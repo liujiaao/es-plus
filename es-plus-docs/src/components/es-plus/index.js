@@ -1,6 +1,6 @@
 import EsDialog from './es-dialog'
 import useDialogInstantce from './es-dialog/src/utils/useDialog'
-import EsForm from './es-Form'
+import EsForm from './es-form'
 import EsTable from './es-table'
 import svgIcons from './svgIcon'
 import './style.js' // 导入样式
