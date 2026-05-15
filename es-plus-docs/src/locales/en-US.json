@@ -1,0 +1,56 @@
+{
+  "header": {
+    "title": "ES-Plus Docs",
+    "guide": "Guide",
+    "components": "Components",
+    "api": "API",
+    "github": "GitHub",
+    "search": "Search docs...",
+    "searchShortcut": "Ctrl+K"
+  },
+  "sidebar": {
+    "guide": {
+      "title": "Guide",
+      "gettingStarted": "Getting Started",
+      "installation": "Installation",
+      "usage": "Usage"
+    },
+    "components": {
+      "title": "Components",
+      "button": "Button",
+      "input": "Input",
+      "select": "Select"
+    }
+  },
+  "content": {
+    "previous": "Previous",
+    "next": "Next",
+    "onThisPage": "On This Page",
+    "editOnGitHub": "Edit"
+  },
+  "home": {
+    "title": "ES-Plus",
+    "description": "A Vue 3 based enterprise UI component library",
+    "getStarted": "Get Started",
+    "viewOnGithub": "View on GitHub",
+    "features": {
+      "title": "Features",
+      "lightweight": "Lightweight",
+      "lightweightDesc": "Built with Vue 3 + TypeScript, small bundle size",
+      "typeSafe": "Type Safe",
+      "typeSafeDesc": "Full TypeScript type support",
+      "accessible": "Accessible",
+      "accessibleDesc": "Complete ARIA support",
+      "themeable": "Themeable",
+      "themeableDesc": "Powerful theme customization"
+    }
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  }
+}

@@ -1,0 +1,49 @@
+import { version } from '../package.json'
+import EsDialog from './components/es-dialog'
+import useDialog from './components/es-dialog/src/use-dialog'
+import EsForm from './components/es-form'
+import EsTable from './components/es-table'
+import SvgIcon from './components/svg-icon'
+
+// 组件列表
+const components = [EsDialog, EsForm, EsTable, SvgIcon]
+
+// Vue 3 插件安装函数
+const install = (app: any, options: Record<string, unknown> = {}) => {
+  components.forEach((component) => {
+    if (component.name) {
+      app.component(component.name, component)
+    }
+  })
+
+  if (options.globalProperties !== false) {
+    app.config.globalProperties.$useDialog = useDialog
+
+    components.forEach((component: any) => {
+      if (component.isPlugin && component.Plugin) {
+        app.use(component.Plugin, options[component.name] || {})
+      }
+    })
+  }
+
+  app.provide('$EsPlus', {
+    useDialog,
+    ...options
+  })
+}
+
+// 按需导出
+export {
+  EsDialog,
+  EsForm,
+  EsTable,
+  SvgIcon,
+  useDialog,
+  install
+}
+
+// 默认导出
+export default {
+  version,
+  install
+}
