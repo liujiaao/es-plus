@@ -139,9 +139,7 @@ dialog({
 <script setup>
 import { ref, h } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
-import EsTable from 'es-plus/components/es-table'
-import { useDialog } from 'es-plus'
+import { EsForm, EsTable, useDialog } from 'es-plus'
 
 const activeComponent = ref('es-form')
 
