@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   const isProd = env.VITE_USE_PROD_PACKAGE === 'true'
 
   return {
+    base: env.VITE_BASE_URL || '/',
     plugins: [
       vue(),
       vueJsx()
