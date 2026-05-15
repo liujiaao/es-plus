@@ -124,7 +124,7 @@ import AdvancedCrossPageSelect from '@/components/examples/advanced/CrossPageSel
 import AdvancedStepForm from '@/components/examples/advanced/StepForm.vue'
 import AdvancedFormTableDialog from '@/components/examples/advanced/FormTableDialog.vue'
 import AdvancedOrderExpandTable from '@/components/examples/advanced/OrderExpandTable.vue'
-import AdvancedOneLineCRUD from '@/components/examples/advanced/OneLineCRUD.vue'
+import AdvancedOneLineCrud from '@/components/examples/advanced/OneLineCrud.vue'
 import AdvancedRowApproval from '@/components/examples/advanced/RowApproval.vue'
 import AdvancedAutoFitHeight from '@/components/examples/advanced/AutoFitHeight.vue'
 import AdvancedAnyBackendApi from '@/components/examples/advanced/AnyBackendApi.vue'
@@ -159,7 +159,7 @@ docsData['linkage'].examples[3].component = AdvancedStepForm
 docsData['linkage'].examples[4].component = AdvancedFormTableDialog
 
 docsData['linkage'].examples[5].component = AdvancedOrderExpandTable
-docsData['linkage'].examples[6].component = AdvancedOneLineCRUD
+docsData['linkage'].examples[6].component = AdvancedOneLineCrud
 docsData['linkage'].examples[7].component = AdvancedRowApproval
 docsData['linkage'].examples[8].component = AdvancedAutoFitHeight
 docsData['linkage'].examples[9].component = AdvancedAnyBackendApi
