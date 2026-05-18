@@ -15,8 +15,8 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, computed } from 'vue'
-import EsTable from 'es-plus/components/es-table'
 
 const toggleOptions = [
   { label: 'Q1', value: 'q1' },

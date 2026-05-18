@@ -17,8 +17,8 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref } from 'vue'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = ref([
   { name: '张三', age: 28, score: 85, salary: 15000 },

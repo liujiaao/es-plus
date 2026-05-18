@@ -18,8 +18,8 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, PictureFilled, Document, FolderOpened, View, Download, Delete } from '@element-plus/icons-vue'
-import EsForm from 'es-plus/components/es-form'
-import type { BtnConfig } from 'es-plus/types'
+import { EsForm } from 'es-plus'
+import type { BtnConfig } from 'es-plus'
 
 const formRef = ref()
 const formModel = reactive<{ files: any[] }>({ files: [] })

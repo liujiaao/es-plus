@@ -29,9 +29,9 @@
 </template>
 
 <script setup lang="jsx">
+import { EsTable } from 'es-plus'
 import { ref } from 'vue'
 import { ElMessage, ElTag, ElAlert, ElMessageBox } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableRef = ref(null)
 const tableData = ref([])

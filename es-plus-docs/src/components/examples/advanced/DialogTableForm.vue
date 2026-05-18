@@ -15,9 +15,7 @@
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
-import EsForm from 'es-plus/components/es-form'
-import { useDialog } from 'es-plus'
+import { EsTable, EsForm,  useDialog } from 'es-plus'
 
 const selectDialog = useDialog()
 const editDialog = useDialog()

@@ -11,9 +11,9 @@
 </template>
 
 <script setup>
+import { EsForm } from 'es-plus'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const formRef = ref()
 

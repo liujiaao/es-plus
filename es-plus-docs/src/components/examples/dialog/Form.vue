@@ -12,8 +12,7 @@
 <script setup lang="jsx">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useDialog } from 'es-plus'
-import EsForm from 'es-plus/components/es-form'
+import { EsForm,  useDialog } from 'es-plus'
 
 const dialog = useDialog()
 const lastResult = ref(null)

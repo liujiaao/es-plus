@@ -10,9 +10,9 @@
 </template>
 
 <script setup lang="ts">
+import { EsForm } from 'es-plus'
 import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const formRef = ref()
 

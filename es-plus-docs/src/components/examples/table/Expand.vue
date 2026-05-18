@@ -33,9 +33,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref } from 'vue'
 import { ElDescriptions, ElDescriptionsItem, ElRadioGroup, ElRadioButton } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const showMode = ref('expand')
 

@@ -20,9 +20,7 @@
 <script setup lang="jsx">
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElTag, ElMessageBox } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
-import EsTable from 'es-plus/components/es-table'
-import { useDialog } from 'es-plus'
+import { EsTable, EsForm,  useDialog } from 'es-plus'
 
 const queryFormRef = ref(null)
 const tableRef = ref(null)

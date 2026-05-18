@@ -10,9 +10,9 @@
 </template>
 
 <script setup lang="ts">
+import { EsForm } from 'es-plus'
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const formModel = reactive({
   gender: 'male',

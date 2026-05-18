@@ -10,9 +10,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, h } from 'vue'
 import { ElTag } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = ref([])
 const pagination = ref({ pageSize: 10, current: 1, total: 0, pageSizes: [5, 10, 20] })

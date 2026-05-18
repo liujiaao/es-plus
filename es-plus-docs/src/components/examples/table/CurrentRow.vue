@@ -20,10 +20,10 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, computed, h } from 'vue'
 import { ElTag, ElMessage } from 'element-plus'
 import { Refresh, Delete } from '@element-plus/icons-vue'
-import EsTable from 'es-plus/components/es-table'
 
 const masterRef = ref()
 const currentOrder = ref(null)

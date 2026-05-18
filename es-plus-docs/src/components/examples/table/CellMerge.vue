@@ -9,9 +9,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, h } from 'vue'
 import { ElProgress } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = ref([
   { id: 1, name: '部门A', project: '项目X', task: '设计', progress: 80 },

@@ -6,9 +6,12 @@ declare module '*.vue' {
   export default component
 }
 
+declare module 'es-plus-ui/dist/style.css'
+
 interface ImportMetaEnv {
   readonly VITE_APP_TITLE: string
   readonly VITE_APP_DEFAULT_LANG: string
+  readonly VITE_USE_DIST: string
 }
 
 interface ImportMeta {

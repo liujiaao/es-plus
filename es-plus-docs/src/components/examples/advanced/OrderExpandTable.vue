@@ -19,9 +19,9 @@
 </template>
 
 <script setup lang="jsx">
+import { EsTable } from 'es-plus'
 import { ref } from 'vue'
 import { ElTag } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const statusMap = {
   pending: { text: '待付款', type: 'warning' },

@@ -27,9 +27,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, computed, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableRef = ref()
 const selectionsByPage = reactive({})

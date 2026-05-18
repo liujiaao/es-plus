@@ -18,10 +18,9 @@
 </template>
 
 <script setup lang="jsx">
+import { EsTable, EsForm } from 'es-plus'
 import { ref, reactive } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
-import EsTable from 'es-plus/components/es-table'
 
 const tableRef = ref(null)
 const tableData = ref([])

@@ -1,0 +1,23 @@
+{
+  "name": "es-plus-verify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.1.5",
+    "element-plus": "^2.5.0",
+    "@element-plus/icons-vue": "^2.1.0",
+    "es-plus-ui": "^1.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vitejs/plugin-vue-jsx": "^4.0.0",
+    "vite": "^5.0.0"
+  }
+}

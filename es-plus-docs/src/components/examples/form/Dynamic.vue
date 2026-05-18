@@ -15,10 +15,10 @@
 </template>
 
 <script setup>
+import { EsForm } from 'es-plus'
 import { ref, computed, h } from 'vue'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElButton, ElMessageBox, ElDialog } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const formModel = ref({
   fields: [{ name: '字段1', value: '' }]

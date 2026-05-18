@@ -10,9 +10,9 @@
 </template>
 
 <script setup lang="ts">
+import { EsForm } from 'es-plus'
 import { reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const productMap: Record<string, { name: string; price: number; unit: string }> = {
   laptop:  { name: '笔记本电脑', price: 5999, unit: '台' },

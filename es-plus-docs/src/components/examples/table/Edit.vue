@@ -14,9 +14,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, h } from 'vue'
 import { ElMessage, ElInput, ElSelect, ElOption, ElButton } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const rawData = [
   { id: 1, name: '张三', age: 28, department: 'tech', editing: false },

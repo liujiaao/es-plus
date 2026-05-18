@@ -15,10 +15,10 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Printer, Refresh, Plus, Delete } from '@element-plus/icons-vue'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = ref([
   { id: 1, name: '产品A', category: '电子', price: 299, stock: 100 },

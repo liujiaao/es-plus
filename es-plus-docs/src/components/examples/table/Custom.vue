@@ -25,8 +25,8 @@
 
 <script setup>
 // import { h } from 'vue'
+import { EsTable } from 'es-plus'
 import { ElButton, ElTag, ElProgress, ElAvatar } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = [
   { id: 1, name: '项目A', status: 'active', progress: 75, manager: '张三', avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png' },

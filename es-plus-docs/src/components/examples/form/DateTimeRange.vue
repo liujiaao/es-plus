@@ -10,11 +10,11 @@
 </template>
 
 <script setup>
+import { EsForm } from 'es-plus'
 import { ref, reactive } from 'vue'
 
 const formRef = ref(null)
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
 
 const formModel = reactive({
   date: '',

@@ -7,9 +7,7 @@
 <script setup lang="jsx">
 import { ref } from 'vue'
 import { ElMessage, ElTag, ElMessageBox } from 'element-plus'
-import { useDialog } from 'es-plus'
-import EsForm from 'es-plus/components/es-form'
-import EsTable from 'es-plus/components/es-table'
+import { EsTable, EsForm,  useDialog } from 'es-plus'
 
 const crudDialog = useDialog()
 const tableData = ref([

@@ -10,10 +10,10 @@
 </template>
 
 <script setup lang="ts">
+import { EsForm } from 'es-plus'
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import EsForm from 'es-plus/components/es-form'
 
 const formModel = reactive({
   gallery: [],

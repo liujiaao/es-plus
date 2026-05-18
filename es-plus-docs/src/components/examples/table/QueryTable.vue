@@ -22,9 +22,9 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, reactive, h } from 'vue'
 import { ElTag } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableRef = ref()
 const tableData = ref([])

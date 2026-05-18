@@ -9,8 +9,7 @@
 </template>
 
 <script setup>
-import EsTable from 'es-plus/components/es-table'
-
+import { EsTable } from 'es-plus'
 const tableData = [
   { name: '张三', age: 28, address: '北京市朝阳区', email: 'zhangsan@example.com' },
   { name: '李四', age: 32, address: '上海市浦东新区', email: 'lisi@example.com' },

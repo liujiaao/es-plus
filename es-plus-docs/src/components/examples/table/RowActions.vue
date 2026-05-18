@@ -9,10 +9,10 @@
 </template>
 
 <script setup>
+import { EsTable } from 'es-plus'
 import { ref, h } from 'vue'
 import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { Plus, Download } from '@element-plus/icons-vue'
-import EsTable from 'es-plus/components/es-table'
 
 const userRole = ref('admin')
 

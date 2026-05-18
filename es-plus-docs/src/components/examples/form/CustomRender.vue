@@ -9,10 +9,10 @@
 </template>
 
 <script setup>
+import { EsForm } from 'es-plus'
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElUpload, ElButton, ElIcon, ElSlider, ElColorPicker, ElInputNumber, ElRate, ElTransfer } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import EsForm from 'es-plus/components/es-form'
 
 const formModel = reactive({
   avatar: '',

@@ -16,7 +16,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import EsForm from 'es-plus/components/es-form'
+import {EsForm} from 'es-plus'
 
 const formModel = ref({
   name: '',

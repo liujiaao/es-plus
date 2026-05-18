@@ -7,8 +7,7 @@
 <script setup lang="jsx">
 import { ref } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
-import { useDialog } from 'es-plus'
-import EsTable from 'es-plus/components/es-table'
+import { EsTable,  useDialog } from 'es-plus'
 
 const dialog = useDialog()
 const selectedProducts = ref([])

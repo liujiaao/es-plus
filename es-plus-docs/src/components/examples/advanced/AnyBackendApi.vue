@@ -27,9 +27,9 @@
 </template>
 
 <script setup lang="jsx">
+import { EsTable } from 'es-plus'
 import { ref, computed } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
-import EsTable from 'es-plus/components/es-table'
 
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })

@@ -9,7 +9,10 @@ import App from './App.vue'
 import '@/styles/index.scss'
 
 // 导入 ES-Plus 组件
-import ESPlus from './components/es-plus'
+// dist 模式：别名指向打包产物，样式通过下方 import 引入
+// 源码模式：别名指向 src，样式由 Vite SCSS 管道自动处理（空文件占位）
+import ESPlus from 'es-plus'
+import 'es-plus-ui/dist/style.css'
 
 const app = createApp(App)
 
