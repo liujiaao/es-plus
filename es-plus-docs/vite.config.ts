@@ -5,10 +5,7 @@ import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
-  const isProd = env.VITE_USE_PROD_PACKAGE === 'true'
-  const esPlusRoot = isProd
-    ? resolve(__dirname, '../packages/es-plus/dist')
-    : resolve(__dirname, '../packages/es-plus/src')
+  const esPlusSrc = resolve(__dirname, '../packages/es-plus/src')
 
   return {
     base: env.VITE_BASE_URL || '/',
@@ -19,11 +16,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src'),
-        'es-plus/components/es-form': resolve(esPlusRoot, isProd ? 'es-plus.js' : 'components/es-form/index.ts'),
-        'es-plus/components/es-table': resolve(esPlusRoot, isProd ? 'es-plus.js' : 'components/es-table/index.ts'),
-        'es-plus/components/es-dialog': resolve(esPlusRoot, isProd ? 'es-plus.js' : 'components/es-dialog/index.ts'),
-        'es-plus/components/svg-icon': resolve(esPlusRoot, isProd ? 'es-plus.js' : 'components/svg-icon/index.ts'),
-        'es-plus': resolve(esPlusRoot, isProd ? 'es-plus.js' : 'index.ts')
+        'es-plus/components/es-form': resolve(esPlusSrc, 'components/es-form/index.ts'),
+        'es-plus/components/es-table': resolve(esPlusSrc, 'components/es-table/index.ts'),
+        'es-plus/components/es-dialog': resolve(esPlusSrc, 'components/es-dialog/index.ts'),
+        'es-plus/components/svg-icon': resolve(esPlusSrc, 'components/svg-icon/index.ts'),
+        'es-plus': resolve(esPlusSrc, 'index.ts')
       }
     },
     server: {

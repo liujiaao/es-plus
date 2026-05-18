@@ -31,17 +31,16 @@ jobs:
             packages/es-plus/package-lock.json
             es-plus-docs/package-lock.json
 
-      - name: Build component library
+      - name: Install component library dependencies
         run: |
           cd packages/es-plus
           npm ci
-          npm run build
 
       - name: Build docs site
         run: |
           cd es-plus-docs
           npm ci
-          VITE_USE_PROD_PACKAGE=true npm run build
+          npm run build
         env:
           VITE_BASE_URL: /es-plus/
 
