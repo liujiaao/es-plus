@@ -19,7 +19,7 @@
       <!-- 内容 -->
       <article class="doc-content">
         <!-- 特性介绍 -->
-        <section class="doc-section" v-if="currentDoc.features">
+        <section class="doc-section" v-if="currentDoc.features" id="features">
           <h2 class="section-title">核心特性</h2>
           <div class="features-grid">
             <div v-for="feature in currentDoc.features" :key="feature.name" class="feature-card">
@@ -33,7 +33,7 @@
         </section>
         
         <!-- 案例列表 -->
-        <section class="doc-section">
+        <section class="doc-section" id="examples">
           <h2 class="section-title">实战案例</h2>
           <div class="examples-list">
             <CodePlayground
@@ -54,13 +54,13 @@
         </section>
         
         <!-- API -->
-        <section class="doc-section" v-if="currentDoc.api">
+        <section class="doc-section" v-if="currentDoc.api" id="api">
           <h2 class="section-title">API 参考</h2>
           <div v-for="(items, key) in currentDoc.api" :key="key" class="api-block">
-            <h3 class="api-subtitle">{{ key }}</h3>
+            <h3 class="api-subtitle">{{ apiTitleMap[key] || key }}</h3>
             <el-table :data="items" border>
-              <el-table-column prop="name" label="名称" width="180" />
-              <el-table-column prop="type" label="类型" width="150" />
+              <el-table-column prop="name" label="名称" width="220" />
+              <el-table-column prop="type" label="类型" width="220" />
               <el-table-column prop="desc" label="说明" />
             </el-table>
           </div>
@@ -99,7 +99,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
@@ -133,41 +133,40 @@ import AdvancedDialogTableForm from '@/components/examples/advanced/DialogTableF
 import AdvancedDynamicFormQuery from '@/components/examples/advanced/DynamicFormQuery.vue'
 import AdvancedCascadeFormTable from '@/components/examples/advanced/CascadeFormTable.vue'
 import AdvancedStepImportWizard from '@/components/examples/advanced/StepImportWizard.vue'
+import AdvancedAdminPage from '@/components/examples/advanced/AdminPage.vue'
 
 const route = useRoute()
 
 const docsData = rawDocsData
 
-// Assign imported components to their examples
-docsData['use-dialog'].examples[0].component = DialogBasic
-docsData['use-dialog'].examples[1].component = DialogForm
-docsData['use-dialog'].examples[2].component = DialogConfirm
-docsData['use-dialog'].examples[3].component = DialogNestedModal
-docsData['use-dialog'].examples[4].component = DialogAdvanced
-docsData['use-dialog'].examples[5].component = DialogAsync
-docsData['use-dialog'].examples[6].component = DialogDetailPreview
-docsData['use-dialog'].examples[7].component = DialogTableDialog
-docsData['use-dialog'].examples[8].component = DialogStepDialog
-docsData['use-dialog'].examples[9].component = DialogDynamicBtn
-docsData['use-dialog'].examples[10].component = DialogMultiInstance
-docsData['use-dialog'].examples[11].component = DialogFormTableDialog
+const apiTitleMap: Record<string, string> = {
+  Options: 'DialogOptions 弹窗配置',
+  DialogOptions: 'DialogOptions 弹窗配置',
+  'configBtn click': 'configBtn click 回调'
+}
 
-docsData['linkage'].examples[0].component = AdvancedFormTable
-docsData['linkage'].examples[1].component = AdvancedZeroCodeQuery
-docsData['linkage'].examples[2].component = AdvancedCrossPageSelect
-docsData['linkage'].examples[3].component = AdvancedStepForm
-docsData['linkage'].examples[4].component = AdvancedFormTableDialog
+// Assign imported components by key
+const dialogComponents: Record<string, any> = {
+  basic: DialogBasic, form: DialogForm, confirm: DialogConfirm,
+  'nested-modal': DialogNestedModal, advanced: DialogAdvanced, async: DialogAsync,
+  'detail-preview': DialogDetailPreview, 'table-dialog': DialogTableDialog,
+  'step-dialog': DialogStepDialog, 'dynamic-btn': DialogDynamicBtn,
+  'multi-instance': DialogMultiInstance, 'form-table-dialog': DialogFormTableDialog
+}
+const linkageComponents: Record<string, any> = {
+  'form-table': AdvancedFormTable, 'zero-code-query': AdvancedZeroCodeQuery,
+  'cross-page-select': AdvancedCrossPageSelect, 'step-form': AdvancedStepForm,
+  'form-table-dialog': AdvancedFormTableDialog, 'order-expand-table': AdvancedOrderExpandTable,
+  'one-line-crud': AdvancedOneLineCrud, 'row-approval': AdvancedRowApproval,
+  'auto-fit-height': AdvancedAutoFitHeight, 'any-backend-api': AdvancedAnyBackendApi,
+  'conditional-btns': AdvancedConditionalBtns, 'dialog-table-form': AdvancedDialogTableForm,
+  'dynamic-form-query': AdvancedDynamicFormQuery, 'cascade-form-table': AdvancedCascadeFormTable,
+  'step-import-wizard': AdvancedStepImportWizard,
+  'admin-page': AdvancedAdminPage
+}
 
-docsData['linkage'].examples[5].component = AdvancedOrderExpandTable
-docsData['linkage'].examples[6].component = AdvancedOneLineCrud
-docsData['linkage'].examples[7].component = AdvancedRowApproval
-docsData['linkage'].examples[8].component = AdvancedAutoFitHeight
-docsData['linkage'].examples[9].component = AdvancedAnyBackendApi
-docsData['linkage'].examples[10].component = AdvancedConditionalBtns
-docsData['linkage'].examples[11].component = AdvancedDialogTableForm
-docsData['linkage'].examples[12].component = AdvancedDynamicFormQuery
-docsData['linkage'].examples[13].component = AdvancedCascadeFormTable
-docsData['linkage'].examples[14].component = AdvancedStepImportWizard
+docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })
+docsData['linkage'].examples.forEach((ex: any) => { ex.component = linkageComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name

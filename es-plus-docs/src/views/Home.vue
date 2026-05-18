@@ -65,6 +65,106 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
       </div>
     </div>
     
+    <!-- Comparison Section -->
+    <div class="comparison-section">
+      <h2 class="section-title">为什么选择 ES-Plus？</h2>
+      <p class="section-subtitle">同样的 CRUD 页面，代码量减少 70%</p>
+      <div class="comparison-grid">
+        <div class="comparison-card traditional">
+          <div class="comparison-header">
+            <span class="comparison-badge bad">传统写法</span>
+            <span class="comparison-lines">~200 行</span>
+          </div>
+          <pre class="comparison-code" v-pre><code>&lt;template&gt;
+  &lt;el-form :model="form" :rules="rules" ref="formRef"&gt;
+    &lt;el-form-item label="姓名" prop="name"&gt;
+      &lt;el-input v-model="form.name" /&gt;
+    &lt;/el-form-item&gt;
+    &lt;el-form-item label="状态" prop="status"&gt;
+      &lt;el-select v-model="form.status"&gt;
+        &lt;el-option v-for="item in statusOptions"
+          :key="item.value" :label="item.label"
+          :value="item.value" /&gt;
+      &lt;/el-select&gt;
+    &lt;/el-form-item&gt;
+    &lt;!-- 每个字段重复 el-form-item... --&gt;
+  &lt;/el-form&gt;
+  &lt;el-table :data="tableData"&gt;
+    &lt;el-table-column prop="name" label="姓名" /&gt;
+    &lt;el-table-column prop="status" label="状态"&gt;
+      &lt;template #default="{ row }"&gt;
+        &lt;el-tag&gt;{{ row.status }}&lt;/el-tag&gt;
+      &lt;/template&gt;
+    &lt;/el-table-column&gt;
+    &lt;!-- 每列重复 el-table-column... --&gt;
+  &lt;/el-table&gt;
+  &lt;el-pagination ... /&gt;
+  &lt;!-- + 手动查询/重置/分页/请求逻辑 --&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+// 查询、重置、分页、请求...
+// 约 150 行业务逻辑
+const handleQuery = () =&gt; { ... }
+const handleReset = () =&gt; { ... }
+const handlePageChange = () =&gt; { ... }
+const fetchData = async () =&gt; { ... }
+&lt;/script&gt;</code></pre>
+        </div>
+
+        <div class="comparison-card esplus">
+          <div class="comparison-header">
+            <span class="comparison-badge good">ES-Plus</span>
+            <span class="comparison-lines">~20 行</span>
+          </div>
+          <pre class="comparison-code" v-pre><code>&lt;es-table
+  :columns="columns"
+  :options="options"
+  v-model:data-source="tableData"
+  v-model:pagination="pagination"
+&gt;
+  &lt;es-form
+    :model="form"
+    :form-item-list="formItems"
+    :config-btn="btns"
+  /&gt;
+&lt;/es-table&gt;
+
+&lt;script setup&gt;
+const formItems = [
+  { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
+  { prop: 'status', label: '状态', formtype: 'Select',
+    span: 6, dataOptions: [...] }
+]
+const btns = [
+  { name: '查询', type: 'primary', key: 'query',
+    triggerEvent: true },
+  { name: '重置', key: 'reset', triggerEvent: true }
+]
+const columns = [
+  { prop: 'name', label: '姓名' },
+  { prop: 'status', label: '状态' }
+]
+// 查询/重置/分页全自动，零事件代码
+&lt;/script&gt;</code></pre>
+        </div>
+      </div>
+      <div class="comparison-stats">
+        <div class="comp-stat">
+          <span class="comp-stat-value">-70%</span>
+          <span class="comp-stat-label">代码量</span>
+        </div>
+        <div class="comp-stat">
+          <span class="comp-stat-value">0</span>
+          <span class="comp-stat-label">手动事件</span>
+        </div>
+        <div class="comp-stat">
+          <span class="comp-stat-value">3</span>
+          <span class="comp-stat-label">配置即开发</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Features Section -->
     <div class="features-section">
       <h2 class="section-title">核心特性</h2>
@@ -157,7 +257,7 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
           <div class="step-content">
             <h4>安装依赖</h4>
             <div class="code-block">
-              <code>npm install element-plus @element-plus/icons-vue</code>
+              <code>npm install es-plus-ui element-plus @element-plus/icons-vue</code>
             </div>
           </div>
         </div>
@@ -166,7 +266,7 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
           <div class="step-content">
             <h4>引入组件</h4>
             <div class="code-block">
-              <code>import { EsForm, EsTable, useDialog } from 'es-plus'</code>
+              <code>import { EsForm, EsTable, useDialog } from 'es-plus-ui'</code>
             </div>
           </div>
         </div>
@@ -184,7 +284,7 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
     
     <!-- Footer -->
     <footer class="home-footer">
-      <p>ES-Plus © 2024 - 企业级前端组件库</p>
+      <p>ES-Plus © 2025 - 企业级前端组件库</p>
     </footer>
   </div>
 </template>
@@ -204,7 +304,7 @@ const goToPlayground = () => {
 }
 
 const goToGithub = () => {
-  window.open('https://github.com', '_blank')
+  window.open('https://github.com/liujiaao/es-plus', '_blank')
 }
 </script>
 
@@ -231,7 +331,7 @@ const goToGithub = () => {
 .hero-badge {
   display: inline-block;
   padding: 6px 16px;
-  background: linear-gradient(135deg, var(--primary-color), #36cfc9);
+  background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
   color: white;
   border-radius: 20px;
   font-size: 14px;
@@ -242,7 +342,7 @@ const goToGithub = () => {
 .hero-title {
   font-size: 72px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--primary-color), #36cfc9);
+  background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 16px;
@@ -341,6 +441,120 @@ const goToGithub = () => {
   overflow-x: auto;
 }
 
+// Comparison Section
+.comparison-section {
+  padding: 100px 48px;
+  background: var(--bg-color);
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: var(--text-color-secondary);
+  margin-top: -48px;
+  margin-bottom: 48px;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.comparison-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color-lighter);
+  transition: transform 0.3s, box-shadow 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  }
+
+  &.traditional {
+    border-color: #f56c6c33;
+  }
+
+  &.esplus {
+    border-color: #67c23a33;
+  }
+}
+
+.comparison-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-color-page);
+  border-bottom: 1px solid var(--border-color-lighter);
+}
+
+.comparison-badge {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 4px;
+
+  &.bad {
+    background: #fef0f0;
+    color: #f56c6c;
+  }
+
+  &.good {
+    background: #f0f9eb;
+    color: #67c23a;
+  }
+}
+
+.comparison-lines {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.comparison-code {
+  padding: 16px 20px;
+  margin: 0;
+  background: #1e1e1e;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #abb2bf;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.comparison-stats {
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+  margin-top: 48px;
+}
+
+.comp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.comp-stat-value {
+  font-size: 48px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.comp-stat-label {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+  margin-top: 8px;
+}
+
 // Features Section
 .features-section {
   padding: 100px 48px;
@@ -386,7 +600,7 @@ const goToGithub = () => {
   border-radius: 16px;
   color: white;
   
-  &.blue { background: linear-gradient(135deg, #409eff, #36cfc9); }
+  &.blue { background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); }
   &.green { background: linear-gradient(135deg, #67c23a, #95d475); }
   &.purple { background: linear-gradient(135deg, #6f42c1, #a855f7); }
   &.orange { background: linear-gradient(135deg, #e6a23c, #f4a460); }
@@ -509,7 +723,7 @@ const goToGithub = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary-color), #36cfc9);
+  background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
   color: white;
   border-radius: 50%;
   font-size: 20px;
@@ -554,6 +768,14 @@ const goToGithub = () => {
 
 // Responsive
 @media (max-width: 1200px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-stats {
+    gap: 48px;
+  }
+
   .hero-section {
     grid-template-columns: 1fr;
     text-align: center;
@@ -595,7 +817,8 @@ const goToGithub = () => {
   
   .features-section,
   .components-section,
-  .get-started-section {
+  .get-started-section,
+  .comparison-section {
     padding: 60px 24px;
   }
 }

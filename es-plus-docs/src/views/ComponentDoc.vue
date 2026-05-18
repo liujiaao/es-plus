@@ -19,7 +19,7 @@
       <!-- 文档内容 -->
       <article class="doc-content">
         <!-- 组件特性介绍 -->
-        <section class="doc-section" v-if="currentDoc.features">
+        <section class="doc-section" v-if="currentDoc.features" id="features">
           <h2 class="section-title">组件特性</h2>
           <div class="features-grid">
             <div 
@@ -39,7 +39,7 @@
         </section>
         
         <!-- 使用案例 -->
-        <section class="doc-section">
+        <section class="doc-section" id="examples">
           <h2 class="section-title">使用案例</h2>
           <div class="examples-list">
             <CodePlayground
@@ -52,7 +52,7 @@
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
                 <div v-else class="placeholder-preview">
-                  <el-alert :title="`案例 ${index + 1}: ${example.title}`" type="info" />
+                  <el-alert :title="`案例 ${Number(index) + 1}: ${example.title}`" type="info" />
                 </div>
               </template>
             </CodePlayground>
@@ -60,48 +60,21 @@
         </section>
         
         <!-- API 文档 -->
-        <section class="doc-section" v-if="currentDoc.api">
+        <section class="doc-section" v-if="currentDoc.api" id="api">
           <h2 class="section-title">API 文档</h2>
-          
-          <!-- Props -->
-          <div class="api-block" v-if="currentDoc.api.props">
-            <h3 class="api-subtitle">Props</h3>
-            <el-table :data="currentDoc.api.props" border>
-              <el-table-column prop="name" label="属性名" width="180" />
-              <el-table-column prop="type" label="类型" width="150" />
-              <el-table-column prop="default" label="默认值" width="150" />
-              <el-table-column prop="desc" label="说明" />
-            </el-table>
-          </div>
-          
-          <!-- Events -->
-          <div class="api-block" v-if="currentDoc.api.events">
-            <h3 class="api-subtitle">Events</h3>
-            <el-table :data="currentDoc.api.events" border>
-              <el-table-column prop="name" label="事件名" width="180" />
-              <el-table-column prop="params" label="参数" width="200" />
-              <el-table-column prop="desc" label="说明" />
-            </el-table>
-          </div>
-          
-          <!-- Methods -->
-          <div class="api-block" v-if="currentDoc.api.methods">
-            <h3 class="api-subtitle">Methods</h3>
-            <el-table :data="currentDoc.api.methods" border>
-              <el-table-column prop="name" label="方法名" width="180" />
-              <el-table-column prop="params" label="参数" width="200" />
-              <el-table-column prop="desc" label="说明" />
-            </el-table>
-          </div>
-          
-          <!-- Slots -->
-          <div class="api-block" v-if="currentDoc.api.slots">
-            <h3 class="api-subtitle">Slots</h3>
-            <el-table :data="currentDoc.api.slots" border>
-              <el-table-column prop="name" label="插槽名" width="180" />
-              <el-table-column prop="desc" label="说明" />
-            </el-table>
-          </div>
+
+          <template v-for="(items, key) in currentDoc.api" :key="key">
+            <div class="api-block">
+              <h3 class="api-subtitle">{{ apiTitleMap[key as string] || key }}</h3>
+              <el-table :data="items" border>
+                <el-table-column prop="name" label="名称" width="220" />
+                <el-table-column prop="type" label="类型" width="220" />
+                <el-table-column v-if="(items as any[]).some((it: any) => it.default !== undefined)" prop="default" label="默认值" width="120" />
+                <el-table-column v-if="(items as any[]).some((it: any) => it.params !== undefined)" prop="params" label="参数" width="200" />
+                <el-table-column prop="desc" label="说明" />
+              </el-table>
+            </div>
+          </template>
         </section>
       </article>
       
@@ -150,7 +123,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
 import { docsData as rawDocsData } from './component-doc.data'
 
@@ -194,49 +167,30 @@ import TableCurrentRow from '@/components/examples/table/CurrentRow.vue'
 import TableTableHeight from '@/components/examples/table/TableHeight.vue'
 
 const route = useRoute()
-const router = useRouter()
 
 // 组件文档数据
 const docsData = rawDocsData
 
-// Assign imported components to their examples
-docsData['es-form'].examples[0].component = FormBasic
-docsData['es-form'].examples[1].component = FormLayout
-docsData['es-form'].examples[2].component = FormConditional
-docsData['es-form'].examples[3].component = FormDynamic
-docsData['es-form'].examples[4].component = FormValidation
-docsData['es-form'].examples[5].component = FormAsyncOptions
-docsData['es-form'].examples[6].component = FormCustomRender
-docsData['es-form'].examples[7].component = FormDialog
-docsData['es-form'].examples[8].component = FormDateTimeRange
-docsData['es-form'].examples[9].component = FormCascader
-docsData['es-form'].examples[10].component = FormAdvancedButtons
-docsData['es-form'].examples[11].component = FormUpload
-docsData['es-form'].examples[12].component = FormFileUpload
-docsData['es-form'].examples[13].component = FormPreferences
-docsData['es-form'].examples[14].component = FormComputedFields
-docsData['es-form'].examples[15].component = FormCustomButton
-docsData['es-form'].examples[16].component = FormDetailMode
-docsData['es-form'].examples[17].component = FormSearchForm
+// Assign imported components to their examples by key
+const formComponents: Record<string, any> = {
+  basic: FormBasic, layout: FormLayout, conditional: FormConditional,
+  dynamic: FormDynamic, validation: FormValidation, 'async-options': FormAsyncOptions,
+  'custom-render': FormCustomRender, dialog: FormDialog, 'datetime-range': FormDateTimeRange,
+  cascader: FormCascader, 'advanced-buttons': FormAdvancedButtons, upload: FormUpload,
+  'file-upload': FormFileUpload, preferences: FormPreferences, 'computed-fields': FormComputedFields,
+  'custom-button': FormCustomButton, 'detail-mode': FormDetailMode, 'search-form': FormSearchForm
+}
+const tableComponents: Record<string, any> = {
+  basic: TableBasic, toolbar: TableToolbar, custom: TableCustom,
+  selection: TableSelection, edit: TableEdit, sort: TableSort,
+  group: TableGroup, fixed: TableFixed, pagination: TablePagination,
+  'remote-data': TableRemoteData, expand: TableExpand, 'cell-merge': TableCellMerge,
+  'query-table': TableQueryTable, 'row-actions': TableRowActions, 'dynamic-columns': TableDynamicColumns,
+  'callback-pipeline': TableCallbackPipeline, 'current-row': TableCurrentRow, 'table-height': TableTableHeight
+}
 
-docsData['es-table'].examples[0].component = TableBasic
-docsData['es-table'].examples[1].component = TableToolbar
-docsData['es-table'].examples[2].component = TableCustom
-docsData['es-table'].examples[3].component = TableSelection
-docsData['es-table'].examples[4].component = TableEdit
-docsData['es-table'].examples[5].component = TableSort
-docsData['es-table'].examples[6].component = TableGroup
-docsData['es-table'].examples[7].component = TableFixed
-docsData['es-table'].examples[8].component = TablePagination
-docsData['es-table'].examples[9].component = TableRemoteData
-docsData['es-table'].examples[10].component = TableExpand
-docsData['es-table'].examples[11].component = TableCellMerge
-docsData['es-table'].examples[12].component = TableQueryTable
-docsData['es-table'].examples[13].component = TableRowActions
-docsData['es-table'].examples[14].component = TableDynamicColumns
-docsData['es-table'].examples[15].component = TableCallbackPipeline
-docsData['es-table'].examples[16].component = TableCurrentRow
-docsData['es-table'].examples[17].component = TableTableHeight
+docsData['es-form'].examples.forEach((ex: any) => { ex.component = formComponents[ex.key] })
+docsData['es-table'].examples.forEach((ex: any) => { ex.component = tableComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name as string
@@ -248,6 +202,20 @@ const toc = ref([
   { id: 'examples', text: '使用案例', level: 2 },
   { id: 'api', text: 'API 文档', level: 2 }
 ])
+
+const apiTitleMap: Record<string, string> = {
+  props: 'Props',
+  events: 'Events',
+  methods: 'Methods',
+  slots: 'Slots',
+  FormItemOption: 'FormItemOption 配置',
+  LayoutFormProps: 'LayoutFormProps 布局配置',
+  BtnConfig: 'BtnConfig 按钮配置',
+  TableColumn: 'TableColumn 列配置',
+  TableOptions: 'TableOptions 选项配置',
+  DialogOptions: 'DialogOptions 弹窗配置',
+  'configBtn click': 'configBtn click 回调'
+}
 
 const activeHeading = ref('')
 const prevDoc = ref<{ path: string; title: string } | null>(null)
@@ -284,12 +252,7 @@ const updateNav = () => {
 watch(() => route.params.name, updateNav, { immediate: true })
 
 onMounted(() => {
-  // 高亮代码
-  setTimeout(() => {
-    document.querySelectorAll('pre code').forEach((block) => {
-      // hljs.highlightElement(block as HTMLElement)
-    })
-  }, 500)
+  // hljs highlighting handled by CodePlayground component
 })
 </script>
 

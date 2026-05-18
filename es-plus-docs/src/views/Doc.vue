@@ -12,7 +12,7 @@
       
       <!-- 文档内容 -->
       <article class="doc-content">
-        <h1 class="doc-title">{{ currentDoc.title }}</h1>
+        <!-- <h1 class="doc-title">{{ currentDoc.title }}</h1> -->
         <div class="markdown-content" v-html="renderedContent"></div>
       </article>
       
@@ -48,8 +48,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -58,6 +58,7 @@ import hljs from 'highlight.js'
 import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
+import migrationMd from '@/docs/migration.md?raw'
 
 const route = useRoute()
 
@@ -80,7 +81,8 @@ const md = new MarkdownIt({
 const docsData = {
   'getting-started': { title: '快速开始', content: gettingStartedMd },
   'installation': { title: '安装', content: installationMd },
-  'usage': { title: '使用', content: usageMd }
+  'usage': { title: '使用', content: usageMd },
+  'migration': { title: '迁移指南', content: migrationMd }
 }
 
 const currentDoc = computed(() => {
@@ -99,14 +101,28 @@ const currentCategory = computed(() => {
 })
 
 const renderedContent = computed(() => {
-  return md.render(currentDoc.value.content)
+  const html = md.render(currentDoc.value.content)
+  // Add IDs to headings for TOC linking
+  return html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
+    const text = content.replace(/<[^>]+>/g, '').trim()
+    const id = text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
+    return `<h${level} id="${id}">${content}</h${level}>`
+  })
 })
 
-const toc = ref([
-  { id: 'intro', text: '简介' },
-  { id: 'install', text: '安装' },
-  { id: 'usage', text: '使用' }
-])
+const toc = ref<{ id: string; text: string }[]>([])
+
+const extractToc = () => {
+  nextTick(() => {
+    const headings = document.querySelectorAll('.doc-content h2, .doc-content h3')
+    toc.value = Array.from(headings).map((h) => ({
+      id: h.id,
+      text: h.textContent || ''
+    })).filter(h => h.id && h.text)
+  })
+}
+
+watch(renderedContent, extractToc, { immediate: true })
 
 const prevDoc = ref(null)
 const nextDoc = ref(null)

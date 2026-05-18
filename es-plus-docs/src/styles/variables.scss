@@ -1,8 +1,14 @@
 // 主题变量
 :root {
-  --primary-color: #409eff;
+  // ES-Plus 品牌色系 — 区别于 Element Plus 默认蓝
+  --brand-primary: #3b82f6;
+  --brand-primary-light: #dbeafe;
+  --brand-accent: #06b6d4;
+
+  --primary-color: var(--brand-primary);
+  --primary-color-light: var(--brand-primary-light);
   --bg-color: #ffffff;
-  --bg-color-page: #fafafa;
+  --bg-color-page: #f5f7fa;
   --bg-color-overlay: #ffffff;
   --text-color-primary: #303133;
   --text-color-regular: #606266;
