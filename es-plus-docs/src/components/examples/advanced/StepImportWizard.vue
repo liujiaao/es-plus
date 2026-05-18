@@ -60,9 +60,9 @@ const openImportDialog = () => {
     { prop: 'name', label: '姓名', width: 80 },
     { prop: 'dept', label: '部门', width: 90 },
     { prop: 'type', label: '类型', width: 80 },
-    { prop: 'salary', label: '薪资', width: 100, formatter: (r) => `¥${r.salary.toLocaleString()}` },
+    { prop: 'salary', label: '薪资',  formatter: (r) => `¥${r.salary.toLocaleString()}` },
     {
-      prop: 'valid', label: '校验', width: 80,
+      prop: 'valid', label: '校验', 
       render: (_, { row }) => row.valid
         ? <span style="color: #67c23a">通过</span>
         : <span style="color: #f56c6c">{row.error}</span>
