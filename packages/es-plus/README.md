@@ -1,20 +1,38 @@
 # es-plus-ui
 
-基于 Vue 3 + Element Plus 的企业级中后台前端组件库，以配置化驱动为核心，大幅减少中后台 CRUD 页面开发代码量。
+基于 Vue 3 + Element Plus 的企业级中后台 CRUD 组件库 — 配置化驱动表单、表格、弹窗全链路联动
 
 [![npm version](https://img.shields.io/npm/v/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
+[![npm downloads](https://img.shields.io/npm/dm/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
 [![license](https://img.shields.io/npm/l/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
+[![github stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
+
+**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[GitHub](https://github.com/liujiaao/es-plus)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)**
 
 ## 核心特性
 
 - **配置化开发** — JSON 配置生成复杂表单与表格，替代大量模板代码
-- **表单表格联动** — `triggerEvent` + `apiParams.model` 实现零事件代码查询
+- **表单↔表格↔弹窗联动** — 查询/重置/分页全自动，零事件代码
 - **编程式弹窗** — `useDialog` Hook 命令式调用，支持 JSX 渲染、嵌套弹窗
 - **自适应高度** — `ResizeObserver` 自动重算表格高度，表单展开/收起自动响应
 - **跨页选择** — `rowkey` + `cachePageSelection` 解决分页选择丢失痛点
 - **任意后端适配** — `configTableOut` + `qrcb` 配置化适配不同后端响应格式
 - **TypeScript** — 完整类型定义
 - **13 种表单类型** — Input、Select、datePicker、timePicker、Slider、ColorPicker、Transfer、Cascader、Radio、Checkbox、Switch、Rate、Upload
+
+## 为什么选择 es-plus-ui？
+
+> 同样的 CRUD 页面，传统写法 ~200 行，es-plus-ui ~20 行
+
+| 痛点 | 传统 Element Plus | es-plus-ui |
+|------|-------------------|------------|
+| 表单字段 | 每个字段 5-8 行 `el-form-item` + `v-model` | 一行 `{ prop, label, formtype }` |
+| 查询/重置 | 手动 `@click` + `resetFields()` | `triggerEvent: true` 自动处理 |
+| 分页请求 | 手动绑定 `current-page` + `size-change` 事件 | 分页切换自动请求 |
+| 表单↔表格 | 手动传参、手动刷新 | 自动发现、自动合并参数 |
+| 弹窗管理 | 模板声明 + `visible` 状态 | `useDialog()` 编程式调用 |
+| 选择丢失 | 分页后选中清空 | 跨页选择缓存 + 去重 |
+| 后端适配 | 每个接口手动映射字段 | `configTableOut` 统一映射 |
 
 ## 安装
 
