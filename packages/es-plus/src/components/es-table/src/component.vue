@@ -69,11 +69,11 @@
             }"
           >
             <el-pagination
-              background
-              :size="paginationConfig.size"
+              :background="paginationBackground"
+              :size="paginationIsSmall ? 'small' : paginationConfig.size"
               :total="paginationConfig.total"
               v-model:page-size="paginationConfig.pageSize"
-              :page-sizes="paginationConfig.pageSizes"
+              :page-sizes="paginationPageSizes"
               v-model:current-page="paginationConfig.current"
               :layout="layout"
               style="padding: 0; margin: 10px 0; text-align: center"
@@ -269,7 +269,15 @@ const slotStyles = computed(() => {
   return { type: 'string', value: '' }
 })
 
-const layout = computed(() => 'prev, pager, next, jumper, sizes, ->, total')
+const paginationLayoutConfig = computed(() => {
+  const cfg = $esPlusTable?.paginationLayout
+  if (!cfg) return null
+  return typeof cfg === 'function' ? cfg() : cfg
+})
+const layout = computed(() => paginationLayoutConfig.value?.layout || 'prev, pager, next, jumper, sizes, ->, total')
+const paginationPageSizes = computed(() => paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes)
+const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
+const paginationBackground = computed(() => paginationLayoutConfig.value?.background ?? true)
 const loadStatus = computed(() => props.options.loading || loadingStatus.value)
 const isRequestConf = computed(() => !!props.options.actionUrl || (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0))
 const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof props.options.httpRequest === 'function')

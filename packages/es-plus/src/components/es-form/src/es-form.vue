@@ -229,6 +229,7 @@ const setFormRef = (el: unknown) => {
 // Composables
 const { formInputComponents } = useFormInputs()
 const httpRequestGlobal = ($esPlusForm?.$httpRequest as (params: Record<string, unknown>) => Promise<unknown>) || undefined
+const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as ((defaults: Record<string, string>) => Record<string, string>) | undefined
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 // Break circular dependency: formLayoutRef is populated after useFormLayout
@@ -258,7 +259,7 @@ watch(
       }).filter((it): it is FormItemOption => !!it)
       return
     }
-    const rows = await getEveryFormQueryField(needLoadList)
+    const rows = await getEveryFormQueryField(needLoadList, fieldFieldOutputGlobal)
     // 标记已加载的 prop
     needLoadList.forEach((it) => loadedApiProps.value.add(it.prop))
     formItemRowsList.value = list
@@ -539,7 +540,7 @@ const formItmeRequestInstance = async (propsList: string[]) => {
   const targetItems = list.filter((it) => it && propsList.includes(it.prop))
   if (!targetItems.length) return
 
-  const rows = await getEveryFormQueryField(targetItems)
+  const rows = await getEveryFormQueryField(targetItems, fieldFieldOutputGlobal)
   rows.forEach((resultApiOption) => {
     if (!resultApiOption) return
     const itemIndex = formItemRowsList.value.findIndex((it) => it && it.prop === resultApiOption.prop)

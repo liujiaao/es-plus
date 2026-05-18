@@ -46,6 +46,104 @@ app.use(EsPlus)
 app.mount('#app')
 ```
 
+### 全局配置
+
+通过 `app.use(EsPlus, options)` 第二个参数配置全局默认值，避免每个组件重复传入相同的请求方法、字段映射、分页布局等配置：
+
+```typescript
+import axios from 'axios'
+
+const app = createApp(App)
+
+app.use(EsPlus, {
+  EsTable: {
+    methods: {
+      // 全局 HTTP 请求方法，所有 EsTable 共用
+      $httpRequest: async ({ url, formParams, headers, ...rest }) => {
+        const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
+        return res.data
+      },
+      // 分页布局配置
+      paginationLayout: () => ({
+        layout: 'total, sizes, prev, pager, next, jumper',
+        pageSizes: [10, 20, 50, 100],
+        isSmall: true,
+        background: true
+      }),
+      // API 响应字段映射（后端返回字段 → 组件内部字段）
+      configQueryFieldOutput: () => ({
+        total: 'total',        // 后端总数字段名
+        pageSize: 'pageSize',  // 后端每页条数字段名
+        current: 'pageIndex',  // 后端当前页码字段名
+        tableData: 'data'      // 后端数据列表字段名
+      })
+    }
+  },
+  EsForm: {
+    methods: {
+      // 全局 HTTP 请求方法，所有 EsForm 共用
+      $httpRequest: async ({ url, formParams, headers, ...rest }) => {
+        const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
+        return res.data
+      },
+      // API 响应字段映射（后端返回字段 → 组件内部字段）
+      fieldFieldOutput: () => ({
+        total: 'total',        // 后端总数字段名
+        pageSize: 'pageSize',  // 后端每页条数字段名
+        current: 'pageIndex',  // 后端当前页码字段名
+        listData: 'data'       // 后端选项列表字段名
+      })
+    }
+  }
+})
+```
+
+#### 配置项说明
+
+| 组件 | 配置键 | 类型 | 说明 |
+|------|--------|------|------|
+| EsTable | `$httpRequest` | `(params) => Promise` | 全局请求方法，未传 `options.httpRequest` 时使用 |
+| EsTable | `paginationLayout` | `() => PaginationLayoutConfig` | 分页布局配置（layout/pageSizes/isSmall/background） |
+| EsTable | `configQueryFieldOutput` | `() => FieldMap` | API 响应字段映射，未传 `options.configTableOut` 时使用 |
+| EsForm | `$httpRequest` | `(params) => Promise` | 全局请求方法，未传 `formItem.httpRequest` 时使用 |
+| EsForm | `fieldFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射，未传 `formItem.configFormOut` 时使用 |
+
+> **优先级**：组件 props / 选项 > 全局配置 > 组件默认值。例如 `options.configTableOut` 优先于 `configQueryFieldOutput`。
+
+#### paginationLayout 配置
+
+```typescript
+paginationLayout: () => ({
+  layout: 'total, sizes, prev, pager, next, jumper',  // Element Plus 分页布局字符串
+  pageSizes: [10, 20, 50, 100],                        // 每页条数选项
+  isSmall: true,                                        // 是否使用小型分页器
+  background: true                                      // 是否显示背景色
+})
+```
+
+#### fieldFieldOutput / configQueryFieldOutput 配置
+
+函数接收默认字段映射作为参数，返回自定义映射：
+
+```typescript
+// 默认映射（不配置时的值）
+{
+  total: 'records',
+  pageSize: 'pageSize',
+  current: 'pageNo',
+  listData: 'rows'     // EsForm 用 listData
+  // tableData: 'rows' // EsTable 用 tableData
+}
+
+// 自定义示例：后端返回 { data: { list: [...], pagination: { total: 100 } } }
+fieldFieldOutput: (defaults) => ({
+  total: 'total',
+  pageSize: 'pageSize',
+  current: 'pageNo',
+  listData: 'list'
+})
+```
+
 ### 按需引入
 
 ```typescript

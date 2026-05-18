@@ -136,7 +136,7 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
     })
   }
 
-  const getEveryFormQueryField = async (rowsList: FormItemOption[]) => {
+  const getEveryFormQueryField = async (rowsList: FormItemOption[], fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>) => {
     try {
       if (!Array.isArray(rowsList)) return []
       const apiUrlList = rowsList.filter((it) => it && it.apiParams && isObject(it.apiParams) && it.apiParams.url)
@@ -147,7 +147,8 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
         const promiseThen = httpRequestFormInstance(
           { ...(option.apiParams?.model || {}) },
           { httpRequest, apiParams: option.apiParams, ...(option.apiParams?.options || {}) },
-          option
+          option,
+          fieldFieldOutput
         )
         return wrapPromise(promiseThen)
       })
