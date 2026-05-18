@@ -77,7 +77,7 @@ describe('useFormLayout', () => {
     expect(getBtnColSpan.value).toBe(6)
   })
 
-  it('should return 24 btn col span when no space left', () => {
+  it('should return 0 btn col span when full row leaves no space', () => {
     const props = {
       layoutFormProps: {},
       formItemList: [
@@ -86,6 +86,8 @@ describe('useFormLayout', () => {
     }
 
     const { getBtnColSpan } = useFormLayout(props)
-    expect(getBtnColSpan.value).toBe(24)
+    // When last row is fully occupied (span=24), hasSpan=0 and btnColSpan=0<=0 is true
+    // so the function returns hasSpan=0 (button can fit in zero space = needs new row)
+    expect(getBtnColSpan.value).toBe(0)
   })
 })
