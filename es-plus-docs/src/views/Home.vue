@@ -14,6 +14,10 @@
             <el-icon class="btn-icon"><Document /></el-icon>
             快速开始
           </el-button>
+          <el-button size="large" type="success" @click="goToAiCrud">
+            <el-icon class="btn-icon"><MagicStick /></el-icon>
+            AI 生成 CRUD
+          </el-button>
           <el-button size="large" @click="goToPlayground">
             <el-icon class="btn-icon"><Monitor /></el-icon>
             Playground
@@ -29,12 +33,12 @@
             <span class="stat-label">核心组件</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value">20+</span>
-            <span class="stat-label">使用案例</span>
+            <span class="stat-value">60+</span>
+            <span class="stat-label">配置项</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value">Vue3</span>
-            <span class="stat-label">技术栈</span>
+            <span class="stat-value">-70%</span>
+            <span class="stat-label">代码量</span>
           </div>
         </div>
       </div>
@@ -159,8 +163,8 @@ const columns = [
           <span class="comp-stat-label">手动事件</span>
         </div>
         <div class="comp-stat">
-          <span class="comp-stat-value">3</span>
-          <span class="comp-stat-label">配置即开发</span>
+          <span class="comp-stat-value">JSON</span>
+          <span class="comp-stat-label">配置驱动</span>
         </div>
       </div>
     </div>
@@ -248,6 +252,41 @@ const columns = [
       </div>
     </div>
     
+    <!-- AI Coding Section -->
+    <div class="ai-section">
+      <h2 class="section-title">AI Coding 时代的最佳搭档</h2>
+      <p class="section-subtitle">JSON 配置 = AI 最容易理解和生成的格式</p>
+      <div class="ai-grid">
+        <div class="ai-card">
+          <div class="ai-card-icon">
+            <el-icon :size="32"><MagicStick /></el-icon>
+          </div>
+          <h3>AI 一句话生成页面</h3>
+          <p>描述业务需求，AI 直接输出 JSON 配置，即刻渲染为完整 CRUD 页面</p>
+        </div>
+        <div class="ai-card">
+          <div class="ai-card-icon">
+            <el-icon :size="32"><Edit /></el-icon>
+          </div>
+          <h3>JSON Schema 自动补全</h3>
+          <p>提供完整 JSON Schema，Cursor / Copilot 编写配置时享受智能提示</p>
+        </div>
+        <div class="ai-card">
+          <div class="ai-card-icon">
+            <el-icon :size="32"><SetUp /></el-icon>
+          </div>
+          <h3>结构化 = 可校验</h3>
+          <p>配置是数据，可静态校验、可 diff、可版本管理，AI 改错了一眼就能发现</p>
+        </div>
+      </div>
+      <div class="ai-cta">
+        <el-button type="success" size="large" @click="goToAiCrud">
+          <el-icon class="btn-icon"><MagicStick /></el-icon>
+          体验 AI CRUD 生成器
+        </el-button>
+      </div>
+    </div>
+
     <!-- Get Started Section -->
     <div class="get-started-section">
       <h2 class="section-title">快速开始</h2>
@@ -284,14 +323,14 @@ const columns = [
     
     <!-- Footer -->
     <footer class="home-footer">
-      <p>ES-Plus © 2025 - 企业级前端组件库</p>
+      <p>ES-Plus © {{ new Date().getFullYear() }} - 企业级配置化前端组件库</p>
     </footer>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List, ChatDotRound } from '@element-plus/icons-vue'
+import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -301,6 +340,10 @@ const goToGuide = () => {
 
 const goToPlayground = () => {
   router.push('/playground')
+}
+
+const goToAiCrud = () => {
+  router.push('/ai-crud')
 }
 
 const goToGithub = () => {
@@ -698,6 +741,63 @@ const goToGithub = () => {
   }
 }
 
+// AI Section
+.ai-section {
+  padding: 100px 48px;
+  background: linear-gradient(135deg, #f0f9eb 0%, #ecf5ff 100%);
+  text-align: center;
+}
+
+.ai-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.ai-card {
+  padding: 40px 24px;
+  background: var(--bg-color);
+  border-radius: 16px;
+  border: 1px solid var(--border-color-lighter);
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    margin-bottom: 12px;
+  }
+
+  p {
+    font-size: 14px;
+    color: var(--text-color-secondary);
+    line-height: 1.7;
+  }
+}
+
+.ai-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #67c23a, #409eff);
+  color: white;
+}
+
+.ai-cta {
+  margin-top: 48px;
+}
+
 // Get Started Section
 .get-started-section {
   padding: 100px 48px;
@@ -806,19 +906,21 @@ const goToGithub = () => {
   .hero-title {
     font-size: 48px;
   }
-  
-  .features-grid {
+
+  .features-grid,
+  .ai-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .hero-section {
     padding: 60px 24px;
   }
-  
+
   .features-section,
   .components-section,
   .get-started-section,
-  .comparison-section {
+  .comparison-section,
+  .ai-section {
     padding: 60px 24px;
   }
 }

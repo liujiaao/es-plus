@@ -36,6 +36,7 @@
 import { EsTable, EsForm } from 'es-plus'
 import { ref, reactive, computed } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const heightMode = ref('fixed')
 const tableData = ref([])
@@ -94,8 +95,7 @@ const columns = [
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
   const { pageIndex = 1, pageSize = 5, keyword, category } = { ...formParams, ...rest }
-  const res = await fetch('https://fakestoreapi.com/products')
-  let filtered = await res.json()
+  let filtered = await fetchProducts()
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
   const total = filtered.length

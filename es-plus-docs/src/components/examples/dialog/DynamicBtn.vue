@@ -48,13 +48,14 @@ const openApprovalDialog = () => {
         type: 'primary',
         icon: 'Check',
         disabled: () => action.value !== 'approve' && !reason.value.trim(),
-        click: () => {
+        click: (_, { close }) => {
           if (action.value !== 'approve' && !reason.value.trim()) {
             ElMessage.warning('请输入审批意见')
             return
           }
           const actionText = { approve: '通过', reject: '驳回', return: '退回' }[action.value]
           ElMessage.success(`已${actionText}`)
+          close()
         }
       }
     ]

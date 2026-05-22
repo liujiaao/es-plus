@@ -26,6 +26,11 @@ const routes: RouteRecordRaw[] = [
     path: '/playground',
     name: 'playground',
     component: () => import('@/views/Playground.vue')
+  },
+  {
+    path: '/ai-crud',
+    name: 'ai-crud',
+    component: () => import('@/views/AiCrud.vue')
   }
 ]
 

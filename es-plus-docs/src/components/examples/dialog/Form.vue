@@ -77,9 +77,7 @@ const openAddDialog = () => {
         type: 'primary',
         icon: 'Check',
         click: (instance, { close, getRefs }) => {
-       
           const formRef = getRefs('formRef')
-             console.log('instance', formRef)
           formRef?.validate()
             .then(() => {
               lastResult.value = { action: '新增', data: { ...formData.value } }

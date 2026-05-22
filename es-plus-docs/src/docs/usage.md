@@ -67,6 +67,31 @@ app.mount('#app')
 | `configQueryFieldOutput` | EsTable | 后端分页字段映射（total、pageSize、current、tableData） |
 | `fieldFieldOutput` | EsForm | 后端表单查询字段映射（total、pageSize、current、listData） |
 
+### 实际项目示例（axios）
+
+```typescript
+import axios from 'axios'
+
+app.use(ESPlus, {
+  EsTable: {
+    methods: {
+      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+        return data
+      },
+      configQueryFieldOutput: () => ({
+        total: 'total',
+        tableData: 'records',  // 适配 MyBatis-Plus 分页格式
+        pageSize: 'size',
+        current: 'current'
+      })
+    }
+  }
+})
+```
+
+配置一次后，所有 `EsTable` 无需再传 `httpRequest`，只需声明 `apiParams.url` 即可发起请求。
+
 ## EsForm 用法
 
 ### 基础表单
@@ -319,16 +344,51 @@ dialog({
 ES-Plus 使用 TypeScript 编写，提供完整的类型定义，无需额外安装 `@types` 包：
 
 ```typescript
-import type { FormItemOption, TableColumn, TableOptions } from 'es-plus-ui'
+import type { FormItemOption, TableColumn, TableOptions, BtnConfig } from 'es-plus-ui'
 
 const formItems: FormItemOption[] = [
-  { prop: 'name', label: '姓名', formtype: 'Input', span: 12 }
+  { prop: 'name', label: '姓名', formtype: 'Input', span: 12 },
+  { prop: 'status', label: '状态', formtype: 'Select', span: 6,
+    dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }
 ]
 
 const columns: TableColumn[] = [
-  { prop: 'name', label: '姓名' }
+  { prop: 'name', label: '姓名', width: 120 },
+  { prop: 'status', label: '状态' },
+  { prop: 'operate', label: '操作', btns: [
+    { name: '编辑', type: 'primary', clickEvent: (row) => edit(row) }
+  ] }
 ]
+
+const btns: BtnConfig[] = [
+  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
+  { name: '重置', key: 'reset', triggerEvent: true }
+]
+
+const options: TableOptions = {
+  border: true,
+  httpRequest: async (params) => fetchList(params),
+  configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' }
+}
 ```
+
+### JSON Schema（IDE 智能提示）
+
+ES-Plus 还提供 JSON Schema 文件，在 VS Code 中编辑配置时可获得自动补全：
+
+```jsonc
+// .vscode/settings.json
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["**/form-config.json"],
+      "url": "./node_modules/es-plus-ui/schemas/form-item.schema.json"
+    }
+  ]
+}
+```
+
+配合 AI IDE（Cursor、Copilot）时，Schema 可作为上下文让 AI 精确生成配置。
 
 ## 更多资源
 

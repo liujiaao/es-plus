@@ -20,7 +20,8 @@
 <script setup lang="jsx">
 import { EsTable, EsForm } from 'es-plus'
 import { ref, reactive } from 'vue'
-import { ElMessage, ElTag } from 'element-plus'
+import { ElTag } from 'element-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const tableRef = ref(null)
 const tableData = ref([])
@@ -114,8 +115,7 @@ const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
   const { pageIndex = 1, pageSize = 5, keyword, category, priceRange, rating, sortBy } = { ...formParams, ...rest }
 
-  const res = await fetch('https://fakestoreapi.com/products')
-  let filtered = await res.json()
+  let filtered = await fetchProducts()
 
   if (keyword) {
     filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))

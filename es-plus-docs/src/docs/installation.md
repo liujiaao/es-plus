@@ -96,6 +96,29 @@ export default defineConfig({
 })
 ```
 
+## JSX 支持（高级用法）
+
+如果你需要使用 `useDialog` 的 JSX `render` 能力（如分步弹窗、动态表单弹窗），项目需要配置 JSX 插件：
+
+```bash
+npm install -D @vitejs/plugin-vue-jsx
+```
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
+
+export default defineConfig({
+  plugins: [vue(), vueJsx()]
+})
+```
+
+:::tip
+如果只使用模板语法（`<es-form>`、`<es-table>` 等），无需安装此插件。JSX 仅在使用 `useDialog` 的 `render` / `renderFooter` 等函数式渲染场景时需要。
+:::
+
 ## 浏览器兼容性
 
 | 浏览器 | 最低版本 |

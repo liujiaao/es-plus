@@ -16,6 +16,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
 import { EsTable, EsForm,  useDialog } from 'es-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const selectDialog = useDialog()
 const editDialog = useDialog()
@@ -29,9 +30,8 @@ const categoryMap = {
 }
 
 const allProducts = ref([])
-const fetchProducts = async () => {
-  const res = await fetch('https://fakestoreapi.com/products')
-  allProducts.value = await res.json()
+const loadProducts = async () => {
+  allProducts.value = await fetchProducts()
 }
 
 const selectColumns = [
@@ -79,7 +79,7 @@ const addProduct = (row) => {
 }
 
 const openSelectDialog = async () => {
-  await fetchProducts()
+  await loadProducts()
   selectDialog({
     title: '选择商品',
     width: '800px',

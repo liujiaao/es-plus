@@ -32,10 +32,6 @@ const confirmDelete = () => {
         close()
       }}
     ],
-    onSubmit: (close) => {
-      ElMessage.success('删除成功')
-      close()
-    }
   })
 }
 
@@ -57,10 +53,6 @@ const confirmPublish = () => {
         close()
       }}
     ],
-    onSubmit: (close) => {
-      ElMessage.success('发布成功')
-      close()
-    }
   })
 }
 
@@ -81,10 +73,6 @@ const confirmLogout = () => {
         close()
       }}
     ],
-    onSubmit: (close) => {
-      ElMessage.success('已退出登录')
-      close()
-    }
   })
 }
 </script>

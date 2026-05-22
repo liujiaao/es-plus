@@ -69,6 +69,12 @@
         <div class="nav-title">工具</div>
         <ul class="nav-list">
           <li class="nav-item">
+            <router-link to="/ai-crud" class="nav-link">
+              <span class="nav-icon"><el-icon><MagicStick /></el-icon></span>
+              AI CRUD 生成器
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/playground" class="nav-link">
               <span class="nav-icon"><el-icon><Monitor /></el-icon></span>
               Playground
@@ -83,7 +89,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean

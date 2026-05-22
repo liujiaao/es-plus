@@ -28,6 +28,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage, ElTag, ElMessageBox, ElAlert } from 'element-plus'
 import { EsTable, EsForm,  useDialog } from 'es-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const tableRef = ref(null)
 const dialog = useDialog()
@@ -63,8 +64,7 @@ const columns = [
 
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 5 } = params || {}
-  const res = await fetch('https://fakestoreapi.com/products')
-  const all = await res.json()
+  const all = await fetchProducts()
   const total = all.length
   const start = (pageIndex - 1) * pageSize
   return { data: all.slice(start, start + pageSize), total, pageSize, pageIndex }

@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { EsForm } from 'es-plus'
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const formRef = ref()
@@ -120,7 +120,7 @@ const formItems = [
   }
 ]
 
-const configBtn = [
+const configBtn = computed(() => [
   {
     name: showMore.value ? '收起' : '更多',
     direction: 'left',
@@ -149,7 +149,7 @@ const configBtn = [
       resultVisible.value = false
     }
   }
-]
+])
 
 const layoutProps = {
   fromLayProps: { labelWidth: '80px', size: 'small', minFoldRows: 4, btnColSpan: 24 },

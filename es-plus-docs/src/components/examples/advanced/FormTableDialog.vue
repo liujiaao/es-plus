@@ -21,6 +21,7 @@
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElTag, ElMessageBox } from 'element-plus'
 import { EsTable, EsForm,  useDialog } from 'es-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const queryFormRef = ref(null)
 const tableRef = ref(null)
@@ -119,8 +120,7 @@ const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
   const { pageIndex = 1, pageSize = 5, keyword, category, priceRange } = { ...formParams, ...rest }
 
-  const res = await fetch('https://fakestoreapi.com/products')
-  let filtered = await res.json()
+  let filtered = await fetchProducts()
 
   if (keyword) {
     filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
@@ -152,8 +152,6 @@ const tableOptions = {
   tabHeight: 350,
   // showHeaderBar: false
 }
-
-const selectedRows = ref([])
 
 const handleDelete = async (row) => {
   try {

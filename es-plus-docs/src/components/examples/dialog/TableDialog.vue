@@ -8,6 +8,7 @@
 import { ref } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
 import { EsTable,  useDialog } from 'es-plus'
+import { fetchProducts } from '@/utils/mock-api'
 
 const dialog = useDialog()
 const selectedProducts = ref([])
@@ -39,8 +40,7 @@ const columns = [
 
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 5 } = params || {}
-  const res = await fetch('https://fakestoreapi.com/products')
-  const allData = await res.json()
+  const allData = await fetchProducts()
   const total = allData.length
   const start = (pageIndex - 1) * pageSize
   return { data: allData.slice(start, start + pageSize), total, pageSize, pageIndex }
@@ -89,9 +89,6 @@ const openProductPicker = () => {
         icon: 'Check',
         click: (instance, { close, getRefs }) => {
           const refFromGetRefs = getRefs('tableRef')
-          console.log('getRefs("tableRef"):', instance)
-          console.log('closure tableInstance:', tableInstance)
-
           const tableRef = tableInstance || refFromGetRefs
           const selection = tableRef?.getSelectionRows?.() || []
           if (!selection.length) {

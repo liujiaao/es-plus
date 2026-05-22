@@ -54,7 +54,7 @@ const openCustomHeaderFooter = () => {
         </div>
       </div>
     ),
-    isHiddeFooter: true
+    isHiddenFooter: true
   })
 }
 

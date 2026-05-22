@@ -6,7 +6,7 @@
 
 <script setup lang="jsx">
 import { ref, computed } from 'vue'
-import { ElMessage, ElSteps, ElStep, ElResult } from 'element-plus'
+import { ElMessage, ElSteps, ElStep, ElResult, ElButton } from 'element-plus'
 import { EsForm,  useDialog } from 'es-plus'
 
 const dialog = useDialog()
@@ -88,30 +88,32 @@ const openStepDialog = () => {
         }
       </div>
     ),
-    configBtn: computed(() => {
-      if (isDone.value) return [{ name: '完成', type: 'primary', click: (_, { close }) => close() }]
-      const btns = []
-      if (currentStep.value > 0) btns.push({ name: '上一步', click: () => { currentStep.value--; formRef?.clearValidate() } })
-      btns.push({
-        name: isLastStep.value ? '提交创建' : '下一步',
-        type: 'primary',
-        icon: isLastStep.value ? 'Check' : 'ArrowRight',
-        click: () => {
-          formRef?.validate()
-            .then(() => {
-              if (isLastStep.value) {
-                isDone.value = true
-                ElMessage.success('项目创建成功')
-              } else {
-                currentStep.value++
-                formRef?.clearValidate()
-              }
-            })
-            .catch(() => {})
+    isHiddenFooter: true,
+    renderFooter: (h, { close }) => (
+      <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 10px 20px; width: 100%">
+        {isDone.value
+          ? <ElButton type="primary" onClick={() => close()}>完成</ElButton>
+          : [
+              currentStep.value > 0 && <ElButton onClick={() => { currentStep.value--; formRef?.clearValidate() }}>上一步</ElButton>,
+              <ElButton type="primary" onClick={() => {
+                formRef?.validate()
+                  .then(() => {
+                    if (isLastStep.value) {
+                      isDone.value = true
+                      ElMessage.success('项目创建成功')
+                    } else {
+                      currentStep.value++
+                      formRef?.clearValidate()
+                    }
+                  })
+                  .catch(() => {})
+              }}>
+                {isLastStep.value ? '提交创建' : '下一步'}
+              </ElButton>
+            ]
         }
-      })
-      return btns
-    }).value
+      </div>
+    )
   })
 }
 </script>
