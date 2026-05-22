@@ -42,6 +42,7 @@ pnpm add es-plus-ui element-plus @element-plus/icons-vue
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import ESPlus from 'es-plus-ui'
+import 'es-plus-ui/dist/style.css'
 import 'element-plus/dist/index.css'
 import App from './App.vue'
 

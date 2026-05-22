@@ -2,6 +2,8 @@
 
 基于 Vue 3 + Element Plus 的企业级中后台 CRUD 组件库 — 配置化驱动表单、表格、弹窗全链路联动
 
+中文 | [English](./README.en.md)
+
 [![npm version](https://img.shields.io/npm/v/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
 [![npm downloads](https://img.shields.io/npm/dm/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
 [![license](https://img.shields.io/npm/l/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
