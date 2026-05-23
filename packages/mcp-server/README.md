@@ -328,7 +328,7 @@ function openForm(title, row = {}) {
 ## 本地开发
 
 ```bash
-git clone https://github.com/es-plus-ui/es-plus.git
+git clone https://github.com/liujiaao/es-plus.git
 cd es-plus/packages/mcp-server
 npm install
 npm run build

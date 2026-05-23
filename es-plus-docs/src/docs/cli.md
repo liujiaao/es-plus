@@ -388,5 +388,5 @@ es-plus create user-management
 ## 相关链接
 
 - [es-plus-ui 组件库](https://www.npmjs.com/package/es-plus-ui)
-- [@es-plus/mcp-server AI 集成](./mcp-server)
-- [GitHub 仓库](https://github.com/es-plus-ui/es-plus)
+- [@es-plus/mcp-server AI 集成](https://www.npmjs.com/package/@es-plus/mcp-server)
+- [GitHub 仓库](https://github.com/liujiaao/es-plus)

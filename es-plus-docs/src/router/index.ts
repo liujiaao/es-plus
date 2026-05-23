@@ -31,6 +31,11 @@ const routes: RouteRecordRaw[] = [
     path: '/ai-crud',
     name: 'ai-crud',
     component: () => import('@/views/AiCrud.vue')
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFound.vue')
   }
 ]
 

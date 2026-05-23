@@ -46,7 +46,19 @@ export {
 
 // 类型导出
 export type { CrudPageSchema, CrudAction } from './components/es-crud-page'
-export type { EsPlusOptions } from './types'
+export type {
+  FormItemOption,
+  ApiParams,
+  BtnConfig,
+  LayoutFormProps,
+  TableColumn,
+  TableOptions,
+  PaginationConfig,
+  DialogOptions,
+  EsFormInstance,
+  EsTableInstance,
+  EsPlusOptions
+} from './types'
 
 // 默认导出
 export default {
