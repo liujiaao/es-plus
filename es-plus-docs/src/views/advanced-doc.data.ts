@@ -117,7 +117,8 @@ export const docsData: Record<string, any> = {
       { key: 'dynamic-form-query', title: '动态表单查询', description: 'isHidden 函数式显隐 + 级联选项加载 + apiParams.model 自动同步，零模板代码。', component: null, code: code('advanced/13-dynamic-form-query') },
       { key: 'cascade-form-table', title: '级联表单联动表格', description: '三级级联(isHidden) + httpRequest远程数据 + triggerEvent自动查询。', component: null, code: code('advanced/14-cascade-form-table') },
       { key: 'step-import-wizard', title: '分步导入向导', description: 'useDialog多步骤：配置表单 → 预览表格 → 确认提交，configBtn动态按钮。', component: null, code: code('advanced/15-step-import-wizard') },
-      { key: 'admin-page', title: '完整后台管理页', description: '搜索表单 + 分页表格 + CRUD弹窗 + 删除确认 — 一个文件完整后台页面，覆盖 90% 中后台场景。', component: null, code: code('advanced/16-admin-page') }
+      { key: 'admin-page', title: '完整后台管理页', description: '搜索表单 + 分页表格 + CRUD弹窗 + 删除确认 — 一个文件完整后台页面，覆盖 90% 中后台场景。', component: null, code: code('advanced/16-admin-page') },
+      { key: 'crud-page', title: 'EsCrudPage 一键 CRUD', description: 'EsCrudPage 组件：一个 schema 对象即可渲染完整的查询+表格+弹窗 CRUD 页面，支持 Server-Driven UI。', component: null, code: code('advanced/17-crud-page') }
     ]
   }
 }

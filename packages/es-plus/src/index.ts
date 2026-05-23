@@ -3,10 +3,11 @@ import EsDialog from './components/es-dialog'
 import useDialog from './components/es-dialog/src/use-dialog'
 import EsForm from './components/es-form'
 import EsTable from './components/es-table'
+import EsCrudPage from './components/es-crud-page'
 import SvgIcon from './components/svg-icon'
 
 // 组件列表
-const components = [EsDialog, EsForm, EsTable, SvgIcon]
+const components = [EsDialog, EsForm, EsTable, EsCrudPage, SvgIcon]
 
 // Vue 3 插件安装函数
 const install = (app: any, options: Record<string, unknown> = {}) => {
@@ -37,10 +38,14 @@ export {
   EsDialog,
   EsForm,
   EsTable,
+  EsCrudPage,
   SvgIcon,
   useDialog,
   install
 }
+
+// 类型导出
+export type { CrudPageSchema, CrudAction } from './components/es-crud-page'
 
 // 默认导出
 export default {

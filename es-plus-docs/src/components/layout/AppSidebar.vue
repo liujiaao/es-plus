@@ -18,6 +18,12 @@
             <router-link to="/guide/usage" class="nav-link">使用</router-link>
           </li>
           <li class="nav-item">
+            <router-link to="/guide/mcp-server" class="nav-link">
+              <span class="nav-icon"><el-icon><MagicStick /></el-icon></span>
+              MCP Server
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/guide/migration" class="nav-link">
               <span class="nav-icon"><el-icon><Switch /></el-icon></span>
               迁移指南

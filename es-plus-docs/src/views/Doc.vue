@@ -58,6 +58,7 @@ import hljs from 'highlight.js'
 import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
+import mcpServerMd from '@/docs/mcp-server.md?raw'
 import migrationMd from '@/docs/migration.md?raw'
 
 const route = useRoute()
@@ -82,6 +83,7 @@ const docsData = {
   'getting-started': { title: '快速开始', content: gettingStartedMd },
   'installation': { title: '安装', content: installationMd },
   'usage': { title: '使用', content: usageMd },
+  'mcp-server': { title: 'MCP Server', content: mcpServerMd },
   'migration': { title: '迁移指南', content: migrationMd }
 }
 
