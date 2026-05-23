@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://es-plus-ui.github.io/schemas/index.schema.json",
+  "title": "ES-Plus UI Configuration Schema",
+  "description": "Complete JSON Schema for es-plus-ui component library configuration. Covers EsForm, EsTable, useDialog, and shared types.",
+  "definitions": {
+    "FormItemOption": {
+      "$ref": "form-item.schema.json"
+    },
+    "TableColumn": {
+      "$ref": "table-column.schema.json"
+    },
+    "TableOptions": {
+      "$ref": "table-options.schema.json"
+    },
+    "BtnConfig": {
+      "$ref": "btn-config.schema.json"
+    },
+    "DialogOptions": {
+      "$ref": "dialog-options.schema.json"
+    },
+    "ApiParams": {
+      "$ref": "api-params.schema.json"
+    },
+    "FormItemList": {
+      "type": "array",
+      "description": "Array of form field configurations",
+      "items": { "$ref": "form-item.schema.json" }
+    },
+    "TableColumnList": {
+      "type": "array",
+      "description": "Array of table column configurations",
+      "items": { "$ref": "table-column.schema.json" }
+    },
+    "PaginationConfig": {
+      "type": "object",
+      "description": "Pagination configuration",
+      "properties": {
+        "pageSize": {
+          "type": "integer",
+          "default": 10,
+          "description": "Number of items per page"
+        },
+        "current": {
+          "type": "integer",
+          "default": 1,
+          "description": "Current page number"
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total number of records"
+        },
+        "pageSizes": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "description": "Available page size options"
+        },
+        "size": {
+          "type": "string",
+          "enum": ["large", "default", "small"],
+          "default": "small"
+        },
+        "isSmall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use compact pagination style"
+        }
+      }
+    }
+  }
+}

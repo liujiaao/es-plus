@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../src/prompts/index.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,sBAAsB,EAAE,MAAM,gBAAgB,CAAC;AACxD,OAAO,EAAE,wBAAwB,EAAE,MAAM,kBAAkB,CAAC;AAE5D,MAAM,UAAU,eAAe,CAAC,MAAiB;IAC/C,sBAAsB,CAAC,MAAM,CAAC,CAAC;IAC/B,wBAAwB,CAAC,MAAM,CAAC,CAAC;AACnC,CAAC"}
