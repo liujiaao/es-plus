@@ -1,31 +1,30 @@
 <template>
   <!-- 分组列处理 -->
   <el-table-column v-if="cols.groups && Array.isArray(cols.groups)" v-bind="columnBindAttr(cols)">
-    <template v-for="(item, index) in cols.groups" :key="item.prop || item.key || index">
-      <el-table-column v-if="item.render && typeof item.render === 'function'" v-bind="columnBindAttr({ ...item, columnIndex: index })">
-        <template #default="scope">
-          <render-dom-tb
-            v-if="scope && scope.row"
-            :row="scope.row"
-            :index="scope.$index"
-            :data-key="item.key"
-            :render="item.render"
-          />
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-      <el-table-column v-else-if="item.scopedSlots && item.scopedSlots.customRender" v-bind="columnBindAttr({ ...item, columnIndex: index })">
-        <template #default="scope">
-          <slot
-            v-if="scope && scope.row"
-            v-bind="{ ...item, row: scope.row, column: scope.column, scope: scope }"
-            :name="item.scopedSlots.customRender"
-          />
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-      <el-table-column v-else v-bind="columnBindAttr({ ...item, columnIndex: index })" />
-    </template>
+    <el-table-column
+      v-for="(item, index) in cols.groups"
+      :key="item.prop || item.key || index"
+      v-bind="columnBindAttr({ ...item, columnIndex: index })"
+    >
+      <template v-if="item.render && typeof item.render === 'function'" #default="scope">
+        <render-dom-tb
+          v-if="scope && scope.row"
+          :row="scope.row"
+          :index="scope.$index"
+          :data-key="item.key"
+          :render="item.render"
+        />
+        <span v-else>-</span>
+      </template>
+      <template v-else-if="item.scopedSlots && item.scopedSlots.customRender" #default="scope">
+        <slot
+          v-if="scope && scope.row"
+          v-bind="{ ...item, row: scope.row, column: scope.column, scope: scope }"
+          :name="item.scopedSlots.customRender"
+        />
+        <span v-else>-</span>
+      </template>
+    </el-table-column>
   </el-table-column>
 
   <!-- 自定义渲染函数列 -->
