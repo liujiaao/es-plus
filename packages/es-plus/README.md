@@ -17,7 +17,10 @@
 - **自适应高度** — `ResizeObserver` 自动重算表格高度，表单展开/收起自动响应
 - **跨页选择** — `rowkey` + `cachePageSelection` 解决分页选择丢失痛点
 - **任意后端适配** — `configTableOut` + `qrcb` 配置化适配不同后端响应格式
-- **TypeScript** — 完整类型定义
+- **权限控制** — `permissionValue` 声明式按钮权限，无需 v-if
+- **国际化** — `labelKey` + 自定义翻译函数，兼容任意 i18n 方案
+- **TypeScript** — 完整类型定义，11 个核心接口可导入
+- **AI 原生支持** — 配套 [@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server) 和 [@es-plus/cli](https://www.npmjs.com/package/@es-plus/cli)
 - **13 种表单类型** — Input、Select、datePicker、timePicker、Slider、ColorPicker、Transfer、Cascader、Radio、Checkbox、Switch、Rate、Upload
 
 ## 为什么选择 es-plus-ui？
@@ -187,7 +190,7 @@ const items = [
 ]
 const btns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'reset', triggerEvent: true }
+  { name: '重置', key: 'rest', triggerEvent: true }
 ]
 </script>
 ```
@@ -347,7 +350,7 @@ function openAddDialog() {
 | click | `(model, formRef, httpRequestInstance?) => void` | 点击回调 |
 | triggerEvent | `boolean` | `true` 时自动触发表格查询/表单重置 |
 
-> `triggerEvent: true` + `key: 'query'` → 自动调用父级 EsTable 的 `httpRequestInstance`；`triggerEvent: true` + `key: 'reset'` → 自动重置表单。
+> `triggerEvent: true` + `key: 'query'` → 自动调用父级 EsTable 的 `httpRequestInstance`；`triggerEvent: true` + `key: 'rest'` → 自动重置表单。
 
 ### Events
 
@@ -901,7 +904,7 @@ const queryItems = [
 ]
 const queryBtns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'reset', triggerEvent: true }
+  { name: '重置', key: 'rest', triggerEvent: true }
 ]
 const tableOptions = {
   httpRequest: mockRequest,
@@ -910,7 +913,7 @@ const tableOptions = {
 }
 ```
 
-> `triggerEvent: true` + `key: 'query'` → EsForm 自动调用父级 EsTable 的 `httpRequestInstance`；`key: 'reset'` → 自动重置表单。
+> `triggerEvent: true` + `key: 'query'` → EsForm 自动调用父级 EsTable 的 `httpRequestInstance`；`key: 'rest'` → 自动重置表单。
 
 ### CRUD 弹窗
 
@@ -1042,7 +1045,127 @@ const handleSelectionChange = (rows) => {
 
 ---
 
+## 权限控制
+
+安装时配置权限函数，按钮自动按权限显隐，无需 v-if：
+
+```typescript
+app.use(ESPlus, {
+  permission: (value) => userPermissions.includes(value)
+})
+```
+
+在任意 `BtnConfig` 中声明 `permissionValue`：
+
+```typescript
+const btns = [
+  { name: '新增', type: 'primary', permissionValue: 'user:add', click: () => add() },
+  { name: '删除', type: 'danger', permissionValue: 'user:delete', click: (row) => del(row) }
+]
+// 用户无 'user:delete' 权限时，删除按钮自动隐藏
+```
+
+适用于 EsForm `configBtn`、EsTable `configBtn`、表格列 `btns`、useDialog `configBtn`。
+
+---
+
+## 国际化（i18n）
+
+安装时配置翻译函数，兼容任意 i18n 库：
+
+```typescript
+app.use(ESPlus, {
+  t: (key) => i18n.global.t(key)
+})
+```
+
+表单项和表格列使用 `labelKey` 字段：
+
+```typescript
+const formItems = [
+  { prop: 'name', label: '姓名', labelKey: 'form.name', formtype: 'Input' }
+]
+const columns = [
+  { prop: 'name', label: '姓名', labelKey: 'table.name' }
+]
+// 有 labelKey 且配置了 t 函数时，使用 t(labelKey)；否则回退到 label
+```
+
+---
+
+## EsCrudPage — 一键 CRUD 页面
+
+传入 Schema 即可生成完整的查询表单 + 数据表格 + 弹窗编辑页面：
+
+```vue
+<template>
+  <es-crud-page :schema="schema" :http-request="fetchList" />
+</template>
+
+<script setup>
+const schema = {
+  formItems: [
+    { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
+    { prop: 'status', label: '状态', formtype: 'Select', span: 6,
+      dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }
+  ],
+  columns: [
+    { prop: 'name', label: '姓名' },
+    { prop: 'status', label: '状态' }
+  ],
+  actions: ['add', 'edit', 'delete']
+}
+</script>
+```
+
+```typescript
+import type { CrudPageSchema, CrudAction } from 'es-plus-ui'
+```
+
+---
+
+## AI 工具链
+
+ES-Plus 配套两个官方 AI 工具，支持自然语言生成完整 CRUD 页面：
+
+### @es-plus/mcp-server
+
+让 Claude Code、Cursor 等 AI 编码工具直接调用 CRUD 生成能力：
+
+```bash
+claude mcp add es-plus -- npx -y @es-plus/mcp-server
+```
+
+在 AI 对话中直接说"生成一个用户管理页面"，AI 自动调用 MCP Server 生成完整 .vue 文件。
+
+详见：[@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server)
+
+### @es-plus/cli
+
+终端生成 CRUD 页面、校验配置、生成脚手架：
+
+```bash
+npx @es-plus/cli create user-management
+npx @es-plus/cli validate ./config.json --schema form-item
+npx @es-plus/cli scaffold dashboard --features query,table,dialog
+```
+
+详见：[@es-plus/cli](https://www.npmjs.com/package/@es-plus/cli)
+
+---
+
 ## 更新日志
+
+### v1.2.0
+
+- 导出全部 TypeScript 类型定义（FormItemOption、TableColumn 等 11 个核心接口）
+- 新增 EsCrudPage 一键 CRUD 页面组件
+- 新增权限控制（permissionValue 声明式按钮权限）
+- 新增国际化支持（labelKey + 自定义翻译函数）
+- 新增 @es-plus/mcp-server AI 编码工具集成
+- 新增 @es-plus/cli 命令行工具
+- 修复 EsForm 按钮模板嵌套问题
+- 修复 EsDialog v-if/v-for 优先级问题
 
 ### v1.0.0
 
