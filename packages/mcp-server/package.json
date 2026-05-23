@@ -1,0 +1,57 @@
+{
+  "name": "@es-plus/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for es-plus-ui - AI coding tool integration for CRUD page generation",
+  "type": "module",
+  "bin": {
+    "mcp-server-es-plus": "./build/index.js"
+  },
+  "main": "./build/index.js",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
+    }
+  },
+  "files": [
+    "build",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "es-plus",
+    "vue3",
+    "crud",
+    "ai-coding",
+    "element-plus"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/mcp-server"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ajv": "^8.12.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}

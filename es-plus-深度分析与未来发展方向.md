@@ -7,6 +7,7 @@
 - [三、AI 编程时代的价值审视](#三ai-编程时代的价值审视)
 - [四、未来发展方向与路线图](#四未来发展方向与路线图)
 - [五、行动建议与优先级排序](#五行动建议与优先级排序)
+- [附录 B：@es-plus/mcp-server 使用指南](#附录-bes-plusmcp-server-使用指南)
 
 ---
 
@@ -417,7 +418,7 @@ const pageConfig = {
 | **LLM 友好文档** | 为每个配置项提供结构化的 JSON Schema 定义 + 丰富示例 | P0 |
 | **配置 Schema 导出** | 导出 FormItemOption / TableColumn / TableOptions 的 JSON Schema，供 AI 工具校验 | P0 |
 | **AI Prompt 模板** | 提供"用 ES-Plus 配置生成 XXX 页面"的标准 Prompt | P1 |
-| **MCP Server** | 开发 ES-Plus MCP Server，让 Claude Code 等 AI 工具可以直接查询 API 文档 | P1 |
+| **MCP Server** ✅ | `@es-plus/mcp-server` 已发布，Claude Code / Cursor 一行配置即用 | P1（已完成） |
 | **VS Code 插件** | 配置项智能提示、校验、预览 | P2 |
 | **CLI 脚手架** | `npx create-es-plus-page` 一键生成 CRUD 页面 | P2 |
 
@@ -500,7 +501,7 @@ const adapters = {
 │ ● 表格内编辑 editable     │     │ ● EsPage 一体化组件       │     │ ● UI 框架适配层           │
 │ ● 表单联动验证            │     │ ● Excel/CSV 导出         │     │ ● 低代码平台集成          │
 │ ● JSON Schema 导出       │     │ ● 虚拟滚动               │     │ ● 可视化页面搭建器        │
-│ ● LLM 友好文档           │     │ ● MCP Server             │     │ ● 后端配置驱动前端渲染    │
+│ ● LLM 友好文档           │     │ ● MCP Server ✅          │     │ ● 后端配置驱动前端渲染    │
 │ ● TypeScript 类型完善    │     │ ● EsDescription 组件     │     │ ● 行业配置标准推广        │
 │ ● EsTreeSelect 组件      │     │ ● 表单分组/步骤配置       │     │                          │
 └──────────────────────────┘     └──────────────────────────┘     └──────────────────────────┘
@@ -533,7 +534,7 @@ const adapters = {
 | 序号 | 行动 | 理由 |
 |------|------|------|
 | 8 | 开发 EsPage 一体化组件 | 从组件库升级为页面引擎的关键产品 |
-| 9 | 开发 MCP Server | 让 Claude Code 等原生支持 ES-Plus 配置生成 |
+| 9 | ✅ ~~开发 MCP Server~~ | 已完成：`@es-plus/mcp-server` 支持 5 个 Tools + 6 个 Resources + 2 个 Prompts |
 | 10 | 集成虚拟滚动 | 大数据量表格的刚需，弥补与 Vxe-table 的差距 |
 | 11 | 重构 useFormInputs 为适配器模式 | 为多 UI 框架支持打下架构基础 |
 
@@ -580,4 +581,187 @@ const adapters = {
 
 ---
 
-*文档版本：v1.0 | 生成日期：2026-05-14 | 基于 ES-Plus 1.0.0 源码分析*
+---
+
+## 附录 B：@es-plus/mcp-server 使用指南
+
+### 概述
+
+`@es-plus/mcp-server` 是 ES-Plus 的 MCP (Model Context Protocol) Server，让 AI 编码工具（Claude Code、Cursor、Continue、Windsurf 等）一行配置即可获得 ES-Plus CRUD 页面生成能力。
+
+AI 工具通过 MCP 协议与该 Server 通信，可以：
+- 从自然语言生成完整 `.vue` CRUD 页面
+- 校验 ES-Plus JSON 配置的正确性
+- 查询组件 API 文档和可用字段类型
+- 生成空白页面脚手架
+
+### 安装与配置
+
+#### Claude Code
+
+在项目根目录创建 `.claude/settings.json`：
+
+```jsonc
+{
+  "mcpServers": {
+    "es-plus": {
+      "command": "npx",
+      "args": ["-y", "@es-plus/mcp-server"]
+    }
+  }
+}
+```
+
+#### Cursor
+
+在项目根目录创建 `.cursor/mcp.json`：
+
+```jsonc
+{
+  "mcpServers": {
+    "es-plus": {
+      "command": "npx",
+      "args": ["-y", "@es-plus/mcp-server"]
+    }
+  }
+}
+```
+
+#### Continue
+
+在 `~/.continue/config.json` 的 `mcpServers` 中添加：
+
+```jsonc
+{
+  "mcpServers": [
+    {
+      "name": "es-plus",
+      "command": "npx",
+      "args": ["-y", "@es-plus/mcp-server"]
+    }
+  ]
+}
+```
+
+### MCP Tools（可调用工具）
+
+| 工具名 | 输入 | 输出 | 用途 |
+|--------|------|------|------|
+| `generate_crud_page` | `{ description: "自然语言描述" }` | 完整 .vue SFC 代码 | 从描述生成 CRUD 页面 |
+| `validate_config` | `{ config: "JSON字符串", type?: "schema名" }` | 校验结果 + 修复建议 | 检查配置是否符合 Schema |
+| `list_form_types` | 无参数 | 13 种 formtype + 说明 | 查询可用表单字段类型 |
+| `get_component_api` | `{ component: "EsForm" \| "EsTable" \| "useDialog" }` | TypeScript 接口 + 用法 | 获取组件 API 文档 |
+| `scaffold_page` | `{ name: "page-name", features?: [...] }` | 最小 .vue 模板 | 生成空白页面脚手架 |
+
+### MCP Resources（可读取资源）
+
+| URI | 内容 | 用途 |
+|-----|------|------|
+| `esplus://schemas/form-item` | FormItemOption JSON Schema | IDE 校验 / AI 理解配置结构 |
+| `esplus://schemas/table-column` | TableColumn JSON Schema | 同上 |
+| `esplus://schemas/table-options` | TableOptions JSON Schema | 同上 |
+| `esplus://schemas/dialog-options` | DialogOptions JSON Schema | 同上 |
+| `esplus://schemas/btn-config` | BtnConfig JSON Schema | 同上 |
+| `esplus://schemas/api-params` | ApiParams JSON Schema | 同上 |
+| `esplus://types` | 完整 TypeScript 类型定义 | AI 理解类型系统 |
+| `esplus://examples` | 6 个预设 CRUD 示例（含完整代码） | AI 学习配置模式 |
+
+### MCP Prompts（提示模板）
+
+| Prompt 名 | 参数 | 用途 |
+|-----------|------|------|
+| `crud-page` | `description: string` | 生成完整 CRUD 页面的系统提示模板 |
+| `form-config` | `description: string` | 仅生成表单配置 JSON 的系统提示模板 |
+
+### 使用示例
+
+配置完成后，在 AI 编码工具中直接对话即可触发：
+
+**示例 1：生成完整 CRUD 页面**
+
+```
+帮我生成一个用户管理页面，查询条件有姓名、手机号、状态，
+表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除
+```
+
+AI 工具自动调用 `generate_crud_page`，返回包含查询表单、数据表格、操作按钮和弹窗表单的完整 `.vue` 文件。
+
+**示例 2：查询组件 API**
+
+```
+EsTable 的 options 配置有哪些属性？httpRequest 怎么用？
+```
+
+AI 工具调用 `get_component_api`，返回 `TableOptions` 完整接口定义和使用说明。
+
+**示例 3：校验配置**
+
+```
+帮我检查这个表单配置是否正确：
+[{ "prop": "name", "label": "姓名", "formtype": "Inputx" }]
+```
+
+AI 工具调用 `validate_config`，返回 `formtype` 值不在枚举范围内的错误和修复建议。
+
+### 架构图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AI 编码工具                                │
+│  (Claude Code / Cursor / Continue / Windsurf)               │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ MCP Protocol (stdio)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  @es-plus/mcp-server                         │
+├──────────────┬──────────────────┬───────────────────────────┤
+│   Tools (5)  │  Resources (8)   │  Prompts (2)             │
+│              │                  │                           │
+│ generate_crud│ schemas/*.json   │ crud-page                │
+│ validate     │ types            │ form-config              │
+│ list_types   │ examples         │                           │
+│ get_api      │                  │                           │
+│ scaffold     │                  │                           │
+├──────────────┴──────────────────┴───────────────────────────┤
+│                      Core Engine                            │
+│                                                             │
+│  crud-engine.ts  ─── 自然语言 → 配置对象                     │
+│  code-generator.ts ─── 配置对象 → .vue SFC 代码              │
+│  schema-validator.ts ─── JSON Schema 校验 (Ajv)             │
+│  constants.ts ─── FormType 定义、预设示例                    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼ 输出
+┌─────────────────────────────────────────────────────────────┐
+│  .vue SFC 文件（可直接粘贴到项目中运行）                       │
+│  ─ <es-table> + <es-form> + useDialog()                     │
+│  ─ 查询表单 + 数据表格 + 操作按钮 + 新增/编辑弹窗             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 本地开发
+
+```bash
+# 克隆仓库后
+cd packages/mcp-server
+npm install
+npm run build
+
+# 本地测试启动
+node build/index.js
+
+# 本地配置使用（替换 npx 方式）
+# .claude/settings.json
+{
+  "mcpServers": {
+    "es-plus": {
+      "command": "node",
+      "args": ["./packages/mcp-server/build/index.js"]
+    }
+  }
+}
+```
+
+---
+
+*文档版本：v1.1 | 更新日期：2026-05-23 | 基于 ES-Plus 1.0.4 + @es-plus/mcp-server 1.0.0*

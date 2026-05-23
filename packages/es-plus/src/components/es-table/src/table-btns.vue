@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { computed, h, inject } from 'vue'
 import { ElButton } from 'element-plus'
 
 const props = defineProps<{
@@ -55,8 +55,12 @@ RenderDom.props = {
   render: { type: Function, required: true }
 }
 
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+
 const hasPermission = (_btnList: unknown[], pvalue?: string) => {
   if (!pvalue) return true
+  const permFn = esPlus.permission
+  if (typeof permFn === 'function') return (permFn as (v: string) => boolean)(pvalue)
   return true
 }
 

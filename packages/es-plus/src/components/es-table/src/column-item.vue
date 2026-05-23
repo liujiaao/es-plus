@@ -61,13 +61,15 @@
 </template>
 
 <script setup lang="ts">
-import { h, defineComponent } from 'vue'
+import { h, defineComponent, inject } from 'vue'
 import { ElTableColumn } from 'element-plus'
 import type { TableColumn } from '../../../types'
 
 const props = defineProps<{
   cols: TableColumn
 }>()
+
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
 
 // 函数式组件定义
 const RenderDomTb = defineComponent({
@@ -113,6 +115,8 @@ const columnBindAttr = (cols: TableColumn) => {
     } else if (t === 'key') {
       options.prop = cols[t]
       options[t] = cols[t]
+    } else if (t === 'label' && cols.labelKey && typeof esPlus.t === 'function') {
+      options.label = (esPlus.t as (k: string) => string)(cols.labelKey)
     } else {
       options[t] = cols[t]
     }

@@ -134,6 +134,7 @@ import AdvancedDynamicFormQuery from '@/components/examples/advanced/DynamicForm
 import AdvancedCascadeFormTable from '@/components/examples/advanced/CascadeFormTable.vue'
 import AdvancedStepImportWizard from '@/components/examples/advanced/StepImportWizard.vue'
 import AdvancedAdminPage from '@/components/examples/advanced/AdminPage.vue'
+import AdvancedCrudPage from '@/components/examples/advanced/CrudPage.vue'
 
 const route = useRoute()
 
@@ -162,7 +163,8 @@ const linkageComponents: Record<string, any> = {
   'conditional-btns': AdvancedConditionalBtns, 'dialog-table-form': AdvancedDialogTableForm,
   'dynamic-form-query': AdvancedDynamicFormQuery, 'cascade-form-table': AdvancedCascadeFormTable,
   'step-import-wizard': AdvancedStepImportWizard,
-  'admin-page': AdvancedAdminPage
+  'admin-page': AdvancedAdminPage,
+  'crud-page': AdvancedCrudPage
 }
 
 docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })

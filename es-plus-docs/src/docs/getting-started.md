@@ -57,7 +57,7 @@ const formItems = [
 
 const btns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'reset', triggerEvent: true }
+  { name: '重置', key: 'rest', triggerEvent: true }
 ]
 
 const handleConfirm = ({ key, model }) => {
@@ -106,7 +106,7 @@ const formItems = [
 ]
 const btns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'reset', triggerEvent: true }
+  { name: '重置', key: 'rest', triggerEvent: true }
 ]
 
 const columns = [

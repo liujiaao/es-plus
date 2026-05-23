@@ -1,6 +1,6 @@
 {
   "name": "es-plus-ui",
-"version": "1.0.4",
+  "version": "1.2.0",
   "description": "基于 Vue 3 和 Element Plus 的企业级中后台前端组件库",
   "type": "module",
   "main": "./dist/es-plus.umd.cjs",
@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "build": "vite build",
-    "prepublishOnly": "echo 'Skipping build, already built'",
+    "prepublishOnly": "npm run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
@@ -46,8 +46,17 @@
     "json-schema",
     "ai-friendly"
   ],
-  "author": "",
+  "author": "liujiaao <303363554@qq.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/es-plus"
+  },
+  "homepage": "https://liujiaao.github.io/es-plus/",
+  "bugs": {
+    "url": "https://github.com/liujiaao/es-plus/issues"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

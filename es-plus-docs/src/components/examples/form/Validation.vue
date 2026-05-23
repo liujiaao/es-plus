@@ -60,9 +60,13 @@ const configBtn = [
     direction: 'right',
     icon: 'Check',
     click: async (model, formRef) => {
-     // ElMessage.success('验证通过，表单提交成功！')
-       await formRef.validate()
-      console.log('提交的表单数据:', model)
+      try {
+        await formRef.validate()
+        ElMessage.success('验证通过，表单提交成功！')
+        console.log('提交的表单数据:', model)
+      } catch {
+        ElMessage.warning('请检查表单填写是否正确')
+      }
     }
   },
   {
