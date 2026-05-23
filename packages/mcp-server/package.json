@@ -7,6 +7,12 @@
     "mcp-server-es-plus": "./build/index.js"
   },
   "main": "./build/index.js",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
+    }
+  },
   "files": [
     "build",
     "schemas"
@@ -27,6 +33,14 @@
     "element-plus"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/es-plus-ui/es-plus.git",
+    "directory": "packages/mcp-server"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

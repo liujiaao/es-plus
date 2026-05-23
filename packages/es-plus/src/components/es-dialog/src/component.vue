@@ -46,26 +46,27 @@
             <RenderJsx :render="props.renderFooter" :instance="getCurrentInstanceModel" />
           </template>
           <template v-else-if="props.configBtn && props.configBtn.length">
-            <el-button
-              v-for="(it, inx) in configBtn"
-              size="small"
-              v-bind="filterOptions(it)"
-              :icon="getCompIcon(it.icon)"
-              :disabled="typeof it.disabled === 'function' ? it.disabled() : it.disabled || false"
-              @click="() => {
-                it.click?.(renderBodyRefsObject.currentRef, {
-                  close: handleClose,
-                  getRefs: (name?: string) => {
-                    if (name) return renderBodyRefsObject[name] || null
-                    return renderBodyRefsObject
-                  },
-                  dialogInstance
-                })
-              }"
-              :key="it.key || inx"
-            >
-              {{ it.name }}
-            </el-button>
+            <template v-for="(it, inx) in configBtn" :key="it.key || inx">
+              <el-button
+                v-if="checkPermission(it.permissionValue)"
+                size="small"
+                v-bind="filterOptions(it)"
+                :icon="getCompIcon(it.icon)"
+                :disabled="typeof it.disabled === 'function' ? it.disabled() : it.disabled || false"
+                @click="() => {
+                  it.click?.(renderBodyRefsObject.currentRef, {
+                    close: handleClose,
+                    getRefs: (name?: string) => {
+                      if (name) return renderBodyRefsObject[name] || null
+                      return renderBodyRefsObject
+                    },
+                    dialogInstance
+                  })
+                }"
+              >
+                {{ it.name }}
+              </el-button>
+            </template>
           </template>
         </span>
         <slot v-else name="footer" />
@@ -121,6 +122,14 @@ const renderBodyRefsObject = reactive<Record<string, any>>({})
 const isFullscreen = ref(false)
 const dialogInstance = instance
 const locale = ref(zhCn)
+
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+
+const checkPermission = (pvalue?: string): boolean => {
+  if (!pvalue) return true
+  const fn = esPlus.permission
+  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+}
 
 const injectedLocale = inject('elLocale', null)
 if (injectedLocale) {

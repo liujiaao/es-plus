@@ -24,6 +24,18 @@
             </router-link>
           </li>
           <li class="nav-item">
+            <router-link to="/guide/cli" class="nav-link">
+              <span class="nav-icon"><el-icon><Monitor /></el-icon></span>
+              CLI 工具
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/guide/permission-i18n" class="nav-link">
+              <span class="nav-icon"><el-icon><Lock /></el-icon></span>
+              权限与国际化
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/guide/migration" class="nav-link">
               <span class="nav-icon"><el-icon><Switch /></el-icon></span>
               迁移指南
@@ -95,7 +107,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean

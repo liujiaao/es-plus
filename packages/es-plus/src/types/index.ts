@@ -4,6 +4,7 @@ import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 export interface FormItemOption {
   prop: string
   label: string
+  labelKey?: string
   formtype?: 'Input' | 'Select' | 'datePicker' | 'timePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
   attrs?: Record<string, unknown>
@@ -41,6 +42,7 @@ export interface BtnConfig {
   direction?: 'left' | 'right'
   loading?: boolean
   disabled?: boolean | (() => boolean)
+  permissionValue?: string
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
   [key: string]: unknown
 }
@@ -60,6 +62,7 @@ export interface TableColumn {
   prop?: string
   key?: string
   label?: string
+  labelKey?: string
   width?: number | string
   minWidth?: number | string
   align?: string
@@ -137,4 +140,11 @@ export interface EsTableInstance {
   toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
   clearAllSelection: () => void
   refresh: () => void
+}
+
+export interface EsPlusOptions {
+  permission?: (value: string) => boolean
+  t?: (key: string) => string
+  globalProperties?: boolean
+  [key: string]: unknown
 }

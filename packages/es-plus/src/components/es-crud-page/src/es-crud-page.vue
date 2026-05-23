@@ -88,7 +88,7 @@ const mergedQueryBtns = computed<BtnConfig[]>(() => {
 
   const btns: BtnConfig[] = [
     { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-    { name: '重置', key: 'reset', triggerEvent: true },
+    { name: '重置', key: 'rest', triggerEvent: true },
   ]
   if (actions.value.includes('add')) {
     btns.push({
@@ -136,12 +136,21 @@ const mergedColumns = computed<TableColumn[]>(() => {
   return cols
 })
 
-const mergedOptions = computed(() => ({
-  border: true,
-  isInitRun: props.autoLoad,
-  ...(props.schema.tableOptions || {}),
-  ...(props.httpRequest ? { httpRequest: props.httpRequest } : {})
-}))
+const mergedOptions = computed(() => {
+  const base: Record<string, unknown> = {
+    border: true,
+    isInitRun: props.autoLoad,
+    ...(props.schema.tableOptions || {})
+  }
+  if (props.httpRequest) {
+    base.httpRequest = props.httpRequest
+  }
+  const hasHttp = base.httpRequest && typeof base.httpRequest === 'function'
+  if (hasHttp && !base.apiParams && !base.actionUrl) {
+    base.apiParams = { url: '/crud-page', method: 'GET' }
+  }
+  return base
+})
 
 function handleAdd() {
   if (props.schema.dialogFormItems?.length) {

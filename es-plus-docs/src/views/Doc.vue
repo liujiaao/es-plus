@@ -59,14 +59,18 @@ import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
 import mcpServerMd from '@/docs/mcp-server.md?raw'
+import cliMd from '@/docs/cli.md?raw'
+import permissionI18nMd from '@/docs/permission-i18n.md?raw'
 import migrationMd from '@/docs/migration.md?raw'
 
 const route = useRoute()
 
+hljs.configure({ ignoreUnescapedHTML: true })
+
 // 初始化 markdown-it
 const md = new MarkdownIt({
   html: true,
-  linkify: true,
+  linkify: false,
   typographer: true,
   highlight: (str, lang) => {
     if (lang && hljs.getLanguage(lang)) {
@@ -84,6 +88,8 @@ const docsData = {
   'installation': { title: '安装', content: installationMd },
   'usage': { title: '使用', content: usageMd },
   'mcp-server': { title: 'MCP Server', content: mcpServerMd },
+  'cli': { title: 'CLI 工具', content: cliMd },
+  'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },
   'migration': { title: '迁移指南', content: migrationMd }
 }
 

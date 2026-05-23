@@ -40,7 +40,8 @@ const pageSchema = {
   tableOptions: {
     border: true,
     multiSelect: true,
-    configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' }
+    configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },
+    rowkey: 'id'
   },
   dialogFormItems: [
     { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },

@@ -154,6 +154,13 @@ if (injectedLocale) {
 
 const instance = getCurrentInstance() || {}
 const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+
+const checkPermission = (pvalue?: string): boolean => {
+  if (!pvalue) return true
+  const fn = esPlus.permission
+  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+}
 
 // Refs
 const tableRef = ref<any>(null)
@@ -298,7 +305,8 @@ const filteredColumns = computed(() => {
     if ((el.prop === 'operate' || el.key === 'operate') && el.btns && !el.render) {
       el.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
         return h('div', [
-          el.btns?.map((btn: any) =>
+          el.btns?.filter((btn: any) => checkPermission(btn.permissionValue))
+            .map((btn: any) =>
             h(ElButton, {
               onClick: () => btn.clickEvent?.(row),
               text: true,

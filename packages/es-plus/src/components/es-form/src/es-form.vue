@@ -5,7 +5,7 @@
         <template v-for="(item, index) in formItem" :key="item.prop">
           <el-col v-show="!item?.isFold" :span="item.span || 6">
             <el-form-item
-              :label="item.label"
+              :label="translateLabel(item)"
               v-bind="initFormItemOptions(item.formItemOptions || {})"
               :prop="item.prop"
               @click.stop="() => {}"
@@ -33,30 +33,32 @@
             <div v-if="btnColSpanRow && configBtn.length" class="buttonOperate leftRightBtn">
               <div class="btn-left">
                 <el-form-item label-width="0px" class="btn-formItem">
-                  <el-button
-                    v-for="(it, inx) in colRightLeftList.colLeftBtn"
-                    v-bind="filterOptions(it)"
-                    :icon="getCompIcon(it.icon)"
-                    :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                    @click="() => it.click(model, refs, getTableInstant?.httpRequestInstance)"
-                    :key="it.key || inx"
-                  >
-                    {{ it.name }}
-                  </el-button>
+                  <template v-for="(it, inx) in colRightLeftList.colLeftBtn" :key="it.key || inx">
+                    <el-button
+                      v-if="checkPermission(it.permissionValue)"
+                      v-bind="filterOptions(it)"
+                      :icon="getCompIcon(it.icon)"
+                      :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
+                      @click="() => it.click(model, refs, getTableInstant?.httpRequestInstance)"
+                    >
+                      {{ it.name }}
+                    </el-button>
+                  </template>
                 </el-form-item>
               </div>
               <div class="btn-right">
                 <el-form-item label-width="0px" class="btn-formItem">
-                  <el-button
-                    v-for="(it, inx) in colRightLeftList.colRightBtn"
-                    v-bind="filterOptions(it)"
-                    :icon="getCompIcon(it.icon)"
-                    :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                    @click="() => clickBtn(it)"
-                    :key="it.key || inx"
-                  >
-                    {{ it.name }}
-                  </el-button>
+                  <template v-for="(it, inx) in colRightLeftList.colRightBtn" :key="it.key || inx">
+                    <el-button
+                      v-if="checkPermission(it.permissionValue)"
+                      v-bind="filterOptions(it)"
+                      :icon="getCompIcon(it.icon)"
+                      :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
+                      @click="() => clickBtn(it)"
+                    >
+                      {{ it.name }}
+                    </el-button>
+                  </template>
                   <el-button
                     v-if="isFold"
                     link
@@ -94,16 +96,17 @@
             >
               <div class="buttonOperate" :style="{ 'text-align': getBtnColSpan === 24 ? 'right' : 'left' }">
                 <template v-if="configBtn.length">
-                  <el-button
-                    v-for="(it, inx) in configBtn"
-                    v-bind="filterOptions(it)"
-                    :icon="getCompIcon(it.icon)"
-                    :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                    @click="() => it?.click(model, refs, getTableInstant?.httpRequestInstance)"
-                    :key="it.key || inx"
-                  >
-                    {{ it.name }}
-                  </el-button>
+                  <template v-for="(it, inx) in configBtn" :key="it.key || inx">
+                    <el-button
+                      v-if="checkPermission(it.permissionValue)"
+                      v-bind="filterOptions(it)"
+                      :icon="getCompIcon(it.icon)"
+                      :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
+                      @click="() => it?.click(model, refs, getTableInstant?.httpRequestInstance)"
+                    >
+                      {{ it.name }}
+                    </el-button>
+                  </template>
                 </template>
                 <el-button
                   v-if="isFold"
@@ -194,6 +197,20 @@ const emit = defineEmits<{
 
 const instance = getCurrentInstance()
 const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+
+const checkPermission = (pvalue?: string): boolean => {
+  if (!pvalue) return true
+  const fn = esPlus.permission
+  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+}
+
+const translateLabel = (item: FormItemOption): string => {
+  if (item.labelKey && typeof esPlus.t === 'function') {
+    return (esPlus.t as (k: string) => string)(item.labelKey)
+  }
+  return item.label
+}
 
 // 保留与 Table 的耦合（同时支持 inject 和 instance.ctx 两种获取方式）
 const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)

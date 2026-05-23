@@ -46,6 +46,7 @@ export {
 
 // 类型导出
 export type { CrudPageSchema, CrudAction } from './components/es-crud-page'
+export type { EsPlusOptions } from './types'
 
 // 默认导出
 export default {
