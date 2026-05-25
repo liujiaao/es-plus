@@ -78,21 +78,93 @@ import { EsForm } from 'es-plus-ui'
 按需引入时仍需确保 Element Plus 已全局注册或按需导入其基础组件（如 ElInput、ElSelect 等），ES-Plus 内部依赖这些组件。
 :::
 
-## Vite 配置
+## 自动导入（unplugin-vue-components）
 
-如果使用子路径导入（如 `import EsForm from 'es-plus-ui/components/es-form'`），需要在 `vite.config.ts` 中配置别名：
+如果你的项目使用 `unplugin-vue-components` + `ElementPlusResolver` 做按需自动导入，**必须额外配置 `EsPlusResolver`**，否则 es-plus 内部依赖的 Element Plus 组件样式不会被注入。
+
+### 为什么需要 EsPlusResolver？
+
+`ElementPlusResolver` 只扫描你自己 `.vue` 模板中的 `<el-xxx>` 标签。es-plus 是预编译的第三方包，它内部使用的 `<el-table>`、`<el-form>`、`<el-pagination>` 等组件存在于已编译的 JS bundle 中，resolver 扫描不到它们，导致对应的 Element Plus 样式不会被注入。
+
+### 安装配置
+
+```bash
+npm install -D unplugin-vue-components unplugin-auto-import
+```
 
 ```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import AutoImport from 'unplugin-auto-import/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()]
+    }),
+    Components({
+      resolvers: [
+        ElementPlusResolver(),
+        EsPlusResolver()  // 自动注入 es-plus 依赖的 EP 组件样式
+      ]
+    })
+  ]
+})
+```
+
+配置后，模板中使用 `<es-table>`、`<es-form>` 时，构建工具会自动注入：
+- `es-plus-ui/dist/style.css`（es-plus 自身样式）
+- es-plus 内部依赖的所有 Element Plus 组件的按需样式
+
+:::tip 不会重复引入
+如果你同时配了 `ElementPlusResolver()`，相同组件的样式构建工具会自动去重，不会重复打包。
+:::
+
+### EsPlusResolver 选项
+
+```typescript
+EsPlusResolver({
+  // 如果你已经全量引入了 Element Plus 样式，可以关闭 EP 样式注入
+  importElementStyles: false,
+
+  // 使用 SASS 源文件（适合自定义 Element Plus 主题）
+  importStyle: 'sass'  // 默认 'css'
+})
+```
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `importElementStyles` | `boolean` | `true` | 是否注入 es-plus 依赖的 EP 组件样式 |
+| `importStyle` | `'css' \| 'sass'` | `'css'` | CSS 编译后文件 / SASS 源文件 |
+
+### 常见场景对照
+
+| 你的项目配置 | 需要做什么 |
+|---|---|
+| 全量引入 `import 'element-plus/dist/index.css'` | 只需 `import 'es-plus-ui/dist/style.css'`，无需 resolver |
+| `ElementPlusResolver()` 按需导入 | 必须添加 `EsPlusResolver()` |
+| `ElementPlusResolver()` + 自定义主题 | 添加 `EsPlusResolver({ importStyle: 'sass' })` |
+
+:::warning 不配置 EsPlusResolver 的后果
+如果只配了 `ElementPlusResolver()` 而没有 `EsPlusResolver()`：
+- es-plus 组件功能正常（JS 逻辑不受影响）
+- 但内部 Element Plus 组件**无样式**（表格无边框、表单无布局、弹窗无遮罩等）
+:::
+
+## Vite 基础配置
+
+```typescript
+// vite.config.ts
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      'es-plus-ui/components': 'es-plus-ui/es/components'
-    }
-  }
+  plugins: [vue()]
 })
 ```
 

@@ -67,6 +67,27 @@ app.use(EsPlus)
 app.mount('#app')
 ```
 
+### 自动按需导入（unplugin-vue-components）
+
+如果项目使用 `ElementPlusResolver` 按需导入 Element Plus，**必须同时配置 `EsPlusResolver`**，否则 es-plus 内部依赖的 EP 组件样式不会被注入：
+
+```typescript
+// vite.config.ts
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    Components({
+      resolvers: [ElementPlusResolver(), EsPlusResolver()]
+    })
+  ]
+})
+```
+
+`EsPlusResolver` 会在检测到 `<es-table>`、`<es-form>` 等组件时，自动注入 es-plus 自身样式及其依赖的全部 Element Plus 组件样式。与 `ElementPlusResolver` 不冲突、不重复。
+
 ### 全局配置
 
 通过 `app.use(EsPlus, options)` 第二个参数配置全局默认值，避免每个组件重复传入相同的请求方法、字段映射、分页布局等配置：
@@ -1155,6 +1176,12 @@ npx @es-plus/cli scaffold dashboard --features query,table,dialog
 ---
 
 ## 更新日志
+
+### v1.3.0
+
+- 新增 `EsPlusResolver` — 适配 `unplugin-vue-components` 按需导入场景，自动注入 ES-Plus 内部依赖的 Element Plus 组件样式
+- 新增 `es-plus-ui/resolver` 子路径导出（支持 ESM/CJS + TypeScript 类型）
+- 修复组件注册失败问题 — EsTable、EsDialog、SvgIcon 补充 `defineOptions({ name })` 声明，打包后 `component.name` 不再为 undefined
 
 ### v1.2.0
 

@@ -75,6 +75,10 @@
   </div>
 </template>
 
+<script lang="ts">
+export default { name: 'EsDialog' }
+</script>
+
 <script setup lang="ts">
 import { computed, ref, reactive, getCurrentInstance, provide, inject, useAttrs } from 'vue'
 import { ElConfigProvider, ElDialog, ElButton, ElIcon } from 'element-plus'

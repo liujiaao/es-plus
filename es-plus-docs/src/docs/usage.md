@@ -1,5 +1,88 @@
 # 使用
 
+## 引入方式
+
+ES-Plus 支持两种引入方式，根据你的项目配置选择其一：
+
+### 方式一：全量引入（简单直接）
+
+```typescript
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import ESPlus from 'es-plus-ui'
+import 'es-plus-ui/dist/style.css'
+import App from './App.vue'
+
+const app = createApp(App)
+app.use(ElementPlus)
+app.use(ESPlus)
+app.mount('#app')
+```
+
+### 方式二：自动按需导入（推荐，需配合 unplugin）
+
+如果项目使用 `unplugin-vue-components` + `ElementPlusResolver` 做按需自动导入，**必须额外配置 `EsPlusResolver`**：
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()]
+    }),
+    Components({
+      resolvers: [
+        ElementPlusResolver(),
+        EsPlusResolver()
+      ]
+    })
+  ]
+})
+```
+
+```typescript
+// main.ts — 按需模式下只需注册 ESPlus 插件，无需手动引入样式
+import { createApp } from 'vue'
+import ESPlus from 'es-plus-ui'
+import App from './App.vue'
+
+const app = createApp(App)
+app.use(ESPlus)
+app.mount('#app')
+```
+
+:::warning 为什么需要 EsPlusResolver？
+`ElementPlusResolver` 只扫描你自己 `.vue` 模板中的 `<el-xxx>` 标签。es-plus 是预编译的第三方包，它内部使用的 `<el-table>`、`<el-form>` 等组件存在于已编译的 JS 中，resolver 扫描不到它们，导致 Element Plus 样式缺失（表格无边框、表单无布局等）。
+
+`EsPlusResolver` 在检测到 `<es-table>`、`<es-form>` 等组件时，自动注入 es-plus 自身样式和其内部依赖的全部 Element Plus 组件样式。
+:::
+
+### EsPlusResolver 配置项
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `importElementStyles` | `boolean` | `true` | 是否自动注入 EP 组件样式。已全量引入时可设为 `false` |
+| `importStyle` | `'css' \| 'sass'` | `'css'` | 样式格式。自定义主题时用 `'sass'` |
+
+```typescript
+// 示例：已全量引入 EP 样式，只需 es-plus 自身样式
+EsPlusResolver({ importElementStyles: false })
+
+// 示例：配合 Element Plus 主题定制
+EsPlusResolver({ importStyle: 'sass' })
+```
+
+---
+
 ## 全局配置
 
 通过 `app.use(ESPlus, options)` 可以全局配置各组件的默认行为，避免在每个组件中重复传入相同的配置。

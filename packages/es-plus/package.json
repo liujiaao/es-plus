@@ -1,6 +1,6 @@
 {
   "name": "es-plus-ui",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "基于 Vue 3 和 Element Plus 的企业级中后台前端组件库",
   "type": "module",
   "main": "./dist/es-plus.umd.cjs",
@@ -11,6 +11,11 @@
       "import": "./dist/es-plus.js",
       "require": "./dist/es-plus.umd.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./resolver": {
+      "import": "./dist/resolver.mjs",
+      "require": "./dist/resolver.cjs",
+      "types": "./dist/resolver.d.ts"
     },
     "./dist/style.css": "./dist/style.css",
     "./schemas/*": "./schemas/*"

@@ -53,7 +53,7 @@
 npm install es-plus-ui element-plus @element-plus/icons-vue
 ```
 
-### 注册插件
+### 注册插件（全量引入）
 
 ```typescript
 import { createApp } from 'vue'
@@ -67,6 +67,25 @@ const app = createApp(App)
 app.use(ElementPlus)
 app.use(ESPlus)
 app.mount('#app')
+```
+
+### 自动按需导入（推荐）
+
+配合 `unplugin-vue-components` 使用时，需添加 `EsPlusResolver` 以确保 es-plus 内部依赖的 Element Plus 组件样式被正确注入：
+
+```typescript
+// vite.config.ts
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    Components({
+      resolvers: [ElementPlusResolver(), EsPlusResolver()]
+    })
+  ]
+})
 ```
 
 ### 第一个 CRUD 页面
