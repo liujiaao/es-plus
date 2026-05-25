@@ -1,1 +1,1 @@
-{"version":3,"file":"crud-page.d.ts","sourceRoot":"","sources":["../../src/prompts/crud-page.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AAgCzE,wBAAgB,sBAAsB,CAAC,MAAM,EAAE,SAAS,QAuBvD"}
+{"version":3,"file":"crud-page.d.ts","sourceRoot":"","sources":["../../src/prompts/crud-page.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AAkCzE,wBAAgB,sBAAsB,CAAC,MAAM,EAAE,SAAS,QAgCvD"}

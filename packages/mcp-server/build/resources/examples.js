@@ -1,5 +1,4 @@
-import { PRESET_EXAMPLES } from "../core/constants.js";
-import { generateCrudPage } from "../core/code-generator.js";
+import { PRESET_EXAMPLES, generateCrudPage } from "@es-plus/shared";
 export function registerExamplesResource(server) {
     server.resource("examples", "esplus://examples", {
         description: "Pre-built CRUD page examples with prompts and generated code",

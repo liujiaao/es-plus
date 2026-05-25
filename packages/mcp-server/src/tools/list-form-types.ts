@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { FORM_TYPES } from "../core/constants.js";
+import { FORM_TYPES } from "@es-plus/shared";
 
 export function registerListFormTypes(server: McpServer) {
   server.tool(

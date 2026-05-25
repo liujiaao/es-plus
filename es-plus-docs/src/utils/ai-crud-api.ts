@@ -40,7 +40,7 @@ Return a JSON object with these fields:
 {
   "name": "Button Text",
   "type": "primary",             // primary/success/warning/danger/info
-  "key": "query",                // Special: 'query' triggers search, 'reset' resets form
+  "key": "query",                // Special: 'query' triggers search, 'rest' resets form
   "triggerEvent": true           // Auto-trigger form-table linkage
 }
 

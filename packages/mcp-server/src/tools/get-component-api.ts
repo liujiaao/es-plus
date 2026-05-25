@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { COMPONENT_LIST, type ComponentName } from "../core/constants.js";
+import { COMPONENT_LIST, type ComponentName } from "@es-plus/shared";
 
 const COMPONENT_DOCS: Record<ComponentName, string> = {
   EsForm: `# EsForm API

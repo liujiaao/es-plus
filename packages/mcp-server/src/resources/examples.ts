@@ -1,6 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PRESET_EXAMPLES } from "../core/constants.js";
-import { generateCrudPage } from "../core/code-generator.js";
+import { PRESET_EXAMPLES, generateCrudPage } from "@es-plus/shared";
 
 export function registerExamplesResource(server: McpServer) {
   server.resource(

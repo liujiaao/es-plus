@@ -1,0 +1,1 @@
+{"version":3,"file":"schema-generator.d.ts","sourceRoot":"","sources":["../src/schema-generator.ts"],"names":[],"mappings":"AAGA,MAAM,WAAW,gBAAgB;IAC/B,MAAM,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;IAC/B,WAAW,EAAE,MAAM,CAAA;IACnB,OAAO,EAAE,MAAM,CAAA;CAChB;AAED,wBAAgB,kBAAkB,CAAC,WAAW,EAAE,MAAM,GAAG,gBAAgB,CAMxE"}

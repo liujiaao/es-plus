@@ -1,4 +1,4 @@
-import { FORM_TYPES } from "../core/constants.js";
+import { FORM_TYPES } from "@es-plus/shared";
 export function registerListFormTypes(server) {
     server.tool("list_form_types", "List all 13 available form field types (formtype) in es-plus-ui with descriptions and usage examples.", {}, async () => {
         const lines = FORM_TYPES.map((ft, i) => `${i + 1}. **${ft.type}** — ${ft.description}\n   Example: ${ft.example}`);

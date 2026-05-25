@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CLI tool for es-plus-ui - generate CRUD pages, validate configs",
   "type": "module",
   "bin": {
@@ -14,8 +14,7 @@
     }
   },
   "files": [
-    "build",
-    "schemas"
+    "build"
   ],
   "scripts": {
     "build": "tsc",
@@ -44,10 +43,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@es-plus/shared": "^1.0.0",
     "commander": "^12.0.0",
     "prompts": "^2.4.2",
-    "picocolors": "^1.0.0",
-    "ajv": "^8.12.0"
+    "picocolors": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
