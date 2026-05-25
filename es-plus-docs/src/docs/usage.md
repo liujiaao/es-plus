@@ -1,51 +1,68 @@
 # 使用
 
-## 全局配置
+## 全局配置（Options）
 
-通过 `app.use(ESPlus, options)` 可以全局配置各组件的默认行为，避免在每个组件中重复传入相同的配置。
+无论使用哪种引入方式，**都需要调用 `app.use(ESPlus, options)` 来注入全局配置**。全局配置通过 Vue 的 `provide/inject` 机制注入，与组件注册是独立的两个功能：
+
+- **组件注册**：让 `<es-table>` 在模板中可用（可由 `app.component` 或自动导入完成）
+- **全局配置**：注入 `$httpRequest`、`configQueryFieldOutput`、`permission`、`t` 等（只能通过 `app.use` 完成）
+
+:::tip 核心原理
+ES-Plus 组件内部通过 `inject('$esPlusTable')` / `inject('$EsPlus')` 获取全局配置。这些配置只有在 `app.use(ESPlus, options)` 执行后才会被注入。自动导入只负责按需引入组件代码和样式，不会注入这些运行时配置。
+:::
+
+---
+
+## 三种使用模式
+
+### 模式一：全量引入 + 全局配置（最简单）
+
+适合不在意包体积的项目，或后台管理系统：
 
 ```typescript
+// main.ts
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 import ESPlus from 'es-plus-ui'
 import 'es-plus-ui/dist/style.css'
-import 'element-plus/dist/index.css'
+import axios from 'axios'
 import App from './App.vue'
 
 const app = createApp(App)
 app.use(ElementPlus)
 app.use(ESPlus, {
+  // 权限控制
+  permission: (value) => userStore.permissions.includes(value),
+  // 国际化
+  t: (key) => i18n.global.t(key),
+  // EsTable 全局配置
   EsTable: {
     methods: {
-      // 全局请求方法 — 所有 EsTable 共享，无需逐个传入 httpRequest
-      $httpRequest: async ({ url, formParams }) => {
-        const res = await fetch(url, { method: 'POST', body: JSON.stringify(formParams) })
-        return res.json()
+      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+        return data
       },
-      // 分页布局配置
       paginationLayout: () => ({
         layout: 'total, sizes, prev, pager, next, jumper',
         pageSizes: [10, 20, 50, 100],
-        isSmall: true,
         background: true
       }),
-      // 接口字段映射 — 适配后端返回格式
       configQueryFieldOutput: () => ({
         total: 'total',
+        tableData: 'data',
         pageSize: 'pageSize',
-        current: 'pageIndex',
-        tableData: 'data'
+        current: 'pageIndex'
       })
     }
   },
+  // EsForm 全局配置
   EsForm: {
     methods: {
-      // 全局请求方法 — 用于表单的异步数据源加载
       $httpRequest: async ({ url, formParams }) => {
-        const res = await fetch(url, { method: 'POST', body: JSON.stringify(formParams) })
-        return res.json()
+        const { data } = await axios.post(url, { ...formParams })
+        return data
       },
-      // 表单查询字段映射
       fieldFieldOutput: () => ({
         total: 'total',
         pageSize: 'pageSize',
@@ -58,21 +75,46 @@ app.use(ESPlus, {
 app.mount('#app')
 ```
 
-### 配置项说明
+### 模式二：自动按需导入 + 全局配置（推荐）
 
-| 配置 | 组件 | 说明 |
-|---|---|---|
-| `$httpRequest` | EsTable / EsForm | 全局 HTTP 请求方法，组件内可被 prop 覆盖 |
-| `paginationLayout` | EsTable | 分页器布局配置（layout、pageSizes、isSmall、background） |
-| `configQueryFieldOutput` | EsTable | 后端分页字段映射（total、pageSize、current、tableData） |
-| `fieldFieldOutput` | EsForm | 后端表单查询字段映射（total、pageSize、current、listData） |
-
-### 实际项目示例（axios）
+适合对包体积有要求的项目。**`EsPlusResolver` 负责样式注入，`app.use` 负责全局配置**：
 
 ```typescript
-import axios from 'axios'
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
 
+export default defineConfig({
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()]
+    }),
+    Components({
+      resolvers: [ElementPlusResolver(), EsPlusResolver()]
+    })
+  ]
+})
+```
+
+```typescript
+// main.ts — 自动导入模式
+import { createApp } from 'vue'
+import ESPlus from 'es-plus-ui'
+import axios from 'axios'
+import App from './App.vue'
+
+const app = createApp(App)
+
+// 关键：skipComponentRegistration 避免与自动导入重复注册
 app.use(ESPlus, {
+  skipComponentRegistration: true,  // 组件由 EsPlusResolver 自动导入，跳过全局注册
+  permission: (value) => userStore.permissions.includes(value),
+  t: (key) => i18n.global.t(key),
   EsTable: {
     methods: {
       $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
@@ -81,16 +123,144 @@ app.use(ESPlus, {
       },
       configQueryFieldOutput: () => ({
         total: 'total',
-        tableData: 'records',  // 适配 MyBatis-Plus 分页格式
+        tableData: 'records',
         pageSize: 'size',
         current: 'current'
+      }),
+      paginationLayout: () => ({
+        layout: 'total, sizes, prev, pager, next, jumper',
+        pageSizes: [10, 20, 50, 100],
+        background: true
+      })
+    }
+  },
+  EsForm: {
+    methods: {
+      $httpRequest: async ({ url, formParams }) => {
+        const { data } = await axios.post(url, { ...formParams })
+        return data
+      }
+    }
+  }
+})
+
+app.mount('#app')
+```
+
+:::warning 重要
+即使使用自动导入，**仍然需要 `app.use(ESPlus, options)`**。自动导入只解决组件注册和样式，全局 HTTP 请求、字段映射、权限、i18n 等配置必须通过 `app.use` 注入。
+:::
+
+### 模式三：按需手动导入 + 全局配置（精确控制）
+
+只注册需要的组件，手动管理样式：
+
+```typescript
+// main.ts
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import { EsForm, EsTable, useDialog } from 'es-plus-ui'
+import 'es-plus-ui/dist/style.css'
+import ESPlus from 'es-plus-ui'
+import axios from 'axios'
+import App from './App.vue'
+
+const app = createApp(App)
+app.use(ElementPlus)
+
+// 手动注册需要的组件
+app.component('EsForm', EsForm)
+app.component('EsTable', EsTable)
+
+// 全局配置仍通过 app.use 注入（跳过组件注册，因为已经手动注册了）
+app.use(ESPlus, {
+  skipComponentRegistration: true,
+  EsTable: {
+    methods: {
+      $httpRequest: async (params) => {
+        const { data } = await axios(params)
+        return data
+      },
+      configQueryFieldOutput: () => ({
+        total: 'total',
+        tableData: 'list',
+        pageSize: 'pageSize',
+        current: 'page'
+      })
+    }
+  }
+})
+
+app.mount('#app')
+```
+
+---
+
+## Options 配置项参考
+
+### 顶层配置
+
+| 配置 | 类型 | 说明 |
+|------|------|------|
+| `skipComponentRegistration` | `boolean` | 跳过全局组件注册（自动导入时使用） |
+| `permission` | `(value: string) => boolean` | 权限校验函数，控制按钮显隐 |
+| `t` | `(key: string) => string` | 翻译函数，配合 labelKey 使用 |
+| `EsTable` | `{ methods: {...} }` | EsTable 全局方法配置 |
+| `EsForm` | `{ methods: {...} }` | EsForm 全局方法配置 |
+
+### EsTable.methods
+
+| 方法 | 类型 | 说明 |
+|------|------|------|
+| `$httpRequest` | `(params) => Promise<any>` | 全局请求方法，未传 `options.httpRequest` 时使用 |
+| `paginationLayout` | `() => PaginationConfig` | 分页布局（layout/pageSizes/isSmall/background） |
+| `configQueryFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射 |
+
+### EsForm.methods
+
+| 方法 | 类型 | 说明 |
+|------|------|------|
+| `$httpRequest` | `(params) => Promise<any>` | 全局请求方法，用于远程加载选项数据 |
+| `fieldFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射 |
+
+### 优先级规则
+
+```
+组件 props/options > 全局配置（app.use 注入） > 组件默认值
+```
+
+例如：`options.configTableOut` > `configQueryFieldOutput()` > 内置默认 `{ total: 'records', tableData: 'rows' }`
+
+---
+
+## 实际项目示例（MyBatis-Plus 后端）
+
+```typescript
+app.use(ESPlus, {
+  EsTable: {
+    methods: {
+      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+        const { data } = await axios.post(url, { ...formParams, pageNo: pageIndex, pageSize })
+        return data
+      },
+      configQueryFieldOutput: () => ({
+        total: 'total',
+        tableData: 'records',  // MyBatis-Plus IPage.records
+        pageSize: 'size',
+        current: 'current'
+      }),
+      paginationLayout: () => ({
+        layout: 'total, sizes, prev, pager, next, jumper',
+        pageSizes: [10, 20, 50, 100],
+        background: true
       })
     }
   }
 })
 ```
 
-配置一次后，所有 `EsTable` 无需再传 `httpRequest`，只需声明 `apiParams.url` 即可发起请求。
+配置一次后，所有 `EsTable` 无需再传 `httpRequest` 和 `configTableOut`，只需在 `options` 中声明 `apiParams.url` 即可发起请求。
 
 ## EsForm 用法
 

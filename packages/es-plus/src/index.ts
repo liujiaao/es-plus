@@ -11,11 +11,14 @@ const components = [EsDialog, EsForm, EsTable, EsCrudPage, SvgIcon]
 
 // Vue 3 插件安装函数
 const install = (app: any, options: Record<string, unknown> = {}) => {
-  components.forEach((component) => {
-    if (component.name) {
-      app.component(component.name, component)
-    }
-  })
+  // 自动导入模式下跳过组件全局注册，避免重复注册
+  if (!options.skipComponentRegistration) {
+    components.forEach((component) => {
+      if (component.name) {
+        app.component(component.name, component)
+      }
+    })
+  }
 
   if (options.globalProperties !== false) {
     app.config.globalProperties.$useDialog = useDialog

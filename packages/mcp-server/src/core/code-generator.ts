@@ -20,6 +20,9 @@ export function generateCrudPage(description: string): GenerateResult {
       : "",
     config.hasStatusRender ? `- Status column with ElTag render` : "",
     config.actions.includes("delete") ? `- Delete confirmation dialog` : "",
+    ``,
+    `Note: 需要在 main.ts 中配置全局 app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`,
+    `详见: https://es-plus.liujiaao.top/docs/usage`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -83,15 +86,14 @@ export function generateScaffold(
     lines.push(`const tableData = ref([])`);
     lines.push(`const pagination = ref({ current: 1, pageSize: 10, total: 0 })`);
     lines.push(`const columns = []`);
+    lines.push(`// httpRequest 和 configTableOut 由全局配置注入，无需在此声明`);
+    lines.push(`// 全局配置: app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`);
     lines.push(`const options = {`);
     lines.push(`  border: true,`);
     lines.push(`  stripe: true,`);
     lines.push(`  highlightCurrentRow: true,`);
     lines.push(`  headerCellStyle: { background: '#f5f7fa' },`);
-    lines.push(`  httpRequest: async (params) => {`);
-    lines.push(`    // TODO: 替换为实际接口调用`);
-    lines.push(`  },`);
-    lines.push(`  configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },`);
+    lines.push(`  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址`);
     lines.push(`  rowkey: 'id'`);
     lines.push(`}`);
     lines.push(``);

@@ -218,7 +218,6 @@ export function generateCrudConfig(input) {
         stripe: true,
         highlightCurrentRow: true,
         headerCellStyle: { background: '#f5f7fa' },
-        configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },
         rowkey: 'id',
     };
     const dialogFormItems = fields
@@ -322,18 +321,14 @@ export function generateCode(config) {
         .replace(/"render": "(.*?)"/g, (_, code) => `render: ${code.replace(/\\"/g, '"')}`);
     lines.push(`const columns = ${colStr}`);
     lines.push(``);
-    // table options
+    // table options — httpRequest 和 configTableOut 由全局配置注入，无需在此重复声明
+    // 全局配置示例见 main.ts: app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })
     lines.push(`const options = {`);
     lines.push(`  border: true,`);
     lines.push(`  stripe: true,`);
     lines.push(`  highlightCurrentRow: true,`);
     lines.push(`  headerCellStyle: { background: '#f5f7fa' },`);
-    lines.push(`  httpRequest: async (params) => {`);
-    lines.push(`    // TODO: 替换为实际接口调用`);
-    lines.push(`    // const res = await axios.get('/api/list', { params: params.formParams })`);
-    lines.push(`    // return res.data`);
-    lines.push(`  },`);
-    lines.push(`  configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },`);
+    lines.push(`  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址`);
     lines.push(`  rowkey: 'id'`);
     lines.push(`}`);
     // delete handler
