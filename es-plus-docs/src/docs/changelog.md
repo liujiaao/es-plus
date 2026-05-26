@@ -2,6 +2,39 @@
 
 记录 es-plus-ui 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
 
+## v1.3.4
+
+> 2026-05-26 发布
+
+**EsCrudPage 增强**
+
+- 新增 `tableBtns` schema 属性，支持表格工具栏按钮分区（`code: 1` 左侧 / `code: 2` 右侧）
+- 新增 `formLayout.minFoldRows` 支持查询表单自动展开/收起
+- Dialog `render` 支持 JSX 语法，可嵌套 EsCrudPage 实现复杂弹窗
+- 新增 `operationColumn` 配置行操作按钮（支持 `dialogKey` 绑定弹窗、`confirm` 删除确认）
+- 新增事件：`@dialog-confirm`、`@dialog-cancel`、`@dialog-open`、`@btn-click`
+- 新增 expose：`openDialog(key, row)`、`closeDialog(key)`
+
+**尺寸统一**
+
+- EsForm 按钮默认 `size: 'small'`
+- EsForm 表单项通过 `el-form size` prop 级联统一为 `small`
+- 文档示例全局设置 `app.use(ElementPlus, { size: 'small' })`
+
+**MCP Server & CLI 同步**
+
+- `@es-plus/mcp-server@1.1.1`：Zod schema 适配 `tableBtns`、`formLayout.minFoldRows`、`operationColumn`、`dialogs`
+- `@es-plus/cli@1.1.1`：通过 `@es-plus/shared` 自动继承新配置能力
+- `@es-plus/shared@1.0.1`：`StructuredCrudConfigSchema` 新增多弹窗模式完整支持
+- `esplus://conventions` 资源文档更新，新增 tableBtns / formLayout / operationColumn 使用说明
+
+**文档**
+
+- CrudPage 示例重写：订单管理 CRUD（11 个查询字段、表单折叠、工具栏按钮分离、嵌套弹窗）
+- 文档项目启用 Vue JSX（`@vitejs/plugin-vue-jsx`）
+
+---
+
 ## v1.3.3
 
 > 2026-05-25 发布
