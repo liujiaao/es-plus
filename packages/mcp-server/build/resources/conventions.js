@@ -219,7 +219,21 @@ The host app must provide a translation function via global config or \`useI18n(
 
 EsCrudPage v2 supports multiple independent dialogs with button-dialog binding:
 
-### toolbarBtns — Explicit Toolbar Buttons
+### tableBtns — Table Toolbar Buttons (Recommended)
+\`\`\`json
+"tableBtns": [
+  { "name": "下载", "icon": "Download", "code": 1, "dialogKey": "download" },
+  { "name": "新增", "type": "primary", "icon": "Plus", "code": 1, "dialogKey": "add" },
+  { "name": "Excel导入", "icon": "Upload", "code": 2, "actionType": "import" }
+]
+\`\`\`
+- \`code: 1\` = left side of table toolbar (default)
+- \`code: 2\` = right side of table toolbar
+- \`dialogKey\`: clicking the button opens the dialog with this key
+- \`actionType\`: emits btn-click event with this key (no dialog)
+- \`confirm\`: shows ElMessageBox before action
+
+### toolbarBtns — Form Area Buttons (Legacy Positioning)
 \`\`\`json
 "toolbarBtns": [
   { "name": "新增", "type": "primary", "icon": "Plus", "dialogKey": "add" },
@@ -227,9 +241,15 @@ EsCrudPage v2 supports multiple independent dialogs with button-dialog binding:
   { "name": "导出", "icon": "Download", "actionType": "export" }
 ]
 \`\`\`
-- \`dialogKey\`: clicking the button opens the dialog with this key
-- \`actionType\`: emits btn-click event with this key (no dialog)
-- \`confirm\`: shows ElMessageBox before action
+- Rendered alongside query/reset buttons in EsForm's button area
+- Use \`tableBtns\` instead for better UX (buttons above table, separated from query controls)
+
+### formLayout — Query Form Layout & Collapse
+\`\`\`json
+"formLayout": { "labelWidth": "100px", "minFoldRows": 2 }
+\`\`\`
+- \`minFoldRows\`: when form rows exceed this number, shows expand/collapse toggle
+- \`labelWidth\`: label width for all form items
 
 ### operationColumn — Explicit Row Action Buttons
 \`\`\`json

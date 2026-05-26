@@ -155,11 +155,27 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
     typescript: z.ZodDefault<z.ZodBoolean>;
     permissions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     i18n: z.ZodDefault<z.ZodBoolean>;
+    formLayout: z.ZodOptional<z.ZodObject<{
+        span: z.ZodOptional<z.ZodNumber>;
+        labelWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        minFoldRows: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
     toolbarBtns: z.ZodOptional<z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         key: z.ZodOptional<z.ZodString>;
         type: z.ZodOptional<z.ZodString>;
         icon: z.ZodOptional<z.ZodString>;
+        dialogKey: z.ZodOptional<z.ZodString>;
+        actionType: z.ZodOptional<z.ZodString>;
+        confirm: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>;
+        permissionValue: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>>;
+    tableBtns: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        name: z.ZodString;
+        key: z.ZodOptional<z.ZodString>;
+        type: z.ZodOptional<z.ZodString>;
+        icon: z.ZodOptional<z.ZodString>;
+        code: z.ZodDefault<z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>]>>;
         dialogKey: z.ZodOptional<z.ZodString>;
         actionType: z.ZodOptional<z.ZodString>;
         confirm: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>;
@@ -239,6 +255,7 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
         formLayout: z.ZodOptional<z.ZodObject<{
             span: z.ZodOptional<z.ZodNumber>;
             labelWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+            minFoldRows: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>>;
         hasCustomRender: z.ZodOptional<z.ZodBoolean>;
         isDraggable: z.ZodOptional<z.ZodBoolean>;

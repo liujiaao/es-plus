@@ -13,17 +13,62 @@ function loadCrudPageTypes() {
 }
 const CRUD_PAGE_TYPES_FALLBACK = `export interface CrudPageSchema {
   formItems?: FormItemOption[]
-  queryBtns?: BtnConfig[]
+  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  toolbarBtns?: CrudBtnConfig[]
+  tableBtns?: TableBtnConfig[]
   columns: TableColumn[]
   tableOptions?: Partial<TableOptions>
-  dialogFormItems?: FormItemOption[]
-  dialogOptions?: Partial<DialogOptions>
-  actions?: CrudAction[]
   pagination?: PaginationConfig
-  formLayout?: { span?: number; labelWidth?: string | number }
+  operationColumn?: OperationColumnConfig | false
+  dialogs?: Record<string, CrudDialogConfig>
+  /** @deprecated */ queryBtns?: BtnConfig[]
+  /** @deprecated */ actions?: CrudAction[]
+  /** @deprecated */ dialogFormItems?: FormItemOption[]
+  /** @deprecated */ dialogOptions?: Partial<DialogOptions>
 }
 
-export type CrudAction = 'add' | 'edit' | 'delete' | 'view' | 'export'
+export interface CrudBtnConfig extends BtnConfig {
+  dialogKey?: string
+  actionType?: string
+  confirm?: string | boolean
+}
+
+export interface TableBtnConfig extends CrudBtnConfig {
+  /** 1=left (default), 2=right */
+  code?: 1 | 2
+}
+
+export interface OperationColumnConfig {
+  label?: string
+  width?: number | string
+  fixed?: boolean | string
+  btns: RowBtnConfig[]
+}
+
+export interface RowBtnConfig {
+  name: string
+  key?: string
+  type?: string
+  dialogKey?: string
+  confirm?: string | boolean
+  permissionValue?: string
+}
+
+export interface CrudDialogConfig {
+  title?: string | ((row?: Record<string, unknown>) => string)
+  width?: string | number
+  formItems?: FormItemOption[]
+  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  render?: (h: any, context: DialogRenderContext) => any
+  configBtn?: DialogBtnConfig[]
+  isDraggable?: boolean
+  maxHeight?: string | number
+  fullscreen?: boolean
+  isHiddenFooter?: boolean
+  onConfirm?: (data: Record<string, unknown>, context: DialogActionContext) => void | Promise<void>
+}
+
+export type CrudAction = 'add' | 'edit' | 'delete' | 'view' | 'export' | 'import'
 
 export interface CrudPageProps {
   schema: CrudPageSchema
@@ -38,8 +83,10 @@ export interface CrudPageEmits {
   (e: 'delete', row: Record<string, unknown>): void
   (e: 'view', row: Record<string, unknown>): void
   (e: 'export', model: Record<string, unknown>): void
-  (e: 'row-click', row: Record<string, unknown>): void
-  (e: 'btn-click', key: string, row?: Record<string, unknown>): void
+  (e: 'btn-click', key: string, payload?: Record<string, unknown>): void
+  (e: 'dialog-confirm', dialogKey: string, data: Record<string, unknown>): void
+  (e: 'dialog-cancel', dialogKey: string): void
+  (e: 'dialog-open', dialogKey: string, row?: Record<string, unknown>): void
 }
 
 export interface CrudPageExpose {
@@ -48,6 +95,8 @@ export interface CrudPageExpose {
   tableRef: any
   formRef: any
   queryModel: Record<string, unknown>
+  openDialog: (key: string, row?: Record<string, unknown>) => void
+  closeDialog: (key: string) => void
 }`;
 function buildContent() {
     const types = loadCrudPageTypes();
@@ -64,30 +113,37 @@ ${types}
 EsCrudPage accepts a \`CrudPageSchema\` object and renders a complete CRUD page at runtime.
 It auto-generates query/reset buttons, operation column with edit/delete buttons, and dialog forms.
 
-### Basic Example
+### Basic Example (Multi-Dialog Mode with JSX)
 
 \`\`\`vue
 <template>
   <es-crud-page
     ref="crudRef"
     :schema="pageSchema"
-    :http-request="fetchData"
-    @delete="handleDelete"
+    @dialog-confirm="handleDialogConfirm"
     @btn-click="handleBtnClick"
   />
 </template>
 
-<script setup>
+<script setup lang="tsx">
 import { ref } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { EsCrudPage, EsForm } from 'es-plus-ui'
+import { ElMessage } from 'element-plus'
 
 const crudRef = ref(null)
 
 const pageSchema = {
   formItems: [
-    { prop: 'name', label: '姓名', formtype: 'Input', span: 6, attrs: { clearable: true } },
-    { prop: 'status', label: '状态', formtype: 'Select', span: 6, attrs: { clearable: true },
-      dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }
+    { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
+    { prop: 'status', label: '状态', formtype: 'Select', span: 6,
+      dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    { prop: 'createTime', label: '创建时间', formtype: 'datePicker', span: 8,
+      attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
+  ],
+  formLayout: { labelWidth: '80px', minFoldRows: 1 },
+  tableBtns: [
+    { name: '新增', type: 'primary', icon: 'Plus', code: 1, dialogKey: 'add' },
+    { name: '导出', icon: 'Download', code: 2, actionType: 'export' }
   ],
   columns: [
     { prop: 'name', label: '姓名' },
@@ -96,44 +152,45 @@ const pageSchema = {
   ],
   tableOptions: {
     border: true,
-    stripe: true,
-    highlightCurrentRow: true,
-    headerCellStyle: { background: '#f5f7fa' },
     apiParams: { url: '/api/users' },
     rowkey: 'id'
   },
-  dialogFormItems: [
-    { prop: 'name', label: '姓名', formtype: 'Input', span: 24,
-      formItemOptions: { rules: [{ required: true, message: '请输入姓名', trigger: 'blur' }] } },
-    { prop: 'email', label: '邮箱', formtype: 'Input', span: 24,
-      formItemOptions: { rules: [{ required: true, message: '请输入邮箱', trigger: 'blur' }] } }
-  ],
-  actions: ['add', 'edit', 'delete'],
+  operationColumn: {
+    label: '操作', width: 160, fixed: 'right',
+    btns: [
+      { name: '编辑', type: 'primary', dialogKey: 'edit' },
+      { name: '删除', type: 'danger', key: 'delete', confirm: '确定删除？' }
+    ]
+  },
+  dialogs: {
+    add: {
+      title: '新增用户', width: '560px',
+      formItems: [
+        { prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+          formItemOptions: { rules: [{ required: true, message: '请输入姓名' }] } },
+        { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 }
+      ]
+    },
+    edit: {
+      title: (row) => \`编辑 — \${row?.name || ''}\`,
+      width: '560px',
+      formItems: [
+        { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },
+        { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 }
+      ]
+    }
+  },
   pagination: { pageSize: 10 }
 }
 
-async function fetchData(params) {
-  const { data } = await axios.get('/api/users', { params: params.formParams })
-  return data
+function handleDialogConfirm(dialogKey, data) {
+  ElMessage.success(\`[\${dialogKey}] 保存成功\`)
+  crudRef.value?.refresh()
 }
 
-function handleDelete(row) {
-  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
-    .then(async () => {
-      await axios.delete(\`/api/users/\${row.id}\`)
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
-    })
-    .catch(() => {})
-}
-
-function handleBtnClick(key, data) {
-  if (key === 'add-confirm') {
-    // Call add API with data
-    crudRef.value?.refresh()
-  }
-  if (key === 'edit-confirm') {
-    // Call edit API with data
+function handleBtnClick(key, payload) {
+  if (key === 'delete') {
+    ElMessage.success('已删除')
     crudRef.value?.refresh()
   }
 }
@@ -143,11 +200,13 @@ function handleBtnClick(key, data) {
 ## Key Points
 
 1. **No need to define query/reset buttons** — EsCrudPage adds them automatically
-2. **No need to define operation column** — EsCrudPage adds edit/delete buttons based on \`actions\`
-3. **Schema is pure JSON** — no render functions, functions go in the wrapper SFC
-4. **Use \`apiParams: { url }\`** in tableOptions when global httpRequest is configured
-5. **Events**: \`@delete\` for row deletion, \`@btn-click\` for dialog confirm (key: "add-confirm" | "edit-confirm")
-6. **Expose**: \`crudRef.value?.refresh()\` to reload table data after mutations
+2. **\`tableBtns\`** — buttons rendered in EsTable toolbar (code:1=left, code:2=right)
+3. **\`toolbarBtns\`** — buttons rendered alongside query/reset in EsForm button area
+4. **\`formLayout.minFoldRows\`** — enables form collapse when rows exceed this number
+5. **\`dialogs\` + \`dialogKey\`** — multi-dialog architecture with button-dialog binding
+6. **Dialog \`render\`** — use JSX to render custom content (nested EsCrudPage, etc.)
+7. **Events**: \`@dialog-confirm\`, \`@btn-click\` for all button/dialog interactions
+8. **Expose**: \`crudRef.value?.refresh()\`, \`openDialog(key, row)\`, \`closeDialog(key)\`
 `;
 }
 export function registerCrudPageSchemaResource(server) {
