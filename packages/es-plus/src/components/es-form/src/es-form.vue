@@ -6,7 +6,7 @@
           <el-col v-show="!item?.isFold" :span="item.span || 6">
             <el-form-item
               :label="translateLabel(item)"
-              v-bind="initFormItemOptions(item.formItemOptions || {})"
+              v-bind="initFormItemOptions((item as any).formItemOptions || {})"
               :prop="item.prop"
               @click.stop="() => {}"
             >
@@ -26,7 +26,7 @@
               :row="{ isFold: isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
               :form-model="model"
               :form-item-list="formItem"
-              :render="renderBtn"
+              :render="(renderBtn as Function)"
             />
           </template>
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
@@ -90,7 +90,7 @@
             <el-form-item
               v-if="!btnColSpanRow && configBtn.length"
               :label="' '"
-              :label-width="formProps.labelBtnWidth ? formProps.labelBtnWidth : formProps.labelWidth"
+              :label-width="(formProps as any).labelBtnWidth ? (formProps as any).labelBtnWidth : (formProps as any).labelWidth"
               :class="{ formItemCols: btnColSpanRow ? true : getBtnColSpan === 24 }"
               class="btn-formItem"
             >
@@ -218,7 +218,7 @@ const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
-  const ctx = instance?.ctx as Record<string, unknown>
+  const ctx = (instance as any)?.ctx as Record<string, any>
   return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
 })
 
@@ -298,7 +298,7 @@ const formItemListFilter = computed(() => {
   const list = formItemRowsList.value || []
   return list
     .map((it) => (it ? { ...it, span: it.span || 6, dataOptions: it.dataOptions || [] } : null))
-    .filter((it): it is FormItemOption => {
+    .filter((it): it is (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)
@@ -340,12 +340,12 @@ const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
 const clickBtn = async (it: BtnConfig) => {
   if (it.triggerEvent && ['query', 'rest'].includes(it.key || '')) {
-    queryTableRequest(props.model, refs.value as { resetFields: () => void }, it.key)
+    queryTableRequest(props.model, refs.value as any, it.key)
   } else {
 
      // await refs.value.validate()
      if (it.key === 'rest' && refs.value) {
-         refs.value.resetFields()
+         ;(refs.value as any).resetFields()
       }
     it.click?.(props.model, refs.value, getTableInstant.value?.httpRequestInstance)
   }
@@ -380,7 +380,7 @@ const reset = () => emit('reset', refs.value, props.model)
 
 // 自定义弹窗
 const createDialogInstance = (() =>
-  instance?.ctx?.dialogInstance ? instance.ctx.dialogInstance() : useDialog)()
+  (instance as any)?.ctx?.dialogInstance ? (instance as any).ctx.dialogInstance() : useDialog)()
 const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
@@ -410,7 +410,7 @@ const getFormRowsFun = () => {
               size: 'small',
               maxlength: 3,
               formatter: (value: string) => value.replace(/^0|[^0-9]/g, ''),
-              modelValue: row.width,
+              modelValue: row.width as any,
               'onUpdate:modelValue': (val: unknown) => {
                 row.width = val
               }
@@ -441,7 +441,7 @@ const getCustomerTableInfo = () => {
               size: 'small',
               maxlength: 3,
               formatter: (value: string) => value.replace(/^0|[^0-9]/g, ''),
-              modelValue: row.width,
+              modelValue: row.width as any,
               'onUpdate:modelValue': (val: unknown) => {
                 row.width = val
               }
@@ -512,7 +512,7 @@ const handleTableItemOption = () => {
 // 生命周期
 nextTick(() => {
   formInstance.value = refs.value as Record<string, unknown>
-  ;(instance?.ctx as Record<string, unknown>)?.bodyFormInstance?.(formInstance.value)
+  ;((instance as any)?.ctx as Record<string, any>)?.bodyFormInstance?.(formInstance.value)
 })
 
 // 子组件定义

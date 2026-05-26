@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { useTableSelection } from './use-table-selection'
 
 describe('useTableSelection', () => {
@@ -51,5 +51,60 @@ describe('useTableSelection', () => {
     clearAllSelection(tableRef)
 
     expect(multipleSelection.value).toEqual([])
+  })
+
+  describe('handleSelectData', () => {
+    it('should toggle selection for matching rows', () => {
+      const { handleSelectionChange, handleSelectData, multipleSelection } = useTableSelection('id')
+      const toggleRowSelection = vi.fn()
+      const tableRef = { toggleRowSelection }
+
+      handleSelectionChange([{ id: 1, name: 'a' }, { id: 2, name: 'b' }], 1)
+      const newPageData = [{ id: 1, name: 'a' }, { id: 3, name: 'c' }]
+
+      handleSelectData(newPageData, tableRef)
+
+      expect(toggleRowSelection).toHaveBeenCalledWith({ id: 1, name: 'a' }, true)
+      expect(toggleRowSelection).toHaveBeenCalledTimes(1)
+    })
+
+    it('should do nothing when multipleSelection is empty', () => {
+      const { handleSelectData } = useTableSelection('id')
+      const toggleRowSelection = vi.fn()
+
+      handleSelectData([{ id: 1 }], { toggleRowSelection })
+
+      expect(toggleRowSelection).not.toHaveBeenCalled()
+    })
+
+    it('should do nothing when rowkey is not set', () => {
+      const { handleSelectionChange, handleSelectData } = useTableSelection()
+      const toggleRowSelection = vi.fn()
+
+      handleSelectionChange([{ id: 1 }], 1)
+      handleSelectData([{ id: 1 }], { toggleRowSelection })
+
+      expect(toggleRowSelection).not.toHaveBeenCalled()
+    })
+
+    it('should do nothing for empty dataList', () => {
+      const { handleSelectionChange, handleSelectData } = useTableSelection('id')
+      const toggleRowSelection = vi.fn()
+
+      handleSelectionChange([{ id: 1 }], 1)
+      handleSelectData([], { toggleRowSelection })
+
+      expect(toggleRowSelection).not.toHaveBeenCalled()
+    })
+
+    it('should handle multiple matches', () => {
+      const { handleSelectionChange, handleSelectData } = useTableSelection('id')
+      const toggleRowSelection = vi.fn()
+
+      handleSelectionChange([{ id: 1 }, { id: 2 }, { id: 3 }], 1)
+      handleSelectData([{ id: 1 }, { id: 2 }, { id: 4 }], { toggleRowSelection })
+
+      expect(toggleRowSelection).toHaveBeenCalledTimes(2)
+    })
   })
 })

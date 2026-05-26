@@ -8,7 +8,7 @@
       :width="props.width"
       :show-close="false"
       @close="beforeClose"
-      :fullscreen="filteredAttrs?.fullscreen ?? isFullscreen"
+      :fullscreen="(filteredAttrs?.fullscreen as boolean) ?? isFullscreen"
     >
       <template #header>
         <template v-if="props.renderHeader">

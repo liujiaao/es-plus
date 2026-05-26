@@ -6,7 +6,7 @@
           v-if="showHeaderBar"
           ref="headBarRef"
           class="btn-slot"
-          :style="slotStyles.value && slotStyles.type === 'object' && slotStyles.value"
+          :style="(slotStyles.value && slotStyles.type === 'object' && slotStyles.value) as any"
           :class="slotStyles.type === 'string' ? slotStyles.value : { slotClass: slotState && slotStyles.type !== 'object' }"
         >
           <div class="headerBar" v-if="hasDefaultSlot" :style="{ paddingBottom: hasDefaultSlot ? '10px' : '0px' }">
@@ -18,9 +18,9 @@
             <table-btns
               ref="tbBtnRef"
               :instance="{ tableRef: instance, formInstance: formInstance }"
-              v-if="(options.configBtn && options.configBtn.length) || options.leftText"
-              :btn-config="options.configBtn"
-              :left-text="options.leftText"
+              v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
+              :btn-config="(options.configBtn as any[])"
+              :left-text="(options.leftText as string)"
             />
             <el-table
               class="el-dp_tables"
@@ -152,7 +152,7 @@ if (injectedLocale) {
   locale.value = injectedLocale as any
 }
 
-const instance = getCurrentInstance() || {}
+const instance = getCurrentInstance() as any
 const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {})
 const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
 
@@ -255,7 +255,7 @@ const isFormInstance = computed(() => {
 })
 
 const hasDefaultSlot = computed(() => !!slots.default?.())
-const heightType = computed(() => props.options.heightType || 'auto')
+const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 const tabHeight = computed(() => {
   if (typeof props.options.tabHeight === 'number') {
     return `${props.options.tabHeight}px`
@@ -296,9 +296,9 @@ const filteredColumns = computed(() => {
       el.formatter = (row: Record<string, unknown>) => {
         const value = row[el.prop as string] || row[el.key as string]
         if (value == null || value === '') {
-          return el.emptyPlaceholder || '-'
+          return (el.emptyPlaceholder as string) || '-'
         }
-        return value
+        return value as string
       }
     }
 
@@ -361,7 +361,7 @@ const { tableHeight, resizeObservers } = useTableResize(
   headBarRef,
   tbBtnRef,
   paginationRef,
-  { heightType: heightType.value, tabHeight: props.options.tabHeight }
+  { heightType: heightType.value as 'auto' | 'height', tabHeight: props.options.tabHeight }
 )
 
 watch(
@@ -452,7 +452,7 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
       if (key === 'tableData') {
         tableData.value = Array.isArray(rowData) ? rowData : []
       } else {
-        paginationConfig.value[key as keyof PaginationConfig] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
+        ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
       }
     })
   }
@@ -460,7 +460,7 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
 
 const queryTableListMethod = (params: Record<string, unknown>, options: { success?: (res: Record<string, unknown>) => void; fail?: (err: unknown) => void } = {}) => {
   const { success, fail } = options
-  const apiParams = props.options?.apiParams || {}
+  const apiParams = (props.options?.apiParams || {}) as Record<string, any>
   const url = props.options?.actionUrl || apiParams.url || ''
 
   if (!url || !Object.keys(apiParams).length) return

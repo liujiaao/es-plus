@@ -20,7 +20,7 @@ import {
 import type { FormItemOption } from '../types'
 
 // 支持嵌套属性路径的取值和赋值
-const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
+export const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
   const keys = path.split(/\.|\[|\]/).filter(Boolean)
   let result = obj
   for (const key of keys) {
@@ -30,7 +30,7 @@ const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => 
   return result
 }
 
-const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+export const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
   const keys = path.split(/\.|\[|\]/).filter(Boolean)
   const lastKey = keys.pop()
   let current: Record<string, unknown> = obj
@@ -52,7 +52,7 @@ export function useFormInputs() {
         'Input',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElInput, {
-            modelValue: getNestedValue(model, row.prop),
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -67,7 +67,7 @@ export function useFormInputs() {
           return hFn(
             ElSelect,
             {
-              modelValue: getNestedValue(model, row.prop),
+              modelValue: getNestedValue(model, row.prop) as any,
               ...row.attrs,
               ...row.on,
               'onUpdate:modelValue': (val: unknown) => {
@@ -85,7 +85,7 @@ export function useFormInputs() {
         'datePicker',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElDatePicker, {
-            modelValue: getNestedValue(model, row.prop),
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -98,7 +98,7 @@ export function useFormInputs() {
         'timePicker',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElTimePicker, {
-            modelValue: getNestedValue(model, row.prop),
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -111,7 +111,7 @@ export function useFormInputs() {
         'Slider',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElSlider, {
-            modelValue: getNestedValue(model, row.prop) as number,
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -124,7 +124,7 @@ export function useFormInputs() {
         'ColorPicker',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElColorPicker, {
-            modelValue: getNestedValue(model, row.prop) as string,
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -137,7 +137,7 @@ export function useFormInputs() {
         'Transfer',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElTransfer, {
-            modelValue: getNestedValue(model, row.prop) as unknown[],
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -150,7 +150,7 @@ export function useFormInputs() {
         'Cascader',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElCascader, {
-            modelValue: getNestedValue(model, row.prop) as unknown[],
+            modelValue: getNestedValue(model, row.prop) as any,
             options: row.dataOptions,
             ...row.attrs,
             ...row.on,
@@ -166,7 +166,7 @@ export function useFormInputs() {
           return hFn(
             ElRadioGroup,
             {
-              modelValue: getNestedValue(model, row.prop),
+              modelValue: getNestedValue(model, row.prop) as any,
               ...row.attrs,
               ...row.on,
               'onUpdate:modelValue': (val: unknown) => {
@@ -175,7 +175,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElRadio, { key: idx, value: opt.value }, () => opt.label)
+                hFn(ElRadio, { key: idx, value: opt.value as any }, () => opt.label)
               )
           )
         }
@@ -186,7 +186,7 @@ export function useFormInputs() {
           return hFn(
             ElCheckboxGroup,
             {
-              modelValue: getNestedValue(model, row.prop) as unknown[],
+              modelValue: getNestedValue(model, row.prop) as any,
               ...row.attrs,
               ...row.on,
               'onUpdate:modelValue': (val: unknown) => {
@@ -195,7 +195,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElCheckbox, { key: idx, value: opt.value }, () => opt.label)
+                hFn(ElCheckbox, { key: idx, value: opt.value as any }, () => opt.label)
               )
           )
         }
@@ -204,7 +204,7 @@ export function useFormInputs() {
         'Switch',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElSwitch, {
-            modelValue: getNestedValue(model, row.prop) as boolean,
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {
@@ -217,7 +217,7 @@ export function useFormInputs() {
         'Rate',
         (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
           return hFn(ElRate, {
-            modelValue: getNestedValue(model, row.prop) as number,
+            modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {

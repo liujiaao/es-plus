@@ -90,4 +90,109 @@ describe('useFormLayout', () => {
     // so the function returns hasSpan=0 (button can fit in zero space = needs new row)
     expect(getBtnColSpan.value).toBe(0)
   })
+
+  describe('changeFolded', () => {
+    it('should toggle folded state', () => {
+      const props = {
+        layoutFormProps: {
+          fromLayProps: { minFoldRows: 1 }
+        },
+        formItemList: [
+          { prop: 'a', span: 12 },
+          { prop: 'b', span: 12 },
+          { prop: 'c', span: 12 },
+          { prop: 'd', span: 12 }
+        ]
+      }
+
+      const { folded, changeFolded } = useFormLayout(props)
+      expect(folded.value).toBe(true)
+
+      changeFolded()
+      expect(folded.value).toBe(false)
+
+      changeFolded()
+      expect(folded.value).toBe(true)
+    })
+  })
+
+  describe('formItem with fold state', () => {
+    it('should mark items beyond fold threshold with isFold=true when folded', () => {
+      const props = {
+        layoutFormProps: {
+          fromLayProps: { minFoldRows: 1 }
+        },
+        formItemList: [
+          { prop: 'a', span: 12 },
+          { prop: 'b', span: 12 },
+          { prop: 'c', span: 12 },
+          { prop: 'd', span: 12 }
+        ]
+      }
+
+      const { formItem, folded } = useFormLayout(props)
+      expect(folded.value).toBe(true)
+
+      const foldedItems = formItem.value.filter((it: any) => it.isFold)
+      const visibleItems = formItem.value.filter((it: any) => !it.isFold)
+      expect(visibleItems.length).toBeGreaterThan(0)
+      expect(foldedItems.length).toBeGreaterThan(0)
+    })
+
+    it('should mark all items with isFold=false when not folded', () => {
+      const props = {
+        layoutFormProps: {
+          fromLayProps: { minFoldRows: 1 }
+        },
+        formItemList: [
+          { prop: 'a', span: 12 },
+          { prop: 'b', span: 12 },
+          { prop: 'c', span: 12 },
+          { prop: 'd', span: 12 }
+        ]
+      }
+
+      const { formItem, changeFolded } = useFormLayout(props)
+      changeFolded()
+
+      const foldedItems = formItem.value.filter((it: any) => it.isFold)
+      expect(foldedItems.length).toBe(0)
+    })
+
+    it('should not fold when items fit within minFoldRows', () => {
+      const props = {
+        layoutFormProps: {
+          fromLayProps: { minFoldRows: 3 }
+        },
+        formItemList: [
+          { prop: 'a', span: 12 },
+          { prop: 'b', span: 12 }
+        ]
+      }
+
+      const { formItem } = useFormLayout(props)
+      const foldedItems = formItem.value.filter((it: any) => it.isFold)
+      expect(foldedItems.length).toBe(0)
+    })
+  })
+
+  describe('getBtnColSpan with folded state', () => {
+    it('should return 24 when folded', () => {
+      const props = {
+        layoutFormProps: {
+          fromLayProps: { minFoldRows: 1 }
+        },
+        formItemList: [
+          { prop: 'a', span: 12 },
+          { prop: 'b', span: 12 },
+          { prop: 'c', span: 12 },
+          { prop: 'd', span: 12 }
+        ]
+      }
+
+      const { getBtnColSpan, folded } = useFormLayout(props)
+      expect(folded.value).toBe(true)
+      expect(getBtnColSpan.value).toBe(24)
+    })
+  })
 })

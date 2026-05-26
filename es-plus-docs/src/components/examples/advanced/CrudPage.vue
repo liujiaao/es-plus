@@ -27,7 +27,13 @@ const pageSchema = {
       { label: '启用', value: 1 },
       { label: '禁用', value: 0 }
     ]},
-    { prop: 'date', label: '日期', formtype: 'datePicker', span: 8, attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
+    { prop: 'date', label: '日期', formtype: 'datePicker', span: 8, attrs: { 
+      type: 'daterange', 
+     valueFormat: 'YYYY-MM-DD' ,
+         'start-placeholder': '开始日期',
+          'end-placeholder': '结束日期',
+          placeholder: '选择日期时间'
+  } }
   ],
   columns: [
     { prop: 'id', label: 'ID', width: 60 },

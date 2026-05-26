@@ -2,6 +2,15 @@ import { createVNode, getCurrentInstance, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'
 
+export interface DialogCallable {
+  (dialogOptions: DialogOptions): any
+  close: () => void
+}
+
+export interface DialogCallableWithDestroy extends DialogCallable {
+  destroy: () => void
+}
+
 const getAppendToElement = (appendTo?: string | HTMLElement) => {
   if (typeof appendTo === 'string') {
     return document.querySelector(appendTo) || document.body
@@ -26,7 +35,7 @@ const initInstance = (Component: any, props: DialogOptions, container: HTMLEleme
     }
 
     if (!vNode.appContext.config) {
-      vNode.appContext.config = {}
+      vNode.appContext.config = {} as any
     }
     if (!vNode.appContext.config.globalProperties) {
       vNode.appContext.config.globalProperties = {}
@@ -40,7 +49,9 @@ const initInstance = (Component: any, props: DialogOptions, container: HTMLEleme
   return vNode
 }
 
-export const useDialog = (Component?: any, opt: { onlyInstance?: boolean } = {}) => {
+export function useDialog(Component?: any, opt?: { onlyInstance?: false }): DialogCallableWithDestroy
+export function useDialog(Component?: any, opt?: { onlyInstance: true }): DialogCallable
+export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {}) {
   Component = Component || EsDialog
   const options = Object.assign({ onlyInstance: false }, opt)
 
@@ -63,7 +74,7 @@ export const useDialog = (Component?: any, opt: { onlyInstance?: boolean } = {})
       const originalOnSubmit = dialogOptions.onSubmit
 
       dialogOptions.onClosed = (...args: any[]) => {
-        originalOnClosed?.(...args)
+        ;(originalOnClosed as Function)?.(...args)
         close()
       }
 

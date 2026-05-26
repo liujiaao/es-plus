@@ -62,6 +62,7 @@ import mcpServerMd from '@/docs/mcp-server.md?raw'
 import cliMd from '@/docs/cli.md?raw'
 import permissionI18nMd from '@/docs/permission-i18n.md?raw'
 import migrationMd from '@/docs/migration.md?raw'
+import changelogMd from '@/docs/changelog.md?raw'
 
 const route = useRoute()
 
@@ -90,7 +91,8 @@ const docsData = {
   'mcp-server': { title: 'MCP Server', content: mcpServerMd },
   'cli': { title: 'CLI 工具', content: cliMd },
   'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },
-  'migration': { title: '迁移指南', content: migrationMd }
+  'migration': { title: '迁移指南', content: migrationMd },
+  'changelog': { title: '更新日志', content: changelogMd }
 }
 
 const currentDoc = computed(() => {

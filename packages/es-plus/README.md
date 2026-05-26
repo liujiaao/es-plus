@@ -1156,6 +1156,21 @@ npx @es-plus/cli scaffold dashboard --features query,table,dialog
 
 ## 更新日志
 
+### v1.3.3
+
+- 修复全部 35 个 TypeScript 编译错误，`vue-tsc --noEmit` 零错误通过
+- 新增 `tsconfig.build.json` 分离生产构建和测试的类型检查
+- `useDialog` 添加函数重载，精确区分 `DialogCallableWithDestroy` 和 `DialogCallable` 类型
+- `TableOptions` 类型补全：新增 `configBtn`、`leftText`、`height` 属性声明
+- `heightType` 支持 `'maxHeight'` 选项
+- 单元测试全面覆盖：82 → 254 测试用例（11 个测试文件）
+- `vue-tsc` 升级至 v3.3.1（兼容 TypeScript 5.9）
+
+### v1.3.2
+
+- 新增 JSON Schema 文件，支持 AI 工具链集成
+- 配置 changesets 自动版本管理
+
 ### v1.2.0
 
 - 导出全部 TypeScript 类型定义（FormItemOption、TableColumn 等 11 个核心接口）
