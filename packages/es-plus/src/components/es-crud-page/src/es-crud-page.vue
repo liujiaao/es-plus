@@ -33,6 +33,7 @@ import type {
   CrudPageSchema,
   CrudAction,
   CrudBtnConfig,
+  TableBtnConfig,
   OperationColumnConfig,
   RowBtnConfig,
   CrudDialogConfig,
@@ -124,6 +125,9 @@ const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
 
 const normalizedToolbarBtns = computed<CrudBtnConfig[]>(() => {
   if (props.schema.toolbarBtns) return props.schema.toolbarBtns
+
+  // 新模式（显式配置了 dialogs 或 operationColumn）：不自动生成工具栏按钮
+  if (props.schema.dialogs || props.schema.operationColumn !== undefined) return []
 
   // 旧模式：从 actions 推导
   const actions = props.schema.actions || ['add', 'edit', 'delete']
@@ -219,6 +223,23 @@ const mergedColumns = computed<TableColumn[]>(() => {
   return cols
 })
 
+// ─── 表格工具栏按钮 ───
+
+const normalizedTableBtns = computed(() => {
+  if (!props.schema.tableBtns?.length) return []
+  return props.schema.tableBtns.map((btn: TableBtnConfig) => ({
+    name: btn.name,
+    type: btn.type,
+    size: btn.size || 'small',
+    icon: btn.icon,
+    code: btn.code || 1,
+    permissionValue: btn.permissionValue,
+    loading: btn.loading,
+    disabled: btn.disabled,
+    click: () => handleToolbarBtnClick(btn)
+  }))
+})
+
 // ─── 表格选项 ───
 
 const mergedOptions = computed(() => {
@@ -230,17 +251,24 @@ const mergedOptions = computed(() => {
   if (props.httpRequest) {
     base.httpRequest = props.httpRequest
   }
+  const tBtns = normalizedTableBtns.value
+  if (tBtns.length > 0) {
+    const existing = (base.configBtn as any[]) || []
+    base.configBtn = [...existing, ...tBtns]
+  }
   return base
 })
 
 // ─── 表单布局 ───
 
 const formLayoutProps = computed(() => {
-  if (!props.schema.formLayout) return undefined
+  const layout = props.schema.formLayout
+  if (!layout) return undefined
   return {
     rowLayProps: { gutter: 16 },
     fromLayProps: {
-      labelBtnWidth: props.schema.formLayout.labelWidth
+      labelBtnWidth: layout.labelWidth,
+      ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {})
     }
   } as any
 })

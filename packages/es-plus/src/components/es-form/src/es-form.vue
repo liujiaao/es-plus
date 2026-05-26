@@ -3,7 +3,7 @@
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
-          <el-col v-show="!item?.isFold" :span="item.span || 6">
+          <el-col v-show="!item?.isFold" :span="item.span">
             <el-form-item
               :label="translateLabel(item)"
               v-bind="initFormItemOptions((item as any).formItemOptions || {})"
@@ -232,6 +232,7 @@ const extendedIcon = Object.fromEntries(Object.entries(ElementPlusIconsVue))
 const getCompIcon = (key?: string) => (key ? extendedIcon[key] || key : undefined)
 const filterOptions = (it: BtnConfig) => {
   const { icon, ...opt } = it as Record<string, unknown>
+  if (!opt.size) opt.size = 'small'
   return opt
 }
 
@@ -253,6 +254,7 @@ const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 // Break circular dependency: formLayoutRef is populated after useFormLayout
 const formLayoutRef = ref<Record<string, unknown>>(props.layoutFormProps?.fromLayProps || {})
 const formProps = computed(() => ({
+  size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
   rules: props.rules,
@@ -297,15 +299,35 @@ watch(
 
 const formItemListFilter = computed(() => {
   const list = formItemRowsList.value || []
-  return list
-    .map((it) => (it ? { ...it, span: it.span || 6, dataOptions: it.dataOptions || [] } : null))
-    .filter((it): it is (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> }) => {
+  const visible = list
+    .map((it) => (it ? { ...it, dataOptions: it.dataOptions || [] } : null))
+    .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)
       }
       return true
     })
+
+  const itemsWithoutSpan = visible.filter((it) => !it.span)
+  const autoCount = itemsWithoutSpan.length
+  let autoSpan = 6
+  if (autoCount > 0) {
+    const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
+    const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
+    if (fixedTotal === 0) {
+      if (autoCount === 1) autoSpan = 24
+      else if (autoCount === 2) autoSpan = 12
+      else if (autoCount === 3) autoSpan = 8
+      else autoSpan = 6
+    } else {
+      autoSpan = remaining >= autoCount ? Math.floor(remaining / autoCount) : 6
+      if (autoSpan > 12) autoSpan = 12
+      if (autoSpan < 4) autoSpan = 6
+    }
+  }
+
+  return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
 const {

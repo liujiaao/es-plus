@@ -7,9 +7,11 @@ export interface CrudPageSchema {
   /** 查询表单字段配置 */
   formItems?: FormItemOption[]
   /** 表单布局配置 */
-  formLayout?: { span?: number; labelWidth?: string | number }
-  /** 工具栏按钮（显式声明，替代从 actions 自动生成） */
+  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  /** 工具栏按钮（显式声明，替代从 actions 自动生成，渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
+  /** 表格工具栏按钮（渲染在 EsTable 上方的 configBtn 区域，code:1=左侧 code:2=右侧） */
+  tableBtns?: TableBtnConfig[]
   /** 表格列配置 */
   columns: TableColumn[]
   /** 表格选项配置 */
@@ -41,6 +43,13 @@ export interface CrudBtnConfig extends BtnConfig {
   actionType?: string
   /** 点击前确认提示（true = 默认提示文字，string = 自定义提示文字） */
   confirm?: string | boolean
+}
+
+// ─── 表格工具栏按钮 ───
+
+export interface TableBtnConfig extends CrudBtnConfig {
+  /** 按钮位置：1=左侧（默认），2=右侧 */
+  code?: 1 | 2
 }
 
 // ─── 操作列 ───

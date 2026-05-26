@@ -20,11 +20,11 @@ export function useFormLayout(props: { layoutFormProps?: LayoutFormProps; formIt
 
     for (let i = 0; i < formItems.length; i++) {
       const item = formItems[i]
-      pre += item.span || 6
+      pre += item.span || 24
       if (pre > 24) {
         const statIndex = columnRows.length ? columnRows[columnRows.length - 1].endIndex : 0
         columnRows.push({ statIndex, endIndex: i })
-        pre = item.span || 6
+        pre = item.span || 24
         if (i === formItems.length - 1) {
           columnRows.push({ statIndex: i, endIndex: i + 1 })
         }
@@ -71,7 +71,7 @@ export function useFormLayout(props: { layoutFormProps?: LayoutFormProps; formIt
     const { rowNum, columnRow } = getRowColsAlgorithm.value
     const lastColumn = columnRow[rowNum - 1] || []
     const btnColSpan = props.layoutFormProps?.fromLayProps?.btnColSpan || 0
-    const totalSpan = lastColumn.reduce((sum, idx) => sum + (props.formItemList[idx]?.span || 6), 0)
+    const totalSpan = lastColumn.reduce((sum, idx) => sum + (props.formItemList[idx]?.span || 24), 0)
     const hasSpan = 24 - totalSpan
 
     return !folded.value && btnColSpan <= hasSpan ? hasSpan : 24

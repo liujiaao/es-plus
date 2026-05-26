@@ -318,6 +318,26 @@ const filteredColumns = computed(() => {
       }
     }
   })
+
+  // 当所有列都设置了固定 width 且没有 minWidth 时，将最后一个非固定列的 width 转为 minWidth 以填充剩余空间
+  const allFixedWidth = list.length > 0 && list.every((col) => col.width && !col.minWidth)
+  if (allFixedWidth) {
+    let flexIdx = -1
+    for (let i = list.length - 1; i >= 0; i--) {
+      const col = list[i]
+      if (!col.fixed && col.prop !== 'operate' && col.key !== 'operate') {
+        flexIdx = i
+        break
+      }
+    }
+    if (flexIdx === -1) flexIdx = list.length - 1
+    if (flexIdx >= 0) {
+      const col = list[flexIdx]
+      col.minWidth = col.width
+      delete col.width
+    }
+  }
+
   return list
 })
 

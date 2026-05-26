@@ -69,7 +69,7 @@
           <li class="nav-item">
             <router-link to="/components/es-crud-page" class="nav-link">
               <span class="nav-icon"><el-icon><Document /></el-icon></span>
-              高级EsCrudPage CRUD
+             EsCrudPage  高级CRUD
             </router-link>
           </li>
         </ul>

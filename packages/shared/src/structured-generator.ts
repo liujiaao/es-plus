@@ -35,7 +35,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   const formFields = config.fields.filter(f => f.inForm !== false)
   const hasDelete = config.actions.includes('delete')
   const hasDialog = config.actions.includes('add') || config.actions.includes('edit') || config.actions.includes('view')
-  const useNewDialogMode = !!(config.dialogs || config.toolbarBtns || config.operationColumn !== undefined)
+  const useNewDialogMode = !!(config.dialogs || config.toolbarBtns || config.tableBtns || config.operationColumn !== undefined)
 
   const renderFields = tableFields.filter(f => f.render)
   if (renderFields.length > 0) {
@@ -62,10 +62,18 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.multiSelect ? { multiSelect: true } : {}),
   }
 
+  // Query form layout (minFoldRows for collapse)
+  if (config.formLayout) {
+    schema.formLayout = config.formLayout
+  }
+
   // New multi-dialog mode
   if (useNewDialogMode) {
     if (config.toolbarBtns) {
       schema.toolbarBtns = config.toolbarBtns
+    }
+    if (config.tableBtns) {
+      schema.tableBtns = config.tableBtns
     }
     if (config.operationColumn !== undefined) {
       schema.operationColumn = config.operationColumn

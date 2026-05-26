@@ -12,6 +12,7 @@ export type {
   CrudPageEmits,
   CrudPageExpose,
   CrudBtnConfig,
+  TableBtnConfig,
   OperationColumnConfig,
   RowBtnConfig,
   RowBtnContext,

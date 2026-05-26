@@ -151,7 +151,7 @@ describe('EsCrudPage', () => {
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
-      const actionCol = columnsProp.find((c: any) => c.prop === 'action')
+      const actionCol = columnsProp.find((c: any) => c.prop === 'operate')
       expect(actionCol).toBeDefined()
       expect(actionCol.label).toBe('操作')
       expect(actionCol.fixed).toBe('right')
@@ -166,7 +166,7 @@ describe('EsCrudPage', () => {
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
-      const actionCol = columnsProp.find((c: any) => c.prop === 'action')
+      const actionCol = columnsProp.find((c: any) => c.prop === 'operate')
       expect(actionCol).toBeUndefined()
     })
 
@@ -175,14 +175,14 @@ describe('EsCrudPage', () => {
         schema: {
           columns: [
             { prop: 'name', label: '姓名' },
-            { prop: 'action', label: '操作', btns: [{ name: '自定义' }] }
+            { prop: 'operate', label: '操作', btns: [{ name: '自定义' }] }
           ],
           actions: ['edit', 'delete']
         }
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
-      const actionCols = columnsProp.filter((c: any) => c.prop === 'action')
+      const actionCols = columnsProp.filter((c: any) => c.prop === 'operate')
       expect(actionCols).toHaveLength(1)
     })
   })
@@ -323,7 +323,7 @@ describe('EsCrudPage', () => {
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
-      const actionCol = columnsProp.find((c: any) => c.prop === 'action')
+      const actionCol = columnsProp.find((c: any) => c.prop === 'operate')
       expect(actionCol).toBeDefined()
       // Should have edit and delete buttons (view not included by default)
       expect(actionCol.btns.some((b: any) => b.name === '编辑')).toBe(true)
@@ -339,7 +339,7 @@ describe('EsCrudPage', () => {
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
-      const actionCol = columnsProp.find((c: any) => c.prop === 'action')
+      const actionCol = columnsProp.find((c: any) => c.prop === 'operate')
       expect(actionCol.btns.some((b: any) => b.name === '查看')).toBe(true)
     })
 

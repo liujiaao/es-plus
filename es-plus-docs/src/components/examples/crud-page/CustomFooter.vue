@@ -57,6 +57,7 @@ const schema = {
         { prop: 'remark',
           label: '审批意见', 
           formtype: 'Input',
+          span: 24,
           attrs: { type: 'textarea', rows: 3, placeholder: '请输入审批意见...' },
           formItemOptions: { 
             rules: [{ required: true, message: '请填写审批意见' }] }

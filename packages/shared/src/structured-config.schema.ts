@@ -63,6 +63,18 @@ const ToolbarBtnSchema = z.object({
   permissionValue: z.string().optional(),
 })
 
+const TableBtnSchema = z.object({
+  name: z.string().min(1),
+  key: z.string().optional(),
+  type: z.string().optional(),
+  icon: z.string().optional(),
+  code: z.union([z.literal(1), z.literal(2)]).default(1).describe('1=left, 2=right'),
+  dialogKey: z.string().optional(),
+  actionType: z.string().optional(),
+  confirm: z.union([z.string(), z.boolean()]).optional(),
+  permissionValue: z.string().optional(),
+})
+
 const RowBtnSchema = z.object({
   name: z.string().min(1),
   key: z.string().optional(),
@@ -90,6 +102,7 @@ const DialogConfigSchema = z.object({
   formLayout: z.object({
     span: z.number().optional(),
     labelWidth: z.union([z.string(), z.number()]).optional(),
+    minFoldRows: z.number().int().optional().describe('Form collapses when rows exceed this number'),
   }).optional(),
   hasCustomRender: z.boolean().optional(),
   isDraggable: z.boolean().optional(),
@@ -120,7 +133,13 @@ export const StructuredCrudConfigSchema = z.object({
   typescript: z.boolean().default(true).describe('Generate TypeScript'),
   permissions: z.record(z.string(), z.string()).optional().describe('Permission codes for action buttons'),
   i18n: z.boolean().default(false).describe('Use labelKey for i18n'),
-  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Explicit toolbar buttons with dialog binding'),
+  formLayout: z.object({
+    span: z.number().optional(),
+    labelWidth: z.union([z.string(), z.number()]).optional(),
+    minFoldRows: z.number().int().optional().describe('Query form collapses when rows exceed this number'),
+  }).optional().describe('Query form layout config'),
+  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Toolbar buttons rendered in EsForm button area (legacy positioning)'),
+  tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (code:1=left, code:2=right) rendered above EsTable'),
   operationColumn: OperationColumnSchema.optional().describe('Operation column config (false = hidden)'),
   dialogs: z.record(z.string(), DialogConfigSchema).optional().describe('Multi-dialog configs keyed by dialog ID'),
 })
