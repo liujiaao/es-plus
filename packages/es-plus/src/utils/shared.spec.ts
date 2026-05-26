@@ -40,6 +40,60 @@ describe('shared utils', () => {
     })
   })
 
+  describe('isString', () => {
+    it('should return true for strings', () => {
+      expect(isString('')).toBe(true)
+      expect(isString('hello')).toBe(true)
+      expect(isString(String(123))).toBe(true)
+    })
+
+    it('should return false for non-strings', () => {
+      expect(isString(123)).toBe(false)
+      expect(isString(null)).toBe(false)
+      expect(isString(undefined)).toBe(false)
+      expect(isString({})).toBe(false)
+    })
+  })
+
+  describe('isNumber', () => {
+    it('should return true for valid numbers', () => {
+      expect(isNumber(0)).toBe(true)
+      expect(isNumber(42)).toBe(true)
+      expect(isNumber(-3.14)).toBe(true)
+      expect(isNumber(Infinity)).toBe(true)
+    })
+
+    it('should return false for NaN and non-numbers', () => {
+      expect(isNumber(NaN)).toBe(false)
+      expect(isNumber('123')).toBe(false)
+      expect(isNumber(null)).toBe(false)
+      expect(isNumber(undefined)).toBe(false)
+    })
+  })
+
+  describe('isEmpty', () => {
+    it('should return true for null/undefined', () => {
+      expect(isEmpty(null)).toBe(true)
+      expect(isEmpty(undefined)).toBe(true)
+    })
+
+    it('should return true for empty arrays and objects', () => {
+      expect(isEmpty([])).toBe(true)
+      expect(isEmpty({})).toBe(true)
+    })
+
+    it('should return false for non-empty arrays and objects', () => {
+      expect(isEmpty([1])).toBe(false)
+      expect(isEmpty({ a: 1 })).toBe(false)
+    })
+
+    it('should return false for primitives', () => {
+      expect(isEmpty(0)).toBe(false)
+      expect(isEmpty('')).toBe(false)
+      expect(isEmpty(false)).toBe(false)
+    })
+  })
+
   describe('firstWordUpperCase', () => {
     it('should capitalize first letter and lowercase rest', () => {
       expect(firstWordUpperCase('hello')).toBe('Hello')

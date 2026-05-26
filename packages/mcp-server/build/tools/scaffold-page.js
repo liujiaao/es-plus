@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateScaffold } from "../core/code-generator.js";
+import { generateScaffold } from "@es-plus/shared";
 export function registerScaffoldPage(server) {
     server.tool("scaffold_page", "Generate a minimal es-plus-ui page scaffold (.vue SFC) with the basic structure for query form, table, and optional dialog. Use this when you need a blank starting template.", {
         name: z

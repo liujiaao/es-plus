@@ -21,7 +21,8 @@ npm install -D @es-plus/cli
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `es-plus create <name>` | 交互式生成 CRUD 页面 | `es-plus create user-management` |
+| `es-plus create <name>` | 交互式 / 从配置生成 CRUD 页面 | `es-plus create user-management` |
+| `es-plus create --from-config` | 从 JSON 配置生成生产级代码 | `es-plus create --from-config ./config.json` |
 | `es-plus validate <file>` | 校验 JSON 配置文件 | `es-plus validate ./config.json` |
 | `es-plus scaffold <name>` | 生成最小页面脚手架 | `es-plus scaffold dashboard` |
 
@@ -163,6 +164,172 @@ const columns = [
 | 评分、星级 | Rate 评分 |
 | 头像、图片、附件 | Upload 上传 |
 | 其他 | Input 输入框 |
+
+---
+
+## create --from-config — 从结构化配置生成（推荐）
+
+当需要生产级代码（零 TODO、零占位符、真实 API 地址）时，使用 `--from-config` 从 JSON 配置文件生成：
+
+### 基本用法
+
+```bash
+# 从 JSON 配置文件生成
+es-plus create --from-config ./user-manage.json
+
+# 指定输出路径和模式
+es-plus create --from-config ./user-manage.json -o ./src/views/user/ --mode schema
+
+# 从 stdin 读取（配合其他工具）
+cat config.json | es-plus create --from-config -
+```
+
+### 参数说明
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--from-config <file>` | JSON 配置文件路径（`-` 表示 stdin） | **必填** |
+| `-o, --output <path>` | 输出目录 | `./src/views/<Name>/` |
+| `--mode <mode>` | 输出模式：`schema` 或 `sfc` | `schema` |
+| `--typescript` | 生成 TypeScript 代码 | `true` |
+
+### 配置文件格式（StructuredCrudConfig）
+
+```json
+{
+  "name": "UserManage",
+  "apiUrl": "/api/system/users",
+  "fields": [
+    { "prop": "username", "label": "用户名", "formtype": "Input", "required": true,
+      "rules": [{ "min": 2, "max": 20, "message": "用户名长度 2-20 个字符" }] },
+    { "prop": "phone", "label": "手机号", "formtype": "Input", "required": true,
+      "rules": [{ "pattern": "^1[3-9]\\d{9}$", "message": "手机号格式不正确" }] },
+    { "prop": "email", "label": "邮箱", "formtype": "Input", "inQuery": false,
+      "rules": [{ "type": "email", "message": "邮箱格式不正确" }] },
+    { "prop": "status", "label": "状态", "formtype": "Select",
+      "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }],
+      "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
+    { "prop": "deptId", "label": "部门", "formtype": "Select", "inTable": false,
+      "apiParams": { "url": "/api/system/depts/options" } },
+    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker",
+      "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
+  ],
+  "actions": ["add", "edit", "delete"],
+  "tableOptions": { "rowkey": "userId" },
+  "permissions": { "add": "system:user:add", "edit": "system:user:edit", "delete": "system:user:delete" }
+}
+```
+
+### 多弹窗配置文件示例
+
+```json
+{
+  "name": "OrderManage",
+  "apiUrl": "/api/orders",
+  "fields": [
+    { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+    { "prop": "customerName", "label": "客户", "formtype": "Input" },
+    { "prop": "amount", "label": "金额", "formtype": "Input", "inQuery": false,
+      "attrs": { "type": "number" } },
+    { "prop": "status", "label": "状态", "formtype": "Select",
+      "dataOptions": [
+        { "label": "待审核", "value": 0 },
+        { "label": "已通过", "value": 1 },
+        { "label": "已拒绝", "value": 2 }
+      ] }
+  ],
+  "toolbarBtns": [
+    { "name": "新建订单", "type": "primary", "icon": "Plus", "dialogKey": "add" },
+    { "name": "导出", "icon": "Download", "actionType": "export" }
+  ],
+  "operationColumn": {
+    "width": 280,
+    "btns": [
+      { "name": "编辑", "type": "primary", "dialogKey": "edit" },
+      { "name": "审批", "type": "warning", "dialogKey": "approve" },
+      { "name": "查看", "dialogKey": "detail" },
+      { "name": "删除", "type": "danger", "confirm": "确定删除该订单？" }
+    ]
+  },
+  "dialogs": {
+    "add": {
+      "title": "新建订单",
+      "width": "700px",
+      "formItems": [
+        { "prop": "customerName", "label": "客户名称", "formtype": "Input", "required": true },
+        { "prop": "amount", "label": "金额", "formtype": "Input", "required": true,
+          "attrs": { "type": "number" } },
+        { "prop": "remark", "label": "备注", "formtype": "Input",
+          "attrs": { "type": "textarea", "rows": 3 } }
+      ]
+    },
+    "edit": {
+      "title": "编辑订单",
+      "width": "700px",
+      "formItems": [
+        { "prop": "customerName", "label": "客户名称", "formtype": "Input" },
+        { "prop": "amount", "label": "金额", "formtype": "Input",
+          "attrs": { "type": "number" } }
+      ]
+    },
+    "approve": {
+      "title": "审批",
+      "width": "500px",
+      "formItems": [
+        { "prop": "result", "label": "审批结果", "formtype": "Radio",
+          "dataOptions": [{ "label": "通过", "value": 1 }, { "label": "拒绝", "value": 2 }] },
+        { "prop": "remark", "label": "审批意见", "formtype": "Input",
+          "attrs": { "type": "textarea" } }
+      ]
+    },
+    "detail": {
+      "title": "订单详情",
+      "width": "800px",
+      "isHiddenFooter": true,
+      "hasCustomRender": true
+    }
+  }
+}
+```
+
+### 输出结构
+
+**schema 模式**（默认）输出两个文件：
+
+```
+src/views/OrderManage/
+├── schema.ts      # CrudPageSchema 配置 JSON
+└── index.vue      # 包装 SFC（~30 行，处理事件和 API 调用）
+```
+
+**sfc 模式** 输出单个完整 SFC：
+
+```
+src/views/OrderManage.vue   # 独立 SFC（~200 行，包含全部逻辑）
+```
+
+### 与自然语言模式对比
+
+| 特性 | `es-plus create -d "..."` | `es-plus create --from-config` |
+|------|--------------------------|-------------------------------|
+| 输入 | 自然语言描述 | 精确 JSON 配置 |
+| API 地址 | 占位符（需手动替换） | 真实地址（直接可用） |
+| 验证规则 | 无 | 完整规则 |
+| 多弹窗 | 不支持 | 完整支持 |
+| 权限 | 不支持 | 支持 |
+| TODO 注释 | 有（需手动处理） | 零 TODO |
+| 适用阶段 | 原型开发 | 生产部署 |
+
+### 配合 CI/CD 使用
+
+```yaml
+# .github/workflows/generate.yml
+- name: Generate pages from configs
+  run: |
+    for f in ./configs/*.json; do
+      npx @es-plus/cli create --from-config "$f" -o ./src/views/
+    done
+```
 
 ---
 

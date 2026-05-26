@@ -3,10 +3,10 @@
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
-          <el-col v-show="!item?.isFold" :span="item.span || 6">
+          <el-col v-show="!item?.isFold" :span="item.span">
             <el-form-item
               :label="translateLabel(item)"
-              v-bind="initFormItemOptions(item.formItemOptions || {})"
+              v-bind="initFormItemOptions((item as any).formItemOptions || {})"
               :prop="item.prop"
               @click.stop="() => {}"
             >
@@ -26,7 +26,7 @@
               :row="{ isFold: isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
               :form-model="model"
               :form-item-list="formItem"
-              :render="renderBtn"
+              :render="(renderBtn as Function)"
             />
           </template>
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
@@ -90,7 +90,7 @@
             <el-form-item
               v-if="!btnColSpanRow && configBtn.length"
               :label="' '"
-              :label-width="formProps.labelBtnWidth ? formProps.labelBtnWidth : formProps.labelWidth"
+              :label-width="(formProps as any).labelBtnWidth ? (formProps as any).labelBtnWidth : (formProps as any).labelWidth"
               :class="{ formItemCols: btnColSpanRow ? true : getBtnColSpan === 24 }"
               class="btn-formItem"
             >
@@ -164,6 +164,7 @@ import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
 import { isObject } from '../../../utils/shared'
+import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
@@ -196,8 +197,8 @@ const emit = defineEmits<{
 }>()
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', {})
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -218,7 +219,7 @@ const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
-  const ctx = instance?.ctx as Record<string, unknown>
+  const ctx = (instance as any)?.ctx as Record<string, any>
   return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
 })
 
@@ -231,6 +232,7 @@ const extendedIcon = Object.fromEntries(Object.entries(ElementPlusIconsVue))
 const getCompIcon = (key?: string) => (key ? extendedIcon[key] || key : undefined)
 const filterOptions = (it: BtnConfig) => {
   const { icon, ...opt } = it as Record<string, unknown>
+  if (!opt.size) opt.size = 'small'
   return opt
 }
 
@@ -252,6 +254,7 @@ const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 // Break circular dependency: formLayoutRef is populated after useFormLayout
 const formLayoutRef = ref<Record<string, unknown>>(props.layoutFormProps?.fromLayProps || {})
 const formProps = computed(() => ({
+  size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
   rules: props.rules,
@@ -296,15 +299,35 @@ watch(
 
 const formItemListFilter = computed(() => {
   const list = formItemRowsList.value || []
-  return list
-    .map((it) => (it ? { ...it, span: it.span || 6, dataOptions: it.dataOptions || [] } : null))
-    .filter((it): it is FormItemOption => {
+  const visible = list
+    .map((it) => (it ? { ...it, dataOptions: it.dataOptions || [] } : null))
+    .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)
       }
       return true
     })
+
+  const itemsWithoutSpan = visible.filter((it) => !it.span)
+  const autoCount = itemsWithoutSpan.length
+  let autoSpan = 6
+  if (autoCount > 0) {
+    const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
+    const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
+    if (fixedTotal === 0) {
+      if (autoCount === 1) autoSpan = 24
+      else if (autoCount === 2) autoSpan = 12
+      else if (autoCount === 3) autoSpan = 8
+      else autoSpan = 6
+    } else {
+      autoSpan = remaining >= autoCount ? Math.floor(remaining / autoCount) : 6
+      if (autoSpan > 12) autoSpan = 12
+      if (autoSpan < 4) autoSpan = 6
+    }
+  }
+
+  return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
 const {
@@ -340,12 +363,12 @@ const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
 const clickBtn = async (it: BtnConfig) => {
   if (it.triggerEvent && ['query', 'rest'].includes(it.key || '')) {
-    queryTableRequest(props.model, refs.value as { resetFields: () => void }, it.key)
+    queryTableRequest(props.model, refs.value as any, it.key)
   } else {
 
      // await refs.value.validate()
      if (it.key === 'rest' && refs.value) {
-         refs.value.resetFields()
+         ;(refs.value as any).resetFields()
       }
     it.click?.(props.model, refs.value, getTableInstant.value?.httpRequestInstance)
   }
@@ -380,7 +403,7 @@ const reset = () => emit('reset', refs.value, props.model)
 
 // 自定义弹窗
 const createDialogInstance = (() =>
-  instance?.ctx?.dialogInstance ? instance.ctx.dialogInstance() : useDialog)()
+  (instance as any)?.ctx?.dialogInstance ? (instance as any).ctx.dialogInstance() : useDialog)()
 const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
@@ -410,7 +433,7 @@ const getFormRowsFun = () => {
               size: 'small',
               maxlength: 3,
               formatter: (value: string) => value.replace(/^0|[^0-9]/g, ''),
-              modelValue: row.width,
+              modelValue: row.width as any,
               'onUpdate:modelValue': (val: unknown) => {
                 row.width = val
               }
@@ -441,7 +464,7 @@ const getCustomerTableInfo = () => {
               size: 'small',
               maxlength: 3,
               formatter: (value: string) => value.replace(/^0|[^0-9]/g, ''),
-              modelValue: row.width,
+              modelValue: row.width as any,
               'onUpdate:modelValue': (val: unknown) => {
                 row.width = val
               }
@@ -512,7 +535,7 @@ const handleTableItemOption = () => {
 // 生命周期
 nextTick(() => {
   formInstance.value = refs.value as Record<string, unknown>
-  ;(instance?.ctx as Record<string, unknown>)?.bodyFormInstance?.(formInstance.value)
+  ;((instance as any)?.ctx as Record<string, any>)?.bodyFormInstance?.(formInstance.value)
 })
 
 // 子组件定义

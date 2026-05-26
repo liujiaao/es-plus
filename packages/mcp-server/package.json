@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "MCP Server for es-plus-ui - AI coding tool integration for CRUD page generation",
   "type": "module",
   "bin": {
@@ -15,9 +15,12 @@
   },
   "files": [
     "build",
-    "schemas"
+    "schemas",
+    "bundled"
   ],
   "scripts": {
+    "bundle-types": "node scripts/bundle-types.mjs",
+    "prebuild": "cd ../shared && npm run build && cd ../mcp-server && npm run bundle-types",
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc --watch",
@@ -46,6 +49,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@es-plus/shared": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "ajv": "^8.12.0",
     "zod": "^3.22.0"

@@ -23,7 +23,7 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)
+app.use(ElementPlus, { size: 'small' })
 app.use(i18n)
 
 // 使用 ES-Plus 组件库

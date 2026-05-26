@@ -1,4 +1,24 @@
-const TYPES_CONTENT = `// es-plus-ui TypeScript Type Definitions
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+function loadTypesFromSource() {
+    const paths = [
+        join(__dirname, "../../../../es-plus/src/types/index.ts"),
+        join(__dirname, "../../bundled/types.d.ts"),
+    ];
+    for (const p of paths) {
+        try {
+            return readFileSync(p, "utf-8");
+        }
+        catch {
+            continue;
+        }
+    }
+    return TYPES_FALLBACK;
+}
+const TYPES_FALLBACK = `// es-plus-ui TypeScript Type Definitions (bundled fallback)
+// Run "npm run bundle-types" to update from source
 
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
@@ -13,13 +33,9 @@ export interface FormItemOption {
   attrs?: Record<string, unknown>
   on?: Record<string, unknown>
   dataOptions?: Array<{ label: string; value: unknown }>
-  isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean
-  render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
   isInitRun?: boolean
-  callOptionListFormat?: (data: unknown[]) => unknown[]
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  listenToCallBack?: Record<string, (params: unknown) => unknown>
   width?: number | string
   [key: string]: unknown
 }
@@ -46,17 +62,6 @@ export interface BtnConfig {
   [key: string]: unknown
 }
 
-export interface LayoutFormProps {
-  rowLayProps?: Record<string, unknown>
-  fromLayProps?: {
-    isBtnHidden?: boolean
-    minFoldRows?: number
-    btnColSpan?: number
-    labelBtnWidth?: string | number
-  }
-  setOptions?: boolean
-}
-
 export interface TableColumn {
   prop?: string
   key?: string
@@ -65,9 +70,7 @@ export interface TableColumn {
   minWidth?: number | string
   align?: string
   fixed?: boolean | string
-  formatter?: (row: Record<string, unknown>) => string
   render?: (h: RenderFunction, ctx: { row: Record<string, unknown>; value: unknown; index: number }) => VNode | string
-  scopedSlots?: { customRender?: string }
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
@@ -77,24 +80,14 @@ export interface TableColumn {
 
 export interface TableOptions {
   multiSelect?: boolean
-  expand?: boolean
-  snIndex?: boolean
-  loading?: boolean
   border?: boolean
   stripe?: boolean
-  size?: 'large' | 'default' | 'small'
   headerCellStyle?: Record<string, unknown>
   highlightCurrentRow?: boolean
-  cachePageSelection?: boolean
-  heightType?: 'auto' | 'height'
-  tabHeight?: number | string
   isInitRun?: boolean
-  actionUrl?: string
   apiParams?: ApiParams
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  listenToCallBack?: Record<string, (params: unknown) => unknown>
   configTableOut?: Record<string, string>
-  entryQuery?: Record<string, unknown>
   rowkey?: string
   [key: string]: unknown
 }
@@ -104,53 +97,29 @@ export interface PaginationConfig {
   current?: number
   total?: number
   pageSizes?: number[]
-  size?: 'large' | 'default' | 'small'
-  isSmall?: boolean
 }
 
 export interface DialogOptions {
   title?: string
   width?: string | number
   render?: (h: RenderFunction, instance: unknown, components: Record<string, unknown>) => VNode
-  renderHeader?: (h: RenderFunction, instance: unknown) => VNode
-  renderFooter?: (h: RenderFunction, instance: unknown) => VNode
   configBtn?: BtnConfig[]
-  onSubmit?: (close: () => void) => void
-  onClosed?: () => void
   isDraggable?: boolean
-  hiddenFullBtn?: boolean
-  isHiddenFooter?: boolean
-  maxHeight?: string | number
-  appendTo?: string | HTMLElement
-  fullscreen?: boolean
   [key: string]: unknown
-}
-
-export interface EsFormInstance {
-  validate: () => Promise<boolean>
-  resetFields: () => void
-  clearValidate: () => void
-}
-
-export interface EsTableInstance {
-  httpRequestInstance: (model?: Record<string, unknown>) => Promise<unknown>
-  clearSelection: () => void
-  toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
-  clearAllSelection: () => void
-  refresh: () => void
 }
 `;
 export function registerTypesResource(server) {
     server.resource("types", "esplus://types", {
-        description: "Complete TypeScript type definitions for all es-plus-ui components",
+        description: "Complete TypeScript type definitions for all es-plus-ui components (read from source when available)",
         mimeType: "text/plain",
     }, async () => {
+        const content = loadTypesFromSource();
         return {
             contents: [
                 {
                     uri: "esplus://types",
                     mimeType: "text/plain",
-                    text: TYPES_CONTENT,
+                    text: content,
                 },
             ],
         };

@@ -45,7 +45,11 @@ const formItems = [
     label: '日期范围',
     formtype: 'datePicker',
     span: 8,
-    attrs: { type: 'daterange', placeholder: '选择日期范围', clearable: true }
+    attrs: { type: 'daterange',
+    'start-placeholder': '开始日期',
+    'end-placeholder': '结束日期',
+       
+    placeholder: '选择日期范围', clearable: true }
   }
 ]
 

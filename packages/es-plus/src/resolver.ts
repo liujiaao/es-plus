@@ -70,6 +70,10 @@ const EP_INTERNAL_DEPS = [
   'transfer',
   'upload',
   'loading',
+  'message',
+  'message-box',
+  'breadcrumb',
+  'breadcrumb-item',
 ]
 
 // es-plus 组件名 → 模块路径映射

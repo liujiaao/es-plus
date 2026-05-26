@@ -67,27 +67,6 @@ app.use(EsPlus)
 app.mount('#app')
 ```
 
-### 自动按需导入（unplugin-vue-components）
-
-如果项目使用 `ElementPlusResolver` 按需导入 Element Plus，**必须同时配置 `EsPlusResolver`**，否则 es-plus 内部依赖的 EP 组件样式不会被注入：
-
-```typescript
-// vite.config.ts
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { EsPlusResolver } from 'es-plus-ui/resolver'
-
-export default defineConfig({
-  plugins: [
-    Components({
-      resolvers: [ElementPlusResolver(), EsPlusResolver()]
-    })
-  ]
-})
-```
-
-`EsPlusResolver` 会在检测到 `<es-table>`、`<es-form>` 等组件时，自动注入 es-plus 自身样式及其依赖的全部 Element Plus 组件样式。与 `ElementPlusResolver` 不冲突、不重复。
-
 ### 全局配置
 
 通过 `app.use(EsPlus, options)` 第二个参数配置全局默认值，避免每个组件重复传入相同的请求方法、字段映射、分页布局等配置：
@@ -1116,7 +1095,9 @@ const columns = [
 
 ## EsCrudPage — 一键 CRUD 页面
 
-传入 Schema 即可生成完整的查询表单 + 数据表格 + 弹窗编辑页面：
+传入 Schema 即可生成完整的查询表单 + 数据表格 + 多弹窗交互页面：
+
+### 基础用法（旧模式，仍可用）
 
 ```vue
 <template>
@@ -1139,8 +1120,73 @@ const schema = {
 </script>
 ```
 
+### 多弹窗模式（v1.4+ 推荐）
+
+显式声明按钮和多个独立弹窗，通过 `dialogKey` 绑定：
+
+```vue
+<template>
+  <es-crud-page ref="crudRef" :schema="schema" @dialog-confirm="handleConfirm" @btn-click="handleBtn" />
+</template>
+
+<script setup lang="ts">
+import type { CrudPageSchema } from 'es-plus-ui'
+
+const schema: CrudPageSchema = {
+  formItems: [
+    { prop: 'name', label: '姓名', formtype: 'Input' },
+    { prop: 'status', label: '状态', formtype: 'Select',
+      dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }
+  ],
+  columns: [
+    { prop: 'name', label: '姓名' },
+    { prop: 'status', label: '状态' }
+  ],
+  tableOptions: { border: true, apiParams: { url: '/api/users' } },
+  toolbarBtns: [
+    { name: '新增', type: 'primary', icon: 'Plus', dialogKey: 'add' },
+    { name: '导出', icon: 'Download', actionType: 'export' },
+  ],
+  operationColumn: {
+    width: 200,
+    btns: [
+      { name: '编辑', type: 'primary', dialogKey: 'edit' },
+      { name: '删除', type: 'danger', confirm: '确定删除吗？' },
+    ]
+  },
+  dialogs: {
+    add: { title: '新增', width: '600px', formItems: [
+      { prop: 'name', label: '姓名', formtype: 'Input', formItemOptions: { rules: [{ required: true, message: '请输入' }] } },
+    ]},
+    edit: { title: '编辑', width: '600px', formItems: [
+      { prop: 'name', label: '姓名', formtype: 'Input' },
+    ]},
+  }
+}
+</script>
+```
+
+### configureEsPlus — 模块级全局配置
+
+自动导入模式下无需 `app.use`，直接调用 `configureEsPlus`：
+
 ```typescript
-import type { CrudPageSchema, CrudAction } from 'es-plus-ui'
+import { configureEsPlus } from 'es-plus-ui'
+
+configureEsPlus({
+  permission: (value) => userStore.permissions.includes(value),
+  EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
+  EsForm: { $httpRequest: (p) => axios(p).then(r => r.data) }
+})
+```
+
+### TypeScript 类型
+
+```typescript
+import type {
+  CrudPageSchema, CrudBtnConfig, OperationColumnConfig,
+  RowBtnConfig, CrudDialogConfig, DialogRenderContext, DialogActionContext
+} from 'es-plus-ui'
 ```
 
 ---
@@ -1177,11 +1223,31 @@ npx @es-plus/cli scaffold dashboard --features query,table,dialog
 
 ## 更新日志
 
-### v1.3.0
+### v1.4.0
 
-- 新增 `EsPlusResolver` — 适配 `unplugin-vue-components` 按需导入场景，自动注入 ES-Plus 内部依赖的 Element Plus 组件样式
-- 新增 `es-plus-ui/resolver` 子路径导出（支持 ESM/CJS + TypeScript 类型）
-- 修复组件注册失败问题 — EsTable、EsDialog、SvgIcon 补充 `defineOptions({ name })` 声明，打包后 `component.name` 不再为 undefined
+- **EsCrudPage 多弹窗架构**：支持 `toolbarBtns`、`operationColumn`、`dialogs` 显式声明
+- 按钮通过 `dialogKey` 声明式绑定弹窗，支持多个独立弹窗
+- 弹窗支持 `formItems`（表单模式）和 `render`（自定义渲染模式）
+- 新增事件：`dialog-confirm`、`dialog-cancel`、`dialog-open`
+- Expose 扩展：`openDialog(key, row?)`、`closeDialog(key)`
+- **configureEsPlus()**：模块级单例配置，解决自动导入模式配置丢失问题
+- 所有组件 inject 添加 `getGlobalConfig()` fallback
+- 完全向后兼容：旧 `actions` + `dialogFormItems` 配置自动转换
+
+### v1.3.3
+
+- 修复全部 35 个 TypeScript 编译错误，`vue-tsc --noEmit` 零错误通过
+- 新增 `tsconfig.build.json` 分离生产构建和测试的类型检查
+- `useDialog` 添加函数重载，精确区分 `DialogCallableWithDestroy` 和 `DialogCallable` 类型
+- `TableOptions` 类型补全：新增 `configBtn`、`leftText`、`height` 属性声明
+- `heightType` 支持 `'maxHeight'` 选项
+- 单元测试全面覆盖：82 → 254 测试用例（11 个测试文件）
+- `vue-tsc` 升级至 v3.3.1（兼容 TypeScript 5.9）
+
+### v1.3.2
+
+- 新增 JSON Schema 文件，支持 AI 工具链集成
+- 配置 changesets 自动版本管理
 
 ### v1.2.0
 

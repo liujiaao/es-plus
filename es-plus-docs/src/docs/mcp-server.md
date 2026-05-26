@@ -87,7 +87,156 @@ ES-Plus 的 MCP Server 将组件库的能力暴露给 AI 工具，让 AI 能够*
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 5 个工具：
+配置完成后，AI 工具会自动发现并使用以下 6 个工具：
+
+### generate_crud_from_config（推荐）
+
+**功能**：从结构化 JSON 配置生成**生产级** CRUD 页面代码（零 TODO、零占位符）
+
+与 `generate_crud_page`（自然语言模式）不同，此工具接收精确的字段定义、真实 API 地址、数据选项和验证规则，输出可直接投入生产的代码。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| config | string | ✅ | StructuredCrudConfig 的 JSON 字符串 |
+
+**输出模式**：
+
+- **schema 模式**（默认）：输出 CrudPageSchema JSON + 包装 SFC（约 30 行）
+- **sfc 模式**：输出完整独立的 Vue 3 SFC（约 200 行）
+
+**基础配置示例**：
+
+```json
+{
+  "name": "UserManage",
+  "apiUrl": "/api/system/users",
+  "fields": [
+    { "prop": "username", "label": "用户名", "formtype": "Input", "required": true },
+    { "prop": "phone", "label": "手机号", "formtype": "Input" },
+    { "prop": "status", "label": "状态", "formtype": "Select",
+      "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }],
+      "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
+    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker",
+      "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
+  ],
+  "actions": ["add", "edit", "delete"],
+  "permissions": { "add": "system:user:add", "edit": "system:user:edit", "delete": "system:user:delete" }
+}
+```
+
+**多弹窗配置示例**：
+
+```json
+{
+  "name": "UserManage",
+  "apiUrl": "/api/system/users",
+  "fields": [
+    { "prop": "username", "label": "用户名", "formtype": "Input", "required": true },
+    { "prop": "status", "label": "状态", "formtype": "Select",
+      "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }] }
+  ],
+  "toolbarBtns": [
+    { "name": "新增", "type": "primary", "icon": "Plus", "dialogKey": "add" },
+    { "name": "导入", "icon": "Upload", "dialogKey": "import" },
+    { "name": "导出", "icon": "Download", "actionType": "export" }
+  ],
+  "operationColumn": {
+    "label": "操作",
+    "width": 240,
+    "fixed": "right",
+    "btns": [
+      { "name": "编辑", "type": "primary", "dialogKey": "edit" },
+      { "name": "审批", "type": "warning", "dialogKey": "approve" },
+      { "name": "删除", "type": "danger", "key": "delete", "confirm": "确定删除该条数据吗？" }
+    ]
+  },
+  "dialogs": {
+    "add": {
+      "title": "新增用户",
+      "width": "600px",
+      "formItems": [
+        { "prop": "username", "label": "用户名", "formtype": "Input", "required": true },
+        { "prop": "phone", "label": "手机号", "formtype": "Input" }
+      ]
+    },
+    "edit": {
+      "title": "编辑用户",
+      "width": "600px",
+      "formItems": [
+        { "prop": "username", "label": "用户名", "formtype": "Input" },
+        { "prop": "phone", "label": "手机号", "formtype": "Input" }
+      ]
+    },
+    "approve": {
+      "title": "审批",
+      "width": "500px",
+      "formItems": [
+        { "prop": "result", "label": "审批结果", "formtype": "Radio" },
+        { "prop": "remark", "label": "备注", "formtype": "Input" }
+      ]
+    },
+    "import": {
+      "title": "批量导入",
+      "width": "500px",
+      "hasCustomRender": true
+    }
+  }
+}
+```
+
+**StructuredCrudConfig 完整字段说明**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | string | ✅ | PascalCase 组件名 |
+| `apiUrl` | string | ✅ | 真实 API 端点 |
+| `fields` | FieldConfig[] | ✅ | 字段配置数组 |
+| `actions` | string[] | 旧模式必填 | CRUD 操作：add/edit/delete/view/export/import |
+| `toolbarBtns` | object[] | 否 | 工具栏按钮（多弹窗模式） |
+| `operationColumn` | object \| false | 否 | 操作列配置（多弹窗模式） |
+| `dialogs` | Record<string, object> | 否 | 弹窗配置（多弹窗模式） |
+| `mode` | 'schema' \| 'sfc' | 否 | 输出模式，默认 schema |
+| `typescript` | boolean | 否 | 是否生成 TypeScript，默认 true |
+| `permissions` | Record<string, string> | 否 | 权限标识映射 |
+| `tableOptions` | object | 否 | 表格选项 |
+| `pagination` | object | 否 | 分页配置 |
+
+**FieldConfig 字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `prop` | string | 后端字段名 |
+| `label` | string | 显示标签 |
+| `formtype` | string | 表单类型（13 种） |
+| `inQuery` | boolean | 是否在查询表单中显示（默认 true） |
+| `inTable` | boolean | 是否在表格中显示（默认 true） |
+| `inForm` | boolean | 是否在弹窗表单中显示（默认 true） |
+| `required` | boolean | 是否必填 |
+| `rules` | object[] | 自定义验证规则 |
+| `attrs` | object | 透传给 Element Plus 组件的属性 |
+| `dataOptions` | object[] | 静态选项数据 |
+| `apiParams` | object | 远程选项加载配置 |
+| `querySpan` | number | 查询表单栅格宽度 |
+| `render` | string | 表格列渲染表达式 |
+| `width` | number \| string | 表格列宽 |
+
+**示例对话**：
+
+```
+用户：帮我生成一个用户管理页面，要有新增、编辑、审批功能，每个操作独立弹窗
+
+AI：[读取 esplus://conventions 获取规范]
+    [构建 StructuredCrudConfig JSON]
+    [调用 generate_crud_from_config]
+    
+    生成了 UserManage 页面：
+    - schema.ts：CrudPageSchema 配置（含 3 个弹窗定义）
+    - Page.vue：30 行包装组件（处理弹窗确认逻辑）
+```
+
+---
 
 ### generate_crud_page
 
@@ -214,6 +363,7 @@ AI 工具可以主动读取以下资源来获取上下文信息：
 
 | URI | 内容说明 |
 |-----|----------|
+| `esplus://conventions` | 代码生成规范（formtype、按钮key、多弹窗模式、configureEsPlus等） |
 | `esplus://schemas/form-item` | FormItemOption 完整 JSON Schema 定义 |
 | `esplus://schemas/table-column` | TableColumn 完整 JSON Schema 定义 |
 | `esplus://schemas/table-options` | TableOptions 完整 JSON Schema 定义 |
@@ -406,4 +556,5 @@ MCP Server 生成的是标准 es-plus-ui 配置代码。如果需要调整风格
 
 | 版本 | 变更 |
 |------|------|
+| 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |

@@ -1,6 +1,6 @@
 {
   "name": "es-plus-ui",
-  "version": "1.3.0",
+  "version": "1.3.4",
   "description": "基于 Vue 3 和 Element Plus 的企业级中后台前端组件库",
   "type": "module",
   "main": "./dist/es-plus.umd.cjs",
@@ -29,8 +29,10 @@
     "**/*.css"
   ],
   "scripts": {
+    "typecheck": "vue-tsc --noEmit -p tsconfig.build.json",
+    "typecheck:all": "vue-tsc --noEmit",
     "build": "vite build",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
@@ -67,14 +69,15 @@
     "registry": "https://registry.npmjs.org/"
   },
   "peerDependencies": {
-    "vue": "^3.2.0",
+    "@element-plus/icons-vue": "^2.1.0",
     "element-plus": "^2.2.0",
-    "@element-plus/icons-vue": "^2.1.0"
+    "vue": "^3.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitejs/plugin-vue-jsx": "^4.0.0",
     "@vue/test-utils": "^2.4.0",
+    "element-plus": "^2.5.0",
     "happy-dom": "^14.0.0",
     "sass": "^1.70.0",
     "typescript": "^5.3.0",
@@ -82,7 +85,6 @@
     "vite-plugin-dts": "^3.7.0",
     "vitest": "^1.2.0",
     "vue": "^3.4.0",
-    "vue-tsc": "^1.8.0",
-    "element-plus": "^2.5.0"
+    "vue-tsc": "^3.3.1"
   }
 }

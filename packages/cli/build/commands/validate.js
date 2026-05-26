@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { validateConfig, listAvailableSchemas } from "../core/schema-validator.js";
+import { validateConfig, listAvailableSchemas } from '@es-plus/shared';
 export const validateCommand = new Command("validate")
     .argument("<file>", "JSON config file to validate")
     .option("-s, --schema <type>", "schema type: " + listAvailableSchemas().join(", "))

@@ -8,7 +8,7 @@
       :width="props.width"
       :show-close="false"
       @close="beforeClose"
-      :fullscreen="filteredAttrs?.fullscreen ?? isFullscreen"
+      :fullscreen="(filteredAttrs?.fullscreen as boolean) ?? isFullscreen"
     >
       <template #header>
         <template v-if="props.renderHeader">
@@ -88,6 +88,7 @@ import EsTable from '../../es-table'
 import EsForm from '../../es-form'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { getGlobalConfig } from '../../../config'
 import type { BtnConfig } from '../../../types'
 
 const props = defineProps<{
@@ -127,7 +128,7 @@ const isFullscreen = ref(false)
 const dialogInstance = instance
 const locale = ref(zhCn)
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createApp, h, nextTick } from 'vue'
 import { useDialog } from '../src/use-dialog'
-import type { DialogOptions } from '../../../../types'
+import type { DialogOptions, BtnConfig } from '../../../types'
 
 // useDialog uses document.body and DOM rendering, so we test it with real DOM in happy-dom
 
@@ -163,7 +163,7 @@ describe('useDialog - 生命周期', () => {
   describe('configBtn', () => {
     it('passes configBtn to dialog props', () => {
       const dialog = useDialog()
-      const configBtn = [
+      const configBtn: BtnConfig[] = [
         { name: '取消', click: vi.fn() },
         { name: '确定', type: 'primary', click: vi.fn() }
       ]

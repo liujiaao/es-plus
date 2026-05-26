@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { generateScaffold } from "../core/code-generator.js";
+import { generateScaffold } from '@es-plus/shared';
 function toPascalCase(str) {
     return str
         .replace(/(^|[-_])([a-z])/g, (_, __, letter) => letter.toUpperCase())

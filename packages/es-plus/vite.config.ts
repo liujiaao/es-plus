@@ -40,6 +40,8 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist',
       include: ['src/**/*.ts', 'src/**/*.vue'],
+      exclude: ['src/**/*.spec.ts', 'src/**/__tests__/**'],
+      tsconfigPath: './tsconfig.build.json',
       skipDiagnostics: true,
       noEmitOnError: false
     }),

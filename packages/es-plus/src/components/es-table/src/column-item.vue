@@ -63,13 +63,14 @@
 <script setup lang="ts">
 import { h, defineComponent, inject } from 'vue'
 import { ElTableColumn } from 'element-plus'
+import { getGlobalConfig } from '../../../config'
 import type { TableColumn } from '../../../types'
 
 const props = defineProps<{
   cols: TableColumn
 }>()
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // 函数式组件定义
 const RenderDomTb = defineComponent({

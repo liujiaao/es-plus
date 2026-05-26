@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateScaffold } from "../core/code-generator.js";
+import { generateScaffold } from "@es-plus/shared";
 
 export function registerScaffoldPage(server: McpServer) {
   server.tool(

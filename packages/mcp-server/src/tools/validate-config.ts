@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { validateConfig, listAvailableSchemas } from "../core/schema-validator.js";
+import { validateConfig, listAvailableSchemas } from "@es-plus/shared";
 
 export function registerValidateConfig(server: McpServer) {
   server.tool(

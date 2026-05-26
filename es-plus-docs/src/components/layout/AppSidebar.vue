@@ -41,6 +41,12 @@
               迁移指南
             </router-link>
           </li>
+          <li class="nav-item">
+            <router-link to="/guide/changelog" class="nav-link">
+              <span class="nav-icon"><el-icon><Document /></el-icon></span>
+              更新日志
+            </router-link>
+          </li>
         </ul>
       </div>
 
@@ -58,6 +64,12 @@
             <router-link to="/components/es-table" class="nav-link">
               <span class="nav-icon"><el-icon><Grid /></el-icon></span>
               EsTable 高级表格
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/components/es-crud-page" class="nav-link">
+              <span class="nav-icon"><el-icon><Document /></el-icon></span>
+             EsCrudPage  高级CRUD
             </router-link>
           </li>
         </ul>
@@ -107,7 +119,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean

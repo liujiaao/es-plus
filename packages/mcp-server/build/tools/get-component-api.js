@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COMPONENT_LIST } from "../core/constants.js";
+import { COMPONENT_LIST } from "@es-plus/shared";
 const COMPONENT_DOCS = {
     EsForm: `# EsForm API
 

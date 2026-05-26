@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validateConfig, listAvailableSchemas } from "../core/schema-validator.js";
+import { validateConfig, listAvailableSchemas } from "@es-plus/shared";
 export function registerValidateConfig(server) {
     server.tool("validate_config", "Validate an es-plus-ui JSON configuration against its schema. Returns validation errors and fix suggestions.", {
         config: z

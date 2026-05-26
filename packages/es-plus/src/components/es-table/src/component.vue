@@ -6,7 +6,7 @@
           v-if="showHeaderBar"
           ref="headBarRef"
           class="btn-slot"
-          :style="slotStyles.value && slotStyles.type === 'object' && slotStyles.value"
+          :style="(slotStyles.value && slotStyles.type === 'object' && slotStyles.value) as any"
           :class="slotStyles.type === 'string' ? slotStyles.value : { slotClass: slotState && slotStyles.type !== 'object' }"
         >
           <div class="headerBar" v-if="hasDefaultSlot" :style="{ paddingBottom: hasDefaultSlot ? '10px' : '0px' }">
@@ -18,9 +18,9 @@
             <table-btns
               ref="tbBtnRef"
               :instance="{ tableRef: instance, formInstance: formInstance }"
-              v-if="(options.configBtn && options.configBtn.length) || options.leftText"
-              :btn-config="options.configBtn"
-              :left-text="options.leftText"
+              v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
+              :btn-config="(options.configBtn as any[])"
+              :left-text="(options.leftText as string)"
             />
             <el-table
               class="el-dp_tables"
@@ -111,6 +111,7 @@ import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'ele
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
+import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
@@ -154,9 +155,9 @@ if (injectedLocale) {
   locale.value = injectedLocale as any
 }
 
-const instance = getCurrentInstance() || {}
-const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {})
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const instance = getCurrentInstance() as any
+const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -257,7 +258,7 @@ const isFormInstance = computed(() => {
 })
 
 const hasDefaultSlot = computed(() => !!slots.default?.())
-const heightType = computed(() => props.options.heightType || 'auto')
+const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 const tabHeight = computed(() => {
   if (typeof props.options.tabHeight === 'number') {
     return `${props.options.tabHeight}px`
@@ -298,9 +299,9 @@ const filteredColumns = computed(() => {
       el.formatter = (row: Record<string, unknown>) => {
         const value = row[el.prop as string] || row[el.key as string]
         if (value == null || value === '') {
-          return el.emptyPlaceholder || '-'
+          return (el.emptyPlaceholder as string) || '-'
         }
-        return value
+        return value as string
       }
     }
 
@@ -319,6 +320,26 @@ const filteredColumns = computed(() => {
       }
     }
   })
+
+  // 当所有列都设置了固定 width 且没有 minWidth 时，将最后一个非固定列的 width 转为 minWidth 以填充剩余空间
+  const allFixedWidth = list.length > 0 && list.every((col) => col.width && !col.minWidth)
+  if (allFixedWidth) {
+    let flexIdx = -1
+    for (let i = list.length - 1; i >= 0; i--) {
+      const col = list[i]
+      if (!col.fixed && col.prop !== 'operate' && col.key !== 'operate') {
+        flexIdx = i
+        break
+      }
+    }
+    if (flexIdx === -1) flexIdx = list.length - 1
+    if (flexIdx >= 0) {
+      const col = list[flexIdx]
+      col.minWidth = col.width
+      delete col.width
+    }
+  }
+
   return list
 })
 
@@ -363,7 +384,7 @@ const { tableHeight, resizeObservers } = useTableResize(
   headBarRef,
   tbBtnRef,
   paginationRef,
-  { heightType: heightType.value, tabHeight: props.options.tabHeight }
+  { heightType: heightType.value as 'auto' | 'height', tabHeight: props.options.tabHeight }
 )
 
 watch(
@@ -454,7 +475,7 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
       if (key === 'tableData') {
         tableData.value = Array.isArray(rowData) ? rowData : []
       } else {
-        paginationConfig.value[key as keyof PaginationConfig] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
+        ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
       }
     })
   }
@@ -462,7 +483,7 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
 
 const queryTableListMethod = (params: Record<string, unknown>, options: { success?: (res: Record<string, unknown>) => void; fail?: (err: unknown) => void } = {}) => {
   const { success, fail } = options
-  const apiParams = props.options?.apiParams || {}
+  const apiParams = (props.options?.apiParams || {}) as Record<string, any>
   const url = props.options?.actionUrl || apiParams.url || ''
 
   if (!url || !Object.keys(apiParams).length) return

@@ -10,7 +10,7 @@
         <template v-for="(item, index) in processedBtnLeft" :key="item.name">
           <div v-if="!item.isHide" :style="buttonContainerStyle(index)">
             <render-dom v-if="item.render && typeof item.render === 'function'" :render="item.render" />
-            <el-button v-else :type="item.type" :size="item.size || 'small'" :icon="item.icon" :loading="item.loading || false" v-bind="item" :disabled="getDisabledState(item)" @click="()=>item.click(instance)">
+            <el-button v-else :type="(item.type as any)" :size="(item.size as any) || 'small'" :icon="(item.icon as any)" :loading="(item.loading as any) || false" v-bind="item" :disabled="getDisabledState(item)" @click="()=>(item.click as any)(instance)">
               {{ item.name }}
             </el-button>
           </div>
@@ -22,7 +22,7 @@
         <template v-for="(item, index) in processedBtnRight" :key="item.name">
           <div v-if="!item.isHide" :style="buttonContainerStyle(index)">
             <render-dom v-if="item.render && typeof item.render === 'function'" :render="item.render" />
-            <el-button v-else :type="item.type" :size="item.size || 'small'" v-bind="item" :icon="item.icon" :loading="item.loading || false" :disabled="getDisabledState(item)" @click="() =>item.click(instance)">
+            <el-button v-else :type="(item.type as any)" :size="(item.size as any) || 'small'" v-bind="item" :icon="(item.icon as any)" :loading="(item.loading as any) || false" :disabled="getDisabledState(item)" @click="() =>(item.click as any)(instance)">
               {{ item.name }}
             </el-button>
           </div>
@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { computed, h, inject } from 'vue'
 import { ElButton } from 'element-plus'
+import { getGlobalConfig } from '../../../config'
 
 const props = defineProps<{
   leftText?: string
@@ -42,7 +43,7 @@ const props = defineProps<{
   instance?: Record<string, unknown>
 }>()
 
-const RenderDom = (props: { render: () => unknown }) => {
+const RenderDom = (props: { render: Function }) => {
   if (!props.render || typeof props.render !== 'function') return null
   try {
     return props.render()
@@ -55,7 +56,7 @@ RenderDom.props = {
   render: { type: Function, required: true }
 }
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const hasPermission = (_btnList: unknown[], pvalue?: string) => {
   if (!pvalue) return true
@@ -93,11 +94,11 @@ const showContainer = computed(() => {
   return props.leftText || processedBtnLeft.value.length > 0 || processedBtnRight.value.length > 0
 })
 
-const getDisabledState = (item: Record<string, unknown>) => {
+const getDisabledState = (item: Record<string, unknown>): boolean => {
   if (typeof item.disabled === 'function') {
-    return item.disabled()
+    return (item.disabled as () => boolean)()
   }
-  return item.disabled || false
+  return (item.disabled as boolean) || false
 }
 
 const buttonContainerStyle = (index: number) => {
