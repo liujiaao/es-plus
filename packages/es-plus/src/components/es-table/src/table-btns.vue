@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { computed, h, inject } from 'vue'
 import { ElButton } from 'element-plus'
+import { getGlobalConfig } from '../../../config'
 
 const props = defineProps<{
   leftText?: string
@@ -55,7 +56,7 @@ RenderDom.props = {
   render: { type: Function, required: true }
 }
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const hasPermission = (_btnList: unknown[], pvalue?: string) => {
   if (!pvalue) return true

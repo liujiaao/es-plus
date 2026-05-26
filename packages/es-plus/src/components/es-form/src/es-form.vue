@@ -164,6 +164,7 @@ import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
 import { isObject } from '../../../utils/shared'
+import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
@@ -196,8 +197,8 @@ const emit = defineEmits<{
 }>()
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', {})
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

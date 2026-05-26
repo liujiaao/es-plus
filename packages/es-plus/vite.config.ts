@@ -3,6 +3,34 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import dts from 'vite-plugin-dts'
 import { resolve } from 'path'
+import { buildSync } from 'esbuild'
+import { copyFileSync } from 'fs'
+
+function buildResolver() {
+  return {
+    name: 'build-resolver',
+    closeBundle() {
+      buildSync({
+        entryPoints: [resolve(__dirname, 'src/resolver.ts')],
+        outfile: resolve(__dirname, 'dist/resolver.mjs'),
+        format: 'esm',
+        platform: 'node',
+        target: 'node14',
+      })
+      buildSync({
+        entryPoints: [resolve(__dirname, 'src/resolver.ts')],
+        outfile: resolve(__dirname, 'dist/resolver.cjs'),
+        format: 'cjs',
+        platform: 'node',
+        target: 'node14',
+      })
+      copyFileSync(
+        resolve(__dirname, 'src/resolver.d.ts'),
+        resolve(__dirname, 'dist/resolver.d.ts')
+      )
+    }
+  }
+}
 
 export default defineConfig({
   plugins: [
@@ -16,7 +44,8 @@ export default defineConfig({
       tsconfigPath: './tsconfig.build.json',
       skipDiagnostics: true,
       noEmitOnError: false
-    })
+    }),
+    buildResolver()
   ],
   build: {
     lib: {

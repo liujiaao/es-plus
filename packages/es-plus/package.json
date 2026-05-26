@@ -12,6 +12,11 @@
       "require": "./dist/es-plus.umd.cjs",
       "types": "./dist/index.d.ts"
     },
+    "./resolver": {
+      "import": "./dist/resolver.mjs",
+      "require": "./dist/resolver.cjs",
+      "types": "./dist/resolver.d.ts"
+    },
     "./dist/style.css": "./dist/style.css",
     "./schemas/*": "./schemas/*"
   },

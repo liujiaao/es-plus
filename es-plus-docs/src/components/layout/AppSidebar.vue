@@ -66,6 +66,12 @@
               EsTable 高级表格
             </router-link>
           </li>
+          <li class="nav-item">
+            <router-link to="/components/es-crud-page" class="nav-link">
+              <span class="nav-icon"><el-icon><Document /></el-icon></span>
+              高级EsCrudPage CRUD
+            </router-link>
+          </li>
         </ul>
       </div>
 

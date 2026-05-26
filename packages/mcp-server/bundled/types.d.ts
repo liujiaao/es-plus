@@ -91,7 +91,7 @@ export interface TableOptions {
   headerCellStyle?: Record<string, unknown>
   highlightCurrentRow?: boolean
   cachePageSelection?: boolean
-  heightType?: 'auto' | 'height'
+  heightType?: 'auto' | 'height' | 'maxHeight'
   tabHeight?: number | string
   isInitRun?: boolean
   actionUrl?: string
@@ -100,7 +100,10 @@ export interface TableOptions {
   listenToCallBack?: Record<string, (params: unknown) => unknown>
   configTableOut?: Record<string, string>
   entryQuery?: Record<string, unknown>
+  configBtn?: BtnConfig[]
+  leftText?: string
   rowkey?: string
+  height?: number | string
   [key: string]: unknown
 }
 

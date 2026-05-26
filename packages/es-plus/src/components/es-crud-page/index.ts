@@ -5,4 +5,18 @@ EsCrudPage.install = function (app: any) {
 }
 
 export default EsCrudPage
-export type { CrudPageSchema, CrudAction, CrudPageProps, CrudPageEmits, CrudPageExpose } from './src/types'
+export type {
+  CrudPageSchema,
+  CrudAction,
+  CrudPageProps,
+  CrudPageEmits,
+  CrudPageExpose,
+  CrudBtnConfig,
+  OperationColumnConfig,
+  RowBtnConfig,
+  RowBtnContext,
+  CrudDialogConfig,
+  DialogRenderContext,
+  DialogBtnConfig,
+  DialogActionContext
+} from './src/types'

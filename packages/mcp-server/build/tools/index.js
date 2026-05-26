@@ -4,9 +4,11 @@ import { registerValidateConfig } from "./validate-config.js";
 import { registerListFormTypes } from "./list-form-types.js";
 import { registerGetComponentApi } from "./get-component-api.js";
 import { registerScaffoldPage } from "./scaffold-page.js";
+import { registerGenerateFromConfig } from "./generate-from-config.js";
 export function registerTools(server) {
     registerGenerateCrudPage(server);
     registerGenerateCrudSchema(server);
+    registerGenerateFromConfig(server);
     registerValidateConfig(server);
     registerListFormTypes(server);
     registerGetComponentApi(server);

@@ -226,5 +226,107 @@ export const docsData: Record<string, any> = {
         { name: 'refresh', params: '-', desc: '强制重新计算表格布局' }
       ]
     }
+  },
+  'es-crud-page': {
+    title: '高级EsCrudPage CRUD',
+    description: 'Schema 驱动的一站式 CRUD 页面组件，支持多弹窗架构、按钮-弹窗声明绑定、自定义渲染、权限控制。',
+    features: [
+      { name: '多弹窗架构', desc: 'dialogs 声明多个弹窗，toolbarBtns/operationColumn 通过 dialogKey 绑定', icon: 'CopyDocument' },
+      { name: '权限控制', desc: 'permissionValue 配合全局 permission 函数控制按钮显隐', icon: 'Lock' },
+      { name: '自定义渲染', desc: '弹窗支持 render 函数、configBtn 自定义底部、动态标题', icon: 'Edit' },
+      { name: '程序化控制', desc: 'openDialog/closeDialog 方法支持外部程序化控制弹窗', icon: 'Setting' }
+    ],
+    examples: [
+      { key: 'basic', title: '基础 CRUD', description: '最简 actions 模式：查询+表格+新增编辑删除，展示旧版 schema 驱动。', component: null, code: code('crud-page/01-basic') },
+      { key: 'multi-dialog', title: '多弹窗绑定', description: 'toolbarBtns + operationColumn + dialogs 完整展示按钮-弹窗绑定。', component: null, code: code('crud-page/02-multi-dialog') },
+      { key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs 使用 render 函数渲染自定义组件（文件上传、统计面板）。', component: null, code: code('crud-page/03-custom-render') },
+      { key: 'dynamic-title', title: '动态标题与回填', description: 'edit 弹窗 title 为函数 + 表单自动回填行数据。', component: null, code: code('crud-page/04-dynamic-title') },
+      { key: 'row-confirm', title: '行确认与删除', description: '操作列 confirm 确认提示 + btn-click 事件处理删除/发布。', component: null, code: code('crud-page/05-row-confirm') },
+      { key: 'permission', title: '权限控制按钮', description: 'permissionValue 配合 configureEsPlus permission 函数控制按钮显隐。', component: null, code: code('crud-page/06-permission') },
+      { key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 自定义三按钮（取消/拒绝/通过）实现审批场景。', component: null, code: code('crud-page/07-custom-footer') },
+      { key: 'program-open', title: '程序化控制弹窗', description: '通过 ref.openDialog / closeDialog 程序化控制弹窗打开。', component: null, code: code('crud-page/08-program-open') },
+      { key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏操作，只读列表场景。', component: null, code: code('crud-page/09-hidden-column') },
+      { key: 'full-business', title: '完整业务场景', description: '用户管理全功能：多弹窗+动态标题+render详情+确认+导出。', component: null, code: code('crud-page/10-full-business') }
+    ],
+    api: {
+      props: [
+        { name: 'schema', type: 'CrudPageSchema', default: '-', desc: 'CRUD 页面完整配置对象（必填，见 CrudPageSchema 表）' },
+        { name: 'httpRequest', type: 'Function', default: '-', desc: '自定义 HTTP 请求方法，覆盖 schema.tableOptions.httpRequest' },
+        { name: 'autoLoad', type: 'boolean', default: 'true', desc: '是否在挂载时自动请求数据' }
+      ],
+      'CrudPageSchema': [
+        { name: 'formItems', type: 'FormItemOption[]', default: '[]', desc: '查询表单字段配置（同 EsForm formItemList）' },
+        { name: 'formLayout', type: '{ span, labelWidth }', default: '-', desc: '表单布局配置' },
+        { name: 'columns', type: 'TableColumn[]', default: '-', desc: '表格列配置（必填，同 EsTable columns）' },
+        { name: 'tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项配置（同 EsTable options）' },
+        { name: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置' },
+        { name: 'toolbarBtns', type: 'CrudBtnConfig[]', default: '-', desc: '工具栏按钮（见 CrudBtnConfig 表）' },
+        { name: 'operationColumn', type: 'OperationColumnConfig | false', default: '-', desc: '操作列配置，false 隐藏操作列（见 OperationColumnConfig 表）' },
+        { name: 'dialogs', type: 'Record<string, CrudDialogConfig>', default: '-', desc: '多弹窗配置，key 为弹窗标识（见 CrudDialogConfig 表）' },
+        { name: 'actions (deprecated)', type: 'CrudAction[]', default: '-', desc: '旧版快捷动作，建议改用 toolbarBtns + operationColumn' }
+      ],
+      'CrudBtnConfig': [
+        { name: 'name', type: 'string', default: '-', desc: '按钮文本' },
+        { name: 'type', type: 'string', default: '-', desc: '按钮类型：primary/success/warning/danger' },
+        { name: 'icon', type: 'string', default: '-', desc: '图标名称（Element Plus Icons）' },
+        { name: 'key', type: 'string', default: '-', desc: '按钮唯一标识' },
+        { name: 'dialogKey', type: 'string', default: '-', desc: '点击时打开的弹窗 key（自动绑定 dialogs 中的配置）' },
+        { name: 'actionType', type: 'string', default: '-', desc: '语义动作类型（用于 btn-click 事件 emit）' },
+        { name: 'confirm', type: 'string | boolean', default: '-', desc: '点击前确认提示文字' },
+        { name: 'permissionValue', type: 'string', default: '-', desc: '权限标识，配合全局 permission 函数控制显隐' }
+      ],
+      'OperationColumnConfig': [
+        { name: 'label', type: 'string', default: '操作', desc: '列标题' },
+        { name: 'width', type: 'number | string', default: '-', desc: '列宽度' },
+        { name: 'fixed', type: 'boolean | string', default: 'right', desc: '固定方向' },
+        { name: 'btns', type: 'RowBtnConfig[]', default: '-', desc: '行操作按钮列表（见 RowBtnConfig 表）' }
+      ],
+      'RowBtnConfig': [
+        { name: 'name', type: 'string', default: '-', desc: '按钮文字' },
+        { name: 'key', type: 'string', default: '-', desc: '按钮标识（用于 btn-click 事件）' },
+        { name: 'type', type: 'string', default: '-', desc: '按钮类型' },
+        { name: 'icon', type: 'string', default: '-', desc: '图标' },
+        { name: 'dialogKey', type: 'string', default: '-', desc: '点击时打开的弹窗 key，自动将当前行数据传入' },
+        { name: 'confirm', type: 'string | boolean', default: '-', desc: '点击前确认提示（如删除确认）' },
+        { name: 'permissionValue', type: 'string', default: '-', desc: '权限标识' },
+        { name: 'hidden', type: 'boolean | Function', default: '-', desc: '是否隐藏，支持 (row) => boolean 动态判断' },
+        { name: 'click', type: 'Function', default: '-', desc: '自定义点击处理 (row, { refresh, getSelectedRows, openDialog }) => void' }
+      ],
+      'CrudDialogConfig': [
+        { name: 'title', type: 'string | Function', default: '-', desc: '弹窗标题，支持 (row) => string 动态标题' },
+        { name: 'width', type: 'string | number', default: '600px', desc: '弹窗宽度' },
+        { name: 'formItems', type: 'FormItemOption[]', default: '-', desc: '表单字段（简单场景）' },
+        { name: 'formLayout', type: '{ span, labelWidth }', default: '-', desc: '表单布局' },
+        { name: 'render', type: 'Function', default: '-', desc: '自定义渲染 (h, { row, model, close, refresh }) => VNode' },
+        { name: 'configBtn', type: 'DialogBtnConfig[]', default: '-', desc: '底部按钮配置，action: confirm/cancel/custom' },
+        { name: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '隐藏底部按钮区域' },
+        { name: 'isDraggable', type: 'boolean', default: 'false', desc: '可拖拽' },
+        { name: 'fullscreen', type: 'boolean', default: 'false', desc: '全屏' },
+        { name: 'maxHeight', type: 'string | number', default: '-', desc: '最大高度' },
+        { name: 'onOpen', type: 'Function', default: '-', desc: '弹窗打开时回调 (row?) => void' },
+        { name: 'onConfirm', type: 'Function', default: '-', desc: '确认回调 (data, { close, refresh, getRefs, row }) => void' },
+        { name: 'onClose', type: 'Function', default: '-', desc: '弹窗关闭时回调' }
+      ],
+      events: [
+        { name: 'dialog-confirm', params: '(dialogKey, data)', desc: '弹窗确认时触发' },
+        { name: 'dialog-cancel', params: '(dialogKey)', desc: '弹窗取消时触发' },
+        { name: 'dialog-open', params: '(dialogKey, row?)', desc: '弹窗打开时触发' },
+        { name: 'btn-click', params: '(key, payload?)', desc: '按钮点击时触发（非弹窗类按钮或行操作）' },
+        { name: 'query', params: '(model)', desc: '查询事件' },
+        { name: 'export', params: '(model)', desc: '导出事件' },
+        { name: 'add', params: '-', desc: '新增按钮点击（向后兼容）' },
+        { name: 'edit', params: '(row)', desc: '编辑按钮点击（向后兼容）' },
+        { name: 'delete', params: '(row)', desc: '删除按钮点击（向后兼容）' }
+      ],
+      methods: [
+        { name: 'refresh', params: '-', desc: '刷新表格数据' },
+        { name: 'getSelectedRows', params: '-', desc: '获取选中行' },
+        { name: 'openDialog', params: '(key, row?)', desc: '程序化打开弹窗' },
+        { name: 'closeDialog', params: '(key)', desc: '程序化关闭弹窗' },
+        { name: 'queryModel', params: '-', desc: '当前查询表单模型（响应式）' },
+        { name: 'tableRef', params: '-', desc: '内部 EsTable 组件实例' },
+        { name: 'formRef', params: '-', desc: '内部 EsForm 组件实例' }
+      ]
+    }
   }
 }

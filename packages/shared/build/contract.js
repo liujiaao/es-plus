@@ -9,7 +9,7 @@ export const SPECIAL_BTN_KEYS = {
 export const BUILT_IN_BTN_KEYS = ['query', 'rest', 'add', 'export', 'import'];
 export const OPERATION_COLUMN_PROP_SFC = 'operate';
 export const OPERATION_COLUMN_PROP_CRUD_PAGE = 'action';
-export const VALID_CRUD_ACTIONS = ['add', 'edit', 'delete', 'view', 'export'];
+export const VALID_CRUD_ACTIONS = ['add', 'edit', 'delete', 'view', 'export', 'import'];
 export const DEFAULT_CONFIG_TABLE_OUT = {
     total: 'total',
     tableData: 'data',
@@ -19,5 +19,20 @@ export const DEFAULT_CONFIG_TABLE_OUT = {
 export const CRUD_PAGE_BTN_CLICK_KEYS = {
     ADD_CONFIRM: 'add-confirm',
     EDIT_CONFIRM: 'edit-confirm',
+};
+export const CRUD_PAGE_DIALOG_KEYS = {
+    ADD: 'add',
+    EDIT: 'edit',
+    VIEW: 'view',
+};
+export const DEFAULT_TOOLBAR_BTNS = {
+    ADD: { name: '新增', type: 'primary', key: 'add', icon: 'Plus', dialogKey: 'add' },
+    EXPORT: { name: '导出', key: 'export', icon: 'Download', actionType: 'export' },
+    IMPORT: { name: '导入', key: 'import', icon: 'Upload', actionType: 'import' },
+};
+export const DEFAULT_ROW_BTNS = {
+    VIEW: { name: '查看', type: 'primary', key: 'view', dialogKey: 'view' },
+    EDIT: { name: '编辑', type: 'primary', key: 'edit', dialogKey: 'edit' },
+    DELETE: { name: '删除', type: 'danger', key: 'delete', confirm: '确定删除该条数据吗？' },
 };
 //# sourceMappingURL=contract.js.map

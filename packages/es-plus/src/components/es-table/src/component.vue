@@ -109,6 +109,7 @@ import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'ele
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
+import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
@@ -153,8 +154,8 @@ if (injectedLocale) {
 }
 
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {})
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {})
+const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

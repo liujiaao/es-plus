@@ -166,6 +166,17 @@ import TableCallbackPipeline from '@/components/examples/table/CallbackPipeline.
 import TableCurrentRow from '@/components/examples/table/CurrentRow.vue'
 import TableTableHeight from '@/components/examples/table/TableHeight.vue'
 
+import CrudBasic from '@/components/examples/crud-page/Basic.vue'
+import CrudMultiDialog from '@/components/examples/crud-page/MultiDialog.vue'
+import CrudCustomRender from '@/components/examples/crud-page/CustomRender.vue'
+import CrudDynamicTitle from '@/components/examples/crud-page/DynamicTitle.vue'
+import CrudRowConfirm from '@/components/examples/crud-page/RowConfirm.vue'
+import CrudPermission from '@/components/examples/crud-page/Permission.vue'
+import CrudCustomFooter from '@/components/examples/crud-page/CustomFooter.vue'
+import CrudProgramOpen from '@/components/examples/crud-page/ProgramOpen.vue'
+import CrudHiddenColumn from '@/components/examples/crud-page/HiddenColumn.vue'
+import CrudFullBusiness from '@/components/examples/crud-page/FullBusiness.vue'
+
 const route = useRoute()
 
 // 组件文档数据
@@ -188,9 +199,16 @@ const tableComponents: Record<string, any> = {
   'query-table': TableQueryTable, 'row-actions': TableRowActions, 'dynamic-columns': TableDynamicColumns,
   'callback-pipeline': TableCallbackPipeline, 'current-row': TableCurrentRow, 'table-height': TableTableHeight
 }
+const crudPageComponents: Record<string, any> = {
+  basic: CrudBasic, 'multi-dialog': CrudMultiDialog, 'custom-render': CrudCustomRender,
+  'dynamic-title': CrudDynamicTitle, 'row-confirm': CrudRowConfirm, permission: CrudPermission,
+  'custom-footer': CrudCustomFooter, 'program-open': CrudProgramOpen, 'hidden-column': CrudHiddenColumn,
+  'full-business': CrudFullBusiness
+}
 
 docsData['es-form'].examples.forEach((ex: any) => { ex.component = formComponents[ex.key] })
 docsData['es-table'].examples.forEach((ex: any) => { ex.component = tableComponents[ex.key] })
+docsData['es-crud-page'].examples.forEach((ex: any) => { ex.component = crudPageComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name as string
@@ -214,7 +232,12 @@ const apiTitleMap: Record<string, string> = {
   TableColumn: 'TableColumn 列配置',
   TableOptions: 'TableOptions 选项配置',
   DialogOptions: 'DialogOptions 弹窗配置',
-  'configBtn click': 'configBtn click 回调'
+  'configBtn click': 'configBtn click 回调',
+  CrudPageSchema: 'CrudPageSchema 配置',
+  CrudBtnConfig: 'CrudBtnConfig 工具栏按钮配置',
+  OperationColumnConfig: 'OperationColumnConfig 操作列配置',
+  RowBtnConfig: 'RowBtnConfig 行按钮配置',
+  CrudDialogConfig: 'CrudDialogConfig 弹窗配置'
 }
 
 const activeHeading = ref('')
