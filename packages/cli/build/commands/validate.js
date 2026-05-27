@@ -48,7 +48,7 @@ function detectSchemaType(config) {
     const obj = config;
     if ("columns" in obj || "tableData" in obj)
         return "table-column";
-    if ("httpRequest" in obj || "configTableOut" in obj || "apiParams" in obj)
+    if ("httpRequest" in obj || "configTableOut" in obj || "apiParams" in obj || "virtual" in obj)
         return "table-options";
     if ("render" in obj || "configBtn" in obj || "isDraggable" in obj)
         return "dialog-options";

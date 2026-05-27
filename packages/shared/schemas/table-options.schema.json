@@ -135,6 +135,33 @@
     "leftText": {
       "type": "string",
       "description": "Text displayed on the left side of the table toolbar"
+    },
+    "virtual": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable virtual scrolling via el-table-v2 (suitable for 10k+ rows)"
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["default", "virtual"],
+      "description": "Table rendering engine. 'default'=el-table, 'virtual'=el-table-v2"
+    },
+    "rowHeight": {
+      "type": "number",
+      "default": 50,
+      "description": "Row height in pixels for virtual scrolling mode"
+    },
+    "estimatedRowHeight": {
+      "type": "number",
+      "description": "Estimated row height for dynamic-height virtual scrolling"
+    },
+    "overscanCount": {
+      "type": "number",
+      "default": 2,
+      "description": "Number of rows to render outside visible area (virtual mode buffer)"
+    },
+    "rowClassName": {
+      "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"
     }
   },
   "additionalProperties": true

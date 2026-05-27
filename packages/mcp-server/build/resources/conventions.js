@@ -27,6 +27,22 @@ ${Object.entries(DEFAULT_CONFIG_TABLE_OUT)
         .map(([k, v]) => `  - ${k}: "${v}"`)
         .join("\n")}
 
+## Virtual Scrolling (10k+ rows)
+Enable virtual scrolling for large datasets:
+\`\`\`typescript
+tableOptions: {
+  virtual: true,           // Switch to el-table-v2 engine
+  rowHeight: 48,           // Fixed row height (default 50)
+  tabHeight: 500,          // Container height (required for virtual)
+  heightType: 'height',    // Use fixed height mode
+  rowkey: 'id',            // Required for virtual selection
+}
+\`\`\`
+- All existing column configs work identically in virtual mode
+- \`type: 'selection'\` in columns creates checkbox column (preferred over multiSelect)
+- Performance: O(1) selection via Set-based tracking, no per-row iteration
+- Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable
+
 ## Global Config Pattern
 When using app.use(ESPlus), configure globally:
 \`\`\`typescript
@@ -90,9 +106,15 @@ interface StructuredCrudConfig {
     stripe?: boolean            // default: true
     rowkey?: string             // default: 'id'
     heightType?: 'height' | 'auto' | 'maxHeight'
+    tabHeight?: number | string // Container height (required for virtual mode)
     multiSelect?: boolean
     highlightCurrentRow?: boolean  // default: true
     headerCellStyle?: Record<string, string>
+    virtual?: boolean           // Enable virtual scrolling (10k+ rows)
+    rowHeight?: number          // Row height in px (default 50)
+    estimatedRowHeight?: number // For dynamic-height rows
+    overscanCount?: number      // Buffer rows (default 2)
+    rowClassName?: string       // Custom row CSS class
   }
   pagination?: { pageSize?: number }  // default: 10
   mode?: 'schema' | 'sfc'            // default: 'schema'
