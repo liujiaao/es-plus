@@ -118,7 +118,13 @@ export const docsData: Record<string, any> = {
       { key: 'cascade-form-table', title: '级联表单联动表格', description: '三级级联(isHidden) + httpRequest远程数据 + triggerEvent自动查询。', component: null, code: code('advanced/14-cascade-form-table') },
       { key: 'step-import-wizard', title: '分步导入向导', description: 'useDialog多步骤：配置表单 → 预览表格 → 确认提交，configBtn动态按钮。', component: null, code: code('advanced/15-step-import-wizard') },
       { key: 'admin-page', title: '完整后台管理页', description: '搜索表单 + 分页表格 + CRUD弹窗 + 删除确认 — 一个文件完整后台页面，覆盖 90% 中后台场景。', component: null, code: code('advanced/16-admin-page') },
-      { key: 'crud-page', title: 'EsCrudPage 一键 CRUD', description: 'EsCrudPage 组件：一个 schema 对象即可渲染完整的查询+表格+弹窗 CRUD 页面，支持 Server-Driven UI。', component: null, code: code('advanced/17-crud-page') }
+      { key: 'crud-page', title: 'EsCrudPage 一键 CRUD', description: 'EsCrudPage 组件：一个 schema 对象即可渲染完整的查询+表格+弹窗 CRUD 页面，支持 Server-Driven UI。', component: null, code: code('advanced/17-crud-page') },
+      { key: 'virtual-table', title: '虚拟滚动基础', description: 'options.virtual: true 开启虚拟滚动，10 万行数据流畅渲染，支持多选、序号列。', component: null, code: code('advanced/18-virtual-table') },
+      { key: 'virtual-table-sort', title: '虚拟表格排序+固定列', description: '虚拟模式下排序、固定列、序号列、斑马纹完整兼容，5 万行数据即时排序。', component: null, code: code('advanced/19-virtual-table-sort') },
+      { key: 'virtual-table-select', title: '虚拟表格多选+操作', description: '虚拟模式多选 + 行高亮 + 操作按钮(render/btns) + getSelectionRows 获取选中。', component: null, code: code('advanced/20-virtual-table-select') },
+      { key: 'virtual-table-custom-render', title: '虚拟表格自定义渲染', description: '虚拟模式 render/scopedSlots/ellipsis/formatter 四种自定义渲染方式完整兼容。', component: null, code: code('advanced/21-virtual-table-custom-render') },
+      { key: 'virtual-table-row-style', title: '虚拟表格行样式+事件', description: '虚拟模式 rowClassName + highlightCurrentRow + 行点击/双击事件完整兼容。', component: null, code: code('advanced/22-virtual-table-row-style') },
+      { key: 'virtual-table-crud', title: '虚拟表格完整CRUD', description: '虚拟模式 EsForm+EsTable+useDialog 完整 CRUD 场景：查询筛选+新增编辑删除+批量操作。', component: null, code: code('advanced/23-virtual-table-crud') }
     ]
   }
 }

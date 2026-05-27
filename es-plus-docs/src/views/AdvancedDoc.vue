@@ -135,6 +135,12 @@ import AdvancedCascadeFormTable from '@/components/examples/advanced/CascadeForm
 import AdvancedStepImportWizard from '@/components/examples/advanced/StepImportWizard.vue'
 import AdvancedAdminPage from '@/components/examples/advanced/AdminPage.vue'
 import AdvancedCrudPage from '@/components/examples/advanced/CrudPage.vue'
+import AdvancedVirtualTable from '@/components/examples/advanced/VirtualTable.vue'
+import AdvancedVirtualTableSort from '@/components/examples/advanced/VirtualTableSort.vue'
+import AdvancedVirtualTableSelect from '@/components/examples/advanced/VirtualTableSelect.vue'
+import AdvancedVirtualTableCustomRender from '@/components/examples/advanced/VirtualTableCustomRender.vue'
+import AdvancedVirtualTableRowStyle from '@/components/examples/advanced/VirtualTableRowStyle.vue'
+import AdvancedVirtualTableCrud from '@/components/examples/advanced/VirtualTableCrud.vue'
 
 const route = useRoute()
 
@@ -164,7 +170,13 @@ const linkageComponents: Record<string, any> = {
   'dynamic-form-query': AdvancedDynamicFormQuery, 'cascade-form-table': AdvancedCascadeFormTable,
   'step-import-wizard': AdvancedStepImportWizard,
   'admin-page': AdvancedAdminPage,
-  'crud-page': AdvancedCrudPage
+  'crud-page': AdvancedCrudPage,
+  'virtual-table': AdvancedVirtualTable,
+  'virtual-table-sort': AdvancedVirtualTableSort,
+  'virtual-table-select': AdvancedVirtualTableSelect,
+  'virtual-table-custom-render': AdvancedVirtualTableCustomRender,
+  'virtual-table-row-style': AdvancedVirtualTableRowStyle,
+  'virtual-table-crud': AdvancedVirtualTableCrud
 }
 
 docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })
