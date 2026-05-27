@@ -140,9 +140,15 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
             height: "height";
             auto: "auto";
         }>>;
+        tabHeight: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         multiSelect: z.ZodOptional<z.ZodBoolean>;
         highlightCurrentRow: z.ZodDefault<z.ZodBoolean>;
         headerCellStyle: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+        virtual: z.ZodOptional<z.ZodBoolean>;
+        rowHeight: z.ZodOptional<z.ZodNumber>;
+        estimatedRowHeight: z.ZodOptional<z.ZodNumber>;
+        overscanCount: z.ZodOptional<z.ZodNumber>;
+        rowClassName: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
     pagination: z.ZodOptional<z.ZodObject<{
         pageSize: z.ZodDefault<z.ZodNumber>;

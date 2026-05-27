@@ -104,6 +104,18 @@ export interface TableOptions {
   leftText?: string
   rowkey?: string
   height?: number | string
+  /** 启用虚拟滚动（等同 engine: 'virtual'） */
+  virtual?: boolean
+  /** 表格渲染引擎：default=el-table, virtual=el-table-v2 */
+  engine?: 'default' | 'virtual'
+  /** 虚拟滚动行高（默认 50） */
+  rowHeight?: number
+  /** 动态行高预估值 */
+  estimatedRowHeight?: number
+  /** 可视区域外预渲染行数（默认 2） */
+  overscanCount?: number
+  /** 行类名（虚拟模式支持函数） */
+  rowClassName?: string | ((params: { row: Record<string, unknown>; rowIndex: number }) => string)
   [key: string]: unknown
 }
 

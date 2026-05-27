@@ -22,7 +22,19 @@
               :btn-config="(options.configBtn as any[])"
               :left-text="(options.leftText as string)"
             />
+            <virtual-engine
+              v-if="isVirtual"
+              ref="virtualEngineRef"
+              :columns="filteredColumns"
+              :data-source="dataSource"
+              :table-height="tableHeight"
+              :options="props.options"
+              :parent-slots="$slots"
+              @sort-change="changeTableSort"
+              @selection-change="handleVirtualSelectionChange"
+            />
             <el-table
+              v-else
               class="el-dp_tables"
               :id="tableId"
               :key="tableId"
@@ -111,6 +123,7 @@ import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'ele
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
+import VirtualEngine from './engines/virtual-engine.vue'
 import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
@@ -164,6 +177,12 @@ const checkPermission = (pvalue?: string): boolean => {
   const fn = esPlus.permission
   return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
 }
+
+// 虚拟滚动引擎切换
+const isVirtual = computed(() =>
+  props.options.virtual === true || props.options.engine === 'virtual'
+)
+const virtualEngineRef = ref<InstanceType<typeof VirtualEngine> | null>(null)
 
 // Refs
 const tableRef = ref<any>(null)
@@ -348,7 +367,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   'multiSelect', 'expand', 'snIndex', 'loading', 'cachePageSelection',
   'httpRequest', 'configTableOut', 'listenToCallBack',
   'apiParams', 'actionUrl', 'heightType', 'tabHeight',
-  'isInitRun', 'entryQuery', 'configBtn', 'leftText', 'rowkey'
+  'isInitRun', 'entryQuery', 'configBtn', 'leftText', 'rowkey',
+  'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName'
 ])
 
 const tableAttrs = computed(() => {
@@ -438,6 +458,10 @@ const { multipleSelection, handleSelectionChange, initSelection, clearAllSelecti
 
 const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
   handleSelectionChange(val, paginationConfig.value.current || 1)
+}
+
+const handleVirtualSelectionChange = (rows: Record<string, unknown>[]) => {
+  handleSelectionChange(rows, paginationConfig.value.current || 1)
 }
 
 // 请求逻辑
@@ -638,28 +662,49 @@ const columnBindAttr = (cols: Record<string, unknown>) => {
 // 提供表格实例给子组件（保留与 Form 的耦合）
 provide('getTableInstantce', () => ({
   ...(instance?.setupState || {}),
-  tableRef,
+  tableRef: isVirtual.value ? virtualEngineRef : tableRef,
   toggleSelection: (rows: Record<string, unknown>[]) => {
-    if (rows) {
-      rows.forEach((row) => {
-        tableRef.value?.toggleRowSelection(row)
-      })
+    if (isVirtual.value) {
+      if (rows) {
+        rows.forEach((row) => {
+          virtualEngineRef.value?.toggleRowSelection(row, true)
+        })
+      } else {
+        virtualEngineRef.value?.clearSelection()
+      }
     } else {
-      tableRef.value?.clearSelection()
+      if (rows) {
+        rows.forEach((row) => {
+          tableRef.value?.toggleRowSelection(row)
+        })
+      } else {
+        tableRef.value?.clearSelection()
+      }
     }
   },
-  clearAllSelection: () => clearAllSelection(tableRef.value),
-  refsInstance: () => tableRef.value,
+  clearAllSelection: () => isVirtual.value
+    ? virtualEngineRef.value?.clearSelection()
+    : clearAllSelection(tableRef.value),
+  refsInstance: () => isVirtual.value ? virtualEngineRef.value?.getTableRef() : tableRef.value,
   httpRequestInstance
 }))
 
 // 暴露方法
 defineExpose({
   httpRequestInstance,
-  getSelectionRows: () => multipleSelection.value,
-  clearSelection: () => tableRef.value?.clearSelection?.(),
-  clearAllSelection: () => clearAllSelection(tableRef.value),
-  refresh: () => tableRef.value?.doLayout?.()
+  getSelectionRows: () => isVirtual.value
+    ? virtualEngineRef.value?.getSelectedRows() ?? []
+    : multipleSelection.value,
+  clearSelection: () => isVirtual.value
+    ? virtualEngineRef.value?.clearSelection()
+    : tableRef.value?.clearSelection?.(),
+  clearAllSelection: () => isVirtual.value
+    ? virtualEngineRef.value?.clearSelection()
+    : clearAllSelection(tableRef.value),
+  refresh: () => isVirtual.value
+    ? virtualEngineRef.value?.doLayout()
+    : tableRef.value?.doLayout?.(),
+  scrollToRow: (row: number) => virtualEngineRef.value?.scrollToRow(row),
 })
 </script>
 

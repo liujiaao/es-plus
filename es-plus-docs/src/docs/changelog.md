@@ -2,6 +2,40 @@
 
 记录 es-plus-ui 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
 
+## v1.3.5
+
+> 2026-05-27 发布
+
+**EsTable 虚拟滚动（el-table-v2）**
+
+- 新增 `virtual: true` 一键启用虚拟滚动引擎，支持 10 万行数据流畅渲染
+- 基于 Strategy Pattern + 条件渲染架构，现有 EsTable 用法零改动
+- 完整兼容：`type: 'selection'`、`type: 'index'`、`type: 'expand'`、`render`、`scopedSlots`、`ellipsis`、`formatter`、`btns`、`fixed`、`sortable` 全部适配
+- O(1) 选择性能：基于 Set 跟踪，勾选/全选无 O(n) 遍历
+- 新增 TableOptions 字段：`virtual`、`engine`、`rowHeight`、`estimatedRowHeight`、`overscanCount`、`rowClassName`
+- 新增 expose 方法：`scrollToRow(index)` — 虚拟模式按行索引滚动
+- 支持 `highlightCurrentRow`、`stripe`、`border` 样式与普通表格一致
+
+**文档**
+
+- 新增 6 个虚拟表格高级场景示例：
+  - 10 万行基础虚拟滚动
+  - 排序 + 固定列 + 序号列 + 斑马纹
+  - 多选 + 高亮 + 操作按钮
+  - render / scopedSlots / ellipsis / formatter 自定义渲染
+  - rowClassName + highlightCurrentRow + 行事件
+  - httpRequest + 分页 + useDialog 完整 CRUD
+- EsTable API 文档更新：补充虚拟滚动配置说明
+
+**MCP Server & CLI 同步**
+
+- `@es-plus/mcp-server@1.1.2`：`get_component_api` 补充虚拟滚动文档，`generate_crud_from_config` 支持 virtual 配置
+- `@es-plus/cli@1.1.2`：`validate` 命令自动识别虚拟表格配置并校验
+- `@es-plus/shared@1.0.2`：`table-options.schema.json` 新增虚拟滚动字段，`StructuredCrudConfigSchema` 支持 virtual 选项，代码生成器输出虚拟模式配置
+- `esplus://conventions` 资源文档新增 Virtual Scrolling 章节
+
+---
+
 ## v1.3.4
 
 > 2026-05-26 发布

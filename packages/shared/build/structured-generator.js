@@ -32,7 +32,13 @@ function generateSchema(config) {
         apiParams: { url: config.apiUrl },
         rowkey: tOpts.rowkey || 'id',
         ...(tOpts.heightType ? { heightType: tOpts.heightType } : {}),
+        ...(tOpts.tabHeight ? { tabHeight: tOpts.tabHeight } : {}),
         ...(tOpts.multiSelect ? { multiSelect: true } : {}),
+        ...(tOpts.virtual ? { virtual: true } : {}),
+        ...(tOpts.rowHeight ? { rowHeight: tOpts.rowHeight } : {}),
+        ...(tOpts.estimatedRowHeight ? { estimatedRowHeight: tOpts.estimatedRowHeight } : {}),
+        ...(tOpts.overscanCount ? { overscanCount: tOpts.overscanCount } : {}),
+        ...(tOpts.rowClassName ? { rowClassName: tOpts.rowClassName } : {}),
     };
     // Query form layout (minFoldRows for collapse)
     if (config.formLayout) {
@@ -228,7 +234,18 @@ function generateSFC(config) {
     lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`);
     lines.push(`  headerCellStyle: { background: '#f5f7fa' },`);
     lines.push(`  apiParams: { url: '${config.apiUrl}' },`);
-    lines.push(`  rowkey: '${tOpts.rowkey || 'id'}'`);
+    lines.push(`  rowkey: '${tOpts.rowkey || 'id'}',`);
+    if (tOpts.virtual) {
+        lines.push(`  virtual: true,`);
+        if (tOpts.rowHeight)
+            lines.push(`  rowHeight: ${tOpts.rowHeight},`);
+        if (tOpts.tabHeight)
+            lines.push(`  tabHeight: ${tOpts.tabHeight},`);
+        if (tOpts.heightType)
+            lines.push(`  heightType: '${tOpts.heightType}',`);
+    }
+    if (tOpts.multiSelect)
+        lines.push(`  multiSelect: true,`);
     lines.push(`}`);
     // delete handler
     if (hasDelete) {

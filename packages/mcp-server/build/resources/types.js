@@ -66,14 +66,19 @@ export interface TableColumn {
   prop?: string
   key?: string
   label?: string
+  labelKey?: string
+  type?: 'selection' | 'index' | 'expand'
   width?: number | string
   minWidth?: number | string
   align?: string
-  fixed?: boolean | string
+  fixed?: boolean | 'left' | 'right'
+  sortable?: boolean
   render?: (h: RenderFunction, ctx: { row: Record<string, unknown>; value: unknown; index: number }) => VNode | string
+  scopedSlots?: { customRender?: string }
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
+  formatter?: (row: Record<string, unknown>, column: TableColumn, cellValue: unknown, index: number) => string
   btns?: Array<{ name: string; type?: string; clickEvent?: (row: Record<string, unknown>) => void }>
   [key: string]: unknown
 }
@@ -89,6 +94,14 @@ export interface TableOptions {
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   configTableOut?: Record<string, string>
   rowkey?: string
+  heightType?: 'auto' | 'height' | 'maxHeight'
+  tabHeight?: number | string
+  virtual?: boolean
+  engine?: 'default' | 'virtual'
+  rowHeight?: number
+  estimatedRowHeight?: number
+  overscanCount?: number
+  rowClassName?: string | ((params: { row: Record<string, unknown>; rowIndex: number }) => string)
   [key: string]: unknown
 }
 

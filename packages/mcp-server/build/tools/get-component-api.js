@@ -91,13 +91,32 @@ interface TableOptions {
   rowkey?: string             // Row unique key
   isInitRun?: boolean         // Auto-fetch on mount (default true)
   heightType?: 'auto' | 'height'  // Height mode
+  tabHeight?: number | string // Container height value (used with heightType)
+
+  // Virtual scrolling (el-table-v2, suitable for 10k+ rows)
+  virtual?: boolean           // Enable virtual scrolling
+  engine?: 'default' | 'virtual'  // Rendering engine selection
+  rowHeight?: number          // Row height in px (default 50)
+  estimatedRowHeight?: number // For dynamic-height rows
+  overscanCount?: number      // Buffer rows outside viewport (default 2)
+  rowClassName?: string | ((params: { row, rowIndex }) => string)
 }
 \`\`\`
+
+## TableColumn Interface (virtual mode support)
+Virtual mode supports the same column config as normal mode:
+- \`type: 'selection'\` — Checkbox column (alternative to multiSelect option)
+- \`type: 'index'\` — Row number column
+- \`type: 'expand'\` — Expand row column
+- \`render\`, \`scopedSlots\`, \`ellipsis\`, \`formatter\` — All supported
+- \`btns\` — Operation buttons in virtual mode
 
 ## Instance Methods (via ref)
 - \`httpRequestInstance(model?)\` — Trigger data fetch
 - \`clearSelection()\` — Clear row selection
+- \`getSelectionRows()\` — Get selected rows
 - \`toggleRowSelection(row, selected?)\` — Toggle row checkbox
+- \`scrollToRow(index)\` — Scroll to row by index (virtual mode)
 - \`refresh()\` — Reload current page
 
 ## Key Features
@@ -106,6 +125,7 @@ interface TableOptions {
 - Grouped columns via \`groups\` property
 - Operation column via \`btns\` array
 - Auto-linked with EsForm via provide/inject
+- Virtual scrolling: same API, just add \`virtual: true\` for 10k+ row performance
 `,
     useDialog: `# useDialog API
 

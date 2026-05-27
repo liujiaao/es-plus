@@ -88,9 +88,15 @@ export function registerGenerateFromConfig(server: McpServer) {
               heightType: z
                 .enum(["height", "auto", "maxHeight"])
                 .optional(),
+              tabHeight: z.union([z.number(), z.string()]).optional(),
               multiSelect: z.boolean().optional(),
               highlightCurrentRow: z.boolean().default(true),
               headerCellStyle: z.record(z.string()).optional(),
+              virtual: z.boolean().optional(),
+              rowHeight: z.number().optional(),
+              estimatedRowHeight: z.number().optional(),
+              overscanCount: z.number().int().optional(),
+              rowClassName: z.string().optional(),
             })
             .optional(),
           pagination: z

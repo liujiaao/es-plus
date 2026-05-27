@@ -59,7 +59,7 @@ function detectSchemaType(config: unknown): string {
   if (!config || typeof config !== "object") return "form-item";
   const obj = config as Record<string, unknown>;
   if ("columns" in obj || "tableData" in obj) return "table-column";
-  if ("httpRequest" in obj || "configTableOut" in obj || "apiParams" in obj) return "table-options";
+  if ("httpRequest" in obj || "configTableOut" in obj || "apiParams" in obj || "virtual" in obj) return "table-options";
   if ("render" in obj || "configBtn" in obj || "isDraggable" in obj) return "dialog-options";
   return "form-item";
 }
