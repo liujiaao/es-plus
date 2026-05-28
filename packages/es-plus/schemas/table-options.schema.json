@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/table-options.schema.json",
   "title": "EsTable Options Configuration",
-  "description": "Configuration object for es-plus-ui EsTable options prop",
+  "description": "Configuration object for @es-plus/vue3 EsTable options prop",
   "type": "object",
   "properties": {
     "border": {

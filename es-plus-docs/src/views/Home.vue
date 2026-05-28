@@ -3,7 +3,7 @@
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
-        <div class="hero-badge">🚀 Vue 3 + Element Plus</div>
+        <div class="hero-badge">🚀 Vue 3 + Element Plus · Vue 2 + Element UI</div>
         <h1 class="hero-title">ES-Plus</h1>
         <p class="hero-description">
           企业级中后台前端解决方案<br>
@@ -296,7 +296,7 @@ const columns = [
           <div class="step-content">
             <h4>安装依赖</h4>
             <div class="code-block">
-              <code>npm install es-plus-ui element-plus @element-plus/icons-vue</code>
+              <code>npm install @es-plus/vue3 element-plus @element-plus/icons-vue</code>
             </div>
           </div>
         </div>
@@ -305,7 +305,7 @@ const columns = [
           <div class="step-content">
             <h4>引入组件</h4>
             <div class="code-block">
-              <code>import { EsForm, EsTable, useDialog } from 'es-plus-ui'</code>
+              <code>import { EsForm, EsTable, useDialog } from '@es-plus/vue3'</code>
             </div>
           </div>
         </div>

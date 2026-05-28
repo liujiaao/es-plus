@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/btn-config.schema.json",
   "title": "Button Configuration",
-  "description": "Configuration for action buttons in es-plus-ui EsForm and EsTable",
+  "description": "Configuration for action buttons in @es-plus/vue3 EsForm and EsTable",
   "type": "object",
   "required": ["name"],
   "properties": {

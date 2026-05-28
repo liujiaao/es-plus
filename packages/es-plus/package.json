@@ -1,7 +1,7 @@
 {
-  "name": "es-plus-ui",
-  "version": "1.3.5",
-  "description": "基于 Vue 3 和 Element Plus 的企业级中后台前端组件库",
+  "name": "@es-plus/vue3",
+  "version": "1.4.0",
+  "description": "es-plus for Vue 3 + Element Plus: configuration-driven enterprise components, sharing the same JSON config schema as @es-plus/vue2 (Vue 2 + Element UI). Renamed from es-plus-ui starting v1.4.0.",
   "type": "module",
   "main": "./dist/es-plus.umd.cjs",
   "module": "./dist/es-plus.js",

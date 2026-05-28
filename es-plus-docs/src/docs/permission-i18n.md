@@ -1,6 +1,6 @@
 # 权限控制与国际化
 
-es-plus-ui 内置了按钮级权限控制和 i18n 国际化支持，通过插件安装时注入配置即可全局生效。
+@es-plus/vue3 内置了按钮级权限控制和 i18n 国际化支持，通过插件安装时注入配置即可全局生效。
 
 ## 权限控制
 
@@ -9,7 +9,7 @@ es-plus-ui 内置了按钮级权限控制和 i18n 国际化支持，通过插件
 在 `app.use()` 时传入 `permission` 函数，接收权限标识字符串，返回 `boolean`：
 
 ```typescript
-import ESPlus from 'es-plus-ui'
+import ESPlus from '@es-plus/vue3'
 
 const userPermissions = ['user:add', 'user:edit', 'user:view']
 
@@ -104,7 +104,7 @@ permissions.add('user:edit')
 在 `app.use()` 时传入 `t` 翻译函数：
 
 ```typescript
-import ESPlus from 'es-plus-ui'
+import ESPlus from '@es-plus/vue3'
 import { createI18n } from 'vue-i18n'
 
 const i18n = createI18n({
@@ -193,7 +193,7 @@ app.use(ESPlus, {
 ### TypeScript 类型
 
 ```typescript
-import type { EsPlusOptions } from 'es-plus-ui'
+import type { EsPlusOptions } from '@es-plus/vue3'
 
 const options: EsPlusOptions = {
   permission: (value) => checkPermission(value),

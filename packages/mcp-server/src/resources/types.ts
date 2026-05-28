@@ -22,7 +22,7 @@ function loadTypesFromSource(): string {
   return TYPES_FALLBACK;
 }
 
-const TYPES_FALLBACK = `// es-plus-ui TypeScript Type Definitions (bundled fallback)
+const TYPES_FALLBACK = `// @es-plus/vue3 TypeScript Type Definitions (bundled fallback)
 // Run "npm run bundle-types" to update from source
 
 import type { VNode, RenderFunction } from 'vue'
@@ -133,7 +133,7 @@ export function registerTypesResource(server: McpServer) {
     "esplus://types",
     {
       description:
-        "Complete TypeScript type definitions for all es-plus-ui components (read from source when available)",
+        "Complete TypeScript type definitions for all @es-plus/vue3 components (read from source when available)",
       mimeType: "text/plain",
     },
     async () => {

@@ -12,18 +12,20 @@ export const scaffoldCommand = new Command("scaffold")
     .argument("<name>", "page name (kebab-case)")
     .option("-f, --features <list>", "comma-separated features: query,table,dialog", "query,table")
     .option("-o, --output <path>", "output file path")
+    .option("-t, --target <target>", "target framework: vue3 (default) or vue2", "vue3")
     .description("Generate a minimal es-plus page scaffold")
     .action((name, options) => {
     const features = options.features.split(",").map((f) => f.trim());
+    const target = options.target === 'vue2' ? 'vue2' : 'vue3';
     const outputPath = resolve(process.cwd(), options.output || `src/views/${toPascalCase(name)}.vue`);
-    const code = generateScaffold(name, features);
+    const code = generateScaffold(name, features, target);
     const dir = dirname(outputPath);
     if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
     }
     writeFileSync(outputPath, code, "utf-8");
     console.log(pc.green(`✔ 已生成: ${outputPath}`));
-    console.log(pc.dim(`  features: ${features.join(", ")}`));
+    console.log(pc.dim(`  features: ${features.join(", ")}, target: ${target}`));
     console.log("");
 });
 //# sourceMappingURL=scaffold.js.map

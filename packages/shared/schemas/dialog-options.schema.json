@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/dialog-options.schema.json",
   "title": "useDialog Options Configuration",
-  "description": "Configuration object passed to the useDialog() hook in es-plus-ui",
+  "description": "Configuration object passed to the useDialog() hook in @es-plus/vue3",
   "type": "object",
   "properties": {
     "title": {

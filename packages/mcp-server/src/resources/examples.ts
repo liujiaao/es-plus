@@ -24,7 +24,7 @@ export function registerExamplesResource(server: McpServer) {
       });
 
       const content = [
-        "# es-plus-ui CRUD Page Examples\n",
+        "# @es-plus/vue3 CRUD Page Examples\n",
         "These examples are generated from natural language descriptions using the es-plus CRUD engine.\n",
         ...sections,
       ].join("\n");

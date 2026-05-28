@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/index.schema.json",
   "title": "ES-Plus UI Configuration Schema",
-  "description": "Complete JSON Schema for es-plus-ui component library configuration. Covers EsForm, EsTable, useDialog, and shared types.",
+  "description": "Complete JSON Schema for @es-plus/vue3 component library configuration. Covers EsForm, EsTable, useDialog, and shared types.",
   "definitions": {
     "FormItemOption": {
       "$ref": "form-item.schema.json"

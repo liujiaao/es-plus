@@ -5,7 +5,7 @@ import { generateCrudPage, generateCrudSchema } from "@es-plus/shared";
 export function registerGenerateCrudPage(server: McpServer) {
   server.tool(
     "generate_crud_page",
-    "Generate a CRUD page from a natural language description. Supports two modes: 'schema' (default, recommended) outputs CrudPageSchema JSON + wrapper SFC; 'sfc' outputs a full Vue 3 SFC.",
+    "Generate a CRUD page from a natural language description. Supports two modes (schema/sfc) and two targets (vue3/vue2). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.",
     {
       description: z
         .string()
@@ -16,13 +16,22 @@ export function registerGenerateCrudPage(server: McpServer) {
         .enum(["schema", "sfc"])
         .default("schema")
         .describe(
-          "Output mode: 'schema' (default) for CrudPageSchema JSON + minimal wrapper using <es-crud-page>; 'sfc' for complete Vue 3 SFC with EsTable + EsForm"
+          "Output mode: 'schema' (default) for CrudPageSchema JSON + minimal wrapper using <es-crud-page>; 'sfc' for complete SFC with EsTable + EsForm"
+        ),
+      target: z
+        .enum(["vue3", "vue2"])
+        .default("vue3")
+        .describe(
+          "Target framework: 'vue3' (default) outputs Vue 3 + Element Plus + @es-plus/vue3; 'vue2' outputs Vue 2 + Element UI + @es-plus/vue2 (defineComponent + setup() + :sync)"
         ),
     },
-    async ({ description, mode }) => {
+    async ({ description, mode, target }) => {
       try {
+        const tgt = (target || "vue3") as "vue3" | "vue2";
+        const esPlusPkg = tgt === "vue2" ? "@es-plus/vue2" : "@es-plus/vue3";
+
         if (mode === "sfc") {
-          const result = generateCrudPage(description);
+          const result = generateCrudPage(description, tgt);
           return {
             content: [
               {
@@ -33,7 +42,7 @@ export function registerGenerateCrudPage(server: McpServer) {
           };
         }
 
-        const result = generateCrudSchema(description);
+        const result = generateCrudSchema(description, tgt);
         const schemaJson = JSON.stringify(result.schema, null, 2);
 
         return {
@@ -48,7 +57,7 @@ export function registerGenerateCrudPage(server: McpServer) {
                 "## CrudPageSchema (schema.ts)",
                 "",
                 "```typescript",
-                `import type { CrudPageSchema } from 'es-plus-ui'`,
+                `import type { CrudPageSchema } from '${esPlusPkg}'`,
                 "",
                 `export const pageSchema: CrudPageSchema = ${schemaJson}`,
                 "```",

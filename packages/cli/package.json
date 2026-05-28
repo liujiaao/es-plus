@@ -1,7 +1,7 @@
 {
   "name": "@es-plus/cli",
   "version": "1.1.2",
-  "description": "CLI tool for es-plus-ui - generate CRUD pages, validate configs",
+  "description": "CLI tool for es-plus (Vue 3 / Vue 2) - generate CRUD pages, validate configs",
   "type": "module",
   "bin": {
     "es-plus": "./build/index.js"

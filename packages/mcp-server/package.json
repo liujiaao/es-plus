@@ -1,7 +1,7 @@
 {
   "name": "@es-plus/mcp-server",
   "version": "1.1.2",
-  "description": "MCP Server for es-plus-ui - AI coding tool integration for CRUD page generation",
+  "description": "MCP Server for es-plus (Vue 3 / Vue 2) - AI coding tool integration for CRUD page generation",
   "type": "module",
   "bin": {
     "mcp-server-es-plus": "./build/index.js"

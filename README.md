@@ -1,15 +1,18 @@
 # ES-Plus
 
-基于 Vue 3 + Element Plus 的企业级 CRUD 组件库 —— 配置驱动、表单表格弹窗全链路联动、AI 原生支持。
+企业级 CRUD 组件库 —— 配置驱动、表单表格弹窗全链路联动、AI 原生支持。**同时支持 Vue 3 + Element Plus 和 Vue 2 + Element UI**，同一份配置两个渲染器通用。
 
 中文 | [English](./README.en.md)
 
-[![npm version](https://img.shields.io/npm/v/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![npm downloads](https://img.shields.io/npm/dm/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![license](https://img.shields.io/npm/l/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
+[![@es-plus/vue3](https://img.shields.io/npm/v/%40es-plus%2Fvue3.svg?label=%40es-plus%2Fvue3)](https://www.npmjs.com/package/@es-plus/vue3)
+[![@es-plus/vue2](https://img.shields.io/npm/v/%40es-plus%2Fvue2.svg?label=%40es-plus%2Fvue2)](https://www.npmjs.com/package/@es-plus/vue2)
+[![@es-plus/core](https://img.shields.io/npm/v/%40es-plus%2Fcore.svg?label=%40es-plus%2Fcore)](https://www.npmjs.com/package/@es-plus/core)
+[![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 
-**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)**
+**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
+
+> **v1.4.0 起重命名**：`es-plus-ui` 已重命名为 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3)，同时新增 Vue 2 渲染器 [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 与框架无关的 [`@es-plus/core`](https://www.npmjs.com/package/@es-plus/core)。原 `es-plus-ui` 包继续作为 stub 包工作，详见 [迁移指南](./docs/migrate-v1.4.md)。
 
 ---
 
@@ -47,20 +50,20 @@
 
 ## 快速开始
 
-### 安装
+### 安装（Vue 3）
 
 ```bash
-npm install es-plus-ui element-plus @element-plus/icons-vue
+npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 ```
 
-### 注册插件
+### 注册插件（Vue 3）
 
 ```typescript
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import ESPlus from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+import ESPlus from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 import App from './App.vue'
 
 const app = createApp(App)
@@ -68,6 +71,15 @@ app.use(ElementPlus)
 app.use(ESPlus)
 app.mount('#app')
 ```
+
+### Vue 2 项目？
+
+```bash
+npm install @es-plus/vue2 element-ui
+# Vue 2.6 还需要 @vue/composition-api
+```
+
+参见 [`@es-plus/vue2` README](./packages/vue2/README.md)，配置 API 与 Vue 3 版本完全一致。
 
 ### 第一个 CRUD 页面
 
@@ -261,7 +273,7 @@ options: {
 ## useDialog 编程式弹窗
 
 ```tsx
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 
@@ -353,8 +365,10 @@ import type {
   EsFormInstance,    // 表单实例方法
   EsTableInstance,   // 表格实例方法
   EsPlusOptions      // 全局配置
-} from 'es-plus-ui'
+} from '@es-plus/vue3'
 ```
+
+> 跨 Vue 2 / Vue 3 共享类型时，从 `@es-plus/core/types` 导入 — 同一份 `columns` / `formItemList` 在两个渲染器中通用。
 
 ---
 
@@ -429,33 +443,44 @@ app.use(ESPlus, {
 ```
 es-plus/
 ├── packages/
-│   ├── es-plus/          # 组件库源码（npm: es-plus-ui）
+│   ├── es-plus/          # Vue 3 渲染器源码（npm: @es-plus/vue3）
+│   ├── vue2/             # Vue 2 渲染器源码（npm: @es-plus/vue2）
+│   ├── core/             # 框架无关核心层（npm: @es-plus/core）
+│   ├── es-plus-legacy/   # 兼容 stub（npm: es-plus-ui，re-export @es-plus/vue3）
+│   ├── shared/           # MCP/CLI 共享逻辑
 │   ├── mcp-server/       # MCP Server（npm: @es-plus/mcp-server）
 │   └── cli/              # CLI 工具（npm: @es-plus/cli）
 ├── es-plus-docs/         # 文档站点（Vite + Vue 3）
-└── es-eui/               # Vue 2 + Element UI 版本
+└── docs/                 # 设计文档与迁移指南
 ```
 
 ## 本地开发
 
 ```bash
-# 组件库构建
+# Vue 3 组件库构建
 cd packages/es-plus && npm install && npm run build
+
+# Vue 2 组件库构建
+cd packages/vue2 && npm install && npm run build
 
 # 文档站点开发
 cd es-plus-docs && npm install && npm run dev
 
 # 运行测试
 cd packages/es-plus && npm test
+cd packages/core && npm test
 ```
 
 ## 相关链接
 
 | 包 | 说明 | 链接 |
 |---|---|---|
-| es-plus-ui | 组件库 | [npm](https://www.npmjs.com/package/es-plus-ui) |
-| @es-plus/mcp-server | AI 编码工具集成 | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
-| @es-plus/cli | 命令行工具 | [npm](https://www.npmjs.com/package/@es-plus/cli) |
+| `@es-plus/vue3` | Vue 3 + Element Plus 渲染器 | [npm](https://www.npmjs.com/package/@es-plus/vue3) |
+| `@es-plus/vue2` | Vue 2 + Element UI 渲染器 | [npm](https://www.npmjs.com/package/@es-plus/vue2) |
+| `@es-plus/core` | 框架无关核心层（类型/工具/算法） | [npm](https://www.npmjs.com/package/@es-plus/core) |
+| `@es-plus/mcp-server` | AI 编码工具集成 | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
+| `@es-plus/cli` | 命令行工具 | [npm](https://www.npmjs.com/package/@es-plus/cli) |
+| `es-plus-ui` (deprecated) | 已迁移至 `@es-plus/vue3` | [迁移指南](./docs/migrate-v1.4.md) |
 | 在线文档 | 完整 API 与示例 | [文档](https://liujiaao.github.io/es-plus/) |
 
 ## 贡献

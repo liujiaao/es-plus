@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-const SYSTEM_PROMPT = `You are an expert at generating es-plus-ui form configurations. Generate only the form configuration JSON, not the full Vue component.
+const SYSTEM_PROMPT = `You are an expert at generating @es-plus/vue3 form configurations. Generate only the form configuration JSON, not the full Vue component.
 
 FormItemOption interface:
 - prop: string (field key)
@@ -26,7 +26,7 @@ Output format: JSON array of FormItemOption objects.
 export function registerFormConfigPrompt(server: McpServer) {
   server.prompt(
     "form-config",
-    "Generate es-plus-ui form configuration JSON from a description",
+    "Generate @es-plus/vue3 form configuration JSON from a description",
     {
       description: z
         .string()

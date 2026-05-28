@@ -2,9 +2,9 @@
  * AI CRUD API - OpenAI-compatible API integration for real AI-powered config generation
  */
 
-const SYSTEM_PROMPT = `You are an es-plus-ui configuration generator. Given a natural language description of a CRUD page, generate the complete configuration as a JSON object.
+const SYSTEM_PROMPT = `You are an @es-plus/vue3 configuration generator. Given a natural language description of a CRUD page, generate the complete configuration as a JSON object.
 
-es-plus-ui is a Vue 3 + Element Plus config-driven component library. It uses JSON configuration to generate forms, tables, and dialogs.
+@es-plus/vue3 is a Vue 3 + Element Plus config-driven component library. It uses JSON configuration to generate forms, tables, and dialogs.
 
 ## Output Format
 

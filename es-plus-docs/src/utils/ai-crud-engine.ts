@@ -1,5 +1,5 @@
 /**
- * AI CRUD Engine - Rule-based natural language to es-plus-ui config generator
+ * AI CRUD Engine - Rule-based natural language to @es-plus/vue3 config generator
  * Parses Chinese/English field descriptions and generates complete CRUD page configuration
  */
 
@@ -308,7 +308,7 @@ export function generateCode(config: GeneratedConfig): string {
   lines.push(`import { ${vueImports.join(', ')} } from 'vue'`)
 
   if (hasDialog) {
-    lines.push(`import { useDialog } from 'es-plus-ui'`)
+    lines.push(`import { useDialog } from '@es-plus/vue3'`)
   }
 
   const epImports: string[] = []

@@ -135,7 +135,7 @@ It auto-generates query/reset buttons, operation column with edit/delete buttons
 
 <script setup lang="tsx">
 import { ref } from 'vue'
-import { EsCrudPage, EsForm } from 'es-plus-ui'
+import { EsCrudPage, EsForm } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
 
 const crudRef = ref(null)

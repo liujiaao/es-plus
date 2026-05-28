@@ -135,7 +135,7 @@ Virtual mode supports the same column config as normal mode:
 
 ## Usage
 \`\`\`typescript
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 
@@ -193,7 +193,7 @@ interface DialogOptions {
 export function registerGetComponentApi(server: McpServer) {
   server.tool(
     "get_component_api",
-    "Get the full API documentation for an es-plus-ui component, including TypeScript interfaces, props, methods, and usage examples.",
+    "Get the full API documentation for an @es-plus/vue3 component, including TypeScript interfaces, props, methods, and usage examples.",
     {
       component: z
         .enum(COMPONENT_LIST)

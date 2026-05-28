@@ -58,6 +58,7 @@ import hljs from 'highlight.js'
 import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
+import vue2Md from '@/docs/vue2.md?raw'
 import mcpServerMd from '@/docs/mcp-server.md?raw'
 import cliMd from '@/docs/cli.md?raw'
 import permissionI18nMd from '@/docs/permission-i18n.md?raw'
@@ -88,6 +89,7 @@ const docsData = {
   'getting-started': { title: '快速开始', content: gettingStartedMd },
   'installation': { title: '安装', content: installationMd },
   'usage': { title: '使用', content: usageMd },
+  'vue2': { title: 'Vue 2 指南', content: vue2Md },
   'mcp-server': { title: 'MCP Server', content: mcpServerMd },
   'cli': { title: 'CLI 工具', content: cliMd },
   'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },

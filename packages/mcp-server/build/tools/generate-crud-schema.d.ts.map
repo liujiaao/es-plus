@@ -1,1 +1,1 @@
-{"version":3,"file":"generate-crud-schema.d.ts","sourceRoot":"","sources":["../../src/tools/generate-crud-schema.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AAIzE,wBAAgB,0BAA0B,CAAC,MAAM,EAAE,SAAS,QAyD3D"}
+{"version":3,"file":"generate-crud-schema.d.ts","sourceRoot":"","sources":["../../src/tools/generate-crud-schema.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AAIzE,wBAAgB,0BAA0B,CAAC,MAAM,EAAE,SAAS,QAkE3D"}

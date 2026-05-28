@@ -8,7 +8,7 @@
  * ```ts
  * import Components from 'unplugin-vue-components/vite'
  * import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
- * import { EsPlusResolver } from 'es-plus-ui/resolver'
+ * import { EsPlusResolver } from '@es-plus/vue3/resolver'
  *
  * export default defineConfig({
  *   plugins: [
@@ -78,15 +78,15 @@ const EP_INTERNAL_DEPS = [
 
 // es-plus 组件名 → 模块路径映射
 const ES_PLUS_COMPONENTS: Record<string, string> = {
-  EsTable: 'es-plus-ui',
-  EsForm: 'es-plus-ui',
-  EsDialog: 'es-plus-ui',
-  EsCrudPage: 'es-plus-ui',
-  SvgIcon: 'es-plus-ui',
+  EsTable: '@es-plus/vue3',
+  EsForm: '@es-plus/vue3',
+  EsDialog: '@es-plus/vue3',
+  EsCrudPage: '@es-plus/vue3',
+  SvgIcon: '@es-plus/vue3',
 }
 
 function getSideEffects(options: EsPlusResolverOptions): string[] {
-  const effects: string[] = ['es-plus-ui/dist/style.css']
+  const effects: string[] = ['@es-plus/vue3/dist/style.css']
 
   if (options.importElementStyles !== false) {
     const stylePath = options.importStyle === 'sass' ? 'style/index' : 'style/css'

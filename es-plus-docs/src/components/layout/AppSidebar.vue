@@ -18,6 +18,12 @@
             <router-link to="/guide/usage" class="nav-link">使用</router-link>
           </li>
           <li class="nav-item">
+            <router-link to="/guide/vue2" class="nav-link">
+              <span class="nav-icon"><el-icon><SetUp /></el-icon></span>
+              Vue 2 指南
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/guide/mcp-server" class="nav-link">
               <span class="nav-icon"><el-icon><MagicStick /></el-icon></span>
               MCP Server
@@ -119,7 +125,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean

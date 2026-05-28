@@ -48,7 +48,7 @@ const FieldConfigSchema = z.object({
     permissionValue: z.string().optional(),
 });
 export function registerGenerateFromConfig(server) {
-    server.tool("generate_crud_from_config", "Generate a production-ready CRUD page from a structured JSON config. Unlike generate_crud_page (which uses regex-based NL parsing), this tool accepts precise field definitions, real API URLs, data options, and validation rules — producing zero-TODO code ready for production. The AI client should read esplus://conventions and esplus://types resources first, then construct the config JSON from the user's requirements.", {
+    server.tool("generate_crud_from_config", "Generate a production-ready CRUD page from a structured JSON config. Unlike generate_crud_page (which uses regex-based NL parsing), this tool accepts precise field definitions, real API URLs, data options, and validation rules — producing zero-TODO code ready for production. Supports `target: 'vue3' | 'vue2'` field in config (default 'vue3'); when target='vue2', emits Vue 2 + Element UI + @es-plus/vue2 compatible code (defineComponent + setup(), :sync). The AI client should read esplus://conventions and esplus://types resources first, then construct the config JSON from the user's requirements.", {
         config: z
             .string()
             .describe("JSON string of StructuredCrudConfig. Must include: name (PascalCase), apiUrl (real endpoint), fields (array with prop/label/formtype), actions (array of CRUD operations). See esplus://conventions resource for the full schema and examples."),
@@ -88,6 +88,7 @@ export function registerGenerateFromConfig(server) {
                 })
                     .optional(),
                 mode: z.enum(["schema", "sfc"]).default("schema"),
+                target: z.enum(["vue3", "vue2"]).default("vue3"),
                 typescript: z.boolean().default(true),
                 permissions: z.record(z.string()).optional(),
                 i18n: z.boolean().default(false),

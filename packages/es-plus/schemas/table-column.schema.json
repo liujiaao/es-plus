@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/table-column.schema.json",
   "title": "EsTable Column Configuration",
-  "description": "Configuration for a single column in es-plus-ui EsTable component",
+  "description": "Configuration for a single column in @es-plus/vue3 EsTable component",
   "type": "object",
   "properties": {
     "prop": {

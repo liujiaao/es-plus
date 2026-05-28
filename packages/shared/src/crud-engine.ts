@@ -303,9 +303,9 @@ export function generateCode(config: GeneratedConfig): string {
   if (config.hasStatusRender) vueImports.push('h')
   lines.push(`import { ${vueImports.join(', ')} } from 'vue'`)
 
-  // es-plus-ui imports
+  // @es-plus/vue3 imports
   if (hasDialog) {
-    lines.push(`import { useDialog } from 'es-plus-ui'`)
+    lines.push(`import { useDialog } from '@es-plus/vue3'`)
   }
 
   // element-plus imports

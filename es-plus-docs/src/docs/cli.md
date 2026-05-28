@@ -108,7 +108,7 @@ $ es-plus create order-list
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const queryForm = reactive({ name: '', phone: '', status: '' })
 const tableData = ref([])
@@ -488,7 +488,7 @@ const options = {
 额外包含：
 
 ```js
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 const dialog = useDialog()
 ```
 
@@ -554,6 +554,6 @@ es-plus create user-management
 
 ## 相关链接
 
-- [es-plus-ui 组件库](https://www.npmjs.com/package/es-plus-ui)
+- [@es-plus/vue3 组件库](https://www.npmjs.com/package/@es-plus/vue3)
 - [@es-plus/mcp-server AI 集成](https://www.npmjs.com/package/@es-plus/mcp-server)
 - [GitHub 仓库](https://github.com/liujiaao/es-plus)

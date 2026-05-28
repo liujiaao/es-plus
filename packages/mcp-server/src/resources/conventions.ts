@@ -11,7 +11,7 @@ import {
 } from "@es-plus/shared";
 
 function buildConventionsContent(): string {
-  return `# es-plus-ui Code Generation Conventions
+  return `# @es-plus/vue3 Code Generation Conventions
 
 ## Form Types (formtype)
 Valid values: ${VALID_FORM_TYPES.join(", ")}
@@ -199,7 +199,7 @@ interface FieldConfig {
 \`\`\`typescript
 // main.ts — configure once for the entire application
 import axios from 'axios'
-import ESPlus from 'es-plus-ui'
+import ESPlus from '@es-plus/vue3'
 
 app.use(ESPlus, {
   EsTable: {
@@ -322,7 +322,7 @@ Set \`"operationColumn": false\` to hide the operation column entirely.
 ### configureEsPlus() — Module-Level Config (Auto-Import Mode)
 \`\`\`typescript
 // main.ts — works without app.use(EsPlus)
-import { configureEsPlus } from 'es-plus-ui'
+import { configureEsPlus } from '@es-plus/vue3'
 
 configureEsPlus({
   EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
@@ -339,7 +339,7 @@ Both modes are supported — legacy config auto-converts at runtime.
 
 ## Common Gotchas (Full List)
 
-1. Reset button key is "rest" NOT "reset" — this is intentional in es-plus-ui
+1. Reset button key is "rest" NOT "reset" — this is intentional in @es-plus/vue3
 2. formtype casing: "datePicker", "timePicker" (camelCase) — all others PascalCase
 3. Table operation column prop: "operate" in SFC mode, "action" in CrudPage schema mode
 4. \`triggerEvent: true\` is REQUIRED on query/reset buttons for table auto-refresh
@@ -360,7 +360,7 @@ export function registerConventionsResource(server: McpServer) {
     "esplus://conventions",
     {
       description:
-        "Code generation conventions and rules for es-plus-ui (button keys, formtypes, import requirements)",
+        "Code generation conventions and rules for @es-plus/vue3 (button keys, formtypes, import requirements)",
       mimeType: "text/plain",
     },
     async () => {

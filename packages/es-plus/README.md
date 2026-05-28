@@ -1,13 +1,15 @@
-# es-plus-ui
+# @es-plus/vue3
 
 基于 Vue 3 + Element Plus 的企业级中后台 CRUD 组件库 — 配置化驱动表单、表格、弹窗全链路联动
 
-[![npm version](https://img.shields.io/npm/v/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![npm downloads](https://img.shields.io/npm/dm/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![license](https://img.shields.io/npm/l/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
+[![npm version](https://img.shields.io/npm/v/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
+[![npm downloads](https://img.shields.io/npm/dm/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
+[![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![github stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 
-**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[GitHub](https://github.com/liujiaao/es-plus)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)**
+**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[GitHub](https://github.com/liujiaao/es-plus)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[Vue 2 版本](https://www.npmjs.com/package/@es-plus/vue2)**
+
+> **v1.4.0 起重命名**：原包 [`es-plus-ui`](https://www.npmjs.com/package/es-plus-ui) 已重命名为 `@es-plus/vue3`，与 Vue 2 版本 [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 在同一 scope 下统一管理。`es-plus-ui@1.4.0+` 现在是仅做 re-export 的 stub 包并已 `npm deprecate` —— 现有项目仍能继续使用，但建议升级到 `@es-plus/vue3`。详见 [迁移指南](https://github.com/liujiaao/es-plus/blob/master/docs/migrate-v1.4.md)。
 
 ## 核心特性
 
@@ -23,11 +25,11 @@
 - **AI 原生支持** — 配套 [@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server) 和 [@es-plus/cli](https://www.npmjs.com/package/@es-plus/cli)
 - **13 种表单类型** — Input、Select、datePicker、timePicker、Slider、ColorPicker、Transfer、Cascader、Radio、Checkbox、Switch、Rate、Upload
 
-## 为什么选择 es-plus-ui？
+## 为什么选择 @es-plus/vue3？
 
-> 同样的 CRUD 页面，传统写法 ~200 行，es-plus-ui ~20 行
+> 同样的 CRUD 页面，传统写法 ~200 行，@es-plus/vue3 ~20 行
 
-| 痛点 | 传统 Element Plus | es-plus-ui |
+| 痛点 | 传统 Element Plus | @es-plus/vue3 |
 |------|-------------------|------------|
 | 表单字段 | 每个字段 5-8 行 `el-form-item` + `v-model` | 一行 `{ prop, label, formtype }` |
 | 查询/重置 | 手动 `@click` + `resetFields()` | `triggerEvent: true` 自动处理 |
@@ -40,11 +42,11 @@
 ## 安装
 
 ```bash
-npm install es-plus-ui element-plus @element-plus/icons-vue
+npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 # 或
-yarn add es-plus-ui element-plus @element-plus/icons-vue
+yarn add @es-plus/vue3 element-plus @element-plus/icons-vue
 # 或
-pnpm add es-plus-ui element-plus @element-plus/icons-vue
+pnpm add @es-plus/vue3 element-plus @element-plus/icons-vue
 ```
 
 前置依赖：`vue ^3.2.0`、`element-plus ^2.2.0`、`@element-plus/icons-vue ^2.1.0`
@@ -57,8 +59,8 @@ pnpm add es-plus-ui element-plus @element-plus/icons-vue
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import EsPlus from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+import EsPlus from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 import App from './App.vue'
 
 const app = createApp(App)
@@ -168,8 +170,8 @@ fieldFieldOutput: (defaults) => ({
 ### 按需引入
 
 ```typescript
-import { EsForm, EsTable, useDialog } from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+import { EsForm, EsTable, useDialog } from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 ```
 
 ### 最小示例
@@ -237,8 +239,8 @@ const options = {
 **useDialog**：
 
 ```tsx
-import { useDialog } from 'es-plus-ui'
-import EsForm from 'es-plus-ui/components/es-form'
+import { useDialog } from '@es-plus/vue3'
+import EsForm from '@es-plus/vue3/components/es-form'
 
 const dialog = useDialog()
 function openAddDialog() {
@@ -693,7 +695,7 @@ const options = {
 ### 基本用法
 
 ```typescript
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 
@@ -841,7 +843,7 @@ dialog1({
 
 ## TypeScript 类型
 
-es-plus-ui 导出以下 TypeScript 接口，可直接导入使用：
+@es-plus/vue3 导出以下 TypeScript 接口，可直接导入使用：
 
 ```typescript
 import type {
@@ -855,7 +857,7 @@ import type {
   ApiParams,
   EsFormInstance,
   EsTableInstance
-} from 'es-plus-ui'
+} from '@es-plus/vue3'
 ```
 
 | 接口 | 说明 |
@@ -875,7 +877,7 @@ import type {
 
 ## 表单+表格+弹窗联动
 
-es-plus-ui 的核心优势在于 EsForm、EsTable、useDialog 三者的深度联动，实现配置即开发。
+@es-plus/vue3 的核心优势在于 EsForm、EsTable、useDialog 三者的深度联动，实现配置即开发。
 
 ### 零代码查询
 
@@ -983,7 +985,7 @@ dialog({
 
 ### CSS 未加载
 
-确保引入了样式文件：`import 'es-plus-ui/dist/style.css'`
+确保引入了样式文件：`import '@es-plus/vue3/dist/style.css'`
 
 ### 图标不显示
 
@@ -1130,7 +1132,7 @@ const schema = {
 </template>
 
 <script setup lang="ts">
-import type { CrudPageSchema } from 'es-plus-ui'
+import type { CrudPageSchema } from '@es-plus/vue3'
 
 const schema: CrudPageSchema = {
   formItems: [
@@ -1171,7 +1173,7 @@ const schema: CrudPageSchema = {
 自动导入模式下无需 `app.use`，直接调用 `configureEsPlus`：
 
 ```typescript
-import { configureEsPlus } from 'es-plus-ui'
+import { configureEsPlus } from '@es-plus/vue3'
 
 configureEsPlus({
   permission: (value) => userStore.permissions.includes(value),
@@ -1186,7 +1188,7 @@ configureEsPlus({
 import type {
   CrudPageSchema, CrudBtnConfig, OperationColumnConfig,
   RowBtnConfig, CrudDialogConfig, DialogRenderContext, DialogActionContext
-} from 'es-plus-ui'
+} from '@es-plus/vue3'
 ```
 
 ---
@@ -1225,6 +1227,9 @@ npx @es-plus/cli scaffold dashboard --features query,table,dialog
 
 ### v1.4.0
 
+- **包重命名**：`es-plus-ui` → `@es-plus/vue3`，与同期发布的 `@es-plus/vue2` 形成统一 scope。旧包名 `es-plus-ui@1.4.0+` 是仅做 re-export 的 stub，并已 npm deprecate
+- **`@es-plus/vue2` 0.x 同步发布**：Vue 2 + Element UI 渲染器，使用同一份 schema 配置
+- **`@es-plus/core` 1.0**：抽出框架无关核心层，由 `@es-plus/vue3` 与 `@es-plus/vue2` 共同消费
 - **EsCrudPage 多弹窗架构**：支持 `toolbarBtns`、`operationColumn`、`dialogs` 显式声明
 - 按钮通过 `dialogKey` 声明式绑定弹窗，支持多个独立弹窗
 - 弹窗支持 `formItems`（表单模式）和 `render`（自定义渲染模式）

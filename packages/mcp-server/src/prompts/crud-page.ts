@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-const SYSTEM_PROMPT = `You are an expert at generating es-plus-ui CRUD pages. es-plus-ui is a config-driven Vue 3 + Element Plus component library.
+const SYSTEM_PROMPT = `You are an expert at generating @es-plus/vue3 CRUD pages. @es-plus/vue3 is a config-driven Vue 3 + Element Plus component library.
 
 Key concepts:
 - EsForm: Config-driven form using \`formItemList\` (array of FormItemOption) and \`configBtn\` (array of BtnConfig)
@@ -35,7 +35,7 @@ Before generating code, read these MCP resources for accurate types and conventi
 export function registerCrudPagePrompt(server: McpServer) {
   server.prompt(
     "crud-page",
-    "Generate a complete es-plus-ui CRUD page from a description",
+    "Generate a complete @es-plus/vue3 CRUD page from a description",
     {
       description: z
         .string()

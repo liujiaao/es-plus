@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/api-params.schema.json",
   "title": "API Parameters Configuration",
-  "description": "Configuration for API requests in es-plus-ui components",
+  "description": "Configuration for API requests in @es-plus/vue3 components",
   "type": "object",
   "required": ["url"],
   "properties": {
