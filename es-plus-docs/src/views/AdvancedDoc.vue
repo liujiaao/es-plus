@@ -4,8 +4,8 @@
       <!-- 面包屑 -->
       <div class="doc-breadcrumb">
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>高级用法</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ t('sidebar.section.advanced') }}</el-breadcrumb-item>
           <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -20,7 +20,7 @@
       <article class="doc-content">
         <!-- 特性介绍 -->
         <section class="doc-section" v-if="currentDoc.features" id="features">
-          <h2 class="section-title">核心特性</h2>
+          <h2 class="section-title">{{ t('advancedDoc.features') }}</h2>
           <div class="features-grid">
             <div v-for="feature in currentDoc.features" :key="feature.name" class="feature-card">
               <el-icon :size="32" class="feature-icon">
@@ -34,7 +34,7 @@
         
         <!-- 案例列表 -->
         <section class="doc-section" id="examples">
-          <h2 class="section-title">实战案例</h2>
+          <h2 class="section-title">{{ t('advancedDoc.examples') }}</h2>
           <div class="examples-list">
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
@@ -55,7 +55,7 @@
         
         <!-- API -->
         <section class="doc-section" v-if="currentDoc.api" id="api">
-          <h2 class="section-title">API 参考</h2>
+          <h2 class="section-title">{{ t('advancedDoc.api') }}</h2>
           <div v-for="(items, key) in currentDoc.api" :key="key" class="api-block">
             <h3 class="api-subtitle">{{ apiTitleMap[key] || key }}</h3>
             <el-table :data="items" border>
@@ -70,20 +70,20 @@
       <!-- 底部导航 -->
       <div class="doc-footer-nav">
         <router-link v-if="prevDoc" :to="prevDoc.path" class="footer-nav prev">
-          <span class="nav-label">上一个</span>
+          <span class="nav-label">{{ t('componentDoc.previous') }}</span>
           <span class="nav-title">{{ prevDoc.title }}</span>
         </router-link>
         <div v-else></div>
         <router-link v-if="nextDoc" :to="nextDoc.path" class="footer-nav next">
-          <span class="nav-label">下一个</span>
+          <span class="nav-label">{{ t('componentDoc.next') }}</span>
           <span class="nav-title">{{ nextDoc.title }}</span>
         </router-link>
       </div>
     </div>
-    
+
     <!-- 右侧目录 -->
     <aside class="doc-aside">
-      <div class="aside-title">本页目录</div>
+      <div class="aside-title">{{ t('componentDoc.toc') }}</div>
       <div class="aside-toc">
         <a
           v-for="heading in toc"
@@ -102,7 +102,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
+
+const { t } = useI18n()
 import { docsData as rawDocsData } from './advanced-doc.data'
 
 // 导入案例组件
@@ -187,10 +190,10 @@ const currentDoc = computed(() => {
   return docsData[name] || { title: '未找到', description: '', examples: [] }
 })
 
-const toc = ref([
-  { id: 'features', text: '核心特性' },
-  { id: 'examples', text: '实战案例' },
-  { id: 'api', text: 'API 参考' }
+const toc = computed(() => [
+  { id: 'features', text: t('advancedDoc.features') },
+  { id: 'examples', text: t('advancedDoc.examples') },
+  { id: 'api', text: t('advancedDoc.api') }
 ])
 
 const scrollToHeading = (id) => {

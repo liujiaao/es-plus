@@ -30,6 +30,7 @@ const dialog = useDialog()
 const departments = ['技术部', '产品部', '设计部', '市场部', '运营部']
 const positions = ['工程师', '高级工程师', '架构师', '经理', '总监', '实习生']
 const statusList = ['在职', '离职', '试用期']
+const cities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安']
 
 const mockDatabase: Record<string, unknown>[] = []
 for (let i = 1; i <= 10000; i++) {
@@ -42,6 +43,8 @@ for (let i = 1; i <= 10000; i++) {
     phone: `138${String(10000000 + i).slice(-8)}`,
     email: `employee${i}@company.com`,
     joinDate: `2020-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+    salary: 8000 + ((i * 137) % 30000),
+    address: `${cities[i % cities.length]}市`,
   })
 }
 
@@ -96,22 +99,28 @@ const formBtns = [
 ]
 
 // =========== 表格配置 ===========
+// 列宽合计 ~1310px，故意大于 CodePlayground 预览区（1000~1100），
+// 这样可以演示横向滚动能力。配合 virtual-engine.vue 的
+// `scrollbarAlwaysOn:true`，横滚条会常驻底部，用户立刻可见可拖。
+// fixed:'right' 操作列在横滚时贴在右侧不动。
 const columns = [
   { type: 'selection', width: 50 },
   { type: 'index', label: '#', width: 60 },
   { prop: 'name', label: '姓名', width: 100 },
   { prop: 'department', label: '部门', width: 100 },
   { prop: 'position', label: '职位', width: 120 },
-  { prop: 'status', label: '状态', width: 80,
+  { prop: 'status', label: '状态', width: 90,
     render: (_h: any, { row }: any) => {
       const map: Record<string, string> = { '在职': 'success', '离职': 'danger', '试用期': 'warning' }
       return h(ElTag, { type: (map[row.status as string] || 'info') as any, size: 'small' }, () => row.status)
     }
   },
   { prop: 'phone', label: '联系电话', width: 140 },
-  { prop: 'email', label: '邮箱', minWidth: 200, ellipsis: true },
-  { prop: 'joinDate', label: '入职日期', width: 120 },
-  { prop: 'operate', label: '操作', width: 160, fixed: 'right',
+  { prop: 'email', label: '邮箱', width: 220, ellipsis: true },
+  { prop: 'joinDate', label: '入职日期', width: 130 },
+  { prop: 'salary', label: '薪资 (¥)', width: 120, align: 'right' as const },
+  { prop: 'address', label: '所在地', width: 130, ellipsis: true },
+  { prop: 'operate', label: '操作', width: 150, fixed: 'right',
     btns: [
       { name: '编辑', type: 'primary', clickEvent: (row: any) => openEditDialog(row) },
       { name: '删除', type: 'danger', clickEvent: (row: any) => handleDelete(row) },

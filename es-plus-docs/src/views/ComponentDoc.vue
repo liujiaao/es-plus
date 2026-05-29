@@ -4,8 +4,8 @@
       <!-- 面包屑 -->
       <div class="doc-breadcrumb">
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item>组件文档</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ t('breadcrumb.componentDoc') }}</el-breadcrumb-item>
           <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -20,7 +20,7 @@
       <article class="doc-content">
         <!-- 组件特性介绍 -->
         <section class="doc-section" v-if="currentDoc.features" id="features">
-          <h2 class="section-title">组件特性</h2>
+          <h2 class="section-title">{{ t('componentDoc.features') }}</h2>
           <div class="features-grid">
             <div 
               v-for="feature in currentDoc.features" 
@@ -40,7 +40,7 @@
         
         <!-- 使用案例 -->
         <section class="doc-section" id="examples">
-          <h2 class="section-title">使用案例</h2>
+          <h2 class="section-title">{{ t('componentDoc.examples') }}</h2>
           <div class="examples-list">
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
@@ -61,7 +61,7 @@
         
         <!-- API 文档 -->
         <section class="doc-section" v-if="currentDoc.api" id="api">
-          <h2 class="section-title">API 文档</h2>
+          <h2 class="section-title">{{ t('componentDoc.api') }}</h2>
 
           <template v-for="(items, key) in currentDoc.api" :key="key">
             <div class="api-block">
@@ -80,22 +80,22 @@
       
       <!-- 底部导航 -->
       <div class="doc-footer-nav">
-        <router-link 
-          v-if="prevDoc" 
-          :to="prevDoc.path" 
+        <router-link
+          v-if="prevDoc"
+          :to="prevDoc.path"
           class="footer-nav prev"
         >
-          <span class="nav-label">上一个</span>
+          <span class="nav-label">{{ t('componentDoc.previous') }}</span>
           <span class="nav-title">{{ prevDoc.title }}</span>
         </router-link>
         <div v-else></div>
-        
-        <router-link 
-          v-if="nextDoc" 
-          :to="nextDoc.path" 
+
+        <router-link
+          v-if="nextDoc"
+          :to="nextDoc.path"
           class="footer-nav next"
         >
-          <span class="nav-label">下一个</span>
+          <span class="nav-label">{{ t('componentDoc.next') }}</span>
           <span class="nav-title">{{ nextDoc.title }}</span>
         </router-link>
       </div>
@@ -103,7 +103,7 @@
     
     <!-- 右侧目录 -->
     <aside class="doc-aside">
-      <div class="aside-title">本页目录</div>
+      <div class="aside-title">{{ t('componentDoc.toc') }}</div>
       <div class="aside-toc">
         <a
           v-for="heading in toc"
@@ -124,8 +124,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useHead } from '@unhead/vue'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
 import { docsData as rawDocsData } from './component-doc.data'
+
+const { t } = useI18n()
 
 // 导入案例组件
 import FormBasic from '@/components/examples/form/Basic.vue'
@@ -215,10 +219,19 @@ const currentDoc = computed(() => {
   return docsData[name] || { title: '未找到', description: '', examples: [], api: {} }
 })
 
-const toc = ref([
-  { id: 'features', text: '组件特性', level: 2 },
-  { id: 'examples', text: '使用案例', level: 2 },
-  { id: 'api', text: 'API 文档', level: 2 }
+useHead({
+  title: () => currentDoc.value.title,
+  meta: [
+    { name: 'description', content: () => currentDoc.value.description || `${currentDoc.value.title} - ES-Plus 组件 API 与示例` },
+    { property: 'og:title', content: () => `${currentDoc.value.title} · ES-Plus` },
+    { property: 'og:description', content: () => currentDoc.value.description || '' },
+  ],
+})
+
+const toc = computed(() => [
+  { id: 'features', text: t('componentDoc.features'), level: 2 },
+  { id: 'examples', text: t('componentDoc.examples'), level: 2 },
+  { id: 'api', text: t('componentDoc.api'), level: 2 }
 ])
 
 const apiTitleMap: Record<string, string> = {

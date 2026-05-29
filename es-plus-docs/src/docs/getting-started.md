@@ -83,6 +83,10 @@ const handleConfirm = ({ key, model }) => {
 | 手动 `v-model` 绑定每个字段 | 自动绑定到 `model` |
 | 手动 `@click` + `resetFields()` | `triggerEvent: true` 自动处理 |
 
+### 在线试一下
+
+<demo name="form-basic" />
+
 ## 第一个表格
 
 配置化列定义 + 自动分页 + 请求联动：
@@ -134,6 +138,10 @@ const options = {
 ```
 
 `EsForm` 嵌套在 `EsTable` 内时，查询/重置/分页全自动联动，无需手动编写事件处理。
+
+### 在线试一下
+
+<demo name="table-basic" />
 
 ## 第一个弹窗
 

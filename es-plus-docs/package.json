@@ -6,22 +6,29 @@
   "scripts": {
     "dev": "vite",
     "dev:dist": "vite --mode dist",
+    "dev:dist:fresh": "npm --prefix ../packages/es-plus run build && vite --mode dist",
     "build": "vite build",
     "build:dist": "vite build --mode dist",
+    "build:dist:fresh": "npm --prefix ../packages/es-plus run build && vite build --mode dist",
     "preview": "vite preview"
   },
   "dependencies": {
-    "es-plus": "file:../packages/es-plus",
-    "vue": "^3.2.45",
-    "vue-router": "^4.1.5",
-    "element-plus": "^2.2.26",
     "@element-plus/icons-vue": "^2.0.10",
-    "vue-i18n": "^9.2.2",
-    "markdown-it": "^13.0.1",
-    "highlight.js": "^11.6.0",
-    "fuse.js": "^7.0.0",
+    "@guolao/vue-monaco-editor": "^1.6.0",
+    "@unhead/vue": "^3.1.1",
     "@vueuse/core": "^9.5.0",
-    "pinia": "^2.0.28"
+    "element-plus": "^2.2.26",
+    "es-plus": "file:../packages/es-plus",
+    "fuse.js": "^7.0.0",
+    "highlight.js": "^11.6.0",
+    "lz-string": "^1.5.0",
+    "markdown-it": "^13.0.1",
+    "monaco-editor": "^0.55.1",
+    "pinia": "^2.0.28",
+    "vite-plugin-sitemap": "^0.8.2",
+    "vue": "^3.2.45",
+    "vue-i18n": "^9.2.2",
+    "vue-router": "^4.1.5"
   },
   "devDependencies": {
     "@types/markdown-it": "^12.2.3",

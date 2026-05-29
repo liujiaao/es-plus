@@ -5,23 +5,28 @@
       <div class="preview-header">
         <span class="preview-title">{{ title }}</span>
         <div class="preview-actions">
-          <el-button 
-            link 
-            :icon="isExpanded ? ArrowUp : ArrowDown" 
+          <el-button
+            link
+            :icon="isExpanded ? ArrowUp : ArrowDown"
             @click="toggleExpand"
           >
-            {{ isExpanded ? '收起代码' : '展开代码' }}
+            {{ isExpanded ? t('codePlayground.collapse') : t('codePlayground.expand') }}
           </el-button>
           <el-button link :icon="CopyDocument" @click="copyCode">
-            复制
+            {{ t('codePlayground.copy') }}
+          </el-button>
+          <el-button link :icon="Promotion" @click="openInSandbox">
+            {{ t('codePlayground.tryOnline') }}
           </el-button>
           <el-button link :icon="Refresh" @click="refreshPreview">
-            刷新
+            {{ t('codePlayground.refresh') }}
           </el-button>
         </div>
       </div>
       <div class="preview-content" :class="{ 'is-expanded': isExpanded }">
-        <slot name="preview" />
+        <div :key="refreshKey" class="preview-mount">
+          <slot name="preview" />
+        </div>
       </div>
     </div>
     
@@ -55,10 +60,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { ArrowUp, ArrowDown, CopyDocument, Refresh } from '@element-plus/icons-vue'
+import { ArrowUp, ArrowDown, CopyDocument, Refresh, Promotion } from '@element-plus/icons-vue'
+import { openInCodeSandbox, prefetchSandboxVendor } from '@/utils/sandbox'
 import hljs from 'highlight.js'
+
+const { t } = useI18n()
+
+// Warm the unpkg cache for `@es-plus/vue3` dist on mount so the user's click
+// on "在线试" does not need to await a fetch (which would risk popup blocking).
+onMounted(() => {
+  prefetchSandboxVendor()
+})
 
 interface CodeTabs {
   name: string
@@ -102,6 +117,34 @@ const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
 }
 
+// `navigator.clipboard` is only available in secure contexts (https / localhost).
+// On http://lan-ip dev servers it's undefined, so fall back to legacy execCommand.
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // fall through to fallback
+    }
+  }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    ta.style.pointerEvents = 'none'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  } catch {
+    return false
+  }
+}
+
 const copyCode = async () => {
   let codeToCopy = ''
   if (typeof props.code === 'string') {
@@ -109,17 +152,32 @@ const copyCode = async () => {
   } else {
     codeToCopy = `${props.code.template}\n\n${props.code.script}\n\n${props.code.style}`
   }
-  
-  try {
-    await navigator.clipboard.writeText(codeToCopy)
-    ElMessage.success('代码已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
+  const ok = await copyToClipboard(codeToCopy)
+  if (ok) ElMessage.success(t('codePlayground.copied'))
+  else ElMessage.error(t('codePlayground.copyFailed'))
 }
 
 const refreshPreview = () => {
   refreshKey.value++
+}
+
+const openInSandbox = async () => {
+  const code = displayCode.value
+  if (!code.template && !code.script) {
+    ElMessage.warning(t('codePlayground.noSource'))
+    return
+  }
+  try {
+    await openInCodeSandbox({
+      template: code.template,
+      script: code.script,
+      style: code.style,
+      title: props.title,
+    })
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(t('codePlayground.sandboxFailed'))
+  }
 }
 
 // 高亮代码
@@ -132,12 +190,6 @@ watch(() => props.code, () => {
     }, 100)
   }
 }, { immediate: true })
-
-provide('refreshKey', refreshKey)
-</script>
-
-<script lang="ts">
-import { provide } from 'vue'
 </script>
 
 <style lang="scss" scoped>

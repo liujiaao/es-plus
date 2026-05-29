@@ -17,6 +17,8 @@
           :class="tableClass"
           :row-class="rowClassName"
           :row-event-handlers="rowEventHandlers"
+          :fixed="true"
+          :scrollbar-always-on="true"
           @column-sort="handleColumnSort as any"
         />
       </template>

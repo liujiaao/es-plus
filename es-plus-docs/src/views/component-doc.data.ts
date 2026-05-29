@@ -126,6 +126,7 @@ export const docsData: Record<string, any> = {
         { name: 'resetFields', params: '-', desc: '重置所有字段' },
         { name: 'clearValidate', params: '(props?)', desc: '清除校验状态' },
         { name: 'validateField', params: '(props)', desc: '校验指定字段' },
+        { name: 'scrollToField', params: '(prop)', desc: '滚动到指定字段位置' },
         { name: 'formItmeRequestInstance', params: '(propsList)', desc: '手动触发指定字段的 API 数据加载' },
         { name: 'getFormRef', params: '-', desc: '获取底层 ElForm 实例' }
       ]
@@ -221,16 +222,15 @@ export const docsData: Record<string, any> = {
         { name: 'leftText', type: 'string', default: '-', desc: '顶部左侧文本' }
       ],
       events: [
-        { name: 'update:dataSource', params: '(data)', desc: '数据更新' },
-        { name: 'update:pagination', params: '(pagination)', desc: '分页更新' },
-        { name: 'selection-change', params: '(selection)', desc: '选择项变化时触发' },
+        { name: 'update:dataSource', params: '(data)', desc: '数据更新（v-model 自动触发）' },
+        { name: 'update:pagination', params: '(pagination)', desc: '分页更新（v-model:pagination 自动触发）' },
         { name: 'pagination-current-change', params: '(pagination)', desc: '页码变化时触发' },
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
         { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' }
       ],
       methods: [
         { name: 'httpRequestInstance', params: '(model?)', desc: '手动触发表格数据请求' },
-        { name: 'getSelectionRows', params: '-', desc: '获取选中行（含跨页缓存）' },
+        { name: 'getSelectionRows', params: '-', desc: '获取选中行（含跨页缓存）。注：跨页选择不通过事件暴露，需通过此方法或 ref 主动读取' },
         { name: 'clearSelection', params: '-', desc: '清除当前页选择' },
         { name: 'clearAllSelection', params: '-', desc: '清除所有页面选择（含跨页缓存）' },
         { name: 'refresh', params: '-', desc: '强制重新计算表格布局' },
@@ -327,7 +327,9 @@ export const docsData: Record<string, any> = {
         { name: 'export', params: '(model)', desc: '导出事件' },
         { name: 'add', params: '-', desc: '新增按钮点击（向后兼容）' },
         { name: 'edit', params: '(row)', desc: '编辑按钮点击（向后兼容）' },
-        { name: 'delete', params: '(row)', desc: '删除按钮点击（向后兼容）' }
+        { name: 'view', params: '(row)', desc: '查看按钮点击（向后兼容）' },
+        { name: 'delete', params: '(row)', desc: '删除按钮点击（向后兼容）' },
+        { name: 'row-click', params: '(row)', desc: '表格行点击事件透传' }
       ],
       methods: [
         { name: 'refresh', params: '-', desc: '刷新表格数据' },

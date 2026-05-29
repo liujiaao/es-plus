@@ -77,6 +77,12 @@ app.use(ESPlus, {
 app.mount('#app')
 ```
 
+### 在线试一下
+
+下面是一个实际加载远端数据的查询表格 —— `httpRequest` 拦截器自动接管分页与请求，`EsForm` 嵌套在 `EsTable` 内时查询/重置自动触发翻页：
+
+<demo name="table-remote-data" />
+
 ### 模式二：自动按需导入 + configureEsPlus（推荐）
 
 适合对包体积有要求的项目。**`EsPlusResolver` 负责组件注册和样式注入，`configureEsPlus()` 负责全局配置**：

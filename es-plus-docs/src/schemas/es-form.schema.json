@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://es-plus.dev/schemas/es-form.schema.json",
+  "title": "ES-Plus EsForm formItemList",
+  "description": "Schema for the formItemList prop passed to <es-form />",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/FormItem"
+  },
+  "definitions": {
+    "FormItem": {
+      "type": "object",
+      "required": ["prop"],
+      "properties": {
+        "prop": {
+          "type": "string",
+          "description": "字段名（绑定到 model 的 key）"
+        },
+        "label": {
+          "type": "string",
+          "description": "字段标签"
+        },
+        "formtype": {
+          "type": "string",
+          "description": "表单组件类型",
+          "enum": [
+            "Input",
+            "InputNumber",
+            "Select",
+            "Cascader",
+            "DatePicker",
+            "TimePicker",
+            "Switch",
+            "Radio",
+            "Checkbox",
+            "Slider",
+            "Rate",
+            "ColorPicker",
+            "Upload",
+            "Transfer",
+            "Custom"
+          ]
+        },
+        "span": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 24,
+          "description": "栅格占位（1-24）"
+        },
+        "attrs": {
+          "type": "object",
+          "description": "传递给底层 Element Plus 组件的 props（如 placeholder、disabled、type 等）"
+        },
+        "dataOptions": {
+          "type": "array",
+          "description": "Select / Radio / Checkbox 的选项",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "value": {}
+            },
+            "required": ["label"]
+          }
+        },
+        "apiParams": {
+          "type": "object",
+          "description": "异步加载 dataOptions 配置",
+          "properties": {
+            "url": { "type": "string" },
+            "method": { "type": "string", "enum": ["GET", "POST"] },
+            "params": { "type": "object" },
+            "fieldOutput": { "type": "object" }
+          }
+        },
+        "rules": {
+          "oneOf": [
+            { "type": "object" },
+            { "type": "array", "items": { "type": "object" } }
+          ],
+          "description": "校验规则（Element Plus 格式）"
+        },
+        "isHidden": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string", "description": "函数体表达式（运行时 eval）" }
+          ],
+          "description": "是否隐藏，可基于 model 做条件显隐"
+        },
+        "disabled": {
+          "type": "boolean"
+        },
+        "default": {
+          "description": "默认值"
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "labelWidth": {
+          "type": ["string", "number"]
+        },
+        "on": {
+          "type": "object",
+          "description": "事件监听（change/input/blur/focus 等），值为函数体字符串",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://es-plus.dev/schemas/es-table-columns.schema.json",
+  "title": "ES-Plus EsTable columns",
+  "description": "Schema for the columns prop passed to <es-table />",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/Column"
+  },
+  "definitions": {
+    "Column": {
+      "type": "object",
+      "properties": {
+        "prop": {
+          "type": "string",
+          "description": "列对应的数据字段名"
+        },
+        "label": {
+          "type": "string",
+          "description": "列表头文本"
+        },
+        "width": {
+          "type": ["string", "number"],
+          "description": "列宽（像素或百分比）"
+        },
+        "minWidth": {
+          "type": ["string", "number"]
+        },
+        "fixed": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string", "enum": ["left", "right"] }
+          ],
+          "description": "是否固定列"
+        },
+        "align": {
+          "type": "string",
+          "enum": ["left", "center", "right"]
+        },
+        "headerAlign": {
+          "type": "string",
+          "enum": ["left", "center", "right"]
+        },
+        "sortable": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string", "enum": ["custom"] }
+          ]
+        },
+        "showOverflowTooltip": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["selection", "index", "expand"],
+          "description": "特殊列类型"
+        },
+        "formatter": {
+          "type": "string",
+          "description": "格式化函数体（运行时 eval）"
+        },
+        "render": {
+          "type": "string",
+          "description": "自定义渲染函数体（运行时 eval）"
+        },
+        "isHidden": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string" }
+          ]
+        },
+        "children": {
+          "type": "array",
+          "description": "嵌套列（多级表头）",
+          "items": { "$ref": "#/definitions/Column" }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
