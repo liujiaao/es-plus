@@ -124,7 +124,7 @@ export const StructuredCrudConfigSchema = z.object({
         pageSizes: z.array(z.number().int()).optional(),
     }).optional(),
     mode: z.enum(['schema', 'sfc']).default('schema').describe('Output mode'),
-    target: z.enum(['vue3', 'vue2']).default('vue3').describe('Target framework: "vue3" (es-plus-ui + Element Plus, default) or "vue2" (@es-plus/vue2 + Element UI)'),
+    target: z.enum(['vue3', 'vue2']).default('vue3').describe('Target framework: "vue3" (@es-plus/vue3 + Element Plus, default) or "vue2" (@es-plus/vue2 + Element UI)'),
     typescript: z.boolean().default(true).describe('Generate TypeScript'),
     permissions: z.record(z.string(), z.string()).optional().describe('Permission codes for action buttons'),
     i18n: z.boolean().default(false).describe('Use labelKey for i18n'),

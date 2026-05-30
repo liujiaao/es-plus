@@ -129,7 +129,7 @@ function generateSchema(config) {
         config.permissions ? '- Permissions configured' : '',
         target === 'vue2'
             ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
-            : '- Target: Vue 3 + Element Plus (es-plus-ui)',
+            : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
     ].filter(Boolean).join('\n');
     return { code, wrapperCode, summary, warnings };
 }
@@ -400,7 +400,7 @@ function generateSFC(config) {
         config.permissions ? '- Permissions configured' : '',
         isVue2
             ? '- Target: Vue 2 + Element UI (@es-plus/vue2). JSX render needs @vue/babel-preset-jsx.'
-            : '- Target: Vue 3 + Element Plus (es-plus-ui)',
+            : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
     ].filter(Boolean).join('\n');
     return { code, summary, warnings };
 }

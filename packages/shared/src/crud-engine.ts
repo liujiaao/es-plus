@@ -296,7 +296,12 @@ export function generateCode(config: GeneratedConfig): string {
   lines.push(`  </es-table>`)
   lines.push(`</template>`)
   lines.push(``)
-  lines.push(`<script setup>`)
+  // When there's a dialog, the generated code emits `render: (h) => <EsForm .../>`
+  // JSX — that requires `lang="jsx"` on the script tag plus the
+  // @vitejs/plugin-vue-jsx (or babel preset for Vue 2). Without lang, the SFC
+  // compiler routes the body through the plain-JS loader which chokes on JSX.
+  const scriptLang = hasDialog ? ' lang="jsx"' : ''
+  lines.push(`<script setup${scriptLang}>`)
 
   // Vue imports
   const vueImports = ['reactive', 'ref']

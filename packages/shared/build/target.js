@@ -12,10 +12,10 @@
  *  │ <script setup>          │ 支持                                   │ 不支持 → defineComponent + setup() │
  *  │ v-model 多目标           │ v-model:data-source                   │ :data-source.sync                 │
  *  │ ElMessage / ElMessageBox│ from 'element-plus'                   │ from 'element-ui' (Message/MessageBox) │
- *  │ es-plus 包名             │ es-plus-ui                            │ @es-plus/vue2                     │
+ *  │ es-plus 包名             │ @es-plus/vue3                            │ @es-plus/vue2                     │
  *  │ JSX 渲染函数 h           │ 全局 h(...)                            │ createElement(comp, { props, on }) │
  *  │ 虚拟滚动 (virtual)       │ ElTableV2 支持                         │ 无对应能力 → 自动忽略 + warning    │
- *  │ TS 类型 import          │ from 'es-plus-ui'                     │ from '@es-plus/vue2'              │
+ *  │ TS 类型 import          │ from '@es-plus/vue3'                     │ from '@es-plus/vue2'              │
  *  └─────────────────────────┴───────────────────────────────────────┴───────────────────────────────────┘
  *
  * 适用范围：
@@ -27,7 +27,7 @@ export const DEFAULT_TARGET = 'vue3';
  * 根据 target 返回 es-plus 类型/函数的导入包名
  */
 export function getEsPlusPackageName(target) {
-    return target === 'vue2' ? '@es-plus/vue2' : 'es-plus-ui';
+    return target === 'vue2' ? '@es-plus/vue2' : '@es-plus/vue3';
 }
 /**
  * 根据 target 返回 element-plus / element-ui 的导入包名

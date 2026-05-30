@@ -5,7 +5,7 @@ import { DEFAULT_TARGET, getEsPlusPackageName, rewriteVModelSync, rewriteElement
  *
  * Vue 3 vs Vue 2 差异：
  *  - 模板中的 v-model:* 修饰符（仅在 generateCode 输出的代码包含时）
- *  - import 包名：es-plus-ui ↔ @es-plus/vue2
+ *  - import 包名：@es-plus/vue3 ↔ @es-plus/vue2
  *  - script setup 与 defineComponent 之间的差异（见 generateScaffold 处理；
  *    crud-engine.generateCode 当前固定输出 vue3 风格，vue2 模式下会做后置改写）
  */
@@ -27,7 +27,7 @@ export function generateCrudPage(description, target = DEFAULT_TARGET) {
         config.actions.includes("delete") ? `- Delete confirmation dialog` : "",
         target === 'vue2'
             ? `- Target: Vue 2 + Element UI (@es-plus/vue2)`
-            : `- Target: Vue 3 + Element Plus (es-plus-ui)`,
+            : `- Target: Vue 3 + Element Plus (@es-plus/vue3)`,
         ``,
         target === 'vue2'
             ? `Note: 需要在 main.js 中执行 Vue.use(ElementUI) + Vue.use(EsPlus)，并通过 esPlus 配置全局 httpRequest`
@@ -45,7 +45,7 @@ export function generateCrudPage(description, target = DEFAULT_TARGET) {
  *  1. v-model:xxx="..."             →  :xxx.sync="..."
  *  2. ElMessageBox / ElMessage       →  MessageBox / Message
  *  3. from 'element-plus'            →  from 'element-ui'
- *  4. from 'es-plus-ui'              →  from '@es-plus/vue2'
+ *  4. from '@es-plus/vue3'           →  from '@es-plus/vue2'
  *  5. <script setup>                 →  <script>defineComponent({ setup() {...} })
  *
  * 注意：第 5 项是非平凡转换，本函数采用模板字符串替换实现的"轻量改写"——
@@ -59,7 +59,8 @@ function adaptCodeToVue2(code) {
     out = rewriteElementUsage(out, 'vue2');
     // 3. element-plus → element-ui
     out = out.replace(/from\s+['"]element-plus['"]/g, "from 'element-ui'");
-    // 4. es-plus-ui → @es-plus/vue2
+    // 4. @es-plus/vue3 (and legacy es-plus-ui) → @es-plus/vue2
+    out = out.replace(/from\s+['"]@es-plus\/vue3['"]/g, "from '@es-plus/vue2'");
     out = out.replace(/from\s+['"]es-plus-ui['"]/g, "from '@es-plus/vue2'");
     // 5. <script setup> → defineComponent + setup()
     // 仅当源码确实包含 <script setup> 时执行
@@ -76,7 +77,11 @@ function adaptCodeToVue2(code) {
  *  - 不导出 import 进来的符号、不导出已经在原始声明里被命名为 _xxx 私有的标识符
  */
 function transformScriptSetupBlock(source) {
-    const re = /<script setup(\s+lang="ts")?>([\s\S]*?)<\/script>/m;
+    // Accept lang="ts" | "tsx" | "jsx" | (none). The jsx variant is emitted by
+    // crud-engine when the SFC contains dialog render functions; for vue2 output
+    // the lang attribute is preserved on the rewritten <script> tag so consumers
+    // know they still need @vue/babel-preset-jsx or equivalent.
+    const re = /<script setup(\s+lang="(?:ts|tsx|jsx)")?>([\s\S]*?)<\/script>/m;
     const match = source.match(re);
     if (!match)
         return source;
@@ -91,15 +96,27 @@ function transformScriptSetupBlock(source) {
         if (name && !name.startsWith('_'))
             exposed.add(name);
     }
+    // ES `import` statements MUST sit at the top of the module — they're illegal
+    // inside a function body. Pull every top-level import out of the setup body
+    // first, then emit imports → defineComponent → setup() { non-import body }.
+    const importRe = /^[ \t]*import\s+[^;]+;?\s*$/gm;
+    const imports = [];
+    const bodyWithoutImports = body.replace(importRe, (line) => {
+        imports.push(line.trim());
+        return '';
+    });
     // 缩进 setup 体（每行前面加 4 空格，空行保持）
-    const indented = body
+    const indented = bodyWithoutImports
         .split('\n')
         .map((l) => (l.length === 0 ? l : '    ' + l))
         .join('\n');
     const returnFields = Array.from(exposed).join(', ');
+    // De-dup `defineComponent` from extracted imports (we always add our own)
+    const userImports = imports.filter((line) => !/defineComponent/.test(line));
     const replacement = [
         `<script${lang}>`,
         `import { defineComponent } from 'vue'`,
+        ...userImports,
         ``,
         `export default defineComponent({`,
         `  setup() {`,

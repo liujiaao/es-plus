@@ -105,7 +105,11 @@ function adaptCodeToVue2(code: string): string {
  *  - 不导出 import 进来的符号、不导出已经在原始声明里被命名为 _xxx 私有的标识符
  */
 function transformScriptSetupBlock(source: string): string {
-  const re = /<script setup(\s+lang="ts")?>([\s\S]*?)<\/script>/m;
+  // Accept lang="ts" | "tsx" | "jsx" | (none). The jsx variant is emitted by
+  // crud-engine when the SFC contains dialog render functions; for vue2 output
+  // the lang attribute is preserved on the rewritten <script> tag so consumers
+  // know they still need @vue/babel-preset-jsx or equivalent.
+  const re = /<script setup(\s+lang="(?:ts|tsx|jsx)")?>([\s\S]*?)<\/script>/m;
   const match = source.match(re);
   if (!match) return source;
 
@@ -122,17 +126,31 @@ function transformScriptSetupBlock(source: string): string {
     if (name && !name.startsWith('_')) exposed.add(name);
   }
 
+  // ES `import` statements MUST sit at the top of the module — they're illegal
+  // inside a function body. Pull every top-level import out of the setup body
+  // first, then emit imports → defineComponent → setup() { non-import body }.
+  const importRe = /^[ \t]*import\s+[^;]+;?\s*$/gm
+  const imports: string[] = []
+  const bodyWithoutImports = body.replace(importRe, (line) => {
+    imports.push(line.trim())
+    return ''
+  })
+
   // 缩进 setup 体（每行前面加 4 空格，空行保持）
-  const indented = body
+  const indented = bodyWithoutImports
     .split('\n')
     .map((l) => (l.length === 0 ? l : '    ' + l))
     .join('\n');
 
   const returnFields = Array.from(exposed).join(', ');
 
+  // De-dup `defineComponent` from extracted imports (we always add our own)
+  const userImports = imports.filter((line) => !/defineComponent/.test(line))
+
   const replacement = [
     `<script${lang}>`,
     `import { defineComponent } from 'vue'`,
+    ...userImports,
     ``,
     `export default defineComponent({`,
     `  setup() {`,

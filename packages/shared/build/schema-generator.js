@@ -47,7 +47,7 @@ function buildCrudPageSchema(config) {
 /**
  * 包装 SFC 生成（同时支持 vue3 和 vue2 target）
  *
- * Vue 3 风格：<script setup> + ElMessageBox + 'es-plus-ui'
+ * Vue 3 风格：<script setup> + ElMessageBox + '@es-plus/vue3'
  * Vue 2 风格：<script>defineComponent({ setup() {} })</script> + MessageBox + '@es-plus/vue2'
  */
 function buildWrapperSFC(config, target) {
@@ -179,7 +179,7 @@ function buildSummary(config, target) {
         `- Output: CrudPageSchema JSON + EsCrudPage wrapper SFC`,
         target === 'vue2'
             ? `- Target: Vue 2 + Element UI (use @es-plus/vue2)`
-            : `- Target: Vue 3 + Element Plus (use es-plus-ui)`,
+            : `- Target: Vue 3 + Element Plus (use @es-plus/vue3)`,
         ``,
         `Note: 需要在 main.${target === 'vue2' ? 'js' : 'ts'} 中配置 ${target === 'vue2' ? 'Vue.use(EsPlus)' : 'app.use(ESPlus)'} 全局插件`,
     ].filter(Boolean).join('\n');
