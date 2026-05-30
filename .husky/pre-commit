@@ -1,0 +1,46 @@
+# pre-commit hook: lock-sync guard
+#
+# When any packages/<name>/package.json is staged, the root package-lock.json
+# MUST also be staged. Otherwise CI's `npm ci` will fail with
+# "Missing: <pkg>@<version> from lock file" because `npm ci` requires strict
+# package.json ↔ package-lock.json equality (unlike `npm install` which
+# silently updates the lock on its own).
+#
+# This hook caught the exact failure that triggered its creation: a vue3
+# version bump 1.4.0 → 1.4.1 was committed without re-running `npm install`,
+# so the lock still referenced 1.4.0 and every CI run died at `npm ci`.
+#
+# Escape hatch: `git commit --no-verify` skips this. Use sparingly — usually
+# only when you're intentionally committing a half-state on a feature branch
+# that you'll fix up before opening a PR.
+
+STAGED=$(git diff --cached --name-only)
+
+# Match packages/<dirname>/package.json — exclude nested package.json (e.g.
+# packages/<x>/node_modules/<dep>/package.json, which should never be staged
+# anyway, but defensive grep).
+PKG_JSONS=$(echo "$STAGED" | grep -E '^packages/[^/]+/package\.json$' || true)
+ROOT_LOCK=$(echo "$STAGED" | grep -E '^package-lock\.json$' || true)
+
+if [ -n "$PKG_JSONS" ] && [ -z "$ROOT_LOCK" ]; then
+  echo ""
+  echo "❌ pre-commit lock-sync check failed"
+  echo ""
+  echo "You staged these package.json files:"
+  echo "$PKG_JSONS" | sed 's/^/    /'
+  echo ""
+  echo "…but the root package-lock.json is NOT staged. CI's \`npm ci\` will"
+  echo "fail with 'Missing: <pkg>@<new-version> from lock file' on the next"
+  echo "push because lockfile and package.json will be out of sync."
+  echo ""
+  echo "Fix:"
+  echo "    npm install --legacy-peer-deps"
+  echo "    git add package-lock.json"
+  echo "    git commit ..."
+  echo ""
+  echo "Or, if you are intentionally committing only a meta change that doesn't"
+  echo "affect dependency resolution and will be followed by another commit:"
+  echo "    git commit --no-verify ..."
+  echo ""
+  exit 1
+fi

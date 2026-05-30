@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "husky",
     "test": "npm test --workspaces --if-present",
     "build:packages": "npm run build --workspace @es-plus/shared && npm run build --workspace @es-plus/vue3 && npm run build --workspace @es-plus/vue2 && npm run build --workspace @es-plus/cli && npm run build --workspace @es-plus/mcp-server",
     "test:e2e": "node __tests__/e2e/scripts/run-all.mjs",
@@ -12,6 +13,7 @@
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
-    "@changesets/cli": "^2.31.0"
+    "@changesets/cli": "^2.31.0",
+    "husky": "^9.1.7"
   }
 }
