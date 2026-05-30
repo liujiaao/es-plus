@@ -23,7 +23,7 @@
 import { watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -45,6 +45,7 @@ const sections = [
   {
     titleKey: 'sidebar.section.start',
     items: [
+      { path: '/guide/why-es-plus', labelKey: 'sidebar.whyEsPlus', icon: markRaw(StarFilled) },
       { path: '/guide/getting-started', labelKey: 'sidebar.gettingStarted', icon: markRaw(Promotion) },
       { path: '/guide/installation', labelKey: 'sidebar.installation', icon: markRaw(Box) },
       { path: '/guide/usage', labelKey: 'sidebar.usage', icon: markRaw(Reading) },

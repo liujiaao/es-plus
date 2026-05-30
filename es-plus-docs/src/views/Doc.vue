@@ -68,10 +68,12 @@ import permissionI18nMd from '@/docs/permission-i18n.md?raw'
 import migrationMd from '@/docs/migration.md?raw'
 import changelogMd from '@/docs/changelog.md?raw'
 import schemaSetupMd from '@/docs/schema-setup.md?raw'
+import whyEsPlusMd from '@/docs/why-es-plus.md?raw'
 // English variants (only translated anchor docs exist)
 import gettingStartedEnMd from '@/docs/getting-started.en.md?raw'
 import mcpServerEnMd from '@/docs/mcp-server.en.md?raw'
 import vue2EnMd from '@/docs/vue2.en.md?raw'
+import whyEsPlusEnMd from '@/docs/why-es-plus.en.md?raw'
 import { useHead } from '@unhead/vue'
 
 const route = useRoute()
@@ -115,6 +117,7 @@ const md: MarkdownIt = new MarkdownIt({
 // 文档数据 — content is sourced from .md files via ?raw imports
 type DocEntry = { title: string; content: string; titleEn?: string; contentEn?: string }
 const docsData: Record<string, DocEntry> = {
+  'why-es-plus': { title: '为什么是 ES-Plus', content: whyEsPlusMd, titleEn: 'Why ES-Plus', contentEn: whyEsPlusEnMd },
   'getting-started': { title: '快速开始', content: gettingStartedMd, titleEn: 'Getting Started', contentEn: gettingStartedEnMd },
   'installation': { title: '安装', content: installationMd },
   'usage': { title: '使用', content: usageMd },
