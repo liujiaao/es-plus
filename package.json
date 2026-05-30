@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "husky",
+    "prepare": "husky || exit 0",
     "test": "npm test --workspaces --if-present",
     "build:packages": "npm run build --workspace @es-plus/shared && npm run build --workspace @es-plus/vue3 && npm run build --workspace @es-plus/vue2 && npm run build --workspace @es-plus/cli && npm run build --workspace @es-plus/mcp-server",
     "test:e2e": "node __tests__/e2e/scripts/run-all.mjs",
