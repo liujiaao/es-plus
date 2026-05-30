@@ -1,4 +1,4 @@
-// Auto-generated from undefined
+// Auto-generated from E:\wokerCode\es-plus\es-plus\packages\vue3\src\components\es-crud-page\src\types.ts
 // Do not edit manually — run "npm run bundle-types" to update
 
 import type { VNode, RenderFunction } from 'vue'

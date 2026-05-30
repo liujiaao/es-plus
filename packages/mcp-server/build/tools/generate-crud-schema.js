@@ -8,11 +8,11 @@ export function registerGenerateCrudSchema(server) {
         target: z
             .enum(["vue3", "vue2"])
             .default("vue3")
-            .describe("Target framework: 'vue3' (default, es-plus-ui + Element Plus) or 'vue2' (@es-plus/vue2 + Element UI). Schema JSON is target-agnostic; only wrapper SFC differs."),
+            .describe("Target framework: 'vue3' (default, @es-plus/vue3 + Element Plus) or 'vue2' (@es-plus/vue2 + Element UI). Schema JSON is target-agnostic; only wrapper SFC differs."),
     }, async ({ description, target }) => {
         try {
             const tgt = (target || "vue3");
-            const esPlusPkg = tgt === "vue2" ? "@es-plus/vue2" : "es-plus-ui";
+            const esPlusPkg = tgt === "vue2" ? "@es-plus/vue2" : "@es-plus/vue3";
             const result = generateCrudSchema(description, tgt);
             const schemaJson = JSON.stringify(result.schema, null, 2);
             return {

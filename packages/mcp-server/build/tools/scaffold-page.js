@@ -12,7 +12,7 @@ export function registerScaffoldPage(server) {
         target: z
             .enum(["vue3", "vue2"])
             .default("vue3")
-            .describe("Target framework: 'vue3' (default, <script setup> + es-plus-ui) or 'vue2' (defineComponent + setup() + @es-plus/vue2)"),
+            .describe("Target framework: 'vue3' (default, <script setup> + @es-plus/vue3) or 'vue2' (defineComponent + setup() + @es-plus/vue2)"),
     }, async ({ name, features, target }) => {
         try {
             const tgt = (target || "vue3");
