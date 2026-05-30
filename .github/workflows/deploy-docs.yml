@@ -28,19 +28,20 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: |
-            packages/vue3/package-lock.json
+            package-lock.json
             es-plus-docs/package-lock.json
 
-      - name: Install component library dependencies
-        run: |
-          cd packages/vue3
-          npm ci
+      # Install at root so workspaces (@es-plus/vue3 etc.) get linked AND
+      # root devDeps (husky) get installed. Without --legacy-peer-deps the
+      # docs site's @unhead/vue + vite peer ranges conflict in npm 10+.
+      - name: Install monorepo deps
+        run: npm ci --legacy-peer-deps
+
+      - name: Install docs site deps
+        run: cd es-plus-docs && npm ci --legacy-peer-deps
 
       - name: Build docs site
-        run: |
-          cd es-plus-docs
-          npm ci
-          npm run build
+        run: cd es-plus-docs && npm run build
         env:
           VITE_BASE_URL: /es-plus/
 
