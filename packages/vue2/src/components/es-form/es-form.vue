@@ -136,7 +136,7 @@
 /**
  * EsForm —— Vue 2 + Element UI 配置化表单
  *
- * 与 Vue 3 + Element Plus 版本（packages/es-plus/.../es-form.vue）的功能等价点：
+ * 与 Vue 3 + Element Plus 版本（packages/vue3/.../es-form.vue）的功能等价点：
  *  - 24 栅格自动布局 / 折叠展开
  *  - 13 种内置 formtype
  *  - 远端 dataOptions 加载（apiParams + httpRequest）

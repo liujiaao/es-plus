@@ -4,7 +4,7 @@
  * 这些函数被 @es-plus/vue3 (Vue 3) 和 @es-plus/vue2 (Vue 2) 共享。
  * 严禁引入任何 Vue / Element 依赖，保证 0 副作用、0 框架耦合。
  *
- * 提取自 packages/es-plus/src/utils/shared.ts (1.3.5)，
+ * 提取自 packages/vue3/src/utils/shared.ts (1.3.5)，
  * 行为完全一致，仅迁移位置以便跨框架复用。
  */
 /** 判断是否为纯对象（plain object，不含数组/Date/RegExp 等） */
@@ -101,7 +101,7 @@ export const wrapPromise = (promise) => {
  * 例如 getNestedValue({ a: { b: 1 } }, 'a.b') === 1
  *      getNestedValue({ list: [{ name: 'x' }] }, 'list[0].name') === 'x'
  *
- * 提取自 packages/es-plus/src/composables/use-form-inputs.ts，
+ * 提取自 packages/vue3/src/composables/use-form-inputs.ts，
  * 用于表单 v-model 绑定嵌套字段（如 user.address.city）。
  */
 export const getNestedValue = (obj, path) => {

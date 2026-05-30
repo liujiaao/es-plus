@@ -6,7 +6,7 @@
  *   2. 把后端响应映射到组件内部约定字段（total / pageSize / current / listData）
  *   3. 批量并发拉取多个表单字段的远端选项数据
  *
- * 提取自 packages/es-plus/src/composables/use-form-request.ts (1.3.5)，
+ * 提取自 packages/vue3/src/composables/use-form-request.ts (1.3.5)，
  * 移除 vue 的 nextTick / toRaw / unref 依赖：
  *   - nextTick：仅用于让初始化时机 fall behind reactive flush，渲染层可在自己的
  *     微任务里再包一层（例如 Vue 3 nextTick / Vue 2 Vue.nextTick）。core 不感知。

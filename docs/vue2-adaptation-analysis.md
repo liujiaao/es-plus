@@ -63,7 +63,7 @@
 **思路**：使用 `vue-demi` 抹平 Vue 2/3 差异，创建 Element 组件映射适配层。
 
 ```
-packages/es-plus/
+packages/vue3/
   src/
     adapter/
       vue-compat.ts          # re-export from vue-demi
@@ -358,7 +358,7 @@ const columns = [
 cd packages/core && npx vitest run
 
 # 2. Vue 3 版本回归
-cd packages/es-plus && npx vitest run
+cd packages/vue3 && npx vitest run
 
 # 3. Vue 2 版本测试
 cd packages/es-plus-v2 && npx vitest run

@@ -9,7 +9,7 @@
  * 2. 使用 unknown 替代具体 VNode 类型 —— 由各渲染层包装
  * 3. 对 Element 特定 props（type/size 等）使用宽松字面量联合
  *
- * 提取自 packages/es-plus/src/types/index.ts，
+ * 提取自 packages/vue3/src/types/index.ts，
  * 移除 VNode / RenderFunction / FormProps / ButtonProps 引用。
  */
 export {};

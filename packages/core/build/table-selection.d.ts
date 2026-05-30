@@ -11,7 +11,7 @@
  * 2. selectionsByPage 按页缓存当前页的选择，最终 reduce 为去重的全集
  * 3. 当不传 rowkey 时退化为单页模式（没有跨页持久化）
  *
- * 提取自 packages/es-plus/src/composables/use-table-selection.ts (1.3.5)，
+ * 提取自 packages/vue3/src/composables/use-table-selection.ts (1.3.5)，
  * 剥离 ref，把状态变更改为纯函数 + 由调用方持有可变状态。
  *
  * Vue 2 / Vue 3 渲染层各自创建 ref/reactive 包装这些状态。

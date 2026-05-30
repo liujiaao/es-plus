@@ -458,7 +458,7 @@ es-plus/
 
 ```bash
 # Vue 3 组件库构建
-cd packages/es-plus && npm install && npm run build
+cd packages/vue3 && npm install && npm run build
 
 # Vue 2 组件库构建
 cd packages/vue2 && npm install && npm run build
@@ -467,7 +467,7 @@ cd packages/vue2 && npm install && npm run build
 cd es-plus-docs && npm install && npm run dev
 
 # 运行测试
-cd packages/es-plus && npm test
+cd packages/vue3 && npm test
 cd packages/core && npm test
 ```
 

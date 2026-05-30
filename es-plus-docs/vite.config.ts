@@ -35,9 +35,9 @@ const sitemapRoutes = [
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   const useDist = env.VITE_USE_DIST === 'true'
-  const esPlusSrc = resolve(__dirname, '../packages/es-plus/src')
-  const esPlusDist = resolve(__dirname, '../packages/es-plus/dist/es-plus.js')
-  const esPlusDistCss = resolve(__dirname, '../packages/es-plus/dist/style.css')
+  const esPlusSrc = resolve(__dirname, '../packages/vue3/src')
+  const esPlusDist = resolve(__dirname, '../packages/vue3/dist/es-plus.js')
+  const esPlusDistCss = resolve(__dirname, '../packages/vue3/dist/style.css')
 
   const aliasTarget = useDist ? esPlusDist : esPlusSrc
 

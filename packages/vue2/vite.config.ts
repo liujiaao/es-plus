@@ -6,7 +6,7 @@ import { resolve } from 'path'
 /**
  * Vue 2 + Element UI 渲染层构建配置
  *
- * 与 packages/es-plus (Vue 3) 的 vite.config.ts 关键差异：
+ * 与 packages/vue3 (Vue 3) 的 vite.config.ts 关键差异：
  *  - 使用 @vitejs/plugin-vue2 替代 @vitejs/plugin-vue
  *  - external 列表改为 vue / element-ui / @vue/composition-api / @es-plus/core
  *  - target 调整为 es2018 以匹配 Vue 2.6+ 用户的常见环境

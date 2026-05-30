@@ -143,4 +143,4 @@ TypeScript 自带补全 + 校验，比 JSON Schema 更精确。**JSON Schema 适
 
 ## 反馈
 
-若发现某个属性没有补全或类型描述不准确，请到 [ES-Plus GitHub Issues](https://github.com/jiaaowuhan/es-plus/issues) 反馈。Schema 维护在 [`packages/es-plus/src/types/index.ts`](https://github.com/jiaaowuhan/es-plus/blob/master/packages/es-plus/src/types/index.ts) 与 docs 站 [`src/schemas/`](https://github.com/jiaaowuhan/es-plus/tree/master/es-plus-docs/src/schemas) 同步。
+若发现某个属性没有补全或类型描述不准确，请到 [ES-Plus GitHub Issues](https://github.com/jiaaowuhan/es-plus/issues) 反馈。Schema 维护在 [`packages/vue3/src/types/index.ts`](https://github.com/jiaaowuhan/es-plus/blob/master/packages/vue3/src/types/index.ts) 与 docs 站 [`src/schemas/`](https://github.com/jiaaowuhan/es-plus/tree/master/es-plus-docs/src/schemas) 同步。

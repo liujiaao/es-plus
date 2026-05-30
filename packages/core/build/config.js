@@ -9,7 +9,7 @@
  * 2. 使用浅合并而非深合并，避免覆盖用户在新一次 use 时的显式 undefined
  * 3. getGlobalConfig 返回 readonly 引用，调用方不应直接修改其内容
  *
- * 提取自 packages/es-plus/src/config.ts (1.3.5)，行为完全一致。
+ * 提取自 packages/vue3/src/config.ts (1.3.5)，行为完全一致。
  */
 /**
  * 模块作用域单例 —— 整个应用生命周期内唯一

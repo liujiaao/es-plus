@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:dist": "vite --mode dist",
-    "dev:dist:fresh": "npm --prefix ../packages/es-plus run build && vite --mode dist",
+    "dev:dist:fresh": "npm --prefix ../packages/vue3 run build && vite --mode dist",
     "build": "vite build",
     "build:dist": "vite build --mode dist",
-    "build:dist:fresh": "npm --prefix ../packages/es-plus run build && vite build --mode dist",
+    "build:dist:fresh": "npm --prefix ../packages/vue3 run build && vite build --mode dist",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,7 +18,7 @@
     "@unhead/vue": "^3.1.1",
     "@vueuse/core": "^9.5.0",
     "element-plus": "^2.2.26",
-    "es-plus": "file:../packages/es-plus",
+    "es-plus": "file:../packages/vue3",
     "fuse.js": "^7.0.0",
     "highlight.js": "^11.6.0",
     "lz-string": "^1.5.0",

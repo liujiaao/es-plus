@@ -95,7 +95,7 @@ The AI calls the MCP server's `generate_crud_page` / `generate_form` / `validate
 - `schema://es-form` — JSON Schema for `formItemList` items
 - `schema://es-table` — JSON Schema for `columns` and `options`
 - `schema://es-crud-page` — JSON Schema for full CRUD pages
-- `types://es-plus` — TypeScript types extracted from `packages/es-plus/src/types`
+- `types://es-plus` — TypeScript types extracted from `packages/vue3/src/types`
 
 ## Local Development
 

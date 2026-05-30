@@ -1,7 +1,7 @@
 /**
  * Vue 2 + Element UI 表单输入适配器
  *
- * 与 Vue 3 + Element Plus 版本（packages/es-plus/src/composables/use-form-inputs.ts）的核心差异：
+ * 与 Vue 3 + Element Plus 版本（packages/vue3/src/composables/use-form-inputs.ts）的核心差异：
  *
  * 1. h() 签名：
  *    - Vue 3：h(Comp, { modelValue, 'onUpdate:modelValue': fn, ...props })

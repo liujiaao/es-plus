@@ -11,7 +11,7 @@
  *   - 按钮列定位：根据最后一行剩余 span 决定按钮放在末行尾部还是单独一行
  *   - 渲染：渲染层按 columnRow 输出 <ElRow><ElCol>... 结构
  *
- * 提取自 packages/es-plus/src/composables/use-form-layout.ts (1.3.5)，
+ * 提取自 packages/vue3/src/composables/use-form-layout.ts (1.3.5)，
  * 仅保留纯函数部分（getRowColsAlgorithm + 衍生计算），剥离 ref/computed/watch。
  * Vue 2 / Vue 3 渲染层各自用 computed 包装该函数即可。
  */
