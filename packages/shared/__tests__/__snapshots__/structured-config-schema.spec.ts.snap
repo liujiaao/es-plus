@@ -1,0 +1,190 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`StructuredCrudConfigSchema — accepts valid configs > accepts the full-featured config end-to-end 1`] = `
+{
+  "actions": [
+    "add",
+    "edit",
+    "delete",
+    "view",
+    "export",
+  ],
+  "apiUrl": "/api/orders",
+  "fields": [
+    {
+      "align": "left",
+      "attrs": {
+        "placeholder": "请输入订单号",
+      },
+      "ellipsis": true,
+      "fixed": "left",
+      "formSpan": 24,
+      "formtype": "Input",
+      "inForm": false,
+      "inQuery": true,
+      "inTable": true,
+      "label": "订单号",
+      "prop": "orderNo",
+      "querySpan": 6,
+      "required": true,
+      "rules": [
+        {
+          "message": "格式不正确",
+          "pattern": "^ORD-\\d+$",
+          "trigger": "blur",
+        },
+      ],
+      "width": 160,
+    },
+    {
+      "dataOptions": [
+        {
+          "label": "待处理",
+          "value": 0,
+        },
+        {
+          "disabled": false,
+          "label": "已完成",
+          "value": 1,
+        },
+      ],
+      "formatter": "(row) => row.status === 1 ? '已完成' : '待处理'",
+      "formtype": "Select",
+      "inForm": true,
+      "inQuery": true,
+      "inTable": true,
+      "label": "状态",
+      "prop": "status",
+    },
+    {
+      "apiParams": {
+        "labelField": "name",
+        "method": "GET",
+        "url": "/api/depts",
+        "valueField": "id",
+      },
+      "formtype": "Select",
+      "inForm": true,
+      "inQuery": true,
+      "inTable": true,
+      "label": "部门",
+      "prop": "deptId",
+    },
+    {
+      "attrs": {
+        "type": "daterange",
+        "valueFormat": "YYYY-MM-DD",
+      },
+      "formtype": "datePicker",
+      "inForm": true,
+      "inQuery": true,
+      "inTable": true,
+      "label": "创建时间",
+      "prop": "createTime",
+    },
+  ],
+  "i18n": false,
+  "mode": "schema",
+  "name": "OrderList",
+  "pagination": {
+    "pageSize": 20,
+    "pageSizes": [
+      10,
+      20,
+      50,
+    ],
+  },
+  "tableOptions": {
+    "border": true,
+    "highlightCurrentRow": true,
+    "rowkey": "id",
+    "stripe": true,
+    "virtual": false,
+  },
+  "target": "vue3",
+  "toolbarBtns": [
+    {
+      "key": "export-all",
+      "name": "导出全部",
+      "type": "primary",
+    },
+  ],
+  "typescript": true,
+}
+`;
+
+exports[`StructuredCrudConfigSchema — accepts valid configs > accepts the minimal config and fills defaults 1`] = `
+{
+  "actions": [
+    "add",
+    "edit",
+    "delete",
+  ],
+  "apiUrl": "/api/users",
+  "fields": [
+    {
+      "formtype": "Input",
+      "inForm": true,
+      "inQuery": true,
+      "inTable": true,
+      "label": "姓名",
+      "prop": "name",
+    },
+  ],
+  "i18n": false,
+  "mode": "schema",
+  "name": "UserManage",
+  "target": "vue3",
+  "typescript": true,
+}
+`;
+
+exports[`StructuredCrudConfigSchema — rejects invalid input > rejects missing required top-level keys 1`] = `
+[
+  {
+    "code": "invalid_type",
+    "path": [
+      "name",
+    ],
+  },
+  {
+    "code": "invalid_type",
+    "path": [
+      "apiUrl",
+    ],
+  },
+  {
+    "code": "invalid_type",
+    "path": [
+      "fields",
+    ],
+  },
+  {
+    "code": "invalid_type",
+    "path": [
+      "actions",
+    ],
+  },
+]
+`;
+
+exports[`StructuredCrudConfigSchema — surface listing > top-level keys are stable 1`] = `
+[
+  "actions",
+  "apiUrl",
+  "dialogs",
+  "fields",
+  "formLayout",
+  "i18n",
+  "mode",
+  "name",
+  "operationColumn",
+  "pagination",
+  "permissions",
+  "tableBtns",
+  "tableOptions",
+  "target",
+  "toolbarBtns",
+  "typescript",
+]
+`;

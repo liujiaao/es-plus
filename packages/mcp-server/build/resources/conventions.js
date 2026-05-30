@@ -1,6 +1,94 @@
 import { VALID_FORM_TYPES, SPECIAL_BTN_KEYS, BUILT_IN_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, OPERATION_COLUMN_PROP_CRUD_PAGE, VALID_CRUD_ACTIONS, DEFAULT_CONFIG_TABLE_OUT, CRUD_PAGE_BTN_CLICK_KEYS, } from "@es-plus/shared";
-function buildConventionsContent() {
-    return `# es-plus-ui Code Generation Conventions
+const TARGETS = {
+    vue3: {
+        esPlusPkg: "@es-plus/vue3",
+        elementPkg: "element-plus",
+        elementCss: "element-plus/dist/index.css",
+        vue: "Vue 3",
+    },
+    vue2: {
+        esPlusPkg: "@es-plus/vue2",
+        elementPkg: "element-ui",
+        elementCss: "element-ui/lib/theme-chalk/index.css",
+        vue: "Vue 2",
+    },
+};
+function buildVue2Addendum() {
+    // Concise vue2-specific differences appended at the end so the AI sees them
+    // when it asks for vue2 conventions. We don't duplicate every rule — only
+    // call out the syntactic deltas the rest of the doc otherwise glosses over.
+    return `
+---
+
+# Vue 2 Specifics (@es-plus/vue2)
+
+This package is the Vue 2 + Element UI renderer of es-plus. The JSON schema
+(\`formItemList\` / \`columns\` / \`options\` / \`CrudPageSchema\`) is **identical**
+to @es-plus/vue3 — only the SFC syntax and underlying Element layer differ.
+
+## Syntax Mapping
+
+| Concept | Vue 3 | Vue 2 |
+|---------|-------|-------|
+| Reactive setup | \`<script setup>\` | \`defineComponent({ setup() { ... } })\` (Vue 2.7) or Options API |
+| v-model on prop | \`v-model:visible="x"\` | \`:visible.sync="x"\` |
+| Slot content | \`<template #default="{ row }">\` | \`<template v-slot:default="{ row }">\` (or \`slot-scope\` in <2.6) |
+| h function | \`import { h } from 'vue'\` | \`h\` is the first arg of render() — \`render(h, ctx) { ... }\` |
+| Teleport | \`<Teleport to="body">\` | Dialog mounts to body via \`appendTo\` prop |
+| Native HTML attrs | \`v-bind="$attrs"\` (auto) | Manually set \`inheritAttrs: false\` if needed |
+
+## Imports
+
+\`\`\`typescript
+import Vue from 'vue'
+import ElementUI from 'element-ui'
+import 'element-ui/lib/theme-chalk/index.css'
+import ESPlus from '@es-plus/vue2'
+
+Vue.use(ElementUI)
+Vue.use(ESPlus)
+\`\`\`
+
+## Component Import (Setup style, requires vue@>=2.7)
+
+\`\`\`typescript
+import { defineComponent, reactive } from 'vue'
+import { EsForm, EsTable, useDialog } from '@es-plus/vue2'
+
+export default defineComponent({
+  components: { EsForm, EsTable },
+  setup() {
+    const form = reactive({ name: '' })
+    return { form }
+  }
+})
+\`\`\`
+
+## Element UI Differences vs Element Plus
+- Icons: Element UI uses class-based icons (\`<i class="el-icon-edit">\`),
+  not the \`@element-plus/icons-vue\` component package
+- \`el-pagination\` layout strings are the same
+- \`el-table\` API matches except for v-slot syntax
+- \`el-table-v2\` does NOT exist in Element UI — virtual scrolling is Vue 3 only;
+  for Vue 2 large datasets, use server-side pagination or vxe-table integration
+
+## Limitations on Vue 2
+- \`virtual: true\` in TableOptions is ignored (falls back to standard ElTable)
+- \`scrollToRow\` instance method is no-op
+- JSX requires \`@vue/babel-preset-jsx\` setup; default project may need config
+
+## Migration Path Vue 2 → Vue 3
+Because the JSON schema is identical, the migration is mostly syntactic:
+1. Swap \`@es-plus/vue2\` → \`@es-plus/vue3\` + \`element-ui\` → \`element-plus\`
+2. Replace \`.sync\` modifiers with \`v-model:*\`
+3. Replace \`slot-scope\` with \`#name="..."\`
+4. Replace icon classes with \`@element-plus/icons-vue\` components
+5. Your \`columns\`, \`formItemList\`, and \`options\` definitions transfer 1:1
+`;
+}
+function buildConventionsContent(target) {
+    const v = TARGETS[target];
+    return `# ${v.esPlusPkg} Code Generation Conventions (target=${target})
 
 ## Form Types (formtype)
 Valid values: ${VALID_FORM_TYPES.join(", ")}
@@ -28,7 +116,8 @@ ${Object.entries(DEFAULT_CONFIG_TABLE_OUT)
         .join("\n")}
 
 ## Virtual Scrolling (10k+ rows)
-Enable virtual scrolling for large datasets:
+${target === "vue3"
+        ? `Enable virtual scrolling for large datasets:
 \`\`\`typescript
 tableOptions: {
   virtual: true,           // Switch to el-table-v2 engine
@@ -41,11 +130,17 @@ tableOptions: {
 - All existing column configs work identically in virtual mode
 - \`type: 'selection'\` in columns creates checkbox column (preferred over multiSelect)
 - Performance: O(1) selection via Set-based tracking, no per-row iteration
-- Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable
+- Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable`
+        : `Vue 2 + Element UI does NOT support el-table-v2 / virtual scrolling at the
+component layer. For large datasets, use server-side pagination with
+\`apiParams\` + \`configTableOut\`. The \`virtual: true\` option is silently
+ignored on Vue 2.`}
 
 ## Global Config Pattern
-When using app.use(ESPlus), configure globally:
+${target === "vue3"
+        ? `When using app.use(ESPlus), configure globally:
 \`\`\`typescript
+import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
   EsTable: {
     methods: {
@@ -54,7 +149,20 @@ app.use(ESPlus, {
     }
   }
 })
-\`\`\`
+\`\`\``
+        : `When using Vue.use(ESPlus), configure globally:
+\`\`\`typescript
+import Vue from 'vue'
+import ESPlus from '${v.esPlusPkg}'
+Vue.use(ESPlus, {
+  EsTable: {
+    methods: {
+      $httpRequest: (params) => axios(params),
+      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+    }
+  }
+})
+\`\`\``}
 With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline httpRequest.
 
 ## EsCrudPage btn-click Event Keys
@@ -62,8 +170,12 @@ With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline htt
 - Edit confirm: "${CRUD_PAGE_BTN_CLICK_KEYS.EDIT_CONFIRM}"
 
 ## Import Requirements
-- When using status render with ElTag: import { ElTag } from 'element-plus'
-- When using delete confirmation: import { ElMessageBox, ElMessage } from 'element-plus'
+${target === "vue3"
+        ? `- When using status render with ElTag: \`import { ElTag } from '${v.elementPkg}'\`
+- When using delete confirmation: \`import { ElMessageBox, ElMessage } from '${v.elementPkg}'\``
+        : `- ElTag / ElMessage / ElMessageBox come from Element UI:
+  \`import { Tag, Message, MessageBox } from '${v.elementPkg}'\` (note: no 'El' prefix in Element UI named exports)
+  Or use globally-registered \`<el-tag>\` / \`this.$message\` / \`this.$confirm\``}
 - When using EsCrudPage: the component is globally registered via ESPlus plugin
 
 ## CrudPageSchema Mode (Recommended)
@@ -92,6 +204,7 @@ Before constructing a StructuredCrudConfig, AI clients MUST verify:
 7. Status/enum fields have a \`render\` expression for visual display in table columns
 8. The \`name\` is PascalCase and matches the route/page naming convention
 9. Permissions are provided when the project uses RBAC (check for permissionValue usage)
+10. **\`target\`** matches the user's project: \`target: '${target}'\`
 
 ## StructuredCrudConfig Schema
 
@@ -102,93 +215,36 @@ interface StructuredCrudConfig {
   fields: FieldConfig[]
   actions: ('add' | 'edit' | 'delete' | 'view' | 'export' | 'import')[]
   tableOptions?: {
-    border?: boolean            // default: true
-    stripe?: boolean            // default: true
-    rowkey?: string             // default: 'id'
+    border?: boolean
+    stripe?: boolean
+    rowkey?: string
     heightType?: 'height' | 'auto' | 'maxHeight'
-    tabHeight?: number | string // Container height (required for virtual mode)
+    tabHeight?: number | string
     multiSelect?: boolean
-    highlightCurrentRow?: boolean  // default: true
+    highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>
-    virtual?: boolean           // Enable virtual scrolling (10k+ rows)
-    rowHeight?: number          // Row height in px (default 50)
-    estimatedRowHeight?: number // For dynamic-height rows
-    overscanCount?: number      // Buffer rows (default 2)
-    rowClassName?: string       // Custom row CSS class
+    virtual?: boolean           // Vue 3 only — ignored on Vue 2
+    rowHeight?: number
+    estimatedRowHeight?: number
+    overscanCount?: number
+    rowClassName?: string
   }
-  pagination?: { pageSize?: number }  // default: 10
-  mode?: 'schema' | 'sfc'            // default: 'schema'
-  typescript?: boolean                // default: true
-  permissions?: Record<string, string> // e.g. { add: 'user:add', edit: 'user:edit' }
-  i18n?: boolean                      // default: false
-}
-
-interface FieldConfig {
-  prop: string          // Backend field name
-  label: string         // Display label (Chinese/English)
-  formtype: FormType    // One of 13 types
-
-  // Placement
-  inQuery?: boolean     // Show in query form (default: true)
-  inTable?: boolean     // Show in table (default: true)
-  inForm?: boolean      // Show in dialog form (default: true)
-
-  // Layout
-  querySpan?: number    // Query form grid span (default: 6, datePicker: 8)
-  formSpan?: number     // Dialog form grid span (default: 24)
-
-  // Validation
-  required?: boolean    // Shorthand for required rule
-  rules?: FieldRule[]   // Custom rules: { pattern?, min?, max?, type?, message, trigger? }
-
-  // Component attrs (passthrough to Element Plus)
-  attrs?: Record<string, any>
-
-  // Options (Select/Radio/Checkbox/Cascader)
-  dataOptions?: { label: string, value: string | number | boolean, children?: ... }[]
-  apiParams?: { url: string, method?: 'GET'|'POST', labelField?: string, valueField?: string }
-
-  // Table column display
-  width?: number | string
-  minWidth?: number | string
-  align?: 'left' | 'center' | 'right'
-  fixed?: boolean | 'left' | 'right'
-  ellipsis?: boolean
-  formatter?: string    // "(row) => row.amount.toFixed(2)"
-  render?: string       // "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')"
-
-  // Permission
-  permissionValue?: string
-}
-\`\`\`
-
-## Complete Example
-
-\`\`\`json
-{
-  "name": "UserManage",
-  "apiUrl": "/api/system/users",
-  "fields": [
-    { "prop": "username", "label": "用户名", "formtype": "Input", "required": true, "rules": [{ "min": 2, "max": 20, "message": "用户名长度 2-20 个字符" }] },
-    { "prop": "phone", "label": "手机号", "formtype": "Input", "required": true, "rules": [{ "pattern": "^1[3-9]\\\\d{9}$", "message": "手机号格式不正确" }] },
-    { "prop": "email", "label": "邮箱", "formtype": "Input", "inQuery": false, "rules": [{ "type": "email", "message": "邮箱格式不正确" }] },
-    { "prop": "status", "label": "状态", "formtype": "Select", "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }], "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
-    { "prop": "deptId", "label": "部门", "formtype": "Select", "apiParams": { "url": "/api/system/depts/options" }, "inTable": false },
-    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker", "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
-  ],
-  "actions": ["add", "edit", "delete"],
-  "tableOptions": { "rowkey": "userId" },
-  "permissions": { "add": "system:user:add", "edit": "system:user:edit", "delete": "system:user:delete" },
-  "typescript": true
+  pagination?: { pageSize?: number }
+  mode?: 'schema' | 'sfc'
+  typescript?: boolean
+  permissions?: Record<string, string>
+  i18n?: boolean
+  target?: 'vue3' | 'vue2'   // Code generation target (default: vue3)
 }
 \`\`\`
 
 ## httpRequest Integration (Production Pattern)
 
 \`\`\`typescript
-// main.ts — configure once for the entire application
+${target === "vue3"
+        ? `// main.ts — configure once for the entire application
 import axios from 'axios'
-import ESPlus from 'es-plus-ui'
+import ESPlus from '${v.esPlusPkg}'
 
 app.use(ESPlus, {
   EsTable: {
@@ -207,111 +263,37 @@ app.use(ESPlus, {
       configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
     }
   }
-})
+})`
+        : `// main.js — configure once for the entire application
+import Vue from 'vue'
+import axios from 'axios'
+import ESPlus from '${v.esPlusPkg}'
+
+Vue.use(ESPlus, {
+  EsTable: {
+    methods: {
+      $httpRequest: (params) => axios({
+        url: params.url,
+        method: params.method || 'GET',
+        params: params.method === 'GET'
+          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
+          : undefined,
+        data: params.method === 'POST'
+          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
+          : undefined,
+        headers: params.headers,
+      }).then(res => res.data),
+      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+    }
+  }
+})`}
 \`\`\`
 
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
 
-## TypeScript Mode
-
-When \`typescript: true\` (default), generated code includes:
-- \`<script setup lang="ts">\`
-- Interface definitions for form models
-- Proper type annotations on reactive() and ref()
-- Type parameters for component refs
-
-## Permission Pattern
-
-When \`permissions\` is provided, buttons receive \`permissionValue\`:
+## configureEsPlus() — Module-Level Config (Auto-Import Mode)
 \`\`\`typescript
-{ name: '新增', type: 'primary', key: 'add', permissionValue: 'system:user:add' }
-{ name: '编辑', type: 'primary', clickEvent: ..., permissionValue: 'system:user:edit' }
-\`\`\`
-The runtime checks against the user's permission list and hides unauthorized buttons.
-
-## i18n Mode
-
-When \`i18n: true\`, fields use \`labelKey\` instead of hardcoded labels:
-\`\`\`typescript
-{ prop: 'username', labelKey: 'field.username', formtype: 'Input' }
-\`\`\`
-The host app must provide a translation function via global config or \`useI18n()\`.
-
-## Multi-Dialog Mode (New)
-
-EsCrudPage v2 supports multiple independent dialogs with button-dialog binding:
-
-### tableBtns — Table Toolbar Buttons (Recommended)
-\`\`\`json
-"tableBtns": [
-  { "name": "下载", "icon": "Download", "code": 1, "dialogKey": "download" },
-  { "name": "新增", "type": "primary", "icon": "Plus", "code": 1, "dialogKey": "add" },
-  { "name": "Excel导入", "icon": "Upload", "code": 2, "actionType": "import" }
-]
-\`\`\`
-- \`code: 1\` = left side of table toolbar (default)
-- \`code: 2\` = right side of table toolbar
-- \`dialogKey\`: clicking the button opens the dialog with this key
-- \`actionType\`: emits btn-click event with this key (no dialog)
-- \`confirm\`: shows ElMessageBox before action
-
-### toolbarBtns — Form Area Buttons (Legacy Positioning)
-\`\`\`json
-"toolbarBtns": [
-  { "name": "新增", "type": "primary", "icon": "Plus", "dialogKey": "add" },
-  { "name": "导入", "icon": "Upload", "dialogKey": "import" },
-  { "name": "导出", "icon": "Download", "actionType": "export" }
-]
-\`\`\`
-- Rendered alongside query/reset buttons in EsForm's button area
-- Use \`tableBtns\` instead for better UX (buttons above table, separated from query controls)
-
-### formLayout — Query Form Layout & Collapse
-\`\`\`json
-"formLayout": { "labelWidth": "100px", "minFoldRows": 2 }
-\`\`\`
-- \`minFoldRows\`: when form rows exceed this number, shows expand/collapse toggle
-- \`labelWidth\`: label width for all form items
-
-### operationColumn — Explicit Row Action Buttons
-\`\`\`json
-"operationColumn": {
-  "label": "操作",
-  "width": 240,
-  "fixed": "right",
-  "btns": [
-    { "name": "编辑", "type": "primary", "dialogKey": "edit" },
-    { "name": "审批", "type": "warning", "dialogKey": "approve" },
-    { "name": "删除", "type": "danger", "key": "delete", "confirm": "确定删除该条数据吗？" }
-  ]
-}
-\`\`\`
-Set \`"operationColumn": false\` to hide the operation column entirely.
-
-### dialogs — Multi-Dialog Configs
-\`\`\`json
-"dialogs": {
-  "add": { "title": "新增用户", "width": "600px", "formItems": [...] },
-  "edit": { "title": "编辑用户", "width": "600px", "formItems": [...] },
-  "import": { "title": "批量导入", "width": "500px", "hasCustomRender": true }
-}
-\`\`\`
-- Each key is a dialog identifier bound by \`dialogKey\` on buttons
-- \`formItems\`: renders EsForm inside dialog (simple mode)
-- \`hasCustomRender\`: flag for code gen — dev must implement render function manually
-- \`onConfirm\`: callback when confirm button is clicked (wrapper SFC handles)
-- \`isHiddenFooter\`: hides dialog footer (for view-only dialogs)
-
-### New Events
-- \`@dialog-confirm="(dialogKey, data) => {}"\` — emitted after dialog form confirmed
-- \`@dialog-cancel="(dialogKey) => {}"\` — emitted when dialog cancelled
-- \`@dialog-open="(dialogKey, row?) => {}"\` — emitted when dialog opens
-- \`@btn-click="(key, payload?) => {}"\` — for non-dialog button actions (export, custom)
-
-### configureEsPlus() — Module-Level Config (Auto-Import Mode)
-\`\`\`typescript
-// main.ts — works without app.use(EsPlus)
-import { configureEsPlus } from 'es-plus-ui'
+import { configureEsPlus } from '${v.esPlusPkg}'
 
 configureEsPlus({
   EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
@@ -321,14 +303,9 @@ configureEsPlus({
 \`\`\`
 This ensures global config is available even in auto-import mode (unplugin-vue-components).
 
-### Migration from Legacy Mode
-Old: \`{ "actions": ["add","edit","delete"], "dialogFormItems": [...] }\`
-New: \`{ "toolbarBtns": [...], "operationColumn": {...}, "dialogs": {...} }\`
-Both modes are supported — legacy config auto-converts at runtime.
-
 ## Common Gotchas (Full List)
 
-1. Reset button key is "rest" NOT "reset" — this is intentional in es-plus-ui
+1. Reset button key is "rest" NOT "reset" — this is intentional in ${v.esPlusPkg}
 2. formtype casing: "datePicker", "timePicker" (camelCase) — all others PascalCase
 3. Table operation column prop: "operate" in SFC mode, "action" in CrudPage schema mode
 4. \`triggerEvent: true\` is REQUIRED on query/reset buttons for table auto-refresh
@@ -340,22 +317,32 @@ Both modes are supported — legacy config auto-converts at runtime.
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-`;
+${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}
+${target === "vue2" ? buildVue2Addendum() : ""}`;
 }
 export function registerConventionsResource(server) {
-    server.resource("conventions", "esplus://conventions", {
-        description: "Code generation conventions and rules for es-plus-ui (button keys, formtypes, import requirements)",
-        mimeType: "text/plain",
-    }, async () => {
-        return {
+    // Three URIs:
+    //   esplus://conventions       — vue3 (backward-compat default)
+    //   esplus://conventions/vue3  — explicit vue3
+    //   esplus://conventions/vue2  — vue2 variant with addendum on syntax deltas
+    //
+    // Pattern repeats across other resources (types, examples, crud-page-schema)
+    // so AI clients can pull the right context for whichever target they're
+    // generating against.
+    const targets = [
+        { uri: "esplus://conventions", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
+        { uri: "esplus://conventions/vue3", target: "vue3", descSuffix: " — @es-plus/vue3 explicit" },
+        { uri: "esplus://conventions/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 + Element UI variant" },
+    ];
+    for (const { uri, target, descSuffix } of targets) {
+        server.resource(uri === "esplus://conventions" ? "conventions" : `conventions-${target}`, uri, {
+            description: `Code generation conventions and rules${descSuffix} (button keys, formtypes, import requirements, syntax deltas)`,
+            mimeType: "text/plain",
+        }, async () => ({
             contents: [
-                {
-                    uri: "esplus://conventions",
-                    mimeType: "text/plain",
-                    text: buildConventionsContent(),
-                },
+                { uri, mimeType: "text/plain", text: buildConventionsContent(target) },
             ],
-        };
-    });
+        }));
+    }
 }
 //# sourceMappingURL=conventions.js.map

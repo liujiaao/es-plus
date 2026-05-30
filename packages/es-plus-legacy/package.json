@@ -1,0 +1,67 @@
+{
+  "name": "es-plus-ui",
+  "version": "1.4.0",
+  "description": "[DEPRECATED — renamed to @es-plus/vue3] Stub package that re-exports @es-plus/vue3. Install @es-plus/vue3 directly.",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    },
+    "./resolver": {
+      "types": "./resolver.d.ts",
+      "import": "./resolver.mjs",
+      "require": "./resolver.cjs"
+    },
+    "./dist/style.css": "./style.css"
+  },
+  "files": [
+    "index.mjs",
+    "index.cjs",
+    "index.d.ts",
+    "resolver.mjs",
+    "resolver.cjs",
+    "resolver.d.ts",
+    "style.css",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "prepublishOnly": "node -e \"console.log('es-plus-ui stub publishing — re-exports @es-plus/vue3')\""
+  },
+  "keywords": [
+    "deprecated",
+    "es-plus",
+    "es-plus-ui",
+    "vue3"
+  ],
+  "author": "liujiaao <303363554@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/es-plus-legacy"
+  },
+  "homepage": "https://liujiaao.github.io/es-plus/",
+  "bugs": {
+    "url": "https://github.com/liujiaao/es-plus/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "@element-plus/icons-vue": "^2.1.0",
+    "element-plus": "^2.2.0",
+    "vue": "^3.2.0"
+  },
+  "dependencies": {
+    "@es-plus/vue3": "1.4.0"
+  }
+}

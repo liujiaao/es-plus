@@ -1,6 +1,6 @@
 # @es-plus/cli
 
-[es-plus-ui](https://www.npmjs.com/package/es-plus-ui) 官方命令行工具 —— 用自然语言生成 Vue 3 CRUD 页面，校验 JSON 配置，快速搭建页面脚手架。
+[`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方命令行工具 —— 用自然语言生成 CRUD 页面，校验 JSON 配置，快速搭建页面脚手架。同一份配置可生成 Vue 3 或 Vue 2 版本代码。
 
 ## 安装
 
@@ -165,7 +165,7 @@ $ es-plus create order-list
 
 ## validate — 校验配置
 
-校验 JSON 配置文件是否符合 es-plus-ui 组件的 Schema 规范。
+校验 JSON 配置文件是否符合 es-plus 组件的 Schema 规范（`@es-plus/vue3` 与 `@es-plus/vue2` 共用同一份 Schema）。
 
 ### 基本用法
 
@@ -396,9 +396,15 @@ click: async (_, { close, getRefs }) => {
 
 ### Q: 生成的代码依赖什么？
 
+**Vue 3 目标 (`--target vue3`，默认)：**
 - `vue` >= 3.3
-- `es-plus-ui` — 提供 EsForm、EsTable、useDialog
+- `@es-plus/vue3` — 提供 EsForm、EsTable、useDialog
 - `element-plus` — 提供 ElTag、ElMessageBox、ElMessage 等
+
+**Vue 2 目标 (`--target vue2`)：**
+- `vue` ^2.6.14（2.6 还需 `@vue/composition-api`）
+- `@es-plus/vue2` — 提供 EsForm、EsTable、useDialog
+- `element-ui` — 提供 Tag、MessageBox、Message 等
 
 ### Q: Windows 下 npx 报错？
 
@@ -412,8 +418,10 @@ npx @es-plus/cli create user-management
 
 ## 相关链接
 
-- [es-plus-ui 组件库](https://www.npmjs.com/package/es-plus-ui)
-- [@es-plus/mcp-server AI 集成](https://www.npmjs.com/package/@es-plus/mcp-server)
+- [`@es-plus/vue3` 组件库 (Vue 3 + Element Plus)](https://www.npmjs.com/package/@es-plus/vue3)
+- [`@es-plus/vue2` 组件库 (Vue 2 + Element UI)](https://www.npmjs.com/package/@es-plus/vue2)
+- [`@es-plus/core` 框架无关核心](https://www.npmjs.com/package/@es-plus/core)
+- [`@es-plus/mcp-server` AI 集成](https://www.npmjs.com/package/@es-plus/mcp-server)
 - [GitHub 仓库](https://github.com/liujiaao/es-plus)
 
 ## License

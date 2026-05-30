@@ -1,6 +1,39 @@
 # 更新日志
 
-记录 es-plus-ui 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
+记录 ES-Plus 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
+
+## v1.4.0
+
+> 2026-05-28 发布
+
+**npm 包重命名 + Vue 2 渲染层**
+
+- 原 `es-plus-ui` 重命名为 **`@es-plus/vue3`**（Vue 3 + Element Plus）— 公共 API 100% 不变，仅包名调整
+- 新增 **`@es-plus/vue2`@0.9.0**（Vue 2 + Element UI）— 与 Vue 3 版共用同一份 `columns` / `formItemList` / `options` 配置 schema
+- 新增 **`@es-plus/core`@1.0.0** — 框架无关共享核心（类型定义、表单布局算法、按钮解析、配置校验）
+- `es-plus-ui@1.4.0` 仍可用，但已变为 stub 包：`import ESPlus from 'es-plus-ui'` 内部 re-export `@es-plus/vue3`，并打印一次性 deprecation 警告
+- 所有历史 `es-plus-ui@*` 版本通过 `npm deprecate` 打上迁移提示
+- 新增环境变量 `ES_PLUS_SILENCE_DEPRECATION=1` 抑制 stub 警告
+
+**Vue 2 渲染层能力**
+
+- 完整支持 EsForm / EsTable / EsDialog / EsCrudPage 四大组件，内部使用 `@vue/composition-api`（Vue 2.6）或原生 Composition API（Vue 2.7+）
+- `useDialog` 编程式弹窗 API 与 Vue 3 版完全一致
+- 兼容旧 `es-eui` options 形状（`EsTable.methods.$httpRequest` / `configQueryfieldOutput` 自动归一化），从 `es-eui` 切换 `Vue.use()` 一行即可
+- 不支持的功能：虚拟滚动（Element UI 无 `el-table-v2`）、`ElConfigProvider`、`@element-plus/icons-vue`（改用 Element UI 的 `el-icon-xxx` class 字符串）
+
+**MCP & CLI 同步**
+
+- `@es-plus/cli` 与 `@es-plus/mcp-server` 新增 `--target vue2` / `--target vue3` 选项，生成代码自动切换 import 路径
+- 同一份 schema 配置可生成两套 Vue 代码
+
+**类型共享**
+
+- 在 monorepo 中可通过 `import type { EsTableColumn } from '@es-plus/core/types'` 共享配置类型，避免在 Vue 2 / Vue 3 两端重复定义
+
+详见 [迁移指南](/guide/migration) 与 [Vue 2 指南](/guide/vue2)。
+
+---
 
 ## v1.3.5
 

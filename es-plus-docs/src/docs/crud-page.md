@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CrudPageSchema } from 'es-plus-ui'
+import type { CrudPageSchema } from '@es-plus/vue3'
 
 const schema: CrudPageSchema = {
   formItems: [
@@ -76,7 +76,7 @@ v1.4+ 推荐使用显式声明模式，完全控制按钮和弹窗的对应关�
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { CrudPageSchema } from 'es-plus-ui'
+import type { CrudPageSchema } from '@es-plus/vue3'
 import ImportUploader from './ImportUploader.vue'
 
 const crudRef = ref()

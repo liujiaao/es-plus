@@ -4,7 +4,7 @@ import { FORM_TYPES } from "@es-plus/shared";
 export function registerListFormTypes(server: McpServer) {
   server.tool(
     "list_form_types",
-    "List all 13 available form field types (formtype) in es-plus-ui with descriptions and usage examples.",
+    "List all 13 available form field types (formtype) in @es-plus/vue3 with descriptions and usage examples.",
     {},
     async () => {
       const lines = FORM_TYPES.map(
@@ -13,7 +13,7 @@ export function registerListFormTypes(server: McpServer) {
       );
 
       const output = [
-        "# es-plus-ui Form Types (formtype)\n",
+        "# @es-plus/vue3 Form Types (formtype)\n",
         "Available types for the `formtype` property in `FormItemOption`:\n",
         ...lines,
         "",

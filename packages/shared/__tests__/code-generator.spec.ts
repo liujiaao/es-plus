@@ -32,7 +32,9 @@ describe('generateCrudPage — contract compliance', () => {
       const result = generateCrudPage(example.prompt)
       expect(result.code).toContain('<template>')
       expect(result.code).toContain('</template>')
-      expect(result.code).toContain('<script setup>')
+      // Dialog-bearing pages emit `<script setup lang="jsx">`; plain pages
+      // emit `<script setup>`. Both are valid Vue SFC headers.
+      expect(result.code).toMatch(/<script setup(\s+lang="\w+")?>/)
       expect(result.code).toContain('</script>')
     })
 

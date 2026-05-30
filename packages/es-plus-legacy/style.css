@@ -1,0 +1,5 @@
+/* es-plus-ui/dist/style.css stub — re-imports @es-plus/vue3 styles.
+ * The legacy import path `import 'es-plus-ui/dist/style.css'` continues to work,
+ * but please migrate to `import '@es-plus/vue3/dist/style.css'`. */
+
+@import "@es-plus/vue3/dist/style.css";

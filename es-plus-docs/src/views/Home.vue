@@ -3,42 +3,42 @@
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
-        <div class="hero-badge">🚀 Vue 3 + Element Plus</div>
-        <h1 class="hero-title">ES-Plus</h1>
+        <div class="hero-badge">{{ t('home.badge') }}</div>
+        <h1 class="hero-title">{{ t('home.title') }}</h1>
         <p class="hero-description">
-          企业级中后台前端解决方案<br>
-          <span class="hero-subtitle">配置化 · 联动化 · 抽象化</span>
+          {{ t('home.tagline1') }}<br>
+          <span class="hero-subtitle">{{ t('home.tagline2') }}</span>
         </p>
         <div class="hero-actions">
           <el-button type="primary" size="large" @click="goToGuide">
             <el-icon class="btn-icon"><Document /></el-icon>
-            快速开始
+            {{ t('home.ctaQuickStart') }}
           </el-button>
           <el-button size="large" type="success" @click="goToAiCrud">
             <el-icon class="btn-icon"><MagicStick /></el-icon>
-            AI 生成 CRUD
+            {{ t('home.ctaAiCrud') }}
           </el-button>
           <el-button size="large" @click="goToPlayground">
             <el-icon class="btn-icon"><Monitor /></el-icon>
-            Playground
+            {{ t('home.ctaPlayground') }}
           </el-button>
           <el-button size="large" @click="goToGithub">
             <el-icon class="btn-icon"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg></el-icon>
-            GitHub
+            {{ t('home.ctaGithub') }}
           </el-button>
         </div>
         <div class="hero-stats">
           <div class="stat-item">
-            <span class="stat-value">3</span>
-            <span class="stat-label">核心组件</span>
+            <span class="stat-value">{{ t('home.stat1Value') }}</span>
+            <span class="stat-label">{{ t('home.stat1Label') }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value">60+</span>
-            <span class="stat-label">配置项</span>
+            <span class="stat-value">{{ t('home.stat2Value') }}</span>
+            <span class="stat-label">{{ t('home.stat2Label') }}</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value">-70%</span>
-            <span class="stat-label">代码量</span>
+            <span class="stat-value">{{ t('home.stat3Value') }}</span>
+            <span class="stat-label">{{ t('home.stat3Label') }}</span>
           </div>
         </div>
       </div>
@@ -48,7 +48,7 @@
             <span class="dot red"></span>
             <span class="dot yellow"></span>
             <span class="dot green"></span>
-            <span class="code-title">示例代码</span>
+            <span class="code-title">{{ t('home.codeTitle') }}</span>
           </div>
           <pre class="code-content"><code>&lt;es-form
   :model="formModel"
@@ -71,13 +71,13 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
     
     <!-- Comparison Section -->
     <div class="comparison-section">
-      <h2 class="section-title">为什么选择 ES-Plus？</h2>
-      <p class="section-subtitle">同样的 CRUD 页面，代码量减少 70%</p>
+      <h2 class="section-title">{{ t('home.comparisonTitle') }}</h2>
+      <p class="section-subtitle">{{ t('home.comparisonSubtitle') }}</p>
       <div class="comparison-grid">
         <div class="comparison-card traditional">
           <div class="comparison-header">
-            <span class="comparison-badge bad">传统写法</span>
-            <span class="comparison-lines">~200 行</span>
+            <span class="comparison-badge bad">{{ t('home.traditionalBadge') }}</span>
+            <span class="comparison-lines">{{ t('home.traditionalLines') }}</span>
           </div>
           <pre class="comparison-code" v-pre><code>&lt;template&gt;
   &lt;el-form :model="form" :rules="rules" ref="formRef"&gt;
@@ -156,163 +156,131 @@ const columns = [
       <div class="comparison-stats">
         <div class="comp-stat">
           <span class="comp-stat-value">-70%</span>
-          <span class="comp-stat-label">代码量</span>
+          <span class="comp-stat-label">{{ t('home.compStatLines') }}</span>
         </div>
         <div class="comp-stat">
           <span class="comp-stat-value">0</span>
-          <span class="comp-stat-label">手动事件</span>
+          <span class="comp-stat-label">{{ t('home.compStatEvents') }}</span>
         </div>
         <div class="comp-stat">
           <span class="comp-stat-value">JSON</span>
-          <span class="comp-stat-label">配置驱动</span>
+          <span class="comp-stat-label">{{ t('home.compStatJson') }}</span>
         </div>
       </div>
     </div>
 
+    <!-- AI Live Demo (moved up — let users feel the value first) -->
+    <AiLiveDemo />
+
     <!-- Features Section -->
     <div class="features-section">
-      <h2 class="section-title">核心特性</h2>
+      <h2 class="section-title">{{ t('home.featuresTitle') }}</h2>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon-wrapper blue">
             <el-icon :size="28"><Edit /></el-icon>
           </div>
-          <h3 class="feature-title">配置化</h3>
-          <p class="feature-desc">通过 JSON 配置快速生成表单和表格，无需编写繁琐的模板代码，大幅提高开发效率</p>
+          <h3 class="feature-title">{{ t('home.feature1Title') }}</h3>
+          <p class="feature-desc">{{ t('home.feature1Desc') }}</p>
         </div>
-        
+
         <div class="feature-card">
           <div class="feature-icon-wrapper green">
             <el-icon :size="28"><Connection /></el-icon>
           </div>
-          <h3 class="feature-title">联动化</h3>
-          <p class="feature-desc">支持字段间联动、组件间通信，轻松实现复杂的业务场景和数据交互</p>
+          <h3 class="feature-title">{{ t('home.feature2Title') }}</h3>
+          <p class="feature-desc">{{ t('home.feature2Desc') }}</p>
         </div>
-        
+
         <div class="feature-card">
           <div class="feature-icon-wrapper purple">
             <el-icon :size="28"><SetUp /></el-icon>
           </div>
-          <h3 class="feature-title">抽象化</h3>
-          <p class="feature-desc">封装常用业务逻辑，提供高阶组件和 Hooks，让代码更简洁、更易维护</p>
+          <h3 class="feature-title">{{ t('home.feature3Title') }}</h3>
+          <p class="feature-desc">{{ t('home.feature3Desc') }}</p>
         </div>
-        
+
         <div class="feature-card">
           <div class="feature-icon-wrapper orange">
-            <el-icon :size="28"><Grid /></el-icon>
+            <el-icon :size="28"><MagicStick /></el-icon>
           </div>
-          <h3 class="feature-title">高扩展性</h3>
-          <p class="feature-desc">基于 Element Plus 构建，完全兼容其 API，支持自定义渲染和插件扩展</p>
+          <h3 class="feature-title">{{ t('home.feature4Title') }}</h3>
+          <p class="feature-desc">{{ t('home.feature4Desc') }}</p>
         </div>
       </div>
     </div>
-    
+
     <!-- Components Section -->
     <div class="components-section">
-      <h2 class="section-title">组件概览</h2>
+      <h2 class="section-title">{{ t('home.componentsTitle') }}</h2>
       <div class="components-grid">
         <router-link to="/components/es-form" class="component-card">
           <div class="component-icon">
             <el-icon :size="40"><DocumentChecked /></el-icon>
           </div>
           <div class="component-info">
-            <h3>EsForm <span class="component-tag">表单</span></h3>
-            <p>高级表单组件，支持配置化字段定义、联动验证、异步加载等功能</p>
+            <h3>EsForm <span class="component-tag">{{ t('home.componentTagForm') }}</span></h3>
+            <p>{{ t('home.esFormDesc') }}</p>
             <div class="component-links">
-              <span class="link">查看文档 →</span>
+              <span class="link">{{ t('home.viewDocs') }}</span>
             </div>
           </div>
         </router-link>
-        
+
         <router-link to="/components/es-table" class="component-card">
           <div class="component-icon">
             <el-icon :size="40"><List /></el-icon>
           </div>
           <div class="component-info">
-            <h3>EsTable <span class="component-tag">表格</span></h3>
-            <p>高级表格组件，支持配置化列定义、自动分页、数据联动等特性</p>
+            <h3>EsTable <span class="component-tag">{{ t('home.componentTagTable') }}</span></h3>
+            <p>{{ t('home.esTableDesc') }}</p>
             <div class="component-links">
-              <span class="link">查看文档 →</span>
+              <span class="link">{{ t('home.viewDocs') }}</span>
             </div>
           </div>
         </router-link>
-        
+
         <router-link to="/advanced/use-dialog" class="component-card">
           <div class="component-icon">
             <el-icon :size="40"><ChatDotRound /></el-icon>
           </div>
           <div class="component-info">
-            <h3>useDialog <span class="component-tag">弹窗</span></h3>
-            <p>编程式弹窗 Hook，支持 JSX 渲染、表单集成、嵌套弹窗等高级功能</p>
+            <h3>useDialog <span class="component-tag">{{ t('home.componentTagDialog') }}</span></h3>
+            <p>{{ t('home.useDialogDesc') }}</p>
             <div class="component-links">
-              <span class="link">查看文档 →</span>
+              <span class="link">{{ t('home.viewDocs') }}</span>
             </div>
           </div>
         </router-link>
       </div>
     </div>
-    
-    <!-- AI Coding Section -->
-    <div class="ai-section">
-      <h2 class="section-title">AI Coding 时代的最佳搭档</h2>
-      <p class="section-subtitle">JSON 配置 = AI 最容易理解和生成的格式</p>
-      <div class="ai-grid">
-        <div class="ai-card">
-          <div class="ai-card-icon">
-            <el-icon :size="32"><MagicStick /></el-icon>
-          </div>
-          <h3>AI 一句话生成页面</h3>
-          <p>描述业务需求，AI 直接输出 JSON 配置，即刻渲染为完整 CRUD 页面</p>
-        </div>
-        <div class="ai-card">
-          <div class="ai-card-icon">
-            <el-icon :size="32"><Edit /></el-icon>
-          </div>
-          <h3>JSON Schema 自动补全</h3>
-          <p>提供完整 JSON Schema，Cursor / Copilot 编写配置时享受智能提示</p>
-        </div>
-        <div class="ai-card">
-          <div class="ai-card-icon">
-            <el-icon :size="32"><SetUp /></el-icon>
-          </div>
-          <h3>结构化 = 可校验</h3>
-          <p>配置是数据，可静态校验、可 diff、可版本管理，AI 改错了一眼就能发现</p>
-        </div>
-      </div>
-      <div class="ai-cta">
-        <el-button type="success" size="large" @click="goToAiCrud">
-          <el-icon class="btn-icon"><MagicStick /></el-icon>
-          体验 AI CRUD 生成器
-        </el-button>
-      </div>
-    </div>
 
     <!-- Get Started Section -->
     <div class="get-started-section">
-      <h2 class="section-title">快速开始</h2>
+      <h2 class="section-title">{{ t('home.getStartedTitle') }}</h2>
       <div class="install-steps">
         <div class="step">
           <div class="step-number">1</div>
           <div class="step-content">
-            <h4>安装依赖</h4>
+            <h4>{{ t('home.step1Title') }}</h4>
             <div class="code-block">
-              <code>npm install es-plus-ui element-plus @element-plus/icons-vue</code>
+              <code>npm install @es-plus/vue3 element-plus @element-plus/icons-vue</code>
             </div>
           </div>
         </div>
         <div class="step">
           <div class="step-number">2</div>
           <div class="step-content">
-            <h4>引入组件</h4>
+            <h4>{{ t('home.step2Title') }}</h4>
             <div class="code-block">
-              <code>import { EsForm, EsTable, useDialog } from 'es-plus-ui'</code>
+              <code>import { EsForm, EsTable, useDialog } from '@es-plus/vue3'</code>
             </div>
           </div>
         </div>
         <div class="step">
           <div class="step-number">3</div>
           <div class="step-content">
-            <h4>开始使用</h4>
+            <h4>{{ t('home.step3Title') }}</h4>
             <div class="code-block">
               <code>&lt;es-form :model="model" :form-item-list="items" /&gt;</code>
             </div>
@@ -320,17 +288,31 @@ const columns = [
         </div>
       </div>
     </div>
-    
+
     <!-- Footer -->
     <footer class="home-footer">
-      <p>ES-Plus © {{ new Date().getFullYear() }} - 企业级配置化前端组件库</p>
+      <p>ES-Plus © {{ new Date().getFullYear() }} · {{ t('home.footerTagline') }}</p>
     </footer>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useHead } from '@unhead/vue'
 import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
+import AiLiveDemo from '@/components/home/AiLiveDemo.vue'
+
+const { t } = useI18n()
+
+useHead({
+  title: '高级 CRUD 组件库',
+  meta: [
+    { name: 'description', content: 'ES-Plus — 一份 JSON 配置生成 Vue 3 + Element Plus（或 Vue 2 + Element UI）的 CRUD 页面，支持 MCP Server 让 AI 编码助手原生理解组件 API。' },
+    { property: 'og:title', content: 'ES-Plus · 高级 CRUD 组件库' },
+    { property: 'og:description', content: '中后台 CRUD 配置即代码：一份 JSON · 双 Vue 渲染 · AI 写不错。' },
+  ],
+})
 
 const router = useRouter()
 
@@ -903,8 +885,60 @@ const goToGithub = () => {
 }
 
 @media (max-width: 768px) {
+  .hero-section {
+    padding: 48px 20px;
+    gap: 32px;
+    min-height: auto;
+  }
+
   .hero-title {
-    font-size: 48px;
+    font-size: 40px;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  .hero-description {
+    font-size: 18px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+
+  .hero-subtitle {
+    font-size: 15px;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .hero-actions {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+    justify-content: center;
+
+    .el-button {
+      flex: 1 1 auto;
+      min-width: 140px;
+    }
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px 32px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+  }
+
+  .hero-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    margin-bottom: 16px;
   }
 
   .features-grid,
@@ -912,16 +946,39 @@ const goToGithub = () => {
     grid-template-columns: 1fr;
   }
 
-  .hero-section {
-    padding: 60px 24px;
-  }
-
   .features-section,
   .components-section,
   .get-started-section,
   .comparison-section,
   .ai-section {
-    padding: 60px 24px;
+    padding: 48px 20px;
+  }
+
+  .section-title {
+    font-size: 24px !important;
+  }
+
+  .home-footer {
+    padding: 32px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 32px;
+  }
+
+  .hero-description {
+    font-size: 16px;
+  }
+
+  .hero-actions .el-button {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .hero-stats {
+    gap: 16px 24px;
   }
 }
 </style>

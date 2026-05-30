@@ -1,0 +1,9 @@
+# Output of `npm pack` — created by the e2e harness, regenerated each run.
+.packed/
+
+# node_modules / build output left behind by previous fixture installs
+fixtures/**/node_modules/
+fixtures/**/dist/
+fixtures/**/package-lock.json
+fixtures/**/src/App.vue
+fixtures/**/src/schema.ts

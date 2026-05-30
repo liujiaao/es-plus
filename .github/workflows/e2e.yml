@@ -1,0 +1,66 @@
+name: E2E (generated code compiles)
+
+# Run on every push / PR — the matrix is fast enough (~30-60s per combo) to
+# afford gating PRs on it. The job:
+#   1. Builds @es-plus/{shared, vue3, vue2, cli, mcp-server}
+#   2. Runs the e2e harness for each (target, mode) combo IN PARALLEL
+#   3. Each combo packs the relevant packages, installs them into a fresh
+#      Vite project, runs the cli to generate App.vue, then runs `vite build`
+#      and asserts exit 0
+#
+# If any combo fails, the PR is blocked. This is the safety net that
+# prevented past "looks-correct-but-doesn't-compile" regressions.
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit tests (shared + mcp-server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: shared tests
+        run: npm test --workspace @es-plus/shared
+      - name: mcp-server tests
+        run: npm test --workspace @es-plus/mcp-server
+
+  e2e:
+    name: e2e (${{ matrix.target }} / ${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [vue3, vue2]
+        mode: [schema, sfc]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+
+      # Build the packages whose dist/ the e2e harness will pack and install.
+      # `prepublishOnly` runs `tsc --noEmit` for shared, so the build script is
+      # the right thing to invoke here.
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
+      - name: Build @es-plus/${{ matrix.target }}
+        run: npm run build --workspace @es-plus/${{ matrix.target }}
+      - name: Build @es-plus/cli
+        run: npm run build --workspace @es-plus/cli
+
+      - name: Run e2e (${{ matrix.target }} / ${{ matrix.mode }})
+        run: node __tests__/e2e/scripts/run-e2e.mjs --target ${{ matrix.target }} --mode ${{ matrix.mode }}
+        # Per-combo timeout so a hung install doesn't burn the full 6h budget.
+        timeout-minutes: 5

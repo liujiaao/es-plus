@@ -26,8 +26,8 @@ ES-Plus 组件内部通过 `inject('$esPlusTable')` / `inject('$EsPlus')` 获取
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import ESPlus from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+import ESPlus from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 import axios from 'axios'
 import App from './App.vue'
 
@@ -77,6 +77,12 @@ app.use(ESPlus, {
 app.mount('#app')
 ```
 
+### 在线试一下
+
+下面是一个实际加载远端数据的查询表格 —— `httpRequest` 拦截器自动接管分页与请求，`EsForm` 嵌套在 `EsTable` 内时查询/重置自动触发翻页：
+
+<demo name="table-remote-data" />
+
 ### 模式二：自动按需导入 + configureEsPlus（推荐）
 
 适合对包体积有要求的项目。**`EsPlusResolver` 负责组件注册和样式注入，`configureEsPlus()` 负责全局配置**：
@@ -88,7 +94,7 @@ import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { EsPlusResolver } from 'es-plus-ui/resolver'
+import { EsPlusResolver } from '@es-plus/vue3/resolver'
 
 export default defineConfig({
   plugins: [
@@ -106,7 +112,7 @@ export default defineConfig({
 ```typescript
 // main.ts — 自动导入模式（推荐使用 configureEsPlus）
 import { createApp } from 'vue'
-import { configureEsPlus } from 'es-plus-ui'
+import { configureEsPlus } from '@es-plus/vue3'
 import axios from 'axios'
 import App from './App.vue'
 
@@ -162,9 +168,9 @@ app.mount('#app')
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import { EsForm, EsTable, useDialog } from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
-import ESPlus from 'es-plus-ui'
+import { EsForm, EsTable, useDialog } from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
+import ESPlus from '@es-plus/vue3'
 import axios from 'axios'
 import App from './App.vue'
 
@@ -452,7 +458,7 @@ const options = {
 无需在模板中声明 `<el-dialog>`，直接函数调用：
 
 ```typescript
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 import { h } from 'vue'
 
 const dialog = useDialog()
@@ -516,7 +522,7 @@ dialog({
 ES-Plus 使用 TypeScript 编写，提供完整的类型定义，无需额外安装 `@types` 包：
 
 ```typescript
-import type { FormItemOption, TableColumn, TableOptions, BtnConfig } from 'es-plus-ui'
+import type { FormItemOption, TableColumn, TableOptions, BtnConfig } from '@es-plus/vue3'
 
 const formItems: FormItemOption[] = [
   { prop: 'name', label: '姓名', formtype: 'Input', span: 12 },
@@ -554,7 +560,7 @@ ES-Plus 还提供 JSON Schema 文件，在 VS Code 中编辑配置时可获得�
   "json.schemas": [
     {
       "fileMatch": ["**/form-config.json"],
-      "url": "./node_modules/es-plus-ui/schemas/form-item.schema.json"
+      "url": "./node_modules/@es-plus/vue3/schemas/form-item.schema.json"
     }
   ]
 }

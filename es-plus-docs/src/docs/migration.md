@@ -1,4 +1,93 @@
-# 从 Element Plus 迁移
+# 迁移指南
+
+本文涵盖两类迁移：
+
+1. **v1.4.0 包名重命名** — 从 `es-plus-ui` 迁移到 `@es-plus/vue3`
+2. **从原生 Element Plus 迁移** — 把现有 `el-form` / `el-table` 重写为 `es-form` / `es-table`
+
+---
+
+## v1.4.0 包名重命名（`es-plus-ui` → `@es-plus/vue3`）
+
+v1.4.0 起 npm 包名调整：
+
+| v1.3.x 之前 | v1.4.0+ |
+|---|---|
+| `es-plus-ui` | **`@es-plus/vue3`**（Vue 3 + Element Plus） |
+| — | **`@es-plus/vue2`**（Vue 2 + Element UI，新增） |
+| — | **`@es-plus/core`**（框架无关核心，新增） |
+
+> **TL;DR — 你的代码继续运行。** `es-plus-ui@1.4.0` 已变为 stub，内部 re-export `@es-plus/vue3@1.4.0`。现有项目无需立刻调整即可用，运行时会打印一次性 deprecation 警告。建议在下一次例行升级时一并迁移。
+
+### 1. 更新 `package.json`
+
+```diff
+{
+  "dependencies": {
+-   "es-plus-ui": "^1.3.5"
++   "@es-plus/vue3": "^1.4.0"
+  }
+}
+```
+
+### 2. 更新 import
+
+```diff
+- import EsPlus from 'es-plus-ui'
+- import 'es-plus-ui/dist/style.css'
++ import EsPlus from '@es-plus/vue3'
++ import '@es-plus/vue3/dist/style.css'
+```
+
+### 3. 更新 auto-import resolver（如果使用）
+
+```diff
+// vite.config.ts
+- import { EsPlusResolver } from 'es-plus-ui/resolver'
++ import { EsPlusResolver } from '@es-plus/vue3/resolver'
+```
+
+### 4.（可选）更新类型 import
+
+```diff
+- import type { TableColumn, FormItemOption } from 'es-plus-ui'
++ import type { TableColumn, FormItemOption } from '@es-plus/vue3'
+```
+
+**公共 API 100% 不变。** 如果不愿立刻迁移，可设置 `ES_PLUS_SILENCE_DEPRECATION=1` 暂时抑制 stub 警告。
+
+### Deprecation 时间线
+
+| 版本范围 | 状态 |
+|---|---|
+| `es-plus-ui@<1.4.0` | 已 `npm deprecate`，仍可安装但 install 时会提示 |
+| `es-plus-ui@1.4.0+` | Stub 包，re-export `@es-plus/vue3`，仅维护向后兼容、不再增加新功能 |
+| `@es-plus/vue3@1.4.0+` | **活跃开发分支**。新功能 / bug fix / 版本发布在此 |
+
+### 同时使用 Vue 2 渲染层
+
+如果你的项目同时维护 Vue 2 与 Vue 3 代码库，可让两端共享同一份配置：
+
+```bash
+# Vue 2 项目
+npm install @es-plus/vue2 element-ui
+```
+
+详见 [Vue 2 指南](/guide/vue2)。
+
+```ts
+// shared/columns.ts —— 在两个项目中复用
+import type { TableColumn } from '@es-plus/core/types'
+
+export const userColumns: TableColumn[] = [
+  { prop: 'name', label: '姓名', width: 120 },
+  { prop: 'email', label: '邮箱' },
+]
+```
+
+---
+
+## 从原生 Element Plus 迁移
 
 如果你已经在使用 Element Plus，迁移到 ES-Plus 非常简单。ES-Plus 构建在 Element Plus 之上，完全兼容其 API，只是提供了更高层的配置化抽象。
 

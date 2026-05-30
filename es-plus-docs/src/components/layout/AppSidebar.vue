@@ -4,110 +4,13 @@
   </transition>
   <aside class="app-sidebar" :class="{ 'mobile-open': mobileOpen }">
     <div class="sidebar-content">
-      <!-- 指南部分 -->
-      <div class="nav-section">
-        <div class="nav-title">指南</div>
+      <div v-for="section in sections" :key="section.titleKey" class="nav-section">
+        <div class="nav-title">{{ t(section.titleKey) }}</div>
         <ul class="nav-list">
-          <li class="nav-item">
-            <router-link to="/guide/getting-started" class="nav-link">快速开始</router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/installation" class="nav-link">安装</router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/usage" class="nav-link">使用</router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/mcp-server" class="nav-link">
-              <span class="nav-icon"><el-icon><MagicStick /></el-icon></span>
-              MCP Server
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/cli" class="nav-link">
-              <span class="nav-icon"><el-icon><Monitor /></el-icon></span>
-              CLI 工具
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/permission-i18n" class="nav-link">
-              <span class="nav-icon"><el-icon><Lock /></el-icon></span>
-              权限与国际化
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/migration" class="nav-link">
-              <span class="nav-icon"><el-icon><Switch /></el-icon></span>
-              迁移指南
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/guide/changelog" class="nav-link">
-              <span class="nav-icon"><el-icon><Document /></el-icon></span>
-              更新日志
-            </router-link>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 组件部分 -->
-      <div class="nav-section">
-        <div class="nav-title">组件</div>
-        <ul class="nav-list">
-          <li class="nav-item">
-            <router-link to="/components/es-form" class="nav-link">
-              <span class="nav-icon"><el-icon><Edit /></el-icon></span>
-              EsForm 高级表单
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/components/es-table" class="nav-link">
-              <span class="nav-icon"><el-icon><Grid /></el-icon></span>
-              EsTable 高级表格
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/components/es-crud-page" class="nav-link">
-              <span class="nav-icon"><el-icon><Document /></el-icon></span>
-             EsCrudPage  高级CRUD
-            </router-link>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 高级用法 -->
-      <div class="nav-section">
-        <div class="nav-title">高级用法</div>
-        <ul class="nav-list">
-          <li class="nav-item">
-            <router-link to="/advanced/use-dialog" class="nav-link">
-              <span class="nav-icon"><el-icon><ChatDotRound /></el-icon></span>
-              useDialog 弹窗
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/advanced/linkage" class="nav-link">
-              <span class="nav-icon"><el-icon><Connection /></el-icon></span>
-              高级联动组合
-            </router-link>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Playground -->
-      <div class="nav-section">
-        <div class="nav-title">工具</div>
-        <ul class="nav-list">
-          <li class="nav-item">
-            <router-link to="/ai-crud" class="nav-link">
-              <span class="nav-icon"><el-icon><MagicStick /></el-icon></span>
-              AI CRUD 生成器
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/playground" class="nav-link">
-              <span class="nav-icon"><el-icon><Monitor /></el-icon></span>
-              Playground
+          <li v-for="item in section.items" :key="item.path" class="nav-item">
+            <router-link :to="item.path" class="nav-link">
+              <span class="nav-icon"><el-icon><component :is="item.icon" /></el-icon></span>
+              {{ t(item.labelKey) }}
             </router-link>
           </li>
         </ul>
@@ -117,9 +20,10 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -128,6 +32,7 @@ const props = defineProps<{
 const emit = defineEmits(['close'])
 
 const route = useRoute()
+const { t } = useI18n()
 
 // Navigate on mobile closes sidebar
 watch(() => route.path, () => {
@@ -135,6 +40,61 @@ watch(() => route.path, () => {
     emit('close')
   }
 })
+
+const sections = [
+  {
+    titleKey: 'sidebar.section.start',
+    items: [
+      { path: '/guide/getting-started', labelKey: 'sidebar.gettingStarted', icon: markRaw(Promotion) },
+      { path: '/guide/installation', labelKey: 'sidebar.installation', icon: markRaw(Box) },
+      { path: '/guide/usage', labelKey: 'sidebar.usage', icon: markRaw(Reading) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.components',
+    items: [
+      { path: '/components/es-form', labelKey: 'sidebar.esForm', icon: markRaw(Edit) },
+      { path: '/components/es-table', labelKey: 'sidebar.esTable', icon: markRaw(Grid) },
+      { path: '/components/es-crud-page', labelKey: 'sidebar.esCrudPage', icon: markRaw(Document) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.advanced',
+    items: [
+      { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
+      { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.ai',
+    items: [
+      { path: '/guide/mcp-server', labelKey: 'sidebar.mcpServer', icon: markRaw(MagicStick) },
+      { path: '/guide/cli', labelKey: 'sidebar.cli', icon: markRaw(Monitor) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.crossFramework',
+    items: [
+      { path: '/guide/vue2', labelKey: 'sidebar.vue2', icon: markRaw(SetUp) },
+      { path: '/guide/migration', labelKey: 'sidebar.migration', icon: markRaw(Switch) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.reference',
+    items: [
+      { path: '/guide/permission-i18n', labelKey: 'sidebar.permissionI18n', icon: markRaw(Lock) },
+      { path: '/guide/schema-setup', labelKey: 'sidebar.schemaSetup', icon: markRaw(Tools) },
+      { path: '/guide/changelog', labelKey: 'sidebar.changelog', icon: markRaw(Document) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.tools',
+    items: [
+      { path: '/ai-crud', labelKey: 'sidebar.aiCrud', icon: markRaw(MagicStick) },
+      { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },
+    ],
+  },
+]
 </script>
 
 <style lang="scss" scoped>

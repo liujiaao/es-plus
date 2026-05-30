@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://es-plus-ui.github.io/schemas/form-item.schema.json",
   "title": "EsForm Item Configuration",
-  "description": "Configuration for a single form field in es-plus-ui EsForm component",
+  "description": "Configuration for a single form field in @es-plus/vue3 EsForm component",
   "type": "object",
   "required": ["prop", "label"],
   "properties": {

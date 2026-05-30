@@ -457,13 +457,13 @@ es-plus/
 
 ```bash
 # Build the library
-cd packages/es-plus && npm install && npm run build
+cd packages/vue3 && npm install && npm run build
 
 # Run docs site
 cd es-plus-docs && npm install && npm run dev
 
 # Run tests
-cd packages/es-plus && npm test
+cd packages/vue3 && npm test
 ```
 
 ## Ecosystem

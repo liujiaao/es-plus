@@ -9,7 +9,7 @@ const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url),
 
 program
   .name("es-plus")
-  .description("es-plus-ui CLI — generate CRUD pages & validate configs")
+  .description("es-plus CLI — generate CRUD pages & validate configs (Vue 3 / Vue 2)")
   .version(pkg.version);
 
 program.addCommand(createCommand);

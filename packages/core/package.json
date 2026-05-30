@@ -1,0 +1,81 @@
+{
+  "name": "@es-plus/core",
+  "version": "1.0.0",
+  "description": "es-plus framework-agnostic core: shared types, utilities, and pure logic for both Vue 3 (@es-plus/vue3) and Vue 2 (@es-plus/vue2) renderers",
+  "type": "module",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
+    },
+    "./shared": {
+      "types": "./build/shared.d.ts",
+      "import": "./build/shared.js"
+    },
+    "./types": {
+      "types": "./build/types.d.ts",
+      "import": "./build/types.js"
+    },
+    "./config": {
+      "types": "./build/config.d.ts",
+      "import": "./build/config.js"
+    },
+    "./constants": {
+      "types": "./build/constants.d.ts",
+      "import": "./build/constants.js"
+    },
+    "./form-layout": {
+      "types": "./build/form-layout.d.ts",
+      "import": "./build/form-layout.js"
+    },
+    "./table-selection": {
+      "types": "./build/table-selection.d.ts",
+      "import": "./build/table-selection.js"
+    },
+    "./request": {
+      "types": "./build/request.d.ts",
+      "import": "./build/request.js"
+    },
+    "./field-resolver": {
+      "types": "./build/field-resolver.d.ts",
+      "import": "./build/field-resolver.js"
+    }
+  },
+  "files": [
+    "build",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "es-plus",
+    "core",
+    "framework-agnostic",
+    "vue",
+    "config-driven"
+  ],
+  "author": "liujiaao <303363554@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}

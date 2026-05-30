@@ -158,6 +158,10 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
         schema: "schema";
         sfc: "sfc";
     }>>;
+    target: z.ZodDefault<z.ZodEnum<{
+        vue3: "vue3";
+        vue2: "vue2";
+    }>>;
     typescript: z.ZodDefault<z.ZodBoolean>;
     permissions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
     i18n: z.ZodDefault<z.ZodBoolean>;

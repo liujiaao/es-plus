@@ -1,11 +1,20 @@
 # 快速开始
 
-ES-Plus 是基于 Vue 3 和 Element Plus 的企业级中后台组件库，通过配置化方式将常见 CRUD 页面代码量减少 70%。
+ES-Plus 是企业级中后台组件库，通过配置化方式将常见 CRUD 页面代码量减少 70%。提供两套渲染层：
+
+- **`@es-plus/vue3`** — Vue 3 + Element Plus（活跃开发）
+- **`@es-plus/vue2`** — Vue 2 + Element UI（同 schema 兼容版本）
+
+两个包共用同一份 `columns` / `formItemList` / `options` JSON 配置。本指南以 Vue 3 为主示例，Vue 2 用法详见 [Vue 2 指南](/guide/vue2)。
+
+:::tip v1.4.0 包名重命名
+v1.4.0 起，原 `es-plus-ui` 已重命名为 **`@es-plus/vue3`**。旧包仍可通过 stub 正常使用，但已被 `npm deprecate` 标记。详见 [迁移指南](/guide/migration)。
+:::
 
 ## 安装
 
 ```bash
-npm install es-plus-ui element-plus @element-plus/icons-vue
+npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 ```
 
 ## 注册插件
@@ -17,9 +26,10 @@ npm install es-plus-ui element-plus @element-plus/icons-vue
 ```typescript
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
+import ESPlus from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 import 'element-plus/dist/index.css'
-import ESPlus from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+
 import App from './App.vue'
 
 const app = createApp(App)
@@ -98,6 +108,10 @@ const handleConfirm = ({ key, model }) => {
 | 手动 `v-model` 绑定每个字段 | 自动绑定到 `model` |
 | 手动 `@click` + `resetFields()` | `triggerEvent: true` 自动处理 |
 
+### 在线试一下
+
+<demo name="form-basic" />
+
 ## 第一个表格
 
 配置化列定义 + 自动分页 + 请求联动：
@@ -150,12 +164,16 @@ const options = {
 
 `EsForm` 嵌套在 `EsTable` 内时，查询/重置/分页全自动联动，无需手动编写事件处理。
 
+### 在线试一下
+
+<demo name="table-basic" />
+
 ## 第一个弹窗
 
 编程式调用，告别模板声明：
 
 ```typescript
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 
@@ -181,6 +199,8 @@ function openEditDialog(row) {
 
 - [安装](/guide/installation) — 详细安装与环境要求
 - [使用](/guide/usage) — 全局配置、按需引入、TypeScript 支持
+- [Vue 2 指南](/guide/vue2) — Vue 2 + Element UI 渲染层用法
+- [迁移指南](/guide/migration) — 从 `es-plus-ui` / 原生 Element Plus 迁移
 - [EsForm 文档](/components/es-form) — 表单完整 API 与高级用法
 - [EsTable 文档](/components/es-table) — 表格完整 API 与数据联动
 - [useDialog 文档](/advanced/use-dialog) — 弹窗高级功能

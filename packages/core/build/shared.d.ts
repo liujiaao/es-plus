@@ -1,0 +1,73 @@
+/**
+ * 框架无关的工具函数集合
+ *
+ * 这些函数被 @es-plus/vue3 (Vue 3) 和 @es-plus/vue2 (Vue 2) 共享。
+ * 严禁引入任何 Vue / Element 依赖，保证 0 副作用、0 框架耦合。
+ *
+ * 提取自 packages/vue3/src/utils/shared.ts (1.3.5)，
+ * 行为完全一致，仅迁移位置以便跨框架复用。
+ */
+/** 判断是否为纯对象（plain object，不含数组/Date/RegExp 等） */
+export declare const isObject: (value: unknown) => value is Record<string, unknown>;
+/** 判断是否为数组 */
+export declare const isArray: (value: unknown) => value is unknown[];
+/** 判断是否为函数 */
+export declare const isFunction: (value: unknown) => value is Function;
+/** 判断是否为字符串 */
+export declare const isString: (value: unknown) => value is string;
+/** 判断是否为有效数字（排除 NaN） */
+export declare const isNumber: (value: unknown) => value is number;
+/**
+ * 判断值是否"空"
+ * - null / undefined → true
+ * - 空数组 → true
+ * - 空对象（无可枚举键）→ true
+ * - 其它 → false
+ *
+ * 注意：空字符串不视为 empty（与原实现一致）
+ */
+export declare const isEmpty: (value: unknown) => boolean;
+/** 首字母大写其余小写（注意：会把后续大写字母转小写） */
+export declare const firstWordUpperCase: (str: string) => string;
+/** kebab-case 转 camelCase（如 'min-width' → 'minWidth'） */
+export declare const kebabToCamel: (str: string) => string;
+/** kebab-case / 普通字符串 转 PascalCase（如 'es-table' → 'EsTable'） */
+export declare const toPascalCase: (str: string) => string;
+/**
+ * 在嵌套对象中递归查找指定 key 的值
+ * 用于从后端响应中取出 total/listData 等字段（兼容 { data: { rows } } 这类嵌套结构）
+ *
+ * @param obj - 要搜索的对象
+ * @param key - 要查找的字段名
+ * @param depth - 当前递归深度，最大 3 层防止深嵌套爆栈
+ * @returns 找到的值或 undefined
+ */
+export declare const findValueByKey: (obj: Record<string, unknown>, key: string, depth?: number) => unknown;
+/**
+ * 包装 Promise：永远 resolve，把成功/失败统一打平为 status 标记的对象
+ * 与 Promise.allSettled 等价，但兼容旧环境（不依赖 ES2020）
+ */
+export declare const wrapPromise: <T>(promise: Promise<T>) => Promise<{
+    status: "fulfilled";
+    value: T;
+} | {
+    status: "rejected";
+    reason: unknown;
+}>;
+/**
+ * 按路径取嵌套对象的值，支持点号和方括号表示法
+ * 例如 getNestedValue({ a: { b: 1 } }, 'a.b') === 1
+ *      getNestedValue({ list: [{ name: 'x' }] }, 'list[0].name') === 'x'
+ *
+ * 提取自 packages/vue3/src/composables/use-form-inputs.ts，
+ * 用于表单 v-model 绑定嵌套字段（如 user.address.city）。
+ */
+export declare const getNestedValue: (obj: Record<string, unknown>, path: string) => unknown;
+/**
+ * 按路径设置嵌套对象的值（缺失中间层时自动创建普通对象）
+ *
+ * 注意：本函数直接修改 obj，不会触发 Vue 响应式（仅做路径写入）。
+ * 调用方需要保证 obj 自身已被 reactive/ref 包裹，否则视图不会更新。
+ */
+export declare const setNestedValue: (obj: Record<string, unknown>, path: string, value: unknown) => void;
+//# sourceMappingURL=shared.d.ts.map

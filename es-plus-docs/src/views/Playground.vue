@@ -1,8 +1,8 @@
 <template>
   <div class="playground-page">
     <div class="playground-header">
-      <h1 class="playground-title">Playground</h1>
-      <p class="playground-desc">在线体验 ES-Plus 组件，实时预览代码效果</p>
+      <h1 class="playground-title">{{ t('playground.title') }}</h1>
+      <p class="playground-desc">{{ t('playground.description') }}</p>
     </div>
     
     <div class="playground-container">
@@ -18,26 +18,30 @@
         <!-- EsForm Playground -->
         <div v-if="activeComponent === 'es-form'" class="playground-panel">
           <div class="panel-section">
-            <h3 class="panel-title">配置面板</h3>
+            <h3 class="panel-title">{{ t('playground.configPanel') }}</h3>
             <div class="config-area">
               <el-form label-position="top">
-                <el-form-item label="表单字段 (JSON)">
-                  <el-input
-                    v-model="formConfigCode"
-                    type="textarea"
-                    :rows="15"
-                    class="code-input"
-                  />
+                <el-form-item :label="t('playground.formItems')">
+                  <div class="monaco-wrapper">
+                    <VueMonacoEditor
+                      v-model:value="formConfigCode"
+                      language="json"
+                      :options="monacoOptions"
+                      :theme="monacoTheme"
+                      path="form-items.json"
+                      height="360px"
+                    />
+                  </div>
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" @click="applyFormConfig">应用配置</el-button>
-                  <el-button @click="resetFormConfig">重置</el-button>
+                  <el-button type="primary" @click="applyFormConfig">{{ t('playground.applyConfig') }}</el-button>
+                  <el-button @click="resetFormConfig">{{ t('playground.reset') }}</el-button>
                 </el-form-item>
               </el-form>
             </div>
           </div>
           <div class="panel-section">
-            <h3 class="panel-title">预览面板</h3>
+            <h3 class="panel-title">{{ t('playground.previewPanel') }}</h3>
             <div class="preview-area">
               <es-form
                 :model="formModel"
@@ -47,7 +51,7 @@
                 @reset="handleFormReset"
               />
               <div v-if="formResult" class="result-box">
-                <h4>提交结果:</h4>
+                <h4>{{ t('playground.submitResult') }}</h4>
                 <pre>{{ JSON.stringify(formResult, null, 2) }}</pre>
               </div>
             </div>
@@ -57,34 +61,42 @@
         <!-- EsTable Playground -->
         <div v-if="activeComponent === 'es-table'" class="playground-panel">
           <div class="panel-section">
-            <h3 class="panel-title">配置面板</h3>
+            <h3 class="panel-title">{{ t('playground.configPanel') }}</h3>
             <div class="config-area">
               <el-form label-position="top">
-                <el-form-item label="列配置 (JSON)">
-                  <el-input
-                    v-model="tableConfigCode"
-                    type="textarea"
-                    :rows="12"
-                    class="code-input"
-                  />
+                <el-form-item :label="t('playground.tableColumns')">
+                  <div class="monaco-wrapper">
+                    <VueMonacoEditor
+                      v-model:value="tableConfigCode"
+                      language="json"
+                      :options="monacoOptions"
+                      :theme="monacoTheme"
+                      path="table-columns.json"
+                      height="280px"
+                    />
+                  </div>
                 </el-form-item>
-                <el-form-item label="数据 (JSON)">
-                  <el-input
-                    v-model="tableDataCode"
-                    type="textarea"
-                    :rows="8"
-                    class="code-input"
-                  />
+                <el-form-item :label="t('playground.tableData')">
+                  <div class="monaco-wrapper">
+                    <VueMonacoEditor
+                      v-model:value="tableDataCode"
+                      language="json"
+                      :options="monacoOptions"
+                      :theme="monacoTheme"
+                      path="table-data.json"
+                      height="200px"
+                    />
+                  </div>
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" @click="applyTableConfig">应用配置</el-button>
-                  <el-button @click="resetTableConfig">重置</el-button>
+                  <el-button type="primary" @click="applyTableConfig">{{ t('playground.applyConfig') }}</el-button>
+                  <el-button @click="resetTableConfig">{{ t('playground.reset') }}</el-button>
                 </el-form-item>
               </el-form>
             </div>
           </div>
           <div class="panel-section">
-            <h3 class="panel-title">预览面板</h3>
+            <h3 class="panel-title">{{ t('playground.previewPanel') }}</h3>
             <div class="preview-area">
               <es-table
                 :data-source="tableData"
@@ -98,36 +110,37 @@
         <!-- useDialog Playground -->
         <div v-if="activeComponent === 'use-dialog'" class="playground-panel">
           <div class="panel-section">
-            <h3 class="panel-title">配置面板</h3>
+            <h3 class="panel-title">{{ t('playground.configPanel') }}</h3>
             <div class="config-area">
               <el-form label-position="top">
-                <el-form-item label="弹窗配置">
-                  <el-input
-                    v-model="dialogConfigCode"
-                    type="textarea"
-                    :rows="10"
-                    class="code-input"
-                  />
+                <el-form-item :label="t('playground.dialogConfig')">
+                  <div class="js-mode-hint">
+                    <el-icon><InfoFilled /></el-icon>
+                    <span>{{ t('playground.dialogHint') }}</span>
+                  </div>
+                  <div class="monaco-wrapper">
+                    <VueMonacoEditor
+                      v-model:value="dialogConfigCode"
+                      language="javascript"
+                      :options="monacoOptions"
+                      :theme="monacoTheme"
+                      path="dialog-config.js"
+                      height="280px"
+                    />
+                  </div>
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" @click="openPlaygroundDialog">打开弹窗</el-button>
+                  <el-button type="primary" @click="openPlaygroundDialog">{{ t('playground.openDialog') }}</el-button>
+                  <el-button @click="resetDialogConfig">{{ t('playground.reset') }}</el-button>
                 </el-form-item>
               </el-form>
             </div>
           </div>
           <div class="panel-section">
-            <h3 class="panel-title">代码预览</h3>
+            <h3 class="panel-title">{{ t('playground.codePreview') }}</h3>
             <div class="preview-area code-preview">
-              <pre class="hljs"><code class="language-javascript">const dialog = useDialog()
-
-dialog({
-  title: '{{ dialogConfig.title }}',
-  width: '{{ dialogConfig.width }}',
-  render: () => h('div', '{{ dialogConfig.content }}'),
-  onSubmit: (close) => {
-    close()
-  }
-})</code></pre>
+              <div v-if="!dialogConfigValid" class="invalid-hint">{{ t('playground.syntaxError') }}：{{ dialogParseError }}</div>
+              <pre class="hljs"><code class="language-javascript">{{ dialogPreviewCode }}</code></pre>
             </div>
           </div>
         </div>
@@ -137,9 +150,73 @@ dialog({
 </template>
 
 <script setup>
-import { ref, h } from 'vue'
+import { ref, h, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { EsForm, EsTable, useDialog } from 'es-plus'
+
+const { t } = useI18n()
+import { VueMonacoEditor, loader } from '@guolao/vue-monaco-editor'
+import * as monaco from 'monaco-editor'
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
+import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import { useThemeStore } from '@/stores/theme'
+import esFormSchema from '@/schemas/es-form.schema.json'
+import esTableColumnsSchema from '@/schemas/es-table-columns.schema.json'
+import esTableDataSchema from '@/schemas/es-table-data.schema.json'
+
+// Wire monaco-editor to a Vite-bundled worker and feed the local instance
+// to @guolao/vue-monaco-editor's loader. Without this, the loader pulls
+// monaco from a CDN at runtime — which silently fails behind GFW and
+// leaves the editor blank.
+self.MonacoEnvironment = {
+  getWorker(_workerId, label) {
+    if (label === 'json') return new JsonWorker()
+    // 'javascript' / 'typescript' both route through the TS worker — without
+    // it Monaco fires `getSyntacticDiagnostics` / `provideInlayHints` etc and
+    // gets back "Missing requestHandler" errors that flood the console.
+    if (label === 'javascript' || label === 'typescript') return new TsWorker()
+    return new EditorWorker()
+  },
+}
+loader.config({ monaco })
+
+const themeStore = useThemeStore()
+const monacoTheme = computed(() => (themeStore.isDark ? 'vs-dark' : 'vs'))
+const monacoOptions = {
+  minimap: { enabled: false },
+  fontSize: 13,
+  tabSize: 2,
+  scrollBeyondLastLine: false,
+  formatOnPaste: true,
+  automaticLayout: true,
+}
+
+onMounted(() => {
+  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+    validate: true,
+    allowComments: false,
+    schemas: [
+      {
+        uri: 'https://es-plus.dev/schemas/es-form.schema.json',
+        fileMatch: ['form-items.json'],
+        schema: esFormSchema,
+      },
+      {
+        uri: 'https://es-plus.dev/schemas/es-table-columns.schema.json',
+        fileMatch: ['table-columns.json'],
+        schema: esTableColumnsSchema,
+      },
+      {
+        uri: 'https://es-plus.dev/schemas/es-table-data.schema.json',
+        fileMatch: ['table-data.json'],
+        schema: esTableDataSchema,
+      },
+    ],
+  })
+})
 
 const activeComponent = ref('es-form')
 
@@ -159,9 +236,9 @@ const formConfigCode = ref(JSON.stringify(defaultFormItems, null, 2))
 const applyFormConfig = () => {
   try {
     formItems.value = JSON.parse(formConfigCode.value)
-    ElMessage.success('配置已应用')
+    ElMessage.success(t('playground.configApplied'))
   } catch (e) {
-    ElMessage.error('JSON 格式错误')
+    ElMessage.error(t('playground.jsonError'))
   }
 }
 
@@ -202,9 +279,9 @@ const applyTableConfig = () => {
   try {
     tableColumns.value = JSON.parse(tableConfigCode.value)
     tableData.value = JSON.parse(tableDataCode.value)
-    ElMessage.success('配置已应用')
+    ElMessage.success(t('playground.configApplied'))
   } catch (e) {
-    ElMessage.error('JSON 格式错误')
+    ElMessage.error(t('playground.jsonError'))
   }
 }
 
@@ -215,39 +292,72 @@ const resetTableConfig = () => {
   tableData.value = [...defaultTableData]
 }
 
-// useDialog Playground
-const dialogConfig = ref({
+// useDialog Playground — JS 模式
+// 用户直接写一个对象字面量（不带外层括号），Playground 用 new Function 求值
+const defaultDialogCode = `{
   title: '提示',
   width: '400px',
-  content: '这是一个弹窗内容'
-})
+  render: (h) => h('div', { style: 'padding: 20px' }, '这是一个弹窗内容'),
+  configBtn: [
+    { name: '取消', click: (_, { close }) => close() },
+    { name: '确定', type: 'primary', click: (_, { close }) => {
+      ElMessage.success('点击了确认')
+      close()
+    } }
+  ]
+}`
 
-const dialogConfigCode = ref(JSON.stringify(dialogConfig.value, null, 2))
+const dialogConfigCode = ref(defaultDialogCode)
+const dialogParseError = ref('')
 
-const openPlaygroundDialog = () => {
+// 把字符串求值成对象。注入 ElMessage 让 onSubmit 之类能直接用提示。
+const evalDialogConfig = (code) => {
   try {
-    const config = JSON.parse(dialogConfigCode.value)
-    const dialog = useDialog()
-    dialog({
-      title: config.title,
-      width: config.width,
-      render: () => h('div', { style: 'padding: 20px' }, config.content),
-      onSubmit: (close) => {
-        ElMessage.success('点击了确认')
-        close()
-      }
-    })
+    const fn = new Function('ElMessage', 'return (' + code + ')')
+    const obj = fn(ElMessage)
+    if (!obj || typeof obj !== 'object') {
+      throw new Error('表达式必须求值为对象')
+    }
+    dialogParseError.value = ''
+    return obj
   } catch (e) {
-    ElMessage.error('JSON 格式错误')
+    dialogParseError.value = (e && e.message) || String(e)
+    return null
   }
 }
+
+const parsedDialogConfig = computed(() => evalDialogConfig(dialogConfigCode.value))
+const dialogConfigValid = computed(() => parsedDialogConfig.value !== null)
+
+const resetDialogConfig = () => {
+  dialogConfigCode.value = defaultDialogCode
+}
+
+const openPlaygroundDialog = () => {
+  const config = parsedDialogConfig.value
+  if (!config) {
+    ElMessage.error(t('playground.syntaxError') + '：' + dialogParseError.value)
+    return
+  }
+  const dialog = useDialog()
+  dialog(config)
+}
+
+// 代码预览：把用户写的对象字面量直接拼到 dialog(...) 里
+const dialogPreviewCode = computed(() => {
+  return `import { useDialog } from '@es-plus/vue3'
+
+const dialog = useDialog()
+
+dialog(${dialogConfigCode.value})`
+})
 </script>
 
 <style lang="scss" scoped>
 .playground-page {
   padding: 24px;
   max-width: 1600px;
-  margin: 0 auto;
+  margin: 80px auto;
 }
 
 .playground-header {
@@ -305,19 +415,71 @@ const openPlaygroundDialog = () => {
 }
 
 .config-area {
-  .code-input {
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    font-size: 13px;
+  .monaco-wrapper {
+    width: 100%;
+    border: 1px solid var(--el-border-color, var(--border-color-lighter));
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  :deep(.el-form-item__content) {
+    width: 100%;
+    display: block;
+  }
+
+  :deep(.monaco-editor) {
+    .overflow-guard {
+      border-radius: 4px;
+    }
   }
 }
 
 .preview-area {
   min-height: 400px;
-  
+
   &.code-preview {
     background-color: #f6f8fa;
     border-radius: 4px;
     padding: 16px;
+  }
+}
+
+.invalid-hint {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #b54708;
+  background-color: #fef0c7;
+  border: 1px solid #fec84b;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.js-mode-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-color-regular);
+  background-color: var(--fill-color-light);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 4px;
+
+  .el-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--primary-color);
+  }
+
+  code {
+    padding: 1px 4px;
+    font-size: 11px;
+    background-color: var(--fill-color);
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
   }
 }
 

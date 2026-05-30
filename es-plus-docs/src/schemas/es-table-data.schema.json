@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://es-plus.dev/schemas/es-table-data.schema.json",
+  "title": "ES-Plus EsTable dataSource",
+  "description": "Schema for the dataSource array — table rows, freeform but should be an array of plain objects",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}

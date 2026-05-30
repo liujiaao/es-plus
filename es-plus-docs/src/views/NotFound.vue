@@ -2,11 +2,16 @@
   <div class="not-found">
     <div class="not-found-content">
       <h1>404</h1>
-      <p>页面不存在</p>
-      <router-link to="/" class="back-home">返回首页</router-link>
+      <p>{{ t('notFound.message') }}</p>
+      <router-link to="/" class="back-home">{{ t('notFound.backHome') }}</router-link>
     </div>
   </div>
 </template>
+
+<script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+</script>
 
 <style scoped>
 .not-found {

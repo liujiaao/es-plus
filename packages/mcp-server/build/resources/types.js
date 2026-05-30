@@ -2,12 +2,22 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-function loadTypesFromSource() {
-    const paths = [
-        join(__dirname, "../../../../es-plus/src/types/index.ts"),
-        join(__dirname, "../../bundled/types.d.ts"),
-    ];
-    for (const p of paths) {
+// File layout (relative to this file when built):
+//   packages/mcp-server/build/resources/types.js  ← __dirname
+//   packages/mcp-server/bundled/types.d.ts        ← shipped fallback
+//   packages/vue3/src/types/index.ts              ← live vue3 source
+//   packages/vue2/src/types/index.ts              ← live vue2 source
+//
+// Try the live source first (for dev / when the user has the monorepo checked
+// out), fall back to the bundled .d.ts that ships with the npm package.
+function loadTypesFromSource(target) {
+    const sourcePath = target === "vue2"
+        ? join(__dirname, "../../../../vue2/src/types/index.ts")
+        : join(__dirname, "../../../../vue3/src/types/index.ts");
+    const fallback = target === "vue2"
+        ? join(__dirname, "../../bundled/types-vue2.d.ts")
+        : join(__dirname, "../../bundled/types.d.ts");
+    for (const p of [sourcePath, fallback]) {
         try {
             return readFileSync(p, "utf-8");
         }
@@ -15,9 +25,11 @@ function loadTypesFromSource() {
             continue;
         }
     }
-    return TYPES_FALLBACK;
+    // Last-resort fallback: a compact reference inline. Use vue3 shape — vue2
+    // package re-exports the same shapes.
+    return TYPES_FALLBACK_VUE3;
 }
-const TYPES_FALLBACK = `// es-plus-ui TypeScript Type Definitions (bundled fallback)
+const TYPES_FALLBACK_VUE3 = `// @es-plus/vue3 TypeScript Type Definitions (bundled fallback)
 // Run "npm run bundle-types" to update from source
 
 import type { VNode, RenderFunction } from 'vue'
@@ -96,7 +108,7 @@ export interface TableOptions {
   rowkey?: string
   heightType?: 'auto' | 'height' | 'maxHeight'
   tabHeight?: number | string
-  virtual?: boolean
+  virtual?: boolean       // vue3 only — silently ignored on vue2
   engine?: 'default' | 'virtual'
   rowHeight?: number
   estimatedRowHeight?: number
@@ -122,20 +134,20 @@ export interface DialogOptions {
 }
 `;
 export function registerTypesResource(server) {
-    server.resource("types", "esplus://types", {
-        description: "Complete TypeScript type definitions for all es-plus-ui components (read from source when available)",
-        mimeType: "text/plain",
-    }, async () => {
-        const content = loadTypesFromSource();
-        return {
+    const targets = [
+        { uri: "esplus://types", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
+        { uri: "esplus://types/vue3", target: "vue3", descSuffix: " — @es-plus/vue3" },
+        { uri: "esplus://types/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 (Element UI variant; same shapes)" },
+    ];
+    for (const { uri, target, descSuffix } of targets) {
+        server.resource(uri === "esplus://types" ? "types" : `types-${target}`, uri, {
+            description: `Complete TypeScript type definitions${descSuffix} — read from packages/${target}/src when available, falls back to bundled .d.ts`,
+            mimeType: "text/plain",
+        }, async () => ({
             contents: [
-                {
-                    uri: "esplus://types",
-                    mimeType: "text/plain",
-                    text: content,
-                },
+                { uri, mimeType: "text/plain", text: loadTypesFromSource(target) },
             ],
-        };
-    });
+        }));
+    }
 }
 //# sourceMappingURL=types.js.map

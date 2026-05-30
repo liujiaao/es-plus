@@ -18,8 +18,11 @@ export const createCommand = new Command("create")
     .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
     .option("-m, --mode <mode>", "output mode: schema (default) or sfc", "schema")
     .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
+    .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus) or vue2 (@es-plus/vue2 + Element UI)", "vue3")
     .description("Generate a CRUD page from natural language description or structured config")
     .action(async (name, options) => {
+    // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
+    const cliTarget = options.target === 'vue2' ? 'vue2' : 'vue3';
     // Structured config mode — production-ready generation
     if (options.fromConfig) {
         const configPath = resolve(process.cwd(), options.fromConfig);
@@ -52,9 +55,12 @@ export const createCommand = new Command("create")
             return;
         }
         const config = validation.data;
+        // 优先使用 config.target，其次使用 CLI --target，再回落 vue3
+        if (!config.target)
+            config.target = cliTarget;
         const pageName = name || toKebabCase(config.name);
         const pascalName = toPascalCase(pageName);
-        console.log(pc.cyan(`\n⏳ 正在从结构化配置生成 (${config.mode || 'schema'} 模式)...`));
+        console.log(pc.cyan(`\n⏳ 正在从结构化配置生成 (${config.mode || 'schema'} 模式, target=${config.target})...`));
         const result = generateFromConfig(config);
         if (result.warnings.length > 0) {
             console.log(pc.yellow("\n⚠️ Warnings:"));
@@ -146,8 +152,8 @@ export const createCommand = new Command("create")
             outputPath = path;
         }
         outputPath = resolve(process.cwd(), outputPath);
-        console.log(pc.cyan("\n⏳ 正在生成 (SFC 模式)..."));
-        const result = generateCrudPage(description);
+        console.log(pc.cyan(`\n⏳ 正在生成 (SFC 模式, target=${cliTarget})...`));
+        const result = generateCrudPage(description, cliTarget);
         const dir = dirname(outputPath);
         if (!existsSync(dir)) {
             mkdirSync(dir, { recursive: true });
@@ -173,16 +179,17 @@ export const createCommand = new Command("create")
             outputDir = path;
         }
         outputDir = resolve(process.cwd(), outputDir);
-        console.log(pc.cyan("\n⏳ 正在生成 (Schema 模式)..."));
-        const result = generateCrudSchema(description);
+        console.log(pc.cyan(`\n⏳ 正在生成 (Schema 模式, target=${cliTarget})...`));
+        const result = generateCrudSchema(description, cliTarget);
         const schemaJson = JSON.stringify(result.schema, null, 2);
         if (!existsSync(outputDir)) {
             mkdirSync(outputDir, { recursive: true });
         }
         const schemaFile = resolve(outputDir, "schema.ts");
         const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
+        const esPlusPkg = cliTarget === 'vue2' ? '@es-plus/vue2' : '@es-plus/vue3';
         const schemaContent = [
-            `import type { CrudPageSchema } from 'es-plus-ui'`,
+            `import type { CrudPageSchema } from '${esPlusPkg}'`,
             ``,
             `export const pageSchema: CrudPageSchema = ${schemaJson}`,
             ``,

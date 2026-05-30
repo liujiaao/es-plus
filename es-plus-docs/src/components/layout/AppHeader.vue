@@ -9,11 +9,11 @@
         <span class="logo-text">Plus</span>
       </router-link>
       <nav class="header-nav">
-        <router-link to="/" class="nav-item">首页</router-link>
-        <router-link to="/guide/getting-started" class="nav-item">指南</router-link>
-        <router-link to="/components/es-form" class="nav-item">组件</router-link>
-        <router-link to="/advanced/use-dialog" class="nav-item">高级</router-link>
-        <router-link to="/playground" class="nav-item">Playground</router-link>
+        <router-link to="/" class="nav-item">{{ t('header.home') }}</router-link>
+        <router-link to="/guide/getting-started" class="nav-item">{{ t('header.guide') }}</router-link>
+        <router-link to="/components/es-form" class="nav-item">{{ t('header.components') }}</router-link>
+        <router-link to="/advanced/use-dialog" class="nav-item">{{ t('header.advanced') }}</router-link>
+        <router-link to="/playground" class="nav-item">{{ t('header.playground') }}</router-link>
       </nav>
     </div>
     <div class="header-right">
@@ -21,6 +21,18 @@
         <el-icon :size="18"><Search /></el-icon>
         <span class="search-shortcut-text">Ctrl K</span>
       </button>
+      <el-dropdown trigger="click" @command="changeLocale">
+        <button class="lang-btn" title="语言 / Language">
+          <el-icon :size="18"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></el-icon>
+          <span class="lang-label">{{ currentLocaleLabel }}</span>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="zh-CN" :class="{ 'is-active': currentLocale === 'zh-CN' }">中文</el-dropdown-item>
+            <el-dropdown-item command="en-US" :class="{ 'is-active': currentLocale === 'en-US' }">English</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <button class="theme-btn" @click="toggleTheme" :title="isDark ? '切换亮色' : '切换暗色'">
         <el-icon :size="18"><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
       </button>
@@ -33,7 +45,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Search, Close, Expand, Sunny, Moon } from '@element-plus/icons-vue'
 import DocSearch from '../doc/DocSearch.vue'
 import { useThemeStore } from '@/stores/theme'
@@ -42,6 +55,14 @@ const themeStore = useThemeStore()
 const isDark = ref(themeStore.isDark)
 const mobileMenuOpen = ref(false)
 const searchVisible = ref(false)
+
+const { t, locale } = useI18n()
+const currentLocale = computed(() => locale.value)
+const currentLocaleLabel = computed(() => (locale.value === 'en-US' ? 'EN' : '中'))
+const changeLocale = (lang) => {
+  locale.value = lang
+  try { localStorage.setItem('language', lang) } catch {}
+}
 
 const emit = defineEmits(['toggle-mobile-menu'])
 
@@ -206,6 +227,31 @@ onUnmounted(() => {
   &:hover {
     background-color: var(--fill-color-light);
     color: var(--primary-color);
+  }
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-color-regular);
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+
+  &:hover {
+    background-color: var(--fill-color-light);
+    color: var(--primary-color);
+  }
+
+  .lang-label {
+    font-size: 12px;
   }
 }
 
