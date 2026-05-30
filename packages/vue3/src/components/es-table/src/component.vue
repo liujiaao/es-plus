@@ -102,6 +102,8 @@
 <script lang="ts">
 import type { TableOptions } from '../../../types'
 
+export default { name: 'EsTable' }
+
 const defaultOptions: TableOptions = {
   multiSelect: false,
   expand: false,

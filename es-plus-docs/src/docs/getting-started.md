@@ -19,6 +19,8 @@ npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 
 ## 注册插件
 
+### 全量引入
+
 在入口文件中注册 ES-Plus，所有组件将全局可用：
 
 ```typescript
@@ -35,6 +37,29 @@ app.use(ElementPlus)
 app.use(ESPlus)
 app.mount('#app')
 ```
+
+### 按需自动导入
+
+如果项目使用 `unplugin-vue-components` 按需导入 Element Plus，需在 `vite.config.ts` 中添加 `EsPlusResolver`：
+
+```typescript
+// vite.config.ts
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    Components({
+      resolvers: [ElementPlusResolver(), EsPlusResolver()]
+    })
+  ]
+})
+```
+
+:::tip
+`EsPlusResolver` 会自动注入 es-plus 内部依赖的 Element Plus 组件样式，无需手动 `import 'element-plus/dist/index.css'`。详见 [安装文档 - 自动导入](/guide/installation)。
+:::
 
 ## 第一个表单
 

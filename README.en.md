@@ -55,7 +55,7 @@ npm install es-plus-ui element-plus @element-plus/icons-vue
 
 Peer dependencies: `vue ^3.2.0`, `element-plus ^2.2.0`, `@element-plus/icons-vue ^2.1.0`
 
-### Register
+### Register (Full Import)
 
 ```typescript
 import { createApp } from 'vue'
@@ -69,6 +69,25 @@ const app = createApp(App)
 app.use(ElementPlus)
 app.use(EsPlus)
 app.mount('#app')
+```
+
+### Auto-Import (Recommended)
+
+When using `unplugin-vue-components`, add `EsPlusResolver` to ensure Element Plus styles used internally by es-plus are injected:
+
+```typescript
+// vite.config.ts
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    Components({
+      resolvers: [ElementPlusResolver(), EsPlusResolver()]
+    })
+  ]
+})
 ```
 
 ### First CRUD Page

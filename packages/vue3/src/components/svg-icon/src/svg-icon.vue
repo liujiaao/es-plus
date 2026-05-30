@@ -5,6 +5,10 @@
   </svg>
 </template>
 
+<script lang="ts">
+export default { name: 'SvgIcon' }
+</script>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 

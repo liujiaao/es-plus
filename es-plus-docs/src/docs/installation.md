@@ -95,6 +95,73 @@ import { EsForm } from '@es-plus/vue3'
 如果使用子路径导入（如 `import EsForm from '@es-plus/vue3/components/es-form'`），需要在 `vite.config.ts` 中配置别名：
 
 ```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import AutoImport from 'unplugin-auto-import/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { EsPlusResolver } from 'es-plus-ui/resolver'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()]
+    }),
+    Components({
+      resolvers: [
+        ElementPlusResolver(),
+        EsPlusResolver()  // 自动注入 es-plus 依赖的 EP 组件样式
+      ]
+    })
+  ]
+})
+```
+
+配置后，模板中使用 `<es-table>`、`<es-form>` 时，构建工具会自动注入：
+- `es-plus-ui/dist/style.css`（es-plus 自身样式）
+- es-plus 内部依赖的所有 Element Plus 组件的按需样式
+
+:::tip 不会重复引入
+如果你同时配了 `ElementPlusResolver()`，相同组件的样式构建工具会自动去重，不会重复打包。
+:::
+
+### EsPlusResolver 选项
+
+```typescript
+EsPlusResolver({
+  // 如果你已经全量引入了 Element Plus 样式，可以关闭 EP 样式注入
+  importElementStyles: false,
+
+  // 使用 SASS 源文件（适合自定义 Element Plus 主题）
+  importStyle: 'sass'  // 默认 'css'
+})
+```
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `importElementStyles` | `boolean` | `true` | 是否注入 es-plus 依赖的 EP 组件样式 |
+| `importStyle` | `'css' \| 'sass'` | `'css'` | CSS 编译后文件 / SASS 源文件 |
+
+### 常见场景对照
+
+| 你的项目配置 | 需要做什么 |
+|---|---|
+| 全量引入 `import 'element-plus/dist/index.css'` | 只需 `import 'es-plus-ui/dist/style.css'`，无需 resolver |
+| `ElementPlusResolver()` 按需导入 | 必须添加 `EsPlusResolver()` |
+| `ElementPlusResolver()` + 自定义主题 | 添加 `EsPlusResolver({ importStyle: 'sass' })` |
+
+:::warning 不配置 EsPlusResolver 的后果
+如果只配了 `ElementPlusResolver()` 而没有 `EsPlusResolver()`：
+- es-plus 组件功能正常（JS 逻辑不受影响）
+- 但内部 Element Plus 组件**无样式**（表格无边框、表单无布局、弹窗无遮罩等）
+:::
+
+## Vite 基础配置
+
+```typescript
+// vite.config.ts
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
