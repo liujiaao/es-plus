@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/vue2",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "es-plus for Vue 2 + Element UI: configuration-driven enterprise components, sharing the same JSON config schema as @es-plus/vue3 (Vue 3 + Element Plus)",
   "main": "./dist/es-plus-vue2.umd.cjs",
   "module": "./dist/es-plus-vue2.js",
@@ -24,6 +24,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "build": "vite build",
     "prepublishOnly": "npm run typecheck && npm run build",
+    "pretest": "vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
