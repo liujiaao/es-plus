@@ -100,6 +100,13 @@ export interface FlowResult {
   /** Set only on AI path success — passed back next turn as `currentConfig` */
   structuredConfig?: StructuredCrudConfig
   traceIds: string[]
+  /**
+   * Human-readable notes about features the prompt asked for but the preview
+   * can't fully render (multi-tab dialog, multi-step form, etc.). UI shows
+   * these above the preview as an info alert so users don't think the
+   * generator silently dropped the feature.
+   */
+  featureHints: string[]
 }
 
 // ─── internals ────────────────────────────────────────────────────────────
@@ -259,21 +266,85 @@ export function diffConfigs(
 
 // ─── shape adapters ───────────────────────────────────────────────────────
 
+/**
+ * Default placeholder per formtype — mirrors the offline engine. Without this
+ * the AI path's preview renders empty input boxes (Element Plus's el-input
+ * has no built-in placeholder, only el-select / el-date-picker do), which
+ * looks broken next to the documented offline-path behavior.
+ */
+function defaultPlaceholder(label: string, formtype: string): string {
+  switch (formtype) {
+    case 'Select':
+    case 'Cascader':
+    case 'Radio':
+    case 'Checkbox':
+    case 'Transfer':
+    case 'datePicker':
+    case 'timePicker':
+      return `请选择${label}`
+    case 'Upload':
+      return `请上传${label}`
+    case 'Switch':
+    case 'Rate':
+    case 'Slider':
+    case 'ColorPicker':
+      return label
+    default:
+      return `请输入${label}`
+  }
+}
+
+/**
+ * Pick spans so every row totals exactly 24. Keeps the form grid aligned
+ * regardless of how the AI mixed datePicker (typically 8) with Input (6).
+ */
+function pickSpans(formItems: any[]): void {
+  if (formItems.length === 0) return
+  const wantsWide = formItems.some(
+    (f) => f.formtype === 'datePicker' || f.formtype === 'timePicker' || f.formtype === 'Cascader',
+  )
+  const baseSpan = wantsWide ? 8 : 6
+  const perRow = 24 / baseSpan
+  formItems.forEach((f, i) => {
+    const positionInRow = i % perRow
+    const isLastInRow = positionInRow === perRow - 1
+    const isLastOverall = i === formItems.length - 1
+    if (isLastOverall && !isLastInRow) {
+      f.span = 24 - positionInRow * baseSpan
+    } else {
+      f.span = baseSpan
+    }
+  })
+}
+
+function withPreviewPolish(items: any[]): any[] {
+  const out = items.map((it) => ({
+    ...it,
+    attrs: {
+      clearable: it.formtype !== 'Switch' && it.formtype !== 'Rate' && it.formtype !== 'Slider',
+      placeholder: it.attrs?.placeholder || defaultPlaceholder(it.label || it.prop, it.formtype),
+      ...(it.attrs ?? {}),
+    },
+  }))
+  pickSpans(out)
+  return out
+}
+
 function structuredToPreview(config: StructuredCrudConfig): {
   formItems: unknown[]
   columns: unknown[]
   toolbarBtns: unknown[]
 } {
-  const formItems = config.fields
+  const rawFormItems = config.fields
     .filter((f) => f.inQuery !== false)
     .map((f) => ({
       prop: f.prop,
       label: f.label,
       formtype: f.formtype,
-      span: f.querySpan ?? 6,
       attrs: f.attrs,
       dataOptions: f.dataOptions,
     }))
+  const formItems = withPreviewPolish(rawFormItems)
   const columns = config.fields
     .filter((f) => f.inTable !== false)
     .map((f) => ({
@@ -297,8 +368,11 @@ function generatedToPreview(config: GeneratedConfig): {
   columns: unknown[]
   toolbarBtns: unknown[]
 } {
+  // Offline engine already applies placeholder + spans, but we re-run polish
+  // to keep both paths producing identical preview shape (defense in depth —
+  // if engine output ever loses the polish, preview stays correct).
   return {
-    formItems: config.formItems ?? [],
+    formItems: withPreviewPolish(config.formItems ?? []),
     columns: config.columns ?? [],
     toolbarBtns: config.queryBtns ?? [],
   }
@@ -485,6 +559,10 @@ export async function mcpFlow(
       jsonView: validatedConfig,
       structuredConfig: validatedConfig,
       traceIds,
+      // AI path doesn't currently surface feature hints (the LLM is expected
+      // to handle nuance directly in the config); keep empty so UI just hides
+      // the alert.
+      featureHints: [],
     }
   }
 
@@ -559,5 +637,6 @@ export async function mcpFlow(
     jsonView: legacyConfig,
     structuredConfig: undefined, // offline path doesn't produce a StructuredCrudConfig
     traceIds,
+    featureHints: legacyConfig.featureHints ?? [],
   }
 }

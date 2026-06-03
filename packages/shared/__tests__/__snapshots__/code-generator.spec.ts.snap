@@ -31,7 +31,8 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入姓名"
     }
   },
   {
@@ -40,16 +41,18 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入部门"
     }
   },
   {
     "prop": "position",
     "label": "职位",
     "formtype": "Input",
-    "span": 6,
+    "span": 12,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入职位"
     }
   }
 ]
@@ -103,12 +106,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function openForm(title, row = {}) {
@@ -128,7 +132,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入姓名"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -146,7 +151,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入部门"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -164,7 +170,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入职位"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -182,7 +189,8 @@ function openForm(title, row = {}) {
                 "formtype": "Radio",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择性别"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -210,7 +218,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入年龄"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -228,7 +237,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入手机号"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -246,7 +256,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -323,7 +334,8 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入商品名称"
     }
   },
   {
@@ -332,7 +344,8 @@ const formItems = [
     "formtype": "Select",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择分类"
     },
     "dataOptions": [
       {
@@ -353,9 +366,10 @@ const formItems = [
     "prop": "status",
     "label": "状态",
     "formtype": "Select",
-    "span": 6,
+    "span": 12,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择状态"
     },
     "dataOptions": [
       {
@@ -378,10 +392,6 @@ const queryBtns = [
 
 const columns = [
   {
-    "prop": "productName",
-    "label": "商品名称"
-  },
-  {
     "prop": "category",
     "label": "分类"
   },
@@ -396,7 +406,8 @@ const columns = [
   },
   {
     "prop": "price",
-    "label": "价格"
+    "label": "价格",
+    "align": "right"
   },
   {
     "prop": "stock",
@@ -418,12 +429,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -454,7 +466,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入商品名称"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -472,7 +485,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择分类"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -504,7 +518,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -532,7 +547,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入名称"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -550,7 +566,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入价格"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -568,7 +585,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入库存"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -635,7 +653,8 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入标题"
     }
   },
   {
@@ -644,7 +663,8 @@ const formItems = [
     "formtype": "Select",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择分类"
     },
     "dataOptions": [
       {
@@ -665,9 +685,10 @@ const formItems = [
     "prop": "status",
     "label": "状态",
     "formtype": "Select",
-    "span": 6,
+    "span": 12,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择状态"
     },
     "dataOptions": [
       {
@@ -708,7 +729,8 @@ const columns = [
   },
   {
     "prop": "createTime",
-    "label": "创建时间"
+    "label": "创建时间",
+    "width": 180
   },
   {
     "prop": "operate",
@@ -726,12 +748,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -762,7 +785,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入标题"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -780,7 +804,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择分类"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -812,7 +837,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -840,7 +866,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入创建人"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -859,6 +886,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择创建时间",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },
@@ -924,18 +952,20 @@ const formItems = [
     "prop": "field_2",
     "label": "查询关键词",
     "formtype": "Input",
-    "span": 6,
+    "span": 8,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入查询关键词"
     }
   },
   {
     "prop": "level",
     "label": "级别",
     "formtype": "Select",
-    "span": 6,
+    "span": 8,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择级别"
     },
     "dataOptions": [
       {
@@ -959,6 +989,7 @@ const formItems = [
     "span": 8,
     "attrs": {
       "clearable": true,
+      "placeholder": "请选择日期范围",
       "type": "daterange",
       "valueFormat": "YYYY-MM-DD"
     }
@@ -972,16 +1003,8 @@ const queryBtns = [
 
 const columns = [
   {
-    "prop": "field_2",
-    "label": "查询关键词"
-  },
-  {
     "prop": "level",
     "label": "级别"
-  },
-  {
-    "prop": "field_3",
-    "label": "日期范围"
   },
   {
     "prop": "time",
@@ -1000,12 +1023,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function openForm(title, row = {}) {
@@ -1025,7 +1049,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入查询关键词"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1043,7 +1068,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择级别"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1076,6 +1102,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择日期范围",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },
@@ -1096,6 +1123,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择时间",
                         "type": "timerange"
                 },
                 "formItemOptions": {
@@ -1161,7 +1189,8 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入姓名"
     }
   },
   {
@@ -1170,16 +1199,18 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入手机号"
     }
   },
   {
     "prop": "status",
     "label": "状态",
     "formtype": "Select",
-    "span": 6,
+    "span": 12,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择状态"
     },
     "dataOptions": [
       {
@@ -1220,7 +1251,8 @@ const columns = [
   },
   {
     "prop": "createTime",
-    "label": "创建时间"
+    "label": "创建时间",
+    "width": 180
   },
   {
     "prop": "operate",
@@ -1238,12 +1270,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -1274,7 +1307,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入姓名"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1292,7 +1326,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入手机号"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1310,7 +1345,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1338,7 +1374,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入邮箱"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1357,6 +1394,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择创建时间",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },
@@ -1425,16 +1463,18 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入名称"
     }
   },
   {
     "prop": "type",
     "label": "类型",
     "formtype": "Select",
-    "span": 6,
+    "span": 18,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择类型"
     },
     "dataOptions": [
       {
@@ -1498,12 +1538,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -1534,7 +1575,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入名称"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1552,7 +1594,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择类型"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1584,7 +1627,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入编号"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1603,6 +1647,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请输入描述",
                         "type": "textarea",
                         "rows": 3
                 },
@@ -1622,7 +1667,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1699,16 +1745,18 @@ const formItems = [
     "formtype": "Input",
     "span": 6,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入角色名称"
     }
   },
   {
     "prop": "status",
     "label": "状态",
     "formtype": "Select",
-    "span": 6,
+    "span": 18,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择状态"
     },
     "dataOptions": [
       {
@@ -1745,7 +1793,8 @@ const columns = [
   },
   {
     "prop": "createTime",
-    "label": "创建时间"
+    "label": "创建时间",
+    "width": 180
   },
   {
     "prop": "operate",
@@ -1763,12 +1812,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -1799,7 +1849,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入角色名称"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1817,7 +1868,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -1846,6 +1898,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请输入描述",
                         "type": "textarea",
                         "rows": 3
                 },
@@ -1866,6 +1919,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择创建时间",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },
@@ -1932,18 +1986,20 @@ const formItems = [
     "prop": "orderNo",
     "label": "订单号",
     "formtype": "Input",
-    "span": 6,
+    "span": 8,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入订单号"
     }
   },
   {
     "prop": "customerName",
     "label": "客户名称",
     "formtype": "Input",
-    "span": 6,
+    "span": 8,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请输入客户名称"
     }
   },
   {
@@ -1953,6 +2009,7 @@ const formItems = [
     "span": 8,
     "attrs": {
       "clearable": true,
+      "placeholder": "请选择日期范围",
       "type": "daterange",
       "valueFormat": "YYYY-MM-DD"
     }
@@ -1961,9 +2018,10 @@ const formItems = [
     "prop": "status",
     "label": "状态",
     "formtype": "Select",
-    "span": 6,
+    "span": 24,
     "attrs": {
-      "clearable": true
+      "clearable": true,
+      "placeholder": "请选择状态"
     },
     "dataOptions": [
       {
@@ -1989,14 +2047,6 @@ const columns = [
     "label": "订单号"
   },
   {
-    "prop": "customerName",
-    "label": "客户名称"
-  },
-  {
-    "prop": "field_1",
-    "label": "日期范围"
-  },
-  {
     "prop": "status",
     "label": "状态",
     render: (_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')
@@ -2007,11 +2057,13 @@ const columns = [
   },
   {
     "prop": "amount",
-    "label": "金额"
+    "label": "金额",
+    "align": "right"
   },
   {
     "prop": "createTime",
-    "label": "创建时间"
+    "label": "创建时间",
+    "width": 180
   },
   {
     "prop": "operate",
@@ -2029,12 +2081,13 @@ const columns = [
 ]
 
 const options = {
-  border: true,
-  stripe: true,
-  highlightCurrentRow: true,
-  headerCellStyle: { background: '#f5f7fa' },
-  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址
-  rowkey: 'id'
+  "border": true,
+  "stripe": true,
+  "highlightCurrentRow": true,
+  "headerCellStyle": {
+    "background": "#f5f7fa"
+  },
+  "rowkey": "id"
 }
 
 function handleDelete(row) {
@@ -2065,7 +2118,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入订单号"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -2083,7 +2137,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入客户名称"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -2102,6 +2157,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择日期范围",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },
@@ -2121,7 +2177,8 @@ function openForm(title, row = {}) {
                 "formtype": "Select",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请选择状态"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -2149,7 +2206,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入客户"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -2167,7 +2225,8 @@ function openForm(title, row = {}) {
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
-                        "clearable": true
+                        "clearable": true,
+                        "placeholder": "请输入金额"
                 },
                 "formItemOptions": {
                         "rules": [
@@ -2186,6 +2245,7 @@ function openForm(title, row = {}) {
                 "span": 24,
                 "attrs": {
                         "clearable": true,
+                        "placeholder": "请选择创建时间",
                         "type": "daterange",
                         "valueFormat": "YYYY-MM-DD"
                 },

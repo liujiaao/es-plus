@@ -35,6 +35,24 @@
 
           <el-tab-pane :label="t('aiCrud.tabPreview')" name="preview">
             <div class="preview-area" v-if="formItems.length > 0">
+              <!-- Surface features the prompt asked for that preview can't render
+                   (multi-tab dialog, multi-step form, etc.). Without this the
+                   user sees a plain table and thinks the generator dropped
+                   the feature on the floor. -->
+              <el-alert
+                v-if="featureHints.length > 0"
+                type="warning"
+                :closable="false"
+                show-icon
+                class="feature-hints"
+              >
+                <template #title>
+                  <strong>已识别的高级特性（preview 仅渲染基础表单/表格部分，完整代码在「生成代码」tab）</strong>
+                </template>
+                <ul class="feature-hints-list">
+                  <li v-for="(h, idx) in featureHints" :key="idx">{{ h }}</li>
+                </ul>
+              </el-alert>
               <es-table
                 :columns="previewColumns"
                 :options="previewOptions"
@@ -138,6 +156,9 @@ const generatedCode = ref('')
 const generatedConfig = ref<unknown>(null)
 const previewModel = reactive<Record<string, any>>({})
 const mockData = ref<any[]>([])
+// Features the prompt requested but preview can't fully render — shown as
+// an inline alert above the table so users know they exist.
+const featureHints = ref<string[]>([])
 
 const previewOptions = computed(() => ({
   border: true,
@@ -186,6 +207,7 @@ const handleSend = async (text: string) => {
     formItems.value = result.formItems as any[]
     previewColumns.value = result.columns as any[]
     previewBtns.value = (result.toolbarBtns as any[]).map((b) => ({ ...b, triggerEvent: false }))
+    featureHints.value = result.featureHints ?? []
     // Reset preview model + regenerate mock data on every turn.
     for (const k of Object.keys(previewModel)) delete previewModel[k]
     formItems.value.forEach((it: any) => {
@@ -219,6 +241,7 @@ const handleReset = () => {
   previewColumns.value = []
   previewBtns.value = []
   mockData.value = []
+  featureHints.value = []
   for (const k of Object.keys(previewModel)) delete previewModel[k]
 }
 
@@ -383,6 +406,21 @@ watch(
 
 .preview-area {
   padding: 8px;
+}
+
+.feature-hints {
+  margin-bottom: 12px;
+}
+
+.feature-hints-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+
+  li {
+    margin: 2px 0;
+  }
 }
 
 .empty-state {

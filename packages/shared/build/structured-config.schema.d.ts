@@ -61,9 +61,9 @@ declare const FieldConfigSchema: z.ZodObject<{
     width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
     minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
     align: z.ZodOptional<z.ZodEnum<{
+        right: "right";
         left: "left";
         center: "center";
-        right: "right";
     }>>;
     fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
     ellipsis: z.ZodOptional<z.ZodBoolean>;
@@ -118,9 +118,9 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
         width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         align: z.ZodOptional<z.ZodEnum<{
+            right: "right";
             left: "left";
             center: "center";
-            right: "right";
         }>>;
         fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
         ellipsis: z.ZodOptional<z.ZodBoolean>;
@@ -252,9 +252,9 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
             width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
             minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
             align: z.ZodOptional<z.ZodEnum<{
+                right: "right";
                 left: "left";
                 center: "center";
-                right: "right";
             }>>;
             fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
             ellipsis: z.ZodOptional<z.ZodBoolean>;

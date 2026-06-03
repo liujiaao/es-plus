@@ -40,6 +40,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入姓名",
       },
       "formItemOptions": {
         "rules": [
@@ -58,6 +59,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入部门",
       },
       "formItemOptions": {
         "rules": [
@@ -76,6 +78,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入职位",
       },
       "formItemOptions": {
         "rules": [
@@ -94,6 +97,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择性别",
       },
       "dataOptions": [
         {
@@ -122,6 +126,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入年龄",
       },
       "formItemOptions": {
         "rules": [
@@ -140,6 +145,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入手机号",
       },
       "formItemOptions": {
         "rules": [
@@ -158,6 +164,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -188,6 +195,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入姓名",
       },
       "formtype": "Input",
       "label": "姓名",
@@ -197,6 +205,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入部门",
       },
       "formtype": "Input",
       "label": "部门",
@@ -206,11 +215,12 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入职位",
       },
       "formtype": "Input",
       "label": "职位",
       "prop": "position",
-      "span": 6,
+      "span": 12,
     },
   ],
   "pagination": {
@@ -240,10 +250,6 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
   ],
   "columns": [
     {
-      "label": "商品名称",
-      "prop": "productName",
-    },
-    {
       "label": "分类",
       "prop": "category",
     },
@@ -256,6 +262,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "prop": "name",
     },
     {
+      "align": "right",
       "label": "价格",
       "prop": "price",
     },
@@ -268,6 +275,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入商品名称",
       },
       "formItemOptions": {
         "rules": [
@@ -286,6 +294,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择分类",
       },
       "dataOptions": [
         {
@@ -318,6 +327,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -346,6 +356,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入名称",
       },
       "formItemOptions": {
         "rules": [
@@ -364,6 +375,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入价格",
       },
       "formItemOptions": {
         "rules": [
@@ -382,6 +394,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入库存",
       },
       "formItemOptions": {
         "rules": [
@@ -402,6 +415,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入商品名称",
       },
       "formtype": "Input",
       "label": "商品名称",
@@ -411,6 +425,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择分类",
       },
       "dataOptions": [
         {
@@ -434,6 +449,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -448,7 +464,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "状态",
       "prop": "status",
-      "span": 6,
+      "span": 12,
     },
   ],
   "pagination": {
@@ -496,12 +512,14 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "label": "创建时间",
       "prop": "createTime",
+      "width": 180,
     },
   ],
   "dialogFormItems": [
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入标题",
       },
       "formItemOptions": {
         "rules": [
@@ -520,6 +538,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择分类",
       },
       "dataOptions": [
         {
@@ -552,6 +571,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -580,6 +600,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入创建人",
       },
       "formItemOptions": {
         "rules": [
@@ -598,6 +619,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择创建时间",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -620,6 +642,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入标题",
       },
       "formtype": "Input",
       "label": "标题",
@@ -629,6 +652,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择分类",
       },
       "dataOptions": [
         {
@@ -652,6 +676,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -666,7 +691,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "状态",
       "prop": "status",
-      "span": 6,
+      "span": 12,
     },
   ],
   "pagination": {
@@ -694,16 +719,8 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
   ],
   "columns": [
     {
-      "label": "查询关键词",
-      "prop": "field_3",
-    },
-    {
       "label": "级别",
       "prop": "level",
-    },
-    {
-      "label": "日期范围",
-      "prop": "field_4",
     },
     {
       "label": "时间",
@@ -714,6 +731,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入查询关键词",
       },
       "formItemOptions": {
         "rules": [
@@ -732,6 +750,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择级别",
       },
       "dataOptions": [
         {
@@ -764,6 +783,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择日期范围",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -784,6 +804,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择时间",
         "type": "timerange",
       },
       "formItemOptions": {
@@ -805,15 +826,17 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入查询关键词",
       },
       "formtype": "Input",
       "label": "查询关键词",
       "prop": "field_3",
-      "span": 6,
+      "span": 8,
     },
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择级别",
       },
       "dataOptions": [
         {
@@ -832,11 +855,12 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "级别",
       "prop": "level",
-      "span": 6,
+      "span": 8,
     },
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择日期范围",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -891,12 +915,14 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "label": "创建时间",
       "prop": "createTime",
+      "width": 180,
     },
   ],
   "dialogFormItems": [
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入姓名",
       },
       "formItemOptions": {
         "rules": [
@@ -915,6 +941,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入手机号",
       },
       "formItemOptions": {
         "rules": [
@@ -933,6 +960,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -961,6 +989,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入邮箱",
       },
       "formItemOptions": {
         "rules": [
@@ -979,6 +1008,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择创建时间",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -1001,6 +1031,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入姓名",
       },
       "formtype": "Input",
       "label": "姓名",
@@ -1010,6 +1041,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入手机号",
       },
       "formtype": "Input",
       "label": "手机号",
@@ -1019,6 +1051,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1033,7 +1066,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "状态",
       "prop": "status",
-      "span": 6,
+      "span": 12,
     },
   ],
   "pagination": {
@@ -1088,6 +1121,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入名称",
       },
       "formItemOptions": {
         "rules": [
@@ -1106,6 +1140,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择类型",
       },
       "dataOptions": [
         {
@@ -1138,6 +1173,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入编号",
       },
       "formItemOptions": {
         "rules": [
@@ -1156,6 +1192,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入描述",
         "rows": 3,
         "type": "textarea",
       },
@@ -1176,6 +1213,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1206,6 +1244,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入名称",
       },
       "formtype": "Input",
       "label": "名称",
@@ -1215,6 +1254,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择类型",
       },
       "dataOptions": [
         {
@@ -1233,7 +1273,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "类型",
       "prop": "type",
-      "span": 6,
+      "span": 18,
     },
   ],
   "pagination": {
@@ -1277,12 +1317,14 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "label": "创建时间",
       "prop": "createTime",
+      "width": 180,
     },
   ],
   "dialogFormItems": [
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入角色名称",
       },
       "formItemOptions": {
         "rules": [
@@ -1301,6 +1343,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1329,6 +1372,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入描述",
         "rows": 3,
         "type": "textarea",
       },
@@ -1349,6 +1393,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择创建时间",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -1371,6 +1416,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入角色名称",
       },
       "formtype": "Input",
       "label": "角色名称",
@@ -1380,6 +1426,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1394,7 +1441,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "状态",
       "prop": "status",
-      "span": 6,
+      "span": 18,
     },
   ],
   "pagination": {
@@ -1427,14 +1474,6 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "prop": "orderNo",
     },
     {
-      "label": "客户名称",
-      "prop": "customerName",
-    },
-    {
-      "label": "日期范围",
-      "prop": "field_1",
-    },
-    {
       "label": "状态",
       "prop": "status",
     },
@@ -1443,18 +1482,21 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "prop": "customer",
     },
     {
+      "align": "right",
       "label": "金额",
       "prop": "amount",
     },
     {
       "label": "创建时间",
       "prop": "createTime",
+      "width": 180,
     },
   ],
   "dialogFormItems": [
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入订单号",
       },
       "formItemOptions": {
         "rules": [
@@ -1473,6 +1515,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入客户名称",
       },
       "formItemOptions": {
         "rules": [
@@ -1491,6 +1534,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择日期范围",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -1511,6 +1555,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1539,6 +1584,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入客户",
       },
       "formItemOptions": {
         "rules": [
@@ -1557,6 +1603,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入金额",
       },
       "formItemOptions": {
         "rules": [
@@ -1575,6 +1622,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择创建时间",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -1597,24 +1645,27 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入订单号",
       },
       "formtype": "Input",
       "label": "订单号",
       "prop": "orderNo",
-      "span": 6,
+      "span": 8,
     },
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请输入客户名称",
       },
       "formtype": "Input",
       "label": "客户名称",
       "prop": "customerName",
-      "span": 6,
+      "span": 8,
     },
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择日期范围",
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
@@ -1626,6 +1677,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     {
       "attrs": {
         "clearable": true,
+        "placeholder": "请选择状态",
       },
       "dataOptions": [
         {
@@ -1640,7 +1692,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "formtype": "Select",
       "label": "状态",
       "prop": "status",
-      "span": 6,
+      "span": 24,
     },
   ],
   "pagination": {
