@@ -27,8 +27,8 @@ interface ParsedField {
 }
 
 const TYPE_RULES: Array<{ keywords: string[]; type: string; attrs?: Record<string, any> }> = [
-  { keywords: ['日期', 'date', '创建时间', 'createTime', '更新时间', 'updateTime', '开始日期', '结束日期', '下单日期', '下单时间'], type: 'datePicker', attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } },
-  { keywords: ['时间', 'time', '时刻', 'timerange', 'timepicker'], type: 'timePicker', attrs: { type: 'timerange' } },
+  { keywords: ['日期', 'date', '创建时间', 'createTime', '更新时间', 'updateTime', '开始日期', '结束日期', '下单日期', '下单时间'], type: 'DatePicker', attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } },
+  { keywords: ['时间', 'time', '时刻', 'timerange', 'timepicker'], type: 'TimePicker', attrs: { type: 'timerange' } },
   { keywords: ['省', '市', '区', '省市', '城市', '地区', 'cascader', '层级', '区域', '级联'], type: 'Cascader' },
   // status BEFORE plain 状态/type/分类 so 'status' wins over generic 'Select'
   { keywords: ['状态', 'status', '类型', 'type', '分类', 'category', '级别', 'level', '来源', 'source', '可见范围', '上架状态'], type: 'Select' },
@@ -139,8 +139,8 @@ function defaultPlaceholder(label: string, formtype: string): string {
     case 'Checkbox':
     case 'Transfer':
       return `请选择${label}`
-    case 'datePicker':
-    case 'timePicker':
+    case 'DatePicker':
+    case 'TimePicker':
       return `请选择${label}`
     case 'Upload':
       return `请上传${label}`
@@ -445,7 +445,7 @@ function detectFeatures(input: string): {
  */
 function normalizeSpans(formItems: any[]): void {
   if (formItems.length === 0) return
-  const wantsWide = formItems.some((f) => f.formtype === 'datePicker' || f.formtype === 'timePicker' || f.formtype === 'Cascader')
+  const wantsWide = formItems.some((f) => f.formtype === 'DatePicker' || f.formtype === 'TimePicker' || f.formtype === 'Cascader')
   const baseSpan = wantsWide ? 8 : 6
   const perRow = 24 / baseSpan  // 3 or 4
 
@@ -526,7 +526,7 @@ export function generateCrudConfig(input: string): GeneratedConfig {
         col.render = `(_, { row }) => h(ElTag, { type: row.${f.prop} === 1 ? 'success' : 'danger' }, () => row.${f.prop} === 1 ? '启用' : '禁用')`
       }
       // datePicker → table column should be wider so the date isn't cropped
-      if (f.type === 'datePicker') col.width = 180
+      if (f.type === 'DatePicker') col.width = 180
       // Amount/price → right align for readability
       if (/金额|价格|amount|price/i.test(f.name)) col.align = 'right'
       return col

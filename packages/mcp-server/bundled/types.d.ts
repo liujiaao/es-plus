@@ -3,26 +3,38 @@
 
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
+import type { ListenToCallBack as CoreListenToCallBack } from '@es-plus/core'
 
 export interface FormItemOption {
   prop: string
   label: string
   labelKey?: string
-  formtype?: 'Input' | 'Select' | 'datePicker' | 'timePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+  formtype?: 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
+  /** Shortcut: auto-injected into attrs.placeholder */
+  placeholder?: string
+  /** Shortcut: auto-injected into attrs.clearable */
+  clearable?: boolean
+  /** Shortcut: auto-injected into attrs.disabled */
+  disabled?: boolean
   attrs?: Record<string, unknown>
   on?: Record<string, unknown>
   dataOptions?: Array<{ label: string; value: unknown }>
   isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
-  /** 是否在组件初始化时自动加载接口数据，默认 true；设为 false 时需手动调用 formItmeRequestInstance 加载 */
+  /** Whether to auto-load API data on init, default true; set false to load manually via formItmeRequestInstance */
   isInitRun?: boolean
   callOptionListFormat?: (data: unknown[]) => unknown[]
-  /** 自定义 HTTP 请求方法，用于覆盖全局请求配置 */
+  /** Custom HTTP request method override */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  /** 响应数据回调映射，crtn 用于将 API 响应转换为 dataOptions 格式 */
-  listenToCallBack?: Record<string, (params: unknown) => unknown>
+  /**
+   * Callback mapping. Supports readable names (recommended) and legacy abbreviations:
+   * - responseTransform (recommended) / crtn (deprecated)
+   * - beforeRequest (recommended) / brcb (deprecated)
+   * - afterResponse (recommended) / qrcb (deprecated)
+   */
+  listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   components?: Record<string, unknown>
   width?: number | string
   [key: string]: unknown
@@ -42,6 +54,10 @@ export interface BtnConfig {
   type?: ButtonProps['type']
   size?: ButtonProps['size']
   icon?: string
+  /** Button position (recommended, self-documenting): 'left' | 'right' */
+  position?: 'left' | 'right'
+  /** @deprecated Use position instead. 1=left, 2=right */
+  code?: 1 | 2
   direction?: 'left' | 'right'
   loading?: boolean
   disabled?: boolean | (() => boolean)
@@ -52,11 +68,23 @@ export interface BtnConfig {
 
 export interface LayoutFormProps {
   rowLayProps?: Record<string, unknown>
+  /** Form layout config (recommended, correct spelling) */
+  formLayProps?: {
+    isBtnHidden?: boolean
+    minFoldRows?: number
+    btnColSpan?: number
+    labelBtnWidth?: string | number
+    labelWidth?: string | number
+    size?: 'large' | 'default' | 'small' | 'medium' | 'mini'
+  }
+  /** @deprecated Use formLayProps instead (spelling correction) */
   fromLayProps?: {
     isBtnHidden?: boolean
     minFoldRows?: number
     btnColSpan?: number
     labelBtnWidth?: string | number
+    labelWidth?: string | number
+    size?: 'large' | 'default' | 'small' | 'medium' | 'mini'
   }
   setOptions?: boolean
 }
@@ -90,6 +118,10 @@ export interface TableOptions {
   size?: 'large' | 'default' | 'small'
   headerCellStyle?: Record<string, unknown>
   highlightCurrentRow?: boolean
+  /** Whether to show table header, default true */
+  showHeader?: boolean
+  /** Empty text when no data */
+  emptyText?: string
   cachePageSelection?: boolean
   heightType?: 'auto' | 'height' | 'maxHeight'
   tabHeight?: number | string
@@ -97,25 +129,42 @@ export interface TableOptions {
   actionUrl?: string
   apiParams?: ApiParams
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  listenToCallBack?: Record<string, (params: unknown) => unknown>
+  /**
+   * Callback mapping. Supports readable names and legacy abbreviations:
+   * - beforeRequest (recommended) / brcb (deprecated)
+   * - afterResponse (recommended) / qrcb (deprecated)
+   */
+  listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   configTableOut?: Record<string, string>
   entryQuery?: Record<string, unknown>
   configBtn?: BtnConfig[]
   leftText?: string
   rowkey?: string
   height?: number | string
-  /** 启用虚拟滚动（等同 engine: 'virtual'） */
+  /** Enable virtual scrolling (same as engine: 'virtual') */
   virtual?: boolean
-  /** 表格渲染引擎：default=el-table, virtual=el-table-v2 */
+  /** Table engine: default=el-table, virtual=el-table-v2 */
   engine?: 'default' | 'virtual'
-  /** 虚拟滚动行高（默认 50） */
+  /** Virtual scroll row height (default 50) */
   rowHeight?: number
-  /** 动态行高预估值 */
+  /** Dynamic row height estimate */
   estimatedRowHeight?: number
-  /** 可视区域外预渲染行数（默认 2） */
+  /** Overscan count for virtual scroll (default 2) */
   overscanCount?: number
-  /** 行类名（虚拟模式支持函数） */
+  /** Row class name (supports function in virtual mode) */
   rowClassName?: string | ((params: { row: Record<string, unknown>; rowIndex: number }) => string)
+  /** Row style (object or function) */
+  rowStyle?: Record<string, unknown> | ((params: { row: Record<string, unknown>; rowIndex: number }) => Record<string, unknown>)
+  /** Default sort { prop, order } */
+  defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  /** Span method for merging cells */
+  spanMethod?: (data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
+  /** Cell class name */
+  cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
+  /** Cell style */
+  cellStyle?: Record<string, unknown> | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => Record<string, unknown>)
+  /** Header cell class name */
+  headerCellClassName?: string | ((data: { column: unknown; rowIndex: number }) => string)
   [key: string]: unknown
 }
 
@@ -143,6 +192,22 @@ export interface DialogOptions {
   maxHeight?: string | number
   appendTo?: string | HTMLElement
   fullscreen?: boolean
+  showClose?: boolean
+  destroyOnClose?: boolean
+  /** Whether a mask layer is shown, default true */
+  modal?: boolean
+  /** Whether clicking the mask closes the dialog, default true */
+  closeOnClickModal?: boolean
+  /** Whether pressing ESC closes the dialog, default true */
+  closeOnPressEscape?: boolean
+  /** Callback before dialog closes, call done() to close */
+  beforeClose?: (done: () => void) => void
+  /** Whether to vertically center the dialog */
+  alignCenter?: boolean
+  /** Dialog CSS margin-top, default '15vh' */
+  top?: string
+  /** Custom class for the mask layer */
+  modalClass?: string
   [key: string]: unknown
 }
 
@@ -166,3 +231,6 @@ export interface EsPlusOptions {
   globalProperties?: boolean
   [key: string]: unknown
 }
+
+// Re-export core ListenToCallBack for convenience
+export type { ListenToCallBack } from '@es-plus/core'

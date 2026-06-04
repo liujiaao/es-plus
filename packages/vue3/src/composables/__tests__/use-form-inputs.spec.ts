@@ -217,9 +217,19 @@ describe('useFormInputs', () => {
     })
   })
 
-  describe('datePicker', () => {
-    it('should render ElDatePicker', () => {
-      const item: FormItemOption = { prop: 'date', label: 'Date', formtype: 'datePicker' }
+  describe('DatePicker', () => {
+    it('should render ElDatePicker with PascalCase', () => {
+      const item: FormItemOption = { prop: 'date', label: 'Date', formtype: 'DatePicker' }
+      const model = { date: '2024-01-01' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElDatePicker)
+      expect(vnode.props?.modelValue).toBe('2024-01-01')
+    })
+
+    it('should render ElDatePicker with legacy camelCase (datePicker)', () => {
+      // Backward compatibility: 'datePicker' should still work via normalizeFormType
+      const item = { prop: 'date', label: 'Date', formtype: 'datePicker' } as unknown as FormItemOption
       const model = { date: '2024-01-01' }
       const renderFn = formInputComponents(item)
       const vnode = renderFn(h, model, { row: item, index: 0 })
@@ -228,9 +238,19 @@ describe('useFormInputs', () => {
     })
   })
 
-  describe('timePicker', () => {
-    it('should render ElTimePicker', () => {
-      const item: FormItemOption = { prop: 'time', label: 'Time', formtype: 'timePicker' }
+  describe('TimePicker', () => {
+    it('should render ElTimePicker with PascalCase', () => {
+      const item: FormItemOption = { prop: 'time', label: 'Time', formtype: 'TimePicker' }
+      const model = { time: '12:00:00' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElTimePicker)
+      expect(vnode.props?.modelValue).toBe('12:00:00')
+    })
+
+    it('should render ElTimePicker with legacy camelCase (timePicker)', () => {
+      // Backward compatibility: 'timePicker' should still work via normalizeFormType
+      const item = { prop: 'time', label: 'Time', formtype: 'timePicker' } as unknown as FormItemOption
       const model = { time: '12:00:00' }
       const renderFn = formInputComponents(item)
       const vnode = renderFn(h, model, { row: item, index: 0 })

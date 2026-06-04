@@ -19,7 +19,7 @@
                   :row="item"
                   :render="formInputComponents(item)"
                   :index="index"
-                  :model="model"
+                  :model="resolvedModel"
                 />
               </template>
               <template v-else-if="item.render">
@@ -27,7 +27,7 @@
                   :row="item"
                   :render="item.render"
                   :index="index"
-                  :model="model"
+                  :model="resolvedModel"
                 />
               </template>
             </el-form-item>
@@ -38,7 +38,7 @@
           <render-btn
             v-if="isRenderBtn"
             :row="{ isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
-            :form-model="model"
+            :form-model="resolvedModel"
             :form-item-list="formItem"
             :render="renderBtn"
           />
@@ -333,12 +333,14 @@ export default defineComponent({
     const { formInputComponents } = useFormInputs()
     const httpRequestGlobal = ($esPlusForm?.$httpRequest as ((p: Record<string, unknown>) => Promise<unknown>) | undefined) || undefined
     const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as
-      | ((defaults: Record<string, string>) => Record<string, string>)
+      | ((defaults: any) => any)
       | undefined
     const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
     // ─── formProps （供 el-form 使用） ──
-    const formLayoutRef = ref<Record<string, unknown>>(props.layoutFormProps?.fromLayProps || {})
+    const formLayoutRef = ref<Record<string, unknown>>(
+      ((props.layoutFormProps as { fromLayProps?: Record<string, unknown> } | undefined)?.fromLayProps) || {}
+    )
     /**
      * Element UI v2 的 el-form 在 `labelWidth` 缺省时会让 label 浮动在自然位置，
      * 当外层是 flex/wrap 布局且 label 较长时会被挤到 input 上方（label 与 content 分行），
@@ -604,12 +606,13 @@ export default defineComponent({
       getBtnColSpan,
       isRenderBtn,
       colRightLeftList,
-      configBtn: computed(() => props.configBtn),
       formInputComponents,
       formInstance,
-      model: resolvedModel,
-      btnColSpanRow: computed(() => props.btnColSpanRow),
-      renderBtn: computed(() => props.renderBtn),
+      // 注意：不要在 setup return 中暴露与 props 同名的 key（configBtn / model /
+      // btnColSpanRow / renderBtn）——Vue 2 已自动把 props 挂到 vm 实例，
+      // 重复暴露会在 @vue/composition-api 下触发 "already declared as a prop" 警告。
+      // 模板中的 :model 引用 resolvedModel（用于解析 v-model 兼容），其它 props 直接使用名称。
+      resolvedModel,
       getRowColsAlgorithm,
       changeFolded,
       // 方法

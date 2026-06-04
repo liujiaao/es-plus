@@ -24,10 +24,10 @@ describe('generateCrudConfig — field parsing', () => {
     expect(statusItem?.dataOptions).toBeDefined()
   })
 
-  it('infers datePicker type for date fields', () => {
+  it('infers DatePicker type for date fields', () => {
     const config = generateCrudConfig('查询条件有创建时间，表格显示创建时间')
     const dateItem = config.formItems.find(f => f.prop === 'createTime')
-    expect(dateItem?.formtype).toBe('datePicker')
+    expect(dateItem?.formtype).toBe('DatePicker')
   })
 })
 

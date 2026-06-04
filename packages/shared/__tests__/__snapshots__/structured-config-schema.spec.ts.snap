@@ -75,7 +75,7 @@ exports[`StructuredCrudConfigSchema — accepts valid configs > accepts the full
         "type": "daterange",
         "valueFormat": "YYYY-MM-DD",
       },
-      "formtype": "datePicker",
+      "formtype": "DatePicker",
       "inForm": true,
       "inQuery": true,
       "inTable": true,

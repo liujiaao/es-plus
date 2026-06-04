@@ -40,7 +40,7 @@
  */
 
 import { configureEsPlus } from '@es-plus/core'
-import type { Vue as VueType } from './vue-compat'
+import type { Vue2Constructor } from './vue-compat'
 
 import EsForm from './components/es-form'
 import EsTable from './components/es-table'
@@ -109,7 +109,7 @@ const normalizeLegacyOptions = (options: InstallOptions): InstallOptions => {
   return out as InstallOptions
 }
 
-const install = (Vue: typeof VueType, options: InstallOptions = {}) => {
+const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
   // 兼容旧 es-eui options 形状（methods 嵌套 + 字段名差异）
   const normalized = normalizeLegacyOptions(options)
 
@@ -200,6 +200,6 @@ export type {
 // NOTE: keep `version` in sync with package.json — __tests__/exports.spec.ts
 // asserts equality so a drift fails CI.
 export default {
-  version: '1.0.0',
+  version: '1.0.4',
   install,
 }

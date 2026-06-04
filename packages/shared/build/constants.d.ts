@@ -7,11 +7,11 @@ export declare const FORM_TYPES: readonly [{
     readonly description: "下拉选择器 — 单选/多选";
     readonly example: "状态、类型、分类";
 }, {
-    readonly type: "datePicker";
+    readonly type: "DatePicker";
     readonly description: "日期选择器 — 日期/日期范围";
     readonly example: "创建时间、日期范围";
 }, {
-    readonly type: "timePicker";
+    readonly type: "TimePicker";
     readonly description: "时间选择器 — 时间/时间范围";
     readonly example: "开始时间、结束时间";
 }, {
@@ -58,4 +58,13 @@ export declare const PRESET_EXAMPLES: {
     label: string;
     prompt: string;
 }[];
+/**
+ * FormType 旧写法 → 新写法映射
+ * datePicker → DatePicker, timePicker → TimePicker
+ */
+export declare const FORM_TYPE_ALIASES: Record<string, string>;
+/**
+ * 将 FormType 归一化为 PascalCase
+ */
+export declare function normalizeFormType(type: string): string;
 //# sourceMappingURL=constants.d.ts.map

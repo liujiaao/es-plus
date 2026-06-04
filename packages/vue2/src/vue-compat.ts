@@ -1,21 +1,25 @@
 /**
- * Vue 2 兼容层 —— 单点 re-export
+ * Vue 2 兼容层 —— 直接从 @vue/composition-api 导入
  *
- * 设计目标：
- *   - 源码统一 `import { ref } from './vue-compat'`，不直接从 'vue' 导入
- *   - 这样 Vue 2.6 / Vue 2.7 / 未来切换 vue-demi 都只改这一个文件
+ * @vue/composition-api 在不同环境下的行为：
+ *   - Vue 2.7+：@vue/composition-api@1.7+ 的 postinstall 会自动 redirect 到 vue 原生 Composition API
+ *   - Vue 2.6：提供完整的 Composition API polyfill
  *
- * 当前实现：从 'vue' 直接 re-export
- *   - Vue 2.7+：原生支持 Composition API，开箱即用
- *   - Vue 2.6：用户需在 main.js 调用 Vue.use(VueCompositionAPI)，
- *     并配置 bundler resolve.alias('vue', '@vue/composition-api')
- *     （或直接升级到 2.7+，更省事）
+ * 用户只需：
+ *   1. npm install @vue/composition-api
+ *   2. main.js 中 Vue.use(VueCompositionAPI)（Vue 2.6 必须，Vue 2.7 可选）
  *
- * Vue 实例本身（Vue.extend / Vue.component）也由本文件暴露，供 useDialog 编程式弹窗使用。
+ * 不使用 vue-demi 的原因：
+ *   vue-demi 在嵌套 node_modules 安装时（monorepo / npm workspace），其 postinstall
+ *   会解析到 @es-plus/vue2 的 devDependency vue@2.7 而非用户项目的 vue@2.6，
+ *   导致生成了错误的 lib 版本（尝试从 vue 导入 getCurrentInstance），
+ *   在 Vue 2.6 环境下产生 "export 'xxx' was not found in 'vue'" 错误。
  */
 
+// Composition API 全部从 @vue/composition-api 导入：
+// - Vue 2.7+：@vue/composition-api 自动 redirect 到 vue 原生 API
+// - Vue 2.6：提供完整 polyfill
 export {
-  default as Vue,
   ref,
   reactive,
   computed,
@@ -38,6 +42,25 @@ export {
   unref,
   isRef,
   h,
-} from 'vue'
+} from '@vue/composition-api'
 
-export type { PropType, Ref, ComputedRef, WatchSource } from 'vue'
+// Vue 构造器必须从 'vue' 直接导入：
+// @vue/composition-api 的 default export 是 plugin（{ install }），
+// 没有 .extend / .component 等静态方法，useDialog 内部 Vue.extend(...) 会报错。
+export { default as Vue } from 'vue'
+
+export type { PropType, Ref, ComputedRef, WatchSource } from '@vue/composition-api'
+
+/**
+ * Vue 2 constructor type that includes static methods
+ * (component, mixin, use, prototype) which @vue/composition-api's
+ * type definitions omit.
+ *
+ * Use this instead of `typeof Vue` in install function signatures.
+ */
+export interface Vue2Constructor {
+  component(name: string, component?: any): any
+  mixin(mixin: Record<string, any>): void
+  use(plugin: any, ...options: any[]): any
+  prototype: Record<string, any>
+}

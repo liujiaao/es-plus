@@ -19,8 +19,8 @@
       "enum": [
         "Input",
         "Select",
-        "datePicker",
-        "timePicker",
+        "DatePicker",
+        "TimePicker",
         "Slider",
         "ColorPicker",
         "Transfer",

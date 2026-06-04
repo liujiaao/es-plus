@@ -48,7 +48,9 @@ export interface CrudBtnConfig extends BtnConfig {
 // ─── 表格工具栏按钮 ───
 
 export interface TableBtnConfig extends CrudBtnConfig {
-  /** 按钮位置：1=左侧（默认），2=右侧 */
+  /** Button position (recommended): 'left' | 'right' */
+  position?: 'left' | 'right'
+  /** @deprecated Use position instead. 1=left, 2=right */
   code?: 1 | 2
 }
 

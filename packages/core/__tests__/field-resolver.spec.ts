@@ -5,6 +5,7 @@ import {
   applyAutoSpan,
   splitButtonsByDirection,
   splitToolbarButtonsByCode,
+  getButtonPosition,
   filterButtonsByPermission,
   normalizeButtonsHideState,
   resolveButtonDisabled,
@@ -77,6 +78,33 @@ describe('field-resolver > 按钮分组', () => {
     ])
     expect(r.leftBtns.map((x) => x.name)).toEqual(['a', 'b'])
     expect(r.rightBtns.map((x) => x.name)).toEqual(['c'])
+  })
+
+  it('splitToolbarButtonsByCode: 支持 position 字段', () => {
+    const r = splitToolbarButtonsByCode([
+      btn({ name: 'a', position: 'left' }),
+      btn({ name: 'b', position: 'right' }),
+      btn({ name: 'c' }), // default left
+    ])
+    expect(r.leftBtns.map((x) => x.name)).toEqual(['a', 'c'])
+    expect(r.rightBtns.map((x) => x.name)).toEqual(['b'])
+  })
+
+  it('splitToolbarButtonsByCode: position 优先于 code', () => {
+    const r = splitToolbarButtonsByCode([
+      btn({ name: 'a', position: 'right', code: 1 }), // position wins
+    ])
+    expect(r.leftBtns.map((x) => x.name)).toEqual([])
+    expect(r.rightBtns.map((x) => x.name)).toEqual(['a'])
+  })
+
+  it('getButtonPosition: 返回按钮位置', () => {
+    expect(getButtonPosition(btn({ name: 'a' }))).toBe('left')
+    expect(getButtonPosition(btn({ name: 'a', code: 1 }))).toBe('left')
+    expect(getButtonPosition(btn({ name: 'a', code: 2 }))).toBe('right')
+    expect(getButtonPosition(btn({ name: 'a', position: 'left' }))).toBe('left')
+    expect(getButtonPosition(btn({ name: 'a', position: 'right' }))).toBe('right')
+    expect(getButtonPosition(btn({ name: 'a', position: 'right', code: 1 }))).toBe('right')
   })
 })
 

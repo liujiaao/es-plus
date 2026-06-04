@@ -36,6 +36,8 @@
 import { computed, h, inject } from 'vue'
 import { ElButton } from 'element-plus'
 import { getGlobalConfig } from '../../../config'
+import { getButtonPosition } from '@es-plus/core'
+import type { BtnConfig } from '../../../types'
 
 const props = defineProps<{
   leftText?: string
@@ -83,11 +85,11 @@ const processButtonConfig = (config: Array<Record<string, unknown>>) => {
 }
 
 const processedBtnLeft = computed(() => {
-  return processButtonConfig((props.btnConfig || []).filter((item) => item.code === 1)).filter((item) => !item.isHide)
+  return processButtonConfig((props.btnConfig || []).filter((item) => getButtonPosition(item as BtnConfig) === 'left')).filter((item) => !item.isHide)
 })
 
 const processedBtnRight = computed(() => {
-  return processButtonConfig((props.btnConfig || []).filter((item) => item.code === 2)).filter((item) => !item.isHide)
+  return processButtonConfig((props.btnConfig || []).filter((item) => getButtonPosition(item as BtnConfig) === 'right')).filter((item) => !item.isHide)
 })
 
 const showContainer = computed(() => {

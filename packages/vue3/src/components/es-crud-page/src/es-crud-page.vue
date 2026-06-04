@@ -232,7 +232,9 @@ const normalizedTableBtns = computed(() => {
     type: btn.type,
     size: btn.size || 'small',
     icon: btn.icon,
-    code: btn.code || 1,
+    // Support both position (new) and code (legacy)
+    position: btn.position || (btn.code === 2 ? 'right' : 'left') as 'left' | 'right',
+    code: btn.code,
     permissionValue: btn.permissionValue,
     loading: btn.loading,
     disabled: btn.disabled,
@@ -266,7 +268,7 @@ const formLayoutProps = computed(() => {
   if (!layout) return undefined
   return {
     rowLayProps: { gutter: 16 },
-    fromLayProps: {
+    formLayProps: {
       labelBtnWidth: layout.labelWidth,
       ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {})
     }
@@ -400,7 +402,7 @@ function openDialog(key: string, row?: Record<string, unknown>) {
               formItemList: dialogConfig.formItems,
               layoutFormProps: {
                 rowLayProps: { gutter: 16 },
-                fromLayProps: {
+                formLayProps: {
                   isBtnHidden: true,
                   ...(dialogConfig.formLayout || {})
                 }

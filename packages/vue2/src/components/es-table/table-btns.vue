@@ -75,7 +75,7 @@
  */
 
 import { defineComponent, computed, inject, h } from '../../vue-compat'
-import { getGlobalConfig, type BtnConfig } from '@es-plus/core'
+import { getGlobalConfig, getButtonPosition, type BtnConfig } from '@es-plus/core'
 import { getCompIcon } from '../../utils/icon'
 import { mapSize } from '../../utils/size'
 
@@ -165,13 +165,13 @@ export default defineComponent({
 
     const processedBtnLeft = computed<RenderableBtn[]>(() => {
       return processButtonConfig(
-        (props.btnConfig || []).filter((item) => item.code === 1) as Array<Record<string, unknown>>
+        (props.btnConfig || []).filter((item) => getButtonPosition(item as BtnConfig) === 'left') as Array<Record<string, unknown>>
       ).filter((item) => !item.isHide) as RenderableBtn[]
     })
 
     const processedBtnRight = computed<RenderableBtn[]>(() => {
       return processButtonConfig(
-        (props.btnConfig || []).filter((item) => item.code === 2) as Array<Record<string, unknown>>
+        (props.btnConfig || []).filter((item) => getButtonPosition(item as BtnConfig) === 'right') as Array<Record<string, unknown>>
       ).filter((item) => !item.isHide) as RenderableBtn[]
     })
 

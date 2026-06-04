@@ -10,9 +10,9 @@
  */
 
 import EsTable from './component.vue'
-import type { Vue } from '../../vue-compat'
+import type { Vue2Constructor } from '../../vue-compat'
 
-;(EsTable as unknown as { install: (V: typeof Vue) => void }).install = function (Vue) {
+;(EsTable as unknown as { install: (V: Vue2Constructor) => void }).install = function (Vue) {
   Vue.component((EsTable as unknown as { name: string }).name || 'EsTable', EsTable)
 }
 

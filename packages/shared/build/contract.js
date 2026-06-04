@@ -1,7 +1,21 @@
 export const VALID_FORM_TYPES = [
-    'Input', 'Select', 'datePicker', 'timePicker', 'Slider', 'ColorPicker',
+    'Input', 'Select', 'DatePicker', 'TimePicker', 'Slider', 'ColorPicker',
     'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch', 'Rate', 'Upload'
 ];
+/**
+ * FormType 旧写法 → 新写法映射
+ * datePicker → DatePicker, timePicker → TimePicker
+ */
+export const FORM_TYPE_ALIASES = {
+    datePicker: 'DatePicker',
+    timePicker: 'TimePicker',
+};
+/**
+ * 将 FormType 归一化为 PascalCase
+ */
+export function normalizeFormType(type) {
+    return FORM_TYPE_ALIASES[type] ?? type;
+}
 export const SPECIAL_BTN_KEYS = {
     QUERY: 'query',
     RESET: 'rest',

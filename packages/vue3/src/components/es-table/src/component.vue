@@ -128,6 +128,7 @@ import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
+import { getCallback } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
 const props = withDefaults(
@@ -476,17 +477,13 @@ const checkQueryFields = (obj: Record<string, unknown>): boolean => {
 }
 
 const getListenToCallBack = (eventName: string, params: unknown) => {
-  const eventNameList = [
-    { eventName: 'brcb', isReturn: true },
-    { eventName: 'qrcb', isReturn: true }
-  ]
-  const hasEventNameIndex = eventNameList.findIndex((it) => it.eventName === eventName)
-  if (props.options.listenToCallBack && props.options.listenToCallBack[eventName] && hasEventNameIndex !== -1) {
-    const callObj = eventNameList[hasEventNameIndex]
-    if (callObj.isReturn) {
-      return props.options.listenToCallBack[eventName](params)
-    }
+  const cb = props.options.listenToCallBack
+  if (!cb) return undefined
+  const fn = getCallback(cb as any, eventName)
+  if (typeof fn === 'function') {
+    return fn(params)
   }
+  return undefined
 }
 
 const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
@@ -517,7 +514,7 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
     : getListEntry.value || {}
 
 
-  const fnParams = getListenToCallBack('brcb', { ...formData, ...params, ...toRaw(unref(apiParams.model || {})) })
+  const fnParams = getListenToCallBack('beforeRequest', { ...formData, ...params, ...toRaw(unref(apiParams.model || {})) })
   const finalParams = isObject(fnParams) ? fnParams : { ...formData, ...toRaw(unref(apiParams.model || {})), ...params }
   const requestOption = { ...toRaw(unref(apiParams.options || {})) }
   if (apiParams?.method) {
@@ -536,7 +533,7 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
         ...requestOption,
         ...params
       })
-      const responseData = getListenToCallBack('qrcb', res) || res
+      const responseData = getListenToCallBack('afterResponse', res) || res
       if (isObject(res) && Object.keys(res).length && typeof success === 'function') {
         success(responseData as Record<string, unknown>)
       }

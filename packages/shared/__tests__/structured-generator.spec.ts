@@ -14,7 +14,7 @@ const baseConfig = {
       render: "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')"
     },
     {
-      prop: 'createTime', label: '创建时间', formtype: 'datePicker' as const,
+      prop: 'createTime', label: '创建时间', formtype: 'DatePicker' as const,
       attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' },
       inForm: false, querySpan: 8
     },

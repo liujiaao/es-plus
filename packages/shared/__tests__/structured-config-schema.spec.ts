@@ -68,7 +68,7 @@ const full = {
     {
       prop: 'createTime',
       label: '创建时间',
-      formtype: 'datePicker',
+      formtype: 'DatePicker',
       attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' },
     },
   ],

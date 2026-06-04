@@ -901,7 +901,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "createTime",
                 "label": "创建时间",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -1013,7 +1013,7 @@ const formItems = [
   {
     "prop": "field_3",
     "label": "日期范围",
-    "formtype": "datePicker",
+    "formtype": "DatePicker",
     "span": 8,
     "attrs": {
       "clearable": true,
@@ -1126,7 +1126,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "field_3",
                 "label": "日期范围",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -1147,7 +1147,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "time",
                 "label": "时间",
-                "formtype": "timePicker",
+                "formtype": "TimePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -1427,7 +1427,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "createTime",
                 "label": "创建时间",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -1970,7 +1970,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "createTime",
                 "label": "创建时间",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -2069,7 +2069,7 @@ const formItems = [
   {
     "prop": "field_1",
     "label": "日期范围",
-    "formtype": "datePicker",
+    "formtype": "DatePicker",
     "span": 8,
     "attrs": {
       "clearable": true,
@@ -2217,7 +2217,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "field_1",
                 "label": "日期范围",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
@@ -2305,7 +2305,7 @@ function openForm(title, row = {}) {
         {
                 "prop": "createTime",
                 "label": "创建时间",
-                "formtype": "datePicker",
+                "formtype": "DatePicker",
                 "span": 24,
                 "attrs": {
                         "clearable": true,

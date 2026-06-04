@@ -11,6 +11,7 @@
 import { computed, ref, watch } from '../vue-compat'
 import {
   getRowColsAlgorithm as coreGetRowColsAlgorithm,
+  resolveFormLayProps,
   type FormLayoutResult,
 } from '@es-plus/core'
 import type { FormItemOption, LayoutFormProps } from '@es-plus/core'
@@ -29,8 +30,8 @@ export function useFormLayout(props: UseFormLayoutProps) {
    * 后续 schema/类型规范化为 `isBtnHidden`。两者都接受，原始拼写优先。
    */
   const isBtnHidden = computed(() => {
-    const fromLay = props.layoutFormProps?.fromLayProps as Record<string, unknown> | undefined
-    if (!fromLay) return false
+    const fromLay = resolveFormLayProps(props.layoutFormProps) as Record<string, unknown> | undefined
+    if (!fromLay || !Object.keys(fromLay).length) return false
     const legacy = fromLay.isBtnHiden
     const fixed = fromLay.isBtnHidden
     return Boolean(legacy ?? fixed ?? false)
@@ -57,7 +58,7 @@ export function useFormLayout(props: UseFormLayoutProps) {
       ...userProps,
     }
   })
-  const formLayout = computed(() => props.layoutFormProps?.fromLayProps || {})
+  const formLayout = computed(() => resolveFormLayProps(props.layoutFormProps))
   const getSetOptionsStatus = computed(() => props.layoutFormProps?.setOptions)
 
   const getRowColsAlgorithm = computed<FormLayoutResult>(() =>
@@ -71,8 +72,8 @@ export function useFormLayout(props: UseFormLayoutProps) {
    * 这里两个都接受，原始小写优先（保持旧文档案例不改字面量即可工作）。
    */
   const getMinFoldRow = (): number => {
-    const fromLay = props.layoutFormProps?.fromLayProps as Record<string, unknown> | undefined
-    if (!fromLay) return 0
+    const fromLay = resolveFormLayProps(props.layoutFormProps) as Record<string, unknown> | undefined
+    if (!fromLay || !Object.keys(fromLay).length) return 0
     const legacy = fromLay.minfoldRows
     const camel = fromLay.minFoldRows
     return Number(legacy ?? camel ?? 0) || 0
@@ -86,7 +87,7 @@ export function useFormLayout(props: UseFormLayoutProps) {
   const getBtnColSpan = computed(() => {
     const { rowNum, columnRow } = getRowColsAlgorithm.value
     const lastColumn = columnRow[rowNum - 1] || []
-    const btnColSpan = props.layoutFormProps?.fromLayProps?.btnColSpan || 0
+    const btnColSpan = Number((resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)?.btnColSpan) || 0
     const totalSpan = lastColumn.reduce(
       (sum: number, idx: number) => sum + (props.formItemList[idx]?.span || 24),
       0

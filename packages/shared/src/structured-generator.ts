@@ -389,7 +389,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(`        ref={el => el && registerRef('form', el)}`)
     lines.push(`        model={formData}`)
     lines.push(`        formItemList={dialogFormItems}`)
-    lines.push(`        layoutFormProps={{ fromLayProps: { labelWidth: '100px', isBtnHidden: true } }}`)
+    lines.push(`        layoutFormProps={{ formLayProps: { labelWidth: '100px', isBtnHidden: true } }}`)
     lines.push(`      />`)
     lines.push(`    ),`)
     lines.push(`    configBtn: isView ? [`)
@@ -736,7 +736,7 @@ function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boo
     ...(i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
     formtype: field.formtype,
     span: context === 'query'
-      ? (field.querySpan || (field.formtype === 'datePicker' || field.formtype === 'timePicker' ? 8 : 6))
+      ? (field.querySpan || (field.formtype === 'DatePicker' || field.formtype === 'TimePicker' ? 8 : 6))
       : (field.formSpan || 24),
     attrs: { clearable: true, ...(field.attrs || {}) },
   }
@@ -747,7 +747,7 @@ function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boo
   if (context === 'form') {
     const rules: any[] = []
     if (field.required) {
-      const isSelectType = ['Select', 'Radio', 'Checkbox', 'Cascader', 'datePicker', 'timePicker', 'Switch'].includes(field.formtype)
+      const isSelectType = ['Select', 'Radio', 'Checkbox', 'Cascader', 'DatePicker', 'TimePicker', 'Switch'].includes(field.formtype)
       rules.push({
         required: true,
         message: `请${isSelectType ? '选择' : '输入'}${field.label}`,
@@ -826,8 +826,8 @@ function inferTsType(field: FieldConfig): string {
     case 'Checkbox':
     case 'Transfer': return 'any[]'
     case 'Cascader': return 'any[]'
-    case 'datePicker':
-    case 'timePicker':
+    case 'DatePicker':
+    case 'TimePicker':
       return field.attrs?.type?.toString().includes('range') ? 'string[]' : 'string'
     case 'Select':
       return "string | number | ''"
@@ -843,8 +843,8 @@ function getDefaultValue(field: FieldConfig): string {
     case 'Checkbox':
     case 'Transfer':
     case 'Cascader': return '[]'
-    case 'datePicker':
-    case 'timePicker':
+    case 'DatePicker':
+    case 'TimePicker':
       return field.attrs?.type?.toString().includes('range') ? '[]' : "''"
     default: return "''"
   }

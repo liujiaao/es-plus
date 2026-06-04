@@ -39,6 +39,7 @@ export type {
   FormItemOption,
   BtnConfig,
   LayoutFormProps,
+  ListenToCallBack,
   TableColumn,
   ConfigTableOut,
   TableOptions,
@@ -60,6 +61,7 @@ export type { EsPlusGlobalConfig } from './config'
 // ─── 常量 ─────────────────────────────────────────────────────
 export {
   VALID_FORM_TYPES,
+  FORM_TYPE_ALIASES,
   SPECIAL_BTN_KEYS,
   BUILT_IN_BTN_KEYS,
   OPERATION_COLUMN_PROP_SFC,
@@ -114,8 +116,24 @@ export {
   applyAutoSpan,
   splitButtonsByDirection,
   splitToolbarButtonsByCode,
+  getButtonPosition,
   filterButtonsByPermission,
   normalizeButtonsHideState,
   resolveButtonDisabled,
   applyConfigTableOut,
 } from './field-resolver'
+
+// ─── 向后兼容适配层 ──────────────────────────────────────────
+export {
+  normalizeFormType,
+  resolveFormLayProps,
+  getCallback,
+  normalizeFormItem,
+  normalizeFormItemList,
+} from './compat'
+// compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出
+export {
+  getButtonPosition as resolveButtonPosition,
+  isButtonLeft,
+  isButtonRight,
+} from './compat'

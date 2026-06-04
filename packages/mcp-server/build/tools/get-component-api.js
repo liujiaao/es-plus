@@ -34,7 +34,7 @@ function docEsForm(v) {
 interface FormItemOption {
   prop: string              // Field key in model
   label: string             // Display label
-  formtype?: FormType       // Input/Select/datePicker/Switch/Rate/Upload/...
+  formtype?: FormType       // Input/Select/DatePicker/TimePicker/Switch/Rate/Upload/...
   span?: number             // Grid span (1-24, default 6)
   attrs?: Record<string, unknown>  // Pass-through to ${v.elementPkg} component
   dataOptions?: Array<{ label: string; value: unknown }>  // Options for Select/Radio/Checkbox

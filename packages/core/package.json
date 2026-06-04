@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "es-plus framework-agnostic core: shared types, utilities, and pure logic for both Vue 3 (@es-plus/vue3) and Vue 2 (@es-plus/vue2) renderers",
   "type": "module",
   "main": "./build/index.js",

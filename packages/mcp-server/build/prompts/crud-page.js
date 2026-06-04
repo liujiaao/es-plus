@@ -8,7 +8,7 @@ Key concepts:
 - useDialog: Imperative dialog API with JSX render support
 - Form↔Table auto-linking: set \`triggerEvent: true\` on query button to auto-refresh table
 
-Available formtype values: Input, Select, datePicker, timePicker, Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
+Available formtype values: Input, Select, DatePicker, TimePicker, Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
 
 Rules:
 1. Query form fields use span: 6 (or 8 for date ranges)

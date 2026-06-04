@@ -1,5 +1,14 @@
-export declare const VALID_FORM_TYPES: readonly ["Input", "Select", "datePicker", "timePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
+export declare const VALID_FORM_TYPES: readonly ["Input", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
 export type FormType = typeof VALID_FORM_TYPES[number];
+/**
+ * FormType 旧写法 → 新写法映射
+ * datePicker → DatePicker, timePicker → TimePicker
+ */
+export declare const FORM_TYPE_ALIASES: Record<string, string>;
+/**
+ * 将 FormType 归一化为 PascalCase
+ */
+export declare function normalizeFormType(type: string): string;
 export declare const SPECIAL_BTN_KEYS: {
     readonly QUERY: "query";
     readonly RESET: "rest";

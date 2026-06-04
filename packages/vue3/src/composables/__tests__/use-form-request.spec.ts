@@ -3,6 +3,9 @@ import { nextTick } from 'vue'
 import { useFormRequest } from '../use-form-request'
 import type { FormItemOption, ApiParams } from '../../types'
 
+/** httpRequest 函数签名类型 */
+type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
+
 function createFormItem(overrides: Partial<FormItemOption> = {}): FormItemOption {
   return {
     prop: 'testField',
@@ -19,10 +22,10 @@ function createApiParams(overrides: Partial<ApiParams> = {}): ApiParams {
 }
 
 describe('useFormRequest', () => {
-  let mockHttpRequest: ReturnType<typeof vi.fn>
+  let mockHttpRequest: ReturnType<typeof vi.fn> & HttpRequestFn
 
   beforeEach(() => {
-    mockHttpRequest = vi.fn().mockResolvedValue({ rows: [], records: 0 })
+    mockHttpRequest = vi.fn().mockResolvedValue({ rows: [], records: 0 }) as ReturnType<typeof vi.fn> & HttpRequestFn
   })
 
   describe('return value', () => {
@@ -242,7 +245,7 @@ describe('useFormRequest', () => {
     })
 
     it('item-level httpRequest overrides global httpRequest', async () => {
-      const itemHttpRequest = vi.fn().mockResolvedValue({ rows: [{ label: 'Local', value: 99 }], records: 1 })
+      const itemHttpRequest = vi.fn().mockResolvedValue({ rows: [{ label: 'Local', value: 99 }], records: 1 }) as unknown as HttpRequestFn
       const { getEveryFormQueryField } = useFormRequest(mockHttpRequest)
       const items: FormItemOption[] = [
         createFormItem({
@@ -394,7 +397,7 @@ describe('useFormRequest', () => {
     })
 
     it('uses options.httpRequest over global httpRequest', () => {
-      const localRequest = vi.fn().mockResolvedValue({})
+      const localRequest = vi.fn().mockResolvedValue({}) as unknown as HttpRequestFn
       const { queryTableListMethod } = useFormRequest(mockHttpRequest)
 
       queryTableListMethod({}, { apiParams: createApiParams(), httpRequest: localRequest })

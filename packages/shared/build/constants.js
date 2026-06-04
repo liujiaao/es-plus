@@ -1,8 +1,8 @@
 export const FORM_TYPES = [
     { type: 'Input', description: '输入框 — 文本/数字/密码输入', example: '姓名、手机号、邮箱' },
     { type: 'Select', description: '下拉选择器 — 单选/多选', example: '状态、类型、分类' },
-    { type: 'datePicker', description: '日期选择器 — 日期/日期范围', example: '创建时间、日期范围' },
-    { type: 'timePicker', description: '时间选择器 — 时间/时间范围', example: '开始时间、结束时间' },
+    { type: 'DatePicker', description: '日期选择器 — 日期/日期范围', example: '创建时间、日期范围' },
+    { type: 'TimePicker', description: '时间选择器 — 时间/时间范围', example: '开始时间、结束时间' },
     { type: 'Slider', description: '滑块 — 数值区间选择', example: '价格区间、进度' },
     { type: 'ColorPicker', description: '颜色选择器', example: '主题色、标签颜色' },
     { type: 'Transfer', description: '穿梭框 — 左右列表选择', example: '权限分配、人员分配' },
@@ -48,4 +48,18 @@ export const PRESET_EXAMPLES = [
         prompt: '系统配置管理，查询名称、类型，表格显示名称、编号、类型、描述、状态，支持新增编辑删除导出'
     },
 ];
+/**
+ * FormType 旧写法 → 新写法映射
+ * datePicker → DatePicker, timePicker → TimePicker
+ */
+export const FORM_TYPE_ALIASES = {
+    datePicker: 'DatePicker',
+    timePicker: 'TimePicker',
+};
+/**
+ * 将 FormType 归一化为 PascalCase
+ */
+export function normalizeFormType(type) {
+    return FORM_TYPE_ALIASES[type] ?? type;
+}
 //# sourceMappingURL=constants.js.map

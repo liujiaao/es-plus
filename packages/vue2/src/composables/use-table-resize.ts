@@ -71,9 +71,14 @@ export function useTableResize(
           ? tableContainerRef.value.parentElement || tableContainerRef.value
           : tableContainerRef.value
       observer.value.observe(target)
+      // 主动触发一次计算，避免依赖 ResizeObserver 的首次回调（某些环境不触发）。
+      resizeObservers()
 
       if (headBarRef.value) {
         observer.value.observe(headBarRef.value)
+      }
+      if (paginationRef.value) {
+        observer.value.observe(paginationRef.value)
       }
     })
   }

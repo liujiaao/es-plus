@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref, computed } from 'vue'
 import { useColumnAdapter } from '../src/engines/use-column-adapter'
+import type { TableColumn } from '../../../types'
 
 function createOptions(overrides = {}) {
   return {
@@ -22,7 +23,7 @@ describe('useColumnAdapter', () => {
     const columns = ref([
       { prop: 'name', label: '姓名', width: 120 },
       { prop: 'email', label: '邮箱', minWidth: 200 },
-    ])
+    ] as TableColumn[])
     const result = useColumnAdapter(columns, createOptions())
 
     expect(result.value).toHaveLength(2)
@@ -73,7 +74,7 @@ describe('useColumnAdapter', () => {
     const columns = ref([
       { type: 'index', label: '序号', width: 70 },
       { prop: 'name', label: '姓名', width: 100 },
-    ])
+    ] as TableColumn[])
     const result = useColumnAdapter(columns, createOptions())
 
     expect(result.value[0].key).toBe('__index__')
@@ -85,7 +86,7 @@ describe('useColumnAdapter', () => {
     const columns = ref([
       { type: 'selection', width: 60 },
       { prop: 'name', label: '姓名', width: 100 },
-    ])
+    ] as TableColumn[])
     const result = useColumnAdapter(columns, createOptions())
 
     expect(result.value).toHaveLength(2)
@@ -98,7 +99,7 @@ describe('useColumnAdapter', () => {
     const columns = ref([
       { type: 'selection', width: 55 },
       { prop: 'name', label: '姓名', width: 100 },
-    ])
+    ] as TableColumn[])
     const result = useColumnAdapter(columns, createOptions({ multiSelect: true }))
 
     const selectionCols = result.value.filter(c => c.key === '__selection__')

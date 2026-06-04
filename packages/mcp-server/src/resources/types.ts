@@ -42,7 +42,7 @@ const TYPES_FALLBACK_VUE3 = `// @es-plus/vue3 TypeScript Type Definitions (bundl
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 
-export type FormType = 'Input' | 'Select' | 'datePicker' | 'timePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
 
 export interface FormItemOption {
   prop: string

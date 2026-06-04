@@ -292,7 +292,7 @@ export default defineComponent({
       if (!layout) return undefined
       return {
         rowLayProps: { gutter: 16 },
-        fromLayProps: {
+        formLayProps: {
           labelBtnWidth: layout.labelWidth,
           ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {}),
         },
@@ -422,7 +422,7 @@ export default defineComponent({
                     formItemList: dialogConfig.formItems,
                     layoutFormProps: {
                       rowLayProps: { gutter: 16 },
-                      fromLayProps: {
+                      formLayProps: {
                         isBtnHidden: true,
                         ...(dialogConfig.formLayout || {}),
                       },
@@ -467,7 +467,7 @@ export default defineComponent({
       config: CrudDialogConfig,
       formData: Record<string, unknown>,
       row: Record<string, unknown>
-    ): unknown[] | undefined {
+    ): BtnConfig[] | undefined {
       if (config.isHiddenFooter) return undefined
 
       if (config.configBtn) {

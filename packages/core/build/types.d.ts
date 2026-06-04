@@ -61,8 +61,8 @@ export interface ApiParams {
  * 内置表单输入类型
  * - 'Input'        → ElInput / el-input
  * - 'Select'       → ElSelect / el-select
- * - 'datePicker'   → ElDatePicker / el-date-picker
- * - 'timePicker'   → ElTimePicker / el-time-picker
+ * - 'DatePicker'   → ElDatePicker / el-date-picker（推荐，旧写法 'datePicker' 仍可用）
+ * - 'TimePicker'   → ElTimePicker / el-time-picker（推荐，旧写法 'timePicker' 仍可用）
  * - 'Slider'       → ElSlider / el-slider
  * - 'ColorPicker'  → ElColorPicker / el-color-picker
  * - 'Transfer'     → ElTransfer / el-transfer
@@ -73,7 +73,7 @@ export interface ApiParams {
  * - 'Rate'         → ElRate
  * - 'Upload'       → ElUpload
  */
-export type FormType = 'Input' | 'Select' | 'datePicker' | 'timePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload';
+export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload';
 /**
  * 表单字段选项
  *
@@ -93,6 +93,12 @@ export interface FormItemOption {
     formtype?: FormType;
     /** 栅格 span（1-24，默认 6） */
     span?: number;
+    /** 占位文本快捷方式（自动注入到 attrs.placeholder，attrs 中的同名属性优先） */
+    placeholder?: string;
+    /** 是否可清除快捷方式（自动注入到 attrs.clearable，attrs 中的同名属性优先） */
+    clearable?: boolean;
+    /** 是否禁用快捷方式（自动注入到 attrs.disabled / props.disabled，attrs 中的同名属性优先） */
+    disabled?: boolean;
     /** 透传给输入控件的 HTML 属性（Vue 2 createElement 的 attrs / Vue 3 的非组件 props） */
     attrs?: Record<string, unknown>;
     /**
@@ -128,11 +134,14 @@ export interface FormItemOption {
     httpRequest?: (params: Record<string, unknown>) => Promise<unknown>;
     /**
      * 响应数据回调映射
-     * - crtn(data) → 从 API 响应转换为 dataOptions 格式
-     * - brcb(params) → 请求前拦截
-     * - qrcb(res) → 响应后拦截
+     * - responseTransform(data) → 从 API 响应转换为 dataOptions 格式（推荐）
+     * - beforeRequest(params) → 请求前拦截（推荐）
+     * - afterResponse(res) → 响应后拦截（推荐）
+     * - crtn(data) → 旧写法，同 responseTransform（@deprecated）
+     * - brcb(params) → 旧写法，同 beforeRequest（@deprecated）
+     * - qrcb(res) → 旧写法，同 afterResponse（@deprecated）
      */
-    listenToCallBack?: Record<string, (params: unknown) => unknown>;
+    listenToCallBack?: ListenToCallBack;
     /** 表单项是否必填（与 rules 二选一） */
     required?: boolean;
     /** 校验规则 */
@@ -163,12 +172,18 @@ export interface BtnConfig {
     /** 图标（Element Plus 用组件名 / Element UI 用 class 字符串） */
     icon?: string;
     /**
-     * 表格工具栏按钮的位置标记
+     * 按钮位置（推荐，语义自解释）
+     * - 'left' = 左侧（默认）
+     * - 'right' = 右侧
+     */
+    position?: 'left' | 'right';
+    /**
+     * 表格工具栏按钮的位置标记（@deprecated 使用 position 替代）
      * - 1 = 左侧（默认）
      * - 2 = 右侧
      */
     code?: 1 | 2;
-    /** 旧 API：left/right 方向 */
+    /** 表单按钮方向（left/right 区分上下位置） */
     direction?: 'left' | 'right';
     /** 加载态 */
     loading?: boolean;
@@ -199,7 +214,22 @@ export interface BtnConfig {
 export interface LayoutFormProps {
     /** el-row 透传 props（gutter 等） */
     rowLayProps?: Record<string, unknown>;
-    /** 表单本体配置 */
+    /** 表单本体配置（推荐写法） */
+    formLayProps?: {
+        /** 隐藏内置按钮区域 */
+        isBtnHidden?: boolean;
+        /** 折叠时显示行数（>0 启用折叠功能） */
+        minFoldRows?: number;
+        /** 按钮所在 col 的 span */
+        btnColSpan?: number;
+        /** 按钮区 label 宽度 */
+        labelBtnWidth?: string | number;
+        /** 表单 label 宽度 */
+        labelWidth?: string | number;
+        /** 表单尺寸 */
+        size?: EsButtonSize;
+    };
+    /** @deprecated 使用 formLayProps 替代（拼写修正） */
     fromLayProps?: {
         /** 隐藏内置按钮区域 */
         isBtnHidden?: boolean;
@@ -298,6 +328,10 @@ export interface TableOptions {
     size?: EsTableSize;
     headerCellStyle?: Record<string, unknown>;
     highlightCurrentRow?: boolean;
+    /** 是否显示表头，默认 true */
+    showHeader?: boolean;
+    /** 空数据时显示的文本，默认 '暂无数据' */
+    emptyText?: string;
     multiSelect?: boolean;
     expand?: boolean;
     snIndex?: boolean;
@@ -311,11 +345,54 @@ export interface TableOptions {
         row: ModelData;
         rowIndex: number;
     }) => string);
+    /** 行样式（对象或函数形式） */
+    rowStyle?: Record<string, unknown> | ((params: {
+        row: ModelData;
+        rowIndex: number;
+    }) => Record<string, unknown>);
+    /** 默认排序 { prop, order } */
+    defaultSort?: {
+        prop: string;
+        order: 'ascending' | 'descending';
+    };
+    /** 合并单元格方法 */
+    spanMethod?: (data: {
+        row: ModelData;
+        column: unknown;
+        rowIndex: number;
+        columnIndex: number;
+    }) => [number, number];
+    /** 单元格类名 */
+    cellClassName?: string | ((data: {
+        row: ModelData;
+        column: unknown;
+        rowIndex: number;
+        columnIndex: number;
+    }) => string);
+    /** 单元格样式 */
+    cellStyle?: Record<string, unknown> | ((data: {
+        row: ModelData;
+        column: unknown;
+        rowIndex: number;
+        columnIndex: number;
+    }) => Record<string, unknown>);
+    /** 表头单元格类名 */
+    headerCellClassName?: string | ((data: {
+        column: unknown;
+        rowIndex: number;
+    }) => string);
     isInitRun?: boolean;
     actionUrl?: string;
     apiParams?: ApiParams;
     httpRequest?: (params: Record<string, unknown>) => Promise<unknown>;
-    listenToCallBack?: Record<string, (params: unknown) => unknown>;
+    /**
+     * 响应数据回调映射
+     * - beforeRequest(params) → 请求前拦截（推荐）
+     * - afterResponse(res) → 响应后拦截（推荐）
+     * - brcb(params) → 旧写法（@deprecated）
+     * - qrcb(res) → 旧写法（@deprecated）
+     */
+    listenToCallBack?: ListenToCallBack;
     configTableOut?: ConfigTableOut;
     entryQuery?: Record<string, unknown>;
     configBtn?: BtnConfig[];
@@ -390,8 +467,44 @@ export interface DialogOptions {
     showClose?: boolean;
     /** 关闭时销毁内容 */
     destroyOnClose?: boolean;
+    /** 是否需要遮罩层，默认 true */
+    modal?: boolean;
+    /** 点击遮罩层是否关闭弹窗，默认 true */
+    closeOnClickModal?: boolean;
+    /** 按下 ESC 是否关闭弹窗，默认 true */
+    closeOnPressEscape?: boolean;
+    /** 关闭前的回调，调用 done() 关闭弹窗 */
+    beforeClose?: (done: () => void) => void;
+    /** 是否垂直居中弹窗 */
+    alignCenter?: boolean;
+    /** Dialog CSS 中的 margin-top 值，默认 '15vh' */
+    top?: string;
+    /** 遮罩层自定义类名 */
+    modalClass?: string;
     /** 允许任意扩展键 */
     [key: string]: unknown;
+}
+/**
+ * 统一的回调映射接口
+ *
+ * 提供可读性强的回调名，同时保留旧缩写别名（@deprecated）用于向后兼容。
+ * 内部读取时优先新名称，fallback 旧名称，确保两种写法均可使用。
+ */
+export interface ListenToCallBack {
+    /** 将 API 响应转换为 dataOptions 格式（推荐） */
+    responseTransform?: (data: unknown) => unknown[];
+    /** @deprecated 使用 responseTransform */
+    crtn?: (data: unknown) => unknown[];
+    /** 请求发送前的参数拦截/转换（推荐） */
+    beforeRequest?: (params: unknown) => unknown;
+    /** @deprecated 使用 beforeRequest */
+    brcb?: (params: unknown) => unknown;
+    /** 响应返回后的数据拦截/转换（推荐） */
+    afterResponse?: (res: unknown) => unknown;
+    /** @deprecated 使用 afterResponse */
+    qrcb?: (res: unknown) => unknown;
+    /** 允许扩展其他回调 */
+    [key: string]: ((...args: unknown[]) => unknown) | undefined;
 }
 /**
  * EsForm 实例方法

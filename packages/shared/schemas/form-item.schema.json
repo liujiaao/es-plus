@@ -19,8 +19,8 @@
       "enum": [
         "Input",
         "Select",
-        "datePicker",
-        "timePicker",
+        "DatePicker",
+        "TimePicker",
         "Slider",
         "ColorPicker",
         "Transfer",
@@ -31,7 +31,7 @@
         "Rate",
         "Upload"
       ],
-      "description": "Input component type. Maps to the corresponding Element Plus component"
+      "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted."
     },
     "span": {
       "type": "integer",
@@ -39,6 +39,18 @@
       "maximum": 24,
       "default": 6,
       "description": "Grid column span (el-col span, 24-column layout)"
+    },
+    "placeholder": {
+      "type": "string",
+      "description": "Shortcut for placeholder text. Automatically injected into attrs.placeholder; explicit attrs.placeholder takes priority."
+    },
+    "clearable": {
+      "type": "boolean",
+      "description": "Shortcut for clearable. Automatically injected into attrs.clearable; explicit attrs.clearable takes priority."
+    },
+    "disabled": {
+      "type": "boolean",
+      "description": "Shortcut for disabled. Automatically injected into attrs.disabled; explicit attrs.disabled takes priority."
     },
     "attrs": {
       "type": "object",
@@ -106,10 +118,25 @@
     },
     "listenToCallBack": {
       "type": "object",
-      "description": "Callback mapping. Use 'crtn' key for option format conversion",
+      "description": "Callback mapping. Supports both readable names (responseTransform, beforeRequest, afterResponse) and legacy abbreviations (crtn, brcb, qrcb)",
       "properties": {
+        "responseTransform": {
+          "description": "Function to convert API response to [{label, value}] format (recommended, replaces 'crtn')"
+        },
         "crtn": {
-          "description": "Function to convert API response to [{label, value}] format"
+          "description": "(Deprecated) Use responseTransform. Function to convert API response to [{label, value}] format"
+        },
+        "beforeRequest": {
+          "description": "Function to intercept/transform request params before sending (recommended, replaces 'brcb')"
+        },
+        "brcb": {
+          "description": "(Deprecated) Use beforeRequest. Before Request CallBack"
+        },
+        "afterResponse": {
+          "description": "Function to intercept/transform response data after receiving (recommended, replaces 'qrcb')"
+        },
+        "qrcb": {
+          "description": "(Deprecated) Use afterResponse. Query Result CallBack"
         }
       },
       "additionalProperties": true

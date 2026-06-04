@@ -1,12 +1,12 @@
 <template>
-  <div :ref="setTableContainer" class="table_component" :style="containerStyle">
+  <div ref="tableContainerEl" class="table_component" :style="containerStyle">
     <div class="table_containers">
       <div
         v-if="showHeaderBar"
         ref="headBarRef"
         class="btn-slot"
-        :style="slotStyles.type === 'object' ? slotStyles.value : null"
-        :class="slotStyles.type === 'string' ? slotStyles.value : null"
+        :style="slotStyleValue"
+        :class="slotClassValue"
       >
         <div
           v-if="hasDefaultSlot"
@@ -43,7 +43,7 @@
             ref="tableRef"
             style="width: 100%"
             v-bind="tableBindAttrs"
-            :data="dataSource"
+            :data="effectiveDataSource"
             @sort-change="changeTableSort"
             @selection-change="handleTableSelectionChange"
           >
@@ -105,31 +105,35 @@
             </column-item>
           </el-table>
         </div>
+      </div>
 
-        <div
-          v-if="showPagination"
-          ref="paginationRef"
-          class="pagination_page"
-          :style="paginationStyle"
-        >
-          <!--
-            Element UI 与 Element Plus 分页组件 API 差异：
-              - current-page: .sync 双向绑定 (vs Vue 3 v-model:current-page)
-              - page-size: .sync 双向绑定
-          -->
-          <el-pagination
-            :background="paginationBackground"
-            :size="paginationIsSmall ? 'small' : paginationConfig.size"
-            :total="paginationConfig.total"
-            :page-size.sync="paginationConfig.pageSize"
-            :page-sizes="paginationPageSizes"
-            :current-page.sync="paginationConfig.current"
-            :layout="layout"
-            style="padding: 0; margin: 10px 0; text-align: center"
-            @size-change="handleSizeChange"
-            @current-change="handleIndexChange"
-          />
-        </div>
+      <!--
+        分页区域放在 v-loading 元素之外（作为 .table_containers 的子元素），
+        以避免 loading mask（z-index 2000）遮挡分页；
+        分页用 static 定位（默认）参与 flex 列布局，使 .tableContainer (flex:1) 自动让出空间。
+      -->
+      <div
+        v-if="showPagination"
+        ref="paginationRef"
+        class="pagination_page"
+      >
+        <!--
+          Element UI 与 Element Plus 分页组件 API 差异：
+            - current-page: .sync 双向绑定 (vs Vue 3 v-model:current-page)
+            - page-size: .sync 双向绑定
+        -->
+        <el-pagination
+          :background="paginationBackground"
+          :size="paginationIsSmall ? 'small' : paginationConfig.size"
+          :total="paginationConfig.total"
+          :page-size.sync="paginationConfig.pageSize"
+          :page-sizes="paginationPageSizes"
+          :current-page.sync="paginationConfig.current"
+          :layout="layout"
+          style="padding: 0; margin: 10px 0; text-align: center"
+          @size-change="handleSizeChange"
+          @current-change="handleIndexChange"
+        />
       </div>
     </div>
   </div>
@@ -331,6 +335,14 @@ export default defineComponent({
     const tableContainerRef = ref<HTMLElement | null>(null)
     const tableId = ref(`table_${Math.random().toString(36).substring(2, 12)}`)
     const tableData = ref<Record<string, unknown>[]>([])
+
+    // Effective data source: 内部 tableData 优先（接口请求的数据），
+    // 兼容父组件不使用 .sync 但又希望看到接口拉取数据的场景。
+    // 当父组件传入了非空 dataSource 且内部 tableData 为空时，使用 dataSource。
+    const effectiveDataSource = computed(() => {
+      if (tableData.value && tableData.value.length) return tableData.value
+      return props.dataSource
+    })
     const columnRowList = ref<TableColumn[]>([...props.columns])
 
     watch(
@@ -345,9 +357,16 @@ export default defineComponent({
     const slotState = ref(false)
     const showPagination = ref(false)
 
-    // Vue 2 函数式 ref：用 :ref="setTableContainer" 避免 ref 被赋值为 string
-    const setTableContainer = (el: HTMLElement | null) => {
-      if (el) tableContainerRef.value = el
+    // Vue 2 + @vue/composition-api 下函数式 ref `:ref="setterFn"` 在 SFC 模板中
+    // 不会被运行时调用（已知兼容性问题）。改用字符串 ref（模板中 ref="xxx"），
+    // 在 onMounted 内通过 vm.$refs.xxx 手动同步到 setup 中的 ref 变量。
+    // 这是 Vue 2 + composition-api 下 100% 可靠的 DOM 引用方式。
+    const syncDomRefs = () => {
+      const proxy = (instance as any)?.proxy
+      if (!proxy || !proxy.$refs) return
+      tableContainerRef.value = (proxy.$refs.tableContainerEl as HTMLElement) || null
+      headBarRef.value = (proxy.$refs.headBarRef as HTMLElement) || null
+      paginationRef.value = (proxy.$refs.paginationRef as HTMLElement) || null
     }
 
     // ─── 与 EsForm 的耦合 ─────────────────────
@@ -472,6 +491,19 @@ export default defineComponent({
       return { type: 'string', value: '' }
     })
 
+    /** Typed style/class for header bar slot — avoids Vue StyleValue type mismatch in template */
+    const slotStyleValue = computed<Record<string, string | number>>(() => {
+      const s = slotStyles.value
+      if (s.type === 'object' && s.value && typeof s.value === 'object') {
+        return s.value as Record<string, string | number>
+      }
+      return {}
+    })
+    const slotClassValue = computed<string>(() => {
+      const s = slotStyles.value
+      return s.type === 'string' ? (s.value as string) : ''
+    })
+
     // ─── 分页布局配置（来自全局 EsTable 配置） ──
     const paginationLayoutConfig = computed(() => {
       const cfg = $esPlusTable?.paginationLayout
@@ -497,10 +529,11 @@ export default defineComponent({
     )
 
     const paginationStyle = computed(() => ({
-      position: heightType.value === 'height' ? 'absolute' : 'static',
+      position: heightType.value === 'height' ? ('absolute' as const) : ('static' as const),
       bottom: '0px',
       left: '0px',
-      zIndex: 5,
+      // z-index 必须高于 element-loading 蒙层（默认 2000），否则请求加载过程中分页会被蒙层遮挡。
+      zIndex: 2001,
       background: '#fff',
     }))
 
@@ -651,41 +684,70 @@ export default defineComponent({
       }
     })
 
+    // 兼容性修复：在 Vue 2.6 + @vue/composition-api 下，watch(() => props.pagination, ...)
+    // 即使比对相同也会因为父组件 .sync 回传引发 watcher 触发 → 父组件 render watcher 循环。
+    // 解决：emit 前先更新 lastPaginationStr，watcher 收到回传时序列化相同则 return。
+    let lastPaginationStr = JSON.stringify(props.pagination || {})
+    if (props.pagination && Object.keys(props.pagination).length) {
+      paginationConfig.value = { ...paginationConfig.value, ...props.pagination }
+      showPagination.value = (props.pagination as PaginationConfig).total !== undefined
+    }
+    /** Emit pagination 更新，并预先记录序列化值以阻断 .sync 回传循环 */
+    const emitPaginationUpdate = () => {
+      const snapshot = { ...paginationConfig.value }
+      lastPaginationStr = JSON.stringify(snapshot)
+      emit('update:pagination', snapshot)
+    }
     watch(
       () => props.pagination,
-      (val) => {
+      (val: PaginationConfig) => {
+        const str = JSON.stringify(val || {})
+        if (str === lastPaginationStr) return
+        lastPaginationStr = str
         paginationConfig.value = { ...paginationConfig.value, ...val }
         showPagination.value = val.total !== undefined
-      },
-      { deep: true, immediate: true }
+      }
     )
 
+    // 兼容性修复：移除 deep，仅监听数组引用变化即可触发 selection 重置。
+    // .sync 回传相同引用时不会重复触发，避免循环。
     watch(
       () => props.dataSource,
       (val) => {
         initSelection(val, tableRef.value)
-      },
-      { deep: true }
+      }
     )
 
-    watch(
-      tableData,
-      (val) => {
-        if (Array.isArray(val)) {
-          emit('update:dataSource', val)
-        }
-      },
-      { deep: true }
-    )
+    // 兼容性修复：避免 Vue 2.6 + @vue/composition-api 下 .sync 双向绑定循环。
+    // 仅在 tableData 引用变化时 emit，去掉 deep；并通过 lastEmittedRef 跳过
+    // 「外部 .sync 回传 → props.dataSource 变化 → 内部赋值 → emit 再次回传」的循环。
+    let lastEmittedTableData: unknown = null
+    watch(tableData, (val) => {
+      if (!Array.isArray(val)) return
+      if (val === lastEmittedTableData) return
+      lastEmittedTableData = val
+      emit('update:dataSource', val)
+    })
 
     onMounted(() => {
+      // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
+      syncDomRefs()
       if (isRequestConf.value && props.options.isInitRun !== false) {
         httpRequestInstance()
       }
-      // 等待 EsForm 子组件挂载后再触发一次依赖收集
+      // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
       nextTick(() => {
+        syncDomRefs()
         // eslint-disable-next-line no-unused-expressions
         isFormInstance.value
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            syncDomRefs()
+            resizeObservers()
+          })
+        } else {
+          resizeObservers()
+        }
       })
     })
 
@@ -711,6 +773,9 @@ export default defineComponent({
     const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
       const cf = configTableField.value as Record<string, unknown>
       if (isObject(cf) && Object.keys(cf).length) {
+        // 累积所有 pagination 字段更新，最后一次性整体替换 paginationConfig.value，
+        // 避免直接 paginationConfig.value[key] = x 触发多次 setter / 多轮渲染。
+        const paginationPatch: Record<string, unknown> = {}
         Object.entries(cf).forEach(([key, value]) => {
           const isKeyUsed = keyList.includes(key)
           if (!isKeyUsed) return
@@ -719,10 +784,13 @@ export default defineComponent({
           if (key === 'tableData') {
             tableData.value = Array.isArray(rowData) ? rowData : []
           } else {
-            ;(paginationConfig.value as any)[key] =
+            paginationPatch[key] =
               typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
           }
         })
+        if (Object.keys(paginationPatch).length) {
+          paginationConfig.value = { ...paginationConfig.value, ...paginationPatch }
+        }
       }
     }
 
@@ -796,7 +864,7 @@ export default defineComponent({
 
     const httpRequestInstance = (model?: Record<string, unknown>) => {
       return new Promise((resolve, reject) => {
-        paginationConfig.value.current = 1
+        paginationConfig.value = { ...paginationConfig.value, current: 1 }
         queryTableListMethod(
           {
             ...(model || {}),
@@ -807,7 +875,7 @@ export default defineComponent({
             success: (res) => {
               formatConfigOut(res, ['total', 'tableData'])
               if (Object.keys(props.pagination).length) {
-                emit('update:pagination', paginationConfig.value)
+                emitPaginationUpdate()
               }
               resolve(res)
             },
@@ -828,7 +896,7 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            emit('update:pagination', paginationConfig.value)
+            emitPaginationUpdate()
             emit('pagination-current-change', paginationConfig.value)
           },
         }
@@ -844,29 +912,28 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            emit('update:pagination', paginationConfig.value)
+            emitPaginationUpdate()
           },
         }
       )
     }
 
     const handleSizeChange = (size: number) => {
-      paginationConfig.value.pageSize = size
-      paginationConfig.value.current = 1
+      paginationConfig.value = { ...paginationConfig.value, pageSize: size, current: 1 }
       if (isRequestConf.value) {
         changePageSizeRequest()
       } else {
-        emit('update:pagination', paginationConfig.value)
+        emitPaginationUpdate()
         emit('size-change', paginationConfig.value, size)
       }
     }
 
     const handleIndexChange = (val: number) => {
-      paginationConfig.value.current = val
+      paginationConfig.value = { ...paginationConfig.value, current: val }
       if (isRequestConf.value) {
         changePageIndexRequest()
       } else {
-        emit('update:pagination', paginationConfig.value)
+        emitPaginationUpdate()
         emit('pagination-current-change', paginationConfig.value)
       }
     }
@@ -917,6 +984,7 @@ export default defineComponent({
       paginationRef,
       tableId,
       tableData,
+      effectiveDataSource,
       // state
       loadStatus,
       paginationConfig,
@@ -928,6 +996,8 @@ export default defineComponent({
       heightType,
       tabHeight,
       slotStyles,
+      slotStyleValue,
+      slotClassValue,
       slotState,
       showPagination,
       containerStyle,
@@ -937,7 +1007,6 @@ export default defineComponent({
       paginationIsSmall,
       paginationBackground,
       // handlers
-      setTableContainer,
       handleTableSelectionChange,
       changeTableSort,
       handleSizeChange,

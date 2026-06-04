@@ -8,9 +8,9 @@
 
 import EsDialog from './component.vue'
 import useDialog from './use-dialog'
-import type { Vue } from '../../vue-compat'
+import type { Vue2Constructor } from '../../vue-compat'
 
-;(EsDialog as unknown as { install: (V: typeof Vue) => void }).install = function (Vue) {
+;(EsDialog as unknown as { install: (V: Vue2Constructor) => void }).install = function (Vue) {
   Vue.component((EsDialog as unknown as { name: string }).name || 'EsDialog', EsDialog)
   // 同时挂载到 Vue.prototype，方便 Options API 中通过 this.$useDialog() 调用
   ;(Vue as unknown as { prototype: Record<string, unknown> }).prototype.$useDialog = useDialog

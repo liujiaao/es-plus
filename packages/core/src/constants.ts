@@ -13,12 +13,15 @@
 /**
  * 内置表单输入类型清单
  * 用于 schema 校验、自动完成提示、CRUD 配置生成器
+ *
+ * PascalCase 为推荐写法（DatePicker / TimePicker），
+ * camelCase 旧写法（datePicker / timePicker）仍保留以兼容。
  */
 export const VALID_FORM_TYPES = [
   'Input',
   'Select',
-  'datePicker',
-  'timePicker',
+  'DatePicker',
+  'TimePicker',
   'Slider',
   'ColorPicker',
   'Transfer',
@@ -29,6 +32,24 @@ export const VALID_FORM_TYPES = [
   'Rate',
   'Upload',
 ] as const
+
+/**
+ * FormType 旧写法 → 新写法映射
+ * 用于运行时归一化：用户写 'datePicker' 会被转换为 'DatePicker'
+ */
+export const FORM_TYPE_ALIASES: Record<string, string> = {
+  datePicker: 'DatePicker',
+  timePicker: 'TimePicker',
+}
+
+/**
+ * 将 FormType 归一化为 PascalCase
+ * 旧写法（如 'datePicker'）会被转换为推荐写法（'DatePicker'），
+ * 未知值原样返回。
+ */
+export function normalizeFormType(type: string): string {
+  return FORM_TYPE_ALIASES[type] ?? type
+}
 
 /** 由 VALID_FORM_TYPES 推导的字面量联合类型 */
 export type FormTypeLiteral = (typeof VALID_FORM_TYPES)[number]

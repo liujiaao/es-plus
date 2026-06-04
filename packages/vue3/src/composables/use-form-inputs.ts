@@ -18,6 +18,10 @@ import {
   ElUpload
 } from 'element-plus'
 import type { FormItemOption } from '../types'
+import { normalizeFormType } from '@es-plus/core'
+
+/** 表单控件渲染回调的上下文参数类型（与 FormItemOption.render 的 ctx 一致） */
+type FormInputCtx = { row: FormItemOption; index: number }
 
 // 支持嵌套属性路径的取值和赋值
 export const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
@@ -50,7 +54,7 @@ export function useFormInputs() {
     const formPutList = new Map([
       [
         'Input',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElInput, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -63,7 +67,7 @@ export function useFormInputs() {
       ],
       [
         'Select',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(
             ElSelect,
             {
@@ -83,7 +87,7 @@ export function useFormInputs() {
       ],
       [
         'datePicker',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElDatePicker, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -96,7 +100,7 @@ export function useFormInputs() {
       ],
       [
         'timePicker',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElTimePicker, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -109,7 +113,7 @@ export function useFormInputs() {
       ],
       [
         'Slider',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElSlider, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -122,7 +126,7 @@ export function useFormInputs() {
       ],
       [
         'ColorPicker',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElColorPicker, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -135,7 +139,7 @@ export function useFormInputs() {
       ],
       [
         'Transfer',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElTransfer, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -148,7 +152,7 @@ export function useFormInputs() {
       ],
       [
         'Cascader',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElCascader, {
             modelValue: getNestedValue(model, row.prop) as any,
             options: row.dataOptions,
@@ -162,7 +166,7 @@ export function useFormInputs() {
       ],
       [
         'Radio',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(
             ElRadioGroup,
             {
@@ -182,7 +186,7 @@ export function useFormInputs() {
       ],
       [
         'Checkbox',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(
             ElCheckboxGroup,
             {
@@ -202,7 +206,7 @@ export function useFormInputs() {
       ],
       [
         'Switch',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElSwitch, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -215,7 +219,7 @@ export function useFormInputs() {
       ],
       [
         'Rate',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElRate, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
@@ -227,8 +231,34 @@ export function useFormInputs() {
         }
       ],
       [
+        'DatePicker',
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          return hFn(ElDatePicker, {
+            modelValue: getNestedValue(model, row.prop) as any,
+            ...row.attrs,
+            ...row.on,
+            'onUpdate:modelValue': (val: unknown) => {
+              setNestedValue(model, row.prop, val)
+            }
+          })
+        }
+      ],
+      [
+        'TimePicker',
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          return hFn(ElTimePicker, {
+            modelValue: getNestedValue(model, row.prop) as any,
+            ...row.attrs,
+            ...row.on,
+            'onUpdate:modelValue': (val: unknown) => {
+              setNestedValue(model, row.prop, val)
+            }
+          })
+        }
+      ],
+      [
         'Upload',
-        (hFn: typeof h, _model: Record<string, unknown>, { row }: { row: FormItemOption }) => {
+        (hFn: typeof h, _model: Record<string, unknown>, { row }: FormInputCtx) => {
           const { props: uploadProps, httpRequest, triggerRender, fileRender, ...restRow } = row as FormItemOption & {
             props?: Record<string, unknown>
             httpRequest?: (options: Record<string, unknown>) => Promise<unknown>
@@ -285,7 +315,7 @@ export function useFormInputs() {
         }
       ]
     ])
-    return formPutList.get(item.formtype) || (() => null)
+    return formPutList.get(normalizeFormType(item.formtype || '')) || (() => null)
   }
 
   return { formInputComponents }

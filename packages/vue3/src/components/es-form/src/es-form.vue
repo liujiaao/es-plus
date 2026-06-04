@@ -168,6 +168,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
+import { resolveFormLayProps, normalizeFormItemList } from '@es-plus/core'
 
 const props = withDefaults(
   defineProps<{
@@ -252,7 +253,7 @@ const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFiel
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 // Break circular dependency: formLayoutRef is populated after useFormLayout
-const formLayoutRef = ref<Record<string, unknown>>(props.layoutFormProps?.fromLayProps || {})
+const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
 const formProps = computed(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,

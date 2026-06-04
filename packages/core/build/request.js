@@ -13,6 +13,7 @@
  *   - toRaw / unref：core 接收的已经是普通对象，调用方在传入前自行 unwrap。
  */
 import { isObject, findValueByKey, wrapPromise } from './shared';
+import { getCallback } from './compat';
 /**
  * 默认字段映射（与 1.3.5 保持一致）
  */
@@ -207,7 +208,7 @@ export async function getEveryFormQueryField(rowsList, httpRequestGlobal, fieldF
             const { configRows, data } = item.value;
             const option = apiUrlList[index];
             const listenToCallBack = option?.listenToCallBack;
-            // 与原 es-eui 一致：crtn 接收的是"已经预提取过的列表数组"，而不是原始响应。
+            // 与原 es-eui 一致：crtn / responseTransform 接收的是"已经预提取过的列表数组"，而不是原始响应。
             // 优先级：configRows.listData（按 fieldFieldOutput 映射出来的）→ data（剥一层后的）
             //        → option.dataOptions（用户兜底静态选项）→ []
             const preExtractedList = Array.isArray(configRows?.listData) && configRows.listData.length
@@ -216,9 +217,11 @@ export async function getEveryFormQueryField(rowsList, httpRequestGlobal, fieldF
                     ? data
                     : option?.dataOptions || [];
             let newListOptions;
-            if (typeof listenToCallBack?.crtn === 'function') {
-                // crtn 自定义格式化：接收预提取的列表，期望返回一个数组
-                const crtnResult = listenToCallBack.crtn(preExtractedList);
+            // 优先使用 responseTransform（推荐），fallback 到 crtn（旧写法）
+            const crtnFn = getCallback(listenToCallBack, 'responseTransform');
+            if (typeof crtnFn === 'function') {
+                // crtn / responseTransform 自定义格式化：接收预提取的列表，期望返回一个数组
+                const crtnResult = crtnFn(preExtractedList);
                 if (Array.isArray(crtnResult)) {
                     newListOptions = crtnResult;
                 }

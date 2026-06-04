@@ -4,7 +4,7 @@
  * 提取自 EsForm 与 EsTable 中的纯逻辑：
  *   - 表单字段隐藏过滤
  *   - 自动 span 计算
- *   - 工具栏按钮按 code 分左右
+ *   - 工具栏按钮按 position/code 分左右
  *   - 旧 API：按 direction 分左右（EsForm 内置按钮使用）
  *   - 权限过滤
  *   - 按钮 disabled 状态归一化（支持函数形式）
@@ -49,12 +49,19 @@ export declare function splitButtonsByDirection(buttons: BtnConfig[]): {
     colRightBtn: BtnConfig[];
 };
 /**
- * 按 code 字段把表格工具栏按钮分左右两组
- * - code === 1 → 左侧
- * - code === 2 → 右侧
+ * 解析按钮位置 —— 优先 position，fallback code
  *
- * 注意：未配 code 的按钮默认归到 left（与 EsCrudPage 中 `code: btn.code || 1` 一致）。
- * 但如果调用方需要严格区分，应在传入前显式 normalize。
+ * - position 字段优先（推荐，语义自解释）
+ * - code 字段兜底（@deprecated 兼容旧 API）
+ * - 两者都未配时默认 'left'
+ */
+export declare function getButtonPosition(btn: BtnConfig): 'left' | 'right';
+/**
+ * 按 position/code 字段把表格工具栏按钮分左右两组
+ * - position: 'right' 或 code === 2 → 右侧
+ * - position: 'left' 或 code === 1 或未配置 → 左侧
+ *
+ * 注意：未配 position/code 的按钮默认归到 left。
  */
 export declare function splitToolbarButtonsByCode(buttons: BtnConfig[]): {
     leftBtns: BtnConfig[];

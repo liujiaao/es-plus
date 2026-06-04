@@ -7,9 +7,9 @@
  */
 
 import EsCrudPage from './es-crud-page.vue'
-import type { Vue } from '../../vue-compat'
+import type { Vue2Constructor } from '../../vue-compat'
 
-;(EsCrudPage as unknown as { install: (V: typeof Vue) => void }).install = function (Vue) {
+;(EsCrudPage as unknown as { install: (V: Vue2Constructor) => void }).install = function (Vue) {
   Vue.component(
     (EsCrudPage as unknown as { name: string }).name || 'EsCrudPage',
     EsCrudPage

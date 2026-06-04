@@ -7,11 +7,11 @@
  */
 
 import EsForm from './es-form.vue'
-import type { Vue } from '../../vue-compat'
+import type { Vue2Constructor } from '../../vue-compat'
 
 // Element UI 组件作为 EsForm 的依赖，由用户在 main.js 中通过 Vue.use(ElementUI) 全局注册。
 // 这里不重复注册，但提供 install 函数让 Vue.use(EsForm) 也能局部使用。
-;(EsForm as unknown as { install: (V: typeof Vue) => void }).install = function (Vue) {
+;(EsForm as unknown as { install: (V: Vue2Constructor) => void }).install = function (Vue) {
   Vue.component((EsForm as unknown as { name: string }).name || 'EsForm', EsForm)
 }
 

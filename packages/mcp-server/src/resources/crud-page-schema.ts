@@ -107,13 +107,13 @@ const pageSchema = {
     { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
     { prop: 'status', label: '状态', formtype: 'Select', span: 6,
       dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
-    { prop: 'createTime', label: '创建时间', formtype: 'datePicker', span: 8,
+    { prop: 'createTime', label: '创建时间', formtype: 'DatePicker', span: 8,
       attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
   ],
   formLayout: { labelWidth: '80px', minFoldRows: 1 },
   tableBtns: [
-    { name: '新增', type: 'primary', icon: 'Plus', code: 1, dialogKey: 'add' },
-    { name: '导出', icon: 'Download', code: 2, actionType: 'export' }
+    { name: '新增', type: 'primary', icon: 'Plus', position: 'left', dialogKey: 'add' },
+    { name: '导出', icon: 'Download', position: 'right', actionType: 'export' }
   ],
   columns: [
     { prop: 'name', label: '姓名' },
@@ -197,7 +197,7 @@ export default defineComponent({
         { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
         { prop: 'status', label: '状态', formtype: 'Select', span: 6,
           dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
-        { prop: 'createTime', label: '创建时间', formtype: 'datePicker', span: 8,
+        { prop: 'createTime', label: '创建时间', formtype: 'DatePicker', span: 8,
           // Element UI uses different attr names for some date pickers — verify against EUI docs
           attrs: { type: 'daterange', 'value-format': 'yyyy-MM-dd' } }
       ],
@@ -205,8 +205,8 @@ export default defineComponent({
       tableBtns: [
         // Element UI icons are class-based ('el-icon-plus'); the runtime accepts
         // either the raw class or just the bare keyword and prepends 'el-icon-'.
-        { name: '新增', type: 'primary', icon: 'plus', code: 1, dialogKey: 'add' },
-        { name: '导出', icon: 'download', code: 2, actionType: 'export' }
+        { name: '新增', type: 'primary', icon: 'plus', position: 'left', dialogKey: 'add' },
+        { name: '导出', icon: 'download', position: 'right', actionType: 'export' }
       ],
       columns: [
         { prop: 'name', label: '姓名' },
@@ -297,7 +297,7 @@ ${target === "vue2" ? vue2Example() : vue3Example()}
 ## Key Points
 
 1. **No need to define query/reset buttons** — EsCrudPage adds them automatically
-2. **\`tableBtns\`** — buttons rendered in EsTable toolbar (code:1=left, code:2=right)
+2. **\`tableBtns\`** — buttons rendered in EsTable toolbar (position:'left'/'right', legacy code:1/2 still works)
 3. **\`toolbarBtns\`** — buttons rendered alongside query/reset in EsForm button area
 4. **\`formLayout.minFoldRows\`** — enables form collapse when rows exceed this number
 5. **\`dialogs\` + \`dialogKey\`** — multi-dialog architecture with button-dialog binding

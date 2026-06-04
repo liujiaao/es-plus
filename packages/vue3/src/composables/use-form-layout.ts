@@ -1,14 +1,15 @@
 import { computed, ref, watch } from 'vue'
 import type { FormItemOption, LayoutFormProps } from '../types'
+import { resolveFormLayProps } from '@es-plus/core'
 
 export function useFormLayout(props: { layoutFormProps?: LayoutFormProps; formItemList: FormItemOption[] }) {
   const folded = ref(false)
 
-  const isBtnHidden = computed(() => props.layoutFormProps?.fromLayProps?.isBtnHidden ?? false)
+  const isBtnHidden = computed(() => resolveFormLayProps(props.layoutFormProps).isBtnHidden ?? false)
 
   const rowLayout = computed(() => props.layoutFormProps?.rowLayProps || { gutter: 20 })
 
-  const formLayout = computed(() => props.layoutFormProps?.fromLayProps || {})
+  const formLayout = computed(() => resolveFormLayProps(props.layoutFormProps))
 
   const getSetOptionsStatus = computed(() => props.layoutFormProps?.setOptions)
 
@@ -63,14 +64,14 @@ export function useFormLayout(props: { layoutFormProps?: LayoutFormProps; formIt
   })
 
   const isFold = computed(() => {
-    const minFoldRow = props.layoutFormProps?.fromLayProps?.minFoldRows || 0
+    const minFoldRow = (resolveFormLayProps(props.layoutFormProps).minFoldRows as number) || 0
     return minFoldRow > 0 && minFoldRow < getRowColsAlgorithm.value.rowNum
   })
 
   const getBtnColSpan = computed(() => {
     const { rowNum, columnRow } = getRowColsAlgorithm.value
     const lastColumn = columnRow[rowNum - 1] || []
-    const btnColSpan = props.layoutFormProps?.fromLayProps?.btnColSpan || 0
+    const btnColSpan = (resolveFormLayProps(props.layoutFormProps).btnColSpan as number) || 0
     const totalSpan = lastColumn.reduce((sum, idx) => sum + (props.formItemList[idx]?.span || 24), 0)
     const hasSpan = 24 - totalSpan
 
@@ -78,7 +79,7 @@ export function useFormLayout(props: { layoutFormProps?: LayoutFormProps; formIt
   })
 
   const formItem = computed(() => {
-    const minFoldRow = props.layoutFormProps?.fromLayProps?.minFoldRows || 0
+    const minFoldRow = (resolveFormLayProps(props.layoutFormProps).minFoldRows as number) || 0
     const { columnNodeIndex } = getRowColsAlgorithm.value
 
     if (folded.value) {

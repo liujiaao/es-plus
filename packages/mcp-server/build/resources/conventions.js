@@ -92,8 +92,8 @@ function buildConventionsContent(target) {
 
 ## Form Types (formtype)
 Valid values: ${VALID_FORM_TYPES.join(", ")}
-- Note: "datePicker" and "timePicker" are camelCase (not PascalCase)
-- All other types are PascalCase
+- All types are PascalCase (DatePicker, TimePicker, ColorPicker, etc.)
+- Legacy camelCase "datePicker"/"timePicker" still work but PascalCase is recommended
 
 ## Button Keys
 Built-in keys: ${BUILT_IN_BTN_KEYS.join(", ")}
@@ -306,13 +306,13 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 ## Common Gotchas (Full List)
 
 1. Reset button key is "rest" NOT "reset" — this is intentional in ${v.esPlusPkg}
-2. formtype casing: "datePicker", "timePicker" (camelCase) — all others PascalCase
+2. formtype casing: all PascalCase (DatePicker, TimePicker). Legacy "datePicker"/"timePicker" still accepted
 3. Table operation column prop: "operate" in SFC mode, "action" in CrudPage schema mode
 4. \`triggerEvent: true\` is REQUIRED on query/reset buttons for table auto-refresh
 5. In schema mode, \`render\` expressions are NOT evaluated — use wrapper SFC slots
 6. \`apiParams.url\` in tableOptions triggers auto-fetch on mount; omit for manual control
 7. \`configTableOut\` must match your backend response structure exactly
-8. When using \`datePicker\` with type "daterange", the model field stores an array of 2 strings
+8. When using \`DatePicker\` with type "daterange", the model field stores an array of 2 strings
 9. \`rowkey\` (note: lowercase 'k') is required for cross-page selection to work
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed

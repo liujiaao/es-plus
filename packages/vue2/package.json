@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/vue2",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "es-plus for Vue 2 + Element UI: configuration-driven enterprise components, sharing the same JSON config schema as @es-plus/vue3 (Vue 3 + Element Plus)",
   "main": "./dist/es-plus-vue2.umd.cjs",
   "module": "./dist/es-plus-vue2.js",
@@ -63,16 +63,12 @@
     "element-ui": "^2.15.0",
     "vue": "^2.6.14"
   },
-  "peerDependenciesMeta": {
-    "@vue/composition-api": {
-      "optional": true
-    }
-  },
   "dependencies": {
     "@es-plus/core": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@vue/composition-api": "^1.7.2",
     "@vitejs/plugin-vue2": "^2.3.0",
     "element-ui": "^2.15.14",
     "sass": "^1.70.0",
