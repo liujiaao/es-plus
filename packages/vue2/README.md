@@ -35,13 +35,18 @@ npm install @es-plus/vue2 element-ui @vue/composition-api vue@^2.6
 ## Setup
 
 ```js
+// Since 1.1.0, @es-plus/vue2 auto-detects the host Vue version at runtime
+// and wires the Composition API source for you — do NOT add
+// `Vue.use(VueCompositionAPI)` in main.js:
+//   - Vue 2.7+: uses Vue's native Composition API
+//   - Vue 2.6 : EsPlus.install() calls Vue.use(VueCompositionAPI) for you
+// (On Vue 2.7, if both natives setup and the polyfill plugin are active,
+//  setup() runs twice — the install() function logs a warning and you
+//  should remove your manual Vue.use(VueCompositionAPI).)
+
 import Vue from 'vue'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
-
-// Vue 2.6 only — skip on Vue 2.7+
-import VueCompositionAPI from '@vue/composition-api'
-Vue.use(VueCompositionAPI)
 
 import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'

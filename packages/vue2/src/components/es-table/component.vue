@@ -130,6 +130,8 @@
           :page-sizes="paginationPageSizes"
           :current-page.sync="paginationConfig.current"
           :layout="layout"
+          :prev-text="paginationPrevText"
+          :next-text="paginationNextText"
           style="padding: 0; margin: 10px 0; text-align: center"
           @size-change="handleSizeChange"
           @current-change="handleIndexChange"
@@ -526,6 +528,13 @@ export default defineComponent({
     )
     const paginationBackground = computed(
       () => (paginationLayoutConfig.value as any)?.background ?? true
+    )
+    // prev/next 文字：未配置时返回空字符串，让 el-pagination 渲染默认 ‹/› 箭头
+    const paginationPrevText = computed(
+      () => ((paginationLayoutConfig.value as any)?.prevText as string) || ''
+    )
+    const paginationNextText = computed(
+      () => ((paginationLayoutConfig.value as any)?.nextText as string) || ''
     )
 
     const paginationStyle = computed(() => ({
@@ -1006,6 +1015,8 @@ export default defineComponent({
       paginationPageSizes,
       paginationIsSmall,
       paginationBackground,
+      paginationPrevText,
+      paginationNextText,
       // handlers
       handleTableSelectionChange,
       changeTableSort,

@@ -9,7 +9,11 @@
  *
  * 用户使用方式（在 main.js / main.ts 中）：
  *
- *   ┌─ Vue 2.7+ ───────────────────────────────────┐
+ * 不论 Vue 版本，用户都不需要手动 `Vue.use(VueCompositionAPI)`：
+ *   - Vue 2.7+：本库的 vue-compat 直接使用 vue 原生 Composition API
+ *   - Vue 2.6：本库 install() 会自动调用 `Vue.use(VueCompositionAPI)` 安装 polyfill
+ *
+ *   ┌─ Vue 2.6 / 2.7 通用 ─────────────────────────┐
  *   │ import Vue from 'vue'                          │
  *   │ import ElementUI from 'element-ui'             │
  *   │ import 'element-ui/lib/theme-chalk/index.css'  │
@@ -19,16 +23,8 @@
  *   │ Vue.use(EsPlus, { permission: (v) => true })   │
  *   └────────────────────────────────────────────────┘
  *
- *   ┌─ Vue 2.6 ─────────────────────────────────────┐
- *   │ import Vue from 'vue'                          │
- *   │ import VueCompositionAPI from '@vue/composition-api' │
- *   │ import ElementUI from 'element-ui'             │
- *   │ import EsPlus from '@es-plus/vue2'             │
- *   │                                                │
- *   │ Vue.use(VueCompositionAPI)                     │
- *   │ Vue.use(ElementUI)                             │
- *   │ Vue.use(EsPlus)                                │
- *   └────────────────────────────────────────────────┘
+ * 注意：在 Vue 2.7 项目中**不要**额外 `Vue.use(VueCompositionAPI)`，否则原生 setup
+ * 与 polyfill 的 wrappedData 会双重执行，本库 install 会发出警告。
  *
  * 配置示例：
  *   Vue.use(EsPlus, {
@@ -41,6 +37,7 @@
 
 import { configureEsPlus } from '@es-plus/core'
 import type { Vue2Constructor } from './vue-compat'
+import { isVue27Plus, VueCompositionAPIPlugin } from './vue-compat'
 
 import EsForm from './components/es-form'
 import EsTable from './components/es-table'
@@ -110,6 +107,27 @@ const normalizeLegacyOptions = (options: InstallOptions): InstallOptions => {
 }
 
 const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
+  // 自动管理 @vue/composition-api 安装：
+  //   - Vue 2.6.x：必须装 polyfill，否则库内 setup / inject / ref 等无法工作
+  //   - Vue 2.7+：原生支持 Composition API，不应安装 polyfill；如已被用户主动
+  //     `Vue.use(VueCompositionAPI)`，原生 setup 与 polyfill 的 wrappedData 会双重
+  //     执行，导致 "setup binding ... already declared" 与 "inject() outside setup"
+  //     等告警。这里只能发警告，无法在运行时卸载 plugin。
+  const alreadyInstalled = (Vue as unknown as Record<string, unknown>).__composition_api_installed__ === true
+  if (!isVue27Plus) {
+    if (!alreadyInstalled && VueCompositionAPIPlugin) {
+      Vue.use(VueCompositionAPIPlugin as any)
+    }
+  } else if (alreadyInstalled) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[@es-plus/vue2] Vue 2.7+ detected together with @vue/composition-api plugin already installed. ' +
+        'This causes setup() to run twice (once natively, once via the polyfill\'s data() wrapper) and ' +
+        'will produce "setup binding ... already declared" warnings. Remove `Vue.use(VueCompositionAPI)` ' +
+        'from your main.js — Vue 2.7 has Composition API natively.',
+    )
+  }
+
   // 兼容旧 es-eui options 形状（methods 嵌套 + 字段名差异）
   const normalized = normalizeLegacyOptions(options)
 
@@ -200,6 +218,6 @@ export type {
 // NOTE: keep `version` in sync with package.json — __tests__/exports.spec.ts
 // asserts equality so a drift fails CI.
 export default {
-  version: '1.0.4',
+  version: '1.1.0',
   install,
 }

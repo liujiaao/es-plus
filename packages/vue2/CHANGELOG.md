@@ -1,5 +1,51 @@
 # @es-plus/vue2
 
+## 1.1.0 — Vue 2.6 / 2.7 auto-compat + pagination text props
+
+### Added
+
+- **Runtime Vue version detection** in `vue-compat`: at module load the
+  package now reads `Vue.version` and routes Composition API calls to
+  either Vue 2.7's native exports or the `@vue/composition-api` polyfill.
+  Eliminates the long-standing breakage where, in a Vue 2.7 project, the
+  polyfill's `data()` wrapper and the native `setup()` would both run,
+  producing `"setup binding ... already declared"` and
+  `"inject() can only be used inside setup()"` warnings.
+- **Auto-managed polyfill in `install()`**: on Vue 2.6 the install function
+  now calls `Vue.use(VueCompositionAPI)` for you if it hasn't been installed
+  yet. On Vue 2.7+ it detects an already-installed polyfill and logs a
+  `console.warn` recommending its removal (no auto-uninstall — Vue has no
+  reverse API for that).
+- **`paginationLayout.prevText` / `paginationLayout.nextText`** in EsTable's
+  global options: the strings are now forwarded to `<el-pagination>` as
+  `:prev-text` / `:next-text`. Omit or set to empty string to keep the
+  default `‹` / `›` arrow icons.
+
+### Changed
+
+- `peerDependencies.vue` widened from `^2.6.14` to `^2.6.14 || ^2.7.0` to
+  match the install-time check above. No behavior change for existing
+  Vue 2.6 / Vue 2.7 users; just a cleaner npm install signal.
+- README "Setup" section rewritten: users no longer manually
+  `Vue.use(VueCompositionAPI)`. Existing projects with that line should
+  remove it on upgrade (the warning above will fire until they do).
+
+### Migration
+
+For projects coming from 1.0.x:
+
+```diff
+- import VueCompositionAPI from '@vue/composition-api'
+- Vue.use(VueCompositionAPI)
+  import EsPlus from '@es-plus/vue2'
+  Vue.use(EsPlus, { /* options */ })
+```
+
+`@vue/composition-api` must remain in your `package.json` (it's still a
+required peer dep — the dist contains a static `import * as ... from
+'@vue/composition-api'` used as the Vue 2.6 fallback branch), but you
+should no longer activate it as a plugin.
+
 ## 1.0.0 — First stable release
 
 This release promotes @es-plus/vue2 from beta (0.9.x) to GA. The component
