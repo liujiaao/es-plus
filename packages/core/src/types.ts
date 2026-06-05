@@ -36,8 +36,14 @@ export type AnyVNode = unknown
 
 /**
  * 按钮类型字面量（覆盖 Element Plus / Element UI 通用集合）
+ *
+ * 包含 '' 空字符串：element-plus 的 ButtonProps['type'] 把 '' 视为
+ * "无特定 type"（落到默认按钮样式），element-ui 同样接受空值。
+ * 不加这个会让 vue3/vue2 的 BtnConfig.type（继承自 ButtonProps['type']）
+ * 在传入 core 函数时类型不兼容。
  */
 export type EsButtonType =
+  | ''
   | 'default'
   | 'primary'
   | 'success'
@@ -48,8 +54,12 @@ export type EsButtonType =
 
 /**
  * 按钮尺寸字面量
+ *
+ * 包含 '' 空字符串：element-plus 的 ButtonProps['size'] 把 '' 视为
+ * "继承父级尺寸"，element-ui 同样接受空值。同 EsButtonType，省略 ''
+ * 会导致 vue3/vue2 的 BtnConfig 在传入 core 函数时类型不兼容。
  */
-export type EsButtonSize = 'large' | 'default' | 'small' | 'medium' | 'mini'
+export type EsButtonSize = '' | 'large' | 'default' | 'small' | 'medium' | 'mini'
 
 /**
  * 表格尺寸字面量（兼容 Element UI 的 medium/mini）
