@@ -33,9 +33,12 @@ export default defineConfig({
       fileName: (format) => `es-plus-vue2.${format === 'umd' ? 'umd.cjs' : 'js'}`,
     },
     rollupOptions: {
+      // 注意：@vue/composition-api 故意不放进 external —— 把它内联进 dist。
+      // 原因：vue-compat.ts 顶层有 `import * as ... from '@vue/composition-api'`，
+      // 若 external 则消费者必须装这个包，与"Vue 2.7+ 用户无需安装"的承诺冲突。
+      // 内联后 Vue 2.7 用户不装也能 build；运行时 isVue27Plus 分支让 polyfill 代码 dead-but-resident。
       external: [
         'vue',
-        '@vue/composition-api',
         'element-ui',
         '@es-plus/core',
       ],
@@ -43,7 +46,6 @@ export default defineConfig({
         exports: 'named',
         globals: {
           vue: 'Vue',
-          '@vue/composition-api': 'VueCompositionAPI',
           'element-ui': 'ELEMENT',
           '@es-plus/core': 'EsPlusCore',
         },

@@ -1,5 +1,42 @@
 # @es-plus/vue2
 
+## 1.1.1 — Inline @vue/composition-api into dist (fix UNRESOLVED_IMPORT in fresh Vue 2.7 projects)
+
+### Fixed
+
+- **Vue 2.7 fresh projects could not bundle the package.** In 1.1.0,
+  `dist/es-plus-vue2.js` contained a static `import * as ... from '@vue/composition-api'`
+  (because the polyfill was listed under `peerDependencies` and marked external in
+  rollup output). When a Vue 2.7 user followed the README and skipped installing
+  `@vue/composition-api`, vite/rollup raised `UNRESOLVED_IMPORT` at build time.
+  This contradicted the 1.1.0 promise that "Vue 2.7+ users do not need to install
+  the polyfill."
+- The package now **inlines the polyfill into its dist** (rollup `external` no
+  longer lists `@vue/composition-api`). Vue 2.7 users can install just `vue` +
+  `element-ui` and the bundle will resolve. The runtime `vue-compat` switch is
+  unchanged: Vue 2.7 still uses native Composition API; the inlined polyfill code
+  is dead-but-resident in that branch.
+- The peer dep is now declared `optional` via `peerDependenciesMeta`, so npm /
+  pnpm no longer warn Vue 2.7 users about missing polyfill.
+
+### Bundle size impact
+
+- `dist/es-plus-vue2.js` 22.80 KB gzip → **33.61 KB gzip** (+47%)
+- `dist/es-plus-vue2.umd.cjs` 18.15 KB gzip → **27.53 KB gzip** (+52%)
+
+The increase is the cost of the universal-Vue-2.x compatibility guarantee. Future
+major releases that drop Vue 2.6 support will be able to remove the polyfill
+import entirely and reclaim the size.
+
+### Validation
+
+This release was gated on the e2e matrix:
+
+- `(vue2, schema)` — passes (was failing in 1.1.0)
+- `(vue2, sfc)` — passes (was failing in 1.1.0)
+- `(vue3, schema)` / `(vue3, sfc)` — pass (no regression, vue3 package unchanged)
+- `vue2` unit tests 20/20
+
 ## 1.1.0 — Vue 2.6 / 2.7 auto-compat + pagination text props
 
 ### Added

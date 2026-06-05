@@ -25,10 +25,14 @@
 ## Install
 
 ```bash
-# Vue 2.7+ (recommended — no extra plugin needed)
+# Vue 2.7+ — only vue and element-ui needed.
+# Since 1.1.1, @vue/composition-api is inlined into the dist, so it does NOT
+# need to be in your dependencies. The polyfill code is shipped but never
+# executed on Vue 2.7+ (the runtime selects Vue's native Composition API).
 npm install @es-plus/vue2 element-ui vue@^2.7
 
-# Vue 2.6.x (needs @vue/composition-api)
+# Vue 2.6.x — install @vue/composition-api alongside; EsPlus.install()
+# will call Vue.use(VueCompositionAPI) automatically.
 npm install @es-plus/vue2 element-ui @vue/composition-api vue@^2.6
 ```
 
@@ -38,8 +42,10 @@ npm install @es-plus/vue2 element-ui @vue/composition-api vue@^2.6
 // Since 1.1.0, @es-plus/vue2 auto-detects the host Vue version at runtime
 // and wires the Composition API source for you — do NOT add
 // `Vue.use(VueCompositionAPI)` in main.js:
-//   - Vue 2.7+: uses Vue's native Composition API
+//   - Vue 2.7+: uses Vue's native Composition API; polyfill is inlined into
+//               the dist (since 1.1.1) and remains as dead code at runtime.
 //   - Vue 2.6 : EsPlus.install() calls Vue.use(VueCompositionAPI) for you
+//               (using the inlined polyfill instance).
 // (On Vue 2.7, if both natives setup and the polyfill plugin are active,
 //  setup() runs twice — the install() function logs a warning and you
 //  should remove your manual Vue.use(VueCompositionAPI).)

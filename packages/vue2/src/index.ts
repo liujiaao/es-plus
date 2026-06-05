@@ -218,6 +218,6 @@ export type {
 // NOTE: keep `version` in sync with package.json — __tests__/exports.spec.ts
 // asserts equality so a drift fails CI.
 export default {
-  version: '1.1.0',
+  version: '1.1.1',
   install,
 }
