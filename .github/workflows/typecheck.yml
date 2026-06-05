@@ -1,0 +1,44 @@
+name: Typecheck
+
+# Independent typecheck job per package — catches TS errors that the build
+# step might not surface (e.g. vite build with skipDiagnostics, or src files
+# excluded from build but still in tsconfig). Stage A of the production-grade
+# rollout (added 2026-06-05).
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: Typecheck (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't cancel siblings on a single failure — easier to triage when all
+      # packages get to report independently.
+      fail-fast: false
+      matrix:
+        pkg: [core, shared, vue2, vue3, cli, mcp-server]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+
+      # vue2 / vue3 typecheck reads from @es-plus/core's emitted .d.ts in
+      # build/, so build core + shared first (cheap, just tsc).
+      - name: Build @es-plus/core (dep for vue2/vue3 typecheck)
+        if: matrix.pkg != 'core'
+        run: npm run build --workspace @es-plus/core
+
+      - name: Build @es-plus/shared (dep for cli/mcp-server typecheck)
+        if: matrix.pkg == 'cli' || matrix.pkg == 'mcp-server'
+        run: npm run build --workspace @es-plus/shared
+
+      - name: Typecheck ${{ matrix.pkg }}
+        run: npm run typecheck --workspace @es-plus/${{ matrix.pkg }}

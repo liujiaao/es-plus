@@ -24,6 +24,7 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"

@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 提问 / 求助
+    url: https://github.com/liujiaao/es-plus/discussions/categories/q-a
+    about: 不是 bug —— 用法问题、配置疑问、最佳实践，请走 Discussions Q&A
+  - name: 💡 点子 / 早期讨论
+    url: https://github.com/liujiaao/es-plus/discussions/categories/ideas
+    about: 还在打草稿的想法，先到 Discussions Ideas 收集反馈，再来开正式 Feature Request
+  - name: 🎨 晒成品 / 用例分享
+    url: https://github.com/liujiaao/es-plus/discussions/categories/show-and-tell
+    about: 把你用 ES-Plus 做的项目秀出来
+  - name: 🔒 安全漏洞
+    url: https://github.com/liujiaao/es-plus/security/advisories/new
+    about: 安全问题请勿公开报告，走 Security Advisories
+  - name: 📖 文档 / 教程
+    url: https://es-plus.liujiaao.top/
+    about: 阅读官方文档

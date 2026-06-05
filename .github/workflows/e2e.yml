@@ -20,8 +20,17 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit tests (shared + mcp-server)
+    name: Unit tests (${{ matrix.pkg }})
     runs-on: ubuntu-latest
+    strategy:
+      # Test failures in one package shouldn't cancel siblings — we want to see
+      # all failing packages on a single CI run, not one at a time.
+      fail-fast: false
+      matrix:
+        # NOTE: cli is intentionally excluded for now — it has 0 spec files
+        # and `npm test` would fail on "no test files found". Add to matrix
+        # once stage C adds cli specs.
+        pkg: [core, shared, vue2, vue3, mcp-server]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,10 +38,16 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --legacy-peer-deps
-      - name: shared tests
-        run: npm test --workspace @es-plus/shared
-      - name: mcp-server tests
-        run: npm test --workspace @es-plus/mcp-server
+      # Some workspaces have a `pretest` hook that runs `vite build`, which in
+      # turn requires @es-plus/shared / @es-plus/core to be built first
+      # (vue2/vue3 read from their dist via test-utils). Build the dep chain
+      # eagerly so each matrix leg is self-contained.
+      - name: Build @es-plus/core
+        run: npm run build --workspace @es-plus/core
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
+      - name: Run ${{ matrix.pkg }} tests
+        run: npm test --workspace @es-plus/${{ matrix.pkg }}
 
   e2e:
     name: e2e (${{ matrix.target }} / ${{ matrix.mode }})

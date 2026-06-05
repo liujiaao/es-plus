@@ -1,0 +1,103 @@
+name: 🐛 Bug Report
+description: 报告一个 bug —— 包不工作、行为与文档不符、有错误信息等
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你报告 bug！请填写下面的字段，**复现步骤**和**版本信息**对修复至关重要。
+        如果是安全漏洞，请勿在此公开报告 —— 走 [SECURITY.md](../blob/master/SECURITY.md) 流程。
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: 受影响的包
+      description: 选择一个或多个
+      multiple: true
+      options:
+        - "@es-plus/vue3"
+        - "@es-plus/vue2"
+        - "@es-plus/core"
+        - "@es-plus/shared"
+        - "@es-plus/cli"
+        - "@es-plus/mcp-server"
+        - "es-plus-docs (文档站)"
+        - "es-plus-ui (legacy)"
+        - "未知 / 不确定"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 包版本
+      description: 报告的包的具体版本号（可在 `package-lock.json` 找）
+      placeholder: e.g. "@es-plus/vue2": "1.1.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: 运行环境
+      description: 操作系统、Node 版本、Vue 版本、Element 版本、打包器
+      value: |
+        - OS:
+        - Node:
+        - Vue: (e.g. 2.7.16 / 3.4.21)
+        - Element UI / Plus: (版本)
+        - Bundler: (Vite / Webpack / Rollup + 版本)
+        - 浏览器: (Chrome 120 / Firefox 121 / etc)
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你期望发生什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么。**贴完整错误信息和栈追踪**（用代码块包裹）
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: |
+        尽量给最小复现代码（StackBlitz / CodeSandbox / 仓库 link 最佳）。
+        无法分享时至少给完整可执行的代码片段。
+      placeholder: |
+        1. ...
+        2. ...
+        3. 期望 ... 实际 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 已尝试的解决方案
+      description: 你试过哪些办法？哪些可行 / 不可行？
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我已搜索现有 issue 和 closed issue，确认这不是重复报告
+          required: true
+        - label: 我已阅读 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)
+          required: true
+        - label: 这不是用户业务代码 bug —— 我能在最小复现示例里独立触发
+          required: true
