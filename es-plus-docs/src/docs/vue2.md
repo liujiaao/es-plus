@@ -10,11 +10,19 @@
 
 | 依赖 | 版本 |
 |---|---|
-| Vue | ^2.6.14 |
-| Element UI | ^2.15.0 |
-| @vue/composition-api | ^1.7.0（仅 Vue 2.6 需要，2.7 内置） |
+| Vue | `^2.6.14 \|\| ^2.7.0`（自 1.1.0 起原生兼容两条线） |
+| Element UI | `^2.15.0` |
+| `@vue/composition-api` | **不需要安装**（自 1.1.1 起已内联进 dist） |
 
-### Vue 2.7+
+::: tip 1.1.x 后的兼容设计
+**自 `@es-plus/vue2@1.1.0` 起**，包内 `vue-compat` 在模块加载时读取 `Vue.version` 并自动选择 Composition API 来源：Vue 2.7+ 走原生，Vue 2.6 走 polyfill；并由 `install()` 自动 `Vue.use(VueCompositionAPI)`（Vue 2.6 时）。
+
+**自 1.1.1 起**，`@vue/composition-api` 被内联进 dist —— Vue 2.7 用户**不再需要**在 `package.json` 里声明这个依赖，bundler 也不会报 `UNRESOLVED_IMPORT`。
+
+**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**——不论 Vue 2.6 还是 2.7。
+:::
+
+### Vue 2.7+（推荐）
 
 ```bash
 npm install @es-plus/vue2 element-ui
@@ -35,22 +43,31 @@ Vue.use(EsPlus)
 ### Vue 2.6
 
 ```bash
-npm install @es-plus/vue2 element-ui @vue/composition-api
+npm install @es-plus/vue2 element-ui
 ```
 
 ```javascript
-// main.js
+// main.js — 与 Vue 2.7 完全相同
 import Vue from 'vue'
-import VueCompositionAPI from '@vue/composition-api'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'
 
-Vue.use(VueCompositionAPI)  // 必须在 Vue.use(EsPlus) 之前
 Vue.use(ElementUI)
-Vue.use(EsPlus)
+Vue.use(EsPlus)  // ← install() 内部检测到 Vue 2.6 会自动 use 内联的 polyfill
 ```
+
+::: warning 从 1.1.0 之前升级
+如果你之前的 `main.js` 写过：
+
+```javascript
+import VueCompositionAPI from '@vue/composition-api'
+Vue.use(VueCompositionAPI)
+```
+
+**升级到 1.1.0+ 后请删除这两行**。如果保留，在 Vue 2.7 上会触发 `setup()` 双跑警告（原生 setup 与 polyfill 的 `data()` wrapper 同时执行），`install()` 内部会打 `console.warn` 提示你删除。
+:::
 
 ---
 
@@ -77,11 +94,14 @@ Vue.use(EsPlus, {
         const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
         return data
       },
-      // 分页配置
+      // 分页配置（自 1.1.0 起新增 prevText / nextText 透传）
       paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
+        layout: 'prev, pager, next, jumper, sizes, total',
         pageSizes: [10, 20, 50, 100],
+        pageSize: 20,
         background: true,
+        prevText: '上一页',  // 1.1.0+ 透传给 <el-pagination> 的 prev-text；省略则显示默认箭头
+        nextText: '下一页',
       }),
       // 响应字段映射
       configQueryFieldOutput: () => ({

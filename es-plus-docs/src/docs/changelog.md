@@ -2,6 +2,43 @@
 
 记录 ES-Plus 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
 
+## @es-plus/vue2 v1.1.1
+
+> 2026-06-05 发布
+
+**Bug 修复 — Vue 2.7 项目无法 bundle 本包**
+
+- 1.1.0 中 `dist/es-plus-vue2.js` 包含一条静态 `import * as ... from '@vue/composition-api'`（polyfill 被 rollup `external` 标记）。Vue 2.7 用户按 README 跳过安装 polyfill 时，vite/rollup 报 `UNRESOLVED_IMPORT`，违背 1.1.0 "Vue 2.7+ 用户无需安装"的承诺
+- **现已将 polyfill 内联进 dist**（`@vue/composition-api` 不再 external）。Vue 2.7 用户只装 `vue` + `element-ui` 即可成功 bundle；运行时 `vue-compat` 仍走原生分支，内联的 polyfill 代码作为 dead code 不会执行
+- `peerDependenciesMeta.@vue/composition-api.optional = true`，npm / pnpm 不再对 Vue 2.7 用户报"missing peer"
+
+**包体变化**：
+
+| 文件 | 1.1.0 | 1.1.1 |
+|---|---|---|
+| `dist/es-plus-vue2.js` (gzip) | 22.80 KB | 33.61 KB (+47%) |
+| `dist/es-plus-vue2.umd.cjs` (gzip) | 18.15 KB | 27.53 KB (+52%) |
+
+**验证**：`(vue2, schema)` / `(vue2, sfc)` e2e 通过（1.1.0 双双失败）；vue3 矩阵无回归；vue2 单测 20/20。
+
+---
+
+## @es-plus/vue2 v1.1.0
+
+> 2026-06-04 发布
+
+**新能力 — Vue 2.6 / 2.7 自动适配 + 分页文字 prop**
+
+- **运行时 Vue 版本检测**：`vue-compat` 在模块加载时读取 `Vue.version`，把 Composition API 调用路由到 Vue 2.7 的原生导出或 `@vue/composition-api` polyfill。修复 Vue 2.7 项目里 polyfill 与原生 setup 双跑的 `setup binding ... already declared` 与 `inject() outside setup` 警告
+- **`install()` 自动管理 polyfill**：Vue 2.6 自动 `Vue.use(VueCompositionAPI)`；Vue 2.7+ 检测到用户已自行安装 polyfill 时打 `console.warn` 提示删除（无法在运行时卸载）
+- **EsTable `paginationLayout.prevText` / `nextText`**：透传给 `<el-pagination>`。设为空字符串保留默认 `‹` / `›` 箭头
+- `peerDependencies.vue` 扩到 `^2.6.14 || ^2.7.0`
+- README "Setup" 章节重写：用户不再需要手动 `Vue.use(VueCompositionAPI)`
+
+**迁移**：从 1.0.x 升级时，请删除 `main.js` 中的 `Vue.use(VueCompositionAPI)`（旧 Vue 2.7 用户会触发警告直到删除）。`@vue/composition-api` 仍然必须在 `package.json` 中保留为依赖（dist 里有静态 import；1.1.1 已修，本条仅适用于 1.1.0）。
+
+---
+
 ## v1.4.0
 
 > 2026-05-28 发布

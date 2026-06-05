@@ -206,28 +206,31 @@ export default defineConfig({
 
 | 依赖 | 版本 |
 |---|---|
-| Vue | ^2.6.14 |
-| Element UI | ^2.15.0 |
-| @vue/composition-api | ^1.7.0（仅 Vue 2.6 需要，2.7 内置） |
+| Vue | `^2.6.14 \|\| ^2.7.0` |
+| Element UI | `^2.15.0` |
+| `@vue/composition-api` | **不需要安装**（自 `@es-plus/vue2@1.1.1` 起已内联进 dist） |
 
 ### 包管理器安装
 
-**Vue 2.7+（推荐，内置 Composition API）**
-
 ```bash
-npm install @es-plus/vue2 element-ui
+# Vue 2.7+（推荐）
+npm install @es-plus/vue2 element-ui vue@^2.7
+
+# Vue 2.6 —— 安装命令完全一致；polyfill 已被打包进 dist
+npm install @es-plus/vue2 element-ui vue@^2.6
 ```
 
-**Vue 2.6（需要 Composition API 插件）**
+::: tip 1.1.x 自动适配
+- **1.1.0+**：`vue-compat` 在模块加载时读取 `Vue.version`，自动选择 Composition API 来源（Vue 2.7 走原生，Vue 2.6 走 polyfill），并由 `install()` 在 Vue 2.6 时自动调用 `Vue.use(VueCompositionAPI)`
+- **1.1.1+**：`@vue/composition-api` 内联进 dist，Vue 2.7 用户不再需要在 `package.json` 中声明这个依赖
 
-```bash
-npm install @es-plus/vue2 element-ui @vue/composition-api
-```
+**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**——不论 Vue 2.6 还是 2.7。
+:::
 
 ### 注册插件
 
 ```javascript
-// main.js — Vue 2.7+
+// main.js — Vue 2.6 / 2.7 通用
 import Vue from 'vue'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
@@ -236,19 +239,12 @@ import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ElementUI)
 Vue.use(EsPlus)
+// 不需要 Vue.use(VueCompositionAPI) —— 由 EsPlus.install() 在 Vue 2.6 时自动注入
 ```
 
-```javascript
-// main.js — Vue 2.6
-import Vue from 'vue'
-import VueCompositionAPI from '@vue/composition-api'
-import ElementUI from 'element-ui'
-import EsPlus from '@es-plus/vue2'
-
-Vue.use(VueCompositionAPI)
-Vue.use(ElementUI)
-Vue.use(EsPlus)
-```
+::: warning 从 1.1.0 之前升级
+如果你之前的 `main.js` 写过 `Vue.use(VueCompositionAPI)`，**升级到 1.1.0+ 后请删除**。保留会在 Vue 2.7 上触发 `setup()` 双跑警告。详见 [Vue 2 指南](/guide/vue2#安装)。
+:::
 
 :::tip 配置完全一致
 Vue 2 与 Vue 3 共用同一份 `columns` / `formItemList` / `options` JSON 配置。同一份业务配置在两个项目中渲染结果一致，可通过 `@es-plus/core/types` 共享类型定义。

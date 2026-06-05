@@ -12,11 +12,26 @@ If you're starting fresh, use [`@es-plus/vue3`](/guide/getting-started) — it g
 
 ## Install
 
+| Dep | Version |
+|---|---|
+| Vue | `^2.6.14 \|\| ^2.7.0` (1.1.0+ supports both) |
+| Element UI | `^2.15.0` |
+| `@vue/composition-api` | **No need to install** (inlined into dist since 1.1.1) |
+
 ```bash
+# Vue 2.7+ (recommended)
 npm install @es-plus/vue2 element-ui vue@^2.7
+
+# Vue 2.6 — same install command; the polyfill is bundled into our dist
+npm install @es-plus/vue2 element-ui vue@^2.6
 ```
 
-`element-ui` is a peer dep. `vue@^2.7` is required (Composition API support).
+::: tip Auto-compat since 1.1.x
+- **1.1.0**: at module load `vue-compat` reads `Vue.version` and routes Composition API calls to either Vue 2.7's native exports or the `@vue/composition-api` polyfill. On Vue 2.6, `install()` calls `Vue.use(VueCompositionAPI)` for you automatically.
+- **1.1.1**: `@vue/composition-api` is now **inlined into the dist**. Vue 2.7 users no longer need it in `package.json`, and bundlers won't raise `UNRESOLVED_IMPORT`.
+
+**You should NOT call `Vue.use(VueCompositionAPI)` in your `main.js`** — regardless of Vue version. If you do on Vue 2.7, the native `setup()` and the polyfill's `data()` wrapper both run, producing "setup binding ... already declared" warnings; `install()` will log a console warning telling you to remove it.
+:::
 
 ## Register
 
@@ -29,7 +44,19 @@ import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ElementUI)
 Vue.use(ESPlus)
+// No Vue.use(VueCompositionAPI) needed — managed automatically by ESPlus.install()
 ```
+
+::: warning Upgrading from before 1.1.0
+If your old `main.js` had:
+
+```javascript
+import VueCompositionAPI from '@vue/composition-api'
+Vue.use(VueCompositionAPI)
+```
+
+**Remove both lines when upgrading to 1.1.0+.** Keeping them on Vue 2.7 will trigger `setup()` to run twice.
+:::
 
 ## Same Schema, Different Renderer
 
