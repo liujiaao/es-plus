@@ -1,5 +1,52 @@
 # @es-plus/vue2
 
+## 1.1.2 — Externalize @vue/composition-api + forward `<el-table>` native events
+
+### Fixed
+
+- **`[vue-composition-api] No vue dependency found.` in Vue 2.6 projects that
+  also import from `@vue/composition-api` directly.** 1.1.1 inlined the
+  polyfill into `dist/es-plus-vue2.js`, which produced **two separate JS
+  module instances** at runtime: one inside our bundle, one in the consumer's
+  `node_modules/@vue/composition-api` (the one the user's own `setup()`
+  components import). Each instance keeps its registered Vue (`$e`) as a
+  module-private variable, and `Vue.use(EsPlus)` could only initialize one of
+  them — leaving the other to throw `No vue dependency found.` when the user's
+  components called `reactive()` / `ref()` from their own import. The polyfill
+  is now back to being an external rollup dep, so the consumer and our library
+  share a single instance and a single `Vue.use()` call covers both.
+- **`<es-table>` did not forward Element UI's native `Table` events**
+  (`row-click`, `cell-click`, `select`, `header-click`, `row-dblclick`,
+  `row-contextmenu`, etc.). The inner `<el-table>` was missing
+  `v-on="$listeners"`, so listeners written on `<es-table>` only landed in the
+  component's `$listeners` map and never propagated to the underlying
+  `<el-table>`. Vue 2's `_g` (bindObjectListeners) merges `v-on="$listeners"`
+  with the component's existing explicit `@sort-change` /
+  `@selection-change` handlers into an array, so internal handling is
+  preserved while user listeners now fire too.
+
+### ⚠️ Breaking note for Vue 2.7+ users
+
+`@vue/composition-api` is now a required `peerDependency` for **all** users
+(the `peerDependenciesMeta.optional: true` flag is removed). Vue 2.6 users
+already had to install it; Vue 2.7+ users who relied on the 1.1.1 promise
+("no need to install the polyfill") must now add it:
+
+```bash
+npm i @vue/composition-api
+```
+
+The package's postinstall script redirects the polyfill to Vue 2.7's native
+Composition API, so runtime behavior is unchanged. The trade-off is the only
+way to fix the dual-instance bug without forking the polyfill.
+
+### Bundle size impact
+
+Reverses the 1.1.1 increase:
+
+- `dist/es-plus-vue2.js` 33.61 KB gzip → **22.82 KB gzip** (−32%)
+- `dist/es-plus-vue2.umd.cjs` 27.53 KB gzip → **18.16 KB gzip** (−34%)
+
 ## 1.1.1 — Inline @vue/composition-api into dist (fix UNRESOLVED_IMPORT in fresh Vue 2.7 projects)
 
 ### Fixed

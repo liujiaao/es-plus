@@ -36,6 +36,12 @@
             Vue 2 / Element UI 版本不支持虚拟滚动 (Element UI 无 el-table-v2)
             当用户配置 options.virtual === true 时，控制台会警告，仍按普通 el-table 渲染
           -->
+          <!--
+            v-on="$listeners" 把宿主在 <es-table> 上写的所有监听器透传到 <el-table>，
+            让 row-click / cell-click / select / header-click 等 Element UI Table 原生事件
+            能直接被使用方监听。Vue 2 的 _g 会把 $listeners 与下面显式的 @sort-change /
+            @selection-change 合并为数组，不会覆盖我们的内部处理。
+          -->
           <el-table
             class="el-dp_tables"
             :id="tableId"
@@ -43,6 +49,7 @@
             ref="tableRef"
             style="width: 100%"
             v-bind="tableBindAttrs"
+            v-on="$listeners"
             :data="effectiveDataSource"
             @sort-change="changeTableSort"
             @selection-change="handleTableSelectionChange"
@@ -1082,7 +1089,6 @@ export default defineComponent({
 
 .tableContainer {
   border-radius: 0px;
-  transition: all 1.5s;
   flex: 1;
   width: 100%;
   display: flex;

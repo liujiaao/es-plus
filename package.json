@@ -7,6 +7,8 @@
   "scripts": {
     "prepare": "husky || exit 0",
     "test": "npm test --workspaces --if-present",
+    "lint": "eslint . --max-warnings 9999",
+    "lint:fix": "eslint . --fix",
     "build:packages": "npm run build --workspace @es-plus/shared && npm run build --workspace @es-plus/vue3 && npm run build --workspace @es-plus/vue2 && npm run build --workspace @es-plus/cli && npm run build --workspace @es-plus/mcp-server",
     "test:e2e": "node __tests__/e2e/scripts/run-all.mjs",
     "test:e2e:single": "node __tests__/e2e/scripts/run-e2e.mjs",
@@ -16,6 +18,12 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "husky": "^9.1.7"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-vue": "^9.33.0",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "typescript-eslint": "^8.60.1",
+    "vue-eslint-parser": "^9.4.3"
   }
 }

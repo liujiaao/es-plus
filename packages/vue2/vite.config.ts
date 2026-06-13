@@ -33,14 +33,17 @@ export default defineConfig({
       fileName: (format) => `es-plus-vue2.${format === 'umd' ? 'umd.cjs' : 'js'}`,
     },
     rollupOptions: {
-      // 注意：@vue/composition-api 故意不放进 external —— 把它内联进 dist。
-      // 原因：vue-compat.ts 顶层有 `import * as ... from '@vue/composition-api'`，
-      // 若 external 则消费者必须装这个包，与"Vue 2.7+ 用户无需安装"的承诺冲突。
-      // 内联后 Vue 2.7 用户不装也能 build；运行时 isVue27Plus 分支让 polyfill 代码 dead-but-resident。
+      // @vue/composition-api 必须 external：内联会让 dist 里出现一份独立的 polyfill，
+      // 与消费者项目 node_modules 里的那份是两个 JS 模块实例，各自持有私有的 `$e`
+      // (registered Vue)。Vue 2.6 下 Vue.use(EsPlus) 只能给其中一份注册 Vue，另一份
+      // 在 setup() 里调 reactive() 时会抛 "[vue-composition-api] No vue dependency found."。
+      // 代价：Vue 2.7+ 用户也需在依赖里装 @vue/composition-api（其 postinstall 会
+      // redirect 到原生 vue；即便 redirect 失败，isVue27Plus 分支也不会调用 polyfill）。
       external: [
         'vue',
         'element-ui',
         '@es-plus/core',
+        '@vue/composition-api',
       ],
       output: {
         exports: 'named',
@@ -48,6 +51,7 @@ export default defineConfig({
           vue: 'Vue',
           'element-ui': 'ELEMENT',
           '@es-plus/core': 'EsPlusCore',
+          '@vue/composition-api': 'VueCompositionAPI',
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'index.css') return 'style.css'
