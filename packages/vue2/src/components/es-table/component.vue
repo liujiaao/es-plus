@@ -376,6 +376,13 @@ export default defineComponent({
       tableContainerRef.value = (proxy.$refs.tableContainerEl as HTMLElement) || null
       headBarRef.value = (proxy.$refs.headBarRef as HTMLElement) || null
       paginationRef.value = (proxy.$refs.paginationRef as HTMLElement) || null
+      // tbBtnRef 是 TableBtns 组件实例（不是 DOM），useTableResize 通过 .$el.offsetHeight 读高度。
+      // 必须同步，否则 tbBtnHeight 永远为 0，导致 tableHeight 多算一个 toolbar 的高度（~40px），
+      // 让 el-table 撞穿 .tableContainer 的 overflow:hidden 边界把最后一行裁掉。
+      tbBtnRef.value = (proxy.$refs.tbBtnRef as any) || null
+      // tableRef 同理 —— 虽然 useTableResize 不直接读它的高度，但 expose 出去的
+      // clearSelection / refresh / scrollToRow / toggleSelection 等都依赖它指向真实 el-table 实例。
+      tableRef.value = (proxy.$refs.tableRef as any) || null
     }
 
     // ─── 与 EsForm 的耦合 ─────────────────────
@@ -1090,6 +1097,13 @@ export default defineComponent({
 .tableContainer {
   border-radius: 0px;
   flex: 1;
+  // flex 子项默认 min-height: auto（= min-content）会拒绝收缩到比内容还小，
+  // 导致表单展开时 el-table prop height 还没更新的那 1-2 帧里
+  // .tableContainer 被旧表格内容撑高，把分页栏推出视口然后回弹 —— 视觉上分页栏在跳。
+  // min-height:0 + overflow:hidden 让 .tableContainer 严格服从 flex 分配的尺寸，
+  // 内部表格尺寸暂时偏大时被裁住而不影响外部布局，分页栏全程稳定。
+  min-height: 0;
+  overflow: hidden;
   width: 100%;
   display: flex;
   justify-content: space-between;

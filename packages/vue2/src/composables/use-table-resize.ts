@@ -30,6 +30,25 @@ export function useTableResize(
     return Math.round(paginationHeight + headBarHeight + tbBtnHeight)
   }
 
+  /**
+   * 读取父容器可用于布局子元素的高度（即"内容区"高度）。
+   *
+   * `offsetHeight` 包含 padding + border + 滚动条；直接拿来当 .table_component 的
+   * 可用空间，会让 es-table 撑出父容器的内容区，挤进父级 padding 甚至越过父级边界。
+   *
+   * `clientHeight` = padding + content（不含 border / 滚动条），再扣掉上下 padding 即为
+   * 真实可放子元素的高度。fallback 到 offsetHeight - 上下 border 也行，但 clientHeight
+   * 已自动排除 border，更直接。
+   */
+  const getParentContentHeight = (parent: HTMLElement | null | undefined): number => {
+    if (!parent) return 0
+    const cs = typeof window !== 'undefined' ? window.getComputedStyle(parent) : null
+    const paddingTop = cs ? parseFloat(cs.paddingTop) || 0 : 0
+    const paddingBottom = cs ? parseFloat(cs.paddingBottom) || 0 : 0
+    const inner = parent.clientHeight - paddingTop - paddingBottom
+    return inner > 0 ? inner : parent.clientHeight || parent.offsetHeight || 0
+  }
+
   const resizeObservers = () => {
     const element = tableContainerRef.value
     if (!element) return
@@ -38,7 +57,7 @@ export function useTableResize(
       typeof options.tabHeight === 'number'
         ? options.tabHeight
         : options.heightType === 'height'
-          ? element.parentElement?.offsetHeight || element.offsetHeight
+          ? getParentContentHeight(element.parentElement) || element.offsetHeight
           : parseInt(options.tabHeight as string, 10) || 450
 
     const maxContainer = !isNaN(containerHeight) ? containerHeight : 450

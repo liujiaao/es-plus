@@ -1,5 +1,39 @@
 # @es-plus/vue2
 
+## 1.1.3 — EsTable height/refs fixes (last row clipped, exposed methods, pagination jitter)
+
+### Fixed
+
+- **`setRefs()` was not syncing `tbBtnRef` and `tableRef` from
+  `proxy.$refs`.** Two consequences:
+  1. `useTableResize` reads the toolbar height via `tbBtnRef.value.$el.offsetHeight`.
+     Without the sync, `tbBtnHeight` was always `0`, so `tableHeight`
+     overshot by ~one toolbar (~40px) and `el-table` rendered taller than
+     the container's content area. With the also-new `overflow: hidden`
+     on `.tableContainer` (see below), the last row was clipped.
+  2. `expose({ clearSelection, refresh, scrollToRow, toggleSelection, ... })`
+     all delegate to `tableRef.value`. With the ref left at `null`, every
+     exposed table-instance method was a no-op.
+- **Pagination bar jittered when an `EsForm` above the table expanded.**
+  The flex item `.tableContainer` defaulted to `min-height: auto` (=
+  `min-content`), so during the 1–2 frames between the form's height
+  changing and the table's `height` prop catching up, the old (oversized)
+  table content forced `.tableContainer` to grow, pushing the pagination
+  bar out of the viewport before snapping back. Adding `min-height: 0`
+  + `overflow: hidden` makes the flex child obey its allocated size
+  strictly; the table is briefly clipped instead of shoving the
+  pagination row.
+- **`useTableResize` over-counted parent height by padding + border.**
+  Was reading `element.parentElement.offsetHeight`, which includes the
+  parent's padding, border, and scrollbar — so the table's `height` prop
+  was set to a value that pushed `es-table` outside the parent's content
+  box (visible as the table peeking under the parent's bottom padding /
+  border). Replaced with a `getParentContentHeight()` helper that
+  subtracts computed `paddingTop` + `paddingBottom` from `clientHeight`,
+  matching what flex actually allocates.
+
+No API or peer-dep changes. Pure bugfix release.
+
 ## 1.1.2 — Externalize @vue/composition-api + forward `<el-table>` native events
 
 ### Fixed
