@@ -1,5 +1,31 @@
 # @es-plus/vue2
 
+## 1.1.5 — Remove .sync auto-emits (root cause of infinite update loop in Vue 2.6)
+
+### ⚠️ Breaking change
+
+- **`emit('update:dataSource')` and `emit('update:pagination')` removed.**
+  es-table no longer emits `.sync`-style two-way binding events for
+  `dataSource` and `pagination`. In Vue 2.6 + `@vue/composition-api`, these
+  emits interact with Vue's internal reactivity system in a way that
+  produces an infinite render-watcher loop ("[Vue warn]: You may have an
+  infinite update loop in a component render function."). Vue 2.7+ is
+  unaffected; the removal is for 2.6 compatibility.
+
+  **Migration:** Use `v-model` pattern or the existing `@pagination-current-change`
+  / `@size-change` events to maintain parent-side state. If you were using
+  `:data-source.sync` / `:pagination.sync`, switch to one-way `:data-source`
+  / `:pagination` and handle updates via events.
+
+### Also fixed
+
+- **`filteredColumns` no longer mutates the parent's reactive column objects.**
+  Uses `.map(el => ({ ...el }))` to apply formatter/render on shallow copies.
+- **ResizeObserver skipped for `heightType: 'auto'` tables.** Only set up
+  when `heightType` is `'height'` or `'maxHeight'` — the only modes where
+  `tableHeight` is actually bound to el-table. Eliminates unnecessary
+  observer instances on pages with many es-table demos.
+
 ## 1.1.4 — Fix infinite update loop on tree/lazy tables + lazyLoad unmapped
 
 ### Fixed

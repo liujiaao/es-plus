@@ -16,7 +16,7 @@ export function useTableResize(
   headBarRef: { value: HTMLElement | null },
   tbBtnRef: { value: { $el?: HTMLElement } | null },
   paginationRef: { value: HTMLElement | null },
-  options: { heightType?: 'auto' | 'height'; tabHeight?: number | string }
+  options: { heightType?: 'auto' | 'height' | 'maxHeight'; tabHeight?: number | string }
 ) {
   const tableHeight = ref(400)
   const observer = ref<ResizeObserver | null>(null)
@@ -79,6 +79,14 @@ export function useTableResize(
     nextTick(() => {
       if (!tableContainerRef.value || typeof ResizeObserver === 'undefined') return
 
+      // heightType === 'auto' 时 tableHeight 不绑定到 el-table（tableBindAttrs
+      // 仅在 height/maxHeight 模式下才把 tableHeight 写进 result.height 或
+      // result.maxHeight）。ResizeObserver 在此模式下纯粹是浪费，而且单页多实例
+      //（如 EsTableDocs 16 个 demo）同时 fire 时会产生不必要的 computed 重算
+      // 和 v-bind 新对象，在 Vue 2 下可能累积为 "infinite update loop" 告警。
+      const ht = options.heightType
+      if (ht !== 'height' && ht !== 'maxHeight') return
+
       observer.value = new ResizeObserver(() => {
         requestAnimationFrame(() => {
           if (tableContainerRef.value) resizeObservers()
@@ -86,7 +94,7 @@ export function useTableResize(
       })
 
       const target =
-        options.heightType === 'height'
+        ht === 'height'
           ? tableContainerRef.value.parentElement || tableContainerRef.value
           : tableContainerRef.value
       observer.value.observe(target)

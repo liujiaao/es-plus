@@ -301,9 +301,12 @@ export default defineComponent({
       default: () => ({}),
     },
   },
+  // Vue 2.6 + @vue/composition-api 下，emit('update:dataSource') /
+  // emit('update:pagination') 与父组件的 .sync 绑定会形成 reactive 反馈链路，
+  // 触发 "[Vue warn]: You may have an infinite update loop"。Vue 2.7 无此问题
+  // 但为了兼容 2.6，去掉这两个 .sync 式 emit。父组件如需双向绑定请用 v-model
+  // 模式或通过 @pagination-current-change / @size-change 自行维护状态。
   emits: [
-    'update:dataSource',
-    'update:pagination',
     'pagination-current-change',
     'size-change',
     'change-table-sort',
@@ -577,28 +580,40 @@ export default defineComponent({
     )
 
     // ─── 列处理 ────────────────────────────────
+    // filteredColumns 计算列配置的渲染就绪版本。
+    //
+    // 关键约束：绝对不能修改 columnRowList / props.columns 中的原始列对象。
+    // 这些对象是父组件通过 props 传入的，在 Vue 2 中属于父组件的深度观察数据。
+    // 直接 set el.formatter / el.render / el.minWidth 会触发父组件 observer 通知，
+    // 在单页中多实例（如 EsTableDocs 有 15+ 个 es-table）同时 render 时可导致
+    // "[Vue warn]: You may have an infinite update loop in a component render function."
+    //
+    // 解决方式：通过 .map() 对每列做浅拷贝 ({ ...el })，再在拷贝上设置 formatter/render
+    // 和做 width→minWidth 转换，最后返回副本数组。computed 缓存让副本只在 columnRowList
+    // 变化时重新生成。
     const filteredColumns = computed(() => {
-      const list = columnRowList.value.filter((item) => !item.hidCol)
-      list.forEach((el) => {
+      const originals = columnRowList.value.filter((item) => !item.hidCol)
+      const list = originals.map((el) => {
+        const col = { ...el } as TableColumn
         if (
-          el.prop !== 'operate' &&
-          el.key !== 'operate' &&
-          (el.prop || el.key) &&
-          !el.formatter
+          col.prop !== 'operate' &&
+          col.key !== 'operate' &&
+          (col.prop || col.key) &&
+          !col.formatter
         ) {
-          el.formatter = (row: Record<string, unknown>) => {
-            const value = row[el.prop as string] || row[el.key as string]
+          col.formatter = (row: Record<string, unknown>) => {
+            const value = row[col.prop as string] || row[col.key as string]
             if (value == null || value === '') {
-              return (el.emptyPlaceholder as string) || '-'
+              return (col.emptyPlaceholder as string) || '-'
             }
             return value as string
           }
         }
 
-        if ((el.prop === 'operate' || el.key === 'operate') && el.btns && !el.render) {
-          el.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
+        if ((col.prop === 'operate' || col.key === 'operate') && col.btns && !col.render) {
+          col.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
             return h('div', [
-              el.btns
+              col.btns
                 ?.filter((btn: any) => checkPermission(btn.permissionValue))
                 .map((btn: any) =>
                   // Element UI text 按钮：type="text" 而非 text 属性
@@ -621,6 +636,8 @@ export default defineComponent({
             ])
           }
         }
+
+        return col
       })
 
       // 当所有列都设置了固定 width 且没有 minWidth 时，把最后一个非固定列的 width 转为 minWidth
@@ -720,20 +737,12 @@ export default defineComponent({
       }
     })
 
-    // 兼容性修复：在 Vue 2.6 + @vue/composition-api 下，watch(() => props.pagination, ...)
-    // 即使比对相同也会因为父组件 .sync 回传引发 watcher 触发 → 父组件 render watcher 循环。
-    // 解决：emit 前先更新 lastPaginationStr，watcher 收到回传时序列化相同则 return。
     let lastPaginationStr = JSON.stringify(props.pagination || {})
     if (props.pagination && Object.keys(props.pagination).length) {
       paginationConfig.value = { ...paginationConfig.value, ...props.pagination }
       showPagination.value = (props.pagination as PaginationConfig).total !== undefined
     }
-    /** Emit pagination 更新，并预先记录序列化值以阻断 .sync 回传循环 */
-    const emitPaginationUpdate = () => {
-      const snapshot = { ...paginationConfig.value }
-      lastPaginationStr = JSON.stringify(snapshot)
-      emit('update:pagination', snapshot)
-    }
+    // 同步外部 pagination prop 到内部 paginationConfig（单向，不再 emit 回父组件）
     watch(
       () => props.pagination,
       (val: PaginationConfig) => {
@@ -753,17 +762,6 @@ export default defineComponent({
         initSelection(val, tableRef.value)
       }
     )
-
-    // 兼容性修复：避免 Vue 2.6 + @vue/composition-api 下 .sync 双向绑定循环。
-    // 仅在 tableData 引用变化时 emit，去掉 deep；并通过 lastEmittedRef 跳过
-    // 「外部 .sync 回传 → props.dataSource 变化 → 内部赋值 → emit 再次回传」的循环。
-    let lastEmittedTableData: unknown = null
-    watch(tableData, (val) => {
-      if (!Array.isArray(val)) return
-      if (val === lastEmittedTableData) return
-      lastEmittedTableData = val
-      emit('update:dataSource', val)
-    })
 
     onMounted(() => {
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
@@ -911,7 +909,7 @@ export default defineComponent({
             success: (res) => {
               formatConfigOut(res, ['total', 'tableData'])
               if (Object.keys(props.pagination).length) {
-                emitPaginationUpdate()
+                lastPaginationStr = JSON.stringify(paginationConfig.value)
               }
               resolve(res)
             },
@@ -932,7 +930,7 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            emitPaginationUpdate()
+            lastPaginationStr = JSON.stringify(paginationConfig.value)
             emit('pagination-current-change', paginationConfig.value)
           },
         }
@@ -948,7 +946,7 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            emitPaginationUpdate()
+            lastPaginationStr = JSON.stringify(paginationConfig.value)
           },
         }
       )
@@ -959,7 +957,7 @@ export default defineComponent({
       if (isRequestConf.value) {
         changePageSizeRequest()
       } else {
-        emitPaginationUpdate()
+        lastPaginationStr = JSON.stringify(paginationConfig.value)
         emit('size-change', paginationConfig.value, size)
       }
     }
@@ -969,7 +967,7 @@ export default defineComponent({
       if (isRequestConf.value) {
         changePageIndexRequest()
       } else {
-        emitPaginationUpdate()
+        lastPaginationStr = JSON.stringify(paginationConfig.value)
         emit('pagination-current-change', paginationConfig.value)
       }
     }
