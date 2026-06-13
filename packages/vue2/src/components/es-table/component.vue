@@ -227,6 +227,7 @@ const TABLE_INTERNAL_KEYS = new Set([
   'estimatedRowHeight',
   'overscanCount',
   'rowClassName',
+  'lazyLoad',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -354,12 +355,18 @@ export default defineComponent({
     })
     const columnRowList = ref<TableColumn[]>([...props.columns])
 
+    // Only watch the columns array reference — not deep mutations.
+    // deep: true would react to el.formatter / el.render / el.minWidth mutations
+    // that filteredColumns applies to the column objects during render. In Vue 2,
+    // props come from the parent's deeply observed data; each mutation triggers the
+    // watcher → columnRowList reassign → filteredColumns recompute → potential
+    // "infinite update loop" warning. Vue 3 avoids this because its props are
+    // shallow-reactive by default.
     watch(
       () => props.columns,
       (val) => {
         columnRowList.value = [...val]
-      },
-      { deep: true }
+      }
     )
 
     const loadingStatus = ref(false)
@@ -655,6 +662,12 @@ export default defineComponent({
         if (mapped !== undefined) {
           result.size = mapped
         }
+      }
+      // Element UI 的 el-table 懒加载回调 prop 叫 load，但我们的公开 API 用 lazyLoad
+      // 与 Vue 3 版本保持一致（el-table-v2 中也是 load）。映射后 el-table 的懒加载行为
+      //（loadOrToggle → loadData → 用户提供的 lazyLoad 回调）才能正常工作。
+      if (typeof props.options.lazyLoad === 'function') {
+        result.load = props.options.lazyLoad
       }
       return result
     })

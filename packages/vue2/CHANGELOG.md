@@ -1,5 +1,26 @@
 # @es-plus/vue2
 
+## 1.1.4 — Fix infinite update loop on tree/lazy tables + lazyLoad unmapped
+
+### Fixed
+
+- **Tree / lazy tree tables triggered "[Vue warn]: You may have an infinite update
+  loop in a component render function."** The `watch(() => props.columns, ...,
+  { deep: true })` detected mutations that `filteredColumns` made to the parent's
+  column objects (setting `el.formatter`, `el.render`, `el.minWidth` during
+  render). In Vue 2, props come from the parent's deeply observed data, so each
+  property mutation fired the deep watcher → `columnRowList` reassign →
+  `filteredColumns` recompute → repeat. Removed `deep: true` from the columns
+  watcher: it now only reacts to array reference replacement (as intended).
+  Vue 3 already avoids this because its props are shallow-reactive by default.
+- **`lazyLoad` option was never mapped to Element UI's `load` prop.** el-table
+  expects the lazy-load callback on the `load` prop; our public API calls it
+  `lazyLoad`. The mapping is now applied in `tableAttrs` so `lazy: true +
+  lazyLoad(fn)` works correctly: clicking expand triggers `loadOrToggle →
+  loadData → user-provided callback → resolve(children)`.
+
+No API or peer-dep changes. Pure bugfix release.
+
 ## 1.1.3 — EsTable height/refs fixes (last row clipped, exposed methods, pagination jitter)
 
 ### Fixed
