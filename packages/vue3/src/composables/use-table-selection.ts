@@ -9,7 +9,7 @@ export function useTableSelection(rowkey?: string) {
     if (rowkey) {
       if (isInitChange.value) return
       selectionsByPage.value[currentPage] = val
-      let allSelections: Record<string, unknown>[] = []
+      const allSelections: Record<string, unknown>[] = []
       const uniqueMap: Record<string, boolean> = {}
 
       Object.values(selectionsByPage.value).forEach((pageSelections) => {
