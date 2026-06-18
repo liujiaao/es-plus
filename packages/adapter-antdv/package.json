@@ -17,10 +17,12 @@
       "require": "./dist/resolver.cjs",
       "types": "./dist/resolver.d.ts"
     },
-    "./dist/style.css": "./dist/style.css"
+    "./dist/style.css": "./dist/style.css",
+    "./schemas/*": "./schemas/*"
   },
   "files": [
     "dist",
+    "schemas",
     "README.md"
   ],
   "sideEffects": [

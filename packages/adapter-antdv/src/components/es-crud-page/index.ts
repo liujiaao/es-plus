@@ -5,5 +5,17 @@ EsCrudPage.install = (app: any) => {
 }
 
 export { EsCrudPage }
-export type { CrudPageSchema } from './src/es-crud-page.vue'
+export type {
+  CrudPageSchema,
+  CrudAction,
+  CrudBtnConfig,
+  TableBtnConfig,
+  OperationColumnConfig,
+  RowBtnConfig,
+  RowBtnContext,
+  CrudDialogConfig,
+  DialogRenderContext,
+  DialogBtnConfig,
+  DialogActionContext,
+} from './src/types'
 export default EsCrudPage

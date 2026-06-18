@@ -124,14 +124,14 @@ describe('EsTable — 分页', () => {
     expect(vm.showPagination).toBe(true)
   })
 
-  it('pagination 同步 localPagination', async () => {
+  it('pagination 同步 paginationConfig', async () => {
     const wrapper = mount(EsTable, {
       props: { ...baseProps, pagination: { current: 2, pageSize: 20, total: 50 } },
     })
     const vm = wrapper.vm as any
-    expect(vm.localPagination.current).toBe(2)
-    expect(vm.localPagination.pageSize).toBe(20)
-    expect(vm.localPagination.total).toBe(50)
+    expect(vm.paginationConfig.current).toBe(2)
+    expect(vm.paginationConfig.pageSize).toBe(20)
+    expect(vm.paginationConfig.total).toBe(50)
   })
 
   it('handleAdvPageChange → 发射事件', async () => {

@@ -20,7 +20,8 @@ import SvgIconComp from './components/svg-icon'
 import { configureEsPlus as configureEsPlusCore } from './config'
 import type { EsPlusOptions } from './types'
 
-const version = '1.0.0'
+// 与 vue3 一致：从 package.json 读取版本号
+import { version } from '../package.json'
 
 // ─── Per-component Plugin (完全对齐 vue3 的 methods 展开模式) ──
 
@@ -93,11 +94,24 @@ export { useDialogOrig as useDialog }
 export { EsCrudPageComp as EsCrudPage }
 export { SvgIconComp as SvgIcon }
 export { configureEsPlusCore as configureEsPlus }
+export { install }
 export type { CrudPageSchema } from './components/es-crud-page'
 export type {
   FormItemOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableOptions, PaginationConfig, DialogOptions,
   EsFormInstance, EsTableInstance, EsPlusOptions, ListenToCallBack,
 } from './types'
+// 对齐 vue3：导出 CRUD 高级类型
+export type {
+  CrudAction,
+  CrudBtnConfig,
+  OperationColumnConfig,
+  RowBtnConfig,
+  RowBtnContext,
+  CrudDialogConfig,
+  DialogRenderContext,
+  DialogBtnConfig,
+  DialogActionContext
+} from './components/es-crud-page'
 
 export default { version, install }

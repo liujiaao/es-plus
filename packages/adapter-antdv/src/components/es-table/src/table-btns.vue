@@ -14,10 +14,12 @@
         :size="mapBtnSize(item.size)"
         :loading="item.loading"
         :disabled="isDisabled(item)"
-        :icon="renderIcon(item.icon)"
         v-bind="filterExtraProps(item)"
-        @click="item.click ? item.click(item._model, instance) : undefined"
+        @click="item.click ? item.click(item._model as any, instance as any) : undefined"
       >
+        <template #icon v-if="item.icon">
+          <component :is="renderIcon(item.icon)" />
+        </template>
         {{ item.name }}
       </a-button>
     </div>
@@ -29,10 +31,12 @@
         :size="mapBtnSize(item.size)"
         :loading="item.loading"
         :disabled="isDisabled(item)"
-        :icon="renderIcon(item.icon)"
         v-bind="filterExtraProps(item)"
-        @click="item.click ? item.click(item._model, instance) : undefined"
+        @click="item.click ? item.click(item._model as any, instance as any) : undefined"
       >
+        <template #icon v-if="item.icon">
+          <component :is="renderIcon(item.icon)" />
+        </template>
         {{ item.name }}
       </a-button>
     </div>
@@ -43,7 +47,9 @@
 import { computed } from 'vue'
 import type { BtnConfig } from '../../../types'
 import { getButtonPosition } from '@es-plus/core'
-import { getAdvIcon } from '../../../utils/icon'
+import { getAdvIconComponent } from '../../../utils/icon'
+import { getGlobalConfig } from '../../../config'
+import { inject } from 'vue'
 import { mapButtonType, mapSize } from '../../../utils/shared'
 
 const props = defineProps<{
@@ -52,11 +58,27 @@ const props = defineProps<{
   instance?: Record<string, unknown>
 }>()
 
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
+
+const checkPermission = (pvalue?: string): boolean => {
+  if (!pvalue) return true
+  const fn = esPlus.permission
+  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+}
+
+const visibleBtns = computed(() =>
+  props.btnConfig.filter((b) => {
+    if (!checkPermission(b.permissionValue)) return false
+    if (typeof b.isHide === 'function') return !b.isHide()
+    return !b.isHide
+  })
+)
+
 const leftBtns = computed(() =>
-  props.btnConfig.filter((b) => getButtonPosition(b) === 'left')
+  visibleBtns.value.filter((b) => getButtonPosition(b as any) === 'left')
 )
 const rightBtns = computed(() =>
-  props.btnConfig.filter((b) => getButtonPosition(b) !== 'left')
+  visibleBtns.value.filter((b) => getButtonPosition(b as any) !== 'left')
 )
 
 function mapBtnType(type?: string): string {
@@ -74,7 +96,7 @@ function isDisabled(item: BtnConfig): boolean {
 
 function renderIcon(iconName?: string) {
   if (!iconName) return undefined
-  return getAdvIcon(iconName)
+  return getAdvIconComponent(iconName)
 }
 
 /**
@@ -82,9 +104,9 @@ function renderIcon(iconName?: string) {
  */
 function filterExtraProps(item: BtnConfig): Record<string, unknown> {
   const knownKeys = new Set([
-    'name', 'key', 'type', 'size', 'icon', 'position', 'code', 'direction',
+    'name', 'nameKey', 'key', 'type', 'size', 'icon', 'position', 'code', 'direction',
     'loading', 'disabled', 'permissionValue', 'triggerEvent', 'click',
-    'dialogKey', 'actionType', 'confirm', '_model',
+    'dialogKey', 'actionType', 'confirm', '_model', 'render', 'isHide',
   ])
   const extra: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(item)) {

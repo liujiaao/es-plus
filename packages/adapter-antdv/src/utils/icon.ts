@@ -107,6 +107,27 @@ export function getAdvIcon(iconName: string, size: number = 14): VNode | null {
 }
 
 /**
+ * 获取 ADV 图标组件类（用于模板 :is）
+ * @param iconName EP 图标名或 ADV 图标名
+ * @returns 组件构造函数或 undefined
+ */
+export function getAdvIconComponent(iconName: string): any {
+  if (!iconName) return undefined
+  const advName = ICON_NAME_MAP[iconName]
+  if (advName && (Icons as any)[advName]) {
+    return (Icons as any)[advName]
+  }
+  if ((Icons as any)[iconName]) {
+    return (Icons as any)[iconName]
+  }
+  const outlined = `${iconName}Outlined`
+  if ((Icons as any)[outlined]) {
+    return (Icons as any)[outlined]
+  }
+  return undefined
+}
+
+/**
  * 解析图标名称（用于模板中的动态图标）
  */
 export function resolveIcon(iconName: string): string {

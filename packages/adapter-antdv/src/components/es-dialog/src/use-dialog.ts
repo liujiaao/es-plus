@@ -34,7 +34,7 @@ const initInstance = (
 
   if (appContext) {
     vNode.appContext = appContext
-    if (!vNode.appContext.provides) {
+    if (vNode.appContext && !vNode.appContext.provides) {
       vNode.appContext.provides = {}
     }
   }

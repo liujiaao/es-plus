@@ -19,8 +19,10 @@
           v-if="showHeaderBar"
           ref="headBarRef"
           class="btn-slot"
+          :style="headerBarStyle"
+          :class="headerBarClassList"
         >
-          <div class="headerBar" v-if="hasDefaultSlot" style="padding-bottom: 10px">
+          <div class="headerBar" v-if="hasDefaultSlot" :style="{ paddingBottom: hasDefaultSlot ? '10px' : '0px' }">
             <slot />
           </div>
         </div>
@@ -57,33 +59,36 @@
             v-bind="tableBindAttrs"
           >
             <!-- 展开行 -->
-            <template v-if="options.expand" #expandedRowRender="{ record }">
+            <template v-if="options.expand && hasExpandSlot" #expandedRowRender="{ record }">
               <slot name="expand" :row="record" />
             </template>
 
             <!-- 自定义列渲染 (bodyCell 插槽) -->
             <template #bodyCell="{ column, text, record, index }">
               <!-- 操作列 -->
-              <template v-if="column.dataIndex === 'operate' || column.key === 'operate'">
+              <template v-if="isOperateColumn(column)">
                 <a-button
-                  v-for="(btn, bIdx) in getOperateBtns(column)"
+                  v-for="(btn, bIdx) in getOperateBtns(column, record)"
                   :key="bIdx"
-                  :type="mapBtnType(btn.type)"
+                  :type="mapBtnTypeAny(btn.type)"
                   size="small"
                   style="margin-right: 4px"
                   @click="btn.clickEvent?.(record)"
                 >
+                  <template #icon v-if="btn.icon">
+                    <component :is="getAdvIconComponent(btn.icon)" />
+                  </template>
                   {{ btn.name }}
                 </a-button>
               </template>
 
               <!-- 自定义 render 函数列 -->
               <render-dom-tb
-                v-else-if="column._esCol?.render"
+                v-else-if="getColumnRender(column)"
                 :row="record"
                 :index="index"
-                :data-key="column.dataIndex"
-                :render="column._esCol.render"
+                :data-key="getColumnDataIndex(column)"
+                :render="getColumnRender(column)"
               />
 
               <!-- 省略号列 -->
@@ -96,10 +101,10 @@
               </a-tooltip>
 
               <!-- scopedSlots 列 -->
-              <template v-else-if="column._esCol?.scopedSlots?.customRender">
+              <template v-else-if="getColumnScopedSlotName(column)">
                 <slot
-                  v-bind="{ ...column._esCol, row: record, column, index }"
-                  :name="column._esCol.scopedSlots.customRender"
+                  v-bind="{ ...getColumnEsCol(column), row: record, column, index }"
+                  :name="getColumnScopedSlotName(column)"
                 />
               </template>
             </template>
@@ -114,9 +119,9 @@
         class="pagination_page"
       >
         <a-pagination
-          v-model:current="localPagination.current"
-          v-model:pageSize="localPagination.pageSize"
-          :total="localPagination.total"
+          v-model:current="paginationConfig.current"
+          v-model:pageSize="paginationConfig.pageSize"
+          :total="paginationConfig.total"
           :showSizeChanger="true"
           :showQuickJumper="true"
           :pageSizeOptions="paginationPageSizes.map(String)"
@@ -151,7 +156,7 @@ const defaultOptions: TableOptions = {
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs } from 'vue'
+import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs, useSlots } from 'vue'
 import { Table as ATable, Pagination as APagination, Spin as ASpin, ConfigProvider as AConfigProvider, Button as AButton, Tooltip as ATooltip } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import TableBtns from './table-btns.vue'
@@ -159,6 +164,7 @@ import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey, mapSize, mapButtonType } from '../../../utils/shared'
+import { getAdvIconComponent } from '../../../utils/icon'
 import { getCallback } from '@es-plus/core'
 import { adaptColumn, adaptColumns } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -193,15 +199,15 @@ const emit = defineEmits<{
   'change-table-sort': [column: Record<string, unknown>]
 }>()
 
-const slots = defineSlots<{ default?: () => any }>()
+const slots = useSlots() as any
 
 // ─── 国际化 ─────────────────────────────────────────
 const antLocale = ref(zhCN)
 
 // ─── 注入 ───────────────────────────────────────────
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {}) ?? getGlobalConfig().EsTable ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -219,37 +225,37 @@ const tableData = ref<Record<string, unknown>[]>([])
 const columnRowList = ref<TableColumn[]>([...props.columns])
 const loadingStatus = ref(false)
 
-const setTableContainer = (el: HTMLElement | null) => {
+const setTableContainer = (el: any) => {
   if (el) tableContainerRef.value = el
 }
 
 watch(() => props.columns, (val) => { columnRowList.value = [...val] }, { deep: true })
 
 // ─── 表单耦合 ───────────────────────────────────────
-const bodyFormInstance = inject<(inst: unknown) => void>('bodyFormInstance', () => {})
-const getVisibleShow = inject<(() => boolean) | boolean>('getVisibleShow', false)
+const bodyFormInstance = inject<(inst: unknown) => void>('bodyFormInstance', () => undefined)
+const getVisibleShow = inject<(() => boolean) | boolean>('getVisibleShow', () => false)
 const visibleShow = computed(() => (typeof getVisibleShow === 'function' ? getVisibleShow() : getVisibleShow))
 const formInstance = ref<unknown>(null)
 
 // ─── 分页 ───────────────────────────────────────────
-const localPagination = ref({
+const paginationConfig = ref<PaginationConfig>({
   current: 1,
   pageSize: 10,
   total: 0,
 })
-const showPagination = ref(false)
+const showPagination = computed(() => paginationConfig.value.total !== undefined && paginationConfig.value.total > 0)
 
 watch(() => props.pagination, (val) => {
-  localPagination.value = {
-    current: val.current || 1,
-    pageSize: val.pageSize || 10,
-    total: val.total || 0,
+  paginationConfig.value = {
+    ...paginationConfig.value,
+    current: val?.current || 1,
+    pageSize: val?.pageSize || 10,
+    total: val?.total ?? 0,
   }
-  showPagination.value = val.total !== undefined
 }, { deep: true, immediate: true })
 
 // ─── 表格尺寸 ───────────────────────────────────────
-const tableSize = computed(() => mapSize(props.options.size, 'middle'))
+const tableSize = computed(() => mapSize(props.options.size, 'middle') as 'large' | 'middle' | 'small')
 
 // ─── 虚拟滚动 ─────────────────────────────────────
 const isVirtual = computed(() =>
@@ -281,7 +287,33 @@ const isRequestConf = computed(() =>
   (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0)
 )
 const hasDefaultSlot = computed(() => !!slots.default?.())
+const hasExpandSlot = computed(() => !!(slots as any).expand)
 const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
+
+const slotStyles = computed(() => {
+  const raw = props.headBarClass
+  if (typeof raw === 'string') return { type: 'string', value: raw }
+  if (isObject(raw)) return { type: 'object', value: raw }
+  return { type: 'object', value: {} }
+})
+
+const headerBarStyle = computed(() => {
+  if (slotStyles.value.type === 'object') {
+    return slotStyles.value.value as Record<string, string | number>
+  }
+  return undefined
+})
+
+const headerBarClassList = computed(() => {
+  const list: (string | Record<string, unknown>)[] = []
+  if (props.headBarClass) list.push(props.headBarClass)
+  if (slotStyles.value.type === 'string') {
+    list.push(slotStyles.value.value as string)
+  } else if (slotStyles.value.type !== 'object') {
+    list.push({ slotClass: hasDefaultSlot.value })
+  }
+  return list
+})
 
 const tabHeight = computed(() => {
   if (typeof props.options.tabHeight === 'number') return `${props.options.tabHeight}px`
@@ -298,9 +330,9 @@ const paginationLayoutConfig = computed(() => {
   return typeof cfg === 'function' ? cfg() : cfg
 })
 const paginationPageSizes = computed(() =>
-  paginationLayoutConfig.value?.pageSizes || props.pagination.pageSizes || [10, 20, 50, 100]
+  paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes || [10, 20, 50, 100]
 )
-const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? props.pagination.isSmall)
+const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
 
 // ─── 表格选择 ───────────────────────────────────────
 const {
@@ -350,8 +382,12 @@ const adaptedColumns = computed(() => {
     // 普通列
     const advCol = adaptColumn(col)
 
-    // 格式化函数
-    if ((col.prop || col.key) && !col.formatter) {
+    // 格式化函数：有 formatter 时使用 formatter；否则兜底显示文本
+    if (col.formatter) {
+      advCol.customRender = ({ text, record }: { text: unknown; record: Record<string, unknown> }) => {
+        return col.formatter?.(record) ?? (text == null || text === '' ? '-' : String(text))
+      }
+    } else if ((col.prop || col.key)) {
       advCol.customRender = advCol.customRender || (({ text }: { text: unknown }) => {
         if (text == null || text === '') return '-'
         return String(text)
@@ -422,14 +458,14 @@ const resolvedCustomRow = computed(() => {
 // ─── 高度自适应 ─────────────────────────────────────
 const { tableHeight } = useTableResize(
   tableContainerRef, headBarRef, tbBtnRef, paginationRef,
-  { heightType: heightType.value as 'auto' | 'height', tabHeight: props.options.tabHeight }
+  { heightType: heightType.value, tabHeight: props.options.tabHeight }
 )
 
 // ─── ADV Table 统一 change 事件 ─────────────────────
 function handleAdvTableChange(
-  pag: { current: number; pageSize: number },
-  _filters: unknown,
-  sorter: { column: Record<string, unknown>; order: string | null; field: string } | { column: Record<string, unknown>; order: string | null; field: string }
+  _pag: any,
+  _filters: any,
+  sorter: any
 ) {
   if (sorter && (sorter as any).column) {
     const s = sorter as { column: Record<string, unknown>; order: string | null; field: string }
@@ -441,23 +477,25 @@ function handleAdvTableChange(
 
 // ─── 分页事件 ───────────────────────────────────────
 function handleAdvPageChange(page: number) {
-  localPagination.value.current = page
+  paginationConfig.value.current = page
+  setCurrentPage(page)
   if (isRequestConf.value) {
     changePageIndexRequest()
   } else {
-    emit('update:pagination', { ...localPagination.value })
-    emit('pagination-current-change', { ...localPagination.value })
+    emit('update:pagination', { ...paginationConfig.value })
+    emit('pagination-current-change', { ...paginationConfig.value })
   }
 }
 
 function handleAdvSizeChange(current: number, size: number) {
-  localPagination.value.pageSize = size
-  localPagination.value.current = 1
+  paginationConfig.value.pageSize = size
+  paginationConfig.value.current = 1
+  setCurrentPage(1)
   if (isRequestConf.value) {
     changePageSizeRequest()
   } else {
-    emit('update:pagination', { ...localPagination.value })
-    emit('size-change', { ...localPagination.value }, size)
+    emit('update:pagination', { ...paginationConfig.value })
+    emit('size-change', { ...paginationConfig.value }, size)
   }
 }
 
@@ -465,14 +503,28 @@ function handleAdvSizeChange(current: number, size: number) {
 function mapBtnType(type?: string): string {
   return mapButtonType(type)
 }
+function mapBtnTypeAny(type?: string): any {
+  return mapButtonType(type)
+}
 
-function getOperateBtns(column: Record<string, unknown>): any[] {
-  if (column._esCol?.btns) return column._esCol.btns
-  // 临时从 filteredColumns 中查找
-  const col = filteredColumns.value.find(
-    (c) => c.prop === 'operate' || c.key === 'operate'
-  )
-  return col?.btns?.filter((b) => checkPermission(b.permissionValue)) || []
+const isOperateColumn = (column: any) => column?.dataIndex === 'operate' || column?.key === 'operate'
+const getColumnEsCol = (column: any) => column?._esCol || {}
+const getColumnRender = (column: any) => getColumnEsCol(column)?.render
+const getColumnDataIndex = (column: any) => getColumnEsCol(column)?.prop || column?.dataIndex
+const getColumnScopedSlot = (column: any) => getColumnEsCol(column)?.scopedSlots?.customRender
+const getColumnScopedSlotName = (column: any): string | undefined => getColumnScopedSlot(column)
+
+function getOperateBtns(column: any, row: Record<string, unknown>): any[] {
+  const esCol = (column as any)?._esCol || {}
+  const sourceBtns = esCol.btns
+    ? esCol.btns
+    : filteredColumns.value.find((c) => c.prop === 'operate' || c.key === 'operate')?.btns || []
+
+  return sourceBtns.filter((b: any) => {
+    if (!checkPermission(b.permissionValue)) return false
+    if (typeof b.hidden === 'function') return !b.hidden(row)
+    return !b.hidden
+  })
 }
 
 // ─── 配置化请求 ─────────────────────────────────────
@@ -518,7 +570,7 @@ function formatConfigOut(row: Record<string, unknown>, keyList: string[]) {
       if (key === 'tableData') {
         tableData.value = Array.isArray(rowData) ? rowData : []
       } else {
-        ;(localPagination.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
+        ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
       }
     })
   }
@@ -569,14 +621,14 @@ function queryTableListMethod(
 
 const httpRequestInstance = (model?: Record<string, unknown>) => {
   return new Promise((resolve, reject) => {
-    localPagination.value.current = 1
+    paginationConfig.value.current = 1
     queryTableListMethod(
-      { ...(model || {}), pageIndex: localPagination.value.current, pageSize: localPagination.value.pageSize },
+      { ...(model || {}), pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
       {
         success: (res) => {
           formatConfigOut(res, ['total', 'tableData'])
           if (Object.keys(props.pagination).length) {
-            emit('update:pagination', { ...localPagination.value })
+            emit('update:pagination', { ...paginationConfig.value })
           }
           resolve(res)
         },
@@ -588,12 +640,12 @@ const httpRequestInstance = (model?: Record<string, unknown>) => {
 
 function changePageIndexRequest() {
   queryTableListMethod(
-    { pageIndex: localPagination.value.current, pageSize: localPagination.value.pageSize },
+    { pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', { ...localPagination.value })
-        emit('pagination-current-change', { ...localPagination.value })
+        emit('update:pagination', { ...paginationConfig.value })
+        emit('pagination-current-change', { ...paginationConfig.value })
       },
     }
   )
@@ -601,11 +653,11 @@ function changePageIndexRequest() {
 
 function changePageSizeRequest() {
   queryTableListMethod(
-    { pageIndex: localPagination.value.current, pageSize: localPagination.value.pageSize },
+    { pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', { ...localPagination.value })
+        emit('update:pagination', { ...paginationConfig.value })
       },
     }
   )
@@ -651,7 +703,16 @@ defineExpose({
   getSelectionRows: () => multipleSelection.value,
   clearSelection,
   clearAllSelection,
+  toggleRowSelection,
   refresh: () => httpRequestInstance(),
+  scrollToRow: (row: number | string) => {
+    // ADV a-table 没有 scrollToRow，降级处理
+    if (typeof row === 'number') {
+      tableRef.value?.$el?.querySelectorAll?.('.ant-table-row')?.[row]?.scrollIntoView?.({ block: 'center' })
+    } else if (typeof row === 'string' && row) {
+      tableRef.value?.$el?.querySelector?.(`[data-row-key="${row}"]`)?.scrollIntoView?.({ block: 'center' })
+    }
+  },
 })
 </script>
 

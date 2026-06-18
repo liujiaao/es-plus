@@ -1,57 +1,91 @@
 /**
  * 表格高度自适应 (ADV 版本)
  *
- * 使用 ResizeObserver 动态计算表格高度。
- * 逻辑与 @es-plus/vue3 版本一致，直接复用。
+ * 对齐 @es-plus/vue3 的 use-table-resize 行为：
+ * - 支持 heightType: 'auto' | 'height'
+ * - 支持 tabHeight 数字/字符串
+ * - 使用 ResizeObserver 监听容器与头部高度变化
  */
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import type { Ref } from 'vue'
-
-interface ResizeOptions {
-  heightType: 'auto' | 'height'
-  tabHeight?: number | string
-}
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 export function useTableResize(
-  tableContainerRef: Ref<HTMLElement | null>,
-  headBarRef: Ref<HTMLElement | null>,
-  tbBtnRef: Ref<{ $el?: HTMLElement } | null>,
-  paginationRef: Ref<HTMLElement | null>,
-  options: Ref<ResizeOptions> | ResizeOptions,
+  tableContainerRef: { value: HTMLElement | null },
+  headBarRef: { value: HTMLElement | null },
+  tbBtnRef: { value: { $el?: HTMLElement } | null },
+  paginationRef: { value: HTMLElement | null },
+  options: { heightType?: 'auto' | 'height' | 'maxHeight'; tabHeight?: number | string }
 ) {
-  const tableHeight = ref<number>(400)
-  let resizeObserver: ResizeObserver | null = null
+  const tableHeight = ref(400)
+  const observer = ref<ResizeObserver | null>(null)
 
-  const opts = 'value' in options ? options.value : options
+  const isNegative = (num: number) => Math.sign(num) === -1
 
-  function computeHeight() {
-    if (opts.heightType !== 'auto') return
+  const totalContainerNum = () => {
+    const headBarHeight = headBarRef.value?.offsetHeight || 0
+    const tbBtnHeight = tbBtnRef.value?.$el?.offsetHeight || 0
+    const paginationHeight = paginationRef.value?.offsetHeight || 0
+    return Math.round(paginationHeight + headBarHeight + tbBtnHeight)
+  }
+
+  const resizeObservers = () => {
+    const element = tableContainerRef.value
+    if (!element) return
+
+    const containerHeight = typeof options.tabHeight === 'number'
+      ? options.tabHeight
+      : options.heightType === 'height'
+        ? (element.parentElement?.offsetHeight || element.offsetHeight)
+        : (parseInt(options.tabHeight as string, 10) || 450)
+
+    const maxContainer = !isNaN(containerHeight) ? containerHeight : 450
+    const minTableNum = maxContainer - totalContainerNum()
+    const tabContainer = isNegative(minTableNum) ? totalContainerNum() + 300 : maxContainer
+
+    const paginationHeight = paginationRef.value?.offsetHeight || 0
+    const headBarHeight = headBarRef.value?.offsetHeight || 0
+    const tbBtnHeight = tbBtnRef.value?.$el?.offsetHeight || 0
+
+    const newHeight = Math.floor(tabContainer) - Math.round(paginationHeight + headBarHeight + tbBtnHeight)
+    if (tableHeight.value !== newHeight) {
+      tableHeight.value = newHeight
+    }
+  }
+
+  const startObserver = () => {
     nextTick(() => {
-      const container = tableContainerRef.value
-      if (!container) return
-      const containerHeight = container.clientHeight
-      const headHeight = headBarRef.value?.offsetHeight || 0
-      const btnHeight = tbBtnRef.value?.$el?.offsetHeight || 0
-      const paginationHeight = paginationRef.value?.offsetHeight || 56
-      const padding = 32
-      const available = containerHeight - headHeight - btnHeight - paginationHeight - padding
-      tableHeight.value = Math.max(available, 200)
+      if (!tableContainerRef.value || typeof ResizeObserver === 'undefined') return
+
+      observer.value = new ResizeObserver(() => {
+        requestAnimationFrame(() => {
+          if (tableContainerRef.value) resizeObservers()
+        })
+      })
+
+      const target = options.heightType === 'height'
+        ? tableContainerRef.value.parentElement || tableContainerRef.value
+        : tableContainerRef.value
+      observer.value.observe(target)
+
+      if (headBarRef.value) {
+        observer.value.observe(headBarRef.value)
+      }
     })
   }
 
-  onMounted(() => {
-    computeHeight()
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => computeHeight())
-      if (tableContainerRef.value) {
-        resizeObserver.observe(tableContainerRef.value)
-      }
+  const stopObserver = () => {
+    if (observer.value) {
+      observer.value.disconnect()
+      observer.value = null
     }
-  })
+  }
 
-  onBeforeUnmount(() => {
-    resizeObserver?.disconnect()
-  })
+  onMounted(() => startObserver())
+  onBeforeUnmount(() => stopObserver())
 
-  return { tableHeight }
+  return {
+    tableHeight,
+    resizeObservers,
+    startObserver,
+    stopObserver
+  }
 }

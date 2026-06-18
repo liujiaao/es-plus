@@ -182,7 +182,7 @@ export function useFormInputs() {
               props[`on${key.charAt(0).toUpperCase()}${key.slice(1)}`] = handler
             }
           }
-          return hFn(DateComp, props)
+          return hFn(DateComp as any, props)
         },
       ],
       [
@@ -205,7 +205,7 @@ export function useFormInputs() {
               props[`on${key.charAt(0).toUpperCase()}${key.slice(1)}`] = handler
             }
           }
-          return hFn(DateComp, props)
+          return hFn(DateComp as any, props)
         },
       ],
 

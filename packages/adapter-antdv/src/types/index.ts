@@ -31,6 +31,12 @@ export interface FormItemOption {
   isInitRun?: boolean
   callOptionListFormat?: (data: unknown[]) => unknown[]
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
+  /**
+   * Callback mapping. Supports readable names (recommended) and legacy abbreviations:
+   * - responseTransform (recommended) / crtn (deprecated)
+   * - beforeRequest (recommended) / brcb (deprecated)
+   * - afterResponse (recommended) / qrcb (deprecated)
+   */
   listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   components?: Record<string, unknown>
   width?: number | string
@@ -60,18 +66,22 @@ export interface BtnConfig {
   type?: 'primary' | 'default' | 'dashed' | 'text' | 'link' | 'danger' | string
   size?: 'large' | 'middle' | 'small' | string
   icon?: string
+  /** Button position (recommended, self-documenting): 'left' | 'right' */
   position?: 'left' | 'right'
-  /** @deprecated 使用 position 替代 */
+  /** @deprecated Use position instead. 1=left, 2=right */
   code?: 1 | 2
   direction?: 'left' | 'right'
   loading?: boolean
   disabled?: boolean | ((model?: Record<string, unknown>) => boolean)
   permissionValue?: string
+  /** 当 key 为 'query'/'rest' 时触发内置表格联动逻辑 */
   triggerEvent?: boolean
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
   dialogKey?: string
   actionType?: string
   confirm?: string | boolean
+  render?: (h: RenderFunction) => VNode
+  isHide?: boolean | (() => boolean)
   [key: string]: unknown
 }
 
@@ -120,11 +130,14 @@ export interface TableColumn {
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
+  cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
+  headerCellClassName?: string | ((data: { column: unknown; rowIndex: number }) => string)
   btns?: Array<{
     name: string
     type?: string
     icon?: string
     permissionValue?: string
+    hidden?: boolean | ((row: Record<string, unknown>) => boolean)
     clickEvent?: (row: Record<string, unknown>) => void
     [key: string]: unknown
   }>
@@ -182,7 +195,6 @@ export interface PaginationConfig {
   pageSizes?: number[]
   size?: 'large' | 'middle' | 'small' | string
   isSmall?: boolean
-  layout?: string
 }
 
 // ============================================================================
@@ -220,17 +232,23 @@ export interface DialogOptions {
 // 组件实例类型
 // ============================================================================
 export interface EsFormInstance {
+  formItmeRequestInstance: (propsList: string[]) => Promise<void>
+  getFormRef: () => { validate: () => Promise<boolean>; resetFields: () => void; clearValidate: (props?: string | string[]) => void; validateField: (props: string | string[]) => Promise<boolean>; scrollToField: (prop: string) => void }
   validate: () => Promise<boolean>
   resetFields: () => void
-  clearValidate: () => void
+  clearValidate: (props?: string | string[]) => void
+  validateField: (props: string | string[]) => Promise<boolean>
+  scrollToField: (prop: string) => void
 }
 
 export interface EsTableInstance {
   httpRequestInstance: (model?: Record<string, unknown>) => Promise<unknown>
+  getSelectionRows: () => Record<string, unknown>[]
   clearSelection: () => void
   toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
   clearAllSelection: () => void
   refresh: () => void
+  scrollToRow: (row: number | string) => void
 }
 
 // ============================================================================

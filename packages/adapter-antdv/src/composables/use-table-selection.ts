@@ -18,6 +18,7 @@ export function useTableSelection(rowkey?: string) {
   // ─── ADV 声明式选择状态（对外给 a-table 的 :rowSelection 使用） ──
   const selectedRowKeys = ref<(string | number)[]>([])
   const currentPage = ref(1)
+  const setCurrentPage = (page: number) => { currentPage.value = page }
 
   /**
    * ADV 声明式 rowSelection 配置
@@ -134,6 +135,7 @@ export function useTableSelection(rowkey?: string) {
     rowSelection,
     selectedRowKeys,
     currentPage,
+    setCurrentPage,
     // 命令式 API（与 vue3 版本完全兼容）
     handleSelectionChange,
     handleSelectData,

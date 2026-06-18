@@ -32,7 +32,7 @@
         @mousedown="props.isDraggable ? onDragStart($event) : undefined"
       >
         <span class="es-dialog-title-text">
-          <slot name="title">{{ props.title || '弹窗' }}</slot>
+          <slot name="title">{{ dialogTitle }}</slot>
         </span>
         <span class="es-dialog-header-actions">
           <a-button
@@ -92,7 +92,7 @@ export default { name: 'EsDialog' }
 </script>
 
 <script setup lang="ts">
-import { ref, reactive, computed, inject, watch, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, inject, watch, onBeforeUnmount, type VNode } from 'vue'
 import {
   Modal, Button, Space,
 } from 'ant-design-vue'
@@ -106,7 +106,32 @@ import RenderJsx from './render-jsx.vue'
 
 // ─── Props ───────────────────────────────────────────
 const props = withDefaults(
-  defineProps<DialogOptions>(),
+  defineProps<{
+    title?: string
+    width?: string | number
+    visible?: boolean
+    render?: (h: any, instance: any, components: Record<string, unknown>) => VNode
+    renderHeader?: (h: any, instance: any) => VNode
+    renderFooter?: (h: any, instance: any) => VNode
+    configBtn?: BtnConfig[]
+    onSubmit?: (close: () => void) => void
+    onClosed?: () => void
+    isDraggable?: boolean
+    hiddenFullBtn?: boolean
+    isHiddenFooter?: boolean
+    maxHeight?: string | number
+    appendTo?: string | HTMLElement
+    fullscreen?: boolean
+    showClose?: boolean
+    destroyOnClose?: boolean
+    modal?: boolean
+    closeOnClickModal?: boolean
+    closeOnPressEscape?: boolean
+    beforeClose?: (done: () => void) => void
+    alignCenter?: boolean
+    top?: string
+    modalClass?: string
+  }>(),
   {
     title: '弹窗',
     width: '600px',
@@ -131,9 +156,10 @@ const emit = defineEmits<{
 }>()
 
 // ─── 注入 ───────────────────────────────────────────
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const esPlus = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
 
 // ─── 对话框可见性 ───────────────────────────────────
+const dialogTitle = computed(() => props.title || '弹窗')
 const dialogVisible = ref(props.visible !== false)
 watch(() => props.visible, (val) => {
   if (val !== undefined) dialogVisible.value = val
@@ -247,7 +273,7 @@ function filterExtraProps(item: BtnConfig): Record<string, unknown> {
 }
 
 function handleFooterBtnClick(item: BtnConfig) {
-  item.click?.({} as Record<string, unknown>, dialogInstance.value)
+  item.click?.({}, dialogInstance.value as any)
 }
 
 // ─── 透传 attrs ─────────────────────────────────────
@@ -268,9 +294,9 @@ const filteredAttrs = computed(() => {
 
 // ─── 主体样式 ───────────────────────────────────────
 const bodyStyle = computed(() => ({
-  maxHeight: props.maxHeight || 'auto',
-  overflowY: (props.maxHeight ? 'auto' : 'visible') as string,
-}))
+  maxHeight: typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : (props.maxHeight || 'auto'),
+  overflowY: props.maxHeight ? 'auto' : 'visible',
+} as any))
 
 // ─── 弹窗实例（暴露给 render 函数） ──────────────────
 const dialogInstance = computed(() => ({
