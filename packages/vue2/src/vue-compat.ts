@@ -25,6 +25,7 @@
 import Vue from 'vue'
 import * as VueNative from 'vue'
 import * as CompositionApiPolyfill from '@vue/composition-api'
+import type { VNode } from 'vue'
 
 // 解析 Vue 版本
 const versionString: string = (Vue as unknown as { version?: string }).version || ''
@@ -79,8 +80,11 @@ const _unref = api.unref
 const _isRef = api.isRef
 // `h` 的类型在 @vue/composition-api 内部使用了未导出的命名空间 `H`，
 // 直接 const _h = api.h 会触发 TS4023 (Exported variable uses unnameable type)。
-// 用 typeof CompositionApiPolyfill.h 把类型固定到一个可命名的外部符号上。
-const _h: typeof CompositionApiPolyfill.h = api.h
+// Vue 2.7 的 h 类型带有 this: ComponentInternalInstance，在 setup 的箭头渲染函数里
+// 调用会触发 TS2684。这里把它固定到一个无 this 约束的可调用签名上，同时避免
+// TS4023。
+type CreateElementLike = (tag?: any, data?: any, children?: any) => VNode
+const _h: CreateElementLike = api.h as CreateElementLike
 
 export {
   _ref as ref,
