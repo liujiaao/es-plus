@@ -45,10 +45,10 @@ describe('adaptColumn — 单列转换', () => {
     expect(result.sorter).toBe(true)
   })
 
-  it('sortable="custom" → sorter object', () => {
+  it('sortable="custom" → sorter=true（服务端排序，对齐 vue3）', () => {
     const col: TableColumn = { prop: 'date', label: 'Date', sortable: 'custom' }
     const result = adaptColumn(col)
-    expect(result.sorter).toEqual({ compare: expect.any(Function), multiple: 1 })
+    expect(result.sorter).toBe(true)
   })
 
   it('保留 _esCol 原始引用', () => {
@@ -89,7 +89,7 @@ describe('adaptColumns — 批量转换', () => {
     expect(result).toEqual([])
   })
 
-  it('分组列兼容', () => {
+  it('分组列 → children 递归（对齐 vue3 groups，ADV 用 children 实现表头分组）', () => {
     const col: TableColumn = {
       prop: 'groupCol', label: 'Group', groups: [
         { prop: 'sub1', label: 'Sub1' },
@@ -97,8 +97,57 @@ describe('adaptColumns — 批量转换', () => {
       ],
     }
     const result = adaptColumn(col)
-    expect(result.dataIndex).toBe('groupCol')
+    // 分组列：仅 title + children，不设 dataIndex
+    expect(result.dataIndex).toBeUndefined()
+    expect(result.title).toBe('Group')
+    expect(Array.isArray(result.children)).toBe(true)
+    expect((result.children as any[]).length).toBe(2)
+    expect((result.children as any[])[0].dataIndex).toBe('sub1')
     // _esCol 保留原始引用含 groups
     expect(result._esCol.groups).toHaveLength(2)
+  })
+})
+
+describe('adaptColumns — type 列（selection/index）', () => {
+  it("type:'selection' → 跳过（ADV 由 rowSelection 渲染，不生成空列）", () => {
+    const cols: TableColumn[] = [
+      { type: 'selection', width: 50 },
+      { prop: 'name', label: 'Name' },
+    ]
+    const result = adaptColumns(cols)
+    // selection 列被剔除，仅剩普通列
+    expect(result).toHaveLength(1)
+    expect(result[0].dataIndex).toBe('name')
+    expect(result.find((c) => c.dataIndex === 'selection')).toBeUndefined()
+  })
+
+  it("type:'index' → 序号列（等价 snIndex）", () => {
+    const cols: TableColumn[] = [
+      { type: 'index', width: 80 },
+      { prop: 'name', label: 'Name' },
+    ]
+    const result = adaptColumns(cols)
+    expect(result).toHaveLength(2)
+    expect(result[0].dataIndex).toBe('_sn')
+    expect(result[0].title).toBe('#')
+    expect(result[0].width).toBe(80)
+    expect(typeof result[0].customRender).toBe('function')
+    expect((result[0].customRender as Function)({ index: 0 })).toBe(1)
+  })
+
+  it("type:'index' 与 options.snIndex 同时存在 → 不重复", () => {
+    const cols: TableColumn[] = [
+      { type: 'index' },
+      { prop: 'name', label: 'Name' },
+    ]
+    const result = adaptColumns(cols, { snIndex: true })
+    expect(result).toHaveLength(2)
+    expect(result.filter((c) => c.dataIndex === '_sn')).toHaveLength(1)
+  })
+
+  it("type:'index' 自定义 label", () => {
+    const cols: TableColumn[] = [{ type: 'index', label: '序号' }]
+    const result = adaptColumns(cols)
+    expect(result[0].title).toBe('序号')
   })
 })

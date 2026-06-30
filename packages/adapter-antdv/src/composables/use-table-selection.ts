@@ -61,21 +61,20 @@ export function useTableSelection(rowkey?: string) {
   }
 
   /**
-   * 页面切换后恢复选中状态 — ADV 通过 selectedRowKeys 自动保持选中
-   * 这里仅更新 multipleSelection 以保持同步
+   * 页面切换后恢复选中状态 — 声明式模式 selectedRowKeys 已是全量 key，
+   * ADV preserveSelectedRowKeys 自动保持跨页选中。此处仅合并当前页命中行，
+   * 不覆盖其他页（对齐 vue3 toggleRowSelection(row, true) 追加语义）。
    */
   const handleSelectData = (dataList: Record<string, unknown>[], _tableRef: unknown) => {
     if (dataList?.length && rowkey && multipleSelection.value.length) {
-      const pageSelecteds: Record<string, unknown>[] = []
-      dataList.forEach((row) => {
-        multipleSelection.value.forEach((selectedRow) => {
-          if (row[rowkey] === selectedRow[rowkey]) {
-            pageSelecteds.push(row)
-          }
-        })
-      })
-      // 更新当前页的 selectedRowKeys
-      selectedRowKeys.value = pageSelecteds.map((r) => r[rowkey] as string | number)
+      const pageKeys = new Set(
+        dataList
+          .filter((row) => multipleSelection.value.some((s) => s[rowkey] === row[rowkey]))
+          .map((row) => row[rowkey] as string | number),
+      )
+      const merged = new Set(selectedRowKeys.value)
+      pageKeys.forEach((k) => merged.add(k))
+      selectedRowKeys.value = Array.from(merged)
     }
   }
 
@@ -89,22 +88,30 @@ export function useTableSelection(rowkey?: string) {
   }
 
   /**
-   * 仅清除当前页选择
+   * 清除选择（对齐 vue3 clearSelection 清空语义：视觉 + 数据全清）
    */
   const clearSelection = () => {
     selectedRowKeys.value = []
+    multipleSelection.value = []
+    selectionsByPage.value = {}
   }
 
   /**
-   * 切换行选中状态
+   * 切换行选中状态（同步 multipleSelection，保证 getSelectionRows 一致）
    */
   const toggleRowSelection = (row: Record<string, unknown>, selected?: boolean) => {
     if (!rowkey) return
     const key = row[rowkey] as string | number
-    if (selected === false || selectedRowKeys.value.includes(key)) {
-      selectedRowKeys.value = selectedRowKeys.value.filter((k) => k !== key)
-    } else {
+    const exists = selectedRowKeys.value.includes(key)
+    const shouldSelect = selected === undefined ? !exists : selected
+    if (shouldSelect && !exists) {
       selectedRowKeys.value = [...selectedRowKeys.value, key]
+      if (!multipleSelection.value.some((r) => r[rowkey] === key)) {
+        multipleSelection.value = [...multipleSelection.value, row]
+      }
+    } else if (!shouldSelect && exists) {
+      selectedRowKeys.value = selectedRowKeys.value.filter((k) => k !== key)
+      multipleSelection.value = multipleSelection.value.filter((r) => r[rowkey] !== key)
     }
   }
 

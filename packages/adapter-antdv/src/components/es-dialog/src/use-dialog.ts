@@ -34,8 +34,14 @@ const initInstance = (
 
   if (appContext) {
     vNode.appContext = appContext
-    if (vNode.appContext && !vNode.appContext.provides) {
-      vNode.appContext.provides = {}
+    // 对齐 vue3：保证 provides / config / globalProperties 存在，
+    // 使弹窗子树能访问全局属性与注入（如 $EsPlus、$useDialog 等）
+    if (vNode.appContext) {
+      if (!vNode.appContext.provides) vNode.appContext.provides = {}
+      if (!vNode.appContext.config) vNode.appContext.config = {} as any
+      if (!vNode.appContext.config.globalProperties) {
+        ;(vNode.appContext.config as any).globalProperties = {}
+      }
     }
   }
 

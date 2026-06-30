@@ -12,32 +12,32 @@
 -->
 <template>
   <a-config-provider :locale="antLocale">
-    <div :ref="setTableContainer" class="table_component" :style="{ [heightType]: tabHeight }">
-      <div class="table_containers">
-        <!-- 插槽区域 -->
-        <div
-          v-if="showHeaderBar"
-          ref="headBarRef"
-          class="btn-slot"
-          :style="headerBarStyle"
-          :class="headerBarClassList"
-        >
-          <div class="headerBar" v-if="hasDefaultSlot" :style="{ paddingBottom: hasDefaultSlot ? '10px' : '0px' }">
-            <slot />
+    <div :ref="setTableContainer" class="table_component" :class="{ 'table-striped': options.stripe }" :style="{ [heightType]: tabHeight }">
+      <a-spin :spinning="loadStatus" tip="努力加载中...">
+        <div class="table_containers">
+          <!-- 插槽区域 -->
+          <div
+            v-if="showHeaderBar"
+            ref="headBarRef"
+            class="btn-slot"
+            :style="headerBarStyle"
+            :class="headerBarClassList"
+          >
+            <div class="headerBar" v-if="hasDefaultSlot" :style="{ paddingBottom: hasDefaultSlot ? '10px' : '0px' }">
+              <slot />
+            </div>
           </div>
-        </div>
 
-        <!-- 工具栏按钮 -->
-        <table-btns
-          ref="tbBtnRef"
-          :instance="{ tableRef: instance, formInstance: formInstance }"
-          v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
-          :btn-config="(options.configBtn as any[])"
-          :left-text="(options.leftText as string)"
-        />
+          <!-- 工具栏按钮 -->
+          <table-btns
+            ref="tbBtnRef"
+            :instance="{ tableRef: instance, formInstance: formInstance }"
+            v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
+            :btn-config="(options.configBtn as any[])"
+            :left-text="(options.leftText as string)"
+          />
 
-        <!-- 表格主体: a-spin 包裹 -->
-        <a-spin :spinning="loadStatus" tip="努力加载中...">
+          <!-- 表格主体 -->
           <a-table
             ref="tableRef"
             :columns="adaptedColumns"
@@ -48,11 +48,13 @@
             :bordered="options.border"
             :size="tableSize"
             :showHeader="options.showHeader !== false"
-            :rowSelection="options.multiSelect ? rowSelection : undefined"
+            :rowSelection="hasSelection ? resolvedRowSelection : undefined"
             :rowClassName="resolvedRowClassName"
+            :customRow="resolvedCustomRow"
+            :customHeaderRow="resolvedCustomHeaderRow"
             :scroll="tableScroll"
             :virtual="isVirtual"
-            :sortDirections="['ascend', 'descend']"
+            :sortDirections="['ascend', 'descend', 'ascend']"
             :locale="{ emptyText: options.emptyText || '暂无数据' }"
             :defaultExpandAllRows="false"
             @change="handleAdvTableChange"
@@ -109,28 +111,28 @@
               </template>
             </template>
           </a-table>
-        </a-spin>
-      </div>
+        </div>
 
-      <!-- 分页 -->
-      <div
-        v-if="showPagination"
-        ref="paginationRef"
-        class="pagination_page"
-      >
-        <a-pagination
-          v-model:current="paginationConfig.current"
-          v-model:pageSize="paginationConfig.pageSize"
-          :total="paginationConfig.total"
-          :showSizeChanger="true"
-          :showQuickJumper="true"
-          :pageSizeOptions="paginationPageSizes.map(String)"
-          :size="paginationIsSmall ? 'small' : 'default'"
-          :showTotal="(total: number) => `共 ${total} 条`"
-          @change="handleAdvPageChange"
-          @showSizeChange="handleAdvSizeChange"
-        />
-      </div>
+        <!-- 分页 -->
+        <div
+          v-if="showPagination"
+          ref="paginationRef"
+          class="pagination_page"
+        >
+          <a-pagination
+            v-model:current="paginationConfig.current"
+            v-model:pageSize="paginationConfig.pageSize"
+            :total="paginationConfig.total"
+            :showSizeChanger="true"
+            :showQuickJumper="true"
+            :pageSizeOptions="paginationPageSizes.map(String)"
+            :size="paginationIsSmall ? 'small' : 'default'"
+            :showTotal="(total: number) => `共 ${total} 条`"
+            @change="handleAdvPageChange"
+            @showSizeChange="handleAdvSizeChange"
+          />
+        </div>
+      </a-spin>
     </div>
   </a-config-provider>
 </template>
@@ -166,7 +168,7 @@ import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey, mapSize, mapButtonType } from '../../../utils/shared'
 import { getAdvIconComponent } from '../../../utils/icon'
 import { getCallback } from '@es-plus/core'
-import { adaptColumn, adaptColumns } from './column-adapter'
+import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
 import RenderDomTb from './render-dom-tb'
 
@@ -206,8 +208,8 @@ const antLocale = ref(zhCN)
 
 // ─── 注入 ───────────────────────────────────────────
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', {}) ?? getGlobalConfig().EsTable ?? {}
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
+const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -237,21 +239,41 @@ const getVisibleShow = inject<(() => boolean) | boolean>('getVisibleShow', () =>
 const visibleShow = computed(() => (typeof getVisibleShow === 'function' ? getVisibleShow() : getVisibleShow))
 const formInstance = ref<unknown>(null)
 
+// 从默认插槽扫 EsForm 取其 model（对齐 vue3 isFormInstance）
+const isFormInstance = computed(() => {
+  const defaultSlots = (instance as any)?.slots?.default?.() || []
+  const formVNode = defaultSlots.find((vnode: any) => {
+    const type = vnode.type
+    return type?.name === 'EsForm' || type?.displayName === 'EsForm'
+  })
+  if (formVNode) {
+    formInstance.value = (formVNode as any).ctx?.refs?.[(formVNode as any).props?.ref] || formVNode
+    bodyFormInstance(formInstance.value)
+  }
+  return formVNode || {}
+})
+
+// entryQuery 兜底（对齐 vue3 getListEntry）
+const getListEntry = computed(() => {
+  if (props.options.entryQuery && isObject(props.options.entryQuery) && Object.keys(props.options.entryQuery).length) {
+    return props.options.entryQuery
+  }
+  return {}
+})
+
 // ─── 分页 ───────────────────────────────────────────
 const paginationConfig = ref<PaginationConfig>({
-  current: 1,
   pageSize: 10,
+  current: 1,
   total: 0,
+  pageSizes: [],
+  size: 'small',
+  isSmall: true,
+  ...props.pagination,
 })
-const showPagination = computed(() => paginationConfig.value.total !== undefined && paginationConfig.value.total > 0)
 
 watch(() => props.pagination, (val) => {
-  paginationConfig.value = {
-    ...paginationConfig.value,
-    current: val?.current || 1,
-    pageSize: val?.pageSize || 10,
-    total: val?.total ?? 0,
-  }
+  paginationConfig.value = { ...paginationConfig.value, ...val }
 }, { deep: true, immediate: true })
 
 // ─── 表格尺寸 ───────────────────────────────────────
@@ -269,14 +291,18 @@ const rowKeyValue = computed(() => {
 })
 
 // ─── 表格滚动 ───────────────────────────────────────
+// 固定列需 scroll.x 才能生效；无固定列时不设 scroll.x，让表格按容器宽度铺满，
+// 弹性列（无 width）自动吸收剩余空间（对齐 el-table 铺满行为）。
+const hasFixedColumn = computed(() => props.columns.some((col) => !!col.fixed))
+
 const tableScroll = computed(() => {
   const scroll: Record<string, unknown> = {}
-  if (heightType.value === 'height') {
-    scroll.y = tableHeight.value
-  } else if (heightType.value === 'maxHeight') {
+  if (heightType.value === 'height' || heightType.value === 'maxHeight') {
     scroll.y = tableHeight.value
   }
-  scroll.x = 'max-content'
+  if (hasFixedColumn.value) {
+    scroll.x = 'max-content'
+  }
   return Object.keys(scroll).length ? scroll : undefined
 })
 
@@ -286,6 +312,12 @@ const isRequestConf = computed(() =>
   !!props.options.actionUrl ||
   (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0)
 )
+// 分页栏显示：外部显式传入 total 时按外部值显示；请求模式（actionUrl/apiParams）必然带分页，始终显示
+const showPagination = computed(() => {
+  if (props.pagination.total !== undefined) return true
+  if (isRequestConf.value) return true
+  return false
+})
 const hasDefaultSlot = computed(() => !!slots.default?.())
 const hasExpandSlot = computed(() => !!(slots as any).expand)
 const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
@@ -351,26 +383,53 @@ const filteredColumns = computed(() => {
   return columnRowList.value.filter((item) => !item.hidCol)
 })
 
+// ─── 选择列（type:'selection' 等价 options.multiSelect，对齐 vue3 约定）──
+// ADV 通过 rowSelection 自动渲染复选框列，故选择列不进 adaptedColumns；
+// 此处仅检测其存在，并把 width/align/fixed 合并进 rowSelection。
+const selectionCol = computed(() => filteredColumns.value.find((c) => c.type === 'selection'))
+const hasSelection = computed(() => props.options.multiSelect || !!selectionCol.value)
+const resolvedRowSelection = computed(() => {
+  const rs = rowSelection.value
+  const col = selectionCol.value
+  if (!col) return rs
+  const merged: Record<string, unknown> = { ...rs }
+  if (col.width) merged.columnWidth = col.width
+  if (col.align) merged.columnAlign = col.align
+  if (col.fixed === true) merged.fixed = 'left'
+  else if (col.fixed) merged.fixed = col.fixed
+  return merged
+})
+
 // ─── 适配列 ─────────────────────────────────────────
 const adaptedColumns = computed(() => {
   const cols: Record<string, unknown>[] = []
+  const visible = filteredColumns.value
+  const hasIndexCol = visible.some((c) => c.type === 'index')
 
-  // 序号列
-  if (props.options.snIndex) {
-    cols.push({
-      dataIndex: '_sn', key: '_sn', title: '#', width: 60, align: 'center',
-      customRender: ({ index }: { index: number }) => index + 1,
-    })
+  // 序号列（options.snIndex 注入；已存在 type:'index' 列时跳过，避免重复）
+  if (props.options.snIndex && !hasIndexCol) {
+    cols.push(createSnAdvColumn())
   }
 
-  for (const col of filteredColumns.value) {
+  const t = typeof esPlus.t === 'function' ? (esPlus.t as (k: string) => string) : undefined
+  for (const col of visible) {
+    // 选择列：ADV 通过 rowSelection 渲染，此处跳过（对齐 vue3 type:'selection' 约定）
+    if (col.type === 'selection') continue
+
+    // 序号列：type:'index' 等价 options.snIndex
+    if (col.type === 'index') {
+      cols.push(createSnAdvColumn(col))
+      continue
+    }
+
     // 操作列：添加 buttons
     if ((col.prop === 'operate' || col.key === 'operate') && col.btns) {
       const filteredBtns = col.btns.filter((btn) => checkPermission(btn.permissionValue))
+      const operateTitle = (col.labelKey && t ? t(col.labelKey) : undefined) || col.label || '操作'
       cols.push({
         dataIndex: 'operate',
         key: 'operate',
-        title: col.label || '操作',
+        title: operateTitle,
         width: col.width || (filteredBtns.length * 70 + 20),
         align: 'center',
         fixed: col.fixed === true ? 'right' : col.fixed || undefined,
@@ -379,19 +438,20 @@ const adaptedColumns = computed(() => {
       continue
     }
 
-    // 普通列
-    const advCol = adaptColumn(col)
+    // 普通列（adaptColumn 处理 labelKey/sortable/groups）
+    const advCol = adaptColumn(col, t)
+    const placeholder = (col.emptyPlaceholder as string) || '-'
 
-    // 格式化函数：有 formatter 时使用 formatter；否则兜底显示文本
+    // 格式化函数：有 formatter 时使用 formatter；否则兜底显示文本（对齐 vue3 emptyPlaceholder）
     if (col.formatter) {
       advCol.customRender = ({ text, record }: { text: unknown; record: Record<string, unknown> }) => {
-        return col.formatter?.(record) ?? (text == null || text === '' ? '-' : String(text))
+        return col.formatter?.(record) ?? (text == null || text === '' ? placeholder : String(text))
       }
-    } else if ((col.prop || col.key)) {
-      advCol.customRender = advCol.customRender || (({ text }: { text: unknown }) => {
-        if (text == null || text === '') return '-'
+    } else if ((col.prop || col.key) && !advCol.customRender) {
+      advCol.customRender = ({ text }: { text: unknown }) => {
+        if (text == null || text === '') return placeholder
         return String(text)
-      })
+      }
     }
 
     cols.push(advCol)
@@ -435,28 +495,55 @@ const tableBindAttrs = computed(() => {
   return result
 })
 
-// ─── 行样式/类名 ────────────────────────────────────
+// ─── 行样式/类名（对齐 vue3 签名 {row, rowIndex}）──────
+const currentRowKey = ref<unknown>(null)
+
 const resolvedRowClassName = computed(() => {
   const rc = props.options.rowClassName
-  if (!rc) return undefined
-  if (typeof rc === 'function') return rc
-  return rc
-})
-
-const resolvedCustomRow = computed(() => {
-  const rowStyle = props.options.rowStyle
   const highlighted = props.options.highlightCurrentRow
-  if (!rowStyle && !highlighted) return undefined
-  return (record: Record<string, unknown>, _index: number) => {
-    const s: Record<string, unknown> = {}
-    if (typeof rowStyle === 'function') Object.assign(s, rowStyle({ row: record, rowIndex: _index }))
-    else if (rowStyle) Object.assign(s, rowStyle)
-    return { style: Object.keys(s).length ? s : undefined }
+  const rk = rowKeyValue.value
+  return (record: Record<string, unknown>, index: number): string => {
+    const classes: string[] = []
+    if (typeof rc === 'function') {
+      const c = rc({ row: record, rowIndex: index })
+      if (c) classes.push(c)
+    } else if (typeof rc === 'string') {
+      classes.push(rc)
+    }
+    // 高亮当前行（对齐 vue3 highlightCurrentRow）
+    if (highlighted && currentRowKey.value !== null) {
+      const key = (record as any)?.[rk] ?? index
+      if (key === currentRowKey.value) classes.push('ant-table-row-highlighted')
+    }
+    return classes.join(' ')
   }
 })
 
+const resolvedCustomRow = computed((): any => {
+  const rowStyle = props.options.rowStyle
+  const highlighted = props.options.highlightCurrentRow
+  const rk = rowKeyValue.value
+  if (!rowStyle && !highlighted) return undefined
+  return (record: Record<string, unknown>, index: number) => {
+    const s: Record<string, unknown> = {}
+    if (typeof rowStyle === 'function') Object.assign(s, rowStyle({ row: record, rowIndex: index }))
+    else if (rowStyle) Object.assign(s, rowStyle)
+    const onClick = highlighted
+      ? () => { currentRowKey.value = (record as any)?.[rk] ?? index }
+      : undefined
+    return { style: Object.keys(s).length ? s : undefined, onClick }
+  }
+})
+
+// 表头样式（对齐 vue3 headerCellStyle → ADV customHeaderRow）
+const resolvedCustomHeaderRow = computed((): any => {
+  const hs = props.options.headerCellStyle
+  if (!hs) return undefined
+  return () => ({ style: hs })
+})
+
 // ─── 高度自适应 ─────────────────────────────────────
-const { tableHeight } = useTableResize(
+const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef, headBarRef, tbBtnRef, paginationRef,
   { heightType: heightType.value, tabHeight: props.options.tabHeight }
 )
@@ -467,11 +554,11 @@ function handleAdvTableChange(
   _filters: any,
   sorter: any
 ) {
+  // 对齐 vue3 changeTableSort：直接 emit { column, prop, order }，含排序清除（order: null）
   if (sorter && (sorter as any).column) {
     const s = sorter as { column: Record<string, unknown>; order: string | null; field: string }
-    if (s.order) {
-      emit('change-table-sort', { prop: s.field, order: s.order === 'ascend' ? 'ascending' : 'descending' })
-    }
+    const order = s.order === 'ascend' ? 'ascending' : s.order === 'descend' ? 'descending' : null
+    emit('change-table-sort', { column: s.column, prop: s.field, order })
   }
 }
 
@@ -549,7 +636,7 @@ const configTableField = computed(() => {
 function checkQueryFields(obj: Record<string, unknown>): boolean {
   const checkListKey = ['total', 'pageSize', 'current', 'tableData']
   if (isObject(obj)) {
-    return checkListKey.every((it) => obj[it] && typeof obj[it] === 'string')
+    return Object.keys(obj).every((it) => checkListKey.find((its) => its === it) && obj[it] && typeof obj[it] === 'string')
   }
   return false
 }
@@ -585,9 +672,9 @@ function queryTableListMethod(
   const url = props.options?.actionUrl || apiParams.url || ''
   if (!url || !Object.keys(apiParams).length) return
 
-  const formData = formInstance.value
-    ? toRaw(unref((formInstance.value as any).props?.model))
-    : {}
+  const formData = Object.keys(isFormInstance.value).length
+    ? toRaw(unref((isFormInstance.value as any).props?.model))
+    : getListEntry.value || {}
   const fnParams = getListenToCallBack('beforeRequest', { ...formData, ...params, ...toRaw(unref(apiParams.model || {})) })
   const finalParams = isObject(fnParams) ? fnParams : { ...formData, ...toRaw(unref(apiParams.model || {})), ...params }
   const requestOption = { ...toRaw(unref(apiParams.options || {})) }
@@ -671,8 +758,13 @@ onMounted(() => {
 })
 
 watch(visibleShow, async (val, oldVal) => {
-  if (val && val !== oldVal && props.options.actionUrl) {
-    await httpRequestInstance()
+  if (val && val !== oldVal) {
+    if (props.options.actionUrl) {
+      await httpRequestInstance()
+    }
+    // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
+    resizeObservers?.()
+    tableRef.value?.$forceUpdate?.()
   }
 })
 
@@ -697,20 +789,23 @@ provide('getTableInstantce', () => ({
   httpRequestInstance,
 }))
 
-// ─── Expose ──────────────────────────────────────────
+// ─── Expose（对齐 vue3 expose 集）─────────────────────
 defineExpose({
   httpRequestInstance,
   getSelectionRows: () => multipleSelection.value,
   clearSelection,
   clearAllSelection,
-  toggleRowSelection,
-  refresh: () => httpRequestInstance(),
-  scrollToRow: (row: number | string) => {
-    // ADV a-table 没有 scrollToRow，降级处理
-    if (typeof row === 'number') {
+  refresh: () => {
+    // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
+    resizeObservers?.()
+    tableRef.value?.$forceUpdate?.()
+  },
+  scrollToRow: (row: number) => {
+    // 虚拟模式用 ADV 原生 scrollTo；非虚拟 DOM 兜底
+    if (isVirtual.value) {
+      ;(tableRef.value as any)?.scrollTo?.(row)
+    } else {
       tableRef.value?.$el?.querySelectorAll?.('.ant-table-row')?.[row]?.scrollIntoView?.({ block: 'center' })
-    } else if (typeof row === 'string' && row) {
-      tableRef.value?.$el?.querySelector?.(`[data-row-key="${row}"]`)?.scrollIntoView?.({ block: 'center' })
     }
   },
 })
@@ -724,6 +819,13 @@ defineExpose({
   justify-content: space-between;
   align-items: flex-start;
   overflow: hidden;
+
+  // a-spin 在 align-items:flex-start 的 flex 容器中会收缩到内容宽度，
+  // 显式铺满，确保内部表格能按容器宽度自适应。
+  :deep(.ant-spin-nested-loading),
+  :deep(.ant-spin-container) {
+    width: 100%;
+  }
 }
 
 .table_containers {
@@ -735,14 +837,31 @@ defineExpose({
   flex-direction: column;
   align-items: flex-start;
   position: relative;
+
+  // a-table 根在 flex 容器中会收缩到内容宽度，显式铺满以触发弹性列吸收剩余空间。
+  :deep(.ant-table-wrapper) {
+    width: 100%;
+  }
 }
 
 .pagination_page {
   width: 100%;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   padding: 10px 0;
+}
+
+// 斑马纹（对齐 vue3 stripe）
+.table-striped {
+  :deep(.ant-table-tbody > tr:nth-child(even)) {
+    background: #fafafa;
+  }
+}
+
+// 高亮当前行（对齐 vue3 highlightCurrentRow）
+:deep(.ant-table-row-highlighted) {
+  background: #e6f4ff !important;
 }
 
 .btn-slot {

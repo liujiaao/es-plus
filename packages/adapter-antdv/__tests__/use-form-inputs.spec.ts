@@ -3,6 +3,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue'
+import dayjs from 'dayjs'
 import { useFormInputs } from '../src/composables/use-form-inputs'
 import type { FormItemOption } from '../src/types'
 
@@ -222,5 +223,66 @@ describe('useFormInputs — 嵌套路径', () => {
       updateHandler('李四')
       expect(model.user.name).toBe('李四')
     }
+  })
+})
+
+describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）', () => {
+  const { formInputComponents } = useFormInputs()
+
+  it('DatePicker 字符串值 → 转为 dayjs 传入组件（不再触发 date.locale 错误）', () => {
+    const item = makeItem('DatePicker')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('2024-01-01'), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(dayjs.isDayjs(props.value)).toBe(true)
+    expect((props.value as dayjs.Dayjs).format('YYYY-MM-DD')).toBe('2024-01-01')
+  })
+
+  it('DatePicker Range 字符串数组 → 转为 dayjs 数组', () => {
+    const item = makeItem('DatePicker', { attrs: { type: 'daterange' } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(['2024-01-01', '2024-12-31']), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(Array.isArray(props.value)).toBe(true)
+    expect(props.value.every((v: unknown) => dayjs.isDayjs(v))).toBe(true)
+  })
+
+  it('DatePicker 空字符串 → 原样返回，不会被误转为 dayjs(now)', () => {
+    const item = makeItem('DatePicker')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(''), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(props.value).toBe('')
+    expect(dayjs.isDayjs(props.value)).toBe(false)
+  })
+
+  it('DatePicker 配置 valueFormat → 回写 model 为字符串（对齐 EP value-format）', () => {
+    const item = makeItem('DatePicker', { attrs: { valueFormat: 'YYYY-MM-DD' } })
+    const model = makeModel('2024-01-01')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, model, { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    const updateHandler = props['onUpdate:value'] as Function
+    updateHandler(dayjs('2024-06-15'))
+    expect(model.testField).toBe('2024-06-15')
+  })
+
+  it('DatePicker 未配置 valueFormat → 回写 model 为 dayjs 对象（ADV 原生）', () => {
+    const item = makeItem('DatePicker')
+    const model = makeModel('2024-01-01')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, model, { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    const updateHandler = props['onUpdate:value'] as Function
+    updateHandler(dayjs('2024-06-15'))
+    expect(dayjs.isDayjs(model.testField)).toBe(true)
+  })
+
+  it('TimePicker 字符串值 → 转为 dayjs', () => {
+    const item = makeItem('TimePicker')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('12:00:00'), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(dayjs.isDayjs(props.value)).toBe(true)
   })
 })

@@ -1,10 +1,12 @@
 <!--
-  ADV 适配器：EsCrudPage CRUD 编排组件（对齐 @es-plus/vue3）
+  ADV 适配器：EsCrudPage CRUD 编排组件（对齐 @es-plus/vue3 es-crud-page.vue）
 
-  - 同时兼容 vue3 新命名（formItems/formLayout/tableBtns）与旧命名（formItemList/layoutFormProps）
-  - 支持 httpRequest / autoLoad props
-  - 弹窗确认前校验内部 EsForm
-  - 支持 onOpen / onClose / onConfirm 与 dialog-open / dialog-cancel emits
+  - 查询/重置由 EsForm 内部 triggerEvent 联动表格（单次请求），EsCrudPage 不监听 @confirm/@reset
+  - 弹窗 render 接收 inst 参数，用 inst.registerRef 注册表单到 dialog refs 存储
+  - validateAndConfirm 用 dialog 的 getRefs('dialogForm') 取表单 + 透传原生 validate Promise
+  - emits 对齐 vue3（无 page-change/sort-change/add-confirm/edit-confirm）
+  - formLayoutProps 对齐 vue3（labelBtnWidth 键 + 始终 gutter:16）；onOpen 时序对齐
+  - 操作列行按钮不透传 icon/hidden（对齐 vue3）
 -->
 <template>
   <div class="es-crud-page">
@@ -12,25 +14,17 @@
       ref="tableRef"
       :columns="mergedColumns"
       :options="mergedOptions"
-      :dataSource="tableData"
-      :pagination="paginationState"
-      :showHeaderBar="true"
+      v-model:dataSource="tableData"
+      v-model:pagination="paginationState"
       v-bind="$attrs"
-      @update:dataSource="tableData = $event"
-      @update:pagination="onPaginationUpdate"
-      @pagination-current-change="handlePageChange"
-      @size-change="handleSizeChange"
-      @change-table-sort="handleSortChange"
     >
       <es-form
-        v-if="effectiveFormItems && effectiveFormItems.length"
+        v-if="schema.formItems && schema.formItems.length"
         ref="formRef"
         :model="queryModel"
-        :formItemList="effectiveFormItems"
-        :configBtn="mergedFormBtns"
-        :layoutFormProps="effectiveFormLayout"
-        @confirm="handleQuery"
-        @reset="handleReset"
+        :form-item-list="schema.formItems"
+        :config-btn="mergedFormBtns"
+        :layout-form-props="formLayoutProps"
       />
       <template v-for="(_, name) in $slots" #[name]="slotData">
         <slot :name="name" v-bind="slotData || {}" />
@@ -45,23 +39,21 @@ export default { name: 'EsCrudPage' }
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, h } from 'vue'
-import type { VNode } from 'vue'
 import { Modal } from 'ant-design-vue'
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import { useDialog } from '../../es-dialog/src/use-dialog'
 import type {
   CrudPageSchema,
-  CrudAction,
   CrudBtnConfig,
   TableBtnConfig,
   OperationColumnConfig,
   RowBtnConfig,
   CrudDialogConfig,
   DialogActionContext,
-  LayoutFormProps,
 } from './types'
-import type { BtnConfig, TableColumn, TableOptions, PaginationConfig, FormItemOption } from '../../../types'
+import type { BtnConfig, TableColumn } from '../../../types'
 
 const props = withDefaults(
   defineProps<{
@@ -69,7 +61,7 @@ const props = withDefaults(
     httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
     autoLoad?: boolean
   }>(),
-  { autoLoad: true }
+  { autoLoad: true },
 )
 
 const emit = defineEmits<{
@@ -81,11 +73,6 @@ const emit = defineEmits<{
   'export': [model: Record<string, unknown>]
   'row-click': [row: Record<string, unknown>]
   'btn-click': [key: string, payload?: Record<string, unknown>]
-  'page-change': [pagination: PaginationConfig]
-  'size-change': [pagination: PaginationConfig, size: number]
-  'sort-change': [column: Record<string, unknown>]
-  'add-confirm': [model: Record<string, unknown>]
-  'edit-confirm': [model: Record<string, unknown>]
   'dialog-confirm': [dialogKey: string, data: Record<string, unknown>]
   'dialog-cancel': [dialogKey: string]
   'dialog-open': [dialogKey: string, row?: Record<string, unknown>]
@@ -97,26 +84,8 @@ const tableData = ref<Record<string, unknown>[]>([])
 
 const queryModel = reactive<Record<string, unknown>>({})
 
-// ─── Schema 字段兼容 ───
-const effectiveFormItems = computed<FormItemOption[]>(() =>
-  props.schema.formItems || props.schema.formItemList || []
-)
-
-const effectiveFormLayout = computed<LayoutFormProps>(() => {
-  if (props.schema.formLayout) {
-    return {
-      formLayProps: {
-        labelWidth: props.schema.formLayout.labelWidth,
-        ...(props.schema.formLayout.minFoldRows ? { minFoldRows: props.schema.formLayout.minFoldRows } : {}),
-      },
-      ...(props.schema.formLayout.span ? { rowLayProps: { gutter: 16 } } : {}),
-    }
-  }
-  return props.schema.layoutFormProps || {}
-})
-
 watch(
-  effectiveFormItems,
+  () => props.schema.formItems,
   (items) => {
     if (items) {
       items.forEach((item) => {
@@ -126,21 +95,15 @@ watch(
       })
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
-const paginationState = ref<PaginationConfig>({
+const paginationState = ref({
   current: 1,
   pageSize: 10,
   total: 0,
   ...(props.schema.pagination || {}),
 })
-
-watch(
-  () => props.schema.pagination,
-  (p) => { paginationState.value = { ...paginationState.value, ...(p || {}) } },
-  { deep: true }
-)
 
 // ─── 向后兼容：归一化配置 ───
 
@@ -242,7 +205,7 @@ const mergedFormBtns = computed<BtnConfig[]>(() => {
   return [...baseBtns, ...toolbarBtns]
 })
 
-// ─── 表格列合并 ───
+// ─── 表格列合并（操作列行按钮不透传 icon/hidden，对齐 vue3）──
 
 const mergedColumns = computed<TableColumn[]>(() => {
   const cols = [...(props.schema.columns || [])]
@@ -253,9 +216,7 @@ const mergedColumns = computed<TableColumn[]>(() => {
   const actionBtns = opCol.btns.map((btn) => ({
     name: btn.name,
     type: btn.type,
-    icon: btn.icon,
     permissionValue: btn.permissionValue,
-    hidden: btn.hidden,
     clickEvent: (row: Record<string, unknown>) => handleRowBtnClick(btn, row),
   }))
 
@@ -304,7 +265,21 @@ const mergedOptions = computed(() => {
     const existing = (base.configBtn as any[]) || []
     base.configBtn = [...existing, ...tBtns]
   }
-  return base as TableOptions
+  return base
+})
+
+// ─── 表单布局（对齐 vue3：labelBtnWidth 键 + 始终 gutter:16）──
+
+const formLayoutProps = computed(() => {
+  const layout = props.schema.formLayout
+  if (!layout) return undefined
+  return {
+    rowLayProps: { gutter: 16 },
+    formLayProps: {
+      labelBtnWidth: layout.labelWidth,
+      ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {}),
+    },
+  } as any
 })
 
 // ─── 工具栏按钮处理 ───
@@ -312,12 +287,14 @@ const mergedOptions = computed(() => {
 async function handleToolbarBtnClick(btn: CrudBtnConfig) {
   const key = btn.key || btn.actionType || ''
 
+  // 确认逻辑（对齐 vue3 ElMessageBox.confirm，ADV 用 Modal.confirm 近似 warning）
   if (btn.confirm) {
     const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
     try {
       await new Promise((resolve, reject) => {
         Modal.confirm({
           title: '提示',
+          icon: h(ExclamationCircleOutlined),
           content: msg,
           okText: '确定',
           cancelText: '取消',
@@ -331,12 +308,14 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
     }
   }
 
+  // 打开弹窗
   if (btn.dialogKey) {
     if (key === 'add') emit('add')
     openDialog(btn.dialogKey)
     return
   }
 
+  // 非弹窗按钮的事件
   if (key === 'export' || btn.actionType === 'export') {
     emit('export', { ...queryModel })
   } else if (key === 'add') {
@@ -351,12 +330,14 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
 async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>) {
   const key = btn.key || ''
 
+  // 确认逻辑
   if (btn.confirm) {
     const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
     try {
       await new Promise((resolve, reject) => {
         Modal.confirm({
           title: '提示',
+          icon: h(ExclamationCircleOutlined),
           content: msg,
           okText: '确定',
           cancelText: '取消',
@@ -370,6 +351,7 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
     }
   }
 
+  // 自定义 click
   if (btn.click) {
     btn.click(row, {
       refresh,
@@ -379,11 +361,13 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
     return
   }
 
+  // 打开弹窗
   if (btn.dialogKey) {
     openDialog(btn.dialogKey, row)
     return
   }
 
+  // 向后兼容事件
   if (key === 'edit') emit('edit', row)
   else if (key === 'delete') emit('delete', row)
   else if (key === 'view') emit('view', row)
@@ -394,14 +378,12 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
 // ─── 弹窗管理 ───
 
 const dialogInstances = new Map<string, any>()
-const dialogRefs = new Map<string, Record<string, any>>()
 
 function openDialog(key: string, row?: Record<string, unknown>) {
   const dialogConfig = normalizedDialogs.value[key]
   if (!dialogConfig) return
 
   emit('dialog-open', key, row)
-  dialogConfig.onOpen?.(row)
 
   const dialog = useDialog()
   dialogInstances.set(key, dialog)
@@ -419,12 +401,8 @@ function openDialog(key: string, row?: Record<string, unknown>) {
     ? dialogConfig.title(row)
     : dialogConfig.title || ''
 
-  const refsMap: Record<string, any> = {}
-  dialogRefs.set(key, refsMap)
-
-  const registerRef = (name: string, el: any) => {
-    if (el) refsMap[name] = el
-  }
+  // onOpen 在 formData 构建后调用（对齐 vue3 时序）
+  dialogConfig.onOpen?.(row)
 
   const configBtn = resolveDialogBtns(key, dialogConfig, formData, row || {})
 
@@ -435,22 +413,23 @@ function openDialog(key: string, row?: Record<string, unknown>) {
     maxHeight: dialogConfig.maxHeight,
     fullscreen: dialogConfig.fullscreen,
     isHiddenFooter: dialogConfig.isHiddenFooter,
+    // render 接收 inst 参数，用 inst.registerRef 注册表单到 dialog 的 refs 存储（对齐 vue3）
     render: (dialogConfig.render
       ? (hFn: typeof h, inst: any) => {
           return dialogConfig.render!(hFn, {
             row: row || {},
             model: formData,
-            registerRef,
+            registerRef: inst.registerRef,
             close: () => closeDialog(key),
             refresh,
           } as any)
         }
       : dialogConfig.formItems
-        ? (hFn: typeof h) => {
+        ? (hFn: typeof h, inst: any) => {
             return hFn(EsForm, {
-              ref: (el: any) => el && registerRef('dialogForm', el),
+              ref: (el: any) => el && inst.registerRef('dialogForm', el),
               model: formData,
-              formItemList: dialogConfig.formItems as FormItemOption[],
+              formItemList: dialogConfig.formItems,
               layoutFormProps: {
                 rowLayProps: { gutter: 16 },
                 formLayProps: {
@@ -458,13 +437,12 @@ function openDialog(key: string, row?: Record<string, unknown>) {
                   ...(dialogConfig.formLayout || {}),
                 },
               },
-            })
+            } as any)
           }
         : undefined) as any,
     configBtn,
     onClosed: () => {
       dialogInstances.delete(key)
-      dialogRefs.delete(key)
       dialogConfig.onClose?.()
     },
   })
@@ -475,7 +453,6 @@ function closeDialog(key: string) {
   if (dialog) {
     dialog.close()
     dialogInstances.delete(key)
-    dialogRefs.delete(key)
   }
 }
 
@@ -536,11 +513,11 @@ async function validateAndConfirm(
   close: () => void,
   getRefs: (name?: string) => any,
 ) {
+  // 有表单时先校验（透传原生 Promise，让校验失败抛错，对齐 vue3）
   if (config.formItems?.length) {
     const dialogForm = getRefs('dialogForm')
     if (dialogForm?.validate) {
-      const valid = await dialogForm.validate()
-      if (!valid) return
+      await dialogForm.validate()
     }
   }
 
@@ -557,22 +534,6 @@ async function validateAndConfirm(
 
   emit('dialog-confirm', key, formData)
 }
-
-// ─── 查询/重置 ───
-
-function handleQuery(_formRef: unknown, model: Record<string, unknown>) {
-  tableRef.value?.httpRequestInstance?.(model)
-  emit('query', model)
-}
-
-function handleReset(_formRef: unknown, _model: Record<string, unknown>) {
-  tableRef.value?.httpRequestInstance?.({})
-}
-
-function onPaginationUpdate(p: PaginationConfig) { paginationState.value = { ...p } }
-function handlePageChange(p: PaginationConfig) { emit('page-change', p) }
-function handleSizeChange(p: PaginationConfig, size: number) { emit('size-change', p, size) }
-function handleSortChange(col: Record<string, unknown>) { emit('sort-change', col) }
 
 // ─── 公共方法 ───
 
@@ -598,8 +559,5 @@ defineExpose({
 <style scoped>
 .es-crud-page {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 </style>

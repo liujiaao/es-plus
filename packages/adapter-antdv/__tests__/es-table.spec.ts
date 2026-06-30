@@ -124,6 +124,30 @@ describe('EsTable — 分页', () => {
     expect(vm.showPagination).toBe(true)
   })
 
+  it('请求模式 (apiParams) + 无 total → 显示分页', () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        ...baseProps,
+        options: { apiParams: { url: '/api/users' }, isInitRun: false } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    const vm = wrapper.vm as any
+    expect(vm.showPagination).toBe(true)
+  })
+
+  it('请求模式 (actionUrl) + 无 total → 显示分页', () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        ...baseProps,
+        options: { actionUrl: '/api/list', isInitRun: false } as any,
+        pagination: {},
+      },
+    })
+    const vm = wrapper.vm as any
+    expect(vm.showPagination).toBe(true)
+  })
+
   it('pagination 同步 paginationConfig', async () => {
     const wrapper = mount(EsTable, {
       props: { ...baseProps, pagination: { current: 2, pageSize: 20, total: 50 } },
@@ -140,6 +164,42 @@ describe('EsTable — 分页', () => {
     vm.handleAdvPageChange(3)
     await nextTick()
     expect(wrapper.emitted('update:pagination')).toBeTruthy()
+  })
+})
+
+describe('EsTable — 滚动与列宽铺满', () => {
+  it('无固定列 → 不设 scroll.x，让表格铺满容器', () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [],
+        columns: [
+          { prop: 'name', label: '姓名', width: 120 },
+          { prop: 'addr', label: '地址', minWidth: 150 },
+        ],
+        options: {} as any,
+        pagination: {},
+      },
+    })
+    const vm = wrapper.vm as any
+    expect(vm.hasFixedColumn).toBe(false)
+    expect(vm.tableScroll?.x).toBeUndefined()
+  })
+
+  it('有固定列 → 设 scroll.x=max-content 支持固定列', () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [],
+        columns: [
+          { prop: 'name', label: '姓名', fixed: 'left' },
+          { prop: 'addr', label: '地址' },
+        ],
+        options: {} as any,
+        pagination: {},
+      },
+    })
+    const vm = wrapper.vm as any
+    expect(vm.hasFixedColumn).toBe(true)
+    expect(vm.tableScroll?.x).toBe('max-content')
   })
 })
 
@@ -167,6 +227,47 @@ describe('EsTable — 选择 (multiSelect)', () => {
     vm.clearSelection()
     const config = vm.rowSelection
     expect(config.selectedRowKeys).toEqual([])
+  })
+
+  it("columns 中 type:'selection' → 等价 multiSelect：启用 rowSelection 且不生成空列", () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [{ id: '1', name: 'A' }, { id: '2', name: 'B' }],
+        columns: [
+          { type: 'selection', width: 50 },
+          { prop: 'name', label: 'Name' },
+        ],
+        options: { rowkey: 'id' } as any,
+        pagination: { total: 2 },
+      },
+    })
+    const vm = wrapper.vm as any
+    // hasSelection 由 selection 列触发
+    expect(vm.hasSelection).toBe(true)
+    // rowSelection 配置存在，并把列宽/对齐合并进去
+    const config = vm.resolvedRowSelection
+    expect(config).toHaveProperty('selectedRowKeys')
+    expect(config.columnWidth).toBe(50)
+    // adaptedColumns 不含空 dataIndex 的 selection 列
+    const cols = vm.adaptedColumns as any[]
+    expect(cols.every((c) => c.dataIndex !== 'selection')).toBe(true)
+    expect(cols.some((c) => c.dataIndex === 'name')).toBe(true)
+  })
+
+  it("type:'selection' 同时设 options.multiSelect → 不重复", () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [{ id: '1', name: 'A' }],
+        columns: [{ type: 'selection', width: 55 }, { prop: 'name', label: 'Name' }],
+        options: { multiSelect: true, rowkey: 'id' } as any,
+        pagination: { total: 1 },
+      },
+    })
+    const vm = wrapper.vm as any
+    expect(vm.hasSelection).toBe(true)
+    const cols = vm.adaptedColumns as any[]
+    expect(cols.filter((c) => c.dataIndex === 'selection')).toHaveLength(0)
+    expect(cols).toHaveLength(1)
   })
 })
 

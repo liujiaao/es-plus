@@ -1,17 +1,13 @@
 import type { VNode, RenderFunction } from 'vue'
-import type { FormItemOption, BtnConfig, TableColumn, TableOptions, PaginationConfig, DialogOptions } from '../../../types'
+import type { FormItemOption, BtnConfig, TableColumn, TableOptions, PaginationConfig, DialogOptions, LayoutFormProps } from '../../../types'
 
 // ─── 核心 Schema ───
 
 export interface CrudPageSchema {
-  /** 查询表单字段配置（对齐 vue3 新命名） */
+  /** 查询表单字段配置（对齐 vue3） */
   formItems?: FormItemOption[]
-  /** 兼容旧命名 */
-  formItemList?: FormItemOption[]
-  /** 表单布局配置（对齐 vue3 新命名） */
+  /** 表单布局配置（对齐 vue3） */
   formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
-  /** 兼容旧命名 */
-  layoutFormProps?: LayoutFormProps
   /** 工具栏按钮（渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 兼容旧命名 */
@@ -38,27 +34,7 @@ export interface CrudPageSchema {
   dialogOptions?: Partial<DialogOptions>
 }
 
-export interface LayoutFormProps {
-  rowLayProps?: Record<string, unknown>
-  formLayProps?: {
-    isBtnHidden?: boolean
-    minFoldRows?: number
-    btnColSpan?: number
-    labelBtnWidth?: string | number
-    labelWidth?: string | number
-    size?: 'large' | 'middle' | 'small' | string
-  }
-  /** @deprecated 使用 formLayProps 替代 */
-  fromLayProps?: {
-    isBtnHidden?: boolean
-    minFoldRows?: number
-    btnColSpan?: number
-    labelBtnWidth?: string | number
-    labelWidth?: string | number
-    size?: 'large' | 'middle' | 'small' | string
-  }
-  setOptions?: boolean
-}
+export type { LayoutFormProps }
 
 // ─── 工具栏按钮 ───
 
@@ -207,10 +183,6 @@ export interface CrudPageEmits {
   (e: 'export', model: Record<string, unknown>): void
   (e: 'row-click', row: Record<string, unknown>): void
   (e: 'btn-click', key: string, payload?: Record<string, unknown>): void
-  (e: 'page-change', pagination: PaginationConfig): void
-  (e: 'sort-change', column: Record<string, unknown>): void
-  (e: 'add-confirm', model: Record<string, unknown>): void
-  (e: 'edit-confirm', model: Record<string, unknown>): void
   (e: 'dialog-confirm', dialogKey: string, data: Record<string, unknown>): void
   (e: 'dialog-cancel', dialogKey: string): void
   (e: 'dialog-open', dialogKey: string, row?: Record<string, unknown>): void

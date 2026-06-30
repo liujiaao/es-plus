@@ -2,31 +2,9 @@
  * 图标适配测试
  */
 import { describe, it, expect } from 'vitest'
-import { getAdvIcon, resolveIcon } from '../src/utils/icon'
+import { getAdvIcon } from '../src/utils/icon'
 
 describe('图标解析', () => {
-  it('resolveIcon — 已知 EP 图标映射到 ADV 名称', () => {
-    expect(resolveIcon('ArrowDown')).toBe('DownOutlined')
-    expect(resolveIcon('ArrowUp')).toBe('UpOutlined')
-    expect(resolveIcon('Plus')).toBe('PlusOutlined')
-    expect(resolveIcon('Close')).toBe('CloseOutlined')
-    expect(resolveIcon('Search')).toBe('SearchOutlined')
-    expect(resolveIcon('Edit')).toBe('EditOutlined')
-    expect(resolveIcon('Delete')).toBe('DeleteOutlined')
-    expect(resolveIcon('View')).toBe('EyeOutlined')
-    expect(resolveIcon('CopyDocument')).toBe('CopyOutlined')
-    expect(resolveIcon('FullScreen')).toBe('FullscreenOutlined')
-    expect(resolveIcon('Warning')).toBe('WarningOutlined')
-    expect(resolveIcon('Refresh')).toBe('ReloadOutlined')
-    expect(resolveIcon('Download')).toBe('DownloadOutlined')
-    expect(resolveIcon('Upload')).toBe('UploadOutlined')
-  })
-
-  it('resolveIcon — 未知图标返回原名', () => {
-    expect(resolveIcon('CustomIcon')).toBe('CustomIcon')
-    expect(resolveIcon('')).toBe('')
-  })
-
   it('getAdvIcon — 有效名称返回 VNode', () => {
     const vnode = getAdvIcon('Plus', 16)
     expect(vnode).not.toBeNull()

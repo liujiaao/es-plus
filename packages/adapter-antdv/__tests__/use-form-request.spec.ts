@@ -13,12 +13,10 @@ describe('useFormRequest — checkQueryFields', () => {
     expect(result).toEqual(cfg)
   })
 
-  it('无效配置 — 返回默认值', () => {
+  it('部分映射配置 — 子集校验通过（对齐 vue3：允许只映射部分字段）', () => {
     const { configFormField } = useFormRequest()
     const result = configFormField({ configFormOut: { total: 't' } as any })
-    expect(result).toEqual({
-      total: 'records', pageSize: 'pageSize', current: 'pageNo', listData: 'rows',
-    })
+    expect(result).toEqual({ total: 't' })
   })
 
   it('fieldFieldOutput 注入 — 优先使用', () => {
@@ -30,10 +28,16 @@ describe('useFormRequest — checkQueryFields', () => {
     expect(result).toEqual(custom)
   })
 
-  it('fieldFieldOutput 返回无效 → 回退默认', () => {
+  it('fieldFieldOutput 返回部分映射 → 子集校验通过', () => {
     const { configFormField } = useFormRequest()
     const injectFn = vi.fn().mockReturnValue({ total: 't' })
     const result = configFormField({}, injectFn)
+    expect(result).toEqual({ total: 't' })
+  })
+
+  it('含非法键的配置 → 回退默认（子集校验：键必须属于 4 个允许键）', () => {
+    const { configFormField } = useFormRequest()
+    const result = configFormField({ configFormOut: { total: 't', foo: 'bar' } as any })
     expect(result).toEqual({
       total: 'records', pageSize: 'pageSize', current: 'pageNo', listData: 'rows',
     })

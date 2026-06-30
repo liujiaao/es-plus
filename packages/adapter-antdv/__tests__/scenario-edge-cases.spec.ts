@@ -112,10 +112,14 @@ describe('边界: 极端数据量', () => {
     expect(getNestedValue(target, 'a.b.c.d.e')).toBe('deep')
   })
 
-  it('findValueByKey — depth=3 限制', () => {
+  it('findValueByKey — depth 限制（对齐 vue3/core：depth>3 终止，搜索 4 层）', () => {
     const data = { level1: { level2: { level3: { level4: 'too deep' } } } }
-    expect(findValueByKey(data, 'level4')).toBeUndefined() // beyond depth 3
+    // level4 在第 3 层（level1→level2→level3→level4），仍在搜索范围内
+    expect(findValueByKey(data, 'level4')).toBe('too deep')
     expect(findValueByKey(data, 'level3')).toEqual({ level4: 'too deep' })
+    // 第 4 层（level1→level2→level3→level4→level5）超出 depth=3 限制
+    const deeper = { level1: { level2: { level3: { level4: { level5: 'beyond' } } } } }
+    expect(findValueByKey(deeper, 'level5')).toBeUndefined()
   })
 })
 
@@ -131,15 +135,16 @@ describe('边界: 快速翻页', () => {
     expect(sel.multipleSelection.value).toHaveLength(20)
   })
 
-  it('翻到第5页后回到第1页 — 恢复选中', () => {
+  it('翻到第5页后回到第1页 — 跨页选择保留（对齐 vue3 preserveSelectedRowKeys）', () => {
     const sel = useTableSelection('id')
     // 第1页选了1,2
     sel.handleSelectionChange([{ id: '1' }, { id: '2' }], 1)
     // 跳到第5页选了一些
     sel.handleSelectionChange([{ id: '5-1' }, { id: '5-2' }], 5)
-    // 回到第1页，数据含1,2,3
+    // 回到第1页，handleSelectData 合并当前页命中行（不覆盖其他页已选）
     sel.handleSelectData([{ id: '1' }, { id: '2' }, { id: '3' }], null)
-    expect(sel.selectedRowKeys.value.sort()).toEqual(['1', '2'])
+    // 跨页选择保留：第1页的 1,2 与第5页的 5-1,5-2 都在
+    expect(sel.selectedRowKeys.value.sort()).toEqual(['1', '2', '5-1', '5-2'])
   })
 
   it('initSelection 守卫 — isInitChange 阻止递归', () => {

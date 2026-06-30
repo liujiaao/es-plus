@@ -1,111 +1,170 @@
 <!--
   ADV 适配器：EsForm 动态表单组件（对齐 @es-plus/vue3 API）
 
-  Ant Design Vue 版，核心变化：
-  - a-form / a-form-item / a-row / a-col / a-button / a-space
+  Ant Design Vue 版，与 vue3 结构对齐：
+  - a-form / a-form-item / a-row / a-col / a-button / a-space / a-dropdown
   - 表单字段用 name 做校验字段标识（EP 用 prop）
   - 标签宽度通过 labelCol 控制
+  - btnColSpanRow 左右分栏 / 单行两种按钮布局
+  - setOptions 下拉（自定义查询/自定义表格/重置刷新）
+  - 查询/重置由 EsForm 内部 triggerEvent 联动表格（单次请求），不 emit confirm/reset
 -->
 <template>
-  <a-form
-    :ref="setFormRef"
-    :model="model"
-    :rules="formRules"
-    v-bind="formProps"
-    class="es-form"
-  >
+  <a-form :ref="setFormRef" v-bind="formProps" class="es-form">
     <a-row v-bind="rowLayout">
-      <a-col
-        v-for="(item, idx) in formItem"
-        :key="item.prop || idx"
-        :span="item.span || 6"
-        v-show="!item.isFold"
-      >
-        <a-form-item
-          :name="item.prop"
-          :label="translateLabel(item)"
-          :labelCol="labelColStyle"
-          v-bind="item.formItemOptions"
-        >
-          <!-- 自定义 render 渲染函数 -->
-          <RenderDomForm
-            v-if="item.render && typeof item.render === 'function'"
-            :render="item.render"
-            :model="model"
-            :row="item"
-            :index="idx"
-          />
-          <!-- 内置控件类型 -->
-          <component
-            v-else-if="formInputRenderer(item)"
-            :is="formInputRenderer(item)(hFn, model, { row: item, index: idx })"
-          />
-          <!-- 无控件：显示纯文本 -->
-          <span v-else>{{ getNestedValue(model, item.prop) ?? '-' }}</span>
-        </a-form-item>
-      </a-col>
+      <template v-for="(item, index) in formItem" :key="item.prop || index">
+        <a-col v-show="!item?.isFold" :span="item.span">
+          <a-form-item
+            :name="item.prop"
+            :label="translateLabel(item)"
+            :labelCol="labelColStyle"
+            :wrapperCol="wrapperColStyle"
+            v-bind="initFormItemOptions((item as any).formItemOptions || {})"
+            @click.stop="() => {}"
+          >
+            <template v-if="item.formtype">
+              <RenderDomForm :row="item" :render="formInputRenderer(item)" :index="index" :model="model" />
+            </template>
+            <template v-else>
+              <RenderDomForm :row="item" :render="item.render" :index="index" :model="model" />
+            </template>
+          </a-form-item>
+        </a-col>
+      </template>
 
       <!-- 按钮区域 -->
-      <a-col
-        v-if="!isBtnHidden && formItem.length"
-        :span="effectiveBtnColSpan"
-        class="btn-formItem"
-      >
-        <!-- 自定义按钮渲染 -->
-        <RenderBtn
-          v-if="isRenderBtn"
-          :row="{ isFold: showFoldBtn, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formRef }"
-          :form-model="model"
-          :form-item-list="formItem"
-          :render="(renderBtn as Function)"
-        />
-        <a-form-item v-else :labelCol="{ style: { width: labelBtnWidth || 'auto' } }">
-          <a-space>
-            <!-- 左侧按钮 -->
-            <a-button
-              v-for="(it, bIdx) in btnLeft"
-              :key="it.key || bIdx"
-              :type="mapBtnType(it.type)"
-              :size="mapBtnSize(it.size)"
-              :disabled="isDisabled(it)"
-              :loading="it.loading"
-              @click="clickBtn(it)"
-              v-bind="filterExtraProps(it)"
-            >
-              <template #icon v-if="it.icon">
-                <component :is="getAdvIconComponent(it.icon)" />
-              </template>
-              {{ it.name }}
-            </a-button>
-            <!-- 右侧按钮 -->
-            <a-button
-              v-for="(it, bIdx) in btnRight"
-              :key="it.key || bIdx"
-              :type="mapBtnType(it.type)"
-              :size="mapBtnSize(it.size)"
-              :disabled="isDisabled(it)"
-              :loading="it.loading"
-              @click="clickBtn(it)"
-              v-bind="filterExtraProps(it)"
-            >
-              <template #icon v-if="it.icon">
-                <component :is="getAdvIconComponent(it.icon)" />
-              </template>
-              {{ it.name }}
-            </a-button>
-            <!-- 折叠按钮 -->
-            <a-button
-              v-if="showFoldBtn"
-              type="link"
-              @click="changeFolded"
-            >
-              {{ folded ? '展开' : '收起' }}
-              <DownOutlined v-if="folded" />
-              <UpOutlined v-else />
-            </a-button>
-          </a-space>
-        </a-form-item>
-      </a-col>
+      <template v-if="!isBtnHidden">
+        <template v-if="isRenderBtn">
+          <RenderBtn
+            :row="{ isFold: isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formRef }"
+            :form-model="model"
+            :form-item-list="formItem"
+            :render="(renderBtn as Function)"
+          />
+        </template>
+        <a-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
+          <!-- btnColSpanRow：左右分栏布局 -->
+          <div v-if="btnColSpanRow && configBtn.length" class="buttonOperate leftRightBtn">
+            <div class="btn-left">
+              <a-form-item :labelCol="{ style: { width: '0px' } }" class="btn-formItem">
+                <a-space :size="8" wrap>
+                  <a-button
+                    v-for="(it, inx) in colRightLeftList.colLeftBtn"
+                    v-show="checkPermission(it.permissionValue)"
+                    :key="it.key || inx"
+                    v-bind="filterOptions(it)"
+                    :type="mapBtnType(it.type)"
+                    :size="mapBtnSize(it.size)"
+                    :disabled="resolveBtnDisabled(it)"
+                    :loading="it.loading"
+                    @click="() => it.click?.(model, formRef, getTableInstant?.httpRequestInstance)"
+                  >
+                    <template #icon v-if="it.icon">
+                      <component :is="getAdvIconComponent(it.icon)" />
+                    </template>
+                    {{ it.name }}
+                  </a-button>
+                </a-space>
+              </a-form-item>
+            </div>
+            <div class="btn-right">
+              <a-form-item :labelCol="{ style: { width: '0px' } }" class="btn-formItem">
+                <a-space :size="8" wrap>
+                  <a-button
+                    v-for="(it, inx) in colRightLeftList.colRightBtn"
+                    v-show="checkPermission(it.permissionValue)"
+                    :key="it.key || inx"
+                    v-bind="filterOptions(it)"
+                    :type="mapBtnType(it.type)"
+                    :size="mapBtnSize(it.size)"
+                    :disabled="resolveBtnDisabled(it)"
+                    :loading="it.loading"
+                    @click="() => clickBtn(it)"
+                  >
+                    <template #icon v-if="it.icon">
+                      <component :is="getAdvIconComponent(it.icon)" />
+                    </template>
+                    {{ it.name }}
+                  </a-button>
+                  <!-- 折叠按钮 -->
+                  <a-button
+                    v-if="isFold"
+                    type="link"
+                    @click="changeFolded"
+                  >
+                    {{ folded ? '展开' : '收起' }}
+                    <DownOutlined v-if="folded" />
+                    <UpOutlined v-else />
+                  </a-button>
+                  <!-- setOptions 下拉 -->
+                  <a-dropdown v-if="getSetOptionsStatus" placement="bottomLeft">
+                    <a-button type="link">
+                      <template #icon><component :is="getAdvIconComponent('Tools')" /></template>
+                    </a-button>
+                    <template #overlay>
+                      <a-menu @click="handleSetOptionsClick">
+                        <a-menu-item key="customerForm">自定义查询</a-menu-item>
+                        <a-menu-item key="tableItem">自定义表格</a-menu-item>
+                        <a-menu-item key="refresh">重置(刷新)</a-menu-item>
+                      </a-menu>
+                    </template>
+                  </a-dropdown>
+                </a-space>
+              </a-form-item>
+            </div>
+          </div>
+          <!-- 非 btnColSpanRow：单行按钮布局 -->
+          <a-form-item
+            v-else-if="configBtn.length"
+            :label="' '"
+            :labelCol="{ style: { width: labelBtnWidth || 'auto' } }"
+            :class="{ formItemCols: getBtnColSpan === 24 }"
+            class="btn-formItem"
+          >
+            <div class="buttonOperate" :style="{ textAlign: getBtnColSpan === 24 ? 'right' : 'left' }">
+              <a-space :size="8" wrap>
+                <a-button
+                  v-for="(it, inx) in configBtn"
+                  v-show="checkPermission(it.permissionValue)"
+                  :key="it.key || inx"
+                  v-bind="filterOptions(it)"
+                  :type="mapBtnType(it.type)"
+                  :size="mapBtnSize(it.size)"
+                  :disabled="resolveBtnDisabled(it)"
+                  :loading="it.loading"
+                  @click="() => it.click?.(model, formRef, getTableInstant?.httpRequestInstance)"
+                >
+                  <template #icon v-if="it.icon">
+                    <component :is="getAdvIconComponent(it.icon)" />
+                  </template>
+                  {{ it.name }}
+                </a-button>
+                <a-button
+                  v-if="isFold"
+                  type="link"
+                  @click="changeFolded"
+                >
+                  {{ folded ? '展开' : '收起' }}
+                  <DownOutlined v-if="folded" />
+                  <UpOutlined v-else />
+                </a-button>
+                <a-dropdown v-if="getSetOptionsStatus" placement="bottomLeft">
+                  <a-button type="link">
+                    <template #icon><component :is="getAdvIconComponent('Tools')" /></template>
+                  </a-button>
+                  <template #overlay>
+                    <a-menu @click="handleSetOptionsClick">
+                      <a-menu-item key="customerForm">自定义查询</a-menu-item>
+                      <a-menu-item key="tableItem">自定义表格</a-menu-item>
+                      <a-menu-item key="refresh">重置(刷新)</a-menu-item>
+                    </a-menu>
+                  </template>
+                </a-dropdown>
+              </a-space>
+            </div>
+          </a-form-item>
+        </a-col>
+      </template>
     </a-row>
   </a-form>
 </template>
@@ -115,9 +174,9 @@ export default { name: 'EsForm' }
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, h, defineComponent } from 'vue'
+import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import type { VNode } from 'vue'
-import { Form, FormItem, Row, Col, Button, Space } from 'ant-design-vue'
+import { Form, FormItem, Row, Col, Button, Space, Input } from 'ant-design-vue'
 import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
@@ -126,59 +185,17 @@ import { useFormRequest } from '../../../composables/use-form-request'
 import { resolveFormLayProps } from '@es-plus/core'
 import { mapButtonType, mapSize, getNestedValue } from '../../../utils/shared'
 import { getAdvIconComponent } from '../../../utils/icon'
+import useDialog from '../../es-dialog/src/use-dialog'
+import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
 
-// ─── RenderDomForm：自定义渲染函数式组件 ──────────────
-const RenderDomForm = defineComponent({
-  name: 'RenderDomForm',
-  props: {
-    render: { type: Function, required: true },
-    model: { type: Object, default: () => ({}) },
-    row: { type: Object, default: () => ({}) },
-    index: { type: Number, default: 0 },
-  },
-  setup(props) {
-    return (): VNode | string => {
-      try {
-        const result = (props.render as Function)(h, props.model, {
-          row: props.row,
-          index: props.index,
-        })
-        if (typeof result === 'string') return h('span', result) as unknown as VNode
-        return result as VNode
-      } catch {
-        return h('span', '-') as unknown as VNode
-      }
-    }
-  },
-})
-
-// ─── RenderBtn：自定义按钮区渲染 ─────────────────────
-const RenderBtn = defineComponent({
-  name: 'RenderBtn',
-  props: {
-    row: Object,
-    formItemList: Array,
-    formModel: Object,
-    render: Function,
-  },
-  setup(props) {
-    return () => {
-      const { formItemList, formModel, row } = props
-      const renderContent = props.render?.(row, formModel, formItemList, h) || ''
-      return typeof renderContent === 'string' ? h('span', renderContent) : renderContent
-    }
-  },
-})
-
-// ─── Props ───────────────────────────────────────────
+// ─── Props（对齐 vue3，无 formProps prop）─────────────
 const props = withDefaults(
   defineProps<{
     model: Record<string, unknown>
     formItemList: FormItemOption[]
-    configBtn?: BtnConfig[]
     layoutFormProps?: LayoutFormProps
-    formProps?: Record<string, unknown>
+    configBtn?: BtnConfig[]
     renderBtn?: Function | boolean
     btnColSpanRow?: boolean
     rules?: Record<string, unknown>
@@ -187,9 +204,8 @@ const props = withDefaults(
   {
     model: () => ({}),
     formItemList: () => [],
-    configBtn: () => [],
     layoutFormProps: () => ({}),
-    formProps: () => ({ size: 'middle' as const }),
+    configBtn: () => [],
     renderBtn: false,
     btnColSpanRow: true,
     rules: () => ({}),
@@ -201,12 +217,16 @@ const emit = defineEmits<{
   reset: [formRef: unknown, model: Record<string, unknown>]
 }>()
 
-// ─── 注入 ───────────────────────────────────────────
-const esPlus = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
-const getTableInstantce = inject<() => any>('getTableInstantce', () => null)
+const instance = getCurrentInstance()
+const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
-// ─── h 函数引用 ─────────────────────────────────────
-const hFn = h
+// ─── 权限 ───────────────────────────────────────────
+const checkPermission = (pvalue?: string): boolean => {
+  if (!pvalue) return true
+  const fn = esPlus.permission
+  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+}
 
 // ─── 国际化 ─────────────────────────────────────────
 const translateLabel = (item: FormItemOption): string => {
@@ -216,33 +236,119 @@ const translateLabel = (item: FormItemOption): string => {
   return item.label
 }
 
-// ─── 权限 ───────────────────────────────────────────
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
+// ─── 与 Table 的耦合（inject + ctx 双路径，对齐 vue3）──
+const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)
+const getTableInstant = computed(() => {
+  if (injectedTableInstant) {
+    return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
+  }
+  const ctx = (instance as any)?.ctx as Record<string, any>
+  return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
+})
+
+const isParentTable = computed(() => {
+  return !!(getTableInstant.value && Object.keys(getTableInstant.value).length)
+})
+
+// ─── 图标 / 按钮选项（对齐 vue3）─────────────────────
+const filterOptions = (it: BtnConfig) => {
+  const { icon, ...opt } = it as Record<string, unknown>
+  if (!opt.size) opt.size = 'small'
+  return opt
 }
 
-// ─── 表单控件映射 ───────────────────────────────────
+const resolveBtnDisabled = (it: BtnConfig): boolean => {
+  return typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false
+}
+
+function mapBtnType(type?: string): string {
+  return mapButtonType(type)
+}
+
+function mapBtnSize(size?: string): string {
+  return mapSize(size || (formLayout.value.size as string) || 'small', 'small')
+}
+
+// ─── Refs ───────────────────────────────────────────
+const formRef = ref<unknown>(null)
+const formInstance = ref<Record<string, unknown>>({})
+const formItemRowsList = ref<FormItemOption[]>(props.formItemList)
+
+const setFormRef = (el: unknown) => {
+  if (el) formRef.value = el
+}
+
+// ─── Composables ────────────────────────────────────
 const { formInputComponents } = useFormInputs()
+
+const httpRequestGlobal = ($esPlusForm?.$httpRequest as (params: Record<string, unknown>) => Promise<unknown>) || undefined
+const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as
+  | ((defaults: Record<string, string>) => Record<string, string>)
+  | undefined
+const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 function formInputRenderer(item: FormItemOption) {
   return formInputComponents(item)
 }
 
-// ─── 响应式 ─────────────────────────────────────────
-const formItemList = ref<FormItemOption[]>([...props.formItemList])
-const configBtn = ref<BtnConfig[]>([...props.configBtn])
-const layoutProps = ref<LayoutFormProps>({ ...props.layoutFormProps })
-const formRef = ref<any>(null)
+// ─── 表单 Props（对齐 vue3：内联 model/rules）────────
+const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
 
-watch(() => props.formItemList, (val) => { formItemList.value = [...val] }, { deep: true })
-watch(() => props.configBtn, (val) => { configBtn.value = [...val] }, { deep: true })
-watch(() => props.layoutFormProps, (val) => { layoutProps.value = { ...val } }, { deep: true })
+const formProps = computed(() => ({
+  size: 'small' as const,
+  ...formLayoutRef.value,
+  model: props.model,
+  rules: props.rules,
+  validateOnRuleChange: false,
+}))
 
-// ─── 字段过滤与自动 span（对齐 vue3） ────────────────
+const labelColStyle = computed(() => {
+  const w = (formLayoutRef.value.labelWidth as string | number) || (formLayout.value.labelWidth as string | number) || '100px'
+  const width = typeof w === 'number' ? `${w}px` : String(w)
+  return { flex: `0 0 ${width}` }
+})
+
+const wrapperColStyle = computed(() => {
+  return { flex: 'auto' }
+})
+
+// ─── 远程选项加载（缓存已加载 prop，对齐 vue3）────────
+const loadedApiProps = ref<Set<string>>(new Set())
+
+watch(
+  () => props.formItemList,
+  async (val) => {
+    const list = Array.isArray(val) ? val : []
+    const needLoadList = list.filter((it) => it && it.isInitRun !== false && !loadedApiProps.value.has(it.prop))
+    if (!needLoadList.length) {
+      formItemRowsList.value = list
+        .map((it) => {
+          if (!it) return null
+          const existing = formItemRowsList.value.find((old) => old && old.prop === it.prop)
+          return existing?.dataOptions?.length ? { ...it, dataOptions: existing.dataOptions } : it
+        })
+        .filter((it): it is FormItemOption => !!it)
+      return
+    }
+    const rows = await getEveryFormQueryField(needLoadList, fieldFieldOutputGlobal)
+    needLoadList.forEach((it) => loadedApiProps.value.add(it.prop))
+    formItemRowsList.value = list
+      .map((it) => {
+        if (!it) return null
+        const resultApiOption = rows.find((item) => item && item.prop === it.prop)
+        const existing = formItemRowsList.value.find((old) => old && old.prop === it.prop)
+        if (resultApiOption) return { ...it, dataOptions: resultApiOption.listData }
+        if (existing?.dataOptions?.length) return { ...it, dataOptions: existing.dataOptions }
+        return it
+      })
+      .filter((it): it is FormItemOption => !!it)
+  },
+  { immediate: true, deep: true },
+)
+
+// ─── 字段过滤与自动 span（对齐 vue3）─────────────────
 const formItemListFilter = computed(() => {
-  const list = formItemList.value || []
+  const list = formItemRowsList.value || []
   const visible = list
     .map((it) => (it ? { ...it, dataOptions: it.dataOptions || [] } : null))
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
@@ -274,271 +380,342 @@ const formItemListFilter = computed(() => {
   return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
-// ─── 布局（对齐 vue3 签名：{ layoutFormProps, formItemList }） ──
-const layoutComposable = useFormLayout({
-  layoutFormProps: props.layoutFormProps,
-  get formItemList() { return formItemListFilter.value },
-})
-
+// ─── 布局（对齐 vue3 签名）──────────────────────────
 const {
-  folded, isBtnHidden, rowLayout,
-  formLayout, changeFolded, getBtnColSpan, formItem,
-  isFold: showFoldBtn, getRowColsAlgorithm,
-} = layoutComposable
-
-const effectiveBtnColSpan = computed(() => props.btnColSpanRow ? 24 : (getBtnColSpan.value || 24))
-const labelWidth = computed(() => formLayout.value.labelWidth as string | number | undefined)
-const sizeConfig = computed(() => formLayout.value.size as string | undefined)
-const labelBtnWidth = computed(() => (formLayout.value.labelBtnWidth as string) || 'auto')
-
-const resolvedLayout = computed(() => formLayout.value)
-
-// ─── 表单 Props ─────────────────────────────────────
-const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
+  folded,
+  isBtnHidden,
+  rowLayout,
+  formLayout,
+  getSetOptionsStatus,
+  getRowColsAlgorithm,
+  isFold,
+  getBtnColSpan,
+  formItem,
+  changeFolded,
+} = useFormLayout({
+  layoutFormProps: props.layoutFormProps,
+  get formItemList() {
+    return formItemListFilter.value
+  },
+})
 
 watch(
   formLayout,
-  (val) => { formLayoutRef.value = val },
-  { immediate: true }
-)
-
-const formProps = computed(() => ({
-  size: 'middle' as const,
-  ...formLayoutRef.value,
-  ...props.formProps,
-  validateOnRuleChange: false,
-}))
-
-const labelColStyle = computed(() => {
-  const w = labelWidth.value || (formLayout.value.labelWidth as string | number)
-  return w ? { style: { width: typeof w === 'number' ? `${w}px` : String(w) } } : { span: 4 }
-})
-
-// ─── 表单请求 ───────────────────────────────────────
-const esPlusForm = inject<Record<string, unknown>>('$esPlusForm', {}) ?? {}
-const esPlusGlobal = inject<Record<string, unknown>>('$EsPlus', {}) ?? getGlobalConfig() ?? {}
-const httpRequestGlobalFn = (esPlusForm.httpRequest || esPlusGlobal.httpRequest || esPlus.httpRequest) as
-  | ((params: Record<string, unknown>) => Promise<unknown>)
-  | undefined
-const { getEveryFormQueryField } = useFormRequest(httpRequestGlobalFn)
-
-// 缓存已加载数据的表单项 prop，避免 computed 重新计算时重复调用接口
-const loadedApiProps = ref<Set<string>>(new Set())
-
-watch(
-  () => props.formItemList,
-  async (val) => {
-    const list = Array.isArray(val) ? val : []
-    const needLoadList = list.filter((it) => it && it.isInitRun !== false && !loadedApiProps.value.has(it.prop))
-    if (!needLoadList.length) {
-      formItemList.value = list.map((it) => {
-        if (!it) return null
-        const existing = formItemList.value.find((old) => old && old.prop === it.prop)
-        return existing?.dataOptions?.length ? { ...it, dataOptions: existing.dataOptions } : it
-      }).filter((it): it is FormItemOption => !!it)
-      return
-    }
-    const rows = await getEveryFormQueryField(needLoadList, props.fieldFieldOutput)
-    needLoadList.forEach((it) => loadedApiProps.value.add(it.prop))
-    formItemList.value = list
-      .map((it) => {
-        if (!it) return null
-        const resultApiOption = rows.find((item) => item && item.prop === it.prop)
-        const existing = formItemList.value.find((old) => old && old.prop === it.prop)
-        if (resultApiOption) return { ...it, dataOptions: resultApiOption.listData }
-        if (existing?.dataOptions?.length) return { ...it, dataOptions: existing.dataOptions }
-        return it
-      })
-      .filter((it): it is FormItemOption => !!it)
+  (val) => {
+    formLayoutRef.value = val
   },
-  { immediate: true, deep: true }
+  { immediate: true },
 )
 
-// ─── 按钮处理 ───────────────────────────────────────
-const effectiveConfigBtn = computed<BtnConfig[]>(() => {
-  const existing = configBtn.value || []
-  const hasQuery = existing.some((it) => it.key === 'query')
-  const hasRest = existing.some((it) => it.key === 'rest')
-  const defaults: BtnConfig[] = []
-  if (!hasQuery) {
-    defaults.push({ name: '查询', type: 'primary', key: 'query', triggerEvent: true })
-  }
-  if (!hasRest) {
-    defaults.push({ name: '重置', key: 'rest', triggerEvent: true })
-  }
-  return [...defaults, ...existing]
-})
+const labelBtnWidth = computed(() => (formLayout.value.labelBtnWidth as string) || 'auto')
 
-const btnLeft = computed(() =>
-  effectiveConfigBtn.value.filter((btn) => getButtonPosition(btn) === 'left')
-)
-const btnRight = computed(() =>
-  effectiveConfigBtn.value.filter((btn) => getButtonPosition(btn) !== 'left')
-)
-
-function getButtonPosition(btn: BtnConfig): 'left' | 'right' {
-  if (btn.position) return btn.position
-  if (btn.direction) return btn.direction
-  if (btn.code === 2) return 'right'
-  return 'right'
-}
-
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
-}
-
-function mapBtnSize(size?: string): string {
-  return mapSize(size || (sizeConfig.value as string) || 'middle', 'middle')
-}
-
-function isDisabled(item: BtnConfig): boolean {
-  if (typeof item.disabled === 'function') return item.disabled(props.model)
-  return !!item.disabled
-}
-
-function filterExtraProps(item: BtnConfig): Record<string, unknown> {
-  const knownKeys = new Set([
-    'name', 'nameKey', 'key', 'type', 'size', 'icon', 'position', 'code', 'direction',
-    'loading', 'disabled', 'permissionValue', 'triggerEvent', 'click', 'confirm',
-    'dialogKey', 'actionType', 'render', 'isHide',
-  ])
-  const extra: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(item)) {
-    if (!knownKeys.has(k)) extra[k] = v
-  }
-  return extra
-}
+// ─── 按钮分流（对齐 vue3：仅看 direction）────────────
+const colRightLeftList = computed(() => ({
+  colRightBtn: props.configBtn.filter((it) => it.direction === 'right' || !it.direction),
+  colLeftBtn: props.configBtn.filter((it) => it.direction === 'left'),
+}))
 
 const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
+// ─── 按钮点击（对齐 vue3 clickBtn / queryTableRequest）──
 const clickBtn = async (it: BtnConfig) => {
-  if (!checkPermission(it.permissionValue)) return
-  if (it.triggerEvent && it.key === 'query') {
-    handleQuery()
-    return
-  }
-  if (it.triggerEvent && it.key === 'rest') {
-    handleReset()
-    return
-  }
-  it.click?.(props.model, formRef.value, getTableInstantce()?.httpRequestInstance)
-}
-
-// ─── 查询 / 重置 (emit 对齐 vue3: confirm(formRef, model) + reset(formRef, model)) ──
-async function handleQuery() {
-  await formItmeRequestInstance(formItemListFilter.value.map((it) => it.prop))
-  const tableInst = getTableInstantce()
-  if (tableInst?.httpRequestInstance) {
-    tableInst.httpRequestInstance(props.model)
-  }
-  emit('confirm', formRef.value, { ...props.model })
-}
-
-function handleReset() {
-  formRef.value?.resetFields?.()
-  const tableInst = getTableInstantce()
-  if (tableInst?.httpRequestInstance) {
-    tableInst.httpRequestInstance({})
-  }
-  emit('reset', formRef.value, { ...props.model })
-}
-
-// ─── Form ref ───────────────────────────────────────
-const setFormRef = (el: any) => {
-  formRef.value = el
-}
-
-// ─── 表单校验规则 ───────────────────────────────────
-const formRules = computed(() => {
-  const rules: Record<string, Array<Record<string, unknown>>> = {}
-  for (const item of formItemList.value) {
-    if (item.rules?.length) {
-      rules[item.prop] = item.rules
-    } else if (item.required) {
-      rules[item.prop] = [{ required: true, message: `${item.label || item.prop} 不能为空` }]
+  if (it.triggerEvent && ['query', 'rest'].includes(it.key || '')) {
+    queryTableRequest(props.model, formRef.value as any, it.key)
+  } else {
+    if (it.key === 'rest' && formRef.value) {
+      ;(formRef.value as any).resetFields()
     }
+    it.click?.(props.model, formRef.value, getTableInstant.value?.httpRequestInstance)
   }
-  return { ...props.rules, ...rules }
+}
+
+const queryTableRequest = async (
+  model: Record<string, unknown>,
+  formRef: { resetFields: () => void; validate: () => Promise<boolean> } | null,
+  key?: string,
+) => {
+  if (key === 'query') {
+    if (isParentTable.value) {
+      getTableInstant.value?.httpRequestInstance?.(model)
+    }
+  } else if (key === 'rest' && formRef) {
+    if (isParentTable.value) {
+      getTableInstant.value?.httpRequestInstance?.(model)
+    }
+    formRef.resetFields()
+  }
+}
+
+// ─── isParentTable 时注入 marginBottom（对齐 vue3）────
+const initFormItemOptions = (opts: Record<string, unknown>) => {
+  if (isParentTable.value) {
+    const { style, ...rest } = opts
+    return { style: { marginBottom: '10px', ...(style as Record<string, unknown>) }, ...rest }
+  }
+  return opts
+}
+
+// ─── setOptions 下拉（自定义查询/自定义表格/重置刷新）──
+const createDialogInstance = (() =>
+  (instance as any)?.ctx?.dialogInstance ? (instance as any).ctx.dialogInstance() : useDialog)()
+const customerForm = createDialogInstance()
+const customerTable = createDialogInstance()
+
+const handleRefresh = () => {
+  // 保留原有逻辑（对齐 vue3）
+}
+
+const getFormRowsFun = () => {
+  return {
+    data: formItemRowsList.value.map((it) => ({
+      ...it,
+      label: it.label,
+      prop: it.prop,
+      isHidden: !!it.isHidden,
+      width: it.width,
+    })),
+    columns: [
+      { type: 'selection', width: 50 },
+      { label: '名称(列)', key: 'label' },
+      { label: '属性(Key)', key: 'prop' },
+      {
+        label: '列宽',
+        width: 180,
+        render: (_text: unknown, row: Record<string, unknown>) => {
+          return h('div', [
+            h(Input, {
+              size: 'small',
+              maxlength: 3,
+              value: row.width as any,
+              'onUpdate:value': (val: unknown) => {
+                row.width = val
+              },
+            }, {
+              addonBefore: () => '宽度',
+              addonAfter: () => 'px',
+            }),
+          ])
+        },
+      },
+    ],
+  }
+}
+
+const getCustomerTableInfo = () => {
+  return {
+    dataSource: [],
+    columns: [
+      { type: 'selection', width: 50 },
+      { label: '名称(列)', key: 'label' },
+      { label: '属性(Key)', key: 'tableProp' },
+      {
+        label: '列宽',
+        width: 180,
+        render: (_text: unknown, row: Record<string, unknown>) => {
+          return h('div', [
+            h(Input, {
+              size: 'small',
+              maxlength: 3,
+              value: row.width as any,
+              'onUpdate:value': (val: unknown) => {
+                row.width = val
+              },
+            }, {
+              addonBefore: () => '宽度',
+              addonAfter: () => 'px',
+            }),
+          ])
+        },
+      },
+    ],
+  }
+}
+
+const handleCustomerForm = () => {
+  const formRows = getFormRowsFun()
+  customerForm({
+    title: '自定义查询',
+    width: '800px',
+    isDraggable: true,
+    render: () =>
+      h(EsTable, {
+        dataSource: formRows.data,
+        columns: formRows.columns as any,
+        options: {
+          multiSelect: true,
+          expand: false,
+          snIndex: false,
+          loading: false,
+          border: true,
+          size: 'small',
+        },
+        pagination: {
+          pageSize: 10,
+          current: 1,
+          total: formRows.data?.length || 0,
+        },
+      }),
+    configBtn: [
+      {
+        name: '取消',
+        icon: 'Close',
+        click: (_instance: unknown, { close }: { close: () => void }) => close(),
+      },
+      {
+        name: '确认',
+        type: 'primary',
+        icon: 'Check',
+        click: (_instance: unknown, { close }: { close: () => void }) => close(),
+      },
+    ],
+  })
+}
+
+const handleTableItemOption = () => {
+  const formRows = getCustomerTableInfo()
+  customerTable({
+    title: '自定义表格',
+    width: '800px',
+    render: () =>
+      h(EsTable, {
+        dataSource: formRows.dataSource,
+        columns: formRows.columns as any,
+      }),
+  })
+}
+
+const handleSetOptionsClick = ({ key }: { key: string }) => {
+  if (key === 'customerForm') handleCustomerForm()
+  else if (key === 'tableItem') handleTableItemOption()
+  else if (key === 'refresh') handleRefresh()
+}
+
+// ─── 生命周期：上报 bodyFormInstance 给父 table（对齐 vue3）──
+nextTick(() => {
+  formInstance.value = formRef.value as Record<string, unknown>
+  ;((instance as any)?.ctx as Record<string, any>)?.bodyFormInstance?.(formInstance.value)
 })
 
-function validate(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (formRef.value?.validate) {
-      formRef.value
-        .validate()
-        .then(() => resolve(true))
-        .catch(() => resolve(false))
-    } else {
-      resolve(true)
+// ─── 子组件定义 ─────────────────────────────────────
+const RenderBtn = defineComponent({
+  name: 'RenderBtn',
+  props: {
+    row: Object,
+    formItemList: Array,
+    formModel: Object,
+    render: Function,
+  },
+  setup(props) {
+    return () => {
+      const { formItemList, formModel, row } = props
+      const renderContent = props.render?.(row, formModel, formItemList, h) || ''
+      return typeof renderContent === 'string' ? h('span', renderContent) : renderContent
     }
-  })
-}
+  },
+})
 
-function resetFields() {
-  formRef.value?.resetFields?.()
-}
-
-function clearValidate(props?: string | string[]) {
-  formRef.value?.clearValidate?.(props)
-}
-
-function validateField(props: string | string[]): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (formRef.value?.validateField) {
-      formRef.value
-        .validateField(props)
-        .then(() => resolve(true))
-        .catch(() => resolve(false))
-    } else {
-      resolve(true)
+const RenderDomForm = defineComponent({
+  name: 'RenderDomForm',
+  props: {
+    row: Object,
+    index: Number,
+    datakey: String,
+    render: Function,
+    model: Object,
+  },
+  setup(props) {
+    return (): VNode | string => {
+      const { row, index, model } = props
+      const renderContent = props.render?.(h, model, { row, index }) || ''
+      return typeof renderContent === 'string' ? (h('span', renderContent) as unknown as VNode) : (renderContent as VNode)
     }
-  })
-}
+  },
+})
 
-function scrollToField(prop: string) {
-  formRef.value?.scrollToField?.(prop)
-}
-
-// 暴露给外部的方法，用于手动触发指定表单项的请求
+// ─── 暴露给外部的方法（对齐 vue3 defineExpose 全集）──
 const formItmeRequestInstance = async (propsList: string[]) => {
   const list = formItemListFilter.value
   const targetItems = list.filter((it) => it && propsList.includes(it.prop))
   if (!targetItems.length) return
 
-  const rows = await getEveryFormQueryField(targetItems, props.fieldFieldOutput)
+  const rows = await getEveryFormQueryField(targetItems, fieldFieldOutputGlobal)
   rows.forEach((resultApiOption) => {
     if (!resultApiOption) return
-    const itemIndex = formItemList.value.findIndex((it) => it && it.prop === resultApiOption.prop)
+    const itemIndex = formItemRowsList.value.findIndex((it) => it && it.prop === resultApiOption.prop)
     if (itemIndex !== -1) {
-      formItemList.value[itemIndex] = {
-        ...formItemList.value[itemIndex],
+      formItemRowsList.value[itemIndex] = {
+        ...formItemRowsList.value[itemIndex],
         dataOptions: resultApiOption.listData as Array<{ label: string; value: unknown }>,
       }
     }
   })
 }
 
-const getFormRef = () => formRef.value
+const getFormRef = () =>
+  formRef.value as {
+    validate: () => Promise<boolean>
+    resetFields: () => void
+    clearValidate: (props?: string | string[]) => void
+    validateField: (props: string | string[]) => Promise<boolean>
+    scrollToField: (prop: string) => void
+  }
 
 defineExpose({
   formItmeRequestInstance,
   getFormRef,
-  validate,
-  resetFields,
-  clearValidate,
-  validateField,
-  scrollToField,
+  validate: () => getFormRef()?.validate(),
+  resetFields: () => getFormRef()?.resetFields(),
+  clearValidate: (props?: string | string[]) => getFormRef()?.clearValidate(props),
+  validateField: (props: string | string[]) => getFormRef()?.validateField(props),
+  scrollToField: (prop: string) => getFormRef()?.scrollToField(prop),
 })
 </script>
 
 <style lang="scss" scoped>
 .es-form {
   width: 100%;
-}
 
-.btn-formItem {
-  :deep(.ant-form-item-control-input) {
-    min-height: auto;
+  :deep(.ant-form-item-row) {
+    flex-wrap: nowrap;
+  }
+
+  :deep(.ant-form-item-label) {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  :deep(.ant-form-item-control) {
+    min-width: 0;
+  }
+
+  .buttonOperate {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .leftRightBtn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+
+    .btn-left,
+    .btn-right {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .btn-formItem {
+    :deep(.ant-form-item-control-input) {
+      min-height: auto;
+    }
+  }
+
+  .formItemCols {
+    width: 100%;
   }
 }
 </style>

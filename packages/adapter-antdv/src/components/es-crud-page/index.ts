@@ -8,6 +8,9 @@ export { EsCrudPage }
 export type {
   CrudPageSchema,
   CrudAction,
+  CrudPageProps,
+  CrudPageEmits,
+  CrudPageExpose,
   CrudBtnConfig,
   TableBtnConfig,
   OperationColumnConfig,

@@ -22,9 +22,8 @@ export interface FormItemOption {
   clearable?: boolean
   disabled?: boolean
   attrs?: Record<string, unknown>
-  props?: Record<string, unknown>
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
+  dataOptions?: Array<{ label: string; value: unknown }>
   isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: unknown) => boolean
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
@@ -40,9 +39,6 @@ export interface FormItemOption {
   listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   components?: Record<string, unknown>
   width?: number | string
-  required?: boolean
-  rules?: Array<Record<string, unknown>>
-  formItemOptions?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -61,7 +57,6 @@ export interface ApiParams {
 // ============================================================================
 export interface BtnConfig {
   name: string
-  nameKey?: string
   key?: string
   type?: 'primary' | 'default' | 'dashed' | 'text' | 'link' | 'danger' | string
   size?: 'large' | 'middle' | 'small' | string
@@ -72,16 +67,9 @@ export interface BtnConfig {
   code?: 1 | 2
   direction?: 'left' | 'right'
   loading?: boolean
-  disabled?: boolean | ((model?: Record<string, unknown>) => boolean)
+  disabled?: boolean | (() => boolean)
   permissionValue?: string
-  /** 当 key 为 'query'/'rest' 时触发内置表格联动逻辑 */
-  triggerEvent?: boolean
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
-  dialogKey?: string
-  actionType?: string
-  confirm?: string | boolean
-  render?: (h: RenderFunction) => VNode
-  isHide?: boolean | (() => boolean)
   [key: string]: unknown
 }
 
@@ -203,7 +191,6 @@ export interface PaginationConfig {
 export interface DialogOptions {
   title?: string
   width?: string | number
-  visible?: boolean
   render?: (h: RenderFunction, instance: unknown, components: Record<string, unknown>) => VNode
   renderHeader?: (h: RenderFunction, instance: unknown) => VNode
   renderFooter?: (h: RenderFunction, instance: unknown) => VNode
@@ -229,40 +216,29 @@ export interface DialogOptions {
 }
 
 // ============================================================================
-// 组件实例类型
+// 组件实例类型（接口对齐 vue3 最小集；defineExpose 实现保留 vue3 全集）
 // ============================================================================
 export interface EsFormInstance {
-  formItmeRequestInstance: (propsList: string[]) => Promise<void>
-  getFormRef: () => { validate: () => Promise<boolean>; resetFields: () => void; clearValidate: (props?: string | string[]) => void; validateField: (props: string | string[]) => Promise<boolean>; scrollToField: (prop: string) => void }
   validate: () => Promise<boolean>
   resetFields: () => void
-  clearValidate: (props?: string | string[]) => void
-  validateField: (props: string | string[]) => Promise<boolean>
-  scrollToField: (prop: string) => void
+  clearValidate: () => void
 }
 
 export interface EsTableInstance {
   httpRequestInstance: (model?: Record<string, unknown>) => Promise<unknown>
-  getSelectionRows: () => Record<string, unknown>[]
   clearSelection: () => void
   toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
   clearAllSelection: () => void
   refresh: () => void
-  scrollToRow: (row: number | string) => void
 }
 
 // ============================================================================
-// 全局插件配置
+// 全局插件配置（对齐 vue3 最小集；EsTable/EsForm/EsDialog/httpRequest 等归 EsPlusGlobalConfig）
 // ============================================================================
 export interface EsPlusOptions {
   permission?: (value: string) => boolean
   t?: (key: string) => string
   globalProperties?: boolean
-  skipComponentRegistration?: boolean
-  httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  EsTable?: Record<string, unknown>
-  EsForm?: Record<string, unknown>
-  EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }
 

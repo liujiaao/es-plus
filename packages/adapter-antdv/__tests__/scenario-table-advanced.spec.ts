@@ -297,9 +297,9 @@ describe('场景: 排序 + 筛选', () => {
     })
   })
 
-  it('custom sort — 远程排序', () => {
+  it('custom sort — 远程排序（sortable:"custom" → sorter:true，对齐 vue3）', () => {
     const col: TableColumn = { prop: 'customField', label: '自定义', sortable: 'custom' }
     const adv = adaptColumn(col)
-    expect(adv.sorter).toEqual({ compare: expect.any(Function), multiple: 1 })
+    expect(adv.sorter).toBe(true)
   })
 })

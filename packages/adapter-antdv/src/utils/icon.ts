@@ -126,10 +126,3 @@ export function getAdvIconComponent(iconName: string): any {
   }
   return undefined
 }
-
-/**
- * 解析图标名称（用于模板中的动态图标）
- */
-export function resolveIcon(iconName: string): string {
-  return ICON_NAME_MAP[iconName] || iconName
-}

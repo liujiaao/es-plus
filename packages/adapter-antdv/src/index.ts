@@ -23,25 +23,7 @@ import type { EsPlusOptions } from './types'
 // 与 vue3 一致：从 package.json 读取版本号
 import { version } from '../package.json'
 
-// ─── Per-component Plugin (完全对齐 vue3 的 methods 展开模式) ──
-
-;(EsTableComp as any).isPlugin = true
-;(EsTableComp as any).Plugin = {
-  install(app: App, options: Record<string, unknown> = {}) {
-    // 展开 methods 层：用户配置 { methods: { $httpRequest, ... } } → provide 为 { $httpRequest, ... }
-    app.provide('$esPlusTable', { ...(options.methods || {}) })
-  },
-}
-
-;(EsFormComp as any).isPlugin = true
-;(EsFormComp as any).Plugin = {
-  install(app: App, options: Record<string, unknown> = {}) {
-    app.provide('$esPlusForm', {
-      ...(options.methods || {}),
-      useDialog: () => useDialogOrig(),
-    })
-  },
-}
+// isPlugin/Plugin 已下沉到各组件 index.ts（对齐 vue3 定义位置）
 
 // EsDialog 没有 Plugin (同 vue3)
 
@@ -60,7 +42,7 @@ const install = (app: App, options: EsPlusOptions = {}) => {
   configureEsPlusCore(options)
 
   // 组件全局注册
-  if (!options.skipComponentRegistration) {
+  if (!(options as Record<string, unknown>).skipComponentRegistration) {
     components.forEach((component: any) => {
       if (component.name) {
         app.component(component.name, component)
@@ -74,7 +56,7 @@ const install = (app: App, options: EsPlusOptions = {}) => {
 
     components.forEach((component: any) => {
       if (component.isPlugin && component.Plugin) {
-        app.use(component.Plugin, options[component.name] || {})
+        app.use(component.Plugin, (options as Record<string, unknown>)[component.name] || {})
       }
     })
   }
@@ -95,7 +77,8 @@ export { EsCrudPageComp as EsCrudPage }
 export { SvgIconComp as SvgIcon }
 export { configureEsPlusCore as configureEsPlus }
 export { install }
-export type { CrudPageSchema } from './components/es-crud-page'
+export type { EsPlusGlobalConfig } from './config'
+export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } from './components/es-crud-page'
 export type {
   FormItemOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableOptions, PaginationConfig, DialogOptions,

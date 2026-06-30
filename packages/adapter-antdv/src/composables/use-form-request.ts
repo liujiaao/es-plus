@@ -5,7 +5,7 @@
  * ADV 版本与 vue3 版本逻辑完全一致，不依赖 Element Plus。
  */
 import { nextTick, toRaw, unref } from 'vue'
-import { isObject, findValueByKey } from '../utils/shared'
+import { isObject, findValueByKey, wrapPromise } from '../utils/shared'
 import type { FormItemOption, ApiParams } from '../types'
 
 export interface RequestConfig {
@@ -14,16 +14,6 @@ export interface RequestConfig {
   success?: (res: Record<string, unknown>) => void
   fail?: (err: unknown) => void
   [key: string]: unknown
-}
-
-/**
- * Promise.allSettled polyfill 包装
- */
-function wrapPromise<T>(promise: Promise<T>): Promise<{ status: 'fulfilled' | 'rejected'; value?: T; reason?: unknown }> {
-  return promise.then(
-    (value) => ({ status: 'fulfilled' as const, value }),
-    (reason) => ({ status: 'rejected' as const, reason }),
-  )
 }
 
 export function useFormRequest(
@@ -76,12 +66,12 @@ export function useFormRequest(
     }
   }
 
-  /** 校验字段映射配置：4 个字段必须全部存在且为 string 类型 */
+  /** 校验字段映射配置：obj 的每个键必须属于 4 个允许键且为 string（子集校验，对齐 vue3） */
   const checkQueryFields = (obj: Record<string, unknown>): boolean => {
     const checkListKey = ['total', 'pageSize', 'current', 'listData']
     if (isObject(obj)) {
-      return checkListKey.every(
-        (it) => obj[it] && typeof obj[it] === 'string',
+      return Object.keys(obj).every(
+        (it) => checkListKey.find((its) => its === it) && obj[it] && typeof obj[it] === 'string',
       )
     }
     return false
@@ -225,7 +215,7 @@ export function useFormRequest(
 
       results.forEach((item, index) => {
         if (item.status === 'fulfilled') {
-          const { configRows, data } = item.value!
+          const { configRows, data } = item.value
           const option = apiUrlList[index]
           const listenToCallBack = option?.listenToCallBack as
             | Record<string, (params: unknown) => unknown>

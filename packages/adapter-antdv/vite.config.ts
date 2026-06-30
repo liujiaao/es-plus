@@ -38,6 +38,9 @@ export default defineConfig({
         'ant-design-vue',
         '@ant-design/icons-vue',
         '@es-plus/core',
+        // dayjs 与 ant-design-vue 共用同一实例，避免 DatePicker 的
+        // isDayjs / locale 跨实例失效（必须 external，不可打包进产物）
+        'dayjs',
       ],
       output: {
         exports: 'named',
@@ -46,6 +49,7 @@ export default defineConfig({
           'ant-design-vue': 'AntDesignVue',
           '@ant-design/icons-vue': 'AntDesignIconsVue',
           '@es-plus/core': 'EsPlusCore',
+          dayjs: 'dayjs',
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'index.css') return 'style.css'

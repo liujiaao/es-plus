@@ -49,11 +49,11 @@ describe('类型判断函数', () => {
     expect(isNumber(null)).toBe(false)
   })
 
-  it('isEmpty — 空值检测', () => {
+  it('isEmpty — 空值检测（对齐 vue3：空字符串非空）', () => {
     expect(isEmpty(null)).toBe(true)
     expect(isEmpty(undefined)).toBe(true)
-    expect(isEmpty('')).toBe(true)
-    expect(isEmpty('  ')).toBe(true)
+    expect(isEmpty('')).toBe(false) // vue3/core：空字符串不视为 empty
+    expect(isEmpty('  ')).toBe(false)
     expect(isEmpty([])).toBe(true)
     expect(isEmpty({})).toBe(true)
     expect(isEmpty('hello')).toBe(false)
@@ -99,10 +99,11 @@ describe('嵌套路径函数', () => {
     expect(target).toEqual({ user: { name: 'new' } })
   })
 
-  it('setNestedValue — 方括号路径', () => {
+  it('setNestedValue — 方括号路径（对齐 vue3/core：建普通对象，不建数组）', () => {
     const target: Record<string, unknown> = {}
     setNestedValue(target, 'arr[0].name', 'first')
-    expect(target).toEqual({ arr: [{ name: 'first' }] })
+    // vue3/core 的 setNestedValue 对中间层一律建普通对象，数字 key 作为对象属性
+    expect(target).toEqual({ arr: { '0': { name: 'first' } } })
   })
 })
 
@@ -118,9 +119,13 @@ describe('findValueByKey', () => {
     expect(findValueByKey(nested, 'c')).toBe('found')
   })
 
-  it('超过 depth 返回 undefined', () => {
-    const deep = { a: { b: { c: { d: 'too deep' } } } }
-    expect(findValueByKey(deep, 'd')).toBeUndefined()
+  it('超过 depth 返回 undefined（对齐 vue3/core：depth>3 终止，即搜索 4 层）', () => {
+    // d 在第 3 层（a→b→c→d），仍在搜索范围内，应能找到
+    const deep3 = { a: { b: { c: { d: 'level3' } } } }
+    expect(findValueByKey(deep3, 'd')).toBe('level3')
+    // 第 4 层（a→b→c→d→e）超出 depth=3 限制，返回 undefined
+    const deep4 = { a: { b: { c: { d: { e: 'too deep' } } } } }
+    expect(findValueByKey(deep4, 'e')).toBeUndefined()
   })
 })
 

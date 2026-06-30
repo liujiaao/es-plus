@@ -18,11 +18,8 @@ export function useFormLayout(props: {
     resolveFormLayProps(props.layoutFormProps).isBtnHidden ?? false
   )
 
-  /** 兼容拼写错误：isBtnHiden */
-  const isBtnHiden = computed(() => isBtnHidden.value)
-
   const rowLayout = computed(() =>
-    props.layoutFormProps?.rowLayProps || { gutter: 16 }
+    props.layoutFormProps?.rowLayProps || { gutter: 20 }
   )
 
   const formLayout = computed(() =>
@@ -128,7 +125,6 @@ export function useFormLayout(props: {
   return {
     folded,
     isBtnHidden,
-    isBtnHiden,
     rowLayout,
     formLayout,
     getSetOptionsStatus,

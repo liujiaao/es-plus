@@ -151,11 +151,6 @@ describe('useFormLayout — 按钮配置', () => {
     expect(layout.isBtnHidden.value).toBe(true)
   })
 
-  it('isBtnHiden — 兼容拼写错误', () => {
-    const layout = useFormLayout({ formItemList: [makeField('a')] })
-    expect(layout.isBtnHiden.value).toBe(false)
-  })
-
   it('getBtnColSpan — 未折叠且有剩余空间时返回剩余 span', () => {
     const items = [makeField('a', 8), makeField('b', 8)]
     const layout = useFormLayout({ formItemList: items })
