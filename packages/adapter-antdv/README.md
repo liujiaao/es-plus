@@ -79,6 +79,18 @@ app.use(ESPlus, {
 app.mount('#app')
 ```
 
+## 引入方式
+
+- **全量引入**：`app.use(ESPlus, options)`，注册所有组件与全局方法（见上方「快速开始」）。适合大多数后台管理项目。
+- **按需引入**：直接使用命名导出，配合打包工具的 Tree Shaking 仅打包用到的组件：
+
+  ```ts
+  import { EsForm, EsTable } from '@es-plus/adapter-antdv'
+  import '@es-plus/adapter-antdv/dist/style.css'
+  ```
+
+- **自动导入**：见下方「[自动导入 (unplugin-vue-components)](#自动导入-unplugin-vue-components)」小节。
+
 ## 组件 API
 
 | 组件 | 说明 | 与 vue3 版本兼容 |
@@ -264,12 +276,31 @@ export default {
 
 ## Peer Dependencies
 
-| 包 | 版本 |
-|----|------|
-| `vue` | `^3.2.0` |
-| `ant-design-vue` | `^4.0.0` |
-| `@ant-design/icons-vue` | `^7.0.0` |
+| 包 | 版本 | 说明 |
+|----|------|------|
+| `vue` | `^3.2.0` | 渲染框架 |
+| `ant-design-vue` | `^4.0.0` | UI 组件库 |
+| `@ant-design/icons-vue` | `^7.0.0` | 图标 |
+| `dayjs` | `^1.10.5` | 与 ant-design-vue 共用同一实例，必须由宿主提供，避免 DatePicker 跨实例失效 |
+
+## 常见问题（FAQ）
+
+**Q: DatePicker / RangePicker 报错 `isDayjs is not a function` 或语言包失效？**
+A: `dayjs` 是 peerDependency，必须由宿主项目安装，确保 `ant-design-vue` 与 `@es-plus/adapter-antdv` 使用同一个 dayjs 实例。本包构建时已将 `dayjs` 设为 external，切勿被打包工具重复打包进产物。
+
+**Q: ColorPicker 控件为什么是原生 `<input type="color">`？**
+A: Ant Design Vue 4.x 早期版本没有独立的 ColorPicker 组件，故降级为原生颜色选择器，以保持配置 Schema 与 vue3 版一致。如需高级取色器，可通过 `formtype: 'Slot'` 自定义渲染。
+
+**Q: 表单 v-model 字段名与 vue3 版不同？**
+A: Ant Design Vue 表单控件使用 `value/onUpdate:value`（部分组件为 `checked`、`fileList` 等），而 Element Plus 统一为 `modelValue/onUpdate:modelValue`。本适配器已在内部完成映射，**JSON 配置层 100% 兼容**，你无需关心底层差异；仅在自定义 `Slot` 透传 attrs 时需注意该差异。
+
+**Q: 可以和 `@es-plus/vue3` 同时使用吗？**
+A: 不推荐。两者导出的组件同名（`EsForm`/`EsTable` 等），同时全局注册会冲突。同一项目请选择一种 UI 适配器；配置 JSON 可在两者间无缝迁移。
 
 ## License
 
 MIT © [liujiaao](https://github.com/liujiaao)
+
+---
+
+更多架构、构建与发布信息见 [DEVELOP.md](./DEVELOP.md)。

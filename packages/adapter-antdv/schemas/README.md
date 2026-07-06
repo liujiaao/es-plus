@@ -1,6 +1,6 @@
-# @es-plus/vue3 JSON Schema
+# @es-plus/adapter-antdv JSON Schema
 
-JSON Schema definitions for `@es-plus/vue3` configuration objects. Enables IDE autocompletion, validation, and hover documentation when writing `@es-plus/vue3` configs. The same schemas describe `@es-plus/vue2` configs (renderers share identical config shape).
+JSON Schema definitions for `@es-plus/adapter-antdv` configuration objects. Enables IDE autocompletion, validation, and hover documentation when writing `@es-plus/adapter-antdv` configs. The same schemas are shared by all ES-Plus renderers (`@es-plus/vue3`, `@es-plus/vue2`, `@es-plus/adapter-antdv`) — they share an identical config shape.
 
 ## Usage in VS Code
 
@@ -8,7 +8,7 @@ JSON Schema definitions for `@es-plus/vue3` configuration objects. Enables IDE a
 
 ```json
 {
-  "$schema": "node_modules/@es-plus/vue3/schemas/form-item.schema.json",
+  "$schema": "node_modules/@es-plus/adapter-antdv/schemas/form-item.schema.json",
   "prop": "name",
   "label": "Name",
   "formtype": "Input"
@@ -24,15 +24,15 @@ Add to `.vscode/settings.json`:
   "json.schemas": [
     {
       "fileMatch": ["**/form-items.json", "**/formItems.json"],
-      "url": "./node_modules/@es-plus/vue3/schemas/form-item.schema.json"
+      "url": "./node_modules/@es-plus/adapter-antdv/schemas/form-item.schema.json"
     },
     {
       "fileMatch": ["**/table-columns.json", "**/columns.json"],
-      "url": "./node_modules/@es-plus/vue3/schemas/table-column.schema.json"
+      "url": "./node_modules/@es-plus/adapter-antdv/schemas/table-column.schema.json"
     },
     {
       "fileMatch": ["**/table-options.json"],
-      "url": "./node_modules/@es-plus/vue3/schemas/table-options.schema.json"
+      "url": "./node_modules/@es-plus/adapter-antdv/schemas/table-options.schema.json"
     }
   ]
 }
@@ -43,7 +43,7 @@ Add to `.vscode/settings.json`:
 When using Cursor, Claude Code, or GitHub Copilot, include the schema in your prompt context:
 
 ```
-Use the @es-plus/vue3 JSON Schema at node_modules/@es-plus/vue3/schemas/index.schema.json
+Use the @es-plus/adapter-antdv JSON Schema at node_modules/@es-plus/adapter-antdv/schemas/index.schema.json
 to generate valid configuration for my CRUD page.
 ```
 
@@ -74,10 +74,6 @@ index.schema.json
     └── btn-config.schema.json
 ```
 
-## Vue 2 users
+## Cross-renderer compatibility
 
-`@es-plus/vue2` ships the same schema files at `node_modules/@es-plus/vue2/schemas/...`. Substitute the package name in the paths above. Configs validated against either set are runtime-compatible with both renderers.
-
-## Legacy users (`es-plus-ui`)
-
-If you still depend on the deprecated `es-plus-ui` stub package, the old paths `node_modules/es-plus-ui/schemas/...` no longer exist (the stub does not re-export schemas). Migrate the import path to `@es-plus/vue3` per the [v1.4 migration guide](https://github.com/liujiaao/es-plus/blob/master/docs/migrate-v1.4.md).
+`@es-plus/vue3` (Element Plus) and `@es-plus/vue2` (Element UI) ship the same schema files at `node_modules/@es-plus/vue3/schemas/...` and `node_modules/@es-plus/vue2/schemas/...`. A config validated against any one set is runtime-compatible with all three renderers — you can switch the adapter without changing the JSON config.

@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import { resolve } from 'path'
+import { buildSync } from 'esbuild'
+import { copyFileSync } from 'fs'
 
 /**
  * Ant Design Vue 4.x 适配器构建配置
@@ -11,6 +13,40 @@ import { resolve } from 'path'
  *  - UMD global 名改为 EsPlusAntdv
  *  - 输出文件名为 es-plus-antdv
  */
+
+/**
+ * 单独构建 resolver 子产物（esm + cjs + d.ts）
+ *
+ * package.json 的 exports["./resolver"] 声明了 dist/resolver.{mjs,cjs,d.ts}，
+ * 用于 unplugin-vue-components 自动导入。主 lib 构建只产出 index 入口，
+ * resolver 在此用 esbuild 单独编译，对齐 packages/vue3 的做法。
+ */
+function buildResolver() {
+  return {
+    name: 'build-resolver',
+    closeBundle() {
+      buildSync({
+        entryPoints: [resolve(__dirname, 'src/resolver.ts')],
+        outfile: resolve(__dirname, 'dist/resolver.mjs'),
+        format: 'esm',
+        platform: 'node',
+        target: 'node14',
+      })
+      buildSync({
+        entryPoints: [resolve(__dirname, 'src/resolver.ts')],
+        outfile: resolve(__dirname, 'dist/resolver.cjs'),
+        format: 'cjs',
+        platform: 'node',
+        target: 'node14',
+      })
+      copyFileSync(
+        resolve(__dirname, 'src/resolver.d.ts'),
+        resolve(__dirname, 'dist/resolver.d.ts')
+      )
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -23,6 +59,7 @@ export default defineConfig({
       skipDiagnostics: true,
       noEmitOnError: false,
     }),
+    buildResolver(),
   ],
   build: {
     target: 'es2018',
