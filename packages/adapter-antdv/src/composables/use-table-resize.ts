@@ -45,7 +45,12 @@ export function useTableResize(
     const headBarHeight = headBarRef.value?.offsetHeight || 0
     const tbBtnHeight = tbBtnRef.value?.$el?.offsetHeight || 0
 
-    const newHeight = Math.floor(tabContainer) - Math.round(paginationHeight + headBarHeight + tbBtnHeight)
+    // a-table 的 scroll.y 只控制 body 高度，需额外扣除表头高度，
+    // 否则 header + body 总高度会超出容器导致分页器被覆盖。
+    const tableHeaderEl = element.querySelector('.ant-table-header') || element.querySelector('.ant-table-thead')
+    const tableHeaderHeight = tableHeaderEl?.getBoundingClientRect().height || 0
+
+    const newHeight = Math.floor(tabContainer) - Math.round(paginationHeight + headBarHeight + tbBtnHeight + tableHeaderHeight)
     if (tableHeight.value !== newHeight) {
       tableHeight.value = newHeight
     }

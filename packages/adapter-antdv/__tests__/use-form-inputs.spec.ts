@@ -247,13 +247,45 @@ describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）'
     expect(props.value.every((v: unknown) => dayjs.isDayjs(v))).toBe(true)
   })
 
-  it('DatePicker 空字符串 → 原样返回，不会被误转为 dayjs(now)', () => {
+  it('DatePicker 空字符串 → 返回 null（避免被误转为 dayjs(now)，且不触发 ADV date.locale 崩溃）', () => {
     const item = makeItem('DatePicker')
     const renderFn = formInputComponents(item)!
     const vnode = renderFn(h, makeModel(''), { row: item, index: 0 })
     const props = (vnode as any).props || {}
-    expect(props.value).toBe('')
+    expect(props.value).toBeNull()
     expect(dayjs.isDayjs(props.value)).toBe(false)
+  })
+
+  it('DatePicker null → 返回 null', () => {
+    const item = makeItem('DatePicker')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(null), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(props.value).toBeNull()
+  })
+
+  it('TimePicker 空字符串 → 返回 null（避免 ADV TimePicker date.locale 崩溃）', () => {
+    const item = makeItem('TimePicker')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(''), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(props.value).toBeNull()
+  })
+
+  it('DatePicker Range 空数组 [] → 返回 null（避免 ADV RangePicker date.locale 崩溃）', () => {
+    const item = makeItem('DatePicker', { attrs: { type: 'daterange' } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel([]), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(props.value).toBeNull()
+  })
+
+  it('TimePicker Range 空数组 [] → 返回 null', () => {
+    const item = makeItem('TimePicker', { attrs: { isRange: true } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel([]), { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    expect(props.value).toBeNull()
   })
 
   it('DatePicker 配置 valueFormat → 回写 model 为字符串（对齐 EP value-format）', () => {

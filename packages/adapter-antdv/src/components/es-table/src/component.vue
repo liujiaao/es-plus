@@ -821,17 +821,27 @@ defineExpose({
   overflow: hidden;
 
   // a-spin 在 align-items:flex-start 的 flex 容器中会收缩到内容宽度，
-  // 显式铺满，确保内部表格能按容器宽度自适应。
-  :deep(.ant-spin-nested-loading),
+  // 显式铺满并建立完整 flex 链（table_component → a-spin → ant-spin-container → table_containers + pagination），
+  // 确保在固定高度容器（heightType: 'height'）中分页器始终可见。
+  :deep(.ant-spin-nested-loading) {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
   :deep(.ant-spin-container) {
     width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 }
 
 .table_containers {
   flex: 1;
   width: 100%;
-  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   justify-content: space-between;
   flex-direction: column;

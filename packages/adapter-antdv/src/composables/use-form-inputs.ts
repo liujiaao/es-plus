@@ -65,10 +65,18 @@ function resolveValueFormat(attrs: Record<string, unknown>): string | undefined 
  * model → ADV：把字符串/Date/数字转成 dayjs 对象
  * ADV 4.x DatePicker/RangePicker/TimePicker 的 value 必须是 dayjs，直接传字符串会触发
  * `date.locale is not a function`。dayjs 与 ant-design-vue 共用同一实例（构建时 externalize）。
+ *
+ * 空值统一返回 null：
+ * - null/undefined/'' → null（避免被 dayjs('') 误转为 dayjs(now)，且 ADV DatePicker 只接受 dayjs|null）
+ * - 空数组 [] → null（ADV RangePicker 期望 null 或 [dayjs, dayjs]，传入 [] 会在内部
+ *   formatValue 时对 undefined 元素调用 .locale() 触发 `date.locale is not a function` 崩溃）
  */
 function toDayjsValue(value: unknown, fmt?: string): unknown {
-  if (value == null || value === '') return value
-  if (Array.isArray(value)) return value.map((v) => toDayjsValue(v, fmt))
+  if (value == null || value === '') return null
+  if (Array.isArray(value)) {
+    if (value.length === 0) return null
+    return value.map((v) => toDayjsValue(v, fmt))
+  }
   if (dayjs.isDayjs(value)) return value
   const parsed = value as string | number | Date
   return fmt ? dayjs(parsed, fmt) : dayjs(parsed)

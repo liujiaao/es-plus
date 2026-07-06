@@ -674,7 +674,9 @@ defineExpose({
 <style lang="scss" scoped>
 .es-form {
   width: 100%;
-
+  :deep(.ant-form-item) {
+    margin-bottom: 10px
+  }
   :deep(.ant-form-item-row) {
     flex-wrap: nowrap;
   }
