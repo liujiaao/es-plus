@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://es-plus-ui.github.io/schemas/table-column.schema.json",
+  "title": "EsTable Column Configuration",
+  "description": "Configuration for a single column in @es-plus/vue3 EsTable component",
+  "type": "object",
+  "properties": {
+    "prop": {
+      "type": "string",
+      "description": "Data field name in the row object"
+    },
+    "key": {
+      "type": "string",
+      "description": "Alternative to prop. Column unique identifier (converted to prop internally)"
+    },
+    "label": {
+      "type": "string",
+      "description": "Column header text"
+    },
+    "labelKey": {
+      "type": "string",
+      "description": "i18n translation key for the column header. When a global t() function is configured via app.use(ESPlus, { t }), the header will be translated using t(labelKey). Falls back to label when t() is not configured"
+    },
+    "width": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Column width in pixels"
+    },
+    "minWidth": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Minimum column width"
+    },
+    "align": {
+      "type": "string",
+      "enum": ["left", "center", "right"],
+      "default": "center",
+      "description": "Text alignment"
+    },
+    "fixed": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string", "enum": ["left", "right"] }
+      ],
+      "description": "Fix column to left or right side"
+    },
+    "formatter": {
+      "description": "Function (row) => string. Format cell display value"
+    },
+    "render": {
+      "description": "Custom render function (h, { row, value, index }) => VNode"
+    },
+    "scopedSlots": {
+      "type": "object",
+      "description": "Named slot configuration for custom column rendering",
+      "properties": {
+        "customRender": {
+          "type": "string",
+          "description": "Slot name to use for rendering this column"
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "description": "Nested child columns for multi-level headers",
+      "items": { "$ref": "#" }
+    },
+    "ellipsis": {
+      "type": "boolean",
+      "description": "Enable text overflow ellipsis with tooltip"
+    },
+    "hidCol": {
+      "type": "boolean",
+      "description": "Hide this column from rendering"
+    },
+    "btns": {
+      "type": "array",
+      "description": "Row operation buttons (typically used in an 'actions' column)",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Button text"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["primary", "success", "warning", "danger", "info", ""],
+            "default": "primary",
+            "description": "Button type (renders as text/link button)"
+          },
+          "clickEvent": {
+            "description": "Function (row) => void. Click handler receiving the row data"
+          },
+          "permissionValue": {
+            "type": "string",
+            "description": "Permission code for button visibility. When a global permission() function is configured, buttons with unmatched permissionValue will be hidden"
+          }
+      }
+    },
+    "type": {
+      "type": "string",
+      "enum": ["selection", "expand", "index"],
+      "description": "Special column type: selection checkbox, expand row, or row index"
+    },
+    "emptyPlaceholder": {
+      "type": "string",
+      "default": "-",
+      "description": "Placeholder text for empty cell values"
+    }
+  },
+  "additionalProperties": true
+}

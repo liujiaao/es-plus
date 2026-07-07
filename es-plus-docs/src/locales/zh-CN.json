@@ -32,6 +32,7 @@
     "mcpServer": "MCP Server",
     "cli": "CLI 工具",
     "vue2": "Vue 2 指南",
+    "adapterAntdv": "Ant Design Vue 适配器",
     "migration": "迁移指南",
     "permissionI18n": "权限与国际化",
     "schemaSetup": "IDE 自动补全",

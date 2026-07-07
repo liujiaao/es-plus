@@ -11,10 +11,21 @@
 //   - Whether install() integrates with a real Vue instance + plugin order
 //     → smoke-tested below with a minimal Vue stub
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+// element-ui is hoisted to the root node_modules, where `vue` resolves to Vue 3.
+// Its CJS top-level `require('vue')` then crashes because Vue 3's namespace lacks
+// a default export. The real Element UI integration is exercised in the e2e
+// harness; this unit test only asserts the public API shape of the built dist,
+// so we stub the single symbol the dist imports from element-ui.
+vi.mock('element-ui', () => ({
+  MessageBox: {
+    confirm: vi.fn().mockResolvedValue('confirm'),
+  },
+}))
 // Import from the BUILT dist, not src/. Two reasons:
 //   1. src/index.ts pulls in .vue SFCs which vitest can't parse without
 //      @vitejs/plugin-vue2 set up, and adding that pulls vue + parser deps

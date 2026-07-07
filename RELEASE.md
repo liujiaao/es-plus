@@ -9,8 +9,9 @@
 | `@es-plus/shared` | `packages/shared` | 共享核心逻辑（自动安装，用户无感） |
 | `@es-plus/mcp-server` | `packages/mcp-server` | MCP Server（AI 编码工具集成） |
 | `@es-plus/cli` | `packages/cli` | CLI 工具（命令行生成 CRUD 页面） |
+| `@es-plus/adapter-antdv` | `packages/adapter-antdv` | Ant Design Vue 4.x 适配器（**独立发布，不走 changesets**，见文末） |
 
-三个包通过 `linked` 配置联动 — 任一包发版时，其他关联包自动同步版本号。
+前三者通过 `linked` 配置联动 — 任一包发版时，其他关联包自动同步版本号。`@es-plus/adapter-antdv` 不在此联动体系内，版本号独立管理、手动发布。
 
 ## 日常开发流程
 
@@ -129,3 +130,25 @@ CI 可配置 [changeset-bot](https://github.com/apps/changeset-bot) 在 PR 中�
 - `fixed`：版本号保持一致，且所有包一起发布（即使没变更）
 
 本项目用 `linked`，避免不必要的发布。
+
+## 独立发布的包：@es-plus/adapter-antdv
+
+`@es-plus/adapter-antdv`（Ant Design Vue 4.x 适配器）不纳入 changesets 的 `linked` 体系，版本号独立管理，需手动发布。
+
+### 发布步骤
+
+```bash
+cd packages/adapter-antdv
+
+npm run build                                   # 重新构建，确认 dist/resolver.* 已生成
+npm pack --dry-run                              # 检查打包清单（应仅含 dist/、schemas/、README.md）
+npm publish --registry=https://registry.npmjs.org/
+npm view @es-plus/adapter-antdv version         # 验证，应返回已发布版本号
+```
+
+### 注意事项
+
+- `prepublishOnly` 脚本会自动执行 `npm run typecheck && npm run build`，发布前再次校验。
+- 本机默认 registry 可能是 `npmmirror`（淘宝镜像），**必须显式 `--registry=https://registry.npmjs.org/`**；`package.json` 的 `publishConfig.registry` 已锁定官方源作为兜底。
+- 版本号规则与上表一致；由于与 `@es-plus/vue3` 共享配置 Schema，**破坏性 Schema 变更应与 vue3 同步升 major**。
+- 详细的架构、构建产物与开发说明见 [`packages/adapter-antdv/DEVELOP.md`](./packages/adapter-antdv/DEVELOP.md)。

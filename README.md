@@ -1,11 +1,12 @@
 # ES-Plus
 
-企业级 CRUD 组件库 —— 配置驱动、表单表格弹窗全链路联动、AI 原生支持。**同时支持 Vue 3 + Element Plus 和 Vue 2 + Element UI**，同一份配置两个渲染器通用。
+企业级 CRUD 组件库 —— 配置驱动、表单表格弹窗全链路联动、AI 原生支持。**同时支持 Vue 3 + Element Plus、Vue 2 + Element UI、Vue 3 + Ant Design Vue**，同一份配置三个渲染器通用。
 
 中文 | [English](./README.en.md)
 
 [![@es-plus/vue3](https://img.shields.io/npm/v/%40es-plus%2Fvue3.svg?label=%40es-plus%2Fvue3)](https://www.npmjs.com/package/@es-plus/vue3)
 [![@es-plus/vue2](https://img.shields.io/npm/v/%40es-plus%2Fvue2.svg?label=%40es-plus%2Fvue2)](https://www.npmjs.com/package/@es-plus/vue2)
+[![@es-plus/adapter-antdv](https://img.shields.io/npm/v/%40es-plus%2Fadapter-antdv.svg?label=%40es-plus%2Fadapter-antdv)](https://www.npmjs.com/package/@es-plus/adapter-antdv)
 [![@es-plus/core](https://img.shields.io/npm/v/%40es-plus%2Fcore.svg?label=%40es-plus%2Fcore)](https://www.npmjs.com/package/@es-plus/core)
 [![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
@@ -80,6 +81,27 @@ npm install @es-plus/vue2 element-ui
 ```
 
 参见 [`@es-plus/vue2` README](./packages/vue2/README.md)，配置 API 与 Vue 3 版本完全一致。
+
+### Ant Design Vue 项目？
+
+```bash
+npm install @es-plus/adapter-antdv ant-design-vue @ant-design/icons-vue dayjs
+```
+
+```typescript
+import { createApp } from 'vue'
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
+import ESPlus from '@es-plus/adapter-antdv'
+import '@es-plus/adapter-antdv/dist/style.css'
+
+const app = createApp(App)
+app.use(Antd)
+app.use(ESPlus)
+app.mount('#app')
+```
+
+[`@es-plus/adapter-antdv`](./packages/adapter-antdv/README.md) 是 Ant Design Vue 4.x 渲染适配器，**与 `@es-plus/vue3` 共享同一份 JSON 配置 Schema**，配置 API 完全一致，仅底层 UI 组件不同。详见 [adapter-antdv 文档](./packages/adapter-antdv/README.md)。
 
 ### 第一个 CRUD 页面
 
@@ -443,8 +465,9 @@ app.use(ESPlus, {
 ```
 es-plus/
 ├── packages/
-│   ├── es-plus/          # Vue 3 渲染器源码（npm: @es-plus/vue3）
-│   ├── vue2/             # Vue 2 渲染器源码（npm: @es-plus/vue2）
+│   ├── vue3/             # Vue 3 + Element Plus 渲染器（npm: @es-plus/vue3）
+│   ├── vue2/             # Vue 2 + Element UI 渲染器（npm: @es-plus/vue2）
+│   ├── adapter-antdv/    # Vue 3 + Ant Design Vue 渲染器（npm: @es-plus/adapter-antdv）
 │   ├── core/             # 框架无关核心层（npm: @es-plus/core）
 │   ├── es-plus-legacy/   # 兼容 stub（npm: es-plus-ui，re-export @es-plus/vue3）
 │   ├── shared/           # MCP/CLI 共享逻辑
@@ -477,6 +500,7 @@ cd packages/core && npm test
 |---|---|---|
 | `@es-plus/vue3` | Vue 3 + Element Plus 渲染器 | [npm](https://www.npmjs.com/package/@es-plus/vue3) |
 | `@es-plus/vue2` | Vue 2 + Element UI 渲染器 | [npm](https://www.npmjs.com/package/@es-plus/vue2) |
+| `@es-plus/adapter-antdv` | Vue 3 + Ant Design Vue 渲染器 | [npm](https://www.npmjs.com/package/@es-plus/adapter-antdv) |
 | `@es-plus/core` | 框架无关核心层（类型/工具/算法） | [npm](https://www.npmjs.com/package/@es-plus/core) |
 | `@es-plus/mcp-server` | AI 编码工具集成 | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
 | `@es-plus/cli` | 命令行工具 | [npm](https://www.npmjs.com/package/@es-plus/cli) |

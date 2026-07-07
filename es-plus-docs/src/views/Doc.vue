@@ -62,6 +62,7 @@ import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
 import vue2Md from '@/docs/vue2.md?raw'
+import adapterAntdvMd from '@/docs/adapter-antdv.md?raw'
 import mcpServerMd from '@/docs/mcp-server.md?raw'
 import cliMd from '@/docs/cli.md?raw'
 import permissionI18nMd from '@/docs/permission-i18n.md?raw'
@@ -122,6 +123,7 @@ const docsData: Record<string, DocEntry> = {
   'installation': { title: '安装', content: installationMd },
   'usage': { title: '使用', content: usageMd },
   'vue2': { title: 'Vue 2 指南', content: vue2Md, titleEn: 'Vue 2 Guide', contentEn: vue2EnMd },
+  'adapter-antdv': { title: 'Ant Design Vue 适配器', content: adapterAntdvMd, titleEn: 'Ant Design Vue Adapter' },
   'mcp-server': { title: 'MCP Server', content: mcpServerMd, titleEn: 'MCP Server', contentEn: mcpServerEnMd },
   'cli': { title: 'CLI 工具', content: cliMd },
   'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },

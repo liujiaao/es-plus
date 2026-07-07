@@ -1,0 +1,95 @@
+{
+  "name": "@es-plus/adapter-antdv",
+  "version": "1.0.0",
+  "description": "ES-Plus Ant Design Vue adapter — configuration-driven enterprise components (EsForm/EsTable/EsDialog/EsCrudPage) for Vue 3 + Ant Design Vue 4.x. Shares the same JSON config schema as @es-plus/vue3 and @es-plus/vue2.",
+  "type": "module",
+  "main": "./dist/es-plus-antdv.umd.cjs",
+  "module": "./dist/es-plus-antdv.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/es-plus-antdv.js",
+      "require": "./dist/es-plus-antdv.umd.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./resolver": {
+      "import": "./dist/resolver.mjs",
+      "require": "./dist/resolver.cjs",
+      "types": "./dist/resolver.d.ts"
+    },
+    "./dist/style.css": "./dist/style.css",
+    "./schemas/*": "./schemas/*"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "typecheck": "vue-tsc --noEmit -p tsconfig.build.json",
+    "build": "vite build",
+    "prepublishOnly": "npm run typecheck && npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "vue3",
+    "vue",
+    "ant-design-vue",
+    "antdv",
+    "component-library",
+    "form",
+    "table",
+    "dialog",
+    "modal",
+    "es-plus",
+    "typescript",
+    "enterprise",
+    "config-driven",
+    "crud",
+    "json-schema",
+    "ai-friendly"
+  ],
+  "author": "liujiaao <303363554@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/adapter-antdv"
+  },
+  "homepage": "https://liujiaao.github.io/es-plus/",
+  "bugs": {
+    "url": "https://github.com/liujiaao/es-plus/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "@ant-design/icons-vue": "^7.0.0",
+    "ant-design-vue": "^4.0.0",
+    "dayjs": "^1.10.5",
+    "vue": "^3.2.0"
+  },
+  "dependencies": {
+    "@es-plus/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vitejs/plugin-vue-jsx": "^4.0.0",
+    "ant-design-vue": "^4.0.0",
+    "@ant-design/icons-vue": "^7.0.0",
+    "dayjs": "^1.10.5",
+    "sass": "^1.70.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.7.0",
+    "vitest": "^1.2.0",
+    "vue": "^3.4.0",
+    "vue-tsc": "^3.3.1",
+    "happy-dom": "^14.0.0"
+  }
+}
