@@ -23,7 +23,7 @@
 import { watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled, Cpu } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -77,6 +77,7 @@ const sections = [
     titleKey: 'sidebar.section.crossFramework',
     items: [
       { path: '/guide/vue2', labelKey: 'sidebar.vue2', icon: markRaw(SetUp) },
+      { path: '/guide/adapter-antdv', labelKey: 'sidebar.adapterAntdv', icon: markRaw(Cpu) },
       { path: '/guide/migration', labelKey: 'sidebar.migration', icon: markRaw(Switch) },
     ],
   },

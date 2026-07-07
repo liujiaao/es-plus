@@ -32,6 +32,7 @@
     "mcpServer": "MCP Server",
     "cli": "CLI",
     "vue2": "Vue 2 Guide",
+    "adapterAntdv": "Ant Design Vue Adapter",
     "migration": "Migration",
     "permissionI18n": "Permission & i18n",
     "schemaSetup": "IDE Schema Setup",
