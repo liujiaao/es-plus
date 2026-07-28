@@ -194,6 +194,7 @@ import {
 } from '../../vue-compat'
 import {
   getGlobalConfig,
+  getCallback,
   isObject,
   findValueByKey,
   type TableColumn,
@@ -830,21 +831,11 @@ export default defineComponent({
 
     // ─── 请求逻辑 ──────────────────────────────
     const getListenToCallBack = (eventName: string, params: unknown) => {
-      const eventNameList = [
-        { eventName: 'brcb', isReturn: true },
-        { eventName: 'qrcb', isReturn: true },
-      ]
-      const hasEventNameIndex = eventNameList.findIndex((it) => it.eventName === eventName)
-      if (
-        props.options.listenToCallBack &&
-        (props.options.listenToCallBack as any)[eventName] &&
-        hasEventNameIndex !== -1
-      ) {
-        const callObj = eventNameList[hasEventNameIndex]
-        if (callObj.isReturn) {
-          return (props.options.listenToCallBack as any)[eventName](params)
-        }
-      }
+      const cb = props.options.listenToCallBack
+      if (!cb) return undefined
+      const fn = getCallback(cb as any, eventName)
+      if (typeof fn === 'function') return fn(params)
+      return undefined
     }
 
     const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
@@ -891,7 +882,7 @@ export default defineComponent({
           ? { ...formObj.props.model }
           : getListEntry.value || {}
 
-      const fnParams = getListenToCallBack('brcb', {
+      const fnParams = getListenToCallBack('beforeRequest', {
         ...formData,
         ...params,
         ...(apiParams.model || {}),
@@ -915,7 +906,7 @@ export default defineComponent({
             ...requestOption,
             ...params,
           })
-          const responseData = getListenToCallBack('qrcb', res) || res
+          const responseData = getListenToCallBack('afterResponse', res) || res
           if (
             isObject(res) &&
             Object.keys(res as object).length &&
