@@ -30,7 +30,7 @@ vi.mock('vue', async () => {
   }
 })
 
-import { useTableResize } from '../use-table-resize'
+import { useTableResize } from '../src/composables/use-table-resize'
 import { onBeforeUnmount } from 'vue'
 
 function createMockElement(overrides: Partial<HTMLElement> = {}): HTMLElement {

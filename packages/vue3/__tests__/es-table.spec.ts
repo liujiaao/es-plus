@@ -4,8 +4,8 @@ import { nextTick, ref, reactive } from 'vue'
 import {
   ElTable, ElTableColumn, ElPagination, ElButton, ElConfigProvider
 } from 'element-plus'
-import EsTable from '../src/component.vue'
-import type { TableOptions, TableColumn, PaginationConfig } from '../../../types'
+import EsTable from '../src/components/es-table/src/component.vue'
+import type { TableOptions, TableColumn, PaginationConfig } from '../src/types'
 
 // Mock ResizeObserver for happy-dom
 const mockResizeObserver = vi.fn().mockImplementation(() => ({

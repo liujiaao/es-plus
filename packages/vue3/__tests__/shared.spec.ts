@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isObject, isArray, isFunction, isString, isNumber, isEmpty, firstWordUpperCase, kebabToCamel, toPascalCase, findValueByKey, wrapPromise } from './shared'
+import { isObject, isArray, isFunction, isString, isNumber, isEmpty, firstWordUpperCase, kebabToCamel, toPascalCase, findValueByKey, wrapPromise } from '../src/utils/shared'
 
 describe('shared utils', () => {
   describe('isObject', () => {

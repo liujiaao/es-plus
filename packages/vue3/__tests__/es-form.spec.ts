@@ -9,15 +9,15 @@ import {
 } from 'element-plus'
 
 // Mock heavy/circular dependencies that break in test environment
-vi.mock('../../es-dialog/src/use-dialog', () => ({
+vi.mock('../src/components/es-dialog/src/use-dialog', () => ({
   useDialog: vi.fn(() => ({ close: vi.fn(), destroy: vi.fn() })),
   default: vi.fn(() => ({ close: vi.fn(), destroy: vi.fn() }))
 }))
-vi.mock('../../es-table', () => ({
+vi.mock('../src/components/es-table', () => ({
   default: { name: 'EsTable', install: vi.fn() }
 }))
 
-import EsForm from '../src/es-form.vue'
+import EsForm from '../src/components/es-form/src/es-form.vue'
 
 const globalComponents = {
   ElForm, ElRow, ElCol, ElFormItem, ElInput, ElButton,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
-import { useVxeColumnAdapter } from '../src/engines/use-vxe-column-adapter'
-import type { TableColumn, TableOptions } from '../../../types'
+import { useVxeColumnAdapter } from '../src/components/es-table/src/engines/use-vxe-column-adapter'
+import type { TableColumn, TableOptions } from '../src/types'
 
 function baseOptions(overrides: Partial<TableOptions> = {}): TableOptions {
   return { multiSelect: false, snIndex: false, expand: false, ...overrides } as TableOptions

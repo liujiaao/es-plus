@@ -18,7 +18,10 @@
       "types": "./dist/resolver.d.ts"
     },
     "./dist/style.css": "./dist/style.css",
-    "./schemas/*": "./schemas/*"
+    "./schemas/*": "./schemas/*",
+    "./vxe-types-augment": {
+      "types": "./dist/vxe-types-augment.d.ts"
+    }
   },
   "files": [
     "dist",

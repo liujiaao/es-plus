@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createApp, h, nextTick } from 'vue'
-import { useDialog } from '../src/use-dialog'
-import type { DialogOptions, BtnConfig } from '../../../types'
+import { useDialog } from '../src/components/es-dialog/src/use-dialog'
+import type { DialogOptions, BtnConfig } from '../src/types'
 
 // useDialog uses document.body and DOM rendering, so we test it with real DOM in happy-dom
 

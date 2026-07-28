@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { buildFirstClassGridOptions } from '../src/engines/use-vxe-grid-config'
+import { buildFirstClassGridOptions } from '../src/components/es-table/src/engines/use-vxe-grid-config'
 
 describe('buildFirstClassGridOptions — 合计行', () => {
   it('showFooter:true → result.showFooter = true', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { useFormLayout } from './use-form-layout'
-import type { LayoutFormProps, FormItemOption } from '../types'
+import { useFormLayout } from '../src/composables/use-form-layout'
+import type { LayoutFormProps, FormItemOption } from '../src/types'
 
 // Helper to type the props object to avoid excess-property-check issues
 // after LayoutFormProps gained the new formLayProps field

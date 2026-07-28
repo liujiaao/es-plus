@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { useTableSelection } from './use-table-selection'
+import { nextTick } from 'vue'
+import { useTableSelection } from '../src/composables/use-table-selection'
 
 describe('useTableSelection', () => {
   it('should handle basic selection without rowkey', () => {
@@ -51,6 +52,70 @@ describe('useTableSelection', () => {
     clearAllSelection(tableRef)
 
     expect(multipleSelection.value).toEqual([])
+  })
+
+  describe('initSelection', () => {
+    it('tableRef=null → isInitChange 立即恢复为 false', () => {
+      const { initSelection, isInitChange } = useTableSelection('id')
+      initSelection([], null)
+      expect(isInitChange.value).toBe(false)
+    })
+
+    it('tableRef=null → 不影响 multipleSelection', async () => {
+      const { handleSelectionChange, initSelection, multipleSelection } = useTableSelection('id')
+      handleSelectionChange([{ id: '1' }], 1)
+      initSelection([], null)
+      await nextTick()
+      expect(multipleSelection.value).toHaveLength(1)
+    })
+
+    it('无 rowkey + tableRef → nextTick 后调用 clearSelection', async () => {
+      const clearSelection = vi.fn()
+      const tableRef = { clearSelection, toggleRowSelection: vi.fn() }
+      const { initSelection } = useTableSelection()
+      initSelection([], tableRef)
+      expect(clearSelection).not.toHaveBeenCalled()
+      await nextTick()
+      expect(clearSelection).toHaveBeenCalledOnce()
+    })
+
+    it('无 rowkey + tableRef → nextTick 后 isInitChange 恢复为 false', async () => {
+      const tableRef = { clearSelection: vi.fn(), toggleRowSelection: vi.fn() }
+      const { initSelection, isInitChange } = useTableSelection()
+      initSelection([], tableRef)
+      expect(isInitChange.value).toBe(true)
+      await nextTick()
+      expect(isInitChange.value).toBe(false)
+    })
+
+    it('有 rowkey + tableRef → nextTick 后调用 toggleRowSelection 恢复已选行', async () => {
+      const toggleRowSelection = vi.fn()
+      const tableRef = { clearSelection: vi.fn(), toggleRowSelection }
+      const rows = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }]
+      const { handleSelectionChange, initSelection } = useTableSelection('id')
+      handleSelectionChange(rows, 1)
+      initSelection(rows, tableRef)
+      await nextTick()
+      expect(toggleRowSelection).toHaveBeenCalled()
+    })
+
+    it('有 rowkey + tableRef → nextTick 后 isInitChange 恢复为 false', async () => {
+      const tableRef = { clearSelection: vi.fn(), toggleRowSelection: vi.fn() }
+      const { initSelection, isInitChange } = useTableSelection('id')
+      initSelection([{ id: '1' }], tableRef)
+      expect(isInitChange.value).toBe(true)
+      await nextTick()
+      expect(isInitChange.value).toBe(false)
+    })
+
+    it('initSelection 过程中 handleSelectionChange 被忽略（防反弹）', async () => {
+      const tableRef = { clearSelection: vi.fn(), toggleRowSelection: vi.fn() }
+      const { initSelection, handleSelectionChange, multipleSelection } = useTableSelection('id')
+      initSelection([{ id: '1' }], tableRef)
+      handleSelectionChange([{ id: '99' }], 1)
+      expect(multipleSelection.value).toEqual([])
+      await nextTick()
+    })
   })
 
   describe('handleSelectData', () => {

@@ -11,7 +11,10 @@
       "require": "./dist/es-plus-vue2.umd.cjs",
       "types": "./dist/index.d.ts"
     },
-    "./dist/style.css": "./dist/style.css"
+    "./dist/style.css": "./dist/style.css",
+    "./vxe-types-augment": {
+      "types": "./dist/vxe-types-augment.d.ts"
+    }
   },
   "files": [
     "dist",
@@ -76,6 +79,7 @@
     "@types/node": "^20.0.0",
     "@vue/composition-api": "^1.7.2",
     "@vitejs/plugin-vue2": "^2.3.0",
+    "vxe-table": "^3.8.0",
     "element-ui": "^2.15.14",
     "sass": "^1.70.0",
     "typescript": "^5.3.0",

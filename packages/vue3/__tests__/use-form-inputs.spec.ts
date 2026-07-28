@@ -16,8 +16,8 @@ import {
   ElRate,
   ElUpload
 } from 'element-plus'
-import { getNestedValue, setNestedValue, useFormInputs } from '../use-form-inputs'
-import type { FormItemOption } from '../../types'
+import { getNestedValue, setNestedValue, useFormInputs } from '../src/composables/use-form-inputs'
+import type { FormItemOption } from '../src/types'
 
 describe('getNestedValue', () => {
   it('should get a simple top-level property', () => {

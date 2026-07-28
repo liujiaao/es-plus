@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick } from 'vue'
-import { useFormRequest } from '../use-form-request'
-import type { FormItemOption, ApiParams } from '../../types'
+import { useFormRequest } from '../src/composables/use-form-request'
+import type { FormItemOption, ApiParams } from '../src/types'
 import type { ConfigFormFieldOut } from '@es-plus/core'
 
 /** httpRequest 函数签名类型 */

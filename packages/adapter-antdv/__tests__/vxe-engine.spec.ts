@@ -575,3 +575,98 @@ describe('配置 API 一致性', () => {
     expect(col.align).toBe('right')
   })
 })
+
+// ─── 14. M-4 fix: vxeFilteredColumns btn.hidden 静态/动态过滤（P0 补充）──
+
+describe('vxeFilteredColumns — btn.hidden 过滤行为（新修复验证）', () => {
+  /**
+   * 复现 vxeFilteredColumns 中 operate 列的 btns 过滤逻辑：
+   *   - checkPermission: permissionValue 权限检查
+   *   - btn.hidden: boolean 静态隐藏
+   *   - btn.hidden: (row) => boolean 动态隐藏
+   */
+  function filterBtns(
+    btns: Array<{ name: string; permissionValue?: string; hidden?: boolean | ((row: any) => boolean) }>,
+    row: Record<string, unknown>,
+    checkPermission: (pv?: string) => boolean,
+  ) {
+    return btns.filter((btn) => {
+      if (!checkPermission(btn.permissionValue)) return false
+      if (typeof btn.hidden === 'function') return !btn.hidden(row)
+      return !btn.hidden
+    })
+  }
+
+  const row = { id: '1', status: 'active' }
+  const allowAll = (_pv?: string) => true
+
+  it('btn.hidden:true → 被过滤（静态隐藏）', () => {
+    const btns = [
+      { name: '编辑', hidden: false },
+      { name: '删除', hidden: true },
+    ]
+    const result = filterBtns(btns, row, allowAll)
+    expect(result.map((b) => b.name)).toEqual(['编辑'])
+  })
+
+  it('btn.hidden:false → 保留', () => {
+    const btns = [{ name: '查看', hidden: false }]
+    const result = filterBtns(btns, row, allowAll)
+    expect(result).toHaveLength(1)
+  })
+
+  it('btn.hidden 未定义 → 保留（undefined 视为可见）', () => {
+    const btns = [{ name: '查看' }]
+    const result = filterBtns(btns, row, allowAll)
+    expect(result).toHaveLength(1)
+  })
+
+  it('btn.hidden:(row)=>true → 被过滤（动态隐藏）', () => {
+    const btns = [
+      { name: '审批', hidden: (_row: any) => _row.status === 'active' },
+      { name: '编辑' },
+    ]
+    const result = filterBtns(btns, row, allowAll)
+    expect(result.map((b) => b.name)).toEqual(['编辑'])
+  })
+
+  it('btn.hidden:(row)=>false → 保留（动态可见）', () => {
+    const btns = [
+      { name: '撤销', hidden: (_row: any) => _row.status !== 'active' },
+    ]
+    const result = filterBtns(btns, row, allowAll)
+    expect(result).toHaveLength(1)
+  })
+
+  it('动态 hidden 函数收到正确的 row 对象', () => {
+    let capturedRow: any = null
+    const btns = [
+      { name: '测试', hidden: (r: any) => { capturedRow = r; return false } },
+    ]
+    filterBtns(btns, row, allowAll)
+    expect(capturedRow).toBe(row)
+  })
+
+  it('权限不通过时 hidden 函数不执行（权限过滤先于 hidden）', () => {
+    const hiddenFn = vi.fn(() => false)
+    const btns = [{ name: '删除', permissionValue: 'delete', hidden: hiddenFn }]
+    filterBtns(btns, row, (_pv) => false)
+    expect(hiddenFn).not.toHaveBeenCalled()
+  })
+
+  it('权限通过 + hidden:true → 最终被过滤', () => {
+    const btns = [
+      { name: '编辑', permissionValue: 'edit', hidden: true },
+    ]
+    const result = filterBtns(btns, row, (_pv) => true)
+    expect(result).toHaveLength(0)
+  })
+
+  it('权限不通过 + hidden:false → 也被过滤（权限优先）', () => {
+    const btns = [
+      { name: '编辑', permissionValue: 'edit', hidden: false },
+    ]
+    const result = filterBtns(btns, row, (_pv) => false)
+    expect(result).toHaveLength(0)
+  })
+})

@@ -9,13 +9,13 @@ import {
 } from 'element-plus'
 
 // Mock useDialog to avoid DOM-heavy dialog rendering in tests
-vi.mock('../../es-dialog/src/use-dialog', () => ({
+vi.mock('../src/components/es-dialog/src/use-dialog', () => ({
   default: vi.fn(() => vi.fn()),
   useDialog: vi.fn(() => vi.fn())
 }))
 
-import EsCrudPage from '../src/es-crud-page.vue'
-import type { CrudPageSchema } from '../src/types'
+import EsCrudPage from '../src/components/es-crud-page/src/es-crud-page.vue'
+import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
 
 const globalComponents = {
   ElForm, ElRow, ElCol, ElFormItem, ElInput, ElButton,

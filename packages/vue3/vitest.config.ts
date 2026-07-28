@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [vue(), vueJsx()],
   test: {
     environment: 'happy-dom',
-    globals: true
+    globals: true,
+    include: ['__tests__/**/*.spec.ts'],
   },
   resolve: {
     alias: {
