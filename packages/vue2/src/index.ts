@@ -212,6 +212,11 @@ export type {
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions,
+  TableEngineExposed,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
 } from './types'
 
 // ─── 默认导出（带 install 的对象，可直接 Vue.use()） ───

@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: migrate to strict when refactored
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue'
 import {

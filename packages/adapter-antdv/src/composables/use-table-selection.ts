@@ -5,12 +5,17 @@
  * - vue3 使用 el-table 的命令式 API (toggleRowSelection/clearSelection)
  * - ADV 使用 rowSelection 声明式配置
  *
- * 本模块封装 ADV 的声明式选择，对外暴露与 vue3 版本完全兼容的接口。
+ * 跨页选择累积逻辑复用 @es-plus/core applySelectionChange，消除维护偏离副本。
+ * ADV 专有状态（selectedRowKeys / rowSelection / toggleRowSelection / setCurrentPage）保持不变。
  */
 import { ref, nextTick, computed } from 'vue'
-import type { Ref, ComputedRef } from 'vue'
+import {
+  createSelectionState,
+  applySelectionChange,
+} from '@es-plus/core'
 
 export function useTableSelection(rowkey?: string) {
+  const state = createSelectionState()
   const multipleSelection = ref<Record<string, unknown>[]>([])
   const selectionsByPage = ref<Record<number, Record<string, unknown>[]>>({})
   const isInitChange = ref(false)
@@ -19,6 +24,15 @@ export function useTableSelection(rowkey?: string) {
   const selectedRowKeys = ref<(string | number)[]>([])
   const currentPage = ref(1)
   const setCurrentPage = (page: number) => { currentPage.value = page }
+
+  const sync = () => {
+    multipleSelection.value = [...state.multipleSelection]
+    selectionsByPage.value = { ...state.selectionsByPage }
+    isInitChange.value = state.isInitChange
+    if (rowkey) {
+      selectedRowKeys.value = state.multipleSelection.map((r) => r[rowkey] as string | number)
+    }
+  }
 
   /**
    * ADV 声明式 rowSelection 配置
@@ -32,44 +46,28 @@ export function useTableSelection(rowkey?: string) {
   }))
 
   /**
-   * 选择变化处理 — 与 vue3 版本完全一致的逻辑
+   * 选择变化处理 — 跨页累积逻辑复用 core applySelectionChange
    */
   const handleSelectionChange = (val: Record<string, unknown>[], page: number) => {
-    if (rowkey) {
-      if (isInitChange.value) return
-      selectionsByPage.value[page] = val
-      const allSelections: Record<string, unknown>[] = []
-      const uniqueMap: Record<string, boolean> = {}
-
-      Object.values(selectionsByPage.value).forEach((pageSelections) => {
-        pageSelections.forEach((item) => {
-          const key = item[rowkey] as string
-          if (key && !uniqueMap[key]) {
-            allSelections.push(item)
-            uniqueMap[key] = true
-          }
-        })
-      })
-
-      multipleSelection.value = allSelections
-      // 同步到 ADV 的 selectedRowKeys
-      selectedRowKeys.value = allSelections.map((r) => r[rowkey] as string | number)
-    } else {
-      multipleSelection.value = val
+    applySelectionChange(state, val, page, rowkey)
+    sync()
+    if (!rowkey) {
+      // 无 rowkey 时 selectedRowKeys 退化为当前页 id/key
       selectedRowKeys.value = val.map((r) => r.id || r.key || Object.values(r)[0]) as (string | number)[]
     }
   }
 
   /**
-   * 页面切换后恢复选中状态 — 声明式模式 selectedRowKeys 已是全量 key，
-   * ADV preserveSelectedRowKeys 自动保持跨页选中。此处仅合并当前页命中行，
-   * 不覆盖其他页（对齐 vue3 toggleRowSelection(row, true) 追加语义）。
+   * 页面切换后恢复选中状态 — selectedRowKeys 已是全量 key，
+   * ADV preserveSelectedRowKeys 自动保持跨页选中。
+   * 此处仅合并当前页命中行到 selectedRowKeys（对齐 vue3 toggleRowSelection 追加语义）。
    */
   const handleSelectData = (dataList: Record<string, unknown>[], _tableRef: unknown) => {
-    if (dataList?.length && rowkey && multipleSelection.value.length) {
+    const currentSelection = multipleSelection.value
+    if (dataList?.length && rowkey && currentSelection.length) {
       const pageKeys = new Set(
         dataList
-          .filter((row) => multipleSelection.value.some((s) => s[rowkey] === row[rowkey]))
+          .filter((row) => currentSelection.some((s) => s[rowkey] === row[rowkey]))
           .map((row) => row[rowkey] as string | number),
       )
       const merged = new Set(selectedRowKeys.value)
@@ -82,15 +80,19 @@ export function useTableSelection(rowkey?: string) {
    * 清除全部选择（含跨页缓存）
    */
   const clearAllSelection = (_tableRef?: unknown) => {
-    multipleSelection.value = []
-    selectionsByPage.value = {}
+    state.multipleSelection = []
+    state.selectionsByPage = {}
+    state.isInitChange = false
     selectedRowKeys.value = []
+    sync()
   }
 
   /**
    * 清除选择（对齐 vue3 clearSelection 清空语义：视觉 + 数据全清）
    */
   const clearSelection = () => {
+    state.multipleSelection = []
+    state.selectionsByPage = {}
     selectedRowKeys.value = []
     multipleSelection.value = []
     selectionsByPage.value = {}
@@ -106,29 +108,34 @@ export function useTableSelection(rowkey?: string) {
     const shouldSelect = selected === undefined ? !exists : selected
     if (shouldSelect && !exists) {
       selectedRowKeys.value = [...selectedRowKeys.value, key]
-      if (!multipleSelection.value.some((r) => r[rowkey] === key)) {
-        multipleSelection.value = [...multipleSelection.value, row]
+      if (!state.multipleSelection.some((r) => r[rowkey] === key)) {
+        state.multipleSelection = [...state.multipleSelection, row]
+        multipleSelection.value = [...state.multipleSelection]
       }
     } else if (!shouldSelect && exists) {
       selectedRowKeys.value = selectedRowKeys.value.filter((k) => k !== key)
-      multipleSelection.value = multipleSelection.value.filter((r) => r[rowkey] !== key)
+      state.multipleSelection = state.multipleSelection.filter((r) => r[rowkey] !== key)
+      multipleSelection.value = [...state.multipleSelection]
     }
   }
 
   /**
    * 初始化选择状态 — 数据变化时调用
-   * vue3 版本在 initSelection 中调用 handleSelectData 恢复选中
    */
   const initSelection = (dataList: Record<string, unknown>[]) => {
+    // Only flip the guard flag — do NOT sync (which would wipe multipleSelection.value)
+    state.isInitChange = true
     isInitChange.value = true
     if (rowkey) {
       nextTick(() => {
         handleSelectData(dataList, null)
+        state.isInitChange = false
         isInitChange.value = false
       })
     } else {
       nextTick(() => {
         selectedRowKeys.value = []
+        state.isInitChange = false
         isInitChange.value = false
       })
     }

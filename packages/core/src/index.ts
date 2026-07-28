@@ -48,6 +48,24 @@ export type {
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions,
+  // vxe 引擎一等公民 API 类型
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
+  // vxe 进阶类型
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+  // 引擎接口（跨包共享）
+  TableEngineExposed,
 } from './types'
 
 // ─── 全局配置 ─────────────────────────────────────────────────
@@ -122,6 +140,9 @@ export {
   resolveButtonDisabled,
   applyConfigTableOut,
 } from './field-resolver'
+
+// ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
+export { buildFirstClassGridOptions } from './vxe-engine'
 
 // ─── 向后兼容适配层 ──────────────────────────────────────────
 export {

@@ -22,6 +22,8 @@ export { createSelectionState, applySelectionChange, restoreSelectionForPage, cl
 export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, formatConfigOut, queryTableListMethod, httpRequestFormInstance, getEveryFormQueryField, } from './request';
 // ─── 字段/按钮解析 ────────────────────────────────────────────
 export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';
+// ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
+export { buildFirstClassGridOptions } from './vxe-engine';
 // ─── 向后兼容适配层 ──────────────────────────────────────────
 export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, } from './compat';
 // compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出

@@ -32,6 +32,21 @@
             :left-text="options.leftText"
           />
 
+          <!-- vxe-table 引擎（options.engine === 'vxe' 时启用） -->
+          <!-- M-7: v-on="$listeners" 透传 row-click/dblclick/contextmenu 等原生事件给 vxe-grid -->
+          <vxe-engine
+            v-if="isVxeEngine"
+            ref="vxeEngineRef"
+            :columns="filteredColumns"
+            :data-source="effectiveDataSource"
+            :table-height="tableHeight"
+            :options="mergedOptions"
+            :parent-slots="$scopedSlots"
+            v-on="$listeners"
+            @selection-change="handleTableSelectionChange"
+            @sort-change="handleVxeSortChange"
+          />
+
           <!--
             Vue 2 / Element UI 版本不支持虚拟滚动 (Element UI 无 el-table-v2)
             当用户配置 options.virtual === true 时，控制台会警告，仍按普通 el-table 渲染
@@ -43,6 +58,7 @@
             @selection-change 合并为数组，不会覆盖我们的内部处理。
           -->
           <el-table
+            v-else
             class="el-dp_tables"
             :id="tableId"
             :key="tableId"
@@ -120,7 +136,7 @@
         分页用 static 定位（默认）参与 flex 列布局，使 .tableContainer (flex:1) 自动让出空间。
       -->
       <div
-        v-if="showPagination"
+        v-if="showPagination && !isVxeProxyMode"
         ref="paginationRef"
         class="pagination_page"
       >
@@ -186,6 +202,7 @@ import {
 } from '@es-plus/core'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
+import VxeEngine from './engines/vxe-engine.vue'
 import { useTableResize } from '../../composables/use-table-resize'
 import { useTableSelection } from '../../composables/use-table-selection'
 import { mapSize } from '../../utils/size'
@@ -274,7 +291,7 @@ const checkQueryFields = (obj: Record<string, unknown>): boolean => {
 
 export default defineComponent({
   name: 'EsTable',
-  components: { ColumnItem, TableBtns },
+  components: { ColumnItem, TableBtns, VxeEngine },
   // 关闭自动 attrs 继承，避免 fallthrough 重复绑定
   inheritAttrs: false,
   props: {
@@ -340,8 +357,18 @@ export default defineComponent({
       )
     }
 
+    // ─── Engine dispatch ──────────────────────
+    const isVxeEngine = computed(() => props.options.engine === 'vxe')
+    const isVxeProxyMode = computed(() => {
+      if (!isVxeEngine.value) return false
+      const opts = props.options as any
+      return !!(opts.proxyConfig || (opts.vxeConfig as any)?.proxyConfig)
+    })
+    const mergedOptions = computed(() => ({ ...defaultOptions, ...props.options }))
+
     // ─── Refs ─────────────────────────────────
     const tableRef = ref<any>(null)
+    const vxeEngineRef = ref<any>(null)
     const tbBtnRef = ref<any>(null)
     const headBarRef = ref<HTMLElement | null>(null)
     const paginationRef = ref<HTMLElement | null>(null)
@@ -393,6 +420,7 @@ export default defineComponent({
       // tableRef 同理 —— 虽然 useTableResize 不直接读它的高度，但 expose 出去的
       // clearSelection / refresh / scrollToRow / toggleSelection 等都依赖它指向真实 el-table 实例。
       tableRef.value = (proxy.$refs.tableRef as any) || null
+      vxeEngineRef.value = (proxy.$refs.vxeEngineRef as any) || null
     }
 
     // ─── 与 EsForm 的耦合 ─────────────────────
@@ -730,10 +758,14 @@ export default defineComponent({
     // ─── Watchers ─────────────────────────────
     watch(visibleShow, async (val, oldVal) => {
       if (val && val !== oldVal) {
-        if (props.options.actionUrl) {
+        if (props.options.actionUrl && !isVxeProxyMode.value) {
           await httpRequestInstance()
         }
-        ;(tableRef.value as any)?.doLayout?.()
+        if (isVxeEngine.value) {
+          vxeEngineRef.value?.doLayout?.()
+        } else {
+          ;(tableRef.value as any)?.doLayout?.()
+        }
       }
     })
 
@@ -755,10 +787,11 @@ export default defineComponent({
     )
 
     // 兼容性修复：移除 deep，仅监听数组引用变化即可触发 selection 重置。
-    // .sync 回传相同引用时不会重复触发，避免循环。
+    // M-6: vxe 引擎模式下不调用 initSelection（tableRef.value 为 null，且 vxe 自管选择状态）
     watch(
       () => props.dataSource,
       (val) => {
+        if (isVxeEngine.value) return
         initSelection(val, tableRef.value)
       }
     )
@@ -766,7 +799,7 @@ export default defineComponent({
     onMounted(() => {
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
       syncDomRefs()
-      if (isRequestConf.value && props.options.isInitRun !== false) {
+      if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
         httpRequestInstance()
       }
       // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
@@ -976,11 +1009,22 @@ export default defineComponent({
       emit('change-table-sort', column)
     }
 
+    const handleVxeSortChange = (sortInfo: { column: Record<string, unknown>; prop: string; order: string | null }) => {
+      emit('change-table-sort', sortInfo)
+    }
+
     // ─── 提供给子组件的实例 ────────────────────
+    // P5: vxe 引擎下 tableRef 为 null，需委托给 vxeEngineRef
     provide('getTableInstantce', () => ({
-      tableRef,
+      tableRef: isVxeEngine.value ? vxeEngineRef : tableRef,
       toggleSelection: (rows: Record<string, unknown>[]) => {
-        if (rows) {
+        if (isVxeEngine.value) {
+          if (rows) {
+            rows.forEach((row) => vxeEngineRef.value?.toggleRowSelection?.(row))
+          } else {
+            vxeEngineRef.value?.clearSelection?.()
+          }
+        } else if (rows) {
           rows.forEach((row) => {
             ;(tableRef.value as any)?.toggleRowSelection?.(row)
           })
@@ -988,21 +1032,40 @@ export default defineComponent({
           ;(tableRef.value as any)?.clearSelection?.()
         }
       },
-      clearAllSelection: () => clearAllSelectionInternal(tableRef.value),
-      refsInstance: () => tableRef.value,
+      clearAllSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else clearAllSelectionInternal(tableRef.value)
+      },
+      refsInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : tableRef.value,
       httpRequestInstance,
     }))
 
     // ─── 暴露方法（Vue 2 通过 expose 或 return） ──
     const exposed = {
       httpRequestInstance,
-      getSelectionRows: () => multipleSelection.value,
-      clearSelection: () => (tableRef.value as any)?.clearSelection?.(),
-      clearAllSelection: () => clearAllSelectionInternal(tableRef.value),
-      refresh: () => (tableRef.value as any)?.doLayout?.(),
-      // virtual 滚动占位（保持 API 一致，Vue 2 版本无效）
-      scrollToRow: (_row: number) => {
-        // noop in Vue 2 + Element UI
+      getSelectionRows: () => {
+        if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
+        return multipleSelection.value
+      },
+      clearSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else (tableRef.value as any)?.clearSelection?.()
+      },
+      clearAllSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else clearAllSelectionInternal(tableRef.value)
+      },
+      toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => {
+        if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
+        else (tableRef.value as any)?.toggleRowSelection?.(row, selected)
+      },
+      refresh: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.doLayout?.()
+        else (tableRef.value as any)?.doLayout?.()
+      },
+      scrollToRow: (row: number) => {
+        if (isVxeEngine.value) vxeEngineRef.value?.scrollToRow?.(row)
+        // noop for el-table in Vue 2
       },
     }
 
@@ -1023,6 +1086,11 @@ export default defineComponent({
       loadStatus,
       paginationConfig,
       formInstance,
+      // vxe engine
+      isVxeEngine,
+      isVxeProxyMode,
+      mergedOptions,
+      vxeEngineRef,
       // computeds
       filteredColumns,
       tableBindAttrs,
@@ -1044,6 +1112,7 @@ export default defineComponent({
       paginationNextText,
       // handlers
       handleTableSelectionChange,
+      handleVxeSortChange,
       changeTableSort,
       handleSizeChange,
       handleIndexChange,

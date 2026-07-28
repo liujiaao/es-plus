@@ -61,7 +61,13 @@
   "peerDependencies": {
     "@vue/composition-api": "^1.7.0",
     "element-ui": "^2.15.0",
-    "vue": "^2.6.14 || ^2.7.0"
+    "vue": "^2.6.14 || ^2.7.0",
+    "vxe-table": ">=3.5.0 <4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vxe-table": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@es-plus/core": "^1.0.0"

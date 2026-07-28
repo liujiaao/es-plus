@@ -7,7 +7,14 @@
  * 3. Button/Size 等字面量覆盖 ADV 的实际值范围
  */
 import type { VNode, RenderFunction } from 'vue'
-import type { ListenToCallBack as CoreListenToCallBack } from '@es-plus/core'
+import type {
+  ListenToCallBack as CoreListenToCallBack,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+  TableEngineExposed,
+} from '@es-plus/core'
 
 // ============================================================================
 // 表单字段类型 (与 @es-plus/core 的 FormType 一致)
@@ -169,10 +176,25 @@ export interface TableOptions {
   configBtn?: BtnConfig[]
   leftText?: string
   virtual?: boolean
-  engine?: 'default' | 'virtual'
+  engine?: 'default' | 'virtual' | 'vxe'
   rowHeight?: number
   estimatedRowHeight?: number
   overscanCount?: number
+  treeConfig?: VxeTreeConfig
+  proxyConfig?: VxeProxyConfig
+  expandConfig?: VxeExpandConfig
+  seqConfig?: VxeSeqConfig
+  showFooter?: boolean
+  footerMethod?: (params: { columns: unknown[]; data: Record<string, unknown>[] }) => unknown[][]
+  footerData?: unknown[][]
+  editConfig?: Record<string, unknown>
+  exportConfig?: Record<string, unknown>
+  toolbarConfig?: Record<string, unknown>
+  columnConfig?: Record<string, unknown>
+  keyboardConfig?: Record<string, unknown>
+  mouseConfig?: Record<string, unknown>
+  clipboardConfig?: Record<string, unknown>
+  validConfig?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -243,4 +265,11 @@ export interface EsPlusOptions {
 }
 
 // Re-export core types for convenience
-export type { ListenToCallBack } from '@es-plus/core'
+export type {
+  ListenToCallBack,
+  TableEngineExposed,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+} from '@es-plus/core'

@@ -32,13 +32,29 @@
           <table-btns
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
-            v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
+            v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && ((options as any).toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
             :btn-config="(options.configBtn as any[])"
             :left-text="(options.leftText as string)"
           />
 
+          <!-- vxe engine -->
+          <!-- M-4: vxeFilteredColumns 注入了 operate.btns→render；M-7: v-bind="$attrs" 透传 -->
+          <vxe-engine
+            v-if="isVxeEngine"
+            ref="vxeEngineRef"
+            v-bind="$attrs"
+            :columns="vxeFilteredColumns"
+            :data-source="tableData.length ? tableData : dataSource"
+            :table-height="tableHeight"
+            :options="({ ...defaultOptions, ...options } as any)"
+            :parent-slots="($slots as any)"
+            @selection-change="(rows: Record<string, unknown>[]) => handleSelectionChange(rows, paginationConfig.current || 1)"
+            @sort-change="handleVxeSortChange"
+          />
+
           <!-- 表格主体 -->
           <a-table
+            v-else
             ref="tableRef"
             :columns="adaptedColumns"
             :dataSource="tableData.length ? tableData : dataSource"
@@ -115,7 +131,7 @@
 
         <!-- 分页 -->
         <div
-          v-if="showPagination"
+          v-if="showPagination && !isVxeProxyMode"
           ref="paginationRef"
           class="pagination_page"
         >
@@ -171,6 +187,7 @@ import { getCallback } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
 import RenderDomTb from './render-dom-tb'
+import VxeEngine from './engines/vxe-engine.vue'
 
 // ─── Props ───────────────────────────────────────────
 const props = withDefaults(
@@ -231,7 +248,7 @@ const setTableContainer = (el: any) => {
   if (el) tableContainerRef.value = el
 }
 
-watch(() => props.columns, (val) => { columnRowList.value = [...val] }, { deep: true })
+watch(() => props.columns, (val) => { columnRowList.value = [...val] })
 
 // ─── 表单耦合 ───────────────────────────────────────
 const bodyFormInstance = inject<(inst: unknown) => void>('bodyFormInstance', () => undefined)
@@ -283,6 +300,15 @@ const tableSize = computed(() => mapSize(props.options.size, 'middle') as 'large
 const isVirtual = computed(() =>
   props.options.virtual === true || props.options.engine === 'virtual'
 )
+
+// ─── vxe engine ─────────────────────────────────
+const isVxeEngine = computed(() => props.options.engine === 'vxe')
+const isVxeProxyMode = computed(() => {
+  if (!isVxeEngine.value) return false
+  const opts = props.options as any
+  return !!(opts.proxyConfig || (opts.vxeConfig as any)?.proxyConfig)
+})
+const vxeEngineRef = ref<any>(null)
 
 // ─── rowKey ─────────────────────────────────────────
 const rowKeyValue = computed(() => {
@@ -381,6 +407,46 @@ const {
 // ─── 过滤列 ─────────────────────────────────────────
 const filteredColumns = computed(() => {
   return columnRowList.value.filter((item) => !item.hidCol)
+})
+
+// M-4: vxe 引擎专用列（注入 operate 列的 btns→render；普通列注入 emptyPlaceholder formatter，对齐 a-table 路径行为）
+const vxeFilteredColumns = computed(() => {
+  return filteredColumns.value.map((item) => {
+    const col = { ...item }
+    if ((col.prop === 'operate' || col.key === 'operate') && col.btns && !col.render) {
+      col.render = (_h: any, { row }: { row: Record<string, unknown> }) =>
+        h('div', { style: 'display:flex;gap:4px;flex-wrap:wrap;justify-content:center' }, [
+          (col.btns?.filter((btn: any) => checkPermission(btn.permissionValue)) || [])
+            .map((btn: any) =>
+              h(AButton, {
+                onClick: () => btn.clickEvent?.(row),
+                text: true,
+                type: btn.type || 'primary',
+                size: 'small',
+              }, () => btn.name)
+            ),
+        ])
+    } else if (!col.render && !(col.scopedSlots as any)?.customRender && !col.formatter) {
+      // 注入 emptyPlaceholder 兜底，对齐 a-table 路径的 customRender 占位符行为
+      const ph = (col.emptyPlaceholder as string) || '-'
+      const field = (col.prop || col.key) as string
+      col.formatter = (row: Record<string, unknown>) => {
+        const value = row[field]
+        if (value == null || value === '') return ph
+        return String(value)
+      }
+    } else if (col.formatter) {
+      // 有用户自定义 formatter 时也追加 emptyPlaceholder 兜底
+      const ph = (col.emptyPlaceholder as string) || '-'
+      const orig = col.formatter as (row: Record<string, unknown>) => string
+      col.formatter = (row: Record<string, unknown>) => {
+        const result = orig(row)
+        if (result == null || result === '') return ph
+        return String(result)
+      }
+    }
+    return col
+  })
 })
 
 // ─── 选择列（type:'selection' 等价 options.multiSelect，对齐 vue3 约定）──
@@ -547,6 +613,11 @@ const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef, headBarRef, tbBtnRef, paginationRef,
   { heightType: heightType.value, tabHeight: props.options.tabHeight }
 )
+
+// ─── vxe sort 事件（格式已对齐 el-table/vue3 约定）──
+function handleVxeSortChange(sortInfo: { column: Record<string, unknown>; prop: string; order: string | null }) {
+  emit('change-table-sort', sortInfo)
+}
 
 // ─── ADV Table 统一 change 事件 ─────────────────────
 function handleAdvTableChange(
@@ -752,14 +823,14 @@ function changePageSizeRequest() {
 
 // ─── 生命周期 ───────────────────────────────────────
 onMounted(() => {
-  if (isRequestConf.value && props.options.isInitRun !== false) {
+  if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
     httpRequestInstance()
   }
 })
 
 watch(visibleShow, async (val, oldVal) => {
   if (val && val !== oldVal) {
-    if (props.options.actionUrl) {
+    if (props.options.actionUrl && !isVxeProxyMode.value) {
       await httpRequestInstance()
     }
     // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
@@ -779,34 +850,59 @@ watch(tableData, (val) => {
 // ─── Provide ─────────────────────────────────────────
 provide('getTableInstantce', () => ({
   ...(instance?.setupState || {}),
-  tableRef,
+  tableRef: isVxeEngine.value ? vxeEngineRef : tableRef,
   toggleSelection: (rows: Record<string, unknown>[]) => {
-    if (rows) rows.forEach((r) => toggleRowSelection(r, true))
-    else clearSelection()
+    if (isVxeEngine.value) {
+      if (rows) rows.forEach((r) => vxeEngineRef.value?.toggleRowSelection?.(r, true))
+      else vxeEngineRef.value?.clearSelection?.()
+    } else {
+      if (rows) rows.forEach((r) => toggleRowSelection(r, true))
+      else clearSelection()
+    }
   },
-  clearAllSelection,
-  refsInstance: () => tableRef.value,
+  clearAllSelection: () => {
+    clearAllSelection()
+    if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+  },
+  refsInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : tableRef.value,
   httpRequestInstance,
 }))
 
 // ─── Expose（对齐 vue3 expose 集）─────────────────────
 defineExpose({
   httpRequestInstance,
-  getSelectionRows: () => multipleSelection.value,
-  clearSelection,
-  clearAllSelection,
+  getSelectionRows: () => {
+    if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
+    return multipleSelection.value
+  },
+  clearSelection: () => {
+    if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+    else clearSelection()
+  },
+  clearAllSelection: () => {
+    clearAllSelection()
+    if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+  },
   refresh: () => {
-    // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
-    resizeObservers?.()
-    tableRef.value?.$forceUpdate?.()
+    if (isVxeEngine.value) {
+      vxeEngineRef.value?.doLayout?.()
+    } else {
+      resizeObservers?.()
+      tableRef.value?.$forceUpdate?.()
+    }
   },
   scrollToRow: (row: number) => {
-    // 虚拟模式用 ADV 原生 scrollTo；非虚拟 DOM 兜底
-    if (isVirtual.value) {
+    if (isVxeEngine.value) {
+      vxeEngineRef.value?.scrollToRow?.(row)
+    } else if (isVirtual.value) {
       ;(tableRef.value as any)?.scrollTo?.(row)
     } else {
       tableRef.value?.$el?.querySelectorAll?.('.ant-table-row')?.[row]?.scrollIntoView?.({ block: 'center' })
     }
+  },
+  toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => {
+    if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
+    else toggleRowSelection(row, selected !== false)
   },
 })
 </script>

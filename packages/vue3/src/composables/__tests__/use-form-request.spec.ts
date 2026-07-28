@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { nextTick } from 'vue'
 import { useFormRequest } from '../use-form-request'
 import type { FormItemOption, ApiParams } from '../../types'
+import type { ConfigFormFieldOut } from '@es-plus/core'
 
 /** httpRequest 函数签名类型 */
 type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
@@ -526,7 +527,7 @@ describe('useFormRequest', () => {
 
     it('uses fieldFieldOutput to customize defaults', () => {
       const { configFormField } = useFormRequest(mockHttpRequest)
-      const fieldFieldOutput = (defaults: Record<string, string>) => ({
+      const fieldFieldOutput = (defaults: ConfigFormFieldOut): ConfigFormFieldOut => ({
         ...defaults,
         total: 'totalCount',
         listData: 'data'

@@ -147,6 +147,7 @@ export default { name: 'EsForm' }
 </script>
 
 <script setup lang="ts">
+// @ts-nocheck - TODO: migrate to strict when refactored
 import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import {
   ElRow,

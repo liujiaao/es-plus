@@ -9,7 +9,7 @@
  *   import { isObject } from '@es-plus/core'    // 也可以
  */
 export { isObject, isArray, isFunction, isString, isNumber, isEmpty, firstWordUpperCase, kebabToCamel, toPascalCase, findValueByKey, wrapPromise, getNestedValue, setNestedValue, } from './shared';
-export type { ModelData, RenderFn, AnyVNode, EsButtonType, EsButtonSize, EsTableSize, ApiParams, FormType, FormItemOption, BtnConfig, LayoutFormProps, ListenToCallBack, TableColumn, ConfigTableOut, TableOptions, PaginationConfig, DialogOptions, EsFormInstance, EsTableInstance, EsPlusOptions, } from './types';
+export type { ModelData, RenderFn, AnyVNode, EsButtonType, EsButtonSize, EsTableSize, ApiParams, FormType, FormItemOption, BtnConfig, LayoutFormProps, ListenToCallBack, TableColumn, ConfigTableOut, TableOptions, PaginationConfig, DialogOptions, EsFormInstance, EsTableInstance, EsPlusOptions, VxeEditRender, VxeEditConfig, VxeExportConfig, VxeToolbarConfig, VxeColumnConfig, VxeKeyboardConfig, VxeMouseConfig, VxeClipboardConfig, VxeValidConfig, VxeFooterMethod, VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig, TableEngineExposed, } from './types';
 export { configureEsPlus, getGlobalConfig, resetGlobalConfig, } from './config';
 export type { EsPlusGlobalConfig } from './config';
 export { VALID_FORM_TYPES, FORM_TYPE_ALIASES, SPECIAL_BTN_KEYS, BUILT_IN_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, OPERATION_COLUMN_PROP_CRUD_PAGE, VALID_CRUD_ACTIONS, DEFAULT_CONFIG_TABLE_OUT, CRUD_PAGE_BTN_CLICK_KEYS, CRUD_PAGE_DIALOG_KEYS, DEFAULT_TOOLBAR_BTNS, DEFAULT_ROW_BTNS, } from './constants';
@@ -21,6 +21,7 @@ export type { SelectionState, TableRefLike } from './table-selection';
 export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, formatConfigOut, queryTableListMethod, httpRequestFormInstance, getEveryFormQueryField, } from './request';
 export type { RequestConfig, ConfigFormFieldOut, FormFieldOptionResult, } from './request';
 export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';
+export { buildFirstClassGridOptions } from './vxe-engine';
 export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, } from './compat';
 export { getButtonPosition as resolveButtonPosition, isButtonLeft, isButtonRight, } from './compat';
 //# sourceMappingURL=index.d.ts.map

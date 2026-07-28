@@ -120,7 +120,7 @@ const slots = defineSlots()
 const instance = getCurrentInstance()
 const attrs = useAttrs()
 
-const extended = Object.fromEntries(Object.entries(ElementPlusIconsVue).map(([key]) => [key, ElementPlusIconsVue[key]]))
+const extended = Object.fromEntries(Object.entries(ElementPlusIconsVue).map(([key]) => [key, (ElementPlusIconsVue as Record<string, unknown>)[key]]))
 
 const lyFormInstance = ref(null)
 const renderBodyRefsObject = reactive<Record<string, any>>({})
@@ -128,7 +128,7 @@ const isFullscreen = ref(false)
 const dialogInstance = instance
 const locale = ref(zhCn)
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

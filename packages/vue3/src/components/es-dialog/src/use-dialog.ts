@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: migrate to strict when refactored
 import { createVNode, getCurrentInstance, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'

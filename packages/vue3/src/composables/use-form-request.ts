@@ -1,18 +1,22 @@
 import { nextTick, toRaw, unref } from 'vue'
-import { isObject, findValueByKey, wrapPromise } from '../utils/shared'
-import type { FormItemOption, ApiParams } from '../types'
+import { isObject, wrapPromise } from '../utils/shared'
+import {
+  configFormField,
+  formatConfigOut,
+  type RequestConfig,
+  type ConfigFormFieldOut,
+} from '@es-plus/core'
+import type { FormItemOption } from '../types'
 
-export interface RequestConfig {
-  httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  apiParams?: ApiParams
-  success?: (res: Record<string, unknown>) => void
-  fail?: (err: unknown) => void
-  [key: string]: unknown
-}
+export type { RequestConfig, ConfigFormFieldOut }
 
 export function useFormRequest(httpRequestGlobal?: (params: Record<string, unknown>) => Promise<unknown>) {
-  const queryTableListMethod = (params: Record<string, unknown>, options: RequestConfig = {}, option?: FormItemOption) => {
-    const { success, fail, ..._params } = options || {}
+  /**
+   * 单条请求 — 保留 toRaw/unref 以正确处理 Vue 3 响应式 model/options
+   * （core 层不感知响应式，调用方须在传入前 unwrap）
+   */
+  const queryTableListMethod = (params: Record<string, unknown>, options: RequestConfig = {}, _option?: FormItemOption) => {
+    const { success, fail } = options || {}
     if (isObject(options.apiParams) && Object.keys(options.apiParams).length && options.apiParams.url) {
       const initFormParams = { ...params, ...toRaw(unref(options.apiParams.model || {})) }
       const requestOption = { ...toRaw(unref(options.apiParams.options || {})) }
@@ -32,7 +36,6 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
 
       requestFn(requestPayload)
         .then((res) => {
-          // 支持对象和数组两种响应格式（兼容直接返回数组的接口）
           if (typeof success === 'function' && res && (isObject(res) || Array.isArray(res))) {
             success(res as Record<string, unknown>)
           }
@@ -45,76 +48,6 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
     }
   }
 
-  const checkQueryFields = (obj: Record<string, unknown>): boolean => {
-    const checkListKey = ['total', 'pageSize', 'current', 'listData']
-    if (isObject(obj)) {
-      return Object.keys(obj).every((it) => {
-        return checkListKey.find((its) => its === it) && obj[it] && typeof obj[it] === 'string'
-      })
-    }
-    return false
-  }
-
-  const configFormField = (options: Record<string, unknown> = {}, fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>) => {
-    if (isObject(options.configFormOut) && Object.keys(options.configFormOut).length && checkQueryFields(options.configFormOut as Record<string, unknown>)) {
-      return options.configFormOut as Record<string, string>
-    }
-
-    if (typeof fieldFieldOutput === 'function') {
-      const configFields = fieldFieldOutput({
-        total: 'records',
-        pageSize: 'pageSize',
-        current: 'pageNo',
-        listData: 'rows'
-      })
-      if (checkQueryFields(configFields)) {
-        return configFields
-      }
-    }
-
-    return {
-      total: 'records',
-      pageSize: 'pageSize',
-      current: 'pageNo',
-      listData: 'rows'
-    }
-  }
-
-  const formatConfigOut = (row: Record<string, unknown>, keyList: string[], options: Record<string, unknown> = {}, fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>) => {
-    const configFieldOut = configFormField(options, fieldFieldOutput)
-    const configDataOption: Record<string, unknown> = {}
-
-    // 如果 API 响应本身就是数组，直接作为 listData 使用（兼容直接返回数组的接口）
-    if (keyList.includes('listData') && Array.isArray(row)) {
-      configDataOption['listData'] = row
-      return configDataOption
-    }
-
-    if (isObject(configFieldOut) && Object.keys(configFieldOut).length) {
-      for (const [key, value] of Object.entries(configFieldOut)) {
-        const isKeyUsed = keyList.findIndex((it) => it === key)
-        if (isKeyUsed === -1) continue
-
-        const rowValue = row[value as string]
-        if (rowValue !== undefined && rowValue !== null) {
-          if (key === 'listData') {
-            configDataOption[key] = Array.isArray(rowValue) ? rowValue : []
-          } else {
-            configDataOption[key] = typeof rowValue === 'number' ? rowValue : parseInt(rowValue as string, 10) || 0
-          }
-        } else {
-          const resultData = findValueByKey(row, value as string)
-          if (key === 'listData') {
-            configDataOption[key] = Array.isArray(resultData) ? resultData : []
-          } else {
-            configDataOption[key] = typeof resultData === 'number' ? resultData : parseInt(resultData as string, 10) || 0
-          }
-        }
-      }
-    }
-    return configDataOption
-  }
-
   const httpRequestFormInstance = (model: Record<string, unknown>, options: RequestConfig, rows: FormItemOption, fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>) => {
     return new Promise<{ data: Record<string, unknown>; configRows: Record<string, unknown> }>((resolve, reject) => {
       nextTick(() => {
@@ -123,7 +56,7 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
           {
             ...(options || {}),
             success: (res) => {
-              const configRows = formatConfigOut(res, ['total', 'listData'], rows as unknown as Record<string, unknown>, fieldFieldOutput)
+              const configRows = formatConfigOut(res, ['total', 'listData'], rows as unknown as Record<string, unknown>, fieldFieldOutput as unknown as ((defaults: ConfigFormFieldOut) => ConfigFormFieldOut) | undefined)
               resolve({ data: res, configRows })
             },
             fail: (err) => {
@@ -161,17 +94,11 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
           const option = apiUrlList[index]
           const listenToCallBack = option?.listenToCallBack as Record<string, (params: unknown) => unknown> | undefined
 
-          /**
-           * 优先使用 listenToCallBack.crtn 格式化数据
-           * crtn 接收 API 原始响应 data，返回 [{ label, value }] 格式的选项数据
-           * data 是 httpRequest 返回的 { data: any } 中的 data 字段
-           */
           let listData: unknown[] = []
           if (listenToCallBack?.crtn) {
             listData = listenToCallBack.crtn(data) as unknown[]
           }
 
-          // 如果 crtn 未配置或返回空，则降级使用 callOptionListFormat 或格式化后的数据
           const newListOptions =
             Array.isArray(listData) && listData.length > 0
               ? listData
@@ -195,6 +122,6 @@ export function useFormRequest(httpRequestGlobal?: (params: Record<string, unkno
     queryTableListMethod,
     getEveryFormQueryField,
     formatConfigOut,
-    configFormField
+    configFormField,
   }
 }

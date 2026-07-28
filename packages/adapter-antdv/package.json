@@ -72,7 +72,13 @@
     "@ant-design/icons-vue": "^7.0.0",
     "ant-design-vue": "^4.0.0",
     "dayjs": "^1.10.5",
-    "vue": "^3.2.0"
+    "vue": "^3.2.0",
+    "vxe-table": ">=4.5.0 <5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vxe-table": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@es-plus/core": "^1.0.0"
@@ -90,6 +96,7 @@
     "vitest": "^1.2.0",
     "vue": "^3.4.0",
     "vue-tsc": "^3.3.1",
-    "happy-dom": "^14.0.0"
+    "happy-dom": "^14.0.0",
+    "vxe-table": "^4.6.0"
   }
 }

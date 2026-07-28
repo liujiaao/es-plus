@@ -1,71 +1,71 @@
 import { ref, nextTick } from 'vue'
+import {
+  createSelectionState,
+  applySelectionChange,
+  restoreSelectionForPage,
+  clearAllSelection as coreClearAll,
+  type TableRefLike,
+} from '@es-plus/core'
 
 export function useTableSelection(rowkey?: string) {
+  const state = createSelectionState()
   const multipleSelection = ref<Record<string, unknown>[]>([])
   const selectionsByPage = ref<Record<number, Record<string, unknown>[]>>({})
   const isInitChange = ref(false)
 
+  const sync = () => {
+    multipleSelection.value = [...state.multipleSelection]
+    selectionsByPage.value = { ...state.selectionsByPage }
+    isInitChange.value = state.isInitChange
+  }
+
   const handleSelectionChange = (val: Record<string, unknown>[], currentPage: number) => {
-    if (rowkey) {
-      if (isInitChange.value) return
-      selectionsByPage.value[currentPage] = val
-      const allSelections: Record<string, unknown>[] = []
-      const uniqueMap: Record<string, boolean> = {}
+    if (state.isInitChange && rowkey) return
+    applySelectionChange(state, val, currentPage, rowkey)
+    sync()
+  }
 
-      Object.values(selectionsByPage.value).forEach((pageSelections) => {
-        pageSelections.forEach((item) => {
-          const key = item[rowkey] as string
-          if (key && !uniqueMap[key]) {
-            allSelections.push(item)
-            uniqueMap[key] = true
-          }
-        })
-      })
-
-      multipleSelection.value = allSelections
-    } else {
-      multipleSelection.value = val
+  const handleSelectData = (
+    dataList: Record<string, unknown>[],
+    tableRef: { toggleRowSelection?: (row: Record<string, unknown>, selected: boolean) => void }
+  ) => {
+    if (dataList?.length && rowkey && state.multipleSelection.length) {
+      restoreSelectionForPage(state, dataList, tableRef as TableRefLike, rowkey)
     }
   }
 
-  const handleSelectData = (dataList: Record<string, unknown>[], tableRef: { toggleRowSelection?: (row: Record<string, unknown>, selected: boolean) => void }) => {
-    if (dataList?.length && rowkey && multipleSelection.value.length) {
-      const pageSelecteds: Record<string, unknown>[] = []
-      dataList.forEach((row) => {
-        multipleSelection.value.forEach((selectedRow) => {
-          if (row[rowkey] === selectedRow[rowkey]) {
-            pageSelecteds.push(row)
-          }
-        })
-      })
-
-      pageSelecteds.forEach((row) => {
-        tableRef.toggleRowSelection?.(row, true)
-      })
-    }
-  }
-
-  const clearAllSelection = (tableRef: { clearSelection?: () => void }) => {
-    multipleSelection.value = []
-    selectionsByPage.value = {}
-    tableRef.clearSelection?.()
-  }
-
-  const initSelection = (dataList: Record<string, unknown>[], tableRef: { toggleRowSelection?: (row: Record<string, unknown>, selected: boolean) => void; clearSelection?: () => void } | null) => {
-    isInitChange.value = true
+  const clearAllSelection = (tableRef: TableRefLike | null | undefined) => {
     if (!tableRef) {
-      isInitChange.value = false
+      state.multipleSelection = []
+      state.selectionsByPage = {}
+    } else {
+      coreClearAll(state, tableRef)
+    }
+    sync()
+  }
+
+  const initSelection = (
+    dataList: Record<string, unknown>[],
+    tableRef: TableRefLike | null
+  ) => {
+    state.isInitChange = true
+    sync()
+    if (!tableRef) {
+      state.isInitChange = false
+      sync()
       return
     }
     if (rowkey) {
       nextTick(() => {
-        handleSelectData(dataList, tableRef)
-        isInitChange.value = false
+        restoreSelectionForPage(state, dataList, tableRef, rowkey)
+        state.isInitChange = false
+        sync()
       })
     } else {
       nextTick(() => {
         tableRef.clearSelection?.()
-        isInitChange.value = false
+        state.isInitChange = false
+        sync()
       })
     }
   }
@@ -77,6 +77,6 @@ export function useTableSelection(rowkey?: string) {
     handleSelectionChange,
     handleSelectData,
     clearAllSelection,
-    initSelection
+    initSelection,
   }
 }

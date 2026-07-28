@@ -83,6 +83,7 @@ export type {
   FormItemOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableOptions, PaginationConfig, DialogOptions,
   EsFormInstance, EsTableInstance, EsPlusOptions, ListenToCallBack,
+  TableEngineExposed, VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig,
 } from './types'
 // 对齐 vue3：导出 CRUD 高级类型
 export type {

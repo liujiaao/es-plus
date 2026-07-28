@@ -356,6 +356,24 @@ export interface TableColumn {
     clickEvent?: (row: ModelData) => void
     [key: string]: unknown
   }>
+  /**
+   * 行内编辑渲染器（仅 vxe 引擎生效，需配合 options.editConfig 使用）
+   * @example
+   * { prop: 'price', editRender: { name: '$input', props: { type: 'number' } } }
+   * { prop: 'type',  editRender: { name: '$select', options: [{ label: '是', value: 1 }] } }
+   */
+  editRender?: VxeEditRender
+  /**
+   * 表尾单元格格式化（仅 vxe 引擎 + options.showFooter 生效）
+   * @example
+   * footerFormatter: ({ items }) => `¥${items.reduce((s, v) => s + Number(v), 0).toFixed(2)}`
+   */
+  footerFormatter?: (params: {
+    items: unknown[]
+    _columnIndex: number
+    column: { field: string; title: string; [key: string]: unknown }
+    columns: Array<{ field: string; title: string; [key: string]: unknown }>
+  }) => string
   /** 允许任意扩展键 */
   [key: string]: unknown
 }
@@ -373,6 +391,194 @@ export interface ConfigTableOut {
   pageSize?: string
   /** 当前页字段名 */
   current?: string
+}
+
+// ============================================================================
+// vxe 引擎专属类型（一等公民 API，不依赖 vxe-table 安装即可获得类型提示）
+// ============================================================================
+
+/** 行内编辑渲染器配置 */
+export interface VxeEditRender {
+  /** 渲染器名称：'$input' | '$select' | '$textarea' | '$date' | 自定义注册名 */
+  name?: string
+  /** 渲染模式：'default'=点击进入编辑 / 'visible'=常驻可见 */
+  type?: 'default' | 'visible'
+  /** 下拉选项（用于 $select 渲染器） */
+  options?: { label: string; value: unknown }[]
+  /** 传递给渲染器组件的 props */
+  props?: Record<string, unknown>
+  /** 渲染器事件（key = 组件事件名，如 'change'） */
+  events?: Record<string, (...args: unknown[]) => unknown>
+  /** 自动聚焦（CSS 选择器或 true） */
+  autofocus?: string | boolean
+  /** 默认值 */
+  defaultValue?: unknown
+}
+
+/** 表格行内编辑配置 */
+export interface VxeEditConfig {
+  /** 触发方式：click / dblclick / manual */
+  trigger?: 'click' | 'dblclick' | 'manual'
+  /** 编辑模式：cell 单元格级 / row 整行级 */
+  mode?: 'cell' | 'row'
+  /** 显示单元格编辑状态角标 */
+  showStatus?: boolean
+  showUpdateStatus?: boolean
+  showInsertStatus?: boolean
+  /** 点击其他区域自动关闭编辑 */
+  autoClear?: boolean
+  enabled?: boolean
+}
+
+/** Excel / CSV 导出配置 */
+export interface VxeExportConfig {
+  filename?: string
+  sheetName?: string
+  /**
+   * 导出格式
+   * xlsx 格式需额外安装并注册 @vxe-table/plugin-export-xlsx：
+   *   import VXETable from 'vxe-table'
+   *   import VxeTablePluginExportXLSX from '@vxe-table/plugin-export-xlsx'
+   *   VXETable.use(VxeTablePluginExportXLSX)
+   */
+  type?: 'xlsx' | 'csv' | 'html' | 'xml' | 'txt'
+  types?: ('xlsx' | 'csv' | 'html' | 'xml' | 'txt')[]
+  /** 保留单元格样式导出（仅 xlsx） */
+  useStyle?: boolean
+  /** 支持多级表头导出 */
+  isColgroup?: boolean
+  /** 导出合并单元格 */
+  isMerge?: boolean
+  columnFilterMethod?: (params: { column: Record<string, unknown> }) => boolean
+  dataFilterMethod?: (params: { row: Record<string, unknown> }) => boolean
+}
+
+/** 工具栏配置（含导出/刷新/自定义列/打印按钮） */
+export interface VxeToolbarConfig {
+  refresh?: boolean | { queryMethod?: () => void | Promise<void> }
+  export?: boolean | { isPrint?: boolean }
+  print?: boolean
+  /** 全屏切换按钮 */
+  zoom?: boolean
+  /** 自定义列显示/隐藏按钮 */
+  custom?: boolean
+  slots?: { buttons?: string; tools?: string }
+}
+
+/** 列宽拖拽调整配置 */
+export interface VxeColumnConfig {
+  resizable?: boolean
+  minResizableWidth?: number
+  maxResizableWidth?: number
+}
+
+/** 键盘导航配置 */
+export interface VxeKeyboardConfig {
+  /** 方向键移动单元格焦点 */
+  isArrow?: boolean
+  /** Tab 切换单元格 */
+  isTab?: boolean
+  /** Enter 确认并移动 */
+  isEnter?: boolean
+  /** 任意字符触发进入编辑 */
+  isEdit?: boolean
+  /** Delete/Backspace 清空单元格内容 */
+  isDel?: boolean
+  /** Enter 等同 Tab 行为 */
+  enterToTab?: boolean
+}
+
+/** 单元格选中模式配置 */
+export interface VxeMouseConfig {
+  /** 点击单元格高亮选中 */
+  selected?: boolean
+}
+
+/** 剪贴板配置 */
+export interface VxeClipboardConfig {
+  isCopy?: boolean
+  isPaste?: boolean
+}
+
+/** 单元格内容校验配置 */
+export interface VxeValidConfig {
+  autoPos?: boolean
+  message?: 'default' | 'tooltip' | 'modal' | 'none'
+  msgMode?: 'single' | 'full'
+}
+
+/**
+ * 表尾合计行计算函数
+ * - columns：vxe 适配后的列对象（含 field/title）
+ * - data：当前页数据
+ * - 返回二维数组 [行][列] = 合计单元格内容
+ */
+export type VxeFooterMethod = (params: {
+  columns: Array<{ field: string; title: string; [key: string]: unknown }>
+  data: Record<string, unknown>[]
+}) => unknown[][]
+
+/** 树形数据配置（vxe engine:vxe + 树状数据） */
+export interface VxeTreeConfig {
+  /** 平铺数据转树（需配合 rowField + parentField） */
+  transform?: boolean
+  /** 行唯一标识字段名（默认 'id'） */
+  rowField?: string
+  /** 父节点字段名（默认 'parentId'） */
+  parentField?: string
+  /** 子节点字段名（默认 'children'） */
+  children?: string
+  /** 默认展开全部 */
+  expandAll?: boolean
+  /** 懒加载子节点 */
+  lazy?: boolean
+  /** 懒加载方法 */
+  loadMethod?: (params: { row: Record<string, unknown> }) => Promise<unknown[]>
+}
+
+/** 代理数据源配置（vxe 内置分页 + 远程请求） */
+export interface VxeProxyConfig {
+  /** 初始化时自动触发加载，默认 true */
+  autoLoad?: boolean
+  ajax?: {
+    /** 查询数据方法 */
+    query?: (params: Record<string, unknown>) => Promise<{
+      result: unknown[]
+      page?: { total: number }
+    }>
+  }
+  /** 响应字段映射 */
+  props?: {
+    /** 数据数组字段名，默认 'result' */
+    result?: string
+    /** 总数字段名，默认 'total' */
+    total?: string
+  }
+}
+
+/** 行展开配置 */
+export interface VxeExpandConfig {
+  /** 默认展开所有行 */
+  expandAll?: boolean
+  /** 手风琴模式（一次只展开一行） */
+  accordion?: boolean
+  /** 懒加载展开内容 */
+  lazy?: boolean
+  /** 懒加载方法 */
+  loadMethod?: (params: { row: Record<string, unknown> }) => Promise<void>
+  /** 是否允许展开的判断方法 */
+  toggleMethod?: (params: { row: Record<string, unknown> }) => boolean
+}
+
+/** 序号列配置 */
+export interface VxeSeqConfig {
+  /** 起始序号（默认 1） */
+  startIndex?: number
+  /** 自定义序号格式化方法 */
+  seqMethod?: (params: {
+    rowIndex: number
+    row: Record<string, unknown>
+  }) => number | string
 }
 
 /**
@@ -444,13 +650,112 @@ export interface TableOptions {
   /** 启用虚拟滚动（Vue 2 版本不支持，会降级为普通表格） */
   virtual?: boolean
   /** 渲染引擎选择 */
-  engine?: 'default' | 'virtual'
+  engine?: 'default' | 'virtual' | 'vxe'
   /** 虚拟滚动行高（默认 50） */
   rowHeight?: number
   /** 动态行高预估值 */
   estimatedRowHeight?: number
   /** 可视区域外预渲染行数（默认 2） */
   overscanCount?: number
+
+  // ─── vxe 引擎一等公民 API（仅 engine:'vxe' 生效，其他引擎安全忽略）──────────
+
+  /** 是否显示表尾合计行 */
+  showFooter?: boolean
+  /**
+   * 合计行计算函数（动态，与 footerData 二选一）
+   * @example
+   * showFooter: true,
+   * footerMethod: ({ columns, data }) => [
+   *   columns.map((col, i) => i === 0 ? '合计' : data.reduce((s, r) => s + Number(r[col.field] || 0), 0))
+   * ]
+   */
+  footerMethod?: VxeFooterMethod
+  /**
+   * 合计行静态数据（与 footerMethod 二选一，格式：[行][列] 二维数组）
+   * @example
+   * footerData: [['合计', 1000, 500]]
+   */
+  footerData?: unknown[][]
+  /**
+   * 行内编辑配置（需同时为列设置 column.editRender）
+   * @example
+   * editConfig: { trigger: 'click', mode: 'row', showStatus: true }
+   */
+  editConfig?: VxeEditConfig
+  /**
+   * Excel / CSV 导出配置
+   * xlsx 格式需额外安装：npm i @vxe-table/plugin-export-xlsx
+   * 并在 app.use 前注册：VXETable.use(VxeTablePluginExportXLSX)
+   * @example
+   * exportConfig: { filename: '财务报表', type: 'xlsx', useStyle: true }
+   * exportConfig: true  // 使用默认配置
+   */
+  exportConfig?: VxeExportConfig | true
+  /**
+   * 工具栏（含导出/刷新/自定义列/打印按钮）
+   * 启用后自动隐藏 ES-Plus 的 configBtn 工具栏，避免双工具栏冲突
+   * @example
+   * toolbarConfig: { export: true, refresh: true, custom: true }
+   * toolbarConfig: true  // 等同 { export: true, refresh: true, custom: true }
+   */
+  toolbarConfig?: VxeToolbarConfig | boolean
+  /**
+   * 列宽拖拽调整
+   * @example
+   * columnConfig: { resizable: true }
+   */
+  columnConfig?: VxeColumnConfig
+  /**
+   * 键盘导航（方向键/Tab/Enter/字符触发编辑）
+   * @example
+   * keyboardConfig: { isArrow: true, isEnter: true, isEdit: true }
+   */
+  keyboardConfig?: VxeKeyboardConfig
+  /**
+   * 单元格点击高亮选中模式
+   * @example
+   * mouseConfig: { selected: true }
+   */
+  mouseConfig?: VxeMouseConfig
+  /**
+   * 剪贴板复制/粘贴（需配合 mouseConfig.selected 使用）
+   * @example
+   * mouseConfig: { selected: true }, clipboardConfig: { isCopy: true, isPaste: true }
+   */
+  clipboardConfig?: VxeClipboardConfig
+  /**
+   * 单元格内容校验（配合 column.editRender 的 rules 字段使用）
+   * @example
+   * validConfig: { autoPos: true, message: 'tooltip' }
+   */
+  validConfig?: VxeValidConfig
+
+  // ─── vxe 进阶：树形 / 代理数据源 / 展开 / 序号 ─────────────────
+  /**
+   * 树形数据配置（需配合 column.treeNode:true 标记树节点列）
+   * @example
+   * treeConfig: { transform: true, rowField: 'id', parentField: 'parentId' }
+   */
+  treeConfig?: VxeTreeConfig
+  /**
+   * 代理数据源（vxe 内置分页 + 远程查询，与 actionUrl/apiParams 模式互斥）
+   * @example
+   * proxyConfig: { autoLoad: true, ajax: { query: ({ page }) => fetchData(page) } }
+   */
+  proxyConfig?: VxeProxyConfig
+  /**
+   * 行展开配置
+   * @example
+   * expand: true, expandConfig: { accordion: true }
+   */
+  expandConfig?: VxeExpandConfig
+  /**
+   * 序号列配置（需配合 snIndex: true 或 type:'index' 列使用）
+   * @example
+   * seqConfig: { startIndex: 10 }
+   */
+  seqConfig?: VxeSeqConfig
 
   /** 允许任意扩展键 */
   [key: string]: unknown
@@ -619,4 +924,45 @@ export interface EsPlusOptions {
   EsDialog?: Record<string, unknown>
   /** 允许任意扩展键 */
   [key: string]: unknown
+}
+
+// ============================================================================
+// 引擎接口（跨包共享，不含 Vue 依赖）
+// ============================================================================
+
+/**
+ * 所有渲染引擎必须实现的公开方法接口
+ * 由 vue3 / adapter-antdv / vue2 的各 engine 组件 defineExpose 满足
+ */
+export interface TableEngineExposed {
+  getTableRef: () => unknown
+  doLayout: () => void
+  toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
+  clearSelection: () => void
+  getSelectedRows: () => Record<string, unknown>[]
+  scrollToRow: (row: number) => void
+  /** vxe 原始实例（完整访问 vxe-grid 60+ 方法） */
+  vxeInstance?: () => unknown
+
+  // ── 行内编辑 CRUD 追踪（仅 vxe 引擎实现）─────────────────────
+  /** 清除当前激活的编辑单元格 */
+  clearActived?: () => Promise<void>
+  /** 清除所有单元格校验提示 */
+  clearValidate?: () => Promise<void>
+  /** 校验所有/指定行（校验失败时 reject） */
+  validate?: (rows?: Record<string, unknown>[]) => Promise<unknown>
+  /** 获取新增行列表（insert 后未保存） */
+  getInsertRecords?: () => Record<string, unknown>[]
+  /** 获取已修改行列表 */
+  getUpdateRecords?: () => Record<string, unknown>[]
+  /** 获取已删除行列表 */
+  getRemoveRecords?: () => Record<string, unknown>[]
+  /** 还原行到编辑前状态 */
+  revertData?: (rows?: Record<string, unknown> | Record<string, unknown>[]) => Promise<void>
+
+  // ── 导出 / 打印 ────────────────────────────────────────────
+  /** 触发导出（参数覆盖 options.exportConfig） */
+  exportData?: (options?: VxeExportConfig) => Promise<void>
+  /** 触发打印 */
+  print?: () => Promise<void>
 }

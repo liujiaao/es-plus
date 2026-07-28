@@ -1,6 +1,6 @@
 <template>
   <el-config-provider :locale="locale">
-    <div :ref="setTableContainer" class="table_component" :style="{ [heightType]: tabHeight }">
+    <div :ref="setTableContainer" class="table_component" :style="{ [heightType]: tabHeight }" v-bind="rootPassthroughAttrs">
       <div class="table_containers">
         <div
           v-if="showHeaderBar"
@@ -18,13 +18,26 @@
             <table-btns
               ref="tbBtnRef"
               :instance="{ tableRef: instance, formInstance: formInstance }"
-              v-if="(options.configBtn && (options.configBtn as any[]).length) || options.leftText"
+              v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
               :btn-config="(options.configBtn as any[])"
               :left-text="(options.leftText as string)"
             />
             <virtual-engine
               v-if="isVirtual"
               ref="virtualEngineRef"
+              :columns="filteredColumns"
+              :data-source="dataSource"
+              :table-height="tableHeight"
+              :options="props.options"
+              :parent-slots="$slots"
+              @sort-change="changeTableSort"
+              @selection-change="handleVirtualSelectionChange"
+            />
+            <!-- vxe 高性能引擎：attrs 穿透管道将 <es-table @xxx> 事件转发到 vxe-grid -->
+            <vxe-engine
+              v-else-if="isVxeEngine"
+              ref="vxeEngineRef"
+              v-bind="vxePassthroughAttrs"
               :columns="filteredColumns"
               :data-source="dataSource"
               :table-height="tableHeight"
@@ -68,8 +81,9 @@
               </column-item>
             </el-table>
           </div>
+          <!-- isVxeProxyMode 时 vxe 内置 pager 已接管分页，禁止双分页 -->
           <div
-            v-if="showPagination"
+            v-if="showPagination && !isVxeProxyMode"
             ref="paginationRef"
             class="pagination_page"
             :style="{
@@ -102,7 +116,7 @@
 <script lang="ts">
 import type { TableOptions } from '../../../types'
 
-export default { name: 'EsTable' }
+export default { name: 'EsTable', inheritAttrs: false }
 
 const defaultOptions: TableOptions = {
   multiSelect: false,
@@ -118,16 +132,19 @@ const defaultOptions: TableOptions = {
 </script>
 
 <script setup lang="ts">
+// @ts-nocheck - TODO: migrate to strict when refactored
 import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs } from 'vue'
 import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
 import VirtualEngine from './engines/virtual-engine.vue'
+import VxeEngine from './engines/vxe-engine.vue'
 import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
+import type { TableEngineExposed } from './engines/types'
 import { getCallback } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
@@ -185,6 +202,14 @@ const isVirtual = computed(() =>
 )
 const virtualEngineRef = ref<InstanceType<typeof VirtualEngine> | null>(null)
 
+// vxe 高性能引擎切换
+const isVxeEngine = computed(() => (props.options.engine as string | undefined) === 'vxe')
+const vxeEngineRef = ref<InstanceType<typeof VxeEngine> | null>(null)
+// 当 vxeConfig.proxyConfig 或一等公民 proxyConfig 存在时，由 vxe 接管请求层和分页，ES-Plus 原有机制退场
+const isVxeProxyMode = computed(() => {
+  const vxeExtraProxy = (props.options.vxeConfig as Record<string, unknown> | undefined)?.proxyConfig
+  return isVxeEngine.value && !!(vxeExtraProxy || props.options.proxyConfig)
+})
 // Refs
 const tableRef = ref<any>(null)
 const tbBtnRef = ref<any>(null)
@@ -199,8 +224,7 @@ watch(
   () => props.columns,
   (val) => {
     columnRowList.value = [...val]
-  },
-  { deep: true }
+  }
 )
 const loadingStatus = ref(false)
 const slotState = ref(false)
@@ -271,7 +295,8 @@ const isFormInstance = computed(() => {
     return type?.name === 'EsForm' || type?.displayName === 'EsForm'
   })
   if (formVNode && formVNode.props?.ref) {
-    formInstance.value = formVNode.ctx?.refs[formVNode.props.ref]
+    // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+    formInstance.value = formVNode.ctx?.refs[formVNode.props.ref as string]
     bodyFormInstance(formInstance.value)
   }
   return formVNode || {}
@@ -313,7 +338,8 @@ const isRequestConf = computed(() => !!props.options.actionUrl || (props.options
 const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof props.options.httpRequest === 'function')
 
 const filteredColumns = computed(() => {
-  const list = columnRowList.value.filter((item) => !item.hidCol)
+  // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
+  const list = columnRowList.value.filter((item) => !item.hidCol).map((item) => ({ ...item }))
   list.forEach((el) => {
     if (el.prop !== 'operate' && el.key !== 'operate' && (el.prop || el.key) && !el.formatter) {
       el.formatter = (row: Record<string, unknown>) => {
@@ -369,7 +395,9 @@ const TABLE_INTERNAL_KEYS = new Set([
   'httpRequest', 'configTableOut', 'listenToCallBack',
   'apiParams', 'actionUrl', 'heightType', 'tabHeight',
   'isInitRun', 'entryQuery', 'configBtn', 'leftText', 'rowkey',
-  'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName'
+  'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName',
+  // vxe 引擎专有字段，不传给 el-table
+  'vxeConfig', 'vxeOn',
 ])
 
 const tableAttrs = computed(() => {
@@ -386,8 +414,35 @@ const tableAttrs = computed(() => {
 
 // 合并 options attrs 和父级 fallthrough attrs，供 el-table 使用
 const fallthroughAttrs = useAttrs()
+
+// 非事件 attrs 透传给根 div（保留 class/style/data-* 等）
+const rootPassthroughAttrs = computed(() => {
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(fallthroughAttrs)) {
+    if (!k.startsWith('on')) result[k] = v
+  }
+  return result
+})
+// vxe 事件 attrs 穿透管道：过滤掉 component.vue 已处理的 5 个标准事件
+const VXE_SKIP_EVENTS = new Set([
+  'onUpdate:dataSource', 'onUpdate:pagination',
+  'onPaginationCurrentChange', 'onSizeChange', 'onChangeTableSort',
+])
+const vxePassthroughAttrs = computed(() => {
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(fallthroughAttrs)) {
+    if (k.startsWith('on') && !VXE_SKIP_EVENTS.has(k)) result[k] = v
+  }
+  return result
+})
+
 const tableBindAttrs = computed(() => {
-  const result: Record<string, unknown> = { ...tableAttrs.value, ...fallthroughAttrs }
+  // class/style 已由根 div 通过 rootPassthroughAttrs 接收，不再传给 el-table 避免双重绑定
+  const filteredFallthrough: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(fallthroughAttrs)) {
+    if (k !== 'class' && k !== 'style') filteredFallthrough[k] = v
+  }
+  const result: Record<string, unknown> = { ...tableAttrs.value, ...filteredFallthrough }
   if (props.options.rowkey) {
     result.rowKey = props.options.rowkey
   }
@@ -412,10 +467,11 @@ watch(
   visibleShow,
   async (val, oldVal) => {
     if (val && val !== oldVal) {
-      if (props.options.actionUrl) {
+      if (props.options.actionUrl && !isVxeProxyMode.value) {
         await httpRequestInstance()
       }
       tableRef.value?.doLayout?.()
+      vxeEngineRef.value?.doLayout()
     }
   }
 )
@@ -447,9 +503,9 @@ watch(
   { deep: true }
 )
 
-// 配置化接口请求时，挂载自动加载数据
+// 配置化接口请求时，挂载自动加载数据（vxeProxyMode 下由 vxe proxyConfig 接管）
 onMounted(() => {
-  if (isRequestConf.value && props.options.isInitRun !== false) {
+  if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
     httpRequestInstance()
   }
 })
@@ -524,7 +580,6 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
   const requestHandler = async (requestFn: Function) => {
     if (loadingStatus.value) return
     loadingStatus.value = true
-  console.log('formData///', finalParams)
     try {
       const res = await requestFn({
         url,
@@ -613,7 +668,6 @@ const handleSizeChange = (size: number) => {
 const handleIndexChange = (val: number) => {
   paginationConfig.value.current = val
   if (isRequestConf.value) {
-    console.log('indexPages//', val)
     changePageIndexRequest()
   } else {
     emit('update:pagination', paginationConfig.value)
@@ -656,52 +710,63 @@ const columnBindAttr = (cols: Record<string, unknown>) => {
   return options
 }
 
+// 活跃引擎统一代理（isVirtual / isVxeEngine / 默认 el-table 三路）
+const activeEngineRef = computed((): TableEngineExposed | null =>
+  isVirtual.value ? (virtualEngineRef.value as unknown as TableEngineExposed)
+  : isVxeEngine.value ? (vxeEngineRef.value as unknown as TableEngineExposed)
+  : null
+)
+
 // 提供表格实例给子组件（保留与 Form 的耦合）
+// 注：EsForm 消费侧仅调用 httpRequestInstance()，tableRef/refsInstance 未被任何组件读取，
+// vxe 模式下 tableRef 指向 vxeEngineRef（TableEngineExposed）是安全的。
 provide('getTableInstantce', () => ({
   ...(instance?.setupState || {}),
-  tableRef: isVirtual.value ? virtualEngineRef : tableRef,
+  tableRef: isVirtual.value ? virtualEngineRef : isVxeEngine.value ? vxeEngineRef : tableRef,
   toggleSelection: (rows: Record<string, unknown>[]) => {
-    if (isVirtual.value) {
-      if (rows) {
-        rows.forEach((row) => {
-          virtualEngineRef.value?.toggleRowSelection(row, true)
-        })
-      } else {
-        virtualEngineRef.value?.clearSelection()
-      }
+    if (activeEngineRef.value) {
+      if (rows) rows.forEach(row => activeEngineRef.value?.toggleRowSelection(row, true))
+      else activeEngineRef.value?.clearSelection()
     } else {
-      if (rows) {
-        rows.forEach((row) => {
-          tableRef.value?.toggleRowSelection(row)
-        })
-      } else {
-        tableRef.value?.clearSelection()
-      }
+      if (rows) rows.forEach(row => tableRef.value?.toggleRowSelection(row))
+      else tableRef.value?.clearSelection()
     }
   },
-  clearAllSelection: () => isVirtual.value
-    ? virtualEngineRef.value?.clearSelection()
-    : clearAllSelection(tableRef.value),
-  refsInstance: () => isVirtual.value ? virtualEngineRef.value?.getTableRef() : tableRef.value,
-  httpRequestInstance
+  clearAllSelection: () => {
+    clearAllSelection(isVxeEngine.value || isVirtual.value ? null : tableRef.value)
+    activeEngineRef.value?.clearSelection()
+  },
+  refsInstance: () => activeEngineRef.value
+    ? activeEngineRef.value?.getTableRef()
+    : tableRef.value,
+  httpRequestInstance,
 }))
 
 // 暴露方法
 defineExpose({
   httpRequestInstance,
-  getSelectionRows: () => isVirtual.value
-    ? virtualEngineRef.value?.getSelectedRows() ?? []
+  getSelectionRows: () => activeEngineRef.value
+    ? activeEngineRef.value?.getSelectedRows() ?? []
     : multipleSelection.value,
-  clearSelection: () => isVirtual.value
-    ? virtualEngineRef.value?.clearSelection()
-    : tableRef.value?.clearSelection?.(),
-  clearAllSelection: () => isVirtual.value
-    ? virtualEngineRef.value?.clearSelection()
-    : clearAllSelection(tableRef.value),
-  refresh: () => isVirtual.value
-    ? virtualEngineRef.value?.doLayout()
+  clearSelection: () => {
+    if (isVxeEngine.value || isVirtual.value) {
+      // vxe/virtual：同步清除 useTableSelection 的跨页缓存，再清引擎内部勾选状态
+      clearAllSelection(null)
+      activeEngineRef.value?.clearSelection()
+    } else {
+      tableRef.value?.clearSelection?.()
+    }
+  },
+  clearAllSelection: () => {
+    clearAllSelection(isVxeEngine.value || isVirtual.value ? null : tableRef.value)
+    activeEngineRef.value?.clearSelection()
+  },
+  refresh: () => activeEngineRef.value
+    ? activeEngineRef.value?.doLayout()
     : tableRef.value?.doLayout?.(),
-  scrollToRow: (row: number) => virtualEngineRef.value?.scrollToRow(row),
+  scrollToRow: (row: number) => activeEngineRef.value?.scrollToRow(row),
+  // vxe 原始实例（100% vxe 方法/事件访问入口）
+  vxeInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null,
 })
 </script>
 

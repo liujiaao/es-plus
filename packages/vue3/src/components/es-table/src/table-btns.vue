@@ -58,7 +58,7 @@ RenderDom.props = {
   render: { type: Function, required: true }
 }
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
 const hasPermission = (_btnList: unknown[], pvalue?: string) => {
   if (!pvalue) return true

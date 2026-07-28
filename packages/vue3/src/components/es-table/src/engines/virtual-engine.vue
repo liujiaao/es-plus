@@ -74,7 +74,7 @@ const emit = defineEmits<{
 const tableV2Ref = ref<InstanceType<typeof ElTableV2> | null>(null)
 const headerHeight = 50
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 const tFn = computed(() => (esPlus.t as ((key: string) => string) | undefined) || undefined)
 
 const rowkey = computed(() => props.options.rowkey || 'id')

@@ -18,7 +18,7 @@ export const isArray = (value) => {
     return Array.isArray(value);
 };
 /** 判断是否为函数 */
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export const isFunction = (value) => {
     return typeof value === 'function';
 };
