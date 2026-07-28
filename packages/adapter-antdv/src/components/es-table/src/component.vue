@@ -416,7 +416,11 @@ const vxeFilteredColumns = computed(() => {
     if ((col.prop === 'operate' || col.key === 'operate') && col.btns && !col.render) {
       col.render = (_h: any, { row }: { row: Record<string, unknown> }) =>
         h('div', { style: 'display:flex;gap:4px;flex-wrap:wrap;justify-content:center' }, [
-          (col.btns?.filter((btn: any) => checkPermission(btn.permissionValue)) || [])
+          (col.btns?.filter((btn: any) => {
+            if (!checkPermission(btn.permissionValue)) return false
+            if (typeof btn.hidden === 'function') return !btn.hidden(row)
+            return !btn.hidden
+          }) || [])
             .map((btn: any) =>
               h(AButton, {
                 onClick: () => btn.clickEvent?.(row),
