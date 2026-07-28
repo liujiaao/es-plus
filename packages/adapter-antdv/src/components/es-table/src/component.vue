@@ -778,6 +778,11 @@ function queryTableListMethod(
 }
 
 const httpRequestInstance = (model?: Record<string, unknown>) => {
+  // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
+  if (isVxeProxyMode.value) {
+    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+    return Promise.resolve()
+  }
   return new Promise((resolve, reject) => {
     paginationConfig.value.current = 1
     queryTableListMethod(
@@ -836,6 +841,7 @@ watch(visibleShow, async (val, oldVal) => {
     // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
     resizeObservers?.()
     tableRef.value?.$forceUpdate?.()
+    vxeEngineRef.value?.doLayout?.()  // vxe 引擎：重算列宽（对齐 vue3/vue2 路径）
   }
 })
 

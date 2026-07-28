@@ -354,7 +354,12 @@ const filteredColumns = computed(() => {
     if ((el.prop === 'operate' || el.key === 'operate') && el.btns && !el.render) {
       el.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
         return h('div', [
-          el.btns?.filter((btn: any) => checkPermission(btn.permissionValue))
+          el.btns
+            ?.filter((btn: any) => {
+              if (!checkPermission(btn.permissionValue)) return false
+              if (typeof btn.hidden === 'function') return !btn.hidden(row)
+              return !btn.hidden
+            })
             .map((btn: any) =>
             h(ElButton, {
               onClick: () => btn.clickEvent?.(row),
@@ -398,6 +403,10 @@ const TABLE_INTERNAL_KEYS = new Set([
   'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName',
   // vxe 引擎专有字段，不传给 el-table
   'vxeConfig', 'vxeOn',
+  'showFooter', 'footerMethod', 'footerData',
+  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
+  'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
+  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
 ])
 
 const tableAttrs = computed(() => {
@@ -609,6 +618,11 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
 }
 
 const httpRequestInstance = (model?: Record<string, unknown>) => {
+  // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
+  if (isVxeProxyMode.value) {
+    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+    return Promise.resolve()
+  }
   return new Promise((resolve, reject) => {
     paginationConfig.value.current = 1
     queryTableListMethod(

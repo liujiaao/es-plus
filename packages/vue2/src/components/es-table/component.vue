@@ -245,6 +245,12 @@ const TABLE_INTERNAL_KEYS = new Set([
   'overscanCount',
   'rowClassName',
   'lazyLoad',
+  // vxe 引擎专有字段，不传给 el-table
+  'vxeConfig', 'vxeOn',
+  'showFooter', 'footerMethod', 'footerData',
+  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
+  'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
+  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -642,7 +648,11 @@ export default defineComponent({
           col.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
             return h('div', [
               col.btns
-                ?.filter((btn: any) => checkPermission(btn.permissionValue))
+                ?.filter((btn: any) => {
+                  if (!checkPermission(btn.permissionValue)) return false
+                  if (typeof btn.hidden === 'function') return !btn.hidden(row)
+                  return !btn.hidden
+                })
                 .map((btn: any) =>
                   // Element UI text 按钮：type="text" 而非 text 属性
                   h(
@@ -930,6 +940,11 @@ export default defineComponent({
     }
 
     const httpRequestInstance = (model?: Record<string, unknown>) => {
+      // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
+      if (isVxeProxyMode.value) {
+        ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+        return Promise.resolve()
+      }
       return new Promise((resolve, reject) => {
         paginationConfig.value = { ...paginationConfig.value, current: 1 }
         queryTableListMethod(
