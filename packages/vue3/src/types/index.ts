@@ -223,6 +223,8 @@ export interface TableOptions {
   footerData?: unknown[][]
   /** Inline editing config (vxe engine only, requires column.editRender) */
   editConfig?: VxeEditConfig
+  /** Keep original data snapshot so getUpdateRecords/getInsertRecords work (auto-enabled when editConfig is set) */
+  keepSource?: boolean
   /** Excel/CSV export config (vxe engine only; xlsx requires extra plugin) */
   exportConfig?: VxeExportConfig | true
   /** Toolbar config — hides ES-Plus configBtn to avoid double toolbars (vxe engine only) */

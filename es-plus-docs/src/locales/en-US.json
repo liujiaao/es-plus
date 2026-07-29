@@ -29,6 +29,7 @@
     "esCrudPage": "EsCrudPage",
     "useDialog": "useDialog",
     "linkage": "Linkage Composition",
+    "vxeTable": "High-perf vxe-table",
     "mcpServer": "MCP Server",
     "cli": "CLI",
     "vue2": "Vue 2 Guide",

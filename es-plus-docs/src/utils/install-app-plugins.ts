@@ -19,3 +19,4 @@ export function installAppPlugins(app: App) {
   app.use(ESPlus, { globalProperties: true })
   app.use(i18n)
 }
+

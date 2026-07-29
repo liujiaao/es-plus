@@ -36,11 +36,11 @@ export function useVxeColumnAdapter(
     if (opts.multiSelect && !colList.some(c => c.type === 'selection')) {
       cols.push({ type: 'checkbox', width: 50, fixed: 'left', align: 'center' })
     }
-    if (opts.snIndex && !colList.some(c => c.type === 'index')) {
+    if (opts.snIndex && !colList.some(c => c.type === 'index' || c.type === 'snIndex')) {
       cols.push({ type: 'seq', width: 60, title: '#', align: 'center' })
     }
     if (opts.expand && !colList.some(c => c.type === 'expand')) {
-      cols.push({ type: 'expand', width: 50, fixed: 'left', align: 'center' })
+      cols.push({ type: 'expand', width: 50, fixed: 'left', align: 'center', slots: { content: 'expand' } })
     }
 
     for (const col of colList) {
@@ -54,7 +54,7 @@ export function useVxeColumnAdapter(
           align: 'center',
           ...((col as any).vxeColumn || {}),
         })
-      } else if (col.type === 'index') {
+      } else if (col.type === 'index' || col.type === 'snIndex') {
         cols.push({
           type: 'seq',
           title: resolveTitle(col, t),
@@ -63,18 +63,34 @@ export function useVxeColumnAdapter(
           ...((col as any).vxeColumn || {}),
         })
       } else if (col.type === 'expand') {
+        let expandContentSlot = 'expand'
+        if (col.render) {
+          expandContentSlot = `_expand_render_${slotMap.size}`
+          slotMap.set(expandContentSlot, col)
+        }
         cols.push({
           type: 'expand',
           title: resolveTitle(col, t),
           width: typeof col.width === 'number' ? col.width : 50,
           fixed: 'left',
           align: 'center',
+          slots: { content: expandContentSlot },
           ...((col as any).vxeColumn || {}),
         })
       } else if (col.groups && col.groups.length > 0) {
         cols.push(adaptGroupCol(col, slotMap, t))
       } else {
         cols.push(adaptSingleCol(col, slotMap, t))
+      }
+    }
+
+    // treeConfig 存在时：自动将第一个数据列标记为 treeNode，驱动 vxe 在该列渲染缩进和展开图标
+    if ((opts as any).treeConfig && !cols.some(c => c.treeNode)) {
+      const firstDataCol = cols.find(c => !c.type)
+      if (firstDataCol) {
+        firstDataCol.treeNode = true
+        // 树节点列左对齐更易读（仅当列未显式设置 align 时生效）
+        if (!firstDataCol.align || firstDataCol.align === 'center') firstDataCol.align = 'left'
       }
     }
 
@@ -110,6 +126,8 @@ function adaptSingleCol(
   if (col.fixed) base.fixed = col.fixed === true ? 'left' : col.fixed as 'left' | 'right'
   if (col.sortable) base.sortable = true
   if (col.ellipsis) base.showOverflow = 'tooltip'
+  // 显式 treeNode 透传（treeConfig 场景下用户可指定任意列作为树节点列）
+  if ((col as any).treeNode) base.treeNode = true
 
   if (col.render) {
     const slotName = `_render_${field || '_nofield'}_${slotMap.size}`

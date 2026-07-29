@@ -56,7 +56,7 @@
       "enum": ["auto", "height", "maxHeight"],
       "description": "Height calculation mode. 'height' recommended for adaptive height with ResizeObserver"
     },
-    "tabHeight": {
+    "height": {
       "oneOf": [
         { "type": "number" },
         { "type": "string" }

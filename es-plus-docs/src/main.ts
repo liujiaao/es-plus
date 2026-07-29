@@ -2,6 +2,10 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createHead } from '@unhead/vue/client'
 import 'element-plus/dist/index.css'
+import 'vxe-pc-ui/lib/style.css'
+import 'vxe-table/dist/style.css'
+import VxeUI from 'vxe-pc-ui'
+import VxeTable from 'vxe-table'
 import router from './router'
 import i18n from './locales'
 import App from './App.vue'
@@ -35,6 +39,8 @@ app.use(head)
 app.use(createPinia())
 app.use(router)
 app.use(i18n)
+app.use(VxeUI)
+app.use(VxeTable)
 
 // Element Plus + icons + ES-Plus — shared with in-doc demo sub-apps
 installAppPlugins(app)

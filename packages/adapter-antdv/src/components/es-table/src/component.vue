@@ -615,7 +615,10 @@ const resolvedCustomHeaderRow = computed((): any => {
 // ─── 高度自适应 ─────────────────────────────────────
 const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef, headBarRef, tbBtnRef, paginationRef,
-  { heightType: heightType.value, tabHeight: props.options.tabHeight }
+  {
+    heightType: heightType.value,
+    tabHeight: props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined),
+  }
 )
 
 // ─── vxe sort 事件（格式已对齐 el-table/vue3 约定）──

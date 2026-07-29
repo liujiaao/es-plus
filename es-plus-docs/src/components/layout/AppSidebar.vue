@@ -64,6 +64,7 @@ const sections = [
     items: [
       { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
       { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
+      { path: '/advanced/vxe-table', labelKey: 'sidebar.vxeTable', icon: markRaw(Grid) },
     ],
   },
   {

@@ -736,7 +736,7 @@ export default defineComponent({
       paginationRef,
       {
         heightType: heightType.value as 'auto' | 'height',
-        tabHeight: props.options.tabHeight,
+        tabHeight: props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined),
       }
     )
 

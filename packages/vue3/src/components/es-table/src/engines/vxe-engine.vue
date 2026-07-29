@@ -3,7 +3,12 @@
     [es-plus] engine:'vxe' 需要先安装并注册 vxe-table：<br>
     <code>import VxeTable from 'vxe-table'; app.use(VxeTable)</code>
   </div>
-  <!-- 关键：inheritAttrs:false + v-bind="$attrs" 实现事件穿透管道 -->
+  <!--
+    inheritAttrs:false + v-bind="$attrs" 实现事件穿透管道
+    vxe-grid 内部使用 <vxe-table> 渲染表格，columns 是 grid 级别 prop（由 grid 通过 loadColumn() 转发给内部 table）。
+    行内编辑 CRUD 方法（getUpdateRecords / clearEdit 等）在 grid 的 tableComponentMethodKeys 白名单之外，
+    因此通过 getRefMaps().refTable.value 直接访问内部 <vxe-table> 实例调用。
+  -->
   <vxe-grid
     v-else
     ref="gridRef"
@@ -72,7 +77,7 @@ const gridRef = ref<any>(null)
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
 // P2：多选跨页保留依赖唯一键，缺少 rowkey 时给出明确警告（仅开发环境）
-if (process.env.NODE_ENV !== 'production' && props.options.multiSelect && !props.options.rowkey) {
+if (import.meta.env.DEV && props.options.multiSelect && !props.options.rowkey) {
   console.warn(
     '[es-plus] engine:"vxe" + multiSelect:true 建议设置 options.rowkey，' +
     '否则 vxe 无法通过 reserve 跨页保留已选行（当前默认以 "id" 字段作为 keyField）'
@@ -115,13 +120,15 @@ const gridConfig = computed(() => {
   const hasProxyConfig = !!(vxeExtra.proxyConfig || opts.proxyConfig)
 
   const base: Record<string, any> = {
-    border: opts.border ? 'default' : false,
+    border: opts.border ? 'full' : false,
     stripe: opts.stripe || false,
     size: opts.size === 'mini' ? 'mini' : opts.size === 'medium' ? 'medium' : 'small',
     loading: opts.loading || false,
     showHeader: opts.showHeader !== false,
     height: opts.heightType === 'maxHeight' ? undefined : (props.tableHeight || undefined),
     maxHeight: opts.heightType === 'maxHeight' ? (props.tableHeight || undefined) : undefined,
+    // keepSource 必须在 base 初始即设置，确保 vxe-grid 首次渲染就将它转发给内部 <vxe-table>
+    keepSource: opts.keepSource === false ? false : !!(opts.editConfig || opts.keepSource),
     rowConfig: {
       keyField: opts.rowkey || 'id',
       isCurrent: opts.highlightCurrentRow !== false,
@@ -224,7 +231,9 @@ const gridConfig = computed(() => {
     base.columnConfig = { ...(base.columnConfig || {}), ...(firstClass.columnConfig as Record<string, unknown>) }
     delete firstClass.columnConfig
   }
+  console.log('[vxe-engine gridConfig] opts.treeConfig:', opts.treeConfig, 'firstClass.treeConfig:', firstClass.treeConfig)
   Object.assign(base, firstClass)
+  console.log('[vxe-engine gridConfig] base.treeConfig after assign:', base.treeConfig)
 
   // ── vxeConfig 逃生舱：深合并（后写优先，可覆盖上方一等公民配置）──
   for (const [k, v] of Object.entries(vxeExtra)) {
@@ -281,6 +290,15 @@ function handleRowContextmenu({ row, $event }: any) {
 }
 
 // ─── 标准接口实现 ────────────────────────────────────────────
+// grid 只代理 tableComponentMethodKeys 白名单中的方法，
+// 行内编辑 CRUD（getUpdateRecords/clearEdit 等）不在其内，
+// 需要通过 getRefMaps().refTable 获取内部 <vxe-table> 实例直接调用
+const getInternalTable = () => {
+  const refTable = gridRef.value?.getRefMaps?.()?.refTable
+  // refTable 是 Vue ref，.value 才是 vxe-table 组件实例
+  return refTable?.value ?? refTable
+}
+
 defineExpose<TableEngineExposed>({
   getTableRef: () => gridRef.value,
   doLayout: () => gridRef.value?.recalculate(true),
@@ -296,14 +314,14 @@ defineExpose<TableEngineExposed>({
   // vxe 原始实例：完整访问 60+ 方法和 45+ 事件
   vxeInstance: () => gridRef.value,
 
-  // ── 行内编辑 CRUD ───────────────────────────────────────
-  clearActived:     () => (gridRef.value?.clearEdit ?? gridRef.value?.clearActived)?.(),
-  clearValidate:    () => gridRef.value?.clearValidate?.(),
-  validate:         (rows?: Record<string, unknown>[]) => gridRef.value?.validate?.(rows),
-  getInsertRecords: () => gridRef.value?.getInsertRecords?.() ?? [],
-  getUpdateRecords: () => gridRef.value?.getUpdateRecords?.() ?? [],
-  getRemoveRecords: () => gridRef.value?.getRemoveRecords?.() ?? [],
-  revertData:       (rows?: Record<string, unknown> | Record<string, unknown>[]) => gridRef.value?.revertData?.(rows),
+  // ── 行内编辑 CRUD（调用内部 <vxe-table> 实例，grid 不代理这些方法）──
+  clearActived:     () => getInternalTable()?.clearEdit?.(),
+  clearValidate:    () => getInternalTable()?.clearValidate?.(),
+  validate:         (rows?: Record<string, unknown>[]) => getInternalTable()?.validate?.(rows),
+  getInsertRecords: () => getInternalTable()?.getInsertRecords?.() ?? [],
+  getUpdateRecords: () => getInternalTable()?.getUpdateRecords?.() ?? [],
+  getRemoveRecords: () => getInternalTable()?.getRemoveRecords?.() ?? [],
+  revertData:       (rows?: Record<string, unknown> | Record<string, unknown>[]) => getInternalTable()?.revertData?.(rows),
 
   // ── 导出 / 打印 ─────────────────────────────────────────
   exportData: (opts?: any) => gridRef.value?.exportData?.(opts),

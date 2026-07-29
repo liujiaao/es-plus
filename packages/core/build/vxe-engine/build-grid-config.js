@@ -14,9 +14,12 @@ export function buildFirstClassGridOptions(opts) {
         if (opts.footerData !== undefined)
             result.footerData = opts.footerData;
     }
-    // 行内编辑
-    if (opts.editConfig !== undefined)
+    // 行内编辑：editConfig 存在时自动开启 keepSource，否则 getUpdateRecords/getInsertRecords 永远返回空数组
+    if (opts.editConfig !== undefined) {
         result.editConfig = opts.editConfig;
+        if (result.keepSource === undefined)
+            result.keepSource = true;
+    }
     // Excel / CSV 导出
     if (opts.exportConfig !== undefined) {
         result.exportConfig = opts.exportConfig === true ? {} : opts.exportConfig;
@@ -40,6 +43,18 @@ export function buildFirstClassGridOptions(opts) {
         result.clipboardConfig = opts.clipboardConfig;
     if (opts.validConfig !== undefined)
         result.validConfig = opts.validConfig;
+    // 显式 keepSource（可覆盖 editConfig 自动注入的 true；用户设 false 时取消跟踪）
+    if (opts.keepSource !== undefined)
+        result.keepSource = opts.keepSource;
+    // 树形 / 代理请求 / 展开行 / 序号（一等公民字段，直传）
+    if (opts.treeConfig !== undefined)
+        result.treeConfig = opts.treeConfig;
+    if (opts.proxyConfig !== undefined)
+        result.proxyConfig = opts.proxyConfig;
+    if (opts.expandConfig !== undefined)
+        result.expandConfig = opts.expandConfig;
+    if (opts.seqConfig !== undefined)
+        result.seqConfig = opts.seqConfig;
     return result;
 }
 //# sourceMappingURL=build-grid-config.js.map

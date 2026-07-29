@@ -144,6 +144,20 @@ import AdvancedVirtualTableSelect from '@/components/examples/advanced/VirtualTa
 import AdvancedVirtualTableCustomRender from '@/components/examples/advanced/VirtualTableCustomRender.vue'
 import AdvancedVirtualTableRowStyle from '@/components/examples/advanced/VirtualTableRowStyle.vue'
 import AdvancedVirtualTableCrud from '@/components/examples/advanced/VirtualTableCrud.vue'
+import VxeBasicSwitch from '@/components/examples/vxe-table/BasicSwitch.vue'
+import VxeSelectionIndex from '@/components/examples/vxe-table/SelectionIndex.vue'
+import VxeExpandRow from '@/components/examples/vxe-table/ExpandRow.vue'
+import VxeSortFormatter from '@/components/examples/vxe-table/SortFormatter.vue'
+import VxeCustomRender from '@/components/examples/vxe-table/CustomRender.vue'
+import VxeCellEdit from '@/components/examples/vxe-table/CellEdit.vue'
+import VxeRowEdit from '@/components/examples/vxe-table/RowEdit.vue'
+import VxeToolbarExport from '@/components/examples/vxe-table/ToolbarExport.vue'
+import VxeColumnResize from '@/components/examples/vxe-table/ColumnResize.vue'
+import VxeTreeData from '@/components/examples/vxe-table/TreeData.vue'
+import VxeProxyConfig from '@/components/examples/vxe-table/ProxyConfig.vue'
+import VxeFooterSummary from '@/components/examples/vxe-table/FooterSummary.vue'
+import VxeEscapeHatch from '@/components/examples/vxe-table/EscapeHatch.vue'
+import VxeCrudWithDialog from '@/components/examples/vxe-table/CrudWithDialog.vue'
 
 const route = useRoute()
 
@@ -182,8 +196,26 @@ const linkageComponents: Record<string, any> = {
   'virtual-table-crud': AdvancedVirtualTableCrud
 }
 
+const vxeTableComponents: Record<string, any> = {
+  'basic-switch': VxeBasicSwitch,
+  'selection-index': VxeSelectionIndex,
+  'expand-row': VxeExpandRow,
+  'sort-formatter': VxeSortFormatter,
+  'custom-render': VxeCustomRender,
+  'cell-edit': VxeCellEdit,
+  'row-edit': VxeRowEdit,
+  'toolbar-export': VxeToolbarExport,
+  'column-resize': VxeColumnResize,
+  'tree-data': VxeTreeData,
+  'proxy-config': VxeProxyConfig,
+  'footer-summary': VxeFooterSummary,
+  'escape-hatch': VxeEscapeHatch,
+  'crud-with-dialog': VxeCrudWithDialog,
+}
+
 docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })
 docsData['linkage'].examples.forEach((ex: any) => { ex.component = linkageComponents[ex.key] })
+docsData['vxe-table'].examples.forEach((ex: any) => { ex.component = vxeTableComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name

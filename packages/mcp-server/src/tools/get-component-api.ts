@@ -146,7 +146,7 @@ interface TableOptions {
   rowkey?: string             // Row unique key
   isInitRun?: boolean         // Auto-fetch on mount (default true)
   heightType?: 'auto' | 'height'  // Height mode
-  tabHeight?: number | string // Container height value (used with heightType)
+  height?: number | string    // Container height value (used with heightType)
 
   // Virtual scrolling (el-table-v2, suitable for 10k+ rows)
   // Vue 3 only — Vue 2 + Element UI fallback to standard ElTable scrolling.

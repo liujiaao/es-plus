@@ -107,7 +107,7 @@ export interface TableOptions {
   configTableOut?: Record<string, string>
   rowkey?: string
   heightType?: 'auto' | 'height' | 'maxHeight'
-  tabHeight?: number | string
+  height?: number | string
   virtual?: boolean       // vue3 only — silently ignored on vue2
   engine?: 'default' | 'virtual'
   rowHeight?: number

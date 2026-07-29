@@ -105,13 +105,14 @@ const gridConfig = computed(() => {
   const hasProxyConfig = !!(vxeExtra.proxyConfig || opts.proxyConfig)
 
   const base: Record<string, any> = {
-    border: opts.border ? 'default' : false,
+    border: opts.border ? 'full' : false,
     stripe: opts.stripe || false,
     size: opts.size === 'mini' ? 'mini' : (opts.size === 'medium' || opts.size === 'middle') ? 'medium' : 'small',
     loading: opts.loading || false,
     showHeader: opts.showHeader !== false,
     height: opts.heightType === 'maxHeight' ? undefined : (props.tableHeight || undefined),
     maxHeight: opts.heightType === 'maxHeight' ? (props.tableHeight || undefined) : undefined,
+    keepSource: opts.keepSource === false ? false : !!(opts.editConfig || opts.keepSource),
     rowConfig: {
       keyField: opts.rowkey || 'id',
       isCurrent: opts.highlightCurrentRow !== false,
@@ -208,7 +209,7 @@ const gridConfig = computed(() => {
   Object.assign(base, firstClass)
 
   for (const [k, v] of Object.entries(vxeExtra)) {
-    if (k === 'pagerConfig') continue
+    if (k === 'pagerConfig') continue // 已特殊处理
     const DEEP_MERGE_KEYS = [
       'rowConfig', 'checkboxConfig', 'sortConfig', 'columnConfig',
       'editConfig', 'keyboardConfig', 'mouseConfig',
@@ -258,6 +259,14 @@ function handleRowContextmenu({ row, $event }: any) {
   emit('row-contextmenu', row, $event)
 }
 
+// grid 只代理 tableComponentMethodKeys 白名单中的方法，
+// 行内编辑 CRUD（getUpdateRecords/clearEdit 等）不在其内，
+// 需要通过 getRefMaps().refTable 获取内部 <vxe-table> 实例直接调用
+const getInternalTable = () => {
+  const refTable = gridRef.value?.getRefMaps?.()?.refTable
+  return refTable?.value ?? refTable
+}
+
 defineExpose<TableEngineExposed>({
   getTableRef: () => gridRef.value,
   doLayout: () => gridRef.value?.recalculate(true),
@@ -271,13 +280,16 @@ defineExpose<TableEngineExposed>({
     if (row) gridRef.value?.scrollToRow(row)
   },
   vxeInstance: () => gridRef.value,
-  clearActived:     () => (gridRef.value?.clearEdit ?? gridRef.value?.clearActived)?.(),
-  clearValidate:    () => gridRef.value?.clearValidate?.(),
-  validate:         (rows?: Record<string, unknown>[]) => gridRef.value?.validate?.(rows),
-  getInsertRecords: () => gridRef.value?.getInsertRecords?.() ?? [],
-  getUpdateRecords: () => gridRef.value?.getUpdateRecords?.() ?? [],
-  getRemoveRecords: () => gridRef.value?.getRemoveRecords?.() ?? [],
-  revertData:       (rows?: Record<string, unknown> | Record<string, unknown>[]) => gridRef.value?.revertData?.(rows),
+
+  // ── 行内编辑 CRUD（调用内部 <vxe-table> 实例）──────────────
+  clearActived:     () => getInternalTable()?.clearEdit?.(),
+  clearValidate:    () => getInternalTable()?.clearValidate?.(),
+  validate:         (rows?: Record<string, unknown>[]) => getInternalTable()?.validate?.(rows),
+  getInsertRecords: () => getInternalTable()?.getInsertRecords?.() ?? [],
+  getUpdateRecords: () => getInternalTable()?.getUpdateRecords?.() ?? [],
+  getRemoveRecords: () => getInternalTable()?.getRemoveRecords?.() ?? [],
+  revertData:       (rows?: Record<string, unknown> | Record<string, unknown>[]) => getInternalTable()?.revertData?.(rows),
+
   exportData: (opts?: any) => gridRef.value?.exportData?.(opts),
   print:      () => gridRef.value?.print?.(),
 })

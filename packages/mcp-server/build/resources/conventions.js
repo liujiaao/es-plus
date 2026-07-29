@@ -122,7 +122,7 @@ ${target === "vue3"
 tableOptions: {
   virtual: true,           // Switch to el-table-v2 engine
   rowHeight: 48,           // Fixed row height (default 50)
-  tabHeight: 500,          // Container height (required for virtual)
+  height: 500,             // Container height (required for virtual)
   heightType: 'height',    // Use fixed height mode
   rowkey: 'id',            // Required for virtual selection
 }
@@ -219,7 +219,7 @@ interface StructuredCrudConfig {
     stripe?: boolean
     rowkey?: string
     heightType?: 'height' | 'auto' | 'maxHeight'
-    tabHeight?: number | string
+    height?: number | string
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>

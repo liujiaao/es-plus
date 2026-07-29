@@ -22,7 +22,7 @@ interface TableOpts {
   stripe?: boolean
   rowkey?: string
   heightType?: string
-  tabHeight?: number | string
+  height?: number | string
   multiSelect?: boolean
   highlightCurrentRow?: boolean
   headerCellStyle?: Record<string, string>
@@ -86,7 +86,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     apiParams: { url: config.apiUrl },
     rowkey: tOpts.rowkey || 'id',
     ...(tOpts.heightType ? { heightType: tOpts.heightType } : {}),
-    ...(tOpts.tabHeight ? { tabHeight: tOpts.tabHeight } : {}),
+    ...(tOpts.height ? { height: tOpts.height } : {}),
     ...(tOpts.multiSelect ? { multiSelect: true } : {}),
     ...(tOpts.virtual ? { virtual: true } : {}),
     ...(tOpts.rowHeight ? { rowHeight: tOpts.rowHeight } : {}),
@@ -334,7 +334,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   if (tOpts.virtual) {
     lines.push(`  virtual: true,`)
     if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
-    if (tOpts.tabHeight) lines.push(`  tabHeight: ${tOpts.tabHeight},`)
+    if (tOpts.height) lines.push(`  height: ${tOpts.height},`)
     if (tOpts.heightType) lines.push(`  heightType: '${tOpts.heightType}',`)
   }
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)

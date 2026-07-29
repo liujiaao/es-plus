@@ -188,6 +188,7 @@ export interface TableOptions {
   footerMethod?: (params: { columns: unknown[]; data: Record<string, unknown>[] }) => unknown[][]
   footerData?: unknown[][]
   editConfig?: Record<string, unknown>
+  keepSource?: boolean
   exportConfig?: Record<string, unknown>
   toolbarConfig?: Record<string, unknown>
   columnConfig?: Record<string, unknown>

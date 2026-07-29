@@ -469,7 +469,10 @@ const { tableHeight, resizeObservers } = useTableResize(
   headBarRef,
   tbBtnRef,
   paginationRef,
-  { heightType: heightType.value as 'auto' | 'height', tabHeight: props.options.tabHeight }
+  {
+    heightType: heightType.value as 'auto' | 'height',
+    tabHeight: props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined),
+  }
 )
 
 watch(
@@ -779,6 +782,14 @@ defineExpose({
     ? activeEngineRef.value?.doLayout()
     : tableRef.value?.doLayout?.(),
   scrollToRow: (row: number) => activeEngineRef.value?.scrollToRow(row),
+  // vxe 行内编辑 CRUD（engine:'vxe' 时有效）
+  getUpdateRecords: () => activeEngineRef.value?.getUpdateRecords?.() ?? [],
+  getInsertRecords: () => activeEngineRef.value?.getInsertRecords?.() ?? [],
+  getRemoveRecords: () => activeEngineRef.value?.getRemoveRecords?.() ?? [],
+  revertData: (rows?: Record<string, unknown> | Record<string, unknown>[]) => activeEngineRef.value?.revertData?.(rows),
+  clearActived: () => activeEngineRef.value?.clearActived?.(),
+  clearValidate: () => activeEngineRef.value?.clearValidate?.(),
+  validate: (rows?: Record<string, unknown>[]) => activeEngineRef.value?.validate?.(rows),
   // vxe 原始实例（100% vxe 方法/事件访问入口）
   vxeInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null,
 })
