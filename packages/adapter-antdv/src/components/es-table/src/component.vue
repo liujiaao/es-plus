@@ -31,7 +31,7 @@
           <!-- 工具栏按钮 -->
           <table-btns
             ref="tbBtnRef"
-            :instance="{ tableRef: instance, formInstance: formInstance }"
+            :instance="{ tableRef: instance, formInstance: formInstance, getVxeGrid: getVxeGridInstance }"
             v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && ((options as any).toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
             :btn-config="(options.configBtn as any[])"
             :left-text="(options.leftText as string)"
@@ -227,6 +227,11 @@ const antLocale = ref(zhCN)
 const instance = getCurrentInstance() as any
 const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+
+function getVxeGridInstance() {
+  if (!isVxeEngine.value) return null
+  return (vxeEngineRef.value as any)?.vxeInstance?.()
+}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

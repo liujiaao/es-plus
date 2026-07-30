@@ -153,6 +153,7 @@ export const docsData: Record<string, any> = {
       { key: 'footer-summary', title: '汇总行 footerMethod', description: 'showFooter + footerMethod 动态计算合计行，随数据变化实时更新。', component: null, code: code('vxe-table/12-footer-summary') },
       { key: 'escape-hatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。', component: null, code: code('vxe-table/13-escape-hatch') },
       { key: 'crud-with-dialog', title: '完整 CRUD + useDialog', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 — 完整业务闭环。', component: null, code: code('vxe-table/14-crud-with-dialog') },
+      { key: 'merge-cells', title: '复杂合并单元格：静态 + 动态 + 表单联动', description: '三级表头 groups + spanMethod 行列动态合并 + vxeConfig.mergeCells 静态合并 + mergeFooterItems 多行表尾；表单控合并开关。', component: null, code: code('vxe-table/15-merge-cells') },
     ],
     api: {
       'TableOptions（vxe 引擎专属）': [

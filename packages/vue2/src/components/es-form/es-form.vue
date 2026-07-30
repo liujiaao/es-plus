@@ -503,10 +503,10 @@ export default defineComponent({
           t?.httpRequestInstance?.(model)
         }
       } else if (key === 'rest' && formRef) {
+        formRef.resetFields?.()
         if (isParentTable.value) {
           t?.httpRequestInstance?.(model)
         }
-        formRef.resetFields?.()
       }
     }
 

@@ -3,7 +3,10 @@
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
-          <el-col v-show="!item?.isFold" :span="item.span">
+          <el-col
+            :span="item.span"
+            :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
+          >
             <el-form-item
               :label="translateLabel(item)"
               v-bind="initFormItemOptions((item as any).formItemOptions || {})"
@@ -385,10 +388,11 @@ const queryTableRequest = async (model: Record<string, unknown>, formRef: { rese
     //   await formRef.validate()
     // }
   } else if (key === 'rest' && formRef) {
-        if (isParentTable.value) {
+    // 先重置表单字段，确保 model 已恢复初始值后再触发查询
+    formRef.resetFields()
+    if (isParentTable.value) {
       getTableInstant.value?.httpRequestInstance?.(model)
     }
-    formRef.resetFields()
   }
 }
 
@@ -617,6 +621,22 @@ defineExpose({
 
   :deep(.el-form-item__label) {
     font-weight: 500;
+  }
+
+  // 折叠展开平滑过渡：用 max-height 动画替代 v-show 的瞬时显隐，
+  // 让 vxe-grid 等依赖容器高度的引擎在 form 高度渐变中逐步重排，避免抖动
+  .es-col--foldable {
+    overflow: hidden;
+    max-height: 200px; // 足够容纳单行表单项，作为动画起点/终点
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+
+    &.is-folded {
+      max-height: 0;
+      opacity: 0;
+      :deep(.el-form-item) {
+        margin-bottom: 0; // 折叠时消除 form-item 底部间距
+      }
+    }
   }
 
   .buttonOperate {

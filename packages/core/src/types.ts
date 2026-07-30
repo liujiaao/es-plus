@@ -693,6 +693,13 @@ export interface TableOptions {
    */
   exportConfig?: VxeExportConfig | true
   /**
+   * 打印配置（仅 engine:'vxe' 生效，vxe-table 内置打印功能必需）
+   * @example
+   * printConfig: true  // 使用默认配置
+   * printConfig: { columns: [{ field: 'name' }] }  // 指定打印列
+   */
+  printConfig?: Record<string, unknown> | true
+  /**
    * 工具栏（含导出/刷新/自定义列/打印按钮）
    * 启用后自动隐藏 ES-Plus 的 configBtn 工具栏，避免双工具栏冲突
    * @example

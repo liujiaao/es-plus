@@ -49,11 +49,19 @@ export function buildFirstClassGridOptions(
   // 显式 keepSource（可覆盖 editConfig 自动注入的 true；用户设 false 时取消跟踪）
   if (opts.keepSource !== undefined) result.keepSource = opts.keepSource
 
+  // 打印（true 展开为默认空对象）
+  if (opts.printConfig !== undefined) {
+    result.printConfig = opts.printConfig === true ? {} : opts.printConfig
+  }
+
   // 树形 / 代理请求 / 展开行 / 序号（一等公民字段，直传）
   if (opts.treeConfig   !== undefined) result.treeConfig   = opts.treeConfig
   if (opts.proxyConfig  !== undefined) result.proxyConfig  = opts.proxyConfig
   if (opts.expandConfig !== undefined) result.expandConfig = opts.expandConfig
   if (opts.seqConfig    !== undefined) result.seqConfig    = opts.seqConfig
+
+  // 行列合并（直传给 vxe-grid）
+  if (typeof opts.spanMethod === 'function') result.spanMethod = opts.spanMethod
 
   return result
 }

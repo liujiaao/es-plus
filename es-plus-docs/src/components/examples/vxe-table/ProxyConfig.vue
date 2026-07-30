@@ -1,8 +1,9 @@
 <template>
   <div>
     <el-alert type="info" :closable="false" style="margin-bottom:10px"
-      description="proxyConfig 服务端分页：vxe 自管分页状态，EsForm 搜索条件直接与 proxyConfig.ajax 联动" />
-    <!-- EsForm 搜索区 -->
+      description="proxyConfig 服务端分页：vxe 自管分页状态；EsForm 与 EsTable 为兄弟结构，按钮通过 click 回调调用 commitProxy('query') 触发表格刷新" />
+    <!-- 注意：triggerEvent 仅对 EsForm 嵌套在 EsTable 内部的场景生效（依赖 inject 获取父表格实例），
+         兄弟结构下必须手动 click 回调调用 tableRef.vxeInstance().commitProxy('query') -->
     <es-form
       :model="queryForm"
       :form-item-list="formItems"
@@ -26,9 +27,10 @@ const tableRef = ref<InstanceType<typeof EsTable> | null>(null)
 const queryForm = reactive({ keyword: '', department: '' })
 
 const formItems = [
-  { prop: 'keyword', label: '关键词', formtype: 'Input', placeholder: '搜索姓名' },
+  { prop: 'keyword', label: '关键词', formtype: 'Input' as const, placeholder: '搜索姓名', attrs: { clearable: true } },
   {
-    prop: 'department', label: '部门', formtype: 'Select',
+    prop: 'department', label: '部门', formtype: 'Select' as const,
+    attrs: { clearable: true, placeholder: '全部' },
     dataOptions: [
       { label: '全部', value: '' },
       { label: '技术部', value: '技术部' },
@@ -38,13 +40,28 @@ const formItems = [
   },
 ]
 
+// triggerEvent 依赖 EsForm 嵌套在 EsTable 内部（通过 inject 获取父表格实例），
+// 兄弟结构下 inject 拿不到引用，必须用手动 click 回调。
+// 在 proxyConfig 模式下，commitProxy('query') 会触发 vxe 重新请求分页数据。
 const formBtns = [
-  { name: '查询', type: 'primary', click: () => (tableRef.value as any)?.vxeInstance?.commitProxy?.('reload') },
-  { name: '重置', click: () => { queryForm.keyword = ''; queryForm.department = '' } },
+  {
+    name: '查询', type: 'primary' as const, icon: 'Search',
+    click: () => {
+      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('query')
+    },
+  },
+  {
+    name: '重置', type: 'default' as const, icon: 'RefreshLeft',
+    click: () => {
+      queryForm.keyword = ''
+      queryForm.department = ''
+      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('query')
+    },
+  },
 ]
 
 const columns = [
-  { type: 'snIndex', label: '序号', width: 70 },
+  { type: 'index' as const, label: '序号', width: 70 },
   { prop: 'name', label: '姓名', minWidth: 120 },
   { prop: 'department', label: '部门', width: 120 },
   { prop: 'position', label: '职位', width: 130 },
@@ -66,7 +83,8 @@ const tableOptions = {
   rowkey: 'id',
   proxyConfig: {
     autoLoad: true,
-    props: { result: 'result', total: 'page.total' },
+    // vxe v4 使用 response 替代已废弃的 props 做响应字段映射
+    response: { result: 'result', total: 'page.total' },
     ajax: {
       query: ({ page }: any) => {
         return new Promise<any>((resolve) => {

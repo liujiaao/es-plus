@@ -36,6 +36,9 @@ const tableOptions = {
     export: true,
     print: true,
   },
+  // 打印配置：vxe-table 的 print() 需要此参数才会弹出"打印数据"配置弹窗，
+  // 否则跳过弹窗直接 window.print()。true 展开为 {} 即默认配置。
+  printConfig: true as const,
   exportConfig: {
     type: 'csv' as const,
     filename: '员工数据',

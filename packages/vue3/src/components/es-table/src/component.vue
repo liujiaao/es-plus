@@ -17,7 +17,7 @@
           <div class="table_inner_containers">
             <table-btns
               ref="tbBtnRef"
-              :instance="{ tableRef: instance, formInstance: formInstance }"
+              :instance="{ tableRef: instance, formInstance: formInstance, getVxeGrid: getVxeGridInstance }"
               v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
               :btn-config="(options.configBtn as any[])"
               :left-text="(options.leftText as string)"
@@ -189,6 +189,12 @@ if (injectedLocale) {
 const instance = getCurrentInstance() as any
 const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
 const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+
+// configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）
+function getVxeGridInstance() {
+  if (!isVxeEngine.value) return null
+  return (vxeEngineRef.value as any)?.vxeInstance?.()
+}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true

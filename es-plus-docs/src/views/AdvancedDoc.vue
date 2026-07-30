@@ -158,7 +158,7 @@ import VxeProxyConfig from '@/components/examples/vxe-table/ProxyConfig.vue'
 import VxeFooterSummary from '@/components/examples/vxe-table/FooterSummary.vue'
 import VxeEscapeHatch from '@/components/examples/vxe-table/EscapeHatch.vue'
 import VxeCrudWithDialog from '@/components/examples/vxe-table/CrudWithDialog.vue'
-
+import VxeMergeCells from '@/components/examples/vxe-table/MergeCells.vue'
 const route = useRoute()
 
 const docsData = rawDocsData
@@ -211,6 +211,7 @@ const vxeTableComponents: Record<string, any> = {
   'footer-summary': VxeFooterSummary,
   'escape-hatch': VxeEscapeHatch,
   'crud-with-dialog': VxeCrudWithDialog,
+  'merge-cells': VxeMergeCells
 }
 
 docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })

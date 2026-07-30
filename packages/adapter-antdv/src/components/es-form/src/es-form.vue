@@ -13,7 +13,10 @@
   <a-form :ref="setFormRef" v-bind="formProps" class="es-form">
     <a-row v-bind="rowLayout">
       <template v-for="(item, index) in formItem" :key="item.prop || index">
-        <a-col v-show="!item?.isFold" :span="item.span">
+        <a-col
+          :span="item.span"
+          :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
+        >
           <a-form-item
             :name="item.prop"
             :label="translateLabel(item)"
@@ -439,10 +442,10 @@ const queryTableRequest = async (
       getTableInstant.value?.httpRequestInstance?.(model)
     }
   } else if (key === 'rest' && formRef) {
+    formRef.resetFields()
     if (isParentTable.value) {
       getTableInstant.value?.httpRequestInstance?.(model)
     }
-    formRef.resetFields()
   }
 }
 
@@ -718,6 +721,21 @@ defineExpose({
 
   .formItemCols {
     width: 100%;
+  }
+
+  // 折叠展开平滑过渡
+  .es-col--foldable {
+    overflow: hidden;
+    max-height: 200px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+
+    &.is-folded {
+      max-height: 0;
+      opacity: 0;
+      :deep(.ant-form-item) {
+        margin-bottom: 0;
+      }
+    }
   }
 }
 </style>

@@ -21,6 +21,7 @@
     @cell-click="handleCellClick"
     @cell-dblclick="handleCellDblclick"
     @row-contextmenu="handleRowContextmenu"
+    @zoom="handleZoom"
   >
     <!-- render 函数列：动态插槽分发 -->
     <template v-for="[slotName, col] in renderSlotMap" #[slotName]="{ row, rowIndex }">
@@ -287,6 +288,13 @@ function handleCellDblclick({ row, $event }: any) {
 
 function handleRowContextmenu({ row, $event }: any) {
   emit('row-contextmenu', row, $event)
+}
+
+// vxeOn 事件转发：vxe-grid 通过 emit 发出的 native 事件，
+// 经由显式 @event 监听后转发给用户在 vxeOn 中注册的回调
+function handleZoom(params: any) {
+  const handler = (props.options as any)?.vxeOn?.zoom
+  if (handler) handler(params)
 }
 
 // ─── 标准接口实现 ────────────────────────────────────────────
