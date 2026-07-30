@@ -31,7 +31,7 @@
 import { ref, reactive, h, watch, computed } from 'vue'
 import { ElTag } from 'element-plus'
 import { Printer } from '@element-plus/icons-vue'
-import { EsTable, EsForm } from 'es-plus'
+import { EsTable, EsForm, patchHtmlRowSpans } from 'es-plus'
 
 
 // ─── 表格实例 ──────────────────────────────────────────────────
@@ -50,9 +50,6 @@ const PRINT_STYLE = `
   tfoot td { background: #fafafa; font-weight: bold; }
 `
 
-// vxe print 引擎只读静态 merge 注册表，不执行 spanMethod（两者互斥，setMergeCells 与 spanMethod 冲突）。
-// 解决：getPrintHtml 生成基础 HTML → DOMParser 修正 rowspan/colspan → print({ html }) 传回 vxe 打印窗口。
-
 function computeSpan(data: any[], rowIndex: number, colIndex: number, enableMerge: boolean | 'row') {
   if (!enableMerge) return { rowspan: 1, colspan: 1 }
   const field = leafFields[colIndex]
@@ -61,33 +58,16 @@ function computeSpan(data: any[], rowIndex: number, colIndex: number, enableMerg
   return { rowspan: 1, colspan: 1 }
 }
 
+// vxe print 不执行 mergeMethod（与 spanMethod 互斥），用 patchHtmlRowSpans 修正 tbody rowspan。
+// getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 中的 thead{display:table-header-group} 实现每页重复表头。
 async function doPrint(data: any[], opts: Record<string, any>) {
   const grid = getGrid()
   if (!grid) return
-  const { html } = await grid.getPrintHtml({ ...opts, data })
-  grid.print({ ...opts, html: fixMerges(html, data) })
-}
-
-function fixMerges(html: string, data: any[]): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
   const em = queryForm.enableMerge
-  Array.from(doc.querySelectorAll('tbody tr')).forEach((tr, ri) => {
-    Array.from(tr.querySelectorAll('td')).forEach((td, ci) => {
-      const { rowspan, colspan } = computeSpan(data, ri, ci, em)
-      if (rowspan === 0) { td.remove(); return }
-      if (rowspan > 1) td.setAttribute('rowspan', String(rowspan))
-      if (colspan > 1) td.setAttribute('colspan', String(colspan))
-    })
-  })
-  return doc.body.innerHTML
+  const { html } = await grid.getPrintHtml({ ...opts, data })
+  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, ci, em)) })
 }
 
-// 打印预览 = 浏览器原生打印对话框（本身就是预览窗口）。
-// doPrint 流程：getPrintHtml 拿到含 <thead> 多级表头的 HTML
-//   → fixMerges 修正 tbody rowspan/colspan（<thead> 保持不变）
-//   → print({ html, style: PRINT_STYLE })
-//   → VxeUI.print 将 PRINT_STYLE 注入 <style>
-//   → 浏览器打印引擎识别 thead { display:table-header-group } 实现每页重复表头
 function handlePrintPreview() {
   doPrint(tableData.value, { sheetName: '员工KPI绩效考核表', style: PRINT_STYLE })
 }

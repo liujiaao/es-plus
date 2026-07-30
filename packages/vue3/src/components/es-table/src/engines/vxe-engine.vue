@@ -232,9 +232,7 @@ const gridConfig = computed(() => {
     base.columnConfig = { ...(base.columnConfig || {}), ...(firstClass.columnConfig as Record<string, unknown>) }
     delete firstClass.columnConfig
   }
-  console.log('[vxe-engine gridConfig] opts.treeConfig:', opts.treeConfig, 'firstClass.treeConfig:', firstClass.treeConfig)
   Object.assign(base, firstClass)
-  console.log('[vxe-engine gridConfig] base.treeConfig after assign:', base.treeConfig)
 
   // ── vxeConfig 逃生舱：深合并（后写优先，可覆盖上方一等公民配置）──
   for (const [k, v] of Object.entries(vxeExtra)) {
@@ -303,8 +301,16 @@ function handleZoom(params: any) {
 // 需要通过 getRefMaps().refTable 获取内部 <vxe-table> 实例直接调用
 const getInternalTable = () => {
   const refTable = gridRef.value?.getRefMaps?.()?.refTable
-  // refTable 是 Vue ref，.value 才是 vxe-table 组件实例
-  return refTable?.value ?? refTable
+  const tbl = refTable?.value ?? refTable
+  // getRefMaps 是 vxe-grid 内部 API（非公开），大版本升级可能重命名。
+  // DEV 下主动警告，生产环境各方法已有 ?. 兜底不会崩溃。
+  if (import.meta.env.DEV && gridRef.value && !tbl) {
+    console.warn(
+      '[es-plus] vxe-engine: getRefMaps().refTable 不可用——行内编辑方法（validate/getUpdateRecords 等）已失效。' +
+      '请检查 vxe-table 版本兼容性。'
+    )
+  }
+  return tbl
 }
 
 defineExpose<TableEngineExposed>({

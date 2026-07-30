@@ -79,6 +79,9 @@ export type {
   EsPlusOptions
 } from './types'
 
+// vxe-table 打印辅助（spanMethod + 动态合并场景）
+export { patchHtmlRowSpans } from './utils/vxe-print-utils'
+
 // 默认导出
 export default {
   version,
