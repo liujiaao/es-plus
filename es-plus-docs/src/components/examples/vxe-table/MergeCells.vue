@@ -33,12 +33,11 @@ import { ElTag } from 'element-plus'
 import { Printer } from '@element-plus/icons-vue'
 import { EsTable, EsForm } from 'es-plus'
 
+
 // ─── 表格实例 ──────────────────────────────────────────────────
 const tableRef = ref<any>(null)
 const getGrid = () => tableRef.value?.vxeInstance?.()
 
-// ─── 分页打印：表头每页自动重复 ───────────────────────────────
-// thead { display: table-header-group } 是关键：浏览器打印时会在每页顶部重复渲染 thead
 const PRINT_STYLE = `
   @page { margin: 1.5cm; size: A4 landscape; }
   body { font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 12px; }
@@ -51,24 +50,55 @@ const PRINT_STYLE = `
   tfoot td { background: #fafafa; font-weight: bold; }
 `
 
+// vxe print 引擎只读静态 merge 注册表，不执行 spanMethod（两者互斥，setMergeCells 与 spanMethod 冲突）。
+// 解决：getPrintHtml 生成基础 HTML → DOMParser 修正 rowspan/colspan → print({ html }) 传回 vxe 打印窗口。
+
+function computeSpan(data: any[], rowIndex: number, colIndex: number, enableMerge: boolean | 'row') {
+  if (!enableMerge) return { rowspan: 1, colspan: 1 }
+  const field = leafFields[colIndex]
+  if (MERGE_ALWAYS.includes(field)) return mergeRows(data, rowIndex, field)
+  if (enableMerge === true && MERGE_FULL.includes(field)) return mergeRows(data, rowIndex, field)
+  return { rowspan: 1, colspan: 1 }
+}
+
+async function doPrint(data: any[], opts: Record<string, any>) {
+  const grid = getGrid()
+  if (!grid) return
+  const { html } = await grid.getPrintHtml({ ...opts, data })
+  grid.print({ ...opts, html: fixMerges(html, data) })
+}
+
+function fixMerges(html: string, data: any[]): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const em = queryForm.enableMerge
+  Array.from(doc.querySelectorAll('tbody tr')).forEach((tr, ri) => {
+    Array.from(tr.querySelectorAll('td')).forEach((td, ci) => {
+      const { rowspan, colspan } = computeSpan(data, ri, ci, em)
+      if (rowspan === 0) { td.remove(); return }
+      if (rowspan > 1) td.setAttribute('rowspan', String(rowspan))
+      if (colspan > 1) td.setAttribute('colspan', String(colspan))
+    })
+  })
+  return doc.body.innerHTML
+}
+
+// 打印预览 = 浏览器原生打印对话框（本身就是预览窗口）。
+// doPrint 流程：getPrintHtml 拿到含 <thead> 多级表头的 HTML
+//   → fixMerges 修正 tbody rowspan/colspan（<thead> 保持不变）
+//   → print({ html, style: PRINT_STYLE })
+//   → VxeUI.print 将 PRINT_STYLE 注入 <style>
+//   → 浏览器打印引擎识别 thead { display:table-header-group } 实现每页重复表头
 function handlePrintPreview() {
-  getGrid()?.openPrint?.()
+  doPrint(tableData.value, { sheetName: '员工KPI绩效考核表', style: PRINT_STYLE })
 }
 
 function handlePrintAll() {
-  getGrid()?.print?.({
-    sheetName: '员工KPI绩效考核表（全部）',
-    style: PRINT_STYLE,
-  })
+  doPrint(tableData.value, { sheetName: '员工KPI绩效考核表（全部）', style: PRINT_STYLE })
 }
 
 function handlePrintDept(dept: string) {
   const deptData = tableData.value.filter((r: any) => r.dept === dept)
-  getGrid()?.print?.({
-    sheetName: `${dept} KPI绩效报表`,
-    data: deptData,
-    style: PRINT_STYLE,
-  })
+  doPrint(deptData, { sheetName: `${dept} KPI绩效报表`, style: PRINT_STYLE })
 }
 
 // ─── 表单联动 ─────────────────────────────────────────────────
@@ -97,6 +127,16 @@ const rawData = [
   { id: 8,  dept: '产品事业部', team: '增长组', name: '郑十', h1Target: 75,  h1Actual: 90,  h2Target: 85,  h2Actual: 100 },
   { id: 9,  dept: '产品事业部', team: '增长组', name: '钱A', h1Target: 100, h1Actual: 95,  h2Target: 105, h2Actual: 108 },
   { id: 10, dept: '产品事业部', team: '增长组', name: '孙B', h1Target: 88,  h1Actual: 92,  h2Target: 95,  h2Actual: 98  },
+   { id: 11,  dept: '技术事业部', team: '前端组', name: '张三1', h1Target: 100, h1Actual: 120, h2Target: 110, h2Actual: 130 },
+  { id: 12,  dept: '技术事业部', team: '前端组', name: '李四2', h1Target: 90,  h1Actual: 85,  h2Target: 100, h2Actual: 110 },
+  { id: 13,  dept: '技术事业部', team: '前端组', name: '王五3', h1Target: 110, h1Actual: 115, h2Target: 120, h2Actual: 125 },
+  { id: 14,  dept: '技术事业部', team: '后端组', name: '赵六4', h1Target: 80,  h1Actual: 90,  h2Target: 85,  h2Actual: 95  },
+  { id: 15,  dept: '技术事业部', team: '后端组', name: '孙七5', h1Target: 95,  h1Actual: 105, h2Target: 100, h2Actual: 115 },
+  { id: 16,  dept: '产品事业部', team: '平台组', name: '周八6', h1Target: 105, h1Actual: 110, h2Target: 110, h2Actual: 115 },
+  { id: 17,  dept: '产品事业部', team: '平台组', name: '吴九7', h1Target: 85,  h1Actual: 80,  h2Target: 90,  h2Actual: 95  },
+  { id: 18,  dept: '产品事业部', team: '增长组', name: '郑十8', h1Target: 75,  h1Actual: 90,  h2Target: 85,  h2Actual: 100 },
+  { id: 19,  dept: '产品事业部', team: '增长组', name: '钱A9', h1Target: 100, h1Actual: 95,  h2Target: 105, h2Actual: 108 },
+  { id: 20, dept: '产品事业部', team: '增长组', name: '孙B10', h1Target: 88,  h1Actual: 92,  h2Target: 95,  h2Actual: 98  },
 ]
 
 function buildTableData() {
@@ -160,27 +200,17 @@ const columns: any[] = [
   { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' as const },
 ]
 
+// 从 columns 配置动态展开叶子列 field 顺序，colIndex → field，不依赖手动数下标
+const leafFields: string[] = (columns as any[]).flatMap(col =>
+  col.groups ? col.groups.map((g: any) => g.prop) : [col.prop]
+)
+const MERGE_ALWAYS = ['dept', 'team']                    // enableMerge 为真时都合并
+const MERGE_FULL   = ['totalTarget', 'totalActual']      // enableMerge === true 时才合并
+
 // ─── spanMethod：行列混合动态合并 ──────────────────────────────
-// 叶子列编号: 0=dept, 1=team, 2=name, 3=h1Target, 4=h1Actual, 5=h1Rate,
-//             6=h2Target, 7=h2Actual, 8=h2Rate, 9=totalTarget, 10=totalActual
 // 注意：vxe-grid v4 的 spanMethod 回调不传 data，必须从闭包中取 tableData.value
 function spanMethod({ rowIndex, columnIndex }: any) {
-  const data = tableData.value
-  if (!queryForm.enableMerge) return { rowspan: 1, colspan: 1 }
-
-  // 事业部列（col 0）：相同 dept 值的相邻行纵向合并
-  if (columnIndex === 0) return mergeRows(data, rowIndex, 'dept')
-
-  // 团队列（col 1）：相同 team 值的相邻行纵向合并
-  if (columnIndex === 1) return mergeRows(data, rowIndex, 'team')
-
-  // 全部合并模式：年度汇总列也按相同值纵向合并
-  if (queryForm.enableMerge === true) {
-    if (columnIndex === 9) return mergeRows(data, rowIndex, 'totalTarget')
-    if (columnIndex === 10) return mergeRows(data, rowIndex, 'totalActual')
-  }
-
-  return { rowspan: 1, colspan: 1 }
+  return computeSpan(tableData.value, rowIndex, columnIndex, queryForm.enableMerge)
 }
 
 function mergeRows(data: any[], rowIndex: number, field: string) {
@@ -243,7 +273,7 @@ const tableOptions = computed(() => ({
   vxeOn: { 'edit-closed': handleEditClosed },
   showFooter: true,
   footerMethod,
-  printConfig: { sheetName: '员工KPI绩效考核表', style: PRINT_STYLE },
+  printConfig: { sheetName: '员工KPI绩效考核表' },
   _merge: queryForm.enableMerge, // ← 注入 reactive 依赖：enableMerge 变化时 computed 重算
   vxeConfig: {
     // 静态表头合并：年度目标 + 年度完成 两列标题合并为"年度汇总"
