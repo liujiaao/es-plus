@@ -36,7 +36,7 @@ const tableOptions = {
   rowkey: 'id',
   rowHeight: 48,
   heightType: 'height' as const,
-  tabHeight: 500,
+  tabHeight: 600,
 }
 
 const pagination = ref({ pageSize: 100000, current: 1, total: 0 })

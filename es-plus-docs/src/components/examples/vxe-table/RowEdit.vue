@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { EsTable } from 'es-plus'
 
@@ -56,6 +56,7 @@ const tableOptions = {
    keepSource: true,  // keepSource 让 vxe 保存原始数据快照，getUpdateRecords() 才能正确返回已改行
   editConfig: { mode: 'row' as const, trigger: 'click' as const, showStatus: true },
   validConfig: { autoPos: true },
+  vxeOn: { 'edit-closed': refreshCounts },
 }
 
 const pagination = ref({ pageSize: 10, current: 1, total: 0 })
@@ -77,16 +78,25 @@ const vxe = () => {
   return grid?.getRefMaps?.()?.refTable?.value
 }
 
-const insertCount = computed(() => vxe()?.getInsertRecords?.()?.length ?? 0)
-const updateCount = computed(() => vxe()?.getUpdateRecords?.()?.length ?? 0)
-const deleteCount = computed(() => vxe()?.getRemoveRecords?.()?.length ?? 0)
+const insertCount = ref(0)
+const updateCount = ref(0)
+const deleteCount = ref(0)
+
+function refreshCounts() {
+  const v = vxe()
+  insertCount.value = v?.getInsertRecords?.()?.length ?? 0
+  updateCount.value = v?.getUpdateRecords?.()?.length ?? 0
+  deleteCount.value = v?.getRemoveRecords?.()?.length ?? 0
+}
 
 async function addRow() {
   await vxe()?.insertAt?.({ id: ++idSeq, name: '', department: '技术部', salary: 8000 }, -1)
+  refreshCounts()
 }
 
 async function deleteRow(row: any) {
   await vxe()?.remove?.(row)
+  refreshCounts()
 }
 
 async function validateAndSave() {
@@ -102,6 +112,7 @@ async function validateAndSave() {
 
 function revertAll() {
   vxe()?.revertData?.()
+  refreshCounts()
   ElMessage.info('已撤销所有修改')
 }
 </script>

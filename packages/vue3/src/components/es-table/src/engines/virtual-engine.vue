@@ -1,5 +1,5 @@
 <template>
-  <div class="es-virtual-table-wrapper">
+  <div class="es-virtual-table-wrapper" :class="wrapperClass">
     <el-auto-resizer :disable-height="true">
       <template #default="{ width }">
         <el-table-v2
@@ -147,6 +147,12 @@ const tableClass = computed(() => {
   return cls.join(' ')
 })
 
+const wrapperClass = computed(() => {
+  const cls: string[] = []
+  if (props.options.border) cls.push('es-virtual-table-wrapper--border')
+  return cls.join(' ')
+})
+
 const currentRowKey = ref<string>('')
 
 const rowClassName = computed(() => {
@@ -206,11 +212,28 @@ defineExpose<TableEngineExposed>({
   position: relative;
   width: 100%;
 }
-.es-virtual-table--border .el-table-v2 {
+/*
+ * 外边框用 ::after 伪元素叠加实现，不用 border 属性。
+ * 原因：el-table-v2 内容完全填满 wrapper（height: auto），
+ * wrapper 的 border-bottom 会被底部水平滚动条背景覆盖而不可见；
+ * position: absolute; inset: 0 的伪元素不参与布局，
+ * 始终叠加在内容顶层，四边可靠可见。
+ */
+.es-virtual-table-wrapper--border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   border: 1px solid var(--el-border-color-lighter);
+  pointer-events: none;
+  z-index: 1;
 }
-.es-virtual-table--border .el-table-v2 .el-table-v2__header-cell,
-.es-virtual-table--border .el-table-v2 .el-table-v2__row-cell {
+/* 默认为所有虚拟表格补充表头背景色（el-table-v2 不像 el-table 自带灰底） */
+.es-virtual-table .el-table-v2__header-cell {
+  background-color: var(--el-table-header-bg-color, var(--el-fill-color-light, #f5f7fa));
+}
+/* 单元格分割线（es-virtual-table--border 加在 el-table-v2 上，其内部子节点用后代选择器） */
+.es-virtual-table--border .el-table-v2__header-cell,
+.es-virtual-table--border .el-table-v2__row-cell {
   border-right: 1px solid var(--el-border-color-lighter);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }

@@ -234,7 +234,7 @@ export const docsData: Record<string, any> = {
         { name: 'clearSelection', params: '-', desc: '清除当前页选择' },
         { name: 'clearAllSelection', params: '-', desc: '清除所有页面选择（含跨页缓存）' },
         { name: 'refresh', params: '-', desc: '强制重新计算表格布局' },
-        { name: 'scrollToRow', params: '(rowIndex)', desc: '滚动到指定行（仅 virtual 模式）' }
+        { name: 'scrollToRow', params: '(rowIndex)', desc: '滚动到指定行（virtual 模式 / vxe 引擎均支持；el-table 引擎无此接口）' }
       ]
     }
   },
