@@ -220,9 +220,9 @@ export type {
 } from './types'
 
 // ─── 默认导出（带 install 的对象，可直接 Vue.use()） ───
-// NOTE: keep `version` in sync with package.json — __tests__/exports.spec.ts
-// asserts equality so a drift fails CI.
+// Version is injected at build time from package.json via vite define.
+declare const __PKG_VERSION__: string
 export default {
-  version: '1.1.5',
+  version: __PKG_VERSION__,
   install,
 }

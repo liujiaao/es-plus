@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import vue2 from '@vitejs/plugin-vue2'
 import dts from 'vite-plugin-dts'
 import { resolve } from 'path'
+import pkg from './package.json'
 
 /**
  * Vue 2 + Element UI 渲染层构建配置
@@ -12,6 +13,9 @@ import { resolve } from 'path'
  *  - target 调整为 es2018 以匹配 Vue 2.6+ 用户的常见环境
  */
 export default defineConfig({
+  define: {
+    __PKG_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     vue2(),
     dts({

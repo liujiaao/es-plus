@@ -131,88 +131,10 @@ import { docsData as rawDocsData } from './component-doc.data'
 
 const { t } = useI18n()
 
-// 导入案例组件
-import FormBasic from '@/components/examples/form/Basic.vue'
-import FormLayout from '@/components/examples/form/Layout.vue'
-import FormConditional from '@/components/examples/form/Conditional.vue'
-import FormDynamic from '@/components/examples/form/Dynamic.vue'
-import FormValidation from '@/components/examples/form/Validation.vue'
-import FormAsyncOptions from '@/components/examples/form/AsyncOptions.vue'
-import FormCustomRender from '@/components/examples/form/CustomRender.vue'
-import FormDialog from '@/components/examples/form/Dialog.vue'
-import FormDateTimeRange from '@/components/examples/form/DateTimeRange.vue'
-import FormCascader from '@/components/examples/form/Cascader.vue'
-import FormAdvancedButtons from '@/components/examples/form/AdvancedButtons.vue'
-import FormUpload from '@/components/examples/form/Upload.vue'
-import FormFileUpload from '@/components/examples/form/FileUpload.vue'
-import FormPreferences from '@/components/examples/form/Preferences.vue'
-import FormComputedFields from '@/components/examples/form/ComputedFields.vue'
-import FormCustomButton from '@/components/examples/form/CustomButton.vue'
-import FormDetailMode from '@/components/examples/form/DetailMode.vue'
-import FormSearchForm from '@/components/examples/form/SearchForm.vue'
-
-import TableBasic from '@/components/examples/table/Basic.vue'
-import TableToolbar from '@/components/examples/table/Toolbar.vue'
-import TableCustom from '@/components/examples/table/Custom.vue'
-import TableSelection from '@/components/examples/table/Selection.vue'
-import TableEdit from '@/components/examples/table/Edit.vue'
-import TableSort from '@/components/examples/table/Sort.vue'
-import TableGroup from '@/components/examples/table/Group.vue'
-import TableFixed from '@/components/examples/table/Fixed.vue'
-import TablePagination from '@/components/examples/table/Pagination.vue'
-import TableRemoteData from '@/components/examples/table/RemoteData.vue'
-import TableExpand from '@/components/examples/table/Expand.vue'
-import TableCellMerge from '@/components/examples/table/CellMerge.vue'
-import TableQueryTable from '@/components/examples/table/QueryTable.vue'
-import TableRowActions from '@/components/examples/table/RowActions.vue'
-import TableDynamicColumns from '@/components/examples/table/DynamicColumns.vue'
-import TableCallbackPipeline from '@/components/examples/table/CallbackPipeline.vue'
-import TableCurrentRow from '@/components/examples/table/CurrentRow.vue'
-import TableTableHeight from '@/components/examples/table/TableHeight.vue'
-
-import CrudBasic from '@/components/examples/crud-page/Basic.vue'
-import CrudMultiDialog from '@/components/examples/crud-page/MultiDialog.vue'
-import CrudCustomRender from '@/components/examples/crud-page/CustomRender.vue'
-import CrudDynamicTitle from '@/components/examples/crud-page/DynamicTitle.vue'
-import CrudRowConfirm from '@/components/examples/crud-page/RowConfirm.vue'
-import CrudPermission from '@/components/examples/crud-page/Permission.vue'
-import CrudCustomFooter from '@/components/examples/crud-page/CustomFooter.vue'
-import CrudProgramOpen from '@/components/examples/crud-page/ProgramOpen.vue'
-import CrudHiddenColumn from '@/components/examples/crud-page/HiddenColumn.vue'
-import CrudFullBusiness from '@/components/examples/crud-page/FullBusiness.vue'
-
 const route = useRoute()
 
-// 组件文档数据
+// 组件文档数据（component 字段由 component-doc.data.ts 通过 import.meta.glob 自动填充）
 const docsData = rawDocsData
-
-// Assign imported components to their examples by key
-const formComponents: Record<string, any> = {
-  basic: FormBasic, layout: FormLayout, conditional: FormConditional,
-  dynamic: FormDynamic, validation: FormValidation, 'async-options': FormAsyncOptions,
-  'custom-render': FormCustomRender, dialog: FormDialog, 'datetime-range': FormDateTimeRange,
-  cascader: FormCascader, 'advanced-buttons': FormAdvancedButtons, upload: FormUpload,
-  'file-upload': FormFileUpload, preferences: FormPreferences, 'computed-fields': FormComputedFields,
-  'custom-button': FormCustomButton, 'detail-mode': FormDetailMode, 'search-form': FormSearchForm
-}
-const tableComponents: Record<string, any> = {
-  basic: TableBasic, toolbar: TableToolbar, custom: TableCustom,
-  selection: TableSelection, edit: TableEdit, sort: TableSort,
-  group: TableGroup, fixed: TableFixed, pagination: TablePagination,
-  'remote-data': TableRemoteData, expand: TableExpand, 'cell-merge': TableCellMerge,
-  'query-table': TableQueryTable, 'row-actions': TableRowActions, 'dynamic-columns': TableDynamicColumns,
-  'callback-pipeline': TableCallbackPipeline, 'current-row': TableCurrentRow, 'table-height': TableTableHeight
-}
-const crudPageComponents: Record<string, any> = {
-  basic: CrudBasic, 'multi-dialog': CrudMultiDialog, 'custom-render': CrudCustomRender,
-  'dynamic-title': CrudDynamicTitle, 'row-confirm': CrudRowConfirm, permission: CrudPermission,
-  'custom-footer': CrudCustomFooter, 'program-open': CrudProgramOpen, 'hidden-column': CrudHiddenColumn,
-  'full-business': CrudFullBusiness
-}
-
-docsData['es-form'].examples.forEach((ex: any) => { ex.component = formComponents[ex.key] })
-docsData['es-table'].examples.forEach((ex: any) => { ex.component = tableComponents[ex.key] })
-docsData['es-crud-page'].examples.forEach((ex: any) => { ex.component = crudPageComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name as string

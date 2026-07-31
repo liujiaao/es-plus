@@ -108,57 +108,6 @@ import CodePlayground from '@/components/doc/CodePlayground.vue'
 const { t } = useI18n()
 import { docsData as rawDocsData } from './advanced-doc.data'
 
-// 导入案例组件
-import DialogBasic from '@/components/examples/dialog/Basic.vue'
-import DialogForm from '@/components/examples/dialog/Form.vue'
-import DialogConfirm from '@/components/examples/dialog/Confirm.vue'
-import DialogNestedModal from '@/components/examples/dialog/NestedModal.vue'
-import DialogAdvanced from '@/components/examples/dialog/Advanced.vue'
-import DialogAsync from '@/components/examples/dialog/Async.vue'
-import DialogDetailPreview from '@/components/examples/dialog/DetailPreview.vue'
-import DialogTableDialog from '@/components/examples/dialog/TableDialog.vue'
-import DialogStepDialog from '@/components/examples/dialog/StepDialog.vue'
-import DialogDynamicBtn from '@/components/examples/dialog/DynamicBtn.vue'
-import DialogMultiInstance from '@/components/examples/dialog/MultiInstance.vue'
-import DialogFormTableDialog from '@/components/examples/dialog/FormTableDialog.vue'
-import AdvancedFormTable from '@/components/examples/advanced/FormTable.vue'
-import AdvancedZeroCodeQuery from '@/components/examples/advanced/ZeroCodeQuery.vue'
-import AdvancedCrossPageSelect from '@/components/examples/advanced/CrossPageSelect.vue'
-import AdvancedStepForm from '@/components/examples/advanced/StepForm.vue'
-import AdvancedFormTableDialog from '@/components/examples/advanced/FormTableDialog.vue'
-import AdvancedOrderExpandTable from '@/components/examples/advanced/OrderExpandTable.vue'
-import AdvancedOneLineCrud from '@/components/examples/advanced/OneLineCrud.vue'
-import AdvancedRowApproval from '@/components/examples/advanced/RowApproval.vue'
-import AdvancedAutoFitHeight from '@/components/examples/advanced/AutoFitHeight.vue'
-import AdvancedAnyBackendApi from '@/components/examples/advanced/AnyBackendApi.vue'
-import AdvancedConditionalBtns from '@/components/examples/advanced/ConditionalBtns.vue'
-import AdvancedDialogTableForm from '@/components/examples/advanced/DialogTableForm.vue'
-import AdvancedDynamicFormQuery from '@/components/examples/advanced/DynamicFormQuery.vue'
-import AdvancedCascadeFormTable from '@/components/examples/advanced/CascadeFormTable.vue'
-import AdvancedStepImportWizard from '@/components/examples/advanced/StepImportWizard.vue'
-import AdvancedAdminPage from '@/components/examples/advanced/AdminPage.vue'
-import AdvancedCrudPage from '@/components/examples/advanced/CrudPage.vue'
-import AdvancedVirtualTable from '@/components/examples/advanced/VirtualTable.vue'
-import AdvancedVirtualTableSort from '@/components/examples/advanced/VirtualTableSort.vue'
-import AdvancedVirtualTableSelect from '@/components/examples/advanced/VirtualTableSelect.vue'
-import AdvancedVirtualTableCustomRender from '@/components/examples/advanced/VirtualTableCustomRender.vue'
-import AdvancedVirtualTableRowStyle from '@/components/examples/advanced/VirtualTableRowStyle.vue'
-import AdvancedVirtualTableCrud from '@/components/examples/advanced/VirtualTableCrud.vue'
-import VxeBasicSwitch from '@/components/examples/vxe-table/BasicSwitch.vue'
-import VxeSelectionIndex from '@/components/examples/vxe-table/SelectionIndex.vue'
-import VxeExpandRow from '@/components/examples/vxe-table/ExpandRow.vue'
-import VxeSortFormatter from '@/components/examples/vxe-table/SortFormatter.vue'
-import VxeCustomRender from '@/components/examples/vxe-table/CustomRender.vue'
-import VxeCellEdit from '@/components/examples/vxe-table/CellEdit.vue'
-import VxeRowEdit from '@/components/examples/vxe-table/RowEdit.vue'
-import VxeToolbarExport from '@/components/examples/vxe-table/ToolbarExport.vue'
-import VxeColumnResize from '@/components/examples/vxe-table/ColumnResize.vue'
-import VxeTreeData from '@/components/examples/vxe-table/TreeData.vue'
-import VxeProxyConfig from '@/components/examples/vxe-table/ProxyConfig.vue'
-import VxeFooterSummary from '@/components/examples/vxe-table/FooterSummary.vue'
-import VxeEscapeHatch from '@/components/examples/vxe-table/EscapeHatch.vue'
-import VxeCrudWithDialog from '@/components/examples/vxe-table/CrudWithDialog.vue'
-import VxeMergeCells from '@/components/examples/vxe-table/MergeCells.vue'
 const route = useRoute()
 
 const docsData = rawDocsData
@@ -169,55 +118,7 @@ const apiTitleMap: Record<string, string> = {
   'configBtn click': 'configBtn click 回调'
 }
 
-// Assign imported components by key
-const dialogComponents: Record<string, any> = {
-  basic: DialogBasic, form: DialogForm, confirm: DialogConfirm,
-  'nested-modal': DialogNestedModal, advanced: DialogAdvanced, async: DialogAsync,
-  'detail-preview': DialogDetailPreview, 'table-dialog': DialogTableDialog,
-  'step-dialog': DialogStepDialog, 'dynamic-btn': DialogDynamicBtn,
-  'multi-instance': DialogMultiInstance, 'form-table-dialog': DialogFormTableDialog
-}
-const linkageComponents: Record<string, any> = {
-  'form-table': AdvancedFormTable, 'zero-code-query': AdvancedZeroCodeQuery,
-  'cross-page-select': AdvancedCrossPageSelect, 'step-form': AdvancedStepForm,
-  'form-table-dialog': AdvancedFormTableDialog, 'order-expand-table': AdvancedOrderExpandTable,
-  'one-line-crud': AdvancedOneLineCrud, 'row-approval': AdvancedRowApproval,
-  'auto-fit-height': AdvancedAutoFitHeight, 'any-backend-api': AdvancedAnyBackendApi,
-  'conditional-btns': AdvancedConditionalBtns, 'dialog-table-form': AdvancedDialogTableForm,
-  'dynamic-form-query': AdvancedDynamicFormQuery, 'cascade-form-table': AdvancedCascadeFormTable,
-  'step-import-wizard': AdvancedStepImportWizard,
-  'admin-page': AdvancedAdminPage,
-  'crud-page': AdvancedCrudPage,
-  'virtual-table': AdvancedVirtualTable,
-  'virtual-table-sort': AdvancedVirtualTableSort,
-  'virtual-table-select': AdvancedVirtualTableSelect,
-  'virtual-table-custom-render': AdvancedVirtualTableCustomRender,
-  'virtual-table-row-style': AdvancedVirtualTableRowStyle,
-  'virtual-table-crud': AdvancedVirtualTableCrud
-}
-
-const vxeTableComponents: Record<string, any> = {
-  'basic-switch': VxeBasicSwitch,
-  'selection-index': VxeSelectionIndex,
-  'expand-row': VxeExpandRow,
-  'sort-formatter': VxeSortFormatter,
-  'custom-render': VxeCustomRender,
-  'cell-edit': VxeCellEdit,
-  'row-edit': VxeRowEdit,
-  'toolbar-export': VxeToolbarExport,
-  'column-resize': VxeColumnResize,
-  'tree-data': VxeTreeData,
-  'proxy-config': VxeProxyConfig,
-  'footer-summary': VxeFooterSummary,
-  'escape-hatch': VxeEscapeHatch,
-  'crud-with-dialog': VxeCrudWithDialog,
-  'merge-cells': VxeMergeCells
-}
-
-docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })
-docsData['linkage'].examples.forEach((ex: any) => { ex.component = linkageComponents[ex.key] })
-docsData['vxe-table'].examples.forEach((ex: any) => { ex.component = vxeTableComponents[ex.key] })
-
+// 组件由 advanced-doc.data.ts 通过 import.meta.glob 自动填充
 const currentDoc = computed(() => {
   const name = route.params.name
   return docsData[name] || { title: '未找到', description: '', examples: [] }
