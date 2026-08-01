@@ -195,8 +195,10 @@ export default defineComponent({
     const dialogVisible = computed({
       get: () => props.visible || false,
       set: (val: boolean) => {
+        const wasVisible = props.visible
         emit('update:visible', val)
-        if (!val) {
+        // 只在 true→false 转换时 emit closed，避免重复设置导致的循环
+        if (!val && wasVisible) {
           emit('closed', val)
           closeFullscreen()
         }
@@ -204,15 +206,14 @@ export default defineComponent({
     })
 
     const handleClose = () => {
-      // 通过 set dialogVisible 触发 :visible.sync → emit('update:visible', false)
+      // dialogVisible setter 统一处理 emit('closed')，不在此重复 emit
       ;(dialogVisible as unknown as { value: boolean }).value = false
-      emit('closed', false)
       closeFullscreen()
     }
 
     const onDialogClose = () => {
-      // el-dialog @close 触发，与 handleClose 等价
-      emit('closed', false)
+      // 遮罩/ESC/子组件触发 → 同步 dialogVisible 为新状态
+      ;(dialogVisible as unknown as { value: boolean }).value = false
       closeFullscreen()
     }
 
@@ -224,8 +225,12 @@ export default defineComponent({
      * el-dialog 的 before-close 钩子：返回 false 可阻止关闭
      * 此处保持开放（done() 调用即关闭）
      */
-    const beforeCloseHandler = (done: () => void) => {
-      done()
+    /**
+     * el-dialog 的 before-close 钩子：改为走 handleClose 统一流程，
+     * 避免 done() 绕过 dialogVisible setter 造成事件丢失
+     */
+    const beforeCloseHandler = (_done: () => void) => {
+      handleClose()
     }
 
     const filteredAttrs = computed(() => ({ ...(attrs as Record<string, unknown>) }))

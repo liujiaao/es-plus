@@ -108,19 +108,18 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     let lastVm: any = null
 
     const close = () => {
-      if (lastVm) {
-        lastVm.visible = false
-        // 等动画结束后销毁
-        setTimeout(() => {
-          if (lastVm) {
-            lastVm.$destroy()
-            if (lastVm.$el && lastVm.$el.parentNode) {
-              lastVm.$el.parentNode.removeChild(lastVm.$el)
-            }
-            lastVm = null
+      if (!lastVm || lastVm.visible === false) return
+      lastVm.visible = false
+      // 等动画结束后销毁
+      setTimeout(() => {
+        if (lastVm) {
+          lastVm.$destroy()
+          if (lastVm.$el && lastVm.$el.parentNode) {
+            lastVm.$el.parentNode.removeChild(lastVm.$el)
           }
-        }, 300)
-      }
+          lastVm = null
+        }
+      }, 300)
     }
 
     const DialogComponent = (dialogOptions: DialogOptions) => {
@@ -137,7 +136,16 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
       ;(dialogOptions as Record<string, unknown>).onClosed = (...args: unknown[]) => {
         originalOnClosed?.(...args)
-        close()
+        // 组件通过 dialogVisible setter 自行关闭，只做销毁清理
+        setTimeout(() => {
+          if (lastVm) {
+            lastVm.$destroy()
+            if (lastVm.$el && lastVm.$el.parentNode) {
+              lastVm.$el.parentNode.removeChild(lastVm.$el)
+            }
+            lastVm = null
+          }
+        }, 300)
       }
 
       ;(dialogOptions as Record<string, unknown>).onSubmit = (closeFn: Function = close) => {
@@ -155,9 +163,8 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     let vm: any = null
 
     const close = () => {
-      if (vm) {
-        vm.visible = false
-      }
+      if (!vm || vm.visible === false) return
+      vm.visible = false
     }
 
     const destroy = () => {
@@ -198,7 +205,10 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
       ;(mergedOptions as Record<string, unknown>).onClosed = () => {
         originalOnClosed?.()
-        close()
+        // 组件通过 dialogVisible setter 自行关闭，onClosed 只做回调通知
+        if (mergedOptions.destroyOnClose) {
+          setTimeout(() => destroy(), 300)
+        }
       }
 
       ;(mergedOptions as Record<string, unknown>).onSubmit = (closeFn: Function = close) => {
