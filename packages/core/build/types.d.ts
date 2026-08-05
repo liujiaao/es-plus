@@ -626,6 +626,17 @@ export interface TableOptions {
     listenToCallBack?: ListenToCallBack;
     configTableOut?: ConfigTableOut;
     entryQuery?: Record<string, unknown>;
+    /**
+     * httpRequestInstance() 重新拉取时是否保留当前页码（表级默认值）。
+     * - false（默认）：重新拉取回到第 1 页（向后兼容的原有行为）
+     * - true：保留当前页码；若拉取后当前页已无数据且非首页（如删除了本页最后一条），
+     *   自动回退到最后一个有效页并再次拉取。
+     *
+     * 注意：查询/重置按钮属于「新搜索」语义，始终回到第 1 页，不受此配置影响
+     * （内部以 httpRequestInstance(model, { keepPage: false }) 触发）。
+     * 编辑/删除后手动调用 httpRequestInstance() 才会遵循此表级默认值。
+     */
+    refetchKeepPage?: boolean;
     configBtn?: BtnConfig[];
     leftText?: string;
     /** 启用虚拟滚动（Vue 2 版本不支持，会降级为普通表格） */
@@ -670,6 +681,13 @@ export interface TableOptions {
      * exportConfig: true  // 使用默认配置
      */
     exportConfig?: VxeExportConfig | true;
+    /**
+     * 打印配置（仅 engine:'vxe' 生效，vxe-table 内置打印功能必需）
+     * @example
+     * printConfig: true  // 使用默认配置
+     * printConfig: { columns: [{ field: 'name' }] }  // 指定打印列
+     */
+    printConfig?: Record<string, unknown> | true;
     /**
      * 工具栏（含导出/刷新/自定义列/打印按钮）
      * 启用后自动隐藏 ES-Plus 的 configBtn 工具栏，避免双工具栏冲突
@@ -788,6 +806,8 @@ export interface DialogOptions {
     appendTo?: string | HTMLElement;
     /** 全屏 */
     fullscreen?: boolean;
+    /** 内容加载态：true 时在弹窗主体显示 loading 遮罩 */
+    loading?: boolean;
     /** 关闭按钮显示 */
     showClose?: boolean;
     /** 关闭时销毁内容 */

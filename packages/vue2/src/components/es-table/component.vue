@@ -188,6 +188,7 @@ import {
   inject,
   provide,
   getCurrentInstance,
+  markRaw,
   onMounted,
   h,
   nextTick,
@@ -215,7 +216,10 @@ const defaultOptions: TableOptions = {
   loading: false,
   border: false,
   size: 'small',
-  headerCellStyle: { background: '#f5f7fa' },
+  // 用 backgroundColor 而非 background 简写：vxe 引擎的表头竖线/底线画在
+  // .vxe-header--column 的 background-image(linear-gradient) 上，background 简写会把
+  // background-image 一并重置为 none，导致表头竖线消失（#5）。el-table 引擎不受影响。
+  headerCellStyle: { backgroundColor: '#f5f7fa' },
   highlightCurrentRow: true,
   cachePageSelection: true,
 }
@@ -337,7 +341,18 @@ export default defineComponent({
   ],
   setup(props, { emit, slots, attrs, expose }) {
     // ─── 注入全局配置 ─────────────────────────
-    const instance = getCurrentInstance() as unknown as Record<string, unknown>
+    // markRaw：es-table 的 vm 持有响应式数组（tableData / filteredColumns 等），
+    // 若把 getCurrentInstance() 包装对象原样返回给 setup，@vue/composition-api 的
+    // customReactive 会因 hasReactiveArrayChild(instance)===true 而深度遍历 instance.proxy
+    // （即本 vm），进而 observe 其 $options 并沿 $parent 链级联到外层 el-dialog 的
+    // $options.propsData / _parentListeners，使这些对象变为响应式。此后 el-dialog 每次
+    // patch（全屏切换 / 关闭动画）触发的 updateChildComponent 写入都会 dep.notify，
+    // 反复重新入队 EsDialog 渲染 watcher → "infinite update loop"。markRaw 让 customReactive
+    // 在 isRaw 短路处直接跳过整个 vm，从根上切断级联。es-form 因 vm 不含响应式数组
+    //（hasReactiveArrayChild 为 false）本就不触发 customReactive，故无此问题。
+    const instance = markRaw(
+      getCurrentInstance() as unknown as Record<string, unknown>
+    )
     const $esPlusTable =
       inject<Record<string, unknown>>(
         '$esPlusTable',
@@ -799,8 +814,12 @@ export default defineComponent({
 
     // 兼容性修复：移除 deep，仅监听数组引用变化即可触发 selection 重置。
     // M-6: vxe 引擎模式下不调用 initSelection（tableRef.value 为 null，且 vxe 自管选择状态）
+    // 跨页选择记忆：监听 effectiveDataSource（渲染中的真实数据）而非 props.dataSource。
+    // httpRequest 模式下数据落在内部 tableData（Vue2 已移除 update:dataSource 回传，
+    // props.dataSource 恒为空），只有监听 effectiveDataSource 才能在翻页加载后触发
+    // restoreSelectionForPage 勾选回来。
     watch(
-      () => props.dataSource,
+      effectiveDataSource,
       (val) => {
         if (isVxeEngine.value) return
         initSelection(val, tableRef.value)
@@ -858,6 +877,12 @@ export default defineComponent({
         })
         if (Object.keys(paginationPatch).length) {
           paginationConfig.value = { ...paginationConfig.value, ...paginationPatch }
+          // 服务端返回了 configTableOut 映射的 total 字段，即表示该表启用了服务端分页，
+          // 自动点亮分页器 —— 否则未显式传 :pagination 的 httpRequest 表格分页器恒不显示
+          // （#2「服务器分页器也无法显示」的根因）。仅置 true，永不隐藏，不影响既有行为。
+          if ('total' in paginationPatch) {
+            showPagination.value = true
+          }
         }
       }
     }
@@ -930,14 +955,23 @@ export default defineComponent({
       }
     }
 
-    const httpRequestInstance = (model?: Record<string, unknown>) => {
+    const httpRequestInstance = (
+      model?: Record<string, unknown>,
+      reqOptions?: { keepPage?: boolean }
+    ) => {
       // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
       if (isVxeProxyMode.value) {
         ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
         return Promise.resolve()
       }
       return new Promise((resolve, reject) => {
-        paginationConfig.value = { ...paginationConfig.value, current: 1 }
+        // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
+        // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
+        // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
+        const keepPage = reqOptions?.keepPage ?? props.options?.refetchKeepPage === true
+        if (!keepPage) {
+          paginationConfig.value = { ...paginationConfig.value, current: 1 }
+        }
         queryTableListMethod(
           {
             ...(model || {}),
@@ -949,6 +983,37 @@ export default defineComponent({
               formatConfigOut(res, ['total', 'tableData'])
               if (Object.keys(props.pagination).length) {
                 lastPaginationStr = JSON.stringify(paginationConfig.value)
+              }
+              // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
+              //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。
+              const current = Number(paginationConfig.value.current) || 1
+              if (keepPage && (tableData.value?.length ?? 0) === 0 && current > 1) {
+                const total = Number(paginationConfig.value.total) || 0
+                const pageSize = Number(paginationConfig.value.pageSize) || 10
+                const maxPage = Math.max(1, Math.ceil(total / pageSize))
+                if (maxPage < current) {
+                  // 仅在页码确实需要回退时递归一次，避免死循环
+                  paginationConfig.value = { ...paginationConfig.value, current: maxPage }
+                  // 外层请求的 loadingStatus 要到 finally 才复位，此刻仍为 true；
+                  // 若不先手动释放，递归的 queryTableListMethod 会被
+                  // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据（停在空白页）。
+                  loadingStatus.value = false
+                  queryTableListMethod(
+                    { ...(model || {}), pageIndex: maxPage, pageSize },
+                    {
+                      success: (res2) => {
+                        formatConfigOut(res2, ['total', 'tableData'])
+                        if (Object.keys(props.pagination).length) {
+                          lastPaginationStr = JSON.stringify(paginationConfig.value)
+                        }
+                        emit('pagination-current-change', paginationConfig.value)
+                        resolve(res2)
+                      },
+                      fail: (err) => reject(err),
+                    }
+                  )
+                  return
+                }
               }
               resolve(res)
             },
@@ -1126,6 +1191,7 @@ export default defineComponent({
       ...exposed,
       instance,
       resizeObservers,
+      tableHeight,
     }
   },
 })

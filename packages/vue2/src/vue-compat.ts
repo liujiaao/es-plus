@@ -78,6 +78,12 @@ const _toRefs = api.toRefs
 const _toRef = api.toRef
 const _unref = api.unref
 const _isRef = api.isRef
+// markRaw：给对象打上跳过响应式的标记。关键用途——把 Vue 组件实例放进
+// composition-api 的响应式图（如 setup 返回对象、reactive/ref 包裹的模型）之前
+// 先 markRaw，避免 polyfill 的 customReactive 深度遍历整个 vm（$options.propsData /
+// _parentListeners / $children 等），否则 Vue 正常 patch 时会 notify 到无关 watcher，
+// 触发 "infinite update loop"。Vue 2.7 原生与 2.6 polyfill 都导出 markRaw。
+const _markRaw = api.markRaw
 // `h` 的类型在 @vue/composition-api 内部使用了未导出的命名空间 `H`，
 // 直接 const _h = api.h 会触发 TS4023 (Exported variable uses unnameable type)。
 // Vue 2.7 的 h 类型带有 this: ComponentInternalInstance，在 setup 的箭头渲染函数里
@@ -108,6 +114,7 @@ export {
   _toRef as toRef,
   _unref as unref,
   _isRef as isRef,
+  _markRaw as markRaw,
   _h as h,
 }
 

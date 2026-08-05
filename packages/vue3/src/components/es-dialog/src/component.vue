@@ -28,7 +28,7 @@
         </template>
       </template>
 
-      <div class="dialog_body_layouts" :style="initDialogHeight">
+      <div v-loading="props.loading" class="dialog_body_layouts" :style="initDialogHeight">
         <template v-if="props.render && typeof props.render === 'function'">
           <RenderJsx
             :refs="renderBodyRefsObject"
@@ -80,8 +80,8 @@ export default { name: 'EsDialog' }
 </script>
 
 <script setup lang="ts">
-import { computed, ref, reactive, getCurrentInstance, provide, inject, useAttrs } from 'vue'
-import { ElConfigProvider, ElDialog, ElButton, ElIcon } from 'element-plus'
+import { computed, ref, reactive, getCurrentInstance, provide, inject, useAttrs, onMounted, watch } from 'vue'
+import { ElConfigProvider, ElDialog, ElButton, ElIcon, vLoading } from 'element-plus'
 import { FullScreen, Close, CopyDocument } from '@element-plus/icons-vue'
 import RenderJsx from './render-jsx.vue'
 import EsTable from '../../es-table'
@@ -107,12 +107,14 @@ const props = defineProps<{
   renderFooter?: Function
   render?: Function
   fullscreen?: boolean
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:visible': [val: boolean]
   closed: [val: boolean]
   submit: [payload: any]
+  open: []
 }>()
 
 const slots = defineSlots()
@@ -217,6 +219,20 @@ const dialogVisible = computed({
       closeFullscreen()
     }
   }
+})
+
+// 声明式切换 visible false→true 时补发 open
+watch(
+  () => props.visible,
+  (val) => {
+    if (val) emit('open')
+  }
+)
+
+// 程序化调用（useDialog）挂载时 visible 已为 true，watch 不会触发，
+// 需在此补发 open，保证 onOpen 生命周期回调可用。
+onMounted(() => {
+  if (props.visible) emit('open')
 })
 
 const getCurrentInstanceModel = computed(() => ({

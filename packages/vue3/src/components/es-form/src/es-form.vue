@@ -382,7 +382,8 @@ const clickBtn = async (it: BtnConfig) => {
 const queryTableRequest = async (model: Record<string, unknown>, formRef: { resetFields: () => void; validate: () => Promise<boolean> } | null, key?: string) => {
   if (key === 'query') {
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
     }
     //  else if (formRef) {
     //   await formRef.validate()
@@ -391,7 +392,7 @@ const queryTableRequest = async (model: Record<string, unknown>, formRef: { rese
     // 先重置表单字段，确保 model 已恢复初始值后再触发查询
     formRef.resetFields()
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
     }
   }
 }

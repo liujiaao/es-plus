@@ -497,15 +497,18 @@ export default defineComponent({
     }
 
     const queryTableRequest = (model: ModelData, formRef: { resetFields?: () => void } | null, key?: string) => {
-      const t = getTableInstant.value as { httpRequestInstance?: (p: unknown) => void } | null
+      const t = getTableInstant.value as {
+        httpRequestInstance?: (p: unknown, o?: { keepPage?: boolean }) => void
+      } | null
       if (key === 'query') {
         if (isParentTable.value) {
-          t?.httpRequestInstance?.(model)
+          // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
+          t?.httpRequestInstance?.(model, { keepPage: false })
         }
       } else if (key === 'rest' && formRef) {
         formRef.resetFields?.()
         if (isParentTable.value) {
-          t?.httpRequestInstance?.(model)
+          t?.httpRequestInstance?.(model, { keepPage: false })
         }
       }
     }
@@ -577,8 +580,36 @@ export default defineComponent({
       })
     }
 
+    /**
+     * 加固 Element UI el-form 的 label-width 拆卸逻辑，消除
+     * `[ElementForm]unpected width` 报错。
+     *
+     * 背景：es-form 默认 labelWidth: 'auto'。auto 模式下 el-form-item 在 mounted
+     * 时按「label 实测宽度」调用 elForm.registerLabelWidth——但当 form-item 处于
+     * 隐藏容器（如 el-tabs 里非激活、display:none 的 tab-pane）时实测宽度为 0，
+     * EUI 会跳过注册；而 beforeDestroy 仍无条件 deregisterLabelWidth(computedWidth)，
+     * 于是在 potentialLabelWidthArr 里 indexOf 得到 -1，getLabelWidthIndex 抛错。
+     *
+     * 该错误发生在销毁阶段、被全局 errorHandler 捕获，不影响关闭功能，纯属噪音。
+     * 这里包裹本 el-form 实例的 deregisterLabelWidth：仅当宽度确实在数组里才调用原
+     * 实现，否则静默跳过。只影响本组件持有的 el-form 实例，行为安全且局部。
+     */
+    const hardenLabelWidthTeardown = (elForm: Record<string, unknown> | null) => {
+      if (!elForm) return
+      const orig = elForm.deregisterLabelWidth
+      if (typeof orig !== 'function' || (elForm as Record<string, unknown>).__esDeregHardened)
+        return
+      ;(elForm as Record<string, unknown>).__esDeregHardened = true
+      ;(elForm as Record<string, unknown>).deregisterLabelWidth = function (val: unknown) {
+        const arr = (elForm as { potentialLabelWidthArr?: unknown[] }).potentialLabelWidthArr
+        if (!Array.isArray(arr) || arr.indexOf(val) === -1) return
+        return (orig as (v: unknown) => unknown).call(elForm, val)
+      }
+    }
+
     nextTick(() => {
       formInstance.value = templateRefs().formRef as unknown as Record<string, unknown>
+      hardenLabelWidthTeardown(formInstance.value)
       const proxy = (instance as unknown as { proxy?: Record<string, unknown> })?.proxy
       const bodyFormFn = proxy?.bodyFormInstance as ((inst: Record<string, unknown>) => void) | undefined
       bodyFormFn?.(formInstance.value)

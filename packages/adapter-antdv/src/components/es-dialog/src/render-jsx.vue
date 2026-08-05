@@ -55,6 +55,9 @@ export default defineComponent({
       if (!inst) return
       const comp = inst.exposed || inst.proxy
       if (!comp) return
+      // 仅当值变化时才写入，避免触发父组件 reactive 对象的依赖通知
+      // 导致 getCurrentInstanceModel → RenderJsx instance prop → onUpdated → flushRef 循环
+      if (refsObject.currentRef === comp) return
       refsObject.currentRef = comp
       if (typeof userRefCallback === 'function') {
         userRefCallback(comp)

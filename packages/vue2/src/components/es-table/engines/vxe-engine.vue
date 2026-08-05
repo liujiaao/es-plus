@@ -173,13 +173,20 @@ export default defineComponent({
         size: opts.size === 'mini' ? 'mini' : opts.size === 'medium' ? 'medium' : 'small',
         loading: opts.loading || false,
         showHeader: opts.showHeader !== false,
-        height: opts.heightType === 'maxHeight' ? undefined : (props.tableHeight || undefined),
+        // 高度语义对齐 el-table：仅 heightType:'height' 传固定高度，'maxHeight' 传最大高度，
+        // 默认 'auto' 两者皆 undefined —— 让 vxe-grid 按内容自适应，不再强塞 useTableResize 的
+        // 兜底值（auto 模式下 ResizeObserver 直接 return，tableHeight 恒为 400，会导致表体被
+        // 锁死 400px + scrollY 空白，即 #3 高度适配 / #6 逃生舱空白的根因）。
+        height: opts.heightType === 'height' ? (props.tableHeight || undefined) : undefined,
         maxHeight: opts.heightType === 'maxHeight' ? (props.tableHeight || undefined) : undefined,
         keepSource: opts.keepSource === false ? false : !!(opts.editConfig || opts.keepSource),
-        // ── vxe v3 API：rowId 替代 v4 的 rowConfig.keyField ──────
-        rowId: opts.rowkey || 'id',
-        // ── vxe v3 API：highlightCurrentRow 替代 v4 的 rowConfig.isCurrent/isHover ──
-        highlightCurrentRow: opts.highlightCurrentRow !== false,
+        // ── vxe 3.22 API：rowConfig.keyField / isCurrent 替代已废弃的 rowId / highlightCurrentRow ──
+        // （旧顶层属性仍可用但每次渲染都打印 deprecated 警告，改用 rowConfig 消除控制台噪音）
+        rowConfig: {
+          keyField: opts.rowkey || 'id',
+          isCurrent: opts.highlightCurrentRow !== false,
+          isHover: true,
+        },
         checkboxConfig: opts.multiSelect
           ? { reserve: true, highlight: false }
           : undefined,
@@ -215,7 +222,10 @@ export default defineComponent({
       }
 
       // ── vxe v3 API：headerCellStyle/headerCellClassName 为顶层属性（v4 中在 headerCellConfig 内）──
-      const effectiveHeaderStyle = opts.headerCellStyle !== undefined ? opts.headerCellStyle : { background: '#f5f7fa' }
+      // 注意：vxe 表头竖线/底线是画在 .vxe-header--column 的 background-image(linear-gradient) 上，
+      // 默认背景必须用 backgroundColor（而非 background 简写）——background 简写会把 background-image
+      // 一并重置为 none，导致表头竖线消失（#5，表体不受影响因为未注入 cellStyle）。
+      const effectiveHeaderStyle = opts.headerCellStyle !== undefined ? opts.headerCellStyle : { backgroundColor: '#f5f7fa' }
       if (effectiveHeaderStyle) {
         base.headerCellStyle = typeof effectiveHeaderStyle === 'function'
           ? ({ column, columnIndex }: any) => (effectiveHeaderStyle as Function)({ column, columnIndex })
@@ -264,7 +274,7 @@ export default defineComponent({
       // ── vxeConfig 逃生舱（深合并，后写优先）──────────────────
       for (const [k, v] of Object.entries(vxeExtra)) {
         if (k === 'pagerConfig') continue
-        const DEEP_MERGE_KEYS = ['checkboxConfig', 'sortConfig', 'columnConfig', 'editConfig', 'keyboardConfig', 'mouseConfig']
+        const DEEP_MERGE_KEYS = ['checkboxConfig', 'sortConfig', 'columnConfig', 'editConfig', 'keyboardConfig', 'mouseConfig', 'rowConfig']
         if (DEEP_MERGE_KEYS.includes(k) && base[k] && typeof v === 'object') {
           base[k] = { ...base[k], ...v }
         } else {

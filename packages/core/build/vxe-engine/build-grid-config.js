@@ -47,8 +47,9 @@ export function buildFirstClassGridOptions(opts) {
     if (opts.keepSource !== undefined)
         result.keepSource = opts.keepSource;
     // 打印（true 展开为默认空对象）
-    if (opts.printConfig !== undefined)
+    if (opts.printConfig !== undefined) {
         result.printConfig = opts.printConfig === true ? {} : opts.printConfig;
+    }
     // 树形 / 代理请求 / 展开行 / 序号（一等公民字段，直传）
     if (opts.treeConfig !== undefined)
         result.treeConfig = opts.treeConfig;
