@@ -258,7 +258,9 @@ const paginationConfig = ref<PaginationConfig>({
 
 // 出站分页回传的值快照：emit 前先更新它，使父组件用 v-model:pagination 写回时，
 // 入站 watcher 命中 str === lastPaginationStr 而 no-op，从值层面切断双向绑定回环。
-let lastPaginationStr = JSON.stringify(props.pagination || {})
+// 初值用空串哨兵（JSON.stringify 永不产出 ''）：保证入站 watcher 的 immediate 首跑
+// 必然放行（同步 showPagination 初值），而非被自身初值短路；首跑即写入真实快照。
+let lastPaginationStr = ''
 const emitPaginationUpdate = () => {
   const str = JSON.stringify(paginationConfig.value)
   if (str === lastPaginationStr) return

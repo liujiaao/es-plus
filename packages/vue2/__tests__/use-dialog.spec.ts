@@ -32,6 +32,15 @@ function createMockVm(extra: Record<string, any> = {}) {
     $mount: vi.fn(),
     $el: document.createElement('div'),
     $destroy: vi.fn(),
+    // 复用实例时 applyOptionsToVm 按「组件已声明的 prop」决定直写 vm[k] 还是汇入透传属性；
+    // 真实 EsDialog 声明了这些 prop，mock 须同样声明，否则 title 等会被当未声明属性丢弃。
+    $options: {
+      props: {
+        title: {}, visible: {}, width: {}, destroyOnClose: {},
+        appendTo: {}, loading: {}, maxHeight: {}, isDraggable: {},
+        configBtn: {}, render: {}, fullscreen: {},
+      },
+    },
     visible: false,
     ...extra,
   }
@@ -181,13 +190,15 @@ describe('useDialog — 单例模式', () => {
     expect(() => dialog.destroy()).not.toThrow()
   })
 
-  it('内置 onClosed 触发时自动调用 close()（vm.visible=false）', () => {
+  it('关闭链路经 update:visible 桥接翻转 vm.visible=false（编程式无父级 .sync）', () => {
     const dialog = useDialog()
     dialog({} as any)
     vm.visible = true
-    const closedCall = (vm.$on as any).mock.calls.find((c: any) => c[0] === 'closed')
-    expect(closedCall).toBeDefined()
-    closedCall[1]()
+    // 编程式实例无父级 :visible.sync 回写，initInstance 注册 update:visible→vm.visible 桥接，
+    // 组件自身关闭（X/取消/遮罩/ESC）emit('update:visible', false) 经此翻转 visible 真正收起。
+    const bridgeCall = (vm.$on as any).mock.calls.find((c: any) => c[0] === 'update:visible')
+    expect(bridgeCall).toBeDefined()
+    bridgeCall[1](false)
     expect(vm.visible).toBe(false)
   })
 
@@ -212,9 +223,11 @@ describe('useDialog — onlyInstance 模式', () => {
     expect(MockCtor).toHaveBeenCalledTimes(2)
   })
 
-  it('onlyInstance 模式不暴露 destroy 方法', () => {
+  it('onlyInstance 模式同样暴露 destroy 方法（对齐 vue3/ 统一两端）', () => {
     const dialog = useDialog(undefined, { onlyInstance: true })
-    expect((dialog as any).destroy).toBeUndefined()
+    // 统一两端 API：onlyInstance 模式同样提供 destroy（传 cacheKey 只销毁该缓存实例）
+    expect(typeof (dialog as any).destroy).toBe('function')
+    expect(() => (dialog as any).destroy()).not.toThrow()
   })
 
   it('暴露 close 方法', () => {
@@ -235,6 +248,7 @@ describe('useDialog — onlyInstance 模式', () => {
     try {
       const dialog = useDialog(undefined, { onlyInstance: true })
       dialog({} as any)
+      vm.visible = true // close() 守卫 visible===false 早退；开启态方进入延迟销毁分支
       dialog.close()
       expect(vm.$destroy).not.toHaveBeenCalled()
       vi.advanceTimersByTime(300)

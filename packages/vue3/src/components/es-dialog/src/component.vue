@@ -7,7 +7,7 @@
       :draggable="props.isDraggable"
       :width="props.width"
       :show-close="false"
-      @close="beforeClose"
+      :before-close="onBeforeClose"
       :fullscreen="(filteredAttrs?.fullscreen as boolean) ?? isFullscreen"
     >
       <template #header>
@@ -108,6 +108,8 @@ const props = defineProps<{
   render?: Function
   fullscreen?: boolean
   loading?: boolean
+  /** 关闭前拦截：传入后由用户调用 done() 才真正关闭（X/遮罩/ESC 统一经此闸门） */
+  beforeClose?: (done: () => void) => void
 }>()
 
 const emit = defineEmits<{
@@ -167,18 +169,19 @@ const handleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
 }
 
+// X 按钮点击：走统一关闭闸门（beforeClose 拦截）
 const handleClose = () => {
-  emit('closed', false)
-  closeFullscreen()
+  runBeforeClose(doClose)
 }
 
 const handleConfirm = () => {
   emit('submit', { renderBodyRefs: renderBodyRefsObject.currentRef, lyFormInstance, dialogInstance })
 }
 
-const beforeClose = () => {
-  emit('closed', false)
-  closeFullscreen()
+// el-dialog 内建关闭触发（遮罩点击 / ESC）：同样经闸门，不调用 el 的 done，
+// 由 doClose 翻转 v-model（visible）来收起弹窗，保证 beforeClose 可否决
+const onBeforeClose = (_done: () => void) => {
+  runBeforeClose(doClose)
 }
 
 const filteredAttrs = computed(() => {
@@ -213,13 +216,29 @@ const initDialogHeight = computed(() => {
 const dialogVisible = computed({
   get: () => props.visible || false,
   set: (val) => {
+    // wasVisible 守卫：仅在 true→false 真实转换时 emit closed，避免 v-model 二次回写重复派发
+    const wasVisible = props.visible
     emit('update:visible', val)
-    if (!val) {
+    if (!val && wasVisible) {
       emit('closed', val)
       closeFullscreen()
     }
   }
 })
+
+// 实际关闭动作：翻转 visible（setter 统一派发 update:visible + closed）
+const doClose = () => {
+  dialogVisible.value = false
+}
+
+// 关闭闸门：存在 beforeClose 则交给用户决定何时 done()，否则直接关闭
+const runBeforeClose = (proceed: () => void) => {
+  if (typeof props.beforeClose === 'function') {
+    props.beforeClose(proceed)
+  } else {
+    proceed()
+  }
+}
 
 // 声明式切换 visible false→true 时补发 open
 watch(

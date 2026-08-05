@@ -21,7 +21,7 @@ const FALLBACK_PRODUCTS = [
 export async function fetchProducts(): Promise<any[]> {
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+    const timeout = setTimeout(() => controller.abort(), 1200)
     const res = await fetch('https://fakestoreapi.com/products', { signal: controller.signal })
     clearTimeout(timeout)
     if (!res.ok) throw new Error('API error')

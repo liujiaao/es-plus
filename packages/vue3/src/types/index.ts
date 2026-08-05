@@ -288,6 +288,8 @@ export interface DialogOptions {
   closeOnPressEscape?: boolean
   /** Callback before dialog closes, call done() to close */
   beforeClose?: (done: () => void) => void
+  /** 实例缓存键：同一 cacheKey 跨多次调用复用同一弹窗实例（保留内部状态），关闭后延迟 10 分钟自动回收 */
+  cacheKey?: string
   /** Whether to vertically center the dialog */
   alignCenter?: boolean
   /** Dialog CSS margin-top, default '15vh' */

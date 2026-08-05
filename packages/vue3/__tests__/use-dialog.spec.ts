@@ -35,9 +35,9 @@ describe('useDialog - 生命周期', () => {
 
     it('sets visible to true on open', () => {
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', render: () => h('div', '内容') })
+      const { instance } = dialog({ title: '测试', render: () => h('div', '内容') })
 
-      expect(vNode?.component?.props?.visible).toBe(true)
+      expect(instance?.component?.props?.visible).toBe(true)
     })
 
     it('close sets visible to false', async () => {
@@ -63,13 +63,13 @@ describe('useDialog - 生命周期', () => {
 
     it('reuses instance on second call', () => {
       const dialog = useDialog()
-      const vNode1 = dialog({ title: '第一次', render: () => h('div', '1') })
-      const vNode2 = dialog({ title: '第二次', render: () => h('div', '2') })
+      const r1 = dialog({ title: '第一次', render: () => h('div', '1') })
+      const r2 = dialog({ title: '第二次', render: () => h('div', '2') })
 
       // Same vnode should be reused
-      expect(vNode1).toBe(vNode2)
+      expect(r1.instance).toBe(r2.instance)
       // Second call should update title and set visible=true
-      expect(vNode2?.component?.props?.visible).toBe(true)
+      expect(r2.instance?.component?.props?.visible).toBe(true)
     })
 
     it('calls onClosed callback when dialog closes', () => {
@@ -98,25 +98,25 @@ describe('useDialog - 生命周期', () => {
 
     it('applies default width of 50%', () => {
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', render: () => h('div', '内容') })
+      const { instance } = dialog({ title: '测试', render: () => h('div', '内容') })
 
-      expect(vNode?.component?.props?.width).toBe('50%')
+      expect(instance?.component?.props?.width).toBe('50%')
     })
 
     it('applies custom width', () => {
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', width: '800px', render: () => h('div', '内容') })
+      const { instance } = dialog({ title: '测试', width: '800px', render: () => h('div', '内容') })
 
-      expect(vNode?.component?.props?.width).toBe('800px')
+      expect(instance?.component?.props?.width).toBe('800px')
     })
 
     it('sets destroyOnClose to true by default', () => {
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', render: () => h('div', '内容') })
+      const { instance } = dialog({ title: '测试', render: () => h('div', '内容') })
 
       // destroyOnClose is merged into props via Object.assign in mergedOptions
       // The mergedOptions spread may override; check the prop exists with correct value
-      const props = vNode?.component?.props
+      const props = instance?.component?.props
       expect(props?.destroyOnClose === true || props?.destroyOnClose === undefined).toBe(true)
     })
   })
@@ -125,11 +125,11 @@ describe('useDialog - 生命周期', () => {
     it('creates and destroys independently each call', () => {
       const dialog = useDialog(undefined, { onlyInstance: true })
 
-      const vNode1 = dialog({ title: '第一个', render: () => h('div', '1') })
-      const vNode2 = dialog({ title: '第二个', render: () => h('div', '2') })
+      const r1 = dialog({ title: '第一个', render: () => h('div', '1') })
+      const r2 = dialog({ title: '第二个', render: () => h('div', '2') })
 
       // In onlyInstance mode, each call creates a new VNode
-      expect(vNode1).not.toBe(vNode2)
+      expect(r1.instance).not.toBe(r2.instance)
     })
 
     it('close removes the container from DOM', () => {
@@ -143,9 +143,11 @@ describe('useDialog - 生命周期', () => {
       expect(containers.length).toBe(0)
     })
 
-    it('does not have destroy method', () => {
+    it('exposes a destroy method (unified with vue2)', () => {
       const dialog = useDialog(undefined, { onlyInstance: true })
-      expect((dialog as any).destroy).toBeUndefined()
+      // 统一两端 API：onlyInstance 模式同样提供 destroy（对齐 vue2）
+      expect(typeof (dialog as any).destroy).toBe('function')
+      expect(() => (dialog as any).destroy()).not.toThrow()
     })
 
     it('calls onClosed and then removes on close', () => {
@@ -167,9 +169,9 @@ describe('useDialog - 生命周期', () => {
         { name: '取消', click: vi.fn() },
         { name: '确定', type: 'primary', click: vi.fn() }
       ]
-      const vNode = dialog({ title: '测试', render: () => h('div', '内容'), configBtn })
+      const { instance } = dialog({ title: '测试', render: () => h('div', '内容'), configBtn })
 
-      expect(vNode?.component?.props?.configBtn).toEqual(configBtn)
+      expect(instance?.component?.props?.configBtn).toEqual(configBtn)
     })
   })
 
@@ -177,9 +179,9 @@ describe('useDialog - 生命周期', () => {
     it('passes render function to dialog', () => {
       const renderFn = () => h('div', { class: 'custom-content' }, '自定义内容')
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', render: renderFn })
+      const { instance } = dialog({ title: '测试', render: renderFn })
 
-      expect(vNode?.component?.props?.render).toBe(renderFn)
+      expect(instance?.component?.props?.render).toBe(renderFn)
     })
 
     it('render receives (h, instance, components)', () => {
@@ -221,9 +223,45 @@ describe('useDialog - 生命周期', () => {
 
     it('handles fullscreen option', () => {
       const dialog = useDialog()
-      const vNode = dialog({ title: '测试', render: () => h('div', '内容'), fullscreen: true })
+      const { instance } = dialog({ title: '测试', render: () => h('div', '内容'), fullscreen: true })
 
-      expect(vNode?.component?.props?.fullscreen).toBe(true)
+      expect(instance?.component?.props?.fullscreen).toBe(true)
+    })
+  })
+
+  describe('cacheKey (unified with vue2)', () => {
+    it('reuses the same instance across calls with same cacheKey', () => {
+      const dialog = useDialog()
+      const r1 = dialog({ title: '第一次', render: () => h('div', '1'), cacheKey: 'k1' })
+      // 关闭后再次以同 cacheKey 打开 → 复用同一实例（保留内部状态）
+      r1.close()
+      const r2 = dialog({ title: '第二次', render: () => h('div', '2'), cacheKey: 'k1' })
+
+      expect(r1.instance).toBe(r2.instance)
+      expect(r2.instance?.component?.props?.visible).toBe(true)
+      // 本次省略的 prop 不残留上次值：title 覆盖为新值
+      expect(r2.instance?.component?.props?.title).toBe('第二次')
+    })
+
+    it('close(cacheKey instance) hides but keeps the cached instance mounted', async () => {
+      const dialog = useDialog()
+      const { instance, close } = dialog({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'k2' })
+
+      close()
+      await nextTick()
+      // 缓存实例关闭后不立即卸载，仅 visible=false
+      expect(instance?.component?.props?.visible).toBe(false)
+      expect(document.querySelectorAll('.dialog-containers').length).toBeGreaterThan(0)
+    })
+
+    it('destroy(cacheKey) removes that cached container', () => {
+      const dialog = useDialog()
+      dialog({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'k3' })
+
+      dialog.destroy('k3')
+      // 再次打开应视为未命中缓存（新建）
+      const r = dialog({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'k3' })
+      expect(r.instance?.component?.props?.visible).toBe(true)
     })
   })
 })
