@@ -26,7 +26,7 @@
               v-if="isVirtual"
               ref="virtualEngineRef"
               :columns="filteredColumns"
-              :data-source="dataSource"
+              :data-source="displayDataSource"
               :table-height="tableHeight"
               :options="props.options"
               :parent-slots="$slots"
@@ -39,7 +39,7 @@
               ref="vxeEngineRef"
               v-bind="vxePassthroughAttrs"
               :columns="filteredColumns"
-              :data-source="dataSource"
+              :data-source="displayDataSource"
               :table-height="tableHeight"
               :options="props.options"
               :parent-slots="$slots"
@@ -54,7 +54,7 @@
               ref="tableRef"
               style="width: 100%"
               v-bind="tableBindAttrs"
-              :data="dataSource"
+              :data="displayDataSource"
               @sort-change="changeTableSort"
               @selection-change="handleTableSelectionChange"
             >
@@ -133,7 +133,7 @@ const defaultOptions: TableOptions = {
 
 <script setup lang="ts">
 // @ts-nocheck - TODO: migrate to strict when refactored
-import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs } from 'vue'
+import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs, nextTick } from 'vue'
 import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
@@ -256,6 +256,16 @@ const paginationConfig = ref<PaginationConfig>({
   ...props.pagination
 })
 
+// 出站分页回传的值快照：emit 前先更新它，使父组件用 v-model:pagination 写回时，
+// 入站 watcher 命中 str === lastPaginationStr 而 no-op，从值层面切断双向绑定回环。
+let lastPaginationStr = JSON.stringify(props.pagination || {})
+const emitPaginationUpdate = () => {
+  const str = JSON.stringify(paginationConfig.value)
+  if (str === lastPaginationStr) return
+  lastPaginationStr = str
+  emit('update:pagination', paginationConfig.value)
+}
+
 const formInstance = ref<unknown>(null)
 
 // 计算属性
@@ -336,12 +346,49 @@ const paginationLayoutConfig = computed(() => {
   return typeof cfg === 'function' ? cfg() : cfg
 })
 const layout = computed(() => paginationLayoutConfig.value?.layout || 'prev, pager, next, jumper, sizes, ->, total')
-const paginationPageSizes = computed(() => paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes)
+// 分页每页条数选项：始终包含当前生效的 pageSize，否则 el-pagination 的 size 选择器
+// 会因「pageSize 不在 page-sizes 列表中」回退到 pageSizes[0]/10，导致播种的 pageSize
+// 在分页器上显示与实际请求数不一致。
+const paginationPageSizes = computed(() => {
+  const configured = paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes
+  const size = Number(paginationConfig.value.pageSize) || 10
+  const base = Array.isArray(configured) && configured.length ? configured.map((n: unknown) => Number(n)) : [10, 20, 30, 50, 100]
+  return base.includes(size) ? base : [size, ...base].sort((a, b) => a - b)
+})
 const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
 const paginationBackground = computed(() => paginationLayoutConfig.value?.background ?? true)
 const loadStatus = computed(() => props.options.loading || loadingStatus.value)
 const isRequestConf = computed(() => !!props.options.actionUrl || (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0))
 const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof props.options.httpRequest === 'function')
+
+// 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
+// 仅在非请求模式且非 vxe proxy 时生效。
+const isLocalPagination = computed(
+  () => props.options?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
+)
+// 模板渲染用的数据源：本地分页时切当前页，否则原样透传 dataSource。
+const displayDataSource = computed(() => {
+  if (isLocalPagination.value) {
+    const src = Array.isArray(props.dataSource) ? props.dataSource : []
+    const size = Number(paginationConfig.value.pageSize) || 10
+    const cur = Number(paginationConfig.value.current) || 1
+    const start = (cur - 1) * size
+    return src.slice(start, start + size)
+  }
+  return props.dataSource
+})
+// 依据全量 dataSource 回填 total/showPagination + 边界回收（当前页超范围则回退）。
+const syncLocalPagination = () => {
+  if (!isLocalPagination.value) return
+  const total = Array.isArray(props.dataSource) ? props.dataSource.length : 0
+  const size = Number(paginationConfig.value.pageSize) || 10
+  const maxPage = Math.max(1, Math.ceil(total / size))
+  const current = Math.min(Number(paginationConfig.value.current) || 1, maxPage)
+  paginationConfig.value.total = total
+  paginationConfig.value.current = current
+  showPagination.value = true
+  emitPaginationUpdate()
+}
 
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
@@ -481,6 +528,30 @@ const { tableHeight, resizeObservers } = useTableResize(
   }
 )
 
+/**
+ * 统一的"延迟重算高度"：等 DOM（分页器 / 工具栏 / EsForm）布局完成后再重算。
+ *
+ * 关键场景：httpRequest 异步表格在 onMounted 阶段还没拿到数据，showPagination 仍为 false、
+ * 分页器尚未渲染（offsetHeight=0）。此时算出的 tableHeight 少扣了分页器高度 → el-table 偏高，
+ * 撞穿 .tableContainer 的 overflow:hidden，把最后一行裁掉；只有等窗口 resize 命中容器 observer
+ * 才纠正。数据到达、分页器出现后主动重算即可根除。
+ */
+const scheduleResize = () => {
+  const ht = heightType.value
+  if (ht !== 'height' && ht !== 'maxHeight') return
+  nextTick(() => {
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => resizeObservers())
+    } else {
+      resizeObservers()
+    }
+  })
+}
+
+// 分页器由隐藏→显示（异步数据到达点亮 showPagination，或客户端分页播种）会改变可用高度，
+// 此刻必须重算，否则表格保持"分页器未计入"时的偏大高度而裁掉末行。
+watch(showPagination, () => scheduleResize())
+
 watch(
   visibleShow,
   async (val, oldVal) => {
@@ -497,10 +568,22 @@ watch(
 watch(
   () => props.pagination,
   (val) => {
+    // 值比较守卫：与上次出站快照一致（多为自身 emit 经 v-model 写回）时直接 no-op，避免空转一轮
+    const str = JSON.stringify(val || {})
+    if (str === lastPaginationStr) return
+    lastPaginationStr = str
     paginationConfig.value = { ...paginationConfig.value, ...val }
     showPagination.value = val.total !== undefined
   },
   { deep: true, immediate: true }
+)
+
+// 内建客户端分页：初始播种 total/showPagination，并在 dataSource 长度变化时
+// 自动回填 total 与边界回收。当前页切片由 displayDataSource 派生。
+syncLocalPagination()
+watch(
+  () => (Array.isArray(props.dataSource) ? props.dataSource.length : 0),
+  () => syncLocalPagination()
 )
 
 watch(
@@ -645,9 +728,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
       {
         success: (res) => {
           formatConfigOut(res, ['total', 'tableData'])
-          if (Object.keys(props.pagination).length) {
-            emit('update:pagination', paginationConfig.value)
-          }
+          emitPaginationUpdate()
           // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
           //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。
           const current = Number(paginationConfig.value.current) || 1
@@ -667,9 +748,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
                 {
                   success: (res2) => {
                     formatConfigOut(res2, ['total', 'tableData'])
-                    if (Object.keys(props.pagination).length) {
-                      emit('update:pagination', paginationConfig.value)
-                    }
+                    emitPaginationUpdate()
                     emit('pagination-current-change', paginationConfig.value)
                     resolve(res2)
                   },
@@ -697,7 +776,7 @@ const changePageIndexRequest = () => {
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', paginationConfig.value)
+        emitPaginationUpdate()
         emit('pagination-current-change', paginationConfig.value)
       }
     }
@@ -710,7 +789,7 @@ const changePageSizeRequest = () => {
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', paginationConfig.value)
+        emitPaginationUpdate()
       }
     }
   )
@@ -722,7 +801,7 @@ const handleSizeChange = (size: number) => {
   if (isRequestConf.value) {
     changePageSizeRequest()
   } else {
-    emit('update:pagination', paginationConfig.value)
+    emitPaginationUpdate()
     emit('size-change', paginationConfig.value, size)
   }
 }
@@ -732,7 +811,7 @@ const handleIndexChange = (val: number) => {
   if (isRequestConf.value) {
     changePageIndexRequest()
   } else {
-    emit('update:pagination', paginationConfig.value)
+    emitPaginationUpdate()
     emit('pagination-current-change', paginationConfig.value)
   }
 }
@@ -805,6 +884,10 @@ provide('getTableInstantce', () => ({
 }))
 
 // 暴露方法
+// 纯重排列宽/布局（不重新取数），供方法族与逃生舱复用。
+const doLayoutFn = () =>
+  activeEngineRef.value ? activeEngineRef.value?.doLayout() : tableRef.value?.doLayout?.()
+
 defineExpose({
   httpRequestInstance,
   getSelectionRows: () => activeEngineRef.value
@@ -823,9 +906,44 @@ defineExpose({
     clearAllSelection(isVxeEngine.value || isVirtual.value ? null : tableRef.value)
     activeEngineRef.value?.clearSelection()
   },
-  refresh: () => activeEngineRef.value
-    ? activeEngineRef.value?.doLayout()
-    : tableRef.value?.doLayout?.(),
+  // 刷新当前页：保留页码重新取数 + 重排。统一命令式刷新入口。
+  refresh: (model?: Record<string, unknown>) => {
+    if (isVxeProxyMode.value) {
+      ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+      return Promise.resolve()
+    }
+    if (isRequestConf.value) {
+      return httpRequestInstance(model, { keepPage: true }).then((r) => {
+        doLayoutFn()
+        return r
+      })
+    }
+    // 本地/静态：无网络，重排即可（本地分页顺带回收边界并回传父组件）
+    syncLocalPagination()
+    doLayoutFn()
+    return Promise.resolve()
+  },
+  // 重新加载：回到第 1 页重新取数。搜索/重置语义。
+  reload: (model?: Record<string, unknown>) => {
+    if (isVxeProxyMode.value) {
+      ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('reload')
+      return Promise.resolve()
+    }
+    if (isRequestConf.value) {
+      // httpRequestInstance 在 !keepPage 时内部已把 current 置 1
+      return httpRequestInstance(model, { keepPage: false }).then((r) => {
+        doLayoutFn()
+        return r
+      })
+    }
+    // 本地/静态：回到第 1 页
+    paginationConfig.value.current = 1
+    syncLocalPagination()
+    doLayoutFn()
+    return Promise.resolve()
+  },
+  // 仅重排列宽/布局，不重新取数（旧 refresh 行为的逃生舱）
+  doLayout: doLayoutFn,
   scrollToRow: (row: number) => activeEngineRef.value?.scrollToRow(row),
   // vxe 行内编辑 CRUD（engine:'vxe' 时有效）
   getUpdateRecords: () => activeEngineRef.value?.getUpdateRecords?.() ?? [],

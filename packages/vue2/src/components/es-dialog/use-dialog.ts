@@ -155,6 +155,17 @@ const initInstance = (
 
   const vm = new Ctor({ propsData: finalPropsData })
 
+  // 编程式实例没有父级 :visible.sync / v-model:visible 来回写 visible。
+  // es-dialog 关闭（X/取消/遮罩/ESC）只 emit('update:visible', false)，自身不改 props.visible；
+  // 若无人回写，props.visible 恒为 true、弹窗关不掉（尤其 cacheKey 复用实例——onClosed 提前 return
+  // 不销毁，又没有 destroy 兜底藏 DOM）。此处桥接 update:visible → vm.visible，等价父级 .sync 回写，
+  // 使组件自身的关闭链路真正翻转 visible。用户显式传 onUpdate:visible 时以其为准，不覆盖。
+  if (!events['update:visible']) {
+    vm.$on('update:visible', (val: boolean) => {
+      vm.visible = val
+    })
+  }
+
   // 注册事件监听（注意：Vue 2 中通过 $on 监听）
   Object.entries(events).forEach(([eventName, handler]) => {
     vm.$on(eventName, handler)

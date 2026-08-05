@@ -653,6 +653,16 @@ export interface TableOptions {
    */
   refetchKeepPage?: boolean
 
+  /**
+   * 内建客户端分页：传入全量 `dataSource`，组件内部自动切片并自管
+   * current/pageSize/total，无需再写 pagedData 切片、无需监听
+   * pagination-current-change / size-change。数据变化时自动回收边界
+   * （当前页超出范围则回退到最后一个有效页）。
+   * - 仅在非请求模式（无 httpRequest/apiParams/actionUrl）且非 vxe proxy 时生效。
+   * - 初始 pageSize / pageSizes 可用 `:pagination="{ pageSize, pageSizes }"` 播种（无需 total）。
+   */
+  localPagination?: boolean
+
   // ─── 工具栏 ──────────────────────────────────────
   configBtn?: BtnConfig[]
   leftText?: string
@@ -916,8 +926,12 @@ export interface EsTableInstance {
   toggleRowSelection: (row: ModelData, selected?: boolean) => void
   /** 清除所有页选择（含跨页缓存） */
   clearAllSelection: () => void
-  /** 重新加载当前页 */
-  refresh: () => void
+  /** 刷新当前页：保留页码重新取数 + 重排布局（请求模式下会发起一次请求），返回 Promise */
+  refresh: (model?: Record<string, unknown>) => Promise<unknown> | void
+  /** 重新加载：回到第 1 页重新取数（搜索/重置语义），返回 Promise */
+  reload: (model?: Record<string, unknown>) => Promise<unknown> | void
+  /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
+  doLayout: () => void
 }
 
 // ============================================================================
