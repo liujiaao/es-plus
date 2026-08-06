@@ -138,6 +138,27 @@ function checkStructuredConfigZod() {
         }
       }
     }
+
+    // tableBtns 定位字段：唯一权威字段是 `code`（1=left,2=right），三端都读它。
+    // vue3/antdv 额外接受 `position` 作运行时覆盖，但 vue2 忽略它——若生成契约
+    // 里出现 `position`，同一份配置在 vue2 上定位失效，违背「多端同构」。因此两处
+    // Zod 副本都必须只用 `code`、禁止 `position`。
+    // 兼容两种写法：内联 `tableBtns: z.array(z.object({...}))`（mcp 副本）与
+    // 具名 `const TableBtnSchema = z.object({...})`（shared 权威）。
+    const btnBlock =
+      src.match(/tableBtns:\s*z\s*\.array\(z\.object\(\{([\s\S]*?)\}\)\)\s*\.optional\(\)/) ||
+      src.match(/const\s+TableBtnSchema\s*=\s*z\.object\(\{([\s\S]*?)\}\)/)
+    if (!btnBlock) { fail(`未能在 ${label} 定位 tableBtns`); ok = false }
+    else {
+      if (!/\bcode:/.test(btnBlock[1])) {
+        fail(`${label} 的 tableBtns 缺少定位字段 code（1=left,2=right，三端唯一同构字段）`)
+        ok = false
+      }
+      if (/\bposition:/.test(btnBlock[1])) {
+        fail(`${label} 的 tableBtns 含 position 字段——vue2 渲染器忽略它，破坏多端同构；请只用 code`)
+        ok = false
+      }
+    }
   }
 
   if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段）`)

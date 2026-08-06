@@ -39,6 +39,37 @@ describe('detect — tier 1: explicit es-plus packages (high confidence)', () =>
     expect(r.reasoning).toContain('es-plus-ui')
     expect(r.reasoning.toLowerCase()).toMatch(/migrat|migration|legacy/)
   })
+
+  it('returns antdv when @es-plus/adapter-antdv is declared', () => {
+    const r = detect(stringify({ dependencies: { '@es-plus/adapter-antdv': '^1.0.0' } }))
+    expect(r.target).toBe('antdv')
+    expect(r.confidence).toBe('high')
+    expect(r.signals['@es-plus/adapter-antdv']).toBe('^1.0.0')
+  })
+})
+
+describe('detect — antdv inference (Ant Design Vue)', () => {
+  it('vue@3 + ant-design-vue (no element-plus) → antdv high', () => {
+    const r = detect(stringify({
+      dependencies: { vue: '^3.4.0', 'ant-design-vue': '^4.0.0' },
+    }))
+    expect(r.target).toBe('antdv')
+    expect(r.confidence).toBe('high')
+    expect(r.signals['ant-design-vue']).toBe('^4.0.0')
+  })
+
+  it('ant-design-vue only (no vue dep listed) → antdv high', () => {
+    const r = detect(stringify({ dependencies: { 'ant-design-vue': '^4.0.0' } }))
+    expect(r.target).toBe('antdv')
+    expect(r.confidence).toBe('high')
+  })
+
+  it('ant-design-vue + element-plus both present → vue3 wins (element-plus takes precedence)', () => {
+    const r = detect(stringify({
+      dependencies: { vue: '^3.4.0', 'ant-design-vue': '^4.0.0', 'element-plus': '^2.5.0' },
+    }))
+    expect(r.target).toBe('vue3')
+  })
 })
 
 describe('detect — tier 2: infer from Vue + Element layer', () => {
@@ -147,7 +178,7 @@ describe('detect — output shape contract', () => {
     expect(r).toHaveProperty('confidence')
     expect(r).toHaveProperty('reasoning')
     expect(r).toHaveProperty('signals')
-    expect(['vue3', 'vue2']).toContain(r.target)
+    expect(['vue3', 'vue2', 'antdv']).toContain(r.target)
     expect(['high', 'medium', 'low']).toContain(r.confidence)
     expect(typeof r.reasoning).toBe('string')
     expect(typeof r.signals).toBe('object')

@@ -6,6 +6,8 @@ import EsTable from './components/es-table'
 import EsCrudPage from './components/es-crud-page'
 import SvgIcon from './components/svg-icon'
 import { configureEsPlus } from './config'
+// 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
+import { httpRequest } from '@es-plus/core'
 
 // 组件列表
 const components = [EsDialog, EsForm, EsTable, EsCrudPage, SvgIcon]
@@ -49,6 +51,7 @@ export {
   SvgIcon,
   useDialog,
   configureEsPlus,
+  httpRequest,
   install
 }
 

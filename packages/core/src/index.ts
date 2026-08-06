@@ -38,8 +38,9 @@ export {
   configureEsPlus,
   getGlobalConfig,
   resetGlobalConfig,
+  httpRequest,
 } from './config'
-export type { EsPlusGlobalConfig } from './config'
+export type { EsPlusGlobalConfig, HttpRequestFn } from './config'
 
 // ─── 常量 ─────────────────────────────────────────────────────
 export {

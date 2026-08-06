@@ -36,6 +36,8 @@
  */
 
 import { configureEsPlus } from '@es-plus/core'
+// 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
+import { httpRequest } from '@es-plus/core'
 import type { Vue2Constructor } from './vue-compat'
 import { isVue27Plus, VueCompositionAPIPlugin } from './vue-compat'
 
@@ -174,6 +176,7 @@ export {
   EsCrudPage,
   useDialog,
   configureEsPlus,
+  httpRequest,
   install,
 }
 

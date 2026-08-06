@@ -108,13 +108,18 @@ export function registerGenerateFromConfig(server) {
                     confirm: z.union([z.string(), z.boolean()]).optional(),
                     permissionValue: z.string().optional(),
                 })).optional(),
+                // NOTE: canonical positioning field is `code` (1=left, 2=right), the
+                // single field all three renderers read. Kept in exact lockstep with
+                // the authoritative shared schema (structured-config.schema.ts) — do
+                // NOT re-introduce a `position` field here: vue3/antdv accept it as a
+                // runtime override but vue2 ignores it, so emitting `position` breaks
+                // 多端同构. check-schema-contract.mjs guards this.
                 tableBtns: z.array(z.object({
                     name: z.string().min(1),
                     key: z.string().optional(),
                     type: z.string().optional(),
                     icon: z.string().optional(),
-                    position: z.enum(['left', 'right']).default('left'),
-                    code: z.union([z.literal(1), z.literal(2)]).optional(),
+                    code: z.union([z.literal(1), z.literal(2)]).default(1),
                     dialogKey: z.string().optional(),
                     actionType: z.string().optional(),
                     confirm: z.union([z.string(), z.boolean()]).optional(),

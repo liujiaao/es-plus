@@ -12,7 +12,7 @@
 export { isObject, isArray, isFunction, isString, isNumber, isEmpty, firstWordUpperCase, kebabToCamel, toPascalCase, findValueByKey, wrapPromise, getNestedValue, setNestedValue, } from './shared';
 export { PUBLIC_CONTRACT_TYPES } from './public-types';
 // ─── 全局配置 ─────────────────────────────────────────────────
-export { configureEsPlus, getGlobalConfig, resetGlobalConfig, } from './config';
+export { configureEsPlus, getGlobalConfig, resetGlobalConfig, httpRequest, } from './config';
 // ─── 常量 ─────────────────────────────────────────────────────
 export { VALID_FORM_TYPES, FORM_TYPE_ALIASES, SPECIAL_BTN_KEYS, BUILT_IN_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, OPERATION_COLUMN_PROP_CRUD_PAGE, VALID_CRUD_ACTIONS, DEFAULT_CONFIG_TABLE_OUT, CRUD_PAGE_BTN_CLICK_KEYS, CRUD_PAGE_DIALOG_KEYS, DEFAULT_TOOLBAR_BTNS, DEFAULT_ROW_BTNS, } from './constants';
 // ─── 表单布局算法 ─────────────────────────────────────────────

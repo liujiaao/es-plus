@@ -167,6 +167,33 @@ Modal.confirm({
 `;
 }
 
+// Single httpRequest adapter that works for BOTH request shapes es-plus emits, so
+// one global config serves every page pattern (this is what makes the generated
+// code run without hand-editing — a mismatched wrapper silently drops payloads):
+//   • Method A — bare `apiParams:{url}` auto-fetch (es-table calls $httpRequest directly):
+//       { url, formParams:{...fields,pageIndex,pageSize}, headers, method?, pageIndex, pageSize }
+//   • Method B — generated `fetchData` + add/edit/delete handlers (axios-native shape):
+//       { url, method, params?, data?, headers }
+// It prefers Method-B's explicit `params`/`data`, and falls back to Method-A's
+// `formParams`. Always unwraps to `res.data` so configTableOut mapping sees the
+// business payload. A GET-only / formParams-only wrapper breaks Method B
+// (empty PUT bodies, dropped POST/GET payloads); a bare `axios(params)` breaks
+// Method A (formParams ignored → empty query). This handles both.
+function robustHttpRequest(): string {
+  return `(p) => {
+        const method = (p.method || 'GET').toUpperCase()
+        const isRead = method === 'GET'
+        return axios({
+          url: p.url,
+          method,
+          // Method B passes \`params\`/\`data\` directly; Method A only \`formParams\`.
+          params: isRead ? (p.params ?? { ...p.formParams, pageIndex: p.pageIndex, pageSize: p.pageSize }) : undefined,
+          data: isRead ? undefined : (p.data ?? p.formParams),
+          headers: p.headers,
+        }).then(res => res.data)
+      }`;
+}
+
 function buildConventionsContent(target: Target): string {
   const v = TARGETS[target];
   const isVue2 = target === "vue2";
@@ -228,11 +255,12 @@ ignored on Vue 2.`}
 ${!isVue2
     ? `When using app.use(ESPlus), configure globally:
 \`\`\`typescript
+import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios(params),
+      $httpRequest: ${robustHttpRequest()},
       configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
     }
   }
@@ -241,11 +269,12 @@ app.use(ESPlus, {
     : `When using Vue.use(ESPlus), configure globally:
 \`\`\`typescript
 import Vue from 'vue'
+import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios(params),
+      $httpRequest: ${robustHttpRequest()},
       configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
     }
   }
@@ -313,22 +342,78 @@ interface StructuredCrudConfig {
     stripe?: boolean
     rowkey?: string
     heightType?: 'height' | 'auto' | 'maxHeight'
+    tabHeight?: number | string // table container height (works with heightType)
     height?: number | string
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>
-    virtual?: boolean           // Vue 3 only — ignored on Vue 2
+    virtual?: boolean           // Vue 3 only — ignored on Vue 2 / antdv
     rowHeight?: number
     estimatedRowHeight?: number
     overscanCount?: number
     rowClassName?: string
   }
-  pagination?: { pageSize?: number }
+  pagination?: { pageSize?: number; pageSizes?: number[] }
   mode?: 'schema' | 'sfc'
   typescript?: boolean
   permissions?: Record<string, string>
   i18n?: boolean
   target?: 'vue3' | 'vue2' | 'antdv'   // Code generation target (default: vue3)
+
+  // ── Query-form layout ──
+  formLayout?: {
+    span?: number
+    labelWidth?: string | number
+    minFoldRows?: number         // query form collapses when rows exceed this
+  }
+
+  // ── Advanced multi-dialog / toolbar mode ──
+  // Providing ANY of toolbarBtns / tableBtns / operationColumn / dialogs
+  // switches the generator into the "new" schema wrapper (buildSchemaWrapperNew).
+  toolbarBtns?: ToolbarBtn[]     // buttons in the EsForm button area (legacy slot)
+  tableBtns?: TableBtn[]         // toolbar buttons above the table
+  operationColumn?: false | {    // row action column (false = hidden)
+    label?: string
+    width?: number | string
+    fixed?: boolean | 'left' | 'right'
+    btns: RowBtn[]               // at least one
+  }
+  dialogs?: Record<string, DialogConfig>  // keyed by dialog id
+}
+
+interface ToolbarBtn {          // rendered in EsForm button area
+  name: string; key?: string; type?: string; icon?: string
+  dialogKey?: string; actionType?: string
+  confirm?: string | boolean; permissionValue?: string
+}
+
+interface TableBtn {            // toolbar button above the table
+  name: string; key?: string; type?: string; icon?: string
+  code?: 1 | 2                  // 1 = left (default), 2 = right.
+                                // CANONICAL positioning field — all three
+                                // renderers read \`code\`. Do NOT use a
+                                // \`position\` field: vue3/antdv accept it as a
+                                // runtime override but vue2 ignores it, so it
+                                // breaks 多端同构.
+  dialogKey?: string; actionType?: string
+  confirm?: string | boolean; permissionValue?: string
+}
+
+interface RowBtn {              // per-row action button
+  name: string; key?: string; type?: string; icon?: string
+  dialogKey?: string; confirm?: string | boolean; permissionValue?: string
+}
+
+interface DialogConfig {
+  title?: string
+  width?: string | number
+  formItems?: FieldConfig[]
+  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  hasCustomRender?: boolean     // implement render fn in wrapper SFC
+  isDraggable?: boolean
+  maxHeight?: string | number
+  fullscreen?: boolean
+  isHiddenFooter?: boolean
 }
 \`\`\`
 
@@ -343,17 +428,7 @@ import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios({
-        url: params.url,
-        method: params.method || 'GET',
-        params: params.method === 'GET'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        data: params.method === 'POST'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        headers: params.headers,
-      }).then(res => res.data),
+      $httpRequest: ${robustHttpRequest()},
       configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
     }
   }
@@ -366,17 +441,7 @@ import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios({
-        url: params.url,
-        method: params.method || 'GET',
-        params: params.method === 'GET'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        data: params.method === 'POST'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        headers: params.headers,
-      }).then(res => res.data),
+      $httpRequest: ${robustHttpRequest()},
       configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
     }
   }
@@ -391,8 +456,8 @@ ${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus �
 import { configureEsPlus } from '${v.esPlusPkg}'
 
 configureEsPlus({
-  EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
-  EsForm: { $httpRequest: (p) => axios(p).then(r => r.data) },
+  EsTable: { methods: { $httpRequest: ${robustHttpRequest()} } },
+  EsForm: { $httpRequest: ${robustHttpRequest()} },
   permission: (code) => userStore.permissions.includes(code)
 })
 \`\`\`

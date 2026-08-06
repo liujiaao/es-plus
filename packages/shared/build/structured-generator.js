@@ -158,6 +158,17 @@ function generateSFC(config) {
             warnings.push('target=vue2: virtual scrolling is not supported in Element UI — option will be ignored.');
         }
     }
+    else if (hasDialog) {
+        // vue3 / antdv：弹窗 render 用 JSX，需 <script setup lang="tsx|jsx"> + @vitejs/plugin-vue-jsx
+        warnings.push(`target=${target} + mode=sfc: dialog uses a JSX render function, so the generated <script setup> is emitted with lang="${ts ? 'tsx' : 'jsx'}". Ensure @vitejs/plugin-vue-jsx is installed and registered in vite.config (alongside @vitejs/plugin-vue). Use mode=schema if you prefer a JSX-free wrapper.`);
+    }
+    // antdv + SFC + 列 render：render 字符串按 Element 语义编写（h(ElTag, { type })），
+    // 生成器只能重命名符号（ElTag→Tag），无法把 { type: 'success' } 改写为 antdv 的
+    // { color: 'green' }。提醒用户核对，或改用 mode=schema（走 buildStatusTagTemplate 生成
+    // 正确的 <a-tag :color>）。
+    if (target === 'antdv' && hasRender) {
+        warnings.push('target=antdv + mode=sfc: inline column render() is emitted using Element Plus semantics (e.g. <Tag type="success">). Ant Design Vue\'s Tag uses `color` (green/red), not `type`. Adjust the render props, or use mode=schema which generates a correct <a-tag :color> slot automatically.');
+    }
     const lines = [];
     // Template
     lines.push(`<template>`);
@@ -183,15 +194,23 @@ function generateSFC(config) {
         lines.push(ts ? `<script lang="ts">` : `<script>`);
     }
     else {
-        lines.push(ts ? `<script setup lang="ts">` : `<script setup>`);
+        // 弹窗 render 用 JSX → 必须 lang="tsx|jsx"（配合 @vitejs/plugin-vue-jsx），否则无 JSX 时保持 ts/无 lang
+        const lang = hasDialog ? (ts ? 'tsx' : 'jsx') : (ts ? 'ts' : '');
+        lines.push(lang ? `<script setup lang="${lang}">` : `<script setup>`);
     }
     // Imports
     const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref'];
     if (hasRender)
         vueImports.push('h');
     lines.push(`import { ${vueImports.join(', ')} } from 'vue'`);
-    if (hasDialog) {
-        lines.push(`import { useDialog } from '${esPlusPkg}'`);
+    // es-plus 具名导入：弹窗需 useDialog + EsForm（JSX render 引用）；增删改查需全局 httpRequest（方案B）
+    const esPlusNamed = [];
+    if (hasDialog)
+        esPlusNamed.push('useDialog', 'EsForm');
+    if (hasDelete || hasDialog)
+        esPlusNamed.push('httpRequest');
+    if (esPlusNamed.length > 0) {
+        lines.push(`import { ${esPlusNamed.join(', ')} } from '${esPlusPkg}'`);
     }
     // Element 命名映射（ElMessage/ElTag → Vue 2 的 Message/Tag）
     const epImports = [];
@@ -412,6 +431,7 @@ function generateSFC(config) {
 function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target) {
     const ts = config.typescript;
     const isVue2 = target === 'vue2';
+    const esPlusPkg = getEsPlusPackageName(target);
     const tOpts = (config.tableOptions || {});
     const lines = [];
     lines.push(`<template>`);
@@ -422,11 +442,6 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     if (hasDelete)
         lines.push(`    @delete="handleDelete"`);
     lines.push(`    @btn-click="handleBtnClick"`);
-    if (renderFields.length > 0) {
-        for (const f of renderFields) {
-            lines.push(`    #column-${f.prop}="{ row }"`);
-        }
-    }
     lines.push(`  >`);
     if (renderFields.length > 0) {
         for (const f of renderFields) {
@@ -455,6 +470,8 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     else
         epImports.push('ElMessage');
     lines.push(buildElementImport([...new Set(epImports)], target));
+    // 全局 HTTP 请求自由函数（方案B）：fetchData / 增删改共用同一请求实例
+    lines.push(`import { httpRequest } from '${esPlusPkg}'`);
     lines.push(`import { pageSchema } from './schema'`);
     lines.push(``);
     // Vue 2: 包一层 defineComponent
@@ -527,6 +544,7 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
 function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     const ts = config.typescript;
     const isVue2 = target === 'vue2';
+    const esPlusPkg = getEsPlusPackageName(target);
     const tOpts = (config.tableOptions || {});
     const lines = [];
     const hasDelete = config.actions.includes('delete');
@@ -568,6 +586,8 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
         epImports.push('ElMessage');
     // 使用 buildElementImport 自动适配命名（ElMessage → Message 等）和包名
     lines.push(buildElementImport([...new Set(epImports)], target));
+    // 全局 HTTP 请求自由函数（方案B）：fetchData / 弹窗确认 / 删除共用同一请求实例
+    lines.push(`import { httpRequest } from '${esPlusPkg}'`);
     lines.push(`import { pageSchema } from './schema'`);
     lines.push(``);
     // Vue 2: 包一层 defineComponent({ setup() {
@@ -718,6 +738,12 @@ function buildTableColumn(field, i18n) {
         col.fixed = field.fixed;
     if (field.ellipsis)
         col.showOverflowTooltip = true;
+    // Schema mode cannot inline render expressions, so the wrapper emits a
+    // `<template #column-<prop>>` scoped slot. es-table (all three renderers)
+    // only renders that slot when the column declares scopedSlots.customRender,
+    // so wire it up here — otherwise the emitted template is dead code.
+    if (field.render)
+        col.scopedSlots = { customRender: `column-${field.prop}` };
     return col;
 }
 function buildTableColumnSFC(field, config) {

@@ -86,6 +86,21 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.warnings[0]).toContain('status')
   })
 
+  it('wires render fields to a scoped slot the wrapper actually renders', () => {
+    // Schema mode can't inline render, so the column must declare
+    // scopedSlots.customRender AND the wrapper must emit the matching
+    // #column-<prop> template — otherwise the slot is dead code (es-table
+    // only renders a column slot when scopedSlots.customRender is set).
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    const statusCol = schema.columns.find((c: any) => c.prop === 'status')
+    expect(statusCol.scopedSlots).toEqual({ customRender: 'column-status' })
+    // Columns without render must NOT declare a slot (avoids empty-cell bug)
+    const nameCol = schema.columns.find((c: any) => c.prop === 'name')
+    expect(nameCol.scopedSlots).toBeUndefined()
+    expect(result.wrapperCode).toContain('#column-status')
+  })
+
   it('filters fields by inQuery/inTable/inForm', () => {
     const config = {
       ...baseConfig,
@@ -134,9 +149,21 @@ describe('generateFromConfig — sfc mode', () => {
   it('generates a complete SFC', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc', typescript: true })
     expect(result.code).toContain('<template>')
-    expect(result.code).toContain('<script setup lang="ts">')
+    // baseConfig has add/edit → dialog uses JSX render, so script must be lang="tsx"
+    // (@vitejs/plugin-vue-jsx required — plain lang="ts" cannot transform JSX)
+    expect(result.code).toContain('<script setup lang="tsx">')
     expect(result.code).toContain('</script>')
     expect(result.wrapperCode).toBeUndefined()
+  })
+
+  it('uses plain lang for dialog-less SFC (no JSX render)', () => {
+    // Only export action → no add/edit/view dialog → no JSX → plain lang
+    const tsResult = generateFromConfig({ ...baseConfig, actions: ['export'], mode: 'sfc', typescript: true })
+    expect(tsResult.code).toContain('<script setup lang="ts">')
+    expect(tsResult.code).not.toContain('lang="tsx"')
+    const jsResult = generateFromConfig({ ...baseConfig, actions: ['export'], mode: 'sfc', typescript: false })
+    expect(jsResult.code).toContain('<script setup>')
+    expect(jsResult.code).not.toContain('lang=')
   })
 
   it('includes TypeScript interface when typescript=true', () => {
@@ -146,9 +173,19 @@ describe('generateFromConfig — sfc mode', () => {
 
   it('omits TypeScript when typescript=false', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc', typescript: false })
-    expect(result.code).toContain('<script setup>')
+    // baseConfig has a dialog → JSX render → lang="jsx" (still no TypeScript syntax)
+    expect(result.code).toContain('<script setup lang="jsx">')
     expect(result.code).not.toContain('lang="ts"')
     expect(result.code).not.toContain('interface QueryForm')
+  })
+
+  it('imports EsForm + httpRequest for dialog SFC (method B free function)', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'sfc', typescript: true })
+    // EsForm referenced by the JSX dialog render must be imported; httpRequest is the
+    // exposed global request free-function that add/edit/delete call.
+    expect(result.code).toMatch(/import\s*\{[^}]*\bEsForm\b[^}]*\}\s*from\s*'@es-plus\/vue3'/)
+    expect(result.code).toMatch(/import\s*\{[^}]*\bhttpRequest\b[^}]*\}\s*from\s*'@es-plus\/vue3'/)
+    expect(result.code).toContain('<EsForm')
   })
 
   it('uses real API URL in options and handlers', () => {
@@ -349,3 +386,108 @@ describe('Multi-Dialog Mode', () => {
     expect(result.code).toContain('请输入姓名')
   })
 })
+
+describe('multi-target generation (vue3 / vue2 / antdv)', () => {
+  const cfgFor = (target: 'vue3' | 'vue2' | 'antdv', mode: 'schema' | 'sfc') =>
+    ({ ...baseConfig, target, mode, typescript: true } as any)
+
+  it('emits the correct es-plus package name per target', () => {
+    expect(generateFromConfig(cfgFor('vue3', 'schema')).wrapperCode).toContain("from '@es-plus/vue3'")
+    expect(generateFromConfig(cfgFor('vue2', 'schema')).wrapperCode).toContain("from '@es-plus/vue2'")
+    expect(generateFromConfig(cfgFor('antdv', 'schema')).wrapperCode).toContain("from '@es-plus/adapter-antdv'")
+  })
+
+  it('imports httpRequest from the target package in every schema wrapper', () => {
+    for (const t of ['vue3', 'vue2', 'antdv'] as const) {
+      const pkg = t === 'vue2' ? '@es-plus/vue2' : t === 'antdv' ? '@es-plus/adapter-antdv' : '@es-plus/vue3'
+      const { wrapperCode } = generateFromConfig(cfgFor(t, 'schema'))
+      expect(wrapperCode).toMatch(new RegExp(`import\\s*\\{\\s*httpRequest\\s*\\}\\s*from\\s*'${pkg.replace('/', '\\/')}'`))
+    }
+  })
+
+  it('vue2 wrapper uses defineComponent + Element UI naming', () => {
+    const { wrapperCode } = generateFromConfig(cfgFor('vue2', 'schema'))
+    expect(wrapperCode).toContain('defineComponent({')
+    expect(wrapperCode).toContain("from 'element-ui'")
+    expect(wrapperCode).toContain('MessageBox.confirm')
+    expect(wrapperCode).not.toContain('ElMessageBox')
+    // vue2 SFC template must use .sync, not v-model:xxx
+    const sfc = generateFromConfig(cfgFor('vue2', 'sfc')).code
+    expect(sfc).toContain(':data-source.sync=')
+    expect(sfc).not.toContain('v-model:data-source')
+  })
+
+  it('antdv wrapper uses Modal.confirm + a-tag color semantics', () => {
+    const { wrapperCode } = generateFromConfig(cfgFor('antdv', 'schema'))
+    expect(wrapperCode).toContain('Modal.confirm({')
+    expect(wrapperCode).toContain("from 'ant-design-vue'")
+    // status render slot must produce <a-tag :color>, not <el-tag :type>
+    expect(wrapperCode).toContain('<a-tag :color=')
+    expect(wrapperCode).not.toContain('<el-tag')
+    expect(wrapperCode).not.toContain('ElMessageBox')
+  })
+
+  it('vue3 wrapper keeps <script setup> + Element Plus naming', () => {
+    const { wrapperCode } = generateFromConfig(cfgFor('vue3', 'schema'))
+    expect(wrapperCode).toContain('<script setup')
+    expect(wrapperCode).toContain('ElMessageBox.confirm')
+    expect(wrapperCode).toContain("from 'element-plus'")
+  })
+
+  it('never emits a slot directive in the component attribute list (only via <template>)', () => {
+    // Regression: buildSchemaWrapper used to push `#column-x="{ row }"` as an
+    // attribute of <es-crud-page>, which is invalid alongside named template slots.
+    for (const t of ['vue3', 'vue2', 'antdv'] as const) {
+      const { wrapperCode } = generateFromConfig(cfgFor(t, 'schema'))
+      const openTag = wrapperCode!.slice(wrapperCode!.indexOf('<es-crud-page'), wrapperCode!.indexOf('>\n', wrapperCode!.indexOf('<es-crud-page')))
+      expect(openTag).not.toContain('#column-')
+      // the slot must still exist as a proper template
+      expect(wrapperCode).toContain('<template #column-status="{ row }">')
+    }
+  })
+
+  it('warns when antdv SFC inlines an Element-semantics render', () => {
+    const { warnings } = generateFromConfig(cfgFor('antdv', 'sfc'))
+    expect(warnings.some(w => w.includes('Ant Design Vue') && w.includes('color'))).toBe(true)
+  })
+
+  it('schema JSON is framework-invariant across targets', () => {
+    // The single source of truth: schema.code (pageSchema JSON) must be byte-identical
+    // regardless of target — only the wrapper/SFC differs.
+    const extract = (t: 'vue3' | 'vue2' | 'antdv') => {
+      const code = generateFromConfig(cfgFor(t, 'schema')).code
+      return code.replace(/^import[^\n]*\n/gm, '').replace(/^.*?pageSchema[^=]*= /s, '')
+    }
+    expect(extract('vue2')).toBe(extract('vue3'))
+    expect(extract('antdv')).toBe(extract('vue3'))
+  })
+})
+
+describe('tableOptions passthrough', () => {
+  it('passes tabHeight into schema tableOptions', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      tableOptions: { tabHeight: 500 },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.tabHeight).toBe(500)
+  })
+
+  it('omits tabHeight when not configured', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.tabHeight).toBeUndefined()
+  })
+
+  it('warns that vue2 ignores virtual scrolling', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      target: 'vue2',
+      mode: 'schema',
+      tableOptions: { virtual: true },
+    } as any)
+    expect(result.warnings.some(w => w.includes('virtual'))).toBe(true)
+  })
+})
+
