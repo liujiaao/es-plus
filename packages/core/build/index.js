@@ -10,6 +10,7 @@
  */
 // ─── 工具函数 ─────────────────────────────────────────────────
 export { isObject, isArray, isFunction, isString, isNumber, isEmpty, firstWordUpperCase, kebabToCamel, toPascalCase, findValueByKey, wrapPromise, getNestedValue, setNestedValue, } from './shared';
+export { PUBLIC_CONTRACT_TYPES } from './public-types';
 // ─── 全局配置 ─────────────────────────────────────────────────
 export { configureEsPlus, getGlobalConfig, resetGlobalConfig, } from './config';
 // ─── 常量 ─────────────────────────────────────────────────────

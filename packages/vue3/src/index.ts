@@ -52,7 +52,8 @@ export {
   install
 }
 
-// 类型导出
+// 类型导出（跨渲染器契约，须与 core/public-types PUBLIC_CONTRACT_TYPES 一致）
+// CRUD 高级类型（渲染器特有，各包组件层定义）
 export type {
   CrudPageSchema,
   CrudAction,
@@ -65,6 +66,7 @@ export type {
   DialogBtnConfig,
   DialogActionContext
 } from './components/es-crud-page'
+// 配置类类型在 vue3 做 Element Plus 特化，从本地 ./types 导出（形状兼容 core）
 export type {
   FormItemOption,
   ApiParams,
@@ -78,6 +80,33 @@ export type {
   EsTableInstance,
   EsPlusOptions
 } from './types'
+// 框架无关契约类型三端一致，直接透传 @es-plus/core
+export type {
+  ModelData,
+  RenderFn,
+  AnyVNode,
+  EsButtonType,
+  EsButtonSize,
+  EsTableSize,
+  FormType,
+  ConfigTableOut,
+  ListenToCallBack,
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+  TableEngineExposed
+} from '@es-plus/core'
 
 // vxe-table 打印辅助（spanMethod + 动态合并场景）
 export { patchHtmlRowSpans } from './utils/vxe-print-utils'

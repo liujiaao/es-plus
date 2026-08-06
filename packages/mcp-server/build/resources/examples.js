@@ -12,15 +12,17 @@ function buildContent(target) {
             "",
         ].join("\n");
     });
-    const pkg = target === "vue2" ? "@es-plus/vue2" : "@es-plus/vue3";
-    const elementLayer = target === "vue2" ? "Element UI" : "Element Plus";
+    const pkg = target === "vue2" ? "@es-plus/vue2" : target === "antdv" ? "@es-plus/adapter-antdv" : "@es-plus/vue3";
+    const elementLayer = target === "vue2" ? "Element UI" : target === "antdv" ? "Ant Design Vue" : "Element Plus";
     return [
         `# ${pkg} CRUD Page Examples (target=${target})\n`,
         `These examples are generated from natural language descriptions using the @es-plus/shared CRUD engine — the same engine the \`generate_crud_page\` tool calls.\n`,
         `Output target: **${pkg}** + **${elementLayer}**.\n`,
         target === "vue2"
             ? `> Vue 2 SFCs use \`defineComponent + setup()\` (requires vue@>=2.7) and \`:prop.sync\` v-model syntax. The JSON config shapes are identical to the vue3 versions; only the wrapper SFC syntax differs.\n`
-            : `> Vue 3 SFCs use \`<script setup>\` and \`v-model:prop\`. For the equivalent Vue 2 output, fetch \`esplus://examples/vue2\`.\n`,
+            : target === "antdv"
+                ? `> antdv SFCs use Vue 3 \`<script setup>\` + \`v-model:prop\` (identical syntax to vue3); only the UI-library symbols differ (\`message\`/\`Modal\`/\`Tag\` from ant-design-vue, \`<a-tag :color>\`). The JSON config shapes are identical across all targets.\n`
+                : `> Vue 3 SFCs use \`<script setup>\` and \`v-model:prop\`. For the equivalent Vue 2 output, fetch \`esplus://examples/vue2\`.\n`,
         ...sections,
     ].join("\n");
 }
@@ -29,6 +31,7 @@ export function registerExamplesResource(server) {
         { uri: "esplus://examples", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
         { uri: "esplus://examples/vue3", target: "vue3", descSuffix: " — @es-plus/vue3 explicit" },
         { uri: "esplus://examples/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 (defineComponent + setup + .sync)" },
+        { uri: "esplus://examples/antdv", target: "antdv", descSuffix: " — @es-plus/adapter-antdv (Vue 3 syntax + Ant Design Vue)" },
     ];
     for (const { uri, target, descSuffix } of targets) {
         server.resource(uri === "esplus://examples" ? "examples" : `examples-${target}`, uri, {

@@ -17,6 +17,10 @@
       "type": "string",
       "description": "Column header text"
     },
+    "labelKey": {
+      "type": "string",
+      "description": "i18n translation key for the column header. When a global t() function is configured via app.use(ESPlus, { t }), the header will be translated using t(labelKey). Falls back to label when t() is not configured"
+    },
     "width": {
       "oneOf": [
         { "type": "number" },
@@ -92,6 +96,10 @@
           },
           "clickEvent": {
             "description": "Function (row) => void. Click handler receiving the row data"
+          },
+          "permissionValue": {
+            "type": "string",
+            "description": "Permission code for button visibility. When a global permission() function is configured, buttons with unmatched permissionValue will be hidden"
           }
         }
       }

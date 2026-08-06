@@ -192,6 +192,8 @@ export type {
   DialogActionContext,
 } from './components/es-crud-page'
 
+// ─── 类型导出（跨渲染器契约，须与 core/public-types PUBLIC_CONTRACT_TYPES 一致） ───
+// vue2 不做框架特化，全部契约类型直接透传 @es-plus/core 权威定义。
 export type {
   ModelData,
   RenderFn,
@@ -204,6 +206,7 @@ export type {
   FormItemOption,
   BtnConfig,
   LayoutFormProps,
+  ListenToCallBack,
   TableColumn,
   ConfigTableOut,
   TableOptions,
@@ -212,12 +215,22 @@ export type {
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions,
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
   TableEngineExposed,
   VxeTreeConfig,
   VxeProxyConfig,
   VxeExpandConfig,
   VxeSeqConfig,
-} from './types'
+} from '@es-plus/core'
 
 // ─── 默认导出（带 install 的对象，可直接 Vue.use()） ───
 // Version is injected at build time from package.json via vite define.

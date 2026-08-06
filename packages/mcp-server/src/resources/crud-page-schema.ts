@@ -1,24 +1,19 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  crudPageTypesPath,
+  bundledPath,
+  readFirst,
+  type Target,
+} from "./source-locator.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-type Target = "vue3" | "vue2";
-
-// vue3 and vue2 put the EsCrudPage types in slightly different paths:
-//   packages/vue3/src/components/es-crud-page/src/types.ts
-//   packages/vue2/src/components/es-crud-page/types.ts
+// Prefer the live monorepo source (dev), then the bundled .d.ts shipped with the
+// npm package, then the compact inline reference. Path resolution lives in
+// source-locator.ts and is pinned by source-locator.spec.ts.
 function loadCrudPageTypes(target: Target): string {
-  const path = target === "vue2"
-    ? join(__dirname, "../../../../vue2/src/components/es-crud-page/types.ts")
-    : join(__dirname, "../../../../vue3/src/components/es-crud-page/src/types.ts");
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return CRUD_PAGE_TYPES_FALLBACK;
-  }
+  return (
+    readFirst([crudPageTypesPath(target), bundledPath("crud-page-types.d.ts")]) ??
+    CRUD_PAGE_TYPES_FALLBACK
+  );
 }
 
 const CRUD_PAGE_TYPES_FALLBACK = `export interface CrudPageSchema {
@@ -275,9 +270,102 @@ export default defineComponent({
 `;
 }
 
+function antdvExample(): string {
+  return `### Basic Example — antdv (Vue 3 syntax + Ant Design Vue)
+
+\`\`\`vue
+<template>
+  <es-crud-page
+    ref="crudRef"
+    :schema="pageSchema"
+    @dialog-confirm="handleDialogConfirm"
+    @btn-click="handleBtnClick"
+  />
+</template>
+
+<script setup lang="tsx">
+import { ref } from 'vue'
+import { EsCrudPage, EsForm } from '@es-plus/adapter-antdv'
+import { message } from 'ant-design-vue'
+
+const crudRef = ref(null)
+
+const pageSchema = {
+  formItems: [
+    { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
+    { prop: 'status', label: '状态', formtype: 'Select', span: 6,
+      dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    { prop: 'createTime', label: '创建时间', formtype: 'DatePicker', span: 8,
+      attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
+  ],
+  formLayout: { labelWidth: '80px', minFoldRows: 1 },
+  tableBtns: [
+    { name: '新增', type: 'primary', icon: 'Plus', position: 'left', dialogKey: 'add' },
+    { name: '导出', icon: 'Download', position: 'right', actionType: 'export' }
+  ],
+  columns: [
+    { prop: 'name', label: '姓名' },
+    { prop: 'status', label: '状态' },
+    { prop: 'email', label: '邮箱' }
+  ],
+  tableOptions: {
+    border: true,
+    apiParams: { url: '/api/users' },
+    rowkey: 'id'
+  },
+  operationColumn: {
+    label: '操作', width: 160, fixed: 'right',
+    btns: [
+      { name: '编辑', type: 'primary', dialogKey: 'edit' },
+      { name: '删除', type: 'danger', key: 'delete', confirm: '确定删除？' }
+    ]
+  },
+  dialogs: {
+    add: {
+      title: '新增用户', width: '560px',
+      formItems: [
+        { prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+          formItemOptions: { rules: [{ required: true, message: '请输入姓名' }] } },
+        { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 }
+      ]
+    },
+    edit: {
+      title: (row) => \`编辑 — \${row?.name || ''}\`,
+      width: '560px',
+      formItems: [
+        { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },
+        { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 }
+      ]
+    }
+  },
+  pagination: { pageSize: 10 }
+}
+
+function handleDialogConfirm(dialogKey, data) {
+  message.success(\`[\${dialogKey}] 保存成功\`)
+  crudRef.value?.refresh()
+}
+
+function handleBtnClick(key, payload) {
+  if (key === 'delete') {
+    message.success('已删除')
+    crudRef.value?.refresh()
+  }
+}
+</script>
+\`\`\`
+
+### antdv notes
+- Syntax is Vue 3 (\`<script setup>\`, \`v-model:xxx\`) — identical to vue3
+- \`message\` comes from \`ant-design-vue\` (not \`ElMessage\` from element-plus)
+- The \`schema\` JSON itself is identical to vue3 and vue2 — that's the whole point of @es-plus/shared
+`;
+}
+
 function buildContent(target: Target): string {
   const types = loadCrudPageTypes(target);
-  const pkg = target === "vue2" ? "@es-plus/vue2" : "@es-plus/vue3";
+  const pkg =
+    target === "vue2" ? "@es-plus/vue2" : target === "antdv" ? "@es-plus/adapter-antdv" : "@es-plus/vue3";
 
   return `# EsCrudPage Component — Schema-Driven CRUD (${pkg}, target=${target})
 
@@ -292,7 +380,7 @@ ${types}
 EsCrudPage accepts a \`CrudPageSchema\` object and renders a complete CRUD page at runtime.
 It auto-generates query/reset buttons, operation column with edit/delete buttons, and dialog forms.
 
-${target === "vue2" ? vue2Example() : vue3Example()}
+${target === "vue2" ? vue2Example() : target === "antdv" ? antdvExample() : vue3Example()}
 
 ## Key Points
 
@@ -301,7 +389,7 @@ ${target === "vue2" ? vue2Example() : vue3Example()}
 3. **\`toolbarBtns\`** — buttons rendered alongside query/reset in EsForm button area
 4. **\`formLayout.minFoldRows\`** — enables form collapse when rows exceed this number
 5. **\`dialogs\` + \`dialogKey\`** — multi-dialog architecture with button-dialog binding
-6. **Dialog \`render\`** — ${target === "vue3" ? "use JSX to render custom content (nested EsCrudPage, etc.)" : "use h() render function or scoped slot; JSX requires @vue/babel-preset-jsx"}
+6. **Dialog \`render\`** — ${target !== "vue2" ? "use JSX to render custom content (nested EsCrudPage, etc.)" : "use h() render function or scoped slot; JSX requires @vue/babel-preset-jsx"}
 7. **Events**: \`@dialog-confirm\`, \`@btn-click\` for all button/dialog interactions
 8. **Expose**: \`crudRef.value?.refresh()\`, \`openDialog(key, row)\`, \`closeDialog(key)\`
 ${target === "vue2"
@@ -315,6 +403,7 @@ export function registerCrudPageSchemaResource(server: McpServer) {
     { uri: "esplus://crud-page-schema", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
     { uri: "esplus://crud-page-schema/vue3", target: "vue3", descSuffix: " — @es-plus/vue3 explicit" },
     { uri: "esplus://crud-page-schema/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 (defineComponent + setup + Element UI)" },
+    { uri: "esplus://crud-page-schema/antdv", target: "antdv", descSuffix: " — @es-plus/adapter-antdv (Vue 3 syntax + Ant Design Vue)" },
   ];
 
   for (const { uri, target, descSuffix } of targets) {

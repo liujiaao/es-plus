@@ -12,11 +12,11 @@ export const scaffoldCommand = new Command("scaffold")
     .argument("<name>", "page name (kebab-case)")
     .option("-f, --features <list>", "comma-separated features: query,table,dialog", "query,table")
     .option("-o, --output <path>", "output file path")
-    .option("-t, --target <target>", "target framework: vue3 (default) or vue2", "vue3")
+    .option("-t, --target <target>", "target framework: vue3 (default), vue2, or antdv", "vue3")
     .description("Generate a minimal es-plus page scaffold")
     .action((name, options) => {
     const features = options.features.split(",").map((f) => f.trim());
-    const target = options.target === 'vue2' ? 'vue2' : 'vue3';
+    const target = options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
     const outputPath = resolve(process.cwd(), options.output || `src/views/${toPascalCase(name)}.vue`);
     const code = generateScaffold(name, features, target);
     const dir = dirname(outputPath);

@@ -17,6 +17,14 @@ const TARGETS = {
         vModelSync: (prop) => `:${prop}.sync`,
         jsxNote: "Vue 2.7's `<script setup>` works but JSX requires the @vue/babel-preset-jsx plugin. defineComponent + setup() is the safer fallback.",
     },
+    antdv: {
+        esPlusPkg: "@es-plus/adapter-antdv",
+        elementPkg: "ant-design-vue",
+        elementCss: "ant-design-vue/dist/reset.css",
+        scriptSetup: "<script setup>",
+        vModelSync: (prop) => `v-model:${prop}`,
+        jsxNote: "Use `<script setup lang=\"tsx\">` for JSX (Vue 3 syntax, identical to vue3).",
+    },
 };
 function docEsForm(v) {
     return `# EsForm API (${v.esPlusPkg})
@@ -150,11 +158,13 @@ import { EsTable } from '${v.esPlusPkg}'
 - Auto-linked with EsForm via provide/inject
 ${v.esPlusPkg === "@es-plus/vue3"
         ? "- Virtual scrolling: same API, just add `virtual: true` for 10k+ row performance"
-        : "- For 10k+ rows on Vue 2, use server-side pagination — el-table-v2 virtual scrolling is Vue 3 only"}
+        : v.esPlusPkg === "@es-plus/adapter-antdv"
+            ? "- For 10k+ rows on antdv, use server-side pagination or vxe-table's built-in virtual scroll — the el-table-v2 `virtual: true` engine is Element Plus (vue3) only"
+            : "- For 10k+ rows on Vue 2, use server-side pagination — el-table-v2 virtual scrolling is Vue 3 only"}
 `;
 }
 function docUseDialog(v) {
-    const v3Hint = v.esPlusPkg === "@es-plus/vue3";
+    const v3Hint = v.esPlusPkg !== "@es-plus/vue2";
     return `# useDialog API (${v.esPlusPkg})
 
 ## Usage
@@ -237,14 +247,14 @@ function buildDoc(target, component) {
     }
 }
 export function registerGetComponentApi(server) {
-    server.tool("get_component_api", "Get the full API documentation for an es-plus component, including TypeScript interfaces, props, methods, and usage examples. Specify target='vue2' for @es-plus/vue2 + Element UI variants; default is target='vue3'.", {
+    server.tool("get_component_api", "Get the full API documentation for an es-plus component, including TypeScript interfaces, props, methods, and usage examples. Specify target='vue2' for @es-plus/vue2 + Element UI variants, target='antdv' for @es-plus/adapter-antdv + Ant Design Vue; default is target='vue3'.", {
         component: z
             .enum(COMPONENT_LIST)
             .describe("Component name: EsForm, EsTable, or useDialog"),
         target: z
-            .enum(["vue3", "vue2"])
+            .enum(["vue3", "vue2", "antdv"])
             .default("vue3")
-            .describe("Target framework: 'vue3' (default, @es-plus/vue3 + Element Plus) or 'vue2' (@es-plus/vue2 + Element UI). Match the user's project — Vue 3 codebase → vue3, Vue 2 codebase → vue2."),
+            .describe("Target framework: 'vue3' (default, @es-plus/vue3 + Element Plus), 'vue2' (@es-plus/vue2 + Element UI), or 'antdv' (@es-plus/adapter-antdv + Ant Design Vue, Vue 3 syntax). Match the user's project."),
     }, async ({ component, target }) => {
         const tgt = (target || "vue3");
         const doc = buildDoc(tgt, component);

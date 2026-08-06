@@ -36,7 +36,7 @@ export function useVxeColumnAdapter(
     if (opts.multiSelect && !colList.some(c => c.type === 'selection')) {
       cols.push({ type: 'checkbox', width: 50, fixed: 'left', align: 'center' })
     }
-    if (opts.snIndex && !colList.some(c => c.type === 'index' || c.type === 'snIndex')) {
+    if (opts.snIndex && !colList.some(c => c.type === 'index')) {
       cols.push({ type: 'seq', width: 60, title: '#', align: 'center' })
     }
     if (opts.expand && !colList.some(c => c.type === 'expand')) {
@@ -54,7 +54,7 @@ export function useVxeColumnAdapter(
           align: 'center',
           ...((col as any).vxeColumn || {}),
         })
-      } else if (col.type === 'index' || col.type === 'snIndex') {
+      } else if (col.type === 'index') {
         cols.push({
           type: 'seq',
           title: resolveTitle(col, t),

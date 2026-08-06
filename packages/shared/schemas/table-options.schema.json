@@ -63,6 +63,20 @@
       ],
       "description": "Container height value (used with heightType)"
     },
+    "tabHeight": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Height offset reserved for tabs/toolbar above the table when computing adaptive height"
+    },
+    "maxHeight": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Maximum table height (used with heightType='maxHeight')"
+    },
     "cachePageSelection": {
       "type": "boolean",
       "default": true,

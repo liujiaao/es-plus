@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Display label for the form field"
     },
+    "labelKey": {
+      "type": "string",
+      "description": "i18n translation key for the label. When a global t() function is configured via app.use(ESPlus, { t }), the label will be translated using t(labelKey). Falls back to label when t() is not configured"
+    },
     "formtype": {
       "type": "string",
       "enum": [

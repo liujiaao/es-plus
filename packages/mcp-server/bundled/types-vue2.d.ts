@@ -28,4 +28,9 @@ export type {
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions,
+  TableEngineExposed,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
 } from '@es-plus/core'

@@ -5,7 +5,7 @@ import { generateCrudPage, generateCrudSchema } from "@es-plus/shared";
 export function registerGenerateCrudPage(server: McpServer) {
   server.tool(
     "generate_crud_page",
-    "Generate a CRUD page from a natural language description. Supports two modes (schema/sfc) and two targets (vue3/vue2). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.",
+    "Generate a CRUD page from a natural language description. Supports two modes (schema/sfc) and three targets (vue3/vue2/antdv). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.",
     {
       description: z
         .string()
@@ -19,16 +19,16 @@ export function registerGenerateCrudPage(server: McpServer) {
           "Output mode: 'schema' (default) for CrudPageSchema JSON + minimal wrapper using <es-crud-page>; 'sfc' for complete SFC with EsTable + EsForm"
         ),
       target: z
-        .enum(["vue3", "vue2"])
+        .enum(["vue3", "vue2", "antdv"])
         .default("vue3")
         .describe(
-          "Target framework: 'vue3' (default) outputs Vue 3 + Element Plus + @es-plus/vue3; 'vue2' outputs Vue 2 + Element UI + @es-plus/vue2 (defineComponent + setup() + :sync)"
+          "Target framework: 'vue3' (default) outputs Vue 3 + Element Plus + @es-plus/vue3; 'vue2' outputs Vue 2 + Element UI + @es-plus/vue2 (defineComponent + setup() + :sync); 'antdv' outputs Vue 3 + Ant Design Vue + @es-plus/adapter-antdv"
         ),
     },
     async ({ description, mode, target }) => {
       try {
-        const tgt = (target || "vue3") as "vue3" | "vue2";
-        const esPlusPkg = tgt === "vue2" ? "@es-plus/vue2" : "@es-plus/vue3";
+        const tgt = (target || "vue3") as "vue3" | "vue2" | "antdv";
+        const esPlusPkg = tgt === "vue2" ? "@es-plus/vue2" : tgt === "antdv" ? "@es-plus/adapter-antdv" : "@es-plus/vue3";
 
         if (mode === "sfc") {
           const result = generateCrudPage(description, tgt);

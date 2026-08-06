@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { generateScaffold } from "@es-plus/shared";
 export function registerScaffoldPage(server) {
-    server.tool("scaffold_page", "Generate a minimal es-plus page scaffold (.vue SFC) with the basic structure for query form, table, and optional dialog. Supports vue3 (default) / vue2 targets. Use this when you need a blank starting template.", {
+    server.tool("scaffold_page", "Generate a minimal es-plus page scaffold (.vue SFC) with the basic structure for query form, table, and optional dialog. Supports vue3 (default) / vue2 / antdv targets. Use this when you need a blank starting template.", {
         name: z
             .string()
             .describe("Page name in kebab-case, e.g. 'user-management'"),
@@ -10,9 +10,9 @@ export function registerScaffoldPage(server) {
             .optional()
             .describe("Features to include. Defaults to ['query', 'table']. Options: query, table, dialog"),
         target: z
-            .enum(["vue3", "vue2"])
+            .enum(["vue3", "vue2", "antdv"])
             .default("vue3")
-            .describe("Target framework: 'vue3' (default, <script setup> + @es-plus/vue3) or 'vue2' (defineComponent + setup() + @es-plus/vue2)"),
+            .describe("Target framework: 'vue3' (default, <script setup> + @es-plus/vue3), 'vue2' (defineComponent + setup() + @es-plus/vue2), or 'antdv' (<script setup> + @es-plus/adapter-antdv + Ant Design Vue)"),
     }, async ({ name, features, target }) => {
         try {
             const tgt = (target || "vue3");

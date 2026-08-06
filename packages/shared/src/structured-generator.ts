@@ -5,6 +5,9 @@ import {
   DEFAULT_TARGET,
   getEsPlusPackageName,
   buildElementImport,
+  buildDeleteConfirmBlock,
+  buildStatusTagTemplate,
+  rewriteElementUsage,
 } from './target.js'
 
 export type { StructuredCrudConfig }
@@ -14,7 +17,7 @@ export type { StructuredCrudConfig }
  */
 function readTarget(config: StructuredCrudConfig): TargetFramework {
   const t = (config as unknown as { target?: TargetFramework }).target
-  return t === 'vue2' ? 'vue2' : DEFAULT_TARGET
+  return t === 'vue2' || t === 'antdv' ? t : DEFAULT_TARGET
 }
 
 interface TableOpts {
@@ -22,6 +25,7 @@ interface TableOpts {
   stripe?: boolean
   rowkey?: string
   heightType?: string
+  tabHeight?: number | string
   height?: number | string
   multiSelect?: boolean
   highlightCurrentRow?: boolean
@@ -86,6 +90,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     apiParams: { url: config.apiUrl },
     rowkey: tOpts.rowkey || 'id',
     ...(tOpts.heightType ? { heightType: tOpts.heightType } : {}),
+    ...(tOpts.tabHeight ? { tabHeight: tOpts.tabHeight } : {}),
     ...(tOpts.height ? { height: tOpts.height } : {}),
     ...(tOpts.multiSelect ? { multiSelect: true } : {}),
     ...(tOpts.virtual ? { virtual: true } : {}),
@@ -168,7 +173,9 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     config.permissions ? '- Permissions configured' : '',
     target === 'vue2'
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
-      : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
+      : target === 'antdv'
+        ? '- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)'
+        : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
   ].filter(Boolean).join('\n')
 
   return { code, wrapperCode, summary, warnings }
@@ -331,11 +338,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  headerCellStyle: { background: '#f5f7fa' },`)
   lines.push(`  apiParams: { url: '${config.apiUrl}' },`)
   lines.push(`  rowkey: '${tOpts.rowkey || 'id'}',`)
+  if (tOpts.heightType) lines.push(`  heightType: '${tOpts.heightType}',`)
+  if (tOpts.tabHeight) lines.push(`  tabHeight: ${typeof tOpts.tabHeight === 'number' ? tOpts.tabHeight : `'${tOpts.tabHeight}'`},`)
   if (tOpts.virtual) {
     lines.push(`  virtual: true,`)
     if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
     if (tOpts.height) lines.push(`  height: ${tOpts.height},`)
-    if (tOpts.heightType) lines.push(`  heightType: '${tOpts.heightType}',`)
   }
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)
   lines.push(`}`)
@@ -344,13 +352,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   if (hasDelete) {
     lines.push(``)
     lines.push(`function handleDelete(row${ts ? ': any' : ''}) {`)
-    lines.push(`  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`)
-    lines.push(`    .then(async () => {`)
-    lines.push(`      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`)
-    lines.push(`      ElMessage.success('删除成功')`)
-    lines.push(`      tableRef.value?.httpRequestInstance()`)
-    lines.push(`    })`)
-    lines.push(`    .catch(() => {})`)
+    lines.push(...buildDeleteConfirmBlock({
+      target,
+      indent: '  ',
+      bodyLines: [
+        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `ElMessage.success('删除成功')`,
+        `tableRef.value?.httpRequestInstance()`,
+      ],
+    }))
     lines.push(`}`)
   }
 
@@ -434,13 +444,9 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
 
   let code = lines.join('\n')
 
-  // Vue 2 模式：把 ElMessage / ElMessageBox 的使用替换为 Message / MessageBox
-  if (isVue2) {
-    code = code
-      .replace(/\bElMessageBox\b/g, 'MessageBox')
-      .replace(/\bElMessage\b/g, 'Message')
-      .replace(/\bElTag\b/g, 'Tag')
-  }
+  // 目标 UI 库命名替换：ElMessage/ElMessageBox/ElTag → 对应命名
+  // （antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理，此处仅收尾标识符）
+  code = rewriteElementUsage(code, target)
 
   const summary = [
     `Generated full SFC (structured mode, target=${target}):`,
@@ -451,7 +457,9 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     config.permissions ? '- Permissions configured' : '',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2). JSX render needs @vue/babel-preset-jsx.'
-      : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
+      : target === 'antdv'
+        ? '- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)'
+        : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
   ].filter(Boolean).join('\n')
 
   return { code, summary, warnings }
@@ -481,9 +489,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
       // Vue 2.6+ scoped slot 在模板中也用 #name="..."，与 Vue 3 写法兼容
       lines.push(`    <template #column-${f.prop}="{ row }">`)
       lines.push(`      <!-- ${f.label} custom render -->`)
-      lines.push(`      <el-tag :type="row.${f.prop} === 1 ? 'success' : 'danger'">`)
-      lines.push(`        {{ row.${f.prop} === 1 ? '启用' : '禁用' }}`)
-      lines.push(`      </el-tag>`)
+      lines.push(...buildStatusTagTemplate({ target, prop: f.prop, indent: '      ' }))
       lines.push(`    </template>`)
     }
   }
@@ -531,13 +537,15 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   if (hasDelete) {
     body.push(``)
     body.push(`${indent}function handleDelete(row${ts ? ': any' : ''}) {`)
-    body.push(`${indent}  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`)
-    body.push(`${indent}    .then(async () => {`)
-    body.push(`${indent}      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`)
-    body.push(`${indent}      ElMessage.success('删除成功')`)
-    body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`)
-    body.push(`${indent}    })`)
-    body.push(`${indent}    .catch(() => {})`)
+    body.push(...buildDeleteConfirmBlock({
+      target,
+      indent: `${indent}  `,
+      bodyLines: [
+        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `ElMessage.success('删除成功')`,
+        isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()',
+      ],
+    }))
     body.push(`${indent}}`)
   }
 
@@ -575,12 +583,8 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   lines.push(`</script>`)
 
   let code = lines.join('\n')
-  // Vue 2 命名替换：ElMessageBox → MessageBox, ElMessage → Message
-  if (isVue2) {
-    code = code
-      .replace(/\bElMessageBox\b/g, 'MessageBox')
-      .replace(/\bElMessage\b/g, 'Message')
-  }
+  // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
+  code = rewriteElementUsage(code, target)
   return code
 }
 
@@ -605,9 +609,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   if (renderFields.length > 0) {
     for (const f of renderFields) {
       lines.push(`    <template #column-${f.prop}="{ row }">`)
-      lines.push(`      <el-tag :type="row.${f.prop} === 1 ? 'success' : 'danger'">`)
-      lines.push(`        {{ row.${f.prop} === 1 ? '启用' : '禁用' }}`)
-      lines.push(`      </el-tag>`)
+      lines.push(...buildStatusTagTemplate({ target, prop: f.prop, indent: '      ' }))
       lines.push(`    </template>`)
     }
   }
@@ -661,13 +663,15 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   if (hasDelete) {
     body.push(``)
     body.push(`${indent}function handleDelete(row${ts ? ': any' : ''}) {`)
-    body.push(`${indent}  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`)
-    body.push(`${indent}    .then(async () => {`)
-    body.push(`${indent}      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`)
-    body.push(`${indent}      ElMessage.success('删除成功')`)
-    body.push(`${indent}      ${refreshExpr}`)
-    body.push(`${indent}    })`)
-    body.push(`${indent}    .catch(() => {})`)
+    body.push(...buildDeleteConfirmBlock({
+      target,
+      indent: `${indent}  `,
+      bodyLines: [
+        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `ElMessage.success('删除成功')`,
+        refreshExpr,
+      ],
+    }))
     body.push(`${indent}}`)
   }
 
@@ -721,12 +725,8 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   lines.push(`</script>`)
 
   let code = lines.join('\n')
-  // Vue 2 命名替换：ElMessageBox → MessageBox, ElMessage → Message
-  if (isVue2) {
-    code = code
-      .replace(/\bElMessageBox\b/g, 'MessageBox')
-      .replace(/\bElMessage\b/g, 'Message')
-  }
+  // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
+  code = rewriteElementUsage(code, target)
   return code
 }
 

@@ -2,7 +2,26 @@ import { defineConfig } from 'vite'
 import vue2 from '@vitejs/plugin-vue2'
 import dts from 'vite-plugin-dts'
 import { resolve } from 'path'
+import { copyFileSync } from 'fs'
 import pkg from './package.json'
+
+// vxe-types-augment.ts 是纯类型增强（declare module '@es-plus/core'），被
+// tsconfig.build.json 的 exclude 排除在主 dts 之外，避免 vxe-table 类型依赖
+// 泄漏进 index.d.ts、强加给所有消费者。package.json 的
+// exports['./vxe-types-augment'] 单独暴露它，故在此手动拷贝到 dist —— 文件为
+// 纯类型内容（import type / declare module / export {}），.ts 源可原样作为
+// .d.ts。对齐 packages/vue3 中 resolver.d.ts 的 copyFileSync 做法。
+function copyVxeTypesAugment() {
+  return {
+    name: 'copy-vxe-types-augment',
+    closeBundle() {
+      copyFileSync(
+        resolve(__dirname, 'src/vxe-types-augment.ts'),
+        resolve(__dirname, 'dist/vxe-types-augment.d.ts')
+      )
+    },
+  }
+}
 
 /**
  * Vue 2 + Element UI 渲染层构建配置
@@ -27,6 +46,7 @@ export default defineConfig({
       skipDiagnostics: true,
       noEmitOnError: false,
     }),
+    copyVxeTypesAugment(),
   ],
   build: {
     target: 'es2018',

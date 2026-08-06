@@ -1,33 +1,13 @@
-import { readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// File layout (relative to this file when built):
-//   packages/mcp-server/build/resources/types.js  ← __dirname
-//   packages/mcp-server/bundled/types.d.ts        ← shipped fallback
-//   packages/vue3/src/types/index.ts              ← live vue3 source
-//   packages/vue2/src/types/index.ts              ← live vue2 source
-//
-// Try the live source first (for dev / when the user has the monorepo checked
-// out), fall back to the bundled .d.ts that ships with the npm package.
+import { rendererTypesPath, bundledPath, readFirst, } from "./source-locator.js";
+// Try the live monorepo source first (dev / monorepo checkout), fall back to
+// the bundled .d.ts that ships with the npm package, then a compact inline
+// reference. Path resolution lives in source-locator.ts (pinned by
+// source-locator.spec.ts) — vue2 gets its own bundled variant; vue3/antdv
+// share types.d.ts.
 function loadTypesFromSource(target) {
-    const sourcePath = target === "vue2"
-        ? join(__dirname, "../../../../vue2/src/types/index.ts")
-        : join(__dirname, "../../../../vue3/src/types/index.ts");
-    const fallback = target === "vue2"
-        ? join(__dirname, "../../bundled/types-vue2.d.ts")
-        : join(__dirname, "../../bundled/types.d.ts");
-    for (const p of [sourcePath, fallback]) {
-        try {
-            return readFileSync(p, "utf-8");
-        }
-        catch {
-            continue;
-        }
-    }
-    // Last-resort fallback: a compact reference inline. Use vue3 shape — vue2
-    // package re-exports the same shapes.
-    return TYPES_FALLBACK_VUE3;
+    const bundled = target === "vue2" ? "types-vue2.d.ts" : "types.d.ts";
+    return (readFirst([rendererTypesPath(target), bundledPath(bundled)]) ??
+        TYPES_FALLBACK_VUE3);
 }
 const TYPES_FALLBACK_VUE3 = `// @es-plus/vue3 TypeScript Type Definitions (bundled fallback)
 // Run "npm run bundle-types" to update from source
@@ -138,6 +118,7 @@ export function registerTypesResource(server) {
         { uri: "esplus://types", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
         { uri: "esplus://types/vue3", target: "vue3", descSuffix: " — @es-plus/vue3" },
         { uri: "esplus://types/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 (Element UI variant; same shapes)" },
+        { uri: "esplus://types/antdv", target: "antdv", descSuffix: " — @es-plus/adapter-antdv (Ant Design Vue variant; same shapes)" },
     ];
     for (const { uri, target, descSuffix } of targets) {
         server.resource(uri === "esplus://types" ? "types" : `types-${target}`, uri, {

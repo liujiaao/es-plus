@@ -140,6 +140,7 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
             height: "height";
             auto: "auto";
         }>>;
+        tabHeight: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         height: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         multiSelect: z.ZodOptional<z.ZodBoolean>;
         highlightCurrentRow: z.ZodDefault<z.ZodBoolean>;
@@ -161,6 +162,7 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
     target: z.ZodDefault<z.ZodEnum<{
         vue3: "vue3";
         vue2: "vue2";
+        antdv: "antdv";
     }>>;
     typescript: z.ZodDefault<z.ZodBoolean>;
     permissions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;

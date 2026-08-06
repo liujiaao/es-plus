@@ -18,11 +18,11 @@ export const createCommand = new Command("create")
     .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
     .option("-m, --mode <mode>", "output mode: schema (default) or sfc", "schema")
     .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
-    .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus) or vue2 (@es-plus/vue2 + Element UI)", "vue3")
+    .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)", "vue3")
     .description("Generate a CRUD page from natural language description or structured config")
     .action(async (name, options) => {
     // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
-    const cliTarget = options.target === 'vue2' ? 'vue2' : 'vue3';
+    const cliTarget = options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
     // Structured config mode — production-ready generation
     if (options.fromConfig) {
         const configPath = resolve(process.cwd(), options.fromConfig);
@@ -187,7 +187,7 @@ export const createCommand = new Command("create")
         }
         const schemaFile = resolve(outputDir, "schema.ts");
         const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
-        const esPlusPkg = cliTarget === 'vue2' ? '@es-plus/vue2' : '@es-plus/vue3';
+        const esPlusPkg = cliTarget === 'vue2' ? '@es-plus/vue2' : cliTarget === 'antdv' ? '@es-plus/adapter-antdv' : '@es-plus/vue3';
         const schemaContent = [
             `import type { CrudPageSchema } from '${esPlusPkg}'`,
             ``,

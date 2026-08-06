@@ -12,8 +12,8 @@
     },
     "key": {
       "type": "string",
-      "description": "Button identifier. Special values: 'query' triggers table data fetch, 'reset' resets the form",
-      "examples": ["query", "reset", "add", "export"]
+      "description": "Button identifier. Special values: 'query' triggers table data fetch, 'rest' (NOT 'reset') resets the form",
+      "examples": ["query", "rest", "add", "export"]
     },
     "type": {
       "type": "string",
@@ -49,7 +49,7 @@
     "triggerEvent": {
       "type": "boolean",
       "default": false,
-      "description": "When true, automatically triggers form-table linkage. With key='query', calls parent EsTable's httpRequestInstance. With key='reset', resets form fields"
+      "description": "When true, automatically triggers form-table linkage. With key='query', calls parent EsTable's httpRequestInstance. With key='rest', resets form fields"
     },
     "click": {
       "description": "Click handler. In form context: (model, formRef, httpRequestInstance?) => void. In dialog context: (instance, { close, getRefs, dialogVm }) => void"

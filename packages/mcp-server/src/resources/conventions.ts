@@ -10,7 +10,7 @@ import {
   CRUD_PAGE_BTN_CLICK_KEYS,
 } from "@es-plus/shared";
 
-type Target = "vue3" | "vue2";
+type Target = "vue3" | "vue2" | "antdv";
 
 interface TargetVars {
   esPlusPkg: string;
@@ -31,6 +31,12 @@ const TARGETS: Record<Target, TargetVars> = {
     elementPkg: "element-ui",
     elementCss: "element-ui/lib/theme-chalk/index.css",
     vue: "Vue 2",
+  },
+  antdv: {
+    esPlusPkg: "@es-plus/adapter-antdv",
+    elementPkg: "ant-design-vue",
+    elementCss: "ant-design-vue/dist/reset.css",
+    vue: "Vue 3",
   },
 };
 
@@ -108,9 +114,63 @@ Because the JSON schema is identical, the migration is mostly syntactic:
 `;
 }
 
+function buildAntdvAddendum(): string {
+  return `
+---
+
+## antdv (@es-plus/adapter-antdv) Specifics
+
+Target \`antdv\` = **Vue 3 syntax + Ant Design Vue 4.x** as the UI library. The
+JSON schema, component template syntax (\`<script setup>\`, \`v-model:xxx\`,
+\`<template #default="{ row }">\`), and es-plus APIs are IDENTICAL to \`vue3\`.
+Only the UI-library symbols differ.
+
+## UI-Library Symbol Mapping (vue3 → antdv)
+
+| Concern | Element Plus (vue3) | Ant Design Vue (antdv) |
+|---------|---------------------|------------------------|
+| Package | \`@es-plus/vue3\` | \`@es-plus/adapter-antdv\` |
+| UI lib | \`element-plus\` | \`ant-design-vue\` |
+| CSS | \`element-plus/dist/index.css\` | \`ant-design-vue/dist/reset.css\` |
+| Toast | \`ElMessage.success('x')\` | \`message.success('x')\` |
+| Confirm | \`ElMessageBox.confirm(content, title, { type: 'warning' }).then(async () => {…}).catch(() => {})\` | \`Modal.confirm({ title, content, async onOk() {…} })\` |
+| Status tag | \`<el-tag :type="row.x === 1 ? 'success' : 'danger'">\` | \`<a-tag :color="row.x === 1 ? 'green' : 'red'">\` |
+| Named imports | \`{ ElMessage, ElMessageBox, ElTag }\` | \`{ message, Modal, Tag }\` |
+
+## App Bootstrap (antdv)
+\`\`\`typescript
+import { createApp } from 'vue'
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
+import ESPlus from '@es-plus/adapter-antdv'
+
+const app = createApp(App)
+app.use(Antd)
+app.use(ESPlus, { /* EsTable.methods.$httpRequest, etc. */ })
+\`\`\`
+
+## Confirm-Dialog Shape (IMPORTANT)
+Ant Design Vue's \`Modal.confirm\` takes a single options object with an
+\`onOk\` callback — it is NOT the Element Plus Promise chain. Put the delete
+request inside \`async onOk()\`:
+\`\`\`typescript
+Modal.confirm({
+  title: '提示',
+  content: '确定删除该条数据吗？',
+  async onOk() {
+    await $httpRequest({ url: '/api/xxx/delete', method: 'POST', formParams: { id: row.id } })
+    message.success('删除成功')
+    tableRef.value?.httpRequestInstance()
+  },
+})
+\`\`\`
+`;
+}
+
 function buildConventionsContent(target: Target): string {
   const v = TARGETS[target];
-
+  const isVue2 = target === "vue2";
+  const isAntdv = target === "antdv";
   return `# ${v.esPlusPkg} Code Generation Conventions (target=${target})
 
 ## Form Types (formtype)
@@ -154,13 +214,18 @@ tableOptions: {
 - \`type: 'selection'\` in columns creates checkbox column (preferred over multiSelect)
 - Performance: O(1) selection via Set-based tracking, no per-row iteration
 - Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable`
+    : isAntdv
+    ? `The @es-plus/adapter-antdv table is Vue 3 based but built on vxe-table (not
+el-table-v2). The \`virtual: true\` el-table-v2 engine does NOT apply here; for
+large datasets prefer server-side pagination via \`apiParams\` + \`configTableOut\`,
+or rely on vxe-table's built-in virtual scroll where the adapter exposes it.`
     : `Vue 2 + Element UI does NOT support el-table-v2 / virtual scrolling at the
 component layer. For large datasets, use server-side pagination with
 \`apiParams\` + \`configTableOut\`. The \`virtual: true\` option is silently
 ignored on Vue 2.`}
 
 ## Global Config Pattern
-${target === "vue3"
+${!isVue2
     ? `When using app.use(ESPlus), configure globally:
 \`\`\`typescript
 import ESPlus from '${v.esPlusPkg}'
@@ -196,6 +261,12 @@ With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline htt
 ${target === "vue3"
     ? `- When using status render with ElTag: \`import { ElTag } from '${v.elementPkg}'\`
 - When using delete confirmation: \`import { ElMessageBox, ElMessage } from '${v.elementPkg}'\``
+    : isAntdv
+    ? `- Ant Design Vue named exports (no 'El' prefix, no auto-registration for these):
+  \`import { message, Modal, Tag } from '${v.elementPkg}'\`
+- Status render uses \`<a-tag :color="...">\` (colors: 'green'/'red'/'blue'/…) instead of \`<el-tag :type>\`
+- Toasts use \`message.success('...')\` / \`message.error('...')\` instead of \`ElMessage.*\`
+- Delete confirmation uses \`Modal.confirm({ title, content, async onOk() { ... } })\` — an options object with an \`onOk\` callback, NOT the Element Plus \`ElMessageBox.confirm(...).then().catch()\` Promise chain`
     : `- ElTag / ElMessage / ElMessageBox come from Element UI:
   \`import { Tag, Message, MessageBox } from '${v.elementPkg}'\` (note: no 'El' prefix in Element UI named exports)
   Or use globally-registered \`<el-tag>\` / \`this.$message\` / \`this.$confirm\``}
@@ -257,14 +328,14 @@ interface StructuredCrudConfig {
   typescript?: boolean
   permissions?: Record<string, string>
   i18n?: boolean
-  target?: 'vue3' | 'vue2'   // Code generation target (default: vue3)
+  target?: 'vue3' | 'vue2' | 'antdv'   // Code generation target (default: vue3)
 }
 \`\`\`
 
 ## httpRequest Integration (Production Pattern)
 
 \`\`\`typescript
-${target === "vue3"
+${!isVue2
     ? `// main.ts — configure once for the entire application
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
@@ -313,6 +384,7 @@ Vue.use(ESPlus, {
 \`\`\`
 
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
+${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus — `import Antd from 'ant-design-vue'; import 'ant-design-vue/dist/reset.css'; app.use(Antd); app.use(ESPlus, {...})`.\n" : ""}
 
 ## configureEsPlus() — Module-Level Config (Auto-Import Mode)
 \`\`\`typescript
@@ -340,15 +412,16 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}
-${target === "vue2" ? buildVue2Addendum() : ""}`;
+${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
+${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
 export function registerConventionsResource(server: McpServer) {
-  // Three URIs:
+  // Four URIs:
   //   esplus://conventions       — vue3 (backward-compat default)
   //   esplus://conventions/vue3  — explicit vue3
   //   esplus://conventions/vue2  — vue2 variant with addendum on syntax deltas
+  //   esplus://conventions/antdv — antdv variant (Vue 3 syntax + Ant Design Vue symbols)
   //
   // Pattern repeats across other resources (types, examples, crud-page-schema)
   // so AI clients can pull the right context for whichever target they're
@@ -357,6 +430,7 @@ export function registerConventionsResource(server: McpServer) {
     { uri: "esplus://conventions", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
     { uri: "esplus://conventions/vue3", target: "vue3", descSuffix: " — @es-plus/vue3 explicit" },
     { uri: "esplus://conventions/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 + Element UI variant" },
+    { uri: "esplus://conventions/antdv", target: "antdv", descSuffix: " — @es-plus/adapter-antdv + Ant Design Vue variant" },
   ];
 
   for (const { uri, target, descSuffix } of targets) {

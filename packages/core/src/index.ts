@@ -26,47 +26,12 @@ export {
   setNestedValue,
 } from './shared'
 
-// ─── 类型定义 ─────────────────────────────────────────────────
-export type {
-  ModelData,
-  RenderFn,
-  AnyVNode,
-  EsButtonType,
-  EsButtonSize,
-  EsTableSize,
-  ApiParams,
-  FormType,
-  FormItemOption,
-  BtnConfig,
-  LayoutFormProps,
-  ListenToCallBack,
-  TableColumn,
-  ConfigTableOut,
-  TableOptions,
-  PaginationConfig,
-  DialogOptions,
-  EsFormInstance,
-  EsTableInstance,
-  EsPlusOptions,
-  // vxe 引擎一等公民 API 类型
-  VxeEditRender,
-  VxeEditConfig,
-  VxeExportConfig,
-  VxeToolbarConfig,
-  VxeColumnConfig,
-  VxeKeyboardConfig,
-  VxeMouseConfig,
-  VxeClipboardConfig,
-  VxeValidConfig,
-  VxeFooterMethod,
-  // vxe 进阶类型
-  VxeTreeConfig,
-  VxeProxyConfig,
-  VxeExpandConfig,
-  VxeSeqConfig,
-  // 引擎接口（跨包共享）
-  TableEngineExposed,
-} from './types'
+// ─── 类型定义（跨渲染器契约 barrel，单一权威源）─────────────
+// 所有跨渲染器契约类型统一从 ./public-types 透传，三个渲染器 index.ts
+// 必须导出同名类型，由 scripts/check-type-exports.mjs 强制校验。
+export type * from './public-types'
+export { PUBLIC_CONTRACT_TYPES } from './public-types'
+export type { PublicContractTypeName } from './public-types'
 
 // ─── 全局配置 ─────────────────────────────────────────────────
 export {
