@@ -8,8 +8,8 @@ declare const FieldRuleSchema: z.ZodObject<{
         string: "string";
         number: "number";
         email: "email";
-        integer: "integer";
         url: "url";
+        integer: "integer";
     }>>;
     message: z.ZodString;
     trigger: z.ZodOptional<z.ZodEnum<{
@@ -38,8 +38,8 @@ declare const FieldConfigSchema: z.ZodObject<{
             string: "string";
             number: "number";
             email: "email";
-            integer: "integer";
             url: "url";
+            integer: "integer";
         }>>;
         message: z.ZodString;
         trigger: z.ZodOptional<z.ZodEnum<{
@@ -61,9 +61,9 @@ declare const FieldConfigSchema: z.ZodObject<{
     width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
     minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
     align: z.ZodOptional<z.ZodEnum<{
-        right: "right";
         left: "left";
         center: "center";
+        right: "right";
     }>>;
     fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
     ellipsis: z.ZodOptional<z.ZodBoolean>;
@@ -95,8 +95,8 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
                 string: "string";
                 number: "number";
                 email: "email";
-                integer: "integer";
                 url: "url";
+                integer: "integer";
             }>>;
             message: z.ZodString;
             trigger: z.ZodOptional<z.ZodEnum<{
@@ -118,9 +118,9 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
         width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
         align: z.ZodOptional<z.ZodEnum<{
-            right: "right";
             left: "left";
             center: "center";
+            right: "right";
         }>>;
         fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
         ellipsis: z.ZodOptional<z.ZodBoolean>;
@@ -231,8 +231,8 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
                     string: "string";
                     number: "number";
                     email: "email";
-                    integer: "integer";
                     url: "url";
+                    integer: "integer";
                 }>>;
                 message: z.ZodString;
                 trigger: z.ZodOptional<z.ZodEnum<{
@@ -254,9 +254,9 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
             width: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
             minWidth: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
             align: z.ZodOptional<z.ZodEnum<{
-                right: "right";
                 left: "left";
                 center: "center";
+                right: "right";
             }>>;
             fixed: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodLiteral<"left">, z.ZodLiteral<"right">]>>;
             ellipsis: z.ZodOptional<z.ZodBoolean>;
@@ -277,6 +277,8 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 export type StructuredCrudConfig = z.infer<typeof StructuredCrudConfigSchema>;
+/** Pre-parse shape (defaults still optional) — use when authoring/emitting configs before validation. */
+export type StructuredCrudConfigInput = z.input<typeof StructuredCrudConfigSchema>;
 export type FieldConfig = z.infer<typeof FieldConfigSchema>;
 export type FieldRule = z.infer<typeof FieldRuleSchema>;
 export {};

@@ -71,7 +71,25 @@ Rules:
 12. EsCrudPage @btn-click event keys: "add-confirm" for add dialog submit, "edit-confirm" for edit dialog submit
 13. For custom column rendering in schema mode, set the column's \`scopedSlots: { customRender: 'column-<prop>' }\` and provide a matching \`<template #column-<prop>="{ row }">\` in the wrapper — es-table only renders a column slot when scopedSlots.customRender is set
 
+Preferred path: for most requests, DRAFT a StructuredCrudConfig and call the
+\`generate_crud_from_config\` tool rather than hand-writing the SFC — it maps
+your typed config to correct, compilable per-target code deterministically. Use
+hand-written output only when the request is outside the schema's expressiveness.
+
+Self-review checklist — run this against the ORIGINAL request BEFORE emitting:
+- Every field the user named is present, with a formtype chosen by MEANING
+  (status/enum → Select, date/time → DatePicker/TimePicker, image/file → Upload,
+  on/off → Switch), not by keyword matching.
+- Query / table / form partitions are right: system columns (id, createdAt) are
+  inForm:false; detail-only fields are inQuery:false.
+- Every requested action is present; each Select/Cascader has dataOptions or apiParams.
+- Table buttons use code (1=left, 2=right), never position.
+- Business logic the schema can't express (permission gates, conditional display,
+  computed cells) is emitted as a typed extension point (permissionValue / formatter
+  / render) and NOT silently dropped.
+
 Before generating code, read these MCP resources for accurate types and conventions:
+- esplus://examples/nl-to-config — few-shot NL→config with reasoning (read for the config path)
 - esplus://types — live TypeScript definitions
 - esplus://conventions — generation rules and patterns
 - esplus://crud-page-schema — EsCrudPage API and usage examples

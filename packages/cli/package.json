@@ -49,6 +49,14 @@
     "prompts": "^2.4.2",
     "picocolors": "^1.0.0"
   },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/prompts": "^2.4.0",

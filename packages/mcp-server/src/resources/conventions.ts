@@ -307,6 +307,37 @@ Prefer generating CrudPageSchema JSON + wrapper SFC over full SFC mode:
 - Runtime handles query/reset buttons, operation column, dialog lifecycle
 - Schema is pure JSON (no render functions) — easy to validate and store
 
+## Extension Points (business logic the schema can't express)
+The declarative config covers structure (fields, actions, dialogs, layout). Some
+requirements — conditional display, computed cells, permission gates, custom
+controls — cannot be expressed as pure JSON. The contract is **mark, never drop**:
+
+- **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
+  cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
+  inline in SFC mode; carried through in schema mode.
+- **\`render\`** (FieldConfig): a render-function source for a fully custom cell.
+  In **schema mode** it cannot be inlined, so the generator emits a marked
+  wrapper slot instead:
+  \`\`\`html
+  <template #column-<prop>="{ row }">
+    <!-- TODO(es-plus): custom render for "<label>" — replace this default stub with your markup. -->
+    <!-- requested render: <your original render source> -->
+    <!-- a compilable default status-tag stub renders here -->
+  </template>
+  \`\`\`
+  The requirement is preserved as a \`TODO(es-plus)\` marker + echoed source, and
+  a matching \`warnings\` entry is returned — the code still compiles, and the gap
+  is visible rather than silently swallowed.
+- **\`permissionValue\`** (button configs): RBAC gate code, e.g.
+  \`permissionValue: 'employee:delete'\` — express "only admins can X" here, don't
+  drop the button.
+- **\`hasCustomRender\`** (DialogConfig): flags a dialog whose body needs a hand-written
+  render function; the wrapper emits a placeholder comment + a \`warnings\` entry.
+
+Every generation returns a \`warnings: string[]\`. Each entry flags an extension
+point that was emitted as a stub OR a likely mapping mistake — read them and
+resolve each one before shipping.
+
 ---
 
 # Structured Config Tool (generate_crud_from_config)

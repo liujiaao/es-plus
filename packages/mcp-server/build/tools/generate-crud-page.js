@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { generateCrudPage, generateCrudSchema } from "@es-plus/shared";
 export function registerGenerateCrudPage(server) {
-    server.tool("generate_crud_page", "Generate a CRUD page from a natural language description. Supports two modes (schema/sfc) and three targets (vue3/vue2/antdv). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.", {
+    server.tool("generate_crud_page", "FALLBACK (no-LLM) generator: turns a natural-language description into a CRUD page using a REGEX/keyword parser — its accuracy is bounded by keyword coverage, so prefer generate_crud_from_config, where YOU (the AI client) reason NL→typed config. Use this only for a quick prototype, or when you cannot draft a structured config. Supports two modes (schema/sfc) and three targets (vue3/vue2/antdv). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.", {
         description: z
             .string()
             .describe("Natural language description of the CRUD page to generate. Example: '用户管理页面，查询条件有姓名、手机号、状态，表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除'"),

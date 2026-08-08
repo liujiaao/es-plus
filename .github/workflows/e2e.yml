@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [vue3, vue2]
+        target: [vue3, vue2, antdv]
         mode: [schema, sfc]
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +70,15 @@ jobs:
       # the right thing to invoke here.
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
-      - name: Build @es-plus/${{ matrix.target }}
-        run: npm run build --workspace @es-plus/${{ matrix.target }}
+      # The npm workspace name for the antdv target is @es-plus/adapter-antdv
+      # (the target string "antdv" is NOT the package dir/name), so map it here.
+      - name: Build target package
+        run: |
+          if [ "${{ matrix.target }}" = "antdv" ]; then
+            npm run build --workspace @es-plus/adapter-antdv
+          else
+            npm run build --workspace @es-plus/${{ matrix.target }}
+          fi
       - name: Build @es-plus/cli
         run: npm run build --workspace @es-plus/cli
 

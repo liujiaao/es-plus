@@ -260,7 +260,8 @@ The AI calls the MCP server's `generate_crud_page` / `generate_form` / `validate
 
 | Tool | Purpose |
 |------|---------|
-| `generate_crud_page` | Build a complete `EsCrudPage` schema from natural-language intent |
+| `generate_crud_from_config` | **Primary path** — generate a production-ready CRUD page from a STRUCTURED, typed config (you fill typed fields; MCP inputSchema constrains the decoding). Prefer this. |
+| `generate_crud_page` | Fallback (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. Use only for quick prototypes. |
 | `generate_form` | Build an `EsForm` `formItemList` array |
 | `generate_table` | Build an `EsTable` `columns` array |
 | `validate_schema` | Validate a config object against the live JSON Schema |

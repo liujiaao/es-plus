@@ -25,7 +25,7 @@ function generateSchema(config) {
     const useNewDialogMode = !!(config.dialogs || config.toolbarBtns || config.tableBtns || config.operationColumn !== undefined);
     const renderFields = tableFields.filter(f => f.render);
     if (renderFields.length > 0) {
-        warnings.push(`Schema mode does not support inline render expressions. Fields [${renderFields.map(f => f.prop).join(', ')}] have render — handle in wrapper SFC via scopedSlots or event handlers.`);
+        warnings.push(`Schema mode cannot inline a render function. Fields [${renderFields.map(f => f.prop).join(', ')}] emit a marked \`TODO(es-plus)\` extension-point slot in the wrapper SFC (a default status-tag stub echoing your requested render) — replace the stub with the real markup. The requirement is preserved as a marker, not dropped.`);
     }
     // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告
     const tOptsForWarn = (config.tableOptions || {});
@@ -189,14 +189,16 @@ function generateSFC(config) {
     lines.push(`  </es-table>`);
     lines.push(`</template>`);
     lines.push(``);
-    // Script — Vue 2 需要 defineComponent + setup() 包装，Vue 3 直接用 <script setup>
+    // Script — Vue 2 需要 defineComponent + setup() 包装，Vue 3 直接用 <script setup>。
+    // 两端一致：弹窗 render 走 JSX（vue2 用 @vue/babel-preset-jsx / @vitejs/plugin-vue2-jsx，
+    // vue3 用 @vitejs/plugin-vue-jsx），因此 hasDialog 时必须标 lang="tsx|jsx"，否则 esbuild
+    // 的 ts/js loader 遇到 <EsForm/> 直接解析失败（Expected ">" but found "ref"）。
+    const scriptLang = hasDialog ? (ts ? 'tsx' : 'jsx') : (ts ? 'ts' : '');
     if (isVue2) {
-        lines.push(ts ? `<script lang="ts">` : `<script>`);
+        lines.push(scriptLang ? `<script lang="${scriptLang}">` : `<script>`);
     }
     else {
-        // 弹窗 render 用 JSX → 必须 lang="tsx|jsx"（配合 @vitejs/plugin-vue-jsx），否则无 JSX 时保持 ts/无 lang
-        const lang = hasDialog ? (ts ? 'tsx' : 'jsx') : (ts ? 'ts' : '');
-        lines.push(lang ? `<script setup lang="${lang}">` : `<script setup>`);
+        lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : `<script setup>`);
     }
     // Imports
     const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref'];
@@ -446,10 +448,7 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     if (renderFields.length > 0) {
         for (const f of renderFields) {
             // Vue 2.6+ scoped slot 在模板中也用 #name="..."，与 Vue 3 写法兼容
-            lines.push(`    <template #column-${f.prop}="{ row }">`);
-            lines.push(`      <!-- ${f.label} custom render -->`);
-            lines.push(...buildStatusTagTemplate({ target, prop: f.prop, indent: '      ' }));
-            lines.push(`    </template>`);
+            lines.push(...buildExtensionPointSlotLines(f, target));
         }
     }
     lines.push(`  </es-crud-page>`);
@@ -562,9 +561,7 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     lines.push(`  >`);
     if (renderFields.length > 0) {
         for (const f of renderFields) {
-            lines.push(`    <template #column-${f.prop}="{ row }">`);
-            lines.push(...buildStatusTagTemplate({ target, prop: f.prop, indent: '      ' }));
-            lines.push(`    </template>`);
+            lines.push(...buildExtensionPointSlotLines(f, target));
         }
     }
     lines.push(`  </es-crud-page>`);
@@ -674,6 +671,24 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
     code = rewriteElementUsage(code, target);
     return code;
+}
+function buildExtensionPointSlotLines(field, target) {
+    // 优雅降级契约（WS-5）：schema 模式无法内联 render 函数。与其静默丢弃需求，
+    // 生成一个带 TODO(es-plus) 标记的扩展点插槽，并把用户原始的 render 意图作为
+    // 注释回显——占位内容是可编译的默认状态标签，等待开发者替换为真实标记。
+    const lines = [];
+    lines.push(`    <template #column-${field.prop}="{ row }">`);
+    lines.push(`      <!-- TODO(es-plus): custom render for "${field.label}" — replace this default stub with your markup. -->`);
+    if (field.render) {
+        lines.push(`      <!-- requested render: ${sanitizeForComment(field.render)} -->`);
+    }
+    lines.push(...buildStatusTagTemplate({ target, prop: field.prop, indent: '      ' }));
+    lines.push(`    </template>`);
+    return lines;
+}
+// HTML 注释不能包含 "--"，且需单行；折叠空白并把连续短横替换为破折号，截断超长源码。
+function sanitizeForComment(src) {
+    return src.replace(/\s+/g, ' ').replace(/--+/g, '—').trim().slice(0, 200);
 }
 function buildFormItem(field, context, i18n) {
     const item = {

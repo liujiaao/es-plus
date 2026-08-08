@@ -39,6 +39,33 @@ Note: \`antdv\` uses Vue 3 syntax (identical to vue3); only the UI-library
 symbols differ — \`message\` / \`Modal\` / \`Tag\` from ant-design-vue, and
 \`<a-tag :color>\` instead of \`<el-tag :type>\`.
 
+## Recommended generation workflow (config-driven is PRIMARY)
+
+**\`generate_crud_from_config\` is the primary path** — YOU do the reasoning.
+Read the natural-language request and construct a typed \`StructuredCrudConfig\`
+by understanding intent, then call the tool. This is real semantic mapping, not
+keyword matching. (\`generate_crud_page\` uses a regex NL parser and is only a
+no-LLM fallback for hosts that can't reason — prefer the config path.)
+
+Two passes, every time:
+
+1. **Read first**: \`esplus://examples/nl-to-config\` (few-shot NL→config with
+   reasoning) + \`esplus://conventions\` + \`esplus://types\` for the target.
+2. **Draft** the config: map each requested field by MEANING, not keywords —
+   status/type/enum → Select (dataOptions, or apiParams for remote); date/time →
+   DatePicker/TimePicker; image/file → Upload; on/off → Switch. System columns →
+   \`inForm:false\`; detail-only → \`inQuery:false\`. Button placement: left →
+   \`code:1\`, right → \`code:2\` (never \`position\`).
+3. **Self-review** against the original request BEFORE calling:
+   - Did every field the user named make it in, with the right \`formtype\`?
+   - Are query / table / form partitions (\`inQuery\`/\`inTable\`/\`inForm\`) right?
+   - Are all requested actions present? Do Select/Cascader fields have options?
+   - Business logic the schema can't express (permission gates, conditional
+     display, computed values) → emit a typed extension point
+     (\`permissionValue\` / \`formatter\` / \`render\`). **Mark it, never drop it.**
+4. **Call** \`generate_crud_from_config\`, then **read the returned warnings** —
+   each one flags a likely mapping mistake; fix the config and regenerate.
+
 ## Resources
 
 The resource URIs use a target suffix:

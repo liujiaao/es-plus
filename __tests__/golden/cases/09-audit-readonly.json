@@ -1,0 +1,28 @@
+{
+  "nl": "日志审计：表格展示操作人、操作类型（登录/登出/新增/编辑/删除）、操作对象、操作时间、IP 地址；查询有操作人、操作类型、操作时间范围；只读，不显示操作列。",
+  "config": {
+    "name": "AuditLog",
+    "apiUrl": "/api/audit-logs",
+    "fields": [
+      { "prop": "operator", "label": "操作人", "formtype": "Input" },
+      {
+        "prop": "actionType",
+        "label": "操作类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "登录", "value": "login" },
+          { "label": "登出", "value": "logout" },
+          { "label": "新增", "value": "add" },
+          { "label": "编辑", "value": "edit" },
+          { "label": "删除", "value": "delete" }
+        ]
+      },
+      { "prop": "target", "label": "操作对象", "formtype": "Input", "inQuery": false },
+      { "prop": "actionTime", "label": "操作时间", "formtype": "DatePicker", "querySpan": 8 },
+      { "prop": "ip", "label": "IP 地址", "formtype": "Input", "inForm": false }
+    ],
+    "actions": ["view"],
+    "operationColumn": false
+  },
+  "notes": "read-only audit log with hidden operation column"
+}

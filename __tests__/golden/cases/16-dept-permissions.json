@@ -1,0 +1,28 @@
+{
+  "nl": "部门管理：查询有部门名称、部门负责人；表格展示部门名称、负责人、联系电话、状态、创建时间；支持新增、编辑、删除；新增编辑按钮需要权限码 dept:write。",
+  "config": {
+    "name": "DeptManage",
+    "apiUrl": "/api/departments",
+    "permissions": {
+      "add": "dept:write",
+      "edit": "dept:write"
+    },
+    "fields": [
+      { "prop": "deptName", "label": "部门名称", "formtype": "Input" },
+      { "prop": "leader", "label": "部门负责人", "formtype": "Input" },
+      { "prop": "phone", "label": "联系电话", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "禁用", "value": 0 }
+        ]
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "permissions map applied to add/edit actions"
+}

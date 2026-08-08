@@ -24,31 +24,37 @@ const formTypeEnum = VALID_FORM_TYPES as unknown as readonly [string, ...string[
 const crudActionEnum = VALID_CRUD_ACTIONS as unknown as readonly [string, ...string[]]
 
 const FieldConfigSchema = z.object({
-  prop: z.string().min(1),
-  label: z.string().min(1),
-  formtype: z.enum(formTypeEnum),
-  inQuery: z.boolean().default(true),
-  inTable: z.boolean().default(true),
-  inForm: z.boolean().default(true),
+  prop: z.string().min(1).describe('Field key in the data model (camelCase), e.g. "userName"'),
+  label: z.string().min(1).describe('Human-readable column/form label, e.g. "用户名"'),
+  formtype: z.enum(formTypeEnum).describe(
+    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate. Default to Input for plain text."
+  ),
+  inQuery: z.boolean().default(true).describe('Show as a query/filter field above the table'),
+  inTable: z.boolean().default(true).describe('Show as a table column'),
+  inForm: z.boolean().default(true).describe('Show in the add/edit form'),
   querySpan: z.number().int().min(1).max(24).optional(),
   formSpan: z.number().int().min(1).max(24).optional(),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
-  attrs: z.record(z.string(), z.unknown()).optional(),
-  dataOptions: z.array(DataOptionSchema).optional(),
+  attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
+  dataOptions: z.array(DataOptionSchema).optional().describe('Static options for Select/Radio/Checkbox/Cascader. Use this for known fixed enums.'),
   apiParams: z.object({
     url: z.string(),
     method: z.enum(['GET', 'POST']).optional(),
     labelField: z.string().optional(),
     valueField: z.string().optional(),
-  }).optional(),
+  }).optional().describe('Remote options source for Select/Cascader — use instead of dataOptions when options come from an API.'),
   width: z.union([z.number(), z.string()]).optional(),
   minWidth: z.union([z.number(), z.string()]).optional(),
   align: z.enum(['left', 'center', 'right']).optional(),
   fixed: z.union([z.boolean(), z.literal('left'), z.literal('right')]).optional(),
   ellipsis: z.boolean().optional(),
-  formatter: z.string().optional(),
-  render: z.string().optional(),
+  formatter: z.string().optional().describe(
+    'Extension point: a JS arrow-function source string for read-only cell formatting, e.g. "(row) => row.amount.toFixed(2)". Use this to express display logic the schema can\'t otherwise capture.'
+  ),
+  render: z.string().optional().describe(
+    "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
+  ),
   permissionValue: z.string().optional(),
 })
 
@@ -153,5 +159,7 @@ export const StructuredCrudConfigSchema = z.object({
 })
 
 export type StructuredCrudConfig = z.infer<typeof StructuredCrudConfigSchema>
+/** Pre-parse shape (defaults still optional) — use when authoring/emitting configs before validation. */
+export type StructuredCrudConfigInput = z.input<typeof StructuredCrudConfigSchema>
 export type FieldConfig = z.infer<typeof FieldConfigSchema>
 export type FieldRule = z.infer<typeof FieldRuleSchema>

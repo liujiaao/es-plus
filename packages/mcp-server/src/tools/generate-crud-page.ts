@@ -5,7 +5,7 @@ import { generateCrudPage, generateCrudSchema } from "@es-plus/shared";
 export function registerGenerateCrudPage(server: McpServer) {
   server.tool(
     "generate_crud_page",
-    "Generate a CRUD page from a natural language description. Supports two modes (schema/sfc) and three targets (vue3/vue2/antdv). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.",
+    "FALLBACK (no-LLM) generator: turns a natural-language description into a CRUD page using a REGEX/keyword parser — its accuracy is bounded by keyword coverage, so prefer generate_crud_from_config, where YOU (the AI client) reason NL→typed config. Use this only for a quick prototype, or when you cannot draft a structured config. Supports two modes (schema/sfc) and three targets (vue3/vue2/antdv). schema mode outputs CrudPageSchema JSON + wrapper SFC; sfc mode outputs a full SFC.",
     {
       description: z
         .string()

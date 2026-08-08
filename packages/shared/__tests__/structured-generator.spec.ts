@@ -74,10 +74,24 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.code).not.toContain('/api/xxx')
   })
 
-  it('produces zero TODO comments', () => {
-    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+  it('produces zero TODO comments when there are no extension points', () => {
+    // The "zero TODO" invariant holds for the common case: a config with no
+    // render/hasCustomRender extension points must generate complete code.
+    const noExtensionFields = baseConfig.fields.filter(f => !('render' in f))
+    const result = generateFromConfig({ ...baseConfig, fields: noExtensionFields, mode: 'schema' })
     expect(result.code).not.toContain('TODO')
     expect(result.wrapperCode).not.toContain('TODO')
+  })
+
+  it('emits a marked TODO(es-plus) extension point (not a silent drop) for render fields', () => {
+    // WS-5 contract: schema mode can't inline render, so instead of silently
+    // dropping the requirement it emits a marked stub echoing the original
+    // render source — the gap is visible, and the code still compiles.
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    expect(result.wrapperCode).toContain('TODO(es-plus)')
+    // the original render intent is echoed so the developer can restore it
+    expect(result.wrapperCode).toContain('requested render:')
+    expect(result.wrapperCode).toContain('#column-status')
   })
 
   it('warns about render expressions in schema mode', () => {

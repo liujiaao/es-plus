@@ -1,0 +1,64 @@
+{
+  "nl": "全字段覆盖：输入框（备注是多行）、下拉、日期、时间、滑块、颜色选择器、穿梭框、级联、单选、多选、开关、评分、上传，以及一个自定义 render 的复杂状态列。",
+  "config": {
+    "name": "AllTypes",
+    "apiUrl": "/api/all-types",
+    "fields": [
+      { "prop": "name", "label": "名称", "formtype": "Input" },
+      { "prop": "remark", "label": "备注", "formtype": "Input", "attrs": { "type": "textarea", "rows": 3 } },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "禁用", "value": 0 }
+        ]
+      },
+      { "prop": "birthday", "label": "生日", "formtype": "DatePicker" },
+      { "prop": "workTime", "label": "工作时间", "formtype": "TimePicker", "inQuery": false },
+      { "prop": "progress", "label": "进度", "formtype": "Slider", "inQuery": false },
+      { "prop": "themeColor", "label": "主题色", "formtype": "ColorPicker", "inQuery": false },
+      { "prop": "tags", "label": "标签", "formtype": "Transfer", "inQuery": false },
+      { "prop": "region", "label": "地区", "formtype": "Cascader", "inQuery": false },
+      {
+        "prop": "gender",
+        "label": "性别",
+        "formtype": "Radio",
+        "dataOptions": [
+          { "label": "男", "value": "male" },
+          { "label": "女", "value": "female" }
+        ]
+      },
+      {
+        "prop": "hobbies",
+        "label": "爱好",
+        "formtype": "Checkbox",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "读书", "value": "read" },
+          { "label": "运动", "value": "sport" },
+          { "label": "音乐", "value": "music" }
+        ]
+      },
+      { "prop": "active", "label": "是否激活", "formtype": "Switch" },
+      { "prop": "score", "label": "评分", "formtype": "Rate", "inQuery": false },
+      { "prop": "avatar", "label": "头像", "formtype": "Upload", "inQuery": false },
+      {
+        "prop": "complexStatus",
+        "label": "复杂状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "初审", "value": "pending" },
+          { "label": "复审", "value": "reviewing" },
+          { "label": "通过", "value": "passed" },
+          { "label": "拒绝", "value": "rejected" }
+        ],
+        "render": "(_, { row }) => h(ElTag, { type: row.complexStatus === 'passed' ? 'success' : row.complexStatus === 'rejected' ? 'danger' : 'warning' }, () => row.complexStatusLabel)"
+      }
+    ],
+    "actions": ["add", "edit", "delete", "view"]
+  },
+  "notes": "all 13 VALID_FORM_TYPES plus textarea + render extension point"
+}

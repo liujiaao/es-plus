@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
+import { nlToConfig, aiAvailable, AiUnavailableError } from '../ai/nl-to-config.js';
 
 function toPascalCase(str: string): string {
   return str
@@ -15,15 +16,63 @@ function toKebabCase(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
+/**
+ * Emit code from a validated StructuredCrudConfig via the deterministic generator.
+ * Shared by the --from-config path and the --ai path so both produce identical
+ * output layouts (schema.ts + <Pascal>.vue, or a single SFC).
+ */
+function emitFromStructuredConfig(config: any, nameArg: string | undefined, output: string | undefined): void {
+  const pageName = nameArg || toKebabCase(config.name);
+  const pascalName = toPascalCase(pageName);
+
+  const result = generateFromConfig(config);
+
+  if (result.warnings.length > 0) {
+    console.log(pc.yellow("\n⚠️ Warnings:"));
+    for (const w of result.warnings) {
+      console.log(pc.yellow(`  - ${w}`));
+    }
+  }
+
+  const mode = config.mode || "schema";
+
+  if (mode === "sfc") {
+    const defaultOutput = resolve(process.cwd(), `src/views/${pascalName}.vue`);
+    const outputPath = output ? resolve(process.cwd(), output) : defaultOutput;
+    const dir = dirname(outputPath);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(outputPath, result.code, "utf-8");
+    console.log(pc.green(`\n✔ 已生成: ${outputPath}`));
+  } else {
+    const defaultDir = resolve(process.cwd(), `src/views/${pageName}`);
+    const outputDir = output ? resolve(process.cwd(), output) : defaultDir;
+    if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
+
+    const schemaFile = resolve(outputDir, "schema.ts");
+    const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
+
+    writeFileSync(schemaFile, result.code, "utf-8");
+    writeFileSync(wrapperFile, result.wrapperCode || "", "utf-8");
+
+    console.log(pc.green(`\n✔ 已生成:`));
+    console.log(pc.green(`   ${schemaFile}`));
+    console.log(pc.green(`   ${wrapperFile}`));
+  }
+
+  console.log(pc.dim(result.summary));
+  console.log("");
+}
+
 export const createCommand = new Command("create")
   .argument("[name]", "page name (kebab-case, e.g. user-management)")
   .option("-o, --output <path>", "output file path")
   .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
   .option("-m, --mode <mode>", "output mode: schema (default) or sfc", "schema")
   .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
+  .option("--ai", "use an LLM (Anthropic) to reason NL→config; auto-enabled when ANTHROPIC_API_KEY is set. Use --no-ai to force the built-in generator")
   .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)", "vue3")
   .description("Generate a CRUD page from natural language description or structured config")
-  .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string }) => {
+  .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string; ai?: boolean }) => {
     // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
     const cliTarget: 'vue3' | 'vue2' | 'antdv' =
       options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
@@ -64,46 +113,10 @@ export const createCommand = new Command("create")
       // 优先使用 config.target，其次使用 CLI --target，再回落 vue3
       if (!config.target) config.target = cliTarget;
       const pageName = name || toKebabCase(config.name);
-      const pascalName = toPascalCase(pageName);
 
       console.log(pc.cyan(`\n⏳ 正在从结构化配置生成 (${config.mode || 'schema'} 模式, target=${config.target})...`));
 
-      const result = generateFromConfig(config);
-
-      if (result.warnings.length > 0) {
-        console.log(pc.yellow("\n⚠️ Warnings:"));
-        for (const w of result.warnings) {
-          console.log(pc.yellow(`  - ${w}`));
-        }
-      }
-
-      const mode = config.mode || "schema";
-
-      if (mode === "sfc") {
-        const defaultOutput = resolve(process.cwd(), `src/views/${pascalName}.vue`);
-        const outputPath = options.output ? resolve(process.cwd(), options.output) : defaultOutput;
-        const dir = dirname(outputPath);
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-        writeFileSync(outputPath, result.code, "utf-8");
-        console.log(pc.green(`\n✔ 已生成: ${outputPath}`));
-      } else {
-        const defaultDir = resolve(process.cwd(), `src/views/${pageName}`);
-        const outputDir = options.output ? resolve(process.cwd(), options.output) : defaultDir;
-        if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
-
-        const schemaFile = resolve(outputDir, "schema.ts");
-        const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
-
-        writeFileSync(schemaFile, result.code, "utf-8");
-        writeFileSync(wrapperFile, result.wrapperCode || "", "utf-8");
-
-        console.log(pc.green(`\n✔ 已生成:`));
-        console.log(pc.green(`   ${schemaFile}`));
-        console.log(pc.green(`   ${wrapperFile}`));
-      }
-
-      console.log(pc.dim(result.summary));
-      console.log("");
+      emitFromStructuredConfig(config, pageName, options.output);
       return;
     }
 
@@ -147,6 +160,27 @@ export const createCommand = new Command("create")
         description = desc;
       } else {
         description = source;
+      }
+    }
+
+    // Opt-in LLM path: reason NL→StructuredCrudConfig, then reuse the deterministic
+    // generator (compile-guaranteed, identical output to --from-config).
+    // Enabled by --ai, or automatically when ANTHROPIC_API_KEY is present; --no-ai forces regex.
+    const wantAi = options.ai !== false && (options.ai === true || !!process.env.ANTHROPIC_API_KEY);
+    if (wantAi) {
+      if (await aiAvailable()) {
+        try {
+          console.log(pc.cyan(`\n🤖 正在用 LLM 推理配置 (NL→config, target=${cliTarget})...`));
+          const { config, attempts } = await nlToConfig(description!, { target: cliTarget, mode });
+          console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试）→ 走确定性生成器`));
+          emitFromStructuredConfig(config, name, options.output);
+          return;
+        } catch (err: any) {
+          const detail = err instanceof AiUnavailableError ? err.message : (err?.message || String(err));
+          console.log(pc.yellow(`\n⚠️ LLM 路径失败，降级到内置生成器：${detail}`));
+        }
+      } else if (options.ai === true) {
+        console.log(pc.yellow("\n⚠️ 已请求 --ai，但 @anthropic-ai/sdk 未安装或 ANTHROPIC_API_KEY 未设置；降级到内置生成器。"));
       }
     }
 
