@@ -216,6 +216,26 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     warnings.push('target=antdv + mode=sfc: inline column render() is emitted using Element Plus semantics (e.g. <Tag type="success">). Ant Design Vue\'s Tag uses `color` (green/red), not `type`. Adjust the render props, or use mode=schema which generates a correct <a-tag :color> slot automatically.')
   }
 
+  // WS-5「标记而非静默丢弃」：SFC 模式当前只从 actions 推导单个通用弹窗与操作列，
+  // 不消费 config.dialogs / tableBtns / operationColumn（schema 模式才全量支持）。
+  // 检测到这些键就显式告警，引导改用 mode=schema 或手工补全，而不是默默忽略。
+  const ignoredInSfc: string[] = []
+  if (config.dialogs && Object.keys(config.dialogs).length) {
+    ignoredInSfc.push('dialogs (per-dialog titles/formItems/layout — a single generic dialog is derived from actions instead)')
+  }
+  if (Array.isArray(config.tableBtns) && config.tableBtns.length) {
+    ignoredInSfc.push('tableBtns (toolbar buttons + code:1/2 positioning)')
+  }
+  if (config.operationColumn) {
+    ignoredInSfc.push('operationColumn (width/label/fixed)')
+  }
+  if (ignoredInSfc.length) {
+    warnings.push(
+      `mode=sfc does not yet consume: ${ignoredInSfc.join('; ')}. ` +
+        `These were IGNORED (surfaced here, not dropped silently). Use mode=schema for full support, or add them to the emitted SFC by hand.`
+    )
+  }
+
   const lines: string[] = []
 
   // Template
@@ -296,7 +316,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   }
   lines.push(`const tableData = ref([])`)
   lines.push(`const tableRef = ref(null)`)
-  lines.push(`const pagination = ref({ current: 1, pageSize: ${config.pagination?.pageSize || 10}, total: 0 })`)
+  // pageSizes 由 es-table 从 pagination 对象读取（component.vue: paginationConfig.pageSizes）。
+  // 配置里声明了 pageSizes 就透传，避免静默丢弃用户的每页条数选项。
+  const pageSizesPart = Array.isArray(config.pagination?.pageSizes) && config.pagination.pageSizes.length
+    ? `, pageSizes: ${JSON.stringify(config.pagination.pageSizes)}`
+    : ''
+  lines.push(`const pagination = ref({ current: 1, pageSize: ${config.pagination?.pageSize || 10}, total: 0${pageSizesPart} })`)
   if (hasDialog) lines.push(`const dialog = useDialog()`)
   lines.push(``)
 
@@ -402,7 +427,11 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(``)
     lines.push(`function openForm(title${ts ? ': string' : ''}, row${ts ? ': any' : ''} = {}) {`)
     const dialogModelInit = formFields.map(f => `${f.prop}: ${getDefaultValue(f)}`).join(', ')
-    lines.push(`  const formData = reactive({ ${dialogModelInit}, ...row })`)
+    // 当没有任何表单字段（全部 inForm:false）时 dialogModelInit 为空串，直接拼
+    // `{ ${''}, ...row }` 会产出前导逗号 `reactive({ , ...row })` —— JS 语法错。
+    // filter(Boolean) 剔除空段，保证 `reactive({ ...row })` 恒合法。
+    const formInit = [dialogModelInit, '...row'].filter(Boolean).join(', ')
+    lines.push(`  const formData = reactive({ ${formInit} })`)
     lines.push(`  const isView = title === '查看'`)
     lines.push(``)
 
@@ -830,7 +859,14 @@ function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, un
 function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): string {
   const parts: string[] = []
   parts.push(`prop: '${field.prop}'`)
-  parts.push(`label: '${config.i18n ? `\${t('field.${field.prop}')}` : field.label}'`)
+  // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
+  // es-table 内部按 labelKey 解析 i18n 文案。绝不能内联 `label: '${t('...')}'` ——
+  // 内层单引号会截断外层字符串（编译失败），且 SFC 从不 import/定义 t。
+  if (config.i18n) {
+    parts.push(`labelKey: 'field.${field.prop}'`)
+  } else {
+    parts.push(`label: '${field.label}'`)
+  }
   if (field.width) parts.push(`width: ${typeof field.width === 'number' ? field.width : `'${field.width}'`}`)
   if (field.minWidth) parts.push(`minWidth: ${typeof field.minWidth === 'number' ? field.minWidth : `'${field.minWidth}'`}`)
   if (field.align) parts.push(`align: '${field.align}'`)

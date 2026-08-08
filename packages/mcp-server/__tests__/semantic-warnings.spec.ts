@@ -47,6 +47,17 @@ describe("buildSemanticWarnings", () => {
     expect(w.some((m) => m.includes("no formItems"))).toBe(false);
   });
 
+  it("does NOT warn for an add/edit dialog with hasCustomRender (bespoke body, not empty)", () => {
+    // hasCustomRender:true means the modal body is a custom render, so having no
+    // formItems is expected — the empty-body warning would be pure noise.
+    const w = buildSemanticWarnings({
+      fields: [baseField],
+      actions: ["edit"],
+      dialogs: { edit: { title: "编辑", hasCustomRender: true } },
+    });
+    expect(w.some((m) => m.includes("no formItems"))).toBe(false);
+  });
+
   it("still flags a dialog formItem prop absent from the top-level fields", () => {
     const w = buildSemanticWarnings({
       fields: [baseField],

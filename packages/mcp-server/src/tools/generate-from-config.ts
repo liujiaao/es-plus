@@ -234,10 +234,12 @@ export function buildSemanticWarnings(config: any): string[] {
     // An add/edit dialog with no form items renders an empty modal body — the
     // generator silently emits a dialog with nothing to fill (see the
     // `if (dlg.formItems)` guard in structured-generator). Surface it so the
-    // host LLM either supplies formItems or drops the dialog.
+    // host LLM either supplies formItems or drops the dialog. Skip when
+    // hasCustomRender:true — the modal body is a bespoke render, not an empty
+    // form, so "no formItems" is expected and the warning would be noise.
     const isMutatingDialog = dialogId === "add" || dialogId === "edit";
     const formItems = Array.isArray(dlg?.formItems) ? dlg.formItems : [];
-    if (isMutatingDialog && formItems.length === 0) {
+    if (isMutatingDialog && formItems.length === 0 && !dlg?.hasCustomRender) {
       warnings.push(
         `dialog "${dialogId}" is an add/edit dialog but has no formItems — the modal body will be empty. Add formItems (usually the mutable subset of fields) so users have inputs to fill.`
       );

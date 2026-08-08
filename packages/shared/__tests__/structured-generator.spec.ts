@@ -505,3 +505,72 @@ describe('tableOptions passthrough', () => {
   })
 })
 
+describe('sfc mode — regression guards', () => {
+  // 2.3a: every field inForm:false + a dialog action → formData must not carry a
+  // leading comma (`reactive({ , ...row })` is a JS syntax error).
+  it('emits valid reactive() when no field is form-visible (2.3a)', () => {
+    const result = generateFromConfig({
+      name: 'AuditView',
+      apiUrl: '/api/audit',
+      mode: 'sfc',
+      fields: [
+        { prop: 'operator', label: '操作人', formtype: 'Input', inForm: false },
+        { prop: 'ip', label: 'IP', formtype: 'Input', inForm: false, inQuery: false },
+      ],
+      actions: ['view'],
+    } as any)
+    expect(result.code).not.toContain('reactive({ , ')
+    expect(result.code).toContain('reactive({ ...row })')
+  })
+
+  // 2.3b: i18n + sfc column labels must use labelKey (matching schema mode),
+  // never inline `label: '${t('field.x')}'` — nested single quotes break parsing
+  // and `t` is never imported in the SFC.
+  it('uses labelKey (not inline t()) for i18n column labels (2.3b)', () => {
+    const result = generateFromConfig({
+      name: 'DictI18n',
+      apiUrl: '/api/dicts',
+      mode: 'sfc',
+      i18n: true,
+      fields: [{ prop: 'dictName', label: '字典名', formtype: 'Input' }],
+      actions: ['add'],
+    } as any)
+    expect(result.code).toContain("labelKey: 'field.dictName'")
+    expect(result.code).not.toMatch(/'\$\{t\(/)
+  })
+
+  // 2.3d: pagination.pageSizes must be threaded into the pagination ref (es-table
+  // reads pageSizes off the pagination object), not silently dropped.
+  it('propagates pagination.pageSizes into the pagination ref (2.3d)', () => {
+    const result = generateFromConfig({
+      name: 'Paged',
+      apiUrl: '/api/paged',
+      mode: 'sfc',
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add'],
+      pagination: { pageSizes: [5, 25, 75] },
+    } as any)
+    expect(result.code).toMatch(/pageSizes:\s*\[5,\s*25,\s*75\]/)
+  })
+
+  // 2.2=A: sfc mode does not consume dialogs/tableBtns/operationColumn — WS-5
+  // requires surfacing that as a warning rather than silently dropping.
+  it('warns (does not silently drop) when sfc ignores dialogs/tableBtns/operationColumn (2.2)', () => {
+    const result = generateFromConfig({
+      name: 'Campaign',
+      apiUrl: '/api/campaigns',
+      mode: 'sfc',
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add', 'edit'],
+      tableBtns: [{ name: '导出', code: 2 }],
+      operationColumn: { width: 180, btns: [{ name: '编辑' }] },
+      dialogs: { add: { title: '新建', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }] } },
+    } as any)
+    const w = result.warnings.find(w => w.includes('does not yet consume'))
+    expect(w).toBeTruthy()
+    expect(w).toContain('tableBtns')
+    expect(w).toContain('operationColumn')
+    expect(w).toContain('dialogs')
+  })
+})
+

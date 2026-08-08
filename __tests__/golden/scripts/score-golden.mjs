@@ -42,6 +42,14 @@ function countOccurrences(haystack, needle) {
   return n
 }
 
+// A field's prop can surface in two emitted shapes: the schema-mode pageSchema
+// JSON (`"prop": "x"`) or the sfc-mode JS object literal (`prop: 'x'` — column
+// builders emit single-quoted JS, not JSON). Accept either so the check is
+// mode-agnostic instead of silently under-verifying sfc columns.
+function propPresent(code, prop) {
+  return code.includes(`"prop": "${prop}"`) || new RegExp(`prop:\\s*['"]${prop}['"]`).test(code)
+}
+
 /** @returns {string[]} list of invariant-failure messages (empty === pass) */
 function scoreCase(raw) {
   const failures = []
@@ -81,14 +89,14 @@ function scoreCase(raw) {
 
   // (5) every table-visible field appears as a column
   for (const f of config.fields) {
-    if (isVisible(f, 'inTable') && !code.includes(`"prop": "${f.prop}"`)) {
+    if (isVisible(f, 'inTable') && !propPresent(code, f.prop)) {
       failures.push(`table-visible field "${f.prop}" is missing from emitted columns`)
     }
   }
 
   // (6) every query-visible field appears somewhere in the emitted config
   for (const f of config.fields) {
-    if (isVisible(f, 'inQuery') && !code.includes(`"prop": "${f.prop}"`)) {
+    if (isVisible(f, 'inQuery') && !propPresent(code, f.prop)) {
       failures.push(`query-visible field "${f.prop}" is missing from emitted schema`)
     }
   }
@@ -101,14 +109,35 @@ function scoreCase(raw) {
     }
   }
 
-  // (8) tableBtns positioning (code:1=left / code:2=right) preserved
-  if (Array.isArray(config.tableBtns) && config.tableBtns.length) {
+  // (8) tableBtns positioning (code:1=left / code:2=right) preserved.
+  //     This inspects the emitted pageSchema JSON (`"code": N`), which only
+  //     exists in schema mode. In sfc mode tableBtns are not rendered as JSON
+  //     at all — they are intentionally surfaced as a degradation warning
+  //     instead (see check 8b), so this assertion is schema-mode-only.
+  if (config.mode !== 'sfc' && Array.isArray(config.tableBtns) && config.tableBtns.length) {
     const want1 = config.tableBtns.filter((b) => (b.code ?? 1) === 1).length
     const want2 = config.tableBtns.filter((b) => b.code === 2).length
     const got1 = countOccurrences(code, '"code": 1')
     const got2 = countOccurrences(code, '"code": 2')
     if (got1 < want1) failures.push(`expected ${want1} left tableBtn(s) (code:1) but emitted ${got1}`)
     if (got2 < want2) failures.push(`expected ${want2} right tableBtn(s) (code:2) but emitted ${got2}`)
+  }
+
+  // (8b) sfc mode does not yet consume tableBtns/operationColumn/dialogs. WS-5
+  //      ("mark, never drop") requires these be SURFACED as a warning rather
+  //      than silently ignored, so the host LLM/user knows to switch to schema
+  //      mode or hand-complete the SFC.
+  if (config.mode === 'sfc') {
+    const dropped = []
+    if (Array.isArray(config.tableBtns) && config.tableBtns.length) dropped.push('tableBtns')
+    if (config.operationColumn) dropped.push('operationColumn')
+    if (config.dialogs && Object.keys(config.dialogs).length) dropped.push('dialogs')
+    const hasDegradeWarning = (result.warnings || []).some((w) => /does not yet consume/.test(w))
+    if (dropped.length && !hasDegradeWarning) {
+      failures.push(
+        `sfc mode ignores ${dropped.join('/')} but emitted no degradation warning (WS-5: mark, never silently drop)`
+      )
+    }
   }
 
   // (9) "mark, never drop": render fields must surface a marked extension point
