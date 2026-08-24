@@ -6,10 +6,14 @@
 
 | 包名 | 路径 | 说明 |
 |------|------|------|
+| `@es-plus/vue3` | `packages/vue3` | Vue 3 + Element Plus 渲染器 |
+| `@es-plus/vue2` | `packages/vue2` | Vue 2 + Element UI 渲染器 |
+| `@es-plus/core` | `packages/core` | 框架无关核心层（类型/工具/算法） |
 | `@es-plus/shared` | `packages/shared` | 共享核心逻辑（自动安装，用户无感） |
 | `@es-plus/mcp-server` | `packages/mcp-server` | MCP Server（AI 编码工具集成） |
 | `@es-plus/cli` | `packages/cli` | CLI 工具（命令行生成 CRUD 页面） |
 | `@es-plus/adapter-antdv` | `packages/adapter-antdv` | Ant Design Vue 4.x 适配器（**独立发布，不走 changesets**，见文末） |
+| `es-plus-ui` | `packages/es-plus-legacy` | 兼容 stub（re-export `@es-plus/vue3`，deprecated） |
 
 前三者通过 `linked` 配置联动 — 任一包发版时，其他关联包自动同步版本号。`@es-plus/adapter-antdv` 不在此联动体系内，版本号独立管理、手动发布。
 

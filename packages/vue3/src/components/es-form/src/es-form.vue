@@ -172,7 +172,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import { resolveFormLayProps, normalizeFormItemList, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { resolveFormLayProps, calculateAutoSpan, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 
 const props = withDefaults(
   defineProps<{
@@ -314,23 +314,8 @@ const formItemListFilter = computed(() => {
       return true
     })
 
-  const itemsWithoutSpan = visible.filter((it) => !it.span)
-  const autoCount = itemsWithoutSpan.length
-  let autoSpan = 6
-  if (autoCount > 0) {
-    const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
-    const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
-    if (fixedTotal === 0) {
-      if (autoCount === 1) autoSpan = 24
-      else if (autoCount === 2) autoSpan = 12
-      else if (autoCount === 3) autoSpan = 8
-      else autoSpan = 6
-    } else {
-      autoSpan = remaining >= autoCount ? Math.floor(remaining / autoCount) : 6
-      if (autoSpan > 12) autoSpan = 12
-      if (autoSpan < 4) autoSpan = 6
-    }
-  }
+  // auto-span 算法统一走 core 单源（见 core/src/field-resolver.ts calculateAutoSpan）
+  const autoSpan = calculateAutoSpan(visible)
 
   return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
@@ -415,7 +400,8 @@ const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
 const handleRefresh = () => {
-  // 保留原有逻辑
+  // TODO(es-plus): 「重置(刷新)」下拉项目前为空实现，后续补齐「重置表单 + 刷新表格」语义。
+  // 该入口已挂在 template 的 el-dropdown-item @click="handleRefresh" 上，勿删。
 }
 
 const getFormRowsFun = () => {

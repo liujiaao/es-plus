@@ -566,7 +566,7 @@ import type {
 
 ### 6.4 vs Avue / vxe-table
 
-Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极强的表格组件。
+Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极强的表格组件——**自 2026-07 起 vxe-table 同时是 ES-Plus 的可选表格渲染引擎**（`engine: 'vxe'`）。两者是"竞合"关系：vxe-table 的行内编辑 / 导出 / 工具栏 / 树形数据能力被 ES-Plus 封装为一等公民 API，而 Avue 仍是同赛道的配置化竞品。
 
 | 对比项 | Avue | vxe-table | ES-Plus |
 |--------|------|-----------|---------|
@@ -580,7 +580,7 @@ Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极�
 | 类型完整度 | 中 | 高 | 高（11 接口完整导出） |
 | 文档站 | ✅ | ✅ | ✅ + AI CRUD 演示 + StackBlitz Playground |
 
-ES-Plus 的独占差异：**Schema 跨 Vue 2/Vue 3 共享 + AI 原生工具链 + 持续集成保障**。这三点目前国内外社区里**没有第二个组件库做齐**。
+ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工具链 + 持续集成保障**。这三点在同赛道组件库中目前较少见。
 
 ### 6.5 vs Naive UI / Ant Design Vue 等"通用型 UI 库"
 
@@ -669,7 +669,7 @@ CLI 不依赖任何 AI 服务 —— 它用本地规则解析自然语言描述�
 
 ### 7.4 E2E 矩阵：证明 AI 生成的代码"真的能编"
 
-很多组件库说"AI 友好"，但**没人做 e2e 证明这件事**。ES-Plus 的 CI 跑这样一个矩阵（[.github/workflows/e2e.yml](../.github/workflows/e2e.yml)）：
+很多组件库说"AI 友好"，但**同类组件库中较少有人用 e2e 证明这件事**。ES-Plus 的 CI 跑这样一个矩阵（[.github/workflows/e2e.yml](../.github/workflows/e2e.yml)）：
 
 ```
 matrix:
@@ -687,7 +687,7 @@ matrix:
 
 **第一次跑这个 CI 时，vue2 sfc 模式直接挂了** —— 暴露了一个 import 提取的 bug。修完之后到今天保持全绿。
 
-这个矩阵的意义是**契约级保证**：**任何 ES-Plus 发出的代码都能编译**。这是社区方案普遍达不到的工程水准。
+这个矩阵的意义是**契约级保证**：**在 e2e 矩阵覆盖的 6 种组合（vue3/vue2/antdv × schema/sfc）内，ES-Plus 生成器发出的代码都能通过 `vite build`**。这是同类组件库较少做到的工程水准。
 
 ### 7.5 浏览器里的 AI CRUD 演示页
 
@@ -697,7 +697,7 @@ matrix:
 - 右侧 Trace 时间轴：把每一次 MCP tool 调用、AI 请求、zod 校验、代码生成**全部可视化**
 - Preview / Code / JSON tab：直接看到生成结果
 
-这页面是**"AI + es-plus + MCP 协作流程"的活文档** —— 访客不用读文档，看一遍就懂。这是社区**唯一**做了"协议级可视化"的中后台组件库 demo。
+这页面是**"AI + es-plus + MCP 协作流程"的活文档** —— 访客不用读文档，看一遍就懂。这是中后台组件库中较少见的"协议级可视化"demo。
 
 ---
 
@@ -758,7 +758,7 @@ matrix:
 
 - ✅ **中后台 / 管理系统 / 数据中台 / 内部工具** —— 这是它的本命场景
 - ✅ **CRUD 页面 ≥ 10 个** —— ROI 拐点
-- ✅ **Vue 2 项目想用上现代配置驱动** —— 没有第二选择
+- ✅ **Vue 2 项目想用上现代配置驱动** —— 跨框架共享 Schema 的同类选择极少
 - ✅ **同时维护 Vue 2 + Vue 3 项目** —— 同一份 Schema 复用
 - ✅ **团队规模 3+ 人，需要统一编码规范** —— 配置驱动天然收敛
 - ✅ **用 Claude Code / Cursor / Cline 等 AI 编程工具** —— MCP 接入立刻见效
@@ -901,7 +901,7 @@ AI 通过 MCP 协议拿到 ES-Plus 的 Schema，生成代码，写入文件，�
 
 下一个十年，组件库的竞争**不是 prop 多不多、样式好不好看**，而是**能不能让 AI 写出能跑的代码、能不能让一份 Schema 跨框架复用、能不能把团队的横向需求收口到配置层**。
 
-ES-Plus 是第一个把这三件事都做齐的中后台组件库。
+ES-Plus 是较早把这三件事都做齐的中后台组件库之一。
 
 **Star、Try、Feedback**：<https://github.com/liujiaao/es-plus>
 

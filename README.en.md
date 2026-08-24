@@ -1,12 +1,13 @@
 # ES-Plus
 
-Config-driven CRUD component library for Vue 3 + Element Plus — forms, tables, and dialogs with zero boilerplate.
+Enterprise CRUD component library — config-driven, form-table-dialog full-chain linkage, AI-native. **Supports Vue 3 + Element Plus, Vue 2 + Element UI, and Vue 3 + Ant Design Vue — one JSON schema shared across all three renderers.**
 
 [中文](./README.md) | English
 
-[![npm version](https://img.shields.io/npm/v/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![npm downloads](https://img.shields.io/npm/dm/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
-[![license](https://img.shields.io/npm/l/es-plus-ui.svg)](https://www.npmjs.com/package/es-plus-ui)
+[![npm version](https://img.shields.io/npm/v/%40es-plus%2Fvue3.svg?label=%40es-plus%2Fvue3)](https://www.npmjs.com/package/@es-plus/vue3)
+[![npm version](https://img.shields.io/npm/v/%40es-plus%2Fvue2.svg?label=%40es-plus%2Fvue2)](https://www.npmjs.com/package/@es-plus/vue2)
+[![npm version](https://img.shields.io/npm/v/%40es-plus%2Fadapter-antdv.svg?label=%40es-plus%2Fadapter-antdv)](https://www.npmjs.com/package/@es-plus/adapter-antdv)
+[![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 
 **[Documentation](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD Generator](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
@@ -34,7 +35,7 @@ Enterprise back-office apps are 80% CRUD pages — the same form-table-dialog pa
 - **Config-driven** — JSON config generates forms, tables, and dialogs
 - **Auto linkage** — EsForm inside EsTable: query, reset, pagination work automatically
 - **Programmatic dialogs** — `useDialog()` with JSX render, form validation, nested dialogs
-- **13 input types** — Input, Select, datePicker, timePicker, Cascader, Radio, Checkbox, Switch, Slider, Rate, ColorPicker, Transfer, Upload
+- **14 input types** — Input, InputNumber, Select, DatePicker, TimePicker, Cascader, Radio, Checkbox, Switch, Slider, Rate, ColorPicker, Transfer, Upload
 - **Adaptive height** — ResizeObserver auto-recalculates table height
 - **Cross-page selection** — `cachePageSelection` preserves checkbox state across pages
 - **Backend-agnostic** — `configTableOut` maps any API response structure
@@ -50,10 +51,25 @@ Enterprise back-office apps are 80% CRUD pages — the same form-table-dialog pa
 ### Install
 
 ```bash
-npm install es-plus-ui element-plus @element-plus/icons-vue
+npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 ```
 
 Peer dependencies: `vue ^3.2.0`, `element-plus ^2.2.0`, `@element-plus/icons-vue ^2.1.0`
+
+### Vue 2 project?
+
+```bash
+npm install @es-plus/vue2 element-ui
+# Vue 2.6 also needs @vue/composition-api
+```
+
+### Ant Design Vue project?
+
+```bash
+npm install @es-plus/adapter-antdv ant-design-vue @ant-design/icons-vue dayjs
+```
+
+All three renderers share the same JSON config schema — the config API is identical, only the underlying UI components differ.
 
 ### Register (Full Import)
 
@@ -61,8 +77,8 @@ Peer dependencies: `vue ^3.2.0`, `element-plus ^2.2.0`, `@element-plus/icons-vue
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import EsPlus from 'es-plus-ui'
-import 'es-plus-ui/dist/style.css'
+import EsPlus from '@es-plus/vue3'
+import '@es-plus/vue3/dist/style.css'
 import App from './App.vue'
 
 const app = createApp(App)
@@ -79,7 +95,7 @@ When using `unplugin-vue-components`, add `EsPlusResolver` to ensure Element Plu
 // vite.config.ts
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { EsPlusResolver } from 'es-plus-ui/resolver'
+import { EsPlusResolver } from '@es-plus/vue3/resolver'
 
 export default defineConfig({
   plugins: [
@@ -214,7 +230,7 @@ const formItems = [
 |-------|------|-------------|
 | `prop` | `string` | Field name (required) |
 | `label` | `string` | Label text (required) |
-| `formtype` | `string` | Input component type (13 types) |
+| `formtype` | `string` | Input component type (14 types) |
 | `span` | `number` | Grid column span (1-24) |
 | `attrs` | `object` | Pass-through to Element Plus component |
 | `dataOptions` | `array` | Options for Select/Radio/Checkbox |
@@ -281,7 +297,7 @@ options: {
 ## useDialog
 
 ```tsx
-import { useDialog } from 'es-plus-ui'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 
@@ -370,7 +386,7 @@ import type {
   EsFormInstance,    // Form instance methods
   EsTableInstance,   // Table instance methods
   EsPlusOptions      // Global config
-} from 'es-plus-ui'
+} from '@es-plus/vue3'
 ```
 
 ---
@@ -446,11 +462,17 @@ app.use(EsPlus, {
 ```
 es-plus/
 ├── packages/
-│   ├── es-plus/          # Component library (npm: es-plus-ui)
+│   ├── vue3/             # Vue 3 + Element Plus renderer (npm: @es-plus/vue3)
+│   ├── vue2/             # Vue 2 + Element UI renderer (npm: @es-plus/vue2)
+│   ├── adapter-antdv/    # Vue 3 + Ant Design Vue renderer (npm: @es-plus/adapter-antdv)
+│   ├── core/             # Framework-agnostic core (npm: @es-plus/core)
+│   ├── es-plus-legacy/   # Compatibility stub (npm: es-plus-ui, deprecated)
+│   ├── shared/           # MCP/CLI shared logic
 │   ├── mcp-server/       # MCP Server (npm: @es-plus/mcp-server)
 │   └── cli/              # CLI tool (npm: @es-plus/cli)
 ├── es-plus-docs/         # Documentation site (Vite + Vue 3)
-└── es-eui/               # Vue 2 + Element UI version (legacy)
+├── es-eui/               # Vue 2 + Element UI docs (legacy)
+└── es-pc/                # Vue 3 + Ant Design Vue docs
 ```
 
 ## Development
@@ -470,7 +492,10 @@ cd packages/vue3 && npm test
 
 | Package | Description | Link |
 |---------|-------------|------|
-| es-plus-ui | Component library | [npm](https://www.npmjs.com/package/es-plus-ui) |
+| @es-plus/vue3 | Vue 3 + Element Plus renderer | [npm](https://www.npmjs.com/package/@es-plus/vue3) |
+| @es-plus/vue2 | Vue 2 + Element UI renderer | [npm](https://www.npmjs.com/package/@es-plus/vue2) |
+| @es-plus/adapter-antdv | Vue 3 + Ant Design Vue renderer | [npm](https://www.npmjs.com/package/@es-plus/adapter-antdv) |
+| @es-plus/core | Framework-agnostic core | [npm](https://www.npmjs.com/package/@es-plus/core) |
 | @es-plus/mcp-server | AI coding tool integration | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
 | @es-plus/cli | Command line tool | [npm](https://www.npmjs.com/package/@es-plus/cli) |
 | Documentation | Full API & examples | [Docs](https://liujiaao.github.io/es-plus/) |
