@@ -7,7 +7,7 @@ import {
   type TableRefLike,
 } from '@es-plus/core'
 
-export function useTableSelection(rowkey?: string) {
+export function useTableSelection(rowkey?: string, cachePageSelection: boolean = true) {
   const state = createSelectionState()
   const multipleSelection = ref<Record<string, unknown>[]>([])
   const selectionsByPage = ref<Record<number, Record<string, unknown>[]>>({})
@@ -20,8 +20,8 @@ export function useTableSelection(rowkey?: string) {
   }
 
   const handleSelectionChange = (val: Record<string, unknown>[], currentPage: number) => {
-    if (state.isInitChange && rowkey) return
-    applySelectionChange(state, val, currentPage, rowkey)
+    if (state.isInitChange && rowkey && cachePageSelection) return
+    applySelectionChange(state, val, currentPage, rowkey, cachePageSelection)
     sync()
   }
 
@@ -29,7 +29,7 @@ export function useTableSelection(rowkey?: string) {
     dataList: Record<string, unknown>[],
     tableRef: { toggleRowSelection?: (row: Record<string, unknown>, selected: boolean) => void }
   ) => {
-    if (dataList?.length && rowkey && state.multipleSelection.length) {
+    if (dataList?.length && rowkey && cachePageSelection && state.multipleSelection.length) {
       restoreSelectionForPage(state, dataList, tableRef as TableRefLike, rowkey)
     }
   }
@@ -55,7 +55,7 @@ export function useTableSelection(rowkey?: string) {
       sync()
       return
     }
-    if (rowkey) {
+    if (rowkey && cachePageSelection) {
       nextTick(() => {
         restoreSelectionForPage(state, dataList, tableRef, rowkey)
         state.isInitChange = false

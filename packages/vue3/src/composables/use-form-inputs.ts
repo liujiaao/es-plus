@@ -1,6 +1,7 @@
 import { h } from 'vue'
 import {
   ElInput,
+  ElInputNumber,
   ElSelect,
   ElOption,
   ElDatePicker,
@@ -61,22 +62,9 @@ export function useFormInputs() {
         }
       ],
       [
-        'datePicker',
+        'InputNumber',
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
-          return hFn(ElDatePicker, {
-            modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
-            'onUpdate:modelValue': (val: unknown) => {
-              setNestedValue(model, row.prop, val)
-            }
-          })
-        }
-      ],
-      [
-        'timePicker',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
-          return hFn(ElTimePicker, {
+          return hFn(ElInputNumber, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,

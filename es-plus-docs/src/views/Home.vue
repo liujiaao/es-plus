@@ -310,7 +310,7 @@ useHead({
   meta: [
     { name: 'description', content: 'ES-Plus — 一份 JSON 配置生成 Vue 3 + Element Plus（或 Vue 2 + Element UI）的 CRUD 页面，支持 MCP Server 让 AI 编码助手原生理解组件 API。' },
     { property: 'og:title', content: 'ES-Plus · 高级 CRUD 组件库' },
-    { property: 'og:description', content: '中后台 CRUD 配置即代码：一份 JSON · 双 Vue 渲染 · AI 写不错。' },
+    { property: 'og:description', content: '中后台 CRUD 配置即代码：一份 JSON · 三 Vue 渲染 · AI 写不错。' },
   ],
 })
 

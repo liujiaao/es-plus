@@ -145,7 +145,7 @@ import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
 import type { TableEngineExposed } from './engines/types'
-import { getCallback } from '@es-plus/core'
+import { getCallback, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
 const props = withDefaults(
@@ -614,7 +614,7 @@ onMounted(() => {
 })
 
 // 表格选择逻辑
-const { multipleSelection, handleSelectionChange, initSelection, clearAllSelection } = useTableSelection(props.options.rowkey)
+const { multipleSelection, handleSelectionChange, initSelection, clearAllSelection } = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
 
 const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
   handleSelectionChange(val, paginationConfig.value.current || 1)
@@ -863,7 +863,7 @@ const activeEngineRef = computed((): TableEngineExposed | null =>
 // 提供表格实例给子组件（保留与 Form 的耦合）
 // 注：EsForm 消费侧仅调用 httpRequestInstance()，tableRef/refsInstance 未被任何组件读取，
 // vxe 模式下 tableRef 指向 vxeEngineRef（TableEngineExposed）是安全的。
-provide('getTableInstantce', () => ({
+provide(TABLE_CONTEXT_INJECT_KEY, () => ({
   ...(instance?.setupState || {}),
   tableRef: isVirtual.value ? virtualEngineRef : isVxeEngine.value ? vxeEngineRef : tableRef,
   toggleSelection: (rows: Record<string, unknown>[]) => {

@@ -63,14 +63,17 @@ export interface TableRefLike {
  * @param val 当前页 selection-change 抛出的最新选中行
  * @param currentPage 当前页码
  * @param rowkey 行唯一键（如 'id'），不传则退化为单页模式
+ * @param cachePageSelection 是否启用跨页保留勾选（默认 true，向后兼容；
+ *                           传 false 时即使有 rowkey 也不做跨页累积，等价单页选择）
  */
 export function applySelectionChange(
   state: SelectionState,
   val: ModelData[],
   currentPage: number,
-  rowkey?: string
+  rowkey?: string,
+  cachePageSelection: boolean = true
 ): void {
-  if (rowkey) {
+  if (rowkey && cachePageSelection) {
     if (state.isInitChange) return
     state.selectionsByPage[currentPage] = val
 

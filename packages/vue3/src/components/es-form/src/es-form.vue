@@ -172,7 +172,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import { resolveFormLayProps, normalizeFormItemList } from '@es-plus/core'
+import { resolveFormLayProps, normalizeFormItemList, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 
 const props = withDefaults(
   defineProps<{
@@ -219,13 +219,13 @@ const translateLabel = (item: FormItemOption): string => {
 }
 
 // 保留与 Table 的耦合（同时支持 inject 和 instance.ctx 两种获取方式）
-const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)
+const injectedTableInstant = inject<(() => any) | null>(TABLE_CONTEXT_INJECT_KEY, null)
 const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
   const ctx = (instance as any)?.ctx as Record<string, any>
-  return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
+  return typeof ctx?.getTableInstance === 'function' ? ctx?.getTableInstance() : ctx?.getTableInstance
 })
 
 const isParentTable = computed(() => {

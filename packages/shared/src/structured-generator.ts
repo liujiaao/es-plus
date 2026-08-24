@@ -67,6 +67,14 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     warnings.push(`Schema mode cannot inline a render function. Fields [${renderFields.map(f => f.prop).join(', ')}] emit a marked \`TODO(es-plus)\` extension-point slot in the wrapper SFC (a default status-tag stub echoing your requested render) — replace the stub with the real markup. The requirement is preserved as a marker, not dropped.`)
   }
 
+  // WS-5: formatter（列格式化函数）同样无法序列化进 JSON schema —— 不静默丢弃，
+  // 发出降级警告，保留原始 formatter 意图供开发者手动补回。
+  const formatterFields = tableFields.filter(f => typeof f.formatter === 'string' && f.formatter)
+  if (formatterFields.length > 0) {
+    const hints = formatterFields.map(f => `"${f.prop}": ${sanitizeForComment(f.formatter!)}`).join('; ')
+    warnings.push(`Schema mode cannot inline a formatter function (JSON cannot hold functions). Fields [${formatterFields.map(f => f.prop).join(', ')}] are emitted unformatted — re-add \`formatter\` manually. Original formatters: ${hints}. The requirement is marked, not silently dropped.`)
+  }
+
   // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告
   const tOptsForWarn = (config.tableOptions || {}) as Record<string, unknown>
   if (target === 'vue2' && tOptsForWarn.virtual) {

@@ -32,7 +32,7 @@
  * 这样无论是 Vue 2 还是 Vue 3 项目，配置 schema 完全一致 —— 只有内部渲染层做差异化处理。
  */
 
-import { getNestedValue, setNestedValue } from '@es-plus/core'
+import { getNestedValue, setNestedValue, normalizeFormType } from '@es-plus/core'
 import type { FormItemOption, ModelData } from '@es-plus/core'
 
 /**
@@ -135,7 +135,7 @@ export function useFormInputs() {
       ],
 
       // ─────────────────────────────────────────────────────────────────
-      // InputNumber - 数字输入（保留兼容 es-eui 的扩展类型）
+      // InputNumber - 数字输入（已提升为正式 formtype，三端一致）
       // ─────────────────────────────────────────────────────────────────
       [
         'InputNumber',
@@ -179,11 +179,11 @@ export function useFormInputs() {
       ],
 
       // ─────────────────────────────────────────────────────────────────
-      // datePicker - 日期选择（注意 Vue 3 用大写 DatePicker，Vue 2 用 datePicker；
-      //             这里 Map key 跟 Vue 3 版本对齐，使用 'datePicker'）
+      // DatePicker - 日期选择（PascalCase 键与 vue3/antdv 对齐；
+      //             camelCase 旧写法由 normalizeFormType 归一化）
       // ─────────────────────────────────────────────────────────────────
       [
-        'datePicker',
+        'DatePicker',
         (h, model, { row }) => {
           const attrs = resolveAttrs(row)
           const value = getNestedValue(model, row.prop)
@@ -197,10 +197,10 @@ export function useFormInputs() {
       ],
 
       // ─────────────────────────────────────────────────────────────────
-      // timePicker - 时间选择
+      // TimePicker - 时间选择
       // ─────────────────────────────────────────────────────────────────
       [
-        'timePicker',
+        'TimePicker',
         (h, model, { row }) => {
           const attrs = resolveAttrs(row)
           const value = getNestedValue(model, row.prop)
@@ -550,34 +550,14 @@ export function useFormInputs() {
     ])
 
     /**
-     * formtype 大小写兼容查找：
-     *   - Vue 3 版本约定 `datePicker` / `timePicker` 用 camelCase，其它用 PascalCase
-     *   - 原 es-eui 历史上一律使用 PascalCase（`DatePicker` / `TimePicker`）
-     * 为了让旧 es-eui 案例无修改即可使用 @es-plus/vue2，这里做大小写兼容：
-     *   1) 精确匹配（保持 Vue 3 习惯）
-     *   2) 首字母翻转再试一次（覆盖 'DatePicker' ↔ 'datePicker' 这类差异）
-     *   3) 全表 case-insensitive 兜底
-     * 都未命中则返回空渲染器。
+     * formtype 查找：统一走 normalizeFormType（core 单源）
+     *   - PascalCase 为推荐写法，camelCase 旧写法（datePicker/timePicker）归一化后命中
+     *   - 与 vue3 / adapter-antdv 的查找逻辑保持一致，避免三端分叉
      */
     const formtype = (item.formtype ?? '') as string
     if (!formtype) return (): unknown => null
 
-    const direct = formPutList.get(formtype)
-    if (direct) return direct
-
-    const flipped = formtype[0]
-      ? (formtype[0] === formtype[0].toLowerCase()
-          ? formtype[0].toUpperCase() + formtype.slice(1)
-          : formtype[0].toLowerCase() + formtype.slice(1))
-      : formtype
-    const flippedHit = formPutList.get(flipped)
-    if (flippedHit) return flippedHit
-
-    const lower = formtype.toLowerCase()
-    for (const [key, val] of formPutList) {
-      if (key.toLowerCase() === lower) return val
-    }
-    return (): unknown => null
+    return formPutList.get(normalizeFormType(formtype)) || (() => null)
   }
 
   return { formInputComponents }

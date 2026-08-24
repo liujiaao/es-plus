@@ -16,7 +16,7 @@
  * PascalCase 为推荐写法（DatePicker / TimePicker），
  * camelCase 旧写法（datePicker / timePicker）仍保留以兼容。
  */
-export declare const VALID_FORM_TYPES: readonly ["Input", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
+export declare const VALID_FORM_TYPES: readonly ["Input", "InputNumber", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
 /**
  * FormType 旧写法 → 新写法映射
  * 用于运行时归一化：用户写 'datePicker' 会被转换为 'DatePicker'
@@ -43,6 +43,12 @@ export declare const SPECIAL_BTN_KEYS: {
 };
 /** 内置工具栏按钮 key 清单（CRUD 默认按钮使用这些 key） */
 export declare const BUILT_IN_BTN_KEYS: readonly ["query", "rest", "add", "export", "import"];
+/**
+ * EsForm ↔ EsTable 联动的 provide/inject 上下文 key
+ * 历史上拼写为 'getTableInstantce'（Instance 拼错），现统一为正确拼写并收敛到常量，
+ * 避免三端各自硬编码字符串再次漂移。
+ */
+export declare const TABLE_CONTEXT_INJECT_KEY: "getTableInstance";
 /** 操作列在 columns 中的占位 prop —— 普通 SFC 场景 */
 export declare const OPERATION_COLUMN_PROP_SFC = "operate";
 /** 操作列在 columns 中的占位 prop —— EsCrudPage 场景 */

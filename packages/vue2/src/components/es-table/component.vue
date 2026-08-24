@@ -196,6 +196,7 @@ import {
 import {
   getGlobalConfig,
   getCallback,
+  TABLE_CONTEXT_INJECT_KEY,
   isObject,
   findValueByKey,
   type TableColumn,
@@ -844,7 +845,7 @@ export default defineComponent({
       handleSelectionChange,
       initSelection,
       clearAllSelection: clearAllSelectionInternal,
-    } = useTableSelection(props.options.rowkey)
+    } = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
 
     const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
       handleSelectionChange(val, paginationConfig.value.current || 1)
@@ -1173,7 +1174,7 @@ export default defineComponent({
 
     // ─── 提供给子组件的实例 ────────────────────
     // P5: vxe 引擎下 tableRef 为 null，需委托给 vxeEngineRef
-    provide('getTableInstantce', () => ({
+    provide(TABLE_CONTEXT_INJECT_KEY, () => ({
       tableRef: isVxeEngine.value ? vxeEngineRef : tableRef,
       toggleSelection: (rows: Record<string, unknown>[]) => {
         if (isVxeEngine.value) {

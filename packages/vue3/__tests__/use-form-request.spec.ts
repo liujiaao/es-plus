@@ -166,9 +166,11 @@ describe('useFormRequest', () => {
       const rawResponse = { data: [{ code: 'X', text: 'Option X' }], records: 1, rows: [] }
       mockHttpRequest.mockResolvedValue(rawResponse)
 
-      const crtn = vi.fn((data: unknown) => {
-        const res = data as { data: Array<{ code: string; text: string }> }
-        return res.data.map(item => ({ label: item.text, value: item.code }))
+      // crtn / responseTransform 接收"预提取列表"（res.data 剥层后的数组），
+      // 与 callOptionListFormat 口径一致（core 单一权威语义）
+      const crtn = vi.fn((list: unknown) => {
+        const items = list as Array<{ code: string; text: string }>
+        return items.map(item => ({ label: item.text, value: item.code }))
       })
       const callOptionListFormat = vi.fn((data: unknown[]) => data)
 
@@ -184,10 +186,32 @@ describe('useFormRequest', () => {
 
       const result = await getEveryFormQueryField(items)
 
-      expect(crtn).toHaveBeenCalledWith(rawResponse)
+      expect(crtn).toHaveBeenCalledWith([{ code: 'X', text: 'Option X' }])
       expect(result[0].listData).toEqual([{ label: 'Option X', value: 'X' }])
       // callOptionListFormat should NOT be called when crtn returns non-empty
       expect(callOptionListFormat).not.toHaveBeenCalled()
+    })
+
+    it('supports listenToCallBack.responseTransform (recommended alias) same as crtn', async () => {
+      mockHttpRequest.mockResolvedValue({ data: [{ id: 1, name: 'A' }, { id: 2, name: 'B' }], records: 2, rows: [] })
+
+      const responseTransform = vi.fn((list: unknown) =>
+        (list as Array<{ id: number; name: string }>).map(i => ({ label: i.name, value: i.id }))
+      )
+
+      const { getEveryFormQueryField } = useFormRequest(mockHttpRequest)
+      const items: FormItemOption[] = [
+        createFormItem({
+          prop: 'field',
+          apiParams: createApiParams(),
+          listenToCallBack: { responseTransform }
+        })
+      ]
+
+      const result = await getEveryFormQueryField(items)
+
+      expect(responseTransform).toHaveBeenCalledWith([{ id: 1, name: 'A' }, { id: 2, name: 'B' }])
+      expect(result[0].listData).toEqual([{ label: 'A', value: 1 }, { label: 'B', value: 2 }])
     })
 
     it('falls back to callOptionListFormat when crtn returns empty array', async () => {

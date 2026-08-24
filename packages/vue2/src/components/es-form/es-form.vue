@@ -142,7 +142,7 @@
  *  - 13 种内置 formtype
  *  - 远端 dataOptions 加载（apiParams + httpRequest）
  *  - 工具栏按钮（左右分布、权限过滤、内置 query/rest 行为）
- *  - 与 EsTable 联动（通过 inject getTableInstantce）
+ *  - 与 EsTable 联动（通过 inject TABLE_CONTEXT_INJECT_KEY）
  *  - exposed 方法：validate / resetFields / clearValidate / scrollToField
  *
  * Vue 2 关键差异点：
@@ -157,7 +157,7 @@ import { useFormInputs } from '../../composables/use-form-inputs'
 import { useFormLayout } from '../../composables/use-form-layout'
 import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
-import { getGlobalConfig } from '@es-plus/core'
+import { getGlobalConfig, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
 /**
@@ -281,7 +281,7 @@ export default defineComponent({
     }
 
     // ─── 与 EsTable 联动 ──
-    const injectedTableInstant = inject<(() => unknown) | null>('getTableInstantce', null)
+    const injectedTableInstant = inject<(() => unknown) | null>(TABLE_CONTEXT_INJECT_KEY, null)
     const getTableInstant = computed(() => {
       if (injectedTableInstant) {
         return typeof injectedTableInstant === 'function'
@@ -289,7 +289,7 @@ export default defineComponent({
           : injectedTableInstant
       }
       const proxy = (instance as unknown as { proxy?: Record<string, unknown> })?.proxy
-      const fn = proxy?.getTableInstantce
+      const fn = proxy?.getTableInstance
       if (typeof fn === 'function') return (fn as () => unknown)()
       return fn
     })

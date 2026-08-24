@@ -14,7 +14,7 @@ import {
   applySelectionChange,
 } from '@es-plus/core'
 
-export function useTableSelection(rowkey?: string) {
+export function useTableSelection(rowkey?: string, cachePageSelection: boolean = true) {
   const state = createSelectionState()
   const multipleSelection = ref<Record<string, unknown>[]>([])
   const selectionsByPage = ref<Record<number, Record<string, unknown>[]>>({})
@@ -39,7 +39,7 @@ export function useTableSelection(rowkey?: string) {
    */
   const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
-    preserveSelectedRowKeys: true,
+    preserveSelectedRowKeys: cachePageSelection,
     onChange: (keys: (string | number)[], rows: Record<string, unknown>[]) => {
       handleSelectionChange(rows, currentPage.value)
     },
@@ -49,7 +49,7 @@ export function useTableSelection(rowkey?: string) {
    * 选择变化处理 — 跨页累积逻辑复用 core applySelectionChange
    */
   const handleSelectionChange = (val: Record<string, unknown>[], page: number) => {
-    applySelectionChange(state, val, page, rowkey)
+    applySelectionChange(state, val, page, rowkey, cachePageSelection)
     sync()
     if (!rowkey) {
       // 无 rowkey 时 selectedRowKeys 退化为当前页 id/key
@@ -64,7 +64,7 @@ export function useTableSelection(rowkey?: string) {
    */
   const handleSelectData = (dataList: Record<string, unknown>[], _tableRef: unknown) => {
     const currentSelection = multipleSelection.value
-    if (dataList?.length && rowkey && currentSelection.length) {
+    if (dataList?.length && rowkey && cachePageSelection && currentSelection.length) {
       const pageKeys = new Set(
         dataList
           .filter((row) => currentSelection.some((s) => s[rowkey] === row[rowkey]))
@@ -126,7 +126,7 @@ export function useTableSelection(rowkey?: string) {
     // Only flip the guard flag — do NOT sync (which would wipe multipleSelection.value)
     state.isInitChange = true
     isInitChange.value = true
-    if (rowkey) {
+    if (rowkey && cachePageSelection) {
       nextTick(() => {
         handleSelectData(dataList, null)
         state.isInitChange = false

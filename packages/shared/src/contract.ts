@@ -1,6 +1,7 @@
 export const VALID_FORM_TYPES = [
-  'Input', 'Select', 'DatePicker', 'TimePicker', 'Slider', 'ColorPicker',
-  'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch', 'Rate', 'Upload'
+  'Input', 'InputNumber', 'Select', 'DatePicker', 'TimePicker', 'Slider',
+  'ColorPicker', 'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch',
+  'Rate', 'Upload'
 ] as const
 
 export type FormType = typeof VALID_FORM_TYPES[number]

@@ -1,4 +1,4 @@
-export declare const VALID_FORM_TYPES: readonly ["Input", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
+export declare const VALID_FORM_TYPES: readonly ["Input", "InputNumber", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
 export type FormType = typeof VALID_FORM_TYPES[number];
 /**
  * FormType 旧写法 → 新写法映射

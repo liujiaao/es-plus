@@ -22,6 +22,7 @@
       "type": "string",
       "enum": [
         "Input",
+        "InputNumber",
         "Select",
         "DatePicker",
         "TimePicker",

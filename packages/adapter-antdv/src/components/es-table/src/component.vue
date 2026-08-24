@@ -183,7 +183,7 @@ import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey, mapSize, mapButtonType } from '../../../utils/shared'
 import { getAdvIconComponent } from '../../../utils/icon'
-import { getCallback } from '@es-plus/core'
+import { getCallback, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
 import RenderDomTb from './render-dom-tb'
@@ -407,7 +407,7 @@ const {
   clearSelection,
   toggleRowSelection,
   setCurrentPage,
-} = useTableSelection(props.options.rowkey)
+} = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
 
 // ─── 过滤列 ─────────────────────────────────────────
 const filteredColumns = computed(() => {
@@ -866,7 +866,7 @@ watch(tableData, (val) => {
 }, { deep: true })
 
 // ─── Provide ─────────────────────────────────────────
-provide('getTableInstantce', () => ({
+provide(TABLE_CONTEXT_INJECT_KEY, () => ({
   ...(instance?.setupState || {}),
   tableRef: isVxeEngine.value ? vxeEngineRef : tableRef,
   toggleSelection: (rows: Record<string, unknown>[]) => {

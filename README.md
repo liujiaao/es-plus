@@ -38,7 +38,7 @@
 - **配置驱动** — JSON 配置生成表单、表格、弹窗，替代大量模板代码
 - **全链路联动** — EsForm 嵌套在 EsTable 中，查询/重置/分页全自动联动
 - **编程式弹窗** — `useDialog()` 命令式调用，JSX 渲染，表单验证集成
-- **13 种表单控件** — Input、Select、datePicker、timePicker、Cascader、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
+- **14 种表单控件** — Input、InputNumber、Select、DatePicker、TimePicker、Cascader、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
 - **自适应高度** — ResizeObserver 自动重算表格高度
 - **跨页选择** — `cachePageSelection` 分页切换保留勾选
 - **任意后端适配** — `configTableOut` 配置化映射 API 响应字段
@@ -228,7 +228,7 @@ const formItems = [
 |------|------|------|
 | `prop` | `string` | 字段名（必填） |
 | `label` | `string` | 标签（必填） |
-| `formtype` | `string` | 控件类型（13 种） |
+| `formtype` | `string` | 控件类型（14 种） |
 | `span` | `number` | 栅格列宽（1-24） |
 | `attrs` | `object` | 透传到 Element Plus 组件 |
 | `dataOptions` | `array` | Select/Radio/Checkbox 选项 |
@@ -390,7 +390,7 @@ import type {
 } from '@es-plus/vue3'
 ```
 
-> 跨 Vue 2 / Vue 3 共享类型时，从 `@es-plus/core/types` 导入 — 同一份 `columns` / `formItemList` 在两个渲染器中通用。
+> 跨 Vue 2 / Vue 3 / AntDV 共享类型时，从 `@es-plus/core/types` 导入 — 同一份 `columns` / `formItemList` 在三个渲染器中通用。
 
 ---
 

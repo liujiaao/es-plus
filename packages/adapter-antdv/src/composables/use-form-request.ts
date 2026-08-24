@@ -1,14 +1,17 @@
 /**
- * ADV 表单请求 — 完全对齐 @es-plus/vue3 的 use-form-request.ts
+ * ADV 表单请求 — 薄适配层，逻辑全部委托 @es-plus/core（单一权威源）
  *
- * 包含：查询、格式化、远程选项批量加载（带容错）。
- * configFormField / formatConfigOut 直接复用 @es-plus/core，消除维护偏离副本。
+ * 本层只负责 Vue 3 特有的 toRaw/unref 响应式解包 + nextTick 初始化时机；
+ * 行为语义与 @es-plus/vue3 / @es-plus/vue2 完全一致：
+ *   - responseTransform / crtn 接收"预提取列表"，与 callOptionListFormat 口径统一
+ *   - 消除此前的本地分叉（crtn 拿原始响应、responseTransform 别名不生效、data 不剥层）
  */
 import { nextTick, toRaw, unref } from 'vue'
-import { isObject, wrapPromise } from '../utils/shared'
 import {
   configFormField,
   formatConfigOut,
+  getEveryFormQueryField as coreGetEveryFormQueryField,
+  queryTableListMethod as coreQueryTableListMethod,
   type RequestConfig,
   type ConfigFormFieldOut,
 } from '@es-plus/core'
@@ -16,156 +19,61 @@ import type { FormItemOption } from '../types'
 
 export type { RequestConfig, ConfigFormFieldOut }
 
+/** 解包 Vue 3 响应式 —— core 层不感知响应式，调用方须在传入前 unwrap */
+function unwrap<T>(v: T): T {
+  return toRaw(unref(v)) as T
+}
+
 export function useFormRequest(
   httpRequestGlobal?: (params: Record<string, unknown>) => Promise<unknown>,
 ) {
-  /** 单条请求 — 保留 toRaw/unref 以正确处理 Vue 3 响应式 model/options */
+  /** 单条请求 —— 解包后委托 core */
   const queryTableListMethod = (
     params: Record<string, unknown>,
     options: RequestConfig = {},
     _option?: FormItemOption,
   ) => {
-    const { success, fail } = options || {}
-    if (
-      isObject(options.apiParams) &&
-      Object.keys(options.apiParams).length &&
-      options.apiParams!.url
-    ) {
-      const initFormParams = {
-        ...params,
-        ...toRaw(unref(options.apiParams!.model || {})),
-      }
-      const requestOption = { ...toRaw(unref(options.apiParams!.options || {})) }
-      if (options.apiParams!.method) {
-        requestOption.method = options.apiParams!.method
-      }
-
-      const requestPayload = {
-        url: options.apiParams!.url,
-        headers: { ...(options.apiParams!.headers || {}) },
-        formParams: initFormParams,
-        ...requestOption,
-      }
-
-      const requestFn = options.httpRequest || httpRequestGlobal
-      if (!requestFn) return
-
-      requestFn(requestPayload)
-        .then((res) => {
-          if (
-            typeof success === 'function' &&
-            res &&
-            (isObject(res) || Array.isArray(res))
-          ) {
-            success(res as Record<string, unknown>)
-          }
-        })
-        .catch((e) => {
-          if (typeof fail === 'function') fail(e)
-        })
-    }
-  }
-
-  /** Promise 包装的单字段请求 */
-  const httpRequestFormInstance = (
-    model: Record<string, unknown>,
-    options: RequestConfig,
-    rows: FormItemOption,
-    fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>,
-  ) => {
-    return new Promise<{
-      data: Record<string, unknown>
-      configRows: Record<string, unknown>
-    }>((resolve, reject) => {
-      nextTick(() => {
-        queryTableListMethod(
-          { pageIndex: 1, pageSize: 1000, ...(model || {}) },
-          {
-            ...(options || {}),
-            success: (res) => {
-              const configRows = formatConfigOut(
-                res,
-                ['total', 'listData'],
-                rows as unknown as Record<string, unknown>,
-                fieldFieldOutput as unknown as ((defaults: ConfigFormFieldOut) => ConfigFormFieldOut) | undefined,
-              )
-              resolve({ data: res, configRows })
-            },
-            fail: (err) => reject(err),
+    const unwrappedOptions: RequestConfig = options.apiParams
+      ? {
+          ...options,
+          apiParams: {
+            ...options.apiParams,
+            model: unwrap(options.apiParams.model),
+            options: unwrap(options.apiParams.options),
           },
-          rows,
-        )
-      })
-    })
+        }
+      : options
+    return coreQueryTableListMethod(params, unwrappedOptions, httpRequestGlobal)
   }
 
-  /** 批量加载远程选项（容错） */
+  /** 批量拉取所有字段的远端选项 —— 解包后委托 core */
   const getEveryFormQueryField = async (
     rowsList: FormItemOption[],
     fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>,
   ) => {
-    try {
-      if (!Array.isArray(rowsList)) return []
-      const apiUrlList = rowsList.filter(
-        (it) =>
-          it && it.apiParams && isObject(it.apiParams) && it.apiParams.url,
-      )
-      const apiResult: { prop: string; listData: unknown[] }[] = []
-
-      const wrappedPromises = apiUrlList.map((option) => {
-        const { httpRequest } = option
-        const promiseThen = httpRequestFormInstance(
-          { ...(option.apiParams?.model || {}) },
-          {
-            httpRequest,
-            apiParams: option.apiParams,
-            ...(option.apiParams?.options || {}),
-          },
-          option,
-          fieldFieldOutput,
+    // 保留初始化时机：fall behind reactive flush 后再发请求
+    await nextTick()
+    const unwrappedList = Array.isArray(rowsList)
+      ? rowsList.map((item) =>
+          item && item.apiParams
+            ? {
+                ...item,
+                apiParams: {
+                  ...item.apiParams,
+                  model: unwrap(item.apiParams.model),
+                  options: unwrap(item.apiParams.options),
+                },
+              }
+            : item
         )
-        return wrapPromise(promiseThen)
-      })
-
-      const results = await Promise.all(wrappedPromises)
-
-      results.forEach((item, index) => {
-        if (item.status === 'fulfilled') {
-          const { configRows, data } = item.value
-          const option = apiUrlList[index]
-          const listenToCallBack = option?.listenToCallBack as
-            | Record<string, (params: unknown) => unknown>
-            | undefined
-
-          let listData: unknown[] = []
-          if (listenToCallBack?.crtn) {
-            listData = listenToCallBack.crtn(data) as unknown[]
-          }
-          const newListOptions =
-            Array.isArray(listData) && listData.length > 0
-              ? listData
-              : typeof option?.callOptionListFormat === 'function'
-                ? option.callOptionListFormat(
-                    (configRows?.listData as unknown[]) ||
-                      option?.dataOptions ||
-                      [],
-                  )
-                : undefined
-
-          apiResult.push({
-            prop: apiUrlList[index].prop,
-            listData: Array.isArray(newListOptions)
-              ? newListOptions
-              : ((configRows?.listData as unknown[]) ||
-                  apiUrlList[index]?.dataOptions ||
-                  []),
-          })
-        }
-      })
-      return apiResult
-    } catch {
-      return []
-    }
+      : rowsList
+    // antdv 本地 FormItemOption / Record<string,string> 与 core 的 FormItemOption /
+    // ConfigFormFieldOut 类型存在差异（isHidden 签名等），运行时完全兼容，此处收敛到 core 时做类型断言。
+    return coreGetEveryFormQueryField(
+      unwrappedList as any,
+      httpRequestGlobal,
+      fieldFieldOutput as any,
+    )
   }
 
   return {

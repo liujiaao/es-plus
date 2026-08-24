@@ -151,6 +151,16 @@ function scoreCase(raw) {
     }
   }
 
+  // (9b) "mark, never drop": formatter fields in schema mode must surface a
+  //      degradation warning rather than being silently discarded.
+  const formatterFields = config.fields.filter((f) => typeof f.formatter === 'string' && f.formatter)
+  if (config.mode !== 'sfc' && formatterFields.length) {
+    const hasFormatterWarning = (result.warnings || []).some((w) => /formatter/i.test(w))
+    if (!hasFormatterWarning) {
+      failures.push('formatter field(s) present but schema mode emitted no degradation warning (WS-5: mark, never silently drop)')
+    }
+  }
+
   // (10) httpRequest wiring is intact. es-table has a single fetch path built
   //      from TWO cooperating pieces (the resolved "Flag #3"):
   //        Method A — tableOptions.apiParams.url: the fetch GATE + URL source

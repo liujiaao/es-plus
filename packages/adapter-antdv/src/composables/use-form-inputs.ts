@@ -15,6 +15,7 @@ import dayjs from 'dayjs'
 import {
   Input,
   InputPassword,
+  InputNumber,
   Select,
   SelectOption,
   DatePicker,
@@ -180,21 +181,26 @@ export function useFormInputs() {
         },
       ],
 
-      // ─── DatePicker (含 range→RangePicker，type→picker) ────
+      // ─── InputNumber ──────────────────────────────────────
       [
-        'datePicker',
-        (hFn, model, { row }: FormInputCtx) => renderDatePicker(hFn, model, row),
+        'InputNumber',
+        (hFn, model, { row }: FormInputCtx) => {
+          return hFn(InputNumber as any, {
+            value: getNestedValue(model, row.prop),
+            ...row.attrs,
+            ...row.on,
+            'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
+          })
+        },
       ],
+
+      // ─── DatePicker (含 range→RangePicker，type→picker) ────
       [
         'DatePicker',
         (hFn, model, { row }: FormInputCtx) => renderDatePicker(hFn, model, row),
       ],
 
       // ─── TimePicker (含 is-range→TimePicker.RangePicker) ───
-      [
-        'timePicker',
-        (hFn, model, { row }: FormInputCtx) => renderTimePicker(hFn, model, row),
-      ],
       [
         'TimePicker',
         (hFn, model, { row }: FormInputCtx) => renderTimePicker(hFn, model, row),

@@ -185,7 +185,7 @@ import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
-import { resolveFormLayProps } from '@es-plus/core'
+import { resolveFormLayProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import { mapButtonType, mapSize, getNestedValue } from '../../../utils/shared'
 import { getAdvIconComponent } from '../../../utils/icon'
 import useDialog from '../../es-dialog/src/use-dialog'
@@ -240,13 +240,13 @@ const translateLabel = (item: FormItemOption): string => {
 }
 
 // ─── 与 Table 的耦合（inject + ctx 双路径，对齐 vue3）──
-const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)
+const injectedTableInstant = inject<(() => any) | null>(TABLE_CONTEXT_INJECT_KEY, null)
 const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
   const ctx = (instance as any)?.ctx as Record<string, any>
-  return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
+  return typeof ctx?.getTableInstance === 'function' ? ctx?.getTableInstance() : ctx?.getTableInstance
 })
 
 const isParentTable = computed(() => {

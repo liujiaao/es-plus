@@ -1,6 +1,7 @@
 export const VALID_FORM_TYPES = [
-    'Input', 'Select', 'DatePicker', 'TimePicker', 'Slider', 'ColorPicker',
-    'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch', 'Rate', 'Upload'
+    'Input', 'InputNumber', 'Select', 'DatePicker', 'TimePicker', 'Slider',
+    'ColorPicker', 'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch',
+    'Rate', 'Upload'
 ];
 /**
  * FormType 旧写法 → 新写法映射

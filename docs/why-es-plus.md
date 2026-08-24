@@ -1,6 +1,6 @@
 # 为什么是 ES-Plus —— 中后台 CRUD 与 AI Coding 时代的配置驱动答卷
 
-> 一句话总结：**ES-Plus 把"表单—表格—弹窗"这条中后台最高频的链路抽象成一份 JSON Schema，让人手敲的 200 行模板降到 30 行配置，让 AI 写出的代码第一次就能在 CI 里通过 `vite build`，让同一份配置在 Vue 3 + Element Plus 和 Vue 2 + Element UI 两个渲染器之间零成本切换。**
+> 一句话总结：**ES-Plus 把"表单—表格—弹窗"这条中后台最高频的链路抽象成一份 JSON Schema，让人手敲的 200 行模板降到 30 行配置，让 AI 写出的代码第一次就能在 CI 里通过 `vite build`，让同一份配置在 Vue 3 + Element Plus、Vue 2 + Element UI 和 Vue 3 + Ant Design Vue 三个渲染器之间零成本切换。**
 
 ---
 
@@ -9,7 +9,7 @@
 1. [中后台开发的真实代价：那些没人愿意算的账](#一中后台开发的真实代价那些没人愿意算的账)
 2. [复杂交互的隐形税：联动、跨页、自适应、权限、i18n](#二复杂交互的隐形税联动跨页自适应权限i18n)
 3. [AI Coding 时代的新痛点：为什么 AI 写组件库总翻车](#三ai-coding-时代的新痛点为什么-ai-写组件库总翻车)
-4. [ES-Plus 的解题思路：配置驱动 + 双渲染器 + AI 原生](#四es-plus-的解题思路配置驱动--双渲染器--ai-原生)
+4. [ES-Plus 的解题思路：配置驱动 + 三渲染器 + AI 原生](#四es-plus-的解题思路配置驱动--三渲染器--ai-原生)
 5. [核心能力深度解析](#五核心能力深度解析)
 6. [对比竞品：和谁不一样、为什么](#六对比竞品和谁不一样为什么)
 7. [AI 时代的核杀技：MCP Server + CLI + E2E 矩阵](#七ai-时代的核杀技mcp-server--cli--e2e-矩阵)
@@ -290,7 +290,7 @@ ES-Plus 是社区**为数极少**真正落地了这件事的中后台组件库�
 
 ---
 
-## 四、ES-Plus 的解题思路：配置驱动 + 双渲染器 + AI 原生
+## 四、ES-Plus 的解题思路：配置驱动 + 三渲染器 + AI 原生
 
 ### 4.1 三个支柱
 
@@ -332,11 +332,11 @@ ES-Plus 不是"另一个组件库"，它是**一层声明式 DSL**。这层 DSL 
 | 配置可以被 schema 校验 | CI 时跑 `validate_config` 直接拦下错误 |
 | 配置可以跨框架复用 | 同一份 columns 在 Vue 3 + Vue 2 渲染器中通用 |
 
-### 4.3 双渲染器单 Schema：解决"Vue 2 项目能不能用"
+### 4.3 三渲染器单 Schema：解决"Vue 2 项目能不能用"
 
 很多中后台项目还在 Vue 2 + Element UI（**国内估算占比 35-45%**，截至 2026 年）。让这些项目升 Vue 3 的成本谁都背不起。
 
-ES-Plus 的解法是 **拆出 `@es-plus/core` + 两个渲染器**：
+ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 ```
 @es-plus/core        ← 框架无关：types、配置校验、表格选择算法、请求层、form-layout 算法
@@ -362,7 +362,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 两个渲染器**：
 
 ## 五、核心能力深度解析
 
-### 5.1 EsForm —— 13 种控件 × 4 种数据来源 × 条件显隐
+### 5.1 EsForm —— 14 种控件 × 4 种数据来源 × 条件显隐
 
 ```typescript
 const formItems = [
@@ -393,7 +393,7 @@ const formItems = [
 ]
 ```
 
-控件列表：Input / Select / datePicker / timePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer + `render` 逃生舱。
+控件列表：Input / InputNumber / Select / DatePicker / TimePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer + `render` 逃生舱。
 
 **`render` 字段是关键** —— 不像很多组件库被自己的配置 DSL 锁死，遇到特殊需求只能 fork 源码。ES-Plus 给所有 form-item 和 table-column 都留了 `render: (h, ctx) => VNode`，等同于"这个字段我自己渲染"。配置驱动 + 逃生舱 = 既享受 90% 场景的快速，又不在剩下 10% 场景里被困死。
 
@@ -620,7 +620,7 @@ ES-Plus 的独占差异：**Schema 跨 Vue 2/Vue 3 共享 + AI 原生工具链 +
 | `generate_crud_schema` | 自然语言 → 结构化 Schema | 给 AI 一份合法配置作上下文 |
 | `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的 codegen 步骤 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
-| `list_form_types` | 返回 13 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
+| `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |
 
@@ -642,7 +642,7 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 Claude 的工作流是：
 
 1. 调 `detect_project_target` → 读你的 package.json → 知道你用 Vue 3 + Element Plus
-2. 调 `list_form_types` → 拿到 13 种合法控件清单
+2. 调 `list_form_types` → 拿到 14 种合法控件清单
 3. 调 `generate_crud_schema(target='vue3')` → 生成 Schema
 4. 调 `validate_config` → 校验通过
 5. 调 `generate_from_config` → 输出完整 .vue 文件
@@ -673,7 +673,7 @@ CLI 不依赖任何 AI 服务 —— 它用本地规则解析自然语言描述�
 
 ```
 matrix:
-  target: [vue3, vue2]      ← 两个渲染器
+  target: [vue3, vue2, antdv]      ← 三个渲染器
   mode:   [schema, sfc]     ← 两种生成模式
 ```
 
@@ -748,7 +748,7 @@ matrix:
 | 加新字段到 30 个页面 | 改 30 处模板 | 改 30 处配置（行数少一个量级） |
 | Vue 2 升 Vue 3（如果要） | 整个项目重写 | **保留 schema，换一行 import**，渐进迁移 |
 
-**最后一项是潜在的项目救命稻草** —— Vue 2 EOL 后，能不能低成本升级到 Vue 3 决定一个项目活不活。ES-Plus 的双渲染器设计**让升级成本降到接近 0**。
+**最后一项是潜在的项目救命稻草** —— Vue 2 EOL 后，能不能低成本升级到 Vue 3 决定一个项目活不活。ES-Plus 的三渲染器设计**让升级成本降到接近 0**。
 
 ---
 
