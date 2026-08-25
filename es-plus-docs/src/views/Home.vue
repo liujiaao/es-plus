@@ -345,11 +345,11 @@ import AiLiveDemo from '@/components/home/AiLiveDemo.vue'
 const { t } = useI18n()
 
 useHead({
-  title: '高级 CRUD 组件库',
+  title: '中后台 CRUD 的配置层',
   meta: [
-    { name: 'description', content: 'ES-Plus — 一份 JSON 配置生成 Vue 3 + Element Plus（或 Vue 2 + Element UI）的 CRUD 页面，支持 MCP Server 让 AI 编码助手原生理解组件 API。' },
-    { property: 'og:title', content: 'ES-Plus · 高级 CRUD 组件库' },
-    { property: 'og:description', content: '中后台 CRUD 配置即代码：一份 JSON · 三 Vue 渲染 · AI 写不错。' },
+    { name: 'description', content: 'ES-Plus — 中后台 CRUD 的配置层：一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译。' },
+    { property: 'og:title', content: 'ES-Plus · 中后台 CRUD 的配置层' },
+    { property: 'og:description', content: '中后台 CRUD 的配置层：一份配置 · 三个渲染器 · 生成即编译。' },
   ],
 })
 

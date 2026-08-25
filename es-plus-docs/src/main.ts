@@ -21,13 +21,13 @@ const app = createApp(App)
 
 const head = createHead()
 head.push({
-  titleTemplate: (title?: string) => (title ? `${title} · ES-Plus` : 'ES-Plus 高级 CRUD 组件库'),
+  titleTemplate: (title?: string) => (title ? `${title} · ES-Plus` : 'ES-Plus · 中后台 CRUD 的配置层'),
   meta: [
-    { name: 'description', content: 'ES-Plus — 基于 Vue 3 + Element Plus 的高级 CRUD 组件库，配置化表单、表格、CRUD 页面，原生支持 AI 编码与 MCP Server。' },
-    { name: 'keywords', content: 'Vue 3, Element Plus, CRUD, 配置化表单, 配置化表格, 低代码, MCP Server, AI 编码' },
+    { name: 'description', content: 'ES-Plus — 中后台 CRUD 的配置层：一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译。' },
+    { name: 'keywords', content: 'Vue 3, Vue 2, Ant Design Vue, Element Plus, Element UI, CRUD, 配置化表单, 配置化表格, MCP Server, AI 编码' },
     { property: 'og:type', content: 'website' },
-    { property: 'og:title', content: 'ES-Plus · 高级 CRUD 组件库' },
-    { property: 'og:description', content: '让 Vue + Element Plus 表单/表格/CRUD 页面只用 JSON 配置，原生支持 AI 编码助手。' },
+    { property: 'og:title', content: 'ES-Plus · 中后台 CRUD 的配置层' },
+    { property: 'og:description', content: '一份 JSON 配置，三个渲染器通用，AI 生成即编译 —— 中后台 CRUD 的配置层。' },
     { name: 'twitter:card', content: 'summary_large_image' },
   ],
   link: [

@@ -156,7 +156,7 @@ useHead({
   meta: [
     { name: 'description', content: () => `${currentDoc.value.title} - ES-Plus 文档` },
     { property: 'og:title', content: () => `${currentDoc.value.title} · ES-Plus` },
-    { property: 'og:description', content: () => `${currentDoc.value.title} - ES-Plus Vue 3 高级 CRUD 组件库文档` },
+    { property: 'og:description', content: () => `${currentDoc.value.title} - ES-Plus 中后台 CRUD 的配置层（Vue 3 + Element Plus）` },
   ],
 })
 
