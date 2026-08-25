@@ -41,6 +41,9 @@
         <!-- 使用案例 -->
         <section class="doc-section" id="examples">
           <h2 class="section-title">{{ t('componentDoc.examples') }}</h2>
+          <p class="examples-note">
+            {{ t('advancedDoc.crossNote') }}
+          </p>
           <div class="examples-list">
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
@@ -48,6 +51,7 @@
               :title="example.title"
               :description="example.description"
               :code="example.code"
+              :level="levelOf(index, currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -140,6 +144,17 @@ const currentDoc = computed(() => {
   const name = route.params.name as string
   return docsData[name] || { title: '未找到', description: '', examples: [], api: {} }
 })
+
+// 案例难度梯度：按案例在分类中的位置推断（案例已按 01→N 从简单到复杂排序）
+const levelOf = (index: number, total: number): number => {
+  if (total <= 2) return index === 0 ? 1 : 3
+  const ratio = index / (total - 1)
+  if (ratio < 0.25) return 1
+  if (ratio < 0.5) return 2
+  if (ratio < 0.75) return 3
+  if (ratio < 0.9) return 4
+  return 5
+}
 
 useHead({
   title: () => currentDoc.value.title,

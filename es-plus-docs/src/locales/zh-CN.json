@@ -70,7 +70,8 @@
   "advancedDoc": {
     "features": "核心特性",
     "examples": "实战案例",
-    "api": "API 参考"
+    "api": "API 参考",
+    "crossNote": "以下所有案例的 JSON 配置在 Vue 2 / Vue 3 / Ant Design Vue 三端通用 —— 换一行 import 即可切换渲染器。"
   },
   "playground": {
     "title": "Playground",

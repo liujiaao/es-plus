@@ -70,7 +70,8 @@
   "advancedDoc": {
     "features": "Core Features",
     "examples": "Real-world Examples",
-    "api": "API Reference"
+    "api": "API Reference",
+    "crossNote": "Every JSON config below runs unchanged on Vue 2 / Vue 3 / Ant Design Vue — switch one import to change renderer."
   },
   "playground": {
     "title": "Playground",
