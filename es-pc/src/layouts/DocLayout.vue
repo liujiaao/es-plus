@@ -62,6 +62,12 @@
             </a-menu-item>
           </a-sub-menu>
 
+          <!-- vxe 高性能引擎 -->
+          <a-menu-item key="es-vxe-table">
+            <template #icon><ThunderboltOutlined /></template>
+            <span>vxe 高性能引擎</span>
+          </a-menu-item>
+
           <!-- AI 工具链 -->
           <a-menu-item key="ai-tools">
             <template #icon><RobotOutlined /></template>

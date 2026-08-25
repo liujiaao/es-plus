@@ -41,6 +41,12 @@ const routes = [
         component: () => import('@/views/Advanced.vue'),
       },
       {
+        path: 'es-vxe-table',
+        name: 'EsVxeTable',
+        meta: { title: 'vxe 高性能引擎' },
+        component: () => import('@/views/EsVxeTable.vue'),
+      },
+      {
         path: 'ai-tools',
         name: 'AiTools',
         meta: { title: 'AI 工具链' },
