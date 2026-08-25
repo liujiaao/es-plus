@@ -12,11 +12,12 @@
     "@ant-design/icons-vue": "^7.0.0",
     "@es-plus/adapter-antdv": "file:../packages/adapter-antdv",
     "@es-plus/core": "file:../packages/core",
+    "@vxe-ui/core": "^4.4.18",
     "ant-design-vue": "^4.2.6",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
-    "vxe-pc-ui": "^4.17.17",
-    "vxe-table": "^4.21.1"
+    "vxe-pc-ui": "^4.16.23",
+    "vxe-table": "^4.20.9"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",
