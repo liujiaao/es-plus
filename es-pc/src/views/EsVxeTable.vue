@@ -45,6 +45,24 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       <CodeDemo :source="rawSFCs['./es-vxe/InlineEdit.vue']">
         <EsVxeInlineEdit />
       </CodeDemo>
+
+      <h3>多选与序号列</h3>
+      <p><code>type: 'selection'</code> 复选框列 + <code>type: 'snIndex'</code> 序号列，<code>getSelectionRows()</code> 获取选中。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/Selection.vue']">
+        <EsVxeSelection />
+      </CodeDemo>
+
+      <h3>树形数据</h3>
+      <p><code>treeConfig.transform</code> 将扁平数据自动构造成树形，<code>setAllTreeExpand</code> 展开/折叠。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/TreeData.vue']">
+        <EsVxeTreeData />
+      </CodeDemo>
+
+      <h3>工具栏与导出</h3>
+      <p><code>toolbarConfig</code> 内置缩放/全屏/导出；<code>exportConfig</code> 导出 CSV。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/ToolbarExport.vue']">
+        <EsVxeToolbarExport />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -79,6 +97,9 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
 import CodeDemo from '@/components/CodeDemo.vue'
 import EsVxeBasic from './es-vxe/Basic.vue'
 import EsVxeInlineEdit from './es-vxe/InlineEdit.vue'
+import EsVxeSelection from './es-vxe/Selection.vue'
+import EsVxeTreeData from './es-vxe/TreeData.vue'
+import EsVxeToolbarExport from './es-vxe/ToolbarExport.vue'
 
 const rawSFCs = import.meta.glob('./es-vxe/*.vue', { query: '?raw', import: 'default', eager: true })
 
