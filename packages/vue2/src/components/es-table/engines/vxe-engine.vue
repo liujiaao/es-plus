@@ -42,7 +42,6 @@
 </template>
 
 <script lang="ts">
-// @ts-nocheck - Vue 2 + @vue/composition-api 的动态插槽、$attrs/$listeners、proxy 访问
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'

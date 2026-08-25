@@ -1,5 +1,5 @@
 <template>
-  <el-form :ref="setFormRef" v-bind="formProps" class="es-form">
+  <el-form :ref="setFormRef" v-bind="(formProps as any)" class="es-form">
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
@@ -42,7 +42,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it.click(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => it.click?.(model, refs, getTableInstant?.httpRequestInstance)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -105,7 +105,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it?.click(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => it?.click?.(model, refs, getTableInstant?.httpRequestInstance)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -150,7 +150,6 @@ export default { name: 'EsForm' }
 </script>
 
 <script setup lang="ts">
-// @ts-nocheck - TODO: migrate to strict when refactored
 import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import {
   ElRow,
@@ -202,8 +201,8 @@ const emit = defineEmits<{
 }>()
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -253,7 +252,7 @@ const setFormRef = (el: unknown) => {
 // Composables
 const { formInputComponents } = useFormInputs()
 const httpRequestGlobal = ($esPlusForm?.$httpRequest as (params: Record<string, unknown>) => Promise<unknown>) || undefined
-const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as ((defaults: Record<string, string>) => Record<string, string>) | undefined
+const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as any
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 // Break circular dependency: formLayoutRef is populated after useFormLayout
@@ -309,7 +308,7 @@ const formItemListFilter = computed(() => {
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
-        return !it.isHidden(props.model, it, formProps.value)
+        return !it.isHidden(props.model, it, formProps.value as any)
       }
       return true
     })
@@ -481,7 +480,7 @@ const handleCustomerForm = () => {
     render: () =>
       h(EsTable, {
         dataSource: formRows.data,
-        columns: formRows.columns,
+        columns: (formRows.columns as any),
         options: {
           multiSelect: true,
           expand: false,
@@ -520,7 +519,7 @@ const handleTableItemOption = () => {
     render: () =>
       h(EsTable, {
         dataSource: formRows.dataSource,
-        columns: formRows.columns
+        columns: (formRows.columns as any)
       })
   })
 }

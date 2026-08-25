@@ -133,7 +133,6 @@
 </template>
 
 <script lang="ts">
-// @ts-nocheck - TODO: migrate to strict when refactored
 /**
  * EsForm —— Vue 2 + Element UI 配置化表单
  *

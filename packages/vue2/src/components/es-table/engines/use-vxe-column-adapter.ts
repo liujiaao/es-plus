@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: migrate to strict when refactored
 import { computed } from '../../../vue-compat'
 import type { Ref } from '../../../vue-compat'
 import type { TableColumn, TableOptions } from '@es-plus/core'

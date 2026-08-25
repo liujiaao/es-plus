@@ -29,7 +29,7 @@
               :data-source="displayDataSource"
               :table-height="tableHeight"
               :options="props.options"
-              :parent-slots="$slots"
+              :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
             />
@@ -42,7 +42,7 @@
               :data-source="displayDataSource"
               :table-height="tableHeight"
               :options="props.options"
-              :parent-slots="$slots"
+              :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
             />
@@ -132,7 +132,7 @@ const defaultOptions: TableOptions = {
 </script>
 
 <script setup lang="ts">
-// @ts-nocheck - TODO: migrate to strict when refactored
+// @ts-nocheck - 动态槽转发 #[cols.scopedSlots.customRender] 无法被 vue-tsc 类型推断（scope 与 :name 动态索引）；其余类型已修复，仅保留此一处的文件级豁免
 import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs, nextTick } from 'vue'
 import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -187,8 +187,8 @@ if (injectedLocale) {
 }
 
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown>>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）
 function getVxeGridInstance() {

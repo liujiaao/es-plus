@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: migrate to strict when refactored
 import { createVNode, getCurrentInstance, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'
@@ -51,21 +50,23 @@ const initInstance = (Component: any, props: DialogOptions, container: HTMLEleme
   if (appContext) {
     vNode.appContext = appContext
 
-    if (!vNode.appContext.provides) {
-      vNode.appContext.provides = {}
+    // 用局部 appContext 而非 vNode.appContext：vNode.appContext 类型为 AppContext | null，
+    // 此处已赋值非空，直接用 appContext 可避免 null 断言噪音
+    if (!appContext.provides) {
+      appContext.provides = {}
     }
 
     // 注入语言环境（如果父应用有提供）
     const injectedLocale = appContext.provides?.elLocale
     if (injectedLocale) {
-      vNode.appContext.provides['elLocale'] = injectedLocale
+      appContext.provides['elLocale'] = injectedLocale
     }
 
-    if (!vNode.appContext.config) {
-      vNode.appContext.config = {} as any
+    if (!appContext.config) {
+      appContext.config = {} as any
     }
-    if (!vNode.appContext.config.globalProperties) {
-      vNode.appContext.config.globalProperties = {}
+    if (!appContext.config.globalProperties) {
+      appContext.config.globalProperties = {}
     }
   }
 
