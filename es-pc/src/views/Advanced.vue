@@ -270,6 +270,7 @@ import StepImportWizard from './es-advanced/StepImportWizard.vue'
 
 // 虚拟滚动示例初始化时会生成 1 万条数据，EsTable 对 dataSource 的深度监听会导致主线程短暂冻结，
 // 故用 defineAsyncComponent 懒加载 + 按钮触发，避免首屏渲染时整个页面卡死。
+const rawSFCs = import.meta.glob('./es-advanced/*.vue', { query: '?raw', import: 'default', eager: true })
 const showVirtual = ref(false)
 const showVirtualAdvanced = ref(false)
 const VirtualTable = defineAsyncComponent(() => import('./es-advanced/VirtualTable.vue'))
