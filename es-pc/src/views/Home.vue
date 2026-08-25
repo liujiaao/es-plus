@@ -1,11 +1,11 @@
 <template>
   <div class="home-page">
     <div class="hero">
-      <h1 class="hero-title">@es-plus/adapter-antdv</h1>
+      <h1 class="hero-title">ES-Plus · Ant Design Vue</h1>
       <p class="hero-desc">
-        基于 JSON Schema 配置驱动 Ant Design Vue 4.x 的企业级中后台组件库。
+        中后台 CRUD 的配置层 —— 一份 JSON 配置驱动 Ant Design Vue 4.x。
         <br />
-        同一份 Schema 可跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用。
+        同一份 Schema 跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用，AI 生成即编译。
       </p>
       <a-space :size="16">
         <a-button type="primary" size="large" @click="$router.push('/guide')">
@@ -108,7 +108,7 @@ import {
 } from '@ant-design/icons-vue'
 
 const features = [
-  { title: 'JSON 配置驱动', desc: '通过 formItemList / columns / schema 即可生成完整页面，减少 80% 模板代码', icon: DeploymentUnitOutlined },
+  { title: 'JSON 配置驱动', desc: '通过 formItemList / columns / schema 即可生成完整页面，减少 70% 模板代码', icon: DeploymentUnitOutlined },
   { title: '跨框架复用', desc: '同一份 Schema 可在 Element Plus / Ant Design Vue 之间复用，降低迁移成本', icon: InteractionOutlined },
   { title: 'AI 代码生成', desc: '配套 CLI 与 MCP Server（详见主文档站），支持从自然语言或配置直接生成可编译页面', icon: RobotOutlined },
   { title: '表单表格联动', desc: 'triggerEvent 自动联动查询/重置/分页，无需手写事件回调', icon: FileSearchOutlined },
