@@ -61,6 +61,12 @@
               <span>高级联动</span>
             </a-menu-item>
           </a-sub-menu>
+
+          <!-- AI 工具链 -->
+          <a-menu-item key="ai-tools">
+            <template #icon><RobotOutlined /></template>
+            <span>AI 工具链</span>
+          </a-menu-item>
         </a-menu>
       </a-layout-sider>
 
@@ -91,6 +97,7 @@ import {
   HomeOutlined,
   RocketOutlined,
   ThunderboltOutlined,
+  RobotOutlined,
 } from '@ant-design/icons-vue'
 
 const router = useRouter()

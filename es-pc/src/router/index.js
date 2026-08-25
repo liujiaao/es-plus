@@ -40,6 +40,12 @@ const routes = [
         meta: { title: '高级联动' },
         component: () => import('@/views/Advanced.vue'),
       },
+      {
+        path: 'ai-tools',
+        name: 'AiTools',
+        meta: { title: 'AI 工具链' },
+        component: () => import('@/views/AiTools.vue'),
+      },
     ],
   },
 ]
