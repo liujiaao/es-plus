@@ -12,7 +12,9 @@
     <section id="basic">
       <h2>基础用法</h2>
       <p>通过 <code>columns</code> 配置列，<code>data-source</code> 绑定数据。</p>
-      <EsTableBasic />
+            <CodeDemo :source="rawSFCs['./es-table/Basic.vue']">
+        <EsTableBasic />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -21,7 +23,9 @@
     <section id="pagination">
       <h2>分页请求</h2>
       <p>配置 <code>apiParams</code> 和 <code>httpRequest</code> 实现服务端分页，通过 <code>configTableOut</code> 映射响应字段。</p>
-      <EsTablePagination />
+            <CodeDemo :source="rawSFCs['./es-table/Pagination.vue']">
+        <EsTablePagination />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -30,7 +34,9 @@
     <section id="custom">
       <h2>自定义列渲染</h2>
       <p>通过 <code>render</code> 函数或 <code>formatter</code> 自定义列内容展示。</p>
-      <EsTableCustom />
+            <CodeDemo :source="rawSFCs['./es-table/Custom.vue']">
+        <EsTableCustom />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -39,7 +45,9 @@
     <section id="selection">
       <h2>多选</h2>
       <p>通过 <code>type: 'selection'</code> 开启多选列。</p>
-      <EsTableSelection />
+            <CodeDemo :source="rawSFCs['./es-table/Selection.vue']">
+        <EsTableSelection />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -48,7 +56,9 @@
     <section id="actions">
       <h2>操作列</h2>
       <p>在列配置中添加 <code>btns</code> 数组定义操作按钮。</p>
-      <EsTableRowActions />
+            <CodeDemo :source="rawSFCs['./es-table/RowActions.vue']">
+        <EsTableRowActions />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -57,7 +67,9 @@
     <section id="toolbar">
       <h2>工具栏按钮</h2>
       <p>通过 <code>configBtn</code> 在表格上方添加工具栏操作按钮。</p>
-      <EsTableToolbar />
+            <CodeDemo :source="rawSFCs['./es-table/Toolbar.vue']">
+        <EsTableToolbar />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -66,7 +78,9 @@
     <section id="edit">
       <h2>行内编辑</h2>
       <p>表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。</p>
-      <EsTableEdit />
+            <CodeDemo :source="rawSFCs['./es-table/Edit.vue']">
+        <EsTableEdit />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -75,7 +89,9 @@
     <section id="sort">
       <h2>排序</h2>
       <p>前端排序与后端排序两种模式。</p>
-      <EsTableSort />
+            <CodeDemo :source="rawSFCs['./es-table/Sort.vue']">
+        <EsTableSort />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -84,7 +100,9 @@
     <section id="fixed">
       <h2>固定列与高度</h2>
       <p><code>fixed</code> 固定列 + 自适应高度，适合宽表展示。</p>
-      <EsTableFixed />
+            <CodeDemo :source="rawSFCs['./es-table/Fixed.vue']">
+        <EsTableFixed />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -93,7 +111,9 @@
     <section id="remote">
       <h2>远程数据</h2>
       <p><code>actionUrl</code> + <code>httpRequest</code> + <code>configTableOut</code> 完整远程数据请求与分页。</p>
-      <EsTableRemoteData />
+            <CodeDemo :source="rawSFCs['./es-table/RemoteData.vue']">
+        <EsTableRemoteData />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -102,7 +122,9 @@
     <section id="height">
       <h2>自适应容器高度</h2>
       <p><code>heightType: height</code> 继承父容器高度 + ResizeObserver 自动计算。</p>
-      <EsTableTableHeight />
+            <CodeDemo :source="rawSFCs['./es-table/TableHeight.vue']">
+        <EsTableTableHeight />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -111,7 +133,9 @@
     <section id="group">
       <h2>分组表头</h2>
       <p><code>groups</code> 嵌套列配置实现多级分组表头。</p>
-      <EsTableGroup />
+            <CodeDemo :source="rawSFCs['./es-table/Group.vue']">
+        <EsTableGroup />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -120,7 +144,9 @@
     <section id="expand">
       <h2>展开行与树形</h2>
       <p><code>type:expand</code> 展开行 + <code>children</code> 树形数据两种层级展示模式。</p>
-      <EsTableExpand />
+            <CodeDemo :source="rawSFCs['./es-table/Expand.vue']">
+        <EsTableExpand />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -129,7 +155,9 @@
     <section id="cell-merge">
       <h2>单元格合并与行样式</h2>
       <p><code>spanMethod</code> 合并单元格 + <code>rowClassName</code> 条件行样式。</p>
-      <EsTableCellMerge />
+            <CodeDemo :source="rawSFCs['./es-table/CellMerge.vue']">
+        <EsTableCellMerge />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -138,7 +166,9 @@
     <section id="current-row">
       <h2>当前行与主从联动</h2>
       <p><code>highlightCurrentRow</code> 行高亮 + <code>@current-change</code> 事件驱动从表。</p>
-      <EsTableCurrentRow />
+            <CodeDemo :source="rawSFCs['./es-table/CurrentRow.vue']">
+        <EsTableCurrentRow />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -147,7 +177,9 @@
     <section id="dynamic-columns">
       <h2>动态列与汇总行</h2>
       <p><code>hidCol</code> 动态列显隐 + 汇总行配置。</p>
-      <EsTableDynamicColumns />
+            <CodeDemo :source="rawSFCs['./es-table/DynamicColumns.vue']">
+        <EsTableDynamicColumns />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -156,7 +188,9 @@
     <section id="query-table">
       <h2>配置化查询表格</h2>
       <p><code>entryQuery</code> 自动合并搜索参数 + <code>httpRequestInstance</code> 手动刷新，零手动联动代码。</p>
-      <EsTableQueryTable />
+            <CodeDemo :source="rawSFCs['./es-table/QueryTable.vue']">
+        <EsTableQueryTable />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -165,7 +199,9 @@
     <section id="callback-pipeline">
       <h2>请求回调管线</h2>
       <p><code>listenToCallBack</code> 请求响应拦截 + <code>configTableOut</code> 字段映射 + <code>entryQuery</code> 默认参数。</p>
-      <EsTableCallbackPipeline />
+            <CodeDemo :source="rawSFCs['./es-table/CallbackPipeline.vue']">
+        <EsTableCallbackPipeline />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -182,6 +218,7 @@
 </template>
 
 <script setup>
+import CodeDemo from '@/components/CodeDemo.vue'
 import EsTableBasic from './es-table/Basic.vue'
 import EsTablePagination from './es-table/Pagination.vue'
 import EsTableCustom from './es-table/Custom.vue'
@@ -200,6 +237,8 @@ import EsTableCurrentRow from './es-table/CurrentRow.vue'
 import EsTableDynamicColumns from './es-table/DynamicColumns.vue'
 import EsTableQueryTable from './es-table/QueryTable.vue'
 import EsTableCallbackPipeline from './es-table/CallbackPipeline.vue'
+
+const rawSFCs = import.meta.glob('./es-table/*.vue', { query: '?raw', import: 'default', eager: true })
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },

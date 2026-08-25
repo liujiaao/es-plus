@@ -12,7 +12,9 @@
     <section id="basic">
       <h2>基础弹窗</h2>
       <p>使用 <code>useDialog()</code> 命令式 API 打开弹窗。</p>
-      <EsDialogBasic />
+            <CodeDemo :source="rawSFCs['./es-dialog/Basic.vue']">
+        <EsDialogBasic />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -21,7 +23,9 @@
     <section id="form">
       <h2>表单弹窗</h2>
       <p>结合 EsForm 在弹窗中展示表单。</p>
-      <EsDialogForm />
+            <CodeDemo :source="rawSFCs['./es-dialog/Form.vue']">
+        <EsDialogForm />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -30,7 +34,9 @@
     <section id="table">
       <h2>表格弹窗</h2>
       <p>结合 EsTable 在弹窗中展示表格数据。</p>
-      <EsDialogTable />
+            <CodeDemo :source="rawSFCs['./es-dialog/Table.vue']">
+        <EsDialogTable />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -39,7 +45,9 @@
     <section id="confirm">
       <h2>确认弹窗</h2>
       <p>使用 Confirm 模式快速创建确认对话框。</p>
-      <EsDialogConfirm />
+            <CodeDemo :source="rawSFCs['./es-dialog/Confirm.vue']">
+        <EsDialogConfirm />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -48,7 +56,9 @@
     <section id="advanced">
       <h2>高级弹窗</h2>
       <p>可拖拽 + 自定义头尾 + 全屏 + 限高。</p>
-      <EsDialogAdvanced />
+            <CodeDemo :source="rawSFCs['./es-dialog/Advanced.vue']">
+        <EsDialogAdvanced />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -57,7 +67,9 @@
     <section id="nested">
       <h2>嵌套弹窗</h2>
       <p>独立 useDialog 实例，支持父子弹窗通信。</p>
-      <EsDialogNestedModal />
+            <CodeDemo :source="rawSFCs['./es-dialog/NestedModal.vue']">
+        <EsDialogNestedModal />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -66,7 +78,9 @@
     <section id="step">
       <h2>分步弹窗</h2>
       <p>多步骤 EsForm 切换，每步独立校验。</p>
-      <EsDialogStepDialog />
+            <CodeDemo :source="rawSFCs['./es-dialog/StepDialog.vue']">
+        <EsDialogStepDialog />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -75,7 +89,9 @@
     <section id="form-table-dialog">
       <h2>表单+表格+弹窗闭环</h2>
       <p>弹窗内 EsTable 展示数据 + btns 行操作触发编辑弹窗 + configBtn 新增弹窗，三级弹窗嵌套 CRUD。</p>
-      <EsDialogFormTableDialog />
+            <CodeDemo :source="rawSFCs['./es-dialog/FormTableDialog.vue']">
+        <EsDialogFormTableDialog />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -84,7 +100,9 @@
     <section id="async">
       <h2>异步组件弹窗</h2>
       <p><code>defineAsyncComponent</code> 实现弹窗内容延迟加载。</p>
-      <EsDialogAsync />
+            <CodeDemo :source="rawSFCs['./es-dialog/Async.vue']">
+        <EsDialogAsync />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -93,7 +111,9 @@
     <section id="detail-preview">
       <h2>详情预览弹窗</h2>
       <p>配置化详情展示，<code>isHiddenFooter</code> 无按钮模式，动态渲染不同业务对象。</p>
-      <EsDialogDetailPreview />
+            <CodeDemo :source="rawSFCs['./es-dialog/DetailPreview.vue']">
+        <EsDialogDetailPreview />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -102,7 +122,9 @@
     <section id="dynamic-btn">
       <h2>动态按钮状态弹窗</h2>
       <p>审批场景：Radio 切换操作类型，按钮 disabled 函数式动态禁用，条件校验。</p>
-      <EsDialogDynamicBtn />
+            <CodeDemo :source="rawSFCs['./es-dialog/DynamicBtn.vue']">
+        <EsDialogDynamicBtn />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -111,7 +133,9 @@
     <section id="multi-instance">
       <h2>多实例独立弹窗</h2>
       <p><code>onlyInstance: false</code> 模式，同时打开多个独立弹窗，各自拖拽互不影响。</p>
-      <EsDialogMultiInstance />
+            <CodeDemo :source="rawSFCs['./es-dialog/MultiInstance.vue']">
+        <EsDialogMultiInstance />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -128,6 +152,7 @@
 </template>
 
 <script setup>
+import CodeDemo from '@/components/CodeDemo.vue'
 import EsDialogBasic from './es-dialog/Basic.vue'
 import EsDialogForm from './es-dialog/Form.vue'
 import EsDialogTable from './es-dialog/TableDialog.vue'
@@ -140,6 +165,8 @@ import EsDialogAsync from './es-dialog/Async.vue'
 import EsDialogDetailPreview from './es-dialog/DetailPreview.vue'
 import EsDialogDynamicBtn from './es-dialog/DynamicBtn.vue'
 import EsDialogMultiInstance from './es-dialog/MultiInstance.vue'
+
+const rawSFCs = import.meta.glob('./es-dialog/*.vue', { query: '?raw', import: 'default', eager: true })
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },

@@ -11,7 +11,9 @@
     <section id="basic">
       <h2>基础用法</h2>
       <p>通过 <code>form-item-list</code> 配置表单字段。</p>
-      <EsFormBasic />
+            <CodeDemo :source="rawSFCs['./es-form/Basic.vue']">
+        <EsFormBasic />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -19,7 +21,9 @@
     <section id="layout">
       <h2>布局与折叠</h2>
       <p>24 栅格布局 + 自动折叠展开，支持响应式自适应。</p>
-      <EsFormLayout />
+            <CodeDemo :source="rawSFCs['./es-form/Layout.vue']">
+        <EsFormLayout />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -27,7 +31,9 @@
     <section id="conditional">
       <h2>条件显隐 & 联动</h2>
       <p>模型驱动字段显隐，<code>isHidden</code> + <code>on.change</code> 实现字段间联动。</p>
-      <EsFormConditional />
+            <CodeDemo :source="rawSFCs['./es-form/Conditional.vue']">
+        <EsFormConditional />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -35,7 +41,9 @@
     <section id="async">
       <h2>异步加载选项</h2>
       <p><code>apiParams</code> 自动加载下拉选项 + 级联联动。</p>
-      <EsFormAsyncOptions />
+            <CodeDemo :source="rawSFCs['./es-form/AsyncOptions.vue']">
+        <EsFormAsyncOptions />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -43,7 +51,9 @@
     <section id="validation">
       <h2>表单验证</h2>
       <p>集成 Ant Design Vue 验证体系，支持 rules、pattern、自定义 validator。</p>
-      <EsFormValidation />
+            <CodeDemo :source="rawSFCs['./es-form/Validation.vue']">
+        <EsFormValidation />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -51,7 +61,9 @@
     <section id="custom">
       <h2>自定义渲染</h2>
       <p><code>render</code> 函数扩展复杂组件。</p>
-      <EsFormCustomRender />
+            <CodeDemo :source="rawSFCs['./es-form/CustomRender.vue']">
+        <EsFormCustomRender />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -59,7 +71,9 @@
     <section id="detail">
       <h2>详情模式</h2>
       <p>编辑/详情双模式切换。</p>
-      <EsFormDetail />
+            <CodeDemo :source="rawSFCs['./es-form/Detail.vue']">
+        <EsFormDetail />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -67,7 +81,9 @@
     <section id="upload">
       <h2>图片上传</h2>
       <p>支持 picture-card 多图上传、自定义 httpRequest、预览删除等完整上传功能。</p>
-      <EsFormUpload />
+            <CodeDemo :source="rawSFCs['./es-form/Upload.vue']">
+        <EsFormUpload />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -75,7 +91,9 @@
     <section id="preferences">
       <h2>偏好设置</h2>
       <p>Radio、Checkbox、Switch、Slider、ColorPicker、Rate 六种组件配置化示例。</p>
-      <EsFormPreferences />
+            <CodeDemo :source="rawSFCs['./es-form/Preferences.vue']">
+        <EsFormPreferences />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -83,7 +101,9 @@
     <section id="search">
       <h2>组合搜索</h2>
       <p><code>isHidden</code> + <code>apiParams</code> + 更多/收起，完整搜索表单模式。</p>
-      <EsFormSearchForm />
+            <CodeDemo :source="rawSFCs['./es-form/SearchForm.vue']">
+        <EsFormSearchForm />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -91,7 +111,9 @@
     <section id="advanced-buttons">
       <h2>高级按钮区</h2>
       <p><code>btnColSpanRow</code> + <code>direction</code> 实现左右分栏按钮区。</p>
-      <EsFormAdvancedButtons />
+            <CodeDemo :source="rawSFCs['./es-form/AdvancedButtons.vue']">
+        <EsFormAdvancedButtons />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -99,7 +121,9 @@
     <section id="cascader">
       <h2>级联选择器</h2>
       <p>使用 Cascader 组件实现多级联动选择。</p>
-      <EsFormCascader />
+            <CodeDemo :source="rawSFCs['./es-form/Cascader.vue']">
+        <EsFormCascader />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -107,7 +131,9 @@
     <section id="datetime-range">
       <h2>日期时间范围</h2>
       <p>完整覆盖日期、时间、日期时间范围选择场景。</p>
-      <EsFormDateTimeRange />
+            <CodeDemo :source="rawSFCs['./es-form/DateTimeRange.vue']">
+        <EsFormDateTimeRange />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -115,7 +141,9 @@
     <section id="dynamic">
       <h2>动态增减表单</h2>
       <p>运行时动态增删表单项，支持数组类型表单与动态验证。</p>
-      <EsFormDynamic />
+            <CodeDemo :source="rawSFCs['./es-form/Dynamic.vue']">
+        <EsFormDynamic />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -123,7 +151,9 @@
     <section id="computed-fields">
       <h2>联动计算</h2>
       <p><code>on.change</code> + <code>on.input</code> 实现商品选择 → 自动填充单价 → 数量折扣 → 实时计算总价。</p>
-      <EsFormComputedFields />
+            <CodeDemo :source="rawSFCs['./es-form/ComputedFields.vue']">
+        <EsFormComputedFields />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -131,7 +161,9 @@
     <section id="custom-button">
       <h2>自定义按钮区</h2>
       <p><code>renderBtn</code> 完全自定义按钮区域，支持异步提交、保存草稿、确认弹窗等交互。</p>
-      <EsFormCustomButton />
+            <CodeDemo :source="rawSFCs['./es-form/CustomButton.vue']">
+        <EsFormCustomButton />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -139,7 +171,9 @@
     <section id="dialog">
       <h2>弹窗表单</h2>
       <p>在弹窗中使用 EsForm，展示表单与弹窗的无缝集成。</p>
-      <EsFormDialog />
+            <CodeDemo :source="rawSFCs['./es-form/Dialog.vue']">
+        <EsFormDialog />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -147,7 +181,9 @@
     <section id="file-upload">
       <h2>文件上传</h2>
       <p>支持图片、PDF、TXT、Word、Excel、PPT 预览下载及 ZIP 下载，自定义文件列表与操作按钮。</p>
-      <EsFormFileUpload />
+            <CodeDemo :source="rawSFCs['./es-form/FileUpload.vue']">
+        <EsFormFileUpload />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -164,6 +200,7 @@
 </template>
 
 <script setup>
+import CodeDemo from '@/components/CodeDemo.vue'
 import EsFormBasic from './es-form/Basic.vue'
 import EsFormLayout from './es-form/Layout.vue'
 import EsFormConditional from './es-form/Conditional.vue'
@@ -182,6 +219,8 @@ import EsFormComputedFields from './es-form/ComputedFields.vue'
 import EsFormCustomButton from './es-form/CustomButton.vue'
 import EsFormDialog from './es-form/Dialog.vue'
 import EsFormFileUpload from './es-form/FileUpload.vue'
+
+const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },

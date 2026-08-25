@@ -13,7 +13,9 @@
     <section id="basic">
       <h2>基础 CRUD</h2>
       <p>配置查询表单 + 数据表格 + 增删改弹窗，一份 Schema 搞定。</p>
-      <EsCrudBasic />
+            <CodeDemo :source="rawSFCs['./es-crud/Basic.vue']">
+        <EsCrudBasic />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -22,7 +24,9 @@
     <section id="multi-dialog">
       <h2>多弹窗</h2>
       <p>通过 <code>dialogs</code> 配置多个不同弹窗（新增、编辑、详情等）。</p>
-      <EsCrudMultiDialog />
+            <CodeDemo :source="rawSFCs['./es-crud/MultiDialog.vue']">
+        <EsCrudMultiDialog />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -31,7 +35,9 @@
     <section id="permission">
       <h2>权限控制</h2>
       <p>通过 <code>permissionValue</code> 控制按钮显隐，结合全局 <code>permission</code> 校验。</p>
-      <EsCrudPermission />
+            <CodeDemo :source="rawSFCs['./es-crud/Permission.vue']">
+        <EsCrudPermission />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -40,7 +46,9 @@
     <section id="program-open">
       <h2>编程式打开弹窗</h2>
       <p>通过 <code>ref</code> 调用 <code>openDialog(key, data?)</code> 编程式打开弹窗。</p>
-      <EsCrudProgramOpen />
+            <CodeDemo :source="rawSFCs['./es-crud/ProgramOpen.vue']">
+        <EsCrudProgramOpen />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -49,7 +57,9 @@
     <section id="custom-render">
       <h2>自定义弹窗内容</h2>
       <p><code>dialogs</code> 使用 <code>render</code> 函数渲染自定义组件。</p>
-      <EsCrudCustomRender />
+            <CodeDemo :source="rawSFCs['./es-crud/CustomRender.vue']">
+        <EsCrudCustomRender />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -58,7 +68,9 @@
     <section id="dynamic-title">
       <h2>动态标题与回填</h2>
       <p>edit 弹窗 title 为函数 + 表单自动回填行数据。</p>
-      <EsCrudDynamicTitle />
+            <CodeDemo :source="rawSFCs['./es-crud/DynamicTitle.vue']">
+        <EsCrudDynamicTitle />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -67,7 +79,9 @@
     <section id="row-confirm">
       <h2>行确认与删除</h2>
       <p>操作列 <code>confirm</code> 确认提示 + <code>btn-click</code> 事件处理删除/发布。</p>
-      <EsCrudRowConfirm />
+            <CodeDemo :source="rawSFCs['./es-crud/RowConfirm.vue']">
+        <EsCrudRowConfirm />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -76,7 +90,9 @@
     <section id="full-business">
       <h2>完整业务场景</h2>
       <p>用户管理全功能：多弹窗 + 动态标题 + render 详情 + 导出。</p>
-      <EsCrudFullBusiness />
+            <CodeDemo :source="rawSFCs['./es-crud/FullBusiness.vue']">
+        <EsCrudFullBusiness />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -85,7 +101,9 @@
     <section id="custom-footer">
       <h2>自定义弹窗底部</h2>
       <p><code>configBtn</code> 自定义三按钮（取消/拒绝/通过）实现审批场景。</p>
-      <EsCrudCustomFooter />
+            <CodeDemo :source="rawSFCs['./es-crud/CustomFooter.vue']">
+        <EsCrudCustomFooter />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -94,7 +112,9 @@
     <section id="hidden-column">
       <h2>隐藏操作列</h2>
       <p><code>operationColumn: false</code> + 纯工具栏操作，只读列表场景。</p>
-      <EsCrudHiddenColumn />
+            <CodeDemo :source="rawSFCs['./es-crud/HiddenColumn.vue']">
+        <EsCrudHiddenColumn />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -111,6 +131,7 @@
 </template>
 
 <script setup>
+import CodeDemo from '@/components/CodeDemo.vue'
 import EsCrudBasic from './es-crud/Basic.vue'
 import EsCrudMultiDialog from './es-crud/MultiDialog.vue'
 import EsCrudPermission from './es-crud/Permission.vue'
@@ -121,6 +142,8 @@ import EsCrudRowConfirm from './es-crud/RowConfirm.vue'
 import EsCrudFullBusiness from './es-crud/FullBusiness.vue'
 import EsCrudCustomFooter from './es-crud/CustomFooter.vue'
 import EsCrudHiddenColumn from './es-crud/HiddenColumn.vue'
+
+const rawSFCs = import.meta.glob('./es-crud/*.vue', { query: '?raw', import: 'default', eager: true })
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },
