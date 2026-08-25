@@ -124,24 +124,18 @@ const routeNameToMenuKey = (name) => {
     'EsDialog': 'es-dialog',
     'EsCrudPage': 'es-crud-page',
     'Advanced': 'advanced',
+    'EsVxeTable': 'es-vxe-table',
+    'AiTools': 'ai-tools',
   }
   return map[name] || 'home'
 }
 
 const selectedKeys = ref([routeNameToMenuKey(route.name)])
-const openKeys = ref(['esplus-group'])
-
-// ES-Plus 路由映射
-const esPlusRoutes = ['es-form', 'es-table', 'es-dialog', 'es-crud-page', 'advanced']
+const openKeys = ref(['components-group', 'advanced-group'])
 
 function handleMenuClick({ key }) {
-  if (key === 'home') {
-    router.push('/')
-  } else if (key === 'guide') {
-    router.push('/guide')
-  } else if (esPlusRoutes.includes(key)) {
-    router.push(`/${key}`)
-  }
+  // 所有子路由均挂载在 DocLayout 的 '/' 下，home 是唯一特例（path 为 ''）
+  router.push(key === 'home' ? '/' : `/${key}`)
 }
 </script>
 
