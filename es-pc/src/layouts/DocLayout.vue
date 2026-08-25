@@ -40,10 +40,10 @@
             <span>快速上手</span>
           </a-menu-item>
 
-          <!-- ES-Plus 配置化组件 -->
-          <a-sub-menu key="esplus-group">
+          <!-- 组件 -->
+          <a-sub-menu key="components-group">
             <template #icon><ThunderboltOutlined /></template>
-            <template #title>ES-Plus 配置化组件</template>
+            <template #title>组件</template>
 
             <a-menu-item key="es-form">
               <span>EsForm 动态表单</span>
@@ -57,16 +57,20 @@
             <a-menu-item key="es-crud-page">
               <span>EsCrudPage CRUD页面</span>
             </a-menu-item>
+          </a-sub-menu>
+
+          <!-- 高级 -->
+          <a-sub-menu key="advanced-group">
+            <template #icon><ExperimentOutlined /></template>
+            <template #title>高级</template>
+
             <a-menu-item key="advanced">
               <span>高级联动</span>
             </a-menu-item>
+            <a-menu-item key="es-vxe-table">
+              <span>vxe 高性能引擎</span>
+            </a-menu-item>
           </a-sub-menu>
-
-          <!-- vxe 高性能引擎 -->
-          <a-menu-item key="es-vxe-table">
-            <template #icon><ThunderboltOutlined /></template>
-            <span>vxe 高性能引擎</span>
-          </a-menu-item>
 
           <!-- AI 工具链 -->
           <a-menu-item key="ai-tools">
@@ -103,6 +107,7 @@ import {
   HomeOutlined,
   RocketOutlined,
   ThunderboltOutlined,
+  ExperimentOutlined,
   RobotOutlined,
 } from '@ant-design/icons-vue'
 
