@@ -250,7 +250,7 @@ export function registerGetComponentApi(server) {
     server.tool("get_component_api", "Get the full API documentation for an es-plus component, including TypeScript interfaces, props, methods, and usage examples. Specify target='vue2' for @es-plus/vue2 + Element UI variants, target='antdv' for @es-plus/adapter-antdv + Ant Design Vue; default is target='vue3'.", {
         component: z
             .enum(COMPONENT_LIST)
-            .describe("Component name: EsForm, EsTable, or useDialog"),
+            .describe("Component name: EsForm, EsTable, EsDialog, EsCrudPage, SvgIcon, or useDialog (detailed docs currently for EsForm/EsTable/useDialog)"),
         target: z
             .enum(["vue3", "vue2", "antdv"])
             .default("vue3")

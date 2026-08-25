@@ -104,7 +104,7 @@ export function EsPlusResolver(options: EsPlusResolverOptions = {}) {
   return {
     type: 'component' as const,
     resolve(name: string) {
-      if (name in ES_PLUS_COMPONENTS) {
+      if (Object.prototype.hasOwnProperty.call(ES_PLUS_COMPONENTS, name)) {
         if (!sideEffects) {
           sideEffects = getSideEffects(options)
         }

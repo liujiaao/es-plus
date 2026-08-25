@@ -21,7 +21,7 @@ export interface DetectResult {
 }
 
 function parseSemverMajor(spec: string | undefined): number | null {
-  if (!spec) return null;
+  if (typeof spec !== "string" || !spec) return null;
   // Strip range prefixes (^, ~, >=, etc.) and pre-release suffixes
   const cleaned = spec.replace(/^[\^~>=<]+\s*/, "").trim();
   const match = cleaned.match(/^(\d+)\./);
@@ -32,6 +32,16 @@ export function detect(pkgJsonText: string): DetectResult {
   let pkg: Record<string, unknown>;
   try {
     pkg = JSON.parse(pkgJsonText);
+    // JSON.parse("null") / "[]" / "42" 返回非对象，后续 .dependencies 会抛 TypeError
+    if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
+      return {
+        target: "vue3",
+        confidence: "low",
+        reasoning:
+          "package.json content is not a JSON object — falling back to vue3 default.",
+        signals: {},
+      };
+    }
   } catch (err) {
     return {
       target: "vue3",

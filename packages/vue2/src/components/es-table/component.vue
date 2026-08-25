@@ -25,7 +25,7 @@
       >
         <div class="table_inner_containers">
           <table-btns
-            v-if="(options.configBtn && options.configBtn.length) || options.leftText"
+            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || options.vxeConfig?.toolbarConfig))"
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
             :btn-config="options.configBtn"
@@ -644,7 +644,8 @@ export default defineComponent({
         !!props.options.actionUrl ||
         (props.options.apiParams &&
           isObject(props.options.apiParams) &&
-          Object.keys(props.options.apiParams).length > 0)
+          Object.keys(props.options.apiParams).length > 0) ||
+        !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
     )
 
     // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
@@ -990,7 +991,11 @@ export default defineComponent({
       const apiParams = (props.options?.apiParams || {}) as Record<string, any>
       const url = props.options?.actionUrl || apiParams.url || ''
 
-      if (!url || !Object.keys(apiParams).length) return
+      // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求；否则 fail 让 Promise settle
+      if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+        if (typeof fail === 'function') fail(new Error('no url/apiParams configured'))
+        return
+      }
 
       // Vue 2 中响应式对象天然是 plain object，无需 toRaw / unref
       const formObj = isFormInstance.value as any
@@ -1013,7 +1018,10 @@ export default defineComponent({
       }
 
       const requestHandler = async (requestFn: Function) => {
-        if (loadingStatus.value) return
+        if (loadingStatus.value) {
+          if (typeof fail === 'function') fail(new Error('request already in progress'))
+          return
+        }
         loadingStatus.value = true
         try {
           const res = await requestFn({
@@ -1044,6 +1052,8 @@ export default defineComponent({
         requestHandler(props.options.httpRequest as Function)
       } else if ($esPlusTable.$httpRequest) {
         requestHandler($esPlusTable.$httpRequest as Function)
+      } else {
+        if (typeof fail === 'function') fail(new Error('no httpRequest configured'))
       }
     }
 

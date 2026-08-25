@@ -30,7 +30,7 @@
     </template>
     <!-- 用户具名插槽透传（M-3: RenderSlotBridge 替代 <component :is="fn">） -->
     <template v-for="(slotFn, slotName) in namedParentSlots" v-slot:[slotName]="slotProps">
-      <render-slot-bridge :key="slotName" :slot-fn="slotFn" :slot-props="slotProps" />
+      <render-slot-bridge :key="slotName" :slot-fn="slotFn" :slot-props="normalizeSlotProps(slotProps)" />
     </template>
     <!-- 默认空数据 UI -->
     <template v-if="!namedParentSlots['empty']" v-slot:empty>
@@ -148,6 +148,20 @@ export default defineComponent({
       return result
     })
 
+    // 统一自定义插槽 scope 形状（对齐 vue3/antdv）：vxe 原生无 scope/value，补上保持一致
+    function normalizeSlotProps(slotProps: any) {
+      if (!slotProps) return slotProps
+      const { row, rowIndex, column } = slotProps
+      const prop = column?.property ?? column?.field
+      return {
+        ...slotProps,
+        row,
+        column,
+        scope: { row, $index: rowIndex, column },
+        value: prop && row ? row[prop] : undefined,
+      }
+    }
+
     // ─── vxeOn 配置式事件注入（Vue 2：通过 v-on 对象传递，不是 onXxx props）
     const vxeOnListeners = computed(() => {
       const opts = props.options as any
@@ -185,7 +199,7 @@ export default defineComponent({
         rowConfig: {
           keyField: opts.rowkey || 'id',
           isCurrent: opts.highlightCurrentRow !== false,
-          isHover: true,
+          isHover: opts.highlightCurrentRow !== false,
         },
         checkboxConfig: opts.multiSelect
           ? { reserve: true, highlight: false }
@@ -337,7 +351,7 @@ export default defineComponent({
       vxeInstance: () => (gridRef.value as any),
 
       // ── 行内编辑 CRUD（调用内部 <vxe-table> 实例）──────
-      clearActived: () => getInternalTable()?.clearEdit?.(),
+      clearActived: () => getInternalTable()?.clearActived?.(),
       clearValidate: () => getInternalTable()?.clearValidate?.(),
       validate: (rows?: Record<string, unknown>[]) => getInternalTable()?.validate?.(rows),
       getInsertRecords: () => getInternalTable()?.getInsertRecords?.() ?? [],
@@ -363,6 +377,7 @@ export default defineComponent({
       renderSlotMap,
       renderSlotEntries,
       namedParentSlots,
+      normalizeSlotProps,
       handleCheckboxChange,
       handleCheckboxAll,
       handleSortChange,

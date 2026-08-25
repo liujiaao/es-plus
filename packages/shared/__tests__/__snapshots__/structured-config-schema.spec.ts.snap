@@ -106,6 +106,7 @@ exports[`StructuredCrudConfigSchema — accepts valid configs > accepts the full
     {
       "key": "export-all",
       "name": "导出全部",
+      "triggerEvent": true,
       "type": "primary",
     },
   ],

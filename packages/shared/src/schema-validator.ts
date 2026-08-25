@@ -23,9 +23,13 @@ export function createSchemaValidator(schemasDir?: string) {
     if (!existsSync(dir)) return
     const files = readdirSync(dir).filter((f) => f.endsWith(".schema.json"))
     for (const file of files) {
-      const schema = JSON.parse(readFileSync(join(dir, file), "utf-8"))
-      if (schema.$id) {
-        try { ajv.addSchema(schema) } catch { /* already added */ }
+      try {
+        const schema = JSON.parse(readFileSync(join(dir, file), "utf-8"))
+        if (schema.$id) {
+          try { ajv.addSchema(schema) } catch { /* already added */ }
+        }
+      } catch {
+        // 单个 schema 文件损坏不应拖垮整个校验器
       }
     }
   }
@@ -34,7 +38,11 @@ export function createSchemaValidator(schemasDir?: string) {
     ensureSchemasLoaded()
     const schemaPath = join(dir, `${schemaName}.schema.json`)
     if (!existsSync(schemaPath)) return null
-    return JSON.parse(readFileSync(schemaPath, "utf-8"))
+    try {
+      return JSON.parse(readFileSync(schemaPath, "utf-8"))
+    } catch {
+      return null
+    }
   }
 
   function validateConfig(config: unknown, schemaType?: string): ValidationResult {

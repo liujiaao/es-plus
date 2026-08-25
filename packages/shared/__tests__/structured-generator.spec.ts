@@ -185,6 +185,36 @@ describe('generateFromConfig — sfc mode', () => {
     expect(result.code).toContain('interface QueryForm')
   })
 
+  it('infers number|null type and null default for InputNumber', () => {
+    const config = {
+      ...baseConfig,
+      fields: [...baseConfig.fields, { prop: 'amount', label: '金额', formtype: 'InputNumber' as const }],
+    }
+    const result = generateFromConfig({ ...config, mode: 'sfc', typescript: true })
+    expect(result.code).toContain('amount: number | null')
+    expect(result.code).toContain('amount: null')
+  })
+
+  it('escapes single quotes in data strings (label/prop) to keep SFC valid', () => {
+    const config = {
+      ...baseConfig,
+      fields: [{ prop: "user's_name", label: "User's name", formtype: 'Input' as const }],
+    }
+    const result = generateFromConfig({ ...config, mode: 'sfc' })
+    // 生成的列应包含转义后的 label，而不是破坏单引号的原始串
+    expect(result.code).toContain("label: 'User\\'s name'")
+    expect(result.code).toContain("prop: 'user\\'s_name'")
+    expect(result.code).not.toContain("label: 'User's name'")
+  })
+
+  it('escapes backticks/`${` in apiUrl inside template literals', () => {
+    const config = { ...baseConfig, apiUrl: 'https://api.com/x`y${z}' }
+    const result = generateFromConfig({ ...config, mode: 'sfc' })
+    // 生成代码里的反引号模板字面量 URL 必须转义，不能出现未转义的反引号注入
+    expect(result.code).not.toContain('`https://api.com/x`y${z}')
+    expect(result.code).toContain('\\`')
+  })
+
   it('omits TypeScript when typescript=false', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc', typescript: false })
     // baseConfig has a dialog → JSX render → lang="jsx" (still no TypeScript syntax)

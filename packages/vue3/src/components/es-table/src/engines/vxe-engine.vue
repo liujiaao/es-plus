@@ -35,7 +35,7 @@
     </template>
     <!-- 用户具名插槽透传（scopedSlots.customRender） -->
     <template v-for="(slotFn, slotName) in namedParentSlots" #[slotName]="slotProps">
-      <component :is="() => (slotFn as Function)(slotProps)" :key="slotName" />
+      <component :is="() => (slotFn as Function)(normalizeSlotProps(slotProps))" :key="slotName" />
     </template>
     <!-- 默认空数据 UI（用户未提供 #empty 时生效，样式与 el-table 保持一致） -->
     <template v-if="!namedParentSlots['empty']" #empty>
@@ -85,6 +85,15 @@ if (import.meta.env.DEV && props.options.multiSelect && !props.options.rowkey) {
   )
 }
 
+// 行内编辑（editConfig）在 keepSource 下修改内部副本，不会回写 v-model:dataSource。
+// 这里 DEV 提示用户改动需通过 getUpdateRecords() 或监听 edit-closed 手动持久化。
+if (import.meta.env.DEV && (props.options as any)?.editConfig) {
+  console.warn(
+    '[es-plus] engine:"vxe" + editConfig 行内编辑修改的是内部副本（keepSource），' +
+    '不会自动回写 :data-source 或触发 update:dataSource —— 请调用 getUpdateRecords() 或监听 edit-closed 事件手动持久化改动'
+  )
+}
+
 // vxe-table 可用性检测（运行时判断，不强制 peerDep）
 const vxeAvailable = computed(() => {
   try {
@@ -113,6 +122,22 @@ const namedParentSlots = computed(() => {
   }
   return result
 })
+
+// 统一自定义插槽 scope 形状：standard/virtual 引擎传 { row, column, scope, value }，
+// 而 vxe 原生只传 { row, rowIndex, column, ... }（无 scope/value）。这里补上 scope 与
+// value，让用户在三个引擎下都能用 #slot="{ scope }" 读取 scope.row。
+function normalizeSlotProps(slotProps: any) {
+  if (!slotProps) return slotProps
+  const { row, rowIndex, column } = slotProps
+  const prop = column?.property ?? column?.field
+  return {
+    ...slotProps,
+    row,
+    column,
+    scope: { row, $index: rowIndex, column },
+    value: prop && row ? row[prop] : undefined,
+  }
+}
 
 // ─── vxe-grid 配置映射（options → gridConfig）───────────────
 const gridConfig = computed(() => {
@@ -329,7 +354,7 @@ defineExpose<TableEngineExposed>({
   vxeInstance: () => gridRef.value,
 
   // ── 行内编辑 CRUD（调用内部 <vxe-table> 实例，grid 不代理这些方法）──
-  clearActived:     () => getInternalTable()?.clearEdit?.(),
+  clearActived:     () => getInternalTable()?.clearActived?.(),
   clearValidate:    () => getInternalTable()?.clearValidate?.(),
   validate:         (rows?: Record<string, unknown>[]) => getInternalTable()?.validate?.(rows),
   getInsertRecords: () => getInternalTable()?.getInsertRecords?.() ?? [],

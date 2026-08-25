@@ -449,7 +449,9 @@ export default defineComponent({
         configBtn,
         // useDialog 的 onClosed 通过 extractEventHandlers 转为 'closed' 事件
         onClosed: () => {
+          const d = dialogInstances.get(key)
           dialogInstances.delete(key)
+          d?.destroy?.()
           dialogConfig.onClose?.()
         },
       })
@@ -458,8 +460,8 @@ export default defineComponent({
     function closeDialog(key: string) {
       const dialog = dialogInstances.get(key)
       if (dialog) {
-        dialog.close()
         dialogInstances.delete(key)
+        dialog.destroy()
       }
     }
 

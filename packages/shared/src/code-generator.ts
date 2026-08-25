@@ -195,9 +195,9 @@ function transformScriptSetupBlock(source: string): string {
   const lang = match[1] || '';
   const body = match[2];
 
-  // 收集顶层声明标识符
+  // 收集顶层声明标识符（仅列首，避免把函数体内部缩进的 const 也收集进 return）
   const declRegex =
-    /^[ \t]*(?:const|let|var)\s+([\w$]+)\s*=|^[ \t]*(?:async\s+)?function\s+([\w$]+)/gm;
+    /^(?:const|let|var)\s+([\w$]+)\s*=|^(?:async\s+)?function\s+([\w$]+)/gm;
   const exposed = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = declRegex.exec(body)) !== null) {
@@ -208,7 +208,9 @@ function transformScriptSetupBlock(source: string): string {
   // ES `import` statements MUST sit at the top of the module — they're illegal
   // inside a function body. Pull every top-level import out of the setup body
   // first, then emit imports → defineComponent → setup() { non-import body }.
-  const importRe = /^[ \t]*import\s+[^;]+;?\s*$/gm
+  // 注意：生成的 import 均为单行，用 `[^\n]*`（行尾截止）而非 `[^;]+`（会跨行贪婪吞噬
+  // 整个 setup 体），否则无分号时会把后续所有声明误当作 import 删除。
+  const importRe = /^[ \t]*import\b[^\n]*$/gm
   const imports: string[] = []
   const bodyWithoutImports = body.replace(importRe, (line) => {
     imports.push(line.trim())

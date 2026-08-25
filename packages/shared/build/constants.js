@@ -14,7 +14,7 @@ export const FORM_TYPES = [
     { type: 'Rate', description: '评分 — 星级评分', example: '满意度、评分' },
     { type: 'Upload', description: '上传 — 文件/图片上传', example: '头像、附件、证件照' },
 ];
-export const COMPONENT_LIST = ['EsForm', 'EsTable', 'useDialog'];
+export const COMPONENT_LIST = ['EsForm', 'EsTable', 'EsDialog', 'EsCrudPage', 'SvgIcon', 'useDialog'];
 export const PRESET_EXAMPLES = [
     {
         label: '用户管理',

@@ -54,14 +54,6 @@ export declare const wrapPromise: <T>(promise: Promise<T>) => Promise<{
     status: "rejected";
     reason: unknown;
 }>;
-/**
- * 按路径取嵌套对象的值，支持点号和方括号表示法
- * 例如 getNestedValue({ a: { b: 1 } }, 'a.b') === 1
- *      getNestedValue({ list: [{ name: 'x' }] }, 'list[0].name') === 'x'
- *
- * 提取自 packages/vue3/src/composables/use-form-inputs.ts，
- * 用于表单 v-model 绑定嵌套字段（如 user.address.city）。
- */
 export declare const getNestedValue: (obj: Record<string, unknown>, path: string) => unknown;
 /**
  * 按路径设置嵌套对象的值（缺失中间层时自动创建普通对象）

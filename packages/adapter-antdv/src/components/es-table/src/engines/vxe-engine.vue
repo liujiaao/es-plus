@@ -26,7 +26,7 @@
       />
     </template>
     <template v-for="(slotFn, slotName) in namedParentSlots" #[slotName]="slotProps">
-      <component :is="() => (slotFn as Function)(slotProps)" :key="slotName" />
+      <component :is="() => (slotFn as Function)(normalizeSlotProps(slotProps))" :key="slotName" />
     </template>
     <template v-if="!namedParentSlots['empty']" #empty>
       <div style="display:flex;justify-content:center;align-items:center;min-height:60px;color:#8c8c8c;font-size:14px">
@@ -98,6 +98,21 @@ const namedParentSlots = computed(() => {
   }
   return result
 })
+
+// 统一自定义插槽 scope 形状：standard/virtual 引擎传 { row, column, scope, value }，
+// vxe 原生只传 { row, rowIndex, column, ... }。补上 scope 与 value 保持一致。
+function normalizeSlotProps(slotProps: any) {
+  if (!slotProps) return slotProps
+  const { row, rowIndex, column } = slotProps
+  const prop = column?.property ?? column?.field
+  return {
+    ...slotProps,
+    row,
+    column,
+    scope: { row, $index: rowIndex, column },
+    value: prop && row ? row[prop] : undefined,
+  }
+}
 
 const gridConfig = computed(() => {
   const opts = props.options as any
@@ -282,7 +297,7 @@ defineExpose<TableEngineExposed>({
   vxeInstance: () => gridRef.value,
 
   // ── 行内编辑 CRUD（调用内部 <vxe-table> 实例）──────────────
-  clearActived:     () => getInternalTable()?.clearEdit?.(),
+  clearActived:     () => getInternalTable()?.clearActived?.(),
   clearValidate:    () => getInternalTable()?.clearValidate?.(),
   validate:         (rows?: Record<string, unknown>[]) => getInternalTable()?.validate?.(rows),
   getInsertRecords: () => getInternalTable()?.getInsertRecords?.() ?? [],

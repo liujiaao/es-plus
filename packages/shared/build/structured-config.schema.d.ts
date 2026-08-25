@@ -181,6 +181,7 @@ export declare const StructuredCrudConfigSchema: z.ZodObject<{
         actionType: z.ZodOptional<z.ZodString>;
         confirm: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>;
         permissionValue: z.ZodOptional<z.ZodString>;
+        triggerEvent: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>>>;
     tableBtns: z.ZodOptional<z.ZodArray<z.ZodObject<{
         name: z.ZodString;

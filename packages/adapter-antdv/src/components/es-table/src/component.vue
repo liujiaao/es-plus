@@ -341,7 +341,8 @@ const tableScroll = computed(() => {
 const loadStatus = computed(() => props.options.loading || loadingStatus.value)
 const isRequestConf = computed(() =>
   !!props.options.actionUrl ||
-  (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0)
+  (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0) ||
+  !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
 )
 // 分页栏显示：外部显式传入 total 时按外部值显示；请求模式（actionUrl/apiParams）必然带分页，始终显示
 const showPagination = computed(() => {
@@ -753,7 +754,11 @@ function queryTableListMethod(
   const { success, fail } = options
   const apiParams = (props.options?.apiParams || {}) as Record<string, any>
   const url = props.options?.actionUrl || apiParams.url || ''
-  if (!url || !Object.keys(apiParams).length) return
+  // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求；否则 fail 让 Promise settle
+  if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+    if (typeof fail === 'function') fail(new Error('no url/apiParams configured'))
+    return
+  }
 
   const formData = Object.keys(isFormInstance.value).length
     ? toRaw(unref((isFormInstance.value as any).props?.model))
@@ -764,7 +769,10 @@ function queryTableListMethod(
   if (apiParams?.method) requestOption.method = apiParams?.method
 
   const requestHandler = async (requestFn: Function) => {
-    if (loadingStatus.value) return
+    if (loadingStatus.value) {
+      if (typeof fail === 'function') fail(new Error('request already in progress'))
+      return
+    }
     loadingStatus.value = true
     try {
       const res = await requestFn({
@@ -786,13 +794,16 @@ function queryTableListMethod(
     requestHandler(props.options.httpRequest)
   } else if ($esPlusTable.$httpRequest) {
     requestHandler($esPlusTable.$httpRequest as Function)
+  } else {
+    if (typeof fail === 'function') fail(new Error('no httpRequest configured'))
   }
 }
 
 const httpRequestInstance = (model?: Record<string, unknown>) => {
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
-    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+    // 'reload' 回到第 1 页（与非 proxy 分支的搜索语义一致），'query' 会保留当前页
+    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('reload')
     return Promise.resolve()
   }
   return new Promise((resolve, reject) => {

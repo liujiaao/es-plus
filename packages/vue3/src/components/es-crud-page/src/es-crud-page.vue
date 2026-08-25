@@ -412,7 +412,10 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         : undefined,
     configBtn,
     onClosed: () => {
+      const d = dialogInstances.get(key)
       dialogInstances.delete(key)
+      // 单例模式 close() 只隐藏不卸载；这里真正 render(null) 卸载，避免隐藏弹窗常驻 body 泄漏
+      d?.destroy?.()
       dialogConfig.onClose?.()
     }
   })
@@ -421,8 +424,9 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 function closeDialog(key: string) {
   const dialog = dialogInstances.get(key)
   if (dialog) {
-    dialog.close()
     dialogInstances.delete(key)
+    // 用 destroy()（render null + 移除容器）而非 close()（仅 visible=false），避免泄漏隐藏弹窗
+    dialog.destroy()
   }
 }
 

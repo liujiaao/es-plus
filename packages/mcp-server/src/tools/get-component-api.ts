@@ -286,7 +286,7 @@ export function registerGetComponentApi(server: McpServer) {
     {
       component: z
         .enum(COMPONENT_LIST)
-        .describe("Component name: EsForm, EsTable, or useDialog"),
+        .describe("Component name: EsForm, EsTable, EsDialog, EsCrudPage, SvgIcon, or useDialog (detailed docs currently for EsForm/EsTable/useDialog)"),
       target: z
         .enum(["vue3", "vue2", "antdv"])
         .default("vue3")

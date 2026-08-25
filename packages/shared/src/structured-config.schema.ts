@@ -67,6 +67,7 @@ const ToolbarBtnSchema = z.object({
   actionType: z.string().optional(),
   confirm: z.union([z.string(), z.boolean()]).optional(),
   permissionValue: z.string().optional(),
+  triggerEvent: z.boolean().optional(),
 })
 
 const TableBtnSchema = z.object({

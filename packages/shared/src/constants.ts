@@ -17,7 +17,7 @@ export const FORM_TYPES = [
 
 export type FormType = typeof FORM_TYPES[number]['type'];
 
-export const COMPONENT_LIST = ['EsForm', 'EsTable', 'useDialog'] as const;
+export const COMPONENT_LIST = ['EsForm', 'EsTable', 'EsDialog', 'EsCrudPage', 'SvgIcon', 'useDialog'] as const;
 export type ComponentName = typeof COMPONENT_LIST[number];
 
 export const PRESET_EXAMPLES = [

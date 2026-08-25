@@ -56,7 +56,7 @@ export declare const FORM_TYPES: readonly [{
     readonly example: "头像、附件、证件照";
 }];
 export type FormType = typeof FORM_TYPES[number]['type'];
-export declare const COMPONENT_LIST: readonly ["EsForm", "EsTable", "useDialog"];
+export declare const COMPONENT_LIST: readonly ["EsForm", "EsTable", "EsDialog", "EsCrudPage", "SvgIcon", "useDialog"];
 export type ComponentName = typeof COMPONENT_LIST[number];
 export declare const PRESET_EXAMPLES: {
     label: string;

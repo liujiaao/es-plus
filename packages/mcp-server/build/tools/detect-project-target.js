@@ -1,6 +1,6 @@
 import { z } from "zod";
 function parseSemverMajor(spec) {
-    if (!spec)
+    if (typeof spec !== "string" || !spec)
         return null;
     // Strip range prefixes (^, ~, >=, etc.) and pre-release suffixes
     const cleaned = spec.replace(/^[\^~>=<]+\s*/, "").trim();
@@ -11,6 +11,15 @@ export function detect(pkgJsonText) {
     let pkg;
     try {
         pkg = JSON.parse(pkgJsonText);
+        // JSON.parse("null") / "[]" / "42" 返回非对象，后续 .dependencies 会抛 TypeError
+        if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
+            return {
+                target: "vue3",
+                confidence: "low",
+                reasoning: "package.json content is not a JSON object — falling back to vue3 default.",
+                signals: {},
+            };
+        }
     }
     catch (err) {
         return {

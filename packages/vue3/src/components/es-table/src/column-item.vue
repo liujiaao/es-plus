@@ -34,7 +34,7 @@
         v-if="scope && scope.row"
         :row="scope.row"
         :index="scope.$index"
-        :data-key="cols.key"
+        :data-key="cols.prop || cols.key"
         :render="cols.render"
       />
       <span v-else>-</span>

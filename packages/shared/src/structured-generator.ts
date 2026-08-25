@@ -343,15 +343,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', triggerEvent: true },`)
   lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
   if (config.actions.includes('add')) {
-    const perm = config.permissions?.add ? `, permissionValue: '${config.permissions.add}'` : ''
+    const perm = config.permissions?.add ? `, permissionValue: ${q(config.permissions.add)}` : ''
     lines.push(`  { name: '新增', type: 'primary', key: 'add', icon: 'Plus', click: () => openForm('新增')${perm} },`)
   }
   if (config.actions.includes('export')) {
-    const perm = config.permissions?.export ? `, permissionValue: '${config.permissions.export}'` : ''
+    const perm = config.permissions?.export ? `, permissionValue: ${q(config.permissions.export)}` : ''
     lines.push(`  { name: '导出', key: 'export', icon: 'Download', click: () => handleExport()${perm} },`)
   }
   if (config.actions.includes('import')) {
-    const perm = config.permissions?.import ? `, permissionValue: '${config.permissions.import}'` : ''
+    const perm = config.permissions?.import ? `, permissionValue: ${q(config.permissions.import)}` : ''
     lines.push(`  { name: '导入', key: 'import', icon: 'Upload', click: () => handleImport()${perm} },`)
   }
   lines.push(`]`)
@@ -388,8 +388,8 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  stripe: ${tOpts.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`)
   lines.push(`  headerCellStyle: { background: '#f5f7fa' },`)
-  lines.push(`  apiParams: { url: '${config.apiUrl}' },`)
-  lines.push(`  rowkey: '${tOpts.rowkey || 'id'}',`)
+  lines.push(`  apiParams: { url: ${q(config.apiUrl)} },`)
+  lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`)
   if (tOpts.heightType) lines.push(`  heightType: '${tOpts.heightType}',`)
   if (tOpts.tabHeight) lines.push(`  tabHeight: ${typeof tOpts.tabHeight === 'number' ? tOpts.tabHeight : `'${tOpts.tabHeight}'`},`)
   if (tOpts.virtual) {
@@ -408,7 +408,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
       target,
       indent: '  ',
       bodyLines: [
-        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         `tableRef.value?.httpRequestInstance()`,
       ],
@@ -420,7 +420,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   if (config.actions.includes('export')) {
     lines.push(``)
     lines.push(`function handleExport() {`)
-    lines.push(`  window.open(\`${config.apiUrl}/export?\${new URLSearchParams(queryForm as any).toString()}\`)`)
+    lines.push(`  window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(queryForm as any).toString()}\`)`)
     lines.push(`}`)
   }
   if (config.actions.includes('import')) {
@@ -466,7 +466,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(`        try {`)
     lines.push(`          await getRefs('form')?.validate()`)
     lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`          const url = title === '新增' ? '${config.apiUrl}' : \`${config.apiUrl}/\${formData.${tOpts.rowkey || 'id'}}\``)
+    lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData.${qBt(tOpts.rowkey || 'id')}}\``)
     lines.push(`          await httpRequest({ url, method, data: formData })`)
     lines.push(`          ElMessage.success(\`\${title}成功\`)`)
     lines.push(`          close()`)
@@ -578,7 +578,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   body.push(``)
   body.push(`${indent}async function fetchData(params${ts ? ': any' : ''}) {`)
   body.push(`${indent}  const res = await httpRequest({`)
-  body.push(`${indent}    url: '${config.apiUrl}',`)
+  body.push(`${indent}    url: ${q(config.apiUrl)},`)
   body.push(`${indent}    method: 'GET',`)
   body.push(`${indent}    params: { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }`)
   body.push(`${indent}  })`)
@@ -592,7 +592,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
       target,
       indent: `${indent}  `,
       bodyLines: [
-        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()',
       ],
@@ -604,7 +604,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   body.push(`${indent}function handleBtnClick(key${ts ? ': string' : ''}, data${ts ? ': any' : ''}) {`)
   if (config.actions.includes('add')) {
     body.push(`${indent}  if (key === '${CRUD_PAGE_BTN_CLICK_KEYS.ADD_CONFIRM}') {`)
-    body.push(`${indent}    httpRequest({ url: '${config.apiUrl}', method: 'POST', data }).then(() => {`)
+    body.push(`${indent}    httpRequest({ url: ${q(config.apiUrl)}, method: 'POST', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('新增成功')`)
     body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`)
     body.push(`${indent}    })`)
@@ -612,7 +612,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   }
   if (config.actions.includes('edit')) {
     body.push(`${indent}  if (key === '${CRUD_PAGE_BTN_CLICK_KEYS.EDIT_CONFIRM}') {`)
-    body.push(`${indent}    httpRequest({ url: \`${config.apiUrl}/\${data.${tOpts.rowkey || 'id'}}\`, method: 'PUT', data }).then(() => {`)
+    body.push(`${indent}    httpRequest({ url: \`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\`, method: 'PUT', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('编辑成功')`)
     body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`)
     body.push(`${indent}    })`)
@@ -704,7 +704,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   // fetchData
   body.push(`${indent}async function fetchData(params${ts ? ': any' : ''}) {`)
   body.push(`${indent}  const res = await httpRequest({`)
-  body.push(`${indent}    url: '${config.apiUrl}',`)
+  body.push(`${indent}    url: ${q(config.apiUrl)},`)
   body.push(`${indent}    method: 'GET',`)
   body.push(`${indent}    params: { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }`)
   body.push(`${indent}  })`)
@@ -719,7 +719,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
       target,
       indent: `${indent}  `,
       bodyLines: [
-        `await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         refreshExpr,
       ],
@@ -733,7 +733,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   const dialogEntries = Object.entries(dialogs).filter(([, d]) => !d.hasCustomRender)
   for (const [key] of dialogEntries) {
     const method = key === 'add' ? 'POST' : 'PUT'
-    const url = key === 'add' ? `'${config.apiUrl}'` : `\`${config.apiUrl}/\${data.${tOpts.rowkey || 'id'}}\``
+    const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\``
     body.push(`${indent}  if (dialogKey === '${key}') {`)
     body.push(`${indent}    httpRequest({ url: ${url}, method: '${method}', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('操作成功')`)
@@ -748,7 +748,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   body.push(`${indent}function handleBtnClick(key${ts ? ': string' : ''}, payload${ts ? '?: any' : ''}) {`)
   if (config.actions.includes('export')) {
     body.push(`${indent}  if (key === 'export') {`)
-    body.push(`${indent}    window.open(\`${config.apiUrl}/export?\${new URLSearchParams(payload || {}).toString()}\`)`)
+    body.push(`${indent}    window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(payload || {}).toString()}\`)`)
     body.push(`${indent}  }`)
   }
   body.push(`${indent}}`)
@@ -800,6 +800,19 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
 // HTML 注释不能包含 "--"，且需单行；折叠空白并把连续短横替换为破折号，截断超长源码。
 function sanitizeForComment(src: string): string {
   return src.replace(/\s+/g, ' ').replace(/--+/g, '—').trim().slice(0, 200)
+}
+
+// 转义单引号 JS 字符串字面量。label/prop/apiUrl/permissionValue/rowkey 等数据字段
+// 可能来自外部 JSON 或 AI 生成，含 ' 或 \ 会破坏生成代码甚至注入任意 JS。
+// 注意：formatter/render 是源码扩展点（函数源码串），不经此转义。
+function q(value: unknown): string {
+  return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n')}'`
+}
+
+// 转义反引号模板字面量上下文：apiUrl 等数据字段在生成代码里以 `...` 模板字面量出现
+// （如 `url: \`${apiUrl}/${row.id}\``），含 ` 或 ${ 会破坏生成代码甚至注入任意 JS。
+function qBt(value: unknown): string {
+  return String(value).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
 }
 
 function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
@@ -866,14 +879,14 @@ function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, un
 
 function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): string {
   const parts: string[] = []
-  parts.push(`prop: '${field.prop}'`)
+  parts.push(`prop: ${q(field.prop)}`)
   // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
   // es-table 内部按 labelKey 解析 i18n 文案。绝不能内联 `label: '${t('...')}'` ——
   // 内层单引号会截断外层字符串（编译失败），且 SFC 从不 import/定义 t。
   if (config.i18n) {
-    parts.push(`labelKey: 'field.${field.prop}'`)
+    parts.push(`labelKey: ${q(`field.${field.prop}`)}`)
   } else {
-    parts.push(`label: '${field.label}'`)
+    parts.push(`label: ${q(field.label)}`)
   }
   if (field.width) parts.push(`width: ${typeof field.width === 'number' ? field.width : `'${field.width}'`}`)
   if (field.minWidth) parts.push(`minWidth: ${typeof field.minWidth === 'number' ? field.minWidth : `'${field.minWidth}'`}`)
@@ -888,15 +901,15 @@ function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): 
 function buildActionBtns(config: StructuredCrudConfig): string[] {
   const btns: string[] = []
   if (config.actions.includes('view')) {
-    const perm = config.permissions?.view ? `, permissionValue: '${config.permissions.view}'` : ''
+    const perm = config.permissions?.view ? `, permissionValue: ${q(config.permissions.view)}` : ''
     btns.push(`{ name: '查看', type: 'primary', clickEvent: (row) => openForm('查看', row)${perm} }`)
   }
   if (config.actions.includes('edit')) {
-    const perm = config.permissions?.edit ? `, permissionValue: '${config.permissions.edit}'` : ''
+    const perm = config.permissions?.edit ? `, permissionValue: ${q(config.permissions.edit)}` : ''
     btns.push(`{ name: '编辑', type: 'primary', clickEvent: (row) => openForm('编辑', row)${perm} }`)
   }
   if (config.actions.includes('delete')) {
-    const perm = config.permissions?.delete ? `, permissionValue: '${config.permissions.delete}'` : ''
+    const perm = config.permissions?.delete ? `, permissionValue: ${q(config.permissions.delete)}` : ''
     btns.push(`{ name: '删除', type: 'danger', clickEvent: (row) => handleDelete(row)${perm} }`)
   }
   return btns
@@ -905,6 +918,7 @@ function buildActionBtns(config: StructuredCrudConfig): string[] {
 function inferTsType(field: FieldConfig): string {
   switch (field.formtype) {
     case 'Switch': return 'boolean'
+    case 'InputNumber': return 'number | null'
     case 'Rate':
     case 'Slider': return 'number'
     case 'Checkbox':
@@ -922,6 +936,7 @@ function inferTsType(field: FieldConfig): string {
 function getDefaultValue(field: FieldConfig): string {
   switch (field.formtype) {
     case 'Switch': return 'false'
+    case 'InputNumber': return 'null'
     case 'Rate':
     case 'Slider': return '0'
     case 'Checkbox':

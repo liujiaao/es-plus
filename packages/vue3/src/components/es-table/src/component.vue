@@ -145,7 +145,7 @@ import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
 import type { TableEngineExposed } from './engines/types'
-import { getCallback, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { getCallback, getNestedValue, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
 const props = withDefaults(
@@ -360,7 +360,7 @@ const paginationPageSizes = computed(() => {
 const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
 const paginationBackground = computed(() => paginationLayoutConfig.value?.background ?? true)
 const loadStatus = computed(() => props.options.loading || loadingStatus.value)
-const isRequestConf = computed(() => !!props.options.actionUrl || (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0))
+const isRequestConf = computed(() => !!props.options.actionUrl || (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0) || isHttpRequest.value)
 const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof props.options.httpRequest === 'function')
 
 // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
@@ -398,7 +398,8 @@ const filteredColumns = computed(() => {
   list.forEach((el) => {
     if (el.prop !== 'operate' && el.key !== 'operate' && (el.prop || el.key) && !el.formatter) {
       el.formatter = (row: Record<string, unknown>) => {
-        const value = row[el.prop as string] || row[el.key as string]
+        // 用 ?? 避免把 0/false 等假值塌缩成 '-'；用 getNestedValue 支持嵌套 prop（a.b.c）
+        const value = getNestedValue(row, el.prop as string) ?? getNestedValue(row, el.key as string)
         if (value == null || value === '') {
           return (el.emptyPlaceholder as string) || '-'
         }
@@ -666,7 +667,12 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
   const apiParams = (props.options?.apiParams || {}) as Record<string, any>
   const url = props.options?.actionUrl || apiParams.url || ''
 
-  if (!url || !Object.keys(apiParams).length) return
+  // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求（由调用方自处理 url）。
+  // 否则调用 fail 让外层 Promise settle，避免 refresh() 永久挂起。
+  if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+    if (typeof fail === 'function') fail(new Error('no url/apiParams configured'))
+    return
+  }
 
   const formData = Object.keys(isFormInstance.value).length
     ? toRaw(unref((isFormInstance.value as any).props.model))
@@ -681,7 +687,11 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
   }
 
   const requestHandler = async (requestFn: Function) => {
-    if (loadingStatus.value) return
+    if (loadingStatus.value) {
+      // 请求在途时不再静默吞掉新请求，触发 fail 让 Promise settle
+      if (typeof fail === 'function') fail(new Error('request already in progress'))
+      return
+    }
     loadingStatus.value = true
     try {
       const res = await requestFn({
@@ -708,20 +718,24 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
     requestHandler(props.options.httpRequest)
   } else if ($esPlusTable.$httpRequest) {
     requestHandler($esPlusTable.$httpRequest as Function)
+  } else {
+    // 无任何请求函数 → fail 让 Promise settle，避免挂起
+    if (typeof fail === 'function') fail(new Error('no httpRequest configured'))
   }
 }
 
 const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { keepPage?: boolean }) => {
+  // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
+  // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
+  // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
+  const keepPage = reqOptions?.keepPage ?? props.options?.refetchKeepPage === true
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
-    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+    // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页
+    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.(keepPage ? 'query' : 'reload')
     return Promise.resolve()
   }
   return new Promise((resolve, reject) => {
-    // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
-    // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
-    // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
-    const keepPage = reqOptions?.keepPage ?? props.options?.refetchKeepPage === true
     if (!keepPage) {
       paginationConfig.value.current = 1
     }

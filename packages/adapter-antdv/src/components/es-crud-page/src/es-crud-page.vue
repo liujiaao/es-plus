@@ -442,7 +442,9 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         : undefined) as any,
     configBtn,
     onClosed: () => {
+      const d = dialogInstances.get(key)
       dialogInstances.delete(key)
+      d?.destroy?.()
       dialogConfig.onClose?.()
     },
   })
@@ -451,8 +453,8 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 function closeDialog(key: string) {
   const dialog = dialogInstances.get(key)
   if (dialog) {
-    dialog.close()
     dialogInstances.delete(key)
+    dialog.destroy()
   }
 }
 
