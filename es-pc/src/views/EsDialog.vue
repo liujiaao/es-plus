@@ -34,7 +34,7 @@
     <section id="table">
       <h2>表格弹窗</h2>
       <p>结合 EsTable 在弹窗中展示表格数据。</p>
-            <CodeDemo :source="rawSFCs['./es-dialog/Table.vue']">
+            <CodeDemo :source="rawSFCs['./es-dialog/TableDialog.vue']">
         <EsDialogTable />
       </CodeDemo>
     </section>
