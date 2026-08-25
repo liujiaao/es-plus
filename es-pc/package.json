@@ -14,7 +14,9 @@
     "@es-plus/core": "file:../packages/core",
     "ant-design-vue": "^4.2.6",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "vxe-pc-ui": "^4.17.17",
+    "vxe-table": "^4.21.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",

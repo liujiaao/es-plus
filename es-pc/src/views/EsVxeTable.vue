@@ -18,24 +18,33 @@
       <h2>🔧 启用 vxe 引擎</h2>
       <p>安装 vxe-table 并配置 <code>engine: 'vxe'</code>：</p>
       <a-card class="code-block">
-        <pre v-pre><code>npm install vxe-table@^4.6 vxe-pc-ui
+        <pre v-pre><code>npm install vxe-table@^4.6 vxe-pc-ui@^4.16
 
-// 注册 vxe-table（Ant Design Vue 场景）
+// 注册 vxe-table（Vue 3 场景）
 import VxeUIAll from 'vxe-pc-ui'
 import 'vxe-pc-ui/lib/style.css'
 import VxeTable from 'vxe-table'
 import 'vxe-table/lib/style.css'
 app.use(VxeUIAll).use(VxeTable)</code></pre>
       </a-card>
-      <a-card class="code-block">
-        <pre v-pre><code>const options = {
-  engine: 'vxe',          // 切换 vxe 引擎
-  editConfig: { trigger: 'click', mode: 'cell' },  // 行内编辑
-  exportConfig: {},       // 导出
-  toolbarConfig: {},       // 工具栏
-  // ... 其余配置与标准引擎完全一致
-}</code></pre>
-      </a-card>
+    </section>
+
+    <a-divider />
+
+    <section id="examples">
+      <h2>📝 案例</h2>
+
+      <h3>基础表格</h3>
+      <p>使用 <code>engine: 'vxe'</code> 切换到 vxe 引擎，其余配置与标准引擎完全一致。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/Basic.vue']">
+        <EsVxeBasic />
+      </CodeDemo>
+
+      <h3>行内编辑</h3>
+      <p><code>editConfig</code> 配置单元格内直接改数据，<code>getUpdateRecords()</code> 取回改动。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/InlineEdit.vue']">
+        <EsVxeInlineEdit />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -58,8 +67,8 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       <h2>📌 说明</h2>
       <p>
         vxe-table 是可选 peer 依赖（<code>vxe-table >= 4.5.0 &lt; 5.0.0</code>），未安装时
-        <code>engine: 'vxe'</code> 会自动降级为默认引擎并在开发环境告警。vxe 引擎的完整配置（行内编辑、
-        导出、树形数据、合并单元格）见主文档站的
+        <code>engine: 'vxe'</code> 会自动降级为默认引擎并在开发环境告警。vxe 引擎的完整配置（导出、
+        树形数据、合并单元格）见主文档站的
         <a href="https://liujiaao.github.io/es-plus/" target="_blank">vxe-table 文档</a>。
       </p>
     </section>
@@ -67,6 +76,12 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
 </template>
 
 <script setup>
+import CodeDemo from '@/components/CodeDemo.vue'
+import EsVxeBasic from './es-vxe/Basic.vue'
+import EsVxeInlineEdit from './es-vxe/InlineEdit.vue'
+
+const rawSFCs = import.meta.glob('./es-vxe/*.vue', { query: '?raw', import: 'default', eager: true })
+
 // vxe 引擎是跨渲染器的：vue3 / vue2 / antdv 三端均支持 engine: 'vxe'，且同一份 columns 配置通用。
 const engines = [
   { engine: '默认（el-table）', desc: '几十 ~ 几千行，标准场景', flag: '默认' },
