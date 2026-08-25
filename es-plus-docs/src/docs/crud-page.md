@@ -88,7 +88,7 @@ const schema: CrudPageSchema = {
     { prop: 'phone', label: '手机号', formtype: 'Input' },
     { prop: 'status', label: '状态', formtype: 'Select',
       dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
-    { prop: 'createTime', label: '创建时间', formtype: 'datePicker',
+    { prop: 'createTime', label: '创建时间', formtype: 'DatePicker',
       attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
   ],
   formLayout: { labelWidth: '80px' },

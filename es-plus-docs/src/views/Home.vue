@@ -169,6 +169,32 @@ const columns = [
       </div>
     </div>
 
+    <!-- Cross-Renderer Section (三端通用 — 结构性护城河) -->
+    <div class="cross-section">
+      <h2 class="section-title">{{ t('home.crossTitle') }}</h2>
+      <p class="section-subtitle">{{ t('home.crossSubtitle') }}</p>
+      <div class="cross-grid">
+        <div class="cross-card">
+          <div class="cross-card-badge">Vue 3</div>
+          <h3>Element Plus</h3>
+          <code class="cross-pkg">@es-plus/vue3</code>
+          <p class="cross-install">npm install @es-plus/vue3 element-plus</p>
+        </div>
+        <div class="cross-card">
+          <div class="cross-card-badge">Vue 2</div>
+          <h3>Element UI</h3>
+          <code class="cross-pkg">@es-plus/vue2</code>
+          <p class="cross-install">npm install @es-plus/vue2 element-ui</p>
+        </div>
+        <div class="cross-card">
+          <div class="cross-card-badge">Vue 3</div>
+          <h3>Ant Design Vue</h3>
+          <code class="cross-pkg">@es-plus/adapter-antdv</code>
+          <p class="cross-install">npm install @es-plus/adapter-antdv ant-design-vue</p>
+        </div>
+      </div>
+    </div>
+
     <!-- AI Live Demo (moved up — let users feel the value first) -->
     <AiLiveDemo />
 
@@ -247,6 +273,19 @@ const columns = [
           <div class="component-info">
             <h3>useDialog <span class="component-tag">{{ t('home.componentTagDialog') }}</span></h3>
             <p>{{ t('home.useDialogDesc') }}</p>
+            <div class="component-links">
+              <span class="link">{{ t('home.viewDocs') }}</span>
+            </div>
+          </div>
+        </router-link>
+
+        <router-link to="/components/es-crud-page" class="component-card">
+          <div class="component-icon">
+            <el-icon :size="40"><Grid /></el-icon>
+          </div>
+          <div class="component-info">
+            <h3>EsCrudPage <span class="component-tag">{{ t('home.componentTagCrud') }}</span></h3>
+            <p>{{ t('home.esCrudPageDesc') }}</p>
             <div class="component-links">
               <span class="link">{{ t('home.viewDocs') }}</span>
             </div>
@@ -578,6 +617,71 @@ const goToGithub = () => {
   font-size: 14px;
   color: var(--text-color-secondary);
   margin-top: 8px;
+}
+
+// Cross-Renderer Section
+.cross-section {
+  padding: 100px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cross-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.cross-card {
+  padding: 40px 32px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 16px;
+  text-align: center;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color);
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    margin-bottom: 12px;
+  }
+}
+
+.cross-card-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--primary-color-light);
+  color: var(--primary-color);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.cross-pkg {
+  display: inline-block;
+  padding: 6px 16px;
+  background: #1e1e1e;
+  color: #67c23a;
+  border-radius: 6px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.cross-install {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  word-break: break-all;
 }
 
 // Features Section
@@ -942,7 +1046,8 @@ const goToGithub = () => {
   }
 
   .features-grid,
-  .ai-grid {
+  .ai-grid,
+  .cross-grid {
     grid-template-columns: 1fr;
   }
 
@@ -950,6 +1055,7 @@ const goToGithub = () => {
   .components-section,
   .get-started-section,
   .comparison-section,
+  .cross-section,
   .ai-section {
     padding: 48px 20px;
   }

@@ -190,7 +190,7 @@ const columns = [
 | 关键词 | 映射为 |
 |--------|--------|
 | 状态、类型、分类、性别 | Select 下拉选择 |
-| 日期、时间 | datePicker 日期选择器 |
+| 日期、时间 | DatePicker 日期选择器 |
 | 开关、启用/禁用 | Switch 开关 |
 | 评分、星级 | Rate 评分 |
 | 头像、图片、附件 | Upload 上传 |
@@ -242,7 +242,7 @@ cat config.json | es-plus create --from-config -
       "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
     { "prop": "deptId", "label": "部门", "formtype": "Select", "inTable": false,
       "apiParams": { "url": "/api/system/depts/options" } },
-    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker",
+    { "prop": "createTime", "label": "创建时间", "formtype": "DatePicker",
       "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
   ],
   "actions": ["add", "edit", "delete"],
@@ -411,7 +411,7 @@ es-plus validate ./config/table-options.json
 
 建议:
   - Add missing property "prop"
-  - Valid values for /formtype: Input, Select, datePicker, timePicker,
+  - Valid values for /formtype: Input, InputNumber, Select, DatePicker, TimePicker,
     Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
 
 可用 schema: form-item, table-column, table-options, dialog-options

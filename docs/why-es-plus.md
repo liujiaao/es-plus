@@ -352,6 +352,8 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 绝大多数组件库的"AI 友好"只是嘴上说说—— "我们的 API 名字很语义化，AI 容易学。" ES-Plus 把 AI 友好做成了**可验证的工程契约**：
 
+> **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
+
 1. **MCP server** 暴露 8 个 tools + 4 类 resources，AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
@@ -616,9 +618,9 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | Tool | 作用 | 解决的痛点 |
 |------|------|----------|
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
-| `generate_crud_page` | 自然语言 → 完整 .vue 文件 | 一句话生成可运行页面 |
-| `generate_crud_schema` | 自然语言 → 结构化 Schema | 给 AI 一份合法配置作上下文 |
-| `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的 codegen 步骤 |
+| `generate_crud_page` | 自然语言 → 完整 .vue 文件 | ⚠️ **无 LLM 回退**：本地正则/关键词解析，覆盖有限，仅适合快速原型 |
+| `generate_crud_schema` | 自然语言 → 结构化 Schema | **主路径**：由宿主 LLM 语义推理生成（经 zod 校验 + 自修复） |
+| `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的确定性 codegen 步骤 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
 | `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
@@ -665,7 +667,7 @@ npx @es-plus/cli create user-management \
 npx @es-plus/cli validate ./config.json --schema form-item
 ```
 
-CLI 不依赖任何 AI 服务 —— 它用本地规则解析自然语言描述生成 Schema，**完全离线可用**，适合内网部署 / 涉密项目。
+CLI 不依赖任何 AI 服务 —— 它用**本地正则/关键词规则**解析自然语言描述生成 Schema，**完全离线可用**，适合内网部署 / 涉密项目。注意：本地规则的准确率受限于词表覆盖（如字段名映射、类型推断），无法做到宿主 LLM 那样的语义理解；`--ai` 参数可切换到 LLM 路径获得更强的语义推理。
 
 ### 7.4 E2E 矩阵：证明 AI 生成的代码"真的能编"
 

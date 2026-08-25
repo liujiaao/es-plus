@@ -120,7 +120,7 @@ export default {
 
 | 组件 | 说明 | 与 vue3 版本兼容 |
 |------|------|------------------|
-| `EsForm` | 动态表单，13 种控件 | ✅ 100% |
+| `EsForm` | 动态表单，14 种控件 | ✅ 100% |
 | `EsTable` | 动态表格，虚拟滚动 | ✅ 兼容 |
 | `EsDialog` | 动态弹窗 | ✅ 兼容 |
 | `EsCrudPage` | CRUD 编排组件 | ✅ 兼容 |
@@ -184,7 +184,7 @@ Ant Design Vue 4.x 早期版本没有独立的 ColorPicker 组件，故降级为
 
 ## 下一步
 
-- [EsForm 高级表单](#/components/es-form) — 13 种控件、联动、异步选项
+- [EsForm 高级表单](#/components/es-form) — 14 种控件、联动、异步选项
 - [EsTable 高级表格](#/components/es-table) — 虚拟滚动、跨页选择、远程数据
 - [EsCrudPage 高级 CRUD](#/components/es-crud-page) — Schema 驱动的一站式 CRUD
 - [权限与国际化](#/guide/permission-i18n) — `permissionValue` + `labelKey`

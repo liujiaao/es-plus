@@ -7,7 +7,9 @@
     "dev": "vite",
     "dev:dist": "vite --mode dist",
     "dev:dist:fresh": "npm --prefix ../packages/vue3 run build && vite --mode dist",
+    "prebuild": "node ../scripts/sync-docs.mjs",
     "build": "vite build",
+    "prebuild:dist": "node ../scripts/sync-docs.mjs",
     "build:dist": "vite build --mode dist",
     "build:dist:fresh": "npm --prefix ../packages/vue3 run build && vite build --mode dist",
     "preview": "vite preview"
