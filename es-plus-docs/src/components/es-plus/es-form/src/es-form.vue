@@ -225,7 +225,7 @@ export default defineComponent({
       type: Function,
       default: () => () => {}
     },
-    getTableInstantce: {
+    getTableInstance: {
       type: [Object, Function],
       default: () => ({})
     }
@@ -284,7 +284,7 @@ export default defineComponent({
       }
     }
     const getTableInstant = computed(() => {
-      return typeof instance.ctx?.getTableInstantce === 'function' ? instance.ctx?.getTableInstantce() : instance.ctx?.getTableInstantce
+      return typeof instance.ctx?.getTableInstance === 'function' ? instance.ctx?.getTableInstance() : instance.ctx?.getTableInstance
     })
 
   
