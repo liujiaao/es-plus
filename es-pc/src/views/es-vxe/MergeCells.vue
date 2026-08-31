@@ -4,10 +4,18 @@
       type="info"
       show-icon
       style="margin-bottom: 10px"
-      message="企业级复杂合并：三级表头 + spanMethod 行列混合合并 + vxeConfig.mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；editRender 可编辑单元格实时重算达成率"
+      message="企业级复杂合并：三级表头 + spanMethod 行列混合合并 + vxeConfig.mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；editRender 可编辑单元格实时重算达成率；patchHtmlRowSpans 修正合并单元格打印"
     />
 
     <es-form :model="queryForm" :form-item-list="formItems" style="margin-bottom: 8px" />
+
+    <!-- 打印工具栏：合并单元格分页打印（表头每页重复） -->
+    <a-space style="margin-bottom: 8px" wrap>
+      <a-button type="primary" size="small" @click="handlePrintPreview">打印全部</a-button>
+      <a-button size="small" @click="handlePrintDept('技术事业部')">打印技术事业部</a-button>
+      <a-button size="small" @click="handlePrintDept('产品事业部')">打印产品事业部</a-button>
+      <span style="font-size: 12px; color: #909399">分页打印时三级表头自动在每页重复（CSS: thead display:table-header-group）</span>
+    </a-space>
 
     <es-table
       ref="tableRef"
@@ -21,9 +29,39 @@
 <script setup>
 import { ref, reactive, h, watch, computed } from 'vue'
 import { Tag } from 'ant-design-vue'
-import { EsTable, EsForm } from '@es-plus/adapter-antdv'
+import { EsTable, EsForm, patchHtmlRowSpans } from '@es-plus/adapter-antdv'
 
 const tableRef = ref(null)
+const getGrid = () => tableRef.value?.vxeInstance?.()
+
+const PRINT_STYLE = `
+  @page { margin: 1.5cm; size: A4 landscape; }
+  body { font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #c0c4cc; padding: 5px 8px; text-align: center; vertical-align: middle; }
+  th { background: #f5f7fa; font-weight: bold; }
+  tfoot td { background: #fafafa; font-weight: bold; }
+`
+
+// vxe print 不执行 spanMethod（与之互斥），用 patchHtmlRowSpans 修正 tbody rowspan/colspan。
+// getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 的 thead{display:table-header-group} 实现每页重复表头。
+async function doPrint(data, opts) {
+  const grid = getGrid()
+  if (!grid) return
+  const em = queryForm.enableMerge
+  const { html } = await grid.getPrintHtml({ ...opts, data })
+  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, ci, em)) })
+}
+
+function handlePrintPreview() {
+  doPrint(tableData.value, { sheetName: '员工KPI绩效考核表', style: PRINT_STYLE })
+}
+function handlePrintDept(dept) {
+  doPrint(tableData.value.filter((r) => r.dept === dept), { sheetName: `${dept} KPI绩效报表`, style: PRINT_STYLE })
+}
 
 // ─── 表单联动 ─────────────────────────────────────────────────
 const queryForm = reactive({ enableMerge: true, dept: '' })
@@ -182,6 +220,7 @@ const tableOptions = computed(() => ({
   vxeOn: { 'edit-closed': handleEditClosed },
   showFooter: true,
   footerMethod,
+  printConfig: { sheetName: '员工KPI绩效考核表' },
   _merge: queryForm.enableMerge, // 注入 reactive 依赖
   vxeConfig: {
     // 静态表头合并：年度目标 + 年度完成 合并为"年度汇总"

@@ -89,7 +89,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       </CodeDemo>
 
       <h3>合并单元格（企业级）</h3>
-      <p>三级表头 + <code>spanMethod</code> 行列混合合并 + <code>vxeConfig.mergeHeaderItems / mergeFooterItems</code> 表头表尾合并，可编辑实时重算达成率。</p>
+      <p>三级表头 + <code>spanMethod</code> 行列混合合并 + <code>vxeConfig.mergeHeaderItems / mergeFooterItems</code> 表头表尾合并，可编辑实时重算达成率；<code>patchHtmlRowSpans</code> 修正合并单元格分页打印（表头每页重复）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/MergeCells.vue']">
         <EsVxeMergeCells />
       </CodeDemo>
