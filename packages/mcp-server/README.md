@@ -332,7 +332,7 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 
 ### list_form_types
 
-列出 es-plus 支持的全部 13 种表单控件类型及用法示例。无需参数。
+列出 es-plus 支持的全部 14 种表单控件类型及用法示例。无需参数。
 
 ### get_component_api
 

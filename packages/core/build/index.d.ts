@@ -24,6 +24,7 @@ export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, forma
 export type { RequestConfig, ConfigFormFieldOut, FormFieldOptionResult, } from './request';
 export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';
 export { buildFirstClassGridOptions } from './vxe-engine';
+export { patchHtmlRowSpans } from './vxe-print';
 export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, } from './compat';
 export { getButtonPosition as resolveButtonPosition, isButtonLeft, isButtonRight, } from './compat';
 //# sourceMappingURL=index.d.ts.map

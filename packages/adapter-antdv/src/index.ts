@@ -80,6 +80,8 @@ export { SvgIconComp as SvgIcon }
 export { configureEsPlusCore as configureEsPlus }
 export { httpRequest }
 export { install }
+// vxe 打印辅助（合并单元格打印），三端统一从 @es-plus/core 再导出
+export { patchHtmlRowSpans } from '@es-plus/core'
 export type { EsPlusGlobalConfig } from './config'
 export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } from './components/es-crud-page'
 // ── 跨渲染器契约（须与 core/public-types PUBLIC_CONTRACT_TYPES 一致）──

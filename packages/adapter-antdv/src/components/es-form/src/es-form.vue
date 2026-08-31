@@ -465,7 +465,8 @@ const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
 const handleRefresh = () => {
-  // 保留原有逻辑（对齐 vue3）
+  // 「重置(刷新)」= 重置表单字段 + 刷新表格，复用 queryTableRequest 的 'rest' 分支
+  queryTableRequest(props.model, formRef.value as any, 'rest')
 }
 
 const getFormRowsFun = () => {

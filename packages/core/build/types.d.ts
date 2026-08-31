@@ -69,6 +69,7 @@ export interface ApiParams {
 /**
  * 内置表单输入类型
  * - 'Input'        → ElInput / el-input
+ * - 'InputNumber'  → ElInputNumber / el-input-number / a-input-number
  * - 'Select'       → ElSelect / el-select
  * - 'DatePicker'   → ElDatePicker / el-date-picker（推荐，旧写法 'datePicker' 仍可用）
  * - 'TimePicker'   → ElTimePicker / el-time-picker（推荐，旧写法 'timePicker' 仍可用）
@@ -82,7 +83,7 @@ export interface ApiParams {
  * - 'Rate'         → ElRate
  * - 'Upload'       → ElUpload
  */
-export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload';
+export type FormType = 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload';
 /**
  * 表单字段选项
  *

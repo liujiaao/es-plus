@@ -138,7 +138,7 @@
  *
  * 与 Vue 3 + Element Plus 版本（packages/vue3/.../es-form.vue）的功能等价点：
  *  - 24 栅格自动布局 / 折叠展开
- *  - 13 种内置 formtype
+ *  - 14 种内置 formtype
  *  - 远端 dataOptions 加载（apiParams + httpRequest）
  *  - 工具栏按钮（左右分布、权限过滤、内置 query/rest 行为）
  *  - 与 EsTable 联动（通过 inject TABLE_CONTEXT_INJECT_KEY）
@@ -158,6 +158,9 @@ import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
 import { getGlobalConfig, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
+
+// 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
+const warnedIsHiden = new Set<string>()
 
 /**
  * 内联子组件：渲染 form-input 函数返回的 VNode
@@ -422,6 +425,13 @@ export default defineComponent({
           // 后续规范化为 `isHidden`。两者都接受，原始拼写优先（保持旧文档案例可直接运行）。
           const legacyHide = (it as unknown as { isHiden?: unknown }).isHiden
           const fixedHide = it.isHidden
+          if (typeof legacyHide === 'function' && !warnedIsHiden.has(it.prop)) {
+            warnedIsHiden.add(it.prop)
+            console.warn(
+              `[@es-plus/vue2] 字段「${it.prop}」使用了拼写错误的 \`isHiden\`（少一个 d）。` +
+                '该兼容写法仅 Vue 2 支持，vue3 / adapter-antdv 会静默忽略。请统一改用 `isHidden`。'
+            )
+          }
           const hideFn = typeof legacyHide === 'function'
             ? (legacyHide as (m: ModelData, item: FormItemOption, props: Record<string, unknown>) => boolean)
             : typeof fixedHide === 'function'

@@ -399,8 +399,8 @@ const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
 const handleRefresh = () => {
-  // TODO(es-plus): 「重置(刷新)」下拉项目前为空实现，后续补齐「重置表单 + 刷新表格」语义。
-  // 该入口已挂在 template 的 el-dropdown-item @click="handleRefresh" 上，勿删。
+  // 「重置(刷新)」= 重置表单字段 + 刷新表格，复用 queryTableRequest 的 'rest' 分支
+  queryTableRequest(props.model, refs.value as any, 'rest')
 }
 
 const getFormRowsFun = () => {

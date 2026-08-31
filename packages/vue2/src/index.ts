@@ -180,6 +180,9 @@ export {
   install,
 }
 
+// vxe 打印辅助（合并单元格打印），三端统一从 @es-plus/core 再导出
+export { patchHtmlRowSpans } from '@es-plus/core'
+
 // ─── 类型导出（与 Vue 3 版本保持完全一致的类型契约） ───
 export type {
   CrudPageSchema,

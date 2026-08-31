@@ -111,6 +111,9 @@ export {
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
 export { buildFirstClassGridOptions } from './vxe-engine'
 
+// ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
+export { patchHtmlRowSpans } from './vxe-print'
+
 // ─── 向后兼容适配层 ──────────────────────────────────────────
 export {
   normalizeFormType,
