@@ -63,20 +63,18 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       <CodeDemo :source="rawSFCs['./es-vxe/ToolbarExport.vue']">
         <EsVxeToolbarExport />
       </CodeDemo>
-    </section>
 
-    <a-divider />
+      <h3>多级表头</h3>
+      <p><code>groups</code> 将列分组，形成多级表头（组头 + 子列）。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/GroupsHeader.vue']">
+        <EsVxeGroupsHeader />
+      </CodeDemo>
 
-    <section id="capabilities">
-      <h2>✨ 核心能力</h2>
-      <a-list :dataSource="capabilities" size="small" bordered>
-        <template #renderItem="{ item }">
-          <a-list-item>
-            <strong>{{ item.title }}</strong>
-            <span> — {{ item.desc }}</span>
-          </a-list-item>
-        </template>
-      </a-list>
+      <h3>虚拟滚动</h3>
+      <p><code>vxeConfig.scrollY</code> 启用 vxe 原生虚拟滚动，万行数据滚动流畅不卡顿。</p>
+      <CodeDemo :source="rawSFCs['./es-vxe/VirtualScroll.vue']">
+        <EsVxeVirtualScroll />
+      </CodeDemo>
     </section>
 
     <a-divider />
@@ -100,6 +98,8 @@ import EsVxeInlineEdit from './es-vxe/InlineEdit.vue'
 import EsVxeSelection from './es-vxe/Selection.vue'
 import EsVxeTreeData from './es-vxe/TreeData.vue'
 import EsVxeToolbarExport from './es-vxe/ToolbarExport.vue'
+import EsVxeGroupsHeader from './es-vxe/GroupsHeader.vue'
+import EsVxeVirtualScroll from './es-vxe/VirtualScroll.vue'
 
 const rawSFCs = import.meta.glob('./es-vxe/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -116,13 +116,6 @@ const engineColumns = [
   { title: '启用方式', dataIndex: 'flag', key: 'flag' },
 ]
 
-const capabilities = [
-  { title: '行内编辑', desc: 'editConfig 配置单元格内直接改数据，getUpdateRecords 取回改动' },
-  { title: '导出 / 打印', desc: 'exportConfig / printConfig 配置导出 Excel 与打印' },
-  { title: '树形数据', desc: '树形表格，支持懒加载与展开' },
-  { title: '多级表头', desc: 'groups 配置多级表头' },
-  { title: '虚拟滚动', desc: '大数据量下保持流畅' },
-]
 </script>
 
 <style scoped>
