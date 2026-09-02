@@ -2,6 +2,8 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import DocLayout from '@/layouts/DocLayout.vue'
 import Home from '@/views/Home.vue'
 import Guide from '@/views/Guide.vue'
+import QuickStart from '@/views/QuickStart.vue'
+import Cases from '@/views/Cases.vue'
 
 const routes = [
   {
@@ -9,6 +11,8 @@ const routes = [
     component: DocLayout,
     children: [
       { path: '', name: 'Home', meta: { title: '首页' }, component: Home },
+      { path: 'quickstart', name: 'QuickStart', meta: { title: '30 秒上手' }, component: QuickStart },
+      { path: 'cases', name: 'Cases', meta: { title: '核心案例' }, component: Cases },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
       {
         path: 'es-form',

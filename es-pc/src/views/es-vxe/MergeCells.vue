@@ -64,15 +64,15 @@ function handlePrintDept(dept) {
 }
 
 // ─── 表单联动 ─────────────────────────────────────────────────
-const queryForm = reactive({ enableMerge: true, dept: '' })
+const queryForm = reactive({ enableMerge: 'all', dept: '' })
 
 const formItems = [
   {
     prop: 'enableMerge', label: '合并模式', formtype: 'Select', span: 6,
     dataOptions: [
-      { label: '全部合并', value: true },
+      { label: '全部合并', value: 'all' },
       { label: '仅行合并', value: 'row' },
-      { label: '原始样式', value: false },
+      { label: '原始样式', value: 'none' },
     ],
   },
   {
@@ -156,8 +156,8 @@ const columns = [
 
 // 从 columns 动态展开叶子列 field 顺序，colIndex → field
 const leafFields = columns.flatMap((col) => (col.groups ? col.groups.map((g) => g.prop) : [col.prop]))
-const MERGE_ALWAYS = ['dept', 'team'] // enableMerge 为真时都合并
-const MERGE_FULL = ['totalTarget', 'totalActual'] // enableMerge === true 时才合并
+const MERGE_ALWAYS = ['dept', 'team'] // 合并模式非 none 时都合并
+const MERGE_FULL = ['totalTarget', 'totalActual'] // enableMerge === 'all' 时才合并
 
 function mergeRows(data, rowIndex, field) {
   const val = data[rowIndex]?.[field]
@@ -168,10 +168,10 @@ function mergeRows(data, rowIndex, field) {
 }
 
 function computeSpan(data, rowIndex, colIndex, enableMerge) {
-  if (!enableMerge) return { rowspan: 1, colspan: 1 }
+  if (!enableMerge || enableMerge === 'none') return { rowspan: 1, colspan: 1 }
   const field = leafFields[colIndex]
   if (MERGE_ALWAYS.includes(field)) return mergeRows(data, rowIndex, field)
-  if (enableMerge === true && MERGE_FULL.includes(field)) return mergeRows(data, rowIndex, field)
+  if (enableMerge === 'all' && MERGE_FULL.includes(field)) return mergeRows(data, rowIndex, field)
   return { rowspan: 1, colspan: 1 }
 }
 

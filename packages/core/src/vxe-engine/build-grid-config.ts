@@ -55,7 +55,17 @@ export function buildFirstClassGridOptions(
   }
 
   // 树形 / 代理请求 / 展开行 / 序号（一等公民字段，直传）
-  if (opts.treeConfig   !== undefined) result.treeConfig   = opts.treeConfig
+  // vxe v4 已将 tree-config.children 更名为 childrenField；此处做前向兼容归一化，
+  // 用户仍传 children（含 es-plus 旧类型）时静默映射为 childrenField，避免触发 vxe 弃用告警
+  if (opts.treeConfig   !== undefined) {
+    const tc = opts.treeConfig as Record<string, unknown>
+    if (tc.children !== undefined && tc.childrenField === undefined) {
+      const { children, ...rest } = tc
+      result.treeConfig = { ...rest, childrenField: children }
+    } else {
+      result.treeConfig = opts.treeConfig
+    }
+  }
   if (opts.proxyConfig  !== undefined) result.proxyConfig  = opts.proxyConfig
   if (opts.expandConfig !== undefined) result.expandConfig = opts.expandConfig
   if (opts.seqConfig    !== undefined) result.seqConfig    = opts.seqConfig

@@ -153,8 +153,8 @@ const props = withDefaults(
     initTabHeight?: number
     headBarClass?: string | Record<string, unknown>
     showHeaderBar?: boolean
-    dataSource: Record<string, unknown>[]
-    columns: TableColumn[]
+    dataSource?: Record<string, unknown>[]
+    columns?: TableColumn[]
     options?: TableOptions
     pagination?: PaginationConfig
   }>(),

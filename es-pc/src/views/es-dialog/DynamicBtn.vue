@@ -6,7 +6,10 @@
 
 <script setup lang="jsx">
 import { ref } from 'vue'
+import { message, Radio, Input } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
+
+const RadioGroup = Radio.Group
 
 const dialog = useDialog()
 
@@ -21,7 +24,7 @@ const openApprovalDialog = () => {
       <div style="padding: 10px 20px">
         <div style="margin-bottom: 20px">
           <label style="display: block; margin-bottom: 10px; font-weight: 500">审批操作:</label>
-          <RadioGroup v-model={action.value}>
+          <RadioGroup value={action.value} onUpdate:value={(v) => { action.value = v }}>
             <Radio value="approve">通过</Radio>
             <Radio value="reject">驳回</Radio>
             <Radio value="return">退回修改</Radio>
@@ -31,9 +34,9 @@ const openApprovalDialog = () => {
           <label style="display: block; margin-bottom: 10px; font-weight: 500">
             {action.value === 'approve' ? '审批意见（选填）' : '审批意见（必填）'}:
           </label>
-          <Input
-            v-model={reason.value}
-            type="textarea"
+          <Input.TextArea
+            value={reason.value}
+            onUpdate:value={(v) => { reason.value = v }}
             rows={3}
             placeholder={action.value === 'approve' ? '请输入审批意见' : '请输入驳回/退回原因'}
           />

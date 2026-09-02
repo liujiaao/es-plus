@@ -142,7 +142,7 @@ const columns: any[] = [
     label: '组织架构', groups: [
       { prop: 'dept', label: '事业部', width: 110, align: 'center' as const,
         render: (_h: any, { value }: any) =>
-          h(ElTag, { type: (value === '技术事业部' ? '' : 'success') as any, size: 'small' }, () => value) },
+          h(ElTag, { type: (value === '技术事业部' ? undefined : 'success') as any, size: 'small' }, () => value) },
       { prop: 'team', label: '团队', width: 80, align: 'center' as const },
       { prop: 'name', label: '成员', width: 70, align: 'center' as const },
     ],

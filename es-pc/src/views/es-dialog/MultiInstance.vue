@@ -7,7 +7,10 @@
 </template>
 
 <script setup lang="jsx">
+import { message, Descriptions, Tag } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
+
+const DescriptionsItem = Descriptions.Item
 
 const users = {
   1: { id: 1, name: '张三', role: 'admin', dept: '技术部', status: 'active', email: 'zhangsan@example.com' },
@@ -31,11 +34,11 @@ const openUserDetail = (userId) => {
           <DescriptionsItem label="用户ID">{user.id}</DescriptionsItem>
           <DescriptionsItem label="姓名">{user.name}</DescriptionsItem>
           <DescriptionsItem label="角色">
-            <Tag type={user.role === 'admin' ? 'danger' : ''} size="small">{user.role === 'admin' ? '管理员' : '普通用户'}</Tag>
+            <Tag color={user.role === 'admin' ? 'error' : 'default'}>{user.role === 'admin' ? '管理员' : '普通用户'}</Tag>
           </DescriptionsItem>
           <DescriptionsItem label="部门">{user.dept}</DescriptionsItem>
           <DescriptionsItem label="状态">
-            <Tag type={user.status === 'active' ? 'success' : 'info'} size="small">{user.status === 'active' ? '在职' : '离职'}</Tag>
+            <Tag color={user.status === 'active' ? 'success' : 'default'}>{user.status === 'active' ? '在职' : '离职'}</Tag>
           </DescriptionsItem>
           <DescriptionsItem label="邮箱">{user.email}</DescriptionsItem>
         </Descriptions>

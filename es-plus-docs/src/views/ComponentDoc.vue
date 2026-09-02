@@ -232,30 +232,32 @@ onMounted(() => {
 <style lang="scss" scoped>
 .component-doc-page {
   display: flex;
-  padding: 24px 0;
-  max-width: 1400px;
+  padding: 24px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 32px;
 }
 
 .doc-breadcrumb {
-  padding: 0 24px 16px;
+  max-width: 860px;
+  padding: 0 0 16px;
 }
 
 .component-header {
-  padding: 0 24px 24px;
+  max-width: 860px;
+  padding: 0 0 24px;
   border-bottom: 1px solid var(--border-color-lighter);
   margin-bottom: 24px;
 }
 
 .component-title {
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 12px;
 }
@@ -267,7 +269,8 @@ onMounted(() => {
 }
 
 .doc-section {
-  padding: 0 24px 32px;
+  max-width: 860px;
+  padding: 0 0 32px;
 }
 
 .section-title {
@@ -288,15 +291,30 @@ onMounted(() => {
 .feature-item {
   display: flex;
   align-items: flex-start;
-  padding: 20px;
-  background-color: var(--fill-color-light);
-  border-radius: 8px;
+  gap: 14px;
+  padding: 22px;
+  background-color: var(--bg-color);
+  border-radius: 14px;
   border: 1px solid var(--border-color-lighter);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
 .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   color: var(--primary-color);
-  margin-right: 12px;
+  background: var(--primary-color-light, rgba(59, 130, 246, 0.1));
   flex-shrink: 0;
 }
 
@@ -327,6 +345,24 @@ onMounted(() => {
 
 .api-block {
   margin-bottom: 24px;
+
+  // 统一 el-table 与 markdown 原生表格外观（表头浅底/正文次级色/悬停高亮）
+  :deep(.el-table) {
+    font-size: 14px;
+    --el-table-border-color: var(--border-color-lighter);
+    --el-table-header-bg-color: var(--fill-color-light);
+    --el-table-header-text-color: var(--text-color-primary);
+    --el-table-text-color: var(--text-color-regular);
+    --el-table-row-hover-bg-color: var(--fill-color-light);
+  }
+
+  :deep(.el-table th.el-table__cell) {
+    font-weight: 600;
+  }
+
+  :deep(.el-table .cell) {
+    padding: 0 16px;
+  }
 }
 
 .api-subtitle {
@@ -339,7 +375,8 @@ onMounted(() => {
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  padding: 24px;
+  max-width: 860px;
+  padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);
 }

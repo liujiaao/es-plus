@@ -1,9 +1,13 @@
 /* ==========================================================================
  * ES-Plus 设计 token 单一权威源
  *
- * 三端文档站点共享同一套品牌 token，只有底层 UI 组件不同（Element Plus /
- * Element UI / AntDV）。本文件由 scripts/sync-tokens.mjs 分发到各站点，
+ * 三端文档站点共享同一套 token：品牌色、中性色（文字/边框/背景/填充）、
+ * 状态色、间距、圆角。本文件由 scripts/sync-tokens.mjs 分发到各站点，
  * 禁止手改各站点副本 —— 修改请改本文件后运行 `npm run tokens:sync`。
+ *
+ * 命名约定：
+ *   --es-*           规范名（推荐使用）
+ *   --primary-color 等  Element Plus 风格别名（主站 es-plus-docs 组件沿用，指向 --es-*）
  *
  * 维护规则：
  *   1. 品牌主色：科技蓝，兼顾 Element #409EFF 与 AntDV #1677ff 的观感
@@ -17,12 +21,95 @@
   --es-brand-primary-light: #dbeafe;  /* 品牌主色浅底 */
   --es-brand-accent: #06b6d4;         /* 品牌强调色（青绿，配置/数据） */
 
+  /* ── 中性色：文字 ── */
+  --es-text-primary: #1f2329;         /* 主文字 / 标题 */
+  --es-text-regular: #4b5563;         /* 正文 */
+  --es-text-secondary: #8a919f;       /* 次要 / 说明 */
+
+  /* ── 中性色：边框 ── */
+  --es-border: #d8dee6;               /* 常规边框 */
+  --es-border-light: #e4e8ee;         /* 浅边框 */
+  --es-border-lighter: #edeff3;       /* 更浅边框 */
+
+  /* ── 中性色：背景 / 填充 ── */
+  --es-bg: #ffffff;                   /* 卡片 / 容器 */
+  --es-bg-page: #f7f8fa;              /* 页面底 */
+  --es-fill: #f2f4f7;                 /* 填充 */
+  --es-fill-light: #f7f8fa;           /* 浅填充 / 悬停 */
+
+  /* ── 状态色 ── */
+  --es-success: #16a34a;
+  --es-warning: #d97706;
+  --es-danger: #dc2626;
+  --es-info: #64748b;
+
   /* ── 圆角 ── */
   --es-radius-lg: 16px;               /* 卡片/弹窗 */
   --es-radius-sm: 8px;                /* 按钮/输入框 */
 
   /* ── 间距 ── */
-  --es-spacing-xl: 48px;              /* 区块内边距（桌面） */
-  --es-spacing-lg: 32px;              /* 卡片间距 */
-  --es-spacing-md: 16px;              /* 元素间距 */
+  --es-spacing-xs: 8px;
+  --es-spacing-sm: 12px;
+  --es-spacing-md: 16px;
+  --es-spacing-lg: 24px;
+  --es-spacing-xl: 32px;
+  --es-spacing-2xl: 48px;
+
+  /* ── 阴影 ── */
+  --es-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --es-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.08);
+
+  /* ── 代码块背景 ── */
+  --es-code-bg: #f6f8fa;
+
+  /* ── Element Plus 风格别名（主站组件沿用，指向规范名）── */
+  --brand-primary: var(--es-brand-primary);
+  --brand-primary-light: var(--es-brand-primary-light);
+  --brand-accent: var(--es-brand-accent);
+  --primary-color: var(--es-brand-primary);
+  --primary-color-light: var(--es-brand-primary-light);
+  --success-color: var(--es-success);
+  --warning-color: var(--es-warning);
+  --danger-color: var(--es-danger);
+  --info-color: var(--es-info);
+  --text-color-primary: var(--es-text-primary);
+  --text-color-regular: var(--es-text-regular);
+  --text-color-secondary: var(--es-text-secondary);
+  --border-color-base: var(--es-border);
+  --border-color-light: var(--es-border-light);
+  --border-color-lighter: var(--es-border-lighter);
+  --bg-color: var(--es-bg);
+  --bg-color-page: var(--es-bg-page);
+  --fill-color: var(--es-fill);
+  --fill-color-light: var(--es-fill-light);
+  --fill-color-blank: var(--es-bg);
+  --code-bg-color: var(--es-code-bg);
+}
+
+/* ── 暗色主题 ── */
+.is-dark {
+  --es-brand-primary-light: #1e3a5f;
+
+  --es-text-primary: #e5eaf3;
+  --es-text-regular: #cfd3dc;
+  --es-text-secondary: #a3a6ad;
+
+  --es-border: #414243;
+  --es-border-light: #3a3b3d;
+  --es-border-lighter: #363637;
+
+  --es-bg: #1d1e1f;
+  --es-bg-page: #141414;
+  --es-fill: #2c2e31;
+  --es-fill-light: #2c2e31;
+
+  --es-success: #34d399;
+  --es-warning: #fbbf24;
+  --es-danger: #f87171;
+  --es-info: #94a3b8;
+
+  --es-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --es-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
+
+  --es-code-bg: #1e1e1e;
 }

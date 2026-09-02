@@ -87,11 +87,21 @@ if (import.meta.env.DEV && props.options.multiSelect && !props.options.rowkey) {
 
 // 行内编辑（editConfig）在 keepSource 下修改内部副本，不会回写 v-model:dataSource。
 // 这里 DEV 提示用户改动需通过 getUpdateRecords() 或监听 edit-closed 手动持久化。
+// 仅当用户尚未接入持久化处理器时才提示：已通过 vxeOn 监听 edit-closed/edit-actived
+// 或显式关闭 keepSource（改动直接写入行对象）时视为已处理，避免误报刷屏。
 if (import.meta.env.DEV && (props.options as any)?.editConfig) {
-  console.warn(
-    '[es-plus] engine:"vxe" + editConfig 行内编辑修改的是内部副本（keepSource），' +
-    '不会自动回写 :data-source 或触发 update:dataSource —— 请调用 getUpdateRecords() 或监听 edit-closed 事件手动持久化改动'
-  )
+  const vxeOn = ((props.options as any)?.vxeOn ?? {}) as Record<string, unknown>
+  const hasPersistHandler =
+    typeof vxeOn['edit-closed'] === 'function' ||
+    typeof vxeOn['editClosed'] === 'function' ||
+    typeof vxeOn['onEditClosed'] === 'function' ||
+    (props.options as any)?.keepSource === false
+  if (!hasPersistHandler) {
+    console.warn(
+      '[es-plus] engine:"vxe" + editConfig 行内编辑修改的是内部副本（keepSource），' +
+      '不会自动回写 :data-source 或触发 update:dataSource —— 请调用 getUpdateRecords() 或监听 edit-closed 事件手动持久化改动'
+    )
+  }
 }
 
 // vxe-table 可用性检测（运行时判断，不强制 peerDep）

@@ -7,6 +7,7 @@
 <script setup lang="jsx">
 import { ref, computed } from 'vue'
 import { EsForm,  useDialog } from '@es-plus/adapter-antdv'
+import { Steps, Step, Result, Button, message } from 'ant-design-vue'
 
 const dialog = useDialog()
 
@@ -72,11 +73,11 @@ const openStepDialog = () => {
     width: '620px',
     render: (h, { registerRef }) => (
       <div style="padding: 10px 20px">
-        <Steps active={currentStep.value} finishStatus="success" alignCenter style="margin-bottom: 24px">
+        <Steps current={currentStep.value} style="margin-bottom: 24px">
           {stepSchemas.map((s) => <Step title={s.title} />)}
         </Steps>
         {isDone.value
-          ? <Result icon="success" title="项目创建成功" subTitle={`项目「${formData.value.name}」已成功创建`} />
+          ? <Result status="success" title="项目创建成功" subTitle={`项目「${formData.value.name}」已成功创建`} />
           : <EsForm
               ref={(el) => { formRef = el }}
               model={formData.value}
@@ -87,7 +88,6 @@ const openStepDialog = () => {
         }
       </div>
     ),
-    isHiddenFooter: true,
     renderFooter: (h, { close }) => (
       <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 10px 20px; width: 100%">
         {isDone.value

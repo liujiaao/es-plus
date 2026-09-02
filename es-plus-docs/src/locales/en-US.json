@@ -13,14 +13,15 @@
   "sidebar": {
     "section": {
       "start": "Getting Started",
-      "components": "Components",
-      "advanced": "Advanced",
-      "ai": "AI Coding",
-      "crossFramework": "Cross-framework",
-      "reference": "Reference",
-      "tools": "Tools"
+      "cases": "Core Cases",
+      "components": "Component API",
+      "engine": "Engine",
+      "ai": "AI Toolchain",
+      "ecosystem": "Ecosystem"
     },
     "whyEsPlus": "Why ES-Plus",
+    "quickstart": "30-Second Start",
+    "cases": "Case Catalog",
     "gettingStarted": "Quick Start",
     "installation": "Installation",
     "usage": "Global Config",

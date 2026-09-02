@@ -68,7 +68,28 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
         </div>
       </div>
     </div>
-    
+
+    <!-- 三个可验证承诺（文案单一真源 docs/brand/slogan.json） -->
+    <div class="promises-section">
+      <div class="promises-grid">
+        <div class="promise-card" v-for="p in promises" :key="p.key">
+          <h3 class="promise-title">{{ p.title }}</h3>
+          <div class="promise-claim">{{ p.claim }}</div>
+          <p class="promise-desc">{{ p.desc }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- L2 头号案例：零事件代码的 CRUD -->
+    <div class="l2-case-section">
+      <h2 class="section-title">🎯 头号案例 · 零事件代码的 CRUD</h2>
+      <p class="section-subtitle">
+        原生「查询 → 重置 → 翻页」要写 4 个事件函数，还容易踩「拿最新表单值」的坑。
+        es-plus 用 <code>EsForm 嵌套 EsTable</code> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。
+      </p>
+      <CodeDiff :left-code="nativeCode" :right-code="esplusCode" />
+    </div>
+
     <!-- Comparison Section -->
     <div class="comparison-section">
       <h2 class="section-title">{{ t('home.comparisonTitle') }}</h2>
@@ -173,26 +194,8 @@ const columns = [
     <div class="cross-section">
       <h2 class="section-title">{{ t('home.crossTitle') }}</h2>
       <p class="section-subtitle">{{ t('home.crossSubtitle') }}</p>
-      <div class="cross-grid">
-        <div class="cross-card">
-          <div class="cross-card-badge">Vue 3</div>
-          <h3>Element Plus</h3>
-          <code class="cross-pkg">@es-plus/vue3</code>
-          <p class="cross-install">npm install @es-plus/vue3 element-plus</p>
-        </div>
-        <div class="cross-card">
-          <div class="cross-card-badge">Vue 2</div>
-          <h3>Element UI</h3>
-          <code class="cross-pkg">@es-plus/vue2</code>
-          <p class="cross-install">npm install @es-plus/vue2 element-ui</p>
-        </div>
-        <div class="cross-card">
-          <div class="cross-card-badge">Vue 3</div>
-          <h3>Ant Design Vue</h3>
-          <code class="cross-pkg">@es-plus/adapter-antdv</code>
-          <p class="cross-install">npm install @es-plus/adapter-antdv ant-design-vue</p>
-        </div>
-      </div>
+      <!-- 三端切换器：同一份 Schema 源码 + 三端渲染快照（docs/改造三端站点.md §5.4） -->
+      <TriRenderTabs />
     </div>
 
     <!-- AI Live Demo (moved up — let users feel the value first) -->
@@ -336,13 +339,88 @@ const columns = [
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
 import AiLiveDemo from '@/components/home/AiLiveDemo.vue'
+// 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发，禁止手改本文件
+import brand from '@/brand/slogan.json'
+import CodeDiff from '@/components/doc/CodeDiff.vue'
+import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+// 三站对齐的三个可验证承诺，按当前语言取文案
+const promises = computed(() => {
+  const en = locale.value === 'en-US'
+  return brand.promises.map((p) => ({
+    key: p.key,
+    title: en ? p.titleEn : p.title,
+    claim: en ? p.claimEn : p.claim,
+    desc: en ? p.descEn : p.desc,
+  }))
+})
+
+// ── L2 头号案例「零事件代码的 CRUD」并排 diff 内容 ──
+const nativeCode = `<el-form :model="query" inline>
+  <el-form-item label="用户名"><el-input v-model="query.name" /></el-form-item>
+  <el-form-item label="状态"><el-select v-model="query.status" v-model:visible="false">
+    <el-option v-for="i in statusOptions" :key="i.value" :label="i.label" :value="i.value" /></el-select>
+  </el-form-item>
+  <el-form-item>
+    <el-button type="primary" @click="handleQuery">查询</el-button>
+    <el-button @click="handleReset">重置</el-button>
+  </el-form-item>
+</el-form>
+
+<el-table :data="list" v-loading="loading">
+  <el-table-column prop="name" label="用户名" />
+  <el-table-column prop="status" label="状态" />
+</el-table>
+<el-pagination :current-page="page" :page-size="pageSize" :total="total"
+  @current-change="handlePage" @size-change="handleSize" />
+
+// ── 原生 script：4 个事件函数 ──
+const query = reactive({ name: '', status: '' })
+const list = ref([]); const loading = ref(false)
+const page = ref(1); const pageSize = ref(10); const total = ref(0)
+
+const fetchData = async () => {
+  loading.value = true
+  const { data } = await axios.get('/api/users', { params: { ...query, page: page.value, pageSize: pageSize.value } })
+  list.value = data.data; total.value = data.total
+  loading.value = false
+}
+// 4 个事件函数，且「拿最新表单值」容易踩坑
+const handleQuery = () => { page.value = 1; fetchData() }
+const handleReset = () => { Object.assign(query, { name: '', status: '' }); page.value = 1; fetchData() }
+const handlePage = (p) => { page.value = p; fetchData() }
+const handleSize = (s) => { pageSize.value = s; page.value = 1; fetchData() }
+`
+
+const esplusCode = `<es-table :columns="columns" :options="options">
+  <es-form :model="query" :form-item-list="items" :config-btn="btns" />
+</es-table>
+
+// ── es-plus script：0 行事件代码 ──
+const query = reactive({ name: '', status: '' })
+const items = [
+  { prop: 'name', label: '用户名', formtype: 'Input', span: 6 },
+  { prop: 'status', label: '状态', formtype: 'Select', span: 6, dataOptions: statusOptions },
+]
+const btns = [
+  { name: '查询', key: 'query', triggerEvent: true },
+  { name: '重置', key: 'rest', triggerEvent: true },
+]
+const columns = [
+  { prop: 'name', label: '用户名' },
+  { prop: 'status', label: '状态' },
+]
+const options = { apiParams: { url: '/api/users' } }
+// 0 行事件代码：查询/重置/分页全自动联动（triggerEvent）
+`
 
 useHead({
   title: '中后台 CRUD 的配置层',
@@ -498,11 +576,101 @@ const goToGithub = () => {
 .code-content {
   padding: 20px;
   margin: 0;
+  // 全局 `pre { background/color }` 规则会漏进这里，显式覆盖以保持深色代码窗
+  background: transparent;
+  border-radius: 0;
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 13px;
   line-height: 1.8;
   color: #abb2bf;
   overflow-x: auto;
+
+  code {
+    background: transparent;
+    color: inherit;
+  }
+}
+
+// Promises Section (三承诺)
+.promises-section {
+  padding: 48px 48px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.promises-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.promise-card {
+  padding: 32px 28px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 16px;
+  text-align: center;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color);
+  }
+}
+
+.promise-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-color-primary);
+  margin-bottom: 10px;
+}
+
+.promise-claim {
+  display: inline-block;
+  padding: 4px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-accent);
+  background: rgba(6, 182, 212, 0.08);
+  border-radius: 20px;
+}
+
+.promise-desc {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+// L2 头号案例
+.l2-case-section {
+  padding: 48px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .section-title {
+    margin-bottom: 20px;
+  }
+
+  .section-subtitle {
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-color-secondary);
+    margin: -12px auto 40px;
+    max-width: 720px;
+    line-height: 1.7;
+
+    code {
+      padding: 2px 6px;
+      background: var(--fill-color-light);
+      color: var(--primary-color);
+      border-radius: 4px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 14px;
+    }
+  }
 }
 
 // Comparison Section
@@ -1047,7 +1215,8 @@ const goToGithub = () => {
 
   .features-grid,
   .ai-grid,
-  .cross-grid {
+  .cross-grid,
+  .promises-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1056,7 +1225,9 @@ const goToGithub = () => {
   .get-started-section,
   .comparison-section,
   .cross-section,
-  .ai-section {
+  .ai-section,
+  .promises-section,
+  .l2-case-section {
     padding: 48px 20px;
   }
 

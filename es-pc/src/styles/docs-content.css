@@ -1,0 +1,480 @@
+/* ==========================================================================
+ * ES-Plus 文档内容设计规范（单一权威源）
+ *
+ * 三端文档站点的正文排版、代码块、表格、提示框统一收敛到本文件。
+ * 由 scripts/sync-theme.mjs 分发到三站，禁止手改各站点副本。
+ *
+ * 用法：给内容容器加上 `.es-doc-content` 类即可获得统一正文排版。
+ * 品牌色来自 docs/tokens/design-tokens.css（--es-brand-primary 等）。
+ * ========================================================================== */
+
+.es-doc-content {
+  /* ── 排版基础 ── */
+  font-size: 15.5px;
+  line-height: 1.8;
+  color: var(--es-doc-text);
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
+
+  /* 内容语义色（不依赖底层 UI 库，三端一致） */
+  --es-doc-text: #384150;
+  --es-doc-heading: #1a1f2b;
+  --es-doc-text-secondary: #5b6472;
+  --es-doc-border: #e7ebf0;
+  --es-doc-code-bg: #f2f5f9;
+  --es-doc-code-tint: rgba(59, 130, 246, 0.09);
+  /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .is-dark 覆盖（与 CodePlayground / 全局 hljs 一致） */
+  --es-doc-code-block-bg: #f6f8fa;
+  --es-doc-code-block-text: #24292e;
+}
+
+.es-doc-content > *:first-child { margin-top: 0; }
+.es-doc-content > *:last-child { margin-bottom: 0; }
+
+/* ── 标题层级（统一字号/字重/间距节奏）──
+ * scroll-margin-top 让锚点跳转不被固定顶栏遮挡。 */
+.es-doc-content h1,
+.es-doc-content h2,
+.es-doc-content h3,
+.es-doc-content h4 {
+  scroll-margin-top: 88px;
+  color: var(--es-doc-heading);
+  font-weight: 700;
+}
+
+.es-doc-content h1 {
+  font-size: 34px;
+  line-height: 1.25;
+  margin: 0 0 20px;
+  letter-spacing: -0.6px;
+}
+
+.es-doc-content h2 {
+  font-size: 25px;
+  line-height: 1.35;
+  margin: 52px 0 20px;
+  padding-bottom: 10px;
+  letter-spacing: -0.3px;
+  border-bottom: 1px solid var(--es-doc-border);
+  position: relative;
+}
+
+/* h2 底边线上叠一段品牌渐变短线，作为章节视觉锚点 */
+.es-doc-content h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 44px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--es-brand-primary), var(--es-brand-accent));
+}
+
+.es-doc-content h3 {
+  font-size: 19px;
+  line-height: 1.45;
+  margin: 36px 0 14px;
+  letter-spacing: -0.2px;
+}
+
+.es-doc-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 26px 0 10px;
+}
+
+/* 首个子标题与标题之间不留多余上边距 */
+.es-doc-content > h1:first-child { margin-top: 0; }
+.es-doc-content h2:first-child { margin-top: 0; }
+
+/* ── 段落 / 列表 / 引用 ── */
+.es-doc-content p {
+  margin: 0 0 18px;
+  color: var(--es-doc-text);
+}
+
+/* 引导段：紧跟标题的首段稍大、稍淡，营造导语层次 */
+.es-doc-content h1 + p {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--es-doc-text-secondary);
+  margin-bottom: 26px;
+}
+
+/* 列表样式仅作用于 markdown 生成的「裸列表」（无 class）。
+   组件 demo 内的 el-pagination / el-pager / el-select 等 <ul>/<li> 都带 class，
+   用 :not([class]) 排除，避免品牌圆点标记污染分页器等交互组件。 */
+.es-doc-content ul:not([class]),
+.es-doc-content ol:not([class]) {
+  margin: 0 0 18px;
+  padding-left: 22px;
+  color: var(--es-doc-text);
+}
+
+.es-doc-content ul:not([class]) > li,
+.es-doc-content ol:not([class]) > li {
+  margin: 8px 0;
+  line-height: 1.8;
+}
+
+/* 无序列表用品牌色圆点标记 */
+.es-doc-content ul:not([class]) {
+  list-style: none;
+  padding-left: 4px;
+}
+.es-doc-content ul:not([class]) > li {
+  position: relative;
+  padding-left: 22px;
+}
+.es-doc-content ul:not([class]) > li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0.72em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--es-brand-primary);
+  transform: translateY(-50%);
+}
+
+.es-doc-content ol:not([class]) { list-style: decimal; }
+.es-doc-content ol:not([class]) > li::marker {
+  color: var(--es-brand-primary);
+  font-weight: 600;
+}
+
+.es-doc-content li > ul:not([class]),
+.es-doc-content li > ol:not([class]) {
+  margin: 6px 0 0;
+}
+
+.es-doc-content blockquote {
+  margin: 20px 0;
+  padding: 14px 18px;
+  border-left: 3px solid var(--es-brand-primary);
+  background: linear-gradient(90deg, var(--es-doc-code-tint), transparent 90%);
+  border-radius: 0 var(--es-radius-sm) var(--es-radius-sm) 0;
+  color: var(--es-doc-text-secondary);
+}
+
+.es-doc-content blockquote p {
+  margin: 0;
+}
+
+/* 加粗强调 */
+.es-doc-content strong {
+  color: var(--es-doc-heading);
+  font-weight: 600;
+}
+
+/* ── 链接 ── */
+.es-doc-content a {
+  color: var(--es-brand-primary);
+  text-decoration: none;
+  font-weight: 500;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s, color 0.2s;
+}
+
+.es-doc-content a:hover {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
+/* ── 行内代码（品牌色药丸）── */
+.es-doc-content code {
+  padding: 2px 7px;
+  background: var(--es-doc-code-tint);
+  border-radius: 6px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.86em;
+  font-weight: 500;
+  color: var(--es-brand-primary);
+}
+
+/* ── 代码块 ── */
+.es-doc-content pre {
+  margin: 20px 0;
+  padding: 18px 20px;
+  background: var(--es-doc-code-block-bg);
+  border-radius: var(--es-radius-sm);
+  overflow-x: auto;
+  line-height: 1.7;
+}
+
+.es-doc-content pre code {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--es-doc-code-block-text);
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
+/* 带语言标签 + 复制按钮的代码块容器（es-plus-docs 的 markdown 渲染结构） */
+.es-doc-content .code-block-wrapper {
+  position: relative;
+  margin: 20px 0;
+  border-radius: var(--es-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--es-doc-border);
+  background: var(--es-doc-code-block-bg);
+  box-shadow: var(--es-shadow-sm);
+}
+
+.es-doc-content .code-block-wrapper pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.es-doc-content .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid var(--es-doc-border);
+  font-size: 12px;
+}
+
+.es-doc-content .code-block-lang {
+  color: var(--es-doc-text-secondary);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+}
+
+.es-doc-content .code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--es-doc-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.es-doc-content .code-copy-btn:hover {
+  border-color: var(--es-doc-border);
+  background: var(--es-bg);
+  color: var(--es-brand-primary);
+}
+
+.es-doc-content .code-copy-btn.copied {
+  color: var(--es-success);
+  border-color: var(--es-success);
+}
+
+.es-doc-content .copy-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+}
+
+.es-doc-content .copy-icon::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: var(--es-doc-code-block-bg);
+}
+
+/* ── 表格（组件 Props/Options 等）—— 圆角描边 + 表头着色 + 斑马纹 ──
+   只作用于 markdown 生成的「正文表格」。判据用「结构」而非「属性」：
+     · markdown-it 输出的 <table> 是 .es-doc-content 的直接子元素；
+     · Element / Ant Design Vue / vxe 组件表格永远嵌套在组件包裹 div 内
+       （.el-table / .ant-table / .vxe-table …），绝不会是直接子元素。
+   故用直接子选择器 `> table` 精确命中正文表格，天然排除所有组件表格，
+   不依赖组件 <table> 是否带 class / style（antd 视配置可能二者皆无）。 */
+.es-doc-content > table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 20px 0 26px;
+  font-size: 14px;
+  border: 1px solid var(--es-doc-border);
+  border-radius: var(--es-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--es-shadow-sm);
+}
+
+.es-doc-content > table th,
+.es-doc-content > table td {
+  padding: 11px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--es-doc-border);
+  border-right: 1px solid var(--es-doc-border);
+}
+
+.es-doc-content > table th:last-child,
+.es-doc-content > table td:last-child { border-right: none; }
+.es-doc-content > table tbody tr:last-child td { border-bottom: none; }
+
+.es-doc-content > table th {
+  background: var(--es-doc-code-bg);
+  font-weight: 600;
+  color: var(--es-doc-heading);
+  white-space: nowrap;
+}
+
+.es-doc-content > table td {
+  color: var(--es-doc-text-secondary);
+}
+
+.es-doc-content > table tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.015); }
+.es-doc-content > table tbody tr:hover { background: var(--es-doc-code-tint); }
+
+.es-doc-content > table td code {
+  font-size: 12.5px;
+  color: var(--es-brand-primary);
+  background: var(--es-doc-code-tint);
+}
+
+/* ── 提示框（tip / warning / info / danger）── */
+.es-doc-content .tip,
+.es-doc-content .info,
+.es-doc-content .warning,
+.es-doc-content .danger {
+  margin: 20px 0;
+  padding: 14px 18px;
+  border-radius: var(--es-radius-sm);
+  border-left: 4px solid var(--es-brand-primary);
+  background: #ecf5ff;
+  color: var(--es-doc-text-secondary);
+  line-height: 1.75;
+}
+
+.es-doc-content .tip {
+  border-left-color: var(--es-success);
+  background: #f0f9eb;
+}
+
+.es-doc-content .info {
+  border-left-color: var(--es-brand-primary);
+  background: #ecf5ff;
+}
+
+.es-doc-content .warning {
+  border-left-color: var(--es-warning);
+  background: #fdf6ec;
+}
+
+.es-doc-content .danger {
+  border-left-color: var(--es-danger);
+  background: #fef0f0;
+}
+
+.es-doc-content .tip > p,
+.es-doc-content .info > p,
+.es-doc-content .warning > p,
+.es-doc-content .danger > p {
+  margin: 0;
+}
+
+/* ── 自定义容器（VitePress 风格 :::tip / :::warning）── */
+.es-doc-content .custom-block {
+  margin: 22px 0;
+  padding: 16px 18px 16px 20px;
+  border-radius: var(--es-radius-sm);
+  border: 1px solid transparent;
+  border-left: 4px solid var(--es-info);
+  background: var(--es-fill);
+  line-height: 1.75;
+}
+
+.es-doc-content .custom-block .custom-block-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* 标题前的小圆点标记，替代图标资源 */
+.es-doc-content .custom-block .custom-block-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.es-doc-content .custom-block p:last-child {
+  margin-bottom: 0;
+}
+
+.es-doc-content .custom-block.tip { border-left-color: var(--es-success); background: #f0f9eb; }
+.es-doc-content .custom-block.tip .custom-block-title { color: var(--es-success); }
+.es-doc-content .custom-block.warning { border-left-color: var(--es-warning); background: #fdf6ec; }
+.es-doc-content .custom-block.warning .custom-block-title { color: var(--es-warning); }
+.es-doc-content .custom-block.info { border-left-color: var(--es-brand-primary); background: #ecf5ff; }
+.es-doc-content .custom-block.info .custom-block-title { color: var(--es-brand-primary); }
+.es-doc-content .custom-block.danger { border-left-color: var(--es-danger); background: #fef0f0; }
+.es-doc-content .custom-block.danger .custom-block-title { color: var(--es-danger); }
+
+/* ── 图片 / 分割线 ── */
+.es-doc-content img {
+  max-width: 100%;
+  border-radius: var(--es-radius-sm);
+  border: 1px solid var(--es-doc-border);
+  box-shadow: var(--es-shadow-sm);
+}
+
+.es-doc-content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--es-doc-border) 20%, var(--es-doc-border) 80%, transparent);
+  margin: 40px 0;
+}
+
+/* ── 暗色主题（es-plus-docs 使用 .is-dark）── */
+.is-dark .es-doc-content {
+  --es-doc-text: #c9d1dc;
+  --es-doc-heading: #f0f3f8;
+  --es-doc-text-secondary: #9aa2ae;
+  --es-doc-border: #34383f;
+  --es-doc-code-bg: #26292e;
+  --es-doc-code-tint: rgba(96, 165, 250, 0.14);
+  --es-doc-code-block-bg: #1e1e1e;
+  --es-doc-code-block-text: #abb2bf;
+}
+
+.is-dark .es-doc-content .code-block-header {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.is-dark .es-doc-content code {
+  color: #79b8ff;
+}
+
+.is-dark .es-doc-content > table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+
+.is-dark .es-doc-content .custom-block { background: #26292e; }
+.is-dark .es-doc-content .tip,
+.is-dark .es-doc-content .custom-block.tip { background: rgba(22, 163, 74, 0.12); }
+.is-dark .es-doc-content .warning,
+.is-dark .es-doc-content .custom-block.warning { background: rgba(217, 119, 6, 0.12); }
+.is-dark .es-doc-content .info,
+.is-dark .es-doc-content .custom-block.info { background: rgba(59, 130, 246, 0.12); }
+.is-dark .es-doc-content .danger,
+.is-dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }

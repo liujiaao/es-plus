@@ -13,7 +13,7 @@
       <!-- 文档内容 -->
       <article class="doc-content">
         <!-- <h1 class="doc-title">{{ currentDoc.title }}</h1> -->
-        <div class="markdown-content" v-html="renderedContent"></div>
+        <div class="markdown-content es-doc-content" v-html="renderedContent"></div>
       </article>
       
       <!-- 底部导航 -->
@@ -39,12 +39,20 @@
           :key="heading.id"
           :href="`#${heading.id}`"
           class="toc-link"
+          :class="{ active: activeHeading === heading.id }"
           @click.prevent="scrollToHeading(heading.id)"
         >
           {{ heading.text }}
         </a>
       </div>
     </aside>
+
+    <!-- 回到顶部 -->
+    <transition name="back-top-fade">
+      <button v-show="showBackTop" class="back-to-top" title="回到顶部" @click="scrollToTop">
+        <el-icon :size="18"><Top /></el-icon>
+      </button>
+    </transition>
   </div>
 </template>
 
@@ -52,6 +60,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, createApp, type App } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { Top } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import DemoBlock from '@/components/doc/DemoBlock.vue'
@@ -168,6 +177,24 @@ const currentCategory = computed(() => {
   return ''
 })
 
+// 渲染 :::tip / :::warning 等 VitePress 风格容器（markdown-it 原生不支持，需手动展开）。
+// 容器内部仍是 markdown，先单独用 md.render 渲染，再包进 HTML 块。
+const CONTAINER_LABELS: Record<string, string> = {
+  tip: '提示',
+  warning: '警告',
+  info: '信息',
+  danger: '危险',
+}
+const renderContainers = (markdown: string): string =>
+  markdown.replace(
+    /:::[ \t]*(tip|warning|info|danger)[ \t]*([^\n]*)\n([\s\S]*?)\n:::[ \t]*/g,
+    (_m: string, type: string, title: string, content: string) => {
+      const heading = title.trim() || CONTAINER_LABELS[type] || type.toUpperCase()
+      const inner = md.render(content.trim())
+      return `<div class="custom-block ${type}">\n<p class="custom-block-title">${heading}</p>\n${inner}</div>`
+    }
+  )
+
 const renderedContent = computed(() => {
   // Pre-process: convert <demo name="..." /> (and </demo> form) to placeholder divs
   // so markdown-it passes them through cleanly and we can mount components on them later.
@@ -175,7 +202,9 @@ const renderedContent = computed(() => {
     .replace(/<demo\s+name="([^"]+)"\s*\/>/g, '\n<div class="demo-block-placeholder" data-demo-name="$1"></div>\n')
     .replace(/<demo\s+name="([^"]+)"\s*>\s*<\/demo>/g, '\n<div class="demo-block-placeholder" data-demo-name="$1"></div>\n')
 
-  const html = md.render(preprocessed)
+  // 先展开 ::: 容器（内部 markdown 已渲染为 HTML），再渲染整体
+  const withContainers = renderContainers(preprocessed)
+  const html = md.render(withContainers)
   // Add IDs to headings for TOC linking
   return html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
     const text = content.replace(/<[^>]+>/g, '').trim()
@@ -185,6 +214,8 @@ const renderedContent = computed(() => {
 })
 
 const toc = ref<{ id: string; text: string }[]>([])
+const activeHeading = ref('')
+const showBackTop = ref(false)
 
 const extractToc = () => {
   nextTick(() => {
@@ -193,7 +224,24 @@ const extractToc = () => {
       id: h.id,
       text: h.textContent || ''
     })).filter(h => h.id && h.text)
+    updateActiveHeading()
   })
+}
+
+// scroll-spy：高亮当前阅读章节 + 控制回到顶部按钮
+const updateActiveHeading = () => {
+  showBackTop.value = window.scrollY > 400
+  const headings = Array.from(
+    document.querySelectorAll<HTMLElement>('.doc-content h2, .doc-content h3')
+  ).filter((h) => h.id)
+  if (!headings.length) return
+  const offset = 100
+  let current = headings[0].id
+  for (const h of headings) {
+    if (h.getBoundingClientRect().top - offset <= 0) current = h.id
+    else break
+  }
+  activeHeading.value = current
 }
 
 watch(renderedContent, extractToc, { immediate: true })
@@ -207,6 +255,17 @@ const scrollToHeading = (id) => {
   if (el) el.scrollIntoView({ behavior: 'smooth' })
 }
 
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// 上/下篇顺序与侧边栏（AppSidebar）分组阅读顺序一致，而非 docsData 对象键序
+const NAV_ORDER = [
+  'getting-started', 'installation', 'usage', 'why-es-plus',
+  'mcp-server', 'cli',
+  'vue2', 'adapter-antdv', 'migration', 'permission-i18n', 'schema-setup', 'changelog',
+]
+
 const navTitleFor = (key: string): string => {
   const entry = docsData[key]
   if (!entry) return ''
@@ -215,10 +274,10 @@ const navTitleFor = (key: string): string => {
 
 const updateNav = () => {
   const name = route.params.name as string
-  const keys = Object.keys(docsData)
-  const idx = keys.indexOf(name)
-  prevDoc.value = idx > 0 ? { path: `/guide/${keys[idx-1]}`, title: navTitleFor(keys[idx-1]) } : null
-  nextDoc.value = idx < keys.length - 1 ? { path: `/guide/${keys[idx+1]}`, title: navTitleFor(keys[idx+1]) } : null
+  const idx = NAV_ORDER.indexOf(name)
+  if (idx < 0) { prevDoc.value = null; nextDoc.value = null; return }
+  prevDoc.value = idx > 0 ? { path: `/guide/${NAV_ORDER[idx-1]}`, title: navTitleFor(NAV_ORDER[idx-1]) } : null
+  nextDoc.value = idx < NAV_ORDER.length - 1 ? { path: `/guide/${NAV_ORDER[idx+1]}`, title: navTitleFor(NAV_ORDER[idx+1]) } : null
 }
 
 watch(() => route.params.name, updateNav, { immediate: true })
@@ -300,10 +359,12 @@ onMounted(() => {
   }, 100)
   const content = document.querySelector('.markdown-content') as HTMLElement | null
   content?.addEventListener('click', handleContentClick)
+  window.addEventListener('scroll', updateActiveHeading, { passive: true })
   nextTick(() => mountDemos())
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('scroll', updateActiveHeading)
   unmountDemos()
 })
 </script>
@@ -311,37 +372,39 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .doc-page {
   display: flex;
-  padding: 24px 0;
-  max-width: 1400px;
+  padding: 24px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 32px;
 }
 
 .doc-breadcrumb {
-  padding: 0 24px 16px;
+  max-width: 860px;
+  padding: 0 0 16px;
 }
 
 .doc-title {
-  padding: 0 24px 24px;
+  padding: 0 0 24px;
   font-size: 32px;
   font-weight: 600;
   color: var(--text-color-primary);
 }
 
 .doc-content {
-  padding: 0 24px;
+  max-width: 860px;
   min-height: 400px;
 }
 
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  padding: 24px;
+  max-width: 860px;
+  padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);
 }
@@ -405,14 +468,57 @@ onBeforeUnmount(() => {
   text-decoration: none;
   border-left: 2px solid transparent;
   transition: all 0.2s;
-  
+
   &:hover {
     color: var(--primary-color);
     border-left-color: var(--primary-color);
   }
+
+  &.active {
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    font-weight: 600;
+    background: var(--primary-color-light, rgba(59, 130, 246, 0.08));
+  }
 }
 
-@media (max-width: 1200px) {
+/* 回到顶部 */
+.back-to-top {
+  position: fixed;
+  right: 32px;
+  bottom: 40px;
+  z-index: 90;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 50%;
+  background: var(--bg-color);
+  color: var(--text-color-regular);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s;
+
+  &:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+  }
+}
+
+.back-top-fade-enter-active,
+.back-top-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.back-top-fade-enter-from,
+.back-top-fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 992px) {
   .doc-aside {
     display: none;
   }

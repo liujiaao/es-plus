@@ -859,7 +859,7 @@ export default defineComponent({
                 model[row.prop] = val
               }
             }, () => row.dataOptions?.map((item, index) =>
-              h(ElRadio, { key: index, label: item.value }, item.label)
+              h(ElRadio, { key: index, value: item.value }, item.label)
             ))
           }
         ],

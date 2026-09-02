@@ -26,8 +26,9 @@ const columns = [
   { prop: 'name', label: '姓名', minWidth: 120 },
   { prop: 'level', label: '级别', width: 100,
     render: (_h: any, { value }: any) => {
-      const colors: Record<string, string> = { P5: '', P6: 'warning', P7: 'success', P8: 'danger' }
-      return h(ElTag, { type: colors[value] ?? '', size: 'small' }, () => value)
+      // el-tag 的 type 不接受空字符串，未命中时用 undefined 走默认样式
+      const colors: Record<string, string> = { P6: 'warning', P7: 'success', P8: 'danger' }
+      return h(ElTag, { type: colors[value] || undefined, size: 'small' }, () => value)
     }
   },
   { prop: 'department', label: '部门', width: 120 },
@@ -41,7 +42,7 @@ const tableOptions = {
   // vxeConfig：深度合并原生 vxe-grid 配置（逃生舱）
   // es-plus 不理解的 vxe 原生配置都可放这里
   vxeConfig: {
-    highlightCurrentRow: true,
+    // 当前行高亮用 rowConfig.isCurrent（vxe v4 已弃用顶层 highlight-current-row）
     rowConfig: { isHover: true, isCurrent: true },
     columnConfig: { resizable: true, minWidth: 60 },
     scrollX: { enabled: true, gt: 10 },

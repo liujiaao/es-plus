@@ -111,16 +111,18 @@ function resolveDatePickerComponent(attrs: Record<string, unknown>): {
   binding: { prop: string; event: string }
   picker?: string
   showTime?: boolean
+  isRange?: boolean
 } {
   const type = attrs.type as string | undefined
   if (type === 'daterange' || type === 'datetimerange' || type === 'monthrange' || type === 'yearrange') {
-    return { component: RangePicker, binding: V_MODEL_BINDING.RangePicker, showTime: type === 'datetimerange' }
+    return { component: RangePicker, binding: V_MODEL_BINDING.RangePicker, showTime: type === 'datetimerange', isRange: true }
   }
   return {
     component: DatePicker,
     binding: V_MODEL_BINDING.DatePicker,
     picker: epTypeToAdvPicker(type),
     showTime: type === 'datetime',
+    isRange: false,
   }
 }
 
@@ -394,9 +396,37 @@ export function useFormInputs() {
             ...restRow.attrs,
           }
 
-          // EP http-request → ADV customRequest（签名基本兼容，直接透传）
+          // EP http-request → ADV customRequest。
+          // 注意：二者契约不同——EP 依据「返回的 Promise resolve」标记上传成功；
+          // ADV customRequest 忽略返回值，必须显式调用 onSuccess/onError。
+          // 故此处桥接：Promise resolve→onSuccess、reject→onError，并用 settled 去重，
+          // 兼容「仅 resolve」「自行调用 onSuccess」「两者皆有」三种写法（对齐 vue3 http-request）。
           if (httpRequest) {
-            uploadCfg.customRequest = httpRequest
+            uploadCfg.customRequest = (options: Record<string, unknown>) => {
+              const opts = options as {
+                onSuccess?: (res: unknown, file?: unknown) => void
+                onError?: (err: unknown) => void
+                file?: unknown
+              }
+              let settled = false
+              const rawSuccess = opts.onSuccess
+              const rawError = opts.onError
+              const onSuccess = (res: unknown) => {
+                if (settled) return
+                settled = true
+                rawSuccess?.(res, opts.file)
+              }
+              const onError = (err: unknown) => {
+                if (settled) return
+                settled = true
+                rawError?.(err)
+              }
+              const ret = httpRequest({ ...options, onSuccess, onError })
+              if (ret && typeof (ret as { then?: unknown }).then === 'function') {
+                ;(ret as Promise<unknown>).then(onSuccess, onError)
+              }
+              return ret
+            }
           }
 
           // EP show-file-list → ADV showUploadList；EP list-type → ADV listType
@@ -441,7 +471,7 @@ export function useFormInputs() {
 // ─── DatePicker / TimePicker 渲染（共享逻辑） ────────────────
 function renderDatePicker(hFn: typeof h, model: Record<string, unknown>, row: FormItemOption) {
   const attrs = (row.attrs as Record<string, unknown>) || {}
-  const { component: DateComp, binding, picker, showTime } = resolveDatePickerComponent(attrs)
+  const { component: DateComp, binding, picker, showTime, isRange } = resolveDatePickerComponent(attrs)
   const fmt = resolveValueFormat(attrs)
   const props: Record<string, unknown> = {
     ...attrs,
@@ -455,8 +485,23 @@ function renderDatePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
   if (props.valueFormat && !props.format) {
     props.format = props.valueFormat
   }
-  // ADV 不认 EP type
+  // EP range placeholder → ADV：RangePicker 的 placeholder 必须是 [start, end] 数组，
+  // 且无 start-placeholder/end-placeholder。单选 DatePicker 沿用 EP 的 placeholder 字符串。
+  if (isRange) {
+    const startPh = (attrs['start-placeholder'] ?? attrs.startPlaceholder) as string | undefined
+    const endPh = (attrs['end-placeholder'] ?? attrs.endPlaceholder) as string | undefined
+    if (startPh !== undefined || endPh !== undefined) {
+      props.placeholder = [startPh ?? '', endPh ?? '']
+    } else if (typeof props.placeholder === 'string') {
+      props.placeholder = [props.placeholder, props.placeholder]
+    }
+  }
+  // ADV DatePicker/RangePicker 不认 EP 的 type/start-placeholder/end-placeholder
   delete props.type
+  delete props['start-placeholder']
+  delete props.startPlaceholder
+  delete props['end-placeholder']
+  delete props.endPlaceholder
   return hFn(DateComp as any, props)
 }
 

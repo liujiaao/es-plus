@@ -7,8 +7,11 @@ import 'vxe-table/dist/style.css'
 import VxeUI from 'vxe-pc-ui'
 import VxeTable from 'vxe-table'
 import router from './router'
-import i18n from './locales'
 import App from './App.vue'
+// 设计 token 单一真源（docs/tokens/design-tokens.css → scripts/sync-tokens.mjs 分发）
+import '@/styles/design-tokens.css'
+// 文档内容设计规范单一真源（docs/theme/docs-content.css → scripts/sync-theme.mjs 分发）
+import '@/styles/docs-content.css'
 import '@/styles/index.scss'
 
 // dist 模式：别名指向打包产物，样式通过下方 import 引入
@@ -38,11 +41,11 @@ app.use(head)
 
 app.use(createPinia())
 app.use(router)
-app.use(i18n)
 app.use(VxeUI)
 app.use(VxeTable)
 
-// Element Plus + icons + ES-Plus — shared with in-doc demo sub-apps
+// Element Plus + icons + ES-Plus + i18n — shared with in-doc demo sub-apps.
+// i18n 由 installAppPlugins 统一安装，main.ts 不再重复 app.use(i18n)（否则 "Plugin has already been applied"）
 installAppPlugins(app)
 
 app.mount('#app')

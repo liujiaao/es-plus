@@ -112,7 +112,7 @@ const statusMap: Record<string, any> = { active: ['在职', 'success'], leave: [
 
 const columns = [
   { type: 'selection', width: 50 },
-  { type: 'snIndex', label: '序号', width: 70 },
+  { type: 'index', label: '序号', width: 70 },
   { prop: 'name', label: '姓名', minWidth: 120 },
   { prop: 'department', label: '部门', width: 120 },
   { prop: 'position', label: '职位', width: 120 },
@@ -123,7 +123,7 @@ const columns = [
   {
     prop: 'status', label: '状态', width: 90,
     render: (_h: any, { value }: any) => {
-      const [label, type] = statusMap[value] ?? [value, '']
+      const [label, type] = statusMap[value] ?? [value, 'info']
       return h(ElTag, { type, size: 'small' }, () => label)
     },
   },

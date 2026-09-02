@@ -14,7 +14,7 @@ const dialog = useDialog()
 const statusMap = {
   paid: { text: '已支付', type: 'success' },
   pending: { text: '待支付', type: 'warning' },
-  shipped: { text: '已发货', type: '' },
+  shipped: { text: '已发货', type: 'primary' },
   cancelled: { text: '已取消', type: 'danger' }
 }
 

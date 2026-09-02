@@ -1,0 +1,41 @@
+{
+  "$schema": "https://es-plus.dev/brand/slogan.schema.json",
+  "name": "ES-Plus",
+  "positioning": "中后台 CRUD 的配置层",
+  "positioningEn": "The Configuration Layer for Admin CRUD",
+  "slogan": {
+    "en": "Write once, render everywhere.",
+    "zh": "中后台 CRUD 的配置层",
+    "subtitle": "一份 JSON 配置 · 三个渲染器 · 生成即编译",
+    "subtitleEn": "One JSON config · Three renderers · Generate then compile"
+  },
+  "promises": [
+    {
+      "key": "one-config",
+      "title": "一份配置",
+      "titleEn": "One Config",
+      "claim": "30 行 vs 250 行",
+      "claimEn": "30 lines vs 250 lines",
+      "desc": "配置即页面，同样一个 CRUD 页面代码量减少 70%，并排 diff 一目了然。",
+      "descEn": "Config as page: the same CRUD page needs 70% less code, proven by a side-by-side diff."
+    },
+    {
+      "key": "cross-renderer",
+      "title": "三端通用",
+      "titleEn": "Cross-Renderer",
+      "claim": "单 Schema → Vue2 / Vue3 / AntDV",
+      "claimEn": "One Schema → Vue2 / Vue3 / AntDV",
+      "desc": "同一份 JSON Schema 在 Vue 2 / Vue 3 / Ant Design Vue 三端渲染出一致界面，换一行 import 即切换。",
+      "descEn": "One JSON Schema renders an identical UI across Vue 2 / Vue 3 / Ant Design Vue — switch by changing one import."
+    },
+    {
+      "key": "ai-native",
+      "title": "AI 原生生成",
+      "titleEn": "AI-Native Generation",
+      "claim": "MCP + 确定性编译 + CI 可编译保证",
+      "claimEn": "MCP + deterministic compile + CI guarantee",
+      "desc": "JSON Schema 是 AI 能可靠生成的载体，MCP / CLI 生成即编译，CI 保证真的能跑。",
+      "descEn": "JSON Schema is the substrate AI can reliably generate; MCP / CLI produce compilable code, guaranteed by CI."
+    }
+  ]
+}

@@ -6,15 +6,19 @@
 </template>
 
 <script setup lang="jsx">
+import { Descriptions, Tag, Divider } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
+
+const DescriptionsItem = Descriptions.Item
 
 const dialog = useDialog()
 
+// ADV Tag 使用 color（预设色），非 el 的 type
 const statusMap = {
-  paid: { text: '已支付', type: 'success' },
-  pending: { text: '待支付', type: 'warning' },
-  shipped: { text: '已发货', type: '' },
-  cancelled: { text: '已取消', type: 'danger' }
+  paid: { text: '已支付', color: 'success' },
+  pending: { text: '待支付', color: 'warning' },
+  shipped: { text: '已发货', color: 'processing' },
+  cancelled: { text: '已取消', color: 'error' }
 }
 
 const mockOrder = {
@@ -59,7 +63,7 @@ const openDetail = (data) => {
           <DescriptionsItem label="客户">{data.customer}</DescriptionsItem>
           <DescriptionsItem label="手机">{data.phone}</DescriptionsItem>
           <DescriptionsItem label="状态">
-            <Tag type={statusMap[data.status]?.type} size="small">{statusMap[data.status]?.text}</Tag>
+            <Tag color={statusMap[data.status]?.color}>{statusMap[data.status]?.text}</Tag>
           </DescriptionsItem>
           <DescriptionsItem label="金额" span={2}>¥{data.amount.toLocaleString()}</DescriptionsItem>
           <DescriptionsItem label="地址" span={2}>{data.address}</DescriptionsItem>
@@ -67,7 +71,7 @@ const openDetail = (data) => {
           <DescriptionsItem label="支付时间">{data.payTime}</DescriptionsItem>
           <DescriptionsItem label="备注" span={2}>{data.remark || '-'}</DescriptionsItem>
         </Descriptions>
-        <Divider contentPosition="left">商品明细</Divider>
+        <Divider orientation="left">商品明细</Divider>
         <Descriptions column={3} border>
           {data.items.map((item, i) => <>
             <DescriptionsItem label={`商品${i + 1}`}>{item.product}</DescriptionsItem>
@@ -83,11 +87,11 @@ const openDetail = (data) => {
           <DescriptionsItem label="姓名">{data.name}</DescriptionsItem>
           <DescriptionsItem label="邮箱" span={2}>{data.email}</DescriptionsItem>
           <DescriptionsItem label="角色">
-            <Tag type={data.role === 'admin' ? 'danger' : ''} size="small">{data.role === 'admin' ? '管理员' : '普通用户'}</Tag>
+            <Tag color={data.role === 'admin' ? 'error' : 'default'}>{data.role === 'admin' ? '管理员' : '普通用户'}</Tag>
           </DescriptionsItem>
           <DescriptionsItem label="部门">{data.department}</DescriptionsItem>
           <DescriptionsItem label="状态">
-            <Tag type={data.status === 'active' ? 'success' : 'info'} size="small">{data.status === 'active' ? '在职' : '离职'}</Tag>
+            <Tag color={data.status === 'active' ? 'success' : 'default'}>{data.status === 'active' ? '在职' : '离职'}</Tag>
           </DescriptionsItem>
           <DescriptionsItem label="最后登录">{data.lastLogin}</DescriptionsItem>
           <DescriptionsItem label="创建时间" span={2}>{data.createTime}</DescriptionsItem>

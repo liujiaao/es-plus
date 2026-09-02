@@ -17,16 +17,20 @@ const install = (app: any, options: Record<string, unknown> = {}) => {
   // 写入模块级单例，确保自动导入模式也能获取全局配置
   configureEsPlus(options as any)
 
+  // globalProperties 模式下，带独立 Plugin 的组件（EsForm/EsTable）由下方 app.use(Plugin) 注册
+  // （注入 methods / provide），此处若再普通注册会触发 "Component xxx has already been registered" 告警
+  const willInstallPlugins = options.globalProperties !== false
+
   // 自动导入模式下跳过组件全局注册，避免重复注册
   if (!options.skipComponentRegistration) {
-    components.forEach((component) => {
-      if (component.name) {
-        app.component(component.name, component)
-      }
+    components.forEach((component: any) => {
+      if (!component.name) return
+      if (willInstallPlugins && component.isPlugin && component.Plugin) return
+      app.component(component.name, component)
     })
   }
 
-  if (options.globalProperties !== false) {
+  if (willInstallPlugins) {
     app.config.globalProperties.$useDialog = useDialog
 
     components.forEach((component: any) => {

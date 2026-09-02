@@ -52,12 +52,9 @@ const formItems = [
       action: '/api/upload',
       accept: 'image/*',
       listType: 'picture-card',
-      limit: 9,
+      maxCount: 9,
       multiple: true,
-      showFileList: true,
-      onExceed: () => {
-        message.warning('最多只能上传9张图片')
-      }
+      showFileList: true
     },
     // 自定义上传请求（必须在 props 外面）
     httpRequest: (options: { file: File }) => {
@@ -101,19 +98,20 @@ const formItems = [
       ])
     },
     on: {
-      success: (_response: any, file: any, fileList: any[]) => {
-        console.log('上传成功:', file.name, fileList)
-        formModel.gallery = [...fileList]
-      },
-      remove: (_file: any, fileList: any[]) => {
-        formModel.gallery = [...fileList]
-      },
-      change: (_file: any, fileList: any[]) => {
-        formModel.gallery = [...fileList]
+      // ADV Upload 仅提供统一的 change 事件（无 el 的 success/remove），
+      // 且回调实参为单一对象 { file, fileList }，而非位置参数 (file, fileList)。
+      change: ({ fileList }: { fileList: any[] }) => {
+        formModel.gallery = fileList.map((f: any) => {
+          // httpRequest 通过适配器 Promise 桥接回填 f.response
+          const res = (f.response && (f.response.data || f.response)) || {}
+          f.url = f.url || res.url || res.link
+          return f
+        })
       },
       preview: (file: any) => {
-        if (file.url) {
-          window.open(file.url, '_blank')
+        const url = file.url || (file.response && (file.response.data || file.response) || {}).url
+        if (url) {
+          window.open(url, '_blank')
         }
       }
     }

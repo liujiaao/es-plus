@@ -6,6 +6,7 @@
 
 <script setup lang="jsx">
 import { reactive } from 'vue'
+import { Input } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
 
 const dialog = useDialog()
@@ -22,11 +23,11 @@ const openNested = () => {
         <p>这是主弹窗的内容</p>
         <div style="margin: 20px 0">
           <label style="display: block; margin-bottom: 8px">名称:</label>
-          <Input v-model={formData.name} placeholder="请输入名称" />
+          <Input value={formData.name} onUpdate:value={(v) => { formData.name = v }} placeholder="请输入名称" />
         </div>
         <div style="margin: 20px 0">
           <label style="display: block; margin-bottom: 8px">描述:</label>
-          <Input v-model={formData.description} type="textarea" rows={3} placeholder="请输入描述" />
+          <Input.TextArea value={formData.description} onUpdate:value={(v) => { formData.description = v }} rows={3} placeholder="请输入描述" />
         </div>
       </div>
     ),

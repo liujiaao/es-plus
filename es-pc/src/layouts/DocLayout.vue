@@ -34,6 +34,12 @@
             <span>首页</span>
           </a-menu-item>
 
+          <!-- 核心案例（L1–L5 场景化梯度） -->
+          <a-menu-item key="cases">
+            <template #icon><ThunderboltOutlined /></template>
+            <span>核心案例</span>
+          </a-menu-item>
+
           <!-- 快速上手 -->
           <a-menu-item key="guide">
             <template #icon><RocketOutlined /></template>
@@ -82,7 +88,7 @@
 
       <!-- 内容区域 -->
       <a-layout-content class="doc-content">
-        <div class="content-wrapper">
+        <div class="content-wrapper es-doc-content">
           <router-view />
         </div>
 
@@ -118,6 +124,8 @@ const route = useRoute()
 const routeNameToMenuKey = (name) => {
   const map = {
     'Home': 'home',
+    'QuickStart': 'quickstart',
+    'Cases': 'cases',
     'Guide': 'guide',
     'EsForm': 'es-form',
     'EsTable': 'es-table',
@@ -160,7 +168,7 @@ function handleMenuClick({ key }) {
 
 .header-left .logo-icon {
   font-size: 24px;
-  color: #1677ff;
+  color: var(--es-brand-primary);
 }
 
 .header-left .logo-text {

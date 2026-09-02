@@ -25,8 +25,8 @@ const columns = [
     label: '分类',
     width: 120,
     render: (_, { row }) => {
-      const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag type={typeMap[row.category] || 'info'} size="small">{row.category}</Tag>
+      const typeMap = { 'electronics': 'error', 'jewelery': 'warning', "men's clothing": 'default', "women's clothing": 'success' }
+      return <Tag color={typeMap[row.category] || 'processing'}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

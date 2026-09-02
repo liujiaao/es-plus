@@ -42,12 +42,12 @@ code {
   border-radius: 4px;
   font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
   font-size: 13px;
-  color: #d63384;
+  color: var(--es-brand-primary);
 }
 
 /* 链接样式 */
 a {
-  color: #1677ff;
+  color: var(--es-brand-primary);
   text-decoration: none;
 }
 
@@ -58,4 +58,45 @@ a:hover {
 /* Ant Design Vue 菜单覆盖 */
 .ant-menu-item-selected {
   font-weight: 500;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Ant Design Vue 4 表格外观统一（直角 + 边框闭合）
+ *
+ * 1) 直角：antd v4 默认给表格容器/表头(borderRadiusLG=8px)加圆角，文档站统一直角。
+ * 2) 边框闭合：antd「边框表格」把外框拆在三处绘制——左边线在 .ant-table-container，
+ *    顶边线在表头 <table>，右边线在各单元格。开启纵向滚动(固定高度)后，表头成为独立
+ *    <table>，其顶边线会越过「滚动条占位列」而右侧无竖线，导致右上角悬空不闭合。
+ *    解决：外框改由 .ant-table-container 单元素统一绘制(天然四角闭合)，并移除表头
+ *    <table> 自带的顶边线、末列单元格右边线，避免双线/悬空。
+ *
+ * antd 样式经 CSS-in-JS 运行时注入，顺序常晚于静态 CSS，故用 !important 保证生效。
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* (1) 全部圆角归零（含 antd 使用的逻辑圆角属性） */
+.ant-table,
+.ant-table-container,
+.ant-table-content,
+.ant-table-header,
+.ant-table-body,
+.ant-table-container table > thead > tr:first-child > *,
+.ant-table-container table > tbody > tr:last-child > * {
+  border-radius: 0 !important;
+  border-start-start-radius: 0 !important;
+  border-start-end-radius: 0 !important;
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+/* (2) 边框表格 + 固定表头(纵向滚动)时闭合外框。
+      .ant-table-header / .ant-table-body 仅在纵向滚动模式存在(非滚动用 .ant-table-content)，
+      故此规则天然只作用于滚动表，不影响普通边框表。
+      antd 把顶边线画在表头 <table> 上、会越过滚动条占位列而右侧无竖线 → 右上角悬空。
+      给表头/表体补最右侧竖线使右边连续、与顶边线闭合，再给表体补底边线收口。 */
+.ant-table.ant-table-bordered > .ant-table-container > .ant-table-header,
+.ant-table.ant-table-bordered > .ant-table-container > .ant-table-body {
+  border-inline-end: 1px solid #f0f0f0 !important;
+}
+.ant-table.ant-table-bordered > .ant-table-container > .ant-table-body {
+  border-bottom: 1px solid #f0f0f0 !important;
 }

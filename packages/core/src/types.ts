@@ -528,8 +528,14 @@ export interface VxeTreeConfig {
   rowField?: string
   /** 父节点字段名（默认 'parentId'） */
   parentField?: string
-  /** 子节点字段名（默认 'children'） */
+  /** 子节点字段名（默认 'children'），vxe v4 推荐用法 */
+  childrenField?: string
+  /**
+   * @deprecated vxe v4 已更名为 childrenField；仍可传入，es-plus 会自动归一化为 childrenField。
+   */
   children?: string
+  /** transform 模式下缓存原始子节点的字段名（默认 '_X_ROW_CHILD'） */
+  mapChildren?: string
   /** 默认展开全部 */
   expandAll?: boolean
   /** 懒加载子节点 */

@@ -1,15 +1,19 @@
 // --- Raw SFC imports from actual example components (auto-sync) ---
 
+import { defineAsyncComponent } from 'vue'
+
 const rawSFCs = import.meta.glob('@/components/examples/**/*.vue', {
   query: '?raw',
   import: 'default',
   eager: true
 }) as Record<string, string>
 
-const componentModules = import.meta.glob(
-  '@/components/examples/**/*.vue',
-  { eager: true }
-) as Record<string, { default: any }>
+// 惰性加载器：仅当示例真正渲染时才编译/加载对应 SFC。
+// 之前用 { eager: true } 会在首次进入任意 /advanced/* 或 /components/* 文档页时
+// 一次性编译全部 96 个示例（含重型 vxe/JSX），造成路由切换特别慢。
+const componentLoaders = import.meta.glob(
+  '@/components/examples/**/*.vue'
+) as Record<string, () => Promise<{ default: any }>>
 
 function parseSFC(raw: string): { template: string; script: string; style: string } {
   const t = raw.match(/<template>([\s\S]*)<\/template>/)
@@ -42,7 +46,8 @@ function code(path: string) {
 
 function getComponent(examplePath: string): any {
   const componentPath = resolveComponentPath(examplePath)
-  return componentModules[componentPath]?.default ?? null
+  const loader = componentLoaders[componentPath]
+  return loader ? defineAsyncComponent(loader) : null
 }
 
 // --- Documentation data ---
@@ -154,7 +159,7 @@ export const docsData: Record<string, any> = {
     ],
     examples: [
       { key: 'basic-switch', title: '引擎切换', description: '一行配置在 el-table（默认）与 vxe-table（高性能）之间切换，列配置/数据/联动完全兼容。', component: getComponent('vxe-table/01-basic-switch'), code: code('vxe-table/01-basic-switch') },
-      { key: 'selection-index', title: '多选与序号列', description: 'multiSelect 复选框列 + snIndex 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
+      { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
       { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行，通过 #expand 具名插槽自定义展开内容，支持 ElDescriptions 详情卡。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
       { key: 'sort-formatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。', component: getComponent('vxe-table/04-sort-formatter'), code: code('vxe-table/04-sort-formatter') },
       { key: 'custom-render', title: '自定义 render 渲染', description: 'render(h, {value, row, index}) 与 el-table 相同 API，vxe 引擎通过 RenderDomTb 桥接透传，无缝兼容。', component: getComponent('vxe-table/05-custom-render'), code: code('vxe-table/05-custom-render') },

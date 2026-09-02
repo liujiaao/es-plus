@@ -214,8 +214,8 @@ watch(() => props.code, () => {
 
 .preview-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color-lighter);
   background-color: var(--bg-color);
@@ -229,6 +229,7 @@ watch(() => props.code, () => {
 .preview-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .preview-content {
@@ -269,7 +270,7 @@ watch(() => props.code, () => {
   pre {
     margin: 0;
     padding: 16px;
-    background-color: #f6f8fa;
+    background-color: var(--es-code-bg, #f6f8fa);
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.6;

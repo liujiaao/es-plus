@@ -91,7 +91,7 @@ const columns = [
         type: 'primary',
         size: 'small',
         onClick: () => toggleEdit(row)
-      }, row.editing ? '保存' : '编辑')
+      }, () => (row.editing ? '保存' : '编辑'))
     ])
   }
 ]

@@ -25,11 +25,11 @@ const formModel = reactive({
 })
 
 const transferData = [
-  { key: 1, label: '选项一' },
-  { key: 2, label: '选项二' },
-  { key: 3, label: '选项三' },
-  { key: 4, label: '选项四' },
-  { key: 5, label: '选项五' }
+  { key: 1, title: '选项一' },
+  { key: 2, title: '选项二' },
+  { key: 3, title: '选项三' },
+  { key: 4, title: '选项四' },
+  { key: 5, title: '选项五' }
 ]
 
 const formItems = [
@@ -92,7 +92,9 @@ const formItems = [
         'onUpdate:targetKeys': (val) => { model.transfer = val },
         dataSource: transferData,
         filterable: true,
-        titles: ['待选', '已选']
+        titles: ['待选', '已选'],
+        // ADV 的 Transfer 默认 render 返回 null，需显式提供 render 才会显示条目文本
+        render: (item) => item.title
       })
     }
   }

@@ -24,6 +24,7 @@
     :destroyOnClose="props.destroyOnClose"
     :centered="props.alignCenter !== false && !props.top"
     :mask="props.modal !== false"
+    :footer="props.isHiddenFooter ? null : undefined"
     @cancel="handleClose"
     @update:open="onUpdateOpen"
   >
@@ -34,6 +35,7 @@
         :render="props.renderHeader"
         :instance="getCurrentInstanceModel"
         :refs="renderBodyRefsObject"
+        :track-ref="false"
       />
       <div
         v-else
@@ -82,6 +84,7 @@
           :render="props.renderFooter"
           :instance="getCurrentInstanceModel"
           :refs="renderBodyRefsObject"
+          :track-ref="false"
         />
         <a-space v-else-if="footerBtns.length">
           <a-button
@@ -330,13 +333,21 @@ const wrapStyle = computed(() => {
 })
 
 // ─── instance 结构（对齐 vue3 getCurrentInstanceModel）──
-const getCurrentInstanceModel = computed(() => ({
-  renderBodyRefs: renderBodyRefsObject.currentRef,
+// 关键：不能用 computed 依赖 renderBodyRefsObject.currentRef —— 该值由 RenderJsx
+// 子组件（render/renderHeader/renderFooter 各一个实例）在 mount/updated 时写入，
+// 若 computed 依赖它并作为 :instance prop 回流给这些子组件，会形成
+// 写 currentRef → computed 失效 → 子组件重渲染 → 再写 → "Maximum recursive updates" 死循环
+// （多个 RenderJsx 写入同一 currentRef 槽位时尤其无法收敛）。
+// 用稳定对象 + getter 惰性读取，切断响应式回环。
+const getCurrentInstanceModel = {
+  get renderBodyRefs() {
+    return renderBodyRefsObject.currentRef
+  },
   renderBodyRefsObject,
   lyFormInstance,
   dialogInstance,
   getRefs: (name?: string) => (name ? renderBodyRefsObject[name] || null : renderBodyRefsObject),
-}))
+}
 
 const slotComponents = { EsForm, EsTable }
 
@@ -355,8 +366,18 @@ function isDisabled(item: BtnConfig): boolean {
   return !!item.disabled
 }
 
+// 透传给 a-button 的额外属性：必须排除所有已显式绑定/自有语义的键，
+// 否则会与显式绑定冲突（如 disabled 支持函数形式，原样透传会让 a-button 收到
+// Function 触发 "Expected Boolean, got Function" 告警，并覆盖 :disabled 的求值结果）。
+const BTN_OWN_KEYS = new Set([
+  'icon', 'type', 'size', 'name', 'click', 'loading', 'disabled',
+  'permissionValue', 'key', 'direction',
+])
 function filterOptions(it: BtnConfig): Record<string, unknown> {
-  const { icon, ...opt } = it as Record<string, unknown>
+  const opt: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(it as Record<string, unknown>)) {
+    if (!BTN_OWN_KEYS.has(k)) opt[k] = v
+  }
   return opt
 }
 

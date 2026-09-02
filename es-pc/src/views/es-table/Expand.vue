@@ -2,8 +2,8 @@
   <div class="example-expand-table">
     <div class="mode-switch">
       <a-radio-group v-model:value="showMode" size="small">
-        <a-radio-button label="expand">展开行</a-radio-button>
-        <a-radio-button label="tree">树形数据</a-radio-button>
+        <a-radio-button value="expand">展开行</a-radio-button>
+        <a-radio-button value="tree">树形数据</a-radio-button>
       </a-radio-group>
     </div>
     <es-table

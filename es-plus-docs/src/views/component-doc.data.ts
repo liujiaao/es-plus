@@ -1,15 +1,19 @@
 // --- Raw SFC imports from actual example components (auto-sync) ---
 
+import { defineAsyncComponent } from 'vue'
+
 const rawSFCs = import.meta.glob('@/components/examples/**/*.vue', {
   query: '?raw',
   import: 'default',
   eager: true
 }) as Record<string, string>
 
-const componentModules = import.meta.glob(
-  '@/components/examples/**/*.vue',
-  { eager: true }
-) as Record<string, { default: any }>
+// 惰性加载器：仅当示例真正渲染时才编译/加载对应 SFC。
+// 之前用 { eager: true } 会在首次进入任意 /advanced/* 或 /components/* 文档页时
+// 一次性编译全部 96 个示例（含重型 vxe/JSX），造成路由切换特别慢。
+const componentLoaders = import.meta.glob(
+  '@/components/examples/**/*.vue'
+) as Record<string, () => Promise<{ default: any }>>
 
 function parseSFC(raw: string): { template: string; script: string; style: string } {
   // Greedy match for template to handle nested <template> tags (Vue scoped slots)
@@ -43,7 +47,8 @@ function code(path: string) {
 
 function getComponent(examplePath: string): any {
   const componentPath = resolveComponentPath(examplePath)
-  return componentModules[componentPath]?.default ?? null
+  const loader = componentLoaders[componentPath]
+  return loader ? defineAsyncComponent(loader) : null
 }
 
 // --- Documentation data ---

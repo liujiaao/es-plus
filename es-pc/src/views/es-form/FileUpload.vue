@@ -81,9 +81,10 @@ const handlePreview = (file: any) => {
     return
   }
   if (ext === 'txt') {
-    if (file.raw) {
+    const rawFile = file.originFileObj || file.raw
+    if (rawFile) {
       const reader = new FileReader()
-      reader.readAsText(file.raw)
+      reader.readAsText(rawFile)
       reader.onload = () => {
         txtPreviewContent.value = reader.result as string
         txtPreviewVisible.value = true
@@ -133,10 +134,8 @@ const formItems = [
       listType: 'text' as const,
       multiple: true,
       showFileList: true,
-      limit: 10,
-      onExceed: () => {
-        message.warning('最多只能上传10个文件')
-      }
+      // ADV 用 maxCount 限制数量（无 el-upload 的 limit/onExceed）
+      maxCount: 10
     },
     // 只 resolve Promise，不调用 options.onSuccess，避免触发两次
     httpRequest: (options: any) => {
@@ -175,7 +174,8 @@ const formItems = [
     fileRender: (h: any, file: any, onRemove: () => void) => {
       const iconComponent = getFileIconComponent(file.name)
       const iconClass = getFileIconClass(file.name)
-      const isSuccess = file.status === 'success'
+      // ADV 上传完成状态为 'done'（非 el-upload 的 'success'）
+      const isSuccess = file.status === 'done'
 
       return h('div', {
         class: 'upload-file-item',
@@ -189,7 +189,7 @@ const formItems = [
           isSuccess
             ? h('span', { class: 'file-size' }, formatFileSize(file.size))
             : h('span', { class: 'file-status' },
-                file.status === 'uploading' ? `上传中 ${file.percentage || 0}%` : '等待上传')
+                file.status === 'uploading' ? `上传中 ${Math.round(file.percent || 0)}%` : '等待上传')
         ]),
 
         // 操作按钮 (仅上传成功后显示)
@@ -229,21 +229,25 @@ const formItems = [
       ])
     },
     on: {
-      success: (response: any, file: any) => {
-        // Element PlusOutlined 把 httpRequest resolve 值传给 response
-        // 手动把 url 绑定到 file 对象上，供 preview/download 使用
-        file.url = response.url
-        file.link = response.link
-        // 同步到 formModel
-        const all = file.raw?.parentList || []
-        formModel.files = all
-          .filter((f: any) => f.status === 'success')
-          .map((f: any) => ({ name: f.name, size: f.size, url: f.url, link: f.url, raw: f.raw, status: f.status }))
-      },
-      remove: (_file: any, uploadFiles: any[]) => {
-        formModel.files = uploadFiles
-          .filter((f: any) => f.status === 'success')
-          .map((f: any) => ({ name: f.name, size: f.size, url: f.url, link: f.url, raw: f.raw, status: f.status }))
+      // ADV Upload 只有统一的 change 事件（无 el-upload 的 success/remove）。
+      // 上传完成(done)的文件把 httpRequest resolve 的结果(file.response)映射到 url/link，
+      // 供预览/下载使用，并同步到 formModel。
+      change: ({ fileList }: { fileList: any[] }) => {
+        formModel.files = fileList
+          .filter((f: any) => f.status === 'done')
+          .map((f: any) => {
+            const res = f.response || {}
+            f.url = f.url || res.url
+            f.link = f.link || res.link
+            return {
+              name: f.name,
+              size: f.size,
+              url: f.url,
+              link: f.link,
+              originFileObj: f.originFileObj,
+              status: 'done'
+            }
+          })
       }
     }
   }

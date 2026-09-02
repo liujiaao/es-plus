@@ -77,7 +77,7 @@
             v-bind="tableBindAttrs"
           >
             <!-- 展开行 -->
-            <template v-if="options.expand && hasExpandSlot" #expandedRowRender="{ record }">
+            <template v-if="expandEnabled" #expandedRowRender="{ record }">
               <slot name="expand" :row="record" />
             </template>
 
@@ -352,6 +352,9 @@ const showPagination = computed(() => {
 })
 const hasDefaultSlot = computed(() => !!slots.default?.())
 const hasExpandSlot = computed(() => !!(slots as any).expand)
+// 展开：options.expand 或显式声明 type:'expand' 列（对齐 el-table/vxe 约定）均启用
+const hasExpandColumn = computed(() => props.columns.some((c) => c.type === 'expand'))
+const expandEnabled = computed(() => (!!props.options.expand || hasExpandColumn.value) && hasExpandSlot.value)
 const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 
 const slotStyles = computed(() => {
@@ -497,6 +500,11 @@ const adaptedColumns = computed(() => {
       cols.push(createSnAdvColumn(col))
       continue
     }
+
+    // 展开列：ADV 通过 expandedRowRender 整行渲染展开内容，不作为数据列。
+    // 若混入数据列，其 scopedSlots.customRender 会让 bodyCell 在每行的窄单元格内
+    // 内联渲染展开内容（如宽 50 的列 → 中文逐字竖排换行）。对齐 vxe/vue3 type:'expand'。
+    if (col.type === 'expand') continue
 
     // 操作列：添加 buttons
     if ((col.prop === 'operate' || col.key === 'operate') && col.btns) {
@@ -975,6 +983,14 @@ defineExpose({
 
   // a-table 根在 flex 容器中会收缩到内容宽度，显式铺满以触发弹性列吸收剩余空间。
   :deep(.ant-table-wrapper) {
+    width: 100%;
+  }
+
+  // vxe-grid / vxe-table 同样在 align-items:flex-start 的 flex 容器中收缩到内容宽度，
+  // 导致 vxe 测量到的容器宽 = 各列宽之和，无剩余空间可分配，弹性列（仅设 minWidth）无法撑开。
+  // 显式铺满后 vxe 才能按容器宽把剩余空间分配给弹性列。
+  :deep(.vxe-grid),
+  :deep(.vxe-table) {
     width: 100%;
   }
 }

@@ -35,7 +35,7 @@ const tableOptions = {
   treeConfig: {
     rowField: 'id',
     parentField: 'parentId',
-    children: 'children',
+    childrenField: 'children',
     mapChildren: '_X_ROW_CHILD',
     transform: true,
   },

@@ -11,7 +11,7 @@
         <div class="search-bar">
           <a-input v-model:value="searchForm.keyword" placeholder="订单号/客户名" allowClear style="width: 180px" />
           <a-select v-model:value="searchForm.status" placeholder="订单状态" allowClear style="width: 130px">
-            <a-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
+            <a-select-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value">{{ s.label }}</a-select-option>
           </a-select>
           <a-button type="primary" @click="handleSearch">查询</a-button>
           <a-button @click="handleReset">重置</a-button>
@@ -39,11 +39,11 @@ const statusOptions = [
   { label: '已取消', value: 'cancelled' }
 ]
 const statusMap = {
-  pending: { text: '待付款', type: 'warning' },
-  paid: { text: '已付款', type: '' },
-  shipped: { text: '已发货', type: 'success' },
-  completed: { text: '已完成', type: 'success' },
-  cancelled: { text: '已取消', type: 'info' }
+  pending: { text: '待付款', color: 'warning' },
+  paid: { text: '已付款', color: 'default' },
+  shipped: { text: '已发货', color: 'success' },
+  completed: { text: '已完成', color: 'success' },
+  cancelled: { text: '已取消', color: 'default' }
 }
 
 // 模拟后端接口
@@ -79,8 +79,8 @@ const columns = [
     label: '状态',
 
     render: (_, { row }) => {
-      const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return h(Tag, { type: s.type, size: 'small' }, () => s.text)
+      const s = statusMap[row.status] || { text: '-', color: 'default' }
+      return h(Tag, { color: s.color }, () => s.text)
     }
   },
   { prop: 'date', label: '日期', width: 120 }

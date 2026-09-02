@@ -32,7 +32,7 @@ const statusMap = {
   rejected: { text: '已驳回', type: 'danger' }
 }
 
-const typeMap = { leave: 'danger', overtime: 'warning', travel: '', expense: 'success' }
+const typeMap = { leave: 'danger', overtime: 'warning', travel: 'primary', expense: 'success' }
 
 const tableData = ref(
   Array.from({ length: 12 }, (_, i) => ({

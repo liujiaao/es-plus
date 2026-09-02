@@ -25,7 +25,7 @@ const selectedCount = ref(0)
 
 const columns = [
   { type: 'selection', width: 50 },
-  { type: 'snIndex', label: '序号', width: 70 },
+  { type: 'index', label: '序号', width: 70 },
   { prop: 'id', label: 'ID', width: 80 },
   { prop: 'name', label: '姓名', minWidth: 120 },
   { prop: 'department', label: '部门', width: 130 },

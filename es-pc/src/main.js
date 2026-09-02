@@ -14,6 +14,7 @@ import '@es-plus/adapter-antdv/dist/style.css'
 import App from './App.vue'
 import router from './router'
 import './styles/design-tokens.css'
+import './styles/docs-content.css'
 import './styles/global.css'
 
 const app = createApp(App)

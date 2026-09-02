@@ -1,0 +1,146 @@
+{
+  "$schema": "https://es-plus.dev/cases/cases.schema.json",
+  "note": "L1-L5 案例目录单一真源（docs/改造三端站点.md §3.2）。三站「核心案例」页据此渲染，link 指向各站承载该案例的文档页。",
+  "levels": [
+    {
+      "id": "L1",
+      "title": "L1 · 30 秒上手",
+      "goal": "30 秒内让访客「看懂了、想试了」",
+      "cases": [
+        {
+          "id": 1,
+          "title": "配置化表单",
+          "pain": "8 字段查询表单要写 70 行模板",
+          "win": "一行配置一个字段",
+          "links": { "vue3": "/components/es-form", "antdv": "/es-form", "vue2": "/component/esform" }
+        },
+        {
+          "id": 2,
+          "title": "配置化表格",
+          "pain": "列 + 操作列 + 分页要写 60 行",
+          "win": "列配置 + btns 操作列",
+          "links": { "vue3": "/components/es-table", "antdv": "/es-table", "vue2": "/component/estable" }
+        },
+        {
+          "id": 3,
+          "title": "编程式弹窗",
+          "pain": "模板声明弹窗要 45 行",
+          "win": "useDialog() 函数调用",
+          "links": { "vue3": "/advanced/use-dialog", "antdv": "/es-dialog", "vue2": "/component/esdialog" }
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "title": "L2 · 全链路联动",
+      "goal": "头号案例，放 C 位",
+      "cases": [
+        {
+          "id": 4,
+          "title": "零事件代码的 CRUD",
+          "pain": "原生「查询→重置→翻页」要 4 个事件函数，还易踩「拿最新表单值」的坑",
+          "win": "EsForm 嵌套 EsTable + triggerEvent:true，0 行事件代码",
+          "links": { "vue3": "/advanced/linkage", "antdv": "/", "vue2": "/component/combination" }
+        }
+      ]
+    },
+    {
+      "id": "L3",
+      "title": "L3 · 复杂 CRUD 痛点",
+      "goal": "覆盖横切关切",
+      "cases": [
+        {
+          "id": 5,
+          "title": "跨页选择",
+          "pain": "批量审核跨 3 页，原生切页就丢",
+          "win": "cachePageSelection 一行",
+          "links": { "vue3": "/components/es-table", "antdv": "/es-table", "vue2": "/component/estable" }
+        },
+        {
+          "id": 6,
+          "title": "远程下拉 + 条件显隐",
+          "pain": "分类接口拉取 + 字段联动",
+          "win": "apiParams + isHidden",
+          "links": { "vue3": "/components/es-form", "antdv": "/es-form", "vue2": "/component/esform" }
+        },
+        {
+          "id": 7,
+          "title": "任意后端适配",
+          "pain": "5 个 BFF 协议各不同",
+          "win": "configTableOut 递归映射",
+          "links": { "vue3": "/components/es-table", "antdv": "/es-table", "vue2": "/component/estable" }
+        },
+        {
+          "id": 8,
+          "title": "按钮权限 + i18n",
+          "pain": "权限点改名要全工程替换",
+          "win": "permission 声明式",
+          "links": { "vue3": "/guide/permission-i18n", "antdv": "/guide", "vue2": "/guide/configuration" }
+        }
+      ]
+    },
+    {
+      "id": "L4",
+      "title": "L4 · 复杂场景适配",
+      "goal": "vxe / virtual，突破组件库能力上限",
+      "cases": [
+        {
+          "id": 9,
+          "title": "万行数据",
+          "pain": "el-table 卡顿",
+          "win": "virtual:true 虚拟滚动",
+          "links": { "vue3": "/advanced/vxe-table", "antdv": "/es-vxe-table", "vue2": "/component/vxetable" }
+        },
+        {
+          "id": 10,
+          "title": "行内编辑 / 行编辑校验",
+          "pain": "表格内直接改 + 校验",
+          "win": "vxe editConfig",
+          "links": { "vue3": "/advanced/vxe-table", "antdv": "/es-vxe-table", "vue2": "/component/vxetable" }
+        },
+        {
+          "id": 11,
+          "title": "树形 / 多级表头 / 合并单元格",
+          "pain": "层级 + 组头 + 复杂报表",
+          "win": "engine:'vxe'",
+          "links": { "vue3": "/advanced/vxe-table", "antdv": "/es-vxe-table", "vue2": "/component/vxetable" }
+        },
+        {
+          "id": 12,
+          "title": "CRUD + 弹窗综合",
+          "pain": "增删改查全闭环",
+          "win": "EsCrudPage / useDialog",
+          "links": { "vue3": "/components/es-crud-page", "antdv": "/es-crud-page", "vue2": "/component/combination" }
+        }
+      ]
+    },
+    {
+      "id": "L5",
+      "title": "L5 · 个性化适配 + 扩展",
+      "goal": "render 逃生舱，证明「不被 DSL 锁死」",
+      "cases": [
+        {
+          "id": 13,
+          "title": "自定义单元格",
+          "pain": "进度条 / 富文本 / 图片",
+          "win": "render 逃生舱",
+          "links": { "vue3": "/components/es-table", "antdv": "/es-table", "vue2": "/component/estable" }
+        },
+        {
+          "id": 14,
+          "title": "第三方控件接入",
+          "pain": "需要 UI 库没有的控件",
+          "win": "render 自定义组件",
+          "links": { "vue3": "/components/es-form", "antdv": "/es-form", "vue2": "/component/esform" }
+        },
+        {
+          "id": 15,
+          "title": "全局配置 + 按需导入 + 主题",
+          "pain": "团队统一默认值",
+          "win": "app.use(ESPlus,{...}) + Resolver + vxeConfig/vxeOn",
+          "links": { "vue3": "/guide/usage", "antdv": "/guide", "vue2": "/guide/configuration" }
+        }
+      ]
+    }
+  ]
+}

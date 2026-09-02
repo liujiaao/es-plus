@@ -5,7 +5,7 @@
       <div class="doc-breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ t('sidebar.section.advanced') }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ t('breadcrumb.advanced') }}</el-breadcrumb-item>
           <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -165,26 +165,28 @@ watch(() => route.params.name, (name) => {
 <style lang="scss" scoped>
 .advanced-doc-page {
   display: flex;
-  padding: 24px 0;
-  max-width: 1400px;
+  padding: 24px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
   margin: 0 auto;
 }
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 32px;
 }
 .doc-breadcrumb {
-  padding: 0 24px 16px;
+  max-width: 860px;
+  padding: 0 0 16px;
 }
 .doc-header {
-  padding: 0 24px 24px;
+  max-width: 860px;
+  padding: 0 0 24px;
   border-bottom: 1px solid var(--border-color-lighter);
   margin-bottom: 24px;
 }
 .doc-title {
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 12px;
 }
@@ -193,7 +195,8 @@ watch(() => route.params.name, (name) => {
   color: var(--text-color-secondary);
 }
 .doc-section {
-  padding: 0 24px 32px;
+  max-width: 860px;
+  padding: 0 0 32px;
 }
 .section-title {
   font-size: 24px;
@@ -201,7 +204,7 @@ watch(() => route.params.name, (name) => {
   color: var(--text-color-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--primary-color-light);
+  border-bottom: 1px solid var(--border-color-lighter);
 }
 .features-grid {
   display: grid;
@@ -209,15 +212,29 @@ watch(() => route.params.name, (name) => {
   gap: 20px;
 }
 .feature-card {
-  padding: 24px;
-  background-color: var(--fill-color-light);
-  border-radius: 8px;
+  padding: 28px 24px;
+  background-color: var(--bg-color);
+  border-radius: 14px;
   text-align: center;
   border: 1px solid var(--border-color-lighter);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   color: var(--primary-color);
-  margin-bottom: 12px;
+  background: var(--primary-color-light, rgba(59, 130, 246, 0.1));
+  margin-bottom: 16px;
 }
 .feature-card h4 {
   font-size: 16px;
@@ -227,6 +244,7 @@ watch(() => route.params.name, (name) => {
 }
 .feature-card p {
   font-size: 14px;
+  line-height: 1.6;
   color: var(--text-color-secondary);
 }
 .examples-list {
@@ -246,7 +264,8 @@ watch(() => route.params.name, (name) => {
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  padding: 24px;
+  max-width: 860px;
+  padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);
 }

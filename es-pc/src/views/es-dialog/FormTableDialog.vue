@@ -17,7 +17,7 @@ const tableData = ref([
   { id: 4, name: '项目 Delta', status: 'active', manager: '赵六', budget: 45000 }
 ])
 
-const statusMap = { active: { text: '进行中', type: 'success' }, pending: { text: '待启动', type: 'warning' }, completed: { text: '已完成', type: 'info' } }
+const statusMap = { active: { text: '进行中', color: 'success' }, pending: { text: '待启动', color: 'warning' }, completed: { text: '已完成', color: 'default' } }
 const statusOptions = [
   { label: '进行中', value: 'active' }, { label: '待启动', value: 'pending' }, { label: '已完成', value: 'completed' }
 ]
@@ -38,7 +38,7 @@ const columns = [
   { prop: 'name', label: '项目名称' },
   { prop: 'status', label: '状态', width: 100, render: (_, { row }) => {
     const s = statusMap[row.status] || {}
-    return <Tag type={s.type} size="small">{s.text}</Tag>
+    return <Tag color={s.color}>{s.text}</Tag>
   }},
   { prop: 'manager', label: '负责人' },
   { prop: 'budget', label: '预算', width: 120, formatter: (r) => `¥${r.budget.toLocaleString()}` }

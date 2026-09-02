@@ -65,7 +65,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       </CodeDemo>
 
       <h3>多选与序号列</h3>
-      <p><code>type: 'selection'</code> 复选框列 + <code>type: 'snIndex'</code> 序号列，<code>getSelectionRows()</code> 获取选中。</p>
+      <p><code>type: 'selection'</code> 复选框列 + <code>type: 'index'</code> 序号列，<code>getSelectionRows()</code> 获取选中。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/Selection.vue']">
         <EsVxeSelection />
       </CodeDemo>
