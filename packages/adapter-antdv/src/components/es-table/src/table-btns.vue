@@ -64,6 +64,9 @@
 
 <script setup lang="ts">
 import { computed, h, inject, defineComponent } from 'vue'
+// 本地导入 AButton↔<a-button>，对齐 es-table/component.vue 的别名策略，
+// 使命令式弹窗内（appContext 为 null）表格操作列按钮仍能解析。
+import { Button as AButton } from 'ant-design-vue'
 import { getButtonPosition } from '@es-plus/core'
 import { getAdvIconComponent } from '../../../utils/icon'
 import { getGlobalConfig } from '../../../config'

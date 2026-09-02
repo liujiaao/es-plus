@@ -179,7 +179,21 @@ export default { name: 'EsForm' }
 <script setup lang="ts">
 import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import type { VNode } from 'vue'
-import { Form, FormItem, Row, Col, Button, Space, Input } from 'ant-design-vue'
+// 本地导入并按模板标签命名（AForm↔<a-form> 等），使模板解析为直接组件引用而非全局 resolveComponent。
+// 对齐 @es-plus/vue3（其 EsForm 直接 import ElForm/ElFormItem…），确保在 useDialog 命令式渲染的
+// 脱离子树（appContext 为 null，全局注册不可见）中仍能正常解析。Input 供脚本内 h(Input) 使用。
+import {
+  Form as AForm,
+  FormItem as AFormItem,
+  Row as ARow,
+  Col as ACol,
+  Button as AButton,
+  Space as ASpace,
+  Dropdown as ADropdown,
+  Menu as AMenu,
+  MenuItem as AMenuItem,
+  Input,
+} from 'ant-design-vue'
 import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
@@ -306,7 +320,11 @@ const formProps = computed(() => ({
 }))
 
 const labelColStyle = computed(() => {
-  const w = (formLayoutRef.value.labelWidth as string | number) || (formLayout.value.labelWidth as string | number) || '100px'
+  // 未配置 labelWidth 时，标签宽度取内容自适应（flex: 0 0 auto），对齐 @es-plus/vue3。
+  // vue3 用 Element Plus，el-form 无 label-width 即为标签内容宽度；此前 antdv 硬编码 100px 固定标签，
+  // 在弹窗窄列（span=8 ≈ 1/3）下会挤占输入框，导致表单项无法自动分配宽度。
+  const w = (formLayoutRef.value.labelWidth as string | number) || (formLayout.value.labelWidth as string | number)
+  if (w === undefined || w === null || w === '') return { flex: '0 0 auto' }
   const width = typeof w === 'number' ? `${w}px` : String(w)
   return { flex: `0 0 ${width}` }
 })
@@ -692,6 +710,16 @@ defineExpose({
 
   :deep(.ant-form-item-control) {
     min-width: 0;
+  }
+
+  // 表单控件铺满控制区，对齐 @es-plus/vue3（Element Plus 中 el-select/el-date-picker 等默认 100%）。
+  // ant-design-vue 里仅 a-input 默认满宽，a-select/a-picker/a-input-number 默认按内容宽度，
+  // 在弹窗窄列下会显得过窄，故统一强制满宽。
+  :deep(.ant-select),
+  :deep(.ant-picker),
+  :deep(.ant-input-number),
+  :deep(.ant-cascader-picker) {
+    width: 100%;
   }
 
   .buttonOperate {

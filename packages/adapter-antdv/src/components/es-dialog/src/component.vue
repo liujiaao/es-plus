@@ -124,6 +124,10 @@ import type { BtnConfig } from '../../../types'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import RenderJsx from './render-jsx.vue'
+// 本地导入并按模板标签命名（AModal↔<a-modal> 等），使模板解析为直接组件引用而非全局 resolveComponent。
+// 对齐 @es-plus/vue3（其 EsDialog 直接 import ElDialog/ElButton/ElIcon），确保在 useDialog 命令式
+// 渲染的脱离子树（appContext 为 null，全局注册不可见）中仍能解析弹窗骨架组件。
+import { Modal as AModal, Button as AButton, Space as ASpace } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
 // ─── Props（onClosed/onSubmit 不声明为 prop，让其作为事件监听器流入）──
