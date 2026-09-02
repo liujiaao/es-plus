@@ -941,6 +941,18 @@ defineExpose({
     if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
     else toggleRowSelection(row, selected !== false)
   },
+  // 仅重排列宽/布局，不重新取数
+  doLayout: () => vxeEngineRef.value?.doLayout?.(),
+  // vxe 行内编辑 CRUD（engine:'vxe' 时有效）
+  getUpdateRecords: () => isVxeEngine.value ? vxeEngineRef.value?.getUpdateRecords?.() ?? [] : [],
+  getInsertRecords: () => isVxeEngine.value ? vxeEngineRef.value?.getInsertRecords?.() ?? [] : [],
+  getRemoveRecords: () => isVxeEngine.value ? vxeEngineRef.value?.getRemoveRecords?.() ?? [] : [],
+  revertData: (rows?: Record<string, unknown> | Record<string, unknown>[]) => vxeEngineRef.value?.revertData?.(rows),
+  clearActived: () => vxeEngineRef.value?.clearActived?.(),
+  clearValidate: () => vxeEngineRef.value?.clearValidate?.(),
+  validate: (rows?: Record<string, unknown>[]) => vxeEngineRef.value?.validate?.(rows),
+  // vxe 原始实例（100% vxe 方法/事件访问入口；getPrintHtml/print 等经此获取）
+  vxeInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null,
 })
 </script>
 

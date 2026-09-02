@@ -39,6 +39,13 @@ export default defineConfig(({ mode }) => {
   const esPlusSrc = resolve(__dirname, '../packages/vue3/src')
   const esPlusDist = resolve(__dirname, '../packages/vue3/dist/es-plus.js')
   const esPlusDistCss = resolve(__dirname, '../packages/vue3/dist/style.css')
+  // @es-plus/core 目标：源码模式指向 src（全实时，改核心无需重新 build），dist 模式指向 build 产物。
+  // 不加此别名时 Vite 会把 @es-plus/core 当普通 node_modules 裸依赖预打包进 .vite/deps，
+  // 与 monorepo 里刚重建的 build 产物脱节 —— 曾导致 patchHtmlRowSpans 等新导出加载到旧缓存版本
+  // （表现：vxe 打印合并单元格失效，预览为扁平表格）。
+  const esCoreTarget = useDist
+    ? resolve(__dirname, '../packages/core/build')
+    : resolve(__dirname, '../packages/core/src')
 
   const aliasTarget = useDist ? esPlusDist : esPlusSrc
 
@@ -63,6 +70,9 @@ export default defineConfig(({ mode }) => {
         // 走 facade 文件（src/utils/shared-browser.ts）是因为 shared 的 index 顺带
         // re-export 了 node:fs 依赖的 schema-validator —— 浏览器 bundler 解析不了。
         { find: '@es-plus/shared', replacement: resolve(__dirname, 'src/utils/shared-browser.ts') },
+        // @es-plus/core 显式指向 monorepo 工作区（src 或 build），避免被当裸依赖预打包成陈旧副本。
+        // 字符串前缀匹配同时覆盖子路径（如 @es-plus/core/shared）。
+        { find: '@es-plus/core', replacement: esCoreTarget },
         // 所有 es-plus 子路径统一指向同一入口（dist 模式指向打包产物，否则指向源码）
         { find: 'es-plus/components/es-form', replacement: aliasTarget },
         { find: 'es-plus/components/es-table', replacement: aliasTarget },

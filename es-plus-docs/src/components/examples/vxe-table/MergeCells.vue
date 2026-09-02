@@ -50,9 +50,8 @@ const PRINT_STYLE = `
   tfoot td { background: #fafafa; font-weight: bold; }
 `
 
-function computeSpan(data: any[], rowIndex: number, colIndex: number, enableMerge: boolean | 'row') {
+function computeSpan(data: any[], rowIndex: number, field: string, enableMerge: boolean | 'row') {
   if (!enableMerge) return { rowspan: 1, colspan: 1 }
-  const field = leafFields[colIndex]
   if (MERGE_ALWAYS.includes(field)) return mergeRows(data, rowIndex, field)
   if (enableMerge === true && MERGE_FULL.includes(field)) return mergeRows(data, rowIndex, field)
   return { rowspan: 1, colspan: 1 }
@@ -60,12 +59,13 @@ function computeSpan(data: any[], rowIndex: number, colIndex: number, enableMerg
 
 // vxe print 不执行 mergeMethod（与 spanMethod 互斥），用 patchHtmlRowSpans 修正 tbody rowspan。
 // getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 中的 thead{display:table-header-group} 实现每页重复表头。
+// 注意：patchHtmlRowSpans 回调的 ci 是 tbody <td> 的 DOM 顺序 = 叶子列全局顺序，用 leafFields[ci] 取 field。
 async function doPrint(data: any[], opts: Record<string, any>) {
   const grid = getGrid()
   if (!grid) return
   const em = queryForm.enableMerge
   const { html } = await grid.getPrintHtml({ ...opts, data })
-  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, ci, em)) })
+  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
 }
 
 function handlePrintPreview() {
@@ -189,8 +189,10 @@ const MERGE_FULL   = ['totalTarget', 'totalActual']      // enableMerge === true
 
 // ─── spanMethod：行列混合动态合并 ──────────────────────────────
 // 注意：vxe-grid v4 的 spanMethod 回调不传 data，必须从闭包中取 tableData.value
-function spanMethod({ rowIndex, columnIndex }: any) {
-  return computeSpan(tableData.value, rowIndex, columnIndex, queryForm.enableMerge)
+// 注意：多级表头下 vxe 的 columnIndex 是「组内相对索引」（每组从 0 重新计数），
+// 不能按叶子列全局顺序索引；直接用 column.field 最稳妥。
+function spanMethod({ rowIndex, column }: any) {
+  return computeSpan(tableData.value, rowIndex, column.field, queryForm.enableMerge)
 }
 
 function mergeRows(data: any[], rowIndex: number, field: string) {

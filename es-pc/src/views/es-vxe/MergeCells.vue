@@ -48,12 +48,13 @@ const PRINT_STYLE = `
 
 // vxe print 不执行 spanMethod（与之互斥），用 patchHtmlRowSpans 修正 tbody rowspan/colspan。
 // getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 的 thead{display:table-header-group} 实现每页重复表头。
+// ci 是 tbody <td> 的 DOM 顺序 = 叶子列全局顺序，用 leafFields[ci] 取 field。
 async function doPrint(data, opts) {
   const grid = getGrid()
   if (!grid) return
   const em = queryForm.enableMerge
   const { html } = await grid.getPrintHtml({ ...opts, data })
-  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, ci, em)) })
+  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
 }
 
 function handlePrintPreview() {
@@ -167,17 +168,18 @@ function mergeRows(data, rowIndex, field) {
   return { rowspan: count, colspan: 1 }
 }
 
-function computeSpan(data, rowIndex, colIndex, enableMerge) {
+function computeSpan(data, rowIndex, field, enableMerge) {
   if (!enableMerge || enableMerge === 'none') return { rowspan: 1, colspan: 1 }
-  const field = leafFields[colIndex]
   if (MERGE_ALWAYS.includes(field)) return mergeRows(data, rowIndex, field)
   if (enableMerge === 'all' && MERGE_FULL.includes(field)) return mergeRows(data, rowIndex, field)
   return { rowspan: 1, colspan: 1 }
 }
 
 // spanMethod：行列混合动态合并（vxe v4 回调不传 data，从闭包取 tableData.value）
-function spanMethod({ rowIndex, columnIndex }) {
-  return computeSpan(tableData.value, rowIndex, columnIndex, queryForm.enableMerge)
+// 注意：多级表头下 columnIndex 是「组内相对索引」（每组从 0 重新计数），不能用它查 leafFields；
+// 直接用 column.field 最稳妥（getPrintHtml 的 patchHtmlRowSpans 回调用叶子列 DOM 顺序 leafFields[ci]）。
+function spanMethod({ rowIndex, column }) {
+  return computeSpan(tableData.value, rowIndex, column.field, queryForm.enableMerge)
 }
 
 // 编辑完成后重算派生字段

@@ -463,7 +463,7 @@ const goToGithub = () => {
   align-items: center;
   min-height: 600px;
   padding: 80px 48px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  // background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
 }
 
 .hero-content {
