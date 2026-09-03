@@ -100,3 +100,14 @@ a:hover {
 .ant-table.ant-table-bordered > .ant-table-container > .ant-table-body {
   border-bottom: 1px solid #f0f0f0 !important;
 }
+
+/* 快速上手/开发指南等页面手写了深色 .code-block（背景 #1e1e2e、浅色代码文字 #e0e0e0）。
+ * 这些页面被 DocLayout 包在 .es-doc-content 内，而 docs-content.css（单一权威源）会给
+ * .es-doc-content pre 施加亮色 GitHub 风格背景（#f6f8fa）。亮色背景渗入深色 .code-block 后，
+ * 叠加浅色代码文字 → “亮底浅字几乎看不清 + 深色容器边缘割裂”。此处把 .code-block 内的 pre
+ * 归还给深色容器：透明背景、去除多余圆角。选择器 (.es-doc-content .code-block pre = 0,2,1)
+ * 稳定压过渗入规则 (.es-doc-content pre = 0,1,1)，与样式加载顺序无关。 */
+.es-doc-content .code-block pre {
+  background: transparent;
+  border-radius: 0;
+}

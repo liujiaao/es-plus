@@ -45,9 +45,10 @@ import EsForm from './components/es-form'
 import EsTable from './components/es-table'
 import EsDialog, { useDialog } from './components/es-dialog'
 import EsCrudPage from './components/es-crud-page'
+import EsErrorBoundary from './components/es-error-boundary'
 
 // 组件清单（用于全局注册）
-const components = [EsForm, EsTable, EsDialog, EsCrudPage]
+const components = [EsForm, EsTable, EsDialog, EsCrudPage, EsErrorBoundary]
 
 interface InstallOptions extends Record<string, unknown> {
   /** 是否跳过组件的全局注册（按需导入场景下置为 true） */
@@ -174,6 +175,7 @@ export {
   EsTable,
   EsDialog,
   EsCrudPage,
+  EsErrorBoundary,
   useDialog,
   configureEsPlus,
   httpRequest,

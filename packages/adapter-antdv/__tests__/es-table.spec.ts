@@ -284,6 +284,9 @@ describe('EsTable — 暴露的实例方法', () => {
     const vm = wrapper.vm as any
     const result = vm.httpRequestInstance()
     expect(result).toBeInstanceOf(Promise)
+    // 无 url/apiParams 时内部 fail(...) 会拒绝该 Promise。必须在此显式 await 捕获，
+    // 否则拒绝逃逸为 Unhandled Rejection，导致 vitest 整轮退出码 1（三端无法同批全绿）。
+    await expect(result).rejects.toThrow()
   })
 
   it('getSelectionRows — 返回数组', () => {

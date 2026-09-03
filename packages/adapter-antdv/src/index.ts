@@ -16,6 +16,7 @@ import EsFormComp from './components/es-form'
 import EsDialogComp from './components/es-dialog'
 import useDialogOrig from './components/es-dialog/src/use-dialog'
 import EsCrudPageComp from './components/es-crud-page'
+import EsErrorBoundaryComp from './components/es-error-boundary'
 import SvgIconComp from './components/svg-icon'
 import { configureEsPlus as configureEsPlusCore } from './config'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
@@ -35,6 +36,7 @@ const components = [
   EsFormComp,
   EsTableComp,
   EsCrudPageComp,
+  EsErrorBoundaryComp,
   SvgIconComp,
 ]
 
@@ -76,6 +78,7 @@ export { EsFormComp as EsForm }
 export { EsDialogComp as EsDialog }
 export { useDialogOrig as useDialog }
 export { EsCrudPageComp as EsCrudPage }
+export { EsErrorBoundaryComp as EsErrorBoundary }
 export { SvgIconComp as SvgIcon }
 export { configureEsPlusCore as configureEsPlus }
 export { httpRequest }

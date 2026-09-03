@@ -4,13 +4,14 @@ import useDialog from './components/es-dialog/src/use-dialog'
 import EsForm from './components/es-form'
 import EsTable from './components/es-table'
 import EsCrudPage from './components/es-crud-page'
+import EsErrorBoundary from './components/es-error-boundary'
 import SvgIcon from './components/svg-icon'
 import { configureEsPlus } from './config'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
 import { httpRequest } from '@es-plus/core'
 
 // 组件列表
-const components = [EsDialog, EsForm, EsTable, EsCrudPage, SvgIcon]
+const components = [EsDialog, EsForm, EsTable, EsCrudPage, EsErrorBoundary, SvgIcon]
 
 // Vue 3 插件安装函数
 const install = (app: any, options: Record<string, unknown> = {}) => {
@@ -52,6 +53,7 @@ export {
   EsForm,
   EsTable,
   EsCrudPage,
+  EsErrorBoundary,
   SvgIcon,
   useDialog,
   configureEsPlus,

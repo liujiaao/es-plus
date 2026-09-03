@@ -1,25 +1,27 @@
 <template>
   <div class="es-crud-page">
-    <es-table
-      ref="tableRef"
-      :columns="mergedColumns"
-      :options="mergedOptions"
-      v-model:data-source="tableData"
-      v-model:pagination="paginationState"
-      v-bind="$attrs"
-    >
-      <es-form
-        v-if="schema.formItems && schema.formItems.length"
-        ref="formRef"
-        :model="queryModel"
-        :form-item-list="schema.formItems"
-        :config-btn="mergedFormBtns"
-        :layout-form-props="formLayoutProps"
-      />
-      <template v-for="(_, name) in $slots" #[name]="slotData">
-        <slot :name="name" v-bind="slotData || {}" />
-      </template>
-    </es-table>
+    <es-error-boundary @error="onCrudError">
+      <es-table
+        ref="tableRef"
+        :columns="mergedColumns"
+        :options="mergedOptions"
+        v-model:data-source="tableData"
+        v-model:pagination="paginationState"
+        v-bind="$attrs"
+      >
+        <es-form
+          v-if="schema.formItems && schema.formItems.length"
+          ref="formRef"
+          :model="queryModel"
+          :form-item-list="schema.formItems"
+          :config-btn="mergedFormBtns"
+          :layout-form-props="formLayoutProps"
+        />
+        <template v-for="(_, name) in $slots" #[name]="slotData">
+          <slot :name="name" v-bind="slotData || {}" />
+        </template>
+      </es-table>
+    </es-error-boundary>
   </div>
 </template>
 
@@ -28,6 +30,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
+import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import useDialog from '../../es-dialog/src/use-dialog'
 import type {
   CrudPageSchema,
@@ -349,7 +352,19 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
 
 // ─── 弹窗管理 ───
 
+// 错误边界回调：子树（表格/表单/单元格 render）抛错被 EsErrorBoundary 拦截后在此记录，
+// 故障被隔离在边界内、不再冒泡为整页崩溃。
+function onCrudError(err: unknown, info: string) {
+  console.error('[EsCrudPage] 子树渲染错误已被错误边界拦截：', info, err)
+}
+
 const dialogInstances = new Map<string, any>()
+
+// useDialog() 必须在 setup 顶层调用：它在【调用时刻】通过 getCurrentInstance() 捕获 appContext。
+// 若放在 openDialog（DOM 事件回调）内调用，此刻无活动组件实例 → getCurrentInstance() 为 null →
+// appContext 为 null，命令式弹窗将丢失 app 级 provide/inject、globalProperties、i18n，以及用户
+// render 中按全局名解析的组件。提到 setup 顶层后 appContext 被正确捕获，单例回调跨 key 复用。
+const dialog = useDialog()
 
 function openDialog(key: string, row?: Record<string, unknown>) {
   const dialogConfig = normalizedDialogs.value[key]
@@ -357,7 +372,6 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 
   emit('dialog-open', key, row)
 
-  const dialog = useDialog()
   dialogInstances.set(key, dialog)
 
   const formData = reactive<Record<string, unknown>>({})

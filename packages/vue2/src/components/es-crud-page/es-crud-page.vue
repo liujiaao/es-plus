@@ -6,26 +6,28 @@
         - v-model:pagination → :pagination.sync
       Vue 2.3+ 支持 .sync 修饰符自动展开为 :data-source + @update:data-source
     -->
-    <es-table
-      ref="tableRef"
-      :columns="mergedColumns"
-      :options="mergedOptions"
-      :data-source.sync="tableData"
-      :pagination.sync="paginationState"
-      v-bind="$attrs"
-    >
-      <es-form
-        v-if="schema.formItems && schema.formItems.length"
-        ref="formRef"
-        :model="queryModel"
-        :form-item-list="schema.formItems"
-        :config-btn="mergedFormBtns"
-        :layout-form-props="formLayoutProps"
-      />
-      <template v-for="(_, name) in $slots" #[name]="slotData">
-        <slot :name="name" v-bind="slotData || {}" />
-      </template>
-    </es-table>
+    <es-error-boundary @error="onCrudError">
+      <es-table
+        ref="tableRef"
+        :columns="mergedColumns"
+        :options="mergedOptions"
+        :data-source.sync="tableData"
+        :pagination.sync="paginationState"
+        v-bind="$attrs"
+      >
+        <es-form
+          v-if="schema.formItems && schema.formItems.length"
+          ref="formRef"
+          :model="queryModel"
+          :form-item-list="schema.formItems"
+          :config-btn="mergedFormBtns"
+          :layout-form-props="formLayoutProps"
+        />
+        <template v-for="(_, name) in $slots" #[name]="slotData">
+          <slot :name="name" v-bind="slotData || {}" />
+        </template>
+      </es-table>
+    </es-error-boundary>
   </div>
 </template>
 
@@ -48,6 +50,7 @@ import { defineComponent, ref, reactive, computed, watch } from '../../vue-compa
 import { MessageBox } from 'element-ui'
 import EsForm from '../es-form/es-form.vue'
 import EsTable from '../es-table/component.vue'
+import EsErrorBoundary from '../es-error-boundary/es-error-boundary.vue'
 import useDialog from '../es-dialog/use-dialog'
 import type {
   CrudPageSchema,
@@ -62,7 +65,7 @@ import type { BtnConfig, TableColumn } from '@es-plus/core'
 
 export default defineComponent({
   name: 'EsCrudPage',
-  components: { EsForm, EsTable },
+  components: { EsForm, EsTable, EsErrorBoundary },
   inheritAttrs: false,
   props: {
     schema: { type: Object as () => CrudPageSchema, required: true },
@@ -85,6 +88,14 @@ export default defineComponent({
     'dialog-cancel',
     'dialog-open',
   ],
+  methods: {
+    // 错误边界回调：子树（表格/表单/单元格 render）抛错被 EsErrorBoundary 拦截后在此记录，
+    // 故障被隔离在边界内、不再冒泡为整页崩溃。
+    onCrudError(err: unknown, info: string) {
+      // eslint-disable-next-line no-console
+      console.error('[EsCrudPage] 子树渲染错误已被错误边界拦截：', info, err)
+    },
+  },
   setup(props, { emit, expose }) {
     const tableRef = ref<any>(null)
     const formRef = ref<any>(null)
@@ -360,13 +371,17 @@ export default defineComponent({
     // ─── 弹窗管理 ─────
     const dialogInstances = new Map<string, ReturnType<typeof useDialog>>()
 
+    // useDialog() 在 setup 顶层调用（而非 openDialog 事件回调内）：与 vue3/antdv 三端保持一致的
+    // 组合式调用位置。vue2 版 useDialog 基于 Vue.extend、不依赖 appContext（全局插件经原型链继承），
+    // 故此改动对 vue2 为纯一致性/规范性对齐；单例回调跨 key 复用，语义不变。
+    const dialog = useDialog()
+
     function openDialog(key: string, row?: Record<string, unknown>) {
       const dialogConfig = normalizedDialogs.value[key]
       if (!dialogConfig) return
 
       emit('dialog-open', key, row)
 
-      const dialog = useDialog()
       dialogInstances.set(key, dialog)
 
       const formData = reactive<Record<string, unknown>>({})
