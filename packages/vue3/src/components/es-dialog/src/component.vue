@@ -40,7 +40,7 @@
         </template>
       </div>
 
-      <template #footer v-if="!attrs.isHiddenFooter">
+      <template #footer v-if="!props.isHiddenFooter">
         <span v-if="!slots.footer" class="dialog-footer">
           <template v-if="props.renderFooter && typeof props.renderFooter === 'function'">
             <RenderJsx :render="props.renderFooter" :instance="getCurrentInstanceModel" />

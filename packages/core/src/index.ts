@@ -121,6 +121,8 @@ export {
   getCallback,
   normalizeFormItem,
   normalizeFormItemList,
+  filterBtnProps,
+  BTN_ORCHESTRATION_KEYS,
 } from './compat'
 // compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出
 export {

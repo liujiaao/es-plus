@@ -25,7 +25,7 @@
       >
         <div class="table_inner_containers">
           <table-btns
-            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || options.vxeConfig?.toolbarConfig))"
+            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || (options.vxeConfig as any)?.toolbarConfig))"
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
             :btn-config="options.configBtn"
@@ -223,6 +223,22 @@ const defaultOptions: TableOptions = {
   headerCellStyle: { backgroundColor: '#f5f7fa' },
   highlightCurrentRow: true,
   cachePageSelection: true,
+}
+
+/**
+ * 操作列文字按钮的语义色板 —— 复刻 vue3 (`text: true` + `type: btn.type || 'primary'`) 的着色效果。
+ *
+ * Element UI v2 的 `type="text"` 与语义色（danger/success/…）互斥，无法像 Element Plus 那样
+ * 「文字样式 + 语义色」并存；且颜色在 SCSS 编译期固化、无 CSS 变量可引用。为在保持文字按钮
+ * 外观的同时表达按钮语义（如删除按钮显示危险红），此处按类型注入内联 color。
+ * 未命中的类型（含缺省）不注入，沿用 el-button--text 默认主色（#409EFF，等价 vue3 的 `|| 'primary'`）。
+ */
+const OPERATION_BTN_TYPE_COLOR: Record<string, string> = {
+  primary: '#409EFF',
+  success: '#67C23A',
+  warning: '#E6A23C',
+  danger: '#F56C6C',
+  info: '#909399',
 }
 
 // es-table 内部选项键，不应透传给 el-table
@@ -721,8 +737,13 @@ export default defineComponent({
                         type: 'text',
                       },
                       attrs: {
+                        // data-btn-type 保留为外部样式钩子
                         ...(btn.type ? { 'data-btn-type': btn.type } : {}),
                       },
+                      // 语义色内联复刻 vue3 的 (text + type) 着色，弥补 Element UI v2 的 type 互斥限制
+                      style: OPERATION_BTN_TYPE_COLOR[btn.type as string]
+                        ? { color: OPERATION_BTN_TYPE_COLOR[btn.type as string] }
+                        : undefined,
                       on: {
                         click: () => btn.clickEvent?.(row),
                       },

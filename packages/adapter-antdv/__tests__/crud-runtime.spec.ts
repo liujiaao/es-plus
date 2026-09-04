@@ -176,6 +176,33 @@ describe('CRUD 运行时全链路（adapter-antdv, 真实组件 + 内存后端�
     expect(wrapper.text()).toContain('Carol')
   })
 
+  it('防重复提交：快速双击「确定」→ onConfirm 仅触发一次（新增只发生一次）', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await nextTick()
+
+    findButtonByText(wrapper.element, '新增')!.click()
+    await nextTick()
+    await flushPromises()
+
+    const input = dialogInput()
+    expect(input).toBeTruthy()
+    input.value = 'Carol'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+
+    const confirmBtn = findButtonByText(document.body, '确定')!
+    expect(confirmBtn).toBeTruthy()
+    // 在异步 onConfirm 未返回前连续点击两次：第二次应被防重入闸门忽略
+    confirmBtn.click()
+    confirmBtn.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(backend.calls.create, '双击确定后新增仅应发生一次').toBe(1)
+    expect(backend.store).toHaveLength(3)
+  })
+
   it('编辑：点行「编辑」→ 预填 → 改值 → 确定 → 后端更新 → 列表刷新', async () => {
     const wrapper = mountPage()
     await flushPromises()
@@ -210,6 +237,11 @@ describe('CRUD 运行时全链路（adapter-antdv, 真实组件 + 内存后端�
 
     const delBtn = findButtonByText(wrapper.element, '删除')
     expect(delBtn, '行内应渲染出「删除」按钮').toBeTruthy()
+    // danger 视觉对齐 vue3/EP：type:'danger' → ADV danger 布尔 → ant-btn-dangerous（实心红）。
+    // 反例：type:'primary' 的「编辑」按钮不应带 dangerous 类。
+    expect(delBtn!.className, '删除按钮应带 ant-btn-dangerous 类（danger 布尔已生效）').toContain('ant-btn-dangerous')
+    const editBtnForContrast = findButtonByText(wrapper.element, '编辑')
+    expect(editBtnForContrast!.className, 'primary 的编辑按钮不应带 dangerous 类').not.toContain('ant-btn-dangerous')
     delBtn!.click()
     await flushPromises()
     await nextTick()

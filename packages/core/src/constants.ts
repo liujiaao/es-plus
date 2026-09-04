@@ -94,10 +94,10 @@ export type CrudActionLiteral = (typeof VALID_CRUD_ACTIONS)[number]
  * 当用户没有配置 configTableOut 时使用
  */
 export const DEFAULT_CONFIG_TABLE_OUT = {
-  total: 'total',
-  tableData: 'data',
+  total: 'records',
+  tableData: 'rows',
   pageSize: 'pageSize',
-  current: 'pageIndex',
+  current: 'pageNo',
 } as const
 
 /**

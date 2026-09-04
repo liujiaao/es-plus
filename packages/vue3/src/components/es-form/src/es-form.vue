@@ -171,7 +171,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import { resolveFormLayProps, calculateAutoSpan, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { resolveFormLayProps, calculateAutoSpan, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 
 const props = withDefaults(
   defineProps<{
@@ -235,7 +235,8 @@ const isParentTable = computed(() => {
 const extendedIcon = Object.fromEntries(Object.entries(ElementPlusIconsVue))
 const getCompIcon = (key?: string) => (key ? extendedIcon[key] || key : undefined)
 const filterOptions = (it: BtnConfig) => {
-  const { icon, ...opt } = it as Record<string, unknown>
+  // 剥离编排字段（尤其 click 函数，避免遮蔽原生 <button>.click()）；icon/disabled/name 已在模板显式处理
+  const opt = filterBtnProps(it as Record<string, unknown>)
   if (!opt.size) opt.size = 'small'
   return opt
 }

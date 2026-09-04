@@ -37,10 +37,10 @@ export const VALID_CRUD_ACTIONS = ['add', 'edit', 'delete', 'view', 'export', 'i
 export type CrudAction = typeof VALID_CRUD_ACTIONS[number]
 
 export const DEFAULT_CONFIG_TABLE_OUT = {
-  total: 'total',
-  tableData: 'data',
+  total: 'records',
+  tableData: 'rows',
   pageSize: 'pageSize',
-  current: 'pageIndex'
+  current: 'pageNo'
 } as const
 
 export const CRUD_PAGE_BTN_CLICK_KEYS = {

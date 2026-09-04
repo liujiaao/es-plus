@@ -63,10 +63,10 @@ export type CrudActionLiteral = (typeof VALID_CRUD_ACTIONS)[number];
  * 当用户没有配置 configTableOut 时使用
  */
 export declare const DEFAULT_CONFIG_TABLE_OUT: {
-    readonly total: "total";
-    readonly tableData: "data";
+    readonly total: "records";
+    readonly tableData: "rows";
     readonly pageSize: "pageSize";
-    readonly current: "pageIndex";
+    readonly current: "pageNo";
 };
 /**
  * EsCrudPage 的特殊点击事件 key —— 用于触发 add/edit 表单提交流程

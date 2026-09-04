@@ -304,6 +304,72 @@ describe('EsTable — 暴露的实例方法', () => {
   })
 })
 
+describe('EsTable — refresh/reload/refetchKeepPage 语义（对齐 vue3）', () => {
+  // 请求模式挂载：注入内存 httpRequest，捕获每次请求的 pageIndex。
+  // isInitRun:false 关掉 onMounted 自动首拉，避免污染 current 初值（否则默认分支挂载即回 1）。
+  const makeReqProps = (opts: Record<string, any> = {}, pagination: Record<string, any> = {}) => {
+    const calls: any[] = []
+    const httpRequest = vi.fn(async (params: any) => {
+      calls.push(params)
+      return { records: 100, rows: [{ id: `r${params.pageIndex}` }] }
+    })
+    const props = {
+      dataSource: [] as any[],
+      columns: [{ prop: 'id', label: 'ID' }],
+      options: { httpRequest, isInitRun: false, ...opts } as any,
+      pagination: { current: 3, pageSize: 10, total: 100, ...pagination },
+    }
+    return { props, httpRequest, calls }
+  }
+
+  it('新增暴露 reload / doLayout 方法', () => {
+    const { props } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    expect(typeof vm.reload).toBe('function')
+    expect(typeof vm.doLayout).toBe('function')
+    expect(typeof vm.refresh).toBe('function')
+  })
+
+  it('默认（无 refetchKeepPage）：httpRequestInstance 回到第 1 页', async () => {
+    const { props, calls } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    expect(vm.paginationConfig.current).toBe(3)
+    await vm.httpRequestInstance()
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
+  })
+
+  it('refetchKeepPage:true：httpRequestInstance 保留当前页', async () => {
+    const { props, calls } = makeReqProps({ refetchKeepPage: true })
+    const vm = mount(EsTable, { props }).vm as any
+    expect(vm.paginationConfig.current).toBe(3)
+    await vm.httpRequestInstance()
+    expect(vm.paginationConfig.current).toBe(3)
+    expect(calls[calls.length - 1].pageIndex).toBe(3)
+  })
+
+  it('keepPage:false 显式覆盖 refetchKeepPage（查询语义回第 1 页）', async () => {
+    const { props, calls } = makeReqProps({ refetchKeepPage: true })
+    const vm = mount(EsTable, { props }).vm as any
+    await vm.httpRequestInstance({}, { keepPage: false })
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
+  })
+
+  it('reload 回第 1 页取数；refresh 保留当前页取数', async () => {
+    const { props, calls } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    // refresh：keepPage:true → 停留第 3 页
+    await vm.refresh()
+    expect(vm.paginationConfig.current).toBe(3)
+    expect(calls[calls.length - 1].pageIndex).toBe(3)
+    // reload：回到第 1 页
+    await vm.reload()
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
+  })
+})
+
 describe('EsTable — EDGE CASES', () => {
   it('空 dataSource', () => {
     const wrapper = mount(EsTable, {

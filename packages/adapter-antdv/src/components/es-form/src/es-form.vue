@@ -57,6 +57,7 @@
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
+                    :danger="mapBtnDanger(it.type)"
                     :size="mapBtnSize(it.size)"
                     :disabled="resolveBtnDisabled(it)"
                     :loading="it.loading"
@@ -79,6 +80,7 @@
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
+                    :danger="mapBtnDanger(it.type)"
                     :size="mapBtnSize(it.size)"
                     :disabled="resolveBtnDisabled(it)"
                     :loading="it.loading"
@@ -132,6 +134,7 @@
                   :key="it.key || inx"
                   v-bind="filterOptions(it)"
                   :type="mapBtnType(it.type)"
+                  :danger="mapBtnDanger(it.type)"
                   :size="mapBtnSize(it.size)"
                   :disabled="resolveBtnDisabled(it)"
                   :loading="it.loading"
@@ -199,8 +202,10 @@ import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
-import { resolveFormLayProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
-import { mapButtonType, mapSize, getNestedValue } from '../../../utils/shared'
+import { resolveFormLayProps, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { mapButtonType, mapButtonDanger, mapSize, getNestedValue } from '../../../utils/shared'
+import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
+import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
@@ -269,7 +274,8 @@ const isParentTable = computed(() => {
 
 // ─── 图标 / 按钮选项（对齐 vue3）─────────────────────
 const filterOptions = (it: BtnConfig) => {
-  const { icon, ...opt } = it as Record<string, unknown>
+  // 剥离编排字段（尤其 click 函数）；icon 由模板显式绑定
+  const opt = filterBtnProps(it as Record<string, unknown>)
   if (!opt.size) opt.size = 'small'
   return opt
 }
@@ -278,12 +284,17 @@ const resolveBtnDisabled = (it: BtnConfig): boolean => {
   return typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false
 }
 
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
+// 'danger' 属于 ADV 的 LegacyButtonType，type 槽不接受（danger 需独立布尔 prop 承载）；
+// type='primary' + :danger 布尔 = 实心红，对齐 vue3/EP 的 danger 视觉。
+function mapBtnType(type?: string): ButtonType {
+  return mapButtonType(type) as ButtonType
+}
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
 }
 
-function mapBtnSize(size?: string): string {
-  return mapSize(size || (formLayout.value.size as string) || 'small', 'small')
+function mapBtnSize(size?: string): SizeType {
+  return mapSize(size || (formLayout.value.size as string) || 'small', 'small') as SizeType
 }
 
 // ─── Refs ───────────────────────────────────────────
@@ -311,7 +322,7 @@ function formInputRenderer(item: FormItemOption) {
 // ─── 表单 Props（对齐 vue3：内联 model/rules）────────
 const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
 
-const formProps = computed(() => ({
+const formProps = computed<Record<string, any>>(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
@@ -457,12 +468,13 @@ const queryTableRequest = async (
 ) => {
   if (key === 'query') {
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）（对齐 vue3）
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
     }
   } else if (key === 'rest' && formRef) {
     formRef.resetFields()
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
     }
   }
 }
@@ -606,7 +618,9 @@ const handleTableItemOption = () => {
   })
 }
 
-const handleSetOptionsClick = ({ key }: { key: string }) => {
+// a-menu 的 MenuClickEventHandler 传入 MenuInfo（key 为 string | number）；
+// 用宽于 MenuInfo 的结构类型接住，避免 TS2322。
+const handleSetOptionsClick = ({ key }: { key: string | number }) => {
   if (key === 'customerForm') handleCustomerForm()
   else if (key === 'tableItem') handleTableItemOption()
   else if (key === 'refresh') handleRefresh()

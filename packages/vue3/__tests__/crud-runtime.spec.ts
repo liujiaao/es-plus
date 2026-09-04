@@ -187,6 +187,33 @@ describe('CRUD 运行时全链路（vue3, 真实组件 + 内存后端）', () =>
     expect(wrapper.text()).toContain('Carol')
   })
 
+  it('防重复提交：快速双击「确定」→ onConfirm 仅触发一次（新增只发生一次）', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await nextTick()
+
+    findButtonByText(wrapper.element, '新增')!.click()
+    await nextTick()
+    await flushPromises()
+
+    const dialogInput = document.querySelector('.el-dialog .el-input__inner') as HTMLInputElement
+    expect(dialogInput).toBeTruthy()
+    dialogInput.value = 'Carol'
+    dialogInput.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+
+    const confirmBtn = findButtonByText(document.body, '确定')!
+    expect(confirmBtn).toBeTruthy()
+    // 在异步 onConfirm 未返回前连续点击两次：第二次应被防重入闸门忽略
+    confirmBtn.click()
+    confirmBtn.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(backend.calls.create, '双击确定后新增仅应发生一次').toBe(1)
+    expect(backend.store).toHaveLength(3)
+  })
+
   it('编辑：点行「编辑」→ 预填 → 改值 → 确定 → 后端更新 → 列表刷新', async () => {
     const wrapper = mountPage()
     await flushPromises()

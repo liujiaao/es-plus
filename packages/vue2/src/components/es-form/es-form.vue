@@ -40,7 +40,7 @@
             :row="{ isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
             :form-model="resolvedModel"
             :form-item-list="formItem"
-            :render="renderBtn"
+            :render="(renderBtn as Function)"
           />
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
             <!-- btnColSpanRow=true 时左右分布 -->
@@ -156,7 +156,7 @@ import { useFormInputs } from '../../composables/use-form-inputs'
 import { useFormLayout } from '../../composables/use-form-layout'
 import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
-import { getGlobalConfig, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { getGlobalConfig, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
 // 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
@@ -178,7 +178,7 @@ const RenderDomForm = defineComponent({
     render: { type: Function, default: undefined },
     model: { type: Object as PropType<ModelData>, default: () => ({}) },
   },
-  render(createElement, ctx) {
+  render(createElement: any, ctx: any) {
     const { row, index, model, render } = ctx.props
     if (typeof render !== 'function') return null
     const safeRow = row || {}
@@ -199,7 +199,7 @@ const RenderBtn = defineComponent({
     formModel: { type: Object, default: () => ({}) },
     render: { type: Function, default: undefined },
   },
-  render(createElement, ctx) {
+  render(createElement: any, ctx: any) {
     const { formItemList, formModel, row, render } = ctx.props
     if (typeof render !== 'function') return null
     const renderContent = render(row, formModel, formItemList, createElement) || ''
@@ -311,7 +311,7 @@ export default defineComponent({
       return `el-icon-${kebab}`
     }
     const filterOptions = (it: BtnConfig) => {
-      const { icon: _icon, ...opt } = it as unknown as Record<string, unknown>
+      const opt = filterBtnProps(it as unknown as Record<string, unknown>)
       // 把用户传入的 size 经 mapSize 翻译到 Element UI v2 语义；缺省时与表单默认尺寸
       // (mini) 对齐，避免按钮比表单输入大一截。详见 packages/vue2/src/utils/size.ts。
       if (opt.size !== undefined) {

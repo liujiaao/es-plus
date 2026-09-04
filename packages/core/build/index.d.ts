@@ -25,6 +25,6 @@ export type { RequestConfig, ConfigFormFieldOut, FormFieldOptionResult, } from '
 export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';
 export { buildFirstClassGridOptions } from './vxe-engine';
 export { patchHtmlRowSpans } from './vxe-print';
-export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, } from './compat';
+export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, filterBtnProps, BTN_ORCHESTRATION_KEYS, } from './compat';
 export { getButtonPosition as resolveButtonPosition, isButtonLeft, isButtonRight, } from './compat';
 //# sourceMappingURL=index.d.ts.map

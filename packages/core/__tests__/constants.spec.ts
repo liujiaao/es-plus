@@ -111,20 +111,20 @@ describe('normalizeFormType', () => {
 
 // ─── DEFAULT_CONFIG_TABLE_OUT ─────────────────────────────────────────────────
 describe('DEFAULT_CONFIG_TABLE_OUT', () => {
-  it('total 映射到 "total"', () => {
-    expect(DEFAULT_CONFIG_TABLE_OUT.total).toBe('total')
+  it('total 映射到 "records"', () => {
+    expect(DEFAULT_CONFIG_TABLE_OUT.total).toBe('records')
   })
 
-  it('tableData 映射到 "data"', () => {
-    expect(DEFAULT_CONFIG_TABLE_OUT.tableData).toBe('data')
+  it('tableData 映射到 "rows"', () => {
+    expect(DEFAULT_CONFIG_TABLE_OUT.tableData).toBe('rows')
   })
 
   it('pageSize 映射到 "pageSize"', () => {
     expect(DEFAULT_CONFIG_TABLE_OUT.pageSize).toBe('pageSize')
   })
 
-  it('current 映射到 "pageIndex"', () => {
-    expect(DEFAULT_CONFIG_TABLE_OUT.current).toBe('pageIndex')
+  it('current 映射到 "pageNo"', () => {
+    expect(DEFAULT_CONFIG_TABLE_OUT.current).toBe('pageNo')
   })
 })
 

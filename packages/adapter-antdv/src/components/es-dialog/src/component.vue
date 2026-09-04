@@ -92,6 +92,7 @@
             v-show="checkPermission(item.permissionValue)"
             :key="item.key || idx"
             :type="mapBtnType(item.type)"
+            :danger="mapBtnDanger(item.type)"
             :size="mapBtnSize(item.size)"
             :loading="item.loading"
             :disabled="isDisabled(item)"
@@ -118,7 +119,9 @@ export default { name: 'EsDialog' }
 import { ref, reactive, computed, inject, watch, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
-import { mapButtonType, mapSize } from '../../../utils/shared'
+import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
+import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
+import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
 import type { BtnConfig } from '../../../types'
 import EsForm from '../../es-form/src/es-form.vue'
@@ -358,11 +361,14 @@ const slotComponents = { EsForm, EsTable }
 // ─── 底部按钮 ───────────────────────────────────────
 const footerBtns = computed(() => props.configBtn || [])
 
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
+function mapBtnType(type?: string): ButtonType {
+  return mapButtonType(type) as ButtonType
 }
-function mapBtnSize(size?: string): string {
-  return mapSize(size, 'small')
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
+}
+function mapBtnSize(size?: string): SizeType {
+  return mapSize(size, 'small') as SizeType
 }
 
 function isDisabled(item: BtnConfig): boolean {

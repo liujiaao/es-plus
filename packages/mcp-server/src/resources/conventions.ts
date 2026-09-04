@@ -261,7 +261,7 @@ app.use(ESPlus, {
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })
@@ -275,7 +275,7 @@ Vue.use(ESPlus, {
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })
@@ -460,7 +460,7 @@ app.use(ESPlus, {
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })`
@@ -473,7 +473,7 @@ Vue.use(ESPlus, {
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })`}

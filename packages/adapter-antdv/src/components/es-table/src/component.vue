@@ -89,6 +89,7 @@
                   v-for="(btn, bIdx) in getOperateBtns(column, record)"
                   :key="bIdx"
                   :type="mapBtnTypeAny(btn.type)"
+                  :danger="mapBtnDanger(btn.type)"
                   size="small"
                   style="margin-right: 4px"
                   @click="btn.clickEvent?.(record)"
@@ -181,7 +182,7 @@ import TableBtns from './table-btns.vue'
 import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
-import { isObject, findValueByKey, mapSize, mapButtonType } from '../../../utils/shared'
+import { isObject, findValueByKey, mapSize, mapButtonType, mapButtonDanger } from '../../../utils/shared'
 import { getAdvIconComponent } from '../../../utils/icon'
 import { getCallback, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
@@ -434,7 +435,8 @@ const vxeFilteredColumns = computed(() => {
               h(AButton, {
                 onClick: () => btn.clickEvent?.(row),
                 text: true,
-                type: btn.type || 'primary',
+                type: mapBtnTypeAny(btn.type || 'primary'),
+                danger: mapBtnDanger(btn.type),
                 size: 'small',
               }, () => btn.name)
             ),
@@ -685,6 +687,9 @@ function mapBtnType(type?: string): string {
 function mapBtnTypeAny(type?: string): any {
   return mapButtonType(type)
 }
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
+}
 
 const isOperateColumn = (column: any) => column?.dataIndex === 'operate' || column?.key === 'operate'
 const getColumnEsCol = (column: any) => column?._esCol || {}
@@ -807,15 +812,21 @@ function queryTableListMethod(
   }
 }
 
-const httpRequestInstance = (model?: Record<string, unknown>) => {
+const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { keepPage?: boolean }) => {
+  // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
+  // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮显式传 keepPage:false，
+  // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。（对齐 vue3）
+  const keepPage = reqOptions?.keepPage ?? props.options?.refetchKeepPage === true
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
-    // 'reload' 回到第 1 页（与非 proxy 分支的搜索语义一致），'query' 会保留当前页
-    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('reload')
+    // 'reload' 回到第 1 页（搜索语义），'query' 保留当前页
+    ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.(keepPage ? 'query' : 'reload')
     return Promise.resolve()
   }
   return new Promise((resolve, reject) => {
-    paginationConfig.value.current = 1
+    if (!keepPage) {
+      paginationConfig.value.current = 1
+    }
     queryTableListMethod(
       { ...(model || {}), pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
       {
@@ -823,6 +834,36 @@ const httpRequestInstance = (model?: Record<string, unknown>) => {
           formatConfigOut(res, ['total', 'tableData'])
           if (Object.keys(props.pagination).length) {
             emit('update:pagination', { ...paginationConfig.value })
+          }
+          // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
+          //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。（对齐 vue3）
+          const current = Number(paginationConfig.value.current) || 1
+          if (keepPage && (tableData.value?.length ?? 0) === 0 && current > 1) {
+            const total = Number(paginationConfig.value.total) || 0
+            const pageSize = Number(paginationConfig.value.pageSize) || 10
+            const maxPage = Math.max(1, Math.ceil(total / pageSize))
+            if (maxPage < current) {
+              paginationConfig.value.current = maxPage
+              // 外层请求的 loadingStatus 到 finally 才复位，此刻仍为 true；
+              // 若不先手动释放，递归的 queryTableListMethod 会被
+              // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据。（对齐 vue3）
+              loadingStatus.value = false
+              queryTableListMethod(
+                { ...(model || {}), pageIndex: maxPage, pageSize },
+                {
+                  success: (res2) => {
+                    formatConfigOut(res2, ['total', 'tableData'])
+                    if (Object.keys(props.pagination).length) {
+                      emit('update:pagination', { ...paginationConfig.value })
+                    }
+                    emit('pagination-current-change', { ...paginationConfig.value })
+                    resolve(res2)
+                  },
+                  fail: (err) => reject(err),
+                }
+              )
+              return
+            }
           }
           resolve(res)
         },
@@ -905,6 +946,16 @@ provide(TABLE_CONTEXT_INJECT_KEY, () => ({
   httpRequestInstance,
 }))
 
+// 全量重排：a-table 无 doLayout，用 resizeObservers + forceUpdate 等价重排；vxe 引擎调 doLayout
+const doLayoutFn = () => {
+  if (isVxeEngine.value) {
+    vxeEngineRef.value?.doLayout?.()
+  } else {
+    resizeObservers?.()
+    tableRef.value?.$forceUpdate?.()
+  }
+}
+
 // ─── Expose（对齐 vue3 expose 集）─────────────────────
 defineExpose({
   httpRequestInstance,
@@ -920,13 +971,39 @@ defineExpose({
     clearAllSelection()
     if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
   },
-  refresh: () => {
-    if (isVxeEngine.value) {
-      vxeEngineRef.value?.doLayout?.()
-    } else {
-      resizeObservers?.()
-      tableRef.value?.$forceUpdate?.()
+  // 刷新当前页：保留页码重新取数 + 重排。统一命令式刷新入口。（对齐 vue3）
+  refresh: (model?: Record<string, unknown>) => {
+    if (isVxeProxyMode.value) {
+      ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+      return Promise.resolve()
     }
+    if (isRequestConf.value) {
+      return httpRequestInstance(model, { keepPage: true }).then((r) => {
+        doLayoutFn()
+        return r
+      })
+    }
+    // 本地/静态：无网络，重排即可
+    doLayoutFn()
+    return Promise.resolve()
+  },
+  // 重新加载：回到第 1 页重新取数。搜索/重置语义。（对齐 vue3）
+  reload: (model?: Record<string, unknown>) => {
+    if (isVxeProxyMode.value) {
+      ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('reload')
+      return Promise.resolve()
+    }
+    if (isRequestConf.value) {
+      // httpRequestInstance 在 !keepPage 时内部已把 current 置 1
+      return httpRequestInstance(model, { keepPage: false }).then((r) => {
+        doLayoutFn()
+        return r
+      })
+    }
+    // 本地/静态：回到第 1 页
+    paginationConfig.value.current = 1
+    doLayoutFn()
+    return Promise.resolve()
   },
   scrollToRow: (row: number) => {
     if (isVxeEngine.value) {
@@ -941,8 +1018,8 @@ defineExpose({
     if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
     else toggleRowSelection(row, selected !== false)
   },
-  // 仅重排列宽/布局，不重新取数
-  doLayout: () => vxeEngineRef.value?.doLayout?.(),
+  // 仅重排列宽/布局，不重新取数（旧 refresh 行为的逃生舱）（对齐 vue3）
+  doLayout: doLayoutFn,
   // vxe 行内编辑 CRUD（engine:'vxe' 时有效）
   getUpdateRecords: () => isVxeEngine.value ? vxeEngineRef.value?.getUpdateRecords?.() ?? [] : [],
   getInsertRecords: () => isVxeEngine.value ? vxeEngineRef.value?.getInsertRecords?.() ?? [] : [],

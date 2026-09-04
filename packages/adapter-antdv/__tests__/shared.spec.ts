@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import {
   isObject, isArray, isFunction, isString, isNumber, isEmpty,
   findValueByKey, getNestedValue, setNestedValue,
-  mapButtonType, mapSize, firstWordUpperCase,
+  mapButtonType, mapButtonDanger, mapSize, firstWordUpperCase,
 } from '../src/utils/shared'
 
 describe('类型判断函数', () => {
@@ -134,13 +134,24 @@ describe('映射函数', () => {
     expect(mapButtonType('')).toBe('default')
     expect(mapButtonType('default')).toBe('default')
     expect(mapButtonType('primary')).toBe('primary')
-    expect(mapButtonType('danger')).toBe('danger')
+    // danger 映射为合法 type='primary'（ADV type 槽不含 'danger'，红色由 danger 布尔承载）
+    expect(mapButtonType('danger')).toBe('primary')
     expect(mapButtonType('dashed')).toBe('dashed')
     expect(mapButtonType('text')).toBe('link')
     expect(mapButtonType('link')).toBe('link')
     expect(mapButtonType('success')).toBe('default') // 降级
     expect(mapButtonType('warning')).toBe('default') // 降级
     expect(mapButtonType(undefined)).toBe('default')
+  })
+
+  it('mapButtonDanger — 仅 danger 为 true（对齐 vue3/EP 实心红）', () => {
+    expect(mapButtonDanger('danger')).toBe(true)
+    expect(mapButtonDanger('primary')).toBe(false)
+    expect(mapButtonDanger('default')).toBe(false)
+    expect(mapButtonDanger('text')).toBe(false)
+    expect(mapButtonDanger('link')).toBe(false)
+    expect(mapButtonDanger('')).toBe(false)
+    expect(mapButtonDanger(undefined)).toBe(false)
   })
 
   it('mapSize — EP → ADV', () => {

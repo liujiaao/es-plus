@@ -22,7 +22,7 @@
     <template v-for="entry in renderSlotEntries" v-slot:[entry.name]="{ row, rowIndex }">
       <render-dom-tb
         :key="entry.name"
-        :render="entry.col.render"
+        :render="(entry.col.render as any)"
         :row="row"
         :index="rowIndex"
         :data-key="entry.col.prop || entry.col.key || ''"

@@ -495,6 +495,10 @@ function resolveDialogBtns(
   ]
 }
 
+// 防重复提交：记录确认在途的弹窗 key（同一弹窗确认未结束前忽略再次点击），
+// 避免用户在异步 onConfirm 未返回时二次点击「确定」导致新增/编辑被提交两次。
+const confirmingKeys = new Set<string>()
+
 async function validateAndConfirm(
   key: string,
   config: CrudDialogConfig,
@@ -503,29 +507,35 @@ async function validateAndConfirm(
   close: () => void,
   getRefs: (name?: string) => any
 ) {
-  // 如果有表单，先校验
-  if (config.formItems?.length) {
-    const dialogForm = getRefs('dialogForm')
-    if (dialogForm?.validate) {
-      await dialogForm.validate()
+  if (confirmingKeys.has(key)) return
+  confirmingKeys.add(key)
+  try {
+    // 如果有表单，先校验
+    if (config.formItems?.length) {
+      const dialogForm = getRefs('dialogForm')
+      if (dialogForm?.validate) {
+        await dialogForm.validate()
+      }
     }
+
+    const context: DialogActionContext = { close, refresh, getRefs, row }
+
+    // 用户自定义 onConfirm
+    if (config.onConfirm) {
+      await config.onConfirm(formData, context)
+    } else {
+      // 向后兼容：emit btn-click 事件
+      const legacyKey = key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
+      emit('btn-click', legacyKey, formData)
+      close()
+      refresh()
+    }
+
+    // 新事件
+    emit('dialog-confirm', key, formData)
+  } finally {
+    confirmingKeys.delete(key)
   }
-
-  const context: DialogActionContext = { close, refresh, getRefs, row }
-
-  // 用户自定义 onConfirm
-  if (config.onConfirm) {
-    await config.onConfirm(formData, context)
-  } else {
-    // 向后兼容：emit btn-click 事件
-    const legacyKey = key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
-    emit('btn-click', legacyKey, formData)
-    close()
-    refresh()
-  }
-
-  // 新事件
-  emit('dialog-confirm', key, formData)
 }
 
 // ─── 公共方法 ───

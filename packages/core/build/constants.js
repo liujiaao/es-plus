@@ -80,10 +80,10 @@ export const VALID_CRUD_ACTIONS = ['add', 'edit', 'delete', 'view', 'export', 'i
  * 当用户没有配置 configTableOut 时使用
  */
 export const DEFAULT_CONFIG_TABLE_OUT = {
-    total: 'total',
-    tableData: 'data',
+    total: 'records',
+    tableData: 'rows',
     pageSize: 'pageSize',
-    current: 'pageIndex',
+    current: 'pageNo',
 };
 /**
  * EsCrudPage 的特殊点击事件 key —— 用于触发 add/edit 表单提交流程

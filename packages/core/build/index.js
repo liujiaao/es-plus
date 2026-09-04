@@ -28,7 +28,7 @@ export { buildFirstClassGridOptions } from './vxe-engine';
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print';
 // ─── 向后兼容适配层 ──────────────────────────────────────────
-export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, } from './compat';
+export { normalizeFormType, resolveFormLayProps, getCallback, normalizeFormItem, normalizeFormItemList, filterBtnProps, BTN_ORCHESTRATION_KEYS, } from './compat';
 // compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出
 export { getButtonPosition as resolveButtonPosition, isButtonLeft, isButtonRight, } from './compat';
 //# sourceMappingURL=index.js.map
