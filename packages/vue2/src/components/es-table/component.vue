@@ -356,6 +356,8 @@ export default defineComponent({
     'pagination-current-change',
     'size-change',
     'change-table-sort',
+    // 自动加载（onMounted / visibleShow）失败时吞掉 rejection 并向外暴露错误（对齐 vue3）
+    'request-error',
   ],
   setup(props, { emit, slots, attrs, expose }) {
     // ─── 注入全局配置 ─────────────────────────
@@ -873,11 +875,22 @@ export default defineComponent({
       handleSelectionChange(val, paginationConfig.value.current || 1)
     }
 
+    // ─── 自动加载错误吞掉并暴露（对齐 vue3） ─────
+    // onMounted 自动请求与 visibleShow 首次可见触发的自动请求都是 fire-and-forget，
+    // 失败时若不 catch 会产生 unhandled promise rejection。这里统一吞掉并把错误
+    // 暴露到 requestError（可 expose 供外部读取）+ emit('request-error')。
+    // 成功路径会在 httpRequestInstance 内清空 requestError。
+    const requestError = ref<unknown>(null)
+    const handleAutoRequestError = (err: unknown) => {
+      requestError.value = err
+      emit('request-error', err)
+    }
+
     // ─── Watchers ─────────────────────────────
     watch(visibleShow, async (val, oldVal) => {
       if (val && val !== oldVal) {
         if (props.options.actionUrl && !isVxeProxyMode.value) {
-          await httpRequestInstance()
+          await httpRequestInstance().catch(handleAutoRequestError)
         }
         if (isVxeEngine.value) {
           vxeEngineRef.value?.doLayout?.()
@@ -944,7 +957,7 @@ export default defineComponent({
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
       syncDomRefs()
       if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-        httpRequestInstance()
+        httpRequestInstance().catch(handleAutoRequestError)
       }
       // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
       nextTick(() => {
@@ -1103,6 +1116,8 @@ export default defineComponent({
           },
           {
             success: (res) => {
+              // 成功即清空上一次自动加载留下的错误状态（对齐 vue3）
+              requestError.value = null
               formatConfigOut(res, ['total', 'tableData'])
               emitPaginationUpdate()
               // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
@@ -1239,6 +1254,8 @@ export default defineComponent({
 
     const exposed = {
       httpRequestInstance,
+      // 最近一次自动加载（onMounted / visibleShow）的错误；成功后清空（对齐 vue3）
+      requestError,
       getSelectionRows: () => {
         if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
         return multipleSelection.value

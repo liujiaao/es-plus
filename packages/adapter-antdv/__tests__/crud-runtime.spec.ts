@@ -251,4 +251,35 @@ describe('CRUD 运行时全链路（adapter-antdv, 真实组件 + 内存后端�
     const ds = wrapper.findComponent(EsTable).props('dataSource') as unknown[]
     expect(ds).toHaveLength(1)
   })
+
+  it('列表加载失败：自动请求 reject 被吞掉并经 request-error 暴露（无 unhandled rejection）', async () => {
+    // 与 vue3 spec 同构：验证 onMounted 自动请求 rejection 被 .catch(handleAutoRequestError)
+    // 吞掉，不产生 unhandled promise rejection，错误暴露到 EsTable.requestError 并 emit。
+    const boom = new Error('list failed')
+    const failingHttpRequest = async (req: Record<string, any>) => {
+      if (!req.url || req.url === '/api/list') throw boom
+      return { records: 0, rows: [] }
+    }
+    const unhandled: unknown[] = []
+    const onUnhandled = (e: PromiseRejectionEvent) => {
+      unhandled.push(e.reason)
+      e.preventDefault()
+    }
+    window.addEventListener('unhandledrejection', onUnhandled)
+    try {
+      const wrapper = mount(EsCrudPage, {
+        props: { schema: makeSchema(), httpRequest: failingHttpRequest },
+        attachTo: document.body,
+      })
+      await flushPromises()
+      await nextTick()
+
+      const table = wrapper.findComponent(EsTable)
+      expect((table.vm as any).requestError, '失败错误应暴露到 requestError').toBe(boom)
+      expect(table.emitted('request-error'), '应 emit request-error').toBeTruthy()
+      expect(unhandled, '不应出现 unhandled promise rejection').toHaveLength(0)
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled)
+    }
+  })
 })

@@ -217,6 +217,9 @@ const emit = defineEmits<{
   'pagination-current-change': [pagination: PaginationConfig]
   'size-change': [pagination: PaginationConfig, size: number]
   'change-table-sort': [column: Record<string, unknown>]
+  // 自动加载（onMounted / visibleShow 显隐）失败时派发，携带原始错误。
+  // 命令式的 refresh/reload 返回 Promise 由调用方自行 catch，不经此事件。（对齐 vue3）
+  'request-error': [error: unknown]
 }>()
 
 const slots = useSlots() as any
@@ -831,6 +834,8 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
       { ...(model || {}), pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
       {
         success: (res) => {
+          // 加载成功：清除上一轮自动加载的错误态（若有）（对齐 vue3）
+          requestError.value = null
           formatConfigOut(res, ['total', 'tableData'])
           if (Object.keys(props.pagination).length) {
             emit('update:pagination', { ...paginationConfig.value })
@@ -899,16 +904,27 @@ function changePageSizeRequest() {
 }
 
 // ─── 生命周期 ───────────────────────────────────────
+// 自动加载失败处理（对齐 vue3）：onMounted / visibleShow 两处「触发即忘」的自动请求
+// 若不 catch，初始加载失败会冒泡成 unhandled promise rejection。统一「吞掉 + 暴露」：
+//   - requestError：暴露给命令式消费方与测试读取
+//   - emit('request-error')：供上层 UI 呈现失败态
+// 命令式的 refresh/reload 仍返回原始 Promise，由调用方自行 catch。
+const requestError = ref<unknown>(null)
+const handleAutoRequestError = (err: unknown) => {
+  requestError.value = err
+  emit('request-error', err)
+}
 onMounted(() => {
   if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-    httpRequestInstance()
+    httpRequestInstance().catch(handleAutoRequestError)
   }
 })
 
 watch(visibleShow, async (val, oldVal) => {
   if (val && val !== oldVal) {
     if (props.options.actionUrl && !isVxeProxyMode.value) {
-      await httpRequestInstance()
+      // 吞掉 rejection 避免变成 unhandled；错误经 handleAutoRequestError 暴露
+      await httpRequestInstance().catch(handleAutoRequestError)
     }
     // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
     resizeObservers?.()
@@ -959,6 +975,8 @@ const doLayoutFn = () => {
 // ─── Expose（对齐 vue3 expose 集）─────────────────────
 defineExpose({
   httpRequestInstance,
+  // 最近一次自动加载（onMounted/visibleShow）的错误；成功后复位为 null（对齐 vue3）
+  requestError,
   getSelectionRows: () => {
     if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
     return multipleSelection.value

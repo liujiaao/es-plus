@@ -174,6 +174,9 @@ const emit = defineEmits<{
   'pagination-current-change': [pagination: PaginationConfig]
   'size-change': [pagination: PaginationConfig, size: number]
   'change-table-sort': [column: Record<string, unknown>]
+  // 自动加载（onMounted / visibleShow 显隐）失败时派发，携带原始错误。
+  // 命令式的 refresh/reload 返回 Promise 由调用方自行 catch，不经此事件。
+  'request-error': [error: unknown]
 }>()
 
 const slots = defineSlots<{
@@ -560,7 +563,8 @@ watch(
   async (val, oldVal) => {
     if (val && val !== oldVal) {
       if (props.options.actionUrl && !isVxeProxyMode.value) {
-        await httpRequestInstance()
+        // 吞掉 rejection 避免变成 unhandled；错误经 handleAutoRequestError 暴露
+        await httpRequestInstance().catch(handleAutoRequestError)
       }
       tableRef.value?.doLayout?.()
       vxeEngineRef.value?.doLayout()
@@ -608,9 +612,21 @@ watch(
 )
 
 // 配置化接口请求时，挂载自动加载数据（vxeProxyMode 下由 vxe proxyConfig 接管）
+//
+// 自动加载失败的处理：onMounted / visibleShow 两处是「触发即忘」的自动请求
+// （返回的 Promise 无人接管），若不 catch，初始加载失败会冒泡成
+// unhandled promise rejection。这里统一「吞掉 rejection + 暴露错误态」：
+//   - requestError：暴露给模板/命令式消费方与测试读取
+//   - emit('request-error')：供上层 UI（如 EsCrudPage）呈现失败态
+// 命令式的 refresh/reload 仍返回原始 Promise，由调用方自行 catch，不走此路径。
+const requestError = ref<unknown>(null)
+const handleAutoRequestError = (err: unknown) => {
+  requestError.value = err
+  emit('request-error', err)
+}
 onMounted(() => {
   if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-    httpRequestInstance()
+    httpRequestInstance().catch(handleAutoRequestError)
   }
 })
 
@@ -743,6 +759,8 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
       { ...(model || {}), pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
       {
         success: (res) => {
+          // 加载成功：清除上一轮自动加载的错误态（若有）
+          requestError.value = null
           formatConfigOut(res, ['total', 'tableData'])
           emitPaginationUpdate()
           // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
@@ -906,6 +924,8 @@ const doLayoutFn = () =>
 
 defineExpose({
   httpRequestInstance,
+  // 最近一次自动加载（onMounted/visibleShow）的错误；成功后复位为 null
+  requestError,
   getSelectionRows: () => activeEngineRef.value
     ? activeEngineRef.value?.getSelectedRows() ?? []
     : multipleSelection.value,
