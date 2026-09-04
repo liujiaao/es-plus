@@ -151,8 +151,25 @@ const getCompIcon = (key?: string) => {
   return key ? extended[key] || key : undefined
 }
 
+// 只把「真正属于 el-button 的 props」透传，其余配置键必须剔除。
+// 尤其是 click：若随 v-bind 落到原生 <button> 上，Vue 会把它当作 DOM property
+// 赋值（'click' in el 为 true），从而覆盖原生 HTMLElement.prototype.click，
+// 导致 el.click() 调到「无 context 的原始配置回调」而非派发真实点击事件。
+// name 作为按钮文本单独渲染；icon/disabled/permissionValue 已在模板显式处理。
 const filterOptions = (it: BtnConfig) => {
-  const { icon, ...opt } = it as Record<string, unknown>
+  const {
+    icon: _icon,
+    click: _click,
+    name: _name,
+    key: _key,
+    permissionValue: _pv,
+    disabled: _disabled,
+    position: _position,
+    code: _code,
+    direction: _direction,
+    action: _action,
+    ...opt
+  } = it as Record<string, unknown>
   return opt
 }
 
