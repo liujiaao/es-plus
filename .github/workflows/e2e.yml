@@ -30,7 +30,7 @@ jobs:
         # NOTE: cli is intentionally excluded for now — it has 0 spec files
         # and `npm test` would fail on "no test files found". Add to matrix
         # once stage C adds cli specs.
-        pkg: [core, shared, vue2, vue3, mcp-server]
+        pkg: [core, shared, vue2, vue3, adapter-antdv, mcp-server]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

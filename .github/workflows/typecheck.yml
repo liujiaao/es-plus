@@ -21,7 +21,7 @@ jobs:
       # packages get to report independently.
       fail-fast: false
       matrix:
-        pkg: [core, shared, vue2, vue3, cli, mcp-server]
+        pkg: [core, shared, vue2, vue3, adapter-antdv, cli, mcp-server]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
