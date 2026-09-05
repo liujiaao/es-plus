@@ -29,12 +29,12 @@ export interface BoundaryRollbackInput {
     keepPage: boolean;
     /** 本次拉取后当前页的数据条数 */
     rowCount: number;
-    /** 当前页码 */
-    current: number;
-    /** 总条数 */
-    total: number;
-    /** 每页条数 */
-    pageSize: number;
+    /** 当前页码（内部经 Number(...) || 1 归一，允许 undefined） */
+    current: number | undefined;
+    /** 总条数（内部经 Number(...) || 0 归一，允许 undefined） */
+    total: number | undefined;
+    /** 每页条数（内部经 Number(...) || 10 归一，允许 undefined） */
+    pageSize: number | undefined;
 }
 /** 分页边界回退判定的结果 */
 export interface BoundaryRollbackResult {
