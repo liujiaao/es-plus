@@ -120,7 +120,7 @@ export default {
 
 | 组件 | 说明 | 与 vue3 版本兼容 |
 |------|------|------------------|
-| `EsForm` | 动态表单，13 种控件 | ✅ 100% |
+| `EsForm` | 动态表单，14 种控件 | ✅ 100% |
 | `EsTable` | 动态表格，虚拟滚动 | ✅ 兼容 |
 | `EsDialog` | 动态弹窗 | ✅ 兼容 |
 | `EsCrudPage` | CRUD 编排组件 | ✅ 兼容 |
@@ -143,8 +143,15 @@ EsForm 的 `formItemList`、EsTable 的 `columns` / `options`、EsCrudPage 的 `
 | 确认弹窗 | `ElMessageBox.confirm()` | `Modal.confirm()` |
 | ColorPicker | `<ElColorPicker>` | `input[type=color]`（降级，ADV 4.x 无内置） |
 | 表单 v-model | `modelValue` / `onUpdate:modelValue` | `value` / `onUpdate:value` 等（内部已映射） |
+| `httpRequest` 数据渲染 | **受控**：表格渲染 `props.dataSource`，请求结果经 `update:dataSource` 回传，**需绑定 `v-model:data-source`** 才会显示 | **非受控兜底**：内部 `tableData` 直接渲染请求结果，未绑定 `v-model:data-source` 也能显示 |
 
 v-model 字段名差异由适配器内部的 composables 自动映射，**配置层无需关心**；仅在自定义 `Slot` 透传 attrs 时需注意该差异。
+
+:::warning httpRequest 模式请始终绑定 `v-model:data-source`
+三端渲染契约存在一处刻意保留的差异：`@es-plus/vue3` 采用**受控**数据流——`EsTable` 只渲染外部传入的 `dataSource`，`httpRequest`/`actionUrl` 拉取到的数据通过 `update:dataSource` 事件回传，**必须绑定 `v-model:data-source`（或监听 `@update:data-source`）** 才会呈现到表格；`@es-plus/adapter-antdv` 与 `@es-plus/vue2` 则额外提供**内部 `tableData` 兜底**，即使未绑定 `v-model:data-source` 也能渲染请求结果。
+
+为保证配置在三端间无缝迁移，**请始终为 `httpRequest`/`actionUrl` 模式的 `EsTable` 绑定 `v-model:data-source`**（文档中所有远程数据示例均已如此）。这样无论切换到哪个渲染器，行为都一致。
+:::
 
 ## 常见问题
 
@@ -184,7 +191,7 @@ Ant Design Vue 4.x 早期版本没有独立的 ColorPicker 组件，故降级为
 
 ## 下一步
 
-- [EsForm 高级表单](#/components/es-form) — 13 种控件、联动、异步选项
+- [EsForm 高级表单](#/components/es-form) — 14 种控件、联动、异步选项
 - [EsTable 高级表格](#/components/es-table) — 虚拟滚动、跨页选择、远程数据
 - [EsCrudPage 高级 CRUD](#/components/es-crud-page) — Schema 驱动的一站式 CRUD
 - [权限与国际化](#/guide/permission-i18n) — `permissionValue` + `labelKey`

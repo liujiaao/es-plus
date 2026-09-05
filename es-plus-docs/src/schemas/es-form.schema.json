@@ -37,8 +37,7 @@
             "Rate",
             "ColorPicker",
             "Upload",
-            "Transfer",
-            "Custom"
+            "Transfer"
           ]
         },
         "span": {

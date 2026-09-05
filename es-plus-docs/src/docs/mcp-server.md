@@ -250,17 +250,27 @@ mcp-server-es-plus --help        # 用法说明
 
 配置完成后，AI 工具会自动发现并使用以下 6 个工具：
 
-### generate_crud_from_config（推荐）
+### generate_crud_from_config（首选 / 推荐）
 
-**功能**：从结构化 JSON 配置生成**生产级** CRUD 页面代码（零 TODO、零占位符）
+**功能**：从**结构化配置**生成**生产级** CRUD 页面代码（零 TODO、零占位符）
 
-与 `generate_crud_page`（自然语言模式）不同，此工具接收精确的字段定义、真实 API 地址、数据选项和验证规则，输出可直接投入生产的代码。
+这是**首选生成路径**。与 `generate_crud_page`（正则关键词兜底）不同，此工具的入参是一套**类型化字段**（不是一坨 JSON 字符串）——由你（AI 客户端）阅读自然语言需求后，按字段**语义**逐项填空。这把「约束解码」这个提升一次成码率的最强杠杆交回给宿主 LLM：字段的 `.describe()` 语义指引与枚举合法值都内嵌在工具的 JSON schema 里，直接约束你的输出。
 
-**输入参数**：
+> **推理在你这边**：读需求 → 填 `name`（PascalCase）/ `apiUrl`（真实地址）/ `fields[]`（`prop`/`label`/`formtype` + `inQuery`/`inTable`/`inForm`）/ `actions[]`。schema 无法表达的业务逻辑（自定义校验、跨字段计算、副作用）**不要静默丢弃**，而是落成带标记的扩展点（`formatter`/`render` 串），并在返回的 `warnings` 里显式列出。调用前先读 `esplus://conventions`、`esplus://examples/nl-to-config`、`esplus://types`，草拟后对照原始需求自审一遍再调用。
+
+**输入参数**：结构化对象（工具 inputSchema 逐字段约束），主要字段：
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| config | string | ✅ | StructuredCrudConfig 的 JSON 字符串 |
+| name | string | ✅ | 页面/组件名（PascalCase），如 `UserManage` |
+| apiUrl | string | ✅ | 资源的真实 REST 基础地址，如 `/api/users` |
+| fields | FieldConfig[] | ✅ | 字段定义，每个数据属性一项（含 `formtype`/`inQuery`/`inTable`/`inForm`） |
+| actions | string[] | ✅ | 启用的 CRUD 动作：`add`/`edit`/`delete`/`view`/`export`/`import` |
+| mode | `schema`\|`sfc` | | 输出模式，默认 `schema` |
+| target | `vue3`\|`vue2`\|`antdv` | | 目标渲染器，默认 `vue3` |
+| dialogs / tableBtns / operationColumn / permissions / i18n … | | | 见示例与类型资源 |
+
+> 旧文档里 `config: string`（一坨 JSON 字符串）的入参已废弃——现在工具直接暴露完整结构化形状以开启约束解码。
 
 **输出模式**：
 
@@ -399,9 +409,11 @@ AI：[读取 esplus://conventions 获取规范]
 
 ---
 
-### generate_crud_page
+### generate_crud_page（兜底 / no-LLM fallback）
 
-**功能**：从自然语言描述生成完整的 `.vue` CRUD 页面
+**功能**：从自然语言描述生成完整的 `.vue` CRUD 页面——**基于正则/关键词解析**，准确率受关键词覆盖度限制。
+
+> **优先用 `generate_crud_from_config`**。此工具不借助你的语义推理，纯靠内置关键词表匹配字段类型，仅适合快速原型，或你确实无法草拟结构化配置时的兜底。它同样支持 `mode`（schema/sfc）与 `target`（vue3/vue2/antdv）。
 
 **输入参数**：
 
@@ -648,7 +660,9 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 └────────────────────────────────────────────────────┘
 ```
 
-## 自然语言解析规则
+## 自然语言解析规则（仅限 generate_crud_page 兜底）
+
+> 以下关键词表**只**用于 `generate_crud_page` 的正则启发式解析。`generate_crud_from_config`（首选）不走这些表——它由你按字段语义推断，不受关键词覆盖度限制。
 
 `generate_crud_page` 工具使用基于规则的 NLP 引擎，支持以下模式：
 

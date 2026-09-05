@@ -3,7 +3,40 @@
 
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
-import type { ListenToCallBack as CoreListenToCallBack } from '@es-plus/core'
+import type {
+  ListenToCallBack as CoreListenToCallBack,
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+} from '@es-plus/core'
+
+export type {
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+}
 
 export interface FormItemOption {
   prop: string
@@ -104,7 +137,26 @@ export interface TableColumn {
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
-  btns?: Array<{ name: string; type?: string; clickEvent?: (row: Record<string, unknown>) => void }>
+  type?: 'index' | 'selection' | 'expand'
+  sortable?: boolean | 'custom'
+  btns?: Array<{
+    name: string
+    type?: string
+    icon?: string
+    permissionValue?: string
+    hidden?: boolean | ((row: Record<string, unknown>) => boolean)
+    clickEvent?: (row: Record<string, unknown>) => void
+    [key: string]: unknown
+  }>
+  /** Inline edit renderer (vxe engine only, requires options.editConfig) */
+  editRender?: VxeEditRender
+  /** Footer cell formatter (vxe engine + options.showFooter only) */
+  footerFormatter?: (params: {
+    items: unknown[]
+    _columnIndex: number
+    column: { field: string; title: string; [key: string]: unknown }
+    columns: Array<{ field: string; title: string; [key: string]: unknown }>
+  }) => string
   [key: string]: unknown
 }
 
@@ -143,8 +195,8 @@ export interface TableOptions {
   height?: number | string
   /** Enable virtual scrolling (same as engine: 'virtual') */
   virtual?: boolean
-  /** Table engine: default=el-table, virtual=el-table-v2 */
-  engine?: 'default' | 'virtual'
+  /** Table engine: default=el-table, virtual=el-table-v2, vxe=vxe-table */
+  engine?: 'default' | 'virtual' | 'vxe'
   /** Virtual scroll row height (default 50) */
   rowHeight?: number
   /** Dynamic row height estimate */
@@ -165,6 +217,43 @@ export interface TableOptions {
   cellStyle?: Record<string, unknown> | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => Record<string, unknown>)
   /** Header cell class name */
   headerCellClassName?: string | ((data: { column: unknown; rowIndex: number }) => string)
+  // ── vxe engine first-class options ──────────────────────────────
+  /** Show footer totals row (vxe engine only) */
+  showFooter?: boolean
+  /** Footer totals calculation function (vxe engine; mutually exclusive with footerData) */
+  footerMethod?: VxeFooterMethod
+  /** Static footer totals data 2D array (vxe engine; mutually exclusive with footerMethod) */
+  footerData?: unknown[][]
+  /** Inline editing config (vxe engine only, requires column.editRender) */
+  editConfig?: VxeEditConfig
+  /** Keep original data snapshot so getUpdateRecords/getInsertRecords work (auto-enabled when editConfig is set) */
+  keepSource?: boolean
+  /** Excel/CSV export config (vxe engine only; xlsx requires extra plugin) */
+  exportConfig?: VxeExportConfig | true
+  /** Toolbar config — hides ES-Plus configBtn to avoid double toolbars (vxe engine only) */
+  toolbarConfig?: VxeToolbarConfig | boolean
+  /** Column width drag resize (vxe engine only) */
+  columnConfig?: VxeColumnConfig
+  /** Keyboard navigation (vxe engine only) */
+  keyboardConfig?: VxeKeyboardConfig
+  /** Cell click highlight mode (vxe engine only) */
+  mouseConfig?: VxeMouseConfig
+  /** Clipboard copy/paste; requires mouseConfig.selected (vxe engine only) */
+  clipboardConfig?: VxeClipboardConfig
+  /** Cell content validation (vxe engine only) */
+  validConfig?: VxeValidConfig
+  /** Tree data config; requires column.treeNode:true (vxe engine only) */
+  treeConfig?: VxeTreeConfig
+  /** Proxy data source — vxe internal pagination + remote query (vxe engine only; mutually exclusive with actionUrl/apiParams) */
+  proxyConfig?: VxeProxyConfig
+  /** Row expand config (vxe engine only) */
+  expandConfig?: VxeExpandConfig
+  /** Sequence column config (vxe engine only; requires snIndex:true or type:'index') */
+  seqConfig?: VxeSeqConfig
+  /** Raw vxe-grid config escape hatch (deep-merged after first-class options; overrides anything above) */
+  vxeConfig?: Record<string, unknown>
+  /** vxe-grid event injection via config (key = event name, e.g. 'cell-click') */
+  vxeOn?: Record<string, (...args: unknown[]) => unknown>
   [key: string]: unknown
 }
 
@@ -202,6 +291,8 @@ export interface DialogOptions {
   closeOnPressEscape?: boolean
   /** Callback before dialog closes, call done() to close */
   beforeClose?: (done: () => void) => void
+  /** 实例缓存键：同一 cacheKey 跨多次调用复用同一弹窗实例（保留内部状态），关闭后延迟 10 分钟自动回收 */
+  cacheKey?: string
   /** Whether to vertically center the dialog */
   alignCenter?: boolean
   /** Dialog CSS margin-top, default '15vh' */

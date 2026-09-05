@@ -13,10 +13,12 @@ describe('useFormRequest — checkQueryFields', () => {
     expect(result).toEqual(cfg)
   })
 
-  it('部分映射配置 — 子集校验通过（对齐 vue3：允许只映射部分字段）', () => {
+  it('部分映射配置 — 未满 4 个 key 时校验失败回退默认', () => {
     const { configFormField } = useFormRequest()
     const result = configFormField({ configFormOut: { total: 't' } as any })
-    expect(result).toEqual({ total: 't' })
+    expect(result).toEqual({
+      total: 'records', pageSize: 'pageSize', current: 'pageNo', listData: 'rows',
+    })
   })
 
   it('fieldFieldOutput 注入 — 优先使用', () => {
@@ -28,11 +30,13 @@ describe('useFormRequest — checkQueryFields', () => {
     expect(result).toEqual(custom)
   })
 
-  it('fieldFieldOutput 返回部分映射 → 子集校验通过', () => {
+  it('fieldFieldOutput 返回部分映射 → 校验失败回退默认', () => {
     const { configFormField } = useFormRequest()
     const injectFn = vi.fn().mockReturnValue({ total: 't' })
     const result = configFormField({}, injectFn)
-    expect(result).toEqual({ total: 't' })
+    expect(result).toEqual({
+      total: 'records', pageSize: 'pageSize', current: 'pageNo', listData: 'rows',
+    })
   })
 
   it('含非法键的配置 → 回退默认（子集校验：键必须属于 4 个允许键）', () => {

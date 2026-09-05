@@ -24,6 +24,7 @@
     :destroyOnClose="props.destroyOnClose"
     :centered="props.alignCenter !== false && !props.top"
     :mask="props.modal !== false"
+    :footer="props.isHiddenFooter ? null : undefined"
     @cancel="handleClose"
     @update:open="onUpdateOpen"
   >
@@ -34,6 +35,7 @@
         :render="props.renderHeader"
         :instance="getCurrentInstanceModel"
         :refs="renderBodyRefsObject"
+        :track-ref="false"
       />
       <div
         v-else
@@ -82,6 +84,7 @@
           :render="props.renderFooter"
           :instance="getCurrentInstanceModel"
           :refs="renderBodyRefsObject"
+          :track-ref="false"
         />
         <a-space v-else-if="footerBtns.length">
           <a-button
@@ -89,6 +92,7 @@
             v-show="checkPermission(item.permissionValue)"
             :key="item.key || idx"
             :type="mapBtnType(item.type)"
+            :danger="mapBtnDanger(item.type)"
             :size="mapBtnSize(item.size)"
             :loading="item.loading"
             :disabled="isDisabled(item)"
@@ -115,12 +119,18 @@ export default { name: 'EsDialog' }
 import { ref, reactive, computed, inject, watch, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
-import { mapButtonType, mapSize } from '../../../utils/shared'
+import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
+import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
+import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
 import type { BtnConfig } from '../../../types'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import RenderJsx from './render-jsx.vue'
+// 本地导入并按模板标签命名（AModal↔<a-modal> 等），使模板解析为直接组件引用而非全局 resolveComponent。
+// 对齐 @es-plus/vue3（其 EsDialog 直接 import ElDialog/ElButton/ElIcon），确保在 useDialog 命令式
+// 渲染的脱离子树（appContext 为 null，全局注册不可见）中仍能解析弹窗骨架组件。
+import { Modal as AModal, Button as AButton, Space as ASpace } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
 // ─── Props（onClosed/onSubmit 不声明为 prop，让其作为事件监听器流入）──
@@ -233,6 +243,8 @@ const isDragging = ref(false)
 const dragOffset = reactive({ x: 0, y: 0 })
 let dragStartX = 0
 let dragStartY = 0
+// 拖拽途中若组件卸载，用此句柄移除残留在 document 上的临时监听，防止泄漏（对齐 vue2）
+let activeDragCleanup: (() => void) | null = null
 
 const dragStyle = computed(() => {
   if (isFullscreen.value) return undefined
@@ -265,8 +277,11 @@ function onDragStart(e: MouseEvent) {
     isDragging.value = false
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
+    activeDragCleanup = null
   }
 
+  // 保存清理句柄：拖拽途中若组件卸载，用它移除 document 上的临时监听，防止泄漏（对齐 vue2）
+  activeDragCleanup = onUp
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
 }
@@ -281,6 +296,8 @@ watch(isFullscreen, (val) => {
 
 onBeforeUnmount(() => {
   isDragging.value = false
+  // 拖拽途中卸载：移除残留在 document 上的 mousemove/mouseup 监听，防止泄漏（对齐 vue2）
+  if (activeDragCleanup) activeDragCleanup()
 })
 
 // ─── 关闭链（对齐 vue3：emit('closed', false)）────────
@@ -330,24 +347,35 @@ const wrapStyle = computed(() => {
 })
 
 // ─── instance 结构（对齐 vue3 getCurrentInstanceModel）──
-const getCurrentInstanceModel = computed(() => ({
-  renderBodyRefs: renderBodyRefsObject.currentRef,
+// 关键：不能用 computed 依赖 renderBodyRefsObject.currentRef —— 该值由 RenderJsx
+// 子组件（render/renderHeader/renderFooter 各一个实例）在 mount/updated 时写入，
+// 若 computed 依赖它并作为 :instance prop 回流给这些子组件，会形成
+// 写 currentRef → computed 失效 → 子组件重渲染 → 再写 → "Maximum recursive updates" 死循环
+// （多个 RenderJsx 写入同一 currentRef 槽位时尤其无法收敛）。
+// 用稳定对象 + getter 惰性读取，切断响应式回环。
+const getCurrentInstanceModel = {
+  get renderBodyRefs() {
+    return renderBodyRefsObject.currentRef
+  },
   renderBodyRefsObject,
   lyFormInstance,
   dialogInstance,
   getRefs: (name?: string) => (name ? renderBodyRefsObject[name] || null : renderBodyRefsObject),
-}))
+}
 
 const slotComponents = { EsForm, EsTable }
 
 // ─── 底部按钮 ───────────────────────────────────────
 const footerBtns = computed(() => props.configBtn || [])
 
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
+function mapBtnType(type?: string): ButtonType {
+  return mapButtonType(type) as ButtonType
 }
-function mapBtnSize(size?: string): string {
-  return mapSize(size, 'small')
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
+}
+function mapBtnSize(size?: string): SizeType {
+  return mapSize(size, 'small') as SizeType
 }
 
 function isDisabled(item: BtnConfig): boolean {
@@ -355,8 +383,18 @@ function isDisabled(item: BtnConfig): boolean {
   return !!item.disabled
 }
 
+// 透传给 a-button 的额外属性：必须排除所有已显式绑定/自有语义的键，
+// 否则会与显式绑定冲突（如 disabled 支持函数形式，原样透传会让 a-button 收到
+// Function 触发 "Expected Boolean, got Function" 告警，并覆盖 :disabled 的求值结果）。
+const BTN_OWN_KEYS = new Set([
+  'icon', 'type', 'size', 'name', 'click', 'loading', 'disabled',
+  'permissionValue', 'key', 'direction',
+])
 function filterOptions(it: BtnConfig): Record<string, unknown> {
-  const { icon, ...opt } = it as Record<string, unknown>
+  const opt: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(it as Record<string, unknown>)) {
+    if (!BTN_OWN_KEYS.has(k)) opt[k] = v
+  }
   return opt
 }
 
@@ -387,7 +425,7 @@ const filteredAttrs = computed(() => {
   return attrs
 })
 
-defineExpose({ close: handleClose, toggleFullscreen, doClose })
+defineExpose({ close: handleClose, closed: handleClose, toggleFullscreen, doClose })
 </script>
 
 <style lang="scss" scoped>

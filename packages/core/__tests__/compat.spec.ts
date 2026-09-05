@@ -6,6 +6,8 @@ import {
   getCallback,
   normalizeFormItem,
   normalizeFormItemList,
+  filterBtnProps,
+  BTN_ORCHESTRATION_KEYS,
 } from '../src/compat'
 import type { BtnConfig, FormItemOption, ListenToCallBack } from '../src/types'
 
@@ -221,5 +223,68 @@ describe('compat > normalizeFormItemList', () => {
     expect(result[0].attrs?.placeholder).toBe('输入A')
     expect(result[1].attrs?.clearable).toBe(true)
     expect(result[2].attrs?.disabled).toBe(true)
+  })
+})
+
+// ============================================================================
+// 按钮配置透传过滤
+// ============================================================================
+
+describe('compat > filterBtnProps', () => {
+  it('剥离 click（关键：函数透传到原生 <button> 会遮蔽 HTMLElement.prototype.click）', () => {
+    const click = () => {}
+    const out = filterBtnProps({ click, type: 'primary' })
+    expect('click' in out).toBe(false)
+    expect(out.type).toBe('primary')
+  })
+
+  it('剥离全部编排字段，保留可安全透传的 props', () => {
+    const out = filterBtnProps({
+      click: () => {},
+      render: () => {},
+      name: '查询',
+      key: 'query',
+      icon: 'Search',
+      disabled: () => true,
+      permissionValue: 'sys:query',
+      position: 'right',
+      code: 2,
+      direction: 'row',
+      action: 'add',
+      actionType: 'export',
+      dialogKey: 'add',
+      triggerEvent: 'click',
+      isHide: false,
+      isHidden: false,
+      hidden: false,
+      // 应保留：
+      type: 'primary',
+      size: 'small',
+      loading: true,
+      plain: true,
+    })
+    for (const k of BTN_ORCHESTRATION_KEYS) {
+      expect(k in out).toBe(false)
+    }
+    expect(out).toEqual({ type: 'primary', size: 'small', loading: true, plain: true })
+  })
+
+  it('extraOmit 额外剥离各端模板已显式绑定的键（如 table 工具栏另绑 type/size/loading）', () => {
+    const out = filterBtnProps(
+      { type: 'primary', size: 'small', loading: true, round: true },
+      ['type', 'size', 'loading']
+    )
+    expect(out).toEqual({ round: true })
+  })
+
+  it('不修改原始对象', () => {
+    const btn = { click: () => {}, type: 'primary' }
+    const out = filterBtnProps(btn)
+    expect('click' in btn).toBe(true)
+    expect(out).not.toBe(btn)
+  })
+
+  it('BTN_ORCHESTRATION_KEYS 包含 click', () => {
+    expect(BTN_ORCHESTRATION_KEYS).toContain('click')
   })
 })

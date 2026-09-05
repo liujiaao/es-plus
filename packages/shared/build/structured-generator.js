@@ -1,11 +1,11 @@
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, CRUD_PAGE_BTN_CLICK_KEYS } from './contract.js';
-import { DEFAULT_TARGET, getEsPlusPackageName, buildElementImport, } from './target.js';
+import { DEFAULT_TARGET, getEsPlusPackageName, buildElementImport, buildDeleteConfirmBlock, buildStatusTagTemplate, rewriteElementUsage, } from './target.js';
 /**
  * 从 config 中安全读取 target，兼容旧调用（未传 target 时回落到 'vue3'）
  */
 function readTarget(config) {
     const t = config.target;
-    return t === 'vue2' ? 'vue2' : DEFAULT_TARGET;
+    return t === 'vue2' || t === 'antdv' ? t : DEFAULT_TARGET;
 }
 export function generateFromConfig(config) {
     const mode = config.mode || 'schema';
@@ -25,7 +25,14 @@ function generateSchema(config) {
     const useNewDialogMode = !!(config.dialogs || config.toolbarBtns || config.tableBtns || config.operationColumn !== undefined);
     const renderFields = tableFields.filter(f => f.render);
     if (renderFields.length > 0) {
-        warnings.push(`Schema mode does not support inline render expressions. Fields [${renderFields.map(f => f.prop).join(', ')}] have render — handle in wrapper SFC via scopedSlots or event handlers.`);
+        warnings.push(`Schema mode cannot inline a render function. Fields [${renderFields.map(f => f.prop).join(', ')}] emit a marked \`TODO(es-plus)\` extension-point slot in the wrapper SFC (a default status-tag stub echoing your requested render) — replace the stub with the real markup. The requirement is preserved as a marker, not dropped.`);
+    }
+    // WS-5: formatter（列格式化函数）同样无法序列化进 JSON schema —— 不静默丢弃，
+    // 发出降级警告，保留原始 formatter 意图供开发者手动补回。
+    const formatterFields = tableFields.filter(f => typeof f.formatter === 'string' && f.formatter);
+    if (formatterFields.length > 0) {
+        const hints = formatterFields.map(f => `"${f.prop}": ${sanitizeForComment(f.formatter)}`).join('; ');
+        warnings.push(`Schema mode cannot inline a formatter function (JSON cannot hold functions). Fields [${formatterFields.map(f => f.prop).join(', ')}] are emitted unformatted — re-add \`formatter\` manually. Original formatters: ${hints}. The requirement is marked, not silently dropped.`);
     }
     // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告
     const tOptsForWarn = (config.tableOptions || {});
@@ -47,6 +54,7 @@ function generateSchema(config) {
         rowkey: tOpts.rowkey || 'id',
         ...(tOpts.heightType ? { heightType: tOpts.heightType } : {}),
         ...(tOpts.tabHeight ? { tabHeight: tOpts.tabHeight } : {}),
+        ...(tOpts.height ? { height: tOpts.height } : {}),
         ...(tOpts.multiSelect ? { multiSelect: true } : {}),
         ...(tOpts.virtual ? { virtual: true } : {}),
         ...(tOpts.rowHeight ? { rowHeight: tOpts.rowHeight } : {}),
@@ -129,7 +137,9 @@ function generateSchema(config) {
         config.permissions ? '- Permissions configured' : '',
         target === 'vue2'
             ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
-            : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
+            : target === 'antdv'
+                ? '- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)'
+                : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
     ].filter(Boolean).join('\n');
     return { code, wrapperCode, summary, warnings };
 }
@@ -155,6 +165,34 @@ function generateSFC(config) {
             warnings.push('target=vue2: virtual scrolling is not supported in Element UI — option will be ignored.');
         }
     }
+    else if (hasDialog) {
+        // vue3 / antdv：弹窗 render 用 JSX，需 <script setup lang="tsx|jsx"> + @vitejs/plugin-vue-jsx
+        warnings.push(`target=${target} + mode=sfc: dialog uses a JSX render function, so the generated <script setup> is emitted with lang="${ts ? 'tsx' : 'jsx'}". Ensure @vitejs/plugin-vue-jsx is installed and registered in vite.config (alongside @vitejs/plugin-vue). Use mode=schema if you prefer a JSX-free wrapper.`);
+    }
+    // antdv + SFC + 列 render：render 字符串按 Element 语义编写（h(ElTag, { type })），
+    // 生成器只能重命名符号（ElTag→Tag），无法把 { type: 'success' } 改写为 antdv 的
+    // { color: 'green' }。提醒用户核对，或改用 mode=schema（走 buildStatusTagTemplate 生成
+    // 正确的 <a-tag :color>）。
+    if (target === 'antdv' && hasRender) {
+        warnings.push('target=antdv + mode=sfc: inline column render() is emitted using Element Plus semantics (e.g. <Tag type="success">). Ant Design Vue\'s Tag uses `color` (green/red), not `type`. Adjust the render props, or use mode=schema which generates a correct <a-tag :color> slot automatically.');
+    }
+    // WS-5「标记而非静默丢弃」：SFC 模式当前只从 actions 推导单个通用弹窗与操作列，
+    // 不消费 config.dialogs / tableBtns / operationColumn（schema 模式才全量支持）。
+    // 检测到这些键就显式告警，引导改用 mode=schema 或手工补全，而不是默默忽略。
+    const ignoredInSfc = [];
+    if (config.dialogs && Object.keys(config.dialogs).length) {
+        ignoredInSfc.push('dialogs (per-dialog titles/formItems/layout — a single generic dialog is derived from actions instead)');
+    }
+    if (Array.isArray(config.tableBtns) && config.tableBtns.length) {
+        ignoredInSfc.push('tableBtns (toolbar buttons + code:1/2 positioning)');
+    }
+    if (config.operationColumn) {
+        ignoredInSfc.push('operationColumn (width/label/fixed)');
+    }
+    if (ignoredInSfc.length) {
+        warnings.push(`mode=sfc does not yet consume: ${ignoredInSfc.join('; ')}. ` +
+            `These were IGNORED (surfaced here, not dropped silently). Use mode=schema for full support, or add them to the emitted SFC by hand.`);
+    }
     const lines = [];
     // Template
     lines.push(`<template>`);
@@ -175,20 +213,30 @@ function generateSFC(config) {
     lines.push(`  </es-table>`);
     lines.push(`</template>`);
     lines.push(``);
-    // Script — Vue 2 需要 defineComponent + setup() 包装，Vue 3 直接用 <script setup>
+    // Script — Vue 2 需要 defineComponent + setup() 包装，Vue 3 直接用 <script setup>。
+    // 两端一致：弹窗 render 走 JSX（vue2 用 @vue/babel-preset-jsx / @vitejs/plugin-vue2-jsx，
+    // vue3 用 @vitejs/plugin-vue-jsx），因此 hasDialog 时必须标 lang="tsx|jsx"，否则 esbuild
+    // 的 ts/js loader 遇到 <EsForm/> 直接解析失败（Expected ">" but found "ref"）。
+    const scriptLang = hasDialog ? (ts ? 'tsx' : 'jsx') : (ts ? 'ts' : '');
     if (isVue2) {
-        lines.push(ts ? `<script lang="ts">` : `<script>`);
+        lines.push(scriptLang ? `<script lang="${scriptLang}">` : `<script>`);
     }
     else {
-        lines.push(ts ? `<script setup lang="ts">` : `<script setup>`);
+        lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : `<script setup>`);
     }
     // Imports
     const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref'];
     if (hasRender)
         vueImports.push('h');
     lines.push(`import { ${vueImports.join(', ')} } from 'vue'`);
-    if (hasDialog) {
-        lines.push(`import { useDialog } from '${esPlusPkg}'`);
+    // es-plus 具名导入：弹窗需 useDialog + EsForm（JSX render 引用）；增删改查需全局 httpRequest（方案B）
+    const esPlusNamed = [];
+    if (hasDialog)
+        esPlusNamed.push('useDialog', 'EsForm');
+    if (hasDelete || hasDialog)
+        esPlusNamed.push('httpRequest');
+    if (esPlusNamed.length > 0) {
+        lines.push(`import { ${esPlusNamed.join(', ')} } from '${esPlusPkg}'`);
     }
     // Element 命名映射（ElMessage/ElTag → Vue 2 的 Message/Tag）
     const epImports = [];
@@ -225,7 +273,12 @@ function generateSFC(config) {
     }
     lines.push(`const tableData = ref([])`);
     lines.push(`const tableRef = ref(null)`);
-    lines.push(`const pagination = ref({ current: 1, pageSize: ${config.pagination?.pageSize || 10}, total: 0 })`);
+    // pageSizes 由 es-table 从 pagination 对象读取（component.vue: paginationConfig.pageSizes）。
+    // 配置里声明了 pageSizes 就透传，避免静默丢弃用户的每页条数选项。
+    const pageSizesPart = Array.isArray(config.pagination?.pageSizes) && config.pagination.pageSizes.length
+        ? `, pageSizes: ${JSON.stringify(config.pagination.pageSizes)}`
+        : '';
+    lines.push(`const pagination = ref({ current: 1, pageSize: ${config.pagination?.pageSize || 10}, total: 0${pageSizesPart} })`);
     if (hasDialog)
         lines.push(`const dialog = useDialog()`);
     lines.push(``);
@@ -238,15 +291,15 @@ function generateSFC(config) {
     lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', triggerEvent: true },`);
     lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`);
     if (config.actions.includes('add')) {
-        const perm = config.permissions?.add ? `, permissionValue: '${config.permissions.add}'` : '';
+        const perm = config.permissions?.add ? `, permissionValue: ${q(config.permissions.add)}` : '';
         lines.push(`  { name: '新增', type: 'primary', key: 'add', icon: 'Plus', click: () => openForm('新增')${perm} },`);
     }
     if (config.actions.includes('export')) {
-        const perm = config.permissions?.export ? `, permissionValue: '${config.permissions.export}'` : '';
+        const perm = config.permissions?.export ? `, permissionValue: ${q(config.permissions.export)}` : '';
         lines.push(`  { name: '导出', key: 'export', icon: 'Download', click: () => handleExport()${perm} },`);
     }
     if (config.actions.includes('import')) {
-        const perm = config.permissions?.import ? `, permissionValue: '${config.permissions.import}'` : '';
+        const perm = config.permissions?.import ? `, permissionValue: ${q(config.permissions.import)}` : '';
         lines.push(`  { name: '导入', key: 'import', icon: 'Upload', click: () => handleImport()${perm} },`);
     }
     lines.push(`]`);
@@ -281,16 +334,18 @@ function generateSFC(config) {
     lines.push(`  stripe: ${tOpts.stripe !== false},`);
     lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`);
     lines.push(`  headerCellStyle: { background: '#f5f7fa' },`);
-    lines.push(`  apiParams: { url: '${config.apiUrl}' },`);
-    lines.push(`  rowkey: '${tOpts.rowkey || 'id'}',`);
+    lines.push(`  apiParams: { url: ${q(config.apiUrl)} },`);
+    lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`);
+    if (tOpts.heightType)
+        lines.push(`  heightType: '${tOpts.heightType}',`);
+    if (tOpts.tabHeight)
+        lines.push(`  tabHeight: ${typeof tOpts.tabHeight === 'number' ? tOpts.tabHeight : `'${tOpts.tabHeight}'`},`);
     if (tOpts.virtual) {
         lines.push(`  virtual: true,`);
         if (tOpts.rowHeight)
             lines.push(`  rowHeight: ${tOpts.rowHeight},`);
-        if (tOpts.tabHeight)
-            lines.push(`  tabHeight: ${tOpts.tabHeight},`);
-        if (tOpts.heightType)
-            lines.push(`  heightType: '${tOpts.heightType}',`);
+        if (tOpts.height)
+            lines.push(`  height: ${tOpts.height},`);
     }
     if (tOpts.multiSelect)
         lines.push(`  multiSelect: true,`);
@@ -299,20 +354,22 @@ function generateSFC(config) {
     if (hasDelete) {
         lines.push(``);
         lines.push(`function handleDelete(row${ts ? ': any' : ''}) {`);
-        lines.push(`  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`);
-        lines.push(`    .then(async () => {`);
-        lines.push(`      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`);
-        lines.push(`      ElMessage.success('删除成功')`);
-        lines.push(`      tableRef.value?.httpRequestInstance()`);
-        lines.push(`    })`);
-        lines.push(`    .catch(() => {})`);
+        lines.push(...buildDeleteConfirmBlock({
+            target,
+            indent: '  ',
+            bodyLines: [
+                `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+                `ElMessage.success('删除成功')`,
+                `tableRef.value?.httpRequestInstance()`,
+            ],
+        }));
         lines.push(`}`);
     }
     // export/import handlers
     if (config.actions.includes('export')) {
         lines.push(``);
         lines.push(`function handleExport() {`);
-        lines.push(`  window.open(\`${config.apiUrl}/export?\${new URLSearchParams(queryForm as any).toString()}\`)`);
+        lines.push(`  window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(queryForm as any).toString()}\`)`);
         lines.push(`}`);
     }
     if (config.actions.includes('import')) {
@@ -326,7 +383,11 @@ function generateSFC(config) {
         lines.push(``);
         lines.push(`function openForm(title${ts ? ': string' : ''}, row${ts ? ': any' : ''} = {}) {`);
         const dialogModelInit = formFields.map(f => `${f.prop}: ${getDefaultValue(f)}`).join(', ');
-        lines.push(`  const formData = reactive({ ${dialogModelInit}, ...row })`);
+        // 当没有任何表单字段（全部 inForm:false）时 dialogModelInit 为空串，直接拼
+        // `{ ${''}, ...row }` 会产出前导逗号 `reactive({ , ...row })` —— JS 语法错。
+        // filter(Boolean) 剔除空段，保证 `reactive({ ...row })` 恒合法。
+        const formInit = [dialogModelInit, '...row'].filter(Boolean).join(', ');
+        lines.push(`  const formData = reactive({ ${formInit} })`);
         lines.push(`  const isView = title === '查看'`);
         lines.push(``);
         const dialogFormItemsJson = JSON.stringify(formFields.map(f => buildFormItem(f, 'form', config.i18n)), null, 4);
@@ -350,13 +411,19 @@ function generateSFC(config) {
         lines.push(`      { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {`);
         lines.push(`        try {`);
         lines.push(`          await getRefs('form')?.validate()`);
+        lines.push(`        } catch {`);
+        lines.push(`          return // 表单校验未通过：用户需修正，静默中止`);
+        lines.push(`        }`);
+        lines.push(`        try {`);
         lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`);
-        lines.push(`          const url = title === '新增' ? '${config.apiUrl}' : \`${config.apiUrl}/\${formData.${tOpts.rowkey || 'id'}}\``);
+        lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData.${qBt(tOpts.rowkey || 'id')}}\``);
         lines.push(`          await httpRequest({ url, method, data: formData })`);
         lines.push(`          ElMessage.success(\`\${title}成功\`)`);
         lines.push(`          close()`);
         lines.push(`          tableRef.value?.httpRequestInstance()`);
-        lines.push(`        } catch {}`);
+        lines.push(`        } catch (err) {`);
+        lines.push(`          ElMessage.error(\`\${title}失败\`) // 请求失败：弹错误提示并保持弹窗打开`);
+        lines.push(`        }`);
         lines.push(`      }}`);
         lines.push(`    ]`);
         lines.push(`  })`);
@@ -384,13 +451,9 @@ function generateSFC(config) {
     }
     lines.push(`</script>`);
     let code = lines.join('\n');
-    // Vue 2 模式：把 ElMessage / ElMessageBox 的使用替换为 Message / MessageBox
-    if (isVue2) {
-        code = code
-            .replace(/\bElMessageBox\b/g, 'MessageBox')
-            .replace(/\bElMessage\b/g, 'Message')
-            .replace(/\bElTag\b/g, 'Tag');
-    }
+    // 目标 UI 库命名替换：ElMessage/ElMessageBox/ElTag → 对应命名
+    // （antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理，此处仅收尾标识符）
+    code = rewriteElementUsage(code, target);
     const summary = [
         `Generated full SFC (structured mode, target=${target}):`,
         `- ${queryFields.length} query fields, ${tableFields.length} table columns, ${formFields.length} dialog fields`,
@@ -400,13 +463,16 @@ function generateSFC(config) {
         config.permissions ? '- Permissions configured' : '',
         isVue2
             ? '- Target: Vue 2 + Element UI (@es-plus/vue2). JSX render needs @vue/babel-preset-jsx.'
-            : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
+            : target === 'antdv'
+                ? '- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)'
+                : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
     ].filter(Boolean).join('\n');
     return { code, summary, warnings };
 }
 function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target) {
     const ts = config.typescript;
     const isVue2 = target === 'vue2';
+    const esPlusPkg = getEsPlusPackageName(target);
     const tOpts = (config.tableOptions || {});
     const lines = [];
     lines.push(`<template>`);
@@ -417,21 +483,11 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     if (hasDelete)
         lines.push(`    @delete="handleDelete"`);
     lines.push(`    @btn-click="handleBtnClick"`);
-    if (renderFields.length > 0) {
-        for (const f of renderFields) {
-            lines.push(`    #column-${f.prop}="{ row }"`);
-        }
-    }
     lines.push(`  >`);
     if (renderFields.length > 0) {
         for (const f of renderFields) {
             // Vue 2.6+ scoped slot 在模板中也用 #name="..."，与 Vue 3 写法兼容
-            lines.push(`    <template #column-${f.prop}="{ row }">`);
-            lines.push(`      <!-- ${f.label} custom render -->`);
-            lines.push(`      <el-tag :type="row.${f.prop} === 1 ? 'success' : 'danger'">`);
-            lines.push(`        {{ row.${f.prop} === 1 ? '启用' : '禁用' }}`);
-            lines.push(`      </el-tag>`);
-            lines.push(`    </template>`);
+            lines.push(...buildExtensionPointSlotLines(f, target));
         }
     }
     lines.push(`  </es-crud-page>`);
@@ -452,6 +508,8 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     else
         epImports.push('ElMessage');
     lines.push(buildElementImport([...new Set(epImports)], target));
+    // 全局 HTTP 请求自由函数（方案B）：fetchData / 增删改共用同一请求实例
+    lines.push(`import { httpRequest } from '${esPlusPkg}'`);
     lines.push(`import { pageSchema } from './schema'`);
     lines.push(``);
     // Vue 2: 包一层 defineComponent
@@ -466,7 +524,7 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     body.push(``);
     body.push(`${indent}async function fetchData(params${ts ? ': any' : ''}) {`);
     body.push(`${indent}  const res = await httpRequest({`);
-    body.push(`${indent}    url: '${config.apiUrl}',`);
+    body.push(`${indent}    url: ${q(config.apiUrl)},`);
     body.push(`${indent}    method: 'GET',`);
     body.push(`${indent}    params: { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }`);
     body.push(`${indent}  })`);
@@ -475,30 +533,36 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     if (hasDelete) {
         body.push(``);
         body.push(`${indent}function handleDelete(row${ts ? ': any' : ''}) {`);
-        body.push(`${indent}  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`);
-        body.push(`${indent}    .then(async () => {`);
-        body.push(`${indent}      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`);
-        body.push(`${indent}      ElMessage.success('删除成功')`);
-        body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`);
-        body.push(`${indent}    })`);
-        body.push(`${indent}    .catch(() => {})`);
+        body.push(...buildDeleteConfirmBlock({
+            target,
+            indent: `${indent}  `,
+            bodyLines: [
+                `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+                `ElMessage.success('删除成功')`,
+                isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()',
+            ],
+        }));
         body.push(`${indent}}`);
     }
     body.push(``);
     body.push(`${indent}function handleBtnClick(key${ts ? ': string' : ''}, data${ts ? ': any' : ''}) {`);
     if (config.actions.includes('add')) {
         body.push(`${indent}  if (key === '${CRUD_PAGE_BTN_CLICK_KEYS.ADD_CONFIRM}') {`);
-        body.push(`${indent}    httpRequest({ url: '${config.apiUrl}', method: 'POST', data }).then(() => {`);
+        body.push(`${indent}    httpRequest({ url: ${q(config.apiUrl)}, method: 'POST', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('新增成功')`);
         body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('新增失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
     if (config.actions.includes('edit')) {
         body.push(`${indent}  if (key === '${CRUD_PAGE_BTN_CLICK_KEYS.EDIT_CONFIRM}') {`);
-        body.push(`${indent}    httpRequest({ url: \`${config.apiUrl}/\${data.${tOpts.rowkey || 'id'}}\`, method: 'PUT', data }).then(() => {`);
+        body.push(`${indent}    httpRequest({ url: \`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\`, method: 'PUT', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('编辑成功')`);
         body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('编辑失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
@@ -515,17 +579,14 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
     }
     lines.push(`</script>`);
     let code = lines.join('\n');
-    // Vue 2 命名替换：ElMessageBox → MessageBox, ElMessage → Message
-    if (isVue2) {
-        code = code
-            .replace(/\bElMessageBox\b/g, 'MessageBox')
-            .replace(/\bElMessage\b/g, 'Message');
-    }
+    // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
+    code = rewriteElementUsage(code, target);
     return code;
 }
 function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     const ts = config.typescript;
     const isVue2 = target === 'vue2';
+    const esPlusPkg = getEsPlusPackageName(target);
     const tOpts = (config.tableOptions || {});
     const lines = [];
     const hasDelete = config.actions.includes('delete');
@@ -543,11 +604,7 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     lines.push(`  >`);
     if (renderFields.length > 0) {
         for (const f of renderFields) {
-            lines.push(`    <template #column-${f.prop}="{ row }">`);
-            lines.push(`      <el-tag :type="row.${f.prop} === 1 ? 'success' : 'danger'">`);
-            lines.push(`        {{ row.${f.prop} === 1 ? '启用' : '禁用' }}`);
-            lines.push(`      </el-tag>`);
-            lines.push(`    </template>`);
+            lines.push(...buildExtensionPointSlotLines(f, target));
         }
     }
     lines.push(`  </es-crud-page>`);
@@ -569,6 +626,8 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
         epImports.push('ElMessage');
     // 使用 buildElementImport 自动适配命名（ElMessage → Message 等）和包名
     lines.push(buildElementImport([...new Set(epImports)], target));
+    // 全局 HTTP 请求自由函数（方案B）：fetchData / 弹窗确认 / 删除共用同一请求实例
+    lines.push(`import { httpRequest } from '${esPlusPkg}'`);
     lines.push(`import { pageSchema } from './schema'`);
     lines.push(``);
     // Vue 2: 包一层 defineComponent({ setup() {
@@ -586,7 +645,7 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     // fetchData
     body.push(`${indent}async function fetchData(params${ts ? ': any' : ''}) {`);
     body.push(`${indent}  const res = await httpRequest({`);
-    body.push(`${indent}    url: '${config.apiUrl}',`);
+    body.push(`${indent}    url: ${q(config.apiUrl)},`);
     body.push(`${indent}    method: 'GET',`);
     body.push(`${indent}    params: { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }`);
     body.push(`${indent}  })`);
@@ -596,13 +655,15 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     if (hasDelete) {
         body.push(``);
         body.push(`${indent}function handleDelete(row${ts ? ': any' : ''}) {`);
-        body.push(`${indent}  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`);
-        body.push(`${indent}    .then(async () => {`);
-        body.push(`${indent}      await httpRequest({ url: \`${config.apiUrl}/\${row.${tOpts.rowkey || 'id'}}\`, method: 'DELETE' })`);
-        body.push(`${indent}      ElMessage.success('删除成功')`);
-        body.push(`${indent}      ${refreshExpr}`);
-        body.push(`${indent}    })`);
-        body.push(`${indent}    .catch(() => {})`);
+        body.push(...buildDeleteConfirmBlock({
+            target,
+            indent: `${indent}  `,
+            bodyLines: [
+                `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+                `ElMessage.success('删除成功')`,
+                refreshExpr,
+            ],
+        }));
         body.push(`${indent}}`);
     }
     // dialog-confirm handler
@@ -611,11 +672,13 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     const dialogEntries = Object.entries(dialogs).filter(([, d]) => !d.hasCustomRender);
     for (const [key] of dialogEntries) {
         const method = key === 'add' ? 'POST' : 'PUT';
-        const url = key === 'add' ? `'${config.apiUrl}'` : `\`${config.apiUrl}/\${data.${tOpts.rowkey || 'id'}}\``;
+        const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\``;
         body.push(`${indent}  if (dialogKey === '${key}') {`);
         body.push(`${indent}    httpRequest({ url: ${url}, method: '${method}', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('操作成功')`);
         body.push(`${indent}      ${refreshExpr}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('操作失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
@@ -625,7 +688,7 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     body.push(`${indent}function handleBtnClick(key${ts ? ': string' : ''}, payload${ts ? '?: any' : ''}) {`);
     if (config.actions.includes('export')) {
         body.push(`${indent}  if (key === 'export') {`);
-        body.push(`${indent}    window.open(\`${config.apiUrl}/export?\${new URLSearchParams(payload || {}).toString()}\`)`);
+        body.push(`${indent}    window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(payload || {}).toString()}\`)`);
         body.push(`${indent}  }`);
     }
     body.push(`${indent}}`);
@@ -650,13 +713,38 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
     }
     lines.push(`</script>`);
     let code = lines.join('\n');
-    // Vue 2 命名替换：ElMessageBox → MessageBox, ElMessage → Message
-    if (isVue2) {
-        code = code
-            .replace(/\bElMessageBox\b/g, 'MessageBox')
-            .replace(/\bElMessage\b/g, 'Message');
-    }
+    // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
+    code = rewriteElementUsage(code, target);
     return code;
+}
+function buildExtensionPointSlotLines(field, target) {
+    // 优雅降级契约（WS-5）：schema 模式无法内联 render 函数。与其静默丢弃需求，
+    // 生成一个带 TODO(es-plus) 标记的扩展点插槽，并把用户原始的 render 意图作为
+    // 注释回显——占位内容是可编译的默认状态标签，等待开发者替换为真实标记。
+    const lines = [];
+    lines.push(`    <template #column-${field.prop}="{ row }">`);
+    lines.push(`      <!-- TODO(es-plus): custom render for "${field.label}" — replace this default stub with your markup. -->`);
+    if (field.render) {
+        lines.push(`      <!-- requested render: ${sanitizeForComment(field.render)} -->`);
+    }
+    lines.push(...buildStatusTagTemplate({ target, prop: field.prop, indent: '      ' }));
+    lines.push(`    </template>`);
+    return lines;
+}
+// HTML 注释不能包含 "--"，且需单行；折叠空白并把连续短横替换为破折号，截断超长源码。
+function sanitizeForComment(src) {
+    return src.replace(/\s+/g, ' ').replace(/--+/g, '—').trim().slice(0, 200);
+}
+// 转义单引号 JS 字符串字面量。label/prop/apiUrl/permissionValue/rowkey 等数据字段
+// 可能来自外部 JSON 或 AI 生成，含 ' 或 \ 会破坏生成代码甚至注入任意 JS。
+// 注意：formatter/render 是源码扩展点（函数源码串），不经此转义。
+function q(value) {
+    return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n')}'`;
+}
+// 转义反引号模板字面量上下文：apiUrl 等数据字段在生成代码里以 `...` 模板字面量出现
+// （如 `url: \`${apiUrl}/${row.id}\``），含 ` 或 ${ 会破坏生成代码甚至注入任意 JS。
+function qBt(value) {
+    return String(value).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 }
 function buildFormItem(field, context, i18n) {
     const item = {
@@ -721,12 +809,26 @@ function buildTableColumn(field, i18n) {
         col.fixed = field.fixed;
     if (field.ellipsis)
         col.showOverflowTooltip = true;
+    // Schema mode cannot inline render expressions, so the wrapper emits a
+    // `<template #column-<prop>>` scoped slot. es-table (all three renderers)
+    // only renders that slot when the column declares scopedSlots.customRender,
+    // so wire it up here — otherwise the emitted template is dead code.
+    if (field.render)
+        col.scopedSlots = { customRender: `column-${field.prop}` };
     return col;
 }
 function buildTableColumnSFC(field, config) {
     const parts = [];
-    parts.push(`prop: '${field.prop}'`);
-    parts.push(`label: '${config.i18n ? `\${t('field.${field.prop}')}` : field.label}'`);
+    parts.push(`prop: ${q(field.prop)}`);
+    // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
+    // es-table 内部按 labelKey 解析 i18n 文案。绝不能内联 `label: '${t('...')}'` ——
+    // 内层单引号会截断外层字符串（编译失败），且 SFC 从不 import/定义 t。
+    if (config.i18n) {
+        parts.push(`labelKey: ${q(`field.${field.prop}`)}`);
+    }
+    else {
+        parts.push(`label: ${q(field.label)}`);
+    }
     if (field.width)
         parts.push(`width: ${typeof field.width === 'number' ? field.width : `'${field.width}'`}`);
     if (field.minWidth)
@@ -746,15 +848,15 @@ function buildTableColumnSFC(field, config) {
 function buildActionBtns(config) {
     const btns = [];
     if (config.actions.includes('view')) {
-        const perm = config.permissions?.view ? `, permissionValue: '${config.permissions.view}'` : '';
+        const perm = config.permissions?.view ? `, permissionValue: ${q(config.permissions.view)}` : '';
         btns.push(`{ name: '查看', type: 'primary', clickEvent: (row) => openForm('查看', row)${perm} }`);
     }
     if (config.actions.includes('edit')) {
-        const perm = config.permissions?.edit ? `, permissionValue: '${config.permissions.edit}'` : '';
+        const perm = config.permissions?.edit ? `, permissionValue: ${q(config.permissions.edit)}` : '';
         btns.push(`{ name: '编辑', type: 'primary', clickEvent: (row) => openForm('编辑', row)${perm} }`);
     }
     if (config.actions.includes('delete')) {
-        const perm = config.permissions?.delete ? `, permissionValue: '${config.permissions.delete}'` : '';
+        const perm = config.permissions?.delete ? `, permissionValue: ${q(config.permissions.delete)}` : '';
         btns.push(`{ name: '删除', type: 'danger', clickEvent: (row) => handleDelete(row)${perm} }`);
     }
     return btns;
@@ -762,6 +864,7 @@ function buildActionBtns(config) {
 function inferTsType(field) {
     switch (field.formtype) {
         case 'Switch': return 'boolean';
+        case 'InputNumber': return 'number | null';
         case 'Rate':
         case 'Slider': return 'number';
         case 'Checkbox':
@@ -778,6 +881,7 @@ function inferTsType(field) {
 function getDefaultValue(field) {
     switch (field.formtype) {
         case 'Switch': return 'false';
+        case 'InputNumber': return 'null';
         case 'Rate':
         case 'Slider': return '0';
         case 'Checkbox':

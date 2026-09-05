@@ -3,9 +3,9 @@
     <div class="api-switch">
       <span class="switch-label">切换后端接口格式：</span>
       <el-radio-group v-model="apiFormat" size="small">
-        <el-radio-button label="standard">标准格式</el-radio-button>
-        <el-radio-button label="snake">蛇形命名</el-radio-button>
-        <el-radio-button label="nested">嵌套结构</el-radio-button>
+        <el-radio-button value="standard">标准格式</el-radio-button>
+        <el-radio-button value="snake">蛇形命名</el-radio-button>
+        <el-radio-button value="nested">嵌套结构</el-radio-button>
       </el-radio-group>
     </div>
     <es-table

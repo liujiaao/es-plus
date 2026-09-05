@@ -6,7 +6,7 @@
       </button>
       <router-link to="/" class="logo">
         <span class="logo-icon">ES</span>
-        <span class="logo-text">Plus</span>
+        <span class="logo-text">ES-Plus</span>
       </router-link>
       <nav class="header-nav">
         <router-link to="/" class="nav-item">{{ t('header.home') }}</router-link>
@@ -149,13 +149,17 @@ onUnmounted(() => {
     color: white;
     font-weight: 700;
     font-size: 14px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
   }
 
   .logo-text {
     font-size: 20px;
     font-weight: 700;
-    color: var(--text-color-primary);
     letter-spacing: -0.5px;
+    background: linear-gradient(120deg, var(--primary-color) 0%, var(--brand-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 
@@ -166,18 +170,39 @@ onUnmounted(() => {
 }
 
 .nav-item {
+  position: relative;
   color: var(--text-color-regular);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
+  padding: 4px 2px;
   transition: color 0.2s;
 
   &:hover {
-    color: var(--primary-color);
+    color: var(--text-color-primary);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--brand-accent));
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
   }
 
   &.router-link-active {
     color: var(--primary-color);
+    font-weight: 600;
+
+    &::after {
+      transform: scaleX(1);
+    }
   }
 }
 

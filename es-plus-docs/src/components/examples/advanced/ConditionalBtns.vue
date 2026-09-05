@@ -33,7 +33,7 @@ const statusMap = {
   pending: { text: '待审', type: 'warning' },
   approved: { text: '已审', type: 'success' },
   rejected: { text: '已驳', type: 'danger' },
-  published: { text: '已发', type: '' }
+  published: { text: '已发', type: 'primary' }
 }
 
 const columns = [

@@ -124,12 +124,17 @@ export const wrapPromise = <T>(
  * 提取自 packages/vue3/src/composables/use-form-inputs.ts，
  * 用于表单 v-model 绑定嵌套字段（如 user.address.city）。
  */
+// 原型污染防护：路径中出现这些 key 时直接拒绝读写，避免经
+// `__proto__.x = v` 改写 Object.prototype / Function.prototype / Object 原型。
+const DANGEROUS_PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 export const getNestedValue = (
   obj: Record<string, unknown>,
   path: string
 ): unknown => {
   if (obj == null || !path) return undefined
   const keys = path.split(/\.|\[|\]/).filter(Boolean)
+  if (keys.some((k) => DANGEROUS_PROTO_KEYS.has(k))) return undefined
   let result: unknown = obj
   for (const key of keys) {
     if (result == null) return undefined
@@ -151,6 +156,8 @@ export const setNestedValue = (
 ): void => {
   if (obj == null || !path) return
   const keys = path.split(/\.|\[|\]/).filter(Boolean)
+  // 防原型污染：拦截 __proto__ / constructor / prototype，避免写入全局原型链
+  if (keys.some((k) => DANGEROUS_PROTO_KEYS.has(k))) return
   const lastKey = keys.pop()
   let current: Record<string, unknown> = obj
   for (const key of keys) {

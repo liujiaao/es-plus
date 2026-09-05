@@ -263,16 +263,27 @@ AI 会自动调用 MCP Server 的 `generate_crud_page` 工具，返回完整可�
 
 ## 工具 (Tools)
 
-MCP Server 提供 5 个工具，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择调用。
 
-### generate_crud_page
+> **生成路径优先级**：`generate_crud_from_config` 是**首选**（配置驱动、由你——AI 客户端——做真正的语义推理），`generate_crud_page` 是**无 LLM 的正则兜底**（准确率受关键词表覆盖度限制）。优先前者。
 
-从自然语言生成完整的 Vue 3 / Vue 2 CRUD 页面（.vue SFC）。
+### generate_crud_from_config（首选 / 推荐）
+
+从**结构化配置**（带类型的字段，而非 JSON 字符串）生成生产级 CRUD 页面。这是主生成路径：
+
+- 由你（AI 客户端）阅读自然语言请求，直接**按类型逐字段填空**：`name`（PascalCase）、`apiUrl`（真实接口）、`fields[]`（`prop`/`label`/`formtype` + `inQuery`/`inTable`/`inForm`）、`actions[]`。工具的输入 schema 用 `.describe()` 指引你**按字段含义**推断 `formtype`，不靠关键词硬匹配。
+- schema 无法表达的业务逻辑 → 落成**带标记的扩展点**（`formatter`/`render` 串 + `TODO(es-plus)` 桩 + `warnings`），显式暴露而非静默丢弃。
+- 生成前先读 `esplus://conventions`、`esplus://examples/nl-to-config`、`esplus://types`；草拟后对照原始请求**自审**再调用。
+- 返回 `warnings[]` —— 交付前逐条解决。
+
+### generate_crud_page（兜底 / no-LLM fallback）
+
+从自然语言生成 CRUD 页面（.vue SFC）。**它用正则/关键词解析，不做真正推理**——仅用于快速原型，或你无法草拟结构化配置时。日常请优先 `generate_crud_from_config`。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `description` | string | 页面功能描述（中文或英文） |
-| `target` | `'vue3' \| 'vue2'`（可选） | 渲染目标，未传则自动检测 |
+| `target` | `'vue3' \| 'vue2' \| 'antdv'`（可选） | 渲染目标，未传则自动检测 |
 
 **描述技巧**：
 
@@ -290,7 +301,7 @@ MCP Server 提供 5 个工具，AI 编码工具会根据你的描述自动选择
 "操作日志查询，查询关键词、级别、日期范围，表格显示时间、级别、操作人、内容，只查看不编辑"
 ```
 
-**关键词智能识别**：
+**关键词兜底映射**（仅 `generate_crud_page` 的启发式；首选路径靠语义推断而非此表）：
 
 | 字段关键词 | 自动映射为 |
 |-----------|-----------|
@@ -321,7 +332,7 @@ MCP Server 提供 5 个工具，AI 编码工具会根据你的描述自动选择
 
 ### list_form_types
 
-列出 es-plus 支持的全部 13 种表单控件类型及用法示例。无需参数。
+列出 es-plus 支持的全部 14 种表单控件类型及用法示例。无需参数。
 
 ### get_component_api
 

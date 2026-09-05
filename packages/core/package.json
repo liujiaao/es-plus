@@ -3,44 +3,54 @@
   "version": "1.0.1",
   "description": "es-plus framework-agnostic core: shared types, utilities, and pure logic for both Vue 3 (@es-plus/vue3) and Vue 2 (@es-plus/vue2) renderers",
   "type": "module",
-  "main": "./build/index.js",
+  "main": "./build/cjs/index.js",
+  "module": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
-      "import": "./build/index.js"
+      "import": "./build/index.js",
+      "require": "./build/cjs/index.js"
     },
     "./shared": {
       "types": "./build/shared.d.ts",
-      "import": "./build/shared.js"
+      "import": "./build/shared.js",
+      "require": "./build/cjs/shared.js"
     },
     "./types": {
       "types": "./build/types.d.ts",
-      "import": "./build/types.js"
+      "import": "./build/types.js",
+      "require": "./build/cjs/types.js"
     },
     "./config": {
       "types": "./build/config.d.ts",
-      "import": "./build/config.js"
+      "import": "./build/config.js",
+      "require": "./build/cjs/config.js"
     },
     "./constants": {
       "types": "./build/constants.d.ts",
-      "import": "./build/constants.js"
+      "import": "./build/constants.js",
+      "require": "./build/cjs/constants.js"
     },
     "./form-layout": {
       "types": "./build/form-layout.d.ts",
-      "import": "./build/form-layout.js"
+      "import": "./build/form-layout.js",
+      "require": "./build/cjs/form-layout.js"
     },
     "./table-selection": {
       "types": "./build/table-selection.d.ts",
-      "import": "./build/table-selection.js"
+      "import": "./build/table-selection.js",
+      "require": "./build/cjs/table-selection.js"
     },
     "./request": {
       "types": "./build/request.d.ts",
-      "import": "./build/request.js"
+      "import": "./build/request.js",
+      "require": "./build/cjs/request.js"
     },
     "./field-resolver": {
       "types": "./build/field-resolver.d.ts",
-      "import": "./build/field-resolver.js"
+      "import": "./build/field-resolver.js",
+      "require": "./build/cjs/field-resolver.js"
     }
   },
   "files": [
@@ -49,7 +59,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node ./scripts/finalize-cjs.mjs",
     "dev": "tsc -p tsconfig.build.json --watch",
     "test": "vitest run",
     "test:watch": "vitest",

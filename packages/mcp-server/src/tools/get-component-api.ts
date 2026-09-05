@@ -17,7 +17,7 @@ import { COMPONENT_LIST, type ComponentName } from "@es-plus/shared";
 // identical because both renderers share `@es-plus/shared` and the same JSON
 // schema. This is the whole point of the dual-renderer architecture.
 
-type Target = "vue3" | "vue2";
+type Target = "vue3" | "vue2" | "antdv";
 
 interface TargetVars {
   esPlusPkg: string;
@@ -44,6 +44,14 @@ const TARGETS: Record<Target, TargetVars> = {
     scriptSetup: "<script>\nimport { defineComponent } from 'vue'\nexport default defineComponent({\n  setup() { /* ... */ }\n})",
     vModelSync: (prop) => `:${prop}.sync`,
     jsxNote: "Vue 2.7's `<script setup>` works but JSX requires the @vue/babel-preset-jsx plugin. defineComponent + setup() is the safer fallback.",
+  },
+  antdv: {
+    esPlusPkg: "@es-plus/adapter-antdv",
+    elementPkg: "ant-design-vue",
+    elementCss: "ant-design-vue/dist/reset.css",
+    scriptSetup: "<script setup>",
+    vModelSync: (prop) => `v-model:${prop}`,
+    jsxNote: "Use `<script setup lang=\"tsx\">` for JSX (Vue 3 syntax, identical to vue3).",
   },
 };
 
@@ -146,7 +154,7 @@ interface TableOptions {
   rowkey?: string             // Row unique key
   isInitRun?: boolean         // Auto-fetch on mount (default true)
   heightType?: 'auto' | 'height'  // Height mode
-  tabHeight?: number | string // Container height value (used with heightType)
+  height?: number | string    // Container height value (used with heightType)
 
   // Virtual scrolling (el-table-v2, suitable for 10k+ rows)
   // Vue 3 only — Vue 2 + Element UI fallback to standard ElTable scrolling.
@@ -180,12 +188,14 @@ import { EsTable } from '${v.esPlusPkg}'
 - Auto-linked with EsForm via provide/inject
 ${v.esPlusPkg === "@es-plus/vue3"
     ? "- Virtual scrolling: same API, just add `virtual: true` for 10k+ row performance"
+    : v.esPlusPkg === "@es-plus/adapter-antdv"
+    ? "- For 10k+ rows on antdv, use server-side pagination or vxe-table's built-in virtual scroll — the el-table-v2 `virtual: true` engine is Element Plus (vue3) only"
     : "- For 10k+ rows on Vue 2, use server-side pagination — el-table-v2 virtual scrolling is Vue 3 only"}
 `;
 }
 
 function docUseDialog(v: TargetVars): string {
-  const v3Hint = v.esPlusPkg === "@es-plus/vue3";
+  const v3Hint = v.esPlusPkg !== "@es-plus/vue2";
   return `# useDialog API (${v.esPlusPkg})
 
 ## Usage
@@ -272,16 +282,16 @@ function buildDoc(target: Target, component: ComponentName): string {
 export function registerGetComponentApi(server: McpServer) {
   server.tool(
     "get_component_api",
-    "Get the full API documentation for an es-plus component, including TypeScript interfaces, props, methods, and usage examples. Specify target='vue2' for @es-plus/vue2 + Element UI variants; default is target='vue3'.",
+    "Get the full API documentation for an es-plus component, including TypeScript interfaces, props, methods, and usage examples. Specify target='vue2' for @es-plus/vue2 + Element UI variants, target='antdv' for @es-plus/adapter-antdv + Ant Design Vue; default is target='vue3'.",
     {
       component: z
         .enum(COMPONENT_LIST)
-        .describe("Component name: EsForm, EsTable, or useDialog"),
+        .describe("Component name: EsForm, EsTable, EsDialog, EsCrudPage, SvgIcon, or useDialog (detailed docs currently for EsForm/EsTable/useDialog)"),
       target: z
-        .enum(["vue3", "vue2"])
+        .enum(["vue3", "vue2", "antdv"])
         .default("vue3")
         .describe(
-          "Target framework: 'vue3' (default, @es-plus/vue3 + Element Plus) or 'vue2' (@es-plus/vue2 + Element UI). Match the user's project — Vue 3 codebase → vue3, Vue 2 codebase → vue2."
+          "Target framework: 'vue3' (default, @es-plus/vue3 + Element Plus), 'vue2' (@es-plus/vue2 + Element UI), or 'antdv' (@es-plus/adapter-antdv + Ant Design Vue, Vue 3 syntax). Match the user's project."
         ),
     },
     async ({ component, target }) => {

@@ -23,7 +23,7 @@
 - **国际化** — `labelKey` + 自定义翻译函数，兼容任意 i18n 方案
 - **TypeScript** — 完整类型定义，11 个核心接口可导入
 - **AI 原生支持** — 配套 [@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server) 和 [@es-plus/cli](https://www.npmjs.com/package/@es-plus/cli)
-- **13 种表单类型** — Input、Select、datePicker、timePicker、Slider、ColorPicker、Transfer、Cascader、Radio、Checkbox、Switch、Rate、Upload
+- **14 种表单类型** — Input、InputNumber、Select、datePicker、timePicker、Slider、ColorPicker、Transfer、Cascader、Radio、Checkbox、Switch、Rate、Upload
 
 ## 为什么选择 @es-plus/vue3？
 
@@ -268,7 +268,7 @@ function openAddDialog() {
 
 ## EsForm 表单组件
 
-配置化驱动的表单组件，支持 13 种输入类型、动态显隐、异步数据加载、折叠展开等功能。
+配置化驱动的表单组件，支持 14 种输入类型、动态显隐、异步数据加载、折叠展开等功能。
 
 ### Props
 

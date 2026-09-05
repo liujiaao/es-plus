@@ -18,7 +18,10 @@
       "types": "./dist/resolver.d.ts"
     },
     "./dist/style.css": "./dist/style.css",
-    "./schemas/*": "./schemas/*"
+    "./schemas/*": "./schemas/*",
+    "./vxe-types-augment": {
+      "types": "./dist/vxe-types-augment.d.ts"
+    }
   },
   "files": [
     "dist",
@@ -31,6 +34,8 @@
   "scripts": {
     "typecheck": "vue-tsc --noEmit -p tsconfig.build.json",
     "typecheck:all": "vue-tsc --noEmit",
+    "sync-schemas": "node ../../scripts/sync-schemas.mjs",
+    "prebuild": "npm run sync-schemas",
     "build": "vite build",
     "prepublishOnly": "npm run typecheck && npm run build",
     "test": "vitest run",
@@ -72,9 +77,19 @@
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.1.0",
     "element-plus": "^2.2.0",
-    "vue": "^3.2.0"
+    "vue": "^3.2.0",
+    "vxe-table": ">=4.5.0 <5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vxe-table": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@es-plus/core": "^1.0.0"
   },
   "devDependencies": {
+    "vxe-table": "^4.6.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitejs/plugin-vue-jsx": "^4.0.0",
     "@vue/test-utils": "^2.4.0",

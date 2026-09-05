@@ -34,7 +34,7 @@
         v-if="scope && scope.row"
         :row="scope.row"
         :index="scope.$index"
-        :data-key="cols.key"
+        :data-key="cols.prop || cols.key"
         :render="cols.render"
       />
       <span v-else>-</span>
@@ -70,7 +70,7 @@ const props = defineProps<{
   cols: TableColumn
 }>()
 
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
 // 函数式组件定义
 const RenderDomTb = defineComponent({

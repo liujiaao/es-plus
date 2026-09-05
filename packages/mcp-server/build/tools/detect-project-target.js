@@ -1,6 +1,6 @@
 import { z } from "zod";
 function parseSemverMajor(spec) {
-    if (!spec)
+    if (typeof spec !== "string" || !spec)
         return null;
     // Strip range prefixes (^, ~, >=, etc.) and pre-release suffixes
     const cleaned = spec.replace(/^[\^~>=<]+\s*/, "").trim();
@@ -11,6 +11,15 @@ export function detect(pkgJsonText) {
     let pkg;
     try {
         pkg = JSON.parse(pkgJsonText);
+        // JSON.parse("null") / "[]" / "42" 返回非对象，后续 .dependencies 会抛 TypeError
+        if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
+            return {
+                target: "vue3",
+                confidence: "low",
+                reasoning: "package.json content is not a JSON object — falling back to vue3 default.",
+                signals: {},
+            };
+        }
     }
     catch (err) {
         return {
@@ -31,6 +40,8 @@ export function detect(pkgJsonText) {
         signals["@es-plus/vue3"] = deps["@es-plus/vue3"];
     if (deps["@es-plus/vue2"])
         signals["@es-plus/vue2"] = deps["@es-plus/vue2"];
+    if (deps["@es-plus/adapter-antdv"])
+        signals["@es-plus/adapter-antdv"] = deps["@es-plus/adapter-antdv"];
     if (deps["es-plus-ui"])
         signals["es-plus-ui (legacy → vue3)"] = deps["es-plus-ui"];
     if (deps.vue)
@@ -39,7 +50,17 @@ export function detect(pkgJsonText) {
         signals["element-plus"] = deps["element-plus"];
     if (deps["element-ui"])
         signals["element-ui"] = deps["element-ui"];
+    if (deps["ant-design-vue"])
+        signals["ant-design-vue"] = deps["ant-design-vue"];
     // Tier 1 — explicit es-plus package present is the strongest signal.
+    if (deps["@es-plus/adapter-antdv"]) {
+        return {
+            target: "antdv",
+            confidence: "high",
+            reasoning: "Project already depends on @es-plus/adapter-antdv (Vue 3 + Ant Design Vue).",
+            signals,
+        };
+    }
     if (deps["@es-plus/vue3"] && !deps["@es-plus/vue2"]) {
         return {
             target: "vue3",
@@ -78,12 +99,23 @@ export function detect(pkgJsonText) {
     const vueMajor = parseSemverMajor(deps.vue);
     const hasElementPlus = !!deps["element-plus"];
     const hasElementUI = !!deps["element-ui"];
+    const hasAntdv = !!deps["ant-design-vue"];
     if (vueMajor === 2 || hasElementUI) {
         return {
             target: "vue2",
             confidence: vueMajor === 2 && hasElementUI ? "high" : "medium",
             reasoning: `Detected ${vueMajor === 2 ? `vue@${vueMajor}` : ""}${vueMajor === 2 && hasElementUI ? " + " : ""}${hasElementUI ? "element-ui" : ""} — ` +
                 "compatible with @es-plus/vue2. No es-plus package is installed yet; suggest adding @es-plus/vue2.",
+            signals,
+        };
+    }
+    // Ant Design Vue (Vue 3) → antdv, but only when Element Plus isn't also present.
+    if (hasAntdv && !hasElementPlus) {
+        return {
+            target: "antdv",
+            confidence: (vueMajor === 3 || vueMajor === null) ? "high" : "medium",
+            reasoning: `Detected ${vueMajor === 3 ? `vue@${vueMajor} + ` : ""}ant-design-vue — ` +
+                "compatible with @es-plus/adapter-antdv. No es-plus package is installed yet; suggest adding @es-plus/adapter-antdv.",
             signals,
         };
     }
@@ -105,7 +137,7 @@ export function detect(pkgJsonText) {
     };
 }
 export function registerDetectProjectTarget(server) {
-    server.tool("detect_project_target", "Detect which es-plus target (vue3 vs vue2) matches the user's project, given the project's package.json content. The MCP client (e.g. Claude Code) reads the file from the workspace and passes it here. Use this BEFORE calling generate_crud_page / generate_crud_schema / get_component_api so you pick the right target instead of defaulting to vue3.", {
+    server.tool("detect_project_target", "Detect which es-plus target (vue3 / vue2 / antdv) matches the user's project, given the project's package.json content. The MCP client (e.g. Claude Code) reads the file from the workspace and passes it here. Use this BEFORE calling generate_crud_page / generate_crud_schema / get_component_api so you pick the right target instead of defaulting to vue3.", {
         packageJson: z
             .string()
             .describe("Raw string content of the user project's package.json. Read it with your file-read tool (e.g. read_file) and pass the full JSON text here."),

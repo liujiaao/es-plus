@@ -23,7 +23,7 @@
 import { watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled, Cpu } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled, Cpu, Odometer, Collection } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -45,10 +45,19 @@ const sections = [
   {
     titleKey: 'sidebar.section.start',
     items: [
-      { path: '/guide/why-es-plus', labelKey: 'sidebar.whyEsPlus', icon: markRaw(StarFilled) },
+      { path: '/quickstart', labelKey: 'sidebar.quickstart', icon: markRaw(Odometer) },
       { path: '/guide/getting-started', labelKey: 'sidebar.gettingStarted', icon: markRaw(Promotion) },
       { path: '/guide/installation', labelKey: 'sidebar.installation', icon: markRaw(Box) },
       { path: '/guide/usage', labelKey: 'sidebar.usage', icon: markRaw(Reading) },
+      { path: '/guide/why-es-plus', labelKey: 'sidebar.whyEsPlus', icon: markRaw(StarFilled) },
+    ],
+  },
+  {
+    titleKey: 'sidebar.section.cases',
+    items: [
+      { path: '/cases', labelKey: 'sidebar.cases', icon: markRaw(Collection) },
+      { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
+      { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
     ],
   },
   {
@@ -60,10 +69,9 @@ const sections = [
     ],
   },
   {
-    titleKey: 'sidebar.section.advanced',
+    titleKey: 'sidebar.section.engine',
     items: [
-      { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
-      { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
+      { path: '/advanced/vxe-table', labelKey: 'sidebar.vxeTable', icon: markRaw(Grid) },
     ],
   },
   {
@@ -71,29 +79,19 @@ const sections = [
     items: [
       { path: '/guide/mcp-server', labelKey: 'sidebar.mcpServer', icon: markRaw(MagicStick) },
       { path: '/guide/cli', labelKey: 'sidebar.cli', icon: markRaw(Monitor) },
+      { path: '/ai-crud', labelKey: 'sidebar.aiCrud', icon: markRaw(MagicStick) },
+      { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },
     ],
   },
   {
-    titleKey: 'sidebar.section.crossFramework',
+    titleKey: 'sidebar.section.ecosystem',
     items: [
       { path: '/guide/vue2', labelKey: 'sidebar.vue2', icon: markRaw(SetUp) },
       { path: '/guide/adapter-antdv', labelKey: 'sidebar.adapterAntdv', icon: markRaw(Cpu) },
       { path: '/guide/migration', labelKey: 'sidebar.migration', icon: markRaw(Switch) },
-    ],
-  },
-  {
-    titleKey: 'sidebar.section.reference',
-    items: [
       { path: '/guide/permission-i18n', labelKey: 'sidebar.permissionI18n', icon: markRaw(Lock) },
       { path: '/guide/schema-setup', labelKey: 'sidebar.schemaSetup', icon: markRaw(Tools) },
       { path: '/guide/changelog', labelKey: 'sidebar.changelog', icon: markRaw(Document) },
-    ],
-  },
-  {
-    titleKey: 'sidebar.section.tools',
-    items: [
-      { path: '/ai-crud', labelKey: 'sidebar.aiCrud', icon: markRaw(MagicStick) },
-      { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },
     ],
   },
 ]

@@ -1,0 +1,21 @@
+{
+  "nl": "文章分类管理：分类是树形结构，支持选择上级分类（级联选择，数据来自 /api/categories/tree）；表格展示分类名、层级、排序、创建时间；支持新增、编辑、删除。",
+  "config": {
+    "name": "CategoryManage",
+    "apiUrl": "/api/categories",
+    "fields": [
+      { "prop": "name", "label": "分类名", "formtype": "Input" },
+      { "prop": "level", "label": "层级", "formtype": "Input", "inQuery": false },
+      { "prop": "sortOrder", "label": "排序", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "parentId",
+        "label": "上级分类",
+        "formtype": "Cascader",
+        "apiParams": { "url": "/api/categories/tree", "labelField": "name", "valueField": "id" }
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "tree selection via Cascader + apiParams; level/sort detail-only"
+}

@@ -22,7 +22,8 @@ npm install -D @es-plus/cli
 | 命令 | 说明 | 示例 |
 |------|------|------|
 | `es-plus create <name>` | 交互式 / 从配置生成 CRUD 页面 | `es-plus create user-management` |
-| `es-plus create --from-config` | 从 JSON 配置生成生产级代码 | `es-plus create --from-config ./config.json` |
+| `es-plus create --from-config` | 从 JSON 配置生成生产级代码（配置驱动） | `es-plus create --from-config ./config.json` |
+| `es-plus create --ai` | 用 LLM 推理 NL→config 再生成（需 `ANTHROPIC_API_KEY`） | `es-plus create user --ai -d "..."` |
 | `es-plus validate <file>` | 校验 JSON 配置文件 | `es-plus validate ./config.json` |
 | `es-plus scaffold <name>` | 生成最小页面脚手架 | `es-plus scaffold dashboard` |
 
@@ -51,6 +52,36 @@ es-plus create user-management \
 | `<name>` | 页面名称（kebab-case） | **必填** |
 | `-d, --description` | 跳过交互，直接使用此描述生成 | 无（进入交互模式） |
 | `-o, --output <path>` | 输出文件路径 | `./src/views/<PascalName>.vue` |
+| `-m, --mode <mode>` | 输出模式：`schema`（默认，schema.ts + 包装 SFC）或 `sfc`（完整单文件组件） | `schema` |
+| `-t, --target <target>` | 目标框架：`vue3`（默认，Element Plus）/ `vue2`（Element UI）/ `antdv`（Ant Design Vue） | `vue3` |
+| `-c, --from-config <path>` | 从结构化 JSON 配置生成生产级代码（配置驱动，最稳） | 无 |
+| `--ai` | 用 LLM（Anthropic）真正推理 NL→config，再走确定性生成器；检测到 `ANTHROPIC_API_KEY` 时自动启用，`--no-ai` 强制走内置生成器 | 检测到 key 时开 |
+
+### 三条生成路径（准确率从高到低）
+
+`create` 的自然语言 → 代码有三条路径，按可靠性排序：
+
+1. **`--from-config <path>`（配置驱动，最稳）** — 你已有结构化 `StructuredCrudConfig` 时，CLI 先用 Zod 校验，再交给确定性生成器 `generateFromConfig`。代码能否编译由构造保证，三端同构。生产环境首选。
+
+   ```bash
+   es-plus create user-management --from-config ./user.config.json -o ./src/views/user
+   ```
+
+2. **`--ai`（LLM 语义推理）** — 由 LLM 阅读自然语言、按字段**语义**推断出配置（进程内 Zod 校验 + 自修复闭环，最多重试 2 次），再喂给同一个确定性生成器。不受关键词覆盖度限制，是「AI 原生」的主路径。需要可选依赖 `@anthropic-ai/sdk` 与环境变量 `ANTHROPIC_API_KEY`：
+
+   ```bash
+   npm i -D @anthropic-ai/sdk
+   ANTHROPIC_API_KEY=sk-... es-plus create user-management \
+     -d "用户管理，查询姓名、手机号、状态，表格显示姓名、头像、状态、创建时间，支持新增编辑删除" --ai
+   ```
+
+   > 检测到 `ANTHROPIC_API_KEY` 时 `--ai` 自动启用；SDK 未安装、key 缺失或 LLM 调用失败时会**自动降级到内置生成器**，并打印实际走了哪条路，绝不中断。
+
+3. **内置生成器（no-LLM 兜底）** — 无 key / 未装 SDK / 显式 `--no-ai` 时的正则关键词解析。准确率受关键词覆盖度限制，仅用于快速原型；强制走它：
+
+   ```bash
+   es-plus create user-management -d "..." --no-ai
+   ```
 
 ### 交互流程
 
@@ -159,7 +190,7 @@ const columns = [
 | 关键词 | 映射为 |
 |--------|--------|
 | 状态、类型、分类、性别 | Select 下拉选择 |
-| 日期、时间 | datePicker 日期选择器 |
+| 日期、时间 | DatePicker 日期选择器 |
 | 开关、启用/禁用 | Switch 开关 |
 | 评分、星级 | Rate 评分 |
 | 头像、图片、附件 | Upload 上传 |
@@ -211,7 +242,7 @@ cat config.json | es-plus create --from-config -
       "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
     { "prop": "deptId", "label": "部门", "formtype": "Select", "inTable": false,
       "apiParams": { "url": "/api/system/depts/options" } },
-    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker",
+    { "prop": "createTime", "label": "创建时间", "formtype": "DatePicker",
       "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
   ],
   "actions": ["add", "edit", "delete"],
@@ -380,7 +411,7 @@ es-plus validate ./config/table-options.json
 
 建议:
   - Add missing property "prop"
-  - Valid values for /formtype: Input, Select, datePicker, timePicker,
+  - Valid values for /formtype: Input, InputNumber, Select, DatePicker, TimePicker,
     Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
 
 可用 schema: form-item, table-column, table-options, dialog-options

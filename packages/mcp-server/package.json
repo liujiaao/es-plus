@@ -20,7 +20,8 @@
   ],
   "scripts": {
     "bundle-types": "node scripts/bundle-types.mjs",
-    "prebuild": "cd ../shared && npm run build && cd ../mcp-server && npm run bundle-types",
+    "sync-schemas": "node ../../scripts/sync-schemas.mjs",
+    "prebuild": "npm run sync-schemas && cd ../shared && npm run build && cd ../mcp-server && npm run bundle-types",
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc --watch",

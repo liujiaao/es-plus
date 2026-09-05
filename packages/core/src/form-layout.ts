@@ -59,13 +59,15 @@ export function getRowColsAlgorithm(formItemList: FormItemOption[]): FormLayoutR
 
   for (let i = 0; i < formItemList.length; i++) {
     const item = formItemList[i]
-    pre += item.span || 24
+    // 单字段 span 不得超过 24 栅格；越界值（如 30）会导致首项即溢出、产生空行
+    const span = Math.min(item.span || 24, 24)
+    pre += span
 
     if (pre > 24) {
       // 当前项使本行溢出 → 上一项之前为一行，当前项进入新行
       const statIndex = columnRows.length ? columnRows[columnRows.length - 1].endIndex : 0
       columnRows.push({ statIndex, endIndex: i })
-      pre = item.span || 24
+      pre = span
       // 如果当前项也是最后一项，则它独占新行
       if (i === formItemList.length - 1) {
         columnRows.push({ statIndex: i, endIndex: i + 1 })

@@ -2,8 +2,8 @@
   <div class="example-auto-fit-height">
     <div class="demo-controls">
       <el-radio-group v-model="heightMode" size="small">
-        <el-radio-button label="fixed">固定高度 400px</el-radio-button>
-        <el-radio-button label="fixed600">固定高度 600px</el-radio-button>
+        <el-radio-button value="fixed">固定高度 400px</el-radio-button>
+        <el-radio-button value="fixed600">固定高度 600px</el-radio-button>
       </el-radio-group>
       <span class="mode-hint">切换后表格自动重算高度，表单展开/收起也会触发重算</span>
     </div>

@@ -25,11 +25,26 @@
       >
         <div class="table_inner_containers">
           <table-btns
-            v-if="(options.configBtn && options.configBtn.length) || options.leftText"
+            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !hasVxeToolbar"
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
             :btn-config="options.configBtn"
             :left-text="options.leftText"
+          />
+
+          <!-- vxe-table 引擎（options.engine === 'vxe' 时启用） -->
+          <!-- M-7: v-on="$listeners" 透传 row-click/dblclick/contextmenu 等原生事件给 vxe-grid -->
+          <vxe-engine
+            v-if="isVxeEngine"
+            ref="vxeEngineRef"
+            :columns="filteredColumns"
+            :data-source="effectiveDataSource"
+            :table-height="tableHeight"
+            :options="mergedOptions"
+            :parent-slots="$scopedSlots"
+            v-on="$listeners"
+            @selection-change="handleTableSelectionChange"
+            @sort-change="handleVxeSortChange"
           />
 
           <!--
@@ -43,6 +58,7 @@
             @selection-change 合并为数组，不会覆盖我们的内部处理。
           -->
           <el-table
+            v-else
             class="el-dp_tables"
             :id="tableId"
             :key="tableId"
@@ -120,7 +136,7 @@
         分页用 static 定位（默认）参与 flex 列布局，使 .tableContainer (flex:1) 自动让出空间。
       -->
       <div
-        v-if="showPagination"
+        v-if="showPagination && !isVxeProxyMode"
         ref="paginationRef"
         class="pagination_page"
       >
@@ -172,20 +188,27 @@ import {
   inject,
   provide,
   getCurrentInstance,
+  markRaw,
   onMounted,
   h,
   nextTick,
 } from '../../vue-compat'
 import {
   getGlobalConfig,
+  getCallback,
+  getNestedValue,
+  TABLE_CONTEXT_INJECT_KEY,
   isObject,
   findValueByKey,
+  resolveKeepPage,
+  computeBoundaryRollback,
   type TableColumn,
   type PaginationConfig,
   type TableOptions,
 } from '@es-plus/core'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
+import VxeEngine from './engines/vxe-engine.vue'
 import { useTableResize } from '../../composables/use-table-resize'
 import { useTableSelection } from '../../composables/use-table-selection'
 import { mapSize } from '../../utils/size'
@@ -197,9 +220,28 @@ const defaultOptions: TableOptions = {
   loading: false,
   border: false,
   size: 'small',
-  headerCellStyle: { background: '#f5f7fa' },
+  // 用 backgroundColor 而非 background 简写：vxe 引擎的表头竖线/底线画在
+  // .vxe-header--column 的 background-image(linear-gradient) 上，background 简写会把
+  // background-image 一并重置为 none，导致表头竖线消失（#5）。el-table 引擎不受影响。
+  headerCellStyle: { backgroundColor: '#f5f7fa' },
   highlightCurrentRow: true,
   cachePageSelection: true,
+}
+
+/**
+ * 操作列文字按钮的语义色板 —— 复刻 vue3 (`text: true` + `type: btn.type || 'primary'`) 的着色效果。
+ *
+ * Element UI v2 的 `type="text"` 与语义色（danger/success/…）互斥，无法像 Element Plus 那样
+ * 「文字样式 + 语义色」并存；且颜色在 SCSS 编译期固化、无 CSS 变量可引用。为在保持文字按钮
+ * 外观的同时表达按钮语义（如删除按钮显示危险红），此处按类型注入内联 color。
+ * 未命中的类型（含缺省）不注入，沿用 el-button--text 默认主色（#409EFF，等价 vue3 的 `|| 'primary'`）。
+ */
+const OPERATION_BTN_TYPE_COLOR: Record<string, string> = {
+  primary: '#409EFF',
+  success: '#67C23A',
+  warning: '#E6A23C',
+  danger: '#F56C6C',
+  info: '#909399',
 }
 
 // es-table 内部选项键，不应透传给 el-table
@@ -228,6 +270,12 @@ const TABLE_INTERNAL_KEYS = new Set([
   'overscanCount',
   'rowClassName',
   'lazyLoad',
+  // vxe 引擎专有字段，不传给 el-table
+  'vxeConfig', 'vxeOn',
+  'showFooter', 'footerMethod', 'footerData',
+  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
+  'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
+  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -274,7 +322,7 @@ const checkQueryFields = (obj: Record<string, unknown>): boolean => {
 
 export default defineComponent({
   name: 'EsTable',
-  components: { ColumnItem, TableBtns },
+  components: { ColumnItem, TableBtns, VxeEngine },
   // 关闭自动 attrs 继承，避免 fallthrough 重复绑定
   inheritAttrs: false,
   props: {
@@ -301,19 +349,33 @@ export default defineComponent({
       default: () => ({}),
     },
   },
-  // Vue 2.6 + @vue/composition-api 下，emit('update:dataSource') /
-  // emit('update:pagination') 与父组件的 .sync 绑定会形成 reactive 反馈链路，
-  // 触发 "[Vue warn]: You may have an infinite update loop"。Vue 2.7 无此问题
-  // 但为了兼容 2.6，去掉这两个 .sync 式 emit。父组件如需双向绑定请用 v-model
-  // 模式或通过 @pagination-current-change / @size-change 自行维护状态。
+  // Vue 2.6 + @vue/composition-api 下，emit('update:pagination') 与父组件的 .sync /
+  // v-model:pagination 绑定会形成 reactive 反馈链路，裸 emit 会触发 "[Vue warn]:
+  // You may have an infinite update loop"。此处通过 emitPaginationUpdate() 的「值比较」
+  // 守卫安全重新开启双向绑定：emit 前先更新 lastPaginationStr 快照，父组件写回 props 时
+  // 入站 watcher 命中 str === lastPaginationStr 而 no-op，从值层面切断回环。
   emits: [
+    'update:pagination',
     'pagination-current-change',
     'size-change',
     'change-table-sort',
+    // 自动加载（onMounted / visibleShow）失败时吞掉 rejection 并向外暴露错误（对齐 vue3）
+    'request-error',
   ],
   setup(props, { emit, slots, attrs, expose }) {
     // ─── 注入全局配置 ─────────────────────────
-    const instance = getCurrentInstance() as unknown as Record<string, unknown>
+    // markRaw：es-table 的 vm 持有响应式数组（tableData / filteredColumns 等），
+    // 若把 getCurrentInstance() 包装对象原样返回给 setup，@vue/composition-api 的
+    // customReactive 会因 hasReactiveArrayChild(instance)===true 而深度遍历 instance.proxy
+    // （即本 vm），进而 observe 其 $options 并沿 $parent 链级联到外层 el-dialog 的
+    // $options.propsData / _parentListeners，使这些对象变为响应式。此后 el-dialog 每次
+    // patch（全屏切换 / 关闭动画）触发的 updateChildComponent 写入都会 dep.notify，
+    // 反复重新入队 EsDialog 渲染 watcher → "infinite update loop"。markRaw 让 customReactive
+    // 在 isRaw 短路处直接跳过整个 vm，从根上切断级联。es-form 因 vm 不含响应式数组
+    //（hasReactiveArrayChild 为 false）本就不触发 customReactive，故无此问题。
+    const instance = markRaw(
+      getCurrentInstance() as unknown as Record<string, unknown>
+    )
     const $esPlusTable =
       inject<Record<string, unknown>>(
         '$esPlusTable',
@@ -340,8 +402,28 @@ export default defineComponent({
       )
     }
 
+    // ─── Engine dispatch ──────────────────────
+    const isVxeEngine = computed(() => props.options.engine === 'vxe')
+    // vxeConfig.toolbarConfig 非 TableOptions 契约字段，需局部断言取值；且模板不能
+    // 写 TS 断言（会破坏 vite build），故在此 script 内收敛为布尔供模板绑定。
+    const hasVxeToolbar = computed(
+      () =>
+        isVxeEngine.value &&
+        Boolean(
+          props.options.toolbarConfig ||
+            (props.options.vxeConfig as Record<string, unknown> | undefined)?.toolbarConfig,
+        ),
+    )
+    const isVxeProxyMode = computed(() => {
+      if (!isVxeEngine.value) return false
+      const opts = props.options as any
+      return !!(opts.proxyConfig || (opts.vxeConfig as any)?.proxyConfig)
+    })
+    const mergedOptions = computed(() => ({ ...defaultOptions, ...props.options }))
+
     // ─── Refs ─────────────────────────────────
     const tableRef = ref<any>(null)
+    const vxeEngineRef = ref<any>(null)
     const tbBtnRef = ref<any>(null)
     const headBarRef = ref<HTMLElement | null>(null)
     const paginationRef = ref<HTMLElement | null>(null)
@@ -353,6 +435,14 @@ export default defineComponent({
     // 兼容父组件不使用 .sync 但又希望看到接口拉取数据的场景。
     // 当父组件传入了非空 dataSource 且内部 tableData 为空时，使用 dataSource。
     const effectiveDataSource = computed(() => {
+      // 内建客户端分页：对全量 dataSource 做当前页切片
+      if (isLocalPagination.value) {
+        const src = Array.isArray(props.dataSource) ? props.dataSource : []
+        const size = Number(paginationConfig.value.pageSize) || 10
+        const cur = Number(paginationConfig.value.current) || 1
+        const start = (cur - 1) * size
+        return src.slice(start, start + size)
+      }
       if (tableData.value && tableData.value.length) return tableData.value
       return props.dataSource
     })
@@ -393,6 +483,7 @@ export default defineComponent({
       // tableRef 同理 —— 虽然 useTableResize 不直接读它的高度，但 expose 出去的
       // clearSelection / refresh / scrollToRow / toggleSelection 等都依赖它指向真实 el-table 实例。
       tableRef.value = (proxy.$refs.tableRef as any) || null
+      vxeEngineRef.value = (proxy.$refs.vxeEngineRef as any) || null
     }
 
     // ─── 与 EsForm 的耦合 ─────────────────────
@@ -542,11 +633,19 @@ export default defineComponent({
         (paginationLayoutConfig.value as any)?.layout ||
         'prev, pager, next, jumper, sizes, ->, total'
     )
-    const paginationPageSizes = computed(
-      () =>
-        (paginationLayoutConfig.value as any)?.pageSizes ||
-        paginationConfig.value.pageSizes
-    )
+    // 分页每页条数选项：始终包含当前生效的 pageSize，否则 el-pagination 的
+    // size 选择器会因「pageSize 不在 page-sizes 列表中」回退到 pageSizes[0]/10，
+    // 导致播种的 pageSize（如 5）在分页器上显示成 10（每页条数与实际请求数不一致）。
+    const paginationPageSizes = computed(() => {
+      const configured =
+        (paginationLayoutConfig.value as any)?.pageSizes || paginationConfig.value.pageSizes
+      const size = Number(paginationConfig.value.pageSize) || 10
+      const base =
+        Array.isArray(configured) && configured.length
+          ? configured.map((n: unknown) => Number(n))
+          : [10, 20, 30, 50, 100]
+      return base.includes(size) ? base : [size, ...base].sort((a, b) => a - b)
+    })
     const paginationIsSmall = computed(
       () => (paginationLayoutConfig.value as any)?.isSmall ?? paginationConfig.value.isSmall
     )
@@ -576,8 +675,33 @@ export default defineComponent({
         !!props.options.actionUrl ||
         (props.options.apiParams &&
           isObject(props.options.apiParams) &&
-          Object.keys(props.options.apiParams).length > 0)
+          Object.keys(props.options.apiParams).length > 0) ||
+        !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
     )
+
+    // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
+    // 仅在非请求模式且非 vxe proxy 时生效。
+    const isLocalPagination = computed(
+      () =>
+        props.options?.localPagination === true &&
+        !isRequestConf.value &&
+        !isVxeProxyMode.value
+    )
+
+    // 依据全量 dataSource 回填 total / showPagination，并做边界回收：
+    // 数据缩减导致当前页超出范围时（如删除本页最后一条），回退到最后一个有效页。
+    // 当前页数据切片由 effectiveDataSource 自动派生，无需在此处理。
+    const syncLocalPagination = () => {
+      if (!isLocalPagination.value) return
+      const total = Array.isArray(props.dataSource) ? props.dataSource.length : 0
+      const size = Number(paginationConfig.value.pageSize) || 10
+      const maxPage = Math.max(1, Math.ceil(total / size))
+      const current = Math.min(Number(paginationConfig.value.current) || 1, maxPage)
+      paginationConfig.value = { ...paginationConfig.value, total, current }
+      showPagination.value = true
+      // 边界回收可能改动 current/total（如删除本页最后一条回退一页），值比较后回传父组件
+      emitPaginationUpdate()
+    }
 
     // ─── 列处理 ────────────────────────────────
     // filteredColumns 计算列配置的渲染就绪版本。
@@ -602,7 +726,8 @@ export default defineComponent({
           !col.formatter
         ) {
           col.formatter = (row: Record<string, unknown>) => {
-            const value = row[col.prop as string] || row[col.key as string]
+            // 用 ?? 避免把 0/false 等假值塌缩成 '-'；用 getNestedValue 支持嵌套 prop（a.b.c）（对齐 vue3）
+            const value = getNestedValue(row, col.prop as string) ?? getNestedValue(row, col.key as string)
             if (value == null || value === '') {
               return (col.emptyPlaceholder as string) || '-'
             }
@@ -614,7 +739,11 @@ export default defineComponent({
           col.render = (_h: any, { row }: { row: Record<string, unknown> }) => {
             return h('div', [
               col.btns
-                ?.filter((btn: any) => checkPermission(btn.permissionValue))
+                ?.filter((btn: any) => {
+                  if (!checkPermission(btn.permissionValue)) return false
+                  if (typeof btn.hidden === 'function') return !btn.hidden(row)
+                  return !btn.hidden
+                })
                 .map((btn: any) =>
                   // Element UI text 按钮：type="text" 而非 text 属性
                   h(
@@ -624,8 +753,13 @@ export default defineComponent({
                         type: 'text',
                       },
                       attrs: {
+                        // data-btn-type 保留为外部样式钩子
                         ...(btn.type ? { 'data-btn-type': btn.type } : {}),
                       },
+                      // 语义色内联复刻 vue3 的 (text + type) 着色，弥补 Element UI v2 的 type 互斥限制
+                      style: OPERATION_BTN_TYPE_COLOR[btn.type as string]
+                        ? { color: OPERATION_BTN_TYPE_COLOR[btn.type as string] }
+                        : undefined,
                       on: {
                         click: () => btn.clickEvent?.(row),
                       },
@@ -697,9 +831,37 @@ export default defineComponent({
       paginationRef,
       {
         heightType: heightType.value as 'auto' | 'height',
-        tabHeight: props.options.tabHeight,
+        tabHeight: props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined),
       }
     )
+
+    /**
+     * 统一的"延迟重算高度"：等 DOM（分页器 / 工具栏 / EsForm）布局完成后再同步 refs 并重算。
+     *
+     * 关键场景：httpRequest 异步表格在 onMounted 阶段还没拿到数据，showPagination 仍为 false、
+     * 分页器尚未渲染（offsetHeight=0）。此时算出的 tableHeight 少扣了分页器高度 → el-table 偏高，
+     * 撞穿 .tableContainer 的 overflow:hidden，把最后一行裁掉；只有等窗口 resize 命中容器 observer
+     * 才纠正。数据到达、分页器出现后主动重算即可根除（与 tbBtn 那处 0 高度裁行是同一类问题）。
+     */
+    const scheduleResize = () => {
+      const ht = heightType.value
+      if (ht !== 'height' && ht !== 'maxHeight') return
+      nextTick(() => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            syncDomRefs()
+            resizeObservers()
+          })
+        } else {
+          syncDomRefs()
+          resizeObservers()
+        }
+      })
+    }
+
+    // 分页器由隐藏→显示（异步数据到达点亮 showPagination，或客户端分页播种）会改变可用高度，
+    // 此刻必须重算，否则表格保持"分页器未计入"时的偏大高度而裁掉末行。
+    watch(showPagination, () => scheduleResize())
 
     // 合并 options + fallthrough attrs，供 el-table 使用
     const tableBindAttrs = computed(() => {
@@ -721,19 +883,37 @@ export default defineComponent({
       handleSelectionChange,
       initSelection,
       clearAllSelection: clearAllSelectionInternal,
-    } = useTableSelection(props.options.rowkey)
+    } = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
 
     const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
       handleSelectionChange(val, paginationConfig.value.current || 1)
     }
 
+    // ─── 请求失败统一暴露（对齐 vue3） ─────
+    // 所有请求失败路径（onMounted / visibleShow 的 fire-and-forget 自动加载，
+    // 以及 httpRequestInstance 内部 queryTableListMethod 的 fail 回调）都经此暴露：
+    // 写入 requestError（可 expose 供外部读取）+ emit('request-error')。
+    // 命令式调用者（EsForm 查询/重置、EsCrudPage.refresh、翻页）拿到的 rejected
+    // Promise 由各自 `.catch(() => {})` 兜底，避免 unhandled rejection；
+    // 成功路径会在 httpRequestInstance 内清空 requestError。
+    const requestError = ref<unknown>(null)
+    const surfaceRequestError = (err: unknown) => {
+      requestError.value = err
+      emit('request-error', err)
+    }
+
     // ─── Watchers ─────────────────────────────
     watch(visibleShow, async (val, oldVal) => {
       if (val && val !== oldVal) {
-        if (props.options.actionUrl) {
-          await httpRequestInstance()
+        if (props.options.actionUrl && !isVxeProxyMode.value) {
+          // fail 回调已经 surfaceRequestError，这里只需吞掉 rejection 防 unhandled
+          await httpRequestInstance().catch(() => {})
         }
-        ;(tableRef.value as any)?.doLayout?.()
+        if (isVxeEngine.value) {
+          vxeEngineRef.value?.doLayout?.()
+        } else {
+          ;(tableRef.value as any)?.doLayout?.()
+        }
       }
     })
 
@@ -742,7 +922,7 @@ export default defineComponent({
       paginationConfig.value = { ...paginationConfig.value, ...props.pagination }
       showPagination.value = (props.pagination as PaginationConfig).total !== undefined
     }
-    // 同步外部 pagination prop 到内部 paginationConfig（单向，不再 emit 回父组件）
+    // 入站：同步外部 pagination prop 到内部 paginationConfig（值比较守卫，避免与出站 emit 形成回环）
     watch(
       () => props.pagination,
       (val: PaginationConfig) => {
@@ -754,11 +934,38 @@ export default defineComponent({
       }
     )
 
-    // 兼容性修复：移除 deep，仅监听数组引用变化即可触发 selection 重置。
-    // .sync 回传相同引用时不会重复触发，避免循环。
+    /**
+     * 值比较后再回传父组件（支持 :pagination.sync / v-model:pagination）。
+     *
+     * 仅当分页状态相对"上次已同步值"确有变化时才 emit，并同步刷新 lastPaginationStr；
+     * 这样随后 .sync 写回 props.pagination 时，入站 watcher 命中 str === lastPaginationStr 而 no-op，
+     * 从值层面切断 Vue2.6 + composition-api 下 .sync 的响应式反馈回环（旧版正因此回环才移除该 emit）。
+     */
+    const emitPaginationUpdate = () => {
+      const str = JSON.stringify(paginationConfig.value)
+      if (str === lastPaginationStr) return
+      lastPaginationStr = str
+      emit('update:pagination', paginationConfig.value)
+    }
+
+    // 内建客户端分页：初始播种 total/showPagination，并在 dataSource 长度变化时
+    // 自动回填 total 与边界回收（当前页超范围则回退）。当前页切片由 effectiveDataSource 派生。
+    syncLocalPagination()
     watch(
-      () => props.dataSource,
+      () => (Array.isArray(props.dataSource) ? props.dataSource.length : 0),
+      () => syncLocalPagination()
+    )
+
+    // 兼容性修复：移除 deep，仅监听数组引用变化即可触发 selection 重置。
+    // M-6: vxe 引擎模式下不调用 initSelection（tableRef.value 为 null，且 vxe 自管选择状态）
+    // 跨页选择记忆：监听 effectiveDataSource（渲染中的真实数据）而非 props.dataSource。
+    // httpRequest 模式下数据落在内部 tableData（Vue2 已移除 update:dataSource 回传，
+    // props.dataSource 恒为空），只有监听 effectiveDataSource 才能在翻页加载后触发
+    // restoreSelectionForPage 勾选回来。
+    watch(
+      effectiveDataSource,
       (val) => {
+        if (isVxeEngine.value) return
         initSelection(val, tableRef.value)
       }
     )
@@ -766,8 +973,8 @@ export default defineComponent({
     onMounted(() => {
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
       syncDomRefs()
-      if (isRequestConf.value && props.options.isInitRun !== false) {
-        httpRequestInstance()
+      if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
+        httpRequestInstance().catch(() => {})
       }
       // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
       nextTick(() => {
@@ -787,21 +994,11 @@ export default defineComponent({
 
     // ─── 请求逻辑 ──────────────────────────────
     const getListenToCallBack = (eventName: string, params: unknown) => {
-      const eventNameList = [
-        { eventName: 'brcb', isReturn: true },
-        { eventName: 'qrcb', isReturn: true },
-      ]
-      const hasEventNameIndex = eventNameList.findIndex((it) => it.eventName === eventName)
-      if (
-        props.options.listenToCallBack &&
-        (props.options.listenToCallBack as any)[eventName] &&
-        hasEventNameIndex !== -1
-      ) {
-        const callObj = eventNameList[hasEventNameIndex]
-        if (callObj.isReturn) {
-          return (props.options.listenToCallBack as any)[eventName](params)
-        }
-      }
+      const cb = props.options.listenToCallBack
+      if (!cb) return undefined
+      const fn = getCallback(cb as any, eventName)
+      if (typeof fn === 'function') return fn(params)
+      return undefined
     }
 
     const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
@@ -824,6 +1021,12 @@ export default defineComponent({
         })
         if (Object.keys(paginationPatch).length) {
           paginationConfig.value = { ...paginationConfig.value, ...paginationPatch }
+          // 服务端返回了 configTableOut 映射的 total 字段，即表示该表启用了服务端分页，
+          // 自动点亮分页器 —— 否则未显式传 :pagination 的 httpRequest 表格分页器恒不显示
+          // （#2「服务器分页器也无法显示」的根因）。仅置 true，永不隐藏，不影响既有行为。
+          if ('total' in paginationPatch) {
+            showPagination.value = true
+          }
         }
       }
     }
@@ -839,7 +1042,11 @@ export default defineComponent({
       const apiParams = (props.options?.apiParams || {}) as Record<string, any>
       const url = props.options?.actionUrl || apiParams.url || ''
 
-      if (!url || !Object.keys(apiParams).length) return
+      // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求；否则 fail 让 Promise settle
+      if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+        if (typeof fail === 'function') fail(new Error('no url/apiParams configured'))
+        return
+      }
 
       // Vue 2 中响应式对象天然是 plain object，无需 toRaw / unref
       const formObj = isFormInstance.value as any
@@ -848,7 +1055,7 @@ export default defineComponent({
           ? { ...formObj.props.model }
           : getListEntry.value || {}
 
-      const fnParams = getListenToCallBack('brcb', {
+      const fnParams = getListenToCallBack('beforeRequest', {
         ...formData,
         ...params,
         ...(apiParams.model || {}),
@@ -862,7 +1069,10 @@ export default defineComponent({
       }
 
       const requestHandler = async (requestFn: Function) => {
-        if (loadingStatus.value) return
+        if (loadingStatus.value) {
+          if (typeof fail === 'function') fail(new Error('request already in progress'))
+          return
+        }
         loadingStatus.value = true
         try {
           const res = await requestFn({
@@ -872,7 +1082,7 @@ export default defineComponent({
             ...requestOption,
             ...params,
           })
-          const responseData = getListenToCallBack('qrcb', res) || res
+          const responseData = getListenToCallBack('afterResponse', res) || res
           if (
             isObject(res) &&
             Object.keys(res as object).length &&
@@ -893,12 +1103,30 @@ export default defineComponent({
         requestHandler(props.options.httpRequest as Function)
       } else if ($esPlusTable.$httpRequest) {
         requestHandler($esPlusTable.$httpRequest as Function)
+      } else {
+        if (typeof fail === 'function') fail(new Error('no httpRequest configured'))
       }
     }
 
-    const httpRequestInstance = (model?: Record<string, unknown>) => {
+    const httpRequestInstance = (
+      model?: Record<string, unknown>,
+      reqOptions?: { keepPage?: boolean }
+    ) => {
+      // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
+      // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
+      // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
+      const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
+      // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器。
+      // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页——须按 keepPage 派发，
+      // 否则查询/重置（keepPage:false）在 vxe 模式下会停留在当前页（对齐 vue3/antdv）。
+      if (isVxeProxyMode.value) {
+        ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.(keepPage ? 'query' : 'reload')
+        return Promise.resolve()
+      }
       return new Promise((resolve, reject) => {
-        paginationConfig.value = { ...paginationConfig.value, current: 1 }
+        if (!keepPage) {
+          paginationConfig.value = { ...paginationConfig.value, current: 1 }
+        }
         queryTableListMethod(
           {
             ...(model || {}),
@@ -907,13 +1135,47 @@ export default defineComponent({
           },
           {
             success: (res) => {
+              // 成功即清空上一次自动加载留下的错误状态（对齐 vue3）
+              requestError.value = null
               formatConfigOut(res, ['total', 'tableData'])
-              if (Object.keys(props.pagination).length) {
-                lastPaginationStr = JSON.stringify(paginationConfig.value)
+              emitPaginationUpdate()
+              // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
+              //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。
+              const { shouldRollback, maxPage } = computeBoundaryRollback({
+                keepPage,
+                rowCount: tableData.value?.length ?? 0,
+                current: paginationConfig.value.current,
+                total: paginationConfig.value.total,
+                pageSize: paginationConfig.value.pageSize,
+              })
+              if (shouldRollback) {
+                // 仅在页码确实需要回退时递归一次，避免死循环
+                paginationConfig.value = { ...paginationConfig.value, current: maxPage }
+                // 外层请求的 loadingStatus 要到 finally 才复位，此刻仍为 true；
+                // 若不先手动释放，递归的 queryTableListMethod 会被
+                // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据（停在空白页）。
+                loadingStatus.value = false
+                queryTableListMethod(
+                  { ...(model || {}), pageIndex: maxPage, pageSize: paginationConfig.value.pageSize },
+                  {
+                    success: (res2) => {
+                      formatConfigOut(res2, ['total', 'tableData'])
+                      emitPaginationUpdate()
+                      emit('pagination-current-change', paginationConfig.value)
+                      resolve(res2)
+                    },
+                    fail: (err) => {
+                      surfaceRequestError(err)
+                      reject(err)
+                    },
+                  }
+                )
+                return
               }
               resolve(res)
             },
             fail: (err) => {
+              surfaceRequestError(err)
               reject(err)
             },
           }
@@ -930,9 +1192,11 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            lastPaginationStr = JSON.stringify(paginationConfig.value)
+            emitPaginationUpdate()
             emit('pagination-current-change', paginationConfig.value)
           },
+          // 翻页失败同样经统一暴露（对齐 F2）
+          fail: (err) => surfaceRequestError(err),
         }
       )
     }
@@ -946,8 +1210,9 @@ export default defineComponent({
         {
           success: (res) => {
             formatConfigOut(res, ['total', 'tableData'])
-            lastPaginationStr = JSON.stringify(paginationConfig.value)
+            emitPaginationUpdate()
           },
+          fail: (err) => surfaceRequestError(err),
         }
       )
     }
@@ -957,7 +1222,7 @@ export default defineComponent({
       if (isRequestConf.value) {
         changePageSizeRequest()
       } else {
-        lastPaginationStr = JSON.stringify(paginationConfig.value)
+        emitPaginationUpdate()
         emit('size-change', paginationConfig.value, size)
       }
     }
@@ -967,7 +1232,7 @@ export default defineComponent({
       if (isRequestConf.value) {
         changePageIndexRequest()
       } else {
-        lastPaginationStr = JSON.stringify(paginationConfig.value)
+        emitPaginationUpdate()
         emit('pagination-current-change', paginationConfig.value)
       }
     }
@@ -976,11 +1241,22 @@ export default defineComponent({
       emit('change-table-sort', column)
     }
 
+    const handleVxeSortChange = (sortInfo: { column: Record<string, unknown>; prop: string; order: string | null }) => {
+      emit('change-table-sort', sortInfo)
+    }
+
     // ─── 提供给子组件的实例 ────────────────────
-    provide('getTableInstantce', () => ({
-      tableRef,
+    // P5: vxe 引擎下 tableRef 为 null，需委托给 vxeEngineRef
+    provide(TABLE_CONTEXT_INJECT_KEY, () => ({
+      tableRef: isVxeEngine.value ? vxeEngineRef : tableRef,
       toggleSelection: (rows: Record<string, unknown>[]) => {
-        if (rows) {
+        if (isVxeEngine.value) {
+          if (rows) {
+            rows.forEach((row) => vxeEngineRef.value?.toggleRowSelection?.(row))
+          } else {
+            vxeEngineRef.value?.clearSelection?.()
+          }
+        } else if (rows) {
           rows.forEach((row) => {
             ;(tableRef.value as any)?.toggleRowSelection?.(row)
           })
@@ -988,22 +1264,96 @@ export default defineComponent({
           ;(tableRef.value as any)?.clearSelection?.()
         }
       },
-      clearAllSelection: () => clearAllSelectionInternal(tableRef.value),
-      refsInstance: () => tableRef.value,
+      clearAllSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else clearAllSelectionInternal(tableRef.value)
+      },
+      refsInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : tableRef.value,
       httpRequestInstance,
     }))
 
     // ─── 暴露方法（Vue 2 通过 expose 或 return） ──
+    // 纯重排列宽/布局（不重新取数），供方法族与逃生舱复用。
+    const doLayoutFn = () => {
+      if (isVxeEngine.value) vxeEngineRef.value?.doLayout?.()
+      else (tableRef.value as any)?.doLayout?.()
+    }
+
     const exposed = {
       httpRequestInstance,
-      getSelectionRows: () => multipleSelection.value,
-      clearSelection: () => (tableRef.value as any)?.clearSelection?.(),
-      clearAllSelection: () => clearAllSelectionInternal(tableRef.value),
-      refresh: () => (tableRef.value as any)?.doLayout?.(),
-      // virtual 滚动占位（保持 API 一致，Vue 2 版本无效）
-      scrollToRow: (_row: number) => {
-        // noop in Vue 2 + Element UI
+      // 最近一次自动加载（onMounted / visibleShow）的错误；成功后清空（对齐 vue3）
+      requestError,
+      getSelectionRows: () => {
+        if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
+        return multipleSelection.value
       },
+      clearSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else (tableRef.value as any)?.clearSelection?.()
+      },
+      clearAllSelection: () => {
+        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+        else clearAllSelectionInternal(tableRef.value)
+      },
+      toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => {
+        if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
+        else (tableRef.value as any)?.toggleRowSelection?.(row, selected)
+      },
+      // 刷新当前页：保留页码重新取数 + 重排。统一命令式刷新入口。
+      refresh: (model?: Record<string, unknown>) => {
+        if (isVxeProxyMode.value) {
+          ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+          return Promise.resolve()
+        }
+        if (isRequestConf.value) {
+          return httpRequestInstance(model, { keepPage: true }).then((r) => {
+            doLayoutFn()
+            return r
+          })
+        }
+        // 本地/静态：无网络，重排即可（本地分页顺带回收边界并回传父组件）
+        syncLocalPagination()
+        doLayoutFn()
+        return Promise.resolve()
+      },
+      // 重新加载：回到第 1 页重新取数。搜索/重置语义。
+      reload: (model?: Record<string, unknown>) => {
+        if (isVxeProxyMode.value) {
+          ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('reload')
+          return Promise.resolve()
+        }
+        if (isRequestConf.value) {
+          // httpRequestInstance 在 !keepPage 时内部已把 current 置 1
+          return httpRequestInstance(model, { keepPage: false }).then((r) => {
+            doLayoutFn()
+            return r
+          })
+        }
+        // 本地/静态：回到第 1 页
+        paginationConfig.value = { ...paginationConfig.value, current: 1 }
+        syncLocalPagination()
+        doLayoutFn()
+        return Promise.resolve()
+      },
+      // 仅重排列宽/布局，不重新取数（旧 refresh 行为的逃生舱）
+      doLayout: doLayoutFn,
+      scrollToRow: (row: number) => {
+        if (isVxeEngine.value) vxeEngineRef.value?.scrollToRow?.(row)
+        // noop for el-table in Vue 2
+      },
+      // ─── vxe 行内编辑 CRUD 转发（对齐 vue3 / antdv）──
+      // 引擎已实现全部方法（engines/vxe-engine.vue），此处仅做纯转发。
+      // 非 vxe 引擎时返回空数组 / undefined / null，语义与 vue3 一致。
+      getUpdateRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getUpdateRecords?.() ?? [] : []),
+      getInsertRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getInsertRecords?.() ?? [] : []),
+      getRemoveRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getRemoveRecords?.() ?? [] : []),
+      revertData: (rows?: Record<string, unknown> | Record<string, unknown>[]) =>
+        isVxeEngine.value ? vxeEngineRef.value?.revertData?.(rows) : undefined,
+      clearActived: () => (isVxeEngine.value ? vxeEngineRef.value?.clearActived?.() : undefined),
+      clearValidate: () => (isVxeEngine.value ? vxeEngineRef.value?.clearValidate?.() : undefined),
+      validate: (rows?: Record<string, unknown>[]) =>
+        isVxeEngine.value ? vxeEngineRef.value?.validate?.(rows) : undefined,
+      vxeInstance: () => (isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null),
     }
 
     if (typeof expose === 'function') {
@@ -1023,6 +1373,12 @@ export default defineComponent({
       loadStatus,
       paginationConfig,
       formInstance,
+      // vxe engine
+      isVxeEngine,
+      hasVxeToolbar,
+      isVxeProxyMode,
+      mergedOptions,
+      vxeEngineRef,
       // computeds
       filteredColumns,
       tableBindAttrs,
@@ -1044,6 +1400,7 @@ export default defineComponent({
       paginationNextText,
       // handlers
       handleTableSelectionChange,
+      handleVxeSortChange,
       changeTableSort,
       handleSizeChange,
       handleIndexChange,
@@ -1051,6 +1408,7 @@ export default defineComponent({
       ...exposed,
       instance,
       resizeObservers,
+      tableHeight,
     }
   },
 })

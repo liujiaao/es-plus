@@ -25,7 +25,7 @@ const selectedProducts = ref([])
 const categoryMap = {
   'electronics': { text: '电子产品', type: 'danger' },
   'jewelery': { text: '珠宝', type: 'warning' },
-  "men's clothing": { text: '男装', type: '' },
+  "men's clothing": { text: '男装', type: 'info' },
   "women's clothing": { text: '女装', type: 'success' }
 }
 
@@ -79,7 +79,8 @@ const addProduct = (row) => {
 }
 
 const openSelectDialog = async () => {
-  await loadProducts()
+  // 先打开弹窗、不阻塞在网络上：dataSource 绑定响应式 ref，数据到达后自动回填。
+  // （旧写法 await loadProducts() 会卡在 fakestoreapi 的 3s 超时上，弹窗迟迟不出。）
   selectDialog({
     title: '选择商品',
     width: '800px',
@@ -87,13 +88,15 @@ const openSelectDialog = async () => {
       <EsTable
         dataSource={allProducts.value}
         columns={selectColumns}
-        options={{ border: true, size: 'small', heightType: 'height', tabHeight: 400 }}
+        options={{ border: true, size: 'small', heightType: 'height', height: 400 }}
       />
     ),
     configBtn: [
       { name: '关闭', click: (_, { close }) => close() }
     ]
   })
+  // 仅首次拉取；命中缓存则跳过，避免每次打开都重走一遍远程请求
+  if (!allProducts.value.length) await loadProducts()
 }
 
 const openEditDialog = (row) => {

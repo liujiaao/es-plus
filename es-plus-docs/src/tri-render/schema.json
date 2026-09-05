@@ -1,0 +1,25 @@
+{
+  "$schema": "https://es-plus.dev/tri-render/schema.json",
+  "title": "用户管理（三端同一份配置）",
+  "formItems": [
+    { "prop": "name", "label": "用户名", "formtype": "Input", "span": 6, "placeholder": "请输入用户名" },
+    { "prop": "status", "label": "状态", "formtype": "Select", "span": 6, "dataOptions": [
+      { "label": "启用", "value": "1" },
+      { "label": "禁用", "value": "0" }
+    ]}
+  ],
+  "configBtn": [
+    { "name": "查询", "key": "query", "type": "primary", "triggerEvent": true },
+    { "name": "重置", "key": "rest", "triggerEvent": true }
+  ],
+  "columns": [
+    { "prop": "name", "label": "用户名" },
+    { "prop": "email", "label": "邮箱" },
+    { "prop": "status", "label": "状态" },
+    { "prop": "createdAt", "label": "创建时间" }
+  ],
+  "options": {
+    "apiParams": { "url": "/api/users", "method": "POST" },
+    "configTableOut": { "total": "total", "tableData": "data" }
+  }
+}

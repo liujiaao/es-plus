@@ -3,7 +3,7 @@
     <div class="column-toggle">
       <span class="toggle-label">显示列：</span>
       <el-checkbox-group v-model="visibleColumns" size="small">
-        <el-checkbox v-for="c in toggleOptions" :key="c.value" :label="c.value">{{ c.label }}</el-checkbox>
+        <el-checkbox v-for="c in toggleOptions" :key="c.value" :value="c.value">{{ c.label }}</el-checkbox>
       </el-checkbox-group>
     </div>
     <es-table

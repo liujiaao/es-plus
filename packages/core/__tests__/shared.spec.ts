@@ -156,4 +156,19 @@ describe('shared > getNestedValue / setNestedValue', () => {
     setNestedValue(obj, 'user.name', 'tom')
     expect(obj).toEqual({ user: { name: 'tom' } })
   })
+
+  it('拒绝原型污染路径（__proto__/constructor/prototype）', () => {
+    const obj: Record<string, unknown> = {}
+    setNestedValue(obj, '__proto__.polluted', true)
+    setNestedValue(obj, 'constructor.prototype.polluted', true)
+    setNestedValue(obj, 'prototype.polluted', true)
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+    expect(Object.prototype).not.toHaveProperty('polluted')
+    expect(obj).toEqual({})
+  })
+
+  it('getNestedValue 拒绝读原型链危险 key', () => {
+    expect(getNestedValue({}, '__proto__')).toBeUndefined()
+    expect(getNestedValue({}, 'constructor.prototype')).toBeUndefined()
+  })
 })

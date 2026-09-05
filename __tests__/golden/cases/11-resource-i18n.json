@@ -1,0 +1,44 @@
+{
+  "nl": "资源管理：表格上方左侧新增、右侧导出；表格展示资源名、资源类型（菜单/按钮/接口）、标识码、状态；每行可编辑、删除；要求 i18n 显示。",
+  "config": {
+    "name": "ResourceManage",
+    "apiUrl": "/api/resources",
+    "i18n": true,
+    "fields": [
+      { "prop": "name", "label": "资源名", "formtype": "Input" },
+      {
+        "prop": "type",
+        "label": "资源类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "菜单", "value": "menu" },
+          { "label": "按钮", "value": "button" },
+          { "label": "接口", "value": "api" }
+        ]
+      },
+      { "prop": "code", "label": "标识码", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "禁用", "value": 0 }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete", "export"],
+    "tableBtns": [
+      { "name": "新增", "type": "primary", "code": 1, "dialogKey": "add" },
+      { "name": "导出", "code": 2, "actionType": "export" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "编辑", "dialogKey": "edit" },
+        { "name": "删除", "confirm": "确定删除该资源吗？" }
+      ]
+    }
+  },
+  "notes": "i18n enabled; tableBtns + operationColumn"
+}

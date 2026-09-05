@@ -10,7 +10,7 @@ import {
   CRUD_PAGE_BTN_CLICK_KEYS,
 } from "@es-plus/shared";
 
-type Target = "vue3" | "vue2";
+type Target = "vue3" | "vue2" | "antdv";
 
 interface TargetVars {
   esPlusPkg: string;
@@ -31,6 +31,12 @@ const TARGETS: Record<Target, TargetVars> = {
     elementPkg: "element-ui",
     elementCss: "element-ui/lib/theme-chalk/index.css",
     vue: "Vue 2",
+  },
+  antdv: {
+    esPlusPkg: "@es-plus/adapter-antdv",
+    elementPkg: "ant-design-vue",
+    elementCss: "ant-design-vue/dist/reset.css",
+    vue: "Vue 3",
   },
 };
 
@@ -108,9 +114,90 @@ Because the JSON schema is identical, the migration is mostly syntactic:
 `;
 }
 
+function buildAntdvAddendum(): string {
+  return `
+---
+
+## antdv (@es-plus/adapter-antdv) Specifics
+
+Target \`antdv\` = **Vue 3 syntax + Ant Design Vue 4.x** as the UI library. The
+JSON schema, component template syntax (\`<script setup>\`, \`v-model:xxx\`,
+\`<template #default="{ row }">\`), and es-plus APIs are IDENTICAL to \`vue3\`.
+Only the UI-library symbols differ.
+
+## UI-Library Symbol Mapping (vue3 → antdv)
+
+| Concern | Element Plus (vue3) | Ant Design Vue (antdv) |
+|---------|---------------------|------------------------|
+| Package | \`@es-plus/vue3\` | \`@es-plus/adapter-antdv\` |
+| UI lib | \`element-plus\` | \`ant-design-vue\` |
+| CSS | \`element-plus/dist/index.css\` | \`ant-design-vue/dist/reset.css\` |
+| Toast | \`ElMessage.success('x')\` | \`message.success('x')\` |
+| Confirm | \`ElMessageBox.confirm(content, title, { type: 'warning' }).then(async () => {…}).catch(() => {})\` | \`Modal.confirm({ title, content, async onOk() {…} })\` |
+| Status tag | \`<el-tag :type="row.x === 1 ? 'success' : 'danger'">\` | \`<a-tag :color="row.x === 1 ? 'green' : 'red'">\` |
+| Named imports | \`{ ElMessage, ElMessageBox, ElTag }\` | \`{ message, Modal, Tag }\` |
+
+## App Bootstrap (antdv)
+\`\`\`typescript
+import { createApp } from 'vue'
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
+import ESPlus from '@es-plus/adapter-antdv'
+
+const app = createApp(App)
+app.use(Antd)
+app.use(ESPlus, { /* EsTable.methods.$httpRequest, etc. */ })
+\`\`\`
+
+## Confirm-Dialog Shape (IMPORTANT)
+Ant Design Vue's \`Modal.confirm\` takes a single options object with an
+\`onOk\` callback — it is NOT the Element Plus Promise chain. Put the delete
+request inside \`async onOk()\`:
+\`\`\`typescript
+Modal.confirm({
+  title: '提示',
+  content: '确定删除该条数据吗？',
+  async onOk() {
+    await $httpRequest({ url: '/api/xxx/delete', method: 'POST', formParams: { id: row.id } })
+    message.success('删除成功')
+    tableRef.value?.httpRequestInstance()
+  },
+})
+\`\`\`
+`;
+}
+
+// Single httpRequest adapter that works for BOTH request shapes es-plus emits, so
+// one global config serves every page pattern (this is what makes the generated
+// code run without hand-editing — a mismatched wrapper silently drops payloads):
+//   • Method A — bare `apiParams:{url}` auto-fetch (es-table calls $httpRequest directly):
+//       { url, formParams:{...fields,pageIndex,pageSize}, headers, method?, pageIndex, pageSize }
+//   • Method B — generated `fetchData` + add/edit/delete handlers (axios-native shape):
+//       { url, method, params?, data?, headers }
+// It prefers Method-B's explicit `params`/`data`, and falls back to Method-A's
+// `formParams`. Always unwraps to `res.data` so configTableOut mapping sees the
+// business payload. A GET-only / formParams-only wrapper breaks Method B
+// (empty PUT bodies, dropped POST/GET payloads); a bare `axios(params)` breaks
+// Method A (formParams ignored → empty query). This handles both.
+function robustHttpRequest(): string {
+  return `(p) => {
+        const method = (p.method || 'GET').toUpperCase()
+        const isRead = method === 'GET'
+        return axios({
+          url: p.url,
+          method,
+          // Method B passes \`params\`/\`data\` directly; Method A only \`formParams\`.
+          params: isRead ? (p.params ?? { ...p.formParams, pageIndex: p.pageIndex, pageSize: p.pageSize }) : undefined,
+          data: isRead ? undefined : (p.data ?? p.formParams),
+          headers: p.headers,
+        }).then(res => res.data)
+      }`;
+}
+
 function buildConventionsContent(target: Target): string {
   const v = TARGETS[target];
-
+  const isVue2 = target === "vue2";
+  const isAntdv = target === "antdv";
   return `# ${v.esPlusPkg} Code Generation Conventions (target=${target})
 
 ## Form Types (formtype)
@@ -145,7 +232,7 @@ ${target === "vue3"
 tableOptions: {
   virtual: true,           // Switch to el-table-v2 engine
   rowHeight: 48,           // Fixed row height (default 50)
-  tabHeight: 500,          // Container height (required for virtual)
+  height: 500,             // Container height (required for virtual)
   heightType: 'height',    // Use fixed height mode
   rowkey: 'id',            // Required for virtual selection
 }
@@ -154,21 +241,27 @@ tableOptions: {
 - \`type: 'selection'\` in columns creates checkbox column (preferred over multiSelect)
 - Performance: O(1) selection via Set-based tracking, no per-row iteration
 - Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable`
+    : isAntdv
+    ? `The @es-plus/adapter-antdv table is Vue 3 based but built on vxe-table (not
+el-table-v2). The \`virtual: true\` el-table-v2 engine does NOT apply here; for
+large datasets prefer server-side pagination via \`apiParams\` + \`configTableOut\`,
+or rely on vxe-table's built-in virtual scroll where the adapter exposes it.`
     : `Vue 2 + Element UI does NOT support el-table-v2 / virtual scrolling at the
 component layer. For large datasets, use server-side pagination with
 \`apiParams\` + \`configTableOut\`. The \`virtual: true\` option is silently
 ignored on Vue 2.`}
 
 ## Global Config Pattern
-${target === "vue3"
+${!isVue2
     ? `When using app.use(ESPlus), configure globally:
 \`\`\`typescript
+import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios(params),
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      $httpRequest: ${robustHttpRequest()},
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })
@@ -176,12 +269,13 @@ app.use(ESPlus, {
     : `When using Vue.use(ESPlus), configure globally:
 \`\`\`typescript
 import Vue from 'vue'
+import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios(params),
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      $httpRequest: ${robustHttpRequest()},
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })
@@ -196,6 +290,12 @@ With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline htt
 ${target === "vue3"
     ? `- When using status render with ElTag: \`import { ElTag } from '${v.elementPkg}'\`
 - When using delete confirmation: \`import { ElMessageBox, ElMessage } from '${v.elementPkg}'\``
+    : isAntdv
+    ? `- Ant Design Vue named exports (no 'El' prefix, no auto-registration for these):
+  \`import { message, Modal, Tag } from '${v.elementPkg}'\`
+- Status render uses \`<a-tag :color="...">\` (colors: 'green'/'red'/'blue'/…) instead of \`<el-tag :type>\`
+- Toasts use \`message.success('...')\` / \`message.error('...')\` instead of \`ElMessage.*\`
+- Delete confirmation uses \`Modal.confirm({ title, content, async onOk() { ... } })\` — an options object with an \`onOk\` callback, NOT the Element Plus \`ElMessageBox.confirm(...).then().catch()\` Promise chain`
     : `- ElTag / ElMessage / ElMessageBox come from Element UI:
   \`import { Tag, Message, MessageBox } from '${v.elementPkg}'\` (note: no 'El' prefix in Element UI named exports)
   Or use globally-registered \`<el-tag>\` / \`this.$message\` / \`this.$confirm\``}
@@ -206,6 +306,37 @@ Prefer generating CrudPageSchema JSON + wrapper SFC over full SFC mode:
 - Simpler output (~30 lines wrapper vs ~200 lines full SFC)
 - Runtime handles query/reset buttons, operation column, dialog lifecycle
 - Schema is pure JSON (no render functions) — easy to validate and store
+
+## Extension Points (business logic the schema can't express)
+The declarative config covers structure (fields, actions, dialogs, layout). Some
+requirements — conditional display, computed cells, permission gates, custom
+controls — cannot be expressed as pure JSON. The contract is **mark, never drop**:
+
+- **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
+  cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
+  inline in SFC mode; carried through in schema mode.
+- **\`render\`** (FieldConfig): a render-function source for a fully custom cell.
+  In **schema mode** it cannot be inlined, so the generator emits a marked
+  wrapper slot instead:
+  \`\`\`html
+  <template #column-<prop>="{ row }">
+    <!-- TODO(es-plus): custom render for "<label>" — replace this default stub with your markup. -->
+    <!-- requested render: <your original render source> -->
+    <!-- a compilable default status-tag stub renders here -->
+  </template>
+  \`\`\`
+  The requirement is preserved as a \`TODO(es-plus)\` marker + echoed source, and
+  a matching \`warnings\` entry is returned — the code still compiles, and the gap
+  is visible rather than silently swallowed.
+- **\`permissionValue\`** (button configs): RBAC gate code, e.g.
+  \`permissionValue: 'employee:delete'\` — express "only admins can X" here, don't
+  drop the button.
+- **\`hasCustomRender\`** (DialogConfig): flags a dialog whose body needs a hand-written
+  render function; the wrapper emits a placeholder comment + a \`warnings\` entry.
+
+Every generation returns a \`warnings: string[]\`. Each entry flags an extension
+point that was emitted as a stub OR a likely mapping mistake — read them and
+resolve each one before shipping.
 
 ---
 
@@ -242,29 +373,85 @@ interface StructuredCrudConfig {
     stripe?: boolean
     rowkey?: string
     heightType?: 'height' | 'auto' | 'maxHeight'
-    tabHeight?: number | string
+    tabHeight?: number | string // table container height (works with heightType)
+    height?: number | string
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>
-    virtual?: boolean           // Vue 3 only — ignored on Vue 2
+    virtual?: boolean           // Vue 3 only — ignored on Vue 2 / antdv
     rowHeight?: number
     estimatedRowHeight?: number
     overscanCount?: number
     rowClassName?: string
   }
-  pagination?: { pageSize?: number }
+  pagination?: { pageSize?: number; pageSizes?: number[] }
   mode?: 'schema' | 'sfc'
   typescript?: boolean
   permissions?: Record<string, string>
   i18n?: boolean
-  target?: 'vue3' | 'vue2'   // Code generation target (default: vue3)
+  target?: 'vue3' | 'vue2' | 'antdv'   // Code generation target (default: vue3)
+
+  // ── Query-form layout ──
+  formLayout?: {
+    span?: number
+    labelWidth?: string | number
+    minFoldRows?: number         // query form collapses when rows exceed this
+  }
+
+  // ── Advanced multi-dialog / toolbar mode ──
+  // Providing ANY of toolbarBtns / tableBtns / operationColumn / dialogs
+  // switches the generator into the "new" schema wrapper (buildSchemaWrapperNew).
+  toolbarBtns?: ToolbarBtn[]     // buttons in the EsForm button area (legacy slot)
+  tableBtns?: TableBtn[]         // toolbar buttons above the table
+  operationColumn?: false | {    // row action column (false = hidden)
+    label?: string
+    width?: number | string
+    fixed?: boolean | 'left' | 'right'
+    btns: RowBtn[]               // at least one
+  }
+  dialogs?: Record<string, DialogConfig>  // keyed by dialog id
+}
+
+interface ToolbarBtn {          // rendered in EsForm button area
+  name: string; key?: string; type?: string; icon?: string
+  dialogKey?: string; actionType?: string
+  confirm?: string | boolean; permissionValue?: string
+}
+
+interface TableBtn {            // toolbar button above the table
+  name: string; key?: string; type?: string; icon?: string
+  code?: 1 | 2                  // 1 = left (default), 2 = right.
+                                // CANONICAL positioning field — all three
+                                // renderers read \`code\`. Do NOT use a
+                                // \`position\` field: vue3/antdv accept it as a
+                                // runtime override but vue2 ignores it, so it
+                                // breaks 多端同构.
+  dialogKey?: string; actionType?: string
+  confirm?: string | boolean; permissionValue?: string
+}
+
+interface RowBtn {              // per-row action button
+  name: string; key?: string; type?: string; icon?: string
+  dialogKey?: string; confirm?: string | boolean; permissionValue?: string
+}
+
+interface DialogConfig {
+  title?: string
+  width?: string | number
+  formItems?: FieldConfig[]
+  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  hasCustomRender?: boolean     // implement render fn in wrapper SFC
+  isDraggable?: boolean
+  maxHeight?: string | number
+  fullscreen?: boolean
+  isHiddenFooter?: boolean
 }
 \`\`\`
 
 ## httpRequest Integration (Production Pattern)
 
 \`\`\`typescript
-${target === "vue3"
+${!isVue2
     ? `// main.ts — configure once for the entire application
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
@@ -272,18 +459,8 @@ import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios({
-        url: params.url,
-        method: params.method || 'GET',
-        params: params.method === 'GET'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        data: params.method === 'POST'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        headers: params.headers,
-      }).then(res => res.data),
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      $httpRequest: ${robustHttpRequest()},
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })`
@@ -295,32 +472,23 @@ import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
   EsTable: {
     methods: {
-      $httpRequest: (params) => axios({
-        url: params.url,
-        method: params.method || 'GET',
-        params: params.method === 'GET'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        data: params.method === 'POST'
-          ? { ...params.formParams, pageIndex: params.pageIndex, pageSize: params.pageSize }
-          : undefined,
-        headers: params.headers,
-      }).then(res => res.data),
-      configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
+      $httpRequest: ${robustHttpRequest()},
+      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
     }
   }
 })`}
 \`\`\`
 
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
+${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus — `import Antd from 'ant-design-vue'; import 'ant-design-vue/dist/reset.css'; app.use(Antd); app.use(ESPlus, {...})`.\n" : ""}
 
 ## configureEsPlus() — Module-Level Config (Auto-Import Mode)
 \`\`\`typescript
 import { configureEsPlus } from '${v.esPlusPkg}'
 
 configureEsPlus({
-  EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
-  EsForm: { $httpRequest: (p) => axios(p).then(r => r.data) },
+  EsTable: { methods: { $httpRequest: ${robustHttpRequest()} } },
+  EsForm: { $httpRequest: ${robustHttpRequest()} },
   permission: (code) => userStore.permissions.includes(code)
 })
 \`\`\`
@@ -340,15 +508,16 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}
-${target === "vue2" ? buildVue2Addendum() : ""}`;
+${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
+${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
 export function registerConventionsResource(server: McpServer) {
-  // Three URIs:
+  // Four URIs:
   //   esplus://conventions       — vue3 (backward-compat default)
   //   esplus://conventions/vue3  — explicit vue3
   //   esplus://conventions/vue2  — vue2 variant with addendum on syntax deltas
+  //   esplus://conventions/antdv — antdv variant (Vue 3 syntax + Ant Design Vue symbols)
   //
   // Pattern repeats across other resources (types, examples, crud-page-schema)
   // so AI clients can pull the right context for whichever target they're
@@ -357,6 +526,7 @@ export function registerConventionsResource(server: McpServer) {
     { uri: "esplus://conventions", target: "vue3", descSuffix: " (defaults to @es-plus/vue3)" },
     { uri: "esplus://conventions/vue3", target: "vue3", descSuffix: " — @es-plus/vue3 explicit" },
     { uri: "esplus://conventions/vue2", target: "vue2", descSuffix: " — @es-plus/vue2 + Element UI variant" },
+    { uri: "esplus://conventions/antdv", target: "antdv", descSuffix: " — @es-plus/adapter-antdv + Ant Design Vue variant" },
   ];
 
   for (const { uri, target, descSuffix } of targets) {

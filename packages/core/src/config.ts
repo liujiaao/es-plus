@@ -70,3 +70,53 @@ export function getGlobalConfig(): EsPlusGlobalConfig {
 export function resetGlobalConfig(): void {
   globalConfig = {}
 }
+
+/** 全局 HTTP 请求函数签名（AI 生成代码与用户配置共同遵守的调用契约） */
+export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
+
+/**
+ * 从全局配置中解析出用户配置的 HTTP 请求函数。
+ *
+ * 兼容三端 install 写入单例后的三种键位约定：
+ *   1. 顶层 `httpRequest` —— core 权威字段（app.use(EsPlus, { httpRequest })）
+ *   2. `EsTable/EsForm.methods.$httpRequest` —— vue3 / adapter-antdv 原样透传的 options.methods
+ *   3. `EsTable/EsForm.$httpRequest` —— vue2 normalizeLegacyOptions 展平 methods 之后
+ */
+function resolveHttpRequest(cfg: EsPlusGlobalConfig): HttpRequestFn | null {
+  if (typeof cfg.httpRequest === 'function') return cfg.httpRequest as HttpRequestFn
+  for (const key of ['EsTable', 'EsForm'] as const) {
+    const sub = cfg[key] as Record<string, unknown> | undefined
+    if (!sub || typeof sub !== 'object') continue
+    const methods = sub.methods as Record<string, unknown> | undefined
+    const nested = methods && typeof methods.$httpRequest === 'function' ? methods.$httpRequest : undefined
+    const flat = typeof sub.$httpRequest === 'function' ? sub.$httpRequest : undefined
+    const fn = nested || flat
+    if (typeof fn === 'function') return fn as HttpRequestFn
+  }
+  return null
+}
+
+/**
+ * 全局 HTTP 请求自由函数（配置驱动 / 多端同构 / AI 原生）。
+ *
+ * 供 AI + mcp-server 生成的 CRUD 包装代码直接
+ *   `import { httpRequest } from '@es-plus/vue3'`（或 '@es-plus/vue2' / '@es-plus/adapter-antdv'）
+ * 后调用，而无需在组件 provide/inject 树内取用。它解析 install 时写入模块单例的全局 HTTP 客户端，
+ * 因此与 EsTable / EsForm 内部使用的是同一个请求实例（单一实例，避免重复配置）。
+ *
+ * @param params 传给用户配置的 HTTP 请求函数的参数对象（如 { url, method, params, data }）
+ * @throws 若未通过 configureEsPlus / app.use(EsPlus, { httpRequest }) 配置，抛出明确错误，
+ *         而非静默返回 undefined —— 便于在开发期立刻定位「忘记配置全局请求函数」。
+ */
+export function httpRequest(params: Record<string, unknown>): Promise<unknown> {
+  const fn = resolveHttpRequest(getGlobalConfig())
+  if (!fn) {
+    throw new Error(
+      '[es-plus] 全局 httpRequest 未配置。请在应用入口配置全局请求函数，例如：\n' +
+        '  app.use(EsPlus, { httpRequest: (params) => axios(params) })\n' +
+        '  // 或（兼容旧约定）app.use(EsPlus, { EsTable: { methods: { $httpRequest } } })\n' +
+        'AI 生成的 CRUD 代码依赖该全局请求函数完成列表查询与增删改查。',
+    )
+  }
+  return fn(params)
+}

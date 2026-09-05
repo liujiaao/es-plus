@@ -21,6 +21,7 @@
             <a-button
               v-else
               :type="mapBtnType(item.type as string)"
+              :danger="mapBtnDanger(item.type as string)"
               :size="mapBtnSize(item.size as string)"
               :loading="item.loading || false"
               :disabled="getDisabledState(item)"
@@ -44,6 +45,7 @@
             <a-button
               v-else
               :type="mapBtnType(item.type as string)"
+              :danger="mapBtnDanger(item.type as string)"
               :size="mapBtnSize(item.size as string)"
               :loading="item.loading || false"
               :disabled="getDisabledState(item)"
@@ -64,10 +66,15 @@
 
 <script setup lang="ts">
 import { computed, h, inject, defineComponent } from 'vue'
+// 本地导入 AButton↔<a-button>，对齐 es-table/component.vue 的别名策略，
+// 使命令式弹窗内（appContext 为 null）表格操作列按钮仍能解析。
+import { Button as AButton } from 'ant-design-vue'
 import { getButtonPosition } from '@es-plus/core'
 import { getAdvIconComponent } from '../../../utils/icon'
 import { getGlobalConfig } from '../../../config'
-import { mapButtonType, mapSize } from '../../../utils/shared'
+import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
+import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
+import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 
 const props = defineProps<{
   btnConfig?: Array<Record<string, unknown>>
@@ -108,11 +115,14 @@ const processedBtnRight = computed(() =>
 
 const showContainer = computed(() => props.leftText || processedBtnLeft.value.length > 0 || processedBtnRight.value.length > 0)
 
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
+function mapBtnType(type?: string): ButtonType {
+  return mapButtonType(type) as ButtonType
 }
-function mapBtnSize(size?: string): string {
-  return mapSize(size, 'small')
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
+}
+function mapBtnSize(size?: string): SizeType {
+  return mapSize(size, 'small') as SizeType
 }
 
 const getDisabledState = (item: Record<string, unknown>): boolean => {

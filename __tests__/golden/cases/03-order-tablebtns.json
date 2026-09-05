@@ -1,0 +1,31 @@
+{
+  "nl": "订单管理：表格上方左侧有“新增订单”按钮，右侧有“批量导出”按钮；表格列有订单号、金额、下单时间；每行有查看、删除操作。",
+  "config": {
+    "name": "OrderManage",
+    "apiUrl": "/api/orders",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "Input",
+        "inQuery": false,
+        "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
+      },
+      { "prop": "createdAt", "label": "下单时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "delete", "view"],
+    "tableBtns": [
+      { "name": "新增订单", "type": "primary", "code": 1, "dialogKey": "add" },
+      { "name": "批量导出", "code": 2, "actionType": "export" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "查看", "dialogKey": "view" },
+        { "name": "删除", "confirm": "确定删除该订单吗？" }
+      ]
+    }
+  },
+  "notes": "tableBtns code:1=left, code:2=right; formatter extension point for money display"
+}

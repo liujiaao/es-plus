@@ -5,7 +5,7 @@
       <div class="doc-breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ t('sidebar.section.advanced') }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ t('breadcrumb.advanced') }}</el-breadcrumb-item>
           <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -35,6 +35,9 @@
         <!-- 案例列表 -->
         <section class="doc-section" id="examples">
           <h2 class="section-title">{{ t('advancedDoc.examples') }}</h2>
+          <p class="examples-note">
+            {{ t('advancedDoc.crossNote') }}
+          </p>
           <div class="examples-list">
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
@@ -42,6 +45,7 @@
               :title="example.title"
               :description="example.description"
               :code="example.code"
+              :level="levelOf(index, currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -108,43 +112,6 @@ import CodePlayground from '@/components/doc/CodePlayground.vue'
 const { t } = useI18n()
 import { docsData as rawDocsData } from './advanced-doc.data'
 
-// 导入案例组件
-import DialogBasic from '@/components/examples/dialog/Basic.vue'
-import DialogForm from '@/components/examples/dialog/Form.vue'
-import DialogConfirm from '@/components/examples/dialog/Confirm.vue'
-import DialogNestedModal from '@/components/examples/dialog/NestedModal.vue'
-import DialogAdvanced from '@/components/examples/dialog/Advanced.vue'
-import DialogAsync from '@/components/examples/dialog/Async.vue'
-import DialogDetailPreview from '@/components/examples/dialog/DetailPreview.vue'
-import DialogTableDialog from '@/components/examples/dialog/TableDialog.vue'
-import DialogStepDialog from '@/components/examples/dialog/StepDialog.vue'
-import DialogDynamicBtn from '@/components/examples/dialog/DynamicBtn.vue'
-import DialogMultiInstance from '@/components/examples/dialog/MultiInstance.vue'
-import DialogFormTableDialog from '@/components/examples/dialog/FormTableDialog.vue'
-import AdvancedFormTable from '@/components/examples/advanced/FormTable.vue'
-import AdvancedZeroCodeQuery from '@/components/examples/advanced/ZeroCodeQuery.vue'
-import AdvancedCrossPageSelect from '@/components/examples/advanced/CrossPageSelect.vue'
-import AdvancedStepForm from '@/components/examples/advanced/StepForm.vue'
-import AdvancedFormTableDialog from '@/components/examples/advanced/FormTableDialog.vue'
-import AdvancedOrderExpandTable from '@/components/examples/advanced/OrderExpandTable.vue'
-import AdvancedOneLineCrud from '@/components/examples/advanced/OneLineCrud.vue'
-import AdvancedRowApproval from '@/components/examples/advanced/RowApproval.vue'
-import AdvancedAutoFitHeight from '@/components/examples/advanced/AutoFitHeight.vue'
-import AdvancedAnyBackendApi from '@/components/examples/advanced/AnyBackendApi.vue'
-import AdvancedConditionalBtns from '@/components/examples/advanced/ConditionalBtns.vue'
-import AdvancedDialogTableForm from '@/components/examples/advanced/DialogTableForm.vue'
-import AdvancedDynamicFormQuery from '@/components/examples/advanced/DynamicFormQuery.vue'
-import AdvancedCascadeFormTable from '@/components/examples/advanced/CascadeFormTable.vue'
-import AdvancedStepImportWizard from '@/components/examples/advanced/StepImportWizard.vue'
-import AdvancedAdminPage from '@/components/examples/advanced/AdminPage.vue'
-import AdvancedCrudPage from '@/components/examples/advanced/CrudPage.vue'
-import AdvancedVirtualTable from '@/components/examples/advanced/VirtualTable.vue'
-import AdvancedVirtualTableSort from '@/components/examples/advanced/VirtualTableSort.vue'
-import AdvancedVirtualTableSelect from '@/components/examples/advanced/VirtualTableSelect.vue'
-import AdvancedVirtualTableCustomRender from '@/components/examples/advanced/VirtualTableCustomRender.vue'
-import AdvancedVirtualTableRowStyle from '@/components/examples/advanced/VirtualTableRowStyle.vue'
-import AdvancedVirtualTableCrud from '@/components/examples/advanced/VirtualTableCrud.vue'
-
 const route = useRoute()
 
 const docsData = rawDocsData
@@ -155,40 +122,23 @@ const apiTitleMap: Record<string, string> = {
   'configBtn click': 'configBtn click 回调'
 }
 
-// Assign imported components by key
-const dialogComponents: Record<string, any> = {
-  basic: DialogBasic, form: DialogForm, confirm: DialogConfirm,
-  'nested-modal': DialogNestedModal, advanced: DialogAdvanced, async: DialogAsync,
-  'detail-preview': DialogDetailPreview, 'table-dialog': DialogTableDialog,
-  'step-dialog': DialogStepDialog, 'dynamic-btn': DialogDynamicBtn,
-  'multi-instance': DialogMultiInstance, 'form-table-dialog': DialogFormTableDialog
-}
-const linkageComponents: Record<string, any> = {
-  'form-table': AdvancedFormTable, 'zero-code-query': AdvancedZeroCodeQuery,
-  'cross-page-select': AdvancedCrossPageSelect, 'step-form': AdvancedStepForm,
-  'form-table-dialog': AdvancedFormTableDialog, 'order-expand-table': AdvancedOrderExpandTable,
-  'one-line-crud': AdvancedOneLineCrud, 'row-approval': AdvancedRowApproval,
-  'auto-fit-height': AdvancedAutoFitHeight, 'any-backend-api': AdvancedAnyBackendApi,
-  'conditional-btns': AdvancedConditionalBtns, 'dialog-table-form': AdvancedDialogTableForm,
-  'dynamic-form-query': AdvancedDynamicFormQuery, 'cascade-form-table': AdvancedCascadeFormTable,
-  'step-import-wizard': AdvancedStepImportWizard,
-  'admin-page': AdvancedAdminPage,
-  'crud-page': AdvancedCrudPage,
-  'virtual-table': AdvancedVirtualTable,
-  'virtual-table-sort': AdvancedVirtualTableSort,
-  'virtual-table-select': AdvancedVirtualTableSelect,
-  'virtual-table-custom-render': AdvancedVirtualTableCustomRender,
-  'virtual-table-row-style': AdvancedVirtualTableRowStyle,
-  'virtual-table-crud': AdvancedVirtualTableCrud
-}
-
-docsData['use-dialog'].examples.forEach((ex: any) => { ex.component = dialogComponents[ex.key] })
-docsData['linkage'].examples.forEach((ex: any) => { ex.component = linkageComponents[ex.key] })
-
+// 组件由 advanced-doc.data.ts 通过 import.meta.glob 自动填充
 const currentDoc = computed(() => {
   const name = route.params.name
   return docsData[name] || { title: '未找到', description: '', examples: [] }
 })
+
+// 案例难度梯度：按案例在分类中的位置推断（案例已按 01→N 从简单到复杂排序）
+// L1 入门 / L2 基础 / L3 进阶 / L4 高级 / L5 复杂
+const levelOf = (index: number, total: number): number => {
+  if (total <= 2) return index === 0 ? 1 : 3
+  const ratio = index / (total - 1)
+  if (ratio < 0.25) return 1
+  if (ratio < 0.5) return 2
+  if (ratio < 0.75) return 3
+  if (ratio < 0.9) return 4
+  return 5
+}
 
 const toc = computed(() => [
   { id: 'features', text: t('advancedDoc.features') },
@@ -215,26 +165,28 @@ watch(() => route.params.name, (name) => {
 <style lang="scss" scoped>
 .advanced-doc-page {
   display: flex;
-  padding: 24px 0;
-  max-width: 1400px;
+  padding: 24px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
   margin: 0 auto;
 }
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 32px;
 }
 .doc-breadcrumb {
-  padding: 0 24px 16px;
+  max-width: 860px;
+  padding: 0 0 16px;
 }
 .doc-header {
-  padding: 0 24px 24px;
+  max-width: 860px;
+  padding: 0 0 24px;
   border-bottom: 1px solid var(--border-color-lighter);
   margin-bottom: 24px;
 }
 .doc-title {
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 12px;
 }
@@ -243,7 +195,8 @@ watch(() => route.params.name, (name) => {
   color: var(--text-color-secondary);
 }
 .doc-section {
-  padding: 0 24px 32px;
+  max-width: 860px;
+  padding: 0 0 32px;
 }
 .section-title {
   font-size: 24px;
@@ -251,7 +204,7 @@ watch(() => route.params.name, (name) => {
   color: var(--text-color-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid var(--primary-color-light);
+  border-bottom: 1px solid var(--border-color-lighter);
 }
 .features-grid {
   display: grid;
@@ -259,15 +212,29 @@ watch(() => route.params.name, (name) => {
   gap: 20px;
 }
 .feature-card {
-  padding: 24px;
-  background-color: var(--fill-color-light);
-  border-radius: 8px;
+  padding: 28px 24px;
+  background-color: var(--bg-color);
+  border-radius: 14px;
   text-align: center;
   border: 1px solid var(--border-color-lighter);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   color: var(--primary-color);
-  margin-bottom: 12px;
+  background: var(--primary-color-light, rgba(59, 130, 246, 0.1));
+  margin-bottom: 16px;
 }
 .feature-card h4 {
   font-size: 16px;
@@ -277,6 +244,7 @@ watch(() => route.params.name, (name) => {
 }
 .feature-card p {
   font-size: 14px;
+  line-height: 1.6;
   color: var(--text-color-secondary);
 }
 .examples-list {
@@ -296,7 +264,8 @@ watch(() => route.params.name, (name) => {
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  padding: 24px;
+  max-width: 860px;
+  padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);
 }

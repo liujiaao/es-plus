@@ -4,7 +4,8 @@ export { generateCrudSchema, type CrudSchemaResult } from './schema-generator.js
 export { FORM_TYPES, PRESET_EXAMPLES, COMPONENT_LIST, type ComponentName } from './constants.js';
 export { createSchemaValidator, validateConfig, listAvailableSchemas, type ValidationResult } from './schema-validator.js';
 export { generateFromConfig, type StructuredCrudConfig, type StructuredGenerateResult } from './structured-generator.js';
-export { StructuredCrudConfigSchema } from './structured-config.schema.js';
+export { StructuredCrudConfigSchema, type StructuredCrudConfigInput } from './structured-config.schema.js';
+export { buildNlToConfigSystemPrompt, NL_TO_CONFIG_FEWSHOT, type NlToConfigFewShot, } from './ai-nl-to-config-prompt.js';
 export { type TargetFramework, type CodegenContext, DEFAULT_TARGET, getEsPlusPackageName, getElementPackageName, buildElementImport, mapElementNameToV2, rewriteElementUsage, rewriteVModelSync, transformScriptSetupToOptions, } from './target.js';
 export * from './contract.js';
 //# sourceMappingURL=index.d.ts.map

@@ -4,6 +4,9 @@
     <div class="playground-preview">
       <div class="preview-header">
         <span class="preview-title">{{ title }}</span>
+        <el-tag v-if="level" size="small" :type="LEVEL_TYPES[level]" class="level-tag" effect="plain">
+          {{ LEVEL_LABELS[level] }}
+        </el-tag>
         <div class="preview-actions">
           <el-button
             link
@@ -90,7 +93,12 @@ const props = defineProps<{
   title: string
   description?: string
   code: CodeContent | string
+  level?: number
 }>()
+
+// 案例难度梯度（L1 入门 → L5 复杂）
+const LEVEL_LABELS = ['', '入门', '基础', '进阶', '高级', '复杂'] as const
+const LEVEL_TYPES = ['', 'success', 'success', 'warning', 'danger', 'danger'] as const
 
 const isExpanded = ref(false)
 const activeTab = ref('template')
@@ -206,8 +214,8 @@ watch(() => props.code, () => {
 
 .preview-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color-lighter);
   background-color: var(--bg-color);
@@ -221,6 +229,7 @@ watch(() => props.code, () => {
 .preview-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .preview-content {
@@ -261,7 +270,7 @@ watch(() => props.code, () => {
   pre {
     margin: 0;
     padding: 16px;
-    background-color: #f6f8fa;
+    background-color: var(--es-code-bg, #f6f8fa);
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.6;

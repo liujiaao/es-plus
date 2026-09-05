@@ -1,6 +1,7 @@
 import { h } from 'vue'
 import {
   ElInput,
+  ElInputNumber,
   ElSelect,
   ElOption,
   ElDatePicker,
@@ -18,36 +19,11 @@ import {
   ElUpload
 } from 'element-plus'
 import type { FormItemOption } from '../types'
-import { normalizeFormType } from '@es-plus/core'
+import { normalizeFormType, getNestedValue, setNestedValue } from '@es-plus/core'
+export { getNestedValue, setNestedValue } from '@es-plus/core'
 
 /** 表单控件渲染回调的上下文参数类型（与 FormItemOption.render 的 ctx 一致） */
 type FormInputCtx = { row: FormItemOption; index: number }
-
-// 支持嵌套属性路径的取值和赋值
-export const getNestedValue = (obj: Record<string, unknown>, path: string): unknown => {
-  const keys = path.split(/\.|\[|\]/).filter(Boolean)
-  let result = obj
-  for (const key of keys) {
-    if (result == null) return undefined
-    result = result[key] as Record<string, unknown>
-  }
-  return result
-}
-
-export const setNestedValue = (obj: Record<string, unknown>, path: string, value: unknown): void => {
-  const keys = path.split(/\.|\[|\]/).filter(Boolean)
-  const lastKey = keys.pop()
-  let current: Record<string, unknown> = obj
-  for (const key of keys) {
-    if (current[key] == null) {
-      current[key] = {}
-    }
-    current = current[key] as Record<string, unknown>
-  }
-  if (lastKey) {
-    current[lastKey] = value
-  }
-}
 
 export function useFormInputs() {
   const formInputComponents = (item: FormItemOption) => {
@@ -80,28 +56,15 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElOption, { key: idx, value: opt.value, label: opt.label })
+                hFn(ElOption, { key: idx, value: opt.value as string, label: opt.label })
               )
           )
         }
       ],
       [
-        'datePicker',
+        'InputNumber',
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
-          return hFn(ElDatePicker, {
-            modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
-            'onUpdate:modelValue': (val: unknown) => {
-              setNestedValue(model, row.prop, val)
-            }
-          })
-        }
-      ],
-      [
-        'timePicker',
-        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
-          return hFn(ElTimePicker, {
+          return hFn(ElInputNumber, {
             modelValue: getNestedValue(model, row.prop) as any,
             ...row.attrs,
             ...row.on,
@@ -155,7 +118,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElCascader, {
             modelValue: getNestedValue(model, row.prop) as any,
-            options: row.dataOptions,
+            options: row.dataOptions as any,
             ...row.attrs,
             ...row.on,
             'onUpdate:modelValue': (val: unknown) => {

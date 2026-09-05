@@ -56,12 +56,26 @@
       "enum": ["auto", "height", "maxHeight"],
       "description": "Height calculation mode. 'height' recommended for adaptive height with ResizeObserver"
     },
-    "tabHeight": {
+    "height": {
       "oneOf": [
         { "type": "number" },
         { "type": "string" }
       ],
       "description": "Container height value (used with heightType)"
+    },
+    "tabHeight": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Height offset reserved for tabs/toolbar above the table when computing adaptive height"
+    },
+    "maxHeight": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string" }
+      ],
+      "description": "Maximum table height (used with heightType='maxHeight')"
     },
     "cachePageSelection": {
       "type": "boolean",
@@ -135,6 +149,33 @@
     "leftText": {
       "type": "string",
       "description": "Text displayed on the left side of the table toolbar"
+    },
+    "virtual": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable virtual scrolling via el-table-v2 (suitable for 10k+ rows)"
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["default", "virtual"],
+      "description": "Table rendering engine. 'default'=el-table, 'virtual'=el-table-v2"
+    },
+    "rowHeight": {
+      "type": "number",
+      "default": 50,
+      "description": "Row height in pixels for virtual scrolling mode"
+    },
+    "estimatedRowHeight": {
+      "type": "number",
+      "description": "Estimated row height for dynamic-height virtual scrolling"
+    },
+    "overscanCount": {
+      "type": "number",
+      "default": 2,
+      "description": "Number of rows to render outside visible area (virtual mode buffer)"
+    },
+    "rowClassName": {
+      "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"
     }
   },
   "additionalProperties": true

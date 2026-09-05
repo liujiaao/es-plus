@@ -47,6 +47,8 @@ export function useTableResize(
     nextTick(() => {
       if (!tableContainerRef.value || typeof ResizeObserver === 'undefined') return
 
+      resizeObservers()
+
       observer.value = new ResizeObserver(() => {
         requestAnimationFrame(() => {
           if (tableContainerRef.value) resizeObservers()

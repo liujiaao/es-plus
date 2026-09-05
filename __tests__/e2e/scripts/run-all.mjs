@@ -15,6 +15,8 @@ const MATRIX = [
   { target: 'vue3', mode: 'sfc' },
   { target: 'vue2', mode: 'schema' },
   { target: 'vue2', mode: 'sfc' },
+  { target: 'antdv', mode: 'schema' },
+  { target: 'antdv', mode: 'sfc' },
 ]
 
 const failures = []

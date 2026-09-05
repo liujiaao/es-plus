@@ -7,16 +7,21 @@
     "dev": "vite",
     "dev:dist": "vite --mode dist",
     "dev:dist:fresh": "npm --prefix ../packages/vue3 run build && vite --mode dist",
+    "prebuild": "node ../scripts/sync-docs.mjs",
     "build": "vite build",
+    "prebuild:dist": "node ../scripts/sync-docs.mjs",
     "build:dist": "vite build --mode dist",
     "build:dist:fresh": "npm --prefix ../packages/vue3 run build && vite build --mode dist",
     "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.0.10",
+    "@es-plus/core": "file:../packages/core",
     "@guolao/vue-monaco-editor": "^1.6.0",
     "@unhead/vue": "^3.1.1",
+    "@vxe-ui/core": "^4.4.18",
     "@vueuse/core": "^9.5.0",
+    "dom-zindex": "^1.0.7",
     "element-plus": "^2.2.26",
     "es-plus": "file:../packages/vue3",
     "fuse.js": "^7.0.0",
@@ -28,7 +33,10 @@
     "vite-plugin-sitemap": "^0.8.2",
     "vue": "^3.2.45",
     "vue-i18n": "^9.2.2",
-    "vue-router": "^4.1.5"
+    "vue-router": "^4.1.5",
+    "vxe-pc-ui": "^4.16.23",
+    "vxe-table": "^4.6.0",
+    "xe-utils": "^4.0.11"
   },
   "devDependencies": {
     "@types/markdown-it": "^12.2.3",

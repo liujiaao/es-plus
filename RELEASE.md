@@ -1,17 +1,23 @@
 # 发布指南
 
+> 维护者文档以中文为工作语言；英文对外入口见 [README.en.md](./README.en.md)。
+
 本项目使用 [changesets](https://github.com/changesets/changesets) 管理版本和发布。
 
 ## 包结构
 
 | 包名 | 路径 | 说明 |
 |------|------|------|
+| `@es-plus/vue3` | `packages/vue3` | Vue 3 + Element Plus 渲染器 |
+| `@es-plus/vue2` | `packages/vue2` | Vue 2 + Element UI 渲染器 |
+| `@es-plus/core` | `packages/core` | 框架无关核心层（类型/工具/算法） |
 | `@es-plus/shared` | `packages/shared` | 共享核心逻辑（自动安装，用户无感） |
 | `@es-plus/mcp-server` | `packages/mcp-server` | MCP Server（AI 编码工具集成） |
 | `@es-plus/cli` | `packages/cli` | CLI 工具（命令行生成 CRUD 页面） |
-| `@es-plus/adapter-antdv` | `packages/adapter-antdv` | Ant Design Vue 4.x 适配器（**独立发布，不走 changesets**，见文末） |
+| `@es-plus/adapter-antdv` | `packages/adapter-antdv` | Ant Design Vue 4.x 适配器（**随 changesets 独立版本、不 linked**，见文末） |
+| `es-plus-ui` | `packages/es-plus-legacy` | 兼容 stub（re-export `@es-plus/vue3`，deprecated） |
 
-前三者通过 `linked` 配置联动 — 任一包发版时，其他关联包自动同步版本号。`@es-plus/adapter-antdv` 不在此联动体系内，版本号独立管理、手动发布。
+`@es-plus/shared`、`@es-plus/mcp-server`、`@es-plus/cli` 三者通过 `linked` 配置联动 — 任一包发版时，其他两个自动同步到相同版本号。其余包（vue3 / vue2 / core / adapter-antdv / es-plus-legacy）随 changesets **独立版本**：版本号互不影响、各自演进（实测 vue3@1.4.2 / vue2@1.1.5 / core@1.0.1 / adapter-antdv@1.0.0 各不相同）。
 
 ## 日常开发流程
 
@@ -59,7 +65,7 @@ git commit -m "chore: version packages"
 npx changeset publish
 ```
 
-该命令按依赖顺序发布：`@es-plus/shared` → `@es-plus/mcp-server` + `@es-plus/cli`
+该命令发布所有存在待发版本（pending version）的包，并按依赖拓扑自动排序（先 `shared`，再 `cli` / `mcp-server` 与各渲染器），无需手动指定顺序。
 
 发布后自动创建 git tag（如 `@es-plus/shared@1.0.1`）。
 
@@ -79,18 +85,16 @@ git push --follow-tags
 
 ## 构建顺序
 
-发布前需确保构建通过：
+发布前需确保构建通过。根目录一条命令构建全部可发布包：
 
 ```bash
-# 先构建 shared（其他包依赖它）
-cd packages/shared && npm run build
-
-# 再构建消费者（可并行）
-cd packages/mcp-server && npm run build
-cd packages/cli && npm run build
+npm run build:packages
 ```
 
-`mcp-server` 已配置 `prebuild` 脚本自动先构建 shared。
+内部按依赖顺序编排：`schemas:sync → shared → vue3 → vue2 → adapter-antdv → cli → mcp-server`。
+
+- `@es-plus/core` 不在此脚本内——它是纯 `tsc` 构建（vue3 内联打包，vue2 / adapter-antdv 外部引用），单独构建：`npm run build --workspace @es-plus/core`。
+- `@es-plus/adapter-antdv` 的 `prebuild` 会先 `sync-schemas`，`prepublishOnly` 会自动 `typecheck + build`。
 
 ## 预发布（Prerelease）
 
@@ -131,9 +135,13 @@ CI 可配置 [changeset-bot](https://github.com/apps/changeset-bot) 在 PR 中�
 
 本项目用 `linked`，避免不必要的发布。
 
-## 独立发布的包：@es-plus/adapter-antdv
+## @es-plus/adapter-antdv 的版本与发布
 
-`@es-plus/adapter-antdv`（Ant Design Vue 4.x 适配器）不纳入 changesets 的 `linked` 体系，版本号独立管理，需手动发布。
+`@es-plus/adapter-antdv`（Ant Design Vue 4.x 适配器）**在 changesets 体系内，但不在 `linked` 组**：给它提 changeset（`npx changeset` 时勾选 `@es-plus/adapter-antdv`）即走标准 `version` + `publish` 流程，版本号与 vue3 / vue2 互不联动。
+
+由于它与 `@es-plus/vue3` 共享同一份配置 Schema，**破坏性 Schema 变更应与 vue3 同步升 major**（在 changeset 里选 major 即可）。
+
+> 紧急补丁也可绕开 changesets 手动发布（下方步骤）；但日常发版请走 changeset，避免版本与 CHANGELOG 漂移。
 
 ### 发布步骤
 
@@ -150,5 +158,4 @@ npm view @es-plus/adapter-antdv version         # 验证，应返回已发布版
 
 - `prepublishOnly` 脚本会自动执行 `npm run typecheck && npm run build`，发布前再次校验。
 - 本机默认 registry 可能是 `npmmirror`（淘宝镜像），**必须显式 `--registry=https://registry.npmjs.org/`**；`package.json` 的 `publishConfig.registry` 已锁定官方源作为兜底。
-- 版本号规则与上表一致；由于与 `@es-plus/vue3` 共享配置 Schema，**破坏性 Schema 变更应与 vue3 同步升 major**。
 - 详细的架构、构建产物与开发说明见 [`packages/adapter-antdv/DEVELOP.md`](./packages/adapter-antdv/DEVELOP.md)。

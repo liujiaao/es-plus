@@ -46,12 +46,12 @@ const dynamicItems = computed(() => {
       prop: `delete_${index}`, 
       label: ' ', 
       span: 4,
-      render: (h, model, { row }) => h(ElButton, { 
-        text: true, 
+      render: (h, model, { row }) => h(ElButton, {
+        text: true,
         type: 'danger',
         icon: Delete,
-        onClick: () => removeField(index) 
-      }, '删除')
+        onClick: () => removeField(index)
+      }, () => '删除')
     }
   ]).flat()
 })

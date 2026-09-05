@@ -101,6 +101,8 @@ export function adaptColumns(
   for (const col of columns) {
     // 选择列：ADV 通过 rowSelection 渲染，跳过
     if (col.type === 'selection') continue
+    // 展开列：ADV 通过 expandedRowRender 整行渲染，不作为数据列（对齐 vxe/vue3）
+    if (col.type === 'expand') continue
     // 序号列：type:'index' 等价 options.snIndex
     if (col.type === 'index') {
       result.push(createSnAdvColumn(col))

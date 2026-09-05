@@ -38,14 +38,14 @@
 - **配置驱动** — JSON 配置生成表单、表格、弹窗，替代大量模板代码
 - **全链路联动** — EsForm 嵌套在 EsTable 中，查询/重置/分页全自动联动
 - **编程式弹窗** — `useDialog()` 命令式调用，JSX 渲染，表单验证集成
-- **13 种表单控件** — Input、Select、datePicker、timePicker、Cascader、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
+- **14 种表单控件** — Input、InputNumber、Select、DatePicker、TimePicker、Cascader、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
 - **自适应高度** — ResizeObserver 自动重算表格高度
 - **跨页选择** — `cachePageSelection` 分页切换保留勾选
 - **任意后端适配** — `configTableOut` 配置化映射 API 响应字段
 - **权限控制** — `permissionValue` 声明式按钮权限，无需 v-if
 - **国际化** — `labelKey` + 自定义翻译函数，兼容任意 i18n 方案
-- **TypeScript** — 完整类型定义，11 个核心接口可导入
-- **AI 原生支持** — 配套 MCP Server 和 CLI 工具，自然语言生成完整页面
+- **TypeScript** — 完整类型定义 + 38 个跨渲染器契约类型（CI 强制三端同构导出）
+- **AI 原生支持** — 配套 MCP Server 和 CLI：MCP 通过协议把 Schema/约定交给宿主 LLM（Claude Code/Cursor）做语义推理，es-plus 负责约束校验 + 确定性编译成可运行页面
 
 ---
 
@@ -228,7 +228,7 @@ const formItems = [
 |------|------|------|
 | `prop` | `string` | 字段名（必填） |
 | `label` | `string` | 标签（必填） |
-| `formtype` | `string` | 控件类型（13 种） |
+| `formtype` | `string` | 控件类型（14 种） |
 | `span` | `number` | 栅格列宽（1-24） |
 | `attrs` | `object` | 透传到 Element Plus 组件 |
 | `dataOptions` | `array` | Select/Radio/Checkbox 选项 |
@@ -390,7 +390,7 @@ import type {
 } from '@es-plus/vue3'
 ```
 
-> 跨 Vue 2 / Vue 3 共享类型时，从 `@es-plus/core/types` 导入 — 同一份 `columns` / `formItemList` 在两个渲染器中通用。
+> 跨 Vue 2 / Vue 3 / AntDV 共享类型时，从 `@es-plus/core/types` 导入 — 同一份 `columns` / `formItemList` 在三个渲染器中通用。
 
 ---
 
@@ -470,28 +470,40 @@ es-plus/
 │   ├── adapter-antdv/    # Vue 3 + Ant Design Vue 渲染器（npm: @es-plus/adapter-antdv）
 │   ├── core/             # 框架无关核心层（npm: @es-plus/core）
 │   ├── es-plus-legacy/   # 兼容 stub（npm: es-plus-ui，re-export @es-plus/vue3）
-│   ├── shared/           # MCP/CLI 共享逻辑
+│   ├── shared/           # MCP/CLI 共享逻辑（npm: @es-plus/shared）
 │   ├── mcp-server/       # MCP Server（npm: @es-plus/mcp-server）
 │   └── cli/              # CLI 工具（npm: @es-plus/cli）
-├── es-plus-docs/         # 文档站点（Vite + Vue 3）
+├── es-plus-docs/         # 主文档站（Vite + Vue 3 + Element Plus）
+├── es-eui/               # Vue 2 + Element UI 文档站
+├── es-pc/                # Ant Design Vue 文档站
+├── scripts/              # 一致性/契约校验脚本（check:consistency 等）
+├── __tests__/            # e2e 矩阵 + Playwright 运行时测试
 └── docs/                 # 设计文档与迁移指南
 ```
 
 ## 本地开发
 
 ```bash
-# Vue 3 组件库构建
-cd packages/vue3 && npm install && npm run build
+# 根目录一次性装依赖（workspaces monorepo，无需逐包 install）
+npm install --legacy-peer-deps
 
-# Vue 2 组件库构建
-cd packages/vue2 && npm install && npm run build
+# 构建全部可发布包（按依赖顺序：shared → vue3 → vue2 → adapter-antdv → cli → mcp-server）
+npm run build:packages
 
 # 文档站点开发
-cd es-plus-docs && npm install && npm run dev
+cd es-plus-docs && npm run dev
 
-# 运行测试
-cd packages/vue3 && npm test
-cd packages/core && npm test
+# 运行全部包单测
+npm test
+
+# 跨包 e2e 矩阵（vue2/vue3/antdv × schema/sfc）
+npm run test:e2e
+
+# 类型检查（逐包）
+npm run typecheck --workspaces --if-present
+
+# 一致性校验（三端类型导出 / schema 单一真源）
+npm run check:consistency
 ```
 
 ## 相关链接

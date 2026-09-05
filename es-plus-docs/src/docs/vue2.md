@@ -332,6 +332,13 @@ export default {
 | 渲染函数 `h` | 全局 `import { h } from 'vue'` | `render: (h, ctx) => ...` 中传入的 `createElement` |
 | Provide / Inject | `app.provide()` | `Vue.mixin({ provide: { ... } })`（内部已处理） |
 | 插件安装 | `app.use(EsPlus)` | `Vue.use(EsPlus)` |
+| `httpRequest` 数据渲染 | **受控**：需绑定 `v-model:data-source` 才渲染请求结果 | **非受控兜底**：内部 `tableData` 直接渲染，未绑定 `:data-source.sync` 也能显示 |
+
+:::warning httpRequest 模式请始终绑定 `:data-source.sync`
+三端渲染契约有一处刻意保留的差异：`@es-plus/vue3` 采用**受控**数据流，`httpRequest`/`actionUrl` 拉取的数据必须绑定 `v-model:data-source` 才会渲染；`@es-plus/vue2` 与 `@es-plus/adapter-antdv` 则额外提供**内部 `tableData` 兜底**，未绑定 `:data-source.sync` 也能显示请求结果。
+
+为使配置在三端无缝迁移，**请始终为 `httpRequest`/`actionUrl` 模式的 `EsTable` 绑定 `:data-source.sync`**（本文所有远程数据示例均已如此），这样切换到任一渲染器行为都一致。
+:::
 
 ---
 
