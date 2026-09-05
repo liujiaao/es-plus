@@ -10,7 +10,7 @@ cd es-plus
 npm install --legacy-peer-deps
 npm run build:packages
 npm test                                      # 跑全部包单测
-npm run test:e2e                              # 跑 vue2/vue3 × schema/sfc e2e 矩阵
+npm run test:e2e                              # 跑 vue2/vue3/antdv × schema/sfc e2e 矩阵
 ```
 
 PR 提交前请保证 `npm test` + `npm run test:e2e` 全绿。
@@ -22,18 +22,22 @@ ES-Plus 是 **npm workspaces monorepo**。
 ```
 es-plus/
 ├── packages/
-│   ├── core/         # 框架无关纯逻辑（Vue 2/3 共享）
-│   ├── shared/       # 工具链共享（codegen / schema validator）
-│   ├── vue2/         # Vue 2 + Element UI 渲染层
-│   ├── vue3/         # Vue 3 + Element Plus 渲染层
-│   ├── cli/          # 命令行代码生成器
-│   └── mcp-server/   # MCP Server（AI 编码工具集成）
-├── es-plus-docs/     # 文档站（vite + vue3 + element-plus）
-└── __tests__/e2e/    # 跨包 e2e 矩阵
+│   ├── core/           # 框架无关纯逻辑（三渲染器共享）
+│   ├── shared/         # 工具链共享（codegen / schema validator）
+│   ├── vue2/           # Vue 2 + Element UI 渲染层
+│   ├── vue3/           # Vue 3 + Element Plus 渲染层
+│   ├── adapter-antdv/  # Vue 3 + Ant Design Vue 渲染层
+│   ├── cli/            # 命令行代码生成器
+│   ├── mcp-server/     # MCP Server（AI 编码工具集成）
+│   └── es-plus-legacy/ # es-plus-ui 兼容 stub（re-export @es-plus/vue3）
+├── es-plus-docs/       # 主文档站（vite + vue3 + element-plus）
+├── es-eui/             # Vue 2 + Element UI 文档站
+├── es-pc/              # Ant Design Vue 文档站
+└── __tests__/          # e2e（跨包矩阵）+ e2e-runtime（Playwright 运行时）
 ```
 
 依赖图：
-- `core` → 被 `vue2`、`vue3` 直接依赖（vue3 内联打包，vue2 external 引用）
+- `core` → 被 `vue2`、`vue3`、`adapter-antdv` 直接依赖（vue3 内联打包；vue2、adapter-antdv external 引用）
 - `shared` → 被 `cli`、`mcp-server` 依赖
 
 ## 开发流程
@@ -70,7 +74,7 @@ cd packages/<package>
 npm run dev          # watch 模式（如果支持）
 npm test             # 单测
 npm run typecheck    # 类型检查
-npm run lint         # 代码风格（阶段 B 上线后启用）
+npm run lint         # 代码风格
 ```
 
 ### 5. 跑全套验证
@@ -80,7 +84,7 @@ npm run lint         # 代码风格（阶段 B 上线后启用）
 ```bash
 npm run build:packages       # 构建所有包
 npm test --workspaces --if-present
-npm run test:e2e             # vue2/vue3 × schema/sfc 矩阵
+npm run test:e2e             # vue2/vue3/antdv × schema/sfc 矩阵
 ```
 
 ### 6. 提交 commit
@@ -97,7 +101,7 @@ npm run test:e2e             # vue2/vue3 × schema/sfc 矩阵
 
 **type**：`feat` / `fix` / `docs` / `style` / `refactor` / `test` / `chore` / `release`
 
-**scope**：限定为 monorepo 包名（`core`、`shared`、`vue2`、`vue3`、`cli`、`mcp-server`、`docs`、`e2e`、`ci`、`deps`）
+**scope**：限定为 monorepo 包名（`core`、`shared`、`vue2`、`vue3`、`antdv`、`legacy`、`cli`、`mcp-server`、`docs`、`e2e`、`ci`、`deps`；其中 `antdv` = `@es-plus/adapter-antdv`、`legacy` = `es-plus-ui`）
 
 **示例**：
 ```
@@ -117,32 +121,25 @@ PR 标题用 commit message 同样的格式。模板会自动填充——按里�
 ## PR 准入标准
 
 ✅ **必须**：
-- 所有 CI 任务绿（unit-tests、typecheck、e2e、lint）
+- 所有 CI 任务绿（typecheck、e2e、consistency 校验；单测在 e2e.yml 的 `Unit tests` 矩阵内）
 - 改动有对应单测（bug 修复 → 回归测试；新功能 → 行为测试）
 - breaking change 显式在 PR 描述里标 `BREAKING CHANGE:` 并说明迁移路径
-- 涉及发布的改动同步更新 CHANGELOG
+- 涉及发布的改动同步 changeset（`npx changeset`）
 - 对外 API 改动同步 `es-plus-docs` 文档
 
 ⚠️ **审核会重点关注**：
-- 类型契约（`@es-plus/core/types` 改动会影响两个渲染层）
-- 包体积（vue2/vue3 dist 增长 > 10% 需要解释）
+- 类型契约（`@es-plus/core/types` 改动会影响三个渲染层）
+- 包体积（vue2/vue3/adapter-antdv dist 增长 > 10% 需要解释）
 - 跨包依赖一致性（peer dep 范围、版本范围）
 
 ## 版本管理
 
-ES-Plus 用 **independent versioning**——每个包版本独立。
+ES-Plus 用 **changesets** 管理版本与发布，单一真源见 [RELEASE.md](./RELEASE.md)。要点：
 
-发布流程（仅 maintainer）：
-
-```bash
-cd packages/<pkg>
-# 编辑 package.json + src 内 version 字面量（如 vue2/index.ts）
-# 编辑 CHANGELOG.md
-# 编辑 es-plus-docs/src/docs/changelog.md（用户面向）
-git add -A
-git commit -m "release(@es-plus/<pkg>): <version> — <summary>"
-npm publish --workspace @es-plus/<pkg>
-```
+- 日常变更后跑 `npx changeset` 记录变更（生成一个 `.changeset/*.md` 并提交）。
+- 发版时 `npx changeset version` 升版本、自动生成/追加各包 `CHANGELOG.md`，再 `npx changeset publish` 发布。
+- `@es-plus/shared` / `@es-plus/mcp-server` / `@es-plus/cli` 三者 `linked`（同版本联动）；其余包（vue3 / vue2 / core / adapter-antdv / es-plus-legacy）独立版本。
+- `@es-plus/adapter-antdv` 在 changesets 内但不 linked（详见 RELEASE.md）。
 
 ### Semver 边界
 
@@ -164,13 +161,13 @@ npm publish --workspace @es-plus/<pkg>
 
 ## 设计哲学（写代码前请读）
 
-ES-Plus 的核心抽象是**配置即代码**——同一份 JSON 配置驱动两个渲染层（Vue 2 + Element UI / Vue 3 + Element Plus）。
+ES-Plus 的核心抽象是**配置即代码**——同一份 JSON 配置驱动三个渲染层（Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue）。
 
 写新代码时遵循：
 
-1. **新功能优先放 `core`**，让两个渲染层自动获得
-2. **渲染层差异**用 adapter 模式处理（vue2 / vue3 各自实现统一接口）
-3. **不要在配置 schema 里放仅 vue3 / 仅 vue2 的特定字段**——除非有明确 fallback
+1. **新功能优先放 `core`**，让三个渲染层自动获得
+2. **渲染层差异**用 adapter 模式处理（vue3 / vue2 / adapter-antdv 各自实现统一接口）
+3. **不要在配置 schema 里放仅某单一渲染器的特定字段**——除非有明确 fallback
 4. **breaking change 至少经过一个 minor 版本的 deprecation**
 
 ## 行为准则
