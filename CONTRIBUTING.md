@@ -2,6 +2,8 @@
 
 感谢你对 ES-Plus 的关注！这份文档说明开发流程、PR 规范和社区约定。
 
+> 本仓库维护者文档以中文为工作语言（commit / PR / issue 亦以中文为主）；英文对外入口见 [README.en.md](./README.en.md)。
+
 ## TL;DR
 
 ```bash

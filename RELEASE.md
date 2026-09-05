@@ -1,5 +1,7 @@
 # 发布指南
 
+> 维护者文档以中文为工作语言；英文对外入口见 [README.en.md](./README.en.md)。
+
 本项目使用 [changesets](https://github.com/changesets/changesets) 管理版本和发布。
 
 ## 包结构
