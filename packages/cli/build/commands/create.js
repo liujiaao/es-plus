@@ -1,50 +1,12 @@
 import { Command } from "commander";
 import prompts from "prompts";
 import pc from "picocolors";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
 import { nlToConfig, aiAvailable, AiUnavailableError } from '../ai/nl-to-config.js';
-function toPascalCase(str) {
-    return str
-        .replace(/(^|[-_])([a-z])/g, (_, __, letter) => letter.toUpperCase())
-        .replace(/[-_]/g, "");
-}
-function toKebabCase(str) {
-    return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
-/**
- * 覆盖保护：写入前检查目标文件是否已存在。
- * - 无同名文件，或显式 --force → 直接放行。
- * - 存在同名文件且未 --force：
- *     · 交互式终端 → 提示用户确认覆盖；拒绝则返回 false（调用方按取消处理，退出码 0）。
- *     · 非交互环境（无 TTY，如 CI/脚本）→ 拒绝覆盖并置 exitCode=1，避免静默破坏用户已编辑的文件。
- * 对齐「覆盖前先查看目标」的安全约束，防止 `es-plus create` 无声 clobber 现有 schema.ts / *.vue。
- */
-async function confirmOverwrite(targets, force) {
-    const existing = targets.filter((f) => existsSync(f));
-    if (existing.length === 0 || force)
-        return true;
-    console.log(pc.yellow("\n⚠️ 以下文件已存在，将被覆盖："));
-    for (const f of existing)
-        console.log(pc.yellow(`   ${f}`));
-    if (!process.stdout.isTTY) {
-        console.log(pc.red("检测到非交互环境，已中止以避免覆盖。请使用 --force 显式覆盖，或更换 --output 路径。"));
-        process.exitCode = 1;
-        return false;
-    }
-    const { ok } = await prompts({
-        type: "confirm",
-        name: "ok",
-        message: "覆盖以上已存在文件？",
-        initial: false,
-    });
-    if (!ok) {
-        console.log(pc.yellow("已取消"));
-        return false;
-    }
-    return true;
-}
+import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, CLI_TARGETS } from '../utils/strings.js';
+import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
 /**
  * Emit code from a validated StructuredCrudConfig via the deterministic generator.
  * Shared by the --from-config path and the --ai path so both produce identical
@@ -66,10 +28,7 @@ async function emitFromStructuredConfig(config, nameArg, output, force) {
         const outputPath = output ? resolve(process.cwd(), output) : defaultOutput;
         if (!(await confirmOverwrite([outputPath], force)))
             return;
-        const dir = dirname(outputPath);
-        if (!existsSync(dir))
-            mkdirSync(dir, { recursive: true });
-        writeFileSync(outputPath, result.code, "utf-8");
+        writeGeneratedFiles([{ path: outputPath, content: result.code }], dirname(outputPath));
         console.log(pc.green(`\n✔ 已生成: ${outputPath}`));
     }
     else {
@@ -79,10 +38,12 @@ async function emitFromStructuredConfig(config, nameArg, output, force) {
         const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
         if (!(await confirmOverwrite([schemaFile, wrapperFile], force)))
             return;
-        if (!existsSync(outputDir))
-            mkdirSync(outputDir, { recursive: true });
-        writeFileSync(schemaFile, result.code, "utf-8");
-        writeFileSync(wrapperFile, result.wrapperCode || "", "utf-8");
+        // 事务式写入：空 wrapperCode 会抛错（避免 0 字节 .vue 却报成功），
+        // 中途失败回滚新建文件（避免只写出 schema.ts 的半生成目录）。
+        writeGeneratedFiles([
+            { path: schemaFile, content: result.code },
+            { path: wrapperFile, content: result.wrapperCode || "" },
+        ], outputDir);
         console.log(pc.green(`\n✔ 已生成:`));
         console.log(pc.green(`   ${schemaFile}`));
         console.log(pc.green(`   ${wrapperFile}`));
@@ -102,8 +63,14 @@ export const createCommand = new Command("create")
     .option("-f, --force", "overwrite existing output files without prompting")
     .description("Generate a CRUD page from natural language description or structured config")
     .action(async (name, options) => {
+    // 显式未知 target 直接报错退出，避免静默降级为 vue3（丢弃用户明确的不支持请求）。
+    if (!isValidTarget(options.target)) {
+        console.log(pc.red(`✗ 未知 target: ${options.target}（可选: ${CLI_TARGETS.join(", ")}）`));
+        process.exitCode = 1;
+        return;
+    }
     // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
-    const cliTarget = options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
+    const cliTarget = normalizeTarget(options.target);
     // Structured config mode — production-ready generation
     if (options.fromConfig) {
         const configPath = resolve(process.cwd(), options.fromConfig);
@@ -236,11 +203,7 @@ export const createCommand = new Command("create")
         const result = generateCrudPage(description, cliTarget);
         if (!(await confirmOverwrite([outputPath], !!options.force)))
             return;
-        const dir = dirname(outputPath);
-        if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true });
-        }
-        writeFileSync(outputPath, result.code, "utf-8");
+        writeGeneratedFiles([{ path: outputPath, content: result.code }], dirname(outputPath));
         console.log(pc.green(`\n✔ 已生成: ${outputPath}`));
         console.log(pc.dim(result.summary));
     }
@@ -268,18 +231,17 @@ export const createCommand = new Command("create")
         const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
         if (!(await confirmOverwrite([schemaFile, wrapperFile], !!options.force)))
             return;
-        if (!existsSync(outputDir)) {
-            mkdirSync(outputDir, { recursive: true });
-        }
-        const esPlusPkg = cliTarget === 'vue2' ? '@es-plus/vue2' : cliTarget === 'antdv' ? '@es-plus/adapter-antdv' : '@es-plus/vue3';
+        const esPlusPkg = esPlusPkgFor(cliTarget);
         const schemaContent = [
             `import type { CrudPageSchema } from '${esPlusPkg}'`,
             ``,
             `export const pageSchema: CrudPageSchema = ${schemaJson}`,
             ``,
         ].join("\n");
-        writeFileSync(schemaFile, schemaContent, "utf-8");
-        writeFileSync(wrapperFile, result.wrapperCode, "utf-8");
+        writeGeneratedFiles([
+            { path: schemaFile, content: schemaContent },
+            { path: wrapperFile, content: result.wrapperCode },
+        ], outputDir);
         console.log(pc.green(`\n✔ 已生成:`));
         console.log(pc.green(`   ${schemaFile}`));
         console.log(pc.green(`   ${wrapperFile}`));

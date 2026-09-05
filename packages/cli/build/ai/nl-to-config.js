@@ -32,7 +32,11 @@ function textOf(message) {
         .map((b) => b.text)
         .join('\n');
 }
-function extractJson(text) {
+/**
+ * 从模型输出中抽取首个 JSON 对象（容忍 ```json 围栏与前后噪声文本）。
+ * 导出以便单测覆盖围栏/裸对象/无对象抛错三种路径。
+ */
+export function extractJson(text) {
     const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     const body = fenced ? fenced[1] : text;
     const start = body.indexOf('{');

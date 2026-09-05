@@ -42,7 +42,11 @@ export const validateCommand = new Command("validate")
         process.exit(1);
     }
 });
-function detectSchemaType(config) {
+/**
+ * 依据配置对象的独有字段推断 schema 类型（--schema 未显式指定时）。
+ * 导出以便单测覆盖分支判定（table-column / table-options / dialog-options / form-item）。
+ */
+export function detectSchemaType(config) {
     if (!config || typeof config !== "object")
         return "form-item";
     const obj = config;

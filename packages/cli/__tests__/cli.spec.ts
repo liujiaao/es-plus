@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest'
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   toPascalCase,
   toKebabCase,
   normalizeTarget,
   esPlusPkgFor,
+  isValidTarget,
+  CLI_TARGETS,
 } from '../src/utils/strings'
 import { detectSchemaType } from '../src/commands/validate'
 import { extractJson, AiUnavailableError } from '../src/ai/nl-to-config'
+import { writeGeneratedFiles } from '../src/utils/fs'
 
 describe('strings.toPascalCase', () => {
   it('kebab → Pascal', () => {
@@ -45,6 +51,20 @@ describe('strings.esPlusPkgFor', () => {
   it('vue2 → @es-plus/vue2', () => expect(esPlusPkgFor('vue2')).toBe('@es-plus/vue2'))
   it('antdv → @es-plus/adapter-antdv', () =>
     expect(esPlusPkgFor('antdv')).toBe('@es-plus/adapter-antdv'))
+})
+
+describe('strings.isValidTarget', () => {
+  it('三端受支持值均合法', () => {
+    for (const t of CLI_TARGETS) expect(isValidTarget(t)).toBe(true)
+  })
+  it('undefined（未传）合法（命令层默认 vue3）', () => {
+    expect(isValidTarget(undefined)).toBe(true)
+  })
+  it('未知值不合法（不再静默降级 vue3）', () => {
+    expect(isValidTarget('svelte')).toBe(false)
+    expect(isValidTarget('vue4')).toBe(false)
+    expect(isValidTarget('')).toBe(false)
+  })
 })
 
 describe('validate.detectSchemaType', () => {
@@ -104,5 +124,49 @@ describe('nl-to-config.AiUnavailableError', () => {
     const e = new AiUnavailableError('no-key')
     expect(e.reason).toBe('no-key')
     expect(e.message).toMatch(/ANTHROPIC_API_KEY/)
+  })
+})
+
+describe('fs.writeGeneratedFiles', () => {
+  const mkTmp = () => mkdtempSync(join(tmpdir(), 'esplus-cli-'))
+
+  it('正常写入多文件', () => {
+    const dir = mkTmp()
+    try {
+      const a = join(dir, 'schema.ts')
+      const b = join(dir, 'Page.vue')
+      writeGeneratedFiles([{ path: a, content: 'export const x = 1' }, { path: b, content: '<template/>' }], dir)
+      expect(readFileSync(a, 'utf-8')).toBe('export const x = 1')
+      expect(readFileSync(b, 'utf-8')).toBe('<template/>')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('目录不存在时递归创建', () => {
+    const dir = mkTmp()
+    try {
+      const nested = join(dir, 'a', 'b')
+      const f = join(nested, 'Page.vue')
+      writeGeneratedFiles([{ path: f, content: '<template/>' }], nested)
+      expect(existsSync(f)).toBe(true)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('空内容 → 落盘前整体抛错（不写出 0 字节文件）', () => {
+    const dir = mkTmp()
+    try {
+      const a = join(dir, 'schema.ts')
+      const b = join(dir, 'Page.vue')
+      expect(() =>
+        writeGeneratedFiles([{ path: a, content: 'ok' }, { path: b, content: '' }], dir)
+      ).toThrow(/拒绝写入空文件/)
+      // 校验在写入前完成——第一个文件也不应被写出
+      expect(existsSync(a)).toBe(false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
