@@ -14,6 +14,9 @@ import {
   applySelectionChange,
 } from '@es-plus/core'
 
+// 无 rowkey 调用 toggleRowSelection 的一次性开发告警标记（模块级，避免刷屏）
+let warnedNoRowkeyToggle = false
+
 export function useTableSelection(rowkey?: string, cachePageSelection: boolean = true) {
   const state = createSelectionState()
   const multipleSelection = ref<Record<string, unknown>[]>([])
@@ -102,7 +105,23 @@ export function useTableSelection(rowkey?: string, cachePageSelection: boolean =
    * 切换行选中状态（同步 multipleSelection，保证 getSelectionRows 一致）
    */
   const toggleRowSelection = (row: Record<string, unknown>, selected?: boolean) => {
-    if (!rowkey) return
+    if (!rowkey) {
+      // ant-design-vue 的选择是基于 rowKey 的（selectedRowKeys），无 rowkey 无法定位行——
+      // 与 vue3/vue2（el-table 基于行对象的原生命令）不同，此处只能 no-op。
+      // 开发期一次性告警，使这一框架约束可见（生产构建静默）。
+      if (
+        !warnedNoRowkeyToggle &&
+        !(typeof process !== 'undefined' && process.env?.NODE_ENV === 'production')
+      ) {
+        warnedNoRowkeyToggle = true
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[@es-plus/adapter-antdv] toggleRowSelection 需要配置 rowkey 才能生效' +
+            '（ant-design-vue 的行选择基于 rowKey）；未配置 rowkey 时此调用被忽略。',
+        )
+      }
+      return
+    }
     const key = row[rowkey] as string | number
     const exists = selectedRowKeys.value.includes(key)
     const shouldSelect = selected === undefined ? !exists : selected
