@@ -153,13 +153,14 @@ export function rewriteElementUsage(code: string, target: TargetFramework): stri
  *
  *  - vue3 / vue2：Element 的 Promise 形态
  *      ElMessageBox.confirm(content, title, { type: 'warning' })
- *        .then(async () => { ...body })
- *        .catch(() => {})
+ *        .then(async () => { try { ...body } catch { ElMessage.error('删除失败') } })
+ *        .catch(() => {})   // 仅吞用户取消，请求失败由内层 try/catch 上报
  *  - antdv：Ant Design Vue 的对象形态（Modal.confirm 不返回 confirm-thenable）
- *      Modal.confirm({ title, content, async onOk() { ...body } })
+ *      Modal.confirm({ title, content, async onOk() { try { ...body } catch { ... } } })
  *
  * bodyLines 为确认后执行的语句（不含额外缩进，helper 负责缩进）；其中的 ElMessage 引用
- * 由调用方在最终阶段通过 rewriteElementUsage 统一改写为目标命名。
+ * 由调用方在最终阶段通过 rewriteElementUsage 统一改写为目标命名。内层 try/catch 确保
+ * 删除请求失败会弹错误提示，而不是被外层用于吞取消的 .catch 静默丢弃。
  */
 export function buildDeleteConfirmBlock(opts: {
   target: TargetFramework
@@ -178,7 +179,11 @@ export function buildDeleteConfirmBlock(opts: {
       `${indent}  title: '${title}',`,
       `${indent}  content: '${content}',`,
       `${indent}  async onOk() {`,
-      ...body.map(l => (l ? `${indent}    ${l}` : l)),
+      `${indent}    try {`,
+      ...body.map(l => (l ? `${indent}      ${l}` : l)),
+      `${indent}    } catch (err) {`,
+      `${indent}      ElMessage.error('删除失败')`,
+      `${indent}    }`,
       `${indent}  },`,
       `${indent}})`,
     ]
@@ -187,7 +192,11 @@ export function buildDeleteConfirmBlock(opts: {
   return [
     `${indent}ElMessageBox.confirm('${content}', '${title}', { type: 'warning' })`,
     `${indent}  .then(async () => {`,
-    ...body.map(l => (l ? `${indent}    ${l}` : l)),
+    `${indent}    try {`,
+    ...body.map(l => (l ? `${indent}      ${l}` : l)),
+    `${indent}    } catch (err) {`,
+    `${indent}      ElMessage.error('删除失败')`,
+    `${indent}    }`,
     `${indent}  })`,
     `${indent}  .catch(() => {})`,
   ]

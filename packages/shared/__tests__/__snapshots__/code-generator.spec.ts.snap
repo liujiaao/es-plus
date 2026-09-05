@@ -289,13 +289,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -441,10 +441,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -608,13 +612,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -760,10 +764,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -910,13 +918,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1215,13 +1223,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1353,10 +1361,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1489,13 +1501,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1621,10 +1633,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1771,13 +1787,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1895,10 +1911,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -2014,13 +2034,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -2164,10 +2184,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -2338,13 +2362,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })

@@ -411,13 +411,19 @@ function generateSFC(config) {
         lines.push(`      { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {`);
         lines.push(`        try {`);
         lines.push(`          await getRefs('form')?.validate()`);
+        lines.push(`        } catch {`);
+        lines.push(`          return // 表单校验未通过：用户需修正，静默中止`);
+        lines.push(`        }`);
+        lines.push(`        try {`);
         lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`);
         lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData.${qBt(tOpts.rowkey || 'id')}}\``);
         lines.push(`          await httpRequest({ url, method, data: formData })`);
         lines.push(`          ElMessage.success(\`\${title}成功\`)`);
         lines.push(`          close()`);
         lines.push(`          tableRef.value?.httpRequestInstance()`);
-        lines.push(`        } catch {}`);
+        lines.push(`        } catch (err) {`);
+        lines.push(`          ElMessage.error(\`\${title}失败\`) // 请求失败：弹错误提示并保持弹窗打开`);
+        lines.push(`        }`);
         lines.push(`      }}`);
         lines.push(`    ]`);
         lines.push(`  })`);
@@ -545,6 +551,8 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
         body.push(`${indent}    httpRequest({ url: ${q(config.apiUrl)}, method: 'POST', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('新增成功')`);
         body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('新增失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
@@ -553,6 +561,8 @@ function buildSchemaWrapper(config, hasDelete, _hasDialog, renderFields, target)
         body.push(`${indent}    httpRequest({ url: \`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\`, method: 'PUT', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('编辑成功')`);
         body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('编辑失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
@@ -667,6 +677,8 @@ function buildSchemaWrapperNew(config, renderFields, warnings, target) {
         body.push(`${indent}    httpRequest({ url: ${url}, method: '${method}', data }).then(() => {`);
         body.push(`${indent}      ElMessage.success('操作成功')`);
         body.push(`${indent}      ${refreshExpr}`);
+        body.push(`${indent}    }).catch(() => {`);
+        body.push(`${indent}      ElMessage.error('操作失败')`);
         body.push(`${indent}    })`);
         body.push(`${indent}  }`);
     }
