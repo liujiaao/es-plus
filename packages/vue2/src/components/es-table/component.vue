@@ -1195,6 +1195,8 @@ export default defineComponent({
             emitPaginationUpdate()
             emit('pagination-current-change', paginationConfig.value)
           },
+          // 翻页失败同样经统一暴露（对齐 F2）
+          fail: (err) => surfaceRequestError(err),
         }
       )
     }
@@ -1210,6 +1212,7 @@ export default defineComponent({
             formatConfigOut(res, ['total', 'tableData'])
             emitPaginationUpdate()
           },
+          fail: (err) => surfaceRequestError(err),
         }
       )
     }

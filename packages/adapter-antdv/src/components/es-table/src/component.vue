@@ -899,6 +899,8 @@ function changePageIndexRequest() {
         emit('update:pagination', { ...paginationConfig.value })
         emit('pagination-current-change', { ...paginationConfig.value })
       },
+      // 翻页失败同样经统一暴露（对齐 F2）
+      fail: (err) => surfaceRequestError(err),
     }
   )
 }
@@ -911,6 +913,7 @@ function changePageSizeRequest() {
         formatConfigOut(res, ['total', 'tableData'])
         emit('update:pagination', { ...paginationConfig.value })
       },
+      fail: (err) => surfaceRequestError(err),
     }
   )
 }

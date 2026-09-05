@@ -821,7 +821,10 @@ const changePageIndexRequest = () => {
         formatConfigOut(res, ['total', 'tableData'])
         emitPaginationUpdate()
         emit('pagination-current-change', paginationConfig.value)
-      }
+      },
+      // 翻页失败同样经统一暴露：写 requestError + emit('request-error')，
+      // 否则加载态消失、数据留旧值而用户无任何失败反馈（对齐 F2）
+      fail: (err) => surfaceRequestError(err)
     }
   )
 }
@@ -833,7 +836,8 @@ const changePageSizeRequest = () => {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
         emitPaginationUpdate()
-      }
+      },
+      fail: (err) => surfaceRequestError(err)
     }
   )
 }
