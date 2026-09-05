@@ -514,17 +514,18 @@ export default defineComponent({
 
     const queryTableRequest = (model: ModelData, formRef: { resetFields?: () => void } | null, key?: string) => {
       const t = getTableInstant.value as {
-        httpRequestInstance?: (p: unknown, o?: { keepPage?: boolean }) => void
+        httpRequestInstance?: (p: unknown, o?: { keepPage?: boolean }) => Promise<unknown> | void
       } | null
       if (key === 'query') {
         if (isParentTable.value) {
           // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
-          t?.httpRequestInstance?.(model, { keepPage: false })
+          // 失败已由 es-table 内部 emit('request-error') 暴露，这里吞掉 rejection 防 unhandled（对齐 vue3）
+          t?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
         }
       } else if (key === 'rest' && formRef) {
         formRef.resetFields?.()
         if (isParentTable.value) {
-          t?.httpRequestInstance?.(model, { keepPage: false })
+          t?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
         }
       }
     }

@@ -887,13 +887,15 @@ export default defineComponent({
       handleSelectionChange(val, paginationConfig.value.current || 1)
     }
 
-    // ─── 自动加载错误吞掉并暴露（对齐 vue3） ─────
-    // onMounted 自动请求与 visibleShow 首次可见触发的自动请求都是 fire-and-forget，
-    // 失败时若不 catch 会产生 unhandled promise rejection。这里统一吞掉并把错误
-    // 暴露到 requestError（可 expose 供外部读取）+ emit('request-error')。
+    // ─── 请求失败统一暴露（对齐 vue3） ─────
+    // 所有请求失败路径（onMounted / visibleShow 的 fire-and-forget 自动加载，
+    // 以及 httpRequestInstance 内部 queryTableListMethod 的 fail 回调）都经此暴露：
+    // 写入 requestError（可 expose 供外部读取）+ emit('request-error')。
+    // 命令式调用者（EsForm 查询/重置、EsCrudPage.refresh、翻页）拿到的 rejected
+    // Promise 由各自 `.catch(() => {})` 兜底，避免 unhandled rejection；
     // 成功路径会在 httpRequestInstance 内清空 requestError。
     const requestError = ref<unknown>(null)
-    const handleAutoRequestError = (err: unknown) => {
+    const surfaceRequestError = (err: unknown) => {
       requestError.value = err
       emit('request-error', err)
     }
@@ -902,7 +904,8 @@ export default defineComponent({
     watch(visibleShow, async (val, oldVal) => {
       if (val && val !== oldVal) {
         if (props.options.actionUrl && !isVxeProxyMode.value) {
-          await httpRequestInstance().catch(handleAutoRequestError)
+          // fail 回调已经 surfaceRequestError，这里只需吞掉 rejection 防 unhandled
+          await httpRequestInstance().catch(() => {})
         }
         if (isVxeEngine.value) {
           vxeEngineRef.value?.doLayout?.()
@@ -969,7 +972,7 @@ export default defineComponent({
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
       syncDomRefs()
       if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-        httpRequestInstance().catch(handleAutoRequestError)
+        httpRequestInstance().catch(() => {})
       }
       // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
       nextTick(() => {
@@ -1157,7 +1160,10 @@ export default defineComponent({
                       emit('pagination-current-change', paginationConfig.value)
                       resolve(res2)
                     },
-                    fail: (err) => reject(err),
+                    fail: (err) => {
+                      surfaceRequestError(err)
+                      reject(err)
+                    },
                   }
                 )
                 return
@@ -1165,6 +1171,7 @@ export default defineComponent({
               resolve(res)
             },
             fail: (err) => {
+              surfaceRequestError(err)
               reject(err)
             },
           }

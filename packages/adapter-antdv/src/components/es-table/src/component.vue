@@ -871,14 +871,20 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
                   emit('pagination-current-change', { ...paginationConfig.value })
                   resolve(res2)
                 },
-                fail: (err) => reject(err),
+                fail: (err) => {
+                  surfaceRequestError(err)
+                  reject(err)
+                },
               }
             )
             return
           }
           resolve(res)
         },
-        fail: (err) => reject(err),
+        fail: (err) => {
+          surfaceRequestError(err)
+          reject(err)
+        },
       }
     )
   })
@@ -910,27 +916,28 @@ function changePageSizeRequest() {
 }
 
 // ─── 生命周期 ───────────────────────────────────────
-// 自动加载失败处理（对齐 vue3）：onMounted / visibleShow 两处「触发即忘」的自动请求
-// 若不 catch，初始加载失败会冒泡成 unhandled promise rejection。统一「吞掉 + 暴露」：
+// 请求失败统一暴露（对齐 vue3）：所有失败路径——onMounted / visibleShow 两处「触发即忘」的
+// 自动请求，以及 httpRequestInstance 内部 queryTableListMethod 的 fail 回调——都经此暴露：
 //   - requestError：暴露给命令式消费方与测试读取
 //   - emit('request-error')：供上层 UI 呈现失败态
-// 命令式的 refresh/reload 仍返回原始 Promise，由调用方自行 catch。
+// 命令式调用者（EsForm 查询/重置、EsCrudPage.refresh、翻页）拿到 rejected Promise
+// 后各自 `.catch(() => {})` 兜底，避免 unhandled rejection。
 const requestError = ref<unknown>(null)
-const handleAutoRequestError = (err: unknown) => {
+const surfaceRequestError = (err: unknown) => {
   requestError.value = err
   emit('request-error', err)
 }
 onMounted(() => {
   if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-    httpRequestInstance().catch(handleAutoRequestError)
+    httpRequestInstance().catch(() => {})
   }
 })
 
 watch(visibleShow, async (val, oldVal) => {
   if (val && val !== oldVal) {
     if (props.options.actionUrl && !isVxeProxyMode.value) {
-      // 吞掉 rejection 避免变成 unhandled；错误经 handleAutoRequestError 暴露
-      await httpRequestInstance().catch(handleAutoRequestError)
+      // fail 回调已 surfaceRequestError，这里只需吞掉 rejection 防 unhandled
+      await httpRequestInstance().catch(() => {})
     }
     // ADV a-table 无 doLayout，等价重排（对齐 vue3 tableRef.doLayout）
     resizeObservers?.()

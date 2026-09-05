@@ -569,8 +569,8 @@ watch(
   async (val, oldVal) => {
     if (val && val !== oldVal) {
       if (props.options.actionUrl && !isVxeProxyMode.value) {
-        // 吞掉 rejection 避免变成 unhandled；错误经 handleAutoRequestError 暴露
-        await httpRequestInstance().catch(handleAutoRequestError)
+        // 失败已由 httpRequestInstance 内部 surfaceRequestError 暴露，这里仅吞掉 rejection
+        await httpRequestInstance().catch(() => {})
       }
       tableRef.value?.doLayout?.()
       vxeEngineRef.value?.doLayout()
@@ -619,20 +619,20 @@ watch(
 
 // 配置化接口请求时，挂载自动加载数据（vxeProxyMode 下由 vxe proxyConfig 接管）
 //
-// 自动加载失败的处理：onMounted / visibleShow 两处是「触发即忘」的自动请求
-// （返回的 Promise 无人接管），若不 catch，初始加载失败会冒泡成
-// unhandled promise rejection。这里统一「吞掉 rejection + 暴露错误态」：
+// 统一请求失败处理：httpRequestInstance 的所有失败路径都会调用 surfaceRequestError，
+// 因此自动加载与命令式触发（查询/重置/刷新）的失败都会被一致地暴露：
 //   - requestError：暴露给模板/命令式消费方与测试读取
 //   - emit('request-error')：供上层 UI（如 EsCrudPage）呈现失败态
-// 命令式的 refresh/reload 仍返回原始 Promise，由调用方自行 catch，不走此路径。
+// httpRequestInstance 返回的 Promise 仍会 reject，程序化调用方可另行 catch。
 const requestError = ref<unknown>(null)
-const handleAutoRequestError = (err: unknown) => {
+const surfaceRequestError = (err: unknown) => {
   requestError.value = err
   emit('request-error', err)
 }
 onMounted(() => {
   if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
-    httpRequestInstance().catch(handleAutoRequestError)
+    // 失败已由 httpRequestInstance 内部 surfaceRequestError 暴露，这里仅吞掉 rejection
+    httpRequestInstance().catch(() => {})
   }
 })
 
@@ -795,6 +795,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
                   resolve(res2)
                 },
                 fail: (err) => {
+                  surfaceRequestError(err)
                   reject(err)
                 }
               }
@@ -804,6 +805,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
           resolve(res)
         },
         fail: (err) => {
+          surfaceRequestError(err)
           reject(err)
         }
       }

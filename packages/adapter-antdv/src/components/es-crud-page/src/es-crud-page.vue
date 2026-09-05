@@ -564,7 +564,9 @@ async function validateAndConfirm(
 // ─── 公共方法 ───
 
 function refresh() {
-  tableRef.value?.httpRequestInstance?.()
+  // 失败已由 es-table 内部 surfaceRequestError + emit('request-error') 暴露，
+  // 这里吞掉 rejection 避免 unhandled promise rejection（对齐 vue3）。
+  return tableRef.value?.httpRequestInstance?.()?.catch(() => {})
 }
 
 function getSelectedRows(): Record<string, unknown>[] {

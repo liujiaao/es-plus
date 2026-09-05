@@ -541,7 +541,8 @@ async function validateAndConfirm(
 // ─── 公共方法 ───
 
 function refresh() {
-  tableRef.value?.httpRequestInstance?.()
+  // 失败已由 es-table 内部 surfaceRequestError 暴露（emit request-error），这里吞掉 rejection 避免 unhandled
+  return tableRef.value?.httpRequestInstance?.()?.catch(() => {})
 }
 
 function getSelectedRows(): Record<string, unknown>[] {

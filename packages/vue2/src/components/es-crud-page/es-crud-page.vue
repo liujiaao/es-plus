@@ -572,7 +572,9 @@ export default defineComponent({
 
     // ─── 公共方法 ─────
     function refresh() {
-      ;(tableRef.value as any)?.httpRequestInstance?.()
+      // 失败已由 es-table 内部 surfaceRequestError + emit('request-error') 暴露，
+      // 这里吞掉 rejection 避免 unhandled promise rejection（对齐 vue3）。
+      return (tableRef.value as any)?.httpRequestInstance?.()?.catch(() => {})
     }
 
     function getSelectedRows(): Record<string, unknown>[] {

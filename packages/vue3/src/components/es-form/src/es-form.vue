@@ -368,7 +368,8 @@ const queryTableRequest = async (model: Record<string, unknown>, formRef: { rese
   if (key === 'query') {
     if (isParentTable.value) {
       // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
-      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
+      // 失败已由 es-table 内部 surfaceRequestError 暴露，这里吞掉 rejection 避免 unhandled
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
     }
     //  else if (formRef) {
     //   await formRef.validate()
@@ -377,7 +378,7 @@ const queryTableRequest = async (model: Record<string, unknown>, formRef: { rese
     // 先重置表单字段，确保 model 已恢复初始值后再触发查询
     formRef.resetFields()
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
     }
   }
 }

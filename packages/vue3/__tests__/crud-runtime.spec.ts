@@ -291,4 +291,47 @@ describe('CRUD 运行时全链路（vue3, 真实组件 + 内存后端）', () =>
       window.removeEventListener('unhandledrejection', onUnhandled)
     }
   })
+
+  it('命令式刷新失败：EsCrudPage.refresh() 的 reject 被吞掉并经 request-error 暴露（无 unhandled rejection）', async () => {
+    // F2 的核心：命令式调用者（refresh/EsForm 查询）历史上不 catch httpRequestInstance
+    // 返回的 rejected Promise，失败即冒泡成 unhandled rejection 且用户无反馈。
+    // 此处首屏成功、随后切到 reject 的后端，调用 refresh()：断言 refresh 自身不抛、
+    // 错误经 request-error 暴露、且全程无 unhandled promise rejection。
+    let failNow = false
+    const boom = new Error('refresh failed')
+    const flakyHttpRequest = async (req: Record<string, any>) => {
+      const url = req.url || '/api/list'
+      if (url === '/api/list' && failNow) throw boom
+      if (url === '/api/list') return { records: 0, rows: [] }
+      return { code: 0 }
+    }
+    const unhandled: unknown[] = []
+    const onUnhandled = (e: PromiseRejectionEvent) => {
+      unhandled.push(e.reason)
+      e.preventDefault()
+    }
+    window.addEventListener('unhandledrejection', onUnhandled)
+    try {
+      const wrapper = mount(EsCrudPage, {
+        props: { schema: makeSchema(), httpRequest: flakyHttpRequest },
+        attachTo: document.body,
+        global: { plugins: [ElementPlus, EsPlus] },
+      })
+      await flushPromises()
+      await nextTick()
+
+      failNow = true
+      // refresh() 应返回一个已被 .catch 兜底的 Promise —— await 不应抛
+      await (wrapper.vm as any).refresh()
+      await flushPromises()
+      await nextTick()
+
+      const table = wrapper.findComponent(EsTable)
+      expect((table.vm as any).requestError, '刷新失败应暴露到 requestError').toBe(boom)
+      expect(table.emitted('request-error'), '应 emit request-error').toBeTruthy()
+      expect(unhandled, '命令式刷新失败不应出现 unhandled promise rejection').toHaveLength(0)
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled)
+    }
+  })
 })
