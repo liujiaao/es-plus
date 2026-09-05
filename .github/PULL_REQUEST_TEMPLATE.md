@@ -23,10 +23,12 @@ PR 标题用 Conventional Commits 格式：feat(scope): xxx / fix(scope): xxx
 
 - [ ] `@es-plus/vue3`
 - [ ] `@es-plus/vue2`
-- [ ] `@es-plus/core` ⚠️ 改 core 会同时影响 vue2 和 vue3，需要双侧测试
+- [ ] `@es-plus/adapter-antdv`
+- [ ] `@es-plus/core` ⚠️ 改 core 会同时影响 vue2 / vue3 / adapter-antdv，需要三端测试
 - [ ] `@es-plus/shared`
 - [ ] `@es-plus/cli`
 - [ ] `@es-plus/mcp-server`
+- [ ] `es-plus-ui`（legacy stub，一般不需要动）
 - [ ] `es-plus-docs`
 - [ ] 仓库根（CI / workspace 配置 / 文档）
 
@@ -48,8 +50,9 @@ PR 标题用 Conventional Commits 格式：feat(scope): xxx / fix(scope): xxx
 - [ ] 已加单测（spec 路径：__tests__/xxx.spec.ts）
 - [ ] 单测覆盖 happy path + 至少 1 个失败/边界 case
 - [ ] e2e 矩阵在本地通过：`npm run test:e2e`
-- [ ] typecheck 通过：`npm run typecheck --workspaces`
-- [ ] lint 通过（阶段 B 上线后）：`npm run lint --workspaces`
+- [ ] typecheck 通过：`npm run typecheck --workspaces --if-present`
+- [ ] lint 通过：`npm run lint`
+- [ ] 一致性校验通过：`npm run check:consistency`
 
 ## 兼容性 / 破坏性变更
 
@@ -63,8 +66,8 @@ PR 标题用 Conventional Commits 格式：feat(scope): xxx / fix(scope): xxx
 
 - [ ] `es-plus-docs/src/docs/` 对应文档已更新
 - [ ] 包内 README.md 已更新（如果 API 有变化）
-- [ ] 包 CHANGELOG.md 已加条目（如果是发布相关 PR）
-- [ ] 文档站 changelog.md 已加条目（同上）
+- [ ] 已添加 changeset（`npx changeset`，如果是需要发版的 PR）
+- [ ] 文档站 changelog.md 已加条目（如果是用户面向的发布说明）
 
 ## 包体积影响（仅 vue2 / vue3 / core dist 改动）
 

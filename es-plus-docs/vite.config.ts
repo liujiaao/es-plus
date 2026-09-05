@@ -30,6 +30,7 @@ const sitemapRoutes = [
   // advanced pages
   '/advanced/use-dialog',
   '/advanced/linkage',
+  '/advanced/vxe-table',
 ]
 
 export default defineConfig(({ mode }) => {
@@ -38,6 +39,13 @@ export default defineConfig(({ mode }) => {
   const esPlusSrc = resolve(__dirname, '../packages/vue3/src')
   const esPlusDist = resolve(__dirname, '../packages/vue3/dist/es-plus.js')
   const esPlusDistCss = resolve(__dirname, '../packages/vue3/dist/style.css')
+  // @es-plus/core 目标：源码模式指向 src（全实时，改核心无需重新 build），dist 模式指向 build 产物。
+  // 不加此别名时 Vite 会把 @es-plus/core 当普通 node_modules 裸依赖预打包进 .vite/deps，
+  // 与 monorepo 里刚重建的 build 产物脱节 —— 曾导致 patchHtmlRowSpans 等新导出加载到旧缓存版本
+  // （表现：vxe 打印合并单元格失效，预览为扁平表格）。
+  const esCoreTarget = useDist
+    ? resolve(__dirname, '../packages/core/build')
+    : resolve(__dirname, '../packages/core/src')
 
   const aliasTarget = useDist ? esPlusDist : esPlusSrc
 
@@ -53,23 +61,28 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
+      // 强制 vxe-table / vxe-pc-ui 共享同一份 @vxe-ui/core 单例（避免双副本导致组件注册表分裂）
+      dedupe: ['@vxe-ui/core', 'xe-utils', 'vue'],
+      alias: [
+        { find: '@', replacement: resolve(__dirname, 'src') },
         // @es-plus/shared 是 MCP server 真实 tool 实现所在的纯函数包；
         // AI CRUD 页面浏览器侧直接 import 这套，等于跑 MCP server 同一份逻辑。
         // 走 facade 文件（src/utils/shared-browser.ts）是因为 shared 的 index 顺带
         // re-export 了 node:fs 依赖的 schema-validator —— 浏览器 bundler 解析不了。
-        '@es-plus/shared': resolve(__dirname, 'src/utils/shared-browser.ts'),
+        { find: '@es-plus/shared', replacement: resolve(__dirname, 'src/utils/shared-browser.ts') },
+        // @es-plus/core 显式指向 monorepo 工作区（src 或 build），避免被当裸依赖预打包成陈旧副本。
+        // 字符串前缀匹配同时覆盖子路径（如 @es-plus/core/shared）。
+        { find: '@es-plus/core', replacement: esCoreTarget },
         // 所有 es-plus 子路径统一指向同一入口（dist 模式指向打包产物，否则指向源码）
-        'es-plus/components/es-form': aliasTarget,
-        'es-plus/components/es-table': aliasTarget,
-        'es-plus/components/es-dialog': aliasTarget,
-        'es-plus/components/svg-icon': aliasTarget,
-        'es-plus/types': aliasTarget,
-        'es-plus': aliasTarget,
+        { find: 'es-plus/components/es-form', replacement: aliasTarget },
+        { find: 'es-plus/components/es-table', replacement: aliasTarget },
+        { find: 'es-plus/components/es-dialog', replacement: aliasTarget },
+        { find: 'es-plus/components/svg-icon', replacement: aliasTarget },
+        { find: 'es-plus/types', replacement: aliasTarget },
+        { find: 'es-plus', replacement: aliasTarget },
         // dist 模式下样式文件指向打包产物，源码模式下指向空文件（源码样式由 Vite 自动处理）
-        'es-plus-ui/dist/style.css': useDist ? esPlusDistCss : resolve(__dirname, 'src/styles/_empty.css')
-      }
+        { find: 'es-plus-ui/dist/style.css', replacement: useDist ? esPlusDistCss : resolve(__dirname, 'src/styles/_empty.css') },
+      ],
     },
     server: {
       port: 3000,
@@ -78,8 +91,7 @@ export default defineConfig(({ mode }) => {
     css: {
       preprocessorOptions: {
         scss: {
-          api: 'modern-compiler',
-          additionalData: `@use "@/styles/variables.scss" as *;`
+          api: 'modern-compiler'
         }
       }
     }

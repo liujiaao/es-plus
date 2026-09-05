@@ -6,26 +6,28 @@
         - v-model:pagination → :pagination.sync
       Vue 2.3+ 支持 .sync 修饰符自动展开为 :data-source + @update:data-source
     -->
-    <es-table
-      ref="tableRef"
-      :columns="mergedColumns"
-      :options="mergedOptions"
-      :data-source.sync="tableData"
-      :pagination.sync="paginationState"
-      v-bind="$attrs"
-    >
-      <es-form
-        v-if="schema.formItems && schema.formItems.length"
-        ref="formRef"
-        :model="queryModel"
-        :form-item-list="schema.formItems"
-        :config-btn="mergedFormBtns"
-        :layout-form-props="formLayoutProps"
-      />
-      <template v-for="(_, name) in $slots" #[name]="slotData">
-        <slot :name="name" v-bind="slotData || {}" />
-      </template>
-    </es-table>
+    <es-error-boundary @error="onCrudError">
+      <es-table
+        ref="tableRef"
+        :columns="mergedColumns"
+        :options="mergedOptions"
+        :data-source.sync="tableData"
+        :pagination.sync="paginationState"
+        v-bind="$attrs"
+      >
+        <es-form
+          v-if="schema.formItems && schema.formItems.length"
+          ref="formRef"
+          :model="queryModel"
+          :form-item-list="schema.formItems"
+          :config-btn="mergedFormBtns"
+          :layout-form-props="formLayoutProps"
+        />
+        <template v-for="(_, name) in $slots" #[name]="slotData">
+          <slot :name="name" v-bind="slotData || {}" />
+        </template>
+      </es-table>
+    </es-error-boundary>
   </div>
 </template>
 
@@ -44,10 +46,11 @@
  *
  * 业务逻辑（schema 归一化、按钮处理、弹窗管理）100% 与 Vue 3 版本一致。
  */
-import { defineComponent, ref, reactive, computed, watch } from '../../vue-compat'
+import { defineComponent, ref, reactive, computed, watch, set } from '../../vue-compat'
 import { MessageBox } from 'element-ui'
 import EsForm from '../es-form/es-form.vue'
 import EsTable from '../es-table/component.vue'
+import EsErrorBoundary from '../es-error-boundary/es-error-boundary.vue'
 import useDialog from '../es-dialog/use-dialog'
 import type {
   CrudPageSchema,
@@ -62,7 +65,7 @@ import type { BtnConfig, TableColumn } from '@es-plus/core'
 
 export default defineComponent({
   name: 'EsCrudPage',
-  components: { EsForm, EsTable },
+  components: { EsForm, EsTable, EsErrorBoundary },
   inheritAttrs: false,
   props: {
     schema: { type: Object as () => CrudPageSchema, required: true },
@@ -85,6 +88,14 @@ export default defineComponent({
     'dialog-cancel',
     'dialog-open',
   ],
+  methods: {
+    // 错误边界回调：子树（表格/表单/单元格 render）抛错被 EsErrorBoundary 拦截后在此记录，
+    // 故障被隔离在边界内、不再冒泡为整页崩溃。
+    onCrudError(err: unknown, info: string) {
+      // eslint-disable-next-line no-console
+      console.error('[EsCrudPage] 子树渲染错误已被错误边界拦截：', info, err)
+    },
+  },
   setup(props, { emit, expose }) {
     const tableRef = ref<any>(null)
     const formRef = ref<any>(null)
@@ -92,13 +103,15 @@ export default defineComponent({
     const queryModel = reactive<Record<string, unknown>>({})
 
     // 同步 schema.formItems → queryModel 默认字段
+    // 用 set() 而非直接赋值：Vue 2.7 reactive({}) 后新增的键需经 set 才响应式，
+    // 否则带校验规则的查询字段会复现「校验重渲染回补陈旧空值清空输入」的问题（同弹窗 formData 修复）。
     watch(
       () => props.schema.formItems,
       (items) => {
         if (items) {
           items.forEach((item) => {
             if (item.prop && !(item.prop in queryModel)) {
-              ;(queryModel as Record<string, unknown>)[item.prop as string] = ''
+              set(queryModel as Record<string, unknown>, item.prop as string, '')
             }
           })
         }
@@ -260,7 +273,9 @@ export default defineComponent({
         type: btn.type,
         size: (btn as Record<string, unknown>).size || 'small',
         icon: btn.icon,
-        code: btn.code || 1,
+        // 同时支持 position（新，语义自解释）与 code（旧兼容）——与 vue3/antdv 单源对齐
+        position: btn.position || (btn.code === 2 ? 'right' : 'left') as 'left' | 'right',
+        code: btn.code,
         permissionValue: btn.permissionValue,
         loading: (btn as Record<string, unknown>).loading,
         disabled: (btn as Record<string, unknown>).disabled,
@@ -360,24 +375,34 @@ export default defineComponent({
     // ─── 弹窗管理 ─────
     const dialogInstances = new Map<string, ReturnType<typeof useDialog>>()
 
+    // useDialog() 在 setup 顶层调用（而非 openDialog 事件回调内）：与 vue3/antdv 三端保持一致的
+    // 组合式调用位置。vue2 版 useDialog 基于 Vue.extend、不依赖 appContext（全局插件经原型链继承），
+    // 故此改动对 vue2 为纯一致性/规范性对齐；单例回调跨 key 复用，语义不变。
+    const dialog = useDialog()
+
     function openDialog(key: string, row?: Record<string, unknown>) {
       const dialogConfig = normalizedDialogs.value[key]
       if (!dialogConfig) return
 
       emit('dialog-open', key, row)
 
-      const dialog = useDialog()
       dialogInstances.set(key, dialog)
 
-      const formData = reactive<Record<string, unknown>>({})
+      // Vue 2.7 的 reactive() 沿用 Vue 2 Observer：向已响应式对象「后加」的键不是响应式的
+      // （经典限制，需 $set）。若先 reactive({}) 再逐字段赋值，model[prop] 读取时不建立依赖，
+      // EsForm 便不会随输入重渲染——无校验规则时 el-input 的本地 currentValue 恰好兜住输入而不暴露，
+      // 一旦字段带校验规则，el-form-item 因校验重渲染会用「陈旧的空 value」回补 el-input 而清空输入
+      // （create 表单必填字段无法录入）。故这里先把所有字段建好再交给 reactive，键从创建即响应式。
+      // vue3 用 Proxy 无此问题，此修复仅对齐 vue2 语义。
+      const initialFormData: Record<string, unknown> = {}
       if (dialogConfig.formItems) {
         dialogConfig.formItems.forEach((item) => {
           if (item.prop) {
-            ;(formData as Record<string, unknown>)[item.prop] =
-              row?.[item.prop] ?? ''
+            initialFormData[item.prop] = row?.[item.prop] ?? ''
           }
         })
       }
+      const formData = reactive<Record<string, unknown>>(initialFormData)
 
       const title =
         typeof dialogConfig.title === 'function'
@@ -448,7 +473,9 @@ export default defineComponent({
         configBtn,
         // useDialog 的 onClosed 通过 extractEventHandlers 转为 'closed' 事件
         onClosed: () => {
+          const d = dialogInstances.get(key)
           dialogInstances.delete(key)
+          d?.destroy?.()
           dialogConfig.onClose?.()
         },
       })
@@ -457,8 +484,8 @@ export default defineComponent({
     function closeDialog(key: string) {
       const dialog = dialogInstances.get(key)
       if (dialog) {
-        dialog.close()
         dialogInstances.delete(key)
+        dialog.destroy()
       }
     }
 
@@ -485,7 +512,11 @@ export default defineComponent({
             return {
               ...btn,
               click: async (_: unknown, { close, getRefs }: any) => {
-                await validateAndConfirm(key, config, formData, row, close, getRefs)
+                // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+                // 吞掉以防 EsDialog handleBtnClick 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+                try {
+                  await validateAndConfirm(key, config, formData, row, close, getRefs)
+                } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
               },
             }
           }
@@ -505,11 +536,19 @@ export default defineComponent({
           name: '确定',
           type: 'primary',
           click: async (_: unknown, { close, getRefs }: any) => {
-            await validateAndConfirm(key, config, formData, row, close, getRefs)
+            // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+            // 吞掉以防 EsDialog handleBtnClick 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+            try {
+              await validateAndConfirm(key, config, formData, row, close, getRefs)
+            } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
           },
         },
       ]
     }
+
+    // 防重复提交：记录确认在途的弹窗 key（同一弹窗确认未结束前忽略再次点击），
+    // 避免异步 onConfirm 未返回时二次点击「确定」导致新增/编辑被提交两次。（对齐 vue3）
+    const confirmingKeys = new Set<string>()
 
     async function validateAndConfirm(
       key: string,
@@ -519,31 +558,39 @@ export default defineComponent({
       close: () => void,
       getRefs: (name?: string) => any
     ) {
-      if (config.formItems?.length) {
-        const dialogForm = getRefs('dialogForm')
-        if (dialogForm?.validate) {
-          await dialogForm.validate()
+      if (confirmingKeys.has(key)) return
+      confirmingKeys.add(key)
+      try {
+        if (config.formItems?.length) {
+          const dialogForm = getRefs('dialogForm')
+          if (dialogForm?.validate) {
+            await dialogForm.validate()
+          }
         }
+
+        const context: DialogActionContext = { close, refresh, getRefs, row }
+
+        if (config.onConfirm) {
+          await config.onConfirm(formData, context)
+        } else {
+          const legacyKey =
+            key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
+          emit('btn-click', legacyKey, formData)
+          close()
+          refresh()
+        }
+
+        emit('dialog-confirm', key, formData)
+      } finally {
+        confirmingKeys.delete(key)
       }
-
-      const context: DialogActionContext = { close, refresh, getRefs, row }
-
-      if (config.onConfirm) {
-        await config.onConfirm(formData, context)
-      } else {
-        const legacyKey =
-          key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
-        emit('btn-click', legacyKey, formData)
-        close()
-        refresh()
-      }
-
-      emit('dialog-confirm', key, formData)
     }
 
     // ─── 公共方法 ─────
     function refresh() {
-      ;(tableRef.value as any)?.httpRequestInstance?.()
+      // 失败已由 es-table 内部 surfaceRequestError + emit('request-error') 暴露，
+      // 这里吞掉 rejection 避免 unhandled promise rejection（对齐 vue3）。
+      return (tableRef.value as any)?.httpRequestInstance?.()?.catch(() => {})
     }
 
     function getSelectedRows(): Record<string, unknown>[] {
@@ -565,11 +612,8 @@ export default defineComponent({
     }
 
     return {
-      // refs
-      tableRef,
-      formRef,
+      // refs（tableRef/formRef/queryModel 由 ...exposed 提供，此处不重复以免键覆盖告警 TS2783）
       tableData,
-      queryModel,
       paginationState,
       // computeds
       mergedColumns,

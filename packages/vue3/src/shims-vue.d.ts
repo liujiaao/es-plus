@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 /**
  * `*.vue` 文件的 TypeScript 模块声明（Vue 3 SFC）
  *

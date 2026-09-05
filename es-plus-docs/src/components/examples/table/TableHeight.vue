@@ -3,9 +3,9 @@
     <div class="height-controls">
       <span>容器高度：</span>
       <el-radio-group v-model="containerHeight" size="small">
-        <el-radio-button label="300px" />
-        <el-radio-button label="500px" />
-        <el-radio-button label="100%" />
+        <el-radio-button value="300px">300px</el-radio-button>
+        <el-radio-button value="500px">500px</el-radio-button>
+        <el-radio-button value="100%">100%</el-radio-button>
       </el-radio-group>
     </div>
     <div class="table-wrapper" :style="{ height: containerHeight }">

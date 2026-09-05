@@ -1,12 +1,19 @@
 /**
  * ADV 表单布局 — 完全对齐 @es-plus/vue3 的 use-form-layout.ts
  *
- * 实现 24 栅格行/列算法，折叠逻辑，按钮位置计算。
- * 与 vue3 版本差异仅在于不依赖 Element Plus 特定类型。
+ * 24 栅格行列算法、折叠逻辑、按钮位置计算全部复用 @es-plus/core 纯函数，
+ * 本文件仅保留 Vue 响应式（computed/ref/watch）包装层。
  */
 import { computed, ref, watch } from 'vue'
 import type { FormItemOption, LayoutFormProps } from '../types'
-import { resolveFormLayProps } from '@es-plus/core'
+import {
+  resolveFormLayProps,
+  getRowColsAlgorithm as coreGetRowColsAlgorithm,
+  shouldShowFoldButton,
+  getBtnColSpan as coreGetBtnColSpan,
+  applyFoldFlags,
+  type FormItemOption as CoreFormItemOption,
+} from '@es-plus/core'
 
 export function useFormLayout(props: {
   layoutFormProps?: LayoutFormProps
@@ -30,92 +37,23 @@ export function useFormLayout(props: {
     props.layoutFormProps?.setOptions
   )
 
-  /** 24 栅格行/列算法 */
-  const getRowColsAlgorithm = computed(() => {
-    let pre = 0
-    const groupArrayList: FormItemOption[][] = []
-    const columnRows: { statIndex: number; endIndex: number }[] = []
-    const formItems = props.formItemList
+  const getRowColsAlgorithm = computed(() =>
+    coreGetRowColsAlgorithm(props.formItemList as unknown as CoreFormItemOption[])
+  )
 
-    for (let i = 0; i < formItems.length; i++) {
-      const item = formItems[i]
-      pre += item.span || 24
-      if (pre > 24) {
-        const statIndex = columnRows.length ? columnRows[columnRows.length - 1].endIndex : 0
-        columnRows.push({ statIndex, endIndex: i })
-        pre = item.span || 24
-        if (i === formItems.length - 1) {
-          columnRows.push({ statIndex: i, endIndex: i + 1 })
-        }
-      } else {
-        if (i === formItems.length - 1) {
-          const statIndex = columnRows.length ? columnRows[columnRows.length - 1].endIndex : 0
-          columnRows.push({ statIndex, endIndex: i + 1 })
-        } else if (pre === 24) {
-          const statIndex = columnRows.length ? columnRows[columnRows.length - 1].endIndex : 0
-          columnRows.push({ statIndex, endIndex: i + 1 })
-          pre = 0
-        }
-      }
-    }
-
-    columnRows.forEach((it) => {
-      groupArrayList.push(formItems.slice(it.statIndex, it.endIndex))
-    })
-
-    const columRowIndexs = groupArrayList.map((it) => it.map(() => 0))
-
-    let rowColIndex = -1
-    columRowIndexs.forEach((row) => {
-      row.forEach((_, idx) => {
-        row[idx] = (rowColIndex += 1)
-      })
-    })
-
-    return {
-      columnRow: columRowIndexs,
-      rowNum: columRowIndexs.length,
-      columnNodeIndex: columRowIndexs.map((it) => it[it.length - 1]),
-    }
-  })
-
-  /** 是否需要折叠 */
   const isFold = computed(() => {
     const minFoldRow = (resolveFormLayProps(props.layoutFormProps).minFoldRows as number) || 0
-    return minFoldRow > 0 && minFoldRow < getRowColsAlgorithm.value.rowNum
+    return shouldShowFoldButton(getRowColsAlgorithm.value, minFoldRow)
   })
 
-  /** 按钮所在 col 的 span 计算 */
   const getBtnColSpan = computed(() => {
-    const { rowNum, columnRow } = getRowColsAlgorithm.value
-    const lastColumn = columnRow[rowNum - 1] || []
-    const btnColSpan =
-      (resolveFormLayProps(props.layoutFormProps).btnColSpan as number) || 0
-    const totalSpan = lastColumn.reduce(
-      (sum, idx) => sum + (props.formItemList[idx]?.span || 24),
-      0
-    )
-    const hasSpan = 24 - totalSpan
-    return !folded.value && btnColSpan <= hasSpan ? hasSpan : 24
+    const btnColSpan = (resolveFormLayProps(props.layoutFormProps).btnColSpan as number) || 0
+    return coreGetBtnColSpan(getRowColsAlgorithm.value, props.formItemList as unknown as CoreFormItemOption[], folded.value, btnColSpan)
   })
 
-  /** 折叠标记 */
   const formItem = computed(() => {
-    const minFoldRow =
-      (resolveFormLayProps(props.layoutFormProps).minFoldRows as number) || 0
-    const { columnNodeIndex } = getRowColsAlgorithm.value
-
-    if (folded.value) {
-      const lastFoldIndex =
-        columnNodeIndex[minFoldRow - 1] ??
-        columnNodeIndex[columnNodeIndex.length - 1] ??
-        9999
-      return props.formItemList.map((it, index) => ({
-        ...it,
-        isFold: index > lastFoldIndex,
-      }))
-    }
-    return props.formItemList.map((it) => ({ ...it, isFold: false }))
+    const minFoldRow = (resolveFormLayProps(props.layoutFormProps).minFoldRows as number) || 0
+    return applyFoldFlags(props.formItemList as unknown as CoreFormItemOption[], getRowColsAlgorithm.value, folded.value, minFoldRow) as unknown as (FormItemOption & { isFold: boolean })[]
   })
 
   watch(isFold, (val) => { folded.value = val }, { immediate: true })

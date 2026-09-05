@@ -58,6 +58,27 @@ es-plus create user-management \
 | `<name>` | 页面名称（kebab-case） | **必填** |
 | `-d, --description` | 跳过交互，直接用此描述生成 | 无（进入交互模式） |
 | `-o, --output <path>` | 输出文件路径 | `./src/views/<PascalName>.vue` |
+| `-c, --from-config <path>` | 从结构化 JSON 配置生成（生产模式，配置驱动） | 无 |
+| `--ai` | 用 LLM（Anthropic）真正推理 NL→config，再走确定性生成器；检测到 `ANTHROPIC_API_KEY` 时自动启用。`--no-ai` 可强制走内置生成器 | 检测到 key 时开 |
+
+### 生成路径（准确率从高到低）
+
+1. **`--from-config <path>`** — 你已有结构化配置时，直接确定性生成，编译由构造保证。最稳。
+2. **`--ai`** — 由 LLM 阅读自然语言、按类型逐字段推理出 `StructuredCrudConfig`（进程内 Zod 校验 + 自修复闭环 ≤2 次），再喂给同一个确定性生成器。需要 `@anthropic-ai/sdk`（可选依赖，`npm i -D @anthropic-ai/sdk`）与 `ANTHROPIC_API_KEY`。
+3. **内置生成器（兜底）** — 无 key / 未装 SDK / `--no-ai` 时的正则关键词解析，准确率受关键词覆盖度限制。当 `--ai` 路径不可用或失败时会自动降级到这里，并打印实际走了哪条路。
+
+```bash
+# 配置驱动（最稳）
+es-plus create user-management --from-config ./user.config.json -o ./src/views/user
+
+# LLM 推理（需要 key）；不可用时自动降级到内置生成器
+ANTHROPIC_API_KEY=sk-... es-plus create user-management \
+  -d "用户管理，查询姓名、手机号、状态，表格显示姓名、头像、状态、创建时间，支持新增编辑删除" --ai
+
+# 强制走内置生成器（即使设置了 key）
+es-plus create user-management -d "..." --no-ai
+```
+
 
 ### 交互流程
 

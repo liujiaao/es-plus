@@ -130,7 +130,7 @@ describe('@es-plus/vue2 — install() integrates with a Vue 2-shaped stub', () =
     const { Stub, registered } = makeVueStub()
     install(Stub, {})
     expect(Object.keys(registered).sort()).toEqual(
-      ['EsCrudPage', 'EsDialog', 'EsForm', 'EsTable'].sort()
+      ['EsCrudPage', 'EsDialog', 'EsErrorBoundary', 'EsForm', 'EsTable', 'SvgIcon'].sort()
     )
   })
 

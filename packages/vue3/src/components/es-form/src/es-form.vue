@@ -1,9 +1,12 @@
 <template>
-  <el-form :ref="setFormRef" v-bind="formProps" class="es-form">
+  <el-form :ref="setFormRef" v-bind="(formProps as any)" class="es-form">
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
-          <el-col v-show="!item?.isFold" :span="item.span">
+          <el-col
+            :span="item.span"
+            :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
+          >
             <el-form-item
               :label="translateLabel(item)"
               v-bind="initFormItemOptions((item as any).formItemOptions || {})"
@@ -39,7 +42,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it.click(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => it.click?.(model, refs, getTableInstant?.httpRequestInstance)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -102,7 +105,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it?.click(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => it?.click?.(model, refs, getTableInstant?.httpRequestInstance)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -168,7 +171,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import { resolveFormLayProps, normalizeFormItemList } from '@es-plus/core'
+import { resolveFormLayProps, calculateAutoSpan, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 
 const props = withDefaults(
   defineProps<{
@@ -198,8 +201,8 @@ const emit = defineEmits<{
 }>()
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown>>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
-const esPlus = inject<Record<string, unknown>>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -215,13 +218,13 @@ const translateLabel = (item: FormItemOption): string => {
 }
 
 // 保留与 Table 的耦合（同时支持 inject 和 instance.ctx 两种获取方式）
-const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)
+const injectedTableInstant = inject<(() => any) | null>(TABLE_CONTEXT_INJECT_KEY, null)
 const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
   const ctx = (instance as any)?.ctx as Record<string, any>
-  return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
+  return typeof ctx?.getTableInstance === 'function' ? ctx?.getTableInstance() : ctx?.getTableInstance
 })
 
 const isParentTable = computed(() => {
@@ -232,7 +235,8 @@ const isParentTable = computed(() => {
 const extendedIcon = Object.fromEntries(Object.entries(ElementPlusIconsVue))
 const getCompIcon = (key?: string) => (key ? extendedIcon[key] || key : undefined)
 const filterOptions = (it: BtnConfig) => {
-  const { icon, ...opt } = it as Record<string, unknown>
+  // 剥离编排字段（尤其 click 函数，避免遮蔽原生 <button>.click()）；icon/disabled/name 已在模板显式处理
+  const opt = filterBtnProps(it as Record<string, unknown>)
   if (!opt.size) opt.size = 'small'
   return opt
 }
@@ -249,7 +253,7 @@ const setFormRef = (el: unknown) => {
 // Composables
 const { formInputComponents } = useFormInputs()
 const httpRequestGlobal = ($esPlusForm?.$httpRequest as (params: Record<string, unknown>) => Promise<unknown>) || undefined
-const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as ((defaults: Record<string, string>) => Record<string, string>) | undefined
+const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as any
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 // Break circular dependency: formLayoutRef is populated after useFormLayout
@@ -305,28 +309,13 @@ const formItemListFilter = computed(() => {
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
-        return !it.isHidden(props.model, it, formProps.value)
+        return !it.isHidden(props.model, it, formProps.value as any)
       }
       return true
     })
 
-  const itemsWithoutSpan = visible.filter((it) => !it.span)
-  const autoCount = itemsWithoutSpan.length
-  let autoSpan = 6
-  if (autoCount > 0) {
-    const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
-    const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
-    if (fixedTotal === 0) {
-      if (autoCount === 1) autoSpan = 24
-      else if (autoCount === 2) autoSpan = 12
-      else if (autoCount === 3) autoSpan = 8
-      else autoSpan = 6
-    } else {
-      autoSpan = remaining >= autoCount ? Math.floor(remaining / autoCount) : 6
-      if (autoSpan > 12) autoSpan = 12
-      if (autoSpan < 4) autoSpan = 6
-    }
-  }
+  // auto-span 算法统一走 core 单源（见 core/src/field-resolver.ts calculateAutoSpan）
+  const autoSpan = calculateAutoSpan(visible)
 
   return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
@@ -378,16 +367,19 @@ const clickBtn = async (it: BtnConfig) => {
 const queryTableRequest = async (model: Record<string, unknown>, formRef: { resetFields: () => void; validate: () => Promise<boolean> } | null, key?: string) => {
   if (key === 'query') {
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
+      // 失败已由 es-table 内部 surfaceRequestError 暴露，这里吞掉 rejection 避免 unhandled
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
     }
     //  else if (formRef) {
     //   await formRef.validate()
     // }
   } else if (key === 'rest' && formRef) {
-        if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
-    }
+    // 先重置表单字段，确保 model 已恢复初始值后再触发查询
     formRef.resetFields()
+    if (isParentTable.value) {
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
+    }
   }
 }
 
@@ -409,7 +401,8 @@ const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
 const handleRefresh = () => {
-  // 保留原有逻辑
+  // 「重置(刷新)」= 重置表单字段 + 刷新表格，复用 queryTableRequest 的 'rest' 分支
+  queryTableRequest(props.model, refs.value as any, 'rest')
 }
 
 const getFormRowsFun = () => {
@@ -489,7 +482,7 @@ const handleCustomerForm = () => {
     render: () =>
       h(EsTable, {
         dataSource: formRows.data,
-        columns: formRows.columns,
+        columns: (formRows.columns as any),
         options: {
           multiSelect: true,
           expand: false,
@@ -528,7 +521,7 @@ const handleTableItemOption = () => {
     render: () =>
       h(EsTable, {
         dataSource: formRows.dataSource,
-        columns: formRows.columns
+        columns: (formRows.columns as any)
       })
   })
 }
@@ -616,6 +609,22 @@ defineExpose({
 
   :deep(.el-form-item__label) {
     font-weight: 500;
+  }
+
+  // 折叠展开平滑过渡：用 max-height 动画替代 v-show 的瞬时显隐，
+  // 让 vxe-grid 等依赖容器高度的引擎在 form 高度渐变中逐步重排，避免抖动
+  .es-col--foldable {
+    overflow: hidden;
+    max-height: 200px; // 足够容纳单行表单项，作为动画起点/终点
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+
+    &.is-folded {
+      max-height: 0;
+      opacity: 0;
+      :deep(.el-form-item) {
+        margin-bottom: 0; // 折叠时消除 form-item 底部间距
+      }
+    }
   }
 
   .buttonOperate {

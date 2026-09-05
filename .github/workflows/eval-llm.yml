@@ -1,0 +1,67 @@
+name: LLM Accuracy Eval (nightly)
+
+# Layer-2 accuracy scorer: drives the real NL→config reasoning path against the
+# golden corpus and measures in-schema-intent zero-edit accuracy (target >= 95%).
+#
+# This needs an ANTHROPIC_API_KEY and costs money, so it does NOT run per-PR — only
+# nightly and on manual dispatch. The free per-PR gate is the `golden` job in
+# typecheck.yml (Layer-1 deterministic scorer). Without the secret, eval:llm exits 0
+# as a no-op, so a fork/PR without the key never fails here.
+
+on:
+  schedule:
+    # 03:17 UTC daily — off the top of the hour on purpose.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Minimum in-schema intent accuracy (0-1)'
+        required: false
+        default: '0.95'
+
+jobs:
+  eval-llm:
+    name: NL→config accuracy vs golden
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
+      # Optional dep — installed only for this eval job, never a runtime dep.
+      - name: Install Anthropic SDK
+        run: npm install --no-save @anthropic-ai/sdk
+      - name: Run LLM accuracy eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ESPLUS_EVAL_TARGET: ${{ github.event.inputs.target || '0.95' }}
+        run: npm run eval:llm -- --require-key
+
+  golden-e2e:
+    # Heavy counterpart to the free per-PR Layer-1 scorer: compiles EVERY golden
+    # case through the config-driven cli into a real `vite build`, across all
+    # three targets. Too slow to gate every PR, so it runs nightly (no API key
+    # needed — this is deterministic config→code→compile, not LLM inference).
+    name: Golden corpus compiles (all targets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Build shared + all target packages + cli
+        run: |
+          npm run build --workspace @es-plus/shared
+          npm run build --workspace @es-plus/vue3
+          npm run build --workspace @es-plus/vue2
+          npm run build --workspace @es-plus/adapter-antdv
+          npm run build --workspace @es-plus/cli
+      - name: Compile whole golden corpus (vite build per case)
+        run: npm run golden:e2e
+        timeout-minutes: 30

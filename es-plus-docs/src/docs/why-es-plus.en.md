@@ -1,6 +1,6 @@
 # Why ES-Plus — A Config-Driven Answer for Admin CRUD in the AI Coding Era
 
-> One-liner: **ES-Plus abstracts the most repetitive admin-panel chain — form, table, dialog — into a single JSON Schema. A hand-written 200-line template collapses to 30 lines of config. AI-generated code passes `vite build` in CI on the first try. And the exact same config runs unchanged on both the Vue 3 + Element Plus renderer and the Vue 2 + Element UI renderer.**
+> One-liner: **ES-Plus abstracts the most repetitive admin-panel chain — form, table, dialog — into a single JSON Schema. A hand-written 200-line template collapses to 30 lines of config. AI-generated code passes `vite build` in CI on the first try. And the exact same config runs unchanged on all three renderers — Vue 3 + Element Plus, Vue 2 + Element UI, and Vue 3 + Ant Design Vue.**
 
 ---
 
@@ -9,7 +9,7 @@
 1. [The Real Cost of Admin Development: The Hidden Bills Nobody Wants to Total Up](#1-the-real-cost-of-admin-development)
 2. [The Hidden Tax of Complex Interactions: Linkage, Cross-Page, Auto-Fit, Permissions, i18n](#2-the-hidden-tax-of-complex-interactions)
 3. [New Pain in the AI Coding Era: Why AI Keeps Breaking on Component Libraries](#3-new-pain-in-the-ai-coding-era)
-4. [How ES-Plus Solves It: Config-Driven + Dual Renderer + AI-Native](#4-how-es-plus-solves-it)
+4. [How ES-Plus Solves It: Config-Driven + Three Renderers + AI-Native](#4-how-es-plus-solves-it)
 5. [Deep Dive: Core Capabilities](#5-deep-dive-core-capabilities)
 6. [Compared to Other Tools: What's Different and Why](#6-compared-to-other-tools)
 7. [The Killer Feature for the AI Era: MCP Server + CLI + E2E Matrix](#7-the-killer-feature-for-the-ai-era)
@@ -107,7 +107,7 @@ The actual complexity of a CRUD page is never "render a form plus a table" — i
 | Change page / pageSize | Write `handleCurrentChange` / `handleSizeChange` → grab current form values (**gotcha: you need the latest values**) → call API | **Zero code** — pagination automatically requests with current form values |
 | Keep selection across pages | Maintain a `selectedMap`, diff and merge on every page change, write back to `<el-table>`'s selection | `cachePageSelection: true` |
 
-ES-Plus uses `provide / inject` so that **dropping an EsForm into the default slot of an EsTable automatically wires them together** (see `inject('EsTableContext')` around [packages/vue3/src/components/es-form/src/es-form.vue:648](../packages/vue3/src/components/es-form/src/es-form.vue)). Setting `triggerEvent: true` on a button calls the table's `httpRequest` directly. **Zero glue code in the entire data loop.**
+ES-Plus uses `provide / inject` so that **dropping an EsForm into the default slot of an EsTable automatically wires them together** (see `inject(TABLE_CONTEXT_INJECT_KEY)` around [packages/vue3/src/components/es-form/src/es-form.vue:222](../packages/vue3/src/components/es-form/src/es-form.vue)). Setting `triggerEvent: true` on a button calls the table's `httpRequest` directly. **Zero glue code in the entire data loop.**
 
 ### 2.2 Cross-Page Selection: Wildly Underrated
 
@@ -122,7 +122,7 @@ options: {
 }
 ```
 
-The implementation lives in [packages/core/src/table-selection.ts](../packages/core/src/table-selection.ts) — the **same** algorithm is shared by both the Vue 3 and Vue 2 renderers, which means selection behavior is **byte-identical** regardless of which Vue version your project runs on.
+The implementation lives in [packages/core/src/table-selection.ts](../packages/core/src/table-selection.ts) — the **same** algorithm is shared by the Vue 3, Vue 2, and Ant Design Vue renderers, which means selection behavior is **byte-identical** regardless of which Vue version your project runs on.
 
 ### 2.3 Auto-Sizing Table Height: `100vh - 360px` Is Technical Debt
 
@@ -331,13 +331,13 @@ ES-Plus isn't "yet another component library." It's **a declarative DSL layer on
 | Config can be served by the backend | The backend changes a field without a frontend deploy (great for enterprise low-code) |
 | Config can be AI-generated | The MCP server emits valid config ([Section 7](#7-the-killer-feature-for-the-ai-era)) |
 | Config can be schema-validated | Run `validate_config` in CI and catch errors before runtime |
-| Config can be shared across frameworks | The same `columns` runs on both the Vue 3 and Vue 2 renderers |
+| Config can be shared across frameworks | The same `columns` runs on all three renderers (Vue 3 / Vue 2 / AntDV) |
 
-### 4.3 Dual Renderer, Single Schema: Answering "Can Vue 2 Projects Use This?"
+### 4.3 Three Renderers, Single Schema: Answering "Can Vue 2 Projects Use This?"
 
 A lot of admin projects are still on Vue 2 + Element UI (**roughly 35–45% of the China market, as of 2026**). Nobody can afford the cost of migrating them to Vue 3.
 
-ES-Plus's solution is to split out **`@es-plus/core` + two renderers**:
+ES-Plus's solution is to split out **`@es-plus/core` + three renderers**:
 
 ```
 @es-plus/core        ← framework-agnostic: types, config validation,
@@ -354,6 +354,8 @@ Going further: **the MCP server's generated config takes a `target: 'vue3' | 'vu
 
 Most component libraries' "AI friendliness" is just talk — "our API names are semantic, AI can pick them up easily." ES-Plus turns AI-friendliness into a **verifiable engineering contract**:
 
+> **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
+
 1. **The MCP server** exposes 8 tools and 4 resource categories; the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
@@ -364,7 +366,7 @@ That last one is the real guarantee. Other "AI-friendly" component libraries don
 
 ## 5. Deep Dive: Core Capabilities
 
-### 5.1 EsForm — 13 Control Types × 4 Data Sources × Conditional Visibility
+### 5.1 EsForm — 14 Control Types × 4 Data Sources × Conditional Visibility
 
 ```typescript
 const formItems = [
@@ -376,7 +378,7 @@ const formItems = [
     dataOptions: [{ label: 'Enabled', value: 1 }, { label: 'Disabled', value: 0 }] },
 
   // 3. Date range (attrs pass straight through to Element Plus)
-  { prop: 'date', label: 'Date', formtype: 'datePicker', span: 8,
+  { prop: 'date', label: 'Date', formtype: 'DatePicker', span: 8,
     attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } },
 
   // 4. Remote-loaded select (apiParams + format callback)
@@ -395,7 +397,7 @@ const formItems = [
 ]
 ```
 
-Supported controls: Input / Select / datePicker / timePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer — plus the `render` escape hatch.
+Supported controls: Input / Select / DatePicker / TimePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer — plus the `render` escape hatch.
 
 **The `render` field is the key** — unlike many libraries that lock you into their config DSL, leaving you to fork the source the moment you hit something special, ES-Plus exposes `render: (h, ctx) => VNode` on every form item and every table column. It means "this field is mine, I'll render it myself." Config-driven plus an escape hatch: the speed of the 90% case without getting trapped in the remaining 10%.
 
@@ -568,7 +570,7 @@ These are **project templates** (Admin Templates) — you clone a full admin pro
 
 ### 6.4 vs. Avue / vxe-table
 
-Avue is a long-running config-driven admin library from the China community; vxe-table is a high-performance table component.
+Avue is a long-running config-driven admin library from the China community; vxe-table is a high-performance table component — and **since 2026-07, vxe-table is also ES-Plus's optional table rendering engine** (`engine: 'vxe'`). The two are "co-opetition": vxe-table's inline-editing / export / toolbar / tree-data capabilities are wrapped by ES-Plus as first-class APIs, while Avue remains a same-track config-driven competitor.
 
 | Aspect | Avue | vxe-table | ES-Plus |
 |--------|------|-----------|---------|
@@ -582,7 +584,7 @@ Avue is a long-running config-driven admin library from the China community; vxe
 | Type coverage | Medium | High | High (11 interfaces fully exported) |
 | Docs site | Yes | Yes | Yes + AI CRUD demo + StackBlitz Playground |
 
-ES-Plus's unique differentiators: **shared Schema across Vue 2/Vue 3, an AI-native toolchain, and a CI safety net**. As of today no other component library — in China or abroad — ships all three.
+ES-Plus's differentiators: **shared Schema across Vue 2 / Vue 3 / AntDV, an AI-native toolchain, and a CI safety net**. These three together are still rare among same-track component libraries.
 
 ### 6.5 vs. Naive UI / Ant Design Vue / Other General-Purpose UI Libraries
 
@@ -675,7 +677,7 @@ Plenty of component libraries claim "AI-friendly" — **none of them prove it wi
 
 ```
 matrix:
-  target: [vue3, vue2]      ← two renderers
+  target: [vue3, vue2, antdv]      ← three renderers
   mode:   [schema, sfc]     ← two generation modes
 ```
 
@@ -689,7 +691,7 @@ Every push and PR runs **4 combinations**, each with this pipeline:
 
 **The first time we ran this CI, vue2 sfc mode failed immediately** — surfacing a bug in the import-extraction logic. We fixed it and it's been green ever since.
 
-The point of this matrix is a **contract-level guarantee**: **any code ES-Plus emits will compile**. That's an engineering bar the community rarely clears.
+The point of this matrix is a **contract-level guarantee**: **within the e2e matrix's 6 combinations (vue3/vue2/antdv × schema/sfc), any code ES-Plus emits will compile**. That's an engineering bar the community rarely clears.
 
 ### 7.5 The AI CRUD Demo in the Browser
 
@@ -699,7 +701,7 @@ Open [https://liujiaao.github.io/es-plus/#/ai-crud](https://liujiaao.github.io/e
 - Right: a Trace timeline that visualizes every MCP tool call, AI request, zod validation, and codegen step
 - Preview / Code / JSON tabs: see the generated result directly
 
-That page is **living documentation of the "AI + es-plus + MCP" workflow** — visitors don't have to read the docs; one look and they get it. It's the only admin component library demo in the community with **protocol-level visualization**.
+That page is **living documentation of the "AI + es-plus + MCP" workflow** — visitors don't have to read the docs; one look and they get it. It's one of the few admin component library demos with **protocol-level visualization**.
 
 ---
 

@@ -1,5 +1,6 @@
 export const FORM_TYPES = [
     { type: 'Input', description: '输入框 — 文本/数字/密码输入', example: '姓名、手机号、邮箱' },
+    { type: 'InputNumber', description: '数字输入框 — 数值/金额输入', example: '年龄、价格、库存数量' },
     { type: 'Select', description: '下拉选择器 — 单选/多选', example: '状态、类型、分类' },
     { type: 'DatePicker', description: '日期选择器 — 日期/日期范围', example: '创建时间、日期范围' },
     { type: 'TimePicker', description: '时间选择器 — 时间/时间范围', example: '开始时间、结束时间' },
@@ -13,7 +14,7 @@ export const FORM_TYPES = [
     { type: 'Rate', description: '评分 — 星级评分', example: '满意度、评分' },
     { type: 'Upload', description: '上传 — 文件/图片上传', example: '头像、附件、证件照' },
 ];
-export const COMPONENT_LIST = ['EsForm', 'EsTable', 'useDialog'];
+export const COMPONENT_LIST = ['EsForm', 'EsTable', 'EsDialog', 'EsCrudPage', 'SvgIcon', 'useDialog'];
 export const PRESET_EXAMPLES = [
     {
         label: '用户管理',

@@ -18,4 +18,9 @@ pnpm-debug.log*
 *.sln
 *.sw?
 es-eui/
-es-pc/
+
+# Playwright Tier 2 runtime E2E artifacts
+test-results/
+playwright-report/
+__tests__/e2e-runtime/test-results/
+__tests__/e2e-runtime/playwright-report/

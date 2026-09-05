@@ -1,0 +1,16 @@
+{
+  "nl": "简单 SFC 模式：仓库管理，查询有仓库编码、仓库名、启用状态；表格展示仓库编码、仓库名、启用状态、创建时间；支持新增、编辑、删除。",
+  "config": {
+    "name": "WarehouseManage",
+    "apiUrl": "/api/warehouses",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "warehouseCode", "label": "仓库编码", "formtype": "Input" },
+      { "prop": "warehouseName", "label": "仓库名", "formtype": "Input" },
+      { "prop": "enabled", "label": "启用状态", "formtype": "Switch" },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "sfc mode sanity"
+}

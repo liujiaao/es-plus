@@ -84,7 +84,8 @@ export function applyAutoSpan(visibleFormItemList) {
  */
 export function splitButtonsByDirection(buttons) {
     return {
-        colRightBtn: buttons.filter((it) => it.direction === 'right' || !it.direction),
+        // 除 'left' 外一律归右（含未配置与非法值），避免非法 direction 的按钮被静默丢弃
+        colRightBtn: buttons.filter((it) => it.direction !== 'left'),
         colLeftBtn: buttons.filter((it) => it.direction === 'left'),
     };
 }

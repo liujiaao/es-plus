@@ -1,0 +1,55 @@
+{
+  "nl": "antdv 促销活动管理：表格上方左侧有“新建活动”按钮，右侧有“批量导出”按钮；查询条件有活动名称、状态（草稿/进行中/已结束）；表格列有活动名称、状态、开始时间、结束时间；每行有编辑、查看、删除操作；新增和编辑弹窗都填活动名称、开始时间、结束时间。",
+  "config": {
+    "name": "PromotionManage",
+    "apiUrl": "/api/promotions",
+    "target": "antdv",
+    "fields": [
+      { "prop": "title", "label": "活动名称", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "草稿", "value": "draft" },
+          { "label": "进行中", "value": "running" },
+          { "label": "已结束", "value": "ended" }
+        ]
+      },
+      { "prop": "startAt", "label": "开始时间", "formtype": "DatePicker", "inForm": true },
+      { "prop": "endAt", "label": "结束时间", "formtype": "DatePicker", "inForm": true }
+    ],
+    "actions": ["add", "edit", "delete", "view"],
+    "tableBtns": [
+      { "name": "新建活动", "type": "primary", "code": 1, "dialogKey": "add" },
+      { "name": "批量导出", "code": 2, "actionType": "export" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "编辑", "dialogKey": "edit" },
+        { "name": "查看", "dialogKey": "view" },
+        { "name": "删除", "confirm": "确定删除该活动吗？" }
+      ]
+    },
+    "dialogs": {
+      "add": {
+        "title": "新建活动",
+        "formItems": [
+          { "prop": "title", "label": "活动名称", "formtype": "Input" },
+          { "prop": "startAt", "label": "开始时间", "formtype": "DatePicker" },
+          { "prop": "endAt", "label": "结束时间", "formtype": "DatePicker" }
+        ]
+      },
+      "edit": {
+        "title": "编辑活动",
+        "formItems": [
+          { "prop": "title", "label": "活动名称", "formtype": "Input" },
+          { "prop": "startAt", "label": "开始时间", "formtype": "DatePicker" },
+          { "prop": "endAt", "label": "结束时间", "formtype": "DatePicker" }
+        ]
+      }
+    }
+  },
+  "notes": "antdv target combining tableBtns (code:1 left / code:2 right), operationColumn with dialogKey + confirm, AND multi-dialog add/edit. This is the antdv leg previously uncovered — 06-antdv-article exercised antdv without tableBtns/operationColumn/dialogs together."
+}

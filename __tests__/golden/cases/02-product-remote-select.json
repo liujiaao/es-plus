@@ -1,0 +1,20 @@
+{
+  "nl": "商品列表：查询有商品名、所属分类（分类下拉数据来自 /api/categories 接口）；表格展示商品名、分类、价格、上架状态；支持新增、编辑、删除、导出。",
+  "config": {
+    "name": "ProductManage",
+    "apiUrl": "/api/products",
+    "fields": [
+      { "prop": "name", "label": "商品名", "formtype": "Input" },
+      {
+        "prop": "categoryId",
+        "label": "所属分类",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/categories", "labelField": "name", "valueField": "id" }
+      },
+      { "prop": "price", "label": "价格", "formtype": "Input", "inQuery": false },
+      { "prop": "onSale", "label": "上架状态", "formtype": "Switch", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete", "export"]
+  },
+  "notes": "remote dropdown via apiParams; price/onSale are detail-only → inQuery:false"
+}

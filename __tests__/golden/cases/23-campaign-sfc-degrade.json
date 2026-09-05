@@ -1,0 +1,24 @@
+{
+  "nl": "SFC 模式的活动管理：查询有活动名称、状态；表格展示活动名称、状态、开始时间；工具栏左侧有导入按钮、右侧有导出按钮；操作列宽 180；新增/编辑弹窗各自定制标题与表单项；支持新增、编辑、删除。",
+  "config": {
+    "name": "CampaignManage",
+    "apiUrl": "/api/campaigns",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "campaignName", "label": "活动名称", "formtype": "Input" },
+      { "prop": "status", "label": "状态", "formtype": "Select", "dataOptions": [{ "label": "进行中", "value": 1 }, { "label": "已结束", "value": 0 }] },
+      { "prop": "startTime", "label": "开始时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableBtns": [
+      { "name": "导入", "code": 1 },
+      { "name": "导出", "code": 2 }
+    ],
+    "operationColumn": { "width": 180, "btns": [{ "name": "编辑" }, { "name": "删除" }] },
+    "dialogs": {
+      "add": { "title": "新建活动", "formItems": [{ "prop": "campaignName", "label": "活动名称", "formtype": "Input" }] },
+      "edit": { "title": "编辑活动", "formItems": [{ "prop": "campaignName", "label": "活动名称", "formtype": "Input" }, { "prop": "status", "label": "状态", "formtype": "Select" }] }
+    }
+  },
+  "notes": "WS-5 net for 2.2=A: sfc mode does not consume tableBtns/operationColumn/dialogs. It must SURFACE a 'does not yet consume' warning (mark, never silently drop), and still compile. The scorer asserts the degradation warning is present in sfc mode."
+}

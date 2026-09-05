@@ -1,4 +1,4 @@
-export declare const VALID_FORM_TYPES: readonly ["Input", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
+export declare const VALID_FORM_TYPES: readonly ["Input", "InputNumber", "Select", "DatePicker", "TimePicker", "Slider", "ColorPicker", "Transfer", "Cascader", "Radio", "Checkbox", "Switch", "Rate", "Upload"];
 export type FormType = typeof VALID_FORM_TYPES[number];
 /**
  * FormType 旧写法 → 新写法映射
@@ -19,10 +19,10 @@ export declare const OPERATION_COLUMN_PROP_CRUD_PAGE = "action";
 export declare const VALID_CRUD_ACTIONS: readonly ["add", "edit", "delete", "view", "export", "import"];
 export type CrudAction = typeof VALID_CRUD_ACTIONS[number];
 export declare const DEFAULT_CONFIG_TABLE_OUT: {
-    readonly total: "total";
-    readonly tableData: "data";
+    readonly total: "records";
+    readonly tableData: "rows";
     readonly pageSize: "pageSize";
-    readonly current: "pageIndex";
+    readonly current: "pageNo";
 };
 export declare const CRUD_PAGE_BTN_CLICK_KEYS: {
     readonly ADD_CONFIRM: "add-confirm";

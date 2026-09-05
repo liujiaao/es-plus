@@ -1,0 +1,34 @@
+{
+  "nl": "Vue2 任务管理：查询有任务名、优先级（高/中/低）、截止时间；表格展示任务名、优先级、状态（待办/进行中/已完成）、截止时间；支持新增、编辑、删除、导出。",
+  "config": {
+    "name": "TaskManage",
+    "apiUrl": "/api/tasks",
+    "target": "vue2",
+    "fields": [
+      { "prop": "taskName", "label": "任务名", "formtype": "Input" },
+      {
+        "prop": "priority",
+        "label": "优先级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "高", "value": "high" },
+          { "label": "中", "value": "medium" },
+          { "label": "低", "value": "low" }
+        ]
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "待办", "value": "todo" },
+          { "label": "进行中", "value": "doing" },
+          { "label": "已完成", "value": "done" }
+        ]
+      },
+      { "prop": "dueDate", "label": "截止时间", "formtype": "DatePicker" }
+    ],
+    "actions": ["add", "edit", "delete", "export"]
+  },
+  "notes": "vue2 target with multiple static enums"
+}

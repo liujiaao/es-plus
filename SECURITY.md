@@ -9,6 +9,7 @@
 | `@es-plus/vue3` | 1.4.x | ✅ |
 | `@es-plus/vue2` | 1.1.x | ✅ |
 | `@es-plus/core` | 1.0.x | ✅ |
+| `@es-plus/adapter-antdv` | 1.0.x | ✅ |
 | `@es-plus/shared` | 1.1.x | ✅ |
 | `@es-plus/cli` | 1.2.x | ✅ |
 | `@es-plus/mcp-server` | 1.2.x | ✅ |

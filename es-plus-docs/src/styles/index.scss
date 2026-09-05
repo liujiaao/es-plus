@@ -1,27 +1,9 @@
 // ES-Plus 文档站点样式
 
-// 变量定义
+// 布局变量（设计 token 见 design-tokens.css 单一真源）
 :root {
   --header-height: 60px;
   --sidebar-width: 260px;
-  --primary-color: #409eff;
-  --primary-color-light: #ecf5ff;
-  --success-color: #67c23a;
-  --warning-color: #e6a23c;
-  --danger-color: #f56c6c;
-  --info-color: #909399;
-  
-  --bg-color: #ffffff;
-  --bg-color-page: #f5f7fa;
-  --text-color-primary: #303133;
-  --text-color-regular: #606266;
-  --text-color-secondary: #909399;
-  --border-color-base: #dcdfe6;
-  --border-color-light: #e4e7ed;
-  --border-color-lighter: #ebeef5;
-  --fill-color: #f0f2f5;
-  --fill-color-light: #f5f7fa;
-  --fill-color-blank: #ffffff;
 }
 
 // 基础样式
@@ -116,169 +98,15 @@ pre {
 a {
   color: var(--primary-color);
   text-decoration: none;
-  
+
   &:hover {
-    color: #66b1ff;
+    color: var(--es-brand-accent);
   }
 }
 
-// 文档内容样式
-.markdown-content {
-  h1 {
-    font-size: 32px;
-    font-weight: 600;
-    margin-bottom: 24px;
-    color: var(--text-color-primary);
-  }
-  
-  h2 {
-    font-size: 24px;
-    font-weight: 600;
-    margin: 40px 0 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color-lighter);
-    color: var(--text-color-primary);
-  }
-  
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 28px 0 16px;
-    color: var(--text-color-primary);
-  }
-  
-  p {
-    font-size: 15px;
-    line-height: 1.8;
-    color: var(--text-color-regular);
-    margin-bottom: 16px;
-  }
-  
-  code {
-    background-color: var(--fill-color);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    font-size: 13px;
-    color: var(--primary-color);
-  }
-  
-  pre code {
-    background: transparent;
-    padding: 0;
-  }
-
-  // 代码块包裹器（含语言标签 + 复制按钮）
-  .code-block-wrapper {
-    position: relative;
-    margin: 16px 0;
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: var(--code-bg-color, #f6f8fa);
-    border: 1px solid var(--border-color-lighter);
-  }
-
-  .code-block-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.04);
-    border-bottom: 1px solid var(--border-color-lighter);
-    font-size: 12px;
-  }
-
-  .code-block-lang {
-    color: var(--text-color-secondary);
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    text-transform: lowercase;
-    letter-spacing: 0.3px;
-  }
-
-  .code-copy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: var(--text-color-regular);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-
-    &:hover {
-      background: var(--bg-color);
-      border-color: var(--border-color-lighter);
-      color: var(--primary-color);
-    }
-
-    &.copied {
-      color: var(--success-color, #67c23a);
-      border-color: var(--success-color, #67c23a);
-    }
-  }
-
-  .copy-icon {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 1px solid currentColor;
-    border-radius: 2px;
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: -3px;
-      left: -3px;
-      width: 12px;
-      height: 12px;
-      border: 1px solid currentColor;
-      border-radius: 2px;
-      background: var(--code-bg-color, #f6f8fa);
-    }
-  }
-
-  .code-block-wrapper pre {
-    margin: 0;
-    border-radius: 0;
-    border: none;
-    background: transparent;
-  }
-
-  .is-dark & .code-block-header {
-    background: rgba(255, 255, 255, 0.04);
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    
-    th, td {
-      border: 1px solid var(--border-color-lighter);
-      padding: 12px;
-      text-align: left;
-    }
-    
-    th {
-      background-color: var(--fill-color-light);
-      font-weight: 600;
-    }
-  }
-  
-  ul, ol {
-    margin: 16px 0;
-    padding-left: 24px;
-    
-    li {
-      margin: 8px 0;
-      color: var(--text-color-regular);
-    }
-  }
-}
+// 文档内容样式统一由 docs-content.css 单一真源（.es-doc-content）提供。
+// 历史上这里存在一整套重复的 .markdown-content 排版规则，会以相同/更高特异性
+// 覆盖单一真源导致三端不一致，已移除。代码块 wrapper / 复制按钮亦收敛至真源。
 
 // 动画
 .fade-enter-active,

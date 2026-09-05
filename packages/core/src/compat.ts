@@ -68,6 +68,51 @@ export function isButtonLeft(btn: BtnConfig): boolean {
 }
 
 // ============================================================================
+// 按钮配置透传过滤（单一权威源）
+// ============================================================================
+
+/**
+ * 按钮编排字段：这些键 **不应** 随 v-bind 透传给底层按钮组件（el-button / a-button）。
+ *
+ * 分两类：
+ * 1. es-plus 编排语义键（click/render/position/code/permissionValue/... / dialogKey / actionType）
+ *    —— 属于配置协议，不是按钮组件的 prop。
+ * 2. 各端模板已显式单独绑定/渲染的键（icon 用 getCompIcon 绑、disabled 求值后绑、name 作文本渲染）
+ *    —— 再随 v-bind 摊一次会重复甚至冲突（如 disabled 的函数形被原样透传触发告警）。
+ *
+ * 最关键的是 `click`：它是函数，若透传到原生 <button>，Vue 会执行 `el.click = fn`
+ * （因 `'click' in HTMLElement`），**遮蔽原生 HTMLElement.prototype.click()**，
+ * 使程序化 `.click()` 调到无上下文的原始回调而非派发真实点击事件。
+ */
+export const BTN_ORCHESTRATION_KEYS = [
+  'click', 'render', 'name', 'key', 'icon', 'disabled',
+  'permissionValue', 'position', 'code', 'direction',
+  'action', 'actionType', 'dialogKey', 'triggerEvent',
+  'isHide', 'isHidden', 'hidden',
+] as const
+
+/**
+ * 过滤按钮配置：剥离编排字段，仅保留可安全透传给底层按钮组件的 props
+ * （type/size/loading/plain/round/... 及用户自定义 props）。
+ *
+ * @param btn 按钮配置对象
+ * @param extraOmit 额外需剥离的键 —— 各端模板已显式绑定的键（如 table 工具栏另绑 :type/:size/:loading）
+ * @returns 可安全 v-bind 到按钮组件的属性对象
+ */
+export function filterBtnProps(
+  btn: Record<string, unknown>,
+  extraOmit?: readonly string[]
+): Record<string, unknown> {
+  const omit = new Set<string>(BTN_ORCHESTRATION_KEYS as readonly string[])
+  if (extraOmit) for (const k of extraOmit) omit.add(k)
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(btn)) {
+    if (!omit.has(k)) out[k] = v
+  }
+  return out
+}
+
+// ============================================================================
 // 回调别名兼容
 // ============================================================================
 

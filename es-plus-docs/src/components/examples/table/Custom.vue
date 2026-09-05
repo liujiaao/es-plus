@@ -44,9 +44,11 @@ const columns = [
   {
     prop: 'action',
     label: '操作',
+    // ElButton 是组件，子节点必须用函数式插槽 () => '文本'；直接传字符串会触发
+    // "Non-function value encountered for default slot" 告警
     render: (h, { row }) => h('div', [
-      h(ElButton, { link: true, type: 'primary', size: 'small', onClick: () => handleEdit(row) }, '编辑'),
-      h(ElButton, { link: true, type: 'danger', size: 'small', onClick: () => handleDelete(row) }, '删除')
+      h(ElButton, { link: true, type: 'primary', size: 'small', onClick: () => handleEdit(row) }, () => '编辑'),
+      h(ElButton, { link: true, type: 'danger', size: 'small', onClick: () => handleDelete(row) }, () => '删除')
     ])
   }
 ]

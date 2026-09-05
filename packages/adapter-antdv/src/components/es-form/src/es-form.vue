@@ -13,7 +13,10 @@
   <a-form :ref="setFormRef" v-bind="formProps" class="es-form">
     <a-row v-bind="rowLayout">
       <template v-for="(item, index) in formItem" :key="item.prop || index">
-        <a-col v-show="!item?.isFold" :span="item.span">
+        <a-col
+          :span="item.span"
+          :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
+        >
           <a-form-item
             :name="item.prop"
             :label="translateLabel(item)"
@@ -54,6 +57,7 @@
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
+                    :danger="mapBtnDanger(it.type)"
                     :size="mapBtnSize(it.size)"
                     :disabled="resolveBtnDisabled(it)"
                     :loading="it.loading"
@@ -76,6 +80,7 @@
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
+                    :danger="mapBtnDanger(it.type)"
                     :size="mapBtnSize(it.size)"
                     :disabled="resolveBtnDisabled(it)"
                     :loading="it.loading"
@@ -129,6 +134,7 @@
                   :key="it.key || inx"
                   v-bind="filterOptions(it)"
                   :type="mapBtnType(it.type)"
+                  :danger="mapBtnDanger(it.type)"
                   :size="mapBtnSize(it.size)"
                   :disabled="resolveBtnDisabled(it)"
                   :loading="it.loading"
@@ -176,14 +182,30 @@ export default { name: 'EsForm' }
 <script setup lang="ts">
 import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import type { VNode } from 'vue'
-import { Form, FormItem, Row, Col, Button, Space, Input } from 'ant-design-vue'
+// 本地导入并按模板标签命名（AForm↔<a-form> 等），使模板解析为直接组件引用而非全局 resolveComponent。
+// 对齐 @es-plus/vue3（其 EsForm 直接 import ElForm/ElFormItem…），确保在 useDialog 命令式渲染的
+// 脱离子树（appContext 为 null，全局注册不可见）中仍能正常解析。Input 供脚本内 h(Input) 使用。
+import {
+  Form as AForm,
+  FormItem as AFormItem,
+  Row as ARow,
+  Col as ACol,
+  Button as AButton,
+  Space as ASpace,
+  Dropdown as ADropdown,
+  Menu as AMenu,
+  MenuItem as AMenuItem,
+  Input,
+} from 'ant-design-vue'
 import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
-import { resolveFormLayProps } from '@es-plus/core'
-import { mapButtonType, mapSize, getNestedValue } from '../../../utils/shared'
+import { resolveFormLayProps, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import { mapButtonType, mapButtonDanger, mapSize, getNestedValue } from '../../../utils/shared'
+import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
+import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
@@ -237,13 +259,13 @@ const translateLabel = (item: FormItemOption): string => {
 }
 
 // ─── 与 Table 的耦合（inject + ctx 双路径，对齐 vue3）──
-const injectedTableInstant = inject<(() => any) | null>('getTableInstantce', null)
+const injectedTableInstant = inject<(() => any) | null>(TABLE_CONTEXT_INJECT_KEY, null)
 const getTableInstant = computed(() => {
   if (injectedTableInstant) {
     return typeof injectedTableInstant === 'function' ? injectedTableInstant() : injectedTableInstant
   }
   const ctx = (instance as any)?.ctx as Record<string, any>
-  return typeof ctx?.getTableInstantce === 'function' ? ctx?.getTableInstantce() : ctx?.getTableInstantce
+  return typeof ctx?.getTableInstance === 'function' ? ctx?.getTableInstance() : ctx?.getTableInstance
 })
 
 const isParentTable = computed(() => {
@@ -252,7 +274,8 @@ const isParentTable = computed(() => {
 
 // ─── 图标 / 按钮选项（对齐 vue3）─────────────────────
 const filterOptions = (it: BtnConfig) => {
-  const { icon, ...opt } = it as Record<string, unknown>
+  // 剥离编排字段（尤其 click 函数）；icon 由模板显式绑定
+  const opt = filterBtnProps(it as Record<string, unknown>)
   if (!opt.size) opt.size = 'small'
   return opt
 }
@@ -261,12 +284,17 @@ const resolveBtnDisabled = (it: BtnConfig): boolean => {
   return typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false
 }
 
-function mapBtnType(type?: string): string {
-  return mapButtonType(type)
+// 'danger' 属于 ADV 的 LegacyButtonType，type 槽不接受（danger 需独立布尔 prop 承载）；
+// type='primary' + :danger 布尔 = 实心红，对齐 vue3/EP 的 danger 视觉。
+function mapBtnType(type?: string): ButtonType {
+  return mapButtonType(type) as ButtonType
+}
+function mapBtnDanger(type?: string): boolean {
+  return mapButtonDanger(type)
 }
 
-function mapBtnSize(size?: string): string {
-  return mapSize(size || (formLayout.value.size as string) || 'small', 'small')
+function mapBtnSize(size?: string): SizeType {
+  return mapSize(size || (formLayout.value.size as string) || 'small', 'small') as SizeType
 }
 
 // ─── Refs ───────────────────────────────────────────
@@ -294,7 +322,7 @@ function formInputRenderer(item: FormItemOption) {
 // ─── 表单 Props（对齐 vue3：内联 model/rules）────────
 const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
 
-const formProps = computed(() => ({
+const formProps = computed<Record<string, any>>(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
@@ -303,7 +331,11 @@ const formProps = computed(() => ({
 }))
 
 const labelColStyle = computed(() => {
-  const w = (formLayoutRef.value.labelWidth as string | number) || (formLayout.value.labelWidth as string | number) || '100px'
+  // 未配置 labelWidth 时，标签宽度取内容自适应（flex: 0 0 auto），对齐 @es-plus/vue3。
+  // vue3 用 Element Plus，el-form 无 label-width 即为标签内容宽度；此前 antdv 硬编码 100px 固定标签，
+  // 在弹窗窄列（span=8 ≈ 1/3）下会挤占输入框，导致表单项无法自动分配宽度。
+  const w = (formLayoutRef.value.labelWidth as string | number) || (formLayout.value.labelWidth as string | number)
+  if (w === undefined || w === null || w === '') return { flex: '0 0 auto' }
   const width = typeof w === 'number' ? `${w}px` : String(w)
   return { flex: `0 0 ${width}` }
 })
@@ -436,13 +468,15 @@ const queryTableRequest = async (
 ) => {
   if (key === 'query') {
     if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
+      // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）（对齐 vue3）
+      // 失败已由 es-table 内部 emit('request-error') 暴露，这里吞掉 rejection 防 unhandled
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
     }
   } else if (key === 'rest' && formRef) {
-    if (isParentTable.value) {
-      getTableInstant.value?.httpRequestInstance?.(model)
-    }
     formRef.resetFields()
+    if (isParentTable.value) {
+      getTableInstant.value?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
+    }
   }
 }
 
@@ -462,7 +496,8 @@ const customerForm = createDialogInstance()
 const customerTable = createDialogInstance()
 
 const handleRefresh = () => {
-  // 保留原有逻辑（对齐 vue3）
+  // 「重置(刷新)」= 重置表单字段 + 刷新表格，复用 queryTableRequest 的 'rest' 分支
+  queryTableRequest(props.model, formRef.value as any, 'rest')
 }
 
 const getFormRowsFun = () => {
@@ -584,7 +619,9 @@ const handleTableItemOption = () => {
   })
 }
 
-const handleSetOptionsClick = ({ key }: { key: string }) => {
+// a-menu 的 MenuClickEventHandler 传入 MenuInfo（key 为 string | number）；
+// 用宽于 MenuInfo 的结构类型接住，避免 TS2322。
+const handleSetOptionsClick = ({ key }: { key: string | number }) => {
   if (key === 'customerForm') handleCustomerForm()
   else if (key === 'tableItem') handleTableItemOption()
   else if (key === 'refresh') handleRefresh()
@@ -690,6 +727,16 @@ defineExpose({
     min-width: 0;
   }
 
+  // 表单控件铺满控制区，对齐 @es-plus/vue3（Element Plus 中 el-select/el-date-picker 等默认 100%）。
+  // ant-design-vue 里仅 a-input 默认满宽，a-select/a-picker/a-input-number 默认按内容宽度，
+  // 在弹窗窄列下会显得过窄，故统一强制满宽。
+  :deep(.ant-select),
+  :deep(.ant-picker),
+  :deep(.ant-input-number),
+  :deep(.ant-cascader-picker) {
+    width: 100%;
+  }
+
   .buttonOperate {
     display: flex;
     align-items: center;
@@ -718,6 +765,21 @@ defineExpose({
 
   .formItemCols {
     width: 100%;
+  }
+
+  // 折叠展开平滑过渡
+  .es-col--foldable {
+    overflow: hidden;
+    max-height: 200px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+
+    &.is-folded {
+      max-height: 0;
+      opacity: 0;
+      :deep(.ant-form-item) {
+        margin-bottom: 0;
+      }
+    }
   }
 }
 </style>

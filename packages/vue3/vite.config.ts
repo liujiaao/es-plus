@@ -32,6 +32,24 @@ function buildResolver() {
   }
 }
 
+// vxe-types-augment.ts 是纯类型增强（declare module '@es-plus/core'），被
+// tsconfig.build.json 的 exclude 排除在主 dts 之外，避免 vxe-table 类型依赖
+// 泄漏进 index.d.ts、强加给所有消费者。package.json 的
+// exports['./vxe-types-augment'] 单独暴露它，故在此手动拷贝到 dist —— 文件为
+// 纯类型内容（import type / declare module / export {}），.ts 源可原样作为
+// .d.ts。对齐 resolver.d.ts 的 copyFileSync 做法。
+function copyVxeTypesAugment() {
+  return {
+    name: 'copy-vxe-types-augment',
+    closeBundle() {
+      copyFileSync(
+        resolve(__dirname, 'src/vxe-types-augment.ts'),
+        resolve(__dirname, 'dist/vxe-types-augment.d.ts')
+      )
+    }
+  }
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -45,7 +63,8 @@ export default defineConfig({
       skipDiagnostics: true,
       noEmitOnError: false
     }),
-    buildResolver()
+    buildResolver(),
+    copyVxeTypesAugment()
   ],
   build: {
     lib: {
@@ -55,13 +74,18 @@ export default defineConfig({
       fileName: (format) => `es-plus.${format === 'umd' ? 'umd.cjs' : 'js'}`
     },
     rollupOptions: {
-      external: ['vue', 'element-plus', '@element-plus/icons-vue'],
+      // @es-plus/core external：与 vue2/adapter-antdv 一致，不内联进产物。
+      // 内联会让 dist 里出现一份私有 core 副本（与独立 @es-plus/core 漂移），且
+      // 生成的 .d.ts 仍 `import from '@es-plus/core'` —— 消费者若未装 core 会报
+      // "Cannot find module '@es-plus/core'"。故声明为 dependency + external。
+      external: ['vue', 'element-plus', '@element-plus/icons-vue', '@es-plus/core'],
       output: {
         exports: 'named',
         globals: {
           vue: 'Vue',
           'element-plus': 'ElementPlus',
-          '@element-plus/icons-vue': 'ElementPlusIconsVue'
+          '@element-plus/icons-vue': 'ElementPlusIconsVue',
+          '@es-plus/core': 'EsPlusCore'
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'index.css') return 'style.css'

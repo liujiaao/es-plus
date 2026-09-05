@@ -40,7 +40,7 @@ const statusOptions = [
 ]
 const statusMap = {
   pending: { text: '待付款', type: 'warning' },
-  paid: { text: '已付款', type: '' },
+  paid: { text: '已付款', type: 'primary' },
   shipped: { text: '已发货', type: 'success' },
   completed: { text: '已完成', type: 'success' },
   cancelled: { text: '已取消', type: 'info' }

@@ -1,0 +1,27 @@
+{
+  "nl": "SFC 模式下的 vue2 项目：字典管理，查询有字典类型、字典编码；表格展示字典类型、字典编码、字典值、排序、状态；支持新增、编辑、删除。",
+  "config": {
+    "name": "DictManage",
+    "apiUrl": "/api/dicts",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "dictType", "label": "字典类型", "formtype": "Input" },
+      { "prop": "dictCode", "label": "字典编码", "formtype": "Input" },
+      { "prop": "dictValue", "label": "字典值", "formtype": "Input", "inQuery": false },
+      { "prop": "sortOrder", "label": "排序", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "禁用", "value": 0 }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "vue2 sfc mode"
+}

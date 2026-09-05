@@ -3,6 +3,10 @@ export declare const FORM_TYPES: readonly [{
     readonly description: "输入框 — 文本/数字/密码输入";
     readonly example: "姓名、手机号、邮箱";
 }, {
+    readonly type: "InputNumber";
+    readonly description: "数字输入框 — 数值/金额输入";
+    readonly example: "年龄、价格、库存数量";
+}, {
     readonly type: "Select";
     readonly description: "下拉选择器 — 单选/多选";
     readonly example: "状态、类型、分类";
@@ -52,7 +56,7 @@ export declare const FORM_TYPES: readonly [{
     readonly example: "头像、附件、证件照";
 }];
 export type FormType = typeof FORM_TYPES[number]['type'];
-export declare const COMPONENT_LIST: readonly ["EsForm", "EsTable", "useDialog"];
+export declare const COMPONENT_LIST: readonly ["EsForm", "EsTable", "EsDialog", "EsCrudPage", "SvgIcon", "useDialog"];
 export type ComponentName = typeof COMPONENT_LIST[number];
 export declare const PRESET_EXAMPLES: {
     label: string;

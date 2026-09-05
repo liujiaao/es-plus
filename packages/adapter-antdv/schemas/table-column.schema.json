@@ -101,6 +101,7 @@
             "type": "string",
             "description": "Permission code for button visibility. When a global permission() function is configured, buttons with unmatched permissionValue will be hidden"
           }
+        }
       }
     },
     "type": {

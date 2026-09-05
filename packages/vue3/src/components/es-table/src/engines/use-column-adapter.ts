@@ -87,6 +87,11 @@ export function useColumnAdapter(
       }
 
       if (col.groups && col.groups.length > 0) {
+        // el-table-v2 不支持多级表头（children），这里展平子列、父级 group 标题会丢失。
+        // DEV 下显式警告，避免"组头文字静默消失"看起来像 bug。
+        if (import.meta.env.DEV) {
+          console.warn(`[es-plus] virtual engine does not support multi-level headers — group "${col.label}" is flattened into its child columns (group title dropped). Use the standard or vxe engine for grouped headers.`)
+        }
         for (const child of col.groups) {
           result.push(adaptColumn(child, options))
         }
@@ -243,11 +248,11 @@ function createSlotCellRenderer(col: TableColumn, parentSlots: Slots) {
 }
 
 function createEllipsisCellRenderer(col: TableColumn) {
-  return ({ cellData, rowData }: CellRendererParams) => {
+  return ({ cellData, rowData, rowIndex }: CellRendererParams) => {
     let text: string
     if (col.formatter) {
       const formatter = col.formatter as (row: any, column: any, cellValue: any, index: number) => string
-      text = String(formatter(rowData, col, cellData, 0) ?? '')
+      text = String(formatter(rowData, col, cellData, rowIndex) ?? '')
     } else {
       text = String(cellData ?? '')
     }

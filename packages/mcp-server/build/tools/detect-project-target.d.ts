@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-export type Target = "vue3" | "vue2";
+export type Target = "vue3" | "vue2" | "antdv";
 export interface DetectResult {
     target: Target;
     confidence: "high" | "medium" | "low";

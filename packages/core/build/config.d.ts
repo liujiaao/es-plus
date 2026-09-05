@@ -52,4 +52,19 @@ export declare function getGlobalConfig(): EsPlusGlobalConfig;
  * 会读到旧值，造成不一致。
  */
 export declare function resetGlobalConfig(): void;
+/** 全局 HTTP 请求函数签名（AI 生成代码与用户配置共同遵守的调用契约） */
+export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>;
+/**
+ * 全局 HTTP 请求自由函数（配置驱动 / 多端同构 / AI 原生）。
+ *
+ * 供 AI + mcp-server 生成的 CRUD 包装代码直接
+ *   `import { httpRequest } from '@es-plus/vue3'`（或 '@es-plus/vue2' / '@es-plus/adapter-antdv'）
+ * 后调用，而无需在组件 provide/inject 树内取用。它解析 install 时写入模块单例的全局 HTTP 客户端，
+ * 因此与 EsTable / EsForm 内部使用的是同一个请求实例（单一实例，避免重复配置）。
+ *
+ * @param params 传给用户配置的 HTTP 请求函数的参数对象（如 { url, method, params, data }）
+ * @throws 若未通过 configureEsPlus / app.use(EsPlus, { httpRequest }) 配置，抛出明确错误，
+ *         而非静默返回 undefined —— 便于在开发期立刻定位「忘记配置全局请求函数」。
+ */
+export declare function httpRequest(params: Record<string, unknown>): Promise<unknown>;
 //# sourceMappingURL=config.d.ts.map

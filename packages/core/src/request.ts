@@ -319,8 +319,9 @@ export async function getEveryFormQueryField(
       const crtnFn = getCallback(listenToCallBack, 'responseTransform')
       if (typeof crtnFn === 'function') {
         // crtn / responseTransform 自定义格式化：接收预提取的列表，期望返回一个数组
+        // 返回空数组视为"未产出有效结果"，回退到 callOptionListFormat / 兜底
         const crtnResult = crtnFn(preExtractedList) as unknown
-        if (Array.isArray(crtnResult)) {
+        if (Array.isArray(crtnResult) && crtnResult.length > 0) {
           newListOptions = crtnResult
         }
       }

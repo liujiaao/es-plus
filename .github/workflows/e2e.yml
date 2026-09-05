@@ -13,9 +13,9 @@ name: E2E (generated code compiles)
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   pull_request:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   workflow_dispatch:
 
 jobs:
@@ -27,10 +27,7 @@ jobs:
       # all failing packages on a single CI run, not one at a time.
       fail-fast: false
       matrix:
-        # NOTE: cli is intentionally excluded for now — it has 0 spec files
-        # and `npm test` would fail on "no test files found". Add to matrix
-        # once stage C adds cli specs.
-        pkg: [core, shared, vue2, vue3, mcp-server]
+        pkg: [core, shared, vue2, vue3, adapter-antdv, mcp-server, cli]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [vue3, vue2]
+        target: [vue3, vue2, antdv]
         mode: [schema, sfc]
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +67,15 @@ jobs:
       # the right thing to invoke here.
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
-      - name: Build @es-plus/${{ matrix.target }}
-        run: npm run build --workspace @es-plus/${{ matrix.target }}
+      # The npm workspace name for the antdv target is @es-plus/adapter-antdv
+      # (the target string "antdv" is NOT the package dir/name), so map it here.
+      - name: Build target package
+        run: |
+          if [ "${{ matrix.target }}" = "antdv" ]; then
+            npm run build --workspace @es-plus/adapter-antdv
+          else
+            npm run build --workspace @es-plus/${{ matrix.target }}
+          fi
       - name: Build @es-plus/cli
         run: npm run build --workspace @es-plus/cli
 
@@ -79,3 +83,34 @@ jobs:
         run: node __tests__/e2e/scripts/run-e2e.mjs --target ${{ matrix.target }} --mode ${{ matrix.mode }}
         # Per-combo timeout so a hung install doesn't burn the full 6h budget.
         timeout-minutes: 5
+
+  runtime-e2e:
+    # Tier 2 运行时 E2E：真实 Chromium 渲染真实 Element UI + 真实 @es-plus/vue2 dist，
+    # 覆盖 vitest（Tier 1）无法验证的浏览器级 CRUD 交互（弹窗、表单提交、列表刷新）。
+    name: Runtime e2e (vue2 / playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # vue2 dist 由 pretest:e2e:runtime 钩子构建，但其构建依赖 core/shared dist，
+      # 故先把依赖链显式建好，与 unit-tests job 一致。
+      - name: Build @es-plus/core
+        run: npm run build --workspace @es-plus/core
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run runtime e2e (vue2)
+        run: npm run test:e2e:runtime
+        timeout-minutes: 10
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-vue2
+          path: __tests__/e2e-runtime/playwright-report
+          retention-days: 7

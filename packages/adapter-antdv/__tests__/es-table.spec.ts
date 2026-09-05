@@ -284,6 +284,9 @@ describe('EsTable — 暴露的实例方法', () => {
     const vm = wrapper.vm as any
     const result = vm.httpRequestInstance()
     expect(result).toBeInstanceOf(Promise)
+    // 无 url/apiParams 时内部 fail(...) 会拒绝该 Promise。必须在此显式 await 捕获，
+    // 否则拒绝逃逸为 Unhandled Rejection，导致 vitest 整轮退出码 1（三端无法同批全绿）。
+    await expect(result).rejects.toThrow()
   })
 
   it('getSelectionRows — 返回数组', () => {
@@ -298,6 +301,72 @@ describe('EsTable — 暴露的实例方法', () => {
     const vm = wrapper.vm as any
     // refresh 调用 httpRequestInstance, 无 url/apiParams 时不应抛错
     expect(() => vm.refresh()).not.toThrow()
+  })
+})
+
+describe('EsTable — refresh/reload/refetchKeepPage 语义（对齐 vue3）', () => {
+  // 请求模式挂载：注入内存 httpRequest，捕获每次请求的 pageIndex。
+  // isInitRun:false 关掉 onMounted 自动首拉，避免污染 current 初值（否则默认分支挂载即回 1）。
+  const makeReqProps = (opts: Record<string, any> = {}, pagination: Record<string, any> = {}) => {
+    const calls: any[] = []
+    const httpRequest = vi.fn(async (params: any) => {
+      calls.push(params)
+      return { records: 100, rows: [{ id: `r${params.pageIndex}` }] }
+    })
+    const props = {
+      dataSource: [] as any[],
+      columns: [{ prop: 'id', label: 'ID' }],
+      options: { httpRequest, isInitRun: false, ...opts } as any,
+      pagination: { current: 3, pageSize: 10, total: 100, ...pagination },
+    }
+    return { props, httpRequest, calls }
+  }
+
+  it('新增暴露 reload / doLayout 方法', () => {
+    const { props } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    expect(typeof vm.reload).toBe('function')
+    expect(typeof vm.doLayout).toBe('function')
+    expect(typeof vm.refresh).toBe('function')
+  })
+
+  it('默认（无 refetchKeepPage）：httpRequestInstance 回到第 1 页', async () => {
+    const { props, calls } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    expect(vm.paginationConfig.current).toBe(3)
+    await vm.httpRequestInstance()
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
+  })
+
+  it('refetchKeepPage:true：httpRequestInstance 保留当前页', async () => {
+    const { props, calls } = makeReqProps({ refetchKeepPage: true })
+    const vm = mount(EsTable, { props }).vm as any
+    expect(vm.paginationConfig.current).toBe(3)
+    await vm.httpRequestInstance()
+    expect(vm.paginationConfig.current).toBe(3)
+    expect(calls[calls.length - 1].pageIndex).toBe(3)
+  })
+
+  it('keepPage:false 显式覆盖 refetchKeepPage（查询语义回第 1 页）', async () => {
+    const { props, calls } = makeReqProps({ refetchKeepPage: true })
+    const vm = mount(EsTable, { props }).vm as any
+    await vm.httpRequestInstance({}, { keepPage: false })
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
+  })
+
+  it('reload 回第 1 页取数；refresh 保留当前页取数', async () => {
+    const { props, calls } = makeReqProps()
+    const vm = mount(EsTable, { props }).vm as any
+    // refresh：keepPage:true → 停留第 3 页
+    await vm.refresh()
+    expect(vm.paginationConfig.current).toBe(3)
+    expect(calls[calls.length - 1].pageIndex).toBe(3)
+    // reload：回到第 1 页
+    await vm.reload()
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(calls[calls.length - 1].pageIndex).toBe(1)
   })
 })
 
@@ -340,5 +409,86 @@ describe('EsTable — EDGE CASES', () => {
     })
     const vm = wrapper.vm as any
     expect(vm.adaptedColumns).toHaveLength(0)
+  })
+})
+
+describe('EsTable — 内建客户端分页 (localPagination)', () => {
+  const makeData = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: String(i + 1), name: `姓名${i + 1}` }))
+  const columns = [
+    { prop: 'id', label: 'ID' },
+    { prop: 'name', label: '姓名' },
+  ]
+
+  it('切当前页：displayDataSource 只返回当前页数据，total 回填全量长度', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    expect(vm.displayDataSource).toHaveLength(10)
+    expect(vm.displayDataSource[0].id).toBe('1')
+    expect(vm.paginationConfig.total).toBe(25)
+    expect(vm.showPagination).toBe(true)
+  })
+
+  it('翻页：current 变化后 displayDataSource 切到对应页', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    vm.paginationConfig.current = 3
+    await nextTick()
+    // 第三页只剩 5 条
+    expect(vm.displayDataSource).toHaveLength(5)
+    expect(vm.displayDataSource[0].id).toBe('21')
+  })
+
+  it('边界回收：数据缩短使当前页越界时回退到最后有效页', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    vm.paginationConfig.current = 3
+    await nextTick()
+    // 数据缩短到 8 条，只有 1 页
+    await wrapper.setProps({ dataSource: makeData(8) })
+    await nextTick()
+    expect(vm.paginationConfig.total).toBe(8)
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(vm.displayDataSource).toHaveLength(8)
+  })
+
+  it('请求模式下不启用本地分页（displayDataSource 不切片）', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true, actionUrl: '/api/list' } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    expect(vm.isLocalPagination).toBe(false)
+    // 请求模式 tableData 为空 → 回退到全量 dataSource（不切片）
+    expect(vm.displayDataSource).toHaveLength(25)
   })
 })

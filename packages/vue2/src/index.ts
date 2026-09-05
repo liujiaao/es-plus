@@ -36,6 +36,8 @@
  */
 
 import { configureEsPlus } from '@es-plus/core'
+// 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
+import { httpRequest } from '@es-plus/core'
 import type { Vue2Constructor } from './vue-compat'
 import { isVue27Plus, VueCompositionAPIPlugin } from './vue-compat'
 
@@ -43,9 +45,11 @@ import EsForm from './components/es-form'
 import EsTable from './components/es-table'
 import EsDialog, { useDialog } from './components/es-dialog'
 import EsCrudPage from './components/es-crud-page'
+import EsErrorBoundary from './components/es-error-boundary'
+import SvgIcon from './components/svg-icon'
 
 // 组件清单（用于全局注册）
-const components = [EsForm, EsTable, EsDialog, EsCrudPage]
+const components = [EsForm, EsTable, EsDialog, EsCrudPage, EsErrorBoundary, SvgIcon]
 
 interface InstallOptions extends Record<string, unknown> {
   /** 是否跳过组件的全局注册（按需导入场景下置为 true） */
@@ -172,10 +176,16 @@ export {
   EsTable,
   EsDialog,
   EsCrudPage,
+  EsErrorBoundary,
+  SvgIcon,
   useDialog,
   configureEsPlus,
+  httpRequest,
   install,
 }
+
+// vxe 打印辅助（合并单元格打印），三端统一从 @es-plus/core 再导出
+export { patchHtmlRowSpans } from '@es-plus/core'
 
 // ─── 类型导出（与 Vue 3 版本保持完全一致的类型契约） ───
 export type {
@@ -192,6 +202,8 @@ export type {
   DialogActionContext,
 } from './components/es-crud-page'
 
+// ─── 类型导出（跨渲染器契约，须与 core/public-types PUBLIC_CONTRACT_TYPES 一致） ───
+// vue2 不做框架特化，全部契约类型直接透传 @es-plus/core 权威定义。
 export type {
   ModelData,
   RenderFn,
@@ -204,6 +216,7 @@ export type {
   FormItemOption,
   BtnConfig,
   LayoutFormProps,
+  ListenToCallBack,
   TableColumn,
   ConfigTableOut,
   TableOptions,
@@ -212,12 +225,27 @@ export type {
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions,
-} from './types'
+  VxeEditRender,
+  VxeEditConfig,
+  VxeExportConfig,
+  VxeToolbarConfig,
+  VxeColumnConfig,
+  VxeKeyboardConfig,
+  VxeMouseConfig,
+  VxeClipboardConfig,
+  VxeValidConfig,
+  VxeFooterMethod,
+  TableEngineExposed,
+  VxeTreeConfig,
+  VxeProxyConfig,
+  VxeExpandConfig,
+  VxeSeqConfig,
+} from '@es-plus/core'
 
 // ─── 默认导出（带 install 的对象，可直接 Vue.use()） ───
-// NOTE: keep `version` in sync with package.json — __tests__/exports.spec.ts
-// asserts equality so a drift fails CI.
+// Version is injected at build time from package.json via vite define.
+declare const __PKG_VERSION__: string
 export default {
-  version: '1.1.5',
+  version: __PKG_VERSION__,
   install,
 }

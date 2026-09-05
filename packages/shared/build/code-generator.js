@@ -1,5 +1,5 @@
 import { generateCrudConfig, generateCode } from "./crud-engine.js";
-import { DEFAULT_TARGET, getEsPlusPackageName, rewriteVModelSync, rewriteElementUsage, } from "./target.js";
+import { DEFAULT_TARGET, getEsPlusPackageName, rewriteVModelSync, rewriteElementUsage, mapElementNameToAntdv, } from "./target.js";
 /**
  * 从自然语言描述生成完整 SFC（直接基于 EsTable + EsForm，不使用 EsCrudPage）
  *
@@ -15,6 +15,9 @@ export function generateCrudPage(description, target = DEFAULT_TARGET) {
     if (target === 'vue2') {
         code = adaptCodeToVue2(code);
     }
+    else if (target === 'antdv') {
+        code = adaptCodeToAntdv(code);
+    }
     const summary = [
         `Generated CRUD page (${target}) with:`,
         `- ${config.formItems.length} query form fields`,
@@ -23,15 +26,21 @@ export function generateCrudPage(description, target = DEFAULT_TARGET) {
         config.dialogFormItems?.length
             ? `- ${config.dialogFormItems.length} dialog form fields (with validation rules)`
             : "",
-        config.hasStatusRender ? `- Status column with ${target === 'vue2' ? 'el-tag' : 'ElTag'} render` : "",
+        config.hasStatusRender
+            ? `- Status column with ${target === 'antdv' ? 'a-tag' : target === 'vue2' ? 'el-tag' : 'ElTag'} render`
+            : "",
         config.actions.includes("delete") ? `- Delete confirmation dialog` : "",
         target === 'vue2'
             ? `- Target: Vue 2 + Element UI (@es-plus/vue2)`
-            : `- Target: Vue 3 + Element Plus (@es-plus/vue3)`,
+            : target === 'antdv'
+                ? `- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)`
+                : `- Target: Vue 3 + Element Plus (@es-plus/vue3)`,
         ``,
         target === 'vue2'
             ? `Note: 需要在 main.js 中执行 Vue.use(ElementUI) + Vue.use(EsPlus)，并通过 esPlus 配置全局 httpRequest`
-            : `Note: 需要在 main.ts 中配置全局 app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`,
+            : target === 'antdv'
+                ? `Note: 需要在 main.ts 中 app.use(Antd) + app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`
+                : `Note: 需要在 main.ts 中配置全局 app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`,
         `详见: https://es-plus.liujiaao.top/docs/usage`,
     ]
         .filter(Boolean)
@@ -68,6 +77,61 @@ function adaptCodeToVue2(code) {
     return out;
 }
 /**
+ * 把 Vue 3 + Element Plus 风格生成的 SFC 代码改写为 Vue 3 + Ant Design Vue 风格
+ *
+ * antdv 与 vue3 共享 Vue 3 语法（保留 <script setup> / v-model:xxx），差异在于：
+ *  1. es-plus 包名：@es-plus/vue3 → @es-plus/adapter-antdv
+ *  2. 删除确认：ElMessageBox.confirm(...).then().catch()（Promise 形态）
+ *     → Modal.confirm({ title, content, async onOk() { ... } })（对象形态）
+ *  3. 状态列：h(ElTag, { type: ... 'success' : 'danger' }) → h(Tag, { color: ... 'green' : 'red' })
+ *  4. import { ... } from 'element-plus' → 命名映射 + from 'ant-design-vue'
+ *  5. 其余标识符（ElMessage → message 等）统一改写
+ *
+ * 说明：仅针对 crud-engine.generateCode 产出的固定结构做转换（非通用转换器）。
+ */
+function adaptCodeToAntdv(code) {
+    let out = code;
+    // 1. @es-plus/vue3 (and legacy es-plus-ui) → @es-plus/adapter-antdv
+    out = out.replace(/from\s+['"]@es-plus\/vue3['"]/g, "from '@es-plus/adapter-antdv'");
+    out = out.replace(/from\s+['"]es-plus-ui['"]/g, "from '@es-plus/adapter-antdv'");
+    // 2. 删除确认弹窗的结构差异：ElMessageBox Promise 形态 → Modal.confirm 对象形态
+    out = rewriteConfirmToModal(out);
+    // 3. 状态列渲染：h(ElTag, { type }) → h(Tag, { color })，并映射 success/danger → green/red
+    out = out.replace(/h\(ElTag,\s*\{\s*type:\s*(row\.\w+ === 1)\s*\?\s*'success'\s*:\s*'danger'\s*\}/g, "h(Tag, { color: $1 ? 'green' : 'red' }");
+    // 4. element-plus import → 命名映射 + ant-design-vue
+    out = out.replace(/import\s+\{([^}]+)\}\s+from\s+['"]element-plus['"]/g, (_m, names) => {
+        const mapped = [
+            ...new Set(names.split(',').map((n) => mapElementNameToAntdv(n.trim())).filter(Boolean)),
+        ];
+        return `import { ${mapped.join(', ')} } from 'ant-design-vue'`;
+    });
+    // 5. 收尾标识符改写（ElMessage → message 等；ElMessageBox 已在第 2 步结构化处理）
+    out = rewriteElementUsage(out, 'antdv');
+    return out;
+}
+/**
+ * 把固定结构的 Element `ElMessageBox.confirm(...).then(async () => {...}).catch(() => {})`
+ * 转换为 Ant Design Vue 的 `Modal.confirm({ title, content, async onOk() {...} })`。
+ *
+ * 仅匹配 crud-engine / structured-generator 生成的稳定形态。
+ */
+function rewriteConfirmToModal(code) {
+    const re = /([ \t]*)ElMessageBox\.confirm\(([^)]*)\)\s*\n\s*\.then\(async \(\) => \{([\s\S]*?)\n[ \t]*\}\)\s*\n[ \t]*\.catch\(\(\) => \{\}\)/g;
+    return code.replace(re, (_m, indent, args, body) => {
+        const parts = args.split(',');
+        const content = (parts[0] || "''").trim();
+        const title = (parts[1] || "'提示'").trim();
+        return [
+            `${indent}Modal.confirm({`,
+            `${indent}  title: ${title},`,
+            `${indent}  content: ${content},`,
+            `${indent}  async onOk() {${body}`,
+            `${indent}  },`,
+            `${indent}})`,
+        ].join('\n');
+    });
+}
+/**
  * 把单一 <script setup [lang="ts"]>...</script> 块改写为
  * <script [lang="ts"]>import { defineComponent } from 'vue'; export default defineComponent({ setup() { ... return { exposed... } } })</script>
  *
@@ -87,8 +151,8 @@ function transformScriptSetupBlock(source) {
         return source;
     const lang = match[1] || '';
     const body = match[2];
-    // 收集顶层声明标识符
-    const declRegex = /^[ \t]*(?:const|let|var)\s+([\w$]+)\s*=|^[ \t]*(?:async\s+)?function\s+([\w$]+)/gm;
+    // 收集顶层声明标识符（仅列首，避免把函数体内部缩进的 const 也收集进 return）
+    const declRegex = /^(?:const|let|var)\s+([\w$]+)\s*=|^(?:async\s+)?function\s+([\w$]+)/gm;
     const exposed = new Set();
     let m;
     while ((m = declRegex.exec(body)) !== null) {
@@ -99,7 +163,9 @@ function transformScriptSetupBlock(source) {
     // ES `import` statements MUST sit at the top of the module — they're illegal
     // inside a function body. Pull every top-level import out of the setup body
     // first, then emit imports → defineComponent → setup() { non-import body }.
-    const importRe = /^[ \t]*import\s+[^;]+;?\s*$/gm;
+    // 注意：生成的 import 均为单行，用 `[^\n]*`（行尾截止）而非 `[^;]+`（会跨行贪婪吞噬
+    // 整个 setup 体），否则无分号时会把后续所有声明误当作 import 删除。
+    const importRe = /^[ \t]*import\b[^\n]*$/gm;
     const imports = [];
     const bodyWithoutImports = body.replace(importRe, (line) => {
         imports.push(line.trim());

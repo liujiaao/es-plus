@@ -7,9 +7,9 @@ name: Typecheck
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   pull_request:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
       # packages get to report independently.
       fail-fast: false
       matrix:
-        pkg: [core, shared, vue2, vue3, cli, mcp-server]
+        pkg: [core, shared, vue2, vue3, adapter-antdv, cli, mcp-server]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,3 +42,37 @@ jobs:
 
       - name: Typecheck ${{ matrix.pkg }}
         run: npm run typecheck --workspace @es-plus/${{ matrix.pkg }}
+
+  consistency:
+    name: Consistency (type exports + schema single-source)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # 三包契约类型导出一致 + schema↔类型同步 + schemas 单源无漂移
+      - name: Check cross-renderer consistency
+        run: npm run check:consistency
+
+  golden:
+    name: Golden config→code (Layer-1 deterministic scorer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # score-golden.mjs imports generateFromConfig from @es-plus/shared's build/
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
+      # Free per-PR gate: every golden config validates + generates coherent code
+      # (fields/actions/tableBtn codes preserved; extension points marked, not dropped).
+      - name: Score golden corpus
+        run: npm run test:golden
+
+

@@ -1,0 +1,21 @@
+{
+  "nl": "设备管理：表格展示设备编号、设备名称、在线状态（在线/离线/故障）用 Switch 表示是否启用、安装日期、最后上报时间；查询有设备名称、在线状态；支持新增、编辑、删除、导入。",
+  "config": {
+    "name": "DeviceManage",
+    "apiUrl": "/api/devices",
+    "fields": [
+      { "prop": "deviceNo", "label": "设备编号", "formtype": "Input", "inQuery": false },
+      { "prop": "deviceName", "label": "设备名称", "formtype": "Input" },
+      {
+        "prop": "online",
+        "label": "在线状态",
+        "formtype": "Switch",
+        "inQuery": true
+      },
+      { "prop": "installDate", "label": "安装日期", "formtype": "DatePicker" },
+      { "prop": "lastReportTime", "label": "最后上报时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete", "import"]
+  },
+  "notes": "Switch for boolean online status; system report time excluded from form"
+}

@@ -26,37 +26,21 @@ export {
   setNestedValue,
 } from './shared'
 
-// ─── 类型定义 ─────────────────────────────────────────────────
-export type {
-  ModelData,
-  RenderFn,
-  AnyVNode,
-  EsButtonType,
-  EsButtonSize,
-  EsTableSize,
-  ApiParams,
-  FormType,
-  FormItemOption,
-  BtnConfig,
-  LayoutFormProps,
-  ListenToCallBack,
-  TableColumn,
-  ConfigTableOut,
-  TableOptions,
-  PaginationConfig,
-  DialogOptions,
-  EsFormInstance,
-  EsTableInstance,
-  EsPlusOptions,
-} from './types'
+// ─── 类型定义（跨渲染器契约 barrel，单一权威源）─────────────
+// 所有跨渲染器契约类型统一从 ./public-types 透传，三个渲染器 index.ts
+// 必须导出同名类型，由 scripts/check-type-exports.mjs 强制校验。
+export type * from './public-types'
+export { PUBLIC_CONTRACT_TYPES } from './public-types'
+export type { PublicContractTypeName } from './public-types'
 
 // ─── 全局配置 ─────────────────────────────────────────────────
 export {
   configureEsPlus,
   getGlobalConfig,
   resetGlobalConfig,
+  httpRequest,
 } from './config'
-export type { EsPlusGlobalConfig } from './config'
+export type { EsPlusGlobalConfig, HttpRequestFn } from './config'
 
 // ─── 常量 ─────────────────────────────────────────────────────
 export {
@@ -64,6 +48,7 @@ export {
   FORM_TYPE_ALIASES,
   SPECIAL_BTN_KEYS,
   BUILT_IN_BTN_KEYS,
+  TABLE_CONTEXT_INJECT_KEY,
   OPERATION_COLUMN_PROP_SFC,
   OPERATION_COLUMN_PROP_CRUD_PAGE,
   VALID_CRUD_ACTIONS,
@@ -92,6 +77,10 @@ export {
   clearAllSelection,
 } from './table-selection'
 export type { SelectionState, TableRefLike } from './table-selection'
+
+// ─── 分页请求判定 ─────────────────────────────────────────────
+export { resolveKeepPage, computeBoundaryRollback } from './pagination'
+export type { BoundaryRollbackInput, BoundaryRollbackResult } from './pagination'
 
 // ─── 请求相关 ─────────────────────────────────────────────────
 export {
@@ -123,6 +112,12 @@ export {
   applyConfigTableOut,
 } from './field-resolver'
 
+// ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
+export { buildFirstClassGridOptions } from './vxe-engine'
+
+// ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
+export { patchHtmlRowSpans } from './vxe-print'
+
 // ─── 向后兼容适配层 ──────────────────────────────────────────
 export {
   normalizeFormType,
@@ -130,6 +125,8 @@ export {
   getCallback,
   normalizeFormItem,
   normalizeFormItemList,
+  filterBtnProps,
+  BTN_ORCHESTRATION_KEYS,
 } from './compat'
 // compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出
 export {

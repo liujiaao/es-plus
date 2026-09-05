@@ -1,8 +1,12 @@
 const TYPE_RULES = [
     { keywords: ['日期', 'date', '创建时间', 'createTime', '更新时间', 'updateTime', '开始日期', '结束日期', '下单日期', '下单时间'], type: 'DatePicker', attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } },
     { keywords: ['时间', 'time', '时刻', 'timerange', 'timepicker'], type: 'TimePicker', attrs: { type: 'timerange' } },
+    // Slider 提前到 Cascader 之前：'价格区间'/'区间' 含 '区'，若 Cascader 先命中会被误判为级联
+    { keywords: ['进度', 'slider', '价格区间', '区间', '范围'], type: 'Slider' },
     { keywords: ['省', '市', '区', '省市', '城市', '地区', 'cascader', '层级', '区域', '级联'], type: 'Cascader' },
     // status BEFORE plain 状态/type/分类 so 'status' wins over generic 'Select'
+    // '文件类型'/'图片类型' 含 '类型' 但语义是 Upload，需在 Select 之前命中
+    { keywords: ['文件类型', '图片类型'], type: 'Upload' },
     { keywords: ['状态', 'status', '类型', 'type', '分类', 'category', '级别', 'level', '来源', 'source', '可见范围', '上架状态'], type: 'Select' },
     { keywords: ['开关', 'switch', '是否', 'enable'], type: 'Switch' },
     { keywords: ['评分', 'rate', '星级', 'score'], type: 'Rate' },
@@ -11,7 +15,6 @@ const TYPE_RULES = [
     { keywords: ['备注', 'remark', '描述', 'description', '内容', 'content', '简介', 'intro', '富文本'], type: 'Input', attrs: { type: 'textarea', rows: 3 } },
     { keywords: ['性别', 'gender', '单选', 'radio'], type: 'Radio' },
     { keywords: ['多选', 'checkbox', '兴趣', '爱好', '标签', 'tags'], type: 'Checkbox' },
-    { keywords: ['进度', 'slider', '价格区间', '区间', '范围'], type: 'Slider' },
     { keywords: ['穿梭', 'transfer', '分配'], type: 'Transfer' },
 ];
 const FIELD_PROP_MAP = {
@@ -226,10 +229,12 @@ function parseFields(rawInput) {
     // CAUTION: only put words here that CANNOT appear as field names — "分类"
     // is a common field name (preset 3 table includes 分类) and was previously a
     // boundary, which truncated the table section before its first item.
-    const queryBoundary = /表格|列表|支持|操作|底部|每行|点击|弹窗|多步|第[一二三四五六七八九十1-9]步|[。;；]/;
-    const tableBoundary = /查询|支持|操作|底部|每行|点击|弹窗|多步|第[一二三四五六七八九十1-9]步|[。;；]/;
-    // Match either "查询" or "查询条件" or "查询字段" optionally followed by ：
-    const queryHead = /查询(?:条件|字段)?[：:有]?/;
+    // '操作' 作为边界词会误匹配 '操作人'/'操作时间' 等字段名 → 负向前瞻排除常见 '操作X' 字段
+    const queryBoundary = /表格|列表|支持|操作(?!人|时间|类型|记录|内容|对象|日志|者)|底部|每行|点击|弹窗|多步|第[一二三四五六七八九十1-9]步|[。;；]/;
+    const tableBoundary = /查询|支持|操作(?!人|时间|类型|记录|内容|对象|日志|者)|底部|每行|点击|弹窗|多步|第[一二三四五六七八九十1-9]步|[。;；]/;
+    // Match "查询" / "查询条件" / "查询字段" (optionally followed by ：/：/有)。
+    // 要求"查询"位于子句开头（输入起始或标点之后），避免误匹配"日志查询""订单查询"这类复合名词里的"查询"。
+    const queryHead = /(?:^|[，,。;；：:\s])查询(?:条件|字段)?[：:有]?/;
     // Match REAL table heads, NOT compound nouns like "商品列表" / "订单列表".
     // A real table head must be followed by list-introducing context — either:
     //   (a) "表格" / "列表" + one of 列/字段/显示/展示/有/：:  (e.g. "表格列：", "列表显示")
@@ -410,6 +415,8 @@ function normalizeSpans(formItems) {
 }
 // ─── public entry ────────────────────────────────────────────────────────────
 export function generateCrudConfig(input) {
+    // 每次生成重置计数器，保证未命中映射的字段 prop 名确定性（否则跨调用累计 field_N）
+    fieldCounter = 0;
     const fields = parseFields(input);
     const actions = parseActions(input);
     const { featureHints, optionPatches } = detectFeatures(input);
@@ -630,10 +637,14 @@ export function generateCode(config) {
         lines.push(`function handleDelete(row) {`);
         lines.push(`  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`);
         lines.push(`    .then(async () => {`);
-        lines.push(`      // TODO: 调用删除接口`);
-        lines.push(`      // await axios.delete(\`/api/item/\${row.id}\`)`);
-        lines.push(`      ElMessage.success('删除成功')`);
-        lines.push(`      tableRef.value?.httpRequestInstance()`);
+        lines.push(`      try {`);
+        lines.push(`        // TODO: 调用删除接口`);
+        lines.push(`        // await axios.delete(\`/api/item/\${row.id}\`)`);
+        lines.push(`        ElMessage.success('删除成功')`);
+        lines.push(`        tableRef.value?.httpRequestInstance()`);
+        lines.push(`      } catch (err) {`);
+        lines.push(`        ElMessage.error('删除失败')`);
+        lines.push(`      }`);
         lines.push(`    })`);
         lines.push(`    .catch(() => {})`);
         lines.push(`}`);
@@ -670,13 +681,13 @@ export function generateCode(config) {
         lines.push(`      { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {`);
         lines.push(`        try {`);
         lines.push(`          await getRefs('form')?.validate()`);
-        lines.push(`          // TODO: 调用保存接口`);
-        lines.push(`          // await axios.post('/api/save', formData)`);
-        lines.push(`          close()`);
-        lines.push(`          tableRef.value?.httpRequestInstance()`);
         lines.push(`        } catch {`);
-        lines.push(`          // 表单验证失败`);
+        lines.push(`          return // 表单校验未通过：用户需修正，静默中止`);
         lines.push(`        }`);
+        lines.push(`        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）`);
+        lines.push(`        // await axios.post('/api/save', formData)`);
+        lines.push(`        close()`);
+        lines.push(`        tableRef.value?.httpRequestInstance()`);
         lines.push(`      }}`);
         lines.push(`    ]`);
         lines.push(`  })`);

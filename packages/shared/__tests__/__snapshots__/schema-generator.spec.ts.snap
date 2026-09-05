@@ -726,25 +726,37 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "label": "时间",
       "prop": "time",
     },
+    {
+      "label": "操作人",
+      "prop": "operator",
+    },
+    {
+      "label": "内容",
+      "prop": "content",
+    },
+    {
+      "label": "只查看不编辑",
+      "prop": "field_2",
+    },
   ],
   "dialogFormItems": [
     {
       "attrs": {
         "clearable": true,
-        "placeholder": "请输入查询关键词",
+        "placeholder": "请输入关键词",
       },
       "formItemOptions": {
         "rules": [
           {
-            "message": "请输入查询关键词",
+            "message": "请输入关键词",
             "required": true,
             "trigger": "blur",
           },
         ],
       },
       "formtype": "Input",
-      "label": "查询关键词",
-      "prop": "field_3",
+      "label": "关键词",
+      "prop": "keyword",
       "span": 24,
     },
     {
@@ -798,7 +810,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       },
       "formtype": "DatePicker",
       "label": "日期范围",
-      "prop": "field_4",
+      "prop": "field_1",
       "span": 24,
     },
     {
@@ -821,16 +833,75 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       "prop": "time",
       "span": 24,
     },
+    {
+      "attrs": {
+        "clearable": true,
+        "placeholder": "请输入操作人",
+      },
+      "formItemOptions": {
+        "rules": [
+          {
+            "message": "请输入操作人",
+            "required": true,
+            "trigger": "blur",
+          },
+        ],
+      },
+      "formtype": "Input",
+      "label": "操作人",
+      "prop": "operator",
+      "span": 24,
+    },
+    {
+      "attrs": {
+        "clearable": true,
+        "placeholder": "请输入内容",
+        "rows": 3,
+        "type": "textarea",
+      },
+      "formItemOptions": {
+        "rules": [
+          {
+            "message": "请输入内容",
+            "required": true,
+            "trigger": "blur",
+          },
+        ],
+      },
+      "formtype": "Input",
+      "label": "内容",
+      "prop": "content",
+      "span": 24,
+    },
+    {
+      "attrs": {
+        "clearable": true,
+        "placeholder": "请输入只查看不编辑",
+      },
+      "formItemOptions": {
+        "rules": [
+          {
+            "message": "请输入只查看不编辑",
+            "required": true,
+            "trigger": "blur",
+          },
+        ],
+      },
+      "formtype": "Input",
+      "label": "只查看不编辑",
+      "prop": "field_2",
+      "span": 24,
+    },
   ],
   "formItems": [
     {
       "attrs": {
         "clearable": true,
-        "placeholder": "请输入查询关键词",
+        "placeholder": "请输入关键词",
       },
       "formtype": "Input",
-      "label": "查询关键词",
-      "prop": "field_3",
+      "label": "关键词",
+      "prop": "keyword",
       "span": 8,
     },
     {
@@ -866,7 +937,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       },
       "formtype": "DatePicker",
       "label": "日期范围",
-      "prop": "field_4",
+      "prop": "field_1",
       "span": 8,
     },
   ],
@@ -1304,7 +1375,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
   "columns": [
     {
       "label": "角色名称",
-      "prop": "field_7",
+      "prop": "field_1",
     },
     {
       "label": "状态",
@@ -1337,7 +1408,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       },
       "formtype": "Input",
       "label": "角色名称",
-      "prop": "field_7",
+      "prop": "field_1",
       "span": 24,
     },
     {
@@ -1420,7 +1491,7 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
       },
       "formtype": "Input",
       "label": "角色名称",
-      "prop": "field_7",
+      "prop": "field_1",
       "span": 6,
     },
     {
@@ -1776,9 +1847,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1823,9 +1898,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1905,9 +1984,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1952,9 +2035,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1999,9 +2086,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -2046,9 +2137,13 @@ async function fetchData(params) {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      ElMessage.success('删除成功')
-      crudRef.value?.refresh()
+      try {
+        // TODO: 调用删除接口
+        ElMessage.success('删除成功')
+        crudRef.value?.refresh()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }

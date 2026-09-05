@@ -40,7 +40,7 @@
             :row="{ isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
             :form-model="resolvedModel"
             :form-item-list="formItem"
-            :render="renderBtn"
+            :render="renderBtnFn"
           />
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
             <!-- btnColSpanRow=true 时左右分布 -->
@@ -138,11 +138,11 @@
  *
  * 与 Vue 3 + Element Plus 版本（packages/vue3/.../es-form.vue）的功能等价点：
  *  - 24 栅格自动布局 / 折叠展开
- *  - 13 种内置 formtype
+ *  - 14 种内置 formtype
  *  - 远端 dataOptions 加载（apiParams + httpRequest）
  *  - 工具栏按钮（左右分布、权限过滤、内置 query/rest 行为）
- *  - 与 EsTable 联动（通过 inject getTableInstantce）
- *  - exposed 方法：validate / resetFields / clearValidate / scrollToField
+ *  - 与 EsTable 联动（通过 inject TABLE_CONTEXT_INJECT_KEY）
+ *  - exposed 方法：validate / resetFields / clearValidate / validateField / scrollToField
  *
  * Vue 2 关键差异点：
  *  - 使用 defineComponent + setup() 替代 <script setup>
@@ -156,8 +156,11 @@ import { useFormInputs } from '../../composables/use-form-inputs'
 import { useFormLayout } from '../../composables/use-form-layout'
 import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
-import { getGlobalConfig } from '@es-plus/core'
+import { getGlobalConfig, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
+
+// 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
+const warnedIsHiden = new Set<string>()
 
 /**
  * 内联子组件：渲染 form-input 函数返回的 VNode
@@ -175,7 +178,7 @@ const RenderDomForm = defineComponent({
     render: { type: Function, default: undefined },
     model: { type: Object as PropType<ModelData>, default: () => ({}) },
   },
-  render(createElement, ctx) {
+  render(createElement: any, ctx: any) {
     const { row, index, model, render } = ctx.props
     if (typeof render !== 'function') return null
     const safeRow = row || {}
@@ -196,7 +199,7 @@ const RenderBtn = defineComponent({
     formModel: { type: Object, default: () => ({}) },
     render: { type: Function, default: undefined },
   },
-  render(createElement, ctx) {
+  render(createElement: any, ctx: any) {
     const { formItemList, formModel, row, render } = ctx.props
     if (typeof render !== 'function') return null
     const renderContent = render(row, formModel, formItemList, createElement) || ''
@@ -280,7 +283,7 @@ export default defineComponent({
     }
 
     // ─── 与 EsTable 联动 ──
-    const injectedTableInstant = inject<(() => unknown) | null>('getTableInstantce', null)
+    const injectedTableInstant = inject<(() => unknown) | null>(TABLE_CONTEXT_INJECT_KEY, null)
     const getTableInstant = computed(() => {
       if (injectedTableInstant) {
         return typeof injectedTableInstant === 'function'
@@ -288,7 +291,7 @@ export default defineComponent({
           : injectedTableInstant
       }
       const proxy = (instance as unknown as { proxy?: Record<string, unknown> })?.proxy
-      const fn = proxy?.getTableInstantce
+      const fn = proxy?.getTableInstance
       if (typeof fn === 'function') return (fn as () => unknown)()
       return fn
     })
@@ -308,7 +311,7 @@ export default defineComponent({
       return `el-icon-${kebab}`
     }
     const filterOptions = (it: BtnConfig) => {
-      const { icon: _icon, ...opt } = it as unknown as Record<string, unknown>
+      const opt = filterBtnProps(it as unknown as Record<string, unknown>)
       // 把用户传入的 size 经 mapSize 翻译到 Element UI v2 语义；缺省时与表单默认尺寸
       // (mini) 对齐，避免按钮比表单输入大一截。详见 packages/vue2/src/utils/size.ts。
       if (opt.size !== undefined) {
@@ -422,6 +425,13 @@ export default defineComponent({
           // 后续规范化为 `isHidden`。两者都接受，原始拼写优先（保持旧文档案例可直接运行）。
           const legacyHide = (it as unknown as { isHiden?: unknown }).isHiden
           const fixedHide = it.isHidden
+          if (typeof legacyHide === 'function' && !warnedIsHiden.has(it.prop)) {
+            warnedIsHiden.add(it.prop)
+            console.warn(
+              `[@es-plus/vue2] 字段「${it.prop}」使用了拼写错误的 \`isHiden\`（少一个 d）。` +
+                '该兼容写法仅 Vue 2 支持，vue3 / adapter-antdv 会静默忽略。请统一改用 `isHidden`。'
+            )
+          }
           const hideFn = typeof legacyHide === 'function'
             ? (legacyHide as (m: ModelData, item: FormItemOption, props: Record<string, unknown>) => boolean)
             : typeof fixedHide === 'function'
@@ -488,6 +498,13 @@ export default defineComponent({
 
     const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
+    // 供模板绑定：把 Function | boolean 的 renderBtn 收敛为函数或 undefined。
+    // 不要在模板里写 `renderBtn as Function` —— Vue2 模板表达式由 babel 解析，
+    // TS 断言会导致 vite build 失败（tsc 不查模板故 typecheck 反而漏过）。
+    const renderBtnFn = computed(() =>
+      typeof props.renderBtn === 'function' ? props.renderBtn : undefined,
+    )
+
     // ─── 按钮点击逻辑 ──
     const handleBtnClick = (it: BtnConfig) => {
       const formRef = (templateRefs().formRef as unknown) as Record<string, unknown> | null
@@ -496,16 +513,20 @@ export default defineComponent({
     }
 
     const queryTableRequest = (model: ModelData, formRef: { resetFields?: () => void } | null, key?: string) => {
-      const t = getTableInstant.value as { httpRequestInstance?: (p: unknown) => void } | null
+      const t = getTableInstant.value as {
+        httpRequestInstance?: (p: unknown, o?: { keepPage?: boolean }) => Promise<unknown> | void
+      } | null
       if (key === 'query') {
         if (isParentTable.value) {
-          t?.httpRequestInstance?.(model)
+          // 查询=新搜索，始终回到第 1 页（即使表级配置了 refetchKeepPage）
+          // 失败已由 es-table 内部 emit('request-error') 暴露，这里吞掉 rejection 防 unhandled（对齐 vue3）
+          t?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
         }
       } else if (key === 'rest' && formRef) {
-        if (isParentTable.value) {
-          t?.httpRequestInstance?.(model)
-        }
         formRef.resetFields?.()
+        if (isParentTable.value) {
+          t?.httpRequestInstance?.(model, { keepPage: false })?.catch(() => {})
+        }
       }
     }
 
@@ -540,24 +561,39 @@ export default defineComponent({
 
     const validate = (): Promise<boolean> => {
       const ref = getFormRef()
-      if (!ref) return Promise.resolve(false)
-      // Element UI el-form.validate 接受 callback；若返回 Promise 我们以 callback 形式包装
-      return new Promise<boolean>((resolve) => {
+      // 无表单实例：与 vue3/antdv 的 getFormRef()?.validate()（await undefined）一致——放行
+      if (!ref) return Promise.resolve(true)
+      // Element UI el-form.validate 接受 callback；这里对齐 vue3(el-form)/antdv(a-form)
+      // 原生 validate() 的 Promise 语义：校验通过 resolve(true)，不通过则 reject。
+      // EsCrudPage 的提交流程只靠 await validate() 抛错来中止（返回值被忽略），
+      // 若此处像旧实现那样 resolve(false)，非法的新增/编辑表单会被静默提交并关闭弹窗
+      // （三端里唯独 vue2 绕过校验）。reject 才能与另两端一致地拦截非法提交。
+      return new Promise<boolean>((resolve, reject) => {
         try {
           const maybePromise = (ref as unknown as { validate: (cb: (valid: boolean) => void) => void | Promise<boolean> }).validate((valid: boolean) => {
-            resolve(!!valid)
+            if (valid) resolve(true)
+            else reject(new Error('EsForm validation failed'))
           })
           if (maybePromise && typeof (maybePromise as Promise<boolean>).then === 'function') {
-            ;(maybePromise as Promise<boolean>).then(resolve).catch(() => resolve(false))
+            ;(maybePromise as Promise<boolean>).then(() => resolve(true)).catch(reject)
           }
         } catch (e) {
-          resolve(false)
+          reject(e)
         }
       })
     }
     const resetFields = () => getFormRef()?.resetFields()
     const clearValidate = (p?: string | string[]) => getFormRef()?.clearValidate(p)
     const validateField = (p: string | string[]) => getFormRef()?.validateField(p)
+    // element-ui 2.15.14 的 el-form 没有原生 scrollToField；这里对齐 vue3/antdv 的 API，
+    // 通过 el-form 内部维护的 fields 数组找到对应 el-form-item 实例后滚动到视口居中。
+    const scrollToField = (prop: string) => {
+      const form = getFormRef() as unknown as {
+        fields?: Array<{ prop?: string; $el?: HTMLElement }>
+      } | null
+      const field = form?.fields?.find((f) => f && f.prop === prop)
+      field?.$el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    }
 
     const formItmeRequestInstance = async (propsList: string[]) => {
       const list = formItemListFilter.value
@@ -576,8 +612,36 @@ export default defineComponent({
       })
     }
 
+    /**
+     * 加固 Element UI el-form 的 label-width 拆卸逻辑，消除
+     * `[ElementForm]unpected width` 报错。
+     *
+     * 背景：es-form 默认 labelWidth: 'auto'。auto 模式下 el-form-item 在 mounted
+     * 时按「label 实测宽度」调用 elForm.registerLabelWidth——但当 form-item 处于
+     * 隐藏容器（如 el-tabs 里非激活、display:none 的 tab-pane）时实测宽度为 0，
+     * EUI 会跳过注册；而 beforeDestroy 仍无条件 deregisterLabelWidth(computedWidth)，
+     * 于是在 potentialLabelWidthArr 里 indexOf 得到 -1，getLabelWidthIndex 抛错。
+     *
+     * 该错误发生在销毁阶段、被全局 errorHandler 捕获，不影响关闭功能，纯属噪音。
+     * 这里包裹本 el-form 实例的 deregisterLabelWidth：仅当宽度确实在数组里才调用原
+     * 实现，否则静默跳过。只影响本组件持有的 el-form 实例，行为安全且局部。
+     */
+    const hardenLabelWidthTeardown = (elForm: Record<string, unknown> | null) => {
+      if (!elForm) return
+      const orig = elForm.deregisterLabelWidth
+      if (typeof orig !== 'function' || (elForm as Record<string, unknown>).__esDeregHardened)
+        return
+      ;(elForm as Record<string, unknown>).__esDeregHardened = true
+      ;(elForm as Record<string, unknown>).deregisterLabelWidth = function (val: unknown) {
+        const arr = (elForm as { potentialLabelWidthArr?: unknown[] }).potentialLabelWidthArr
+        if (!Array.isArray(arr) || arr.indexOf(val) === -1) return
+        return (orig as (v: unknown) => unknown).call(elForm, val)
+      }
+    }
+
     nextTick(() => {
       formInstance.value = templateRefs().formRef as unknown as Record<string, unknown>
+      hardenLabelWidthTeardown(formInstance.value)
       const proxy = (instance as unknown as { proxy?: Record<string, unknown> })?.proxy
       const bodyFormFn = proxy?.bodyFormInstance as ((inst: Record<string, unknown>) => void) | undefined
       bodyFormFn?.(formInstance.value)
@@ -592,6 +656,7 @@ export default defineComponent({
         resetFields,
         clearValidate,
         validateField,
+        scrollToField,
       })
     }
 
@@ -605,6 +670,7 @@ export default defineComponent({
       folded,
       getBtnColSpan,
       isRenderBtn,
+      renderBtnFn,
       colRightLeftList,
       formInputComponents,
       formInstance,
@@ -632,6 +698,7 @@ export default defineComponent({
       resetFields,
       clearValidate,
       validateField,
+      scrollToField,
     }
   },
 })

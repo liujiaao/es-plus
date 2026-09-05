@@ -1,6 +1,6 @@
 # 为什么是 ES-Plus —— 中后台 CRUD 与 AI Coding 时代的配置驱动答卷
 
-> 一句话总结：**ES-Plus 把"表单—表格—弹窗"这条中后台最高频的链路抽象成一份 JSON Schema，让人手敲的 200 行模板降到 30 行配置，让 AI 写出的代码第一次就能在 CI 里通过 `vite build`，让同一份配置在 Vue 3 + Element Plus 和 Vue 2 + Element UI 两个渲染器之间零成本切换。**
+> 一句话总结：**ES-Plus 把"表单—表格—弹窗"这条中后台最高频的链路抽象成一份 JSON Schema，让人手敲的 200 行模板降到 30 行配置，让 AI 写出的代码第一次就能在 CI 里通过 `vite build`，让同一份配置在 Vue 3 + Element Plus、Vue 2 + Element UI 和 Vue 3 + Ant Design Vue 三个渲染器之间零成本切换。**
 
 ---
 
@@ -9,7 +9,7 @@
 1. [中后台开发的真实代价：那些没人愿意算的账](#一中后台开发的真实代价那些没人愿意算的账)
 2. [复杂交互的隐形税：联动、跨页、自适应、权限、i18n](#二复杂交互的隐形税联动跨页自适应权限i18n)
 3. [AI Coding 时代的新痛点：为什么 AI 写组件库总翻车](#三ai-coding-时代的新痛点为什么-ai-写组件库总翻车)
-4. [ES-Plus 的解题思路：配置驱动 + 双渲染器 + AI 原生](#四es-plus-的解题思路配置驱动--双渲染器--ai-原生)
+4. [ES-Plus 的解题思路：配置驱动 + 三渲染器 + AI 原生](#四es-plus-的解题思路配置驱动--三渲染器--ai-原生)
 5. [核心能力深度解析](#五核心能力深度解析)
 6. [对比竞品：和谁不一样、为什么](#六对比竞品和谁不一样为什么)
 7. [AI 时代的核杀技：MCP Server + CLI + E2E 矩阵](#七ai-时代的核杀技mcp-server--cli--e2e-矩阵)
@@ -290,7 +290,7 @@ ES-Plus 是社区**为数极少**真正落地了这件事的中后台组件库�
 
 ---
 
-## 四、ES-Plus 的解题思路：配置驱动 + 双渲染器 + AI 原生
+## 四、ES-Plus 的解题思路：配置驱动 + 三渲染器 + AI 原生
 
 ### 4.1 三个支柱
 
@@ -332,11 +332,11 @@ ES-Plus 不是"另一个组件库"，它是**一层声明式 DSL**。这层 DSL 
 | 配置可以被 schema 校验 | CI 时跑 `validate_config` 直接拦下错误 |
 | 配置可以跨框架复用 | 同一份 columns 在 Vue 3 + Vue 2 渲染器中通用 |
 
-### 4.3 双渲染器单 Schema：解决"Vue 2 项目能不能用"
+### 4.3 三渲染器单 Schema：解决"Vue 2 项目能不能用"
 
 很多中后台项目还在 Vue 2 + Element UI（**国内估算占比 35-45%**，截至 2026 年）。让这些项目升 Vue 3 的成本谁都背不起。
 
-ES-Plus 的解法是 **拆出 `@es-plus/core` + 两个渲染器**：
+ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 ```
 @es-plus/core        ← 框架无关：types、配置校验、表格选择算法、请求层、form-layout 算法
@@ -352,6 +352,8 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 两个渲染器**：
 
 绝大多数组件库的"AI 友好"只是嘴上说说—— "我们的 API 名字很语义化，AI 容易学。" ES-Plus 把 AI 友好做成了**可验证的工程契约**：
 
+> **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
+
 1. **MCP server** 暴露 8 个 tools + 4 类 resources，AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
@@ -362,7 +364,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 两个渲染器**：
 
 ## 五、核心能力深度解析
 
-### 5.1 EsForm —— 13 种控件 × 4 种数据来源 × 条件显隐
+### 5.1 EsForm —— 14 种控件 × 4 种数据来源 × 条件显隐
 
 ```typescript
 const formItems = [
@@ -393,7 +395,7 @@ const formItems = [
 ]
 ```
 
-控件列表：Input / Select / datePicker / timePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer + `render` 逃生舱。
+控件列表：Input / InputNumber / Select / DatePicker / TimePicker / Switch / Rate / Cascader / Radio / Checkbox / Upload / Slider / ColorPicker / Transfer + `render` 逃生舱。
 
 **`render` 字段是关键** —— 不像很多组件库被自己的配置 DSL 锁死，遇到特殊需求只能 fork 源码。ES-Plus 给所有 form-item 和 table-column 都留了 `render: (h, ctx) => VNode`，等同于"这个字段我自己渲染"。配置驱动 + 逃生舱 = 既享受 90% 场景的快速，又不在剩下 10% 场景里被困死。
 
@@ -566,7 +568,7 @@ import type {
 
 ### 6.4 vs Avue / vxe-table
 
-Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极强的表格组件。
+Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极强的表格组件——**自 2026-07 起 vxe-table 同时是 ES-Plus 的可选表格渲染引擎**（`engine: 'vxe'`）。两者是"竞合"关系：vxe-table 的行内编辑 / 导出 / 工具栏 / 树形数据能力被 ES-Plus 封装为一等公民 API，而 Avue 仍是同赛道的配置化竞品。
 
 | 对比项 | Avue | vxe-table | ES-Plus |
 |--------|------|-----------|---------|
@@ -580,7 +582,7 @@ Avue 是国内做了多年的配置化后台组件库，vxe-table 是性能极�
 | 类型完整度 | 中 | 高 | 高（11 接口完整导出） |
 | 文档站 | ✅ | ✅ | ✅ + AI CRUD 演示 + StackBlitz Playground |
 
-ES-Plus 的独占差异：**Schema 跨 Vue 2/Vue 3 共享 + AI 原生工具链 + 持续集成保障**。这三点目前国内外社区里**没有第二个组件库做齐**。
+ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工具链 + 持续集成保障**。这三点在同赛道组件库中目前较少见。
 
 ### 6.5 vs Naive UI / Ant Design Vue 等"通用型 UI 库"
 
@@ -616,11 +618,11 @@ ES-Plus 的独占差异：**Schema 跨 Vue 2/Vue 3 共享 + AI 原生工具链 +
 | Tool | 作用 | 解决的痛点 |
 |------|------|----------|
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
-| `generate_crud_page` | 自然语言 → 完整 .vue 文件 | 一句话生成可运行页面 |
-| `generate_crud_schema` | 自然语言 → 结构化 Schema | 给 AI 一份合法配置作上下文 |
-| `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的 codegen 步骤 |
+| `generate_crud_page` | 自然语言 → 完整 .vue 文件 | ⚠️ **无 LLM 回退**：本地正则/关键词解析，覆盖有限，仅适合快速原型 |
+| `generate_crud_schema` | 自然语言 → 结构化 Schema | **主路径**：由宿主 LLM 语义推理生成（经 zod 校验 + 自修复） |
+| `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的确定性 codegen 步骤 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
-| `list_form_types` | 返回 13 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
+| `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |
 
@@ -642,7 +644,7 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 Claude 的工作流是：
 
 1. 调 `detect_project_target` → 读你的 package.json → 知道你用 Vue 3 + Element Plus
-2. 调 `list_form_types` → 拿到 13 种合法控件清单
+2. 调 `list_form_types` → 拿到 14 种合法控件清单
 3. 调 `generate_crud_schema(target='vue3')` → 生成 Schema
 4. 调 `validate_config` → 校验通过
 5. 调 `generate_from_config` → 输出完整 .vue 文件
@@ -665,15 +667,15 @@ npx @es-plus/cli create user-management \
 npx @es-plus/cli validate ./config.json --schema form-item
 ```
 
-CLI 不依赖任何 AI 服务 —— 它用本地规则解析自然语言描述生成 Schema，**完全离线可用**，适合内网部署 / 涉密项目。
+CLI 不依赖任何 AI 服务 —— 它用**本地正则/关键词规则**解析自然语言描述生成 Schema，**完全离线可用**，适合内网部署 / 涉密项目。注意：本地规则的准确率受限于词表覆盖（如字段名映射、类型推断），无法做到宿主 LLM 那样的语义理解；`--ai` 参数可切换到 LLM 路径获得更强的语义推理。
 
 ### 7.4 E2E 矩阵：证明 AI 生成的代码"真的能编"
 
-很多组件库说"AI 友好"，但**没人做 e2e 证明这件事**。ES-Plus 的 CI 跑这样一个矩阵（[.github/workflows/e2e.yml](../.github/workflows/e2e.yml)）：
+很多组件库说"AI 友好"，但**同类组件库中较少有人用 e2e 证明这件事**。ES-Plus 的 CI 跑这样一个矩阵（[.github/workflows/e2e.yml](../.github/workflows/e2e.yml)）：
 
 ```
 matrix:
-  target: [vue3, vue2]      ← 两个渲染器
+  target: [vue3, vue2, antdv]      ← 三个渲染器
   mode:   [schema, sfc]     ← 两种生成模式
 ```
 
@@ -687,7 +689,7 @@ matrix:
 
 **第一次跑这个 CI 时，vue2 sfc 模式直接挂了** —— 暴露了一个 import 提取的 bug。修完之后到今天保持全绿。
 
-这个矩阵的意义是**契约级保证**：**任何 ES-Plus 发出的代码都能编译**。这是社区方案普遍达不到的工程水准。
+这个矩阵的意义是**契约级保证**：**在 e2e 矩阵覆盖的 6 种组合（vue3/vue2/antdv × schema/sfc）内，ES-Plus 生成器发出的代码都能通过 `vite build`**。这是同类组件库较少做到的工程水准。
 
 ### 7.5 浏览器里的 AI CRUD 演示页
 
@@ -697,7 +699,7 @@ matrix:
 - 右侧 Trace 时间轴：把每一次 MCP tool 调用、AI 请求、zod 校验、代码生成**全部可视化**
 - Preview / Code / JSON tab：直接看到生成结果
 
-这页面是**"AI + es-plus + MCP 协作流程"的活文档** —— 访客不用读文档，看一遍就懂。这是社区**唯一**做了"协议级可视化"的中后台组件库 demo。
+这页面是**"AI + es-plus + MCP 协作流程"的活文档** —— 访客不用读文档，看一遍就懂。这是中后台组件库中较少见的"协议级可视化"demo。
 
 ---
 
@@ -748,7 +750,7 @@ matrix:
 | 加新字段到 30 个页面 | 改 30 处模板 | 改 30 处配置（行数少一个量级） |
 | Vue 2 升 Vue 3（如果要） | 整个项目重写 | **保留 schema，换一行 import**，渐进迁移 |
 
-**最后一项是潜在的项目救命稻草** —— Vue 2 EOL 后，能不能低成本升级到 Vue 3 决定一个项目活不活。ES-Plus 的双渲染器设计**让升级成本降到接近 0**。
+**最后一项是潜在的项目救命稻草** —— Vue 2 EOL 后，能不能低成本升级到 Vue 3 决定一个项目活不活。ES-Plus 的三渲染器设计**让升级成本降到接近 0**。
 
 ---
 
@@ -758,7 +760,7 @@ matrix:
 
 - ✅ **中后台 / 管理系统 / 数据中台 / 内部工具** —— 这是它的本命场景
 - ✅ **CRUD 页面 ≥ 10 个** —— ROI 拐点
-- ✅ **Vue 2 项目想用上现代配置驱动** —— 没有第二选择
+- ✅ **Vue 2 项目想用上现代配置驱动** —— 跨框架共享 Schema 的同类选择极少
 - ✅ **同时维护 Vue 2 + Vue 3 项目** —— 同一份 Schema 复用
 - ✅ **团队规模 3+ 人，需要统一编码规范** —— 配置驱动天然收敛
 - ✅ **用 Claude Code / Cursor / Cline 等 AI 编程工具** —— MCP 接入立刻见效
@@ -901,7 +903,7 @@ AI 通过 MCP 协议拿到 ES-Plus 的 Schema，生成代码，写入文件，�
 
 下一个十年，组件库的竞争**不是 prop 多不多、样式好不好看**，而是**能不能让 AI 写出能跑的代码、能不能让一份 Schema 跨框架复用、能不能把团队的横向需求收口到配置层**。
 
-ES-Plus 是第一个把这三件事都做齐的中后台组件库。
+ES-Plus 是较早把这三件事都做齐的中后台组件库之一。
 
 **Star、Try、Feedback**：<https://github.com/liujiaao/es-plus>
 

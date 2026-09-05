@@ -901,7 +901,7 @@ export default defineComponent({
     })
 
     // 提供表格实例给子组件
-    provide('getTableInstantce', () => ({
+    provide('getTableInstance', () => ({
       ...(instance?.setupState || {}),
       // ...(instance?.ctx || {}),
       tableRef,

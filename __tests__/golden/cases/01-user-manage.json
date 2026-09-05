@@ -1,0 +1,24 @@
+{
+  "nl": "用户管理页面：查询条件有用户名、手机号、状态（启用/禁用）；表格展示用户名、手机号、头像、注册时间、状态；支持新增、编辑、删除。",
+  "config": {
+    "name": "UserManage",
+    "apiUrl": "/api/users",
+    "fields": [
+      { "prop": "username", "label": "用户名", "formtype": "Input" },
+      { "prop": "phone", "label": "手机号", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "禁用", "value": 0 }
+        ]
+      },
+      { "prop": "avatar", "label": "头像", "formtype": "Upload", "inQuery": false },
+      { "prop": "createdAt", "label": "注册时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "semantic type inference: status enum → Select, avatar → Upload, createdAt system → inForm:false"
+}

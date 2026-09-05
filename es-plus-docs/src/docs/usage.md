@@ -300,7 +300,7 @@ const formItems = [
       { label: '启用', value: 1 },
       { label: '禁用', value: 0 }
     ] },
-  { prop: 'date', label: '日期范围', formtype: 'datePicker', span: 8,
+  { prop: 'date', label: '日期范围', formtype: 'DatePicker', span: 8,
     attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' } }
 ]
 </script>

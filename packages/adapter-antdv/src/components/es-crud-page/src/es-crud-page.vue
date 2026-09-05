@@ -10,26 +10,28 @@
 -->
 <template>
   <div class="es-crud-page">
-    <es-table
-      ref="tableRef"
-      :columns="mergedColumns"
-      :options="mergedOptions"
-      v-model:dataSource="tableData"
-      v-model:pagination="paginationState"
-      v-bind="$attrs"
-    >
-      <es-form
-        v-if="schema.formItems && schema.formItems.length"
-        ref="formRef"
-        :model="queryModel"
-        :form-item-list="schema.formItems"
-        :config-btn="mergedFormBtns"
-        :layout-form-props="formLayoutProps"
-      />
-      <template v-for="(_, name) in $slots" #[name]="slotData">
-        <slot :name="name" v-bind="slotData || {}" />
-      </template>
-    </es-table>
+    <es-error-boundary @error="onCrudError">
+      <es-table
+        ref="tableRef"
+        :columns="mergedColumns"
+        :options="mergedOptions"
+        v-model:dataSource="tableData"
+        v-model:pagination="paginationState"
+        v-bind="$attrs"
+      >
+        <es-form
+          v-if="schema.formItems && schema.formItems.length"
+          ref="formRef"
+          :model="queryModel"
+          :form-item-list="schema.formItems"
+          :config-btn="mergedFormBtns"
+          :layout-form-props="formLayoutProps"
+        />
+        <template v-for="(_, name) in $slots" #[name]="slotData">
+          <slot :name="name" v-bind="slotData || {}" />
+        </template>
+      </es-table>
+    </es-error-boundary>
   </div>
 </template>
 
@@ -43,6 +45,7 @@ import { Modal } from 'ant-design-vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
+import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import { useDialog } from '../../es-dialog/src/use-dialog'
 import type {
   CrudPageSchema,
@@ -377,7 +380,19 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
 
 // ─── 弹窗管理 ───
 
+// 错误边界回调：子树（表格/表单/单元格 render）抛错被 EsErrorBoundary 拦截后在此记录，
+// 故障被隔离在边界内、不再冒泡为整页崩溃。
+function onCrudError(err: unknown, info: string) {
+  console.error('[EsCrudPage] 子树渲染错误已被错误边界拦截：', info, err)
+}
+
 const dialogInstances = new Map<string, any>()
+
+// useDialog() 必须在 setup 顶层调用：它在【调用时刻】通过 getCurrentInstance() 捕获 appContext。
+// 若放在 openDialog（DOM 事件回调）内调用，此刻无活动组件实例 → getCurrentInstance() 为 null →
+// appContext 为 null，命令式弹窗将丢失 app 级 provide/inject、globalProperties、i18n，以及用户
+// render 中按全局名解析的组件。提到 setup 顶层后 appContext 被正确捕获，单例回调跨 key 复用。
+const dialog = useDialog()
 
 function openDialog(key: string, row?: Record<string, unknown>) {
   const dialogConfig = normalizedDialogs.value[key]
@@ -385,7 +400,6 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 
   emit('dialog-open', key, row)
 
-  const dialog = useDialog()
   dialogInstances.set(key, dialog)
 
   const formData = reactive<Record<string, unknown>>({})
@@ -442,7 +456,9 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         : undefined) as any,
     configBtn,
     onClosed: () => {
+      const d = dialogInstances.get(key)
       dialogInstances.delete(key)
+      d?.destroy?.()
       dialogConfig.onClose?.()
     },
   })
@@ -451,8 +467,8 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 function closeDialog(key: string) {
   const dialog = dialogInstances.get(key)
   if (dialog) {
-    dialog.close()
     dialogInstances.delete(key)
+    dialog.destroy()
   }
 }
 
@@ -479,7 +495,11 @@ function resolveDialogBtns(
         return {
           ...btn,
           click: async (_: any, { close, getRefs }: any) => {
-            await validateAndConfirm(key, config, formData, row, close, getRefs)
+            // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+            // 吞掉以防 EsDialog 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+            try {
+              await validateAndConfirm(key, config, formData, row, close, getRefs)
+            } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
           },
         }
       }
@@ -499,11 +519,19 @@ function resolveDialogBtns(
       name: '确定',
       type: 'primary',
       click: async (_: any, { close, getRefs }: any) => {
-        await validateAndConfirm(key, config, formData, row, close, getRefs)
+        // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+        // 吞掉以防 EsDialog 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+        try {
+          await validateAndConfirm(key, config, formData, row, close, getRefs)
+        } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
       },
     },
   ]
 }
+
+// 防重复提交：记录确认在途的弹窗 key（同一弹窗确认未结束前忽略再次点击），
+// 避免异步 onConfirm 未返回时二次点击「确定」导致新增/编辑被提交两次。（对齐 vue3）
+const confirmingKeys = new Set<string>()
 
 async function validateAndConfirm(
   key: string,
@@ -513,32 +541,40 @@ async function validateAndConfirm(
   close: () => void,
   getRefs: (name?: string) => any,
 ) {
-  // 有表单时先校验（透传原生 Promise，让校验失败抛错，对齐 vue3）
-  if (config.formItems?.length) {
-    const dialogForm = getRefs('dialogForm')
-    if (dialogForm?.validate) {
-      await dialogForm.validate()
+  if (confirmingKeys.has(key)) return
+  confirmingKeys.add(key)
+  try {
+    // 有表单时先校验（透传原生 Promise，让校验失败抛错，对齐 vue3）
+    if (config.formItems?.length) {
+      const dialogForm = getRefs('dialogForm')
+      if (dialogForm?.validate) {
+        await dialogForm.validate()
+      }
     }
+
+    const context: DialogActionContext = { close, refresh, getRefs, row }
+
+    if (config.onConfirm) {
+      await config.onConfirm(formData, context)
+    } else {
+      const legacyKey = key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
+      emit('btn-click', legacyKey, formData)
+      close()
+      refresh()
+    }
+
+    emit('dialog-confirm', key, formData)
+  } finally {
+    confirmingKeys.delete(key)
   }
-
-  const context: DialogActionContext = { close, refresh, getRefs, row }
-
-  if (config.onConfirm) {
-    await config.onConfirm(formData, context)
-  } else {
-    const legacyKey = key === 'add' ? 'add-confirm' : key === 'edit' ? 'edit-confirm' : `${key}-confirm`
-    emit('btn-click', legacyKey, formData)
-    close()
-    refresh()
-  }
-
-  emit('dialog-confirm', key, formData)
 }
 
 // ─── 公共方法 ───
 
 function refresh() {
-  tableRef.value?.httpRequestInstance?.()
+  // 失败已由 es-table 内部 surfaceRequestError + emit('request-error') 暴露，
+  // 这里吞掉 rejection 避免 unhandled promise rejection（对齐 vue3）。
+  return tableRef.value?.httpRequestInstance?.()?.catch(() => {})
 }
 
 function getSelectedRows(): Record<string, unknown>[] {

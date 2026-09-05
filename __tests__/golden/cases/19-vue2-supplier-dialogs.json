@@ -1,0 +1,43 @@
+{
+  "nl": "Vue2 供应商管理：表格显示供应商名称、联系人、电话、状态（启用/停用）；新增和编辑用不同弹窗——新增填名称、联系人、电话，编辑还能改结算周期；支持新增、编辑、删除。",
+  "config": {
+    "name": "SupplierManage",
+    "apiUrl": "/api/suppliers",
+    "target": "vue2",
+    "fields": [
+      { "prop": "name", "label": "供应商名称", "formtype": "Input" },
+      { "prop": "contact", "label": "联系人", "formtype": "Input" },
+      { "prop": "phone", "label": "电话", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "停用", "value": 0 }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "dialogs": {
+      "add": {
+        "title": "新增供应商",
+        "formItems": [
+          { "prop": "name", "label": "供应商名称", "formtype": "Input" },
+          { "prop": "contact", "label": "联系人", "formtype": "Input" },
+          { "prop": "phone", "label": "电话", "formtype": "Input" }
+        ]
+      },
+      "edit": {
+        "title": "编辑供应商",
+        "formItems": [
+          { "prop": "name", "label": "供应商名称", "formtype": "Input" },
+          { "prop": "contact", "label": "联系人", "formtype": "Input" },
+          { "prop": "phone", "label": "电话", "formtype": "Input" },
+          { "prop": "settlementCycle", "label": "结算周期", "formtype": "Input" }
+        ]
+      }
+    }
+  },
+  "notes": "vue2 target WITH multi-dialog add/edit — exercises the vue2 useDialog update:visible bridge under distinct add/edit formItems (a combination not covered by 05 which is vue3, nor 07 which is vue2 without dialogs)."
+}

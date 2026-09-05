@@ -1,0 +1,16 @@
+{
+  "nl": "SFC 模式的操作审计日志：查询有操作人、操作类型；表格展示操作人、操作类型、IP、操作时间，全部只读展示（没有任何可编辑字段）；支持查看详情弹窗。",
+  "config": {
+    "name": "AuditLogView",
+    "apiUrl": "/api/audit-logs",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "operator", "label": "操作人", "formtype": "Input", "inForm": false },
+      { "prop": "action", "label": "操作类型", "formtype": "Input", "inForm": false },
+      { "prop": "ip", "label": "IP", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "createdAt", "label": "操作时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["view"]
+  },
+  "notes": "regression net for 2.3a: every field inForm:false + a dialog action must NOT emit `reactive({ , ...row })` (leading-comma syntax error). Compile-proves the empty-form-fields branch."
+}

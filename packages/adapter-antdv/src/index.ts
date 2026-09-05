@@ -16,8 +16,11 @@ import EsFormComp from './components/es-form'
 import EsDialogComp from './components/es-dialog'
 import useDialogOrig from './components/es-dialog/src/use-dialog'
 import EsCrudPageComp from './components/es-crud-page'
+import EsErrorBoundaryComp from './components/es-error-boundary'
 import SvgIconComp from './components/svg-icon'
 import { configureEsPlus as configureEsPlusCore } from './config'
+// 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
+import { httpRequest } from '@es-plus/core'
 import type { EsPlusOptions } from './types'
 
 // 与 vue3 一致：从 package.json 读取版本号
@@ -33,6 +36,7 @@ const components = [
   EsFormComp,
   EsTableComp,
   EsCrudPageComp,
+  EsErrorBoundaryComp,
   SvgIconComp,
 ]
 
@@ -74,16 +78,30 @@ export { EsFormComp as EsForm }
 export { EsDialogComp as EsDialog }
 export { useDialogOrig as useDialog }
 export { EsCrudPageComp as EsCrudPage }
+export { EsErrorBoundaryComp as EsErrorBoundary }
 export { SvgIconComp as SvgIcon }
 export { configureEsPlusCore as configureEsPlus }
+export { httpRequest }
 export { install }
+// vxe 打印辅助（合并单元格打印），三端统一从 @es-plus/core 再导出
+export { patchHtmlRowSpans } from '@es-plus/core'
 export type { EsPlusGlobalConfig } from './config'
 export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } from './components/es-crud-page'
+// ── 跨渲染器契约（须与 core/public-types PUBLIC_CONTRACT_TYPES 一致）──
+// 配置类类型在 antdv 做 Ant Design Vue 特化，从本地 ./types 导出（形状兼容 core）
 export type {
   FormItemOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableOptions, PaginationConfig, DialogOptions,
-  EsFormInstance, EsTableInstance, EsPlusOptions, ListenToCallBack,
+  EsFormInstance, EsTableInstance, EsPlusOptions,
 } from './types'
+// 框架无关契约类型三端一致，直接透传 @es-plus/core
+export type {
+  ModelData, RenderFn, AnyVNode, EsButtonType, EsButtonSize, EsTableSize,
+  FormType, ConfigTableOut, ListenToCallBack, TableEngineExposed,
+  VxeEditRender, VxeEditConfig, VxeExportConfig, VxeToolbarConfig, VxeColumnConfig,
+  VxeKeyboardConfig, VxeMouseConfig, VxeClipboardConfig, VxeValidConfig, VxeFooterMethod,
+  VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig,
+} from '@es-plus/core'
 // 对齐 vue3：导出 CRUD 高级类型
 export type {
   CrudAction,

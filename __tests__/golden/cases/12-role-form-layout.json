@@ -1,0 +1,30 @@
+{
+  "nl": "角色管理：新增编辑弹窗宽度 720px，表单分 2 列；表格展示角色名、角色编码、数据权限范围、创建时间；支持新增、编辑、删除、查看。",
+  "config": {
+    "name": "RoleManage",
+    "apiUrl": "/api/roles",
+    "fields": [
+      { "prop": "roleName", "label": "角色名", "formtype": "Input" },
+      { "prop": "roleCode", "label": "角色编码", "formtype": "Input" },
+      {
+        "prop": "dataScope",
+        "label": "数据权限范围",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "全部", "value": "all" },
+          { "label": "本部门", "value": "dept" },
+          { "label": "本部门及以下", "value": "dept_and_child" },
+          { "label": "仅本人", "value": "self" }
+        ]
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete", "view"],
+    "formLayout": { "span": 12 },
+    "dialogs": {
+      "add": { "title": "新增角色", "width": 720, "formLayout": { "span": 12 } },
+      "edit": { "title": "编辑角色", "width": 720, "formLayout": { "span": 12 } }
+    }
+  },
+  "notes": "dialog width + 2-column form layout"
+}

@@ -1,0 +1,42 @@
+{
+  "nl": "SKU 管理：表格上方左侧批量导入按钮，右侧批量导出按钮；表格展示 SKU 编码、SKU 名称、规格、售价、库存、状态；每行可编辑、删除；表格启用虚拟滚动。",
+  "config": {
+    "name": "SkuManage",
+    "apiUrl": "/api/skus",
+    "fields": [
+      { "prop": "skuCode", "label": "SKU 编码", "formtype": "Input" },
+      { "prop": "skuName", "label": "SKU 名称", "formtype": "Input" },
+      { "prop": "spec", "label": "规格", "formtype": "Input", "inQuery": false },
+      { "prop": "price", "label": "售价", "formtype": "Input", "inQuery": false },
+      { "prop": "stock", "label": "库存", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "上架", "value": 1 },
+          { "label": "下架", "value": 0 }
+        ]
+      }
+    ],
+    "actions": ["edit", "delete", "import", "export"],
+    "tableBtns": [
+      { "name": "批量导入", "type": "primary", "code": 1, "actionType": "import" },
+      { "name": "批量导出", "code": 2, "actionType": "export" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "编辑", "dialogKey": "edit" },
+        { "name": "删除", "confirm": "确定删除该 SKU 吗？" }
+      ]
+    },
+    "tableOptions": {
+      "virtual": true,
+      "height": 500,
+      "heightType": "height",
+      "rowHeight": 48
+    }
+  },
+  "notes": "virtual scrolling + import/export tableBtns; expected warning on vue2"
+}

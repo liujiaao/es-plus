@@ -1,5 +1,7 @@
 # Contributor Covenant 行为准则
 
+> English readers: this code of conduct follows Contributor Covenant 2.1; project info in English is at [README.en.md](./README.en.md).
+
 ## 我们的承诺
 
 身为社区成员、贡献者和领导者，我们承诺使社区参与者不受骚扰，无论年龄、体型、可见或不可见的缺陷、族裔、性征、性别认同和表达、经验水平、教育程度、社会与经济地位、国籍、相貌、种族、宗教或性认同和取向如何。

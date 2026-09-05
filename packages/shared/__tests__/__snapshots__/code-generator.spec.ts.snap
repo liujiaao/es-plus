@@ -289,13 +289,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -441,10 +441,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -608,13 +612,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -760,10 +764,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -910,13 +918,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -941,7 +949,7 @@ exports[`generateCrudPage — snapshot tests > generates stable output for: 日�
 import { reactive, ref } from 'vue'
 import { useDialog } from '@es-plus/vue3'
 
-const queryForm = reactive({ field_2: '', level: '', field_3: '' })
+const queryForm = reactive({ keyword: '', level: '', field_1: '' })
 const tableData = ref([])
 const tableRef = ref(null)
 const pagination = ref({ current: 1, pageSize: 10, total: 0 })
@@ -949,13 +957,13 @@ const dialog = useDialog()
 
 const formItems = [
   {
-    "prop": "field_2",
-    "label": "查询关键词",
+    "prop": "keyword",
+    "label": "关键词",
     "formtype": "Input",
     "span": 8,
     "attrs": {
       "clearable": true,
-      "placeholder": "请输入查询关键词"
+      "placeholder": "请输入关键词"
     }
   },
   {
@@ -983,7 +991,7 @@ const formItems = [
     ]
   },
   {
-    "prop": "field_3",
+    "prop": "field_1",
     "label": "日期范围",
     "formtype": "DatePicker",
     "span": 8,
@@ -1011,6 +1019,18 @@ const columns = [
     "label": "时间"
   },
   {
+    "prop": "operator",
+    "label": "操作人"
+  },
+  {
+    "prop": "content",
+    "label": "内容"
+  },
+  {
+    "prop": "field_2",
+    "label": "只查看不编辑"
+  },
+  {
     "prop": "operate",
     "label": "操作",
     "width": 100,
@@ -1033,7 +1053,7 @@ const options = {
 }
 
 function openForm(title, row = {}) {
-  const formData = reactive({ field_2: '', level: '', field_3: '', time: '', ...row })
+  const formData = reactive({ keyword: '', level: '', field_1: '', time: '', operator: '', content: '', field_2: '', ...row })
   const isView = title === '查看'
   dialog({
     title,
@@ -1044,19 +1064,19 @@ function openForm(title, row = {}) {
         model={formData}
         formItemList={[
         {
-                "prop": "field_2",
-                "label": "查询关键词",
+                "prop": "keyword",
+                "label": "关键词",
                 "formtype": "Input",
                 "span": 24,
                 "attrs": {
                         "clearable": true,
-                        "placeholder": "请输入查询关键词"
+                        "placeholder": "请输入关键词"
                 },
                 "formItemOptions": {
                         "rules": [
                                 {
                                         "required": true,
-                                        "message": "请输入查询关键词",
+                                        "message": "请输入关键词",
                                         "trigger": "blur"
                                 }
                         ]
@@ -1096,7 +1116,7 @@ function openForm(title, row = {}) {
                 ]
         },
         {
-                "prop": "field_3",
+                "prop": "field_1",
                 "label": "日期范围",
                 "formtype": "DatePicker",
                 "span": 24,
@@ -1135,6 +1155,65 @@ function openForm(title, row = {}) {
                                 }
                         ]
                 }
+        },
+        {
+                "prop": "operator",
+                "label": "操作人",
+                "formtype": "Input",
+                "span": 24,
+                "attrs": {
+                        "clearable": true,
+                        "placeholder": "请输入操作人"
+                },
+                "formItemOptions": {
+                        "rules": [
+                                {
+                                        "required": true,
+                                        "message": "请输入操作人",
+                                        "trigger": "blur"
+                                }
+                        ]
+                }
+        },
+        {
+                "prop": "content",
+                "label": "内容",
+                "formtype": "Input",
+                "span": 24,
+                "attrs": {
+                        "clearable": true,
+                        "placeholder": "请输入内容",
+                        "type": "textarea",
+                        "rows": 3
+                },
+                "formItemOptions": {
+                        "rules": [
+                                {
+                                        "required": true,
+                                        "message": "请输入内容",
+                                        "trigger": "blur"
+                                }
+                        ]
+                }
+        },
+        {
+                "prop": "field_2",
+                "label": "只查看不编辑",
+                "formtype": "Input",
+                "span": 24,
+                "attrs": {
+                        "clearable": true,
+                        "placeholder": "请输入只查看不编辑"
+                },
+                "formItemOptions": {
+                        "rules": [
+                                {
+                                        "required": true,
+                                        "message": "请输入只查看不编辑",
+                                        "trigger": "blur"
+                                }
+                        ]
+                }
         }
 ]}
       />
@@ -1144,13 +1223,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1282,10 +1361,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1418,13 +1501,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1550,10 +1633,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -1700,13 +1787,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -1732,7 +1819,7 @@ import { reactive, ref, h } from 'vue'
 import { useDialog } from '@es-plus/vue3'
 import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
 
-const queryForm = reactive({ field_4: '', status: '' })
+const queryForm = reactive({ field_1: '', status: '' })
 const tableData = ref([])
 const tableRef = ref(null)
 const pagination = ref({ current: 1, pageSize: 10, total: 0 })
@@ -1740,7 +1827,7 @@ const dialog = useDialog()
 
 const formItems = [
   {
-    "prop": "field_4",
+    "prop": "field_1",
     "label": "角色名称",
     "formtype": "Input",
     "span": 6,
@@ -1779,7 +1866,7 @@ const queryBtns = [
 
 const columns = [
   {
-    "prop": "field_4",
+    "prop": "field_1",
     "label": "角色名称"
   },
   {
@@ -1824,16 +1911,20 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
 
 function openForm(title, row = {}) {
-  const formData = reactive({ field_4: '', status: '', description: '', createTime: '', ...row })
+  const formData = reactive({ field_1: '', status: '', description: '', createTime: '', ...row })
   const isView = title === '查看'
   dialog({
     title,
@@ -1844,7 +1935,7 @@ function openForm(title, row = {}) {
         model={formData}
         formItemList={[
         {
-                "prop": "field_4",
+                "prop": "field_1",
                 "label": "角色名称",
                 "formtype": "Input",
                 "span": 24,
@@ -1943,13 +2034,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })
@@ -2093,10 +2184,14 @@ const options = {
 function handleDelete(row) {
   ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })
     .then(async () => {
-      // TODO: 调用删除接口
-      // await axios.delete(\`/api/item/\${row.id}\`)
-      ElMessage.success('删除成功')
-      tableRef.value?.httpRequestInstance()
+      try {
+        // TODO: 调用删除接口
+        // await axios.delete(\`/api/item/\${row.id}\`)
+        ElMessage.success('删除成功')
+        tableRef.value?.httpRequestInstance()
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     })
     .catch(() => {})
 }
@@ -2267,13 +2362,13 @@ function openForm(title, row = {}) {
       { name: '确定', type: 'primary', click: async (_, { close, getRefs }) => {
         try {
           await getRefs('form')?.validate()
-          // TODO: 调用保存接口
-          // await axios.post('/api/save', formData)
-          close()
-          tableRef.value?.httpRequestInstance()
         } catch {
-          // 表单验证失败
+          return // 表单校验未通过：用户需修正，静默中止
         }
+        // TODO: 调用保存接口（失败时请 catch 并用 ElMessage.error 提示，勿静默）
+        // await axios.post('/api/save', formData)
+        close()
+        tableRef.value?.httpRequestInstance()
       }}
     ]
   })

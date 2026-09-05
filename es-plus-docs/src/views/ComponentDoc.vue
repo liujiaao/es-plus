@@ -41,6 +41,9 @@
         <!-- 使用案例 -->
         <section class="doc-section" id="examples">
           <h2 class="section-title">{{ t('componentDoc.examples') }}</h2>
+          <p class="examples-note">
+            {{ t('advancedDoc.crossNote') }}
+          </p>
           <div class="examples-list">
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
@@ -48,6 +51,7 @@
               :title="example.title"
               :description="example.description"
               :code="example.code"
+              :level="levelOf(index, currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -131,93 +135,26 @@ import { docsData as rawDocsData } from './component-doc.data'
 
 const { t } = useI18n()
 
-// 导入案例组件
-import FormBasic from '@/components/examples/form/Basic.vue'
-import FormLayout from '@/components/examples/form/Layout.vue'
-import FormConditional from '@/components/examples/form/Conditional.vue'
-import FormDynamic from '@/components/examples/form/Dynamic.vue'
-import FormValidation from '@/components/examples/form/Validation.vue'
-import FormAsyncOptions from '@/components/examples/form/AsyncOptions.vue'
-import FormCustomRender from '@/components/examples/form/CustomRender.vue'
-import FormDialog from '@/components/examples/form/Dialog.vue'
-import FormDateTimeRange from '@/components/examples/form/DateTimeRange.vue'
-import FormCascader from '@/components/examples/form/Cascader.vue'
-import FormAdvancedButtons from '@/components/examples/form/AdvancedButtons.vue'
-import FormUpload from '@/components/examples/form/Upload.vue'
-import FormFileUpload from '@/components/examples/form/FileUpload.vue'
-import FormPreferences from '@/components/examples/form/Preferences.vue'
-import FormComputedFields from '@/components/examples/form/ComputedFields.vue'
-import FormCustomButton from '@/components/examples/form/CustomButton.vue'
-import FormDetailMode from '@/components/examples/form/DetailMode.vue'
-import FormSearchForm from '@/components/examples/form/SearchForm.vue'
-
-import TableBasic from '@/components/examples/table/Basic.vue'
-import TableToolbar from '@/components/examples/table/Toolbar.vue'
-import TableCustom from '@/components/examples/table/Custom.vue'
-import TableSelection from '@/components/examples/table/Selection.vue'
-import TableEdit from '@/components/examples/table/Edit.vue'
-import TableSort from '@/components/examples/table/Sort.vue'
-import TableGroup from '@/components/examples/table/Group.vue'
-import TableFixed from '@/components/examples/table/Fixed.vue'
-import TablePagination from '@/components/examples/table/Pagination.vue'
-import TableRemoteData from '@/components/examples/table/RemoteData.vue'
-import TableExpand from '@/components/examples/table/Expand.vue'
-import TableCellMerge from '@/components/examples/table/CellMerge.vue'
-import TableQueryTable from '@/components/examples/table/QueryTable.vue'
-import TableRowActions from '@/components/examples/table/RowActions.vue'
-import TableDynamicColumns from '@/components/examples/table/DynamicColumns.vue'
-import TableCallbackPipeline from '@/components/examples/table/CallbackPipeline.vue'
-import TableCurrentRow from '@/components/examples/table/CurrentRow.vue'
-import TableTableHeight from '@/components/examples/table/TableHeight.vue'
-
-import CrudBasic from '@/components/examples/crud-page/Basic.vue'
-import CrudMultiDialog from '@/components/examples/crud-page/MultiDialog.vue'
-import CrudCustomRender from '@/components/examples/crud-page/CustomRender.vue'
-import CrudDynamicTitle from '@/components/examples/crud-page/DynamicTitle.vue'
-import CrudRowConfirm from '@/components/examples/crud-page/RowConfirm.vue'
-import CrudPermission from '@/components/examples/crud-page/Permission.vue'
-import CrudCustomFooter from '@/components/examples/crud-page/CustomFooter.vue'
-import CrudProgramOpen from '@/components/examples/crud-page/ProgramOpen.vue'
-import CrudHiddenColumn from '@/components/examples/crud-page/HiddenColumn.vue'
-import CrudFullBusiness from '@/components/examples/crud-page/FullBusiness.vue'
-
 const route = useRoute()
 
-// 组件文档数据
+// 组件文档数据（component 字段由 component-doc.data.ts 通过 import.meta.glob 自动填充）
 const docsData = rawDocsData
-
-// Assign imported components to their examples by key
-const formComponents: Record<string, any> = {
-  basic: FormBasic, layout: FormLayout, conditional: FormConditional,
-  dynamic: FormDynamic, validation: FormValidation, 'async-options': FormAsyncOptions,
-  'custom-render': FormCustomRender, dialog: FormDialog, 'datetime-range': FormDateTimeRange,
-  cascader: FormCascader, 'advanced-buttons': FormAdvancedButtons, upload: FormUpload,
-  'file-upload': FormFileUpload, preferences: FormPreferences, 'computed-fields': FormComputedFields,
-  'custom-button': FormCustomButton, 'detail-mode': FormDetailMode, 'search-form': FormSearchForm
-}
-const tableComponents: Record<string, any> = {
-  basic: TableBasic, toolbar: TableToolbar, custom: TableCustom,
-  selection: TableSelection, edit: TableEdit, sort: TableSort,
-  group: TableGroup, fixed: TableFixed, pagination: TablePagination,
-  'remote-data': TableRemoteData, expand: TableExpand, 'cell-merge': TableCellMerge,
-  'query-table': TableQueryTable, 'row-actions': TableRowActions, 'dynamic-columns': TableDynamicColumns,
-  'callback-pipeline': TableCallbackPipeline, 'current-row': TableCurrentRow, 'table-height': TableTableHeight
-}
-const crudPageComponents: Record<string, any> = {
-  basic: CrudBasic, 'multi-dialog': CrudMultiDialog, 'custom-render': CrudCustomRender,
-  'dynamic-title': CrudDynamicTitle, 'row-confirm': CrudRowConfirm, permission: CrudPermission,
-  'custom-footer': CrudCustomFooter, 'program-open': CrudProgramOpen, 'hidden-column': CrudHiddenColumn,
-  'full-business': CrudFullBusiness
-}
-
-docsData['es-form'].examples.forEach((ex: any) => { ex.component = formComponents[ex.key] })
-docsData['es-table'].examples.forEach((ex: any) => { ex.component = tableComponents[ex.key] })
-docsData['es-crud-page'].examples.forEach((ex: any) => { ex.component = crudPageComponents[ex.key] })
 
 const currentDoc = computed(() => {
   const name = route.params.name as string
   return docsData[name] || { title: '未找到', description: '', examples: [], api: {} }
 })
+
+// 案例难度梯度：按案例在分类中的位置推断（案例已按 01→N 从简单到复杂排序）
+const levelOf = (index: number, total: number): number => {
+  if (total <= 2) return index === 0 ? 1 : 3
+  const ratio = index / (total - 1)
+  if (ratio < 0.25) return 1
+  if (ratio < 0.5) return 2
+  if (ratio < 0.75) return 3
+  if (ratio < 0.9) return 4
+  return 5
+}
 
 useHead({
   title: () => currentDoc.value.title,
@@ -295,30 +232,32 @@ onMounted(() => {
 <style lang="scss" scoped>
 .component-doc-page {
   display: flex;
-  padding: 24px 0;
-  max-width: 1400px;
+  padding: 24px clamp(16px, 4vw, 48px);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 24px;
+  padding-right: 32px;
 }
 
 .doc-breadcrumb {
-  padding: 0 24px 16px;
+  max-width: 860px;
+  padding: 0 0 16px;
 }
 
 .component-header {
-  padding: 0 24px 24px;
+  max-width: 860px;
+  padding: 0 0 24px;
   border-bottom: 1px solid var(--border-color-lighter);
   margin-bottom: 24px;
 }
 
 .component-title {
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 12px;
 }
@@ -330,7 +269,8 @@ onMounted(() => {
 }
 
 .doc-section {
-  padding: 0 24px 32px;
+  max-width: 860px;
+  padding: 0 0 32px;
 }
 
 .section-title {
@@ -351,15 +291,30 @@ onMounted(() => {
 .feature-item {
   display: flex;
   align-items: flex-start;
-  padding: 20px;
-  background-color: var(--fill-color-light);
-  border-radius: 8px;
+  gap: 14px;
+  padding: 22px;
+  background-color: var(--bg-color);
+  border-radius: 14px;
   border: 1px solid var(--border-color-lighter);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
 .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   color: var(--primary-color);
-  margin-right: 12px;
+  background: var(--primary-color-light, rgba(59, 130, 246, 0.1));
   flex-shrink: 0;
 }
 
@@ -390,6 +345,24 @@ onMounted(() => {
 
 .api-block {
   margin-bottom: 24px;
+
+  // 统一 el-table 与 markdown 原生表格外观（表头浅底/正文次级色/悬停高亮）
+  :deep(.el-table) {
+    font-size: 14px;
+    --el-table-border-color: var(--border-color-lighter);
+    --el-table-header-bg-color: var(--fill-color-light);
+    --el-table-header-text-color: var(--text-color-primary);
+    --el-table-text-color: var(--text-color-regular);
+    --el-table-row-hover-bg-color: var(--fill-color-light);
+  }
+
+  :deep(.el-table th.el-table__cell) {
+    font-weight: 600;
+  }
+
+  :deep(.el-table .cell) {
+    padding: 0 16px;
+  }
 }
 
 .api-subtitle {
@@ -402,7 +375,8 @@ onMounted(() => {
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  padding: 24px;
+  max-width: 860px;
+  padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);
 }

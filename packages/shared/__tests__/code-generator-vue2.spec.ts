@@ -63,5 +63,18 @@ describe(`generateCrudPage (target=${TARGET}) — contract compliance`, () => {
       // must NOT appear in the vue2 output.
       expect(result.code).not.toMatch(/v-model:[a-zA-Z-]+="/)
     })
+
+    it(`${example.label}: setup body is inside setup(), not hoisted to module top-level`, () => {
+      const result = generateCrudPage(example.prompt, TARGET)
+      const code = result.code
+      const exportIdx = code.indexOf('export default defineComponent')
+      expect(exportIdx).toBeGreaterThan(-1)
+      // reactive()/useDialog() 等运行时调用若出现在 defineComponent 之前，说明 setup 体
+      // 被 import 提取正则误提到模块顶层（会在加载期执行、运行时抛错）。
+      const reactiveIdx = code.indexOf('reactive(')
+      const dialogIdx = code.indexOf('useDialog()')
+      if (reactiveIdx !== -1) expect(reactiveIdx).toBeGreaterThan(exportIdx)
+      if (dialogIdx !== -1) expect(dialogIdx).toBeGreaterThan(exportIdx)
+    })
   }
 })
