@@ -13,9 +13,9 @@ name: E2E (generated code compiles)
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   pull_request:
-    branches: [master, develop]
+    branches: [master, develop, dev-lja]
   workflow_dispatch:
 
 jobs:
