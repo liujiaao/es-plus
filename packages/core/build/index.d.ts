@@ -20,6 +20,8 @@ export { getRowColsAlgorithm, shouldShowFoldButton, getBtnColSpan, applyFoldFlag
 export type { RowLayoutInfo, FormLayoutResult } from './form-layout';
 export { createSelectionState, applySelectionChange, restoreSelectionForPage, clearAllSelection, } from './table-selection';
 export type { SelectionState, TableRefLike } from './table-selection';
+export { resolveKeepPage, computeBoundaryRollback } from './pagination';
+export type { BoundaryRollbackInput, BoundaryRollbackResult } from './pagination';
 export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, formatConfigOut, queryTableListMethod, httpRequestFormInstance, getEveryFormQueryField, } from './request';
 export type { RequestConfig, ConfigFormFieldOut, FormFieldOptionResult, } from './request';
 export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';

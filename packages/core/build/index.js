@@ -19,6 +19,8 @@ export { VALID_FORM_TYPES, FORM_TYPE_ALIASES, SPECIAL_BTN_KEYS, BUILT_IN_BTN_KEY
 export { getRowColsAlgorithm, shouldShowFoldButton, getBtnColSpan, applyFoldFlags, } from './form-layout';
 // ─── 跨页选择 ─────────────────────────────────────────────────
 export { createSelectionState, applySelectionChange, restoreSelectionForPage, clearAllSelection, } from './table-selection';
+// ─── 分页请求判定 ─────────────────────────────────────────────
+export { resolveKeepPage, computeBoundaryRollback } from './pagination';
 // ─── 请求相关 ─────────────────────────────────────────────────
 export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, formatConfigOut, queryTableListMethod, httpRequestFormInstance, getEveryFormQueryField, } from './request';
 // ─── 字段/按钮解析 ────────────────────────────────────────────

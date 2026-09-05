@@ -145,7 +145,13 @@ import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
 import type { TableEngineExposed } from './engines/types'
-import { getCallback, getNestedValue, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import {
+  getCallback,
+  getNestedValue,
+  TABLE_CONTEXT_INJECT_KEY,
+  resolveKeepPage,
+  computeBoundaryRollback,
+} from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
 const props = withDefaults(
@@ -744,7 +750,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
   // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
   // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
   // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
-  const keepPage = reqOptions?.keepPage ?? props.options?.refetchKeepPage === true
+  const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
     // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页
@@ -765,34 +771,35 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
           emitPaginationUpdate()
           // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
           //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。
-          const current = Number(paginationConfig.value.current) || 1
-          if (keepPage && (tableData.value?.length ?? 0) === 0 && current > 1) {
-            const total = Number(paginationConfig.value.total) || 0
-            const pageSize = Number(paginationConfig.value.pageSize) || 10
-            const maxPage = Math.max(1, Math.ceil(total / pageSize))
-            if (maxPage < current) {
-              // 仅在页码确实需要回退时递归一次，避免死循环
-              paginationConfig.value.current = maxPage
-              // 外层请求的 loadingStatus 要到 finally 才复位，此刻仍为 true；
-              // 若不先手动释放，递归的 queryTableListMethod 会被
-              // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据（停在空白页）。
-              loadingStatus.value = false
-              queryTableListMethod(
-                { ...(model || {}), pageIndex: maxPage, pageSize },
-                {
-                  success: (res2) => {
-                    formatConfigOut(res2, ['total', 'tableData'])
-                    emitPaginationUpdate()
-                    emit('pagination-current-change', paginationConfig.value)
-                    resolve(res2)
-                  },
-                  fail: (err) => {
-                    reject(err)
-                  }
+          const { shouldRollback, maxPage } = computeBoundaryRollback({
+            keepPage,
+            rowCount: tableData.value?.length ?? 0,
+            current: paginationConfig.value.current,
+            total: paginationConfig.value.total,
+            pageSize: paginationConfig.value.pageSize,
+          })
+          if (shouldRollback) {
+            // 仅在页码确实需要回退时递归一次，避免死循环
+            paginationConfig.value.current = maxPage
+            // 外层请求的 loadingStatus 要到 finally 才复位，此刻仍为 true；
+            // 若不先手动释放，递归的 queryTableListMethod 会被
+            // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据（停在空白页）。
+            loadingStatus.value = false
+            queryTableListMethod(
+              { ...(model || {}), pageIndex: maxPage, pageSize: paginationConfig.value.pageSize },
+              {
+                success: (res2) => {
+                  formatConfigOut(res2, ['total', 'tableData'])
+                  emitPaginationUpdate()
+                  emit('pagination-current-change', paginationConfig.value)
+                  resolve(res2)
+                },
+                fail: (err) => {
+                  reject(err)
                 }
-              )
-              return
-            }
+              }
+            )
+            return
           }
           resolve(res)
         },

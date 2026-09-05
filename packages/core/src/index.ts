@@ -78,6 +78,10 @@ export {
 } from './table-selection'
 export type { SelectionState, TableRefLike } from './table-selection'
 
+// ─── 分页请求判定 ─────────────────────────────────────────────
+export { resolveKeepPage, computeBoundaryRollback } from './pagination'
+export type { BoundaryRollbackInput, BoundaryRollbackResult } from './pagination'
+
 // ─── 请求相关 ─────────────────────────────────────────────────
 export {
   DEFAULT_CONFIG_FORM_FIELD_OUT,
