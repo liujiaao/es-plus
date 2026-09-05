@@ -41,7 +41,7 @@ Enterprise back-office apps are 80% CRUD pages — the same form-table-dialog pa
 - **Backend-agnostic** — `configTableOut` maps any API response structure
 - **Permission control** — `permissionValue` on buttons, no `v-if` needed
 - **i18n** — `labelKey` + custom translate function, works with any i18n library
-- **TypeScript** — Full type definitions, 11 core interfaces exported
+- **TypeScript** — Full type definitions + 38 cross-renderer contract types (CI-enforced parity across all three renderers)
 - **AI-native** — Official MCP Server and CLI for natural-language page generation
 
 ---
@@ -467,25 +467,40 @@ es-plus/
 │   ├── adapter-antdv/    # Vue 3 + Ant Design Vue renderer (npm: @es-plus/adapter-antdv)
 │   ├── core/             # Framework-agnostic core (npm: @es-plus/core)
 │   ├── es-plus-legacy/   # Compatibility stub (npm: es-plus-ui, deprecated)
-│   ├── shared/           # MCP/CLI shared logic
+│   ├── shared/           # MCP/CLI shared logic (npm: @es-plus/shared)
 │   ├── mcp-server/       # MCP Server (npm: @es-plus/mcp-server)
 │   └── cli/              # CLI tool (npm: @es-plus/cli)
-├── es-plus-docs/         # Documentation site (Vite + Vue 3)
-├── es-eui/               # Vue 2 + Element UI docs (legacy)
-└── es-pc/                # Vue 3 + Ant Design Vue docs
+├── es-plus-docs/         # Main docs site (Vite + Vue 3 + Element Plus)
+├── es-eui/               # Vue 2 + Element UI docs site
+├── es-pc/                # Ant Design Vue docs site
+├── scripts/              # Consistency / contract check scripts
+├── __tests__/            # e2e matrix + Playwright runtime tests
+└── docs/                 # Design docs & migration guides
 ```
 
 ## Development
 
 ```bash
-# Build the library
-cd packages/vue3 && npm install && npm run build
+# Install once at the root (workspaces monorepo)
+npm install --legacy-peer-deps
+
+# Build all publishable packages (dependency-ordered: shared → vue3 → vue2 → adapter-antdv → cli → mcp-server)
+npm run build:packages
 
 # Run docs site
-cd es-plus-docs && npm install && npm run dev
+cd es-plus-docs && npm run dev
 
-# Run tests
-cd packages/vue3 && npm test
+# Run all package unit tests
+npm test
+
+# Cross-package e2e matrix (vue2/vue3/antdv × schema/sfc)
+npm run test:e2e
+
+# Typecheck (per package)
+npm run typecheck --workspaces --if-present
+
+# Cross-renderer consistency checks (type exports / schema single source)
+npm run check:consistency
 ```
 
 ## Ecosystem
