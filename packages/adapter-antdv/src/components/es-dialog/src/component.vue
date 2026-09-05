@@ -243,6 +243,8 @@ const isDragging = ref(false)
 const dragOffset = reactive({ x: 0, y: 0 })
 let dragStartX = 0
 let dragStartY = 0
+// 拖拽途中若组件卸载，用此句柄移除残留在 document 上的临时监听，防止泄漏（对齐 vue2）
+let activeDragCleanup: (() => void) | null = null
 
 const dragStyle = computed(() => {
   if (isFullscreen.value) return undefined
@@ -275,8 +277,11 @@ function onDragStart(e: MouseEvent) {
     isDragging.value = false
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
+    activeDragCleanup = null
   }
 
+  // 保存清理句柄：拖拽途中若组件卸载，用它移除 document 上的临时监听，防止泄漏（对齐 vue2）
+  activeDragCleanup = onUp
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
 }
@@ -291,6 +296,8 @@ watch(isFullscreen, (val) => {
 
 onBeforeUnmount(() => {
   isDragging.value = false
+  // 拖拽途中卸载：移除残留在 document 上的 mousemove/mouseup 监听，防止泄漏（对齐 vue2）
+  if (activeDragCleanup) activeDragCleanup()
 })
 
 // ─── 关闭链（对齐 vue3：emit('closed', false)）────────
