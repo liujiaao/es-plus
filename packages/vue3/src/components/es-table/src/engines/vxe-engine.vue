@@ -55,6 +55,12 @@ import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
 import { buildFirstClassGridOptions } from './use-vxe-grid-config'
+import {
+  normalizeVxeOrder,
+  mergeCheckboxRecords,
+  applySpanShim,
+  resolveInternalTable,
+} from './vxe-engine-helpers'
 
 defineOptions({ inheritAttrs: false })
 
@@ -183,13 +189,7 @@ const gridConfig = computed(() => {
   }
 
   if (opts.spanMethod) {
-    base.mergeMethod = ({ row, rowIndex, column, columnIndex }: any) => {
-      // P2 shim：vxe 列用 column.field，el-table 列用 column.property，统一补齐两个属性
-      const shimmedCol = column ? { ...column, property: column.field ?? column.property } : column
-      const res = opts.spanMethod({ row, rowIndex, column: shimmedCol, columnIndex })
-      if (Array.isArray(res)) return { rowspan: res[0], colspan: res[1] }
-      return res || { rowspan: 1, colspan: 1 }
-    }
+    base.mergeMethod = (params: any) => applySpanShim(opts.spanMethod, params)
   }
 
   if (opts.rowClassName) {
@@ -297,18 +297,15 @@ const gridConfig = computed(() => {
 
 // ─── 事件处理 ───────────────────────────────────────────────
 function handleCheckboxChange({ records, reserves }: any) {
-  const all = [...(records || []), ...(reserves || [])]
-  emit('selection-change', all)
+  emit('selection-change', mergeCheckboxRecords(records, reserves))
 }
 
 function handleCheckboxAll({ records, reserves }: any) {
-  const all = [...(records || []), ...(reserves || [])]
-  emit('selection-change', all)
+  emit('selection-change', mergeCheckboxRecords(records, reserves))
 }
 
 function handleSortChange({ field, order }: any) {
-  const esOrder = order === 'asc' ? 'ascending' : order === 'desc' ? 'descending' : null
-  emit('sort-change', { column: { prop: field }, prop: field, order: esOrder })
+  emit('sort-change', { column: { prop: field }, prop: field, order: normalizeVxeOrder(order) })
 }
 
 function handleCellClick({ row, $event }: any) {
@@ -335,8 +332,7 @@ function handleZoom(params: any) {
 // 行内编辑 CRUD（getUpdateRecords/clearEdit 等）不在其内，
 // 需要通过 getRefMaps().refTable 获取内部 <vxe-table> 实例直接调用
 const getInternalTable = () => {
-  const refTable = gridRef.value?.getRefMaps?.()?.refTable
-  const tbl = refTable?.value ?? refTable
+  const tbl = resolveInternalTable(gridRef)
   // getRefMaps 是 vxe-grid 内部 API（非公开），大版本升级可能重命名。
   // DEV 下主动警告，生产环境各方法已有 ?. 兜底不会崩溃。
   if (import.meta.env.DEV && gridRef.value && !tbl) {

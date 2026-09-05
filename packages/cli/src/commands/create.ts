@@ -5,16 +5,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
 import { nlToConfig, aiAvailable, AiUnavailableError } from '../ai/nl-to-config.js';
-
-function toPascalCase(str: string): string {
-  return str
-    .replace(/(^|[-_])([a-z])/g, (_, __, letter) => letter.toUpperCase())
-    .replace(/[-_]/g, "");
-}
-
-function toKebabCase(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
+import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor } from '../utils/strings.js';
 
 /**
  * 覆盖保护：写入前检查目标文件是否已存在。
@@ -112,8 +103,7 @@ export const createCommand = new Command("create")
   .description("Generate a CRUD page from natural language description or structured config")
   .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string; ai?: boolean; force?: boolean }) => {
     // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
-    const cliTarget: 'vue3' | 'vue2' | 'antdv' =
-      options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
+    const cliTarget: 'vue3' | 'vue2' | 'antdv' = normalizeTarget(options.target);
     // Structured config mode — production-ready generation
     if (options.fromConfig) {
       const configPath = resolve(process.cwd(), options.fromConfig);
@@ -301,8 +291,7 @@ export const createCommand = new Command("create")
         mkdirSync(outputDir, { recursive: true });
       }
 
-      const esPlusPkg =
-        cliTarget === 'vue2' ? '@es-plus/vue2' : cliTarget === 'antdv' ? '@es-plus/adapter-antdv' : '@es-plus/vue3';
+      const esPlusPkg = esPlusPkgFor(cliTarget);
       const schemaContent = [
         `import type { CrudPageSchema } from '${esPlusPkg}'`,
         ``,

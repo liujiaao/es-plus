@@ -3,12 +3,7 @@ import pc from "picocolors";
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateScaffold } from '@es-plus/shared';
-
-function toPascalCase(str: string): string {
-  return str
-    .replace(/(^|[-_])([a-z])/g, (_, __, letter) => letter.toUpperCase())
-    .replace(/[-_]/g, "");
-}
+import { toPascalCase, normalizeTarget } from '../utils/strings.js';
 
 export const scaffoldCommand = new Command("scaffold")
   .argument("<name>", "page name (kebab-case)")
@@ -18,8 +13,7 @@ export const scaffoldCommand = new Command("scaffold")
   .description("Generate a minimal es-plus page scaffold")
   .action((name: string, options: { features: string; output?: string; target?: string }) => {
     const features = options.features.split(",").map((f) => f.trim());
-    const target: 'vue3' | 'vue2' | 'antdv' =
-      options.target === 'vue2' ? 'vue2' : options.target === 'antdv' ? 'antdv' : 'vue3';
+    const target = normalizeTarget(options.target);
 
     const outputPath = resolve(
       process.cwd(),

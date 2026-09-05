@@ -10,15 +10,18 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { patchHtmlRowSpans } from '../src/utils/vxe-print-utils'
+// 直接导入发货实现（此前测试内联复制了这些逻辑 = 测试剧场；现共享同一份纯函数）
+import {
+  normalizeVxeOrder,
+  mergeCheckboxRecords,
+  applySpanShim,
+  resolveInternalTable,
+} from '../src/components/es-table/src/engines/vxe-engine-helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. sort 事件归一化
 //    handleSortChange 逻辑：vxe order 'asc'/'desc'/null → es-plus 'ascending'/'descending'/null
 // ─────────────────────────────────────────────────────────────────────────────
-
-function normalizeVxeOrder(order: string | null | undefined): 'ascending' | 'descending' | null {
-  return order === 'asc' ? 'ascending' : order === 'desc' ? 'descending' : null
-}
 
 describe('sort 事件归一化', () => {
   it("'asc' → 'ascending'", () => {
@@ -42,10 +45,6 @@ describe('sort 事件归一化', () => {
 // 2. checkbox 事件合并：records + reserves 平铺
 // ─────────────────────────────────────────────────────────────────────────────
 
-function mergeCheckboxRecords(records: any[], reserves: any[]): any[] {
-  return [...(records || []), ...(reserves || [])]
-}
-
 describe('checkbox 事件合并', () => {
   it('records + reserves → 平铺合并', () => {
     const r1 = { id: 1 }; const r2 = { id: 2 }; const r3 = { id: 3 }
@@ -68,18 +67,6 @@ describe('checkbox 事件合并', () => {
 // 3. spanMethod → mergeMethod shim
 //    vxe column 用 field；el-table 用 property；shim 补写另一个属性
 // ─────────────────────────────────────────────────────────────────────────────
-
-function applySpanShim(
-  spanMethod: (params: any) => any,
-  params: { row: any; rowIndex: number; column: any; columnIndex: number }
-): { rowspan: number; colspan: number } {
-  const shimmedCol = params.column
-    ? { ...params.column, property: params.column.field ?? params.column.property }
-    : params.column
-  const res = spanMethod({ ...params, column: shimmedCol })
-  if (Array.isArray(res)) return { rowspan: res[0], colspan: res[1] }
-  return res || { rowspan: 1, colspan: 1 }
-}
 
 describe('spanMethod → mergeMethod shim', () => {
   it('column.field → column.property 补写（el-table 兼容）', () => {
@@ -199,40 +186,35 @@ describe('patchHtmlRowSpans', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. getInternalTable 防御链
+// 5. getInternalTable 防御链（resolveInternalTable 纯部分）
 //    三种情况：refTable 是 Vue Ref（.value 才是实例）/ 原始对象 / undefined
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getInternalTable(gridRef: { value: any } | null): any {
-  const refTable = gridRef?.value?.getRefMaps?.()?.refTable
-  return refTable?.value ?? refTable
-}
-
-describe('getInternalTable 防御链', () => {
+describe('resolveInternalTable 防御链', () => {
   it('refTable 是 Vue Ref → 返回 .value', () => {
     const instance = { clearEdit: vi.fn() }
     const grid = { getRefMaps: () => ({ refTable: { value: instance } }) }
-    expect(getInternalTable({ value: grid })).toBe(instance)
+    expect(resolveInternalTable({ value: grid })).toBe(instance)
   })
 
   it('refTable 是原始对象（非 Ref）→ 直接返回', () => {
     const instance = { clearEdit: vi.fn() }
     const grid = { getRefMaps: () => ({ refTable: instance }) }
     // refTable.value 为 undefined，fallback 到 refTable 本身
-    expect(getInternalTable({ value: grid })).toBe(instance)
+    expect(resolveInternalTable({ value: grid })).toBe(instance)
   })
 
   it('getRefMaps 不存在 → 返回 undefined（不崩溃）', () => {
     const grid = {}  // 无 getRefMaps
-    expect(getInternalTable({ value: grid })).toBeUndefined()
+    expect(resolveInternalTable({ value: grid })).toBeUndefined()
   })
 
   it('gridRef 为 null → 返回 undefined（不崩溃）', () => {
-    expect(getInternalTable(null)).toBeUndefined()
+    expect(resolveInternalTable(null)).toBeUndefined()
   })
 
   it('refTable 为 undefined → 返回 undefined', () => {
     const grid = { getRefMaps: () => ({ refTable: undefined }) }
-    expect(getInternalTable({ value: grid })).toBeUndefined()
+    expect(resolveInternalTable({ value: grid })).toBeUndefined()
   })
 })

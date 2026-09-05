@@ -55,7 +55,11 @@ export const validateCommand = new Command("validate")
     }
   });
 
-function detectSchemaType(config: unknown): string {
+/**
+ * 依据配置对象的独有字段推断 schema 类型（--schema 未显式指定时）。
+ * 导出以便单测覆盖分支判定（table-column / table-options / dialog-options / form-item）。
+ */
+export function detectSchemaType(config: unknown): string {
   if (!config || typeof config !== "object") return "form-item";
   const obj = config as Record<string, unknown>;
   if ("columns" in obj || "tableData" in obj) return "table-column";
