@@ -46,7 +46,7 @@
  *
  * 业务逻辑（schema 归一化、按钮处理、弹窗管理）100% 与 Vue 3 版本一致。
  */
-import { defineComponent, ref, reactive, computed, watch } from '../../vue-compat'
+import { defineComponent, ref, reactive, computed, watch, set } from '../../vue-compat'
 import { MessageBox } from 'element-ui'
 import EsForm from '../es-form/es-form.vue'
 import EsTable from '../es-table/component.vue'
@@ -103,13 +103,15 @@ export default defineComponent({
     const queryModel = reactive<Record<string, unknown>>({})
 
     // 同步 schema.formItems → queryModel 默认字段
+    // 用 set() 而非直接赋值：Vue 2.7 reactive({}) 后新增的键需经 set 才响应式，
+    // 否则带校验规则的查询字段会复现「校验重渲染回补陈旧空值清空输入」的问题（同弹窗 formData 修复）。
     watch(
       () => props.schema.formItems,
       (items) => {
         if (items) {
           items.forEach((item) => {
             if (item.prop && !(item.prop in queryModel)) {
-              ;(queryModel as Record<string, unknown>)[item.prop as string] = ''
+              set(queryModel as Record<string, unknown>, item.prop as string, '')
             }
           })
         }
@@ -386,15 +388,21 @@ export default defineComponent({
 
       dialogInstances.set(key, dialog)
 
-      const formData = reactive<Record<string, unknown>>({})
+      // Vue 2.7 的 reactive() 沿用 Vue 2 Observer：向已响应式对象「后加」的键不是响应式的
+      // （经典限制，需 $set）。若先 reactive({}) 再逐字段赋值，model[prop] 读取时不建立依赖，
+      // EsForm 便不会随输入重渲染——无校验规则时 el-input 的本地 currentValue 恰好兜住输入而不暴露，
+      // 一旦字段带校验规则，el-form-item 因校验重渲染会用「陈旧的空 value」回补 el-input 而清空输入
+      // （create 表单必填字段无法录入）。故这里先把所有字段建好再交给 reactive，键从创建即响应式。
+      // vue3 用 Proxy 无此问题，此修复仅对齐 vue2 语义。
+      const initialFormData: Record<string, unknown> = {}
       if (dialogConfig.formItems) {
         dialogConfig.formItems.forEach((item) => {
           if (item.prop) {
-            ;(formData as Record<string, unknown>)[item.prop] =
-              row?.[item.prop] ?? ''
+            initialFormData[item.prop] = row?.[item.prop] ?? ''
           }
         })
       }
+      const formData = reactive<Record<string, unknown>>(initialFormData)
 
       const title =
         typeof dialogConfig.title === 'function'
@@ -504,7 +512,11 @@ export default defineComponent({
             return {
               ...btn,
               click: async (_: unknown, { close, getRefs }: any) => {
-                await validateAndConfirm(key, config, formData, row, close, getRefs)
+                // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+                // 吞掉以防 EsDialog handleBtnClick 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+                try {
+                  await validateAndConfirm(key, config, formData, row, close, getRefs)
+                } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
               },
             }
           }
@@ -524,7 +536,11 @@ export default defineComponent({
           name: '确定',
           type: 'primary',
           click: async (_: unknown, { close, getRefs }: any) => {
-            await validateAndConfirm(key, config, formData, row, close, getRefs)
+            // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+            // 吞掉以防 EsDialog handleBtnClick 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+            try {
+              await validateAndConfirm(key, config, formData, row, close, getRefs)
+            } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
           },
         },
       ]

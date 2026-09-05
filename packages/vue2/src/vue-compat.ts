@@ -84,6 +84,9 @@ const _isRef = api.isRef
 // _parentListeners / $children 等），否则 Vue 正常 patch 时会 notify 到无关 watcher，
 // 触发 "infinite update loop"。Vue 2.7 原生与 2.6 polyfill 都导出 markRaw。
 const _markRaw = api.markRaw
+// set：向响应式对象「新增」键并使其响应式（Vue 2 Observer 的经典限制——直接赋值新键不响应）。
+// Vue 2.7 原生与 2.6 polyfill（@vue/composition-api）都导出 set。
+const _set = api.set
 // `h` 的类型在 @vue/composition-api 内部使用了未导出的命名空间 `H`，
 // 直接 const _h = api.h 会触发 TS4023 (Exported variable uses unnameable type)。
 // Vue 2.7 的 h 类型带有 this: ComponentInternalInstance，在 setup 的箭头渲染函数里
@@ -115,6 +118,7 @@ export {
   _unref as unref,
   _isRef as isRef,
   _markRaw as markRaw,
+  _set as set,
   _h as h,
 }
 
