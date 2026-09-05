@@ -85,6 +85,9 @@
       "optional": true
     }
   },
+  "dependencies": {
+    "@es-plus/core": "^1.0.0"
+  },
   "devDependencies": {
     "vxe-table": "^4.6.0",
     "@vitejs/plugin-vue": "^5.0.0",

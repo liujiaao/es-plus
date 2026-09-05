@@ -202,10 +202,11 @@ async function runScenario({ target, mode, prompt, keepOnFailure, fromConfig }) 
   console.log(`\n=== e2e: target=${target}, mode=${mode}${fromConfig ? ` (from-config: ${fromConfig})` : ''} ===`)
 
   // Pack all packages our fixture will install. core + shared are transitive
-  // deps of vue3/vue2/cli/mcp-server, so they must be packed first. vue2 and
-  // antdv externalize `@es-plus/core` (vue3 bundles it), so without packing the
-  // LOCAL core, npm would resolve it from the registry — where a stale
-  // published version can lag the freshly-built dist's imports.
+  // deps of vue3/vue2/cli/mcp-server, so they must be packed first. All three
+  // renderers (vue3/vue2/antdv) externalize `@es-plus/core` and declare it as a
+  // dependency, so without packing the LOCAL core, npm would resolve it from the
+  // registry — where a stale published version can lag the freshly-built dist's
+  // imports.
   const pkgDir = PKG_DIR[target]
   const coreTar = packPackage(join(REPO_ROOT, 'packages/core'))
   const sharedTar = packPackage(join(REPO_ROOT, 'packages/shared'))
