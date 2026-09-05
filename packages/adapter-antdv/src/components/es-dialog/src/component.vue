@@ -418,7 +418,7 @@ const filteredAttrs = computed(() => {
   return attrs
 })
 
-defineExpose({ close: handleClose, toggleFullscreen, doClose })
+defineExpose({ close: handleClose, closed: handleClose, toggleFullscreen, doClose })
 </script>
 
 <style lang="scss" scoped>

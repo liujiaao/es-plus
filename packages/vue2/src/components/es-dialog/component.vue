@@ -113,6 +113,7 @@ import {
   onBeforeUnmount,
   onMounted,
 } from '../../vue-compat'
+import type { PropType } from '../../vue-compat'
 import { getGlobalConfig, type BtnConfig } from '@es-plus/core'
 import RenderJsx from './render-jsx.vue'
 import { getCompIcon } from '../../utils/icon'
@@ -129,6 +130,11 @@ export default defineComponent({
     modalAppendToBody: { type: Boolean, default: true },
     closeOnClickModal: { type: Boolean, default: true },
     closeOnPressEscape: { type: Boolean, default: true },
+    // 关闭闸门：存在时 X/遮罩/ESC 关闭前先交给用户 done() 决定；doClose() 可绕过它强制关闭。
+    beforeClose: {
+      type: Function as PropType<(done: () => void) => void>,
+      default: undefined,
+    },
     destroyOnClose: { type: Boolean, default: false },
     hiddenFullBtn: { type: Boolean, default: false },
     width: { type: [String, Number], default: '50%' },
@@ -323,6 +329,8 @@ export default defineComponent({
     const handleFullscreen = () => {
       isFullscreen.value = !isFullscreen.value
     }
+    // 对齐 antdv/vue3 的命名（exposed 用 toggleFullscreen）
+    const toggleFullscreen = handleFullscreen
 
     const dialogVisible = computed({
       get: () => props.visible || false,
@@ -337,16 +345,30 @@ export default defineComponent({
       },
     })
 
-    const handleClose = () => {
-      // dialogVisible setter 统一处理 emit('closed')，不在此重复 emit
+    // 强制关闭：直接翻转 dialogVisible（setter 统一 emit closed），绕过 beforeClose 闸门。
+    // 这是「真正的强制关闭」逃生舱，供 exposed.doClose / 内部确认后调用。
+    const doClose = () => {
       ;(dialogVisible as unknown as { value: boolean }).value = false
       closeFullscreen()
     }
 
+    // 关闭闸门：存在 beforeClose 则交给用户 done() 决定何时关闭，否则直接 doClose。
+    const runBeforeClose = (proceed: () => void) => {
+      if (typeof props.beforeClose === 'function') {
+        props.beforeClose(proceed)
+      } else {
+        proceed()
+      }
+    }
+
+    const handleClose = () => {
+      // X 按钮点击：走统一关闭闸门（beforeClose 可拦截）
+      runBeforeClose(doClose)
+    }
+
     const onDialogClose = () => {
-      // 遮罩/ESC/子组件触发 → 同步 dialogVisible 为新状态
-      ;(dialogVisible as unknown as { value: boolean }).value = false
-      closeFullscreen()
+      // 遮罩/ESC/子组件触发 → 走闸门（与 X 按钮一致）
+      runBeforeClose(doClose)
     }
 
     const onDialogClosed = () => {
@@ -431,7 +453,12 @@ export default defineComponent({
     }))
 
     const exposed = {
+      // 三端统一命名：close（标准）/ closed（别名，历史兼容）走闸门；
+      // toggleFullscreen 切全屏；doClose 绕过 beforeClose 强制关闭。
+      close: handleClose,
       closed: handleClose,
+      toggleFullscreen,
+      doClose,
     }
     if (typeof expose === 'function') {
       expose(exposed)

@@ -1324,6 +1324,19 @@ export default defineComponent({
         if (isVxeEngine.value) vxeEngineRef.value?.scrollToRow?.(row)
         // noop for el-table in Vue 2
       },
+      // ─── vxe 行内编辑 CRUD 转发（对齐 vue3 / antdv）──
+      // 引擎已实现全部方法（engines/vxe-engine.vue），此处仅做纯转发。
+      // 非 vxe 引擎时返回空数组 / undefined / null，语义与 vue3 一致。
+      getUpdateRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getUpdateRecords?.() ?? [] : []),
+      getInsertRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getInsertRecords?.() ?? [] : []),
+      getRemoveRecords: () => (isVxeEngine.value ? vxeEngineRef.value?.getRemoveRecords?.() ?? [] : []),
+      revertData: (rows?: Record<string, unknown> | Record<string, unknown>[]) =>
+        isVxeEngine.value ? vxeEngineRef.value?.revertData?.(rows) : undefined,
+      clearActived: () => (isVxeEngine.value ? vxeEngineRef.value?.clearActived?.() : undefined),
+      clearValidate: () => (isVxeEngine.value ? vxeEngineRef.value?.clearValidate?.() : undefined),
+      validate: (rows?: Record<string, unknown>[]) =>
+        isVxeEngine.value ? vxeEngineRef.value?.validate?.(rows) : undefined,
+      vxeInstance: () => (isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null),
     }
 
     if (typeof expose === 'function') {

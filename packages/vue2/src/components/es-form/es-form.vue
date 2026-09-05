@@ -142,7 +142,7 @@
  *  - 远端 dataOptions 加载（apiParams + httpRequest）
  *  - 工具栏按钮（左右分布、权限过滤、内置 query/rest 行为）
  *  - 与 EsTable 联动（通过 inject TABLE_CONTEXT_INJECT_KEY）
- *  - exposed 方法：validate / resetFields / clearValidate / scrollToField
+ *  - exposed 方法：validate / resetFields / clearValidate / validateField / scrollToField
  *
  * Vue 2 关键差异点：
  *  - 使用 defineComponent + setup() 替代 <script setup>
@@ -578,6 +578,15 @@ export default defineComponent({
     const resetFields = () => getFormRef()?.resetFields()
     const clearValidate = (p?: string | string[]) => getFormRef()?.clearValidate(p)
     const validateField = (p: string | string[]) => getFormRef()?.validateField(p)
+    // element-ui 2.15.14 的 el-form 没有原生 scrollToField；这里对齐 vue3/antdv 的 API，
+    // 通过 el-form 内部维护的 fields 数组找到对应 el-form-item 实例后滚动到视口居中。
+    const scrollToField = (prop: string) => {
+      const form = getFormRef() as unknown as {
+        fields?: Array<{ prop?: string; $el?: HTMLElement }>
+      } | null
+      const field = form?.fields?.find((f) => f && f.prop === prop)
+      field?.$el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    }
 
     const formItmeRequestInstance = async (propsList: string[]) => {
       const list = formItemListFilter.value
@@ -640,6 +649,7 @@ export default defineComponent({
         resetFields,
         clearValidate,
         validateField,
+        scrollToField,
       })
     }
 
@@ -681,6 +691,7 @@ export default defineComponent({
       resetFields,
       clearValidate,
       validateField,
+      scrollToField,
     }
   },
 })

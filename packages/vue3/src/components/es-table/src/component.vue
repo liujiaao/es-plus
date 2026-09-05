@@ -981,6 +981,12 @@ defineExpose({
   // 仅重排列宽/布局，不重新取数（旧 refresh 行为的逃生舱）
   doLayout: doLayoutFn,
   scrollToRow: (row: number) => activeEngineRef.value?.scrollToRow(row),
+  // 命令式勾选单行（对齐 antdv/vue2 的同名方法）：selected 省略时切换，传入布尔时强制置位。
+  // el-table / vxe / virtual 三引擎的 toggleRowSelection 均为 (row, selected?) 签名。
+  toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => {
+    if (activeEngineRef.value) activeEngineRef.value?.toggleRowSelection?.(row, selected)
+    else tableRef.value?.toggleRowSelection?.(row, selected)
+  },
   // vxe 行内编辑 CRUD（engine:'vxe' 时有效）
   getUpdateRecords: () => activeEngineRef.value?.getUpdateRecords?.() ?? [],
   getInsertRecords: () => activeEngineRef.value?.getInsertRecords?.() ?? [],

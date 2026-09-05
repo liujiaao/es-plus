@@ -285,7 +285,12 @@ provide('bodyFormInstance', (e: any) => {
 
 if (instance) {
   instance.exposed = {
-    closed: handleClose
+    // 三端统一命名：close（标准）/ closed（别名，历史兼容）走闸门；
+    // toggleFullscreen 切全屏；doClose 绕过 beforeClose 强制关闭。
+    close: handleClose,
+    closed: handleClose,
+    toggleFullscreen: handleFullscreen,
+    doClose,
   }
 }
 </script>
