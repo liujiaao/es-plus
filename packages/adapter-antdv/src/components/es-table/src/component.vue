@@ -303,9 +303,29 @@ const paginationConfig = ref<PaginationConfig>({
   ...props.pagination,
 })
 
+// 出站/入站共用的值比较令牌：初值用空串哨兵（JSON.stringify 永不产出 ''），
+// 保证入站 watch 的 immediate 首跑必然放行；随后与上次出站快照一致时 no-op，
+// 从值层面切断 v-model:pagination 双向绑定回环（对齐 vue3/vue2）。
+let lastPaginationStr = ''
 watch(() => props.pagination, (val) => {
+  const str = JSON.stringify(val || {})
+  if (str === lastPaginationStr) return
+  lastPaginationStr = str
   paginationConfig.value = { ...paginationConfig.value, ...val }
 }, { deep: true, immediate: true })
+
+/**
+ * 值比较后再回传父组件（支持 v-model:pagination）。仅当分页状态相对上次已同步值
+ * 确有变化时才 emit，并刷新 lastPaginationStr，使随后 v-model 写回时入站 watch 命中
+ * 守卫而 no-op。统一所有出站点（请求成功/回退/翻页/改页大小），消除此前
+ * 「请求路径按 props.pagination 存在性门控、翻页路径无条件 emit」的内部与三端不一致。
+ */
+const emitPaginationUpdate = () => {
+  const str = JSON.stringify(paginationConfig.value)
+  if (str === lastPaginationStr) return
+  lastPaginationStr = str
+  emit('update:pagination', { ...paginationConfig.value })
+}
 
 // ─── 表格尺寸 ───────────────────────────────────────
 const tableSize = computed(() => mapSize(props.options.size, 'middle') as 'large' | 'middle' | 'small')
@@ -671,7 +691,7 @@ function handleAdvPageChange(page: number) {
   if (isRequestConf.value) {
     changePageIndexRequest()
   } else {
-    emit('update:pagination', { ...paginationConfig.value })
+    emitPaginationUpdate()
     emit('pagination-current-change', { ...paginationConfig.value })
   }
 }
@@ -683,7 +703,7 @@ function handleAdvSizeChange(current: number, size: number) {
   if (isRequestConf.value) {
     changePageSizeRequest()
   } else {
-    emit('update:pagination', { ...paginationConfig.value })
+    emitPaginationUpdate()
     emit('size-change', { ...paginationConfig.value }, size)
   }
 }
@@ -842,9 +862,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
           // 加载成功：清除上一轮自动加载的错误态（若有）（对齐 vue3）
           requestError.value = null
           formatConfigOut(res, ['total', 'tableData'])
-          if (Object.keys(props.pagination).length) {
-            emit('update:pagination', { ...paginationConfig.value })
-          }
+          emitPaginationUpdate()
           // 分页边界回退：保留页模式下，若拉取后当前页已无数据且非首页
           //（如删除了本页最后一条），回退到最后一个有效页并再次拉取。（对齐 vue3）
           const { shouldRollback, maxPage } = computeBoundaryRollback({
@@ -865,9 +883,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
               {
                 success: (res2) => {
                   formatConfigOut(res2, ['total', 'tableData'])
-                  if (Object.keys(props.pagination).length) {
-                    emit('update:pagination', { ...paginationConfig.value })
-                  }
+                  emitPaginationUpdate()
                   emit('pagination-current-change', { ...paginationConfig.value })
                   resolve(res2)
                 },
@@ -896,7 +912,7 @@ function changePageIndexRequest() {
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', { ...paginationConfig.value })
+        emitPaginationUpdate()
         emit('pagination-current-change', { ...paginationConfig.value })
       },
       // 翻页失败同样经统一暴露（对齐 F2）
@@ -911,7 +927,7 @@ function changePageSizeRequest() {
     {
       success: (res) => {
         formatConfigOut(res, ['total', 'tableData'])
-        emit('update:pagination', { ...paginationConfig.value })
+        emitPaginationUpdate()
       },
       fail: (err) => surfaceRequestError(err),
     }
