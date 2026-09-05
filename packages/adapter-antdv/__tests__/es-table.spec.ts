@@ -411,3 +411,84 @@ describe('EsTable — EDGE CASES', () => {
     expect(vm.adaptedColumns).toHaveLength(0)
   })
 })
+
+describe('EsTable — 内建客户端分页 (localPagination)', () => {
+  const makeData = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: String(i + 1), name: `姓名${i + 1}` }))
+  const columns = [
+    { prop: 'id', label: 'ID' },
+    { prop: 'name', label: '姓名' },
+  ]
+
+  it('切当前页：displayDataSource 只返回当前页数据，total 回填全量长度', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    expect(vm.displayDataSource).toHaveLength(10)
+    expect(vm.displayDataSource[0].id).toBe('1')
+    expect(vm.paginationConfig.total).toBe(25)
+    expect(vm.showPagination).toBe(true)
+  })
+
+  it('翻页：current 变化后 displayDataSource 切到对应页', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    vm.paginationConfig.current = 3
+    await nextTick()
+    // 第三页只剩 5 条
+    expect(vm.displayDataSource).toHaveLength(5)
+    expect(vm.displayDataSource[0].id).toBe('21')
+  })
+
+  it('边界回收：数据缩短使当前页越界时回退到最后有效页', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    vm.paginationConfig.current = 3
+    await nextTick()
+    // 数据缩短到 8 条，只有 1 页
+    await wrapper.setProps({ dataSource: makeData(8) })
+    await nextTick()
+    expect(vm.paginationConfig.total).toBe(8)
+    expect(vm.paginationConfig.current).toBe(1)
+    expect(vm.displayDataSource).toHaveLength(8)
+  })
+
+  it('请求模式下不启用本地分页（displayDataSource 不切片）', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: makeData(25),
+        columns,
+        options: { localPagination: true, actionUrl: '/api/list' } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    expect(vm.isLocalPagination).toBe(false)
+    // 请求模式 tableData 为空 → 回退到全量 dataSource（不切片）
+    expect(vm.displayDataSource).toHaveLength(25)
+  })
+})

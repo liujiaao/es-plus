@@ -44,7 +44,7 @@
             ref="vxeEngineRef"
             v-bind="$attrs"
             :columns="vxeFilteredColumns"
-            :data-source="tableData.length ? tableData : dataSource"
+            :data-source="displayDataSource"
             :table-height="tableHeight"
             :options="({ ...defaultOptions, ...options } as any)"
             :parent-slots="($slots as any)"
@@ -57,7 +57,7 @@
             v-else
             ref="tableRef"
             :columns="adaptedColumns"
-            :dataSource="tableData.length ? tableData : dataSource"
+            :dataSource="displayDataSource"
             :rowKey="rowKeyValue"
             :pagination="false"
             :loading="false"
@@ -373,12 +373,40 @@ const isRequestConf = computed(() =>
   (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0) ||
   !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
 )
-// 分页栏显示：外部显式传入 total 时按外部值显示；请求模式（actionUrl/apiParams）必然带分页，始终显示
+// 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
+// 仅在非请求模式且非 vxe proxy 时生效（对齐 vue3/vue2）。
+const isLocalPagination = computed(
+  () => props.options?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
+)
+// 分页栏显示：外部显式传入 total 时按外部值显示；请求模式（actionUrl/apiParams）必然带分页，始终显示；本地分页始终显示
 const showPagination = computed(() => {
   if (props.pagination.total !== undefined) return true
   if (isRequestConf.value) return true
+  if (isLocalPagination.value) return true
   return false
 })
+// 模板渲染用的数据源：本地分页时切当前页，否则维持 tableData(请求)/dataSource 回退。
+const displayDataSource = computed(() => {
+  if (isLocalPagination.value) {
+    const src = Array.isArray(props.dataSource) ? props.dataSource : []
+    const size = Number(paginationConfig.value.pageSize) || 10
+    const cur = Number(paginationConfig.value.current) || 1
+    const start = (cur - 1) * size
+    return src.slice(start, start + size)
+  }
+  return tableData.value.length ? tableData.value : props.dataSource
+})
+// 依据全量 dataSource 回填 total + 边界回收（当前页超范围则回退到最后有效页）。
+const syncLocalPagination = () => {
+  if (!isLocalPagination.value) return
+  const total = Array.isArray(props.dataSource) ? props.dataSource.length : 0
+  const size = Number(paginationConfig.value.pageSize) || 10
+  const maxPage = Math.max(1, Math.ceil(total / size))
+  const current = Math.min(Number(paginationConfig.value.current) || 1, maxPage)
+  paginationConfig.value.total = total
+  paginationConfig.value.current = current
+  emitPaginationUpdate()
+}
 const hasDefaultSlot = computed(() => !!slots.default?.())
 const hasExpandSlot = computed(() => !!(slots as any).expand)
 // 展开：options.expand 或显式声明 type:'expand' 列（对齐 el-table/vxe 约定）均启用
@@ -968,6 +996,14 @@ watch(visibleShow, async (val, oldVal) => {
 watch(() => props.dataSource, (val) => {
   initSelection(val)
 }, { deep: true })
+
+// 内建客户端分页：初始播种 total，并在 dataSource 长度变化时自动回填 total 与边界回收。
+// 当前页切片由 displayDataSource 派生。
+syncLocalPagination()
+watch(
+  () => (Array.isArray(props.dataSource) ? props.dataSource.length : 0),
+  () => syncLocalPagination()
+)
 
 watch(tableData, (val) => {
   if (Array.isArray(val)) emit('update:dataSource', val)
