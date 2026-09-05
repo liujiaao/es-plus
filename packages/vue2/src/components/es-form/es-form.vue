@@ -561,18 +561,24 @@ export default defineComponent({
 
     const validate = (): Promise<boolean> => {
       const ref = getFormRef()
-      if (!ref) return Promise.resolve(false)
-      // Element UI el-form.validate 接受 callback；若返回 Promise 我们以 callback 形式包装
-      return new Promise<boolean>((resolve) => {
+      // 无表单实例：与 vue3/antdv 的 getFormRef()?.validate()（await undefined）一致——放行
+      if (!ref) return Promise.resolve(true)
+      // Element UI el-form.validate 接受 callback；这里对齐 vue3(el-form)/antdv(a-form)
+      // 原生 validate() 的 Promise 语义：校验通过 resolve(true)，不通过则 reject。
+      // EsCrudPage 的提交流程只靠 await validate() 抛错来中止（返回值被忽略），
+      // 若此处像旧实现那样 resolve(false)，非法的新增/编辑表单会被静默提交并关闭弹窗
+      // （三端里唯独 vue2 绕过校验）。reject 才能与另两端一致地拦截非法提交。
+      return new Promise<boolean>((resolve, reject) => {
         try {
           const maybePromise = (ref as unknown as { validate: (cb: (valid: boolean) => void) => void | Promise<boolean> }).validate((valid: boolean) => {
-            resolve(!!valid)
+            if (valid) resolve(true)
+            else reject(new Error('EsForm validation failed'))
           })
           if (maybePromise && typeof (maybePromise as Promise<boolean>).then === 'function') {
-            ;(maybePromise as Promise<boolean>).then(resolve).catch(() => resolve(false))
+            ;(maybePromise as Promise<boolean>).then(() => resolve(true)).catch(reject)
           }
         } catch (e) {
-          resolve(false)
+          reject(e)
         }
       })
     }
