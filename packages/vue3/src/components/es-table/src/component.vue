@@ -679,6 +679,12 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
         tableData.value = Array.isArray(rowData) ? rowData : []
       } else {
         ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
+        // 服务端返回了 configTableOut 映射的 total 字段，即表示该表启用了服务端分页，
+        // 自动点亮分页器——否则未显式传 :pagination 的 httpRequest 表格分页器恒不显示
+        // （对齐 vue2/antdv）。仅置 true，永不隐藏，不影响既有行为。
+        if (key === 'total') {
+          showPagination.value = true
+        }
       }
     })
   }

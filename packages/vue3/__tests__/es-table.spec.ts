@@ -173,6 +173,26 @@ describe('EsTable - 自动请求配置', () => {
     expect(callArgs.url).toBe('/api/list')
   })
 
+  it('#6: httpRequest 表格未传 :pagination 时，加载后自动显示分页器', async () => {
+    const mockRequest = vi.fn().mockResolvedValue({ records: 25, rows: sampleData })
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      // 注意：不传 pagination —— 复现 #6（此前 showPagination 恒为 false，分页器不显示）
+      options: {
+        httpRequest: mockRequest,
+        actionUrl: '/api/list',
+        configTableOut: { total: 'records', tableData: 'rows' },
+      } as TableOptions,
+    })
+    // 加载前：未显式传 :pagination，分页器不显示
+    expect(wrapper.findComponent(ElPagination).exists()).toBe(false)
+    await flushPromises()
+    await nextTick()
+    // 加载后：服务端返回映射的 total，应自动点亮分页器（对齐 vue2/antdv）
+    expect(wrapper.findComponent(ElPagination).exists()).toBe(true)
+  })
+
   it('does not auto-request when isInitRun is false', async () => {
     const mockRequest = vi.fn().mockResolvedValue({
       records: 0, pageSize: 10, pageNo: 1, rows: []
