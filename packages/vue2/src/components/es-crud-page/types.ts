@@ -54,6 +54,9 @@ export interface CrudBtnConfig extends BtnConfig {
 }
 
 export interface TableBtnConfig extends CrudBtnConfig {
+  /** Button position (recommended): 'left' | 'right' */
+  position?: 'left' | 'right'
+  /** @deprecated Use position instead. 1=left, 2=right */
   code?: 1 | 2
 }
 
