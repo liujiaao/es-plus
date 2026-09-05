@@ -10,6 +10,14 @@ import { test, expect, type Page } from '@playwright/test'
  *
  * 后端计数通过 window.__backend.calls 读取（fixture 的 App.vue 把内存后端挂到了 window）。
  * 注入缝与 Tier 1 一致：EsCrudPage 的 :http-request prop。
+ *
+ * 本 spec 额外锁定审计发现（真实浏览器 + 真实 element-ui 校验，vitest+happy-dom 下 el-form.validate()
+ * 不 reject、element-ui 无法挂载，故只能在此层验证）：
+ *   - #1 表单校验拦截：必填未填点「确定」→ onConfirm 被阻断 + 无 unhandled rejection
+ *   - #3 渲染契约：falsy(0) 原样显示、嵌套路径经 getNestedValue 解析
+ *   - F2 请求失败：失败经 request-error 暴露、数据保留、无 unhandled rejection
+ * 注：#2（vxe proxy keepPage：query vs reload）为 vxe 引擎专属，本 fixture 用默认 el-table 引擎，
+ *     不覆盖；如需锁定 #2 需另建 engine:'vxe' + proxyConfig 的 fixture。
  */
 
 const rows = (page: Page) => page.locator('.el-table__body-wrapper').first().locator('tbody tr.el-table__row')
@@ -22,6 +30,8 @@ const rowBtn = (page: Page, name: string) => page.getByRole('button', { name }).
 async function backendCalls(page: Page) {
   return page.evaluate(() => (window as any).__backend.calls as { list: number; create: number; update: number; remove: number })
 }
+const unhandled = (page: Page) => page.evaluate(() => (window as any).__unhandled as string[])
+const requestErrors = (page: Page) => page.evaluate(() => (window as any).__requestErrors as string[])
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -33,6 +43,46 @@ test('列表加载：挂载即经 httpRequest 拉数据并渲染 Alice/Bob', asy
   await expect(page.getByText('Alice').first()).toBeVisible()
   await expect(page.getByText('Bob').first()).toBeVisible()
   expect((await backendCalls(page)).list).toBeGreaterThanOrEqual(1)
+})
+
+test('#3 falsy/嵌套渲染：score=0 原样显示、嵌套 info.city 经 getNestedValue 解析', async ({ page }) => {
+  // 旧实现 `row[prop] || row[key]` 会把 0 显示为空、且 `row['info.city']` 取不到嵌套值。
+  // 取 Alice 所在行（score:0, info.city:'Beijing'）——在主体层（非 fixed 复制层）断言。
+  const aliceRow = page.locator('.el-table__body-wrapper').first().locator('tbody tr.el-table__row', { hasText: 'Alice' }).first()
+  await expect(aliceRow).toContainText('0') // score=0 未被吞成空
+  await expect(aliceRow).toContainText('Beijing') // 嵌套 info.city 正确解析
+  // Bob 行：score=99 + 城市 Shanghai
+  const bobRow = page.locator('.el-table__body-wrapper').first().locator('tbody tr.el-table__row', { hasText: 'Bob' }).first()
+  await expect(bobRow).toContainText('99')
+  await expect(bobRow).toContainText('Shanghai')
+})
+
+test('#1 校验拦截：必填未填点「确定」→ 新增被阻断（不新增）且无 unhandled rejection', async ({ page }) => {
+  await page.getByRole('button', { name: '新增' }).click()
+  await expect(dialog(page)).toBeVisible()
+
+  // 不填姓名直接点「确定」：EsForm.validate() reject → validateAndConfirm 抛出 → onConfirm 不执行
+  await dialog(page).getByRole('button', { name: '确定' }).click()
+
+  // 弹窗保持打开（未 close），后端未新增，列表仍 2 行
+  await expect(dialog(page)).toBeVisible()
+  await expect(page.locator('.el-form-item__error').first()).toBeVisible()
+  await expect(rows(page)).toHaveCount(2)
+  expect((await backendCalls(page)).create).toBe(0)
+  // F2 交叉：confirm 点击处 try/catch 吞掉 validate 的 reject，不得冒泡成 unhandled rejection
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('F2 请求失败：强制失败刷新 → 失败经 request-error 暴露、数据保留、无 unhandled rejection', async ({ page }) => {
+  await page.getByRole('button', { name: '强制失败刷新' }).click()
+
+  // 失败被暴露（EsTable emit request-error）
+  await expect.poll(async () => (await requestErrors(page)).length).toBeGreaterThanOrEqual(1)
+  // 列表数据保留（失败不清空既有行），页面仍可用
+  await expect(rows(page)).toHaveCount(2)
+  await expect(page.getByText('Alice').first()).toBeVisible()
+  // 核心 F2 保证：命令式 refresh 的 reject 被 .catch 吞掉，无 unhandled rejection
+  expect(await unhandled(page)).toHaveLength(0)
 })
 
 test('新增：点工具栏「新增」→ 弹窗填表 → 确定 → 后端 +1 → 列表 +1', async ({ page }) => {
