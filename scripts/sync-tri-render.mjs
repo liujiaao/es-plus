@@ -46,6 +46,9 @@ function main() {
   let synced = 0
 
   for (const target of SITES) {
+    // es-eui/ 被 .gitignore（本地-only playground，不进 CI）：该站点缺失时跳过校验，
+    // 只对已跟踪站点（es-plus-docs / es-pc）做单源一致性门禁。
+    if (CHECK && rel(target).startsWith('es-eui/') && !existsSync(target)) continue
     for (const file of files) {
       const srcContent = readFileSync(join(SOURCE, file))
       const dstPath = join(target, file)

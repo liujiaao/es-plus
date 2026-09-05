@@ -40,7 +40,7 @@
             :row="{ isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
             :form-model="resolvedModel"
             :form-item-list="formItem"
-            :render="(renderBtn as Function)"
+            :render="renderBtnFn"
           />
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
             <!-- btnColSpanRow=true 时左右分布 -->
@@ -498,6 +498,13 @@ export default defineComponent({
 
     const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
+    // 供模板绑定：把 Function | boolean 的 renderBtn 收敛为函数或 undefined。
+    // 不要在模板里写 `renderBtn as Function` —— Vue2 模板表达式由 babel 解析，
+    // TS 断言会导致 vite build 失败（tsc 不查模板故 typecheck 反而漏过）。
+    const renderBtnFn = computed(() =>
+      typeof props.renderBtn === 'function' ? props.renderBtn : undefined,
+    )
+
     // ─── 按钮点击逻辑 ──
     const handleBtnClick = (it: BtnConfig) => {
       const formRef = (templateRefs().formRef as unknown) as Record<string, unknown> | null
@@ -646,6 +653,7 @@ export default defineComponent({
       folded,
       getBtnColSpan,
       isRenderBtn,
+      renderBtnFn,
       colRightLeftList,
       formInputComponents,
       formInstance,

@@ -38,6 +38,9 @@ function main() {
 
   for (const target of TARGETS) {
     if (CHECK) {
+      // es-eui/ 被 .gitignore（本地-only playground，不进 CI）：该站点缺失时跳过校验，
+      // 只对已跟踪站点（es-plus-docs / es-pc）做单源一致性门禁。
+      if (rel(target).startsWith('es-eui/') && !existsSync(target)) continue
       const dstContent = existsSync(target) ? readFileSync(target, 'utf-8') : null
       if (dstContent !== srcContent) {
         console.error(`❌ 案例目录漂移：${rel(target)} 与单源不一致`)

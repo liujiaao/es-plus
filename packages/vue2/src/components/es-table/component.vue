@@ -25,7 +25,7 @@
       >
         <div class="table_inner_containers">
           <table-btns
-            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || (options.vxeConfig as any)?.toolbarConfig))"
+            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !hasVxeToolbar"
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
             :btn-config="options.configBtn"
@@ -401,6 +401,16 @@ export default defineComponent({
 
     // ─── Engine dispatch ──────────────────────
     const isVxeEngine = computed(() => props.options.engine === 'vxe')
+    // vxeConfig.toolbarConfig 非 TableOptions 契约字段，需局部断言取值；且模板不能
+    // 写 TS 断言（会破坏 vite build），故在此 script 内收敛为布尔供模板绑定。
+    const hasVxeToolbar = computed(
+      () =>
+        isVxeEngine.value &&
+        Boolean(
+          props.options.toolbarConfig ||
+            (props.options.vxeConfig as Record<string, unknown> | undefined)?.toolbarConfig,
+        ),
+    )
     const isVxeProxyMode = computed(() => {
       if (!isVxeEngine.value) return false
       const opts = props.options as any
@@ -1335,6 +1345,7 @@ export default defineComponent({
       formInstance,
       // vxe engine
       isVxeEngine,
+      hasVxeToolbar,
       isVxeProxyMode,
       mergedOptions,
       vxeEngineRef,
