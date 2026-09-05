@@ -196,6 +196,7 @@ import {
 import {
   getGlobalConfig,
   getCallback,
+  getNestedValue,
   TABLE_CONTEXT_INJECT_KEY,
   isObject,
   findValueByKey,
@@ -725,7 +726,8 @@ export default defineComponent({
           !col.formatter
         ) {
           col.formatter = (row: Record<string, unknown>) => {
-            const value = row[col.prop as string] || row[col.key as string]
+            // 用 ?? 避免把 0/false 等假值塌缩成 '-'；用 getNestedValue 支持嵌套 prop（a.b.c）（对齐 vue3）
+            const value = getNestedValue(row, col.prop as string) ?? getNestedValue(row, col.key as string)
             if (value == null || value === '') {
               return (col.emptyPlaceholder as string) || '-'
             }
@@ -1110,16 +1112,18 @@ export default defineComponent({
       model?: Record<string, unknown>,
       reqOptions?: { keepPage?: boolean }
     ) => {
-      // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
+      // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
+      // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
+      // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
+      const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
+      // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器。
+      // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页——须按 keepPage 派发，
+      // 否则查询/重置（keepPage:false）在 vxe 模式下会停留在当前页（对齐 vue3/antdv）。
       if (isVxeProxyMode.value) {
-        ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.('query')
+        ;(vxeEngineRef.value?.getTableRef?.() as any)?.commitProxy?.(keepPage ? 'query' : 'reload')
         return Promise.resolve()
       }
       return new Promise((resolve, reject) => {
-        // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
-        // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
-        // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
-        const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
         if (!keepPage) {
           paginationConfig.value = { ...paginationConfig.value, current: 1 }
         }
