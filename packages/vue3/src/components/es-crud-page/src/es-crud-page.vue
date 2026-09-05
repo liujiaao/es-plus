@@ -468,7 +468,11 @@ function resolveDialogBtns(
         return {
           ...btn,
           click: async (_: any, { close, getRefs }: any) => {
-            await validateAndConfirm(key, config, formData, row, close, getRefs)
+            // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+            // 吞掉以防 EsDialog 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+            try {
+              await validateAndConfirm(key, config, formData, row, close, getRefs)
+            } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
           }
         }
       }
@@ -489,7 +493,11 @@ function resolveDialogBtns(
       name: '确定',
       type: 'primary',
       click: async (_: any, { close, getRefs }: any) => {
-        await validateAndConfirm(key, config, formData, row, close, getRefs)
+        // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
+        // 吞掉以防 EsDialog 未捕获 click() 返回的 promise → unhandled rejection（对齐 F2）
+        try {
+          await validateAndConfirm(key, config, formData, row, close, getRefs)
+        } catch { /* 已在 validate/onConfirm 内暴露，忽略 */ }
       }
     }
   ]
