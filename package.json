@@ -35,7 +35,7 @@
     "test:golden": "node __tests__/golden/scripts/score-golden.mjs",
     "golden:e2e": "node __tests__/e2e/scripts/run-golden.mjs",
     "eval:llm": "node scripts/eval-llm.mjs",
-    "build:packages": "npm run schemas:sync && npm run build --workspace @es-plus/shared && npm run build --workspace @es-plus/vue3 && npm run build --workspace @es-plus/vue2 && npm run build --workspace @es-plus/adapter-antdv && npm run build --workspace @es-plus/cli && npm run build --workspace @es-plus/mcp-server",
+    "build:packages": "npm run schemas:sync && npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared && npm run build --workspace @es-plus/vue3 && npm run build --workspace @es-plus/vue2 && npm run build --workspace @es-plus/adapter-antdv && npm run build --workspace @es-plus/cli && npm run build --workspace @es-plus/mcp-server",
     "test:e2e": "node __tests__/e2e/scripts/run-all.mjs",
     "test:e2e:single": "node __tests__/e2e/scripts/run-e2e.mjs",
     "pretest:e2e:runtime": "npm run build --workspace @es-plus/vue2",
