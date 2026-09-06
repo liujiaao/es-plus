@@ -1,5 +1,16 @@
 # @es-plus/vue3
 
+## 1.5.0
+
+### Minor Changes
+
+- 9869180: 修复 crud-page 确定按钮校验/onConfirm rejection 冒泡为 unhandled rejection、httpRequest 未传 :pagination 时加载后自动显示分页器、请求失败统一暴露；对齐三端暴露 API。
+
+### Patch Changes
+
+- Updated dependencies [9869180]
+  - @es-plus/core@1.1.0
+
 ## 1.4.1 — Virtual table horizontal scroll fix
 
 ### Fixed
@@ -28,7 +39,7 @@ automatically. The combined behavior shift is:
 
 - BEFORE: virtual tables silently couldn't horizontally scroll; fixed-right
   columns visually detached on overflow.
-- AFTER:  virtual tables horizontally scroll when overflow exists; fixed
+- AFTER: virtual tables horizontally scroll when overflow exists; fixed
   columns anchor correctly; scrollbar is always discoverable.
 
 No source changes outside `components/es-table/src/engines/virtual-engine.vue`.

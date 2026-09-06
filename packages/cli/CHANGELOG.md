@@ -1,5 +1,16 @@
 # @es-plus/cli
 
+## 1.3.0
+
+### Minor Changes
+
+- 9869180: 新增 NL→Config AI 生成能力与 antdv 渲染器支持；加固生成器健壮性（覆盖保护/未知 target/写盘事务/顶层兜底）。
+
+### Patch Changes
+
+- Updated dependencies [9869180]
+  - @es-plus/shared@1.3.0
+
 ## 1.2.0 — Vue 2 generation actually compiles
 
 This release fixes two bugs in the @es-plus/shared code generator (which

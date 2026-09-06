@@ -1,5 +1,16 @@
 # @es-plus/mcp-server
 
+## 1.3.0
+
+### Minor Changes
+
+- 9869180: 新增 NL→Config AI 层、SFC 模式、InputNumber、antdv 渲染器与全局 httpRequest 支持。
+
+### Patch Changes
+
+- Updated dependencies [9869180]
+  - @es-plus/shared@1.3.0
+
 ## 1.2.0 — Dual-target awareness + protocol clarity
 
 This release closes the vue3-only blind spot in the MCP surface. Resources

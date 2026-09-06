@@ -1,5 +1,11 @@
 # @es-plus/shared
 
+## 1.3.0
+
+### Minor Changes
+
+- 9869180: 新增 NL→Config AI 层、SFC 模式回归防护、InputNumber 支持；修复 codegen 增删改查失败提示。
+
 ## 1.1.0 — Codegen lang="jsx" + Vue 2 import extraction
 
 This release fixes two long-standing code-generator bugs that produced

@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/adapter-antdv",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ES-Plus Ant Design Vue adapter — configuration-driven enterprise components (EsForm/EsTable/EsDialog/EsCrudPage) for Vue 3 + Ant Design Vue 4.x. Shares the same JSON config schema as @es-plus/vue3 and @es-plus/vue2.",
   "type": "module",
   "main": "./dist/es-plus-antdv.umd.cjs",
@@ -86,7 +86,7 @@
     }
   },
   "dependencies": {
-    "@es-plus/core": "^1.0.0"
+    "@es-plus/core": "^1.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

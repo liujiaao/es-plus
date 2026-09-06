@@ -1,5 +1,16 @@
 # @es-plus/vue2
 
+## 1.2.0
+
+### Minor Changes
+
+- 9869180: 三端一致性修复：修复带校验字段输入被清空（reactive 键后补非响应式）、EsForm.validate 校验失败 reject、请求失败统一暴露且无 unhandled rejection；对齐 EsTable/EsForm/EsDialog 暴露 API 并补 SvgIcon。
+
+### Patch Changes
+
+- Updated dependencies [9869180]
+  - @es-plus/core@1.1.0
+
 ## 1.1.5 — Remove .sync auto-emits (root cause of infinite update loop in Vue 2.6)
 
 ### ⚠️ Breaking change
@@ -32,7 +43,7 @@
 
 - **Tree / lazy tree tables triggered "[Vue warn]: You may have an infinite update
   loop in a component render function."** The `watch(() => props.columns, ...,
-  { deep: true })` detected mutations that `filteredColumns` made to the parent's
+{ deep: true })` detected mutations that `filteredColumns` made to the parent's
   column objects (setting `el.formatter`, `el.render`, `el.minWidth` during
   render). In Vue 2, props come from the parent's deeply observed data, so each
   property mutation fired the deep watcher → `columnRowList` reassign →
@@ -42,8 +53,8 @@
 - **`lazyLoad` option was never mapped to Element UI's `load` prop.** el-table
   expects the lazy-load callback on the `load` prop; our public API calls it
   `lazyLoad`. The mapping is now applied in `tableAttrs` so `lazy: true +
-  lazyLoad(fn)` works correctly: clicking expand triggers `loadOrToggle →
-  loadData → user-provided callback → resolve(children)`.
+lazyLoad(fn)` works correctly: clicking expand triggers `loadOrToggle →
+loadData → user-provided callback → resolve(children)`.
 
 No API or peer-dep changes. Pure bugfix release.
 
@@ -67,9 +78,9 @@ No API or peer-dep changes. Pure bugfix release.
   changing and the table's `height` prop catching up, the old (oversized)
   table content forced `.tableContainer` to grow, pushing the pagination
   bar out of the viewport before snapping back. Adding `min-height: 0`
-  + `overflow: hidden` makes the flex child obey its allocated size
-  strictly; the table is briefly clipped instead of shoving the
-  pagination row.
+  - `overflow: hidden` makes the flex child obey its allocated size
+    strictly; the table is briefly clipped instead of shoving the
+    pagination row.
 - **`useTableResize` over-counted parent height by padding + border.**
   Was reading `element.parentElement.offsetHeight`, which includes the
   parent's padding, border, and scrollbar — so the table's `height` prop
@@ -230,7 +241,7 @@ JSON config schema 1:1 with @es-plus/vue3, so the same `formItemList` /
 - **Verified** by the end-to-end harness in the monorepo
   (`__tests__/e2e/scripts/run-e2e.mjs`): for every CRUD generator mode
   (schema / sfc) the produced SFC compiles cleanly in a fresh Vite + Vue 2.7
-  + Element UI project against `@es-plus/vue2@1.0.0`.
+  - Element UI project against `@es-plus/vue2@1.0.0`.
 
 ### Limitations carried forward from 0.9.x
 

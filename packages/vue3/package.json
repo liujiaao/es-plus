@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/vue3",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "es-plus for Vue 3 + Element Plus: configuration-driven enterprise components, sharing the same JSON config schema as @es-plus/vue2 (Vue 2 + Element UI). Renamed from es-plus-ui starting v1.4.0.",
   "type": "module",
   "main": "./dist/es-plus.umd.cjs",
@@ -86,7 +86,7 @@
     }
   },
   "dependencies": {
-    "@es-plus/core": "^1.0.0"
+    "@es-plus/core": "^1.1.0"
   },
   "devDependencies": {
     "vxe-table": "^4.6.0",
