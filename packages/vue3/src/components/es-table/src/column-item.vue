@@ -20,7 +20,7 @@
         <slot
           v-if="scope && scope.row"
           v-bind="{ ...item, row: scope.row, column: scope.column, scope: scope }"
-          :name="item.scopedSlots.customRender"
+          :name="item.scopedSlots!.customRender"
         />
         <span v-else>-</span>
       </template>
