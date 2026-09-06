@@ -159,12 +159,14 @@ export function runCliFromConfig(sandbox, { mode, configPath }) {
       'es-plus', 'create', 'App',
       '--from-config', rel,
       '--output', 'src/App.vue',
+      '--force',
     ], sandbox)
   } else {
     sh('npx', [
       'es-plus', 'create', 'App',
       '--from-config', rel,
       '--output', 'src/generated',
+      '--force',
     ], sandbox)
     const genDir = join(sandbox, 'src', 'generated')
     const wrapperSrc = join(genDir, 'App.vue')
