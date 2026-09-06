@@ -34,7 +34,7 @@ jobs:
         run: npm run build --workspace @es-plus/shared
       # Optional dep — installed only for this eval job, never a runtime dep.
       - name: Install Anthropic SDK
-        run: npm install --no-save @anthropic-ai/sdk
+        run: npm install --no-save @anthropic-ai/sdk --legacy-peer-deps
       - name: Run LLM accuracy eval
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
