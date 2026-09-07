@@ -1,0 +1,290 @@
+/* PictureCard 上传组件样式 */
+
+.uploader-card-container {
+  display: inline-block;
+  position: relative;
+
+  // Element UI 样式覆盖（需要在 Vue 组件中使用 /deep/ 或 >>> ）
+
+
+  .uploader-card {
+    border: 2px dashed #d9d9d9;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+
+    ::v-deep .el-upload--picture-card {
+    width: 100% !important;
+    height: 100% !important;
+    line-height: inherit !important;
+  }
+    &:hover {
+      border-color: #409eff;
+      background-color: #f5f7fa;
+    }
+
+    &.is-disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      
+      &:hover {
+        border-color: #d9d9d9;
+        background-color: #fafafa;
+      }
+    }
+
+    .upload-trigger {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: #8c939d;
+      font-size: 14px;
+      transition: all 0.3s ease;
+
+      .el-icon-plus {
+        font-size: 24px;
+        margin-bottom: 8px;
+        color: #8c939d;
+        transition: all 0.3s ease;
+      }
+
+      .upload-text {
+        font-size: 12px;
+        color: #8c939d;
+        transition: all 0.3s ease;
+      }
+
+      &:hover {
+        color: #409eff;
+        
+        .el-icon-plus,
+        .upload-text {
+          color: #409eff;
+        }
+      }
+    }
+
+    .upload-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: #409eff;
+
+      .el-icon-loading {
+        font-size: 24px;
+        margin-bottom: 8px;
+        animation: rotating 2s linear infinite;
+      }
+
+      .upload-progress {
+        font-size: 12px;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+
+    .file-item {
+      position: relative;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      overflow: hidden;
+      background-color: #fff;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: #409eff;
+        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+      }
+
+      .file-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+
+        &:hover {
+          transform: scale(1.05);
+        }
+      }
+
+      .file-actions {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        cursor: pointer;
+
+        .el-icon-zoom-in,
+        .el-icon-delete {
+          color: #fff;
+          font-size: 16px;
+          margin: 0 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover {
+            color: #409eff;
+            transform: scale(1.1);
+          }
+        }
+      }
+
+      &:hover .file-actions {
+        opacity: 1;
+      }
+
+      .file-status {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        padding: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+
+  .upload-tips {
+    margin-top: 8px;
+    
+    .tips-text {
+      font-size: 12px;
+      color: #909399;
+      line-height: 1.5;
+      margin: 0;
+    }
+  }
+
+  /* 预览对话框样式 */
+  .preview-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  .dialog-footer {
+    text-align: right;
+    padding: 10px 0 0;
+  }
+}
+
+/* 动画效果 */
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 768px) {
+  .uploader-card-container {
+    .el-upload--picture-card {
+      width: 100px !important;
+      height: 100px !important;
+    }
+
+    .file-list .file-item {
+      width: 100px !important;
+      height: 100px !important;
+    }
+  }
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .uploader-card-container {
+    .uploader-card {
+      background-color: #2a2a2a;
+      border-color: #4a4a4a;
+
+      &:hover {
+        background-color: #3a3a3a;
+        border-color: #409eff;
+      }
+
+      .upload-trigger {
+        color: #b0b0b0;
+
+        .el-icon-plus,
+        .upload-text {
+          color: #b0b0b0;
+        }
+
+        &:hover {
+          color: #409eff;
+          
+          .el-icon-plus,
+          .upload-text {
+            color: #409eff;
+          }
+        }
+      }
+    }
+
+    .file-list .file-item {
+      background-color: #2a2a2a;
+      border-color: #4a4a4a;
+
+      &:hover {
+        border-color: #409eff;
+      }
+    }
+
+    .upload-tips .tips-text {
+      color: #b0b0b0;
+    }
+  }
+}
+
+/* 加载状态样式 */
+.upload-loading-state {
+  .uploader-card {
+    border-color: #409eff;
+    background-color: #ecf5ff;
+  }
+}
+
+/* 错误状态样式 */
+.upload-error-state {
+  .uploader-card {
+    border-color: #f56c6c;
+    background-color: #fef0f0;
+  }
+}
+
+/* 成功状态样式 */
+.upload-success-state {
+  .uploader-card {
+    border-color: #67c23a;
+    background-color: #f0f9ff;
+  }
+}

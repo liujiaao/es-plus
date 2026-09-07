@@ -5,6 +5,9 @@ dist/
 .env
 .env.*
 !.env.example
+# es-eui 的 env 文件是非敏感构建配置（原 es-eui 仓库内已跟踪），保留进 es-plus
+!es-eui/.env.development
+!es-eui/.env.production
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -17,7 +20,6 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-es-eui/
 
 # Playwright Tier 2 runtime E2E artifacts
 test-results/

@@ -1,0 +1,75 @@
+# 开发环境文件
+.env.*
+!.env.example
+
+# 源码
+src/
+public/
+
+# 配置文件
+babel.config.js
+vue.config.js
+vue.lib.config.js
+
+# 测试文件
+tests/
+*.test.js
+*.spec.js
+test/
+spec/
+__tests__/
+coverage/
+
+# 文档文件（保留 README.md）
+docs/
+*.md
+!README.md
+
+# Git 相关
+.git/
+.gitignore
+.git.gitattributes
+
+# IDE 相关
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 依赖
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 构建缓存
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+
+# 其他配置文件
+.eslintrc.*
+.prettierrc.*
+.editorconfig
+.stylelintrc.*
+.clintrc.*
+.nycrc
+tsconfig.json
+jsconfig.json
+
+# 构建工具
+webpack.config.js
+rollup.config.js
+vite.config.js
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+appveyor.yml
+
+# 其他
+plans/

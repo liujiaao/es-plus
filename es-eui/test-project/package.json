@@ -1,0 +1,25 @@
+{
+  "name": "es-eui-test-project",
+  "version": "1.0.0",
+  "description": "测试验证 ES-EUI 组件库的生产项目",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "install:local": "npm install es-eui@file:../dist"
+  },
+  "dependencies": {
+    "element-ui": "^2.15.14",
+    "es-eui": "^1.0.0",
+    "vue": "^2.6.14"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "^5.0.8",
+    "vue-template-compiler": "^2.6.14"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

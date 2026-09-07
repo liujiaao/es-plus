@@ -1,0 +1,45 @@
+{
+  "name": "es-eui",
+  "version": "1.0.2",
+  "private": false,
+  "description": "基于 Element UI 的 Vue 2 组件库，包含对话框、表单、表格等常用组件",
+  "main": "dist/es-eui.common.js",
+  "module": "dist/es-eui.esm.js",
+  "unpkg": "dist/es-eui.js",
+  "jsdelivr": "dist/es-eui.js",
+  "files": [
+    "dist",
+    "src/components/es-eui",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build:lib": "vue-cli-service build --target lib --name es-eui src/components/es-eui/index.js --mode production"
+  },
+  "peerDependencies": {
+    "vue": "^2.6.14",
+    "element-ui": "^2.15.14"
+  },
+  "dependencies": {},
+  "keywords": [
+    "vue",
+    "vue2",
+    "element-ui",
+    "component-library",
+    "ui-components",
+    "es-eui",
+    "dialog",
+    "form",
+    "table"
+  ],
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
+}

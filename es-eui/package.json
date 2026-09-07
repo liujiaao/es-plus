@@ -1,0 +1,63 @@
+{
+  "name": "es-eui-docs",
+  "version": "1.0.0",
+  "description": "ES-EUI Component Library Documentation - Based on Vue 2.0 and Element UI",
+  "author": "",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "prebuild": "node scripts/generate-raw-sources.js",
+    "preserve": "node scripts/generate-raw-sources.js",
+    "build:lib": "vue-cli-service build --target lib --name es-eui src/components/es-eui/index.js --mode production",
+    "lint": "vue-cli-service lint",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "@es-plus/core": "^1.1.0",
+    "@es-plus/vue2": "^1.2.0",
+    "@vxe-ui/core": "3.4.19",
+    "axios": "^0.27.2",
+    "element-ui": "^2.15.14",
+    "vue": "^2.6.14",
+    "vue-router": "^3.5.3",
+    "vuex": "^3.6.2",
+    "vxe-pc-ui": "3.16.22",
+    "vxe-table": "~3.22.9",
+    "xe-utils": "^4.0.0"
+  },
+  "devDependencies": {
+    "@vue/babel-preset-jsx": "^1.4.0",
+    "@vue/cli-plugin-babel": "~5.0.8",
+    "@vue/cli-plugin-eslint": "~5.0.8",
+    "@vue/cli-plugin-router": "~5.0.8",
+    "@vue/cli-plugin-vuex": "~5.0.8",
+    "@vue/cli-service": "~5.0.8",
+    "@vue/composition-api": "^1.7.2",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-vue": "^8.7.1",
+    "sass": "^1.32.13",
+    "sass-loader": "^10.4.1",
+    "vue-template-compiler": "^2.6.14"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "plugin:vue/essential",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "parser": "babel-eslint"
+    },
+    "rules": {}
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
