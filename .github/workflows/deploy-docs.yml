@@ -30,6 +30,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             es-plus-docs/package-lock.json
+            es-pc/package-lock.json
 
       # Install at root so workspaces (@es-plus/vue3 etc.) get linked AND
       # root devDeps (husky) get installed. Without --legacy-peer-deps the
@@ -37,13 +38,36 @@ jobs:
       - name: Install monorepo deps
         run: npm ci --legacy-peer-deps
 
-      - name: Install docs site deps
+      - name: Install docs site deps (es-plus-docs)
         run: cd es-plus-docs && npm ci --legacy-peer-deps
 
-      - name: Build docs site
+      - name: Install docs site deps (es-pc)
+        run: cd es-pc && npm ci --legacy-peer-deps
+
+      # es-pc 依赖 @es-plus/adapter-antdv（其唯一运行时依赖是 @es-plus/core）。
+      # 两者都 external 引用构建产物，故先构建 core 再 adapter-antdv。
+      - name: Build @es-plus/core + adapter-antdv (es-pc deps)
+        run: |
+          npm run build --workspace @es-plus/core
+          npm run build --workspace @es-plus/adapter-antdv
+
+      - name: Build docs site (es-plus-docs)
         run: cd es-plus-docs && npm run build
         env:
           VITE_BASE_URL: /es-plus/
+
+      - name: Build docs site (es-pc)
+        run: cd es-pc && npm run build
+        env:
+          VITE_BASE_URL: /es-plus/es-pc/
+
+      # 单一 Pages 站点：es-plus-docs 在根，es-pc 在 /es-pc/ 子路径
+      - name: Combine sites into Pages artifact
+        run: |
+          mkdir -p _site
+          cp -r es-plus-docs/dist/. _site/
+          mkdir -p _site/es-pc
+          cp -r es-pc/dist/. _site/es-pc/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -51,7 +75,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: es-plus-docs/dist
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
