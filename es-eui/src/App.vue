@@ -62,6 +62,24 @@
           >
             <i class="el-icon-link"></i> GitHub
           </a>
+          <el-dropdown
+            trigger="click"
+            class="site-switcher"
+            @command="switchSite"
+          >
+            <span class="site-switcher-link">
+              <i class="el-icon-refresh"></i> {{ currentSiteLabel }}<i class="el-icon-arrow-down el-icon--right"></i>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item
+                v-for="s in SITES"
+                :key="s.key"
+                :command="s"
+              >
+                {{ s.key === currentSite ? '✓ ' : '' }}{{ s.label }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </nav>
       </div>
     </header>
@@ -115,11 +133,31 @@
 </template>
 
 <script>
+// 三端站点切换器：GitHub / 腾讯云 两套部署地址
+const SITES = [
+  { key: 'vue3', label: 'Vue 3 · Element Plus', github: 'https://liujiaao.github.io/es-plus/', tencent: 'https://es-plus-vue3.edgeone.dev/' },
+  { key: 'antdv', label: 'Vue 3 · Ant Design Vue', github: 'https://liujiaao.github.io/es-plus/es-pc/', tencent: 'https://es-plus-antdv.edgeone.dev/' },
+  { key: 'vue2', label: 'Vue 2 · Element UI', github: 'https://liujiaao.github.io/es-plus/es-eui/', tencent: 'https://es-plus-vue2.edgeone.dev/' },
+]
+const isGithubDeploy = () => window.location.hostname.includes('github.io')
+const detectCurrentSite = () => {
+  const { hostname, pathname } = window.location
+  if (isGithubDeploy()) {
+    if (pathname.startsWith('/es-plus/es-pc')) return 'antdv'
+    if (pathname.startsWith('/es-plus/es-eui')) return 'vue2'
+    return 'vue3'
+  }
+  if (hostname.includes('es-plus-vue2')) return 'vue2'
+  if (hostname.includes('es-plus-antdv')) return 'antdv'
+  return 'vue3'
+}
+
 export default {
   name: 'App',
   data() {
     return {
-      bannerClosed: false
+      bannerClosed: false,
+      SITES
     }
   },
   computed: {
@@ -143,6 +181,19 @@ export default {
     },
     isAiTools() {
       return this.$route.path.startsWith('/ai-tools')
+    },
+    currentSite() {
+      return detectCurrentSite()
+    },
+    currentSiteLabel() {
+      return SITES.find((s) => s.key === this.currentSite)?.label || '站点'
+    }
+  },
+  methods: {
+    switchSite(site) {
+      if (site && site.key !== this.currentSite) {
+        window.location.href = isGithubDeploy() ? site.github : site.tencent
+      }
     }
   }
 }
@@ -244,6 +295,33 @@ body {
     .nav-link {
       i {
         margin-right: 4px;
+      }
+    }
+
+    .site-switcher {
+      margin-left: 12px;
+
+      .site-switcher-link {
+        display: inline-flex;
+        align-items: center;
+        height: 60px;
+        color: #606266;
+        font-size: 15px;
+        cursor: pointer;
+        transition: color 0.3s;
+
+        &:hover {
+          color: var(--es-brand-primary);
+        }
+
+        .el-icon-refresh {
+          margin-right: 4px;
+        }
+      }
+
+      .el-dropdown-menu__item.is-active {
+        color: var(--es-brand-primary);
+        font-weight: 600;
       }
     }
   }

@@ -10,6 +10,19 @@
       </div>
       <div class="header-right">
         <a-space :size="16">
+          <a-dropdown :trigger="['click']">
+            <a-button type="link" class="site-switcher-btn">
+              <template #icon><SwapOutlined /></template>
+              {{ currentSiteLabel }}
+            </a-button>
+            <template #overlay>
+              <a-menu :selectable="false" @click="switchSite">
+                <a-menu-item v-for="s in SITES" :key="s.key">
+                  <span>{{ s.key === currentSite ? '✓ ' : '' }}{{ s.label }}</span>
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
           <a-button type="link" href="https://github.com" target="_blank">
             <GithubOutlined /> GitHub
           </a-button>
@@ -115,10 +128,38 @@ import {
   ThunderboltOutlined,
   ExperimentOutlined,
   RobotOutlined,
+  SwapOutlined,
 } from '@ant-design/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// 三端站点切换器：GitHub / 腾讯云 两套部署地址
+const SITES = [
+  { key: 'vue3', label: 'Vue 3 · Element Plus', github: 'https://liujiaao.github.io/es-plus/', tencent: 'https://es-plus-vue3.edgeone.dev/' },
+  { key: 'antdv', label: 'Vue 3 · Ant Design Vue', github: 'https://liujiaao.github.io/es-plus/es-pc/', tencent: 'https://es-plus-antdv.edgeone.dev/' },
+  { key: 'vue2', label: 'Vue 2 · Element UI', github: 'https://liujiaao.github.io/es-plus/es-eui/', tencent: 'https://es-plus-vue2.edgeone.dev/' },
+]
+const isGithubDeploy = () => window.location.hostname.includes('github.io')
+const detectCurrentSite = () => {
+  const { hostname, pathname } = window.location
+  if (isGithubDeploy()) {
+    if (pathname.startsWith('/es-plus/es-pc')) return 'antdv'
+    if (pathname.startsWith('/es-plus/es-eui')) return 'vue2'
+    return 'vue3'
+  }
+  if (hostname.includes('es-plus-vue2')) return 'vue2'
+  if (hostname.includes('es-plus-antdv')) return 'antdv'
+  return 'vue3'
+}
+const currentSite = detectCurrentSite()
+const currentSiteLabel = SITES.find((s) => s.key === currentSite)?.label || '站点'
+const switchSite = ({ key }) => {
+  const site = SITES.find((s) => s.key === key)
+  if (site && key !== currentSite) {
+    window.location.href = isGithubDeploy() ? site.github : site.tencent
+  }
+}
 
 // 根据当前路由设置 selectedKeys
 const routeNameToMenuKey = (name) => {
@@ -180,6 +221,15 @@ function handleMenuClick({ key }) {
 .header-right {
   display: flex;
   align-items: center;
+}
+
+.site-switcher-btn {
+  padding: 0 4px;
+}
+
+.site-current {
+  font-weight: 600;
+  color: #1677ff;
 }
 
 .doc-body {

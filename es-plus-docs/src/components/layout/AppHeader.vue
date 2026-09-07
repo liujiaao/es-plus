@@ -36,6 +36,19 @@
       <button class="theme-btn" @click="toggleTheme" :title="isDark ? '切换亮色' : '切换暗色'">
         <el-icon :size="18"><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
       </button>
+      <el-dropdown trigger="click" @command="switchSite">
+        <button class="site-btn" title="切换站点 / Switch site">
+          <el-icon :size="18"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></el-icon>
+          <span class="site-label">{{ currentSiteLabel }}</span>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item v-for="s in SITES" :key="s.key" :command="s">
+              {{ s.key === currentSite ? '✓ ' : '' }}{{ s.label }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <a href="https://github.com/liujiaao/es-plus" target="_blank" rel="noopener" class="github-link">
         <el-icon :size="20"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg></el-icon>
       </a>
@@ -62,6 +75,32 @@ const currentLocaleLabel = computed(() => (locale.value === 'en-US' ? 'EN' : '�
 const changeLocale = (lang) => {
   locale.value = lang
   try { localStorage.setItem('language', lang) } catch {}
+}
+
+// 三端站点切换器：GitHub / 腾讯云 两套部署地址
+const SITES = [
+  { key: 'vue3', label: 'Vue 3 · Element Plus', github: 'https://liujiaao.github.io/es-plus/', tencent: 'https://es-plus-vue3.edgeone.dev/' },
+  { key: 'antdv', label: 'Vue 3 · Ant Design Vue', github: 'https://liujiaao.github.io/es-plus/es-pc/', tencent: 'https://es-plus-antdv.edgeone.dev/' },
+  { key: 'vue2', label: 'Vue 2 · Element UI', github: 'https://liujiaao.github.io/es-plus/es-eui/', tencent: 'https://es-plus-vue2.edgeone.dev/' },
+]
+const isGithubDeploy = () => window.location.hostname.includes('github.io')
+const detectCurrentSite = () => {
+  const { hostname, pathname } = window.location
+  if (isGithubDeploy()) {
+    if (pathname.startsWith('/es-plus/es-pc')) return 'antdv'
+    if (pathname.startsWith('/es-plus/es-eui')) return 'vue2'
+    return 'vue3'
+  }
+  if (hostname.includes('es-plus-vue2')) return 'vue2'
+  if (hostname.includes('es-plus-antdv')) return 'antdv'
+  return 'vue3'
+}
+const currentSite = detectCurrentSite()
+const currentSiteLabel = SITES.find((s) => s.key === currentSite)?.label || '站点'
+const switchSite = (site) => {
+  if (site.key !== currentSite) {
+    window.location.href = isGithubDeploy() ? site.github : site.tencent
+  }
 }
 
 const emit = defineEmits(['toggle-mobile-menu'])
@@ -277,6 +316,32 @@ onUnmounted(() => {
 
   .lang-label {
     font-size: 12px;
+  }
+}
+
+.site-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-color-regular);
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+
+  &:hover {
+    background-color: var(--fill-color-light);
+    color: var(--primary-color);
+  }
+
+  .site-label {
+    font-size: 12px;
+    white-space: nowrap;
   }
 }
 
