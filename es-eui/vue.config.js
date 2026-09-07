@@ -2,7 +2,7 @@ const path = require('path')
 const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
-    publicPath: process.env.PUBLIC_PATH || (process.env.NODE_ENV === 'production' ? '/es-eui/' : '/'),
+    publicPath: process.env.PUBLIC_PATH || '/',
     // 禁用转译依赖，避免 babel 处理大量文件导致内存溢出
     transpileDependencies: false,
     // 完全禁用 source map 以减少内存占用
