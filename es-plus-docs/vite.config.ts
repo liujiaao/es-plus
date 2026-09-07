@@ -75,6 +75,11 @@ export default defineConfig(({ mode }) => {
       dedupe: ['@vxe-ui/core', 'xe-utils', 'vue'],
       alias: [
         { find: '@', replacement: resolve(__dirname, 'src') },
+        // packages/shared/src/structured-config.schema.ts 直接 import 'zod'，而该文件
+        // 位于 es-plus-docs 之外的 monorepo 包里。Rollup 从「导入文件所在目录」向上找
+        // node_modules，永远找不到 es-plus-docs/node_modules（兄弟目录）。edgeone 只装
+        // es-plus-docs、不装 monorepo 根，所以必须显式把 zod 指向本站自己的 node_modules。
+        { find: 'zod', replacement: resolve(__dirname, 'node_modules/zod') },
         // @es-plus/shared 是 MCP server 真实 tool 实现所在的纯函数包；
         // AI CRUD 页面浏览器侧直接 import 这套，等于跑 MCP server 同一份逻辑。
         // 走 facade 文件（src/utils/shared-browser.ts）是因为 shared 的 index 顺带
