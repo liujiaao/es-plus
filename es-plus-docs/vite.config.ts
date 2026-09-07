@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import Sitemap from 'vite-plugin-sitemap'
 import { resolve } from 'path'
+import { mkdirSync } from 'fs'
 
 const SITE_HOSTNAME = 'https://es-plus.dev'
 
@@ -52,6 +53,15 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.VITE_BASE_URL || '/',
     plugins: [
+      // vite-plugin-sitemap 在 closeBundle 里直接 writeFileSync 到 outDir(dist)，不会自己
+      // mkdir。腾讯云 edgeone 的 Linux/Node22 环境下 closeBundle 触发时 dist 尚未被 vite
+      // 创建，导致 ENOENT(dist/robots.txt)。这里在 buildStart 先建好 dist 目录兜底。
+      {
+        name: 'ensure-dist-dir',
+        buildStart() {
+          mkdirSync(resolve(__dirname, 'dist'), { recursive: true })
+        },
+      },
       vue(),
       vueJsx(),
       Sitemap({
