@@ -4,7 +4,7 @@
  * 集中管理旧 API → 新 API 的运行时桥接逻辑，
  * 确保旧写法在新版本中仍然可用。
  */
-import type { BtnConfig, FormItemOption, ListenToCallBack } from './types';
+import type { BtnConfig, ListenToCallBack } from './types';
 /**
  * 将 FormType 归一化为 PascalCase
  * 旧写法（如 'datePicker'）会被转换为推荐写法（'DatePicker'），
@@ -68,6 +68,20 @@ export declare function filterBtnProps(btn: Record<string, unknown>, extraOmit?:
  */
 export declare function getCallback(cb: ListenToCallBack | Record<string, (...args: unknown[]) => unknown> | undefined, name: string): ((...args: unknown[]) => unknown) | undefined;
 /**
+ * normalizeFormItem 需要的最小结构约束。
+ *
+ * 不直接收完整的 `FormItemOption`：三个渲染器各自特化了 `render` / `isHidden` 签名，
+ * 与 core 的 `FormItemOption` 互不兼容（antdv / vue2 会编译失败）。本函数只用这四个字段，
+ * 就只要求这四个字段 —— 与 `resolveItemValidateProps` 的处理方式同构。
+ */
+export interface FormItemShortcutSource {
+    attrs?: Record<string, unknown>;
+    placeholder?: unknown;
+    clearable?: unknown;
+    disabled?: unknown;
+    [key: string]: unknown;
+}
+/**
  * 归一化 FormItemOption：将顶层快捷属性合并到 attrs
  *
  * 规则：
@@ -75,9 +89,13 @@ export declare function getCallback(cb: ListenToCallBack | Record<string, (...ar
  * - attrs 中已有的同名属性不会被覆盖（显式 attrs 优先）
  * - 原始顶层属性保留不删除（保持数据完整性）
  */
-export declare function normalizeFormItem(item: FormItemOption): FormItemOption;
+export declare function normalizeFormItem<T extends FormItemShortcutSource>(item: T): T & {
+    attrs?: Record<string, unknown>;
+};
 /**
  * 批量归一化 FormItemOption 列表
  */
-export declare function normalizeFormItemList(items: FormItemOption[]): FormItemOption[];
+export declare function normalizeFormItemList<T extends FormItemShortcutSource>(items: T[]): Array<T & {
+    attrs?: Record<string, unknown>;
+}>;
 //# sourceMappingURL=compat.d.ts.map

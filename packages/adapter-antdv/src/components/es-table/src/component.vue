@@ -849,8 +849,14 @@ function queryTableListMethod(
         ...requestOption, ...params,
       })
       const responseData = getListenToCallBack('afterResponse', res) || res
-      if (isObject(res) && Object.keys(res).length && typeof success === 'function') {
-        success(responseData as Record<string, unknown>)
+      // 空 / 非对象响应（204、拦截器 return undefined、原始值）以及数组响应也要调用 success ——
+      // httpRequestInstance 的 Promise 只在 success/fail 中 settle，否则表格加载永久挂起。
+      // 非对象归一为 {}（formatConfigOut 对非对象返回空结果），数组原样交给 formatConfigOut 的直传路径。
+      if (typeof success === 'function') {
+        const normalized = responseData && (isObject(responseData) || Array.isArray(responseData))
+          ? responseData
+          : {}
+        success(normalized as Record<string, unknown>)
       }
     } catch (e) {
       if (typeof fail === 'function') fail(e)

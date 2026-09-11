@@ -177,7 +177,8 @@ import {
   filterBtnProps,
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
-  resolveFormRules
+  resolveFormRules,
+  normalizeFormItem
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -313,7 +314,7 @@ watch(
 const formItemListFilter = computed(() => {
   const list = formItemRowsList.value || []
   const visible = list
-    .map((it) => (it ? { ...it, dataOptions: it.dataOptions || [] } : null))
+    .map((it) => (it ? { ...normalizeFormItem(it), dataOptions: it.dataOptions || [] } : null))
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
       if (it.isHidden && typeof it.isHidden === 'function') {

@@ -14,6 +14,26 @@
 import { describe, it, expect } from 'vitest'
 import { StructuredCrudConfigSchema } from '../src/structured-config.schema.js'
 
+describe('StructuredCrudConfigSchema — name 路径穿越约束', () => {
+  const base = {
+    apiUrl: '/api/users',
+    fields: [{ prop: 'name', label: '姓名', formtype: 'Input' }],
+    actions: ['add'] as const,
+  }
+
+  it('拒绝含路径分隔符 / "." / ".." / 盘符的 name', () => {
+    for (const name of ['../../evil', 'a/b', 'a\\b', '..', '.', 'C:evil']) {
+      expect(StructuredCrudConfigSchema.safeParse({ ...base, name }).success, name).toBe(false)
+    }
+  })
+
+  it('放行 PascalCase 与中文页面名', () => {
+    for (const name of ['UserManage', 'user-management', '用户管理']) {
+      expect(StructuredCrudConfigSchema.safeParse({ ...base, name }).success, name).toBe(true)
+    }
+  })
+})
+
 // Minimal valid config — exercises required keys only.
 // Required: name + apiUrl + fields[] + actions[] (per StructuredCrudConfigSchema).
 const minimal = {

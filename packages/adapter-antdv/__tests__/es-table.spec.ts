@@ -289,6 +289,22 @@ describe('EsTable — 暴露的实例方法', () => {
     await expect(result).rejects.toThrow()
   })
 
+  it('httpRequestInstance — 空/undefined 响应仍 settle（回归：此前永久挂起）', async () => {
+    const httpRequest = vi.fn().mockResolvedValue(undefined)
+    const wrapper = mount(EsTable, {
+      props: {
+        ...baseProps,
+        options: { httpRequest, apiParams: { url: '/api/list' }, isInitRun: false } as any
+      }
+    })
+    const vm = wrapper.vm as any
+    const outcome = await Promise.race([
+      vm.httpRequestInstance().then(() => 'settled'),
+      new Promise((r) => setTimeout(() => r('timeout'), 300))
+    ])
+    expect(outcome).toBe('settled')
+  })
+
   it('getSelectionRows — 返回数组', () => {
     const wrapper = mount(EsTable, { props: baseProps })
     const vm = wrapper.vm as any

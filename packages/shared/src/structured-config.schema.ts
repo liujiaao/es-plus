@@ -119,7 +119,10 @@ const DialogConfigSchema = z.object({
 })
 
 export const StructuredCrudConfigSchema = z.object({
-  name: z.string().min(1).describe('Page/component name in PascalCase, e.g. "UserManage"'),
+  name: z.string().min(1).refine(
+    (v) => !/[\\/]/.test(v) && v !== '.' && v !== '..' && !/^[A-Za-z]:/.test(v),
+    { message: 'name 会被用作文件/目录名，不得包含路径分隔符、"." 或 ".."' }
+  ).describe('Page/component name in PascalCase, e.g. "UserManage"'),
   apiUrl: z.string().min(1).describe('API base URL, e.g. "/api/users"'),
   fields: z.array(FieldConfigSchema).min(1).describe('Field definitions'),
   actions: z.array(z.enum(crudActionEnum)).min(1).describe('Enabled CRUD actions'),

@@ -298,3 +298,32 @@ describe('EsForm - form 级规则（全局配置兜底）', () => {
     }
   })
 })
+
+describe('EsForm - 顶层快捷字段注入（placeholder / clearable / disabled）', () => {
+  // 回归：FormItemOption 顶层快捷字段此前从未被 normalizeFormItem 归一化，
+  // 三端全部静默丢弃。接线后应透传到具体控件。
+  it('顶层 placeholder / clearable / disabled 透传到 Input 控件', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [{
+        prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+        placeholder: '请输入姓名', clearable: true, disabled: true
+      }]
+    })
+    const input = wrapper.findComponent(ElInput)
+    expect(input.props('placeholder')).toBe('请输入姓名')
+    expect(input.props('clearable')).toBe(true)
+    expect(input.props('disabled')).toBe(true)
+  })
+
+  it('attrs 中同名属性优先于顶层快捷字段', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [{
+        prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+        placeholder: '顶层', attrs: { placeholder: 'attrs 优先' }
+      }]
+    })
+    expect(wrapper.findComponent(ElInput).props('placeholder')).toBe('attrs 优先')
+  })
+})

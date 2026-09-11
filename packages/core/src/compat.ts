@@ -184,6 +184,22 @@ export function getCallback(
 const FORM_ITEM_SHORTCUT_KEYS = ['placeholder', 'clearable', 'disabled'] as const
 
 /**
+ * normalizeFormItem 需要的最小结构约束。
+ *
+ * 不直接收完整的 `FormItemOption`：三个渲染器各自特化了 `render` / `isHidden` 签名，
+ * 与 core 的 `FormItemOption` 互不兼容（antdv / vue2 会编译失败）。本函数只用这四个字段，
+ * 就只要求这四个字段 —— 与 `resolveItemValidateProps` 的处理方式同构。
+ */
+export interface FormItemShortcutSource {
+  attrs?: Record<string, unknown>
+  placeholder?: unknown
+  clearable?: unknown
+  disabled?: unknown
+  // 允许其余字段（prop/label/render…）—— 否则对象字面量会被 excess property 检查拒绝
+  [key: string]: unknown
+}
+
+/**
  * 归一化 FormItemOption：将顶层快捷属性合并到 attrs
  *
  * 规则：
@@ -191,8 +207,10 @@ const FORM_ITEM_SHORTCUT_KEYS = ['placeholder', 'clearable', 'disabled'] as cons
  * - attrs 中已有的同名属性不会被覆盖（显式 attrs 优先）
  * - 原始顶层属性保留不删除（保持数据完整性）
  */
-export function normalizeFormItem(item: FormItemOption): FormItemOption {
-  const merged = { ...item }
+export function normalizeFormItem<T extends FormItemShortcutSource>(
+  item: T
+): T & { attrs?: Record<string, unknown> } {
+  const merged = { ...item } as T & { attrs?: Record<string, unknown> }
   const mergedAttrs = { ...item.attrs }
 
   for (const key of FORM_ITEM_SHORTCUT_KEYS) {
@@ -212,6 +230,8 @@ export function normalizeFormItem(item: FormItemOption): FormItemOption {
 /**
  * 批量归一化 FormItemOption 列表
  */
-export function normalizeFormItemList(items: FormItemOption[]): FormItemOption[] {
-  return items.map(normalizeFormItem)
+export function normalizeFormItemList<T extends FormItemShortcutSource>(
+  items: T[]
+): Array<T & { attrs?: Record<string, unknown> }> {
+  return items.map((item) => normalizeFormItem(item))
 }

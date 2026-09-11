@@ -397,6 +397,48 @@ describe('EsTable - 自动请求配置', () => {
     expect(mockRequest).toHaveBeenCalledTimes(1)
   })
 
+  it('空/undefined 响应 → httpRequestInstance 仍 settle（回归：此前永久挂起）', async () => {
+    const mockRequest = vi.fn().mockResolvedValue(undefined)
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      options: {
+        isInitRun: false,
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' }
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 0 }
+    })
+    await flushPromises()
+    const vm = wrapper.vm as any
+    const outcome = await Promise.race([
+      vm.httpRequestInstance().then(() => 'settled'),
+      new Promise((r) => setTimeout(() => r('timeout'), 300))
+    ])
+    expect(outcome).toBe('settled')
+  })
+
+  it('数组响应 → httpRequestInstance 仍 settle（回归：此前 isObject 判定跳过 success）', async () => {
+    const mockRequest = vi.fn().mockResolvedValue([{ id: 1 }])
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      options: {
+        isInitRun: false,
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' }
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 0 }
+    })
+    await flushPromises()
+    const vm = wrapper.vm as any
+    const outcome = await Promise.race([
+      vm.httpRequestInstance().then(() => 'settled'),
+      new Promise((r) => setTimeout(() => r('timeout'), 300))
+    ])
+    expect(outcome).toBe('settled')
+  })
+
   it('falls back to global $esPlusTable.$httpRequest', async () => {
     const globalRequest = vi.fn().mockResolvedValue({
       records: 0, pageSize: 10, pageNo: 1, rows: []

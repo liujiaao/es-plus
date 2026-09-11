@@ -146,9 +146,21 @@
       },
       "additionalProperties": true
     },
+    "required": {
+      "type": "boolean",
+      "description": "Whether this field is required. Injected into the underlying form-item's `required` prop. When formItemOptions.required is also set, formItemOptions takes priority."
+    },
+    "rules": {
+      "type": "array",
+      "description": "Validation rules for this field (Element Plus format). Injected into the underlying form-item's `rules` and merged with form-level rules, with this field's rules ordered first (so its message wins). When formItemOptions.rules is also set, formItemOptions takes priority.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
     "formItemOptions": {
       "type": "object",
-      "description": "Additional props passed to el-form-item (e.g., rules, labelWidth, required)",
+      "description": "Additional props passed to the underlying form-item (el-form-item / a-form-item). This is the low-level escape hatch: its `rules` / `required` take priority over the same-named top-level fields.",
       "properties": {
         "rules": {
           "description": "Validation rules for this field (Element Plus format)"

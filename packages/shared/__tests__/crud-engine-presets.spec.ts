@@ -193,6 +193,11 @@ describe('preset 5: 跨页批量审核 (cross-page selection)', () => {
     expect(cfg.tableOptions.cachePageSelection).toBe(true)
   })
 
+  it('enables multiSelect（选择列）— 回归：此前误写为非法键 selection', () => {
+    expect(cfg.tableOptions.multiSelect).toBe(true)
+    expect((cfg.tableOptions as unknown as Record<string, unknown>).selection).toBeUndefined()
+  })
+
   it('surfaces cross-page selection note in featureHints', () => {
     expect(cfg.featureHints?.join(' ')).toMatch(/跨页|cross.?page/i)
   })

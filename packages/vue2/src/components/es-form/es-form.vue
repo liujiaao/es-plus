@@ -161,7 +161,8 @@ import {
   filterBtnProps,
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
-  resolveFormRules
+  resolveFormRules,
+  normalizeFormItem
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
@@ -425,7 +426,7 @@ export default defineComponent({
     const formItemListFilter = computed(() => {
       const list = formItemRowsList.value || []
       const visible = list
-        .map((it) => (it ? { ...it, dataOptions: it.dataOptions || [] } : null))
+        .map((it) => (it ? { ...normalizeFormItem(it), dataOptions: it.dataOptions || [] } : null))
         .filter((it): it is FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> } => {
           if (!it) return false
           // 字段名兼容：原 es-eui 用 `isHiden`（少一个 d，原始拼写错误），

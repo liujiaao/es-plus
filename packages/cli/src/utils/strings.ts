@@ -6,6 +6,8 @@
  * 发货实现（而非命令闭包内的副本）。
  */
 
+import { isAbsolute, relative } from 'node:path'
+
 export type CliTarget = 'vue3' | 'vue2' | 'antdv'
 
 /** 受支持的三端目标（顺序即 --help / 报错提示里的展示顺序）。 */
@@ -47,4 +49,30 @@ export function esPlusPkgFor(target: CliTarget): string {
     : target === 'antdv'
       ? '@es-plus/adapter-antdv'
       : '@es-plus/vue3'
+}
+
+/**
+ * 判断一个「由页面名派生的文件/目录基名」是否安全。
+ *
+ * 只拒绝与路径穿越相关的形态：路径分隔符、`.` / `..`、Windows 盘符前缀。
+ * 不限制中文等其余字符 —— LLM 可能产出中文页面名，那是合法的（非穿越）文件名。
+ *
+ * 背景：`name` 此前只约束 `min(1)`，`toPascalCase` 也不剥离分隔符，
+ * 于是 `--from-config` 载入不可信配置时可通过 `name: "../../evil"` 把文件写出输出目录。
+ */
+export function isSafePathSegment(segment: string): boolean {
+  if (!segment) return false
+  if (segment === '.' || segment === '..') return false
+  if (/[\\/]/.test(segment)) return false
+  if (/^[A-Za-z]:/.test(segment)) return false
+  return true
+}
+
+/**
+ * 兜底校验：`target` 解析后必须位于 `baseDir` 之内。
+ * 用于拼出文件路径后再核一次，任何形式的逃逸都会返回 false。
+ */
+export function isPathInside(baseDir: string, target: string): boolean {
+  const rel = relative(baseDir, target)
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
 }

@@ -3,7 +3,7 @@ import pc from "picocolors";
 import { resolve } from "node:path";
 import { dirname } from "node:path";
 import { generateScaffold } from '@es-plus/shared';
-import { toPascalCase, normalizeTarget, isValidTarget, CLI_TARGETS } from '../utils/strings.js';
+import { toPascalCase, normalizeTarget, isValidTarget, isSafePathSegment, CLI_TARGETS } from '../utils/strings.js';
 import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
 
 export const scaffoldCommand = new Command("scaffold")
@@ -21,6 +21,13 @@ export const scaffoldCommand = new Command("scaffold")
     }
     const features = options.features.split(",").map((f) => f.trim());
     const target = normalizeTarget(options.target);
+
+    // 与 create 一致：name 会被用作文件名，拒绝路径穿越（如 name = "../../evil"）。
+    if (!isSafePathSegment(name) || !isSafePathSegment(toPascalCase(name))) {
+      console.log(pc.red(`✗ 非法的页面名：${name}（不得包含路径分隔符、"." 或 ".."）`));
+      process.exitCode = 1;
+      return;
+    }
 
     const outputPath = resolve(
       process.cwd(),

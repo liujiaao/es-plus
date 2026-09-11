@@ -5,6 +5,7 @@ import {
   DEFAULT_TARGET,
   getEsPlusPackageName,
   buildElementImport,
+  buildDeleteConfirmBlock,
   rewriteVModelSync,
   rewriteElementUsage,
 } from "./target.js"
@@ -183,17 +184,14 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
   if (hasDelete) {
     lines.push(``)
     lines.push(`function handleDelete(row) {`)
-    lines.push(`  ElMessageBox.confirm('确定删除该条数据吗？', '提示', { type: 'warning' })`)
-    lines.push(`    .then(async () => {`)
-    lines.push(`      try {`)
-    lines.push(`        // TODO: 调用删除接口`)
-    lines.push(`        ElMessage.success('删除成功')`)
-    lines.push(`        crudRef.value?.refresh()`)
-    lines.push(`      } catch (err) {`)
-    lines.push(`        ElMessage.error('删除失败')`)
-    lines.push(`      }`)
-    lines.push(`    })`)
-    lines.push(`    .catch(() => {})`)
+    // vue3 走 ElMessageBox.confirm 的 Promise 形态，antdv 走 Modal.confirm 的对象形态
+    // （由 buildDeleteConfirmBlock 按 target 区分）。生成的 ElMessage 引用在 return 前
+    // 统一由 rewriteElementUsage 改写为目标 UI 库命名。
+    lines.push(...buildDeleteConfirmBlock({
+      target,
+      indent: '  ',
+      bodyLines: ['// TODO: 调用删除接口', `ElMessage.success('删除成功')`, 'crudRef.value?.refresh()'],
+    }))
     lines.push(`}`)
   }
 
@@ -210,7 +208,10 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
   lines.push(`}`)
   lines.push(`</script>`)
 
-  return lines.join('\n')
+  // vue3 / antdv 共用 Vue 3 语法，但 UI 库符号不同（ElMessage→message、ElTag→Tag …）。
+  // 此前该分支漏掉这一步，导致 antdv 产物 import 了 Modal/message、代码体仍引用
+  // ElMessageBox/ElMessage，生成结果不可编译。
+  return rewriteElementUsage(lines.join('\n'), target)
 }
 
 function buildSummary(config: GeneratedConfig, target: TargetFramework): string {
@@ -225,7 +226,9 @@ function buildSummary(config: GeneratedConfig, target: TargetFramework): string 
     `- Output: CrudPageSchema JSON + EsCrudPage wrapper SFC`,
     target === 'vue2'
       ? `- Target: Vue 2 + Element UI (use @es-plus/vue2)`
-      : `- Target: Vue 3 + Element Plus (use @es-plus/vue3)`,
+      : target === 'antdv'
+        ? `- Target: Vue 3 + Ant Design Vue (use @es-plus/adapter-antdv)`
+        : `- Target: Vue 3 + Element Plus (use @es-plus/vue3)`,
     ``,
     `Note: 需要在 main.${target === 'vue2' ? 'js' : 'ts'} 中配置 ${target === 'vue2' ? 'Vue.use(EsPlus)' : 'app.use(ESPlus)'} 全局插件`,
   ].filter(Boolean).join('\n')

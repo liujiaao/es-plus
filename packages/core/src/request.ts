@@ -185,9 +185,12 @@ export function queryTableListMethod(
 
   requestFn(requestPayload)
     .then((res) => {
-      if (typeof options.success === 'function' && res && (isObject(res) || Array.isArray(res))) {
-        options.success(res as Record<string, unknown>)
-      }
+      if (typeof options.success !== 'function') return
+      // 非对象/数组的响应（204 空响应、拦截器 return undefined、原始值等）归一为空对象后
+      // 仍调用 success —— 否则 httpRequestFormInstance 这类 Promise 化封装既收不到 success
+      // 也收不到 fail，Promise 永不 settle，远端下拉选项会整体挂起（无报错）。
+      const normalized = res && (isObject(res) || Array.isArray(res)) ? res : {}
+      options.success(normalized as Record<string, unknown>)
     })
     .catch((e) => {
       if (typeof options.fail === 'function') {

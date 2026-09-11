@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { describe, it, expect, vi } from 'vitest'
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -8,9 +8,13 @@ import {
   normalizeTarget,
   esPlusPkgFor,
   isValidTarget,
+  isSafePathSegment,
+  isPathInside,
   CLI_TARGETS,
 } from '../src/utils/strings'
 import { detectSchemaType } from '../src/commands/validate'
+import { createCommand } from '../src/commands/create'
+import { scaffoldCommand } from '../src/commands/scaffold'
 import { extractJson, AiUnavailableError } from '../src/ai/nl-to-config'
 import { writeGeneratedFiles } from '../src/utils/fs'
 
@@ -166,6 +170,105 @@ describe('fs.writeGeneratedFiles', () => {
       // 校验在写入前完成——第一个文件也不应被写出
       expect(existsSync(a)).toBe(false)
     } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('strings.isSafePathSegment — 路径穿越防护', () => {
+  it('拒绝路径分隔符 / "." / ".." / 盘符 / 空串', () => {
+    for (const seg of ['../../evil', 'a/b', 'a\\b', '..', '.', 'C:evil', '']) {
+      expect(isSafePathSegment(seg), seg).toBe(false)
+    }
+  })
+
+  it('放行正常页面名（含中文）', () => {
+    for (const seg of ['UserManage', 'user-management', '订单管理', 'A1_b2']) {
+      expect(isSafePathSegment(seg), seg).toBe(true)
+    }
+  })
+})
+
+describe('strings.isPathInside — 输出目录越界兜底', () => {
+  const base = join('root', 'views')
+
+  it('目录内 → true', () => {
+    expect(isPathInside(base, join(base, 'schema.ts'))).toBe(true)
+    expect(isPathInside(base, join(base, 'Sub', 'Page.vue'))).toBe(true)
+  })
+
+  it('同级 / 上级 / 自身 → false', () => {
+    expect(isPathInside(base, join('root', 'evil.ts'))).toBe(false)
+    expect(isPathInside(base, join(base, '..', 'evil.ts'))).toBe(false)
+    expect(isPathInside(base, base)).toBe(false)
+  })
+})
+
+describe('create — [name] 路径穿越拦截（接线级）', () => {
+  it('name 含 ../ 时拒绝生成，且写出目录之外不产生文件', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-c8-name-'))
+    const outDir = join(dir, 'out')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await createCommand.parseAsync([
+        'node', 'create', '../evil',
+        '-d', '用户管理，支持新增编辑', '--no-ai',
+        '-o', outDir, '--force'
+      ])
+      expect(process.exitCode).toBe(1)
+      // 输出目录不应被创建/写入
+      expect(existsSync(outDir) ? readdirSync(outDir).length : 0).toBe(0)
+      // 更不应在上一级留下逃逸产物
+      expect(existsSync(join(dir, 'evil'))).toBe(false)
+      expect(existsSync(join(dir, 'schema.ts'))).toBe(false)
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('--from-config 载入 name 含 ../ 的配置 → schema 校验即拒绝，不落盘', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-c8-cfg-'))
+    const outDir = join(dir, 'out')
+    const cfgPath = join(dir, 'cfg.json')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      writeFileSync(cfgPath, JSON.stringify({
+        name: '../../evil',
+        apiUrl: '/api/x',
+        fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+        actions: ['add']
+      }))
+      await createCommand.parseAsync([
+        'node', 'create', '--from-config', cfgPath, '-o', outDir, '--force'
+      ])
+      expect(process.exitCode).toBe(1)
+      expect(existsSync(join(dir, 'evil'))).toBe(false)
+      expect(existsSync(outDir)).toBe(false)
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('scaffold 的 [name] 同样拒绝路径穿越', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-c8-scaffold-'))
+    const outFile = join(dir, 'out', 'Page.vue')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await scaffoldCommand.parseAsync([
+        'node', 'scaffold', '../evil', '-o', outFile, '--force'
+      ])
+      expect(process.exitCode).toBe(1)
+      expect(existsSync(outFile)).toBe(false)
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
       rmSync(dir, { recursive: true, force: true })
     }
   })

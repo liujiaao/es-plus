@@ -5,7 +5,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
 import { nlToConfig, aiAvailable, AiUnavailableError } from '../ai/nl-to-config.js';
-import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, CLI_TARGETS } from '../utils/strings.js';
+import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, isSafePathSegment, isPathInside, CLI_TARGETS } from '../utils/strings.js';
 import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
 
 /**
@@ -16,6 +16,14 @@ import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
 async function emitFromStructuredConfig(config: any, nameArg: string | undefined, output: string | undefined, force: boolean): Promise<void> {
   const pageName = nameArg || toKebabCase(config.name);
   const pascalName = toPascalCase(pageName);
+
+  // 页面名会被用作文件/目录名。config.name 可能来自不可信来源（LLM / 用户配置文件），
+  // 若含路径分隔符或 `..` 会把产物写出目标目录（路径穿越）。
+  if (!isSafePathSegment(pageName) || !isSafePathSegment(pascalName)) {
+    console.log(pc.red(`✗ 非法的页面名：${config.name}（不得包含路径分隔符、"." 或 ".."）`));
+    process.exitCode = 1;
+    return;
+  }
 
   const result = generateFromConfig(config);
 
@@ -40,6 +48,12 @@ async function emitFromStructuredConfig(config: any, nameArg: string | undefined
 
     const schemaFile = resolve(outputDir, "schema.ts");
     const wrapperFile = resolve(outputDir, `${pascalName}.vue`);
+    // 兜底：拼出的路径必须仍在 outputDir 内（任何形式的逃逸都拒绝）
+    if (!isPathInside(outputDir, schemaFile) || !isPathInside(outputDir, wrapperFile)) {
+      console.log(pc.red(`✗ 输出路径越界：${wrapperFile}`));
+      process.exitCode = 1;
+      return;
+    }
     if (!(await confirmOverwrite([schemaFile, wrapperFile], force))) return;
 
     // 事务式写入：空 wrapperCode 会抛错（避免 0 字节 .vue 却报成功），
@@ -200,6 +214,13 @@ export const createCommand = new Command("create")
     }
 
     const pascalName = toPascalCase(name);
+
+    // 同 emitFromStructuredConfig：name 会被用作文件/目录名，拒绝路径穿越。
+    if (!isSafePathSegment(name) || !isSafePathSegment(pascalName)) {
+      console.log(pc.red(`✗ 非法的页面名：${name}（不得包含路径分隔符、"." 或 ".."）`));
+      process.exitCode = 1;
+      return;
+    }
 
     if (mode === "sfc") {
       const defaultOutput = resolve(process.cwd(), `src/views/${pascalName}.vue`);

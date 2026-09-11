@@ -187,6 +187,6 @@ export function normalizeFormItem(item) {
  * 批量归一化 FormItemOption 列表
  */
 export function normalizeFormItemList(items) {
-    return items.map(normalizeFormItem);
+    return items.map((item) => normalizeFormItem(item));
 }
 //# sourceMappingURL=compat.js.map

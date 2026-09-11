@@ -26,3 +26,6 @@ test-results/
 playwright-report/
 __tests__/e2e-runtime/test-results/
 __tests__/e2e-runtime/playwright-report/
+
+# 会话工作记录（本地留存，不进版本库）
+.session-notes/

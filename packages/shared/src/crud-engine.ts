@@ -410,8 +410,10 @@ function detectFeatures(input: string): {
   // Cross-page selection toolbar
   if (/跨页|cross-page/i.test(input) || /批量(审核|审批|删除|上下架|操作)/.test(input)) {
     patches.cachePageSelection = true
-    patches.selection = true
-    hints.push('跨页批量选择 — `options.cachePageSelection: true` + selection 列已启用，底部 toolbar 需自行实现')
+    // 渲染器读取的是 options.multiSelect（选项列注入），此前误写为 selection —— 非法键，
+    // 三端均不识别，导致跨页批量选择的选择列根本不渲染。
+    patches.multiSelect = true
+    hints.push('跨页批量选择 — `options.cachePageSelection: true` + `options.multiSelect: true`（选择列）已启用，底部 toolbar 需自行实现')
   }
 
   // Multi-tab detail dialog

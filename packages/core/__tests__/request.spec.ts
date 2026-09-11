@@ -148,6 +148,24 @@ describe('request > queryTableListMethod', () => {
     expect(fail).toHaveBeenCalled()
   })
 
+  it('非对象响应（undefined/null/原始值）→ 仍调用 success，归一为 {}', async () => {
+    // 回归：此前 success 仅在 res 为非空对象/数组时被调用，导致
+    // httpRequestFormInstance 的 Promise 永不 settle（远端下拉选项挂起）。
+    for (const res of [undefined, null, '', 0, 'raw-text']) {
+      const fn = vi.fn().mockResolvedValue(res)
+      const success = vi.fn()
+      queryTableListMethod({}, { apiParams: { url: '/x' }, success }, fn)
+      await new Promise((r) => setTimeout(r, 0))
+      expect(success, `res=${String(res)}`).toHaveBeenCalledWith({})
+    }
+  })
+
+  it('无 success 回调 → 不抛错', async () => {
+    const fn = vi.fn().mockResolvedValue(undefined)
+    expect(() => queryTableListMethod({}, { apiParams: { url: '/x' } }, fn)).not.toThrow()
+    await new Promise((r) => setTimeout(r, 0))
+  })
+
   it('字段级 httpRequest 优先于全局', async () => {
     const local = vi.fn().mockResolvedValue({})
     const global = vi.fn().mockResolvedValue({})
@@ -203,6 +221,16 @@ describe('request > httpRequestFormInstance', () => {
       httpRequestFormInstance({}, { apiParams: rows.apiParams }, rows as any, fn)
     ).rejects.toThrow('boom')
   })
+
+  it('httpRequest resolve undefined → Promise 仍 settle（回归：此前永久挂起）', async () => {
+    const fn = vi.fn().mockResolvedValue(undefined)
+    const rows = { prop: 'f', apiParams: { url: '/x' } }
+    const outcome = await Promise.race([
+      httpRequestFormInstance({}, { apiParams: rows.apiParams }, rows as any, fn).then(() => 'resolved'),
+      new Promise((r) => setTimeout(() => r('timeout'), 200))
+    ])
+    expect(outcome).toBe('resolved')
+  })
 })
 
 describe('request > getEveryFormQueryField', () => {
@@ -227,6 +255,18 @@ describe('request > getEveryFormQueryField', () => {
     expect(result).toHaveLength(1)
     expect(result[0].prop).toBe('myProp')
     expect(result[0].listData).toEqual([{ id: 1 }])
+  })
+
+  it('远端 resolve undefined → 仍 resolve（回归：此前 Promise.all 永久挂起）', async () => {
+    const fn = vi.fn().mockResolvedValue(undefined)
+    const outcome = await Promise.race([
+      getEveryFormQueryField(
+        [{ prop: 'f', apiParams: { url: '/api' } }] as any,
+        fn
+      ).then((r) => (Array.isArray(r) ? 'resolved' : 'bad')),
+      new Promise((r) => setTimeout(() => r('timeout'), 200))
+    ])
+    expect(outcome).toBe('resolved')
   })
 
   it('responseTransform 接收 preExtractedList（非原始 response）', async () => {

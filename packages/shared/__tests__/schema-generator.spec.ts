@@ -79,3 +79,38 @@ describe('generateCrudSchema — wrapper SFC', () => {
     expect(result.wrapperCode).toContain('edit-confirm')
   })
 })
+
+describe('generateCrudSchema — antdv wrapper 可编译性（回归）', () => {
+  // 回归：该分支此前漏调 rewriteElementUsage —— import 被映射为 Modal/message，
+  // 代码体却仍是 ElMessageBox/ElMessage，生成产物引用未定义符号、不可编译。
+  const result = generateCrudSchema('用户管理，支持新增编辑删除', 'antdv')
+
+  it('使用 antdv 的 Modal 对象式确认', () => {
+    expect(result.wrapperCode).toContain('Modal.confirm({')
+    expect(result.wrapperCode).toContain("from 'ant-design-vue'")
+  })
+
+  it('不残留 ElMessageBox / ElMessage 引用，改用 message', () => {
+    expect(result.wrapperCode).not.toMatch(/\bElMessageBox\b/)
+    expect(result.wrapperCode).not.toMatch(/\bElMessage\b/)
+    expect(result.wrapperCode).toContain('message.success')
+    expect(result.wrapperCode).toContain('message.error')
+  })
+
+  it('import 的符号与代码体一致（Modal / message 均在 import 中）', () => {
+    const importLine = result.wrapperCode.split('\n').find((l) => l.includes('ant-design-vue')) || ''
+    expect(importLine).toContain('Modal')
+    expect(importLine).toContain('message')
+  })
+
+  it('summary 标注 Ant Design Vue（此前误标 Element Plus）', () => {
+    expect(result.summary).toContain('Ant Design Vue')
+    expect(result.summary).not.toContain('Element Plus')
+  })
+
+  it('vue3 仍输出 ElMessageBox（未被误改）', () => {
+    const vue3 = generateCrudSchema('用户管理，支持新增编辑删除')
+    expect(vue3.wrapperCode).toContain('ElMessageBox')
+    expect(vue3.wrapperCode).not.toContain('Modal.confirm')
+  })
+})
