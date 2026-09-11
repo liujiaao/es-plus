@@ -215,4 +215,58 @@ export function applyConfigTableOut(response, configTableOut) {
     }
     return result;
 }
+// ============================================================================
+// 表单校验配置解析（三端共用，避免各渲染器各写一份优先级逻辑）
+// ============================================================================
+/**
+ * 把未知值收敛为规则对象；非对象（含数组 / null）一律视为空
+ */
+function asRuleMap(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        return {};
+    return value;
+}
+/**
+ * 解析表单项要注入到底层 form-item 的校验配置（`required` / `rules`）。
+ *
+ * 优先级：**`formItemOptions` 中的同名键优先**，`item.required` / `item.rules`
+ * 只在前者未提供该键时才注入。
+ *
+ * 依据：本库对「快捷方式 vs 低层透传袋」的既有约定就是低层袋优先 ——
+ * `FormItemOption` 的 `placeholder` / `clearable` / `disabled` 均标注
+ * 「attrs 中的同名属性优先」。`formItemOptions` 与 `attrs` 同属透传给底层组件的
+ * 逃生舱，故沿用同一方向。
+ *
+ * 返回值只含**需要注入的键**，调用方展开合并即可，不会覆盖 `formItemOptions`
+ * 中已有的其他键。
+ *
+ * @example
+ * // formItemOptions 赢，item.required 被忽略
+ * { prop: 'name', required: false, formItemOptions: { required: true } }
+ */
+export function resolveItemValidateProps(item) {
+    const opts = asRuleMap(item.formItemOptions);
+    const injected = {};
+    if (opts.required === undefined && item.required !== undefined) {
+        injected.required = item.required;
+    }
+    if (opts.rules === undefined && item.rules !== undefined) {
+        injected.rules = item.rules;
+    }
+    return injected;
+}
+/**
+ * 合并 form 级校验规则：全局配置兜底，组件 props 同名键优先。
+ *
+ * `rules` 形如 `{ 字段路径: 规则数组 }`。底层组件（Element Plus / Element UI / ADV）
+ * 会把 form 级规则与 form-item 级规则**合并**（item 级在前），所以这里只需按字段名做
+ * 一层浅合并：组件 props 给了某字段就用组件的，否则回落到全局配置。
+ *
+ * 之所以不是「全局整体被组件整体覆盖」：全局配置的用途是给一批表单提供公共字段
+ * （例如所有表单都校验 `createTime` 区间），而组件只关心自己那几个字段 ——
+ * 整体覆盖会让全局配置基本失效。
+ */
+export function resolveFormRules(globalRules, propRules) {
+    return { ...asRuleMap(globalRules), ...asRuleMap(propRules) };
+}
 //# sourceMappingURL=field-resolver.js.map

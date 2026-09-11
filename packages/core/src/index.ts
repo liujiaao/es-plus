@@ -110,6 +110,8 @@ export {
   normalizeButtonsHideState,
   resolveButtonDisabled,
   applyConfigTableOut,
+  resolveItemValidateProps,
+  resolveFormRules,
 } from './field-resolver'
 
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────

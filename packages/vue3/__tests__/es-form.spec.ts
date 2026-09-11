@@ -196,3 +196,105 @@ describe('EsForm - 配置渲染', () => {
     expect(mockRequest).not.toHaveBeenCalled()
   })
 })
+
+describe('EsForm - item 级校验 required / rules 注入', () => {
+  const firstItem = (wrapper: ReturnType<typeof mountForm>) =>
+    wrapper.findComponent({ name: 'ElFormItem' })
+
+  it('item.required 注入到 el-form-item', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24, required: true }]
+    })
+    expect(firstItem(wrapper).props('required')).toBe(true)
+  })
+
+  it('item.rules 注入到 el-form-item', () => {
+    const rules = [{ min: 3, message: '至少 3 个字符' }]
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24, rules }]
+    })
+    expect(firstItem(wrapper).props('rules')).toEqual(rules)
+  })
+
+  it('formItemOptions.required 优先于 item.required', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [
+        {
+          prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+          required: false,
+          formItemOptions: { required: true }
+        }
+      ]
+    })
+    expect(firstItem(wrapper).props('required')).toBe(true)
+  })
+
+  it('formItemOptions.rules 优先于 item.rules', () => {
+    const optsRules = [{ max: 10 }]
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [
+        {
+          prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+          rules: [{ min: 3 }],
+          formItemOptions: { rules: optsRules }
+        }
+      ]
+    })
+    expect(firstItem(wrapper).props('rules')).toEqual(optsRules)
+  })
+
+  it('注入不覆盖 formItemOptions 的其他键', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [
+        {
+          prop: 'name', label: '姓名', formtype: 'Input', span: 24,
+          required: true,
+          formItemOptions: { labelWidth: '80px' }
+        }
+      ]
+    })
+    expect(firstItem(wrapper).props('labelWidth')).toBe('80px')
+    expect(firstItem(wrapper).props('required')).toBe(true)
+  })
+
+  it('未配置时 el-form-item 的 required/rules 保持未设置（不注入空值）', () => {
+    const wrapper = mountForm({
+      model: { name: '' },
+      formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24 }]
+    })
+    expect(firstItem(wrapper).props('required')).toBeUndefined()
+    expect(firstItem(wrapper).props('rules')).toBeUndefined()
+  })
+})
+
+describe('EsForm - form 级规则（全局配置兜底）', () => {
+  it('全局 EsForm.rules 兜底，组件 props.rules 同名字段优先', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    const localAge = [{ min: 18, message: '未成年' }]
+    try {
+      configureEsPlus({
+        EsForm: { rules: { name: [{ required: true, message: '姓名必填' }], age: [{ min: 1 }] } }
+      })
+      const wrapper = mountForm({
+        model: { name: '', age: '' },
+        formItemList: [
+          { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },
+          { prop: 'age', label: '年龄', formtype: 'Input', span: 24 }
+        ],
+        rules: { age: localAge }
+      })
+      const formRules = wrapper.findComponent({ name: 'ElForm' }).props('rules') as Record<string, unknown>
+      // 组件提供了 age → 用组件的（全局给的是 [{min:1}]，内容不同即证明组件赢了）
+      expect(formRules.age).toEqual(localAge)
+      // 组件没提供 name → 回落到全局
+      expect(formRules.name).toEqual([{ required: true, message: '姓名必填' }])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+})

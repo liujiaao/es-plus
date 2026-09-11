@@ -9,9 +9,10 @@
  *
  * 退出码：0 = 成功/一致；1 = 校验发现漂移。
  */
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
+import { writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { readText, sameText } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -33,12 +34,12 @@ function main() {
   let synced = 0
 
   for (const file of files) {
-    const srcContent = readFileSync(join(SOURCE, file), 'utf-8')
+    const srcContent = readText(join(SOURCE, file))
     const dstPath = join(TARGET, file)
 
     if (CHECK) {
-      const dstContent = existsSync(dstPath) ? readFileSync(dstPath, 'utf-8') : null
-      if (dstContent !== srcContent) {
+      const dstContent = existsSync(dstPath) ? readText(dstPath) : null
+      if (!sameText(dstContent, srcContent)) {
         console.error(`❌ 文档漂移：es-plus-docs/src/docs/${file} 与 docs/${file} 不一致`)
         drift = true
       }

@@ -10,6 +10,8 @@ import {
   normalizeButtonsHideState,
   resolveButtonDisabled,
   applyConfigTableOut,
+  resolveItemValidateProps,
+  resolveFormRules,
 } from '../src/field-resolver'
 import type { BtnConfig, FormItemOption } from '../src/types'
 
@@ -178,5 +180,72 @@ describe('field-resolver > applyConfigTableOut', () => {
     const r = applyConfigTableOut({}, { tableData: 'data', total: 'total' })
     expect(r.tableData).toEqual([])
     expect(r.total).toBe(0)
+  })
+})
+
+describe('field-resolver > resolveItemValidateProps', () => {
+  it('只有快捷字段 → 原样注入', () => {
+    const rules = [{ required: true, message: '必填' }]
+    expect(resolveItemValidateProps({ required: true, rules })).toEqual({ required: true, rules })
+  })
+
+  it('formItemOptions 有同名键 → formItemOptions 优先，快捷字段被忽略', () => {
+    const shortcutRules = [{ min: 3 }]
+    const optsRules = [{ max: 10 }]
+    const out = resolveItemValidateProps({
+      required: false,
+      rules: shortcutRules,
+      formItemOptions: { required: true, rules: optsRules },
+    })
+    expect(out).toEqual({})
+  })
+
+  it('formItemOptions 只给了 required → rules 仍然从快捷字段注入', () => {
+    const rules = [{ min: 3 }]
+    const out = resolveItemValidateProps({ required: false, rules, formItemOptions: { required: true } })
+    expect(out).toEqual({ rules })
+  })
+
+  it('formItemOptions 的 required 为 false 也算「已提供」，不被 true 覆盖', () => {
+    const out = resolveItemValidateProps({ required: true, formItemOptions: { required: false } })
+    expect(out).toEqual({})
+  })
+
+  it('两者都没有 → 返回空对象（调用方展开后不产生多余键）', () => {
+    expect(resolveItemValidateProps({})).toEqual({})
+  })
+
+  it('formItemOptions 为非法值（数组/null）时按空处理', () => {
+    expect(resolveItemValidateProps({ required: true, formItemOptions: [] as never })).toEqual({
+      required: true,
+    })
+  })
+})
+
+describe('field-resolver > resolveFormRules', () => {
+  it('全局与组件分别提供不同字段 → 两者都在', () => {
+    const out = resolveFormRules({ name: [{ required: true }] }, { age: [{ min: 18 }] })
+    expect(out).toEqual({ name: [{ required: true }], age: [{ min: 18 }] })
+  })
+
+  it('同名字段 → 组件 props 覆盖全局', () => {
+    const local = [{ min: 18 }]
+    const out = resolveFormRules({ age: [{ required: true }] }, { age: local })
+    expect(out.age).toBe(local)
+  })
+
+  it('全局为空/未配置 → 等同于组件 props', () => {
+    const local = { name: [{ required: true }] }
+    expect(resolveFormRules(undefined, local)).toEqual(local)
+  })
+
+  it('组件未配置 → 回落到全局', () => {
+    const globalRules = { name: [{ required: true }] }
+    expect(resolveFormRules(globalRules, {})).toEqual(globalRules)
+  })
+
+  it('非法值（数组/null/字符串）按空处理，不抛错', () => {
+    expect(resolveFormRules(null, null)).toEqual({})
+    expect(resolveFormRules([1, 2], 'nope')).toEqual({})
   })
 })

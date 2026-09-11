@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { readText, sameText } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -50,17 +51,24 @@ function main() {
     // 只对已跟踪站点（es-plus-docs / es-pc）做单源一致性门禁。
     if (CHECK && rel(target).startsWith('es-eui/') && !existsSync(target)) continue
     for (const file of files) {
-      const srcContent = readFileSync(join(SOURCE, file))
+      const srcPath = join(SOURCE, file)
       const dstPath = join(target, file)
+      // schema.json 是文本：行尾符归一化后比较，避免 Windows 检出差异被误判为漂移；
+      // *.png 是渲染快照，必须按原始字节比较。
+      const isText = file.endsWith('.json')
       if (CHECK) {
-        const dstContent = existsSync(dstPath) ? readFileSync(dstPath) : null
-        if (!dstContent || Buffer.compare(dstContent, srcContent) !== 0) {
+        const same =
+          existsSync(dstPath) &&
+          (isText
+            ? sameText(readText(dstPath), readText(srcPath))
+            : Buffer.compare(readFileSync(dstPath), readFileSync(srcPath)) === 0)
+        if (!same) {
           console.error(`❌ 三端渲染快照漂移：${rel(dstPath)} 与单源不一致`)
           drift = true
         }
       } else {
         if (!existsSync(target)) mkdirSync(target, { recursive: true })
-        writeFileSync(dstPath, srcContent)
+        writeFileSync(dstPath, isText ? readText(srcPath) : readFileSync(srcPath))
         synced++
       }
     }

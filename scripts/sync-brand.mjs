@@ -11,9 +11,10 @@
  *
  * 退出码：0 = 成功/一致；1 = 校验发现漂移。
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { readText, sameText } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -32,7 +33,7 @@ function rel(p) {
 }
 
 function main() {
-  const srcContent = readFileSync(SOURCE, 'utf-8')
+  const srcContent = readText(SOURCE)
   let drift = false
   let synced = 0
 
@@ -41,8 +42,8 @@ function main() {
       // es-eui/ 被 .gitignore（本地-only playground，不进 CI）：该站点缺失时跳过校验，
       // 只对已跟踪站点（es-plus-docs / es-pc）做单源一致性门禁。
       if (rel(target).startsWith('es-eui/') && !existsSync(target)) continue
-      const dstContent = existsSync(target) ? readFileSync(target, 'utf-8') : null
-      if (dstContent !== srcContent) {
+      const dstContent = existsSync(target) ? readText(target) : null
+      if (!sameText(dstContent, srcContent)) {
         console.error(`❌ 品牌文案漂移：${rel(target)} 与单源不一致`)
         drift = true
       }

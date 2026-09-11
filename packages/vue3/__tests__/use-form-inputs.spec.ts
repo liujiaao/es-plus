@@ -405,4 +405,81 @@ describe('useFormInputs', () => {
       expect((model as any).address.city).toBe('Shanghai')
     })
   })
+
+  // 回归：这两个逃生舱此前在 Vue 3 下静默失效（见 use-form-inputs.ts 的 rowPassThrough）
+  describe('透传逃生舱 props / on', () => {
+    it('should merge props into the control props', () => {
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        props: { clearable: true, maxlength: 10 }
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, {}, { row: item, index: 0 })
+      expect(vnode.props?.clearable).toBe(true)
+      expect(vnode.props?.maxlength).toBe(10)
+    })
+
+    it('should convert raw on keys to onXxx listeners', () => {
+      const handler = () => {}
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        on: { change: handler, blur: handler }
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, {}, { row: item, index: 0 })
+      expect(vnode.props?.onChange).toBe(handler)
+      expect(vnode.props?.onBlur).toBe(handler)
+      // 裸键名不应再出现，否则说明事件又被当成普通 prop 透传了
+      expect(vnode.props?.change).toBeUndefined()
+    })
+
+    it('should not double-prefix keys already in onXxx form', () => {
+      const handler = () => {}
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        on: { onFocus: handler }
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, {}, { row: item, index: 0 })
+      expect(vnode.props?.onFocus).toBe(handler)
+      expect(vnode.props?.onOnFocus).toBeUndefined()
+    })
+
+    it('should let the internal two-way binding win over a user-supplied update handler', () => {
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        on: { 'update:modelValue': () => {} }
+      }
+      const model: Record<string, unknown> = { name: 'old' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      const updateFn = vnode.props?.['onUpdate:modelValue'] as (val: unknown) => void
+      updateFn('new')
+      expect(model.name).toBe('new')
+    })
+
+    it('should apply props and on to a non-Input control too', () => {
+      const handler = () => {}
+      const item: FormItemOption = {
+        prop: 'pick',
+        label: 'Pick',
+        formtype: 'DatePicker',
+        props: { valueFormat: 'YYYY-MM-DD' },
+        on: { change: handler }
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, {}, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElDatePicker)
+      expect(vnode.props?.valueFormat).toBe('YYYY-MM-DD')
+      expect(vnode.props?.onChange).toBe(handler)
+    })
+  })
 })

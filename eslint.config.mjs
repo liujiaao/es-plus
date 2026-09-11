@@ -90,6 +90,10 @@ export default [
   // — that would let the autofixer rewrite `:foo.sync` → `v-model:foo`,
   // which is Vue 3 syntax and breaks Element UI runtime.
   ...vuePresetFor('packages/vue2/**/*.vue', 'flat/vue2-recommended'),
+  // e2e 运行时夹具（__tests__/e2e-runtime/vue2）是一个真实的 Vue 2 应用，
+  // 且没有自己的 package.json。不在这里显式路由的话，它只会命中下面的
+  // 「tests」段（不设 vue parser），落到基础段的 TS 解析器上 → 解析报错。
+  ...vuePresetFor('__tests__/e2e-runtime/vue2/**/*.vue', 'flat/vue2-recommended'),
 
   // ─── 4. Vue 3 SFC ────────────────────────────────────────────────
   ...vuePresetFor('packages/vue3/**/*.vue', 'flat/recommended'),

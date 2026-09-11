@@ -2,7 +2,7 @@
  * Ant Design Vue 表单控件渲染映射
  *
  * 对齐 @es-plus/vue3 use-form-inputs.ts 的结构与行为：
- * - row.on 直接展开（...row.on），与 vue3 一致；Upload 仍用 onXxx 转换（对齐 vue3 Upload 分支）
+ * - row.props / row.attrs 合并透传，row.on 的事件名统一转成 onXxx（对齐 vue3 的 rowPassThrough）
  * - v-model 绑定字段按 ADV 各组件适配（value/checked/targetKeys）
  * - DatePicker/TimePicker value 必须 dayjs（ADV 4.x），toDayjsValue/fromDayjsValue 做防御转换；
  *   配置 valueFormat 时回写字符串（对齐 EP value-format），未配置则保留 dayjs（ADV 原生）——此为 ADV 必要偏离
@@ -37,6 +37,37 @@ import { normalizeFormType } from '@es-plus/core'
 import { getNestedValue, setNestedValue, isObject } from '../utils/shared'
 
 type FormInputCtx = { row: FormItemOption; index: number }
+
+/**
+ * 把事件名转换为 Vue 3 `h()` 需要的 `onXxx` 形式。
+ * 已经是 `onXxx` 的键名原样返回，避免二次加前缀（例如 `onUpdate:value`）。
+ */
+function toOnKey(key: string): string {
+  return /^on[A-Z]/.test(key) ? key : `on${key.charAt(0).toUpperCase()}${key.slice(1)}`
+}
+
+/**
+ * 构建表单项透传给输入控件的属性：合并 `props` 与 `attrs`，并把 `on` 的事件名转成 `onXxx`。
+ *
+ * 与 @es-plus/vue3 的 rowPassThrough 行为对齐：
+ * - `props` 与 `attrs` 合并后透传（core 的 FormItemOption 文档承诺两个适配器都会合并二者）
+ * - `on` 的裸事件名（如 `change`）会被 h() 当成普通 prop，必须转成 onXxx 才是事件监听器
+ *
+ * 注意：调用方若还需要读**原始** attrs 做 EP→ADV 字段映射（Cascader 的 attrs.props、
+ * Switch 的 active-value、DatePicker 的 type/start-placeholder 等），请继续用 `row.attrs`，
+ * 不要用本函数的返回值 —— 合并结果含事件监听器与组件 props，拿去解析组件类型会误判。
+ *
+ * 调用方需在返回值之后展开内部的 v-model 绑定事件，由它接管双向绑定。
+ */
+function rowPassThrough(row: FormItemOption): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...row.props, ...row.attrs }
+  if (row.on) {
+    for (const [key, handler] of Object.entries(row.on)) {
+      merged[toOnKey(key)] = handler
+    }
+  }
+  return merged
+}
 
 /**
  * ADV 各组件的 v-model 绑定字段映射
@@ -156,8 +187,7 @@ export function useFormInputs() {
           const { component: InputComp, binding } = resolveInputComponent(row.attrs || {})
           return hFn(InputComp, {
             [binding.prop]: getNestedValue(model, row.prop),
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             [binding.event]: (val: unknown) => { setNestedValue(model, row.prop, val) },
           })
         },
@@ -171,8 +201,7 @@ export function useFormInputs() {
             Select as any,
             {
               value: getNestedValue(model, row.prop),
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
             },
             () =>
@@ -189,8 +218,7 @@ export function useFormInputs() {
         (hFn, model, { row }: FormInputCtx) => {
           return hFn(InputNumber as any, {
             value: getNestedValue(model, row.prop),
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
           })
         },
@@ -214,8 +242,7 @@ export function useFormInputs() {
         (hFn, model, { row }: FormInputCtx) => {
           return hFn(Slider, {
             value: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
           })
         },
@@ -229,8 +256,7 @@ export function useFormInputs() {
           return hFn('input', {
             value: getNestedValue(model, row.prop) as string || '#000000',
             type: 'color',
-            ...attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             onInput: (e: Event) => {
               const val = (e.target as HTMLInputElement)?.value
               setNestedValue(model, row.prop, val)
@@ -252,11 +278,9 @@ export function useFormInputs() {
       [
         'Transfer',
         (hFn, model, { row }: FormInputCtx) => {
-          const attrs = row.attrs || {}
           const props: Record<string, unknown> = {
             targetKeys: getNestedValue(model, row.prop) as string[] || [],
-            ...attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:targetKeys': (val: unknown) => { setNestedValue(model, row.prop, val) },
           }
           // EP data → ADV dataSource
@@ -276,8 +300,7 @@ export function useFormInputs() {
           const props: Record<string, unknown> = {
             value: getNestedValue(model, row.prop),
             options: row.dataOptions,
-            ...attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
           }
           // EP Cascader 的 props 配置 → ADV 扁平字段
@@ -307,8 +330,7 @@ export function useFormInputs() {
             RadioGroup,
             {
               value: getNestedValue(model, row.prop),
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
             },
             () =>
@@ -327,8 +349,7 @@ export function useFormInputs() {
             CheckboxGroup,
             {
               value: getNestedValue(model, row.prop) as any,
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
             },
             () =>
@@ -345,9 +366,8 @@ export function useFormInputs() {
         (hFn, model, { row }: FormInputCtx) => {
           const attrs = row.attrs || {}
           const props: Record<string, unknown> = {
-            ...attrs,
+            ...rowPassThrough(row),
             checked: getNestedValue(model, row.prop),
-            ...row.on,
             'onUpdate:checked': (val: unknown) => { setNestedValue(model, row.prop, val) },
           }
           if (attrs['active-value'] !== undefined && props['checked-value'] === undefined) {
@@ -368,9 +388,8 @@ export function useFormInputs() {
         (hFn, model, { row }: FormInputCtx) => {
           const attrs = row.attrs || {}
           const props: Record<string, unknown> = {
-            ...attrs,
+            ...rowPassThrough(row),
             value: getNestedValue(model, row.prop),
-            ...row.on,
             'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
           }
           if (attrs.texts && !props.tooltips) props.tooltips = attrs.texts
@@ -440,7 +459,7 @@ export function useFormInputs() {
           // 事件转换（对齐 vue3 Upload 分支：onXxx 形式）
           if (restRow.on) {
             for (const [key, handler] of Object.entries(restRow.on)) {
-              uploadCfg[`on${key.charAt(0).toUpperCase()}${key.slice(1)}`] = handler
+              uploadCfg[toOnKey(key)] = handler
             }
           }
 
@@ -474,9 +493,8 @@ function renderDatePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
   const { component: DateComp, binding, picker, showTime, isRange } = resolveDatePickerComponent(attrs)
   const fmt = resolveValueFormat(attrs)
   const props: Record<string, unknown> = {
-    ...attrs,
+    ...rowPassThrough(row),
     [binding.prop]: toDayjsValue(getNestedValue(model, row.prop), fmt),
-    ...row.on,
     [binding.event]: (val: unknown) => { setNestedValue(model, row.prop, fromDayjsValue(val, fmt)) },
   }
   if (picker) props.picker = picker
@@ -511,9 +529,8 @@ function renderTimePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
   const TimeComp = isRange ? ((TimePicker as any).RangePicker || TimePicker) : TimePicker
   const fmt = resolveValueFormat(attrs)
   const props: Record<string, unknown> = {
-    ...attrs,
+    ...rowPassThrough(row),
     value: toDayjsValue(getNestedValue(model, row.prop), fmt),
-    ...row.on,
     'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, fromDayjsValue(val, fmt)) },
   }
   if (props.valueFormat && !props.format) {

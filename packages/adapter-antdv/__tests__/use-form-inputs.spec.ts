@@ -318,3 +318,54 @@ describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）'
     expect(dayjs.isDayjs(props.value)).toBe(true)
   })
 })
+
+// 回归：这两个逃生舱此前与 vue3 一样静默失效（见 use-form-inputs.ts 的 rowPassThrough）
+describe('useFormInputs — 透传逃生舱 props / on', () => {
+  const { formInputComponents } = useFormInputs()
+  const propsOf = (formtype: string, overrides: Partial<FormItemOption> = {}) => {
+    const item = makeItem(formtype, overrides)
+    const renderFn = formInputComponents(item)!
+    return ((renderFn(h, makeModel(), { row: item, index: 0 }) as any).props || {}) as Record<string, unknown>
+  }
+
+  it('props 会被合并进控件属性', () => {
+    const props = propsOf('Input', { props: { allowClear: true, maxlength: 10 } })
+    expect(props.allowClear).toBe(true)
+    expect(props.maxlength).toBe(10)
+  })
+
+  it('on 的裸事件名会被转成 onXxx 监听器', () => {
+    const handler = () => {}
+    const props = propsOf('Input', { on: { change: handler, blur: handler } })
+    expect(props.onChange).toBe(handler)
+    expect(props.onBlur).toBe(handler)
+    // 裸键名不应再出现，否则说明事件又被当成普通 prop 透传了
+    expect(props.change).toBeUndefined()
+  })
+
+  it('已是 onXxx 的键名不会二次加前缀', () => {
+    const handler = () => {}
+    const props = propsOf('Input', { on: { onFocus: handler } })
+    expect(props.onFocus).toBe(handler)
+    expect(props.onOnFocus).toBeUndefined()
+  })
+
+  it('props 与 attrs 同时存在时都会透传，attrs 同名键优先', () => {
+    const props = propsOf('Input', { props: { maxlength: 5 }, attrs: { maxlength: 20 } })
+    expect(props.maxlength).toBe(20)
+  })
+
+  it('合并透传不影响 DatePicker 用原始 attrs.type 解析组件（RangePicker）', () => {
+    // 回归点：rowPassThrough 的返回值含事件监听器与组件 props，
+    // 若拿它去 resolveDatePickerComponent 会误判，必须仍用原始 row.attrs
+    const props = propsOf('DatePicker', { attrs: { type: 'daterange' }, props: { type: 'nonsense' } })
+    expect(props.picker).toBeUndefined()
+    expect(Array.isArray(props.placeholder) || props.placeholder === undefined).toBe(true)
+  })
+
+  it('合并透传不影响 Switch 读原始 attrs 的 EP 字段映射', () => {
+    const props = propsOf('Switch', { attrs: { 'active-value': 'Y', 'inactive-value': 'N' } })
+    expect(props['checked-value']).toBe('Y')
+    expect(props['un-checked-value']).toBe('N')
+  })
+})

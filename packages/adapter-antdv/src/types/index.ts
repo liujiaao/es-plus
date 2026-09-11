@@ -29,6 +29,18 @@ export interface FormItemOption {
   clearable?: boolean
   disabled?: boolean
   attrs?: Record<string, unknown>
+  /**
+   * 透传给输入控件的组件 props。
+   * - 与 `attrs` 的区别：`props` 是组件声明 props，`attrs` 是宽松透传
+   * - 本适配器中 `props` 与 `attrs` 会被合并后一起透传给 Ant Design Vue 组件
+   * - 兼容 es-eui 既有约定（formItemList 中可同时使用 attrs / props）
+   */
+  props?: Record<string, unknown>
+  /**
+   * 透传给输入控件的事件监听器。
+   * 键名用组件事件名（如 `change`、`update:value`），适配器会转换成 Vue 3
+   * `h()` 需要的 `onXxx` 形式；已写成 `onXxx` 的键名原样透传。
+   */
   on?: Record<string, unknown>
   dataOptions?: Array<{ label: string; value: unknown }>
   isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: unknown) => boolean
@@ -45,6 +57,22 @@ export interface FormItemOption {
    */
   listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   components?: Record<string, unknown>
+  /**
+   * 表单项是否必填（与 rules 二选一）
+   * 与 `formItemOptions.required` 同时存在时，**`formItemOptions` 优先**
+   */
+  required?: boolean
+  /**
+   * 校验规则（透传给 a-form-item 的 rules）
+   * 与 form 级 rules 是叠加关系（本字段规则在前，消息优先）；
+   * 与 `formItemOptions.rules` 同时存在时，**`formItemOptions` 优先**
+   */
+  rules?: Array<Record<string, unknown>>
+  /**
+   * 表单项布局配置（透传给 a-form-item）
+   * 其中的 `required` / `rules` 优先于本类型上的同名字段
+   */
+  formItemOptions?: Record<string, unknown>
   width?: number | string
   [key: string]: unknown
 }
@@ -248,11 +276,20 @@ export interface EsFormInstance {
 }
 
 export interface EsTableInstance {
+  /** 触发请求（可传额外查询参数） */
   httpRequestInstance: (model?: Record<string, unknown>) => Promise<unknown>
+  /** 清除当前页选择 */
   clearSelection: () => void
+  /** 切换某一行的选中状态 */
   toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => void
+  /** 清除所有页选择（含跨页缓存） */
   clearAllSelection: () => void
-  refresh: () => void
+  /** 刷新当前页：保留页码重新取数 + 重排布局，返回 Promise */
+  refresh: (model?: Record<string, unknown>) => Promise<unknown> | void
+  /** 重新加载：回到第 1 页重新取数（搜索/重置语义），返回 Promise */
+  reload: (model?: Record<string, unknown>) => Promise<unknown> | void
+  /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
+  doLayout: () => void
 }
 
 // ============================================================================

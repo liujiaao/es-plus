@@ -22,7 +22,7 @@
             :label="translateLabel(item)"
             :labelCol="labelColStyle"
             :wrapperCol="wrapperColStyle"
-            v-bind="initFormItemOptions((item as any).formItemOptions || {})"
+            v-bind="initFormItemOptions(item)"
             @click.stop="() => {}"
           >
             <template v-if="item.formtype">
@@ -202,7 +202,13 @@ import { getGlobalConfig } from '../../../config'
 import { useFormInputs } from '../../../composables/use-form-inputs'
 import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
-import { resolveFormLayProps, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import {
+  resolveFormLayProps,
+  filterBtnProps,
+  TABLE_CONTEXT_INJECT_KEY,
+  resolveItemValidateProps,
+  resolveFormRules,
+} from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'
@@ -326,7 +332,8 @@ const formProps = computed<Record<string, any>>(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
-  rules: props.rules,
+  // 全局 EsForm.rules 作为 form 级规则兜底，组件 props.rules 按字段名优先
+  rules: resolveFormRules($esPlusForm?.rules, props.rules),
   validateOnRuleChange: false,
 }))
 
@@ -481,7 +488,13 @@ const queryTableRequest = async (
 }
 
 // ─── isParentTable 时注入 marginBottom（对齐 vue3）────
-const initFormItemOptions = (opts: Record<string, unknown>) => {
+const initFormItemOptions = (item: FormItemOption) => {
+  // required / rules 快捷字段只在 formItemOptions 未提供该键时才注入 ——
+  // formItemOptions 是透传给 a-form-item 的低层逃生舱，优先级更高
+  const opts: Record<string, unknown> = {
+    ...((item.formItemOptions as Record<string, unknown> | undefined) || {}),
+    ...resolveItemValidateProps(item)
+  }
   if (isParentTable.value) {
     const { style, ...rest } = opts
     return { style: { marginBottom: '10px', ...(style as Record<string, unknown>) }, ...rest }

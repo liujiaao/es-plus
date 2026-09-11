@@ -126,7 +126,7 @@ async function main() {
     }
   } finally {
     servers.forEach((s) => {
-      try { s.kill() } catch {}
+      try { s.kill() } catch { /* 进程可能已自行退出，忽略 */ }
     })
     await browser.close()
   }

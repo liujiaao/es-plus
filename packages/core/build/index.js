@@ -24,7 +24,7 @@ export { resolveKeepPage, computeBoundaryRollback } from './pagination';
 // ─── 请求相关 ─────────────────────────────────────────────────
 export { DEFAULT_CONFIG_FORM_FIELD_OUT, checkQueryFields, configFormField, formatConfigOut, queryTableListMethod, httpRequestFormInstance, getEveryFormQueryField, } from './request';
 // ─── 字段/按钮解析 ────────────────────────────────────────────
-export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, } from './field-resolver';
+export { filterVisibleFormItems, calculateAutoSpan, applyAutoSpan, splitButtonsByDirection, splitToolbarButtonsByCode, getButtonPosition, filterButtonsByPermission, normalizeButtonsHideState, resolveButtonDisabled, applyConfigTableOut, resolveItemValidateProps, resolveFormRules, } from './field-resolver';
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
 export { buildFirstClassGridOptions } from './vxe-engine';
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────

@@ -20,7 +20,13 @@
 export interface EsPlusGlobalConfig {
   /** EsTable 全局默认 props（合并优先级低于组件实例 props） */
   EsTable?: Record<string, unknown>
-  /** EsForm 全局默认 props */
+  /**
+   * EsForm 全局默认 props
+   *
+   * 其中 `rules`（`{ 字段路径: 规则数组 }`）会作为 **form 级校验规则**的兜底，
+   * 与组件 `props.rules` 按字段名浅合并：组件给了某字段就用组件的，否则用全局的。
+   * form-item 级规则仍优先于 form 级（底层组件自身的合并语义）。
+   */
   EsForm?: Record<string, unknown>
   /** EsDialog 全局默认 props */
   EsDialog?: Record<string, unknown>

@@ -24,9 +24,8 @@
     @zoom="handleZoom"
   >
     <!-- render 函数列：动态插槽分发 -->
-    <template v-for="[slotName, col] in renderSlotMap" #[slotName]="{ row, rowIndex }">
+    <template v-for="[slotName, col] in renderSlotMap" :key="slotName" #[slotName]="{ row, rowIndex }">
       <RenderDomTb
-        :key="slotName"
         :render="(col.render as any)"
         :row="row"
         :index="rowIndex"
@@ -34,8 +33,8 @@
       />
     </template>
     <!-- 用户具名插槽透传（scopedSlots.customRender） -->
-    <template v-for="(slotFn, slotName) in namedParentSlots" #[slotName]="slotProps">
-      <component :is="() => (slotFn as Function)(normalizeSlotProps(slotProps))" :key="slotName" />
+    <template v-for="(slotFn, slotName) in namedParentSlots" :key="slotName" #[slotName]="slotProps">
+      <component :is="() => (slotFn as Function)(normalizeSlotProps(slotProps))" />
     </template>
     <!-- 默认空数据 UI（用户未提供 #empty 时生效，样式与 el-table 保持一致） -->
     <template v-if="!namedParentSlots['empty']" #empty>

@@ -9,12 +9,23 @@
   - 暴露 reset() 供宿主在数据恢复后清除错误态、重新渲染子树
 -->
 <template>
-  <slot v-if="!capturedError" />
-  <slot v-else name="fallback" :error="capturedError" :reset="reset">
-    <div class="es-error-boundary" role="alert">
-      {{ fallbackText || '组件渲染出错' }}
-    </div>
-  </slot>
+  <!--
+    Vue 2 要求模板恰好一个根节点，而 <slot> 不能作根 —— Vue 2 编译器会报
+    「Cannot use <slot> as component root element because it may contain multiple nodes.」
+    当默认插槽展开为多个节点时，渲染函数会返回节点数组而无法渲染。
+
+    故这里包一层 `display: contents` 的容器：它自身不生成盒子，子节点仍按父级布局参与
+    排布（`height: 100%` 这类规则也仍然相对祖父解析），行为上最接近 Vue 3 的 fragment。
+    这是 Vue 2 的必要偏离 —— @es-plus/vue3 的版本无需此包装。
+  -->
+  <div class="es-error-boundary__root">
+    <slot v-if="!capturedError" />
+    <slot v-else name="fallback" :error="capturedError" :reset="reset">
+      <div class="es-error-boundary" role="alert">
+        {{ fallbackText || '组件渲染出错' }}
+      </div>
+    </slot>
+  </div>
 </template>
 
 <script lang="ts">
@@ -42,6 +53,10 @@ export default {
 </script>
 
 <style scoped>
+/* 单根包装容器：不生成盒子，避免改变宿主的布局（Vue 2 无 fragment，必须有一个根元素） */
+.es-error-boundary__root {
+  display: contents;
+}
 .es-error-boundary {
   padding: 12px 16px;
   color: #cf1322;

@@ -25,6 +25,35 @@ export { getNestedValue, setNestedValue } from '@es-plus/core'
 /** 表单控件渲染回调的上下文参数类型（与 FormItemOption.render 的 ctx 一致） */
 type FormInputCtx = { row: FormItemOption; index: number }
 
+/**
+ * 把事件名转换为 Vue 3 `h()` 需要的 `onXxx` 形式。
+ * 已经是 `onXxx` 的键名原样返回，避免二次加前缀（例如 `onUpdate:modelValue`）。
+ */
+function toOnKey(key: string): string {
+  return /^on[A-Z]/.test(key) ? key : `on${key.charAt(0).toUpperCase()}${key.slice(1)}`
+}
+
+/**
+ * 构建表单项透传给输入控件的属性：合并 `props` 与 `attrs`，并把 `on` 的事件名转成 `onXxx`。
+ *
+ * 这两处此前都是静默失效的坑：
+ * - `props` 从未被展开，而 core 的 FormItemOption 文档承诺「Vue 3 适配器中 props 与 attrs
+ *   会被合并到一起透传」，于是照着文档写的配置在 Vue 2 生效、在 Vue 3 无声丢弃；
+ * - `on` 为裸展开，`{ change: fn }` 会被当作名为 change 的 prop 而非事件监听器，
+ *   导致除 Upload 外的 13 种控件的 `on` 配置全部失效。
+ *
+ * 调用方需在返回值之后展开内部的 `onUpdate:modelValue`，由它接管双向绑定。
+ */
+function rowPassThrough(row: FormItemOption): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...row.props, ...row.attrs }
+  if (row.on) {
+    for (const [key, handler] of Object.entries(row.on)) {
+      merged[toOnKey(key)] = handler
+    }
+  }
+  return merged
+}
+
 export function useFormInputs() {
   const formInputComponents = (item: FormItemOption) => {
     const formPutList = new Map([
@@ -33,8 +62,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElInput, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -48,8 +76,7 @@ export function useFormInputs() {
             ElSelect,
             {
               modelValue: getNestedValue(model, row.prop) as any,
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:modelValue': (val: unknown) => {
                 setNestedValue(model, row.prop, val)
               }
@@ -66,8 +93,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElInputNumber, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -79,8 +105,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElSlider, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -92,8 +117,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElColorPicker, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -105,8 +129,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElTransfer, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -119,8 +142,7 @@ export function useFormInputs() {
           return hFn(ElCascader, {
             modelValue: getNestedValue(model, row.prop) as any,
             options: row.dataOptions as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -134,8 +156,7 @@ export function useFormInputs() {
             ElRadioGroup,
             {
               modelValue: getNestedValue(model, row.prop) as any,
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:modelValue': (val: unknown) => {
                 setNestedValue(model, row.prop, val)
               }
@@ -154,8 +175,7 @@ export function useFormInputs() {
             ElCheckboxGroup,
             {
               modelValue: getNestedValue(model, row.prop) as any,
-              ...row.attrs,
-              ...row.on,
+              ...rowPassThrough(row),
               'onUpdate:modelValue': (val: unknown) => {
                 setNestedValue(model, row.prop, val)
               }
@@ -172,8 +192,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElSwitch, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -185,8 +204,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElRate, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -198,8 +216,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElDatePicker, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -211,8 +228,7 @@ export function useFormInputs() {
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           return hFn(ElTimePicker, {
             modelValue: getNestedValue(model, row.prop) as any,
-            ...row.attrs,
-            ...row.on,
+            ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
             }
@@ -243,7 +259,7 @@ export function useFormInputs() {
           // 将 on 中的事件转换为 Vue 3 h() 需要的 onXxx 格式
           if (restRow.on) {
             for (const [key, handler] of Object.entries(restRow.on)) {
-              elUploadProps[`on${key.charAt(0).toUpperCase()}${key.slice(1)}`] = handler
+              elUploadProps[toOnKey(key)] = handler
             }
           }
 

@@ -10,7 +10,7 @@
           >
             <el-form-item
               :label="translateLabel(item)"
-              v-bind="initFormItemOptions(item.formItemOptions || {})"
+              v-bind="initFormItemOptions(item)"
               :prop="item.prop"
               @click.native.stop="noop"
             >
@@ -156,7 +156,13 @@ import { useFormInputs } from '../../composables/use-form-inputs'
 import { useFormLayout } from '../../composables/use-form-layout'
 import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
-import { getGlobalConfig, filterBtnProps, TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
+import {
+  getGlobalConfig,
+  filterBtnProps,
+  TABLE_CONTEXT_INJECT_KEY,
+  resolveItemValidateProps,
+  resolveFormRules
+} from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
 // 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
@@ -362,7 +368,8 @@ export default defineComponent({
         size: 'mini',
         ...userLayout,
         model: resolvedModel.value,
-        rules: props.rules,
+        // 全局 EsForm.rules 作为 form 级规则兜底，组件 props.rules 按字段名优先
+        rules: resolveFormRules($esPlusForm?.rules, props.rules),
         validateOnRuleChange: false,
       }
       const mapped = mapSize(merged.size)
@@ -543,7 +550,13 @@ export default defineComponent({
       }
     }
 
-    const initFormItemOptions = (opts: Record<string, unknown>) => {
+    const initFormItemOptions = (item: FormItemOption) => {
+      // required / rules 快捷字段只在 formItemOptions 未提供该键时才注入 ——
+      // formItemOptions 是透传给 el-form-item 的低层逃生舱，优先级更高
+      const opts: Record<string, unknown> = {
+        ...((item.formItemOptions as Record<string, unknown> | undefined) || {}),
+        ...resolveItemValidateProps(item)
+      }
       if (isParentTable.value) {
         const { style, ...rest } = opts
         return { style: { marginBottom: '10px', ...((style as Record<string, unknown>) || {}) }, ...rest }

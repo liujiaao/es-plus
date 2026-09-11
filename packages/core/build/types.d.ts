@@ -152,11 +152,27 @@ export interface FormItemOption {
      * - qrcb(res) → 旧写法，同 afterResponse（@deprecated）
      */
     listenToCallBack?: ListenToCallBack;
-    /** 表单项是否必填（与 rules 二选一） */
+    /**
+     * 表单项是否必填（与 rules 二选一）
+     *
+     * 与 `formItemOptions.required` 同时存在时，**`formItemOptions` 优先**
+     * （低层透传袋优先，与 `attrs` > `placeholder`/`clearable`/`disabled` 同构）。
+     */
     required?: boolean;
-    /** 校验规则 */
+    /**
+     * 校验规则（透传给 form-item 的 rules）
+     *
+     * 与 form 级 `rules` 是**叠加**关系而非覆盖：底层组件会把本字段的规则排在
+     * form 级规则之前，因此本字段的校验消息优先。与 `formItemOptions.rules`
+     * 同时存在时，**`formItemOptions` 优先**。
+     */
     rules?: Array<Record<string, unknown>>;
-    /** 表单项布局配置（透传给 el-form-item） */
+    /**
+     * 表单项布局配置（透传给 el-form-item / a-form-item）
+     *
+     * 这是直接透传给底层组件的低层逃生舱，其中的 `required` / `rules` 优先于
+     * 本类型上的同名快捷字段。
+     */
     formItemOptions?: Record<string, unknown>;
     /** 自定义控件相关 */
     components?: Record<string, unknown>;
