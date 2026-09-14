@@ -38,7 +38,8 @@ export interface ColumnAdapterOptions {
   indeterminate: Ref<boolean>
   onSelectAll: (val: boolean) => void
   onSelectRow: (rowKey: string, val: boolean) => void
-  rowkey: string
+  // 支持 ref/computed：渲染/交互时读取最新 rowkey，避免运行期切换后仍用旧键。
+  rowkey: string | Ref<string>
   parentSlots?: Slots
   t?: (key: string) => string
   expandedKeys?: Ref<Set<string>>
@@ -46,6 +47,9 @@ export interface ColumnAdapterOptions {
 }
 
 const DEFAULT_WIDTH = 150
+
+const resolveRowkey = (rowkey: string | Ref<string>): string =>
+  typeof rowkey === 'string' ? rowkey : rowkey.value
 
 export function useColumnAdapter(
   columns: Ref<TableColumn[]>,
@@ -164,7 +168,7 @@ function createSelectionColumn(options: ColumnAdapterOptions, col?: TableColumn)
     fixed,
     align: 'center',
     cellRenderer: ({ rowData }) => {
-      const rowKey = String(rowData[options.rowkey] ?? '')
+      const rowKey = String(rowData[resolveRowkey(options.rowkey)] ?? '')
       const checked = options.selectedKeys.value.has(rowKey)
       return h(ElCheckbox, {
         modelValue: checked,
@@ -202,7 +206,7 @@ function createExpandColumn(options: ColumnAdapterOptions, col?: TableColumn): V
     fixed: 'left',
     align: 'center',
     cellRenderer: ({ rowData }) => {
-      const rowKey = String(rowData[options.rowkey] ?? '')
+      const rowKey = String(rowData[resolveRowkey(options.rowkey)] ?? '')
       const expanded = options.expandedKeys?.value.has(rowKey) ?? false
       return h('span', {
         class: ['es-virtual-expand-icon', expanded ? 'is-expanded' : ''],

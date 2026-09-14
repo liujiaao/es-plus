@@ -19,6 +19,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { FORM_RENDER_CONTRACT } from './renderer-contract.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -68,6 +69,31 @@ const UNION_SOURCES = [
     slice: /formtype\?:\s*([^\n]+)/,
   },
 ]
+
+/**
+ * 抽取每个 formtype 键**到下一个键之间**的源码窗口。
+ * 行为层校验用：只要该 key 的窗口里出现契约声明的组件 token，就认为实现未被换掉。
+ */
+function extractBranchWindows(path) {
+  const src = readFileSync(join(ROOT, path), 'utf-8')
+  const keys = [...src.matchAll(/^\s*'([A-Z][a-zA-Z0-9]*)',\s*$/gm)].map((m) => ({
+    key: m[1],
+    i: m.index,
+  }))
+  const map = new Map()
+  for (let k = 0; k < keys.length; k++) {
+    map.set(keys[k].key, src.slice(keys[k].i, k + 1 < keys.length ? keys[k + 1].i : src.length))
+  }
+  return map
+}
+
+/** 把契约 token 转成匹配正则：含 `-` 或全小写视为标签/字符串（带引号匹配），否则按标识符单词边界 */
+function tokenRe(token) {
+  const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return /-/.test(token) || token === token.toLowerCase()
+    ? new RegExp(`['"\`]${esc}['"\`]`)
+    : new RegExp(`\\b${esc}\\b`)
+}
 
 function extractUnionMembers({ path, slice }) {
   const src = readFileSync(join(ROOT, path), 'utf-8')
@@ -128,13 +154,54 @@ function main() {
     }
   }
 
+  // 4. 行为层：每个 formtype 在每个渲染器里必须绑到契约声明的组件（不只是键存在）
+  const contractKeys = Object.keys(FORM_RENDER_CONTRACT)
+  const contractMissing = valid.keys.filter((k) => !(k in FORM_RENDER_CONTRACT))
+  const contractExtra = contractKeys.filter((k) => !valid.set.has(k))
+  if (contractMissing.length || contractExtra.length) {
+    fail = true
+    console.error('❌ renderer-contract 与 VALID_FORM_TYPES 不一致：')
+    if (contractMissing.length) console.error(`   contract 缺：${contractMissing.join(', ')}`)
+    if (contractExtra.length) console.error(`   contract 多：${contractExtra.join(', ')}`)
+  }
+  for (const [name, path] of RENDERER_INPUTS) {
+    const windows = extractBranchWindows(path)
+    for (const key of valid.keys) {
+      const entry = FORM_RENDER_CONTRACT[key]
+      if (!entry) continue
+      const tokens = entry[name] || []
+      const win = windows.get(key)
+      if (win === undefined) {
+        fail = true
+        console.error(`❌ ${name}: 未定位到 formtype '${key}' 的渲染分支`)
+        continue
+      }
+      if (!tokens.some((t) => tokenRe(t).test(win))) {
+        fail = true
+        console.error(
+          `❌ ${name}: formtype '${key}' 的分支未绑定契约组件（期望其一：${tokens.join(' / ')}）—— 实现可能被换成了别的控件`
+        )
+      }
+    }
+  }
+  // deviation 必须写明原因（文档化强制）
+  for (const [key, entry] of Object.entries(FORM_RENDER_CONTRACT)) {
+    if (!entry.deviation) continue
+    for (const [renderer, reason] of Object.entries(entry.deviation)) {
+      if (!reason || !reason.trim()) {
+        fail = true
+        console.error(`❌ ${key}/${renderer}: deviation 未说明原因`)
+      }
+    }
+  }
+
   if (fail) {
-    console.error('\n三端 formtype 键集/联合类型存在分叉，请统一到 VALID_FORM_TYPES 单源。')
+    console.error('\n三端 formtype 键集/联合类型/组件绑定存在分叉，请统一到 VALID_FORM_TYPES + renderer-contract 单源。')
     process.exit(1)
   }
 
   console.log(
-    `✅ 三端 formPutList 键集 + TS 联合类型一致（${valid.keys.length} 项），与 VALID_FORM_TYPES 单源同步`
+    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定一致（${valid.keys.length} 项），与 VALID_FORM_TYPES / renderer-contract 单源同步`
   )
 }
 

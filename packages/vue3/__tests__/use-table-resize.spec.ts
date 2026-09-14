@@ -522,4 +522,51 @@ describe('useTableResize', () => {
 
     expect(tableHeight.value).toBe(400)
   })
+
+  // 回归：options 以 ref/computed 传入时，运行期修改应即时生效（此前原始值快照）
+  it('tabHeight 传入 ref：运行期修改后 resizeObservers 使用新值', () => {
+    const containerRef = ref(createMockElement({ offsetHeight: 500 }))
+    const tabHeight = ref<number | string>(600)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      ref(null),
+      ref(null),
+      ref(null),
+      { tabHeight }
+    )
+
+    resizeObservers()
+    expect(tableHeight.value).toBe(600)
+
+    tabHeight.value = 700
+    resizeObservers()
+    expect(tableHeight.value).toBe(700)
+  })
+
+  it('heightType 传入 ref：auto→height 切换后按父容器高度重算', () => {
+    const parentEl = createMockElement({ offsetHeight: 900 })
+    const containerRef = ref(
+      createMockElement({ offsetHeight: 600, parentElement: parentEl } as any)
+    )
+    const heightType = ref<'auto' | 'height'>('auto')
+    const tabHeight = ref<number | undefined>(undefined)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      ref(null),
+      ref(null),
+      ref(null),
+      { heightType, tabHeight }
+    )
+
+    // auto + tabHeight 为 undefined → parseInt(undefined) → 450
+    resizeObservers()
+    expect(tableHeight.value).toBe(450)
+
+    heightType.value = 'height'
+    resizeObservers()
+    // 切换后使用 parentElement.offsetHeight = 900
+    expect(tableHeight.value).toBe(900)
+  })
 })

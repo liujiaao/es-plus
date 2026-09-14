@@ -242,6 +242,11 @@ watch(
   }
 )
 const loadingStatus = ref(false)
+// 请求序号（递增 ticket）：每次 queryTableListMethod 调用自增，只有最新序号的结果被采纳。
+// 快速翻页时旧请求的响应/失败会被静默丢弃，不再覆盖新页数据、不再弹 request-error。
+// 注意 computeBoundaryRollback 的递归调用会自增 ticket，从而正确“接管”外层请求，
+// 不会因序号机制被误杀。
+const requestTicket = ref(0)
 const slotState = ref(false)
 const showPagination = ref(false)
 
@@ -529,14 +534,18 @@ const tableBindAttrs = computed(() => {
 })
 
 // 使用原生 ResizeObserver
+// heightType / tabHeight 以 computed 传入，运行期修改 options 时能即时生效（此前是原始值快照）。
+const resizeTabHeight = computed(() =>
+  props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined)
+)
 const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef,
   headBarRef,
   tbBtnRef,
   paginationRef,
   {
-    heightType: heightType.value as 'auto' | 'height',
-    tabHeight: props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined),
+    heightType,
+    tabHeight: resizeTabHeight,
   }
 )
 
@@ -690,15 +699,25 @@ const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
   }
 }
 
-const queryTableListMethod = (params: Record<string, unknown>, options: { success?: (res: Record<string, unknown>) => void; fail?: (err: unknown) => void } = {}) => {
+type QueryTableListCallbacks = {
+  // isCurrent=false 表示本次请求已被更新的请求淘汰（序号过期）：调用方应静默丢弃结果，
+  // 但仍需让回调把外层 Promise settle，避免调用方 await 永久挂起。
+  success?: (res: Record<string, unknown>, isCurrent: boolean) => void
+  fail?: (err: unknown, isCurrent: boolean) => void
+}
+
+const queryTableListMethod = (params: Record<string, unknown>, options: QueryTableListCallbacks = {}) => {
   const { success, fail } = options
+  // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
+  const ticket = ++requestTicket.value
   const apiParams = (props.options?.apiParams || {}) as Record<string, any>
   const url = props.options?.actionUrl || apiParams.url || ''
 
   // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求（由调用方自处理 url）。
   // 否则调用 fail 让外层 Promise settle，避免 refresh() 永久挂起。
   if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
-    if (typeof fail === 'function') fail(new Error('no url/apiParams configured'))
+    // 同步配置错误不是“被淘汰请求”，必须按当前请求暴露（isCurrent=true）。
+    if (typeof fail === 'function') fail(new Error('no url/apiParams configured'), true)
     return
   }
 
@@ -715,12 +734,9 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
   }
 
   const requestHandler = async (requestFn: Function) => {
-    if (loadingStatus.value) {
-      // 请求在途时不再静默吞掉新请求，触发 fail 让 Promise settle
-      if (typeof fail === 'function') fail(new Error('request already in progress'))
-      return
-    }
+    // 不再用 loadingStatus 当互斥锁：并发请求各自持有序号，由序号决定谁的结果生效。
     loadingStatus.value = true
+    let isCurrent = false
     try {
       const res = await requestFn({
         url,
@@ -729,6 +745,7 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
         ...requestOption,
         ...params
       })
+      isCurrent = ticket === requestTicket.value
       const responseData = getListenToCallBack('afterResponse', res) || res
       // 空 / 非对象响应（204、拦截器 return undefined、原始值）以及数组响应也要调用 success ——
       // httpRequestInstance 的 Promise 只在 success/fail 中 settle，否则表格加载永久挂起。
@@ -737,14 +754,16 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
         const normalized = responseData && (isObject(responseData) || Array.isArray(responseData))
           ? responseData
           : {}
-        success(normalized as Record<string, unknown>)
+        success(normalized as Record<string, unknown>, isCurrent)
       }
     } catch (e) {
+      isCurrent = ticket === requestTicket.value
       if (typeof fail === 'function') {
-        fail(e)
+        fail(e, isCurrent)
       }
     } finally {
-      loadingStatus.value = false
+      // 只有最新请求才负责收起 loading；被淘汰请求不得清掉仍在途的最新请求的加载态。
+      if (ticket === requestTicket.value) loadingStatus.value = false
     }
   }
 
@@ -753,8 +772,8 @@ const queryTableListMethod = (params: Record<string, unknown>, options: { succes
   } else if ($esPlusTable.$httpRequest) {
     requestHandler($esPlusTable.$httpRequest as Function)
   } else {
-    // 无任何请求函数 → fail 让 Promise settle，避免挂起
-    if (typeof fail === 'function') fail(new Error('no httpRequest configured'))
+    // 无任何请求函数 → fail 让 Promise settle，避免挂起（isCurrent=true，非淘汰请求）
+    if (typeof fail === 'function') fail(new Error('no httpRequest configured'), true)
   }
 }
 
@@ -776,7 +795,12 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
     queryTableListMethod(
       { ...(model || {}), pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
       {
-        success: (res) => {
+        success: (res, isCurrent) => {
+          // 被更新的请求淘汰：静默丢弃结果并 settle，不写数据、不清错、不回滚页码。
+          if (!isCurrent) {
+            resolve(undefined)
+            return
+          }
           // 加载成功：清除上一轮自动加载的错误态（若有）
           requestError.value = null
           formatConfigOut(res, ['total', 'tableData'])
@@ -791,22 +815,28 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
             pageSize: paginationConfig.value.pageSize,
           })
           if (shouldRollback) {
-            // 仅在页码确实需要回退时递归一次，避免死循环
+            // 仅在页码确实需要回退时递归一次，避免死循环。
+            // 递归调用会自增 requestTicket，自动接管“最新请求”身份：
+            // 外层请求的 finally 因序号过期不会复位 loadingStatus，由递归请求负责收起。
             paginationConfig.value.current = maxPage
-            // 外层请求的 loadingStatus 要到 finally 才复位，此刻仍为 true；
-            // 若不先手动释放，递归的 queryTableListMethod 会被
-            // `if (loadingStatus.value) return` 挡掉，导致页码回退了却没拉到数据（停在空白页）。
-            loadingStatus.value = false
             queryTableListMethod(
               { ...(model || {}), pageIndex: maxPage, pageSize: paginationConfig.value.pageSize },
               {
-                success: (res2) => {
+                success: (res2, isCurrent2) => {
+                  if (!isCurrent2) {
+                    resolve(undefined)
+                    return
+                  }
                   formatConfigOut(res2, ['total', 'tableData'])
                   emitPaginationUpdate()
                   emit('pagination-current-change', paginationConfig.value)
                   resolve(res2)
                 },
-                fail: (err) => {
+                fail: (err, isCurrent2) => {
+                  if (!isCurrent2) {
+                    resolve(undefined)
+                    return
+                  }
                   surfaceRequestError(err)
                   reject(err)
                 }
@@ -816,7 +846,12 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
           }
           resolve(res)
         },
-        fail: (err) => {
+        fail: (err, isCurrent) => {
+          // 被淘汰请求的失败静默丢弃，但必须 settle，避免 refresh() 等待的 Promise 悬空。
+          if (!isCurrent) {
+            resolve(undefined)
+            return
+          }
           surfaceRequestError(err)
           reject(err)
         }
@@ -829,14 +864,19 @@ const changePageIndexRequest = () => {
   queryTableListMethod(
     { pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
     {
-      success: (res) => {
+      success: (res, isCurrent) => {
+        // 页码已被后续翻页更新时丢弃本次旧页响应，否则数据会回跳到旧页。
+        if (!isCurrent) return
         formatConfigOut(res, ['total', 'tableData'])
         emitPaginationUpdate()
         emit('pagination-current-change', paginationConfig.value)
       },
       // 翻页失败同样经统一暴露：写 requestError + emit('request-error')，
-      // 否则加载态消失、数据留旧值而用户无任何失败反馈（对齐 F2）
-      fail: (err) => surfaceRequestError(err)
+      // 否则加载态消失、数据留旧值而用户无任何失败反馈（对齐 F2）。
+      // 被淘汰请求的失败不暴露（避免快速翻页时误报 request-error）。
+      fail: (err, isCurrent) => {
+        if (isCurrent) surfaceRequestError(err)
+      }
     }
   )
 }
@@ -845,11 +885,14 @@ const changePageSizeRequest = () => {
   queryTableListMethod(
     { pageIndex: paginationConfig.value.current, pageSize: paginationConfig.value.pageSize },
     {
-      success: (res) => {
+      success: (res, isCurrent) => {
+        if (!isCurrent) return
         formatConfigOut(res, ['total', 'tableData'])
         emitPaginationUpdate()
       },
-      fail: (err) => surfaceRequestError(err)
+      fail: (err, isCurrent) => {
+        if (isCurrent) surfaceRequestError(err)
+      }
     }
   )
 }

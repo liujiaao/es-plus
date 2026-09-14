@@ -51,6 +51,11 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
       merged[toOnKey(key)] = handler
     }
   }
+  // 显式双向绑定优先：剔除用户经 props/attrs/on 透传的 modelValue 与 onUpdate:modelValue。
+  // 各控件分支把内部 modelValue 展开在 rowPassThrough 之前，若不移除，用户透传值会覆盖
+  // 表单 model 绑定，输入框与 model 静默脱钩（文档约定「内部双向绑定优先」）。
+  delete merged.modelValue
+  delete merged['onUpdate:modelValue']
   return merged
 }
 

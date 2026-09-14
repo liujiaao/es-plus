@@ -156,3 +156,72 @@ describe('EsForm(ADV) - 顶层快捷字段注入（placeholder / disabled）', (
     expect(input.props('disabled')).toBe(true)
   })
 })
+
+// 回归：ADV 的 getNamePath 不拆分 'user.name'，此前整串当单键读 model['user.name']
+// → 嵌套字段能输入、校验必错。改为数组 name path 后测试才成立。
+describe('EsForm(ADV) - 嵌套 prop 校验', () => {
+  it('item.prop "user.name" 以数组 name path 传给 a-form-item', () => {
+    const wrapper = mountForm({
+      model: { user: { name: '' } },
+      formItemList: [{ prop: 'user.name', label: '姓名', formtype: 'Input', span: 24 }]
+    })
+    expect(firstItem(wrapper).props('name')).toEqual(['user', 'name'])
+  })
+
+  it('嵌套字段 required + 空值 → 校验失败（不再因读错路径而必错/漏检）', async () => {
+    const wrapper = mountForm({
+      model: { user: { name: '' } },
+      formItemList: [{ prop: 'user.name', label: '姓名', formtype: 'Input', span: 24, required: true }]
+    })
+    await expect(wrapper.vm.validate()).rejects.toBeTruthy()
+  })
+
+  it('嵌套字段 required + 有值 → 校验通过', async () => {
+    const wrapper = mountForm({
+      model: { user: { name: '张三' } },
+      formItemList: [{ prop: 'user.name', label: '姓名', formtype: 'Input', span: 24, required: true }]
+    })
+    // ADV validate() resolve 的是表单值对象（非布尔），只断言不 reject
+    await expect(wrapper.vm.validate()).resolves.toBeTruthy()
+  })
+})
+
+// 回归：item 级 name 改数组 path 后，form 级扁平键必须仍能匹配，
+// 故绑定给 <a-form> 前把 'user.name' 展开为嵌套 { user: { name: [...] } }。
+describe('EsForm(ADV) - 嵌套 form 级规则', () => {
+  it("全局规则扁平键 'user.name' 展开为嵌套并生效", async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({
+        EsForm: { rules: { 'user.name': [{ required: true, message: '姓名必填' }] } }
+      })
+      const wrapper = mountForm({
+        model: { user: { name: '' } },
+        formItemList: [{ prop: 'user.name', label: '姓名', formtype: 'Input', span: 24 }]
+      })
+      const aForm = wrapper.findComponent({ name: 'AForm' })
+      expect(aForm.props('rules')).toEqual({
+        user: { name: [{ required: true, message: '姓名必填' }] }
+      })
+      await expect(wrapper.vm.validate()).rejects.toBeTruthy()
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('扁平字段规则不受嵌套展开影响', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ EsForm: { rules: { name: [{ required: true, message: '姓名必填' }] } } })
+      const wrapper = mountForm({
+        model: { name: '' },
+        formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24 }]
+      })
+      const aForm = wrapper.findComponent({ name: 'AForm' })
+      expect(aForm.props('rules')).toEqual({ name: [{ required: true, message: '姓名必填' }] })
+      await expect(wrapper.vm.validate()).rejects.toBeTruthy()
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+})

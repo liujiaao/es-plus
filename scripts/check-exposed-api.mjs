@@ -80,6 +80,7 @@ function extractObjectKeys(src, openBraceIndex) {
   let paren = 0
   let square = 0
   let expectKey = false
+  let hasSpread = false
   const keys = []
 
   while (i < n) {
@@ -117,6 +118,12 @@ function extractObjectKeys(src, openBraceIndex) {
     if (c === ']') { square--; i++; continue }
 
     const atTop = curly === 1 && paren === 0 && square === 0
+    // 顶层 spread 会把键藏进别的对象，使键集不可静态审计 —— 显式记录以便报错
+    if (atTop && c === '.' && c2 === '.' && src[i + 2] === '.') {
+      hasSpread = true
+      i += 3
+      continue
+    }
     if (c === ',' && atTop) { expectKey = true; i++; continue }
 
     if (/\s/.test(c)) { i++; continue }
@@ -133,7 +140,7 @@ function extractObjectKeys(src, openBraceIndex) {
     expectKey = false
     i++
   }
-  return keys
+  return { keys, hasSpread }
 }
 
 function exposedKeysFor(path, anchor) {
@@ -157,12 +164,20 @@ function main() {
   let fail = false
 
   for (const [comp, renderers] of Object.entries(COMPONENTS)) {
+    let compFailed = false
     const sets = {}
     for (const [name, path, anchor] of renderers) {
       try {
-        sets[name] = extractUnique(exposedKeysFor(path, anchor))
+        const { keys, hasSpread } = exposedKeysFor(path, anchor)
+        sets[name] = extractUnique(keys)
+        if (hasSpread) {
+          compFailed = true
+          console.error(
+            `❌ ${comp}/${name}: expose 块使用了 spread（...），键集不可静态审计 —— 请显式列出暴露的方法`,
+          )
+        }
       } catch (e) {
-        fail = true
+        compFailed = true
         console.error(`❌ ${comp}/${name}: ${e.message}`)
       }
     }
@@ -173,7 +188,7 @@ function main() {
       for (let y = x + 1; y < names.length; y++) {
         const { onlyA, onlyB } = diff(sets[names[x]], sets[names[y]])
         if (onlyA.length || onlyB.length) {
-          fail = true
+          compFailed = true
           console.error(
             `❌ ${comp}: ${names[x]} 与 ${names[y]} 暴露 API 不一致：` +
               `${names[x]}独有 [${onlyA.join(', ')}] / ${names[y]}独有 [${onlyB.join(', ')}]`,
@@ -187,14 +202,15 @@ function main() {
     for (const name of names) {
       const { onlyA: missing, onlyB: extra } = diff(expected, sets[name])
       if (missing.length || extra.length) {
-        fail = true
+        compFailed = true
         console.error(`❌ ${comp}/${name} 与权威快照 EXPECTED 不符：`)
         if (missing.length) console.error(`   缺失（快照有而该端无）：${missing.join(', ')}`)
         if (extra.length) console.error(`   多余（该端有而快照无）：${extra.join(', ')}`)
       }
     }
 
-    if (!fail) console.log(`✅ ${comp} 三端暴露 API 一致（${expected.length} 项）`)
+    if (compFailed) fail = true
+    else console.log(`✅ ${comp} 三端暴露 API 一致（${expected.length} 项）`)
   }
 
   if (fail) {

@@ -90,7 +90,7 @@ const {
   getSelectedRows,
   clearSelection,
   toggleRowSelection,
-} = useVirtualSelection(dataSourceRef, rowkey.value)
+} = useVirtualSelection(dataSourceRef, rowkey)
 
 const { sortState, onColumnSort, toSortChangePayload } = useVirtualSort()
 
@@ -132,7 +132,7 @@ const adaptedColumns = useColumnAdapter(columnsRef, {
     onSelectRow(key, val)
     emitSelectionChange()
   },
-  rowkey: rowkey.value,
+  rowkey,
   parentSlots: props.parentSlots,
   t: tFn.value,
   expandedKeys,

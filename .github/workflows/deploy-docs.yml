@@ -1,7 +1,12 @@
 name: Deploy Docs
 
+# 仅在 Typecheck 工作流对 master 成功后部署 —— 此前 deploy-docs 与 typecheck 并行、
+# 无任何依赖，一个只破坏 mcp-server 的提交也会照常把三个文档站发布上线。
+# （GitHub Actions 的 `needs` 不能跨 workflow，故用 workflow_run 表达依赖。）
 on:
-  push:
+  workflow_run:
+    workflows: ["Typecheck"]
+    types: [completed]
     branches: [master]
   workflow_dispatch:
 
@@ -16,6 +21,8 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    # workflow_run 触发时要求上游成功；workflow_dispatch 手动触发不受限。
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

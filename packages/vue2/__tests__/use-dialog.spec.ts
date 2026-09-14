@@ -280,3 +280,67 @@ describe('useDialog — onlyInstance 模式', () => {
     expect(mockVue.extend).toHaveBeenCalledWith(CustomComp)
   })
 })
+
+// ─── 延迟销毁竞态：关闭后 300ms 内重开，旧回调不得销毁新实例 ─────────────────────
+describe('useDialog — 延迟销毁竞态', () => {
+  const findClosedHandler = () =>
+    (vm.$on as any).mock.calls.find((c: any) => c[0] === 'closed')?.[1]
+
+  it('onlyInstance: close() 的延迟销毁只作用于被关闭的旧实例', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog(undefined, { onlyInstance: true })
+      dialog({} as any)
+      vm.visible = true
+      dialog.close() // 武装 300ms 延迟销毁，目标应为 vm
+
+      // 关闭后 300ms 内重开 → 创建新实例 vm2 并覆盖 lastVm
+      const vm2 = createMockVm()
+      MockCtor.mockImplementation(() => vm2)
+      dialog({ visible: true } as any)
+
+      vi.advanceTimersByTime(300)
+      expect(vm.$destroy).toHaveBeenCalled()
+      expect(vm2.$destroy).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('onlyInstance: onClosed 的延迟销毁只作用于本次创建的实例', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog(undefined, { onlyInstance: true })
+      dialog({ onClosed: vi.fn() } as any)
+      findClosedHandler()()
+
+      const vm2 = createMockVm()
+      MockCtor.mockImplementation(() => vm2)
+      dialog({ visible: true, onClosed: vi.fn() } as any)
+
+      vi.advanceTimersByTime(300)
+      expect(vm.$destroy).toHaveBeenCalled()
+      expect(vm2.$destroy).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('单例: 300ms 内重开后，旧的 onClosed 延迟销毁不销毁复用中的实例', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog()
+      dialog({ onClosed: vi.fn() } as any)
+      findClosedHandler()() // 武装延迟销毁
+
+      // 重开：单例复用同一 vm 并 visible=true
+      dialog({ title: 'reopen' } as any)
+      expect(vm.visible).toBe(true)
+
+      vi.advanceTimersByTime(300)
+      expect(vm.$destroy).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

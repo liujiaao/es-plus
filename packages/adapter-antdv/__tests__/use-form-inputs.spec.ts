@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import { h } from 'vue'
 import dayjs from 'dayjs'
+import { Input, RangePicker } from 'ant-design-vue'
 import { useFormInputs } from '../src/composables/use-form-inputs'
 import type { FormItemOption } from '../src/types'
 
@@ -367,5 +368,107 @@ describe('useFormInputs — 透传逃生舱 props / on', () => {
     const props = propsOf('Switch', { attrs: { 'active-value': 'Y', 'inactive-value': 'N' } })
     expect(props['checked-value']).toBe('Y')
     expect(props['un-checked-value']).toBe('N')
+  })
+})
+
+// 回归：EP→ADV 字段映射此前只读 row.attrs，放在 row.props 的同名配置被静默忽略。
+// 修复后 props / attrs 合并读取（attrs 同名优先），既让 props 生效，又保留
+// 「attrs.type 覆盖 props.type」的历史解析边界（见上方 DatePicker 回归守卫）。
+describe('useFormInputs — props 也参与 EP→ADV 字段映射', () => {
+  const { formInputComponents } = useFormInputs()
+  const vnodeOf = (formtype: string, overrides: Partial<FormItemOption> = {}) => {
+    const item = makeItem(formtype, overrides)
+    const renderFn = formInputComponents(item)!
+    return renderFn(h, makeModel(), { row: item, index: 0 }) as any
+  }
+  const propsOf = (formtype: string, overrides: Partial<FormItemOption> = {}) =>
+    (vnodeOf(formtype, overrides).props || {}) as Record<string, unknown>
+
+  it('Input props.type=textarea → 解析为 TextArea 组件', () => {
+    const vnode = vnodeOf('Input', { props: { type: 'textarea' } })
+    expect(vnode.type).toBe((Input as any).TextArea)
+  })
+
+  it('DatePicker props.type=daterange → 解析为 RangePicker', () => {
+    const vnode = vnodeOf('DatePicker', { props: { type: 'daterange' } })
+    expect(vnode.type).toBe(RangePicker)
+  })
+
+  it('DatePicker props.type 与 attrs.type 同时存在时 attrs 仍优先（不破坏既有边界）', () => {
+    const vnode = vnodeOf('DatePicker', {
+      attrs: { type: 'daterange' },
+      props: { type: 'nonsense' },
+    })
+    expect(vnode.type).toBe(RangePicker)
+  })
+
+  it('DatePicker props.valueFormat 生效（format 透传且回写字符串）', () => {
+    const item = makeItem('DatePicker', { props: { valueFormat: 'YYYY-MM-DD' } })
+    const model = makeModel('2024-01-01')
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, model, { row: item, index: 0 }) as any
+    expect(vnode.props.format).toBe('YYYY-MM-DD')
+    ;(vnode.props['onUpdate:value'] as Function)(dayjs('2024-06-15'))
+    expect(model.testField).toBe('2024-06-15')
+  })
+
+  it('Switch props.active-value / inactive-value 生效', () => {
+    const props = propsOf('Switch', { props: { 'active-value': 'Y', 'inactive-value': 'N' } })
+    expect(props['checked-value']).toBe('Y')
+    expect(props['un-checked-value']).toBe('N')
+  })
+
+  it('Rate props.texts / max 生效', () => {
+    const props = propsOf('Rate', { props: { texts: ['差', '中', '好'], max: 3 } })
+    expect(props.tooltips).toEqual(['差', '中', '好'])
+    expect(props.count).toBe(3)
+  })
+})
+
+// 回归：Transfer 此前只把 EP data 改名 dataSource，未做 label→title 映射，
+// 且从不读 es-plus 标准字段 row.dataOptions → 列表项无标题、dataOptions 失效。
+describe('useFormInputs — Transfer 数据源映射（label→title / dataOptions）', () => {
+  const { formInputComponents } = useFormInputs()
+  const renderTransfer = (overrides: Partial<FormItemOption>, model = makeModel(['1'])) => {
+    const item = makeItem('Transfer', overrides)
+    const renderFn = formInputComponents(item)!
+    return renderFn(h, model, { row: item, index: 0 }) as any
+  }
+
+  it('row.dataOptions → dataSource，label→title、value→key', () => {
+    const vnode = renderTransfer({
+      dataOptions: [
+        { label: '选项1', value: '1' },
+        { label: '选项2', value: '2' },
+      ],
+    })
+    expect(vnode.props.dataSource).toEqual([
+      expect.objectContaining({ key: '1', title: '选项1' }),
+      expect.objectContaining({ key: '2', title: '选项2' }),
+    ])
+    expect(vnode.props.targetKeys).toEqual(['1'])
+  })
+
+  it('EP data（attrs）→ dataSource，并映射 label→title', () => {
+    const vnode = renderTransfer({ attrs: { data: [{ key: 'a', label: '甲' }] } })
+    expect(vnode.props.dataSource).toEqual([expect.objectContaining({ key: 'a', title: '甲' })])
+    expect(vnode.props.data).toBeUndefined()
+  })
+
+  it('显式 dataSource 优先于 dataOptions（低层袋优先）', () => {
+    const vnode = renderTransfer({
+      attrs: { dataSource: [{ key: 'x', title: '显式' }] },
+      dataOptions: [{ label: '标准', value: 'y' }],
+    })
+    expect(vnode.props.dataSource).toEqual([expect.objectContaining({ key: 'x', title: '显式' })])
+  })
+
+  it('已带 title/key 的项不做二次改写', () => {
+    const vnode = renderTransfer({
+      attrs: { dataSource: [{ key: 'k', title: '原标题', label: '忽略' }] },
+    })
+    expect(vnode.props.dataSource).toEqual([
+      expect.objectContaining({ key: 'k', title: '原标题' }),
+    ])
   })
 })

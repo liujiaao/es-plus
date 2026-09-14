@@ -339,4 +339,24 @@ describe('useColumnAdapter', () => {
       rowIndex: 0,
     })).not.toThrow()
   })
+
+  // 回归：rowkey 原始字符串是快照，运行期切换后选择列仍按旧键取 key
+  it('rowkey 传入 ref：切换后选择列按新键判定勾选态', () => {
+    const columns = ref([{ prop: 'name', label: '姓名', width: 100 }])
+    const rowkey = ref('id')
+    const selectedKeys = ref(new Set<string>(['u1']))
+    const result = useColumnAdapter(columns, createOptions({ multiSelect: true, rowkey, selectedKeys }))
+
+    const selectionCol = result.value.find((c) => c.key === '__selection__')!
+    rowkey.value = 'uid'
+    const vnode = selectionCol.cellRenderer!({
+      cellData: null,
+      column: selectionCol,
+      columnIndex: 0,
+      rowData: { id: 'x', uid: 'u1' },
+      rowIndex: 0,
+    })
+    // 使用新键 uid 命中 selectedKeys → 勾选态为 true
+    expect(vnode.props.modelValue).toBe(true)
+  })
 })

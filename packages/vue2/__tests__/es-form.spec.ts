@@ -19,8 +19,9 @@
  * 优先级契约（与 @es-plus/vue3 / adapter-antdv 一致）：
  *   formItemOptions.required / .rules  >  item.required / item.rules
  */
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import Vue from 'vue'
+import { TABLE_CONTEXT_INJECT_KEY } from '@es-plus/core'
 import EsForm from '../src/components/es-form/es-form.vue'
 
 const passthrough = (name: string, props: Record<string, unknown>) => ({
@@ -77,6 +78,10 @@ beforeAll(() => {
       return h('input', { attrs: this.$attrs })
     }
   })
+  // el-select / el-option 桩：Select 的选项来自 row.dataOptions，
+  // 用于验证远端 dataOptions 重载后的响应式刷新。
+  Vue.component('ElSelect', passthrough('ElSelect', { value: { default: undefined }, multiple: Boolean, clearable: Boolean, disabled: Boolean }))
+  Vue.component('ElOption', passthrough('ElOption', { value: { default: undefined }, label: { type: String, default: undefined }, disabled: Boolean }))
 })
 
 function mountForm(props: Record<string, unknown> = {}): any {
@@ -95,7 +100,27 @@ function findByName(vm: any, name: string): any {
   return null
 }
 
+/** 深度优先收集所有同名组件实例 */
+function findAllByName(vm: any, name: string, out: any[] = []): any[] {
+  for (const child of vm.$children || []) {
+    if (child.$options?.name === name) out.push(child)
+    findAllByName(child, name, out)
+  }
+  return out
+}
+
 const firstItem = (vm: any) => findByName(vm, 'ElFormItem')
+
+/** 挂载带「表格上下文」注入的 EsForm —— 模拟 EsTable + EsForm 联动，使查询/重置能触发表格请求 */
+function mountFormWithTable(props: Record<string, unknown>, table: Record<string, unknown>): any {
+  return new Vue({
+    provide: { [TABLE_CONTEXT_INJECT_KEY]: () => table },
+    render: (h) => h(EsForm as any, { props: { model: {}, formItemList: [], ...props } })
+  }).$mount()
+}
+
+/** 等待远端请求（Promise + nextTick 链）完成并完成一次渲染 */
+const flushPromises = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 describe('EsForm(vue2) - 基础渲染', () => {
   it('按 formItemList 渲染出 el-form-item', () => {
@@ -219,5 +244,81 @@ describe('EsForm(vue2) - 顶层快捷字段注入（placeholder / disabled）', 
     expect(input).toBeTruthy()
     expect(input.$el.getAttribute('placeholder')).toBe('请输入姓名')
     expect(input.$el.hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('EsForm(vue2) - triggerEvent 按钮（单行 / 左栏布局）', () => {
+  // 回归：单行布局（btnColSpanRow=false）与左栏按钮此前走 handleBtnClick，只调 it.click，
+  // 不处理 triggerEvent —— 内置查询/重置按钮点击无效。
+  it('btnColSpanRow=false 单行布局：query 按钮触发 httpRequestInstance，不调用自定义 click', () => {
+    const httpRequestInstance = vi.fn(() => Promise.resolve({}))
+    const click = vi.fn()
+    const vm = mountFormWithTable({
+      model: { kw: 'x' },
+      btnColSpanRow: false,
+      configBtn: [{ key: 'query', name: '查询', triggerEvent: true, click }]
+    }, { httpRequestInstance })
+    const btn = findAllByName(vm, 'ElButton')[0]
+    expect(btn).toBeTruthy()
+    btn.$emit('click')
+    expect(httpRequestInstance).toHaveBeenCalledTimes(1)
+    expect(httpRequestInstance).toHaveBeenCalledWith({ kw: 'x' }, { keepPage: false })
+    expect(click).not.toHaveBeenCalled()
+  })
+
+  it('左栏按钮：query 按钮触发 httpRequestInstance', () => {
+    const httpRequestInstance = vi.fn(() => Promise.resolve({}))
+    const click = vi.fn()
+    const vm = mountFormWithTable({
+      model: {},
+      configBtn: [{ key: 'query', name: '查询', direction: 'left', triggerEvent: true, click }]
+    }, { httpRequestInstance })
+    const btn = findAllByName(vm, 'ElButton')[0]
+    expect(btn).toBeTruthy()
+    btn.$emit('click')
+    expect(httpRequestInstance).toHaveBeenCalledWith({}, { keepPage: false })
+    expect(click).not.toHaveBeenCalled()
+  })
+
+  it('单行布局：rest 按钮重置表单并刷新表格', () => {
+    const httpRequestInstance = vi.fn(() => Promise.resolve({}))
+    const resetFields = vi.fn()
+    const vm = mountFormWithTable({
+      btnColSpanRow: false,
+      configBtn: [{ key: 'rest', name: '重置', triggerEvent: true }]
+    }, { httpRequestInstance })
+    const form = findByName(vm, 'ElForm')
+    form.resetFields = resetFields
+    const btn = findAllByName(vm, 'ElButton')[0]
+    expect(btn).toBeTruthy()
+    btn.$emit('click')
+    expect(resetFields).toHaveBeenCalled()
+    expect(httpRequestInstance).toHaveBeenCalledWith({}, { keepPage: false })
+  })
+})
+
+describe('EsForm(vue2) - 远端字段选项重载（响应式整体替换）', () => {
+  // 回归：formItmeRequestInstance 此前用 formItemRowsList.value[i] = {...}（Vue 2 无法拦截
+  // 数组下标赋值），远端 dataOptions 重载后 computed 不失效，Select 仍显示旧选项。
+  it('formItmeRequestInstance 重新拉取后 Select 选项刷新', async () => {
+    const httpRequest = vi.fn(() => Promise.resolve({ data: [{ label: '新选项', value: 2 }] }))
+    const vm = mountForm({
+      model: { city: 1 },
+      formItemList: [{
+        prop: 'city', label: '城市', formtype: 'Select', span: 24,
+        isInitRun: false,
+        dataOptions: [{ label: '旧选项', value: 1 }],
+        apiParams: { url: '/city' },
+        httpRequest
+      }]
+    })
+    expect(findAllByName(vm, 'ElOption').map((o) => o.$props.label)).toEqual(['旧选项'])
+
+    const form = findByName(vm, 'EsForm')
+    expect(typeof form.formItmeRequestInstance).toBe('function')
+    await form.formItmeRequestInstance(['city'])
+    await flushPromises()
+
+    expect(findAllByName(vm, 'ElOption').map((o) => o.$props.label)).toEqual(['新选项'])
   })
 })

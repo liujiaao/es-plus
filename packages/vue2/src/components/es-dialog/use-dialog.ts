@@ -257,17 +257,19 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     let lastVm: any = null
 
     const close = () => {
-      if (!lastVm || lastVm.visible === false) return
-      lastVm.visible = false
+      // 捕获本次被关闭的实例：延迟回调只能销毁它，不能在 300ms 内重开新弹窗后
+      // 误销毁 `lastVm` 指向的新实例。
+      const target = lastVm
+      if (!target || target.visible === false) return
+      target.visible = false
       // 等动画结束后销毁
       setTimeout(() => {
-        if (lastVm) {
-          lastVm.$destroy()
-          if (lastVm.$el && lastVm.$el.parentNode) {
-            lastVm.$el.parentNode.removeChild(lastVm.$el)
-          }
-          lastVm = null
+        target.$destroy()
+        if (target.$el && target.$el.parentNode) {
+          target.$el.parentNode.removeChild(target.$el)
         }
+        // 仅当 `lastVm` 仍指向本实例时才清空引用，避免抹掉期间新建的实例
+        if (lastVm === target) lastVm = null
       }, 300)
     }
 
@@ -295,16 +297,21 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         | Function
         | undefined
 
+      // 捕获「本次调用创建的实例」：延迟销毁只作用于它。
+      // 关闭后 300ms 内重新 open 会创建新实例并覆盖 lastVm，若回调仍读 lastVm
+      // 就会误销毁新弹窗。
+      let createdVm: any = null
+
       ;(dialogOptions as Record<string, unknown>).onClosed = (...args: unknown[]) => {
         originalOnClosed?.(...args)
         if (cacheKey) return // 缓存实例不销毁，保留在 cache 中
         setTimeout(() => {
-          if (lastVm) {
-            lastVm.$destroy()
-            if (lastVm.$el && lastVm.$el.parentNode) {
-              lastVm.$el.parentNode.removeChild(lastVm.$el)
+          if (createdVm) {
+            createdVm.$destroy()
+            if (createdVm.$el && createdVm.$el.parentNode) {
+              createdVm.$el.parentNode.removeChild(createdVm.$el)
             }
-            lastVm = null
+            if (lastVm === createdVm) lastVm = null
           }
         }, 300)
       }
@@ -314,6 +321,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }
 
       lastVm = initInstance(Component, dialogOptions, dialogOptions.appendTo)
+      createdVm = lastVm
       if (cacheKey) {
         cacheInstance(cacheKey, lastVm, pickProps(dialogOptions as Record<string, unknown>))
       }
@@ -393,11 +401,17 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         | Function
         | undefined
 
+      // 捕获本次创建的实例：关闭后 300ms 内重开会复用同一单例并把 visible 置回 true，
+      // 延迟销毁回调必须确认「仍是本实例且仍处于关闭态」才动手，否则会销毁刚重开的弹窗。
+      let createdVm: any = null
+
       ;(mergedOptions as Record<string, unknown>).onClosed = () => {
         originalOnClosed?.()
         if (cacheKey) return // 缓存实例不销毁
         if (mergedOptions.destroyOnClose) {
-          setTimeout(() => destroy(), 300)
+          setTimeout(() => {
+            if (vm === createdVm && vm.visible === false) destroy()
+          }, 300)
         }
       }
 
@@ -406,6 +420,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }
 
       const newVm = initInstance(Component, mergedOptions, mergedOptions.appendTo)
+      createdVm = newVm
       if (cacheKey) {
         cacheInstance(cacheKey, newVm, pickProps(mergedOptions as Record<string, unknown>))
       } else {

@@ -210,8 +210,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
     （正确写法见 `es-crud-page.vue:103` 用 `set()`）。
 - **vue2 dialog 300ms 销毁竞态**（CONFIRMED）：`vue2/.../use-dialog.ts:263-271` 等，
   延迟销毁回调引用可变 `lastVm` / `vm`；关闭后 300ms 内重开会销毁新弹窗。
-- **vue2 `closed` 时序分歧**（CONFIRMED）：`es-dialog/component.vue:335-346` 在
-  `dialogVisible` setter 内同步 emit `closed`，el-dialog 原生 `@closed`（动画后）被空实现吞掉。
+- ~~**vue2 `closed` 时序分歧**~~（**经复核推翻**）：对照 `vue3/.../es-dialog/src/component.vue:233-244`，
+  两端**均在 `dialogVisible` setter 内同步 `emit('closed')`**，vue2 已与 vue3 对齐，不存在跨端分歧。
+  （原判据「el-dialog 原生 `@closed` 被空实现吞掉」属实，但 vue3 同样不依赖原生 `@closed`，故不构成差异。）
 - **antdv 只读 `row.attrs`、不读 `row.props`**（CONFIRMED，系统性问题）：DatePicker `type`
   （`use-form-inputs.ts:147`）、Input `type`（`:167`）、Switch `active-value`（`:373-380`）、
   Rate `texts/max`（`:395-396`）、`resolveValueFormat`（`:92-94`）。
@@ -257,6 +258,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
   却不补 `scopedSlots`，`ElTag` 成死导入（`:106-108`），违反本项目「标记而非静默丢弃」原则。
 - **远端选项无法依赖当前表单值**（CONFIRMED）：`request.ts:281-287` 只传 `{...apiParams.model}`，
   函数本身无 model 入参，级联下拉（选省后拉市）无法实现。
+- **`BtnConfig.nameKey` 是死字段**（CONFIRMED，由新增的契约消费检查首跑抓出）：
+  `core/src/types.ts:231` 声明了 `nameKey`，`config.ts:35` 注释也承诺 i18n 可用，
+  但三端按钮均直接渲染 `name`，**全仓无任何读取**。与 C3 同类（契约声明 ≠ 实际消费）。
 
 ---
 
@@ -296,8 +300,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 - 本次修复的**两个回归测试文件 + changeset 至今 untracked**
   （`packages/vue2/__tests__/es-form.spec.ts`、`packages/adapter-antdv/__tests__/es-form.spec.ts`、
   `.changeset/fixed-form-escape-hatches-and-validation.md`），意味着 HEAD 上 CI 跑不到它们。
-- lint 未进 CI；无 publish job，发布 100% 手动（且 npm 写操作 403 未解决，见会话记录第六节）。
-- `deploy-docs.yml` 无 `paths` 过滤、无 `needs`，与 typecheck/e2e 并行，破坏 mcp-server 的提交也会照常部署。
+- ~~lint 未进 CI~~ **已修复**：`typecheck.yml` 新增 `lint` job（0 error 门禁）。
+- 无 publish job，发布 100% 手动（且 npm 写操作 403 未解决，见会话记录第六节）——**未动，见 §7 待决策**。
+- ~~`deploy-docs.yml` 与 typecheck 并行~~ **已修复**：改为 `workflow_run` 依赖 Typecheck 成功后才部署（跨 workflow 的 `needs` 不可用）。
 - 无 `.gitattributes`。
 
 ---
@@ -318,14 +323,31 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 
 ## 七、修复优先级建议
 
-> **修复进展（2026-09-11）**：`立即` 档 5 条（**C1 / C2 / C3 / C4 / C8**）已修复，各自补齐回归测试并
-> 逐条反向验证（临时拆掉修复 → 测试变红）。C3 按决策采用「接线 `normalizeFormItem`」方案。
-> 复核阶段另发现并修复了两处**同类遗漏**：三端表格本地请求函数的 settle 守卫（C1 同类）、
-> `scaffold` 的 `<name>` 路径穿越（C8 同类）。全量 7 包 typecheck 全过、lint 0 error、
-> `check:consistency` 全绿。变更记录见 `.changeset/fix-request-settle-and-codegen-traversal.md`。
-> **`结构性` 档（6–10）本轮未动。**
+> **修复进展（2026-09-11 ~ 09-14）**
+>
+> **立即档**：C1 / C2 / C3 / C4 / C8 已修复，各补回归并逐条反向验证（拆掉修复即变红）。
+> C3 按决策采用「接线 `normalizeFormItem`」方案。复核阶段另发现并修复两处**同类遗漏**：
+> 三端表格本地请求函数的 settle 守卫（C1 同类）、`scaffold` 的 `<name>` 路径穿越（C8 同类）。
+>
+> **结构性档**：
+> - **#6 行为层 parity**：新增 `scripts/renderer-contract.mjs` 单源契约，
+>   `check-renderer-parity` 升级为校验「每个 formtype 在三端**绑定的组件**」——组件被换成别的控件即红
+>   （已反向验证：DatePicker 期望改成 ElTimePicker → FAIL）。
+> - **#7 契约消费检查**：新增 `scripts/check-contract-consumption.mjs` 并接入 `check:consistency`。
+>   首跑即抓出 **`BtnConfig.nameKey` 是从未接线的死字段**；`TableOptions` 因 vxe 配置是动态键透传而排除
+>   （避免误报）。
+> - **#10 硬化**：`check-generator-contract` 去注释干扰 + 识别 `export { x as y }` 别名绕过；
+>   `check-exposed-api` 检测 expose 块里的 `spread`（否则键集不可静态审计）。
+> - **#9 工程卫生**：lint 进 CI；`deploy-docs` 改为 `workflow_run` 依赖 Typecheck 成功后才部署。
+> - **#8 P1**：vue2 / vue3 / antdv 各修一批（详见 §4 各条目的「已修复」标注）。
+>
+> 验证：全量 **1889 passed**（7 包）、7 包 typecheck 全过、lint 0 error、`check:consistency` 22 项全绿。
+> 变更记录见 `.changeset/`。
 
 ### 立即（发版前必须）
+
+> 以下 5 条**均已完成**（含回归测试 + 逐条反向验证），变更记录见
+> `.changeset/fix-request-settle-and-codegen-traversal.md`。
 
 | 序 | 对应 | 动作 |
 |---|---|---|
@@ -337,15 +359,29 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 
 ### 结构性（决定能否兑现「三端同构」卖点）
 
-6. **补行为层 parity 断言**：同一个 `formtype`，三端渲染出的**能力集**必须一致，而不只是键存在。
-   这是把口号变成契约的唯一办法。
-7. **加「契约字段必须被消费」静态检查**：扫描 `FormItemOption` 等契约类型字段，排除白名单后，
-   要求每个字段至少被一个渲染器读取。可一次性挡住整类静默失效。
-8. 落地并发翻页的请求序号 / 取消；给 antdv 补 `attrs` + `props` 合并读取；antdv Transfer 映射
-   `label → title` 并消费 `dataOptions`；嵌套 prop 用数组 name path 传给 `a-form-item`。
-9. 工程卫生：提交 untracked 测试与 changeset、`build/` 移出版本库、lint 进 CI、
-   `deploy-docs` 加 `needs`/`paths`、补 publish job（发版前先验证 npm 写权限）。
-10. 修 `check-*` 脚本的白名单化与文本匹配，使其能发现行为分叉。
+6. ✅ **补行为层 parity 断言**：`scripts/renderer-contract.mjs`（单源契约）+
+   `check-renderer-parity` 校验「键 → 组件绑定」，组件被换掉即红。
+7. ✅ **「契约字段必须被消费」静态检查**：`scripts/check-contract-consumption.mjs`，已接入
+   `check:consistency`；首跑抓出死字段 `BtnConfig.nameKey`。
+8. ◐ **P1 缺陷**：vue3（分页竞态 / `modelValue` 被覆盖 / 运行期快照）、antdv（Transfer `label→title`
+   与 `dataOptions` / `attrs+props` 合并读取 / 嵌套 prop 数组 name path）、vue2（单行按钮 `triggerEvent` /
+   数组下标赋值响应式 / dialog 延迟销毁竞态）**已修**。**未做**：三端 `es-table` 的
+   loadingStatus 互斥与 rowkey/heightType 快照**仅在 vue3 对齐**，vue2 / antdv 同构缺陷仍存（见待决策）。
+9. ◐ **工程卫生**：已提交此前 untracked 的测试与 changeset；lint 进 CI；`deploy-docs` 改为
+   `workflow_run` 依赖 Typecheck。**未做**：`build/` 出库、publish job —— 见待决策。
+10. ✅ **难化 `check-*` 脚本**：`check-generator-contract`（去注释 + 别名识别）、
+    `check-exposed-api`（expose spread 检测）已硬化。
+
+### 待决策（需你拍板，未擅自执行）
+
+- **`build/` 是否移出版本库**：232 个编译产物入库是「源码/产物漂移」隐患；但三端 typecheck 与
+  单测都通过 `package.json` exports 解析到 `packages/core|shared/build`（vitest 无 alias），
+  移除后本地 `npm test` / `npm run typecheck` 需先构建 core/shared。CI 已显式构建依赖链，故只影响本地 DX。
+  **建议**：保留入库，或改为「移除 + 根 `pretest`/`pretypecheck` 自动构建」。
+- **是否加 publish job**：当前 npm 账号写操作全 403（会话记录第六节）且未解决；
+  在恢复写权限前加发布流水线只会引入一个注定失败的 job。**建议**：先解决 npm 写权限再谈。
+- **`BtnConfig.nameKey`**：死字段，接线（三端按钮 i18n）或从契约移除，二选一。
+- **vue2 / antdv `es-table` 同构缺陷**：并发请求竞态与 rowkey/heightType 快照，是否对齐 vue3。
 
 ---
 
@@ -355,4 +391,5 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 - 渲染器：`packages/{vue3,vue2,adapter-antdv}/src` + `__tests__`。
 - AI 工具链：`packages/{mcp-server,cli}` + `shared` 生成器。
 - 基础设施：`scripts/`、`.github/workflows/`、各包 `package.json` / 构建配置、`__tests__/`。
-- 本次审计期间**未修改任何产品代码**。
+- 审计阶段**只读、未修改任何产品代码**。报告定稿后已按第七节优先档开始修复，
+  随后转入结构性档（6–10）；当前修复状态见第七节的「修复进展」与各缺陷条目下的「已修复」标注。

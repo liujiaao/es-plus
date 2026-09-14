@@ -464,3 +464,151 @@ describe('EsTable - 自动请求配置', () => {
     expect(globalRequest).toHaveBeenCalled()
   })
 })
+
+// 回归：并发分页请求竞态（此前用全局 loadingStatus 当互斥锁，在途请求直接 fail，
+// 且 handleIndexChange 先改页码再发请求 → 快速翻页时旧页数据覆盖/误报 request-error）
+describe('EsTable - 并发分页请求竞态', () => {
+  const deferred = <T = unknown>() => {
+    let resolve!: (value: T) => void
+    let reject!: (reason?: unknown) => void
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    return { promise, resolve, reject }
+  }
+
+  const mountRaceTable = () => {
+    const pending: Array<{ opts: any; d: ReturnType<typeof deferred> }> = []
+    const mockRequest = vi.fn((opts: any) => {
+      const d = deferred()
+      pending.push({ opts, d })
+      return d.promise
+    })
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      options: {
+        isInitRun: false,
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' },
+        configTableOut: { total: 'records', tableData: 'rows' },
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 100 },
+    })
+    return { wrapper, mockRequest, pending }
+  }
+
+  it('快速翻页：被淘汰请求的响应静默丢弃，只有最新页写入数据', async () => {
+    const { wrapper, mockRequest, pending } = mountRaceTable()
+    await flushPromises()
+    expect(mockRequest).not.toHaveBeenCalled()
+
+    const pagination = wrapper.findComponent({ name: 'ElPagination' })
+    await pagination.vm.$emit('current-change', 2)
+    await pagination.vm.$emit('current-change', 3)
+    await nextTick()
+
+    // 旧实现第二发会被 loadingStatus 锁挡掉；修复后两次请求都应发出
+    expect(mockRequest).toHaveBeenCalledTimes(2)
+    const req2 = pending.find((p) => p.opts.formParams?.pageIndex === 2)
+    const req3 = pending.find((p) => p.opts.formParams?.pageIndex === 3)
+    expect(req2, '第 2 页请求应发出').toBeTruthy()
+    expect(req3, '第 3 页请求应发出').toBeTruthy()
+
+    // 旧页先返回 → 不得写入，也不得触发 request-error
+    req2!.d.resolve({ records: 100, rows: [{ name: 'stale-page-2' }] })
+    await flushPromises()
+    expect(wrapper.emitted('request-error')).toBeFalsy()
+    expect((wrapper.vm as any).requestError).toBeFalsy()
+
+    // 最新页返回 → 写入
+    req3!.d.resolve({ records: 100, rows: [{ name: 'latest-page-3' }] })
+    await flushPromises()
+    const updates = wrapper.emitted('update:dataSource') as any[]
+    expect(updates.length).toBeGreaterThan(0)
+    const latest = updates[updates.length - 1][0]
+    expect(latest).toHaveLength(1)
+    expect(latest[0].name).toBe('latest-page-3')
+  })
+
+  it('被淘汰请求失败静默丢弃，不触发 request-error', async () => {
+    const { wrapper, pending } = mountRaceTable()
+    await flushPromises()
+
+    const pagination = wrapper.findComponent({ name: 'ElPagination' })
+    await pagination.vm.$emit('current-change', 2)
+    await pagination.vm.$emit('current-change', 3)
+    await nextTick()
+
+    const req2 = pending.find((p) => p.opts.formParams?.pageIndex === 2)
+    const req3 = pending.find((p) => p.opts.formParams?.pageIndex === 3)
+    req2!.d.reject(new Error('stale page failed'))
+    await flushPromises()
+
+    expect(wrapper.emitted('request-error'), '旧请求失败不应暴露').toBeFalsy()
+    expect((wrapper.vm as any).requestError).toBeFalsy()
+
+    // 最新请求仍能正常写入
+    req3!.d.resolve({ records: 100, rows: [{ name: 'latest-page-3' }] })
+    await flushPromises()
+    const updates = wrapper.emitted('update:dataSource') as any[]
+    expect(updates[updates.length - 1][0][0].name).toBe('latest-page-3')
+  })
+
+  it('最新请求失败仍按原有行为触发 request-error', async () => {
+    const { wrapper, pending } = mountRaceTable()
+    await flushPromises()
+
+    const pagination = wrapper.findComponent({ name: 'ElPagination' })
+    await pagination.vm.$emit('current-change', 2)
+    await nextTick()
+    const req2 = pending.find((p) => p.opts.formParams?.pageIndex === 2)!
+    req2.d.reject(new Error('latest failed'))
+    await flushPromises()
+
+    expect(wrapper.emitted('request-error'), '最新请求失败应暴露').toBeTruthy()
+    expect((wrapper.vm as any).requestError).toBeTruthy()
+  })
+
+  it('边界回退的递归请求不被序号机制误杀（keepPage 空页回退后取到有效页数据）', async () => {
+    const pending: Array<{ opts: any; d: ReturnType<typeof deferred> }> = []
+    const mockRequest = vi.fn((opts: any) => {
+      const d = deferred()
+      pending.push({ opts, d })
+      return d.promise
+    })
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      options: {
+        isInitRun: false,
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' },
+        configTableOut: { total: 'records', tableData: 'rows' },
+      } as TableOptions,
+      // current(20) > maxPage(10) 且该页为空 → 触发回退
+      pagination: { current: 20, pageSize: 10, total: 100 },
+    })
+    await flushPromises()
+
+    const refreshPromise = (wrapper.vm as any).refresh()
+    await nextTick()
+    expect(pending).toHaveLength(1)
+
+    // 首个 keepPage 请求返回空 → 递归回退到 maxPage=10
+    pending[0].d.resolve({ records: 100, rows: [] })
+    await flushPromises()
+    expect(pending, '回退应发起第二次请求').toHaveLength(2)
+    expect(pending[1].opts.formParams?.pageIndex).toBe(10)
+
+    pending[1].d.resolve({ records: 100, rows: [{ name: 'page-10' }] })
+    await refreshPromise
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:dataSource') as any[]
+    const latest = updates[updates.length - 1][0]
+    expect(latest[0].name).toBe('page-10')
+    expect(wrapper.emitted('request-error')).toBeFalsy()
+  })
+})

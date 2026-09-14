@@ -18,7 +18,7 @@
           :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
         >
           <a-form-item
-            :name="item.prop"
+            :name="toAdvNamePath(item.prop)"
             :label="translateLabel(item)"
             :labelCol="labelColStyle"
             :wrapperCol="wrapperColStyle"
@@ -210,7 +210,7 @@ import {
   resolveFormRules,
   normalizeFormItem,
 } from '@es-plus/core'
-import { mapButtonType, mapButtonDanger, mapSize, getNestedValue } from '../../../utils/shared'
+import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
@@ -263,6 +263,55 @@ const translateLabel = (item: FormItemOption): string => {
     return (esPlus.t as (k: string) => string)(item.labelKey)
   }
   return item.label
+}
+
+// ─── 嵌套 name path ─────────────────────────────────
+/** ADV 的 NamePath：字符串或路径数组（对齐 ant-design-vue/es/form/interface NamePath） */
+type AdvNamePath = string | number | (string | number)[]
+
+/**
+ * 把 es-plus 的 `prop` 转成 ADV 的 name path。
+ *
+ * ADV 的 `getNamePath = toArray` 不拆分 `'user.name'`，会整串当成单个键去读
+ * `model['user.name']`（undefined），导致嵌套字段「能输入、校验必错」；
+ * 转成 `['user', 'name']` 后 ADV 才按嵌套路径读值，与渲染层
+ * `getNestedValue`/`setNestedValue` 的绑定语义一致（对齐 vue3/EP 原生 `prop="user.name"`）。
+ */
+const toAdvNamePath = (prop: string): AdvNamePath =>
+  typeof prop === 'string' && prop.includes('.') ? prop.split('.') : prop
+
+/** 同上，批量版本：供暴露的 validateField / clearValidate 使用，保持 `'user.name'` 入参可用 */
+const toAdvNamePathList = (names: string | string[]): AdvNamePath | AdvNamePath[] =>
+  Array.isArray(names) ? names.map((n) => toAdvNamePath(n)) : toAdvNamePath(names)
+
+/**
+ * 把 form 级 rules 里带点的扁平键展开成嵌套对象。
+ *
+ * ADV 的 form-item 用 namePath 逐层查 rules（FormItem.js `getPropByPath`），
+ * 因此数组 name path `['user','name']` 要求 rules 形如 `{ user: { name: [...] } }`；
+ * 而 es-plus 对外契约（与 vue3/EP 一致）是扁平键 `'user.name'`。
+ * 这里在绑定给 `<a-form>` 前做形状转换，对外契约不变，同时保证嵌套 form 级规则继续生效。
+ *
+ * 极端冲突（同时存在 `'a'` 与 `'a.b'` 两个规则键）无嵌套结构可同时承载，后写入者覆盖，
+ * 属于既有语义盲区，不在本次修复范围。
+ */
+function nestDottedRuleKeys(rules: Record<string, unknown>): Record<string, unknown> {
+  const nested: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(rules)) {
+    const parts = key.split('.')
+    if (parts.length === 1) {
+      nested[key] = value
+      continue
+    }
+    let node = nested
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i]
+      if (!isObject(node[seg])) node[seg] = {}
+      node = node[seg] as Record<string, unknown>
+    }
+    node[parts[parts.length - 1]] = value
+  }
+  return nested
 }
 
 // ─── 与 Table 的耦合（inject + ctx 双路径，对齐 vue3）──
@@ -333,8 +382,9 @@ const formProps = computed<Record<string, any>>(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,
   model: props.model,
-  // 全局 EsForm.rules 作为 form 级规则兜底，组件 props.rules 按字段名优先
-  rules: resolveFormRules($esPlusForm?.rules, props.rules),
+  // 全局 EsForm.rules 作为 form 级规则兜底，组件 props.rules 按字段名优先；
+  // 带点的键（'user.name'）展开为嵌套对象，以匹配数组 name path（见 nestDottedRuleKeys）
+  rules: nestDottedRuleKeys(resolveFormRules($esPlusForm?.rules, props.rules)),
   validateOnRuleChange: false,
 }))
 
@@ -706,9 +756,9 @@ const getFormRef = () =>
   formRef.value as {
     validate: () => Promise<boolean>
     resetFields: () => void
-    clearValidate: (props?: string | string[]) => void
-    validateField: (props: string | string[]) => Promise<boolean>
-    scrollToField: (prop: string) => void
+    clearValidate: (props?: AdvNamePath | AdvNamePath[]) => void
+    validateField: (props: AdvNamePath | AdvNamePath[]) => Promise<boolean>
+    scrollToField: (prop: AdvNamePath) => void
   }
 
 defineExpose({
@@ -716,9 +766,14 @@ defineExpose({
   getFormRef,
   validate: () => getFormRef()?.validate(),
   resetFields: () => getFormRef()?.resetFields(),
-  clearValidate: (props?: string | string[]) => getFormRef()?.clearValidate(props),
-  validateField: (props: string | string[]) => getFormRef()?.validateField(props),
-  scrollToField: (prop: string) => getFormRef()?.scrollToField(prop),
+  // 嵌套字段保持 `'user.name'` 入参可用：转成数组 name path 后再交给 ADV
+  clearValidate: (props?: string | string[]) => {
+    const f = getFormRef()
+    if (!f) return
+    props === undefined ? f.clearValidate() : f.clearValidate(toAdvNamePathList(props))
+  },
+  validateField: (props: string | string[]) => getFormRef()?.validateField(toAdvNamePathList(props)),
+  scrollToField: (prop: string) => getFormRef()?.scrollToField(toAdvNamePath(prop)),
 })
 </script>
 

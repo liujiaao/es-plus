@@ -53,9 +53,10 @@ function toOnKey(key: string): string {
  * - `props` 与 `attrs` 合并后透传（core 的 FormItemOption 文档承诺两个适配器都会合并二者）
  * - `on` 的裸事件名（如 `change`）会被 h() 当成普通 prop，必须转成 onXxx 才是事件监听器
  *
- * 注意：调用方若还需要读**原始** attrs 做 EP→ADV 字段映射（Cascader 的 attrs.props、
- * Switch 的 active-value、DatePicker 的 type/start-placeholder 等），请继续用 `row.attrs`，
- * 不要用本函数的返回值 —— 合并结果含事件监听器与组件 props，拿去解析组件类型会误判。
+ * 注意：调用方若还需要读配置键做 EP→ADV 字段映射（Cascader 的 props、Switch 的
+ * active-value、DatePicker 的 type/start-placeholder 等），请用 `mergedRowAttrs(row)`
+ * 而不是本函数的返回值 —— 本函数结果含事件监听器，拿去解析组件类型会误判；
+ * `mergedRowAttrs` 只合并 props/attrs，且 attrs 同名优先，保留原始解析边界。
  *
  * 调用方需在返回值之后展开内部的 v-model 绑定事件，由它接管双向绑定。
  */
@@ -67,6 +68,40 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
     }
   }
   return merged
+}
+
+/**
+ * 合并 `props` 与 `attrs`，用于 EP→ADV 字段映射的**判定值**读取。
+ *
+ * 与 `rowPassThrough` 使用相同的合并顺序（attrs 同名键优先），因此：
+ * - `props` 里的同名配置（如 `props.type`、`props['active-value']`）也能被识别，不再静默失效；
+ * - 同时 `attrs` 始终覆盖 `props`，历史坑（`props.type` 污染 `attrs.type` 导致 DatePicker
+ *   误判组件）不会被重新引入（回归守卫见 use-form-inputs.spec.ts 的 DatePicker 用例）。
+ *
+ * 与 `rowPassThrough` 的区别：不含 `on` 事件监听器，避免把事件对象误当配置键读取。
+ */
+function mergedRowAttrs(row: FormItemOption): Record<string, unknown> {
+  return { ...(row.props || {}), ...(row.attrs || {}) }
+}
+
+/**
+ * EP / es-plus 选项 → ADV `TransferItem` 字段映射：
+ * - `label` → `title`（ant-design-vue 的 TransferItem 展示字段是 `title`，无 `label`）
+ * - `value` → `key`（ADV Transfer 依赖 `key` 作为唯一标识；EP 同样用 key，但 es-plus 标准
+ *   `dataOptions` 用的是 `value`，必须补齐）
+ *
+ * 原字段一并保留，避免丢失调用方数据（ADV 会忽略不认识的键）。
+ */
+function normalizeTransferDataSource(list: unknown): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(list)) return undefined
+  return list.map((raw, idx) => {
+    const item = (raw || {}) as Record<string, unknown>
+    const next: Record<string, unknown> = { ...item }
+    if (next.title === undefined && next.label !== undefined) next.title = next.label
+    if (next.key === undefined && next.value !== undefined) next.key = next.value
+    if (next.key === undefined) next.key = String(idx)
+    return next
+  })
 }
 
 /**
@@ -88,7 +123,7 @@ const V_MODEL_BINDING: Record<string, { prop: string; event: string }> = {
   Transfer: { prop: 'targetKeys', event: 'onUpdate:targetKeys' },
 }
 
-/** 解析 EP 风格的值格式（valueFormat / value-format） */
+/** 解析 EP 风格的值格式（valueFormat / value-format）。传入 mergedRowAttrs，props 与 attrs 均可识别。 */
 function resolveValueFormat(attrs: Record<string, unknown>): string | undefined {
   return (attrs.valueFormat as string) || (attrs['value-format'] as string) || undefined
 }
@@ -184,7 +219,7 @@ export function useFormInputs() {
       [
         'Input',
         (hFn, model, { row }: FormInputCtx) => {
-          const { component: InputComp, binding } = resolveInputComponent(row.attrs || {})
+          const { component: InputComp, binding } = resolveInputComponent(mergedRowAttrs(row))
           return hFn(InputComp, {
             [binding.prop]: getNestedValue(model, row.prop),
             ...rowPassThrough(row),
@@ -252,7 +287,7 @@ export function useFormInputs() {
       [
         'ColorPicker',
         (hFn, model, { row }: FormInputCtx) => {
-          const attrs = row.attrs || {}
+          const attrs = mergedRowAttrs(row)
           return hFn('input', {
             value: getNestedValue(model, row.prop) as string || '#000000',
             type: 'color',
@@ -283,11 +318,12 @@ export function useFormInputs() {
             ...rowPassThrough(row),
             'onUpdate:targetKeys': (val: unknown) => { setNestedValue(model, row.prop, val) },
           }
-          // EP data → ADV dataSource
-          if (props.data && !props.dataSource) {
-            props.dataSource = props.data
-            delete props.data
-          }
+          // 数据源：EP data → ADV dataSource；es-plus 标准选项字段 row.dataOptions 也是一源。
+          // 优先级沿用「低层透传袋优先于标准快捷字段」：显式 dataSource > data > dataOptions。
+          const rawSource = props.dataSource ?? props.data ?? row.dataOptions
+          const dataSource = normalizeTransferDataSource(rawSource)
+          if (dataSource !== undefined) props.dataSource = dataSource
+          delete props.data
           return hFn(Transfer, props)
         },
       ],
@@ -296,7 +332,7 @@ export function useFormInputs() {
       [
         'Cascader',
         (hFn, model, { row }: FormInputCtx) => {
-          const attrs = row.attrs || {}
+          const attrs = mergedRowAttrs(row)
           const props: Record<string, unknown> = {
             value: getNestedValue(model, row.prop),
             options: row.dataOptions,
@@ -364,7 +400,7 @@ export function useFormInputs() {
       [
         'Switch',
         (hFn, model, { row }: FormInputCtx) => {
-          const attrs = row.attrs || {}
+          const attrs = mergedRowAttrs(row)
           const props: Record<string, unknown> = {
             ...rowPassThrough(row),
             checked: getNestedValue(model, row.prop),
@@ -386,7 +422,7 @@ export function useFormInputs() {
       [
         'Rate',
         (hFn, model, { row }: FormInputCtx) => {
-          const attrs = row.attrs || {}
+          const attrs = mergedRowAttrs(row)
           const props: Record<string, unknown> = {
             ...rowPassThrough(row),
             value: getNestedValue(model, row.prop),
@@ -489,7 +525,9 @@ export function useFormInputs() {
 
 // ─── DatePicker / TimePicker 渲染（共享逻辑） ────────────────
 function renderDatePicker(hFn: typeof h, model: Record<string, unknown>, row: FormItemOption) {
-  const attrs = (row.attrs as Record<string, unknown>) || {}
+  // 用 mergedRowAttrs：props.type 等同名配置也生效；attrs 同名键优先，
+  // 故不会发生 props.type 污染 attrs.type 导致组件误判（回归守卫同下）。
+  const attrs = mergedRowAttrs(row)
   const { component: DateComp, binding, picker, showTime, isRange } = resolveDatePickerComponent(attrs)
   const fmt = resolveValueFormat(attrs)
   const props: Record<string, unknown> = {
@@ -524,7 +562,8 @@ function renderDatePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
 }
 
 function renderTimePicker(hFn: typeof h, model: Record<string, unknown>, row: FormItemOption) {
-  const attrs = (row.attrs as Record<string, unknown>) || {}
+  // 同 renderDatePicker：props 与 attrs 合并读取（attrs 同名优先）。
+  const attrs = mergedRowAttrs(row)
   const isRange = attrs['is-range'] || attrs.isRange
   const TimeComp = isRange ? ((TimePicker as any).RangePicker || TimePicker) : TimePicker
   const fmt = resolveValueFormat(attrs)

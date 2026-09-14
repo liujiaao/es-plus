@@ -58,16 +58,31 @@ const fail = (msg) => {
 }
 
 /**
- * index.ts 是否运行时导出某个具名符号（排除 `export type { ... }` 块）。
- * 处理两种形态：
- *   export { ..., httpRequest, ... }
- *   export { httpRequest }
+ * 去掉注释，避免「加一行 // httpRequest 注释」就骗过文本匹配（历史可绕过点之一）。
+ */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
+
+/**
+ * index.ts 是否**以指定名字**运行时导出某符号（排除 `export type { ... }`）。
+ * 支持 `export { a, b }` 与 `export { local as name }`；**拒绝** `export { name as other }`
+ * —— 后者会让生成代码的 `import { name }` 解析失败（历史可绕过点之二）。
  */
 function exportsRuntimeValue(indexSrc, name) {
-  // 去掉所有 `export type { ... }` 块，避免把类型导出误判为运行时导出
-  const withoutTypeBlocks = indexSrc.replace(/export\s+type\s*\{[\s\S]*?\}/g, '')
-  const re = new RegExp(`export\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`, 'm')
-  return re.test(withoutTypeBlocks)
+  const src = stripComments(indexSrc)
+  for (const block of src.matchAll(/export\s*(type\s*)?\{([^}]*)\}/g)) {
+    if (block[1]) continue // export type { ... } 不算运行时导出
+    for (const entry of block[2].split(',')) {
+      const m = entry.trim().match(/^([\w$]+)(?:\s+as\s+([\w$]+))?$/)
+      if (!m) continue
+      const exportedName = m[2] || m[1]
+      if (exportedName === name) return true
+    }
+  }
+  return false
 }
 
 for (const r of RENDERERS) {
@@ -77,22 +92,22 @@ for (const r of RENDERERS) {
     fail(`${r.name}: index.ts 未运行时导出 httpRequest（方案B 依赖：生成的包装代码需 import { httpRequest }）`)
   }
 
-  // 2. es-crud-page 声明 httpRequest prop
-  const crudSrc = read(r.crudPage)
-  if (!/\bhttpRequest\b/.test(crudSrc)) {
+  // 2. es-crud-page 声明 httpRequest prop（必须是 prop 声明，不能只是使用/注释）
+  const crudSrc = stripComments(read(r.crudPage))
+  if (!/\bhttpRequest\s*\??\s*:/.test(crudSrc)) {
     fail(`${r.name}: es-crud-page 未声明 httpRequest prop（生成器发出 :http-request）`)
   }
 
-  // 3. es-crud-page 触发契约事件
+  // 3. es-crud-page 通过 emit(...) 触发契约事件（不能只是任意字符串字面量）
   for (const evt of ['delete', 'btn-click', 'dialog-confirm']) {
-    const re = new RegExp(`['"]${evt}['"]`)
+    const re = new RegExp(`emit\\(\\s*['"]${evt}['"]`)
     if (!re.test(crudSrc)) {
-      fail(`${r.name}: es-crud-page 未声明 '${evt}' 事件（生成器发出 @${evt}）`)
+      fail(`${r.name}: es-crud-page 未通过 emit('${evt}') 触发事件（生成器发出 @${evt}）`)
     }
   }
 
   // 4. es-table 以 scopedSlots.customRender 作为列插槽开关
-  const tableSrc = read(r.table)
+  const tableSrc = stripComments(read(r.table))
   if (!/scopedSlots[\s\S]{0,40}customRender/.test(tableSrc)) {
     fail(`${r.name}: es-table 未使用 scopedSlots.customRender 作为列插槽开关（生成器依赖该机制渲染 #column-<prop>）`)
   }

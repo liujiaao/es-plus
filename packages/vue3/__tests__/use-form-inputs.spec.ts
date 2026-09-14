@@ -1,5 +1,5 @@
 // @ts-nocheck - TODO: migrate to strict when refactored
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { h } from 'vue'
 import {
   ElInput,
@@ -464,6 +464,50 @@ describe('useFormInputs', () => {
       const updateFn = vnode.props?.['onUpdate:modelValue'] as (val: unknown) => void
       updateFn('new')
       expect(model.name).toBe('new')
+    })
+
+    // 回归：props/attrs 展开在显式 modelValue 之后会覆盖内部绑定，输入框与 model 静默脱钩
+    it('props 中的 modelValue 不得覆盖内部 model 绑定', () => {
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        props: { modelValue: 'hijacked-by-props' }
+      }
+      const model = { name: 'bound-value' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      expect(vnode.props?.modelValue).toBe('bound-value')
+    })
+
+    it('attrs 中的 modelValue 不得覆盖内部 model 绑定', () => {
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        attrs: { modelValue: 'hijacked-by-attrs' }
+      }
+      const model = { name: 'bound-value' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      expect(vnode.props?.modelValue).toBe('bound-value')
+    })
+
+    it('attrs 中的 onUpdate:modelValue 不得劫持内部回写', () => {
+      const spy = vi.fn()
+      const item: FormItemOption = {
+        prop: 'name',
+        label: 'Name',
+        formtype: 'Input',
+        attrs: { 'onUpdate:modelValue': spy }
+      }
+      const model: Record<string, unknown> = { name: 'old' }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, model, { row: item, index: 0 })
+      const updateFn = vnode.props?.['onUpdate:modelValue'] as (val: unknown) => void
+      updateFn('new')
+      expect(model.name).toBe('new')
+      expect(spy).not.toHaveBeenCalled()
     })
 
     it('should apply props and on to a non-Input control too', () => {

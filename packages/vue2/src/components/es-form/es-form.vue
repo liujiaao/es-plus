@@ -57,7 +57,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="resolveDisabled(it)"
-                      @click="handleBtnClick(it)"
+                      @click="clickBtn(it)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -109,7 +109,7 @@
                     v-bind="filterOptions(it)"
                     :icon="getCompIcon(it.icon)"
                     :disabled="resolveDisabled(it)"
-                    @click="handleBtnClick(it)"
+                    @click="clickBtn(it)"
                   >
                     {{ it.name }}
                   </el-button>
@@ -614,16 +614,21 @@ export default defineComponent({
       const targetItems = list.filter((it) => it && propsList.includes(it.prop))
       if (!targetItems.length) return
       const rows = await getEveryFormQueryField(targetItems, fieldFieldOutputGlobal)
+      // Vue 2 无法拦截数组下标赋值（this.arr[i] = x 不触发依赖），必须整体替换数组引用。
+      // 原实现 `formItemRowsList.value[itemIndex] = {...}` 使 formItemListFilter 这个
+      // computed 不失效 —— 远端字段 dataOptions 重载后视图不刷新（Select 仍是旧选项）。
+      const nextRows = formItemRowsList.value.slice()
       rows.forEach((apiOption) => {
         if (!apiOption) return
-        const itemIndex = formItemRowsList.value.findIndex((it) => it && it.prop === apiOption.prop)
+        const itemIndex = nextRows.findIndex((it) => it && it.prop === apiOption.prop)
         if (itemIndex !== -1) {
-          formItemRowsList.value[itemIndex] = {
-            ...formItemRowsList.value[itemIndex],
+          nextRows[itemIndex] = {
+            ...nextRows[itemIndex],
             dataOptions: apiOption.listData as Array<{ label: string; value: unknown }>,
           }
         }
       })
+      formItemRowsList.value = nextRows
     }
 
     /**

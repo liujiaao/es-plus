@@ -43,6 +43,21 @@ jobs:
       - name: Typecheck ${{ matrix.pkg }}
         run: npm run typecheck --workspace @es-plus/${{ matrix.pkg }}
 
+  lint:
+    name: Lint (eslint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # 历史教训：eslint.config.js 曾是 ESM 但根 package.json 无 "type":"module"，
+      # 配置加载即失败 → lint 从未真正运行。改为 .mjs 后当前 0 error / 警告放行。
+      - name: ESLint (0 errors)
+        run: npm run lint
+
   consistency:
     name: Consistency (type exports + schema single-source)
     runs-on: ubuntu-latest

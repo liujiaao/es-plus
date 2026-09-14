@@ -2,9 +2,12 @@ import { ref, computed, watch, type Ref } from 'vue'
 
 export function useVirtualSelection(
   dataSource: Ref<Record<string, unknown>[]>,
-  rowkey: string
+  rowkey: string | Ref<string>
 ) {
   const selectedKeys = ref<Set<string>>(new Set())
+
+  // rowkey 支持 ref/computed：每次存取时读取，运行期切换 rowkey 不再快照旧值。
+  const getRowkey = () => (typeof rowkey === 'string' ? rowkey : rowkey.value)
 
   // O(1) — 直接比较 Set size 与数据长度
   const allSelected = computed(() => {
@@ -31,7 +34,7 @@ export function useVirtualSelection(
     if (val) {
       const next = new Set(selectedKeys.value)
       for (const row of dataSource.value) {
-        next.add(String(row[rowkey] ?? ''))
+        next.add(String(row[getRowkey()] ?? ''))
       }
       selectedKeys.value = next
     } else {
@@ -44,7 +47,7 @@ export function useVirtualSelection(
     if (keys.size === 0) return []
     const result: Record<string, unknown>[] = []
     for (const row of dataSource.value) {
-      if (keys.has(String(row[rowkey] ?? ''))) {
+      if (keys.has(String(row[getRowkey()] ?? ''))) {
         result.push(row)
       }
       if (result.length === keys.size) break
@@ -57,7 +60,7 @@ export function useVirtualSelection(
   }
 
   function toggleRowSelection(row: Record<string, unknown>, selected?: boolean) {
-    const key = String(row[rowkey] ?? '')
+    const key = String(row[getRowkey()] ?? '')
     if (selected === undefined) {
       onSelectRow(key, !selectedKeys.value.has(key))
     } else {

@@ -242,4 +242,18 @@ describe('useVirtualSelection — rowkey 边界', () => {
     onSelectRow('', true)
     expect(getSelectedRows()).toHaveLength(1)
   })
+
+  // 回归：rowkey 以原始字符串传入时是快照，运行期切换 rowkey 不生效
+  it('rowkey 传入 ref：运行期切换后按新键选择/取行', () => {
+    const ds = ref([{ id: '1', uid: 'u1', name: 'row1' }])
+    const rowkey = ref('id')
+    const { onSelectAll, getSelectedRows, selectedKeys } = useVirtualSelection(ds, rowkey)
+
+    rowkey.value = 'uid'
+    onSelectAll(true)
+    expect(selectedKeys.value.has('u1')).toBe(true)
+    expect(selectedKeys.value.has('1')).toBe(false)
+    expect(getSelectedRows()).toHaveLength(1)
+    expect(getSelectedRows()[0].name).toBe('row1')
+  })
 })
