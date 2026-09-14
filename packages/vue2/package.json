@@ -27,6 +27,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "build:deps": "npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared",
+    "prebuild": "npm run build:deps",
     "pretypecheck": "npm run build:deps",
     "build": "vite build",
     "prepublishOnly": "npm run typecheck && npm run build",

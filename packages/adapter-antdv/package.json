@@ -36,7 +36,7 @@
     "build:deps": "npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared",
     "pretypecheck": "npm run build:deps",
     "sync-schemas": "node ../../scripts/sync-schemas.mjs",
-    "prebuild": "npm run sync-schemas",
+    "prebuild": "npm run sync-schemas && npm run build:deps",
     "build": "vite build",
     "prepublishOnly": "npm run typecheck && npm run build",
     "test": "vitest run",

@@ -37,7 +37,7 @@
     "pretypecheck": "npm run build:deps",
     "typecheck:all": "vue-tsc --noEmit",
     "sync-schemas": "node ../../scripts/sync-schemas.mjs",
-    "prebuild": "npm run sync-schemas",
+    "prebuild": "npm run sync-schemas && npm run build:deps",
     "build": "vite build",
     "prepublishOnly": "npm run typecheck && npm run build",
     "test": "vitest run",

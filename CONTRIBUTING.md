@@ -18,8 +18,9 @@ npm run test:e2e                              # 跑 vue2/vue3/antdv × schema/sf
 PR 提交前请保证 `npm test` + `npm run test:e2e` 全绿。
 
 > **构建产物不入库**：`packages/*/build/` 由脚本生成，已加入 `.gitignore`。消费包（vue2/vue3/adapter-antdv/cli/mcp-server）
-> 通过 `pretest` / `pretypecheck` 钩子自动构建 `@es-plus/core` 与 `@es-plus/shared`，也可手动 `npm run build:libs`。
-> 因此直接 `npm test` / `npm run typecheck` 不会因缺产物失败；改动 core/shared 源码后，下一次 test/typecheck 会自动用最新产物。
+> 通过 `pretest` / `pretypecheck` / `prebuild` 钩子自动构建 `@es-plus/core` 与 `@es-plus/shared`，也可手动 `npm run build:libs`。
+> 因此 `npm test` / `npm run typecheck` / `npm run build` 都不会因缺产物失败；改动 core/shared 源码后会自动用最新产物。
+> （注意：新增消费包时，三个 pre* 钩子都要接上 —— 曾因只接了 test/typecheck、漏了 build，导致 CI 的 e2e 全挂。）
 
 ### 文档站与 monorepo 的联动
 
