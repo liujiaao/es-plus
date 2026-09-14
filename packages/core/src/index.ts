@@ -24,6 +24,7 @@ export {
   wrapPromise,
   getNestedValue,
   setNestedValue,
+  parsePathSegments,
 } from './shared'
 
 // ─── 类型定义（跨渲染器契约 barrel，单一权威源）─────────────

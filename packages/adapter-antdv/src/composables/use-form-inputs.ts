@@ -67,6 +67,13 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
       merged[toOnKey(key)] = handler
     }
   }
+  // 显式双向绑定优先：剔除用户经 props/attrs/on 透传的 v-model 键。
+  // ADV 各控件的 v-model 键不同（value / checked / targetKeys / fileList），
+  // 若不移除，用户透传值会覆盖内部 model 绑定，输入控件与 model 静默脱钩
+  // （与 vue3 `rowPassThrough` 剔除 `modelValue` 同构）。
+  for (const key of ['value', 'checked', 'targetKeys', 'fileList']) {
+    delete merged[key]
+  }
   return merged
 }
 
@@ -241,7 +248,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(SelectOption, { key: idx, value: opt.value, label: opt.label }),
+                hFn(SelectOption, { key: idx, value: opt.value, label: opt.label, disabled: opt.disabled }),
               ),
           )
         },
@@ -371,7 +378,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(Radio, { key: idx, value: opt.value }, () => opt.label),
+                hFn(Radio, { key: idx, value: opt.value, disabled: opt.disabled }, () => opt.label),
               ),
           )
         },
@@ -390,7 +397,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(Checkbox, { key: idx, value: opt.value }, () => opt.label),
+                hFn(Checkbox, { key: idx, value: opt.value, disabled: opt.disabled }, () => opt.label),
               ),
           )
         },

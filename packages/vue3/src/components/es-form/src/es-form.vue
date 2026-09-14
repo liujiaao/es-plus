@@ -42,7 +42,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it.click?.(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => clickBtn(it)"
                     >
                       {{ it.name }}
                     </el-button>
@@ -105,7 +105,7 @@
                       v-bind="filterOptions(it)"
                       :icon="getCompIcon(it.icon)"
                       :disabled="typeof it.disabled === 'function' ? it.disabled() || false : it.disabled || false"
-                      @click="() => it?.click?.(model, refs, getTableInstant?.httpRequestInstance)"
+                      @click="() => clickBtn(it)"
                     >
                       {{ it.name }}
                     </el-button>

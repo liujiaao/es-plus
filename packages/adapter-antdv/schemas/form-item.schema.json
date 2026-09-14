@@ -62,6 +62,11 @@
       "description": "Attributes passed through to the underlying Element Plus component (e.g., placeholder, clearable, type, multiple)",
       "additionalProperties": true
     },
+    "props": {
+      "type": "object",
+      "description": "Component props passed through to the underlying control (Vue 2 createElement props; on Vue 3 merged with attrs and forwarded together). attrs wins on the same key.",
+      "additionalProperties": true
+    },
     "on": {
       "type": "object",
       "description": "Event listeners passed to the component (e.g., change, input, blur)",

@@ -128,12 +128,24 @@ export const wrapPromise = <T>(
 // `__proto__.x = v` 改写 Object.prototype / Function.prototype / Object 原型。
 const DANGEROUS_PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
+/**
+ * 把字段路径拆成层级键，同时支持点号与方括号表示法。
+ *   'user.name'    → ['user', 'name']
+ *   'list[0].name' → ['list', '0', 'name']
+ *
+ * 这是本库字段路径的**单源分词器**：读取（getNestedValue）、写入（setNestedValue）
+ * 以及各渲染器把路径转成组件所需形态（如 ADV 的 name path 数组）都应经此，
+ * 避免各处 `.split('.')` 只认点号而漏掉 `a[0].b` 这类被 schema 支持的写法。
+ */
+export const parsePathSegments = (path: string): string[] =>
+  path.split(/\.|\[|\]/).filter(Boolean)
+
 export const getNestedValue = (
   obj: Record<string, unknown>,
   path: string
 ): unknown => {
   if (obj == null || !path) return undefined
-  const keys = path.split(/\.|\[|\]/).filter(Boolean)
+  const keys = parsePathSegments(path)
   if (keys.some((k) => DANGEROUS_PROTO_KEYS.has(k))) return undefined
   let result: unknown = obj
   for (const key of keys) {
@@ -155,7 +167,7 @@ export const setNestedValue = (
   value: unknown
 ): void => {
   if (obj == null || !path) return
-  const keys = path.split(/\.|\[|\]/).filter(Boolean)
+  const keys = parsePathSegments(path)
   // 防原型污染：拦截 __proto__ / constructor / prototype，避免写入全局原型链
   if (keys.some((k) => DANGEROUS_PROTO_KEYS.has(k))) return
   const lastKey = keys.pop()

@@ -24,6 +24,18 @@ import { FORM_RENDER_CONTRACT } from './renderer-contract.mjs'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
+/**
+ * 去掉注释后再做静态匹配 —— 否则「把无用组件名写进注释」就能骗过 token 校验：
+ * 例如把 Input 分支的实现换成 ElTimePicker、只在旁边留一行 `// ElInput`，旧实现会放行。
+ */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
+
+const readStripped = (p) => stripComments(readFileSync(join(ROOT, p), 'utf-8'))
+
 const RENDERER_INPUTS = [
   ['vue3', 'packages/vue3/src/composables/use-form-inputs.ts'],
   ['vue2', 'packages/vue2/src/composables/use-form-inputs.ts'],
@@ -32,7 +44,7 @@ const RENDERER_INPUTS = [
 
 // 权威键集：@es-plus/shared 的 contract.ts 单源（直接读源码，避免依赖 build 产物）
 function readValidFormTypes() {
-  const src = readFileSync(join(ROOT, 'packages/shared/src/contract.ts'), 'utf-8')
+  const src = readStripped('packages/shared/src/contract.ts')
   const m = src.match(/VALID_FORM_TYPES\s*=\s*\[([\s\S]*?)\]/)
   if (!m) throw new Error('无法从 shared/contract.ts 解析 VALID_FORM_TYPES')
   const keys = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
@@ -45,7 +57,7 @@ function readValidFormTypes() {
  * 只取 PascalCase 词（避免误收事件名/图标名等），再与 VALID_FORM_TYPES 比对过滤。
  */
 function extractMapKeys(path) {
-  const src = readFileSync(join(ROOT, path), 'utf-8')
+  const src = readStripped(path)
   const keys = [...src.matchAll(/^\s*'([A-Z][a-zA-Z0-9]*)',\s*$/gm)].map((m) => m[1])
   return { keys, set: new Set(keys) }
 }
@@ -75,7 +87,7 @@ const UNION_SOURCES = [
  * 行为层校验用：只要该 key 的窗口里出现契约声明的组件 token，就认为实现未被换掉。
  */
 function extractBranchWindows(path) {
-  const src = readFileSync(join(ROOT, path), 'utf-8')
+  const src = readStripped(path)
   const keys = [...src.matchAll(/^\s*'([A-Z][a-zA-Z0-9]*)',\s*$/gm)].map((m) => ({
     key: m[1],
     i: m.index,
@@ -96,7 +108,7 @@ function tokenRe(token) {
 }
 
 function extractUnionMembers({ path, slice }) {
-  const src = readFileSync(join(ROOT, path), 'utf-8')
+  const src = readStripped(path)
   const m = src.match(slice)
   if (!m) return null
   const keys = [...m[1].matchAll(/'([A-Za-z][a-zA-Z0-9]*)'/g)].map((x) => x[1])

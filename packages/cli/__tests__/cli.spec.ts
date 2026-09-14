@@ -182,8 +182,14 @@ describe('strings.isSafePathSegment — 路径穿越防护', () => {
     }
   })
 
-  it('放行正常页面名（含中文）', () => {
-    for (const seg of ['UserManage', 'user-management', '订单管理', 'A1_b2']) {
+  it('拒绝 Windows 会规范化的结尾空格 / 点（".. "、"a."）', () => {
+    for (const seg of ['.. ', ' ..', 'a.', 'a. ', '. ']) {
+      expect(isSafePathSegment(seg), seg).toBe(false)
+    }
+  })
+
+  it('放行正常页面名（含中文与中间的点）', () => {
+    for (const seg of ['UserManage', 'user-management', '订单管理', 'A1_b2', '用户.管理', '.hidden']) {
       expect(isSafePathSegment(seg), seg).toBe(true)
     }
   })

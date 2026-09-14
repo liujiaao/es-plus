@@ -15,6 +15,10 @@
  * 合法的「不被渲染层直接读取」的字段必须登记在 ALLOWLIST 里并写明原因（例如
  * 由 core 消费、仅供用户扩展点、废弃别名）。新增契约字段若忘了接线，本检查会红。
  *
+ * 已知局限：消费统计是「按字段名在渲染层源码中出现」，因此与通用词同名的字段
+ * （如 `type`/`size`/`key`/`width`）天然会被判为已消费。它擅长抓的是**专有字段名**
+ * （placeholder/required/formItemOptions/nameKey 这类）的漏接线，这正是历史缺陷的高发区。
+ *
  * 用法：
  *   node scripts/check-contract-consumption.mjs            # 校验（CI 用）
  *   node scripts/check-contract-consumption.mjs --report   # 打印每个字段的消费计数
@@ -55,11 +59,16 @@ const ALLOWLIST = new Map([
   ['FormItemOption.callOptionListFormat', '由 core 的 request.ts 在响应处理链中消费，渲染器无需读取'],
   ['FormItemOption.clearable', '由 core 的 normalizeFormItem 注入 attrs 后由控件消费（渲染器无需直接读）'],
   ['FormItemOption.required', '由 core 的 resolveItemValidateProps 消费（渲染器只需展开其返回值）'],
-  // —— 已知死字段（待接线或移除），见 docs/source-audit-report.md ——
-  ['BtnConfig.nameKey', 'BtnConfig 的 i18n 别名，目前三端按钮均直接渲染 name、从未读取 nameKey（待接线或移除）'],
 ])
 
 const CHECK = !process.argv.includes('--report')
+
+/** 去注释：避免「加一行 // field 注释」或注释里的 `.field` 骗过消费统计 */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
 
 /** 用花括号配对截取 `export interface <name>` 的 body（避免嵌套对象/CRLF 干扰） */
 function interfaceBody(src, name) {
@@ -79,13 +88,27 @@ function interfaceBody(src, name) {
   return null
 }
 
-/** 抽取接口的顶层字段名（缩进两格、`name?: type` / `name: type`） */
+/**
+ * 抽取接口的**顶层**字段名（`name?: type` / `name: type`）。
+ * 用花括号深度判断，故缩进多少格都能识别，且不会把嵌套对象/泛型里的键误当字段
+ * （此前写死「缩进恰好两格」，四格缩进的字段会被漏掉）。
+ */
 function interfaceFields(body) {
-  return body
-    .split(/\r?\n/)
-    .map((line) => line.match(/^\s{2}([A-Za-z_$][\w$]*)\??\s*:/))
-    .filter(Boolean)
-    .map((m) => m[1])
+  const fields = []
+  let depth = 0
+  for (const rawLine of stripComments(body).split(/\r?\n/)) {
+    const line = rawLine
+    if (depth === 0) {
+      const m = line.match(/^\s*([A-Za-z_$][\w$]*)\??\s*:/)
+      // 排除索引签名（`[key: string]: unknown`）—— 它们以 `[` 开头，上面的正则本就不匹配
+      if (m) fields.push(m[1])
+    }
+    for (const ch of line) {
+      if (ch === '{') depth++
+      else if (ch === '}') depth--
+    }
+  }
+  return fields
 }
 
 function walk(dir, acc = []) {
@@ -122,11 +145,11 @@ function main() {
     console.error('❌ 未找到任何渲染器源码文件，检查路径配置')
     process.exit(1)
   }
-  const blob = rendererFiles.map((f) => readFileSync(f, 'utf-8')).join('\n')
+  const blob = stripComments(rendererFiles.map((f) => readFileSync(f, 'utf-8')).join('\n'))
 
   let fail = false
   for (const contract of CONTRACTS) {
-    const src = readFileSync(join(ROOT, contract.path), 'utf-8')
+    const src = stripComments(readFileSync(join(ROOT, contract.path), 'utf-8'))
     const body = interfaceBody(src, contract.name)
     if (body == null) {
       console.error(`❌ 无法解析 ${contract.name}（${contract.path}），选择器失效`)

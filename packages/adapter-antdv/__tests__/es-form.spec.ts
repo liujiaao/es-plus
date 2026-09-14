@@ -184,6 +184,30 @@ describe('EsForm(ADV) - 嵌套 prop 校验', () => {
     // ADV validate() resolve 的是表单值对象（非布尔），只断言不 reject
     await expect(wrapper.vm.validate()).resolves.toBeTruthy()
   })
+
+  // 回归：schema 明确支持 `prop: 'a[0].b'`（core getNestedValue 按 /\.|\[|\]/ 分词）。
+  // 只按 '.' 切分会得到 ['a[0]','b']，ADV 读 model['a[0]'] → undefined，校验必错。
+  it('item.prop "a[0].b" 以数组 name path 传给 a-form-item（方括号写法）', () => {
+    const wrapper = mountForm({
+      model: { a: [{ b: '' }] },
+      formItemList: [{ prop: 'a[0].b', label: '项', formtype: 'Input', span: 24 }]
+    })
+    expect(firstItem(wrapper).props('name')).toEqual(['a', '0', 'b'])
+  })
+
+  it('方括号嵌套字段 required：空值校验失败、有值通过', async () => {
+    const empty = mountForm({
+      model: { a: [{ b: '' }] },
+      formItemList: [{ prop: 'a[0].b', label: '项', formtype: 'Input', span: 24, required: true }]
+    })
+    await expect(empty.vm.validate()).rejects.toBeTruthy()
+
+    const filled = mountForm({
+      model: { a: [{ b: 'x' }] },
+      formItemList: [{ prop: 'a[0].b', label: '项', formtype: 'Input', span: 24, required: true }]
+    })
+    await expect(filled.vm.validate()).resolves.toBeTruthy()
+  })
 })
 
 // 回归：item 级 name 改数组 path 后，form 级扁平键必须仍能匹配，
@@ -219,6 +243,22 @@ describe('EsForm(ADV) - 嵌套 form 级规则', () => {
       })
       const aForm = wrapper.findComponent({ name: 'AForm' })
       expect(aForm.props('rules')).toEqual({ name: [{ required: true, message: '姓名必填' }] })
+      await expect(wrapper.vm.validate()).rejects.toBeTruthy()
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it("方括号扁平键 'a[0].b' 同样展开为嵌套规则", async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ EsForm: { rules: { 'a[0].b': [{ required: true, message: '必填' }] } } })
+      const wrapper = mountForm({
+        model: { a: [{ b: '' }] },
+        formItemList: [{ prop: 'a[0].b', label: '项', formtype: 'Input', span: 24 }]
+      })
+      const aForm = wrapper.findComponent({ name: 'AForm' })
+      expect(aForm.props('rules')).toEqual({ a: { '0': { b: [{ required: true, message: '必填' }] } } })
       await expect(wrapper.vm.validate()).rejects.toBeTruthy()
     } finally {
       resetGlobalConfig()

@@ -717,6 +717,8 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
   // 否则调用 fail 让外层 Promise settle，避免 refresh() 永久挂起。
   if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
     // 同步配置错误不是“被淘汰请求”，必须按当前请求暴露（isCurrent=true）。
+    // 本调用已抢占最新序号：此前若有在途请求，其 finally 会因序号过期而跳过收起 loading，这里补收。
+    if (ticket === requestTicket.value) loadingStatus.value = false
     if (typeof fail === 'function') fail(new Error('no url/apiParams configured'), true)
     return
   }
@@ -749,7 +751,9 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
       const responseData = getListenToCallBack('afterResponse', res) || res
       // 空 / 非对象响应（204、拦截器 return undefined、原始值）以及数组响应也要调用 success ——
       // httpRequestInstance 的 Promise 只在 success/fail 中 settle，否则表格加载永久挂起。
-      // 非对象归一为 {}（formatConfigOut 对非对象返回空结果），数组原样交给 formatConfigOut 的直传路径。
+      // 非对象 / 空响应归一为 {}：本地 formatConfigOut 得到空结果（清空行、total 归 0），
+      // 这是有意的取舍（不再挂起，代价是 204 会被当作空列表）。数组响应同样会 settle，
+      // 但表格本地映射没有数组直传分支，会渲染为空表。
       if (typeof success === 'function') {
         const normalized = responseData && (isObject(responseData) || Array.isArray(responseData))
           ? responseData
@@ -773,6 +777,7 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
     requestHandler($esPlusTable.$httpRequest as Function)
   } else {
     // 无任何请求函数 → fail 让 Promise settle，避免挂起（isCurrent=true，非淘汰请求）
+    if (ticket === requestTicket.value) loadingStatus.value = false
     if (typeof fail === 'function') fail(new Error('no httpRequest configured'), true)
   }
 }

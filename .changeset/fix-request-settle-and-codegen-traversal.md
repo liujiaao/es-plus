@@ -16,7 +16,10 @@
   整体挂起（远端下拉选项加载不出来且无报错）。现非对象响应归一为 `{}` 后仍调用 `success`。
 - **同类缺陷同时存在于三端表格组件的本地请求函数**：`isObject(res) && Object.keys(res).length`
   守卫会跳过空响应与数组响应，而 `httpRequestInstance` 的 Promise 只在 success/fail 中 settle
-  → 表格加载永久挂起。三端一并修复（数组响应交给 `formatConfigOut` 的直传路径）。
+  → 表格加载永久挂起。三端一并修复。
+  **行为变化**：空 / 非对象响应（如 204、拦截器 `return undefined`）现在会 settle 并被视为空列表
+  （清空行、`total` 归 0），此前是 Promise 挂起；数组响应也会 settle，但表格本地映射不含数组直传分支，
+  会渲染为空表（如需支持裸数组列表响应，是独立的后续需求）。
 
 **C2 antdv 代码生成不可编译（shared）**
 - `schema-generator` 的 Vue3/antdv 共用 `<script setup>` 分支此前漏调 `rewriteElementUsage`：

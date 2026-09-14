@@ -7,6 +7,8 @@
   "scripts": {
     "prepare": "husky || exit 0",
     "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:libs": "npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared",
     "lint": "eslint . --max-warnings 9999",
     "lint:fix": "eslint . --fix",
     "schemas:sync": "node scripts/sync-schemas.mjs",

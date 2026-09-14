@@ -61,7 +61,7 @@ export interface FormItemOption {
    * `h()` 需要的 `onXxx` 形式；已写成 `onXxx` 的键名原样透传。
    */
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown }>
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
   isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams

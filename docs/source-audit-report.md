@@ -219,8 +219,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
   → `props: { type: 'textarea' }` 被静默忽略，放 `attrs` 才生效，同名配置放错袋行为完全不同。
 - **antdv Upload `limit` 未映射为 `maxCount`**（CONFIRMED）：`use-form-inputs.ts:401-481`，
   限制数被忽略；`on-exceed` 在 ADV 无对应事件。
-- **`dataOptions.disabled` 三端全丢**（CONFIRMED）：Select / Radio / Checkbox 只透传 label/value
-  （antdv `:208-210` / `:337-339` / `:356-358`），禁用项可点。
+- ~~**`dataOptions.disabled` 三端全丢**~~（**更正并经复核**）：vue2 一直有透传
+  （`use-form-inputs.ts:174,275,330,361`），**只有 vue3 / antdv 丢失** —— Select / Radio / Checkbox
+  的选项节点只带 label/value。**已修复**（vue3 三处 + antdv 三处补 `disabled`，并加回归测试）。
 - **antdv ColorPicker 降级**（CONFIRMED）：`:252-275` 渲染原生 `<input type="color">`，
   丢失 alpha / predefine / clearable / disabled，且不触发 a-form-item 的 fieldChange，
   change / blur 触发式校验失效。
@@ -259,8 +260,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 - **远端选项无法依赖当前表单值**（CONFIRMED）：`request.ts:281-287` 只传 `{...apiParams.model}`，
   函数本身无 model 入参，级联下拉（选省后拉市）无法实现。
 - **`BtnConfig.nameKey` 是死字段**（CONFIRMED，由新增的契约消费检查首跑抓出）：
-  `core/src/types.ts:231` 声明了 `nameKey`，`config.ts:35` 注释也承诺 i18n 可用，
-  但三端按钮均直接渲染 `name`，**全仓无任何读取**。与 C3 同类（契约声明 ≠ 实际消费）。
+  声明了 `nameKey`、`config.ts` 注释也承诺 i18n 可用，但三端按钮均直接渲染 `name`，**全仓无任何读取**。
+  与 C3 同类（契约声明 ≠ 实际消费）。**已按决策移除**：接线需改约 30 处三端按钮渲染点、收益与之不成比例，
+  且该字段从未生效（无用户依赖）；同步更正了 `config.ts` 注释与 `adapter-antdv/README.md` 的承诺。
 
 ---
 
@@ -363,25 +365,33 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
    `check-renderer-parity` 校验「键 → 组件绑定」，组件被换掉即红。
 7. ✅ **「契约字段必须被消费」静态检查**：`scripts/check-contract-consumption.mjs`，已接入
    `check:consistency`；首跑抓出死字段 `BtnConfig.nameKey`。
-8. ◐ **P1 缺陷**：vue3（分页竞态 / `modelValue` 被覆盖 / 运行期快照）、antdv（Transfer `label→title`
-   与 `dataOptions` / `attrs+props` 合并读取 / 嵌套 prop 数组 name path）、vue2（单行按钮 `triggerEvent` /
-   数组下标赋值响应式 / dialog 延迟销毁竞态）**已修**。**未做**：三端 `es-table` 的
-   loadingStatus 互斥与 rowkey/heightType 快照**仅在 vue3 对齐**，vue2 / antdv 同构缺陷仍存（见待决策）。
+8. ✅ **P1 缺陷**：vue3（分页竞态 / `modelValue` 被覆盖 / 运行期快照）、antdv（Transfer `label→title`
+   与 `dataOptions` / `attrs+props` 合并读取 / 嵌套 prop 数组 name path / 表格竞态与快照）、
+   vue2（单行按钮 `triggerEvent` / 数组下标赋值响应式 / dialog 延迟销毁竞态 / 表格竞态与快照）**均已修**。
 9. ◐ **工程卫生**：已提交此前 untracked 的测试与 changeset；lint 进 CI；`deploy-docs` 改为
-   `workflow_run` 依赖 Typecheck。**未做**：`build/` 出库、publish job —— 见待决策。
+   `workflow_run` 依赖 Typecheck；**`build/` 移出版本库 + `pretest`/`pretypecheck` 自动构建**。
+   **未做**：publish job —— 见待决策。
 10. ✅ **难化 `check-*` 脚本**：`check-generator-contract`（去注释 + 别名识别）、
     `check-exposed-api`（expose spread 检测）已硬化。
 
-### 待决策（需你拍板，未擅自执行）
+### 决策与结论（本轮已定）
 
-- **`build/` 是否移出版本库**：232 个编译产物入库是「源码/产物漂移」隐患；但三端 typecheck 与
-  单测都通过 `package.json` exports 解析到 `packages/core|shared/build`（vitest 无 alias），
-  移除后本地 `npm test` / `npm run typecheck` 需先构建 core/shared。CI 已显式构建依赖链，故只影响本地 DX。
-  **建议**：保留入库，或改为「移除 + 根 `pretest`/`pretypecheck` 自动构建」。
+- ✅ **`build/` 移出版本库（采用「移除 + 自动构建」）**：`.gitignore` 加 `packages/*/build/`，
+  `git rm --cached` 移除 232 个产物；消费包新增 `build:deps` + `pretest`/`pretypecheck` 钩子
+  （根提供 `npm run build:libs`）。实测删产物后 `npm test`/`npm run typecheck` 会自动构建
+  core/shared 并全绿 —— **改源码后下次 test/typecheck 一定拿到最新产物**。
+- ✅ **`BtnConfig.nameKey` 移除**：死字段、零引用；接线面约 30 处，收益不足。同步更正
+  `config.ts` 注释与 `adapter-antdv/README.md` 的 i18n 承诺，避免新的假承诺。
+- ✅ **vue2 / antdv `es-table` 同构对齐**：两端的并发请求竞态（递增请求序号）与
+  `useTableResize`（heightType/tabHeight 运行期生效）已对齐 vue3；antdv 另对齐 `useTableSelection`
+  的 rowkey 运行期读取。两端均补回归测试并反向验证。
+
+### 仍待决策
+
 - **是否加 publish job**：当前 npm 账号写操作全 403（会话记录第六节）且未解决；
   在恢复写权限前加发布流水线只会引入一个注定失败的 job。**建议**：先解决 npm 写权限再谈。
-- **`BtnConfig.nameKey`**：死字段，接线（三端按钮 i18n）或从契约移除，二选一。
-- **vue2 / antdv `es-table` 同构缺陷**：并发请求竞态与 rowkey/heightType 快照，是否对齐 vue3。
+- **三端仍存的已知分歧/遗留**（报告 §4）：antdv `Upload limit→maxCount` 未映射、
+  `dataOptions.disabled` 三端仍丢、antdv ColorPicker 原生降级、DatePicker 回写类型 Date vs dayjs —— 均为独立小项。
 
 ---
 

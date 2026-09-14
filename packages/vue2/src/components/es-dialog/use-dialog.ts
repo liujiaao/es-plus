@@ -264,6 +264,8 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       target.visible = false
       // 等动画结束后销毁
       setTimeout(() => {
+        // 期间被重新打开（visible 被置回 true）→ 不销毁，避免误杀正在显示的弹窗
+        if (target.visible !== false) return
         target.$destroy()
         if (target.$el && target.$el.parentNode) {
           target.$el.parentNode.removeChild(target.$el)
@@ -306,7 +308,8 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         originalOnClosed?.(...args)
         if (cacheKey) return // 缓存实例不销毁，保留在 cache 中
         setTimeout(() => {
-          if (createdVm) {
+          // 与单例分支一致：期间被重新打开则不销毁
+          if (createdVm && createdVm.visible === false) {
             createdVm.$destroy()
             if (createdVm.$el && createdVm.$el.parentNode) {
               createdVm.$el.parentNode.removeChild(createdVm.$el)

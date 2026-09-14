@@ -260,4 +260,71 @@ describe('useTableResize (adapter-antdv)', () => {
     useTableResize(ref(null), ref(null), ref(null), ref(null), {})
     expect(onBeforeUnmount).toHaveBeenCalled()
   })
+
+  // ─── 运行期快照修复（对齐 vue3）─────────────────────────────────────
+  // 回归：options 以 ref/computed 传入时，运行期修改应即时生效（此前原始值快照）
+  it('tabHeight 传入 ref：运行期修改后 resizeObservers 使用新值', () => {
+    const containerRef = ref(mockEl({ offsetHeight: 500 }))
+    const tabHeight = ref<number | string>(600)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      ref(null),
+      ref(null),
+      ref(null),
+      { tabHeight }
+    )
+
+    resizeObservers()
+    expect(tableHeight.value).toBe(600)
+
+    tabHeight.value = 700
+    resizeObservers()
+    expect(tableHeight.value).toBe(700)
+  })
+
+  it('heightType 传入 ref：auto→height 切换后按父容器高度重算', () => {
+    const parentEl = mockEl({ offsetHeight: 900 })
+    const containerRef = ref(mockEl({ offsetHeight: 600, parentElement: parentEl } as any))
+    const heightType = ref<'auto' | 'height'>('auto')
+    const tabHeight = ref<number | undefined>(undefined)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      ref(null),
+      ref(null),
+      ref(null),
+      { heightType, tabHeight }
+    )
+
+    // auto + tabHeight 为 undefined → parseInt(undefined) → 450
+    resizeObservers()
+    expect(tableHeight.value).toBe(450)
+
+    heightType.value = 'height'
+    resizeObservers()
+    // 切换后使用 parentElement.offsetHeight = 900
+    expect(tableHeight.value).toBe(900)
+  })
+
+  it('heightType 传入 ref 运行期切换 → 重挂 observer 监听新目标', async () => {
+    const parentEl = mockEl({ offsetHeight: 900 })
+    const containerEl = mockEl({ offsetHeight: 600, parentElement: parentEl } as any)
+    const heightType = ref<'auto' | 'height'>('auto')
+
+    useTableResize(ref(containerEl), ref(null), ref(null), ref(null), {
+      heightType,
+      tabHeight: ref(600),
+    })
+    await nextTick()
+    expect(mockObserve).toHaveBeenCalledWith(containerEl)
+
+    mockObserve.mockClear()
+    heightType.value = 'height'
+    // watch（pre flush）→ stopObserver + startObserver（内部再 nextTick 才 observe）
+    await nextTick()
+    await nextTick()
+    expect(mockDisconnect).toHaveBeenCalled()
+    expect(mockObserve).toHaveBeenCalledWith(parentEl)
+  })
 })

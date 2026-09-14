@@ -88,7 +88,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElOption, { key: idx, value: opt.value as string, label: opt.label })
+                hFn(ElOption, { key: idx, value: opt.value as string, label: opt.label, disabled: opt.disabled })
               )
           )
         }
@@ -168,7 +168,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElRadio, { key: idx, value: opt.value as any }, () => opt.label)
+                hFn(ElRadio, { key: idx, value: opt.value as any, disabled: opt.disabled }, () => opt.label)
               )
           )
         }
@@ -187,7 +187,7 @@ export function useFormInputs() {
             },
             () =>
               row.dataOptions?.map((opt, idx) =>
-                hFn(ElCheckbox, { key: idx, value: opt.value as any }, () => opt.label)
+                hFn(ElCheckbox, { key: idx, value: opt.value as any, disabled: opt.disabled }, () => opt.label)
               )
           )
         }

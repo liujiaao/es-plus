@@ -62,6 +62,9 @@ export function esPlusPkgFor(target: CliTarget): string {
  */
 export function isSafePathSegment(segment: string): boolean {
   if (!segment) return false
+  // Windows 会规范化结尾的空格与点（'.. ' → '..'、'a.' → 'a'），可绕过朴素的相等比较
+  if (segment !== segment.trim()) return false
+  if (/[.\s]$/.test(segment)) return false
   if (segment === '.' || segment === '..') return false
   if (/[\\/]/.test(segment)) return false
   if (/^[A-Za-z]:/.test(segment)) return false

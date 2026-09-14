@@ -32,7 +32,7 @@ export interface EsPlusGlobalConfig {
   EsDialog?: Record<string, unknown>
   /** 权限校验函数（按钮 permissionValue → boolean），不配置则视为全部放行 */
   permission?: (value: string) => boolean
-  /** i18n 翻译函数（labelKey/nameKey → text），不配置则降级使用 label/name */
+  /** i18n 翻译函数（labelKey → text），不配置则降级使用 label */
   t?: (key: string) => string
   /** 全局 HTTP 请求函数（组件级 httpRequest 优先于此） */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>

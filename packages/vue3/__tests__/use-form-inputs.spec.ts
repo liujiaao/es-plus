@@ -202,6 +202,26 @@ describe('useFormInputs', () => {
       expect(vnode.props?.modelValue).toBe(1)
     })
 
+    it('dataOptions.disabled 透传到选项（回归：此前丢弃，禁用项仍可点）', () => {
+      const item: FormItemOption = {
+        prop: 'status',
+        label: 'Status',
+        formtype: 'Select',
+        dataOptions: [
+          { label: 'Active', value: 1 },
+          { label: 'Inactive', value: 0, disabled: true }
+        ]
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, {}, { row: item, index: 0 })
+      const slots = vnode.children as unknown as
+        | (() => { props?: { disabled?: boolean } }[])
+        | { default: () => { props?: { disabled?: boolean } }[] }
+      const options = typeof slots === 'function' ? slots() : slots.default()
+      expect(options[0].props?.disabled).toBeUndefined()
+      expect(options[1].props?.disabled).toBe(true)
+    })
+
     it('should update model on Select change', () => {
       const item: FormItemOption = {
         prop: 'status',

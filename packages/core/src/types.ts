@@ -227,8 +227,6 @@ export interface FormItemOption {
 export interface BtnConfig {
   /** 按钮显示文本 */
   name: string
-  /** i18n 标签 key */
-  nameKey?: string
   /** 按钮唯一标识（query/rest/add/export...） */
   key?: string
   /** 按钮类型 */

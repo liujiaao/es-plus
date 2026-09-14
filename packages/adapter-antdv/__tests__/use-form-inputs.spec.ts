@@ -55,6 +55,28 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
     expect((vnode as any).type?.name || (vnode as any).type?.__name || (vnode as any).type).toBeTruthy()
   })
 
+  it('Select — dataOptions.disabled 透传到选项（回归：此前丢弃，禁用项仍可点）', () => {
+    const item = makeItem('Select', {
+      dataOptions: [
+        { label: 'A', value: 1 },
+        { label: 'B', value: 0, disabled: true },
+      ],
+    } as any)
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(), { row: item, index: 0 }) as any
+    const slots = vnode.children
+    const options = typeof slots === 'function' ? slots() : slots.default()
+    expect(options[0].props?.disabled).toBeUndefined()
+    expect(options[1].props?.disabled).toBe(true)
+  })
+
+  it('Input — attrs.value 不得覆盖内部 model 绑定（回归）', () => {
+    const item = makeItem('Input', { attrs: { value: 'hijacked-by-attrs' } } as any)
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('bound-value'), { row: item, index: 0 }) as any
+    expect(vnode.props?.value).toBe('bound-value')
+  })
+
   it('Input textarea — 渲染 TextArea', () => {
     const renderFn = formInputComponents(makeItem('Input', {
       attrs: { type: 'textarea', rows: 4 },

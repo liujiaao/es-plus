@@ -532,6 +532,34 @@ describe('EsTable - 并发分页请求竞态', () => {
     expect(latest[0].name).toBe('latest-page-3')
   })
 
+  // 覆盖最危险的顺序：最新请求先返回并写入，旧请求**随后**才返回。
+  // 若 isCurrent 判定缺失/为恒真，旧响应会覆盖已写入的最新数据 —— 原有用例（旧先返回）
+  // 无法暴露这一点。
+  it('最新页先返回、旧页后返回 → 旧页不得覆盖最新数据', async () => {
+    const { wrapper, mockRequest, pending } = mountRaceTable()
+    await flushPromises()
+
+    const pagination = wrapper.findComponent({ name: 'ElPagination' })
+    await pagination.vm.$emit('current-change', 2)
+    await pagination.vm.$emit('current-change', 3)
+    await nextTick()
+    expect(mockRequest).toHaveBeenCalledTimes(2)
+
+    const req2 = pending.find((p) => p.opts.formParams?.pageIndex === 2)
+    const req3 = pending.find((p) => p.opts.formParams?.pageIndex === 3)
+
+    req3!.d.resolve({ records: 100, rows: [{ name: 'latest-page-3' }] })
+    await flushPromises()
+    req2!.d.resolve({ records: 100, rows: [{ name: 'stale-page-2' }] })
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:dataSource') as any[]
+    const final = updates[updates.length - 1][0]
+    expect(final).toHaveLength(1)
+    expect(final[0].name).toBe('latest-page-3')
+    expect(wrapper.emitted('request-error')).toBeFalsy()
+  })
+
   it('被淘汰请求失败静默丢弃，不触发 request-error', async () => {
     const { wrapper, pending } = mountRaceTable()
     await flushPromises()

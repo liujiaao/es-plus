@@ -172,4 +172,26 @@ describe('EDGE CASES', () => {
     await nextTick()
     expect(sel.selectedRowKeys.value).toEqual([])
   })
+
+  // 回归：rowkey 原始字符串是快照，运行期切换后内部仍按旧键选择/取行（对齐 vue3）
+  it('rowkey 传入 ref：运行期切换后按新键选择', () => {
+    const rowkey = ref('id')
+    const sel = useTableSelection(rowkey)
+
+    rowkey.value = 'uid'
+    sel.toggleRowSelection({ id: 'x', uid: 'u1' }, true)
+
+    expect(sel.selectedRowKeys.value).toEqual(['u1'])
+    expect(sel.multipleSelection.value).toEqual([{ id: 'x', uid: 'u1' }])
+  })
+
+  it('rowkey 传入 getter：运行期切换后按新键选择', () => {
+    let key = 'id'
+    const sel = useTableSelection(() => key)
+
+    key = 'uid'
+    sel.toggleRowSelection({ id: 'x', uid: 'u1' }, true)
+
+    expect(sel.selectedRowKeys.value).toEqual(['u1'])
+  })
 })

@@ -61,7 +61,7 @@
                     :size="mapBtnSize(it.size)"
                     :disabled="resolveBtnDisabled(it)"
                     :loading="it.loading"
-                    @click="() => it.click?.(model, formRef, getTableInstant?.httpRequestInstance)"
+                    @click="() => clickBtn(it)"
                   >
                     <template #icon v-if="it.icon">
                       <component :is="getAdvIconComponent(it.icon)" />
@@ -138,7 +138,7 @@
                   :size="mapBtnSize(it.size)"
                   :disabled="resolveBtnDisabled(it)"
                   :loading="it.loading"
-                  @click="() => it.click?.(model, formRef, getTableInstant?.httpRequestInstance)"
+                  @click="() => clickBtn(it)"
                 >
                   <template #icon v-if="it.icon">
                     <component :is="getAdvIconComponent(it.icon)" />
@@ -209,6 +209,7 @@ import {
   resolveItemValidateProps,
   resolveFormRules,
   normalizeFormItem,
+  parsePathSegments,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -277,8 +278,13 @@ type AdvNamePath = string | number | (string | number)[]
  * 转成 `['user', 'name']` 后 ADV 才按嵌套路径读值，与渲染层
  * `getNestedValue`/`setNestedValue` 的绑定语义一致（对齐 vue3/EP 原生 `prop="user.name"`）。
  */
-const toAdvNamePath = (prop: string): AdvNamePath =>
-  typeof prop === 'string' && prop.includes('.') ? prop.split('.') : prop
+const toAdvNamePath = (prop: string): AdvNamePath => {
+  if (typeof prop !== 'string') return prop
+  // 用 core 单源分词器，同时支持点号与方括号：'a[0].b' → ['a','0','b']。
+  // 只认 '.' 会把 'a[0].b' 切成 ['a[0]','b']，ADV 读 model['a[0]'] → undefined（校验必错）。
+  const segments = parsePathSegments(prop)
+  return segments.length > 1 ? segments : prop
+}
 
 /** 同上，批量版本：供暴露的 validateField / clearValidate 使用，保持 `'user.name'` 入参可用 */
 const toAdvNamePathList = (names: string | string[]): AdvNamePath | AdvNamePath[] =>
@@ -298,18 +304,33 @@ const toAdvNamePathList = (names: string | string[]): AdvNamePath | AdvNamePath[
 function nestDottedRuleKeys(rules: Record<string, unknown>): Record<string, unknown> {
   const nested: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(rules)) {
-    const parts = key.split('.')
+    const parts = parsePathSegments(key)
     if (parts.length === 1) {
       nested[key] = value
       continue
     }
     let node = nested
+    let conflict = false
     for (let i = 0; i < parts.length - 1; i++) {
       const seg = parts[i]
+      // 'a' 与 'a.b' 同时存在时，扁平规则数组与嵌套对象无法共存（数组会被覆盖成 {}）。
+      // 保留先写入的扁平规则并告警，避免静默丢失规则。
+      if (node[seg] !== undefined && !isObject(node[seg])) {
+        console.warn(
+          `[es-plus] form 级规则键冲突：'${key}' 与扁平键 '${parts.slice(0, i + 1).join('.')}' 无法共存，已跳过 '${key}'`
+        )
+        conflict = true
+        break
+      }
       if (!isObject(node[seg])) node[seg] = {}
       node = node[seg] as Record<string, unknown>
     }
-    node[parts[parts.length - 1]] = value
+    if (conflict) continue
+    const leaf = parts[parts.length - 1]
+    if (node[leaf] !== undefined && !isObject(node[leaf]) && !Array.isArray(node[leaf])) {
+      console.warn(`[es-plus] form 级规则键冲突：'${key}' 覆盖了已存在的同名扁平规则`)
+    }
+    node[leaf] = value
   }
   return nested
 }

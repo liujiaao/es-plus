@@ -68,6 +68,12 @@ export function useTableResize(
     nextTick(() => {
       if (!tableContainerRef.value || typeof ResizeObserver === 'undefined') return
 
+      // 幂等：先断开可能仍存在的旧 observer，避免 deferred start 叠加导致重复观察 / 泄漏
+      if (observer.value) {
+        observer.value.disconnect()
+        observer.value = null
+      }
+
       resizeObservers()
 
       observer.value = new ResizeObserver(() => {
@@ -101,10 +107,18 @@ export function useTableResize(
 
   // 运行期 options 变化：heightType 决定观察目标，需重挂 observer；tabHeight 变化只需重算。
   // 若传入的是原始值（非响应式），watch 源不会触发，行为与旧版一致。
+  let lastHeightType = getHeightType()
   watch(
-    () => [getHeightType(), getTabHeight()],
-    () => {
-      if (typeof ResizeObserver !== 'undefined' && tableContainerRef.value) {
+    () => [getHeightType(), getTabHeight()] as const,
+    ([heightType]) => {
+      if (typeof ResizeObserver === 'undefined' || !tableContainerRef.value) {
+        resizeObservers()
+        return
+      }
+      // 仅 heightType 变化时才需要重挂（观察目标变了）；tabHeight 变化重算即可。
+      // 否则频繁改 tabHeight 会在 nextTick 前反复 stop/start，泄漏前一个 observer。
+      if (heightType !== lastHeightType) {
+        lastHeightType = heightType
         stopObserver()
         startObserver()
       } else {

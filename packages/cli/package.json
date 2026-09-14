@@ -20,7 +20,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
+    "build:deps": "npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared",
+    "pretypecheck": "npm run build:deps",
     "test": "vitest run",
+    "pretest": "npm run build:deps",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },

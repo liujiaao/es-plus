@@ -40,7 +40,7 @@ app.use(Antd)
 app.use(ESPlus, {
   // 全局权限校验（按钮 permissionValue → boolean）
   permission: (value) => userStore.permissions.includes(value),
-  // 全局 i18n 翻译（labelKey / nameKey → text）
+  // 全局 i18n 翻译（labelKey → text）
   t: (key) => i18n.global.t(key),
   // EsTable 全局方法
   EsTable: {
