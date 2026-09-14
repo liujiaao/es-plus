@@ -21,6 +21,19 @@ PR 提交前请保证 `npm test` + `npm run test:e2e` 全绿。
 > 通过 `pretest` / `pretypecheck` 钩子自动构建 `@es-plus/core` 与 `@es-plus/shared`，也可手动 `npm run build:libs`。
 > 因此直接 `npm test` / `npm run typecheck` 不会因缺产物失败；改动 core/shared 源码后，下一次 test/typecheck 会自动用最新产物。
 
+### 文档站与 monorepo 的联动
+
+三个文档站（`es-plus-docs` / `es-pc` / `es-eui`）都通过 `file:` 依赖 + 各自构建器的 alias 指向 monorepo **本地包**，
+不会解析到 npm 上已发布的旧版本（三个站都不在根 `workspaces` 内，各自有独立的 `node_modules` / lock）：
+
+| 站点 | 目标 | 模式 |
+|---|---|---|
+| `es-plus-docs`（Vue3 + Element Plus） | `packages/vue3` + `packages/core` | 默认**源码**（`VITE_USE_DIST=false`）；`.env.dist` 切 dist |
+| `es-pc`（Ant Design Vue） | `packages/adapter-antdv` + `packages/core` | 默认**源码**；`VITE_USE_DIST=true` 切 dist |
+| `es-eui`（Vue2 + Element UI） | `packages/vue2` + `packages/core` | 只能用**构建产物**（本站无 TS loader），`preserve`/`prebuild` 会先 `npm run build:esplus` 重建本地包 |
+
+> 注意：本地包版本号在发版前保持不变（changeset 待发布），所以「重新 npm install」拿不到最新代码 —— 必须靠上述 file:/alias 指向本地。
+
 ## 仓库结构
 
 ES-Plus 是 **npm workspaces monorepo**。

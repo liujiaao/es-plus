@@ -26,7 +26,13 @@ module.exports = defineConfig({
                 '@': path.resolve(__dirname, 'src'),
                 vue$: path.resolve(__dirname, 'node_modules/vue'),
                 'element-ui$': path.resolve(__dirname, 'node_modules/element-ui'),
-                '@vue/composition-api': path.resolve(__dirname, 'node_modules/@vue/composition-api')
+                '@vue/composition-api': path.resolve(__dirname, 'node_modules/@vue/composition-api'),
+                // es-plus 指向 monorepo 本地包（dist/build），避免解析到 node_modules 里
+                // 已发布的陈旧副本。@es-plus/vue2 是 TS SFC 包，es-eui 无 TS loader，
+                // 故只能用其构建产物；由 prebuild/preserve 的 build:esplus 保证产物新鲜。
+                '@es-plus/vue2/dist/style.css$': path.resolve(__dirname, '../packages/vue2/dist/style.css'),
+                '@es-plus/vue2$': path.resolve(__dirname, '../packages/vue2/dist/es-plus-vue2.js'),
+                '@es-plus/core$': path.resolve(__dirname, '../packages/core/build/index.js')
             }
         }
     },

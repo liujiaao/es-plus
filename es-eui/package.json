@@ -7,15 +7,16 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "prebuild": "node scripts/generate-raw-sources.js",
-    "preserve": "node scripts/generate-raw-sources.js",
+    "build:esplus": "npm --prefix .. run build --workspace @es-plus/core && npm --prefix .. run build --workspace @es-plus/vue2",
+    "prebuild": "node scripts/generate-raw-sources.js && npm run build:esplus",
+    "preserve": "node scripts/generate-raw-sources.js && npm run build:esplus",
     "build:lib": "vue-cli-service build --target lib --name es-eui src/components/es-eui/index.js --mode production",
     "lint": "vue-cli-service lint",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@es-plus/core": "^1.1.0",
-    "@es-plus/vue2": "^1.2.0",
+    "@es-plus/core": "file:../packages/core",
+    "@es-plus/vue2": "file:../packages/vue2",
     "@vxe-ui/core": "3.4.19",
     "axios": "^0.27.2",
     "element-ui": "^2.15.14",
