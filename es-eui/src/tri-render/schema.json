@@ -1,5 +1,5 @@
 {
-  "$schema": "https://es-plus.dev/tri-render/schema.json",
+  "$schema": "https://liujiaao.github.io/es-plus/tri-render/schema.json",
   "title": "用户管理（三端同一份配置）",
   "formItems": [
     { "prop": "name", "label": "用户名", "formtype": "Input", "span": 6, "placeholder": "请输入用户名" },

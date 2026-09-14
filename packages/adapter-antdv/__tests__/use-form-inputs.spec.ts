@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { h } from 'vue'
 import dayjs from 'dayjs'
-import { Input, RangePicker } from 'ant-design-vue'
+import { Input, RangePicker, TimeRangePicker } from 'ant-design-vue'
 import { useFormInputs } from '../src/composables/use-form-inputs'
 import type { FormItemOption } from '../src/types'
 
@@ -481,6 +481,61 @@ describe('useFormInputs — props 也参与 EP→ADV 字段映射', () => {
     const props = propsOf('Rate', { props: { texts: ['差', '中', '好'], max: 3 } })
     expect(props.tooltips).toEqual(['差', '中', '好'])
     expect(props.count).toBe(3)
+  })
+})
+
+// 回归：renderDatePicker 已做 start-placeholder/end-placeholder → placeholder 数组映射，
+// renderTimePicker 此前未做，导致 TimePicker range 的 EP 占位符被当未知 attr 丢弃。
+describe('useFormInputs — TimePicker range 占位符映射（对齐 DatePicker）', () => {
+  const { formInputComponents } = useFormInputs()
+  const vnodeOf = (formtype: string, overrides: Partial<FormItemOption> = {}) => {
+    const item = makeItem(formtype, overrides)
+    const renderFn = formInputComponents(item)!
+    return renderFn(h, makeModel(), { row: item, index: 0 }) as any
+  }
+  const propsOf = (formtype: string, overrides: Partial<FormItemOption> = {}) =>
+    (vnodeOf(formtype, overrides).props || {}) as Record<string, unknown>
+
+  it('attrs 的 start-placeholder/end-placeholder → placeholder 数组，且 EP 键不再透传', () => {
+    const vnode = vnodeOf('TimePicker', {
+      attrs: { isRange: true, 'start-placeholder': '开始时间', 'end-placeholder': '结束时间' },
+    })
+    expect(vnode.props.placeholder).toEqual(['开始时间', '结束时间'])
+    expect(vnode.props['start-placeholder']).toBeUndefined()
+    expect(vnode.props['end-placeholder']).toBeUndefined()
+    expect(vnode.props.startPlaceholder).toBeUndefined()
+    expect(vnode.props.endPlaceholder).toBeUndefined()
+    expect(vnode.props.isRange).toBeUndefined()
+    expect(vnode.props['is-range']).toBeUndefined()
+  })
+
+  it('range 仅配置字符串 placeholder → 复制为 [ph, ph]', () => {
+    const props = propsOf('TimePicker', {
+      attrs: { isRange: true, placeholder: '请选择时间' },
+    })
+    expect(props.placeholder).toEqual(['请选择时间', '请选择时间'])
+  })
+
+  it('range 组件解析为 TimeRangePicker（回归：TimePicker.RangePicker 已不存在）', () => {
+    const vnode = vnodeOf('TimePicker', { attrs: { isRange: true } })
+    expect(vnode.type).toBe(TimeRangePicker)
+  })
+
+  it('props（非 attrs）里的 isRange/占位符同样生效', () => {
+    const props = propsOf('TimePicker', {
+      props: { isRange: true, 'start-placeholder': '起', 'end-placeholder': '止' },
+    })
+    expect(props.placeholder).toEqual(['起', '止'])
+    expect(props.isRange).toBeUndefined()
+  })
+
+  it('非 range 时间选择器：字符串 placeholder 保持字符串，EP 键被清理', () => {
+    const props = propsOf('TimePicker', {
+      attrs: { placeholder: '选择时间', 'start-placeholder': '不应出现', 'end-placeholder': '不应出现' },
+    })
+    expect(props.placeholder).toBe('选择时间')
+    expect(props['start-placeholder']).toBeUndefined()
+    expect(props['end-placeholder']).toBeUndefined()
   })
 })
 

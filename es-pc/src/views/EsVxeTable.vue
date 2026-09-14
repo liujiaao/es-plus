@@ -145,7 +145,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
         vxe-table 是可选 peer 依赖（<code>vxe-table >= 4.5.0 &lt; 5.0.0</code>），未安装时
         <code>engine: 'vxe'</code> 会自动降级为默认引擎并在开发环境告警。vxe 引擎的完整配置（导出、
         树形数据、合并单元格）见主文档站的
-        <a href="https://liujiaao.github.io/es-plus/" target="_blank">vxe-table 文档</a>。
+        <a href="https://vxetable.cn" target="_blank">vxe-table 文档</a>。
       </p>
     </section>
   </div>
@@ -175,8 +175,8 @@ const rawSFCs = import.meta.glob('./es-vxe/*.vue', { query: '?raw', import: 'def
 
 // vxe 引擎是跨渲染器的：vue3 / vue2 / antdv 三端均支持 engine: 'vxe'，且同一份 columns 配置通用。
 const engines = [
-  { engine: '默认（el-table）', desc: '几十 ~ 几千行，标准场景', flag: '默认' },
-  { engine: 'virtual（el-table-v2）', desc: '上万行，虚拟滚动', flag: 'options.virtual' },
+  { engine: '默认（a-table）', desc: '几十 ~ 几千行，标准场景', flag: '默认' },
+  { engine: 'virtual（a-table :virtual）', desc: '上万行，虚拟滚动', flag: 'options.virtual' },
   { engine: 'vxe（vxe-table）', desc: '行内编辑 / 导出 / 树形 / 多级表头', flag: "engine: 'vxe'" },
 ]
 

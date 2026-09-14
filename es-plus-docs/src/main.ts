@@ -14,9 +14,9 @@ import '@/styles/design-tokens.css'
 import '@/styles/docs-content.css'
 import '@/styles/index.scss'
 
-// dist 模式：别名指向打包产物，样式通过下方 import 引入
-// 源码模式：别名指向 src，样式由 Vite SCSS 管道自动处理（空文件占位）
-import 'es-plus-ui/dist/style.css'
+// dist 模式：别名指向打包产物；源码模式：别名指向空文件（样式由 Vite SCSS 管道处理）。
+// 旧代码 import 的是不存在的包名 `es-plus-ui/dist/style.css`，纯误导，已改为站点自有别名。
+import '@es-plus/style.css'
 
 import { installAppPlugins } from '@/utils/install-app-plugins'
 

@@ -693,7 +693,7 @@ export default {
         <h3>遇到问题？</h3>
         <p>如果在使用过程中遇到问题，可以参考 GitHub 仓库中的示例代码或提交 Issue</p>
         <a
-          href="https://github.com/liujiaao/es-eui"
+          href="https://github.com/liujiaao/es-plus"
           target="_blank"
           class="cta-link"
         >

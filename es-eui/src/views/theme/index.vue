@@ -14,7 +14,7 @@
           定制主题
         </router-link>
         <router-link
-          to="/theme/preview"
+          to="/guide/theme"
           class="nav-item"
         >
           主题预览

@@ -10,6 +10,7 @@
 <script setup>
 import { EsCrudPage } from '@es-plus/adapter-antdv'
 import { h, ref } from 'vue'
+import { message, Upload, Button, Progress } from 'ant-design-vue'
 const mockData = Array.from({ length: 12 }, (_, i) => ({
   id: i + 1,
   name: `文档${i + 1}.xlsx`,
@@ -54,7 +55,8 @@ const schema = {
             drag: true,
             action: '#',
             multiple: true,
-            autoUpload: false,
+            // ADV 无 autoUpload：beforeUpload 返回 false 阻止自动上传，避免 action:'#' 被真的请求
+            beforeUpload: () => false,
             onChange: () => {}
           }, {
             default: () => h('div', [

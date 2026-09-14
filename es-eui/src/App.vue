@@ -56,8 +56,9 @@
             AI 工具链
           </router-link>
           <a
-            href="https://github.com"
+            href="https://github.com/liujiaao/es-plus"
             target="_blank"
+            rel="noopener"
             class="nav-link"
           >
             <i class="el-icon-link"></i> GitHub
@@ -126,7 +127,7 @@
       class="footer"
     >
       <div class="container">
-        <p>ES-Plus © 2024 基于 Vue 2.0 和 Element UI 的组件库</p>
+        <p>ES-Plus © {{ new Date().getFullYear() }} 基于 Vue 2.0 和 Element UI 的组件库</p>
       </div>
     </footer>
   </div>

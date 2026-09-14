@@ -1,5 +1,5 @@
 {
-  "$schema": "https://es-plus.dev/ai/ai-tools.schema.json",
+  "$schema": "https://liujiaao.github.io/es-plus/ai/ai-tools.schema.json",
   "title": "AI 工具链",
   "subtitle": "ES-Plus 是「中后台 CRUD 的配置层」——因为配置是数据，AI 才能可靠地生成。配套 MCP Server 与 CLI，AI 生成的代码真的能编译。",
   "sections": [

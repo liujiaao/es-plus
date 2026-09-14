@@ -24,7 +24,7 @@
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
         <template #title>
-          <b>heightType: 'height' + tabHeight</b> — el-table 高度自动 = 容器 - 表单 - 分页。
+          <b>heightType: 'height' + tabHeight</b> — a-table 高度自动 = 容器 - 表单 - 分页。
           表单展开/收起时 ResizeObserver 自动触发高度重算，无需手动监听。
         </template>
       </Alert>

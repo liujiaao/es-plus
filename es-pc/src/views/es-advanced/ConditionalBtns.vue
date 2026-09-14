@@ -10,7 +10,7 @@
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
         <template #title>
-          <b>btns + clickEvent</b> — 一行配置声明行操作按钮，替代 el-table 冗长的 v-if / template slot 写法。
+          <b>btns + clickEvent</b> — 一行配置声明行操作按钮，替代 a-table 冗长的 v-if / template slot 写法。
           按钮行为随行数据动态变化，无需手动判断。
         </template>
       </Alert>

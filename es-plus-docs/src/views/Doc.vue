@@ -65,6 +65,7 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import DemoBlock from '@/components/doc/DemoBlock.vue'
 import { installAppPlugins } from '@/utils/install-app-plugins'
+import { rewriteInternalDocLinks } from '@/utils/doc-links'
 
 // Raw markdown imports — eliminates template-string escaping issues
 import gettingStartedMd from '@/docs/getting-started.md?raw'
@@ -206,11 +207,13 @@ const renderedContent = computed(() => {
   const withContainers = renderContainers(preprocessed)
   const html = md.render(withContainers)
   // Add IDs to headings for TOC linking
-  return html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
+  const withHeadingIds = html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
     const text = content.replace(/<[^>]+>/g, '').trim()
     const id = text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
     return `<h${level} id="${id}">${content}</h${level}>`
   })
+  // hash 路由：把 .md 里的站内绝对链接 /guide/xxx 改写为 #/guide/xxx
+  return rewriteInternalDocLinks(withHeadingIds)
 })
 
 const toc = ref<{ id: string; text: string }[]>([])

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://es-plus.dev/sitemap.xml
+Sitemap: https://liujiaao.github.io/es-plus/sitemap.xml

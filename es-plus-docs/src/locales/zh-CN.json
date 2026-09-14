@@ -205,6 +205,7 @@
     "emptyPreview": "生成配置后可在此预览效果",
     "emptyJson": "生成配置后可查看 JSON 数据结构",
     "settingsAlert": "填写 API Key 后将使用真实 AI 生成，支持 OpenAI 兼容格式（如 DeepSeek、通义千问、月之暗面等）。不填则使用本地规则引擎。",
+    "proxyNotice": "当前 Base URL 走本地开发代理（/openai），仅在 npm run dev 下可用，用于规避浏览器 CORS。生产环境需自备 CORS 代理/网关，并在设置中改为其地址。",
     "cancel": "取消",
     "save": "保存",
     "promptRequired": "请输入需求描述",

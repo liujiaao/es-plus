@@ -3,6 +3,15 @@
     <div class="ai-crud-header">
       <h1 class="ai-crud-title">{{ t('aiCrud.title') }}</h1>
       <p class="ai-crud-banner">{{ t('aiCrud.banner') }}</p>
+      <el-alert
+        v-if="isDevProxyBase"
+        class="ai-crud-proxy-notice"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #title>{{ t('aiCrud.proxyNotice') }}</template>
+      </el-alert>
       <div class="ai-crud-toolbar">
         <el-tag :type="useAI ? 'success' : 'info'" class="engine-tag">
           {{ useAI ? t('aiCrud.engineAi') : t('aiCrud.engineRule') }}
@@ -106,7 +115,7 @@
           <el-input v-model="aiConfig.apiKey" placeholder="sk-..." show-password />
         </el-form-item>
         <el-form-item label="Base URL">
-          <el-input v-model="aiConfig.baseUrl" placeholder="https://api.openai.com/v1" />
+          <el-input v-model="aiConfig.baseUrl" placeholder="/openai/v1 或 https://your-gateway.example.com/v1" />
         </el-form-item>
         <el-form-item label="Model">
           <el-input v-model="aiConfig.model" placeholder="gpt-4o-mini" />
@@ -169,10 +178,15 @@ const previewOptions = computed(() => ({
 // ─── AI config ──────────────────────────────────────────────────────────
 const aiConfig = reactive({
   apiKey: '',
-  baseUrl: 'https://api.openai.com/v1',
+  // 默认走 vite dev server 的同源代理（见 vite.config.ts server.proxy）：
+  // /openai/v1 → https://api.openai.com/v1。浏览器直连 OpenAI 会被 CORS 拦截。
+  // 用户可在设置里改成任意自建 endpoint（如自建网关 / 兼容 OpenAI 的国内服务）。
+  baseUrl: '/openai/v1',
   model: 'gpt-4o-mini',
 })
 const useAI = computed(() => !!aiConfig.apiKey)
+// 当前是否在使用开发态同源代理路径（生产无此代理，需用户自备网关）。
+const isDevProxyBase = computed(() => aiConfig.baseUrl.startsWith('/openai'))
 const showSettings = ref(false)
 
 // ─── handlers ──────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@
 import { EsForm } from '@es-plus/adapter-antdv'
 import { ref, reactive, computed } from 'vue'
 import { message } from 'ant-design-vue'
+import { fetchMockUsers, fetchMockPosts, fetchMockAlbums } from '@/utils/mock-api'
 
 const formRef = ref()
 
@@ -45,35 +46,17 @@ const formItems = computed(() => [
     attrs: {
       placeholder: '请选择省份',
       allowClear: true,
-      filterable: true
+      showSearch: true
     },
-    // 接口请求配置：指定 API 地址和请求方法
+    // 接口请求配置：真实项目里指向后端地址（此处仅作配置示例）
     apiParams: {
-      url: 'https://jsonplaceholder.typicode.com/users',
+      url: '/api/mock/users',
       method: 'GET'
     },
     // 自定义 HTTP 请求方法，返回 Promise，resolve 的值为 API 原始响应数据
-    // 参数 config 包含 { url, headers, formParams, ... }
-    httpRequest: (config: Record<string, unknown>) => {
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('GET', config.url as string, true)
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              // 直接返回 API 原始数据（数组或对象均可），crtn 回调会接收此数据
-              resolve(JSON.parse(xhr.responseText))
-            } catch {
-              resolve([])
-            }
-          } else {
-            reject(new Error('Request failed'))
-          }
-        }
-        xhr.onerror = () => reject(new Error('Network error'))
-        xhr.send()
-      })
-    },
+    // 参数 config 包含 { url, headers, formParams, ... }；本示例用站内本地 mock，
+    // 断网/被墙时也不会静默空白。真实项目可改为 fetch(config.url) 或封装的 request。
+    httpRequest: () => fetchMockUsers(),
     // 响应数据格式化回调
     // crtn 接收 httpRequest resolve 的原始数据，返回 [{ label, value }] 格式
     listenToCallBack: {
@@ -110,33 +93,16 @@ const formItems = computed(() => [
     attrs: {
       placeholder: '请选择城市',
       allowClear: true,
-      filterable: true,
+      showSearch: true,
       // 未选择省份时禁用城市选择
       disabled: !formModel.province
     },
     apiParams: {
-      url: 'https://jsonplaceholder.typicode.com/posts',
+      url: '/api/mock/posts',
       method: 'GET'
     },
-    httpRequest: (config: Record<string, unknown>) => {
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('GET', config.url as string, true)
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText))
-            } catch {
-              resolve([])
-            }
-          } else {
-            reject(new Error('Request failed'))
-          }
-        }
-        xhr.onerror = () => reject(new Error('Network error'))
-        xhr.send()
-      })
-    },
+    // 站内本地 mock，断网可用；真实项目替换为 fetch(config.url)
+    httpRequest: () => fetchMockPosts(),
     listenToCallBack: {
       crtn: (data: unknown) => {
         if (Array.isArray(data)) {
@@ -168,33 +134,16 @@ const formItems = computed(() => [
     attrs: {
       placeholder: '请选择区县',
       allowClear: true,
-      filterable: true,
+      showSearch: true,
       // 未选择城市时禁用区县选择
       disabled: !formModel.city
     },
     apiParams: {
-      url: 'https://jsonplaceholder.typicode.com/albums',
+      url: '/api/mock/albums',
       method: 'GET'
     },
-    httpRequest: (config: Record<string, unknown>) => {
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('GET', config.url as string, true)
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText))
-            } catch {
-              resolve([])
-            }
-          } else {
-            reject(new Error('Request failed'))
-          }
-        }
-        xhr.onerror = () => reject(new Error('Network error'))
-        xhr.send()
-      })
-    },
+    // 站内本地 mock，断网可用；真实项目替换为 fetch(config.url)
+    httpRequest: () => fetchMockAlbums(),
     listenToCallBack: {
       crtn: (data: unknown) => {
         if (Array.isArray(data)) {

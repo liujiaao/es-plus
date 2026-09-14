@@ -6,7 +6,7 @@ declare module '*.vue' {
   export default component
 }
 
-declare module 'es-plus-ui/dist/style.css'
+declare module '@es-plus/style.css'
 
 interface ImportMetaEnv {
   readonly VITE_APP_TITLE: string

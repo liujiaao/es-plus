@@ -134,8 +134,9 @@ const formItems = [
       listType: 'text' as const,
       multiple: true,
       showFileList: true,
-      // ADV 用 maxCount 限制数量（无 el-upload 的 limit/onExceed）
-      maxCount: 10
+      // ADV 用 maxCount 限制数量（适配器已支持 EP limit→maxCount 映射，二者等价）
+      maxCount: 10,
+      // 如需按 EP 写法，也可直接写 limit: 10，适配器会自动映射为 maxCount
     },
     // 只 resolve Promise，不调用 options.onSuccess，避免触发两次
     httpRequest: (options: any) => {

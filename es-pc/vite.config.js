@@ -49,5 +49,20 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       open: true,
     },
+    build: {
+      // 分包：把体积最大的 ant-design-vue / vxe / 图标拆出主 chunk，降低首屏 index 体积。
+      // 不做按需引入（风险大），仅按依赖边界拆分，可被浏览器并行缓存。
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router'],
+            'vendor-antd': ['ant-design-vue'],
+            'vendor-antd-icons': ['@ant-design/icons-vue'],
+            'vendor-vxe': ['vxe-table', 'vxe-pc-ui', '@vxe-ui/core', 'xe-utils'],
+          },
+        },
+      },
+    },
   }
 })

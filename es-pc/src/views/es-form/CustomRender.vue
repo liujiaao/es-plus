@@ -40,9 +40,14 @@ const formItems = [
     render: (h, model) => {
       return h(Upload, {
         class: 'avatar-uploader',
-        'show-file-list': false,
-        'auto-upload': false,
-        'on-change': (file) => { model.avatar = URL.createObjectURL(file.raw) }
+        showUploadList: false,
+        // ADV 无 EP 的 auto-upload：beforeUpload 返回 false 即阻止自动上传
+        beforeUpload: () => false,
+        // ADV onChange 参数为 info 对象，原始文件在 info.file.raw
+        onChange: (info) => {
+          const raw = info?.file?.raw
+          if (raw) model.avatar = URL.createObjectURL(raw)
+        }
       }, () => {
         if (model.avatar) {
           return h('img', { src: model.avatar, class: 'avatar', style: 'width: 100px; height: 100px; border-radius: 50%; object-fit: cover;' })
@@ -91,7 +96,7 @@ const formItems = [
         targetKeys: model.transfer,
         'onUpdate:targetKeys': (val) => { model.transfer = val },
         dataSource: transferData,
-        filterable: true,
+        showSearch: true,
         titles: ['待选', '已选'],
         // ADV 的 Transfer 默认 render 返回 null，需显式提供 render 才会显示条目文本
         render: (item) => item.title

@@ -517,7 +517,7 @@ export default {
               立即开始
             </router-link>
             <a
-              href="https://github.com/liujiaao/es-eui"
+              href="https://github.com/liujiaao/es-plus"
               target="_blank"
               class="btn btn-outline btn-lg"
             >

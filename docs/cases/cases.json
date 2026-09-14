@@ -1,5 +1,5 @@
 {
-  "$schema": "https://es-plus.dev/cases/cases.schema.json",
+  "$schema": "https://liujiaao.github.io/es-plus/cases/cases.schema.json",
   "note": "L1-L5 案例目录单一真源（docs/改造三端站点.md §3.2）。三站「核心案例」页据此渲染，link 指向各站承载该案例的文档页。",
   "levels": [
     {

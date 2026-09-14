@@ -23,10 +23,10 @@
               </a-menu>
             </template>
           </a-dropdown>
-          <a-button type="link" href="https://github.com" target="_blank">
+          <a-button type="link" href="https://github.com/liujiaao/es-plus" target="_blank">
             <GithubOutlined /> GitHub
           </a-button>
-          <a-button type="primary" size="small">v1.0.0</a-button>
+          <a-button type="primary" size="small">v{{ adapterVersion }}</a-button>
         </a-space>
       </div>
     </a-layout-header>
@@ -130,7 +130,9 @@ import {
   RobotOutlined,
   SwapOutlined,
 } from '@ant-design/icons-vue'
+import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
 
+const adapterVersion = ADAPTER_ANTDV_VERSION
 const router = useRouter()
 const route = useRoute()
 

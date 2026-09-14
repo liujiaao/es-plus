@@ -205,6 +205,7 @@
     "emptyPreview": "Generate first to see the live preview.",
     "emptyJson": "Generate first to see the JSON.",
     "settingsAlert": "With an API key, real AI will generate the config (OpenAI-compatible — DeepSeek / Qwen / Moonshot etc.). Without a key, the local rule engine is used.",
+    "proxyNotice": "This Base URL uses the local dev proxy (/openai), which only works under npm run dev to bypass browser CORS. In production you must provide your own CORS proxy/gateway and set its URL in Settings.",
     "cancel": "Cancel",
     "save": "Save",
     "promptRequired": "Please enter a prompt.",

@@ -200,17 +200,17 @@ onMounted(() => {
     allowComments: false,
     schemas: [
       {
-        uri: 'https://es-plus.dev/schemas/es-form.schema.json',
+        uri: 'https://liujiaao.github.io/es-plus/schemas/es-form.schema.json',
         fileMatch: ['form-items.json'],
         schema: esFormSchema,
       },
       {
-        uri: 'https://es-plus.dev/schemas/es-table-columns.schema.json',
+        uri: 'https://liujiaao.github.io/es-plus/schemas/es-table-columns.schema.json',
         fileMatch: ['table-columns.json'],
         schema: esTableColumnsSchema,
       },
       {
-        uri: 'https://es-plus.dev/schemas/es-table-data.schema.json',
+        uri: 'https://liujiaao.github.io/es-plus/schemas/es-table-data.schema.json',
         fileMatch: ['table-data.json'],
         schema: esTableDataSchema,
       },

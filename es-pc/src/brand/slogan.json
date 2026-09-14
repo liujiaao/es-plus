@@ -1,5 +1,5 @@
 {
-  "$schema": "https://es-plus.dev/brand/slogan.schema.json",
+  "$schema": "https://liujiaao.github.io/es-plus/brand/slogan.schema.json",
   "name": "ES-Plus",
   "positioning": "中后台 CRUD 的配置层",
   "positioningEn": "The Configuration Layer for Admin CRUD",

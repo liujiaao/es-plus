@@ -39,9 +39,13 @@ function main() {
 
   for (const target of TARGETS) {
     if (CHECK) {
-      // es-eui/ 被 .gitignore（本地-only playground，不进 CI）：该站点缺失时跳过校验，
-      // 只对已跟踪站点（es-plus-docs / es-pc）做单源一致性门禁。
-      if (rel(target).startsWith('es-eui/') && !existsSync(target)) continue
+      // 三个站点均已纳入版本库与构建：目标缺失属异常，显式报错而非静默跳过
+      // （此前误以为 es-eui/ 被 .gitignore，导致该站目标被删时漏检）。
+      if (!existsSync(target)) {
+        console.error(`❌ 目标不存在：${rel(target)}`)
+        drift = true
+        continue
+      }
       const dstContent = existsSync(target) ? readText(target) : null
       if (!sameText(dstContent, srcContent)) {
         console.error(`❌ 文档内容设计规范漂移：${rel(target)} 与单源不一致`)

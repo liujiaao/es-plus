@@ -13,20 +13,16 @@
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref, h } from 'vue'
 import { Tag } from 'ant-design-vue'
+import { fetchPostsPaginated } from '@/utils/mock-api'
 
 const tableData = ref([])
 const pagination = ref({ pageSize: 10, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
-const httpRequest = async (params) => {
+// 站内本地 mock：不直连 jsonplaceholder，断网/被墙时也能正常分页，不会静默空白
+const httpRequest = (params) => {
   const pageIndex = params.pageIndex || 1
   const pageSize = params.pageSize || 10
-  const start = (pageIndex - 1) * pageSize
-  const response = await fetch(
-    `https://jsonplaceholder.typicode.com/posts?_start=${start}&_limit=${pageSize}`
-  )
-  const data = await response.json()
-  const total = parseInt(response.headers.get('x-total-count') || '100')
-  return { data, total, pageSize, pageIndex }
+  return fetchPostsPaginated({ pageIndex, pageSize })
 }
 
 const columns = [
@@ -52,10 +48,10 @@ const tableOptions = {
   // stripe: true,
   height: 400,
   heightType: 'height',
-  // actionUrl: 'https://jsonplaceholder.typicode.com/posts',
   httpRequest,
+  // 真实项目指向后端分页接口；本示例由 httpRequest 返回本地 mock
   apiParams: {
-    url: 'https://jsonplaceholder.typicode.com/posts',
+    url: '/api/mock/posts',
     method: 'GET'
   },
   configTableOut: {

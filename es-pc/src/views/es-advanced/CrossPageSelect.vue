@@ -20,7 +20,7 @@
     <div class="hint">
       <Alert type="info" :closable="false" show-icon>
         <template #title>
-          切换分页后选择不丢失 — <b>rowkey + cachePageSelection</b> 解决 el-table 跨页选择丢失的痛点。
+          切换分页后选择不丢失 — <b>rowkey + cachePageSelection</b> 解决 a-table 跨页选择丢失的痛点。
           getSelectionRows() 返回所有页面的选中数据。
         </template>
       </Alert>

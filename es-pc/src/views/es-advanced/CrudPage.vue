@@ -205,7 +205,8 @@ const pageSchema: any = {
           dataOptions: [{ label: '选项一', value: '1' }, { label: '选项二', value: '2' }, { label: '选项三', value: '3' }],
           formItemOptions: { rules: [{ required: true, message: '请选择一项' }] } },
         { prop: 'photos', label: '照片墙', formtype: 'Upload', span: 24,
-          attrs: { listType: 'picture-card', action: '#', autoUpload: false, limit: 5 } }
+          // ADV 无 autoUpload：beforeUpload 返回 false 阻止自动上传，避免 action:'#' 被真的请求
+          attrs: { listType: 'picture-card', action: '#', beforeUpload: () => false, limit: 5 } }
       ],
       formLayout: { labelWidth: '100px' }
     },

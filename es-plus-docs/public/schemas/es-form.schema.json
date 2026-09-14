@@ -1,111 +1,248 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://es-plus.dev/schemas/es-form.schema.json",
+  "$id": "https://liujiaao.github.io/es-plus/schemas/es-form.schema.json",
   "title": "ES-Plus EsForm formItemList",
-  "description": "Schema for the formItemList prop passed to <es-form />",
+  "description": "Schema for the formItemList prop passed to <es-form />. GENERATED from packages/shared/schemas/form-item.schema.json by scripts/gen-doc-schemas.mjs — do not hand-edit.",
   "type": "array",
   "items": {
-    "$ref": "#/definitions/FormItem"
-  },
-  "definitions": {
-    "FormItem": {
-      "type": "object",
-      "required": ["prop"],
-      "properties": {
-        "prop": {
-          "type": "string",
-          "description": "字段名（绑定到 model 的 key）"
-        },
-        "label": {
-          "type": "string",
-          "description": "字段标签"
-        },
-        "formtype": {
-          "type": "string",
-          "description": "表单组件类型",
-          "enum": [
-            "Input",
-            "InputNumber",
-            "Select",
-            "Cascader",
-            "DatePicker",
-            "TimePicker",
-            "Switch",
-            "Radio",
-            "Checkbox",
-            "Slider",
-            "Rate",
-            "ColorPicker",
-            "Upload",
-            "Transfer",
-            "Custom"
-          ]
-        },
-        "span": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 24,
-          "description": "栅格占位（1-24）"
-        },
-        "attrs": {
+    "title": "EsForm Item Configuration",
+    "description": "Configuration for a single form field in @es-plus/vue3 EsForm component",
+    "type": "object",
+    "required": [
+      "prop",
+      "label"
+    ],
+    "properties": {
+      "prop": {
+        "type": "string",
+        "description": "Field name bound to the form model. Supports nested paths like 'a.b' or 'a[0].b'"
+      },
+      "label": {
+        "type": "string",
+        "description": "Display label for the form field"
+      },
+      "labelKey": {
+        "type": "string",
+        "description": "i18n translation key for the label. When a global t() function is configured via app.use(ESPlus, { t }), the label will be translated using t(labelKey). Falls back to label when t() is not configured"
+      },
+      "formtype": {
+        "type": "string",
+        "enum": [
+          "Input",
+          "InputNumber",
+          "Select",
+          "DatePicker",
+          "TimePicker",
+          "Slider",
+          "ColorPicker",
+          "Transfer",
+          "Cascader",
+          "Radio",
+          "Checkbox",
+          "Switch",
+          "Rate",
+          "Upload"
+        ],
+        "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted."
+      },
+      "span": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 24,
+        "default": 6,
+        "description": "Grid column span (el-col span, 24-column layout)"
+      },
+      "placeholder": {
+        "type": "string",
+        "description": "Shortcut for placeholder text. Automatically injected into attrs.placeholder; explicit attrs.placeholder takes priority."
+      },
+      "clearable": {
+        "type": "boolean",
+        "description": "Shortcut for clearable. Automatically injected into attrs.clearable; explicit attrs.clearable takes priority."
+      },
+      "disabled": {
+        "type": "boolean",
+        "description": "Shortcut for disabled. Automatically injected into attrs.disabled; explicit attrs.disabled takes priority."
+      },
+      "attrs": {
+        "type": "object",
+        "description": "Attributes passed through to the underlying Element Plus component (e.g., placeholder, clearable, type, multiple)",
+        "additionalProperties": true
+      },
+      "props": {
+        "type": "object",
+        "description": "Component props passed through to the underlying control (Vue 2 createElement props; on Vue 3 merged with attrs and forwarded together). attrs wins on the same key.",
+        "additionalProperties": true
+      },
+      "on": {
+        "type": "object",
+        "description": "Event listeners passed to the component (e.g., change, input, blur)",
+        "additionalProperties": true
+      },
+      "dataOptions": {
+        "type": "array",
+        "description": "Options data for Select, Radio, Checkbox, Cascader components",
+        "items": {
           "type": "object",
-          "description": "传递给底层 Element Plus 组件的 props（如 placeholder、disabled、type 等）"
-        },
-        "dataOptions": {
-          "type": "array",
-          "description": "Select / Radio / Checkbox 的选项",
-          "items": {
-            "type": "object",
-            "properties": {
-              "label": { "type": "string" },
-              "value": {}
-            },
-            "required": ["label"]
-          }
-        },
-        "apiParams": {
-          "type": "object",
-          "description": "异步加载 dataOptions 配置",
+          "required": [
+            "label",
+            "value"
+          ],
           "properties": {
-            "url": { "type": "string" },
-            "method": { "type": "string", "enum": ["GET", "POST"] },
-            "params": { "type": "object" },
-            "fieldOutput": { "type": "object" }
+            "label": {
+              "type": "string",
+              "description": "Display text"
+            },
+            "value": {
+              "description": "Option value (string, number, or boolean)"
+            },
+            "disabled": {
+              "type": "boolean",
+              "description": "Whether this option is disabled"
+            },
+            "children": {
+              "type": "array",
+              "description": "Child options for Cascader",
+              "items": {
+                "$ref": "#/items/properties/dataOptions/items"
+              }
+            }
+          }
+        }
+      },
+      "width": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "Field width (number for px, string for CSS value)"
+      },
+      "isHidden": {
+        "description": "Function (model, item, formProps) => boolean. Returns true to hide the field conditionally"
+      },
+      "render": {
+        "description": "Custom render function (h, model, ctx) => VNode. Used when formtype is not set"
+      },
+      "apiParams": {
+        "title": "API Parameters Configuration",
+        "description": "Configuration for loading options from an API endpoint",
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "API endpoint URL"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE",
+              "PATCH"
+            ],
+            "default": "GET",
+            "description": "HTTP request method"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Request headers",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "object",
+            "description": "Additional parameters merged into the request",
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "description": "Extra request options",
+            "additionalProperties": true
           }
         },
-        "rules": {
-          "oneOf": [
-            { "type": "object" },
-            { "type": "array", "items": { "type": "object" } }
-          ],
-          "description": "校验规则（Element Plus 格式）"
+        "additionalProperties": true
+      },
+      "isInitRun": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to auto-load API data on component initialization"
+      },
+      "callOptionListFormat": {
+        "description": "Function (data) => Array<{label, value}>. Transforms API response to dataOptions format"
+      },
+      "httpRequest": {
+        "description": "Custom HTTP request function override for this field. Signature: (params) => Promise"
+      },
+      "listenToCallBack": {
+        "type": "object",
+        "description": "Callback mapping. Supports both readable names (responseTransform, beforeRequest, afterResponse) and legacy abbreviations (crtn, brcb, qrcb)",
+        "properties": {
+          "responseTransform": {
+            "description": "Function to convert API response to [{label, value}] format (recommended, replaces 'crtn')"
+          },
+          "crtn": {
+            "description": "(Deprecated) Use responseTransform. Function to convert API response to [{label, value}] format"
+          },
+          "beforeRequest": {
+            "description": "Function to intercept/transform request params before sending (recommended, replaces 'brcb')"
+          },
+          "brcb": {
+            "description": "(Deprecated) Use beforeRequest. Before Request CallBack"
+          },
+          "afterResponse": {
+            "description": "Function to intercept/transform response data after receiving (recommended, replaces 'qrcb')"
+          },
+          "qrcb": {
+            "description": "(Deprecated) Use afterResponse. Query Result CallBack"
+          }
         },
-        "isHidden": {
-          "oneOf": [
-            { "type": "boolean" },
-            { "type": "string", "description": "函数体表达式（运行时 eval）" }
-          ],
-          "description": "是否隐藏，可基于 model 做条件显隐"
-        },
-        "disabled": {
-          "type": "boolean"
-        },
-        "default": {
-          "description": "默认值"
-        },
-        "placeholder": {
-          "type": "string"
-        },
-        "labelWidth": {
-          "type": ["string", "number"]
-        },
-        "on": {
+        "additionalProperties": true
+      },
+      "required": {
+        "type": "boolean",
+        "description": "Whether this field is required. Injected into the underlying form-item's `required` prop. When formItemOptions.required is also set, formItemOptions takes priority."
+      },
+      "rules": {
+        "type": "array",
+        "description": "Validation rules for this field (Element Plus format). Injected into the underlying form-item's `rules` and merged with form-level rules, with this field's rules ordered first (so its message wins). When formItemOptions.rules is also set, formItemOptions takes priority.",
+        "items": {
           "type": "object",
-          "description": "事件监听（change/input/blur/focus 等），值为函数体字符串",
           "additionalProperties": true
         }
       },
-      "additionalProperties": true
-    }
+      "formItemOptions": {
+        "type": "object",
+        "description": "Additional props passed to the underlying form-item (el-form-item / a-form-item). This is the low-level escape hatch: its `rules` / `required` take priority over the same-named top-level fields.",
+        "properties": {
+          "rules": {
+            "description": "Validation rules for this field (Element Plus format)"
+          },
+          "labelWidth": {
+            "type": "string",
+            "description": "Override label width for this field"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Show required asterisk"
+          }
+        },
+        "additionalProperties": true
+      },
+      "components": {
+        "type": "object",
+        "description": "Custom component mapping for this field",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": true
   }
 }

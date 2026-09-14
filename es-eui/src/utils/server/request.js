@@ -5,9 +5,9 @@ import routes from '@/router'
 import { Loading } from 'element-ui';
 
 // create an axios instance
-const apiurl = process.env.VUE_APP_URL
+// 环境变量统一使用 VUE_APP_BASE_API（.env.development / .env.production 均已定义）
 const service = axios.create({
-  baseURL: process.env.NODE_ENV === 'development' ? process.env.BASE_API : apiurl,
+  baseURL: process.env.VUE_APP_BASE_API || '',
   contentType: 'application/json;charset=UTF-8',
   timeout: 60000,
   // withCredentials: true

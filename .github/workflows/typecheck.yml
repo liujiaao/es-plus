@@ -58,6 +58,30 @@ jobs:
       - name: ESLint (0 errors)
         run: npm run lint
 
+  docs-build:
+    # 三个文档站的构建此前只在 deploy-docs（master）里跑，PR 阶段无门禁 ——
+    # 路由/别名/配置回归只能合入后暴露。这里在 PR/push 阶段就构建三站。
+    name: Docs build (${{ matrix.site }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [es-plus-docs, es-pc, es-eui]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # es-eui 的 prebuild 会重建本地 @es-plus/core / @es-plus/vue2（用根 workspace 的 tsc/vite），
+      # 所以必须先装根依赖（与 deploy-docs 的安装顺序一致）。
+      - name: Install monorepo deps
+        run: npm ci --legacy-peer-deps
+      - name: Install site deps (${{ matrix.site }})
+        run: cd ${{ matrix.site }} && npm ci --legacy-peer-deps
+      - name: Build site (${{ matrix.site }})
+        run: cd ${{ matrix.site }} && npm run build
+
   consistency:
     name: Consistency (type exports + schema single-source)
     runs-on: ubuntu-latest

@@ -1,5 +1,4 @@
 import Vue from 'vue'
-import VueCompositionAPI from '@vue/composition-api'
 import App from './App.vue'
 import router from './router'
 import store from './store'
@@ -118,7 +117,7 @@ Vue.config.warnHandler = function (msg, vm, trace) {
 
 // 全局 Promise 错误处理
 window.addEventListener('unhandledrejection', event => {
-    console.warn('Unhandled promise rejection:', event.reason)
+    console.error('Unhandled promise rejection:', event.reason)
     event.preventDefault()
 })
 

@@ -156,6 +156,7 @@ import {
 } from '@ant-design/icons-vue'
 // 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发，禁止手改本文件
 import brand from '@/brand/slogan.json'
+import { ADAPTER_ANTDV_VERSION, CORE_VERSION } from '@/utils/versions'
 import CodeDiff from '@/components/CodeDiff.vue'
 import TriRenderTabs from '@/components/TriRenderTabs.vue'
 
@@ -184,8 +185,8 @@ const techs = [
   { name: 'Vite', version: '6.3+' },
   { name: 'Ant Design Vue', version: '4.2+' },
   { name: 'Vue Router', version: '4.5+' },
-  { name: '@es-plus/adapter-antdv', version: '1.0.0' },
-  { name: '@es-plus/core', version: '1.0.1' },
+  { name: '@es-plus/adapter-antdv', version: ADAPTER_ANTDV_VERSION },
+  { name: '@es-plus/core', version: CORE_VERSION },
 ]
 
 // ── L2 头号案例「零事件代码的 CRUD」并排 diff 内容 ──

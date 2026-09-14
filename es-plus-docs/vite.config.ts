@@ -5,12 +5,13 @@ import Sitemap from 'vite-plugin-sitemap'
 import { resolve } from 'path'
 import { mkdirSync } from 'fs'
 
-const SITE_HOSTNAME = 'https://es-plus.dev'
+const SITE_HOSTNAME = 'https://liujiaao.github.io/es-plus'
 
 // All static (non-param) routes + curated dynamic doc paths.
 // Hash routing means crawlers won't auto-discover, so we list explicitly.
+// 注意：根路由 '/' 由 vite-plugin-sitemap 自动产出，这里不要再列，否则 dist/sitemap.xml
+// 会出现重复的 <loc>。
 const sitemapRoutes = [
-  '/',
   '/playground',
   '/ai-crud',
   // guide pages
@@ -66,6 +67,10 @@ export default defineConfig(({ mode }) => {
       vueJsx(),
       Sitemap({
         hostname: SITE_HOSTNAME,
+        // hostname 含路径时，vite-plugin-sitemap 用 `new URL(routePath, hostname)` 解析，
+        // 根绝对 routePath 会丢掉 /es-plus 前缀；显式 basePath 才能产出
+        // https://liujiaao.github.io/es-plus/...（robots.txt 不受影响）。
+        basePath: '/es-plus',
         dynamicRoutes: sitemapRoutes,
         outDir: 'dist',
       }),
@@ -99,18 +104,66 @@ export default defineConfig(({ mode }) => {
         { find: 'es-plus/components/svg-icon', replacement: aliasTarget },
         { find: 'es-plus/types', replacement: aliasTarget },
         { find: 'es-plus', replacement: aliasTarget },
-        // dist 模式下样式文件指向打包产物，源码模式下指向空文件（源码样式由 Vite 自动处理）
-        { find: 'es-plus-ui/dist/style.css', replacement: useDist ? esPlusDistCss : resolve(__dirname, 'src/styles/_empty.css') },
+        // 库样式入口：dist 模式指向打包产物 style.css，源码模式指向空文件
+        // （源码样式由 Vite 的 SCSS 管道自动处理）。用站点自有别名而非旧包名
+        // `es-plus-ui/dist/style.css`（该包已不存在，纯误导）。
+        { find: '@es-plus/style.css', replacement: useDist ? esPlusDistCss : resolve(__dirname, 'src/styles/_empty.css') },
       ],
     },
     server: {
       port: 3000,
-      host: true
+      host: true,
+      proxy: {
+        // 浏览器直连 https://api.openai.com 会被 CORS 拦截。开发态提供同源代理：
+        // AI CRUD 默认 baseUrl = /openai/v1 → https://api.openai.com/v1。
+        // 生产环境没有这层代理，需用户自备同源网关（页面内有显著提示）。
+        '/openai': {
+          target: 'https://api.openai.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/openai/, ''),
+          configure: (proxy) => {
+            // 去掉浏览器带上的 Origin，避免目标站按来源拒绝（Host 已由 changeOrigin 改写）。
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.removeHeader('origin')
+            })
+          },
+        },
+      },
     },
     css: {
       preprocessorOptions: {
         scss: {
           api: 'modern-compiler'
+        }
+      }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          // 把体积最大的第三方库拆成独立 chunk，避免全部塞进 index-*.js，
+          // 并让浏览器可长期缓存。Element Plus / 全部图标仍全量引入（见
+          // src/utils/install-app-plugins.ts），按需引入风险大，暂不改造。
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return
+            if (id.includes('monaco-editor')) return 'monaco'
+            if (
+              id.includes('element-plus') ||
+              id.includes('@element-plus') ||
+              id.includes('@floating-ui') ||
+              id.includes('lodash-es') ||
+              id.includes('async-validator')
+            ) {
+              return 'element-plus'
+            }
+            if (
+              id.includes('vxe') ||
+              id.includes('@vxe-ui') ||
+              id.includes('xe-utils') ||
+              id.includes('dom-zindex')
+            ) {
+              return 'vxe'
+            }
+          }
         }
       }
     }

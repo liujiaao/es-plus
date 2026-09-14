@@ -201,7 +201,7 @@ export default {
   },
   computed:{
     uploadUrlBase(){
-      const url = process.env.NODE_ENV === 'development' ? process.env.BASE_API : process.env.VUE_APP_URL;
+      const url = process.env.VUE_APP_BASE_API;
       if(url&&url.indexOf("http")===0){
         return url.replace(/\/$/,'')
       }else{ 

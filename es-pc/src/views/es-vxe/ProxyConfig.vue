@@ -25,10 +25,10 @@ const tableRef = ref(null)
 const queryForm = reactive({ keyword: '', department: '' })
 
 const formItems = [
-  { prop: 'keyword', label: '关键词', formtype: 'Input', placeholder: '搜索姓名', attrs: { clearable: true } },
+  { prop: 'keyword', label: '关键词', formtype: 'Input', placeholder: '搜索姓名', attrs: { allowClear: true } },
   {
     prop: 'department', label: '部门', formtype: 'Select',
-    attrs: { clearable: true, placeholder: '全部' },
+    attrs: { allowClear: true, placeholder: '全部' },
     dataOptions: [
       { label: '全部', value: '' },
       { label: '技术部', value: '技术部' },

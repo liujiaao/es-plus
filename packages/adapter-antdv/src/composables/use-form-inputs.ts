@@ -22,6 +22,7 @@ import {
   DatePicker,
   RangePicker,
   TimePicker,
+  TimeRangePicker,
   Slider,
   Transfer,
   Cascader,
@@ -592,7 +593,9 @@ function renderTimePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
   // 同 renderDatePicker：props 与 attrs 合并读取（attrs 同名优先）。
   const attrs = mergedRowAttrs(row)
   const isRange = attrs['is-range'] || attrs.isRange
-  const TimeComp = isRange ? ((TimePicker as any).RangePicker || TimePicker) : TimePicker
+  // ADV 4.x 的范围组件是独立导出的 TimeRangePicker（TimePicker.RangePicker 已不存在，
+  // 旧写法会静默降级为单选 TimePicker）。对齐 renderDatePicker 的 RangePicker 用法。
+  const TimeComp = isRange ? TimeRangePicker : TimePicker
   const fmt = resolveValueFormat(attrs)
   const props: Record<string, unknown> = {
     ...rowPassThrough(row),
@@ -602,7 +605,23 @@ function renderTimePicker(hFn: typeof h, model: Record<string, unknown>, row: Fo
   if (props.valueFormat && !props.format) {
     props.format = props.valueFormat
   }
+  // EP range placeholder → ADV：与 renderDatePicker 对齐，TimeRangePicker 的
+  // placeholder 必须是 [start, end] 数组，且不认 EP 的 start-placeholder/end-placeholder。
+  if (isRange) {
+    const startPh = (attrs['start-placeholder'] ?? attrs.startPlaceholder) as string | undefined
+    const endPh = (attrs['end-placeholder'] ?? attrs.endPlaceholder) as string | undefined
+    if (startPh !== undefined || endPh !== undefined) {
+      props.placeholder = [startPh ?? '', endPh ?? '']
+    } else if (typeof props.placeholder === 'string') {
+      props.placeholder = [props.placeholder, props.placeholder]
+    }
+  }
+  // ADV TimePicker 不认 EP 的 is-range/start-placeholder/end-placeholder，避免作为未知 attr 透传
   delete props['is-range']
   delete props.isRange
+  delete props['start-placeholder']
+  delete props.startPlaceholder
+  delete props['end-placeholder']
+  delete props.endPlaceholder
   return hFn(TimeComp as any, props)
 }
