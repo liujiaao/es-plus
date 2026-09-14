@@ -56,6 +56,9 @@ describe('EsTable(vue2) - 请求 settle', () => {
     await vm.$nextTick()
     const table = tableOf(vm)
     expect(await settleWithin(table.httpRequestInstance())).toBe('settled')
+    // 裸数组响应应直接作为表格数据（回归：此前数组响应渲染空表）
+    expect(table.tableData).toHaveLength(1)
+    expect(table.tableData[0]).toEqual({ id: 1 })
   })
 })
 

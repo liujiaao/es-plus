@@ -217,8 +217,8 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
   （`use-form-inputs.ts:147`）、Input `type`（`:167`）、Switch `active-value`（`:373-380`）、
   Rate `texts/max`（`:395-396`）、`resolveValueFormat`（`:92-94`）。
   → `props: { type: 'textarea' }` 被静默忽略，放 `attrs` 才生效，同名配置放错袋行为完全不同。
-- **antdv Upload `limit` 未映射为 `maxCount`**（CONFIRMED）：`use-form-inputs.ts:401-481`，
-  限制数被忽略；`on-exceed` 在 ADV 无对应事件。
+- ~~**antdv Upload `limit` 未映射为 `maxCount`**~~（**已修复**）：此前限制数被忽略；
+  现 `limit` → `maxCount`，`on-exceed` 在 ADV 无对应事件改为显式告警。
 - ~~**`dataOptions.disabled` 三端全丢**~~（**更正并经复核**）：vue2 一直有透传
   （`use-form-inputs.ts:174,275,330,361`），**只有 vue3 / antdv 丢失** —— Select / Radio / Checkbox
   的选项节点只带 label/value。**已修复**（vue3 三处 + antdv 三处补 `disabled`，并加回归测试）。
@@ -316,10 +316,9 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
   映射到 EUI 的 `medium/small/mini`。此前会话记录把它列为「行为分歧」不准确。
 - **CRLF 说法不准确**：仓库 blob 实为 LF（`git ls-files --eol`：`i/lf` 1079、`i/none` 108），
   是 `core.autocrlf=true` 让 **779 个工作区文件**检出为 CRLF，而非「1186 个 blob 含 CRLF」。
-- **`DatePicker` valueFormat 回写类型分歧属实**：`valueFormat` 未配置时，vue3 / vue2 回写原生
-  `Date`（`vue3/.../use-form-inputs.ts:214-237`），antdv 回写 dayjs
-  （`adapter-antdv/.../use-form-inputs.ts:106-123,491-499`，代码注释自认「必要偏离」）。
-  `model.date.getTime()` 在 antdv 会抛错。
+- **`DatePicker` valueFormat 回写类型分歧属实**（**已修复**）：`valueFormat` 未配置时，vue3 / vue2 回写原生
+  `Date`，antdv 曾回写 dayjs（`model.date.getTime()` 会抛错）。现 antdv 统一回写 `Date`；
+  配置 `valueFormat` 时三端均回写字符串。**行为变化**：依赖 antdv 侧拿到 dayjs 的代码需改读 `Date`。
 
 ---
 
@@ -390,8 +389,16 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 
 - **是否加 publish job**：当前 npm 账号写操作全 403（会话记录第六节）且未解决；
   在恢复写权限前加发布流水线只会引入一个注定失败的 job。**建议**：先解决 npm 写权限再谈。
-- **三端仍存的已知分歧/遗留**（报告 §4）：antdv `Upload limit→maxCount` 未映射、
-  `dataOptions.disabled` 三端仍丢、antdv ColorPicker 原生降级、DatePicker 回写类型 Date vs dayjs —— 均为独立小项。
+- **三端仍未消除的差异**：仅剩 antdv `ColorPicker` 的原生 `<input type="color">` 降级
+  （ADV 无 ColorPicker，已在 `renderer-contract.mjs` 显式登记 deviation）。
+  此前的 `Upload limit`、`dataOptions.disabled`、`DatePicker` 回写类型、裸数组列表响应均已在
+  本轮修复（见 §4 / §6 对应条目）。
+
+### 本轮新增修复（收尾）
+
+- 三端 `es-table` 本地 `formatConfigOut` 支持**裸数组响应**（此前渲染空表）。
+- antdv `Upload limit → maxCount`；`on-exceed` 无对应事件改为显式告警。
+- antdv `DatePicker/TimePicker` 未配 `valueFormat` 时回写**原生 Date**（三端统一）。
 
 ---
 

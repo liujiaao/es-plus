@@ -1,7 +1,7 @@
 /**
  * 表单控件渲染器测试 — 16 种 formtype → ADV 组件映射
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { h } from 'vue'
 import dayjs from 'dayjs'
 import { Input, RangePicker } from 'ant-design-vue'
@@ -75,6 +75,27 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
     const renderFn = formInputComponents(item)!
     const vnode = renderFn(h, makeModel('bound-value'), { row: item, index: 0 }) as any
     expect(vnode.props?.value).toBe('bound-value')
+  })
+
+  it('Upload — EP limit 映射为 ADV maxCount（回归：此前 limit 被静默忽略）', () => {
+    const item = makeItem('Upload', { attrs: { limit: 3 } } as any)
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(), { row: item, index: 0 }) as any
+    expect(vnode.props?.maxCount).toBe(3)
+    expect(vnode.props?.limit).toBeUndefined()
+  })
+
+  it('Upload — on.exceed 在 ADV 无对应事件：告警且不透传 onExceed', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const item = makeItem('Upload', { on: { exceed: () => {} } } as any)
+      const renderFn = formInputComponents(item)!
+      const vnode = renderFn(h, makeModel(), { row: item, index: 0 }) as any
+      expect(warn).toHaveBeenCalled()
+      expect(vnode.props?.onExceed).toBeUndefined()
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('Input textarea — 渲染 TextArea', () => {
@@ -322,7 +343,7 @@ describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）'
     expect(model.testField).toBe('2024-06-15')
   })
 
-  it('DatePicker 未配置 valueFormat → 回写 model 为 dayjs 对象（ADV 原生）', () => {
+  it('DatePicker 未配置 valueFormat → 回写 model 为原生 Date（对齐 vue3/vue2，回归）', () => {
     const item = makeItem('DatePicker')
     const model = makeModel('2024-01-01')
     const renderFn = formInputComponents(item)!
@@ -330,7 +351,23 @@ describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）'
     const props = (vnode as any).props || {}
     const updateHandler = props['onUpdate:value'] as Function
     updateHandler(dayjs('2024-06-15'))
-    expect(dayjs.isDayjs(model.testField)).toBe(true)
+    // 此前回写 dayjs，model.date.getTime() 会抛错；三端统一为 Date
+    expect(model.testField).toBeInstanceOf(Date)
+    expect((model.testField as Date).getTime()).toBe(dayjs('2024-06-15').valueOf())
+  })
+
+  it('DatePicker Range 未配置 valueFormat → 回写 Date 数组', () => {
+    const item = makeItem('DatePicker', { attrs: { type: 'daterange' } })
+    const model = makeModel(['2024-01-01', '2024-01-31'])
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, model, { row: item, index: 0 })
+    const props = (vnode as any).props || {}
+    const updateHandler = props['onUpdate:value'] as Function
+    updateHandler([dayjs('2024-06-01'), dayjs('2024-06-30')])
+    const result = model.testField as Date[]
+    expect(Array.isArray(result)).toBe(true)
+    expect(result.every((d) => d instanceof Date)).toBe(true)
+    expect(result[0].getTime()).toBe(dayjs('2024-06-01').valueOf())
   })
 
   it('TimePicker 字符串值 → 转为 dayjs', () => {

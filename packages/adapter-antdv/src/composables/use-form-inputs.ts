@@ -5,7 +5,8 @@
  * - row.props / row.attrs 合并透传，row.on 的事件名统一转成 onXxx（对齐 vue3 的 rowPassThrough）
  * - v-model 绑定字段按 ADV 各组件适配（value/checked/targetKeys）
  * - DatePicker/TimePicker value 必须 dayjs（ADV 4.x），toDayjsValue/fromDayjsValue 做防御转换；
- *   配置 valueFormat 时回写字符串（对齐 EP value-format），未配置则保留 dayjs（ADV 原生）——此为 ADV 必要偏离
+ *   配置 valueFormat 时回写字符串（对齐 EP value-format），未配置则回写**原生 Date**
+ *   （对齐 vue3/vue2 的 Element 语义，避免三端 model 形状分歧）
  * - DatePicker 单选 type→ADV picker 映射；range→RangePicker
  * - EP Cascader props / Switch active-* / Rate texts→tooltips 等做 EP→ADV 字段映射
  * - Upload customRequest 替代 http-request；itemRender 用 actions.remove 替代 handleRemove
@@ -156,11 +157,18 @@ function toDayjsValue(value: unknown, fmt?: string): unknown {
   return fmt ? dayjs(parsed, fmt) : dayjs(parsed)
 }
 
-/** ADV → model：按需把 dayjs 转回 model 期望的形态（配 fmt→字符串，未配→dayjs） */
+/**
+ * ADV → model：把 ADV 回传的 dayjs 转回 model 期望的形态。
+ *
+ * - 配置了 `valueFormat` → 字符串（对齐 EP `value-format`）
+ * - 未配置 → **原生 Date**（对齐 vue3/vue2 的 Element 语义：EP/EUI 的 DatePicker
+ *   在无 value-format 时回写 Date）。此前返回 dayjs，导致同一份配置在 antdv 下
+ *   model 是 dayjs、在 vue3/vue2 下是 Date —— `model.date.getTime()` 在 antdv 会抛错。
+ */
 function fromDayjsValue(value: unknown, fmt?: string): unknown {
   if (value == null || value === '') return value
   if (Array.isArray(value)) return value.map((v) => fromDayjsValue(v, fmt))
-  if (dayjs.isDayjs(value)) return fmt ? value.format(fmt) : value
+  if (dayjs.isDayjs(value)) return fmt ? value.format(fmt) : (value as dayjs.Dayjs).toDate()
   return value
 }
 
@@ -498,10 +506,22 @@ export function useFormInputs() {
           if (uploadCfg['list-type'] !== undefined && uploadCfg.listType === undefined) {
             uploadCfg.listType = uploadCfg['list-type']
           }
+          // EP limit → ADV maxCount（ADV 用 maxCount 限制文件数，此前 limit 被静默忽略）
+          if (uploadCfg.limit !== undefined && uploadCfg.maxCount === undefined) {
+            uploadCfg.maxCount = uploadCfg.limit
+          }
+          delete uploadCfg.limit
 
           // 事件转换（对齐 vue3 Upload 分支：onXxx 形式）
           if (restRow.on) {
             for (const [key, handler] of Object.entries(restRow.on)) {
+              // EP 的 on-exceed 在 ADV 无对应事件，透传 onExceed 会被当作无效 prop 静默忽略 —— 显式告警
+              if (key === 'exceed') {
+                console.warn(
+                  '[es-plus] Upload 的 on-exceed 在 Ant Design Vue 无对应事件，已忽略；如需超限处理请用 ADV 的 beforeUpload / onChange'
+                )
+                continue
+              }
               uploadCfg[toOnKey(key)] = handler
             }
           }

@@ -437,6 +437,9 @@ describe('EsTable - 自动请求配置', () => {
       new Promise((r) => setTimeout(() => r('timeout'), 300))
     ])
     expect(outcome).toBe('settled')
+    // 裸数组响应应直接作为表格数据（回归：此前数组响应渲染空表）
+    expect(vm.tableData).toHaveLength(1)
+    expect(vm.tableData[0]).toEqual({ id: 1 })
   })
 
   it('falls back to global $esPlusTable.$httpRequest', async () => {

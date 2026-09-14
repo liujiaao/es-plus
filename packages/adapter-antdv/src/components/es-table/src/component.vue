@@ -811,7 +811,18 @@ function getListenToCallBack(eventName: string, params: unknown) {
   return undefined
 }
 
-function formatConfigOut(row: Record<string, unknown>, keyList: string[]) {
+function formatConfigOut(row: Record<string, unknown> | unknown[], keyList: string[]) {
+  // 裸数组响应：直接作为表格数据（total = 长度）。此前数组响应会得到空表。
+  // 注意 antdv 的 showPagination 是只读 computed（由 pagination.total / isRequestConf 推导），不可赋值。
+  if (Array.isArray(row)) {
+    if (keyList.includes('tableData')) {
+      tableData.value = row as Record<string, unknown>[]
+      if (keyList.includes('total')) {
+        paginationConfig.value.total = row.length
+      }
+    }
+    return
+  }
   if (isObject(configTableField.value) && Object.keys(configTableField.value).length) {
     Object.entries(configTableField.value).forEach(([key, value]) => {
       if (!keyList.includes(key)) return

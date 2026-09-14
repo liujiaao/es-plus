@@ -289,6 +289,20 @@ describe('EsTable — 暴露的实例方法', () => {
     await expect(result).rejects.toThrow()
   })
 
+  it('httpRequestInstance — 裸数组响应直接作为表格数据（回归：此前渲染空表）', async () => {
+    const httpRequest = vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }])
+    const wrapper = mount(EsTable, {
+      props: {
+        ...baseProps,
+        options: { httpRequest, apiParams: { url: '/api/list' }, isInitRun: false } as any
+      }
+    })
+    const vm = wrapper.vm as any
+    await vm.httpRequestInstance()
+    expect(vm.tableData).toHaveLength(2)
+    expect(vm.tableData[0]).toEqual({ id: 1 })
+  })
+
   it('httpRequestInstance — 空/undefined 响应仍 settle（回归：此前永久挂起）', async () => {
     const httpRequest = vi.fn().mockResolvedValue(undefined)
     const wrapper = mount(EsTable, {

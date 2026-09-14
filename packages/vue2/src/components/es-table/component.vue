@@ -1010,7 +1010,18 @@ export default defineComponent({
       return undefined
     }
 
-    const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
+    const formatConfigOut = (row: Record<string, unknown> | unknown[], keyList: string[]) => {
+      // 裸数组响应：直接作为表格数据（total = 长度）。此前数组响应会得到空表。
+      if (Array.isArray(row)) {
+        if (keyList.includes('tableData')) {
+          tableData.value = row as Record<string, unknown>[]
+          if (keyList.includes('total')) {
+            paginationConfig.value = { ...paginationConfig.value, total: row.length }
+            showPagination.value = true
+          }
+        }
+        return
+      }
       const cf = configTableField.value as Record<string, unknown>
       if (isObject(cf) && Object.keys(cf).length) {
         // 累积所有 pagination 字段更新，最后一次性整体替换 paginationConfig.value，

@@ -677,7 +677,18 @@ const getListenToCallBack = (eventName: string, params: unknown) => {
   return undefined
 }
 
-const formatConfigOut = (row: Record<string, unknown>, keyList: string[]) => {
+const formatConfigOut = (row: Record<string, unknown> | unknown[], keyList: string[]) => {
+  // 裸数组响应：直接作为表格数据（total = 长度）。此前数组响应会得到空表。
+  if (Array.isArray(row)) {
+    if (keyList.includes('tableData')) {
+      tableData.value = row as Record<string, unknown>[]
+      if (keyList.includes('total')) {
+        paginationConfig.value.total = row.length
+        showPagination.value = true
+      }
+    }
+    return
+  }
   if (isObject(configTableField.value) && Object.keys(configTableField.value).length) {
     Object.entries(configTableField.value).forEach(([key, value]) => {
       const isKeyUsed = keyList.includes(key)
