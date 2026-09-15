@@ -77,8 +77,15 @@ jobs:
       # 造成「绿灯但什么都没发布」的假象。这里显式失败，避免误判发布成功。
       - name: Verify versioning has been done
         run: |
-          shopt -s nullglob
-          pending=(.changeset/*.md)
+          # 注意：必须排除 .changeset/README.md —— 它是 changesets 的常驻说明文件，
+          # 任何状态下都存在。若把它算作"未消费的 changeset"，本守卫会在**正确**的
+          # 已 version 状态下一律失败，把工作流变成永久红。
+          pending=()
+          for f in .changeset/*.md; do
+            [ -e "$f" ] || continue
+            [ "$(basename "$f")" = "README.md" ] && continue
+            pending+=("$f")
+          done
           if [ ${#pending[@]} -gt 0 ]; then
             echo "::error::.changeset/ 下仍有 ${#pending[@]} 个未消费的 changeset：${pending[*]}"
             echo "::error::请先本地运行 \`npx changeset version\` 并提交版本号变更，再触发本工作流。"
