@@ -76,7 +76,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '订单管理：表格上方左侧一个"批量导出"按钮，右侧一个"新增订单"按钮；表格展示订单号、金额、下单时间；支持新增、删除、查看；金额右对齐并保留两位小数。',
     reasoning:
-      '工具栏按钮的左右定位只由 code 决定：code:1=左、code:2=右（不要用 position）。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
+      '工具栏按钮的左右定位用 position："left"/"right"（三端渲染器都读它；code:1/2 是仍被接受的旧别名）。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
     config: {
       name: 'OrderManage',
       apiUrl: '/api/orders',
@@ -94,8 +94,8 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       ],
       actions: ['add', 'delete', 'view'],
       tableBtns: [
-        { name: '批量导出', code: 1, actionType: 'export' },
-        { name: '新增订单', type: 'primary', code: 2, actionType: 'add' },
+        { name: '批量导出', position: 'left', actionType: 'export' },
+        { name: '新增订单', type: 'primary', position: 'right', actionType: 'add' },
       ],
     },
   },
@@ -213,7 +213,7 @@ export function buildNlToConfigSystemPrompt(): string {
     '- inTable: is it a visible column?',
     '- inForm: is it entered in the add/edit form? (system-generated fields like createdAt → inForm:false)',
     '',
-    'Toolbar button placement is decided ONLY by code: code:1 = left, code:2 = right. Never use a "position" field.',
+    'Toolbar button placement uses position: "left" | "right" — all three renderers read it (the renderer types mark code as deprecated). code:1 = left / code:2 = right is a legacy alias that is still accepted and auto-normalized.',
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',

@@ -113,8 +113,21 @@ app.mount('#app')
 | ColorPicker | `<ElColorPicker>` | `input[type=color]`（降级） |
 | v-model (表单) | `modelValue/onUpdate:modelValue` | `value/onUpdate:value` 等 |
 
-**配置 Schema 100% 兼容** — 所有 `FormItemOption`、`TableColumn`、`TableOptions`、`DialogOptions` 等
-类型定义与 `@es-plus/vue3` 完全相同。
+**类型定义与 `@es-plus/vue3` 完全相同** — 所有 `FormItemOption`、`TableColumn`、`TableOptions`、
+`DialogOptions` 等契约类型均来自 `@es-plus/core` 单一真源，由 CI 强制三端同名导出。
+
+### 已知行为差异（非类型差异）
+
+同一份配置在三端**类型**上通用，但下列行为存在真实差异，请按需规避：
+
+| 项 | 差异 | 处理 |
+|---|---|---|
+| EP 专有属性名 | `clearable`/`filterable`/`show-word-limit`/`collapse-tags` 会被自动改写为 ADV 的 `allowClear`/`showSearch`/`showCount`/`maxTagCount` | ✅ 已适配 |
+| `collapse-tags-tooltip` | ADV 需渲染 Tooltip，无布尔等价物 | ⚠️ dev 告警后丢弃 |
+| `useDialog` 返回值 | vue3/vue2 返回 `{ instance, close, destroy }` 并支持 `cacheKey`；本端返回原始 vNode | ⚠️ 不要跨端解构该返回值 |
+| ColorPicker | ADV 4.x 无内置组件，降级为 `input[type=color]`，丢失 alpha/predefine 与表单校验态 | ⚠️ 已知降级 |
+| `sortable: 'custom'` | ADV `sorter: true` 会在点击表头时**本地重排当前页**（vue3/vue2 为纯服务端排序） | ⚠️ 已知差异 |
+| `emptyText` | 默认引擎下生效（vue3/vue2 默认引擎忽略它） | 仅本端支持 |
 
 ## 使用示例
 

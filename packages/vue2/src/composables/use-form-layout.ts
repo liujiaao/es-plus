@@ -11,6 +11,9 @@
 import { computed, ref, watch } from '../vue-compat'
 import {
   getRowColsAlgorithm as coreGetRowColsAlgorithm,
+  shouldShowFoldButton,
+  getBtnColSpan as coreGetBtnColSpan,
+  applyFoldFlags,
   resolveFormLayProps,
   type FormLayoutResult,
 } from '@es-plus/core'
@@ -79,37 +82,32 @@ export function useFormLayout(props: UseFormLayoutProps) {
     return Number(legacy ?? camel ?? 0) || 0
   }
 
-  const isFold = computed(() => {
-    const minFoldRow = getMinFoldRow()
-    return minFoldRow > 0 && minFoldRow < getRowColsAlgorithm.value.rowNum
-  })
+  // 折叠判定 / 按钮列 span / isFold 标注三段此前在 vue2 内联重写了一遍，
+  // 与 @es-plus/core 的同名实现逐行等价（antdv 也曾各自内联）。这里改回调用 core，
+  // 使「同一份配置在三个渲染器得到同一套布局数学」成为结构性保证，而不是靠人工同步。
+  const isFold = computed(() =>
+    shouldShowFoldButton(getRowColsAlgorithm.value, getMinFoldRow())
+  )
 
   const getBtnColSpan = computed(() => {
-    const { rowNum, columnRow } = getRowColsAlgorithm.value
-    const lastColumn = columnRow[rowNum - 1] || []
-    const btnColSpan = Number((resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)?.btnColSpan) || 0
-    const totalSpan = lastColumn.reduce(
-      (sum: number, idx: number) => sum + (props.formItemList[idx]?.span || 24),
-      0
+    const btnColSpan =
+      Number((resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)?.btnColSpan) || 0
+    return coreGetBtnColSpan(
+      getRowColsAlgorithm.value,
+      props.formItemList || [],
+      folded.value,
+      btnColSpan
     )
-    const hasSpan = 24 - totalSpan
-    return !folded.value && btnColSpan <= hasSpan ? hasSpan : 24
   })
 
-  const formItem = computed(() => {
-    const minFoldRow = getMinFoldRow()
-    const { columnNodeIndex } = getRowColsAlgorithm.value
-
-    if (folded.value) {
-      const lastFoldIndex =
-        columnNodeIndex[minFoldRow - 1] ?? columnNodeIndex[columnNodeIndex.length - 1] ?? 9999
-      return (props.formItemList || []).map((it: FormItemOption, index: number) => ({
-        ...it,
-        isFold: index > lastFoldIndex,
-      }))
-    }
-    return (props.formItemList || []).map((it: FormItemOption) => ({ ...it, isFold: false }))
-  })
+  const formItem = computed(() =>
+    applyFoldFlags(
+      props.formItemList || [],
+      getRowColsAlgorithm.value,
+      folded.value,
+      getMinFoldRow()
+    )
+  )
 
   watch(
     isFold,

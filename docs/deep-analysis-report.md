@@ -1,0 +1,274 @@
+# es-plus 深度分析报告
+
+> 分析日期：2026-09-15
+> 范围：8 个库包（~31k 行）+ 3 个文档站（~87k 行）+ 工程基建
+> 方法：四路并行静态审计（core/shared · 三渲染器 · AI 工具链 · CI/发布），关键结论回读源码复核，并实际执行 `npm test`、`npm run check:consistency`、npm registry 查询做交叉验证。
+> 标注：`[已核实]` = 本次亲自执行命令/读源码坐实；`[待核实]` = 子审计推断未二次验证。
+> 状态图例：⬜ 未修 · 🔧 修复中 · ✅ 已修 · ⏸ 待决策
+
+---
+
+## 一、项目全貌（实测数据）
+
+| 维度 | 实测 |
+|---|---|
+| 定位 | 企业级 CRUD 组件库：配置驱动 + AI 原生，一份配置三端渲染 |
+| 仓库 | npm workspaces monorepo，8 个包，200 commits（2026-05 起，9 月最活跃） |
+| 库代码 | ~31k 行（vue3 6.7k / vue2 7.3k / antdv 6.8k / shared 3.4k / core 3.1k / mcp 3.1k / cli 0.75k） |
+| 文档站 | 3 站 ~87k 行（es-eui 40.8k / es-plus-docs 31.9k / es-pc 14.7k） |
+| 测试 | **76 文件 / 1928 用例，全绿**（`npm test` 退出 0）`[已核实]` |
+| 门禁 | `check:consistency`（15 项）通过 `[已核实]` |
+| 发布 | 7 个包已上 npm，最新版与本地 `package.json` 一致；`es-plus-ui` 冻结 1.4.0 `[已核实]` |
+| 真实采用度 | **~170–235 下载/月/包** —— 接近爬虫/镜像噪音，实质零用户 `[已核实]` |
+| 语言 | 中文注释与文档，面向国内中后台团队 |
+
+**一句话判断**：这是一个**工程质量明显高于其市场验证度**的项目。代码组织、单源同步、契约门禁的成熟度，远超 ~30k 行、零用户开源项目的中位水平；但「三端同构」这个核心卖点，在**配置层为真、行为层半真、命令式 API 层为假**。
+
+---
+
+## 二、架构评价：分层是真的，下沉是成功的
+
+`@es-plus/core` 是真正的框架无关层（零依赖，不 import vue），三个渲染器确实消费它：
+
+- **语义一致性做得好**：`PUBLIC_CONTRACT_TYPES` 由 CI 强制三端同名导出；formtype 的 Map key 三端相等由 `check-renderer-parity.mjs` 锁定。
+- **下沉彻底的部分**：表单布局算法、请求链路（三端 `use-form-request` 都委托 core）、跨页选择状态机、vxe 配置映射、按钮/规则归一化。
+- **下沉不彻底的部分**：`calculateAutoSpan`、`shouldShowFoldButton`、`getBtnColSpan` 在 core 里已存在，但 **vue2 和 antdv 各自内联重写了一遍**，只有 vue3 调用 core。
+
+`docs/refactor-design.md` 诊断的 P0（formtype 三分叉、请求层绕过 core、inject key 拼写错、`cachePageSelection` 失效、`@ts-nocheck`）——逐项回读源码，**基本已修复**：全库仅剩 1 处 `@ts-nocheck`（`packages/vue3/src/components/es-table/src/component.vue:135`，带明确理由），测试数从基线 core 209/shared 258/vue3 425/vue2 272/antdv 466 增长到 250/277/463/299/537。
+
+**结论**：这个仓库的「自我修复能力」是被验证过的——它有一份准确的自我诊断文档，且真的照做了。
+
+---
+
+## 三、核心卖点检验：「一份配置三端渲染」
+
+### 成立的部分（CI 强制）
+
+- 14 种 formtype 三端全部存在且绑定正确组件 —— 契约测试锁死。
+- `FormItemOption` 顶层快捷字段（`placeholder`/`disabled`）经 `normalizeFormItem` 三端都到达控件。
+- EsTable/EsForm/EsDialog 的 expose key 集合三端一致 —— CI 锁死。
+- vxe 一等公民 API 三端齐备。
+
+### 不成立的部分（无门禁，实测存在）
+
+`scripts/check-renderer-parity.mjs` 是**名字级**门禁，看不到「属性被静默丢弃」。
+
+#### P0-1：antdv 静默吞掉 `clearable` / `filterable` ⬜ `[已核实]`
+
+```
+grep -rn "allowClear\|showSearch\|maxTagCount\|showCount" packages/adapter-antdv/src/
+→ 0 命中
+```
+
+- `clearable` 被 antdv 自己的类型声明为一等选项（`packages/adapter-antdv/src/types/index.ts:29`），core 的 `normalizeFormItem` 会把它注入 `attrs`，然后**原样透传给根本不认这个 prop 的 ADV 组件 → 无任何警告地失效**。
+- `filterable` 同理（ADV 只认 `showSearch`）→ **远程搜索 Select 在 antdv 站不可用**。
+- 推翻 `packages/adapter-antdv/README.md:104` 的「配置 API 完全一致」与 `:126` 的「配置 Schema 100% 兼容」。
+
+#### P0-2：antdv 插件重复注册（注释在撒谎）⬜ `[已核实]`
+
+`packages/adapter-antdv/src/index.ts:48` 注释写「完全对齐 vue3」，但 vue3 在 `packages/vue3/src/index.ts:24-31` 有一段专门的守卫，注释里明确写着这正是为了避免 `"Component xxx has already been registered"` 告警：
+
+```ts
+// vue3
+if (willInstallPlugins && component.isPlugin && component.Plugin) return
+```
+
+**antdv 把这段守卫漏掉了**，于是 `app.component(name, comp)` 与 `app.use(comp.Plugin)` 重复注册同一个名字 → dev 环境必刷告警，且最终生效的是后注册的 Plugin 版本。
+
+#### P1-1：默认列对齐三端不一致 ⬜ `[已核实]`
+
+- vue3 / vue2：`column-item.vue:126-128` 强制 `align='center'`
+- antdv 默认引擎：`column-adapter.ts:34` 只在显式传了 `align` 时才设置 → 落到 ADV 默认的 **left**
+- antdv 自己的 vxe 引擎走 `use-vxe-column-adapter.ts:120` 又是 `center` → **同一个库内部自相矛盾**
+
+#### P1-2：命令式 API 不同构（用户代码会挂）⬜
+
+| API | vue3 | vue2 | antdv |
+|---|---|---|---|
+| `useDialog` 返回 | `{instance, close, destroy}` + `cacheKey` + 10min TTL | 同 vue3 | **裸 vNode，无 cacheKey、无 DialogResult** |
+| `validateField` | `Promise<boolean>` | **`void`**（await 不会等待） | `Promise<boolean>` |
+| `update:dataSource` | 有 | **无**（刻意移除） | 有 |
+| 虚拟滚动 | 支持 | **不支持**（降级告警） | ADV 原生 |
+
+`check-exposed-api.mjs` 只比对 key 名字，不看签名与语义 → 这四处**全部无门禁**。
+
+#### P1-3：`sortable` 语义在 antdv 被改变 ⬜ `[已核实]`
+
+`column-adapter.ts:49-51` 把 `sortable:'custom'`（EP 语义 = 服务端排序）映射为 `sorter: true`（ADV 语义 = **本地排序**）→ 点击表头会先本地重排当前页。注释声称「对齐 vue3」，实际引入了 vue3/vue2 没有的行为。
+
+#### 其他已核实的问题
+
+- antdv 无 `key`/`prop` 的列生成 `col_${Math.random()}` 作 key（`column-adapter.ts:27`）→ 每次重算身份都变，破坏 a-table 列状态。
+- `emptyText` 是声明过的选项，但 vue3/vue2 默认引擎**硬编码「暂无数据」**忽略它。
+- vue2 的 `lazyLoad` 是独有能力；反向地，`virtual` 对 vue2 无效。
+
+---
+
+## 四、文档/工具链侧的信任问题
+
+### 已核实的矛盾：MCP 给 LLM 的指引自相矛盾 ⬜ `[已核实]`
+
+- **类型资源**（`esplus://types` 实时读渲染器源码）说：`position` 是推荐写法，**`code` 已 `@deprecated`**（`packages/vue3/src/types/index.ts:115-118`）。
+- **约定资源**（`esplus://conventions`）说：`code` 是唯一权威，**「Do NOT use a `position` field」**（`packages/mcp-server/src/resources/conventions.ts:423-428`），理由写的是「vue2 会忽略 position，破坏多端同构」。
+- **示例资源**（`esplus://crud-page-schema`）又**通篇使用 `position`**（`crud-page-schema.ts:110` 等 6 处）。
+
+**实测纠正**：`position` 在 vue2 里**是生效的** —— vue2 的工具栏 `table-btns.vue:168` 和 CRUD 页 `es-crud-page.vue:276-277` 都走 core 的 `getButtonPosition`，而该函数**优先读 `position`**。
+
+真实缺陷不是「position 破坏同构」，而是**两个叠加的问题**：
+
+1. conventions 里那句理由是陈旧的、错误的，它把宿主 LLM 推向一个本已废弃的字段，且三种资源互相打架；
+2. **更严重的是：`position` 会被静默改写。** `StructuredCrudConfigSchema` 的 `TableBtnSchema` 只声明了 `code`，而 Zod 默认 strip 未知键 —— 实测 `{ name: '新增', position: 'right' }` 经 `safeParse` 后变成 `{ name: '新增', code: 1 }`：**解析成功、零告警，按钮从右侧跑到左侧**。
+
+第 2 点意味着「AI 生成 → 用户拿到页面」的链路上存在一条无提示的错误路径，而且它被 `check-schema-contract.mjs` 主动加固着 —— 该脚本当时有一条规则**禁止 `position` 出现在 tableBtns 中**，理由同样写着「vue2 忽略它」。即：一个基于错误事实的守卫，把正确的写法挡在门外，同时放行静默错误。这也解释了为什么 golden 语料 24 个用例里**没有任何一个使用 `position`** —— 该路径从未被测过。
+
+### 文档站 AI 路径是「平行宇宙」⬜
+
+`es-plus-docs/src/utils/mcp-flow.ts` 自己手写了一份 prompt（`:146-197`），**从不 import shared 的 `buildNlToConfigSystemPrompt`**，因此：教的是已废弃的 `datePicker` 拼写、`target` 枚举缺 `antdv`、示例弱于官方 few-shot。shared 侧任何 prompt 改进都到不了浏览器演示页。
+
+同理，「NL → 配置」这条链路在仓库里有 **4 份独立实现**（CLI `--ai` / MCP / 文档站 / eval），修复循环有 3 份。
+
+### 数字漂移（无门禁）⬜ `[已核实]`
+
+- 根 `README.md:47` 声称 **「38 个跨渲染器契约类型」**，实测 `PUBLIC_CONTRACT_TYPES` 只有 **35 个**。
+- `docs/ai/ai-tools.md:22` 引用不存在的工具名 `generate_from_config`（实际 `generate_crud_from_config`）。
+
+---
+
+## 五、工程基建：门禁很多，但漏点集中在「能自动变绿」的地方
+
+### 做得好的
+
+- 单源同步体系（8 个 sync + 对应 check），缺目标即报错（此前审计已加固）。
+- PR 会构建三个文档站。
+- golden 语料 23 个用例，分两层：**L1 确定性打分（PR 跑，免费）/ L2 真实 LLM 评估（夜间，`exactIntent` ≥ 0.95）**，且特意把 6 个 few-shot 派生用例单列，避免「背 prompt」被算成泛化能力。
+
+### 关键漏洞（按危害排序）
+
+1. **`publish.yml` 目前是未跟踪文件** → GitHub 根本不运行它，**当前不存在任何发布自动化**。`[已核实]`
+2. 即便提交，`push: tags: ['v*']` 触发器**永远不会被 changesets 流程命中**：changesets 打的是 `@es-plus/vue3@1.5.1` 这类 per-package tag。且 `changeset publish` **不会 push 它创建的 tag**，配合 `contents: read` 权限，tag 只存在于临时 runner 上即消失。
+3. 该 workflow 只跑 `changeset publish`、**不跑 `changeset version`** → 以当前 6 个未消费的 changeset 文件 + 版本已与 npm 一致的状态，手动触发会打印 "No unpublished projects" 然后**绿灯退出，什么都没发布**。
+4. **`sync-docs.mjs` 可被删除「绕过」**：只校验源与目标的**交集**。删掉 `es-plus-docs/src/docs/why-es-plus.md`，该文件就退出被检查集合，`docs:check` 依然打印「一致」并退出 0——**而站点页面已经没了**。
+5. **`sync-tri-render.mjs` 在源缺失时报告「0 个文件一致」并绿灯**。
+6. **formtype 清单存在 3 份手写副本**，而 `check-schema-contract.mjs`（锚定 `core/constants.ts`）与 `check-renderer-parity.mjs`（锚定 `shared/contract.ts`）**之间没有连线**。
+7. **PR 层 golden 打分从不编译**（只做字符串匹配）→ 语法错误的生成代码能通过唯一的 PR 门禁；真正的编译验证只在夜间跑，且不阻塞部署。
+8. **`deploy-docs` 只依赖 Typecheck workflow**，不依赖 e2e → **e2e 挂了照样部署三站**。
+9. `@es-plus/mcp-server` 的 `build`/`bundle-types` 在 CI 中**从不执行**，首次运行发生在发布时的 `prepublishOnly`。
+10. `es-plus-legacy` 完全不在任何 workflow 中；且被 `.changeset/config.json` `ignore` → 永远不再 bump，其 `^1.5.0` 依赖在 vue3 升 2.0 时会变成不可满足的悬空。
+11. `test:coverage` 从未接入 CI，且**本身是坏的**（没有任何包声明 `@vitest/coverage-v8`）→ 全仓零覆盖率度量。
+12. ESLint `--max-warnings 9999`，当前已有 **1491 条 warning** → 等于只拦 error。
+
+---
+
+## 六、安全与代码质量
+
+### 真实风险
+
+- **生成代码注入面**：`FieldConfig.formatter` / `render` 是自由函数源码字符串，`q()` **刻意不转义**它们，直接拼进生成的 SFC（`packages/shared/src/structured-generator.ts:819`、`:908-909`）。路径穿越防护扎实（`isSafePathSegment` + `isPathInside` + zod refine，有测试），但**代码内容无任何沙箱或 AST 校验**。任何不可信来源的配置（LLM 输出、下载的 JSON、贡献者 PR）都等于任意代码执行。
+- **文档站 API Key 走浏览器**：`AiCrud.vue` 把 key 从浏览器发到可配置的 `baseUrl`；生产 CORS 方案至今空缺。
+- **es-eui 遗留问题仍在** `[已核实]`：`https://wdshop-be.szlanyou.com` 内网域名硬编码 3 处（均在孤儿目录 `src/views/salesPolicy/`）、`package.lib.json` / `PUBLISH_GUIDE.md` / `test-project/` 等发布残留完整保留。
+- **勘误（复核后修正）**：上一轮审计把 `es-eui/src/views/test/RechargeRecord.vue` 描述为「反被路由暴露到公网」暗示风险，复核后不成立 —— 该页使用**公开** API `https://dummyjson.com/users`，文件头注明其用途是演示 `brcb` 与 Vue 2.6 + Composition API 兼容性，`/test/recharge-record` 是一条有意的示例路由，`TODO:237` 是「此处替换为真实接口」的常规模板提示。**未作删除**（删除会丢失一个真实可用的 vue2 演示页）。
+
+### 一般质量问题
+
+- `any` 密度集中在重复代码处：antdv 207 / vue3 182 / vue2 157 处。
+- 死代码：core `filterVisibleFormItems`、`applyAutoSpan`、`splitButtonsByDirection`、`normalizeButtonsHideState` **零消费者**；`normalizeFormType` 有 **4 份实现**；`shared/src/constants.ts` 的导出不可达。
+- 三端同构的真相：**`es-crud-page.vue` 在 vue3/antdv 间约 74% 逐字相同，`use-vxe-column-adapter.ts` 约 90% 相同**——渲染层本质是三份 fork。
+- vue3 的 `tsconfig` 是 `strict: false`；三个渲染器的 dts 插件都设了 `skipDiagnostics: true` → **类型错误无法阻止发布包产出 .d.ts**。
+
+---
+
+## 七、优先级建议
+
+### 第一梯队（用户必撞，且当前无门禁）
+
+1. 补 antdv 的 `clearable→allowClear`、`filterable→showSearch`、`collapse-tags→maxTagCount`、`show-word-limit→showCount` 映射，并加**属性级**契约测试。
+2. 修 antdv `install()` 重复注册，并纠正「完全对齐 vue3」注释。
+3. 统一三端默认列对齐，antdv 内部两引擎也要一致。
+4. 修 `useDialog` / `validateField` / `update:dataSource` 的三端 API 差异，或至少在文档中列出差异表。
+
+### 第二梯队（信任与证据链）
+
+5. 清理 MCP 资源里 `position` vs `code` 的三方矛盾口径（`position` 三端都 work，删掉错误理由即可）。
+6. 修好 `publish.yml`：改用 changesets 实际 tag 格式或 `workflow_dispatch`、加 `changeset version`、给 `contents: write` 并 push tags。
+7. 堵 `sync-docs.mjs` 的交集漏洞、`sync-tri-render.mjs` 的空集绿灯。
+8. 让 golden L1 至少做语法校验，并把编译验证提到 PR 门禁。
+
+### 第三梯队（收敛与清债）
+
+9. 把 vue2/antdv 内联的 auto-span / fold 算法切回 core 已有实现，消除 formtype 第 3 份副本。
+10. 文档站 AI 路径改为 import shared 的 prompt，消除第 4 份 NL→配置实现。
+11. 补 `test:coverage` 依赖或删除该脚本；`es-eui` 孤儿业务代码与内网域名从公开站点移除。
+12. 修正 README「38 个契约类型」→ 35，并给这类数字加校验脚本。
+
+---
+
+## 八、总体结论
+
+**技术判断**：架构方向正确且执行认真——分层清晰、单源同步有成体系的门禁、测试与自我诊断文档的质量脱俗。上一轮审计与重构诊断中的 P0 基本落地，这是罕见的。
+
+**产品判断**：核心卖点「三端同构」当前**被高估**。配置 schema 层是真同构（并且 CI 强制）；但属性透传、默认视觉、命令式 API 这三层都存在静默失效——**而静默失效恰恰是最伤信任的失败模式**：用户不会收到报错，只会发现「在 Element 上好好的，换 antdv 就没反应」。
+
+**最大风险不是代码质量，而是证据链与市场**：tri-render 快照仍为 0、发布自动化实际不存在、下载量处于噪音水平。项目的问题已经从「能不能写对」转变为「**如何让人相信它是对的并愿意用**」。当前所有门禁都在验证「三端名字一致」，而没有一条在验证「三端看到的东西一样」——而后者才是卖点本身。
+
+---
+
+## 附：修复进展（2026-09-15）
+
+一轮内完成，每项均**先复现/读源码坐实，再改，再验证**（含"反向探针"：故意重新引入缺陷，确认守卫确实变红）。
+
+### 第一梯队
+
+| # | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| 1 | antdv 静默吞掉 `clearable`/`filterable`/`collapse-tags`/`show-word-limit` | 新增 `EP_ATTR_MAP` 按 formtype 限定作用域改名（`clearable→allowClear` 等），`collapse-tags` 做 boolean→`maxTagCount` 语义转换，无等价物的 `collapse-tags-tooltip` 改为**告警后丢弃** | 新增 13 条契约测试；antdv 561→**565 全绿**。`grep allowClear` 从 0 命中变为有映射 |
+| 2 | antdv `install()` 重复注册 | 补回 vue3 已有的 `isPlugin && Plugin` 守卫（此前注释谎称"完全对齐 vue3"） | 新增 `install.spec.ts` 5 条，含"默认安装不得产生 already-been-registered 告警" |
+| 3 | 三端默认列对齐不一致 | `adaptColumn` 默认 `align='center'`，与 vue3/vue2 及本包 vxe 引擎收敛；顺带修掉列 key 的 `Math.random()`（改为确定性位置路径） | 新增 6 条测试；22 文件 565 测试全绿 |
+| 4 | 命令式 API 不同构 | antdv `useDialog` 返回值改为 `{instance, close, destroy}`（保留 callable 上的 close/destroy，纯增量）；vue2 `validateField` 由 `void` 桥接为 Promise（含"无匹配字段不挂起"处理） | 新增 8 条测试。`update:dataSource` 经复核是**有意移除**（Vue2 `.sync` 回环），改为在 vue2 README 明确文档化而非强改 |
+
+### 第二梯队
+
+| # | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| 5 | `position` 被静默改写为 `code:1` | `TableBtnSchema`（shared zod4 + mcp zod3 两份）接受 `position` 并 `.transform()` 归一化成一致的 `code`；修正 conventions / AI prompt / 检查脚本里"vue2 忽略 position"的错误理由 | 探针验证：关掉归一化后 golden 24 号用例**精确报错**「declares position="right" but normalized code=1」；关掉整个 transform 后 19/24 失败。新增 golden 用例 24 + 6 条 schema 测试 |
+| 6 | publish.yml 不可用 | 触发器改为 `workflow_dispatch`（原 `v*` 永不命中 changesets 的 `@scope/pkg@ver` tag）；`contents: write` + 新增 `git push origin --tags`（changesets 只本地打 tag、从不推送）；新增"必须先 changeset version"前置守卫，堵住"绿灯但没发布" | 用 js-yaml 解析校验；逐条比对 `@changesets/cli` 源码确认 tag 格式与不推送行为 |
+| 7 | sync 门禁可被"删除"绕过 | `sync-docs` 由"两目录交集"改为显式 `MIRRORED_DOCS` 清单，源/目标缺失均报错；`sync-tri-render` 由"存在性过滤"改为显式 `DISTRIBUTED_FILES`，缺失即失败（不再退化成"0 个文件恒绿"） | 两种失败模式实测退出码均为 1，健康态为 0 |
+| 8 | golden L1 不校验语法；编译只在夜间 | L1 增加真实解析（pageSchema JSON 载荷 `JSON.parse` + SFC `<script>` 块 esbuild 解析，按 `lang` 选 ts/tsx loader），esbuild 显式声明为根 devDependency（不靠 hoisting）；`golden-compile`（全语料 24 用例 × 三目标真实 vite build）从夜间**移入 typecheck.yml** | 探针注入语法错误 → 19/24 失败。附带收益：deploy-docs 依赖 Typecheck，全语料编译现在也是部署前置 |
+
+### 第三梯队
+
+| # | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| 9 | 三端布局算法各写一份 | vue2 的 `isFold`/`getBtnColSpan`/`formItem` 与 antdv 的自动 span 内联实现改回调用 core 已有函数（逐行等价，纯去重） | vue2 303 / antdv 565 全绿，typecheck 干净 |
+| 10 | formtype 契约两处手写副本无关联 | 复核后确认 **core 不能 import shared**（会把 ajv+zod 拖进三个渲染器产物），故不强行合并；改为修正 core 里"重新导出"的错误注释 + 在 `check-schema-contract.mjs` 新增 core↔shared 的**逐项相等**校验 | 探针删除 shared 里一个类型 → 精确报"已分叉：仅 core 有 [Rate]"，退出码 1 |
+| 11 | `test:coverage` 是坏的；es-eui 孤儿代码含内网域名 | 补声明 `@vitest/coverage-v8@1.6.1`；删除 `es-eui/src/views/salesPolicy/`（5 文件，全站 0 引用、未注册路由，是 `wdshop-be.szlanyou.com` 的全部残留） | coverage 实测跑通（vue3 88.26% stmts）；内网域名命中数 0；es-eui 站点**构建成功**（exit 0） |
+| 12 | README 契约类型数 38 ≠ 实际 35 | README.md / README.en.md 改为 35；新增 `scripts/check-readme-claims.mjs`（数量 + 控件枚举**集合相等**校验），接入 `check:consistency` | 探针改回 38 → 精确报错退出 1 |
+
+### 复核后**未**修改的项（附理由）
+
+- **`RechargeRecord.vue`**：见上文勘误，是使用公开 API 的正当演示页，删除会丢功能。
+- **`update:dataSource` 缺失**：有意为之（Vue2 `.sync` 回环），已在 vue2 README 文档化差异，未强行加回。
+- **`es-plus-legacy`**：`package.json` 的 `^1.5.0` 与 vue3 1.5.0 实际**一致**（上一轮审计的"版本漂移"指控不成立，漂的是 README 文案）；已把 `ignore` 冻结的后果写进 RELEASE.md。
+- **`check-schema-contract` 的 formtype 部分**：仅修了我改坏的 `z\s*\.object` 正则容错（原来不容忍换行，纯格式化就会失配并误报"契约漂移"）。
+
+### 尚未处理（需决策 / 超出本轮范围）
+
+- **真正的单一真源**：`core/constants.ts` ↔ `shared/contract.ts` 仍是手写双份 + 门禁。彻底解决需要一个独立的无依赖契约包（如 `@es-plus/contract`），属结构性改造。
+- **发布自动化尚不能生效**：`.github/workflows/publish.yml` 仍是**未跟踪文件**，GitHub 不会运行它 —— 需先提交。且 OIDC 的 `.npmrc` 与 `setup-node` token 行组合尚未实跑验证，建议首次用 `workflow_dispatch` 试跑。
+- **coverage 无阈值门禁**：脚本已可用，但"覆盖率不得低于 X%"是策略决定，未擅自设阈值。
+- **`es-eui` 发布残留**（`package.lib.json`/`PUBLISH_GUIDE.md`/`test-project/` 等）与 `raw-sources.generated.js` 每次构建弄脏工作树：仍待决策（后者本轮已手动还原，未改其生成方式）。
+- **生成代码注入面**：`formatter`/`render` 仍是原样拼进产物，未见沙箱化设计。
+- **三端快照（tri-render PNG）**：数量仍为 0。
+
+### 本轮验证快照
+
+| 项 | 结果 |
+|---|---|
+| `npm test`（7 包） | **1966 用例全绿**（分析起点为 1928，本轮 +38） |
+| `npm run typecheck`（7 包） | exit 0，0 个 TS 错误 |
+| `npm run check:consistency` | 全绿（含 `check:readme` 与 core↔shared formtype 两项新增校验） |
+| `npm run test:golden` | 24/24（含新增的 position 用例与新增的真实语法解析） |
+| 文档站 `es-plus-docs` 构建 | 成功（2m5s）；shared prompt 的规则串与 few-shot 均已进入产物，旧 sketch 与废弃 `datePicker` 写法命中数 0 |
+| `es-eui` 构建 | 成功（exit 0），孤儿代码删除后无影响 |
+| `vitest run --coverage`（vue3） | 跑通，88.26% stmts |
+
+各包用例数：core 250 · shared 283 · vue2 303 · vue3 463 · adapter-antdv 565 · mcp-server 59 · cli 43。

@@ -11,27 +11,37 @@ import type { TableColumn } from '../../../types'
  * @param col ES-Plus 列配置
  * @param t   i18n 翻译函数（用于 labelKey）
  */
-export function adaptColumn(col: TableColumn, t?: (key: string) => string): Record<string, unknown> {
+export function adaptColumn(
+  col: TableColumn,
+  t?: (key: string) => string,
+  fallbackKey = 'col_0',
+): Record<string, unknown> {
   const advCol: Record<string, unknown> = {}
 
   // 分组列表头：仅 title + children，不设 dataIndex
   if (col.groups && col.groups.length > 0) {
     const groupTitle = (col.labelKey && t ? t(col.labelKey) : undefined) || col.label
     if (groupTitle) advCol.title = groupTitle
-    advCol.children = col.groups.map((child) => adaptColumn(child, t))
+    advCol.children = col.groups.map((child, i) => adaptColumn(child, t, `${fallbackKey}_${i}`))
     advCol._esCol = col
     return advCol
   }
 
   advCol.dataIndex = col.prop || col.key
-  advCol.key = col.key || col.prop || `col_${Math.random().toString(36).slice(2, 8)}`
+  // key 兜底必须是**确定性**的：此前用 Math.random()，导致既无 key 又无 prop 的列
+  // 每次重算（computed 重新求值）都拿到新身份，使 a-table 的列状态（排序/筛选/列宽）
+  // 与快照失稳。改用调用方传入的位置路径。
+  advCol.key = col.key || col.prop || fallbackKey
 
   // labelKey 国际化优先，其次 label（对齐 vue3）
   const title = (col.labelKey && t ? t(col.labelKey) : undefined) || col.label
   if (title) advCol.title = title
   if (col.width) advCol.width = col.width
   if (col.minWidth) advCol.minWidth = col.minWidth
-  if (col.align) advCol.align = col.align
+  // 默认居中对齐 —— 对齐 vue3/vue2 的 column-item（未显式配置时二者都强制 center）。
+  // 此前此处仅在显式传 align 时才设置，落到 a-table 默认的 left；而本包自己的 vxe 引擎
+  // 默认 center（use-vxe-column-adapter），造成「同一份配置三端三种对齐」+「同包内两引擎不一致」。
+  advCol.align = col.align || 'center'
 
   // 固定列
   if (col.fixed === true) {
@@ -98,7 +108,7 @@ export function adaptColumns(
     result.push(createSnAdvColumn())
   }
 
-  for (const col of columns) {
+  for (const [i, col] of columns.entries()) {
     // 选择列：ADV 通过 rowSelection 渲染，跳过
     if (col.type === 'selection') continue
     // 展开列：ADV 通过 expandedRowRender 整行渲染，不作为数据列（对齐 vxe/vue3）
@@ -109,7 +119,7 @@ export function adaptColumns(
       continue
     }
     // 普通列（含 groups → children 递归）
-    result.push(adaptColumn(col, options.t))
+    result.push(adaptColumn(col, options.t, `col_${i}`))
   }
 
   return result

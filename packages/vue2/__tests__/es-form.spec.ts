@@ -297,6 +297,59 @@ describe('EsForm(vue2) - triggerEvent 按钮（单行 / 左栏布局）', () => 
   })
 })
 
+describe('EsForm(vue2) - validateField 的 Promise 语义（三端同构）', () => {
+  // 回归：element-ui 的 el-form.validateField 是**纯 callback 式**（返回 undefined），
+  // 而 vue3(Element Plus) / antdv(Ant Design Vue) 返回 Promise。此前 vue2 直接透传，
+  // 导致 `await form.validateField('name')` 立刻返回、完全不等待校验 ——
+  // 三端里唯独 vue2 无法用 await 拦截字段级校验。
+  // 注意：桩要挂在 **el-form** 子实例上，不能挂到 EsForm 实例上 ——
+  // Vue 2.7 的 `expose` 是把方法直接赋到实例上的，挂到 EsForm 上会把被测方法本身覆盖掉。
+  const setup = () => {
+    const vm = mountForm({ formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24 }] })
+    return { esForm: findByName(vm, 'EsForm'), elForm: findByName(vm, 'ElForm') }
+  }
+
+  it('校验通过 → resolve(true)', async () => {
+    const { esForm, elForm } = setup()
+    elForm.fields = [{ prop: 'name' }]
+    elForm.validateField = (_props: unknown, cb: (msg?: string) => void) => cb('')
+
+    await expect(esForm.validateField('name')).resolves.toBe(true)
+  })
+
+  it('校验不通过 → reject（与 EP/ADV 一致）', async () => {
+    const { esForm, elForm } = setup()
+    elForm.fields = [{ prop: 'name' }]
+    elForm.validateField = (_props: unknown, cb: (msg?: string) => void) => cb('姓名必填')
+
+    await expect(esForm.validateField('name')).rejects.toBeTruthy()
+  })
+
+  it('await 会真正等待异步校验回调', async () => {
+    const { esForm, elForm } = setup()
+    elForm.fields = [{ prop: 'name' }]
+    let settled = false
+    elForm.validateField = (_props: unknown, cb: (msg?: string) => void) => {
+      setTimeout(() => { settled = true; cb('') }, 10)
+    }
+
+    const p = esForm.validateField('name')
+    expect(settled).toBe(false) // 尚未回调 → 修复前会在此处就返回 undefined
+    await p
+    expect(settled).toBe(true)
+  })
+
+  it('未匹配到字段时不挂起：直接放行（element-ui 此时不调用 callback）', async () => {
+    const { esForm, elForm } = setup()
+    elForm.fields = [{ prop: 'other' }]
+    const spy = vi.fn()
+    elForm.validateField = spy
+
+    await expect(esForm.validateField('name')).resolves.toBe(true)
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
 describe('EsForm(vue2) - 远端字段选项重载（响应式整体替换）', () => {
   // 回归：formItmeRequestInstance 此前用 formItemRowsList.value[i] = {...}（Vue 2 无法拦截
   // 数组下标赋值），远端 dataOptions 重载后 computed 不失效，Select 仍显示旧选项。

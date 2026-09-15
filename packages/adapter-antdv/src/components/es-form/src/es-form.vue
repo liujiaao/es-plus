@@ -210,6 +210,7 @@ import {
   resolveFormRules,
   normalizeFormItem,
   parsePathSegments,
+  applyAutoSpan,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -470,25 +471,12 @@ const formItemListFilter = computed(() => {
       return true
     })
 
-  const itemsWithoutSpan = visible.filter((it) => !it.span)
-  const autoCount = itemsWithoutSpan.length
-  let autoSpan = 6
-  if (autoCount > 0) {
-    const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
-    const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
-    if (fixedTotal === 0) {
-      if (autoCount === 1) autoSpan = 24
-      else if (autoCount === 2) autoSpan = 12
-      else if (autoCount === 3) autoSpan = 8
-      else autoSpan = 6
-    } else {
-      autoSpan = remaining >= autoCount ? Math.floor(remaining / autoCount) : 6
-      if (autoSpan > 12) autoSpan = 12
-      if (autoSpan < 4) autoSpan = 6
-    }
-  }
-
-  return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
+  // 自动 span 算法此前在本文件内联重写了一遍，与 @es-plus/core 的 applyAutoSpan
+  // 逐行等价（vue2 也曾各自内联）。改回调用 core，使三端共用同一套布局数学。
+  // 双重断言：本文件的 FormItemOption 来自 `../../../types`（本包自有的类型声明），
+  // 与 @es-plus/core 的 FormItemOption 并非同一名义类型，直接传参会被 TS 拒绝。
+  // 二者结构一致（本包类型本就应转出 core 的契约，见 types/index.ts），此处只需跨过名义差异。
+  return applyAutoSpan(visible as unknown as Parameters<typeof applyAutoSpan>[0]) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
 // ─── 布局（对齐 vue3 签名）──────────────────────────

@@ -1,13 +1,23 @@
 /**
  * 框架无关的常量定义
  *
- * 这些常量来自 packages/shared/src/contract.ts，是 MCP/CLI 与运行时共用的契约。
- * 重新导出到 @es-plus/core 以便 Vue 2 / Vue 3 渲染层都能从同一处读取，
- * 避免两个包各自定义出现漂移。
+ * 与 packages/shared/src/contract.ts 是**同一份契约的两处手写副本**。
+ *
+ * 为什么是副本而不是 import：`@es-plus/core` 必须保持零依赖（它会被打进 vue2/vue3/antdv
+ * 三个渲染器的产物），而 `@es-plus/shared` 依赖 ajv + zod。core → shared 的 import 会把
+ * 这两个重依赖拖进所有用户的应用包。真正的单一真源需要一个独立的、无依赖的契约包
+ * （如 `@es-plus/contract`），属结构性改造，尚未进行。
+ *
+ * 因此当前用**门禁**代替 import：`scripts/check-schema-contract.mjs` 会断言本文件的
+ * VALID_FORM_TYPES 与 shared/contract.ts 的逐项相等，两处漂移会让 CI 变红。
+ * （此前两者之间没有任何检查——schema 门禁锚定本文件，renderer-parity 锚定 shared，
+ * 只改一处再同步 schema/类型即可保持全绿。）
  *
  * 维护规则：
  * 1. 这里只能存放"无副作用、无 Vue/Element 依赖"的纯常量
  * 2. 修改前需同步检查 mcp-server / cli 是否依赖
+ * 3. 改 VALID_FORM_TYPES / FORM_TYPE_ALIASES 等契约常量时，必须同步
+ *    packages/shared/src/contract.ts，否则 check:schema 会失败
  */
 
 /**

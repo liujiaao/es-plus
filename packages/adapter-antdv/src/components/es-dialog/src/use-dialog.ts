@@ -8,8 +8,22 @@ import { createVNode, getCurrentInstance, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'
 
+/**
+ * 单次调用返回值 —— 与 @es-plus/vue3 / @es-plus/vue2 的 `DialogResult` 同构。
+ *
+ * 此前本端直接返回 vNode，导致同一份业务代码在三端表现不同：
+ *   const { instance, close } = useDialog()({ ... })   // vue3/vue2 可用，antdv 得到 undefined
+ * es-eui（Vue2 站）的官方示例正是这种解构写法，即文档教的三端通用写法在本端会挂。
+ */
+export interface DialogResult {
+  /** 本次弹窗的 vNode（与 vue3 语义一致：可经 `instance.component.props.xxx` 响应式更新） */
+  instance: any
+  close: () => void
+  destroy: () => void
+}
+
 export interface DialogCallable {
-  (dialogOptions: DialogOptions): any
+  (dialogOptions: DialogOptions): DialogResult
   close: () => void
 }
 
@@ -98,7 +112,16 @@ export function useDialog(
     }
 
     ;(DialogComponent as any).close = close
-    return DialogComponent
+    // 该模式下不存在独立销毁语义：close() 已卸载并移除容器，destroy 与 close 等价
+    ;(DialogComponent as any).destroy = close
+
+    const callable = ((dialogOptions: DialogOptions) => {
+      const vNode = DialogComponent(dialogOptions)
+      return { instance: vNode, close, destroy: close }
+    }) as DialogCallableWithDestroy
+    callable.close = close
+    callable.destroy = close
+    return callable
   }
 
   // 模式2：复用容器（默认，单弹窗）
@@ -154,7 +177,16 @@ export function useDialog(
 
   ;(DialogComponent as any).close = close
   ;(DialogComponent as any).destroy = destroy
-  return DialogComponent
+
+  // 返回值形态与 vue3/vue2 的 DialogResult 对齐；同时保留 callable 上的 close/destroy
+  // （既有 `dialog.close()` 写法不受影响，属于纯增量变更）。
+  const callable = ((dialogOptions: DialogOptions) => {
+    const vNode = DialogComponent(dialogOptions)
+    return { instance: vNode, close, destroy }
+  }) as DialogCallableWithDestroy
+  callable.close = close
+  callable.destroy = destroy
+  return callable
 }
 
 export default useDialog

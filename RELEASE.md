@@ -17,7 +17,10 @@
 | `@es-plus/adapter-antdv` | `packages/adapter-antdv` | Ant Design Vue 4.x 适配器（**随 changesets 独立版本、不 linked**，见文末） |
 | `es-plus-ui` | `packages/es-plus-legacy` | 兼容 stub（re-export `@es-plus/vue3`，deprecated） |
 
-`@es-plus/shared`、`@es-plus/mcp-server`、`@es-plus/cli` 三者通过 `linked` 配置联动 — 任一包发版时，其他两个自动同步到相同版本号。其余包（vue3 / vue2 / core / adapter-antdv / es-plus-legacy）随 changesets **独立版本**：版本号互不影响、各自演进（实测 vue3@1.4.2 / vue2@1.1.5 / core@1.0.1 / adapter-antdv@1.0.0 各不相同）。
+`@es-plus/shared`、`@es-plus/mcp-server`、`@es-plus/cli` 三者通过 `linked` 配置联动 — 任一包发版时，其他两个自动同步到相同版本号。其余包（vue3 / vue2 / core / adapter-antdv / es-plus-legacy）随 changesets **独立版本**：版本号互不影响、各自演进（实测 vue3@1.5.0 / vue2@1.2.0 / core@1.1.0 / adapter-antdv@1.1.0 各不相同）。
+
+> `es-plus-ui`（`packages/es-plus-legacy`）已被 `.changeset/config.json` 的 `ignore` 冻结 —— 不再 version、不再发布。
+> 其依赖范围 `@es-plus/vue3: ^1.5.0` 也随 changesets 一起冻结：若 vue3 升到 2.0，该 stub 的依赖将不可满足且无自动修复路径。
 
 ## 日常开发流程
 
@@ -61,19 +64,28 @@ git commit -m "chore: version packages"
 
 ### 3. 发布到 npm
 
-```bash
-npx changeset publish
-```
+发布由 GitHub Actions 工作流 [`.github/workflows/publish.yml`](./.github/workflows/publish.yml)
+通过 npm **Trusted Publishing (OIDC)** 完成 —— **不要在本地直接 `changeset publish`**：
 
-该命令发布所有存在待发版本（pending version）的包，并按依赖拓扑自动排序（先 `shared`，再 `cli` / `mcp-server` 与各渲染器），无需手动指定顺序。
-
-发布后自动创建 git tag（如 `@es-plus/shared@1.0.1`）。
-
-推送 tag 到远程：
+本地 token 的写操作被 registry 限制（任何 PUT 返回 403），本地发布必然失败；CI 走 OIDC 交换身份，不需要 token。
 
 ```bash
-git push --follow-tags
+# 1) 本地消费 changeset，生成版本号变更并提交
+npx changeset version
+git add -A && git commit -m "chore: version packages"
+
+# 2) 推送提交后，到 GitHub → Actions → Publish → Run workflow
 ```
+
+工作流会依次：构建全部包 → `changeset publish`（按依赖拓扑排序，先 `shared`，再 `cli` / `mcp-server` 与各渲染器）
+→ 把 changesets 生成的 per-package tag 推回仓库。
+
+> **注意**：工作流前置守卫要求 `.changeset/` 下没有未消费的 changeset。若忘记第 1 步，
+> `changeset publish` 会以「No unpublished projects to publish」**退出码 0** 结束 ——
+> 绿灯但什么都没发布。守卫会直接失败以避免这种误判。
+
+`changesets` 生成的是 **per-package tag**（如 `@es-plus/shared@1.0.1`），不是 `v1.0.1`。
+`changeset publish` 只在本地 `git tag`、**从不自动推送**；推送由工作流里的 `git push origin --tags` 完成。
 
 ## 版本号规则
 
@@ -91,9 +103,9 @@ git push --follow-tags
 npm run build:packages
 ```
 
-内部按依赖顺序编排：`schemas:sync → shared → vue3 → vue2 → adapter-antdv → cli → mcp-server`。
+内部按依赖顺序编排：`schemas:sync → core → shared → vue3 → vue2 → adapter-antdv → cli → mcp-server`。
 
-- `@es-plus/core` 不在此脚本内——它是纯 `tsc` 构建（vue3 内联打包，vue2 / adapter-antdv 外部引用），单独构建：`npm run build --workspace @es-plus/core`。
+- `@es-plus/core` **在脚本内且最先构建**（`core → shared → ...`）：vue3/vue2/adapter-antdv 都依赖它，先于三者产出。
 - `@es-plus/adapter-antdv` 的 `prebuild` 会先 `sync-schemas`，`prepublishOnly` 会自动 `typecheck + build`。
 
 ## 预发布（Prerelease）

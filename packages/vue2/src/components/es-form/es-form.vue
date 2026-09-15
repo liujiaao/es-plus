@@ -598,7 +598,44 @@ export default defineComponent({
     }
     const resetFields = () => getFormRef()?.resetFields()
     const clearValidate = (p?: string | string[]) => getFormRef()?.clearValidate(p)
-    const validateField = (p: string | string[]) => getFormRef()?.validateField(p)
+
+    // element-ui 的 validateField 是**纯 callback 式**（返回 undefined），而 vue3(Element Plus) /
+    // antdv(Ant Design Vue) 的同名方法返回 Promise：通过 resolve(true)，不通过 reject。
+    // 此前本端直接透传，导致 `await form.validateField('name')` 在 vue2 立刻返回、
+    // 完全不等待校验 —— 三端里唯独 vue2 无法用 await 拦截字段级校验。
+    // 这里把 callback 桥接成 Promise，语义与 validate() 保持同一套（见上方 validate 注释）。
+    const validateField = (p: string | string[]): Promise<boolean> => {
+      const ref = getFormRef()
+      // 无表单实例：与 validate() 一致，放行
+      if (!ref) return Promise.resolve(true)
+
+      // element-ui 在「未匹配到任何字段」时只 console.warn 后 return，**不会调用 callback**。
+      // 若直接包 Promise 会永不 settle（调用方 await 永久挂起），故先自行判定并在无匹配时放行。
+      const propsList = Array.isArray(p) ? p : [p]
+      const form = ref as unknown as { fields?: Array<{ prop?: string }> }
+      const hasMatchedField = Array.isArray(form?.fields)
+        ? form.fields.some((f) => f && f.prop !== undefined && propsList.includes(f.prop))
+        : true
+      if (!hasMatchedField) return Promise.resolve(true)
+
+      return new Promise<boolean>((resolve, reject) => {
+        try {
+          ;(ref as unknown as {
+            validateField: (
+              props: string | string[],
+              cb: (message?: string, invalidFields?: unknown) => void,
+            ) => void
+          }).validateField(p, (message?: string, invalidFields?: unknown) => {
+            // element-ui 回调约定：校验通过时 message 为 ''（无规则时为 undefined），
+            // 不通过时为错误文案。对齐 EP/ADV 的 reject 语义。
+            if (message) reject(invalidFields ?? new Error(message))
+            else resolve(true)
+          })
+        } catch (e) {
+          reject(e)
+        }
+      })
+    }
     // element-ui 2.15.14 的 el-form 没有原生 scrollToField；这里对齐 vue3/antdv 的 API，
     // 通过 el-form 内部维护的 fields 数组找到对应 el-form-item 实例后滚动到视口居中。
     const scrollToField = (prop: string) => {

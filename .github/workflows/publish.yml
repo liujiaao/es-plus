@@ -1,0 +1,90 @@
+name: Publish
+
+# 通过 npm Trusted Publishing (OIDC) 发布 —— 不使用任何 npm token。
+#
+# 背景：本账号的 token 写操作被 registry 限制（owner/维护者/权限/token 类型/OTP 均正常，
+# 但任何 PUT 都返回 403）。Trusted Publishing 是 npm 官方推荐、且不依赖 token 的发布方式。
+#
+# 使用前需在 npmjs.com 为**每个要发布的包**配置一次：
+#   包页 → Settings → Trusted Publisher → GitHub Actions
+#     - Organization or user: liujiaao
+#     - Repository:           es-plus
+#     - Workflow filename:    publish.yml
+#     - Environment:          （留空）
+#
+# 发布流程（两步，缺一不可）：
+#   1. 本地 `npx changeset version` → 提交版本号变更（该操作会消费掉 .changeset/*.md）
+#   2. 手动触发本工作流（Actions → Publish → Run workflow）
+#
+# 为什么不监听 tag 推送：changesets 生成的是 **per-package** tag（`@es-plus/vue3@1.5.1`，
+# 见 @changesets/cli tagPublish），不是 `v*`。此前配的 `tags: ['v*']` 永远不会命中，
+# 那条触发器等于不存在（且 `*` 在 GitHub 的 tag 过滤里不匹配 `/`，放宽也要写成 `**@**`）。
+# 又因为本工作流自己会推送 changesets 生成的 tag，再监听 tag 只会造成「推送 -> 再发布」的回环，
+# 故只保留 workflow_dispatch 这一个确定可用的入口。
+
+on:
+  workflow_dispatch:
+
+# contents: write 是必需的 —— changesets 只在**本地**创建 git tag（tagPublish 仅调用
+# `git tag`，从不 push），需要由本工作流把 tag 推回仓库，否则发布版本在 git 里没有任何痕迹。
+permissions:
+  contents: write
+  id-token: write # OIDC：Trusted Publishing 必需
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # changesets 需要完整历史来定位已有 tag
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Trusted Publishing 需要 npm >= 11.5（Node 20 自带的是 npm 10）
+      - name: Upgrade npm (Trusted Publishing 需要 >= 11.5)
+        run: npm install -g npm@latest
+
+      # 前置守卫：本工作流的约定是「本地先 changeset version，再触发发布」。
+      # 若 .changeset/ 下仍有未消费的 changeset，说明还没 version 过 —— 此时
+      # `changeset publish` 会打印 "No unpublished projects to publish" 并**以退出码 0 结束**，
+      # 造成「绿灯但什么都没发布」的假象。这里显式失败，避免误判发布成功。
+      - name: Verify versioning has been done
+        run: |
+          shopt -s nullglob
+          pending=(.changeset/*.md)
+          if [ ${#pending[@]} -gt 0 ]; then
+            echo "::error::.changeset/ 下仍有 ${#pending[@]} 个未消费的 changeset：${pending[*]}"
+            echo "::error::请先本地运行 \`npx changeset version\` 并提交版本号变更，再触发本工作流。"
+            exit 1
+          fi
+          echo "✅ 无待消费 changeset，可发布"
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      # 构建全部包（含 schemas:sync 与 core/shared 依赖链）
+      - name: Build packages
+        run: npm run build:packages
+
+      # changeset publish 会为每个新版本本地打 git tag，需要 git 身份
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # changeset publish 只发布「版本号尚未在 registry 上」的包；
+      # OIDC 模式下无需 NODE_AUTH_TOKEN，npm 会自动向 registry 交换身份。
+      - name: Publish changed packages
+        run: npx changeset publish
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+
+      # 把 changesets 本地创建（但从不推送）的 per-package tag 推回仓库。
+      # 没有这一步，tag 会随 runner 一起消失，release 溯源永久缺失。
+      - name: Push release tags
+        run: git push origin --tags

@@ -142,10 +142,19 @@ import { employeeColumns, employeeForm } from '@/shared/employee.config'
 
 | Feature | Vue 3 (`@es-plus/vue3`) | Vue 2 (`@es-plus/vue2`) |
 | --- | --- | --- |
-| Virtual scrolling (`virtual: true`) | Yes (`el-table-v2`) | **Not supported** — Element UI has no `el-table-v2` |
+| Virtual scrolling (`virtual: true`) | Yes (`el-table-v2`) | **Not supported** — Element UI has no `el-table-v2` (warns and degrades) |
+| `update:dataSource` (two-way sync) | Emitted | **Not emitted** — table data stays internal in `httpRequest` mode; read it via the table instance instead |
+| EsForm toolbar dropdown (custom query / custom table / refresh) | Yes | **Not implemented** |
 | `ElConfigProvider` locale/size injection | Yes | Use Element UI's global `Vue.use(ElementUI, { locale, size })` |
 | Icons | Element Plus icon components | Element UI class strings (`el-icon-edit`) — converted automatically when needed |
 | Default size | `default` (Element Plus) | `mini` — matches Element UI v2 visual density |
+
+`validateField` / `useDialog` return the same Promise / `{ instance, close, destroy }` shapes as Vue 3,
+so `await form.validateField('name')` and `const { close } = dialog({...})` are portable across ends.
+
+`update:dataSource` is intentionally absent: emitting it re-created a `.sync` reactivity feedback
+loop under Vue 2.6 + `@vue/composition-api`. The same class of loop was solved for `update:pagination`
+with a value-snapshot guard, but the equivalent guard has not been built for table data.
 
 `size` values written for Vue 3 (`large` / `default` / `small`) are auto-mapped into Element UI's (`medium` / `small` / `mini`) so configs remain portable.
 

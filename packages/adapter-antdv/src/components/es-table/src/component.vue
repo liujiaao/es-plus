@@ -554,7 +554,7 @@ const adaptedColumns = computed(() => {
   }
 
   const t = typeof esPlus.t === 'function' ? (esPlus.t as (k: string) => string) : undefined
-  for (const col of visible) {
+  for (const [colIndex, col] of visible.entries()) {
     // 选择列：ADV 通过 rowSelection 渲染，此处跳过（对齐 vue3 type:'selection' 约定）
     if (col.type === 'selection') continue
 
@@ -586,7 +586,8 @@ const adaptedColumns = computed(() => {
     }
 
     // 普通列（adaptColumn 处理 labelKey/sortable/groups）
-    const advCol = adaptColumn(col, t)
+    // 传入位置路径作为 key 兜底：既无 key 又无 prop 的列需要确定性身份
+    const advCol = adaptColumn(col, t, `col_${colIndex}`)
     const placeholder = (col.emptyPlaceholder as string) || '-'
 
     // 格式化函数：有 formatter 时使用 formatter；否则兜底显示文本（对齐 vue3 emptyPlaceholder）

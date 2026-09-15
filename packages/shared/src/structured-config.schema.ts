@@ -63,6 +63,7 @@ const ToolbarBtnSchema = z.object({
   key: z.string().optional(),
   type: z.string().optional(),
   icon: z.string().optional(),
+  position: z.enum(['left', 'right']).optional().describe('left | right'),
   dialogKey: z.string().optional(),
   actionType: z.string().optional(),
   confirm: z.union([z.string(), z.boolean()]).optional(),
@@ -70,17 +71,32 @@ const ToolbarBtnSchema = z.object({
   triggerEvent: z.boolean().optional(),
 })
 
-const TableBtnSchema = z.object({
-  name: z.string().min(1),
-  key: z.string().optional(),
-  type: z.string().optional(),
-  icon: z.string().optional(),
-  code: z.union([z.literal(1), z.literal(2)]).default(1).describe('1=left, 2=right'),
-  dialogKey: z.string().optional(),
-  actionType: z.string().optional(),
-  confirm: z.union([z.string(), z.boolean()]).optional(),
-  permissionValue: z.string().optional(),
-})
+const TableBtnSchema = z
+  .object({
+    name: z.string().min(1),
+    key: z.string().optional(),
+    type: z.string().optional(),
+    icon: z.string().optional(),
+    position: z.enum(['left', 'right']).optional().describe('left | right (recommended positioning field)'),
+    code: z.union([z.literal(1), z.literal(2)]).optional().describe('1=left, 2=right (legacy alias of position; normalized automatically)'),
+    dialogKey: z.string().optional(),
+    actionType: z.string().optional(),
+    confirm: z.union([z.string(), z.boolean()]).optional(),
+    permissionValue: z.string().optional(),
+  })
+  // position 与 code 的关系在合并层收敛，避免两处语义分叉。
+  //
+  // 背景（已实测）：Zod 默认 strip 未知键，因此只声明 code 时，宿主 LLM 若按
+  // `esplus://crud-page-schema` 示例写 `position: 'right'`，会被**静默改写成 code:1（左侧）**——
+  // 解析报成功、无任何告警，按钮跑到错误的一侧。而渲染器契约（三端 BtnConfig）恰恰把
+  // position 标为推荐、把 code 标为 deprecated，core 的 getButtonPosition 也优先读 position。
+  //
+  // 归一化策略：position 为准，若只给 position 则同步生成一致的 code。
+  // 这样既不再丢 position，又保证下游（渲染器 / golden 评分器 / 生成物 JSON）读 code 永远正确。
+  .transform((b) => ({
+    ...b,
+    code: (b.position === 'right' ? 2 : b.position === 'left' ? 1 : (b.code ?? 1)) as 1 | 2,
+  }))
 
 const RowBtnSchema = z.object({
   name: z.string().min(1),

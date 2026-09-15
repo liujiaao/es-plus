@@ -42,6 +42,12 @@ export {
   StructuredCrudConfigSchema,
 } from '../../../packages/shared/src/structured-config.schema'
 
+// NL→配置的 system prompt 单一真源（CLI / MCP / eval 用的是同一份）。
+// 本模块是纯字符串拼接 + 类型导入，无 node 依赖，可在浏览器中使用。
+export {
+  buildNlToConfigSystemPrompt,
+} from '../../../packages/shared/src/ai-nl-to-config-prompt'
+
 export {
   type TargetFramework,
   DEFAULT_TARGET,

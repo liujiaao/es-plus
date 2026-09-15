@@ -45,17 +45,23 @@ const install = (app: App, options: EsPlusOptions = {}) => {
   // 写入模块级单例
   configureEsPlusCore(options)
 
+  // globalProperties 模式下，带独立 Plugin 的组件（EsForm/EsTable）由下方 app.use(Plugin) 注册
+  // （注入 methods / provide），此处若再普通注册会触发 "Component xxx has already been registered" 告警。
+  // 这段守卫此前在 antdv 端遗漏（注释却写着「完全对齐 vue3」），导致 dev 环境必刷重复注册告警，
+  // 且最终生效的是后注册的 Plugin 版本 —— 与 vue3 的安装语义不一致。
+  const willInstallPlugins = options.globalProperties !== false
+
   // 组件全局注册
   if (!(options as Record<string, unknown>).skipComponentRegistration) {
     components.forEach((component: any) => {
-      if (component.name) {
-        app.component(component.name, component)
-      }
+      if (!component.name) return
+      if (willInstallPlugins && component.isPlugin && component.Plugin) return
+      app.component(component.name, component)
     })
   }
 
   // 全局属性 + per-component Plugin 注册
-  if (options.globalProperties !== false) {
+  if (willInstallPlugins) {
     app.config.globalProperties.$useDialog = useDialogOrig
 
     components.forEach((component: any) => {

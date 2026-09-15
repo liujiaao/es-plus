@@ -420,12 +420,13 @@ interface ToolbarBtn {          // rendered in EsForm button area
 
 interface TableBtn {            // toolbar button above the table
   name: string; key?: string; type?: string; icon?: string
-  code?: 1 | 2                  // 1 = left (default), 2 = right.
-                                // CANONICAL positioning field — all three
-                                // renderers read \`code\`. Do NOT use a
-                                // \`position\` field: vue3/antdv accept it as a
-                                // runtime override but vue2 ignores it, so it
-                                // breaks 多端同构.
+  position?: 'left' | 'right'   // RECOMMENDED positioning field. All three
+                                // renderers read it (core's getButtonPosition
+                                // prefers \`position\`), and the renderer type
+                                // declarations mark \`code\` as deprecated.
+  code?: 1 | 2                  // Legacy alias: 1 = left (default), 2 = right.
+                                // Still accepted; keep \`position\` and \`code\`
+                                // consistent when you set both.
   dialogKey?: string; actionType?: string
   confirm?: string | boolean; permissionValue?: string
 }

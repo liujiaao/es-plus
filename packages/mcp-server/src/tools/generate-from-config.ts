@@ -72,6 +72,32 @@ const FieldConfigSchema = z.object({
   permissionValue: z.string().optional(),
 });
 
+/**
+ * Table toolbar button — mirrors the shared authoritative TableBtnSchema.
+ *
+ * Accepts both `position` (recommended by the renderer contract) and `code`
+ * (legacy alias), and normalizes them so the emitted `code` always agrees with
+ * `position`. Without the transform, Zod's unknown-key stripping would turn
+ * `position: "right"` into `code: 1` (left) silently.
+ */
+const TableBtnSchema = z
+  .object({
+    name: z.string().min(1),
+    key: z.string().optional(),
+    type: z.string().optional(),
+    icon: z.string().optional(),
+    position: z.enum(["left", "right"]).optional().describe("left | right (recommended positioning field)"),
+    code: z.union([z.literal(1), z.literal(2)]).optional().describe("1=left, 2=right (legacy alias of position; normalized automatically)"),
+    dialogKey: z.string().optional(),
+    actionType: z.string().optional(),
+    confirm: z.union([z.string(), z.boolean()]).optional(),
+    permissionValue: z.string().optional(),
+  })
+  .transform((b) => ({
+    ...b,
+    code: (b.position === "right" ? 2 : b.position === "left" ? 1 : (b.code ?? 1)) as 1 | 2,
+  }));
+
 // ── Structured config raw shape (the tool's input schema) ──────────────
 // Exposing the FULL structured shape as the tool's input — rather than a
 // single opaque `config` JSON string — turns MCP tool-use into constrained
@@ -83,7 +109,8 @@ const FieldConfigSchema = z.object({
 // StructuredCrudConfigSchema — the two zod versions can't share objects safely.
 // scripts/check-schema-contract.mjs guards the two copies against drift
 // (target enum must cover vue3/vue2/antdv; tableOptions must carry the height/
-// virtual contract fields; tableBtns must use `code`, never `position`).
+// virtual contract fields; tableBtns must accept `position` and normalize it
+// into `code` via .transform()).
 // That guard locates each field by a regex on its zod expression, so keep the
 // target/tableOptions/tableBtns declarations below in their existing textual
 // form (do not inline placeholder samples of those expressions in comments —
@@ -139,6 +166,7 @@ const configShape = {
         key: z.string().optional(),
         type: z.string().optional(),
         icon: z.string().optional(),
+        position: z.enum(["left", "right"]).optional().describe("left | right"),
         dialogKey: z.string().optional(),
         actionType: z.string().optional(),
         confirm: z.union([z.string(), z.boolean()]).optional(),
@@ -146,23 +174,18 @@ const configShape = {
       })
     )
     .optional(),
-  // NOTE: canonical positioning field is `code` (1=left, 2=right), the
-  // single field all three renderers read. Kept in exact lockstep with
-  // the authoritative shared schema (structured-config.schema.ts) — do
-  // NOT re-introduce a `position` field here: vue3/antdv accept it as a
-  // runtime override but vue2 ignores it, so emitting `position` breaks
-  // 多端同构. check-schema-contract.mjs guards this.
-  tableBtns: z.array(z.object({
-    name: z.string().min(1),
-    key: z.string().optional(),
-    type: z.string().optional(),
-    icon: z.string().optional(),
-    code: z.union([z.literal(1), z.literal(2)]).default(1).describe("1=left, 2=right"),
-    dialogKey: z.string().optional(),
-    actionType: z.string().optional(),
-    confirm: z.union([z.string(), z.boolean()]).optional(),
-    permissionValue: z.string().optional(),
-  })).optional(),
+  // NOTE: both `position` and `code` are accepted. `position` is the field the
+  // renderer contract recommends (@es-plus/* BtnConfig marks `code` deprecated
+  // and core's getButtonPosition reads `position` first); `code` is the legacy
+  // alias kept for lockstep with the shared authoritative schema.
+  //
+  // They are reconciled inside TableBtnSchema's .transform(), which always emits
+  // a `code` consistent with `position`. That normalization is what makes the
+  // two-field contract safe: without it, Zod's default unknown-key stripping
+  // would silently rewrite `position: "right"` into `code: 1` (LEFT) with no
+  // error at all. Do NOT drop the .transform() — check-schema-contract.mjs
+  // guards it.
+  tableBtns: z.array(TableBtnSchema).optional(),
   operationColumn: z
     .union([
       z.literal(false),

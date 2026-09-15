@@ -23,6 +23,7 @@ import {
   generateFromConfig,
   StructuredCrudConfigSchema,
   FORM_TYPES,
+  buildNlToConfigSystemPrompt,
   type GeneratedConfig,
   type StructuredCrudConfig,
 } from '@es-plus/shared'
@@ -143,57 +144,28 @@ function checkAborted(signal: AbortSignal | undefined): void {
 
 // ─── system prompt / AI call ──────────────────────────────────────────────
 
-const STRUCTURED_CONFIG_SKETCH = `interface StructuredCrudConfig {
-  name: string                              // Component file name (camelCase)
-  apiUrl?: string                           // Optional list endpoint
-  fields: Array<{
-    prop: string                            // camelCase
-    label: string
-    formtype: ${FORM_TYPES.join(' | ')}
-    inQuery?: boolean                       // default true — show in search form
-    inTable?: boolean                       // default true — show as table column
-    inForm?: boolean                        // default true — show in add/edit dialog
-    querySpan?: number                      // 1..24, query form grid
-    formSpan?: number                       // 1..24, dialog form grid
-    required?: boolean
-    dataOptions?: { label: string; value: string|number|boolean }[]
-    width?: number | string
-    align?: 'left' | 'center' | 'right'
-    formatter?: string                      // expression string for display
-  }>
-  actions?: ('add'|'edit'|'delete'|'view'|'export')[]
-  toolbarBtns?: { name: string; key: string; type?: string; triggerEvent?: boolean }[]
-  pagination?: { pageSize?: number; pageSizes?: number[] }
-  tableOptions?: { border?: boolean; stripe?: boolean; virtual?: boolean }
-  mode?: 'schema' | 'sfc'                   // default 'schema'
-  target?: 'vue3' | 'vue2'                  // default 'vue3'
-}`
-
+/**
+ * system prompt —— 直接使用 @es-plus/shared 的单一真源 `buildNlToConfigSystemPrompt()`，
+ * 只在末尾追加本页特有的两段上下文（MCP 工具说明、多轮「现有配置」）。
+ *
+ * 此前本文件手写了一份 prompt 与一份 `STRUCTURED_CONFIG_SKETCH`，从不 import shared，
+ * 结果是**与 CLI / MCP / eval 三处的 steering 完全脱钩**：它教的是已废弃的
+ * `formtype:'datePicker'` 拼写，`target` 也漏了 `antdv`，且示例强度弱于官方 few-shot。
+ * shared 侧任何 prompt 改进都到不了这个对外演示页 —— 而它正是外部用户的第一触点。
+ *
+ * 保留 shared 的语义规则 + 6 个 few-shot，不再是「关键词表」式指引。
+ */
 function buildSystemPrompt(currentConfig: StructuredCrudConfig | undefined): string {
   const ctx = currentConfig
-    ? `Existing config (refine/extend, don't replace from scratch):\n\`\`\`json\n${JSON.stringify(currentConfig, null, 2)}\n\`\`\``
-    : 'Existing config: (none — first turn)'
-  return `You are an es-plus CRUD page configurator. You produce structured JSON configs that @es-plus/vue3 uses to render forms + tables + dialogs.
+    ? `Existing config (refine/extend it — do not replace from scratch):\n\`\`\`json\n${JSON.stringify(currentConfig, null, 2)}\n\`\`\``
+    : 'Existing config: (none — this is the first turn)'
+  const tools = [
+    '# Available MCP tools (the server runs these on your behalf)',
+    '- generate_crud_from_config(config) → produces the SFC + page schema',
+    '- validate_config(config) → zod-validates against StructuredCrudConfigSchema',
+  ].join('\n')
 
-# Available MCP tools (the server runs these on your behalf)
-- generate_crud_from_config(config: StructuredCrudConfig) → produces SFC + schema
-- validate_config(config) → zod-validates against StructuredCrudConfigSchema
-
-# Output schema (must match exactly — use the field names below verbatim)
-\`\`\`ts
-${STRUCTURED_CONFIG_SKETCH}
-\`\`\`
-
-${ctx}
-
-# Rules
-- camelCase prop names; \`name\` should be PascalCase like \`UserManagement\`
-- Use Chinese labels for Chinese input, English for English input
-- For status/category fields use formtype:'Select' with dataOptions
-- For date ranges use formtype:'datePicker' with attrs:{ type:'daterange', valueFormat:'YYYY-MM-DD' }
-- Always include the \`name\` and \`fields\` keys at the top level
-- If user mentions edit/delete actions, set actions:['add','edit','delete'] etc.
-- Respond ONLY with the JSON object, no commentary, no markdown fences.`
+  return [buildNlToConfigSystemPrompt(), '', tools, '', ctx].join('\n')
 }
 
 async function callOpenAI(

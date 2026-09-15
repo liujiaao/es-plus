@@ -44,7 +44,7 @@
 - **任意后端适配** — `configTableOut` 配置化映射 API 响应字段
 - **权限控制** — `permissionValue` 声明式按钮权限，无需 v-if
 - **国际化** — `labelKey` + 自定义翻译函数，兼容任意 i18n 方案
-- **TypeScript** — 完整类型定义 + 38 个跨渲染器契约类型（CI 强制三端同构导出）
+- **TypeScript** — 完整类型定义 + 35 个跨渲染器契约类型（CI 强制三端同构导出，数量由 `check:readme` 校验）
 - **AI 原生支持** — 配套 MCP Server 和 CLI：MCP 通过协议把 Schema/约定交给宿主 LLM（Claude Code/Cursor）做语义推理，es-plus 负责约束校验 + 确定性编译成可运行页面
 
 ---

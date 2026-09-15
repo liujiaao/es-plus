@@ -41,27 +41,10 @@ jobs:
           ESPLUS_EVAL_TARGET: ${{ github.event.inputs.target || '0.95' }}
         run: npm run eval:llm -- --require-key
 
-  golden-e2e:
-    # Heavy counterpart to the free per-PR Layer-1 scorer: compiles EVERY golden
-    # case through the config-driven cli into a real `vite build`, across all
-    # three targets. Too slow to gate every PR, so it runs nightly (no API key
-    # needed — this is deterministic config→code→compile, not LLM inference).
-    name: Golden corpus compiles (all targets)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci --legacy-peer-deps
-      - name: Build shared + all target packages + cli
-        run: |
-          npm run build --workspace @es-plus/shared
-          npm run build --workspace @es-plus/vue3
-          npm run build --workspace @es-plus/vue2
-          npm run build --workspace @es-plus/adapter-antdv
-          npm run build --workspace @es-plus/cli
-      - name: Compile whole golden corpus (vite build per case)
-        run: npm run golden:e2e
-        timeout-minutes: 30
+  # NOTE: 整个 golden 语料的真实编译（golden:e2e）已移到 typecheck.yml 的
+  # `golden-compile` 作业 —— 它是确定性的、不需要 API key，没有理由只在夜间跑：
+  # 夜间任务不阻塞合并、也不阻塞部署，生成器产出编译不过的代码时 PR 上仍是绿的。
+  # 本文件现在只保留需要 ANTHROPIC_API_KEY（花钱）的 Layer-2 准确率评估。
+  #
+  # 放在 typecheck.yml 还有一个附带好处：deploy-docs 通过 workflow_run 依赖 Typecheck，
+  # 因此「全语料能编译」现在也间接成为了部署前置条件。

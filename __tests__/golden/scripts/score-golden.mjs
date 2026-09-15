@@ -20,12 +20,80 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { transformSync } from 'esbuild'
 import { generateFromConfig, StructuredCrudConfigSchema } from '@es-plus/shared'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', 'cases')
 
 /** @typedef {{ file: string, failures: string[] }} CaseResult */
+
+/**
+ * 语法校验 —— 本层此前只做字符串匹配（countOccurrences / propPresent），
+ * 因此**语法坏掉的生成物照样能通过 PR 门禁**：唯一的「能编译」证明在夜间的
+ * golden-e2e（vite build），而它不阻塞合并、也不阻塞部署。
+ *
+ * 这里补一次真实解析，成本是毫秒级、无需 npm install：
+ *   - schema 模式产出 `export const pageSchema = {<JSON>}` → 直接 JSON.parse 其载荷；
+ *   - 两种模式的 SFC → 抽出 <script> 块交给 esbuild 解析（TS 语法错误会抛出）。
+ *
+ * 覆盖不到的是模板编译与依赖解析（那是 golden-e2e 的职责），但「生成器拼出语法错误代码」
+ * 这一类真实故障从此在 PR 上就会红。
+ */
+function checkSyntax({ mode, code, wrapper, failures }) {
+  /** esbuild 解析一段 TS/JS，返回错误信息或 null（只解析、不解析依赖） */
+  const parseTs = (src, label) => {
+    try {
+      transformSync(src, { loader: 'ts' })
+      return null
+    } catch (err) {
+      return `${label} failed to parse — ${String(err.message).split('\n')[0]}`
+    }
+  }
+
+  if (mode !== 'sfc') {
+    // schema 模式的 code 是一个 TS 模块：
+    //   import type { CrudPageSchema } from '@es-plus/vue3'
+    //   export const pageSchema: CrudPageSchema = { ...JSON... }
+    // （typescript:false 时为 `export const pageSchema = { ... }`，无类型注解）
+    const moduleErr = parseTs(code, 'schema mode: pageSchema module')
+    if (moduleErr) failures.push(moduleErr)
+
+    // 载荷必须是合法 JSON —— 这比「模块能解析」更严格，且能挡住生成器拼坏对象字面量
+    const m = code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)
+    if (!m) {
+      failures.push('schema mode: could not locate the `pageSchema` object literal')
+    } else {
+      try {
+        JSON.parse(m[1])
+      } catch (err) {
+        failures.push(`schema mode: pageSchema payload is not valid JSON — ${err.message}`)
+      }
+    }
+  }
+
+  // SFC（schema 模式的 wrapper / sfc 模式的 code）的 <script> 块必须能被解析
+  const sfcs = []
+  if (mode === 'sfc') {
+    if (code.trim()) sfcs.push(['sfc code', code])
+  } else if (wrapper && wrapper.trim()) {
+    sfcs.push(['wrapper', wrapper])
+  }
+  for (const [label, sfc] of sfcs) {
+    const blocks = [...sfc.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+    for (const [, attrs, body] of blocks) {
+      // 生成器产出的是 <script setup lang="tsx">（含 JSX 渲染函数）——用 'ts' 解析 JSX
+      // 会误报「Expected ">" but found ...」。按声明语言选择 loader。
+      const lang = (attrs.match(/lang\s*=\s*["']?([a-z]+)/i) || [])[1]?.toLowerCase()
+      const loader = lang === 'tsx' ? 'tsx' : lang === 'jsx' ? 'jsx' : lang === 'ts' ? 'ts' : 'js'
+      try {
+        transformSync(body, { loader })
+      } catch (err) {
+        failures.push(`${label}: <script> block failed to parse — ${err.message.split('\n').slice(0, 2).join(' ')}`)
+      }
+    }
+  }
+}
 
 function isVisible(field, key) {
   // defaults resolved by the schema parse, but guard for raw usage too
@@ -79,6 +147,9 @@ function scoreCase(raw) {
   // (3) code present
   if (!code.trim()) failures.push('emitted code is empty')
 
+  // (3b) 语法校验：生成物必须真的能被解析（此前本层只做字符串匹配，语法错误也能过）
+  checkSyntax({ mode: config.mode, code, wrapper, failures })
+
   // (4) mode/wrapper coherence
   if (config.mode === 'schema' && !wrapper.trim()) {
     failures.push('schema mode must emit a wrapper SFC (wrapperCode) but it is empty')
@@ -122,6 +193,23 @@ function scoreCase(raw) {
     if (got1 < want1) failures.push(`expected ${want1} left tableBtn(s) (code:1) but emitted ${got1}`)
     if (got2 < want2) failures.push(`expected ${want2} right tableBtn(s) (code:2) but emitted ${got2}`)
   }
+
+  // (8c) position → code 归一化：用例里显式声明的 `position` 必须原样反映到解析后的 `code`。
+  //      回归背景：Zod 默认 strip 未知键，只声明 code 时 `position: 'right'` 会被**静默**
+  //      改写成 code:1（左侧）——解析成功、零告警，按钮落到错误一侧。
+  //      这里拿 raw（声明值）与 parsed（归一化后）对照，正是 strip 会露馅的地方。
+  const rawBtns = Array.isArray(raw.config?.tableBtns) ? raw.config.tableBtns : []
+  const parsedBtns = Array.isArray(config.tableBtns) ? config.tableBtns : []
+  rawBtns.forEach((rawBtn, i) => {
+    if (!rawBtn?.position) return
+    const expected = rawBtn.position === 'right' ? 2 : 1
+    const actual = parsedBtns[i]?.code
+    if (actual !== expected) {
+      failures.push(
+        `tableBtn "${rawBtn.name ?? i}" declares position="${rawBtn.position}" but normalized code=${actual} (expected ${expected}) — position was silently dropped`
+      )
+    }
+  })
 
   // (8b) sfc mode does not yet consume tableBtns/operationColumn/dialogs. WS-5
   //      ("mark, never drop") requires these be SURFACED as a warning rather

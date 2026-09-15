@@ -586,3 +586,94 @@ describe('useFormInputs — Transfer 数据源映射（label→title / dataOptio
     ])
   })
 })
+
+/**
+ * 回归：EP 专有属性名此前被原样透传给 ADV 组件，而 ADV 不认识 → **无告警地静默失效**。
+ * 同一份配置在 vue3/vue2 正常、antdv 无反应，是本适配器最伤信任的失败模式。
+ * 这里按 formtype 逐条锁死「EP 名 → ADV 名」的映射与「EP 名必须被删除」的不变量。
+ */
+describe('useFormInputs — EP 专有属性 → ADV 属性名映射', () => {
+  const { formInputComponents } = useFormInputs()
+  const propsOf = (formtype: string, overrides: Partial<FormItemOption> = {}) => {
+    const item = makeItem(formtype, overrides)
+    const renderFn = formInputComponents(item)!
+    return ((renderFn(h, makeModel(), { row: item, index: 0 }) as any).props || {}) as Record<string, unknown>
+  }
+
+  it('Select: clearable → allowClear，且 clearable 被移除', () => {
+    const props = propsOf('Select', { attrs: { clearable: true } })
+    expect(props.allowClear).toBe(true)
+    expect('clearable' in props).toBe(false)
+  })
+
+  it('Select: filterable → showSearch（此前远程搜索 Select 在 antdv 完全不可用）', () => {
+    const props = propsOf('Select', { attrs: { filterable: true } })
+    expect(props.showSearch).toBe(true)
+    expect('filterable' in props).toBe(false)
+  })
+
+  it('Select: collapse-tags(boolean) → maxTagCount=1 语义转换', () => {
+    const props = propsOf('Select', { attrs: { 'collapse-tags': true } })
+    expect(props.maxTagCount).toBe(1)
+    expect('collapse-tags' in props).toBe(false)
+  })
+
+  it('Select: collapse-tags=false → 不产生 maxTagCount 值', () => {
+    const props = propsOf('Select', { attrs: { 'collapse-tags': false } })
+    expect(props.maxTagCount).toBeUndefined()
+  })
+
+  it('Select: collapse-tags-tooltip 无 ADV 等价物 → 丢弃并一次性告警', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const props = propsOf('Select', { attrs: { 'collapse-tags-tooltip': true } })
+    expect('collapse-tags-tooltip' in props).toBe(false)
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('collapse-tags-tooltip'))
+    spy.mockRestore()
+  })
+
+  it('Input: clearable → allowClear、show-word-limit → showCount', () => {
+    const props = propsOf('Input', { attrs: { clearable: true, 'show-word-limit': true } })
+    expect(props.allowClear).toBe(true)
+    expect(props.showCount).toBe(true)
+    expect('clearable' in props).toBe(false)
+    expect('show-word-limit' in props).toBe(false)
+  })
+
+  it('Cascader: clearable / filterable 同样映射', () => {
+    const props = propsOf('Cascader', { attrs: { clearable: true, filterable: true } })
+    expect(props.allowClear).toBe(true)
+    expect(props.showSearch).toBe(true)
+  })
+
+  it('DatePicker: clearable → allowClear', () => {
+    const props = propsOf('DatePicker', { attrs: { clearable: false } })
+    expect(props.allowClear).toBe(false)
+    expect('clearable' in props).toBe(false)
+  })
+
+  it('TimePicker: clearable → allowClear', () => {
+    const props = propsOf('TimePicker', { attrs: { clearable: true } })
+    expect(props.allowClear).toBe(true)
+  })
+
+  it('显式 ADV 原生名优先于 EP 别名（低层配置不被覆盖）', () => {
+    const props = propsOf('Select', { attrs: { clearable: true, allowClear: false } })
+    expect(props.allowClear).toBe(false)
+    expect('clearable' in props).toBe(false)
+  })
+
+  it('props 袋里的 EP 别名同样被映射（与 attrs 同构）', () => {
+    const props = propsOf('Select', { props: { filterable: true } })
+    expect(props.showSearch).toBe(true)
+  })
+
+  it('InputNumber 不在映射表内：ADV 无 allowClear，不产生该属性', () => {
+    const props = propsOf('InputNumber', { attrs: { clearable: true } })
+    expect(props.allowClear).toBeUndefined()
+  })
+
+  it('旧别名 datePicker 也会被归一化后命中映射', () => {
+    const props = propsOf('datePicker', { attrs: { clearable: true } })
+    expect(props.allowClear).toBe(true)
+  })
+})

@@ -148,9 +148,11 @@ describe('useDialog — onlyInstance:true', () => {
     expect(mockCreateVNode).toHaveBeenCalledTimes(2)
   })
 
-  it('onlyInstance 模式没有 destroy 方法', () => {
+  // 三端同构：vue3 的 onlyInstance 分支同样定义了 destroy（该模式 close 已卸载并移除容器，
+  // destroy 与其等价）。此前本端缺失 destroy，跨端代码 `const { destroy } = dialog(...)` 会挂。
+  it('onlyInstance 模式同样提供 destroy（对齐 vue3）', () => {
     const dialog = useDialog(undefined, { onlyInstance: true })
-    expect((dialog as any).destroy).toBeUndefined()
+    expect(typeof (dialog as any).destroy).toBe('function')
   })
 
   it('visible 默认置为 true', () => {
@@ -220,5 +222,44 @@ describe('useDialog — 自定义 Component', () => {
     dialog({})
     const comp = mockCreateVNode.mock.calls[0][0]
     expect(comp).toBeDefined()
+  })
+})
+
+/**
+ * 三端同构：调用返回值形态。
+ *
+ * 此前 antdv 的 `dialog({...})` 直接返回 vNode，而 vue3/vue2 返回
+ * `{ instance, close, destroy }`。es-eui（Vue2 站）的官方示例正是
+ * `const { instance, close } = useDialog()({...})` 这种解构写法 ——
+ * 即文档教的三端通用写法在本端会拿到 undefined。
+ */
+describe('useDialog — 返回值与 vue3/vue2 的 DialogResult 同构', () => {
+  it('默认模式：返回 { instance, close, destroy }', () => {
+    const dialog = useDialog()
+    const result = dialog({ title: 'x' })
+    expect(result).toBeTruthy()
+    expect(result.instance).toBeTruthy()
+    expect(typeof result.close).toBe('function')
+    expect(typeof result.destroy).toBe('function')
+  })
+
+  it('onlyInstance 模式：同样返回 { instance, close, destroy }', () => {
+    const dialog = useDialog(undefined, { onlyInstance: true })
+    const result = dialog({ title: 'x' })
+    expect(result.instance).toBeTruthy()
+    expect(typeof result.close).toBe('function')
+    expect(typeof result.destroy).toBe('function')
+  })
+
+  it('解构写法可用，且 close 与 callable.close 是同一函数', () => {
+    const dialog = useDialog()
+    const { close } = dialog({ title: 'x' })
+    expect(close).toBe((dialog as any).close)
+  })
+
+  it('instance 指向本次渲染的 vNode（可做响应式 props 更新）', () => {
+    const dialog = useDialog()
+    const { instance } = dialog({ title: 'x' })
+    expect(instance).toBe(mockCreateVNode.mock.results[0].value)
   })
 })

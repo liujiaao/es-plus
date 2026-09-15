@@ -9,7 +9,7 @@
  *
  * 退出码：0 = 成功/一致；1 = 校验发现漂移。
  */
-import { writeFileSync, readdirSync, existsSync } from 'node:fs'
+import { writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { readText, sameText } from './lib/text-sync.mjs'
@@ -21,25 +21,43 @@ const TARGET = join(ROOT, 'es-plus-docs', 'src', 'docs')
 
 const CHECK = process.argv.includes('--check')
 
-/** 两目录重叠的 .md 文件（单一权威源在根 docs/，文档站副本由本脚本生成，禁止手改） */
-function overlappingFiles() {
-  const src = new Set(readdirSync(SOURCE).filter((f) => f.endsWith('.md')))
-  const dst = new Set(readdirSync(TARGET).filter((f) => f.endsWith('.md')))
-  return [...src].filter((f) => dst.has(f)).sort()
-}
+/**
+ * 应由根 docs/ 镜像到文档站的文档清单（单一权威源在根 docs/，文档站副本由本脚本生成，禁止手改）。
+ *
+ * 为什么是**显式清单**而不是「两目录交集」：交集写法下，删掉文档站副本会让该文件
+ * 自动退出被检查集合 —— `--check` 依然打印「N 个文档一致」并退出 0，而站点页面
+ * 已经消失。同类门禁里这是唯一可被「删除」绕过的一个。
+ * 新增镜像文档时把文件名加进这里（不要依赖目录扫描）。
+ */
+const MIRRORED_DOCS = ['why-es-plus.md', 'why-es-plus.en.md']
 
 function main() {
-  const files = overlappingFiles()
   let drift = false
   let synced = 0
 
-  for (const file of files) {
-    const srcContent = readText(join(SOURCE, file))
+  for (const file of MIRRORED_DOCS) {
+    const srcPath = join(SOURCE, file)
     const dstPath = join(TARGET, file)
 
+    // 源缺失 = 单源本身被删，必须报错（不能静默跳过）
+    if (!existsSync(srcPath)) {
+      console.error(`❌ 单源缺失：docs/${file} 不存在（MIRRORED_DOCS 声明的镜像文档）`)
+      drift = true
+      continue
+    }
+
+    const srcContent = readText(srcPath)
+
     if (CHECK) {
-      const dstContent = existsSync(dstPath) ? readText(dstPath) : null
-      if (!sameText(dstContent, srcContent)) {
+      // 目标缺失同样报错：此前正是「目标被删 -> 退出检查集合 -> 绿灯」的漏点
+      if (!existsSync(dstPath)) {
+        console.error(
+          `❌ 文档站副本缺失：es-plus-docs/src/docs/${file} 不存在（运行 \`npm run docs:sync\` 生成）`,
+        )
+        drift = true
+        continue
+      }
+      if (!sameText(readText(dstPath), srcContent)) {
         console.error(`❌ 文档漂移：es-plus-docs/src/docs/${file} 与 docs/${file} 不一致`)
         drift = true
       }
@@ -54,9 +72,9 @@ function main() {
       console.error('\n文档站与根 docs/ 不同步。运行 `npm run docs:sync` 重新同步，不要手改文档站副本。')
       process.exit(1)
     }
-    console.log(`✅ ${files.length} 个重叠文档与根 docs/（单一权威源）逐字节一致`)
+    console.log(`✅ ${MIRRORED_DOCS.length} 个镜像文档与根 docs/（单一权威源）逐字节一致`)
   } else {
-    console.log(`✅ 已从根 docs/ 同步 ${synced} 个重叠文档到 es-plus-docs/src/docs/`)
+    console.log(`✅ 已从根 docs/ 同步 ${synced} 个镜像文档到 es-plus-docs/src/docs/`)
   }
 }
 

@@ -162,6 +162,63 @@ describe('StructuredCrudConfigSchema — rejects invalid input', () => {
   })
 })
 
+// 回归：tableBtns 的定位字段。
+//
+// 此前 Schema 只声明 `code`，而渲染器契约（三端 BtnConfig）把 `position` 标为推荐、
+// `code` 标为 deprecated，MCP 的 esplus://crud-page-schema 示例也通篇用 `position`。
+// Zod 默认 strip 未知键 ⇒ 宿主 LLM 写 `position: 'right'` 时会被**静默改写成 code:1（左侧）**：
+// 解析成功、零告警，按钮落到错误的一侧。这组用例把该行为钉死。
+describe('StructuredCrudConfigSchema — tableBtns 定位字段（position ↔ code 归一化）', () => {
+  const parseBtn = (btn: Record<string, unknown>) => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'Page',
+      apiUrl: '/api/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      tableBtns: [btn],
+    })
+    expect(r.success).toBe(true)
+    return (r as { data: { tableBtns: Array<Record<string, unknown>> } }).data.tableBtns[0]
+  }
+
+  it("position:'right' 被保留，并归一化为 code:2（而非静默退化成 code:1）", () => {
+    const btn = parseBtn({ name: '新增', position: 'right' })
+    expect(btn.position).toBe('right')
+    expect(btn.code).toBe(2)
+  })
+
+  it("position:'left' 归一化为 code:1", () => {
+    const btn = parseBtn({ name: '导出', position: 'left' })
+    expect(btn.code).toBe(1)
+  })
+
+  it('只给 code 时保持原值（旧别名仍可用）', () => {
+    expect(parseBtn({ name: '导出', code: 2 }).code).toBe(2)
+    expect(parseBtn({ name: '导出', code: 1 }).code).toBe(1)
+  })
+
+  it('两者都给且冲突时以 position 为准（并保持 code 与之一致）', () => {
+    const btn = parseBtn({ name: '导出', position: 'right', code: 1 })
+    expect(btn.code).toBe(2)
+  })
+
+  it('都不给时默认为左侧 code:1（下游按 code 读取，不能缺失）', () => {
+    expect(parseBtn({ name: '新增' }).code).toBe(1)
+  })
+
+  it('toolbarBtns 同样接受 position（不再被 strip）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'Page',
+      apiUrl: '/api/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      toolbarBtns: [{ name: '重置', position: 'right' }],
+    })
+    expect(r.success).toBe(true)
+    expect((r as { data: { toolbarBtns: Array<Record<string, unknown>> } }).data.toolbarBtns[0].position).toBe('right')
+  })
+})
+
 describe('StructuredCrudConfigSchema — surface listing', () => {
   it('top-level keys are stable', () => {
     // ZodObject exposes .shape — snapshotting the key list catches accidental

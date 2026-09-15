@@ -32,14 +32,21 @@ const fail = (msg) => {
 }
 
 // ── 1. formtype 枚举同步 ────────────────────────────────
-function checkFormTypeEnum() {
-  const constantsSrc = read('packages/core/src/constants.ts')
-  const m = constantsSrc.match(/VALID_FORM_TYPES\s*=\s*\[([\s\S]*?)\]\s*as const/)
-  if (!m) return fail('未能在 core/constants.ts 定位 VALID_FORM_TYPES')
-  const coreTypes = m[1]
+function parseFormTypeList(src, label) {
+  const m = src.match(/VALID_FORM_TYPES\s*=\s*\[([\s\S]*?)\]\s*as const/)
+  if (!m) {
+    fail(`未能在 ${label} 定位 VALID_FORM_TYPES`)
+    return null
+  }
+  return m[1]
     .split(',')
     .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
     .filter(Boolean)
+}
+
+function checkFormTypeEnum() {
+  const coreTypes = parseFormTypeList(read('packages/core/src/constants.ts'), 'core/constants.ts')
+  if (!coreTypes) return
 
   const schema = readSchema('form-item.schema.json')
   const enumVals = schema?.properties?.formtype?.enum ?? []
@@ -59,6 +66,29 @@ function checkFormTypeEnum() {
   }
   if (!missingInSchema.length && !extraInSchema.length) {
     console.log(`✅ formtype 枚举同步（${coreTypes.length} 项）`)
+  }
+
+  // ── 1b. core/constants.ts ↔ shared/contract.ts 两处手写副本必须逐项一致 ──
+  // 这是此前**没有被任何检查覆盖**的一条边：本脚本锚定 core，check-renderer-parity
+  // 锚定 shared/contract.ts，只改一处再同步 form-item schema 与 core/types.ts，
+  // 就能让两道门禁同时保持全绿，而两处契约已经分叉。
+  const sharedTypes = parseFormTypeList(
+    read('packages/shared/src/contract.ts'),
+    'shared/contract.ts'
+  )
+  if (sharedTypes) {
+    const onlyCore = coreTypes.filter((t) => !sharedTypes.includes(t))
+    const onlyShared = sharedTypes.filter((t) => !coreTypes.includes(t))
+    if (onlyCore.length || onlyShared.length) {
+      fail(
+        'core/constants.ts 与 shared/contract.ts 的 VALID_FORM_TYPES 已分叉：' +
+          (onlyCore.length ? `仅 core 有 [${onlyCore.join(', ')}]；` : '') +
+          (onlyShared.length ? `仅 shared 有 [${onlyShared.join(', ')}]；` : '') +
+          '两处是同一契约的手写副本（core 零依赖，不能 import shared），必须同步修改'
+      )
+    } else {
+      console.log('✅ core/constants.ts 与 shared/contract.ts 的 formtype 列表一致')
+    }
   }
 }
 
@@ -139,23 +169,40 @@ function checkStructuredConfigZod() {
       }
     }
 
-    // tableBtns 定位字段：唯一权威字段是 `code`（1=left,2=right），三端都读它。
-    // vue3/antdv 额外接受 `position` 作运行时覆盖，但 vue2 忽略它——若生成契约
-    // 里出现 `position`，同一份配置在 vue2 上定位失效，违背「多端同构」。因此两处
-    // Zod 副本都必须只用 `code`、禁止 `position`。
+    // tableBtns 定位字段：`position`（渲染器契约推荐：三端 BtnConfig 都把 code 标为
+    // deprecated，core getButtonPosition 优先读 position）与 `code`（旧别名）都必须被**接受**，
+    // 且必须由 .transform() 归一化成「与 position 一致的 code」。
+    //
+    // 为什么归一化是硬要求：Zod 默认 strip 未知键。若只声明 code 而不接受 position，
+    // 宿主 LLM 按 esplus://crud-page-schema 的示例写 position:'right' 时会被**静默改写成
+    // code:1（左侧）**——解析成功、零告警，按钮跑到错误一侧（已实测复现）。
+    // 反之，若只接受 position 而不落 code，下游按 code 读取的地方（golden 评分器、
+    // 生成物 JSON）会拿不到定位信息。两者必须同时存在并归一化。
+    //
     // 兼容两种写法：内联 `tableBtns: z.array(z.object({...}))`（mcp 副本）与
     // 具名 `const TableBtnSchema = z.object({...})`（shared 权威）。
+    // 注意 `z\s*\.object`：z 与 .object 可能跨行（链式写法），不容忍空白会让守卫在
+    // 纯格式化改动下静默失配（把「定位失败」误报成契约漂移）。
     const btnBlock =
-      src.match(/tableBtns:\s*z\s*\.array\(z\.object\(\{([\s\S]*?)\}\)\)\s*\.optional\(\)/) ||
-      src.match(/const\s+TableBtnSchema\s*=\s*z\.object\(\{([\s\S]*?)\}\)/)
+      src.match(/tableBtns:\s*z\s*\.array\(\s*z\s*\.object\(\{([\s\S]*?)\}\)\s*\)\s*\.optional\(\)/) ||
+      src.match(/const\s+TableBtnSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\}\)/)
     if (!btnBlock) { fail(`未能在 ${label} 定位 tableBtns`); ok = false }
     else {
       if (!/\bcode:/.test(btnBlock[1])) {
-        fail(`${label} 的 tableBtns 缺少定位字段 code（1=left,2=right，三端唯一同构字段）`)
+        fail(`${label} 的 tableBtns 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
         ok = false
       }
-      if (/\bposition:/.test(btnBlock[1])) {
-        fail(`${label} 的 tableBtns 含 position 字段——vue2 渲染器忽略它，破坏多端同构；请只用 code`)
+      if (!/\bposition\s*:/.test(btnBlock[1])) {
+        fail(
+          `${label} 的 tableBtns 缺少 position 字段（渲染器契约推荐字段）——` +
+            `缺失会让 position 被 Zod 静默 strip，position:'right' 退化成 code:1（左侧）且无任何报错`
+        )
+        ok = false
+      }
+      // 归一化：两处副本都必须在 TableBtnSchema 上挂 .transform()，把 position 落成一致的 code。
+      // 允许 object 与 transform 之间存在说明性注释（两处副本的注释长度不同）。
+      if (!/const\s+TableBtnSchema\s*=\s*z\s*\.object\(\{[\s\S]*?\}\)[\s\S]{0,2000}?\.transform\(/.test(src)) {
+        fail(`${label} 的 TableBtnSchema 缺少 .transform() 归一化（position 必须落成一致的 code）`)
         ok = false
       }
     }

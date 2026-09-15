@@ -151,3 +151,53 @@ describe('adaptColumns — type 列（selection/index）', () => {
     expect(result[0].title).toBe('序号')
   })
 })
+
+/**
+ * 三端同构回归：对齐方式与列身份。
+ *
+ * - 对齐：vue3/vue2 的 column-item 在未显式配置时强制 center；此前 ADV 默认引擎
+ *   不设 align → 落到 a-table 的 left，造成「同一份配置三端三种对齐」，
+ *   且本包 vxe 引擎默认 center，同包内两引擎也不一致。
+ * - 列身份：既无 key 又无 prop 的列此前用 Math.random() 兜底，
+ *   每次 computed 重算都产生新 key，破坏 a-table 列状态并让快照失稳。
+ */
+describe('adaptColumn — 对齐默认值与列身份确定性（三端同构）', () => {
+  it('未显式配置 align 时默认为 center（对齐 vue3/vue2）', () => {
+    const result = adaptColumn({ prop: 'name', label: '姓名' })
+    expect(result.align).toBe('center')
+  })
+
+  it('显式 align 优先于默认值', () => {
+    expect(adaptColumn({ prop: 'a', label: 'A', align: 'left' }).align).toBe('left')
+    expect(adaptColumn({ prop: 'b', label: 'B', align: 'right' }).align).toBe('right')
+  })
+
+  it('adaptColumns 生成的普通列同样默认 center', () => {
+    const result = adaptColumns([{ prop: 'name', label: '姓名' }])
+    expect(result[0].align).toBe('center')
+  })
+
+  it('groups 子列同样默认 center', () => {
+    const result = adaptColumn({
+      label: '分组',
+      groups: [{ prop: 'child', label: '子列' }],
+    })
+    expect((result.children as Record<string, unknown>[])[0].align).toBe('center')
+  })
+
+  it('无 key 无 prop 的列，key 兜底是确定性的（不再用 Math.random）', () => {
+    const a = adaptColumns([{ prop: 'x', label: 'X' }, { label: '无绑定列' }])
+    const b = adaptColumns([{ prop: 'x', label: 'X' }, { label: '无绑定列' }])
+    expect(a[1].key).toBe(b[1].key)
+    expect(a[1].key).toBe('col_1')
+  })
+
+  it('groups 子列的兜底 key 与顶层不冲突', () => {
+    const result = adaptColumn({
+      label: '分组',
+      groups: [{ label: '无绑定子列' }],
+    })
+    const child = (result.children as Record<string, unknown>[])[0]
+    expect(child.key).toBe('col_0_0')
+  })
+})

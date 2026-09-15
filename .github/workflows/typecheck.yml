@@ -110,8 +110,37 @@ jobs:
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
       # Free per-PR gate: every golden config validates + generates coherent code
-      # (fields/actions/tableBtn codes preserved; extension points marked, not dropped).
+      # (fields/actions/tableBtn codes preserved; extension points marked, not dropped)
+      # AND the emitted code is actually parsed (pageSchema JSON payload + SFC
+      # <script> blocks) — previously the scorer only string-matched, so
+      # syntactically broken output could pass the only PR-time golden gate.
       - name: Score golden corpus
         run: npm run test:golden
+
+  golden-compile:
+    # 整个 golden 语料（24 个用例 × 三个渲染目标）真实 `vite build` 编译。
+    # 此前只在夜间跑（eval-llm.yml），而夜间任务不阻塞合并、也不阻塞部署 ——
+    # 生成器产出「能通过字符串断言但编译不过」的代码时，PR 上是绿的。
+    # e2e.yml 的 6 个组合虽然也在 PR 编译，但每个组合只覆盖 2 个合成页面；
+    # 这里覆盖的是全部策划用例的广度。
+    name: Golden corpus compiles (all targets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Build shared + all target packages + cli
+        run: |
+          npm run build --workspace @es-plus/shared
+          npm run build --workspace @es-plus/vue3
+          npm run build --workspace @es-plus/vue2
+          npm run build --workspace @es-plus/adapter-antdv
+          npm run build --workspace @es-plus/cli
+      - name: Compile whole golden corpus (vite build per case)
+        run: npm run golden:e2e
 
 

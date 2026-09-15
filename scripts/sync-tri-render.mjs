@@ -34,16 +34,30 @@ function rel(p) {
   return p.replace(ROOT + '\\', '').replace(ROOT + '/', '').replace(/\\/g, '/')
 }
 
-/** 权威源中需要分发的文件（当前仅 schema.json；快照另立任务） */
-function sourceFiles() {
-  if (!existsSync(SOURCE)) return []
-  return ['schema.json'].filter((f) => existsSync(join(SOURCE, f)))
-}
+/**
+ * 权威源中需要分发的文件（当前仅 schema.json；快照另立任务）。
+ *
+ * 必须显式声明、且**缺失即报错**。此前实现是「扫描存在性后过滤」：
+ * 源文件一旦被删，`files` 变成空数组 → 循环体一次都不执行 → 打印
+ * 「3 个站点（0 个文件）逐字节一致」并退出 0，门禁恒绿而三站副本仍在。
+ * 显式清单 + 缺失报错杜绝了这种「空集绿灯」。
+ */
+const DISTRIBUTED_FILES = ['schema.json']
 
 function main() {
-  const files = sourceFiles()
+  const files = DISTRIBUTED_FILES
   let drift = false
   let synced = 0
+
+  // 单源本身缺失 / 声明文件缺失 → 报错，不能静默降级成「0 个文件」
+  const missingSources = []
+  if (!existsSync(SOURCE)) missingSources.push(rel(SOURCE))
+  else for (const f of files) if (!existsSync(join(SOURCE, f))) missingSources.push(rel(join(SOURCE, f)))
+  if (missingSources.length) {
+    console.error(`❌ 单源缺失：${missingSources.join(', ')}`)
+    console.error('（DISTRIBUTED_FILES 声明的文件必须存在；缺失时不报错会退化成「0 个文件恒绿」）')
+    process.exit(1)
+  }
 
   for (const target of SITES) {
     // 三个站点都已纳入版本库与构建，因此目标目录缺失属异常（此前对 es-eui 的静默跳过已移除）。

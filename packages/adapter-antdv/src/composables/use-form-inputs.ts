@@ -64,6 +64,7 @@ function toOnKey(key: string): string {
  */
 function rowPassThrough(row: FormItemOption): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...row.props, ...row.attrs }
+  applyEpAttrMap(normalizeFormType((row.formtype as string) || ''), merged)
   if (row.on) {
     for (const [key, handler] of Object.entries(row.on)) {
       merged[toOnKey(key)] = handler
@@ -91,6 +92,76 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
  */
 function mergedRowAttrs(row: FormItemOption): Record<string, unknown> {
   return { ...(row.props || {}), ...(row.attrs || {}) }
+}
+
+/**
+ * EP / EUI → ADV 属性名映射（按 formtype 限定作用域）
+ *
+ * 背景：`clearable` / `filterable` 这类 Element 专有属性此前被原样透传给 ADV 组件，
+ * 而 ADV 不认识它们 → **无告警地静默失效**（`grep allowClear` 曾为 0 命中）。
+ * 同一份配置在 vue3/vue2 正常、在 antdv 无反应，是本适配器最伤信任的失败模式。
+ *
+ * 为什么必须按 formtype 限定：ADV 并非所有控件都支持 `allowClear`
+ * （InputNumber / Slider / Switch / Rate / Radio / Checkbox / Transfer 均无），
+ * 不加限定地全局改名会给这些组件塞入未知 prop，最终落到根 DOM 上变成
+ * 无意义的 `allowclear="true"` 属性。
+ */
+const EP_ATTR_MAP: Record<string, Record<string, string>> = {
+  Input: { clearable: 'allowClear', 'show-word-limit': 'showCount' },
+  Select: { clearable: 'allowClear', filterable: 'showSearch' },
+  Cascader: { clearable: 'allowClear', filterable: 'showSearch' },
+  DatePicker: { clearable: 'allowClear' },
+  TimePicker: { clearable: 'allowClear' },
+}
+
+/** 已告警过的「无 ADV 对应」EP 属性，避免在渲染循环里刷屏 */
+const warnedEpAttrs = new Set<string>()
+
+/** 开发期一次性告警：该 EP 属性在本 formtype 上无 ADV 对应，已丢弃。生产构建静默。 */
+function warnUnmappableEpAttr(formtype: string, key: string): void {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') return
+  const id = `${formtype}.${key}`
+  if (warnedEpAttrs.has(id)) return
+  warnedEpAttrs.add(id)
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[@es-plus/adapter-antdv] ${formtype} 的 "${key}" 在 Ant Design Vue 无对应属性，已忽略。` +
+      `该配置在 vue3/vue2 生效，在此端不会生效 —— 如需 ADV 语义请改用其原生属性名。`,
+  )
+}
+
+/**
+ * 就地改写 `merged`：把 EP 专有属性名换成 ADV 属性名。
+ *
+ * 约定（与 Upload 分支的 show-file-list / limit 映射保持一致）：
+ * - 用户已显式写了 ADV 原生名时不覆盖，只删掉 EP 别名；
+ * - 无论是否映射成功都删除 EP 别名，避免它作为未知 prop 落到 DOM 上。
+ */
+function applyEpAttrMap(formtype: string, merged: Record<string, unknown>): void {
+  const map = EP_ATTR_MAP[formtype]
+  if (map) {
+    for (const [epKey, advKey] of Object.entries(map)) {
+      if (merged[epKey] !== undefined && merged[advKey] === undefined) {
+        merged[advKey] = merged[epKey]
+      }
+      delete merged[epKey]
+    }
+  }
+
+  // EP `collapse-tags`（布尔）→ ADV `maxTagCount`（number | 'responsive'）：
+  // 语义转换而非改名 —— EP 折叠后显示首个标签 + 「+N」，对应 ADV maxTagCount: 1。
+  if (formtype === 'Select' && merged['collapse-tags'] !== undefined) {
+    const collapse = merged['collapse-tags']
+    if (merged.maxTagCount === undefined) {
+      merged.maxTagCount = typeof collapse === 'number' ? collapse : collapse ? 1 : undefined
+    }
+    delete merged['collapse-tags']
+  }
+  // EP `collapse-tags-tooltip` 需要渲染 Tooltip 组件，ADV 无布尔等价物 —— 显式告警后丢弃。
+  if (formtype === 'Select' && merged['collapse-tags-tooltip'] !== undefined) {
+    delete merged['collapse-tags-tooltip']
+    warnUnmappableEpAttr(formtype, 'collapse-tags-tooltip')
+  }
 }
 
 /**
