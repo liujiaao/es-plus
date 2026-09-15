@@ -50,9 +50,15 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Trusted Publishing 需要 npm >= 11.5（Node 20 自带的是 npm 10）
+      # Trusted Publishing 需要 npm >= 11.5（Node 20 自带的是 npm 10.8）。
+      #
+      # 这里**钉住 11.x 而不是 `npm@latest`** —— 实测 npm 12.0.2 的 engines 为
+      #   node: ^22.22.2 || ^24.15.0 || >=26.0.0
+      # 而本工作流用 Node 20，装 latest 会直接 EBADENGINE 失败（首次试跑即撞上）。
+      # npm 11.x 的 engines 是 ^20.17.0 || >=22.9.0，与本工作流的 Node 20 兼容，
+      # 且满足 trusted publishing 的 >= 11.5 要求。将来若升级 Node 版本可再放宽。
       - name: Upgrade npm (Trusted Publishing 需要 >= 11.5)
-        run: npm install -g npm@latest
+        run: npm install -g "npm@^11.5.0"
 
       # 前置守卫：把「发布环境里不得存在任何 npm 凭据」变成显式不变量。
       # 若将来有人重新加上 registry-url（或仓库里出现带 token 的 .npmrc），
