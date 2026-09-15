@@ -243,6 +243,29 @@ if (willInstallPlugins && component.isPlugin && component.Plugin) return
 | 11 | `test:coverage` 是坏的；es-eui 孤儿代码含内网域名 | 补声明 `@vitest/coverage-v8@1.6.1`；删除 `es-eui/src/views/salesPolicy/`（5 文件，全站 0 引用、未注册路由，是 `wdshop-be.szlanyou.com` 的全部残留） | coverage 实测跑通（vue3 88.26% stmts）；内网域名命中数 0；es-eui 站点**构建成功**（exit 0） |
 | 12 | README 契约类型数 38 ≠ 实际 35 | README.md / README.en.md 改为 35；新增 `scripts/check-readme-claims.mjs`（数量 + 控件枚举**集合相等**校验），接入 `check:consistency` | 探针改回 38 → 精确报错退出 1 |
 
+### OIDC 与 `.npmrc` 的实测结论（2026-09-15 追加）
+
+`actions/setup-node` 在设置 `registry-url` 时会往 runner 的 `.npmrc` 写入一行
+`//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`，而 Trusted Publishing 下该变量并不存在。
+**这一行不是惰性的** —— 用真实 registry 请求实测（npm 10.9.8）：
+
+| `.npmrc` 情形 | `npm whoami` 的结果 |
+|---|---|
+| 含 `_authToken=${NODE_AUTH_TOKEN}` 且变量未设置 | npm **真的发出带凭据的请求**，收到 `E401 Unauthorized` |
+| 不含该行 | npm 直接判定 `ENEEDAUTH`（need auth），不发送凭据 |
+
+即：该行的存在会改变 npm 的认证行为（从"我知道自己没登录"变成"拿一个无效凭据去请求"），
+对需要走 OIDC 的发布流程是实质风险。
+
+**修复**：工作流去掉 `registry-url`（所有包都在 npmjs 默认 registry 下，去掉不损失能力），
+并新增 `Assert no npm auth token is configured (OIDC only)` 前置守卫，检查
+userconfig / globalconfig / 仓库 `.npmrc` 三处是否出现 `_authToken`，出现即失败并给出明确原因 ——
+把"发布环境不得存在任何 npm 凭据"变成显式不变量，避免将来有人加回 `registry-url` 后以难定位的 401 告终。
+守卫逻辑已用离线探针验证：干净环境通过、注入 token 行后退出码 1。
+
+> 局限：本地只有 npm 10.9.8，而工作流会升级到 npm ≥ 11.5；跨版本的 OIDC 行为差异未能实测。
+> 但"移除 token 行"在任何版本下都是正确方向（Trusted Publishing 本就不需要 token）。
+
 ### 复核后**未**修改的项（附理由）
 
 - **`RechargeRecord.vue`**：见上文勘误，是使用公开 API 的正当演示页，删除会丢功能。
@@ -253,7 +276,7 @@ if (willInstallPlugins && component.isPlugin && component.Plugin) return
 ### 尚未处理（需决策 / 超出本轮范围）
 
 - **真正的单一真源**：`core/constants.ts` ↔ `shared/contract.ts` 仍是手写双份 + 门禁。彻底解决需要一个独立的无依赖契约包（如 `@es-plus/contract`），属结构性改造。
-- **发布自动化尚不能生效**：`.github/workflows/publish.yml` 仍是**未跟踪文件**，GitHub 不会运行它 —— 需先提交。且 OIDC 的 `.npmrc` 与 `setup-node` token 行组合尚未实跑验证，建议首次用 `workflow_dispatch` 试跑。
+- **发布自动化仍需一次实跑验证**：`publish.yml` 已在 commit `d13ae39` 提交（触发器/权限/推 tag/版本前置守卫均已落地）。OIDC 的 `.npmrc` 组合已做**离线实测**并据此修复（见下），但 OIDC 换取短期令牌的完整链路只能在真实 GitHub Actions 里验证 —— 首次发布请用 `workflow_dispatch` 试跑。
 - **coverage 无阈值门禁**：脚本已可用，但"覆盖率不得低于 X%"是策略决定，未擅自设阈值。
 - **`es-eui` 发布残留**（`package.lib.json`/`PUBLISH_GUIDE.md`/`test-project/` 等）与 `raw-sources.generated.js` 每次构建弄脏工作树：仍待决策（后者本轮已手动还原，未改其生成方式）。
 - **生成代码注入面**：`formatter`/`render` 仍是原样拼进产物，未见沙箱化设计。

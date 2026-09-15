@@ -39,15 +39,37 @@ jobs:
         with:
           fetch-depth: 0 # changesets 需要完整历史来定位已有 tag
 
+      # 故意**不设** `registry-url`：setup-node 设了它会往 runner 的 .npmrc 写入
+      #   //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+      # 而 Trusted Publishing 模式下没有 NODE_AUTH_TOKEN。本地实测（npm 10.9.8）表明
+      # 该行并非惰性：带着它 npm 会**真的发出带凭据的请求并收到 401**，而不带它时 npm
+      # 直接判定「未登录」（ENEEDAUTH）。前者可能干扰 OIDC 换取短期发布令牌的流程。
+      # 所有包都在 npmjs 默认 registry 下，去掉 registry-url 不损失任何能力。
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
           cache: npm
 
       # Trusted Publishing 需要 npm >= 11.5（Node 20 自带的是 npm 10）
       - name: Upgrade npm (Trusted Publishing 需要 >= 11.5)
         run: npm install -g npm@latest
+
+      # 前置守卫：把「发布环境里不得存在任何 npm 凭据」变成显式不变量。
+      # 若将来有人重新加上 registry-url（或仓库里出现带 token 的 .npmrc），
+      # 这里会立刻以清晰信息失败，而不是让发布以难以定位的 401 告终。
+      - name: Assert no npm auth token is configured (OIDC only)
+        run: |
+          echo "npm: $(npm -v)"
+          echo "registry: $(npm config get registry)"
+          leak=0
+          for cfg in "$(npm config get userconfig)" "$(npm config get globalconfig)" .npmrc; do
+            if [ -f "$cfg" ] && grep -qE '_authToken|_auth\s*=' "$cfg"; then
+              echo "::error::在 $cfg 中发现 npm 凭据配置；Trusted Publishing 必须走 OIDC，不能存在 token"
+              leak=1
+            fi
+          done
+          if [ "$leak" -ne 0 ]; then exit 1; fi
+          echo "✅ 未发现 npm 凭据配置，将使用 OIDC Trusted Publishing"
 
       # 前置守卫：本工作流的约定是「本地先 changeset version，再触发发布」。
       # 若 .changeset/ 下仍有未消费的 changeset，说明还没 version 过 —— 此时
