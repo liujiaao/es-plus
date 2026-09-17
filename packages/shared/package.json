@@ -19,6 +19,25 @@
     "schemas"
   ],
   "sideEffects": false,
+  "description": "es-plus shared toolchain: structured config schema, CRUD code generators, and the NL→config prompt used by @es-plus/cli and @es-plus/mcp-server",
+  "keywords": [
+    "es-plus",
+    "codegen",
+    "json-schema",
+    "zod",
+    "crud"
+  ],
+  "author": "liujiaao <303363554@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liujiaao/es-plus.git",
+    "directory": "packages/shared"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
