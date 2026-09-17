@@ -266,18 +266,20 @@ userconfig / globalconfig / 仓库 `.npmrc` 三处是否出现 `_authToken`，�
 > 局限：本地只有 npm 10.9.8，而工作流会升级到 npm ≥ 11.5；跨版本的 OIDC 行为差异未能实测。
 > 但"移除 token 行"在任何版本下都是正确方向（Trusted Publishing 本就不需要 token）。
 
-### 发布工作流实跑记录（2026-09-15）
+### 发布工作流实跑记录（2026-09-15 ~ 09-17）
 
 `changeset version` 消费全部 changeset 后的版本：adapter-antdv 1.2.0 · vue2 1.3.0 · vue3 1.6.0 ·
 core 1.2.0 · shared 1.4.0 · mcp-server 1.4.0 · cli 1.4.0（es-plus-ui 按 `ignore` 保持 1.4.0）。
 
-`workflow_dispatch` 试跑三次，逐步暴露并修复了两处**只有真实运行才会暴露**的缺陷：
+`workflow_dispatch` 共试跑 **4 次**（另有 1 处静态预检），每次都暴露了一个**只有真实运行才会出现**的缺陷：
 
-| 试跑 | 结果 | 根因 / 修复 |
+| 运行 | 结果 | 根因 / 修复 |
 |---|---|---|
-| #1 | 在 `Upgrade npm` 一步 `EBADENGINE` 失败 | `npm@latest` 已指向 **12.0.2**，其 engines 为 `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`，而工作流用 Node 20 → 改为钉住 `npm@^11.5.0`（engines `^20.17.0 \|\| >=22.9.0`，且满足 trusted publishing 的 ≥11.5 要求） |
-| （预检） | 发现守卫自身有 bug | `Verify versioning` 的 glob `.changeset/*.md` 会匹配常驻的 `.changeset/README.md` → 在**正确**的已 version 状态下也会失败，等于把工作流变成永久红。改为遍历时排除 README.md，并双向验证 |
-| #2 | 走到 `Publish changed packages` 才失败（`ENEEDAUTH`） | 见下 |
+| #1 `34951712093` | 在 `Upgrade npm` 一步 `EBADENGINE` 失败 | `npm@latest` 已指向 **12.0.2**，其 engines 为 `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`，而工作流用 Node 20 → 改为钉住 `npm@^11.5.0`（engines `^20.17.0 \|\| >=22.9.0`，且满足 trusted publishing 的 ≥11.5 要求） |
+| （静态预检） | 发现守卫自身有 bug | `Verify versioning` 的 glob `.changeset/*.md` 会匹配常驻的 `.changeset/README.md` → 在**正确**的已 version 状态下也会失败，等于把工作流变成永久红。改为遍历时排除 README.md，并双向验证 |
+| #2 `34952065486` | 走到 `Publish changed packages` 失败（`ENEEDAUTH`） | npmjs.com 侧尚未配置 Trusted Publisher（详见下） |
+| #3 `35190832275` | 部分发布 + 我的一处误判 | shared 缺 `repository` 字段致 provenance 校验 E422；其余 6 个包**实际已发布** |
+| #4 `35191386293` | **全绿** | 补齐 shared 元信息后 7 个包全部上线，tag 已推送 |
 
 试跑 #2 的**成功步骤**（即本仓库侧已全部验证通过）：
 
@@ -302,17 +304,68 @@ changesets 已正确识别出 7 个待发包并进入发布（`@es-plus/adapter-
 （`id-token: write` 已声明、npm 11.19.1 ≥ 11.5、环境内无任何 `.npmrc` 凭据）—— 因此剩余的唯一解释是
 **npmjs.com 上尚未为这些包配置 Trusted Publisher**，npm 没有可交换 OIDC 令牌的对象，于是回退到 token 认证并失败。
 
-**后果与状态**：`changeset publish` 按依赖顺序发布，失败发生在第一个包，且已核对 registry ——
-7 个包的 latest 仍是旧版本（1.5.0/1.2.0/1.1.0/1.1.0/1.3.0/1.3.0/1.3.0），**没有任何部分发布**，
-无残留 tag（`Push release tags` 未执行）。配置完成后可直接重新触发，无需回滚。
+**后果与状态**：该次运行在第一个包（`@es-plus/shared`）上失败，**未发布任何包** ——
+已核对 registry，7 个包的 latest 仍是旧版本，无残留 tag。配置 Trusted Publisher 后可直接重试，无需回滚。
 
 **待办（需在 npmjs.com 操作，仓库内无法完成）**：为上述 7 个包各配置一次
 `Settings → Trusted Publisher → GitHub Actions`：Organization or user `liujiaao`、
-Repository `es-plus`、Workflow filename `publish.yml`、Environment 留空。
+Repository `es-plus`、Workflow filename `publish.yml`、Environment 留空。**已完成。**
 
-> 另注：试跑 #2 的日志显示 `npm warn publish npm auto-corrected some errors in your package.json`，
-> 提示 `repository.url` 被规范化为 `git+https://github.com/liujiaao/es-plus.git`。建议在发布前
-> 运行 `npm pkg fix` 消除该类警告，避免发布产物与仓库声明不一致。
+> 另注：这次日志里的 `npm warn publish "repository.url" was normalized` 当时被我记为「顺手清掉」
+> 的次要警告 —— 它其实是下一轮发布的**硬阻塞**（见「试跑 #4」）。教训：provenance 相关警告不可降级处理。
+
+#### 试跑 #3（配置 Trusted Publisher 后，run 35190832275）—— 部分发布 + 误判
+
+Trusted Publisher 配置生效，OIDC 交换成功（日志出现 `Signed provenance statement with source and
+build information from GitHub Actions`），但发布报 **E422**：
+
+```
+Error verifying sigstore provenance bundle: Failed to validate repository information:
+package.json: "repository.url" is "", expected to match "https://github.com/liujiaao/es-plus"
+```
+
+根因：**7 个包里只有 `@es-plus/shared` 的 `package.json` 缺 `repository` 字段**（其余 6 个都有）。
+已补齐（并顺带补上该文件同样缺失的 description/keywords/author/license/publishConfig ——
+缺 `license` 会让 npm 上显示为 UNLICENSED）。
+
+**本轮的一处判断错误（已更正）**：该次运行整体结论是 failure，我据此判断「没有部分发布」。
+实际上 `changeset publish` 会**先把所有包都尝试一遍，最后才因存在失败而抛错** ——
+那一次真正失败的是 `shared` 一个包，**其余 6 个已成功发布**（registry 时间戳 06:41:25–06:46:53
+可佐证）。教训：changesets 的「整体失败」不等于「全部未发布」，判断发布状态必须以 registry 为准，
+不能只看 workflow 结论。
+
+#### 试跑 #4（run 35191386293）—— 全绿
+
+补齐 shared 元信息后重跑，**10 个步骤全部 success**，`shared@1.4.0` 发布完成。至此 7 个包全部上线：
+
+| 包 | 版本 | 发布时间(UTC) |
+|---|---|---|
+| @es-plus/core | 1.2.0 | 06:41:25 |
+| @es-plus/vue2 | 1.3.0 | 06:42:05 |
+| @es-plus/adapter-antdv | 1.2.0 | 06:42:13 |
+| @es-plus/mcp-server | 1.4.0 | 06:44:18 |
+| @es-plus/cli | 1.4.0 | 06:46:53 |
+| @es-plus/vue3 | 1.6.0 | 06:43:49 |
+| @es-plus/shared | 1.4.0 | 06:50:28 |
+
+3 个抽查包（vue3 / shared / adapter-antdv）均带 **provenance attestation**
+（`dist.attestations.provenance` 存在，发布者 `npm-oidc-no-reply@github.com`）。
+
+#### 补记：6 个 tag 一度丢失（已修复）
+
+试跑 #3（`35190832275`）的 `Push release tags` 步骤因 publish 失败被跳过，导致它**在 runner 上创建的 6 个 tag
+随 runner 一起销毁** —— 这正是本报告 §五 描述的失效模式（"changesets 从不推送它创建的 tag"）
+在真实环境中的一次复现：包已上 npm，但 git 里没有任何发布痕迹。
+
+已按 changesets 的实际格式（annotated tag、message 为 tag 名、tagger 为
+`github-actions[bot] <github-actions[bot]@users.noreply.github.com>`）在**该次运行 checkout 的
+commit `6c7d7cb`** 上补建并推送这 6 个 tag。如需撤销：
+
+```bash
+TAGS=(@es-plus/vue3@1.6.0 @es-plus/vue2@1.3.0 @es-plus/core@1.2.0 @es-plus/cli@1.4.0 @es-plus/mcp-server@1.4.0 @es-plus/adapter-antdv@1.2.0)
+git tag -d "${TAGS[@]}"
+for t in "${TAGS[@]}"; do git push origin --delete "$t"; done
+```
 
 ### 复核后**未**修改的项（附理由）
 
@@ -324,7 +377,7 @@ Repository `es-plus`、Workflow filename `publish.yml`、Environment 留空。
 ### 尚未处理（需决策 / 超出本轮范围）
 
 - **真正的单一真源**：`core/constants.ts` ↔ `shared/contract.ts` 仍是手写双份 + 门禁。彻底解决需要一个独立的无依赖契约包（如 `@es-plus/contract`），属结构性改造。
-- **发布自动化的最后一环在 npmjs.com 侧**：流水线本身已跑通到发布前一步（见下「实跑记录」），唯一剩余阻塞是为各包配置 Trusted Publisher —— 该操作需登录 npmjs.com，无法在仓库内完成。
+- **发布链路已打通并完成一次真实发版**（见下「实跑记录」）：Trusted Publishing 配置完成，7 个包已带 provenance 发布，release tag 已推送。
 - **coverage 无阈值门禁**：脚本已可用，但"覆盖率不得低于 X%"是策略决定，未擅自设阈值。
 - **`es-eui` 发布残留**（`package.lib.json`/`PUBLISH_GUIDE.md`/`test-project/` 等）与 `raw-sources.generated.js` 每次构建弄脏工作树：仍待决策（后者本轮已手动还原，未改其生成方式）。
 - **生成代码注入面**：`formatter`/`render` 仍是原样拼进产物，未见沙箱化设计。
