@@ -107,6 +107,59 @@ function routerPaths(relPath, { vue2 = false } = {}) {
   return paths
 }
 
+/**
+ * 跨端链接的 URL 构造校验。
+ *
+ * 案例卡的跨端链接由各站 utils/sites 的 `crossSiteUrl(key, path)` 拼出。
+ * 三站都是 hash 路由，所以必须是 `${url}#${path}` 且 **path 保留前导斜杠**
+ * （`#/es-form`）。少一个斜杠写成 `#es-form`，构建产物里看起来完全正常，
+ * 但 vue-router 匹配不到该路径，会落到 404/兜底页 —— 这类错误只有真点一次
+ * 或用浏览器按 hash 加载目标站才能发现（本轮就是先写成 `#es-form` 后靠
+ * 逐条加载发现的）。这里把它变成静态断言。
+ */
+function checkCrossSiteUrlImpl() {
+  const files = [
+    'es-plus-docs/src/utils/sites.ts',
+    'es-pc/src/utils/sites.js',
+    'es-eui/src/utils/sites.js',
+  ]
+  const impls = []
+  for (const f of files) {
+    const src = read(f)
+    if (!src) continue
+    const m = src.match(/export function crossSiteUrl\([^)]*\)[^{]*\{([\s\S]*?)\n\}/)
+    if (!m) {
+      fail(`${f} 未找到 crossSiteUrl 实现（案例卡的跨端链接依赖它）`)
+      continue
+    }
+    // 只比对**函数体**并去掉注释：一份是 .ts（签名带类型注解）、两份是 .js，
+    // 直接比整段会把类型注解当成差异报出来。
+    const body = m[1]
+      .split('\n')
+      .filter((l) => !/^\s*\/\//.test(l))
+      .join('\n')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!/`\$\{site\.url\}#\$\{/.test(body)) {
+      fail(`${f} 的 crossSiteUrl 未按 \`\${site.url}#\${path}\` 拼接（三站都是 hash 路由）`)
+    }
+    if (!/startsWith\('\/'\)/.test(body)) {
+      fail(
+        `${f} 的 crossSiteUrl 未保证 path 的前导斜杠 —— hash 路由需要 \`#/es-form\`，` +
+          '写成 `#es-form` 会匹配不到路由并落到 404（构建产物里看不出来）',
+      )
+    }
+    impls.push([f, body])
+  }
+  if (impls.length === files.length) {
+    const [, ref] = impls[0]
+    for (const [f, body] of impls.slice(1)) {
+      if (body !== ref) fail(`${f} 的 crossSiteUrl 实现与 ${impls[0][0]} 不一致（三端应完全相同）`)
+    }
+    if (!failed) console.log('✅ 三站 crossSiteUrl 实现一致且保留 hash 路由的前导斜杠')
+  }
+}
+
 function main() {
   const cases = JSON.parse(read('docs/cases/cases.json') || '{}')
   const sites = {
@@ -161,4 +214,5 @@ function main() {
   console.log(`✅ 案例目录的 ${checked} 条站内链接在三站路由中全部存在`)
 }
 
+checkCrossSiteUrlImpl()
 main()

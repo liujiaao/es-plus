@@ -22,10 +22,11 @@
           <span class="level-goal">{{ level.goal }}</span>
         </div>
         <div class="case-grid">
-          <router-link
+          <!-- 卡片从 <router-link> 改为 <div>：要在卡里放三端互链，而 <router-link> 渲染成
+               <a>，里面再嵌 <a>（跨端链接）是非法 HTML，点击行为也会互相干扰。 -->
+          <div
             v-for="c in level.cases"
             :key="c.id"
-            :to="c.links.vue2"
             class="case-card"
           >
             <div class="case-title">
@@ -34,8 +35,20 @@
             </div>
             <p class="case-pain"><strong>痛点：</strong>{{ c.pain }}</p>
             <p class="case-win"><strong>优势：</strong>{{ c.win }}</p>
-            <span class="case-link">查看案例 →</span>
-          </router-link>
+            <!-- 三端互链：同一案例在另两端都有对应页面 —— 这正是 es-plus 的头号卖点，
+                 而案例库是最该展示它的地方。地址来自 utils/sites 的三站清单
+                 （与顶栏切换器同一份，受 check:site-nav 守护）。 -->
+            <div class="case-links">
+              <router-link :to="c.links[siteKey]" class="case-link">本端 · {{ siteShort }} →</router-link>
+              <a
+                v-for="s in otherSites"
+                :key="s.key"
+                :href="crossSiteUrl(s.key, c.links[s.key])"
+                class="case-link case-link-cross"
+                rel="noopener"
+              >{{ s.short }} ↗</a>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -45,15 +58,35 @@
 <script>
 // 案例目录单一真源：由 scripts/sync-cases.mjs 从 docs/cases/cases.json 分发，禁止手改本文件
 import cases from '@/cases/cases.json'
+// 跨端互链：与顶栏切换器共用同一份三站清单（受 check:site-nav 守护）
+import { SITES, SITE_KEY, siteOf, crossSiteUrl } from '@/utils/sites'
 
 export default {
   name: 'Cases',
+  computed: {
+    /** 另两端（本端走站内路由，不用绝对地址） */
+    otherSites() {
+      return SITES.filter((s) => s.key !== SITE_KEY)
+    },
+    siteShort() {
+      return siteOf(SITE_KEY)?.short ?? SITE_KEY
+    },
+    // Vue 2 的模板表达式只能访问**实例属性**：模块级的 SITE_KEY 与 crossSiteUrl
+    // 在模板里都取不到 —— 前者让 c.links[undefined] 拿不到链接，后者直接抛
+    // "crossSiteUrl is not a function"。两者都必须挂到实例上。
+    siteKey() {
+      return SITE_KEY
+    }
+  },
   data() {
     return {
       levels: cases.levels
     }
   },
   methods: {
+    // 模块级导入的函数在 Vue 2 模板里同样访问不到（与 SITE_KEY 同一根因），
+    // 必须挂到实例上；该函数是纯函数、不依赖 this，直接简写挂载。
+    crossSiteUrl,
     circled(n) {
       return '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n - 1]
     }
@@ -160,12 +193,27 @@ export default {
 .case-pain strong { color: #f56c6c; }
 .case-win strong { color: #67c23a; }
 
+.case-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+}
+
 .case-link {
-  display: inline-block;
-  margin-top: 8px;
   font-size: 13px;
   color: var(--es-brand-primary);
   font-weight: 500;
+  text-decoration: none;
+}
+
+/* 另两端的入口：弱一档但保持可点 */
+.case-link-cross {
+  color: #718096;
+  font-weight: 400;
 }
 
 @media (max-width: 768px) {

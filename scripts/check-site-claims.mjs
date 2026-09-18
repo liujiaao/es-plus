@@ -146,11 +146,12 @@ function checkOneConfigClaims() {
 
 // ── 2. 渲染器数量 ────────────────────────────────────────
 function rendererCount() {
-  const src = read('es-plus-docs/src/components/layout/AppHeader.vue')
+  // SITES 已从布局组件抽到各站的 utils/sites 模块（案例卡互链也要用同一份）
+  const src = read('es-plus-docs/src/utils/sites.ts')
   if (!src) return null
   const m = src.match(/const\s+SITES\s*=\s*\[([\s\S]*?)\n\]/)
   if (!m) {
-    fail('未能在 AppHeader.vue 定位 SITES 数组')
+    fail('未能在 es-plus-docs/src/utils/sites.ts 定位 SITES 数组')
     return null
   }
   return (m[1].match(/\{\s*key:/g) || []).length

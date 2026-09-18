@@ -35,10 +35,13 @@ const ROOT = join(__dirname, '..')
 
 // 站点目录 → 该站在 SITES 里的身份 key。这是本脚本的输入，不是被校验对象：
 // 它表达「哪个目录是哪个渲染端」，改这里意味着站点定位变了。
+//
+// SITES 已从三个布局组件抽到各站的 utils/sites 模块：案例卡也要用它拼跨端链接，
+// 留在布局里就必须在案例页再抄一份（第 4 份副本），而门禁只覆盖布局那一份。
 const SITE_TARGETS = [
-  { dir: 'es-plus-docs', key: 'vue3', file: 'es-plus-docs/src/components/layout/AppHeader.vue' },
-  { dir: 'es-pc', key: 'antdv', file: 'es-pc/src/layouts/DocLayout.vue' },
-  { dir: 'es-eui', key: 'vue2', file: 'es-eui/src/App.vue' },
+  { dir: 'es-plus-docs', key: 'vue3', file: 'es-plus-docs/src/utils/sites.ts' },
+  { dir: 'es-pc', key: 'antdv', file: 'es-pc/src/utils/sites.js' },
+  { dir: 'es-eui', key: 'vue2', file: 'es-eui/src/utils/sites.js' },
 ]
 
 const DEPLOY_WORKFLOW = '.github/workflows/deploy-docs.yml'
@@ -150,7 +153,8 @@ function main() {
     for (const e of parseEntries(literal, t.file)) {
       // 先剥掉字符串字面量，否则 url 值里的 `https:` 会被当成一个属性名
       const stripped = e.raw.replace(/'[^']*'/g, "''")
-      const extra = stripped.match(/\b(?!key\b|label\b|url\b)[A-Za-z_$][\w$]*\s*:/g)
+      // 允许的字段：key / label / url（切换器用）+ short（案例卡的跨端链接用短标签）
+      const extra = stripped.match(/\b(?!key\b|label\b|short\b|url\b)[A-Za-z_$][\w$]*\s*:/g)
       if (extra) {
         fail(`${t.file} 的 SITES 项 ${e.key} 含预期外字段：${extra.join(', ')}`)
       }

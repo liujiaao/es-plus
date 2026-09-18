@@ -21,7 +21,20 @@
           </div>
           <p class="case-pain"><strong>痛点：</strong>{{ c.pain }}</p>
           <p class="case-win"><strong>优势：</strong>{{ c.win }}</p>
-          <router-link :to="c.links.vue3" class="case-link">查看案例 →</router-link>
+          <!-- 三端互链：同一案例在另两端都有对应页面 —— 这正是 es-plus 的头号卖点
+               （同一份配置 → 三端），而案例库是最该展示它的地方。
+               本端用站内路由，另两端用绝对地址（地址来自 utils/sites 的三站清单，
+               与顶栏切换器同一份，受 check:site-nav 守护）。 -->
+          <div class="case-links">
+            <router-link :to="c.links[SITE_KEY]" class="case-link">本端 · Vue 3 · EP →</router-link>
+            <a
+              v-for="s in otherSites"
+              :key="s.key"
+              :href="crossSiteUrl(s.key, c.links[s.key])"
+              class="case-link case-link-cross"
+              rel="noopener"
+            >{{ s.short }} ↗</a>
+          </div>
         </div>
       </div>
     </section>
@@ -31,8 +44,12 @@
 <script setup lang="ts">
 // 案例目录单一真源：由 scripts/sync-cases.mjs 从 docs/cases/cases.json 分发，禁止手改本文件
 import cases from '@/cases/cases.json'
+// 跨端互链：与顶栏切换器共用同一份三站清单（受 check:site-nav 守护）
+import { SITES, SITE_KEY, crossSiteUrl } from '@/utils/sites'
 
 const levels = cases.levels
+/** 另两端（本端用站内路由，不走绝对地址） */
+const otherSites = SITES.filter((s) => s.key !== SITE_KEY)
 
 const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n - 1]
 </script>
@@ -150,15 +167,30 @@ const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n
 .case-pain strong { color: #f56c6c; flex-shrink: 0; }
 .case-win strong { color: #67c23a; flex-shrink: 0; }
 
+.case-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color-lighter);
+}
+
 .case-link {
   display: inline-block;
-  margin-top: 8px;
   font-size: 13px;
   color: var(--primary-color);
   font-weight: 500;
   text-decoration: none;
 
   &:hover { text-decoration: underline; }
+}
+
+/* 另两端的入口：视觉上从属于本端链接（弱一档），但保持可点、可辨 */
+.case-link-cross {
+  color: var(--text-color-secondary);
+  font-weight: 400;
 }
 
 @media (max-width: 768px) {

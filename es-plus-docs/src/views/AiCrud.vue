@@ -158,6 +158,8 @@ import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { EsForm, EsTable } from 'es-plus'
 import { mcpFlow, type ChatMessage, type TraceEntry } from '@/utils/mcp-flow'
+// 渲染端选项与称呼来自三站清单（与顶栏切换器、案例卡互链同一份）
+import { SITES } from '@/utils/sites'
 import type { StructuredCrudConfig, TargetFramework } from '@es-plus/shared'
 import { PRESETS, type Preset } from '@/utils/preset-examples'
 import ChatComposer from '@/components/ai-crud/ChatComposer.vue'
@@ -214,12 +216,11 @@ const useAI = computed(() => !!aiConfig.apiKey)
  *  - 离线：generateCrudSchema(description, target) —— 与 MCP/CLI 同一个函数；
  *  - AI：校验通过后覆盖 config.target（generateFromConfig 从 config 读它）；
  *  - 提示词：把选择写进 system prompt 的上下文，减少模型自作主张。
+ *
+ * 选项直接来自三站清单（`SITES.short`），不在这里再写一遍渲染端名字 ——
+ * 顶栏切换器、案例卡互链、本页选择器用的应当是同一组称呼。
  */
-const TARGETS = [
-  { value: 'vue3', label: 'Vue 3 · EP' },
-  { value: 'vue2', label: 'Vue 2 · EUI' },
-  { value: 'antdv', label: 'Vue 3 · AntDV' },
-] as const
+const TARGETS = SITES.map((s) => ({ value: s.key, label: s.short }))
 const target = ref<'vue3' | 'vue2' | 'antdv'>('vue3')
 
 /** 本次生成实际使用的渲染端（来自 FlowResult.target，不由界面假设 —— 便于发现不一致） */
