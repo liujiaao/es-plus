@@ -3,7 +3,7 @@
  * AI 工具链文案单源同步：docs/ai/ai-tools.json 为权威源，分发到三个文档站点。
  *
  * 三站 AI 页（es-pc AiTools.vue / es-eui ai-tools.vue）从各自 src/ai/ai-tools.json 读取，
- * 保证 MCP / CLI / 在线体验文案跨站零漂移（docs/改造三端站点.md §5.5）。
+ * 保证 MCP / CLI / 在线体验文案跨站零漂移（docs/internal/改造三端站点.md §5.5）。
  *
  * 用法：
  *   node scripts/sync-ai.mjs           # 同步：拷贝单源到各站点

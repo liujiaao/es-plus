@@ -20,7 +20,7 @@
 
 > **现状**：本目录**没有任何 `*.png` 快照**，三站也**不再展示快照占位图**。
 
-此前的设计是「同一份 Schema 源码 + 三端渲染快照」（原因见 [`docs/改造三端站点.md` §6.3](../../改造三端站点.md)：
+此前的设计是「同一份 Schema 源码 + 三端渲染快照」（原因见 [`docs/internal/改造三端站点.md` §6.3](../internal/改造三端站点.md)：
 Element UI / Vue2 是 Vue2-only，无法挂进 Vue3 应用，单页三端活体切换不可行）。但该机制**从未真正落地**：
 
 - 生成脚本 [`scripts/gen-tri-render-snapshots.mjs`](../../scripts/gen-tri-render-snapshots.mjs) 依赖 Playwright，

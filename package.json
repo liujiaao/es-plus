@@ -41,7 +41,7 @@
     "check:site-nav": "node scripts/check-site-nav.mjs",
     "check:readme": "node scripts/check-readme-claims.mjs",
     "check:theme-bridge": "node scripts/check-theme-bridge.mjs",
-    "check:consistency": "npm run check:exports && npm run check:schema && npm run check:generator && npm run check:parity && npm run check:api && npm run check:contract && npm run check:site-nav && npm run check:readme && npm run check:site-claims && npm run check:data-schemas && npm run check:brand-assets && npm run check:theme-bridge && npm run schemas:check && npm run docs:check && npm run tokens:check && npm run brand:check && npm run tri-render:check && npm run tri-render:pairs:check && npm run cases:check && npm run check:cases-links && npm run ai:check && npm run theme:check && npm run element-theme:check && npm run one-config:check && npm run data-schemas:check && npm run og:check",
+    "check:consistency": "npm run check:exports && npm run check:schema && npm run check:generator && npm run check:parity && npm run check:api && npm run check:contract && npm run check:site-nav && npm run check:readme && npm run check:site-claims && npm run check:data-schemas && npm run check:brand-assets && npm run check:theme-bridge && npm run schemas:check && npm run docs:check && npm run check:docs-layout && npm run tokens:check && npm run brand:check && npm run tri-render:check && npm run tri-render:pairs:check && npm run cases:check && npm run check:cases-links && npm run ai:check && npm run theme:check && npm run element-theme:check && npm run one-config:check && npm run data-schemas:check && npm run og:check",
     "test:golden": "node __tests__/golden/scripts/score-golden.mjs",
     "golden:e2e": "node __tests__/e2e/scripts/run-golden.mjs",
     "eval:llm": "node scripts/eval-llm.mjs",
@@ -59,7 +59,8 @@
     "check:data-schemas": "node scripts/check-data-schemas.mjs",
     "og:gen": "node scripts/gen-og-image.mjs",
     "og:check": "node scripts/gen-og-image.mjs --check",
-    "check:brand-assets": "node scripts/check-brand-assets.mjs"
+    "check:brand-assets": "node scripts/check-brand-assets.mjs",
+    "check:docs-layout": "node scripts/check-docs-layout.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",

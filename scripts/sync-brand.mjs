@@ -3,7 +3,7 @@
  * 品牌文案单源同步：docs/brand/ 下的品牌资产为权威源，分发到三个文档站点。
  *
  * 分发的文件：
- *   - `slogan.json`：口号、定位与「三个承诺」文案（见 docs/改造三端站点.md §5.1）；
+ *   - `slogan.json`：口号、定位与「三个承诺」文案（见 docs/internal/改造三端站点.md §5.1）；
  *   - `one-config-diff.json`：由 scripts/gen-one-config-diff.mjs 从
  *     `docs/brand/one-config/{native,esplus}.vue` **实测**生成的对比数据
  *     （两段完整源码 + 行数/降幅）。首页对比卡展示的就是它，数字不是硬编码。

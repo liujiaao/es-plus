@@ -77,6 +77,12 @@ import mcpServerMd from '@/docs/mcp-server.md?raw'
 import cliMd from '@/docs/cli.md?raw'
 import permissionI18nMd from '@/docs/permission-i18n.md?raw'
 import migrationMd from '@/docs/migration.md?raw'
+// 英文迁移指南：单源是根 docs/migrate-v1.4.md（由 sync-docs.mjs 镜像）。文件名保持
+// migrate-v1.4 是有意为之 —— 已发布到 npm 的多个包 README 链接了这个路径（GitHub blob），
+// 改名会让那些线上链接立刻 404，而 npm 上的 README 无法回改。
+// 内容独立于中文版（中文版侧重「从原生 Element Plus 迁移」，英文版侧重包名重命名
+// 与 Vue 2 渲染器接入），不是逐句翻译 —— 此前它沉睡在 docs/migrate-v1.4.md，从未发布。
+import migrationEnMd from '@/docs/migrate-v1.4.md?raw'
 import changelogMd from '@/docs/changelog.md?raw'
 import schemaSetupMd from '@/docs/schema-setup.md?raw'
 import whyEsPlusMd from '@/docs/why-es-plus.md?raw'
@@ -138,7 +144,7 @@ const docsData: Record<string, DocEntry> = {
   'cli': { title: 'CLI 工具', content: cliMd },
   'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },
   'schema-setup': { title: 'IDE 配置自动补全', content: schemaSetupMd },
-  'migration': { title: '迁移指南', content: migrationMd },
+  'migration': { title: '迁移指南', content: migrationMd, titleEn: 'Migration Guide', contentEn: migrationEnMd },
   'changelog': { title: '更新日志', content: changelogMd }
 }
 

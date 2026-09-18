@@ -1,6 +1,6 @@
 # `@es-plus/vue2` 接入 es-eui 文档工程的本地集成测试指南
 
-本指南描述如何把本仓库中刚实现的 Vue 2 适配包 (`@es-plus/vue2` + `@es-plus/core`) 接入到现有的 **es-eui** 文档工程（位于 [es-eui/](../es-eui/)），用于本地端到端验证：
+本指南描述如何把本仓库中刚实现的 Vue 2 适配包 (`@es-plus/vue2` + `@es-plus/core`) 接入到现有的 **es-eui** 文档工程（位于 [es-eui/](../../es-eui/)），用于本地端到端验证：
 
 1. 同一份 JSON Schema 配置在 Vue 2（Element UI）与 Vue 3（Element Plus）下渲染一致；
 2. 表格 / 表单 / Dialog / CrudPage 等核心交互在 Element UI 下行为正常；
@@ -43,7 +43,7 @@ npm -w @es-plus/vue2 run typecheck
 npm -w @es-plus/vue2 run build
 ```
 
-构建成功后，应该在 [packages/vue2/dist/](../packages/vue2/dist/) 看到：
+构建成功后，应该在 [packages/vue2/dist/](../../packages/vue2/dist/) 看到：
 
 ```
 dist/
@@ -134,7 +134,7 @@ es-eui 工程会**热更新** `node_modules/@es-plus/*`，dev server 自动 relo
 
 ## 3. 修改 es-eui 的 `main.js`
 
-[es-eui/src/main.js](../es-eui/src/main.js) 当前同时使用 `Vue.use(esEui, { ... })` 注册自研组件。我们要把 `esEui` 替换或并行成 `@es-plus/vue2`。**推荐并行注册**，方便对比。
+[es-eui/src/main.js](../../es-eui/src/main.js) 当前同时使用 `Vue.use(esEui, { ... })` 注册自研组件。我们要把 `esEui` 替换或并行成 `@es-plus/vue2`。**推荐并行注册**，方便对比。
 
 ### 3.1 最小接入（仅安装插件）
 
@@ -214,7 +214,7 @@ export default {
 
 ## 4. 在 es-eui 路由中注册测试页面
 
-新建 [es-eui/src/views/component/EsPlusVue2Smoke.vue](../es-eui/src/views/component/) 作为冒烟测试入口。这个文件**完全照搬**了 es-eui 现有 EsTable 测试页的数据，只是把组件换成 `@es-plus/vue2` 提供的版本。
+新建 [es-eui/src/views/component/EsPlusVue2Smoke.vue](../../es-eui/src/views/component/) 作为冒烟测试入口。这个文件**完全照搬**了 es-eui 现有 EsTable 测试页的数据，只是把组件换成 `@es-plus/vue2` 提供的版本。
 
 ```vue
 <template>
@@ -301,7 +301,7 @@ export default {
 </script>
 ```
 
-在 [es-eui/src/router/index.js](../es-eui/src/router/index.js) 增加一条路由：
+在 [es-eui/src/router/index.js](../../es-eui/src/router/index.js) 增加一条路由：
 
 ```js
 {
@@ -391,7 +391,7 @@ node packages/cli/dist/index.js create employee \
 ## 8. 排错手册
 
 ### Q: 启动报 `Cannot resolve '@es-plus/vue2'`
-- 检查 [es-eui/node_modules/@es-plus/vue2/dist/](../es-eui/node_modules/@es-plus/vue2/dist/) 是否存在
+- 检查 [es-eui/node_modules/@es-plus/vue2/dist/](../../es-eui/node_modules/@es-plus/vue2/dist/) 是否存在
 - 如果使用 `file:` 协议，记得每次构建后重跑 `npm install`
 - 如果用 `npm link`，重启 IDE / dev server
 
@@ -404,14 +404,14 @@ node packages/cli/dist/index.js create employee \
 - 检查自定义 `render` 是否使用了 `h(Comp, { modelValue: x, 'onUpdate:modelValue': fn })` 格式 → vue2 必须改为 `h(Comp, { props: { value: x }, on: { input: fn } })`
 
 ### Q: Message / MessageBox is undefined
-- es-eui 现有的 [main.js](../es-eui/src/main.js) 已用 `Vue.use(ElementUI)` 全局注册，CLI 生成的代码会用 `this.$message` / `this.$confirm`，正常工作
+- es-eui 现有的 [main.js](../../es-eui/src/main.js) 已用 `Vue.use(ElementUI)` 全局注册，CLI 生成的代码会用 `this.$message` / `this.$confirm`，正常工作
 - 如果手写代码 `import { Message, MessageBox } from 'element-ui'`，记得**全量导入**而非按需导入
 
 ---
 
 ## 9. 后续工作
 
-完成本指南验证后，建议把 [es-eui/src/views/component/EsPlusVue2Smoke.vue](../es-eui/src/views/component/) 的对比页做成持续回归用例，每次 `@es-plus/vue2` 发版前手动跑一遍。
+完成本指南验证后，建议把 [es-eui/src/views/component/EsPlusVue2Smoke.vue](../../es-eui/src/views/component/) 的对比页做成持续回归用例，每次 `@es-plus/vue2` 发版前手动跑一遍。
 
 进一步自动化：
 

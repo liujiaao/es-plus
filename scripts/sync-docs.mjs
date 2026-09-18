@@ -29,7 +29,7 @@ const CHECK = process.argv.includes('--check')
  * 已经消失。同类门禁里这是唯一可被「删除」绕过的一个。
  * 新增镜像文档时把文件名加进这里（不要依赖目录扫描）。
  */
-const MIRRORED_DOCS = ['why-es-plus.md', 'why-es-plus.en.md']
+const MIRRORED_DOCS = ['why-es-plus.md', 'why-es-plus.en.md', 'migrate-v1.4.md']
 
 function main() {
   let drift = false
