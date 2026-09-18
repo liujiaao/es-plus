@@ -56,6 +56,14 @@ const routes = [
         meta: { title: 'AI 工具链' },
         component: () => import('@/views/AiTools.vue'),
       },
+      // 404 兜底：此前没有这一条，匹配不到的地址会渲染成整页空白。
+      // 跨站链接（见 docs/cases/cases.json）写错时的表现就从「白屏」变成「404 页」。
+      {
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        meta: { title: '页面不存在' },
+        component: () => import('@/views/NotFound.vue'),
+      },
     ],
   },
 ]

@@ -130,6 +130,14 @@ const routes = [
     path: '/test/recharge-record',
     name: 'RechargeRecord',
     component: () => import('../views/test/RechargeRecord.vue')
+  },
+
+  // 404 兜底：此前没有这一条，匹配不到的地址（含写错的跨站链接）会渲染成整页空白。
+  // Vue 2 的通配写法是 path: '*'（Vue 3 用 ':pathMatch(.*)*'）。
+  {
+    path: '*',
+    name: 'NotFound',
+    component: () => import('../views/NotFound.vue')
   }
 ]
 
