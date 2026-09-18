@@ -3,8 +3,14 @@
     <div class="ai-crud-header">
       <h1 class="ai-crud-title">{{ t('aiCrud.title') }}</h1>
       <p class="ai-crud-banner">{{ t('aiCrud.banner') }}</p>
+      <!--
+        这条提示只在**真的会用 AI 路径**时才出现（已填 Key 且 base 仍指向 dev 代理）。
+        此前是「只要 base 是 /openai 就显示」，而那是默认值 —— 于是每个访客首屏第一眼
+        看到的都是「生产环境需自备 CORS 网关」。没填 Key 的人走的是本地规则引擎，
+        与这条提示毫不相干，不该被它挡住；设置弹窗里的说明已经覆盖了他们。
+      -->
       <el-alert
-        v-if="isDevProxyBase"
+        v-if="isDevProxyBase && useAI"
         class="ai-crud-proxy-notice"
         type="warning"
         :closable="false"

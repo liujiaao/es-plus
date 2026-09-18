@@ -66,6 +66,9 @@ const sections = [
       { path: '/components/es-form', labelKey: 'sidebar.esForm', icon: markRaw(Edit) },
       { path: '/components/es-table', labelKey: 'sidebar.esTable', icon: markRaw(Grid) },
       { path: '/components/es-crud-page', labelKey: 'sidebar.esCrudPage', icon: markRaw(Document) },
+      // Playground 是 EsForm / EsTable / useDialog 的实时配置编辑器，按内容归到组件组；
+      // 此前它挂在「AI 工具链」下与 MCP / CLI 并列 —— 那不是 AI 功能，分组会误导。
+      { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },
     ],
   },
   {
@@ -80,7 +83,6 @@ const sections = [
       { path: '/guide/mcp-server', labelKey: 'sidebar.mcpServer', icon: markRaw(MagicStick) },
       { path: '/guide/cli', labelKey: 'sidebar.cli', icon: markRaw(Monitor) },
       { path: '/ai-crud', labelKey: 'sidebar.aiCrud', icon: markRaw(MagicStick) },
-      { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },
     ],
   },
   {
