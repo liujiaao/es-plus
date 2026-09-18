@@ -1,0 +1,53 @@
+{
+  "$comment": "由 scripts/gen-tri-render-pairs.mjs 从三端真实示例文件测得，禁止手改。数值是可核对的实测（同名示例之间的差异行数），不是宣称。",
+  "metric": "delta = 单侧变更行数（LCS 逐行比对；一处替换记 1 行，不两侧重复计数）。medianDelta = 该渲染端全部同名示例 delta 的中位数。",
+  "sourceLabel": "Vue 3 · Element Plus",
+  "totalPairs": 97,
+  "renderers": [
+    {
+      "key": "antdv",
+      "label": "Vue 3 · Ant Design Vue",
+      "pkg": "@es-plus/adapter-antdv",
+      "pairs": 68,
+      "medianDelta": 10,
+      "le10": 35,
+      "le20": 50,
+      "ge100": 2,
+      "best": "table/Basic.vue"
+    },
+    {
+      "key": "vue2",
+      "label": "Vue 2 · Element UI",
+      "pkg": "@es-plus/vue2",
+      "pairs": 29,
+      "medianDelta": 71,
+      "le10": 0,
+      "le20": 0,
+      "ge100": 7,
+      "best": "table/Basic.vue"
+    }
+  ],
+  "proof": {
+    "renderer": "antdv",
+    "rendererLabel": "Vue 3 · Ant Design Vue",
+    "rendererPkg": "@es-plus/adapter-antdv",
+    "title": "table/Basic.vue",
+    "deltaLines": 2,
+    "source": {
+      "label": "Vue 3 · Element Plus",
+      "path": "es-plus-docs/src/components/examples/table/Basic.vue",
+      "changed": [
+        11
+      ],
+      "code": "<template>\r\n  <div class=\"example-basic-table\">\r\n    <es-table\r\n      :data-source=\"tableData\"\r\n      :columns=\"columns\"\r\n      :options=\"{ border: true, stripe: true }\"\r\n    />\r\n  </div>\r\n</template>\r\n\r\n<script setup>\r\nimport { EsTable } from 'es-plus'\r\nconst tableData = [\r\n  { name: '张三', age: 28, address: '北京市朝阳区', email: 'zhangsan@example.com' },\r\n  { name: '李四', age: 32, address: '上海市浦东新区', email: 'lisi@example.com' },\r\n  { name: '王五', age: 24, address: '广州市天河区', email: 'wangwu@example.com' },\r\n  { name: '赵六', age: 30, address: '深圳市南山区', email: 'zhaoliu@example.com' }\r\n]\r\n\r\nconst columns = [\r\n  { prop: 'name', label: '姓名', width: 100 },\r\n  { prop: 'age', label: '年龄', width: 80, align: 'center' },\r\n  { prop: 'address', label: '地址', minWidth: 150 },\r\n  { prop: 'email', label: '邮箱', minWidth: 180 }\r\n]\r\n</script>\r\n\r\n<style scoped>\r\n.example-basic-table {\r\n  padding: 0;\r\n}\r\n</style>\r\n"
+    },
+    "target": {
+      "label": "Vue 3 · Ant Design Vue",
+      "path": "es-pc/src/views/es-table/Basic.vue",
+      "changed": [
+        11
+      ],
+      "code": "<template>\r\n  <div class=\"example-basic-table\">\r\n    <es-table\r\n      :data-source=\"tableData\"\r\n      :columns=\"columns\"\r\n      :options=\"{ border: true, stripe: true }\"\r\n    />\r\n  </div>\r\n</template>\r\n\r\n<script setup>\r\nimport { EsTable } from '@es-plus/adapter-antdv'\r\nconst tableData = [\r\n  { name: '张三', age: 28, address: '北京市朝阳区', email: 'zhangsan@example.com' },\r\n  { name: '李四', age: 32, address: '上海市浦东新区', email: 'lisi@example.com' },\r\n  { name: '王五', age: 24, address: '广州市天河区', email: 'wangwu@example.com' },\r\n  { name: '赵六', age: 30, address: '深圳市南山区', email: 'zhaoliu@example.com' }\r\n]\r\n\r\nconst columns = [\r\n  { prop: 'name', label: '姓名', width: 100 },\r\n  { prop: 'age', label: '年龄', width: 80, align: 'center' },\r\n  { prop: 'address', label: '地址', minWidth: 150 },\r\n  { prop: 'email', label: '邮箱', minWidth: 180 }\r\n]\r\n</script>\r\n\r\n<style scoped>\r\n.example-basic-table {\r\n  padding: 0;\r\n}\r\n</style>\r\n"
+    }
+  }
+}

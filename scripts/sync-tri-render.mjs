@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 /**
- * 三端「同一份 Schema」单源同步：docs/tri-render/ 为权威源，分发到三个文档站点。
+ * 三端「同一份 Schema / 同一份配对实测」单源同步：docs/tri-render/ 为权威源，
+ * 分发到三个文档站点。
  *
- * 现状：只分发 `schema.json`（「同一份配置」的 JSON Schema，三站 TriRenderTabs 展示源码用）。
- * **三端渲染快照（*.png）尚未产出** —— 生成脚本 scripts/gen-tri-render-snapshots.mjs 依赖
- * Playwright 且未接入 CI，三站当前也不展示快照（占位 UI 已移除）。快照的生成与 CI 接入
- * 属独立任务；在那之前，本脚本不参与「快照一致性」的门禁，避免对 1 个文件恒绿造成假象。
+ * 分发的两类文件：
+ *   - `schema.json`：「同一份配置」的 JSON 示例，三站 TriRenderTabs 展示其源码；
+ *   - `pairs.json`：由 scripts/gen-tri-render-pairs.mjs 从三端真实示例文件**实测**得到的
+ *     配对统计与证据样例（同名示例之间到底差几行）。三站据此展示「换一行 import」
+ *     的真实证据，而不是散文式的宣称。
+ *
+ * **三端渲染快照（*.png）仍未产出** —— 生成脚本 scripts/gen-tri-render-snapshots.mjs
+ * 依赖 Playwright 且未接入 CI。快照不是本脚本的责任，也不在 DISTRIBUTED_FILES 里，
+ * 以免对它恒绿造成假象。
  *
  * 用法：
- *   node scripts/sync-tri-render.mjs           # 同步：拷贝 schema.json 到各站点
+ *   node scripts/sync-tri-render.mjs           # 同步：拷贝到各站点
  *   node scripts/sync-tri-render.mjs --check   # 校验：各站点与单源逐字节一致（CI）
  *
  * 退出码：0 = 成功/一致；1 = 校验发现漂移或目标缺失。
@@ -35,14 +41,17 @@ function rel(p) {
 }
 
 /**
- * 权威源中需要分发的文件（当前仅 schema.json；快照另立任务）。
+ * 权威源中需要分发的文件（快照另立任务）。
  *
  * 必须显式声明、且**缺失即报错**。此前实现是「扫描存在性后过滤」：
  * 源文件一旦被删，`files` 变成空数组 → 循环体一次都不执行 → 打印
  * 「3 个站点（0 个文件）逐字节一致」并退出 0，门禁恒绿而三站副本仍在。
  * 显式清单 + 缺失报错杜绝了这种「空集绿灯」。
+ *
+ * pairs.json 由 scripts/gen-tri-render-pairs.mjs 生成后再同步；它自身的新鲜度由
+ * `npm run tri-render:pairs:check` 保证（对照三端真实示例文件重新实测）。
  */
-const DISTRIBUTED_FILES = ['schema.json']
+const DISTRIBUTED_FILES = ['schema.json', 'pairs.json']
 
 function main() {
   const files = DISTRIBUTED_FILES
