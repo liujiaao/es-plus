@@ -240,7 +240,9 @@
       "output": "output"
     },
     "btnSearch": "查询",
-    "btnReset": "重置"
+    "btnReset": "重置",
+    "targetLabel": "渲染端",
+    "codeTarget": "本次生成目标"
   },
   "content": {
     "previous": "上一页",

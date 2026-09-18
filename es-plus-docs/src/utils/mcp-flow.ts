@@ -18,14 +18,14 @@
 //    offline path so the user still sees output.
 
 import {
-  generateCrudConfig,
-  generateCode,
+  generateCrudSchema,
   generateFromConfig,
   StructuredCrudConfigSchema,
   FORM_TYPES,
   buildNlToConfigSystemPrompt,
-  type GeneratedConfig,
+  type CrudSchemaResult,
   type StructuredCrudConfig,
+  type TargetFramework,
 } from '@es-plus/shared'
 
 // ─── public types ─────────────────────────────────────────────────────────
@@ -83,6 +83,16 @@ export interface FlowOptions {
   signal?: AbortSignal
   /** Last AI-produced config (only meaningful in AI mode for multi-turn) */
   currentConfig?: StructuredCrudConfig
+  /**
+   * 目标渲染端：'vue3' | 'vue2' | 'antdv'。
+   *
+   * 这是 es-plus 的核心卖点（同一份配置 → 三端），所以它必须是**用户可选的**，
+   * 而不是让模型猜：
+   *  - 离线路径把它直接传给 generateCrudSchema(description, target)；
+   *  - AI 路径在 schema 校验通过后把它落到 config.target 上（generateFromConfig
+   *    通过 readTarget(config) 读它），因此模型自己写了什么都会被这里的显式选择覆盖。
+   */
+  target?: TargetFramework
 }
 
 /**
@@ -108,6 +118,8 @@ export interface FlowResult {
    * generator silently dropped the feature.
    */
   featureHints: string[]
+  /** 本次生成实际使用的渲染端（供 UI 显示，避免用户以为切了没生效） */
+  target: TargetFramework
 }
 
 // ─── internals ────────────────────────────────────────────────────────────
@@ -155,17 +167,23 @@ function checkAborted(signal: AbortSignal | undefined): void {
  *
  * 保留 shared 的语义规则 + 6 个 few-shot，不再是「关键词表」式指引。
  */
-function buildSystemPrompt(currentConfig: StructuredCrudConfig | undefined): string {
+function buildSystemPrompt(
+  currentConfig: StructuredCrudConfig | undefined,
+  target: TargetFramework,
+): string {
   const ctx = currentConfig
     ? `Existing config (refine/extend it — do not replace from scratch):\n\`\`\`json\n${JSON.stringify(currentConfig, null, 2)}\n\`\`\``
     : 'Existing config: (none — this is the first turn)'
+  // 目标渲染端由界面决定。告诉模型是为了让它按对应框架组织语义；
+  // 即便它写错，返回前也会被显式覆盖（见 override target 那处 trace）。
+  const targetLine = `Target renderer: "${target}" (chosen by the user in the UI — always emit target: "${target}").`
   const tools = [
     '# Available MCP tools (the server runs these on your behalf)',
     '- generate_crud_from_config(config) → produces the SFC + page schema',
     '- validate_config(config) → zod-validates against StructuredCrudConfigSchema',
   ].join('\n')
 
-  return [buildNlToConfigSystemPrompt(), '', tools, '', ctx].join('\n')
+  return [buildNlToConfigSystemPrompt(), '', tools, '', targetLine, '', ctx].join('\n')
 }
 
 async function callOpenAI(
@@ -335,18 +353,44 @@ function structuredToPreview(config: StructuredCrudConfig): {
   return { formItems, columns, toolbarBtns }
 }
 
-function generatedToPreview(config: GeneratedConfig): {
+/**
+ * 预览用的默认查询按钮。
+ *
+ * 两条路径共用一份：此前 AI 路径的兜底是英文 'Search' / 'Reset'，而页面正文与
+ * 预设全是中文，预览里冒出两个英文按钮。这里统一为中文，两条路径不再各写一份。
+ * （真正的国际化应走 i18n，但本文件是纯逻辑 util，不持有 locale；这属于遗留小项。）
+ */
+const DEFAULT_QUERY_BTNS = [
+  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
+  { name: '重置', key: 'rest', triggerEvent: true },
+]
+
+/**
+ * 离线路径的预览映射：输入是 generateCrudSchema 产出的 CrudPageSchema JSON
+ * （`{ formItems, columns, tableOptions, actions }`）。
+ *
+ * 注意 generateCrudSchema 的 columns 已经剔除了 `operate`（操作列由 EsTable 的
+ * tableBtns 提供），所以这里按 actions 补回一个操作列 —— 否则预览里看不到
+ * 「编辑/删除」按钮，用户会以为生成器漏了增删改。
+ */
+function schemaToPreview(schema: {
+  formItems?: unknown[]
+  columns?: unknown[]
+  actions?: string[]
+}): {
   formItems: unknown[]
   columns: unknown[]
   toolbarBtns: unknown[]
 } {
-  // Offline engine already applies placeholder + spans, but we re-run polish
-  // to keep both paths producing identical preview shape (defense in depth —
-  // if engine output ever loses the polish, preview stays correct).
+  const actions = schema.actions ?? []
+  const cols: unknown[] = [...(schema.columns ?? [])]
+  if (actions.some((a) => ['edit', 'delete', 'view'].includes(a))) {
+    cols.push({ prop: 'operate', label: '操作', width: 150, fixed: 'right' })
+  }
   return {
-    formItems: withPreviewPolish(config.formItems ?? []),
-    columns: config.columns ?? [],
-    toolbarBtns: config.queryBtns ?? [],
+    formItems: withPreviewPolish(schema.formItems ?? []),
+    columns: cols,
+    toolbarBtns: schema.formItems?.length ? DEFAULT_QUERY_BTNS : [],
   }
 }
 
@@ -386,7 +430,7 @@ export async function mcpFlow(
     })
 
     const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-      { role: 'system', content: buildSystemPrompt(opts.currentConfig) },
+      { role: 'system', content: buildSystemPrompt(opts.currentConfig, opts.target ?? 'vue3') },
     ]
     for (const m of history.slice(-6)) {
       if (m.role === 'user') messages.push({ role: 'user', content: m.content })
@@ -475,6 +519,23 @@ export async function mcpFlow(
   // ── AI path final codegen ─────────────────────────────────────────────
   if (validatedConfig) {
     checkAborted(opts.signal)
+    // 渲染端由界面决定，不由模型决定：模型可能在 config 里写了自己的 target（甚至
+    // 没写而落到 schema 默认值 vue3）。这里显式覆盖，保证「用户选了 vue2 就真的出 vue2」，
+    // 否则三端选择器会是个摆设。generateFromConfig 内部通过 readTarget(config) 读它。
+    const target = opts.target ?? validatedConfig.target ?? 'vue3'
+    if (validatedConfig.target !== target) {
+      pushTrace(opts, traceIds, {
+        startedAt: Date.now(),
+        kind: 'mcp_validation',
+        toolName: 'override_target',
+        title: 'override target',
+        summary: `模型给出 ${validatedConfig.target ?? '(未指定)'} → 按界面选择覆盖为 ${target}`,
+        input: { modelTarget: validatedConfig.target, uiTarget: target },
+        output: { target },
+        status: 'success',
+      })
+      validatedConfig.target = target
+    }
     const genStart = Date.now()
     const generated = generateFromConfig(validatedConfig)
     pushTrace(opts, traceIds, {
@@ -482,8 +543,12 @@ export async function mcpFlow(
       kind: 'mcp_tool_call',
       toolName: 'generate_crud_from_config',
       title: 'generate_crud_from_config',
-      summary: `${generated.code.length} chars of code · ${generated.warnings.length} warnings`,
-      input: { fields: validatedConfig.fields.length, mode: validatedConfig.mode ?? 'schema' },
+      summary: `${generated.code.length} chars of code · ${generated.warnings.length} warnings · target=${target}`,
+      input: {
+        fields: validatedConfig.fields.length,
+        mode: validatedConfig.mode ?? 'schema',
+        target,
+      },
       output: {
         summary: generated.summary,
         warnings: generated.warnings,
@@ -531,6 +596,7 @@ export async function mcpFlow(
       jsonView: validatedConfig,
       structuredConfig: validatedConfig,
       traceIds,
+      target,
       // AI path doesn't currently surface feature hints (the LLM is expected
       // to handle nuance directly in the config); keep empty so UI just hides
       // the alert.
@@ -539,58 +605,62 @@ export async function mcpFlow(
   }
 
   // ── Offline / fallback path (no AI key, AI errored, or AI failed twice) ──
+  //
+  // 这里调用的是 **MCP server / CLI 用的同一个函数** generateCrudSchema(desc, target)
+  // （packages/shared/src/schema-generator.ts）。此前这里用的是另一套旧生成器
+  // generateCrudConfig + generateCode —— 那套只产 Vue 3 + Element Plus，
+  // 于是页面顶部那句「IDE 里 Claude Code 调 MCP server 跑的就是这套逻辑」对离线路径
+  // 并不成立：两条路径当时是两套不同实现。换成同一个函数后，这句话才名副其实，
+  // 而且**三端 target 支持随之免费获得**（wrapperCode 按 target 生成 vue3/vue2/antdv）。
+  const target = opts.target ?? 'vue3'
   const tcStart = Date.now()
-  let legacyConfig: GeneratedConfig | undefined
+  let legacy: CrudSchemaResult | undefined
   let legacyErr: Error | undefined
   try {
-    legacyConfig = generateCrudConfig(prompt)
+    legacy = generateCrudSchema(prompt, target)
   } catch (e) {
     legacyErr = e instanceof Error ? e : new Error(String(e))
   }
+  const legacySchema = legacy?.schema as {
+    formItems?: unknown[]
+    columns?: unknown[]
+    actions?: string[]
+  } | undefined
   pushTrace(opts, traceIds, {
     startedAt: tcStart,
     kind: 'mcp_tool_call',
-    toolName: 'generate_crud_config',
-    title: 'generate_crud_config',
-    summary: legacyConfig
-      ? `${legacyConfig.formItems.length} form items · ${legacyConfig.columns.length} columns`
+    toolName: 'generate_crud_schema',
+    title: 'generate_crud_schema',
+    summary: legacy
+      ? `${legacySchema?.formItems?.length ?? 0} form items · ${legacySchema?.columns?.length ?? 0} columns · target=${target}`
       : (legacyErr?.message ?? 'failed'),
-    input: { description: prompt },
-    output: legacyConfig
+    input: { description: prompt, target },
+    output: legacy
       ? {
-          formItems: legacyConfig.formItems.length,
-          columns: legacyConfig.columns.length,
-          actions: legacyConfig.actions,
+          formItems: legacySchema?.formItems?.length ?? 0,
+          columns: legacySchema?.columns?.length ?? 0,
+          actions: legacySchema?.actions,
+          target: legacy.target,
+          wrapperCode: legacy.wrapperCode.slice(0, 400),
         }
       : undefined,
-    status: legacyConfig ? (opts.ai?.apiKey ? 'cached' : 'success') : 'error',
+    status: legacy ? (opts.ai?.apiKey ? 'cached' : 'success') : 'error',
     error: legacyErr?.message,
   })
-  if (!legacyConfig) throw legacyErr ?? new Error('Failed to generate CRUD config')
-
-  const codeStart = Date.now()
-  const code = generateCode(legacyConfig)
-  pushTrace(opts, traceIds, {
-    startedAt: codeStart,
-    kind: 'mcp_tool_call',
-    toolName: 'generate_code',
-    title: 'generate_code',
-    summary: `${code.length} chars of SFC`,
-    input: { fields: legacyConfig.formItems.length },
-    output: { codePreview: code.slice(0, 400) },
-    status: 'success',
-  })
+  if (!legacy) throw legacyErr ?? new Error('Failed to generate CRUD schema')
 
   pushTrace(opts, traceIds, {
     startedAt: Date.now(),
     kind: 'render',
     title: 'render: preview / code / json',
-    summary: 'tabs updated',
+    summary: `tabs updated (target=${legacy.target})`,
     status: 'success',
   })
 
-  const preview = generatedToPreview(legacyConfig)
-  const summary = `Generated CRUD page: ${legacyConfig.formItems.length} query fields, ${legacyConfig.columns.length} columns${legacyConfig.actions.length ? `, actions: ${legacyConfig.actions.join('/')}` : ''}.`
+  const preview = schemaToPreview(legacySchema ?? {})
+  const summary = `Generated CRUD page: ${preview.formItems.length} query fields, ${preview.columns.length} columns${
+    legacySchema?.actions?.length ? `, actions: ${legacySchema.actions.join('/')}` : ''
+  } · target=${legacy.target}.`
 
   return {
     message: {
@@ -599,16 +669,17 @@ export async function mcpFlow(
       role: 'assistant',
       content: summary,
       traceIds,
-      fieldsCount: legacyConfig.formItems.length,
-      columnsCount: legacyConfig.columns.length,
+      fieldsCount: preview.formItems.length,
+      columnsCount: preview.columns.length,
     },
     formItems: preview.formItems,
     columns: preview.columns,
     toolbarBtns: preview.toolbarBtns,
-    code,
-    jsonView: legacyConfig,
+    code: legacy.wrapperCode,
+    jsonView: legacy.schema,
     structuredConfig: undefined, // offline path doesn't produce a StructuredCrudConfig
     traceIds,
-    featureHints: legacyConfig.featureHints ?? [],
+    featureHints: [],
+    target: legacy.target,
   }
 }

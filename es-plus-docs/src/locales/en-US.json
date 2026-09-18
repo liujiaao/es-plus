@@ -240,7 +240,9 @@
       "output": "output"
     },
     "btnSearch": "Search",
-    "btnReset": "Reset"
+    "btnReset": "Reset",
+    "targetLabel": "Renderer",
+    "codeTarget": "Generated for"
   },
   "content": {
     "previous": "Previous",

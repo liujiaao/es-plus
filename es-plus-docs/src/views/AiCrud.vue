@@ -16,6 +16,19 @@
         <el-tag :type="useAI ? 'success' : 'info'" class="engine-tag">
           {{ useAI ? t('aiCrud.engineAi') : t('aiCrud.engineRule') }}
         </el-tag>
+        <!-- 渲染端选择：es-plus 的头号卖点是「同一份配置 → 三端」，不带这个开关的
+             生成器演示只能说明「自然语言 → 一个 Vue 3 页面」。选择会同时作用于
+             离线（generateCrudSchema 的 target 参数）与 AI（覆盖 config.target）两条路径。 -->
+        <div class="target-picker">
+          <span class="target-label">{{ t('aiCrud.targetLabel') }}</span>
+          <el-radio-group v-model="target" size="small">
+            <el-radio-button
+              v-for="opt in TARGETS"
+              :key="opt.value"
+              :value="opt.value"
+            >{{ opt.label }}</el-radio-button>
+          </el-radio-group>
+        </div>
         <el-button @click="showSettings = true" :icon="Setting">{{ t('aiCrud.settings') }}</el-button>
       </div>
     </div>
@@ -81,6 +94,15 @@
 
           <el-tab-pane :label="t('aiCrud.tabCode')" name="code">
             <div class="code-area" v-if="generatedCode">
+              <!-- 把本次实际使用的渲染端与对应包名摆在代码上方：这是「同一份配置 → 三端」
+                   最直接的证据 —— 切一次渲染端，这里的 import 包名就会变。 -->
+              <div class="code-meta">
+                <span class="code-target">
+                  {{ t('aiCrud.codeTarget') }}
+                  <el-tag size="small" type="primary">{{ generatedTarget }}</el-tag>
+                </span>
+                <code class="code-pkg">{{ generatedPkg }}</code>
+              </div>
               <pre class="code-block"><code>{{ generatedCode }}</code></pre>
             </div>
             <div v-else class="empty-state">
@@ -136,7 +158,7 @@ import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { EsForm, EsTable } from 'es-plus'
 import { mcpFlow, type ChatMessage, type TraceEntry } from '@/utils/mcp-flow'
-import type { StructuredCrudConfig } from '@es-plus/shared'
+import type { StructuredCrudConfig, TargetFramework } from '@es-plus/shared'
 import { PRESETS, type Preset } from '@/utils/preset-examples'
 import ChatComposer from '@/components/ai-crud/ChatComposer.vue'
 import TraceTab from '@/components/ai-crud/TraceTab.vue'
@@ -185,6 +207,30 @@ const aiConfig = reactive({
   model: 'gpt-4o-mini',
 })
 const useAI = computed(() => !!aiConfig.apiKey)
+
+/**
+ * 目标渲染端。三端是 es-plus 的头号卖点，所以它是**用户可选**的，而不是让模型猜。
+ * 三条链路都会用到它：
+ *  - 离线：generateCrudSchema(description, target) —— 与 MCP/CLI 同一个函数；
+ *  - AI：校验通过后覆盖 config.target（generateFromConfig 从 config 读它）；
+ *  - 提示词：把选择写进 system prompt 的上下文，减少模型自作主张。
+ */
+const TARGETS = [
+  { value: 'vue3', label: 'Vue 3 · EP' },
+  { value: 'vue2', label: 'Vue 2 · EUI' },
+  { value: 'antdv', label: 'Vue 3 · AntDV' },
+] as const
+const target = ref<'vue3' | 'vue2' | 'antdv'>('vue3')
+
+/** 本次生成实际使用的渲染端（来自 FlowResult.target，不由界面假设 —— 便于发现不一致） */
+const generatedTarget = ref<TargetFramework>('vue3')
+/** 该渲染端对应的包名，摆在生成代码上方作为「三端」的直接证据 */
+const PACKAGE_OF: Record<TargetFramework, string> = {
+  vue3: '@es-plus/vue3 + element-plus',
+  vue2: '@es-plus/vue2 + element-ui',
+  antdv: '@es-plus/adapter-antdv + ant-design-vue',
+}
+const generatedPkg = computed(() => PACKAGE_OF[generatedTarget.value])
 // 当前是否在使用开发态同源代理路径（生产无此代理，需用户自备网关）。
 const isDevProxyBase = computed(() => aiConfig.baseUrl.startsWith('/openai'))
 const showSettings = ref(false)
@@ -211,11 +257,13 @@ const handleSend = async (text: string) => {
       onTrace: (entry) => traces.value.push(entry),
       signal: abortController.signal,
       currentConfig: currentStructuredConfig.value ?? undefined,
+      target: target.value,
     })
 
     // Commit assistant message + uniform preview state from FlowResult.
     messages.value.push(result.message)
     if (result.structuredConfig) currentStructuredConfig.value = result.structuredConfig
+    generatedTarget.value = result.target
     generatedCode.value = result.code
     generatedConfig.value = result.jsonView
     formItems.value = result.formItems as any[]
@@ -328,7 +376,9 @@ watch(
   font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 品牌主色 → 强调色。此前这里是并入前旧产品的紫色渐变（#667eea → #764ba2），
+     是全站品牌色改造的最后一处漏网 —— 与首页 hero、顶栏标记都不是一套。 */
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--brand-accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -345,11 +395,50 @@ watch(
 .ai-crud-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .engine-tag {
   font-size: 12px;
+}
+
+/* 渲染端选择器：紧挨着引擎标签，让「三端」和「引擎」一样是首屏可见的控制项 */
+.target-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.target-label {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+/* 生成代码上方的元信息：本次目标 + 对应包名（切渲染端时这里会变） */
+.code-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-lighter);
+  background: var(--fill-color-light);
+}
+
+.code-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-color-regular);
+}
+
+.code-pkg {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-color-secondary);
 }
 
 .ai-crud-content {
