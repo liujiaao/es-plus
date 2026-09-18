@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://liujiaao.github.io/es-plus/ai/ai-tools.schema.json",
+  "title": "ES-Plus AI 工具链文案（ai-tools.json）",
+  "description": "三站 AI 工具链页的单一真源。sections 按顺序渲染；每个 section 可带代码块与链接，codeBlocks 与 links 至少有一个。",
+  "type": "object",
+  "required": ["title", "subtitle", "sections"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "pattern": "^https?://" },
+    "title": { "type": "string", "minLength": 1 },
+    "subtitle": { "type": "string", "minLength": 1 },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "intro"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "title": { "type": "string", "minLength": 1 },
+          "intro": { "type": "string", "minLength": 1 },
+          "flow": { "type": "string" },
+          "codeBlocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["lang", "code"],
+              "additionalProperties": false,
+              "properties": {
+                "lang": { "type": "string", "minLength": 1 },
+                "code": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "links": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["label", "href"],
+              "additionalProperties": false,
+              "properties": {
+                "label": { "type": "string", "minLength": 1 },
+                "href": { "type": "string", "pattern": "^https?://" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

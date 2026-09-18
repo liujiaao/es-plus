@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://liujiaao.github.io/es-plus/cases/cases.schema.json",
+  "title": "ES-Plus 案例目录（cases.json）",
+  "description": "三站「核心案例」页的单一真源。每条案例给三端各自的落点链接；链接是否指向真实页面由 scripts/check-cases-links.mjs 校验，本 schema 只管结构。",
+  "type": "object",
+  "required": ["note", "levels"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "pattern": "^https?://" },
+    "note": { "type": "string", "minLength": 1 },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "goal", "cases"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^L[0-9]+$" },
+          "title": { "type": "string", "minLength": 1 },
+          "goal": { "type": "string", "minLength": 1 },
+          "cases": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "pain", "win", "links"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "integer", "minimum": 1 },
+                "title": { "type": "string", "minLength": 1 },
+                "pain": { "type": "string", "minLength": 1 },
+                "win": { "type": "string", "minLength": 1 },
+                "note": { "type": "string" },
+                "links": {
+                  "type": "object",
+                  "required": ["vue3", "antdv", "vue2"],
+                  "additionalProperties": false,
+                  "description": "三端各自的落点路径。必须指向该站真实存在的页面，且不得是站点根（'/' 表示没有落点）。",
+                  "properties": {
+                    "vue3": { "type": "string", "pattern": "^/" },
+                    "antdv": { "type": "string", "pattern": "^/" },
+                    "vue2": { "type": "string", "pattern": "^/" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

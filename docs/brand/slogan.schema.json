@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://liujiaao.github.io/es-plus/brand/slogan.schema.json",
+  "title": "ES-Plus 品牌文案（slogan.json）",
+  "description": "三站首页 hero 与「三个承诺」的单一真源。声明 $schema 的前提是这份文件真的存在 —— 此前 slogan.json 指向的 slogan.schema.json 并不存在，属于死链（见 scripts/check-data-schemas.mjs）。",
+  "type": "object",
+  "required": ["name", "positioning", "positioningEn", "slogan", "promises"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "pattern": "^https?://" },
+    "name": { "type": "string", "minLength": 1 },
+    "positioning": { "type": "string", "minLength": 1 },
+    "positioningEn": { "type": "string", "minLength": 1 },
+    "slogan": {
+      "type": "object",
+      "required": ["en", "zh", "subtitle", "subtitleEn"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "zh": { "type": "string", "minLength": 1 },
+        "subtitle": { "type": "string", "minLength": 1 },
+        "subtitleEn": { "type": "string", "minLength": 1 }
+      }
+    },
+    "promises": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "title", "titleEn", "claim", "claimEn", "desc", "descEn"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "title": { "type": "string", "minLength": 1 },
+          "titleEn": { "type": "string", "minLength": 1 },
+          "claim": { "type": "string", "minLength": 1 },
+          "claimEn": { "type": "string", "minLength": 1 },
+          "desc": { "type": "string", "minLength": 1 },
+          "descEn": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
