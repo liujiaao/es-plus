@@ -547,3 +547,29 @@ describe('useFormInputs', () => {
     })
   })
 })
+
+describe('useFormInputs — 未知 formtype 的告警', () => {
+  const { formInputComponents } = useFormInputs()
+
+  it('未知 formtype 告警一次并点名字段，同值不重复告警', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    formInputComponents({ prop: 'weirdField', label: 'T', formtype: '__probe_unknown_a__' } as any)
+    formInputComponents({ prop: 'secondField', label: 'T', formtype: '__probe_unknown_a__' } as any)
+    formInputComponents({ prop: 'thirdField', label: 'T', formtype: '__probe_unknown_b__' } as any)
+    const msgs = warn.mock.calls.map((c) => String(c[0]))
+    expect(msgs.filter((m) => m.includes('__probe_unknown_a__'))).toHaveLength(1)
+    expect(msgs.filter((m) => m.includes('__probe_unknown_b__'))).toHaveLength(1)
+    expect(msgs.some((m) => m.includes('weirdField'))).toBe(true)
+    // 提示里必须给出合法值，否则用户不知道改成什么
+    expect(msgs.some((m) => m.includes('合法值') && m.includes('Input'))).toBe(true)
+    warn.mockRestore()
+  })
+
+  it('合法 formtype 不告警', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    formInputComponents({ prop: 'okField', label: 'T', formtype: 'Input' } as any)
+    formInputComponents({ prop: 'okField2', label: 'T', formtype: 'DatePicker' } as any)
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})

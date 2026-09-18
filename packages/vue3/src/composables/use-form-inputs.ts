@@ -19,7 +19,7 @@ import {
   ElUpload
 } from 'element-plus'
 import type { FormItemOption } from '../types'
-import { normalizeFormType, getNestedValue, setNestedValue } from '@es-plus/core'
+import { normalizeFormType, getNestedValue, setNestedValue, VALID_FORM_TYPES } from '@es-plus/core'
 export { getNestedValue, setNestedValue } from '@es-plus/core'
 
 /** 表单控件渲染回调的上下文参数类型（与 FormItemOption.render 的 ctx 一致） */
@@ -299,8 +299,33 @@ export function useFormInputs() {
         }
       ]
     ])
-    return formPutList.get(normalizeFormType(item.formtype || '')) || (() => null)
+    const resolved = formPutList.get(normalizeFormType(item.formtype || ''))
+    if (!resolved && item.formtype) {
+      warnUnknownFormType(String(item.formtype), String(item.prop ?? ''))
+    }
+    return resolved || (() => null)
   }
 
   return { formInputComponents }
+}
+
+/**
+ * 未知 formtype 的告警（dev-only，按值去重）。
+ *
+ * 三端此前都写成 `formPutList.get(...) || (() => null)` —— 未知 formtype **静默**
+ * 渲染成空。配置写错时（AI 生成、手写 JSON、从别端复制、文档里抄错）用户只看到
+ * 「这个字段不见了」，没有任何线索指向 formtype；Playground 的「应用配置」也曾因此
+ * 对非法配置报「已应用」。三端在这里统一告警，每种值只告一次以免刷屏。
+ *
+ * 生产构建下 `import.meta.env.DEV` 为 false，不产生日志。
+ * （本文件内已有 `import.meta.env.DEV` 的用法先例，见 es-table 的 vxe-engine。）
+ */
+const warnedFormTypes = new Set<string>()
+function warnUnknownFormType(formtype: string, prop: string): void {
+  if (!import.meta.env.DEV || warnedFormTypes.has(formtype)) return
+  warnedFormTypes.add(formtype)
+  console.warn(
+    `[es-plus] 未知的 formtype「${formtype}」${prop ? `（字段 ${prop}）` : ''}：该字段不会被渲染。` +
+      `合法值：${VALID_FORM_TYPES.join(', ')}。`,
+  )
 }

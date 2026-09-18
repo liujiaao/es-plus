@@ -32,7 +32,7 @@
  * 这样无论是 Vue 2 还是 Vue 3 项目，配置 schema 完全一致 —— 只有内部渲染层做差异化处理。
  */
 
-import { getNestedValue, setNestedValue, normalizeFormType } from '@es-plus/core'
+import { getNestedValue, setNestedValue, normalizeFormType, VALID_FORM_TYPES } from '@es-plus/core'
 import type { FormItemOption, ModelData } from '@es-plus/core'
 
 /**
@@ -557,8 +557,27 @@ export function useFormInputs() {
     const formtype = (item.formtype ?? '') as string
     if (!formtype) return (): unknown => null
 
-    return formPutList.get(normalizeFormType(formtype)) || (() => null)
+    const resolved = formPutList.get(normalizeFormType(formtype))
+    if (!resolved) warnUnknownFormType(formtype, String(item.prop ?? ''))
+    return resolved || (() => null)
   }
 
   return { formInputComponents }
+}
+
+/**
+ * 未知 formtype 的告警（dev-only，按值去重）。
+ *
+ * 此前是 `formPutList.get(...) || (() => null)` —— 未知 formtype **静默**渲染成空，
+ * 配置写错时只表现为「这个字段不见了」。三端统一告警，与 vue3 / adapter-antdv 保持一致。
+ * 生产构建下 `import.meta.env.DEV` 为 false，不产生日志。
+ */
+const warnedFormTypes = new Set<string>()
+function warnUnknownFormType(formtype: string, prop: string): void {
+  if (!import.meta.env.DEV || warnedFormTypes.has(formtype)) return
+  warnedFormTypes.add(formtype)
+  console.warn(
+    `[es-plus] 未知的 formtype「${formtype}」${prop ? `（字段 ${prop}）` : ''}：该字段不会被渲染。` +
+      `合法值：${VALID_FORM_TYPES.join(', ')}。`,
+  )
 }
