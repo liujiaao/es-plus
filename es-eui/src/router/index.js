@@ -125,13 +125,6 @@ const routes = [
     component: () => import('../views/ai-tools.vue')
   },
 
-  // 测试页：Composition API + @es-plus/vue2 兼容性验证（Vue 2.6）
-  {
-    path: '/test/recharge-record',
-    name: 'RechargeRecord',
-    component: () => import('../views/test/RechargeRecord.vue')
-  },
-
   // 404 兜底：此前没有这一条，匹配不到的地址（含写错的跨站链接）会渲染成整页空白。
   // Vue 2 的通配写法是 path: '*'（Vue 3 用 ':pathMatch(.*)*'）。
   {
@@ -140,6 +133,11 @@ const routes = [
     component: () => import('../views/NotFound.vue')
   }
 ]
+
+// 原 `/test/recharge-record` 路由已移除：那是一个公网可达的测试页（475 行、直连
+// DummyJSON、内含 TODO），而它要演示的能力已有专用 CI 覆盖 ——
+// `__tests__/e2e-runtime/tests/vue2-crud.spec.ts`。文件本身保留为参考示例，
+// 见 `src/examples/vue2-compat/RechargeRecord.vue` 的头部注释。
 
 const router = new VueRouter({
   mode: 'hash',

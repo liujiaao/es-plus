@@ -379,9 +379,14 @@ for t in "${TAGS[@]}"; do git push origin --delete "$t"; done
 - **真正的单一真源**：`core/constants.ts` ↔ `shared/contract.ts` 仍是手写双份 + 门禁。彻底解决需要一个独立的无依赖契约包（如 `@es-plus/contract`），属结构性改造。
 - **发布链路已打通并完成一次真实发版**（见下「实跑记录」）：Trusted Publishing 配置完成，7 个包已带 provenance 发布，release tag 已推送。
 - **coverage 无阈值门禁**：脚本已可用，但"覆盖率不得低于 X%"是策略决定，未擅自设阈值。
-- **`es-eui` 发布残留**（`package.lib.json`/`PUBLISH_GUIDE.md`/`test-project/` 等）与 `raw-sources.generated.js` 每次构建弄脏工作树：仍待决策（后者本轮已手动还原，未改其生成方式）。
+- ~~**`es-eui` 发布残留**~~ **已于 2026-09-18 处理**：按「只清无引用的发布残留」决策删除
+  `package.lib.json`/`vue.lib.config.js`/`PUBLISH_GUIDE.md`/`LIBRARY_README.md`/
+  `PAIN_POINT_ANALYSIS.md`/`README_DETAILED.md`/`plans/`/`scripts/*.bat`/`test-project/`/`.npmignore`
+  与跑不通的 `build:lib`；`/test/recharge-record` 从路由表移除（能力有专用 e2e 覆盖），
+  页面保留为参考示例移至 `src/examples/vue2-compat/`。
+- **`raw-sources.generated.js` 每次构建弄脏工作树**：仍未处理（生成物含时间戳 + 被 glob 的示例源码）。
 - **生成代码注入面**：`formatter`/`render` 仍是原样拼进产物，未见沙箱化设计。
-- **三端快照（tri-render PNG）**：数量仍为 0。
+- **三端快照（tri-render PNG）**：数量仍为 0（渲染证据现由 `pairs.json` 的同名示例逐行实测承担）。
 
 ### 本轮验证快照
 

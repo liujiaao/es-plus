@@ -37,12 +37,23 @@
 - `es-pc/src/views/es-crud/CustomRender.vue`：`Upload/Button/Progress/message` **未 import**，弹窗渲染必崩。
 
 **仍待决策 / 另立任务**：
-- #1 三端快照的生成 + CI（Playwright 截「同一案例」）。
-- #8 es-eui 的发布残留（`package.lib.json`/`PUBLISH_GUIDE.md`/`test-project/` 等）与孤儿业务代码
-  （`views/salesPolicy`、`/test/recharge-record` 公网暴露）——按决策未删。
+- #1 三端快照的生成 + CI（Playwright 截「同一案例」）。**（已部分替代）** 三站现展示
+  `pairs.json` 的实测证据：同名示例逐行比对（两侧完整源码 + 变更行高亮），
+  见 `scripts/gen-tri-render-pairs.mjs`。快照补的是它覆盖不到的像素级一致。
 - #3 生产环境的 AI CORS 网关方案（当前仅 dev 代理可用）。
 - 文档站 schema 的 `$id` 与 `schema-setup.md` 已随本轮统一；Playground 运行时只 `JSON.parse`、不做
   schema validate（补全/hover 已随 schema 补齐而正确）。
+
+### 追加处理（2026-09-18）
+
+- #8 **已处理**（按「只清无引用的发布残留」决策）：删除 `package.lib.json`、`vue.lib.config.js`、
+  `PUBLISH_GUIDE.md`、`LIBRARY_README.md`、`PAIN_POINT_ANALYSIS.md`、`README_DETAILED.md`、
+  `plans/`、`scripts/*.bat`、`test-project/`、`.npmignore`（均 0 引用，且与 `private: true` 矛盾），
+  以及跑不通的 `build:lib` 脚本（其目标 `src/components/es-eui/index.js` 不存在）。
+  `/test/recharge-record` 已从路由表移除 —— 该能力有专用 CI 覆盖
+  （`__tests__/e2e-runtime/tests/vue2-crud.spec.ts`）；页面本身保留为参考示例，
+  移至 `src/examples/vue2-compat/`，其「数据源是外部公开 API」一事写进了文件头注释。
+- 孤儿业务代码（`views/salesPolicy`、内网域名）在更早一轮已清除。
 
 ---
 

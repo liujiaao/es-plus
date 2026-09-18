@@ -23,8 +23,18 @@
 
 <script lang="jsx">
 /**
- * 充值记录测试页 —— 演示 @es-plus/vue2 在 Vue 2.6 + @vue/composition-api 下
- * 的「表格 ↔ 表单」接口请求联动能力。
+ * 充值记录 —— 参考示例：@es-plus/vue2 在 Vue 2.6 + @vue/composition-api 下的
+ * 「表格 ↔ 表单」接口请求联动能力。
+ *
+ * ⚠️ 本文件**没有路由**（此前挂在 `/test/recharge-record` 上，是公网可达的测试页，
+ *    已从路由表移除）。保留它是作为可读的参考实现，不会被任何页面渲染。
+ *    同一能力在 CI 里有专用覆盖：`__tests__/e2e-runtime/tests/vue2-crud.spec.ts`
+ *    （配合 `e2e-runtime/vue2/` 夹具）—— 那是验证，这里是演示，两者互补。
+ *
+ * ⚠️ 若将来要把它接回路由：注意它的数据源是 **外部公开 API**（DummyJSON），
+ *    断网或被墙时会静默空表。站内已有本地假后端
+ *    （`src/examples/_mock/crud-service.js` 的 `createEmployeeService()`，
+ *    支持分页/过滤/增删改/延迟/错误注入），接回时应改用它。
  *
  * 联动机制：
  *  1. 表单内置「查询/重置」按钮设置 triggerEvent: true，会自动调起表格请求
@@ -48,7 +58,7 @@
  */
 import { defineComponent, reactive, ref } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import RechargeForm from './components/RechargeForm.vue'
+import RechargeForm from './RechargeForm.vue'
 
 const statusMap = { 1: '成功', 2: '失败', 3: '处理中' }
 const statusTypeMap = { 1: 'success', 2: 'danger', 3: 'warning' }

@@ -12,7 +12,6 @@
     "preserve": "node ../scripts/gen-element-theme.mjs && node scripts/generate-raw-sources.js && npm run build:esplus",
     "element-theme:sync": "node ../scripts/gen-element-theme.mjs",
     "element-theme:check": "node ../scripts/gen-element-theme.mjs --check",
-    "build:lib": "vue-cli-service build --target lib --name es-eui src/components/es-eui/index.js --mode production",
     "lint": "vue-cli-service lint",
     "deploy": "gh-pages -d dist"
   },
