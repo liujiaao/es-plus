@@ -1,0 +1,7 @@
+{
+  "$comment": "由 scripts/gen-og-image.mjs 生成：记录生成时的输入指纹，用于判断卡片是否已过期",
+  "inputHash": "9f76291a41fe3689",
+  "brandPrimary": "#3b82f6",
+  "brandAccent": "#06b6d4",
+  "size": "1200x630"
+}

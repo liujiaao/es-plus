@@ -259,14 +259,16 @@ body {
     .logo-img {
       width: 36px;
       height: 36px;
-      background: var(--es-brand-primary);
+      /* 与另两站的品牌标记保持一致：同一渐变、同一圆角、同一字号 */
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: #fff;
-      border-radius: 4px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 18px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.3px;
       margin-right: 10px;
     }
 

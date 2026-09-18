@@ -4,7 +4,10 @@
     <a-layout-header class="doc-header">
       <div class="header-left">
         <a-space align="center" :size="12">
-          <BookOutlined class="logo-icon" />
+          <!-- 品牌标记：此前这里用的是 Ant Design Vue 的 BookOutlined 图标 ——
+               拿第三方 UI 库的图标当自己的 logo，另两站用的是「ES」方块，
+               同一个产品三处标记各不相同。统一为「ES」方块（配色走品牌 token）。 -->
+          <span class="logo-mark">ES</span>
           <span class="logo-text">ES-Plus 开发文档</span>
         </a-space>
       </div>
@@ -121,7 +124,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
-  BookOutlined,
+  // 不再引入 BookOutlined：它此前被当作本站 logo，现已换成统一的「ES」品牌标记
   GithubOutlined,
   HomeOutlined,
   RocketOutlined,
@@ -219,9 +222,21 @@ function handleMenuClick({ key }) {
   z-index: 100;
 }
 
-.header-left .logo-icon {
-  font-size: 24px;
-  color: var(--es-brand-primary);
+/* 与另两站的「ES」方块对齐：品牌主色 → 强调色的渐变、圆角、白色粗体字。
+   （此前这里是 BookOutlined 图标的字号/颜色样式） */
+.header-left .logo-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
 }
 
 .header-left .logo-text {

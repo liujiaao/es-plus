@@ -1,4 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="4" fill="#409EFF"/>
-  <text x="16" y="22" text-anchor="middle" fill="white" font-size="16" font-weight="bold">E+</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ES-Plus">
+  <!--
+    ES-Plus 品牌标记的单一真源（由 scripts/sync-brand.mjs 分发到三站 public/favicon.svg）。
+
+    此前三站各有一套、且都不是品牌色：
+      es-plus-docs / es-eui 是 #409EFF（Element Plus 默认蓝）配「E+」，
+      es-pc 是 #1677ff（Ant Design Vue 默认蓝）配「E」，文件还叫 vite.svg。
+    而顶栏 logo 用的是「ES」方块 —— 标签页图标与站内标记也对不上。
+
+    这里统一为顶栏那枚标记：品牌主色 → 强调色的渐变方块 + 「ES」。
+    渐变的两个色值必须等于 docs/tokens/design-tokens.css 里的
+    --es-brand-primary / --es-brand-accent，由 scripts/check-brand-assets.mjs 校验
+    （SVG 读不到 CSS 变量，只能写字面量，所以需要门禁防漂移）。
+  -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#g)"/>
+  <text x="16" y="22" text-anchor="middle" fill="#ffffff"
+        font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700"
+        letter-spacing="0.3">ES</text>
 </svg>

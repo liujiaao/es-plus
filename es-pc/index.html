@@ -2,9 +2,39 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ES Plus 开发文档</title>
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <title>ES-Plus 开发文档 · Ant Design Vue 端</title>
+
+    <!--
+      静态 meta：主文档站把 title/description/og 放在 unhead 里由 JS 注入，
+      不执行 JS 的抓取器与社交平台抓不到；本站此前 index.html 里一行 meta 都没有
+      （连 description 和 og 都没有），分享出去是无描述、无卡片的裸链接。
+      这里直接写静态标签，保证非 JS 环境也能拿到。
+      og:url / og:image 指向主文档站：三端是同一个产品的三个渲染端，
+      分享卡片统一用主文档站的规范地址与卡片图（单一真源在 es-plus-docs）。
+    -->
+    <meta
+      name="description"
+      content="ES-Plus 的 Ant Design Vue 渲染端文档：同一份 JSON 配置驱动 EsForm / EsTable / EsDialog / EsCrudPage，与 Vue 2 / Vue 3 端共用同一套字段与列定义。"
+    />
+    <meta name="keywords" content="Ant Design Vue, CRUD, 配置化表单, 配置化表格, JSON Schema, Vue 3" />
+    <link rel="canonical" href="https://liujiaao.github.io/es-plus/es-pc/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ES-Plus" />
+    <meta property="og:title" content="ES-Plus 开发文档 · Ant Design Vue 端" />
+    <meta
+      property="og:description"
+      content="同一份 JSON 配置驱动 EsForm / EsTable / EsDialog / EsCrudPage，与 Vue 2 / Vue 3 端共用同一套字段与列定义。"
+    />
+    <meta property="og:url" content="https://liujiaao.github.io/es-plus/es-pc/" />
+    <meta property="og:image" content="https://liujiaao.github.io/es-plus/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://liujiaao.github.io/es-plus/og-image.png" />
   </head>
   <body>
     <div id="app"></div>

@@ -4,7 +4,37 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ES-Plus 文档</title>
+
+    <title>ES-Plus 文档 · 中后台 CRUD 的配置层</title>
+
+    <!--
+      静态 meta：main.ts 里用 unhead 也会注入一份（标题随路由变化），但那是 JS 注入 ——
+      不执行 JS 的抓取器与社交平台抓不到。这里写静态兜底，保证任何环境下都有
+      描述与分享卡片。og:image 由 scripts/gen-og-image.mjs 从品牌单源生成。
+    -->
+    <meta
+      name="description"
+      content="ES-Plus —— 中后台 CRUD 的配置层：一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译。"
+    />
+    <meta
+      name="keywords"
+      content="Vue 3, Vue 2, Ant Design Vue, Element Plus, Element UI, CRUD, 配置化表单, 配置化表格, MCP Server, AI 编码"
+    />
+    <link rel="canonical" href="https://liujiaao.github.io/es-plus/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ES-Plus" />
+    <meta property="og:title" content="ES-Plus · 中后台 CRUD 的配置层" />
+    <meta
+      property="og:description"
+      content="一份 JSON 配置，三个渲染器通用，AI 生成即编译 —— 中后台 CRUD 的配置层。"
+    />
+    <meta property="og:url" content="https://liujiaao.github.io/es-plus/" />
+    <meta property="og:image" content="https://liujiaao.github.io/es-plus/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://liujiaao.github.io/es-plus/og-image.png" />
   </head>
   <body>
     <div id="app"></div>

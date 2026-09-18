@@ -30,6 +30,29 @@ const ROOT = join(__dirname, '..')
  */
 const BRAND_FILES = ['slogan.json', 'one-config-diff.json']
 
+/**
+ * 需要发到各站 public/ 的品牌资产（文件名 → 各站目标路径）。
+ * favicon 必须放在 public/ 而不是 src/：它由 index.html 直接引用、由构建原样拷贝。
+ * 三站此前各有一套图标且都不是品牌色（详见 docs/brand/favicon.svg 的注释），
+ * 这里统一为同一份单源。
+ */
+const PUBLIC_ASSETS = [
+  {
+    file: 'favicon.svg',
+    targets: [
+      'es-plus-docs/public/favicon.svg',
+      'es-pc/public/favicon.svg',
+      'es-eui/public/favicon.svg',
+    ],
+  },
+  {
+    // 分享卡片：三站的 og:url / og:image 都指向主文档站（同一产品的三个渲染端共用一张卡片），
+    // 因此只有主站需要托管这份 PNG。
+    file: 'og-image.png',
+    targets: ['es-plus-docs/public/og-image.png'],
+  },
+]
+
 const SITE_DIRS = ['es-plus-docs', 'es-pc', 'es-eui']
 
 const CHECK = process.argv.includes('--check')
@@ -43,7 +66,8 @@ function main() {
   let synced = 0
 
   // 单源缺失 = 品牌资产被删，必须报错（不能靠目录扫描，否则空集恒绿）
-  const missing = BRAND_FILES.filter((f) => !existsSync(join(ROOT, 'docs', 'brand', f)))
+  const allFiles = [...BRAND_FILES, ...PUBLIC_ASSETS.map((a) => a.file)]
+  const missing = allFiles.filter((f) => !existsSync(join(ROOT, 'docs', 'brand', f)))
   if (missing.length) {
     console.error(`❌ 单源缺失：docs/brand/${missing.join(', docs/brand/')}`)
     process.exit(1)
@@ -74,16 +98,41 @@ function main() {
     }
   }
 
+  // public/ 资产（favicon 等）：目标路径写全，不做目录扫描
+  for (const asset of PUBLIC_ASSETS) {
+    const srcContent = readText(join(ROOT, 'docs', 'brand', asset.file))
+    for (const relTarget of asset.targets) {
+      const target = join(ROOT, relTarget)
+      if (CHECK) {
+        if (!existsSync(target)) {
+          console.error(`❌ 目标不存在：${rel(relTarget)}`)
+          drift = true
+          continue
+        }
+        if (!sameText(readText(target), srcContent)) {
+          console.error(`❌ 品牌资产漂移：${rel(relTarget)} 与单源不一致`)
+          drift = true
+        }
+      } else {
+        const dir = dirname(target)
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+        writeFileSync(target, srcContent)
+        synced++
+      }
+    }
+  }
+
   if (CHECK) {
     if (drift) {
       console.error('\n品牌资产与单源不同步。运行 `npm run brand:sync` 重新生成，不要手改各站点副本。')
       process.exit(1)
     }
     console.log(
-      `✅ 全部 ${SITE_DIRS.length} 个站点品牌资产与单源逐字节一致（${BRAND_FILES.length} 个文件）`,
+      `✅ 全部 ${SITE_DIRS.length} 个站点的品牌资产与单源逐字节一致` +
+        `（${BRAND_FILES.length} 个 src 资产 + ${PUBLIC_ASSETS.length} 个 public 资产）`,
     )
   } else {
-    console.log(`✅ 已从单源同步 ${BRAND_FILES.length} 个品牌资产到 ${synced} 处`)
+    console.log(`✅ 已从单源同步品牌资产到 ${synced} 处`)
   }
 }
 
