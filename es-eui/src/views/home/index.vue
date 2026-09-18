@@ -40,28 +40,32 @@
             一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译
           </p>
           
-          <!-- 统计信息 -->
+          <!-- 统计信息 —— 三个数字都是可核对的事实：
+               渲染端数取自三站切换器的 SITES 数组；表单控件数取自 core 的 VALID_FORM_TYPES；
+               代码降幅取自品牌单源 docs/brand/one-config-diff.json 的实测值。
+               由 scripts/check-site-claims.mjs 守住（此前这里写的是 5 / 20 / 80%，
+               其中控件数与降幅都与源码不符，且本站介绍页自己写的是 14）。 -->
           <div class="hero-stats">
             <div class="stat-item">
               <span
                 class="stat-number"
-                data-count="5"
-              >0</span>+
-              <span class="stat-label">核心组件</span>
+                data-count="3"
+              >0</span> 端
+              <span class="stat-label">共用同一份配置</span>
             </div>
             <div class="stat-item">
               <span
                 class="stat-number"
-                data-count="20"
-              >0</span>+
-              <span class="stat-label">控件类型</span>
+                data-count="14"
+              >0</span> 种
+              <span class="stat-label">表单控件</span>
             </div>
             <div class="stat-item">
               <span
                 class="stat-number"
-                data-count="80"
+                data-count="77"
               >0</span>%
-              <span class="stat-label">效率提升</span>
+              <span class="stat-label">模板与事件胶水代码减少</span>
             </div>
           </div>
           
@@ -121,7 +125,15 @@
             es-plus 用 <strong>EsForm 嵌套 EsTable</strong> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。
           </p>
         </div>
-        <CodeDiff :left-code="nativeCode" :right-code="esplusCode" />
+        <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值 -->
+        <CodeDiff
+          left-title="传统写法"
+          right-title="ES-Plus"
+          :left-lines="oneConfig.breakdown.native.totalLines + ' 行'"
+          :right-lines="oneConfig.breakdown.esplus.totalLines + ' 行'"
+          :left-code="oneConfig.code.native.text"
+          :right-code="oneConfig.code.esplus.text"
+        />
       </div>
     </div>
 
@@ -534,6 +546,8 @@ export default {
 <script>
 // 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发，禁止手改本文件
 import brand from '@/brand/slogan.json'
+// 「一份配置」对比的实测数据（单源 docs/brand/one-config-diff.json）
+import oneConfig from '@/brand/one-config-diff.json'
 import CodeDiff from '@/components/CodeDiff.vue'
 import TriRenderTabs from '@/components/TriRenderTabs.vue'
 
@@ -544,64 +558,10 @@ export default {
     return {
       brand,
       activeStep: 0,
-      // ── L2 头号案例「零事件代码的 CRUD」并排 diff 内容 ──
-      nativeCode: `<el-form :model="query" inline>
-  <el-form-item label="用户名"><el-input v-model="query.name" /></el-form-item>
-  <el-form-item label="状态">
-    <el-select v-model="query.status">
-      <el-option v-for="i in statusOptions" :key="i.value" :label="i.label" :value="i.value" />
-    </el-select>
-  </el-form-item>
-  <el-form-item>
-    <el-button type="primary" @click="handleQuery">查询</el-button>
-    <el-button @click="handleReset">重置</el-button>
-  </el-form-item>
-</el-form>
-
-<el-table :data="list" v-loading="loading">
-  <el-table-column prop="name" label="用户名" />
-  <el-table-column prop="status" label="状态" />
-</el-table>
-<el-pagination :current-page="page" :page-size="pageSize" :total="total"
-  @current-change="handlePage" @size-change="handleSize" />
-
-// ── 原生 script：4 个事件函数 ──
-data() {
-  return { query: { name: '', status: '' }, list: [], loading: false, page: 1, pageSize: 10, total: 0 }
-},
-methods: {
-  async fetchData() { /* 手写请求 + 赋值 */ },
-  handleQuery() { this.page = 1; this.fetchData() },
-  handleReset() { this.query = { name: '', status: '' }; this.page = 1; this.fetchData() },
-  handlePage(p) { this.page = p; this.fetchData() },
-  handleSize(s) { this.pageSize = s; this.page = 1; this.fetchData() }
-}
-`,
-      esplusCode: `<es-table :columns="columns" :options="options">
-  <es-form :model="query" :form-item-list="items" :config-btn="btns" />
-</es-table>
-
-// ── es-plus script：0 行事件代码 ──
-data() {
-  return {
-    query: { name: '', status: '' },
-    items: [
-      { prop: 'name', label: '用户名', formtype: 'Input', span: 6 },
-      { prop: 'status', label: '状态', formtype: 'Select', span: 6, dataOptions: statusOptions }
-    ],
-    btns: [
-      { name: '查询', key: 'query', triggerEvent: true },
-      { name: '重置', key: 'rest', triggerEvent: true }
-    ],
-    columns: [
-      { prop: 'name', label: '用户名' },
-      { prop: 'status', label: '状态' }
-    ],
-    options: { apiParams: { url: '/api/users' } }
-  }
-}
-// 查询/重置/分页全自动联动（triggerEvent）
-`,
+      // L2 头号案例的并排 diff 不再内联节选伪代码（旧的节选带「...」省略，
+      // 配的 ~250/~30 行徽章其实是 CodeDiff 的默认 prop，与任何真实代码都对不上）。
+      // 完整两版源码与实测行数来自品牌单源 docs/brand/one-config-diff.json。
+      oneConfig,
       // 痛点数据
       painPoints: [
         {
@@ -648,12 +608,13 @@ data() {
           desc: 'configTableOut统一配置字段映射，无论后端返回data还是rows都能轻松适配'
         }
       ],
-      // 优势数据
+      // 优势数据 —— 全部是可核对的事实，不写无法验证的「3x 维护速度」这类数字。
+      // 由 scripts/check-site-claims.mjs 逐项校验（口径见该脚本头部注释）。
       advantages: [
-        { number: '60%', label: '代码量减少', desc: '配置化替代模板代码' },
-        { number: '80%', label: '效率提升', desc: '专注业务而非重复劳动' },
-        { number: '3x', label: '维护速度', desc: '统一规范降低协作成本' },
-        { number: '0', label: '学习成本', desc: '基于Element UI无缝上手' }
+        { number: '77%', label: '模板与事件胶水代码减少', desc: '查询 / 重置 / 翻页 / 取数全部由配置接管' },
+        { number: '14', label: '表单控件', desc: '与 Vue 3 / Ant Design Vue 端共用同一份配置与同一套字段' },
+        { number: '3', label: '渲染端共用一份配置', desc: 'Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue' },
+        { number: '0', label: '联动链路事件代码', desc: 'triggerEvent 自动接管，只剩编辑 / 删除两个业务动作需要手写' }
       ],
       features: [
         {

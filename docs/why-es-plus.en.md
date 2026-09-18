@@ -1,6 +1,6 @@
 # Why ES-Plus — A Config-Driven Answer for Admin CRUD in the AI Coding Era
 
-> One-liner: **ES-Plus abstracts the most repetitive admin-panel chain — form, table, dialog — into a single JSON Schema. A hand-written 200-line template collapses to 30 lines of config. AI-generated code passes `vite build` in CI on the first try. And the exact same config runs unchanged on all three renderers — Vue 3 + Element Plus, Vue 2 + Element UI, and Vue 3 + Ant Design Vue.**
+> One-liner: **ES-Plus abstracts the most repetitive admin-panel chain — form, table, dialog — into a single JSON Schema. 115 lines of markup and event glue collapse to 27 lines of config (-76.5%). AI-generated code passes `vite build` in CI on the first try. And the exact same config runs unchanged on all three renderers — Vue 3 + Element Plus, Vue 2 + Element UI, and Vue 3 + Ant Design Vue.**
 
 ---
 
@@ -32,27 +32,30 @@ That's the **admin CRUD mantra**: query → list → dialog → submit. **About 
 
 ### 1.1 How One Real Page Bloats
 
-Take a "User Management" page — **8 query fields + 6 table columns + edit dialog** — the kind of page nearly every admin app has:
+Take a "User Management" page — **4 query fields + a 4-column table with an action column + pagination** — the kind of page nearly every admin app has:
 
-| Module | Vanilla Element Plus | Lines |
+| Module | Vanilla Element Plus | Measured |
 |------|----------------------|------|
-| Query form (8 fields) | `<el-form>` + 8 × `<el-form-item>` + 8 × `<el-input>/<el-select>/<el-date-picker>` + 2 buttons | **~70** |
-| Table (6 cols + actions + pagination) | `<el-table>` + 7 × `<el-table-column>` + scope slot + `<el-pagination>` | **~60** |
-| Edit dialog | `<el-dialog>` + nested `<el-form>` + cancel/confirm + `validate()` | **~45** |
-| Event handlers | `handleQuery` / `handleReset` / `handlePageChange` / `handleSizeChange` / `handleEdit` / `handleDelete` / `handleSubmit` | **~50** |
-| State | `formRef` / `tableLoading` / `dialogVisible` / `editingRow` / `currentPage` / `pageSize` / `total` / `selectedRows` | **~25** |
-| **Total** | | **~250** |
+| Template | `<el-form>` + 4 × `<el-form-item>` + controls + query/reset buttons; `<el-table>` + 4 × `<el-table-column>` (incl. a status-tag scope slot) + an action column + `<el-pagination>` | **61** |
+| Event handlers & fetching | `fetchDeptOptions` / `fetchData` / `handleQuery` / `handleReset` / `handlePageChange` / `handleSizeChange` / `handleEdit` / `handleDelete` | **54** |
+| Everything else (imports / state / constants) | — | **36** |
+| **Total** | | **151** |
 
-**ES-Plus takes the same page down to ~30 lines of config + ~10 lines of setup**, a savings of **~210 lines**.
+**The ES-Plus version of the same page is 85 lines** (template 18 + events 9 + other 58): query / reset / pagination / fetching need **zero event handlers** — `triggerEvent: true` wires the whole loop.
 
-The bigger point: of those 250 lines, at least **180 are dead code** — they look identical on every CRUD page; only the field names change. On a project with 20 CRUD pages, that's **3,600 lines that could just evaporate**.
+The bigger point: those **115 lines of markup and event glue** (61 + 54) are exactly what looks identical on every CRUD page, with only the field names changed — as config they shrink to **27 lines** (-76.5%). On a project with 20 CRUD pages, that's **1760 lines that could just evaporate**.
+
+> Every figure above is measured by `npm run one-config:gen` from `docs/brand/one-config/{native,esplus}.vue`,
+> and locked by `npm run check:site-claims`. Both samples implement the same page with the same feature scope —
+> no ellipses, no stubs. Metric: template lines + `handle*`/`fetch*` event & fetch functions.
+> Whole-file non-empty lines: 136 → 76 (-44.1%).
 
 ### 1.2 The Hidden Costs of That Dead Code
 
 The countable parts:
 
-- **Write**: 3,600 lines × 1 min/line = 60 hours
-- **Review**: 3,600 lines × 0.5 min/line = 30 hours
+- **Write**: 1760 lines × 1 min/line = 29 hours
+- **Review**: 1760 lines × 0.5 min/line = 15 hours
 - **Test**: one pass + edge cases per page × 20 pages × 30 min = 10 hours
 
 The uncountable parts (**the ones that actually kill you**):
@@ -532,7 +535,7 @@ import type {
 | Dimension | Vanilla Element | ES-Plus |
 |------|------------|---------|
 | Learning curve | Low, well-documented | Medium — you need to internalize the config-driven mindset |
-| Lines per page | ~250 | ~30 |
+| Lines per page | 151 | 85 (markup + glue: 115 → 27) |
 | Cross-cutting change | Edit N pages | Edit 1 config or 1 global default |
 | Customization headroom | 100% | 95% (the extreme 5% uses the `render` escape hatch) |
 | Best for | Landing pages, marketing, a small number of admin pages | Admin panels, internal tools, CRUD-heavy apps |

@@ -304,7 +304,7 @@ export default {
 | 能力 | 说明 |
 |---|---|
 | `columns` 配置 | 字段、render、btns、ellipsis、formatter 完全一致 |
-| `formItemList` 配置 | 13 种 formtype、dataOptions、attrs 透传完全一致 |
+| `formItemList` 配置 | 14 种 formtype、dataOptions、attrs 透传完全一致 |
 | `options` 配置 | httpRequest、configTableOut、apiParams、border、stripe 等完全一致 |
 | `useDialog` API | `dialog()` 调用签名、configBtn、registerRef、getRefs 完全一致 |
 | 跨页选择 | `getSelectionRows()` 行为一致 |

@@ -330,7 +330,7 @@ cat config.json | es-plus create --from-config -
 ```
 src/views/OrderManage/
 ├── schema.ts      # CrudPageSchema 配置 JSON
-└── index.vue      # 包装 SFC（~30 行，处理事件和 API 调用）
+└── index.vue      # 包装 SFC（处理事件和 API 调用；三字段页面实测 43–49 非空行，随字段数变化）
 ```
 
 **sfc 模式** 输出单个完整 SFC：

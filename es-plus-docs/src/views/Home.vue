@@ -87,107 +87,42 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
         原生「查询 → 重置 → 翻页」要写 4 个事件函数，还容易踩「拿最新表单值」的坑。
         es-plus 用 <code>EsForm 嵌套 EsTable</code> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。
       </p>
-      <CodeDiff :left-code="nativeCode" :right-code="esplusCode" />
+      <!-- 这里不重复贴代码：完整两版源码与实测降幅在下方「一份配置」一节，全页只有一处代码面 -->
+      <div class="l2-glue">
+        <div class="l2-glue-item">
+          <span class="l2-glue-figure">{{ oneConfig.breakdown.native.glueLines }} 行</span>
+          <span class="l2-glue-label">原生：查询 / 重置 / 翻页 / 取数的事件函数</span>
+        </div>
+        <span class="l2-glue-arrow">→</span>
+        <div class="l2-glue-item">
+          <span class="l2-glue-figure good">{{ oneConfig.breakdown.esplus.glueLines }} 行</span>
+          <span class="l2-glue-label">ES-Plus：仅剩编辑 / 删除两个业务动作（联动链路 0 行）</span>
+        </div>
+      </div>
     </div>
 
     <!-- Comparison Section -->
     <div class="comparison-section">
       <h2 class="section-title">{{ t('home.comparisonTitle') }}</h2>
       <p class="section-subtitle">{{ t('home.comparisonSubtitle') }}</p>
-      <div class="comparison-grid">
-        <div class="comparison-card traditional">
-          <div class="comparison-header">
-            <span class="comparison-badge bad">{{ t('home.traditionalBadge') }}</span>
-            <span class="comparison-lines">{{ t('home.traditionalLines') }}</span>
-          </div>
-          <pre class="comparison-code" v-pre><code>&lt;template&gt;
-  &lt;el-form :model="form" :rules="rules" ref="formRef"&gt;
-    &lt;el-form-item label="姓名" prop="name"&gt;
-      &lt;el-input v-model="form.name" /&gt;
-    &lt;/el-form-item&gt;
-    &lt;el-form-item label="状态" prop="status"&gt;
-      &lt;el-select v-model="form.status"&gt;
-        &lt;el-option v-for="item in statusOptions"
-          :key="item.value" :label="item.label"
-          :value="item.value" /&gt;
-      &lt;/el-select&gt;
-    &lt;/el-form-item&gt;
-    &lt;!-- 每个字段重复 el-form-item... --&gt;
-  &lt;/el-form&gt;
-  &lt;el-table :data="tableData"&gt;
-    &lt;el-table-column prop="name" label="姓名" /&gt;
-    &lt;el-table-column prop="status" label="状态"&gt;
-      &lt;template #default="{ row }"&gt;
-        &lt;el-tag&gt;{{ row.status }}&lt;/el-tag&gt;
-      &lt;/template&gt;
-    &lt;/el-table-column&gt;
-    &lt;!-- 每列重复 el-table-column... --&gt;
-  &lt;/el-table&gt;
-  &lt;el-pagination ... /&gt;
-  &lt;!-- + 手动查询/重置/分页/请求逻辑 --&gt;
-&lt;/template&gt;
-
-&lt;script setup&gt;
-// 查询、重置、分页、请求...
-// 约 150 行业务逻辑
-const handleQuery = () =&gt; { ... }
-const handleReset = () =&gt; { ... }
-const handlePageChange = () =&gt; { ... }
-const fetchData = async () =&gt; { ... }
-&lt;/script&gt;</code></pre>
-        </div>
-
-        <div class="comparison-card esplus">
-          <div class="comparison-header">
-            <span class="comparison-badge good">ES-Plus</span>
-            <span class="comparison-lines">~20 行</span>
-          </div>
-          <pre class="comparison-code" v-pre><code>&lt;es-table
-  :columns="columns"
-  :options="options"
-  v-model:data-source="tableData"
-  v-model:pagination="pagination"
-&gt;
-  &lt;es-form
-    :model="form"
-    :form-item-list="formItems"
-    :config-btn="btns"
-  /&gt;
-&lt;/es-table&gt;
-
-&lt;script setup&gt;
-const formItems = [
-  { prop: 'name', label: '姓名', formtype: 'Input', span: 6 },
-  { prop: 'status', label: '状态', formtype: 'Select',
-    span: 6, dataOptions: [...] }
-]
-const btns = [
-  { name: '查询', type: 'primary', key: 'query',
-    triggerEvent: true },
-  { name: '重置', key: 'rest', triggerEvent: true }
-]
-const columns = [
-  { prop: 'name', label: '姓名' },
-  { prop: 'status', label: '状态' }
-]
-// 查询/重置/分页全自动，零事件代码
-&lt;/script&gt;</code></pre>
-        </div>
-      </div>
+      <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值而非组件默认值 -->
+      <CodeDiff
+        :left-title="t('home.traditionalBadge')"
+        :right-title="t('home.esPlusBadge')"
+        :left-lines="`${oneConfig.breakdown.native.totalLines}${t('home.linesSuffix')}`"
+        :right-lines="`${oneConfig.breakdown.esplus.totalLines}${t('home.linesSuffix')}`"
+        :left-code="oneConfig.code.native.text"
+        :right-code="oneConfig.code.esplus.text"
+      />
       <div class="comparison-stats">
-        <div class="comp-stat">
-          <span class="comp-stat-value">-70%</span>
-          <span class="comp-stat-label">{{ t('home.compStatLines') }}</span>
-        </div>
-        <div class="comp-stat">
-          <span class="comp-stat-value">0</span>
-          <span class="comp-stat-label">{{ t('home.compStatEvents') }}</span>
-        </div>
-        <div class="comp-stat">
-          <span class="comp-stat-value">JSON</span>
-          <span class="comp-stat-label">{{ t('home.compStatJson') }}</span>
+        <div v-for="m in comparisonStats" :key="m.label" class="comp-stat">
+          <span class="comp-stat-value">{{ m.value }}</span>
+          <span class="comp-stat-label">{{ m.label }}</span>
         </div>
       </div>
+      <p class="comparison-note">
+        {{ t('home.comparisonNote') }}
+      </p>
     </div>
 
     <!-- Cross-Renderer Section (三端通用 — 结构性护城河) -->
@@ -347,6 +282,8 @@ import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List
 import AiLiveDemo from '@/components/home/AiLiveDemo.vue'
 // 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发，禁止手改本文件
 import brand from '@/brand/slogan.json'
+// 「一份配置」对比的实测数据（通用单源：docs/brand/one-config-diff.json，由 gen-one-config-diff.mjs 实测生成）
+import oneConfigDiff from '@/brand/one-config-diff.json'
 import CodeDiff from '@/components/doc/CodeDiff.vue'
 import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
 
@@ -363,42 +300,21 @@ const promises = computed(() => {
   }))
 })
 
-// ── L2 头号案例「零事件代码的 CRUD」并排 diff 内容 ──
-const nativeCode = `<el-form :model="query" inline>
-  <el-form-item label="用户名"><el-input v-model="query.name" /></el-form-item>
-  <el-form-item label="状态"><el-select v-model="query.status" v-model:visible="false">
-    <el-option v-for="i in statusOptions" :key="i.value" :label="i.label" :value="i.value" /></el-select>
-  </el-form-item>
-  <el-form-item>
-    <el-button type="primary" @click="handleQuery">查询</el-button>
-    <el-button @click="handleReset">重置</el-button>
-  </el-form-item>
-</el-form>
+// ── 「一份配置」对比：两段源码与全部数字都来自品牌单源 ──
+// 单源：docs/brand/one-config/{native,esplus}.vue → scripts/gen-one-config-diff.mjs 实测
+// → docs/brand/one-config-diff.json → scripts/sync-brand.mjs 分发到本站 src/brand/。
+// 因此这里没有硬编码的行数：徽章与降幅都是实测值，改源码即改数字。
+const oneConfig = oneConfigDiff
 
-<el-table :data="list" v-loading="loading">
-  <el-table-column prop="name" label="用户名" />
-  <el-table-column prop="status" label="状态" />
-</el-table>
-<el-pagination :current-page="page" :page-size="pageSize" :total="total"
-  @current-change="handlePage" @size-change="handleSize" />
-
-// ── 原生 script：4 个事件函数 ──
-const query = reactive({ name: '', status: '' })
-const list = ref([]); const loading = ref(false)
-const page = ref(1); const pageSize = ref(10); const total = ref(0)
-
-const fetchData = async () => {
-  loading.value = true
-  const { data } = await axios.get('/api/users', { params: { ...query, page: page.value, pageSize: pageSize.value } })
-  list.value = data.data; total.value = data.total
-  loading.value = false
-}
-// 4 个事件函数，且「拿最新表单值」容易踩坑
-const handleQuery = () => { page.value = 1; fetchData() }
-const handleReset = () => { Object.assign(query, { name: '', status: '' }); page.value = 1; fetchData() }
-const handlePage = (p) => { page.value = p; fetchData() }
-const handleSize = (s) => { pageSize.value = s; page.value = 1; fetchData() }
-`
+const comparisonStats = computed(() => {
+  const m = oneConfig.metrics
+  // 数字取自实测产出，标签走 i18n（JSON 里的 label 只有中文，不能直接上英文页）
+  return [
+    { value: `-${m.markupPlusGlue.reduction}%`, label: t('home.compStatGlue') },
+    { value: `-${m.wholeFile.reduction}%`, label: t('home.compStatLines') },
+    { value: '0', label: t('home.compStatEvents') },
+  ]
+})
 
 const esplusCode = `<es-table :columns="columns" :options="options">
   <es-form :model="query" :form-item-list="items" :config-btn="btns" />
@@ -762,9 +678,64 @@ const goToGithub = () => {
 
 .comparison-stats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 80px;
-  margin-top: 48px;
+  gap: 64px;
+  margin-top: 44px;
+}
+
+/* 数字的口径说明：两个口径都给，避免只挑好看的那个 */
+.comparison-note {
+  max-width: 900px;
+  margin: 20px auto 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-color-secondary);
+  text-align: center;
+}
+
+/* L2 头号案例：不重复贴代码，只给实测的「胶水代码」行数 */
+.l2-glue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.l2-glue-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 220px;
+  padding: 18px 24px;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 12px;
+  background: var(--bg-color);
+}
+
+.l2-glue-figure {
+  font-size: 32px;
+  font-weight: 800;
+  color: #f56c6c;
+
+  &.good {
+    color: #67c23a;
+  }
+}
+
+.l2-glue-label {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.l2-glue-arrow {
+  font-size: 24px;
+  color: var(--text-color-secondary);
 }
 
 .comp-stat {

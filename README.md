@@ -29,7 +29,10 @@
 | 模板声明 `<el-dialog v-model="visible">` | 函数调用 `dialog({ title, render })` |
 | 手动编写分页事件处理 | 分页切换自动触发请求 |
 
-**减少 70% 代码量，零事件处理代码。**
+**同一页面、同一功能范围：模板与事件胶水代码减少 76.5%（115 → 27 行），整页非空行减少 44.1%（136 → 76 行）；查询 / 重置 / 翻页 / 取数零事件代码。**
+
+> 数字由 `npm run one-config:gen` 从 `docs/brand/one-config/{native,esplus}.vue` 实测得出，
+> 由 `npm run check:site-claims` 守住院线。口径：模板区行数 + `handle*`/`fetch*` 事件与取数函数行数。
 
 ---
 

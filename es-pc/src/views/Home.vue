@@ -42,7 +42,15 @@
         es-plus 用 <code>EsForm 嵌套 EsTable</code> + <code>triggerEvent: true</code>，
         把整条联动链路收敛为 <strong>0 行事件代码</strong>。
       </p>
-      <CodeDiff :left-code="nativeCode" :right-code="esplusCode" />
+      <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值 -->
+      <CodeDiff
+        left-title="传统写法"
+        right-title="ES-Plus"
+        :left-lines="`${oneConfig.breakdown.native.totalLines} 行`"
+        :right-lines="`${oneConfig.breakdown.esplus.totalLines} 行`"
+        :left-code="oneConfig.code.native.text"
+        :right-code="oneConfig.code.esplus.text"
+      />
     </div>
 
     <!-- 三端通用：同一份 Schema 源码 + 三端渲染快照 -->
@@ -158,6 +166,8 @@ import {
 import brand from '@/brand/slogan.json'
 import { ADAPTER_ANTDV_VERSION, CORE_VERSION } from '@/utils/versions'
 import CodeDiff from '@/components/CodeDiff.vue'
+// 「一份配置」对比的实测数据（单源 docs/brand/one-config-diff.json，由 gen-one-config-diff.mjs 生成）
+import oneConfig from '@/brand/one-config-diff.json'
 import TriRenderTabs from '@/components/TriRenderTabs.vue'
 
 const openAiCrud = () => {
@@ -165,7 +175,7 @@ const openAiCrud = () => {
 }
 
 const features = [
-  { title: 'JSON 配置驱动', desc: '通过 formItemList / columns / schema 即可生成完整页面，减少 70% 模板代码', icon: DeploymentUnitOutlined },
+  { title: 'JSON 配置驱动', desc: '通过 formItemList / columns / schema 即可生成完整页面；同一页面的模板与事件胶水代码实测减少 77%（口径与源码见主文档站「一份配置」一节）', icon: DeploymentUnitOutlined },
   { title: '跨框架复用', desc: '同一份 Schema 可在 Element Plus / Ant Design Vue 之间复用，降低迁移成本', icon: InteractionOutlined },
   { title: 'AI 代码生成', desc: '配套 CLI 与 MCP Server（详见主文档站），支持从自然语言或配置直接生成可编译页面', icon: RobotOutlined },
   { title: '表单表格联动', desc: 'triggerEvent 自动联动查询/重置/分页，无需手写事件回调', icon: FileSearchOutlined },
@@ -190,59 +200,9 @@ const techs = [
 ]
 
 // ── L2 头号案例「零事件代码的 CRUD」并排 diff 内容 ──
-// 痛点：原生「查询→重置→翻页」要 4 个事件函数，还易踩「拿最新表单值」的坑。
-// 解法：EsForm 嵌套 EsTable + triggerEvent:true，0 行事件代码。
-const nativeCode = `<a-form :model="query" layout="inline">
-  <a-form-item label="用户名"><a-input v-model="query.name" /></a-form-item>
-  <a-form-item label="状态"><a-select v-model="query.status" :options="statusOptions" /></a-form-item>
-  <a-form-item>
-    <a-button type="primary" @click="handleQuery">查询</a-button>
-    <a-button @click="handleReset">重置</a-button>
-  </a-form-item>
-</a-form>
-
-<a-table :data-source="list" :columns="cols"
-  :loading="loading" :pagination="pagination"
-  @change="handleTableChange" />
-
-// ── 原生 script：4 个事件函数 ──
-const query = reactive({ name: '', status: '' })
-const list = ref([]); const loading = ref(false)
-const pagination = reactive({ current: 1, pageSize: 10, total: 0 })
-
-const fetchData = async () => {
-  loading.value = true
-  const { data } = await axios.get('/api/users', { params: { ...query, ...pagination } })
-  list.value = data.data; pagination.total = data.total
-  loading.value = false
-}
-// 4 个事件函数，且「拿最新表单值」容易踩坑
-const handleQuery = () => { pagination.current = 1; fetchData() }
-const handleReset = () => { Object.assign(query, { name: '', status: '' }); pagination.current = 1; fetchData() }
-const handleTableChange = (p) => { pagination.current = p.current; pagination.pageSize = p.pageSize; fetchData() }
-`
-
-const esplusCode = `<es-table :columns="columns" :options="options">
-  <es-form :model="query" :form-item-list="items" :config-btn="btns" />
-</es-table>
-
-// ── es-plus script：0 行事件代码 ──
-const query = reactive({ name: '', status: '' })
-const items = [
-  { prop: 'name', label: '用户名', formtype: 'Input', span: 6 },
-  { prop: 'status', label: '状态', formtype: 'Select', span: 6, dataOptions: statusOptions },
-]
-const btns = [
-  { name: '查询', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'rest', triggerEvent: true },
-]
-const columns = [
-  { prop: 'name', label: '用户名' },
-  { prop: 'status', label: '状态' },
-]
-const options = { apiParams: { url: '/api/users' } }
-// 0 行事件代码：查询/重置/分页全自动联动（triggerEvent）
-`
+// 首页不再内联节选伪代码（旧的节选带「...」省略，配的 ~250/~30 行徽章其实是
+// CodeDiff 的默认 prop，与任何真实代码都对不上）：完整两版源码与实测行数来自品牌单源，
+// 单源文件是 docs/brand/one-config/{native,esplus}.vue —— 同一页面、同一功能范围，无省略号。
 </script>
 
 <style scoped>

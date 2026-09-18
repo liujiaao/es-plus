@@ -14,10 +14,10 @@
       "key": "one-config",
       "title": "一份配置",
       "titleEn": "One Config",
-      "claim": "30 行 vs 250 行",
-      "claimEn": "30 lines vs 250 lines",
-      "desc": "配置即页面，同样一个 CRUD 页面代码量减少 70%，并排 diff 一目了然。",
-      "descEn": "Config as page: the same CRUD page needs 70% less code, proven by a side-by-side diff."
+      "claim": "模板与事件胶水代码减少 76.5%",
+      "claimEn": "76.5% less markup + glue code",
+      "desc": "同一页面、同一功能范围：模板 + 事件胶水代码 115 → 27 行（−76.5%）；整页非空行 136 → 76 行（−44.1%）。数字由构建脚本从展示的源码实测得出。",
+      "descEn": "Same page, same scope: markup + event glue code 115 → 27 lines (-76.5%); whole-file non-empty lines 136 → 76 (-44.1%). Figures are measured from the code shown."
     },
     {
       "key": "cross-renderer",

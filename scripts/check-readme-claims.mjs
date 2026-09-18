@@ -14,7 +14,7 @@
  * 用法：node scripts/check-readme-claims.mjs
  * 退出码：0 = 一致；1 = 发现漂移。
  */
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -118,10 +118,43 @@ function checkFormTypes(formTypes) {
   }
 }
 
+// ── 4. 「减少 N% 代码量」必须等于实测降幅 ────────────────
+// README 长期写「减少 70% 代码量」，与站点上那张对比卡是同一个数字 ——
+// 而站点那边的口径（模板 + 事件胶水代码）实测是 76.5%。两处必须同源，
+// 否则又是「同一事实两个数字」。实测值来自 docs/brand/one-config-diff.json。
+function checkReductionClaim() {
+  const p = join(ROOT, 'docs/brand/one-config-diff.json')
+  if (!existsSync(p)) {
+    fail('缺少 docs/brand/one-config-diff.json（运行 `npm run one-config:gen` 生成）')
+    return
+  }
+  const measured = JSON.parse(readFileSync(p, 'utf-8')).metrics.markupPlusGlue.reduction
+  const targets = [
+    { file: 'README.md', re: /模板与事件胶水代码减少\s*(\d+(?:\.\d+)?)\s*%/ },
+    { file: 'README.en.md', re: /(\d+(?:\.\d+)?)%\s*less markup and event glue code/ },
+  ]
+  for (const { file, re } of targets) {
+    const src = read(file)
+    const m = src.match(re)
+    if (!m) {
+      fail(
+        `${file} 未找到「减少 N% 模板与事件胶水代码」的声明（若改了表述，请同步本断言）`,
+      )
+      continue
+    }
+    if (Math.abs(Number(m[1]) - measured) > 0.05) {
+      fail(`${file} 声明减少 ${m[1]}%，实测（模板+事件胶水代码）是 ${measured}%`)
+    } else {
+      console.log(`✅ ${file} 的降幅声明与实测一致（${m[1]}%）`)
+    }
+  }
+}
+
 const contractTypes = readContractTypes()
 const formTypes = readFormTypes()
 if (contractTypes) checkContractTypeCount(contractTypes)
 if (formTypes) checkFormTypes(formTypes)
+checkReductionClaim()
 
 if (failed) {
   console.error('\nREADME 声明与源码事实不符 —— 请修正 README 或本脚本的匹配规则。')

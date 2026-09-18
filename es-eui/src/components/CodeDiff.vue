@@ -25,8 +25,10 @@ export default {
   props: {
     leftTitle: { type: String, default: '原生写法' },
     rightTitle: { type: String, default: 'ES-Plus' },
-    leftLines: { type: String, default: '~250 行' },
-    rightLines: { type: String, default: '~30 行' },
+    // 必须由调用点传入实测行数 —— 曾经的默认值 '~250 行' 是凭空捏的，
+  // 并被调用点静默当成真实数字显示（见 scripts/check-site-claims.mjs 的口径说明）
+  leftLines: { type: String, required: true },
+    rightLines: { type: String, required: true },
     leftCode: { type: String, required: true },
     rightCode: { type: String, required: true }
   }
