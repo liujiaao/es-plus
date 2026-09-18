@@ -165,8 +165,19 @@ if (willInstallPlugins && component.isPlugin && component.Plugin) return
 
 - **生成代码注入面**：`FieldConfig.formatter` / `render` 是自由函数源码字符串，`q()` **刻意不转义**它们，直接拼进生成的 SFC（`packages/shared/src/structured-generator.ts:819`、`:908-909`）。路径穿越防护扎实（`isSafePathSegment` + `isPathInside` + zod refine，有测试），但**代码内容无任何沙箱或 AST 校验**。任何不可信来源的配置（LLM 输出、下载的 JSON、贡献者 PR）都等于任意代码执行。
 - **文档站 API Key 走浏览器**：`AiCrud.vue` 把 key 从浏览器发到可配置的 `baseUrl`；生产 CORS 方案至今空缺。
-- **es-eui 遗留问题仍在** `[已核实]`：`https://wdshop-be.szlanyou.com` 内网域名硬编码 3 处（均在孤儿目录 `src/views/salesPolicy/`）、`package.lib.json` / `PUBLISH_GUIDE.md` / `test-project/` 等发布残留完整保留。
-- **勘误（复核后修正）**：上一轮审计把 `es-eui/src/views/test/RechargeRecord.vue` 描述为「反被路由暴露到公网」暗示风险，复核后不成立 —— 该页使用**公开** API `https://dummyjson.com/users`，文件头注明其用途是演示 `brcb` 与 Vue 2.6 + Composition API 兼容性，`/test/recharge-record` 是一条有意的示例路由，`TODO:237` 是「此处替换为真实接口」的常规模板提示。**未作删除**（删除会丢失一个真实可用的 vue2 演示页）。
+- ~~**es-eui 遗留问题仍在**~~ **已全部处理（2026-09-18 复核）**：本条当初记录的两件事现在都不成立 ——
+  内网域名硬编码（`https://wdshop-be.szlanyou.com`）与孤儿目录 `src/views/salesPolicy/` 已在更早一轮清除
+  （现全库检索 `szlanyou`/`dfwxfw` 为 0 命中）；`package.lib.json` / `PUBLISH_GUIDE.md` / `test-project/`
+  等发布残留已按「只清无引用的发布残留」决策删除（连同 `vue.lib.config.js`、`LIBRARY_README.md`、
+  `PAIN_POINT_ANALYSIS.md`、`README_DETAILED.md`、`plans/`、`scripts/*.bat`、`.npmignore` 与跑不通的
+  `build:lib`）。**保留此条是为了记录它曾被判定为遗留风险，勿据此再报一次。**
+- **勘误（复核后修正，2026-09-18 追加结论）**：上一轮审计把 `es-eui/src/views/test/RechargeRecord.vue`
+  描述为「反被路由暴露到公网」暗示风险，复核后不成立 —— 该页使用**公开** API
+  `https://dummyjson.com/users`，文件头注明其用途是演示 `brcb` 与 Vue 2.6 + Composition API 兼容性，
+  `TODO:237` 是「此处替换为真实接口」的常规模板提示。**它不是安全问题。**
+  但后续按「公网可达的测试页不值得留在路由表里」另行处理：路由 `/test/recharge-record` 已移除
+  （该能力有专用 CI 覆盖：`__tests__/e2e-runtime/tests/vue2-crud.spec.ts`），页面移到
+  `src/examples/vue2-compat/` 作为参考示例保留，文件头补注了「无路由、数据源是外部公开 API」。
 
 ### 一般质量问题
 

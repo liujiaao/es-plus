@@ -7,6 +7,9 @@
 
 **修复状态图例**：⬜ 未修 · 🔧 修复中 · ✅ 已修 · ⏸ 待决策
 
+> 正文各条的标记与下方「修复进展」表**同步维护**。此前正文 15 条一律挂着 ⬜（未修），
+> 而表里 14 条已写 ✅ —— 两种读法给出相反结论，是典型的「状态标记失真」。
+
 ---
 
 ## 修复进展（2026-09-14）
@@ -22,7 +25,7 @@
 | 5 | es-pc EP-only 属性 + TimePicker 映射 | ✅ | `clearable→allowClear`、`filterable→showSearch`、`autoUpload→beforeUpload`；**adapter 修复 TimePicker range**（见下「额外发现」） |
 | 6 | 零测试 / 零 PR 构建门禁 | ✅ | `typecheck.yml` 新增 `docs-build` matrix job（PR/push 构建三站） |
 | 7 | 分包 / 体积 | ✅ | es-pc index **3.88MB→128KB**；es-plus-docs index **2.8MB→482KB**（拆 element-plus/vxe/monaco） |
-| 8 | es-eui 合并遗留债 | ◐ | 按决策「保守」：删除明确死文件（`utils/server/index.js`、`HelloWorld.vue`）；发布残留 / 孤儿业务代码 **另立任务** |
+| 8 | es-eui 合并遗留债 | ✅ | 2026-09-14 按决策「保守」只删明确死文件；**2026-09-18 追加处理完毕**（发布残留全清 + 测试页移出路由），详见下方「追加处理」 |
 | 9 | es-eui 运行期 bug | ✅ | env 失配、死路由 `/theme/preview`、favicon 404 全修 |
 | 10 | 死链 / 错链 / sitemap | ✅ | 三站死链修仓库地址；sitemap host 改规范域名 + 去重复根 + `basePath` |
 | 11 | 单源门禁有洞 | ✅ | 6 个 sync 脚本的错误注释与静默跳过已修（目标缺失即报错）；新增 `check:site-nav` 校验三站 SITES 数组一致 |
@@ -59,7 +62,13 @@
 
 ## 一、P0 — 真实缺陷，影响对外可信度
 
-### 1. 核心卖点「同一份配置三端渲染」没有渲染证据（跨站）⬜
+### 1. 核心卖点「同一份配置三端渲染」没有渲染证据（跨站）✅
+
+> **状态**：当时按「移除空转」处理（删占位 UI、`sync-tri-render` 改为显式清单并在目标缺失时报错）。
+> **2026-09-18 追加**：渲染证据已由 `pairs.json` 补上 —— 三端同名示例逐行实测
+> （两侧完整源码 + 变更行高亮，证据样例 `table/Basic.vue` 全文件 33 行只差 1 行 import），
+> 由 `scripts/gen-tri-render-pairs.mjs` 生成、`check:tri-render:pairs:check` 守新鲜度。
+> 仍未做的只有**像素级**快照（下面的发现原文写于占位 UI 尚在时，勿据此判断当前 UI）。
 
 - `docs/tri-render/` 只有 `README.md` + `schema.json`，**三站 PNG 数量均为 0**（实测）。
 - 三站 `TriRenderTabs` 用 `import.meta.glob('*/tri-render/*.png')` 取图 → 恒空 → **永远显示占位图**：
@@ -71,22 +80,19 @@
 - 脚本截取目标是各站**首页**而非「同一案例」的三端渲染，即便生成也证明不了同构。
 - `es-pc/src/views/Home.vue:55` 默认 `active='vue3'`，AntDV 站点首屏展示的是别端占位图。
 
-### 2. 主文档站指南互链全断 ⬜
-
+### 2. 主文档站指南互链全断 ✅
 - 路由是 hash 模式：`es-plus-docs/src/router/index.ts:53` `createWebHashHistory()`。
 - 但 md 里写绝对路径链接，如 `es-plus-docs/src/docs/changelog.md:71`、`crud-page.md:568`、
   `getting-started.md`、`getting-started.en.md:8` 等大量 `](/guide/xxx)`、`](/components/xxx)`。
 - `Doc.vue` 只重写 demo/标题、不重写链接 → 点击整页跳转 → 404 / 回首页。**影响所有指南互链。**
 
-### 3. AI CRUD 默认必然失败 ⬜
-
+### 3. AI CRUD 默认必然失败 ✅
 - `es-plus-docs/src/views/AiCrud.vue:170-173` 默认 `baseUrl=https://api.openai.com/v1`；
   `mcp-flow.ts:204` 在浏览器里直接 `fetch`。
 - `es-plus-docs/vite.config.ts` 无任何 `server.proxy`；OpenAI 不返回 CORS 头 →
   默认配置下 AI 生成路径对用户不可用。
 
-### 4. 主站 schema 是第三/四份手写副本，不受单源门禁 ⬜
-
+### 4. 主站 schema 是第三/四份手写副本，不受单源门禁 ✅
 - `es-plus-docs/src/schemas/` 与 `es-plus-docs/public/schemas/` 各 3 个文件，
   **不在** `scripts/sync-schemas.mjs:26-30` 的 `TARGETS` 内。
 - 相对权威 `packages/shared/schemas/form-item.schema.json` **缺十余个字段**
@@ -94,8 +100,7 @@
 - Playground 用 src 副本校验（`es-plus-docs/src/views/Playground.vue:166-168`）
   → **合法配置被判非法**。
 
-### 5. es-pc 示例用 Element-only 属性，静默失效 + 适配器缺口 ⬜
-
+### 5. es-pc 示例用 Element-only 属性，静默失效 + 适配器缺口 ✅
 - `clearable: true`（`es-pc/src/views/es-vxe/ProxyConfig.vue:28,31`）：ADV Select 只认 `allowClear`。
 - `filterable: true`（`es-pc/src/views/es-form/AsyncOptions.vue:48,113,171`、
   `es-pc/src/views/es-form/CustomRender.vue:94`）：ADV 只认 `showSearch` → 远程搜索示例不可用。
@@ -105,8 +110,7 @@
   （`packages/adapter-antdv/src/composables/use-form-inputs.ts:572-586`），
   但 `renderTimePicker` 未做 → TimePicker range 占位符被当未知 attr 丢弃。
 
-### 6. 三站零测试、零 PR 构建门禁 ⬜
-
+### 6. 三站零测试、零 PR 构建门禁 ✅
 - 三站均无 test 脚本；`check:consistency` 只校验文本漂移、不构建站点。
 - 站点构建只出现在 `.github/workflows/deploy-docs.yml`（master 部署时）→
   路由/别名/配置回归只能在合入 master 后暴露。
@@ -116,14 +120,18 @@
 
 ## 二、P1 — 真实缺陷，影响体验 / 维护
 
-### 7. 无分包、体积失控 ⬜
-
+### 7. 无分包、体积失控 ✅
 - es-pc：`dist/assets/index-*.js` **3.88 MB**、CSS 593 KB；`es-pc/vite.config.js` 无 `manualChunks`，
   `es-pc/src/main.js:2,18` 全量 `app.use(Antd)`。
 - es-plus-docs：dist 20 MB，`index` 2.8 MB（全量 Element Plus + 全部图标）、
   `Playground` 3.8 MB、monaco `ts.worker` 7 MB。
 
-### 8. es-eui 合并遗留债 ⬜
+### 8. es-eui 合并遗留债 ✅（2026-09-18 处理完毕，详见本报告顶部「追加处理」）
+
+> **状态**：本条列出的三项现已全部清除 —— 发布残留按「只清无引用的发布残留」决策删除；
+> 孤儿业务代码与内网域名（`salesPolicy/`、`szlanyou`/`dfwxfw`）在更早一轮已清除；
+> `/test/recharge-record` 路由已移除（页面保留为参考示例，见顶部「追加处理」）。
+> 下面保留的是**当时的发现原文**，用于记录它曾被判定为遗留债。
 
 - 旧「独立 npm 包」残留（与 `private:true` 现状矛盾）：`package.lib.json`（name `es-eui`、
   private:false、unpkg/jsDelivr）、`PUBLISH_GUIDE.md`、`vue.lib.config.js`、`scripts/publish*.bat`、
@@ -136,16 +144,14 @@
 - 死文件 `es-eui/src/utils/server/index.js`（从未 import），含硬编码生产域
   `https://dfac-wx.dfwxfw.com`、错乱正则。
 
-### 9. es-eui 运行期 bug ⬜
-
+### 9. es-eui 运行期 bug ✅
 - **环境变量失配**：`es-eui/.env.development` 定义 `VUE_APP_BASE_API`，
   但 `es-eui/src/utils/server/request.js:8-10` 读 `process.env.BASE_API` / `VUE_APP_URL`
   → dev 下 `baseURL` 为 `undefined`。
 - 死路由：`es-eui/src/views/theme/index.vue:17` → `/theme/preview`，router 未定义。
 - favicon 404：`es-eui/public/index.html:7` 引用不存在的 `favicon.ico`。
 
-### 10. 死链 / 错链 ⬜
-
+### 10. 死链 / 错链 ✅
 - es-eui：`src/App.vue:59` → `https://github.com`；`src/views/guide/quickstart.vue:696`、
   `src/views/home/index.vue:520` → 已被并入的 `github.com/liujiaao/es-eui`。
 - es-pc：`src/layouts/DocLayout.vue:26` → `https://github.com`；
@@ -154,8 +160,7 @@
   与实际 `liujiaao.github.io/es-plus/` 不符；`sitemapRoutes` 含 `'/'` 致根 URL 重复
   （本机 `dist/sitemap.xml` 已复现）。
 
-### 11. 单源门禁有洞、注释失真 ⬜
-
+### 11. 单源门禁有洞、注释失真 ✅
 - `sync-tokens.mjs:39-41`、`sync-brand.mjs:42-44`、`sync-cases.mjs:42-44`、`sync-ai.mjs:42-44`、
   `sync-theme.mjs:42-44`、`sync-tri-render.mjs:51-52` 注释「es-eui/ 被 .gitignore」——
   事实是 es-eui 已跟踪 177 文件、被构建部署。
@@ -163,21 +168,18 @@
 - 三站站点切换器 `SITES` 数组为**三份手写复本**（`es-plus-docs/src/components/layout/AppHeader.vue:81-84`、
   `es-pc/src/layouts/DocLayout.vue:138-141`、`es-eui/src/App.vue:137-140`），无 sync、无 check。
 
-### 12. schema `$id` 旧域名 ⬜
-
+### 12. schema `$id` 旧域名 ✅
 - `packages/shared/schemas/*.schema.json:3` 全为 `https://es-plus-ui.github.io/schemas/...`，
   随 `sync-schemas.mjs` 分发到 vue3 / adapter-antdv / mcp-server。
 
-### 13. 死代码 / 误导 ⬜
-
+### 13. 死代码 / 误导 ✅
 - 主站 `es-plus-docs/src/components/es-plus/`（2023 年旧组件源码副本，约 28 文件）**全库 0 引用**。
 - `es-plus-docs/src/main.ts:19` import 旧包名 `es-plus-ui/dist/style.css`
   （源码模式下被 alias 到空文件，纯误导）。
 - `es-plus-docs/src/utils/shared-browser.ts` facade 相对 `packages/shared/src` 漏了一批导出
   （`createSchemaValidator`/`validateConfig`/`listAvailableSchemas`/`buildNlToConfigSystemPrompt` 等）。
 
-### 14. es-pc 依赖 / 文案问题 ⬜
-
+### 14. es-pc 依赖 / 文案问题 ✅
 - `dayjs` **未声明**，但 `es-pc/src/main.js:5` 直接 `import 'dayjs/locale/zh-cn'`；
   靠 ant-design-vue 提升侥幸可用，`npm ci` 若嵌套即挂。
 - 首页版本号硬编码过期：`es-pc/src/views/Home.vue:187` adapter 标 `1.0.0`（实际 1.1.0）、
@@ -187,8 +189,7 @@
 - `es-pc/src/views/es-form/FileUpload.vue:137` 注释称「无 el-upload 的 limit/onExceed」，
   但适配器已支持 `limit→maxCount`。
 
-### 15. 外网 mock 不可靠 ⬜
-
+### 15. 外网 mock 不可靠 ✅
 - `es-pc/src/views/es-form/AsyncOptions.vue:52,118,176`、`es-table/Pagination.vue:25,58`
   直连 `jsonplaceholder.typicode.com`，断网/被墙时静默空，无本地兜底。
 - `es-pc/src/views/es-table/Custom.vue:32-35` 头像用 `cube.elemecdn.com`。
