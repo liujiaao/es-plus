@@ -16,7 +16,7 @@
     <!-- Combination Examples -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-s-cooperation" />
         </div>
         <h2 class="section-title">组合示例</h2>
@@ -241,7 +241,7 @@ export default {
     font-size: 24px;
     margin: 40px 0 15px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #409eff;
+    border-bottom: 2px solid var(--es-brand-primary);
     color: #303133;
   }
 
@@ -295,14 +295,14 @@ export default {
           margin-left: auto;
           padding: 2px 8px;
           font-size: 12px;
-          color: #409EFF;
+          color: var(--es-brand-primary);
           cursor: pointer;
-          border: 1px solid #409EFF;
+          border: 1px solid var(--es-brand-primary);
           border-radius: 3px;
           transition: all 0.3s;
 
           &:hover {
-            background: #409EFF;
+            background: var(--es-brand-primary);
             color: #fff;
           }
         }

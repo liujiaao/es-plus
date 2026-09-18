@@ -30,7 +30,7 @@ export default {
   border-radius: 10px;
 }
 .custom-dialog .el-dialog__header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   color: white;
 }
 </style>

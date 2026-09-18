@@ -23,7 +23,7 @@
   --es-doc-border: #e7ebf0;
   --es-doc-code-bg: #f2f5f9;
   --es-doc-code-tint: rgba(59, 130, 246, 0.09);
-  /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .is-dark 覆盖（与 CodePlayground / 全局 hljs 一致） */
+  /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .dark 覆盖（与 CodePlayground / 全局 hljs 一致） */
   --es-doc-code-block-bg: #f6f8fa;
   --es-doc-code-block-text: #24292e;
 }
@@ -447,8 +447,8 @@
   margin: 40px 0;
 }
 
-/* ── 暗色主题（es-plus-docs 使用 .is-dark）── */
-.is-dark .es-doc-content {
+/* ── 暗色主题（跟随 <html> 上的 .dark，与 Element Plus / vxe-table 的暗色约定一致）── */
+.dark .es-doc-content {
   --es-doc-text: #c9d1dc;
   --es-doc-heading: #f0f3f8;
   --es-doc-text-secondary: #9aa2ae;
@@ -459,22 +459,22 @@
   --es-doc-code-block-text: #abb2bf;
 }
 
-.is-dark .es-doc-content .code-block-header {
+.dark .es-doc-content .code-block-header {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.is-dark .es-doc-content code {
+.dark .es-doc-content code {
   color: #79b8ff;
 }
 
-.is-dark .es-doc-content > table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+.dark .es-doc-content > table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
 
-.is-dark .es-doc-content .custom-block { background: #26292e; }
-.is-dark .es-doc-content .tip,
-.is-dark .es-doc-content .custom-block.tip { background: rgba(22, 163, 74, 0.12); }
-.is-dark .es-doc-content .warning,
-.is-dark .es-doc-content .custom-block.warning { background: rgba(217, 119, 6, 0.12); }
-.is-dark .es-doc-content .info,
-.is-dark .es-doc-content .custom-block.info { background: rgba(59, 130, 246, 0.12); }
-.is-dark .es-doc-content .danger,
-.is-dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }
+.dark .es-doc-content .custom-block { background: #26292e; }
+.dark .es-doc-content .tip,
+.dark .es-doc-content .custom-block.tip { background: rgba(22, 163, 74, 0.12); }
+.dark .es-doc-content .warning,
+.dark .es-doc-content .custom-block.warning { background: rgba(217, 119, 6, 0.12); }
+.dark .es-doc-content .info,
+.dark .es-doc-content .custom-block.info { background: rgba(59, 130, 246, 0.12); }
+.dark .es-doc-content .danger,
+.dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }

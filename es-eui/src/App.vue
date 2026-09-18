@@ -714,10 +714,10 @@ $bg-light: #f7fafc;
       font-size: 18px;
       color: white;
 
-      &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-      &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-      &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-      &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
       &.cyan { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
       &.pink { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
     }
@@ -748,7 +748,7 @@ $bg-light: #f7fafc;
   .step-number {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -925,7 +925,7 @@ $bg-light: #f7fafc;
       color: white;
 
       &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, #409eff 0%, #67c23a 100%); }
+      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
       &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
     }
 
@@ -984,10 +984,10 @@ $bg-light: #f7fafc;
       color: white;
       flex-shrink: 0;
 
-      &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-      &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-      &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-      &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
       &.cyan { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
     }
 
@@ -1105,10 +1105,10 @@ $bg-light: #f7fafc;
       color: white;
       margin-bottom: 16px;
 
-      &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-      &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-      &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-      &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
     }
 
     .feature-title {
@@ -1152,7 +1152,7 @@ $bg-light: #f7fafc;
 
     .demo-block__badge {
       padding: 2px 8px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: white;
       font-size: 11px;
       border-radius: 4px;
@@ -1290,7 +1290,7 @@ $bg-light: #f7fafc;
       align-items: center;
       gap: 8px;
       padding: 12px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: white;
       font-size: 14px;
       font-weight: 500;

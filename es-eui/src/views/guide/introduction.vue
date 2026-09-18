@@ -509,20 +509,23 @@ export default {
 
 <style lang="scss" scoped>
 // Variables
-$primary-color: #409eff;
+// 品牌色一律取自设计 token 单一真源（src/assets/design-tokens.css，由 sync-tokens 分发），
+// 不在这里另立一份字面量 —— 此前本页自带 $primary-color: #409eff 与一整套通用紫/青渐变
+// （#667eea / #764ba2 / #f093fb / #4facfe …），是并入前旧产品的身份色，与主站品牌蓝不是一套。
+$primary-color: var(--es-brand-primary);
 $text-primary: #1a1a1a;
 $text-secondary: #4a5568;
 $text-tertiary: #718096;
 $border-color: #e2e8f0;
 $bg-light: #f7fafc;
 
-// Gradient colors
-$gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-$gradient-purple: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-$gradient-green: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-$gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-$gradient-cyan: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-$gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+// Gradient colors —— 全部由品牌 token 派生，保持四张卡视觉可区分但同族
+$gradient-blue: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
+$gradient-purple: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
+$gradient-green: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%);
+$gradient-orange: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
+$gradient-cyan: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%);
+$gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-primary) 100%);
 
 .intro-page {
   max-width: 1200px;
@@ -581,7 +584,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     gap: 8px;
 
     .gradient-text {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 50%, var(--es-brand-accent) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -642,7 +645,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       border-radius: 16px;
       padding: 32px;
       margin-bottom: 40px;
-      border-left: 4px solid #409eff;
+      border-left: 4px solid var(--es-brand-primary);
 
       .intro-text {
         font-size: 16px;
@@ -701,10 +704,10 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
           color: white;
           font-size: 20px;
 
-          &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-          &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-          &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-          &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+          &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+          &.purple { background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%); }
+          &.green { background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%); }
+          &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
         }
 
         .component-info {
@@ -735,7 +738,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       }
 
       &.info {
-        border-left: 4px solid #409eff;
+        border-left: 4px solid var(--es-brand-primary);
         background: linear-gradient(to right, #ecf5ff, #fff);
       }
 
@@ -773,7 +776,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -903,7 +906,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
           .solution-tag {
             display: inline-block;
             padding: 4px 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
             color: white;
             font-size: 14px;
             font-weight: 600;
@@ -946,7 +949,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     border-radius: 12px;
     color: white;
     font-size: 18px;
@@ -1126,7 +1129,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       color: white;
 
       &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, #409eff 0%, #67c23a 100%); }
+      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, #67c23a 100%); }
       &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
     }
 
@@ -1158,7 +1161,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     top: 8px;
     bottom: 8px;
     width: 2px;
-    background: linear-gradient(to bottom, #667eea, #764ba2);
+    background: linear-gradient(to bottom, var(--es-brand-primary), var(--es-brand-accent));
     border-radius: 1px;
   }
 
@@ -1177,7 +1180,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       width: 16px;
       height: 16px;
       background: white;
-      border: 3px solid #667eea;
+      border: 3px solid var(--es-brand-primary);
       border-radius: 50%;
       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
     }
@@ -1224,7 +1227,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
 .cta-section {
   margin-top: 80px;
   padding: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   border-radius: 20px;
   text-align: center;
   color: white;
@@ -1263,7 +1266,7 @@ $gradient-pink: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       gap: 8px;
       padding: 14px 32px;
       background: white;
-      color: #667eea;
+      color: var(--es-brand-primary);
       font-size: 16px;
       font-weight: 600;
       border-radius: 50px;

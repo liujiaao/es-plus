@@ -2,6 +2,9 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createHead } from '@unhead/vue/client'
 import 'element-plus/dist/index.css'
+// Element Plus 暗色主题（选择器 html.dark）——不导入它，切到暗色时只有站点外壳变暗，
+// 正文里的 el-* 组件（本页内容就是组件 demo）仍是亮色。类名由 stores/theme.ts 挂载。
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'vxe-pc-ui/lib/style.css'
 import 'vxe-table/dist/style.css'
 import VxeUI from 'vxe-pc-ui'

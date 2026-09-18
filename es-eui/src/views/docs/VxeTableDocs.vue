@@ -16,7 +16,7 @@
     <!-- 使用示例 -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-s-grid" />
         </div>
         <h2 class="section-title">使用示例</h2>
@@ -270,7 +270,7 @@ export default {
     font-size: 24px;
     margin: 40px 0 15px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #409eff;
+    border-bottom: 2px solid var(--es-brand-primary);
     color: #303133;
   }
 

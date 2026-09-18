@@ -776,7 +776,7 @@ $bg-light: #f7fafc;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   overflow: hidden;
   color: #fff;
   
@@ -801,7 +801,7 @@ $bg-light: #f7fafc;
   .orb-1 {
     width: 500px;
     height: 500px;
-    background: #f093fb;
+    background: var(--es-brand-accent);
     top: -10%;
     left: -10%;
     animation-delay: 0s;
@@ -810,7 +810,7 @@ $bg-light: #f7fafc;
   .orb-2 {
     width: 400px;
     height: 400px;
-    background: #4facfe;
+    background: var(--es-brand-accent);
     bottom: -10%;
     right: -10%;
     animation-delay: -5s;
@@ -876,7 +876,7 @@ $bg-light: #f7fafc;
       .logo-text {
         font-size: 32px;
         font-weight: 700;
-        background: linear-gradient(to right, #fff, #e0e7ff);
+        background: linear-gradient(to right, #fff, var(--es-brand-primary-light));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
@@ -890,7 +890,7 @@ $bg-light: #f7fafc;
     letter-spacing: -2px;
     
     .gradient-text {
-      background: linear-gradient(135deg, #fff 0%, #e0e7ff 50%, #c7d2fe 100%);
+      background: linear-gradient(135deg, #fff 0%, var(--es-brand-primary-light) 50%, var(--es-brand-primary-light) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: shimmer 3s infinite linear;
@@ -964,7 +964,7 @@ $bg-light: #f7fafc;
       
       &.btn-primary {
         background: #fff;
-        color: #667eea;
+        color: var(--es-brand-primary);
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         
         &:hover {
@@ -1055,7 +1055,7 @@ $bg-light: #f7fafc;
     &:hover {
       transform: translateY(-4px);
       box-shadow: 0 16px 40px rgba(102, 126, 234, 0.12);
-      border-color: #667eea;
+      border-color: var(--es-brand-primary);
     }
   }
 
@@ -1194,7 +1194,7 @@ $bg-light: #f7fafc;
     .section-badge {
       display: inline-block;
       padding: 6px 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: #fff;
       border-radius: 20px;
       font-size: 12px;
@@ -1270,19 +1270,19 @@ $bg-light: #f7fafc;
       transition: transform 0.3s;
       
       &.blue {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       }
       
       &.purple {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
       }
       
       &.green {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%);
       }
       
       &.orange {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
       }
       
       i {
@@ -1318,7 +1318,7 @@ $bg-light: #f7fafc;
     .section-badge {
       display: inline-block;
       padding: 8px 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: #fff;
       border-radius: 20px;
       font-size: 13px;
@@ -1465,7 +1465,7 @@ $bg-light: #f7fafc;
     .arrow-line {
       width: 60px;
       height: 60px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -1483,7 +1483,7 @@ $bg-light: #f7fafc;
     .arrow-text {
       font-size: 14px;
       font-weight: 600;
-      color: #667eea;
+      color: var(--es-brand-primary);
       white-space: nowrap;
     }
   }
@@ -1606,7 +1606,7 @@ $bg-light: #f7fafc;
     gap: 30px;
     margin-top: 60px;
     padding: 40px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     border-radius: 20px;
     
     .advantage-item {
@@ -1617,7 +1617,7 @@ $bg-light: #f7fafc;
         font-size: 48px;
         font-weight: 700;
         margin-bottom: 8px;
-        background: linear-gradient(to right, #fff, #e0e7ff);
+        background: linear-gradient(to right, #fff, var(--es-brand-primary-light));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
@@ -1639,7 +1639,7 @@ $bg-light: #f7fafc;
 // 快速开始
 .quick-start {
   padding: 120px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   color: #fff;
   
   .section-header {
@@ -1684,7 +1684,7 @@ $bg-light: #f7fafc;
       &.active {
         .step-number {
           background: #fff;
-          color: #667eea;
+          color: var(--es-brand-primary);
           transform: scale(1.1);
         }
         
@@ -1801,7 +1801,7 @@ $bg-light: #f7fafc;
   }
   
   &.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     color: #fff;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     
@@ -1813,11 +1813,11 @@ $bg-light: #f7fafc;
   
   &.btn-outline {
     background: transparent;
-    border: 2px solid #667eea;
-    color: #667eea;
+    border: 2px solid var(--es-brand-primary);
+    color: var(--es-brand-primary);
     
     &:hover {
-      background: #667eea;
+      background: var(--es-brand-primary);
       color: #fff;
     }
   }

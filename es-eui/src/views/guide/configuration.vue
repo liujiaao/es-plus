@@ -633,7 +633,7 @@ Vue.use(EsPlus, {
 </script>
 
 <style lang="scss" scoped>
-$primary: #409eff;
+$primary: var(--es-brand-primary);
 $success: #67c23a;
 $warning: #e6a23c;
 $danger: #f56c6c;
@@ -655,7 +655,7 @@ $bg-light: #f7fafc;
 .hero-section {
   text-align: center;
   padding: 60px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   border-radius: 20px;
   margin-bottom: 50px;
   color: white;
@@ -726,10 +726,10 @@ $bg-light: #f7fafc;
     font-size: 18px;
     color: white;
 
-    &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-    &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+    &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+    &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+    &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
   }
 
   .section-title {
@@ -1017,10 +1017,10 @@ $bg-light: #f7fafc;
       color: white;
       flex-shrink: 0;
 
-      &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-      &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-      &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-      &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
     }
 
     .next-info {

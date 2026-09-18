@@ -178,7 +178,7 @@ dialog({
 
 .case-link {
   font-size: 14px;
-  color: #409eff;
+  color: var(--es-brand-primary);
   font-weight: 500;
   text-decoration: none;
 }

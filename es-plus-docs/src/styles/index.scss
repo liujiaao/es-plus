@@ -57,7 +57,7 @@ pre {
 .hljs-variable, .hljs-template-variable { color: #e36209; }
 
 // hljs dark mode tokens (One Dark-ish)
-.is-dark {
+.dark {
   .hljs-comment, .hljs-quote { color: #7f848e; }
   .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #c678dd; }
   .hljs-string, .hljs-attr { color: #98c379; }
@@ -82,7 +82,7 @@ pre {
   }
 }
 
-.is-dark ::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb {
   background: #4c4d4f;
 
   &:hover {

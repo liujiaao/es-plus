@@ -103,6 +103,6 @@ export default {
 }
 
 .ai-section a {
-  color: #409eff;
+  color: var(--es-brand-primary);
 }
 </style>

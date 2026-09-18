@@ -72,7 +72,7 @@ export default defineComponent({
 
     const departments = ['技术部', '产品部', '设计部', '市场部']
     const statuses = ['active', 'leave', 'probation']
-    const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
+    const colors = ['var(--es-brand-primary)', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
     const tableData = Array.from({ length: 18 }, (_, i) => ({
       id: i + 1,
       name: `员工${i + 1}`,

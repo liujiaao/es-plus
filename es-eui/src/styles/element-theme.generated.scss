@@ -1,0 +1,18 @@
+// 本文件由 scripts/gen-element-theme.mjs 生成，禁止手改。
+// 单一真源：docs/tokens/design-tokens.css 的 --es-brand-primary
+// 改品牌色请改单源，然后运行 `npm run element-theme:sync`。
+//
+// 只覆盖 $--color-primary：Element UI 的浅色阶（--color-primary-light-1..9）
+// 由 common/var.scss 的 mix() 从主色派生，编译期自动跟着变，无需手工列色阶。
+//
+// 不要再手动 @import icon.scss：图标已由 base.scss 传递引入
+// （index.scss → base.scss → icon.scss），重复引入只会把 @font-face 与
+// 284 个 icon 规则各写两遍（实测 +17KB），并不会多保住任何一个图标。
+//
+// $--font-path 必须显式设置：icon.scss 用的是相对路径 'fonts'，
+// 而本文件不在 lib/theme-chalk/ 下，不指到包内字体目录会构建失败。
+$--font-path: '~element-ui/packages/theme-chalk/src/fonts';
+
+$--color-primary: #3b82f6;
+
+@import '~element-ui/packages/theme-chalk/src/index';

@@ -62,7 +62,14 @@
   /* ── 代码块背景 ── */
   --es-code-bg: #f6f8fa;
 
-  /* ── Element Plus 风格别名（主站组件沿用，指向规范名）── */
+  /* ── 旧别名（Element UI 1.x 命名，指向规范名）──
+   * 主站自研组件（DocSearch / CodePlayground / ChatComposer 等）历史沿用这批名字，
+   * 它们指向 --es-* 规范名，因此对自研组件是**有效**的。
+   *
+   * ⚠️ 但 Element Plus 2.x **完全不读这些名字**：它读 --el-color-*。
+   * 所以下面的 --primary-color 不等于「已改过 Element Plus 主题」——
+   * 那件事由本文件末尾的「运行时桥接」负责。别再把它当成 EP 的别名。
+   */
   --brand-primary: var(--es-brand-primary);
   --brand-primary-light: var(--es-brand-primary-light);
   --brand-accent: var(--es-brand-accent);
@@ -84,10 +91,35 @@
   --fill-color-light: var(--es-fill-light);
   --fill-color-blank: var(--es-bg);
   --code-bg-color: var(--es-code-bg);
+
+  /* ── 运行时桥接：Element Plus ──
+   * Element Plus 2.x 的组件只认 --el-color-*（不是上面的 --primary-color）。
+   * 不写这一段，主站就是「自研组件品牌蓝 #3b82f6 + el-* 组件库默认蓝 #409eff」
+   * 同页两种蓝（已实测）。
+   *
+   * 色阶必须一起给：EP 的 hover/disabled/border 态读的是
+   * --el-color-primary-light-3/5/7/8/9 与 -dark-2，只覆盖 --el-color-primary
+   * 会让 hover 仍是库默认蓝。数值按 EP 自己的算法（主色与白 #fff / 黑按权重线性混合）
+   * 由 #3b82f6 推得，非手调。
+   *
+   * 只桥接主色：状态色（success/warning/danger）的浅色阶是一整套算法产物，
+   * 半套覆盖会比不覆盖更难看，故有意留给 EP 默认值。
+   */
+  --el-color-primary: var(--es-brand-primary);
+  --el-color-primary-light-3: #76a8f9;
+  --el-color-primary-light-5: #9dc1fb;
+  --el-color-primary-light-7: #c4dafc;
+  --el-color-primary-light-8: #d8e6fd;
+  --el-color-primary-light-9: #ebf3fe;
+  --el-color-primary-dark-2: #2f68c5;
 }
 
-/* ── 暗色主题 ── */
-.is-dark {
+/* ── 暗色主题 ──
+ * 选择器用 `dark` 而不是自造的 `is-dark`：暗色开关挂在 <html> 上，
+ * 而 Element Plus / ant-design-vue / vxe-table 的暗色主题一律以 `dark` 为约定键。
+ * 用私有名字的后果是「站点外壳变暗、组件库保持亮色」的半残暗色（已实测）。
+ */
+.dark {
   --es-brand-primary-light: #1e3a5f;
 
   --es-text-primary: #e5eaf3;
@@ -112,4 +144,23 @@
   --es-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
 
   --es-code-bg: #1e1e1e;
+}
+
+/* ── 暗色：Element Plus 桥接（这里**必须**用 :root.dark）──
+ * element-plus/theme-chalk/dark/css-vars.css 的选择器是 `html.dark`，且它内部把
+ * --el-color-primary 重置回 #409eff。若这里只写 `.dark`（特异性 0,1,0）会**输给**它
+ * （0,1,1），暗色下主色被打回库默认蓝。`:root.dark` 是 0,2,0，稳定胜出，与导入顺序无关。
+ *
+ * 色阶按 EP 自己的暗色算法（主色与暗色底 #141414 按权重线性混合，权重 = 1 - N/10）
+ * 由 #3b82f6 推得 —— 该算法已用 EP 公开的 #409eff 暗色值反解校验过。
+ * 只覆盖 --el-color-primary 是不够的：hover/disabled 态读的是 -light-3/5/7/8/9。
+ */
+:root.dark {
+  --el-color-primary: var(--es-brand-primary);
+  --el-color-primary-light-3: #2f61b2;
+  --el-color-primary-light-5: #284b85;
+  --el-color-primary-light-7: #203558;
+  --el-color-primary-light-8: #1c2a41;
+  --el-color-primary-light-9: #181f2b;
+  --el-color-primary-dark-2: #629bf8;
 }

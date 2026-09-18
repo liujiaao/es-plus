@@ -4,7 +4,11 @@ import router from './router'
 import store from './store'
 import ElementUI from 'element-ui'
 import http from '@/utils/server/request.js'
-import 'element-ui/lib/theme-chalk/index.css'
+// Element UI 主题：由单源 token 生成（$--color-primary 取自 --es-brand-primary），
+// 取代原先直接引 element-ui 预编译 CSS 的做法 —— 预编译产物里主色是写死的 #409EFF，
+// 无法在运行期覆盖，导致本站组件库默认蓝与自研组件的品牌蓝 #3b82f6 不一致。
+// 生成物由 scripts/gen-element-theme.mjs 产出，勿手改。
+import './styles/element-theme.generated.scss'
 import './assets/design-tokens.css'
 import './assets/docs-content.css'
 Vue.use(ElementUI, { size: 'mini' })

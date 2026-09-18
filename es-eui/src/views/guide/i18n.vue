@@ -821,7 +821,7 @@ content: (
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     color: #fff;
     border-radius: 20px;
     font-size: 14px;
@@ -863,16 +863,16 @@ content: (
     justify-content: center;
 
     &.blue {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     }
     &.purple {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
     }
     &.green {
       background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
     }
     &.orange {
-      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
     }
 
     i {
@@ -919,7 +919,7 @@ content: (
   .feature-icon {
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -965,7 +965,7 @@ content: (
 .step-marker {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -997,7 +997,7 @@ content: (
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'Consolas', monospace;
-    color: #409eff;
+    color: var(--es-brand-primary);
   }
 }
 
@@ -1034,8 +1034,8 @@ content: (
       transition: all 0.3s;
 
       &:hover {
-        border-color: #409eff;
-        color: #409eff;
+        border-color: var(--es-brand-primary);
+        color: var(--es-brand-primary);
       }
     }
   }
@@ -1101,14 +1101,14 @@ content: (
   }
 
   &:hover {
-    border-color: #409eff;
-    color: #409eff;
+    border-color: var(--es-brand-primary);
+    color: var(--es-brand-primary);
   }
 
   &.active {
-    border-color: #409eff;
+    border-color: var(--es-brand-primary);
     background: #ecf5ff;
-    color: #409eff;
+    color: var(--es-brand-primary);
   }
 }
 
@@ -1182,11 +1182,11 @@ content: (
   transition: all 0.3s;
 
   &:hover {
-    color: #409eff;
+    color: var(--es-brand-primary);
   }
 
   &.active {
-    color: #409eff;
+    color: var(--es-brand-primary);
     background: #fff;
     font-weight: 500;
   }
@@ -1246,7 +1246,7 @@ content: (
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'Consolas', monospace;
-      color: #409eff;
+      color: var(--es-brand-primary);
     }
   }
 

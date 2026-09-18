@@ -13,7 +13,7 @@ export default {
       formData: {
         title: '',
         content: '',
-        themeColor: '#409eff',
+        themeColor: 'var(--es-brand-primary)',
         showTags: false,
         tags: []
       },
@@ -66,7 +66,7 @@ export default {
           label: '主题色',
           span: 12,
           render: (h, model, { row }) => {
-            const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
+            const colors = ['var(--es-brand-primary)', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
             return h('div', {
               style: { display: 'flex', gap: '10px' }
             }, colors.map(color =>

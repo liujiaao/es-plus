@@ -1,5 +1,5 @@
 <template>
-  <div class="app-wrapper" :class="{ 'is-dark': isDark }">
+  <div class="app-wrapper" :class="{ dark: isDark }">
     <AppHeader @toggle-mobile-menu="toggleMobileMenu" />
     <AppSidebar :mobile-open="mobileMenuOpen" @close="mobileMenuOpen = false" />
     <AppContent>
@@ -29,7 +29,7 @@ onMounted(() => {
 
   // Watch for theme changes from header toggle
   const observer = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('is-dark')
+    isDark.value = document.documentElement.classList.contains('dark')
   })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 })

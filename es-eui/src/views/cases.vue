@@ -131,7 +131,7 @@ export default {
 .case-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-  border-color: #409eff;
+  border-color: var(--es-brand-primary);
 }
 
 .case-title {

@@ -16,7 +16,7 @@
     <!-- 使用示例 -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-s-grid" />
         </div>
         <h2 class="section-title">使用示例</h2>
@@ -354,7 +354,7 @@ export default {
     margin-bottom: 30px;
     padding: 15px 20px;
     background: #f5f7fa;
-    border-left: 4px solid #409eff;
+    border-left: 4px solid var(--es-brand-primary);
     border-radius: 4px;
   }
 
@@ -362,7 +362,7 @@ export default {
     font-size: 24px;
     margin: 40px 0 15px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #409eff;
+    border-bottom: 2px solid var(--es-brand-primary);
     color: #303133;
   }
 
@@ -421,7 +421,7 @@ export default {
       font-size: 12px;
       padding: 2px 10px;
       border-radius: 12px;
-      background: #409eff;
+      background: var(--es-brand-primary);
       color: #fff;
     }
 
@@ -463,9 +463,9 @@ export default {
           margin-left: auto;
           padding: 4px 12px;
           font-size: 12px;
-          color: #409eff;
+          color: var(--es-brand-primary);
           background: #fff;
-          border: 1px solid #409eff;
+          border: 1px solid var(--es-brand-primary);
           border-radius: 4px;
           cursor: pointer;
           transition: all 0.2s;
@@ -474,7 +474,7 @@ export default {
           gap: 4px;
 
           &:hover {
-            background: #409eff;
+            background: var(--es-brand-primary);
             color: #fff;
           }
 

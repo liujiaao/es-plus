@@ -442,7 +442,7 @@ Vue.prototype.$useDialog = useDialog`
 </script>
 
 <style lang="scss" scoped>
-$primary: #409eff;
+$primary: var(--es-brand-primary);
 $success: #67c23a;
 $warning: #e6a23c;
 $danger: #f56c6c;
@@ -464,7 +464,7 @@ $bg-light: #f7fafc;
 .hero-section {
   text-align: center;
   padding: 60px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
   border-radius: 20px;
   margin-bottom: 50px;
   color: white;
@@ -535,10 +535,10 @@ $bg-light: #f7fafc;
     font-size: 18px;
     color: white;
 
-    &.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    &.purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    &.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-    &.orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
+    &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
+    &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
+    &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
   }
 
   .section-title {
@@ -564,7 +564,7 @@ $bg-light: #f7fafc;
   .step-number {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -620,7 +620,7 @@ $bg-light: #f7fafc;
       color: white;
 
       &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, #409eff 0%, #67c23a 100%); }
+      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
       &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
     }
 
@@ -666,7 +666,7 @@ $bg-light: #f7fafc;
       .step-dot {
         width: 28px;
         height: 28px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -850,7 +850,7 @@ $bg-light: #f7fafc;
       align-items: center;
       gap: 8px;
       padding: 12px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
       color: white;
       font-size: 14px;
       font-weight: 500;
