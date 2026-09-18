@@ -92,7 +92,8 @@
     "configApplied": "配置已应用",
     "jsonError": "JSON 格式错误",
     "syntaxError": "代码有语法错误",
-    "confirmClicked": "点击了确认"
+    "confirmClicked": "点击了确认",
+    "configInvalid": "配置未通过校验，未应用"
   },
   "home": {
     "badge": "🚀 中后台 CRUD 的配置层 · Vue 2 / Vue 3 / Ant Design Vue",

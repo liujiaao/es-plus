@@ -37,6 +37,8 @@
                   <el-button type="primary" @click="applyFormConfig">{{ t('playground.applyConfig') }}</el-button>
                   <el-button @click="resetFormConfig">{{ t('playground.reset') }}</el-button>
                 </el-form-item>
+                <!-- 校验未通过时内联给出**具体哪个字段错**，而不是只弹一句"应用成功" -->
+                <div v-if="formConfigError" class="invalid-hint">{{ formConfigError }}</div>
               </el-form>
             </div>
           </div>
@@ -92,6 +94,7 @@
                   <el-button type="primary" @click="applyTableConfig">{{ t('playground.applyConfig') }}</el-button>
                   <el-button @click="resetTableConfig">{{ t('playground.reset') }}</el-button>
                 </el-form-item>
+                <div v-if="tableConfigError" class="invalid-hint">{{ tableConfigError }}</div>
               </el-form>
             </div>
           </div>
@@ -232,14 +235,80 @@ const formItems = ref([...defaultFormItems])
 const formLayout = ref({ fromLayProps: { labelWidth: '80px' } })
 const formResult = ref(null)
 const formConfigCode = ref(JSON.stringify(defaultFormItems, null, 2))
+/** 应用配置时的校验问题（非空则内联提示，且不应用） */
+const formConfigError = ref('')
+
+/**
+ * 「应用配置」前的校验。
+ *
+ * 此前三条 apply 路径只做 `JSON.parse` —— 于是「**语法合法但 schema 非法**」的配置
+ * 会弹出绿色「配置已应用」，然后**静默出错**：例如 formtype 写成不存在的值，
+ * 三端渲染器里 vue3 / vue2 的 use-form-inputs 会把未知 formtype 映射成 `() => null`
+ * （什么都不渲染、零告警），用户看到的是"应用成功了，但那个字段不见了"。
+ *
+ * 这里用两个来源做校验，不引入任何新的校验器、也不手写控件清单：
+ *  1. **从单源 schema 推导**：monaco 之所以能画红波浪线，是因为编辑器的 schema 已经
+ *     接的是本站生成的 es-form.schema.json。表单字段的 `items.properties.formtype.enum`
+ *     就是那 14 种合法控件 —— 直接读它做同步校验，正好覆盖"静默不渲染"这个失效模式。
+ *  2. **monaco 已算好的 markers**：schema/语法层面的其余问题（类型、未知字段…）由
+ *     JSON 语言服务给出，这里只读取，不重复实现。
+ *
+ * 注意 markers 由 worker 异步计算，刚粘贴就立刻点「应用」的极端情况下可能还没算完；
+ * 所以同步的 formtype 校验是必需的兜底，而不是冗余。
+ */
+const formTypeEnum = () => esFormSchema?.items?.properties?.formtype?.enum ?? []
+
+/** 同步校验：返回人类可读的问题列表（空 = 通过） */
+function validateFormItems(items) {
+  if (!Array.isArray(items)) return [`配置必须是数组，当前是 ${typeof items}`]
+  const allowed = formTypeEnum()
+  const problems = []
+  items.forEach((it, i) => {
+    const where = `第 ${i + 1} 个字段（${it?.label || it?.prop || '未命名'}）`
+    if (!it || typeof it !== 'object') {
+      problems.push(`${where}：不是对象`)
+      return
+    }
+    if (!it.prop) problems.push(`${where}：缺少 prop`)
+    if (!it.formtype) {
+      problems.push(`${where}：缺少 formtype`)
+    } else if (!allowed.includes(it.formtype)) {
+      problems.push(
+        `${where}：formtype「${it.formtype}」不是合法控件类型（合法值：${allowed.join('、')}）`,
+      )
+    }
+  })
+  return problems
+}
+
+/** 读取 monaco 已计算出的错误 marker（schema / 语法），用于补充 formtype 之外的校验 */
+function editorErrors(pathSuffix) {
+  const model = monaco.editor.getModels().find((m) => m.uri.path.endsWith(pathSuffix))
+  if (!model) return []
+  return monaco.editor
+    .getModelMarkers({ resource: model.uri })
+    .filter((m) => m.severity === 8 /* MarkerSeverity.Error */)
+    .map((m) => m.message)
+}
 
 const applyFormConfig = () => {
+  let parsed
   try {
-    formItems.value = JSON.parse(formConfigCode.value)
-    ElMessage.success(t('playground.configApplied'))
+    parsed = JSON.parse(formConfigCode.value)
   } catch (e) {
+    formConfigError.value = t('playground.jsonError')
     ElMessage.error(t('playground.jsonError'))
+    return
   }
+  const problems = [...validateFormItems(parsed), ...editorErrors('form-items.json')]
+  if (problems.length) {
+    formConfigError.value = problems.join('；')
+    ElMessage.error(t('playground.configInvalid'))
+    return
+  }
+  formConfigError.value = ''
+  formItems.value = parsed
+  ElMessage.success(t('playground.configApplied'))
 }
 
 const resetFormConfig = () => {
@@ -273,16 +342,40 @@ const defaultTableData = [
 const tableColumns = ref([...defaultTableColumns])
 const tableData = ref([...defaultTableData])
 const tableConfigCode = ref(JSON.stringify(defaultTableColumns, null, 2))
+const tableConfigError = ref('')
 const tableDataCode = ref(JSON.stringify(defaultTableData, null, 2))
 
 const applyTableConfig = () => {
+  let cols
+  let rows
   try {
-    tableColumns.value = JSON.parse(tableConfigCode.value)
-    tableData.value = JSON.parse(tableDataCode.value)
-    ElMessage.success(t('playground.configApplied'))
+    cols = JSON.parse(tableConfigCode.value)
+    rows = JSON.parse(tableDataCode.value)
   } catch (e) {
+    tableConfigError.value = t('playground.jsonError')
     ElMessage.error(t('playground.jsonError'))
+    return
   }
+  // 列缺少 prop / key 时表格会渲染出无名列（与 formtype 那类问题同源的"静默失效"）
+  const problems = []
+  if (!Array.isArray(cols)) problems.push('列配置必须是数组')
+  else {
+    cols.forEach((c, i) => {
+      if (!c || typeof c !== 'object') problems.push(`第 ${i + 1} 列：不是对象`)
+      else if (!c.prop && !c.key) problems.push(`第 ${i + 1} 列（${c.label || '未命名'}）：缺少 prop/key`)
+    })
+  }
+  if (!Array.isArray(rows)) problems.push('数据必须是数组')
+  problems.push(...editorErrors('table-columns.json'), ...editorErrors('table-data.json'))
+  if (problems.length) {
+    tableConfigError.value = problems.join('；')
+    ElMessage.error(t('playground.configInvalid'))
+    return
+  }
+  tableConfigError.value = ''
+  tableColumns.value = cols
+  tableData.value = rows
+  ElMessage.success(t('playground.configApplied'))
 }
 
 const resetTableConfig = () => {

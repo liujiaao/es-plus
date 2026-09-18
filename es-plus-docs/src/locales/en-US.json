@@ -92,7 +92,8 @@
     "configApplied": "Config applied",
     "jsonError": "Invalid JSON",
     "syntaxError": "Syntax error",
-    "confirmClicked": "Confirm clicked"
+    "confirmClicked": "Confirm clicked",
+    "configInvalid": "Config failed validation — not applied"
   },
   "home": {
     "badge": "🚀 The config layer for admin CRUD · Vue 2 / Vue 3 / Ant Design Vue",
