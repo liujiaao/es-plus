@@ -134,24 +134,33 @@
 </template>
 
 <script>
-// 三端站点切换器：GitHub / 腾讯云 两套部署地址
+/**
+ * 三端站点切换器。
+ *
+ * `SITES` 是三站共同维护的一份列表（内容必须逐字一致，由
+ * scripts/check-site-nav.mjs 校验），每项只有一个 `url` —— 即 CI 实际部署到的
+ * 那个地址（.github/workflows/deploy-docs.yml 把三站合成一个 Pages 站点：
+ * 主站在根、es-pc 在 /es-pc/、es-eui 在 /es-eui/）。
+ *
+ * 此前这里还有一套腾讯云 EdgeOne 地址，并由 `location.hostname.includes('github.io')`
+ * 决定用哪套。问题有两层：那三个 EdgeOne 地址实测已不可用（401 / 不解析），
+ * 而凡是拿不到 github.io 的环境（本地 localhost、将来挂的自有域名）都会被判为
+ * 「非 GitHub 部署」→ 跳向死链；同一处 hostname 猜测还导致本站顶栏显示的是
+ * 「Vue 3 · Element Plus」而不是本站身份。现已收敛为单一地址。
+ */
 const SITES = [
-  { key: 'vue3', label: 'Vue 3 · Element Plus', github: 'https://liujiaao.github.io/es-plus/', tencent: 'https://es-plus-vue3.edgeone.dev/' },
-  { key: 'antdv', label: 'Vue 3 · Ant Design Vue', github: 'https://liujiaao.github.io/es-plus/es-pc/', tencent: 'https://es-plus-antdv.edgeone.dev/' },
-  { key: 'vue2', label: 'Vue 2 · Element UI', github: 'https://liujiaao.github.io/es-plus/es-eui/', tencent: 'https://es-plus-vue2.edgeone.dev/' },
+  { key: 'vue3', label: 'Vue 3 · Element Plus', url: 'https://liujiaao.github.io/es-plus/' },
+  { key: 'antdv', label: 'Vue 3 · Ant Design Vue', url: 'https://liujiaao.github.io/es-plus/es-pc/' },
+  { key: 'vue2', label: 'Vue 2 · Element UI', url: 'https://liujiaao.github.io/es-plus/es-eui/' },
 ]
-const isGithubDeploy = () => window.location.hostname.includes('github.io')
-const detectCurrentSite = () => {
-  const { hostname, pathname } = window.location
-  if (isGithubDeploy()) {
-    if (pathname.startsWith('/es-plus/es-pc')) return 'antdv'
-    if (pathname.startsWith('/es-plus/es-eui')) return 'vue2'
-    return 'vue3'
-  }
-  if (hostname.includes('es-plus-vue2')) return 'vue2'
-  if (hostname.includes('es-plus-antdv')) return 'antdv'
-  return 'vue3'
-}
+
+/**
+ * 本站身份：直接声明，不再从 hostname/pathname 反推。
+ * 反推覆盖不了 localhost、预览环境与将来的自有域名，猜错就会显示错误的当前站
+ * 并把用户送去它站的地址。该常量与 SITES/SITE_KEYS 的一致性由
+ * scripts/check-site-nav.mjs 校验。
+ */
+const SITE_KEY = 'vue2'
 
 export default {
   name: 'App',
@@ -184,7 +193,7 @@ export default {
       return this.$route.path.startsWith('/ai-tools')
     },
     currentSite() {
-      return detectCurrentSite()
+      return SITE_KEY
     },
     currentSiteLabel() {
       return SITES.find((s) => s.key === this.currentSite)?.label || '站点'
@@ -192,8 +201,8 @@ export default {
   },
   methods: {
     switchSite(site) {
-      if (site && site.key !== this.currentSite) {
-        window.location.href = isGithubDeploy() ? site.github : site.tencent
+      if (site && site.key !== this.currentSite && site.url) {
+        window.location.href = site.url
       }
     }
   }
