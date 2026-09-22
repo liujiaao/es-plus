@@ -239,14 +239,34 @@ function checkSiteHomeFigures() {
       { label: '表单控件', value: formTypes, unit: '种' },
       { label: '模板与事件胶水代码减少', value: glueReduction, unit: '%' },
     ]
-    for (const [i, m] of items.entries()) {
+    // 按 **label 查表**，不按位置索引。
+    //
+    // 此前是 `expect[i]` + `label === exp.label` 才断言：把首页三个 stat-item 块**重排**一下，
+    // 每一项的 label 都对不上它位置上的期望值 → 三处断言全部静默跳过，仍然打印绿色
+    // （而姊妹检查——advantages 数组——一直是按 label 查表的，两边不对称）。
+    // 现在：label 找不到期望值就失败，值不符也失败；重排不再能让断言空转。
+    const byLabel = new Map(expect.map((e) => [e.label, e]))
+    for (const m of items) {
       const value = Number(m[1])
       const label = m[2].trim()
-      const exp = expect[i]
-      if (exp && label === exp.label && value !== exp.value) {
+      const exp = byLabel.get(label)
+      if (!exp) {
+        fail(
+          `es-eui 首页出现未登记的统计项「${label}」——新增统计项必须登记到本脚本并给出可核对的口径`,
+        )
+        continue
+      }
+      if (value !== exp.value) {
         fail(
           `es-eui 首页统计「${label}」写 ${value}${exp.unit}，实测应为 ${exp.value}${exp.unit}`,
         )
+      }
+    }
+    // 期望的每一项都必须真的出现在页面上（防止把统计项删掉就当通过）
+    const seen = new Set(items.map((m) => m[2].trim()))
+    for (const e of expect) {
+      if (!seen.has(e.label)) {
+        fail(`es-eui 首页缺少统计项「${e.label}」（本脚本登记了它，且它的值是可核对的实测事实）`)
       }
     }
     // 校验项数也要对上：统计项被删/新增时提醒同步本脚本
