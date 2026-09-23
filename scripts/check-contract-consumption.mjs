@@ -7,21 +7,31 @@
  * 类型检查与现有门禁都抓不到这类问题，因为它们只校验名字/键集。
  *
  * 本脚本对 core 的契约接口（默认 FormItemOption）做字段级扫描，断言每个字段
- * 至少被一个渲染器（packages/{vue3,vue2,adapter-antdv}/src）**实际读取**：
+ * 被**每一个**渲染器（packages/{vue3,vue2,adapter-antdv}/src）**实际读取**：
  *   - 属性访问：`row.field`
  *   - 下标访问：`row['field']` / `item["field"]`
  *   - 解构：`const { field } = row`
  *
- * 合法的「不被渲染层直接读取」的字段必须登记在 ALLOWLIST 里并写明原因（例如
- * 由 core 消费、仅供用户扩展点、废弃别名）。新增契约字段若忘了接线，本检查会红。
+ * 为什么是「每一个」而不是「至少一个」：早先的实现把三端源码拼成一个 blob 再统计，
+ * 判据是「总数不为 0」——**结构上不可能发现「三缺一」**（某字段只有 vue3 接线、
+ * vue2/antdv 静默忽略，总数照样非 0）。而这恰恰是历史缺陷的形状：同一个契约字段
+ * 在三端各读一遍，漏掉一端不会有任何信号。现在逐端统计，任一端为 0 即红。
+ *
+ * 合法的「有渲染层不读它」必须登记：
+ *   - `ALLOWLIST`：**没有**渲染层直接读（由 core 消费 / 仅供扩展点 / 废弃别名）；
+ *   - `RENDERER_EXEMPT`：**部分**渲染层不读（其余端确实在读，故不能整字段登记）。
+ * 新增契约字段若忘了接线，本检查会红。
  *
  * 已知局限：消费统计是「按字段名在渲染层源码中出现」，因此与通用词同名的字段
- * （如 `type`/`size`/`key`/`width`）天然会被判为已消费。它擅长抓的是**专有字段名**
- * （placeholder/required/formItemOptions/nameKey 这类）的漏接线，这正是历史缺陷的高发区。
+ * （如 `type`/`size`/`key`/`width`）天然会被判为已消费；同名但属**别的**契约/对象的
+ * 访问（如 `props.options.listenToCallBack` 之于 `FormItemOption.listenToCallBack`）、
+ * 甚至 CSS 类名（`.ellipsis-text` 会让 `TableColumn.ellipsis` 计到数）同样会算作消费。
+ * 它擅长抓的是**专有字段名**（placeholder/required/formItemOptions/nameKey 这类）的
+ * 漏接线，这正是历史缺陷的高发区；逐端断言把「哪一端没接」也纳入了信号。
  *
  * 用法：
  *   node scripts/check-contract-consumption.mjs            # 校验（CI 用）
- *   node scripts/check-contract-consumption.mjs --report   # 打印每个字段的消费计数
+ *   node scripts/check-contract-consumption.mjs --report   # 打印每个字段的逐端消费计数
  *
  * 退出码：0 = 全部已消费/已登记；1 = 发现未消费且未登记的字段。
  */
@@ -59,6 +69,23 @@ const ALLOWLIST = new Map([
   ['FormItemOption.callOptionListFormat', '由 core 的 request.ts 在响应处理链中消费，渲染器无需读取'],
   ['FormItemOption.clearable', '由 core 的 normalizeFormItem 注入 attrs 后由控件消费（渲染器无需直接读）'],
   ['FormItemOption.required', '由 core 的 resolveItemValidateProps 消费（渲染器只需展开其返回值）'],
+  ['BtnConfig.direction', '由 core 的 resolveButtonSide / splitButtonsByDirection 消费；三端内联的 direction 过滤已删除，改调 core'],
+])
+
+/**
+ * 只对**部分**渲染器豁免的登记表：其余端确实在读，故不能整字段进 ALLOWLIST。
+ * key = `接口.字段`，value = { exempt: 允许为 0 的渲染器 key, reason }
+ */
+const RENDERER_EXEMPT = new Map([
+  [
+    'FormItemOption.placeholder',
+    {
+      exempt: ['vue3', 'vue2'],
+      reason:
+        '由 core 的 compat.ts（FORM_ITEM_SHORTCUT_KEYS）注入 attrs 后由控件消费，与 clearable 同构；' +
+        'antdv 侧另有直接读取（range 类控件的两段占位拆分），故不能整字段登记',
+    },
+  ],
 ])
 
 const CHECK = !process.argv.includes('--report')
@@ -90,15 +117,21 @@ function interfaceBody(src, name) {
 
 /**
  * 抽取接口的**顶层**字段名（`name?: type` / `name: type`）。
- * 用花括号深度判断，故缩进多少格都能识别，且不会把嵌套对象/泛型里的键误当字段
+ * 用花括号 + 圆括号深度判断，故缩进多少格都能识别，且不会把嵌套对象/泛型里的键误当字段
  * （此前写死「缩进恰好两格」，四格缩进的字段会被漏掉）。
+ *
+ * 同时跟踪圆括号深度：多行函数类型的**参数名**不是字段，但它们按花括号计数恰好落在
+ * 深度 0 上（下表 `render?: (` 之后的 `h:` / `ctx:` 都在花括号深度 0、只有圆括号还开着），
+ * 于是此前被当成两个字段混进清单。`h` / `ctx` 这种极短的名字在渲染层里遍地都是，
+ * 结果就是两个**假字段**常年被记为「已消费」，稀释了这份清单的可信度。
  */
 function interfaceFields(body) {
   const fields = []
   let depth = 0
+  let paren = 0
   for (const rawLine of stripComments(body).split(/\r?\n/)) {
     const line = rawLine
-    if (depth === 0) {
+    if (depth === 0 && paren === 0) {
       const m = line.match(/^\s*([A-Za-z_$][\w$]*)\??\s*:/)
       // 排除索引签名（`[key: string]: unknown`）—— 它们以 `[` 开头，上面的正则本就不匹配
       if (m) fields.push(m[1])
@@ -106,6 +139,8 @@ function interfaceFields(body) {
     for (const ch of line) {
       if (ch === '{') depth++
       else if (ch === '}') depth--
+      else if (ch === '(') paren++
+      else if (ch === ')') paren--
     }
   }
   return fields
@@ -140,12 +175,19 @@ function countConsumption(blob, field) {
 }
 
 function main() {
-  const rendererFiles = RENDERER_SRC.flatMap((d) => walk(join(ROOT, d)))
-  if (rendererFiles.length === 0) {
-    console.error('❌ 未找到任何渲染器源码文件，检查路径配置')
+  // 逐端一份 blob —— 合并成一份会让「三缺一」在统计上消失
+  const blobs = RENDERER_SRC.map((dir) => ({
+    key: dir.split('/')[1],
+    blob: stripComments(
+      walk(join(ROOT, dir))
+        .map((f) => readFileSync(f, 'utf-8'))
+        .join('\n')
+    ),
+  }))
+  if (blobs.some((b) => !b.blob)) {
+    console.error('❌ 某个渲染器目录为空，检查路径配置')
     process.exit(1)
   }
-  const blob = stripComments(rendererFiles.map((f) => readFileSync(f, 'utf-8')).join('\n'))
 
   let fail = false
   for (const contract of CONTRACTS) {
@@ -162,33 +204,70 @@ function main() {
 
     if (!CHECK) {
       console.log(`\n=== ${contract.name}（${fields.length} 字段）===`)
+      console.log(`  ${blobs.map((b) => b.key.slice(0, 4).padStart(6)).join('')}  field`)
       for (const f of fields.sort()) {
-        console.log(`  ${String(countConsumption(blob, f)).padStart(4)}  ${f}${ALLOWLIST.has(allowKey(f)) ? '  [allowlisted]' : ''}`)
+        const counts = blobs.map((b) => countConsumption(b.blob, f))
+        console.log(
+          `  ${counts.map((c) => String(c).padStart(6)).join('')}  ${f}${ALLOWLIST.has(allowKey(f)) ? '  [allowlisted]' : ''}`
+        )
       }
       continue
     }
 
-    const unconsumed = fields.filter((f) => countConsumption(blob, f) === 0)
-    const unregistered = unconsumed.filter((f) => !ALLOWLIST.has(allowKey(f)))
+    // 逐端判定：任一端为 0 即「该端没接线」
+    const silentByField = new Map()
+    for (const f of fields) {
+      if (ALLOWLIST.has(allowKey(f))) continue
+      const exempt = new Set(RENDERER_EXEMPT.get(allowKey(f))?.exempt ?? [])
+      const silent = blobs
+        .filter((b) => !exempt.has(b.key) && countConsumption(b.blob, f) === 0)
+        .map((b) => b.key)
+      if (silent.length) silentByField.set(f, silent)
+    }
 
-    // 登记表里出现过期条目也算问题（字段已删除/改名）
+    // 登记表里出现过期条目也算问题（字段已删除/改名 / 该端其实早就读了）
     const stale = [...ALLOWLIST.keys()]
       .filter((k) => k.startsWith(`${contract.name}.`))
       .map((k) => k.slice(contract.name.length + 1))
       .filter((f) => !fields.includes(f))
+    const staleExempt = []
+    for (const [k, v] of RENDERER_EXEMPT) {
+      if (!k.startsWith(`${contract.name}.`)) continue
+      const f = k.slice(contract.name.length + 1)
+      if (!fields.includes(f)) {
+        staleExempt.push(`${k}（字段已不存在）`)
+        continue
+      }
+      for (const r of v.exempt) {
+        const b = blobs.find((x) => x.key === r)
+        if (!b) staleExempt.push(`${k}（渲染器 key "${r}" 不存在）`)
+        else if (countConsumption(b.blob, f) > 0) {
+          staleExempt.push(`${k} 豁免了 ${r}，但该端已在读取（请移除该豁免）`)
+        }
+      }
+    }
 
-    if (unregistered.length) {
+    if (silentByField.size) {
       fail = true
-      console.error(`❌ ${contract.name} 存在「声明了但渲染层从未读取」的字段（疑似静默失效）：`)
-      for (const f of unregistered) console.error(`   - ${f}`)
-      console.error('   要么在渲染器里接线，要么加入 ALLOWLIST 并说明原因。')
+      console.error(`❌ ${contract.name} 存在「声明了但在某个渲染端从未读取」的字段（疑似静默失效）：`)
+      for (const [f, silent] of silentByField) {
+        console.error(`   - ${f}  ← 未读取：${silent.join(', ')}`)
+      }
+      console.error('   要么在该端接线，要么在 ALLOWLIST / RENDERER_EXEMPT 登记并说明原因。')
     }
     if (stale.length) {
       fail = true
       console.error(`❌ ${contract.name} ALLOWLIST 含已不存在的字段（请清理）：${stale.join(', ')}`)
     }
+    if (staleExempt.length) {
+      fail = true
+      console.error(`❌ ${contract.name} RENDERER_EXEMPT 含过期条目（请清理）：`)
+      for (const s of staleExempt) console.error(`   - ${s}`)
+    }
     if (!fail) {
-      console.log(`✅ ${contract.name}: ${fields.length} 个字段全部被渲染层消费或已登记`)
+      console.log(
+        `✅ ${contract.name}: ${fields.length} 个字段在 ${blobs.length} 端均被消费或已登记`
+      )
     }
   }
 
