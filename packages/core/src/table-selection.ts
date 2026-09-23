@@ -54,6 +54,21 @@ export interface TableRefLike {
 }
 
 /**
+ * 把行键归一化为可比对的字符串。
+ *
+ * 去重侧（`applySelectionChange`）与回显侧（`restoreSelectionForPage`）必须用**同一套**
+ * 归一化，否则两处对「是不是同一行」的判断不一致：此前去重用 `String(key)`、
+ * 回显用 `===`，于是第 1 页选中的 `{ id: 1 }` 在数据源把它序列化成 `'1'` 的第 2 页里
+ * 回显不出来（数字与字符串不严格相等），表现为"翻页回来勾选丢了"。
+ *
+ * 键不存在（undefined/null）时返回 null 表示"该行无法参与跨页去重"。
+ */
+function normalizeRowKey(value: unknown): string | null {
+  if (value === undefined || value === null) return null
+  return typeof value === 'string' ? value : String(value)
+}
+
+/**
  * 处理 selection-change 事件 —— 把当前页选择合入全局集合并去重
  *
  * 注意：本函数直接 mutate state.selectionsByPage 与 state.multipleSelection。
@@ -78,15 +93,19 @@ export function applySelectionChange(
     state.selectionsByPage[currentPage] = val
 
     const allSelections: ModelData[] = []
-    const uniqueMap: Record<string, boolean> = {}
+    // 用 Map 而不是裸对象：裸对象的原型链上有 toString / constructor / valueOf /
+    // hasOwnProperty 等既有键，`!uniqueMap['toString']` 恒为 false —— 行键恰好是
+    // 这些字符串的行**永远选不中**；而 `uniqueMap['__proto__'] = true` 写的是原型，
+    // 不产生自有属性，同一行会被重复收进全集。core 的 setNestedValue 早已防住
+    // 同类原型污染，这里当时漏了。
+    const seenKeys = new Map<string, true>()
 
     Object.values(state.selectionsByPage).forEach((pageSelections) => {
       pageSelections.forEach((item) => {
-        const key = item[rowkey] as string | number
-        const keyStr = String(key)
-        if (key !== undefined && key !== null && !uniqueMap[keyStr]) {
+        const keyStr = normalizeRowKey((item as Record<string, unknown>)[rowkey])
+        if (keyStr !== null && !seenKeys.has(keyStr)) {
           allSelections.push(item)
-          uniqueMap[keyStr] = true
+          seenKeys.set(keyStr, true)
         }
       })
     })
@@ -113,13 +132,22 @@ export function restoreSelectionForPage(
 ): void {
   if (!dataList?.length || !rowkey || !state.multipleSelection.length) return
 
+  // 先把已选键摊成 Set（O(选中数)），再对当前页做一次线性扫描 ——
+  // 此前是「当前页每行 × 全量选中」的嵌套比较：翻到第 N 页时复杂度是
+  // O(pageSize × 累计选中数)，几千行 × 上千选中即为百万级比较，且每次都发生在
+  // 翻页的高频路径上。归一化与去重侧共用 normalizeRowKey（见其注释）。
+  const selectedKeys = new Set<string>()
+  state.multipleSelection.forEach((selectedRow) => {
+    const k = normalizeRowKey((selectedRow as Record<string, unknown>)[rowkey])
+    if (k !== null) selectedKeys.add(k)
+  })
+
   const pageSelecteds: ModelData[] = []
   dataList.forEach((row) => {
-    state.multipleSelection.forEach((selectedRow) => {
-      if (row[rowkey] === selectedRow[rowkey]) {
-        pageSelecteds.push(row)
-      }
-    })
+    const k = normalizeRowKey((row as Record<string, unknown>)[rowkey])
+    if (k !== null && selectedKeys.has(k)) {
+      pageSelecteds.push(row)
+    }
   })
 
   pageSelecteds.forEach((row) => {
@@ -133,5 +161,10 @@ export function restoreSelectionForPage(
 export function clearAllSelection(state: SelectionState, tableRef: TableRefLike): void {
   state.multipleSelection = []
   state.selectionsByPage = {}
+  // isInitChange 是 SelectionState 的一部分，清空必须把它一起复位：
+  // 它会让 applySelectionChange 直接 early-return（:77），残留 true 就等于
+  // 「清空之后用户再也选不中任何行」。三个渲染器各自在 nextTick 里复位它，
+  // 但那是它们的时序，不是本函数的契约 —— 显式清空不应取决于调用方有没有走那条路径。
+  state.isInitChange = false
   tableRef.clearSelection?.()
 }
