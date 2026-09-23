@@ -214,6 +214,96 @@ describe('useTableResize', () => {
     expect(tableHeight.value).toBe(400)
   })
 
+  it('should treat "600px" as 600 (unit is equivalent, not silently eaten)', () => {
+    const containerRef = ref(createMockElement({ offsetHeight: 500 }))
+    const headBarRef = ref(createMockElement({ offsetHeight: 50 }))
+    const tbBtnRef = ref(null)
+    const paginationRef = ref(null)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      headBarRef,
+      tbBtnRef,
+      paginationRef,
+      { tabHeight: '600px' }
+    )
+
+    resizeObservers()
+
+    // 600 - 50 = 550
+    expect(tableHeight.value).toBe(550)
+  })
+
+  it('should measure the real container for "100%" instead of reading it as 100px', () => {
+    const parentEl = createMockElement({ offsetHeight: 900 })
+    const containerRef = ref(
+      createMockElement({ offsetHeight: 500, parentElement: parentEl })
+    )
+    const headBarRef = ref(createMockElement({ offsetHeight: 50 }))
+    const tbBtnRef = ref(null)
+    const paginationRef = ref(null)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      headBarRef,
+      tbBtnRef,
+      paginationRef,
+      { heightType: 'auto', tabHeight: '100%' }
+    )
+
+    resizeObservers()
+
+    // 有单位 → 不能当像素值。此前 parseInt('100%') === 100，把「占满」静默当成 100px
+    // （结果会是 100 - 50 = 50）。现在改为量真实容器：900 - 50 = 850。
+    expect(tableHeight.value).toBe(850)
+  })
+
+  it('should measure the real container for "100vh" instead of reading it as 100px', () => {
+    const parentEl = createMockElement({ offsetHeight: 720 })
+    const containerRef = ref(
+      createMockElement({ offsetHeight: 500, parentElement: parentEl })
+    )
+    const headBarRef = ref(createMockElement({ offsetHeight: 20 }))
+    const tbBtnRef = ref(null)
+    const paginationRef = ref(null)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      headBarRef,
+      tbBtnRef,
+      paginationRef,
+      { heightType: 'auto', tabHeight: '100vh' }
+    )
+
+    resizeObservers()
+
+    // 720 - 20 = 700
+    expect(tableHeight.value).toBe(700)
+  })
+
+  it('should measure the real container for "1.5rem" instead of reading it as 1px', () => {
+    const parentEl = createMockElement({ offsetHeight: 640 })
+    const containerRef = ref(
+      createMockElement({ offsetHeight: 500, parentElement: parentEl })
+    )
+    const headBarRef = ref(createMockElement({ offsetHeight: 40 }))
+    const tbBtnRef = ref(null)
+    const paginationRef = ref(null)
+
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef,
+      headBarRef,
+      tbBtnRef,
+      paginationRef,
+      { heightType: 'auto', tabHeight: '1.5rem' }
+    )
+
+    resizeObservers()
+
+    // 此前 parseInt('1.5rem') === 1 → 1 - 40 = -39。现在量真实容器：640 - 40 = 600。
+    expect(tableHeight.value).toBe(600)
+  })
+
   it('should use parentElement offsetHeight when heightType is "height"', () => {
     const parentEl = createMockElement({ offsetHeight: 900 })
     const containerRef = ref(

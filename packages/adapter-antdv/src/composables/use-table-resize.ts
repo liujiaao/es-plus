@@ -19,6 +19,28 @@ function readOption<T>(value: MaybeRefLike<T> | undefined): T | undefined {
   return unref(value as Ref<T> | T) as T
 }
 
+/**
+ * tabHeight 的解析结果，三类必须分开 —— 混为一谈就是**静默吃单位**：
+ *   '600' / '600px'            → { px: 600 }   单位可忽略，或本就等价
+ *   '100%' / '100vh' / '1.5rem' → { measure }   有单位，这里拿不到像素值：
+ *                                此前 `parseInt('100%')` 得到 100，把「占满」静默当成 100px，
+ *                                `parseInt('1.5rem')` 更是得到 1。这类值只能交给「量真实容器」
+ *   'invalid' / undefined       → { fallback }  完全没有数字 → 沿用 450 默认
+ */
+type TabHeightParse = { kind: 'px'; value: number } | { kind: 'measure' } | { kind: 'fallback' }
+
+function parseTabHeight(value: number | string | undefined): TabHeightParse {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? { kind: 'px', value } : { kind: 'fallback' }
+  }
+  if (typeof value !== 'string') return { kind: 'fallback' }
+  const trimmed = value.trim()
+  const px = /^(-?\d+(?:\.\d+)?)(px)?$/i.exec(trimmed)
+  if (px) return { kind: 'px', value: Number(px[1]) }
+  if (/^-?\d+(?:\.\d+)?[a-z%]+$/i.test(trimmed)) return { kind: 'measure' }
+  return { kind: 'fallback' }
+}
+
 export function useTableResize(
   tableContainerRef: { value: HTMLElement | null },
   headBarRef: { value: HTMLElement | null },
@@ -52,11 +74,13 @@ export function useTableResize(
     const heightType = getHeightType()
     const tabHeight = getTabHeight()
 
-    const containerHeight = typeof tabHeight === 'number'
-      ? tabHeight
-      : heightType === 'height'
-        ? (element.parentElement?.offsetHeight || element.offsetHeight)
-        : (parseInt(tabHeight as string, 10) || 450)
+    const tabHeightParsed = parseTabHeight(tabHeight)
+    const containerHeight =
+      tabHeightParsed.kind === 'px'
+        ? tabHeightParsed.value
+        : heightType === 'height' || tabHeightParsed.kind === 'measure'
+          ? (element.parentElement?.offsetHeight || element.offsetHeight)
+          : 450
 
     const maxContainer = !isNaN(containerHeight) ? containerHeight : 450
     const minTableNum = maxContainer - totalContainerNum()

@@ -116,6 +116,54 @@ describe('useTableResize (vue2)', () => {
     expect(tableHeight.value).toBe(400) // 450 - 50
   })
 
+  it('tabHeight "600px" → 视为 600（单位等价，不该被吃掉）', () => {
+    const containerRef = ref(mockEl({ offsetHeight: 500 }))
+    const headBarRef = ref(mockEl({ offsetHeight: 50 }))
+    const { tableHeight, resizeObservers } = useTableResize(
+      containerRef, headBarRef, ref(null), ref(null), { tabHeight: '600px' }
+    )
+    resizeObservers()
+    expect(tableHeight.value).toBe(550) // 600 - 50
+  })
+
+  it('tabHeight "100%" → 量真实父容器，而不是当作 100px', () => {
+    const parentEl = mockEl({ clientHeight: 900, offsetHeight: 900 })
+    const containerEl = mockEl({ offsetHeight: 500, parentElement: parentEl } as any)
+    const headBarRef = ref(mockEl({ offsetHeight: 50 }))
+    const { tableHeight, resizeObservers } = useTableResize(
+      ref(containerEl), headBarRef, ref(null), ref(null),
+      { heightType: 'auto', tabHeight: '100%' }
+    )
+    resizeObservers()
+    // 此前 parseInt('100%') === 100，把「占满」静默当成 100px；现在量真实容器：900 - 50 = 850
+    expect(tableHeight.value).toBe(850)
+  })
+
+  it('tabHeight "100vh" → 量真实父容器，而不是当作 100px', () => {
+    const parentEl = mockEl({ clientHeight: 720, offsetHeight: 720 })
+    const containerEl = mockEl({ offsetHeight: 500, parentElement: parentEl } as any)
+    const headBarRef = ref(mockEl({ offsetHeight: 20 }))
+    const { tableHeight, resizeObservers } = useTableResize(
+      ref(containerEl), headBarRef, ref(null), ref(null),
+      { heightType: 'auto', tabHeight: '100vh' }
+    )
+    resizeObservers()
+    expect(tableHeight.value).toBe(700) // 720 - 20
+  })
+
+  it('tabHeight "1.5rem" → 量真实父容器，而不是当作 1px', () => {
+    const parentEl = mockEl({ clientHeight: 640, offsetHeight: 640 })
+    const containerEl = mockEl({ offsetHeight: 500, parentElement: parentEl } as any)
+    const headBarRef = ref(mockEl({ offsetHeight: 40 }))
+    const { tableHeight, resizeObservers } = useTableResize(
+      ref(containerEl), headBarRef, ref(null), ref(null),
+      { heightType: 'auto', tabHeight: '1.5rem' }
+    )
+    resizeObservers()
+    // 此前 parseInt('1.5rem') === 1；现在量真实容器：640 - 40 = 600
+    expect(tableHeight.value).toBe(600)
+  })
+
   it('heightType:"height" → 使用 getParentContentHeight(parentElement)', () => {
     const parentEl = mockEl({ clientHeight: 900, offsetHeight: 900 })
     const containerEl = mockEl({ offsetHeight: 600, parentElement: parentEl } as any)
