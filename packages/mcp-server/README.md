@@ -326,9 +326,19 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `config` | string | JSON 配置字符串 |
-| `type` | string? | Schema 类型，不传则自动检测 |
+| `type` | string? | Schema 类型，不传按 `form-item` 校验 |
 
-支持的 Schema 类型：`form-item`、`table-column`、`table-options`、`dialog-options`
+支持的 Schema 类型：`form-item`、`table-column`、`table-options`、`dialog-options`，
+以及 `structured-crud-config` —— 即 `generate_crud_from_config` 的入参。
+
+**草拟完结构化配置后先自查一遍**，不要等生成报错：
+
+```
+validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-config" })
+```
+
+它按 `generate_crud_from_config` 的同一份 Zod schema（`packages/shared/src/structured-config.schema.ts`）
+判定，错误路径与 `fields[0].formtype` 这类写法一一对应，因此 `generate → 校验 → 编译` 三步都跑得通。
 
 ### list_form_types
 
