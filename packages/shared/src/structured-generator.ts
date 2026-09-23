@@ -44,12 +44,37 @@ export interface StructuredGenerateResult {
   warnings: string[]
 }
 
+/**
+ * prop 不是裸标识符时的提示（仅提示，不拒绝）。
+ *
+ * 生成侧已经把这类 prop 安全地引号化（`qKey`），所以产物是可编译的 —— 但对 `a.b` /
+ * `a[0].b` 这类嵌套路径，**SFC 模式的默认值不生效**：`reactive({ 'a.b': '' })` 建的是
+ * 扁平键 `"a.b"`，而 core 的 `getNestedValue`/`setNestedValue` 按 `/\.|\[|\]/` 分段去
+ * 读嵌套结构 `{ a: { b } }`，两者对不上（字段首次编辑后会落到正确路径，但初始默认值被忽略）。
+ * schema 模式没有这个问题（默认值由 EsCrudPage 处理）。
+ */
+function warnNonIdentifierProps(config: StructuredCrudConfig): string[] {
+  const props = (config.fields || []).map((f) => f?.prop).filter((p): p is string => typeof p === 'string')
+  const odd = props.filter((p) => p && !BARE_IDENTIFIER.test(p))
+  if (!odd.length) return []
+  const nested = odd.filter((p) => /[.[\]]/.test(p))
+  return [
+    `prop 不是裸标识符：${odd.join(', ')}。生成侧已按需加引号（产物可编译），` +
+      (nested.length
+        ? `但嵌套路径（${nested.join(', ')}）在 mode=sfc 下**初始默认值不生效**（reactive 建的是扁平键）——请改用 mode=schema，或自行初始化嵌套结构。`
+        : `建议改用标识符以免下游工具（如按 prop 生成的插槽名）难以处理。`),
+  ]
+}
+
 export function generateFromConfig(config: StructuredCrudConfig): StructuredGenerateResult {
   const mode = config.mode || 'schema'
-  if (mode === 'sfc') {
-    return generateSFC(config)
+  const result = mode === 'sfc' ? generateSFC(config) : generateSchema(config)
+  // 只在这一处汇总跨模式的通用提示，避免两个模式各写一遍而分叉。
+  const propWarnings = warnNonIdentifierProps(config)
+  if (propWarnings.length) {
+    return { ...result, warnings: [...propWarnings, ...(result.warnings || [])] }
   }
-  return generateSchema(config)
+  return result
 }
 
 function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult {
@@ -140,7 +165,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
         if (dlg.isHiddenFooter) dialogSchema.isHiddenFooter = true
         if (dlg.hasCustomRender) {
           dialogSchema.hasCustomRender = true
-          warnings.push(`Dialog "${key}" has hasCustomRender=true — implement render function in wrapper SFC.`)
+          warnings.push(`Dialog "${sanitizeForComment(key)}" has hasCustomRender=true — implement render function in wrapper SFC.`)
         }
         schemaDialogs[key] = dialogSchema
       }
@@ -225,7 +250,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   }
 
   // WS-5「标记而非静默丢弃」：SFC 模式当前只从 actions 推导单个通用弹窗与操作列，
-  // 不消费 config.dialogs / tableBtns / operationColumn（schema 模式才全量支持）。
+  // 不消费 config.dialogs / tableBtns / toolbarBtns / operationColumn（schema 模式才全量支持）。
   // 检测到这些键就显式告警，引导改用 mode=schema 或手工补全，而不是默默忽略。
   const ignoredInSfc: string[] = []
   if (config.dialogs && Object.keys(config.dialogs).length) {
@@ -233,6 +258,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   }
   if (Array.isArray(config.tableBtns) && config.tableBtns.length) {
     ignoredInSfc.push('tableBtns (toolbar buttons + code:1/2 positioning)')
+  }
+  // toolbarBtns 此前**漏在清单外**：generateSFC 全程不读它（引用数 0），于是它既不生效、
+  // 也不告警 —— 违反本函数自己的「显式告警，而不是默默忽略」约定。SFC 模式下表单按钮由
+  // queryBtns/actions 派生，toolbarBtns 的 name/position/dialogKey 全部丢失。
+  if (Array.isArray(config.toolbarBtns) && config.toolbarBtns.length) {
+    ignoredInSfc.push('toolbarBtns (form-area buttons + position/dialogKey)')
   }
   if (config.operationColumn) {
     ignoredInSfc.push('operationColumn (width/label/fixed)')
@@ -309,14 +340,14 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(`interface QueryForm {`)
     for (const f of queryFields) {
       const tsType = inferTsType(f)
-      lines.push(`  ${f.prop}: ${tsType}`)
+      lines.push(`  ${qKey(f.prop)}: ${tsType}`)
     }
     lines.push(`}`)
     lines.push(``)
   }
 
   // Reactive state
-  const modelInit = queryFields.map(f => `${f.prop}: ${getDefaultValue(f)}`).join(', ')
+  const modelInit = queryFields.map(f => `${qKey(f.prop)}: ${getDefaultValue(f)}`).join(', ')
   if (ts) {
     lines.push(`const queryForm = reactive<QueryForm>({ ${modelInit} })`)
   } else {
@@ -390,12 +421,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  headerCellStyle: { background: '#f5f7fa' },`)
   lines.push(`  apiParams: { url: ${q(config.apiUrl)} },`)
   lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`)
-  if (tOpts.heightType) lines.push(`  heightType: '${tOpts.heightType}',`)
-  if (tOpts.tabHeight) lines.push(`  tabHeight: ${typeof tOpts.tabHeight === 'number' ? tOpts.tabHeight : `'${tOpts.tabHeight}'`},`)
+  if (tOpts.heightType) lines.push(`  heightType: ${q(tOpts.heightType)},`)
+  if (tOpts.tabHeight) lines.push(`  tabHeight: ${numOrStr(tOpts.tabHeight)},`)
   if (tOpts.virtual) {
     lines.push(`  virtual: true,`)
     if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
-    if (tOpts.height) lines.push(`  height: ${tOpts.height},`)
+    if (tOpts.height) lines.push(`  height: ${numOrStr(tOpts.height)},`)
   }
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)
   lines.push(`}`)
@@ -434,7 +465,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   if (hasDialog) {
     lines.push(``)
     lines.push(`function openForm(title${ts ? ': string' : ''}, row${ts ? ': any' : ''} = {}) {`)
-    const dialogModelInit = formFields.map(f => `${f.prop}: ${getDefaultValue(f)}`).join(', ')
+    const dialogModelInit = formFields.map(f => `${qKey(f.prop)}: ${getDefaultValue(f)}`).join(', ')
     // 当没有任何表单字段（全部 inForm:false）时 dialogModelInit 为空串，直接拼
     // `{ ${''}, ...row }` 会产出前导逗号 `reactive({ , ...row })` —— JS 语法错。
     // filter(Boolean) 剔除空段，保证 `reactive({ ...row })` 恒合法。
@@ -744,7 +775,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   for (const [key] of dialogEntries) {
     const method = key === 'add' ? 'POST' : 'PUT'
     const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\``
-    body.push(`${indent}  if (dialogKey === '${key}') {`)
+    body.push(`${indent}  if (dialogKey === ${q(key)}) {`)
     body.push(`${indent}    httpRequest({ url: ${url}, method: '${method}', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('操作成功')`)
     body.push(`${indent}      ${refreshExpr}`)
@@ -770,7 +801,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
     body.push(``)
     body.push(`${indent}// Custom render dialogs — implement in pageSchema.dialogs[key].render`)
     for (const [key] of customRenderDialogs) {
-      body.push(`${indent}// Dialog "${key}" uses custom render — configure in schema or override via openDialog`)
+      body.push(`${indent}// Dialog "${sanitizeForComment(key)}" uses custom render — configure in schema or override via openDialog`)
     }
   }
 
@@ -800,7 +831,7 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
   // 注释回显——占位内容是可编译的默认状态标签，等待开发者替换为真实标记。
   const lines: string[] = []
   lines.push(`    <template #column-${field.prop}="{ row }">`)
-  lines.push(`      <!-- TODO(es-plus): custom render for "${field.label}" — replace this default stub with your markup. -->`)
+  lines.push(`      <!-- TODO(es-plus): custom render for "${sanitizeForComment(String(field.label))}" — replace this default stub with your markup. -->`)
   if (field.render) {
     lines.push(`      <!-- requested render: ${sanitizeForComment(field.render)} -->`)
   }
@@ -825,6 +856,38 @@ function q(value: unknown): string {
 // （如 `url: \`${apiUrl}/${row.id}\``），含 ` 或 ${ 会破坏生成代码甚至注入任意 JS。
 function qBt(value: unknown): string {
   return String(value).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
+}
+
+// 裸标识符：可以直接写在「对象字面量键 / TS 接口成员名」位置的形态。
+const BARE_IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+
+/**
+ * 对象字面量键 / TS 接口成员名：**仅在不是裸标识符时才加引号**。
+ *
+ * 为什么必须加引号：`prop` 支持嵌套路径 —— core 的 `parsePathSegments` 按
+ * `/\.|\[|\]/` 分段，`form-item.schema.json` 也明文写「Supports nested paths like
+ * 'a.b' or 'a[0].b'」。裸写 `a.b: ''` 在对象字面量里是语法错、在 TS 接口里会被解析成
+ * 「成员 b、类型 string」，而 `'a.b': ''` 两种位置都合法且语义等价。它同时兜住了
+ * prop 含引号/冒号/括号时的注入（见本文件 `q()` 的注释）。
+ *
+ * 为什么**不能**无条件加引号：`{ 'amount': null }` 与 `{ amount: null }` 运行时等价，
+ * 但前者会让既有断言（`__tests__/structured-generator.spec.ts:194-195` 断言
+ * `amount: null`）以及所有正常输出发生无意义变化。按需加 → 正常路径逐字节不变。
+ */
+function qKey(prop: string): string {
+  return BARE_IDENTIFIER.test(prop) ? prop : q(prop)
+}
+
+/**
+ * `number | string` 两种字面量的生成形态：number 原样、string 经 `q()` 转义。
+ *
+ * 抽成一处的原因：同一个 union（`tableOptions.tabHeight` 与 `.height` 都是
+ * `z.union([z.number(), z.string()])`）此前被写了两遍 —— 其中 `height` 漏了分支，
+ * 传 `'100vh'` 直接生成 `height: 100vh,` 导致产物**语法错误**；而 `tabHeight` 的
+ * 字符串分支是 `'${x}'` 裸拼，未转义。两处共用本函数后不会再分叉。
+ */
+function numOrStr(v: number | string): string {
+  return typeof v === 'number' ? String(v) : q(v)
 }
 
 function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {

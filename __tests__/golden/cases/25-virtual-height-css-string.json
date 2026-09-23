@@ -1,0 +1,30 @@
+{
+  "nl": "商品管理：查询有商品名、状态；表格展示商品名、状态、售价、库存；表格启用虚拟滚动，容器高度按 CSS 值给 100vh；支持新增、编辑、删除。",
+  "config": {
+    "name": "ProductVirtualViewport",
+    "apiUrl": "/api/products",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "productName", "label": "商品名", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "上架", "value": 1 },
+          { "label": "下架", "value": 0 }
+        ]
+      },
+      { "prop": "price", "label": "售价", "formtype": "Input", "inQuery": false },
+      { "prop": "stock", "label": "库存", "formtype": "Input", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "virtual": true,
+      "heightType": "height",
+      "height": "100vh",
+      "rowHeight": 48
+    }
+  },
+  "notes": "锁定 tableOptions.height 的 **string** 形态：该字段是 z.union([number, string])，与 tabHeight 同一个 union。修复前 SFC 分支直接拼 `height: ${x}`，传字符串会生成 `height: 100vh,` —— 产物语法错误、vite build 失败；修复后应生成 `height: '100vh',`。数字形态由 17-sku-virtual-scroll.json（height: 500）覆盖，两者必须同时成立。"
+}
