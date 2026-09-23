@@ -5,7 +5,7 @@
         <el-table-v2
           ref="tableV2Ref"
           :columns="(adaptedColumns as any)"
-          :data="dataSource"
+          :data="flatDataSource"
           :width="width || 800"
           :height="tableHeight || 400"
           :row-height="options.rowHeight || 50"
@@ -23,7 +23,7 @@
         />
       </template>
     </el-auto-resizer>
-    <div v-if="!dataSource || dataSource.length === 0" class="es-virtual-table__empty">
+    <div v-if="!flatDataSource || flatDataSource.length === 0" class="es-virtual-table__empty">
       <slot name="empty">
         <div class="ant-empty ant-empty-normal">
           <div class="ant-empty-image">
@@ -96,6 +96,45 @@ const { sortState, onColumnSort, toSortChangePayload } = useVirtualSort()
 
 const expandedKeys = ref<Set<string>>(new Set())
 
+/**
+ * 展开态下真正下发给 el-table-v2 的行序列：把已展开行的 `children` 按文档顺序就地摊平，
+ * 同时记录每行的层级供展开列缩进。
+ *
+ * 为什么自己摊平，而不是用 ElTableV2 的 `expandColumnKey` + `expandedRowKeys`：
+ * 那两个 prop 在激活 EL 内建的树形摊平（`composables/use-data.mjs`）之外，还会连带激活
+ * EL 内建的展开图标位（`renderers/cell.mjs`：非 object 的 `expandIconProps` → 每格插一个
+ * 14×14 空 div），与引擎自绘的 `.es-virtual-expand-icon` 叠加。引擎自持这一份状态，
+ * 与 use-virtual-sort 的处理保持一致。
+ *
+ * 此前只维护 `expandedKeys` 却从不影响 data，于是「展开」只翻转了图标：行序列恒定不变，
+ * 展开区永远是空的，且没有任何提示。
+ */
+const expandedView = computed(() => {
+  const rows = props.dataSource
+  const keys = expandedKeys.value
+  const rk = rowkey.value
+  const depths = new Map<string, number>()
+  if (!keys.size) return { rows, depths }
+
+  const out: Record<string, unknown>[] = []
+  const walk = (list: Record<string, unknown>[], depth: number) => {
+    for (const row of list) {
+      const key = String(row[rk] ?? '')
+      depths.set(key, depth)
+      out.push(row)
+      const children = row.children
+      if (keys.has(key) && Array.isArray(children) && children.length > 0) {
+        walk(children as Record<string, unknown>[], depth + 1)
+      }
+    }
+  }
+  walk(rows, 0)
+  return { rows: out, depths }
+})
+
+const flatDataSource = computed(() => expandedView.value.rows)
+const rowDepths = computed(() => expandedView.value.depths)
+
 function onToggleExpand(key: string) {
   const next = new Set(expandedKeys.value)
   const row = props.dataSource.find(r => String(r[rowkey.value] ?? '') === key)
@@ -137,6 +176,7 @@ const adaptedColumns = useColumnAdapter(columnsRef, {
   t: tFn.value,
   expandedKeys,
   onToggleExpand,
+  depths: rowDepths,
 })
 
 const tableClass = computed(() => {

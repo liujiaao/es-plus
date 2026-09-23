@@ -44,9 +44,17 @@ export interface ColumnAdapterOptions {
   t?: (key: string) => string
   expandedKeys?: Ref<Set<string>>
   onToggleExpand?: (rowKey: string) => void
+  /** 展开后各行的层级（0 = 顶层）。树形数据展开时用于缩进，与 EL 的 depth×indentSize 同义 */
+  depths?: Ref<Map<string, number>>
 }
 
 const DEFAULT_WIDTH = 150
+
+/** 展开列的列 key —— 引擎摊平数据与列适配器共用同一常量，避免魔法字符串分叉 */
+export const EXPAND_COLUMN_KEY = '__expand__'
+
+/** 树形数据每加深一层的缩进像素（EL TableV2 的 indentSize 默认值） */
+const INDENT_SIZE = 16
 
 const resolveRowkey = (rowkey: string | Ref<string>): string =>
   typeof rowkey === 'string' ? rowkey : rowkey.value
@@ -198,9 +206,19 @@ function createIndexColumn(col?: TableColumn): VirtualColumn {
 }
 
 function createExpandColumn(options: ColumnAdapterOptions, col?: TableColumn): VirtualColumn {
+  if (col?.render && import.meta.env.DEV) {
+    // el-table-v2 没有「详情行」概念（行高由 rowHeight 统一决定，且单元格不支持跨列），
+    // 展开区内容无法就地渲染。此前该 render 被静默丢弃 —— 显式警告，
+    // 与同级 group 标题被摊平时丢掉的处理一致（见 useColumnAdapter 内的多级表头分支）。
+    console.warn(
+      '[es-plus] virtual engine cannot render `render` on a `type: "expand"` column — ' +
+      'el-table-v2 has no detail-row concept. Only `children` (tree data) is revealed on expand. ' +
+      'Use the standard or vxe engine if you need custom expand content.'
+    )
+  }
   return {
-    key: '__expand__',
-    dataKey: '__expand__',
+    key: EXPAND_COLUMN_KEY,
+    dataKey: EXPAND_COLUMN_KEY,
     title: (col?.label as string) || '',
     width: typeof col?.width === 'number' ? col.width : 50,
     fixed: 'left',
@@ -208,6 +226,8 @@ function createExpandColumn(options: ColumnAdapterOptions, col?: TableColumn): V
     cellRenderer: ({ rowData }) => {
       const rowKey = String(rowData[resolveRowkey(options.rowkey)] ?? '')
       const expanded = options.expandedKeys?.value.has(rowKey) ?? false
+      // 树形数据每深一层右移 INDENT_SIZE，与 EL 自身的 depth×indentSize 语义一致
+      const depth = options.depths?.value.get(rowKey) ?? 0
       return h('span', {
         class: ['es-virtual-expand-icon', expanded ? 'is-expanded' : ''],
         style: {
@@ -215,6 +235,7 @@ function createExpandColumn(options: ColumnAdapterOptions, col?: TableColumn): V
           display: 'inline-flex',
           alignItems: 'center',
           transition: 'transform 0.2s',
+          marginInlineStart: `${depth * INDENT_SIZE}px`,
           transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
         },
         onClick: (e: Event) => {
