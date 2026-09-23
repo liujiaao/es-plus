@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 
 export function useVirtualSelection(
   dataSource: Ref<Record<string, unknown>[]>,
@@ -9,15 +9,35 @@ export function useVirtualSelection(
   // rowkey 支持 ref/computed：每次存取时读取，运行期切换 rowkey 不再快照旧值。
   const getRowkey = () => (typeof rowkey === 'string' ? rowkey : rowkey.value)
 
-  // O(1) — 直接比较 Set size 与数据长度
+  /**
+   * 「本页」已选中的行数。
+   *
+   * `selectedKeys` 是**跨页累积**的（cachePageSelection），与「当前页行数」不是同一个基数：
+   * 直接比 `selectedKeys.size === dataSource.length` 会让表头勾选态与实际选择相反 ——
+   * 上一页全选过（size 恰好等于本页行数）就显示「全选」，而本页一行都没选；
+   * 本页全选中但上一页的键还留着（size 更大）反而显示「未全选」。
+   * 因此两个计算属性都必须按本页逐行判定。
+   */
+  const selectedOnPage = computed(() => {
+    const keys = selectedKeys.value
+    if (keys.size === 0) return 0
+    const rk = getRowkey()
+    let count = 0
+    for (const row of dataSource.value) {
+      if (keys.has(String(row[rk] ?? ''))) count++
+    }
+    return count
+  })
+
   const allSelected = computed(() => {
-    if (dataSource.value.length === 0) return false
-    return selectedKeys.value.size === dataSource.value.length
+    const len = dataSource.value.length
+    if (len === 0) return false
+    return selectedOnPage.value === len
   })
 
   const indeterminate = computed(() => {
-    const size = selectedKeys.value.size
-    return size > 0 && size < dataSource.value.length
+    const n = selectedOnPage.value
+    return n > 0 && n < dataSource.value.length
   })
 
   function onSelectRow(key: string, val: boolean) {

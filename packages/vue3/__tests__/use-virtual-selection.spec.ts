@@ -257,3 +257,62 @@ describe('useVirtualSelection — rowkey 边界', () => {
     expect(getSelectedRows()[0].name).toBe('row1')
   })
 })
+
+// ─── 10. 跨页：表头勾选态必须只看「本页」 ─────────────────────────────────
+//
+// `selectedKeys` 是跨页累积的（cachePageSelection），而 `allSelected` / `indeterminate`
+// 此前拿 `selectedKeys.size` 与「本页行数」直接比 —— 两个基数根本不同源：
+//   · 上一页全选（size=3）、当前页一行未选（3 行）→ size === length → 表头显示「全选」
+//   · 当前页全选中、上一页的键还在（size=6，本页 3 行）→ 6 !== 3 → 表头显示「未全选」
+// 于是翻页后表头勾选态与实际选择相反。
+
+describe('useVirtualSelection — 跨页时的表头勾选态', () => {
+  /** 模拟翻页：同一份 hook 实例，dataSource 换成下一页 */
+  const setup = () => {
+    const ds = makeDataSource([1, 2, 3])
+    const api = useVirtualSelection(ds, 'id')
+    return { ds, ...api }
+  }
+
+  it('上一页全选、当前页一行未选 → allSelected 必须是 false', () => {
+    const { ds, onSelectAll, allSelected } = setup()
+    onSelectAll(true) // 第 1 页 1..3 全选
+    ds.value = makeDataSource([4, 5, 6]).value // 翻到第 2 页
+    expect(allSelected.value).toBe(false)
+  })
+
+  it('当前页全选中（且上一页的键仍在） → allSelected 必须是 true', () => {
+    const { ds, onSelectAll, allSelected } = setup()
+    onSelectAll(true) // 第 1 页
+    ds.value = makeDataSource([4, 5, 6]).value
+    onSelectAll(true) // 第 2 页
+    expect(allSelected.value).toBe(true)
+  })
+
+  it('上一页全选、当前页一行未选 → indeterminate 必须是 false', () => {
+    const { ds, onSelectAll, indeterminate } = setup()
+    onSelectAll(true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    expect(indeterminate.value).toBe(false)
+  })
+
+  it('当前页只选了一行 → indeterminate 必须是 true', () => {
+    const { ds, onSelectAll, onSelectRow, indeterminate } = setup()
+    onSelectAll(true) // 第 1 页 1..3 全选
+    ds.value = makeDataSource([4, 5, 6]).value
+    onSelectRow('4', true) // 第 2 页只选一行
+    expect(indeterminate.value).toBe(true)
+  })
+
+  it('当前页一行未选、但上一页有选中 → indeterminate 必须是 false', () => {
+    const { ds, onSelectAll, indeterminate } = setup()
+    onSelectAll(true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    // 取消掉上一页的选择后仍留一个跨页键，确保 size 落在 (0, length) 区间内
+    onSelectAll(false)
+    ds.value = makeDataSource([1, 2, 3]).value
+    onSelectAll(true)
+    ds.value = makeDataSource([7, 8, 9]).value // 当前页一行未选
+    expect(indeterminate.value).toBe(false)
+  })
+})
