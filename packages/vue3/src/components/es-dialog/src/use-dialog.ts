@@ -1,4 +1,4 @@
-import { createVNode, getCurrentInstance, render } from 'vue'
+import { createVNode, getCurrentInstance, getCurrentScope, onScopeDispose, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'
 
@@ -35,13 +35,35 @@ const getAppendToElement = (appendTo?: string | HTMLElement) => {
   return appendTo instanceof HTMLElement ? appendTo : document.body
 }
 
-/** 从调用参数中提取「会作为 prop 下发」的键（排除 onXxx 事件与 cacheKey 本身） */
+/** 从调用参数中提取「会下发到弹窗组件」的键 —— 只剥掉 cacheKey（它只是本 hook 的缓存键） */
 const pickProps = (opts: Record<string, unknown>): Record<string, unknown> => {
   const out: Record<string, unknown> = {}
   Object.keys(opts).forEach((k) => {
-    if (!k.startsWith('on') && k !== 'cacheKey') out[k] = opts[k]
+    if (k !== 'cacheKey') out[k] = opts[k]
   })
   return out
+}
+
+/**
+ * 把一次调用的 props 写到**已挂载**的组件 vNode 上。
+ *
+ * 分两条通道是因为在 Vue 3 里两者是不同的容器（已实测）：
+ * - 声明过的 prop（title / width / visible…）→ `component.props`，组件渲染读的是它；
+ * - `onXxx` 事件 → **不在 component.props 里**：EsDialog 没把 onClosed 声明为 prop，
+ *   写 `component.props.onClosed` 等于写进一个无人读取的槽（实测：写完再 emit 依然
+ *   触发旧回调）；Vue 的 emit 查的是 `vNode.props`，只有写那里才生效。
+ */
+const applyPropsToVNode = (vNode: any, props: Record<string, unknown>) => {
+  if (!vNode || !vNode.component) return
+  const listeners: Record<string, unknown> = {}
+  const declared: Record<string, unknown> = {}
+  Object.keys(props).forEach((k) => {
+    // 与 Vue 运行时判定事件键的规则一致（on + 非小写字母）
+    if (/^on[^a-z]/.test(k)) listeners[k] = props[k]
+    else declared[k] = props[k]
+  })
+  Object.assign(vNode.component.props, declared)
+  Object.assign(vNode.props, listeners)
 }
 
 const initInstance = (Component: any, props: DialogOptions, container: HTMLElement, appContext: any) => {
@@ -104,9 +126,8 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     clearTimeout(cached.timer)
     // props 覆盖：以创建时的基线 props 为底叠加本次 opts，
     // 使本次省略的 prop 回退到基线值，而非残留上一次调用的值
-    const nextProps = { ...(cached.baseProps || {}), ...pickProps(opts) }
-    Object.assign(cached.vNode.component.props, nextProps)
-    cached.vNode.component.props.visible = true
+    const merged = { ...(cached.baseProps || {}), ...pickProps(opts) }
+    applyPropsToVNode(cached.vNode, { ...toCacheProps(merged, cacheKey), visible: true })
     return cached
   }
 
@@ -149,26 +170,43 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     }
   }
 
+  /**
+   * 构造「一次调用真正要下发到缓存实例」的 props。
+   *
+   * onClosed 必须包一层：缓存实例关闭时**不卸载**，靠这里武装 TTL 回收。
+   * 首次创建与缓存命中都要过这里 —— 命中路径此前既不下发 `on*`，也不重新包装，
+   * 于是缓存实例收不到新回调，TTL 也只在首次创建那次挂得上。
+   */
+  const toCacheProps = (opts: Record<string, unknown>, cacheKey: string): Record<string, unknown> => {
+    const out = pickProps(opts)
+    const originalOnClosed = out.onClosed as Function | undefined
+    out.onClosed = (...args: unknown[]) => {
+      originalOnClosed?.(...args)
+      armCacheDestroy(cacheKey)
+    }
+    const originalOnSubmit = out.onSubmit as Function | undefined
+    out.onSubmit = (closeFn: Function = () => closeCache(cacheKey)) => {
+      originalOnSubmit?.(closeFn)
+    }
+    return out
+  }
+
   /** 为一次 cacheKey 打开创建独立缓存条目（独立 container，关闭不卸载） */
   const openCached = (cacheKey: string, dialogOptions: DialogOptions) => {
     const cacheContainer = document.createElement('div')
     cacheContainer.className = 'dialog-containers'
 
-    const originalOnClosed = (dialogOptions as Record<string, unknown>).onClosed as Function | undefined
-    const originalOnSubmit = (dialogOptions as Record<string, unknown>).onSubmit as Function | undefined
-
-    ;(dialogOptions as Record<string, unknown>).onClosed = (...args: unknown[]) => {
-      originalOnClosed?.(...args)
-      armCacheDestroy(cacheKey) // 缓存实例不立即销毁，武装 TTL
-    }
-    ;(dialogOptions as Record<string, unknown>).onSubmit = (closeFn: Function = () => closeCache(cacheKey)) => {
-      originalOnSubmit?.(closeFn)
-    }
-
-    const cVNode = initInstance(Component, dialogOptions, cacheContainer, appContext)
+    const cVNode = initInstance(
+      Component,
+      toCacheProps(dialogOptions as Record<string, unknown>, cacheKey) as DialogOptions,
+      cacheContainer,
+      appContext
+    )
     instanceCache.set(cacheKey, {
       vNode: cVNode,
       container: cacheContainer,
+      // 基线存**原始** props（不含包装）：命中时以它为底叠加本次 opts，
+      // 包装交给 toCacheProps 统一再套一层，避免基线里压着一层过期包装
       baseProps: pickProps(dialogOptions as Record<string, unknown>),
       timer: null,
     })
@@ -230,6 +268,12 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
     DialogComponent.close = close
     DialogComponent.destroy = destroy
+
+    // 宿主组件作用域销毁（卸载）时回收本 hook 持有的一切：
+    // 弹窗容器是**手工**追加到 body 的，不属于任何组件的子树，宿主卸载不会连带移除；
+    // 缓存实例的 TTL 定时器同理。不注册的话，组件没了、弹窗与定时器还在。
+    // destroy() 无参 = 销毁当前实例 + 全部缓存（含清 timer、移除 container）。
+    if (getCurrentScope()) onScopeDispose(() => destroy())
     return DialogComponent
   } else {
     // ─── 单例模式：复用同一弹窗实例（无 cacheKey）───
@@ -303,6 +347,9 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
     DialogComponent.close = close
     DialogComponent.destroy = destroy
+
+    // 同上：destroy() 无参 = 拆掉单例 vNode 并移除它的 container + 清空全部缓存
+    if (getCurrentScope()) onScopeDispose(() => destroy())
     return DialogComponent
   }
 }

@@ -26,14 +26,20 @@ vi.mock('vue', async (importOriginal) => {
     })),
     render: vi.fn(),
     getCurrentInstance: vi.fn(() => null),
+    // 默认无作用域 = 「不在组件 setup 里调用」，与真实语义一致：useDialog 不注册卸载清理。
+    // 清理用例再把 getCurrentScope 改成返回一个作用域，捕获 onScopeDispose 的回调。
+    getCurrentScope: vi.fn(() => null),
+    onScopeDispose: vi.fn(),
   }
 })
 
-import { createVNode, render } from 'vue'
+import { createVNode, getCurrentScope, onScopeDispose, render } from 'vue'
 import { useDialog } from '../src/components/es-dialog/src/use-dialog'
 
 const mockCreateVNode = createVNode as ReturnType<typeof vi.fn>
 const mockRender = render as ReturnType<typeof vi.fn>
+const mockGetCurrentScope = getCurrentScope as unknown as ReturnType<typeof vi.fn>
+const mockOnScopeDispose = onScopeDispose as unknown as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -261,5 +267,63 @@ describe('useDialog — 返回值与 vue3/vue2 的 DialogResult 同构', () => {
     const dialog = useDialog()
     const { instance } = dialog({ title: 'x' })
     expect(instance).toBe(mockCreateVNode.mock.results[0].value)
+  })
+})
+
+/**
+ * 宿主作用域销毁（卸载）时的回收。
+ *
+ * 弹窗容器是手工 append 到 appendTo 的，不在任何组件子树里 —— 宿主卸载不会连带移除它，
+ * 此前也没有任何清理挂载点，容器与已渲染的弹窗会活过宿主组件。
+ */
+describe('useDialog — 宿主作用域销毁时的回收', () => {
+  const withScope = (fn: (dispose: () => void) => void) => {
+    let dispose: (() => void) | undefined
+    mockGetCurrentScope.mockReturnValue({} as any)
+    mockOnScopeDispose.mockImplementation((cb: () => void) => {
+      dispose = cb
+    })
+    try {
+      fn(() => dispose?.())
+    } finally {
+      mockGetCurrentScope.mockReturnValue(null)
+      mockOnScopeDispose.mockReset()
+    }
+  }
+
+  it('默认模式：注册 onScopeDispose，销毁时卸载 vNode 并移除容器', () => {
+    withScope((dispose) => {
+      const dialog = useDialog()
+      dialog({ title: 'x' })
+      expect(mockOnScopeDispose).toHaveBeenCalledTimes(1)
+
+      const containersBefore = document.body.childElementCount
+      expect(containersBefore).toBeGreaterThan(0)
+      mockRender.mockClear()
+
+      dispose()
+
+      expect(mockRender).toHaveBeenCalledWith(null, expect.anything())
+      expect(document.body.childElementCount).toBe(0)
+    })
+  })
+
+  it('onlyInstance 模式：注册 onScopeDispose，销毁时移除容器', () => {
+    withScope((dispose) => {
+      const dialog = useDialog(undefined, { onlyInstance: true })
+      dialog({ title: 'x' })
+      expect(mockOnScopeDispose).toHaveBeenCalledTimes(1)
+
+      dispose()
+
+      expect(mockRender).toHaveBeenCalledWith(null, expect.anything())
+      expect(document.body.childElementCount).toBe(0)
+    })
+  })
+
+  it('不在组件 setup 里调用（无作用域）→ 不注册清理，不抛错', () => {
+    const dialog = useDialog()
+    expect(mockOnScopeDispose).not.toHaveBeenCalled()
+    expect(typeof dialog).toBe('function')
   })
 })

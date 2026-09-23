@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // vi.hoisted ensures these variables are available before vi.mock() factories run
-const { MockCtor, mockVue } = vi.hoisted(() => {
+const { MockCtor, mockVue, mockGetCurrentInstance, mockOnUnmounted } = vi.hoisted(() => {
   const MockCtor = vi.fn()
   const mockVue = {
     extend: vi.fn(() => MockCtor),
   }
-  return { MockCtor, mockVue }
+  // 默认 null = 「不在组件 setup 里调用」：与真实 Composition API 的语义一致，
+  // useDialog 因此不注册卸载清理（既有用例都不挂组件）。
+  const mockGetCurrentInstance = vi.fn(() => null)
+  const mockOnUnmounted = vi.fn()
+  return { MockCtor, mockVue, mockGetCurrentInstance, mockOnUnmounted }
 })
 
 vi.mock('../src/vue-compat', async () => {
@@ -14,6 +18,8 @@ vi.mock('../src/vue-compat', async () => {
   return {
     ...actual,
     Vue: mockVue,
+    getCurrentInstance: mockGetCurrentInstance,
+    onUnmounted: mockOnUnmounted,
   }
 })
 
@@ -27,8 +33,23 @@ import { useDialog } from '../src/components/es-dialog/use-dialog'
 // ─── Mock vm factory ──────────────────────────────────────────────────────────
 
 function createMockVm(extra: Record<string, any> = {}) {
+  // $on/$off 既是 spy 也是一套真的监听表：既有用例靠 .mock.calls 断言注册行为，
+  // 而「回调是否真的被换掉」只有真的把事件发一遍才验得出来。
+  const listeners: Record<string, Function[]> = {}
   return {
-    $on: vi.fn(),
+    $on: vi.fn((event: string, handler: Function) => {
+      ;(listeners[event] = listeners[event] || []).push(handler)
+    }),
+    $off: vi.fn((event: string, handler?: Function) => {
+      if (!handler) {
+        delete listeners[event]
+        return
+      }
+      listeners[event] = (listeners[event] || []).filter((h) => h !== handler)
+    }),
+    $emit: (event: string, ...args: unknown[]) => {
+      ;(listeners[event] || []).slice().forEach((h) => h(...args))
+    },
     $mount: vi.fn(),
     $el: document.createElement('div'),
     $destroy: vi.fn(),
@@ -342,5 +363,108 @@ describe('useDialog — 延迟销毁竞态', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+// ─── 回归：缓存实例的回调必须能更新（此前 pickProps + applyOptionsToVm 双双丢弃 on*）──
+describe('useDialog — cacheKey 复用时的回调更新', () => {
+  it('同一 cacheKey 第二次打开：新 onClosed 生效，旧回调不再被调用', () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const dialog = useDialog()
+    dialog({ cacheKey: 'k-cb', onClosed: first } as any)
+    dialog({ cacheKey: 'k-cb', onClosed: second } as any)
+
+    // 真的把 'closed' 发一遍（mock vm 的 $on/$off 是一套真的监听表）
+    ;(vm as any).$emit('closed', true)
+
+    // 回归：此前 pickProps 剥光 on*、applyOptionsToVm 又跳过 on*，
+    // 这次调用什么也没注册，跑的还是第一次那批回调 —— second 从不被调用
+    expect(second).toHaveBeenCalledWith(true)
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  it('省略 onClosed 时回退到基线回调，而不是继续沿用上一次临时传入的', () => {
+    const base = vi.fn()
+    const temp = vi.fn()
+    const dialog = useDialog()
+    dialog({ cacheKey: 'k-fb', onClosed: base } as any)
+    dialog({ cacheKey: 'k-fb', onClosed: temp } as any)
+    dialog({ cacheKey: 'k-fb' } as any)
+
+    ;(vm as any).$emit('closed', true)
+
+    expect(base).toHaveBeenCalledWith(true)
+    expect(temp).not.toHaveBeenCalled()
+  })
+
+  it('换回调不会波及挂在同一事件上的 TTL 武装监听：关闭后缓存仍被回收', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog()
+      dialog({ cacheKey: 'k-keep', onClosed: vi.fn() } as any)
+      dialog({ cacheKey: 'k-keep', onClosed: vi.fn() } as any)
+
+      vm.visible = false
+      ;(vm as any).$emit('closed', false) // 触发 TTL 武装
+      // 摘监听若用「整体 $off('closed')」，就会把这个武装监听一起摘掉 —— 缓存再无回收
+      vi.advanceTimersByTime(10 * 60 * 1000)
+
+      expect(vm.$destroy).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+// ─── 回归：宿主组件卸载时的回收（此前 $el 与 TTL 定时器都会活过宿主）───────────
+describe('useDialog — 宿主组件卸载时的回收', () => {
+  const runInSetup = (fn: () => void) => {
+    ;(mockGetCurrentInstance as any).mockReturnValue({})
+    try {
+      fn()
+    } finally {
+      ;(mockGetCurrentInstance as any).mockReturnValue(null)
+    }
+  }
+
+  it('注册 onUnmounted 清理：卸载时销毁缓存实例并从 DOM 摘除 $el', () => {
+    runInSetup(() => {
+      const dialog = useDialog()
+      dialog({ cacheKey: 'k-scope', onClosed: vi.fn() } as any)
+
+      // 回归：此前完全不注册卸载清理（容器是手工 append 的，宿主卸载不会连带移除）
+      expect(mockOnUnmounted).toHaveBeenCalledTimes(1)
+
+      const parent = document.createElement('div')
+      parent.appendChild(vm.$el)
+      expect(vm.$destroy).not.toHaveBeenCalled()
+
+      ;(mockOnUnmounted as any).mock.calls[0][0]()
+
+      expect(vm.$destroy).toHaveBeenCalled()
+      expect(parent.contains(vm.$el)).toBe(false)
+    })
+  })
+
+  it('清理同时清空缓存：卸载后再以同 cacheKey 打开会新建实例', () => {
+    runInSetup(() => {
+      const dialog = useDialog()
+      dialog({ cacheKey: 'k-scope2', onClosed: vi.fn() } as any)
+      const created = MockCtor.mock.calls.length
+
+      ;(mockOnUnmounted as any).mock.calls[0][0]()
+
+      dialog({ cacheKey: 'k-scope2', visible: true } as any)
+      expect(MockCtor.mock.calls.length).toBe(created + 1)
+    })
+  })
+
+  it('单例模式同样注册清理，无实例时调用不抛出', () => {
+    runInSetup(() => {
+      const dialog = useDialog()
+      expect(mockOnUnmounted).toHaveBeenCalledTimes(1)
+      expect(() => (mockOnUnmounted as any).mock.calls[0][0]()).not.toThrow()
+    })
   })
 })

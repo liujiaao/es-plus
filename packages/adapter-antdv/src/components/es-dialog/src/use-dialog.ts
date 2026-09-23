@@ -4,7 +4,7 @@
  * - onlyInstance: false（默认）→ 复用容器，适合单弹窗场景
  * - onlyInstance: true → 每次创建新容器，适合并发多弹窗
  */
-import { createVNode, getCurrentInstance, render } from 'vue'
+import { createVNode, getCurrentInstance, getCurrentScope, onScopeDispose, render } from 'vue'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '../../../types'
 
@@ -121,6 +121,10 @@ export function useDialog(
     }) as DialogCallableWithDestroy
     callable.close = close
     callable.destroy = close
+
+    // 宿主组件作用域销毁（卸载）时回收：弹窗容器是**手工**追加到 appendTo 的，
+    // 不属于任何组件子树，宿主卸载不会连带移除它。
+    if (getCurrentScope()) onScopeDispose(() => close())
     return callable
   }
 
@@ -186,6 +190,9 @@ export function useDialog(
   }) as DialogCallableWithDestroy
   callable.close = close
   callable.destroy = destroy
+
+  // 同上：destroy() = 卸载 vNode 并移除手工追加到 appendTo 的 container
+  if (getCurrentScope()) onScopeDispose(() => destroy())
   return callable
 }
 

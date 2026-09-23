@@ -22,7 +22,7 @@
  *     若需要 i18n / 全局配置注入，请通过 props 显式传入
  */
 
-import { Vue, getCurrentInstance } from '../../vue-compat'
+import { Vue, getCurrentInstance, onUnmounted } from '../../vue-compat'
 import EsDialog from './component.vue'
 import type { DialogOptions } from '@es-plus/core'
 
@@ -38,11 +38,17 @@ export type DialogCallableWithDestroy = DialogCallable
 /** 缓存实例的延迟自动销毁时长：关闭后 10 分钟未重新打开则回收 */
 const CACHE_TTL = 10 * 60 * 1000
 
-/** 从调用参数中提取「会作为 prop 下发」的键（排除 onXxx 事件与 cacheKey 本身） */
+/**
+ * 从调用参数中提取「会下发到弹窗组件」的键 —— 只剥掉 cacheKey（它只是本 hook 的缓存键）。
+ *
+ * 此前这里把全部 `on*` 一并剥掉，于是缓存命中时 `{ ...__baseProps, ...pickProps(opts) }`
+ * 里**永远没有回调**：同一 cacheKey 第二次打开时传的新 onClosed/onOpened 全被丢弃，
+ * 弹窗一直跑第一次那批回调，且再也没有机会更新。事件的下发通道见 applyOptionsToVm。
+ */
 const pickProps = (opts: Record<string, unknown>): Record<string, unknown> => {
   const out: Record<string, unknown> = {}
   Object.keys(opts).forEach((k) => {
-    if (!k.startsWith('on') && k !== 'cacheKey') out[k] = opts[k]
+    if (k !== 'cacheKey') out[k] = opts[k]
   })
   return out
 }
@@ -52,6 +58,12 @@ const getAppendToElement = (appendTo?: string | HTMLElement): HTMLElement => {
     return (document.querySelector(appendTo) as HTMLElement) || document.body
   }
   return appendTo instanceof HTMLElement ? appendTo : document.body
+}
+
+/** `onXxx` 键 → 事件名：'onClosed' → 'closed'，'onUpdate:visible' → 'update:visible' */
+const eventNameFromKey = (key: string): string => {
+  const rest = key.slice(2)
+  return rest.charAt(0).toLowerCase() + rest.slice(1)
 }
 
 /**
@@ -68,11 +80,7 @@ const extractEventHandlers = (
 
   Object.entries(options).forEach(([key, value]) => {
     if (key.startsWith('on') && typeof value === 'function' && key.length > 2) {
-      // 'onClosed' → 'closed', 'onSubmit' → 'submit', 'onUpdate:visible' → 'update:visible'
-      const eventName = key.slice(2)
-      // 'Closed' → 'closed', 保留 'update:visible' 中的 ':'
-      const normalized = eventName.charAt(0).toLowerCase() + eventName.slice(1)
-      events[normalized] = value as Function
+      events[eventNameFromKey(key)] = value as Function
     } else {
       propsData[key] = value
     }
@@ -116,13 +124,33 @@ const splitProps = (
 /**
  * 复用已存在实例时应用新 options：已声明 prop 直接写 vm[k]；
  * 未声明的透传属性汇入 vm.passThroughAttrs（若该组件声明了此 prop）。
- * 跳过 on* 事件键与 cacheKey。
+ *
+ * @param applyEvents 是否同时更新 onXxx 监听，默认 false。只有缓存实例该传 true：
+ *   缓存实例创建时给 onClosed 套的包装只做「透传用户回调」（TTL 由 cacheInstance
+ *   另挂的监听负责），换掉它没有副作用；而单例复用实例上的那个包装里还压着
+ *   destroyOnClose 的延迟销毁，覆盖它会静默丢掉这条清理路径。
+ *
+ *   换监听时按「注册时记下的那个 handler」精确摘除（vm.__esEventHandlers），
+ *   不能用 `$off(eventName)` 整体摘 —— 同一事件上还挂着 TTL 武装监听与
+ *   update:visible 桥接，会被一并摘掉。
  */
-const applyOptionsToVm = (vm: any, opts: Record<string, unknown>) => {
+const applyOptionsToVm = (vm: any, opts: Record<string, unknown>, applyEvents = false) => {
   const declared = new Set(Object.keys((vm && vm.$options && vm.$options.props) || {}))
   const attrs: Record<string, unknown> = {}
+  const handlers: Record<string, Function> = vm.__esEventHandlers || {}
   Object.keys(opts).forEach((k) => {
-    if (k.startsWith('on') || k === 'cacheKey' || k === 'passThroughAttrs') return
+    if (k === 'cacheKey' || k === 'passThroughAttrs') return
+    if (k.startsWith('on')) {
+      if (!applyEvents) return
+      const handler = opts[k]
+      if (typeof handler !== 'function') return
+      const eventName = eventNameFromKey(k)
+      const prev = handlers[eventName]
+      if (prev) vm.$off(eventName, prev)
+      vm.$on(eventName, handler)
+      handlers[eventName] = handler
+      return
+    }
     if (declared.has(k) || declared.has(camelize(k))) {
       vm[k] = opts[k]
     } else {
@@ -167,9 +195,13 @@ const initInstance = (
   }
 
   // 注册事件监听（注意：Vue 2 中通过 $on 监听）
+  // 同时记下「本次注册的 onXxx 监听」，供缓存命中时精确摘除旧监听（见 applyOptionsToVm）
+  const registeredEvents: Record<string, Function> = {}
   Object.entries(events).forEach(([eventName, handler]) => {
     vm.$on(eventName, handler)
+    registeredEvents[eventName] = handler
   })
+  ;(vm as any).__esEventHandlers = registeredEvents
 
   // $mount() 不传参数 = 创建一个游离的 $el（不挂到 DOM 树）
   // 然后我们手工 appendChild 到目标节点
@@ -206,9 +238,10 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     // 重新打开：取消上一轮关闭时武装的「延迟自动销毁」定时器
     clearTimeout((cached as any).__cacheTimeout)
     // props 覆盖：以创建时的基线 props 为底叠加本次 opts，
-    // 使本次省略的 prop 回退到基线值，而非残留上一次调用的值
+    // 使本次省略的 prop 回退到基线值，而非残留上一次调用的值。
+    // applyEvents=true：缓存实例的 onXxx 也要跟着换，否则第二次打开传的回调被丢弃。
     const nextProps = { ...((cached as any).__baseProps || {}), ...pickProps(opts) }
-    applyOptionsToVm(cached, nextProps)
+    applyOptionsToVm(cached, nextProps, true)
     cached.visible = true
     return cached
   }
@@ -347,6 +380,11 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }
       destroyCache()
     }
+
+    // 宿主组件卸载时回收编程式弹窗：$el 是手工 append 到目标节点的，不在任何组件
+    // 子树里，宿主卸载不会连带移除；缓存实例的 TTL 定时器同理。
+    // destroy() 无参 = 销毁当前实例 + 全部缓存。
+    if (getCurrentInstance()) onUnmounted(() => DialogComponent.destroy())
     return DialogComponent
   } else {
     // ─── 单例模式：复用同一弹窗实例 ───
@@ -408,8 +446,11 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       // 延迟销毁回调必须确认「仍是本实例且仍处于关闭态」才动手，否则会销毁刚重开的弹窗。
       let createdVm: any = null
 
-      ;(mergedOptions as Record<string, unknown>).onClosed = () => {
-        originalOnClosed?.()
+      ;(mergedOptions as Record<string, unknown>).onClosed = (...args: unknown[]) => {
+        // 透传事件载荷：组件 emit('closed', val) 带的是关闭后的 visible 值，
+        // 此前这里的包装不收参数，用户写的 `onClosed: (val) => …` 在 Vue 2 端恒拿到 undefined
+        // （Vue 3 / antdv 两端的同一包装都透传，只有这里漏了）
+        originalOnClosed?.(...args)
         if (cacheKey) return // 缓存实例不销毁
         if (mergedOptions.destroyOnClose) {
           setTimeout(() => {
@@ -442,6 +483,9 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       destroy()
       destroyCache()
     }
+
+    // 同上：destroy() 无参 = 拆掉单例 vm 并移除其 $el + 清空全部缓存
+    if (getCurrentInstance()) onUnmounted(() => DialogComponent.destroy())
     return DialogComponent
   }
 }

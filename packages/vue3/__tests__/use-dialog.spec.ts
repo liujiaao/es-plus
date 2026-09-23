@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createApp, h, nextTick } from 'vue'
+import { createApp, defineComponent, h, nextTick } from 'vue'
 import { useDialog } from '../src/components/es-dialog/src/use-dialog'
 import type { DialogOptions, BtnConfig } from '../src/types'
 
@@ -262,6 +262,108 @@ describe('useDialog - 生命周期', () => {
       // 再次打开应视为未命中缓存（新建）
       const r = dialog({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'k3' })
       expect(r.instance?.component?.props?.visible).toBe(true)
+    })
+
+    // ─── 回归：缓存实例的回调必须能更新（此前 pickProps 把所有 on* 剥光）───────
+    it('同一 cacheKey 第二次打开传入新的 onClosed → 新回调生效，旧回调不再被调用', () => {
+      const first = vi.fn()
+      const second = vi.fn()
+      const dialog = useDialog()
+      const r1 = dialog({ title: '第一次', render: () => h('div', '1'), cacheKey: 'k-cb', onClosed: first })
+      const r2 = dialog({ title: '第二次', render: () => h('div', '2'), cacheKey: 'k-cb', onClosed: second })
+
+      expect(r2.instance).toBe(r1.instance) // 前提：确实命中了缓存
+      // 与 el-dialog 关闭时同一条链路：组件 emit('closed')，Vue 按 vnode.props 找监听
+      r2.instance.component.emit('closed', true)
+
+      // 回归：此前 pickProps 剥掉全部 on* + 事件写在了 component.props 这个死槽里，
+      // 于是这里跑的还是第一次那批回调（first 被调用、second 从不被调用）
+      expect(second).toHaveBeenCalledTimes(1)
+      expect(first).not.toHaveBeenCalled()
+    })
+
+    it('省略 onClosed 时回退到基线回调，而不是继续沿用上一次临时传入的', () => {
+      const base = vi.fn()
+      const temp = vi.fn()
+      const dialog = useDialog()
+      dialog({ title: 'a', render: () => h('div', 'a'), cacheKey: 'k-fb', onClosed: base })
+      dialog({ title: 'b', render: () => h('div', 'b'), cacheKey: 'k-fb', onClosed: temp })
+      const r3 = dialog({ title: 'c', render: () => h('div', 'c'), cacheKey: 'k-fb' })
+
+      r3.instance.component.emit('closed', true)
+
+      expect(base).toHaveBeenCalledTimes(1)
+      expect(temp).not.toHaveBeenCalled()
+    })
+  })
+
+  // ─── 回归：宿主组件卸载时的回收（此前容器与 TTL 定时器都会活过宿主）───────────
+  describe('宿主作用域销毁时的回收', () => {
+    /** 在真实组件 setup 里调用 useDialog —— 只有这样才有 effect scope 可挂清理 */
+    const mountHost = () => {
+      let dialog: any
+      const Host = defineComponent({
+        setup() {
+          dialog = useDialog()
+          return () => h('div', 'host')
+        }
+      })
+      const hostEl = document.createElement('div')
+      document.body.appendChild(hostEl)
+      const hostApp = createApp(Host)
+      hostApp.mount(hostEl)
+      return { hostApp, hostEl, getDialog: () => dialog }
+    }
+
+    it('卸载时移除追加到 body 的弹窗容器，并清空缓存', async () => {
+      const { hostApp, hostEl, getDialog } = mountHost()
+      getDialog()({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'scope-k1' })
+      expect(document.querySelectorAll('.dialog-containers').length).toBe(1)
+
+      hostApp.unmount()
+      await nextTick()
+      hostEl.remove()
+
+      // 回归：此前弹窗容器是手工 append 到 body 的、不在宿主子树里，宿主卸载后仍在
+      expect(document.querySelectorAll('.dialog-containers').length).toBe(0)
+      // 缓存条目也清掉了：再次以同 cacheKey 打开应视为未命中（新建实例）
+      const { instance } = getDialog()({ title: '再来一次', render: () => h('div', 'y'), cacheKey: 'scope-k1' })
+      expect(instance?.component?.props?.title).toBe('再来一次')
+    })
+
+    it('卸载时清掉「关闭后武装」的 TTL 定时器', async () => {
+      const CACHE_TTL_MS = 10 * 60 * 1000 // 与 use-dialog.ts 的 CACHE_TTL 对应
+      const armed: unknown[] = []
+      const realSetTimeout = globalThis.setTimeout
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((
+        fn: () => void,
+        ms?: number
+      ) => {
+        const id = realSetTimeout(fn, ms)
+        if (ms === CACHE_TTL_MS) armed.push(id)
+        return id
+      }) as typeof globalThis.setTimeout)
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
+
+      const { hostApp, hostEl, getDialog } = mountHost()
+      try {
+        const { instance } = getDialog()({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'scope-k2' })
+        // 关闭 → onClosed 包装武装 TTL（缓存实例关闭不卸载，靠它拖延回收）
+        instance.component.emit('closed', true)
+        expect(armed).toHaveLength(1)
+
+        clearTimeoutSpy.mockClear()
+        hostApp.unmount()
+        await nextTick()
+
+        // 回归：此前该定时器无人清理，宿主卸载后仍会在 10 分钟后对已废弃的缓存动手
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(armed[0])
+      } finally {
+        getDialog()?.destroy?.() // 兜底：定时器必须在这条用例里被清掉，不留 10 分钟的真实定时器
+        setTimeoutSpy.mockRestore()
+        clearTimeoutSpy.mockRestore()
+        hostEl.remove()
+      }
     })
   })
 })
