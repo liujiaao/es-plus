@@ -812,7 +812,6 @@ myDialog({
 | configBtn | Array | [] | 底部按钮配置 |
 | onOpen | Function | - | 打开回调 |
 | onClosed | Function | - | 关闭回调 |
-| onSubmit | Function | - | 提交回调（点击确定时） |
 | customClass | String | '' | 自定义类名 |
 | appendToBody | Boolean | true | 插入到 body |
 | modal | Boolean | true | 显示遮罩 |

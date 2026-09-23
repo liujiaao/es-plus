@@ -298,7 +298,6 @@ export interface DialogOptions {
   renderHeader?: (h: RenderFunction, instance: unknown) => VNode
   renderFooter?: (h: RenderFunction, instance: unknown) => VNode
   configBtn?: BtnConfig[]
-  onSubmit?: (close: () => void) => void
   onClosed?: () => void
   isDraggable?: boolean
   hiddenFullBtn?: boolean

@@ -287,13 +287,16 @@ export default {
         width: '480px',
         render: (h) => h('div', { style: { padding: '12px' } }, '从 @es-plus/vue2 弹出的 Dialog'),
         configBtn: [
-          { name: '取消', key: 'cancel' },
-          { name: '确定', key: 'submit', type: 'primary' },
+          { name: '取消', click: (_, { close }) => close() },
+          {
+            name: '确定',
+            type: 'primary',
+            click: (_, { close }) => {
+              this.$message.success('已提交')
+              close()
+            },
+          },
         ],
-        onSubmit: (close) => {
-          this.$message.success('已提交')
-          close()
-        },
       })
     },
   },
@@ -365,7 +368,7 @@ node packages/cli/dist/index.js create employee \
 | 6 | EsForm 校验 | required + rules 触发 el-form-item 红色提示 |
 | 7 | EsForm layoutFormProps 折叠 | minFoldRows: 1 时展开/收起按钮工作正常 |
 | 8 | EsDialog 模板用法 | `<es-dialog :visible.sync>` 弹出 / 关闭正常 |
-| 9 | useDialog 编程式 | `this.$useDialog({ render })` 弹出，configBtn / onSubmit 正常 |
+| 9 | useDialog 编程式 | `this.$useDialog({ render })` 弹出，configBtn 按钮点击（含 `close`）正常 |
 | 10 | EsCrudPage 配置驱动 | 同一份 schema JSON 在 vue3 / vue2 demo 中视觉对齐 |
 | 11 | render 函数自定义列 | `render(h, { row })` 用 createElement 创建 VNode，正常显示 |
 | 12 | 权限按钮过滤 | `Vue.use(EsPlus, { permission })` 后，`permissionValue` 不通过的按钮不渲染 |

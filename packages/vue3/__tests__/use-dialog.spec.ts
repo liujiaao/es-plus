@@ -83,19 +83,6 @@ describe('useDialog - 生命周期', () => {
       expect(typeof dialog.close).toBe('function')
     })
 
-    it('wraps onSubmit with close function', () => {
-      const onSubmit = vi.fn()
-      const dialog = useDialog()
-      dialog({ title: '测试', render: () => h('div', '内容'), onSubmit })
-
-      // onSubmit is wrapped internally in the useDialog code.
-      // The wrapper is set on mergedOptions and passed to initInstance.
-      // We can't directly access the wrapped function from vnode props due to Vue internals,
-      // but we verify the mechanism by ensuring the dialog was created without errors
-      // and close function is available
-      expect(typeof dialog.close).toBe('function')
-    })
-
     it('applies default width of 50%', () => {
       const dialog = useDialog()
       const { instance } = dialog({ title: '测试', render: () => h('div', '内容') })

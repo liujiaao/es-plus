@@ -97,7 +97,6 @@ export const docsData: Record<string, any> = {
         { name: 'modal', type: 'boolean', desc: '是否显示遮罩层，默认 true' },
         { name: 'alignCenter', type: 'boolean', desc: '是否垂直居中，默认 false' },
         { name: 'showClose', type: 'boolean', desc: '是否显示右上角关闭按钮，默认 true' },
-        { name: 'onSubmit', type: '(close: () => void) => void', desc: '确认提交回调；close 为关闭函数，不调用则弹窗保持打开（常用于异步提交后关闭）' },
         { name: 'onClosed', type: '() => void', desc: '弹窗完全关闭后的回调（过渡动画结束时触发）' },
       ],
       'configBtn click 回调': [

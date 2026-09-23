@@ -246,10 +246,6 @@ interface DialogOptions {
 }
 \`\`\`
 
-> Note: \`onSubmit\` is exposed by the type but the runtime never wires it up
-> from any footer button — drive submit via a \`configBtn\` item with its own
-> \`click\` handler (see example above).
-
 ## Dialog Instance (available in render/configBtn callbacks)
 - \`close()\` — Close dialog
 - \`registerRef(name, ref)\` — Register a component ref

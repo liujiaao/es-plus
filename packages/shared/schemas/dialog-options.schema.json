@@ -135,9 +135,6 @@
       "type": "string",
       "description": "Custom text for the cancel button"
     },
-    "onSubmit": {
-      "description": "Submit callback. Signature: (close) => void"
-    },
     "onClosed": {
       "description": "Callback fired after dialog is fully closed"
     },

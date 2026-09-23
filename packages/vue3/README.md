@@ -740,7 +740,6 @@ dialog({
 | modal | `boolean` | — | 显示遮罩 |
 | lockScroll | `boolean` | — | 锁定滚动 |
 | onlyInstance | `boolean` | — | 单实例模式（复用同一弹窗） |
-| onSubmit | `(close) => void` | — | 提交回调 |
 | onClosed | `() => void` | — | 关闭回调 |
 | onOpen | `() => void` | — | 打开回调 |
 

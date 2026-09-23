@@ -69,8 +69,8 @@ const eventNameFromKey = (key: string): string => {
 /**
  * Vue 2 中将 Vue 3 风格的 onXxx 事件回调转为 propsData/$on 监听
  *
- * Vue 3 用户写法：useDialog()({ onClosed: () => {}, onSubmit: () => {} })
- * Vue 2 中需要：把 onClosed → 监听 'closed' 事件，onSubmit → 监听 'submit' 事件
+ * Vue 3 用户写法：useDialog()({ onClosed: () => {} })
+ * Vue 2 中需要：把 onClosed → 监听 'closed' 事件
  */
 const extractEventHandlers = (
   options: Record<string, unknown>
@@ -328,9 +328,6 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       const originalOnClosed = (dialogOptions as Record<string, unknown>).onClosed as
         | Function
         | undefined
-      const originalOnSubmit = (dialogOptions as Record<string, unknown>).onSubmit as
-        | Function
-        | undefined
 
       // 捕获「本次调用创建的实例」：延迟销毁只作用于它。
       // 关闭后 300ms 内重新 open 会创建新实例并覆盖 lastVm，若回调仍读 lastVm
@@ -350,10 +347,6 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
             if (lastVm === createdVm) lastVm = null
           }
         }, 300)
-      }
-
-      ;(dialogOptions as Record<string, unknown>).onSubmit = (closeFn: Function = close) => {
-        originalOnSubmit?.(closeFn)
       }
 
       lastVm = initInstance(Component, dialogOptions, dialogOptions.appendTo)
@@ -438,9 +431,6 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       const originalOnClosed = (mergedOptions as Record<string, unknown>).onClosed as
         | Function
         | undefined
-      const originalOnSubmit = (mergedOptions as Record<string, unknown>).onSubmit as
-        | Function
-        | undefined
 
       // 捕获本次创建的实例：关闭后 300ms 内重开会复用同一单例并把 visible 置回 true，
       // 延迟销毁回调必须确认「仍是本实例且仍处于关闭态」才动手，否则会销毁刚重开的弹窗。
@@ -457,10 +447,6 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
             if (vm === createdVm && vm.visible === false) destroy()
           }, 300)
         }
-      }
-
-      ;(mergedOptions as Record<string, unknown>).onSubmit = (closeFn: Function = close) => {
-        originalOnSubmit?.(closeFn)
       }
 
       const newVm = initInstance(Component, mergedOptions, mergedOptions.appendTo)

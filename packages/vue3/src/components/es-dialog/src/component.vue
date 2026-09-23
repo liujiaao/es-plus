@@ -115,7 +115,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:visible': [val: boolean]
   closed: [val: boolean]
-  submit: [payload: any]
   open: []
 }>()
 
@@ -193,10 +192,6 @@ const handleFullscreen = () => {
 // X 按钮点击：走统一关闭闸门（beforeClose 拦截）
 const handleClose = () => {
   runBeforeClose(doClose)
-}
-
-const handleConfirm = () => {
-  emit('submit', { renderBodyRefs: renderBodyRefsObject.currentRef, lyFormInstance, dialogInstance })
 }
 
 // el-dialog 内建关闭触发（遮罩点击 / ESC）：同样经闸门，不调用 el 的 done，

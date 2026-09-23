@@ -97,15 +97,10 @@ export function useDialog(
         dialogOptions.visible = true
       }
       const originalOnClosed = dialogOptions.onClosed
-      const originalOnSubmit = dialogOptions.onSubmit
 
       dialogOptions.onClosed = (...args: any[]) => {
         ;(originalOnClosed as Function)?.(...args)
         close()
-      }
-
-      dialogOptions.onSubmit = (closeFn = close) => {
-        originalOnSubmit?.(closeFn)
       }
 
       return initInstance(Component, dialogOptions, container, appContext)
@@ -163,16 +158,11 @@ export function useDialog(
       ...dialogOptions,
     }
 
-    const { onClosed: originalOnClosed, onSubmit: originalOnSubmit } =
-      mergedOptions
+    const { onClosed: originalOnClosed } = mergedOptions
 
     mergedOptions.onClosed = () => {
       originalOnClosed?.()
       close()
-    }
-
-    mergedOptions.onSubmit = (closeFn = close) => {
-      originalOnSubmit?.(closeFn)
     }
 
     vNode = initInstance(Component, mergedOptions, container, appContext)

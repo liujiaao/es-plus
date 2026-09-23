@@ -853,8 +853,6 @@ export interface DialogOptions {
   renderFooter?: (h: RenderFn, instance: unknown) => AnyVNode
   /** 底部按钮 */
   configBtn?: BtnConfig[]
-  /** 提交回调 */
-  onSubmit?: (close: () => void) => void
   /** 关闭后回调 */
   onClosed?: () => void
   /** 是否可拖拽 */

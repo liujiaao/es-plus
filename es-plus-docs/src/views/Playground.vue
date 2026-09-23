@@ -403,7 +403,7 @@ const defaultDialogCode = `{
 const dialogConfigCode = ref(defaultDialogCode)
 const dialogParseError = ref('')
 
-// 把字符串求值成对象。注入 ElMessage 让 onSubmit 之类能直接用提示。
+// 把字符串求值成对象。注入 ElMessage 让 configBtn 的 click 之类能直接用提示。
 const evalDialogConfig = (code) => {
   try {
     const fn = new Function('ElMessage', 'return (' + code + ')')

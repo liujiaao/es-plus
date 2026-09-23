@@ -1073,7 +1073,6 @@ export default {
               <tr><td><code>loading</code></td><td>Boolean</td><td>false</td><td>是否显示加载状态</td></tr>
               <tr><td><code>render</code></td><td>Function</td><td>—</td><td>弹窗内容渲染函数：<code>(createElement) => VNode</code>。支持 JSX</td></tr>
               <tr><td><code>configBtn</code></td><td>Array</td><td>[]</td><td>弹窗底部按钮配置</td></tr>
-              <tr><td><code>onSubmit</code></td><td>Function</td><td>—</td><td>默认按钮"确认"的回调（需 <code>showDefaultButtons: true</code>）</td></tr>
               <tr><td><code>onOpen</code></td><td>Function</td><td>—</td><td>弹窗打开时的回调</td></tr>
               <tr><td><code>onClosed</code></td><td>Function</td><td>—</td><td>弹窗关闭后的回调</td></tr>
             </tbody>

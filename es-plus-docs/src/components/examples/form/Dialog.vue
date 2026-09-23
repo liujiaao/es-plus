@@ -45,15 +45,22 @@ const openDialog = () => {
       formItemList: formItems,
       layoutFormProps: { fromLayProps: { labelWidth: '80px' } }
     }),
-    onSubmit: (close) => {
-      if (!formData.value.name) {
-        ElMessage.warning('请输入名称')
-        return
+    configBtn: [
+      { name: '取消', click: (_, { close }) => close() },
+      {
+        name: '确定',
+        type: 'primary',
+        click: (_, { close }) => {
+          if (!formData.value.name) {
+            ElMessage.warning('请输入名称')
+            return
+          }
+          lastResult.value = { ...formData.value, action: '新增' }
+          ElMessage.success('提交成功')
+          close()
+        }
       }
-      lastResult.value = { ...formData.value, action: '新增' }
-      ElMessage.success('提交成功')
-      close()
-    }
+    ]
   })
 }
 
@@ -84,11 +91,18 @@ const openEditDialog = () => {
         formItemList={formItems}
         layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }} />
     },
-    onSubmit: (close) => {
-      lastResult.value = { ...editData.value, action: '编辑' }
-      ElMessage.success('保存成功')
-      close()
-    }
+    configBtn: [
+      { name: '取消', click: (_, { close }) => close() },
+      {
+        name: '确定',
+        type: 'primary',
+        click: (_, { close }) => {
+          lastResult.value = { ...editData.value, action: '编辑' }
+          ElMessage.success('保存成功')
+          close()
+        }
+      }
+    ]
   })
 }
 </script>

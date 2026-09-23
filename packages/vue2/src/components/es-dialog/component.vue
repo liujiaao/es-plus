@@ -157,7 +157,7 @@ export default defineComponent({
     // 显式收进此 prop，再在 filteredAttrs 里合并 v-bind 到 el-dialog。
     passThroughAttrs: { type: Object, default: () => ({}) },
   },
-  emits: ['update:visible', 'closed', 'submit', 'open'],
+  emits: ['update:visible', 'closed', 'open'],
   setup(props, { emit, attrs, slots, expose }) {
     const instance = getCurrentInstance() as unknown as Record<string, unknown>
     const lyFormInstance = ref<unknown>(null)

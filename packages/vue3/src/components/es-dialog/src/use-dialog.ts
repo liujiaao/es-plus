@@ -184,10 +184,6 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       originalOnClosed?.(...args)
       armCacheDestroy(cacheKey)
     }
-    const originalOnSubmit = out.onSubmit as Function | undefined
-    out.onSubmit = (closeFn: Function = () => closeCache(cacheKey)) => {
-      originalOnSubmit?.(closeFn)
-    }
     return out
   }
 
@@ -252,14 +248,10 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }
 
       const originalOnClosed = (dialogOptions as Record<string, unknown>).onClosed as Function | undefined
-      const originalOnSubmit = (dialogOptions as Record<string, unknown>).onSubmit as Function | undefined
 
       ;(dialogOptions as Record<string, unknown>).onClosed = (...args: unknown[]) => {
         ;(originalOnClosed as Function)?.(...args)
         close()
-      }
-      ;(dialogOptions as Record<string, unknown>).onSubmit = (closeFn: Function = close) => {
-        originalOnSubmit?.(closeFn)
       }
 
       const vNode = initInstance(Component, dialogOptions, container, appContext)
@@ -331,14 +323,11 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         return { instance: cVNode, close: () => closeCache(cacheKey), destroy }
       }
 
-      const { onClosed: originalOnClosed, onSubmit: originalOnSubmit } = mergedOptions as Record<string, any>
+      const { onClosed: originalOnClosed } = mergedOptions as Record<string, any>
 
       ;(mergedOptions as Record<string, unknown>).onClosed = () => {
         originalOnClosed?.()
         close()
-      }
-      ;(mergedOptions as Record<string, unknown>).onSubmit = (closeFn = close) => {
-        originalOnSubmit?.(closeFn)
       }
 
       vNode = initInstance(Component, mergedOptions, container, appContext)

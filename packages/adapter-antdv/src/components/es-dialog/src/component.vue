@@ -2,7 +2,7 @@
   ADV 适配器：EsDialog 弹窗组件（对齐 @es-plus/vue3 component.vue）
 
   Ant Design Vue a-modal 替代 el-dialog。对齐 vue3 关键行为：
-  - 关闭链：onClosed/onSubmit 不声明为 prop（作为事件监听器流入），doClose emit('closed', false)
+  - 关闭链：onClosed 不声明为 prop（作为事件监听器流入），doClose emit('closed', false)
   - RenderJsx 传入 renderBodyRefsObject，footer 按钮 click 第一参 = renderBodyRefsObject.currentRef，
     第二参 = { close, getRefs, dialogInstance }
   - instance 结构对齐 vue3：{ renderBodyRefs, renderBodyRefsObject, lyFormInstance, dialogInstance, getRefs }
@@ -133,7 +133,7 @@ import RenderJsx from './render-jsx.vue'
 import { Modal as AModal, Button as AButton, Space as ASpace } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
-// ─── Props（onClosed/onSubmit 不声明为 prop，让其作为事件监听器流入）──
+// ─── Props（onClosed 不声明为 prop，让其作为事件监听器流入）──
 const props = withDefaults(
   defineProps<{
     title?: string
@@ -413,7 +413,7 @@ function handleFooterBtnClick(item: BtnConfig) {
 const filteredAttrs = computed(() => {
   const ignored = new Set([
     'title', 'width', 'render', 'renderHeader', 'renderFooter',
-    'configBtn', 'onSubmit', 'onClosed', 'isDraggable', 'hiddenFullBtn',
+    'configBtn', 'onClosed', 'isDraggable', 'hiddenFullBtn',
     'isHiddenFooter', 'maxHeight', 'appendTo', 'fullscreen', 'showClose',
     'destroyOnClose', 'modal', 'closeOnClickModal', 'closeOnPressEscape',
     'beforeClose', 'alignCenter', 'top', 'modalClass', 'visible',

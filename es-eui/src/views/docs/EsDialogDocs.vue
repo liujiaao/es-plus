@@ -206,13 +206,6 @@
             <td>—</td>
           </tr>
           <tr>
-            <td>onSubmit</td>
-            <td>确认回调</td>
-            <td>Function</td>
-            <td>—</td>
-            <td>—</td>
-          </tr>
-          <tr>
             <td>onClosed</td>
             <td>关闭回调</td>
             <td>Function</td>

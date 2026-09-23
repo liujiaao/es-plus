@@ -4,7 +4,7 @@
  * 覆盖：
  *   - 默认模式（onlyInstance:false）：复用容器、close、destroy
  *   - onlyInstance:true 模式：每次创建新容器
- *   - onClosed / onSubmit 回调包装
+ *   - onClosed 回调包装
  *   - appendTo 挂载目标选择
  *
  * 注意：测试不挂载 Vue 组件，仅测试 useDialog 返回的函数和 DOM 操作逻辑。
@@ -111,16 +111,6 @@ describe('useDialog — 默认模式（onlyInstance:false）', () => {
     const mergedOnClosed = mockCreateVNode.mock.calls[0][1]?.onClosed
     mergedOnClosed?.()
     expect(onClosed).toHaveBeenCalled()
-  })
-
-  it('onSubmit 回调被包装：调用后触发 close', () => {
-    const onSubmit = vi.fn()
-    const dialog = useDialog()
-    dialog({ onSubmit })
-    const mergedOnSubmit = mockCreateVNode.mock.calls[0][1]?.onSubmit
-    const closeFn = vi.fn()
-    mergedOnSubmit?.(closeFn)
-    expect(onSubmit).toHaveBeenCalledWith(closeFn)
   })
 
   it('mergedOptions 默认包含 visible:true + width:"50%"', () => {

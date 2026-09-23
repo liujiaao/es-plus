@@ -245,7 +245,7 @@ export const tableExamples = [
 
 export const dialogExamples = [
   { key: 'Basic', title: '基础弹窗', description: 'useDialog 最简用法：一个函数调用即可打开弹窗。' },
-  { key: 'Confirm', title: '确认弹窗', description: 'configBtn 配置确认/取消按钮，onSubmit 回调处理确认逻辑。' },
+  { key: 'Confirm', title: '确认弹窗', description: 'configBtn 配置确认/取消按钮，确认逻辑写在按钮的 click 里。' },
   { key: 'FormDialog', title: '表单弹窗 (JSX + EsForm)', description: 'JSX render 函数中使用 EsForm，实现表单弹窗。' },
   { key: 'Draggable', title: '可拖拽弹窗', description: 'isDraggable: true 开启弹窗拖拽功能。' },
   { key: 'Fullscreen', title: '全屏弹窗', description: 'fullscreen: true 开启全屏弹窗模式。' },

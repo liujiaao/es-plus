@@ -180,10 +180,9 @@ const dialogProps = [
   { key: '2', prop: 'width', type: 'string | number', default: '520', desc: '弹窗宽度' },
   { key: '3', prop: 'render', type: 'function', default: '-', desc: '自定义渲染内容' },
   { key: '4', prop: 'configBtn', type: 'BtnConfig[]', default: '[]', desc: '底部按钮配置' },
-  { key: '5', prop: 'onSubmit', type: 'function', default: '-', desc: '确认回调，接收 close 函数' },
-  { key: '6', prop: 'onClosed', type: 'function', default: '-', desc: '关闭后回调' },
-  { key: '7', prop: 'isDraggable', type: 'boolean', default: 'false', desc: '是否可拖拽' },
-  { key: '8', prop: 'fullscreen', type: 'boolean', default: 'false', desc: '是否全屏' },
+  { key: '5', prop: 'onClosed', type: 'function', default: '-', desc: '关闭后回调' },
+  { key: '6', prop: 'isDraggable', type: 'boolean', default: 'false', desc: '是否可拖拽' },
+  { key: '7', prop: 'fullscreen', type: 'boolean', default: 'false', desc: '是否全屏' },
 ]
 </script>
 
