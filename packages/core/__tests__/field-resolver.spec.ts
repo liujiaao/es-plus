@@ -6,6 +6,7 @@ import {
   splitButtonsByDirection,
   splitToolbarButtonsByCode,
   getButtonPosition,
+  resolveButtonSide,
   filterButtonsByPermission,
   normalizeButtonsHideState,
   resolveButtonDisabled,
@@ -107,6 +108,57 @@ describe('field-resolver > 按钮分组', () => {
     expect(getButtonPosition(btn({ name: 'a', position: 'left' }))).toBe('left')
     expect(getButtonPosition(btn({ name: 'a', position: 'right' }))).toBe('right')
     expect(getButtonPosition(btn({ name: 'a', position: 'right', code: 1 }))).toBe('right')
+  })
+
+  // resolveButtonSide 是**唯一**的位置解析入口：表单按钮与表格按钮共用它，
+  // 两端的字段优先级与兜底方向**刻意不同**（见 field-resolver.ts 的注释）。
+  // 这组用例钉住的是 group A 修的缺陷：三端 EsForm 此前各自内联过滤、只读 direction，
+  // 生成出来的表单工具栏按钮（结构化配置只写 position）位置被静默丢弃、永远渲染到右侧。
+  describe('resolveButtonSide', () => {
+    it("kind='table'：position → code → 左（与 getButtonPosition 逐字一致，且不看 direction）", () => {
+      expect(resolveButtonSide(btn({ name: 'a' }), 'table')).toBe('left')
+      expect(resolveButtonSide(btn({ name: 'a', code: 2 }), 'table')).toBe('right')
+      expect(resolveButtonSide(btn({ name: 'a', position: 'right' }), 'table')).toBe('right')
+      expect(resolveButtonSide(btn({ name: 'a', position: 'right', code: 1 }), 'table')).toBe('right')
+      // direction 不参与表格链：把 direction 并进来会让「表格按钮写了 direction:'right'」
+      // 从左侧变到右侧，那是不必要的行为变更。
+      expect(resolveButtonSide(btn({ name: 'a', direction: 'right' }), 'table')).toBe('left')
+    })
+
+    it("kind='form'：direction → position → code → 右（表单文档化默认是右侧）", () => {
+      expect(resolveButtonSide(btn({ name: 'a' }), 'form')).toBe('right')
+      expect(resolveButtonSide(btn({ name: 'a', direction: 'left' }), 'form')).toBe('left')
+      expect(resolveButtonSide(btn({ name: 'a', position: 'left' }), 'form')).toBe('left')
+      expect(resolveButtonSide(btn({ name: 'a', code: 1 }), 'form')).toBe('left')
+      expect(resolveButtonSide(btn({ name: 'a', code: 2 }), 'form')).toBe('right')
+    })
+
+    it("kind='form'：direction 优先于 position（既有配置写了 direction 的不能被翻转）", () => {
+      expect(resolveButtonSide(btn({ name: 'a', direction: 'left', position: 'right' }), 'form')).toBe('left')
+      expect(resolveButtonSide(btn({ name: 'a', direction: 'right', position: 'left' }), 'form')).toBe('right')
+    })
+
+    it("kind='form'：只写表格那套字段（position/code）也能落到正确一侧", () => {
+      // 这正是 AI 按 MCP 指令生成的形态：只有 position（或旧别名 code），没有 direction。
+      // 修复前这类按钮一律被丢到右侧。
+      const r = splitButtonsByDirection([
+        btn({ name: 'a', position: 'left' }),
+        btn({ name: 'b', code: 1 }),
+        btn({ name: 'c', position: 'right' }),
+        btn({ name: 'd' }), // 不配 → 右侧（表单默认）
+      ])
+      expect(r.colLeftBtn.map((x) => x.name)).toEqual(['a', 'b'])
+      expect(r.colRightBtn.map((x) => x.name)).toEqual(['c', 'd'])
+    })
+
+    it('非法值视为未配置并继续 fallback，不再静默丢弃', () => {
+      // 注意作用域：**三端 EsForm 的内联过滤**（`it.direction === 'left'` / `=== 'right'`）
+      // 会把 direction:'center' 的按钮两栏都不放——静默丢弃，与本函数注释里「避免非法
+      // direction 的按钮被静默丢弃」的意图相反。core 这个函数此前写的是 `!== 'left'`，
+      // 本就不丢。本用例钉住的是「委托给 resolveButtonSide 之后这条性质没有被改坏」。
+      const r = splitButtonsByDirection([btn({ name: 'a', direction: 'center' as 'left' })])
+      expect(r.colRightBtn.map((x) => x.name)).toEqual(['a'])
+    })
   })
 })
 

@@ -83,7 +83,7 @@ Self-review checklist — run this against the ORIGINAL request BEFORE emitting:
 - Query / table / form partitions are right: system columns (id, createdAt) are
   inForm:false; detail-only fields are inQuery:false.
 - Every requested action is present; each Select/Cascader has dataOptions or apiParams.
-- Table buttons use code (1=left, 2=right), never position.
+- Table buttons use position ('left'/'right'); code 1=left / 2=right is the legacy alias.
 - Business logic the schema can't express (permission gates, conditional display,
   computed cells) is emitted as a typed extension point (permissionValue / formatter
   / render) and NOT silently dropped.

@@ -98,6 +98,35 @@ const TableBtnSchema = z
     code: (b.position === "right" ? 2 : b.position === "left" ? 1 : (b.code ?? 1)) as 1 | 2,
   }));
 
+/**
+ * Form-area toolbar button — mirrors the shared authoritative ToolbarBtnSchema.
+ *
+ * Same two-field contract as TableBtnSchema (`position` recommended, `code`
+ * legacy alias), but with the **opposite fallback**: an EsForm toolbar button
+ * with no position renders on the RIGHT (core's splitButtonsByDirection —
+ * "默认（不配 direction）视为右侧"), whereas a table button defaults to the
+ * left. Copying TableBtnSchema's `b.code ?? 1` here would silently move every
+ * unpositioned form button from right to left.
+ */
+const ToolbarBtnSchema = z
+  .object({
+    name: z.string().min(1),
+    key: z.string().optional(),
+    type: z.string().optional(),
+    icon: z.string().optional(),
+    position: z.enum(["left", "right"]).optional().describe("left | right (recommended positioning field; defaults to right)"),
+    code: z.union([z.literal(1), z.literal(2)]).optional().describe("1=left, 2=right (legacy alias of position; normalized automatically)"),
+    dialogKey: z.string().optional(),
+    actionType: z.string().optional(),
+    confirm: z.union([z.string(), z.boolean()]).optional(),
+    permissionValue: z.string().optional(),
+    triggerEvent: z.boolean().optional(),
+  })
+  .transform((b) => ({
+    ...b,
+    code: (b.position === "left" ? 1 : b.position === "right" ? 2 : (b.code ?? 2)) as 1 | 2,
+  }));
+
 // ── Structured config raw shape (the tool's input schema) ──────────────
 // Exposing the FULL structured shape as the tool's input — rather than a
 // single opaque `config` JSON string — turns MCP tool-use into constrained
@@ -109,8 +138,8 @@ const TableBtnSchema = z
 // StructuredCrudConfigSchema — the two zod versions can't share objects safely.
 // scripts/check-schema-contract.mjs guards the two copies against drift
 // (target enum must cover vue3/vue2/antdv; tableOptions must carry the height/
-// virtual contract fields; tableBtns must accept `position` and normalize it
-// into `code` via .transform()).
+// virtual contract fields; tableBtns AND toolbarBtns must accept `position` and
+// normalize it into `code` via .transform()).
 // That guard locates each field by a regex on its zod expression, so keep the
 // target/tableOptions/tableBtns declarations below in their existing textual
 // form (do not inline placeholder samples of those expressions in comments —
@@ -159,21 +188,7 @@ const configShape = {
       minFoldRows: z.number().int().optional(),
     })
     .optional(),
-  toolbarBtns: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        key: z.string().optional(),
-        type: z.string().optional(),
-        icon: z.string().optional(),
-        position: z.enum(["left", "right"]).optional().describe("left | right"),
-        dialogKey: z.string().optional(),
-        actionType: z.string().optional(),
-        confirm: z.union([z.string(), z.boolean()]).optional(),
-        permissionValue: z.string().optional(),
-      })
-    )
-    .optional(),
+  toolbarBtns: z.array(ToolbarBtnSchema).optional(),
   // NOTE: both `position` and `code` are accepted. `position` is the field the
   // renderer contract recommends (@es-plus/* BtnConfig marks `code` deprecated
   // and core's getButtonPosition reads `position` first); `code` is the legacy

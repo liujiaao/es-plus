@@ -217,6 +217,48 @@ describe('StructuredCrudConfigSchema — tableBtns 定位字段（position ↔ c
     expect(r.success).toBe(true)
     expect((r as { data: { toolbarBtns: Array<Record<string, unknown>> } }).data.toolbarBtns[0].position).toBe('right')
   })
+
+  // 两类按钮的**兜底方向相反**，这是最容易抄错的一处：
+  //   - 表格按钮：不配定位 → 左侧（core getButtonPosition「两者都未配时默认 'left'」）
+  //   - 表单工具栏按钮：不配定位 → 右侧（core splitButtonsByDirection「默认（不配 direction）视为右侧」）
+  // 把 TableBtnSchema 整段复制给 ToolbarBtnSchema 是最自然的写法，而症状是**所有未配
+  // position 的表单按钮静默翻到左侧** —— 解析成功、零告警、门禁也只要「有 transform」就放行。
+  // 这组用例与 check-schema-contract.mjs 的兜底方向断言一起把两个默认值钉死。
+  describe('两类按钮的兜底方向必须相反（表格=左 / 表单=右）', () => {
+    const parseToolbarBtn = (btn: Record<string, unknown>) => {
+      const r = StructuredCrudConfigSchema.safeParse({
+        name: 'Page',
+        apiUrl: '/api/x',
+        fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+        actions: ['add'],
+        toolbarBtns: [btn],
+      })
+      expect(r.success).toBe(true)
+      return (r as { data: { toolbarBtns: Array<Record<string, unknown>> } }).data.toolbarBtns[0]
+    }
+
+    it('表单按钮不配定位 → code:2（右侧，与 EsForm 的既有默认一致）', () => {
+      expect(parseToolbarBtn({ name: '重置' }).code).toBe(2)
+      expect(parseBtn({ name: '新增' }).code).toBe(1) // 表格按钮仍默认左侧
+    })
+
+    it("表单按钮 position:'left' → code:1", () => {
+      expect(parseToolbarBtn({ name: '重置', position: 'left' }).code).toBe(1)
+    })
+
+    it("表单按钮 position:'right' → code:2", () => {
+      expect(parseToolbarBtn({ name: '重置', position: 'right' }).code).toBe(2)
+    })
+
+    it("表单按钮只给 code 时保持原值（旧别名仍可用，code:1 不会被改写成右侧）", () => {
+      expect(parseToolbarBtn({ name: '重置', code: 1 }).code).toBe(1)
+      expect(parseToolbarBtn({ name: '重置', code: 2 }).code).toBe(2)
+    })
+
+    it('表单按钮两者冲突时以 position 为准', () => {
+      expect(parseToolbarBtn({ name: '重置', position: 'left', code: 2 }).code).toBe(1)
+    })
+  })
 })
 
 describe('StructuredCrudConfigSchema — surface listing', () => {

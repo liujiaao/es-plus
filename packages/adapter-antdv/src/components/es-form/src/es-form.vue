@@ -211,6 +211,7 @@ import {
   normalizeFormItem,
   parsePathSegments,
   applyAutoSpan,
+  resolveButtonSide,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -508,10 +509,12 @@ watch(
 
 const labelBtnWidth = computed(() => (formLayout.value.labelBtnWidth as string) || 'auto')
 
-// ─── 按钮分流（对齐 vue3：仅看 direction）────────────
+// ─── 按钮分流（委托 core 的唯一实现，三端一致）────────────
+// 此前三端各自内联 `direction === 'right' || !direction`，只认 direction ——
+// 配置里声明的 position/code 被静默丢弃，表单工具栏按钮永远渲到右侧。
 const colRightLeftList = computed(() => ({
-  colRightBtn: props.configBtn.filter((it) => it.direction === 'right' || !it.direction),
-  colLeftBtn: props.configBtn.filter((it) => it.direction === 'left'),
+  colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+  colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
 }))
 
 const isRenderBtn = computed(() => typeof props.renderBtn === 'function')

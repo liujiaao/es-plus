@@ -139,12 +139,100 @@ const STRUCTURED_CONFIG_SOURCES = [
 // 自动扩展、又不过度约束（结构化配置本就是 TableOptions 的子集）。
 const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName']
 
+/**
+ * 剥掉行注释与块注释。
+ *
+ * 为什么必须有：本守卫在原文上跑正则来断言「某字段存在」，而 `// rowClassName: z...`
+ * 里照样能匹配到 `rowClassName:` —— 把声明**改成注释**即可让守卫保持全绿却失去校验
+ * （已实测：注释掉 rowClassName 后本脚本仍输出 ✅）。剥注释后这类绕过会立刻失败。
+ *
+ * 必须**单趟从左到右**扫描，不能先跑一遍块注释正则再跑行注释正则：
+ * 这两个文件里存在 `// … @es-plus/星号 BtnConfig …` 形态的行注释（星号为块注释起始符），
+ * 先做块注释替换会把它当成块注释起点，一路吞到很远的结束符 —— 实测直接把
+ * `tableBtns` 声明整段吃掉，守卫随即报「定位不到 tableBtns」。单趟扫描在遇到
+ * `//` 时先跳到行尾，就不会把行注释里的起始符当成块注释起点。
+ *
+ * `//` 的判定排除前置冒号，避免吃掉 `https://…` / `esplus://…` 这类字面量。
+ */
+function stripComments(src) {
+  let out = ''
+  let i = 0
+  while (i < src.length) {
+    const two = src.slice(i, i + 2)
+    if (two === '/*') {
+      const end = src.indexOf('*/', i + 2)
+      if (end === -1) break // 未闭合：不猜，后面的内容一律丢弃（宁可漏也别误判为「存在」）
+      i = end + 2
+      continue
+    }
+    if (two === '//' && src[i - 1] !== ':') {
+      const end = src.indexOf('\n', i)
+      if (end === -1) break
+      out += '\n'
+      i = end + 1
+      continue
+    }
+    out += src[i]
+    i++
+  }
+  return out
+}
+
+/**
+ * 断言一个按钮 schema 同时接受 position 与 code，且 .transform() 真的把 position
+ * **映射**成 code。
+ *
+ * 只检查「有没有 .transform(」是不够的：`.transform((x) => x)` 这种空操作同样满足
+ * 文本匹配（已实测通过），而它恰恰会让 position:'right' 被静默丢掉。因此判据是该
+ * transform 体内必须**同时**出现 `code:` 赋值与对 `position` 的读取。
+ *
+ * @param src 已剥注释的源码
+ * @param opts.constName 具名 schema 常量名（shared 权威与 mcp 副本均为具名）
+ * @param opts.label 出错信息里的来源名
+ */
+function assertButtonPositionContract(src, { constName, label, fallback }) {
+  const block = src.match(
+    new RegExp(`const\\s+${constName}\\s*=\\s*z\\s*\\.object\\(\\{([\\s\\S]*?)\\}\\)[\\s\\S]{0,300}?\\.transform\\(([\\s\\S]{0,600})`)
+  )
+  if (!block) {
+    fail(`${label} 未能定位 ${constName} 的 .transform()（position 必须落成一致的 code）`)
+    return
+  }
+  const [, fields, transformBody] = block
+  if (!/\bcode\s*:/.test(fields)) {
+    fail(`${label} 的 ${constName} 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
+  }
+  if (!/\bposition\s*:/.test(fields)) {
+    fail(
+      `${label} 的 ${constName} 缺少 position 字段（渲染器契约推荐字段）——` +
+        `缺失会让 position 被 Zod 静默 strip，position 与 code 不一致时按钮跑到错误一侧且无任何报错`
+    )
+  }
+  if (!/code\s*:/.test(transformBody)) {
+    fail(
+      `${label} 的 ${constName}.transform() 没有产出 code —— 空操作 transform（如 \`(x) => x\`）` +
+        `同样能通过「存在性」检查，但归一化并未发生`
+    )
+  }
+  if (!/\.position\b/.test(transformBody)) {
+    fail(`${label} 的 ${constName}.transform() 没有读取 b.position —— 未把 position 映射成 code`)
+  }
+  // 兜底方向必须与调用方声明一致：表单按钮（EsForm）默认右侧、表格按钮默认左侧。
+  // 抄错方向的后果是**所有未配 position 的按钮静默翻到另一侧**，而上面几条断言全绿。
+  if (fallback && !new RegExp(`\\.code\\s*\\?\\?\\s*${fallback}\\b`).test(transformBody)) {
+    fail(
+      `${label} 的 ${constName}.transform() 兜底方向应为 ${fallback}（${fallback === 2 ? '表单按钮默认右侧' : '表格按钮默认左侧'}）—— ` +
+        `抄错方向会让所有未配 position 的按钮静默翻到另一侧`
+    )
+  }
+}
+
 function checkStructuredConfigZod() {
   let ok = true
   const jsonTO = readSchema('table-options.schema.json').properties ?? {}
 
   for (const { file, label } of STRUCTURED_CONFIG_SOURCES) {
-    const src = read(file)
+    const src = stripComments(read(file))
 
     // target 枚举必须覆盖三个渲染目标
     const tm = src.match(/target:\s*z\s*\.enum\(\[([^\]]*)\]\)/)
@@ -169,8 +257,7 @@ function checkStructuredConfigZod() {
       }
     }
 
-    // tableBtns 定位字段：`position`（渲染器契约推荐：三端 BtnConfig 都把 code 标为
-    // deprecated，core getButtonPosition 优先读 position）与 `code`（旧别名）都必须被**接受**，
+    // 定位字段契约：`position`（渲染器契约推荐）与 `code`（旧别名）都必须被**接受**，
     // 且必须由 .transform() 归一化成「与 position 一致的 code」。
     //
     // 为什么归一化是硬要求：Zod 默认 strip 未知键。若只声明 code 而不接受 position，
@@ -179,36 +266,28 @@ function checkStructuredConfigZod() {
     // 反之，若只接受 position 而不落 code，下游按 code 读取的地方（golden 评分器、
     // 生成物 JSON）会拿不到定位信息。两者必须同时存在并归一化。
     //
-    // 兼容两种写法：内联 `tableBtns: z.array(z.object({...}))`（mcp 副本）与
-    // 具名 `const TableBtnSchema = z.object({...})`（shared 权威）。
-    // 注意 `z\s*\.object`：z 与 .object 可能跨行（链式写法），不容忍空白会让守卫在
-    // 纯格式化改动下静默失配（把「定位失败」误报成契约漂移）。
-    const btnBlock =
-      src.match(/tableBtns:\s*z\s*\.array\(\s*z\s*\.object\(\{([\s\S]*?)\}\)\s*\)\s*\.optional\(\)/) ||
-      src.match(/const\s+TableBtnSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\}\)/)
-    if (!btnBlock) { fail(`未能在 ${label} 定位 tableBtns`); ok = false }
-    else {
-      if (!/\bcode:/.test(btnBlock[1])) {
-        fail(`${label} 的 tableBtns 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
-        ok = false
-      }
-      if (!/\bposition\s*:/.test(btnBlock[1])) {
-        fail(
-          `${label} 的 tableBtns 缺少 position 字段（渲染器契约推荐字段）——` +
-            `缺失会让 position 被 Zod 静默 strip，position:'right' 退化成 code:1（左侧）且无任何报错`
-        )
-        ok = false
-      }
-      // 归一化：两处副本都必须在 TableBtnSchema 上挂 .transform()，把 position 落成一致的 code。
-      // 允许 object 与 transform 之间存在说明性注释（两处副本的注释长度不同）。
-      if (!/const\s+TableBtnSchema\s*=\s*z\s*\.object\(\{[\s\S]*?\}\)[\s\S]{0,2000}?\.transform\(/.test(src)) {
-        fail(`${label} 的 TableBtnSchema 缺少 .transform() 归一化（position 必须落成一致的 code）`)
+    // **两类按钮都要查**。此前只查 tableBtns，正因为不对称才让 toolbarBtns 长期只有
+    // position、没有 code 与归一化，而三端 EsForm 又只读 direction —— 生成出来的表单
+    // 工具栏按钮的位置被静默丢弃、永远渲染到右侧。缺的那一边没人守，就一直缺着。
+    //
+    // 兜底方向也查（表单=2/right，表格=1/left）：两份 schema 长得几乎一样，把
+    // TableBtnSchema 整段抄给 ToolbarBtnSchema 是最容易犯的错，且症状是「所有未配
+    // position 的按钮翻到另一侧」这种大面积静默行为变更。
+    assertButtonPositionContract(src, { constName: 'TableBtnSchema', label, fallback: 1 })
+    assertButtonPositionContract(src, { constName: 'ToolbarBtnSchema', label, fallback: 2 })
+
+    // 字段引用点也必须成对：具名 schema 写好了却没被引用，等于没修。
+    for (const [field, constName] of [['tableBtns', 'TableBtnSchema'], ['toolbarBtns', 'ToolbarBtnSchema']]) {
+      const ref = src.match(new RegExp(`${field}\\s*:\\s*z\\s*\\.array\\(([^)]*)\\)`))
+      if (!ref) { fail(`未能在 ${label} 定位 ${field}`); ok = false }
+      else if (!ref[1].includes(constName)) {
+        fail(`${label} 的 ${field} 未引用 ${constName}（定位字段契约对它不生效）`)
         ok = false
       }
     }
   }
 
-  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段）`)
+  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)
 }
 
 checkFormTypeEnum()

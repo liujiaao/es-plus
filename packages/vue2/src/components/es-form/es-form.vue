@@ -162,7 +162,8 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
   resolveFormRules,
-  normalizeFormItem
+  normalizeFormItem,
+  resolveButtonSide,
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
@@ -500,8 +501,8 @@ export default defineComponent({
 
     // ─── 按钮分组（左右） ──
     const colRightLeftList = computed(() => ({
-      colRightBtn: props.configBtn.filter((it) => it.direction === 'right' || !it.direction),
-      colLeftBtn: props.configBtn.filter((it) => it.direction === 'left'),
+      colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+      colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
     }))
 
     const isRenderBtn = computed(() => typeof props.renderBtn === 'function')

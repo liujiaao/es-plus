@@ -107,6 +107,7 @@ export {
   splitButtonsByDirection,
   splitToolbarButtonsByCode,
   getButtonPosition,
+  resolveButtonSide,
   filterButtonsByPermission,
   normalizeButtonsHideState,
   resolveButtonDisabled,

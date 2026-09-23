@@ -14,6 +14,26 @@
 
 import type { BtnConfig, FormItemOption, ModelData } from './types'
 
+/**
+ * 位置解析所需的**最小**输入 —— 只含定位相关的三个字段。
+ *
+ * 为什么不直接用 `BtnConfig`：三端各自声明了 BtnConfig，彼此并不结构兼容。
+ * 例如 adapter-antdv 的 `type` 是 `... | string`（ANT 支持 dashed/text/link），
+ * core 的 `type` 是字面量联合 —— 一旦签名要求完整的 core `BtnConfig`，
+ * antdv 传自己的按钮进来就是类型错误，哪怕本函数根本不读 `type`。
+ *
+ * 只依赖真正读到的三个字段，耦合面就从「整张按钮契约」缩到「定位语义」，
+ * 三端都能直接调用，且任一端扩展自己的 BtnConfig 都不会再牵动这里。
+ */
+export interface ButtonSideInput {
+  /** 推荐字段：'left' | 'right' */
+  position?: 'left' | 'right'
+  /** 表单按钮的既有字段（direction 在表单语义里优先于 position） */
+  direction?: 'left' | 'right'
+  /** @deprecated 旧别名：1 = left，2 = right */
+  code?: 1 | 2
+}
+
 // ============================================================================
 // 表单字段过滤与 span 计算
 // ============================================================================
@@ -97,10 +117,13 @@ export function splitButtonsByDirection(buttons: BtnConfig[]): {
   colLeftBtn: BtnConfig[]
   colRightBtn: BtnConfig[]
 } {
+  // 改为委托 resolveButtonSide（kind='form'），使表单按钮的位置判定只有一处实现 ——
+  // 此前本函数与三端 EsForm 各自内联的过滤是四份副本，其中三份忽略 position/code。
+  // 语义变化仅一处：非法 direction（如 'center'）从前会**两栏都不放（静默丢弃）**，
+  // 现在归 fallback（右侧）。这正是本函数注释里「避免非法 direction 的按钮被静默丢弃」的本意。
   return {
-    // 除 'left' 外一律归右（含未配置与非法值），避免非法 direction 的按钮被静默丢弃
-    colRightBtn: buttons.filter((it) => it.direction !== 'left'),
-    colLeftBtn: buttons.filter((it) => it.direction === 'left'),
+    colRightBtn: buttons.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+    colLeftBtn: buttons.filter((it) => resolveButtonSide(it, 'form') === 'left'),
   }
 }
 
@@ -112,10 +135,45 @@ export function splitButtonsByDirection(buttons: BtnConfig[]): {
  * - 两者都未配时默认 'left'
  */
 export function getButtonPosition(btn: BtnConfig): 'left' | 'right' {
-  if (btn.position) return btn.position
-  // fallback: 旧 code 映射
-  if (btn.code === 2) return 'right'
-  return 'left'
+  return resolveButtonSide(btn, 'table')
+}
+
+/**
+ * 按钮位置的**唯一**解析入口 —— 表单按钮与表格工具栏按钮共用。
+ *
+ * 为什么要有这个函数：定位字段此前有三套语义、四处实现 ——
+ *   - 表格工具栏：`getButtonPosition` 读 position → code（默认左）；
+ *   - 表单按钮：三端 EsForm **各自内联**的过滤只读 `direction`（默认右），
+ *     position/code 被完全忽略；
+ *   - `splitButtonsByDirection`（core 内）也只读 direction。
+ * 后果：`structured-config.schema.ts` 的 `ToolbarBtnSchema` 只声明 `position`，
+ * 而生成出来的表单工具栏按钮的 position 被**静默丢弃、永远渲染到右侧**。
+ *
+ * 两种 kind 的字段优先级**不同，这是刻意的、有文档依据的**，不能统一：
+ *   - `'form'`：direction → position → code → **right**。表单按钮的文档化字段就是
+ *     `direction`（`types.ts` 的 "表单按钮方向"、`splitButtonsByDirection` 的
+ *     "默认（不配 direction）视为右侧"），所以它必须排第一 —— 否则同时写了
+ *     `direction:'left'` 与 `position:'right'` 的既有配置会被**翻转**（今天 direction 胜）。
+ *     再兜住 position/code 是为了让「只写了表格那套字段」的配置（含 AI 现按 MCP 指令
+ *     生成的 `code:2`）也能落到正确一侧，而不是被静默丢到右边。
+ *   - `'table'`：position → code → **left**，与 `getButtonPosition` 历史语义逐字一致；
+ *     **不含 direction** —— 把 direction 并进表格链会让「表格按钮写了 direction:'right'」
+ *     从左侧变到右侧，那是不必要的行为变更。
+ *
+ * 非法值（如 `direction:'center'`）视为未配置并继续 fallback：此前三端内联过滤会把这类
+ * 按钮**两栏都不放（静默丢弃）**，与 `splitButtonsByDirection` 注释里「避免非法 direction
+ * 的按钮被静默丢弃」的意图相反。
+ */
+export function resolveButtonSide(btn: ButtonSideInput, kind: 'form' | 'table'): 'left' | 'right' {
+  const only = (v: unknown): 'left' | 'right' | undefined =>
+    v === 'left' || v === 'right' ? v : undefined
+
+  const position = only(btn.position)
+  const direction = only(btn.direction)
+  const code = btn.code === 2 ? 'right' : btn.code === 1 ? 'left' : undefined
+
+  if (kind === 'form') return direction ?? position ?? code ?? 'right'
+  return position ?? code ?? 'left'
 }
 
 /**

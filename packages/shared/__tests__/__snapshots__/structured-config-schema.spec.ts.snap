@@ -104,6 +104,7 @@ exports[`StructuredCrudConfigSchema — accepts valid configs > accepts the full
   "target": "vue3",
   "toolbarBtns": [
     {
+      "code": 2,
       "key": "export-all",
       "name": "导出全部",
       "triggerEvent": true,

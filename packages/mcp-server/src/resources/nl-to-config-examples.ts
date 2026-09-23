@@ -72,10 +72,10 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
-    label: "Table button positioning (code:1 left / code:2 right) + formatter extension point",
+    label: "Table button positioning (position:'left' / position:'right') + formatter extension point",
     nl: "订单管理：表格上方左侧有“新增订单”按钮，右侧有“批量导出”按钮；表格列有订单号、金额、下单时间；每行有查看、删除操作。",
     reasoning:
-      "“左侧”→ code:1，“右侧”→ code:2（code 是三端唯一同构定位字段，绝不用 position）；金额需格式化显示 → 用 formatter 扩展点表达展示逻辑；行内操作 → operationColumn.btns。",
+      "“左侧”→ position:'left'，“右侧”→ position:'right'（position 是三端共同推荐、自解释的定位字段；legacy code:1/2 仍被接受，但新配置不要写）；金额需格式化显示 → 用 formatter 扩展点表达展示逻辑；行内操作 → operationColumn.btns。",
     config: {
       name: "OrderManage",
       apiUrl: "/api/orders",
@@ -92,8 +92,8 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
       ],
       actions: ["add", "delete", "view"],
       tableBtns: [
-        { name: "新增订单", type: "primary", code: 1, dialogKey: "add" },
-        { name: "批量导出", code: 2, actionType: "export" },
+        { name: "新增订单", type: "primary", position: "left", dialogKey: "add" },
+        { name: "批量导出", position: "right", actionType: "export" },
       ],
       operationColumn: {
         label: "操作",
@@ -205,7 +205,7 @@ function buildContent(): string {
     "- Enumerated states (status/type/gender) → `Select` with `dataOptions`, or `apiParams` when options come from an API.",
     "- Dates/times → `DatePicker`/`TimePicker`; images/files → `Upload`; on/off → `Switch`.",
     "- System-generated columns (createdAt, id) → `inForm:false`; detail-only fields → `inQuery:false`.",
-    "- Button placement: “left” → `code:1`, “right” → `code:2` (never emit `position`).",
+    "- Button placement: \"left\" → `position:'left'`, \"right\" → `position:'right'` (`code:1`/`code:2` is the legacy alias — still accepted, but prefer `position`).",
     "- Requirements the schema can't express (permission gating, conditional display, computed values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them.",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",

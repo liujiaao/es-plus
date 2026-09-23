@@ -178,7 +178,8 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
   resolveFormRules,
-  normalizeFormItem
+  normalizeFormItem,
+  resolveButtonSide,
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -354,8 +355,8 @@ watch(
 )
 
 const colRightLeftList = computed(() => ({
-  colRightBtn: props.configBtn.filter((it) => it.direction === 'right' || !it.direction),
-  colLeftBtn: props.configBtn.filter((it) => it.direction === 'left')
+  colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+  colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
 }))
 
 const isRenderBtn = computed(() => typeof props.renderBtn === 'function')

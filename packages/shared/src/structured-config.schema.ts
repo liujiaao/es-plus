@@ -58,18 +58,33 @@ const FieldConfigSchema = z.object({
   permissionValue: z.string().optional(),
 })
 
-const ToolbarBtnSchema = z.object({
-  name: z.string().min(1),
-  key: z.string().optional(),
-  type: z.string().optional(),
-  icon: z.string().optional(),
-  position: z.enum(['left', 'right']).optional().describe('left | right'),
-  dialogKey: z.string().optional(),
-  actionType: z.string().optional(),
-  confirm: z.union([z.string(), z.boolean()]).optional(),
-  permissionValue: z.string().optional(),
-  triggerEvent: z.boolean().optional(),
-})
+const ToolbarBtnSchema = z
+  .object({
+    name: z.string().min(1),
+    key: z.string().optional(),
+    type: z.string().optional(),
+    icon: z.string().optional(),
+    position: z.enum(['left', 'right']).optional().describe('left | right (recommended positioning field)'),
+    code: z
+      .union([z.literal(1), z.literal(2)])
+      .optional()
+      .describe('1=left, 2=right (legacy alias of position; normalized automatically)'),
+    dialogKey: z.string().optional(),
+    actionType: z.string().optional(),
+    confirm: z.union([z.string(), z.boolean()]).optional(),
+    permissionValue: z.string().optional(),
+    triggerEvent: z.boolean().optional(),
+  })
+  // 与 TableBtnSchema 同形，但**兜底方向相反**：表单工具栏按钮的文档化默认是**右侧**
+  // （core 的 splitButtonsByDirection「默认（不配 direction）视为右侧」），表格按钮才是左侧。
+  // 抄 TableBtnSchema 的 `b.code ?? 1` 会把每个没写 position 的表单按钮从右侧翻到左侧。
+  //
+  // 背景与 TableBtnSchema 相同：Zod 默认 strip 未知键，`code` 未声明时宿主 LLM 写
+  // `code:1`（左侧）会被静默丢弃、按钮落到默认的右侧，解析成功且无告警。
+  .transform((b) => ({
+    ...b,
+    code: (b.position === 'left' ? 1 : b.position === 'right' ? 2 : (b.code ?? 2)) as 1 | 2,
+  }))
 
 const TableBtnSchema = z
   .object({
@@ -172,8 +187,8 @@ export const StructuredCrudConfigSchema = z.object({
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Query form collapses when rows exceed this number'),
   }).optional().describe('Query form layout config'),
-  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Toolbar buttons rendered in EsForm button area (legacy positioning)'),
-  tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (code:1=left, code:2=right) rendered above EsTable'),
+  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Toolbar buttons rendered in EsForm button area (position:left|right; defaults to right)'),
+  tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (position:left|right, recommended; legacy code:1=left/2=right) rendered above EsTable'),
   operationColumn: OperationColumnSchema.optional().describe('Operation column config (false = hidden)'),
   dialogs: z.record(z.string(), DialogConfigSchema).optional().describe('Multi-dialog configs keyed by dialog ID'),
 })

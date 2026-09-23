@@ -56,9 +56,14 @@ export interface BtnConfig {
   type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
   size?: 'large' | 'default' | 'small'
   icon?: string
+  /** Button position (recommended, self-documenting): 'left' | 'right' */
+  position?: 'left' | 'right'
+  /** @deprecated Use position instead. 1=left, 2=right */
+  code?: 1 | 2
   direction?: 'left' | 'right'
   loading?: boolean
   disabled?: boolean | (() => boolean)
+  permissionValue?: string
   triggerEvent?: boolean
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
   [key: string]: unknown

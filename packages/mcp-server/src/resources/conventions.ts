@@ -414,8 +414,14 @@ interface StructuredCrudConfig {
 
 interface ToolbarBtn {          // rendered in EsForm button area
   name: string; key?: string; type?: string; icon?: string
+  position?: 'left' | 'right'   // 'left' | 'right'. Default when omitted: 'right'
+                                // (the documented EsForm default — NOT the table
+                                // default). Resolved by core's resolveButtonSide.
+  code?: 1 | 2                  // Legacy alias: 1 = left, 2 = right (default). Still
+                                // accepted; keep it consistent with \`position\`.
   dialogKey?: string; actionType?: string
   confirm?: string | boolean; permissionValue?: string
+  triggerEvent?: boolean
 }
 
 interface TableBtn {            // toolbar button above the table

@@ -27,5 +27,5 @@
       ]
     }
   },
-  "notes": "tableBtns code:1=left, code:2=right; formatter extension point for money display"
+  "notes": "tableBtns 定位 + formatter 扩展点（金额格式化）。本用例**刻意使用 legacy 的 code:1=left / code:2=right**：position 才是推荐字段（三端 BtnConfig 把 code 标为 deprecated），新配置应写 position:'left'/'right'，但 code 仍被接受且必须与 position 逐字等价 —— 这里就是那条等价性的活证据，换掉它等于丢掉旧别名的覆盖。（推荐字段形态由 24-position-tablebtns 覆盖）。"
 }

@@ -55,7 +55,8 @@ Two passes, every time:
    status/type/enum → Select (dataOptions, or apiParams for remote); date/time →
    DatePicker/TimePicker; image/file → Upload; on/off → Switch. System columns →
    \`inForm:false\`; detail-only → \`inQuery:false\`. Button placement: left →
-   \`code:1\`, right → \`code:2\` (never \`position\`).
+   \`position:'left'\`, right → \`position:'right'\` (\`code:1\`/\`code:2\` is the
+   legacy alias; still accepted, but prefer \`position\`).
 3. **Self-review** against the original request BEFORE calling:
    - Did every field the user named make it in, with the right \`formtype\`?
    - Are query / table / form partitions (\`inQuery\`/\`inTable\`/\`inForm\`) right?
