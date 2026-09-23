@@ -8,7 +8,7 @@
       :width="props.width"
       :show-close="false"
       :before-close="onBeforeClose"
-      :fullscreen="(filteredAttrs?.fullscreen as boolean) ?? isFullscreen"
+      :fullscreen="isFullscreen"
     >
       <template #header>
         <template v-if="props.renderHeader">
@@ -128,7 +128,9 @@ const extended = Object.fromEntries(Object.entries(ElementPlusIconsVue).map(([ke
 
 const lyFormInstance = ref(null)
 const renderBodyRefsObject = reactive<Record<string, any>>({})
-const isFullscreen = ref(false)
+// fullscreen 是声明 prop（Vue 会把它从 attrs 摘走），文档语义为「初值」——
+// 对齐 vue2 `ref(!!props.fullscreen)` / antdv `ref(props.fullscreen || false)`。
+const isFullscreen = ref(!!props.fullscreen)
 const dialogInstance = instance
 const locale = ref(zhCn)
 
@@ -182,7 +184,9 @@ const closeFullscreen = () => {
 }
 
 const handleFullscreen = () => {
-  if (attrs?.fullscreen) return
+  // 此处原本有一句 `if (attrs?.fullscreen) return`：fullscreen 是声明 prop，
+  // 永远不在 attrs 里，该守卫从未生效（死代码）。vue2 / antdv 的切换都不设闸，
+  // 这里保持三端一致 —— prop 只定初值，之后允许自由切换。
   isFullscreen.value = !isFullscreen.value
 }
 
