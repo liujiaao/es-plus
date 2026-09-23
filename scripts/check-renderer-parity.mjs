@@ -85,16 +85,30 @@ const UNION_SOURCES = [
 /**
  * 抽取每个 formtype 键**到下一个键之间**的源码窗口。
  * 行为层校验用：只要该 key 的窗口里出现契约声明的组件 token，就认为实现未被换掉。
+ *
+ * 窗口上界必须止于 Map 字面量的收尾（`])`），不能一路切到文件尾：最后一个分支的
+ * 「窗口」原本会吞掉文件后半段（模块级的 renderXxx 辅助函数、类型声明…），那些
+ * 与分支无关的代码会污染窗口内的 token 统计。实测就是 antdv 的 Upload 分支窗口
+ * 因为一路到 EOF 而「含有」renderDatePicker / renderTimePicker 两个它根本没用的 token。
  */
+function mapEndIndex(src) {
+  const open = src.indexOf('new Map')
+  if (open < 0) return src.length
+  const rel = src.slice(open).search(/\n\s*\]\s*\)/)
+  return rel < 0 ? src.length : open + rel
+}
+
 function extractBranchWindows(path) {
   const src = readStripped(path)
   const keys = [...src.matchAll(/^\s*'([A-Z][a-zA-Z0-9]*)',\s*$/gm)].map((m) => ({
     key: m[1],
     i: m.index,
   }))
+  const end = mapEndIndex(src)
   const map = new Map()
   for (let k = 0; k < keys.length; k++) {
-    map.set(keys[k].key, src.slice(keys[k].i, k + 1 < keys.length ? keys[k + 1].i : src.length))
+    const stop = k + 1 < keys.length ? Math.min(keys[k + 1].i, end) : end
+    map.set(keys[k].key, src.slice(keys[k].i, stop))
   }
   return map
 }
@@ -192,6 +206,31 @@ function main() {
         fail = true
         console.error(
           `❌ ${name}: formtype '${key}' 的分支未绑定契约组件（期望其一：${tokens.join(' / ')}）—— 实现可能被换成了别的控件`
+        )
+        continue
+      }
+
+      // 4b. 反向断言：窗口里不得出现**其它** formtype 的契约组件 token。
+      // 只做正向匹配时，「把实现换成别的控件、顺手在窗口里留一个非注释的期望 token」
+      // 就能通过 —— 实测：DatePicker 分支换成 ElInput、旁边留一个死掉的 ElDatePicker
+      // 引用即可（正向匹配只看「有没有」，不看「是不是真的在用」）。
+      // 成对断言把「换了控件」这件事变成两个信号：期望 token 还在 + 别的控件 token 不该在。
+      //
+      // 该端若对该 formtype 已登记 deviation（有意的差异/降级实现），豁免此项 ——
+      // 差异实现天然可能引用别的控件，这是既有且已文档化的机制，不再另立登记表。
+      if (entry.deviation && entry.deviation[name]) continue
+      const foreign = []
+      for (const other of contractKeys) {
+        if (other === key) continue
+        for (const t of FORM_RENDER_CONTRACT[other][name] || []) {
+          if (tokenRe(t).test(win)) foreign.push(`${other}(${t})`)
+        }
+      }
+      if (foreign.length) {
+        fail = true
+        console.error(
+          `❌ ${name}: formtype '${key}' 的分支出现了别的 formtype 的契约组件：${foreign.join(', ')}` +
+            ` —— 实现可能已被换掉（若为有意的交叉引用，请在该 formtype 登记 deviation 说明原因）`
         )
       }
     }
