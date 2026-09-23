@@ -7,6 +7,16 @@
  * 目的：兑现“换渲染器只换 import 路径”的家族承诺，防止某个包漏导出/多导出
  * 契约类型而悄悄漂移。
  *
+ * 两条断言：
+ *   1. 每个渲染器 ⊇ PUBLIC_CONTRACT_TYPES（漏导出）；
+ *   2. 三端的导出集合彼此一致 —— 只存在于某一端的类型必须登记在 RENDERER_SPECIFIC
+ *      并写明原因（多导出）。
+ *
+ * 为什么第 2 条是「三端两两一致」而不是「⊆ 契约清单」：index.ts 本来就会导出契约
+ * 清单之外的类型（`EsFormProps`/`EsTableExpose` 之类），断言子集会立刻误报。
+ * 但「**只有一端**导出某名字」恰恰是承诺被破坏的形状：使用者按 vue3 写完再换 import
+ * 路径到 vue2，那个名字就消失了 —— 而此前只查缺失，这种不对称无人发现。
+ *
  * 用法：node scripts/check-type-exports.mjs
  * 退出码：0 = 全部一致；1 = 有缺失/漂移。
  */
@@ -22,6 +32,27 @@ const RENDERERS = [
   { name: '@es-plus/vue2', index: 'packages/vue2/src/index.ts' },
   { name: '@es-plus/adapter-antdv', index: 'packages/adapter-antdv/src/index.ts' },
 ]
+
+/**
+ * 允许「只有某一端导出」的端特化类型登记表。
+ * key = `渲染器包名.类型名`，value = 原因。新增条目请写明为什么它不该三端共有。
+ */
+const RENDERER_SPECIFIC = new Map([
+  [
+    '@es-plus/adapter-antdv.CrudPageProps',
+    'antdv 的 es-crud-page 以独立 types 文件声明 Props/Emits/Expose 并对外导出；vue3/vue2 的对应组件未导出这三个类型',
+  ],
+  ['@es-plus/adapter-antdv.CrudPageEmits', '同上（antdv 端特化）'],
+  ['@es-plus/adapter-antdv.CrudPageExpose', '同上（antdv 端特化）'],
+  [
+    '@es-plus/adapter-antdv.EsPlusGlobalConfig',
+    'antdv 的插件全局配置类型（注释写明「对齐 vue3 最小集」）；vue3/vue2 未导出同名类型',
+  ],
+  [
+    '@es-plus/vue2.TableBtnConfig',
+    'vue2 的 crud-page 在 CrudBtnConfig 之上再声明 position/code（types.ts:56）；vue3/antdv 未导出该扩展名',
+  ],
+])
 
 /** 从 public-types.ts 提取权威契约类型清单 */
 function readContractList() {
@@ -84,10 +115,48 @@ function main() {
     }
   }
 
+  // ── 多导出 / 不对称：只存在于某一端的导出名 ──────────────
+  const all = new Set(RENDERERS.flatMap((r) => [...perPkg[r.name]]))
+  const onlyInOne = [...all].filter((n) => RENDERERS.some((r) => !perPkg[r.name].has(n)))
+  const unregistered = onlyInOne.filter((n) => {
+    const owners = RENDERERS.filter((r) => perPkg[r.name].has(n)).map((r) => r.name)
+    // 登记表按「渲染器.类型名」登记，逐个所有者检查
+    return owners.some((o) => !RENDERER_SPECIFIC.has(`${o}.${n}`))
+  })
+  if (unregistered.length) {
+    failed = true
+    console.error(`❌ 有 ${unregistered.length} 个类型只被部分渲染器导出（破坏「换 import 路径」承诺）：`)
+    for (const n of unregistered) {
+      const owners = RENDERERS.filter((r) => perPkg[r.name].has(n)).map((r) => r.name)
+      const absent = RENDERERS.filter((r) => !perPkg[r.name].has(n)).map((r) => r.name)
+      console.error(`   - ${n}：有 ${owners.join(', ')}；无 ${absent.join(', ')}`)
+    }
+    console.error('   要么补齐三端导出，要么逐端登记进 RENDERER_SPECIFIC 并写明原因。\n')
+  } else if (onlyInOne.length) {
+    console.log(`✅ ${onlyInOne.length} 个端特化导出均已登记（${onlyInOne.join(', ')}）`)
+  }
+
+  // 登记表过期：该名字如今已是三端共有，或已不再被导出
+  const stale = []
+  for (const key of RENDERER_SPECIFIC.keys()) {
+    const dot = key.indexOf('.')
+    const pkg = key.slice(0, dot)
+    const name = key.slice(dot + 1)
+    if (!all.has(name)) stale.push(`${key}（该类型已不再被任何端导出）`)
+    else if (!onlyInOne.includes(name)) stale.push(`${key}（${name} 如今三端都导出，请移除该登记）`)
+    else if (!perPkg[pkg]?.has(name)) stale.push(`${key}（${pkg} 并未导出 ${name}）`)
+  }
+  if (stale.length) {
+    failed = true
+    console.error(`❌ RENDERER_SPECIFIC 含过期条目（请清理）：`)
+    for (const s of stale) console.error(`   - ${s}`)
+    console.error('')
+  }
+
   console.log('')
 
   if (failed) {
-    console.error('契约类型导出不一致 —— 请补齐上述缺失导出，或同步更新 core/public-types.ts。')
+    console.error('契约类型导出不一致 —— 请补齐缺失导出，或同步更新 core/public-types.ts / RENDERER_SPECIFIC。')
     process.exit(1)
   }
   console.log('三个渲染器契约类型导出完全一致 ✅')
