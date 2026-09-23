@@ -87,8 +87,14 @@ export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown
  *   1. 顶层 `httpRequest` —— core 权威字段（app.use(EsPlus, { httpRequest })）
  *   2. `EsTable/EsForm.methods.$httpRequest` —— vue3 / adapter-antdv 原样透传的 options.methods
  *   3. `EsTable/EsForm.$httpRequest` —— vue2 normalizeLegacyOptions 展平 methods 之后
+ *
+ * 导出给渲染层复用：EsForm 的字段级远端取数此前只读 `$esPlusForm.$httpRequest`
+ * （等价于第 2/3 条），完全看不到顶层 `httpRequest` —— 而顶层才是 core 的权威字段，
+ * 也是未配置时错误提示里推荐给用户的写法。于是「按文档配了顶层 httpRequest」的应用里，
+ * EsForm 的远端下拉取不到请求函数（表现为挂起），EsTable 却一切正常。
+ * 渲染层统一回落到这里，三种键位约定只需维护这一份。
  */
-function resolveHttpRequest(cfg: EsPlusGlobalConfig): HttpRequestFn | null {
+export function resolveHttpRequest(cfg: EsPlusGlobalConfig): HttpRequestFn | null {
   if (typeof cfg.httpRequest === 'function') return cfg.httpRequest as HttpRequestFn
   for (const key of ['EsTable', 'EsForm'] as const) {
     const sub = cfg[key] as Record<string, unknown> | undefined

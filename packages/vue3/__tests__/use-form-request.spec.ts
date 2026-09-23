@@ -370,13 +370,21 @@ describe('useFormRequest', () => {
       expect(mockHttpRequest).not.toHaveBeenCalled()
     })
 
-    it('does nothing when no httpRequest function is available', () => {
+    it('无 httpRequest 可用时给出可操作的错误，而不是静默什么都不做', () => {
+      // 契约变更（回归：此前断言的是「不抛错就行」= 静默 return）：
+      // 静默 return 让 httpRequestFormInstance 的 new Promise 永不 settle ——
+      // 远端下拉整体挂起且没有任何线索。现在必须走 fail 回调（有 fail 时）
+      // 或直接抛出（没有 fail 时）。详见 core/src/request.ts 的注释。
       const { queryTableListMethod } = useFormRequest()
 
-      // Should not throw
+      const fail = vi.fn()
+      queryTableListMethod({}, { apiParams: createApiParams(), fail })
+      expect(fail).toHaveBeenCalledTimes(1)
+      expect((fail.mock.calls[0][0] as Error).message).toContain('httpRequest')
+
       expect(() => {
         queryTableListMethod({}, { apiParams: createApiParams() })
-      }).not.toThrow()
+      }).toThrow(/httpRequest/)
     })
 
     it('calls httpRequest with correct payload', () => {

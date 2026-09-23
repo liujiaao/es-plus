@@ -40,6 +40,7 @@ export {
   getGlobalConfig,
   resetGlobalConfig,
   httpRequest,
+  resolveHttpRequest,
 } from './config'
 export type { EsPlusGlobalConfig, HttpRequestFn } from './config'
 

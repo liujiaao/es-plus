@@ -178,6 +178,26 @@ describe('request > queryTableListMethod', () => {
     expect(local).toHaveBeenCalled()
     expect(global).not.toHaveBeenCalled()
   })
+
+  it('一个请求函数都没有（字段级与全局都空）→ 调 fail 并给出可操作的错误', () => {
+    // 回归：此前这里是 `if (!requestFn) return` —— 既不出错也不回调，
+    // 而调用方 httpRequestFormInstance 的 new Promise 因此永不 settle：
+    // 远端下拉整体挂起，且没有任何报错指向"忘记配置 httpRequest"。
+    const fail = vi.fn()
+    queryTableListMethod({}, { apiParams: { url: '/x' }, fail })
+
+    // 同步就必须已经回调 —— 不能是"以后会回调"
+    expect(fail).toHaveBeenCalledTimes(1)
+    const err = fail.mock.calls[0][0] as Error
+    expect(err).toBeInstanceOf(Error)
+    expect(err.message).toContain('httpRequest')
+    // 错误信息必须可操作：直接给出推荐的配置写法
+    expect(err.message).toContain('app.use(EsPlus')
+  })
+
+  it('一个请求函数都没有且没给 fail → 抛出，而不是静默吞掉', () => {
+    expect(() => queryTableListMethod({}, { apiParams: { url: '/x' } })).toThrow(/httpRequest/)
+  })
 })
 
 describe('request > httpRequestFormInstance', () => {
@@ -230,6 +250,18 @@ describe('request > httpRequestFormInstance', () => {
       new Promise((r) => setTimeout(() => r('timeout'), 200))
     ])
     expect(outcome).toBe('resolved')
+  })
+
+  it('一个请求函数都没有 → Promise reject 而不是永久挂起（回归：此前永不 settle）', async () => {
+    const rows = { prop: 'f', apiParams: { url: '/x' } }
+    const outcome = await Promise.race([
+      httpRequestFormInstance({}, { apiParams: rows.apiParams }, rows as any).then(
+        () => 'resolved',
+        (e: Error) => (e.message.includes('httpRequest') ? 'rejected-with-hint' : 'rejected')
+      ),
+      new Promise((r) => setTimeout(() => r('timeout'), 200)),
+    ])
+    expect(outcome).toBe('rejected-with-hint')
   })
 })
 

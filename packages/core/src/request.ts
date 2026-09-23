@@ -181,7 +181,30 @@ export function queryTableListMethod(
   }
 
   const requestFn = options.httpRequest || httpRequestGlobal
-  if (!requestFn) return
+  if (!requestFn) {
+    // 不再静默 return。此前这里直接返回，而调用方（httpRequestFormInstance 的
+    // `new Promise`）既拿不到 success 也拿不到 fail —— Promise **永不 settle**，
+    // 远端下拉选项整体挂起且没有任何报错。这是 :190-191 已经修过一次的同一个洞
+    // （那次修的是「非对象响应不调 success」），只是漏在更早的这个 return 上。
+    //
+    // 走 options.fail 而不是抛错：真实调用方（三端 EsTable 的翻页/查询）都传了 fail，
+    // 并统一接到 surfaceRequestError → requestError + emit('request-error')，
+    // 于是「忘记配置 httpRequest」会显示为该有的失败反馈，而不是空表格或整页崩。
+    // 措辞与 config.ts 的 httpRequest 保持一致。
+    const err = new Error(
+      '[es-plus] 未配置 httpRequest：字段级 options.httpRequest 与全局 httpRequest 均为空。\n' +
+        '请在应用入口配置全局请求函数，例如：\n' +
+        '  app.use(EsPlus, { httpRequest: (params) => axios(params) })\n' +
+        '  // 或（兼容旧约定）app.use(EsPlus, { EsTable: { methods: { $httpRequest } } })'
+    )
+    if (typeof options.fail === 'function') {
+      options.fail(err)
+    } else {
+      // 连 fail 都没给：无处投递，就只能抛 —— 静默吞掉正是本缺陷本身。
+      throw err
+    }
+    return
+  }
 
   requestFn(requestPayload)
     .then((res) => {

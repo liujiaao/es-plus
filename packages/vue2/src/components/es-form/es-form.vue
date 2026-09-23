@@ -164,6 +164,7 @@ import {
   resolveFormRules,
   normalizeFormItem,
   resolveButtonSide,
+  resolveHttpRequest,
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
 
@@ -342,7 +343,16 @@ export default defineComponent({
 
     // ─── composables ──
     const { formInputComponents } = useFormInputs()
-    const httpRequestGlobal = ($esPlusForm?.$httpRequest as ((p: Record<string, unknown>) => Promise<unknown>) | undefined) || undefined
+    // 取值优先级：注入的 $esPlusForm.$httpRequest（更具体）→ core 的全局解析。
+    // 此前只读 $esPlusForm.$httpRequest，而 $esPlusForm 默认就是 globalConfig().EsForm，
+    // 于是顶层 `httpRequest`（core 权威字段）在 EsForm 里完全不可见 —— 远端下拉会挂起。
+    // 回落顺序与「字段级 options.httpRequest 优先于全局」一致，不翻转既有优先级。
+    const httpRequestGlobal =
+      ($esPlusForm?.$httpRequest as ((p: Record<string, unknown>) => Promise<unknown>) | undefined) ||
+      (resolveHttpRequest(getGlobalConfig()) as
+        | ((p: Record<string, unknown>) => Promise<unknown>)
+        | null) ||
+      undefined
     const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as
       | ((defaults: any) => any)
       | undefined
@@ -402,8 +412,43 @@ export default defineComponent({
             .filter((it): it is FormItemOption => !!it)
           return
         }
-        const rows = await getEveryFormQueryField(needLoadList, fieldFieldOutputGlobal)
-        needLoadList.forEach((it) => loadedApiProps.value.add(it.prop))
+        // 真会发请求的子集（与 core getEveryFormQueryField 内部的过滤条件保持一致）——
+        // 只有这些字段才存在「请求失败」这回事。
+        const needFetchList = needLoadList.filter((it) => it && it.apiParams && it.apiParams.url)
+
+        // 取数失败不该走渲染错误通道：async watcher 回调里逃出去的 reject 会被 Vue 的
+        // 错误处理冒泡到 errorCaptured，被外层错误边界接住后把整页替换掉。
+        // （当前 core 的 getEveryFormQueryField 自带兜底 catch，所以这条通道暂时打不通；
+        //  这里显式接住是为了不让它取决于 core 内部实现，且给下面的降级一个落点。）
+        let rows: Awaited<ReturnType<typeof getEveryFormQueryField>> = []
+        let loadThrew = false
+        try {
+          rows = await getEveryFormQueryField(needFetchList, fieldFieldOutputGlobal)
+        } catch (e) {
+          loadThrew = true
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[es-plus] EsForm 远端字段选项加载失败，已降级为无选项：', e)
+          }
+        }
+
+        // 「已加载」只记真正拿到结果的字段。此前无条件标记 needLoadList，于是一次失败
+        // 就把这些字段永久钉成空选项：core 会把异常 catch 掉并返回 []，于是既无报错也不会重试。
+        const returnedProps = new Set(rows.map((r) => r && r.prop))
+        const missingProps: string[] = []
+        for (const it of needLoadList) {
+          if (!it) continue
+          if (needFetchList.indexOf(it) !== -1 && !returnedProps.has(it.prop)) {
+            missingProps.push(it.prop)
+            continue
+          }
+          loadedApiProps.value.add(it.prop)
+        }
+        if (!loadThrew && missingProps.length && process.env.NODE_ENV !== 'production') {
+          console.warn(
+            `[es-plus] EsForm 以下字段的远端选项未取到数据（保持未加载，下次 formItemList 变化时重试）：${missingProps.join(', ')}`
+          )
+        }
+
         formItemRowsList.value = list
           .map((it) => {
             if (!it) return null
