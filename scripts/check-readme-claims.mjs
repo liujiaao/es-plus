@@ -83,7 +83,9 @@ function checkFormTypes(formTypes) {
     Number(m[1] ?? m[2])
   )
   if (!counts.length) {
-    console.log('ℹ️  README.md 未声明表单控件数量，跳过该项')
+    // 找不到声明就失败，不静默跳过 —— 否则「把这段文案删掉」就成了让断言失效的开关，
+    // 与上面契约类型数量那项的处理保持一致（同类断言应同规）。
+    fail('README.md 未找到表单控件数量声明（若删除了该表述，请同步本脚本）')
   } else {
     for (const c of counts) {
       if (c !== formTypes.length) {
@@ -98,7 +100,7 @@ function checkFormTypes(formTypes) {
   // 3. README 中「14 种表单控件 — A、B、C…」那一行的枚举必须与源码集合完全一致
   const listLine = readme.match(/\*\*\d+\s*种表单控件\*\*\s*—\s*([^\n]+)/)
   if (!listLine) {
-    console.log('ℹ️  README.md 未列出控件枚举明细，跳过枚举比对')
+    fail('README.md 未列出控件枚举明细（若删除了该表述，请同步本脚本）')
     return
   }
   const listed = listLine[1]
