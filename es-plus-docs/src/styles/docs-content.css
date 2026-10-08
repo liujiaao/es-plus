@@ -200,7 +200,7 @@
 .es-doc-content pre {
   margin: 20px 0;
   padding: 18px 20px;
-  background: var(--es-doc-code-block-bg);
+ /* background: var(--es-doc-code-block-bg); */
   border-radius: var(--es-radius-sm);
   overflow-x: auto;
   line-height: 1.7;
