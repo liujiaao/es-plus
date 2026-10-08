@@ -1,0 +1,58 @@
+name: Scaffold smoke
+
+# 「npm create es-plus@latest 现在真能产出一个装得上、构建得过的项目吗」的端到端验证。
+#
+# 这是重活：每个渲染器都要 scaffold → 真 npm install（拉 npm 上已发布的 @es-plus/* latest
+# 与框架依赖）→ 真 vite build，比 check:scaffold（纯静态契约校验，进 check:consistency 每次都跑）
+# 慢一个量级。所以**只在脚手架相关文件变动时触发**，不挂到每次 push。
+#
+# 刻意测 `latest`（已发布包）而非 workspace 本地包：模板里 @es-plus/* 固定写 "latest"，
+# 用户 `npm create` 时装的就是 npm 上那一版 —— 这个 workflow 要复刻的正是用户的真实体验，
+# 包含「模板 + 已发布产物」这对组合是否仍然兼容（例如 vue2 的 composition-api / plugin-vue2
+# 坑就属于这一层，check:scaffold 看不到）。
+on:
+  push:
+    paths:
+      - 'packages/create-es-plus/**'
+      - '.github/workflows/scaffold-smoke.yml'
+  pull_request:
+    paths:
+      - 'packages/create-es-plus/**'
+      - '.github/workflows/scaffold-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Scaffold → install → build (${{ matrix.renderer }})
+    runs-on: ubuntu-latest
+    strategy:
+      # 三端各自独立报告，一端挂了也让其它两端跑完，便于定位是哪一端的组合出了问题。
+      fail-fast: false
+      matrix:
+        renderer: [vue3, vue2, antdv]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 装 monorepo 依赖并编译 create-es-plus 自身（tsc → build/index.js）。
+      - run: npm ci --legacy-peer-deps
+      - name: Build create-es-plus
+        run: npm run build --workspace create-es-plus
+
+      # scaffold 到 repo 外的临时目录：若生成在 monorepo 内，生成项目的 npm install 会被
+      # 父级的 workspace / node_modules 解析干扰，污染信号。
+      - name: Scaffold ${{ matrix.renderer }} starter
+        run: node packages/create-es-plus/build/index.js "$RUNNER_TEMP/es-plus-smoke" -t ${{ matrix.renderer }} --no-mcp -y -f
+
+      # 生成项目的 install 会读它自己的 .npmrc（vue2 模板带 legacy-peer-deps=true，
+      # 用于绕开 @vue/composition-api 过时的 vue<2.7 peer）。
+      - name: Install deps
+        run: npm install
+        working-directory: ${{ runner.temp }}/es-plus-smoke
+
+      - name: Build
+        run: npm run build
+        working-directory: ${{ runner.temp }}/es-plus-smoke

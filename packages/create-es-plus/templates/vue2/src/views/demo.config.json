@@ -1,0 +1,21 @@
+{
+  "formItems": [
+    { "prop": "name", "label": "商品名称", "formtype": "Input", "span": 8 },
+    {
+      "prop": "status",
+      "label": "状态",
+      "formtype": "Select",
+      "span": 8,
+      "dataOptions": [
+        { "label": "在售", "value": 1 },
+        { "label": "下架", "value": 0 }
+      ]
+    }
+  ],
+  "columns": [
+    { "prop": "name", "label": "商品名称" },
+    { "prop": "price", "label": "价格" },
+    { "prop": "status", "label": "状态" }
+  ],
+  "tableOptions": { "border": true }
+}

@@ -60,6 +60,16 @@ And it's a solid CRUD library first: enterprise back-office apps are 80% CRUD �
 
 ## Quick Start
 
+### One command (recommended)
+
+```bash
+npm create es-plus@latest
+```
+
+Interactively pick a renderer (Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue), optionally wire up the MCP (AI generation) config, and get a **ready-to-run** CRUD demo (query form + table, no backend). CI keeps all three renderers' `scaffold → install → build` green via a scaffold smoke workflow. See [`create-es-plus`](./packages/create-es-plus/README.md).
+
+To integrate into an existing project manually, read on.
+
 ### Install
 
 ```bash

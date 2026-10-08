@@ -63,6 +63,16 @@ ES-Plus 把这件事反过来做：**让 LLM 只做它擅长的语义推理（�
 
 ## 快速开始
 
+### 一行起步（推荐）
+
+```bash
+npm create es-plus@latest
+```
+
+交互式选渲染器（Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue），可选一键写入 MCP（AI 生成）配置，产出一个**装上就能跑**的 CRUD 示例项目（查询表单 + 表格，零后端）。CI 用脚手架 smoke 守着三端 `scaffold → install → build` 全绿。详见 [`create-es-plus`](./packages/create-es-plus/README.md)。
+
+想手动集成到已有项目，继续往下看。
+
 ### 安装（Vue 3）
 
 ```bash

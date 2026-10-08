@@ -17,8 +17,9 @@
  *   4. Vue 3 SFC — flat/recommended for packages/vue3/**\/*.vue
  *   5. node-script files — process.* globals, console allowed
  *   6. tests — relax any-typing & unused-vars
- *   7. mcp-server / cli — console is the product
- *   8. global rule overrides
+ *   7. global rule overrides
+ *   8. CLI console exemption (mcp-server / cli / create-es-plus) — MUST be
+ *      last so its `no-console: off` wins over section 7's global `warn`
  *
  * Why not type-checked TS rules across the whole monorepo:
  *   `recommendedTypeChecked` requires every linted file to be in a tsconfig
@@ -71,6 +72,11 @@ export default [
       'es-eui/**',
       // Local verification scratchpad — not part of any published package
       'test-project/**',
+      // create-es-plus starter payloads: copied verbatim into generated
+      // projects, they import deps that only exist AFTER scaffolding (not in
+      // this monorepo's graph) and the vue2 one deliberately uses Vue-2 SFC
+      // idioms. Lint the scaffolder (src/**), never its template payloads.
+      'packages/create-es-plus/templates/**',
       // Generated / vendored
       '**/schemas/**',
       '**/fixtures/**',
@@ -127,15 +133,7 @@ export default [
     },
   },
 
-  // ─── 7. mcp-server / cli — console IS the product ───────────────
-  {
-    files: ['packages/mcp-server/**/*.{ts,js,mjs}', 'packages/cli/**/*.{ts,js,mjs}'],
-    rules: {
-      'no-console': 'off',
-    },
-  },
-
-  // ─── 8. global rule overrides ────────────────────────────────────
+  // ─── 7. global rule overrides ────────────────────────────────────
   // Decision tree (how to assign a rule):
   //   - true bug source → keep 'error'  (no-cond-assign, no-func-assign,
   //                                       prefer-const, no-dupe-keys, ...)
@@ -218,6 +216,24 @@ export default [
       'vue/require-default-prop': 'off',
       'vue/no-template-shadow': 'off',
       'vue/one-component-per-file': 'off',
+    },
+  },
+
+  // ─── 8. CLI console exemption (MUST come after the global overrides) ──
+  // mcp-server / cli / create-es-plus are CLIs: their stdout (next-steps,
+  // prompts, progress) is the UX, not debug noise. This block turns off
+  // no-console for them. It has to sit AFTER section 7 — flat config is
+  // last-wins, and section 7 sets a global `no-console: 'warn'` with no
+  // `files`, so an earlier `off` here would be clobbered (that is exactly
+  // why cli used to leak 54 console.log warnings despite a prior exemption).
+  {
+    files: [
+      'packages/mcp-server/**/*.{ts,js,mjs}',
+      'packages/cli/**/*.{ts,js,mjs}',
+      'packages/create-es-plus/**/*.{ts,js,mjs}',
+    ],
+    rules: {
+      'no-console': 'off',
     },
   },
 ]
