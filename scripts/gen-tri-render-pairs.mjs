@@ -93,10 +93,16 @@ const splitLines = (text) => text.replace(/\r\n/g, '\n').replace(/\n$/, '').spli
 
 function listVue(dir) {
   if (!existsSync(join(ROOT, dir))) return null
-  return readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.vue'))
+  // 必须排序：readdirSync 的返回顺序随文件系统而变（Windows/NTFS 近似按名排序，
+  // Linux/ext4 近乎哈希序）。下游 best/proof 在「最小 delta 并列」时按遍历顺序定胜者 ——
+  // 不排序就会 Windows 本地生成一版、CI(Linux) 又测出另一版 → --check 必红（实测
+  // table/Basic.vue 与 table/Group.vue 并列最小，顺序一翻 proof 就换人）。
+  return readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.vue')).sort()
 }
 
 const rel = (p) => p.replace(/\\/g, '/')
+// 字符串全序比较：给 best/proof 的并列项一个与平台无关的确定性次序。
+const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
 
 /** 逐组比对：返回每个渲染端与主站的配对统计 */
 function measure() {
@@ -167,20 +173,30 @@ function build() {
       process.exit(1)
     }
     const stat = summarize(pairs)
-    // 差异最小的那一对作为「证据样例」
-    const best = [...pairs].sort((x, y) => x.deltaA - y.deltaA)[0]
+    // 差异最小的那一对作为「证据样例」；并列时按 (group, name) 定序，不靠遍历顺序。
+    const best = [...pairs].sort(
+      (x, y) => x.deltaA - y.deltaA || cmpStr(x.group, y.group) || cmpStr(x.name, y.name),
+    )[0]
     return { key: r.key, label: r.label, pkg: r.pkg, ...stat, best: best ? `${best.group}/${best.name}` : null }
   })
 
-  // 证据样例：取差异最小的那一对，带出两侧完整源码与逐行变更位置
+  // 证据样例：取差异最小的那一对，带出两侧完整源码与逐行变更位置。
+  // 并列时按 (渲染端声明序, group, name) 定序 —— 与遍历/文件系统顺序无关。
   let proof = null
+  const rIndex = new Map(RENDERERS.map((r, i) => [r.key, i]))
   const allBest = []
   for (const r of RENDERERS) {
     for (const p of perRenderer.get(r.key).pairs) {
       allBest.push({ renderer: r, pair: p })
     }
   }
-  allBest.sort((x, y) => x.pair.deltaA - y.pair.deltaA)
+  allBest.sort(
+    (x, y) =>
+      x.pair.deltaA - y.pair.deltaA ||
+      rIndex.get(x.renderer.key) - rIndex.get(y.renderer.key) ||
+      cmpStr(x.pair.group, y.pair.group) ||
+      cmpStr(x.pair.name, y.pair.name),
+  )
   if (allBest.length) {
     const { renderer, pair } = allBest[0]
     proof = {
