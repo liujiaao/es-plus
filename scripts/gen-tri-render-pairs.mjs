@@ -103,6 +103,11 @@ function listVue(dir) {
 const rel = (p) => p.replace(/\\/g, '/')
 // 字符串全序比较：给 best/proof 的并列项一个与平台无关的确定性次序。
 const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0)
+// 把要内联进 JSON 的源码统一成 LF：仓库无 .gitattributes，Windows 检出经 autocrlf
+// 变 CRLF、Linux(CI) 保持 LF。EOL 以转义 \r\n 落在 JSON 字符串**内部**，而 sameText
+// 只归一化文件物理换行、够不到这些转义序列 —— 不归一化就会 Windows 生成一版、CI
+// 又测出另一版（本脚本的 splitLines 早已对 diff 这样做，这里把内联源码补齐）。
+const toLF = (s) => s.replace(/\r\n/g, '\n')
 
 /** 逐组比对：返回每个渲染端与主站的配对统计 */
 function measure() {
@@ -209,13 +214,13 @@ function build() {
         label: SOURCE_LABEL,
         path: pair.pathA,
         changed: pair.changedA,
-        code: readText(join(ROOT, pair.pathA)),
+        code: toLF(readText(join(ROOT, pair.pathA))),
       },
       target: {
         label: renderer.label,
         path: pair.pathB,
         changed: pair.changedB,
-        code: readText(join(ROOT, pair.pathB)),
+        code: toLF(readText(join(ROOT, pair.pathB))),
       },
     }
   }
