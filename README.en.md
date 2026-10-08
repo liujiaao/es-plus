@@ -1,6 +1,6 @@
 # ES-Plus
 
-Enterprise CRUD component library — config-driven, form-table-dialog full-chain linkage, AI-native. **Supports Vue 3 + Element Plus, Vue 2 + Element UI, and Vue 3 + Ant Design Vue — one JSON schema shared across all three renderers.**
+Make AI-generated CRUD pages **safe to merge**: the LLM writes a single JSON config, ES-Plus handles schema validation + deterministic compilation, emitting runnable code for **Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue** in one shot — one config, three renderers, byte-reproducible.
 
 [中文](./README.md) | English
 
@@ -16,7 +16,16 @@ Enterprise CRUD component library — config-driven, form-table-dialog full-chai
 
 ## Why ES-Plus
 
-Enterprise back-office apps are 80% CRUD pages — the same form-table-dialog pattern over and over. With raw Element Plus each page needs 200+ lines of template. With ES-Plus the same page takes **30 lines of config**.
+Generating frontend code with AI isn't rare anymore in 2026 — what's rare is daring to **merge the output as-is**. Most AI codegen runs on vibes: every run differs, nothing matches your design system, no one validates it — so you still review line by line, fix, and review again.
+
+ES-Plus flips this around: **let the LLM do what it's good at (turn requirements into a config), and hand the must-be-deterministic part — emitting correct code — to a compiler.**
+
+- **The LLM emits config, not code** — via MCP, the host LLM (Claude Code / Cursor) receives the schema & conventions and outputs a single JSON
+- **The library validates** — zod + JSON Schema reject invalid config before compilation; bad config never reaches the output
+- **Deterministic compilation** — the same config always compiles to byte-identical code across all three renderers, guarded in CI by a golden corpus × determinism invariants + real esbuild parsing
+- **Three renderers, one config** — Vue 3 + Element Plus, Vue 2 + Element UI, Vue 3 + Ant Design Vue
+
+And it's a solid CRUD library first: enterprise back-office apps are 80% CRUD — form query → table → dialog edit. With raw Element Plus each page needs 200+ lines of template; with ES-Plus the same page takes **30 lines of config**.
 
 | Traditional Element Plus | ES-Plus |
 |--------------------------|---------|

@@ -1,6 +1,6 @@
 # ES-Plus
 
-企业级 CRUD 组件库 —— 配置驱动、表单表格弹窗全链路联动、AI 原生支持。**同时支持 Vue 3 + Element Plus、Vue 2 + Element UI、Vue 3 + Ant Design Vue**，同一份配置三个渲染器通用。
+让 AI 生成的 CRUD 页面**可以直接合进代码库**：LLM 只写一份 JSON 配置，ES-Plus 负责 Schema 校验 + 确定性编译，一次产出 **Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue** 三套可运行代码 —— 同一份配置、三端一致、可复现。
 
 中文 | [English](./README.en.md)
 
@@ -19,7 +19,16 @@
 
 ## 为什么选择 ES-Plus
 
-中后台系统 80% 的页面是 CRUD：表单查询 → 表格展示 → 弹窗编辑。用原生 Element Plus 每个页面需要 200+ 行模板代码，用 ES-Plus 只需 **30 行配置**。
+2026 年用 AI 生成前端早不稀奇，稀奇的是**敢不敢把生成结果直接合并**。多数 AI codegen 是「凭感觉」：每次输出都不一样、对不上你的设计系统、没人替它校验 —— 于是你还得逐行 review、改、再 review。
+
+ES-Plus 把这件事反过来做：**让 LLM 只做它擅长的语义推理（需求 → 一份配置），把「生成正确代码」这件必须确定的事交给编译器**。
+
+- **LLM 产出配置，不产出代码** —— 通过 MCP 把 Schema/约定交给宿主 LLM（Claude Code / Cursor），它只输出一份 JSON
+- **库做校验** —— zod + JSON Schema 在编译前拦下非法配置，坏配置到不了产物
+- **确定性编译** —— 同一份配置永远编译出字节级相同的三端代码，golden 用例语料 × 多类确定性不变量 + esbuild 真语法解析在 CI 守着
+- **三端一致** —— 一份配置通吃 Vue 3 + Element Plus、Vue 2 + Element UI、Vue 3 + Ant Design Vue
+
+而且它首先是个**好用的 CRUD 库**：中后台系统 80% 的页面是 CRUD —— 表单查询 → 表格展示 → 弹窗编辑。用原生 Element Plus 每个页面需要 200+ 行模板代码，用 ES-Plus 只需 **30 行配置**。
 
 | 传统写法 | ES-Plus |
 |---------|---------|
