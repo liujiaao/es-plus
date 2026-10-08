@@ -43,7 +43,7 @@ npm -w @es-plus/vue2 run typecheck
 npm -w @es-plus/vue2 run build
 ```
 
-构建成功后，应该在 [packages/vue2/dist/](../../packages/vue2/dist/) 看到：
+构建成功后，应该在 `packages/vue2/dist/` 看到：
 
 ```
 dist/
@@ -394,7 +394,7 @@ node packages/cli/dist/index.js create employee \
 ## 8. 排错手册
 
 ### Q: 启动报 `Cannot resolve '@es-plus/vue2'`
-- 检查 [es-eui/node_modules/@es-plus/vue2/dist/](../../es-eui/node_modules/@es-plus/vue2/dist/) 是否存在
+- 检查 `es-eui/node_modules/@es-plus/vue2/dist/` 是否存在
 - 如果使用 `file:` 协议，记得每次构建后重跑 `npm install`
 - 如果用 `npm link`，重启 IDE / dev server
 

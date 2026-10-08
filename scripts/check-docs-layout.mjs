@@ -17,12 +17,19 @@
  *      sync-docs.mjs 的 MIRRORED_DOCS 清单里 —— 否则「单源在根 docs/」只是说法，
  *      实际站点读的是另一份没人维护的副本。
  *
+ * 链接校验不止看「本地是否存在」：一个指向 dist/ 或 node_modules/ 的链接在
+ * 开发机上照样 existsSync===true（本地构建/安装产物都在），却会在 CI 全新检出时
+ * 断掉。这类 Windows-本地绿 / Linux-CI-红 的分歧实际咬过两次 —— 所以这里再加一道
+ * `git check-ignore` 门禁：凡指向被 git 忽略的路径（生成物/依赖）一律判为断链，
+ * 让本地跑守卫就能复现 CI 全新检出的结果，而不是等推上去才红。
+ *
  * 用法：node scripts/check-docs-layout.mjs
  * 退出码：0 = 符合约定且无断链；1 = 违反约定或存在断链。
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, resolve, relative } from 'node:path'
+import { dirname, join, resolve, relative, sep } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -85,25 +92,85 @@ function checkLayout() {
   if (!failed) console.log(`✅ 根 docs/ 分层符合约定（对外 ${ALLOWED_ROOT_MD.size - 1} 份 / 内部 ${REQUIRED_INTERNAL.length} 份 / 投稿 ${REQUIRED_ARTICLES.length} 份）`)
 }
 
+// 给定一组绝对路径，返回其中被 git 忽略的那些（规范化后的绝对路径集合）。
+// 无法判定时（git 不可用 / 不在 work tree 内）返回 null —— 调用方据此跳过忽略门禁，
+// 保持旧行为而不是让守卫自己崩掉。
+function gitIgnoredSet(targets) {
+  if (targets.length === 0) return new Set()
+  // 必须喂「仓库内 + 相对 ROOT 的 POSIX 路径」给 git check-ignore：
+  //  - 绝对 Windows 路径（E:\..）会被 git 当成含反斜杠的串做 C-quoting，输出被 "" 包裹、
+  //    \ 翻倍，匹配不回来；
+  //  - 正斜杠绝对路径（E:/..）在 Git-Bash/MSYS 下被改写成 /e/.. 直接 fatal。
+  // 相对 POSIX 路径（packages/vue2/dist）喂进去、原样吐出来，跨平台最稳。
+  const rels = new Map() // posixRel -> 规范化绝对 target
+  for (const t of targets) {
+    const rel = relative(ROOT, t)
+    if (!rel || rel.startsWith('..')) continue // 仓库外：不是「生成物/依赖」门禁的目标
+    rels.set(rel.split(sep).join('/'), resolve(t))
+  }
+  if (rels.size === 0) return new Set()
+  // git 对含特殊字符的路径仍会 C-quoting；最小化反转义，纯 ASCII 正斜杠路径不受影响。
+  const unquote = (raw) => {
+    const s = raw.trim()
+    if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+      return s.slice(1, -1).replace(/\\(.)/g, '$1')
+    }
+    return s
+  }
+  const parse = (out) => {
+    const set = new Set()
+    for (const raw of String(out).split('\n')) {
+      const line = unquote(raw)
+      if (!line) continue
+      set.add(rels.get(line) || resolve(ROOT, line))
+    }
+    return set
+  }
+  try {
+    // check-ignore --stdin：逐行读入路径，打印其中被忽略者；
+    // 退出码 0=有命中，1=无命中（二者都正常），128=出错（非 work tree 等）。
+    const out = execFileSync('git', ['check-ignore', '--stdin'], {
+      cwd: ROOT,
+      input: [...rels.keys()].join('\n'),
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    })
+    return parse(out)
+  } catch (e) {
+    if (e && e.status === 1) return parse(e.stdout || '') // 无命中
+    return null // git 不可用 / 非 work tree → 降级，不启用忽略门禁
+  }
+}
+
 // ── 2. 链接可解析 ────────────────────────────────────────
 function checkLinks() {
   const files = walkMarkdown(DOCS)
   let checked = 0
-  const broken = []
+  const entries = []
   for (const f of files) {
     const text = readFileSync(f, 'utf-8')
     for (const m of text.matchAll(/\]\((\.\.?\/[^)#\s]*)\)/g)) {
       checked++
-      const target = resolve(dirname(f), m[1])
-      if (!existsSync(target)) {
-        broken.push(`${relative(ROOT, f).replace(/\\/g, '/')} → ${m[1]}`)
-      }
+      entries.push({ f, link: m[1], target: resolve(dirname(f), m[1]) })
+    }
+  }
+  // 只对「本地存在」的目标判定是否被忽略：不存在的已经是断链；被忽略的（dist/、
+  // node_modules/ 等生成物）本地虽在、CI 全新检出时同样不在 —— 本地提前拦下。
+  const existing = entries.filter((e) => existsSync(e.target)).map((e) => e.target)
+  const ignored = gitIgnoredSet(existing)
+  const broken = []
+  for (const e of entries) {
+    const rel = relative(ROOT, e.f).replace(/\\/g, '/')
+    if (!existsSync(e.target)) {
+      broken.push(`${rel} → ${e.link}（目标不存在）`)
+    } else if (ignored && ignored.has(resolve(e.target))) {
+      broken.push(`${rel} → ${e.link}（指向被 git 忽略的生成物/依赖，CI 全新检出时不存在）`)
     }
   }
   if (broken.length) {
     fail(`docs/ 内有 ${broken.length} 处断链：\n    ${broken.join('\n    ')}`)
   } else if (checked) {
-    console.log(`✅ docs/ 内 ${checked} 处相对链接全部可解析`)
+    console.log(`✅ docs/ 内 ${checked} 处相对链接全部可解析（且无一指向被忽略的生成物）`)
   }
   return checked
 }
