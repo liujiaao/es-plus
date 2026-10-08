@@ -96,11 +96,16 @@ export default defineComponent({
   not the \`@element-plus/icons-vue\` component package
 - \`el-pagination\` layout strings are the same
 - \`el-table\` API matches except for v-slot syntax
-- \`el-table-v2\` does NOT exist in Element UI — virtual scrolling is Vue 3 only;
-  for Vue 2 large datasets, use server-side pagination or vxe-table integration
+- \`el-table-v2\` does NOT exist in Element UI — virtual scrolling is Vue 2's one
+  real gap; for Vue 2 large datasets, use server-side pagination or the vxe-table
+  engine (\`engine: 'vxe'\`), which is fully supported here
 
 ## Limitations on Vue 2
-- \`virtual: true\` in TableOptions is ignored (falls back to standard ElTable)
+- \`virtual: true\` / \`engine: 'virtual'\` in TableOptions is ignored — the component
+  logs a warning and renders a standard el-table (it does not fail)
+- \`engine: 'vxe'\` IS supported: @es-plus/vue2 ships its own vxe engine
+  (\`engines/vxe-engine.vue\`), so \`engine: 'vxe'\` switches to vxe-table — which
+  itself supports Vue 2 — and is this target's recommended large-data path
 - \`scrollToRow\` instance method is no-op
 - JSX requires \`@vue/babel-preset-jsx\` setup; default project may need config
 
@@ -242,14 +247,31 @@ tableOptions: {
 - Performance: O(1) selection via Set-based tracking, no per-row iteration
 - Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable`
     : isAntdv
-    ? `The @es-plus/adapter-antdv table is Vue 3 based but built on vxe-table (not
-el-table-v2). The \`virtual: true\` el-table-v2 engine does NOT apply here; for
-large datasets prefer server-side pagination via \`apiParams\` + \`configTableOut\`,
-or rely on vxe-table's built-in virtual scroll where the adapter exposes it.`
-    : `Vue 2 + Element UI does NOT support el-table-v2 / virtual scrolling at the
-component layer. For large datasets, use server-side pagination with
-\`apiParams\` + \`configTableOut\`. The \`virtual: true\` option is silently
-ignored on Vue 2.`}
+    ? `Virtual scrolling IS supported — but through Ant Design Vue, not el-table-v2.
+\`virtual: true\` (or \`engine: 'virtual'\`) is forwarded to \`<a-table :virtual>\`,
+which is ADV 4's own virtual scroll (pair it with \`scroll: { y }\` for the
+container height):
+\`\`\`typescript
+tableOptions: {
+  virtual: true,           // → <a-table :virtual="true">
+  height: 500,             // → scroll.y, the viewport the virtualizer measures
+  rowkey: 'id',
+}
+\`\`\`
+- \`el-table-v2\` itself does NOT exist here — do not expect el-table-v2-specific
+  options (\`rowHeight\` / \`estimatedRowHeight\` / \`overscanCount\`) to take effect;
+  they are Element Plus renderer internals and are ignored on antdv
+- \`engine: 'vxe'\` is the other option: it switches to vxe-table, which brings its
+  own virtual scroll and inline editing
+- For 10k+ rows prefer server-side pagination via \`apiParams\` + \`configTableOut\`
+  unless the user explicitly asks for virtual scrolling`
+    : `Vue 2 + Element UI has no virtual scrolling at the component layer (there
+is no \`el-table-v2\`). \`virtual: true\` and \`engine: 'virtual'\` are NOT silently
+swallowed — the component logs a warning and degrades to a standard
+\`el-table\`; \`engine: 'vxe'\` IS available on this target too (vxe-table supports
+Vue 2) and is the recommended large-data path here.
+For large datasets, use server-side pagination with \`apiParams\` +
+\`configTableOut\`.`}
 
 ## Global Config Pattern
 ${!isVue2
@@ -378,7 +400,8 @@ interface StructuredCrudConfig {
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>
-    virtual?: boolean           // Vue 3 only — ignored on Vue 2 / antdv
+    virtual?: boolean           // vue3 → el-table-v2; antdv → <a-table virtual>; vue2 → ignored (warns)
+    engine?: 'default' | 'virtual' | 'vxe'  // 'vxe' works on all three targets
     rowHeight?: number
     estimatedRowHeight?: number
     overscanCount?: number
@@ -414,6 +437,10 @@ interface StructuredCrudConfig {
 
 interface ToolbarBtn {          // rendered in EsForm button area
   name: string; key?: string; type?: string; icon?: string
+  direction?: 'left' | 'right'  // Form-side direction. HIGHEST priority in core's
+                                // resolveButtonSide(btn,'form') chain:
+                                // direction → position → code → 'right'.
+                                // Only form buttons have it; table buttons do not.
   position?: 'left' | 'right'   // 'left' | 'right'. Default when omitted: 'right'
                                 // (the documented EsForm default — NOT the table
                                 // default). Resolved by core's resolveButtonSide.

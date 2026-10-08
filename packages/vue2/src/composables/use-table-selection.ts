@@ -39,6 +39,25 @@ export function useTableSelection(rowkey?: string, cachePageSelection: boolean =
     sync()
   }
 
+  /**
+   * 数据换页后恢复本页的勾选态（可主动调用，语义与 vue3 的同名导出逐字一致）。
+   *
+   * 这个文件与 vue3/src/composables/use-table-selection.ts 是刻意互为镜像的，
+   * 此前 vue2 缺这一个导出 —— 三端里只有 antdv 在自己的 composable 内部调用它
+   * （adapter-antdv/src/composables/use-table-selection.ts），vue2/vue3 的 EsTable
+   * 都走 initSelection 那条路径。所以补上它是**接口对齐**，不是修一个用户可见的
+   * 勾选丢失：今天没有任何调用方会因为这一行而改变行为。写清楚是为了避免后来者
+   * 误以为这里有历史 bug 可挖。
+   */
+  const handleSelectData = (
+    dataList: Record<string, unknown>[],
+    tableRef: { toggleRowSelection?: (row: Record<string, unknown>, selected: boolean) => void }
+  ) => {
+    if (dataList?.length && rowkey && cachePageSelection && state.multipleSelection.length) {
+      restoreSelectionForPage(state, dataList, tableRef as TableRefLike, rowkey)
+    }
+  }
+
   const clearAllSelection = (tableRef: TableRefLike | null) => {
     if (!tableRef) {
       // 没有 tableRef 时手工重置 state（core 要求 tableRef 非空）
@@ -78,6 +97,7 @@ export function useTableSelection(rowkey?: string, cachePageSelection: boolean =
     selectionsByPage,
     isInitChange,
     handleSelectionChange,
+    handleSelectData,
     clearAllSelection,
     initSelection,
   }

@@ -48,6 +48,7 @@ import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/cor
 import { getGlobalConfig, buildFirstClassGridOptions } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
+  import type { RenderSlotColumn } from './use-vxe-column-adapter'
 
 export default defineComponent({
   name: 'VxeEngineVue2',
@@ -129,7 +130,7 @@ export default defineComponent({
 
     // M-2: Vue 2 模板不支持 Map v-for 数组解构，转换为普通对象数组
     const renderSlotEntries = computed(() => {
-      const entries: Array<{ name: string; col: TableColumn }> = []
+      const entries: Array<{ name: string; col: RenderSlotColumn }> = []
       renderSlotMap.value.forEach((col, name) => {
         entries.push({ name, col })
       })

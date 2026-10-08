@@ -187,10 +187,10 @@ import { EsTable } from '${v.esPlusPkg}'
 - Operation column via \`btns\` array
 - Auto-linked with EsForm via provide/inject
 ${v.esPlusPkg === "@es-plus/vue3"
-    ? "- Virtual scrolling: same API, just add `virtual: true` for 10k+ row performance"
+    ? "- Virtual scrolling: same API, just add `virtual: true` for 10k+ row performance (renders the el-table-v2 engine; `engine: 'virtual'` is equivalent, `engine: 'vxe'` switches to vxe-table)"
     : v.esPlusPkg === "@es-plus/adapter-antdv"
-    ? "- For 10k+ rows on antdv, use server-side pagination or vxe-table's built-in virtual scroll — the el-table-v2 `virtual: true` engine is Element Plus (vue3) only"
-    : "- For 10k+ rows on Vue 2, use server-side pagination — el-table-v2 virtual scrolling is Vue 3 only"}
+    ? "- Virtual scrolling: `virtual: true` is forwarded to `<a-table :virtual>` (Ant Design Vue 4 native virtual scroll) — pair it with `height` for the viewport. The el-table-v2 renderer is Element Plus (vue3) only, and its `rowHeight`/`estimatedRowHeight`/`overscanCount` knobs do not apply here. `engine: 'vxe'` switches to vxe-table instead."
+    : "- For 10k+ rows on Vue 2, use server-side pagination or `engine: 'vxe'` — Element UI has no el-table-v2, so `virtual: true` / `engine: 'virtual'` are ignored (with a console warning), but the vxe engine is fully supported here and brings vxe-table's own virtual scroll."}
 `;
 }
 

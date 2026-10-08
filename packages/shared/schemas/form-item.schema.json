@@ -34,9 +34,11 @@
         "Checkbox",
         "Switch",
         "Rate",
-        "Upload"
+        "Upload",
+        "datePicker",
+        "timePicker"
       ],
-      "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted."
+      "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted — they are normalized to DatePicker/TimePicker at runtime (normalizeFormType), so they are listed here too. Keep this enum in sync with VALID_FORM_TYPES ∪ FORM_TYPE_ALIASES."
     },
     "span": {
       "type": "integer",

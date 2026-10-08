@@ -156,7 +156,14 @@ export const getNestedValue = (
 }
 
 /**
- * 按路径设置嵌套对象的值（缺失中间层时自动创建普通对象）
+ * 按路径设置嵌套对象的值（缺失中间层时按下一段是否为数字索引，自动创建数组或普通对象）
+ *
+ * 关键点：`parsePathSegments` 明确支持 `list[0].name` 这类数组索引路径（见其注释），
+ * 所以缺失中间层时**不能一律建普通对象** —— 否则 `setNestedValue({}, 'tags[0].name', 'x')`
+ * 会产出 `{ tags: { '0': { name:'x' } } }`（一个 '0' 字符串键的伪数组）而不是
+ * `{ tags: [ { name:'x' } ] }`。读回时 `obj.tags['0']` 侥幸可用，但 `Array.isArray` /
+ * `.map` / `.length` 全部失效，JSON 提交给后端也变成对象 —— 静默错到序列化边界才暴露。
+ * 因此按「下一段是否为纯数字」决定该层建 `[]` 还是 `{}`。
  *
  * 注意：本函数直接修改 obj，不会触发 Vue 响应式（仅做路径写入）。
  * 调用方需要保证 obj 自身已被 reactive/ref 包裹，否则视图不会更新。
@@ -170,15 +177,19 @@ export const setNestedValue = (
   const keys = parsePathSegments(path)
   // 防原型污染：拦截 __proto__ / constructor / prototype，避免写入全局原型链
   if (keys.some((k) => DANGEROUS_PROTO_KEYS.has(k))) return
-  const lastKey = keys.pop()
   let current: Record<string, unknown> = obj
-  for (const key of keys) {
-    if (current[key] == null || typeof current[key] !== 'object') {
-      current[key] = {}
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i]
+    const existing = current[key]
+    // 仅在该层缺失/非对象时创建；已存在的容器（含用户预置的数组）原样保留，不覆盖。
+    if (existing == null || typeof existing !== 'object') {
+      // 下一段是纯数字索引 → 该层应为数组，否则为普通对象。
+      current[key] = /^\d+$/.test(keys[i + 1]) ? [] : {}
     }
     current = current[key] as Record<string, unknown>
   }
-  if (lastKey) {
+  const lastKey = keys[keys.length - 1]
+  if (lastKey !== undefined) {
     current[lastKey] = value
   }
 }

@@ -533,6 +533,29 @@ describe('useFormInputs — formInputComponents 分支', () => {
     expect((vnode as any).tag).toBe('el-upload')
   })
 
+  // vue2 这条线一直是完整的（onSuccess/onError/onRemove 三处 setNestedValue 写回），
+  // vue3/antdv 此前漏了。补这条用例是把三端对齐后的行为钉住，防止以后被改回去。
+  it('Upload → 上传成功后把文件列表写回 model[prop]', () => {
+    const item = { formtype: 'Upload', prop: 'files', props: { action: '/upload' } }
+    const uploadModel: Record<string, unknown> = { files: [] }
+    const renderer = formInputComponents(item as any)
+    const vnode = renderer(mockH as any, uploadModel as any, { row: item as any })
+
+    // file-list 从 model 读出
+    expect((vnode as any).data.attrs['file-list']).toEqual([])
+
+    // 上传成功 → onSuccess 既调用户回调，也写回 model
+    const list = [{ name: 'a.png', uid: 1, status: 'success' }]
+    ;(vnode as any).data.props.onSuccess({ link: '/a.png' }, list[0], list)
+    expect(uploadModel.files).toEqual(list)
+    expect(uploadModel.files).not.toBe(list)
+
+    // 删除 → 列表同步收缩到 model
+    const afterRemove = [] as unknown[]
+    ;(vnode as any).data.props.onRemove(list[0], afterRemove)
+    expect(uploadModel.files).toEqual(afterRemove)
+  })
+
   it('InputNumber → el-input-number', () => {
     const item = { formtype: 'InputNumber', prop: 'age' }
     const renderer = formInputComponents(item as any)

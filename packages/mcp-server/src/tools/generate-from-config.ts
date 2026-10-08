@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateFromConfig, VALID_FORM_TYPES, VALID_CRUD_ACTIONS } from "@es-plus/shared";
+import { generateFromConfig, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
 
 const FieldRuleSchema = z.object({
   required: z.boolean().optional(),
@@ -21,11 +21,33 @@ const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
   })
 );
 
+// Mirrors the shared authoritative schema's prop guard — see
+// packages/shared/src/structured-config.schema.ts for the rationale. Only
+// unambiguously-broken forms are rejected; kebab-case props still work in
+// schema mode, so they must NOT be rejected here.
+const UNSAFE_PROP_SEGMENT = /^(?:__proto__|constructor|prototype)$/;
+function isSafeProp(v: string): boolean {
+  if (v === "." || v === ".." || /[\\/]/.test(v)) return false;
+  const segments = v.split(/\.|\[|\]/).filter((s) => s !== "");
+  if (segments.length === 0) return false;
+  return !segments.some((s) => UNSAFE_PROP_SEGMENT.test(s));
+}
+
 const FieldConfigSchema = z.object({
-  prop: z.string().min(1).describe("Field key in the data model (camelCase), e.g. \"userName\""),
+  prop: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'prop must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+    })
+    .describe("Field key in the data model (camelCase), e.g. \"userName\""),
   label: z.string().min(1).describe("Human-readable column/form label, e.g. \"用户名\""),
   formtype: z
-    .enum(VALID_FORM_TYPES as unknown as [string, ...string[]])
+    // 与 shared 的 StructuredCrudConfigSchema 同一口径：规范写法 ∪ 运行时承认的旧别名
+    // （camelCase datePicker/timePicker 由 normalizeFormType 归一化）。
+    // 只列 VALID_FORM_TYPES 会让 MCP 把合法旧配置判成非法，与运行时行为不一致。
+    .enum([...VALID_FORM_TYPES, ...Object.keys(FORM_TYPE_ALIASES)] as unknown as [string, ...string[]])
     .describe(
       "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate. Default to Input for plain text."
     ),
@@ -107,6 +129,12 @@ const TableBtnSchema = z
  * "默认（不配 direction）视为右侧"), whereas a table button defaults to the
  * left. Copying TableBtnSchema's `b.code ?? 1` here would silently move every
  * unpositioned form button from right to left.
+ *
+ * `direction` is declared here for the same reason as `position`: core's
+ * `resolveButtonSide(btn, 'form')` chains `direction → position → code → right`,
+ * so `direction` is the **highest**-priority form-side field. Omitting it from
+ * this schema (as it was omitted from the shared one) means Zod strips it, and a
+ * config that writes `direction: "left"` silently renders right.
  */
 const ToolbarBtnSchema = z
   .object({
@@ -114,6 +142,7 @@ const ToolbarBtnSchema = z
     key: z.string().optional(),
     type: z.string().optional(),
     icon: z.string().optional(),
+    direction: z.enum(["left", "right"]).optional().describe("Form-button direction (legacy form-side field; wins over 'position')"),
     position: z.enum(["left", "right"]).optional().describe("left | right (recommended positioning field; defaults to right)"),
     code: z.union([z.literal(1), z.literal(2)]).optional().describe("1=left, 2=right (legacy alias of position; normalized automatically)"),
     dialogKey: z.string().optional(),
@@ -122,10 +151,16 @@ const ToolbarBtnSchema = z
     permissionValue: z.string().optional(),
     triggerEvent: z.boolean().optional(),
   })
-  .transform((b) => ({
-    ...b,
-    code: (b.position === "left" ? 1 : b.position === "right" ? 2 : (b.code ?? 2)) as 1 | 2,
-  }));
+  // Short-circuit priority (direction → position → code), NOT a left-OR/right-OR
+  // merge: when the two conflict, e.g. { direction: 'right', position: 'left' },
+  // an OR-merge yields code:1 (left) while core's resolveButtonSide reads
+  // `direction ?? position` = right — the normalized code would contradict the
+  // runtime side. Keep the ?? chain byte-for-byte aligned with the shared schema.
+  .transform((b) => {
+    const side = b.direction ?? b.position;
+    if (side) return { ...b, code: (side === "left" ? 1 : 2) as 1 | 2 };
+    return { ...b, code: (b.code ?? 2) as 1 | 2 };
+  });
 
 // ── Structured config raw shape (the tool's input schema) ──────────────
 // Exposing the FULL structured shape as the tool's input — rather than a
@@ -164,6 +199,9 @@ const configShape = {
       highlightCurrentRow: z.boolean().default(true),
       headerCellStyle: z.record(z.string()).optional(),
       virtual: z.boolean().optional(),
+      // 与 structured-config.schema.ts 的同名字段保持一致 —— 两边都是 z.object
+      // （没有 passthrough），少一个键就等于把该配置静默剥掉。
+      engine: z.enum(["default", "virtual", "vxe"]).optional(),
       rowHeight: z.number().optional(),
       estimatedRowHeight: z.number().optional(),
       overscanCount: z.number().int().optional(),

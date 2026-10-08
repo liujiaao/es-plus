@@ -18,7 +18,7 @@
     v-bind="filteredAttrs"
     :open="dialogVisible"
     :width="isFullscreen ? '100vw' : props.width"
-    :closable="false"
+    :closable="showNativeClose"
     :maskClosable="props.closeOnClickModal !== false"
     :keyboard="props.closeOnPressEscape !== false"
     :destroyOnClose="props.destroyOnClose"
@@ -56,7 +56,7 @@
             <FullscreenExitOutlined v-if="isFullscreen" />
             <FullscreenOutlined v-else />
           </a-button>
-          <a-button type="text" size="small" @click="handleClose">
+          <a-button v-if="props.showClose" type="text" size="small" @click="handleClose">
             <CloseOutlined />
           </a-button>
         </span>
@@ -210,6 +210,16 @@ const dialogVisible = ref(props.visible !== false)
 watch(() => props.visible, (val) => {
   if (val !== undefined) dialogVisible.value = val
 })
+
+// 原生关闭按钮只在「调用方没有自绘头部」时放出。
+//
+// 此前这里硬编码 `:closable="false"`（`showClose` 声明了但从未被读，还被列进
+// filteredAttrs 的忽略名单，等于彻底死掉）。它只在**内置头部**下成立 —— 内置头部的
+// header-actions 里已经自绘了一个 CloseOutlined。一旦调用方传入 renderHeader，
+// 自绘的随 `v-else` 一起消失，原生的又恒被关掉 —— 弹窗**完全没有关闭入口**。
+// 现在：showClose === false 全关；否则内置头部用自绘的、自定义头部用原生的，
+// 任何组合下都不会出现两个 X。
+const showNativeClose = computed(() => props.showClose && !!props.renderHeader)
 
 function onUpdateOpen(val: boolean) {
   // a-modal mask/ESC 触发 update:open(false) 时走 handleClose 网关，

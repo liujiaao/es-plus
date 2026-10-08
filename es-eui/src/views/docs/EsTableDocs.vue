@@ -253,7 +253,7 @@
         <li><strong>请求封装</strong>：统一配置 httpRequest，集中处理 Token、错误提示、Loading</li>
         <li><strong>按钮操作</strong>：操作列通过 instance.httpRquestInstace() 刷新表格，不直接修改数据源</li>
         <li><strong>日期范围</strong>：使用 brcb 回调将日期范围拆分为 start/end 两个字段传给后端</li>
-        <li><strong>性能优化</strong>：大数据量时设置 tabHeight 固定表格高度，启用虚拟滚动</li>
+        <li><strong>性能优化</strong>：大数据量时设置 tabHeight 固定表格高度；万行级请切到 vxe 引擎（engine: 'vxe'）——Element UI 的 el-table 本身没有虚拟滚动</li>
       </ol>
     </div>
     </section>

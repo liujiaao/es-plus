@@ -350,3 +350,141 @@ describe('request > getEveryFormQueryField', () => {
     expect(result[0].prop).toBe('okField')
   })
 })
+
+// ── apiParams.labelField / valueField ────────────────────────────────────
+// 这两个字段此前只有声明与教学、没有任何消费点：用户按提示词写
+// `apiParams: { url, labelField: 'name', valueField: 'id' }` 拿到的仍是空下拉且不报错。
+// 下面锁住「真的映射了」，以及三条容易被写错的性质（保留原键 / 递归 children / 先于 crtn）。
+describe('request > getEveryFormQueryField > labelField/valueField', () => {
+  it('按 labelField/valueField 映射出 label/value', async () => {
+    const fn = vi.fn().mockResolvedValue({ rows: [{ name: '分类A', id: 7 }] })
+    const result = await getEveryFormQueryField(
+      [
+        {
+          prop: 'categoryId',
+          apiParams: { url: '/api/categories', labelField: 'name', valueField: 'id' },
+        },
+      ] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([{ name: '分类A', id: 7, label: '分类A', value: 7 }])
+  })
+
+  it('树形响应：children 递归映射且不被丢弃（Cascader 依赖）', async () => {
+    // 10-category-cascader.json 正是「树形接口 + labelField/valueField」的组合。
+    // 若只产出 { label, value }，children 会整个消失，级联选择退化成一层。
+    const fn = vi.fn().mockResolvedValue({
+      rows: [
+        { name: '技术', id: 1, children: [{ name: '前端', id: 11, children: [{ name: 'Vue', id: 111 }] }] },
+      ],
+    })
+    const result = await getEveryFormQueryField(
+      [
+        {
+          prop: 'parentId',
+          apiParams: { url: '/api/categories/tree', labelField: 'name', valueField: 'id' },
+        },
+      ] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([
+      {
+        name: '技术',
+        id: 1,
+        label: '技术',
+        value: 1,
+        children: [
+          {
+            name: '前端',
+            id: 11,
+            label: '前端',
+            value: 11,
+            children: [{ name: 'Vue', id: 111, label: 'Vue', value: 111 }],
+          },
+        ],
+      },
+    ])
+  })
+
+  it('保留 disabled 与未知附加键（下游 formatter / crtn 可能要用）', async () => {
+    const fn = vi.fn().mockResolvedValue({ rows: [{ name: '停用项', id: 2, disabled: true, extra: 'x' }] })
+    const result = await getEveryFormQueryField(
+      [{ prop: 'f', apiParams: { url: '/api', labelField: 'name', valueField: 'id' } }] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([
+      { name: '停用项', id: 2, disabled: true, extra: 'x', label: '停用项', value: 2 },
+    ])
+  })
+
+  it('只配 labelField → value 取默认键 value', async () => {
+    const fn = vi.fn().mockResolvedValue({ rows: [{ name: 'A', value: 9 }] })
+    const result = await getEveryFormQueryField(
+      [{ prop: 'f', apiParams: { url: '/api', labelField: 'name' } }] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([{ name: 'A', value: 9, label: 'A' }])
+  })
+
+  it('映射发生在 crtn 之前：crtn 收到的是已归一化的列表', async () => {
+    // 顺序反了的话，crtn 已经产出的 [{label,value}] 会被再按 'name' 取一遍 → undefined。
+    const fn = vi.fn().mockResolvedValue({ rows: [{ name: 'A', id: 1 }] })
+    const crtn = vi.fn().mockImplementation((list: any[]) => list)
+    const result = await getEveryFormQueryField(
+      [
+        {
+          prop: 'f',
+          apiParams: { url: '/api', labelField: 'name', valueField: 'id' },
+          listenToCallBack: { crtn },
+        },
+      ] as any,
+      fn
+    )
+    expect(crtn).toHaveBeenCalledWith([{ name: 'A', id: 1, label: 'A', value: 1 }])
+    expect(result[0].listData).toEqual([{ name: 'A', id: 1, label: 'A', value: 1 }])
+  })
+
+  it('未配置 labelField/valueField → 原样透传，不新增 label/value 键', async () => {
+    const fn = vi.fn().mockResolvedValue({ rows: [{ name: 'A', id: 1 }] })
+    const result = await getEveryFormQueryField(
+      [{ prop: 'f', apiParams: { url: '/api' } }] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([{ name: 'A', id: 1 }])
+  })
+
+  it('dataOptions 不是数组时映射不抛（不得拖垮其它字段）', async () => {
+    const fn = vi.fn().mockResolvedValue({ rows: [] })
+    const result = await getEveryFormQueryField(
+      [
+        {
+          prop: 'bad',
+          apiParams: { url: '/api/bad', labelField: 'name' },
+          dataOptions: { not: 'an array' },
+        },
+        { prop: 'ok', apiParams: { url: '/api/ok', labelField: 'name' } },
+      ] as any,
+      fn
+    )
+    // 非法配置的那一项不该让整个函数掉进 catch 返回 []
+    expect(result.map((r) => r.prop)).toContain('ok')
+  })
+
+  it('API 空列表回退到静态 dataOptions 时，不按 labelField/valueField 映射（否则抹成 undefined）', async () => {
+    // 回归：mapOptionFields 曾被无条件套在 rawList 上，连 dataOptions 静态兜底也映射 ——
+    // 静态项是 {label,value}、没有 name/id 业务键，映射后 label/value 全成 undefined，
+    // 下拉里的 '全部' 直接消失。字段映射只该作用于 API 原始行，静态兜底原样透传。
+    const fn = vi.fn().mockResolvedValue({ rows: [] })
+    const result = await getEveryFormQueryField(
+      [
+        {
+          prop: 'status',
+          apiParams: { url: '/api/status', labelField: 'name', valueField: 'id' },
+          dataOptions: [{ label: '全部', value: '' }],
+        },
+      ] as any,
+      fn
+    )
+    expect(result[0].listData).toEqual([{ label: '全部', value: '' }])
+  })
+})

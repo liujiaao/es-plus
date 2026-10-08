@@ -32,6 +32,7 @@ import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import useDialog from '../../es-dialog/src/use-dialog'
+import { getNestedValue, setNestedValue } from '@es-plus/core'
 import type {
   CrudPageSchema,
   CrudAction,
@@ -80,8 +81,12 @@ watch(
   (items) => {
     if (items) {
       items.forEach((item) => {
-        if (item.prop && !(item.prop in queryModel)) {
-          queryModel[item.prop] = ''
+        // prop 支持 'a.b' / 'a[0].b' 嵌套路径（见 core parsePathSegments）。
+        // 必须经 setNestedValue 建出嵌套结构、经 getNestedValue 判存在：
+        // 扁平键 queryModel['a.b']='' 在 getNestedValue(model,'a.b') 下取不到，
+        // 且 {...queryModel} 会把悬空的 'a.b' 键一并带进查询/导出负载。
+        if (item.prop && getNestedValue(queryModel, item.prop) === undefined) {
+          setNestedValue(queryModel, item.prop, '')
         }
       })
     }
@@ -378,7 +383,10 @@ function openDialog(key: string, row?: Record<string, unknown>) {
   if (dialogConfig.formItems) {
     dialogConfig.formItems.forEach((item) => {
       if (item.prop) {
-        formData[item.prop] = row?.[item.prop] ?? ''
+        // 按路径回填：prop 支持 'a.b' / 'a[0].b'。必须经 setNestedValue 建出嵌套结构、
+        // 经 getNestedValue 从 row 读同名路径 —— 否则编辑态下表单经 getNestedValue(model,'a.b')
+        // 取到 undefined（此处只落了扁平键 'a.b'），嵌套字段永远不回填。
+        setNestedValue(formData, item.prop, getNestedValue(row ?? {}, item.prop) ?? '')
       }
     })
   }

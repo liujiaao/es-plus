@@ -153,26 +153,26 @@
     "virtual": {
       "type": "boolean",
       "default": false,
-      "description": "Enable virtual scrolling via el-table-v2 (suitable for 10k+ rows)"
+      "description": "Enable virtual scrolling for large datasets. The rendering engine is target-specific: vue3 switches to the el-table-v2 engine; antdv forwards `virtual` to <a-table> (Ant Design Vue 4 native virtual scroll). Vue 2 + Element UI has no equivalent — it warns and degrades to a plain el-table (vue2's large-data path is `engine: 'vxe'` instead). Safe to set on any target."
     },
     "engine": {
       "type": "string",
-      "enum": ["default", "virtual"],
-      "description": "Table rendering engine. 'default'=el-table, 'virtual'=el-table-v2"
+      "enum": ["default", "virtual", "vxe"],
+      "description": "Table rendering engine, an alternative to `virtual: true`. 'default' = el-table / a-table / el-table, 'virtual' = the target's virtual engine (vue3 el-table-v2; antdv <a-table :virtual>; vue2 has no equivalent and degrades to a plain el-table with a warning), 'vxe' = vxe-table, available on all THREE targets — vue3, antdv and vue2 each ship a vxe adapter, and vxe-table itself supports Vue 2. 'vxe' is therefore the large-data path for vue2, where 'virtual' is not available."
     },
     "rowHeight": {
       "type": "number",
       "default": 50,
-      "description": "Row height in pixels for virtual scrolling mode"
+      "description": "Row height in pixels for virtual mode (vue3 / el-table-v2 only)"
     },
     "estimatedRowHeight": {
       "type": "number",
-      "description": "Estimated row height for dynamic-height virtual scrolling"
+      "description": "Estimated row height for dynamic-height virtual scrolling (vue3 / el-table-v2 only)"
     },
     "overscanCount": {
       "type": "number",
       "default": 2,
-      "description": "Number of rows to render outside visible area (virtual mode buffer)"
+      "description": "Number of rows to render outside the visible area (vue3 / el-table-v2 only)"
     },
     "rowClassName": {
       "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"

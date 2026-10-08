@@ -6,7 +6,7 @@
       v-model="dialogVisible"
       :draggable="props.isDraggable"
       :width="props.width"
-      :show-close="false"
+      :show-close="showNativeClose"
       :before-close="onBeforeClose"
       :fullscreen="isFullscreen"
     >
@@ -23,7 +23,7 @@
               <FullScreen v-if="!isFullscreen" />
               <CopyDocument v-else />
             </el-icon>
-            <el-icon @click="handleClose"><Close /></el-icon>
+            <el-icon @click="handleClose" v-show="props.showClose"><Close /></el-icon>
           </div>
         </template>
       </template>
@@ -91,26 +91,44 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { getGlobalConfig } from '../../../config'
 import type { BtnConfig } from '../../../types'
 
-const props = defineProps<{
-  title?: string
-  visible?: boolean
-  appendTo?: object | string
-  hiddenFullBtn?: boolean
-  width?: string | number
-  isDraggable?: boolean
-  confirmText?: string
-  cancelText?: string
-  configBtn?: BtnConfig[]
-  maxHeight?: string | number
-  isHiddenFooter?: boolean
-  renderHeader?: Function
-  renderFooter?: Function
-  render?: Function
-  fullscreen?: boolean
-  loading?: boolean
-  /** 关闭前拦截：传入后由用户调用 done() 才真正关闭（X/遮罩/ESC 统一经此闸门） */
-  beforeClose?: (done: () => void) => void
-}>()
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    visible?: boolean
+    appendTo?: object | string
+    hiddenFullBtn?: boolean
+    width?: string | number
+    isDraggable?: boolean
+    confirmText?: string
+    cancelText?: string
+    configBtn?: BtnConfig[]
+    maxHeight?: string | number
+    isHiddenFooter?: boolean
+    renderHeader?: Function
+    renderFooter?: Function
+    render?: Function
+    fullscreen?: boolean
+    loading?: boolean
+    /** 是否显示关闭按钮（默认 true）。false 时自绘的与原生的一起隐藏 */
+    showClose?: boolean
+    /** 关闭前拦截：传入后由用户调用 done() 才真正关闭（X/遮罩/ESC 统一经此闸门） */
+    beforeClose?: (done: () => void) => void
+  }>(),
+  // showClose 必须真的默认 true：模板里用 `v-show="props.showClose"` 做闸门，
+  // 若声明成 optional 而不给默认值，不传时是 undefined → 自绘的 X 反而被隐藏。
+  { showClose: true }
+)
+
+// 原生关闭按钮只在「用户没有自绘头部」时放出。
+//
+// 此前这里硬编码 `:show-close="false"`，它只在**内置头部**下成立 —— 内置头部的
+// `.btns` 里已经自绘了一个 X（与全屏按钮同排）。可一旦调用方传入 renderHeader，
+// 自绘 X 随 `v-else` 一起消失，原生 X 又恒被关掉 —— 弹窗**完全没有关闭入口**，
+// 且无法通过 attrs 补救：`v-bind="filteredAttrs"` 在前、显式绑定在后，后者胜出。
+//
+// 现在：showClose === false 全关；否则内置头部用自绘的、自定义头部用原生的，
+// 任何组合下都不会出现两个 X。
+const showNativeClose = computed(() => props.showClose && !!props.renderHeader)
 
 const emit = defineEmits<{
   'update:visible': [val: boolean]

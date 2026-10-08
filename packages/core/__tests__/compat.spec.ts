@@ -3,6 +3,8 @@ import {
   normalizeFormType,
   resolveFormLayProps,
   getButtonPosition,
+  isButtonLeft,
+  isButtonRight,
   getCallback,
   normalizeFormItem,
   normalizeFormItemList,
@@ -92,6 +94,30 @@ describe('compat > getButtonPosition', () => {
 
   it('两者都未配时默认 left', () => {
     expect(getButtonPosition({ name: 'btn' })).toBe('left')
+  })
+
+  // ── 非法输入对齐（回归：此前 compat 与 field-resolver 两份实现，非法 position 分叉）──
+  // 配置来自手写 JSON / AI 生成时 position 完全可能是类型外的值。此前 compat 版
+  // `if (btn.position) return btn.position` 把 'center' **原样返回**（返回值类型却写着
+  // 'left' | 'right'），于是 isButtonRight 与 isButtonLeft 双双为 false，
+  // 按钮在左右两栏都不出现 —— 静默消失。现委托 resolveButtonSide(btn, 'table')。
+  it("非法 position（类型外的值）视为未配置，继续 fallback 到 code", () => {
+    // 无 code → 落到表格链默认值 left
+    expect(getButtonPosition({ name: 'btn', position: 'center' } as any)).toBe('left')
+    // 有 code → 由 code 决定
+    expect(getButtonPosition({ name: 'btn', position: 'center', code: 2 } as any)).toBe('right')
+    expect(getButtonPosition({ name: 'btn', position: 'center', code: 1 } as any)).toBe('left')
+  })
+
+  it('非法 position 不再让 isButtonLeft / isButtonRight 双双为 false', () => {
+    const btn = { name: 'btn', position: 'center' } as any
+    expect(isButtonLeft(btn)).toBe(true)
+    expect(isButtonRight(btn)).toBe(false)
+  })
+
+  it('表格链不含 direction（与 field-resolver 的 kind=table 一致）', () => {
+    // direction 只属于表单按钮语义；表格按钮写了它不该改变落位
+    expect(getButtonPosition({ name: 'btn', direction: 'right' } as any)).toBe('left')
   })
 })
 

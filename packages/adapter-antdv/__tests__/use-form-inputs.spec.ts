@@ -77,6 +77,13 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
     expect(vnode.props?.value).toBe('bound-value')
   })
 
+  it('Input — attrs.disabled 为函数时被求值（对齐 vue2 / es-eui；不求值则函数恒真，控件永久禁用）', () => {
+    const item = makeItem('Input', { attrs: { disabled: () => true } } as any)
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel(), { row: item, index: 0 }) as any
+    expect(vnode.props?.disabled).toBe(true)
+  })
+
   it('Upload — EP limit 映射为 ADV maxCount（回归：此前 limit 被静默忽略）', () => {
     const item = makeItem('Upload', { attrs: { limit: 3 } } as any)
     const renderFn = formInputComponents(item)!
@@ -215,6 +222,55 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
     expect(vnode).toBeTruthy()
   })
 
+  // ADV 把所有生命周期收敛成一个内部 onInternalChange，统一走 props['onUpdate:fileList']
+  // 抛出最新列表（upload/Upload.js:201/222/233/245/268）—— 绑这一个即覆盖增改错删。
+  // 此前这个分支连 fileList 都没绑（`_model` 参数根本没用），上传完 model 里是空的。
+  describe('Upload — file-list ↔ model 双向绑定', () => {
+    it('fileList 取自 model[prop]', () => {
+      const files = [{ name: 'a.png', uid: 1 }]
+      const vnode = formInputComponents(makeItem('Upload'))!(h, makeModel(files), {
+        row: makeItem('Upload'),
+        index: 0,
+      })
+      expect(vnode.props?.fileList).toEqual(files)
+    })
+
+    it('model[prop] 不是数组时给 []，而不是 undefined', () => {
+      for (const empty of [undefined, null, 'not-array']) {
+        const vnode = formInputComponents(makeItem('Upload'))!(h, makeModel(empty), {
+          row: makeItem('Upload'),
+          index: 0,
+        })
+        expect(vnode.props?.fileList, String(empty)).toEqual([])
+      }
+    })
+
+    it('update:fileList 把新列表写回 model[prop]，且换新数组引用', () => {
+      const model = makeModel([])
+      const vnode = formInputComponents(makeItem('Upload'))!(h, model, {
+        row: makeItem('Upload'),
+        index: 0,
+      })
+      const next = [{ name: 'b.png', uid: 2 }]
+      vnode.props!['onUpdate:fileList'](next)
+      expect(model.testField).toEqual(next)
+      expect(model.testField).not.toBe(next)
+    })
+
+    it('用户自己的 on.update:fileList 仍会被调用（不能被接管吃掉）', () => {
+      const user = vi.fn()
+      const item = makeItem('Upload', { on: { 'update:fileList': user } } as any)
+      const model = makeModel([])
+      const vnode = formInputComponents(item)!(h, model, { row: item, index: 0 })
+      expect(vnode.props!['onUpdate:fileList']).not.toBe(user)
+
+      const next = [{ uid: 7 }]
+      vnode.props!['onUpdate:fileList'](next)
+      expect(user).toHaveBeenCalledWith(next)
+      expect(model.testField).toEqual(next)
+    })
+  })
+
   it('ColorPicker (降级) — 渲染 input[type=color]', () => {
     const renderFn = formInputComponents(makeItem('ColorPicker'))!
     const vnode = renderFn(h, makeModel('#ff0000'), { row: makeItem('ColorPicker'), index: 0 })
@@ -332,8 +388,55 @@ describe('useFormInputs — 日期值字符串↔dayjs 转换（根因修复）'
     expect(props.value).toBeNull()
   })
 
-  it('DatePicker 配置 valueFormat → 回写 model 为字符串（对齐 EP value-format）', () => {
-    const item = makeItem('DatePicker', { attrs: { valueFormat: 'YYYY-MM-DD' } })
+  // ── valueFormat 参与**读入**解析 ────────────────────────────────────────
+  // 这组用例补的是覆盖空白，不是某个 bug 的回归守卫 —— 别把它们当成后者。
+  //
+  // 此前 valueFormat 只有「回写」被覆盖（见下面几条 `回写 model 为字符串`），
+  // 没有任何用例断言**读入**方向：配置了 valueFormat 的 model 字符串必须真的按
+  // 该格式被解析。`dayjs(str, fmt)` 的第二参只有在装了 customParseFormat 时才
+  // 生效，否则被静默忽略、退回原生 Date 解析。
+  //
+  // 但这里**测不出**缺插件的情况：本 spec 顶部就 import 了 ant-design-vue，而
+  //   ant-design-vue/es/vc-picker/generate/dayjs.js:8-10
+  // 在模块初始化时就 dayjs.extend(customParseFormat)（同一个 dayjs 单例），
+  // 所以即使把 use-form-inputs 里那行 extend 注释掉，本组用例照样全绿（已实测）。
+  // 因此它们锁的是「valueFormat 读入语义」这个可观测契约本身，插件那行由源码注释负责说明。
+  it("valueFormat 参与解析：'DD/MM/YYYY' 的日/月顺序不能被原生解析蒙对", () => {
+    const item = makeItem('DatePicker', { attrs: { valueFormat: 'DD/MM/YYYY' } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('28/09/2026'), { row: item, index: 0 })
+    const value = ((vnode as any).props || {}).value
+    expect(dayjs.isDayjs(value)).toBe(true)
+    expect((value as dayjs.Dayjs).isValid()).toBe(true)
+    // 未装插件时这里会是 Invalid Date；就算原生能解析也会把 28 当月份（溢出成 Invalid）
+    expect((value as dayjs.Dayjs).format('DD/MM/YYYY')).toBe('28/09/2026')
+    expect((value as dayjs.Dayjs).year()).toBe(2026)
+    expect((value as dayjs.Dayjs).month()).toBe(8) // 9 月（0-based）
+    expect((value as dayjs.Dayjs).date()).toBe(28)
+  })
+
+  it("valueFormat 参与解析：纯时间 'HH:mm:ss'（原生解析必失败）", () => {
+    const item = makeItem('TimePicker', { attrs: { valueFormat: 'HH:mm:ss' } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('10:30:00'), { row: item, index: 0 })
+    const value = ((vnode as any).props || {}).value
+    expect(dayjs.isDayjs(value)).toBe(true)
+    expect((value as dayjs.Dayjs).isValid()).toBe(true)
+    expect((value as dayjs.Dayjs).hour()).toBe(10)
+    expect((value as dayjs.Dayjs).minute()).toBe(30)
+  })
+
+  it('valueFormat 参与解析：中文日期 YYYY年MM月DD日', () => {
+    const item = makeItem('DatePicker', { attrs: { valueFormat: 'YYYY年MM月DD日' } })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('2026年09月28日'), { row: item, index: 0 })
+    const value = ((vnode as any).props || {}).value
+    expect(dayjs.isDayjs(value)).toBe(true)
+    expect((value as dayjs.Dayjs).isValid()).toBe(true)
+    expect((value as dayjs.Dayjs).format('YYYY-MM-DD')).toBe('2026-09-28')
+  })
+
+  it('DatePicker 配置 valueFormat → 回写 model 为字符串（对齐 EP value-format）', () => {    const item = makeItem('DatePicker', { attrs: { valueFormat: 'YYYY-MM-DD' } })
     const model = makeModel('2024-01-01')
     const renderFn = formInputComponents(item)!
     const vnode = renderFn(h, model, { row: item, index: 0 })

@@ -25,7 +25,7 @@
     "**/*.css"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.build.json",
     "build:deps": "npm run build --workspace @es-plus/core && npm run build --workspace @es-plus/shared",
     "prebuild": "npm run build:deps",
     "pretypecheck": "npm run build:deps",
@@ -91,6 +91,7 @@
     "vite-plugin-dts": "^3.7.0",
     "vitest": "^1.2.0",
     "vue": "^2.7.16",
-    "vue-template-compiler": "^2.7.16"
+    "vue-template-compiler": "^2.7.16",
+    "vue-tsc": "^3.3.1"
   }
 }

@@ -9,6 +9,7 @@
 import type { VNode, RenderFunction } from 'vue'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  VxeEditRender,
   VxeTreeConfig,
   VxeProxyConfig,
   VxeExpandConfig,
@@ -104,7 +105,15 @@ export interface BtnConfig {
   loading?: boolean
   disabled?: boolean | (() => boolean)
   permissionValue?: string
+  /** 是否联动 EsTable 查询 —— key 为 'query'/'rest' 且本字段为 true 时触发一次表格刷新 */
+  triggerEvent?: boolean
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
+  /** 关联弹窗 key（CRUD 场景，见 es-crud-page.vue 的 openDialog 分支） */
+  dialogKey?: string
+  /** 关联动作类型（CRUD 场景，如 export/import；无 key 时兜底作语义键） */
+  actionType?: string
+  /** 二次确认提示（true 用默认文案，字符串自定义文案） */
+  confirm?: string | boolean
   [key: string]: unknown
 }
 
@@ -153,6 +162,21 @@ export interface TableColumn {
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
+  /**
+   * 行内编辑渲染器（仅 vxe 引擎生效，需配合 options.editConfig）。
+   * 消费点：engines/use-vxe-column-adapter.ts 直接读 `col.editRender`（此前只能 `as any`）。
+   */
+  editRender?: VxeEditRender
+  /**
+   * 表尾单元格格式化（仅 vxe 引擎 + options.showFooter）。
+   * 消费点：engines/use-vxe-column-adapter.ts 包一层 `String(...)`（此前同样只能 `as any`）。
+   */
+  footerFormatter?: (params: {
+    items: unknown[]
+    _columnIndex: number
+    column: { field: string; title: string; [key: string]: unknown }
+    columns: Array<{ field: string; title: string; [key: string]: unknown }>
+  }) => string
   cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
   headerCellClassName?: string | ((data: { column: unknown; rowIndex: number }) => string)
   btns?: Array<{
@@ -201,6 +225,10 @@ export interface TableOptions {
   listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   configTableOut?: Record<string, string>
   entryQuery?: Record<string, unknown>
+  /** httpRequestInstance() 重新拉取时是否保留当前页码（表级默认值，默认 false）。消费点见 component.vue 的 resolveKeepPage */
+  refetchKeepPage?: boolean
+  /** 内建客户端分页：传入全量 dataSource，组件内部切片并自管 current/pageSize/total（见 component.vue 的 isLocalPagination） */
+  localPagination?: boolean
   configBtn?: BtnConfig[]
   leftText?: string
   virtual?: boolean
@@ -217,6 +245,8 @@ export interface TableOptions {
   footerData?: unknown[][]
   editConfig?: Record<string, unknown>
   keepSource?: boolean
+  /** 打印配置（vxe engine；true 用默认配置）。由 core 的 vxe-engine/build-grid-config.ts 消费 */
+  printConfig?: Record<string, unknown> | true
   exportConfig?: Record<string, unknown>
   toolbarConfig?: Record<string, unknown>
   columnConfig?: Record<string, unknown>
@@ -242,6 +272,13 @@ export interface PaginationConfig {
 export interface DialogOptions {
   title?: string
   width?: string | number
+  /**
+   * 弹窗显示状态（a-modal 的 open）。
+   *
+   * useDialog 会在未显式传入时补 true，且缓存/开关均靠翻转该 prop；
+   * component.vue 也把它声明成了 props（`visible?: boolean`）—— 此前本类型漏了它。
+   */
+  visible?: boolean
   render?: (h: RenderFunction, instance: unknown, components: Record<string, unknown>) => VNode
   renderHeader?: (h: RenderFunction, instance: unknown) => VNode
   renderFooter?: (h: RenderFunction, instance: unknown) => VNode
@@ -298,6 +335,14 @@ export interface EsPlusOptions {
   permission?: (value: string) => boolean
   t?: (key: string) => string
   globalProperties?: boolean
+  /** 跳过组件全局注册（自动导入模式下设为 true，见 index.ts 的 install） */
+  skipComponentRegistration?: boolean
+  /** 全局 httpRequest（core 的权威字段，见 core/config.ts 的 resolveHttpRequest） */
+  httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
+  /** 各组件级默认配置：install 时按组件名下发 */
+  EsTable?: Record<string, unknown>
+  EsForm?: Record<string, unknown>
+  EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }
 

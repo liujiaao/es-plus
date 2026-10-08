@@ -13,6 +13,23 @@
  */
 import { h } from 'vue'
 import dayjs from 'dayjs'
+// ⚠️ 这一行**不是**在修一个现存 bug —— 写清楚免得后人误判。
+//
+// `dayjs(str, fmt)` 只有装了 customParseFormat 才真的按 fmt 解析，否则第二参被静默
+// 忽略、退回原生 Date 解析（实测 dayjs('28/09/2026','DD/MM/YYYY') → Invalid Date）。
+// 但本模块**已经**通过依赖链拿到了它：顶部 import 的 ant-design-vue 的
+//   node_modules/ant-design-vue/es/vc-picker/generate/dayjs.js:8-10
+//   import customParseFormat from 'dayjs/plugin/customParseFormat'
+//   dayjs.extend(customParseFormat)
+// 在模块初始化时就 extend 了同一个 dayjs 单例（构建时 externalize，三端共用）。
+// 所以即使删掉这一行，toDayjsValue 的 `dayjs(parsed, fmt)` 今天也是正确的。
+//
+// 保留它是为了不把自己的解析正确性建立在**第三方的副作用**上：ADV 哪天不再 extend、
+// 或这段解析被挪进一个不 import ADV 的模块，症状是静默返回 Invalid Date（不抛错）。
+// 显式声明依赖的成本是一行，收益是这处不再依赖别人。
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+
+dayjs.extend(customParseFormat)
 import {
   Input,
   InputPassword,
@@ -76,6 +93,12 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
   // （与 vue3 `rowPassThrough` 剔除 `modelValue` 同构）。
   for (const key of ['value', 'checked', 'targetKeys', 'fileList']) {
     delete merged[key]
+  }
+  // disabled 的函数形式求值（对齐 vue2 resolveAttrs / es-eui 约定，见 vue2 composables.spec.ts）：
+  // 不求值的话函数会原样落到控件 disabled prop，函数恒为真值 → 控件被永久禁用，
+  // 同一份 `attrs: { disabled: () => cond }` 配置在 vue2 可用、在 ADV 永久禁用（三端不一致）。
+  if (typeof merged.disabled === 'function') {
+    merged.disabled = (merged.disabled as () => unknown)()
   }
   return merged
 }
@@ -524,7 +547,7 @@ export function useFormInputs() {
       // ─── Upload — ADV 用 customRequest 替代 http-request，itemRender 用 actions.remove ──
       [
         'Upload',
-        (hFn, _model, { row }: FormInputCtx) => {
+        (hFn, model, { row }: FormInputCtx) => {
           const { props: uploadProps, httpRequest, triggerRender, fileRender, ...restRow } = row as FormItemOption & {
             props?: Record<string, unknown>
             httpRequest?: (options: Record<string, unknown>) => Promise<unknown>
@@ -596,6 +619,35 @@ export function useFormInputs() {
               }
               uploadCfg[toOnKey(key)] = handler
             }
+          }
+
+          // ── file-list 与 model 的双向绑定 ──
+          //
+          // 此前这个分支**连 fileList 都没绑**（`_model` 参数根本没用），上传成功后
+          // model[prop] 仍是初始值 —— 表单提交上去是空的，且不报错。vue2 的实现一直是
+          // 完整的（三个生命周期回调都 setNestedValue 写回），这里补齐到同水平。
+          //
+          // ADV 与 EP 的差异：ADV 把所有生命周期收敛成一个内部函数 onInternalChange
+          // （upload/Upload.js 的 add 201 / success 222 / progress 233 / error 245 /
+          // remove 268 四处调用），它统一走 props['onUpdate:fileList'] 抛出最新列表 ——
+          // 绑这一个就覆盖增、改、错、删全部路径，不需要像 vue3 那样分别接管
+          // onSuccess/onError/onRemove。注意它是 Function **prop**（interface.js:19
+          // 的 `'onUpdate:fileList': functionType()`），不是 $emit 事件。
+          //
+          // 传 `[]` 而不是 undefined：ADV 内部对 fileList 直接做数组操作。
+          const modelFileList = getNestedValue(model, row.prop)
+          uploadCfg.fileList = Array.isArray(modelFileList) ? modelFileList : []
+
+          // 用户若在 `on: { 'update:fileList': fn }` 里给了回调（上面的 toOnKey 循环
+          // 原样放过该键），先取出来，避免下面的接管把它吃掉。
+          const userOnUpdateFileList = uploadCfg['onUpdate:fileList'] as
+            | ((list: unknown[]) => void)
+            | undefined
+
+          uploadCfg['onUpdate:fileList'] = (list: unknown[]) => {
+            userOnUpdateFileList?.(list)
+            // 换新数组引用而不是原地改：与 vue3/vue2 三端一致
+            setNestedValue(model, row.prop, Array.isArray(list) ? [...list] : [])
           }
 
           // ADV Upload 插槽

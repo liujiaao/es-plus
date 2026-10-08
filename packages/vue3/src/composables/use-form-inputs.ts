@@ -56,6 +56,12 @@ function rowPassThrough(row: FormItemOption): Record<string, unknown> {
   // 表单 model 绑定，输入框与 model 静默脱钩（文档约定「内部双向绑定优先」）。
   delete merged.modelValue
   delete merged['onUpdate:modelValue']
+  // disabled 的函数形式求值（对齐 vue2 resolveAttrs / es-eui 约定，见 vue2 composables.spec.ts）：
+  // 不求值的话函数会原样落到控件 disabled prop，函数恒为真值 → 控件被永久禁用，
+  // 同一份 `attrs: { disabled: () => cond }` 配置在 vue2 可用、在 vue3 永久禁用（三端不一致）。
+  if (typeof merged.disabled === 'function') {
+    merged.disabled = (merged.disabled as () => unknown)()
+  }
   return merged
 }
 
@@ -132,8 +138,29 @@ export function useFormInputs() {
       [
         'Transfer',
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          // dataOptions → ElTransfer 的 data。
+          //
+          // 三端里此前只有 vue3 **完全没消费** dataOptions：vue2 是
+          //   data: dataOptions.map(opt => ({ key: opt.value, label: opt.label, disabled: opt.disabled }))
+          // antdv 是 normalizeTransferDataSource（value→key、label→title、无 key 回落下标），
+          // 而 vue3 只传了 modelValue 与透传袋 —— 于是穿梭框两侧永远是空的，
+          // 配置写得再全也白搭，且解析/编译/门禁全绿。
+          //
+          // ElTransfer 的 data 项**必须带 key**（它才是选中态与回写的标识），而 dataOptions
+          // 用的是 value，直接透传会让每项都缺 key。key 缺失时回落下标，与 antdv 的兜底一致。
+          // 位置与 Cascader 的 `options` 同理：放在 rowPassThrough 之前，用户显式透传的
+          // data 仍可覆盖（沿用「内部绑定在前、透传袋在后」的既有优先级）。
+          const dataOptions = row.dataOptions as Array<Record<string, unknown>> | undefined
           return hFn(ElTransfer, {
             modelValue: getNestedValue(model, row.prop) as any,
+            ...(Array.isArray(dataOptions)
+              ? {
+                  data: dataOptions.map((opt, idx) => ({
+                    ...opt,
+                    key: opt.key ?? opt.value ?? String(idx)
+                  }))
+                }
+              : {}),
             ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)
@@ -242,7 +269,7 @@ export function useFormInputs() {
       ],
       [
         'Upload',
-        (hFn: typeof h, _model: Record<string, unknown>, { row }: FormInputCtx) => {
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
           const { props: uploadProps, httpRequest, triggerRender, fileRender, ...restRow } = row as FormItemOption & {
             props?: Record<string, unknown>
             httpRequest?: (options: Record<string, unknown>) => Promise<unknown>
@@ -271,6 +298,70 @@ export function useFormInputs() {
           // 合并 httpRequest（优先用表单项配置的，其次用 props 中的）
           if (httpRequest) {
             elUploadProps['http-request'] = httpRequest
+          }
+
+          // ── file-list 与 model 的双向绑定 ──
+          //
+          // 此前这个分支**连 modelValue/file-list 都没绑**（直接把 elUploadProps 丢给 ElUpload），
+          // 于是上传成功后 model[prop] 仍是初始值 —— 表单提交上去是空的，且不报错。
+          // vue2 的实现（use-form-inputs.ts 的 Upload 分支）一直是完整的：三个生命周期回调
+          // 都把列表 setNestedValue 写回。这里补齐到同水平。
+          //
+          // ElUpload 内部是 `useVModel(props, 'fileList', …, { passive: true })`（见 element-plus
+          // 的 upload/src/use-handlers.mjs），等价于官方的 `v-model:file-list`：读 props.fileList
+          // 作初值，每次变更通过 `update:fileList` 抛出。所以绑定这一个事件就够了；
+          // onSuccess / onError / onRemove 只是**用户回调**的入口（它们都是 ElUpload 的
+          // Function prop，不是 $emit 事件），这里接管它们以便在调用户回调的同时写回 model。
+          //
+          // 传 `[]` 而不是 undefined：ElUpload 的 uploadFiles 直接对 props.fileList 调 .find()，
+          // 给 undefined 会让首屏渲染就抛。
+          const modelFileList = getNestedValue(model, row.prop)
+          elUploadProps.fileList = Array.isArray(modelFileList) ? modelFileList : []
+
+          // 用户在 `on: { success | error | remove }` 里给的回调，已被上面的 toOnKey 循环
+          // 转成同名 prop 写进了 elUploadProps —— 先取出来，避免下面的接管把它吃掉。
+          const userOnSuccess = elUploadProps.onSuccess as
+            | ((...args: unknown[]) => void)
+            | undefined
+          const userOnError = elUploadProps.onError as ((...args: unknown[]) => void) | undefined
+          const userOnRemove = elUploadProps.onRemove as ((...args: unknown[]) => void) | undefined
+          // 用户若直接绑了 update:fileList（少见但合法），同样不能丢
+          const userOnUpdateFileList = elUploadProps['onUpdate:fileList'] as
+            | ((list: unknown[]) => void)
+            | undefined
+
+          const writeBack = (list: unknown): void => {
+            // 换新数组引用而不是原地改：Vue 2 的数组变异检测依赖它，Vue 3 下也无害
+            setNestedValue(model, row.prop, Array.isArray(list) ? [...list] : [])
+          }
+
+          elUploadProps.onSuccess = (
+            response: unknown,
+            file: Record<string, unknown>,
+            list: unknown[]
+          ) => {
+            userOnSuccess?.(response, file, list)
+            writeBack(list)
+          }
+          elUploadProps.onError = (
+            err: unknown,
+            file: Record<string, unknown>,
+            list: unknown[]
+          ) => {
+            userOnError?.(err, file, list)
+            // 失败的文件 ElUpload 会 removeFile（use-handlers.mjs 的 handleError），
+            // 随后的 update:fileList 会再写一次 —— 这里先写，保证同步路径上 model 也是最新的
+            writeBack(list)
+          }
+          elUploadProps.onRemove = (file: Record<string, unknown>, list: unknown[]) => {
+            userOnRemove?.(file, list)
+            // 注意 ElUpload 的 doRemove 是「先 removeFile 再调 onRemove」，
+            // 所以这里的 list 已经是移除后的列表
+            writeBack(list)
+          }
+          elUploadProps['onUpdate:fileList'] = (list: unknown) => {
+            userOnUpdateFileList?.(list as unknown[])
+            writeBack(list)
           }
 
           // Vue 3 h() 的 slots 参数：通过第三个参数传递命名插槽

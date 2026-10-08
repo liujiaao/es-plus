@@ -103,8 +103,8 @@ export interface TableOptions {
   rowkey?: string
   heightType?: 'auto' | 'height' | 'maxHeight'
   height?: number | string
-  virtual?: boolean       // vue3 only — silently ignored on vue2
-  engine?: 'default' | 'virtual'
+  virtual?: boolean       // vue3 → el-table-v2; antdv → <a-table virtual>; vue2 → ignored (warns)
+  engine?: 'default' | 'virtual' | 'vxe'  // 'vxe' works on all three targets
   rowHeight?: number
   estimatedRowHeight?: number
   overscanCount?: number

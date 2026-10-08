@@ -19,7 +19,7 @@ function targetNotes(target: Target): string {
 - Template multi-target binding uses \`:data-source.sync\` / \`:pagination.sync\`, NOT \`v-model:xxx\`.
 - UI-library symbols: \`Message\` / \`MessageBox\` from 'element-ui' (NOT ElMessage/ElMessageBox).
 - Status tags: <el-tag :type="... ? 'success' : 'danger'">.
-- Element UI has NO virtual scrolling (no el-table-v2) — ignore \`virtual\`.
+- Element UI has NO virtual scrolling (no el-table-v2) — do not emit \`virtual: true\` or \`engine: 'virtual'\` for this target. \`engine: 'vxe'\` IS available and is the supported large-data path here (vxe-table itself supports Vue 2).
 - JSX render (dialogs) needs @vue/babel-preset-jsx; prefer mode=schema to avoid JSX.`;
   }
   if (target === "antdv") {

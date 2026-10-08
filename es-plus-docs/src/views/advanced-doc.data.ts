@@ -96,7 +96,7 @@ export const docsData: Record<string, any> = {
         { name: 'destroyOnClose', type: 'boolean', desc: '关闭时销毁内容区，下次打开重新渲染，默认 true（useDialog 已注入）' },
         { name: 'modal', type: 'boolean', desc: '是否显示遮罩层，默认 true' },
         { name: 'alignCenter', type: 'boolean', desc: '是否垂直居中，默认 false' },
-        { name: 'showClose', type: 'boolean', desc: '是否显示右上角关闭按钮，默认 true' },
+        { name: 'showClose', type: 'boolean', desc: '是否显示关闭按钮，默认 true；传 false 彻底隐藏（内置头部自绘的与自定义头部时原生的都隐藏）' },
         { name: 'onClosed', type: '() => void', desc: '弹窗完全关闭后的回调（过渡动画结束时触发）' },
       ],
       'configBtn click 回调': [

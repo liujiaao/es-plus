@@ -1,3 +1,5 @@
+import { q, qKey, qMember, inlineJson } from './codegen-escape.js'
+
 export interface GeneratedConfig {
   formItems: any[]
   columns: any[]
@@ -532,7 +534,7 @@ export function generateCrudConfig(input: string): GeneratedConfig {
       const col: any = { prop: f.prop, label: f.name }
       if (/状态|status/i.test(f.name)) {
         hasStatusRender = true
-        col.render = `(_, { row }) => h(ElTag, { type: row.${f.prop} === 1 ? 'success' : 'danger' }, () => row.${f.prop} === 1 ? '启用' : '禁用')`
+        col.render = `(_, { row }) => h(ElTag, { type: row${qMember(f.prop)} === 1 ? 'success' : 'danger' }, () => row${qMember(f.prop)} === 1 ? '启用' : '禁用')`
       }
       // datePicker → table column should be wider so the date isn't cropped
       if (f.type === 'DatePicker') col.width = 180
@@ -645,7 +647,7 @@ export function generateCode(config: GeneratedConfig): string {
 
   lines.push(``)
 
-  const modelFields = config.formItems.map(f => `${f.prop}: ''`).join(', ')
+  const modelFields = config.formItems.map(f => `${qKey(f.prop)}: ''`).join(', ')
   lines.push(`const queryForm = reactive({ ${modelFields} })`)
   lines.push(`const tableData = ref([])`)
   lines.push(`const tableRef = ref(null)`)
@@ -665,22 +667,22 @@ export function generateCode(config: GeneratedConfig): string {
     lines.push(``)
   }
 
-  lines.push(`const formItems = ${JSON.stringify(config.formItems, null, 2)}`)
+  lines.push(`const formItems = ${inlineJson(config.formItems, 2)}`)
   lines.push(``)
 
   // queryBtns — need to serialize click handlers as code, not JSON
   lines.push(`const queryBtns = [`)
   for (const btn of config.queryBtns) {
     if (btn.key === 'add') {
-      lines.push(`  { name: '${btn.name}', type: '${btn.type}', key: '${btn.key}', icon: '${btn.icon}', click: () => openForm('新增') },`)
+      lines.push(`  { name: ${q(btn.name)}, type: ${q(btn.type)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => openForm('新增') },`)
     } else if (btn.key === 'export') {
-      lines.push(`  { name: '${btn.name}', key: '${btn.key}', icon: '${btn.icon}', click: () => { /* TODO: 调用导出接口 */ } },`)
+      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => { /* TODO: 调用导出接口 */ } },`)
     } else if (btn.key === 'import') {
-      lines.push(`  { name: '${btn.name}', key: '${btn.key}', icon: '${btn.icon}', click: () => { /* TODO: 调用导入接口 */ } },`)
+      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => { /* TODO: 调用导入接口 */ } },`)
     } else {
-      const parts = [`name: '${btn.name}'`]
-      if (btn.type) parts.push(`type: '${btn.type}'`)
-      parts.push(`key: '${btn.key}'`)
+      const parts = [`name: ${q(btn.name)}`]
+      if (btn.type) parts.push(`type: ${q(btn.type)}`)
+      parts.push(`key: ${q(btn.key)}`)
       if (btn.triggerEvent) parts.push(`triggerEvent: true`)
       lines.push(`  { ${parts.join(', ')} },`)
     }
@@ -689,14 +691,14 @@ export function generateCode(config: GeneratedConfig): string {
   lines.push(``)
 
   // columns — render functions need to be unquoted
-  const colStr = JSON.stringify(config.columns, null, 2)
+  const colStr = inlineJson(config.columns, 2)
     .replace(/"render": "(.*?)"/g, (_, code) => `render: ${code.replace(/\\"/g, '"')}`)
   lines.push(`const columns = ${colStr}`)
   lines.push(``)
 
   // table options — httpRequest 和 configTableOut 由全局配置注入，无需在此重复声明
   // 全局配置示例见 main.ts: app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })
-  lines.push(`const options = ${JSON.stringify(config.tableOptions, null, 2)}`)
+  lines.push(`const options = ${inlineJson(config.tableOptions, 2)}`)
 
   // delete handler
   if (hasDelete) {
@@ -721,7 +723,7 @@ export function generateCode(config: GeneratedConfig): string {
   if (hasDialog) {
     lines.push(``)
     lines.push(`function openForm(title, row = {}) {`)
-    const dialogModelFields = (config.dialogFormItems || []).map(f => `${f.prop}: ''`).join(', ')
+    const dialogModelFields = (config.dialogFormItems || []).map(f => `${qKey(f.prop)}: ''`).join(', ')
     lines.push(`  const formData = reactive({ ${dialogModelFields}, ...row })`)
     lines.push(`  const isView = title === '查看'`)
     lines.push(`  dialog({`)
@@ -733,7 +735,7 @@ export function generateCode(config: GeneratedConfig): string {
     lines.push(`        model={formData}`)
 
     // dialog form items without formItemOptions for view mode
-    const dialogItemsStr = JSON.stringify(config.dialogFormItems, null, 8)
+    const dialogItemsStr = inlineJson(config.dialogFormItems, 8)
     lines.push(`        formItemList={${dialogItemsStr}}`)
     lines.push(`      />`)
     lines.push(`    ),`)

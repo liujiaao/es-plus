@@ -533,6 +533,67 @@ describe('tableOptions passthrough', () => {
     } as any)
     expect(result.warnings.some(w => w.includes('virtual'))).toBe(true)
   })
+
+  // ── engine ───────────────────────────────────────────────────────────────
+  // `engine` 此前在**两级**都被丢掉：Zod 的 tableOptions 是普通 z.object（无
+  // passthrough）会剥掉它，生成器的发射白名单里也没有它。于是
+  // `engine: 'vxe'` 经 NL→config 走一遍就静默变成默认引擎。
+  // 下面同时钉住这两级，缺任一级都会红。
+  it("passes engine through: 'virtual'", () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      tableOptions: { engine: 'virtual' },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.engine).toBe('virtual')
+  })
+
+  it("passes engine through: 'vxe'（NL→config 路径静默丢过它）", () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      tableOptions: { engine: 'vxe' },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.engine).toBe('vxe')
+  })
+
+  it('omits engine when not configured（不给既有配置添新键）', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.engine).toBeUndefined()
+  })
+
+  it("vue2 + engine:'virtual' 也要警告（等价于 virtual:true，此前不警告）", () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      target: 'vue2',
+      mode: 'schema',
+      tableOptions: { engine: 'virtual' },
+    } as any)
+    expect(result.warnings.some(w => w.includes('virtual'))).toBe(true)
+  })
+
+  // 反例：**曾经的错误告警**。旧实现断言「vue2 + engine:'vxe' 要警告（vxe 适配器
+  // 只存在于 vue3/antdv）」—— 但 vue2 有完整的 vxe 适配器
+  // （packages/vue2/src/components/es-table/engines/vxe-engine.vue，带单测
+  // vxe-engine.spec.ts），generator 也把 engine 原样透传（同文件
+  // `...(tOpts.engine ? { engine: tOpts.engine } : {})`），运行时确实走 vxe 引擎。
+  // 三端对 vxe-table 的依赖声明完全一致（optional peerDependency，vue2 用 ^3.8.0），
+  // vue3/antdv 不警告，vue2 就不该警告。旧测试把假信息钉成了契约，这里钉住真事实：
+  // **不警告** + engine 必须留在产物里。
+  it("vue2 + engine:'vxe' 不警告，且 engine 原样透传（vue2 也有 vxe 适配器）", () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      target: 'vue2',
+      mode: 'schema',
+      tableOptions: { engine: 'vxe' },
+    } as any)
+    expect(result.warnings.some(w => w.includes('vxe'))).toBe(false)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.engine).toBe('vxe')
+  })
 })
 
 describe('sfc mode — regression guards', () => {

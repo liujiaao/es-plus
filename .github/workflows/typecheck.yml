@@ -22,6 +22,18 @@ jobs:
       fail-fast: false
       matrix:
         pkg: [core, shared, vue2, vue3, adapter-antdv, cli, mcp-server]
+        # 有意**不**纳入的两个包，各有明确理由，不要"顺手补上"：
+        #
+        # 1. packages/es-plus-legacy（包名 es-plus-ui）——**没有可类型检查的东西**。
+        #    它没有 src/、没有 tsconfig.json，package.json 里只有 prepublishOnly 一个脚本，
+        #    实测 `npm run typecheck --workspace es-plus-ui` 直接
+        #    `Missing script: "typecheck"` —— 加进这个矩阵只会得到一个永久全红的 job。
+        #    它是 8 个手写产物文件组成的转发桩（published 到 npm，让老 import 路径继续可用），
+        #    真正的风险不是"类型不对"而是"转发面悄悄断掉"，因此由 consistency job 里的
+        #    `check:legacy-stub` 守（旧入口齐全 / 转发目标仍被 vue3 声明 / files 覆盖 exports /
+        #    .d.ts 的类型名在 vue3 源里存在 / README 声称的依赖范围与 package.json 一致）。
+        # 2. 文档站三个包（es-plus-docs / es-pc / es-eui）——由下面的 docs-build job 真跑
+        #    `vite build`，那比 tsc 更强的信号。
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -93,6 +105,7 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       # 三包契约类型导出一致 + schema↔类型同步 + schemas 单源无漂移
+      # + 生成物转义（反向探针）+ 校验器 schema 文件集契约 + 遗留桩转发契约
       - name: Check cross-renderer consistency
         run: npm run check:consistency
 
@@ -118,7 +131,7 @@ jobs:
         run: npm run test:golden
 
   golden-compile:
-    # 整个 golden 语料（24 个用例 × 三个渲染目标）真实 `vite build` 编译。
+    # 整个 golden 语料（25 个用例 × 三个渲染目标）真实 `vite build` 编译。
     # 此前只在夜间跑（eval-llm.yml），而夜间任务不阻塞合并、也不阻塞部署 ——
     # 生成器产出「能通过字符串断言但编译不过」的代码时，PR 上是绿的。
     # e2e.yml 的 6 个组合虽然也在 PR 编译，但每个组合只覆盖 2 个合成页面；

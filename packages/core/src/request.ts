@@ -280,6 +280,49 @@ export interface FormFieldOptionResult {
 }
 
 /**
+ * 按 `apiParams.labelField` / `valueField` 把远端列表映射成 option 形态。
+ *
+ * 这两个字段此前只有声明（`core/types.ts` 的 ApiParams、三端 types、结构化配置 Zod）
+ * 与教学（NL→config 提示词让 LLM 用它），**没有任何消费点** —— 用户按提示写了
+ * `apiParams: { url, labelField: 'name', valueField: 'id' }`，渲染出来仍是空下拉，
+ * 且不报错。这里补上唯一的消费点（三端渲染器都调用本函数，故单点即三端生效）。
+ *
+ * 两条必须守住的性质：
+ *
+ * 1. **保留原键、只覆盖 label/value**，而不是产出 `{ label, value }`。
+ *    Cascader 的选项是**树**（`options` 里的 `children`），`10-category-cascader.json`
+ *    正是「树形接口 + labelField/valueField」的组合 —— 只取 label/value 会把
+ *    `children` 整个丢掉，级联选择直接变成一层。除了 children，`disabled`、
+ *    以及用户自定义的附加键（crtn / formatter 可能要用）也一并保留。
+ *
+ * 2. 递归映射 `children`：树的每一层用的是同一套字段名。
+ *
+ * 未配置这两个字段时**原样返回**（不做任何拷贝），保证既有配置逐字节不变。
+ */
+export function mapOptionFields(list: unknown[], apiParams?: ApiParams): unknown[] {
+  const labelField = apiParams?.labelField
+  const valueField = apiParams?.valueField
+  if (!labelField && !valueField) return list
+  // 公共函数：list 理论上应为数组，但直接调用者（或上游某条兜底链）可能传入非数组。
+  // 原样透传，交给调用处既有的 `Array.isArray(...)` 兜底，别在这里抛。
+  if (!Array.isArray(list)) return list
+
+  const mapOne = (item: unknown): unknown => {
+    // 非对象（数组里混进字符串/数字）不做猜测，原样留着 —— 与不配置时的行为一致，
+    // 让渲染器/用户回调按它们原本的方式处理。
+    if (!item || typeof item !== 'object') return item
+    const src = item as Record<string, unknown>
+    const out: Record<string, unknown> = { ...src }
+    if (labelField) out.label = src[labelField]
+    if (valueField) out.value = src[valueField]
+    if (Array.isArray(src.children)) out.children = src.children.map(mapOne)
+    return out
+  }
+
+  return list.map(mapOne)
+}
+
+/**
  * 批量拉取所有字段的远端选项
  *
  * 处理流程（与原 es-eui getEveryFormQueryFiled 行为对齐）：
@@ -287,6 +330,11 @@ export interface FormFieldOptionResult {
  * 2. 并发请求所有字段（用 wrapPromise 容错，单字段失败不影响其它）
  * 3. 计算"预提取列表" preExtractedList：
  *      configRows.listData (按字段映射提取) → data (剥一层后的) → dataOptions → []
+ * 3b. 配置了 apiParams.labelField / valueField 时，用 mapOptionFields 把预提取列表
+ *     映射成 option 形态（见该函数注释；必须在第 4 步之前 —— 否则
+ *     crtn/callOptionListFormat 已经产出的 [{label,value}] 会被再按字段名取一遍，
+ *     取到 undefined）。**只映射来自 API 的列表（listData/data）**；dataOptions 是用户
+ *     给的静态兜底、本身已是 {label,value}，映射它只会把 label/value 抹成 undefined。
  * 4. 若配置了 listenToCallBack.crtn：把 preExtractedList 传给 crtn，crtn 返回数组才采纳
  * 5. 否则若有 callOptionListFormat，则把 preExtractedList 交给它格式化
  * 6. 最终再兜底到 configRows.listData / dataOptions / []
@@ -333,12 +381,29 @@ export async function getEveryFormQueryField(
       // 与原 es-eui 一致：crtn / responseTransform 接收的是"已经预提取过的列表数组"，而不是原始响应。
       // 优先级：configRows.listData（按 fieldFieldOutput 映射出来的）→ data（剥一层后的）
       //        → option.dataOptions（用户兜底静态选项）→ []
-      const preExtractedList: unknown[] =
-        Array.isArray(configRows?.listData) && (configRows.listData as unknown[]).length
-          ? (configRows.listData as unknown[])
-          : Array.isArray(data) && (data as unknown[]).length
-            ? (data as unknown[])
-            : (option?.dataOptions as unknown[]) || []
+      //
+      // 这三个来源里，只有前两个（listData / data）是 **API 原始行**，才需要按
+      // labelField/valueField 归一化成 option 形态；第三个 dataOptions 是用户给的
+      // **静态兜底**，本身已是 `{label,value}` 形态 —— 对它再按字段名取一遍，会把
+      // 它的 label/value 抹成 undefined（静态项没有 name/id 这类业务键）。
+      // 因此只在列表来自 API 时才做字段映射。
+      let rawList: unknown[]
+      let listFromApi: boolean
+      if (Array.isArray(configRows?.listData) && (configRows.listData as unknown[]).length) {
+        rawList = configRows.listData as unknown[]
+        listFromApi = true
+      } else if (Array.isArray(data) && (data as unknown[]).length) {
+        rawList = data as unknown[]
+        listFromApi = true
+      } else {
+        rawList = (option?.dataOptions as unknown[]) || []
+        listFromApi = false
+      }
+
+      // 声明式字段映射先于函数式逃生舱（crtn / callOptionListFormat）—— 理由见本函数注释第 3b 步
+      const preExtractedList: unknown[] = listFromApi
+        ? mapOptionFields(rawList, option?.apiParams)
+        : rawList
 
       let newListOptions: unknown[] | undefined
       // 优先使用 responseTransform（推荐），fallback 到 crtn（旧写法）

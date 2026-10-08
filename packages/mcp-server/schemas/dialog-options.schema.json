@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://liujiaao.github.io/es-plus/schemas/dialog-options.schema.json",
   "title": "useDialog Options Configuration",
-  "description": "Configuration object passed to the useDialog() hook in @es-plus/vue3",
+  "description": "Configuration object passed to the useDialog() hook in @es-plus/vue3. NOTE: this schema intentionally declares NO `required` — every field is optional, and a dialog with neither title nor content is legal (the component declares `title?: string` / `render?:` and simply renders an empty header/body). Adding `required: [\"title\"]` here would make the schema stricter than both the type (core/src/types.ts DialogOptions.title?) and the runtime, i.e. it would reject configs that currently work. See check-schema-contract.mjs's `checkPermissiveSchemas`.",
   "type": "object",
   "properties": {
     "title": {

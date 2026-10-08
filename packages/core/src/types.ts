@@ -689,16 +689,23 @@ export interface TableOptions {
   configBtn?: BtnConfig[]
   leftText?: string
 
-  // ─── 虚拟滚动（仅 Vue 3 + el-table-v2 支持） ────────
-  /** 启用虚拟滚动（Vue 2 版本不支持，会降级为普通表格） */
+  // ─── 虚拟滚动（三个 target 都接受，但引擎各不相同） ────────
+  /**
+   * 启用虚拟滚动。
+   *
+   * 引擎按 target 分派：vue3 走 el-table-v2；antdv 把 `virtual` 透传给
+   * `<a-table :virtual>`（Ant Design Vue 4 原生虚拟滚动）；vue2 + Element UI
+   * 无对应实现 —— **不是静默忽略**，会打 console 警告并降级为普通 el-table。
+   */
   virtual?: boolean
-  /** 渲染引擎选择 */
+  /** 渲染引擎选择。'vxe' 三端均支持：vue3 / antdv / vue2 各有自己的 vxe 适配器
+   *  （vxe-table 本身支持 Vue 2；三端都用 optional peerDependency 声明，vue2 用 ^3.8.0）。 */
   engine?: 'default' | 'virtual' | 'vxe'
-  /** 虚拟滚动行高（默认 50） */
+  /** 虚拟滚动行高（默认 50）—— 仅 vue3 / el-table-v2 消费 */
   rowHeight?: number
-  /** 动态行高预估值 */
+  /** 动态行高预估值 —— 仅 vue3 / el-table-v2 消费 */
   estimatedRowHeight?: number
-  /** 可视区域外预渲染行数（默认 2） */
+  /** 可视区域外预渲染行数（默认 2）—— 仅 vue3 / el-table-v2 消费 */
   overscanCount?: number
 
   // ─── vxe 引擎一等公民 API（仅 engine:'vxe' 生效，其他引擎安全忽略）──────────
@@ -726,6 +733,19 @@ export interface TableOptions {
    * editConfig: { trigger: 'click', mode: 'row', showStatus: true }
    */
   editConfig?: VxeEditConfig
+  /**
+   * 保留原始数据快照，使 getUpdateRecords / getInsertRecords 可用
+   * （设置 editConfig 时自动开启）。
+   *
+   * 由本包的 vxe-engine/build-grid-config.ts 消费，vue3 / adapter-antdv 两个 vxe 端
+   * 一直各自声明了它、core 却漏了 —— 于是本包自己的引擎在读它，公开类型里却没有这个字段。
+   * 放在 core 而非各端：它的消费方是本包的共享构建器，且类型不依赖 vxe-table 包
+   * （对比 vxeConfig / vxeOn 必须留在各端的 declare module 增强里 —— core 不允许有依赖）。
+   *
+   * @example
+   * editConfig: { mode: 'row' }, keepSource: false  // 取消自动开启，编辑直接写回行对象
+   */
+  keepSource?: boolean
   /**
    * Excel / CSV 导出配置
    * xlsx 格式需额外安装：npm i @vxe-table/plugin-export-xlsx
@@ -869,7 +889,13 @@ export interface DialogOptions {
   fullscreen?: boolean
   /** 内容加载态：true 时在弹窗主体显示 loading 遮罩 */
   loading?: boolean
-  /** 关闭按钮显示 */
+  /**
+   * 关闭按钮显示，默认 true。
+   *
+   * 传 false 会同时隐藏内置头部里自绘的那个 X 与原生按钮（弹窗不再有关闭入口，
+   * 只能靠底部按钮或 `doClose()`）。保持默认时由组件择一绘制：内置头部用自绘的，
+   * 自定义 `renderHeader` 时用 el-dialog / a-modal 原生的 —— 不会出现两个 X。
+   */
   showClose?: boolean
   /** 关闭时销毁内容 */
   destroyOnClose?: boolean

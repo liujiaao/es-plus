@@ -104,6 +104,16 @@ export interface ApiParams {
   headers?: Record<string, string>
   model?: Record<string, unknown>
   options?: Record<string, unknown>
+  /**
+   * 字段映射别名：把远端返回项映射成 `{ label, value }`。
+   *
+   * 由 @es-plus/core 的 getEveryFormQueryField 统一实现（三端共用同一条路径），
+   * 但此前本端类型漏声明 —— 照文档写 `apiParams: { labelField: 'name' }` 的 vue3 用户
+   * 会直接撞 TS2353（本接口没有索引签名兜底），而 vue2/antdv 的同名接口一直有此字段。
+   */
+  labelField?: string
+  /** 见 labelField */
+  valueField?: string
 }
 
 export interface BtnConfig {
@@ -120,7 +130,18 @@ export interface BtnConfig {
   loading?: boolean
   disabled?: boolean | (() => boolean)
   permissionValue?: string
+  /**
+   * 是否联动 EsTable 查询 —— `key` 为 'query'/'rest' 且本字段为 true 时，
+   * 点击按钮触发一次表格刷新（见 es-form.vue 的按钮点击分支）。
+   */
+  triggerEvent?: boolean
   click?: (model: Record<string, unknown>, formRef: unknown, httpRequestInstance?: unknown) => void
+  /** 关联弹窗 key（CRUD 场景，见 es-crud-page.vue 的 openDialog 分支） */
+  dialogKey?: string
+  /** 关联动作类型（CRUD 场景，如 export/import；无 key 时兜底作语义键） */
+  actionType?: string
+  /** 二次确认提示（true 用默认文案，字符串自定义文案） */
+  confirm?: string | boolean
   [key: string]: unknown
 }
 
@@ -214,6 +235,18 @@ export interface TableOptions {
   listenToCallBack?: CoreListenToCallBack | Record<string, (params: unknown) => unknown>
   configTableOut?: Record<string, string>
   entryQuery?: Record<string, unknown>
+  /**
+   * httpRequestInstance() 重新拉取时是否保留当前页码（表级默认值，默认 false）。
+   *
+   * 消费点：component.vue 的 `resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)`。
+   * core 的 TableOptions 一直声明它，本端此前漏了 —— 差值被索引签名吃掉，不报错但无补全。
+   */
+  refetchKeepPage?: boolean
+  /**
+   * 内建客户端分页：传入全量 dataSource，组件内部切片并自管 current/pageSize/total。
+   * 仅在非请求模式且非 vxe proxy 时生效（见 component.vue 的 isLocalPagination）。
+   */
+  localPagination?: boolean
   configBtn?: BtnConfig[]
   leftText?: string
   rowkey?: string
@@ -275,6 +308,8 @@ export interface TableOptions {
   expandConfig?: VxeExpandConfig
   /** Sequence column config (vxe engine only; requires snIndex:true or type:'index') */
   seqConfig?: VxeSeqConfig
+  /** 打印配置（vxe engine only；true 用默认配置）。由 core 的 vxe-engine/build-grid-config.ts 消费 */
+  printConfig?: Record<string, unknown> | true
   /** Raw vxe-grid config escape hatch (deep-merged after first-class options; overrides anything above) */
   vxeConfig?: Record<string, unknown>
   /** vxe-grid event injection via config (key = event name, e.g. 'cell-click') */
@@ -289,11 +324,29 @@ export interface PaginationConfig {
   pageSizes?: number[]
   size?: 'large' | 'default' | 'small'
   isSmall?: boolean
+  /**
+   * 分页布局（如 'total, sizes, prev, pager, next, jumper'）。
+   *
+   * 优先级与同级的 pageSizes / isSmall / background 一致：
+   * 全局 `$esPlusTable.paginationLayout.layout` 优先，其次才是本 prop。
+   * 此前 `layout` 只读全局那一路（component.vue 的 layout computed），
+   * 于是 core 公开契约里的这个字段在 `:pagination="{ layout }"` 上被静默忽略。
+   */
+  layout?: string
 }
 
 export interface DialogOptions {
   title?: string
   width?: string | number
+  /**
+   * 弹窗显示状态。
+   *
+   * useDialog 会在未显式传入时补 true（use-dialog.ts 的 `dialogOptions.visible === undefined` 分支），
+   * 缓存实例的开关也全靠翻转这个 prop —— 属于 useDialog 的公开入参，此前类型里没有。
+   */
+  visible?: boolean
+  /** 内容加载态：true 时在弹窗主体显示 loading 遮罩（component.vue 的 v-loading="props.loading"） */
+  loading?: boolean
   render?: (h: RenderFunction, instance: unknown, components: Record<string, unknown>) => VNode
   renderHeader?: (h: RenderFunction, instance: unknown) => VNode
   renderFooter?: (h: RenderFunction, instance: unknown) => VNode
@@ -353,6 +406,17 @@ export interface EsPlusOptions {
   permission?: (value: string) => boolean
   t?: (key: string) => string
   globalProperties?: boolean
+  /** 跳过组件全局注册（自动导入模式下设为 true，见 index.ts 的 install） */
+  skipComponentRegistration?: boolean
+  /**
+   * 全局 httpRequest（core 的权威字段，见 core/config.ts 的 resolveHttpRequest）。
+   * 组件级 options.httpRequest 优先于此。
+   */
+  httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
+  /** 各组件级默认配置：install 时按组件名下发（index.ts 的 `options[component.name]`） */
+  EsTable?: Record<string, unknown>
+  EsForm?: Record<string, unknown>
+  EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }
 

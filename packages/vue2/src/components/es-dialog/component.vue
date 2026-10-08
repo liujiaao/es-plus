@@ -14,7 +14,7 @@
       v-bind="filteredAttrs"
       :visible.sync="dialogVisible"
       :width="typeof width === 'number' ? width + 'px' : width"
-      :show-close="false"
+      :show-close="showNativeClose"
       :fullscreen="isFullscreen"
       :append-to-body="appendToBody"
       :modal-append-to-body="modalAppendToBody"
@@ -40,7 +40,7 @@
                 :class="isFullscreen ? 'el-icon-copy-document' : 'el-icon-full-screen'"
                 @click="handleFullscreen"
               />
-              <i class="el-icon-close" @click="handleClose" />
+              <i class="el-icon-close" v-show="showClose" @click="handleClose" />
             </div>
           </div>
         </template>
@@ -148,6 +148,8 @@ export default defineComponent({
     renderFooter: { type: Function, default: undefined },
     render: { type: Function, default: undefined },
     fullscreen: { type: Boolean, default: false },
+    // 是否显示关闭按钮，默认 true。false 时自绘的（内置头部）与原生的一起隐藏。
+    showClose: { type: Boolean, default: true },
     // 弹窗内容加载态：true 时在 body 区域显示 el-loading 遮罩
     loading: { type: Boolean, default: false },
     // 用户透传给 RenderJsx 的额外组件映射（如 EsTable / EsForm 引用）
@@ -388,6 +390,15 @@ export default defineComponent({
       ...((props.passThroughAttrs as Record<string, unknown>) || {}),
     }))
 
+    // 原生关闭按钮只在「调用方没有自绘头部」时放出。
+    //
+    // 此前这里硬编码 `:show-close="false"`，它只在**内置头部**下成立 —— 内置头部的
+    // `.btns` 里已经自绘了一个 X（与全屏按钮同排）。可一旦调用方传入 renderHeader，
+    // 自绘 X 随 `v-else` 一起消失，原生 X 又恒被关掉 —— 弹窗**完全没有关闭入口**。
+    // 现在：showClose === false 全关；否则内置头部用自绘的、自定义头部用原生的，
+    // 任何组合下都不会出现两个 X。
+    const showNativeClose = computed(() => props.showClose && !!props.renderHeader)
+
     const initDialogCls = computed(() => {
       if (!isFullscreen.value) {
         if (props.maxHeight) return 'dialogShadow'
@@ -472,6 +483,7 @@ export default defineComponent({
       renderBodyRefsObject,
       // computeds
       filteredAttrs,
+      showNativeClose,
       initDialogCls,
       initDialogHeight,
       getCurrentInstanceModel,

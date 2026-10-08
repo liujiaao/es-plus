@@ -6,7 +6,7 @@
   "type": "array",
   "items": {
     "title": "EsTable Column Configuration",
-    "description": "Configuration for a single column in @es-plus/vue3 EsTable component",
+    "description": "Configuration for a single column in @es-plus/vue3 EsTable component. Every column must be at least one of: addressable (prop or key), a built-in special column (type: selection/expand/index), or a multi-level header group (groups). A column with none of these renders nothing.",
     "type": "object",
     "properties": {
       "prop": {
@@ -154,6 +154,28 @@
         "description": "Placeholder text for empty cell values"
       }
     },
+    "anyOf": [
+      {
+        "required": [
+          "prop"
+        ]
+      },
+      {
+        "required": [
+          "key"
+        ]
+      },
+      {
+        "required": [
+          "type"
+        ]
+      },
+      {
+        "required": [
+          "groups"
+        ]
+      }
+    ],
     "additionalProperties": true
   }
 }

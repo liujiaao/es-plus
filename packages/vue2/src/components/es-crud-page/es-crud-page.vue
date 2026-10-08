@@ -62,6 +62,7 @@ import type {
   DialogActionContext,
 } from './types'
 import type { BtnConfig, TableColumn } from '@es-plus/core'
+import { getNestedValue, setNestedValue, parsePathSegments } from '@es-plus/core'
 
 export default defineComponent({
   name: 'EsCrudPage',
@@ -105,13 +106,39 @@ export default defineComponent({
     // 同步 schema.formItems → queryModel 默认字段
     // 用 set() 而非直接赋值：Vue 2.7 reactive({}) 后新增的键需经 set 才响应式，
     // 否则带校验规则的查询字段会复现「校验重渲染回补陈旧空值清空输入」的问题（同弹窗 formData 修复）。
+    //
+    // 嵌套 prop（'a.b' / 'a[0].b'，schema 明确支持）必须【逐层 set】建响应式结构：
+    // 直接 set(queryModel, 'a.b', '') 只会落一个名为 'a.b' 的扁平响应式键，而表单经
+    // getNestedValue(model, 'a.b') 读的是 queryModel.a.b —— 取不到、输入也不响应式。
+    const reactiveSetPath = (
+      target: Record<string, unknown>,
+      path: string,
+      value: unknown
+    ) => {
+      const keys = parsePathSegments(path)
+      // 防原型污染，与 core setNestedValue 的拒绝名单一致。
+      if (keys.some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return
+      let cur: Record<string, unknown> = target
+      for (let i = 0; i < keys.length - 1; i++) {
+        const k = keys[i]
+        if (cur[k] == null || typeof cur[k] !== 'object') {
+          // 下一段是纯数字索引 → 该层建数组，否则建普通对象（对齐 core setNestedValue）。
+          set(cur, k, /^\d+$/.test(keys[i + 1]) ? [] : {})
+        }
+        cur = cur[k] as Record<string, unknown>
+      }
+      const last = keys[keys.length - 1]
+      // 叶子也经 set 落 '' 占位 —— 后续表单写入 setNestedValue(model, path, v) 命中已响应式的键。
+      if (last !== undefined) set(cur, last, value)
+    }
     watch(
       () => props.schema.formItems,
       (items) => {
         if (items) {
           items.forEach((item) => {
-            if (item.prop && !(item.prop in queryModel)) {
-              set(queryModel as Record<string, unknown>, item.prop as string, '')
+            // getNestedValue 判存在（而非 'a.b' in queryModel）：嵌套结构下顶层键是 a 而非 'a.b'。
+            if (item.prop && getNestedValue(queryModel, item.prop) === undefined) {
+              reactiveSetPath(queryModel as Record<string, unknown>, item.prop as string, '')
             }
           })
         }
@@ -394,11 +421,15 @@ export default defineComponent({
       // 一旦字段带校验规则，el-form-item 因校验重渲染会用「陈旧的空 value」回补 el-input 而清空输入
       // （create 表单必填字段无法录入）。故这里先把所有字段建好再交给 reactive，键从创建即响应式。
       // vue3 用 Proxy 无此问题，此修复仅对齐 vue2 语义。
+      //
+      // 嵌套 prop（'a.b' / 'a[0].b'）走 setNestedValue 建出结构、getNestedValue 从 row 读同名路径：
+      // 扁平键 initialFormData['a.b'] 既取不到 row 的嵌套值（编辑态不回填），
+      // 也与表单经 getNestedValue(model,'a.b') 的读取对不上。结构在 reactive() 前建好即全程响应式。
       const initialFormData: Record<string, unknown> = {}
       if (dialogConfig.formItems) {
         dialogConfig.formItems.forEach((item) => {
           if (item.prop) {
-            initialFormData[item.prop] = row?.[item.prop] ?? ''
+            setNestedValue(initialFormData, item.prop, getNestedValue(row ?? {}, item.prop) ?? '')
           }
         })
       }

@@ -7,6 +7,7 @@
 
 import type { BtnConfig, FormItemOption, ListenToCallBack, ModelData } from './types'
 import { FORM_TYPE_ALIASES } from './constants'
+import { resolveButtonSide } from './field-resolver'
 
 // ============================================================================
 // FormType 归一化
@@ -41,16 +42,27 @@ export function resolveFormLayProps(
 // ============================================================================
 
 /**
- * 解析按钮位置 —— 优先 position，fallback code
+ * 解析按钮位置（表格工具栏语义）—— 委托给唯一的解析入口。
  *
- * - position 字段优先（推荐，语义自解释）
- * - code 字段兜底（@deprecated 兼容旧 API）
- * - 两者都未配时默认 'left'
+ * 这里此前是一份**独立实现**：
+ *   `if (btn.position) return btn.position; if (btn.code === 2) return 'right'; return 'left'`
+ * 与 `field-resolver.ts` 的同名函数（读 `resolveButtonSide(btn, 'table')`）在合法输入上
+ * 完全同解，但非法输入分叉：配置来自手写 JSON / AI 生成时 `position` 完全可能是
+ * `'center'`、`'top'` 这类不在类型里的值，那时本实现会把 `'center'` **原样返回**
+ * （返回值类型写着 'left' | 'right'，是撒谎），于是 `isButtonRight` 与 `isButtonLeft`
+ * 双双为 false —— 按钮在左右两栏里都不出现，静默消失，且不报错。
+ * field-resolver 的 `only()` 会把非法值当成未配置，继续 fallback 到 code → left。
+ *
+ * `isButtonRight`/`isButtonLeft` 就是基于本函数的差集过滤（三端 table-btns.vue 用的
+ * 是 `index.ts` 里 field-resolver 那一版 `getButtonPosition`，这两个辅助函数则只由
+ * `resolveButtonPosition` 一族对外暴露），所以非法值的分叉只污染这几个导出。
+ *
+ * 委托后 `resolveButtonPosition` / `isButtonLeft` / `isButtonRight` 与
+ * `getButtonPosition` / `splitToolbarButtonsByCode` 全部同解，非法值不再静默丢按钮。
+ * 合法输入下行为逐字未变（原 4 条断言全部照常成立）。
  */
 export function getButtonPosition(btn: BtnConfig): 'left' | 'right' {
-  if (btn.position) return btn.position
-  if (btn.code === 2) return 'right'
-  return 'left'
+  return resolveButtonSide(btn, 'table')
 }
 
 /**

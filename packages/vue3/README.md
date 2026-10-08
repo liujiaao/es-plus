@@ -728,9 +728,9 @@ dialog({
 | hiddenFullBtn | `boolean` | `false` | 隐藏全屏按钮 |
 | isHiddenFooter | `boolean` | `false` | 隐藏底部 |
 | center | `boolean` | — | 垂直居中 |
-| closeOnClickModal | `boolean` | `false` | 点击遮罩关闭 |
-| closeOnPressEscape | `boolean` | `false` | 按 ESC 关闭 |
-| showClose | `boolean` | `true` | 显示关闭按钮 |
+| closeOnClickModal | `boolean` | `true` | 点击遮罩关闭（继承 el-dialog 默认值） |
+| closeOnPressEscape | `boolean` | `true` | 按 ESC 关闭（继承 el-dialog 默认值） |
+| showClose | `boolean` | `true` | 显示关闭按钮。内置头部由组件自绘；自定义 `renderHeader` 时显示原生按钮。传 `false` 彻底隐藏 |
 | destroyOnClose | `boolean` | — | 关闭时销毁 |
 | showDefaultButtons | `boolean` | — | 显示默认确定/取消按钮 |
 | loading | `boolean` | `false` | 加载状态 |

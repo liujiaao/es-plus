@@ -38,7 +38,7 @@ See the full migration guide: <https://github.com/liujiaao/es-plus/blob/master/d
 
 ## What still works
 
-- `npm install es-plus-ui` — installs this stub, which depends on `@es-plus/vue3@1.4.0`
+- `npm install es-plus-ui` — installs this stub, which depends on `@es-plus/vue3@^1.6.0` (kept equal to `dependencies` in `package.json`; see the `check:legacy-stub` guard)
 - `import ... from 'es-plus-ui'` — re-exports `@es-plus/vue3`
 - `import 'es-plus-ui/dist/style.css'` — re-imports `@es-plus/vue3/dist/style.css`
 - `import { EsPlusResolver } from 'es-plus-ui/resolver'` — re-exports `@es-plus/vue3/resolver`

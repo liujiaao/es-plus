@@ -24,9 +24,19 @@ export interface VxeColumnOption {
   [key: string]: any
 }
 
+/**
+ * renderSlotMap 的值类型：一定带 render 的列。
+ *
+ * 两处 `slotMap.set` 都在 `if (col.render)` 分支内（adaptSingleCol 与本文件 expand 分支），
+ * 所以「登记进 slotMap」与「render 存在」是同一件事。原先写成 `Map<string, TableColumn>`
+ * 会丢掉这个不变量，于是 vxe-engine.vue 的 `:render="entry.col.render"` 撞上
+ * render-dom-tb 的必填 render prop（TS2322）—— 那里只能靠 `as any` 掩盖。
+ */
+export type RenderSlotColumn = TableColumn & { render: NonNullable<TableColumn['render']> }
+
 interface AdapterResult {
   columns: VxeColumnOption[]
-  renderSlotMap: Map<string, TableColumn>
+  renderSlotMap: Map<string, RenderSlotColumn>
 }
 
 export function useVxeColumnAdapter(
@@ -36,7 +46,7 @@ export function useVxeColumnAdapter(
 ) {
   const _result = computed((): AdapterResult => {
     const cols: VxeColumnOption[] = []
-    const slotMap = new Map<string, TableColumn>()
+    const slotMap = new Map<string, RenderSlotColumn>()
     const colList = columns.value
     const opts = unrefOptions(options)
 
@@ -71,7 +81,7 @@ export function useVxeColumnAdapter(
         })
       } else if (col.type === 'expand') {
         let expandContentSlot = 'expand'
-        if (col.render) {
+        if (hasRender(col)) {
           expandContentSlot = `_expand_render_${slotMap.size}`
           slotMap.set(expandContentSlot, col)
         }
@@ -114,9 +124,19 @@ function resolveTitle(col: TableColumn, t?: (key: string) => string): string {
   return (col.label || '') as string
 }
 
+/**
+ * 类型守卫：把「有 render」这件事交给编译器，而不是靠 `as any`。
+ *
+ * 直接写 `if (col.render)` 不会把 `col` 收窄成 RenderSlotColumn（TS 只收窄属性访问本身，
+ * 不通过可选属性收窄父对象），所以登记 slotMap 那两处必须走这个谓词。
+ */
+function hasRender(col: TableColumn): col is RenderSlotColumn {
+  return typeof col.render === 'function'
+}
+
 function adaptSingleCol(
   col: TableColumn,
-  slotMap: Map<string, TableColumn>,
+  slotMap: Map<string, RenderSlotColumn>,
   t?: (key: string) => string,
 ): VxeColumnOption {
   const field = (col.prop || col.key || '') as string
@@ -134,7 +154,7 @@ function adaptSingleCol(
   if (col.ellipsis) base.showOverflow = 'tooltip'
   if ((col as any).treeNode) base.treeNode = true
 
-  if (col.render) {
+  if (hasRender(col)) {
     const slotName = `_render_${field || '_nofield'}_${slotMap.size}`
     base.slots = { default: slotName }
     slotMap.set(slotName, col)
@@ -168,7 +188,7 @@ function adaptSingleCol(
 
 function adaptGroupCol(
   col: TableColumn,
-  slotMap: Map<string, TableColumn>,
+  slotMap: Map<string, RenderSlotColumn>,
   t?: (key: string) => string,
 ): VxeColumnOption {
   const base = adaptSingleCol(col, slotMap, t)

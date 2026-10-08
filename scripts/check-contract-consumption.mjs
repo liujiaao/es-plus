@@ -191,11 +191,21 @@ function main() {
 
   let fail = false
   for (const contract of CONTRACTS) {
+    // 每个 contract 一份独立的失败标志。
+    // 曾经这里直接用外层的 `fail` 去决定要不要打印成功行，于是**只要前面有一个 contract 红了，
+    // 后面所有 contract 即便全绿也不再打印 ✅** —— 报告从「哪几项失败」退化成「从某个位置起
+    // 没有 ✅」，读者无法区分「没打印」和「失败」。两处 stale 检查也都以 contract.name 为前缀，
+    // 本来就是 per-contract 的，用共享标志同样失真。
+    let contractFailed = false
+    const markFailed = () => {
+      contractFailed = true
+      fail = true
+    }
     const src = stripComments(readFileSync(join(ROOT, contract.path), 'utf-8'))
     const body = interfaceBody(src, contract.name)
     if (body == null) {
       console.error(`❌ 无法解析 ${contract.name}（${contract.path}），选择器失效`)
-      fail = true
+      markFailed()
       continue
     }
     const fields = interfaceFields(body)
@@ -248,7 +258,7 @@ function main() {
     }
 
     if (silentByField.size) {
-      fail = true
+      markFailed()
       console.error(`❌ ${contract.name} 存在「声明了但在某个渲染端从未读取」的字段（疑似静默失效）：`)
       for (const [f, silent] of silentByField) {
         console.error(`   - ${f}  ← 未读取：${silent.join(', ')}`)
@@ -256,15 +266,15 @@ function main() {
       console.error('   要么在该端接线，要么在 ALLOWLIST / RENDERER_EXEMPT 登记并说明原因。')
     }
     if (stale.length) {
-      fail = true
+      markFailed()
       console.error(`❌ ${contract.name} ALLOWLIST 含已不存在的字段（请清理）：${stale.join(', ')}`)
     }
     if (staleExempt.length) {
-      fail = true
+      markFailed()
       console.error(`❌ ${contract.name} RENDERER_EXEMPT 含过期条目（请清理）：`)
       for (const s of staleExempt) console.error(`   - ${s}`)
     }
-    if (!fail) {
+    if (!contractFailed) {
       console.log(
         `✅ ${contract.name}: ${fields.length} 个字段在 ${blobs.length} 端均被消费或已登记`
       )

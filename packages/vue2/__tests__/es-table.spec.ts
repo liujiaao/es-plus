@@ -206,3 +206,82 @@ describe('EsTable(vue2) - 并发分页请求竞态', () => {
     expect(errors).toHaveLength(0)
   })
 })
+
+/**
+ * 分页尺寸：Element UI 的分页没有 `size` prop，只有布尔 `small`。
+ *
+ * 此前模板是从 vue3 逐字抄来的 `:size="paginationIsSmall ? 'small' : paginationConfig.size"` ——
+ * 两个分支在 vue2 里都是空转：`size` 不是 el-pagination 声明的 prop，只会作为 HTML 属性
+ * 落到分页根元素上，既不报错也无任何样式效果。于是本组件**自己声明的默认值**
+ * （`paginationConfig` 初值 `size: 'small'` / `isSmall: true`）在渲染层从未生效 ——
+ * 而 vue3（Element Plus 有 `size`）与 adapter-antdv（AntDV 分页只认 default/small）
+ * 两端都按同一份默认值渲染成 small。这里用渲染出的 `small` 属性把三端拉齐。
+ *
+ * 沿用文件既有做法：不加载真实 element-ui（`el-pagination` 作为未知元素渲染，
+ * 属性照常落到 DOM 上，足以断言）。
+ */
+describe('EsTable(vue2) - 分页尺寸映射到 Element UI 的 small', () => {
+  /**
+   * 带连字符的未知元素走 Vue 2 的 baseSetAttr：真值 `setAttribute`、假值
+   * `removeAttribute`。所以「不 small」= 属性**不存在**，「small」= `small="true"`。
+   */
+  const smallAttr = (vm: any): string | null =>
+    vm.$el.querySelector('el-pagination')?.getAttribute('small') ?? null
+  const isSmall = (vm: any): boolean => smallAttr(vm) === 'true'
+
+  /** `pagination.total !== undefined` 才会点亮 showPagination */
+  const paginated = { current: 1, pageSize: 10, total: 30 }
+
+  /** paginationLayout 不是 prop，而是父级（EsCrudPage）注入的 `$esPlusTable` */
+  const mountWithLayout = (layout: Record<string, unknown>, pagination: Record<string, unknown>) =>
+    (new Vue({
+      provide: { $esPlusTable: { paginationLayout: () => layout } },
+      render: (h) =>
+        h(EsTable as any, {
+          props: { dataSource: [], columns: [{ prop: 'id', label: 'ID' }], options: {}, pagination }
+        })
+    }) as any).$mount()
+
+  it('默认配置 → small（回归：此前本端渲染成默认尺寸，与 vue3/antdv 不一致）', async () => {
+    const vm = mountTable({ pagination: paginated })
+    await vm.$nextTick()
+    expect(smallAttr(vm), '分页应已渲染').not.toBeNull()
+    expect(isSmall(vm)).toBe(true)
+  })
+
+  it('pagination.isSmall: false 且 size 非 small → 不渲染 small', async () => {
+    const vm = mountTable({ pagination: { ...paginated, isSmall: false, size: 'default' } })
+    await vm.$nextTick()
+    expect(smallAttr(vm)).toBeNull()
+  })
+
+  it("pagination.size: 'small' → small（Element UI 唯一能表达的取值）", async () => {
+    const vm = mountTable({ pagination: { ...paginated, isSmall: false, size: 'small' } })
+    await vm.$nextTick()
+    expect(isSmall(vm)).toBe(true)
+  })
+
+  it("pagination.size: 'large' 且 isSmall: false → 不渲染 small（Element UI 无 large）", async () => {
+    const vm = mountTable({ pagination: { ...paginated, isSmall: false, size: 'large' } })
+    await vm.$nextTick()
+    expect(smallAttr(vm)).toBeNull()
+  })
+
+  it('paginationLayout.isSmall 优先于 pagination.isSmall（两个方向都验）', async () => {
+    const on = mountWithLayout({ isSmall: true }, { ...paginated, isSmall: false, size: 'default' })
+    await on.$nextTick()
+    expect(isSmall(on)).toBe(true)
+
+    // isSmall 为假时退回 size 判定（与 vue3 的 `isSmall ? 'small' : size` 同构），
+    // 所以这里 size 也要给非 small，才能验出「layout 的 false 压过了 pagination 的 true」
+    const off = mountWithLayout({ isSmall: false }, { ...paginated, isSmall: true, size: 'default' })
+    await off.$nextTick()
+    expect(smallAttr(off)).toBeNull()
+  })
+
+  it('`size` 不再作为裸属性落到分页元素上（回归：此前渲染出 size="small"）', async () => {
+    const vm = mountTable({ pagination: { ...paginated, size: 'large' } })
+    await vm.$nextTick()
+    expect(vm.$el.querySelector('el-pagination')?.getAttribute('size')).toBeNull()
+  })
+})

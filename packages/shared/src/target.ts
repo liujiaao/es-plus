@@ -26,6 +26,8 @@
  *  - 不在运行时被引用，纯构建产物输出工具
  */
 
+import { q, qAttr, qMember, qMustache } from './codegen-escape.js'
+
 export type TargetFramework = 'vue3' | 'vue2' | 'antdv'
 
 export const DEFAULT_TARGET: TargetFramework = 'vue3'
@@ -176,8 +178,8 @@ export function buildDeleteConfirmBlock(opts: {
   if (opts.target === 'antdv') {
     return [
       `${indent}Modal.confirm({`,
-      `${indent}  title: '${title}',`,
-      `${indent}  content: '${content}',`,
+      `${indent}  title: ${q(title)},`,
+      `${indent}  content: ${q(content)},`,
       `${indent}  async onOk() {`,
       `${indent}    try {`,
       ...body.map(l => (l ? `${indent}      ${l}` : l)),
@@ -190,7 +192,7 @@ export function buildDeleteConfirmBlock(opts: {
   }
   // vue3 / vue2（vue2 的 ElMessageBox→MessageBox 由 rewriteElementUsage 处理）
   return [
-    `${indent}ElMessageBox.confirm('${content}', '${title}', { type: 'warning' })`,
+    `${indent}ElMessageBox.confirm(${q(content)}, ${q(title)}, { type: 'warning' })`,
     `${indent}  .then(async () => {`,
     `${indent}    try {`,
     ...body.map(l => (l ? `${indent}      ${l}` : l)),
@@ -206,6 +208,14 @@ export function buildDeleteConfirmBlock(opts: {
  * 生成状态列自定义渲染的模板片段（scoped slot 内），按 target 适配标签组件。
  *  - vue3 / vue2：<el-tag :type="... 'success' : 'danger'">
  *  - antdv：<a-tag :color="... 'green' : 'red'">
+ *
+ * 两个位置需要**两套**转义，缺一不可：
+ *  - `:type=` / `:color=` 是**双引号包起来的 HTML 属性值**。`qMember` 给的是 JS 表达式
+ *    形态（`row['b"x']`），其中的 `"` 在 JS 里合法，却会把外层属性值撑破。所以整条表达式
+ *    还要再过一遍 `qAttr`（实体化），HTML 解析器解码后仍是同一条 JS 表达式。
+ *    实测 `prop: 'b"@mouseover="alert(1)'` 会生成
+ *    `<el-tag :type="row['b"@mouseover="alert(1)'] === 1 ? …">` —— 凭空多出一个事件属性。
+ *  - `{{ … }}` 是 mustache，`qMember` 已经走 `qMustache` 挡住 `}}` 提前收尾。
  */
 export function buildStatusTagTemplate(opts: {
   target: TargetFramework
@@ -218,16 +228,18 @@ export function buildStatusTagTemplate(opts: {
   const prop = opts.prop
   const activeText = opts.activeText ?? '启用'
   const inactiveText = opts.inactiveText ?? '禁用'
-  const text = `{{ row.${prop} === 1 ? '${activeText}' : '${inactiveText}' }}`
+  const text = `{{ row${qMember(prop)} === 1 ? ${qMustache(activeText)} : ${qMustache(inactiveText)} }}`
   if (opts.target === 'antdv') {
+    const colorExpr = `row${qMember(prop)} === 1 ? 'green' : 'red'`
     return [
-      `${indent}<a-tag :color="row.${prop} === 1 ? 'green' : 'red'">`,
+      `${indent}<a-tag :color="${qAttr(colorExpr)}">`,
       `${indent}  ${text}`,
       `${indent}</a-tag>`,
     ]
   }
+  const typeExpr = `row${qMember(prop)} === 1 ? 'success' : 'danger'`
   return [
-    `${indent}<el-tag :type="row.${prop} === 1 ? 'success' : 'danger'">`,
+    `${indent}<el-tag :type="${qAttr(typeExpr)}">`,
     `${indent}  ${text}`,
     `${indent}</el-tag>`,
   ]

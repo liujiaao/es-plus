@@ -173,6 +173,16 @@ describe('useFormInputs', () => {
       expect(vnode.props?.placeholder).toBe('Enter')
     })
 
+    it('attrs.disabled 为函数时被求值（对齐 vue2 / es-eui；不求值则函数恒真，控件永久禁用）', () => {
+      const item = {
+        prop: 'name', label: 'Name', formtype: 'Input',
+        attrs: { disabled: () => true },
+      } as unknown as FormItemOption
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { name: '' }, { row: item, index: 0 })
+      expect(vnode.props?.disabled).toBe(true)
+    })
+
     it('should update model via onUpdate:modelValue', () => {
       const item: FormItemOption = { prop: 'name', label: 'Name', formtype: 'Input' }
       const model: Record<string, unknown> = { name: 'old' }
@@ -311,6 +321,76 @@ describe('useFormInputs', () => {
       expect(vnode.type).toBe(ElTransfer)
       expect(vnode.props?.modelValue).toEqual([1, 2])
     })
+
+    // dataOptions → data：三端里此前只有 vue3 没消费（vue2 自己 map，antdv 走
+    // normalizeTransferDataSource），穿梭框两侧恒为空。这组用例把它钉住。
+    it('dataOptions → data，且 value 必须改名成 key（ElTransfer 的标识字段）', () => {
+      const item: FormItemOption = {
+        prop: 'selected',
+        label: 'Transfer',
+        formtype: 'Transfer',
+        dataOptions: [
+          { label: 'A', value: 'a' },
+          { label: 'B', value: 'b', disabled: true }
+        ]
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { selected: [] }, { row: item, index: 0 })
+      expect(vnode.props?.data).toEqual([
+        { label: 'A', value: 'a', key: 'a' },
+        { label: 'B', value: 'b', disabled: true, key: 'b' }
+      ])
+    })
+
+    it('dataOptions 的 value 为 0 时不能用 || 兜底（0 是合法 key）', () => {
+      const item: FormItemOption = {
+        prop: 'selected',
+        label: 'Transfer',
+        formtype: 'Transfer',
+        dataOptions: [{ label: '零', value: 0 }]
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { selected: [] }, { row: item, index: 0 })
+      expect(vnode.props?.data?.[0].key).toBe(0)
+    })
+
+    it('已带 key 的选项保留原 key（不强行改写成 value）', () => {
+      const item: FormItemOption = {
+        prop: 'selected',
+        label: 'Transfer',
+        formtype: 'Transfer',
+        dataOptions: [{ label: 'A', value: 'a', key: 'k-a' }]
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { selected: [] }, { row: item, index: 0 })
+      expect(vnode.props?.data?.[0].key).toBe('k-a')
+    })
+
+    it('都没有 key/value 时回落下标（与 antdv 的兜底一致，避免每项同 key）', () => {
+      const item: FormItemOption = {
+        prop: 'selected',
+        label: 'Transfer',
+        formtype: 'Transfer',
+        dataOptions: [{ label: 'A' }, { label: 'B' }]
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { selected: [] }, { row: item, index: 0 })
+      expect(vnode.props?.data?.map((d: any) => d.key)).toEqual(['0', '1'])
+    })
+
+    it('用户经 attrs 显式透传的 data 优先于 dataOptions（沿用既有优先级）', () => {
+      const explicit = [{ label: 'X', key: 'x' }]
+      const item: FormItemOption = {
+        prop: 'selected',
+        label: 'Transfer',
+        formtype: 'Transfer',
+        dataOptions: [{ label: 'A', value: 'a' }],
+        attrs: { data: explicit }
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { selected: [] }, { row: item, index: 0 })
+      expect(vnode.props?.data).toEqual(explicit)
+    })
   })
 
   describe('Cascader', () => {
@@ -403,6 +483,88 @@ describe('useFormInputs', () => {
       const renderFn = formInputComponents(item)
       const vnode = renderFn(h, model, { row: item, index: 0 })
       expect(vnode.type).toBe(ElUpload)
+    })
+
+    // ── file-list ↔ model 双向绑定 ──────────────────────────────────────
+    // 此前这个分支连 file-list 都没绑：上传完 model[prop] 仍是初始值，
+    // 表单提交上去是空的，且不报错。vue2 一直是完整的，vue3 漏了。
+    const uploadItem = (extra: Record<string, unknown> = {}): FormItemOption =>
+      ({ prop: 'file', label: 'File', formtype: 'Upload', ...extra }) as FormItemOption
+
+    it('el-upload 的 fileList 取自 model[prop]', () => {
+      const files = [{ name: 'a.png', uid: 1 }]
+      const vnode = formInputComponents(uploadItem())!(h, { file: files }, {
+        row: uploadItem(),
+        index: 0,
+      })
+      expect(vnode.props?.fileList).toEqual(files)
+    })
+
+    it('model[prop] 不是数组时给 []，而不是 undefined', () => {
+      // ElUpload 内部（use-handlers.mjs 的 getFile）直接对 props.fileList 调 .find()，
+      // 传 undefined 会让首屏渲染就抛。
+      for (const empty of [{}, { file: null }, { file: undefined }, { file: 'not-array' }]) {
+        const vnode = formInputComponents(uploadItem())!(h, empty, {
+          row: uploadItem(),
+          index: 0,
+        })
+        expect(vnode.props?.fileList, JSON.stringify(empty)).toEqual([])
+      }
+    })
+
+    it('update:fileList 把新列表写回 model[prop]，且换新数组引用', () => {
+      const model: Record<string, unknown> = { file: [] }
+      const vnode = formInputComponents(uploadItem())!(h, model, {
+        row: uploadItem(),
+        index: 0,
+      })
+      const next = [{ name: 'b.png', uid: 2 }]
+      vnode.props!['onUpdate:fileList'](next)
+      expect(model.file).toEqual(next)
+      // 必须换引用：Vue 2 那条线靠它触发数组更新，这里保持三端一致
+      expect(model.file).not.toBe(next)
+    })
+
+    it('onSuccess 既调用户回调，也把文件列表写回 model', () => {
+      const userSuccess = vi.fn()
+      const item = uploadItem({ on: { success: userSuccess } })
+      const model: Record<string, unknown> = { file: [] }
+      const vnode = formInputComponents(item)!(h, model, { row: item, index: 0 })
+      // 用户回调经 toOnKey 变成 onSuccess prop，随后被接管包装
+      expect(vnode.props?.onSuccess).not.toBe(userSuccess)
+
+      const list = [{ name: 'c.png', uid: 3, status: 'success' }]
+      vnode.props!.onSuccess({ url: '/c.png' }, list[0], list)
+
+      expect(userSuccess).toHaveBeenCalledWith({ url: '/c.png' }, list[0], list)
+      expect(model.file).toEqual(list)
+    })
+
+    it('onError / onRemove 同样写回（失败与删除都要落到 model）', () => {
+      const userError = vi.fn()
+      const userRemove = vi.fn()
+      const item = uploadItem({ on: { error: userError, remove: userRemove } })
+      const model: Record<string, unknown> = { file: [{ uid: 1 }, { uid: 2 }] }
+      const vnode = formInputComponents(item)!(h, model, { row: item, index: 0 })
+
+      const afterErr = [{ uid: 1 }]
+      vnode.props!.onError(new Error('boom'), { uid: 2 }, afterErr)
+      expect(userError).toHaveBeenCalled()
+      expect(model.file).toEqual(afterErr)
+
+      const afterRemove = [{ uid: 1 }]
+      vnode.props!.onRemove({ uid: 2 }, afterRemove)
+      expect(userRemove).toHaveBeenCalled()
+      expect(model.file).toEqual(afterRemove)
+    })
+
+    it('支持嵌套 prop 路径（写回走 setNestedValue）', () => {
+      const item = { prop: 'docs.files', label: '附件', formtype: 'Upload' } as FormItemOption
+      const model: Record<string, unknown> = { docs: { files: [] } }
+      const vnode = formInputComponents(item)!(h, model, { row: item, index: 0 })
+      const next = [{ uid: 9 }]
+      vnode.props!['onUpdate:fileList'](next)
+      expect((model.docs as Record<string, unknown>).files).toEqual(next)
     })
   })
 

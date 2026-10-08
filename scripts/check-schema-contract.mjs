@@ -10,6 +10,8 @@
  *     的 formtype.enum 完全一致（新增控件类型时两处必须同步）。
  *  2. 关键契约字段存在性：core/types.ts 新增的重要契约字段必须在对应 schema 中出现，
  *     避免 AI 工具链拿到过期 schema。
+ *  3. 有意宽松的 schema 不得被加上 required（dialog-options：每个字段在权威类型里都可选），
+ *     防止「补 required」这种听起来是加固、实际把合法配置判红的改动。
  *
  * 用法：node scripts/check-schema-contract.mjs
  * 退出码：0 = 同步；1 = 发现漂移。
@@ -25,10 +27,17 @@ const SCHEMAS = join(ROOT, 'packages/shared/schemas')
 const read = (p) => readFileSync(join(ROOT, p), 'utf-8')
 const readSchema = (name) => JSON.parse(readFileSync(join(SCHEMAS, name), 'utf-8'))
 
-let failed = false
+// 每个检查函数各自持有失败标志并**返回布尔值**，最后由调用处汇总。
+//
+// 这里曾经是模块级的 `let failed = false`，被所有检查函数共享写入。后果是：任何一个
+// 函数置红之后，**另一个函数即便全过也不再打印自己的 ✅** —— `checkRequiredFields()`
+// 就踩了这条（它用 `if (!failed)` 决定要不要打印，于是 formtype 一旦分叉，7 项字段
+// 全存在也会静默不报）。共享可变标志让「到底谁失败了」在报告里不可分辨：读者只能
+// 看到「某处起没有 ✅」，分不清是没跑、没打印、还是失败。改成本地标志 + 返回值汇总后，
+// 这一类缺陷在结构上不存在了。
 const fail = (msg) => {
-  failed = true
   console.error(`❌ ${msg}`)
+  return false
 }
 
 // ── 1. formtype 枚举同步 ────────────────────────────────
@@ -44,28 +53,61 @@ function parseFormTypeList(src, label) {
     .filter(Boolean)
 }
 
+/** 解析 FORM_TYPE_ALIASES（旧写法 → 新写法），用于「枚举 = 规范 ∪ 别名」的判定。 */
+function parseFormTypeAliases(src, label) {
+  const m = src.match(/FORM_TYPE_ALIASES\s*(?::[^=]+)?=\s*\{([\s\S]*?)\n\}/)
+  if (!m) {
+    fail(`未能在 ${label} 定位 FORM_TYPE_ALIASES`)
+    return null
+  }
+  const out = {}
+  for (const mm of m[1].matchAll(/([A-Za-z_$][\w$]*)\s*:\s*['"]([^'"]+)['"]/g)) {
+    out[mm[1]] = mm[2]
+  }
+  return out
+}
+
 function checkFormTypeEnum() {
-  const coreTypes = parseFormTypeList(read('packages/core/src/constants.ts'), 'core/constants.ts')
-  if (!coreTypes) return
+  let ok = true
+  const coreSrc = read('packages/core/src/constants.ts')
+  const coreTypes = parseFormTypeList(coreSrc, 'core/constants.ts')
+  if (!coreTypes) return false // parseFormTypeList 已打印原因
+  const coreAliases = parseFormTypeAliases(coreSrc, 'core/constants.ts')
+  if (!coreAliases) return false
+  const aliasKeys = Object.keys(coreAliases)
 
   const schema = readSchema('form-item.schema.json')
   const enumVals = schema?.properties?.formtype?.enum ?? []
 
   const missingInSchema = coreTypes.filter((t) => !enumVals.includes(t))
-  const extraInSchema = enumVals.filter((t) => !coreTypes.includes(t))
+  // schema 里多出的项**只有**两处合法来源：core 的规范列表、或已登记的别名。
+  // 别名必须被允许 —— 它们在运行时由 normalizeFormType 归一化、schema 自己的 describe
+  // 也写明 "deprecated but still accepted"，枚举拒绝它们等于「文档承认、校验拒绝」。
+  const extraInSchema = enumVals.filter((t) => !coreTypes.includes(t) && !aliasKeys.includes(t))
+  // 别名写进了 schema 却没有对应映射 → 归一化后会落到未知控件，属真漂移。
+  const aliasesMissingInSchema = aliasKeys.filter((t) => !enumVals.includes(t))
 
   if (missingInSchema.length) {
-    fail(
+    ok = fail(
       `form-item schema 的 formtype.enum 缺少 core VALID_FORM_TYPES 中的：${missingInSchema.join(', ')}`
     )
   }
   if (extraInSchema.length) {
-    fail(
-      `form-item schema 的 formtype.enum 多出 core 未定义的：${extraInSchema.join(', ')}`
+    ok = fail(
+      `form-item schema 的 formtype.enum 多出 core 未定义、也未登记为别名的：${extraInSchema.join(', ')}`
     )
   }
-  if (!missingInSchema.length && !extraInSchema.length) {
-    console.log(`✅ formtype 枚举同步（${coreTypes.length} 项）`)
+  if (aliasesMissingInSchema.length) {
+    ok = fail(
+      `form-item schema 的 formtype.enum 缺少 core FORM_TYPE_ALIASES 已登记的别名：${aliasesMissingInSchema.join(', ')}` +
+        '（运行时接受这些写法，枚举必须一并接受）'
+    )
+  }
+  if (!missingInSchema.length && !extraInSchema.length && !aliasesMissingInSchema.length) {
+    const aliasInSchema = aliasKeys.filter((t) => enumVals.includes(t))
+    console.log(
+      `✅ formtype 枚举同步（${coreTypes.length} 项规范 + ${aliasInSchema.length} 项别名 = ${enumVals.length} 项）`
+    )
   }
 
   // ── 1b. core/constants.ts ↔ shared/contract.ts 两处手写副本必须逐项一致 ──
@@ -76,11 +118,13 @@ function checkFormTypeEnum() {
     read('packages/shared/src/contract.ts'),
     'shared/contract.ts'
   )
-  if (sharedTypes) {
+  if (!sharedTypes) {
+    ok = false // parseFormTypeList 已打印原因
+  } else {
     const onlyCore = coreTypes.filter((t) => !sharedTypes.includes(t))
     const onlyShared = sharedTypes.filter((t) => !coreTypes.includes(t))
     if (onlyCore.length || onlyShared.length) {
-      fail(
+      ok = fail(
         'core/constants.ts 与 shared/contract.ts 的 VALID_FORM_TYPES 已分叉：' +
           (onlyCore.length ? `仅 core 有 [${onlyCore.join(', ')}]；` : '') +
           (onlyShared.length ? `仅 shared 有 [${onlyShared.join(', ')}]；` : '') +
@@ -90,6 +134,51 @@ function checkFormTypeEnum() {
       console.log('✅ core/constants.ts 与 shared/contract.ts 的 formtype 列表一致')
     }
   }
+
+  // ── 1c. 别名表也必须一致（core/constants.ts ↔ shared/contract.ts）──
+  // 1b 只覆盖了 VALID_FORM_TYPES；FORM_TYPE_ALIASES 是同一契约的**另一处手写副本**，
+  // 此前没有任何检查。后果：给 core 加一个别名（运行时生效）而漏改 shared 副本时，
+  // above 的「枚举 = 规范 ∪ 别名」会按 core 的口径判定 —— schema 与 zod 都不会收录该别名，
+  // 而运行时却承认它：又是一个「文档/校验 vs 运行时」不一致，且门禁全绿。
+  const sharedAliases = parseFormTypeAliases(
+    read('packages/shared/src/contract.ts'),
+    'shared/contract.ts'
+  )
+  if (!sharedAliases) {
+    ok = false
+  } else {
+    const coreKeys = Object.keys(coreAliases).sort()
+    const sharedKeys = Object.keys(sharedAliases).sort()
+    const diffs = []
+    if (coreKeys.join(',') !== sharedKeys.join(',')) {
+      diffs.push(
+        `键集不同：仅 core [${coreKeys.filter((k) => !sharedKeys.includes(k)).join(', ') || '-'}]，` +
+          `仅 shared [${sharedKeys.filter((k) => !coreKeys.includes(k)).join(', ') || '-'}]`
+      )
+    }
+    for (const k of coreKeys.filter((k) => sharedKeys.includes(k))) {
+      if (coreAliases[k] !== sharedAliases[k]) {
+        diffs.push(`'${k}' 映射不同：core → ${coreAliases[k]}，shared → ${sharedAliases[k]}`)
+      }
+    }
+    // 别名必须指向一个真实存在的规范写法，否则归一化后仍会落到未知控件。
+    const badTargets = Object.entries(coreAliases).filter(([, v]) => !coreTypes.includes(v))
+    if (badTargets.length) {
+      diffs.push(
+        `别名指向非 VALID_FORM_TYPES 的值：${badTargets.map(([k, v]) => `${k} → ${v}`).join(', ')}`
+      )
+    }
+    if (diffs.length) {
+      ok = fail(
+        'core/constants.ts 与 shared/contract.ts 的 FORM_TYPE_ALIASES 已分叉：' + diffs.join('；')
+      )
+    } else {
+      console.log(
+        `✅ core/constants.ts 与 shared/contract.ts 的别名表一致（${coreKeys.length} 项，且均指向规范写法）`
+      )
+    }
+  }
+  return ok
 }
 
 // ── 2. 关键契约字段存在性 ───────────────────────────────
@@ -106,17 +195,68 @@ const REQUIRED_FIELDS = [
 
 function checkRequiredFields() {
   const cache = {}
+  let missing = 0
   for (const f of REQUIRED_FIELDS) {
     const schema = (cache[f.schema] ??= readSchema(f.schema))
     let node = schema
-    let ok = true
+    let found = true
     for (const key of f.path) {
       if (node && typeof node === 'object' && key in node) node = node[key]
-      else { ok = false; break }
+      else { found = false; break }
     }
-    if (!ok) fail(`schema ${f.schema} 缺少契约字段：${f.label}`)
+    if (!found) {
+      missing++
+      fail(`schema ${f.schema} 缺少契约字段：${f.label}`)
+    }
   }
-  if (!failed) console.log(`✅ 关键契约字段全部存在（${REQUIRED_FIELDS.length} 项）`)
+  // 判据是本函数自己的计数，不是别的函数的失败标志 —— 这条边必须能独立报绿。
+  if (missing === 0) console.log(`✅ 关键契约字段全部存在（${REQUIRED_FIELDS.length} 项）`)
+  return missing === 0
+}
+
+// ── 2b. 「宽松是契约的一部分」的 schema 不得被加上 required ────────
+// B3 的原计划是「给既无 required 又 additionalProperties:true 的 schema 补 required」，
+// 但按 schema 逐份核对后，只有 table-column 真的补得（且补成了 anyOf[prop|key|type|groups]，
+// 因为 {key} / {type:'selection'} / {groups} 三种列在库里都是真实用法，平铺 required:["prop"]
+// 会把它们判红）。dialog-options 补不得：
+//
+//   - core/src/types.ts 的 DialogOptions 里**每个字段都是可选的**（`title?: string`）；
+//   - es-dialog 组件自己也是 `title?: string`，模板 `{{ props.title }}` 缺省就是空标题；
+//   - 也就是说「没有 title 的弹窗」是合法且运行时正常的配置。
+//
+// 给它加 `required: ["title"]` 会让 schema **比类型和运行时都严** —— 把当前能用的配置判红，
+// 与 B3 自己定的原则（additionalProperties 保持 true，不做破坏性收紧）直接冲突。
+// 这条断言把「有意宽松」钉成契约：谁想补 required，先来这里看理由。
+// 注意极性与其他检查相反：本条要求 required **不存在**。
+const PERMISSIVE_SCHEMAS = [
+  {
+    schema: 'dialog-options.schema.json',
+    reason: 'DialogOptions 的每个字段都是可选的（title?: string，组件缺省渲染空标题），加 required 会拒绝合法配置',
+  },
+]
+
+function checkPermissiveSchemas() {
+  let ok = true
+  for (const { schema: file, reason } of PERMISSIVE_SCHEMAS) {
+    const schema = readSchema(file)
+    if (schema?.required !== undefined) {
+      ok = fail(
+        `${file} 声明了顶层 required（${JSON.stringify(schema.required)}）——该 schema 的有意宽松是契约的一部分：${reason}`
+      )
+    }
+    // 平铺的 required 之外，anyOf/oneOf 里塞 required 同样能收紧校验，一并拦。
+    for (const kw of ['anyOf', 'oneOf']) {
+      if (Array.isArray(schema?.[kw]) && schema[kw].some((b) => b && b.required)) {
+        ok = fail(`${file} 的 ${kw} 分支里出现了 required —— ${reason}`)
+      }
+    }
+  }
+  if (ok) {
+    console.log(
+      `✅ 有意宽松的 schema 未被加上 required（${PERMISSIVE_SCHEMAS.map((s) => s.schema).join(', ')}）`
+    )
+  }
+  return ok
 }
 
 // ── 3. 结构化配置 Zod ↔ JSON 单源 漂移 ──────────────────
@@ -191,40 +331,41 @@ function stripComments(src) {
  * @param opts.label 出错信息里的来源名
  */
 function assertButtonPositionContract(src, { constName, label, fallback }) {
+  let ok = true
   const block = src.match(
     new RegExp(`const\\s+${constName}\\s*=\\s*z\\s*\\.object\\(\\{([\\s\\S]*?)\\}\\)[\\s\\S]{0,300}?\\.transform\\(([\\s\\S]{0,600})`)
   )
   if (!block) {
-    fail(`${label} 未能定位 ${constName} 的 .transform()（position 必须落成一致的 code）`)
-    return
+    return fail(`${label} 未能定位 ${constName} 的 .transform()（position 必须落成一致的 code）`)
   }
   const [, fields, transformBody] = block
   if (!/\bcode\s*:/.test(fields)) {
-    fail(`${label} 的 ${constName} 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
+    ok = fail(`${label} 的 ${constName} 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
   }
   if (!/\bposition\s*:/.test(fields)) {
-    fail(
+    ok = fail(
       `${label} 的 ${constName} 缺少 position 字段（渲染器契约推荐字段）——` +
         `缺失会让 position 被 Zod 静默 strip，position 与 code 不一致时按钮跑到错误一侧且无任何报错`
     )
   }
   if (!/code\s*:/.test(transformBody)) {
-    fail(
+    ok = fail(
       `${label} 的 ${constName}.transform() 没有产出 code —— 空操作 transform（如 \`(x) => x\`）` +
         `同样能通过「存在性」检查，但归一化并未发生`
     )
   }
   if (!/\.position\b/.test(transformBody)) {
-    fail(`${label} 的 ${constName}.transform() 没有读取 b.position —— 未把 position 映射成 code`)
+    ok = fail(`${label} 的 ${constName}.transform() 没有读取 b.position —— 未把 position 映射成 code`)
   }
   // 兜底方向必须与调用方声明一致：表单按钮（EsForm）默认右侧、表格按钮默认左侧。
   // 抄错方向的后果是**所有未配 position 的按钮静默翻到另一侧**，而上面几条断言全绿。
   if (fallback && !new RegExp(`\\.code\\s*\\?\\?\\s*${fallback}\\b`).test(transformBody)) {
-    fail(
+    ok = fail(
       `${label} 的 ${constName}.transform() 兜底方向应为 ${fallback}（${fallback === 2 ? '表单按钮默认右侧' : '表格按钮默认左侧'}）—— ` +
         `抄错方向会让所有未配 position 的按钮静默翻到另一侧`
     )
   }
+  return ok
 }
 
 function checkStructuredConfigZod() {
@@ -273,8 +414,8 @@ function checkStructuredConfigZod() {
     // 兜底方向也查（表单=2/right，表格=1/left）：两份 schema 长得几乎一样，把
     // TableBtnSchema 整段抄给 ToolbarBtnSchema 是最容易犯的错，且症状是「所有未配
     // position 的按钮翻到另一侧」这种大面积静默行为变更。
-    assertButtonPositionContract(src, { constName: 'TableBtnSchema', label, fallback: 1 })
-    assertButtonPositionContract(src, { constName: 'ToolbarBtnSchema', label, fallback: 2 })
+    if (!assertButtonPositionContract(src, { constName: 'TableBtnSchema', label, fallback: 1 })) ok = false
+    if (!assertButtonPositionContract(src, { constName: 'ToolbarBtnSchema', label, fallback: 2 })) ok = false
 
     // 字段引用点也必须成对：具名 schema 写好了却没被引用，等于没修。
     for (const [field, constName] of [['tableBtns', 'TableBtnSchema'], ['toolbarBtns', 'ToolbarBtnSchema']]) {
@@ -288,14 +429,25 @@ function checkStructuredConfigZod() {
   }
 
   if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)
+  return ok
 }
 
-checkFormTypeEnum()
-checkRequiredFields()
-checkStructuredConfigZod()
+// ── 汇总 ────────────────────────────────────────────────
+// 每个检查独立报绿（上面的 ✅ 由各函数自己打印），最后按名字列出失败项 ——
+// 原先只打印一行总错误，读者得自己回滚屏幕找是哪条边的 ❌。
+const checks = [
+  ['formtype 枚举同步', checkFormTypeEnum()],
+  ['关键契约字段存在性', checkRequiredFields()],
+  ['有意宽松的 schema 未被收紧', checkPermissiveSchemas()],
+  ['结构化配置 Zod ↔ JSON 单源', checkStructuredConfigZod()],
+]
 
-if (failed) {
-  console.error('\nschema 与 core 类型不同步 —— 更新 packages/shared/schemas 后运行 `npm run schemas:sync`。')
+const failedChecks = checks.filter(([, ok]) => !ok).map(([name]) => name)
+if (failedChecks.length) {
+  console.error(
+    `\nschema 与 core 类型不同步（失败项：${failedChecks.join('、')}）—— ` +
+      '更新 packages/shared/schemas 后运行 `npm run schemas:sync`。'
+  )
   process.exit(1)
 }
 console.log('\nschema ↔ 类型 契约同步 ✅')

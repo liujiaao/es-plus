@@ -13,5 +13,18 @@ export default defineConfig({
     // `document` at module top level (its util.js does feature detection).
     environment: 'happy-dom',
     include: ['__tests__/**/*.spec.ts'],
+    coverage: {
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.ts', 'src/**/*.vue'],
+      exclude: ['src/**/*.spec.ts', 'src/**/*.d.ts', 'src/index.ts'],
+      // 阈值 = 实测基线向下取整再减 2（基线是本配置、本包测试的真实值）：
+      //   实测 65.72 / 67.62 / 57.39 / 65.72
+      thresholds: {
+        statements: 63,
+        branches: 65,
+        functions: 55,
+        lines: 63,
+      },
+    },
   },
 })

@@ -19,7 +19,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { FORM_RENDER_CONTRACT } from './renderer-contract.mjs'
+import { FORM_RENDER_CONTRACT, FORM_BEHAVIOR_CONTRACT } from './renderer-contract.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -235,6 +235,38 @@ function main() {
       }
     }
   }
+  // 5. 行为层：组件绑对了还不够 —— 必须真的接通行为（Upload 写回 model、Transfer 吃 dataOptions）。
+  //    这一层专门挡 C 系列那种「键在、组件对、编译过、全绿，但配置静默失效」的缺陷：
+  //    vue3 的 Upload 曾连 fileList 都没绑、Transfer 从不读 dataOptions，而上面 1~4 全绿。
+  const behaviorKeys = Object.keys(FORM_BEHAVIOR_CONTRACT)
+  const behaviorOrphans = behaviorKeys.filter((k) => !valid.set.has(k) || !(k in FORM_RENDER_CONTRACT))
+  if (behaviorOrphans.length) {
+    fail = true
+    console.error(
+      `❌ renderer-contract 的 FORM_BEHAVIOR_CONTRACT 含未知 formtype（不在 VALID_FORM_TYPES / FORM_RENDER_CONTRACT 中）：${behaviorOrphans.join(', ')}`
+    )
+  }
+  for (const [name, path] of RENDERER_INPUTS) {
+    const windows = extractBranchWindows(path)
+    for (const [key, behaviors] of Object.entries(FORM_BEHAVIOR_CONTRACT)) {
+      const win = windows.get(key)
+      if (win === undefined) continue // 4 已经报过「未定位到分支」
+      for (const [behaviorId, spec] of Object.entries(behaviors)) {
+        if (spec.deviation && spec.deviation[name]) continue // 有意的差异实现，由下面的原因检查兜底
+        const tokens = spec.tokens[name] || []
+        const missed = tokens.filter((t) => !tokenRe(t).test(win))
+        if (missed.length) {
+          fail = true
+          console.error(
+            `❌ ${name}: formtype '${key}' 的渲染分支未接通行为 ${behaviorId}（缺 token：${missed.join(' / ')}）` +
+              `\n   ${spec.why}` +
+              `\n   要么接线，要么在该行为上登记 deviation 并写明原因。`
+          )
+        }
+      }
+    }
+  }
+
   // deviation 必须写明原因（文档化强制）
   for (const [key, entry] of Object.entries(FORM_RENDER_CONTRACT)) {
     if (!entry.deviation) continue
@@ -245,14 +277,30 @@ function main() {
       }
     }
   }
+  // 行为层的 deviation 同样必须写明原因，且不得是空串占位
+  for (const [key, behaviors] of Object.entries(FORM_BEHAVIOR_CONTRACT)) {
+    for (const [behaviorId, spec] of Object.entries(behaviors)) {
+      if (!spec.deviation) continue
+      for (const [renderer, reason] of Object.entries(spec.deviation)) {
+        if (!reason || !reason.trim()) {
+          fail = true
+          console.error(`❌ ${key}/${behaviorId}/${renderer}: deviation 未说明原因`)
+        }
+      }
+    }
+  }
 
   if (fail) {
     console.error('\n三端 formtype 键集/联合类型/组件绑定存在分叉，请统一到 VALID_FORM_TYPES + renderer-contract 单源。')
     process.exit(1)
   }
 
+  const behaviorCount = Object.values(FORM_BEHAVIOR_CONTRACT).reduce(
+    (n, b) => n + Object.keys(b).length,
+    0
+  )
   console.log(
-    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定一致（${valid.keys.length} 项），与 VALID_FORM_TYPES / renderer-contract 单源同步`
+    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定 + ${behaviorCount} 条行为契约一致（${valid.keys.length} 项 formtype），与 VALID_FORM_TYPES / renderer-contract 单源同步`
   )
 }
 

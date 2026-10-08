@@ -121,7 +121,7 @@
           "id": 9,
           "title": "万行数据",
           "pain": "el-table 卡顿",
-          "win": "virtual:true 虚拟滚动",
+          "win": "engine:'vxe' 虚拟滚动",
           "links": {
             "vue3": "/advanced/vxe-table",
             "antdv": "/es-vxe-table",

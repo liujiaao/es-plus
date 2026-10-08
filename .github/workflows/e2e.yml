@@ -44,7 +44,10 @@ jobs:
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
       - name: Run ${{ matrix.pkg }} tests
-        run: npm test --workspace @es-plus/${{ matrix.pkg }}
+        # 带 --coverage 跑：各包 vitest.config.ts 里的 coverage.thresholds 据此生效。
+        # 阈值是各包实测基线（见配置内的注释），所以这里只是「不许静默下滑」的锁，
+        # 不是让 PR 去补历史欠账 —— 新增未覆盖代码才会把这一格打红。
+        run: npm test --workspace @es-plus/${{ matrix.pkg }} -- --coverage
 
   e2e:
     name: e2e (${{ matrix.target }} / ${{ matrix.mode }})

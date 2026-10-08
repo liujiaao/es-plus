@@ -202,6 +202,28 @@ describe('EsCrudPage', () => {
       expect(vm.queryModel).toHaveProperty('status')
     })
 
+    it('嵌套 prop 的 queryModel 建成嵌套结构而非扁平键（回归：扁平键 getNestedValue 取不到、{...} 会漏键）', async () => {
+      // prop 支持 'a.b' / 'a[0].b'（schema 明确支持、表单经 getNestedValue 读写）。
+      // 此前 queryModel['user.name']='' 落的是扁平键，表单 getNestedValue(model,'user.name')
+      // 取 queryModel.user.name → undefined，且 {...queryModel} 导出会带上悬空的 'user.name' 键。
+      const schema: CrudPageSchema = {
+        columns: [{ prop: 'name', label: '姓名' }],
+        formItems: [
+          { prop: 'user.name', label: '姓名', formtype: 'Input', span: 8 },
+          { prop: 'tags[0].id', label: '标签', formtype: 'Input', span: 8 },
+        ],
+      }
+      const wrapper = mountCrudPage({ schema })
+      await nextTick()
+      const qm = (wrapper.vm as any).queryModel as Record<string, any>
+      // 不得存在字面扁平键 'user.name' / 'tags[0].id'（toHaveProperty 会把点号当深路径，故查 Object.keys）
+      expect(Object.keys(qm)).not.toContain('user.name')
+      expect(Object.keys(qm)).not.toContain('tags[0].id')
+      expect(qm.user).toEqual({ name: '' })
+      expect(Array.isArray(qm.tags)).toBe(true)
+      expect(qm.tags[0]).toEqual({ id: '' })
+    })
+
     it('passes queryModel to EsForm model prop', () => {
       const wrapper = mountCrudPage({ schema: schemaWithForm })
       const form = wrapper.findComponent({ name: 'EsForm' })

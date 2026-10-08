@@ -1,5 +1,17 @@
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, OPERATION_COLUMN_PROP_CRUD_PAGE, CRUD_PAGE_BTN_CLICK_KEYS } from './contract.js'
 import type { StructuredCrudConfig, FieldConfig } from './structured-config.schema.js'
+import { StructuredCrudConfigSchema } from './structured-config.schema.js'
+import {
+  q,
+  qBt,
+  qAttr,
+  qKey,
+  qMember,
+  numOrStr,
+  sanitizeForComment,
+  inlineJson,
+  BARE_IDENTIFIER,
+} from './codegen-escape.js'
 import {
   type TargetFramework,
   DEFAULT_TARGET,
@@ -31,6 +43,14 @@ interface TableOpts {
   highlightCurrentRow?: boolean
   headerCellStyle?: Record<string, string>
   virtual?: boolean
+  /**
+   * 引擎选择（`virtual: true` 的等价写法，也是唯一能选 vxe 的途径）。
+   *
+   * 此前这个键在 Zod 层就被剥掉了（tableOptions 是普通 z.object，没有 passthrough），
+   * 且这里也不在发射白名单里 —— 两道都丢，于是 `engine: 'vxe'` 经 NL→config 走一遍
+   * 会静默变成默认引擎。两级一起补上。
+   */
+  engine?: 'default' | 'virtual' | 'vxe'
   rowHeight?: number
   estimatedRowHeight?: number
   overscanCount?: number
@@ -66,7 +86,32 @@ function warnNonIdentifierProps(config: StructuredCrudConfig): string[] {
   ]
 }
 
+/**
+ * 入口校验。
+ *
+ * 此前 `generateFromConfig` 直接读 `config.mode` / `config.fields.filter(...)` ——
+ * `fields` 缺失就地抛 `TypeError`，而 schema 校验只在**部分**调用方生效
+ * （`cli/commands/create.ts`、`cli/ai/nl-to-config.ts`、`mcp-server` 的 `configShape`），
+ * 测试与 `score-golden.mjs` 走的是未校验对象。于是「契约违规」在这条路径上是
+ * 「某些调用方会炸、某些静默产出垃圾」，而不是一处明确的失败。
+ *
+ * 这里只做**校验**、不用 parse 结果：`StructuredCrudConfigSchema` 带大量 `.default()`，
+ * 改用解析结果会顺带改写既有输入语义（例如把省略的 `inQuery` 落成显式 `true`），
+ * 属于另一层行为变更。校验失败则抛出带字段级明细的错误，让问题可见。
+ */
+function assertValidConfig(config: StructuredCrudConfig): void {
+  const parsed = StructuredCrudConfigSchema.safeParse(config)
+  if (parsed.success) return
+  const details = parsed.error.issues
+    .slice(0, 20)
+    .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
+    .join('\n')
+  const more = parsed.error.issues.length > 20 ? `\n  …还有 ${parsed.error.issues.length - 20} 条` : ''
+  throw new Error(`generateFromConfig: 配置未通过 StructuredCrudConfigSchema 校验\n${details}${more}`)
+}
+
 export function generateFromConfig(config: StructuredCrudConfig): StructuredGenerateResult {
+  assertValidConfig(config)
   const mode = config.mode || 'schema'
   const result = mode === 'sfc' ? generateSFC(config) : generateSchema(config)
   // 只在这一处汇总跨模式的通用提示，避免两个模式各写一遍而分叉。
@@ -100,10 +145,21 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     warnings.push(`Schema mode cannot inline a formatter function (JSON cannot hold functions). Fields [${formatterFields.map(f => f.prop).join(', ')}] are emitted unformatted — re-add \`formatter\` manually. Original formatters: ${hints}. The requirement is marked, not silently dropped.`)
   }
 
-  // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告
+  // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告。
+  // 只警告 `virtual: true` 与 `engine: 'virtual'`（二者等价）—— 这两者确实会降级。
+  //
+  // **`engine: 'vxe'` 刻意不警告**：vue2 有完整的 vxe 适配器
+  // （`packages/vue2/src/components/es-table/engines/vxe-engine.vue`，带单测），
+  // 生成物里的 `engine` 也原样透传（见下方 `...(tOpts.engine ? …)`），
+  // 运行时确实走 vxe 引擎；三端对 vxe-table 的依赖声明也完全一致
+  // （optional peerDependency，vue2 用 ^3.8.0）。vue3/antdv 下不警告，vue2 下同样不该警告。
+  // 此前这里用「vxe 引擎只存在于 vue3/antdv、vue2 会退回普通 el-table」告警 ——
+  // 那是 vue2 引入 vxe 引擎（2026-07-28）之前的旧事实，属**错误告警**：
+  // 它会让一个完全可用的 vue2 配置收到「你的配置被忽略了」的假信息。
   const tOptsForWarn = (config.tableOptions || {}) as Record<string, unknown>
-  if (target === 'vue2' && tOptsForWarn.virtual) {
-    warnings.push('target=vue2: Element UI does not support virtual scrolling (no el-table-v2). The "virtual" option will be ignored at runtime — use normal el-table for large datasets and consider server-side pagination.')
+  const wantsVirtual2 = target === 'vue2' && (tOptsForWarn.virtual || tOptsForWarn.engine === 'virtual')
+  if (wantsVirtual2) {
+    warnings.push('target=vue2: Element UI does not support virtual scrolling (no el-table-v2). The "virtual" option will be ignored at runtime — use normal el-table for large datasets and consider server-side pagination, or switch to the vxe engine (`engine: \'vxe\'`), which vue2 does support.')
   }
 
   const schema: Record<string, unknown> = {}
@@ -127,6 +183,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.height ? { height: tOpts.height } : {}),
     ...(tOpts.multiSelect ? { multiSelect: true } : {}),
     ...(tOpts.virtual ? { virtual: true } : {}),
+    ...(tOpts.engine ? { engine: tOpts.engine } : {}),
     ...(tOpts.rowHeight ? { rowHeight: tOpts.rowHeight } : {}),
     ...(tOpts.estimatedRowHeight ? { estimatedRowHeight: tOpts.estimatedRowHeight } : {}),
     ...(tOpts.overscanCount ? { overscanCount: tOpts.overscanCount } : {}),
@@ -181,7 +238,9 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
 
   schema.pagination = { pageSize: config.pagination?.pageSize || 10 }
 
-  const schemaJson = JSON.stringify(schema, null, 2)
+  // 用 inlineJson 而非裸 JSON.stringify：schema 会被内联进 wrapper SFC 的 <script>，
+  // 用户可控的 label 含 `</script>` 时否则能提前闭合宿主 script 标签。正常内容字节不变。
+  const schemaJson = inlineJson(schema, 2)
   const wrapperCode = useNewDialogMode
     ? buildSchemaWrapperNew(config, renderFields, warnings, target)
     : buildSchemaWrapper(config, hasDelete, hasDialog, renderFields, target)
@@ -233,7 +292,8 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
       warnings.push('target=vue2 + mode=sfc: dialog uses JSX render — ensure your project includes @vue/babel-preset-jsx (or use mode=schema for simpler output).')
     }
     const tOptsForWarn = (config.tableOptions || {}) as Record<string, unknown>
-    if (tOptsForWarn.virtual) {
+    // `engine: 'vxe'` 不警告 —— vue2 有 vxe 适配器，见 schema 模式同处的说明。
+    if (tOptsForWarn.virtual || tOptsForWarn.engine === 'virtual') {
       warnings.push('target=vue2: virtual scrolling is not supported in Element UI — option will be ignored.')
     }
   } else if (hasDialog) {
@@ -358,14 +418,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // pageSizes 由 es-table 从 pagination 对象读取（component.vue: paginationConfig.pageSizes）。
   // 配置里声明了 pageSizes 就透传，避免静默丢弃用户的每页条数选项。
   const pageSizesPart = Array.isArray(config.pagination?.pageSizes) && config.pagination.pageSizes.length
-    ? `, pageSizes: ${JSON.stringify(config.pagination.pageSizes)}`
+    ? `, pageSizes: ${inlineJson(config.pagination.pageSizes)}`
     : ''
   lines.push(`const pagination = ref({ current: 1, pageSize: ${config.pagination?.pageSize || 10}, total: 0${pageSizesPart} })`)
   if (hasDialog) lines.push(`const dialog = useDialog()`)
   lines.push(``)
 
-  // formItems
-  const formItemsJson = JSON.stringify(queryFields.map(f => buildFormItem(f, 'query', config.i18n)), null, 2)
+  // formItems —— 这段 JSON 会被内联进生成 SFC 的 <script> 块，必须用 inlineJson：
+  // 用户可控的 label 里写 `</script>` 否则能提前闭合宿主 script 标签（见 codegen-escape.ts）。
+  const formItemsJson = inlineJson(queryFields.map(f => buildFormItem(f, 'query', config.i18n)), 2)
   lines.push(`const formItems = ${formItemsJson}`)
   lines.push(``)
 
@@ -428,6 +489,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
     if (tOpts.height) lines.push(`  height: ${numOrStr(tOpts.height)},`)
   }
+  if (tOpts.engine) lines.push(`  engine: ${q(tOpts.engine)},`)
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)
   lines.push(`}`)
 
@@ -439,7 +501,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
       target,
       indent: '  ',
       bodyLines: [
-        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row${qMember(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         `tableRef.value?.httpRequestInstance()`,
       ],
@@ -474,7 +536,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(`  const isView = title === '查看'`)
     lines.push(``)
 
-    const dialogFormItemsJson = JSON.stringify(formFields.map(f => buildFormItem(f, 'form', config.i18n)), null, 4)
+    const dialogFormItemsJson = inlineJson(formFields.map(f => buildFormItem(f, 'form', config.i18n)), 4)
     lines.push(`  const dialogFormItems = ${dialogFormItemsJson}`)
     lines.push(``)
 
@@ -501,7 +563,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(`        }`)
     lines.push(`        try {`)
     lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData.${qBt(tOpts.rowkey || 'id')}}\``)
+    lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData${qMember(tOpts.rowkey || 'id')}}\``)
     lines.push(`          await httpRequest({ url, method, data: formData })`)
     lines.push(`          ElMessage.success(\`\${title}成功\`)`)
     lines.push(`          close()`)
@@ -629,7 +691,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
       target,
       indent: `${indent}  `,
       bodyLines: [
-        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row${qMember(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()',
       ],
@@ -651,7 +713,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   }
   if (config.actions.includes('edit')) {
     body.push(`${indent}  if (key === '${CRUD_PAGE_BTN_CLICK_KEYS.EDIT_CONFIRM}') {`)
-    body.push(`${indent}    httpRequest({ url: \`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\`, method: 'PUT', data }).then(() => {`)
+    body.push(`${indent}    httpRequest({ url: \`${qBt(config.apiUrl)}/\${data${qMember(tOpts.rowkey || 'id')}}\`, method: 'PUT', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('编辑成功')`)
     body.push(`${indent}      ${isVue2 ? 'crudRef.value && crudRef.value.refresh && crudRef.value.refresh()' : 'crudRef.value?.refresh()'}`)
     body.push(`${indent}    }).catch(() => {`)
@@ -760,7 +822,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
       target,
       indent: `${indent}  `,
       bodyLines: [
-        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row.${qBt(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
+        `await httpRequest({ url: \`${qBt(config.apiUrl)}/\${row${qMember(tOpts.rowkey || 'id')}}\`, method: 'DELETE' })`,
         `ElMessage.success('删除成功')`,
         refreshExpr,
       ],
@@ -774,7 +836,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   const dialogEntries = Object.entries(dialogs).filter(([, d]) => !d.hasCustomRender)
   for (const [key] of dialogEntries) {
     const method = key === 'add' ? 'POST' : 'PUT'
-    const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data.${qBt(tOpts.rowkey || 'id')}}\``
+    const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data${qMember(tOpts.rowkey || 'id')}}\``
     body.push(`${indent}  if (dialogKey === ${q(key)}) {`)
     body.push(`${indent}    httpRequest({ url: ${url}, method: '${method}', data }).then(() => {`)
     body.push(`${indent}      ElMessage.success('操作成功')`)
@@ -830,7 +892,9 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
   // 生成一个带 TODO(es-plus) 标记的扩展点插槽，并把用户原始的 render 意图作为
   // 注释回显——占位内容是可编译的默认状态标签，等待开发者替换为真实标记。
   const lines: string[] = []
-  lines.push(`    <template #column-${field.prop}="{ row }">`)
+  // prop 落在这里是 **HTML 属性值** 位置（#column-xxx 插槽名），q()/qBt() 都放行 `"`，
+  // 必须走 qAttr：实测 prop 含 `"@mouseover="` 会凭空注入一个 HTML 事件属性。
+  lines.push(`    <template #column-${qAttr(field.prop)}="{ row }">`)
   lines.push(`      <!-- TODO(es-plus): custom render for "${sanitizeForComment(String(field.label))}" — replace this default stub with your markup. -->`)
   if (field.render) {
     lines.push(`      <!-- requested render: ${sanitizeForComment(field.render)} -->`)
@@ -840,55 +904,8 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
   return lines
 }
 
-// HTML 注释不能包含 "--"，且需单行；折叠空白并把连续短横替换为破折号，截断超长源码。
-function sanitizeForComment(src: string): string {
-  return src.replace(/\s+/g, ' ').replace(/--+/g, '—').trim().slice(0, 200)
-}
-
-// 转义单引号 JS 字符串字面量。label/prop/apiUrl/permissionValue/rowkey 等数据字段
-// 可能来自外部 JSON 或 AI 生成，含 ' 或 \ 会破坏生成代码甚至注入任意 JS。
-// 注意：formatter/render 是源码扩展点（函数源码串），不经此转义。
-function q(value: unknown): string {
-  return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n')}'`
-}
-
-// 转义反引号模板字面量上下文：apiUrl 等数据字段在生成代码里以 `...` 模板字面量出现
-// （如 `url: \`${apiUrl}/${row.id}\``），含 ` 或 ${ 会破坏生成代码甚至注入任意 JS。
-function qBt(value: unknown): string {
-  return String(value).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
-}
-
-// 裸标识符：可以直接写在「对象字面量键 / TS 接口成员名」位置的形态。
-const BARE_IDENTIFIER = /^[A-Za-z_$][\w$]*$/
-
-/**
- * 对象字面量键 / TS 接口成员名：**仅在不是裸标识符时才加引号**。
- *
- * 为什么必须加引号：`prop` 支持嵌套路径 —— core 的 `parsePathSegments` 按
- * `/\.|\[|\]/` 分段，`form-item.schema.json` 也明文写「Supports nested paths like
- * 'a.b' or 'a[0].b'」。裸写 `a.b: ''` 在对象字面量里是语法错、在 TS 接口里会被解析成
- * 「成员 b、类型 string」，而 `'a.b': ''` 两种位置都合法且语义等价。它同时兜住了
- * prop 含引号/冒号/括号时的注入（见本文件 `q()` 的注释）。
- *
- * 为什么**不能**无条件加引号：`{ 'amount': null }` 与 `{ amount: null }` 运行时等价，
- * 但前者会让既有断言（`__tests__/structured-generator.spec.ts:194-195` 断言
- * `amount: null`）以及所有正常输出发生无意义变化。按需加 → 正常路径逐字节不变。
- */
-function qKey(prop: string): string {
-  return BARE_IDENTIFIER.test(prop) ? prop : q(prop)
-}
-
-/**
- * `number | string` 两种字面量的生成形态：number 原样、string 经 `q()` 转义。
- *
- * 抽成一处的原因：同一个 union（`tableOptions.tabHeight` 与 `.height` 都是
- * `z.union([z.number(), z.string()])`）此前被写了两遍 —— 其中 `height` 漏了分支，
- * 传 `'100vh'` 直接生成 `height: 100vh,` 导致产物**语法错误**；而 `tabHeight` 的
- * 字符串分支是 `'${x}'` 裸拼，未转义。两处共用本函数后不会再分叉。
- */
-function numOrStr(v: number | string): string {
-  return typeof v === 'number' ? String(v) : q(v)
-}
+// 转义器已提到 codegen-escape.ts 单源 —— 本包 4 处生成代码共用同一份实现。
+// `formatter`/`render` 是源码扩展点（函数源码串），刻意不经转义。
 
 function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
   const item: Record<string, unknown> = {
@@ -963,10 +980,14 @@ function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): 
   } else {
     parts.push(`label: ${q(field.label)}`)
   }
-  if (field.width) parts.push(`width: ${typeof field.width === 'number' ? field.width : `'${field.width}'`}`)
-  if (field.minWidth) parts.push(`minWidth: ${typeof field.minWidth === 'number' ? field.minWidth : `'${field.minWidth}'`}`)
-  if (field.align) parts.push(`align: '${field.align}'`)
-  if (field.fixed) parts.push(`fixed: ${typeof field.fixed === 'boolean' ? field.fixed : `'${field.fixed}'`}`)
+  // width/minWidth/align/fixed 此前是手写裸拼（`'${field.width}'`），未复用本文件
+  // 已有的转义器 —— 实测 width 传 `20' + (1) + '` 会生成
+  // `width: '20' + (1) + '',`，把数据字段变成可执行 JS。numOrStr/q 对正常值
+  // （数字、'20px'、'left'）的输出与原先逐字节相同，仅注入场景才变。
+  if (field.width) parts.push(`width: ${numOrStr(field.width)}`)
+  if (field.minWidth) parts.push(`minWidth: ${numOrStr(field.minWidth)}`)
+  if (field.align) parts.push(`align: ${q(field.align)}`)
+  if (field.fixed) parts.push(`fixed: ${typeof field.fixed === 'boolean' ? field.fixed : q(field.fixed)}`)
   if (field.ellipsis) parts.push(`showOverflowTooltip: true`)
   if (field.formatter) parts.push(`formatter: ${field.formatter}`)
   if (field.render) parts.push(`render: ${field.render}`)

@@ -1,4 +1,5 @@
 import { generateCrudConfig, generateCode, type GeneratedConfig } from "./crud-engine.js";
+import { q, qAttr } from "./codegen-escape.js";
 import {
   type TargetFramework,
   DEFAULT_TARGET,
@@ -268,7 +269,7 @@ export function generateScaffold(
 
   const lines: string[] = [];
   lines.push(`<template>`);
-  lines.push(`  <div class="${name}-page">`);
+  lines.push(`  <div class="${qAttr(name)}-page">`);
 
   if (hasTable) {
     lines.push(`    <es-table`);
@@ -305,7 +306,7 @@ export function generateScaffold(
     }
     lines.push(``);
     lines.push(`export default defineComponent({`);
-    lines.push(`  name: '${componentName}',`);
+    lines.push(`  name: ${q(componentName)},`);
     lines.push(`  setup() {`);
 
     const exposeFields: string[] = [];
