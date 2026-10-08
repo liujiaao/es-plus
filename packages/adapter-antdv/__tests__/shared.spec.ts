@@ -99,11 +99,13 @@ describe('嵌套路径函数', () => {
     expect(target).toEqual({ user: { name: 'new' } })
   })
 
-  it('setNestedValue — 方括号路径（对齐 vue3/core：建普通对象，不建数组）', () => {
+  it('setNestedValue — 方括号路径（对齐 vue3/core：数字段建真数组）', () => {
     const target: Record<string, unknown> = {}
     setNestedValue(target, 'arr[0].name', 'first')
-    // vue3/core 的 setNestedValue 对中间层一律建普通对象，数字 key 作为对象属性
-    expect(target).toEqual({ arr: { '0': { name: 'first' } } })
+    // core 的 setNestedValue 按下一段是否为数字索引建容器：arr[0] → 真数组，
+    // 而非 { '0': ... } 伪数组（后者 Array.isArray/.map/JSON 提交全部错位）。
+    expect(Array.isArray((target as { arr: unknown }).arr)).toBe(true)
+    expect(target).toEqual({ arr: [{ name: 'first' }] })
   })
 })
 
