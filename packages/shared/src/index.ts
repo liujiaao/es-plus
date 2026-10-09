@@ -5,6 +5,24 @@ export { FORM_TYPES, PRESET_EXAMPLES, COMPONENT_LIST, type ComponentName } from 
 export { createSchemaValidator, validateConfig, listAvailableSchemas, type ValidationResult } from './schema-validator.js'
 export { generateFromConfig, type StructuredCrudConfig, type StructuredGenerateResult } from './structured-generator.js'
 export { StructuredCrudConfigSchema, type StructuredCrudConfigInput } from './structured-config.schema.js'
+// 组合层:三面字段表 → 一份合法 StructuredCrudConfig（含表格的子集走 generateFromConfig）
+export {
+  composeCrudConfig,
+  type ComposeCrudInput,
+  type ComposeResult,
+  type SurfaceField,
+} from './compose-crud-config.js'
+// 片段发射层:独立 es-form / es-table / useDialog（不含表格的子集 + 与原生/第三方混排）
+export {
+  generateFormBlock,
+  generateTableBlock,
+  generateDialogBlock,
+  type FragmentResult,
+  type FormBlockInput,
+  type TableBlockInput,
+  type TableRowButton,
+  type DialogBlockInput,
+} from './fragment-generator.js'
 export {
   buildNlToConfigSystemPrompt,
   NL_TO_CONFIG_FEWSHOT,

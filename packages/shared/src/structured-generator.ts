@@ -907,7 +907,7 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
 // 转义器已提到 codegen-escape.ts 单源 —— 本包 4 处生成代码共用同一份实现。
 // `formatter`/`render` 是源码扩展点（函数源码串），刻意不经转义。
 
-function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
+export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
   const item: Record<string, unknown> = {
     prop: field.prop,
     ...(i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
@@ -951,7 +951,7 @@ function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boo
   return item
 }
 
-function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, unknown> {
+export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, unknown> {
   const col: Record<string, unknown> = {
     prop: field.prop,
     ...(i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
@@ -969,7 +969,7 @@ function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, un
   return col
 }
 
-function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): string {
+export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): string {
   const parts: string[] = []
   parts.push(`prop: ${q(field.prop)}`)
   // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
@@ -994,7 +994,7 @@ function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): 
   return `{ ${parts.join(', ')} }`
 }
 
-function buildActionBtns(config: StructuredCrudConfig): string[] {
+export function buildActionBtns(config: StructuredCrudConfig): string[] {
   const btns: string[] = []
   if (config.actions.includes('view')) {
     const perm = config.permissions?.view ? `, permissionValue: ${q(config.permissions.view)}` : ''
@@ -1011,7 +1011,7 @@ function buildActionBtns(config: StructuredCrudConfig): string[] {
   return btns
 }
 
-function inferTsType(field: FieldConfig): string {
+export function inferTsType(field: FieldConfig): string {
   switch (field.formtype) {
     case 'Switch': return 'boolean'
     case 'InputNumber': return 'number | null'
@@ -1029,7 +1029,7 @@ function inferTsType(field: FieldConfig): string {
   }
 }
 
-function getDefaultValue(field: FieldConfig): string {
+export function getDefaultValue(field: FieldConfig): string {
   switch (field.formtype) {
     case 'Switch': return 'false'
     case 'InputNumber': return 'null'

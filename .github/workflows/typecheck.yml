@@ -129,6 +129,11 @@ jobs:
       # syntactically broken output could pass the only PR-time golden gate.
       - name: Score golden corpus
         run: npm run test:golden
+      # 片段发射器(generate_form/table/dialog)不经过 generateFromConfig,所以 golden
+      # 评分覆盖不到它们。这里按 子集 × 三端 × ts/js 确定性发射并用 esbuild 解析产物,
+      # 把「片段拼出语法错误代码」挡在 PR 上(与 score-golden 对配置路径同级的保证)。
+      - name: Fragment compile smoke
+        run: npm run fragment:smoke
 
   golden-compile:
     # 整个 golden 语料（25 个用例 × 三个渲染目标）真实 `vite build` 编译。
