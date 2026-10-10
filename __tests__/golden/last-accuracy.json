@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-10-10T07:47:08.069Z",
+  "measuredAt": "2026-10-10T10:03:16.255Z",
   "model": "pa/claude-opus-4-8",
   "servedModel": "pa/venus-marble-4-8,pa/claude-opus-4-8",
   "cases": 25,
@@ -7,12 +7,12 @@
   "fewshotDerivedCases": 6,
   "target": 0.95,
   "inSchemaIntentZeroEdit": 0.0526,
-  "inSchemaIntentZeroEditAll": 0.08,
+  "inSchemaIntentZeroEditAll": 0.12,
   "exactIntentFull": 0.0526,
-  "exactIntentFullAll": 0.08,
-  "propSetF1": 0.7255,
-  "attributeAccuracy": 0.9452,
-  "actionsF1": 0.973,
+  "exactIntentFullAll": 0.12,
+  "propSetF1": 0.7308,
+  "attributeAccuracy": 0.9349,
+  "actionsF1": 0.965,
   "compileRate": 1,
   "byCapability": {
     "propSet": {
@@ -22,8 +22,8 @@
     },
     "formtype": {
       "applicable": 19,
-      "pass": 16,
-      "rate": 0.8421
+      "pass": 18,
+      "rate": 0.9474
     },
     "membership": {
       "applicable": 19,
@@ -32,8 +32,8 @@
     },
     "actions": {
       "applicable": 19,
-      "pass": 17,
-      "rate": 0.8947
+      "pass": 16,
+      "rate": 0.8421
     },
     "tableBtns": {
       "applicable": 5,
@@ -62,8 +62,8 @@
     },
     "dataOptions": {
       "applicable": 12,
-      "pass": 8,
-      "rate": 0.6667
+      "pass": 7,
+      "rate": 0.5833
     },
     "i18n": {
       "applicable": 2,
@@ -98,7 +98,7 @@
   },
   "byLanguage": {
     "zh": 0.0526,
-    "en": 0.0526
+    "en": 0
   },
   "passed": false
 }
