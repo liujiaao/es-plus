@@ -1,30 +1,75 @@
 {
   "nl": "客户管理：新增和编辑用不同的弹窗表单——新增时填公司名、联系人、电话；编辑时在这些之外还能改信用额度。",
+  "nlEn": "Customer management: add and edit use different dialog forms — on add, fill in company name, contact, and phone; on edit, besides those you can also change the credit limit.",
   "config": {
     "name": "CustomerManage",
     "apiUrl": "/api/customers",
     "fields": [
-      { "prop": "company", "label": "公司名", "formtype": "Input" },
-      { "prop": "contact", "label": "联系人", "formtype": "Input" },
-      { "prop": "phone", "label": "电话", "formtype": "Input" }
+      {
+        "prop": "company",
+        "label": "公司名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "contact",
+        "label": "联系人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "phone",
+        "label": "电话",
+        "formtype": "Input"
+      }
     ],
-    "actions": ["add", "edit", "delete"],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ],
     "dialogs": {
       "add": {
         "title": "新增客户",
         "formItems": [
-          { "prop": "company", "label": "公司名", "formtype": "Input" },
-          { "prop": "contact", "label": "联系人", "formtype": "Input" },
-          { "prop": "phone", "label": "电话", "formtype": "Input" }
+          {
+            "prop": "company",
+            "label": "公司名",
+            "formtype": "Input"
+          },
+          {
+            "prop": "contact",
+            "label": "联系人",
+            "formtype": "Input"
+          },
+          {
+            "prop": "phone",
+            "label": "电话",
+            "formtype": "Input"
+          }
         ]
       },
       "edit": {
         "title": "编辑客户",
         "formItems": [
-          { "prop": "company", "label": "公司名", "formtype": "Input" },
-          { "prop": "contact", "label": "联系人", "formtype": "Input" },
-          { "prop": "phone", "label": "电话", "formtype": "Input" },
-          { "prop": "creditLimit", "label": "信用额度", "formtype": "Input" }
+          {
+            "prop": "company",
+            "label": "公司名",
+            "formtype": "Input"
+          },
+          {
+            "prop": "contact",
+            "label": "联系人",
+            "formtype": "Input"
+          },
+          {
+            "prop": "phone",
+            "label": "电话",
+            "formtype": "Input"
+          },
+          {
+            "prop": "creditLimit",
+            "label": "信用额度",
+            "formtype": "Input"
+          }
         ]
       }
     }

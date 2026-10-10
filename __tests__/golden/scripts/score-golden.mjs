@@ -315,7 +315,12 @@ function main() {
       results.push({ file, failures: ['golden case must have { nl: string, config: object }'] })
       continue
     }
-    results.push({ file, failures: scoreCase(raw) })
+    // nlEn 可选（双语 eval 用），但存在时必须是非空字符串——空串会让 eval 跑一次空 prompt。
+    if (raw.nlEn !== undefined && (typeof raw.nlEn !== 'string' || !raw.nlEn.trim())) {
+      results.push({ file, failures: ['nlEn, when present, must be a non-empty string'] })
+      continue
+    }
+    results.push({ file, failures: scoreCase(raw), bilingual: typeof raw.nlEn === 'string' })
   }
 
   const passed = results.filter((r) => r.failures.length === 0)
@@ -333,6 +338,8 @@ function main() {
   }
   console.log('-----------------------------------')
   console.log(`  ${passed.length}/${results.length} cases passed`)
+  const bilingual = results.filter((r) => r.bilingual).length
+  console.log(`  bilingual (nlEn present): ${bilingual}/${results.length}`)
 
   if (failed.length) {
     console.error(`\n${failed.length} golden case(s) failed the deterministic scorer.`)

@@ -9,6 +9,9 @@ Make AI-generated CRUD pages **safe to merge**: the LLM writes a single JSON con
 [![npm version](https://img.shields.io/npm/v/%40es-plus%2Fadapter-antdv.svg?label=%40es-plus%2Fadapter-antdv)](https://www.npmjs.com/package/@es-plus/adapter-antdv)
 [![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
+[![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
+
+<sub>The accuracy badge = the nightly Layer-2 eval's measured in-schema-intent "zero-edit" hit rate on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — the exact number the gate enforces, **not a marketing figure**. The corpus is 25 cases today: a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts.</sub>
 
 **[Documentation](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD Generator](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
 

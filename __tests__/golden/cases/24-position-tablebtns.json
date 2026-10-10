@@ -1,10 +1,15 @@
 {
   "nl": "合同管理：表格上方右侧是“新增合同”按钮，左侧是“批量导出”；表格展示合同编号、金额、签署日期；支持新增、删除、查看；金额保留两位小数。",
+  "nlEn": "Contract management: above the table, the \"Add Contract\" button is on the right and \"Batch Export\" is on the left; the table shows contract number, amount, and signing date; supports add, delete, and view; the amount keeps two decimal places.",
   "config": {
     "name": "ContractManage",
     "apiUrl": "/api/contracts",
     "fields": [
-      { "prop": "contractNo", "label": "合同编号", "formtype": "Input" },
+      {
+        "prop": "contractNo",
+        "label": "合同编号",
+        "formtype": "Input"
+      },
       {
         "prop": "amount",
         "label": "金额",
@@ -12,18 +17,42 @@
         "inQuery": false,
         "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
       },
-      { "prop": "signedAt", "label": "签署日期", "formtype": "DatePicker", "inForm": false }
+      {
+        "prop": "signedAt",
+        "label": "签署日期",
+        "formtype": "DatePicker",
+        "inForm": false
+      }
     ],
-    "actions": ["add", "delete", "view"],
+    "actions": [
+      "add",
+      "delete",
+      "view"
+    ],
     "tableBtns": [
-      { "name": "批量导出", "position": "left", "actionType": "export" },
-      { "name": "新增合同", "type": "primary", "position": "right", "dialogKey": "add" }
+      {
+        "name": "批量导出",
+        "position": "left",
+        "actionType": "export"
+      },
+      {
+        "name": "新增合同",
+        "type": "primary",
+        "position": "right",
+        "dialogKey": "add"
+      }
     ],
     "operationColumn": {
       "label": "操作",
       "btns": [
-        { "name": "查看", "dialogKey": "view" },
-        { "name": "删除", "confirm": "确定删除该合同吗？" }
+        {
+          "name": "查看",
+          "dialogKey": "view"
+        },
+        {
+          "name": "删除",
+          "confirm": "确定删除该合同吗？"
+        }
       ]
     }
   },

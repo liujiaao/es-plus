@@ -19,10 +19,19 @@ on:
         required: false
         default: '0.95'
 
+# Serialize per ref so two overlapping nightly runs can't race the badge commit.
+# Do NOT cancel in-progress — an eval run costs money; let a started one finish.
+concurrency:
+  group: eval-llm-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   eval-llm:
     name: NL→config accuracy vs golden
     runs-on: ubuntu-latest
+    # Needed only for the badge commit-back below; everything else is read-only.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,10 +45,30 @@ jobs:
       - name: Install Anthropic SDK
         run: npm install --no-save @anthropic-ai/sdk --legacy-peer-deps
       - name: Run LLM accuracy eval
+        id: eval
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ESPLUS_EVAL_TARGET: ${{ github.event.inputs.target || '0.95' }}
         run: npm run eval:llm -- --require-key
+      # Commit the refreshed accuracy record + shields badge so the README badge
+      # tracks reality — even on a RED run (always()), so a regression turns the
+      # badge yellow/red instead of silently freezing on an old green number.
+      # Change-detected (no empty commits) and [skip ci] (no CI feedback loop).
+      # Guarded to this repo so forks never attempt a push they can't make.
+      - name: Commit accuracy badge + record
+        if: always() && github.repository_owner == 'liujiaao' && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          FILES="__tests__/golden/last-accuracy.json __tests__/golden/last-accuracy-badge.json"
+          if git status --porcelain -- $FILES | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add $FILES
+            git commit -m "chore(eval): refresh nightly accuracy badge [skip ci]"
+            git push
+          else
+            echo "No accuracy change to commit."
+          fi
 
   # NOTE: 整个 golden 语料的真实编译（golden:e2e）已移到 typecheck.yml 的
   # `golden-compile` 作业 —— 它是确定性的、不需要 API key，没有理由只在夜间跑：

@@ -1,16 +1,42 @@
 {
   "nl": "国际化的字典管理页（SFC 模式，开启 i18n）：查询有字典编码、字典名称；表格展示字典编码、字典名称、状态；支持新增、编辑。字段标签走 i18n。",
+  "nlEn": "Internationalized dictionary management page (SFC mode, i18n enabled): query by dict code and dict name; the table shows dict code, dict name, and status; supports add and edit. Field labels use i18n.",
   "config": {
     "name": "DictI18nManage",
     "apiUrl": "/api/dicts",
     "mode": "sfc",
     "i18n": true,
     "fields": [
-      { "prop": "dictCode", "label": "字典编码", "formtype": "Input" },
-      { "prop": "dictName", "label": "字典名称", "formtype": "Input" },
-      { "prop": "status", "label": "状态", "formtype": "Select", "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "停用", "value": 0 }] }
+      {
+        "prop": "dictCode",
+        "label": "字典编码",
+        "formtype": "Input"
+      },
+      {
+        "prop": "dictName",
+        "label": "字典名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "停用",
+            "value": 0
+          }
+        ]
+      }
     ],
-    "actions": ["add", "edit"]
+    "actions": [
+      "add",
+      "edit"
+    ]
   },
   "notes": "regression net for 2.3b: i18n + sfc must emit `labelKey: 'field.x'` (matching schema mode), never `label: '${t('field.x')}'` — nested single quotes break the parse and `t` is never imported in SFC."
 }

@@ -186,6 +186,263 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'edit', 'delete'],
     },
   },
+  {
+    nl: '收货地址管理：查询有收货人；表格展示收货人、所在地区、详细地址、是否默认；所在地区是省/市/区三级固定级联；支持新增、编辑、删除。',
+    reasoning:
+      '省/市/区是固定的三级树、不来自接口 → Cascader + 内联嵌套 dataOptions.children（递归），而不是 apiParams；详细地址是明细不作查询 (inQuery:false)；是否默认是开关 → Switch。',
+    config: {
+      name: 'AddressBook',
+      apiUrl: '/api/addresses',
+      fields: [
+        { prop: 'receiver', label: '收货人', formtype: 'Input' },
+        {
+          prop: 'region',
+          label: '所在地区',
+          formtype: 'Cascader',
+          inQuery: false,
+          dataOptions: [
+            {
+              label: '浙江省',
+              value: 'zj',
+              children: [
+                {
+                  label: '杭州市',
+                  value: 'hz',
+                  children: [
+                    { label: '西湖区', value: 'xh' },
+                    { label: '余杭区', value: 'yh' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { prop: 'detail', label: '详细地址', formtype: 'Input', inQuery: false },
+        { prop: 'isDefault', label: '是否默认', formtype: 'Switch', inQuery: false },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '菜单管理（整个界面要国际化）：查询有菜单名称、菜单类型（目录/菜单/按钮）；表格展示菜单名称、类型、路由路径、排序、状态；新增/编辑表单两列排布、标签宽 100px；支持新增、编辑、删除。',
+    reasoning:
+      '"界面要国际化" → i18n:true（标签走 labelKey）；"两列排布、标签宽" 是表单布局 → 顶层 formLayout {span:12, labelWidth:"100px"}；菜单类型是有限枚举 → Select；排序是数值 → InputNumber。',
+    config: {
+      name: 'MenuManage',
+      apiUrl: '/api/menus',
+      i18n: true,
+      formLayout: { span: 12, labelWidth: '100px' },
+      fields: [
+        { prop: 'menuName', label: '菜单名称', formtype: 'Input' },
+        {
+          prop: 'menuType',
+          label: '菜单类型',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '目录', value: 'catalog' },
+            { label: '菜单', value: 'menu' },
+            { label: '按钮', value: 'button' },
+          ],
+        },
+        { prop: 'path', label: '路由路径', formtype: 'Input', inQuery: false },
+        { prop: 'sort', label: '排序', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '启用', value: 1 },
+            { label: '禁用', value: 0 },
+          ],
+        },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '用 SFC 单文件组件模式生成标签管理：查询有标签名、标签分组；表格展示标签名、分组、颜色、使用次数；支持新增、编辑、删除。',
+    reasoning:
+      '明确要 SFC 单文件组件 → mode:"sfc"（产出自带 <script setup> 的 .vue，而非 pageSchema JSON + 包装器）；"颜色" 是取色语义 → ColorPicker；使用次数是统计值、系统生成 (inForm:false) 且不作查询。',
+    config: {
+      name: 'TagManage',
+      apiUrl: '/api/tags',
+      mode: 'sfc',
+      fields: [
+        { prop: 'tagName', label: '标签名', formtype: 'Input' },
+        { prop: 'groupName', label: '标签分组', formtype: 'Input' },
+        { prop: 'color', label: '颜色', formtype: 'ColorPicker', inQuery: false },
+        { prop: 'useCount', label: '使用次数', formtype: 'InputNumber', inQuery: false, inForm: false },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '监控指标明细：数据量很大，表格要开虚拟滚动；查询有指标名、级别（正常/警告/严重）；表格展示时间、指标名、指标值、主机、级别；只读。',
+    reasoning:
+      '"数据量很大、开虚拟滚动" → tableOptions.virtual:true（三端引擎不同：vue3 el-table-v2、antdv 透传、vue2 退化并告警，设置本身安全）；只读 → actions 仅 ["view"]；指标值/主机是明细 (inQuery:false, inForm:false)。',
+    config: {
+      name: 'MetricLog',
+      apiUrl: '/api/metrics',
+      tableOptions: { virtual: true },
+      fields: [
+        { prop: 'ts', label: '时间', formtype: 'DatePicker', inForm: false },
+        { prop: 'metric', label: '指标名', formtype: 'Input' },
+        { prop: 'value', label: '指标值', formtype: 'InputNumber', inQuery: false, inForm: false },
+        { prop: 'host', label: '主机', formtype: 'Input', inQuery: false, inForm: false },
+        {
+          prop: 'level',
+          label: '级别',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '正常', value: 'ok' },
+            { label: '警告', value: 'warn' },
+            { label: '严重', value: 'crit' },
+          ],
+        },
+      ],
+      actions: ['view'],
+    },
+  },
+  {
+    nl: '会员管理：新增和编辑用不同的弹窗——新增填昵称、手机号、等级；编辑时除这些外还能改积分和状态；表格展示昵称、手机号、等级、积分、状态；支持新增、编辑、删除。',
+    reasoning:
+      '新增/编辑表单项不同 → 用 dialogs.add / dialogs.edit 分别声明各自的 formItems（编辑多出积分、状态）；顶层 fields 承载表格列全集，弹窗差异不污染列定义。',
+    config: {
+      name: 'MemberManage',
+      apiUrl: '/api/members',
+      fields: [
+        { prop: 'nickname', label: '昵称', formtype: 'Input' },
+        { prop: 'phone', label: '手机号', formtype: 'Input' },
+        {
+          prop: 'level',
+          label: '等级',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '普通', value: 1 },
+            { label: 'VIP', value: 2 },
+          ],
+        },
+        { prop: 'points', label: '积分', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          inQuery: false,
+          dataOptions: [
+            { label: '正常', value: 1 },
+            { label: '冻结', value: 0 },
+          ],
+        },
+      ],
+      actions: ['add', 'edit', 'delete'],
+      dialogs: {
+        add: {
+          title: '新增会员',
+          formItems: [
+            { prop: 'nickname', label: '昵称', formtype: 'Input' },
+            { prop: 'phone', label: '手机号', formtype: 'Input' },
+            { prop: 'level', label: '等级', formtype: 'Select' },
+          ],
+        },
+        edit: {
+          title: '编辑会员',
+          formItems: [
+            { prop: 'nickname', label: '昵称', formtype: 'Input' },
+            { prop: 'phone', label: '手机号', formtype: 'Input' },
+            { prop: 'level', label: '等级', formtype: 'Select' },
+            { prop: 'points', label: '积分', formtype: 'InputNumber' },
+            { prop: 'status', label: '状态', formtype: 'Select' },
+          ],
+        },
+      },
+    },
+  },
+  {
+    nl: '薪资管理：表格展示员工、部门、基本工资、绩效、实发工资；其中"基本工资""实发工资"只有具备 salary:view 权限的人能看到；查询有员工、部门；支持编辑。',
+    reasoning:
+      '"某些列仅特定权限可见" → 对应字段用 permissionValue 逐字段门控（schema 原生支持的可见性，既不丢弃也不落成注释）；薪资字段是明细 (inQuery:false)。注意 permissionValue 是字段级可见性，与按钮级 permissions 不是一回事。',
+    config: {
+      name: 'SalaryManage',
+      apiUrl: '/api/salaries',
+      fields: [
+        { prop: 'employee', label: '员工', formtype: 'Input' },
+        { prop: 'dept', label: '部门', formtype: 'Input' },
+        { prop: 'base', label: '基本工资', formtype: 'InputNumber', inQuery: false, permissionValue: 'salary:view' },
+        { prop: 'bonus', label: '绩效', formtype: 'InputNumber', inQuery: false },
+        { prop: 'net', label: '实发工资', formtype: 'InputNumber', inQuery: false, permissionValue: 'salary:view' },
+      ],
+      actions: ['edit'],
+    },
+  },
+  {
+    nl: '工单管理：查询有工单号、状态（待处理/处理中/已完成）；表格展示工单号、标题、状态、优先级；状态列要用彩色标签自定义渲染；操作列每行有"处理""关闭"两个按钮；支持查看、编辑。',
+    reasoning:
+      '"状态列彩色标签自定义渲染" 超出声明式 schema → 落成 render 扩展点（函数源码串，保留不丢）；"操作列每行有处理/关闭按钮" → operationColumn 配成对象并显式列出两个行按钮 btns（处理走 edit 弹窗）。',
+    config: {
+      name: 'TicketManage',
+      apiUrl: '/api/tickets',
+      fields: [
+        { prop: 'ticketNo', label: '工单号', formtype: 'Input' },
+        { prop: 'title', label: '标题', formtype: 'Input', inQuery: false },
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '待处理', value: 0 },
+            { label: '处理中', value: 1 },
+            { label: '已完成', value: 2 },
+          ],
+          render: "(row) => h('el-tag', { type: row.status === 2 ? 'success' : row.status === 1 ? 'warning' : 'info' }, STATUS_TEXT[row.status])",
+        },
+        {
+          prop: 'priority',
+          label: '优先级',
+          formtype: 'Select',
+          inQuery: false,
+          dataOptions: [
+            { label: '高', value: 3 },
+            { label: '中', value: 2 },
+            { label: '低', value: 1 },
+          ],
+        },
+      ],
+      actions: ['view', 'edit'],
+      operationColumn: {
+        label: '操作',
+        btns: [
+          { name: '处理', dialogKey: 'edit' },
+          { name: '关闭' },
+        ],
+      },
+    },
+  },
+  {
+    nl: '用 Ant Design Vue 做评论管理：查询有评论人、审核状态（待审/通过/驳回）；表格展示评论人、内容摘要、审核状态、提交时间；支持查看、删除。',
+    reasoning:
+      '明确要 Ant Design Vue → target:"antdv"（Vue3 语法，UI 符号映射到 ant-design-vue：message / Modal / <a-tag>）；审核状态是枚举 → Select；提交时间系统生成 (inForm:false)。',
+    config: {
+      name: 'CommentManage',
+      apiUrl: '/api/comments',
+      target: 'antdv',
+      fields: [
+        { prop: 'author', label: '评论人', formtype: 'Input' },
+        { prop: 'summary', label: '内容摘要', formtype: 'Input', inQuery: false },
+        {
+          prop: 'auditStatus',
+          label: '审核状态',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '待审', value: 0 },
+            { label: '通过', value: 1 },
+            { label: '驳回', value: 2 },
+          ],
+        },
+        { prop: 'submittedAt', label: '提交时间', formtype: 'DatePicker', inForm: false },
+      ],
+      actions: ['view', 'delete'],
+    },
+  },
 ]
 
 /**

@@ -10,6 +10,9 @@
 [![@es-plus/core](https://img.shields.io/npm/v/%40es-plus%2Fcore.svg?label=%40es-plus%2Fcore)](https://www.npmjs.com/package/@es-plus/core)
 [![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
+[![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
+
+<sub>准确率徽章 = 夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）实测的 in-schema intent「零编辑」命中率，门禁即此数；**不是营销数字**。语料目前 25 例，是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径。</sub>
 
 **[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 
