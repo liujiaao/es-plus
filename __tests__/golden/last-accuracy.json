@@ -1,0 +1,103 @@
+{
+  "measuredAt": "2026-10-10T05:51:18.751Z",
+  "model": "pa/claude-opus-4-8",
+  "cases": 25,
+  "heldoutCases": 19,
+  "fewshotDerivedCases": 6,
+  "target": 0.95,
+  "inSchemaIntentZeroEdit": 0,
+  "inSchemaIntentZeroEditAll": 0,
+  "exactIntentFull": 0,
+  "exactIntentFullAll": 0,
+  "propSetF1": 0,
+  "attributeAccuracy": 0,
+  "actionsF1": 0,
+  "compileRate": 0,
+  "byCapability": {
+    "propSet": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "formtype": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "membership": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "actions": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "tableBtns": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "dialogs": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "operationColumn": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "permissions": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "apiParams": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "dataOptions": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "i18n": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "formLayout": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "target": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "mode": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "virtualScroll": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    },
+    "extPoints": {
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
+    }
+  },
+  "byLanguage": {
+    "zh": 0,
+    "en": 0
+  },
+  "passed": false
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "label": "heldout accuracy",
-  "message": "pending nightly",
-  "color": "lightgrey"
+  "message": "0.0%",
+  "color": "red"
 }
