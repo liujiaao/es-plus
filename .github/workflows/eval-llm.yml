@@ -48,6 +48,14 @@ jobs:
         id: eval
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Optional: point at an Anthropic-Messages-compatible gateway (self-host /
+          # proxy / third-party relay). Leave the secret unset to use api.anthropic.com.
+          # The relay MUST speak the native /v1/messages protocol — an OpenAI-only
+          # endpoint will not work with @anthropic-ai/sdk.
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          # Optional repo variable: the model id the endpoint actually serves
+          # (default below is a real Anthropic id; a relay likely needs its own).
+          ESPLUS_EVAL_MODEL: ${{ vars.ESPLUS_EVAL_MODEL }}
           ESPLUS_EVAL_TARGET: ${{ github.event.inputs.target || '0.95' }}
         run: npm run eval:llm -- --require-key
       # Commit the refreshed accuracy record + shields badge so the README badge

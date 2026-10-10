@@ -150,7 +150,16 @@ async function nlToConfig(client, system, nl) {
 
 async function main() {
   const Anthropic = await loadSdk()
-  const client = new Anthropic()
+  // ANTHROPIC_BASE_URL lets this point at an Anthropic-Messages-compatible
+  // gateway (self-host / proxy / third-party relay) instead of api.anthropic.com.
+  // The SDK already reads this env var on its own; we pass it explicitly only to
+  // LOG the effective endpoint, so a misconfigured relay is obvious in CI output
+  // rather than silently hitting the wrong host. Requires a gateway that speaks
+  // the native /v1/messages protocol (x-api-key auth) — an OpenAI-only endpoint
+  // will NOT work with this SDK.
+  const baseURL = process.env.ANTHROPIC_BASE_URL
+  const client = new Anthropic(baseURL ? { baseURL } : {})
+  console.log(`[eval:llm] endpoint: ${baseURL || 'https://api.anthropic.com (default)'} · model: ${MODEL}`)
   const system = buildNlToConfigSystemPrompt()
 
   const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
