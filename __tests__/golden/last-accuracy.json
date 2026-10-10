@@ -1,53 +1,53 @@
 {
-  "measuredAt": "2026-10-10T05:51:18.751Z",
+  "measuredAt": "2026-10-10T06:15:26.542Z",
   "model": "pa/claude-opus-4-8",
   "cases": 25,
   "heldoutCases": 19,
   "fewshotDerivedCases": 6,
   "target": 0.95,
   "inSchemaIntentZeroEdit": 0,
-  "inSchemaIntentZeroEditAll": 0,
+  "inSchemaIntentZeroEditAll": 0.08,
   "exactIntentFull": 0,
-  "exactIntentFullAll": 0,
-  "propSetF1": 0,
-  "attributeAccuracy": 0,
-  "actionsF1": 0,
-  "compileRate": 0,
+  "exactIntentFullAll": 0.08,
+  "propSetF1": 0.7233,
+  "attributeAccuracy": 0.9173,
+  "actionsF1": 0.9707,
+  "compileRate": 1,
   "byCapability": {
     "propSet": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 19,
+      "pass": 3,
+      "rate": 0.1579
     },
     "formtype": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 19,
+      "pass": 15,
+      "rate": 0.7895
     },
     "membership": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 19,
+      "pass": 11,
+      "rate": 0.5789
     },
     "actions": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 19,
+      "pass": 17,
+      "rate": 0.8947
     },
     "tableBtns": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 5,
+      "pass": 1,
+      "rate": 0.2
     },
     "dialogs": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 6,
+      "pass": 1,
+      "rate": 0.1667
     },
     "operationColumn": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 6,
+      "pass": 2,
+      "rate": 0.3333
     },
     "permissions": {
       "applicable": 0,
@@ -55,49 +55,49 @@
       "rate": null
     },
     "apiParams": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 1,
+      "pass": 1,
+      "rate": 1
     },
     "dataOptions": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 12,
+      "pass": 8,
+      "rate": 0.6667
     },
     "i18n": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 2,
+      "pass": 2,
+      "rate": 1
     },
     "formLayout": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 1,
+      "pass": 1,
+      "rate": 1
     },
     "target": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 4,
+      "pass": 4,
+      "rate": 1
     },
     "mode": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 6,
+      "pass": 5,
+      "rate": 0.8333
     },
     "virtualScroll": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 2,
+      "pass": 2,
+      "rate": 1
     },
     "extPoints": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 3,
+      "pass": 2,
+      "rate": 0.6667
     }
   },
   "byLanguage": {
     "zh": 0,
-    "en": 0
+    "en": 0.0526
   },
   "passed": false
 }
