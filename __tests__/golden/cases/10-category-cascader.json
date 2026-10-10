@@ -13,13 +13,13 @@
       {
         "prop": "level",
         "label": "层级",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false
       },
       {
         "prop": "sortOrder",
         "label": "排序",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false
       },
       {

@@ -23,7 +23,7 @@
       {
         "prop": "price",
         "label": "价格",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false
       },
       {
