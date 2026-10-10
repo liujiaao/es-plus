@@ -51,6 +51,14 @@ const BADGE_FILE = join(__dirname, '..', '__tests__', 'golden', 'last-accuracy-b
 const MODEL = process.env.ESPLUS_EVAL_MODEL || 'claude-opus-5'
 const TARGET_ACCURACY = Number(process.env.ESPLUS_EVAL_TARGET || '0.95')
 
+// Every model id the server actually answered with, across the whole run.
+// A relay/gateway can silently route a requested id to a different backend
+// (e.g. PPIO maps `pa/claude-opus-4-8` → its internal `pa/venus-marble-4-8`),
+// so we record what REALLY served the eval instead of trusting the id we asked
+// for — otherwise the committed accuracy number could be attributed to a model
+// that never ran. Populated in callModel from each response's `model` field.
+const SERVED_MODELS = new Set()
+
 // 与 few-shot 示例（shared/src/ai-nl-to-config-prompt.ts 的 NL_TO_CONFIG_FEWSHOT）同源/近变体的用例。
 // 在这些用例上打分，测得的是"模型是否复述了它刚在 system prompt 里看到的 few-shot"，而非"泛化到未见场景"，
 // 会系统性抬高准确率数字。因此单独报告为 few-shot recall，把 >=95% 的门禁落在留出集（heldout）上。
@@ -112,6 +120,7 @@ async function callModel(client, system, messages) {
     system,
     messages,
   })
+  if (res.model) SERVED_MODELS.add(res.model)
   return textOf(res)
 }
 
@@ -287,9 +296,22 @@ async function main() {
   // truth and drift is visible over time. This runs only on a real measured
   // pass (skip() exits before we get here), so the file always reflects a run
   // that actually called the model.
+  // What actually answered. If the server routed our requested id to a
+  // different backend, surface it loudly: a committed accuracy number must be
+  // attributable to a known model, not a silent substitution.
+  const served = [...SERVED_MODELS]
+  const servedModel = served.length ? served.join(',') : MODEL
+  if (served.length && !served.includes(MODEL)) {
+    console.warn(
+      `[eval:llm] NOTE: requested model '${MODEL}' but the endpoint served '${servedModel}' ` +
+        `(relay alias/routing). Accuracy below is attributed to the SERVED model.`
+    )
+  }
+
   const record = {
     measuredAt: new Date().toISOString(),
     model: MODEL,
+    servedModel,
     cases: n,
     heldoutCases: heldout.length,
     fewshotDerivedCases: fewshotRows.length,
