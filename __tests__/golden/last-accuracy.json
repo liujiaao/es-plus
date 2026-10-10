@@ -1,33 +1,34 @@
 {
-  "measuredAt": "2026-10-10T06:15:26.542Z",
+  "measuredAt": "2026-10-10T06:49:26.221Z",
   "model": "pa/claude-opus-4-8",
+  "servedModel": "pa/venus-marble-4-8,pa/claude-opus-4-8",
   "cases": 25,
   "heldoutCases": 19,
   "fewshotDerivedCases": 6,
   "target": 0.95,
-  "inSchemaIntentZeroEdit": 0,
-  "inSchemaIntentZeroEditAll": 0.08,
-  "exactIntentFull": 0,
-  "exactIntentFullAll": 0.08,
-  "propSetF1": 0.7233,
-  "attributeAccuracy": 0.9173,
-  "actionsF1": 0.9707,
+  "inSchemaIntentZeroEdit": 0.0526,
+  "inSchemaIntentZeroEditAll": 0.12,
+  "exactIntentFull": 0.0526,
+  "exactIntentFullAll": 0.12,
+  "propSetF1": 0.7641,
+  "attributeAccuracy": 0.926,
+  "actionsF1": 0.9787,
   "compileRate": 1,
   "byCapability": {
     "propSet": {
       "applicable": 19,
-      "pass": 3,
-      "rate": 0.1579
+      "pass": 4,
+      "rate": 0.2105
     },
     "formtype": {
       "applicable": 19,
-      "pass": 15,
-      "rate": 0.7895
+      "pass": 14,
+      "rate": 0.7368
     },
     "membership": {
       "applicable": 19,
-      "pass": 11,
-      "rate": 0.5789
+      "pass": 12,
+      "rate": 0.6316
     },
     "actions": {
       "applicable": 19,
@@ -46,8 +47,8 @@
     },
     "operationColumn": {
       "applicable": 6,
-      "pass": 2,
-      "rate": 0.3333
+      "pass": 1,
+      "rate": 0.1667
     },
     "permissions": {
       "applicable": 0,
@@ -96,8 +97,8 @@
     }
   },
   "byLanguage": {
-    "zh": 0,
-    "en": 0.0526
+    "zh": 0.0526,
+    "en": 0.1579
   },
   "passed": false
 }
