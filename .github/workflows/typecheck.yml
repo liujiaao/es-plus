@@ -104,6 +104,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --legacy-peer-deps
+      # check:scorers 跑 scripts/eval/scorers.test.mjs，它 import
+      # StructuredCrudConfigSchema from '@es-plus/shared'（解析到 build/index.js），
+      # 故必须先 tsc 出 shared build/（与 golden job 同理）。
+      - name: Build @es-plus/shared
+        run: npm run build --workspace @es-plus/shared
       # 三包契约类型导出一致 + schema↔类型同步 + schemas 单源无漂移
       # + 生成物转义（反向探针）+ 校验器 schema 文件集契约 + 遗留桩转发契约
       - name: Check cross-renderer consistency
