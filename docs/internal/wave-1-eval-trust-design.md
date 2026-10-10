@@ -10,7 +10,22 @@
 > PR-3 `NL_TO_CONFIG_FEWSHOT` 6→14 shot（8 全新域）+ spec 2 道护栏；
 > PR-4 `last-accuracy-badge.json`（shields endpoint）+ `eval-llm.yml` 变更检测 commit-back + README/README.en 徽章与注脚。
 > 验证：shared vitest 392 pass、`check:scorers` 绿、`test:golden` 25/25（双语 25/25）、`check:readme` 绿、CLI 43 pass。
-> 真实准确率数字待首个 nightly（有 `ANTHROPIC_API_KEY`）跑出后由 CI 回写——徽章当前为 grey `pending nightly` 占位。
+>
+> **首个真实 run 结论（2026-10-10，PPIO Opus-4.8 中继，见 memory `ppio-eval-relay-config`）：**
+> 评测跑通并回写（徽章现为真实值，非占位）。真实数字 —— heldout 零编辑意图准确率 ≈ **5.3%**（all ≈12%），
+> **远未**触及「≥95%」。但这是**门禁指标口径**的问题，不是模型/生成器质量问题：
+> 门禁 `exactIntentCore` 要求「整份 config 逐字节复现金标」（精确列集 `propF1==1` ∧ 每字段 formtype+membership 全中），
+> 而短 NL **本质上欠定**——同一句话有多套都正确的列集/可搜索性/弹窗拆分，指标只给「与某位作者的任意选择逐字节相同」记分。
+> 同一 run 的分维指标才是真实水平：**compiles 100% · 属性准确率 ≈93% · actions F1 ≈98% · propSet F1 ≈76%**。
+>
+> **口径重定义（本波结论）：** 对外不再把「≥95%」挂在「零编辑准确率」上。可信且有意义的对外口径是
+> **「编译通过率 100% + 属性级准确率 ~93% + actions F1 ~98%」**，零编辑率作为「硬诚实数字」如实报告（徽章即它）。
+> 若未来仍要一个合法的「≥95%」头条，需**改所измер**——门禁只对 NL 明确指定的维度打分（逐 case 标注 NL 固定了哪些维度），
+> 而不是惩罚欠定选择；在那个指标上强模型才可能合法逼近 95%。详见 memory `eval-heldout-vs-95-claim`。
+>
+> **本次「补齐差距」已落地（route a）：** 修正 5 处明显错误的金标 formtype（金额/售价/库存 数值字段 `Input`→`InputNumber`，模型本就对、金标错）；
+> prompt formtype 规则补「数值字段 → InputNumber」（此前 fall through 到 `otherwise → Input`，直接教错）；两条 few-shot 同步纠正。
+> 效果：属性准确率/formtype 维度诚实抬升；零编辑率受 propSet 欠定封顶，无法靠此达到 95%。
 
 ## 0. 现状校准（roadmap 的假设 vs 真实代码）
 

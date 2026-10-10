@@ -29,13 +29,13 @@
       {
         "prop": "price",
         "label": "售价",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false
       },
       {
         "prop": "stock",
         "label": "库存",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false
       }
     ],

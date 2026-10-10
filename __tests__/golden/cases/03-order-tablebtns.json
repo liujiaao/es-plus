@@ -13,7 +13,7 @@
       {
         "prop": "amount",
         "label": "金额",
-        "formtype": "Input",
+        "formtype": "InputNumber",
         "inQuery": false,
         "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
       },
