@@ -1,18 +1,18 @@
 {
-  "measuredAt": "2026-10-10T10:03:16.255Z",
+  "measuredAt": "2026-10-11T10:10:12.813Z",
   "model": "pa/claude-opus-4-8",
   "servedModel": "pa/venus-marble-4-8,pa/claude-opus-4-8",
   "cases": 25,
   "heldoutCases": 19,
   "fewshotDerivedCases": 6,
   "target": 0.95,
-  "inSchemaIntentZeroEdit": 0.0526,
-  "inSchemaIntentZeroEditAll": 0.12,
-  "exactIntentFull": 0.0526,
-  "exactIntentFullAll": 0.12,
-  "propSetF1": 0.7308,
-  "attributeAccuracy": 0.9349,
-  "actionsF1": 0.965,
+  "inSchemaIntentZeroEdit": 0,
+  "inSchemaIntentZeroEditAll": 0.08,
+  "exactIntentFull": 0,
+  "exactIntentFullAll": 0.08,
+  "propSetF1": 0.7353,
+  "attributeAccuracy": 0.9443,
+  "actionsF1": 0.973,
   "compileRate": 1,
   "byCapability": {
     "propSet": {
@@ -27,13 +27,13 @@
     },
     "membership": {
       "applicable": 19,
-      "pass": 12,
-      "rate": 0.6316
+      "pass": 11,
+      "rate": 0.5789
     },
     "actions": {
       "applicable": 19,
-      "pass": 16,
-      "rate": 0.8421
+      "pass": 17,
+      "rate": 0.8947
     },
     "tableBtns": {
       "applicable": 5,
@@ -42,8 +42,8 @@
     },
     "dialogs": {
       "applicable": 6,
-      "pass": 2,
-      "rate": 0.3333
+      "pass": 1,
+      "rate": 0.1667
     },
     "operationColumn": {
       "applicable": 6,
@@ -62,8 +62,8 @@
     },
     "dataOptions": {
       "applicable": 12,
-      "pass": 7,
-      "rate": 0.5833
+      "pass": 8,
+      "rate": 0.6667
     },
     "i18n": {
       "applicable": 2,
@@ -97,8 +97,8 @@
     }
   },
   "byLanguage": {
-    "zh": 0.0526,
-    "en": 0
+    "zh": 0,
+    "en": 0.1053
   },
   "passed": false
 }
