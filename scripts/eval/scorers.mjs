@@ -356,3 +356,38 @@ export function summarizeConvergence(rows, k) {
     total,
   }
 }
+
+// ── 「95% 定义」统一判定：scoped zero-edit ∨ ≤K 轮收敛 ───────────────────────────
+//
+// 两条腿的 OR——「95% = scoped zero-edit ∨ ≤K 轮收敛」的真实单一数字。此前 eval 只分开
+// 报 scoped-zero-edit 与 convergence@K，无人把它们按 case OR 起来；而定义里的 95% 恰恰是这个
+// per-case 的 OR。只观测、不门禁（沿用 B2/B3 先例），但第一次把「95」落成可读的一个数。
+
+/**
+ * 单行是否满足「95% 定义」：scoped zero-edit ∨ ≤k 轮收敛。
+ *   - 有收敛语料的行（带 convergence）：firstTurn !== null && firstTurn <= k。
+ *     firstTurn=0 即 zero-edit（天然涵盖第一条腿）；1..k 即第二条腿的精修恢复。
+ *   - 无收敛语料的行：只有第一条腿可判 → exactIntentScoped（即 turn-0 scoped 命中）。
+ * @param {{ exactIntentScoped?: boolean, convergence?: { firstTurn: number|null } | null }} row
+ * @param {number} k
+ * @returns {boolean}
+ */
+export function meets95Definition(row, k) {
+  if (row && row.convergence) {
+    const ft = row.convergence.firstTurn
+    return ft !== null && ft !== undefined && ft <= k
+  }
+  return !!(row && row.exactIntentScoped)
+}
+
+/**
+ * 「95% 定义」聚合（只观测、不门禁）：rows 按 meets95Definition 判，返回占比 + 旁证计数。
+ * @param {Array<{ exactIntentScoped?: boolean, convergence?: { firstTurn: number|null } | null }>} rows
+ * @param {number} k
+ */
+export function summarize95(rows, k) {
+  const total = Array.isArray(rows) ? rows.length : 0
+  if (!total) return { rate: null, pass: 0, total: 0 }
+  const pass = rows.filter((r) => meets95Definition(r, k)).length
+  return { rate: pass / total, pass, total }
+}

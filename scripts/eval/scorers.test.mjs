@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95 } from './scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '..', '__tests__', 'golden', 'cases')
@@ -232,6 +232,39 @@ console.log('meta-eval: convergence (firstConvergedTurn / summarizeConvergence)'
   check(Math.abs(sum.meanTurnsToConverge - (0 + 2 + 4) / 3) < 1e-9, 'summarizeConvergence: 均值仅计已收敛 (0+2+4)/3')
   const empty = summarizeConvergence([], 3)
   check(empty.rateAtK === null && empty.meanTurnsToConverge === null && empty.total === 0, 'summarizeConvergence: 空语料回 null')
+}
+
+// 6) 「95% 定义」统一判定（meets95Definition / summarize95）：scoped zero-edit ∨ ≤K 轮收敛
+console.log('meta-eval: 95% definition (meets95Definition / summarize95)')
+{
+  const K = 3
+  // 无收敛语料的行 → 只看第一条腿 exactIntentScoped
+  check(meets95Definition({ exactIntentScoped: true }, K) === true, 'meets95: 无收敛语料、scoped 命中 → 过')
+  check(meets95Definition({ exactIntentScoped: false }, K) === false, 'meets95: 无收敛语料、scoped 未命中 → 不过')
+  // 有收敛语料的行 → 看 firstTurn ≤ K（firstTurn=0 即 zero-edit，天然涵盖第一条腿）
+  check(meets95Definition({ convergence: { firstTurn: 0 } }, K) === true, 'meets95: zero-edit 收敛(firstTurn=0) → 过')
+  check(meets95Definition({ convergence: { firstTurn: 3 } }, K) === true, 'meets95: 第 3 轮收敛(=K) → 过')
+  check(meets95Definition({ convergence: { firstTurn: 4 } }, K) === false, 'meets95: 第 4 轮收敛(>K) → 不过')
+  check(meets95Definition({ convergence: { firstTurn: null } }, K) === false, 'meets95: 未收敛(null) → 不过')
+  // convergence 优先于 exactIntentScoped：第二条腿恢复的行即便 turn-0 scoped=false 也算过
+  check(
+    meets95Definition({ exactIntentScoped: false, convergence: { firstTurn: 1 } }, K) === true,
+    'meets95: 第 1 轮恢复（turn-0 scoped=false）→ 过（第二条腿接住）'
+  )
+
+  // summarize95：pass / total / rate
+  const rows = [
+    { exactIntentScoped: true }, // 第一条腿过
+    { exactIntentScoped: false }, // 两条腿都没过
+    { exactIntentScoped: false, convergence: { firstTurn: 1 } }, // 第二条腿接住
+    { convergence: { firstTurn: null } }, // 有语料但未收敛
+  ]
+  const s95 = summarize95(rows, K)
+  check(s95.total === 4, 'summarize95: total=4')
+  check(s95.pass === 2, 'summarize95: pass=2（第一条腿 1 + 第二条腿 1）')
+  check(Math.abs(s95.rate - 2 / 4) < 1e-9, 'summarize95: rate=2/4')
+  const empty95 = summarize95([], K)
+  check(empty95.rate === null && empty95.pass === 0 && empty95.total === 0, 'summarize95: 空集回 null')
 }
 
 if (failures) {

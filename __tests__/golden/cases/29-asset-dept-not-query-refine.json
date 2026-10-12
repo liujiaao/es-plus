@@ -1,0 +1,22 @@
+{
+  "nl": "固定资产台账：可以按资产名称搜索；表格展示资产名称、资产编号、使用部门、购入日期；支持新增、编辑、删除。",
+  "nlEn": "Fixed-asset ledger: searchable by asset name; the table shows asset name, asset number, using department, and purchase date; supports add, edit, and delete.",
+  "fixedFields": ["assetName", "assetNo", "useDept", "purchaseDate"],
+  "pinnedDims": ["propSet", "actions", "inQuery:useDept"],
+  "refinements": [
+    { "turn": 1, "correction": "使用部门不用做成查询条件，我只按资产名称搜，部门只在表格里展示。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "AssetLedger",
+    "apiUrl": "/api/assets",
+    "fields": [
+      { "prop": "assetName", "label": "资产名称", "formtype": "Input", "inQuery": true },
+      { "prop": "assetNo", "label": "资产编号", "formtype": "Input", "inQuery": false },
+      { "prop": "useDept", "label": "使用部门", "formtype": "Input", "inQuery": false },
+      { "prop": "purchaseDate", "label": "购入日期", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:useDept）：NL 只说「按资产名称搜索」，使用部门是常见筛选项，模型倾向把它也做成查询条件（inQuery:true），与 gold=false 冲突 → turn-0 scoped 必 false、循环触发；一句自然纠正后收敛。逆模型先验、未被 few-shot 教过，非过拟合。"
+}

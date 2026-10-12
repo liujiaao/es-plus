@@ -1,0 +1,22 @@
+{
+  "nl": "客户管理：可以按客户名称搜索；表格展示客户名称、所属行业、负责人、创建时间；支持新增、编辑、删除。",
+  "nlEn": "Customer management: searchable by customer name; the table shows customer name, industry, owner, and created time; supports add, edit, and delete.",
+  "fixedFields": ["customerName", "industry", "owner", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "inQuery:owner"],
+  "refinements": [
+    { "turn": 1, "correction": "负责人不用做成查询条件，我只按客户名称搜，负责人只在表格里展示。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "CustomerManage",
+    "apiUrl": "/api/customers",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input", "inQuery": true },
+      { "prop": "industry", "label": "所属行业", "formtype": "Input", "inQuery": false },
+      { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:owner）：NL 只说「按客户名称搜索」，负责人是常见筛选项，模型倾向把它也做成查询条件（inQuery:true），与 gold=false 冲突 → turn-0 scoped 必 false、循环触发；一句自然纠正后收敛。逆模型先验、未被 few-shot 教过，非过拟合。"
+}

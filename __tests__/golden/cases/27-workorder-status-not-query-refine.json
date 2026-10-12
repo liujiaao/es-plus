@@ -1,0 +1,32 @@
+{
+  "nl": "报修工单管理：可以按工单标题搜索；表格展示工单标题、报修人、工单状态（待处理/处理中/已完成）、创建时间；支持新增、编辑、删除。",
+  "nlEn": "Repair work-order management: searchable by work-order title; the table shows work-order title, reporter, status (pending/in-progress/done), and created time; supports add, edit, and delete.",
+  "fixedFields": ["title", "reporter", "status", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "inQuery:status"],
+  "refinements": [
+    { "turn": 1, "correction": "工单状态不用做成查询条件，我只要按标题搜索，状态只在表格里展示就行。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "WorkOrderManage",
+    "apiUrl": "/api/work-orders",
+    "fields": [
+      { "prop": "title", "label": "工单标题", "formtype": "Input", "inQuery": true },
+      { "prop": "reporter", "label": "报修人", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "工单状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待处理", "value": "pending" },
+          { "label": "处理中", "value": "processing" },
+          { "label": "已完成", "value": "done" }
+        ]
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:status）：NL 只说「按标题搜索」，status 是最典型的筛选字段，模型倾向「好心」把它也做成查询条件（inQuery:true），与 gold=false 冲突 → turn-0 scoped 必 false、循环触发；一句自然纠正后收敛到 false。逆模型先验、未被 few-shot 教过（few-shot 只教「明细字段不作查询」，不涉及 status 不作查询），非过拟合。"
+}

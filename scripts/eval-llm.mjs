@@ -39,7 +39,7 @@ import {
   generateFromConfig,
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
-import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence } from './eval/scorers.mjs'
+import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95 } from './eval/scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -288,6 +288,12 @@ async function main() {
     CONVERGE_K
   )
 
+  // 「95% 定义」统一数（只观测、不门禁）：scoped zero-edit ∨ ≤K 轮收敛，按 per-row OR 聚合。
+  // 这把 scoped 第一条腿与 convergence 第二条腿合成一个真实数字——此前两条腿分开报、无人算 OR。
+  // heldout 优先（门禁总体），空则退全量以避免除零。
+  const def95Rows = heldout.length ? heldout : zhRows
+  const def95 = summarize95(def95Rows, CONVERGE_K)
+
   // 按维度在留出集上聚合：applicable=被多少 case 用到，pass=命中数，rate=命中率。
   // 这是能定位回归到具体维度的诊断信号（AI-01 的核心产物）。
   const capRows = heldout.length ? heldout : rows
@@ -354,6 +360,14 @@ async function main() {
         `(${convStats.converged}/${convStats.total} converged; mean turns ${mean})`
     )
   }
+  // 「95% 定义」统一数：scoped zero-edit ∨ ≤K 轮收敛（per-case OR）。这才是定义里那个「95」。
+  if (def95.rate !== null) {
+    const src = heldout.length ? 'HELDOUT' : 'ALL'
+    console.log(
+      `  95%-definition (${src}, observed): ${(def95.rate * 100).toFixed(1)}%  ` +
+        `(scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge; ${def95.pass}/${def95.total})`
+    )
+  }
   if (byLanguage.en !== null) {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
   }
@@ -415,6 +429,16 @@ async function main() {
           total: convStats.total,
         }
       : null,
+    // 「95% 定义」统一数（只观测、不门禁）：scoped zero-edit ∨ ≤K 轮收敛的 per-case OR。
+    definition95: def95.rate === null
+      ? null
+      : {
+          k: CONVERGE_K,
+          source: heldout.length ? 'heldout' : 'all',
+          rate: Number(def95.rate.toFixed(4)),
+          pass: def95.pass,
+          total: def95.total,
+        },
     byCapability,
     byLanguage,
     passed: gateExact >= TARGET_ACCURACY,
