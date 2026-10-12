@@ -5,7 +5,7 @@
 > **（P2）95% 准确率——先把口径改良定义，再在 schema-grounded 语料上诚实逼近。**
 > 本文是技术实施方案，不是公开文案。具体 AI-xx roadmap 映射在落地时同步进 [ROADMAP.md](../../packages/mcp-server/ROADMAP.md)。
 >
-> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；**PR-A3' 已落地**（B3 精修回环 + B4 pin；`diffConfig` + `refine_config`「确定性 validate+diff」工具 + eval K 轮收敛驱动 + `firstConvergedTurn`/`summarizeConvergence` + convergence@K 指标；两处偏离 §5 字面已评审拍板：工具不喂模型、只认 scripted refinements；shared 430 测试 / mcp-server 116 测试 + `check:scorers` + `test:golden` 26/26 全绿，见 §5 末）；C2 待做。未触发任何付费 run。
+> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；**PR-A3' 已落地**（B3 精修回环 + B4 pin；`diffConfig` + `refine_config`「确定性 validate+diff」工具 + eval K 轮收敛驱动 + `firstConvergedTurn`/`summarizeConvergence` + convergence@K 指标；两处偏离 §5 字面已评审拍板：工具不喂模型、只认 scripted refinements；shared 430 测试 / mcp-server 116 测试 + `check:scorers` + `test:golden` 26/26 全绿，见 §5 末）；C2 待做。A3' 带 key 付费复测已跑（`pa/claude-opus-4-8`，convergence@3 heldout 100% / 0 轮，但唯一语料 turn 0 即 zero-edit、精修环未真实压测，见 §5.3）；**PR-C2（A3）已落地**（确定性前门校验：shared `validateAndRepair` + 两个生成前门生成前过闸、非法回结构化 per-issue 错误；三处偏离 §6 字面已评审拍板：前门不含模型回灌循环、不按默认改写 config、assertValidConfig 早已被 catch；shared 443 测试 / mcp-server 118 测试 + typecheck/lint/golden/fragment/scorers 全绿，见 §6 末）；A4 沙箱 build-repair 独立后续 PR。
 >
 > **复核纠正（落地时发现，已改）：** 原 §2.2 写「esbuild 已在仓库依赖链里，不新增运行时依赖」——**错**。实测 esbuild 只在**根仓库**（golden/smoke 脚本），三个发布包（shared/cli/mcp-server）都没有它。经确认采 **A 方案：给 `@es-plus/shared` 加 esbuild 依赖**，做真不变量（发射前校验与 CI 发射后校验同款解析器、零漂移）。另：`generate_crud` 的 `mode` 默认**本就是 `schema`**，A1 实际只剩「选 sfc 加保真度警告」。
 >
@@ -220,30 +220,38 @@ P2 准确率轨：                            ▼                    ▼
 - ✅ `diffConfig` 纯函数单测覆盖增/删/改字段、formtype、membership、name/apiUrl、actions。
 - ✅ `refine_config`（buildRefineResult）单测含「金额改数值右对齐」→ 合法 + diff 捕获 formtype/align 变更。
 - ✅ 门禁全绿：shared 430 测试、mcp-server 116 测试、`check:scorers`（含收敛纯函数）、`test:golden` 26/26、workspace typecheck、lint 0 error。
-- ⏳ 带 key 复测（**需显式指令**）：报告 `convergenceRateAtK`（K=3）与 `meanTurnsToConverge`——「95% = scoped zero-edit ∨ ≤K 轮收敛」口径的第二条腿。**本次未触发**。
+- ✅ 带 key 付费复测已跑（2026-10-12，`pa/claude-opus-4-8` @ PPIO 中继，46 调用，exit 0）：`convergenceRateAtK`（K=3, heldout）= **100%**、`meanTurnsToConverge` = **0.00**（converged 1 / total 1），已持久化进 `last-accuracy.json.convergence`。同轮口径：zero-edit heldout 35.0%（GATED，仍 < 95%）、scoped heldout 70.0%（观测）、attr 94.4%、compiles 100%。
+  - ⚠️ **数字真但空心**：唯一的收敛语料 case 26 在 turn 0 就 zero-edit（真实模型首发即 `amount: InputNumber` + `align: right`），scripted 精修轮**从未触发**（`0 次纠正尝试`）。故「100% / 0 轮」反映的是 zero-edit 命中、**不是精修恢复**。收敛的打分数学（`firstConvergedTurn`/`summarizeConvergence`）已被 `check:scorers` 的 turn>0 合成序列单测覆盖，但 **eval-llm.mjs 的实时多轮精修环未被真实模型走到**。待一条「强模型 turn 0 必错、一条自然纠正后收敛」的语料来真正压测；为避免 overfit golden，**不**此刻改语料硬逼它错。「95% 第二条腿」目前是良构但 n=1 空载。
 
-## 6. PR-C2 · A3+A4 生产安全网（服务端 validate→repair + 沙箱 build-repair）
+## 6. PR-C2 · A3+A4 生产安全网（服务端 validate→repair + 沙箱 build-repair）  ✅ A3 已落地（确定性前门校验）· A4 延后
 
 > 目标：把 P1 的「一次性」从「理论不变量」兜成「用户视角永远拿到能编译的产出」。C1 让坏输入几乎不可能变成坏代码；C2 兜住剩余尾部 + 把非法 config 挡在用户之前。
 
 ### 6.1 设计决策（两条）
 
-**决策 C2-a — 把 nightly 的 validate→repair 搬进前门（A3）。** 现在工具只校验一次、发非阻塞警告（[validate-config.ts:124-191](../../packages/mcp-server/src/tools/validate-config.ts#L124-L191) + [buildSemanticWarnings:294-345](../../packages/mcp-server/src/tools/generate-from-config.ts#L294-L345)）；把 [eval-llm.mjs:128-155](../../scripts/eval-llm.mjs#L128-L155) 的 ≤2 次 Zod 回灌循环抽成 shared/server 共用的 `validateAndRepair`，让**非法 config 永远到不了用户面前**。
+**决策 C2-a — 确定性前门校验（A3）✅ 已落地。** 已评审拍板（同 A3' 的承重分界）：**前门只做确定性校验、回结构化错误，模型驱动的「repair 回灌」留在握着 client 的宿主侧**。把权威 Zod 判定 + 结构化 `/path: message` 错误/建议抽到 shared 的 `validateAndRepair`（[validate-and-repair.ts](../../packages/shared/src/validate-and-repair.ts)），让 mcp 前门、CLI `--from-config`、eval 共用同一份判定；两个生成前门（generate_crud / generate_crud_from_config）生成前先过它，**非法 config 到不了用户面前**，且回的是结构化 per-issue 错误 + 建议，而非过去 `assertValidConfig` 抛出的一句泛化 `Error generating code: …`。
 
-**决策 C2-b — 沙箱 build-repair 回环（A4，可选但强）。** 把 `golden:e2e` 的真实 vite build（[typecheck.yml:143](../../.github/workflows/typecheck.yml#L143) `golden-compile` job）下沉成按次生成的闭环：generate → 临时目录 vite build →（若报错）把编译错误喂回一个修复轮 → 重生成。有 C1 的 parse-gate 后，这里几乎永远一次通过；它只兜极端尾部（如罕见的 template 层问题）。因成本/时延较高，默认关闭、按需开（`--verify-compile` 旗标），CI 的 `golden-compile` job 仍是广度保证。
+> **三处偏离设计原文（均为确定性决策的直接后果，已记录）：**
+> 1. 设计 §6 原写「把 nightly / eval 的 ≤2 次 Zod **回灌循环**搬进前门」。那个回灌是**模型驱动**的（eval 的 [driveToValidConfig](../../scripts/eval-llm.mjs#L143-L170) 跑在握着 client 的宿主侧），塞进确定性 MCP 工具会破坏「MCP 确定性 + 宿主推理」承重分界。故**前门不含回灌循环**——只校验 + 回结构化错误，宿主据此下一轮自纠。
+> 2. 设计原文称前门「现在只校验一次、发非阻塞警告」——不确。[validate-config.ts](../../packages/mcp-server/src/tools/validate-config.ts) 的 validate_config 是**独立校验工具**、回的是 errors；非阻塞**警告**只有 generate 路径的 [buildSemanticWarnings:294-345](../../packages/mcp-server/src/tools/generate-from-config.ts#L294-L345)。而 `assertValidConfig` 的抛错其实**早已**被两个前门的 try/catch 兜成 `isError:true`——不是「冒泡」，真实缺口是「泛化字符串、无 per-issue 结构」。
+> 3. `validateAndRepair` **不按 schema 默认改写** config（不回传 safeParse 的解析结果）：那会把省略的 `inQuery` 等落成显式 `true`，是另一层语义变更，[structured-generator.ts:99-101](../../packages/shared/src/structured-generator.ts#L99-L101) 的 `assertValidConfig` 已明确拒绝。本函数与它一致：只判、不改。「repair」是宿主下一轮的事。
 
-### 6.2 文件级改动
+**决策 C2-b — 沙箱 build-repair 回环（A4）⏳ 本 PR 延后。** 已拍板：A4（临时目录 vite build + 编译错误回喂的闭环，`--verify-compile` 旗标）与全量 vite 沙箱因成本/时延 + 需宿主侧模型回环，**拆成独立后续 PR**。CI 的 `golden-compile` job（[typecheck.yml:143](../../.github/workflows/typecheck.yml#L143) → `golden:e2e`）仍是广度保证；C1 的 parse-gate 已兜住绝大多数编译尾部。
 
-- **抽取** `validateAndRepair`（shared 或 mcp-server util）：封装 Zod safeParse + ≤2 次结构化 issue 回灌（文案复用 eval-llm 的 `- [path] message` 形式）。
-- **改** [generate-crud.ts](../../packages/mcp-server/src/tools/generate-crud.ts) / [generate-from-config.ts](../../packages/mcp-server/src/tools/generate-from-config.ts) 前门：生成前走 `validateAndRepair`；`assertValidConfig` 的抛错包成结构化错误回传（而非冒泡）。
-- **新增**（A4，可选）`packages/mcp-server/scripts/verify-compile.mjs`：临时目录 + vite build + 错误回喂；工具加 `--verify-compile`/入参旗标。
-- **复用** [compile-smoke.mjs](../../scripts/compile-smoke.mjs) 的 esbuild 语法闸作为「快速版」校验（build 之前先过它，便宜且挡住绝大多数）。
+### 6.2 文件级改动（A3 已落地）
 
-### 6.3 PR-C2 验收
+- **新增** [validate-and-repair.ts](../../packages/shared/src/validate-and-repair.ts)（shared，SDK-free）：`validateAndRepair(config): ValidationResult` + `formatIssuePath` + `zodIssuesToResult` + `ZodIssueLike`。权威 `StructuredCrudConfigSchema.safeParse`，失败渲染成与 Ajv 分支一致的 `/path: message` 形态。barrel 导出。
+- **改** [validate-config.ts](../../packages/mcp-server/src/tools/validate-config.ts)：删掉本地重复的 `formatZodPath`/`zodIssuesToResult`/`validateStructuredConfig` 实现体，`validateStructuredConfig` 收敛成 shared `validateAndRepair` 的薄包装（`validatePayload`、`refine_config` 调用方零改动）。
+- **改** [generate-from-config.ts](../../packages/mcp-server/src/tools/generate-from-config.ts)：新增 `formatValidationError(result)`（与 validate_config 错误块同形）；`generate_crud_from_config` 生成前走 `validateAndRepair`，非法则回 `isError:true` + 结构化错误。
+- **改** [generate-crud.ts](../../packages/mcp-server/src/tools/generate-crud.ts)：表格路径 `composeCrudConfig` 产出的 config 过 `validateAndRepair` 再 `generateFromConfig`（gate-only，不替换为归一后的 config——happy path 行为不变）。
+- **测试**：shared `validate-and-repair.spec.ts`（13，内核 + 两个纯 helper）；mcp `generate-tools-and-prompts.spec.ts` 加「前门确定性校验闸」描述块（非法 → nothing generated + per-issue；合法 → 仍生成）；既有 `validate-config.spec.ts`（11）作为委托未改语义的集成守卫。
 
-- 非法 config（缺字段/坏枚举）→ 前门返回结构化错误 + 修复建议，不冒泡、不产出半成品。
-- `--verify-compile` 开启时：故意注入一个会编译失败的边角 config → 回环修复或明确报不可修复（不静默产坏码）。
-- 关闭时现状零回归；`golden-compile` CL job 不受影响。
+### 6.3 PR-C2（A3）验收  ✅
+
+- ✅ 非法 config（坏枚举 formtype）→ 前门回结构化 `/fields/0/formtype` 错误 + 合法取值建议，**什么都没生成**（无 ```` ``` ````、无旧的 `Error generating code:`）。
+- ✅ 合法 config happy path 零回归（仍出代码）。
+- ✅ 门禁全绿：shared 443 测试、mcp-server 118 测试、workspace typecheck exit 0、lint exit 0（仅既有 any/console 警告）、`test:golden` 26/26、`fragment:smoke`、`check:scorers`、`check:exports`、`check:schema-validator`、`check:schema`、`check:fragment`。Windows 上不跑 `one-config:check`/`og:check`（CRLF 误报）。
+- ⏳ A4（`--verify-compile` 沙箱 build-repair）独立后续 PR。
 
 ## 7. 全波风险与护栏
 

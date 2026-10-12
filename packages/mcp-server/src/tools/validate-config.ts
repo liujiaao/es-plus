@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   validateConfig,
   listAvailableSchemas,
-  StructuredCrudConfigSchema,
+  validateAndRepair,
   type ValidationResult,
 } from "@es-plus/shared";
 
@@ -25,89 +25,16 @@ import {
  */
 export const STRUCTURED_CRUD_TYPE = "structured-crud-config";
 
-/** zod issue 的最小形状（只取我们用来生成 errors/suggestions 的字段） */
-interface ZodIssueLike {
-  path?: (string | number)[];
-  message: string;
-  code?: string;
-  expected?: string;
-  values?: unknown[];
-  minimum?: number;
-  maximum?: number;
-}
-
-/**
- * Zod issue 按 Ajv 的 `instancePath: message` 形态渲染。
- *
- * Ajv 的 instancePath 形如 `/page/title`（前导斜杠），这里刻意保持一致：调用方
- * （MCP 客户端 / 宿主 LLM）看到的两种分支的错误串格式应当相同，否则它会以为遇到了两种错误。
- */
-function formatZodPath(path: (string | number)[] | undefined): string {
-  if (!path || path.length === 0) return "(root)";
-  return "/" + path.map((p) => String(p)).join("/");
-}
-
-function zodIssuesToResult(issues: ZodIssueLike[]): ValidationResult {
-  const errors = issues.map((i) => `${formatZodPath(i.path)}: ${i.message}`);
-
-  const suggestions: string[] = [];
-  for (const issue of issues) {
-    const path = formatZodPath(issue.path);
-    switch (issue.code) {
-      case "invalid_type":
-        if (issue.expected) suggestions.push(`${path} should be type "${issue.expected}"`);
-        break;
-      case "invalid_value":
-        if (issue.values?.length) {
-          const shown = issue.values.slice(0, 12).join(", ");
-          const more = issue.values.length > 12 ? ", …" : "";
-          suggestions.push(`Valid values for ${path}: ${shown}${more}`);
-        }
-        break;
-      case "too_small":
-        if (issue.minimum !== undefined) {
-          suggestions.push(`${path} must have at least ${issue.minimum}`);
-        }
-        break;
-      case "too_big":
-        if (issue.maximum !== undefined) {
-          suggestions.push(`${path} must have at most ${issue.maximum}`);
-        }
-        break;
-      case "invalid_union":
-        suggestions.push(`${path} does not match any of the allowed shapes`);
-        break;
-    }
-  }
-
-  return { valid: false, errors, suggestions };
-}
-
 /**
  * 用权威 Zod schema 校验结构化配置。
  *
- * zod 跨版本调用是安全的：`safeParse` 用的是 schema **自身**的 zod 实现（shared 的 zod 4），
- * 与调用方的 zod 版本无关 —— 只要不把两边的 schema 互相**组合**（`z.object({...shape})`、
- * 塞进对方的 `.refine()`），就不会踩到版本不兼容。（`generate-from-config.ts` 里内联一份
- * 副本是因为要**组合**，这里只是调用，故直接复用单源。）
+ * 实现已下沉到 shared 的 `validateAndRepair`（C2·A3）：mcp-server 前门、CLI `--from-config`、
+ * eval 现在共用同一份判定与同一种 `/path: message` 错误串格式，不再各写一份字段清单。
+ * 这里保留 `validateStructuredConfig` 这个名字只为既有调用方（`validatePayload`、`refine_config`）
+ * 不受影响；语义与过去完全一致（只判、不改、无模型）。
  */
 export function validateStructuredConfig(config: unknown): ValidationResult {
-  const result = StructuredCrudConfigSchema.safeParse(config);
-  if (result.success) return { valid: true, errors: [], suggestions: [] };
-
-  // zod 4 用 `issues`；旧版（以及部分被包装过的 error 对象）用 `errors`。两处都读，
-  // 与 CLI `--from-config` 的写法一致 —— 拿不到 issue 列表时宁可回一句泛化错误，
-  // 也不能因为字段名差异而报「校验通过」。
-  const error = result.error as unknown as { issues?: ZodIssueLike[]; errors?: ZodIssueLike[] };
-  const issues = error.issues ?? error.errors ?? [];
-  if (issues.length === 0) {
-    return {
-      valid: false,
-      errors: ["Configuration failed structured-config validation (no issue details available)"],
-      suggestions: ["Check the config against the structured CRUD page schema"],
-    };
-  }
-  return zodIssuesToResult(issues);
+  return validateAndRepair(config);
 }
 
 /**

@@ -29,6 +29,13 @@ export {
   type FieldChange,
   type FieldAttrChange,
 } from './config-diff.js'
+// 生产安全网(C2·A3):确定性前门校验 —— 权威 Zod 判定 + 结构化错误/建议(只判不改、无模型)
+export {
+  validateAndRepair,
+  formatIssuePath,
+  zodIssuesToResult,
+  type ZodIssueLike,
+} from './validate-and-repair.js'
 // 片段发射层:独立 es-form / es-table / useDialog（不含表格的子集 + 与原生/第三方混排）
 export {
   generateFormBlock,

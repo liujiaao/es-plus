@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateFromConfig, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { generateFromConfig, validateAndRepair, type ValidationResult, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
 
 const FieldRuleSchema = z.object({
   required: z.boolean().optional(),
@@ -344,6 +344,27 @@ export function buildSemanticWarnings(config: any): string[] {
   return warnings;
 }
 
+/**
+ * 把一次校验失败渲染成前门的结构化错误正文（C2·A3）。
+ *
+ * 与 `validate_config` 工具的错误块同形（`  - {error}` + `Suggestions:` + `  → {s}`），
+ * 让宿主 LLM 两条路径看到的失败格式一致。关键点：**什么都没生成** —— 非法 config 到不了
+ * 用户面前，而不是像过去那样被 `assertValidConfig` 抛成一句泛化 `Error generating code: …`。
+ */
+export function formatValidationError(result: ValidationResult): string {
+  return [
+    "✗ Config failed structured-config validation — nothing was generated:\n",
+    ...result.errors.map((e) => `  - ${e}`),
+    "",
+    result.suggestions.length > 0 ? "Suggestions:" : "",
+    ...result.suggestions.map((s) => `  → ${s}`),
+    "",
+    "Fix these and call again.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function registerGenerateFromConfig(server: McpServer) {
   server.tool(
     "generate_crud_from_config",
@@ -351,10 +372,20 @@ export function registerGenerateFromConfig(server: McpServer) {
     configShape,
     async (config: any) => {
       try {
+        // 前门确定性校验(C2·A3):非法 config 在这里就回结构化错误 + 建议,不进生成、不产半成品。
+        const check = validateAndRepair(config);
+        if (!check.valid) {
+          return {
+            content: [{ type: "text", text: formatValidationError(check) }],
+            isError: true,
+          };
+        }
+
         const result = generateFromConfig(config);
 
         const semanticWarnings = buildSemanticWarnings(config);
         const allWarnings = [...result.warnings, ...semanticWarnings];
+
 
         const output: string[] = [result.summary];
 

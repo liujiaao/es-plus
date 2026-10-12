@@ -5,9 +5,10 @@ import {
   generateFromConfig,
   generateFormBlock,
   generateDialogBlock,
+  validateAndRepair,
 } from "@es-plus/shared";
 import { surfaceFieldSchema } from "./_fragment-shapes.js";
-import { buildSemanticWarnings } from "./generate-from-config.js";
+import { buildSemanticWarnings, formatValidationError } from "./generate-from-config.js";
 
 /**
  * FRONT DOOR. The host LLM's one reasoning step is to fill `surfaces` — which of
@@ -113,6 +114,15 @@ export function registerGenerateCrud(server: McpServer) {
             pagination: args.pagination,
             dialogs: dialogs as any,
           });
+
+          // 前门确定性校验(C2·A3):组合出的 config 先过权威 Zod 判定,非法则回结构化错误、不生成。
+          const check = validateAndRepair(config);
+          if (!check.valid) {
+            return {
+              content: [{ type: "text", text: formatValidationError(check) }],
+              isError: true,
+            };
+          }
 
           const result = generateFromConfig(config as any);
           const allWarnings = [...composeWarnings, ...result.warnings, ...buildSemanticWarnings(config)];

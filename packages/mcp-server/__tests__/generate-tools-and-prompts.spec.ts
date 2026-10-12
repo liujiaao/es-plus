@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { registerGenerateCrud } from "../src/tools/generate-crud.js";
+import { registerGenerateFromConfig } from "../src/tools/generate-from-config.js";
 import { registerGenerateForm } from "../src/tools/generate-form.js";
 import { registerGenerateTable } from "../src/tools/generate-table.js";
 import { registerGenerateDialog } from "../src/tools/generate-dialog.js";
@@ -163,6 +164,44 @@ describe("standalone fragment tools", () => {
     });
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("```tsx");
+  });
+});
+
+describe("front door — deterministic validate gate (C2·A3)", () => {
+  function fromConfigHandler() {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    expect(tools.generate_crud_from_config).toBeDefined();
+    return tools.generate_crud_from_config.handler;
+  }
+
+  const validFromConfig = {
+    name: "UserManage",
+    apiUrl: "/api/users",
+    fields: [field("userName", "用户名")],
+    actions: ["add", "edit"],
+  };
+
+  it("illegal config is rejected at the front door — nothing generated, structured errors returned", async () => {
+    const res = await fromConfigHandler()({
+      ...validFromConfig,
+      fields: [field("u", "U", "Nope")], // formtype not in the schema enum
+    });
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text;
+    expect(text).toContain("nothing was generated");
+    expect(text).toContain("/fields/0/formtype");
+    expect(text).toContain("Valid values for /fields/0/formtype");
+    // the deterministic gate must NOT have emitted any code
+    expect(text).not.toContain("```");
+    // and NOT the old flattened throw string
+    expect(text).not.toContain("Error generating code:");
+  });
+
+  it("valid config still generates (gate does not break the happy path)", async () => {
+    const res = await fromConfigHandler()(validFromConfig);
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain("```");
   });
 });
 
