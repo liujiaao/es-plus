@@ -1,0 +1,22 @@
+{
+  "nl": "客户管理：初版只要能按客户名称搜索；表格展示客户名称、所属行业、负责人、创建时间；支持新增、编辑、删除。",
+  "nlEn": "Customer management: the first draft only needs to be searchable by customer name; the table shows customer name, industry, owner, and created time; supports add, edit, and delete.",
+  "fixedFields": ["customerName", "industry", "owner", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "inQuery:owner"],
+  "refinements": [
+    { "turn": 1, "correction": "负责人也要能在查询条件里按名字搜，不只是在表格里展示。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "CustomerManage",
+    "apiUrl": "/api/customers",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input", "inQuery": true },
+      { "prop": "industry", "label": "所属行业", "formtype": "Input", "inQuery": false },
+      { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": true },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:owner，文本查询）。机制：gold 是精修后的最终意图（owner inQuery:true），初版 NL 刻意欠定——只说「按客户名称搜索」。turn-0 必 miss：模型对未提及字段恒置 inQuery:false（few-shot 「只按 X 搜索 → 其余 false」强化之），故 pinned inQuery:owner 初版必 false≠gold → scoped=X → 循环触发（结构性保证）。一句「负责人也要能按名字搜」后应补回 → 第 1 轮收敛。实测锚点：本轮模型 membership 整体 52%，稳定把非主搜字段漏出查询。heldout、未被 few-shot 教过。"
+}

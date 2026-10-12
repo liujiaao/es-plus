@@ -1,0 +1,32 @@
+{
+  "nl": "固定资产台账：初版只要能按资产名称搜索；表格展示资产名称、资产编号、使用状态（在用/闲置/报废）、购入日期；支持新增、编辑、删除。",
+  "nlEn": "Fixed-asset ledger: the first draft only needs to be searchable by asset name; the table shows asset name, asset number, usage status (in-use/idle/scrapped), and purchase date; supports add, edit, and delete.",
+  "fixedFields": ["assetName", "assetNo", "status", "purchaseDate"],
+  "pinnedDims": ["propSet", "actions", "inQuery:status"],
+  "refinements": [
+    { "turn": 1, "correction": "使用状态也要能在查询条件里按选项筛选，不只是在表格里展示。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "AssetLedger",
+    "apiUrl": "/api/assets",
+    "fields": [
+      { "prop": "assetName", "label": "资产名称", "formtype": "Input", "inQuery": true },
+      { "prop": "assetNo", "label": "资产编号", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "使用状态",
+        "formtype": "Select",
+        "inQuery": true,
+        "dataOptions": [
+          { "label": "在用", "value": "in_use" },
+          { "label": "闲置", "value": "idle" },
+          { "label": "报废", "value": "scrapped" }
+        ]
+      },
+      { "prop": "purchaseDate", "label": "购入日期", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:status，枚举下拉查询）。机制：gold 是精修后的最终意图（status inQuery:true），初版 NL 刻意欠定——只说「按资产名称搜索」。turn-0 必 miss：模型对未提及字段恒置 inQuery:false（few-shot 「只按 X 搜索 → 其余 false」强化之），故 pinned inQuery:status 初版必 false≠gold → scoped=X → 循环触发（结构性保证）。一句「使用状态也要能筛选」后应把枚举做成查询下拉 → 第 1 轮收敛。实测锚点：本轮模型在 status.inQuery 上稳定 want-true-got-false（07/16/22）。heldout、未被 few-shot 教过。"
+}

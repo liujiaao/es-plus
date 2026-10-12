@@ -1,0 +1,32 @@
+{
+  "nl": "报修工单管理：初版只要能按工单标题搜索；表格展示工单标题、报修人、工单状态（待处理/处理中/已完成）、创建时间；支持新增、编辑、删除。",
+  "nlEn": "Repair work-order management: the first draft only needs to be searchable by work-order title; the table shows work-order title, reporter, status (pending/in-progress/done), and created time; supports add, edit, and delete.",
+  "fixedFields": ["title", "reporter", "status", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "inQuery:createdAt"],
+  "refinements": [
+    { "turn": 1, "correction": "创建时间也要能当查询条件，按时间区间筛选，不只是在表格里看。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "WorkOrderManage",
+    "apiUrl": "/api/work-orders",
+    "fields": [
+      { "prop": "title", "label": "工单标题", "formtype": "Input", "inQuery": true },
+      { "prop": "reporter", "label": "报修人", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "工单状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待处理", "value": "pending" },
+          { "label": "处理中", "value": "processing" },
+          { "label": "已完成", "value": "done" }
+        ]
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": true }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "收敛语料（membership 铰链 inQuery:createdAt，日期区间查询）。机制：gold 是「精修后的最终意图」（createdAt inQuery:true），而初版 NL 刻意欠定——只说「按工单标题搜索」，没要求时间筛选。turn-0 必 miss：模型对未提及字段恒置 inQuery:false（本轮老 27/28/29 实测如此；few-shot 「只按 X 搜索 → 其余 false」正好强化这一点），故 pinned inQuery:createdAt 在初版必 false≠gold → scoped=X → 循环触发（结构性保证，非赌模型犯错）。一句自然追加「创建时间也要能按区间筛选」后，模型应把它加进查询栏 → 第 1 轮收敛。实测锚点：本轮模型在 startAt/endAt/installDate.inQuery 上稳定 want-true-got-false（把日期从查询里丢掉），正是第二条腿要测的「按纠正补回过滤器」的能力。heldout、未被 few-shot 教过。"
+}
