@@ -116,6 +116,11 @@ export function registerGenerateCrud(server: McpServer) {
 
           const result = generateFromConfig(config as any);
           const allWarnings = [...composeWarnings, ...result.warnings, ...buildSemanticWarnings(config)];
+          if (args.mode === "sfc") {
+            allWarnings.push(
+              "mode=sfc 是单文件输出，保真度低于默认的 schema 模式：dialogs / tableBtns / toolbarBtns / operationColumn 不会全量发射（schema 模式才全支持）。除非确需单 SFC，建议用 mode=schema。"
+            );
+          }
 
           const out: string[] = [result.summary];
           if (allWarnings.length > 0) {

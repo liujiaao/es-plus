@@ -1,3 +1,5 @@
+import { transformSync } from 'esbuild'
+
 /**
  * 代码生成器的**转义层**（单源）。
  *
@@ -17,8 +19,10 @@
  *   - `inlineJson()` 内联进 SFC `<script>` 的 JSON
  *
  * `formatter` / `render` 是**文档化的源码扩展点**（`structured-config.schema.ts`
- * 的 describe 明写 "Extension point"），刻意不经任何转义 —— 它们就是用来内联
- * 任意 JS 源码的。不要"顺手修"它们。
+ * 的 describe 明写 "Extension point"），刻意不改写其**内容** —— 它们就是用来内联
+ * 任意 JS/TS 源码的，不要"顺手转义"它们。但发射前必须过一道**语法闸**
+ * （`assertEmittableExpr`，见文件末尾）：一个畸形的 formatter/render 字符串内联进
+ * SFC 对象字面量会让整个组件编译失败，而 `generateFromConfig` 不抛错 —— 坏码会静默产出。
  */
 
 /**
@@ -160,4 +164,33 @@ export function sanitizeForComment(src: string): string {
  */
 export function inlineJson(value: unknown, space?: string | number): string {
   return JSON.stringify(value, null, space).replace(/<\/(script)/gi, '<\\/$1')
+}
+
+/**
+ * 扩展点**语法闸**：`formatter` / `render` 是调用方提供的源码字符串，发射前确认它
+ * 作为**一个表达式**能被解析。否则内联进 SFC 的对象字面量（`{ …, formatter: <src> }`）
+ * 会让整个组件编译失败 —— 而 `generateFromConfig` 对此不抛错，坏码会静默产出。
+ *
+ * 为什么用 esbuild 而不是 `new Function`：`new Function` 只认纯 JS，会把合法的带类型
+ * 标注的 formatter（`(row: Row) => …`）误判为非法。esbuild 的 TS/TSX loader 能解析
+ * TS **与** JSX（列 render 可能是 `(row) => <Tag/>`），且**只解析、不执行、不改写内容**。
+ * 这与 CI 的 `score-golden` / `golden:e2e` 用的是同一个解析器 —— 发射前校验与发射后
+ * 校验零漂移。
+ *
+ * 先试 `tsx`（覆盖 JSX render）、再试 `ts`（覆盖 `<T>()=>…` 这类 tsx 会误解析的泛型箭头）：
+ * 任一能解析即判合法，最大化放行真实合法源码，只毙真正的垃圾串（未闭合模板、括号不配平等）。
+ *
+ * 调用方约定：返回 `false` 时**省略**该扩展点并发一条降级 warning（与 schema 模式
+ * 「emit unformatted + warn」一致），从而「发射的东西永远能编译」成为结构性保证。
+ */
+export function assertEmittableExpr(src: string): boolean {
+  for (const loader of ['tsx', 'ts'] as const) {
+    try {
+      transformSync(`const __esplus_probe = (${src});`, { loader })
+      return true
+    } catch {
+      // 换下一个 loader 再试
+    }
+  }
+  return false
 }

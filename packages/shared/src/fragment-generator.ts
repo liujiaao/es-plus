@@ -228,7 +228,7 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   const cfgLike = { i18n } as unknown as StructuredCrudConfig
   lines.push('const columns = [')
   for (const f of fields) {
-    lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike)},`)
+    lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
   }
   if (input.rowButtons && input.rowButtons.length) {
     const w = input.rowButtons.length * 80 + 20

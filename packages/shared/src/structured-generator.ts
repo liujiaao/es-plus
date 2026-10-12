@@ -11,6 +11,7 @@ import {
   sanitizeForComment,
   inlineJson,
   BARE_IDENTIFIER,
+  assertEmittableExpr,
 } from './codegen-escape.js'
 import {
   type TargetFramework,
@@ -452,7 +453,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // columns
   lines.push(`const columns = [`)
   for (const f of tableFields) {
-    const col = buildTableColumnSFC(f, config)
+    const col = buildTableColumnSFC(f, config, warnings)
     lines.push(`  ${col},`)
   }
   // operation column
@@ -969,7 +970,7 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<str
   return col
 }
 
-export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig): string {
+export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig, warnings?: string[]): string {
   const parts: string[] = []
   parts.push(`prop: ${q(field.prop)}`)
   // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
@@ -989,8 +990,24 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   if (field.align) parts.push(`align: ${q(field.align)}`)
   if (field.fixed) parts.push(`fixed: ${typeof field.fixed === 'boolean' ? field.fixed : q(field.fixed)}`)
   if (field.ellipsis) parts.push(`showOverflowTooltip: true`)
-  if (field.formatter) parts.push(`formatter: ${field.formatter}`)
-  if (field.render) parts.push(`render: ${field.render}`)
+  // formatter/render 是源码扩展点，原样内联。发射前过语法闸（assertEmittableExpr）：
+  // 畸形字符串内联进对象字面量会让整个 SFC 编译失败，而本函数不抛错 —— 坏码会静默
+  // 产出。闸不过就**省略该扩展点 + 降级告警**（与 schema 模式「emit unformatted + warn」
+  // 一致），于是「发射的东西永远能编译」成为结构性保证。
+  if (field.formatter) {
+    if (assertEmittableExpr(field.formatter)) {
+      parts.push(`formatter: ${field.formatter}`)
+    } else {
+      warnings?.push(`Field "${field.prop}" 的 formatter 不是合法的 JS/TS 表达式，已省略以保证编译通过（原文：${sanitizeForComment(field.formatter)}）。请修正后手动补回。`)
+    }
+  }
+  if (field.render) {
+    if (assertEmittableExpr(field.render)) {
+      parts.push(`render: ${field.render}`)
+    } else {
+      warnings?.push(`Field "${field.prop}" 的 render 不是合法的 JS/TS 表达式，已省略以保证编译通过（原文：${sanitizeForComment(field.render)}）。请修正后手动补回。`)
+    }
+  }
   return `{ ${parts.join(', ')} }`
 }
 

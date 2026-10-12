@@ -116,6 +116,22 @@ function run() {
     }
   }
 
+  // ── 扩展点语法闸(PR-C1):畸形 formatter 不得拼出语法错误代码 ──
+  // 「100% 编译」不变量在片段层的证明:坏串被省略+降级(见 buildTableColumnSFC
+  // 的 assertEmittableExpr),产物仍可解析。若闸被摘除,这几个子集会立刻红。
+  const MALFORMED_FIELDS = [
+    f('bad1', '坏1', 'Input', { formatter: '(row) => `¥${row.bad1' }), // 未闭合模板字符串
+    f('bad2', '坏2', 'Input', { formatter: '(row) => {{{' }), // 括号不配平
+    f('amount', '金额', 'InputNumber', { align: 'right', formatter: '(row) => Number(row.amount).toFixed(2)' }), // 合法:仍内联
+  ]
+  for (const target of TARGETS) {
+    for (const typescript of TS) {
+      count++
+      const r = generateTableBlock({ fields: MALFORMED_FIELDS, apiUrl: '/api/x', target, typescript })
+      parseSfc(r.code, `table-malformed-fmt[${target}/${typescript ? 'ts' : 'js'}]`, failures)
+    }
+  }
+
   if (failures.length) {
     console.error(`❌ compile-smoke: ${failures.length}/${count} 个片段产物解析失败：`)
     for (const m of failures) console.error(`   - ${m}`)
