@@ -1,6 +1,8 @@
 {
   "nl": "SFC 模式的活动管理：查询有活动名称、状态；表格展示活动名称、状态、开始时间；工具栏左侧有导入按钮、右侧有导出按钮；操作列宽 180；新增/编辑弹窗各自定制标题与表单项；支持新增、编辑、删除。",
   "nlEn": "Campaign management in SFC mode: query by campaign name and status; the table shows campaign name, status, and start time; the toolbar has an import button on the left and an export button on the right; the operation column is 180 wide; the add/edit dialogs each customize their title and form items; supports add, edit, and delete.",
+  "fixedFields": ["campaignName", "status", "startTime"],
+  "pinnedDims": ["propSet", "actions", "mode", "tableBtns"],
   "config": {
     "name": "CampaignManage",
     "apiUrl": "/api/campaigns",

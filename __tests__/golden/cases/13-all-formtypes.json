@@ -1,6 +1,8 @@
 {
   "nl": "全字段覆盖：输入框（备注是多行）、下拉、日期、时间、滑块、颜色选择器、穿梭框、级联、单选、多选、开关、评分、上传，以及一个自定义 render 的复杂状态列。",
   "nlEn": "Full field-type coverage: input (remark is multiline), select, date, time, slider, color picker, transfer, cascader, radio, checkbox, switch, rate, and upload, plus a complex status column with a custom render.",
+  "fixedFields": ["remark", "complexStatus"],
+  "pinnedDims": ["formtype:remark", "extPoints:complexStatus"],
   "config": {
     "name": "AllTypes",
     "apiUrl": "/api/all-types",

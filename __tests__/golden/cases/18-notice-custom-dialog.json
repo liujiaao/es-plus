@@ -1,6 +1,8 @@
 {
   "nl": "通知公告：查询有公告标题、发布状态、发布时间范围；表格展示标题、发布状态、发布时间、发布人；支持新增、编辑、删除、查看；公告内容在编辑弹窗用自定义 render 展示为富文本摘要。",
   "nlEn": "Notice announcements: query by announcement title, publish status, and publish time range; the table shows title, publish status, publish time, and publisher; supports add, edit, delete, and view; the announcement content is shown as a rich-text summary via a custom render in the edit dialog.",
+  "fixedFields": ["title", "published", "publishTime", "publisher", "content"],
+  "pinnedDims": ["propSet", "actions"],
   "config": {
     "name": "NoticeManage",
     "apiUrl": "/api/notices",

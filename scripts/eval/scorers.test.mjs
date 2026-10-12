@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim } from './scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '..', '__tests__', 'golden', 'cases')
@@ -108,8 +108,70 @@ for (const { key } of CAPABILITY_SCORERS) {
   check(s.exactIntentFull === false, `扰动 ${key} 后 exactIntentFull 仍为 true`)
 }
 
-// 3) 语料覆盖体检（提示，不致命）
-console.log('meta-eval: golden-corpus capability coverage')
+// 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化
+console.log('meta-eval: scoped metric (pinnedDims)')
+{
+  // mask 钉：字段集 + 仅金额列 formtype + actions。NL「没锁」status/createdAt 的 formtype。
+  const mask = { pinnedDims: ['propSet', 'formtype:amount', 'actions'] }
+
+  // 自洽：gold-vs-gold 下 scoped 必真
+  check(scoreAll(base, base, mask).exactIntentScoped === true, 'scoped: gold-vs-gold 应为 true')
+
+  // 掩码内扰动咬得住：金额列 formtype 变 → scoped 掉
+  {
+    const pred = clone(base)
+    pred.fields[3].formtype = 'DatePicker' // fields[3] = amount
+    check(scoreAll(base, pred, mask).exactIntentScoped === false, 'scoped: 扰动金额列 formtype（掩码内）应翻红')
+  }
+  // 掩码内扰动咬得住：actions 变 → scoped 掉
+  {
+    const pred = clone(base)
+    pred.actions.pop()
+    check(scoreAll(base, pred, mask).exactIntentScoped === false, 'scoped: 扰动 actions（掩码内）应翻红')
+  }
+  // 掩码外免责（本 PR 的核心价值）：status 列 formtype 猜错 → scoped **不**掉
+  {
+    const pred = clone(base)
+    pred.fields[1].formtype = 'Input' // fields[1] = status（Select→Input），NL 没锁它
+    const s = scoreAll(base, pred, mask)
+    check(s.exactIntentScoped === true, 'scoped: 扰动掩码外字段 formtype 应免责（仍 true）')
+    check(s.exactIntentCore === false, 'scoped: 该扰动应让 core 翻红（证明 scoped 比 core 宽在正确的地方）')
+  }
+
+  // 空掩码退化为 core（向后兼容）：无 mask 与 mask 为空数组都应 ≡ exactIntentCore
+  {
+    const pred = clone(base)
+    pred.fields[1].formtype = 'Input'
+    const noMask = scoreAll(base, pred)
+    const emptyMask = scoreAll(base, pred, { pinnedDims: [] })
+    check(noMask.exactIntentScoped === noMask.exactIntentCore, 'scoped: 无掩码应 ≡ core')
+    check(emptyMask.exactIntentScoped === emptyMask.exactIntentCore, 'scoped: 空掩码数组应 ≡ core')
+  }
+
+  // token 合法性校验器（防标注漂移，供 check:cases 用）
+  check(isValidPinnedDim('propSet') === true, 'isValidPinnedDim: 整维度 propSet 合法')
+  check(isValidPinnedDim('formtype:amount') === true, 'isValidPinnedDim: 字段级 formtype:amount 合法')
+  check(isValidPinnedDim('bogus') === false, 'isValidPinnedDim: 未知维度 bogus 非法')
+  check(isValidPinnedDim('target:amount') === false, 'isValidPinnedDim: target 不可字段细化')
+  check(isValidPinnedDim('formtype:') === false, 'isValidPinnedDim: 空字段名非法')
+
+  // membership 的三个分量（inQuery/inTable/inForm）：只锁其一时互不牵连
+  check(isValidPinnedDim('inQuery:amount') === true, 'isValidPinnedDim: inQuery:amount 合法')
+  check(isValidPinnedDim('inQuery') === false, 'isValidPinnedDim: 裸 inQuery（非字段级）非法')
+  {
+    const m = { pinnedDims: ['inQuery:amount'] } // base.amount.inQuery=false
+    check(scoreAll(base, base, m).exactIntentScoped === true, 'scoped: inQuery:amount gold-vs-gold 应 true')
+    const bitPred = clone(base)
+    bitPred.fields[3].inQuery = true // 翻转 amount.inQuery（锁定分量）→ 掉
+    check(scoreAll(base, bitPred, m).exactIntentScoped === false, 'scoped: 翻转 inQuery:amount 应翻红')
+    const sibPred = clone(base)
+    sibPred.fields[3].inTable = false // 翻转 inTable（未锁分量）→ 不掉
+    check(scoreAll(base, sibPred, m).exactIntentScoped === true, 'scoped: 翻转同字段 inTable（未锁分量）应免责')
+  }
+}
+
+// 4) 语料覆盖体检（提示，不致命）+ 规格掩码标注合法性（致命，防漂移）
+console.log('meta-eval: golden-corpus capability coverage + mask legality')
 {
   const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
   const applicableCount = Object.fromEntries(CAPABILITY_SCORERS.map((s) => [s.key, 0]))
@@ -117,6 +179,18 @@ console.log('meta-eval: golden-corpus capability coverage')
     const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
     const g = StructuredCrudConfigSchema.parse(raw.config)
     for (const s of CAPABILITY_SCORERS) if (s.applicable(g)) applicableCount[s.key]++
+
+    // 掩码标注合法性（B2）：token 必须可记分；`维度:字段` 与 fixedFields 引用的 prop 必须真实存在。
+    // 这把「NL 到底锁了什么」的标注钉死在 config 的真实字段上，杜绝 formtype:amuont 这类笔误静默免责。
+    const props = new Set(g.fields.map((fd) => fd.prop))
+    for (const token of raw.pinnedDims ?? []) {
+      check(isValidPinnedDim(token), `${f}: pinnedDims token "${token}" 非法（维度名不可记分或字段级左半不可细化）`)
+      const { field } = parsePinnedDim(token)
+      if (field !== undefined) check(props.has(field), `${f}: pinnedDims "${token}" 引用的字段 "${field}" 不在 config.fields 中`)
+    }
+    for (const prop of raw.fixedFields ?? []) {
+      check(props.has(prop), `${f}: fixedFields 的 "${prop}" 不在 config.fields 中（喂给模型的字段必须真实存在）`)
+    }
   }
   const uncovered = Object.entries(applicableCount).filter(([, n]) => n === 0).map(([k]) => k)
   for (const { key } of CAPABILITY_SCORERS) {

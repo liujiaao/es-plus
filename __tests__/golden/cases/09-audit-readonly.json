@@ -1,6 +1,8 @@
 {
   "nl": "日志审计：表格展示操作人、操作类型（登录/登出/新增/编辑/删除）、操作对象、操作时间、IP 地址；查询有操作人、操作类型、操作时间范围；只读，不显示操作列。",
   "nlEn": "Log audit: the table shows operator, operation type (login/logout/create/edit/delete), operation target, operation time, and IP address; query by operator, operation type, and operation time range; read-only, with no operation column.",
+  "fixedFields": ["operator", "actionType", "target", "actionTime", "ip"],
+  "pinnedDims": ["propSet", "actions", "formtype:actionType", "dataOptions:actionType", "operationColumn"],
   "config": {
     "name": "AuditLog",
     "apiUrl": "/api/audit-logs",

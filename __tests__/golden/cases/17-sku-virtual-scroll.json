@@ -1,6 +1,8 @@
 {
   "nl": "SKU 管理：表格上方左侧批量导入按钮，右侧批量导出按钮；表格展示 SKU 编码、SKU 名称、规格、售价、库存、状态；每行可编辑、删除；表格启用虚拟滚动。",
   "nlEn": "SKU management: above the table a batch-import button on the left and a batch-export button on the right; the table shows SKU code, SKU name, spec, selling price, stock, and status; each row can be edited and deleted; the table enables virtual scrolling.",
+  "fixedFields": ["skuCode", "skuName", "spec", "price", "stock", "status"],
+  "pinnedDims": ["propSet", "tableBtns", "operationColumn", "virtualScroll"],
   "config": {
     "name": "SkuManage",
     "apiUrl": "/api/skus",

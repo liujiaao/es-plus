@@ -1,6 +1,8 @@
 {
   "nl": "资源管理：表格上方左侧新增、右侧导出；表格展示资源名、资源类型（菜单/按钮/接口）、标识码、状态；每行可编辑、删除；要求 i18n 显示。",
   "nlEn": "Resource management: above the table, add on the left and export on the right; the table shows resource name, resource type (menu/button/api), identifier code, and status; each row can be edited and deleted; i18n display is required.",
+  "fixedFields": ["name", "type", "code", "status"],
+  "pinnedDims": ["propSet", "tableBtns", "operationColumn", "formtype:type", "dataOptions:type"],
   "config": {
     "name": "ResourceManage",
     "apiUrl": "/api/resources",

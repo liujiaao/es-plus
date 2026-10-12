@@ -48,6 +48,8 @@ const ACCURACY_FILE = join(__dirname, '..', '__tests__', 'golden', 'last-accurac
 // README points its badge at the raw URL of this file; a nightly commit-back keeps
 // the published number honest without a server. Gate number drives it (heldout).
 const BADGE_FILE = join(__dirname, '..', '__tests__', 'golden', 'last-accuracy-badge.json')
+// Parallel scoped-metric badge (B2). Additive — core badge above remains the gated one.
+const BADGE_SCOPED_FILE = join(__dirname, '..', '__tests__', 'golden', 'last-accuracy-badge-scoped.json')
 const MODEL = process.env.ESPLUS_EVAL_MODEL || 'claude-opus-5'
 const TARGET_ACCURACY = Number(process.env.ESPLUS_EVAL_TARGET || '0.95')
 
@@ -125,8 +127,14 @@ async function callModel(client, system, messages) {
 }
 
 /** NL → validated config, with a self-repair loop (<=2 retries feeding the Zod error back). */
-async function nlToConfig(client, system, nl) {
-  const messages = [{ role: 'user', content: nl }]
+async function nlToConfig(client, system, nl, fixedFields) {
+  // B2: 若 case 标了 fixedFields（NL/契约明确给定的字段 prop），把它们喂给模型——使 propSet
+  // 从「猜字段」变「给定字段」，与真实生产（有契约）一致；模型只补欠定残差（formtype/归属/布局…）。
+  const content =
+    Array.isArray(fixedFields) && fixedFields.length
+      ? `${nl}\n\nFields (given — use EXACTLY these props; infer each field's formtype / membership / actions / layout): ${fixedFields.join(', ')}`
+      : nl
+  const messages = [{ role: 'user', content }]
   let lastRaw = ''
   for (let attempt = 0; attempt <= 2; attempt++) {
     const raw = await callModel(client, system, messages)
@@ -178,23 +186,27 @@ async function main() {
   for (const file of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, file), 'utf8'))
     const gold = StructuredCrudConfigSchema.parse(raw.config)
+    // B2 规格掩码：pinnedDims = NL 真正锁定的维度/字段（scoped 口径只记它们）；
+    // fixedFields = NL/契约明确给定的字段 prop（喂给模型）。两者均可选、可增量标注。
+    const mask = { pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [] }
+    const fixedFields = Array.isArray(raw.fixedFields) ? raw.fixedFields : undefined
     // 双语：中文（raw.nl）始终跑并作门禁语言；英文（raw.nlEn）有则跑、只观测。
     const langs = [{ lang: 'zh', nl: raw.nl }]
     if (typeof raw.nlEn === 'string' && raw.nlEn.trim()) langs.push({ lang: 'en', nl: raw.nlEn })
     for (const { lang, nl } of langs) {
       process.stdout.write(`[eval:llm] ${file} [${lang}] … `)
       try {
-        const pred = await nlToConfig(client, system, nl)
+        const pred = await nlToConfig(client, system, nl, fixedFields)
         let compiles = true
         try {
           generateFromConfig(pred)
         } catch {
           compiles = false
         }
-        const s = scoreAll(gold, pred)
+        const s = scoreAll(gold, pred, mask)
         rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file) })
         console.log(
-          `intent=${s.exactIntentCore ? 'EXACT' : 'diff'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
+          `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
         )
         if (s.attrMisses.length) console.log(`           attr misses: ${s.attrMisses.join('; ')}`)
         const dimMisses = Object.entries(s.byCapability)
@@ -202,7 +214,7 @@ async function main() {
           .map(([k]) => k)
         if (dimMisses.length) console.log(`           dim misses: ${dimMisses.join(', ')}`)
       } catch (err) {
-        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, byCapability: {}, compiles: false, error: err.message, fewshotDerived: FEWSHOT_DERIVED.has(file) })
+        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, fewshotDerived: FEWSHOT_DERIVED.has(file) })
         console.log(`ERROR — ${err.message.split('\n')[0]}`)
       }
     }
@@ -223,6 +235,9 @@ async function main() {
   const exactFewshot = fewshotRows.length ? meanFewshot((r) => (r.exactIntentCore ? 1 : 0)) : null
   const exactFull = meanAll((r) => (r.exactIntentFull ? 1 : 0))
   const exactFullHeldout = heldout.length ? meanHeldout((r) => (r.exactIntentFull ? 1 : 0)) : null
+  // scoped 口径（B2）：只对 NL 锁定维度记分。本 PR 只观测、不门禁（门禁仍落 core，决策 A1'-a）。
+  const exactScoped = meanAll((r) => (r.exactIntentScoped ? 1 : 0))
+  const exactScopedHeldout = heldout.length ? meanHeldout((r) => (r.exactIntentScoped ? 1 : 0)) : null
   const compileRate = meanAll((r) => (r.compiles ? 1 : 0))
   const propF1 = meanAll((r) => r.propF1?.f1 ?? 0)
   const attrAcc = meanAll((r) => r.attrAcc ?? 0)
@@ -265,7 +280,13 @@ async function main() {
   console.log(`  cases:                 ${n}  (heldout ${heldout.length} / fewshot-derived ${fewshotRows.length})`)
   console.log(`  in-schema intent zero-edit (ALL):      ${(exact * 100).toFixed(1)}%`)
   if (exactHeldout !== null) {
-    console.log(`  in-schema intent zero-edit (HELDOUT):  ${(exactHeldout * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%)`)
+    console.log(`  in-schema intent zero-edit (HELDOUT):  ${(exactHeldout * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%, GATED)`)
+  }
+  // scoped：只记 NL 锁定维度的良定义口径。与 core 并列展示——core 是硬诚实数字（惩罚欠定），
+  // scoped 是公平口径（不惩罚 NL 没锁的维度）。本 PR scoped 只观测，门禁仍落 core。
+  console.log(`  in-schema intent SCOPED (ALL, observed): ${(exactScoped * 100).toFixed(1)}%   (only NL-pinned dims; decision A1'-a)`)
+  if (exactScopedHeldout !== null) {
+    console.log(`  in-schema intent SCOPED (HELDOUT):     ${(exactScopedHeldout * 100).toFixed(1)}%   (not gated yet — ratchet target)`)
   }
   if (exactFewshot !== null) {
     console.log(`  in-schema intent zero-edit (few-shot): ${(exactFewshot * 100).toFixed(1)}%   (recall, not generalization)`)
@@ -318,6 +339,9 @@ async function main() {
     target: TARGET_ACCURACY,
     inSchemaIntentZeroEdit: Number(gateExact.toFixed(4)),
     inSchemaIntentZeroEditAll: Number(exact.toFixed(4)),
+    // scoped 口径（B2，只记 NL 锁定维度；本 PR 观测、未门禁）。heldout 优先，空则退全量。
+    inSchemaIntentScoped: Number((exactScopedHeldout ?? exactScoped).toFixed(4)),
+    inSchemaIntentScopedAll: Number(exactScoped.toFixed(4)),
     exactIntentFull: Number((exactFullHeldout ?? exactFull).toFixed(4)),
     exactIntentFullAll: Number(exactFull.toFixed(4)),
     propSetF1: Number(propF1.toFixed(4)),
@@ -351,6 +375,25 @@ async function main() {
     console.log(`  (badge written to ${BADGE_FILE})`)
   } catch (err) {
     console.warn(`  (could not write badge: ${err.message})`)
+  }
+
+  // Second, PARALLEL badge for the scoped metric (B2). The core badge above stays
+  // the gated/honest number; this one shows the well-defined "only NL-pinned dims"
+  // figure. Written alongside so the plumbing exists; the public README badge is
+  // deferred until a real nightly first populates this file (else it 404s).
+  const scopedGate = exactScopedHeldout ?? exactScoped
+  const spct = scopedGate * 100
+  const scopedBadge = {
+    schemaVersion: 1,
+    label: 'scoped accuracy',
+    message: `${spct.toFixed(1)}%`,
+    color: spct >= 95 ? 'brightgreen' : spct >= 90 ? 'green' : spct >= 80 ? 'yellow' : 'red',
+  }
+  try {
+    writeFileSync(BADGE_SCOPED_FILE, JSON.stringify(scopedBadge, null, 2) + '\n')
+    console.log(`  (scoped badge written to ${BADGE_SCOPED_FILE})`)
+  } catch (err) {
+    console.warn(`  (could not write scoped badge: ${err.message})`)
   }
 
   if (gateExact < TARGET_ACCURACY) {

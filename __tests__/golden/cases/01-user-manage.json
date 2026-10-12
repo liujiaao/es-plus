@@ -1,6 +1,8 @@
 {
   "nl": "用户管理页面：查询条件有用户名、手机号、状态（启用/禁用）；表格展示用户名、手机号、头像、注册时间、状态；支持新增、编辑、删除。",
   "nlEn": "User management page: query by username, phone, and status (enabled/disabled); the table shows username, phone, avatar, registration time, and status; supports add, edit, and delete.",
+  "fixedFields": ["username", "phone", "status", "avatar", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "formtype:status", "dataOptions:status"],
   "config": {
     "name": "UserManage",
     "apiUrl": "/api/users",

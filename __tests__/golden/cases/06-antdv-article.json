@@ -1,6 +1,8 @@
 {
   "nl": "（用 antd）文章管理：查询有标题、分类、发布状态（草稿/已发布）；表格展示标题、分类、发布状态、发布时间；支持增删改查。",
   "nlEn": "(Using antd) Article management: query by title, category, and publish status (draft/published); the table shows title, category, publish status, and publish time; supports create, read, update, and delete.",
+  "fixedFields": ["title", "category", "status", "publishedAt"],
+  "pinnedDims": ["propSet", "actions", "formtype:status", "dataOptions:status", "target"],
   "config": {
     "name": "ArticleManage",
     "apiUrl": "/api/articles",

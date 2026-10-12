@@ -1,6 +1,8 @@
 {
   "nl": "文章分类管理：分类是树形结构，支持选择上级分类（级联选择，数据来自 /api/categories/tree）；表格展示分类名、层级、排序、创建时间；支持新增、编辑、删除。",
   "nlEn": "Article category management: categories form a tree structure and support selecting a parent category (cascader, data from /api/categories/tree); the table shows category name, level, sort order, and creation time; supports add, edit, and delete.",
+  "fixedFields": ["name", "level", "sortOrder", "parentId", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "formtype:parentId", "apiParams:parentId"],
   "config": {
     "name": "CategoryManage",
     "apiUrl": "/api/categories",

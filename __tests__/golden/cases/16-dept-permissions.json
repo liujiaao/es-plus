@@ -1,6 +1,8 @@
 {
   "nl": "部门管理：查询有部门名称、部门负责人；表格展示部门名称、负责人、联系电话、状态、创建时间；支持新增、编辑、删除；新增编辑按钮需要权限码 dept:write。",
   "nlEn": "Department management: query by department name and department head; the table shows department name, head, contact phone, status, and creation time; supports add, edit, and delete; the add and edit buttons require permission code dept:write.",
+  "fixedFields": ["deptName", "leader", "phone", "status", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "permissions"],
   "config": {
     "name": "DeptManage",
     "apiUrl": "/api/departments",

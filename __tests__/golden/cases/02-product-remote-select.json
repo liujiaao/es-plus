@@ -1,6 +1,8 @@
 {
   "nl": "商品列表：查询有商品名、所属分类（分类下拉数据来自 /api/categories 接口）；表格展示商品名、分类、价格、上架状态；支持新增、编辑、删除、导出。",
   "nlEn": "Product list: query by product name and category (the category dropdown data comes from the /api/categories endpoint); the table shows product name, category, price, and on-sale status; supports add, edit, delete, and export.",
+  "fixedFields": ["name", "categoryId", "price", "onSale"],
+  "pinnedDims": ["propSet", "actions", "formtype:categoryId", "apiParams:categoryId"],
   "config": {
     "name": "ProductManage",
     "apiUrl": "/api/products",

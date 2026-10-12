@@ -67,7 +67,7 @@ jobs:
         if: always() && github.repository_owner == 'liujiaao' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          FILES="__tests__/golden/last-accuracy.json __tests__/golden/last-accuracy-badge.json"
+          FILES="__tests__/golden/last-accuracy.json __tests__/golden/last-accuracy-badge.json __tests__/golden/last-accuracy-badge-scoped.json"
           if git status --porcelain -- $FILES | grep -q .; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -1,6 +1,8 @@
 {
   "nl": "合同管理：表格上方右侧是“新增合同”按钮，左侧是“批量导出”；表格展示合同编号、金额、签署日期；支持新增、删除、查看；金额保留两位小数。",
   "nlEn": "Contract management: above the table, the \"Add Contract\" button is on the right and \"Batch Export\" is on the left; the table shows contract number, amount, and signing date; supports add, delete, and view; the amount keeps two decimal places.",
+  "fixedFields": ["contractNo", "amount", "signedAt"],
+  "pinnedDims": ["propSet", "actions", "tableBtns", "formtype:amount", "extPoints:amount"],
   "config": {
     "name": "ContractManage",
     "apiUrl": "/api/contracts",

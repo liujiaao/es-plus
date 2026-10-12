@@ -172,11 +172,89 @@ export const CAPABILITY_SCORERS = [
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 
+// ── 字段级 scorer（供 scoped 口径的 `维度:字段` token 使用）─────────────────────
+// B2 的承重点：NL 常常只锁定「某一列」的某个属性（如「金额列用数值类型」），而不是
+// 全表所有字段。粗粒度维度会把 NL 没提的字段也拖进 AND，又把欠定惩罚带回来。于是
+// 对可按字段细化的维度，提供「只看这一个 prop」的判定；`pinnedDims` 里写 `formtype:amount`
+// 即只记金额列的 formtype，status/createdAt 猜错不扣分（因为 NL 没锁它们）。
+const memberAttrEqual = (attr, gold, pred, prop) => {
+  const g = fieldMap(gold).get(prop)
+  const p = fieldMap(pred).get(prop)
+  return !!g && !!p && g[attr] === p[attr]
+}
+const FIELD_SCORERS = {
+  formtype: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    return !!g && !!p && g.formtype === p.formtype
+  },
+  membership: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    return !!g && !!p && g.inQuery === p.inQuery && g.inTable === p.inTable && g.inForm === p.inForm
+  },
+  // membership 的三个分量，供「NL 只锁其一」的更细标注（如「查询条件不含头像」→ inQuery:avatar）。
+  inQuery: (gold, pred, prop) => memberAttrEqual('inQuery', gold, pred, prop),
+  inTable: (gold, pred, prop) => memberAttrEqual('inTable', gold, pred, prop),
+  inForm: (gold, pred, prop) => memberAttrEqual('inForm', gold, pred, prop),
+  extPoints: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !p) return false
+    for (const kind of ['render', 'formatter', 'permissionValue']) if (g[kind] && !p[kind]) return false
+    return true
+  },
+  apiParams: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !g.apiParams) return true // 该字段本就不要求 apiParams → 空钉即过
+    return !!p && !!p.apiParams && eq(g.apiParams, p.apiParams)
+  },
+  dataOptions: (gold, pred, prop) => {
+    const has = (c) => !!((fieldMap(c).get(prop)?.dataOptions ?? []).length)
+    return has(gold) === has(pred)
+  },
+}
+
+/** 可按字段细化的维度名（`维度:字段` 的合法左半），供 check 校验标注合法性。 */
+export const FIELD_SCORABLE_DIMS = Object.keys(FIELD_SCORERS)
+/** 可整维度钉定的名（`维度` 的合法形态），供 check 校验标注合法性。 */
+export const WHOLE_SCORABLE_DIMS = CAPABILITY_SCORERS.map((s) => s.key)
+
+/** 解析一个 pinnedDims token：`formtype:amount` → {dim,field}；`actions` → {dim}。 */
+export function parsePinnedDim(token) {
+  const i = String(token).indexOf(':')
+  return i === -1 ? { dim: token, field: undefined } : { dim: token.slice(0, i), field: token.slice(i + 1) }
+}
+
+/** 一个 pinnedDims token 是否合法：整维度须是 capability key；`维度:字段` 的维度须可字段细化。 */
+export function isValidPinnedDim(token) {
+  const { dim, field } = parsePinnedDim(token)
+  return field === undefined ? WHOLE_SCORABLE_DIMS.includes(dim) : FIELD_SCORABLE_DIMS.includes(dim) && !!field
+}
+
+/** 对单个 pinnedDims token 判定命中（整维度走 CAPABILITY_SCORERS.pass；`维度:字段` 走 FIELD_SCORERS）。 */
+function scoreDimension(gold, pred, token) {
+  const { dim, field } = parsePinnedDim(token)
+  if (field !== undefined) {
+    const scorer = FIELD_SCORERS[dim]
+    if (!scorer) throw new Error(`pinnedDims: 维度 "${dim}" 不支持字段级细化（可用：${FIELD_SCORABLE_DIMS.join(', ')}）`)
+    return !!scorer(gold, pred, field)
+  }
+  const s = CAPABILITY_SCORERS.find((s) => s.key === dim)
+  if (!s) throw new Error(`pinnedDims: 未知维度 "${dim}"（可用：${WHOLE_SCORABLE_DIMS.join(', ')}）`)
+  return !!s.pass(gold, pred)
+}
+
 /**
  * 对一对 (gold, pred) 打分。返回 byCapability（条件打分）+ 向后兼容的明细分
- * （propF1 / attrAcc / attrMisses / actionsF1 / tableBtnsMatch）+ 两个合成分。
+ * （propF1 / attrAcc / attrMisses / actionsF1 / tableBtnsMatch）+ 三个合成分。
+ *
+ * `mask`（可选）= 该 case 的规格掩码 `{ pinnedDims?: string[] }`——NL 真正锁定的维度/字段
+ * 清单。给了就只对这些 token 记 `exactIntentScoped`；没给则 scoped ≡ core（向后兼容）。
+ * `fixedFields` 不在此参与打分（它只用于喂模型，见 eval-llm.mjs）。
  */
-export function scoreAll(gold, pred) {
+export function scoreAll(gold, pred, mask) {
   const byCapability = {}
   for (const s of CAPABILITY_SCORERS) {
     const applicable = !!s.applicable(gold)
@@ -217,6 +295,10 @@ export function scoreAll(gold, pred) {
   // 更严：该 case 所有 applicable 维度都命中。只观测，不门禁。
   const exactIntentFull = Object.values(byCapability).every((c) => (c.applicable ? c.pass : true))
 
+  // scoped 口径（B2）：只 AND 掩码里 NL 真正锁定的 token。无掩码 → 退化为 core（向后兼容）。
+  const pinned = mask && Array.isArray(mask.pinnedDims) ? mask.pinnedDims : []
+  const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, pred, t)) : exactIntentCore
+
   return {
     byCapability,
     propF1,
@@ -226,5 +308,6 @@ export function scoreAll(gold, pred) {
     tableBtnsMatch,
     exactIntentCore,
     exactIntentFull,
+    exactIntentScoped,
   }
 }

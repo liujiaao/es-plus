@@ -1,6 +1,8 @@
 {
   "nl": "订单管理：表格上方左侧有“新增订单”按钮，右侧有“批量导出”按钮；表格列有订单号、金额、下单时间；每行有查看、删除操作。",
   "nlEn": "Order management: above the table there is an \"Add Order\" button on the left and a \"Batch Export\" button on the right; table columns are order number, amount, and order time; each row has view and delete actions.",
+  "fixedFields": ["orderNo", "amount", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn"],
   "config": {
     "name": "OrderManage",
     "apiUrl": "/api/orders",

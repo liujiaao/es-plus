@@ -1,6 +1,8 @@
 {
   "nl": "SFC 模式下的 vue2 项目：字典管理，查询有字典类型、字典编码；表格展示字典类型、字典编码、字典值、排序、状态；支持新增、编辑、删除。",
   "nlEn": "A vue2 project in SFC mode: dictionary management, query by dict type and dict code; the table shows dict type, dict code, dict value, sort order, and status; supports add, edit, and delete.",
+  "fixedFields": ["dictType", "dictCode", "dictValue", "sortOrder", "status"],
+  "pinnedDims": ["propSet", "actions", "target", "mode"],
   "config": {
     "name": "DictManage",
     "apiUrl": "/api/dicts",

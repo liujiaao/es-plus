@@ -1,6 +1,8 @@
 {
   "nl": "Vue2 供应商管理：表格显示供应商名称、联系人、电话、状态（启用/停用）；新增和编辑用不同弹窗——新增填名称、联系人、电话，编辑还能改结算周期；支持新增、编辑、删除。",
   "nlEn": "Vue2 supplier management: the table shows supplier name, contact, phone, and status (enabled/disabled); add and edit use different dialogs — add fills in name, contact, and phone, while edit can also change the settlement cycle; supports add, edit, and delete.",
+  "fixedFields": ["name", "contact", "phone", "status"],
+  "pinnedDims": ["actions", "target", "dialogs", "formtype:status", "dataOptions:status"],
   "config": {
     "name": "SupplierManage",
     "apiUrl": "/api/suppliers",

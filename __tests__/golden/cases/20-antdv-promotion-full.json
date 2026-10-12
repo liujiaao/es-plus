@@ -1,6 +1,8 @@
 {
   "nl": "antdv 促销活动管理：表格上方左侧有“新建活动”按钮，右侧有“批量导出”按钮；查询条件有活动名称、状态（草稿/进行中/已结束）；表格列有活动名称、状态、开始时间、结束时间；每行有编辑、查看、删除操作；新增和编辑弹窗都填活动名称、开始时间、结束时间。",
   "nlEn": "antdv promotion campaign management: above the table there is a \"New Campaign\" button on the left and a \"Batch Export\" button on the right; query by campaign name and status (draft/ongoing/ended); table columns are campaign name, status, start time, and end time; each row has edit, view, and delete actions; both the add and edit dialogs fill in campaign name, start time, and end time.",
+  "fixedFields": ["title", "status", "startAt", "endAt"],
+  "pinnedDims": ["propSet", "tableBtns", "operationColumn", "dialogs", "formtype:status", "dataOptions:status", "target"],
   "config": {
     "name": "PromotionManage",
     "apiUrl": "/api/promotions",

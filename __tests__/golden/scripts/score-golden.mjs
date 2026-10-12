@@ -320,6 +320,20 @@ function main() {
       results.push({ file, failures: ['nlEn, when present, must be a non-empty string'] })
       continue
     }
+    // 规格掩码（B2，可选、可增量标注）：存在时必须是 string[]。token 的语义合法性
+    // （维度名是否可记分）在 meta-eval（check:scorers）里对全量 case 校验，这里只管形状，
+    // 以保持 Layer-1 不依赖 scorers.mjs。
+    const maskShape = []
+    for (const key of ['fixedFields', 'pinnedDims']) {
+      if (raw[key] === undefined) continue
+      if (!Array.isArray(raw[key]) || raw[key].some((x) => typeof x !== 'string')) {
+        maskShape.push(`${key}, when present, must be a string[]`)
+      }
+    }
+    if (maskShape.length) {
+      results.push({ file, failures: maskShape })
+      continue
+    }
     results.push({ file, failures: scoreCase(raw), bilingual: typeof raw.nlEn === 'string' })
   }
 

@@ -1,6 +1,8 @@
 {
   "nl": "SFC 模式的操作审计日志：查询有操作人、操作类型；表格展示操作人、操作类型、IP、操作时间，全部只读展示（没有任何可编辑字段）；支持查看详情弹窗。",
   "nlEn": "Operation audit log in SFC mode: query by operator and operation type; the table shows operator, operation type, IP, and operation time, all as read-only display (no editable fields at all); supports a view-detail dialog.",
+  "fixedFields": ["operator", "action", "ip", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "mode"],
   "config": {
     "name": "AuditLogView",
     "apiUrl": "/api/audit-logs",

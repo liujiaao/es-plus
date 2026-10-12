@@ -1,6 +1,8 @@
 {
   "nl": "角色管理：新增编辑弹窗宽度 720px，表单分 2 列；表格展示角色名、角色编码、数据权限范围、创建时间；支持新增、编辑、删除、查看。",
   "nlEn": "Role management: the add/edit dialog is 720px wide with a 2-column form; the table shows role name, role code, data permission scope, and creation time; supports add, edit, delete, and view.",
+  "fixedFields": ["roleName", "roleCode", "dataScope", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "formLayout"],
   "config": {
     "name": "RoleManage",
     "apiUrl": "/api/roles",
