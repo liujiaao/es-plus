@@ -334,6 +334,33 @@ function main() {
       results.push({ file, failures: maskShape })
       continue
     }
+    // 精修语料（B3，可选）：refinements = 按轮次排列的 NL 纠正；convergesBy = 该 case 自称
+    // 的收敛轮数上界。这里只管形状（Layer-1 不依赖模型/scorers）；真实收敛数字在付费 eval 跑。
+    const refineShape = []
+    if (raw.refinements !== undefined) {
+      if (!Array.isArray(raw.refinements) || raw.refinements.length === 0) {
+        refineShape.push('refinements, when present, must be a non-empty array')
+      } else {
+        raw.refinements.forEach((r, i) => {
+          if (!r || typeof r.correction !== 'string' || !r.correction.trim()) {
+            refineShape.push(`refinements[${i}].correction must be a non-empty string`)
+          }
+          if (r && r.turn !== undefined && (!Number.isInteger(r.turn) || r.turn < 1)) {
+            refineShape.push(`refinements[${i}].turn, when present, must be a positive integer`)
+          }
+        })
+      }
+    }
+    if (raw.convergesBy !== undefined && (!Number.isInteger(raw.convergesBy) || raw.convergesBy < 1)) {
+      refineShape.push('convergesBy, when present, must be a positive integer')
+    }
+    if (raw.convergesBy !== undefined && raw.refinements === undefined) {
+      refineShape.push('convergesBy requires refinements (nothing to converge without corrections)')
+    }
+    if (refineShape.length) {
+      results.push({ file, failures: refineShape })
+      continue
+    }
     results.push({ file, failures: scoreCase(raw), bilingual: typeof raw.nlEn === 'string' })
   }
 

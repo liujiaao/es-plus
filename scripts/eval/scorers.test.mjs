@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence } from './scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '..', '__tests__', 'golden', 'cases')
@@ -199,6 +199,39 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
   if (uncovered.length) {
     console.warn(`  ⚠ 未被 golden 语料触发的维度（heldout rate 恒为 n/a，考虑补语料）：${uncovered.join(', ')}`)
   }
+}
+
+// 5) B3 收敛判定（firstConvergedTurn / summarizeConvergence）：纯函数、无 API key
+console.log('meta-eval: convergence (firstConvergedTurn / summarizeConvergence)')
+{
+  // firstConvergedTurn：首个 scoped 命中的 0-based 轮次；初稿即过 = 0；全程不过 = null
+  check(firstConvergedTurn([{ exactIntentScoped: true }]) === 0, 'firstConvergedTurn: 初稿即收敛应为 0')
+  check(
+    firstConvergedTurn([{ exactIntentScoped: false }, { exactIntentScoped: false }, { exactIntentScoped: true }]) === 2,
+    'firstConvergedTurn: 第 2 轮纠正后收敛应为 2'
+  )
+  check(
+    firstConvergedTurn([{ exactIntentScoped: false }, { exactIntentScoped: false }]) === null,
+    'firstConvergedTurn: 全程未收敛应为 null'
+  )
+  check(firstConvergedTurn([]) === null, 'firstConvergedTurn: 空序列应为 null')
+  // 容忍布尔数组形态
+  check(firstConvergedTurn([false, true]) === 1, 'firstConvergedTurn: 布尔数组形态可用')
+
+  // summarizeConvergence：rateAtK / meanTurnsToConverge / converged / total
+  const rows = [
+    { firstTurn: 0 }, // zero-edit
+    { firstTurn: 2 }, // 2 轮收敛
+    { firstTurn: null }, // 未收敛
+    { firstTurn: 4 }, // 4 轮才收敛（> K=3）
+  ]
+  const sum = summarizeConvergence(rows, 3)
+  check(sum.total === 4, 'summarizeConvergence: total=4')
+  check(sum.converged === 3, 'summarizeConvergence: converged=3（null 不计）')
+  check(Math.abs(sum.rateAtK - 2 / 4) < 1e-9, 'summarizeConvergence: ≤3 轮内收敛 2/4') // turn 0 与 2，4 超 K、null 不算
+  check(Math.abs(sum.meanTurnsToConverge - (0 + 2 + 4) / 3) < 1e-9, 'summarizeConvergence: 均值仅计已收敛 (0+2+4)/3')
+  const empty = summarizeConvergence([], 3)
+  check(empty.rateAtK === null && empty.meanTurnsToConverge === null && empty.total === 0, 'summarizeConvergence: 空语料回 null')
 }
 
 if (failures) {

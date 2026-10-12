@@ -5,7 +5,7 @@
 > **（P2）95% 准确率——先把口径改良定义，再在 schema-grounded 语料上诚实逼近。**
 > 本文是技术实施方案，不是公开文案。具体 AI-xx roadmap 映射在落地时同步进 [ROADMAP.md](../../packages/mcp-server/ROADMAP.md)。
 >
-> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；A3'/C2 待做。未触发任何付费 run。
+> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；**PR-A3' 已落地**（B3 精修回环 + B4 pin；`diffConfig` + `refine_config`「确定性 validate+diff」工具 + eval K 轮收敛驱动 + `firstConvergedTurn`/`summarizeConvergence` + convergence@K 指标；两处偏离 §5 字面已评审拍板：工具不喂模型、只认 scripted refinements；shared 430 测试 / mcp-server 116 测试 + `check:scorers` + `test:golden` 26/26 全绿，见 §5 末）；C2 待做。未触发任何付费 run。
 >
 > **复核纠正（落地时发现，已改）：** 原 §2.2 写「esbuild 已在仓库依赖链里，不新增运行时依赖」——**错**。实测 esbuild 只在**根仓库**（golden/smoke 脚本），三个发布包（shared/cli/mcp-server）都没有它。经确认采 **A 方案：给 `@es-plus/shared` 加 esbuild 依赖**，做真不变量（发射前校验与 CI 发射后校验同款解析器、零漂移）。另：`generate_crud` 的 `mode` 默认**本就是 `schema`**，A1 实际只剩「选 sfc 加保真度警告」。
 >
@@ -194,31 +194,33 @@ P2 准确率轨：                            ▼                    ▼
 - ✅ 门禁全绿：shared 422 测试、mcp 112 测试（覆盖率 branches 85.9≥77 / stmts 46.67≥27）、`check:scorers` / `test:golden` 25/25 / `fragment:smoke` 78/78、workspace typecheck。
 - ⏳ 带 key 复测（**需显式指令**）：以 `fixedFields` 来自摄取的方式跑 scoped，propSet 维度趋近 1（字段给定后不再是猜）。**本次未触发**。
 
-## 5. PR-A3' · B3+B4 精修回环 + pin（兑现「收敛」定义）
+## 5. PR-A3' · B3+B4 精修回环 + pin（兑现「收敛」定义）✅ 已落地（diffConfig + refine_config + eval K 轮驱动）
 
 > 目标：把承重定义里的「≤K 轮精修内收敛」做成**可度量**（指标）且**可用**（UX）。这是四大缺口的最后两块：refinement/diff 回环 + pin。
 
 ### 5.1 设计决策（三条）
 
-**决策 A3'-a — pin 载体就用现成的 `StructuredCrudConfig`。** 它已可序列化、可移植、跨轮复用（[index.ts:129-134](../../packages/mcp-server/src/index.ts#L129-L134) 已声明）。只需补一个薄「往返」：工具返回里带回当前 config（已有），精修工具接收「上一版 config + 一条 NL 修正」。**不做数据库、不做会话态**——pin 就是那段 JSON，由调用方（host LLM / CLI）持有。
+**决策 A3'-a — pin 载体就用现成的 `StructuredCrudConfig`。** 它已可序列化、可移植、跨轮复用（[index.ts:128-134](../../packages/mcp-server/src/index.ts#L128-L134) 已声明「Schema is portable / keep the same JSON and just regenerate」）。**不做数据库、不做会话态**——pin 就是那段 JSON，由调用方（host LLM / CLI）持有。✅
 
-**决策 A3'-b — 新增 `refine_config` 工具：config + NL 修正 → 新 config + diff。** 内部：把「上一版 config（作为 assistant 已给出的结构）+ 用户修正」喂给模型，产出新 config，经 Zod 校验（复用 A3 的服务端 validate→repair），再对新旧 config 做结构化 diff 回传（让调用方看清改了什么）。这与 nightly 的 schema-repair 循环是**两个不同的循环**：那个只修合法性、从不看意图；这个修的是意图。
+**决策 A3'-b — `refine_config` 工具做成「确定性 validate + diff」（落地修正：~~喂给模型~~ 不在工具内调模型）。** §5 原写「config + NL 修正 → **喂给模型** 产出新 config」。源码核实后判定这与 es-plus 的 MCP 确定性工具范式冲突（LLM 推理只活在 host/CLI/eval，工具一律确定性，见 generate-from-config.ts "You (the AI client) do the reasoning"），**已评审拍板偏离**：由 host LLM 产出修订后的 `revised`，工具 = `validateStructuredConfig(revised)`（无效回 Zod 错误）+ `diffConfig(previous, revised)` 回显本轮改动。与现有 `validate_config` 同范式。原文「复用 A3 的 `validateAndRepair`」亦为错配——源码中**不存在** `validateAndRepair`（A3/C2-a 未落地），本 PR 用既有权威 `validateStructuredConfig` 做一次性校验，repair 回环留给 C2。
 
-**决策 A3'-c — eval 侧新增 K 轮收敛驱动 + `convergence@K` 指标。** 在 [eval-llm.mjs](../../scripts/eval-llm.mjs) 的 schema-repair 循环（[:128-155](../../scripts/eval-llm.mjs#L128-L155)）**之外**，套一层精修循环：初版 pred 后，最多 K 轮——由 case 脚本化修正（`refinements`）或 diff(gold,pred) 推出的「下一条修正」驱动，重算 scoped 分；记录首次 `exactIntentScoped===true` 的轮次，K 轮未收敛记 ∞。
+**决策 A3'-c — eval 侧 K 轮收敛驱动 + `convergence@K` 指标（只观测、不门禁；只认 scripted refinements）。** 在 [driveToValidConfig](../../scripts/eval-llm.mjs) 的 schema-repair 自修复环**之外**套一层精修循环：turn 0 后延续**同一段对话**逐条喂 `refinements` 的修正，每轮重算 scoped 分，`firstConvergedTurn` 记首个 `exactIntentScoped===true` 的 0-based 轮次（0=zero-edit，null=未收敛）。**头条 zero-edit/scoped 口径恒取 turn 0，精修不污染它。** §5 原文的 `diff(gold,pred)` 自动推修正会**泄漏 gold** → 收敛率虚高，**刻意不采用**（最多作 debug 上界，绝不进 record/badge）；与 heldout vs few-shot 的诚实性同源。指标沿用 B2 scoped 的「本 PR 观测、未门禁」先例。
 
-### 5.2 文件级改动
+### 5.2 文件级改动（已落地）
 
-- **新增** `packages/mcp-server/src/tools/refine-config.ts`（薄封装）+ 注册；内部复用 A3 的 `validateAndRepair`。
-- **新增** shared 侧 `diffConfig(prev, next)`（结构化 diff，纯函数、可单测），`refine_config` 与 eval 收敛驱动共用。
-- **改** 若干 [`__tests__/golden/cases/*.json`](../../__tests__/golden/cases/)：加可选 `refinements: [{turn, correction}]` 与 `convergesBy: K`；或留空由 diff-oracle 自动推修正。[score-golden.mjs:314-322](../../__tests__/golden/scripts/score-golden.mjs#L314-L322) 入参校验放宽接受这些可选键。
-- **改** [eval-llm.mjs](../../scripts/eval-llm.mjs)：加精修驱动；record（[:311-330](../../scripts/eval-llm.mjs#L311)）增 `convergenceRateAtK`、`meanTurnsToConverge`、逐 case 收敛轮次；徽章可加「convergence@K」口径。
-- **改** [scorers.mjs](../../scripts/eval/scorers.mjs)：加 `firstConvergedTurn(scoreArray)` 纯函数（逐轮 `scoreAll` 结果数组 → 首个收敛轮次），复用 per-pair 打分。
+- **新增** [`packages/shared/src/config-diff.ts`](../../packages/shared/src/config-diff.ts)：`diffConfig(prev, next): ConfigDiff` + `summarizeDiff(diff)`，纯函数、不依赖 Zod（三成员布尔按 schema 默认 true 归一后比），`refine_config` 与 eval 共用。barrel 导出。单测 [config-diff.spec.ts](../../packages/shared/__tests__/config-diff.spec.ts)（8 例：增/删/改字段、formtype、membership、name/apiUrl、actions、空 prev）。
+- **新增** [`packages/mcp-server/src/tools/refine-config.ts`](../../packages/mcp-server/src/tools/refine-config.ts)：`buildRefineResult({previous, revised})` 纯函数 + `registerRefineConfig`。单测 [refine-config.spec.ts](../../packages/mcp-server/__tests__/refine-config.spec.ts)（金额改数值右对齐 / 非法 revised 回错无 diff / 无改动 / 首轮）。
+- **改** [eval-llm.mjs](../../scripts/eval-llm.mjs)：`nlToConfig` 拆成 `buildInitialMessages` + `driveToValidConfig`（可延续对话）；per-case 加 K 轮精修驱动（仅中文门禁语言 + 标了 refinements）；record 增 `convergence { k, source, rateAtK, meanTurnsToConverge, converged, total }`（无语料则为 null）；控制台打印 `convergence@K`。
+- **改** [scorers.mjs](../../scripts/eval/scorers.mjs)：加 `firstConvergedTurn(scores)` 与 `summarizeConvergence(rows, k)` 纯函数；meta-eval [scorers.test.mjs](../../scripts/eval/scorers.test.mjs) 覆盖二者（无 key 可跑）。
+- **改** [score-golden.mjs](../../__tests__/golden/scripts/score-golden.mjs)：Layer-1 形状校验接受可选 `refinements: [{correction, turn?}]` 与 `convergesBy`（正整数、需伴随 refinements）。
+- **新增** golden 收敛语料 [26-order-amount-refine.json](../../__tests__/golden/cases/26-order-amount-refine.json)：金额首轮常猜成 Input，一条自然纠正后应收敛到 InputNumber（scoped 铰链 formtype:amount）。
 
 ### 5.3 PR-A3' 验收
 
-- `refine_config` 单测：给定一版 config + 「金额改数值右对齐」类修正 → 产出新 config（Zod 合法）+ 正确 diff。
-- `diffConfig` 纯函数单测覆盖增/删/改字段、formtype、membership。
-- 带 key 复测（**需显式指令**）：报告 `convergenceRateAtK`（如 K=3）与 `meanTurnsToConverge`；这是「95% = zero-edit ∨ ≤K 轮收敛」口径的头条数字。
+- ✅ `diffConfig` 纯函数单测覆盖增/删/改字段、formtype、membership、name/apiUrl、actions。
+- ✅ `refine_config`（buildRefineResult）单测含「金额改数值右对齐」→ 合法 + diff 捕获 formtype/align 变更。
+- ✅ 门禁全绿：shared 430 测试、mcp-server 116 测试、`check:scorers`（含收敛纯函数）、`test:golden` 26/26、workspace typecheck、lint 0 error。
+- ⏳ 带 key 复测（**需显式指令**）：报告 `convergenceRateAtK`（K=3）与 `meanTurnsToConverge`——「95% = scoped zero-edit ∨ ≤K 轮收敛」口径的第二条腿。**本次未触发**。
 
 ## 6. PR-C2 · A3+A4 生产安全网（服务端 validate→repair + 沙箱 build-repair）
 

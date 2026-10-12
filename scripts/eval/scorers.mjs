@@ -311,3 +311,48 @@ export function scoreAll(gold, pred, mask) {
     exactIntentScoped,
   }
 }
+
+// ── B3 收敛（refinement loop）：多轮精修里「第几轮收敛」的纯判定 ───────────────────
+//
+// 判定口径复用 scoped（exactIntentScoped）——与「95% = scoped zero-edit ∨ ≤K 轮收敛」的
+// 良定义一致。初稿 = 第 0 轮（0 次纠正即过 = zero-edit）；每喂一条纠正 +1 轮。
+
+/**
+ * 给定按轮次排列的 scoreAll 结果数组（index 0 = 初稿，1 = 第 1 轮纠正后…），返回首个
+ * `exactIntentScoped===true` 的 0-based 轮次号；全程未收敛返回 null。
+ * @param {Array<{ exactIntentScoped?: boolean } | boolean>} scores
+ * @returns {number | null}
+ */
+export function firstConvergedTurn(scores) {
+  if (!Array.isArray(scores)) return null
+  for (let i = 0; i < scores.length; i++) {
+    const s = scores[i]
+    const converged = typeof s === 'boolean' ? s : !!(s && s.exactIntentScoped)
+    if (converged) return i
+  }
+  return null
+}
+
+/**
+ * 收敛语料聚合（只观测、不门禁）。rows 每项 `{ firstTurn: number|null }`（见 firstConvergedTurn）。
+ *   - rateAtK           : firstTurn !== null && firstTurn <= k 的占比（≤K 轮内收敛率）
+ *   - meanTurnsToConverge: 已收敛案例 firstTurn 的均值（未收敛不计入；null 若无一收敛）
+ *   - converged / total : 旁证——高均值+极少收敛不至于被误读为「平均很快」
+ * @param {Array<{ firstTurn: number|null }>} rows
+ * @param {number} k
+ */
+export function summarizeConvergence(rows, k) {
+  const total = Array.isArray(rows) ? rows.length : 0
+  if (!total) return { rateAtK: null, meanTurnsToConverge: null, converged: 0, total: 0 }
+  const convergedAny = rows.filter((r) => r.firstTurn !== null && r.firstTurn !== undefined)
+  const withinK = convergedAny.filter((r) => r.firstTurn <= k)
+  const meanTurns = convergedAny.length
+    ? convergedAny.reduce((a, r) => a + r.firstTurn, 0) / convergedAny.length
+    : null
+  return {
+    rateAtK: withinK.length / total,
+    meanTurnsToConverge: meanTurns,
+    converged: convergedAny.length,
+    total,
+  }
+}

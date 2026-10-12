@@ -12,6 +12,7 @@ import { registerGenerateForm } from "./generate-form.js";
 import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
 import { registerIngestSchema } from "./ingest-schema.js";
+import { registerRefineConfig } from "./refine-config.js";
 
 export function registerTools(server: McpServer) {
   registerDetectProjectTarget(server);
@@ -29,6 +30,8 @@ export function registerTools(server: McpServer) {
   registerListFormTypes(server);
   // 摄取层:把既有 schema 预填成一份草拟 StructuredCrudConfig(需人审修订后再 generate)。
   registerIngestSchema(server);
+  // 精修层:对已 pin 的配置做一轮 NL 纠正后,确定性校验新配置并回显本轮 diff。
+  registerRefineConfig(server);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
 }

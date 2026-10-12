@@ -1,0 +1,54 @@
+{
+  "nl": "订单管理：表格展示订单号、客户名称、订单金额、下单日期、订单状态（待付款/已付款/已取消）；查询有客户名称、订单状态；支持新增、编辑、删除。",
+  "nlEn": "Order management: the table shows order number, customer name, order amount, order date, and order status (unpaid/paid/cancelled); query by customer name and order status; supports add, edit, and delete.",
+  "fixedFields": ["orderNo", "customerName", "amount", "orderDate", "status"],
+  "pinnedDims": ["propSet", "formtype:amount", "actions"],
+  "refinements": [
+    { "turn": 1, "correction": "订单金额要按数值输入、金额列右对齐显示。" }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "OrderManage",
+    "apiUrl": "/api/orders",
+    "fields": [
+      {
+        "prop": "orderNo",
+        "label": "订单号",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "customerName",
+        "label": "客户名称",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "amount",
+        "label": "订单金额",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "align": "right"
+      },
+      {
+        "prop": "orderDate",
+        "label": "下单日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "订单状态",
+        "formtype": "Select",
+        "inQuery": true,
+        "dataOptions": [
+          { "label": "待付款", "value": "unpaid" },
+          { "label": "已付款", "value": "paid" },
+          { "label": "已取消", "value": "cancelled" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "B3 收敛语料：金额首轮常被猜成 Input，一条自然纠正（数值输入、右对齐）后应收敛到 InputNumber。scoped 收敛铰链 = formtype:amount。"
+}

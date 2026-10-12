@@ -39,7 +39,7 @@ import {
   generateFromConfig,
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
-import { scoreAll, CAPABILITY_SCORERS } from './eval/scorers.mjs'
+import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence } from './eval/scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -126,15 +126,21 @@ async function callModel(client, system, messages) {
   return textOf(res)
 }
 
-/** NL → validated config, with a self-repair loop (<=2 retries feeding the Zod error back). */
-async function nlToConfig(client, system, nl, fixedFields) {
-  // B2: 若 case 标了 fixedFields（NL/契约明确给定的字段 prop），把它们喂给模型——使 propSet
-  // 从「猜字段」变「给定字段」，与真实生产（有契约）一致；模型只补欠定残差（formtype/归属/布局…）。
+/** 构造初始对话。B2：标了 fixedFields 时把它们喂给模型（从「猜字段」变「给定字段」）。 */
+function buildInitialMessages(nl, fixedFields) {
   const content =
     Array.isArray(fixedFields) && fixedFields.length
       ? `${nl}\n\nFields (given — use EXACTLY these props; infer each field's formtype / membership / actions / layout): ${fixedFields.join(', ')}`
       : nl
-  const messages = [{ role: 'user', content }]
+  return [{ role: 'user', content }]
+}
+
+/**
+ * 在给定对话上跑「调模型 → 取 JSON → Zod 校验」并带 <=2 次自修复重试，返回通过 Zod 的 config。
+ * 会把每次尝试（含成功那次的 assistant 轮）追加进 `messages`——这样 B3 多轮精修可以**延续同一段对话**
+ * 继续喂纠正，而不是另起炉灶。抽成独立函数即为复用这条自修复环。
+ */
+async function driveToValidConfig(client, system, messages) {
   let lastRaw = ''
   for (let attempt = 0; attempt <= 2; attempt++) {
     const raw = await callModel(client, system, messages)
@@ -148,12 +154,13 @@ async function nlToConfig(client, system, nl, fixedFields) {
       continue
     }
     const parsed = StructuredCrudConfigSchema.safeParse(candidate)
+    // 把模型这轮产出记入对话（无论成败）——成功时保留它，后续纠正才有上下文。
+    messages.push({ role: 'assistant', content: JSON.stringify(candidate) })
     if (parsed.success) return parsed.data
     const issues = parsed.error.issues
       .slice(0, 8)
       .map((i) => `- [${i.path.join('.') || '(root)'}] ${i.message}`)
       .join('\n')
-    messages.push({ role: 'assistant', content: JSON.stringify(candidate) })
     messages.push({
       role: 'user',
       content: `The config failed schema validation:\n${issues}\nFix these and respond with ONLY the corrected JSON object.`,
@@ -190,13 +197,19 @@ async function main() {
     // fixedFields = NL/契约明确给定的字段 prop（喂给模型）。两者均可选、可增量标注。
     const mask = { pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [] }
     const fixedFields = Array.isArray(raw.fixedFields) ? raw.fixedFields : undefined
+    // B3 精修语料：refinements = 按轮次排列的 NL 纠正（只在中文门禁语言上跑）；convergesBy = 该 case
+    // 自称的收敛轮数上界（只记录、不门禁）。头条 zero-edit/scoped 口径恒取 turn 0，精修不污染它。
+    const refinements = Array.isArray(raw.refinements) && raw.refinements.length ? raw.refinements : null
+    const convergesBy = Number.isInteger(raw.convergesBy) ? raw.convergesBy : null
     // 双语：中文（raw.nl）始终跑并作门禁语言；英文（raw.nlEn）有则跑、只观测。
     const langs = [{ lang: 'zh', nl: raw.nl }]
     if (typeof raw.nlEn === 'string' && raw.nlEn.trim()) langs.push({ lang: 'en', nl: raw.nlEn })
     for (const { lang, nl } of langs) {
       process.stdout.write(`[eval:llm] ${file} [${lang}] … `)
       try {
-        const pred = await nlToConfig(client, system, nl, fixedFields)
+        // turn 0：初稿。头条分（zero-edit/scoped/propF1/…）恒为此轮，精修轮不回写 s。
+        const messages = buildInitialMessages(nl, fixedFields)
+        const pred = await driveToValidConfig(client, system, messages)
         let compiles = true
         try {
           generateFromConfig(pred)
@@ -204,10 +217,31 @@ async function main() {
           compiles = false
         }
         const s = scoreAll(gold, pred, mask)
-        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file) })
+
+        // B3：中文语言 + 标了 refinements 时，延续同一段对话逐条喂纠正，记录每轮 scoped 命中，
+        // 直到收敛或喂完。初稿已 scoped 命中则 0 次纠正即收敛（zero-edit），不再调用模型。
+        let convergence
+        if (lang === 'zh' && refinements) {
+          const scopedSeq = [s.exactIntentScoped]
+          for (const ref of refinements) {
+            if (scopedSeq[scopedSeq.length - 1]) break
+            messages.push({ role: 'user', content: ref.correction })
+            const rPred = await driveToValidConfig(client, system, messages)
+            scopedSeq.push(scoreAll(gold, rPred, mask).exactIntentScoped)
+          }
+          const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
+          convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
+        }
+
+        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence })
         console.log(
           `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
         )
+        if (convergence) {
+          const ft = convergence.firstTurn
+          const label = ft === null ? '未收敛' : ft === 0 ? 'zero-edit' : `第 ${ft} 轮收敛`
+          console.log(`           convergence: ${label}（${convergence.attempts} 次纠正尝试${convergesBy ? `，自称 ≤${convergesBy}` : ''}）`)
+        }
         if (s.attrMisses.length) console.log(`           attr misses: ${s.attrMisses.join('; ')}`)
         const dimMisses = Object.entries(s.byCapability)
           .filter(([, v]) => v.applicable && !v.pass)
@@ -242,6 +276,17 @@ async function main() {
   const propF1 = meanAll((r) => r.propF1?.f1 ?? 0)
   const attrAcc = meanAll((r) => r.attrAcc ?? 0)
   const actF1 = meanAll((r) => r.actionsF1?.f1 ?? 0)
+
+  // B3 收敛（只观测、不门禁）：收敛语料 = 标了 refinements 的中文行；heldout 优先、空则退全量。
+  // firstTurn=0 即 zero-edit 收敛（0 次纠正）；null = 喂完所有纠正仍未 scoped 命中。
+  const CONVERGE_K = 3
+  const convZhRows = zhRows.filter((r) => r.convergence)
+  const convHeldout = convZhRows.filter((r) => !r.fewshotDerived)
+  const convSource = convHeldout.length ? convHeldout : convZhRows
+  const convStats = summarizeConvergence(
+    convSource.map((r) => ({ firstTurn: r.convergence.firstTurn })),
+    CONVERGE_K
+  )
 
   // 按维度在留出集上聚合：applicable=被多少 case 用到，pass=命中数，rate=命中率。
   // 这是能定位回归到具体维度的诊断信号（AI-01 的核心产物）。
@@ -299,6 +344,16 @@ async function main() {
   console.log(`  attribute acc (avg):   ${(attrAcc * 100).toFixed(1)}%`)
   console.log(`  actions F1 (avg):      ${(actF1 * 100).toFixed(1)}%`)
   console.log(`  compiles:              ${(compileRate * 100).toFixed(1)}%`)
+  // B3 收敛（只观测）：≤K 轮内收敛率 + 平均收敛轮数。「95% = scoped zero-edit ∨ ≤K 轮收敛」
+  // 的第二条腿。converged/total 旁证——语料小、未收敛会把均值拉偏，必须一起看。
+  if (convStats.total) {
+    const src = convHeldout.length ? 'HELDOUT' : 'ALL'
+    const mean = convStats.meanTurnsToConverge === null ? 'n/a' : convStats.meanTurnsToConverge.toFixed(2)
+    console.log(
+      `  convergence@${CONVERGE_K} (${src}, observed): ${(convStats.rateAtK * 100).toFixed(0)}%  ` +
+        `(${convStats.converged}/${convStats.total} converged; mean turns ${mean})`
+    )
+  }
   if (byLanguage.en !== null) {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
   }
@@ -348,6 +403,18 @@ async function main() {
     attributeAccuracy: Number(attrAcc.toFixed(4)),
     actionsF1: Number(actF1.toFixed(4)),
     compileRate: Number(compileRate.toFixed(4)),
+    // B3 收敛（只观测、不门禁）。收敛语料为空时整块为 null，表明本次没跑精修语料。
+    convergence: convStats.total
+      ? {
+          k: CONVERGE_K,
+          source: convHeldout.length ? 'heldout' : 'all',
+          rateAtK: convStats.rateAtK === null ? null : Number(convStats.rateAtK.toFixed(4)),
+          meanTurnsToConverge:
+            convStats.meanTurnsToConverge === null ? null : Number(convStats.meanTurnsToConverge.toFixed(2)),
+          converged: convStats.converged,
+          total: convStats.total,
+        }
+      : null,
     byCapability,
     byLanguage,
     passed: gateExact >= TARGET_ACCURACY,

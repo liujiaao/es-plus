@@ -21,6 +21,14 @@ export {
   type IngestResult,
   type TypeDescriptor,
 } from './schema-ingest.js'
+// 精修层(B3):两份 StructuredCrudConfig 的结构化差异 —— refine_config 工具 + eval 收敛判定旁证
+export {
+  diffConfig,
+  summarizeDiff,
+  type ConfigDiff,
+  type FieldChange,
+  type FieldAttrChange,
+} from './config-diff.js'
 // 片段发射层:独立 es-form / es-table / useDialog（不含表格的子集 + 与原生/第三方混排）
 export {
   generateFormBlock,
