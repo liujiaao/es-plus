@@ -5,7 +5,7 @@
 > **（P2）95% 准确率——先把口径改良定义，再在 schema-grounded 语料上诚实逼近。**
 > 本文是技术实施方案，不是公开文案。具体 AI-xx roadmap 映射在落地时同步进 [ROADMAP.md](../../packages/mcp-server/ROADMAP.md)。
 >
-> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；A2'/A3'/C2 待做。未触发任何付费 run。
+> **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；A3'/C2 待做。未触发任何付费 run。
 >
 > **复核纠正（落地时发现，已改）：** 原 §2.2 写「esbuild 已在仓库依赖链里，不新增运行时依赖」——**错**。实测 esbuild 只在**根仓库**（golden/smoke 脚本），三个发布包（shared/cli/mcp-server）都没有它。经确认采 **A 方案：给 `@es-plus/shared` 加 esbuild 依赖**，做真不变量（发射前校验与 CI 发射后校验同款解析器、零漂移）。另：`generate_crud` 的 `mode` 默认**本就是 `schema`**，A1 实际只剩「选 sfc 加保真度警告」。
 >
@@ -161,7 +161,7 @@ P2 准确率轨：                            ▼                    ▼
 
 **✅ 已定夺（membership 粒度，用户决策）：** 字段级 membership 拆成 `inQuery:X` / `inTable:X` / `inForm:X` 三个独立 token（原捆绑式 `membership:X` 仍保留为"三者同时相等"的整字段判定）。拆分评分器已落地 + 自测（翻 `amount.inQuery` 翻红、翻同字段 `amount.inTable` 免责）。**但**因上述"无默认归一化"的评分器事实，本批 22 条标注**实际未使用** inQuery/inTable/inForm 分量（见上一节第 3 条）——拆分是把能力备好，钉不钉由"评分器能否忠实捕捉"这条更硬的线决定。此偏差已据实记录，非回避。
 
-## 4. PR-A2' · B1 schema 摄取层（锚定 propSet）
+## 4. PR-A2' · B1 schema 摄取层（锚定 propSet）  ✅ 已落地（引擎 + MCP 工具）
 
 > 目标：补「四大缺口」里最大的一块——让字段来自**机器可读契约**而非散文推断。这是让 scoped 口径在**真实生产**中立得住的前提（B2 让它在语料里立得住）。
 
@@ -176,9 +176,9 @@ P2 准确率轨：                            ▼                    ▼
 ### 4.2 文件级改动
 
 - **新增** `packages/shared/src/schema-ingest.ts`：`ingestSchema(text, kind)` + `defaultFormtypeForType(type)`。无运行时新依赖（OpenAPI/JSON Schema 为 `JSON.parse` + 遍历；sample-json 同理；ts-interface/sql-ddl 可后置到用 esbuild/轻量正则，先 stub）。
-- **改** [ai-nl-to-config-prompt.ts:457-467](../../packages/shared/src/ai-nl-to-config-prompt.ts#L457-L467) 的 formtype 规则段：引用 `defaultFormtypeForType` 的同一张表（文字与代码同源）。
-- **新增** MCP 工具 `ingest_schema`（`packages/mcp-server/src/tools/ingest-schema.ts`，薄封装）：入参契约文本 + kind，出参 `fields[]`（可直接灌给 `generate_crud` 的 surfaces 或 `generate_crud_from_config`）。注册进 [tools/index.ts](../../packages/mcp-server/src/tools/index.ts)。
-- **新增** CLI 子命令 `es-plus ingest <file>`（可选、锦上添花）：本地契约文件 → `fields[]` JSON。
+- **~~改~~（落地修正：不改）** [ai-nl-to-config-prompt.ts](../../packages/shared/src/ai-nl-to-config-prompt.ts) 的 formtype 规则段。**源码核实后发现这是两条不同的轴**：prompt / 字段 `.describe` 教的是**按字段含义**推断（status→Select、头像→Upload），而 `defaultFormtypeForType` 是**按数据类型**推断（integer→InputNumber）。强行让语义 prompt「引用」数据类型表是错配。改为：`defaultFormtypeForType` 作为**数据类型轴**的单一事实源（供摄取层用），语义 prompt 保持不动；真正可守护的一致性 = `defaultFormtypeForType` **对输入域全覆盖且输出恒 ∈ `VALID_FORM_TYPES`**（无 undefined 落空），这正面堵住 Wave-1「fall-through 教错」坑。该不变量以 **vitest 全覆盖断言**实现（见 §4.3），而非 `check:*.mjs`——它本质是代码执行属性（既有 check 脚本都是文本巡检，验不了全覆盖），且 repo 刚修过的 shared-build 排序 CI 坑让「跑脚本前须先 build」的新门禁得不偿失。
+- **新增** MCP 工具 `ingest_schema`（[`packages/mcp-server/src/tools/ingest-schema.ts`](../../packages/mcp-server/src/tools/ingest-schema.ts)，薄封装）：入参 `{ text, kind, name?, apiUrl? }`，内部 `ingestSchema → composeCrudConfig(table/form=摄取字段)`，出参一份**草拟好的 `StructuredCrudConfig` JSON + 合并告警**（供宿主 LLM 审阅修订后再调 `generate_crud_from_config`，占位 name/apiUrl 显式告警）。注册进 [tools/index.ts](../../packages/mcp-server/src/tools/index.ts)。
+- **延后** CLI 子命令 `es-plus ingest <file>`（本 PR 决策：引擎 + MCP 工具先行，CLI 另开小步——它只是薄壳）。
 - **（可选、更强）** `detect_project_target` 的对偶：日后把「离线文档解析」升级为「活 introspection」（直连运行中的后端 `/openapi.json` 或 DB），作为 B1 的 v2，不在本 PR。
 
 ### 4.3 新增/强化测试
@@ -186,11 +186,13 @@ P2 准确率轨：                            ▼                    ▼
 - **新增** `packages/shared/__tests__/schema-ingest.spec.ts`：各 kind 的样例契约 → 期望 `fields[]`（含类型→formtype 预填、枚举→Select+options）；畸形契约 → 带 warning 不抛。
 - **新增** 端到端用例：一段 OpenAPI → `ingestSchema` → `composeCrudConfig` → `generateFromConfig(mode=schema)` → esbuild 解析通过（证明摄取产物接得上脊柱）。
 
-### 4.4 PR-A2' 验收
+### 4.4 PR-A2' 验收  ✅
 
-- 2 种高价值来源可用；`defaultFormtypeForType` 与 prompt 文字同源（加一道 `check:*` 断言两者一致）。
-- 摄取 → 生成全链在 golden 层解析通过。
-- 带 key 复测（**需显式指令**）：以 `fixedFields` 来自摄取的方式跑 scoped，propSet 维度趋近 1（字段给定后不再是猜）。
+- ✅ 3 种高价值来源可用（jsonSchema / openapi / sample-json；ts-interface / sql-ddl 为 stub + 指引告警）。
+- ✅ `defaultFormtypeForType` 对输入域**全覆盖且输出恒 ∈ `VALID_FORM_TYPES`**（vitest 全覆盖断言守护，替代原「与 prompt 文字同源」口径——见 §4.2 落地修正）。
+- ✅ 摄取 → `composeCrudConfig` → `generateFromConfig(mode=schema)` 全链产物过 esbuild（`transformSync` loader:ts）解析（schema-ingest.spec.ts 端到端用例）。
+- ✅ 门禁全绿：shared 422 测试、mcp 112 测试（覆盖率 branches 85.9≥77 / stmts 46.67≥27）、`check:scorers` / `test:golden` 25/25 / `fragment:smoke` 78/78、workspace typecheck。
+- ⏳ 带 key 复测（**需显式指令**）：以 `fixedFields` 来自摄取的方式跑 scoped，propSet 维度趋近 1（字段给定后不再是猜）。**本次未触发**。
 
 ## 5. PR-A3' · B3+B4 精修回环 + pin（兑现「收敛」定义）
 
@@ -249,7 +251,7 @@ P2 准确率轨：                            ▼                    ▼
 | 迁移门禁到 scoped 当天变红 | 决策 A1'-a：scoped 新增、core 保留，逐步 ratchet（同 Wave 1 决策 B） |
 | 规格掩码标注把 NL 没锁的维度误标为锁定 → 虚高 | §3.3 meta-eval 的「掩码外维度免责」断言 + 掩码 key 合法性 `check` |
 | B1 摄取被当成「全自动」掩盖欠定残差 | 决策 A2'-b/c：摄取只定 `fields` 骨架，残差显式交 LLM、显式计入 scoped |
-| prompt 的 formtype 规则与代码映射再次漂移 | 决策 A2'-b：`defaultFormtypeForType` 单一事实源 + `check:*` 一致性断言 |
+| prompt 的 formtype 规则与代码映射再次漂移 | 决策 A2'-b（落地修正）：`defaultFormtypeForType` 作为**数据类型轴**单一事实源 + vitest「全覆盖 + 输出恒 ∈ VALID_FORM_TYPES」不变量；语义 prompt 是另一条轴，不绑定（见 §4.2） |
 | 收敛驱动用 diff(gold,pred) 变相泄题 | 脚本化 `refinements` 优先；diff-oracle 仅模拟「人类看着错改一处」，且只在 eval、不进产物 |
 | 付费 eval run 被无意触发 | 全波所有「带 key 复测」均标注**需显式指令**；不自触发、不在本设计阶段跑 |
 | 持久化 JSON 的 Windows CRLF 守卫误报 | 徽章/accuracy JSON 强制 LF（沿用团队既有记录 memory `windows-crlf-guard-false-positives`） |

@@ -11,6 +11,7 @@ import { registerGenerateCrud } from "./generate-crud.js";
 import { registerGenerateForm } from "./generate-form.js";
 import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
+import { registerIngestSchema } from "./ingest-schema.js";
 
 export function registerTools(server: McpServer) {
   registerDetectProjectTarget(server);
@@ -26,6 +27,8 @@ export function registerTools(server: McpServer) {
   registerGenerateFromConfig(server);
   registerValidateConfig(server);
   registerListFormTypes(server);
+  // 摄取层:把既有 schema 预填成一份草拟 StructuredCrudConfig(需人审修订后再 generate)。
+  registerIngestSchema(server);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
 }

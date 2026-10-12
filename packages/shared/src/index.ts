@@ -12,6 +12,15 @@ export {
   type ComposeResult,
   type SurfaceField,
 } from './compose-crud-config.js'
+// 摄取层:结构化 schema(OpenAPI / JSON Schema / 样例 JSON)→ 字段表 → composeCrudConfig
+export {
+  ingestSchema,
+  defaultFormtypeForType,
+  INGEST_FORM_TYPES,
+  type SchemaKind,
+  type IngestResult,
+  type TypeDescriptor,
+} from './schema-ingest.js'
 // 片段发射层:独立 es-form / es-table / useDialog（不含表格的子集 + 与原生/第三方混排）
 export {
   generateFormBlock,
