@@ -1,71 +1,64 @@
 {
-  "measuredAt": "2026-10-12T10:58:57.002Z",
+  "measuredAt": "2026-10-13T10:34:01.593Z",
   "model": "pa/claude-opus-4-8",
-  "servedModel": "pa/venus-marble-4-8,pa/claude-opus-4-8",
+  "servedModel": "pa/claude-opus-4-8",
   "cases": 29,
   "heldoutCases": 23,
   "fewshotDerivedCases": 6,
   "target": 0.95,
-  "inSchemaIntentZeroEdit": 0.3043,
-  "inSchemaIntentZeroEditAll": 0.3103,
-  "inSchemaIntentScoped": 0.6087,
-  "inSchemaIntentScopedAll": 0.6552,
-  "exactIntentFull": 0.2174,
-  "exactIntentFullAll": 0.2414,
-  "propSetF1": 0.9564,
-  "attributeAccuracy": 0.9305,
-  "actionsF1": 0.9663,
-  "compileRate": 1,
-  "convergence": {
-    "k": 3,
-    "source": "heldout",
-    "rateAtK": 1,
-    "meanTurnsToConverge": 0.75,
-    "converged": 4,
-    "total": 4
-  },
+  "inSchemaIntentZeroEdit": 0,
+  "inSchemaIntentZeroEditAll": 0,
+  "inSchemaIntentScoped": 0,
+  "inSchemaIntentScopedAll": 0,
+  "exactIntentFull": 0,
+  "exactIntentFullAll": 0,
+  "propSetF1": 0,
+  "attributeAccuracy": 0,
+  "actionsF1": 0,
+  "compileRate": 0,
+  "convergence": null,
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0.7391,
-    "pass": 17,
+    "rate": 0,
+    "pass": 0,
     "total": 23
   },
   "byCapability": {
     "propSet": {
-      "applicable": 23,
-      "pass": 21,
-      "rate": 0.913
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "formtype": {
-      "applicable": 23,
-      "pass": 20,
-      "rate": 0.8696
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "membership": {
-      "applicable": 23,
-      "pass": 10,
-      "rate": 0.4348
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "actions": {
-      "applicable": 23,
-      "pass": 20,
-      "rate": 0.8696
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "tableBtns": {
-      "applicable": 5,
-      "pass": 1,
-      "rate": 0.2
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "dialogs": {
-      "applicable": 6,
-      "pass": 4,
-      "rate": 0.6667
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "operationColumn": {
-      "applicable": 6,
-      "pass": 1,
-      "rate": 0.1667
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "permissions": {
       "applicable": 0,
@@ -73,49 +66,49 @@
       "rate": null
     },
     "apiParams": {
-      "applicable": 1,
-      "pass": 1,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "dataOptions": {
-      "applicable": 15,
-      "pass": 14,
-      "rate": 0.9333
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "i18n": {
-      "applicable": 2,
-      "pass": 2,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "formLayout": {
-      "applicable": 1,
-      "pass": 1,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "target": {
-      "applicable": 4,
-      "pass": 4,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "mode": {
-      "applicable": 6,
-      "pass": 5,
-      "rate": 0.8333
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "virtualScroll": {
-      "applicable": 2,
-      "pass": 2,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "extPoints": {
-      "applicable": 3,
-      "pass": 3,
-      "rate": 1
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     }
   },
   "byLanguage": {
-    "zh": 0.3043,
-    "en": 0.3478
+    "zh": 0,
+    "en": 0
   },
   "passed": false
 }
