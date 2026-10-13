@@ -76,7 +76,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '订单管理：表格上方左侧一个"批量导出"按钮，右侧一个"新增订单"按钮；表格展示订单号、金额、下单时间；支持新增、删除、查看；金额右对齐并保留两位小数。',
     reasoning:
-      '工具栏按钮的左右定位用 position："left"/"right"（三端渲染器都读它；code:1/2 是仍被接受的旧别名）。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
+      '工具栏按钮的左右定位用 position："left"/"right"（三端渲染器都读它；code:1/2 是仍被接受的旧别名）。按钮的动作绑定按语义分两类：打开弹窗的 add/edit/view 用 dialogKey（新增→dialogKey:"add" 才会打开内置新增弹窗），导出/导入这类副作用用 actionType（actionType:"export"/"import"）—— 二者不可混用，给新增写 actionType:"add" 不会打开任何弹窗（是个死按钮）。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
     config: {
       name: 'OrderManage',
       apiUrl: '/api/orders',
@@ -95,7 +95,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'delete', 'view'],
       tableBtns: [
         { name: '批量导出', position: 'left', actionType: 'export' },
-        { name: '新增订单', type: 'primary', position: 'right', actionType: 'add' },
+        { name: '新增订单', type: 'primary', position: 'right', dialogKey: 'add' },
       ],
     },
   },
@@ -472,6 +472,7 @@ export function buildNlToConfigSystemPrompt(): string {
     '- inForm: is it entered in the add/edit form? (system-generated fields like createdAt → inForm:false)',
     '',
     'Toolbar button placement uses position: "left" | "right" — all three renderers read it (the renderer types mark code as deprecated). code:1 = left / code:2 = right is a legacy alias that is still accepted and auto-normalized.',
+    'Bind each button to its behavior by semantics, matching the library defaults: dialog buttons (add / edit / view) use `dialogKey` (the "新增" toolbar button → dialogKey:"add" opens the built-in add dialog; row 编辑 → dialogKey:"edit", 查看 → dialogKey:"view"); side-effect buttons (export / import) use `actionType` ("导出" → actionType:"export", "导入" → actionType:"import"); the row delete button uses `confirm`. NEVER put actionType:"add" on an add button — only `dialogKey` opens the built-in dialog, so an actionType:"add" button does nothing.',
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',

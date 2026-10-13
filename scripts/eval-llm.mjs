@@ -39,7 +39,7 @@ import {
   generateFromConfig,
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
-import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95 } from './eval/scorers.mjs'
+import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -246,7 +246,15 @@ async function main() {
         const dimMisses = Object.entries(s.byCapability)
           .filter(([, v]) => v.applicable && !v.pass)
           .map(([k]) => k)
-        if (dimMisses.length) console.log(`           dim misses: ${dimMisses.join(', ')}`)
+        if (dimMisses.length) {
+          console.log(`           dim misses: ${dimMisses.join(', ')}`)
+          // 结构化维度（tableBtns/operationColumn/dialogs）逐例展开「期望 vs 实得」——
+          // 其余维度的差异 attrMisses/propF1 已覆盖，这里只补 scorer 原本只报维度名的三者。
+          for (const dim of dimMisses) {
+            const d = describeDimMiss(dim, gold, pred)
+            if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
+          }
+        }
       } catch (err) {
         rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, fewshotDerived: FEWSHOT_DERIVED.has(file) })
         console.log(`ERROR — ${err.message.split('\n')[0]}`)

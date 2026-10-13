@@ -89,6 +89,15 @@ describe('buildNlToConfigSystemPrompt — 组装与无损性', () => {
     expect(prompt).toContain('legacy alias')
   })
 
+  it('带上按钮 dialogKey vs actionType 的库契约规则（防 actionType:"add" 死按钮回归）', () => {
+    // add/edit/view → dialogKey（开弹窗）；export/import → actionType（副作用）。
+    // 这条库契约（DEFAULT_TOOLBAR_BTNS/DEFAULT_ROW_BTNS）此前只隐含在示例里、且示例本身
+    // 把新增写成了 actionType:"add"（死按钮）。规则显式点名后钉在这里，防止回退。
+    expect(prompt).toContain('dialogKey:"add" opens the built-in add dialog')
+    expect(prompt).toContain('actionType:"export"')
+    expect(prompt).toContain('NEVER put actionType:"add"')
+  })
+
   it('带上「schema 表达不了就保留为扩展点」的规则与三个扩展点名字', () => {
     for (const token of ['formatter', 'render', 'permissionValue']) {
       expect(prompt, `prompt 漏了扩展点 ${token}`).toContain(token)

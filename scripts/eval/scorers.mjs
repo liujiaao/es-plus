@@ -73,14 +73,14 @@ function membershipEqual(gold, pred) {
   )
 }
 
+/** tableBtns 的比较键元素（排序多重集）：name + 归一化 code（左右）+ actionType。
+ *  抽成单源，判定（tableBtnsEqual）与诊断输出（describeDimMiss）复用同一套键，不会漂移。 */
+const tableBtnKeyParts = (c) =>
+  (c.tableBtns || []).map((b) => `${b.name}|${b.code ?? 1}|${b.actionType ?? ''}`).sort()
+
 /** 不止比 code：name + 归一化后 code（左右）+ actionType 的多重集相等。 */
 function tableBtnsEqual(gold, pred) {
-  const key = (c) =>
-    (c.tableBtns || [])
-      .map((b) => `${b.name}|${b.code ?? 1}|${b.actionType ?? ''}`)
-      .sort()
-      .join(',,')
-  return key(gold) === key(pred)
+  return tableBtnKeyParts(gold).join(',,') === tableBtnKeyParts(pred).join(',,')
 }
 
 /** dialog key 集合相等 ∧ 每个 dialog 的 formItems prop 集合相等。 */
@@ -96,14 +96,48 @@ function dialogsEqual(gold, pred) {
   return true
 }
 
+/** 行操作列的行按钮 name（排序）—— 判定与诊断同源。 */
+const rowBtnNames = (o) => (o?.btns ?? []).map((b) => b.name).sort()
+
 /** false 必须对 false；对象对对象时比行按钮 name 集合（结构意图，不逐一比样式）。 */
 function operationColumnEqual(gold, pred) {
   const go = gold.operationColumn
   const po = pred.operationColumn
   if (go === false || po === false) return go === po
   if (!go || !po) return false
-  const names = (o) => (o.btns ?? []).map((b) => b.name).sort().join(',')
-  return names(go) === names(po)
+  return rowBtnNames(go).join(',') === rowBtnNames(po).join(',')
+}
+
+/**
+ * 结构化维度（tableBtns / operationColumn / dialogs）的「期望 vs 实得」可读键 —— 供 eval 诊断输出。
+ * 与各维度 pass() **同源**（复用同一套键函数），所以 `want === got` 当且仅当该维度 pass；
+ * 这正是定位「模型究竟把按钮 name/actionType/行按钮 写成了什么」的那一行。
+ * 其余维度返回 null（它们的差异已由 attrMisses / propF1 等既有输出覆盖）。
+ */
+export function describeDimMiss(dim, gold, pred) {
+  if (dim === 'tableBtns') {
+    const show = (c) => tableBtnKeyParts(c).join(' · ') || '（无）'
+    return { want: show(gold), got: show(pred) }
+  }
+  if (dim === 'operationColumn') {
+    const show = (c) => {
+      const o = c.operationColumn
+      if (o === false) return 'false（关闭操作列）'
+      if (!o) return '（未配置）'
+      return rowBtnNames(o).join(' · ') || '（无行按钮）'
+    }
+    return { want: show(gold), got: show(pred) }
+  }
+  if (dim === 'dialogs') {
+    const show = (c) => {
+      const d = c.dialogs ?? {}
+      const keys = Object.keys(d).sort()
+      if (!keys.length) return '（未配置）'
+      return keys.map((k) => `${k}:[${(d[k].formItems ?? []).map((f) => f.prop).sort().join(',')}]`).join(' ; ')
+    }
+    return { want: show(gold), got: show(pred) }
+  }
+  return null
 }
 
 function permissionsEqual(gold, pred) {

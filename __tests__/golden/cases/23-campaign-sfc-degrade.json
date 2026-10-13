@@ -43,11 +43,13 @@
     "tableBtns": [
       {
         "name": "导入",
-        "code": 1
+        "code": 1,
+        "actionType": "import"
       },
       {
         "name": "导出",
-        "code": 2
+        "code": 2,
+        "actionType": "export"
       }
     ],
     "operationColumn": {
