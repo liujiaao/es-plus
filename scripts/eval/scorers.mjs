@@ -186,6 +186,13 @@ function virtualScrollEqual(gold, pred) {
   return virt(gold) === virt(pred) && engine(gold) === engine(pred)
 }
 
+/** 后端响应字段映射：整对象等值（未声明 ≡ null）。仅当 gold 声明了非空映射时才 applicable。 */
+function configTableOutEqual(gold, pred) {
+  const g = gold.tableOptions?.configTableOut ?? null
+  const p = pred.tableOptions?.configTableOut ?? null
+  return eq(g, p)
+}
+
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 
 /** mark-never-drop 的 LLM 侧对偶：gold 每个扩展点在 pred 同名 field 上必须也存在（不比内容）。 */
@@ -222,6 +229,11 @@ export const CAPABILITY_SCORERS = [
   { key: 'target', applicable: (g) => g.target !== 'vue3', pass: (g, p) => g.target === p.target },
   { key: 'mode', applicable: (g) => g.mode === 'sfc', pass: (g, p) => g.mode === p.mode },
   { key: 'virtualScroll', applicable: (g) => g.tableOptions?.virtual === true || ['virtual', 'vxe'].includes(g.tableOptions?.engine), pass: virtualScrollEqual },
+  {
+    key: 'configTableOut',
+    applicable: (g) => !!(g.tableOptions?.configTableOut && Object.keys(g.tableOptions.configTableOut).length),
+    pass: configTableOutEqual,
+  },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 

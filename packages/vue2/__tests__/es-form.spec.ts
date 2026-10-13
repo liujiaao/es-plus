@@ -375,3 +375,31 @@ describe('EsForm(vue2) - 远端字段选项重载（响应式整体替换）', (
     expect(findAllByName(vm, 'ElOption').map((o) => o.$props.label)).toEqual(['新选项'])
   })
 })
+
+// 回归：字段级 permissionValue 此前 schema+prompt+scorer 都认，组件 formItemListFilter 却只按
+// isHidden 过滤 → 无权限的字段照样渲染（假承诺）。接线后应与 isHidden 同层被过滤。
+describe('EsForm(vue2) - 字段级 permissionValue 门控', () => {
+  const gateItems = () => [
+    { prop: 'name', label: '姓名', formtype: 'Input' as const, span: 24 },
+    { prop: 'salary', label: '工资', formtype: 'InputNumber' as const, span: 24, permissionValue: 'salary:view' },
+  ]
+
+  it('无权限的字段不渲染，有权限的字段正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const vm = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+      await vm.$nextTick()
+      const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+      expect(labels).toEqual(['姓名'])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const vm = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+    await vm.$nextTick()
+    expect(findAllByName(vm, 'ElFormItem')).toHaveLength(2)
+  })
+})

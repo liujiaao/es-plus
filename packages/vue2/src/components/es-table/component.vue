@@ -734,7 +734,8 @@ export default defineComponent({
     // 和做 width→minWidth 转换，最后返回副本数组。computed 缓存让副本只在 columnRowList
     // 变化时重新生成。
     const filteredColumns = computed(() => {
-      const originals = columnRowList.value.filter((item) => !item.hidCol)
+      // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+      const originals = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
       const list = originals.map((el) => {
         const col = { ...el } as TableColumn
         if (

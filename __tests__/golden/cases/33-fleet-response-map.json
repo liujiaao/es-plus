@@ -1,0 +1,31 @@
+{
+  "nl": "Vue2 车队管理：查询有车牌号、车辆类型（货车/客车/特种）；表格展示车牌号、车辆类型、里程、年检到期；支持新增、编辑、删除。后端接口返回 { data: [...], total: N }。",
+  "nlEn": "Vue2 fleet management: query by plate number and vehicle type (truck/bus/special); the table shows plate number, vehicle type, mileage, and inspection due date; supports add, edit, and delete. The backend endpoint returns { data: [...], total: N }.",
+  "fixedFields": ["plateNo", "vehicleType", "mileage", "inspectDue"],
+  "pinnedDims": ["propSet", "actions", "target", "configTableOut"],
+  "config": {
+    "name": "FleetManage",
+    "apiUrl": "/api/fleets",
+    "target": "vue2",
+    "fields": [
+      { "prop": "plateNo", "label": "车牌号", "formtype": "Input" },
+      {
+        "prop": "vehicleType",
+        "label": "车辆类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "货车", "value": "truck" },
+          { "label": "客车", "value": "bus" },
+          { "label": "特种", "value": "special" }
+        ]
+      },
+      { "prop": "mileage", "label": "里程", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "inspectDue", "label": "年检到期", "formtype": "DatePicker" }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "tableData": "data", "total": "total" }
+    }
+  },
+  "notes": "AI-08: { data, total } mapping on the vue2 target (vue2/schema)"
+}

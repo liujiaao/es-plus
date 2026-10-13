@@ -150,6 +150,8 @@ describe('NL_TO_CONFIG_FEWSHOT — 维度覆盖（few-shot 必须教全这些能
     'formLayout（表单布局）': () => cfgs.some((c) => c.formLayout !== undefined),
     'mode:sfc（单文件组件）': () => cfgs.some((c) => c.mode === 'sfc'),
     'tableOptions.virtual（虚拟滚动）': () => cfgs.some((c) => c.tableOptions?.virtual === true),
+    'tableOptions.configTableOut（后端响应字段映射）': () =>
+      cfgs.some((c) => c.tableOptions?.configTableOut !== undefined),
     '多弹窗 dialogs（新增/编辑不同表单）': () =>
       cfgs.some((c) => c.dialogs !== undefined && Object.keys(c.dialogs).length >= 2),
     'permissionValue（字段级可见性门控）': () => anyField((f) => f.permissionValue !== undefined),

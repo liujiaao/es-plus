@@ -38,51 +38,9 @@ import EsPlus from '../src/index'
 import EsCrudPage from '../src/components/es-crud-page/src/es-crud-page.vue'
 import EsTable from '../src/components/es-table/src/component.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
-
-// ─── 内存后端：唯一的 httpRequest 缝，路由靠 url，替代真实服务端 ───
-function createInMemoryBackend(seed: Array<Record<string, unknown>>) {
-  let store = seed.map((r) => ({ ...r }))
-  let nextId = Math.max(0, ...store.map((r) => Number(r.id) || 0)) + 1
-  const calls = { list: 0, create: 0, update: 0, remove: 0 }
-
-  const httpRequest = async (req: Record<string, any>) => {
-    const { url = '', formParams = {}, pageIndex = 1, pageSize = 10 } = req
-    if (url === '/api/create') {
-      calls.create++
-      store.push({ id: nextId++, ...formParams })
-      return { code: 0 }
-    }
-    if (url === '/api/update') {
-      calls.update++
-      const i = store.findIndex((r) => r.id === formParams.id)
-      if (i >= 0) store[i] = { ...store[i], ...formParams }
-      return { code: 0 }
-    }
-    if (url === '/api/delete') {
-      calls.remove++
-      store = store.filter((r) => r.id !== formParams.id)
-      return { code: 0 }
-    }
-    // 默认：列表查询（default configTableField 映射 records→total, rows→tableData）
-    calls.list++
-    const start = (Number(pageIndex) - 1) * Number(pageSize)
-    return { records: store.length, rows: store.slice(start, start + Number(pageSize)) }
-  }
-
-  return {
-    httpRequest,
-    calls,
-    get store() {
-      return store
-    },
-  }
-}
-
-// 在 document.body（弹窗 teleport 目标）内按可见文字找按钮
-function findButtonByText(root: ParentNode, text: string): HTMLButtonElement | null {
-  const btns = Array.from(root.querySelectorAll('button')) as HTMLButtonElement[]
-  return btns.find((b) => (b.textContent || '').trim().includes(text)) || null
-}
+// 内存后端 + 按文字找按钮，与 generated-runtime.spec.ts（挂生成物）**共用同一实现**：
+// 两边若各写一份，后端语义一分叉，两边的绿就没有可比性。见 runtime-harness.ts。
+import { createInMemoryBackend, findButtonByText } from './runtime-harness'
 
 let backend: ReturnType<typeof createInMemoryBackend>
 

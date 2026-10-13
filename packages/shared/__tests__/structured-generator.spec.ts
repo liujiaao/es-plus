@@ -250,6 +250,35 @@ describe('generateFromConfig — sfc mode', () => {
     expect(result.code).toContain("permissionValue: 'user:delete'")
   })
 
+  // 字段级 permissionValue ≠ 按钮级 permissions：它把「某些列/字段仅特定权限可见」落到 es-table
+  // 的 filteredColumns / es-form 的 formItemListFilter（此前 schema+prompt+scorer 都认它，组件与
+  // 生成器却都没有 → 静默丢弃）。这里锁住两条发射路径。
+  it('emits field-level permissionValue on columns in SFC mode', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        { prop: 'salary', label: '基本工资', formtype: 'InputNumber' as const, inQuery: false, permissionValue: 'salary:view' },
+      ],
+    })
+    expect(result.code).toContain("permissionValue: 'salary:view'")
+  })
+
+  it('emits field-level permissionValue into schema-mode JSON', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        { prop: 'salary', label: '基本工资', formtype: 'InputNumber' as const, inQuery: false, permissionValue: 'salary:view' },
+      ],
+    })
+    // 列（buildTableColumn）+ 弹窗表单项（buildFormItem）都写进 pageSchema JSON
+    expect(result.code).toContain('"permissionValue": "salary:view"')
+    expect(result.wrapperCode).toBeDefined()
+  })
+
   it('includes render expressions inline', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc' })
     expect(result.code).toContain("render: (_, { row }) => h(ElTag")
@@ -522,6 +551,42 @@ describe('tableOptions passthrough', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
     const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
     expect(schema.tableOptions.tabHeight).toBeUndefined()
+  })
+
+  // ── configTableOut（AI-08）─────────────────────────────────────────────────
+  // 后端响应字段映射。与 engine 同构：Zod 的 tableOptions 是普通 z.object（无
+  // passthrough），不在那里声明就会被剥掉 → NL→config 走一遍静默丢映射。
+  // 组件读的是 options.configTableOut，schema 模式发进 schema.tableOptions。
+  it('passes configTableOut into schema tableOptions（NL→config 路径）', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      tableOptions: { configTableOut: { tableData: 'list', total: 'totalCount' } },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.configTableOut).toEqual({ tableData: 'list', total: 'totalCount' })
+  })
+
+  it('omits configTableOut when not configured（不给既有配置添新键）', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.configTableOut).toBeUndefined()
+  })
+
+  // SFC 模式的 options 是手搓块（非 JSON.stringify）——漏发即静默丢弃（WS-5）。
+  // 逐键用 q() 转义（响应键名是用户数据，不是 JS 源）。
+  it('emits configTableOut into the sfc options object', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      tableOptions: { configTableOut: { tableData: 'data', current: 'pageIndex' } },
+    } as any)
+    expect(result.code).toContain("configTableOut: { tableData: 'data', current: 'pageIndex' }")
+  })
+
+  it('does not emit configTableOut in sfc mode when not configured', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'sfc' })
+    expect(result.code).not.toContain('configTableOut')
   })
 
   it('warns that vue2 ignores virtual scrolling', () => {

@@ -327,3 +327,39 @@ describe('EsForm - 顶层快捷字段注入（placeholder / clearable / disabled
     expect(wrapper.findComponent(ElInput).props('placeholder')).toBe('attrs 优先')
   })
 })
+
+describe('EsForm - 字段级 permissionValue 门控', () => {
+  // 回归：字段级 permissionValue 此前 schema+prompt+scorer 都认，组件 formItemListFilter 却只按
+  // isHidden 过滤 → 无权限的字段照样渲染（假承诺）。接线后应与 isHidden 同层被过滤。
+  it('无权限的字段不渲染，有权限的字段正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const wrapper = mountForm({
+        model: { name: '', salary: '' },
+        formItemList: [
+          { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },
+          { prop: 'salary', label: '工资', formtype: 'InputNumber', span: 24, permissionValue: 'salary:view' }
+        ]
+      })
+      await nextTick()
+      const text = wrapper.text()
+      expect(text).toContain('姓名')
+      expect(text).not.toContain('工资')
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const wrapper = mountForm({
+      model: { name: '', salary: '' },
+      formItemList: [
+        { prop: 'name', label: '姓名', formtype: 'Input', span: 24 },
+        { prop: 'salary', label: '工资', formtype: 'InputNumber', span: 24, permissionValue: 'salary:view' }
+      ]
+    })
+    await nextTick()
+    expect(wrapper.text()).toContain('工资')
+  })
+})

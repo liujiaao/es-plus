@@ -443,6 +443,31 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['view', 'delete'],
     },
   },
+  {
+    nl: '资金台账：查询有账户名；表格展示账户名、余额、币种、更新时间；支持新增、编辑、删除。注意列表接口返回的是 { list: [...], totalCount: N }，请按此做响应字段映射。',
+    reasoning:
+      '后端列表响应是 { list, totalCount } 而非常规的 { rows, records } → 在 tableOptions.configTableOut 做平铺键映射 { tableData: "list", total: "totalCount" }（每个值是响应里的平铺键名，不是深层路径；只声明要改的键，其余保持默认）。余额是数值 → InputNumber；币种是有限枚举 → Select + dataOptions；更新时间系统生成 → inForm:false。',
+    config: {
+      name: 'LedgerManage',
+      apiUrl: '/api/ledgers',
+      fields: [
+        { prop: 'accountName', label: '账户名', formtype: 'Input' },
+        { prop: 'balance', label: '余额', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'currency',
+          label: '币种',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '人民币', value: 'CNY' },
+            { label: '美元', value: 'USD' },
+          ],
+        },
+        { prop: 'updatedAt', label: '更新时间', formtype: 'DatePicker', inQuery: false, inForm: false },
+      ],
+      tableOptions: { configTableOut: { tableData: 'list', total: 'totalCount' } },
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
 ]
 
 /**
@@ -474,6 +499,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Toolbar button placement uses position: "left" | "right" — all three renderers read it (the renderer types mark code as deprecated). code:1 = left / code:2 = right is a legacy alias that is still accepted and auto-normalized.',
     'Bind each button to its behavior by semantics, matching the library defaults: dialog buttons (add / edit / view) use `dialogKey` (the "新增" toolbar button → dialogKey:"add" opens the built-in add dialog; row 编辑 → dialogKey:"edit", 查看 → dialogKey:"view"); side-effect buttons (export / import) use `actionType` ("导出" → actionType:"export", "导入" → actionType:"import"); the row delete button uses `confirm`. NEVER put actionType:"add" on an add button — only `dialogKey` opens the built-in dialog, so an actionType:"add" button does nothing.',
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
+    'When the list response does not use the library default shape ({ rows, records }), declare the mapping declaratively in `tableOptions.configTableOut` — a FLAT path object { total?, tableData?, pageSize?, current? } whose VALUES are the response key names, e.g. a backend returning { list, count } → { tableData: "list", total: "count" }. Do NOT model response mapping any other way; it is a plain object, never a callback.',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',

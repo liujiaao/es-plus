@@ -477,7 +477,8 @@ const {
 
 // ─── 过滤列 ─────────────────────────────────────────
 const filteredColumns = computed(() => {
-  return columnRowList.value.filter((item) => !item.hidCol)
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  return columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
 })
 
 // M-4: vxe 引擎专用列（注入 operate 列的 btns→render；普通列注入 emptyPlaceholder formatter，对齐 a-table 路径行为）

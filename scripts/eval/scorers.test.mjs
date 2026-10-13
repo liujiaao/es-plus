@@ -36,7 +36,7 @@ const BASE_INPUT = {
   mode: 'sfc', //              → mode 维度 applicable
   i18n: true, //               → i18n 维度 applicable
   typescript: true,
-  tableOptions: { virtual: true }, // → virtualScroll 维度 applicable
+  tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' } }, // → virtualScroll + configTableOut 维度 applicable
   formLayout: { span: 12 }, //  → formLayout 维度 applicable
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
@@ -94,6 +94,7 @@ const PERTURB = {
   target: (c) => { c.target = 'vue3' },
   mode: (c) => { c.mode = 'schema' },
   virtualScroll: (c) => { c.tableOptions.virtual = false },
+  configTableOut: (c) => { c.tableOptions.configTableOut.tableData = 'changed' },
   extPoints: (c) => { delete c.fields[3].formatter },
 }
 

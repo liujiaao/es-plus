@@ -56,6 +56,11 @@ interface TableOpts {
   estimatedRowHeight?: number
   overscanCount?: number
   rowClassName?: string
+  /**
+   * 后端列表响应的字段映射（默认 total←records / tableData←rows）。
+   * 组件读 `options.configTableOut`，仅接受平铺键：total / tableData / pageSize / current。
+   */
+  configTableOut?: { total?: string; tableData?: string; pageSize?: string; current?: string }
 }
 
 export interface StructuredGenerateResult {
@@ -189,6 +194,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.estimatedRowHeight ? { estimatedRowHeight: tOpts.estimatedRowHeight } : {}),
     ...(tOpts.overscanCount ? { overscanCount: tOpts.overscanCount } : {}),
     ...(tOpts.rowClassName ? { rowClassName: tOpts.rowClassName } : {}),
+    ...(tOpts.configTableOut ? { configTableOut: tOpts.configTableOut } : {}),
   }
 
   // Query form layout (minFoldRows for collapse)
@@ -492,6 +498,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   }
   if (tOpts.engine) lines.push(`  engine: ${q(tOpts.engine)},`)
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)
+  // 后端响应字段映射：SFC 的 options 是手搓块（非 JSON.stringify），逐键用 q() 转义
+  // —— 与 schema 模式同等地「发射而非静默丢弃」（WS-5）。
+  if (tOpts.configTableOut) {
+    const cto = tOpts.configTableOut
+    const ctoParts = (['total', 'tableData', 'pageSize', 'current'] as const)
+      .filter((k) => cto[k])
+      .map((k) => `${k}: ${q(cto[k])}`)
+    if (ctoParts.length) lines.push(`  configTableOut: { ${ctoParts.join(', ')} },`)
+  }
   lines.push(`}`)
 
   // delete handler
@@ -921,6 +936,9 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
 
   if (field.dataOptions) item.dataOptions = field.dataOptions
   if (field.apiParams) item.apiParams = field.apiParams
+  // 字段级权限编码：字符串，可直接进 schema 模式 JSON；运行时由 es-form 的 formItemListFilter
+  // 按全局 permission(code) 过滤（无权限则整个表单项不渲染）。按钮级 permissions 是另一回事。
+  if (field.permissionValue) item.permissionValue = field.permissionValue
 
   if (context === 'form') {
     const rules: any[] = []
@@ -967,6 +985,9 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<str
   // only renders that slot when the column declares scopedSlots.customRender,
   // so wire it up here — otherwise the emitted template is dead code.
   if (field.render) col.scopedSlots = { customRender: `column-${field.prop}` }
+  // 字段级权限编码：字符串，可直接进 schema 模式 JSON；运行时由 es-table 的 filteredColumns
+  // 按全局 permission(code) 过滤（无权限则该列不渲染）。与静态 hidCol 同层。
+  if (field.permissionValue) col.permissionValue = field.permissionValue
   return col
 }
 
@@ -990,6 +1011,10 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   if (field.align) parts.push(`align: ${q(field.align)}`)
   if (field.fixed) parts.push(`fixed: ${typeof field.fixed === 'boolean' ? field.fixed : q(field.fixed)}`)
   if (field.ellipsis) parts.push(`showOverflowTooltip: true`)
+  // 字段级权限编码：字符串权限码（非表达式），经 q() 转义后内联 —— 运行时由 es-table 的
+  // filteredColumns 按全局 permission(code) 过滤（无权限则该列不渲染）。刻意不过 assertEmittableExpr：
+  // 它是权限码不是 JS 源码。与静态 hidCol 同层。
+  if (field.permissionValue) parts.push(`permissionValue: ${q(field.permissionValue)}`)
   // formatter/render 是源码扩展点，原样内联。发射前过语法闸（assertEmittableExpr）：
   // 畸形字符串内联进对象字面量会让整个 SFC 编译失败，而本函数不抛错 —— 坏码会静默
   // 产出。闸不过就**省略该扩展点 + 降级告警**（与 schema 模式「emit unformatted + warn」

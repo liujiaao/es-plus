@@ -509,6 +509,8 @@ const formItemListFilter = computed(() => {
     .map((it) => (it ? { ...normalizeFormItem(it), dataOptions: it.dataOptions || [] } : null))
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
+      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+      if (!checkPermission(it.permissionValue)) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)
       }

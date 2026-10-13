@@ -475,6 +475,8 @@ export default defineComponent({
         .map((it) => (it ? { ...normalizeFormItem(it), dataOptions: it.dataOptions || [] } : null))
         .filter((it): it is FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> } => {
           if (!it) return false
+          // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+          if (!checkPermission(it.permissionValue)) return false
           // 字段名兼容：原 es-eui 用 `isHiden`（少一个 d，原始拼写错误），
           // 后续规范化为 `isHidden`。两者都接受，原始拼写优先（保持旧文档案例可直接运行）。
           const legacyHide = (it as unknown as { isHiden?: unknown }).isHiden

@@ -85,7 +85,7 @@ virtualScroll / target / mode；且仓库里**没有** committed 的 `last-accur
 ### AI-03 — runtime tier：mount 生成出来的 schema · `M`
 - **Why**：现在 runtime 测试挂的是**手写** schema——等于没测生成物真能渲染/交互。golden 的 `vite build` 只证明「能编译」，不等于「能跑」。
 - **验收**：至少对 golden 子集，把生成的 pageSchema mount 起来跑冒烟断言（能渲染、表单能填、弹窗能开）。
-- **状态**：⬜ 未落地（**P0 唯一未完项**）。「能编译」已证、「能跑」仍缺。归入 Wave 3 收尾；与 AI-18 的零代码联动冒烟合并做。
+- **状态**：✅ 已落地（2026-10-13，vue3）。新增 `packages/vue3/__tests__/generated-runtime.spec.ts`（11 例）+ 共用 harness `runtime-harness.ts`：golden config → `generateFromConfig(mode:schema)` → 提取 `pageSchema` 对象（与 `score-golden.mjs` checkSyntax **同一条正则**，避免一处认的产物另一处认不出）→ 挂**真实** EsCrudPage/EsTable/EsForm/useDialog + 内存后端，断言「能渲染（拉数+回写 data-source+行文本）/ 表单能填且值随 formParams 下发 / 弹窗能开」。覆盖三种装配路径：01 legacy actions 模式、05 显式 dialogs 新模式、13 多 formtype；另单列 golden-30 断言**列级 permissionValue 的运行时门控**（AI-20 的运行时见证：无权限列不渲染、有权限正常渲染——证明是门控而非生成物根本没这列）。`crud-runtime.spec.ts` 改为复用同一 harness（后端契约不再可能分叉）。**踩坑记录**：`EsPlus` 的 install 会执行 `configureEsPlus(options)`（洗掉先前配置）且 `provide('$EsPlus', {...options})`，故全局 `permission` 必须经 `[[EsPlus, {permission}]]` 插件选项传入，先 `configureEsPlus()` 再挂载会被覆盖。golden-05「显式 dialogs 无 toolbarBtns」下工具栏**不**生成「新增」（组件既有行为，非缺陷），其弹窗靠行内「编辑」打开。**范围**：本轮 vue3（Tier-1 已证生成物可跑）；antdv（Tier-1 已有 crud-runtime 脚手架）留作同构扩展。**P0 至此全清**。
 
 ### AI-04 — commit 真实 accuracy 数字 + README 徽章 · `S`（依赖 AI-01）
 - **Why**：没有数字的「AI 原生」是营销。
@@ -133,6 +133,7 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 ### AI-08 — `configTableOut` 后端字段映射 · `M`
 - **Why**：官方 headline feature，schema 里**完全没有**；中心度第一（数据接线），L3 case7「任意后端适配」头牌。
 - **验收**：schema 建模出参字段映射为**路径对象**（total/data/pageSize/current，对标 ProTable `postData` / Amis `api.adaptor`）；复杂入参回调（listenToCallBack/apiParams.model）归 Tier-2/3；生成代码接上（`field-resolver.ts:273`）；golden 覆盖（≥8 例）。
+- **状态**：✅ 已落地（2026-10-13）。**落点唯一且经三处源码核对**：`configTableOut` 在库的每一层都属 **table options**——core `TableOptions`（`types.ts:680`）、三端本地 `TableOptions`（`vue3/types/index.ts:243` 等）、组件读 `props.options.configTableOut`（`vue3/es-table/src/component.vue:295`）、**JSON 单源** `table-options.schema.json` 早已声明它（4 键 + `additionalProperties:true`）——**唯一缺口是 AI config 的 Zod**（`tableOptions` 是普通 `z.object` 无 passthrough，直接在关卡处把它 strip）。故建模为 **AI `tableOptions.configTableOut`**（与 `engine`/`virtual`/`rowClassName` 同构，非顶层）。改动：① schema 加 4 键平铺路径对象；② 生成器 `TableOpts` + **两处 emit**（schema 的 `schema.tableOptions`；SFC 手搓 `options` 块逐键 `q()` 转义——SFC 不发即静默丢弃，违反 WS-5）；③ few-shot 加 `LedgerManage` shot + 系统规则行 + 覆盖守卫；④ scorer 新增 `configTableOut` 维度（整对象等值）+ meta-eval base/扰动。**两处会咬人的陷阱已排除**：(a) 组件三端**本地** `checkQueryFields` 用 `['total','pageSize','current','tableData']` 且只校验「已存在的键」→ 偏映射（如 `{tableData:'list'}`）合法（core 的 `checkQueryFields` 要 `listData`，是 form 侧 `configFormOut` 用的，**不是**这条路径）；(b) `CrudPageSchema.tableOptions?: Partial<TableOptions>` 已含 `configTableOut` → 生成的 `pageSchema` 字面量在 Tier-0 `vite build` 无 excess-property 报错，**三端渲染包零类型改动**。golden：新增 8 例（`31`–`38`，跨 vue3×4/vue2×2/antdv×2 + schema×6/sfc×2，键子集含 4 键全映射 / 单键 override / `{data,total}` / `{list}` 无 total 等）——`configTableOut 8 case(s)` **恰好顶格**；`test:golden` 38/38、`check:scorers` OK。测试：生成器 spec 4 例（schema 发/不发 + sfc 发/不发）+ **运行时见证**（`generated-runtime.spec.ts`：只吐 `{list, totalCount}` 的后端仍渲染出行——把「发射了映射」升级为「映射真的驱动数据接线」，与 AI-20 同构）。全量 2384 测试绿、typecheck 绿。**范围**：surfaces 前门（`generate_crud`）的 `input` 目前**不含** tableOptions（它连 `virtual`/`engine` 也不带走），故 `configTableOut` 暂不入前门——留作后续（前门补 tableOptions 时一并带）。
 
 ### AI-09 — 高级表格特性 epic（group header / row-expand / tree table / 可编辑单元格）· `L`–`XL`
 - **Why**：L4 头牌「超库上限」，当前只能靠 render 字符串硬塞。对标 AG Grid 列定义（children/treeData/masterDetail/editable）全声明式。
@@ -147,7 +148,9 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 
 ### AI-18 — 生成器恒吐 form↔table provide/inject 契约 · `S`–`M`
 - **Why**：零事件代码联动靠 EsForm 物理嵌在 EsTable 默认插槽 + `triggerEvent:true`（why-es-plus §3.2 点名 AI 常误造 event-bus/Pinia）。隐式结构契约，模型「看不见」。
-- **验收**：schema 模式生成物恒含正确嵌套 + triggerEvent；golden 加「零代码联动」冒烟断言（配合 AI-03）。
+- **复核更正（2026-10-13，三端源码核对）**：原表述「**schema 模式**生成物恒含正确嵌套 + triggerEvent」**方向有误**。schema 模式生成物是**纯 JSON schema**（`export const pageSchema = {...}`），既无模板也无嵌套——装配由 **EsCrudPage 组件内部**完成：其模板**恒为** `<es-table><es-form :form-item-list="schema.formItems" :config-btn="mergedFormBtns"/></es-table>`，且 `mergedFormBtns` 的查询/重置**恒带** `triggerEvent:true`（`es-crud-page.vue:12-20,189-206`）。**嵌套 + `triggerEvent` 只出现在 SFC 模式与 `queryBtns` 发射**（`structured-generator.ts:342-357,436-437`）。
+- **验收（修正后）**：SFC 模式生成物恒含嵌套 + `triggerEvent`（已满足）；schema 模式的联动契约由 **EsCrudPage 承载**，以**运行时断言见证**——即 AI-03 的「点查询 → 表格重载且值随 formParams 下发」（已落地）。
+- **状态**：✅ 契约成立且已有运行时见证（2026-10-13，并入 AI-03 的 `generated-runtime.spec.ts`）。schema 模式**无需发射层改动**（嵌套是组件内建能力），故本项不做生成器改动。
 
 ### AI-19 — scaffold_page + conventions 教 `app.use(ESPlus)` 全局装配 · `S`
 - **Why**：permissionValue / labelKey 只在 main.ts 装配 `{permission, t, httpRequest}` 后才生效——跨文件依赖，模型常漏。
@@ -160,7 +163,15 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 ### AI-10 — 编译检查 render/formatter/permissionValue 字符串 · `M`
 - **Why**：现在是不经编译检查的 JS 字符串——拼错的变量名能骗过全部 341 测试、运行时才炸。
 - **验收**：这些片段喂给 esbuild transform 做 parse 级校验。**AI-16 是 formatter/permissionValue 的终局形态；render(→VNode) 永留本层。**
-- **状态**：🟡 ~2/3 已落地。render+formatter 已走 esbuild parse-gate（`shared/src/codegen-escape.ts:186`，接 `structured-generator.ts:997`），语义是**降级+警告**（优于原验收硬报错，保留此语义）。**残余**：① permissionValue 未过门；② schema 模式内联 render/formatter 仍缺（当前仅 SFC 列路径）。归入 Wave 3 收尾。
+- **状态**：🟡 ~1/2 已落地。render+formatter 已走 esbuild parse-gate（`shared/src/codegen-escape.ts:186`，接 `structured-generator.ts:997`），语义是**降级+警告**（优于原验收硬报错，保留此语义）。**Wave 3 收尾复核（2026-10-13）**：
+  - ① ~~permissionValue 未过门~~ → **误判，已更正**。`permissionValue` 是**权限码字符串**（core `types.ts:257`，由全局 `permission(code)` 消费，非 JS 表达式），esbuild parse-gate 对它**不适用**（校验一个权限码没有意义）。复核顺带挖出**真缺陷**：字段级 `permissionValue` 是**幻影能力**——prompt 教学（`ai-nl-to-config-prompt.ts:363`）+ surface schema（`_fragment-shapes.ts:93`）+ scorer（`scorers.mjs:189` `extPoints`）三处都认，但**组件契约与生成器都没接** → LLM 产出被静默丢弃、green eval、运行时零效果（正是本库「mark, never drop」原则禁止的）。已修，见 **AI-20**。
+  - ② schema 模式内联 render/formatter 仍缺（当前仅 SFC 列路径）→ **结构性 JSON 限制**（函数无法内联进纯 JSON），已由标记扩展点 + 降级告警缓解，非接线缺口；终局归 AI-16（表达式 DSL）/ AI-11（模式对齐）。
+  - 附：`permissionValue` 现行语义 = 权限码；AI-16 拟将其收窄为 bool 表达式属**未来形态**，届时另行迁移（`permissionValue(bool)` 与 `permission(code)` 不是同一契约）。
+
+### AI-20 — 字段/列级 permissionValue 端到端接线（修 AI-10 暴露的幻影能力）· `M`
+- **Why**：AI-10 收尾复核挖出——字段级 `permissionValue` 三处（prompt 教学 / surface schema / eval scorer）都认，**组件契约与生成器都没接**：LLM 按提示产出 → schema 校验通过 → scorer 记分 → 生成器静默丢弃 → 运行时零效果。是「mark, never drop」明令禁止的静默丢弃（同 `tableBtns actionType` / `operationColumn` 的 scorer 建模坑同构）。
+- **验收**：字段级 `permissionValue` 全链路生效——类型契约声明（core + 三端）+ 三端 es-form `formItemListFilter` / es-table `filteredColumns` 与 `isHidden`/`hidCol` 同层过滤 + generator 全模式 emit；未配全局 `permission` 时一律放行（向后兼容）。
+- **状态**：✅ 已落地（2026-10-13）。类型：core `types.ts`（`FormItemOption` + `TableColumn`）、vue3 / adapter-antdv 局部类型各加 `permissionValue?: string`（vue2 复用 core 类型）。接线：`vue3/vue2/adapter-antdv` 的 `es-form` + `es-table` 各 2 处 = 6 处，均复用既有 `checkPermission`（`!pvalue → true`，未配全局 `permission` 放行）。生成器：`shared/src/structured-generator.ts` 3 个 emit 点（`buildFormItem` / `buildTableColumn` / `buildTableColumnSFC`），用 `q()` 转义（权限码非 JS 源，刻意不过 esbuild）。测试：三端 es-form/es-table 各 2 例 + shared 生成器 2 例（SFC 列 + schema JSON）全绿。golden：新增 `30-payroll-field-permission.json`（新域 PayrollManage，与 few-shot 域 SalaryManage 不碰撞；`pinnedDims:["extPoints:netPay"]`）——`score-golden` 30/30、`check:scorers` OK（免费确定性门禁）。向后兼容：仅当 field 带 `permissionValue` 才 emit → 既有 29 例生成物逐字节不变（golden-04 的 permissionValue 是**按钮级**，不受影响）。
 
 ### AI-11 — SFC-mode ↔ schema-mode 特性对齐 · `M`
 - **Why**：SFC 路径当前功能更少，两条路不等价会让 `mode` 选择变成能力陷阱。
@@ -170,6 +181,7 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 ### AI-12 — `get_component_api` 扩到 EsDialog / EsCrudPage / vxe · `S`–`M`
 - **Why**：覆盖不全，LLM 写 render 字符串时查不到真实 API，只能凭空捏造 prop/slot。当前仅 EsForm/EsTable/useDialog 有文档，EsDialog/EsCrudPage/SvgIcon 走占位分支。
 - **验收**：三个组件族的 API 可查；AI-15 依赖它。归入 Wave 3（低成本直接抬接地准确率）。
+- **状态**：✅ 已落地（2026-10-13）。新增 `docEsDialog` / `docEsCrudPage` / `docSvgIcon`（三端 per-target 分支：antdv 独有的 `iconName`/`iconClass?`、`title`/`default`/`footer` 插槽、**无 `open` 事件**；vue3/vue2 的 required `iconClass`）；`docEsTable` 追加 `## vxe engine — options.engine:'vxe'` 段（激活方式 + 安装提示 + `VxeOnlyOptions` + `vxeConfig`/`vxeOn` 逃生口 + vxe-only 实例方法 + 三条 gotchas）；顺带修正 `docUseDialog` 里**失实**的 `## Dialog Instance` 段（旧文写 `registerRef`/`getRefs`/`setLoading` 挂在 dialog 实例上——实为 `render` 上下文产物、`setLoading` 根本不存在；改为真实的 `{instance, close, destroy}` + 可直呼 `dialog.close()/dialog.destroy(cacheKey?)`，见 `use-dialog.ts:238-262`）。新增 spec `__tests__/get-component-api.spec.ts`（38 例）：驱动**真实 handler**，钉 6 组件 × 3 target 的良构性（非空 / 平衡围栏 / 无 `\n`&#124;`` \` `` 泄漏）+ 各 per-target 分支 + vxe 段 + EsCrudPage 全 emits/exposed/schema 键；已用 mutation（重注 `\n`）验证该守卫会咬（2 红）。全部逐条对三端源码复核（`engine:'vxe'` 三端皆有 `vxe-engine.vue`、install-hint 文案、`refresh/reload→commitProxy` 仅 proxy 模式、`editConfig→keepSource` 自动、antdv `defineExpose({close,closed,toggleFullscreen,doClose})`、CrudPage 7 exposed + 11 emits、SvgIcon 解析 `iconClass&#124;&#124;iconName`）。typecheck + 156 测试全绿。
 
 ---
 
@@ -211,8 +223,8 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 |----|------|------|
 | **Wave 1** | ✅ 已完成：AI-01 + AI-02 + AI-05 + AI-04（PR-1~4；AI-17 显式推迟） | 先让分数可信、再用低成本 few-shot 把分抬起来。 |
 | **Wave 2** | ✅ 已交付：信任地基（ingest / refine / validate / from_config 前门 / validateAndRepair / scoped+收敛） | 占回「Wave 2」号位（实际交付即此，消除与 schema 表达力撞号）。 |
-| **Wave 3 · 对齐+收尾**（阶段 0） | 本次 ROADMAP 重编 → AI-10 收尾（补 permissionValue 门）→ AI-12（EsDialog/EsCrudPage/vxe API）→ AI-03（runtime mount，并 AI-18 联动冒烟） | 零风险、消除方向冲突、AI-12 当场抬准确率接地。 |
-| **Wave 4 · 最高频声明式缺口**（阶段 1，Tier-1） | AI-08 configTableOut（响应映射路径对象）→ AI-06 isHidden（声明式条件）+ golden 扩 L3/L4 | 中心度第一（数据接线）+ 最刺眼缺口；真正的「全场景」第一步。 |
+| **Wave 3 · 对齐+收尾**（阶段 0） | ~~本次 ROADMAP 重编 → AI-10 收尾（补 permissionValue 门）~~ ✅ → ~~AI-12（EsDialog/EsCrudPage/vxe API）~~ ✅ → ~~AI-03（runtime mount，并 AI-18 联动冒烟）~~ ✅ | 零风险、消除方向冲突、AI-12 当场抬准确率接地。AI-10 收尾落为 **AI-20**（字段级 permissionValue 端到端接线）+ 该条残① 误判更正。AI-03 落地即 **P0 全清**；顺带源码核对更正 AI-18 的「schema 模式发射嵌套」错误前提（嵌套是 EsCrudPage 内建，非生成器发射）。 |
+| **Wave 4 · 最高频声明式缺口**（阶段 1，Tier-1） | ~~AI-08 configTableOut（响应映射路径对象）~~ ✅ → AI-06 isHidden（声明式条件）+ golden 扩 L3/L4 | 中心度第一（数据接线）+ 最刺眼缺口；真正的「全场景」第一步。AI-08 已落地（schema/generator/前门教学/scorer/golden 8 例/运行时见证）。 |
 | **Wave 5 · 高级表格 epic**（阶段 2，Tier-1） | AI-09 拆 4 子项（groups/tree/expand/editConfig）+ 先定扁平vs拆分架构 + golden L4 | L4 头牌「超库上限」，类型化结构可 golden。 |
 | **Wave 6 · 表达式 DSL 基石**（阶段 3，Tier-2） | AI-16（CEL，不含 render）→ AI-07（联动/computed）+ 收窄 formatter/permissionValue/isHidden | DSL 做底座，安全解锁联动，收敛逃生舱。 |
 | **横切**（贯穿 Wave 4–6） | AI-18 provide/inject 恒吐 + AI-19 全局装配教学 | 非 schema，守头牌「零代码联动」compile+runtime。 |

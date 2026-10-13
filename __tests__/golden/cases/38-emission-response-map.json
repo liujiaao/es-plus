@@ -1,0 +1,30 @@
+{
+  "nl": "用 Ant Design Vue 做排放监测：查询有监测点、污染物类型（废气/废水）；表格展示监测点、污染物类型、浓度、监测时间；支持新增、编辑、删除。后端返回 { data: [...], perPage: N }。",
+  "nlEn": "Ant Design Vue emission monitoring: query by monitoring point and pollutant type (waste-gas/waste-water); the table shows monitoring point, pollutant type, concentration, and monitored time; supports add, edit, and delete. The backend returns { data: [...], perPage: N }.",
+  "fixedFields": ["site", "pollutant", "concentration", "monitoredAt"],
+  "pinnedDims": ["propSet", "actions", "target", "configTableOut"],
+  "config": {
+    "name": "EmissionManage",
+    "apiUrl": "/api/emissions",
+    "target": "antdv",
+    "fields": [
+      { "prop": "site", "label": "监测点", "formtype": "Input" },
+      {
+        "prop": "pollutant",
+        "label": "污染物类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "废气", "value": "gas" },
+          { "label": "废水", "value": "water" }
+        ]
+      },
+      { "prop": "concentration", "label": "浓度", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "monitoredAt", "label": "监测时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "tableData": "data", "pageSize": "perPage" }
+    }
+  },
+  "notes": "AI-08: { tableData, pageSize } mapping (no total) on the antdv target (antdv/schema)"
+}

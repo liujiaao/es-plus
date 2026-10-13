@@ -95,6 +95,11 @@ export interface FormItemOption {
    */
   formItemOptions?: Record<string, unknown>
   width?: number | string
+  /**
+   * 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时整个表单项不渲染
+   * （在 es-form 的 `formItemListFilter` 里与 `isHidden` 同层过滤）。
+   */
+  permissionValue?: string
   [key: string]: unknown
 }
 
@@ -183,6 +188,8 @@ export interface TableColumn {
   groups?: TableColumn[]
   ellipsis?: boolean
   hidCol?: boolean
+  /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
+  permissionValue?: string
   type?: 'index' | 'selection' | 'expand'
   sortable?: boolean | 'custom'
   btns?: Array<{

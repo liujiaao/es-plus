@@ -417,7 +417,8 @@ const syncLocalPagination = () => {
 
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
-  const list = columnRowList.value.filter((item) => !item.hidCol).map((item) => ({ ...item }))
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  const list = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue)).map((item) => ({ ...item }))
   list.forEach((el) => {
     if (el.prop !== 'operate' && el.key !== 'operate' && (el.prop || el.key) && !el.formatter) {
       el.formatter = (row: Record<string, unknown>) => {

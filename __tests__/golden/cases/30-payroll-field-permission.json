@@ -1,0 +1,40 @@
+{
+  "nl": "计薪管理：查询有员工姓名、计薪月份；表格展示员工姓名、计薪月份、应发合计、实发合计；支持新增、编辑；只有拥有权限码 payroll:netpay:view 的人才能查看“实发合计”这一列。",
+  "nlEn": "Payroll management: query by employee name and payroll month; the table shows employee name, payroll month, gross total, and net total; supports add and edit; only users with permission code payroll:netpay:view can view the \"Net Total\" column.",
+  "fixedFields": ["netPay"],
+  "pinnedDims": ["extPoints:netPay"],
+  "config": {
+    "name": "PayrollManage",
+    "apiUrl": "/api/payrolls",
+    "fields": [
+      {
+        "prop": "employeeName",
+        "label": "员工姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "payrollMonth",
+        "label": "计薪月份",
+        "formtype": "DatePicker"
+      },
+      {
+        "prop": "grossPay",
+        "label": "应发合计",
+        "formtype": "InputNumber",
+        "inQuery": false
+      },
+      {
+        "prop": "netPay",
+        "label": "实发合计",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "permissionValue": "payroll:netpay:view"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "prerequisite：字段级可见性 → 列级 permissionValue 扩展点。extPoints:netPay 钉「实发合计」列必须挂 permissionValue（与按钮级 permissions 无关，是同一个 permission 函数、不同粒度）。"
+}

@@ -249,6 +249,17 @@ export const StructuredCrudConfigSchema = z.object({
       .optional()
       .describe('Buffer rows outside the visible area (vue3 / el-table-v2 only; default 2)'),
     rowClassName: z.string().optional().describe('Custom row CSS class name'),
+    configTableOut: z
+      .object({
+        total: z.string().optional(),
+        tableData: z.string().optional(),
+        pageSize: z.string().optional(),
+        current: z.string().optional(),
+      })
+      .optional()
+      .describe(
+        'Map the LIST API response onto table semantics when the backend does not use the default flat shape. Default mapping is { total: "records", tableData: "rows", pageSize: "pageSize", current: "pageNo" }. Each value is the FLAT response key (no deep paths — the component only reads top-level keys). e.g. a backend returning { list: [...], count: N } → { tableData: "list", total: "count" }. Only the keys you set are remapped; omit a key to keep its default.'
+      ),
   }).optional(),
   pagination: z.object({
     pageSize: z.number().int().default(10),

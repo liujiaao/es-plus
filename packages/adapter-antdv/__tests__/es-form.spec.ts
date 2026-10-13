@@ -265,3 +265,30 @@ describe('EsForm(ADV) - 嵌套 form 级规则', () => {
     }
   })
 })
+
+// 回归：字段级 permissionValue 此前 schema+prompt+scorer 都认，组件 formItemListFilter 却只按
+// isHidden 过滤 → 无权限的字段照样渲染（假承诺）。接线后应与 isHidden 同层被过滤。
+describe('EsForm(ADV) - 字段级 permissionValue 门控', () => {
+  const gateItems = () => [
+    { prop: 'name', label: '姓名', formtype: 'Input' as const, span: 24 },
+    { prop: 'salary', label: '工资', formtype: 'InputNumber' as const, span: 24, permissionValue: 'salary:view' },
+  ]
+
+  it('无权限的字段不渲染，有权限的字段正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const wrapper = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+      expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
+      expect(wrapper.text()).toContain('姓名')
+      expect(wrapper.text()).not.toContain('工资')
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const wrapper = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(2)
+  })
+})
