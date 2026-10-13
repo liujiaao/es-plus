@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick, reactive } from 'vue'
 import { FormItem as AFormItem, Input as AInput } from 'ant-design-vue'
 
 // 屏蔽重依赖：EsForm 会 import es-table 与 use-dialog，与 ESLint/单测无关，
@@ -290,5 +291,55 @@ describe('EsForm(ADV) - 字段级 permissionValue 门控', () => {
   it('未配置全局 permission 时一律放行', async () => {
     const wrapper = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
     expect(wrapper.findAllComponents(AFormItem)).toHaveLength(2)
+  })
+})
+
+// AI-06：声明式 isHidden（纯 JSON 条件）在 ADV 端同样生效且随 model 反应 ——
+// 组件层零逻辑改动，靠 core normalizeFormItem 在 formItemListFilter 里水合。
+describe('EsForm(ADV) - 声明式 isHidden 条件（AI-06）', () => {
+  const items = () => [
+    { prop: 'swapType', label: '申请类型', formtype: 'Input' as const, span: 12 },
+    {
+      prop: 'swapReason',
+      label: '调班原因',
+      formtype: 'Input' as const,
+      span: 12,
+      isHidden: { field: 'swapType', op: 'eq', value: 'rotate' },
+    },
+  ]
+
+  it('条件成立时隐藏，随 model 变化恢复显示', async () => {
+    const model = reactive({ swapType: 'rotate', swapReason: '' })
+    const wrapper = mountForm({ model, formItemList: items() })
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('调班原因')
+
+    model.swapType = 'duty'
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(2)
+    expect(wrapper.text()).toContain('调班原因')
+  })
+
+  it('条件数组（AND）全部成立才隐藏', async () => {
+    const model = reactive({ a: 1, b: false })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        {
+          prop: 'note',
+          label: '说明',
+          formtype: 'Input' as const,
+          span: 24,
+          isHidden: [{ field: 'a', op: 'eq' as const, value: 1 }, { field: 'b', op: 'falsy' as const }],
+        },
+      ],
+    })
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(0)
+
+    model.b = true
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
   })
 })

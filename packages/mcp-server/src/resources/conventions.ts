@@ -330,10 +330,18 @@ Prefer generating CrudPageSchema JSON + wrapper SFC over full SFC mode:
 - Schema is pure JSON (no render functions) — easy to validate and store
 
 ## Extension Points (business logic the schema can't express)
-The declarative config covers structure (fields, actions, dialogs, layout). Some
-requirements — conditional display, computed cells, permission gates, custom
-controls — cannot be expressed as pure JSON. The contract is **mark, never drop**:
+The declarative config covers structure (fields, actions, dialogs, layout) and
+**form-scope conditional visibility** (\`isHidden\`, below). Some requirements —
+computed cells, permission gates, custom controls — cannot be expressed as pure
+JSON. The contract is **mark, never drop**:
 
+- **\`isHidden\`** (FieldConfig — **not** an extension point: it's PLAIN JSON DATA,
+  not a code string): a declarative visibility condition \`{ field, op?, value? }\`
+  or an array of them (AND), where the field is HIDDEN while the condition holds.
+  \`field\` is another field path in the same form; \`op\` ∈ eq (default) / ne / in /
+  nIn / empty / notEmpty / truthy / falsy. Use this for "show field X only when Y
+  is Z" — it applies to the query/add/edit forms, NOT the table column. Do NOT
+  reach for \`formatter\`/\`render\` for visibility.
 - **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
   cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
   inline in SFC mode; carried through in schema mode.

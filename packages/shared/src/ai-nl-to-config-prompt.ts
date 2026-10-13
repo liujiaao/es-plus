@@ -468,6 +468,38 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'edit', 'delete'],
     },
   },
+  {
+    nl: '退款单管理：查询条件有退款单号和订单号；表格展示退款单号、订单号、退款金额、退款方式、退款原因；支持新增、编辑、删除。新增/编辑时，退款原因只在退款方式为「部分退款」时才需要填写。',
+    reasoning:
+      '「只在…时才需要填写」= 条件显隐，且是**反相**的：字段在「退款方式 ≠ 部分退款」时隐藏，所以在退款原因字段上写 `isHidden: { field: "refundType", op: "ne", value: "part" }`（语义是「条件成立即隐藏」，op 省略时默认 eq）。它是**纯 JSON 数据**，绝不是函数字符串 —— 不要写成 permissionValue（那是权限码）或 render/formatter。退款方式是有限枚举 → Select + dataOptions，value 用英文码，条件里的 value 必须与之一致；退款金额是数值 → InputNumber。查询条件按 NL 只有两个 → 其余字段 inQuery:false；退款单号是系统生成的业务单号 → inForm:false。',
+    config: {
+      name: 'RefundManage',
+      apiUrl: '/api/refunds',
+      fields: [
+        { prop: 'refundNo', label: '退款单号', formtype: 'Input', inForm: false },
+        { prop: 'orderNo', label: '订单号', formtype: 'Input' },
+        { prop: 'refundAmount', label: '退款金额', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'refundType',
+          label: '退款方式',
+          formtype: 'Select',
+          inQuery: false,
+          dataOptions: [
+            { label: '全额退款', value: 'full' },
+            { label: '部分退款', value: 'part' },
+          ],
+        },
+        {
+          prop: 'refundReason',
+          label: '退款原因',
+          formtype: 'Input',
+          inQuery: false,
+          isHidden: { field: 'refundType', op: 'ne', value: 'part' },
+        },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
 ]
 
 /**
@@ -500,11 +532,12 @@ export function buildNlToConfigSystemPrompt(): string {
     'Bind each button to its behavior by semantics, matching the library defaults: dialog buttons (add / edit / view) use `dialogKey` (the "新增" toolbar button → dialogKey:"add" opens the built-in add dialog; row 编辑 → dialogKey:"edit", 查看 → dialogKey:"view"); side-effect buttons (export / import) use `actionType` ("导出" → actionType:"export", "导入" → actionType:"import"); the row delete button uses `confirm`. NEVER put actionType:"add" on an add button — only `dialogKey` opens the built-in dialog, so an actionType:"add" button does nothing.',
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
     'When the list response does not use the library default shape ({ rows, records }), declare the mapping declaratively in `tableOptions.configTableOut` — a FLAT path object { total?, tableData?, pageSize?, current? } whose VALUES are the response key names, e.g. a backend returning { list, count } → { tableData: "list", total: "count" }. Do NOT model response mapping any other way; it is a plain object, never a callback.',
+    'Conditional field visibility ("only needed when …", "只在…时才填写") → the field-level `isHidden`, expressed as PLAIN JSON DATA, never a JS function: a single condition `{ field, op?, value? }` or an ARRAY of them (AND — hidden only when ALL hold). Semantics: the field is HIDDEN WHILE the condition HOLDS, so "show only when refundType is part" is `{ field: "refundType", op: "ne", value: "part" }`. `field` is another field path in the same form, `value` must match that field\'s value type (e.g. the dataOptions value), ops = eq (default) / ne / in / nIn / empty / notEmpty / truthy / falsy. It applies to the query and add/edit forms, NOT to the table column. Emit this rather than dropping the conditional field.',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',
     '- fully custom cell/control → `render` (a function source string)',
-    '- per-field visibility gate → `permissionValue`',
+    '- per-field permission gate → `permissionValue` (a permission CODE string, consumed by the host\'s global permission(code) — this is RBAC, NOT a data-driven condition; for "depends on another field\'s value" use `isHidden`)',
     'Emitting one of these is correct behavior; silently omitting the requirement is a failure.',
     '',
     'Respond with ONLY the JSON object — no prose, no markdown fences.',

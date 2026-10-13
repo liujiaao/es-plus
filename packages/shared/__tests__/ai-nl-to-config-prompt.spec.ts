@@ -155,6 +155,7 @@ describe('NL_TO_CONFIG_FEWSHOT — 维度覆盖（few-shot 必须教全这些能
     '多弹窗 dialogs（新增/编辑不同表单）': () =>
       cfgs.some((c) => c.dialogs !== undefined && Object.keys(c.dialogs).length >= 2),
     'permissionValue（字段级可见性门控）': () => anyField((f) => f.permissionValue !== undefined),
+    'isHidden（声明式条件显隐）': () => anyField((f) => f.isHidden !== undefined),
     'render（自定义单元格扩展点）': () => anyField((f) => f.render !== undefined),
     'formatter（展示格式化扩展点）': () => anyField((f) => f.formatter !== undefined),
     'permissions（按钮级 RBAC）': () =>

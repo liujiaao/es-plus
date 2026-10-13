@@ -12,7 +12,8 @@
  * 这些函数完全不依赖 Vue / Element，渲染层只需调用即可。
  */
 
-import type { BtnConfig, FormItemOption, ModelData } from './types'
+import type { BtnConfig, FieldHidden, FieldHiddenCondition, FieldHiddenOp, FormItemOption, ModelData } from './types'
+import { getNestedValue } from './shared'
 
 /**
  * 位置解析所需的**最小**输入 —— 只含定位相关的三个字段。
@@ -39,10 +40,109 @@ export interface ButtonSideInput {
 // ============================================================================
 
 /**
- * 根据 isHidden 函数过滤字段
+ * 宽松相等：先严格比较，再**仅**放宽 number ↔ string（`1` ≈ `'1'`）。
+ *
+ * 为什么需要：声明式条件通常由 AI 生成 / 手写 JSON，而 `value` 的类型可能与
+ * model 实际值漂移（dataOptions 里 value 是数字 `1`，条件却写成字符串 `'1'`，
+ * 或反之）。此时若用严格相等，字段会**永不隐藏**且**毫无提示**——正是本库
+ * 反复强调的「静默不生效」。
+ *
+ * 为什么只放宽 number ↔ string 而不用裸 `==`：`==` 会把 `'' == 0`、`null == undefined`、
+ * `false == 0` 一并判真，语义难以预期；而空值判定有专门的 `empty`/`falsy` 算子，
+ * 不该由 `eq` 代办。此处的放宽范围是**刻意收窄**的。
+ */
+function looseEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (typeof a === 'number' && typeof b === 'string') return String(a) === b
+  if (typeof a === 'string' && typeof b === 'number') return a === String(b)
+  return false
+}
+
+/** 「空」判定：空串 / null / undefined / 空数组（与表单「未填」的直觉一致）。 */
+function isEmptyValue(v: unknown): boolean {
+  return v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)
+}
+
+/** 未知算子只告警一次（避免每次渲染刷屏）。 */
+const warnedHiddenOps = new Set<string>()
+
+/**
+ * 求值单条声明式条件 —— 返回 true 表示**条件成立、该字段应隐藏**。
+ *
+ * 未知算子 / 非法 field 一律 **fail-open**（返回 false，即不隐藏）：
+ * 隐藏一个字段是「信息消失」，误隐藏比误显示危险得多，故宁可放行并告警。
+ */
+export function matchHiddenCondition(cond: FieldHiddenCondition, model: ModelData): boolean {
+  if (!cond || typeof cond !== 'object') return false
+
+  const field = cond.field
+  if (typeof field !== 'string' || field === '') {
+    if (!warnedHiddenOps.has('__field__')) {
+      warnedHiddenOps.add('__field__')
+      console.warn('[es-plus] isHidden 条件缺少合法 field，已忽略该条件')
+    }
+    return false
+  }
+
+  const actual = getNestedValue(model as Record<string, unknown>, field)
+  const op: FieldHiddenOp = cond.op ?? 'eq'
+  const expected = cond.value
+
+  switch (op) {
+    case 'eq':
+      return looseEqual(actual, expected)
+    case 'ne':
+      return !looseEqual(actual, expected)
+    case 'in':
+      return Array.isArray(expected) && expected.some((v) => looseEqual(actual, v))
+    case 'nIn':
+      return !(Array.isArray(expected) && expected.some((v) => looseEqual(actual, v)))
+    case 'empty':
+      return isEmptyValue(actual)
+    case 'notEmpty':
+      return !isEmptyValue(actual)
+    case 'truthy':
+      return !!actual
+    case 'falsy':
+      return !actual
+    default:
+      if (!warnedHiddenOps.has(op)) {
+        warnedHiddenOps.add(op)
+        console.warn(`[es-plus] isHidden 未知算子 "${op}"，已按「不隐藏」处理`)
+      }
+      return false
+  }
+}
+
+/**
+ * 把声明式条件编译成 `isHidden` 可用的谓词。
+ *
+ * - 单条件 → 该条件成立即隐藏；
+ * - 条件数组 → **AND**（全部成立才隐藏）；
+ * - 空数组 → 永不隐藏（避免「空数组 ∧ 恒真 → 永远隐藏」的反直觉语义）。
+ *
+ * `normalizeFormItem`（compat）用它把 JSON 形态的 `isHidden` 水合成函数，
+ * 因此三端 `formItemListFilter` 只需照旧调用 `isHidden`，不必感知两种形态。
+ */
+export function compileHiddenCondition(
+  cond: FieldHidden
+): (model: ModelData) => boolean {
+  const conds = Array.isArray(cond) ? cond : [cond]
+  if (conds.length === 0) return () => false
+  return (model: ModelData): boolean => conds.every((c) => matchHiddenCondition(c, model))
+}
+
+/**
+ * 根据 isHidden 过滤字段
+ *
+ * 支持三种 `isHidden` 形态（见 `FormItemOption.isHidden`）：
+ *   - 函数：（历史用法）直接调用
+ *   - 声明式条件对象 / 数组：就地编译后求值（正常路径下 `normalizeFormItem`
+ *     已水合为函数，此处兜住「未过 normalizeFormItem 的直调方」）
+ *   - 缺省：可见
  *
  * @param formItemList 字段列表
- * @param model 当前表单 model（传给 isHidden）
+ * @param model 当前表单 model（传给 isHidden / 供条件求值）
  * @param formProps 透传给 isHidden 的 form props 上下文
  */
 export function filterVisibleFormItems(
@@ -57,6 +157,9 @@ export function filterVisibleFormItems(
     if (!it) return false
     if (typeof it.isHidden === 'function') {
       return !it.isHidden(model, it, formProps)
+    }
+    if (it.isHidden && typeof it.isHidden === 'object') {
+      return !compileHiddenCondition(it.isHidden)(model)
     }
     return true
   })

@@ -1,0 +1,35 @@
+{
+  "nl": "请假申请管理：查询有员工姓名、请假类型（年假/病假/事假）；表格展示员工姓名、请假类型、开始日期、结束日期、病假证明；支持新增、编辑、删除。表单里「病假证明」只在请假类型为「病假」时才需要填写，其余类型隐藏。",
+  "nlEn": "Leave request management: query by employee name and leave type (annual / sick / personal); the table shows employee name, leave type, start date, end date, and sick-leave certificate; supports add, edit, and delete. In the form, \"sick-leave certificate\" is only needed when the leave type is \"sick\"; it is hidden for the other types.",
+  "fixedFields": ["employeeName", "leaveType", "startDate", "endDate", "sickNote"],
+  "pinnedDims": ["propSet", "actions", "target", "isHidden:sickNote"],
+  "config": {
+    "name": "LeaveRequestManage",
+    "apiUrl": "/api/leave-requests",
+    "target": "vue2",
+    "fields": [
+      { "prop": "employeeName", "label": "员工姓名", "formtype": "Input" },
+      {
+        "prop": "leaveType",
+        "label": "请假类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "年假", "value": "annual" },
+          { "label": "病假", "value": "sick" },
+          { "label": "事假", "value": "personal" }
+        ]
+      },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker", "inQuery": false },
+      { "prop": "endDate", "label": "结束日期", "formtype": "DatePicker", "inQuery": false },
+      {
+        "prop": "sickNote",
+        "label": "病假证明",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "leaveType", "op": "ne", "value": "sick" }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=ne — 非病假时隐藏病假证明（vue2/schema）"
+}

@@ -186,6 +186,7 @@ function checkFormTypeEnum() {
 const REQUIRED_FIELDS = [
   { schema: 'form-item.schema.json', path: ['properties', 'labelKey'], label: 'FormItemOption.labelKey (i18n)' },
   { schema: 'form-item.schema.json', path: ['properties', 'placeholder'], label: 'FormItemOption.placeholder' },
+  { schema: 'form-item.schema.json', path: ['properties', 'isHidden'], label: 'FormItemOption.isHidden (声明式条件显隐)' },
   { schema: 'table-column.schema.json', path: ['properties', 'labelKey'], label: 'TableColumn.labelKey (i18n)' },
   { schema: 'table-options.schema.json', path: ['properties', 'tabHeight'], label: 'TableOptions.tabHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'maxHeight'], label: 'TableOptions.maxHeight' },
@@ -278,6 +279,15 @@ const STRUCTURED_CONFIG_SOURCES = [
 // 否则会被 Zod strip、用户设置无法生效。只校验 JSON 确实声明的字段，使守卫随单源
 // 自动扩展、又不过度约束（结构化配置本就是 TableOptions 的子集）。
 const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName']
+
+// FieldConfigSchema 里必须声明的「AI 契约」字段。与 STRUCTURED_TABLE_CONTRACT 同因：
+// 两处 Zod（shared 权威 + mcp 内联副本）都是 z.object（无 passthrough），少声明一个键
+// 就等于把该字段**静默剥掉** —— 解析成功、零告警，配置里的值凭空消失。
+// `isHidden` 就是这类：AI-06 用声明式条件驱动显隐，若只加在 shared 而漏了 mcp，
+// 走 MCP 路径的配置里 isHidden 会被丢弃、字段永远可见（假承诺）。
+// 注意 `isHiddenFooter`（dialog 级）不是同一字段：它后面跟的是 'F' 不是 ':'，
+// 故 `\bisHidden\s*:` 不会误匹配。
+const STRUCTURED_FIELD_CONTRACT = ['isHidden']
 
 /**
  * 剥掉行注释与块注释。
@@ -416,6 +426,20 @@ function checkStructuredConfigZod() {
     // position 的按钮翻到另一侧」这种大面积静默行为变更。
     if (!assertButtonPositionContract(src, { constName: 'TableBtnSchema', label, fallback: 1 })) ok = false
     if (!assertButtonPositionContract(src, { constName: 'ToolbarBtnSchema', label, fallback: 2 })) ok = false
+
+    // 字段契约：FieldConfigSchema 必须声明每个 AI 契约字段（否则 Zod 静默剥掉）。
+    // 只按「对象字面量块」定位，不靠行号 —— 块以列 0 的 `})` 收尾（嵌套对象均缩进，
+    // 不会误当块尾）。见 STRUCTURED_FIELD_CONTRACT 的说明。
+    const fc = src.match(/const FieldConfigSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\n\}\);?/)
+    if (!fc) { fail(`未能在 ${label} 定位 FieldConfigSchema`); ok = false }
+    else {
+      for (const f of STRUCTURED_FIELD_CONTRACT) {
+        if (!new RegExp(`\\b${f}\\s*:`).test(fc[1])) {
+          fail(`${label} 的 FieldConfigSchema 缺少契约字段 ${f}（会被 Zod 静默剥掉，配置里该字段凭空消失）`)
+          ok = false
+        }
+      }
+    }
 
     // 字段引用点也必须成对：具名 schema 写好了却没被引用，等于没修。
     for (const [field, constName] of [['tableBtns', 'TableBtnSchema'], ['toolbarBtns', 'ToolbarBtnSchema']]) {

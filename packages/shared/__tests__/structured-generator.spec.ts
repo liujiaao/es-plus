@@ -284,6 +284,77 @@ describe('generateFromConfig — sfc mode', () => {
     expect(result.code).toContain("render: (_, { row }) => h(ElTag")
   })
 
+  // AI-06：声明式 isHidden 是**纯 JSON 数据**，两种模式都经 buildFormItem 发射
+  // （schema 经 inlineJson 进 pageSchema；sfc 的 formItems 同样 inlineJson）。
+  it('emits declarative isHidden into schema-mode JSON (query + dialog form items)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: { field: 'type', op: 'ne' as const, value: 'part' },
+        },
+      ],
+    })
+    // 单条件对象原样内联（未解析 defaults，逐字节等于输入）
+    expect(result.code).toContain('"isHidden": {')
+    expect(result.code).toContain('"field": "type"')
+    expect(result.code).toContain('"op": "ne"')
+    expect(result.code).toContain('"value": "part"')
+  })
+
+  it('emits declarative isHidden in SFC mode (conditions ride along with inlineJson formItems)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'list',
+          label: '名单',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: [{ field: 'a', op: 'eq' as const, value: 1 }, { field: 'b', op: 'falsy' as const }],
+        },
+      ],
+    })
+    expect(result.code).toContain('"isHidden": [')
+    expect(result.code).toContain('"op": "eq"')
+    expect(result.code).toContain('"op": "falsy"')
+  })
+
+  it('does NOT emit isHidden when absent (backward compatible: prior outputs byte-identical)', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    expect(result.code).not.toContain('isHidden')
+  })
+
+  it('isHidden is form-scoped — a column-only field never leaks it into the emitted columns', () => {
+    // 该字段 inQuery:false + inForm:false → 既不进查询表单也不进弹窗表单，
+    // 只会被 buildTableColumn 处理；而 isHidden 只挂在 buildFormItem 上，
+    // 故整个产物里不该出现它的条件（列级动态显隐是 hidCol 的静态语义）。
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'shadow',
+          label: '影子列',
+          formtype: 'Input' as const,
+          inQuery: false,
+          inForm: false,
+          isHidden: { field: 'type', op: 'eq' as const, value: 'x' },
+        },
+      ],
+    })
+    expect(result.code).not.toContain('isHidden')
+  })
+
   it('generates useDialog form with validation', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc' })
     expect(result.code).toContain('useDialog')

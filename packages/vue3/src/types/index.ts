@@ -35,6 +35,20 @@ export type {
   VxeSeqConfig,
 }
 
+/**
+ * 显隐算子 / 声明式条件 —— 与 core `types.ts` 的同名类型结构一致。
+ *
+ * 与 `FormItemOption` 一样，本文件是 core 契约的**框架特化副本**（渲染器契约
+ * 各自声明、形状兼容）。此处只多一条约束：条件里**不得**出现函数，它是纯 JSON。
+ */
+export type FieldHiddenOp = 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+export interface FieldHiddenCondition {
+  /** model 字段路径（支持 `user.name`），条件成立时隐藏该字段 */
+  field: string
+  op?: FieldHiddenOp
+  value?: unknown
+}
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -62,7 +76,17 @@ export interface FormItemOption {
    */
   on?: Record<string, unknown>
   dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
-  isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean
+  /**
+   * 动态显隐判断：返回 true 表示**隐藏**该字段。
+   *
+   * - 函数形态：原生用法
+   * - 声明式形态：单条件或条件数组（AND，纯 JSON），由 core `normalizeFormItem`
+   *   在运行时编译为函数 —— 故渲染层只需照旧调用 `isHidden`
+   */
+  isHidden?:
+    | FieldHiddenCondition
+    | FieldHiddenCondition[]
+    | ((model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean)
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
   /** Whether to auto-load API data on init, default true; set false to load manually via formItmeRequestInstance */

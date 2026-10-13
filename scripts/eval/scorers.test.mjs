@@ -40,7 +40,8 @@ const BASE_INPUT = {
   formLayout: { span: 12 }, //  → formLayout 维度 applicable
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
-    { prop: 'name', label: '名称', formtype: 'Input' },
+    // isHidden：条件显隐（条件成立即隐藏；base.status 是 Select，value 取数字码）
+    { prop: 'name', label: '名称', formtype: 'Input', isHidden: { field: 'status', op: 'eq', value: 1 } }, // → isHidden 维度
     { prop: 'status', label: '状态', formtype: 'Select', dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }, // → dataOptions 维度
     { prop: 'categoryId', label: '分类', formtype: 'Select', apiParams: { url: '/api/cat', labelField: 'name', valueField: 'id' } }, // → apiParams 维度
     { prop: 'amount', label: '金额', formtype: 'Input', inQuery: false, formatter: '(row) => row.amount.toFixed(2)' }, // → extPoints 维度
@@ -95,6 +96,7 @@ const PERTURB = {
   mode: (c) => { c.mode = 'schema' },
   virtualScroll: (c) => { c.tableOptions.virtual = false },
   configTableOut: (c) => { c.tableOptions.configTableOut.tableData = 'changed' },
+  isHidden: (c) => { c.fields[0].isHidden.op = 'ne' },
   extPoints: (c) => { delete c.fields[3].formatter },
 }
 
@@ -131,6 +133,41 @@ console.log('meta-eval: operationColumn 库默认派生等价')
   const goldCustom = { fields: flds, actions: ['edit'], operationColumn: { btns: [{ name: '处理' }, { name: '关闭' }] } }
   check(scoreAll(goldCustom, { fields: flds, actions: ['edit'] }).byCapability.operationColumn.pass === false,
     'operationColumn: 自定义行按钮(处理/关闭)不可由 actions 派生 → 省略应判负')
+}
+
+// 2c) isHidden 维度的语义（整对象等值 / 数组形态 / 字段级细化）
+//     条件显隐是行为契约而非扩展点兜底，故比**内容**（算子、value、数组顺序都算数），
+//     与 configTableOut 同策略；extPoints 那种只比 presence 的是因为它比的是不可静态校验的源码串。
+console.log('meta-eval: isHidden (declarative condition)')
+{
+  const cond = { field: 'b', op: 'eq', value: 'x' }
+  const gold = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: cond }], actions: ['add'] }
+  const wrongValue = clone(gold)
+  wrongValue.fields[0].isHidden.value = 'y'
+  check(scoreAll(gold, clone(gold)).byCapability.isHidden.pass === true, 'isHidden: 整对象一致应判正')
+  check(scoreAll(gold, wrongValue).byCapability.isHidden.pass === false, 'isHidden: value 不符应判负')
+
+  // 数组形态（AND）也按整对象等值 —— 顺序敏感
+  const goldArr = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: [{ field: 'b', op: 'empty' }, { field: 'c', op: 'truthy' }] }], actions: ['add'] }
+  check(scoreAll(goldArr, clone(goldArr)).byCapability.isHidden.pass === true, 'isHidden: 数组形态一致应判正')
+  check(scoreAll(goldArr, gold).byCapability.isHidden.pass === false, 'isHidden: 数组→单条件应判负')
+
+  // gold 没有任何 isHidden → 维度不 applicable（不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.isHidden.applicable === false, 'isHidden: gold 未声明时维度不 applicable')
+
+  // 字段级细化：只钉该字段；未锁字段的 isHidden 猜错免责
+  check(isValidPinnedDim('isHidden:a') === true, 'isValidPinnedDim: isHidden:a 合法')
+  const m = { pinnedDims: ['isHidden:a'] }
+  check(scoreAll(gold, clone(gold), m).exactIntentScoped === true, 'scoped: isHidden:a gold-vs-gold 应 true')
+  check(scoreAll(gold, wrongValue, m).exactIntentScoped === false, 'scoped: 扰动 isHidden:a 应翻红')
+  const twoField = {
+    fields: [clone(gold.fields[0]), { prop: 'z', label: 'Z', formtype: 'Input', isHidden: { field: 'b', op: 'eq', value: 'q' } }],
+    actions: ['add'],
+  }
+  const zChanged = clone(twoField)
+  zChanged.fields[1].isHidden.value = 'zzz'
+  check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 isHidden 应免责')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化

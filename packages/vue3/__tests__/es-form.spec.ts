@@ -112,6 +112,45 @@ describe('EsForm - 配置渲染', () => {
     expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
   })
 
+  // AI-06：声明式条件（纯 JSON）也能驱动显隐 —— 组件层零改动，靠 core
+  // normalizeFormItem 在 formItemListFilter 里水合。这里断言三端「看见就生效」。
+  it('hides fields with a declarative isHidden condition (eq) and reacts to model changes', async () => {
+    const model = reactive({ type: 'rotate', reason: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'type', label: '类型', formtype: 'Input', span: 12 },
+        { prop: 'reason', label: '原因', formtype: 'Input', span: 12,
+          isHidden: { field: 'type', op: 'eq', value: 'rotate' } }
+      ]
+    })
+    // type === 'rotate' → 条件成立 → reason 隐藏
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
+
+    model.type = 'duty'
+    await nextTick()
+    // 条件不再成立 → reason 出现（reactive 联动）
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(2)
+  })
+
+  it('hides fields with a declarative isHidden condition array (AND)', async () => {
+    const model = reactive({ a: 1, b: false, note: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'note', label: '说明', formtype: 'Input', span: 24,
+          isHidden: [{ field: 'a', op: 'eq', value: 1 }, { field: 'b', op: 'falsy' }] }
+      ]
+    })
+    // 两条都成立 → 隐藏
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(0)
+
+    model.b = true
+    await nextTick()
+    // 只剩一条成立 → 显示
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
+  })
+
   it('renders configBtn buttons', () => {
     const wrapper = mountForm({
       model: { keyword: '' },

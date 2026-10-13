@@ -108,7 +108,7 @@
       "description": "Field width (number for px, string for CSS value)"
     },
     "isHidden": {
-      "description": "Function (model, item, formProps) => boolean. Returns true to hide the field conditionally"
+      "description": "Conditional visibility. Returns true to HIDE the field while the condition holds. Two forms: (1) function (model, item, formProps) => boolean; (2) declarative plain-JSON condition — { field, op?, value? } or an array of them (array = AND). op ∈ eq|ne|in|nIn|empty|notEmpty|truthy|falsy (default eq). Data only, never a JS source string. Declarative conditions are compiled to a predicate at runtime by normalizeFormItem. Applies to the query/filter form and the add/edit dialog forms, NOT the table column."
     },
     "render": {
       "description": "Custom render function (h, model, ctx) => VNode. Used when formtype is not set"

@@ -27,6 +27,15 @@ import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 
 export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
 
+export interface FieldHiddenCondition {
+  /** Another field path in the same form model, e.g. "status" or "user.type". */
+  field: string
+  /** eq (default) | ne | in | nIn | empty | notEmpty | truthy | falsy */
+  op?: 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+  /** RHS: scalar for eq/ne, array for in/nIn; ignored by empty/notEmpty/truthy/falsy. */
+  value?: unknown
+}
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -39,6 +48,12 @@ export interface FormItemOption {
   isInitRun?: boolean
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   width?: number | string
+  /**
+   * Conditional visibility: the field is HIDDEN while the condition holds.
+   * PLAIN JSON DATA — a single condition or an array (AND); never a JS string.
+   * Applies to the query/add/edit forms, NOT the table column.
+   */
+  isHidden?: FieldHiddenCondition | FieldHiddenCondition[]
   [key: string]: unknown
 }
 

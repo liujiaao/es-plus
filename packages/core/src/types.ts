@@ -128,6 +128,41 @@ export type FormType =
   | 'Upload'
 
 /**
+ * `isHidden` 声明式条件的比较算子。
+ *
+ * 之所以是**数据**而非裸 JS：schema 模式（`mode: 'schema'`）的产物是纯 JSON
+ * （`inlineJson` 序列化），函数无法内联；声明式条件可被 JSON 承载、可被三端
+ * 一致求值，也留得住「可静态校验」的口子（对标 Amis `visibleOn`）。
+ *
+ *   eq / ne       —— 严格相等 / 不等（默认算子）
+ *   in / nIn      —— 值 ∈ / ∉ 右侧数组
+ *   empty / notEmpty —— 空串 / null / undefined / 空数组 判定
+ *   truthy / falsy    —— 真值 / 假值判定（`!!v`）
+ */
+export type FieldHiddenOp = 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+
+/**
+ * 单条声明式显隐条件：**当条件成立时隐藏该字段**。
+ *
+ * `field` 取 model 的字段路径（支持 `user.name` 嵌套，与 `prop` 同规）。
+ * `op` 省略时按 `eq`。
+ */
+export interface FieldHiddenCondition {
+  field: string
+  op?: FieldHiddenOp
+  value?: unknown
+}
+
+/**
+ * `isHidden` 的取值：单条件、条件数组（**全部成立 = AND 才隐藏**），
+ * 或原生的函数式判断（`(model, item, formProps) => boolean`）。
+ *
+ * 声明式形态由 `normalizeFormItem`（compat）在运行时编译成函数，故三端
+ * `formItemListFilter` 只需照旧调用 `isHidden`，无需感知两种形态。
+ */
+export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[]
+
+/**
  * 表单字段选项
  *
  * 注意 render 签名：
@@ -165,8 +200,14 @@ export interface FormItemOption {
   on?: Record<string, unknown>
   /** 静态选项（Select/Radio/Checkbox/Cascader 用） */
   dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
-  /** 动态显隐判断 */
-  isHidden?: (model: ModelData, item: FormItemOption, formProps: unknown) => boolean
+  /**
+   * 动态显隐判断：返回 true 表示**隐藏**该字段。
+   *
+   * - 函数形态：`(model, item, formProps) => boolean`（原生用法）
+   * - 声明式形态：`FieldHiddenCondition | FieldHiddenCondition[]`（AI 生成 / JSON schema
+   *   用；数组为 AND），由 `normalizeFormItem` 在运行时编译为函数
+   */
+  isHidden?: FieldHidden | ((model: ModelData, item: FormItemOption, formProps: unknown) => boolean)
   /** 自定义渲染函数（h, model, ctx） */
   render?: (h: RenderFn, model: ModelData, ctx: { row: FormItemOption; index: number }) => AnyVNode
   /** 远程加载选项配置 */

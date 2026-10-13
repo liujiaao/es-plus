@@ -61,6 +61,36 @@ function isSafeProp(v: string): boolean {
   return !segments.some((s) => UNSAFE_PROP_SEGMENT.test(s))
 }
 
+/**
+ * 显隐条件算子（与 core `FieldHiddenOp` 单一权威源对齐 —— core/types.ts）。
+ * 这里刻意**不用裸 JS 字符串**：条件是可 JSON 化的数据，schema 模式下才能内联。
+ */
+const HIDDEN_OPS = ['eq', 'ne', 'in', 'nIn', 'empty', 'notEmpty', 'truthy', 'falsy'] as const
+
+/**
+ * 单条声明式显隐条件：**条件成立时隐藏该字段**。
+ *
+ * `field` 与 `prop` 同规（支持 `user.name` 嵌套），读的是同一 model —— 它同样会被
+ * `parsePathSegments` 分段并在 model 上取值，因此与 `prop` 共用同一道 `isSafeProp` 防线。
+ */
+const HiddenConditionSchema = z.object({
+  field: z.string().min(1).refine(isSafeProp, {
+    message:
+      'field 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
+  }).describe('Model field path to test, e.g. "status" or "user.type"'),
+  op: z.enum(HIDDEN_OPS).default('eq').describe(
+    "Comparison operator. eq/ne = equal/not-equal (eq is the default; number↔string is tolerated, e.g. 1 matches '1'); in/nIn = value is/is-not in the given array; empty/notEmpty = ''/null/undefined/[] check; truthy/falsy = JS truthiness (!!v). The hidden field is hidden WHEN this expression holds."
+  ),
+  value: z.unknown().optional().describe(
+    'Right-hand side of the comparison. REQUIRED for eq/ne (scalar) and in/nIn (array). IGNORED by empty/notEmpty/truthy/falsy.'
+  ),
+})
+
+/**
+ * 显隐条件：单条件，或条件数组（**全部成立 = AND 才隐藏**）。
+ */
+const HiddenConditionListSchema = z.union([HiddenConditionSchema, z.array(HiddenConditionSchema).min(1)])
+
 const FieldConfigSchema = z.object({
   prop: z.string().min(1).refine(isSafeProp, {
     message:
@@ -97,6 +127,9 @@ const FieldConfigSchema = z.object({
     "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
   ),
   permissionValue: z.string().optional(),
+  isHidden: HiddenConditionListSchema.optional().describe(
+    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold). Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
+  ),
 })
 
 const ToolbarBtnSchema = z

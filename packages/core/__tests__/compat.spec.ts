@@ -236,6 +236,43 @@ describe('compat > normalizeFormItem', () => {
     const itemWithAttrs = normalizeFormItem({ prop: 'name', label: 'Name', attrs: { class: 'test' } })
     expect(itemWithAttrs.attrs?.class).toBe('test')
   })
+
+  // AI-06：声明式 isHidden（JSON 条件）→ 运行时水合为谓词。
+  // 这是「三端 formItemListFilter 零改动」的承重点：归一化的唯一入口把它编译掉。
+  it('声明式 isHidden（单条件对象）水合为函数，且语义正确', () => {
+    const item = normalizeFormItem({
+      prop: 'reason',
+      label: '原因',
+      isHidden: { field: 'type', op: 'ne', value: 'part' },
+    })
+    expect(typeof item.isHidden).toBe('function')
+    // 水合发生在运行时：静态类型仍是「条件对象 | 函数」联合，故经 unknown 收窄。
+    const fn = item.isHidden as unknown as (m: Record<string, unknown>) => boolean
+    expect(fn({ type: 'full' })).toBe(true)
+    expect(fn({ type: 'part' })).toBe(false)
+  })
+
+  it('声明式 isHidden（条件数组 = AND）水合为函数', () => {
+    const item = normalizeFormItem({
+      prop: 'list',
+      label: '名单',
+      isHidden: [{ field: 'a', op: 'eq', value: 1 }, { field: 'b', op: 'falsy' }],
+    })
+    const fn = item.isHidden as unknown as (m: Record<string, unknown>) => boolean
+    expect(fn({ a: 1, b: false })).toBe(true)
+    expect(fn({ a: 1, b: true })).toBe(false)
+  })
+
+  it('函数形态的 isHidden 原样透传（不被水合覆盖）', () => {
+    const orig = () => true
+    const item = normalizeFormItem({ prop: 'a', label: 'A', isHidden: orig })
+    expect(item.isHidden).toBe(orig)
+  })
+
+  it('缺省 isHidden 不引入多余键', () => {
+    const item = normalizeFormItem({ prop: 'a', label: 'A' })
+    expect('isHidden' in item).toBe(false)
+  })
 })
 
 describe('compat > normalizeFormItemList', () => {

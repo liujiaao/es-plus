@@ -115,6 +115,8 @@ export {
   applyConfigTableOut,
   resolveItemValidateProps,
   resolveFormRules,
+  matchHiddenCondition,
+  compileHiddenCondition,
 } from './field-resolver'
 
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────

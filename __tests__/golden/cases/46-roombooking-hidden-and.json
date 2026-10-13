@@ -1,0 +1,39 @@
+{
+  "nl": "会议室预定管理：查询有会议室名称、预定日期；表格展示会议室名称、预定日期、预定类型（常规/临时）、参会人数、外部访客、访客名单；支持新增、编辑、删除。表单里「访客名单」在「预定类型」为常规 且 未勾选「外部访客」时隐藏。",
+  "nlEn": "Meeting-room booking management: query by room name and booking date; the table shows room name, booking date, booking type (regular / ad-hoc), attendee count, external guest, and guest list; supports add, edit, and delete. In the form, \"guest list\" is hidden when the \"booking type\" is regular AND \"external guest\" is not checked.",
+  "fixedFields": ["roomName", "bookDate", "bookType", "attendeeCount", "externalGuest", "guestList"],
+  "pinnedDims": ["propSet", "actions", "target", "isHidden:guestList"],
+  "config": {
+    "name": "MeetingRoomBookManage",
+    "apiUrl": "/api/meeting-room-bookings",
+    "target": "antdv",
+    "fields": [
+      { "prop": "roomName", "label": "会议室名称", "formtype": "Input" },
+      { "prop": "bookDate", "label": "预定日期", "formtype": "DatePicker" },
+      {
+        "prop": "bookType",
+        "label": "预定类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "常规", "value": "normal" },
+          { "label": "临时", "value": "temp" }
+        ]
+      },
+      { "prop": "attendeeCount", "label": "参会人数", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "externalGuest", "label": "外部访客", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "guestList",
+        "label": "访客名单",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": [
+          { "field": "bookType", "op": "eq", "value": "normal" },
+          { "field": "externalGuest", "op": "falsy" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden 数组形态（AND）—— 常规预定且无外部访客时隐藏访客名单（antdv/schema）"
+}

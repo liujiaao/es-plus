@@ -33,6 +33,45 @@ function isSafeProp(v: string): boolean {
   return !segments.some((s) => UNSAFE_PROP_SEGMENT.test(s));
 }
 
+/**
+ * Declarative conditional-visibility conditions — mirrors the shared
+ * authoritative schema (packages/shared/src/structured-config.schema.ts).
+ *
+ * MUST be declared here too: this inline Zod copy is what the MCP tool parses
+ * the host LLM's config with, and Zod strips unknown keys by default. Without
+ * `isHidden` here, a config that declares a visibility condition would parse
+ * "successfully" with the condition silently DROPPED — the field would render
+ * unconditionally, with no error. `check-schema-contract.mjs` guards the
+ * field-level contract so the two copies can't drift again.
+ */
+const HIDDEN_OPS = ["eq", "ne", "in", "nIn", "empty", "notEmpty", "truthy", "falsy"] as const;
+
+const HiddenConditionSchema = z.object({
+  field: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'field must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+    })
+    .describe('Model field path to test, e.g. "status" or "user.type"'),
+  op: z
+    .enum(HIDDEN_OPS)
+    .default("eq")
+    .describe(
+      "Comparison operator. eq/ne = equal/not-equal (eq is the default; number↔string is tolerated, e.g. 1 matches '1'); in/nIn = value is/is-not in the given array; empty/notEmpty = ''/null/undefined/[] check; truthy/falsy = JS truthiness (!!v). The field is HIDDEN while this expression holds."
+    ),
+  value: z
+    .unknown()
+    .optional()
+    .describe(
+      "Right-hand side of the comparison. REQUIRED for eq/ne (scalar) and in/nIn (array). IGNORED by empty/notEmpty/truthy/falsy."
+    ),
+});
+
+/** A single condition, or an array of conditions (all must hold = AND, then hidden). */
+const HiddenConditionListSchema = z.union([HiddenConditionSchema, z.array(HiddenConditionSchema).min(1)]);
+
 const FieldConfigSchema = z.object({
   prop: z
     .string()
@@ -92,6 +131,9 @@ const FieldConfigSchema = z.object({
       "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
     ),
   permissionValue: z.string().optional(),
+  isHidden: HiddenConditionListSchema.optional().describe(
+    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? } or an array of them (array = AND). Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
+  ),
 });
 
 /**

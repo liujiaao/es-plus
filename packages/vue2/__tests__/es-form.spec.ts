@@ -403,3 +403,33 @@ describe('EsForm(vue2) - 字段级 permissionValue 门控', () => {
     expect(findAllByName(vm, 'ElFormItem')).toHaveLength(2)
   })
 })
+
+// AI-06：声明式 isHidden（纯 JSON 条件）也要在 vue2 端生效 —— 组件层零逻辑改动，
+// 靠 core normalizeFormItem 在 formItemListFilter 里把条件水合成谓词。这里只钉「接线」：
+// 同一个条件在两个相反 model 下分别隐藏 / 显示（反应性由 vue3 端见证，此处不重复）。
+describe('EsForm(vue2) - 声明式 isHidden 条件（AI-06）', () => {
+  const items = () => [
+    { prop: 'swapType', label: '申请类型', formtype: 'Input' as const, span: 12 },
+    {
+      prop: 'swapReason',
+      label: '调班原因',
+      formtype: 'Input' as const,
+      span: 12,
+      isHidden: { field: 'swapType', op: 'eq', value: 'rotate' },
+    },
+  ]
+
+  it('条件成立时隐藏该字段（其余照常渲染）', async () => {
+    const vm = mountForm({ model: { swapType: 'rotate', swapReason: '' }, formItemList: items() })
+    await vm.$nextTick()
+    const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+    expect(labels).toEqual(['申请类型'])
+  })
+
+  it('条件不成立时显示该字段（证明是条件驱动，而非字段缺失）', async () => {
+    const vm = mountForm({ model: { swapType: 'duty', swapReason: '' }, formItemList: items() })
+    await vm.$nextTick()
+    const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+    expect(labels).toEqual(['申请类型', '调班原因'])
+  })
+})

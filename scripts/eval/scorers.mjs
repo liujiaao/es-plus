@@ -193,6 +193,24 @@ function configTableOutEqual(gold, pred) {
   return eq(g, p)
 }
 
+/**
+ * 声明式条件显隐：gold 每个带 `isHidden` 的 field，pred 同名 field 必须存在**且整对象等值**。
+ *
+ * 深度等值（`eq`）而非 presence：条件的算子写错（`eq` 写成 `ne`）、`value` 的类型或数组
+ * 顺序不符都算未命中 —— 条件显隐是「行为契约」不是「扩展点兜底」，照着比内容才有意义
+ * （与 `configTableOut` 同为整对象等值；`extPoints` 那种只比 presence 的是因为其内容
+ * 是不可静态校验的 JS 源码串）。
+ */
+function isHiddenEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!f.isHidden) continue
+    const pf = pm.get(f.prop)
+    if (!pf || !pf.isHidden || !eq(f.isHidden, pf.isHidden)) return false
+  }
+  return true
+}
+
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 
 /** mark-never-drop 的 LLM 侧对偶：gold 每个扩展点在 pred 同名 field 上必须也存在（不比内容）。 */
@@ -233,6 +251,11 @@ export const CAPABILITY_SCORERS = [
     key: 'configTableOut',
     applicable: (g) => !!(g.tableOptions?.configTableOut && Object.keys(g.tableOptions.configTableOut).length),
     pass: configTableOutEqual,
+  },
+  {
+    key: 'isHidden',
+    applicable: (g) => g.fields.some((f) => f.isHidden !== undefined),
+    pass: isHiddenEqual,
   },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
@@ -278,6 +301,12 @@ const FIELD_SCORERS = {
   dataOptions: (gold, pred, prop) => {
     const has = (c) => !!((fieldMap(c).get(prop)?.dataOptions ?? []).length)
     return has(gold) === has(pred)
+  },
+  isHidden: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !g.isHidden) return true // 该字段本就不要求条件显隐 → 空钉即过
+    return !!p && !!p.isHidden && eq(g.isHidden, p.isHidden)
   },
 }
 

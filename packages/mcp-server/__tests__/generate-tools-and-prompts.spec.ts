@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { registerGenerateCrud } from "../src/tools/generate-crud.js";
 import { registerGenerateFromConfig } from "../src/tools/generate-from-config.js";
 import { registerGenerateForm } from "../src/tools/generate-form.js";
@@ -202,6 +203,46 @@ describe("front door — deterministic validate gate (C2·A3)", () => {
     const res = await fromConfigHandler()(validFromConfig);
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("```");
+  });
+
+  // AI-06：MCP 参数 schema（configShape）必须声明 isHidden —— 否则 Zod 默认 strip，
+  // 走 MCP 路径的配置里声明式显隐条件会被**静默剥掉**（字段永远可见）。这里通过
+  // z.object(shape) 真解析一遍，把「源码里有没有声明」升级为「解析后还在不在」。
+  it("MCP 参数 schema 保留字段级 isHidden（单条件 + 数组 AND + op 缺省）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    const shape = tools.generate_crud_from_config.shape;
+
+    const parsed = z.object(shape).parse({
+      ...validFromConfig,
+      fields: [
+        field("payType", "支付方式"),
+        field("cashRemark", "现金备注", "Input", {
+          isHidden: { field: "payType", op: "eq", value: "cash" },
+        }),
+      ],
+    });
+    expect(parsed.fields[1].isHidden).toEqual({ field: "payType", op: "eq", value: "cash" });
+
+    const parsedAnd = z.object(shape).parse({
+      ...validFromConfig,
+      fields: [
+        field("note", "说明", "Input", {
+          isHidden: [{ field: "a", op: "eq", value: 1 }, { field: "b", op: "truthy" }],
+        }),
+      ],
+    });
+    expect(parsedAnd.fields[0].isHidden).toEqual([
+      { field: "a", op: "eq", value: 1 },
+      { field: "b", op: "truthy" },
+    ]);
+
+    // op 缺省 → 填 'eq'
+    const parsedDefault = z.object(shape).parse({
+      ...validFromConfig,
+      fields: [field("remark", "备注", "Input", { isHidden: { field: "payType" } })],
+    });
+    expect(parsedDefault.fields[0].isHidden).toEqual({ field: "payType", op: "eq" });
   });
 });
 

@@ -30,7 +30,7 @@ FormItemOption interface:
 - attrs: object (pass-through props to the ${uiLib} component — e.g. type, placeholder, valueFormat)
 - dataOptions: Array<{ label: string, value: any }> (for Select/Radio/Checkbox)
 - rules: array (${uiLib} validation rules)
-- isHidden: function (dynamic visibility)
+- isHidden: dynamic visibility. Either a predicate function (model, item, formProps) => boolean, OR a declarative PLAIN JSON condition { field, op?, value? } / an array (AND) — HIDDEN while the condition holds. \`field\` is another field path; op = eq (default) | ne | in | nIn | empty | notEmpty | truthy | falsy. Form-scope (query + add/edit), not the table column.
 
 Common patterns:
 - Text input: { prop: 'name', label: '姓名', formtype: 'Input', span: 12 }

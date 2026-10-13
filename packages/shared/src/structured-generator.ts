@@ -939,6 +939,11 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
   // 字段级权限编码：字符串，可直接进 schema 模式 JSON；运行时由 es-form 的 formItemListFilter
   // 按全局 permission(code) 过滤（无权限则整个表单项不渲染）。按钮级 permissions 是另一回事。
   if (field.permissionValue) item.permissionValue = field.permissionValue
+  // 声明式显隐条件：**纯 JSON 数据**（非 JS 函数），可直接内联进 schema 模式的 pageSchema
+  // （SFC 模式同样经 inlineJson 序列化 formItems），故此处两种模式共用一个 emit 点。
+  // 运行时由 core `normalizeFormItem` 编译为谓词（三端 formItemListFilter 照旧调用 isHidden）。
+  // 只作用于 query / 弹窗表单（buildFormItem 的两个 context），**不进**表格列（buildTableColumn）。
+  if (field.isHidden) item.isHidden = field.isHidden
 
   if (context === 'form') {
     const rules: any[] = []

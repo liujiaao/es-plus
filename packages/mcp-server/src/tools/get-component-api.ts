@@ -75,7 +75,12 @@ interface FormItemOption {
   span?: number             // Grid span (1-24, default 6)
   attrs?: Record<string, unknown>  // Pass-through to ${v.elementPkg} component
   dataOptions?: Array<{ label: string; value: unknown }>  // Options for Select/Radio/Checkbox
-  isHidden?: (model, item, formProps) => boolean  // Dynamic visibility
+  isHidden?: ((model, item, formProps) => boolean)
+    | { field: string; op?: 'eq'|'ne'|'in'|'nIn'|'empty'|'notEmpty'|'truthy'|'falsy'; value?: unknown }
+    | Array<{ field: string; op?: 'eq'|'ne'|'in'|'nIn'|'empty'|'notEmpty'|'truthy'|'falsy'; value?: unknown }>
+                            // Dynamic visibility: a function, OR a declarative
+                            // plain-JSON condition (array = AND). HIDDEN while it
+                            // holds. Form-scope (query + add/edit), not the table column.
   render?: (h, model, ctx) => VNode    // Custom render function
   apiParams?: ApiParams     // Remote data loading config
   isInitRun?: boolean       // Auto-load API data on mount (default true)

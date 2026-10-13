@@ -23,12 +23,13 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, reactive } from 'vue'
 import ElementPlus from 'element-plus'
 // 先初始化包入口（与 crud-runtime.spec.ts 同因：让整张模块图按库自身顺序完成初始化）。
 import EsPlus from '../src/index'
 import EsCrudPage from '../src/components/es-crud-page/src/es-crud-page.vue'
 import EsTable from '../src/components/es-table/src/component.vue'
+import EsForm from '../src/components/es-form/src/es-form.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
 import type { StructuredCrudConfig } from '../../shared/src/structured-generator'
 import {
@@ -211,3 +212,42 @@ describe('生成物运行时冒烟 — 31-inventory（configTableOut 响应映�
     expect(wrapper.text()).toContain(`L1-${first}`)
   })
 })
+
+// ────────────────────────────────────────────────────────────────────────────
+// 4) 声明式 isHidden 的运行时见证（AI-06）
+//    golden-45 声明两个反相条件：`renewDiscount` 在 autoRenew truthy 时隐藏、
+//    `expireNotice` 在 autoRenew falsy 时隐藏。两者都 inQuery:false，落在
+//    生成的 `dialogFormItems` 上。这里把**生成出来的** formItems 挂进真实 EsForm，
+//    用一个可变的 reactive model 驱动开关，断言字段真的随条件出现/消失 ——
+//    把「发射了条件」升级为「条件真的驱动了可见性」（与 AI-08/AI-20 同构）。
+// ────────────────────────────────────────────────────────────────────────────
+describe('生成物运行时冒烟 — 45-subscription（声明式 isHidden 条件显隐）', () => {
+  afterEach(cleanup)
+
+  it('生成物里的 isHidden 在真实 EsForm 上生效，且随 model 变化', async () => {
+    const schema = generatePageSchema(loadGoldenConfig('45-subscription-hidden-truthy.json'))
+    const formItems = schema.dialogFormItems as unknown[]
+    expect(formItems, '该用例的弹窗表单应包含条件字段').toBeTruthy()
+
+    // 生成物里确实带着条件数据（纯 JSON，非函数）——否则下面即使「隐藏」也是因字段缺失
+    const withCond = formItems.filter((f: any) => f.isHidden)
+    expect(withCond.map((f: any) => f.prop).sort()).toEqual(['expireNotice', 'renewDiscount'])
+
+    const model = reactive({ planName: '', price: 0, autoRenew: true, renewDiscount: 0, expireNotice: '' })
+    const wrapper = mount(EsForm, {
+      props: { model, formItemList: formItems },
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await nextTick()
+
+    // autoRenew = true → 隐藏 expireNotice（falsy 条件不成立）→ 显示 renewDiscount（truthy 条件成立）
+    expect(wrapper.text()).toContain('续费折扣')
+    expect(wrapper.text(), 'autoRenew 为真时「到期提醒语」应隐藏').not.toContain('到期提醒语')
+
+    model.autoRenew = false
+    await nextTick()
+    expect(wrapper.text()).toContain('到期提醒语')
+    expect(wrapper.text(), 'autoRenew 为假时「续费折扣」应隐藏').not.toContain('续费折扣')
+  })
+})
+

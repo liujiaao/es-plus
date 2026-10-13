@@ -1,0 +1,35 @@
+{
+  "nl": "保险理赔管理：查询有保单号、理赔类型（车险/医疗险/财产险）；表格展示保单号、理赔类型、出险日期、定损员；支持新增、编辑、删除。表单里「定损员」只在理赔类型为「车险」时才需要指定，其余类型隐藏。",
+  "nlEn": "Insurance claim management: query by policy number and claim type (auto / medical / property); the table shows policy number, claim type, incident date, and loss assessor; supports add, edit, and delete. In the form, \"loss assessor\" only needs to be assigned when the claim type is \"auto\"; it is hidden for the other types.",
+  "fixedFields": ["policyNo", "claimType", "incidentDate", "assessor"],
+  "pinnedDims": ["propSet", "actions", "mode", "isHidden:assessor"],
+  "config": {
+    "name": "InsuranceClaimManage",
+    "apiUrl": "/api/insurance-claims",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "policyNo", "label": "保单号", "formtype": "Input" },
+      {
+        "prop": "claimType",
+        "label": "理赔类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "车险", "value": "auto" },
+          { "label": "医疗险", "value": "medical" },
+          { "label": "财产险", "value": "property" }
+        ]
+      },
+      { "prop": "incidentDate", "label": "出险日期", "formtype": "DatePicker", "inQuery": false },
+      {
+        "prop": "assessor",
+        "label": "定损员",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "claimType", "op": "nIn", "value": ["auto"] }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=nIn — 非车险时隐藏定损员（vue3/sfc，条件随 formItems 一起内联进 SFC）"
+}

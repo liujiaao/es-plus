@@ -134,6 +134,39 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
+    label: "Conditional field visibility → declarative isHidden (plain JSON, no code)",
+    nl: "退款管理：查询退款单号；表格展示退款单号、订单号、退款金额、退款类型、退款原因；支持新增、编辑、删除。表单里「退款原因」只在退款类型为「部分退款」时才显示。",
+    reasoning:
+      "表单字段随另一字段的值显隐 → 用字段级 isHidden（纯 JSON 条件，条件成立即隐藏），NOT formatter/render。注意它是**反相**的：「只在退款类型=部分退款时显示」= 在退款类型 ≠ 部分退款时隐藏，故写 op:'ne'。它是**表单作用域**（查询表单 + 新增/编辑弹窗），不是表格列。op 省略时默认 eq。退款方式是有限枚举 → Select + dataOptions。",
+    config: {
+      name: "RefundManage",
+      apiUrl: "/api/refunds",
+      fields: [
+        { prop: "refundNo", label: "退款单号", formtype: "Input" },
+        { prop: "orderNo", label: "订单号", formtype: "Input" },
+        { prop: "refundAmount", label: "退款金额", formtype: "InputNumber" },
+        {
+          prop: "refundType",
+          label: "退款类型",
+          formtype: "Select",
+          inQuery: false,
+          dataOptions: [
+            { label: "全额退款", value: "full" },
+            { label: "部分退款", value: "part" },
+          ],
+        },
+        {
+          prop: "refundReason",
+          label: "退款原因",
+          formtype: "Input",
+          inQuery: false,
+          isHidden: { field: "refundType", op: "ne", value: "part" },
+        },
+      ],
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
     label: "Multiple dialogs with different form fields",
     nl: "客户管理：新增和编辑用不同的弹窗表单——新增时填公司名、联系人、电话；编辑时在这些之外还能改信用额度。",
     reasoning:
@@ -206,7 +239,8 @@ function buildContent(): string {
     "- Dates/times → `DatePicker`/`TimePicker`; images/files → `Upload`; on/off → `Switch`.",
     "- System-generated columns (createdAt, id) → `inForm:false`; detail-only fields → `inQuery:false`.",
     "- Button placement: \"left\" → `position:'left'`, \"right\" → `position:'right'` (`code:1`/`code:2` is the legacy alias — still accepted, but prefer `position`).",
-    "- Requirements the schema can't express (permission gating, conditional display, computed values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them.",
+    "- Form-scope conditional visibility (\"field X shows only when Y is Z\", \"只在…时才填写\") → the field-level `isHidden` — a PLAIN JSON condition (never a JS string), `{ field, op?, value? }` or an array (AND), hidden while it holds. Applies to the query/add/edit forms, NOT the table column.",
+    "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` above is declarative data, NOT an extension point — use it, don't reach for formatter/render for visibility.)",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",
     "---",

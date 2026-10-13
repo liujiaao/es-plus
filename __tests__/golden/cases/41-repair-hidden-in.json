@@ -1,0 +1,44 @@
+{
+  "nl": "设备报修管理：查询有设备名称、故障类型（硬件/软件/网络）；表格展示设备名称、故障类型、报修人、紧急程度、上门地址；支持新增、编辑、删除。表单里「上门地址」在故障类型为「软件」或「网络」时隐藏（这两类走远程支持）。",
+  "nlEn": "Equipment repair management: query by device name and fault type (hardware / software / network); the table shows device name, fault type, reporter, urgency, and on-site address; supports add, edit, and delete. In the form, \"on-site address\" is hidden when the fault type is \"software\" or \"network\" (both are handled by remote support).",
+  "fixedFields": ["deviceName", "faultType", "reporter", "urgency", "onsiteAddress"],
+  "pinnedDims": ["propSet", "actions", "target", "isHidden:onsiteAddress"],
+  "config": {
+    "name": "EquipmentRepairManage",
+    "apiUrl": "/api/equipment-repairs",
+    "target": "antdv",
+    "fields": [
+      { "prop": "deviceName", "label": "设备名称", "formtype": "Input" },
+      {
+        "prop": "faultType",
+        "label": "故障类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "硬件", "value": "hardware" },
+          { "label": "软件", "value": "software" },
+          { "label": "网络", "value": "network" }
+        ]
+      },
+      { "prop": "reporter", "label": "报修人", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "urgency",
+        "label": "紧急程度",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "普通", "value": "normal" },
+          { "label": "紧急", "value": "urgent" }
+        ]
+      },
+      {
+        "prop": "onsiteAddress",
+        "label": "上门地址",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "faultType", "op": "in", "value": ["software", "network"] }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=in — 软件/网络故障时隐藏上门地址（antdv/schema）"
+}
