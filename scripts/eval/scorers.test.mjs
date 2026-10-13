@@ -108,6 +108,30 @@ for (const { key } of CAPABILITY_SCORERS) {
   check(s.exactIntentFull === false, `扰动 ${key} 后 exactIntentFull 仍为 true`)
 }
 
+// 2b) operationColumn 库默认派生等价（锁定本次 scorer 修复）
+//     组件 es-crud-page 在省略 operationColumn 时按 actions 自动派生行按钮（view→查看/edit→编辑/
+//     delete→删除），故「显式 btns=[编辑,删除]」与「省略 operationColumn + actions 含 edit/delete」
+//     渲染同一组行按钮，判定必须相等——否则会把正确的极简配置误罚为 miss（库默认→scorer，非 overfit）。
+console.log('meta-eval: operationColumn 库默认派生等价')
+{
+  const flds = [{ prop: 'name', label: '名称', formtype: 'Input', inQuery: true, inTable: true, inForm: true }]
+  const gold = { fields: flds, actions: ['add', 'edit', 'delete'], operationColumn: { label: '操作', btns: [{ name: '编辑' }, { name: '删除' }] } }
+  // 模型省略 operationColumn，但 actions 含 edit/delete → 组件派生 [编辑,删除] == gold.btns
+  check(scoreAll(gold, { fields: flds, actions: ['add', 'edit', 'delete'] }).byCapability.operationColumn.pass === true,
+    'operationColumn: 省略但 actions 派生出同一行按钮集 → 应判等')
+  // 守恒：actions 缺 delete → 派生只有 [编辑] ≠ gold[编辑,删除] → 仍判负（真漏不放过）
+  check(scoreAll(gold, { fields: flds, actions: ['add', 'edit'] }).byCapability.operationColumn.pass === false,
+    'operationColumn: 省略且 actions 派生不出 gold 行按钮（缺 delete）→ 应判负')
+  // view→查看 也在派生表内：显式 [查看,编辑,删除] == 省略 + actions 含 view/edit/delete
+  const goldV = { fields: flds, actions: ['add', 'view', 'edit', 'delete'], operationColumn: { btns: [{ name: '查看' }, { name: '编辑' }, { name: '删除' }] } }
+  check(scoreAll(goldV, { fields: flds, actions: ['add', 'view', 'edit', 'delete'] }).byCapability.operationColumn.pass === true,
+    'operationColumn: view→查看 也在派生表内 → 判等')
+  // 自定义行按钮（如处理/关闭）不在 actions 派生范围 → 模型省略仍判负
+  const goldCustom = { fields: flds, actions: ['edit'], operationColumn: { btns: [{ name: '处理' }, { name: '关闭' }] } }
+  check(scoreAll(goldCustom, { fields: flds, actions: ['edit'] }).byCapability.operationColumn.pass === false,
+    'operationColumn: 自定义行按钮(处理/关闭)不可由 actions 派生 → 省略应判负')
+}
+
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化
 console.log('meta-eval: scoped metric (pinnedDims)')
 {

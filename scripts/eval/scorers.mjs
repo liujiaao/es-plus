@@ -99,13 +99,32 @@ function dialogsEqual(gold, pred) {
 /** 行操作列的行按钮 name（排序）—— 判定与诊断同源。 */
 const rowBtnNames = (o) => (o?.btns ?? []).map((b) => b.name).sort()
 
-/** false 必须对 false；对象对对象时比行按钮 name 集合（结构意图，不逐一比样式）。 */
+/**
+ * 组件 es-crud-page `normalizedOperationColumn` 的判定镜像。
+ *
+ * 关键：配置**省略** operationColumn 时，组件并非「无操作列」，而是按 actions 自动派生行按钮
+ * （view→查看 / edit→编辑 / delete→删除；无任何行动作则整列关闭 false）。所以「省略 operationColumn
+ * + actions=[add,edit,delete]」与「显式 operationColumn.btns=[编辑,删除]」渲染出**同一组行按钮**。
+ * 旧 operationColumnEqual 把 `undefined` 当空集，会把前者（正确的极简配置）误判为 miss —— 这是库默认
+ * 未被判定建模的老问题，与 inQuery 默认陷阱同构。这里改为比较**有效行按钮集**（库默认→scorer，非 overfit）。
+ * 自定义行按钮（如示例 TicketManage 的「处理/关闭」）不在 actions 派生范围内，模型省略它们仍会正确判负。
+ */
+const ROW_ACTION_LABEL = { view: '查看', edit: '编辑', delete: '删除' }
+function effectiveRowBtns(cfg) {
+  const oc = cfg.operationColumn
+  if (oc === false) return { disabled: true, names: [] }
+  if (oc !== undefined) return { disabled: false, names: rowBtnNames(oc) }
+  // 省略 → 镜像组件按 actions 派生（无行动作时组件返回 false=整列关闭）。
+  const actions = cfg.actions ?? ['add', 'edit', 'delete']
+  const names = ['view', 'edit', 'delete'].filter((a) => actions.includes(a)).map((a) => ROW_ACTION_LABEL[a])
+  return names.length ? { disabled: false, names: names.sort() } : { disabled: true, names: [] }
+}
+
+/** 比较**有效**行按钮集：关闭态须一致，行按钮 name 集须相等（结构意图，不逐一比样式）。 */
 function operationColumnEqual(gold, pred) {
-  const go = gold.operationColumn
-  const po = pred.operationColumn
-  if (go === false || po === false) return go === po
-  if (!go || !po) return false
-  return rowBtnNames(go).join(',') === rowBtnNames(po).join(',')
+  const g = effectiveRowBtns(gold)
+  const p = effectiveRowBtns(pred)
+  return g.disabled === p.disabled && g.names.join(',') === p.names.join(',')
 }
 
 /**
@@ -120,11 +139,11 @@ export function describeDimMiss(dim, gold, pred) {
     return { want: show(gold), got: show(pred) }
   }
   if (dim === 'operationColumn') {
+    // 显示**有效**行按钮集（镜像组件派生），与 operationColumnEqual 同源 → want===got 当且仅当 pass。
     const show = (c) => {
-      const o = c.operationColumn
-      if (o === false) return 'false（关闭操作列）'
-      if (!o) return '（未配置）'
-      return rowBtnNames(o).join(' · ') || '（无行按钮）'
+      const e = effectiveRowBtns(c)
+      if (e.disabled) return 'false（关闭操作列）'
+      return e.names.join(' · ') || '（无行按钮）'
     }
     return { want: show(gold), got: show(pred) }
   }
