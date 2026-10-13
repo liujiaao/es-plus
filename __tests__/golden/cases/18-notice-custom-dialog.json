@@ -37,6 +37,7 @@
         "prop": "publisher",
         "label": "发布人",
         "formtype": "Input",
+        "inQuery": false,
         "inForm": false
       },
       {

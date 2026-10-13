@@ -36,12 +36,14 @@
         "prop": "startAt",
         "label": "开始时间",
         "formtype": "DatePicker",
+        "inQuery": false,
         "inForm": true
       },
       {
         "prop": "endAt",
         "label": "结束时间",
         "formtype": "DatePicker",
+        "inQuery": false,
         "inForm": true
       }
     ],

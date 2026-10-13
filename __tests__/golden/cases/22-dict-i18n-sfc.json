@@ -23,6 +23,7 @@
         "prop": "status",
         "label": "状态",
         "formtype": "Select",
+        "inQuery": false,
         "dataOptions": [
           {
             "label": "启用",

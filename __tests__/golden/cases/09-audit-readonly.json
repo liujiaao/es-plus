@@ -55,6 +55,7 @@
         "prop": "ip",
         "label": "IP 地址",
         "formtype": "Input",
+        "inQuery": false,
         "inForm": false
       }
     ],

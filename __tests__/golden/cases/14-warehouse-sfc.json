@@ -27,6 +27,7 @@
         "prop": "createdAt",
         "label": "创建时间",
         "formtype": "DatePicker",
+        "inQuery": false,
         "inForm": false
       }
     ],

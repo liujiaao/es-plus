@@ -27,12 +27,14 @@
       {
         "prop": "installDate",
         "label": "安装日期",
-        "formtype": "DatePicker"
+        "formtype": "DatePicker",
+        "inQuery": false
       },
       {
         "prop": "lastReportTime",
         "label": "最后上报时间",
         "formtype": "DatePicker",
+        "inQuery": false,
         "inForm": false
       }
     ],

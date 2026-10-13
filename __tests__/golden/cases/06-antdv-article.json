@@ -37,6 +37,7 @@
         "prop": "publishedAt",
         "label": "发布时间",
         "formtype": "DatePicker",
+        "inQuery": false,
         "inForm": false
       }
     ],
