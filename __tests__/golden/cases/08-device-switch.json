@@ -1,8 +1,12 @@
 {
-  "nl": "设备管理：表格展示设备编号、设备名称、在线状态（在线/离线/故障）用 Switch 表示是否启用、安装日期、最后上报时间；查询有设备名称、在线状态；支持新增、编辑、删除、导入。",
-  "nlEn": "Device management: the table shows device number, device name, online status (online/offline/fault), a Switch indicating whether it is enabled, installation date, and last report time; query by device name and online status; supports add, edit, delete, and import.",
+  "nl": "设备管理：表格展示设备编号、设备名称、在线状态（在线/离线/故障三种）、安装日期、最后上报时间；查询有设备名称、在线状态；支持新增、编辑、删除、导入。",
+  "nlEn": "Device management: the table shows device number, device name, online status (online/offline/fault — three states), installation date, and last report time; query by device name and online status; supports add, edit, delete, and import.",
   "fixedFields": ["deviceNo", "deviceName", "online", "installDate", "lastReportTime"],
   "pinnedDims": ["propSet", "actions", "formtype:online"],
+  "refinements": [
+    { "turn": 1, "correction": "在线状态其实运维只区分在线和不在线，故障归入离线——合并成在线/离线两态，表单里用开关 Switch 直接切换，别用下拉。" }
+  ],
+  "convergesBy": 1,
   "config": {
     "name": "DeviceManage",
     "apiUrl": "/api/devices",
@@ -45,5 +49,5 @@
       "import"
     ]
   },
-  "notes": "Switch for boolean online status; system report time excluded from form"
+  "notes": "收敛语料（formtype 铰链 formtype:online，枚举→开关的语义收窄）。机制：gold 是精修后的最终意图（online 二态 Switch、无 dataOptions），初版 NL 刻意把在线状态写成「在线/离线/故障三种」——一个三值具名枚举。turn-0 必 miss：few-shot 稳定区分「状态（枚举/多值）→Select」（示例 01/03/07/16 的 status 全 Select）与「开关/是否/on-off → Switch」（示例 02 上架、05 是否默认、类型规则 'boolean on/off toggle → Switch'），三值枚举无开关语义 → 模型恒置 formtype:online=Select ≠ gold Switch → pinned formtype:online 必 X → scoped=X → 循环触发（结构性保证，非赌模型犯错；实测锚点：本模型在 08 的 online.formtype 上跨两轮付费 run 稳定 want-Switch-got-Select）。一句「合并成在线/离线两态、表单用开关 Switch」后，二态 + 开关语义命中 few-shot → 第 1 轮收敛。弃用旧版「用 Switch 表示是否启用」自相矛盾表述（三值枚举却标 Switch，模型合理选 Select 反被误罚）。heldout、未被 few-shot 教过此具体收窄。"
 }
