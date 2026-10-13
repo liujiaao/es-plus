@@ -1,0 +1,24 @@
+{
+  "nl": "会议管理：查询有会议主题、会议室；表格首列勾选，后面展示会议主题、主持人、开始时间；支持新增、编辑、删除。",
+  "nlEn": "Meeting management: query by meeting subject and room; the table starts with a checkbox column, then shows subject, host, and start time; supports add, edit, and delete.",
+  "fixedFields": ["subject", "host", "startTime"],
+  "pinnedDims": ["propSet", "actions", "columns", "mode"],
+  "config": {
+    "name": "MeetingManage",
+    "apiUrl": "/api/meetings",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "subject", "label": "会议主题", "formtype": "Input" },
+      { "prop": "host", "label": "主持人", "formtype": "Input", "inQuery": false },
+      { "prop": "startTime", "label": "开始时间", "formtype": "DatePicker" }
+    ],
+    "columns": [
+      { "type": "selection", "width": 50 },
+      { "prop": "subject", "label": "会议主题" },
+      { "prop": "host", "label": "主持人" },
+      { "prop": "startTime", "label": "开始时间", "width": 180 }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: selection 非字段列（vue3/sfc）"
+}

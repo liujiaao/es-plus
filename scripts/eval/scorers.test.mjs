@@ -57,6 +57,12 @@ const BASE_INPUT = {
     add: { title: '新增', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }] },
     edit: { title: '编辑', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }, { prop: 'amount', label: '金额', formtype: 'Input' }] },
   }, // → dialogs 维度
+  columns: [
+    { type: 'selection' },
+    { prop: 'name', label: '名称' },
+    { label: '金额信息', groups: [{ prop: 'amount', label: '金额' }] },
+  ], // → columns 维度（显式列逃生数组：非字段列 + 多级表头）
+  expandConfig: { title: '详情', fields: [{ prop: 'createdAt', label: '创建时间' }] }, // → expandConfig 维度（声明式行展开内容）
 }
 
 const base = StructuredCrudConfigSchema.parse(BASE_INPUT)
@@ -97,6 +103,8 @@ const PERTURB = {
   virtualScroll: (c) => { c.tableOptions.virtual = false },
   configTableOut: (c) => { c.tableOptions.configTableOut.tableData = 'changed' },
   isHidden: (c) => { c.fields[0].isHidden.op = 'ne' },
+  columns: (c) => { c.columns[0].type = 'index' },
+  expandConfig: (c) => { c.expandConfig.title = '别的' },
   extPoints: (c) => { delete c.fields[3].formatter },
 }
 
@@ -168,6 +176,61 @@ console.log('meta-eval: isHidden (declarative condition)')
   const zChanged = clone(twoField)
   zChanged.fields[1].isHidden.value = 'zzz'
   check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 isHidden 应免责')
+}
+
+// 2d) columns（显式列逃生数组，AI-09 子项①）维度的语义：整数组深等值（列序 / 层级 / 非字段列都算数）
+console.log('meta-eval: columns (explicit column array)')
+{
+  const cols = [
+    { type: 'selection' },
+    { prop: 'name', label: '名称' },
+    { label: '组', groups: [{ prop: 'amount', label: '金额' }] },
+  ]
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], columns: cols }
+  check(scoreAll(gold, clone(gold)).byCapability.columns.pass === true, 'columns: 整数组一致应判正')
+
+  const orderChanged = clone(gold)
+  orderChanged.columns.reverse()
+  check(scoreAll(gold, orderChanged).byCapability.columns.pass === false, 'columns: 列序变化应判负（顺序是契约）')
+
+  const typeChanged = clone(gold)
+  typeChanged.columns[0].type = 'index'
+  check(scoreAll(gold, typeChanged).byCapability.columns.pass === false, 'columns: 非字段列 type 变化应判负')
+
+  const groupsFlattened = clone(gold)
+  delete groupsFlattened.columns[2].groups
+  check(scoreAll(gold, groupsFlattened).byCapability.columns.pass === false, 'columns: 多级表头被拍平应判负')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.columns.pass === false, 'columns: pred 漏发整段 columns 应判负')
+
+  // gold 无 columns → 维度不 applicable（派生路径，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.columns.applicable === false, 'columns: gold 未声明时维度不 applicable')
+}
+
+// 2e) expandConfig（声明式行展开内容，AI-09 子项②）维度的语义：整体深等值
+//（标题 / 字段序 / 标签都是渲染契约）
+console.log('meta-eval: expandConfig (declarative row-expand content)')
+{
+  const ec = { title: '详情', fields: [{ prop: 'remark', label: '备注' }, { prop: 'createdAt', label: '创建时间' }] }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], expandConfig: ec }
+  check(scoreAll(gold, clone(gold)).byCapability.expandConfig.pass === true, 'expandConfig: 整体一致应判正')
+
+  const fieldOrder = clone(gold)
+  fieldOrder.expandConfig.fields.reverse()
+  check(scoreAll(gold, fieldOrder).byCapability.expandConfig.pass === false, 'expandConfig: 字段序变化应判负（顺序是契约）')
+
+  const titleChanged = clone(gold)
+  titleChanged.expandConfig.title = '别的标题'
+  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === false, 'expandConfig: 标题变化应判负')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.expandConfig.pass === false, 'expandConfig: pred 漏发整段应判负')
+
+  // gold 无 expandConfig → 维度不 applicable（无行展开，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.expandConfig.applicable === false, 'expandConfig: gold 未声明时维度不 applicable')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化

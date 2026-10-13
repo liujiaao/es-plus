@@ -132,6 +132,44 @@ const FieldConfigSchema = z.object({
   ),
 })
 
+/**
+ * 显式表格列（`columns` 逃生数组的元素）—— 对齐组件契约 `TableColumn`。
+ *
+ * `fields`（扁平）只能派生「一个字段 = 一列」，表达不了**多级表头**（`groups` 自指递归）
+ * 与**非字段列**（`type:'index'|'selection'|'expand'` —— 它们没有 `prop`/`label`/`formtype`，
+ * 塞进 `FieldConfigSchema` 只能放宽那三个硬必填）。这层就是为此存在的窄口径承载：
+ * 只收结构化列属性，**不收** `render`/`formatter` 源码字符串（自定义单元格仍走字段级扩展点）。
+ *
+ * `groups` 递归（组件 `TableColumn.groups?: TableColumn[]` 同形；JSON 单源
+ * `table-column.schema.json` 亦以 `$ref:"#"` 自指）。跨端安全上限 = **2 级表头**
+ * （antdv N 级递归，vue3/vue2 默认仅 1 级）—— 超 2 级由生成器降级告警，不在此拒绝。
+ */
+const ColumnSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    prop: z.string().min(1).refine(isSafeProp, {
+      message:
+        'prop 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
+    }).optional().describe('Data key for this column, e.g. "userName". Omit for non-field columns (type: index/selection/expand).'),
+    label: z.string().optional().describe('Column header text. Omit for non-field columns.'),
+    labelKey: z.string().optional().describe('i18n key alternative to label (used when i18n is on)'),
+    type: z.enum(['index', 'selection', 'expand']).optional().describe(
+      "Non-field column kind: 'index' = row number, 'selection' = checkbox column, 'expand' = row expander (needs a content slot / expandConfig). Omit for a normal data column."
+    ),
+    width: z.union([z.number(), z.string()]).optional(),
+    minWidth: z.union([z.number(), z.string()]).optional(),
+    align: z.enum(['left', 'center', 'right']).optional(),
+    fixed: z.union([z.boolean(), z.literal('left'), z.literal('right')]).optional(),
+    sortable: z.boolean().optional(),
+    ellipsis: z.boolean().optional(),
+    showOverflowTooltip: z.boolean().optional(),
+    permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
+    groups: z.array(ColumnSchema).optional().describe(
+      'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
+    ),
+    btns: z.array(z.record(z.string(), z.unknown())).optional().describe('In-cell action buttons (operation column)'),
+  })
+)
+
 const ToolbarBtnSchema = z
   .object({
     name: z.string().min(1),
@@ -312,6 +350,27 @@ export const StructuredCrudConfigSchema = z.object({
   tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (position:left|right, recommended; legacy code:1=left/2=right) rendered above EsTable'),
   operationColumn: OperationColumnSchema.optional().describe('Operation column config (false = hidden)'),
   dialogs: z.record(z.string(), DialogConfigSchema).optional().describe('Multi-dialog configs keyed by dialog ID'),
+  columns: z.array(ColumnSchema).optional().describe(
+    "Explicit table columns (escape hatch over the `fields`-derived columns). When present it REPLACES the derived data columns (override, not merge) — `fields` still drives the query/add/edit forms. Use it for multi-level group headers (`groups`), and non-field columns (`type`: index/selection/expand). The operation column is STILL appended from `actions`/`operationColumn` (set `operationColumn:false` to manage it yourself). Omit to keep the derived one-field-one-column behavior."
+  ),
+  expandConfig: z
+    .object({
+      title: z.string().optional().describe('Optional title shown at the top of the expanded row.'),
+      fields: z
+        .array(
+          z.object({
+            prop: z.string().min(1).describe('Row field to display (value = `row[prop]`).'),
+            label: z.string().optional().describe('Label text for this field.'),
+            labelKey: z.string().optional().describe('i18n label key (used with a global t() function; takes precedence over `label`).'),
+          })
+        )
+        .min(1)
+        .describe('Read-only fields rendered inside the expanded row, one per line as `label: value`.'),
+    })
+    .optional()
+    .describe(
+      "Row-expand content (AI-09 子项②). When set, the table gets ONE row-expander whose expanded content is a read-only field list. If `columns` already declares a `{type:'expand'}` column it is used as-is (position preserved) and the content attaches to it; otherwise the generator prepends a leading expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
+    ),
 })
 
 export type StructuredCrudConfig = z.infer<typeof StructuredCrudConfigSchema>

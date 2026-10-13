@@ -137,6 +137,55 @@ const FieldConfigSchema = z.object({
 });
 
 /**
+ * Explicit table column (element of the `columns` escape array) — mirrors the
+ * component contract `TableColumn`. This inline Zod copy MUST declare it too:
+ * Zod strips unknown keys, so without it a config that supplies `columns` would
+ * parse "successfully" with the whole array silently DROPPED (the table would
+ * fall back to the derived columns) and no error. `check-schema-contract.mjs`
+ * guards the `columns` contract so the two copies can't drift.
+ *
+ * Recursive via z.lazy (`groups` nests column arrays — multi-level headers).
+ * Deliberately does NOT accept `render`/`formatter` source strings: those are
+ * field-level extension points; this is the structured column path.
+ */
+const ColumnSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    prop: z
+      .string()
+      .min(1)
+      .refine(isSafeProp, {
+        message:
+          'prop must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+      })
+      .optional()
+      .describe('Data key for this column, e.g. "userName". Omit for non-field columns (type: index/selection/expand).'),
+    label: z.string().optional().describe('Column header text. Omit for non-field columns.'),
+    labelKey: z.string().optional().describe('i18n key alternative to label (used when i18n is on)'),
+    type: z
+      .enum(["index", "selection", "expand"])
+      .optional()
+      .describe(
+        "Non-field column kind: 'index' = row number, 'selection' = checkbox column, 'expand' = row expander (needs an expandConfig/slot). Omit for a normal data column."
+      ),
+    width: z.union([z.number(), z.string()]).optional(),
+    minWidth: z.union([z.number(), z.string()]).optional(),
+    align: z.enum(["left", "center", "right"]).optional(),
+    fixed: z.union([z.boolean(), z.literal("left"), z.literal("right")]).optional(),
+    sortable: z.boolean().optional(),
+    ellipsis: z.boolean().optional(),
+    showOverflowTooltip: z.boolean().optional(),
+    permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
+    groups: z
+      .array(ColumnSchema)
+      .optional()
+      .describe(
+        'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
+      ),
+    btns: z.array(z.record(z.unknown())).optional().describe('In-cell action buttons (operation column)'),
+  })
+);
+
+/**
  * Table toolbar button — mirrors the shared authoritative TableBtnSchema.
  *
  * Accepts both `position` (recommended by the renderer contract) and `code`
@@ -326,6 +375,30 @@ const configShape = {
       })
     )
     .optional(),
+  columns: z
+    .array(ColumnSchema)
+    .optional()
+    .describe(
+      "Explicit table columns (escape hatch over the `fields`-derived columns). When present it REPLACES the derived data columns (override, not merge) — `fields` still drives the query/add/edit forms. Use it for multi-level group headers (`groups`), and non-field columns (`type`: index/selection/expand). The operation column is STILL appended from `actions`/`operationColumn` (set `operationColumn:false` to manage it yourself). Omit to keep the derived one-field-one-column behavior."
+    ),
+  expandConfig: z
+    .object({
+      title: z.string().optional().describe("Optional title shown at the top of the expanded row."),
+      fields: z
+        .array(
+          z.object({
+            prop: z.string().min(1).describe("Row field to display (value = `row[prop]`)."),
+            label: z.string().optional().describe("Label text for this field."),
+            labelKey: z.string().optional().describe("i18n label key (used with a global t() function; takes precedence over `label`)."),
+          })
+        )
+        .min(1)
+        .describe("Read-only fields rendered inside the expanded row, one per line as `label: value`."),
+    })
+    .optional()
+    .describe(
+      "Row-expand content (AI-09 子项②). When set, the table gets ONE row-expander whose expanded content is a read-only field list. If `columns` already declares a `{type:'expand'}` column it is used as-is (position preserved) and the content attaches to it; otherwise the generator prepends a leading expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
+    ),
 } as const;
 
 /**

@@ -174,7 +174,9 @@ exports[`StructuredCrudConfigSchema — surface listing > top-level keys are sta
 [
   "actions",
   "apiUrl",
+  "columns",
   "dialogs",
+  "expandConfig",
   "fields",
   "formLayout",
   "i18n",

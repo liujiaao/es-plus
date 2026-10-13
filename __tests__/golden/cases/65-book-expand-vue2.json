@@ -1,0 +1,27 @@
+{
+  "nl": "图书管理：查询书名、作者；表格展示书名、作者、库存；每行可展开查看出版社、ISBN；支持新增、编辑、删除。",
+  "nlEn": "Book management: query by title and author; the table shows title, author and stock; each row can expand to reveal the publisher and ISBN; supports add, edit and delete.",
+  "fixedFields": ["bookName", "author", "stock", "publisher", "isbn"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "config": {
+    "name": "BookManage",
+    "apiUrl": "/api/books",
+    "target": "vue2",
+    "fields": [
+      { "prop": "bookName", "label": "书名", "formtype": "Input" },
+      { "prop": "author", "label": "作者", "formtype": "Input" },
+      { "prop": "stock", "label": "库存", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "publisher", "label": "出版社", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "isbn", "label": "ISBN", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "出版信息",
+      "fields": [
+        { "prop": "publisher", "label": "出版社" },
+        { "prop": "isbn", "label": "ISBN" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（vue2/schema）"
+}

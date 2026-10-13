@@ -342,6 +342,23 @@ JSON. The contract is **mark, never drop**:
   nIn / empty / notEmpty / truthy / falsy. Use this for "show field X only when Y
   is Z" — it applies to the query/add/edit forms, NOT the table column. Do NOT
   reach for \`formatter\`/\`render\` for visibility.
+- **\`columns\`** (top-level — **not** an extension point: it's PLAIN JSON DATA): the
+  explicit table-column array, an escape hatch over the \`fields\`-derived columns for
+  things the flat field list can't express — **multi-level group headers** (\`{ label,
+  groups: [ …child columns… ] }\`, cross-renderer safe to 2 levels) and **non-field
+  columns** (\`{ type: 'index' | 'selection' | 'expand' }\`). When present it REPLACES
+  the derived table columns (override, not merge), so every table-visible field must
+  appear inside it; \`fields\` still drives the query/add/edit forms. The operation
+  column is auto-appended from \`actions\`/\`operationColumn\` — do NOT add it to \`columns\`.
+- **\`expandConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **row-expand content** — \`{ title?, fields: [ { prop, label? } ] }\`
+  (fields non-empty). Its presence makes the table render exactly ONE row-expander
+  whose content is a read-only \`label: value\` list read from \`row[prop]\`; the listed
+  props are typically detail-only fields (mark them \`inTable:false\`). If \`columns\`
+  already declares a \`{ type: 'expand' }\` column the content attaches there (position
+  kept), otherwise the generator prepends one — you do NOT write the expander column
+  yourself. Use this for "每行可展开查看…". DISTINCT from \`tableOptions.expandConfig\`
+  (the vxe \`{ accordion }\` switch) — never use that for row-expand content.
 - **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
   cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
   inline in SFC mode; carried through in schema mode.

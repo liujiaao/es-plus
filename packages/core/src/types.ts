@@ -408,6 +408,14 @@ export interface TableColumn {
   scopedSlots?: { customRender?: string }
   /** 分组列（嵌套表头） */
   groups?: TableColumn[]
+  /**
+   * 行展开内容（仅 `type:'expand'` 列有意义）—— AI-09 子项②。
+   *
+   * 声明式字段明细：展开行内渲染一组只读「标签: 值」（值取 `row[prop]`）。
+   * 与 `TableOptions.expandConfig`（vxe `{ accordion }`）**不同概念**：那是 vxe 引擎的
+   * 展开行为开关，这里是展开的**内容**，三端默认引擎均消费。
+   */
+  expandConfig?: ExpandRowConfig
   /** 文本超出省略号 + tooltip */
   ellipsis?: boolean
   /** 隐藏列（保留配置但不渲染） */
@@ -449,6 +457,30 @@ export interface TableColumn {
   }) => string
   /** 允许任意扩展键 */
   [key: string]: unknown
+}
+
+/**
+ * 行展开的**内容**描述（AI-09 子项②）。
+ *
+ * 挂在 `TableColumn.expandConfig` 上，仅 `type:'expand'` 列消费：展开行内渲染一组
+ * 只读「标签: 值」，值取 `row[field.prop]`。纯 JSON 数据 —— 可直接内联进 schema 模式
+ * 的 pageSchema，无需宿主插槽（与 antdv `#expandedRowRender` 的 slot 约定互补）。
+ */
+export interface ExpandRowConfig {
+  /** 展开区标题（可选，纯文本，不参与 i18n） */
+  title?: string
+  /** 展开区字段明细（至少一列） */
+  fields: ExpandRowField[]
+}
+
+/** 展开区的一个只读字段。`labelKey` 配合全局 t() 时优先于 `label`。 */
+export interface ExpandRowField {
+  /** 取值字段名（`row[prop]`） */
+  prop: string
+  /** 标签文本 */
+  label?: string
+  /** i18n 标签 key（配合全局 t()） */
+  labelKey?: string
 }
 
 /**

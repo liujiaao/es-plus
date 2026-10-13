@@ -1,0 +1,28 @@
+{
+  "nl": "政策管理：查询政策名称；表格展示政策名称、生效日期；每行可展开查看发布部门、适用范围、政策摘要；支持新增、编辑、删除。",
+  "nlEn": "Policy management: query by policy name; the table shows policy name and effective date; each row can expand to reveal the issuing department, applicable scope and summary; supports add, edit and delete.",
+  "fixedFields": ["policyName", "effectDate", "dept", "scope", "summary"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "config": {
+    "name": "PolicyManage",
+    "apiUrl": "/api/policies",
+    "target": "vue2",
+    "fields": [
+      { "prop": "policyName", "label": "政策名称", "formtype": "Input" },
+      { "prop": "effectDate", "label": "生效日期", "formtype": "DatePicker", "inQuery": false },
+      { "prop": "dept", "label": "发布部门", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "scope", "label": "适用范围", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "summary", "label": "政策摘要", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "政策详情",
+      "fields": [
+        { "prop": "dept", "label": "发布部门" },
+        { "prop": "scope", "label": "适用范围" },
+        { "prop": "summary", "label": "政策摘要" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（title + 3 字段明细）（vue2/schema）"
+}

@@ -1,0 +1,30 @@
+{
+  "nl": "商品管理：查询商品名；表格首列序号，随后展示商品名、价格；每行可展开查看规格、产地；支持新增、编辑、删除。",
+  "nlEn": "Goods management: query by goods name; the table's first column is an index, then goods name and price; each row can expand to reveal the spec and origin; supports add, edit and delete.",
+  "fixedFields": ["goodsName", "price", "spec", "origin"],
+  "pinnedDims": ["propSet", "actions", "columns", "expandConfig"],
+  "config": {
+    "name": "GoodsManage",
+    "apiUrl": "/api/goods",
+    "fields": [
+      { "prop": "goodsName", "label": "商品名", "formtype": "Input" },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "spec", "label": "规格", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "origin", "label": "产地", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60 },
+      { "prop": "goodsName", "label": "商品名" },
+      { "prop": "price", "label": "价格" },
+      { "type": "expand" }
+    ],
+    "expandConfig": {
+      "fields": [
+        { "prop": "spec", "label": "规格" },
+        { "prop": "origin", "label": "产地" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: expandConfig 挂到显式 columns 的 {type:'expand'}（无 title）（vue3/schema）"
+}

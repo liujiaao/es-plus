@@ -1,0 +1,27 @@
+{
+  "nl": "用 antd 风格做学生管理：查询姓名、班级；表格展示姓名、班级、总分；每行可展开查看家长姓名、家长电话；支持新增、编辑、删除。",
+  "nlEn": "Student management with an Ant Design look: query by name and class; the table shows name, class and total score; each row can expand to reveal the parent name and parent phone; supports add, edit and delete.",
+  "fixedFields": ["studentName", "className", "totalScore", "parentName", "parentPhone"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "config": {
+    "name": "StudentManage",
+    "apiUrl": "/api/students",
+    "target": "antdv",
+    "fields": [
+      { "prop": "studentName", "label": "姓名", "formtype": "Input" },
+      { "prop": "className", "label": "班级", "formtype": "Input" },
+      { "prop": "totalScore", "label": "总分", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "parentName", "label": "家长姓名", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "parentPhone", "label": "家长电话", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "家长联系",
+      "fields": [
+        { "prop": "parentName", "label": "家长姓名" },
+        { "prop": "parentPhone", "label": "家长电话" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（antdv/schema）"
+}

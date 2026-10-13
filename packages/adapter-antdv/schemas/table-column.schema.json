@@ -109,6 +109,42 @@
       "enum": ["selection", "expand", "index"],
       "description": "Special column type: selection checkbox, expand row, or row index"
     },
+    "expandConfig": {
+      "type": "object",
+      "description": "Row-expand content for a `type: 'expand'` column (AI-09 子项②). When set, the row expander renders a read-only `label: value` list from `row[prop]` for each entry in `fields` (display order preserved). Usually supplied via the top-level StructuredCrudConfig.expandConfig, which the generator maps onto the expand column. Distinct from tableOptions.expandConfig (the vxe `{ accordion }` switch).",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Optional heading rendered above the field list"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Detail fields to show, in display order",
+          "items": {
+            "type": "object",
+            "properties": {
+              "prop": {
+                "type": "string",
+                "description": "Row key to read the value from"
+              },
+              "label": {
+                "type": "string",
+                "description": "Display label (falls back to `prop`)"
+              },
+              "labelKey": {
+                "type": "string",
+                "description": "i18n key for the label (takes precedence over `label`)"
+              }
+            },
+            "required": ["prop"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["fields"],
+      "additionalProperties": true
+    },
     "emptyPlaceholder": {
       "type": "string",
       "default": "-",

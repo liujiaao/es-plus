@@ -251,3 +251,95 @@ describe('生成物运行时冒烟 — 45-subscription（声明式 isHidden 条�
   })
 })
 
+// ────────────────────────────────────────────────────────────────────────────
+// 5) 显式 columns / groups 的运行时见证（AI-09 子项①）
+//    golden-48 用顶层 columns 逃生数组表达两级分组表头：「课程信息」下分课程名称/课时。
+//    这里把**生成出来的** pageSchema 挂进真实 EsCrudPage + EsTable，断言组标题与子列
+//    都真的渲染出来 —— 把「发射了 columns」升级为「columns 真的驱动了多级表头」。
+//    （分组子列没有顶层 prop，故不能走 seedFromSchema；按 fields 自造行。）
+// ────────────────────────────────────────────────────────────────────────────
+describe('生成物运行时冒烟 — 48-course（显式 columns / groups 多级表头）', () => {
+  afterEach(cleanup)
+
+  it('生成物里的 columns/groups 真的驱动了两级表头与列渲染', async () => {
+    const config = loadGoldenConfig('48-course-group-2level.json')
+    const schema = generatePageSchema(config)
+
+    // 生成物里确实带着显式列（两组、各含子列）——否则下面「看到分组表头」也无来由
+    const cols = schema.columns as any[]
+    expect(cols, '生成物应保留显式 columns（而非被 Zod 剥掉）').toHaveLength(2)
+    expect(cols.map((c) => c.label)).toEqual(['课程信息', '教师信息'])
+    expect(cols[0].groups.map((g: any) => g.prop)).toEqual(['courseName', 'hours'])
+
+    // 种子：分组子列无顶层 prop，不能走 seedFromSchema —— 按 fields 造行。
+    const props = (config.fields || []).map((f) => f.prop as string)
+    const httpRequest = async () => ({
+      records: 2,
+      rows: [0, 1].map((i) => Object.fromEntries([['id', i + 1], ...props.map((p) => [p, `R${i + 1}-${p}`])])),
+    })
+    const wrapper = mount(EsCrudPage, {
+      props: { schema, httpRequest },
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await flushPromises()
+    await nextTick()
+
+    // 两级分组表头：组标题 + 子列标题都在表头渲染
+    expect(wrapper.text()).toContain('课程信息')
+    expect(wrapper.text()).toContain('教师信息')
+    expect(wrapper.text()).toContain('课时')
+    expect(wrapper.text()).toContain('职称')
+    // 列真的驱动了数据渲染（不是只有空壳表头）
+    expect(wrapper.text()).toContain('R1-courseName')
+    expect(wrapper.text()).toContain('R1-teacher')
+  })
+})
+
+describe('生成物运行时冒烟 — 62-supplier（声明式行展开 expandConfig）', () => {
+  afterEach(cleanup)
+
+  it('生成物里的 expandConfig 真的驱动了行展开明细渲染', async () => {
+    const config = loadGoldenConfig('62-supplier-expand-index.json')
+    const schema = generatePageSchema(config)
+
+    // 生成物里表格列确实带上了 expandConfig（而非被 Zod / 适配层剥掉）——否则展开区恒空
+    const cols = schema.columns as any[]
+    const expandCol = cols.find((c) => c.type === 'expand')
+    expect(expandCol, '生成物应包含 expand 列').toBeTruthy()
+    expect(expandCol.expandConfig.title).toBe('联系方式')
+    expect(expandCol.expandConfig.fields.map((f: any) => f.prop)).toEqual(['contact', 'address'])
+
+    const props = (config.fields || []).map((f) => f.prop as string)
+    const httpRequest = async () => ({
+      records: 1,
+      rows: [Object.fromEntries([['id', 1], ...props.map((p) => [p, `R-${p}`])])],
+    })
+    const wrapper = mount(EsCrudPage, {
+      props: { schema, httpRequest },
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await flushPromises()
+    await nextTick()
+
+    // 展开前：明细不在文档里
+    expect(wrapper.find('.es-expand-content').exists()).toBe(false)
+
+    // 展开列渲染出切换图标，点击展开
+    const icon = wrapper.find('.el-table__expand-icon')
+    expect(icon.exists(), '展开列应渲染出切换图标').toBe(true)
+    await icon.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    // 展开后：标题 + 字段明细（label: value）真的渲染出来
+    expect(wrapper.find('.es-expand-content').exists()).toBe(true)
+    expect(wrapper.text()).toContain('联系方式')
+    expect(wrapper.text()).toContain('联系人')
+    expect(wrapper.text()).toContain('R-contact')
+    expect(wrapper.text()).toContain('地址')
+    expect(wrapper.text()).toContain('R-address')
+  })
+})
+

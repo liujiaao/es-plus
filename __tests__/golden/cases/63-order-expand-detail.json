@@ -1,0 +1,27 @@
+{
+  "nl": "订单管理：查询订单号；表格展示订单号、金额、下单时间；每行可展开查看收货人、联系电话、收货地址；支持新增、删除。",
+  "nlEn": "Order management: query by order number; the table shows order number, amount and order time; each row can expand to reveal the receiver, phone and shipping address; supports add and delete.",
+  "fixedFields": ["orderNo", "amount", "createdAt", "receiver", "phone", "address"],
+  "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "config": {
+    "name": "OrderManage",
+    "apiUrl": "/api/orders",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "createdAt", "label": "下单时间", "formtype": "DatePicker", "inForm": false },
+      { "prop": "receiver", "label": "收货人", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "phone", "label": "联系电话", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "address", "label": "收货地址", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "fields": [
+        { "prop": "receiver", "label": "收货人" },
+        { "prop": "phone", "label": "联系电话" },
+        { "prop": "address", "label": "收货地址" }
+      ]
+    },
+    "actions": ["add", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（无 title + 3 字段明细）（vue3/schema）"
+}

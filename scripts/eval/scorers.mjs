@@ -257,6 +257,20 @@ export const CAPABILITY_SCORERS = [
     applicable: (g) => g.fields.some((f) => f.isHidden !== undefined),
     pass: isHiddenEqual,
   },
+  {
+    // 显式列逃生数组（AI-09 子项①）：整数组深等值。列序/多级表头/非字段列都是行为契约，
+    // 「给了 columns 但顺序或层级不对」不算命中。仅当 gold 声明非空 columns 时 applicable。
+    key: 'columns',
+    applicable: (g) => !!(g.columns && g.columns.length),
+    pass: (g, p) => eq(g.columns ?? null, p.columns ?? null),
+  },
+  {
+    // 声明式行展开内容（AI-09 子项②）：整体深等值。字段顺序/标题/标签都是渲染契约，
+    // 「给了 expandConfig 但字段序或标题不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'expandConfig',
+    applicable: (g) => !!g.expandConfig,
+    pass: (g, p) => eq(g.expandConfig ?? null, p.expandConfig ?? null),
+  },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 

@@ -1,0 +1,26 @@
+{
+  "nl": "发票管理：查询发票号；表格展示发票号、开票金额、开票日期；每行可展开查看发票抬头、税号；支持新增、编辑、删除。",
+  "nlEn": "Invoice management: query by invoice number; the table shows invoice number, amount and issue date; each row can expand to reveal the title and tax number; supports add, edit and delete.",
+  "fixedFields": ["invoiceNo", "amount", "issueDate", "title", "taxNo"],
+  "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "config": {
+    "name": "InvoiceManage",
+    "apiUrl": "/api/invoices",
+    "fields": [
+      { "prop": "invoiceNo", "label": "发票号", "formtype": "Input" },
+      { "prop": "amount", "label": "开票金额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "issueDate", "label": "开票日期", "formtype": "DatePicker", "inForm": false },
+      { "prop": "title", "label": "发票抬头", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "taxNo", "label": "税号", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "开票信息",
+      "fields": [
+        { "prop": "title", "label": "发票抬头" },
+        { "prop": "taxNo", "label": "税号" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（title + 2 字段明细）（vue3/schema）"
+}

@@ -500,6 +500,65 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'edit', 'delete'],
     },
   },
+  {
+    nl: '考勤管理：查询条件有员工姓名和部门；表格第一列是序号列，随后用两级分组表头展示——「员工」下分员工姓名、部门，「考勤」下分出勤天数、迟到次数；支持新增、编辑、删除。',
+    reasoning:
+      'NL 要求「序号列」+「两级分组表头」——扁平的 `fields` 数组表达不了（非字段列没有 prop/label/formtype，多级表头需要嵌套）。所以用顶层 `columns` 逃生数组：`{ type: "index" }` 是序号列（非字段列），分组表头写 `{ label: "员工", groups: [ …子列… ] }`（跨端安全上限 2 级）。注意 `columns` 一旦给出就**整体覆盖**派生列（override 非 merge），因此每个要在表格里出现的字段都必须写进 `columns`（这里四个字段都进了 groups）；`fields` 仍照常驱动查询表单与新增/编辑表单，故查询字段只需在 `fields` 里标 inQuery。操作列不写进 `columns`——它仍由 actions 自动追加。',
+    config: {
+      name: 'AttendanceManage',
+      apiUrl: '/api/attendance',
+      fields: [
+        { prop: 'employeeName', label: '员工姓名', formtype: 'Input' },
+        { prop: 'department', label: '部门', formtype: 'Input' },
+        { prop: 'attendDays', label: '出勤天数', formtype: 'InputNumber', inQuery: false },
+        { prop: 'lateCount', label: '迟到次数', formtype: 'InputNumber', inQuery: false },
+      ],
+      columns: [
+        { type: 'index', label: '序号', width: 60 },
+        {
+          label: '员工',
+          groups: [
+            { prop: 'employeeName', label: '员工姓名' },
+            { prop: 'department', label: '部门' },
+          ],
+        },
+        {
+          label: '考勤',
+          groups: [
+            { prop: 'attendDays', label: '出勤天数' },
+            { prop: 'lateCount', label: '迟到次数' },
+          ],
+        },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '订单管理：查询条件有订单号；表格展示订单号、金额、下单时间；每行可展开查看收货人、联系电话、收货地址；支持新增、删除。',
+    reasoning:
+      'NL 要求「每行可展开查看…」——这是声明式**行展开内容**，用顶层 `expandConfig`（不是 `tableOptions.expandConfig`，后者是 vxe 的 accordion 开关，与内容无关）。展开的三个字段是明细信息，不单独成列，故标 `inTable:false`；它们仍可留在 `fields` 里（供新增/编辑表单使用，若不需要也可只放在 expandConfig.fields）。这里没给 `columns`，生成器会自动前置一个展开列，无需自己写 `{type:"expand"}`。`expandConfig.fields` 顺序即展示顺序。',
+    config: {
+      name: 'OrderExpandManage',
+      apiUrl: '/api/orders',
+      fields: [
+        { prop: 'orderNo', label: '订单号', formtype: 'Input' },
+        { prop: 'amount', label: '金额', formtype: 'InputNumber', inQuery: false },
+        { prop: 'createdAt', label: '下单时间', formtype: 'DatePicker', inForm: false },
+        { prop: 'receiver', label: '收货人', formtype: 'Input', inTable: false, inQuery: false },
+        { prop: 'phone', label: '联系电话', formtype: 'Input', inTable: false, inQuery: false },
+        { prop: 'address', label: '收货地址', formtype: 'Input', inTable: false, inQuery: false },
+      ],
+      expandConfig: {
+        title: '收货信息',
+        fields: [
+          { prop: 'receiver', label: '收货人' },
+          { prop: 'phone', label: '联系电话' },
+          { prop: 'address', label: '收货地址' },
+        ],
+      },
+      actions: ['add', 'delete'],
+    },
+  },
 ]
 
 /**
@@ -533,6 +592,8 @@ export function buildNlToConfigSystemPrompt(): string {
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
     'When the list response does not use the library default shape ({ rows, records }), declare the mapping declaratively in `tableOptions.configTableOut` — a FLAT path object { total?, tableData?, pageSize?, current? } whose VALUES are the response key names, e.g. a backend returning { list, count } → { tableData: "list", total: "count" }. Do NOT model response mapping any other way; it is a plain object, never a callback.',
     'Conditional field visibility ("only needed when …", "只在…时才填写") → the field-level `isHidden`, expressed as PLAIN JSON DATA, never a JS function: a single condition `{ field, op?, value? }` or an ARRAY of them (AND — hidden only when ALL hold). Semantics: the field is HIDDEN WHILE the condition HOLDS, so "show only when refundType is part" is `{ field: "refundType", op: "ne", value: "part" }`. `field` is another field path in the same form, `value` must match that field\'s value type (e.g. the dataOptions value), ops = eq (default) / ne / in / nIn / empty / notEmpty / truthy / falsy. It applies to the query and add/edit forms, NOT to the table column. Emit this rather than dropping the conditional field.',
+    'Multi-level group headers and non-field columns (row number / checkbox / expander) cannot be expressed by the flat `fields` array — use the top-level `columns` array (an escape hatch aligned with the renderer `TableColumn`). When present it REPLACES the derived table columns (override, not merge), while `fields` still drives the query/add/edit forms. A group header is `{ label, groups: [ …child columns… ] }` — cross-renderer safe to 2 levels (antdv supports more; vue3/vue2 default tables flatten beyond one nesting). A non-field column is `{ type: "index" | "selection" | "expand" }` (no prop/label needed). The operation column is STILL appended from `actions`/`operationColumn`, so do not add it to `columns`. Use `columns` only when the NL asks for grouped headers or index/selection/expander columns; otherwise keep the plain `fields` array.',
+    'Row-expand content ("每行可展开查看…", "点击行展开显示…") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (fields non-empty). Its presence makes the table render ONE row-expander whose content is a read-only `label: value` list read from `row[prop]`. The listed props are typically detail-only fields (mark them `inTable:false` so they are not also a column). If `columns` already declares a `{ type: "expand" }` column the content attaches to it (position kept); otherwise the generator prepends one expander column — you do NOT need to add the expander column yourself. This is DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',

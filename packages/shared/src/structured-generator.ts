@@ -174,7 +174,14 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     schema.formItems = queryFields.map(f => buildFormItem(f, 'query', config.i18n))
   }
 
-  schema.columns = tableFields.map(f => buildTableColumn(f, config.i18n))
+  // 表格列：显式 `columns` 逃生数组优先（多级表头 / 非字段列 / 精确列序），
+  // 否则从 `fields` 派生「一字段一列」。override **非** merge —— 给了 columns 就
+  // 不再混入派生列（避免排序 / 同 prop 重复的二义）。操作列不在此处：schema 模式下
+  // 它由 es-crud-page 按 operationColumn/actions 在运行时追加（见 SFC 分支注释）。
+  schema.columns =
+    config.columns && config.columns.length > 0
+      ? applyExpandConfig(config.columns as Array<Record<string, unknown>>, config, warnings)
+      : applyExpandConfig(tableFields.map(f => buildTableColumn(f, config.i18n)), config, warnings)
 
   const tOpts: TableOpts = (config.tableOptions || {}) as TableOpts
   schema.tableOptions = {
@@ -458,9 +465,25 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
 
   // columns
   lines.push(`const columns = [`)
-  for (const f of tableFields) {
-    const col = buildTableColumnSFC(f, config, warnings)
-    lines.push(`  ${col},`)
+  // AI-09 子项②：顶层 `expandConfig` 在此落到展开列。若 columns 里没有 `type:'expand'`
+  // 列，前置一个（展开列与数据列正交，不破坏 columns 的 override 语义）。
+  const hasExpandColSfc = ((config.columns ?? []) as Array<Record<string, unknown>>).some((c) => c.type === 'expand')
+  if (config.expandConfig && !hasExpandColSfc) {
+    pushSfcColumn({ type: 'expand', expandConfig: config.expandConfig }, lines, '  ', warnings)
+  }
+  if (config.columns && config.columns.length > 0) {
+    // 显式列逃生数组（override 非 merge）：数据列的顺序/构成完全由 columns 决定，
+    // `fields` 不再派生表格列。逐列递归发射（`groups` 多级表头自指）。操作列仍按
+    // 下方 actionBtns 追加（与派生路径一致，schema 模式同语义）。
+    for (const c of config.columns as Array<Record<string, unknown>>) {
+      const col = config.expandConfig && c.type === 'expand' ? { ...c, expandConfig: config.expandConfig } : c
+      pushSfcColumn(col, lines, '  ', warnings)
+    }
+  } else {
+    for (const f of tableFields) {
+      const col = buildTableColumnSFC(f, config, warnings)
+      lines.push(`  ${col},`)
+    }
   }
   // operation column
   const actionBtns = buildActionBtns(config)
@@ -975,6 +998,37 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
   return item
 }
 
+/**
+ * AI-09 子项②：把顶层声明式 `expandConfig` 落到展开列上（schema 模式）。
+ *
+ * 语义：`expandConfig` 一旦给出，表格就必须**恰好有一个**行展开器。
+ * - 若 columns 里已有 `type:'expand'` 列 → 内容挂到它（位置保留）。
+ * - 否则前置一个 `{ type:'expand', expandConfig }`（展开列与数据列正交，不破坏
+ *   `columns` 的 override 语义）。
+ *
+ * 「mark, never drop」的边界：vxe / virtual 引擎不消费列上的声明式展开内容
+ * （vxe 走插槽、el-table-v2 无 detail row），此时发**降级告警**而非静默——数据仍保留。
+ */
+function applyExpandConfig(
+  columns: Array<Record<string, unknown>>,
+  config: StructuredCrudConfig,
+  warnings: string[],
+): Array<Record<string, unknown>> {
+  const ec = config.expandConfig
+  if (!ec) return columns
+  const engine = (config.tableOptions as Record<string, unknown> | undefined)?.engine
+  if (engine === 'vxe') {
+    warnings.push('expandConfig 的声明式展开内容不会被 vxe 引擎渲染（vxe 展开内容走插槽）——数据已保留，但需宿主提供 expand 插槽或改用默认引擎。')
+  } else if (engine === 'virtual' || (config.tableOptions as Record<string, unknown> | undefined)?.virtual) {
+    warnings.push('expandConfig 的声明式展开内容不会被虚拟滚动引擎渲染（el-table-v2 无 detail row）——数据已保留，但需改用默认引擎。')
+  }
+  const out = columns.map((c) => ({ ...c }))
+  const idx = out.findIndex((c) => c.type === 'expand')
+  if (idx >= 0) out[idx] = { ...out[idx], expandConfig: ec }
+  else out.unshift({ type: 'expand', expandConfig: ec })
+  return out
+}
+
 export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, unknown> {
   const col: Record<string, unknown> = {
     prop: field.prop,
@@ -994,6 +1048,83 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<str
   // 按全局 permission(code) 过滤（无权限则该列不渲染）。与静态 hidCol 同层。
   if (field.permissionValue) col.permissionValue = field.permissionValue
   return col
+}
+
+/**
+ * 递归发射一个显式列（`config.columns` 元素）为 SFC 对象字面量。
+ *
+ * `groups` 自指递归 → 多级表头。只发结构化属性：字符串一律经 `q()` 转义、
+ * 数字/px 经 `numOrStr()`，因此数据字段永远不会变成可执行 JS（与 `buildTableColumnSFC`
+ * 同一条防线）。**刻意不发 `render`/`formatter`**：显式列是结构化路径，自定义单元格
+ * 仍走字段级扩展点（`FieldConfig.render`/`formatter`，那两处才有源码闸）。
+ *
+ * 键顺序固定为「标识 → 尺寸 → 行为 → 权限 → 嵌套」，与派生列风格一致；缺省键一律省略，
+ * 产物可读。`type`/`ellipsis`/`groups` 均按渲染契约原名发射（vue3/vue2 `column-item.vue`
+ * 直接读 `type`（原生透传）与 `ellipsis`（:57），不读 `showOverflowTooltip`——派生路径
+ * 把它规范成 el-table 原生 prop 是另一条路，显式列按用户所写原样保留）。
+ */
+function pushSfcColumn(
+  col: Record<string, unknown>,
+  lines: string[],
+  indent: string,
+  warnings: string[],
+): void {
+  const inner = `${indent}  `
+  lines.push(`${indent}{`)
+  const str = (k: string) => {
+    if (col[k] !== undefined) lines.push(`${inner}${k}: ${q(String(col[k]))},`)
+  }
+  const num = (k: string) => {
+    if (col[k] !== undefined) lines.push(`${inner}${k}: ${numOrStr(col[k] as string | number)},`)
+  }
+  const bool = (k: string) => {
+    if (col[k] !== undefined) lines.push(`${inner}${k}: ${col[k] === true},`)
+  }
+  str('prop')
+  str('label')
+  str('labelKey')
+  str('type')
+  str('align')
+  if (col.fixed !== undefined) {
+    lines.push(`${inner}fixed: ${typeof col.fixed === 'boolean' ? col.fixed : q(String(col.fixed))},`)
+  }
+  num('width')
+  num('minWidth')
+  bool('sortable')
+  bool('ellipsis')
+  bool('showOverflowTooltip')
+  str('permissionValue')
+  if (Array.isArray(col.groups) && col.groups.length > 0) {
+    lines.push(`${inner}groups: [`)
+    for (const g of col.groups as Array<Record<string, unknown>>) {
+      pushSfcColumn(g, lines, `${inner}  `, warnings)
+    }
+    lines.push(`${inner}],`)
+  }
+  // btns 是数据显示（name/type/permissionValue），不是源码扩展点 → 用 JSON 序列化。
+  // 含函数等不可序列化值时省略 + 告警，保持「发射的永远能编译」。
+  if (Array.isArray(col.btns) && col.btns.length > 0) {
+    let serialized: string | null = null
+    try {
+      serialized = JSON.stringify(col.btns)
+    } catch {
+      serialized = null
+    }
+    if (serialized !== null) lines.push(`${inner}btns: ${serialized},`)
+    else warnings.push('显式 columns 里的 btns 含无法序列化的值（如函数），已省略以保证编译通过。')
+  }
+  // expandConfig（AI-09 子项②）是纯 JSON 数据（title/fields 字段明细）→ 同 btns 用 JSON 序列化。
+  if (col.expandConfig !== undefined && col.expandConfig !== null) {
+    let serialized: string | null = null
+    try {
+      serialized = JSON.stringify(col.expandConfig)
+    } catch {
+      serialized = null
+    }
+    if (serialized !== null) lines.push(`${inner}expandConfig: ${serialized},`)
+    else warnings.push('行展开 expandConfig 含无法序列化的值，已省略以保证编译通过。')
+  }
+  lines.push(`${indent}},`)
 }
 
 export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudConfig, warnings?: string[]): string {

@@ -1,0 +1,22 @@
+{
+  "nl": "合同管理：查询有合同编号、签约方；表格展示合同编号、签约方、金额列，其中「金额」列按权限可见；支持新增、编辑、删除。",
+  "nlEn": "Contract management: query by contract no. and party; the table shows contract no., party, and an amount column that is visible only with permission; supports add, edit, and delete.",
+  "fixedFields": ["contractNo", "party", "amount"],
+  "pinnedDims": ["propSet", "actions", "columns"],
+  "config": {
+    "name": "ContractManage",
+    "apiUrl": "/api/contracts",
+    "fields": [
+      { "prop": "contractNo", "label": "合同编号", "formtype": "Input" },
+      { "prop": "party", "label": "签约方", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false, "permissionValue": "contract:amount:view" }
+    ],
+    "columns": [
+      { "prop": "contractNo", "label": "合同编号" },
+      { "prop": "party", "label": "签约方" },
+      { "prop": "amount", "label": "金额", "align": "right", "permissionValue": "contract:amount:view" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: 显式列带 permissionValue（列级权限）（vue3/schema）"
+}

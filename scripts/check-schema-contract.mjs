@@ -450,6 +450,31 @@ function checkStructuredConfigZod() {
         ok = false
       }
     }
+
+    // 顶层 `columns` 逃生数组契约（AI-09 子项①）：两处 Zod 都必须声明。
+    // z.object 无 passthrough —— 漏声明等于把整段 columns 静默剥掉，表格回落到派生列、
+    // 零告警（与 isHidden 同类静默丢弃）。且 ColumnSchema 必须递归（z.lazy 自指），
+    // 否则表达不了 groups 多级表头 —— 那正是它存在的理由。
+    if (!/\bcolumns\s*:\s*z\s*\.array\(\s*ColumnSchema/.test(src)) {
+      fail(`${label} 未声明顶层 columns: z.array(ColumnSchema)（逃生列数组会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/const ColumnSchema[\s\S]{0,120}?z\s*\.lazy\(/.test(src)) {
+      fail(`${label} 的 ColumnSchema 不是递归（缺 z.lazy），无法表达 groups 多级表头`)
+      ok = false
+    }
+
+    // 顶层 `expandConfig` 行展开内容契约（AI-09 子项②）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式展开内容整段静默剥掉，
+    // 表格有展开器但内容恒空、零告警。且其 `fields` 必须非空数组（否则同样是空展开）。
+    if (!/\bexpandConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 expandConfig: z.object(...)（声明式行展开内容会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/expandConfig\s*:[\s\S]{0,600}?fields\s*:\s*z\s*\n?\s*\.array\(/.test(src)) {
+      fail(`${label} 的 expandConfig 缺少 fields: z.array(...)（展开内容为空则无意义）`)
+      ok = false
+    }
   }
 
   if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)

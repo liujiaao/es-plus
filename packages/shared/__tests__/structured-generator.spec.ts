@@ -801,3 +801,188 @@ describe('sfc mode — regression guards', () => {
   })
 })
 
+describe('explicit table columns（AI-09 子项① groups）', () => {
+  const cfgWithColumns = {
+    name: 'UserManage',
+    apiUrl: '/api/users',
+    fields: [
+      { prop: 'name', label: '姓名', formtype: 'Input' as const },
+      // 仅进派生列（inQuery/inForm 均 false）—— 证明 columns 覆盖后它消失
+      { prop: 'derivedOnly', label: '派生列', formtype: 'Input' as const, inQuery: false, inForm: false },
+    ],
+    actions: ['add' as const, 'edit' as const, 'delete' as const],
+    columns: [
+      { type: 'selection' },
+      { prop: 'name', label: '姓名' },
+      {
+        label: '联系方式',
+        groups: [
+          { prop: 'phone', label: '手机号' },
+          { prop: 'email', label: '邮箱' },
+        ],
+      },
+    ],
+  } as any
+
+  it('schema 模式：columns 覆盖派生列（override 非 merge）+ 递归 groups 原样进 JSON', () => {
+    const result = generateFromConfig(cfgWithColumns)
+    expect(result.code).toContain('"type": "selection"')
+    expect(result.code).toContain('"groups": [')
+    expect(result.code).toContain('"label": "联系方式"')
+    // 派生列不再出现（derivedOnly 是 inQuery/inForm 均 false 的纯表格字段）
+    expect(result.code).not.toContain('"derivedOnly"')
+  })
+
+  it('schema 模式：无 columns 时派生列行为不变（回归）', () => {
+    const { columns, ...noCols } = cfgWithColumns
+    const result = generateFromConfig(noCols as any)
+    expect(result.code).toContain('"prop": "derivedOnly"')
+    expect(result.code).not.toContain('"type": "selection"')
+  })
+
+  it('sfc 模式：columns 覆盖 + 递归 groups 发射 + 操作列仍追加', () => {
+    const result = generateFromConfig({ ...cfgWithColumns, mode: 'sfc' } as any)
+    expect(result.code).toContain("type: 'selection'")
+    expect(result.code).toContain('groups: [')
+    expect(result.code).toContain("label: '联系方式'")
+    expect(result.code).not.toContain('derivedOnly')
+    // 操作列仍按 actions 追加（与派生路径一致，不让编辑/删除凭空消失）
+    expect(result.code).toContain("prop: 'operate'")
+    expect(result.code).toContain("label: '操作'")
+  })
+
+  it('sfc 模式：列字符串经 q() 转义（引号不破结构）', () => {
+    const result = generateFromConfig({
+      ...cfgWithColumns,
+      mode: 'sfc',
+      columns: [{ prop: 'name', label: "名'称" }],
+    } as any)
+    expect(result.code).toContain("label: '名\\'称'")
+    expect(result.code).not.toContain("label: '名'称'")
+  })
+
+  it('StructuredCrudConfigSchema 接受递归 groups + 无 prop/label 的非字段列', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'selection' }, { label: '组', groups: [{ prop: 'a', label: 'A' }] }],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法列 type', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'nope' }],
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝带路径分隔符的列 prop', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ prop: 'a/b', label: 'B' }],
+    })
+    expect(r.success).toBe(false)
+  })
+})
+
+describe('declarative row-expand content（AI-09 子项② expandConfig）', () => {
+  const cfg = {
+    name: 'OrderManage',
+    apiUrl: '/api/orders',
+    fields: [
+      { prop: 'orderNo', label: '订单号', formtype: 'Input' as const },
+      { prop: 'receiver', label: '收货人', formtype: 'Input' as const, inTable: false, inQuery: false },
+    ],
+    actions: ['add' as const, 'delete' as const],
+    expandConfig: {
+      title: '收货信息',
+      fields: [
+        { prop: 'receiver', label: '收货人' },
+        { prop: 'phone', label: '联系电话' },
+      ],
+    },
+  } as any
+
+  it('schema 模式：无 columns 时前置一个展开列并挂上 expandConfig', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"type": "expand"')
+    expect(result.code).toContain('"expandConfig": {')
+    expect(result.code).toContain('"title": "收货信息"')
+    // 展开列**前置**于派生列（orderNo 等字段列仍在其后）—— 只在表格 columns 数组内比较
+    // （`"prop": "orderNo"` 在查询表单里也出现，全局 indexOf 会命中表单段而失真）
+    const colsIdx = result.code.indexOf('"columns"')
+    const expandIdx = result.code.indexOf('"type": "expand"', colsIdx)
+    const firstFieldIdx = result.code.indexOf('"prop": "orderNo"', colsIdx)
+    expect(expandIdx).toBeGreaterThanOrEqual(0)
+    expect(expandIdx).toBeLessThan(firstFieldIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：columns 已声明 {type:expand} 时内容挂到它上面（不重复前置、位置保持）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      columns: [{ prop: 'orderNo', label: '订单号' }, { type: 'expand' }],
+    } as any)
+    // 只应存在**一个** expand 列（挂到已有的那个上，而非再前置一个）
+    expect(result.code.match(/"type": "expand"/g)).toHaveLength(1)
+    // 位置保持在 orderNo 之后（既不前置于首，也不追加到末）—— 只在表格 columns 数组内比较
+    const colsIdx = result.code.indexOf('"columns"')
+    const orderNoIdx = result.code.indexOf('"prop": "orderNo"', colsIdx)
+    const expandIdx = result.code.indexOf('"type": "expand"', colsIdx)
+    expect(expandIdx).toBeGreaterThan(orderNoIdx)
+    expect(result.code).toContain('"expandConfig": {')
+  })
+
+  it('sfc 模式：发射 type:expand 列 + expandConfig 对象字面量 + 操作列仍追加', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain("type: 'expand'")
+    expect(result.code).toContain('expandConfig: {"title":"收货信息"')
+    expect(result.code).toContain("prop: 'operate'")
+  })
+
+  it('无 expandConfig 时不产生展开列（回归，不给既有配置添键）', () => {
+    const { expandConfig, ...noEc } = cfg
+    const result = generateFromConfig(noEc as any)
+    expect(result.code).not.toContain('"type": "expand"')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('vxe 引擎下告警（展开内容不被 vxe 渲染）但数据保留', () => {
+    const result = generateFromConfig({ ...cfg, tableOptions: { engine: 'vxe' } } as any)
+    expect(result.warnings.some((w: string) => w.includes('vxe'))).toBe(true)
+    expect(result.code).toContain('"expandConfig": {')
+  })
+
+  it('StructuredCrudConfigSchema 接受 expandConfig（title 可选 + labelKey）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      expandConfig: { fields: [{ prop: 'a', labelKey: 'field.a' }] },
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝空 fields 的 expandConfig（空展开无意义）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      expandConfig: { fields: [] },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+

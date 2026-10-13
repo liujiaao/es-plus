@@ -1,0 +1,21 @@
+{
+  "nl": "影片管理：查询影片名；表格展示影片名、时长、上映日期；每行可展开查看剧情简介；支持新增、编辑、删除。",
+  "nlEn": "Movie management: query by movie name; the table shows movie name, duration and release date; each row can expand to reveal the synopsis; supports add, edit and delete.",
+  "fixedFields": ["movieName", "duration", "releaseDate", "synopsis"],
+  "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "config": {
+    "name": "MovieManage",
+    "apiUrl": "/api/movies",
+    "fields": [
+      { "prop": "movieName", "label": "影片名", "formtype": "Input" },
+      { "prop": "duration", "label": "时长(分钟)", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "releaseDate", "label": "上映日期", "formtype": "DatePicker", "inForm": false },
+      { "prop": "synopsis", "label": "剧情简介", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "fields": [{ "prop": "synopsis", "label": "剧情简介" }]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（无 title + 单字段明细）（vue3/schema）"
+}

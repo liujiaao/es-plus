@@ -189,6 +189,12 @@ export interface TableColumn {
   render?: (h: RenderFunction, ctx: { row: Record<string, unknown>; value: unknown; index: number }) => VNode | string
   scopedSlots?: { customRender?: string }
   groups?: TableColumn[]
+  /**
+   * 行展开内容（仅 `type:'expand'` 列消费）—— AI-09 子项②。
+   * 展开行内渲染一组只读「标签: 值」（值取 `record[prop]`）。与 `TableOptions.expandConfig`
+   * （vxe `{ accordion }`）**不同概念**：那是 vxe 引擎的展开行为开关，这里是展开的内容。
+   */
+  expandConfig?: { title?: string; fields: Array<{ prop: string; label?: string; labelKey?: string }> }
   ellipsis?: boolean
   hidCol?: boolean
   /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */

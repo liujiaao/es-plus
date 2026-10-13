@@ -244,6 +244,46 @@ describe("front door — deterministic validate gate (C2·A3)", () => {
     });
     expect(parsedDefault.fields[0].isHidden).toEqual({ field: "payType", op: "eq" });
   });
+
+  it("MCP 参数 schema 保留显式 columns（含递归 groups 与非字段列）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    const shape = tools.generate_crud_from_config.shape;
+
+    const parsed = z.object(shape).parse({
+      ...validFromConfig,
+      columns: [
+        { type: "selection" },
+        { prop: "name", label: "姓名" },
+        { label: "联系方式", groups: [{ prop: "phone", label: "手机号" }] },
+      ],
+    });
+    // 整个数组必须存活（Zod 未知键 strip 会把它整段吞掉）
+    expect(parsed.columns).toHaveLength(3);
+    expect(parsed.columns![0]).toEqual({ type: "selection" });
+    expect(parsed.columns![2]).toEqual({ label: "联系方式", groups: [{ prop: "phone", label: "手机号" }] });
+  });
+
+  it("MCP 参数 schema 保留顶层 expandConfig（声明式行展开内容）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    const shape = tools.generate_crud_from_config.shape;
+
+    const parsed = z.object(shape).parse({
+      ...validFromConfig,
+      expandConfig: {
+        title: "收货信息",
+        fields: [
+          { prop: "receiver", label: "收货人" },
+          { prop: "phone", labelKey: "field.phone" },
+        ],
+      },
+    });
+    // 整个对象必须存活（Zod 未知键 strip 会把它整段吞掉）
+    expect(parsed.expandConfig?.title).toBe("收货信息");
+    expect(parsed.expandConfig?.fields).toHaveLength(2);
+    expect(parsed.expandConfig?.fields[1]).toEqual({ prop: "phone", labelKey: "field.phone" });
+  });
 });
 
 describe("prompts — registration + per-target rendering", () => {

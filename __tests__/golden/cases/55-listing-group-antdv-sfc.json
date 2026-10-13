@@ -1,0 +1,38 @@
+{
+  "nl": "房源管理：查询有小区名称、户型；表格用「房源」分组表头下分小区名称、户型、面积，「价格」分组下分挂牌价、单价；支持新增、编辑、删除。",
+  "nlEn": "Listing management: query by community name and layout; the table uses a \"Listing\" group header covering community, layout, and area, and a \"Price\" group header covering list price and unit price; supports add, edit, and delete.",
+  "fixedFields": ["community", "layout", "area", "listPrice", "unitPrice"],
+  "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "config": {
+    "name": "ListingManage",
+    "apiUrl": "/api/listings",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "community", "label": "小区名称", "formtype": "Input" },
+      { "prop": "layout", "label": "户型", "formtype": "Input" },
+      { "prop": "area", "label": "面积", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "listPrice", "label": "挂牌价", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "unitPrice", "label": "单价", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "columns": [
+      {
+        "label": "房源",
+        "groups": [
+          { "prop": "community", "label": "小区名称" },
+          { "prop": "layout", "label": "户型" },
+          { "prop": "area", "label": "面积", "width": 100 }
+        ]
+      },
+      {
+        "label": "价格",
+        "groups": [
+          { "prop": "listPrice", "label": "挂牌价" },
+          { "prop": "unitPrice", "label": "单价" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: groups（antdv/sfc），组内 3 子列"
+}

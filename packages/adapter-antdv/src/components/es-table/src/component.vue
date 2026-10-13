@@ -78,7 +78,15 @@
           >
             <!-- 展开行 -->
             <template v-if="expandEnabled" #expandedRowRender="{ record }">
-              <slot name="expand" :row="record" />
+              <slot v-if="hasExpandSlot" name="expand" :row="record" />
+              <!-- AI-09 子项②：声明式展开内容（列上的 expandConfig 字段明细） -->
+              <div v-if="expandContent" class="es-expand-content">
+                <div v-if="expandContent.title" class="es-expand-title">{{ expandContent.title }}</div>
+                <div v-for="f in expandContent.fields" :key="f.prop" class="es-expand-field">
+                  <span class="es-expand-label">{{ fieldLabel(f) }}</span>
+                  <span class="es-expand-value">{{ cellValue(record, f.prop) }}</span>
+                </div>
+              </div>
             </template>
 
             <!-- 自定义列渲染 (bodyCell 插槽) -->
@@ -416,7 +424,28 @@ const hasDefaultSlot = computed(() => !!slots.default?.())
 const hasExpandSlot = computed(() => !!(slots as any).expand)
 // 展开：options.expand 或显式声明 type:'expand' 列（对齐 el-table/vxe 约定）均启用
 const hasExpandColumn = computed(() => props.columns.some((c) => c.type === 'expand'))
-const expandEnabled = computed(() => (!!props.options.expand || hasExpandColumn.value) && hasExpandSlot.value)
+// AI-09 子项②：声明式展开内容（列上的 expandConfig 字段明细）。takes 展开列里的第一个。
+const expandContent = computed(() => props.columns.find((c) => c.type === 'expand')?.expandConfig)
+const hasExpandConfig = computed(() => !!expandContent.value)
+// 展开启用条件放宽：宿主 expand 插槽**或**声明式 expandConfig 二者其一即可
+// （此前只认插槽 → 纯 JSON 的 schema 模式无法触发展开）。
+const expandEnabled = computed(
+  () => (!!props.options.expand || hasExpandColumn.value) && (hasExpandSlot.value || hasExpandConfig.value)
+)
+
+/**
+ * 行展开字段明细（AI-09 子项②）—— 展开行内的只读「标签: 值」。
+ * 标签走 `labelKey` + 全局 t()（缺省回退 label，再回退 prop）；值取 `record[prop]`。
+ */
+const fieldLabel = (f: { prop: string; label?: string; labelKey?: string }): string => {
+  const t = typeof esPlus.t === 'function' ? (esPlus.t as (k: string) => string) : undefined
+  if (f.labelKey && t) return t(f.labelKey)
+  return f.label || f.prop
+}
+const cellValue = (row: Record<string, unknown> | undefined, prop: string): unknown => {
+  const v = row ? row[prop] : undefined
+  return v == null || v === '' ? '-' : v
+}
 const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 
 const slotStyles = computed(() => {

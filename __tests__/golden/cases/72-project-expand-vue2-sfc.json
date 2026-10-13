@@ -1,0 +1,44 @@
+{
+  "nl": "以 SFC 方式生成 vue2 项目管理页：查询项目名称；表格展示项目名称、负责人、状态；每行可展开查看项目描述、开始日期；支持新增、编辑、删除。",
+  "nlEn": "Generate the project management page as a vue2 SFC: query by project name; the table shows project name, owner and status; each row can expand to reveal the description and start date; supports add, edit and delete.",
+  "fixedFields": ["projectName", "owner", "status", "description", "startDate"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target", "mode"],
+  "config": {
+    "name": "ProjectManage",
+    "apiUrl": "/api/projects",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "projectName", "label": "项目名称", "formtype": "Input" },
+      { "prop": "owner", "label": "负责人", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "进行中", "value": "active" },
+          { "label": "已完成", "value": "done" }
+        ]
+      },
+      { "prop": "description", "label": "项目描述", "formtype": "Input", "inTable": false, "inQuery": false },
+      {
+        "prop": "startDate",
+        "label": "开始日期",
+        "formtype": "DatePicker",
+        "inForm": false,
+        "inTable": false,
+        "inQuery": false
+      }
+    ],
+    "expandConfig": {
+      "title": "项目信息",
+      "fields": [
+        { "prop": "description", "label": "项目描述" },
+        { "prop": "startDate", "label": "开始日期" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（vue2/SFC）"
+}

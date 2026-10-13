@@ -1,0 +1,24 @@
+{
+  "nl": "船舶管理：查询有船名、船籍港；表格首列序号，后面展示船名、船长、船籍港；支持新增、编辑、删除。",
+  "nlEn": "Vessel management: query by vessel name and port of registry; the table's first column is a row number, then shows vessel name, captain, and port of registry; supports add, edit, and delete.",
+  "fixedFields": ["vesselName", "captain", "port"],
+  "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "config": {
+    "name": "VesselManage",
+    "apiUrl": "/api/vessels",
+    "target": "vue2",
+    "fields": [
+      { "prop": "vesselName", "label": "船名", "formtype": "Input" },
+      { "prop": "captain", "label": "船长", "formtype": "Input", "inQuery": false },
+      { "prop": "port", "label": "船籍港", "formtype": "Input" }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60, "fixed": "left" },
+      { "prop": "vesselName", "label": "船名" },
+      { "prop": "captain", "label": "船长" },
+      { "prop": "port", "label": "船籍港" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: index 非字段列 + fixed:left（vue2/schema）"
+}

@@ -1,0 +1,37 @@
+{
+  "nl": "酒店管理：查询酒店名称、城市；表格展示酒店名称、城市、星级；每行可展开查看联系电话、详细地址；支持新增、编辑、删除。",
+  "nlEn": "Hotel management: query by hotel name and city; the table shows hotel name, city and star rating; each row can expand to reveal the contact phone and full address; supports add, edit and delete.",
+  "fixedFields": ["hotelName", "city", "star", "phone", "address"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "mode"],
+  "config": {
+    "name": "HotelManage",
+    "apiUrl": "/api/hotels",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "hotelName", "label": "酒店名称", "formtype": "Input" },
+      { "prop": "city", "label": "城市", "formtype": "Input" },
+      {
+        "prop": "star",
+        "label": "星级",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "三星", "value": 3 },
+          { "label": "四星", "value": 4 },
+          { "label": "五星", "value": 5 }
+        ]
+      },
+      { "prop": "phone", "label": "联系电话", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "address", "label": "详细地址", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "联系方式",
+      "fields": [
+        { "prop": "phone", "label": "联系电话" },
+        { "prop": "address", "label": "详细地址" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（vue3/SFC）"
+}
