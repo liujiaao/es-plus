@@ -288,6 +288,32 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
       actions: ["add", "delete"],
     },
   },
+  {
+    label: "Tree / hierarchical rows → top-level `treeConfig`",
+    nl: "部门管理：查询条件有部门名称；表格展示部门名称、负责人、状态、创建时间；部门是树形结构，子部门嵌套在父部门下面，默认全部展开。",
+    reasoning:
+      "NL 说「树形结构 / 子部门嵌套在父部门下」→ 顶层 `treeConfig`（声明式树表）。行数据层级键名是缺省的 `children`，故省略 `childrenField`；「默认全部展开」→ `expandAll: true`。`row-key` 由生成器自动发射（rowkey 默认 'id'），无需手写。没有分组表头/非字段列，不用 `columns`。treeConfig 是纯 JSON 声明式数据（非扩展点），且**区别于** `tableOptions.treeConfig`（vxe 专有的 VxeTreeConfig）——用顶层这个。懒加载/异步 load 不在本键范围。",
+    config: {
+      name: "DepartmentTreeManage",
+      apiUrl: "/api/departments",
+      fields: [
+        { prop: "deptName", label: "部门名称", formtype: "Input" },
+        { prop: "leader", label: "负责人", formtype: "Input" },
+        {
+          prop: "status",
+          label: "状态",
+          formtype: "Select",
+          dataOptions: [
+            { label: "启用", value: 1 },
+            { label: "禁用", value: 0 },
+          ],
+        },
+        { prop: "createdAt", label: "创建时间", formtype: "DatePicker", inForm: false },
+      ],
+      treeConfig: { expandAll: true },
+      actions: ["add", "edit", "delete"],
+    },
+  },
 ];
 
 function buildContent(): string {
@@ -303,6 +329,7 @@ function buildContent(): string {
     "- Form-scope conditional visibility (\"field X shows only when Y is Z\", \"只在…时才填写\") → the field-level `isHidden` — a PLAIN JSON condition (never a JS string), `{ field, op?, value? }` or an array (AND), hidden while it holds. Applies to the query/add/edit forms, NOT the table column.",
     "- Multi-level group headers (\"分组表头\") and non-field columns (序号/勾选/展开列) → the top-level `columns` escape array (aligned with the renderer `TableColumn`): a group is `{ label, groups: [ … ] }` (2 levels max cross-renderer), a non-field column is `{ type: 'index' | 'selection' | 'expand' }`. `columns` REPLACES the derived table columns (override, not merge) — every field shown in the table must appear inside it; `fields` still drives the query/add/edit forms. The operation column is auto-appended from `actions`, so don't add it here.",
     "- Row-expand content (\"每行可展开查看…\") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (non-empty). Presence makes the table render ONE row-expander showing a read-only `label: value` list from `row[prop]` (usually detail-only fields, marked `inTable:false`). If `columns` already declares a `{ type: 'expand' }` column the content attaches there; otherwise the generator prepends one — don't add the expander column yourself. DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.",
+    "- Tree / hierarchical rows (\"树形\", \"部门树\", \"分类树\", \"父子层级\", \"子节点嵌套在父节点下\") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. Renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically. Set `childrenField` only when children nest under a key other than `children`; set `expandAll: true` to expand every node by default. Not for lazy/async loading. DISTINCT from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the top-level key.",
     "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` above is declarative data, NOT an extension point — use it, don't reach for formatter/render for visibility.)",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",

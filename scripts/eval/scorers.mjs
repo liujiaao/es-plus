@@ -156,6 +156,14 @@ export function describeDimMiss(dim, gold, pred) {
     }
     return { want: show(gold), got: show(pred) }
   }
+  if (dim === 'treeConfig') {
+    const show = (c) => {
+      const t = c.treeConfig
+      if (!t) return '（未配置）'
+      return `childrenField=${t.childrenField ?? 'children'} · expandAll=${t.expandAll === true}`
+    }
+    return { want: show(gold), got: show(pred) }
+  }
   return null
 }
 
@@ -270,6 +278,13 @@ export const CAPABILITY_SCORERS = [
     key: 'expandConfig',
     applicable: (g) => !!g.expandConfig,
     pass: (g, p) => eq(g.expandConfig ?? null, p.expandConfig ?? null),
+  },
+  {
+    // 声明式树表（AI-09 子项③）：整体深等值。childrenField / expandAll 都是行为契约，
+    // 「给了 treeConfig 但子键名或默认展开状态不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'treeConfig',
+    applicable: (g) => !!g.treeConfig,
+    pass: (g, p) => eq(g.treeConfig ?? null, p.treeConfig ?? null),
   },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]

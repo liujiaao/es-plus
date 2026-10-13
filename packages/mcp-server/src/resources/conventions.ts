@@ -359,6 +359,15 @@ JSON. The contract is **mark, never drop**:
   kept), otherwise the generator prepends one — you do NOT write the expander column
   yourself. Use this for "每行可展开查看…". DISTINCT from \`tableOptions.expandConfig\`
   (the vxe \`{ accordion }\` switch) — never use that for row-expand content.
+- **\`treeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **tree table** — \`{ childrenField?, expandAll? }\` — STATIC trees only.
+  Its presence makes the table render parent/child levels from the nested child array
+  in each row; \`row-key\` is emitted automatically (the default \`rowkey\` covers it).
+  Set \`childrenField\` only when the API nests children under a key other than
+  \`children\` (e.g. \`subItems\`); set \`expandAll: true\` to expand every node by default.
+  Not for lazy/async loading. Use this for "树形 / 部门树 / 分类树 / 父子层级". DISTINCT
+  from \`tableOptions.treeConfig\` (the vxe-only \`VxeTreeConfig\`) — always use the
+  TOP-LEVEL key.
 - **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
   cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
   inline in SFC mode; carried through in schema mode.

@@ -986,3 +986,76 @@ describe('declarative row-expand content（AI-09 子项② expandConfig）', () 
   })
 })
 
+describe('declarative tree table（AI-09 子项③ treeConfig）', () => {
+  const cfg = {
+    name: 'DeptTreeManage',
+    apiUrl: '/api/departments',
+    fields: [
+      { prop: 'deptName', label: '部门名称', formtype: 'Input' as const },
+      { prop: 'leader', label: '负责人', formtype: 'Input' as const },
+    ],
+    actions: ['add' as const, 'delete' as const],
+    treeConfig: { childrenField: 'subItems', expandAll: true },
+  } as any
+
+  it('schema 模式：发射运行时家 tableOptions.treeConfig（childrenField + expandAll）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"treeConfig": {')
+    expect(result.code).toContain('"childrenField": "subItems"')
+    expect(result.code).toContain('"expandAll": true')
+    // 运行时家落在 tableOptions 里（而非顶层 schema 的兄弟键）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const tcIdx = result.code.indexOf('"treeConfig"')
+    expect(tcIdx).toBeGreaterThan(toIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：顶层 treeConfig 缺省子键时发空对象（vxe 靠其存在进入树模式）', () => {
+    const result = generateFromConfig({ ...cfg, treeConfig: {} } as any)
+    expect(result.code).toContain('"treeConfig": {}')
+  })
+
+  it('sfc 模式：发射 options.treeConfig 块（逐键转义）', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain("treeConfig: { childrenField: 'subItems', expandAll: true },")
+  })
+
+  it('无 treeConfig 时不发射（回归，不给既有配置添键）', () => {
+    const { treeConfig, ...noTc } = cfg
+    const result = generateFromConfig(noTc as any)
+    expect(result.code).not.toContain('"treeConfig"')
+    expect(result.code).not.toContain('treeConfig:')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 treeConfig（两键皆可选）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { expandAll: true },
+    })
+    expect(r.success).toBe(true)
+    const r2 = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { childrenField: 'children' },
+    })
+    expect(r2.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（childrenField 非字符串）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { childrenField: 123 },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+

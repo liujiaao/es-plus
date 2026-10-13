@@ -892,6 +892,17 @@ export default defineComponent({
       if (props.options.rowkey) {
         result.rowKey = props.options.rowkey
       }
+      // 树表（AI-09 子项③）：options.treeConfig → el-table（Element UI）原生 prop，
+      // 与 vue3 同款映射 —— tree-props 仅在自定义子键名时发，expandAll → default-expand-all。
+      const treeCfg = props.options.treeConfig
+      if (treeCfg) {
+        if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
+          result.treeProps = { children: treeCfg.childrenField }
+        }
+        if (treeCfg.expandAll) {
+          result.defaultExpandAll = true
+        }
+      }
       if (heightType.value === 'height') {
         result.height = tableHeight.value
       } else if (heightType.value === 'maxHeight') {

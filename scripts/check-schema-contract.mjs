@@ -475,6 +475,18 @@ function checkStructuredConfigZod() {
       fail(`${label} 的 expandConfig 缺少 fields: z.array(...)（展开内容为空则无意义）`)
       ok = false
     }
+
+    // 顶层 `treeConfig` 树表契约（AI-09 子项③）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式树表整段静默剥掉，
+    // 表格回落成扁平列表、零告警。childrenField/expandAll 是跨端窄子集。
+    if (!/\btreeConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 treeConfig: z.object(...)（声明式树表会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/treeConfig\s*:[\s\S]{0,600}?childrenField\s*:\s*z\s*\n?\s*\.string\(/.test(src)) {
+      fail(`${label} 的 treeConfig 缺少 childrenField: z.string(...)（自定义嵌套键名表达不了）`)
+      ok = false
+    }
   }
 
   if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)

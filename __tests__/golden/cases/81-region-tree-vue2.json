@@ -1,0 +1,18 @@
+{
+  "nl": "区域管理：查询区域名称；表格展示区域名称、区域编码；区域是树形结构，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Region management: query by region name; the table shows region name and region code; regions are hierarchical and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["regionName", "regionCode"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "RegionTreeManage",
+    "apiUrl": "/api/regions",
+    "target": "vue2",
+    "fields": [
+      { "prop": "regionName", "label": "区域名称", "formtype": "Input" },
+      { "prop": "regionCode", "label": "区域编码", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（vue2/schema）"
+}

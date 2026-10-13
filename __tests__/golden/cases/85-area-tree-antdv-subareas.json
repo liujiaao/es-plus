@@ -1,0 +1,18 @@
+{
+  "nl": "用 antd 风格做行政区管理：查询行政区名称；表格展示行政区名称、人口；下级行政区放在 subAreas 字段里；支持新增、编辑、删除。",
+  "nlEn": "Administrative area management with an Ant Design look: query by area name; the table shows area name and population; sub-areas are nested under the subAreas field; supports add, edit and delete.",
+  "fixedFields": ["areaName", "population"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "AreaTreeManage",
+    "apiUrl": "/api/areas",
+    "target": "antdv",
+    "fields": [
+      { "prop": "areaName", "label": "行政区名称", "formtype": "Input" },
+      { "prop": "population", "label": "人口", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": { "childrenField": "subAreas" },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 自定义子节点键名 childrenField=subAreas（antdv/schema）"
+}

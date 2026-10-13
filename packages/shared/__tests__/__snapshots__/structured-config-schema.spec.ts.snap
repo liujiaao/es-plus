@@ -189,6 +189,7 @@ exports[`StructuredCrudConfigSchema — surface listing > top-level keys are sta
   "tableOptions",
   "target",
   "toolbarBtns",
+  "treeConfig",
   "typescript",
 ]
 `;

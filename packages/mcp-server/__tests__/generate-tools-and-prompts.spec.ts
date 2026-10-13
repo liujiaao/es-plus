@@ -284,6 +284,19 @@ describe("front door — deterministic validate gate (C2·A3)", () => {
     expect(parsed.expandConfig?.fields).toHaveLength(2);
     expect(parsed.expandConfig?.fields[1]).toEqual({ prop: "phone", labelKey: "field.phone" });
   });
+
+  it("MCP 参数 schema 保留顶层 treeConfig（声明式树表）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    const shape = tools.generate_crud_from_config.shape;
+
+    const parsed = z.object(shape).parse({
+      ...validFromConfig,
+      treeConfig: { childrenField: "subItems", expandAll: true },
+    });
+    // 整个对象必须存活（Zod 未知键 strip 会把它整段吞掉）
+    expect(parsed.treeConfig).toEqual({ childrenField: "subItems", expandAll: true });
+  });
 });
 
 describe("prompts — registration + per-target rendering", () => {

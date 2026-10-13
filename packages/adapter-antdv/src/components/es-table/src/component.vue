@@ -72,7 +72,8 @@
             :virtual="isVirtual"
             :sortDirections="['ascend', 'descend', 'ascend']"
             :locale="{ emptyText: options.emptyText || '暂无数据' }"
-            :defaultExpandAllRows="false"
+            :defaultExpandAllRows="options.treeConfig?.expandAll === true"
+            :childrenColumnName="options.treeConfig?.childrenField || 'children'"
             @change="handleAdvTableChange"
             v-bind="tableBindAttrs"
           >

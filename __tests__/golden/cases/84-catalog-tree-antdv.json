@@ -1,0 +1,18 @@
+{
+  "nl": "用 antd 风格做目录管理：查询目录名称；表格展示目录名称、排序；目录是树形结构，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Catalog management with an Ant Design look: query by catalog name; the table shows catalog name and sort order; catalogs are hierarchical and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["catalogName", "sort"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "CatalogTreeManage",
+    "apiUrl": "/api/catalogs",
+    "target": "antdv",
+    "fields": [
+      { "prop": "catalogName", "label": "目录名称", "formtype": "Input" },
+      { "prop": "sort", "label": "排序", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（antdv/schema）"
+}

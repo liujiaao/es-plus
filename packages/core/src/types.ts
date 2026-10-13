@@ -623,7 +623,7 @@ export type VxeFooterMethod = (params: {
   data: Record<string, unknown>[]
 }) => unknown[][]
 
-/** 树形数据配置（vxe engine:vxe + 树状数据） */
+/** 树形数据配置（vxe engine:vxe + 树状数据；`childrenField` / `expandAll` 亦被默认引擎认，见下） */
 export interface VxeTreeConfig {
   /** 平铺数据转树（需配合 rowField + parentField） */
   transform?: boolean
@@ -631,7 +631,10 @@ export interface VxeTreeConfig {
   rowField?: string
   /** 父节点字段名（默认 'parentId'） */
   parentField?: string
-  /** 子节点字段名（默认 'children'），vxe v4 推荐用法 */
+  /**
+   * 子节点字段名（默认 'children'），vxe v4 推荐用法。
+   * **跨端子集**：el-table / a-table 的默认引擎也读此键（翻译为 tree-props / childrenColumnName）。
+   */
   childrenField?: string
   /**
    * @deprecated vxe v4 已更名为 childrenField；仍可传入，es-plus 会自动归一化为 childrenField。
@@ -639,11 +642,14 @@ export interface VxeTreeConfig {
   children?: string
   /** transform 模式下缓存原始子节点的字段名（默认 '_X_ROW_CHILD'） */
   mapChildren?: string
-  /** 默认展开全部 */
+  /**
+   * 默认展开全部。
+   * **跨端子集**：el-table（default-expand-all）/ a-table（defaultExpandAllRows）也认。
+   */
   expandAll?: boolean
-  /** 懒加载子节点 */
+  /** 懒加载子节点（vxe 专有） */
   lazy?: boolean
-  /** 懒加载方法 */
+  /** 懒加载方法（vxe 专有） */
   loadMethod?: (params: { row: Record<string, unknown> }) => Promise<unknown[]>
 }
 

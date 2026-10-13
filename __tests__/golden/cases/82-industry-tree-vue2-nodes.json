@@ -1,0 +1,18 @@
+{
+  "nl": "行业管理：查询行业名称；表格展示行业名称、行业等级；行业是树形结构，子行业放在 nodes 字段里；支持新增、编辑、删除。",
+  "nlEn": "Industry management: query by industry name; the table shows industry name and level; industries are hierarchical with children under the nodes field; supports add, edit and delete.",
+  "fixedFields": ["industryName", "level"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "IndustryTreeManage",
+    "apiUrl": "/api/industries",
+    "target": "vue2",
+    "fields": [
+      { "prop": "industryName", "label": "行业名称", "formtype": "Input" },
+      { "prop": "level", "label": "行业等级", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": { "childrenField": "nodes" },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 自定义子节点键名 childrenField=nodes（vue2/schema）"
+}

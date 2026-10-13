@@ -1,0 +1,19 @@
+{
+  "nl": "地理层级管理：查询名称；表格展示名称、层级；数据是树形结构，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Geographic hierarchy management: query by name; the table shows name and level; the data is hierarchical and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["name", "level"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target", "mode"],
+  "config": {
+    "name": "GeoTierManage",
+    "apiUrl": "/api/geo-tiers",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "name", "label": "名称", "formtype": "Input" },
+      { "prop": "level", "label": "层级", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（vue2/SFC）"
+}

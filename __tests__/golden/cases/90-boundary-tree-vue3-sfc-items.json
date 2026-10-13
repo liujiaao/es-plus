@@ -1,0 +1,18 @@
+{
+  "nl": "边界管理：查询边界名称；表格展示边界名称、类型；边界是树形结构，子边界放在 items 字段里，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Boundary management: query by boundary name; the table shows boundary name and type; boundaries are hierarchical with children under the items field and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["boundaryName", "type"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "mode"],
+  "config": {
+    "name": "BoundaryTreeManage",
+    "apiUrl": "/api/boundaries",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "boundaryName", "label": "边界名称", "formtype": "Input" },
+      { "prop": "type", "label": "类型", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "childrenField": "items", "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 自定义 childrenField=items + expandAll（vue3/SFC）"
+}

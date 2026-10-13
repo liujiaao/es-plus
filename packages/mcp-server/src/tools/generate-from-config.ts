@@ -399,6 +399,18 @@ const configShape = {
     .describe(
       "Row-expand content (AI-09 子项②). When set, the table gets ONE row-expander whose expanded content is a read-only field list. If `columns` already declares a `{type:'expand'}` column it is used as-is (position preserved) and the content attaches to it; otherwise the generator prepends a leading expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
     ),
+  treeConfig: z
+    .object({
+      childrenField: z
+        .string()
+        .optional()
+        .describe("Key name that holds a row's nested child nodes (default 'children'). Set only when the API nests children under a different key."),
+      expandAll: z.boolean().optional().describe("Whether all nodes start expanded (default false)."),
+    })
+    .optional()
+    .describe(
+      "Declarative tree table (AI-09 子项③). When set, the table renders parent/child levels from the nested child array in each row (row-key is emitted automatically). Static trees only — lazy/async loading is out of scope for this key. SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig): this top-level key is the cross-renderer narrow subset, honored by el-table / a-table as well as vxe."
+    ),
 } as const;
 
 /**

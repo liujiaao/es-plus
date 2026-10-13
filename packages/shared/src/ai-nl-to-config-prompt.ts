@@ -559,6 +559,31 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'delete'],
     },
   },
+  {
+    nl: '部门管理：查询条件有部门名称；表格展示部门名称、负责人、状态、创建时间；部门是树形结构，子部门嵌套在父部门下面，默认全部展开。',
+    reasoning:
+      'NL 要求「树形结构 / 子部门嵌套在父部门下」——这是声明式**树表**，用顶层 `treeConfig`。行数据的层级键名是缺省的 `children`，故 `childrenField` 省略；「默认全部展开」→ `expandAll: true`。`row-key` 由生成器自动发射（rowkey 默认 "id"），无需手写。这里没有分组表头/非字段列，不用 `columns`。注意 `treeConfig` 是纯 JSON 声明式数据（非扩展点），且**区别于** `tableOptions.treeConfig`（那是 vxe 专有的 VxeTreeConfig）——用顶层这个。懒加载/异步 load 不在本键范围。',
+    config: {
+      name: 'DepartmentTreeManage',
+      apiUrl: '/api/departments',
+      fields: [
+        { prop: 'deptName', label: '部门名称', formtype: 'Input' },
+        { prop: 'leader', label: '负责人', formtype: 'Input' },
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '启用', value: 1 },
+            { label: '禁用', value: 0 },
+          ],
+        },
+        { prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', inForm: false },
+      ],
+      treeConfig: { expandAll: true },
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
 ]
 
 /**
@@ -594,6 +619,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Conditional field visibility ("only needed when …", "只在…时才填写") → the field-level `isHidden`, expressed as PLAIN JSON DATA, never a JS function: a single condition `{ field, op?, value? }` or an ARRAY of them (AND — hidden only when ALL hold). Semantics: the field is HIDDEN WHILE the condition HOLDS, so "show only when refundType is part" is `{ field: "refundType", op: "ne", value: "part" }`. `field` is another field path in the same form, `value` must match that field\'s value type (e.g. the dataOptions value), ops = eq (default) / ne / in / nIn / empty / notEmpty / truthy / falsy. It applies to the query and add/edit forms, NOT to the table column. Emit this rather than dropping the conditional field.',
     'Multi-level group headers and non-field columns (row number / checkbox / expander) cannot be expressed by the flat `fields` array — use the top-level `columns` array (an escape hatch aligned with the renderer `TableColumn`). When present it REPLACES the derived table columns (override, not merge), while `fields` still drives the query/add/edit forms. A group header is `{ label, groups: [ …child columns… ] }` — cross-renderer safe to 2 levels (antdv supports more; vue3/vue2 default tables flatten beyond one nesting). A non-field column is `{ type: "index" | "selection" | "expand" }` (no prop/label needed). The operation column is STILL appended from `actions`/`operationColumn`, so do not add it to `columns`. Use `columns` only when the NL asks for grouped headers or index/selection/expander columns; otherwise keep the plain `fields` array.',
     'Row-expand content ("每行可展开查看…", "点击行展开显示…") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (fields non-empty). Its presence makes the table render ONE row-expander whose content is a read-only `label: value` list read from `row[prop]`. The listed props are typically detail-only fields (mark them `inTable:false` so they are not also a column). If `columns` already declares a `{ type: "expand" }` column the content attaches to it (position kept); otherwise the generator prepends one expander column — you do NOT need to add the expander column yourself. This is DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.',
+    'Tree / hierarchical data ("树形", "部门树", "分类树", "父子层级", "子节点嵌套在父节点下") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. It renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically (the default `rowkey` already covers it), so do NOT add anything for it. Set `childrenField` ONLY when the API nests children under a key other than `children` (e.g. `subItems`); set `expandAll: true` when the NL asks for all nodes expanded by default. Do NOT model lazy/async loading here (out of scope). SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the TOP-LEVEL key.',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',

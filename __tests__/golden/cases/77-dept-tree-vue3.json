@@ -1,0 +1,17 @@
+{
+  "nl": "部门管理：查询部门名称；表格展示部门名称、负责人；部门是树形结构（子部门嵌套在父部门下），默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Department management: query by department name; the table shows department name and leader; departments are hierarchical (sub-departments nested under their parents) and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["deptName", "leader"],
+  "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "config": {
+    "name": "DeptTreeManage",
+    "apiUrl": "/api/departments",
+    "fields": [
+      { "prop": "deptName", "label": "部门名称", "formtype": "Input" },
+      { "prop": "leader", "label": "负责人", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（默认 children 键 + 默认全展开）（vue3/schema）"
+}

@@ -1,0 +1,17 @@
+{
+  "nl": "商品分类管理：查询分类名称；表格展示分类名称、排序号；分类是树形结构，子分类放在 subItems 字段里（不是默认的 children）；支持新增、编辑、删除。",
+  "nlEn": "Product category management: query by category name; the table shows category name and sort order; categories are hierarchical with children under the subItems field (not the default children); supports add, edit and delete.",
+  "fixedFields": ["categoryName", "sortNo"],
+  "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "config": {
+    "name": "CategoryTreeManage",
+    "apiUrl": "/api/categories",
+    "fields": [
+      { "prop": "categoryName", "label": "分类名称", "formtype": "Input" },
+      { "prop": "sortNo", "label": "排序号", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": { "childrenField": "subItems" },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 自定义子节点键名 childrenField=subItems（vue3/schema）"
+}

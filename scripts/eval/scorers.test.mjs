@@ -63,6 +63,7 @@ const BASE_INPUT = {
     { label: '金额信息', groups: [{ prop: 'amount', label: '金额' }] },
   ], // → columns 维度（显式列逃生数组：非字段列 + 多级表头）
   expandConfig: { title: '详情', fields: [{ prop: 'createdAt', label: '创建时间' }] }, // → expandConfig 维度（声明式行展开内容）
+  treeConfig: { childrenField: 'children', expandAll: true }, // → treeConfig 维度（声明式树表）
 }
 
 const base = StructuredCrudConfigSchema.parse(BASE_INPUT)
@@ -105,6 +106,7 @@ const PERTURB = {
   isHidden: (c) => { c.fields[0].isHidden.op = 'ne' },
   columns: (c) => { c.columns[0].type = 'index' },
   expandConfig: (c) => { c.expandConfig.title = '别的' },
+  treeConfig: (c) => { c.treeConfig.expandAll = false },
   extPoints: (c) => { delete c.fields[3].formatter },
 }
 
@@ -231,6 +233,29 @@ console.log('meta-eval: expandConfig (declarative row-expand content)')
   // gold 无 expandConfig → 维度不 applicable（无行展开，不参与记分）
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(plain, plain).byCapability.expandConfig.applicable === false, 'expandConfig: gold 未声明时维度不 applicable')
+}
+
+// 2f) treeConfig（声明式树表，AI-09 子项③）维度的语义：整体深等值
+console.log('meta-eval: treeConfig (declarative tree table)')
+{
+  const tc = { childrenField: 'subItems', expandAll: true }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], treeConfig: tc }
+  check(scoreAll(gold, clone(gold)).byCapability.treeConfig.pass === true, 'treeConfig: 整体一致应判正')
+
+  const fieldChanged = clone(gold)
+  fieldChanged.treeConfig.childrenField = 'children'
+  check(scoreAll(gold, fieldChanged).byCapability.treeConfig.pass === false, 'treeConfig: childrenField 变化应判负（子键名是契约）')
+
+  const expandChanged = clone(gold)
+  expandChanged.treeConfig.expandAll = false
+  check(scoreAll(gold, expandChanged).byCapability.treeConfig.pass === false, 'treeConfig: expandAll 变化应判负（默认展开状态是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.treeConfig.pass === false, 'treeConfig: pred 漏发整段应判负')
+
+  // gold 无 treeConfig → 维度不 applicable（无树表，不参与记分）
+  const flat = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(flat, flat).byCapability.treeConfig.applicable === false, 'treeConfig: gold 未声明时维度不 applicable')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化

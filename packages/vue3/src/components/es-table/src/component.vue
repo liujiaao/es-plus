@@ -535,6 +535,18 @@ const tableBindAttrs = computed(() => {
   if (props.options.rowkey) {
     result.rowKey = props.options.rowkey
   }
+  // 树表（AI-09 子项③）：运行时家 options.treeConfig → el-table 原生 prop。
+  // el-table 渲染树靠「row-key + 行数据里的嵌套子数组」，tree-props 只用于自定义子键名，
+  // 故 childrenField 缺省 'children' 时不发（避免无谓的 prop）。expandAll → default-expand-all。
+  const treeCfg = props.options.treeConfig
+  if (treeCfg) {
+    if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
+      result.treeProps = { children: treeCfg.childrenField }
+    }
+    if (treeCfg.expandAll) {
+      result.defaultExpandAll = true
+    }
+  }
   if (heightType.value === 'height') {
     result.height = tableHeight.value
   } else if (heightType.value === 'maxHeight') {

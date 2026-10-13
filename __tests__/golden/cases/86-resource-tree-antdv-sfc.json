@@ -1,0 +1,19 @@
+{
+  "nl": "用 antd 风格做资源管理：查询资源名称；表格展示资源名称、资源类型；资源是树形结构，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Resource management with an Ant Design look: query by resource name; the table shows resource name and resource type; resources are hierarchical and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["resourceName", "resourceType"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target", "mode"],
+  "config": {
+    "name": "ResourceTreeManage",
+    "apiUrl": "/api/resources",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "resourceName", "label": "资源名称", "formtype": "Input" },
+      { "prop": "resourceType", "label": "资源类型", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（antdv/SFC）"
+}

@@ -202,6 +202,18 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.overscanCount ? { overscanCount: tOpts.overscanCount } : {}),
     ...(tOpts.rowClassName ? { rowClassName: tOpts.rowClassName } : {}),
     ...(tOpts.configTableOut ? { configTableOut: tOpts.configTableOut } : {}),
+    // 顶层 treeConfig（AI-09 子项③）→ 运行时唯一家 tableOptions.treeConfig。
+    // vxe 原样认 childrenField/expandAll；el-table/a-table 在组件侧翻译成 tree-props /
+    // childrenColumnName + default-expand-all(-rows)。即便子键为空也发（vxe 靠 treeConfig
+    // 的存在进入树模式；默认引擎靠行数据里的嵌套子数组，treeConfig 存在不产生副作用）。
+    ...(config.treeConfig
+      ? {
+          treeConfig: {
+            ...(config.treeConfig.childrenField ? { childrenField: config.treeConfig.childrenField } : {}),
+            ...(config.treeConfig.expandAll ? { expandAll: true } : {}),
+          },
+        }
+      : {}),
   }
 
   // Query form layout (minFoldRows for collapse)
@@ -529,6 +541,13 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
       .filter((k) => cto[k])
       .map((k) => `${k}: ${q(cto[k])}`)
     if (ctoParts.length) lines.push(`  configTableOut: { ${ctoParts.join(', ')} },`)
+  }
+  // 顶层 treeConfig（AI-09 子项③）→ options.treeConfig。手搓块逐键 q() 转义（同 configTableOut）。
+  if (config.treeConfig) {
+    const tcParts: string[] = []
+    if (config.treeConfig.childrenField) tcParts.push(`childrenField: ${q(config.treeConfig.childrenField)}`)
+    if (config.treeConfig.expandAll) tcParts.push(`expandAll: true`)
+    lines.push(`  treeConfig: { ${tcParts.join(', ')} },`)
   }
   lines.push(`}`)
 

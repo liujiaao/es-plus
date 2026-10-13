@@ -343,3 +343,80 @@ describe('生成物运行时冒烟 — 62-supplier（声明式行展开 expandCo
   })
 })
 
+// ────────────────────────────────────────────────────────────────────────────
+// 6) 声明式树表的运行时见证（AI-09 子项③ treeConfig）
+//    golden-77 默认 children 键 + expandAll；golden-78 自定义 childrenField=subItems。
+//    这里把**生成出来的** pageSchema 挂进真实 EsCrudPage + EsTable，喂**嵌套 rows**，
+//    断言父子层级真的渲染 —— 把「发射了 treeConfig」升级为「treeConfig 真的驱动了树表」。
+//    （el-table 渲染树靠 row-key + 行数据里的嵌套子数组；row-key 由生成器自动发射。）
+// ────────────────────────────────────────────────────────────────────────────
+describe('生成物运行时冒烟 — 77-dept-tree（声明式树表 treeConfig，默认 children 键 + expandAll）', () => {
+  afterEach(cleanup)
+
+  it('treeConfig 发射进 tableOptions，且嵌套 rows 真的渲染出父子层级（expandAll 初始全展开）', async () => {
+    const schema = generatePageSchema(loadGoldenConfig('77-dept-tree-vue3.json'))
+
+    // 生成物里 tableOptions 确实带上了 treeConfig（否则树表行为无来由）
+    const to = schema.tableOptions as any
+    expect(to.treeConfig, '生成物应保留 treeConfig（而非被 Zod / 适配层剥掉）').toBeTruthy()
+    expect(to.treeConfig.expandAll).toBe(true)
+
+    const httpRequest = async () => ({
+      records: 3,
+      rows: [
+        {
+          id: 1,
+          deptName: '总公司',
+          leader: 'A',
+          children: [{ id: 2, deptName: '研发部', leader: 'B', children: [{ id: 3, deptName: '前端组', leader: 'C' }] }],
+        },
+      ],
+    })
+    const wrapper = mount(EsCrudPage, {
+      props: { schema, httpRequest },
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await flushPromises()
+    await nextTick()
+
+    // expandAll=true → 父 / 子 / 孙三层初始都可见
+    expect(wrapper.text()).toContain('总公司')
+    expect(wrapper.text()).toContain('研发部')
+    expect(wrapper.text()).toContain('前端组')
+  })
+})
+
+describe('生成物运行时冒烟 — 78-category-tree（自定义 childrenField=subItems）', () => {
+  afterEach(cleanup)
+
+  it('自定义子节点键名真的被翻译（嵌套在 subItems 下的行也能渲染）', async () => {
+    const schema = generatePageSchema(loadGoldenConfig('78-category-tree-vue3-subitems.json'))
+    const to = schema.tableOptions as any
+    expect(to.treeConfig?.childrenField).toBe('subItems')
+
+    const httpRequest = async () => ({
+      records: 2,
+      rows: [
+        { id: 1, categoryName: '数码', sortNo: 1, subItems: [{ id: 2, categoryName: '手机', sortNo: 2 }] },
+      ],
+    })
+    const wrapper = mount(EsCrudPage, {
+      props: { schema, httpRequest },
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await flushPromises()
+    await nextTick()
+
+    // el-table 默认只认 children 键；能渲染出「手机」证明 childrenField 被翻译成了 tree-props
+    expect(wrapper.text()).toContain('数码')
+    const icon = wrapper.find('.el-table__expand-icon')
+    expect(icon.exists(), '自定义子键下父行也应渲染树展开图标').toBe(true)
+    await icon.trigger('click')
+    await flushPromises()
+    await nextTick()
+    expect(wrapper.text()).toContain('手机')
+  })
+})
+
