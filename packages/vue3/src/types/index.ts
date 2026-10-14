@@ -49,6 +49,38 @@ export interface FieldHiddenCondition {
   value?: unknown
 }
 
+/**
+ * 表达式算子（闭集）—— 与 core `expr.ts` 的 `EXPR_OPS` 同源。
+ * 表达式是**纯 JSON**（JSONLogic 形态），用于旧 8 算子表达不了的谓词（OR / 序关系 / 嵌套 not）。
+ */
+export type FieldHiddenExprOp =
+  | 'var'
+  | '=='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'in'
+  | 'nin'
+  | 'empty'
+  | 'notEmpty'
+  | 'truthy'
+  | 'falsy'
+  | 'and'
+  | 'or'
+  | 'not'
+  | 'if'
+
+/** JSON 表达式节点（AI-16 超集）：`{ var: 'status' }` 或 `{ '==': [{ var: 'status' }, 'pending'] }`。 */
+export interface FieldHiddenExprNode {
+  var?: string
+  [op: string]: unknown
+}
+
+/** `isHidden` 的表达式形态：单节点或节点数组。 */
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -86,6 +118,7 @@ export interface FormItemOption {
   isHidden?:
     | FieldHiddenCondition
     | FieldHiddenCondition[]
+    | FieldHiddenExpr
     | ((model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean)
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams

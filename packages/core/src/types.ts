@@ -154,13 +154,61 @@ export interface FieldHiddenCondition {
 }
 
 /**
- * `isHidden` 的取值：单条件、条件数组（**全部成立 = AND 才隐藏**），
- * 或原生的函数式判断（`(model, item, formProps) => boolean`）。
+ * 表达式字面量（可 JSON 序列化；**对象字面量刻意排除** —— 任何对象形态都必须是算子节点）。
+ */
+export type FieldHiddenLiteral = string | number | boolean | null
+
+/**
+ * 表达式算子（闭集）—— 与 core `expr.ts` 的 `EXPR_OPS` 同源（守卫断言逐项相等）。
+ *
+ *   var 取 model 路径值；== != 等/不等；> >= < <= 序关系；in nin 成员；
+ *   empty notEmpty 空判定；truthy falsy 真值；and or not 逻辑；if 三元。
+ */
+export type FieldHiddenExprOp =
+  | 'var'
+  | '=='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'in'
+  | 'nin'
+  | 'empty'
+  | 'notEmpty'
+  | 'truthy'
+  | 'falsy'
+  | 'and'
+  | 'or'
+  | 'not'
+  | 'if'
+
+/**
+ * JSON 表达式节点（AI-16 底座）—— JSONLogic 形态 / CEL 语义子集。
+ *
+ * 形如 `{ var: 'status' }`、`{ '==': [{ var: 'status' }, 'pending'] }`、
+ * `{ or: [ { '==': [...] }, { '>': [...] } ] }`。操作数可为表达式、字面量或字面量数组。
+ * 键 ∈ {@link FieldHiddenExprOp}；运行时由 core `expr.ts` 求值，Zod（shared 的
+ * `HiddenExprSchema`）是静态权威。类型刻意保持宽松 —— 权威校验在运行时与 Zod。
+ */
+export interface FieldHiddenExprNode {
+  /** 取 model 路径值（操作数是字符串路径） */
+  var?: string
+  /** 算子 → 操作数（表达式 / 字面量 / 字面量数组） */
+  [op: string]: unknown
+}
+
+/** `isHidden` 的表达式形态：单节点或节点数组。 */
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
+/**
+ * `isHidden` 的取值：单条件、条件数组（**全部成立 = AND 才隐藏**）、
+ * JSON 表达式（AI-16 超集），或原生的函数式判断（`(model, item, formProps) => boolean`）。
  *
  * 声明式形态由 `normalizeFormItem`（compat）在运行时编译成函数，故三端
  * `formItemListFilter` 只需照旧调用 `isHidden`，无需感知两种形态。
  */
-export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[]
+export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
 
 /**
  * 表单字段选项
@@ -205,7 +253,8 @@ export interface FormItemOption {
    *
    * - 函数形态：`(model, item, formProps) => boolean`（原生用法）
    * - 声明式形态：`FieldHiddenCondition | FieldHiddenCondition[]`（AI 生成 / JSON schema
-   *   用；数组为 AND），由 `normalizeFormItem` 在运行时编译为函数
+   *   用；数组为 AND）或 JSON 表达式（`FieldHiddenExpr`，AI-16 超集），由
+   *   `normalizeFormItem` 在运行时编译为函数
    */
   isHidden?: FieldHidden | ((model: ModelData, item: FormItemOption, formProps: unknown) => boolean)
   /** 自定义渲染函数（h, model, ctx） */

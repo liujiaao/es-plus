@@ -476,6 +476,83 @@ describe('StructuredCrudConfigSchema — field.isHidden 声明式条件', () => 
   })
 })
 
+// ── field.isHidden 表达式超集（AI-16）──────────────────────────────────
+// 旧 8 算子表达不了的谓词（OR / 序关系 / 嵌套 not）用 JSON 表达式（JSONLogic 形态）。
+// 这是 additive 超集：旧形态全部保留，表达式是**闭算子白名单**（写错即拒，不静默降级）。
+describe('StructuredCrudConfigSchema — field.isHidden 表达式超集', () => {
+  const withField = (field: Record<string, unknown>) =>
+    StructuredCrudConfigSchema.safeParse({
+      name: 'Page',
+      apiUrl: '/api/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }, field],
+      actions: ['add'],
+    })
+
+  const hidden = (isHidden: unknown) => withField({ prop: 'b', label: 'B', formtype: 'Input', isHidden })
+
+  it('接受 { var } 与各算子节点（等/序/成员/空值/逻辑/三元）', () => {
+    expect(hidden({ var: 'status' }).success).toBe(true)
+    expect(hidden({ '==': [{ var: 'status' }, 'pending'] }).success).toBe(true)
+    expect(hidden({ '>': [{ var: 'amount' }, 100] }).success).toBe(true)
+    expect(hidden({ nin: [{ var: 'x' }, ['a', 'b']] }).success).toBe(true)
+    expect(hidden({ empty: [{ var: 'x' }] }).success).toBe(true)
+    expect(hidden({ or: [{ '==': [{ var: 's' }, 'a'] }, { '>': [{ var: 'n' }, 1] }] }).success).toBe(true)
+    expect(hidden({ not: [{ truthy: [{ var: 'x' }] }] }).success).toBe(true)
+    expect(hidden({ if: [{ var: 'x' }, true, false] }).success).toBe(true)
+  })
+
+  it('深嵌套 or/and + 字面量数组操作数', () => {
+    const expr = {
+      or: [
+        { and: [{ '==': [{ var: 'a' }, 1] }, { in: [{ var: 'b' }, [1, 2, 3]] }] },
+        { '==': [{ var: 'a' }, 'none'] },
+      ],
+    }
+    expect(hidden(expr).success).toBe(true)
+  })
+
+  it('保留原语义：表达式节点原样存下（不被剥键）', () => {
+    const expr = { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] }
+    const r = hidden(expr)
+    expect(r.success).toBe(true)
+    const f = (r as { data: { fields: Array<{ isHidden: unknown }> } }).data.fields[1]
+    expect(f.isHidden).toEqual(expr)
+  })
+
+  it('旧条件与表达式可混成数组（AND）', () => {
+    expect(hidden([{ field: 'a', op: 'eq', value: 1 }, { '>': [{ var: 'b' }, 5] }]).success).toBe(true)
+  })
+
+  it('拒绝未知算子（闭白名单，不静默降级）', () => {
+    expect(hidden({ zzz: [] }).success).toBe(false)
+    expect(hidden({ gt: [{ var: 'a' }, 1] }).success).toBe(false)
+  })
+
+  it('拒绝多键算子节点 / 非数组操作数', () => {
+    expect(hidden({ '==': [1, 2], '!=': [1, 2] }).success).toBe(false)
+    expect(hidden({ var: 'a', '==': [] }).success).toBe(false)
+    expect(hidden({ '==': 1 }).success).toBe(false)
+  })
+
+  it('拒绝对象字面量操作数（任何对象都必须是 var / 算子节点）', () => {
+    expect(hidden({ '==': [{ foo: 1 }, 2] }).success).toBe(false)
+  })
+
+  it('var 路径沿用 isSafeProp 防线（__proto__ / 空 / 分隔符）', () => {
+    expect(hidden({ var: '__proto__' }).success).toBe(false)
+    expect(hidden({ var: 'a/../b' }).success).toBe(false)
+    expect(hidden({ '==': [{ var: '' }, 1] }).success).toBe(false)
+    // 嵌套安全路径照常接受
+    expect(hidden({ '==': [{ var: 'user.type' }, 'vip'] }).success).toBe(true)
+  })
+
+  it('顶层不接受裸字面量（与「禁用 JS 串」的原则一致）', () => {
+    expect(hidden(123).success).toBe(false)
+    expect(hidden('abc').success).toBe(false)
+    expect(hidden(true).success).toBe(false)
+  })
+})
+
 describe('StructuredCrudConfigSchema — surface listing', () => {
   it('top-level keys are stable', () => {
     // ZodObject exposes .shape — snapshotting the key list catches accidental

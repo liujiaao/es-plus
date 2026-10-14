@@ -269,6 +269,19 @@ describe('compat > normalizeFormItem', () => {
     expect(item.isHidden).toBe(orig)
   })
 
+  it('声明式 isHidden（表达式形态）也水合为函数（AI-16 超集）', () => {
+    const item = normalizeFormItem({
+      prop: 'reason',
+      label: '原因',
+      isHidden: { or: [{ '==': [{ var: 'status' }, 'rejected'] }, { empty: [{ var: 'status' }] }] },
+    })
+    const fn = item.isHidden as unknown as (m: Record<string, unknown>) => boolean
+    expect(typeof fn).toBe('function')
+    expect(fn({ status: 'rejected' })).toBe(true)
+    expect(fn({ status: '' })).toBe(true)
+    expect(fn({ status: 'pending' })).toBe(false)
+  })
+
   it('缺省 isHidden 不引入多余键', () => {
     const item = normalizeFormItem({ prop: 'a', label: 'A' })
     expect('isHidden' in item).toBe(false)

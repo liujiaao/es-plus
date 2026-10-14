@@ -36,6 +36,19 @@ export interface FieldHiddenCondition {
   value?: unknown
 }
 
+/**
+ * A JSON expression node (JSONLogic-shaped) — only for predicates the plain
+ * condition can't express (OR / ordering / nested NOT), e.g.
+ * \`{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }\`.
+ * Ops: var == != > >= < <= in nin empty notEmpty truthy falsy and or not if.
+ */
+export interface FieldHiddenExprNode {
+  var?: string
+  [op: string]: unknown
+}
+
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -50,10 +63,11 @@ export interface FormItemOption {
   width?: number | string
   /**
    * Conditional visibility: the field is HIDDEN while the condition holds.
-   * PLAIN JSON DATA — a single condition or an array (AND); never a JS string.
-   * Applies to the query/add/edit forms, NOT the table column.
+   * PLAIN JSON DATA — a single condition, a single JSON expression, or an
+   * array (AND); never a JS string. Applies to the query/add/edit forms,
+   * NOT the table column.
    */
-  isHidden?: FieldHiddenCondition | FieldHiddenCondition[]
+  isHidden?: FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
   [key: string]: unknown
 }
 

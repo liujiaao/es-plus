@@ -1,0 +1,35 @@
+{
+  "nl": "采购申请管理：查询有物品名称；表格展示物品名称、采购类别、金额、预算科目编码；支持新增、编辑、删除。表单里「预算科目编码」在金额低于 5000 元时隐藏（小额采购免填）。",
+  "nlEn": "Purchase-request management: query by item name; the table shows item name, category, amount and budget account code; supports add, edit and delete. In the form, the \"budget account code\" is hidden when the amount is below 5000 (small purchases do not need one).",
+  "fixedFields": ["itemName", "category", "amount", "budgetCode"],
+  "pinnedDims": ["propSet", "actions", "isHidden:budgetCode", "mode"],
+  "config": {
+    "name": "PurchaseRequestManage",
+    "apiUrl": "/api/purchase-requests",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "itemName", "label": "物品名称", "formtype": "Input" },
+      {
+        "prop": "category",
+        "label": "采购类别",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "办公用品", "value": "office" },
+          { "label": "设备", "value": "device" },
+          { "label": "服务", "value": "service" }
+        ]
+      },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      {
+        "prop": "budgetCode",
+        "label": "预算科目编码",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "<": [{ "var": "amount" }, 5000] }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（序关系 <）—— 金额低于 5000 时隐藏预算科目编码（vue3/SFC）"
+}

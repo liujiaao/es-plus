@@ -12,8 +12,11 @@
  * 这些函数完全不依赖 Vue / Element，渲染层只需调用即可。
  */
 
-import type { BtnConfig, FieldHidden, FieldHiddenCondition, FieldHiddenOp, FormItemOption, ModelData } from './types'
+import type { BtnConfig, FieldHidden, FieldHiddenCondition, FieldHiddenExpr, FieldHiddenOp, FormItemOption, ModelData } from './types'
 import { getNestedValue } from './shared'
+// looseEqual / isEmptyValue 的单一权威定义在 expr.ts（旧条件求值与新表达式求值共用）；
+// isExprNode / isHiddenExpr 供 compileHiddenCondition 分派表达式形态（AI-16）。
+import { isEmptyValue, isExprNode, isHiddenExpr, looseEqual } from './expr'
 
 /**
  * 位置解析所需的**最小**输入 —— 只含定位相关的三个字段。
@@ -39,29 +42,7 @@ export interface ButtonSideInput {
 // 表单字段过滤与 span 计算
 // ============================================================================
 
-/**
- * 宽松相等：先严格比较，再**仅**放宽 number ↔ string（`1` ≈ `'1'`）。
- *
- * 为什么需要：声明式条件通常由 AI 生成 / 手写 JSON，而 `value` 的类型可能与
- * model 实际值漂移（dataOptions 里 value 是数字 `1`，条件却写成字符串 `'1'`，
- * 或反之）。此时若用严格相等，字段会**永不隐藏**且**毫无提示**——正是本库
- * 反复强调的「静默不生效」。
- *
- * 为什么只放宽 number ↔ string 而不用裸 `==`：`==` 会把 `'' == 0`、`null == undefined`、
- * `false == 0` 一并判真，语义难以预期；而空值判定有专门的 `empty`/`falsy` 算子，
- * 不该由 `eq` 代办。此处的放宽范围是**刻意收窄**的。
- */
-function looseEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true
-  if (typeof a === 'number' && typeof b === 'string') return String(a) === b
-  if (typeof a === 'string' && typeof b === 'number') return a === String(b)
-  return false
-}
-
-/** 「空」判定：空串 / null / undefined / 空数组（与表单「未填」的直觉一致）。 */
-function isEmptyValue(v: unknown): boolean {
-  return v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)
-}
+// 注：looseEqual / isEmptyValue 已上移到 expr.ts（单一权威定义），本文件改为 import。
 
 /** 未知算子只告警一次（避免每次渲染刷屏）。 */
 const warnedHiddenOps = new Set<string>()
@@ -121,6 +102,10 @@ export function matchHiddenCondition(cond: FieldHiddenCondition, model: ModelDat
  * - 条件数组 → **AND**（全部成立才隐藏）；
  * - 空数组 → 永不隐藏（避免「空数组 ∧ 恒真 → 永远隐藏」的反直觉语义）。
  *
+ * 单项求值经 `evalHiddenItem` 分派（AI-16）：**表达式节点**（JSON 表达式 DSL）走
+ * `isHiddenExpr`；**旧 {field, op, value} 条件**走 `matchHiddenCondition` 原样 —— 旧形态
+ * 字节不动、行为零变化，表达式是纯增量。两分支不相交（旧条件必有字符串 field）。
+ *
  * `normalizeFormItem`（compat）用它把 JSON 形态的 `isHidden` 水合成函数，
  * 因此三端 `formItemListFilter` 只需照旧调用 `isHidden`，不必感知两种形态。
  */
@@ -129,7 +114,17 @@ export function compileHiddenCondition(
 ): (model: ModelData) => boolean {
   const conds = Array.isArray(cond) ? cond : [cond]
   if (conds.length === 0) return () => false
-  return (model: ModelData): boolean => conds.every((c) => matchHiddenCondition(c, model))
+  return (model: ModelData): boolean => conds.every((c) => evalHiddenItem(c, model))
+}
+
+/**
+ * 求值单个 isHidden 项：表达式节点 → isHiddenExpr；否则按旧条件 → matchHiddenCondition。
+ * 分派判据 `isExprNode` 只在「无字符串 field 且含算子/var 键」时为真，故旧条件永走旧路径。
+ */
+function evalHiddenItem(item: FieldHiddenCondition | FieldHiddenExpr, model: ModelData): boolean {
+  return isExprNode(item)
+    ? isHiddenExpr(item, model)
+    : matchHiddenCondition(item as FieldHiddenCondition, model)
 }
 
 /**

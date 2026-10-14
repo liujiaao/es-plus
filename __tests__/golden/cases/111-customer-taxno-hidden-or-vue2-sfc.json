@@ -1,0 +1,39 @@
+{
+  "nl": "客户管理：查询有客户名称；表格展示客户名称、客户类型、企业规模、税号；支持新增、编辑、删除。表单里「税号」在客户类型是个人，或企业规模少于 50 人时隐藏。",
+  "nlEn": "Customer management: query by customer name; the table shows customer name, customer type, company size and tax number; supports add, edit and delete. In the form, the \"tax number\" is hidden when the customer type is individual, or the company size is fewer than 50 people.",
+  "fixedFields": ["customerName", "customerType", "companySize", "taxNo"],
+  "pinnedDims": ["propSet", "actions", "isHidden:taxNo", "target", "mode"],
+  "config": {
+    "name": "CustomerManage",
+    "apiUrl": "/api/customers",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input" },
+      {
+        "prop": "customerType",
+        "label": "客户类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "个人", "value": "personal" },
+          { "label": "企业", "value": "company" }
+        ]
+      },
+      { "prop": "companySize", "label": "企业规模", "formtype": "InputNumber" },
+      {
+        "prop": "taxNo",
+        "label": "税号",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "customerType" }, "personal"] },
+            { "<": [{ "var": "companySize" }, 50] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or + 序关系 <）—— 个人客户或规模<50 时隐藏税号（vue2/SFC）"
+}

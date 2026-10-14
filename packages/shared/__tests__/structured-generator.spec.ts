@@ -328,6 +328,47 @@ describe('generateFromConfig — sfc mode', () => {
     expect(result.code).toContain('"op": "falsy"')
   })
 
+  // AI-16：表达式形态的 isHidden 同样是纯 JSON 数据，两种模式都必须原样内联 ——
+  // 否则它在生成期被静默丢掉，三端渲染时字段永远可见。
+  it('emits expression isHidden into schema-mode JSON (or / 序关系 原样内联)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] },
+        } as never,
+      ],
+    })
+    expect(result.code).toContain('"isHidden": {')
+    expect(result.code).toContain('"or"')
+    expect(result.code).toContain('"var": "status"')
+    expect(result.code).toContain('"var": "amount"')
+  })
+
+  it('emits expression isHidden in SFC mode (inlineJson formItems)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: [{ field: 'a', op: 'eq' as const, value: 1 }, { '>': [{ var: 'b' }, 5] }],
+        } as never,
+      ],
+    })
+    expect(result.code).toContain('"var": "b"')
+  })
+
   it('does NOT emit isHidden when absent (backward compatible: prior outputs byte-identical)', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
     expect(result.code).not.toContain('isHidden')

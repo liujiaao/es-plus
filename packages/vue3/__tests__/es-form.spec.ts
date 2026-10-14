@@ -151,6 +151,32 @@ describe('EsForm - 配置渲染', () => {
     expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
   })
 
+  // AI-16：表达式形态（旧 8 算子表达不了的 OR / 序关系）同样由 core 单点求值，
+  // 组件层零改动，且按 reactive model 联动。
+  it('hides fields with an expression isHidden (or / ordering) and reacts to model changes', async () => {
+    const model = reactive({ status: 'pending', amount: 0, reason: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'status', label: '状态', formtype: 'Input', span: 12 },
+        { prop: 'reason', label: '原因', formtype: 'Input', span: 12,
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] } }
+      ]
+    })
+    // status === 'pending' → OR 成立 → reason 隐藏
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
+
+    model.status = 'done'
+    await nextTick()
+    // status 既不 pending、amount 也不 > 100 → 显示
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(2)
+
+    model.amount = 200
+    await nextTick()
+    // amount > 100 → OR 成立 → 再次隐藏
+    expect(wrapper.findAll('.el-form-item')).toHaveLength(1)
+  })
+
   it('renders configBtn buttons', () => {
     const wrapper = mountForm({
       model: { keyword: '' },

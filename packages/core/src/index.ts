@@ -119,6 +119,13 @@ export {
   compileHiddenCondition,
 } from './field-resolver'
 
+// ─── 表达式求值器（AI-16 底座：JSON 表达式 DSL）───────────────
+// 零依赖、无 eval / new Function 的闭白名单求值器（JSONLogic 形态 / CEL 语义子集）。
+// `isHidden` 的表达式形态由 field-resolver 委托此处求值；此处对外暴露求值器本身，
+// 供宿主在代码侧静态求值（AI-07 联动将由它承载）。
+export { evalExpr, isHiddenExpr, isExprNode, EXPR_OPS } from './expr'
+export type { FieldHiddenExpr, FieldHiddenExprNode, FieldHiddenExprOp } from './types'
+
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
 export { buildFirstClassGridOptions } from './vxe-engine'
 

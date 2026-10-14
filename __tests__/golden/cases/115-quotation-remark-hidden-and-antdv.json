@@ -1,0 +1,39 @@
+{
+  "nl": "用 antd 风格做询价单管理：查询有产品名称；表格展示产品名称、产品类别、数量、备注；支持新增、编辑、删除。表单里「备注」在产品类别不是「其它」且不是「自定义」，同时数量大于 0 时隐藏（标准品按统一规格，无需备注）。",
+  "nlEn": "Quotation management with an Ant Design look: query by product name; the table shows product name, category, quantity and remark; supports add, edit and delete. In the form, the \"remark\" is hidden when the category is neither \"other\" nor \"custom\" AND the quantity is greater than 0 (standard products follow a fixed spec and need no remark).",
+  "fixedFields": ["productName", "category", "qty", "remark"],
+  "pinnedDims": ["propSet", "actions", "isHidden:remark", "target"],
+  "config": {
+    "name": "QuotationManage",
+    "apiUrl": "/api/quotations",
+    "target": "antdv",
+    "fields": [
+      { "prop": "productName", "label": "产品名称", "formtype": "Input" },
+      {
+        "prop": "category",
+        "label": "产品类别",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "标准品", "value": "std" },
+          { "label": "其它", "value": "other" },
+          { "label": "自定义", "value": "custom" }
+        ]
+      },
+      { "prop": "qty", "label": "数量", "formtype": "InputNumber" },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "and": [
+            { "nin": [{ "var": "category" }, ["other", "custom"]] },
+            { ">": [{ "var": "qty" }, 0] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（and + nin + 序关系 >）—— 标准品且数量>0 时隐藏备注（antdv/schema）"
+}

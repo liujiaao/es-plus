@@ -432,4 +432,25 @@ describe('EsForm(vue2) - 声明式 isHidden 条件（AI-06）', () => {
     const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
     expect(labels).toEqual(['申请类型', '调班原因'])
   })
+
+  // AI-16：表达式形态（or / 序关系）在 vue2 端同样经 core 求值 —— 只钉接线。
+  it('表达式条件（or / 序关系）同样生效', async () => {
+    const exprItems = () => [
+      { prop: 'status', label: '状态', formtype: 'Input' as const, span: 12 },
+      {
+        prop: 'reason',
+        label: '原因',
+        formtype: 'Input' as const,
+        span: 12,
+        isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] },
+      },
+    ]
+    const hit = mountForm({ model: { status: 'pending', amount: 0, reason: '' }, formItemList: exprItems() })
+    await hit.$nextTick()
+    expect(findAllByName(hit, 'ElFormItem').map((it) => it.$props.label)).toEqual(['状态'])
+
+    const miss = mountForm({ model: { status: 'done', amount: 0, reason: '' }, formItemList: exprItems() })
+    await miss.$nextTick()
+    expect(findAllByName(miss, 'ElFormItem').map((it) => it.$props.label)).toEqual(['状态', '原因'])
+  })
 })

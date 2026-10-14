@@ -69,8 +69,90 @@ const HiddenConditionSchema = z.object({
     ),
 });
 
-/** A single condition, or an array of conditions (all must hold = AND, then hidden). */
-const HiddenConditionListSchema = z.union([HiddenConditionSchema, z.array(HiddenConditionSchema).min(1)]);
+/**
+ * Expression operators (closed set) — mirrors core's `EXPR_OPS` and the shared
+ * authoritative schema verbatim (see packages/core/src/expr.ts). A JSON
+ * expression (JSONLogic-shaped / CEL-semantics subset) is the escape hatch for
+ * predicates the legacy `{field, op, value}` form cannot express — OR, AND-OR
+ * mixes, ordering, nested NOT. It is plain JSON data so it can be inlined into
+ * a schema-mode pageSchema (a JS string cannot).
+ */
+const EXPR_OPS = [
+  "var",
+  "==",
+  "!=",
+  ">",
+  ">=",
+  "<",
+  "<=",
+  "in",
+  "nin",
+  "empty",
+  "notEmpty",
+  "truthy",
+  "falsy",
+  "and",
+  "or",
+  "not",
+  "if",
+] as const;
+
+/** Operators that form a **single-key operator node** (`var` excluded: its operand is a string path). */
+const EXPR_NODE_OP_SET: ReadonlySet<string> = new Set(EXPR_OPS.filter((op) => op !== "var"));
+
+/** `var` node: read a model path (shares the same `isSafeProp` guard as field/prop). */
+const HiddenExprVarSchema = z.strictObject({
+  var: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'var must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+    })
+    .describe('Model field path to read, e.g. "status" or "user.type"'),
+});
+
+/**
+ * Operator node: exactly ONE key ∈ EXPR_OPS (excluding var), value an operand array.
+ * Closed by whitelist (sandbox), arity checked at runtime by core's evaluator.
+ */
+const hiddenExprOpNode = (operand: z.ZodTypeAny) =>
+  z.record(z.string(), z.array(operand)).refine(
+    (o) => {
+      const keys = Object.keys(o);
+      return keys.length === 1 && EXPR_NODE_OP_SET.has(keys[0]);
+    },
+    { message: "expression operator node must have exactly one key ∈ EXPR_OPS (excluding var)" }
+  );
+
+/** Expression node: `{ var }` or an operator node (top-level: bare literals rejected). */
+const HiddenExprNodeSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([HiddenExprVarSchema, hiddenExprOpNode(HiddenExprOperandSchema)])
+);
+
+/** Expression operand: literal / operand array / node (recursive). */
+const HiddenExprOperandSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(HiddenExprOperandSchema),
+    HiddenExprVarSchema,
+    hiddenExprOpNode(HiddenExprOperandSchema),
+  ])
+);
+
+/**
+ * A single condition, a single expression node, or an array (all must hold = AND, then hidden).
+ * Legacy condition first (first-match preserves old behavior); the two branches are disjoint
+ * (a legacy condition always has a string `field`; an expression node never does).
+ */
+const HiddenConditionListSchema = z.union([
+  HiddenConditionSchema,
+  HiddenExprNodeSchema,
+  z.array(z.union([HiddenConditionSchema, HiddenExprNodeSchema])).min(1),
+]);
 
 const FieldConfigSchema = z.object({
   prop: z
@@ -132,7 +214,7 @@ const FieldConfigSchema = z.object({
     ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
-    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? } or an array of them (array = AND). Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
+    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? }, a single JSON expression, or an array of them (array = AND). A JSON expression (JSONLogic-shaped) is only needed when a plain condition cannot express the predicate — OR, AND-OR mixes, ordering (>, <=), or nested NOT: e.g. { or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }; ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Prefer the plain { field, op, value } form for simple cases. Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
   ),
 });
 

@@ -87,9 +87,89 @@ const HiddenConditionSchema = z.object({
 })
 
 /**
- * 显隐条件：单条件，或条件数组（**全部成立 = AND 才隐藏**）。
+ * 表达式算子（闭集）—— 与 core `expr.ts` 的 `EXPR_OPS` **逐项相等**（守卫断言）。
+ * 与 HIDDEN_OPS 同理：刻意用可 JSON 化的数据，schema 模式下才能内联；不引任何库。
  */
-const HiddenConditionListSchema = z.union([HiddenConditionSchema, z.array(HiddenConditionSchema).min(1)])
+const EXPR_OPS = [
+  'var',
+  '==',
+  '!=',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  'in',
+  'nin',
+  'empty',
+  'notEmpty',
+  'truthy',
+  'falsy',
+  'and',
+  'or',
+  'not',
+  'if',
+] as const
+
+/** 构成**单键算子节点**的算子（排除 `var`，其操作数是字符串路径而非数组）。 */
+const EXPR_NODE_OP_SET: ReadonlySet<string> = new Set(EXPR_OPS.filter((op) => op !== 'var'))
+
+/** `var` 节点：取 model 路径值（与 field/prop 共用同一道 `isSafeProp` 防线）。 */
+const HiddenExprVarSchema = z.strictObject({
+  var: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'var 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
+    })
+    .describe('Model field path to read, e.g. "status" or "user.type"'),
+})
+
+/**
+ * 算子节点：**恰好一个**键、键 ∈ EXPR_OPS（不含 var）、值为操作数数组。
+ * 用 record + refine 而非逐个枚举算子 —— 键集闭在白名单内即沙箱闭合，运行时再校验 arity。
+ */
+const hiddenExprOpNode = (operand: z.ZodType<unknown>) =>
+  z.record(z.string(), z.array(operand)).refine(
+    (o) => {
+      const keys = Object.keys(o)
+      return keys.length === 1 && EXPR_NODE_OP_SET.has(keys[0])
+    },
+    { message: '表达式算子节点必须是恰含一个键的对象，且键 ∈ EXPR_OPS（不含 var）' }
+  )
+
+/**
+ * 表达式节点（AI-16 底座，JSONLogic 形态 / CEL 语义子集）：`{ var }` 或算子节点。
+ * 用于 `isHidden` 的**顶层**取值 —— 顶层不接受裸字面量（避免与「禁用 JS 串」的原则冲突）。
+ */
+const HiddenExprNodeSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([HiddenExprVarSchema, hiddenExprOpNode(HiddenExprOperandSchema)])
+)
+
+/** 表达式操作数：字面量 / 操作数数组 / 节点（递归）。 */
+const HiddenExprOperandSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(HiddenExprOperandSchema),
+    HiddenExprVarSchema,
+    hiddenExprOpNode(HiddenExprOperandSchema),
+  ])
+)
+
+/**
+ * 显隐条件：单条件 / 单表达式节点，或条件数组（**全部成立 = AND 才隐藏**）。
+ *
+ * 顺序敏感：旧条件放首位（首匹配保旧行为）；两分支不相交（旧条件必有字符串 `field`，
+ * 表达式节点必为不含 `field` 的 `{var}`/算子对象）。数组分支允许旧条件与表达式混用。
+ */
+const HiddenConditionListSchema = z.union([
+  HiddenConditionSchema,
+  HiddenExprNodeSchema,
+  z.array(z.union([HiddenConditionSchema, HiddenExprNodeSchema])).min(1),
+])
 
 const FieldConfigSchema = z.object({
   prop: z.string().min(1).refine(isSafeProp, {
@@ -128,7 +208,7 @@ const FieldConfigSchema = z.object({
   ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
-    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold). Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
+    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold). A condition may ALSO be a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. The legacy {field,op,value} form remains valid and is preferred for simple cases. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
   ),
 })
 

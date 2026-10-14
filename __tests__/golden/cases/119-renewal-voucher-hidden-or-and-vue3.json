@@ -1,0 +1,45 @@
+{
+  "nl": "续费提醒管理：查询有账户名称；表格展示账户名称、套餐、席位、优惠码、续费代金券；支持新增、编辑、删除。表单里「续费代金券」在套餐为试用版，或席位不超过 5 个且未填优惠码时隐藏。",
+  "nlEn": "Renewal-reminder management: query by account name; the table shows account name, plan, seats, coupon code and renewal voucher; supports add, edit and delete. In the form, the \"renewal voucher\" is hidden when the plan is trial, or the seats are at most 5 and no coupon code has been entered.",
+  "fixedFields": ["accountName", "plan", "seats", "couponCode", "renewalVoucher"],
+  "pinnedDims": ["propSet", "actions", "isHidden:renewalVoucher"],
+  "config": {
+    "name": "RenewalReminderManage",
+    "apiUrl": "/api/renewal-reminders",
+    "target": "vue3",
+    "fields": [
+      { "prop": "accountName", "label": "账户名称", "formtype": "Input" },
+      {
+        "prop": "plan",
+        "label": "套餐",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "试用版", "value": "trial" },
+          { "label": "标准版", "value": "std" },
+          { "label": "企业版", "value": "ent" }
+        ]
+      },
+      { "prop": "seats", "label": "席位", "formtype": "InputNumber" },
+      { "prop": "couponCode", "label": "优惠码", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "renewalVoucher",
+        "label": "续费代金券",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "plan" }, "trial"] },
+            {
+              "and": [
+                { "<=": [{ "var": "seats" }, 5] },
+                { "empty": [{ "var": "couponCode" }] }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（or + and + 序关系 <= + empty）—— 试用版或（席位<=5 且无优惠码）时隐藏续费代金券（vue3/schema）"
+}

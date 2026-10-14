@@ -1,0 +1,39 @@
+{
+  "nl": "用 antd 风格做工单管理：查询有标题；表格展示标题、优先级、负责人、升级原因；支持新增、编辑、删除。表单里「升级原因」在优先级为「低」，或尚未填写负责人时隐藏。",
+  "nlEn": "Ticket management with an Ant Design look: query by title; the table shows title, priority, assignee and escalation reason; supports add, edit and delete. In the form, the \"escalation reason\" is hidden when the priority is \"low\", or no assignee has been filled in yet.",
+  "fixedFields": ["title", "priority", "assignee", "escalateReason"],
+  "pinnedDims": ["propSet", "actions", "isHidden:escalateReason", "target"],
+  "config": {
+    "name": "TicketManage",
+    "apiUrl": "/api/tickets",
+    "target": "antdv",
+    "fields": [
+      { "prop": "title", "label": "标题", "formtype": "Input" },
+      {
+        "prop": "priority",
+        "label": "优先级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "高", "value": "high" },
+          { "label": "中", "value": "medium" },
+          { "label": "低", "value": "low" }
+        ]
+      },
+      { "prop": "assignee", "label": "负责人", "formtype": "Input" },
+      {
+        "prop": "escalateReason",
+        "label": "升级原因",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "priority" }, "low"] },
+            { "empty": [{ "var": "assignee" }] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or）—— 低优先级或未指派负责人时隐藏升级原因（antdv/schema）"
+}

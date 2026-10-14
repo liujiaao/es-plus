@@ -245,6 +245,42 @@ describe("front door — deterministic validate gate (C2·A3)", () => {
     expect(parsedDefault.fields[0].isHidden).toEqual({ field: "payType", op: "eq" });
   });
 
+  // AI-16：isHidden 的表达式超集也必须**存活**于 mcp 内联 Zod —— 两份 Zod 同改
+  // 才有效；只改 shared 会让走 MCP 路径的表达式被静默剥掉（字段永远可见）。
+  it("MCP 参数 schema 保留 isHidden 表达式超集（or / 序关系 / 嵌套）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateFromConfig(server);
+    const shape = tools.generate_crud_from_config.shape;
+
+    const expr = {
+      or: [{ "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] }],
+    };
+    const parsed = z.object(shape).parse({
+      ...validFromConfig,
+      fields: [
+        field("payType", "支付方式"),
+        field("rejectReason", "驳回原因", "Input", { isHidden: expr }),
+      ],
+    });
+    expect(parsed.fields[1].isHidden).toEqual(expr);
+
+    // 旧条件与表达式混成数组（AND）
+    const mixed = [{ field: "a", op: "eq", value: 1 }, { ">": [{ var: "b" }, 5] }];
+    const parsedMixed = z.object(shape).parse({
+      ...validFromConfig,
+      fields: [field("note", "说明", "Input", { isHidden: mixed })],
+    });
+    expect(parsedMixed.fields[0].isHidden).toEqual(mixed);
+
+    // 未知算子必须被拒（闭白名单）
+    expect(() =>
+      z.object(shape).parse({
+        ...validFromConfig,
+        fields: [field("x", "X", "Input", { isHidden: { zzz: [] } })],
+      })
+    ).toThrow();
+  });
+
   it("MCP 参数 schema 保留显式 columns（含递归 groups 与非字段列）", () => {
     const { server, tools } = makeMockServer();
     registerGenerateFromConfig(server);

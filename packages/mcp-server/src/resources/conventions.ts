@@ -339,7 +339,12 @@ JSON. The contract is **mark, never drop**:
   not a code string): a declarative visibility condition \`{ field, op?, value? }\`
   or an array of them (AND), where the field is HIDDEN while the condition holds.
   \`field\` is another field path in the same form; \`op\` ∈ eq (default) / ne / in /
-  nIn / empty / notEmpty / truthy / falsy. Use this for "show field X only when Y
+  nIn / empty / notEmpty / truthy / falsy. When the predicate needs OR / AND-OR
+  mixes / ordering (>, <=) / a nested NOT — which the plain form cannot express —
+  use a JSON expression (JSONLogic-shaped, same \`isHidden\` key): \`{ or: [ { "==":
+  [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }\`, ops =
+  var == != > >= < <= in nin empty notEmpty truthy falsy and or not if; prefer the
+  plain form for simple cases. Use this for "show field X only when Y
   is Z" — it applies to the query/add/edit forms, NOT the table column. Do NOT
   reach for \`formatter\`/\`render\` for visibility.
 - **\`columns\`** (top-level — **not** an extension point: it's PLAIN JSON DATA): the

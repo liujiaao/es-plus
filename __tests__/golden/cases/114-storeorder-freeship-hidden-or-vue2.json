@@ -1,0 +1,38 @@
+{
+  "nl": "商城订单管理：查询有订单号；表格展示订单号、订单金额、会员等级、免邮说明；支持新增、编辑、删除。表单里「免邮说明」在订单金额不低于 99 元，或会员等级为 VIP 时隐藏。",
+  "nlEn": "Online-store order management: query by order number; the table shows order number, order amount, member level and free-shipping note; supports add, edit and delete. In the form, the \"free-shipping note\" is hidden when the order amount is at least 99, or the member level is VIP.",
+  "fixedFields": ["orderNo", "amount", "memberLevel", "freeShipNote"],
+  "pinnedDims": ["propSet", "actions", "isHidden:freeShipNote", "target"],
+  "config": {
+    "name": "StoreOrderManage",
+    "apiUrl": "/api/store-orders",
+    "target": "vue2",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "amount", "label": "订单金额", "formtype": "InputNumber" },
+      {
+        "prop": "memberLevel",
+        "label": "会员等级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "普通", "value": "normal" },
+          { "label": "VIP", "value": "vip" }
+        ]
+      },
+      {
+        "prop": "freeShipNote",
+        "label": "免邮说明",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { ">=": [{ "var": "amount" }, 99] },
+            { "==": [{ "var": "memberLevel" }, "vip"] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or + 序关系 >=）—— 满 99 元或 VIP 会员时隐藏免邮说明（vue2/schema）"
+}

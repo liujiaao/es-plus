@@ -1,0 +1,26 @@
+{
+  "nl": "用 antd 风格做员工档案管理：查询有员工姓名；表格展示员工姓名、所属部门、工龄、新人引导；支持新增、编辑、删除。表单里「新人引导」在工龄满 5 年时隐藏（老员工无需新人引导）。",
+  "nlEn": "Employee-profile management with an Ant Design look: query by employee name; the table shows employee name, department, years of service and onboarding task; supports add, edit and delete. In the form, the \"onboarding task\" is hidden when the years of service reach 5 (veterans need no onboarding).",
+  "fixedFields": ["employeeName", "dept", "years", "onboardingTask"],
+  "pinnedDims": ["propSet", "actions", "isHidden:onboardingTask", "target", "mode"],
+  "config": {
+    "name": "EmployeeProfileManage",
+    "apiUrl": "/api/employee-profiles",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "employeeName", "label": "员工姓名", "formtype": "Input" },
+      { "prop": "dept", "label": "所属部门", "formtype": "Input" },
+      { "prop": "years", "label": "工龄", "formtype": "InputNumber" },
+      {
+        "prop": "onboardingTask",
+        "label": "新人引导",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { ">=": [{ "var": "years" }, 5] }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（序关系 >=）—— 工龄满 5 年时隐藏新人引导（antdv/SFC）"
+}

@@ -378,9 +378,30 @@ function assertButtonPositionContract(src, { constName, label, fallback }) {
   return ok
 }
 
+/**
+ * 解析 `EXPR_OPS` 白名单数组的字面量成员。
+ *
+ * 三处（core `expr.ts` 运行时权威 + shared 权威 Zod + mcp 内联副本）必须**逐一相等**：
+ * 少一项就等于「一侧放行、另一侧拒绝」的假承诺（如 AI 生成的表达式被 mcp 静默剥掉）。
+ * 返回 null 表示定位不到声明（守卫应报错，而非静默跳过）。
+ */
+function parseExprOps(src) {
+  const m = src.match(/const\s+EXPR_OPS\s*=\s*(?:Object\s*\.\s*freeze\(\s*)?\[([\s\S]*?)\]/)
+  if (!m) return null
+  return m[1]
+    .split(',')
+    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean)
+}
+
 function checkStructuredConfigZod() {
   let ok = true
   const jsonTO = readSchema('table-options.schema.json').properties ?? {}
+  const coreExprOps = parseExprOps(stripComments(read('packages/core/src/expr.ts')))
+  if (!coreExprOps) {
+    fail('未能在 core/expr.ts 定位 EXPR_OPS 白名单（表达式算子的运行时权威源）')
+    ok = false
+  }
 
   for (const { file, label } of STRUCTURED_CONFIG_SOURCES) {
     const src = stripComments(read(file))
@@ -519,9 +540,49 @@ function checkStructuredConfigZod() {
       fail(`${label} 的 configTableOut 缺少 tableData: z.string(...)（列表数据键映射表达不了）`)
       ok = false
     }
+
+    // 表达式 DSL 契约（AI-16）：`isHidden` 的表达式超集由**闭算子白名单**收敛。
+    // 两处 Zod 都必须（a）白名单与 core/expr.ts 逐项相等、（b）节点递归（z.lazy）、
+    // （c）var 走 z.strictObject 闭键、（d）算子键闭在 EXPR_OPS 内、（e）顶层联合纳入
+    // 表达式节点。任一条缺失都会让表达式被 Zod 静默剥掉 —— 字段永远可见、零告警
+    // （与 isHidden 同类静默丢弃）。
+    if (coreExprOps) {
+      const srcOps = parseExprOps(src)
+      if (!srcOps) {
+        fail(`${label} 未能定位 EXPR_OPS 白名单（表达式算子集必须与 core/expr.ts 同步）`)
+        ok = false
+      } else {
+        const core = [...coreExprOps].sort().join(',')
+        const mine = [...srcOps].sort().join(',')
+        if (core !== mine) {
+          fail(`${label} 的 EXPR_OPS 与 core/expr.ts 不一致\n    core: ${core}\n    ${label}: ${mine}`)
+          ok = false
+        }
+      }
+    }
+    if (!/HiddenExprVarSchema\s*=\s*z\s*\.strictObject\(/.test(src)) {
+      fail(`${label} 的表达式 var 节点不是 z.strictObject（开键会让非算子键混入节点，闭集被破坏）`)
+      ok = false
+    }
+    if (!/HiddenExprNodeSchema[\s\S]{0,120}?z\s*\.lazy\(/.test(src)) {
+      fail(`${label} 的表达式节点不是递归（缺 z.lazy），嵌套 or/and 表达不了`)
+      ok = false
+    }
+    if (!/EXPR_NODE_OP_SET\s*(?::[^=]+)?=\s*new Set\(\s*EXPR_OPS\.filter\(/.test(src)) {
+      fail(`${label} 的 EXPR_NODE_OP_SET 未由 EXPR_OPS 派生（算子白名单可能漂移）`)
+      ok = false
+    }
+    if (!/HiddenExprVarSchema[\s\S]{0,400}?isSafeProp/.test(src)) {
+      fail(`${label} 的 var 节点未复用 isSafeProp（__proto__ 等路径注入防线缺失）`)
+      ok = false
+    }
+    if (!/HiddenConditionListSchema[\s\S]{0,400}?HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 HiddenConditionListSchema 未纳入 HiddenExprNodeSchema（表达式 isHidden 会被静默剥掉、字段永远可见）`)
+      ok = false
+    }
   }
 
-  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)
+  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化 + isHidden 表达式白名单）`)
   return ok
 }
 

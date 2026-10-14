@@ -1,0 +1,40 @@
+{
+  "nl": "请假申请管理：查询有员工姓名；表格展示员工姓名、请假类型、开始日期、天数、病假证明；支持新增、编辑、删除。表单里「病假证明」在请假类型不是病假，或请假天数少于 3 天时隐藏。",
+  "nlEn": "Leave-request management: query by employee name; the table shows employee name, leave type, start date, day count and sick-leave certificate; supports add, edit and delete. In the form, the \"sick-leave certificate\" is hidden when the leave type is not sick leave, or the day count is fewer than 3.",
+  "fixedFields": ["employeeName", "leaveType", "startDate", "days", "sickProof"],
+  "pinnedDims": ["propSet", "actions", "isHidden:sickProof"],
+  "config": {
+    "name": "LeaveRequestManage",
+    "apiUrl": "/api/leave-requests",
+    "target": "vue3",
+    "fields": [
+      { "prop": "employeeName", "label": "员工姓名", "formtype": "Input" },
+      {
+        "prop": "leaveType",
+        "label": "请假类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "年假", "value": "annual" },
+          { "label": "病假", "value": "sick" },
+          { "label": "事假", "value": "personal" }
+        ]
+      },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker" },
+      { "prop": "days", "label": "天数", "formtype": "InputNumber" },
+      {
+        "prop": "sickProof",
+        "label": "病假证明",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "!=": [{ "var": "leaveType" }, "sick"] },
+            { "<": [{ "var": "days" }, 3] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or + 序关系 <）—— 非病假或天数<3 时隐藏病假证明（vue3/schema）"
+}

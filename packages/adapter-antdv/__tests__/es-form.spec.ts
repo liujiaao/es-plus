@@ -342,4 +342,32 @@ describe('EsForm(ADV) - 声明式 isHidden 条件（AI-06）', () => {
     await nextTick()
     expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
   })
+
+  // AI-16：表达式形态（or / 序关系）同样由 core 单点求值，ADV 端零改动、随 model 联动。
+  it('表达式条件（or / 序关系）在 ADV 端同样生效', async () => {
+    const model = reactive({ status: 'pending', amount: 0, reason: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'status', label: '状态', formtype: 'Input' as const, span: 12 },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          span: 12,
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] },
+        },
+      ],
+    })
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
+
+    model.status = 'done'
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(2)
+
+    model.amount = 200
+    await nextTick()
+    expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
+  })
 })

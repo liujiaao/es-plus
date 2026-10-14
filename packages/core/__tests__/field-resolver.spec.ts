@@ -126,6 +126,20 @@ describe('field-resolver > matchHiddenCondition / compileHiddenCondition (AI-06)
     // 空数组 → 永不隐藏（避免「空数组 AND 恒真 → 永远隐藏」的反直觉）
     expect(compileHiddenCondition([])({ a: 1 })).toBe(false)
   })
+
+  it('compileHiddenCondition：表达式节点分派到新求值器（AI-16 超集）', () => {
+    const expr = { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] }
+    expect(compileHiddenCondition(expr)({ status: 'pending' })).toBe(true)
+    expect(compileHiddenCondition(expr)({ status: 'ok', amount: 200 })).toBe(true)
+    expect(compileHiddenCondition(expr)({ status: 'ok', amount: 50 })).toBe(false)
+  })
+
+  it('compileHiddenCondition：旧条件与表达式可混合成数组（逐元素分派，AND）', () => {
+    const mixed = [{ field: 'a', op: 'eq', value: 1 }, { '>': [{ var: 'b' }, 5] }]
+    expect(compileHiddenCondition(mixed)({ a: 1, b: 6 })).toBe(true)
+    expect(compileHiddenCondition(mixed)({ a: 1, b: 4 })).toBe(false)
+    expect(compileHiddenCondition(mixed)({ a: 2, b: 6 })).toBe(false)
+  })
 })
 
 describe('field-resolver > calculateAutoSpan / applyAutoSpan', () => {

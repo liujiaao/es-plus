@@ -179,6 +179,25 @@ console.log('meta-eval: isHidden (declarative condition)')
   const zChanged = clone(twoField)
   zChanged.fields[1].isHidden.value = 'zzz'
   check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 isHidden 应免责')
+
+  // AI-16：表达式形态的 isHidden 复用同一条深等值路径 —— 形态无关（键排序后逐层比较），
+  // 故无需为表达式新增维度：同一谓词不该被计两次。这里钉住「表达式确实被覆盖且判负正确」。
+  const expr = { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] }
+  const goldExpr = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: expr }], actions: ['add'] }
+  check(scoreAll(goldExpr, clone(goldExpr)).byCapability.isHidden.pass === true, 'isHidden(expr): 表达式一致应判正')
+  const exprWrongOp = clone(goldExpr)
+  exprWrongOp.fields[0].isHidden.or[1] = { '>=': [{ var: 'amount' }, 100] }
+  check(scoreAll(goldExpr, exprWrongOp).byCapability.isHidden.pass === false, 'isHidden(expr): 算子变（> → >=）应判负')
+  const exprWrongVal = clone(goldExpr)
+  exprWrongVal.fields[0].isHidden.or[0]['=='][1] = 'done'
+  check(scoreAll(goldExpr, exprWrongVal).byCapability.isHidden.pass === false, 'isHidden(expr): 值变应判负')
+  // 表达式与旧条件互不相等（形态不同即判负，不做「逻辑等价」推断）
+  check(scoreAll(goldExpr, gold).byCapability.isHidden.pass === false, 'isHidden(expr): 表达式 vs 旧条件应判负')
+  // gold 无 isHidden 时仍不 applicable（表达式不改变这一点）
+  check(scoreAll(plain, plain).byCapability.isHidden.applicable === false, 'isHidden(expr): gold 未声明时维度不 applicable')
+  // 字段级细化对表达式同样生效
+  check(scoreAll(goldExpr, clone(goldExpr), { pinnedDims: ['isHidden:a'] }).exactIntentScoped === true, 'scoped: isHidden:a 表达式 gold-vs-gold 应 true')
+  check(scoreAll(goldExpr, exprWrongVal, { pinnedDims: ['isHidden:a'] }).exactIntentScoped === false, 'scoped: 扰动表达式 isHidden:a 应翻红')
 }
 
 // 2d) columns（显式列逃生数组，AI-09 子项①）维度的语义：整数组深等值（列序 / 层级 / 非字段列都算数）
