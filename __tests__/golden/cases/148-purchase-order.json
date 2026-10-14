@@ -1,0 +1,42 @@
+{
+  "nl": "采购订单（vue2 / Element UI，SFC 模式）：查询有订单号、供应商（下拉数据来自 /api/suppliers 接口）；表格展示订单号、供应商、订单金额、下单日期、状态；支持新增、编辑；订单金额保留两位小数；界面要求国际化。",
+  "nlEn": "Purchase orders (vue2 / Element UI, SFC mode): query by order no. and supplier (the supplier dropdown data comes from the /api/suppliers endpoint); the table shows order no., supplier, order amount, order date, and status; supports add and edit; the order amount keeps two decimal places; the UI requires i18n.",
+  "fixedFields": ["orderNo", "supplierId", "amount", "orderedAt", "status"],
+  "pinnedDims": ["propSet", "actions", "mode", "target", "i18n", "apiParams:supplierId", "extPoints:amount", "formtype:amount"],
+  "config": {
+    "name": "PurchaseOrder",
+    "apiUrl": "/api/purchase-orders",
+    "mode": "sfc",
+    "target": "vue2",
+    "i18n": true,
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      {
+        "prop": "supplierId",
+        "label": "供应商",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/suppliers", "labelField": "name", "valueField": "id" }
+      },
+      {
+        "prop": "amount",
+        "label": "订单金额",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
+      },
+      { "prop": "orderedAt", "label": "下单日期", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待发货", "value": "pending" },
+          { "label": "已收货", "value": "received" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "sfc + vue2：分页绑定自动用 :pagination.sync。formatter 在 sfc 模式下会真实 emit（须过 assertEmittableExpr + esbuild 解析），与 schema 模式（仅 warning）不同。"
+}

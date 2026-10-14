@@ -1,0 +1,34 @@
+{
+  "nl": "合同审核：表格上方左侧「新增合同」、右侧「批量导出」；表格展示合同编号、审核结果、审核人、审核时间；「审核结果」列需要自定义渲染（用不同颜色的标签展示通过/驳回）；支持新增、删除、导出；新增、删除按钮需要权限码 review:add、review:remove。",
+  "nlEn": "Contract review: above the table \"New Contract\" is on the left and \"Batch Export\" on the right; the table shows contract no., review result, reviewer, and review time; the \"review result\" column needs custom rendering (colored tags for passed/rejected); supports add, delete, and export; the add and delete buttons require permission codes review:add, review:remove.",
+  "fixedFields": ["contractNo", "reviewResult", "reviewer", "reviewedAt"],
+  "pinnedDims": ["propSet", "actions", "tableBtns", "permissions", "extPoints:reviewResult"],
+  "config": {
+    "name": "ContractReview",
+    "apiUrl": "/api/contract-reviews",
+    "fields": [
+      { "prop": "contractNo", "label": "合同编号", "formtype": "Input" },
+      {
+        "prop": "reviewResult",
+        "label": "审核结果",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "通过", "value": "passed" },
+          { "label": "驳回", "value": "rejected" },
+          { "label": "待审", "value": "pending" }
+        ],
+        "render": "(_, { row }) => h(ElTag, { type: row.reviewResult === 'passed' ? 'success' : 'danger' }, () => row.reviewResultLabel)"
+      },
+      { "prop": "reviewer", "label": "审核人", "formtype": "Input", "inQuery": false },
+      { "prop": "reviewedAt", "label": "审核时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "delete", "export"],
+    "permissions": { "add": "review:add", "delete": "review:remove" },
+    "tableBtns": [
+      { "name": "新增合同", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "批量导出", "position": "right", "actionType": "export" }
+    ]
+  },
+  "notes": "三维覆盖：tableBtns + permissions + extPoints(render 自定义单元格)。render 仅 schema 模式且承载字段 reviewResult 必须 inTable:true，否则不产 TODO(es-plus) stub + warning，check 9 会红。"
+}

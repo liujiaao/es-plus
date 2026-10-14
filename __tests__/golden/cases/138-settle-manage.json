@@ -1,0 +1,53 @@
+{
+  "nl": "供应商结算：查询有供应商（下拉数据来自 /api/suppliers 接口）、结算周期；表格展示供应商、结算周期、应结金额、状态；表格上方左侧「新增结算单」、右侧「批量导出」；支持新增、编辑、删除；应结金额保留两位小数；新增、编辑、删除按钮需要权限码 settle:add、settle:edit、settle:remove；查询表单标签宽度 90px。",
+  "nlEn": "Supplier settlement: query by supplier (the supplier dropdown data comes from the /api/suppliers endpoint) and settlement cycle; the table shows supplier, settlement cycle, payable amount, and status; above the table \"New Settlement\" is on the left and \"Batch Export\" on the right; supports add, edit, and delete; the payable amount keeps two decimal places; the add, edit, and delete buttons require permission codes settle:add, settle:edit, settle:remove; the query form label width is 90px.",
+  "fixedFields": ["supplierId", "cycle", "amount", "status"],
+  "pinnedDims": ["propSet", "actions", "apiParams:supplierId", "formLayout", "tableBtns", "permissions", "extPoints:amount", "formtype:amount"],
+  "config": {
+    "name": "SettleManage",
+    "apiUrl": "/api/settlements",
+    "fields": [
+      {
+        "prop": "supplierId",
+        "label": "供应商",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/suppliers", "labelField": "name", "valueField": "id" }
+      },
+      {
+        "prop": "cycle",
+        "label": "结算周期",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "月结", "value": "monthly" },
+          { "label": "季结", "value": "quarterly" },
+          { "label": "年结", "value": "yearly" }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "应结金额",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待结算", "value": "pending" },
+          { "label": "已结算", "value": "settled" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "settle:add", "edit": "settle:edit", "delete": "settle:remove" },
+    "formLayout": { "labelWidth": "90px" },
+    "tableBtns": [
+      { "name": "新增结算单", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "批量导出", "position": "right", "actionType": "export" }
+    ]
+  },
+  "notes": "五维覆盖：apiParams(供应商下拉走接口) + formLayout(labelWidth) + tableBtns(左/右) + permissions + extPoints(formatter 两位小数)。formatter 承载字段 amount 必须 inTable:true（schema 模式才会产 formatter warning）。"
+}

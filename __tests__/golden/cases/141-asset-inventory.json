@@ -1,0 +1,42 @@
+{
+  "nl": "资产盘点（Ant Design Vue）：查询有资产名称、所属分类（下拉数据来自 /api/asset-categories 接口）；表格展示资产名称、所属分类、数量、状态、盘点日期；表格上方左侧「新增盘点」、右侧「导出」；支持新增、删除；新增、删除按钮需要权限码 asset:add、asset:remove；界面要求国际化；查询表单标签宽度 100px。",
+  "nlEn": "Asset inventory (Ant Design Vue): query by asset name and category (the category dropdown data comes from the /api/asset-categories endpoint); the table shows asset name, category, quantity, status, and check date; above the table \"New Check\" is on the left and \"Export\" on the right; supports add and delete; the add and delete buttons require permission codes asset:add, asset:remove; the UI requires i18n; the query form label width is 100px.",
+  "fixedFields": ["assetName", "categoryId", "qty", "status", "checkAt"],
+  "pinnedDims": ["propSet", "actions", "target", "i18n", "apiParams:categoryId", "formLayout", "tableBtns", "permissions"],
+  "config": {
+    "name": "AssetInventory",
+    "apiUrl": "/api/assets",
+    "target": "antdv",
+    "i18n": true,
+    "fields": [
+      { "prop": "assetName", "label": "资产名称", "formtype": "Input" },
+      {
+        "prop": "categoryId",
+        "label": "所属分类",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/asset-categories", "labelField": "name", "valueField": "id" }
+      },
+      { "prop": "qty", "label": "数量", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "在库", "value": "in_stock" },
+          { "label": "已领用", "value": "in_use" },
+          { "label": "已报废", "value": "scrapped" }
+        ]
+      },
+      { "prop": "checkAt", "label": "盘点日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "delete"],
+    "permissions": { "add": "asset:add", "delete": "asset:remove" },
+    "formLayout": { "labelWidth": "100px" },
+    "tableBtns": [
+      { "name": "新增盘点", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "导出", "position": "right", "actionType": "export" }
+    ]
+  },
+  "notes": "antdv 目标 + 五维：i18n + apiParams(分类下拉) + formLayout(labelWidth) + tableBtns + permissions。导出 tableBtn 用 actionType:'export'（副作用按钮），非 dialogKey。"
+}

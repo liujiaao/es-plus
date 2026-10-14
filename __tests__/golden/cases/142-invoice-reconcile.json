@@ -1,0 +1,37 @@
+{
+  "nl": "发票核对：查询有发票号、开票方；表格展示发票号、开票方、金额、状态、开票日期；支持新增、编辑、删除；金额保留两位小数；新增、编辑、删除按钮需要权限码 invoice:add、invoice:edit、invoice:remove；界面要求国际化；查询表单分 2 列。",
+  "nlEn": "Invoice reconciliation: query by invoice no. and issuer; the table shows invoice no., issuer, amount, status, and issue date; supports add, edit, and delete; the amount keeps two decimal places; the add, edit, and delete buttons require permission codes invoice:add, invoice:edit, invoice:remove; the UI requires i18n; the query form is 2 columns.",
+  "fixedFields": ["invoiceNo", "issuer", "amount", "status", "issuedAt"],
+  "pinnedDims": ["propSet", "actions", "i18n", "formLayout", "permissions", "extPoints:amount", "formtype:amount"],
+  "config": {
+    "name": "InvoiceReconcile",
+    "apiUrl": "/api/invoice-reconcile",
+    "i18n": true,
+    "fields": [
+      { "prop": "invoiceNo", "label": "发票号", "formtype": "Input" },
+      { "prop": "issuer", "label": "开票方", "formtype": "Input" },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "formatter": "(row) => `¥${Number(row.amount).toFixed(2)}`"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待核对", "value": "todo" },
+          { "label": "已核对", "value": "done" }
+        ]
+      },
+      { "prop": "issuedAt", "label": "开票日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "invoice:add", "edit": "invoice:edit", "delete": "invoice:remove" },
+    "formLayout": { "span": 12 }
+  },
+  "notes": "四维覆盖：i18n + formLayout(span) + permissions + extPoints(formatter 两位小数)。名字用 InvoiceReconcile 以避开语料中已占用的 InvoiceManage（75/128 两例）。"
+}
