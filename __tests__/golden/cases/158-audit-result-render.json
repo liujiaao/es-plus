@@ -1,0 +1,29 @@
+{
+  "nl": "合规核查：查询有核查编号、核查对象；表格展示核查编号、核查对象、核查结果、核查时间，其中「核查结果」列需要自定义渲染（用带状态点的徽标展示）；支持新增、编辑。",
+  "nlEn": "Compliance audit: query by audit no. and subject; the table shows audit no., subject, audit result, and audit time, where the \"audit result\" column needs custom rendering (shown as a badge with a status dot); supports add and edit.",
+  "fixedFields": ["auditNo", "subject", "result", "auditedAt"],
+  "pinnedDims": ["propSet", "actions", "extPoints:result", "target"],
+  "config": {
+    "name": "ComplianceAudit",
+    "apiUrl": "/api/compliance-audits",
+    "target": "antdv",
+    "fields": [
+      { "prop": "auditNo", "label": "核查编号", "formtype": "Input" },
+      { "prop": "subject", "label": "核查对象", "formtype": "Input" },
+      {
+        "prop": "result",
+        "label": "核查结果",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "通过", "value": "pass" },
+          { "label": "不通过", "value": "fail" }
+        ],
+        "render": "(_, { row }) => h(Badge, { status: row.result === 'pass' ? 'success' : 'error', text: row.resultLabel })"
+      },
+      { "prop": "auditedAt", "label": "核查时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "L5：antdv 自定义 render（a-badge 状态点）。第三个 antdv render 例，把 antdv 的 extPoints 覆盖抬到与 vue3 同级。"
+}

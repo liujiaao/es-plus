@@ -1,0 +1,33 @@
+{
+  "nl": "团队成员：查询有姓名、部门；表格展示姓名、头像、部门、角色，其中「头像」列需要自定义渲染（用圆形头像展示）；支持新增、编辑、删除。",
+  "nlEn": "Team members: query by name and department; the table shows name, avatar, department, and role, where the \"avatar\" column needs custom rendering (shown as a round avatar); supports add, edit, and delete.",
+  "fixedFields": ["userName", "avatarUrl", "dept", "role"],
+  "pinnedDims": ["propSet", "actions", "extPoints:avatarUrl"],
+  "config": {
+    "name": "TeamRoster",
+    "apiUrl": "/api/roster",
+    "fields": [
+      { "prop": "userName", "label": "姓名", "formtype": "Input" },
+      {
+        "prop": "avatarUrl",
+        "label": "头像",
+        "formtype": "Input",
+        "inQuery": false,
+        "render": "(_, { row }) => h(ElAvatar, { size: 32, src: row.avatarUrl })"
+      },
+      { "prop": "dept", "label": "部门", "formtype": "Input" },
+      {
+        "prop": "role",
+        "label": "角色",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "管理员", "value": "admin" },
+          { "label": "成员", "value": "member" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：自定义 render（el-avatar）。承载字段为 Input 类型、无 dataOptions —— 证明 render 与 formtype/dataOptions 正交。"
+}

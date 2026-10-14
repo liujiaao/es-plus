@@ -1,0 +1,32 @@
+{
+  "nl": "健康分：查询有对象名称、等级；表格展示对象名称、等级、健康分，其中「健康分」列需要自定义渲染（内嵌第三方仪表盘组件展示得分）；支持新增、编辑。",
+  "nlEn": "Health score: query by subject name and level; the table shows subject name, level, and health score, where the \"health score\" column needs custom rendering (embedding a third-party gauge component for the score); supports add and edit.",
+  "fixedFields": ["name", "level", "score"],
+  "pinnedDims": ["propSet", "actions", "extPoints:score"],
+  "config": {
+    "name": "HealthScore",
+    "apiUrl": "/api/health-scores",
+    "fields": [
+      { "prop": "name", "label": "对象名称", "formtype": "Input" },
+      {
+        "prop": "level",
+        "label": "等级",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "战略级", "value": "strategic" },
+          { "label": "普通级", "value": "normal" }
+        ]
+      },
+      {
+        "prop": "score",
+        "label": "健康分",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "render": "(_, { row }) => h(GaugeChart, { value: row.score, max: 100 })"
+      }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "L5 第三方控件子类：render 内挂第三方仪表盘组件（GaugeChart）。与本批 154 一起覆盖 ROADMAP 点名但此前零覆盖的「第三方控件」。"
+}

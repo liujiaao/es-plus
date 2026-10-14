@@ -1,0 +1,24 @@
+{
+  "nl": "迭代任务：查询有任务名称、负责人；表格展示任务名称、负责人、进度，其中「进度」列需要自定义渲染（用进度条展示完成百分比）；支持新增、编辑、删除。",
+  "nlEn": "Sprint tasks: query by task name and assignee; the table shows task name, assignee, and progress, where the \"progress\" column needs custom rendering (a progress bar showing the completion percentage); supports add, edit, and delete.",
+  "fixedFields": ["task", "assignee", "progress"],
+  "pinnedDims": ["propSet", "actions", "extPoints:progress", "target"],
+  "config": {
+    "name": "SprintBoard",
+    "apiUrl": "/api/sprints",
+    "target": "vue2",
+    "fields": [
+      { "prop": "task", "label": "任务名称", "formtype": "Input" },
+      { "prop": "assignee", "label": "负责人", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "progress",
+        "label": "进度",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "render": "(_, { row }) => h('el-progress', { attrs: { percentage: row.progress } })"
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：vue2 自定义 render（el-progress）。vue2 用 h('el-progress').attrs 全局组件写法，保持三端教学诚实。"
+}

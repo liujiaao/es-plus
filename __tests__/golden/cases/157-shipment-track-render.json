@@ -1,0 +1,29 @@
+{
+  "nl": "物流跟踪：查询有运单号、承运商；表格展示运单号、承运商、轨迹状态、更新时间，其中「轨迹状态」列需要自定义渲染（按状态显示不同颜色的标签）；支持新增、删除。",
+  "nlEn": "Shipment tracking: query by tracking no. and carrier; the table shows tracking no., carrier, tracking status, and update time, where the \"tracking status\" column needs custom rendering (colored tags per status); supports add and delete.",
+  "fixedFields": ["trackingNo", "carrier", "trackStatus", "updatedAt"],
+  "pinnedDims": ["propSet", "actions", "extPoints:trackStatus", "target"],
+  "config": {
+    "name": "ShipmentTrack",
+    "apiUrl": "/api/shipments",
+    "target": "antdv",
+    "fields": [
+      { "prop": "trackingNo", "label": "运单号", "formtype": "Input" },
+      { "prop": "carrier", "label": "承运商", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "trackStatus",
+        "label": "轨迹状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "运输中", "value": "in_transit" },
+          { "label": "已签收", "value": "delivered" }
+        ],
+        "render": "(_, { row }) => h(Tag, { color: row.trackStatus === 'delivered' ? 'green' : 'blue' }, () => row.trackStatusLabel)"
+      },
+      { "prop": "updatedAt", "label": "更新时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "delete"]
+  },
+  "notes": "L5：antdv 多状态标签 render。render 列 inQuery:false（纯展示列），仍 inTable 默认 true → 触发 stub 与 warning。"
+}

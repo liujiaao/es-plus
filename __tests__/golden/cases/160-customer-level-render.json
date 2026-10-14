@@ -1,0 +1,28 @@
+{
+  "nl": "客户档案：查询有客户名称、负责人；表格展示客户名称、客户等级、负责人，其中「客户等级」列需要自定义渲染（按等级用不同颜色的标签展示）；支持新增、编辑。",
+  "nlEn": "Customer accounts: query by account name and owner; the table shows account name, customer level, and owner, where the \"customer level\" column needs custom rendering (colored tags per level); supports add and edit.",
+  "fixedFields": ["account", "level", "owner"],
+  "pinnedDims": ["propSet", "actions", "extPoints:level", "target"],
+  "config": {
+    "name": "CrmAccounts",
+    "apiUrl": "/api/accounts",
+    "target": "vue2",
+    "fields": [
+      { "prop": "account", "label": "客户名称", "formtype": "Input" },
+      {
+        "prop": "level",
+        "label": "客户等级",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "VIP", "value": "vip" },
+          { "label": "普通", "value": "normal" }
+        ],
+        "render": "(_, { row }) => h('el-tag', { attrs: { type: row.level === 'vip' ? 'danger' : 'info' } }, () => row.levelLabel)"
+      },
+      { "prop": "owner", "label": "负责人", "formtype": "Input" }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "L5：vue2 自定义 render（el-tag 染色）。第二个 vue2 render 例，稳住 vue2 端的 extPoints 覆盖。"
+}

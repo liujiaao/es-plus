@@ -1,0 +1,32 @@
+{
+  "nl": "营收看板：查询有月份、渠道；表格展示月份、渠道、营收，其中「营收」列需要自定义渲染（内嵌第三方迷你趋势图组件展示近几期趋势）；支持新增。",
+  "nlEn": "Revenue board: query by month and channel; the table shows month, channel, and revenue, where the \"revenue\" column needs custom rendering (embedding a third-party mini trend-chart component for the recent trend); supports add.",
+  "fixedFields": ["month", "channel", "revenue"],
+  "pinnedDims": ["propSet", "actions", "extPoints:revenue"],
+  "config": {
+    "name": "RevenueBoard",
+    "apiUrl": "/api/revenue",
+    "fields": [
+      { "prop": "month", "label": "月份", "formtype": "Input" },
+      {
+        "prop": "channel",
+        "label": "渠道",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "线上", "value": "online" },
+          { "label": "线下", "value": "offline" }
+        ]
+      },
+      {
+        "prop": "revenue",
+        "label": "营收",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "render": "(_, { row }) => h(MiniSpark, { data: row.revenueTrend, height: 28 })"
+      }
+    ],
+    "actions": ["add"]
+  },
+  "notes": "L5 第三方控件子类：render 内挂第三方迷你图组件（MiniSpark），DSL 替代不了故永留 Tier-3。schema 模式只产 stub，第三方组件是否安装/编译与本路径无关。"
+}

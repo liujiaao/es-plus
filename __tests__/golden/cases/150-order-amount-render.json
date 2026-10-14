@@ -1,0 +1,33 @@
+{
+  "nl": "订单台账：查询有订单号、客户；表格展示订单号、客户、订单金额、状态，其中「订单金额」列需要自定义渲染（超过一万元显示为红色）；支持新增、编辑、删除。",
+  "nlEn": "Order ledger: query by order no. and customer; the table shows order no., customer, order amount, and status, where the \"order amount\" column needs custom rendering (shown in red when over ten thousand); supports add, edit, and delete.",
+  "fixedFields": ["orderNo", "customer", "amount", "status"],
+  "pinnedDims": ["propSet", "actions", "extPoints:amount"],
+  "config": {
+    "name": "OrderLedger",
+    "apiUrl": "/api/orders",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "customer", "label": "客户", "formtype": "Input" },
+      {
+        "prop": "amount",
+        "label": "订单金额",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "render": "(_, { row }) => h('span', { style: { color: row.amount > 10000 ? '#f56c6c' : '' } }, `¥${Number(row.amount).toFixed(2)}`)"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待付款", "value": "unpaid" },
+          { "label": "已付款", "value": "paid" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：自定义 render（金额超阈值标红）。render 字段 amount 非 Select，无 dataOptions 也可承载 render（生成器只按 f.render 判定）。"
+}
