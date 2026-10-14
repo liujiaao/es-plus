@@ -1,0 +1,23 @@
+{
+  "nl": "工单优先级维护：表格行内编辑，单击单元格修改；展示工单标题、优先级，优先级下拉选择（高/中/低），默认中；支持编辑。",
+  "nlEn": "Ticket priority maintenance: the table edits inline — click a cell to change it. Shows ticket title and priority, where priority is a dropdown (high/medium/low) defaulting to medium. Supports edit.",
+  "fixedFields": ["title", "priority"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "target"],
+  "config": {
+    "name": "TicketPriorityEditManage",
+    "apiUrl": "/api/ticket",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "title", "label": "工单标题", "formtype": "Input" },
+      { "prop": "priority", "label": "优先级", "formtype": "Select", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
+    "columns": [
+      { "prop": "title", "label": "工单标题", "editRender": { "name": "$input" } },
+      { "prop": "priority", "label": "优先级", "editRender": { "name": "$select", "options": [{ "label": "高", "value": "high" }, { "label": "中", "value": "medium" }, { "label": "低", "value": "low" }], "defaultValue": "medium" } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig + editRender $select options/defaultValue，vue2/sfc）"
+}

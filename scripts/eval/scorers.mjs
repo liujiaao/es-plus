@@ -164,6 +164,14 @@ export function describeDimMiss(dim, gold, pred) {
     }
     return { want: show(gold), got: show(pred) }
   }
+  if (dim === 'editConfig') {
+    const show = (c) => {
+      const e = c.tableOptions?.editConfig
+      if (!e) return '（未配置）'
+      return `trigger=${e.trigger ?? 'click'} · mode=${e.mode ?? 'cell'}`
+    }
+    return { want: show(gold), got: show(pred) }
+  }
   return null
 }
 
@@ -285,6 +293,14 @@ export const CAPABILITY_SCORERS = [
     key: 'treeConfig',
     applicable: (g) => !!g.treeConfig,
     pass: (g, p) => eq(g.treeConfig ?? null, p.treeConfig ?? null),
+  },
+  {
+    // vxe 行内编辑开关（AI-09 子项④）：tableOptions.editConfig 整体深等值。trigger/mode/
+    // showStatus 等都是行为契约，「给了 editConfig 但进入方式或模式不对」不算命中。
+    // （列级 editRender 已由 columns 维度整体深等覆盖。）仅当 gold 声明时才 applicable。
+    key: 'editConfig',
+    applicable: (g) => g.tableOptions?.editConfig != null,
+    pass: (g, p) => eq(g.tableOptions?.editConfig ?? null, p.tableOptions?.editConfig ?? null),
   },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]

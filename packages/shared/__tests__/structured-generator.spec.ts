@@ -1059,3 +1059,102 @@ describe('declarative tree table（AI-09 子项③ treeConfig）', () => {
   })
 })
 
+describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () => {
+  const cfg = {
+    name: 'SkuPriceEditManage',
+    apiUrl: '/api/sku',
+    fields: [
+      { prop: 'skuName', label: '商品名称', formtype: 'Input' as const },
+      { prop: 'price', label: '价格', formtype: 'InputNumber' as const, inQuery: false },
+    ],
+    tableOptions: { engine: 'vxe', editConfig: { trigger: 'click', mode: 'cell' } },
+    columns: [
+      { prop: 'skuName', label: '商品名称', editRender: { name: '$input' } },
+      { prop: 'price', label: '价格', editRender: { name: '$input', props: { type: 'number' } } },
+    ],
+    actions: ['edit' as const],
+  } as any
+
+  it('schema 模式：发射 tableOptions.editConfig + 列 editRender（engine:vxe 无告警）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"editConfig": {')
+    expect(result.code).toContain('"trigger": "click"')
+    expect(result.code).toContain('"mode": "cell"')
+    expect(result.code).toContain('"editRender": {')
+    // editConfig 落在 tableOptions 块内（运行时唯一家）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const ecIdx = result.code.indexOf('"editConfig"')
+    expect(ecIdx).toBeGreaterThan(toIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：配置了 editConfig 但 engine 非 vxe → 告警（会被静默忽略）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      tableOptions: { editConfig: { mode: 'cell' } }, // 无 engine
+    } as any)
+    expect(result.warnings.join('\n')).toContain("editConfig requires engine: 'vxe'")
+    expect(result.warnings.join('\n')).toContain("'default'")
+  })
+
+  it('sfc 模式：发射 options.editConfig + 列 editRender 对象字面量', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain('editConfig: {"trigger":"click","mode":"cell"},')
+    expect(result.code).toContain('editRender: {"name":"$input"},')
+    expect(result.code).toContain('editRender: {"name":"$input","props":{"type":"number"}},')
+    // 该 config 有 edit 动作 → vue3 SFC 本就有 JSX 弹窗告警（与本子项无关）；只需确认
+    // 行内编辑自身不产生告警（engine:'vxe' 已给）。
+    expect(result.warnings.join('\n')).not.toContain('editConfig')
+  })
+
+  it('sfc 模式：engine 非 vxe → 告警（对三端都适用，不在 isVue2 分支内）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      mode: 'sfc',
+      tableOptions: { engine: 'virtual', editConfig: { mode: 'row' } },
+    } as any)
+    expect(result.warnings.join('\n')).toContain("editConfig requires engine: 'vxe'")
+  })
+
+  it('无 editConfig / editRender 时不发射且无告警（回归，不给既有配置添键）', () => {
+    const { tableOptions, columns, ...plain } = cfg
+    const result = generateFromConfig(plain as any)
+    expect(result.code).not.toContain('"editConfig"')
+    expect(result.code).not.toContain('"editRender"')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('sfc 模式：列 editRender 含不可序列化值 → 降级告警并省略（发射的永远能编译）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      mode: 'sfc',
+      columns: [{ prop: 'skuName', label: '商品名称', editRender: { name: '$input', props: { n: 1n } } }],
+    } as any)
+    expect(result.code).not.toContain('editRender:')
+    expect(result.warnings).toContain('列级行内编辑器 editRender 含无法序列化的值，已省略以保证编译通过。')
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 editConfig + 列 editRender', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['edit'],
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'dblclick', mode: 'row', showStatus: true, autoClear: true } },
+      columns: [{ prop: 'a', label: 'A', editRender: { name: '$select', options: [{ label: '高', value: 'high' }], defaultValue: 'high' } }],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（editConfig.trigger 非枚举）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['edit'],
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'hover' } },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+

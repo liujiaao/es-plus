@@ -36,7 +36,7 @@ const BASE_INPUT = {
   mode: 'sfc', //              → mode 维度 applicable
   i18n: true, //               → i18n 维度 applicable
   typescript: true,
-  tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' } }, // → virtualScroll + configTableOut 维度 applicable
+  tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' }, editConfig: { trigger: 'click', mode: 'cell' } }, // → virtualScroll + configTableOut + editConfig 维度 applicable
   formLayout: { span: 12 }, //  → formLayout 维度 applicable
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
@@ -107,6 +107,7 @@ const PERTURB = {
   columns: (c) => { c.columns[0].type = 'index' },
   expandConfig: (c) => { c.expandConfig.title = '别的' },
   treeConfig: (c) => { c.treeConfig.expandAll = false },
+  editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
   extPoints: (c) => { delete c.fields[3].formatter },
 }
 
@@ -256,6 +257,29 @@ console.log('meta-eval: treeConfig (declarative tree table)')
   // gold 无 treeConfig → 维度不 applicable（无树表，不参与记分）
   const flat = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(flat, flat).byCapability.treeConfig.applicable === false, 'treeConfig: gold 未声明时维度不 applicable')
+}
+
+// 2g) editConfig（vxe 行内编辑，AI-09 子项④）维度的语义：tableOptions.editConfig 整体深等值
+console.log('meta-eval: editConfig (vxe inline editing)')
+{
+  const ec = { trigger: 'dblclick', mode: 'row', showStatus: true }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], tableOptions: { editConfig: ec } }
+  check(scoreAll(gold, clone(gold)).byCapability.editConfig.pass === true, 'editConfig: 整体一致应判正')
+
+  const triggerChanged = clone(gold)
+  triggerChanged.tableOptions.editConfig.trigger = 'click'
+  check(scoreAll(gold, triggerChanged).byCapability.editConfig.pass === false, 'editConfig: trigger 变化应判负（进入编辑的方式是契约）')
+
+  const modeChanged = clone(gold)
+  modeChanged.tableOptions.editConfig.mode = 'cell'
+  check(scoreAll(gold, modeChanged).byCapability.editConfig.pass === false, 'editConfig: mode 变化应判负（cell/row 是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.editConfig.pass === false, 'editConfig: pred 漏发整段应判负')
+
+  // gold 无 editConfig → 维度不 applicable（无行内编辑，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.editConfig.applicable === false, 'editConfig: gold 未声明时维度不 applicable')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化

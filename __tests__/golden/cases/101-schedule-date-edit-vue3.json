@@ -1,0 +1,21 @@
+{
+  "nl": "计划排期管理：表格支持行内编辑，单击单元格修改；展示任务名称、截止日期，日期用日期选择器；支持新增、编辑。",
+  "nlEn": "Schedule planning: the table supports inline editing — click a cell to change it. Shows task name and due date, where the date uses a date picker. Supports add and edit.",
+  "fixedFields": ["taskName", "dueDate"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "config": {
+    "name": "ScheduleEditManage",
+    "apiUrl": "/api/schedule",
+    "fields": [
+      { "prop": "taskName", "label": "任务名称", "formtype": "Input" },
+      { "prop": "dueDate", "label": "截止日期", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click" } },
+    "columns": [
+      { "prop": "taskName", "label": "任务名称", "editRender": { "name": "$input" } },
+      { "prop": "dueDate", "label": "截止日期", "editRender": { "name": "$date" } }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger 缺省 + editRender $date，vue3/schema）"
+}

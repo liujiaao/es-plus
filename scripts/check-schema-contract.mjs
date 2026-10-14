@@ -487,6 +487,38 @@ function checkStructuredConfigZod() {
       fail(`${label} 的 treeConfig 缺少 childrenField: z.string(...)（自定义嵌套键名表达不了）`)
       ok = false
     }
+
+    // vxe 行内编辑契约（AI-09 子项④）：`tableOptions.editConfig`（表级开关）+ 列级
+    // `editRender`（列级编辑器）两处 Zod 都必须声明。同因（z.object 无 passthrough）——
+    // 漏声明等于把行内编辑配置静默剥掉，表格回落成只读、零告警。editConfig 缺 trigger、
+    // editRender 缺 name 则表达不了「怎么进入编辑 / 用哪个编辑器」。二者均仅 vxe 生效。
+    if (!/\beditConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明 tableOptions.editConfig: z.object(...)（行内编辑开关会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/editConfig\s*:[\s\S]{0,400}?trigger\s*:\s*z\s*\n?\s*\.enum\(/.test(src)) {
+      fail(`${label} 的 editConfig 缺少 trigger: z.enum(...)（进入编辑的方式表达不了）`)
+      ok = false
+    }
+    if (!/\beditRender\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未在 ColumnSchema 声明 editRender: z.object(...)（列级行内编辑器会被 Zod 静默剥掉，该列永远不可编辑）`)
+      ok = false
+    }
+    if (!/editRender\s*:[\s\S]{0,400}?name\s*:\s*z\s*\.string\(/.test(src)) {
+      fail(`${label} 的 editRender 缺少 name: z.string(...)（渲染器名表达不了）`)
+      ok = false
+    }
+    // 响应映射契约（AI-08 configTableOut，顺带纳管）：AI-08 只落了 shared 权威、漏了
+    // mcp 内联副本（同类 strip 隐患，此前因 configTableOut 不在 STRUCTURED_TABLE_CONTRACT
+    // 而漏网）。两处 Zod 都必须声明，且含 tableData 键。
+    if (!/\bconfigTableOut\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明 tableOptions.configTableOut: z.object(...)（响应映射会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/configTableOut\s*:[\s\S]{0,400}?tableData\s*:\s*z\s*\.string\(/.test(src)) {
+      fail(`${label} 的 configTableOut 缺少 tableData: z.string(...)（列表数据键映射表达不了）`)
+      ok = false
+    }
   }
 
   if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)

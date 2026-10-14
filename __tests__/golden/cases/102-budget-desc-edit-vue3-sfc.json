@@ -1,0 +1,23 @@
+{
+  "nl": "预算说明维护：表格行内编辑，单击单元格修改；展示科目名称、预算说明，说明为多行文本；支持编辑。",
+  "nlEn": "Budget description maintenance: the table edits inline — click a cell to change it. Shows account name and budget description, where the description is multi-line text. Supports edit.",
+  "fixedFields": ["accountName", "desc"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "config": {
+    "name": "BudgetDescEditManage",
+    "apiUrl": "/api/budget-desc",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "accountName", "label": "科目名称", "formtype": "Input" },
+      { "prop": "desc", "label": "预算说明", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell", "showStatus": true } },
+    "columns": [
+      { "prop": "accountName", "label": "科目名称", "editRender": { "name": "$input" } },
+      { "prop": "desc", "label": "预算说明", "editRender": { "name": "$textarea" } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell/showStatus + editRender $textarea，vue3/sfc）"
+}

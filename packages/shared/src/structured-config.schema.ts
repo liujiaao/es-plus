@@ -167,6 +167,20 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
       'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
     ),
     btns: z.array(z.record(z.string(), z.unknown())).optional().describe('In-cell action buttons (operation column)'),
+    editRender: z
+      .object({
+        name: z.string().optional().describe("Inline-edit renderer name, e.g. '$input' | '$select' | '$textarea' | '$date' (vxe engine only)."),
+        type: z.enum(['default', 'visible']).optional().describe("'default' = enter edit on trigger; 'visible' = editor always shown."),
+        options: z
+          .array(z.object({ label: z.string(), value: z.union([z.string(), z.number(), z.boolean()]) }))
+          .optional()
+          .describe("Option list for a '$select' editor (label/value pairs)."),
+        props: z.record(z.string(), z.unknown()).optional().describe('Props forwarded to the editor component.'),
+        autofocus: z.union([z.string(), z.boolean()]).optional(),
+        defaultValue: z.unknown().optional(),
+      })
+      .optional()
+      .describe("Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine:'vxe'. Function-valued fields (events) and custom-registered renderers are out of scope (Tier-3)."),
   })
 )
 
@@ -320,6 +334,20 @@ export const StructuredCrudConfigSchema = z.object({
       .optional()
       .describe('Buffer rows outside the visible area (vue3 / el-table-v2 only; default 2)'),
     rowClassName: z.string().optional().describe('Custom row CSS class name'),
+    editConfig: z
+      .object({
+        trigger: z.enum(['click', 'dblclick', 'manual']).optional().describe("How editing is entered (default 'click')."),
+        mode: z.enum(['cell', 'row']).optional().describe("'cell' = single cell; 'row' = whole row."),
+        showStatus: z.boolean().optional(),
+        showUpdateStatus: z.boolean().optional(),
+        showInsertStatus: z.boolean().optional(),
+        autoClear: z.boolean().optional(),
+        enabled: z.boolean().optional(),
+      })
+      .optional()
+      .describe(
+        "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. `keepSource` is auto-enabled at runtime (edits are tracked on an internal copy; read them via getUpdateRecords()/edit-closed rather than expecting an auto write-back)."
+      ),
     configTableOut: z
       .object({
         total: z.string().optional(),

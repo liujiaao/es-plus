@@ -61,6 +61,11 @@ interface TableOpts {
    * 组件读 `options.configTableOut`，仅接受平铺键：total / tableData / pageSize / current。
    */
   configTableOut?: { total?: string; tableData?: string; pageSize?: string; current?: string }
+  /**
+   * vxe 行内编辑开关（AI-09 子项④）。仅 vxe 引擎生效 —— 需同时 `engine: 'vxe'`。
+   * 具体哪些列可编辑由列级 `editRender` 决定（`columns[].editRender`）。原样透传。
+   */
+  editConfig?: Record<string, unknown>
 }
 
 export interface StructuredGenerateResult {
@@ -168,6 +173,12 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     warnings.push('target=vue2: Element UI does not support virtual scrolling (no el-table-v2). The "virtual" option will be ignored at runtime — use normal el-table for large datasets and consider server-side pagination, or switch to the vxe engine (`engine: \'vxe\'`), which vue2 does support.')
   }
 
+  // 行内编辑仅 vxe 引擎生效（AI-09 子项④）：配置了 editConfig 但引擎不是 vxe →
+  // 默认/virtual 引擎会在运行时静默忽略，发告警以免「配了却毫无反应」的假承诺。
+  if (tOptsForWarn.editConfig !== undefined && tOptsForWarn.engine !== 'vxe') {
+    warnings.push(`tableOptions.editConfig requires engine: 'vxe' — the current engine is '${(tOptsForWarn.engine as string) || 'default'}', so inline editing will be silently ignored at runtime.`)
+  }
+
   const schema: Record<string, unknown> = {}
 
   if (queryFields.length > 0) {
@@ -202,6 +213,8 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.overscanCount ? { overscanCount: tOpts.overscanCount } : {}),
     ...(tOpts.rowClassName ? { rowClassName: tOpts.rowClassName } : {}),
     ...(tOpts.configTableOut ? { configTableOut: tOpts.configTableOut } : {}),
+    // vxe 行内编辑开关（AI-09 子项④）→ 运行时唯一家 tableOptions.editConfig，原样透传。
+    ...(tOpts.editConfig ? { editConfig: tOpts.editConfig } : {}),
     // 顶层 treeConfig（AI-09 子项③）→ 运行时唯一家 tableOptions.treeConfig。
     // vxe 原样认 childrenField/expandAll；el-table/a-table 在组件侧翻译成 tree-props /
     // childrenColumnName + default-expand-all(-rows)。即便子键为空也发（vxe 靠 treeConfig
@@ -325,6 +338,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   } else if (hasDialog) {
     // vue3 / antdv：弹窗 render 用 JSX，需 <script setup lang="tsx|jsx"> + @vitejs/plugin-vue-jsx
     warnings.push(`target=${target} + mode=sfc: dialog uses a JSX render function, so the generated <script setup> is emitted with lang="${ts ? 'tsx' : 'jsx'}". Ensure @vitejs/plugin-vue-jsx is installed and registered in vite.config (alongside @vitejs/plugin-vue). Use mode=schema if you prefer a JSX-free wrapper.`)
+  }
+
+  // 行内编辑仅 vxe 引擎生效（AI-09 子项④）：配置了 editConfig 但引擎不是 vxe → 告警
+  //（对三端都适用，故在 isVue2 分支之外）。见 schema 模式同处说明。
+  {
+    const tOptsWarn = (config.tableOptions || {}) as Record<string, unknown>
+    if (tOptsWarn.editConfig !== undefined && tOptsWarn.engine !== 'vxe') {
+      warnings.push(`tableOptions.editConfig requires engine: 'vxe' — the current engine is '${(tOptsWarn.engine as string) || 'default'}', so inline editing will be silently ignored at runtime.`)
+    }
   }
 
   // antdv + SFC + 列 render：render 字符串按 Element 语义编写（h(ElTag, { type })），
@@ -542,6 +564,9 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
       .map((k) => `${k}: ${q(cto[k])}`)
     if (ctoParts.length) lines.push(`  configTableOut: { ${ctoParts.join(', ')} },`)
   }
+  // vxe 行内编辑开关（AI-09 子项④）→ options.editConfig。纯 JSON 数据（无函数值）→
+  // 用既有 inlineJson() 序列化（转义 </script>，同 schema/formItems 的做法）。
+  if (tOpts.editConfig) lines.push(`  editConfig: ${inlineJson(tOpts.editConfig)},`)
   // 顶层 treeConfig（AI-09 子项③）→ options.treeConfig。手搓块逐键 q() 转义（同 configTableOut）。
   if (config.treeConfig) {
     const tcParts: string[] = []
@@ -1142,6 +1167,18 @@ function pushSfcColumn(
     }
     if (serialized !== null) lines.push(`${inner}expandConfig: ${serialized},`)
     else warnings.push('行展开 expandConfig 含无法序列化的值，已省略以保证编译通过。')
+  }
+  // editRender（AI-09 子项④）→ 列级行内编辑器，纯 JSON 数据 → 同 btns/expandConfig 用 JSON 序列化。
+  // 含函数等不可序列化值时省略 + 告警，保持「发射的永远能编译」。
+  if (col.editRender !== undefined && col.editRender !== null) {
+    let serialized: string | null = null
+    try {
+      serialized = JSON.stringify(col.editRender)
+    } catch {
+      serialized = null
+    }
+    if (serialized !== null) lines.push(`${inner}editRender: ${serialized},`)
+    else warnings.push('列级行内编辑器 editRender 含无法序列化的值，已省略以保证编译通过。')
   }
   lines.push(`${indent}},`)
 }

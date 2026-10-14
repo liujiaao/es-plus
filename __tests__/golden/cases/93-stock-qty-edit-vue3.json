@@ -1,0 +1,21 @@
+{
+  "nl": "库存数量维护：双击整行进入行内编辑，显示编辑状态角标；展示商品名称、库存数；支持编辑。",
+  "nlEn": "Stock quantity maintenance: double-click a row to edit the whole row inline, with an edit-status badge shown. Shows product name and stock count. Supports edit.",
+  "fixedFields": ["goodsName", "qty"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "config": {
+    "name": "StockQtyEditManage",
+    "apiUrl": "/api/stock-qty",
+    "fields": [
+      { "prop": "goodsName", "label": "商品名称", "formtype": "Input" },
+      { "prop": "qty", "label": "库存数", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "row", "showStatus": true } },
+    "columns": [
+      { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
+      { "prop": "qty", "label": "库存数", "editRender": { "name": "$input", "props": { "type": "number" } } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=dblclick/mode=row/showStatus + editRender，vue3/schema）"
+}

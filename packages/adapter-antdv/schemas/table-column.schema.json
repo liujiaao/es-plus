@@ -149,6 +149,56 @@
       "type": "string",
       "default": "-",
       "description": "Placeholder text for empty cell values"
+    },
+    "editRender": {
+      "type": "object",
+      "description": "Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine: 'vxe'. Marks THIS column editable and picks its editor; a column without `editRender` is not editable. Function-valued fields (events) and custom-registered renderers are out of scope.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Inline-edit renderer name, e.g. '$input' | '$select' | '$textarea' | '$date' (vxe engine only)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["default", "visible"],
+          "description": "'default' = enter edit on trigger; 'visible' = editor always shown"
+        },
+        "options": {
+          "type": "array",
+          "description": "Option list for a '$select' editor (label/value pairs)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "value": {
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "number" },
+                  { "type": "boolean" }
+                ]
+              }
+            },
+            "required": ["label", "value"],
+            "additionalProperties": true
+          }
+        },
+        "props": {
+          "type": "object",
+          "description": "Props forwarded to the editor component",
+          "additionalProperties": true
+        },
+        "autofocus": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string" }
+          ],
+          "description": "Focus the editor when it opens"
+        },
+        "defaultValue": {
+          "description": "Default value seeded into the editor"
+        }
+      },
+      "additionalProperties": true
     }
   },
   "anyOf": [

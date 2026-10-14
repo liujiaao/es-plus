@@ -176,6 +176,43 @@
     },
     "rowClassName": {
       "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"
+    },
+    "editConfig": {
+      "type": "object",
+      "description": "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with `engine: 'vxe'`. This is the table-level switch; a cell is editable ONLY when its column also declares `editRender` (so `editConfig` alone is a no-op). `keepSource` is auto-enabled at runtime (edits are tracked on an internal copy — read them via the vxe edit-closed/update API rather than expecting an automatic write-back).",
+      "properties": {
+        "trigger": {
+          "type": "string",
+          "enum": ["click", "dblclick", "manual"],
+          "description": "How editing is entered (default 'click')"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["cell", "row"],
+          "description": "'cell' = single cell (default); 'row' = whole row"
+        },
+        "showStatus": {
+          "type": "boolean",
+          "description": "Show the row edit-status indicator"
+        },
+        "showUpdateStatus": {
+          "type": "boolean",
+          "description": "Show the update-status indicator"
+        },
+        "showInsertStatus": {
+          "type": "boolean",
+          "description": "Show the insert-status indicator"
+        },
+        "autoClear": {
+          "type": "boolean",
+          "description": "Auto-clear the editing state when the editor closes"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Master enable flag for inline editing"
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

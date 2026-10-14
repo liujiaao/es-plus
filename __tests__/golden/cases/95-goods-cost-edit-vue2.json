@@ -1,0 +1,22 @@
+{
+  "nl": "商品进价管理：双击整行进入行内编辑；展示商品名称、进价；支持编辑。",
+  "nlEn": "Goods purchase-price management: double-click a row to edit inline. Shows goods name and purchase price. Supports edit.",
+  "fixedFields": ["goodsName", "costPrice"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "config": {
+    "name": "GoodsCostEditManage",
+    "apiUrl": "/api/goods-cost",
+    "target": "vue2",
+    "fields": [
+      { "prop": "goodsName", "label": "商品名称", "formtype": "Input" },
+      { "prop": "costPrice", "label": "进价", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click", "mode": "row" } },
+    "columns": [
+      { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
+      { "prop": "costPrice", "label": "进价", "editRender": { "name": "$input", "props": { "type": "number" } } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig click/row + editRender，vue2/schema）"
+}

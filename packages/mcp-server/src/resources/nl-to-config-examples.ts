@@ -314,6 +314,28 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
       actions: ["add", "edit", "delete"],
     },
   },
+  {
+    label: "Inline row editing → `tableOptions.editConfig` + `columns[].editRender` (vxe engine)",
+    nl: "商品价格维护：查询条件有商品名称；表格支持行内编辑，单击单元格修改价格；表格展示商品名称、价格、库存；支持编辑。",
+    reasoning:
+      "NL 说「表格支持行内编辑，单击单元格修改」→ 行内编辑三件套必须同给：(1) `tableOptions.engine: 'vxe'`；(2) 表级开关 `tableOptions.editConfig`（单击进入 → trigger 缺省即 'click'，单格编辑 → mode 缺省即 'cell'，显式写 `{ mode: 'cell' }` 更清楚）；(3) 每个可编辑列的 `columns[].editRender`（没有它该列永不可编辑，editConfig 就是空转）。价格/库存都是数值 → 编辑器用 `$input` + `props.type:'number'`。`columns` 是**覆盖**派生的整表列数组，故表里要展示的列都要写进来；操作列仍由 `actions` 自动追加，不写。editConfig/editRender 仅 vxe 生效。",
+    config: {
+      name: "SkuPriceEditManage",
+      apiUrl: "/api/sku",
+      fields: [
+        { prop: "skuName", label: "商品名称", formtype: "Input" },
+        { prop: "price", label: "价格", formtype: "InputNumber", inQuery: false },
+        { prop: "stock", label: "库存", formtype: "InputNumber", inQuery: false },
+      ],
+      tableOptions: { engine: "vxe", editConfig: { mode: "cell" } },
+      columns: [
+        { prop: "skuName", label: "商品名称", editRender: { name: "$input" } },
+        { prop: "price", label: "价格", editRender: { name: "$input", props: { type: "number" } } },
+        { prop: "stock", label: "库存", editRender: { name: "$input", props: { type: "number" } } },
+      ],
+      actions: ["edit"],
+    },
+  },
 ];
 
 function buildContent(): string {
@@ -330,6 +352,7 @@ function buildContent(): string {
     "- Multi-level group headers (\"分组表头\") and non-field columns (序号/勾选/展开列) → the top-level `columns` escape array (aligned with the renderer `TableColumn`): a group is `{ label, groups: [ … ] }` (2 levels max cross-renderer), a non-field column is `{ type: 'index' | 'selection' | 'expand' }`. `columns` REPLACES the derived table columns (override, not merge) — every field shown in the table must appear inside it; `fields` still drives the query/add/edit forms. The operation column is auto-appended from `actions`, so don't add it here.",
     "- Row-expand content (\"每行可展开查看…\") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (non-empty). Presence makes the table render ONE row-expander showing a read-only `label: value` list from `row[prop]` (usually detail-only fields, marked `inTable:false`). If `columns` already declares a `{ type: 'expand' }` column the content attaches there; otherwise the generator prepends one — don't add the expander column yourself. DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.",
     "- Tree / hierarchical rows (\"树形\", \"部门树\", \"分类树\", \"父子层级\", \"子节点嵌套在父节点下\") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. Renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically. Set `childrenField` only when children nest under a key other than `children`; set `expandAll: true` to expand every node by default. Not for lazy/async loading. DISTINCT from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the top-level key.",
+    "- Inline row editing (\"表格行内编辑\", \"双击单元格改数量\", \"点单元格直接改\") → THREE parts, all under the vxe engine: `tableOptions.engine: 'vxe'`; the table-level switch `tableOptions.editConfig` (`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }`, defaults trigger:'click' / mode:'cell'); and a per-column `columns[].editRender` on EVERY editable column (`{ name: '$input' | '$select' | '$textarea' | '$date', type?, options?, props?, autofocus?, defaultValue? }`, `$select` wants `options`). A column without `editRender` is NOT editable — `editConfig` alone is a no-op — and both are silently ignored unless the engine is vxe. Declare the editable columns via the top-level `columns` array (it REPLACES the derived columns; the operation column is still auto-appended). Function-valued `editRender.events` and custom renderers are out of scope.",
     "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` above is declarative data, NOT an extension point — use it, don't reach for formatter/render for visibility.)",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",

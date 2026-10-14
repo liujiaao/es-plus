@@ -1,0 +1,22 @@
+{
+  "nl": "物料成本维护：单击单元格进入行内编辑；展示物料名称、成本，成本数字输入保留两位小数；支持新增、编辑、删除。",
+  "nlEn": "Material cost maintenance: click a cell to edit inline. Shows material name and cost, where cost is a number input with two decimal places. Supports add, edit and delete.",
+  "fixedFields": ["itemName", "cost"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "config": {
+    "name": "ItemCostEditManage",
+    "apiUrl": "/api/item-cost",
+    "target": "vue2",
+    "fields": [
+      { "prop": "itemName", "label": "物料名称", "formtype": "Input" },
+      { "prop": "cost", "label": "成本", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell", "enabled": true } },
+    "columns": [
+      { "prop": "itemName", "label": "物料名称", "editRender": { "name": "$input" } },
+      { "prop": "cost", "label": "成本", "editRender": { "name": "$input", "props": { "type": "number", "precision": 2 } } }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell/enabled + editRender props，vue2/schema）"
+}

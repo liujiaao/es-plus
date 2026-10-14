@@ -1,0 +1,23 @@
+{
+  "nl": "产品上下架：表格支持行内编辑，单击单元格修改状态；展示产品名称、状态，状态下拉选择（启用/禁用）；支持新增、编辑。",
+  "nlEn": "Product listing control: the table supports inline editing — click a cell to change status. Shows product name and status, where status is a dropdown (enabled/disabled). Supports add and edit.",
+  "fixedFields": ["productName", "status"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "config": {
+    "name": "ProductStatusEditManage",
+    "apiUrl": "/api/product-status",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "productName", "label": "产品名称", "formtype": "Input" },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
+    "columns": [
+      { "prop": "productName", "label": "产品名称", "editRender": { "name": "$input" } },
+      { "prop": "status", "label": "状态", "editRender": { "name": "$select", "options": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }] } }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell + editRender $select+options，vue3/sfc）"
+}

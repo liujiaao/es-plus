@@ -584,6 +584,27 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'edit', 'delete'],
     },
   },
+  {
+    nl: '商品价格维护：查询条件有商品名称；表格支持行内编辑，单击单元格修改价格；表格展示商品名称、价格、库存；支持编辑。',
+    reasoning:
+      'NL 说「表格支持行内编辑，单击单元格修改」→ 行内编辑三件套必须同给：(1) `tableOptions.engine: "vxe"`；(2) 表级开关 `tableOptions.editConfig`（单击进入 → trigger 缺省即 "click"，单格编辑 → mode 缺省即 "cell"，显式写 `{ mode: "cell" }` 更清楚）；(3) 每个可编辑列的 `columns[].editRender`（没有它该列永不可编辑，editConfig 就是空转）。价格/库存都是数值 → 编辑器用 `$input` + `props.type:"number"`。`columns` 是**覆盖**派生的整表列数组，故表里要展示的列都要写进来；操作列仍由 `actions` 自动追加，不写。',
+    config: {
+      name: 'SkuPriceEditManage',
+      apiUrl: '/api/sku',
+      fields: [
+        { prop: 'skuName', label: '商品名称', formtype: 'Input' },
+        { prop: 'price', label: '价格', formtype: 'InputNumber', inQuery: false },
+        { prop: 'stock', label: '库存', formtype: 'InputNumber', inQuery: false },
+      ],
+      tableOptions: { engine: 'vxe', editConfig: { mode: 'cell' } },
+      columns: [
+        { prop: 'skuName', label: '商品名称', editRender: { name: '$input' } },
+        { prop: 'price', label: '价格', editRender: { name: '$input', props: { type: 'number' } } },
+        { prop: 'stock', label: '库存', editRender: { name: '$input', props: { type: 'number' } } },
+      ],
+      actions: ['edit'],
+    },
+  },
 ]
 
 /**
@@ -620,6 +641,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Multi-level group headers and non-field columns (row number / checkbox / expander) cannot be expressed by the flat `fields` array — use the top-level `columns` array (an escape hatch aligned with the renderer `TableColumn`). When present it REPLACES the derived table columns (override, not merge), while `fields` still drives the query/add/edit forms. A group header is `{ label, groups: [ …child columns… ] }` — cross-renderer safe to 2 levels (antdv supports more; vue3/vue2 default tables flatten beyond one nesting). A non-field column is `{ type: "index" | "selection" | "expand" }` (no prop/label needed). The operation column is STILL appended from `actions`/`operationColumn`, so do not add it to `columns`. Use `columns` only when the NL asks for grouped headers or index/selection/expander columns; otherwise keep the plain `fields` array.',
     'Row-expand content ("每行可展开查看…", "点击行展开显示…") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (fields non-empty). Its presence makes the table render ONE row-expander whose content is a read-only `label: value` list read from `row[prop]`. The listed props are typically detail-only fields (mark them `inTable:false` so they are not also a column). If `columns` already declares a `{ type: "expand" }` column the content attaches to it (position kept); otherwise the generator prepends one expander column — you do NOT need to add the expander column yourself. This is DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.',
     'Tree / hierarchical data ("树形", "部门树", "分类树", "父子层级", "子节点嵌套在父节点下") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. It renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically (the default `rowkey` already covers it), so do NOT add anything for it. Set `childrenField` ONLY when the API nests children under a key other than `children` (e.g. `subItems`); set `expandAll: true` when the NL asks for all nodes expanded by default. Do NOT model lazy/async loading here (out of scope). SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the TOP-LEVEL key.',
+    'Inline row editing ("表格行内编辑", "双击单元格改数量", "点单元格直接改") → THREE parts MUST be given together, all under the vxe engine: (1) `tableOptions.engine: "vxe"`; (2) the table-level switch `tableOptions.editConfig` — `{ trigger?: "click" | "dblclick" | "manual", mode?: "cell" | "row", showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }` (defaults are trigger:"click", mode:"cell"); (3) a per-column `columns[].editRender` on EVERY editable column — `{ name: "$input" | "$select" | "$textarea" | "$date", type? : "default" | "visible", options?: [{label,value}], props?, autofocus?, defaultValue? }` ("$select" wants `options`). A column WITHOUT `editRender` is NOT editable, so `editConfig` alone is a no-op; and BOTH are silently ignored at runtime unless the engine is vxe (the generator warns otherwise). Use the top-level `columns` array to declare those editable columns (it REPLACES the derived table columns, so every table-visible field must appear inside it; the operation column is still auto-appended from `actions`). Editing tracks changes on an internal copy at runtime (keepSource is auto-enabled) — read them via the vxe edit-closed/update API. Function-valued `editRender.events` and custom-registered renderers are OUT OF SCOPE.',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',

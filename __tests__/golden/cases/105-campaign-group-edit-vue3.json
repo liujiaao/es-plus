@@ -1,0 +1,29 @@
+{
+  "nl": "活动分组管理：表格行内编辑，单击单元格修改；展示活动名称、渠道、投放量，其中渠道与投放量归入投放信息分组；支持编辑。",
+  "nlEn": "Campaign grouping: the table edits inline — click a cell to change it. Shows campaign name, channel, and reach, where channel and reach are grouped under placement info. Supports edit.",
+  "fixedFields": ["campaignName", "channel", "reach"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "config": {
+    "name": "CampaignGroupEditManage",
+    "apiUrl": "/api/campaign",
+    "target": "vue3",
+    "fields": [
+      { "prop": "campaignName", "label": "活动名称", "formtype": "Input" },
+      { "prop": "channel", "label": "渠道", "formtype": "Input", "inQuery": false },
+      { "prop": "reach", "label": "投放量", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
+    "columns": [
+      { "prop": "campaignName", "label": "活动名称" },
+      {
+        "label": "投放信息",
+        "children": [
+          { "prop": "channel", "label": "渠道", "editRender": { "name": "$input" } },
+          { "prop": "reach", "label": "投放量", "editRender": { "name": "$input", "props": { "type": "number" } } }
+        ]
+      }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑 + 列分组共存（列组子列带 editRender，vue3/schema）"
+}

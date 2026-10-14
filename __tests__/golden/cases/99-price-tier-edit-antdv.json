@@ -1,0 +1,22 @@
+{
+  "nl": "价格档次维护：单击单元格修改折扣；展示档位名称、折扣，折扣下拉选择（九折/八折）；支持编辑。",
+  "nlEn": "Price tier maintenance: click a cell to change the discount. Shows tier name and discount, where discount is a dropdown (10% off / 20% off). Supports edit.",
+  "fixedFields": ["tierName", "discount"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "config": {
+    "name": "PriceTierEditManage",
+    "apiUrl": "/api/price-tiers",
+    "target": "antdv",
+    "fields": [
+      { "prop": "tierName", "label": "档位名称", "formtype": "Input" },
+      { "prop": "discount", "label": "折扣", "formtype": "Select", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
+    "columns": [
+      { "prop": "tierName", "label": "档位名称", "editRender": { "name": "$input" } },
+      { "prop": "discount", "label": "折扣", "editRender": { "name": "$select", "options": [{ "label": "九折", "value": 0.9 }, { "label": "八折", "value": 0.8 }] } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell + editRender $select+options 数值，antdv/schema）"
+}
