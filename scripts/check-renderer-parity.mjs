@@ -10,6 +10,10 @@
  *   3. 各处 TS 联合类型（FormType / antdv 内联 formtype）成员与 VALID_FORM_TYPES 一致
  *      —— 仅校验运行时 Map 会漏掉「联合类型缺成员」的分叉（如 antdv 内联联合曾漏 InputNumber，
  *      运行时正常但 TS 报错），故一并纳入静态校验闭环。
+ *   4. 每个 formtype 在每个渲染器里绑到契约声明的组件（FORM_RENDER_CONTRACT，防「键在、组件被换」）。
+ *   5. 每个 formtype 的关键行为真的接通（FORM_BEHAVIOR_CONTRACT，防「键在、组件对、配置静默失效」）。
+ *   6. 表格列语义三端一致（COLUMN_CONTRACT：内置列类型 index/selection/expand、groups 深度、
+ *      expandConfig、列级 permissionValue/hidCol）—— 正向 token + 反向 forbid + deviation/knownGaps 原因非空。
  *
  * 用法：
  *   node scripts/check-renderer-parity.mjs            # 校验（CI 用）
@@ -19,7 +23,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { FORM_RENDER_CONTRACT, FORM_BEHAVIOR_CONTRACT } from './renderer-contract.mjs'
+import { FORM_RENDER_CONTRACT, FORM_BEHAVIOR_CONTRACT, COLUMN_CONTRACT } from './renderer-contract.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -41,6 +45,8 @@ const RENDERER_INPUTS = [
   ['vue2', 'packages/vue2/src/composables/use-form-inputs.ts'],
   ['antdv', 'packages/adapter-antdv/src/composables/use-form-inputs.ts'],
 ]
+
+const RENDERER_NAMES = RENDERER_INPUTS.map(([name]) => name)
 
 // 权威键集：@es-plus/shared 的 contract.ts 单源（直接读源码，避免依赖 build 产物）
 function readValidFormTypes() {
@@ -267,6 +273,48 @@ function main() {
     }
   }
 
+  // 6. 列语义层：三端对表格列的处理（默认引擎 + vxe/虚拟引擎）必须与 COLUMN_CONTRACT 一致。
+  //    前 1~5 只覆盖 formtype；表格列是另一条独立渲染路径，本块把它纳入同一套 token 机制。
+  //    每端把 sources 逐文件 stripComments 后拼接再匹配 —— 注释里的 token 不算数
+  //    （例如 antdv 的 rowSelection 只在注释里出现，真实接线在 component.vue）。
+  for (const [rowId, row] of Object.entries(COLUMN_CONTRACT)) {
+    for (const name of RENDERER_NAMES) {
+      const sources = row.sources?.[name] || []
+      const tokens = row.tokens?.[name] || []
+      const forbid = row.forbid?.[name] || []
+      // 6c. 结构完整：声明了断言却漏声明 sources 会**静默不检**，必须报错而非放过。
+      if ((tokens.length || forbid.length) && sources.length === 0) {
+        fail = true
+        console.error(
+          `❌ COLUMN_CONTRACT ${rowId}/${name}: 声明了 tokens/forbid 却未声明 sources —— 会静默漏检`
+        )
+        continue
+      }
+      if (sources.length === 0) continue
+      const text = sources.map(readStripped).join('\n')
+      // 6a. 正向：契约 token 必须全部出现（组内 AND）。
+      const missed = tokens.filter((t) => !tokenRe(t).test(text))
+      if (missed.length) {
+        fail = true
+        console.error(
+          `❌ ${rowId}/${name}: 列语义漂移 —— 缺 token [${missed.join(' / ')}]` +
+            `\n   ${row.why}` +
+            `\n   sources: ${sources.join(', ')}`
+        )
+      }
+      // 6b. 反向：契约 forbid token 一个都不许出现（钉住「原生透传 / 只展 1 层」这类否定事实）。
+      const hit = forbid.filter((t) => tokenRe(t).test(text))
+      if (hit.length) {
+        fail = true
+        console.error(
+          `❌ ${rowId}/${name}: 列语义漂移 —— 出现禁止的 token [${hit.join(' / ')}]` +
+            `\n   ${row.why}` +
+            `\n   sources: ${sources.join(', ')}`
+        )
+      }
+    }
+  }
+
   // deviation 必须写明原因（文档化强制）
   for (const [key, entry] of Object.entries(FORM_RENDER_CONTRACT)) {
     if (!entry.deviation) continue
@@ -289,9 +337,25 @@ function main() {
       }
     }
   }
+  // 列契约的 deviation / knownGaps 原因同样非空强制（空串占位会红）。
+  // deviation = 跨端有意差异；knownGaps = 三端一致的已知限制 —— 两者都要求写明原因。
+  for (const [rowId, row] of Object.entries(COLUMN_CONTRACT)) {
+    for (const [renderer, reason] of Object.entries(row.deviation || {})) {
+      if (!reason || !reason.trim()) {
+        fail = true
+        console.error(`❌ COLUMN_CONTRACT ${rowId}/${renderer}: deviation 未说明原因`)
+      }
+    }
+    for (const [renderer, reason] of Object.entries(row.knownGaps || {})) {
+      if (!reason || !reason.trim()) {
+        fail = true
+        console.error(`❌ COLUMN_CONTRACT ${rowId}/${renderer}: knownGaps 未说明原因`)
+      }
+    }
+  }
 
   if (fail) {
-    console.error('\n三端 formtype 键集/联合类型/组件绑定存在分叉，请统一到 VALID_FORM_TYPES + renderer-contract 单源。')
+    console.error('\n三端 formtype 键集/联合类型/组件绑定、或表格列语义存在分叉，请统一到 VALID_FORM_TYPES + renderer-contract 单源。')
     process.exit(1)
   }
 
@@ -299,8 +363,9 @@ function main() {
     (n, b) => n + Object.keys(b).length,
     0
   )
+  const columnCount = Object.keys(COLUMN_CONTRACT).length
   console.log(
-    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定 + ${behaviorCount} 条行为契约一致（${valid.keys.length} 项 formtype），与 VALID_FORM_TYPES / renderer-contract 单源同步`
+    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定 + ${behaviorCount} 条行为契约 + ${columnCount} 条列契约一致（${valid.keys.length} 项 formtype），与 VALID_FORM_TYPES / renderer-contract 单源同步`
   )
 }
 

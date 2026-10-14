@@ -101,3 +101,173 @@ export const FORM_BEHAVIOR_CONTRACT = {
   },
 }
 
+/**
+ * 三端**表格列语义**契约（单源）。
+ *
+ * 前两张契约只覆盖 formtype（表单控件）。表格列是另一条完全独立的渲染路径，
+ * 此前 `check:parity` 对它零覆盖，`check-contract-consumption` 又只做「字段名是否在源码出现」
+ * （`type`/`key` 这类通用名恒真）——结构上看不见列处理的漂移。而三端对 `type`/`groups`/
+ * `expandConfig`/`permissionValue` 确有真实、有意、且**方向相反**的分叉（见各行 why），无人守。
+ * 本契约把这些列语义纳入与 formtype 同一套 token 机制，使每处差异要么被正向 token 钉死、
+ * 要么登记在 deviation（跨端有意差异）或 knownGaps（三端一致的已知限制）里并写明原因。
+ *
+ * 行形态（`{ [rowId]: { why, sources, tokens?, forbid?, deviation?, knownGaps? } }`）：
+ *   - sources[renderer]：**文件路径数组**（仓库相对）。守卫逐文件 `stripComments` 后拼接，
+ *     再在同一段文本里匹配 token —— 故**注释里的 token 不算数**（这正是本守卫要的：
+ *     例如 antdv 的 `column-adapter.ts` 只在注释里提 `rowSelection`，真实接线在 component.vue）。
+ *   - tokens[renderer]：正向，组内 AND —— 全部须出现，少一个即「列语义漂移」。
+ *   - forbid[renderer]：反向 —— 出现任何一个即失败（用来钉住「原生透传 / 只展 1 层」这类否定事实）。
+ *   - deviation / knownGaps：原因**非空强制**（空串占位会红）；deviation=跨端有意差异，knownGaps=三端一致的限制。
+ *
+ * ⚠ token 规则两个实测坑（沿用 FORM_* 契约的 tokenRe，务必遵守）：
+ *   (1) tokenRe 对**全小写** token（含点号连接的）按**带引号字符串**匹配 —— 所以像
+ *       `col.groups` / `item.groups` 这种点号全小写 token **不可用**（源码里是 `cols.groups`，
+ *       不是 `'col.groups'`）。需要用时改用含大写的精确文本，如 `adaptColumn(child`。
+ *   (2) 全小写裸词会命中**引号内**的出现 —— `forbid: ['index']` 只能拦住 `type === 'index'`
+ *       这种带引号的比较，拦不住 `v-for="(item, index)"` 里的循环变量（那没引号）。
+ *       这对「vue3/vue2 不显式分派 type:'index'」的断言恰好够用，但要清楚它的边界。
+ */
+export const COLUMN_CONTRACT = {
+  // —— 内置列类型（type:'index'/'selection'/'expand'）在**三端默认引擎**里的处理 ——
+  'type:index': {
+    why:
+      "内置序号列：antdv 默认把 type:'index' 映射为合成列（el-table 的 type:'index' 在 ADV 无原生等价，用 customRender 渲染行号）；" +
+      'vue3/vue2 默认引擎**原生透传** `type` 给 el-table-column（不显式分派，靠组件自身识别）',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/column-item.vue'],
+      vue2: ['packages/vue2/src/components/es-table/column-item.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/column-adapter.ts'],
+    },
+    // 正向：antdv 默认路径确有合成序号列工厂。
+    tokens: { antdv: ['createSnAdvColumn'] },
+    // 反向：vue3/vue2 默认路径不得出现 type:'index' 的显式分派（靠原生透传）。
+    forbid: { vue3: ['index'], vue2: ['index'] },
+  },
+  'type:selection': {
+    why:
+      "内置选择列：antdv 默认经 rowSelection 渲染（列适配器跳过 type:'selection'，组件用 rowSelection 承接）；" +
+      'vue3/vue2 默认引擎原生透传',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/column-item.vue'],
+      vue2: ['packages/vue2/src/components/es-table/column-item.vue'],
+      // 真实接线在 component.vue；column-adapter.ts 只在注释里提 rowSelection（会被 stripComments 去掉）。
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/component.vue'],
+    },
+    tokens: { antdv: ['rowSelection'] },
+    forbid: { vue3: ['selection'], vue2: ['selection'] },
+  },
+  'type:expand': {
+    why:
+      "内置展开列：三端默认引擎都消费列上的 expandConfig；antdv 另经 expandedRowRender 整行渲染展开内容",
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/column-item.vue'],
+      vue2: ['packages/vue2/src/components/es-table/column-item.vue'],
+      antdv: [
+        'packages/adapter-antdv/src/components/es-table/src/column-adapter.ts',
+        'packages/adapter-antdv/src/components/es-table/src/component.vue',
+      ],
+    },
+    tokens: {
+      vue3: ['expand', 'expandConfig'],
+      vue2: ['expand', 'expandConfig'],
+      // 刻意避开裸 'expand'（component.vue 的 TABLE_INTERNAL_KEYS 是噪声），用两个只属于展开内容的 token。
+      antdv: ['expandedRowRender', 'expandContent'],
+    },
+  },
+  // —— 同一组内置类型在**引擎路径**（vxe ×3 + vue3 虚拟引擎）里的处理：与默认引擎**极性相反** ——
+  // 默认引擎「原生透传」，引擎路径则**显式分派** type 来生成自己的列模型（虚拟列 / vxe 列）。
+  'type:mapped-engines': {
+    why:
+      '引擎路径（vxe ×3 + vue3 虚拟 use-column-adapter）必须显式分派 index/selection/expand，' +
+      '生成各自的列模型；并与默认引擎的「原生透传」形成对照——两处漂移各有一种信号',
+    sources: {
+      // vue3 有两条引擎路径：vxe 与虚拟（二者都显式分派，合并为同一段的 token 来源）。
+      vue3: [
+        'packages/vue3/src/components/es-table/src/engines/use-vxe-column-adapter.ts',
+        'packages/vue3/src/components/es-table/src/engines/use-column-adapter.ts',
+      ],
+      vue2: ['packages/vue2/src/components/es-table/engines/use-vxe-column-adapter.ts'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/engines/use-vxe-column-adapter.ts'],
+    },
+    tokens: {
+      // create*Column 是 vue3 虚拟引擎独有的合成列工厂，钉住「虚拟引擎确实映射了三种类型」。
+      vue3: ['index', 'selection', 'expand', 'createIndexColumn', 'createSelectionColumn', 'createExpandColumn'],
+      vue2: ['index', 'selection', 'expand'],
+      antdv: ['index', 'selection', 'expand'],
+    },
+  },
+  // —— 多级表头（groups）深度 ——
+  'groups:default': {
+    why:
+      '多级表头：三端默认引擎都展开 col.groups 成子列，但 antdv 递归任意层（adaptColumn 自调），' +
+      'vue3/vue2 只展 1 层（columnBindAttr 的跳过表含 groups，孙列不渲染）——**跨端安全上限是 2 级**',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/column-item.vue'],
+      vue2: ['packages/vue2/src/components/es-table/column-item.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/column-adapter.ts'],
+    },
+    tokens: {
+      vue3: ['groups'],
+      vue2: ['groups'],
+      // 含大写的精确文本：递归调用点，钉住「antdv 会再进 adaptColumn」。
+      antdv: ['adaptColumn(child'],
+    },
+    deviation: {
+      antdv: 'antdv 默认列适配器递归任意层 groups；vue3/vue2 默认只展 1 层（孙列被丢弃）。跨端给 <2 级表头才三端一致。',
+    },
+  },
+  'groups:engines': {
+    why:
+      '引擎路径的多级表头一律只展 1 层：adaptGroupCol 建父列、其 children 用 adaptSingleCol 逐个转，' +
+      '不再递归（vxe ×3 一致）',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/engines/use-vxe-column-adapter.ts'],
+      vue2: ['packages/vue2/src/components/es-table/engines/use-vxe-column-adapter.ts'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/engines/use-vxe-column-adapter.ts'],
+    },
+    tokens: {
+      vue3: ['adaptGroupCol', 'adaptSingleCol(child'],
+      vue2: ['adaptGroupCol', 'adaptSingleCol(child'],
+      antdv: ['adaptGroupCol', 'adaptSingleCol(child'],
+    },
+  },
+  // —— 展开内容列（列上的 expandConfig）——
+  'expandConfig:column': {
+    why:
+      '展开列的展开内容来自列声明 expandConfig（title + fields 明细）；三端默认引擎都消费它',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/column-item.vue'],
+      vue2: ['packages/vue2/src/components/es-table/column-item.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/component.vue'],
+    },
+    tokens: {
+      vue3: ['expandConfig'],
+      vue2: ['expandConfig'],
+      antdv: ['expandContent', 'expandedRowRender'],
+    },
+    deviation: {
+      antdv: 'antdv 默认引擎只取其**第一个** type:\'expand\' 列的 expandConfig 作为整表展开内容；vue3/vue2 逐列消费。多展开列时 antdv 只认首个。',
+    },
+  },
+  // —— 列级权限（permissionValue / hidCol）——
+  'permissionValue:column': {
+    why:
+      '列级权限：三端都在列列表上按 hidCol + permissionValue 过滤（无权限的列不渲染；未配全局 permission 时放行）',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/component.vue'],
+      vue2: ['packages/vue2/src/components/es-table/component.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/component.vue'],
+    },
+    tokens: {
+      vue3: ['filteredColumns', 'checkPermission', 'permissionValue', 'hidCol'],
+      vue2: ['filteredColumns', 'checkPermission', 'permissionValue', 'hidCol'],
+      antdv: ['filteredColumns', 'checkPermission', 'permissionValue', 'hidCol'],
+    },
+    knownGaps: {
+      vue3: '权限过滤只作用于顶层 columns；groups 的子列从不被 hidCol/permissionValue 过滤（三端一致，非跨端差异）。',
+      vue2: '权限过滤只作用于顶层 columns；groups 的子列从不被 hidCol/permissionValue 过滤（三端一致，非跨端差异）。',
+      antdv: '权限过滤只作用于顶层 columns；groups 的子列从不被 hidCol/permissionValue 过滤（三端一致，非跨端差异）。',
+    },
+  },
+}
+
