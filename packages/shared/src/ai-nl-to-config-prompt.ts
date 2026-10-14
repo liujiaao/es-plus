@@ -501,6 +501,30 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
     },
   },
   {
+    nl: '省份城市管理：查询条件有省份；表格展示省份、城市、详细地址；支持新增、编辑、删除。新增/编辑时，「城市」的下拉选项随所选省份变化——选浙江出杭州、宁波，选江苏出南京、苏州。',
+    reasoning:
+      '「一个字段的下拉选项随另一字段变化」= 字段联动 `reactions`（纯 JSON，绝不是函数回调）。`dataOptions` 是**字面量选项数组、不是表达式** —— 表达式 DSL 刻意没有对象字面量，所以「选项随条件分支」要写成**每个分支一条规则**，各带自己的 `when` 谓词：省份为 zj 出一条、为 js 出一条，后声明者覆盖先声明者（last-wins）。`dependencies` 列出触发重算的 model 路径（province）。这是**表单作用域**的联动（查询表单 + 新增/编辑弹窗），不是表格列。省份与城市都是有限枚举 → Select + dataOptions，规则里的 value 必须与之一致。',
+    config: {
+      name: 'ProvinceCityManage',
+      apiUrl: '/api/regions',
+      fields: [
+        { prop: 'province', label: '省份', formtype: 'Select', dataOptions: [{ label: '浙江', value: 'zj' }, { label: '江苏', value: 'js' }] },
+        {
+          prop: 'city',
+          label: '城市',
+          formtype: 'Select',
+          inQuery: false,
+          reactions: [
+            { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }, { label: '宁波', value: 'nb' }] } },
+            { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'js'] }, fulfill: { dataOptions: [{ label: '南京', value: 'nj' }, { label: '苏州', value: 'sz' }] } },
+          ],
+        },
+        { prop: 'address', label: '详细地址', formtype: 'Input' },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
     nl: '考勤管理：查询条件有员工姓名和部门；表格第一列是序号列，随后用两级分组表头展示——「员工」下分员工姓名、部门，「考勤」下分出勤天数、迟到次数；支持新增、编辑、删除。',
     reasoning:
       'NL 要求「序号列」+「两级分组表头」——扁平的 `fields` 数组表达不了（非字段列没有 prop/label/formtype，多级表头需要嵌套）。所以用顶层 `columns` 逃生数组：`{ type: "index" }` 是序号列（非字段列），分组表头写 `{ label: "员工", groups: [ …子列… ] }`（跨端安全上限 2 级）。注意 `columns` 一旦给出就**整体覆盖**派生列（override 非 merge），因此每个要在表格里出现的字段都必须写进 `columns`（这里四个字段都进了 groups）；`fields` 仍照常驱动查询表单与新增/编辑表单，故查询字段只需在 `fields` 里标 inQuery。操作列不写进 `columns`——它仍由 actions 自动追加。',
@@ -638,6 +662,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',
     'When the list response does not use the library default shape ({ rows, records }), declare the mapping declaratively in `tableOptions.configTableOut` — a FLAT path object { total?, tableData?, pageSize?, current? } whose VALUES are the response key names, e.g. a backend returning { list, count } → { tableData: "list", total: "count" }. Do NOT model response mapping any other way; it is a plain object, never a callback.',
     'Conditional field visibility ("only needed when …", "只在…时才填写") → the field-level `isHidden`, expressed as PLAIN JSON DATA, never a JS function: a single condition `{ field, op?, value? }` or an ARRAY of them (AND — hidden only when ALL hold). Semantics: the field is HIDDEN WHILE the condition HOLDS, so "show only when refundType is part" is `{ field: "refundType", op: "ne", value: "part" }`. `field` is another field path in the same form, `value` must match that field\'s value type (e.g. the dataOptions value), ops = eq (default) / ne / in / nIn / empty / notEmpty / truthy / falsy. Only when the predicate genuinely needs OR / AND-OR mixes, ordering (>, <=) or a nested NOT — which the plain form cannot express — use a JSON expression instead (JSONLogic-shaped, same `isHidden` key), e.g. `{ or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }`; expression ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if (prefer the plain form for simple cases). It applies to the query and add/edit forms, NOT to the table column. Emit this rather than dropping the conditional field.',
+    'Field-value linkage / computed ("城市下拉随省份变化", "only required once city is filled", "所属大区自动等于所选省份", "结案后结论不可改") → the field-level `reactions` array (PLAIN JSON, never JS callbacks). Use it when THIS field\'s options / required / disabled / value depend on ANOTHER field. Each rule is `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED whenever `fulfill.value` is present — otherwise every edit would overwrite the user\'s manual entry); `when` is a plain-JSON expression (same DSL as `isHidden`, ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if) gating the rule; `fulfill` supplies any of: `dataOptions` (a LITERAL option array — NOT an expression: the DSL forbids object literals, so express "options depending on another field" as ONE RULE PER CASE, each with its own `when`, e.g. province=zj → rule A options, province=js → rule B options), `required` / `disabled` (expression nodes evaluating to a boolean), and `value` (an expression node producing THIS field\'s new value, written back to the model). Rules are evaluated in order with LAST WINS. Applies to the query and add/edit forms, NOT the table column. This is DISTINCT from `isHidden`: use `isHidden` when the field merely appears/disappears; use `reactions` when its options, required, disabled or value must change.',
     'Multi-level group headers and non-field columns (row number / checkbox / expander) cannot be expressed by the flat `fields` array — use the top-level `columns` array (an escape hatch aligned with the renderer `TableColumn`). When present it REPLACES the derived table columns (override, not merge), while `fields` still drives the query/add/edit forms. A group header is `{ label, groups: [ …child columns… ] }` — cross-renderer safe to 2 levels (antdv supports more; vue3/vue2 default tables flatten beyond one nesting). A non-field column is `{ type: "index" | "selection" | "expand" }` (no prop/label needed). The operation column is STILL appended from `actions`/`operationColumn`, so do not add it to `columns`. Use `columns` only when the NL asks for grouped headers or index/selection/expander columns; otherwise keep the plain `fields` array.',
     'Row-expand content ("每行可展开查看…", "点击行展开显示…") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (fields non-empty). Its presence makes the table render ONE row-expander whose content is a read-only `label: value` list read from `row[prop]`. The listed props are typically detail-only fields (mark them `inTable:false` so they are not also a column). If `columns` already declares a `{ type: "expand" }` column the content attaches to it (position kept); otherwise the generator prepends one expander column — you do NOT need to add the expander column yourself. This is DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.',
     'Tree / hierarchical data ("树形", "部门树", "分类树", "父子层级", "子节点嵌套在父节点下") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. It renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically (the default `rowkey` already covers it), so do NOT add anything for it. Set `childrenField` ONLY when the API nests children under a key other than `children` (e.g. `subItems`); set `expandAll: true` when the NL asks for all nodes expanded by default. Do NOT model lazy/async loading here (out of scope). SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the TOP-LEVEL key.',
@@ -646,7 +671,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
     '- read-only display logic → `formatter` (an arrow-function source string)',
     '- fully custom cell/control → `render` (a function source string)',
-    '- per-field permission gate → `permissionValue` (a permission CODE string, consumed by the host\'s global permission(code) — this is RBAC, NOT a data-driven condition; for "depends on another field\'s value" use `isHidden`)',
+    '- per-field permission gate → `permissionValue` (a permission CODE string, consumed by the host\'s global permission(code) — this is RBAC, NOT a data-driven condition; for "depends on another field\'s value" use `isHidden` when the field merely appears/disappears, or `reactions` when its options / required / disabled / value must change)',
     'Emitting one of these is correct behavior; silently omitting the requirement is a failure.',
     '',
     'Respond with ONLY the JSON object — no prose, no markdown fences.',

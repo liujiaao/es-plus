@@ -167,6 +167,51 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
+    label: "Field linkage → declarative reactions (plain JSON, no code)",
+    nl: "地区管理：查询省份；表格展示省份、城市、所属大区；支持新增、编辑。新增时城市下拉随省份变化（浙江→杭州、宁波；江苏→南京）；只有填了城市，发票号才必填；所属大区自动等于所选省份且不可手改。",
+    reasoning:
+      "「城市下拉随省份变化」→ city 的 options 依赖 province，用 city.reactions：选项是**字面量数组**（DSL 禁对象字面量），故按省份分支写成**多条规则**，各带自己的 when（province=zj / province=js）。「只有填了城市发票号才必填」→ invoiceNo.reactions 的 fulfill.required 是表达式 { notEmpty: [{ var: 'city' }] }。「大区自动等于省份、不可手改」→ region.reactions 的 fulfill 同时给 value:{ var:'province' }（回写 model，故 dependencies 必填）与 disabled:{ truthy:[{var:'province'}] }。全是纯 JSON，绝无 JS 回调；都是**表单作用域**（查询/新增/编辑），不是表格列。",
+    config: {
+      name: "RegionManage",
+      apiUrl: "/api/regions",
+      fields: [
+        { prop: "province", label: "省份", formtype: "Select", dataOptions: [
+          { label: "浙江", value: "zj" }, { label: "江苏", value: "js" },
+        ] },
+        {
+          prop: "city",
+          label: "城市",
+          formtype: "Select",
+          inQuery: false,
+          reactions: [
+            { dependencies: ["province"], when: { "==": [{ var: "province" }, "zj"] },
+              fulfill: { dataOptions: [{ label: "杭州", value: "hz" }, { label: "宁波", value: "nb" }] } },
+            { dependencies: ["province"], when: { "==": [{ var: "province" }, "js"] },
+              fulfill: { dataOptions: [{ label: "南京", value: "nj" }] } },
+          ],
+        },
+        {
+          prop: "invoiceNo",
+          label: "发票号",
+          formtype: "Input",
+          inQuery: false,
+          reactions: [{ dependencies: ["city"], fulfill: { required: { notEmpty: [{ var: "city" }] } } }],
+        },
+        {
+          prop: "region",
+          label: "所属大区",
+          formtype: "Input",
+          inQuery: false,
+          reactions: [{ dependencies: ["province"], fulfill: {
+            value: { var: "province" },
+            disabled: { truthy: [{ var: "province" }] },
+          } }],
+        },
+      ],
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
     label: "Multiple dialogs with different form fields",
     nl: "客户管理：新增和编辑用不同的弹窗表单——新增时填公司名、联系人、电话；编辑时在这些之外还能改信用额度。",
     reasoning:
@@ -349,11 +394,12 @@ function buildContent(): string {
     "- System-generated columns (createdAt, id) → `inForm:false`; detail-only fields → `inQuery:false`.",
     "- Button placement: \"left\" → `position:'left'`, \"right\" → `position:'right'` (`code:1`/`code:2` is the legacy alias — still accepted, but prefer `position`).",
     "- Form-scope conditional visibility (\"field X shows only when Y is Z\", \"只在…时才填写\") → the field-level `isHidden` — a PLAIN JSON condition (never a JS string), `{ field, op?, value? }` or an array (AND), hidden while it holds. When a plain condition can't express it (OR / ordering / nested NOT), use a JSON expression instead, e.g. `{ or: [ { \"==\": [{ var: \"status\" }, \"pending\"] }, { \">\": [{ var: \"amount\" }, 100] } ] }`. Applies to the query/add/edit forms, NOT the table column.",
+    "- Field linkage / computed (\"城市下拉随省份变化\", \"只有填了城市发票号才必填\", \"所属大区自动等于所选省份\") → the field-level `reactions` — a PLAIN JSON array of rules, NEVER a JS callback. Each rule is `{ dependencies?, when?, fulfill }`: `dependencies` = model paths that re-trigger it (REQUIRED when `fulfill.value` is present); `when` = optional gate expression (rule applies while truthy); `fulfill` = `{ dataOptions?, required?, disabled?, value? }` where `dataOptions` is a **LITERAL** option array and `required`/`disabled`/`value` are expression nodes (same DSL as `isHidden`) returning a boolean or the field's new value. Because the DSL forbids object literals, express option branching as ONE rule per case, each with its own `when` (e.g. `when: { \"==\": [{ var: \"province\" }, \"zj\"] }`). `value` is written back to the model. Use `isHidden` when the field merely appears/disappears; use `reactions` when its options / required / disabled / value must change. Applies to the query/add/edit forms, NOT the table column.",
     "- Multi-level group headers (\"分组表头\") and non-field columns (序号/勾选/展开列) → the top-level `columns` escape array (aligned with the renderer `TableColumn`): a group is `{ label, groups: [ … ] }` (2 levels max cross-renderer), a non-field column is `{ type: 'index' | 'selection' | 'expand' }`. `columns` REPLACES the derived table columns (override, not merge) — every field shown in the table must appear inside it; `fields` still drives the query/add/edit forms. The operation column is auto-appended from `actions`, so don't add it here.",
     "- Row-expand content (\"每行可展开查看…\") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (non-empty). Presence makes the table render ONE row-expander showing a read-only `label: value` list from `row[prop]` (usually detail-only fields, marked `inTable:false`). If `columns` already declares a `{ type: 'expand' }` column the content attaches there; otherwise the generator prepends one — don't add the expander column yourself. DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.",
     "- Tree / hierarchical rows (\"树形\", \"部门树\", \"分类树\", \"父子层级\", \"子节点嵌套在父节点下\") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. Renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically. Set `childrenField` only when children nest under a key other than `children`; set `expandAll: true` to expand every node by default. Not for lazy/async loading. DISTINCT from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the top-level key.",
     "- Inline row editing (\"表格行内编辑\", \"双击单元格改数量\", \"点单元格直接改\") → THREE parts, all under the vxe engine: `tableOptions.engine: 'vxe'`; the table-level switch `tableOptions.editConfig` (`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }`, defaults trigger:'click' / mode:'cell'); and a per-column `columns[].editRender` on EVERY editable column (`{ name: '$input' | '$select' | '$textarea' | '$date', type?, options?, props?, autofocus?, defaultValue? }`, `$select` wants `options`). A column without `editRender` is NOT editable — `editConfig` alone is a no-op — and both are silently ignored unless the engine is vxe. Declare the editable columns via the top-level `columns` array (it REPLACES the derived columns; the operation column is still auto-appended). Function-valued `editRender.events` and custom renderers are out of scope.",
-    "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` above is declarative data, NOT an extension point — use it, don't reach for formatter/render for visibility.)",
+    "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` and `reactions` above are declarative data, NOT extension points — they cover field visibility and field linkage/computed; don't reach for formatter/render for those.)",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",
     "---",

@@ -154,6 +154,50 @@ const HiddenConditionListSchema = z.union([
   z.array(z.union([HiddenConditionSchema, HiddenExprNodeSchema])).min(1),
 ]);
 
+/**
+ * Field-level linkage (AI-07) fulfillment — plain JSON, NEVER a JS callback.
+ * `dataOptions` is a LITERAL option array (the DSL forbids object literals, so branch by
+ * declaring one rule per case with its own `when`); `required`/`disabled`/`value` are
+ * expression nodes (`value` requires a non-empty `dependencies`).
+ */
+const ReactionFulfillSchema = z.object({
+  dataOptions: z
+    .array(DataOptionSchema)
+    .optional()
+    .describe(
+      "Literal option array for this field while the rule is active (NOT an expression — the DSL forbids object literals, so branch by declaring one rule per case with its own `when`)."
+    ),
+  required: HiddenExprNodeSchema.optional().describe("Expression node evaluating to a boolean: make this field required."),
+  disabled: HiddenExprNodeSchema.optional().describe("Expression node evaluating to a boolean: disable this field."),
+  value: HiddenExprNodeSchema.optional().describe(
+    "Expression node evaluating to this field's new value, written back to the model (requires a non-empty `dependencies`)."
+  ),
+});
+
+/** Field linkage rule (AI-07) — mirrors the shared schema's ReactionSchema. */
+const ReactionSchema = z
+  .object({
+    dependencies: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .refine(isSafeProp, {
+            message:
+              'dependencies item must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+          })
+      )
+      .optional()
+      .describe("Model paths that retrigger this rule. REQUIRED when `fulfill.value` is present."),
+    when: HiddenExprNodeSchema.optional().describe(
+      "Optional gate expression: the rule applies only while it evaluates truthy. Plain JSON data, never a JS source string."
+    ),
+    fulfill: ReactionFulfillSchema,
+  })
+  .refine((r) => r.fulfill.value === undefined || (r.dependencies?.length ?? 0) > 0, {
+    message: "reactions.fulfill.value requires a non-empty dependencies (otherwise every model change would overwrite the user's manual edit)",
+  });
+
 const FieldConfigSchema = z.object({
   prop: z
     .string()
@@ -216,6 +260,12 @@ const FieldConfigSchema = z.object({
   isHidden: HiddenConditionListSchema.optional().describe(
     'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? }, a single JSON expression, or an array of them (array = AND). A JSON expression (JSONLogic-shaped) is only needed when a plain condition cannot express the predicate — OR, AND-OR mixes, ordering (>, <=), or nested NOT: e.g. { or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }; ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Prefer the plain { field, op, value } form for simple cases. Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
   ),
+  reactions: z
+    .array(ReactionSchema)
+    .optional()
+    .describe(
+      "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT the table column."
+    ),
 });
 
 /**

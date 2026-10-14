@@ -46,6 +46,8 @@ const BASE_INPUT = {
     { prop: 'categoryId', label: '分类', formtype: 'Select', apiParams: { url: '/api/cat', labelField: 'name', valueField: 'id' } }, // → apiParams 维度
     { prop: 'amount', label: '金额', formtype: 'Input', inQuery: false, formatter: '(row) => row.amount.toFixed(2)' }, // → extPoints 维度
     { prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', inForm: false },
+    // reactions：字段联动（选项随 status 变化 + 必填随 name）→ reactions 维度
+    { prop: 'city', label: '城市', formtype: 'Select', reactions: [{ dependencies: ['status'], when: { '==': [{ var: 'status' }, 1] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }], required: { truthy: [{ var: 'name' }] } } }] },
   ],
   actions: ['add', 'edit', 'delete', 'view'],
   tableBtns: [
@@ -109,6 +111,7 @@ const PERTURB = {
   treeConfig: (c) => { c.treeConfig.expandAll = false },
   editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
   extPoints: (c) => { delete c.fields[3].formatter },
+  reactions: (c) => { c.fields[5].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }] },
 }
 
 for (const { key } of CAPABILITY_SCORERS) {
@@ -198,6 +201,50 @@ console.log('meta-eval: isHidden (declarative condition)')
   // 字段级细化对表达式同样生效
   check(scoreAll(goldExpr, clone(goldExpr), { pinnedDims: ['isHidden:a'] }).exactIntentScoped === true, 'scoped: isHidden:a 表达式 gold-vs-gold 应 true')
   check(scoreAll(goldExpr, exprWrongVal, { pinnedDims: ['isHidden:a'] }).exactIntentScoped === false, 'scoped: 扰动表达式 isHidden:a 应翻红')
+}
+
+// 2c-bis) reactions 维度的语义（AI-07 字段联动）：整数组深等值 —— value↔dataOptions 互换、
+//         dependencies 顺序、when 谓词错都算负；字段级细化只钉该字段。
+console.log('meta-eval: reactions (field linkage)')
+{
+  const rule = { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }] } }
+  const gold = { fields: [{ prop: 'city', label: '城市', formtype: 'Select', reactions: [rule] }], actions: ['add'] }
+  check(scoreAll(gold, clone(gold)).byCapability.reactions.pass === true, 'reactions: 整数组一致应判正')
+
+  // dataOptions 内容改 → 负
+  const wrongOpts = clone(gold)
+  wrongOpts.fields[0].reactions[0].fulfill.dataOptions = [{ label: '南京', value: 'nj' }]
+  check(scoreAll(gold, wrongOpts).byCapability.reactions.pass === false, 'reactions: dataOptions 内容不符应判负')
+
+  // dependencies 序敏感
+  const two = { dependencies: ['province', 'city'], fulfill: { required: { truthy: [{ var: 'a' }] } } }
+  const goldDeps = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', reactions: [two] }], actions: ['add'] }
+  const depsSwapped = clone(goldDeps)
+  depsSwapped.fields[0].reactions[0].dependencies = ['city', 'province']
+  check(scoreAll(goldDeps, depsSwapped).byCapability.reactions.pass === false, 'reactions: dependencies 顺序不符应判负')
+
+  // fulfill 键互换（value ↔ dataOptions）应判负
+  const goldVal = { fields: [{ prop: 'mirror', label: '镜像', formtype: 'Input', reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }] }], actions: ['add'] }
+  const asOpts = clone(goldVal)
+  asOpts.fields[0].reactions[0].fulfill = { dataOptions: [{ label: 'x', value: 'y' }] }
+  check(scoreAll(goldVal, asOpts).byCapability.reactions.pass === false, 'reactions: value↔dataOptions 互换应判负')
+
+  // gold 无 reactions → 维度不 applicable
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.reactions.applicable === false, 'reactions: gold 未声明时维度不 applicable')
+
+  // 字段级细化：只钉该字段；未锁字段的 reactions 猜错免责
+  check(isValidPinnedDim('reactions:city') === true, 'isValidPinnedDim: reactions:city 合法')
+  const m = { pinnedDims: ['reactions:city'] }
+  check(scoreAll(gold, clone(gold), m).exactIntentScoped === true, 'scoped: reactions:city gold-vs-gold 应 true')
+  check(scoreAll(gold, wrongOpts, m).exactIntentScoped === false, 'scoped: 扰动 reactions:city 应翻红')
+  const twoField = {
+    fields: [clone(gold.fields[0]), { prop: 'z', label: 'Z', formtype: 'Select', reactions: [clone(rule)] }],
+    actions: ['add'],
+  }
+  const zChanged = clone(twoField)
+  zChanged.fields[1].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }]
+  check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 reactions 应免责')
 }
 
 // 2d) columns（显式列逃生数组，AI-09 子项①）维度的语义：整数组深等值（列序 / 层级 / 非字段列都算数）

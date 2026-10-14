@@ -347,6 +347,30 @@ JSON. The contract is **mark, never drop**:
   plain form for simple cases. Use this for "show field X only when Y
   is Z" — it applies to the query/add/edit forms, NOT the table column. Do NOT
   reach for \`formatter\`/\`render\` for visibility.
+- **\`reactions\`** (FieldConfig — **not** an extension point: PLAIN JSON DATA,
+  never a JS callback): field-level **linkage / computed** rules — this field's
+  OPTIONS / required / disabled / own VALUE depend on OTHER fields. An array of
+  rules, each \`{ dependencies?, when?, fulfill }\`:
+  - \`dependencies\`: model paths whose change re-evaluates the rule. **REQUIRED**
+    when \`fulfill.value\` is present.
+  - \`when\`: optional gate expression — the rule applies only while it is truthy.
+  - \`fulfill\`: \`{ dataOptions?, required?, disabled?, value? }\`:
+    - \`dataOptions\` → a **LITERAL** option array (\`[{label,value}]\`) — NOT an
+      expression (the DSL forbids object literals, so branch by writing one rule
+      per case, each with its own \`when\`).
+    - \`required\` / \`disabled\` / \`value\` → **AI-16 expression nodes** returning a
+      boolean (required/disabled) or the field's new value (\`value\`, written back
+      to the model).
+  Ops = the same expression DSL as \`isHidden\` (var == != > >= < <= in nin empty
+  notEmpty truthy falsy and or not if). Example — \`city\` options follow
+  \`province\` (浙江→杭州/宁波, 江苏→南京): two rules, each
+  \`when: { "==": [{ var: "province" }, "zj" | "js"] }\` with its own
+  \`fulfill.dataOptions\`; and a value mirrorer \`region\` auto-equals \`province\`
+  (\`dependencies:["province"], fulfill:{ value:{ var:"province" },
+  disabled:{ truthy:[{ var:"province" }] } }\`). Applies to the query/filter form
+  and the add/edit dialog forms — **NOT** the table column. DISTINCT from
+  \`isHidden\`: use \`isHidden\` when the field merely appears/disappears, and
+  \`reactions\` when its options / required / disabled / value must change.
 - **\`columns\`** (top-level — **not** an extension point: it's PLAIN JSON DATA): the
   explicit table-column array, an escape hatch over the \`fields\`-derived columns for
   things the flat field list can't express — **multi-level group headers** (\`{ label,

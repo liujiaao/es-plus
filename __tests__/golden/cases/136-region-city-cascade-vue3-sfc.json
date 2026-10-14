@@ -1,0 +1,128 @@
+{
+  "nl": "两级联动地址管理（单文件组件）：查询有主体名称；表格展示主体名称、省份、所属大区、城市；支持新增、编辑、删除。表单里「所属大区」自动等于所选省份；「城市」的下拉选项随所属大区变化——华东出上海/南京，华南出广州/深圳。",
+  "nlEn": "Two-level cascading address management (single-file component): query by entity name; the table shows entity name, province, region and city; supports add, edit and delete. In the form the \"region\" is set automatically to the chosen province, and the \"city\" options follow the region — East China gives Shanghai/Nanjing, South China gives Guangzhou/Shenzhen.",
+  "fixedFields": [
+    "entityName",
+    "province",
+    "region",
+    "city"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:region",
+    "reactions:city",
+    "mode"
+  ],
+  "config": {
+    "name": "CascadeAddressManage",
+    "apiUrl": "/api/cascade-addresses",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "entityName",
+        "label": "主体名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "province",
+        "label": "省份",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "浙江",
+            "value": "zj"
+          },
+          {
+            "label": "广东",
+            "value": "gd"
+          }
+        ]
+      },
+      {
+        "prop": "region",
+        "label": "所属大区",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "province"
+            ],
+            "fulfill": {
+              "value": {
+                "var": "province"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "region"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "region"
+                },
+                "zj"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "上海",
+                  "value": "sh"
+                },
+                {
+                  "label": "南京",
+                  "value": "nj"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "region"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "region"
+                },
+                "gd"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "广州",
+                  "value": "gz"
+                },
+                {
+                  "label": "深圳",
+                  "value": "sz"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 级联（region 回写自 province，再由 region 驱动 city 选项）—— 同一遍内 city 读到旧 region，需第二次 watcher 触发才收敛（vue3/SFC）"
+}

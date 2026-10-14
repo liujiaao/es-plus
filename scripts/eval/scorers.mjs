@@ -227,6 +227,22 @@ function isHiddenEqual(gold, pred) {
   return true
 }
 
+/**
+ * 字段联动（AI-07）：gold 每个带 `reactions` 的 field，pred 同名 field 必须存在**且整数组深等值**。
+ *
+ * 深等值而非 presence：这是「行为契约」——`value`↔`dataOptions` 互换、`dependencies` 顺序错、
+ * `when` 谓词写错都算未命中（与 `isHidden`/`columns`/`expandConfig` 同规）。
+ */
+function reactionsEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!f.reactions) continue
+    const pf = pm.get(f.prop)
+    if (!pf || !pf.reactions || !eq(f.reactions, pf.reactions)) return false
+  }
+  return true
+}
+
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 
 /** mark-never-drop 的 LLM 侧对偶：gold 每个扩展点在 pred 同名 field 上必须也存在（不比内容）。 */
@@ -272,6 +288,13 @@ export const CAPABILITY_SCORERS = [
     key: 'isHidden',
     applicable: (g) => g.fields.some((f) => f.isHidden !== undefined),
     pass: isHiddenEqual,
+  },
+  {
+    // 字段联动（AI-07）：整数组深等值。选项联动/必填/禁用/值回写都是行为契约，
+    // 「写了 reactions 但 fulfillment 内容不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'reactions',
+    applicable: (g) => g.fields.some((f) => f.reactions !== undefined),
+    pass: reactionsEqual,
   },
   {
     // 显式列逃生数组（AI-09 子项①）：整数组深等值。列序/多级表头/非字段列都是行为契约，
@@ -352,6 +375,12 @@ const FIELD_SCORERS = {
     const p = fieldMap(pred).get(prop)
     if (!g || !g.isHidden) return true // 该字段本就不要求条件显隐 → 空钉即过
     return !!p && !!p.isHidden && eq(g.isHidden, p.isHidden)
+  },
+  reactions: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !g.reactions) return true // 该字段本就不要求联动 → 空钉即过
+    return !!p && !!p.reactions && eq(g.reactions, p.reactions)
   },
 }
 

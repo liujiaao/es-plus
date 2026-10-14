@@ -371,3 +371,77 @@ describe('EsForm(ADV) - 声明式 isHidden 条件（AI-06）', () => {
     expect(wrapper.findAllComponents(AFormItem)).toHaveLength(1)
   })
 })
+
+describe('EsForm(ADV) - AI-07 字段联动 reactions', () => {
+  // 求值全在 core（packages/core/__tests__/reactions.spec.ts）；此处只钉 antdv 的接线：
+  // overlay 合并进 formItemListFilter、值回写交给 model watcher。
+  const dbl = async () => { await nextTick(); await nextTick() }
+
+  it('required：依赖变化时动态改变必填态', async () => {
+    const model = reactive({ city: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'city', label: '城市', formtype: 'Input', span: 24 },
+        {
+          prop: 'invoiceNo', label: '发票号', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['city'], fulfill: { required: { notEmpty: [{ var: 'city' }] } } }],
+        },
+      ],
+    })
+    await dbl()
+    const items = () => wrapper.findAllComponents(AFormItem)
+    expect(items()[1].props('required')).not.toBe(true)
+
+    model.city = 'hz'
+    await dbl()
+    expect(items()[1].props('required')).toBe(true)
+  })
+
+  it('disabled：条件禁用透传到控件', async () => {
+    const model = reactive({ accountType: 'system' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'accountType', label: '类型', formtype: 'Input', span: 24 },
+        {
+          prop: 'username', label: '账号名', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['accountType'], fulfill: { disabled: { '==': [{ var: 'accountType' }, 'system'] } } }],
+        },
+      ],
+    })
+    await dbl()
+    const usernameDisabled = () => wrapper.findAllComponents(AInput).some((i) => i.props('disabled') === true)
+    expect(usernameDisabled()).toBe(true)
+
+    model.accountType = 'normal'
+    await dbl()
+    expect(usernameDisabled()).toBe(false)
+  })
+
+  it('值回写：依赖变化时写入目标字段，且不踩无关编辑', async () => {
+    const model = reactive({ province: '', region: '', note: '' })
+    mountForm({
+      model,
+      formItemList: [
+        { prop: 'province', label: '省份', formtype: 'Input', span: 24 },
+        { prop: 'note', label: '备注', formtype: 'Input', span: 24 },
+        {
+          prop: 'region', label: '大区', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }],
+        },
+      ],
+    })
+    await dbl()
+    expect(model.region).toBe('')
+
+    model.region = 'manual'
+    model.note = 'x'
+    await dbl()
+    expect(model.region).toBe('manual')
+
+    model.province = 'zj'
+    await dbl()
+    expect(model.region).toBe('zj')
+  })
+})

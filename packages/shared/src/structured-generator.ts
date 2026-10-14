@@ -1011,6 +1011,11 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
   // 运行时由 core `normalizeFormItem` 编译为谓词（三端 formItemListFilter 照旧调用 isHidden）。
   // 只作用于 query / 弹窗表单（buildFormItem 的两个 context），**不进**表格列（buildTableColumn）。
   if (field.isHidden) item.isHidden = field.isHidden
+  // 字段联动（AI-07）：**纯 JSON 数据**（非 JS 回调）—— dependencies/when/fulfill 全是可
+  // JSON 化的表达式节点与字面量选项数组，schema 模式直接内联、SFC 模式随 inlineJson 序列化，
+  // 故两种模式共用同一 emit 点（同 isHidden，无需降级分支）。同样只作用于 query / 弹窗表单，
+  // **不进**表格列（buildTableColumn 不处理 reactions）。
+  if (field.reactions) item.reactions = field.reactions
 
   if (context === 'form') {
     const rules: any[] = []

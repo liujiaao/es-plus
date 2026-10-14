@@ -81,6 +81,26 @@ export interface FieldHiddenExprNode {
 /** `isHidden` 的表达式形态：单节点或节点数组。 */
 export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
 
+/**
+ * 字段联动 fulfillment（AI-07）—— 与 core `types.ts` 的同名类型结构一致，纯 JSON。
+ *
+ * `dataOptions` 是**字面量选项数组**（非表达式：AI-16 DSL 无对象字面量），
+ * `required` / `disabled` / `value` 是表达式节点（`value` 存在时 `dependencies` 必填）。
+ */
+export interface FieldReactionFulfill {
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  required?: FieldHiddenExprNode
+  disabled?: FieldHiddenExprNode
+  value?: FieldHiddenExprNode
+}
+
+/** 字段联动规则（AI-07）：`when` 门控，`fulfill` 提供派生结果。 */
+export interface FieldReaction {
+  dependencies?: string[]
+  when?: FieldHiddenExprNode
+  fulfill: FieldReactionFulfill
+}
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -120,6 +140,8 @@ export interface FormItemOption {
     | FieldHiddenCondition[]
     | FieldHiddenExpr
     | ((model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean)
+  /** 字段联动（AI-07）：声明式规则数组，纯 JSON、无回调；由 core `reactions.ts` 求值。 */
+  reactions?: FieldReaction[]
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
   /** Whether to auto-load API data on init, default true; set false to load manually via formItmeRequestInstance */

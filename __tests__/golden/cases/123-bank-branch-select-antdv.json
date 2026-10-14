@@ -1,0 +1,113 @@
+{
+  "nl": "对公账户管理（antd 风格）：查询有开户名称；表格展示开户名称、银行类型、开户支行、账号；支持新增、编辑、删除。表单里「开户支行」的可选项随「银行类型」变化——国有银行给工行/建行，股份制银行给招商/兴业。",
+  "nlEn": "Corporate-account management (Ant Design look): query by account name; the table shows account name, bank type, branch and account number; supports add, edit and delete. In the form the \"branch\" options follow \"bank type\" — state-owned banks offer ICBC/CCB, joint-stock banks offer CMB/CIB.",
+  "fixedFields": [
+    "accountName",
+    "bankType",
+    "branch",
+    "accountNo"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:branch",
+    "target"
+  ],
+  "config": {
+    "name": "CorporateAccountManage",
+    "apiUrl": "/api/corporate-accounts",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "accountName",
+        "label": "开户名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "bankType",
+        "label": "银行类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "国有银行",
+            "value": "state"
+          },
+          {
+            "label": "股份制银行",
+            "value": "joint"
+          }
+        ]
+      },
+      {
+        "prop": "branch",
+        "label": "开户支行",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "bankType"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "bankType"
+                },
+                "state"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "中国工商银行",
+                  "value": "icbc"
+                },
+                {
+                  "label": "中国建设银行",
+                  "value": "ccb"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "bankType"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "bankType"
+                },
+                "joint"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "招商银行",
+                  "value": "cmb"
+                },
+                {
+                  "label": "兴业银行",
+                  "value": "cib"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "prop": "accountNo",
+        "label": "账号",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 分支式 dataOptions 联动（antdv/schema）"
+}

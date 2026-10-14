@@ -187,6 +187,7 @@ const REQUIRED_FIELDS = [
   { schema: 'form-item.schema.json', path: ['properties', 'labelKey'], label: 'FormItemOption.labelKey (i18n)' },
   { schema: 'form-item.schema.json', path: ['properties', 'placeholder'], label: 'FormItemOption.placeholder' },
   { schema: 'form-item.schema.json', path: ['properties', 'isHidden'], label: 'FormItemOption.isHidden (声明式条件显隐)' },
+  { schema: 'form-item.schema.json', path: ['properties', 'reactions'], label: 'FormItemOption.reactions (字段联动)' },
   { schema: 'table-column.schema.json', path: ['properties', 'labelKey'], label: 'TableColumn.labelKey (i18n)' },
   { schema: 'table-options.schema.json', path: ['properties', 'tabHeight'], label: 'TableOptions.tabHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'maxHeight'], label: 'TableOptions.maxHeight' },
@@ -287,7 +288,7 @@ const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual
 // 走 MCP 路径的配置里 isHidden 会被丢弃、字段永远可见（假承诺）。
 // 注意 `isHiddenFooter`（dialog 级）不是同一字段：它后面跟的是 'F' 不是 ':'，
 // 故 `\bisHidden\s*:` 不会误匹配。
-const STRUCTURED_FIELD_CONTRACT = ['isHidden']
+const STRUCTURED_FIELD_CONTRACT = ['isHidden', 'reactions']
 
 /**
  * 剥掉行注释与块注释。
@@ -578,6 +579,31 @@ function checkStructuredConfigZod() {
     }
     if (!/HiddenConditionListSchema[\s\S]{0,400}?HiddenExprNodeSchema/.test(src)) {
       fail(`${label} 的 HiddenConditionListSchema 未纳入 HiddenExprNodeSchema（表达式 isHidden 会被静默剥掉、字段永远可见）`)
+      ok = false
+    }
+
+    // 字段联动契约（AI-07）：`reactions`（字段级规则数组）两处 Zod 都必须声明，
+    // 且 fulfillment 的表达式键必须复用 `HiddenExprNodeSchema` —— 否则（a）reactions 被
+    // Zod 静默剥掉（配置里写了、运行时无联动、零告警），或（b）退化成裸 JS 串/任意 JSON
+    // （闭算子沙箱被破坏）。`fulfill.value` 与 `dataOptions` 都必须可表达。
+    if (!/const\s+ReactionSchema\s*=\s*z/.test(src)) {
+      fail(`${label} 未声明 const ReactionSchema（字段联动规则会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/reactions\s*:\s*z\s*\.array\(\s*ReactionSchema/.test(src)) {
+      fail(`${label} 的 FieldConfigSchema 未声明 reactions: z.array(ReactionSchema)（字段联动会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/ReactionFulfillSchema\s*=\s*z\s*\.object\([\s\S]{0,900}?dataOptions[\s\S]{0,900}?value/.test(src)) {
+      fail(`${label} 的 ReactionFulfillSchema 缺少 dataOptions / value（选项联动或值回写表达不了）`)
+      ok = false
+    }
+    if (!/ReactionFulfillSchema[\s\S]{0,1400}?HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 ReactionFulfillSchema 未复用 HiddenExprNodeSchema（表达式键退化成任意 JSON，闭算子沙箱被破坏）`)
+      ok = false
+    }
+    if (!/ReactionSchema\s*=\s*z[\s\S]{0,600}?when\s*:\s*HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 ReactionSchema 缺少 when: HiddenExprNodeSchema（规则门控表达不了 / 退化成裸 JS 串）`)
       ok = false
     }
   }

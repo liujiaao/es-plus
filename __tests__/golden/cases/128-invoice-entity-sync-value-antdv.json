@@ -1,0 +1,80 @@
+{
+  "nl": "开票管理（antd 风格）：查询有单据编号；表格展示单据编号、门店名称、开票主体、金额；支持新增、编辑、删除。表单里「开票主体」自动同步所选门店名称（未选门店时留空）。",
+  "nlEn": "Invoicing management (Ant Design look): query by document no.; the table shows document no., store name, invoicing entity and amount; supports add, edit and delete. In the form the \"invoicing entity\" syncs to the chosen store name (left blank until a store is chosen).",
+  "fixedFields": [
+    "docNo",
+    "storeName",
+    "invoiceEntity",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:invoiceEntity",
+    "target"
+  ],
+  "config": {
+    "name": "InvoiceManage",
+    "apiUrl": "/api/invoices",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "docNo",
+        "label": "单据编号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "storeName",
+        "label": "门店名称",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "城西店",
+            "value": "west"
+          },
+          {
+            "label": "城东店",
+            "value": "east"
+          }
+        ]
+      },
+      {
+        "prop": "invoiceEntity",
+        "label": "开票主体",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "storeName"
+            ],
+            "when": {
+              "notEmpty": [
+                {
+                  "var": "storeName"
+                }
+              ]
+            },
+            "fulfill": {
+              "value": {
+                "var": "storeName"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.value 带 when 门控（未选门店不写回）（antdv/schema）"
+}

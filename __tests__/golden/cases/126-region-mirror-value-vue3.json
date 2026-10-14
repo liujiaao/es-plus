@@ -1,0 +1,66 @@
+{
+  "nl": "区域归属管理：查询有主体名称；表格展示主体名称、所选省份、所属大区；支持新增、编辑、删除。表单里「所属大区」不需要手填——它自动等于所选的省份。",
+  "nlEn": "Region-mapping management: query by entity name; the table shows entity name, chosen province and region; supports add, edit and delete. In the form the \"region\" needs no manual entry — it is set automatically to the chosen province.",
+  "fixedFields": [
+    "entityName",
+    "province",
+    "region"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:region"
+  ],
+  "config": {
+    "name": "RegionMappingManage",
+    "apiUrl": "/api/region-mappings",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "entityName",
+        "label": "主体名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "province",
+        "label": "所选省份",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "浙江",
+            "value": "zj"
+          },
+          {
+            "label": "江苏",
+            "value": "js"
+          }
+        ]
+      },
+      {
+        "prop": "region",
+        "label": "所属大区",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "province"
+            ],
+            "fulfill": {
+              "value": {
+                "var": "province"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.value 值回写（大区自动等于省份）—— 依赖 province（vue3/schema）"
+}

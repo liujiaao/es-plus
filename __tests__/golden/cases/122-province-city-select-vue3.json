@@ -1,0 +1,105 @@
+{
+  "nl": "省份城市管理：查询有省份；表格展示省份、城市、详细地址；支持新增、编辑、删除。表单里「城市」的下拉选项随所选省份变化——选浙江出杭州、宁波，选江苏出南京、苏州。",
+  "nlEn": "Province/city management: query by province; the table shows province, city and street address; supports add, edit and delete. In the form the \"city\" dropdown options follow the chosen province — Zhejiang offers Hangzhou and Ningbo, Jiangsu offers Nanjing and Suzhou.",
+  "fixedFields": [
+    "province",
+    "city",
+    "address"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:city"
+  ],
+  "config": {
+    "name": "ProvinceCityManage",
+    "apiUrl": "/api/regions",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "province",
+        "label": "省份",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "浙江",
+            "value": "zj"
+          },
+          {
+            "label": "江苏",
+            "value": "js"
+          }
+        ]
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "province"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "province"
+                },
+                "zj"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "杭州",
+                  "value": "hz"
+                },
+                {
+                  "label": "宁波",
+                  "value": "nb"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "province"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "province"
+                },
+                "js"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "南京",
+                  "value": "nj"
+                },
+                {
+                  "label": "苏州",
+                  "value": "sz"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "prop": "address",
+        "label": "详细地址",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: dataOptions 联动（每分支一条规则 + when 谓词）—— 城市选项随省份变化（vue3/schema）"
+}

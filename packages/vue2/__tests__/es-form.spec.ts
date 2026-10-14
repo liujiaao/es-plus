@@ -454,3 +454,84 @@ describe('EsForm(vue2) - 声明式 isHidden 条件（AI-06）', () => {
     expect(findAllByName(miss, 'ElFormItem').map((it) => it.$props.label)).toEqual(['状态', '原因'])
   })
 })
+
+describe('EsForm(vue2) - AI-07 字段联动 reactions', () => {
+  // 求值全在 core；此处钉 vue2 的两处特化：overlay 合并进 formItemListFilter、
+  // 值回写走**响应式**写入（缺省键经 $set，Vue 2 检测不到属性新增）。
+  const dbl = async (vm: any) => { await vm.$nextTick(); await vm.$nextTick() }
+
+  it('required：依赖变化时动态改变必填态', async () => {
+    const model = Vue.observable({ city: '' })
+    const vm = mountForm({
+      model,
+      formItemList: [
+        { prop: 'city', label: '城市', formtype: 'Input' as const, span: 24 },
+        {
+          prop: 'invoiceNo', label: '发票号', formtype: 'Input' as const, span: 24,
+          reactions: [{ dependencies: ['city'], fulfill: { required: { notEmpty: [{ var: 'city' }] } } }],
+        },
+      ],
+    })
+    await dbl(vm)
+    const required = () => findAllByName(vm, 'ElFormItem')[1].$props.required
+    expect(required()).not.toBe(true)
+
+    ;(model as any).city = 'hz'
+    await dbl(vm)
+    expect(required()).toBe(true)
+  })
+
+  it('disabled：条件禁用透传到 Input 控件', async () => {
+    const model = Vue.observable({ accountType: 'system' })
+    const vm = mountForm({
+      model,
+      formItemList: [
+        { prop: 'accountType', label: '类型', formtype: 'Input' as const, span: 24 },
+        {
+          prop: 'username', label: '账号名', formtype: 'Input' as const, span: 24,
+          reactions: [{ dependencies: ['accountType'], fulfill: { disabled: { '==': [{ var: 'accountType' }, 'system'] } } }],
+        },
+      ],
+    })
+    await dbl(vm)
+    const usernameDisabled = () => findAllByName(vm, 'ElInput').some((i: any) => i.$el.hasAttribute('disabled'))
+    expect(usernameDisabled()).toBe(true)
+
+    ;(model as any).accountType = 'normal'
+    await dbl(vm)
+    expect(usernameDisabled()).toBe(false)
+  })
+
+  it('值回写：缺省目标键经 $set 写入（Vue 2 反应式）', async () => {
+    const setSpy = vi.spyOn(Vue.prototype as unknown as { $set: (...a: unknown[]) => void }, '$set')
+    try {
+      // region 键**不存在**：Vue 2 下普通赋值不会触发更新，故渲染层必须走 $set。
+      const model = Vue.observable({ province: '', note: '' })
+      const vm = mountForm({
+        model,
+        formItemList: [
+          { prop: 'province', label: '省份', formtype: 'Input' as const, span: 24 },
+          { prop: 'note', label: '备注', formtype: 'Input' as const, span: 24 },
+          {
+            prop: 'region', label: '大区', formtype: 'Input' as const, span: 24,
+            reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }],
+          },
+        ],
+      })
+      await dbl(vm)
+      expect('region' in (model as Record<string, unknown>)).toBe(false)
+
+      // 无关字段编辑 → 不触发写回。
+      ;(model as any).note = 'x'
+      await dbl(vm)
+      expect('region' in (model as Record<string, unknown>)).toBe(false)
+
+      ;(model as any).province = 'zj'
+      await dbl(vm)
+      expect((model as Record<string, unknown>).region).toBe('zj')
+      expect(setSpy).toHaveBeenCalled()
+    } finally {
+      setSpy.mockRestore()
+    }
+  })
+})

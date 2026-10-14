@@ -1,0 +1,73 @@
+{
+  "nl": "大区同步管理：查询有主体名称；表格展示主体名称、所选省份、所属大区；支持新增、编辑、删除。表单里「所属大区」自动等于所选省份，并且在所选省份非空时不可手改。",
+  "nlEn": "Region-sync management: query by entity name; the table shows entity name, chosen province and region; supports add, edit and delete. In the form the \"region\" is set automatically to the chosen province and cannot be edited while a province is selected.",
+  "fixedFields": [
+    "entityName",
+    "province",
+    "region"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:region"
+  ],
+  "config": {
+    "name": "RegionSyncManage",
+    "apiUrl": "/api/region-syncs",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "entityName",
+        "label": "主体名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "province",
+        "label": "所选省份",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "浙江",
+            "value": "zj"
+          },
+          {
+            "label": "江苏",
+            "value": "js"
+          }
+        ]
+      },
+      {
+        "prop": "region",
+        "label": "所属大区",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "province"
+            ],
+            "fulfill": {
+              "value": {
+                "var": "province"
+              },
+              "disabled": {
+                "truthy": [
+                  {
+                    "var": "province"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 同一条规则同时给出 value（回写）与 disabled（只读）—— 自动同步且不可手改（vue3/schema）"
+}

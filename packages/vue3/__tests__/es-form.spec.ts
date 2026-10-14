@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { nextTick, reactive } from 'vue'
+import { nextTick, reactive, watch } from 'vue'
 import {
   ElForm, ElRow, ElCol, ElFormItem, ElInput, ElButton,
   ElSelect, ElOption, ElDatePicker, ElInputNumber,
@@ -426,5 +426,121 @@ describe('EsForm - 字段级 permissionValue 门控', () => {
     })
     await nextTick()
     expect(wrapper.text()).toContain('工资')
+  })
+})
+
+describe('EsForm - AI-07 字段联动 reactions', () => {
+  // reactions 的求值全在 core（resolveReactionOverlay / resolveReactionValues），三端只多做
+  // 两件事：把 overlay 合并进 formItemListFilter、把值回写交给 model watcher。这里证明这两件
+  // 接线真的生效（core 的语义由 packages/core/__tests__/reactions.spec.ts 覆盖）。
+  const dbl = async () => { await nextTick(); await nextTick() }
+
+  it('dataOptions：选项随依赖字段变化', async () => {
+    const model = reactive({ province: 'zj' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'province', label: '省份', formtype: 'Select', span: 24 },
+        {
+          prop: 'city', label: '城市', formtype: 'Select', span: 24,
+          reactions: [
+            { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }] } },
+            { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'js'] }, fulfill: { dataOptions: [{ label: '南京', value: 'nj' }] } },
+          ],
+        },
+      ],
+    })
+    await dbl()
+    const labels = () => wrapper.findAllComponents(ElOption).map((o) => o.props('label'))
+    expect(labels()).toContain('杭州')
+    expect(labels()).not.toContain('南京')
+
+    model.province = 'js'
+    await dbl()
+    expect(labels()).toContain('南京')
+    expect(labels()).not.toContain('杭州')
+  })
+
+  it('required：依赖变化时动态改变必填态', async () => {
+    const model = reactive({ city: '' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'city', label: '城市', formtype: 'Input', span: 24 },
+        {
+          prop: 'invoiceNo', label: '发票号', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['city'], fulfill: { required: { notEmpty: [{ var: 'city' }] } } }],
+        },
+      ],
+    })
+    await dbl()
+    const requiredItem = () => wrapper.findAll('.el-form-item')[1]
+    expect(requiredItem().classes()).not.toContain('is-required')
+
+    model.city = 'hz'
+    await dbl()
+    expect(requiredItem().classes()).toContain('is-required')
+  })
+
+  it('disabled：条件禁用透传到控件', async () => {
+    const model = reactive({ accountType: 'system' })
+    const wrapper = mountForm({
+      model,
+      formItemList: [
+        { prop: 'accountType', label: '类型', formtype: 'Select', span: 24 },
+        {
+          prop: 'username', label: '账号名', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['accountType'], fulfill: { disabled: { '==': [{ var: 'accountType' }, 'system'] } } }],
+        },
+      ],
+    })
+    await dbl()
+    const usernameDisabled = () => wrapper.findAllComponents(ElInput).some((i) => i.props('disabled') === true)
+    expect(usernameDisabled()).toBe(true)
+
+    model.accountType = 'normal'
+    await dbl()
+    expect(usernameDisabled()).toBe(false)
+  })
+
+  it('值回写：依赖变化时写入目标字段，且仅在变更时写（可收敛、不踩无关编辑）', async () => {
+    const model = reactive({ province: '', region: '', note: '' })
+    mountForm({
+      model,
+      formItemList: [
+        { prop: 'province', label: '省份', formtype: 'Input', span: 24 },
+        { prop: 'note', label: '备注', formtype: 'Input', span: 24 },
+        {
+          prop: 'region', label: '大区', formtype: 'Input', span: 24,
+          reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }],
+        },
+      ],
+    })
+    let changes = 0
+    watch(() => model.region, () => { changes++ })
+
+    // 挂载即静止：watch 非 immediate，无依赖变更就不写。
+    await dbl()
+    expect(model.region).toBe('')
+    expect(changes).toBe(0)
+
+    // 用户手改目标字段后编辑**无关**字段 → 不触发写回（依赖未变）。
+    model.region = 'manual'
+    await dbl()
+    expect(changes).toBe(1)
+    model.note = 'x'
+    await dbl()
+    expect(model.region).toBe('manual')
+    expect(changes).toBe(1)
+
+    // 依赖变更 → 恰好写一次，值正确、不循环。
+    model.province = 'zj'
+    await dbl()
+    expect(model.region).toBe('zj')
+    expect(changes).toBe(2)
+    model.province = 'js'
+    await dbl()
+    expect(model.region).toBe('js')
+    expect(changes).toBe(3)
   })
 })

@@ -211,6 +211,43 @@ export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
 export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
 
 /**
+ * 字段联动（AI-07）的一条规则里，`fulfill` 的取值：
+ *
+ * - `dataOptions`：**字面量选项数组**（JSON 数据，非表达式）—— AI-16 DSL 刻意排除对象
+ *   字面量，`[{label,value}]` 无法由表达式构造，故「选项随另一字段变化」用**多条规则 +
+ *   各自的 `when` 谓词**表达（每个分支一套选项）
+ * - `required` / `disabled`：求值为布尔的 AI-16 **表达式节点**
+ * - `value`：求值为**本字段自己**新值的 AI-16 **表达式节点**（写回 model；此处
+ *   `dependencies` 必填）
+ *
+ * 全部为纯 JSON 数据，**绝无 JS 回调**。类型保持宽松 —— 权威校验在 Zod，
+ * 运行时求值在 core `reactions.ts`。
+ */
+export interface FieldReactionFulfill {
+  /** 字面量选项数组。非数组则该键被丢弃、保留静态 dataOptions */
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  /** 是否必填（表达式节点）。求值结果非布尔则该键被丢弃 */
+  required?: unknown
+  /** 是否禁用（表达式节点）。求值结果非布尔则该键被丢弃 */
+  disabled?: unknown
+  /** 本字段的新值（表达式节点，写回）。存在时 `dependencies` 必填 */
+  value?: unknown
+}
+
+/**
+ * 字段联动规则（AI-07，对标 Formily `x-reactions` 的声明式子集）。
+ *
+ * - `dependencies`：触发重算的 model 路径；`fulfill.value` 存在时**必填**
+ * - `when`：可选 AI-16 表达式节点，门控整条规则（假值 = 不生效）
+ * - `fulfill`：要求联动的字段属性集合
+ */
+export interface FieldReaction {
+  dependencies?: string[]
+  when?: FieldHiddenExprNode
+  fulfill: FieldReactionFulfill
+}
+
+/**
  * 表单字段选项
  *
  * 注意 render 签名：
@@ -257,6 +294,15 @@ export interface FormItemOption {
    *   `normalizeFormItem` 在运行时编译为函数
    */
   isHidden?: FieldHidden | ((model: ModelData, item: FormItemOption, formProps: unknown) => boolean)
+  /**
+   * 字段联动（AI-07，声明式，对标 Formily `x-reactions`）：本字段的值/选项/必填/禁用
+   * 由**其他字段**的当前值决定。纯 JSON 数据（**绝无 JS 回调**）。
+   *
+   * 由 core `reactions.ts` 在调用点求值：显示派生（`dataOptions`/`required`/`disabled`）
+   * 在三端 `formItemListFilter` 内合并；值回写（`fulfill.value`）由渲染层的 model watcher
+   * 落盘。表单作用域（查询表单 + 新增/编辑弹窗），**非表格列**。
+   */
+  reactions?: FieldReaction[]
   /** 自定义渲染函数（h, model, ctx） */
   render?: (h: RenderFn, model: ModelData, ctx: { row: FormItemOption; index: number }) => AnyVNode
   /** 远程加载选项配置 */
