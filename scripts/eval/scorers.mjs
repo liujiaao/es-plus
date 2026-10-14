@@ -325,6 +325,14 @@ export const CAPABILITY_SCORERS = [
     applicable: (g) => g.tableOptions?.editConfig != null,
     pass: (g, p) => eq(g.tableOptions?.editConfig ?? null, p.tableOptions?.editConfig ?? null),
   },
+  {
+    // 声明式合并单元格（AI-23）：顶层 mergeConfig 整体深等值。rowsBy 的**列集合与顺序**都是
+    // 渲染契约（前者决定哪几列合并、后者决定分组主轴），「给了 mergeConfig 但列不对/顺序反了」
+    // 不算命中。仅当 gold 声明时才 applicable。
+    key: 'mergeConfig',
+    applicable: (g) => !!g.mergeConfig,
+    pass: (g, p) => eq(g.mergeConfig ?? null, p.mergeConfig ?? null),
+  },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 

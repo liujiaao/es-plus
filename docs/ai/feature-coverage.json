@@ -1,0 +1,857 @@
+{
+  "$schema": "https://liujiaao.github.io/es-plus/ai/feature-coverage.schema.json",
+  "note": "AI 可达性台账：文档站 96 例特性演示 × 分层可达性。单一真源——由 scripts/check-feature-coverage.mjs 守卫，与磁盘 examples/**/*.vue、两个 *.data.ts 的 getComponent 引用三方 1:1 咬合。行档由 tokens 最弱档派生。",
+  "tiers": {
+    "A": "前门声明式一步可达（generate_crud）",
+    "B": "声明式，但需 generate_crud_from_config（前门刻意不收）",
+    "C": "逃生舱 / 函数值（Tier-3 源码串或闭包）",
+    "D": "非 AI 生成目标（宿主编排 / 组件命令式 API）"
+  },
+  "demos": [
+    {
+      "id": "form/01-basic",
+      "group": "es-form",
+      "title": "基础配置表单",
+      "tokens": [
+        "formtype",
+        "validation",
+        "formLayout"
+      ]
+    },
+    {
+      "id": "form/02-layout",
+      "group": "es-form",
+      "title": "布局与折叠",
+      "tokens": [
+        "formLayout"
+      ]
+    },
+    {
+      "id": "form/03-conditional",
+      "group": "es-form",
+      "title": "条件联动表单",
+      "tokens": [
+        "fieldVisibility",
+        "reactions"
+      ]
+    },
+    {
+      "id": "form/04-dynamic",
+      "group": "es-form",
+      "title": "动态增减表单",
+      "tokens": [
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "form/05-validation",
+      "group": "es-form",
+      "title": "表单验证",
+      "tokens": [
+        "validation",
+        "validatorFn"
+      ]
+    },
+    {
+      "id": "form/06-async-options",
+      "group": "es-form",
+      "title": "异步数据表单",
+      "tokens": [
+        "apiParams",
+        "reactions"
+      ]
+    },
+    {
+      "id": "form/07-custom-render",
+      "group": "es-form",
+      "title": "自定义渲染表单",
+      "tokens": [
+        "formtype",
+        "renderFn"
+      ]
+    },
+    {
+      "id": "form/08-dialog",
+      "group": "es-form",
+      "title": "弹窗表单",
+      "tokens": [
+        "formtype",
+        "dialogs"
+      ]
+    },
+    {
+      "id": "form/09-datetime-range",
+      "group": "es-form",
+      "title": "日期时间范围",
+      "tokens": [
+        "formtype"
+      ]
+    },
+    {
+      "id": "form/10-cascader",
+      "group": "es-form",
+      "title": "级联选择器",
+      "tokens": [
+        "formtype"
+      ]
+    },
+    {
+      "id": "form/11-advanced-buttons",
+      "group": "es-form",
+      "title": "高级按钮区",
+      "tokens": [
+        "toolbarBtns",
+        "renderBtnFn"
+      ]
+    },
+    {
+      "id": "form/12-upload",
+      "group": "es-form",
+      "title": "图片上传",
+      "tokens": [
+        "formtype",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "form/13-file-upload",
+      "group": "es-form",
+      "title": "文件上传",
+      "tokens": [
+        "formtype",
+        "renderFn"
+      ]
+    },
+    {
+      "id": "form/14-preferences",
+      "group": "es-form",
+      "title": "偏好设置",
+      "tokens": [
+        "formtype"
+      ]
+    },
+    {
+      "id": "form/15-computed-fields",
+      "group": "es-form",
+      "title": "联动计算",
+      "tokens": [
+        "reactions"
+      ]
+    },
+    {
+      "id": "form/16-custom-button",
+      "group": "es-form",
+      "title": "自定义按钮区",
+      "tokens": [
+        "renderBtnFn"
+      ]
+    },
+    {
+      "id": "form/17-detail-mode",
+      "group": "es-form",
+      "title": "详情模式",
+      "tokens": [
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "form/18-search-form",
+      "group": "es-form",
+      "title": "组合搜索",
+      "tokens": [
+        "fieldVisibility",
+        "apiParams",
+        "formLayout"
+      ]
+    },
+    {
+      "id": "table/01-basic",
+      "group": "es-table",
+      "title": "基础表格",
+      "tokens": [
+        "columnsDecl"
+      ]
+    },
+    {
+      "id": "table/02-toolbar",
+      "group": "es-table",
+      "title": "表格工具栏",
+      "tokens": [
+        "tableBtns",
+        "sfcSlot"
+      ]
+    },
+    {
+      "id": "table/03-custom",
+      "group": "es-table",
+      "title": "自定义列渲染",
+      "tokens": [
+        "renderFn",
+        "formatterFn",
+        "sfcSlot"
+      ]
+    },
+    {
+      "id": "table/04-selection",
+      "group": "es-table",
+      "title": "多选与跨页记忆",
+      "tokens": [
+        "tableBase",
+        "pagination"
+      ]
+    },
+    {
+      "id": "table/05-edit",
+      "group": "es-table",
+      "title": "行内编辑",
+      "tokens": [
+        "inlineEdit"
+      ]
+    },
+    {
+      "id": "table/06-sort",
+      "group": "es-table",
+      "title": "排序表格",
+      "tokens": [
+        "columnSortable",
+        "defaultSort"
+      ],
+      "note": "声明式默认排序 A 档；列级 sortable 仅在 columns 上，需 from_config"
+    },
+    {
+      "id": "table/07-group",
+      "group": "es-table",
+      "title": "分组表头",
+      "tokens": [
+        "columnGroups"
+      ]
+    },
+    {
+      "id": "table/08-fixed",
+      "group": "es-table",
+      "title": "固定列与高度",
+      "tokens": [
+        "columnStyle",
+        "tableBase"
+      ]
+    },
+    {
+      "id": "table/09-pagination",
+      "group": "es-table",
+      "title": "分页表格",
+      "tokens": [
+        "configTableOut",
+        "pagination",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "table/10-remote-data",
+      "group": "es-table",
+      "title": "远程数据表格",
+      "tokens": [
+        "configTableOut",
+        "pagination",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "table/11-expand",
+      "group": "es-table",
+      "title": "展开行与树形",
+      "tokens": [
+        "expandConfig",
+        "treeConfig"
+      ]
+    },
+    {
+      "id": "table/12-cell-merge",
+      "group": "es-table",
+      "title": "单元格合并与行样式",
+      "tokens": [
+        "mergeConfig",
+        "spanMethodFn",
+        "tableBase"
+      ],
+      "note": "声明式合并（mergeConfig）A 档；任意闭包 spanMethod 保真 C 档"
+    },
+    {
+      "id": "table/13-query-table",
+      "group": "es-table",
+      "title": "配置化查询表格",
+      "tokens": [
+        "formLayout",
+        "apiParams",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "table/14-row-actions",
+      "group": "es-table",
+      "title": "行操作按钮与动态显隐",
+      "tokens": [
+        "operationColumn",
+        "renderBtnFn"
+      ]
+    },
+    {
+      "id": "table/15-dynamic-columns",
+      "group": "es-table",
+      "title": "动态列与汇总行",
+      "tokens": [
+        "columnsDecl",
+        "formatterFn",
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "table/16-callback-pipeline",
+      "group": "es-table",
+      "title": "请求回调管线",
+      "tokens": [
+        "configTableOut",
+        "pagination",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "table/17-current-row",
+      "group": "es-table",
+      "title": "当前行与主从联动",
+      "tokens": [
+        "tableBase",
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "table/18-table-height",
+      "group": "es-table",
+      "title": "自适应容器高度",
+      "tokens": [
+        "tableBase"
+      ]
+    },
+    {
+      "id": "crud-page/01-basic",
+      "group": "es-crud-page",
+      "title": "基础 CRUD",
+      "tokens": [
+        "operationColumn"
+      ]
+    },
+    {
+      "id": "crud-page/02-multi-dialog",
+      "group": "es-crud-page",
+      "title": "多弹窗绑定",
+      "tokens": [
+        "toolbarBtns",
+        "operationColumn",
+        "dialogs"
+      ]
+    },
+    {
+      "id": "crud-page/03-custom-render",
+      "group": "es-crud-page",
+      "title": "自定义弹窗内容",
+      "tokens": [
+        "dialogs",
+        "renderFn"
+      ]
+    },
+    {
+      "id": "crud-page/04-dynamic-title",
+      "group": "es-crud-page",
+      "title": "动态标题与回填",
+      "tokens": [
+        "dialogs",
+        "renderFn"
+      ]
+    },
+    {
+      "id": "crud-page/05-row-confirm",
+      "group": "es-crud-page",
+      "title": "行确认与删除",
+      "tokens": [
+        "operationColumn",
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "crud-page/06-permission",
+      "group": "es-crud-page",
+      "title": "权限控制按钮",
+      "tokens": [
+        "permissions"
+      ]
+    },
+    {
+      "id": "crud-page/07-custom-footer",
+      "group": "es-crud-page",
+      "title": "自定义弹窗底部",
+      "tokens": [
+        "dialogs",
+        "renderBtnFn"
+      ]
+    },
+    {
+      "id": "crud-page/08-program-open",
+      "group": "es-crud-page",
+      "title": "程序化控制弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "crud-page/09-hidden-column",
+      "group": "es-crud-page",
+      "title": "隐藏操作列",
+      "tokens": [
+        "operationColumn",
+        "toolbarBtns"
+      ]
+    },
+    {
+      "id": "crud-page/10-full-business",
+      "group": "es-crud-page",
+      "title": "完整业务场景",
+      "tokens": [
+        "dialogs",
+        "renderFn",
+        "renderBtnFn",
+        "configTableOut"
+      ]
+    },
+    {
+      "id": "dialog/01-basic",
+      "group": "use-dialog",
+      "title": "弹窗基础与变体",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/02-form",
+      "group": "use-dialog",
+      "title": "表单弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/03-confirm",
+      "group": "use-dialog",
+      "title": "确认与消息弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/04-nested-modal",
+      "group": "use-dialog",
+      "title": "嵌套弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/05-advanced",
+      "group": "use-dialog",
+      "title": "高级弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/06-async",
+      "group": "use-dialog",
+      "title": "异步组件弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/07-detail-preview",
+      "group": "use-dialog",
+      "title": "详情预览弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/08-table-dialog",
+      "group": "use-dialog",
+      "title": "弹窗内嵌表格",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/09-step-dialog",
+      "group": "use-dialog",
+      "title": "分步向导弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/10-dynamic-btn",
+      "group": "use-dialog",
+      "title": "动态按钮状态弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/11-multi-instance",
+      "group": "use-dialog",
+      "title": "多实例独立弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "dialog/12-form-table-dialog",
+      "group": "use-dialog",
+      "title": "表单+表格+弹窗闭环",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/01-form-table",
+      "group": "linkage",
+      "title": "查询表格完整版",
+      "tokens": [
+        "formLayout",
+        "configTableOut"
+      ]
+    },
+    {
+      "id": "advanced/02-zero-code-query",
+      "group": "linkage",
+      "title": "零代码查询",
+      "tokens": [
+        "apiParams",
+        "reactions",
+        "configTableOut"
+      ]
+    },
+    {
+      "id": "advanced/03-cross-page-select",
+      "group": "linkage",
+      "title": "跨页选择持久化",
+      "tokens": [
+        "tableBase"
+      ]
+    },
+    {
+      "id": "advanced/04-step-form",
+      "group": "linkage",
+      "title": "分步表单",
+      "tokens": [
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "advanced/05-form-table-dialog",
+      "group": "linkage",
+      "title": "完整CRUD示例",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/06-order-expand-table",
+      "group": "linkage",
+      "title": "订单展开明细",
+      "tokens": [
+        "expandConfig",
+        "hostOrchestration"
+      ]
+    },
+    {
+      "id": "advanced/07-one-line-crud",
+      "group": "linkage",
+      "title": "极简CRUD弹窗",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/08-row-approval",
+      "group": "linkage",
+      "title": "行操作审批流程",
+      "tokens": [
+        "operationColumn",
+        "renderBtnFn",
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/09-auto-fit-height",
+      "group": "linkage",
+      "title": "自适应高度表格",
+      "tokens": [
+        "tableBase"
+      ]
+    },
+    {
+      "id": "advanced/10-any-backend-api",
+      "group": "linkage",
+      "title": "适配任意后端接口",
+      "tokens": [
+        "configTableOut",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "advanced/11-conditional-btns",
+      "group": "linkage",
+      "title": "条件行操作按钮",
+      "tokens": [
+        "operationColumn",
+        "renderBtnFn"
+      ]
+    },
+    {
+      "id": "advanced/12-dialog-table-form",
+      "group": "linkage",
+      "title": "弹窗内表格嵌套表单",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/13-dynamic-form-query",
+      "group": "linkage",
+      "title": "动态表单查询",
+      "tokens": [
+        "fieldVisibility",
+        "apiParams",
+        "formLayout"
+      ]
+    },
+    {
+      "id": "advanced/14-cascade-form-table",
+      "group": "linkage",
+      "title": "级联表单联动表格",
+      "tokens": [
+        "fieldVisibility",
+        "httpRequestFn"
+      ]
+    },
+    {
+      "id": "advanced/15-step-import-wizard",
+      "group": "linkage",
+      "title": "分步导入向导",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "advanced/16-admin-page",
+      "group": "linkage",
+      "title": "完整后台管理页",
+      "tokens": [
+        "hostSkeleton"
+      ]
+    },
+    {
+      "id": "advanced/17-crud-page",
+      "group": "linkage",
+      "title": "EsCrudPage 一键 CRUD",
+      "tokens": [
+        "crudPage"
+      ],
+      "note": "EsCrudPage 单 schema = AI 主产物（前门）"
+    },
+    {
+      "id": "advanced/18-virtual-table",
+      "group": "linkage",
+      "title": "虚拟滚动基础",
+      "tokens": [
+        "virtualScroll",
+        "tableBase"
+      ]
+    },
+    {
+      "id": "advanced/19-virtual-table-sort",
+      "group": "linkage",
+      "title": "虚拟表格排序+固定列",
+      "tokens": [
+        "virtualScroll",
+        "columnSortable",
+        "columnStyle"
+      ]
+    },
+    {
+      "id": "advanced/20-virtual-table-select",
+      "group": "linkage",
+      "title": "虚拟表格多选+操作",
+      "tokens": [
+        "virtualScroll",
+        "renderFn",
+        "operationColumn"
+      ]
+    },
+    {
+      "id": "advanced/21-virtual-table-custom-render",
+      "group": "linkage",
+      "title": "虚拟表格自定义渲染",
+      "tokens": [
+        "virtualScroll",
+        "renderFn",
+        "formatterFn",
+        "sfcSlot"
+      ]
+    },
+    {
+      "id": "advanced/22-virtual-table-row-style",
+      "group": "linkage",
+      "title": "虚拟表格行样式+事件",
+      "tokens": [
+        "virtualScroll",
+        "tableBase"
+      ]
+    },
+    {
+      "id": "advanced/23-virtual-table-crud",
+      "group": "linkage",
+      "title": "虚拟表格完整CRUD",
+      "tokens": [
+        "virtualScroll",
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "vxe-table/01-basic-switch",
+      "group": "vxe-table",
+      "title": "引擎切换",
+      "tokens": [
+        "virtualScroll"
+      ]
+    },
+    {
+      "id": "vxe-table/02-selection-index",
+      "group": "vxe-table",
+      "title": "多选与序号列",
+      "tokens": [
+        "columnsDecl"
+      ]
+    },
+    {
+      "id": "vxe-table/03-expand-row",
+      "group": "vxe-table",
+      "title": "展开行",
+      "tokens": [
+        "columnsDecl",
+        "sfcSlot"
+      ]
+    },
+    {
+      "id": "vxe-table/04-sort-formatter",
+      "group": "vxe-table",
+      "title": "排序与格式化",
+      "tokens": [
+        "columnSortable",
+        "formatterFn"
+      ]
+    },
+    {
+      "id": "vxe-table/05-custom-render",
+      "group": "vxe-table",
+      "title": "自定义 render 渲染",
+      "tokens": [
+        "renderFn"
+      ]
+    },
+    {
+      "id": "vxe-table/06-cell-edit",
+      "group": "vxe-table",
+      "title": "单元格编辑",
+      "tokens": [
+        "inlineEdit",
+        "vxeFirstClass"
+      ],
+      "note": "editConfig A 档；editRender 等 vxe 原生键 AI Zod 零声明"
+    },
+    {
+      "id": "vxe-table/07-row-edit",
+      "group": "vxe-table",
+      "title": "行编辑与校验",
+      "tokens": [
+        "inlineEdit",
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/08-toolbar-export",
+      "group": "vxe-table",
+      "title": "工具栏与导出",
+      "tokens": [
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/09-column-resize",
+      "group": "vxe-table",
+      "title": "列宽调整与键盘鼠标",
+      "tokens": [
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/10-tree-data",
+      "group": "vxe-table",
+      "title": "树形数据",
+      "tokens": [
+        "treeConfig",
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/11-proxy-config",
+      "group": "vxe-table",
+      "title": "proxyConfig 服务端分页",
+      "tokens": [
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/12-footer-summary",
+      "group": "vxe-table",
+      "title": "汇总行 footerMethod",
+      "tokens": [
+        "formatterFn",
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/13-escape-hatch",
+      "group": "vxe-table",
+      "title": "逃生舱 vxeConfig + vxeOn",
+      "tokens": [
+        "vxeFirstClass"
+      ]
+    },
+    {
+      "id": "vxe-table/14-crud-with-dialog",
+      "group": "vxe-table",
+      "title": "完整 CRUD + useDialog",
+      "tokens": [
+        "virtualScroll",
+        "useDialogApi"
+      ]
+    },
+    {
+      "id": "vxe-table/15-merge-cells",
+      "group": "vxe-table",
+      "title": "复杂合并单元格：静态 + 动态 + 表单联动",
+      "tokens": [
+        "columnGroups",
+        "spanMethodFn",
+        "vxeFirstClass"
+      ]
+    }
+  ]
+}

@@ -423,6 +423,17 @@ JSON. The contract is **mark, never drop**:
   the vxe edit-closed/update API, not by expecting an automatic write-back. Function-valued
   \`editRender.events\` and custom-registered renderers are OUT OF SCOPE. Use this for
   "表格行内编辑 / 双击单元格改数量 / 点单元格直接改".
+- **\`mergeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **row merge** — \`{ rowsBy: ['dept', 'team'] }\` (non-empty). Each named
+  column is grouped by **adjacent-equal** values: the first row of a run keeps the cell
+  with \`rowspan\` = run length and the rest are merged away. \`rowsBy\` order is itself the
+  render contract (it is the grouping axis), so keep the columns in the order the request
+  names them. Cross-renderer (el-table \`span-method\` / a-table column \`customCell\` /
+  vxe \`mergeMethod\`) — the generator consumes it; you do NOT write a span method. Use this
+  for "合并单元格 / 相同的部门只显示一次 / 分组表". DISTINCT from the FUNCTIONAL
+  \`tableOptions.spanMethod\` (an arbitrary JS closure, Tier-3 escape hatch, **not**
+  cross-renderer — a-table has no span-method channel): if both are set the explicit
+  \`spanMethod\` wins and the generator warns.
 - **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
   cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
   inline in SFC mode; carried through in schema mode.

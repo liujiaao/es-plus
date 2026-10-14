@@ -1,0 +1,55 @@
+{
+  "nl": "（Ant Design Vue 项目）大区-城市-小组统计表：三列合并，展示金额。支持新增、编辑。",
+  "nlEn": "(Ant Design Vue project) Region-city-team statistics table: three columns merge, showing amount. Supports add and edit.",
+  "fixedFields": [
+    "region",
+    "city",
+    "team",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "RegionTeamStatAntdv",
+    "apiUrl": "/api/stat",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "region",
+        "label": "大区",
+        "formtype": "Input"
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "region",
+        "city",
+        "team"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: antdv 三列合并（三列各自预计算 rowSpan 数组）"
+}

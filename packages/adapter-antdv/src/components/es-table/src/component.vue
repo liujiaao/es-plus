@@ -198,6 +198,8 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
   computeBoundaryRollback,
+  buildColumnSpans,
+  resolveMergeConfig,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -650,6 +652,27 @@ const adaptedColumns = computed(() => {
     }
   }
 
+  // 合并单元格（AI-23）：a-table **没有** span-method prop，跨端通道是**列级 customCell**
+  // （`(record, rowIndex) => ({ rowSpan, colSpan })`，0 = 该格被合并掉，与 el-table/antdv 一致）。
+  // 用 core 的 buildColumnSpans 预计算每列 span，避免逐格重算。
+  // 注意：es-plus 的 `TableColumn` **不声明** customCell（adaptColumn 也不转发它），故此刻
+  // 该列不可能已带 customCell —— `typeof` 守卫是**防御性**的（防未来 adaptColumn 转发后
+  // 被静默覆盖），不是今天可达的逃生舱。
+  const mergeCfg = resolveMergeConfig(props.options)
+  if (mergeCfg) {
+    const rows = displayDataSource.value as Record<string, unknown>[]
+    for (const c of cols) {
+      const prop = (c.dataIndex ?? c.key) as string | undefined
+      if (!prop || !mergeCfg.rowsBy.includes(prop)) continue
+      if (typeof c.customCell === 'function') continue
+      const spans = buildColumnSpans(rows.map((r) => (r == null ? undefined : r[prop])))
+      c.customCell = (_record: unknown, rowIndex: number) => ({
+        rowSpan: spans[rowIndex] === undefined ? 1 : spans[rowIndex],
+        colSpan: 1,
+      })
+    }
+  }
+
   return cols
 })
 
@@ -662,6 +685,9 @@ const TABLE_INTERNAL_KEYS = new Set([
   'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount',
   'rowClassName', 'border', 'stripe', 'size', 'showHeader',
   'emptyText', 'headerCellStyle', 'highlightCurrentRow',
+  // AI-23：声明式合并单元格在默认引擎里由组件侧翻译成**列级 customCell**（a-table 无
+  // span-method prop），不是 a-table 的直接 attrs，故列入内部键。
+  'mergeConfig',
 ])
 
 const fallthroughAttrs = useAttrs()

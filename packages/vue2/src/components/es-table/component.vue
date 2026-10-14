@@ -211,6 +211,8 @@ import {
   findValueByKey,
   resolveKeepPage,
   computeBoundaryRollback,
+  buildRowSpanMethod,
+  resolveMergeConfig,
   type TableColumn,
   type PaginationConfig,
   type TableOptions,
@@ -285,6 +287,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
   'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
+  // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
+  'mergeConfig',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -907,6 +911,19 @@ export default defineComponent({
         result.height = tableHeight.value
       } else if (heightType.value === 'maxHeight') {
         result.maxHeight = tableHeight.value
+      }
+      // 合并单元格（AI-23）：声明式 mergeConfig → el-table 的 spanMethod。
+      // 显式 spanMethod 是 Tier-3 逃生舱、优先级更高（两者并存时告警，不静默覆盖）。
+      const mergeCfg = resolveMergeConfig(props.options)
+      if (mergeCfg) {
+        if (typeof result.spanMethod === 'function') {
+          console.warn('[es-plus] 同时设置了 tableOptions.spanMethod 与 mergeConfig —— 显式 spanMethod 生效，mergeConfig 被忽略。')
+        } else {
+          result.spanMethod = buildRowSpanMethod(
+            mergeCfg.rowsBy,
+            effectiveDataSource.value as Record<string, unknown>[],
+          )
+        }
       }
       return result
     })

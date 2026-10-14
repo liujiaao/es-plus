@@ -360,6 +360,24 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
+    label: "Row merge / grouped rows → top-level `mergeConfig`",
+    nl: "员工台账：查询条件有姓名；表格展示部门、小组、姓名、职位；同一个部门的行把「部门」合并显示一次，同一个小组把「小组」合并显示一次；支持新增、编辑。",
+    reasoning:
+      "NL 说「同一个部门的行合并显示一次 / 合并单元格 / 分组表」→ 顶层 `mergeConfig`（声明式行合并，纯 JSON 数据、非扩展点）：`{ rowsBy: ['dept', 'team'] }`（数组非空）。语义是**相邻相等**分组：被点名的列按值切段，每段首行保留单元格且 `rowspan` = 段长，其余格被合并掉。`rowsBy` 的**顺序即分组轴**（先按部门、再按小组），照请求里点名的列序写。这是跨端声明式窄子集——生成器会把它翻成三端各自的机制（el-table `span-method` / a-table 列级 `customCell` / vxe `mergeMethod`），**绝不手写 span 函数**。**区别于**函数式 `tableOptions.spanMethod`（任意 JS 闭包，Tier-3、非跨端；两者并存时显式 spanMethod 胜出且生成器告警）。\n\n注意这是**分组**不是**树**：行仍是平铺（横向相邻合并），不是父子嵌套——「树形结构/子部门嵌套」用顶层 `treeConfig`，别混。",
+    config: {
+      name: "StaffMergeManage",
+      apiUrl: "/api/staff",
+      fields: [
+        { prop: "dept", label: "部门", formtype: "Input", inForm: false },
+        { prop: "team", label: "小组", formtype: "Input", inForm: false },
+        { prop: "name", label: "姓名", formtype: "Input" },
+        { prop: "role", label: "职位", formtype: "Input", inQuery: false },
+      ],
+      mergeConfig: { rowsBy: ["dept", "team"] },
+      actions: ["add", "edit"],
+    },
+  },
+  {
     label: "Inline row editing → `tableOptions.editConfig` + `columns[].editRender` (vxe engine)",
     nl: "商品价格维护：查询条件有商品名称；表格支持行内编辑，单击单元格修改价格；表格展示商品名称、价格、库存；支持编辑。",
     reasoning:
@@ -398,6 +416,7 @@ function buildContent(): string {
     "- Multi-level group headers (\"分组表头\") and non-field columns (序号/勾选/展开列) → the top-level `columns` escape array (aligned with the renderer `TableColumn`): a group is `{ label, groups: [ … ] }` (2 levels max cross-renderer), a non-field column is `{ type: 'index' | 'selection' | 'expand' }`. `columns` REPLACES the derived table columns (override, not merge) — every field shown in the table must appear inside it; `fields` still drives the query/add/edit forms. The operation column is auto-appended from `actions`, so don't add it here.",
     "- Row-expand content (\"每行可展开查看…\") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (non-empty). Presence makes the table render ONE row-expander showing a read-only `label: value` list from `row[prop]` (usually detail-only fields, marked `inTable:false`). If `columns` already declares a `{ type: 'expand' }` column the content attaches there; otherwise the generator prepends one — don't add the expander column yourself. DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.",
     "- Tree / hierarchical rows (\"树形\", \"部门树\", \"分类树\", \"父子层级\", \"子节点嵌套在父节点下\") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. Renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically. Set `childrenField` only when children nest under a key other than `children`; set `expandAll: true` to expand every node by default. Not for lazy/async loading. DISTINCT from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the top-level key.",
+    "- Declarative row merge (\"合并单元格\", \"相同的部门只显示一次\", \"分组表\", \"同一类只显示一次\") → the top-level `mergeConfig`: `{ rowsBy: ['dept', 'team'] }` (non-empty). Each named column is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with `rowspan` = run length, the rest are merged away. `rowsBy` order IS the grouping axis — keep the columns in the order the request names them. Cross-renderer (el-table `span-method` / a-table column `customCell` / vxe `mergeMethod`) — the generator consumes it, you do NOT write a span method. DISTINCT from the FUNCTIONAL `tableOptions.spanMethod` (an arbitrary JS closure — Tier-3 and NOT cross-renderer): if both are set the explicit `spanMethod` wins and the generator warns.",
     "- Inline row editing (\"表格行内编辑\", \"双击单元格改数量\", \"点单元格直接改\") → THREE parts, all under the vxe engine: `tableOptions.engine: 'vxe'`; the table-level switch `tableOptions.editConfig` (`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }`, defaults trigger:'click' / mode:'cell'); and a per-column `columns[].editRender` on EVERY editable column (`{ name: '$input' | '$select' | '$textarea' | '$date', type?, options?, props?, autofocus?, defaultValue? }`, `$select` wants `options`). A column without `editRender` is NOT editable — `editConfig` alone is a no-op — and both are silently ignored unless the engine is vxe. Declare the editable columns via the top-level `columns` array (it REPLACES the derived columns; the operation column is still auto-appended). Function-valued `editRender.events` and custom renderers are out of scope.",
     "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` and `reactions` above are declarative data, NOT extension points — they cover field visibility and field linkage/computed; don't reach for formatter/render for those.)",
     "- Cross-file prerequisite (permission gating / i18n): `permissionValue` (field/column/button RBAC) and i18n `labelKey` are INERT until the HOST APP ENTRY assembles the plugin — `app.use(ESPlus, { permission: (code) => …, t: (key) => … })` on vue3/antdv, `Vue.use(ESPlus, {...})` on vue2 — and remote `apiParams` needs a global `httpRequest`. Emit the config as usual; never inline permission checks or `t(...)` calls into fields/columns (the entry side is the host's job). `scaffold_page` returns a ready-to-copy `src/main.ts` (vue2: `src/main.js`) assembly boilerplate covering all three.",

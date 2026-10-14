@@ -13,7 +13,8 @@
  *   4. 每个 formtype 在每个渲染器里绑到契约声明的组件（FORM_RENDER_CONTRACT，防「键在、组件被换」）。
  *   5. 每个 formtype 的关键行为真的接通（FORM_BEHAVIOR_CONTRACT，防「键在、组件对、配置静默失效」）。
  *   6. 表格列语义三端一致（COLUMN_CONTRACT：内置列类型 index/selection/expand、groups 深度、
- *      expandConfig、列级 permissionValue/hidCol）—— 正向 token + 反向 forbid + deviation/knownGaps 原因非空。
+ *      expandConfig、列级 permissionValue/hidCol、声明式合并单元格 mergeConfig）—— 正向 token +
+ *      反向 forbid + deviation/knownGaps 原因非空。
  *
  * 用法：
  *   node scripts/check-renderer-parity.mjs            # 校验（CI 用）

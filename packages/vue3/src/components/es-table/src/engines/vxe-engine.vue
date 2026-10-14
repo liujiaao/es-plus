@@ -54,6 +54,7 @@ import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
 import { buildFirstClassGridOptions } from './use-vxe-grid-config'
+import { buildRowSpanMethod, resolveMergeConfig } from '@es-plus/core'
 import {
   normalizeVxeOrder,
   mergeCheckboxRecords,
@@ -189,6 +190,13 @@ const gridConfig = computed(() => {
 
   if (opts.spanMethod) {
     base.mergeMethod = (params: any) => applySpanShim(opts.spanMethod, params)
+  } else {
+    // 合并单元格（AI-23）：声明式 mergeConfig → vxe mergeMethod，复用同一 core 闭包。
+    const mergeCfg = resolveMergeConfig(opts)
+    if (mergeCfg) {
+      base.mergeMethod = (params: any) =>
+        applySpanShim(buildRowSpanMethod(mergeCfg.rowsBy, props.dataSource), params)
+    }
   }
 
   if (opts.rowClassName) {

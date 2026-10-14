@@ -66,6 +66,17 @@ interface TableOpts {
    * 具体哪些列可编辑由列级 `editRender` 决定（`columns[].editRender`）。原样透传。
    */
   editConfig?: Record<string, unknown>
+  // ── AI-22：闭合 strip-hazard。以下键此前仅存在于 core `TableOptions`（三端运行时
+  //    早已消费），却既不在 AI Zod（被静默剥）也不在本发射白名单（发射时丢）。两级一起补。
+  size?: 'large' | 'default' | 'small'
+  showHeader?: boolean
+  emptyText?: string
+  snIndex?: boolean
+  leftText?: string
+  cachePageSelection?: boolean
+  defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  refetchKeepPage?: boolean
+  localPagination?: boolean
 }
 
 export interface StructuredGenerateResult {
@@ -215,6 +226,17 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.configTableOut ? { configTableOut: tOpts.configTableOut } : {}),
     // vxe 行内编辑开关（AI-09 子项④）→ 运行时唯一家 tableOptions.editConfig，原样透传。
     ...(tOpts.editConfig ? { editConfig: tOpts.editConfig } : {}),
+    // AI-22：此前 AI Zod 未声明、故被静默剥掉的 tableOptions 键（三端运行时早已消费）。
+    // `false` 是这些布尔键的有效取值（如 showHeader:false 隐藏表头），故用 `!== undefined`。
+    ...(tOpts.size ? { size: tOpts.size } : {}),
+    ...(tOpts.showHeader !== undefined ? { showHeader: tOpts.showHeader } : {}),
+    ...(tOpts.emptyText ? { emptyText: tOpts.emptyText } : {}),
+    ...(tOpts.snIndex !== undefined ? { snIndex: tOpts.snIndex } : {}),
+    ...(tOpts.leftText ? { leftText: tOpts.leftText } : {}),
+    ...(tOpts.cachePageSelection !== undefined ? { cachePageSelection: tOpts.cachePageSelection } : {}),
+    ...(tOpts.defaultSort ? { defaultSort: tOpts.defaultSort } : {}),
+    ...(tOpts.refetchKeepPage !== undefined ? { refetchKeepPage: tOpts.refetchKeepPage } : {}),
+    ...(tOpts.localPagination !== undefined ? { localPagination: tOpts.localPagination } : {}),
     // 顶层 treeConfig（AI-09 子项③）→ 运行时唯一家 tableOptions.treeConfig。
     // vxe 原样认 childrenField/expandAll；el-table/a-table 在组件侧翻译成 tree-props /
     // childrenColumnName + default-expand-all(-rows)。即便子键为空也发（vxe 靠 treeConfig
@@ -227,6 +249,10 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
           },
         }
       : {}),
+    // 顶层 mergeConfig（AI-23）→ 运行时唯一家 tableOptions.mergeConfig。
+    // 三端组件侧读到它后各自落地：el-table spanMethod / a-table 列级 customCell /
+    // vxe mergeMethod（求值全部复用 core buildRowSpanMethod，三端等价由构造保证）。
+    ...(config.mergeConfig ? { mergeConfig: { rowsBy: [...config.mergeConfig.rowsBy] } } : {}),
   }
 
   // Query form layout (minFoldRows for collapse)
@@ -567,12 +593,27 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // vxe 行内编辑开关（AI-09 子项④）→ options.editConfig。纯 JSON 数据（无函数值）→
   // 用既有 inlineJson() 序列化（转义 </script>，同 schema/formItems 的做法）。
   if (tOpts.editConfig) lines.push(`  editConfig: ${inlineJson(tOpts.editConfig)},`)
+  // AI-22：与 schema 模式同等地「发射而非静默丢弃」这些 tableOptions 键（SFC 的 options
+  // 是手搓块，字符串/数字经 q()/numOrStr() 转义；defaultSort 是纯 JSON → inlineJson）。
+  if (tOpts.size) lines.push(`  size: ${q(tOpts.size)},`)
+  if (tOpts.showHeader !== undefined) lines.push(`  showHeader: ${tOpts.showHeader},`)
+  if (tOpts.emptyText) lines.push(`  emptyText: ${q(tOpts.emptyText)},`)
+  if (tOpts.snIndex !== undefined) lines.push(`  snIndex: ${tOpts.snIndex},`)
+  if (tOpts.leftText) lines.push(`  leftText: ${q(tOpts.leftText)},`)
+  if (tOpts.cachePageSelection !== undefined) lines.push(`  cachePageSelection: ${tOpts.cachePageSelection},`)
+  if (tOpts.defaultSort) lines.push(`  defaultSort: ${inlineJson(tOpts.defaultSort)},`)
+  if (tOpts.refetchKeepPage !== undefined) lines.push(`  refetchKeepPage: ${tOpts.refetchKeepPage},`)
+  if (tOpts.localPagination !== undefined) lines.push(`  localPagination: ${tOpts.localPagination},`)
   // 顶层 treeConfig（AI-09 子项③）→ options.treeConfig。手搓块逐键 q() 转义（同 configTableOut）。
   if (config.treeConfig) {
     const tcParts: string[] = []
     if (config.treeConfig.childrenField) tcParts.push(`childrenField: ${q(config.treeConfig.childrenField)}`)
     if (config.treeConfig.expandAll) tcParts.push(`expandAll: true`)
     lines.push(`  treeConfig: { ${tcParts.join(', ')} },`)
+  }
+  // 顶层 mergeConfig（AI-23）→ options.mergeConfig。rowsBy 是字符串数组（纯 JSON）→ inlineJson 序列化。
+  if (config.mergeConfig) {
+    lines.push(`  mergeConfig: ${inlineJson({ rowsBy: config.mergeConfig.rowsBy })},`)
   }
   lines.push(`}`)
 
@@ -993,7 +1034,8 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
 export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
   const item: Record<string, unknown> = {
     prop: field.prop,
-    ...(i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
+    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>` → label。
+    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
     formtype: field.formtype,
     span: context === 'query'
       ? (field.querySpan || (field.formtype === 'DatePicker' || field.formtype === 'TimePicker' ? 8 : 6))
@@ -1081,7 +1123,8 @@ function applyExpandConfig(
 export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, unknown> {
   const col: Record<string, unknown> = {
     prop: field.prop,
-    ...(i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
+    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>` → label。
+    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
   }
   if (field.width) col.width = field.width
   if (field.minWidth) col.minWidth = field.minWidth
@@ -1194,7 +1237,10 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // i18n 模式与 schema 模式（buildTableColumn/buildFormItem）统一走 labelKey：
   // es-table 内部按 labelKey 解析 i18n 文案。绝不能内联 `label: '${t('...')}'` ——
   // 内层单引号会截断外层字符串（编译失败），且 SFC 从不 import/定义 t。
-  if (config.i18n) {
+  if (field.labelKey) {
+    // 字段级显式 labelKey 优先（AI-22）。
+    parts.push(`labelKey: ${q(field.labelKey)}`)
+  } else if (config.i18n) {
     parts.push(`labelKey: ${q(`field.${field.prop}`)}`)
   } else {
     parts.push(`label: ${q(field.label)}`)

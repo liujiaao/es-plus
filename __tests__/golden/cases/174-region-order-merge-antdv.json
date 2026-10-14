@@ -1,0 +1,54 @@
+{
+  "nl": "（Ant Design Vue 项目）大区订单表：展示大区、城市、单号、金额；同一个大区的行把「大区」合并。支持新增、编辑、删除。",
+  "nlEn": "(Ant Design Vue project) Region order table: lists region, city, order number and amount; rows of the same region merge the Region cell. Supports add, edit and delete.",
+  "fixedFields": [
+    "region",
+    "city",
+    "orderNo",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "RegionOrderManage",
+    "apiUrl": "/api/orders",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "region",
+        "label": "大区",
+        "formtype": "Input"
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input"
+      },
+      {
+        "prop": "orderNo",
+        "label": "单号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "region"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-23: antdv 端 —— 合并经列级 customCell 落地（a-table 无 span-method 通道）"
+}

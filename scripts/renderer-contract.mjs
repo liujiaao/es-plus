@@ -269,5 +269,55 @@ export const COLUMN_CONTRACT = {
       antdv: '权限过滤只作用于顶层 columns；groups 的子列从不被 hidCol/permissionValue 过滤（三端一致，非跨端差异）。',
     },
   },
+  // —— 声明式合并单元格（AI-23：顶层 mergeConfig.rowsBy，跨端窄子集）——
+  //    **机制三端不同构，故本行是 deviation 的典型**：el-table 有 span-method 通道，
+  //    a-table 没有 —— antdv 必须改走列级 customCell。但三端**求值同源**（core 的
+  //    buildRowSpanMethod / buildColumnSpans），所以「相邻相等 → rowspan」的语义由构造保证。
+  'merge:rows': {
+    why:
+      '声明式合并（顶层 mergeConfig.rowsBy）：默认引擎里 vue3/vue2 把 rowsBy 翻成 el-table 的 spanMethod，' +
+      'antdv 翻成列级 customCell（a-table 无 span-method 通道）。三端语义同源（core 纯函数求值）',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/component.vue'],
+      vue2: ['packages/vue2/src/components/es-table/component.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/component.vue'],
+    },
+    tokens: {
+      // 正向：resolveMergeConfig 求值 + buildRowSpanMethod 建 span 函数 + 落到 el-table 的 spanMethod。
+      vue3: ['resolveMergeConfig', 'buildRowSpanMethod', 'spanMethod'],
+      vue2: ['resolveMergeConfig', 'buildRowSpanMethod', 'spanMethod'],
+      // antdv：预计算列级 span（buildColumnSpans）+ 装到列上的 customCell。
+      // `rowSpan: spans` 是**决定性** token —— 它只在桥真的注入返回 `{rowSpan}` 的函数时出现
+      // （裸 `customCell` 不够：`typeof c.customCell` 的防御守卫也会命中它）。
+      antdv: ['resolveMergeConfig', 'buildColumnSpans', 'rowSpan: spans'],
+    },
+    deviation: {
+      antdv:
+        'a-table **没有** span-method 通道，antdv 默认引擎把 mergeConfig 翻成**列级 customCell**' +
+        '（`(record, rowIndex) => ({ rowSpan, colSpan })`，rowSpan:0 = 该格被合并掉）；' +
+        'vue3/vue2 走 el-table 的 `span-method`。机制不同但语义同源 —— 三端都由 core 求值，跨端一致。',
+    },
+  },
+  // —— 同一 mergeConfig 在**引擎路径**（vxe ×3）里的处理：键名在三端有 v3/v4 分叉 ——
+  'merge:rows-engines': {
+    why:
+      '引擎路径的声明式合并：三端 vxe-engine 都复用 core 的 buildRowSpanMethod 建 span 函数，' +
+      '但 vxe v3 回调键名是 `spanMethod`、v4 改名为 `mergeMethod` —— vue2 按 v3、vue3/antdv 按 v4 发射',
+    sources: {
+      vue3: ['packages/vue3/src/components/es-table/src/engines/vxe-engine.vue'],
+      vue2: ['packages/vue2/src/components/es-table/engines/vxe-engine.vue'],
+      antdv: ['packages/adapter-antdv/src/components/es-table/src/engines/vxe-engine.vue'],
+    },
+    tokens: {
+      vue3: ['resolveMergeConfig', 'buildRowSpanMethod', 'mergeMethod'],
+      vue2: ['resolveMergeConfig', 'buildRowSpanMethod', 'spanMethod'],
+      antdv: ['resolveMergeConfig', 'buildRowSpanMethod', 'mergeMethod'],
+    },
+    deviation: {
+      vue2:
+        'vxe v3 的合并回调键名是 `spanMethod`（v4 改名为 `mergeMethod`）；vue2 的 vxe-engine 按 v3 键名发射，' +
+        'vue3/antdv 按 v4 键名 `mergeMethod`。三端都复用 core 的 buildRowSpanMethod，语义一致。',
+    },
+  },
 }
 

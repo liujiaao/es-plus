@@ -119,6 +119,225 @@ describe("generate_crud front door — surface routing", () => {
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("## Form (FormBlock.vue)");
   });
+
+  // ── AI-21①：前门 passthrough 键（tableOptions/formLayout/operationColumn/tableBtns/toolbarBtns）──
+  // 复用 generate_crud_from_config 那组「MCP 参数 schema 保留 X」的范式：先证明 MCP 工具的
+  // zod 形状**不静默剥**这些键（嵌套 z.object 会剥未声明子键），再证明它们经前门一路存活到生成物。
+  it("passthrough 键在 MCP 参数 schema 中原样存活（不被 Zod strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+
+    const parsed = z.object(shape).parse({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称")] },
+      tableOptions: { border: false, emptyText: "暂无数据", heightType: "auto", size: "small" },
+      formLayout: { labelWidth: "100px", minFoldRows: 2 },
+      operationColumn: { label: "操作", width: 160, btns: [{ name: "编辑", actionType: "edit" }] },
+      tableBtns: [{ name: "导出", actionType: "export" }],
+      toolbarBtns: [{ name: "批量删除", actionType: "delete" }],
+    });
+
+    // 五键逐一原样存活（若形状声明为嵌套 z.object，未声明的子键会被吞掉）
+    expect(parsed.tableOptions).toEqual({ border: false, emptyText: "暂无数据", heightType: "auto", size: "small" });
+    expect(parsed.formLayout).toEqual({ labelWidth: "100px", minFoldRows: 2 });
+    expect(parsed.operationColumn).toEqual({ label: "操作", width: 160, btns: [{ name: "编辑", actionType: "edit" }] });
+    expect(parsed.tableBtns).toEqual([{ name: "导出", actionType: "export" }]);
+    expect(parsed.toolbarBtns).toEqual([{ name: "批量删除", actionType: "delete" }]);
+  });
+
+  it("passthrough 键经前门转发、落进生成的 pageSchema", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称"), statusField] },
+      tableOptions: { emptyText: "暂无数据", heightType: "auto" },
+      formLayout: { labelWidth: "100px" },
+      operationColumn: false,
+      toolbarBtns: [{ name: "批量删除", actionType: "delete" }],
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"emptyText": "暂无数据"');
+    expect(text).toContain('"heightType": "auto"');
+    expect(text).toContain('"labelWidth": "100px"');
+    // operationColumn:false 是有效取值（隐藏操作列），必须落进 schema 而非被当作「未提供」
+    expect(text).toContain('"operationColumn": false');
+    expect(text).toContain('"name": "批量删除"');
+  });
+
+  it("未提供 passthrough 键时组合配置里不出现这些键（零回归）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称"), statusField] },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).not.toContain('"operationColumn"');
+    expect(text).not.toContain('"toolbarBtns"');
+    expect(text).not.toContain('"formLayout"');
+  });
+
+  // AI-21③：入口字段词汇提级 —— isHidden / reactions 此前 SurfaceField 与 zod3 镜像都缺，
+  // 前门 Zod（z.object 嵌套）会把它们静默剥掉。这里证明三键在 MCP 参数 schema 中原样存活。
+  it("面字段的 isHidden / reactions / labelKey 在 MCP 参数 schema 中原样存活（不被 Zod strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+
+    const parsed = z.object(shape).parse({
+      ...baseCrud,
+      surfaces: {
+        table: [field("refundNo", "退款单号")],
+        form: [
+          field("refundType", "退款方式", "Select", { dataOptions: [{ label: "部分退款", value: "part" }] }),
+          field("refundReason", "退款原因", "Input", { isHidden: { field: "refundType", op: "ne", value: "part" } }),
+          field("city", "城市", "Select", {
+            reactions: [
+              { dependencies: ["province"], when: { "==": [{ var: "province" }, "zj"] }, fulfill: { dataOptions: [{ label: "杭州", value: "hz" }] } },
+            ],
+          }),
+          field("refundNo", "退款单号", "Input", { labelKey: "refund.no" }),
+        ],
+      },
+    });
+
+    // 逐一原样存活（字段级键若未声明，z.object 会静默剥掉 —— 违反「mark, never drop」）
+    expect(parsed.surfaces.form[0].dataOptions).toEqual([{ label: "部分退款", value: "part" }]);
+    expect(parsed.surfaces.form[1].isHidden).toEqual({ field: "refundType", op: "ne", value: "part" });
+    expect(parsed.surfaces.form[2].reactions[0].dependencies).toEqual(["province"]);
+    expect(parsed.surfaces.form[2].reactions[0].fulfill.dataOptions).toEqual([{ label: "杭州", value: "hz" }]);
+    expect(parsed.surfaces.form[3].labelKey).toBe("refund.no");
+  });
+
+  // AI-21③ 端到端：前门路由里弹窗体 = form 面（dialogBody = hasForm ? form : table），
+  // 故 form 面上的 isHidden 必须经 compose → generateFromConfig 落入生成物。
+  it("面字段的 isHidden 经前门转发、落进生成的 pageSchema", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        table: [field("refundNo", "退款单号")],
+        form: [
+          field("refundType", "退款方式", "Select", { dataOptions: [{ label: "部分退款", value: "part" }] }),
+          field("refundReason", "退款原因", "Input", { isHidden: { field: "refundType", op: "ne", value: "part" } }),
+        ],
+        dialog: ["add", "edit"],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"isHidden"');
+    expect(text).toContain('"refundType"');
+  });
+
+  // AI-21②：顶层声明式键 expandConfig / treeConfig 此前 crudShape / 转发都缺（静默不可达）。
+  // 这里证明两键在 MCP 参数 schema 中原样存活。
+  it("顶层 expandConfig / treeConfig 在 MCP 参数 schema 中原样存活（不被 Zod strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+
+    const parsed = z.object(shape).parse({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称")] },
+      expandConfig: { title: "明细", fields: [{ prop: "remark", label: "备注" }] },
+      treeConfig: { childrenField: "subItems", expandAll: true },
+    });
+
+    expect(parsed.expandConfig).toEqual({ title: "明细", fields: [{ prop: "remark", label: "备注" }] });
+    expect(parsed.treeConfig).toEqual({ childrenField: "subItems", expandAll: true });
+  });
+
+  // AI-21② 端到端：两键经前门转发 → compose → generateFromConfig 落进生成物。
+  it("顶层 expandConfig / treeConfig 经前门转发、落进生成的 pageSchema", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称"), field("remark", "备注")] },
+      expandConfig: { title: "明细", fields: [{ prop: "remark", label: "备注" }] },
+      treeConfig: { expandAll: true },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"expandConfig"');
+    expect(text).toContain('"treeConfig"');
+    expect(text).toContain('"expandAll": true');
+  });
+
+  // AI-23：顶层 mergeConfig（声明式合并单元格）直接进前门（crudShape + 转发），
+  // 不在 FRONT_DOOR_UNREACHABLE 登记表里。两问：参数 schema 存活 / 经前门落进生成物。
+  it("顶层 mergeConfig 在 MCP 参数 schema 中原样存活（不被 Zod strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+
+    const parsed = z.object(shape).parse({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称")] },
+      mergeConfig: { rowsBy: ["dept", "team"] },
+    });
+
+    expect(parsed.mergeConfig).toEqual({ rowsBy: ["dept", "team"] });
+  });
+
+  it("顶层 mergeConfig 经前门转发、落进生成的 pageSchema", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { table: [field("dept", "部门"), field("team", "小组")] },
+      mergeConfig: { rowsBy: ["dept"] },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"mergeConfig"');
+    expect(text).toContain('"rowsBy"');
+  });
+
+  // AI-21④：surfaces.dialog 由「仅 add|edit|view 罐头键」放宽为「罐头键 | 全参对象」。
+  // 三问：对象条目在参数 schema 中原样存活 / 经前门落到 schema.dialogs / 罐头键行为零回归。
+  it("surfaces.dialog 的全参对象在 MCP 参数 schema 中原样存活（不被 Zod strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+
+    const parsed = z.object(shape).parse({
+      ...baseCrud,
+      surfaces: {
+        table: [field("name", "名称")],
+        dialog: ["add", { key: "detail", title: "订单详情", width: 720, fullscreen: false }],
+      },
+    });
+
+    expect(parsed.surfaces.dialog[0]).toBe("add");
+    expect(parsed.surfaces.dialog[1]).toEqual({ key: "detail", title: "订单详情", width: 720, fullscreen: false });
+  });
+
+  it("surfaces.dialog 的全参对象经前门转发、落进生成的 pageSchema", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        table: [field("name", "名称")],
+        form: [field("name", "名称")],
+        dialog: ["add", { key: "detail", title: "订单详情", width: 720 }],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"detail"');
+    expect(text).toContain('"订单详情"');
+    expect(text).toContain('"width": 720');
+  });
+
+  it("surfaces.dialog 的罐头键仍走默认标题（零回归）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { table: [field("name", "名称")], form: [field("name", "名称")], dialog: ["add"] },
+    });
+    expect(res.isError).toBeFalsy();
+    const text: string = res.content[0].text;
+    expect(text).toContain('"新增"');
+  });
+
+
+
+
 });
 
 describe("standalone fragment tools", () => {

@@ -213,6 +213,9 @@ const FieldConfigSchema = z.object({
       'prop 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
   }).describe('Field key in the data model (camelCase), e.g. "userName"'),
   label: z.string().min(1).describe('Human-readable column/form label, e.g. "用户名"'),
+  labelKey: z.string().optional().describe(
+    "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. NOTE: it only takes effect once the HOST entry assembles the plugin with a `t` option (otherwise the runtime falls back to `label`)."
+  ),
   formtype: z.enum(formTypeEnum).describe(
     "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate. Default to Input for plain text."
   ),
@@ -453,6 +456,39 @@ export const StructuredCrudConfigSchema = z.object({
       .optional()
       .describe('Buffer rows outside the visible area (vue3 / el-table-v2 only; default 2)'),
     rowClassName: z.string().optional().describe('Custom row CSS class name'),
+    // ── AI-22：闭合 strip-hazard。以下键在 core `TableOptions` / JSON 单源
+    //    `table-options.schema.json` 已有、三端运行时也已消费，唯独两处 AI Zod 零声明
+    //    —— 此前经 AI 入口传入会被**静默剥掉**（解析成功、零告警）。此块补齐并纳入
+    //    `check-schema-contract.mjs` 的 STRUCTURED_TABLE_CONTRACT 守卫。
+    size: z
+      .enum(['large', 'default', 'small'])
+      .optional()
+      .describe("Table density. Default 'small' at runtime; el-table and a-table both accept these."),
+    showHeader: z.boolean().optional().describe('Show the table header (default true). Set false to hide it.'),
+    emptyText: z.string().optional().describe("Text shown when there are no rows (default '暂无数据')."),
+    snIndex: z.boolean().optional().describe('Render a leading row-index (serial number) column.'),
+    leftText: z.string().optional().describe('Text shown on the left side of the table toolbar.'),
+    cachePageSelection: z
+      .boolean()
+      .optional()
+      .describe(
+        'Persist the checkbox selection across page changes (needs a stable rowkey). Default true at runtime; set false to reset selection on page change.'
+      ),
+    refetchKeepPage: z
+      .boolean()
+      .optional()
+      .describe('Keep the current page when re-fetching (default false). Query/reset still return to page 1.'),
+    localPagination: z
+      .boolean()
+      .optional()
+      .describe('Paginate already-fetched data client-side instead of requesting each page from the API.'),
+    // 注意：`defaultSort` 是本块唯一带嵌套 `.object({}).optional()` 的键，必须放**末尾** ——
+    // check-schema-contract 的 tableOptions 块捕获非贪婪地停在首个 `}).optional()`，否则它
+    // 之后的契约键会落在捕获区外、漏检。
+    defaultSort: z
+      .object({ prop: z.string(), order: z.enum(['ascending', 'descending']) })
+      .optional()
+      .describe('Default sort applied on first render.'),
     editConfig: z
       .object({
         trigger: z.enum(['click', 'dblclick', 'manual']).optional().describe("How editing is entered (default 'click')."),
@@ -529,6 +565,17 @@ export const StructuredCrudConfigSchema = z.object({
     .optional()
     .describe(
       "Declarative tree table (AI-09 子项③). When set, the table renders parent/child levels from the nested child array in each row (row-key is emitted automatically). Static trees only — lazy/async loading is out of scope for this key. SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig): this top-level key is the cross-renderer narrow subset, honored by el-table / a-table as well as vxe."
+    ),
+  mergeConfig: z
+    .object({
+      rowsBy: z
+        .array(z.string().min(1))
+        .min(1)
+        .describe('Column props to merge. Each is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with rowspan = run length, the rest are merged away.'),
+    })
+    .optional()
+    .describe(
+      "Declarative row-merge (AI-23). `rowsBy: ['dept','team']` merges those columns across consecutive rows with equal values (the standard 'grouped rows' table). Cross-renderer narrow subset: el-table (span-method), a-table (per-column customCell) and vxe (mergeMethod) all honor it. The FUNCTIONAL escape hatch `tableOptions.spanMethod` remains Tier-3 and is NOT cross-renderer (a-table has no span-method channel) — if both are set, the explicit `spanMethod` wins."
     ),
 })
 

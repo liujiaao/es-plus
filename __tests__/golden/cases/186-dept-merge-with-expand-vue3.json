@@ -1,0 +1,62 @@
+{
+  "nl": "部门员工表：部门列按相邻相同合并，展示姓名与月薪，并支持展开行查看备注明细。支持新增、编辑。",
+  "nlEn": "Department staff table: the department column merges across adjacent equal values, showing name and salary, and rows can expand to show a note. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "name",
+    "salary",
+    "note"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptExpandMerge",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formtype": "InputNumber"
+      },
+      {
+        "prop": "note",
+        "label": "备注",
+        "formtype": "Input"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept"
+      ]
+    },
+    "expandConfig": {
+      "title": "明细",
+      "fields": [
+        {
+          "prop": "note",
+          "label": "备注"
+        }
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: mergeConfig 与 expandConfig 共存（两个顶层声明式键互不干扰）"
+}

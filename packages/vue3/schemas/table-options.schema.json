@@ -31,6 +31,15 @@
       "default": true,
       "description": "Highlight the currently selected row"
     },
+    "showHeader": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show the table header (default true). Set false to hide it."
+    },
+    "emptyText": {
+      "type": "string",
+      "description": "Text displayed when the table has no data (default 暂无数据)"
+    },
     "multiSelect": {
       "type": "boolean",
       "default": false,
@@ -176,6 +185,24 @@
     },
     "rowClassName": {
       "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"
+    },
+    "defaultSort": {
+      "type": "object",
+      "description": "Default sort applied on first render. { prop, order } where order is ascending | descending",
+      "properties": {
+        "prop": { "type": "string", "description": "Field name to sort by" },
+        "order": { "type": "string", "enum": ["ascending", "descending"], "description": "Sort direction" }
+      }
+    },
+    "refetchKeepPage": {
+      "type": "boolean",
+      "default": false,
+      "description": "Keep the current page when re-fetching (default false). Query/reset still return to page 1."
+    },
+    "localPagination": {
+      "type": "boolean",
+      "default": false,
+      "description": "Paginate the already-fetched data client-side instead of requesting each page from the API."
     },
     "editConfig": {
       "type": "object",

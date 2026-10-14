@@ -98,7 +98,10 @@ Two passes, every time:
 3. **Self-review** against the original request BEFORE calling:
    - Did every field the user named make it in, with the right \`formtype\`?
    - Is each field in the right surface list(s)? Did you set \`surfaces.dialog\`
-     for every add/edit/view the request implies?
+     for every add/edit/view the request implies? (A dialog entry is a canned
+     key \`add\`/\`edit\`/\`view\`, or a full object \`{ key, title?, width?,
+     fullscreen?, formItems? }\` when the request names a custom dialog id /
+     title / width or a per-dialog field list.)
    - Are all requested actions present? Do Select/Cascader fields have options?
    - Business logic the schema can't express (permission gates, conditional
      display, computed values) → emit a typed extension point

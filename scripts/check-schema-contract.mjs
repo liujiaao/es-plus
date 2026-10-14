@@ -193,6 +193,12 @@ const REQUIRED_FIELDS = [
   { schema: 'table-options.schema.json', path: ['properties', 'maxHeight'], label: 'TableOptions.maxHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'engine'], label: 'TableOptions.engine' },
   { schema: 'table-options.schema.json', path: ['properties', 'virtual'], label: 'TableOptions.virtual' },
+  // AI-22：新增到 JSON 单源的可写展示/行为键（此前只存在于 core TableOptions）。
+  { schema: 'table-options.schema.json', path: ['properties', 'showHeader'], label: 'TableOptions.showHeader' },
+  { schema: 'table-options.schema.json', path: ['properties', 'emptyText'], label: 'TableOptions.emptyText' },
+  { schema: 'table-options.schema.json', path: ['properties', 'defaultSort'], label: 'TableOptions.defaultSort' },
+  { schema: 'table-options.schema.json', path: ['properties', 'refetchKeepPage'], label: 'TableOptions.refetchKeepPage' },
+  { schema: 'table-options.schema.json', path: ['properties', 'localPagination'], label: 'TableOptions.localPagination' },
 ]
 
 function checkRequiredFields() {
@@ -279,7 +285,13 @@ const STRUCTURED_CONFIG_SOURCES = [
 // tableOptions 里必须覆盖 JSON 单源 table-options 中声明的高度/虚拟滚动契约字段，
 // 否则会被 Zod strip、用户设置无法生效。只校验 JSON 确实声明的字段，使守卫随单源
 // 自动扩展、又不过度约束（结构化配置本就是 TableOptions 的子集）。
-const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName']
+const STRUCTURED_TABLE_CONTRACT = [
+  'heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName',
+  // AI-22：以下键在 core `TableOptions` / JSON 单源已有、三端运行时已消费，此前两处 AI Zod
+  // 零声明（经 AI 入口传入被静默剥）。放在本块的**契约键区**（须排在 `editConfig` 之前，
+  // 因块捕获非贪婪地停在首个 `}).optional()`；`defaultSort` 带嵌套对象，进一步排在末尾）。
+  'size', 'showHeader', 'emptyText', 'snIndex', 'leftText', 'cachePageSelection', 'refetchKeepPage', 'localPagination', 'defaultSort',
+]
 
 // FieldConfigSchema 里必须声明的「AI 契约」字段。与 STRUCTURED_TABLE_CONTRACT 同因：
 // 两处 Zod（shared 权威 + mcp 内联副本）都是 z.object（无 passthrough），少声明一个键
@@ -288,7 +300,7 @@ const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual
 // 走 MCP 路径的配置里 isHidden 会被丢弃、字段永远可见（假承诺）。
 // 注意 `isHiddenFooter`（dialog 级）不是同一字段：它后面跟的是 'F' 不是 ':'，
 // 故 `\bisHidden\s*:` 不会误匹配。
-const STRUCTURED_FIELD_CONTRACT = ['isHidden', 'reactions']
+const STRUCTURED_FIELD_CONTRACT = ['isHidden', 'reactions', 'labelKey']
 
 /**
  * 剥掉行注释与块注释。
@@ -507,6 +519,18 @@ function checkStructuredConfigZod() {
     }
     if (!/treeConfig\s*:[\s\S]{0,600}?childrenField\s*:\s*z\s*\n?\s*\.string\(/.test(src)) {
       fail(`${label} 的 treeConfig 缺少 childrenField: z.string(...)（自定义嵌套键名表达不了）`)
+      ok = false
+    }
+
+    // 顶层 `mergeConfig` 声明式合并单元格契约（AI-23）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式合并整段静默剥掉，
+    // 三端回落成「不合并」、零告警（正是本批要消灭的静默失效）。rowsBy 必须非空数组。
+    if (!/\bmergeConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 mergeConfig: z.object(...)（声明式合并单元格会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/mergeConfig\s*:[\s\S]{0,600}?rowsBy\s*:\s*z\s*\n?\s*\.array\(/.test(src)) {
+      fail(`${label} 的 mergeConfig 缺少 rowsBy: z.array(...)（没有列可合并无意义）`)
       ok = false
     }
 

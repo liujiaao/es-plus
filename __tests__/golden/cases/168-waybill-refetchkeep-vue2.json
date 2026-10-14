@@ -1,0 +1,18 @@
+{
+  "nl": "运单列表：刷新时保留当前页码（不回到第一页）；展示运单号、状态；支持编辑。",
+  "nlEn": "Waybill list: keep the current page when refreshing (do not jump back to page 1); shows waybill number and status. Supports edit.",
+  "fixedFields": ["waybillNo", "status"],
+  "pinnedDims": ["propSet", "membership", "target", "actions"],
+  "config": {
+    "name": "WaybillManage",
+    "apiUrl": "/api/waybills",
+    "target": "vue2",
+    "fields": [
+      { "prop": "waybillNo", "label": "运单号", "formtype": "Input" },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inQuery": false }
+    ],
+    "tableOptions": { "refetchKeepPage": true },
+    "actions": ["edit"]
+  },
+  "notes": "AI-22: tableOptions.refetchKeepPage（刷新保留页码，vue2 目标）经 AI Zod 存活并发射"
+}

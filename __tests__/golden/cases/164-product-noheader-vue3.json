@@ -1,0 +1,18 @@
+{
+  "nl": "卡片式商品列表：不显示表头，直接排列商品名与价格；只读。",
+  "nlEn": "Card-style product list: hide the table header and just lay out product name and price. Read-only.",
+  "fixedFields": ["productName", "price"],
+  "pinnedDims": ["propSet", "membership"],
+  "config": {
+    "name": "ProductCardView",
+    "apiUrl": "/api/products",
+    "target": "vue3",
+    "fields": [
+      { "prop": "productName", "label": "商品名", "formtype": "Input", "inQuery": false },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "showHeader": false },
+    "actions": ["view"]
+  },
+  "notes": "AI-22: tableOptions.showHeader=false（隐藏表头）经 AI Zod 存活并发射；false 是有效值（不可用真值判断丢键）"
+}

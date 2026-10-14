@@ -32,6 +32,7 @@ import EsTable from '../src/components/es-table/src/component.vue'
 import EsForm from '../src/components/es-form/src/es-form.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
 import type { StructuredCrudConfig } from '../../shared/src/structured-generator'
+import { composeCrudConfig } from '../../shared/src/compose-crud-config'
 import {
   createInMemoryBackend,
   findButtonByText,
@@ -417,6 +418,73 @@ describe('生成物运行时冒烟 — 78-category-tree（自定义 childrenFiel
     await flushPromises()
     await nextTick()
     expect(wrapper.text()).toContain('手机')
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// 6) 前门面字段 isHidden 的运行时见证（AI-21③）
+//    AI-21③ 把 isHidden/reactions/labelKey 提进入口字段词汇。前门路由里**弹窗体 = form 面**
+//    （generate-crud.ts: dialogBody = hasForm ? form : table），故 form 面上的 isHidden 必须
+//    经 compose → generateFromConfig 落进弹窗表单，并**真的**驱动显隐。
+//    这里直接把（前门那一步的）compose 结果喂给生成器，再把生成出的弹窗 formItems 挂到
+//    真实 EsForm 上，随 model 切换退款方式，断言字段真的出现/消失。
+//    注意语义：键名是 isHidden（**不是 isVisible**）—— 条件成立即隐藏。
+// ────────────────────────────────────────────────────────────────────────────
+describe('生成物运行时冒烟 — AI-21③ 前门面字段 isHidden 直达真实 EsForm', () => {
+  afterEach(cleanup)
+
+  it('compose（dialog 体 = form 面）产出的 isHidden 在真实 EsForm 上随 model 显隐', async () => {
+    const formSurface = [
+      {
+        prop: 'refundType',
+        label: '退款方式',
+        formtype: 'Select',
+        required: true,
+        dataOptions: [
+          { label: '部分退款', value: 'part' },
+          { label: '全额退款', value: 'full' },
+        ],
+      },
+      // 条件成立即隐藏：退款方式是「部分退款」时，隐藏退款原因。
+      { prop: 'refundReason', label: '退款原因', formtype: 'Input', isHidden: { field: 'refundType', op: 'eq', value: 'part' } },
+    ]
+
+    const { config } = composeCrudConfig({
+      name: 'RefundManage',
+      apiUrl: '/api/refunds',
+      table: [
+        { prop: 'refundNo', label: '退款单号', formtype: 'Input' },
+        { prop: 'refundType', label: '退款方式', formtype: 'Select' },
+        { prop: 'refundReason', label: '退款原因', formtype: 'Input' },
+      ],
+      form: formSurface,
+      // 复刻前门：dialogBody = hasForm ? form : table
+      dialogs: { add: { title: '新增', formItems: formSurface } } as any,
+    })
+
+    const schema = generatePageSchema(config as StructuredCrudConfig)
+    const dialogs = schema.dialogs as any
+    const formItems = dialogs?.add?.formItems as unknown[]
+    expect(formItems, '前门 compose 产出的弹窗应带 formItems').toBeTruthy()
+
+    // 生成物里确实带着条件数据（纯 JSON，非函数）——否则下面即使「隐藏」也是因字段缺失
+    const cond = formItems.find((f: any) => f.prop === 'refundReason')
+    expect(cond, '退款原因字段应在弹窗表单里').toBeTruthy()
+    expect((cond as any).isHidden).toEqual({ field: 'refundType', op: 'eq', value: 'part' })
+
+    const model = reactive({ refundType: 'full', refundReason: '' })
+    const wrapper = mount(EsForm, {
+      props: { model, formItemList: formItems },
+      global: { plugins: [ElementPlus, EsPlus] },
+    })
+    await nextTick()
+
+    // refundType = 'full' → 条件不成立 → 退款原因可见
+    expect(wrapper.text()).toContain('退款原因')
+
+    model.refundType = 'part'
+    await nextTick()
+    expect(wrapper.text(), '退款方式为部分退款时「退款原因」应隐藏').not.toContain('退款原因')
   })
 })
 

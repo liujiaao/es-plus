@@ -1,0 +1,19 @@
+{
+  "nl": "系统日志：表格用紧凑（small）尺寸展示，列有时间、级别、内容；只读列表。",
+  "nlEn": "System log: the table uses the compact (small) size and shows time, level and message columns. Read-only list.",
+  "fixedFields": ["time", "level", "message"],
+  "pinnedDims": ["propSet", "membership", "target"],
+  "config": {
+    "name": "SystemLogView",
+    "apiUrl": "/api/logs",
+    "target": "vue2",
+    "fields": [
+      { "prop": "time", "label": "时间", "formtype": "DatePicker" },
+      { "prop": "level", "label": "级别", "formtype": "Select", "inQuery": false },
+      { "prop": "message", "label": "内容", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": { "size": "small" },
+    "actions": ["view"]
+  },
+  "notes": "AI-22: tableOptions.size（紧凑尺寸，vue2 目标）经 AI Zod 存活并发射"
+}

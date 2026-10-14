@@ -143,6 +143,12 @@ export type { FieldReaction, FieldReactionFulfill } from './types'
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
 export { buildFirstClassGridOptions } from './vxe-engine'
 
+// ─── 声明式合并单元格（AI-23：跨端窄子集 mergeConfig.rowsBy）──
+// 求值全在本模块，三端只做「取值 → 调用 → 交给各自组件」（el-table spanMethod /
+// a-table customCell / vxe mergeMethod），故三端等价由构造保证。
+export { buildColumnSpans, buildRowSpanMethod, resolveMergeConfig } from './merge-span'
+export type { MergeConfig, MergeRow } from './merge-span'
+
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'
 

@@ -208,6 +208,12 @@ const FieldConfigSchema = z.object({
     })
     .describe("Field key in the data model (camelCase), e.g. \"userName\""),
   label: z.string().min(1).describe("Human-readable column/form label, e.g. \"用户名\""),
+  labelKey: z
+    .string()
+    .optional()
+    .describe(
+      "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. Only takes effect once the host entry assembles the plugin with a `t` option."
+    ),
   formtype: z
     // 与 shared 的 StructuredCrudConfigSchema 同一口径：规范写法 ∪ 运行时承认的旧别名
     // （camelCase datePicker/timePicker 由 normalizeFormType 归一化）。
@@ -443,6 +449,21 @@ const configShape = {
       estimatedRowHeight: z.number().optional(),
       overscanCount: z.number().int().optional(),
       rowClassName: z.string().optional(),
+      // ── AI-22：闭合 strip-hazard（与 structured-config.schema.ts 同步）。这些键在
+      //    core `TableOptions`/JSON 单源已有、三端运行时已消费，唯独两处 AI Zod 零声明
+      //    —— 经 AI 入口传入会被静默剥掉。补齐并纳入 STRUCTURED_TABLE_CONTRACT 守卫。
+      size: z.enum(["large", "default", "small"]).optional(),
+      showHeader: z.boolean().optional(),
+      emptyText: z.string().optional(),
+      snIndex: z.boolean().optional(),
+      leftText: z.string().optional(),
+      cachePageSelection: z.boolean().optional(),
+      refetchKeepPage: z.boolean().optional(),
+      localPagination: z.boolean().optional(),
+      // defaultSort 是本块唯一带嵌套 .object().optional() 的键，须放末尾（见 shared 同处注释）。
+      defaultSort: z
+        .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
+        .optional(),
       editConfig: z
         .object({
           trigger: z.enum(["click", "dblclick", "manual"]).optional().describe("How editing is entered (default 'click')."),
@@ -581,6 +602,17 @@ const configShape = {
     .optional()
     .describe(
       "Declarative tree table (AI-09 子项③). When set, the table renders parent/child levels from the nested child array in each row (row-key is emitted automatically). Static trees only — lazy/async loading is out of scope for this key. SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig): this top-level key is the cross-renderer narrow subset, honored by el-table / a-table as well as vxe."
+    ),
+  mergeConfig: z
+    .object({
+      rowsBy: z
+        .array(z.string().min(1))
+        .min(1)
+        .describe("Column props to merge. Each is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with rowspan = run length, the rest are merged away."),
+    })
+    .optional()
+    .describe(
+      "Declarative row-merge (AI-23). `rowsBy: ['dept','team']` merges those columns across consecutive rows with equal values (the standard 'grouped rows' table). Cross-renderer narrow subset: el-table (span-method), a-table (per-column customCell) and vxe (mergeMethod) all honor it. The FUNCTIONAL escape hatch `tableOptions.spanMethod` remains Tier-3 and is NOT cross-renderer (a-table has no span-method channel) — if both are set, the explicit `spanMethod` wins."
     ),
 } as const;
 

@@ -288,6 +288,80 @@ function scoreCase(raw) {
     }
   }
 
+  // (12) AI-22: authored `tableOptions` display/behavior keys AND field-level `labelKey`
+  //      must be EMITTED, not silently dropped. These keys lived only in core `TableOptions`
+  //      / the JSON single source and were stripped at the AI Zod gate (accepted by nobody,
+  //      emitted by nobody). Now that they are declared + emitted, this is the regression net:
+  //      schema mode parses the emitted pageSchema and asserts the key is really there; sfc mode
+  //      falls back to key-name matching. No existing case authors these keys, so this is a
+  //      no-op for the current 161 and only bites on the new AI-22 cases (and any future drop).
+  const AI22_TO_KEYS = [
+    'size', 'showHeader', 'emptyText', 'snIndex', 'leftText',
+    'cachePageSelection', 'defaultSort', 'refetchKeepPage', 'localPagination',
+  ]
+  if (config.tableOptions) {
+    const authored = AI22_TO_KEYS.filter((k) => config.tableOptions[k] !== undefined)
+    if (authored.length) {
+      if (config.mode !== 'sfc') {
+        const m = code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)
+        let emittedTO = null
+        if (m) {
+          try {
+            emittedTO = JSON.parse(m[1]).tableOptions
+          } catch {
+            emittedTO = null
+          }
+        }
+        if (!emittedTO) {
+          failures.push('AI-22: could not parse pageSchema.tableOptions for the emission check')
+        } else {
+          for (const k of authored) {
+            if (!(k in emittedTO)) {
+              failures.push(`tableOptions.${k} was authored but NOT emitted into pageSchema.tableOptions (silently dropped)`)
+            }
+          }
+        }
+      } else {
+        for (const k of authored) {
+          if (!new RegExp(`\\b${k}\\s*:`).test(code)) {
+            failures.push(`tableOptions.${k} was authored but not found in the emitted SFC options`)
+          }
+        }
+      }
+    }
+  }
+  for (const f of config.fields) {
+    if (f.labelKey && !code.includes(f.labelKey)) {
+      failures.push(`field "${f.prop}" declares labelKey "${f.labelKey}" but it is missing from the emitted code`)
+    }
+  }
+
+  // (13) AI-23: authored top-level `mergeConfig` must be EMITTED into the runtime home
+  //      (`tableOptions.mergeConfig`), not silently dropped. Same net as (12): the generator
+  //      emits it, so a future regression that forgets the spread turns these cases red.
+  if (config.mergeConfig) {
+    if (config.mode !== 'sfc') {
+      const m = code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)
+      let emittedMC = null
+      if (m) {
+        try {
+          emittedMC = JSON.parse(m[1]).tableOptions?.mergeConfig
+        } catch {
+          emittedMC = null
+        }
+      }
+      if (!emittedMC) {
+        failures.push('AI-23: pageSchema.tableOptions.mergeConfig missing (mergeConfig was authored but silently dropped)')
+      } else if (JSON.stringify(emittedMC.rowsBy) !== JSON.stringify(config.mergeConfig.rowsBy)) {
+        failures.push(
+          `AI-23: pageSchema.tableOptions.mergeConfig.rowsBy = ${JSON.stringify(emittedMC.rowsBy)} != authored ${JSON.stringify(config.mergeConfig.rowsBy)}`
+        )
+      }
+    } else if (!/\bmergeConfig\s*:/.test(code)) {
+      failures.push('AI-23: mergeConfig was authored but not found in the emitted SFC options')
+    }
+  }
+
   return failures
 }
 

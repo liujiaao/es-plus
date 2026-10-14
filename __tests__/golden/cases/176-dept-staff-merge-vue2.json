@@ -1,0 +1,64 @@
+{
+  "nl": "（vue2 项目）部门员工表：部门、小组、姓名、状态；部门列按相邻相同合并。支持新增、编辑、删除。",
+  "nlEn": "(vue2 project) Department staff table: department, team, name and status; the department column merges across adjacent equal values. Supports add, edit and delete.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "name",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptStaffV2",
+    "apiUrl": "/api/staff",
+    "target": "vue2",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "在职",
+            "value": 1
+          },
+          {
+            "label": "离职",
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-23: vue2 端 —— 经 el-table spanMethod 落地（默认引擎透传）"
+}

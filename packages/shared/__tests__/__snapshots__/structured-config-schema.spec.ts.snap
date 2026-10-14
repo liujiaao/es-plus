@@ -180,6 +180,7 @@ exports[`StructuredCrudConfigSchema — surface listing > top-level keys are sta
   "fields",
   "formLayout",
   "i18n",
+  "mergeConfig",
   "mode",
   "name",
   "operationColumn",

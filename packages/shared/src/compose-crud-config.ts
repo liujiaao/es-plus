@@ -1,4 +1,4 @@
-import type { StructuredCrudConfigInput } from './structured-config.schema.js'
+import type { StructuredCrudConfigInput, FieldConfig } from './structured-config.schema.js'
 import type { TargetFramework } from './target.js'
 import type { CrudAction } from './contract.js'
 
@@ -27,6 +27,8 @@ import type { CrudAction } from './contract.js'
 export interface SurfaceField {
   prop: string
   label: string
+  /** i18n 标签键（AI-22 权威侧已有；AI-21③ 提进入口词汇）。与 label 同属「标识」，首次出现为准。 */
+  labelKey?: FieldConfig['labelKey']
   formtype: string
   querySpan?: number
   formSpan?: number
@@ -42,6 +44,10 @@ export interface SurfaceField {
   ellipsis?: boolean
   formatter?: string
   render?: string
+  /** 条件显隐（AI-06 运行时底座已在）；纯 JSON 数据、绝非函数串。语义键：form 面优先。 */
+  isHidden?: FieldConfig['isHidden']
+  /** 字段联动（AI-07）；纯 JSON。语义键：form 面优先。 */
+  reactions?: FieldConfig['reactions']
   permissionValue?: string
 }
 
@@ -68,6 +74,12 @@ export interface ComposeCrudInput {
   tableBtns?: StructuredCrudConfigInput['tableBtns']
   toolbarBtns?: StructuredCrudConfigInput['toolbarBtns']
   dialogs?: StructuredCrudConfigInput['dialogs']
+  /** 声明式行展开内容（AI-09 子项②）；顶层键，跨端窄子集。前门透传（AI-21②）。 */
+  expandConfig?: StructuredCrudConfigInput['expandConfig']
+  /** 声明式树表（AI-09 子项③）；顶层键，跨端窄子集。前门透传（AI-21②）。 */
+  treeConfig?: StructuredCrudConfigInput['treeConfig']
+  /** 声明式合并单元格（AI-23）；顶层键，跨端窄子集。前门透传。 */
+  mergeConfig?: StructuredCrudConfigInput['mergeConfig']
 }
 
 export interface ComposeResult {
@@ -75,7 +87,7 @@ export interface ComposeResult {
   warnings: string[]
 }
 
-const SEMANTIC_KEYS = ['required', 'rules', 'dataOptions', 'apiParams', 'attrs'] as const
+const SEMANTIC_KEYS = ['required', 'rules', 'dataOptions', 'apiParams', 'attrs', 'isHidden', 'reactions'] as const
 const DISPLAY_KEYS = ['width', 'minWidth', 'align', 'fixed', 'ellipsis', 'formatter', 'render'] as const
 
 function copyDefinedKeys(
@@ -111,18 +123,26 @@ export function composeCrudConfig(input: ComposeCrudInput): ComposeResult {
       cur = { prop: f.prop, label: f.label, formtype: f.formtype }
       acc.set(f.prop, cur)
       order.push(f.prop)
-      return cur
+    } else {
+      if (cur.label !== f.label) {
+        warnings.push(
+          `字段 "${f.prop}" 的 label 在不同面冲突（"${String(cur.label)}" vs "${f.label}"）——取首次出现的 "${String(cur.label)}"。`,
+        )
+      }
+      if (cur.labelKey !== undefined && f.labelKey !== undefined && cur.labelKey !== f.labelKey) {
+        warnings.push(
+          `字段 "${f.prop}" 的 labelKey 在不同面冲突（"${String(cur.labelKey)}" vs "${f.labelKey}"）——取首次出现的 "${String(cur.labelKey)}"。`,
+        )
+      }
+      if (cur.formtype !== f.formtype) {
+        warnings.push(
+          `字段 "${f.prop}" 的 formtype 在不同面冲突（"${String(cur.formtype)}" vs "${f.formtype}"）——取首次出现的 "${String(cur.formtype)}"。`,
+        )
+      }
     }
-    if (cur.label !== f.label) {
-      warnings.push(
-        `字段 "${f.prop}" 的 label 在不同面冲突（"${String(cur.label)}" vs "${f.label}"）——取首次出现的 "${String(cur.label)}"。`,
-      )
-    }
-    if (cur.formtype !== f.formtype) {
-      warnings.push(
-        `字段 "${f.prop}" 的 formtype 在不同面冲突（"${String(cur.formtype)}" vs "${f.formtype}"）——取首次出现的 "${String(cur.formtype)}"。`,
-      )
-    }
+    // labelKey 与 label/formtype 不同：它是**可选**的，常只在某一面给出（如只在 form 面写 i18n 键）。
+    // 若沿用「首次出现为准」，后给的那一面会被静默丢弃 → 与 permissionValue 同策略：首个「非空」即取。
+    if (f.labelKey !== undefined && cur.labelKey === undefined) cur.labelKey = f.labelKey
     return cur
   }
 
@@ -181,6 +201,9 @@ export function composeCrudConfig(input: ComposeCrudInput): ComposeResult {
     ...(input.tableBtns !== undefined ? { tableBtns: input.tableBtns } : {}),
     ...(input.toolbarBtns !== undefined ? { toolbarBtns: input.toolbarBtns } : {}),
     ...(input.dialogs !== undefined ? { dialogs: input.dialogs } : {}),
+    ...(input.expandConfig !== undefined ? { expandConfig: input.expandConfig } : {}),
+    ...(input.treeConfig !== undefined ? { treeConfig: input.treeConfig } : {}),
+    ...(input.mergeConfig !== undefined ? { mergeConfig: input.mergeConfig } : {}),
   }
 
   return { config, warnings }

@@ -1,0 +1,18 @@
+{
+  "nl": "用户国际化列表：字段标签走 labelKey（user.name.label、user.age.label）；展示姓名、年龄；支持新增、编辑。",
+  "nlEn": "Internationalized user list: field labels use labelKey (user.name.label, user.age.label); shows name and age. Supports add and edit.",
+  "fixedFields": ["name", "age"],
+  "pinnedDims": ["propSet", "membership", "actions", "i18n"],
+  "config": {
+    "name": "UserI18nManage",
+    "apiUrl": "/api/users",
+    "target": "vue3",
+    "i18n": true,
+    "fields": [
+      { "prop": "name", "label": "姓名", "labelKey": "user.name.label", "formtype": "Input" },
+      { "prop": "age", "label": "年龄", "labelKey": "user.age.label", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-22: 字段级 labelKey 经 AI Zod 存活并由生成器优先发射（此前字段级 labelKey 被 Zod 剥、生成器只会派生 field.<prop>）"
+}

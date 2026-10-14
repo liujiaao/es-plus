@@ -1,0 +1,19 @@
+{
+  "nl": "员工花名册：表格工具栏左侧显示「按部门分组统计」提示文案；展示姓名、部门、职位；支持新增、编辑。",
+  "nlEn": "Employee roster: show the text 「按部门分组统计」 on the left of the table toolbar; lists name, department and position. Supports add and edit.",
+  "fixedFields": ["name", "department", "position"],
+  "pinnedDims": ["propSet", "membership", "actions"],
+  "config": {
+    "name": "EmployeeRosterManage",
+    "apiUrl": "/api/employees",
+    "target": "vue3",
+    "fields": [
+      { "prop": "name", "label": "姓名", "formtype": "Input" },
+      { "prop": "department", "label": "部门", "formtype": "Select", "inQuery": false },
+      { "prop": "position", "label": "职位", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": { "leftText": "按部门分组统计" },
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-22: tableOptions.leftText（工具栏左侧文案）经 AI Zod 存活并发射"
+}

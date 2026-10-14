@@ -1,0 +1,54 @@
+{
+  "nl": "（Ant Design Vue 项目）大区-城市统计表：大区和城市两列都合并，展示项目与金额。支持新增、编辑。",
+  "nlEn": "(Ant Design Vue project) Region-city statistics table: both region and city columns merge, showing project and amount. Supports add and edit.",
+  "fixedFields": [
+    "region",
+    "city",
+    "project",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "RegionCityStat",
+    "apiUrl": "/api/stats",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "region",
+        "label": "大区",
+        "formtype": "Input"
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input"
+      },
+      {
+        "prop": "project",
+        "label": "项目",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "region",
+        "city"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: antdv 双列合并（列级 customCell 预计算 rowSpan 索引）"
+}

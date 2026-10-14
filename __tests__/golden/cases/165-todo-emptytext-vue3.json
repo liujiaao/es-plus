@@ -1,0 +1,19 @@
+{
+  "nl": "待办任务：无数据时显示「暂无待办，休息一下」；展示任务名、负责人、截止时间；支持新增。",
+  "nlEn": "Todo tasks: when there is no data show the text 「暂无待办，休息一下」; lists task name, owner and due time. Supports add.",
+  "fixedFields": ["taskName", "owner", "dueTime"],
+  "pinnedDims": ["propSet", "membership", "actions"],
+  "config": {
+    "name": "TodoTaskManage",
+    "apiUrl": "/api/todos",
+    "target": "vue3",
+    "fields": [
+      { "prop": "taskName", "label": "任务名", "formtype": "Input" },
+      { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false },
+      { "prop": "dueTime", "label": "截止时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "tableOptions": { "emptyText": "暂无待办，休息一下" },
+    "actions": ["add"]
+  },
+  "notes": "AI-22: tableOptions.emptyText（自定义空文案）经 AI Zod 存活并发射"
+}

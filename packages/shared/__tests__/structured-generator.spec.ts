@@ -1100,6 +1100,61 @@ describe('declarative tree table（AI-09 子项③ treeConfig）', () => {
   })
 })
 
+describe('declarative row merge（AI-23 mergeConfig）', () => {
+  const cfg = {
+    name: 'DeptStaffManage',
+    apiUrl: '/api/staff',
+    fields: [
+      { prop: 'dept', label: '部门', formtype: 'Input' as const },
+      { prop: 'team', label: '小组', formtype: 'Input' as const },
+      { prop: 'name', label: '姓名', formtype: 'Input' as const },
+    ],
+    actions: ['add' as const, 'edit' as const],
+    mergeConfig: { rowsBy: ['dept', 'team'] },
+  } as any
+
+  it('schema 模式：发射运行时家 tableOptions.mergeConfig（rowsBy 原序保留）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"mergeConfig": {')
+    expect(result.code).toContain('"rowsBy": [')
+    // 运行时家落在 tableOptions 里（而非顶层 schema 的兄弟键）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const mcIdx = result.code.indexOf('"mergeConfig"')
+    expect(mcIdx).toBeGreaterThan(toIdx)
+    // 顺序是渲染契约（分组主轴）——不能被重排/去重
+    const payload = result.code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    expect(JSON.parse(payload[1]).tableOptions.mergeConfig).toEqual({ rowsBy: ['dept', 'team'] })
+    expect(result.warnings).toEqual([])
+  })
+
+  it('sfc 模式：发射 options.mergeConfig 块（inlineJson 序列化）', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain('mergeConfig: {"rowsBy":["dept","team"]},')
+  })
+
+  it('无 mergeConfig 时不发射（回归，不给既有配置添键）', () => {
+    const { mergeConfig, ...noMc } = cfg
+    const result = generateFromConfig(noMc as any)
+    expect(result.code).not.toContain('"mergeConfig"')
+    expect(result.code).not.toContain('mergeConfig:')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 mergeConfig（rowsBy 单列/多列）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: ['a'] } }).success).toBe(true)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: ['a', 'b'] } }).success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（rowsBy 为空 / 非数组 / 含非字符串）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: [] } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: 'a' } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: [1] } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: {} }).success).toBe(false)
+  })
+})
+
 describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () => {
   const cfg = {
     name: 'SkuPriceEditManage',
@@ -1199,3 +1254,53 @@ describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () =
   })
 })
 
+
+describe('AI-22 — tableOptions 尾部键 / 字段级 labelKey（strip-hazard 闭合）', () => {
+  const TO = { size: 'small', showHeader: false, emptyText: '无数据', snIndex: true, leftText: '左', cachePageSelection: false, defaultSort: { prop: 'a', order: 'descending' }, refetchKeepPage: true, localPagination: true }
+  const TO_KEYS = ['size', 'showHeader', 'emptyText', 'snIndex', 'leftText', 'cachePageSelection', 'defaultSort', 'refetchKeepPage', 'localPagination'] as const
+  const cfg = (extra: Record<string, unknown> = {}) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['view'],
+    tableOptions: TO,
+    ...extra,
+  })
+
+  it('Zod 解析保留全部 9 个尾部键（不被静默剥，含 false 值）', () => {
+    const r: any = StructuredCrudConfigSchema.safeParse(cfg())
+    expect(r.success).toBe(true)
+    for (const k of TO_KEYS) expect(r.data.tableOptions[k], `键 ${k} 不得被剥`).toBeDefined()
+  })
+
+  it('schema 模式把每个尾部键发射进 pageSchema.tableOptions（false 也必须落盘）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg()) as any)
+    const m = code.match(/export\s+const\s+pageSchema[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    const to: any = JSON.parse(m[1]).tableOptions
+    expect(to.size).toBe('small')
+    expect(to.showHeader).toBe(false)
+    expect(to.emptyText).toBe('无数据')
+    expect(to.snIndex).toBe(true)
+    expect(to.leftText).toBe('左')
+    expect(to.cachePageSelection).toBe(false)
+    expect(to.defaultSort).toEqual({ prop: 'a', order: 'descending' })
+    expect(to.refetchKeepPage).toBe(true)
+    expect(to.localPagination).toBe(true)
+  })
+
+  it('sfc 模式同样发射尾部键（手搓 options 块）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ mode: 'sfc' })) as any)
+    for (const k of TO_KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), k).toBe(true)
+  })
+
+  it('字段级 labelKey 优先于 i18n 派生的 field.<prop>', () => {
+    const r = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ i18n: true })) as any)
+    const r2 = generateFromConfig(StructuredCrudConfigSchema.parse({
+      name: 'T', apiUrl: '/x', i18n: true,
+      fields: [{ prop: 'a', label: 'A', labelKey: 'user.a.label', formtype: 'Input' }],
+      actions: ['view'],
+    }) as any)
+    expect(r.code + (r.wrapperCode || '')).toContain('field.a')
+    expect(r2.code + (r2.wrapperCode || '')).toContain('user.a.label')
+  })
+})

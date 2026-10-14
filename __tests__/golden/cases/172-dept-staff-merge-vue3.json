@@ -1,0 +1,54 @@
+{
+  "nl": "部门员工台账：表格展示部门、小组、姓名、职位；同一个部门的行把「部门」这一列合并成一个单元格。支持新增、编辑、删除。",
+  "nlEn": "Department staff ledger: the table lists department, team, name and role; rows of the same department merge into a single cell in the Department column. Supports add, edit and delete.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "name",
+    "role"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptStaffManage",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "role",
+        "label": "职位",
+        "formtype": "Input"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-23: 顶层 mergeConfig.rowsBy 单列 → 生成器发射到 schema.tableOptions.mergeConfig（此前无此键，三端无合并能力）"
+}

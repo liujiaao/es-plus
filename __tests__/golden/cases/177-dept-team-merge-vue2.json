@@ -1,0 +1,54 @@
+{
+  "nl": "（vue2 项目）部门小组表：部门和小组两列合并，展示姓名与级别。支持新增、编辑。",
+  "nlEn": "(vue2 project) Department-team table: department and team columns merge, showing name and grade. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "name",
+    "grade"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptTeamV2",
+    "apiUrl": "/api/staff",
+    "target": "vue2",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "grade",
+        "label": "级别",
+        "formtype": "Input"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept",
+        "team"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: vue2 双列合并"
+}

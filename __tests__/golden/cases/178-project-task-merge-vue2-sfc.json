@@ -1,0 +1,64 @@
+{
+  "nl": "（vue2 项目）项目任务表：项目列按相邻相同合并，后面是任务、负责人、状态。支持新增、编辑。",
+  "nlEn": "(vue2 project) Project task table: the project column merges across adjacent equal values, followed by task, owner and status. Supports add and edit.",
+  "fixedFields": [
+    "project",
+    "task",
+    "owner",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "ProjectTaskV2",
+    "apiUrl": "/api/tasks",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "project",
+        "label": "项目",
+        "formtype": "Input"
+      },
+      {
+        "prop": "task",
+        "label": "任务",
+        "formtype": "Input"
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "在职",
+            "value": 1
+          },
+          {
+            "label": "离职",
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "project"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: vue2 + SFC 模式 —— mergeConfig 经 inlineJson 发射进 options"
+}

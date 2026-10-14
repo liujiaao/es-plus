@@ -1,0 +1,19 @@
+{
+  "nl": "用户批量管理：勾选需要跨页保留（翻页后仍记住已勾选）；展示用户名、邮箱、状态；支持删除。",
+  "nlEn": "Bulk user management: checkbox selection must persist across pages (remembered after paging); shows username, email and status. Supports delete.",
+  "fixedFields": ["userName", "email", "status"],
+  "pinnedDims": ["propSet", "membership", "actions"],
+  "config": {
+    "name": "UserBatchManage",
+    "apiUrl": "/api/users",
+    "target": "vue3",
+    "fields": [
+      { "prop": "userName", "label": "用户名", "formtype": "Input" },
+      { "prop": "email", "label": "邮箱", "formtype": "Input", "inQuery": false },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inQuery": false }
+    ],
+    "tableOptions": { "rowkey": "id", "multiSelect": true, "cachePageSelection": true },
+    "actions": ["delete"]
+  },
+  "notes": "AI-22: tableOptions.cachePageSelection（跨页保留勾选；crud-engine 亦在运行时主动设置此键）经 AI Zod 存活并发射"
+}

@@ -66,6 +66,7 @@ const BASE_INPUT = {
   ], // → columns 维度（显式列逃生数组：非字段列 + 多级表头）
   expandConfig: { title: '详情', fields: [{ prop: 'createdAt', label: '创建时间' }] }, // → expandConfig 维度（声明式行展开内容）
   treeConfig: { childrenField: 'children', expandAll: true }, // → treeConfig 维度（声明式树表）
+  mergeConfig: { rowsBy: ['status', 'name'] }, // → mergeConfig 维度（声明式合并单元格）
 }
 
 const base = StructuredCrudConfigSchema.parse(BASE_INPUT)
@@ -109,6 +110,7 @@ const PERTURB = {
   columns: (c) => { c.columns[0].type = 'index' },
   expandConfig: (c) => { c.expandConfig.title = '别的' },
   treeConfig: (c) => { c.treeConfig.expandAll = false },
+  mergeConfig: (c) => { c.mergeConfig.rowsBy = ['name'] },
   editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
   extPoints: (c) => { delete c.fields[3].formatter },
   reactions: (c) => { c.fields[5].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }] },
@@ -346,6 +348,29 @@ console.log('meta-eval: editConfig (vxe inline editing)')
   // gold 无 editConfig → 维度不 applicable（无行内编辑，不参与记分）
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(plain, plain).byCapability.editConfig.applicable === false, 'editConfig: gold 未声明时维度不 applicable')
+}
+
+// 2h) mergeConfig（声明式合并单元格，AI-23）维度的语义：顶层 mergeConfig 整体深等值
+console.log('meta-eval: mergeConfig (declarative row merge)')
+{
+  const mc = { rowsBy: ['dept', 'team'] }
+  const gold = { fields: [{ prop: 'dept', label: '部门', formtype: 'Input' }], actions: ['add'], mergeConfig: mc }
+  check(scoreAll(gold, clone(gold)).byCapability.mergeConfig.pass === true, 'mergeConfig: 整体一致应判正')
+
+  const colDropped = clone(gold)
+  colDropped.mergeConfig.rowsBy = ['dept']
+  check(scoreAll(gold, colDropped).byCapability.mergeConfig.pass === false, 'mergeConfig: 少一列应判负（哪几列合并是契约）')
+
+  const orderSwapped = clone(gold)
+  orderSwapped.mergeConfig.rowsBy = ['team', 'dept']
+  check(scoreAll(gold, orderSwapped).byCapability.mergeConfig.pass === false, 'mergeConfig: 列序变化应判负（列序是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.mergeConfig.pass === false, 'mergeConfig: pred 漏发整段应判负')
+
+  // gold 无 mergeConfig → 维度不 applicable（无合并，不参与记分）
+  const flat = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(flat, flat).byCapability.mergeConfig.applicable === false, 'mergeConfig: gold 未声明时维度不 applicable')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化
