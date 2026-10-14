@@ -5,6 +5,7 @@ import { registerGenerateFromConfig } from "../src/tools/generate-from-config.js
 import { registerGenerateForm } from "../src/tools/generate-form.js";
 import { registerGenerateTable } from "../src/tools/generate-table.js";
 import { registerGenerateDialog } from "../src/tools/generate-dialog.js";
+import { registerScaffoldPage } from "../src/tools/scaffold-page.js";
 import { registerPrompts } from "../src/prompts/index.js";
 
 // These exercise the deterministic generate_* front door / fragment tools and
@@ -414,5 +415,47 @@ describe("prompts — registration + per-target rendering", () => {
     const prompts = promptHandlers();
     const res = await prompts["form-config"].handler({ description: "一个表单" });
     expect(res.messages[0].content.text).toContain("@es-plus/vue3");
+  });
+});
+
+// AI-19: scaffold_page 现在把「SFC + 入口装配样板」一并返回。工具层拼接是唯一落地处
+// （generateScaffold 仍是纯 SFC），故在此端到端断言返回 text 同时含两者。
+function scaffoldHandler() {
+  const { server, tools } = makeMockServer();
+  registerScaffoldPage(server);
+  expect(tools.scaffold_page).toBeDefined();
+  return tools.scaffold_page.handler;
+}
+
+describe("scaffold_page — SFC + 入口装配样板", () => {
+  it("vue3：同时返回 SFC 与 src/main.ts 装配块", async () => {
+    const res = await scaffoldHandler()({
+      name: "user-manage",
+      features: ["query", "table"],
+      target: "vue3",
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("<template>"); // SFC 部分仍在
+    expect(text).toContain("</script>");
+    expect(text).toContain("src/main.ts"); // 入口块标题
+    expect(text).toContain("app.use(ESPlus, {");
+    expect(text).toContain("permission:");
+    expect(text).toContain("t:");
+    expect(text).toContain("httpRequest:");
+  });
+
+  it("vue2：入口块标题是 src/main.js，装配用 Vue.use(ESPlus", async () => {
+    const res = await scaffoldHandler()({
+      name: "user-manage",
+      features: ["query", "table"],
+      target: "vue2",
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("<template>");
+    expect(text).toContain("src/main.js");
+    expect(text).toContain("Vue.use(ESPlus, {");
+    expect(text).not.toContain("app.use(ESPlus");
+    expect(text).toContain("permission:");
+    expect(text).toContain("t:");
   });
 });

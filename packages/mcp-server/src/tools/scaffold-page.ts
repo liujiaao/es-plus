@@ -1,11 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateScaffold } from "@es-plus/shared";
+import { generateScaffold, generateAppEntry } from "@es-plus/shared";
 
 export function registerScaffoldPage(server: McpServer) {
   server.tool(
     "scaffold_page",
-    "Generate a minimal es-plus page scaffold (.vue SFC) with the basic structure for query form, table, and optional dialog. Supports vue3 (default) / vue2 / antdv targets. Use this when you need a blank starting template.",
+    "Generate a minimal es-plus page scaffold (.vue SFC) — plus the app-entry assembly boilerplate (`app.use(ESPlus, { permission, t, httpRequest })`, vue2: `Vue.use`) that makes permissionValue / i18n labelKey / remote apiParams actually work. Supports vue3 (default) / vue2 / antdv targets. Use this when you need a blank starting template.",
     {
       name: z
         .string()
@@ -27,12 +27,18 @@ export function registerScaffoldPage(server: McpServer) {
       try {
         const tgt = (target || "vue3") as "vue3" | "vue2" | "antdv";
         const code = generateScaffold(name, features, tgt);
+        const entry = generateAppEntry(tgt);
+        const entryFile = tgt === "vue2" ? "src/main.js" : "src/main.ts";
         const featureList = features || ["query", "table"];
         return {
           content: [
             {
               type: "text",
-              text: `Generated scaffold for "${name}" (target=${tgt}) with features: ${featureList.join(", ")}\n\n${code}`,
+              text:
+                `Generated scaffold for "${name}" (target=${tgt}) with features: ${featureList.join(", ")}\n\n` +
+                `${code}\n\n` +
+                `// ───── ${entryFile}（应用入口装配样板，复制一次；permission / t / httpRequest 缺一则对应能力失效）─────\n` +
+                `${entry}`,
             },
           ],
         };

@@ -104,6 +104,22 @@ describe('buildNlToConfigSystemPrompt — 组装与无损性', () => {
     }
   })
 
+  it('带上「permissionValue / labelKey 需宿主入口装配才生效」的跨文件前提规则（AI-19）', () => {
+    // permissionValue / labelKey 是跨文件依赖：只有入口 app.use(ESPlus, { permission, t })
+    // 后才生效。prompt 的输出契约是纯 config JSON，故「强制引用」= 一条规则行（指宿主入口），
+    // 不新增字段、不把 t(...) / 权限判断内联进字段。
+    expect(prompt).toContain('app.use(ESPlus')
+    expect(prompt).toContain('t: (key)')
+    expect(prompt).toContain('INERT')
+  })
+
+  it('few-shot reasoning 补了装配前提（permission / i18n 两例）', () => {
+    const salary = NL_TO_CONFIG_FEWSHOT.find((e) => e.config.name === 'SalaryManage')
+    const menu = NL_TO_CONFIG_FEWSHOT.find((e) => e.config.name === 'MenuManage')
+    expect(salary?.reasoning).toContain('app.use(ESPlus,{permission})')
+    expect(menu?.reasoning).toContain('app.use(ESPlus,{t})')
+  })
+
   it('要求只输出 JSON（否则模型会裹 markdown 围栏，调用方 JSON.parse 直接抛）', () => {
     expect(prompt).toContain('Respond with ONLY the JSON object')
   })

@@ -247,6 +247,65 @@ function transformScriptSetupBlock(source: string): string {
 }
 
 /**
+ * 生成「应用入口全局装配」样板（AI-19）。
+ *
+ * `permissionValue`（RBAC）/ `labelKey`（i18n）/ 远端 `apiParams` 都是**跨文件依赖**：
+ * 只有入口一次性 `app.use(ESPlus, { permission, t, httpRequest })`（vue2：`Vue.use`）
+ * 后才生效，否则静默失效。生成器看得见 config、看不见入口，故由 `scaffold_page`
+ * 把本样板随附在 SFC 之后（CLI 单文件写入不用它，故 `generateScaffold` 只加注释指向）。
+ *
+ * 选项形状为 **core 权威字段**（`packages/core/src/config.ts` 的 `EsPlusGlobalConfig`）：
+ * 顶层 `permission` / `t` / `httpRequest`——而非兼容键位 `EsTable.methods.$httpRequest`。
+ */
+export function generateAppEntry(target: TargetFramework = DEFAULT_TARGET): string {
+  const pkg = getEsPlusPackageName(target);
+  const optionBlock = [
+    `  permission: (code) => userStore.permissions.includes(code), // 字段/列/按钮 permissionValue 的前提`,
+    `  t: (key) => i18n.global.t(key),                             // i18n labelKey 的前提（否则回落 label）`,
+    `  httpRequest: (params) => axios(params),                     // 远端 apiParams 取数的前提`,
+  ];
+
+  if (target === 'vue2') {
+    return [
+      `// src/main.js — 应用入口：全局装配 es-plus（缺一则对应能力静默失效）`,
+      `import Vue from 'vue'`,
+      `import ElementUI from 'element-ui'`,
+      `import 'element-ui/lib/theme-chalk/index.css'`,
+      `import axios from 'axios'`,
+      `import ESPlus from '${pkg}'`,
+      ``,
+      `Vue.use(ElementUI)`,
+      `Vue.use(ESPlus, {`,
+      ...optionBlock,
+      `})`,
+    ].join("\n");
+  }
+
+  const lines = [
+    `// src/main.ts — 应用入口：全局装配 es-plus（缺一则对应能力静默失效）`,
+    `import { createApp } from 'vue'`,
+    `import axios from 'axios'`,
+  ];
+  if (target === 'antdv') {
+    lines.push(`import Antd from 'ant-design-vue'`);
+    lines.push(`import 'ant-design-vue/dist/reset.css'`);
+  }
+  lines.push(`import ESPlus from '${pkg}'`);
+  lines.push(``);
+  lines.push(`const app = createApp(App)`);
+  lines.push(``);
+  if (target === 'antdv') {
+    lines.push(`app.use(Antd)`);
+  }
+  lines.push(`app.use(ESPlus, {`);
+  lines.push(...optionBlock);
+  lines.push(`})`);
+  lines.push(``);
+  lines.push(`app.mount('#app')`);
+  return lines.join("\n");
+}
+
+/**
  * 生成最小化空白脚手架（query/table/dialog 任意组合）
  *
  * @param name      kebab-case 页面名称
@@ -350,6 +409,9 @@ export function generateScaffold(
     lines.push(`    return { ${exposeFields.join(', ')} }`);
     lines.push(`  }`);
     lines.push(`})`);
+    lines.push(`// ── 全局装配（permissionValue / i18n labelKey / 远端 apiParams 的前提）──`);
+    lines.push(`// 入口 main.js 须一次性 Vue.use(ESPlus, { permission, t, httpRequest })，否则对应能力静默失效`);
+    lines.push(`// （scaffold_page 输出会随附可直接复制的 main.js 样板）`);
     lines.push(`</script>`);
 
     return lines.join("\n");
@@ -396,6 +458,9 @@ export function generateScaffold(
     lines.push(``);
   }
 
+  lines.push(`// ── 全局装配（permissionValue / i18n labelKey / 远端 apiParams 的前提）──`);
+  lines.push(`// 入口 main.ts 须一次性 app.use(ESPlus, { permission, t, httpRequest })，否则对应能力静默失效`);
+  lines.push(`// （scaffold_page 输出会随附可直接复制的 main.ts 样板）`);
   lines.push(`</script>`);
 
   return lines.join("\n");

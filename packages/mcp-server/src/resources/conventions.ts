@@ -280,6 +280,9 @@ ${!isVue2
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -294,6 +297,9 @@ import Vue from 'vue'
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -303,6 +309,10 @@ Vue.use(ESPlus, {
 })
 \`\`\``}
 With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline httpRequest.
+\`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` are INERT until the
+entry assembles \`permission\` / \`t\` here — otherwise the gate silently passes and labels
+fall back to \`label\`. \`EsTable.methods.$httpRequest\` above is the legacy-compatible key;
+the core-authoritative field is the top-level \`httpRequest\`.
 
 ## EsCrudPage btn-click Event Keys
 - Add confirm: "${CRUD_PAGE_BTN_CLICK_KEYS.ADD_CONFIRM}"
@@ -579,6 +589,9 @@ import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 
 app.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -592,6 +605,9 @@ import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 
 Vue.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -602,6 +618,10 @@ Vue.use(ESPlus, {
 \`\`\`
 
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
+\`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` take effect ONLY after this
+entry assembles \`permission\` / \`t\`; without it the permission gate silently passes and labels
+fall back to \`label\`. The top-level \`httpRequest\` is the core-authoritative field —
+\`EsTable.methods.$httpRequest\` is the legacy-compatible key.
 ${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus — `import Antd from 'ant-design-vue'; import 'ant-design-vue/dist/reset.css'; app.use(Antd); app.use(ESPlus, {...})`.\n" : ""}
 
 ## configureEsPlus() — Module-Level Config (Auto-Import Mode)
@@ -611,7 +631,9 @@ import { configureEsPlus } from '${v.esPlusPkg}'
 configureEsPlus({
   EsTable: { methods: { $httpRequest: ${robustHttpRequest()} } },
   EsForm: { $httpRequest: ${robustHttpRequest()} },
-  permission: (code) => userStore.permissions.includes(code)
+  permission: (code) => userStore.permissions.includes(code),
+  t: (key) => i18n.t(key),
+  httpRequest: (params) => axios(params)
 })
 \`\`\`
 This ensures global config is available even in auto-import mode (unplugin-vue-components).

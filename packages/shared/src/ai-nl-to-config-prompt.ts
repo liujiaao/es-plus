@@ -226,7 +226,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '菜单管理（整个界面要国际化）：查询有菜单名称、菜单类型（目录/菜单/按钮）；表格展示菜单名称、类型、路由路径、排序、状态；新增/编辑表单两列排布、标签宽 100px；支持新增、编辑、删除。',
     reasoning:
-      '"界面要国际化" → i18n:true（标签走 labelKey）；"两列排布、标签宽" 是表单布局 → 顶层 formLayout {span:12, labelWidth:"100px"}；菜单类型是有限枚举 → Select；排序是数值 → InputNumber。',
+      '"界面要国际化" → i18n:true（标签走 labelKey）；"两列排布、标签宽" 是表单布局 → 顶层 formLayout {span:12, labelWidth:"100px"}；菜单类型是有限枚举 → Select；排序是数值 → InputNumber。（跨文件前提：labelKey 只有宿主入口 app.use(ESPlus,{t}) 装配 i18n 的 t(key) 后才生效，否则回落 label）',
     config: {
       name: 'MenuManage',
       apiUrl: '/api/menus',
@@ -360,7 +360,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '薪资管理：表格展示员工、部门、基本工资、绩效、实发工资；其中"基本工资""实发工资"只有具备 salary:view 权限的人能看到；查询有员工、部门；支持编辑。',
     reasoning:
-      '"某些列仅特定权限可见" → 对应字段用 permissionValue 逐字段门控（schema 原生支持的可见性，既不丢弃也不落成注释）；薪资字段是明细 (inQuery:false)。注意 permissionValue 是字段级可见性，与按钮级 permissions 不是一回事。',
+      '"某些列仅特定权限可见" → 对应字段用 permissionValue 逐字段门控（schema 原生支持的可见性，既不丢弃也不落成注释）；薪资字段是明细 (inQuery:false)。注意 permissionValue 是字段级可见性，与按钮级 permissions 不是一回事。（跨文件前提：permissionValue 只有宿主入口 app.use(ESPlus,{permission}) 装配 permission(code) 后才生效，否则静默放行）',
     config: {
       name: 'SalaryManage',
       apiUrl: '/api/salaries',
@@ -673,6 +673,7 @@ export function buildNlToConfigSystemPrompt(): string {
     '- fully custom cell/control → `render` (a function source string)',
     '- per-field permission gate → `permissionValue` (a permission CODE string, consumed by the host\'s global permission(code) — this is RBAC, NOT a data-driven condition; for "depends on another field\'s value" use `isHidden` when the field merely appears/disappears, or `reactions` when its options / required / disabled / value must change)',
     'Emitting one of these is correct behavior; silently omitting the requirement is a failure.',
+    '`permissionValue` (RBAC) and i18n `labelKey` are INERT until the HOST APPLICATION\'s entry assembles the plugin — it MUST call `app.use(ESPlus, { permission: (code) => …, t: (key) => … })` (vue2: `Vue.use`); remote `apiParams` likewise needs a global `httpRequest`. Emit the config as usual, and do NOT inline permission checks or `t(...)` calls into fields/columns — the scaffold\'s `main.ts` boilerplate covers the entry side.',
     '',
     'Respond with ONLY the JSON object — no prose, no markdown fences.',
     '',
