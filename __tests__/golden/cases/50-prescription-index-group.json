@@ -1,0 +1,35 @@
+{
+  "nl": "处方管理：查询有患者姓名、药品名称；表格首列是序号列，其余按「患者」分组表头下分患者姓名、年龄，「药品」分组下分药品名称、剂量；支持新增、编辑、删除。",
+  "nlEn": "Prescription management: query by patient name and drug name; the table's first column is a row-number column, then a \"Patient\" group header covering patient name and age, and a \"Drug\" group header covering drug name and dosage; supports add, edit, and delete.",
+  "fixedFields": ["patientName", "age", "drugName", "dosage"],
+  "pinnedDims": ["propSet", "actions", "columns"],
+  "config": {
+    "name": "PrescriptionManage",
+    "apiUrl": "/api/prescriptions",
+    "fields": [
+      { "prop": "patientName", "label": "患者姓名", "formtype": "Input" },
+      { "prop": "age", "label": "年龄", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "drugName", "label": "药品名称", "formtype": "Input" },
+      { "prop": "dosage", "label": "剂量", "formtype": "Input", "inQuery": false }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60 },
+      {
+        "label": "患者",
+        "groups": [
+          { "prop": "patientName", "label": "患者姓名" },
+          { "prop": "age", "label": "年龄", "width": 80 }
+        ]
+      },
+      {
+        "label": "药品",
+        "groups": [
+          { "prop": "drugName", "label": "药品名称" },
+          { "prop": "dosage", "label": "剂量" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: index + 两个 groups（vue3/schema）"
+}

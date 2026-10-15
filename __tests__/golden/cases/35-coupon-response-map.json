@@ -1,0 +1,30 @@
+{
+  "nl": "优惠券管理：查询有券名；表格展示券名、面额、有效期、状态（有效/过期）；支持新增、编辑、删除。后端列表接口只返回一个数组字段 list，没有总数字段，前端按本地分页处理。",
+  "nlEn": "Coupon management: query by coupon name; the table shows coupon name, face value, validity period, and status (valid/expired); supports add, edit, and delete. The backend list endpoint returns only an array field list with no total field, so the frontend pages locally.",
+  "fixedFields": ["name", "faceValue", "validUntil", "status"],
+  "pinnedDims": ["propSet", "actions", "configTableOut"],
+  "config": {
+    "name": "CouponManage",
+    "apiUrl": "/api/coupons",
+    "target": "vue3",
+    "fields": [
+      { "prop": "name", "label": "券名", "formtype": "Input" },
+      { "prop": "faceValue", "label": "面额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "validUntil", "label": "有效期", "formtype": "DatePicker" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "有效", "value": "valid" },
+          { "label": "过期", "value": "expired" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "tableData": "list" }
+    }
+  },
+  "notes": "AI-08: partial mapping — tableData only, no total (local paging) (vue3/schema)"
+}

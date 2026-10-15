@@ -151,6 +151,8 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
   computeBoundaryRollback,
+  buildRowSpanMethod,
+  resolveMergeConfig,
 } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
@@ -417,7 +419,8 @@ const syncLocalPagination = () => {
 
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
-  const list = columnRowList.value.filter((item) => !item.hidCol).map((item) => ({ ...item }))
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  const list = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue)).map((item) => ({ ...item }))
   list.forEach((el) => {
     if (el.prop !== 'operate' && el.key !== 'operate' && (el.prop || el.key) && !el.formatter) {
       el.formatter = (row: Record<string, unknown>) => {
@@ -486,6 +489,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
   'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
+  // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
+  'mergeConfig',
 ])
 
 const tableAttrs = computed(() => {
@@ -534,10 +539,32 @@ const tableBindAttrs = computed(() => {
   if (props.options.rowkey) {
     result.rowKey = props.options.rowkey
   }
+  // 树表（AI-09 子项③）：运行时家 options.treeConfig → el-table 原生 prop。
+  // el-table 渲染树靠「row-key + 行数据里的嵌套子数组」，tree-props 只用于自定义子键名，
+  // 故 childrenField 缺省 'children' 时不发（避免无谓的 prop）。expandAll → default-expand-all。
+  const treeCfg = props.options.treeConfig
+  if (treeCfg) {
+    if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
+      result.treeProps = { children: treeCfg.childrenField }
+    }
+    if (treeCfg.expandAll) {
+      result.defaultExpandAll = true
+    }
+  }
   if (heightType.value === 'height') {
     result.height = tableHeight.value
   } else if (heightType.value === 'maxHeight') {
     result.maxHeight = tableHeight.value
+  }
+  // 合并单元格（AI-23）：声明式 mergeConfig → el-table 的 spanMethod。
+  // 显式 spanMethod 是 Tier-3 逃生舱、优先级更高（两者并存时告警，不静默覆盖）。
+  const mergeCfg = resolveMergeConfig(props.options)
+  if (mergeCfg) {
+    if (typeof result.spanMethod === 'function') {
+      console.warn('[es-plus] 同时设置了 tableOptions.spanMethod 与 mergeConfig —— 显式 spanMethod 生效，mergeConfig 被忽略。')
+    } else {
+      result.spanMethod = buildRowSpanMethod(mergeCfg.rowsBy, displayDataSource.value as Record<string, unknown>[])
+    }
   }
   return result
 })

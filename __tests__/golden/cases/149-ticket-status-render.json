@@ -1,0 +1,40 @@
+{
+  "nl": "工单看板：查询有工单号、标题；表格展示工单号、标题、优先级、状态、创建时间，其中「状态」列需要自定义渲染（按不同状态用不同颜色的标签展示）；支持新增、编辑、删除。",
+  "nlEn": "Ticket board: query by ticket no. and title; the table shows ticket no., title, priority, status, and creation time, where the \"status\" column needs custom rendering (colored tags per status); supports add, edit, and delete.",
+  "fixedFields": ["ticketNo", "title", "priority", "status", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "extPoints:status"],
+  "config": {
+    "name": "TicketBoard",
+    "apiUrl": "/api/tickets",
+    "fields": [
+      { "prop": "ticketNo", "label": "工单号", "formtype": "Input" },
+      { "prop": "title", "label": "标题", "formtype": "Input" },
+      {
+        "prop": "priority",
+        "label": "优先级",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "高", "value": "high" },
+          { "label": "中", "value": "mid" },
+          { "label": "低", "value": "low" }
+        ]
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待处理", "value": "todo" },
+          { "label": "处理中", "value": "doing" },
+          { "label": "已完成", "value": "done" }
+        ],
+        "render": "(_, { row }) => h(ElTag, { type: row.status === 'done' ? 'success' : row.status === 'doing' ? 'warning' : 'info' }, () => row.statusLabel)"
+      },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：自定义 render（el-tag 按状态染色）。render 只能 schema 模式（sfc 无 wrapper → check 9 红），且承载字段 status 必须 inTable:true（否则不产 TODO/warning → check 9 红）。"
+}

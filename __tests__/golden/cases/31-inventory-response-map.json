@@ -1,0 +1,32 @@
+{
+  "nl": "库存盘点管理：查询有商品名、仓库；表格展示商品名、仓库、系统数量、实盘数量、盘点状态（未盘/已盘/差异）；支持新增、编辑、删除。后端列表接口返回的是 { list: [...], totalCount: N }，请据此做响应字段映射。",
+  "nlEn": "Inventory count management: query by product name and warehouse; the table shows product name, warehouse, system quantity, actual quantity, and count status (not-counted/counted/discrepancy); supports add, edit, and delete. The backend list endpoint returns { list: [...], totalCount: N }, so map the response fields accordingly.",
+  "fixedFields": ["productName", "warehouse", "systemQty", "actualQty", "countStatus"],
+  "pinnedDims": ["propSet", "actions", "configTableOut"],
+  "config": {
+    "name": "InventoryCount",
+    "apiUrl": "/api/inventory-counts",
+    "target": "vue3",
+    "fields": [
+      { "prop": "productName", "label": "商品名", "formtype": "Input" },
+      { "prop": "warehouse", "label": "仓库", "formtype": "Input" },
+      { "prop": "systemQty", "label": "系统数量", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "actualQty", "label": "实盘数量", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "countStatus",
+        "label": "盘点状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "未盘", "value": "pending" },
+          { "label": "已盘", "value": "counted" },
+          { "label": "差异", "value": "diff" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "tableData": "list", "total": "totalCount" }
+    }
+  },
+  "notes": "AI-08: backend returns { list, totalCount } → flat configTableOut mapping (vue3/schema)"
+}

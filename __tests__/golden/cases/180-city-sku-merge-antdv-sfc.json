@@ -1,0 +1,54 @@
+{
+  "nl": "（Ant Design Vue 项目，单文件组件）城市库存表：城市列合并，后面是分类、SKU、数量。支持新增、编辑。",
+  "nlEn": "(Ant Design Vue project, single-file component) City stock table: the city column merges, followed by category, SKU and quantity. Supports add and edit.",
+  "fixedFields": [
+    "city",
+    "cls",
+    "sku",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "CitySkuSfc",
+    "apiUrl": "/api/stock",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input"
+      },
+      {
+        "prop": "cls",
+        "label": "分类",
+        "formtype": "Input"
+      },
+      {
+        "prop": "sku",
+        "label": "SKU",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "city"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: antdv + SFC 模式"
+}

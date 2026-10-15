@@ -1,0 +1,45 @@
+{
+  "nl": "用 antd 风格以 SFC 方式生成工程师管理页：查询工程师姓名、技能；表格展示姓名、技能、级别；每行可展开查看邮箱、入职日期；支持新增、编辑、删除。",
+  "nlEn": "Generate the engineer management page as an Ant Design SFC: query by engineer name and skill; the table shows name, skill and level; each row can expand to reveal the email and join date; supports add, edit and delete.",
+  "fixedFields": ["name", "skill", "level", "email", "joinDate"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target", "mode"],
+  "config": {
+    "name": "EngineerManage",
+    "apiUrl": "/api/engineers",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "name", "label": "姓名", "formtype": "Input" },
+      { "prop": "skill", "label": "技能", "formtype": "Input" },
+      {
+        "prop": "level",
+        "label": "级别",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "初级", "value": "junior" },
+          { "label": "中级", "value": "middle" },
+          { "label": "高级", "value": "senior" }
+        ]
+      },
+      { "prop": "email", "label": "邮箱", "formtype": "Input", "inTable": false, "inQuery": false },
+      {
+        "prop": "joinDate",
+        "label": "入职日期",
+        "formtype": "DatePicker",
+        "inForm": false,
+        "inTable": false,
+        "inQuery": false
+      }
+    ],
+    "expandConfig": {
+      "title": "联系与入职",
+      "fields": [
+        { "prop": "email", "label": "邮箱" },
+        { "prop": "joinDate", "label": "入职日期" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（antdv/SFC）"
+}

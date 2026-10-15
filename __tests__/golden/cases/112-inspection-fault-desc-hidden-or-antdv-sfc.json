@@ -1,0 +1,40 @@
+{
+  "nl": "用 antd 风格做设备巡检：查询有设备名称；表格展示设备名称、设备编号、巡检结果、现场照片、异常描述；支持新增、编辑、删除。表单里「异常描述」在巡检结果为正常，或已上传现场照片时隐藏。",
+  "nlEn": "Device-inspection management with an Ant Design look: query by device name; the table shows device name, device code, inspection result, site photo and fault description; supports add, edit and delete. In the form, the \"fault description\" is hidden when the inspection result is normal, or a site photo has already been uploaded.",
+  "fixedFields": ["deviceName", "deviceCode", "checkResult", "photoUrl", "faultDesc"],
+  "pinnedDims": ["propSet", "actions", "isHidden:faultDesc", "target", "mode"],
+  "config": {
+    "name": "DeviceInspectionManage",
+    "apiUrl": "/api/device-inspections",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "deviceName", "label": "设备名称", "formtype": "Input" },
+      { "prop": "deviceCode", "label": "设备编号", "formtype": "Input" },
+      {
+        "prop": "checkResult",
+        "label": "巡检结果",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "正常", "value": "ok" },
+          { "label": "异常", "value": "fault" }
+        ]
+      },
+      { "prop": "photoUrl", "label": "现场照片", "formtype": "Upload", "inQuery": false },
+      {
+        "prop": "faultDesc",
+        "label": "异常描述",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "checkResult" }, "ok"] },
+            { "notEmpty": [{ "var": "photoUrl" }] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or）—— 结果正常或已传照片时隐藏异常描述（antdv/SFC）"
+}

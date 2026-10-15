@@ -211,6 +211,8 @@ import {
   findValueByKey,
   resolveKeepPage,
   computeBoundaryRollback,
+  buildRowSpanMethod,
+  resolveMergeConfig,
   type TableColumn,
   type PaginationConfig,
   type TableOptions,
@@ -285,6 +287,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
   'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
+  // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
+  'mergeConfig',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -734,7 +738,8 @@ export default defineComponent({
     // 和做 width→minWidth 转换，最后返回副本数组。computed 缓存让副本只在 columnRowList
     // 变化时重新生成。
     const filteredColumns = computed(() => {
-      const originals = columnRowList.value.filter((item) => !item.hidCol)
+      // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+      const originals = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
       const list = originals.map((el) => {
         const col = { ...el } as TableColumn
         if (
@@ -891,10 +896,34 @@ export default defineComponent({
       if (props.options.rowkey) {
         result.rowKey = props.options.rowkey
       }
+      // 树表（AI-09 子项③）：options.treeConfig → el-table（Element UI）原生 prop，
+      // 与 vue3 同款映射 —— tree-props 仅在自定义子键名时发，expandAll → default-expand-all。
+      const treeCfg = props.options.treeConfig
+      if (treeCfg) {
+        if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
+          result.treeProps = { children: treeCfg.childrenField }
+        }
+        if (treeCfg.expandAll) {
+          result.defaultExpandAll = true
+        }
+      }
       if (heightType.value === 'height') {
         result.height = tableHeight.value
       } else if (heightType.value === 'maxHeight') {
         result.maxHeight = tableHeight.value
+      }
+      // 合并单元格（AI-23）：声明式 mergeConfig → el-table 的 spanMethod。
+      // 显式 spanMethod 是 Tier-3 逃生舱、优先级更高（两者并存时告警，不静默覆盖）。
+      const mergeCfg = resolveMergeConfig(props.options)
+      if (mergeCfg) {
+        if (typeof result.spanMethod === 'function') {
+          console.warn('[es-plus] 同时设置了 tableOptions.spanMethod 与 mergeConfig —— 显式 spanMethod 生效，mergeConfig 被忽略。')
+        } else {
+          result.spanMethod = buildRowSpanMethod(
+            mergeCfg.rowsBy,
+            effectiveDataSource.value as Record<string, unknown>[],
+          )
+        }
       }
       return result
     })

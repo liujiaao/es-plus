@@ -1,0 +1,26 @@
+{
+  "nl": "车辆调度管理：查询有车牌号、驾驶员；表格展示车牌号、驾驶员、目的地、油卡号、油卡备注；支持新增、编辑、删除。表单里「油卡备注」在未填写「油卡号」时隐藏。",
+  "nlEn": "Vehicle dispatch management: query by plate number and driver; the table shows plate number, driver, destination, fuel-card number, and fuel-card note; supports add, edit, and delete. In the form, \"fuel-card note\" is hidden while the \"fuel-card number\" is empty.",
+  "fixedFields": ["plateNo", "driver", "destination", "fuelCard", "fuelNote"],
+  "pinnedDims": ["propSet", "actions", "target", "isHidden:fuelNote"],
+  "config": {
+    "name": "VehicleDispatchManage",
+    "apiUrl": "/api/vehicle-dispatches",
+    "target": "vue2",
+    "fields": [
+      { "prop": "plateNo", "label": "车牌号", "formtype": "Input" },
+      { "prop": "driver", "label": "驾驶员", "formtype": "Input" },
+      { "prop": "destination", "label": "目的地", "formtype": "Input", "inQuery": false },
+      { "prop": "fuelCard", "label": "油卡号", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "fuelNote",
+        "label": "油卡备注",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "fuelCard", "op": "empty" }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=empty — 油卡号为空时隐藏油卡备注（vue2/schema）"
+}

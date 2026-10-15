@@ -1,0 +1,18 @@
+{
+  "nl": "话题管理：查询话题标题；表格展示话题标题、回复数；话题是树形结构（父话题下挂子话题）；支持新增、删除。",
+  "nlEn": "Topic management: query by topic title; the table shows topic title and reply count; topics are hierarchical (sub-topics nested under their parents); supports add and delete.",
+  "fixedFields": ["title", "replyCount"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "TopicTreeManage",
+    "apiUrl": "/api/topics",
+    "target": "vue2",
+    "fields": [
+      { "prop": "title", "label": "话题标题", "formtype": "Input" },
+      { "prop": "replyCount", "label": "回复数", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": {},
+    "actions": ["add", "delete"]
+  },
+  "notes": "AI-09 子项③: 裸树（默认 children 键、默认不展开）（vue2/schema）"
+}

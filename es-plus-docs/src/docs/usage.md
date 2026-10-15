@@ -339,29 +339,50 @@ const handleConfirm = ({ key, model }) => {
 </script>
 ```
 
-### 字段联动
+### 字段联动 / 计算（`reactions`）
 
-通过 `linkage` 配置实现字段间联动，当上游字段变化时自动更新下游选项：
+字段间联动用**声明式** `reactions`：一个纯 JSON 规则数组，**不用回调**。每条规则形如
+`{ dependencies?, when?, fulfill }`：
+
+- `dependencies`：触发重算的 model 路径数组。**含 `fulfill.value` 时必填**（否则任何 model
+  变更都会重算并覆盖用户手改）。
+- `when`：可选门控表达式，仅当其为真时该规则生效。
+- `fulfill`：`{ dataOptions?, required?, disabled?, value? }`——`required` / `disabled` /
+  `value` 是表达式节点（与 `isHidden` 同一套 DSL），`dataOptions` 是**字面量选项数组**。
+
+表达式的算子白名单：`var == != > >= < <= in nin empty notEmpty truthy falsy and or not if`。
 
 ```javascript
 const formItems = [
+  { prop: 'province', label: '省份', formtype: 'Select', span: 8,
+    dataOptions: [{ label: '浙江', value: 'zj' }, { label: '江苏', value: 'js' }] },
   {
-    prop: 'province', label: '省份', formtype: 'Select', span: 8,
-    dataOptions: provinceList,
-    linkage: {
-      effect: ['city'],   // 联动下游字段
-      action: (val, formModel) => {
-        formModel.city = ''                    // 清空下游值
-        return { dataOptions: getCityOptions(val) }  // 更新下游选项
-      }
-    }
+    prop: 'city', label: '城市', formtype: 'Select', span: 8, inQuery: false,
+    // 选项随省份变化：DSL 禁对象字面量，故按省份分支写成多条规则，各带自己的 when
+    reactions: [
+      { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] },
+        fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }, { label: '宁波', value: 'nb' }] } },
+      { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'js'] },
+        fulfill: { dataOptions: [{ label: '南京', value: 'nj' }] } },
+    ],
   },
   {
-    prop: 'city', label: '城市', formtype: 'Select', span: 8,
-    dataOptions: []
-  }
+    prop: 'invoiceNo', label: '发票号', formtype: 'Input', span: 8, inQuery: false,
+    // 只有填了城市，发票号才必填
+    reactions: [{ dependencies: ['city'],
+      fulfill: { required: { notEmpty: [{ var: 'city' }] } } }],
+  },
+  {
+    prop: 'region', label: '所属大区', formtype: 'Input', span: 8, inQuery: false,
+    // 大区自动等于所选省份（值回写），且不可手改
+    reactions: [{ dependencies: ['province'],
+      fulfill: { value: { var: 'province' }, disabled: { truthy: [{ var: 'province' }] } } }],
+  },
 ]
 ```
+
+`reactions` 是**表单作用域**（查询表单 + 新增/编辑弹窗），**不作用于表格列**。字段只是
+「出现/消失」用 `isHidden`；「选项 / 必填态 / 禁用态 / 值」需要变化才用 `reactions`。
 
 ## EsTable 用法
 

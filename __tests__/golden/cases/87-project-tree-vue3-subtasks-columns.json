@@ -1,0 +1,28 @@
+{
+  "nl": "项目管理：查询项目名称；表格用两级表头——「项目」下分「项目名称」「负责人」，另一列是「进度」；项目是树形结构，子任务放在 subTasks 字段里，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Project management: query by project name; the table has two-level group headers — \"Project\" grouping \"Project name\" and \"Owner\", plus a \"Progress\" column; projects are hierarchical with sub-tasks under the subTasks field and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["projectName", "owner", "progress"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "columns"],
+  "config": {
+    "name": "ProjectTreeManage",
+    "apiUrl": "/api/projects",
+    "fields": [
+      { "prop": "projectName", "label": "项目名称", "formtype": "Input" },
+      { "prop": "owner", "label": "负责人", "formtype": "Input" },
+      { "prop": "progress", "label": "进度", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "columns": [
+      {
+        "label": "项目",
+        "groups": [
+          { "prop": "projectName", "label": "项目名称" },
+          { "prop": "owner", "label": "负责人" }
+        ]
+      },
+      { "prop": "progress", "label": "进度", "width": 100 }
+    ],
+    "treeConfig": { "childrenField": "subTasks", "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③+①: 树表 + 多级表头显式列（childrenField=subTasks + expandAll）（vue3/schema）"
+}

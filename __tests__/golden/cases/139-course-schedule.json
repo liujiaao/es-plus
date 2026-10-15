@@ -1,0 +1,55 @@
+{
+  "nl": "课程排期（vue2 / Element UI）：查询有课程名称、授课教师（下拉数据来自 /api/teachers 接口）；表格展示课程名称、授课教师、教室、报名人数、状态；新增和编辑使用不同的弹窗——新增填课程名称、授课教师、教室，编辑在此基础上还能修改状态；支持新增、编辑、删除；「报名人数」列仅在有权限时可见，权限码 course:signup:view；界面要求国际化。",
+  "nlEn": "Course scheduling (vue2 / Element UI): query by course name and teacher (the teacher dropdown data comes from the /api/teachers endpoint); the table shows course name, teacher, classroom, signup count, and status; add and edit use different dialogs — on add fill in course name, teacher, and classroom, and on edit you can additionally change the status; supports add, edit, and delete; the \"signup count\" column is visible only with permission, code course:signup:view; the UI requires i18n.",
+  "fixedFields": ["courseName", "teacherId", "room", "signupCount", "status"],
+  "pinnedDims": ["propSet", "actions", "target", "i18n", "apiParams:teacherId", "dialogs", "extPoints:signupCount"],
+  "config": {
+    "name": "CourseSchedule",
+    "apiUrl": "/api/courses",
+    "target": "vue2",
+    "i18n": true,
+    "fields": [
+      { "prop": "courseName", "label": "课程名称", "formtype": "Input" },
+      {
+        "prop": "teacherId",
+        "label": "授课教师",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/teachers", "labelField": "name", "valueField": "id" }
+      },
+      { "prop": "room", "label": "教室", "formtype": "Input", "inQuery": false },
+      { "prop": "signupCount", "label": "报名人数", "formtype": "InputNumber", "inQuery": false, "permissionValue": "course:signup:view" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "未开始", "value": "idle" },
+          { "label": "进行中", "value": "ongoing" },
+          { "label": "已结束", "value": "finished" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "dialogs": {
+      "add": {
+        "title": "新增课程",
+        "formItems": [
+          { "prop": "courseName", "label": "课程名称", "formtype": "Input" },
+          { "prop": "teacherId", "label": "授课教师", "formtype": "Select" },
+          { "prop": "room", "label": "教室", "formtype": "Input" }
+        ]
+      },
+      "edit": {
+        "title": "编辑课程",
+        "formItems": [
+          { "prop": "courseName", "label": "课程名称", "formtype": "Input" },
+          { "prop": "teacherId", "label": "授课教师", "formtype": "Select" },
+          { "prop": "room", "label": "教室", "formtype": "Input" },
+          { "prop": "status", "label": "状态", "formtype": "Select" }
+        ]
+      }
+    }
+  },
+  "notes": "vue2 目标 + 四维：i18n + apiParams(教师下拉) + dialogs(新增/编辑不同表单) + extPoints(列级 permissionValue)。permissionValue 任意模式/位置安全（无 warning/TODO），故本列无须 inTable 特殊处理。"
+}

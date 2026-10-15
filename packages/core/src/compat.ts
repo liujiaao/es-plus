@@ -5,9 +5,9 @@
  * 确保旧写法在新版本中仍然可用。
  */
 
-import type { BtnConfig, FormItemOption, ListenToCallBack, ModelData } from './types'
+import type { BtnConfig, FieldHidden, FormItemOption, ListenToCallBack, ModelData } from './types'
 import { FORM_TYPE_ALIASES } from './constants'
-import { resolveButtonSide } from './field-resolver'
+import { compileHiddenCondition, resolveButtonSide } from './field-resolver'
 
 // ============================================================================
 // FormType 归一化
@@ -218,6 +218,7 @@ export interface FormItemShortcutSource {
  * - placeholder/clearable/disabled 等快捷属性自动注入到 attrs
  * - attrs 中已有的同名属性不会被覆盖（显式 attrs 优先）
  * - 原始顶层属性保留不删除（保持数据完整性）
+ * - 声明式 `isHidden`（JSON 条件对象 / 数组）在**此处**水合为函数
  */
 export function normalizeFormItem<T extends FormItemShortcutSource>(
   item: T
@@ -234,6 +235,16 @@ export function normalizeFormItem<T extends FormItemShortcutSource>(
 
   if (Object.keys(mergedAttrs).length > 0) {
     merged.attrs = mergedAttrs
+  }
+
+  // 声明式显隐条件（`{field, op, value}` 或条件数组，AND）→ 运行时谓词。
+  // 该形态无法内联进纯 JSON 的 schema 产物，也无法被三端各自实现；统一在
+  // 归一化的唯一入口编译，三端 `formItemListFilter` 便无需感知两种形态。
+  // 只认「非 null 的对象」：函数形态与缺省一律原样透传。
+  // 经 Record 视图读写 —— 泛型 T 上的索引签名不参与属性访问。
+  const hidden = (item as Record<string, unknown>).isHidden
+  if (hidden !== null && typeof hidden === 'object') {
+    ;(merged as Record<string, unknown>).isHidden = compileHiddenCondition(hidden as FieldHidden)
   }
 
   return merged

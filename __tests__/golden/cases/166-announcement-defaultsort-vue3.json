@@ -1,0 +1,18 @@
+{
+  "nl": "公告列表：默认按发布时间倒序排列；展示标题、发布时间；支持新增、编辑。",
+  "nlEn": "Announcement list: sorted by publish time descending by default; shows title and publish time. Supports add and edit.",
+  "fixedFields": ["title", "publishTime"],
+  "pinnedDims": ["propSet", "membership", "actions"],
+  "config": {
+    "name": "AnnouncementManage",
+    "apiUrl": "/api/announcements",
+    "target": "vue3",
+    "fields": [
+      { "prop": "title", "label": "标题", "formtype": "Input" },
+      { "prop": "publishTime", "label": "发布时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "tableOptions": { "defaultSort": { "prop": "publishTime", "order": "descending" } },
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-22: tableOptions.defaultSort（默认排序，含嵌套对象）经 AI Zod 存活并发射；嵌套对象键须在契约键区末尾（守卫捕获边界）"
+}

@@ -1,0 +1,19 @@
+{
+  "nl": "城市档案：一次拉取全部数据、在前端分页；展示城市名、省份、人口；只读。",
+  "nlEn": "City atlas: fetch all data at once and paginate on the client; shows city name, province and population. Read-only.",
+  "fixedFields": ["cityName", "province", "population"],
+  "pinnedDims": ["propSet", "membership", "target"],
+  "config": {
+    "name": "CityAtlasView",
+    "apiUrl": "/api/cities",
+    "target": "antdv",
+    "fields": [
+      { "prop": "cityName", "label": "城市名", "formtype": "Input" },
+      { "prop": "province", "label": "省份", "formtype": "Input", "inQuery": false },
+      { "prop": "population", "label": "人口", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "localPagination": true },
+    "actions": ["view"]
+  },
+  "notes": "AI-22: tableOptions.localPagination（前端分页，antdv 目标）经 AI Zod 存活并发射"
+}

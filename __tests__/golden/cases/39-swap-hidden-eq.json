@@ -1,0 +1,33 @@
+{
+  "nl": "调班申请管理：查询有条件员工姓名、调班日期；表格展示员工姓名、调班日期、申请类型（调班/换班）、调班原因；支持新增、编辑、删除。表单里「调班原因」在申请类型选为「换班」时隐藏（换班的理由由对方填写）。",
+  "nlEn": "Shift-swap request management: query by employee name and swap date; the table shows employee name, swap date, request type (duty-swap / rotation-swap), and swap reason; supports add, edit, and delete. In the form, \"swap reason\" is hidden when the request type is \"rotation-swap\" (the counterparty fills in the reason).",
+  "fixedFields": ["employeeName", "swapDate", "swapType", "swapReason"],
+  "pinnedDims": ["propSet", "actions", "isHidden:swapReason"],
+  "config": {
+    "name": "ShiftSwapManage",
+    "apiUrl": "/api/shift-swaps",
+    "target": "vue3",
+    "fields": [
+      { "prop": "employeeName", "label": "员工姓名", "formtype": "Input" },
+      { "prop": "swapDate", "label": "调班日期", "formtype": "DatePicker" },
+      {
+        "prop": "swapType",
+        "label": "申请类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "调班", "value": "duty" },
+          { "label": "换班", "value": "rotate" }
+        ]
+      },
+      {
+        "prop": "swapReason",
+        "label": "调班原因",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "swapType", "op": "eq", "value": "rotate" }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=eq — 换班时隐藏调班原因（vue3/schema）"
+}

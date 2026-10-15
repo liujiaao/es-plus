@@ -1,0 +1,76 @@
+{
+  "nl": "报销单管理：查询有报销人；表格展示报销人、城市、发票号、金额；支持新增、编辑、删除。表单里只有填了城市之后，「发票号」才是必填的。",
+  "nlEn": "Reimbursement management: query by claimant; the table shows claimant, city, invoice no. and amount; supports add, edit and delete. In the form the \"invoice no.\" is required only once a city has been filled in.",
+  "fixedFields": [
+    "claimant",
+    "city",
+    "invoiceNo",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:invoiceNo"
+  ],
+  "config": {
+    "name": "ReimbursementManage",
+    "apiUrl": "/api/reimbursements",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "claimant",
+        "label": "报销人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "杭州",
+            "value": "hz"
+          },
+          {
+            "label": "南京",
+            "value": "nj"
+          }
+        ]
+      },
+      {
+        "prop": "invoiceNo",
+        "label": "发票号",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "city"
+            ],
+            "fulfill": {
+              "required": {
+                "notEmpty": [
+                  {
+                    "var": "city"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.required 条件必填（填了城市后发票号必填）（vue3/schema）"
+}

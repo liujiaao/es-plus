@@ -1,0 +1,146 @@
+{
+  "nl": "客户地址管理：查询有客户名称；表格展示客户名称、省份、城市、详细地址；支持新增、编辑、删除。表单里「城市」的下拉选项随「省份」变化（浙江→杭州/宁波，江苏→南京/苏州，其它省份清空），并且选了省份后城市必填。",
+  "nlEn": "Customer-address management: query by customer name; the table shows customer name, province, city and street address; supports add, edit and delete. In the form the \"city\" dropdown options follow the \"province\" (Zhejiang → Hangzhou/Ningbo, Jiangsu → Nanjing/Suzhou, others empty), and the city is required once a province is chosen.",
+  "fixedFields": [
+    "customerName",
+    "province",
+    "city",
+    "address"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:city"
+  ],
+  "config": {
+    "name": "CustomerAddressManage",
+    "apiUrl": "/api/customer-addresses",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "customerName",
+        "label": "客户名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "province",
+        "label": "省份",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "浙江",
+            "value": "zj"
+          },
+          {
+            "label": "江苏",
+            "value": "js"
+          },
+          {
+            "label": "其它",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "province"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "province"
+                },
+                "zj"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "杭州",
+                  "value": "hz"
+                },
+                {
+                  "label": "宁波",
+                  "value": "nb"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "province"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "province"
+                },
+                "js"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "南京",
+                  "value": "nj"
+                },
+                {
+                  "label": "苏州",
+                  "value": "sz"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "province"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "province"
+                },
+                "other"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": []
+            }
+          },
+          {
+            "dependencies": [
+              "province"
+            ],
+            "fulfill": {
+              "required": {
+                "notEmpty": [
+                  {
+                    "var": "province"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "address",
+        "label": "详细地址",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 同字段多条规则（分支 dataOptions + required），后声明覆盖先声明（vue3/schema）"
+}

@@ -1,0 +1,35 @@
+{
+  "nl": "预约管理：查询有客户姓名、服务项目；表格用「客户」分组表头下分客户姓名、电话，「预约」分组下分服务项目、预约时间；支持新增、编辑、删除。",
+  "nlEn": "Appointment management: query by customer name and service; the table uses a \"Customer\" group header covering customer name and phone, and an \"Appointment\" group header covering service and appointment time; supports add, edit, and delete.",
+  "fixedFields": ["customerName", "phone", "service", "apptTime"],
+  "pinnedDims": ["propSet", "actions", "columns", "mode"],
+  "config": {
+    "name": "AppointmentManage",
+    "apiUrl": "/api/appointments",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "customerName", "label": "客户姓名", "formtype": "Input" },
+      { "prop": "phone", "label": "电话", "formtype": "Input", "inQuery": false },
+      { "prop": "service", "label": "服务项目", "formtype": "Input" },
+      { "prop": "apptTime", "label": "预约时间", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "columns": [
+      {
+        "label": "客户",
+        "groups": [
+          { "prop": "customerName", "label": "客户姓名" },
+          { "prop": "phone", "label": "电话" }
+        ]
+      },
+      {
+        "label": "预约",
+        "groups": [
+          { "prop": "service", "label": "服务项目" },
+          { "prop": "apptTime", "label": "预约时间" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: groups 多级表头（vue3/sfc — 递归列发射器 + 操作列仍追加）"
+}

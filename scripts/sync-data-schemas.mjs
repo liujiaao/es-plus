@@ -30,6 +30,7 @@ const SCHEMAS = [
   ['brand/slogan.schema.json', 'brand'],
   ['cases/cases.schema.json', 'cases'],
   ['ai/ai-tools.schema.json', 'ai'],
+  ['ai/feature-coverage.schema.json', 'ai'],
 ]
 
 const CHECK = process.argv.includes('--check')

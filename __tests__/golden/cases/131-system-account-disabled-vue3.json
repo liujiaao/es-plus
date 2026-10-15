@@ -1,0 +1,77 @@
+{
+  "nl": "系统账号管理：查询有账号名；表格展示账号名、账号类型、显示名、备注；支持新增、编辑、删除。表单里「账号名」在账号类型为系统内置时不可修改（禁用）。",
+  "nlEn": "System-account management: query by account name; the table shows account name, account type, display name and remark; supports add, edit and delete. In the form the \"account name\" cannot be edited (disabled) when the account type is built-in.",
+  "fixedFields": [
+    "username",
+    "accountType",
+    "displayName",
+    "remark"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:username"
+  ],
+  "config": {
+    "name": "SystemAccountManage",
+    "apiUrl": "/api/system-accounts",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "username",
+        "label": "账号名",
+        "formtype": "Input",
+        "reactions": [
+          {
+            "dependencies": [
+              "accountType"
+            ],
+            "fulfill": {
+              "disabled": {
+                "==": [
+                  {
+                    "var": "accountType"
+                  },
+                  "system"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "accountType",
+        "label": "账号类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "系统内置",
+            "value": "system"
+          },
+          {
+            "label": "普通用户",
+            "value": "normal"
+          }
+        ]
+      },
+      {
+        "prop": "displayName",
+        "label": "显示名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.disabled 条件禁用（系统内置账号名不可改）（vue3/schema）"
+}

@@ -1,0 +1,54 @@
+{
+  "nl": "招聘管理：查询有职位名称、所属部门；表格展示职位名称、所属部门、招聘人数、状态、发布日期；表格上方左侧「新建职位」、右侧「导出」；新增和编辑使用不同的弹窗——新增填职位名称、所属部门、招聘人数，编辑在此基础上还能修改状态；支持新增、编辑、删除；新增、编辑、删除按钮分别需要权限码 recruit:add、recruit:edit、recruit:remove；界面要求国际化；查询表单分 2 列。",
+  "nlEn": "Recruitment management: query by job title and department; the table shows job title, department, headcount, status, and publish date; above the table \"New Job\" is on the left and \"Export\" on the right; add and edit use different dialogs — on add fill in job title, department, and headcount, and on edit you can additionally change the status; supports add, edit, and delete; the add, edit, and delete buttons require permission codes recruit:add, recruit:edit, recruit:remove respectively; the UI requires i18n; the query form is 2 columns.",
+  "fixedFields": ["title", "dept", "headcount", "status", "publishAt"],
+  "pinnedDims": ["propSet", "actions", "i18n", "formLayout", "tableBtns", "dialogs", "permissions"],
+  "config": {
+    "name": "RecruitManage",
+    "apiUrl": "/api/recruits",
+    "i18n": true,
+    "fields": [
+      { "prop": "title", "label": "职位名称", "formtype": "Input" },
+      { "prop": "dept", "label": "所属部门", "formtype": "Input" },
+      { "prop": "headcount", "label": "招聘人数", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "招聘中", "value": "open" },
+          { "label": "已关闭", "value": "closed" }
+        ]
+      },
+      { "prop": "publishAt", "label": "发布日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "recruit:add", "edit": "recruit:edit", "delete": "recruit:remove" },
+    "formLayout": { "span": 12 },
+    "tableBtns": [
+      { "name": "新建职位", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "导出", "position": "right", "actionType": "export" }
+    ],
+    "dialogs": {
+      "add": {
+        "title": "新增职位",
+        "formItems": [
+          { "prop": "title", "label": "职位名称", "formtype": "Input" },
+          { "prop": "dept", "label": "所属部门", "formtype": "Input" },
+          { "prop": "headcount", "label": "招聘人数", "formtype": "InputNumber" }
+        ]
+      },
+      "edit": {
+        "title": "编辑职位",
+        "formItems": [
+          { "prop": "title", "label": "职位名称", "formtype": "Input" },
+          { "prop": "dept", "label": "所属部门", "formtype": "Input" },
+          { "prop": "headcount", "label": "招聘人数", "formtype": "InputNumber" },
+          { "prop": "status", "label": "状态", "formtype": "Select" }
+        ]
+      }
+    }
+  },
+  "notes": "五维覆盖：i18n + formLayout(span) + tableBtns(position→code 归一) + dialogs(新增/编辑不同表单) + permissions。schema 模式下顶层 permissions 对渲染 inert（仅进 summary 行）；按钮级门控实际走 tableBtns[].permissionValue。"
+}

@@ -1,0 +1,114 @@
+{
+  "nl": "配送单管理：查询有收件人；表格展示收件人、配送方式、期望时段、备注；支持新增、编辑、删除。表单里「期望时段」的选项随「配送方式」变化——当日达给上午/下午，次日达给次日上午/次日下午。",
+  "nlEn": "Delivery management: query by receiver; the table shows receiver, delivery method, preferred slot and remark; supports add, edit and delete. In the form the \"preferred slot\" options follow \"delivery method\" — same-day gives morning/afternoon, next-day gives next-morning/next-afternoon.",
+  "fixedFields": [
+    "receiver",
+    "deliveryType",
+    "timeSlot",
+    "remark"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:timeSlot",
+    "target"
+  ],
+  "config": {
+    "name": "DeliveryManage",
+    "apiUrl": "/api/deliveries",
+    "target": "vue2",
+    "fields": [
+      {
+        "prop": "receiver",
+        "label": "收件人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "deliveryType",
+        "label": "配送方式",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "当日达",
+            "value": "sameDay"
+          },
+          {
+            "label": "次日达",
+            "value": "nextDay"
+          }
+        ]
+      },
+      {
+        "prop": "timeSlot",
+        "label": "期望时段",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "deliveryType"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "deliveryType"
+                },
+                "sameDay"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "上午",
+                  "value": "am"
+                },
+                {
+                  "label": "下午",
+                  "value": "pm"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "deliveryType"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "deliveryType"
+                },
+                "nextDay"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "次日上午",
+                  "value": "nextAm"
+                },
+                {
+                  "label": "次日下午",
+                  "value": "nextPm"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 分支式 dataOptions 联动（vue2/schema）"
+}

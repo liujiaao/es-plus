@@ -33,6 +33,171 @@ function isSafeProp(v: string): boolean {
   return !segments.some((s) => UNSAFE_PROP_SEGMENT.test(s));
 }
 
+/**
+ * Declarative conditional-visibility conditions — mirrors the shared
+ * authoritative schema (packages/shared/src/structured-config.schema.ts).
+ *
+ * MUST be declared here too: this inline Zod copy is what the MCP tool parses
+ * the host LLM's config with, and Zod strips unknown keys by default. Without
+ * `isHidden` here, a config that declares a visibility condition would parse
+ * "successfully" with the condition silently DROPPED — the field would render
+ * unconditionally, with no error. `check-schema-contract.mjs` guards the
+ * field-level contract so the two copies can't drift again.
+ */
+const HIDDEN_OPS = ["eq", "ne", "in", "nIn", "empty", "notEmpty", "truthy", "falsy"] as const;
+
+const HiddenConditionSchema = z.object({
+  field: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'field must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+    })
+    .describe('Model field path to test, e.g. "status" or "user.type"'),
+  op: z
+    .enum(HIDDEN_OPS)
+    .default("eq")
+    .describe(
+      "Comparison operator. eq/ne = equal/not-equal (eq is the default; number↔string is tolerated, e.g. 1 matches '1'); in/nIn = value is/is-not in the given array; empty/notEmpty = ''/null/undefined/[] check; truthy/falsy = JS truthiness (!!v). The field is HIDDEN while this expression holds."
+    ),
+  value: z
+    .unknown()
+    .optional()
+    .describe(
+      "Right-hand side of the comparison. REQUIRED for eq/ne (scalar) and in/nIn (array). IGNORED by empty/notEmpty/truthy/falsy."
+    ),
+});
+
+/**
+ * Expression operators (closed set) — mirrors core's `EXPR_OPS` and the shared
+ * authoritative schema verbatim (see packages/core/src/expr.ts). A JSON
+ * expression (JSONLogic-shaped / CEL-semantics subset) is the escape hatch for
+ * predicates the legacy `{field, op, value}` form cannot express — OR, AND-OR
+ * mixes, ordering, nested NOT. It is plain JSON data so it can be inlined into
+ * a schema-mode pageSchema (a JS string cannot).
+ */
+const EXPR_OPS = [
+  "var",
+  "==",
+  "!=",
+  ">",
+  ">=",
+  "<",
+  "<=",
+  "in",
+  "nin",
+  "empty",
+  "notEmpty",
+  "truthy",
+  "falsy",
+  "and",
+  "or",
+  "not",
+  "if",
+] as const;
+
+/** Operators that form a **single-key operator node** (`var` excluded: its operand is a string path). */
+const EXPR_NODE_OP_SET: ReadonlySet<string> = new Set(EXPR_OPS.filter((op) => op !== "var"));
+
+/** `var` node: read a model path (shares the same `isSafeProp` guard as field/prop). */
+const HiddenExprVarSchema = z.strictObject({
+  var: z
+    .string()
+    .min(1)
+    .refine(isSafeProp, {
+      message:
+        'var must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+    })
+    .describe('Model field path to read, e.g. "status" or "user.type"'),
+});
+
+/**
+ * Operator node: exactly ONE key ∈ EXPR_OPS (excluding var), value an operand array.
+ * Closed by whitelist (sandbox), arity checked at runtime by core's evaluator.
+ */
+const hiddenExprOpNode = (operand: z.ZodTypeAny) =>
+  z.record(z.string(), z.array(operand)).refine(
+    (o) => {
+      const keys = Object.keys(o);
+      return keys.length === 1 && EXPR_NODE_OP_SET.has(keys[0]);
+    },
+    { message: "expression operator node must have exactly one key ∈ EXPR_OPS (excluding var)" }
+  );
+
+/** Expression node: `{ var }` or an operator node (top-level: bare literals rejected). */
+const HiddenExprNodeSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([HiddenExprVarSchema, hiddenExprOpNode(HiddenExprOperandSchema)])
+);
+
+/** Expression operand: literal / operand array / node (recursive). */
+const HiddenExprOperandSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(HiddenExprOperandSchema),
+    HiddenExprVarSchema,
+    hiddenExprOpNode(HiddenExprOperandSchema),
+  ])
+);
+
+/**
+ * A single condition, a single expression node, or an array (all must hold = AND, then hidden).
+ * Legacy condition first (first-match preserves old behavior); the two branches are disjoint
+ * (a legacy condition always has a string `field`; an expression node never does).
+ */
+const HiddenConditionListSchema = z.union([
+  HiddenConditionSchema,
+  HiddenExprNodeSchema,
+  z.array(z.union([HiddenConditionSchema, HiddenExprNodeSchema])).min(1),
+]);
+
+/**
+ * Field-level linkage (AI-07) fulfillment — plain JSON, NEVER a JS callback.
+ * `dataOptions` is a LITERAL option array (the DSL forbids object literals, so branch by
+ * declaring one rule per case with its own `when`); `required`/`disabled`/`value` are
+ * expression nodes (`value` requires a non-empty `dependencies`).
+ */
+const ReactionFulfillSchema = z.object({
+  dataOptions: z
+    .array(DataOptionSchema)
+    .optional()
+    .describe(
+      "Literal option array for this field while the rule is active (NOT an expression — the DSL forbids object literals, so branch by declaring one rule per case with its own `when`)."
+    ),
+  required: HiddenExprNodeSchema.optional().describe("Expression node evaluating to a boolean: make this field required."),
+  disabled: HiddenExprNodeSchema.optional().describe("Expression node evaluating to a boolean: disable this field."),
+  value: HiddenExprNodeSchema.optional().describe(
+    "Expression node evaluating to this field's new value, written back to the model (requires a non-empty `dependencies`)."
+  ),
+});
+
+/** Field linkage rule (AI-07) — mirrors the shared schema's ReactionSchema. */
+const ReactionSchema = z
+  .object({
+    dependencies: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .refine(isSafeProp, {
+            message:
+              'dependencies item must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+          })
+      )
+      .optional()
+      .describe("Model paths that retrigger this rule. REQUIRED when `fulfill.value` is present."),
+    when: HiddenExprNodeSchema.optional().describe(
+      "Optional gate expression: the rule applies only while it evaluates truthy. Plain JSON data, never a JS source string."
+    ),
+    fulfill: ReactionFulfillSchema,
+  })
+  .refine((r) => r.fulfill.value === undefined || (r.dependencies?.length ?? 0) > 0, {
+    message: "reactions.fulfill.value requires a non-empty dependencies (otherwise every model change would overwrite the user's manual edit)",
+  });
+
 const FieldConfigSchema = z.object({
   prop: z
     .string()
@@ -43,6 +208,12 @@ const FieldConfigSchema = z.object({
     })
     .describe("Field key in the data model (camelCase), e.g. \"userName\""),
   label: z.string().min(1).describe("Human-readable column/form label, e.g. \"用户名\""),
+  labelKey: z
+    .string()
+    .optional()
+    .describe(
+      "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. Only takes effect once the host entry assembles the plugin with a `t` option."
+    ),
   formtype: z
     // 与 shared 的 StructuredCrudConfigSchema 同一口径：规范写法 ∪ 运行时承认的旧别名
     // （camelCase datePicker/timePicker 由 normalizeFormType 归一化）。
@@ -92,7 +263,79 @@ const FieldConfigSchema = z.object({
       "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
     ),
   permissionValue: z.string().optional(),
+  isHidden: HiddenConditionListSchema.optional().describe(
+    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? }, a single JSON expression, or an array of them (array = AND). A JSON expression (JSONLogic-shaped) is only needed when a plain condition cannot express the predicate — OR, AND-OR mixes, ordering (>, <=), or nested NOT: e.g. { or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }; ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Prefer the plain { field, op, value } form for simple cases. Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
+  ),
+  reactions: z
+    .array(ReactionSchema)
+    .optional()
+    .describe(
+      "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT the table column."
+    ),
 });
+
+/**
+ * Explicit table column (element of the `columns` escape array) — mirrors the
+ * component contract `TableColumn`. This inline Zod copy MUST declare it too:
+ * Zod strips unknown keys, so without it a config that supplies `columns` would
+ * parse "successfully" with the whole array silently DROPPED (the table would
+ * fall back to the derived columns) and no error. `check-schema-contract.mjs`
+ * guards the `columns` contract so the two copies can't drift.
+ *
+ * Recursive via z.lazy (`groups` nests column arrays — multi-level headers).
+ * Deliberately does NOT accept `render`/`formatter` source strings: those are
+ * field-level extension points; this is the structured column path.
+ */
+const ColumnSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    prop: z
+      .string()
+      .min(1)
+      .refine(isSafeProp, {
+        message:
+          'prop must not contain path separators (/ \\), empty/"."/".." segments, or __proto__/constructor/prototype',
+      })
+      .optional()
+      .describe('Data key for this column, e.g. "userName". Omit for non-field columns (type: index/selection/expand).'),
+    label: z.string().optional().describe('Column header text. Omit for non-field columns.'),
+    labelKey: z.string().optional().describe('i18n key alternative to label (used when i18n is on)'),
+    type: z
+      .enum(["index", "selection", "expand"])
+      .optional()
+      .describe(
+        "Non-field column kind: 'index' = row number, 'selection' = checkbox column, 'expand' = row expander (needs an expandConfig/slot). Omit for a normal data column."
+      ),
+    width: z.union([z.number(), z.string()]).optional(),
+    minWidth: z.union([z.number(), z.string()]).optional(),
+    align: z.enum(["left", "center", "right"]).optional(),
+    fixed: z.union([z.boolean(), z.literal("left"), z.literal("right")]).optional(),
+    sortable: z.boolean().optional(),
+    ellipsis: z.boolean().optional(),
+    showOverflowTooltip: z.boolean().optional(),
+    permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
+    groups: z
+      .array(ColumnSchema)
+      .optional()
+      .describe(
+        'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
+      ),
+    btns: z.array(z.record(z.unknown())).optional().describe('In-cell action buttons (operation column)'),
+    editRender: z
+      .object({
+        name: z.string().optional().describe("Inline-edit renderer name, e.g. '$input' | '$select' | '$textarea' | '$date' (vxe engine only)."),
+        type: z.enum(["default", "visible"]).optional().describe("'default' = enter edit on trigger; 'visible' = editor always shown."),
+        options: z
+          .array(z.object({ label: z.string(), value: z.union([z.string(), z.number(), z.boolean()]) }))
+          .optional()
+          .describe("Option list for a '$select' editor (label/value pairs)."),
+        props: z.record(z.unknown()).optional().describe("Props forwarded to the editor component."),
+        autofocus: z.union([z.string(), z.boolean()]).optional(),
+        defaultValue: z.unknown().optional(),
+      })
+      .optional()
+      .describe("Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine:'vxe'. Function-valued fields (events) and custom-registered renderers are out of scope (Tier-3)."),
+  })
+);
 
 /**
  * Table toolbar button — mirrors the shared authoritative TableBtnSchema.
@@ -206,6 +449,46 @@ const configShape = {
       estimatedRowHeight: z.number().optional(),
       overscanCount: z.number().int().optional(),
       rowClassName: z.string().optional(),
+      // ── AI-22：闭合 strip-hazard（与 structured-config.schema.ts 同步）。这些键在
+      //    core `TableOptions`/JSON 单源已有、三端运行时已消费，唯独两处 AI Zod 零声明
+      //    —— 经 AI 入口传入会被静默剥掉。补齐并纳入 STRUCTURED_TABLE_CONTRACT 守卫。
+      size: z.enum(["large", "default", "small"]).optional(),
+      showHeader: z.boolean().optional(),
+      emptyText: z.string().optional(),
+      snIndex: z.boolean().optional(),
+      leftText: z.string().optional(),
+      cachePageSelection: z.boolean().optional(),
+      refetchKeepPage: z.boolean().optional(),
+      localPagination: z.boolean().optional(),
+      // defaultSort 是本块唯一带嵌套 .object().optional() 的键，须放末尾（见 shared 同处注释）。
+      defaultSort: z
+        .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
+        .optional(),
+      editConfig: z
+        .object({
+          trigger: z.enum(["click", "dblclick", "manual"]).optional().describe("How editing is entered (default 'click')."),
+          mode: z.enum(["cell", "row"]).optional().describe("'cell' = single cell; 'row' = whole row."),
+          showStatus: z.boolean().optional(),
+          showUpdateStatus: z.boolean().optional(),
+          showInsertStatus: z.boolean().optional(),
+          autoClear: z.boolean().optional(),
+          enabled: z.boolean().optional(),
+        })
+        .optional()
+        .describe(
+          "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. `keepSource` is auto-enabled at runtime."
+        ),
+      configTableOut: z
+        .object({
+          total: z.string().optional(),
+          tableData: z.string().optional(),
+          pageSize: z.string().optional(),
+          current: z.string().optional(),
+        })
+        .optional()
+        .describe(
+          "Map the LIST API response onto table semantics when the backend does not use the default flat shape { records, rows, pageSize, pageNo }. Each value is the FLAT response key (no deep paths). e.g. { list, count } → { tableData: 'list', total: 'count' }. Only the keys you set are remapped."
+        ),
     })
     .optional(),
   pagination: z
@@ -284,6 +567,53 @@ const configShape = {
       })
     )
     .optional(),
+  columns: z
+    .array(ColumnSchema)
+    .optional()
+    .describe(
+      "Explicit table columns (escape hatch over the `fields`-derived columns). When present it REPLACES the derived data columns (override, not merge) — `fields` still drives the query/add/edit forms. Use it for multi-level group headers (`groups`), and non-field columns (`type`: index/selection/expand). The operation column is STILL appended from `actions`/`operationColumn` (set `operationColumn:false` to manage it yourself). Omit to keep the derived one-field-one-column behavior."
+    ),
+  expandConfig: z
+    .object({
+      title: z.string().optional().describe("Optional title shown at the top of the expanded row."),
+      fields: z
+        .array(
+          z.object({
+            prop: z.string().min(1).describe("Row field to display (value = `row[prop]`)."),
+            label: z.string().optional().describe("Label text for this field."),
+            labelKey: z.string().optional().describe("i18n label key (used with a global t() function; takes precedence over `label`)."),
+          })
+        )
+        .min(1)
+        .describe("Read-only fields rendered inside the expanded row, one per line as `label: value`."),
+    })
+    .optional()
+    .describe(
+      "Row-expand content (AI-09 子项②). When set, the table gets ONE row-expander whose expanded content is a read-only field list. If `columns` already declares a `{type:'expand'}` column it is used as-is (position preserved) and the content attaches to it; otherwise the generator prepends a leading expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
+    ),
+  treeConfig: z
+    .object({
+      childrenField: z
+        .string()
+        .optional()
+        .describe("Key name that holds a row's nested child nodes (default 'children'). Set only when the API nests children under a different key."),
+      expandAll: z.boolean().optional().describe("Whether all nodes start expanded (default false)."),
+    })
+    .optional()
+    .describe(
+      "Declarative tree table (AI-09 子项③). When set, the table renders parent/child levels from the nested child array in each row (row-key is emitted automatically). Static trees only — lazy/async loading is out of scope for this key. SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig): this top-level key is the cross-renderer narrow subset, honored by el-table / a-table as well as vxe."
+    ),
+  mergeConfig: z
+    .object({
+      rowsBy: z
+        .array(z.string().min(1))
+        .min(1)
+        .describe("Column props to merge. Each is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with rowspan = run length, the rest are merged away."),
+    })
+    .optional()
+    .describe(
+      "Declarative row-merge (AI-23). `rowsBy: ['dept','team']` merges those columns across consecutive rows with equal values (the standard 'grouped rows' table). Cross-renderer narrow subset: el-table (span-method), a-table (per-column customCell) and vxe (mergeMethod) all honor it. The FUNCTIONAL escape hatch `tableOptions.spanMethod` remains Tier-3 and is NOT cross-renderer (a-table has no span-method channel) — if both are set, the explicit `spanMethod` wins."
+    ),
 } as const;
 
 /**

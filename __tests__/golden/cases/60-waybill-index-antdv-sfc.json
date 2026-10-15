@@ -1,0 +1,36 @@
+{
+  "nl": "物流运单管理：查询有运单号、目的地；表格首列序号，后面展示运单号、目的地、重量、状态；支持新增、编辑、删除。",
+  "nlEn": "Logistics waybill management: query by waybill no. and destination; the table's first column is a row number, then shows waybill no., destination, weight, and status; supports add, edit, and delete.",
+  "fixedFields": ["waybillNo", "destination", "weight", "status"],
+  "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "config": {
+    "name": "WaybillManage",
+    "apiUrl": "/api/waybills",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "waybillNo", "label": "运单号", "formtype": "Input" },
+      { "prop": "destination", "label": "目的地", "formtype": "Input" },
+      { "prop": "weight", "label": "重量", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "在途", "value": "transit" },
+          { "label": "已签收", "value": "signed" }
+        ]
+      }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60, "fixed": "left" },
+      { "prop": "waybillNo", "label": "运单号" },
+      { "prop": "destination", "label": "目的地" },
+      { "prop": "weight", "label": "重量", "width": 100 },
+      { "prop": "status", "label": "状态" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: index + fixed（antdv/sfc）"
+}

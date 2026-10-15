@@ -1,0 +1,84 @@
+{
+  "nl": "车险投保管理（antd 风格）：查询有投保人；表格展示投保人、险种、车牌号、保额；支持新增、编辑、删除。表单里「车牌号」仅在险种为车险时显示，且此时必填。",
+  "nlEn": "Auto-insurance management (Ant Design look): query by policyholder; the table shows policyholder, insurance type, plate number and coverage; supports add, edit and delete. In the form the \"plate number\" appears only for auto insurance, and is required then.",
+  "fixedFields": [
+    "policyholder",
+    "insuranceType",
+    "plateNo",
+    "coverage"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:plateNo",
+    "isHidden:plateNo",
+    "target"
+  ],
+  "config": {
+    "name": "AutoInsuranceManage",
+    "apiUrl": "/api/auto-insurances",
+    "target": "antdv",
+    "fields": [
+      {
+        "prop": "policyholder",
+        "label": "投保人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "insuranceType",
+        "label": "险种",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "车险",
+            "value": "auto"
+          },
+          {
+            "label": "家财险",
+            "value": "home"
+          }
+        ]
+      },
+      {
+        "prop": "plateNo",
+        "label": "车牌号",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "field": "insuranceType",
+          "op": "ne",
+          "value": "auto"
+        },
+        "reactions": [
+          {
+            "dependencies": [
+              "insuranceType"
+            ],
+            "fulfill": {
+              "required": {
+                "==": [
+                  {
+                    "var": "insuranceType"
+                  },
+                  "auto"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "coverage",
+        "label": "保额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07 + AI-06: reactions.required 与 isHidden 同字段共存（车险才显示车牌号且必填）（antdv/schema）"
+}

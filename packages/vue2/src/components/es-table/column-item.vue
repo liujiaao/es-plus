@@ -62,6 +62,22 @@
     </template>
   </el-table-column>
 
+  <!-- 行展开列（AI-09 子项②）：展开内容来自列上的声明式 expandConfig 字段明细 -->
+  <el-table-column
+    v-else-if="cols.type === 'expand'"
+    v-bind="columnBindAttr(cols)"
+  >
+    <template v-if="cols.expandConfig" #default="scope">
+      <div class="es-expand-content">
+        <div v-if="cols.expandConfig.title" class="es-expand-title">{{ cols.expandConfig.title }}</div>
+        <div v-for="f in cols.expandConfig.fields" :key="f.prop" class="es-expand-field">
+          <span class="es-expand-label">{{ fieldLabel(f) }}</span>
+          <span class="es-expand-value">{{ cellValue(scope && scope.row, f.prop) }}</span>
+        </div>
+      </div>
+    </template>
+  </el-table-column>
+
   <!-- 省略号工具提示列 -->
   <el-table-column
     v-else-if="cols.ellipsis && typeof cols.ellipsis === 'boolean'"
@@ -153,7 +169,7 @@ export default defineComponent({
       const options: Record<string, unknown> = {}
 
       for (const t in cols) {
-        if (t === 'groups' || t === 'scopedSlots' || t === 'render') continue
+        if (t === 'groups' || t === 'scopedSlots' || t === 'render' || t === 'expandConfig') continue
 
         if (t.includes('-')) {
           const parts = t.split('-')
@@ -179,8 +195,25 @@ export default defineComponent({
       return options
     }
 
+    /**
+     * 行展开字段明细（AI-09 子项②）—— 展开行内的只读「标签: 值」。
+     * 标签走 `labelKey` + 全局 t()（缺省回退 label，再回退 prop）；值取 `row[prop]`，
+     * 空值统一显示 '-'。
+     */
+    const fieldLabel = (f: { prop: string; label?: string; labelKey?: string }): string => {
+      if (f.labelKey && typeof esPlus.t === 'function') return (esPlus.t as (k: string) => string)(f.labelKey)
+      return f.label || f.prop
+    }
+
+    const cellValue = (row: Record<string, unknown> | undefined, prop: string): unknown => {
+      const v = row ? row[prop] : undefined
+      return v == null || v === '' ? '-' : v
+    }
+
     return {
       columnBindAttr,
+      fieldLabel,
+      cellValue,
     }
   },
 })

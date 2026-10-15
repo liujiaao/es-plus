@@ -1,0 +1,63 @@
+{
+  "nl": "员工状态表：展示姓名、部门、状态、月薪；「状态」这一列（不是第一列）按相邻相同合并。支持新增、编辑。",
+  "nlEn": "Staff status table: lists name, department, status and salary; the Status column (not the first column) merges across adjacent equal values. Supports add and edit.",
+  "fixedFields": [
+    "name",
+    "dept",
+    "status",
+    "salary"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "StaffStatusManage",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "在职",
+            "value": 1
+          },
+          {
+            "label": "离职",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "status"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: rowsBy 命中非首列 —— 验证 span-method 按列 prop 匹配而非按位置"
+}

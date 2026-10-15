@@ -1,0 +1,43 @@
+{
+  "nl": "用 antd 风格做合同审批管理：查询有合同名称；表格展示合同名称、合同类型、金额、是否自动续约、法务审核；支持新增、编辑、删除。表单里「法务审核」在合同类型为固定期限，同时金额大于 10 万或勾选了自动续约时隐藏。",
+  "nlEn": "Contract-approval management with an Ant Design look: query by contract name; the table shows contract name, contract type, amount, auto-renew flag and legal review; supports add, edit and delete. In the form, the \"legal review\" is hidden when the contract type is fixed-term AND either the amount is greater than 100000 or auto-renew is checked.",
+  "fixedFields": ["contractName", "contractType", "amount", "autoRenew", "legalReview"],
+  "pinnedDims": ["propSet", "actions", "isHidden:legalReview", "target"],
+  "config": {
+    "name": "ContractApprovalManage",
+    "apiUrl": "/api/contract-approvals",
+    "target": "antdv",
+    "fields": [
+      { "prop": "contractName", "label": "合同名称", "formtype": "Input" },
+      {
+        "prop": "contractType",
+        "label": "合同类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "固定期限", "value": "fixed" },
+          { "label": "无固定期限", "value": "open" }
+        ]
+      },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      { "prop": "autoRenew", "label": "是否自动续约", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "legalReview",
+        "label": "法务审核",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": [
+          { "field": "contractType", "op": "eq", "value": "fixed" },
+          {
+            "or": [
+              { ">": [{ "var": "amount" }, 100000] },
+              { "truthy": [{ "var": "autoRenew" }] }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 混合数组（旧 {field,op,value} 与表达式 AND 混用）—— 固定期限且（金额>10 万 或 自动续约）时隐藏法务审核（antdv/schema）"
+}

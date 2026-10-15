@@ -5,6 +5,7 @@ import {
   ElTable, ElTableColumn, ElPagination, ElButton, ElConfigProvider
 } from 'element-plus'
 import EsTable from '../src/components/es-table/src/component.vue'
+import ColumnItem from '../src/components/es-table/src/column-item.vue'
 import type { TableOptions, TableColumn, PaginationConfig } from '../src/types'
 
 // Mock ResizeObserver for happy-dom
@@ -641,5 +642,34 @@ describe('EsTable - 并发分页请求竞态', () => {
     const latest = updates[updates.length - 1][0]
     expect(latest[0].name).toBe('page-10')
     expect(wrapper.emitted('request-error')).toBeFalsy()
+  })
+})
+
+describe('EsTable - 列级 permissionValue 门控', () => {
+  // 回归：列级 permissionValue 此前 schema+prompt+scorer 都认，组件 filteredColumns 却只按 hidCol
+  // 过滤 → 无权限的列照样渲染（假承诺）。接线后应与 hidCol 同层被过滤。
+  const gateColumns: TableColumn[] = [
+    { prop: 'name', label: '姓名', width: 120 },
+    { prop: 'salary', label: '工资', width: 120, permissionValue: 'salary:view' }
+  ]
+
+  it('无权限的列不渲染，有权限的列正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const wrapper = mountTable({ dataSource: sampleData, columns: gateColumns })
+      await nextTick()
+      const items = wrapper.findAllComponents(ColumnItem)
+      expect(items).toHaveLength(1)
+      expect(items[0].props('cols').prop).toBe('name')
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const wrapper = mountTable({ dataSource: sampleData, columns: gateColumns })
+    await nextTick()
+    expect(wrapper.findAllComponents(ColumnItem)).toHaveLength(2)
   })
 })

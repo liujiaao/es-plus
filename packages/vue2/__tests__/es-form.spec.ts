@@ -375,3 +375,163 @@ describe('EsForm(vue2) - 远端字段选项重载（响应式整体替换）', (
     expect(findAllByName(vm, 'ElOption').map((o) => o.$props.label)).toEqual(['新选项'])
   })
 })
+
+// 回归：字段级 permissionValue 此前 schema+prompt+scorer 都认，组件 formItemListFilter 却只按
+// isHidden 过滤 → 无权限的字段照样渲染（假承诺）。接线后应与 isHidden 同层被过滤。
+describe('EsForm(vue2) - 字段级 permissionValue 门控', () => {
+  const gateItems = () => [
+    { prop: 'name', label: '姓名', formtype: 'Input' as const, span: 24 },
+    { prop: 'salary', label: '工资', formtype: 'InputNumber' as const, span: 24, permissionValue: 'salary:view' },
+  ]
+
+  it('无权限的字段不渲染，有权限的字段正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const vm = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+      await vm.$nextTick()
+      const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+      expect(labels).toEqual(['姓名'])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const vm = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
+    await vm.$nextTick()
+    expect(findAllByName(vm, 'ElFormItem')).toHaveLength(2)
+  })
+})
+
+// AI-06：声明式 isHidden（纯 JSON 条件）也要在 vue2 端生效 —— 组件层零逻辑改动，
+// 靠 core normalizeFormItem 在 formItemListFilter 里把条件水合成谓词。这里只钉「接线」：
+// 同一个条件在两个相反 model 下分别隐藏 / 显示（反应性由 vue3 端见证，此处不重复）。
+describe('EsForm(vue2) - 声明式 isHidden 条件（AI-06）', () => {
+  const items = () => [
+    { prop: 'swapType', label: '申请类型', formtype: 'Input' as const, span: 12 },
+    {
+      prop: 'swapReason',
+      label: '调班原因',
+      formtype: 'Input' as const,
+      span: 12,
+      isHidden: { field: 'swapType', op: 'eq', value: 'rotate' },
+    },
+  ]
+
+  it('条件成立时隐藏该字段（其余照常渲染）', async () => {
+    const vm = mountForm({ model: { swapType: 'rotate', swapReason: '' }, formItemList: items() })
+    await vm.$nextTick()
+    const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+    expect(labels).toEqual(['申请类型'])
+  })
+
+  it('条件不成立时显示该字段（证明是条件驱动，而非字段缺失）', async () => {
+    const vm = mountForm({ model: { swapType: 'duty', swapReason: '' }, formItemList: items() })
+    await vm.$nextTick()
+    const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+    expect(labels).toEqual(['申请类型', '调班原因'])
+  })
+
+  // AI-16：表达式形态（or / 序关系）在 vue2 端同样经 core 求值 —— 只钉接线。
+  it('表达式条件（or / 序关系）同样生效', async () => {
+    const exprItems = () => [
+      { prop: 'status', label: '状态', formtype: 'Input' as const, span: 12 },
+      {
+        prop: 'reason',
+        label: '原因',
+        formtype: 'Input' as const,
+        span: 12,
+        isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] },
+      },
+    ]
+    const hit = mountForm({ model: { status: 'pending', amount: 0, reason: '' }, formItemList: exprItems() })
+    await hit.$nextTick()
+    expect(findAllByName(hit, 'ElFormItem').map((it) => it.$props.label)).toEqual(['状态'])
+
+    const miss = mountForm({ model: { status: 'done', amount: 0, reason: '' }, formItemList: exprItems() })
+    await miss.$nextTick()
+    expect(findAllByName(miss, 'ElFormItem').map((it) => it.$props.label)).toEqual(['状态', '原因'])
+  })
+})
+
+describe('EsForm(vue2) - AI-07 字段联动 reactions', () => {
+  // 求值全在 core；此处钉 vue2 的两处特化：overlay 合并进 formItemListFilter、
+  // 值回写走**响应式**写入（缺省键经 $set，Vue 2 检测不到属性新增）。
+  const dbl = async (vm: any) => { await vm.$nextTick(); await vm.$nextTick() }
+
+  it('required：依赖变化时动态改变必填态', async () => {
+    const model = Vue.observable({ city: '' })
+    const vm = mountForm({
+      model,
+      formItemList: [
+        { prop: 'city', label: '城市', formtype: 'Input' as const, span: 24 },
+        {
+          prop: 'invoiceNo', label: '发票号', formtype: 'Input' as const, span: 24,
+          reactions: [{ dependencies: ['city'], fulfill: { required: { notEmpty: [{ var: 'city' }] } } }],
+        },
+      ],
+    })
+    await dbl(vm)
+    const required = () => findAllByName(vm, 'ElFormItem')[1].$props.required
+    expect(required()).not.toBe(true)
+
+    ;(model as any).city = 'hz'
+    await dbl(vm)
+    expect(required()).toBe(true)
+  })
+
+  it('disabled：条件禁用透传到 Input 控件', async () => {
+    const model = Vue.observable({ accountType: 'system' })
+    const vm = mountForm({
+      model,
+      formItemList: [
+        { prop: 'accountType', label: '类型', formtype: 'Input' as const, span: 24 },
+        {
+          prop: 'username', label: '账号名', formtype: 'Input' as const, span: 24,
+          reactions: [{ dependencies: ['accountType'], fulfill: { disabled: { '==': [{ var: 'accountType' }, 'system'] } } }],
+        },
+      ],
+    })
+    await dbl(vm)
+    const usernameDisabled = () => findAllByName(vm, 'ElInput').some((i: any) => i.$el.hasAttribute('disabled'))
+    expect(usernameDisabled()).toBe(true)
+
+    ;(model as any).accountType = 'normal'
+    await dbl(vm)
+    expect(usernameDisabled()).toBe(false)
+  })
+
+  it('值回写：缺省目标键经 $set 写入（Vue 2 反应式）', async () => {
+    const setSpy = vi.spyOn(Vue.prototype as unknown as { $set: (...a: unknown[]) => void }, '$set')
+    try {
+      // region 键**不存在**：Vue 2 下普通赋值不会触发更新，故渲染层必须走 $set。
+      const model = Vue.observable({ province: '', note: '' })
+      const vm = mountForm({
+        model,
+        formItemList: [
+          { prop: 'province', label: '省份', formtype: 'Input' as const, span: 24 },
+          { prop: 'note', label: '备注', formtype: 'Input' as const, span: 24 },
+          {
+            prop: 'region', label: '大区', formtype: 'Input' as const, span: 24,
+            reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }],
+          },
+        ],
+      })
+      await dbl(vm)
+      expect('region' in (model as Record<string, unknown>)).toBe(false)
+
+      // 无关字段编辑 → 不触发写回。
+      ;(model as any).note = 'x'
+      await dbl(vm)
+      expect('region' in (model as Record<string, unknown>)).toBe(false)
+
+      ;(model as any).province = 'zj'
+      await dbl(vm)
+      expect((model as Record<string, unknown>).region).toBe('zj')
+      expect(setSpy).toHaveBeenCalled()
+    } finally {
+      setSpy.mockRestore()
+    }
+  })
+})

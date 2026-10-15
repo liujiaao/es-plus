@@ -1,0 +1,114 @@
+{
+  "nl": "工单管理（单文件组件）：查询有标题；表格展示标题、问题分类、子分类、提交人；支持新增、编辑、删除。表单里「子分类」的选项随「问题分类」变化——账号问题给登录失败/密码重置，账单问题给账单错误/发票申请。",
+  "nlEn": "Ticket management (single-file component): query by title; the table shows title, category, sub-category and submitter; supports add, edit and delete. In the form the \"sub-category\" options follow \"category\" — account issues give login-failure/password-reset, billing issues give billing-error/invoice-request.",
+  "fixedFields": [
+    "title",
+    "category",
+    "subCategory",
+    "submitter"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:subCategory",
+    "mode"
+  ],
+  "config": {
+    "name": "TicketManage",
+    "apiUrl": "/api/tickets",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input"
+      },
+      {
+        "prop": "category",
+        "label": "问题分类",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "账号问题",
+            "value": "account"
+          },
+          {
+            "label": "账单问题",
+            "value": "billing"
+          }
+        ]
+      },
+      {
+        "prop": "subCategory",
+        "label": "子分类",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "category"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "category"
+                },
+                "account"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "登录失败",
+                  "value": "loginFail"
+                },
+                {
+                  "label": "密码重置",
+                  "value": "resetPwd"
+                }
+              ]
+            }
+          },
+          {
+            "dependencies": [
+              "category"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "category"
+                },
+                "billing"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "账单错误",
+                  "value": "billErr"
+                },
+                {
+                  "label": "发票申请",
+                  "value": "invoice"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "prop": "submitter",
+        "label": "提交人",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: 分支式 dataOptions 联动（vue3/SFC）"
+}

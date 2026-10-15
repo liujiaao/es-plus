@@ -23,8 +23,9 @@ targets:
 
 ## Always pick the right target
 
-Every code-generating tool (generate_crud_page / generate_crud_schema /
-generate_from_config / get_component_api) accepts a \`target: 'vue3' | 'vue2' | 'antdv'\`
+Every code-generating tool (generate_crud / generate_crud_from_config /
+generate_form / generate_table / generate_dialog / generate_crud_page /
+generate_crud_schema / scaffold_page / get_component_api) accepts a \`target: 'vue3' | 'vue2' | 'antdv'\`
 parameter. **Detect the target FIRST**, then call the generator:
 
 1. Read the user's project \`package.json\` (use your file-read tool)
@@ -98,7 +99,10 @@ Two passes, every time:
 3. **Self-review** against the original request BEFORE calling:
    - Did every field the user named make it in, with the right \`formtype\`?
    - Is each field in the right surface list(s)? Did you set \`surfaces.dialog\`
-     for every add/edit/view the request implies?
+     for every add/edit/view the request implies? (A dialog entry is a canned
+     key \`add\`/\`edit\`/\`view\`, or a full object \`{ key, title?, width?,
+     fullscreen?, formItems? }\` when the request names a custom dialog id /
+     title / width or a per-dialog field list.)
    - Are all requested actions present? Do Select/Cascader fields have options?
    - Business logic the schema can't express (permission gates, conditional
      display, computed values) → emit a typed extension point

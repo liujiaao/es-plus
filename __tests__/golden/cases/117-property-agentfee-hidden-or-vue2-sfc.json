@@ -1,0 +1,31 @@
+{
+  "nl": "房源租售管理：查询有房源名称；表格展示房源名称、月租、是否配家具、中介费说明；支持新增、编辑、删除。表单里「中介费说明」在房源已配家具，或月租高于 8000 元时隐藏。",
+  "nlEn": "Property rental management: query by listing name; the table shows listing name, monthly rent, furnished flag and agency-fee note; supports add, edit and delete. In the form, the \"agency-fee note\" is hidden when the listing is furnished, or the monthly rent is above 8000.",
+  "fixedFields": ["houseName", "rent", "furnished", "agentFeeNote"],
+  "pinnedDims": ["propSet", "actions", "isHidden:agentFeeNote", "target", "mode"],
+  "config": {
+    "name": "PropertyRentalManage",
+    "apiUrl": "/api/property-rentals",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "houseName", "label": "房源名称", "formtype": "Input" },
+      { "prop": "rent", "label": "月租", "formtype": "InputNumber" },
+      { "prop": "furnished", "label": "是否配家具", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "agentFeeNote",
+        "label": "中介费说明",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "truthy": [{ "var": "furnished" }] },
+            { ">": [{ "var": "rent" }, 8000] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or + 序关系 >）—— 已配家具或月租>8000 时隐藏中介费说明（vue2/SFC）"
+}

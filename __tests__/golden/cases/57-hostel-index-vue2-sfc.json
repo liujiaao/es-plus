@@ -1,0 +1,25 @@
+{
+  "nl": "青年旅舍管理：查询有旅舍名称、城市；表格首列序号，后面展示旅舍名称、城市、床位数量；支持新增、编辑、删除。",
+  "nlEn": "Hostel management: query by hostel name and city; the table's first column is a row number, then shows hostel name, city, and bed count; supports add, edit, and delete.",
+  "fixedFields": ["hostelName", "city", "bedCount"],
+  "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "config": {
+    "name": "HostelManage",
+    "apiUrl": "/api/hostels",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "hostelName", "label": "旅舍名称", "formtype": "Input" },
+      { "prop": "city", "label": "城市", "formtype": "Input" },
+      { "prop": "bedCount", "label": "床位数量", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60 },
+      { "prop": "hostelName", "label": "旅舍名称" },
+      { "prop": "city", "label": "城市" },
+      { "prop": "bedCount", "label": "床位数量", "width": 100 }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: index 非字段列（vue2/sfc）"
+}

@@ -1,0 +1,19 @@
+{
+  "nl": "物料台账：表格最左侧显示序号列，展示物料编码、物料名称、库存数量；支持新增、编辑、删除。",
+  "nlEn": "Material ledger: the table shows a leading row-index (serial number) column and lists material code, material name and stock quantity. Supports add, edit and delete.",
+  "fixedFields": ["materialCode", "materialName", "stockQty"],
+  "pinnedDims": ["propSet", "membership", "actions"],
+  "config": {
+    "name": "MaterialLedgerManage",
+    "apiUrl": "/api/materials",
+    "target": "vue3",
+    "fields": [
+      { "prop": "materialCode", "label": "物料编码", "formtype": "Input" },
+      { "prop": "materialName", "label": "物料名称", "formtype": "Input" },
+      { "prop": "stockQty", "label": "库存数量", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "snIndex": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-22: tableOptions.snIndex（序号列）经 AI Zod 存活并发射（此前两处 AI Zod 零声明、被静默剥）"
+}

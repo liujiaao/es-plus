@@ -35,6 +35,72 @@ export type {
   VxeSeqConfig,
 }
 
+/**
+ * 显隐算子 / 声明式条件 —— 与 core `types.ts` 的同名类型结构一致。
+ *
+ * 与 `FormItemOption` 一样，本文件是 core 契约的**框架特化副本**（渲染器契约
+ * 各自声明、形状兼容）。此处只多一条约束：条件里**不得**出现函数，它是纯 JSON。
+ */
+export type FieldHiddenOp = 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+export interface FieldHiddenCondition {
+  /** model 字段路径（支持 `user.name`），条件成立时隐藏该字段 */
+  field: string
+  op?: FieldHiddenOp
+  value?: unknown
+}
+
+/**
+ * 表达式算子（闭集）—— 与 core `expr.ts` 的 `EXPR_OPS` 同源。
+ * 表达式是**纯 JSON**（JSONLogic 形态），用于旧 8 算子表达不了的谓词（OR / 序关系 / 嵌套 not）。
+ */
+export type FieldHiddenExprOp =
+  | 'var'
+  | '=='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'in'
+  | 'nin'
+  | 'empty'
+  | 'notEmpty'
+  | 'truthy'
+  | 'falsy'
+  | 'and'
+  | 'or'
+  | 'not'
+  | 'if'
+
+/** JSON 表达式节点（AI-16 超集）：`{ var: 'status' }` 或 `{ '==': [{ var: 'status' }, 'pending'] }`。 */
+export interface FieldHiddenExprNode {
+  var?: string
+  [op: string]: unknown
+}
+
+/** `isHidden` 的表达式形态：单节点或节点数组。 */
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
+/**
+ * 字段联动 fulfillment（AI-07）—— 与 core `types.ts` 的同名类型结构一致，纯 JSON。
+ *
+ * `dataOptions` 是**字面量选项数组**（非表达式：AI-16 DSL 无对象字面量），
+ * `required` / `disabled` / `value` 是表达式节点（`value` 存在时 `dependencies` 必填）。
+ */
+export interface FieldReactionFulfill {
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  required?: FieldHiddenExprNode
+  disabled?: FieldHiddenExprNode
+  value?: FieldHiddenExprNode
+}
+
+/** 字段联动规则（AI-07）：`when` 门控，`fulfill` 提供派生结果。 */
+export interface FieldReaction {
+  dependencies?: string[]
+  when?: FieldHiddenExprNode
+  fulfill: FieldReactionFulfill
+}
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -62,7 +128,20 @@ export interface FormItemOption {
    */
   on?: Record<string, unknown>
   dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
-  isHidden?: (model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean
+  /**
+   * 动态显隐判断：返回 true 表示**隐藏**该字段。
+   *
+   * - 函数形态：原生用法
+   * - 声明式形态：单条件或条件数组（AND，纯 JSON），由 core `normalizeFormItem`
+   *   在运行时编译为函数 —— 故渲染层只需照旧调用 `isHidden`
+   */
+  isHidden?:
+    | FieldHiddenCondition
+    | FieldHiddenCondition[]
+    | FieldHiddenExpr
+    | ((model: Record<string, unknown>, item: FormItemOption, formProps: FormProps) => boolean)
+  /** 字段联动（AI-07）：声明式规则数组，纯 JSON、无回调；由 core `reactions.ts` 求值。 */
+  reactions?: FieldReaction[]
   render?: (h: RenderFunction, model: Record<string, unknown>, ctx: { row: FormItemOption; index: number }) => VNode | string
   apiParams?: ApiParams
   /** Whether to auto-load API data on init, default true; set false to load manually via formItmeRequestInstance */
@@ -95,6 +174,11 @@ export interface FormItemOption {
    */
   formItemOptions?: Record<string, unknown>
   width?: number | string
+  /**
+   * 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时整个表单项不渲染
+   * （在 es-form 的 `formItemListFilter` 里与 `isHidden` 同层过滤）。
+   */
+  permissionValue?: string
   [key: string]: unknown
 }
 
@@ -181,8 +265,16 @@ export interface TableColumn {
   render?: (h: RenderFunction, ctx: { row: Record<string, unknown>; value: unknown; index: number }) => VNode | string
   scopedSlots?: { customRender?: string }
   groups?: TableColumn[]
+  /**
+   * 行展开内容（仅 `type:'expand'` 列消费）—— AI-09 子项②。
+   * 展开行内渲染一组只读「标签: 值」（值取 `row[prop]`）。与 `TableOptions.expandConfig`
+   * （vxe `{ accordion }`）**不同概念**：那是 vxe 引擎的展开行为开关，这里是展开的内容。
+   */
+  expandConfig?: { title?: string; fields: Array<{ prop: string; label?: string; labelKey?: string }> }
   ellipsis?: boolean
   hidCol?: boolean
+  /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
+  permissionValue?: string
   type?: 'index' | 'selection' | 'expand'
   sortable?: boolean | 'custom'
   btns?: Array<{

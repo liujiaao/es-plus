@@ -1,0 +1,83 @@
+{
+  "nl": "结算单管理：查询有单据编号；表格展示单据编号、结算方式、结算币种、金额；支持新增、编辑、删除。表单里「结算币种」不需要手填——跨境结算自动为 USD，其余自动为 CNY。",
+  "nlEn": "Settlement management: query by document no.; the table shows document no., settlement method, currency and amount; supports add, edit and delete. In the form the \"currency\" needs no manual entry — cross-border settlement becomes USD, everything else CNY.",
+  "fixedFields": [
+    "docNo",
+    "settleType",
+    "currency",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:currency"
+  ],
+  "config": {
+    "name": "SettlementManage",
+    "apiUrl": "/api/settlements",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "docNo",
+        "label": "单据编号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "settleType",
+        "label": "结算方式",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "境内结算",
+            "value": "domestic"
+          },
+          {
+            "label": "跨境结算",
+            "value": "cross"
+          }
+        ]
+      },
+      {
+        "prop": "currency",
+        "label": "结算币种",
+        "formtype": "Select",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "settleType"
+            ],
+            "fulfill": {
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "settleType"
+                      },
+                      "cross"
+                    ]
+                  },
+                  "USD",
+                  "CNY"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.value 用 {if:[...]} 分支表达式算出目标值（币种跟随结算方式）（vue3/schema）"
+}

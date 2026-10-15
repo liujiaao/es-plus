@@ -1,0 +1,80 @@
+{
+  "nl": "订单收货管理（antd 风格，单文件组件）：查询有订单号；表格展示订单号、配送方式、收货地址、联系人；支持新增、编辑、删除。表单里选了「送货上门」时，收货地址才是必填的。",
+  "nlEn": "Order-delivery management (Ant Design look, single-file component): query by order no.; the table shows order no., delivery mode, shipping address and contact; supports add, edit and delete. In the form the shipping address is required only when \"home delivery\" is selected.",
+  "fixedFields": [
+    "orderNo",
+    "deliveryMode",
+    "shipAddress",
+    "contact"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:shipAddress",
+    "target",
+    "mode"
+  ],
+  "config": {
+    "name": "OrderDeliveryManage",
+    "apiUrl": "/api/order-deliveries",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "orderNo",
+        "label": "订单号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "deliveryMode",
+        "label": "配送方式",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "送货上门",
+            "value": "home"
+          },
+          {
+            "label": "门店自提",
+            "value": "pickup"
+          }
+        ]
+      },
+      {
+        "prop": "shipAddress",
+        "label": "收货地址",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "deliveryMode"
+            ],
+            "fulfill": {
+              "required": {
+                "==": [
+                  {
+                    "var": "deliveryMode"
+                  },
+                  "home"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "contact",
+        "label": "联系人",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.required 条件必填（antdv/SFC）"
+}

@@ -1,0 +1,19 @@
+{
+  "nl": "文件夹管理：查询文件夹名称；表格展示文件夹名称、大小；文件夹是层级结构，默认全部展开；支持新增、删除。",
+  "nlEn": "Folder management: query by folder name; the table shows folder name and size; folders are hierarchical and all nodes start expanded; supports add and delete.",
+  "fixedFields": ["folderName", "size"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target", "mode"],
+  "config": {
+    "name": "FolderTreeManage",
+    "apiUrl": "/api/folders",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "folderName", "label": "文件夹名称", "formtype": "Input" },
+      { "prop": "size", "label": "大小", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（vue2/SFC）"
+}

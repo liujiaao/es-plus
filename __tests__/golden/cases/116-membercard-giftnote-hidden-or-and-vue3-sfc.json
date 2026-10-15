@@ -1,0 +1,45 @@
+{
+  "nl": "会员卡管理：查询有卡号；表格展示卡号、卡类型、余额、是否过期、礼品备注；支持新增、编辑、删除。表单里「礼品备注」在卡类型为「礼品卡」，或余额大于 500 且未过期时隐藏。",
+  "nlEn": "Membership-card management: query by card number; the table shows card number, card type, balance, expired flag and gift note; supports add, edit and delete. In the form, the \"gift note\" is hidden when the card type is \"gift card\", or the balance is greater than 500 and the card has not expired.",
+  "fixedFields": ["cardNo", "cardType", "balance", "expired", "giftNote"],
+  "pinnedDims": ["propSet", "actions", "isHidden:giftNote", "mode"],
+  "config": {
+    "name": "MemberCardManage",
+    "apiUrl": "/api/member-cards",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "cardNo", "label": "卡号", "formtype": "Input" },
+      {
+        "prop": "cardType",
+        "label": "卡类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "储值卡", "value": "stored" },
+          { "label": "礼品卡", "value": "gift" }
+        ]
+      },
+      { "prop": "balance", "label": "余额", "formtype": "InputNumber" },
+      { "prop": "expired", "label": "是否过期", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "giftNote",
+        "label": "礼品备注",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "cardType" }, "gift"] },
+            {
+              "and": [
+                { ">": [{ "var": "balance" }, 500] },
+                { "falsy": [{ "var": "expired" }] }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（or + and + 序关系 > + falsy）—— 礼品卡或（余额>500 且未过期）时隐藏礼品备注（vue3/SFC）"
+}

@@ -31,6 +31,15 @@
       "default": true,
       "description": "Highlight the currently selected row"
     },
+    "showHeader": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show the table header (default true). Set false to hide it."
+    },
+    "emptyText": {
+      "type": "string",
+      "description": "Text displayed when the table has no data (default 暂无数据)"
+    },
     "multiSelect": {
       "type": "boolean",
       "default": false,
@@ -176,6 +185,61 @@
     },
     "rowClassName": {
       "description": "Custom row class name. String or function (({ row, rowIndex }) => string)"
+    },
+    "defaultSort": {
+      "type": "object",
+      "description": "Default sort applied on first render. { prop, order } where order is ascending | descending",
+      "properties": {
+        "prop": { "type": "string", "description": "Field name to sort by" },
+        "order": { "type": "string", "enum": ["ascending", "descending"], "description": "Sort direction" }
+      }
+    },
+    "refetchKeepPage": {
+      "type": "boolean",
+      "default": false,
+      "description": "Keep the current page when re-fetching (default false). Query/reset still return to page 1."
+    },
+    "localPagination": {
+      "type": "boolean",
+      "default": false,
+      "description": "Paginate the already-fetched data client-side instead of requesting each page from the API."
+    },
+    "editConfig": {
+      "type": "object",
+      "description": "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with `engine: 'vxe'`. This is the table-level switch; a cell is editable ONLY when its column also declares `editRender` (so `editConfig` alone is a no-op). `keepSource` is auto-enabled at runtime (edits are tracked on an internal copy — read them via the vxe edit-closed/update API rather than expecting an automatic write-back).",
+      "properties": {
+        "trigger": {
+          "type": "string",
+          "enum": ["click", "dblclick", "manual"],
+          "description": "How editing is entered (default 'click')"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["cell", "row"],
+          "description": "'cell' = single cell (default); 'row' = whole row"
+        },
+        "showStatus": {
+          "type": "boolean",
+          "description": "Show the row edit-status indicator"
+        },
+        "showUpdateStatus": {
+          "type": "boolean",
+          "description": "Show the update-status indicator"
+        },
+        "showInsertStatus": {
+          "type": "boolean",
+          "description": "Show the insert-status indicator"
+        },
+        "autoClear": {
+          "type": "boolean",
+          "description": "Auto-clear the editing state when the editor closes"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Master enable flag for inline editing"
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

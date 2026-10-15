@@ -1,0 +1,61 @@
+{
+  "nl": "（vue2 项目）大区-城市-项目计划表：三列都合并，后面跟阶段与金额。支持新增、编辑。",
+  "nlEn": "(vue2 project) Region-city-project plan table: all three columns merge, followed by stage and amount. Supports add and edit.",
+  "fixedFields": [
+    "region",
+    "city",
+    "project",
+    "stage",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "RegionCityProjectV2",
+    "apiUrl": "/api/plan",
+    "target": "vue2",
+    "fields": [
+      {
+        "prop": "region",
+        "label": "大区",
+        "formtype": "Input"
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input"
+      },
+      {
+        "prop": "project",
+        "label": "项目",
+        "formtype": "Input"
+      },
+      {
+        "prop": "stage",
+        "label": "阶段",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "region",
+        "city",
+        "project"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: vue2 三列合并"
+}

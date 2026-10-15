@@ -1,0 +1,72 @@
+{
+  "nl": "部门员工表（自定义列顺序）：按部门、小组、姓名、月薪四列展示，部门列按相邻相同合并；月薪列用自定义格式化。支持新增、编辑。",
+  "nlEn": "Department staff table (custom column order): shows department, team, name and salary; the department column merges across adjacent equal values, and the salary column uses a custom formatter. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "name",
+    "salary"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptExplicitCols",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formtype": "InputNumber"
+      }
+    ],
+    "columns": [
+      {
+        "prop": "dept",
+        "label": "部门"
+      },
+      {
+        "prop": "team",
+        "label": "小组"
+      },
+      {
+        "prop": "name",
+        "label": "姓名"
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formatter": "(row) => row.salary"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: mergeConfig 与显式 columns 逃生数组共存（合并与列定义正交，互不干扰）"
+}

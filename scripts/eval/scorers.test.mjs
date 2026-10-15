@@ -36,15 +36,18 @@ const BASE_INPUT = {
   mode: 'sfc', //              → mode 维度 applicable
   i18n: true, //               → i18n 维度 applicable
   typescript: true,
-  tableOptions: { virtual: true }, // → virtualScroll 维度 applicable
+  tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' }, editConfig: { trigger: 'click', mode: 'cell' } }, // → virtualScroll + configTableOut + editConfig 维度 applicable
   formLayout: { span: 12 }, //  → formLayout 维度 applicable
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
-    { prop: 'name', label: '名称', formtype: 'Input' },
+    // isHidden：条件显隐（条件成立即隐藏；base.status 是 Select，value 取数字码）
+    { prop: 'name', label: '名称', formtype: 'Input', isHidden: { field: 'status', op: 'eq', value: 1 } }, // → isHidden 维度
     { prop: 'status', label: '状态', formtype: 'Select', dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }, // → dataOptions 维度
     { prop: 'categoryId', label: '分类', formtype: 'Select', apiParams: { url: '/api/cat', labelField: 'name', valueField: 'id' } }, // → apiParams 维度
     { prop: 'amount', label: '金额', formtype: 'Input', inQuery: false, formatter: '(row) => row.amount.toFixed(2)' }, // → extPoints 维度
     { prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', inForm: false },
+    // reactions：字段联动（选项随 status 变化 + 必填随 name）→ reactions 维度
+    { prop: 'city', label: '城市', formtype: 'Select', reactions: [{ dependencies: ['status'], when: { '==': [{ var: 'status' }, 1] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }], required: { truthy: [{ var: 'name' }] } } }] },
   ],
   actions: ['add', 'edit', 'delete', 'view'],
   tableBtns: [
@@ -56,6 +59,14 @@ const BASE_INPUT = {
     add: { title: '新增', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }] },
     edit: { title: '编辑', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }, { prop: 'amount', label: '金额', formtype: 'Input' }] },
   }, // → dialogs 维度
+  columns: [
+    { type: 'selection' },
+    { prop: 'name', label: '名称' },
+    { label: '金额信息', groups: [{ prop: 'amount', label: '金额' }] },
+  ], // → columns 维度（显式列逃生数组：非字段列 + 多级表头）
+  expandConfig: { title: '详情', fields: [{ prop: 'createdAt', label: '创建时间' }] }, // → expandConfig 维度（声明式行展开内容）
+  treeConfig: { childrenField: 'children', expandAll: true }, // → treeConfig 维度（声明式树表）
+  mergeConfig: { rowsBy: ['status', 'name'] }, // → mergeConfig 维度（声明式合并单元格）
 }
 
 const base = StructuredCrudConfigSchema.parse(BASE_INPUT)
@@ -94,7 +105,15 @@ const PERTURB = {
   target: (c) => { c.target = 'vue3' },
   mode: (c) => { c.mode = 'schema' },
   virtualScroll: (c) => { c.tableOptions.virtual = false },
+  configTableOut: (c) => { c.tableOptions.configTableOut.tableData = 'changed' },
+  isHidden: (c) => { c.fields[0].isHidden.op = 'ne' },
+  columns: (c) => { c.columns[0].type = 'index' },
+  expandConfig: (c) => { c.expandConfig.title = '别的' },
+  treeConfig: (c) => { c.treeConfig.expandAll = false },
+  mergeConfig: (c) => { c.mergeConfig.rowsBy = ['name'] },
+  editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
   extPoints: (c) => { delete c.fields[3].formatter },
+  reactions: (c) => { c.fields[5].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }] },
 }
 
 for (const { key } of CAPABILITY_SCORERS) {
@@ -130,6 +149,228 @@ console.log('meta-eval: operationColumn 库默认派生等价')
   const goldCustom = { fields: flds, actions: ['edit'], operationColumn: { btns: [{ name: '处理' }, { name: '关闭' }] } }
   check(scoreAll(goldCustom, { fields: flds, actions: ['edit'] }).byCapability.operationColumn.pass === false,
     'operationColumn: 自定义行按钮(处理/关闭)不可由 actions 派生 → 省略应判负')
+}
+
+// 2c) isHidden 维度的语义（整对象等值 / 数组形态 / 字段级细化）
+//     条件显隐是行为契约而非扩展点兜底，故比**内容**（算子、value、数组顺序都算数），
+//     与 configTableOut 同策略；extPoints 那种只比 presence 的是因为它比的是不可静态校验的源码串。
+console.log('meta-eval: isHidden (declarative condition)')
+{
+  const cond = { field: 'b', op: 'eq', value: 'x' }
+  const gold = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: cond }], actions: ['add'] }
+  const wrongValue = clone(gold)
+  wrongValue.fields[0].isHidden.value = 'y'
+  check(scoreAll(gold, clone(gold)).byCapability.isHidden.pass === true, 'isHidden: 整对象一致应判正')
+  check(scoreAll(gold, wrongValue).byCapability.isHidden.pass === false, 'isHidden: value 不符应判负')
+
+  // 数组形态（AND）也按整对象等值 —— 顺序敏感
+  const goldArr = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: [{ field: 'b', op: 'empty' }, { field: 'c', op: 'truthy' }] }], actions: ['add'] }
+  check(scoreAll(goldArr, clone(goldArr)).byCapability.isHidden.pass === true, 'isHidden: 数组形态一致应判正')
+  check(scoreAll(goldArr, gold).byCapability.isHidden.pass === false, 'isHidden: 数组→单条件应判负')
+
+  // gold 没有任何 isHidden → 维度不 applicable（不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.isHidden.applicable === false, 'isHidden: gold 未声明时维度不 applicable')
+
+  // 字段级细化：只钉该字段；未锁字段的 isHidden 猜错免责
+  check(isValidPinnedDim('isHidden:a') === true, 'isValidPinnedDim: isHidden:a 合法')
+  const m = { pinnedDims: ['isHidden:a'] }
+  check(scoreAll(gold, clone(gold), m).exactIntentScoped === true, 'scoped: isHidden:a gold-vs-gold 应 true')
+  check(scoreAll(gold, wrongValue, m).exactIntentScoped === false, 'scoped: 扰动 isHidden:a 应翻红')
+  const twoField = {
+    fields: [clone(gold.fields[0]), { prop: 'z', label: 'Z', formtype: 'Input', isHidden: { field: 'b', op: 'eq', value: 'q' } }],
+    actions: ['add'],
+  }
+  const zChanged = clone(twoField)
+  zChanged.fields[1].isHidden.value = 'zzz'
+  check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 isHidden 应免责')
+
+  // AI-16：表达式形态的 isHidden 复用同一条深等值路径 —— 形态无关（键排序后逐层比较），
+  // 故无需为表达式新增维度：同一谓词不该被计两次。这里钉住「表达式确实被覆盖且判负正确」。
+  const expr = { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] }
+  const goldExpr = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: expr }], actions: ['add'] }
+  check(scoreAll(goldExpr, clone(goldExpr)).byCapability.isHidden.pass === true, 'isHidden(expr): 表达式一致应判正')
+  const exprWrongOp = clone(goldExpr)
+  exprWrongOp.fields[0].isHidden.or[1] = { '>=': [{ var: 'amount' }, 100] }
+  check(scoreAll(goldExpr, exprWrongOp).byCapability.isHidden.pass === false, 'isHidden(expr): 算子变（> → >=）应判负')
+  const exprWrongVal = clone(goldExpr)
+  exprWrongVal.fields[0].isHidden.or[0]['=='][1] = 'done'
+  check(scoreAll(goldExpr, exprWrongVal).byCapability.isHidden.pass === false, 'isHidden(expr): 值变应判负')
+  // 表达式与旧条件互不相等（形态不同即判负，不做「逻辑等价」推断）
+  check(scoreAll(goldExpr, gold).byCapability.isHidden.pass === false, 'isHidden(expr): 表达式 vs 旧条件应判负')
+  // gold 无 isHidden 时仍不 applicable（表达式不改变这一点）
+  check(scoreAll(plain, plain).byCapability.isHidden.applicable === false, 'isHidden(expr): gold 未声明时维度不 applicable')
+  // 字段级细化对表达式同样生效
+  check(scoreAll(goldExpr, clone(goldExpr), { pinnedDims: ['isHidden:a'] }).exactIntentScoped === true, 'scoped: isHidden:a 表达式 gold-vs-gold 应 true')
+  check(scoreAll(goldExpr, exprWrongVal, { pinnedDims: ['isHidden:a'] }).exactIntentScoped === false, 'scoped: 扰动表达式 isHidden:a 应翻红')
+}
+
+// 2c-bis) reactions 维度的语义（AI-07 字段联动）：整数组深等值 —— value↔dataOptions 互换、
+//         dependencies 顺序、when 谓词错都算负；字段级细化只钉该字段。
+console.log('meta-eval: reactions (field linkage)')
+{
+  const rule = { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }] } }
+  const gold = { fields: [{ prop: 'city', label: '城市', formtype: 'Select', reactions: [rule] }], actions: ['add'] }
+  check(scoreAll(gold, clone(gold)).byCapability.reactions.pass === true, 'reactions: 整数组一致应判正')
+
+  // dataOptions 内容改 → 负
+  const wrongOpts = clone(gold)
+  wrongOpts.fields[0].reactions[0].fulfill.dataOptions = [{ label: '南京', value: 'nj' }]
+  check(scoreAll(gold, wrongOpts).byCapability.reactions.pass === false, 'reactions: dataOptions 内容不符应判负')
+
+  // dependencies 序敏感
+  const two = { dependencies: ['province', 'city'], fulfill: { required: { truthy: [{ var: 'a' }] } } }
+  const goldDeps = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', reactions: [two] }], actions: ['add'] }
+  const depsSwapped = clone(goldDeps)
+  depsSwapped.fields[0].reactions[0].dependencies = ['city', 'province']
+  check(scoreAll(goldDeps, depsSwapped).byCapability.reactions.pass === false, 'reactions: dependencies 顺序不符应判负')
+
+  // fulfill 键互换（value ↔ dataOptions）应判负
+  const goldVal = { fields: [{ prop: 'mirror', label: '镜像', formtype: 'Input', reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }] }], actions: ['add'] }
+  const asOpts = clone(goldVal)
+  asOpts.fields[0].reactions[0].fulfill = { dataOptions: [{ label: 'x', value: 'y' }] }
+  check(scoreAll(goldVal, asOpts).byCapability.reactions.pass === false, 'reactions: value↔dataOptions 互换应判负')
+
+  // gold 无 reactions → 维度不 applicable
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.reactions.applicable === false, 'reactions: gold 未声明时维度不 applicable')
+
+  // 字段级细化：只钉该字段；未锁字段的 reactions 猜错免责
+  check(isValidPinnedDim('reactions:city') === true, 'isValidPinnedDim: reactions:city 合法')
+  const m = { pinnedDims: ['reactions:city'] }
+  check(scoreAll(gold, clone(gold), m).exactIntentScoped === true, 'scoped: reactions:city gold-vs-gold 应 true')
+  check(scoreAll(gold, wrongOpts, m).exactIntentScoped === false, 'scoped: 扰动 reactions:city 应翻红')
+  const twoField = {
+    fields: [clone(gold.fields[0]), { prop: 'z', label: 'Z', formtype: 'Select', reactions: [clone(rule)] }],
+    actions: ['add'],
+  }
+  const zChanged = clone(twoField)
+  zChanged.fields[1].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }]
+  check(scoreAll(twoField, zChanged, m).exactIntentScoped === true, 'scoped: 未锁字段 z 的 reactions 应免责')
+}
+
+// 2d) columns（显式列逃生数组，AI-09 子项①）维度的语义：整数组深等值（列序 / 层级 / 非字段列都算数）
+console.log('meta-eval: columns (explicit column array)')
+{
+  const cols = [
+    { type: 'selection' },
+    { prop: 'name', label: '名称' },
+    { label: '组', groups: [{ prop: 'amount', label: '金额' }] },
+  ]
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], columns: cols }
+  check(scoreAll(gold, clone(gold)).byCapability.columns.pass === true, 'columns: 整数组一致应判正')
+
+  const orderChanged = clone(gold)
+  orderChanged.columns.reverse()
+  check(scoreAll(gold, orderChanged).byCapability.columns.pass === false, 'columns: 列序变化应判负（顺序是契约）')
+
+  const typeChanged = clone(gold)
+  typeChanged.columns[0].type = 'index'
+  check(scoreAll(gold, typeChanged).byCapability.columns.pass === false, 'columns: 非字段列 type 变化应判负')
+
+  const groupsFlattened = clone(gold)
+  delete groupsFlattened.columns[2].groups
+  check(scoreAll(gold, groupsFlattened).byCapability.columns.pass === false, 'columns: 多级表头被拍平应判负')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.columns.pass === false, 'columns: pred 漏发整段 columns 应判负')
+
+  // gold 无 columns → 维度不 applicable（派生路径，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.columns.applicable === false, 'columns: gold 未声明时维度不 applicable')
+}
+
+// 2e) expandConfig（声明式行展开内容，AI-09 子项②）维度的语义：整体深等值
+//（标题 / 字段序 / 标签都是渲染契约）
+console.log('meta-eval: expandConfig (declarative row-expand content)')
+{
+  const ec = { title: '详情', fields: [{ prop: 'remark', label: '备注' }, { prop: 'createdAt', label: '创建时间' }] }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], expandConfig: ec }
+  check(scoreAll(gold, clone(gold)).byCapability.expandConfig.pass === true, 'expandConfig: 整体一致应判正')
+
+  const fieldOrder = clone(gold)
+  fieldOrder.expandConfig.fields.reverse()
+  check(scoreAll(gold, fieldOrder).byCapability.expandConfig.pass === false, 'expandConfig: 字段序变化应判负（顺序是契约）')
+
+  const titleChanged = clone(gold)
+  titleChanged.expandConfig.title = '别的标题'
+  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === false, 'expandConfig: 标题变化应判负')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.expandConfig.pass === false, 'expandConfig: pred 漏发整段应判负')
+
+  // gold 无 expandConfig → 维度不 applicable（无行展开，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.expandConfig.applicable === false, 'expandConfig: gold 未声明时维度不 applicable')
+}
+
+// 2f) treeConfig（声明式树表，AI-09 子项③）维度的语义：整体深等值
+console.log('meta-eval: treeConfig (declarative tree table)')
+{
+  const tc = { childrenField: 'subItems', expandAll: true }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], treeConfig: tc }
+  check(scoreAll(gold, clone(gold)).byCapability.treeConfig.pass === true, 'treeConfig: 整体一致应判正')
+
+  const fieldChanged = clone(gold)
+  fieldChanged.treeConfig.childrenField = 'children'
+  check(scoreAll(gold, fieldChanged).byCapability.treeConfig.pass === false, 'treeConfig: childrenField 变化应判负（子键名是契约）')
+
+  const expandChanged = clone(gold)
+  expandChanged.treeConfig.expandAll = false
+  check(scoreAll(gold, expandChanged).byCapability.treeConfig.pass === false, 'treeConfig: expandAll 变化应判负（默认展开状态是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.treeConfig.pass === false, 'treeConfig: pred 漏发整段应判负')
+
+  // gold 无 treeConfig → 维度不 applicable（无树表，不参与记分）
+  const flat = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(flat, flat).byCapability.treeConfig.applicable === false, 'treeConfig: gold 未声明时维度不 applicable')
+}
+
+// 2g) editConfig（vxe 行内编辑，AI-09 子项④）维度的语义：tableOptions.editConfig 整体深等值
+console.log('meta-eval: editConfig (vxe inline editing)')
+{
+  const ec = { trigger: 'dblclick', mode: 'row', showStatus: true }
+  const gold = { fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], tableOptions: { editConfig: ec } }
+  check(scoreAll(gold, clone(gold)).byCapability.editConfig.pass === true, 'editConfig: 整体一致应判正')
+
+  const triggerChanged = clone(gold)
+  triggerChanged.tableOptions.editConfig.trigger = 'click'
+  check(scoreAll(gold, triggerChanged).byCapability.editConfig.pass === false, 'editConfig: trigger 变化应判负（进入编辑的方式是契约）')
+
+  const modeChanged = clone(gold)
+  modeChanged.tableOptions.editConfig.mode = 'cell'
+  check(scoreAll(gold, modeChanged).byCapability.editConfig.pass === false, 'editConfig: mode 变化应判负（cell/row 是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.editConfig.pass === false, 'editConfig: pred 漏发整段应判负')
+
+  // gold 无 editConfig → 维度不 applicable（无行内编辑，不参与记分）
+  const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(plain, plain).byCapability.editConfig.applicable === false, 'editConfig: gold 未声明时维度不 applicable')
+}
+
+// 2h) mergeConfig（声明式合并单元格，AI-23）维度的语义：顶层 mergeConfig 整体深等值
+console.log('meta-eval: mergeConfig (declarative row merge)')
+{
+  const mc = { rowsBy: ['dept', 'team'] }
+  const gold = { fields: [{ prop: 'dept', label: '部门', formtype: 'Input' }], actions: ['add'], mergeConfig: mc }
+  check(scoreAll(gold, clone(gold)).byCapability.mergeConfig.pass === true, 'mergeConfig: 整体一致应判正')
+
+  const colDropped = clone(gold)
+  colDropped.mergeConfig.rowsBy = ['dept']
+  check(scoreAll(gold, colDropped).byCapability.mergeConfig.pass === false, 'mergeConfig: 少一列应判负（哪几列合并是契约）')
+
+  const orderSwapped = clone(gold)
+  orderSwapped.mergeConfig.rowsBy = ['team', 'dept']
+  check(scoreAll(gold, orderSwapped).byCapability.mergeConfig.pass === false, 'mergeConfig: 列序变化应判负（列序是契约）')
+
+  const predMissing = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(gold, predMissing).byCapability.mergeConfig.pass === false, 'mergeConfig: pred 漏发整段应判负')
+
+  // gold 无 mergeConfig → 维度不 applicable（无合并，不参与记分）
+  const flat = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  check(scoreAll(flat, flat).byCapability.mergeConfig.applicable === false, 'mergeConfig: gold 未声明时维度不 applicable')
 }
 
 // 3) scoped 口径（B2）：掩码自洽 + 掩码内咬得住 + 掩码外免责 + 空掩码退化

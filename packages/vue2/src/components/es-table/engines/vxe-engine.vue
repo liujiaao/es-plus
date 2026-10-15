@@ -45,7 +45,7 @@
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -218,6 +218,18 @@ export default defineComponent({
           const res = opts.spanMethod({ row, rowIndex, column: shimmedCol, columnIndex })
           if (Array.isArray(res)) return { rowspan: res[0], colspan: res[1] }
           return res || { rowspan: 1, colspan: 1 }
+        }
+      } else {
+        // 合并单元格（AI-23）：声明式 mergeConfig → vxe spanMethod，复用同一 core 闭包。
+        const mergeCfg = resolveMergeConfig(opts)
+        if (mergeCfg) {
+          const spanFn = buildRowSpanMethod(mergeCfg.rowsBy, props.dataSource as Record<string, unknown>[])
+          base.spanMethod = ({ row, rowIndex, column, columnIndex }: any) => {
+            const shimmedCol = column ? { ...column, property: column.field ?? column.property } : column
+            const res = spanFn({ row, rowIndex, column: shimmedCol, columnIndex })
+            if (Array.isArray(res)) return { rowspan: res[0], colspan: res[1] }
+            return res || { rowspan: 1, colspan: 1 }
+          }
         }
       }
 

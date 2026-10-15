@@ -1,0 +1,18 @@
+{
+  "nl": "菜单管理：查询菜单名称；表格展示菜单名称、路由路径；菜单是层级结构，默认全部展开；支持新增、编辑、删除。",
+  "nlEn": "Menu management: query by menu name; the table shows menu name and route path; menus are hierarchical and all nodes start expanded; supports add, edit and delete.",
+  "fixedFields": ["menuName", "path"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "mode"],
+  "config": {
+    "name": "MenuTreeManage",
+    "apiUrl": "/api/menus",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "menuName", "label": "菜单名称", "formtype": "Input" },
+      { "prop": "path", "label": "路由路径", "formtype": "Input", "inQuery": false }
+    ],
+    "treeConfig": { "expandAll": true },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 声明式树表（vue3/SFC）"
+}

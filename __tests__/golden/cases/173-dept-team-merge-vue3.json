@@ -1,0 +1,54 @@
+{
+  "nl": "部门-小组员工表：部门、小组两列都按相邻相同的值合并，后面跟姓名和月薪两列。支持新增、编辑。",
+  "nlEn": "Department-team staff table: both the Department and Team columns merge across adjacent equal values, followed by Name and Salary. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "name",
+    "salary"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptTeamStaff",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept",
+        "team"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: 双列 rowsBy（汇总表典型形态）—— 两列各自按相邻相等独立分组"
+}

@@ -1,0 +1,55 @@
+{
+  "nl": "组织架构员工表：部门、小组、职位三列都按相邻相同合并，最后是姓名。支持新增、编辑。",
+  "nlEn": "Organization staff table: department, team and role columns all merge across adjacent equal values, ending with name. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "team",
+    "role",
+    "name"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "OrgStaffTree",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "team",
+        "label": "小组",
+        "formtype": "Input"
+      },
+      {
+        "prop": "role",
+        "label": "职位",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept",
+        "team",
+        "role"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: 三列 rowsBy（层级越深、段越短，验证多列独立分组）"
+}

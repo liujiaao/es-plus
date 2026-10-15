@@ -654,3 +654,37 @@ describe('EsTable — 并发分页请求竞态', () => {
     expect(wrapper.emitted('request-error')).toBeFalsy()
   })
 })
+
+// 回归：列级 permissionValue 此前 schema+prompt+scorer 都认，组件 filteredColumns 却只按 hidCol
+// 过滤 → 无权限的列照样渲染（假承诺）。接线后应与 hidCol 同层被过滤。
+describe('EsTable(ADV) - 列级 permissionValue 门控', () => {
+  const gateProps = () => ({
+    dataSource: [],
+    columns: [
+      { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'salary', label: '工资', permissionValue: 'salary:view' },
+    ],
+    options: {} as any,
+    pagination: { total: 0 },
+  })
+
+  it('无权限的列不渲染，有权限的列正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const wrapper = mount(EsTable, { props: gateProps() })
+      await nextTick()
+      const vm = wrapper.vm as any
+      expect(vm.adaptedColumns.map((c: any) => c.dataIndex)).toEqual(['id'])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const wrapper = mount(EsTable, { props: gateProps() })
+    await nextTick()
+    const vm = wrapper.vm as any
+    expect(vm.adaptedColumns).toHaveLength(2)
+  })
+})

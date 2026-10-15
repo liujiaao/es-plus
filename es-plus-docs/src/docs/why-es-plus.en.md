@@ -623,13 +623,16 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | Tool | What it does | Pain it solves |
 |------|------|----------|
 | `detect_project_target` | Reads package.json, infers vue2/vue3 | AI no longer guesses which Vue version you're on |
-| `generate_crud_page` | Natural language → full .vue file | One sentence yields a runnable page |
-| `generate_crud_schema` | Natural language → structured Schema | Gives the AI a valid config as context |
-| `generate_from_config` | Schema → SFC code | The codegen step in a Schema-first flow |
+| `generate_crud` | **Front door**: fill the `surfaces` intent table (any subset of query / table / form / dialog) → composed and compiled | **Main path**: semantic mapping is done by the **host LLM**; routing and compilation are deterministic code |
+| `generate_form` / `generate_table` / `generate_dialog` | Single-surface fragments: standalone es-form / es-table / useDialog | When you want exactly one component, or a fragment beside non-es-plus components |
+| `generate_crud_from_config` | Full `StructuredCrudConfig` → runnable code | The codegen step in a Schema-first flow |
+| `generate_crud_page` / `generate_crud_schema` | Natural language → full .vue / CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`crud-engine.ts`), limited coverage — only for hosts that can't reason |
 | `validate_config` | zod-validates a config | Bad AI output is caught and retried instantly |
-| `list_form_types` | Returns the 13 formtypes + descriptions | AI no longer guesses which control names are valid |
+| `refine_config` | One corrective pass over a pinned config, echoing the diff | Convergence loop: deterministic validate + diff, no model round-trip |
+| `list_form_types` | Returns the 14 formtypes + descriptions | AI no longer guesses which control names are valid |
 | `get_component_api` | Returns a component's props / events / slots | What the AI sees is protocol-level API docs |
 | `scaffold_page` | Multi-page scaffold | Creates a related group of pages at once |
+| `ingest_schema` | Existing schema → drafted config (needs human review) | Starting point for legacy projects |
 
 **All tools are implemented in `@es-plus/shared`**, which means:
 - The [AI CRUD demo page](https://liujiaao.github.io/es-plus/#/ai-crud) in your browser calls the same code (no backend required)
@@ -649,11 +652,10 @@ After that, in any project just say to Claude:
 Claude's workflow:
 
 1. Call `detect_project_target` → read your package.json → discovers you're on Vue 3 + Element Plus
-2. Call `list_form_types` → fetch the list of 13 valid controls
-3. Call `generate_crud_schema(target='vue3')` → generate the Schema
-4. Call `validate_config` → validation passes
-5. Call `generate_from_config` → emit the full .vue file
-6. Write it into your project and register the route
+2. Read `esplus://conventions` / `esplus://types` → authoritative conventions and component types for that target
+3. Call `generate_crud(name, apiUrl, surfaces, target)` → **you fill `surfaces`**: assign every field in the request to query / table / form / dialog **by meaning**
+4. Read the returned `warnings` → each one flags a likely mapping mistake; fix and regenerate
+5. Write it into your project and register the route
 
 **At no point does the AI guess the component library's API, because the MCP protocol hands it the authoritative schema.**
 

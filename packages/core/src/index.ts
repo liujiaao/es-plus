@@ -115,10 +115,39 @@ export {
   applyConfigTableOut,
   resolveItemValidateProps,
   resolveFormRules,
+  matchHiddenCondition,
+  compileHiddenCondition,
 } from './field-resolver'
+
+// ─── 表达式求值器（AI-16 底座：JSON 表达式 DSL）───────────────
+// 零依赖、无 eval / new Function 的闭白名单求值器（JSONLogic 形态 / CEL 语义子集）。
+// `isHidden` 的表达式形态由 field-resolver 委托此处求值；此处对外暴露求值器本身，
+// 供宿主在代码侧静态求值（AI-07 联动将由它承载）。
+// `looseEqual` 亦在此透出：AI-07 的「仅在变更时写回」判定（收敛终止的前提）
+// 由渲染层在调用点完成，需与求值器同源的相等语义（严格 + 仅放宽 number↔string）。
+export { evalExpr, isHiddenExpr, isExprNode, EXPR_OPS, looseEqual } from './expr'
+export type { FieldHiddenExpr, FieldHiddenExprNode, FieldHiddenExprOp } from './types'
+
+// ─── 字段联动规划器（AI-07：声明式 reactions，纯 JSON、无回调）────────
+// 在 AI-16 求值器之上：显示派生（dataOptions/required/disabled）合入三端
+// formItemListFilter；值回写（fulfill.value）由渲染层 model watcher 落盘。
+// 本模块只读 model、从不写 model —— 响应式与写入均属渲染层。
+export {
+  resolveReactionOverlay,
+  resolveReactionValues,
+  collectReactionDependencies,
+} from './reactions'
+export type { ReactionValue } from './reactions'
+export type { FieldReaction, FieldReactionFulfill } from './types'
 
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
 export { buildFirstClassGridOptions } from './vxe-engine'
+
+// ─── 声明式合并单元格（AI-23：跨端窄子集 mergeConfig.rowsBy）──
+// 求值全在本模块，三端只做「取值 → 调用 → 交给各自组件」（el-table spanMethod /
+// a-table customCell / vxe mergeMethod），故三端等价由构造保证。
+export { buildColumnSpans, buildRowSpanMethod, resolveMergeConfig } from './merge-span'
+export type { MergeConfig, MergeRow } from './merge-span'
 
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'

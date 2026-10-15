@@ -285,3 +285,31 @@ describe('EsTable(vue2) - 分页尺寸映射到 Element UI 的 small', () => {
     expect(vm.$el.querySelector('el-pagination')?.getAttribute('size')).toBeNull()
   })
 })
+
+// 回归：列级 permissionValue 此前 schema+prompt+scorer 都认，组件 filteredColumns 却只按 hidCol
+// 过滤 → 无权限的列照样渲染（假承诺）。接线后应与 hidCol 同层被过滤。
+describe('EsTable(vue2) - 列级 permissionValue 门控', () => {
+  const gateColumns = () => [
+    { prop: 'id', label: 'ID' },
+    { prop: 'salary', label: '工资', permissionValue: 'salary:view' },
+  ]
+
+  it('无权限的列不渲染，有权限的列正常渲染', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'salary:view' })
+      const vm = mountTable({ columns: gateColumns() })
+      await vm.$nextTick()
+      const table = tableOf(vm)
+      expect(table.filteredColumns.map((c: any) => c.prop)).toEqual(['id'])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
+
+  it('未配置全局 permission 时一律放行', async () => {
+    const vm = mountTable({ columns: gateColumns() })
+    await vm.$nextTick()
+    expect(tableOf(vm).filteredColumns).toHaveLength(2)
+  })
+})

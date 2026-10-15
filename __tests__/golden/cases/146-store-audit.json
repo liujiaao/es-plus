@@ -1,0 +1,56 @@
+{
+  "nl": "门店核查（Ant Design Vue）：查询有门店名称、区域；表格展示门店名称、区域、核查得分、状态、核查日期；表格上方左侧「新增核查」、右侧「导出」；新增和编辑使用不同的弹窗——新增填门店名称、区域、核查得分，编辑在此基础上还能修改状态；支持新增、编辑、删除；新增、编辑、删除按钮需要权限码 audit:add、audit:edit、audit:remove；界面要求国际化；查询表单分 2 列。",
+  "nlEn": "Store audit (Ant Design Vue): query by store name and region; the table shows store name, region, audit score, status, and audit date; above the table \"New Check\" is on the left and \"Export\" on the right; add and edit use different dialogs — on add fill in store name, region, and audit score, and on edit you can additionally change the status; supports add, edit, and delete; the add, edit, and delete buttons require permission codes audit:add, audit:edit, audit:remove; the UI requires i18n; the query form is 2 columns.",
+  "fixedFields": ["storeName", "region", "score", "status", "auditAt"],
+  "pinnedDims": ["propSet", "actions", "target", "i18n", "formLayout", "tableBtns", "dialogs", "permissions"],
+  "config": {
+    "name": "StoreAudit",
+    "apiUrl": "/api/store-audits",
+    "target": "antdv",
+    "i18n": true,
+    "fields": [
+      { "prop": "storeName", "label": "门店名称", "formtype": "Input" },
+      { "prop": "region", "label": "区域", "formtype": "Input" },
+      { "prop": "score", "label": "核查得分", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "合格", "value": "pass" },
+          { "label": "整改中", "value": "fixing" },
+          { "label": "不合格", "value": "fail" }
+        ]
+      },
+      { "prop": "auditAt", "label": "核查日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "audit:add", "edit": "audit:edit", "delete": "audit:remove" },
+    "formLayout": { "span": 12 },
+    "tableBtns": [
+      { "name": "新增核查", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "导出", "position": "right", "actionType": "export" }
+    ],
+    "dialogs": {
+      "add": {
+        "title": "新增核查",
+        "formItems": [
+          { "prop": "storeName", "label": "门店名称", "formtype": "Input" },
+          { "prop": "region", "label": "区域", "formtype": "Input" },
+          { "prop": "score", "label": "核查得分", "formtype": "InputNumber" }
+        ]
+      },
+      "edit": {
+        "title": "编辑核查",
+        "formItems": [
+          { "prop": "storeName", "label": "门店名称", "formtype": "Input" },
+          { "prop": "region", "label": "区域", "formtype": "Input" },
+          { "prop": "score", "label": "核查得分", "formtype": "InputNumber" },
+          { "prop": "status", "label": "状态", "formtype": "Select" }
+        ]
+      }
+    }
+  },
+  "notes": "antdv 目标 + 五维：i18n + formLayout(span) + tableBtns + dialogs + permissions（本语料单例维度覆盖最多的一例）。"
+}

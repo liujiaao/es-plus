@@ -1,0 +1,24 @@
+{
+  "nl": "库存占用：查询有 SKU、品名；表格展示 SKU、品名、占用率、仓库，其中「占用率」列需要自定义渲染（用进度条展示）；支持新增、编辑。",
+  "nlEn": "Stock usage: query by SKU and item name; the table shows SKU, item name, usage rate, and warehouse, where the \"usage rate\" column needs custom rendering (shown as a progress bar); supports add and edit.",
+  "fixedFields": ["sku", "name", "usage", "warehouse"],
+  "pinnedDims": ["propSet", "actions", "extPoints:usage"],
+  "config": {
+    "name": "StockUsage",
+    "apiUrl": "/api/stock-usage",
+    "fields": [
+      { "prop": "sku", "label": "SKU", "formtype": "Input" },
+      { "prop": "name", "label": "品名", "formtype": "Input" },
+      {
+        "prop": "usage",
+        "label": "占用率",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "render": "(_, { row }) => h(ElProgress, { percentage: row.usage, status: row.usage >= 90 ? 'exception' : 'success' })"
+      },
+      { "prop": "warehouse", "label": "仓库", "formtype": "Input", "inQuery": false }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "L5：自定义 render（el-progress 进度条）。schema 模式仅产 TODO(es-plus) 槽 + 降级 warning，render 源码不 emit → 不影响 vite 编译。"
+}

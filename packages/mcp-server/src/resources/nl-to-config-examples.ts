@@ -134,6 +134,84 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
+    label: "Conditional field visibility → declarative isHidden (plain JSON, no code)",
+    nl: "退款管理：查询退款单号；表格展示退款单号、订单号、退款金额、退款类型、退款原因；支持新增、编辑、删除。表单里「退款原因」只在退款类型为「部分退款」时才显示。",
+    reasoning:
+      "表单字段随另一字段的值显隐 → 用字段级 isHidden（纯 JSON 条件，条件成立即隐藏），NOT formatter/render。注意它是**反相**的：「只在退款类型=部分退款时显示」= 在退款类型 ≠ 部分退款时隐藏，故写 op:'ne'。它是**表单作用域**（查询表单 + 新增/编辑弹窗），不是表格列。op 省略时默认 eq。退款方式是有限枚举 → Select + dataOptions。",
+    config: {
+      name: "RefundManage",
+      apiUrl: "/api/refunds",
+      fields: [
+        { prop: "refundNo", label: "退款单号", formtype: "Input" },
+        { prop: "orderNo", label: "订单号", formtype: "Input" },
+        { prop: "refundAmount", label: "退款金额", formtype: "InputNumber" },
+        {
+          prop: "refundType",
+          label: "退款类型",
+          formtype: "Select",
+          inQuery: false,
+          dataOptions: [
+            { label: "全额退款", value: "full" },
+            { label: "部分退款", value: "part" },
+          ],
+        },
+        {
+          prop: "refundReason",
+          label: "退款原因",
+          formtype: "Input",
+          inQuery: false,
+          isHidden: { field: "refundType", op: "ne", value: "part" },
+        },
+      ],
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
+    label: "Field linkage → declarative reactions (plain JSON, no code)",
+    nl: "地区管理：查询省份；表格展示省份、城市、所属大区；支持新增、编辑。新增时城市下拉随省份变化（浙江→杭州、宁波；江苏→南京）；只有填了城市，发票号才必填；所属大区自动等于所选省份且不可手改。",
+    reasoning:
+      "「城市下拉随省份变化」→ city 的 options 依赖 province，用 city.reactions：选项是**字面量数组**（DSL 禁对象字面量），故按省份分支写成**多条规则**，各带自己的 when（province=zj / province=js）。「只有填了城市发票号才必填」→ invoiceNo.reactions 的 fulfill.required 是表达式 { notEmpty: [{ var: 'city' }] }。「大区自动等于省份、不可手改」→ region.reactions 的 fulfill 同时给 value:{ var:'province' }（回写 model，故 dependencies 必填）与 disabled:{ truthy:[{var:'province'}] }。全是纯 JSON，绝无 JS 回调；都是**表单作用域**（查询/新增/编辑），不是表格列。",
+    config: {
+      name: "RegionManage",
+      apiUrl: "/api/regions",
+      fields: [
+        { prop: "province", label: "省份", formtype: "Select", dataOptions: [
+          { label: "浙江", value: "zj" }, { label: "江苏", value: "js" },
+        ] },
+        {
+          prop: "city",
+          label: "城市",
+          formtype: "Select",
+          inQuery: false,
+          reactions: [
+            { dependencies: ["province"], when: { "==": [{ var: "province" }, "zj"] },
+              fulfill: { dataOptions: [{ label: "杭州", value: "hz" }, { label: "宁波", value: "nb" }] } },
+            { dependencies: ["province"], when: { "==": [{ var: "province" }, "js"] },
+              fulfill: { dataOptions: [{ label: "南京", value: "nj" }] } },
+          ],
+        },
+        {
+          prop: "invoiceNo",
+          label: "发票号",
+          formtype: "Input",
+          inQuery: false,
+          reactions: [{ dependencies: ["city"], fulfill: { required: { notEmpty: [{ var: "city" }] } } }],
+        },
+        {
+          prop: "region",
+          label: "所属大区",
+          formtype: "Input",
+          inQuery: false,
+          reactions: [{ dependencies: ["province"], fulfill: {
+            value: { var: "province" },
+            disabled: { truthy: [{ var: "province" }] },
+          } }],
+        },
+      ],
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
     label: "Multiple dialogs with different form fields",
     nl: "客户管理：新增和编辑用不同的弹窗表单——新增时填公司名、联系人、电话；编辑时在这些之外还能改信用额度。",
     reasoning:
@@ -194,6 +272,133 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
       actions: ["add", "edit", "delete", "view"],
     },
   },
+  {
+    label: "Multi-level group headers + non-field columns → top-level `columns` escape array",
+    nl: "考勤管理：查询条件有员工姓名和部门；表格第一列是序号列，随后用两级分组表头展示——「员工」下分员工姓名、部门，「考勤」下分出勤天数、迟到次数；支持新增、编辑、删除。",
+    reasoning:
+      "NL 要「序号列」+「两级分组表头」，扁平的 fields 表达不了（非字段列没有 prop/label，多级表头要嵌套）→ 用顶层 columns 逃生数组。`{ type: 'index' }` 是序号列；分组表头写 `{ label: '员工', groups: [ …子列… ] }`（跨端安全上限 2 级）。columns 一旦给出就**整体覆盖**派生列（override 非 merge）→ 每个要在表格出现的字段都得写进 columns（这里四个字段都进了 groups）。fields 仍驱动查询表单与新增/编辑表单。操作列**不**写进 columns —— 它仍由 actions 自动追加。",
+    config: {
+      name: "AttendanceManage",
+      apiUrl: "/api/attendance",
+      fields: [
+        { prop: "employeeName", label: "员工姓名", formtype: "Input" },
+        { prop: "department", label: "部门", formtype: "Input" },
+        { prop: "attendDays", label: "出勤天数", formtype: "InputNumber", inQuery: false },
+        { prop: "lateCount", label: "迟到次数", formtype: "InputNumber", inQuery: false },
+      ],
+      columns: [
+        { type: "index", label: "序号", width: 60 },
+        {
+          label: "员工",
+          groups: [
+            { prop: "employeeName", label: "员工姓名" },
+            { prop: "department", label: "部门" },
+          ],
+        },
+        {
+          label: "考勤",
+          groups: [
+            { prop: "attendDays", label: "出勤天数" },
+            { prop: "lateCount", label: "迟到次数" },
+          ],
+        },
+      ],
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
+    label: "Row-expand content → top-level `expandConfig` (declarative detail list)",
+    nl: "订单管理：查询条件有订单号；表格展示订单号、金额、下单时间；每行可展开查看收货人、联系电话、收货地址；支持新增、删除。",
+    reasoning:
+      "NL 要「每行可展开查看…」——这是声明式**行展开内容**，用顶层 `expandConfig`（不是 `tableOptions.expandConfig` —— 那是 vxe 的 accordion 开关，与内容无关）。展开的三个字段是明细信息、不单独成列，故标 `inTable:false`（仍留在 fields 里供新增/编辑表单用）。这里没给 `columns`，生成器会自动前置一个展开列，无需自己写 `{type:'expand'}`（若 columns 里已声明 {type:'expand'}，内容就挂到它上面、保持位置）。`expandConfig.fields` 的顺序即展开区展示顺序。",
+    config: {
+      name: "OrderExpandManage",
+      apiUrl: "/api/orders",
+      fields: [
+        { prop: "orderNo", label: "订单号", formtype: "Input" },
+        { prop: "amount", label: "金额", formtype: "InputNumber", inQuery: false },
+        { prop: "createdAt", label: "下单时间", formtype: "DatePicker", inForm: false },
+        { prop: "receiver", label: "收货人", formtype: "Input", inTable: false, inQuery: false },
+        { prop: "phone", label: "联系电话", formtype: "Input", inTable: false, inQuery: false },
+        { prop: "address", label: "收货地址", formtype: "Input", inTable: false, inQuery: false },
+      ],
+      expandConfig: {
+        title: "收货信息",
+        fields: [
+          { prop: "receiver", label: "收货人" },
+          { prop: "phone", label: "联系电话" },
+          { prop: "address", label: "收货地址" },
+        ],
+      },
+      actions: ["add", "delete"],
+    },
+  },
+  {
+    label: "Tree / hierarchical rows → top-level `treeConfig`",
+    nl: "部门管理：查询条件有部门名称；表格展示部门名称、负责人、状态、创建时间；部门是树形结构，子部门嵌套在父部门下面，默认全部展开。",
+    reasoning:
+      "NL 说「树形结构 / 子部门嵌套在父部门下」→ 顶层 `treeConfig`（声明式树表）。行数据层级键名是缺省的 `children`，故省略 `childrenField`；「默认全部展开」→ `expandAll: true`。`row-key` 由生成器自动发射（rowkey 默认 'id'），无需手写。没有分组表头/非字段列，不用 `columns`。treeConfig 是纯 JSON 声明式数据（非扩展点），且**区别于** `tableOptions.treeConfig`（vxe 专有的 VxeTreeConfig）——用顶层这个。懒加载/异步 load 不在本键范围。",
+    config: {
+      name: "DepartmentTreeManage",
+      apiUrl: "/api/departments",
+      fields: [
+        { prop: "deptName", label: "部门名称", formtype: "Input" },
+        { prop: "leader", label: "负责人", formtype: "Input" },
+        {
+          prop: "status",
+          label: "状态",
+          formtype: "Select",
+          dataOptions: [
+            { label: "启用", value: 1 },
+            { label: "禁用", value: 0 },
+          ],
+        },
+        { prop: "createdAt", label: "创建时间", formtype: "DatePicker", inForm: false },
+      ],
+      treeConfig: { expandAll: true },
+      actions: ["add", "edit", "delete"],
+    },
+  },
+  {
+    label: "Row merge / grouped rows → top-level `mergeConfig`",
+    nl: "员工台账：查询条件有姓名；表格展示部门、小组、姓名、职位；同一个部门的行把「部门」合并显示一次，同一个小组把「小组」合并显示一次；支持新增、编辑。",
+    reasoning:
+      "NL 说「同一个部门的行合并显示一次 / 合并单元格 / 分组表」→ 顶层 `mergeConfig`（声明式行合并，纯 JSON 数据、非扩展点）：`{ rowsBy: ['dept', 'team'] }`（数组非空）。语义是**相邻相等**分组：被点名的列按值切段，每段首行保留单元格且 `rowspan` = 段长，其余格被合并掉。`rowsBy` 的**顺序即分组轴**（先按部门、再按小组），照请求里点名的列序写。这是跨端声明式窄子集——生成器会把它翻成三端各自的机制（el-table `span-method` / a-table 列级 `customCell` / vxe `mergeMethod`），**绝不手写 span 函数**。**区别于**函数式 `tableOptions.spanMethod`（任意 JS 闭包，Tier-3、非跨端；两者并存时显式 spanMethod 胜出且生成器告警）。\n\n注意这是**分组**不是**树**：行仍是平铺（横向相邻合并），不是父子嵌套——「树形结构/子部门嵌套」用顶层 `treeConfig`，别混。",
+    config: {
+      name: "StaffMergeManage",
+      apiUrl: "/api/staff",
+      fields: [
+        { prop: "dept", label: "部门", formtype: "Input", inForm: false },
+        { prop: "team", label: "小组", formtype: "Input", inForm: false },
+        { prop: "name", label: "姓名", formtype: "Input" },
+        { prop: "role", label: "职位", formtype: "Input", inQuery: false },
+      ],
+      mergeConfig: { rowsBy: ["dept", "team"] },
+      actions: ["add", "edit"],
+    },
+  },
+  {
+    label: "Inline row editing → `tableOptions.editConfig` + `columns[].editRender` (vxe engine)",
+    nl: "商品价格维护：查询条件有商品名称；表格支持行内编辑，单击单元格修改价格；表格展示商品名称、价格、库存；支持编辑。",
+    reasoning:
+      "NL 说「表格支持行内编辑，单击单元格修改」→ 行内编辑三件套必须同给：(1) `tableOptions.engine: 'vxe'`；(2) 表级开关 `tableOptions.editConfig`（单击进入 → trigger 缺省即 'click'，单格编辑 → mode 缺省即 'cell'，显式写 `{ mode: 'cell' }` 更清楚）；(3) 每个可编辑列的 `columns[].editRender`（没有它该列永不可编辑，editConfig 就是空转）。价格/库存都是数值 → 编辑器用 `$input` + `props.type:'number'`。`columns` 是**覆盖**派生的整表列数组，故表里要展示的列都要写进来；操作列仍由 `actions` 自动追加，不写。editConfig/editRender 仅 vxe 生效。",
+    config: {
+      name: "SkuPriceEditManage",
+      apiUrl: "/api/sku",
+      fields: [
+        { prop: "skuName", label: "商品名称", formtype: "Input" },
+        { prop: "price", label: "价格", formtype: "InputNumber", inQuery: false },
+        { prop: "stock", label: "库存", formtype: "InputNumber", inQuery: false },
+      ],
+      tableOptions: { engine: "vxe", editConfig: { mode: "cell" } },
+      columns: [
+        { prop: "skuName", label: "商品名称", editRender: { name: "$input" } },
+        { prop: "price", label: "价格", editRender: { name: "$input", props: { type: "number" } } },
+        { prop: "stock", label: "库存", editRender: { name: "$input", props: { type: "number" } } },
+      ],
+      actions: ["edit"],
+    },
+  },
 ];
 
 function buildContent(): string {
@@ -206,7 +411,15 @@ function buildContent(): string {
     "- Dates/times → `DatePicker`/`TimePicker`; images/files → `Upload`; on/off → `Switch`.",
     "- System-generated columns (createdAt, id) → `inForm:false`; detail-only fields → `inQuery:false`.",
     "- Button placement: \"left\" → `position:'left'`, \"right\" → `position:'right'` (`code:1`/`code:2` is the legacy alias — still accepted, but prefer `position`).",
-    "- Requirements the schema can't express (permission gating, conditional display, computed values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them.",
+    "- Form-scope conditional visibility (\"field X shows only when Y is Z\", \"只在…时才填写\") → the field-level `isHidden` — a PLAIN JSON condition (never a JS string), `{ field, op?, value? }` or an array (AND), hidden while it holds. When a plain condition can't express it (OR / ordering / nested NOT), use a JSON expression instead, e.g. `{ or: [ { \"==\": [{ var: \"status\" }, \"pending\"] }, { \">\": [{ var: \"amount\" }, 100] } ] }`. Applies to the query/add/edit forms, NOT the table column.",
+    "- Field linkage / computed (\"城市下拉随省份变化\", \"只有填了城市发票号才必填\", \"所属大区自动等于所选省份\") → the field-level `reactions` — a PLAIN JSON array of rules, NEVER a JS callback. Each rule is `{ dependencies?, when?, fulfill }`: `dependencies` = model paths that re-trigger it (REQUIRED when `fulfill.value` is present); `when` = optional gate expression (rule applies while truthy); `fulfill` = `{ dataOptions?, required?, disabled?, value? }` where `dataOptions` is a **LITERAL** option array and `required`/`disabled`/`value` are expression nodes (same DSL as `isHidden`) returning a boolean or the field's new value. Because the DSL forbids object literals, express option branching as ONE rule per case, each with its own `when` (e.g. `when: { \"==\": [{ var: \"province\" }, \"zj\"] }`). `value` is written back to the model. Use `isHidden` when the field merely appears/disappears; use `reactions` when its options / required / disabled / value must change. Applies to the query/add/edit forms, NOT the table column.",
+    "- Multi-level group headers (\"分组表头\") and non-field columns (序号/勾选/展开列) → the top-level `columns` escape array (aligned with the renderer `TableColumn`): a group is `{ label, groups: [ … ] }` (2 levels max cross-renderer), a non-field column is `{ type: 'index' | 'selection' | 'expand' }`. `columns` REPLACES the derived table columns (override, not merge) — every field shown in the table must appear inside it; `fields` still drives the query/add/edit forms. The operation column is auto-appended from `actions`, so don't add it here.",
+    "- Row-expand content (\"每行可展开查看…\") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (non-empty). Presence makes the table render ONE row-expander showing a read-only `label: value` list from `row[prop]` (usually detail-only fields, marked `inTable:false`). If `columns` already declares a `{ type: 'expand' }` column the content attaches there; otherwise the generator prepends one — don't add the expander column yourself. DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.",
+    "- Tree / hierarchical rows (\"树形\", \"部门树\", \"分类树\", \"父子层级\", \"子节点嵌套在父节点下\") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. Renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically. Set `childrenField` only when children nest under a key other than `children`; set `expandAll: true` to expand every node by default. Not for lazy/async loading. DISTINCT from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the top-level key.",
+    "- Declarative row merge (\"合并单元格\", \"相同的部门只显示一次\", \"分组表\", \"同一类只显示一次\") → the top-level `mergeConfig`: `{ rowsBy: ['dept', 'team'] }` (non-empty). Each named column is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with `rowspan` = run length, the rest are merged away. `rowsBy` order IS the grouping axis — keep the columns in the order the request names them. Cross-renderer (el-table `span-method` / a-table column `customCell` / vxe `mergeMethod`) — the generator consumes it, you do NOT write a span method. DISTINCT from the FUNCTIONAL `tableOptions.spanMethod` (an arbitrary JS closure — Tier-3 and NOT cross-renderer): if both are set the explicit `spanMethod` wins and the generator warns.",
+    "- Inline row editing (\"表格行内编辑\", \"双击单元格改数量\", \"点单元格直接改\") → THREE parts, all under the vxe engine: `tableOptions.engine: 'vxe'`; the table-level switch `tableOptions.editConfig` (`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }`, defaults trigger:'click' / mode:'cell'); and a per-column `columns[].editRender` on EVERY editable column (`{ name: '$input' | '$select' | '$textarea' | '$date', type?, options?, props?, autofocus?, defaultValue? }`, `$select` wants `options`). A column without `editRender` is NOT editable — `editConfig` alone is a no-op — and both are silently ignored unless the engine is vxe. Declare the editable columns via the top-level `columns` array (it REPLACES the derived columns; the operation column is still auto-appended). Function-valued `editRender.events` and custom renderers are out of scope.",
+    "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` and `reactions` above are declarative data, NOT extension points — they cover field visibility and field linkage/computed; don't reach for formatter/render for those.)",
+    "- Cross-file prerequisite (permission gating / i18n): `permissionValue` (field/column/button RBAC) and i18n `labelKey` are INERT until the HOST APP ENTRY assembles the plugin — `app.use(ESPlus, { permission: (code) => …, t: (key) => … })` on vue3/antdv, `Vue.use(ESPlus, {...})` on vue2 — and remote `apiParams` needs a global `httpRequest`. Emit the config as usual; never inline permission checks or `t(...)` calls into fields/columns (the entry side is the host's job). `scaffold_page` returns a ready-to-copy `src/main.ts` (vue2: `src/main.js`) assembly boilerplate covering all three.",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",
     "---",

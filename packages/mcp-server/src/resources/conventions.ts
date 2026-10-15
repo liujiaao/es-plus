@@ -280,6 +280,9 @@ ${!isVue2
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 app.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -294,6 +297,9 @@ import Vue from 'vue'
 import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 Vue.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -303,6 +309,10 @@ Vue.use(ESPlus, {
 })
 \`\`\``}
 With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline httpRequest.
+\`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` are INERT until the
+entry assembles \`permission\` / \`t\` here — otherwise the gate silently passes and labels
+fall back to \`label\`. \`EsTable.methods.$httpRequest\` above is the legacy-compatible key;
+the core-authoritative field is the top-level \`httpRequest\`.
 
 ## EsCrudPage btn-click Event Keys
 - Add confirm: "${CRUD_PAGE_BTN_CLICK_KEYS.ADD_CONFIRM}"
@@ -330,10 +340,100 @@ Prefer generating CrudPageSchema JSON + wrapper SFC over full SFC mode:
 - Schema is pure JSON (no render functions) — easy to validate and store
 
 ## Extension Points (business logic the schema can't express)
-The declarative config covers structure (fields, actions, dialogs, layout). Some
-requirements — conditional display, computed cells, permission gates, custom
-controls — cannot be expressed as pure JSON. The contract is **mark, never drop**:
+The declarative config covers structure (fields, actions, dialogs, layout) and
+**form-scope conditional visibility** (\`isHidden\`, below). Some requirements —
+computed cells, permission gates, custom controls — cannot be expressed as pure
+JSON. The contract is **mark, never drop**:
 
+- **\`isHidden\`** (FieldConfig — **not** an extension point: it's PLAIN JSON DATA,
+  not a code string): a declarative visibility condition \`{ field, op?, value? }\`
+  or an array of them (AND), where the field is HIDDEN while the condition holds.
+  \`field\` is another field path in the same form; \`op\` ∈ eq (default) / ne / in /
+  nIn / empty / notEmpty / truthy / falsy. When the predicate needs OR / AND-OR
+  mixes / ordering (>, <=) / a nested NOT — which the plain form cannot express —
+  use a JSON expression (JSONLogic-shaped, same \`isHidden\` key): \`{ or: [ { "==":
+  [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }\`, ops =
+  var == != > >= < <= in nin empty notEmpty truthy falsy and or not if; prefer the
+  plain form for simple cases. Use this for "show field X only when Y
+  is Z" — it applies to the query/add/edit forms, NOT the table column. Do NOT
+  reach for \`formatter\`/\`render\` for visibility.
+- **\`reactions\`** (FieldConfig — **not** an extension point: PLAIN JSON DATA,
+  never a JS callback): field-level **linkage / computed** rules — this field's
+  OPTIONS / required / disabled / own VALUE depend on OTHER fields. An array of
+  rules, each \`{ dependencies?, when?, fulfill }\`:
+  - \`dependencies\`: model paths whose change re-evaluates the rule. **REQUIRED**
+    when \`fulfill.value\` is present.
+  - \`when\`: optional gate expression — the rule applies only while it is truthy.
+  - \`fulfill\`: \`{ dataOptions?, required?, disabled?, value? }\`:
+    - \`dataOptions\` → a **LITERAL** option array (\`[{label,value}]\`) — NOT an
+      expression (the DSL forbids object literals, so branch by writing one rule
+      per case, each with its own \`when\`).
+    - \`required\` / \`disabled\` / \`value\` → **AI-16 expression nodes** returning a
+      boolean (required/disabled) or the field's new value (\`value\`, written back
+      to the model).
+  Ops = the same expression DSL as \`isHidden\` (var == != > >= < <= in nin empty
+  notEmpty truthy falsy and or not if). Example — \`city\` options follow
+  \`province\` (浙江→杭州/宁波, 江苏→南京): two rules, each
+  \`when: { "==": [{ var: "province" }, "zj" | "js"] }\` with its own
+  \`fulfill.dataOptions\`; and a value mirrorer \`region\` auto-equals \`province\`
+  (\`dependencies:["province"], fulfill:{ value:{ var:"province" },
+  disabled:{ truthy:[{ var:"province" }] } }\`). Applies to the query/filter form
+  and the add/edit dialog forms — **NOT** the table column. DISTINCT from
+  \`isHidden\`: use \`isHidden\` when the field merely appears/disappears, and
+  \`reactions\` when its options / required / disabled / value must change.
+- **\`columns\`** (top-level — **not** an extension point: it's PLAIN JSON DATA): the
+  explicit table-column array, an escape hatch over the \`fields\`-derived columns for
+  things the flat field list can't express — **multi-level group headers** (\`{ label,
+  groups: [ …child columns… ] }\`, cross-renderer safe to 2 levels) and **non-field
+  columns** (\`{ type: 'index' | 'selection' | 'expand' }\`). When present it REPLACES
+  the derived table columns (override, not merge), so every table-visible field must
+  appear inside it; \`fields\` still drives the query/add/edit forms. The operation
+  column is auto-appended from \`actions\`/\`operationColumn\` — do NOT add it to \`columns\`.
+- **\`expandConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **row-expand content** — \`{ title?, fields: [ { prop, label? } ] }\`
+  (fields non-empty). Its presence makes the table render exactly ONE row-expander
+  whose content is a read-only \`label: value\` list read from \`row[prop]\`; the listed
+  props are typically detail-only fields (mark them \`inTable:false\`). If \`columns\`
+  already declares a \`{ type: 'expand' }\` column the content attaches there (position
+  kept), otherwise the generator prepends one — you do NOT write the expander column
+  yourself. Use this for "每行可展开查看…". DISTINCT from \`tableOptions.expandConfig\`
+  (the vxe \`{ accordion }\` switch) — never use that for row-expand content.
+- **\`treeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **tree table** — \`{ childrenField?, expandAll? }\` — STATIC trees only.
+  Its presence makes the table render parent/child levels from the nested child array
+  in each row; \`row-key\` is emitted automatically (the default \`rowkey\` covers it).
+  Set \`childrenField\` only when the API nests children under a key other than
+  \`children\` (e.g. \`subItems\`); set \`expandAll: true\` to expand every node by default.
+  Not for lazy/async loading. Use this for "树形 / 部门树 / 分类树 / 父子层级". DISTINCT
+  from \`tableOptions.treeConfig\` (the vxe-only \`VxeTreeConfig\`) — always use the
+  TOP-LEVEL key.
+- **\`tableOptions.editConfig\`** + **\`columns[].editRender\`** (vxe inline editing —
+  **requires \`tableOptions.engine: 'vxe'\`**): \`editConfig\` is the table-level switch
+  (\`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?,
+  showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }\`, defaults trigger:'click'
+  / mode:'cell'); \`editRender\` marks ONE column editable and picks its editor
+  (\`{ name: '$input' | '$select' | '$textarea' | '$date', type?: 'default' | 'visible',
+  options?: [{label,value}], props?, autofocus?, defaultValue? }\` — \`$select\` wants
+  \`options\`). ALL THREE are required together: a column WITHOUT \`editRender\` is never
+  editable (so \`editConfig\` alone is a no-op), and both are silently IGNORED unless the
+  engine is vxe (the generator warns). Declare the editable columns via the top-level
+  \`columns\` array — it REPLACES the derived columns, so every table-visible field must
+  appear inside it (the operation column is still auto-appended from \`actions\`). Editing
+  tracks changes on an internal copy at runtime (keepSource is auto-enabled) — read them via
+  the vxe edit-closed/update API, not by expecting an automatic write-back. Function-valued
+  \`editRender.events\` and custom-registered renderers are OUT OF SCOPE. Use this for
+  "表格行内编辑 / 双击单元格改数量 / 点单元格直接改".
+- **\`mergeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
+  declarative **row merge** — \`{ rowsBy: ['dept', 'team'] }\` (non-empty). Each named
+  column is grouped by **adjacent-equal** values: the first row of a run keeps the cell
+  with \`rowspan\` = run length and the rest are merged away. \`rowsBy\` order is itself the
+  render contract (it is the grouping axis), so keep the columns in the order the request
+  names them. Cross-renderer (el-table \`span-method\` / a-table column \`customCell\` /
+  vxe \`mergeMethod\`) — the generator consumes it; you do NOT write a span method. Use this
+  for "合并单元格 / 相同的部门只显示一次 / 分组表". DISTINCT from the FUNCTIONAL
+  \`tableOptions.spanMethod\` (an arbitrary JS closure, Tier-3 escape hatch, **not**
+  cross-renderer — a-table has no span-method channel): if both are set the explicit
+  \`spanMethod\` wins and the generator warns.
 - **\`formatter\`** (FieldConfig): a JS arrow-function source string for read-only
   cell formatting, e.g. \`"(row) => \\\`¥\\\${row.amount.toFixed(2)}\\\`"\`. Emitted
   inline in SFC mode; carried through in schema mode.
@@ -406,6 +506,15 @@ interface StructuredCrudConfig {
     estimatedRowHeight?: number
     overscanCount?: number
     rowClassName?: string
+    editConfig?: {             // vxe inline editing — requires engine:'vxe' (see below); a cell is editable only if its column also declares editRender
+      trigger?: 'click' | 'dblclick' | 'manual'
+      mode?: 'cell' | 'row'
+      showStatus?: boolean
+      showUpdateStatus?: boolean
+      showInsertStatus?: boolean
+      autoClear?: boolean
+      enabled?: boolean
+    }
   }
   pagination?: { pageSize?: number; pageSizes?: number[] }
   mode?: 'schema' | 'sfc'
@@ -491,6 +600,9 @@ import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 
 app.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -504,6 +616,9 @@ import axios from 'axios'
 import ESPlus from '${v.esPlusPkg}'
 
 Vue.use(ESPlus, {
+  permission: (code) => userStore.permissions.includes(code), // permissionValue (RBAC) prerequisite
+  t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
+  httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
     methods: {
       $httpRequest: ${robustHttpRequest()},
@@ -514,6 +629,10 @@ Vue.use(ESPlus, {
 \`\`\`
 
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
+\`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` take effect ONLY after this
+entry assembles \`permission\` / \`t\`; without it the permission gate silently passes and labels
+fall back to \`label\`. The top-level \`httpRequest\` is the core-authoritative field —
+\`EsTable.methods.$httpRequest\` is the legacy-compatible key.
 ${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus — `import Antd from 'ant-design-vue'; import 'ant-design-vue/dist/reset.css'; app.use(Antd); app.use(ESPlus, {...})`.\n" : ""}
 
 ## configureEsPlus() — Module-Level Config (Auto-Import Mode)
@@ -523,7 +642,9 @@ import { configureEsPlus } from '${v.esPlusPkg}'
 configureEsPlus({
   EsTable: { methods: { $httpRequest: ${robustHttpRequest()} } },
   EsForm: { $httpRequest: ${robustHttpRequest()} },
-  permission: (code) => userStore.permissions.includes(code)
+  permission: (code) => userStore.permissions.includes(code),
+  t: (key) => i18n.t(key),
+  httpRequest: (params) => axios(params)
 })
 \`\`\`
 This ensures global config is available even in auto-import mode (unplugin-vue-components).

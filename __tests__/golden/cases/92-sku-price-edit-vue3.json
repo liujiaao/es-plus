@@ -1,0 +1,21 @@
+{
+  "nl": "SKU 定价管理：表格支持行内编辑，单击单元格进入编辑；展示 SKU 名称、单价，单价用数字输入框；支持新增、编辑。",
+  "nlEn": "SKU pricing management: the table supports inline editing — click a cell to edit. Shows SKU name and unit price; unit price uses a number input. Supports add and edit.",
+  "fixedFields": ["skuName", "price"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "config": {
+    "name": "SkuPriceEditManage",
+    "apiUrl": "/api/sku-prices",
+    "fields": [
+      { "prop": "skuName", "label": "SKU名称", "formtype": "Input" },
+      { "prop": "price", "label": "单价", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click", "mode": "cell" } },
+    "columns": [
+      { "prop": "skuName", "label": "SKU名称", "editRender": { "name": "$input" } },
+      { "prop": "price", "label": "单价", "editRender": { "name": "$input", "props": { "type": "number" } } }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=click/mode=cell + columns[].editRender $input，vue3/schema）"
+}

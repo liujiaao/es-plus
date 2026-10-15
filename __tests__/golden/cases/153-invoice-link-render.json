@@ -1,0 +1,24 @@
+{
+  "nl": "发票台账：查询有开票方、金额区间；表格展示发票号、开票方、金额、开票日期，其中「发票号」列需要自定义渲染（渲染成可点击的链接）；支持新增、编辑、删除。",
+  "nlEn": "Invoice book: query by issuer and amount range; the table shows invoice no., issuer, amount, and issue date, where the \"invoice no.\" column needs custom rendering (rendered as a clickable link); supports add, edit, and delete.",
+  "fixedFields": ["invoiceNo", "party", "amount", "issuedAt"],
+  "pinnedDims": ["propSet", "actions", "extPoints:invoiceNo"],
+  "config": {
+    "name": "InvoiceBook",
+    "apiUrl": "/api/invoices",
+    "fields": [
+      {
+        "prop": "invoiceNo",
+        "label": "发票号",
+        "formtype": "Input",
+        "inQuery": false,
+        "render": "(_, { row }) => h(ElLink, { type: 'primary', href: `/invoices/${row.id}`, target: '_blank' }, () => row.invoiceNo)"
+      },
+      { "prop": "party", "label": "开票方", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "issuedAt", "label": "开票日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：自定义 render（el-link 可点）。render 列设 inQuery:false 保持「纯展示列」语义（invariant 无强制，但语义更清晰）。"
+}

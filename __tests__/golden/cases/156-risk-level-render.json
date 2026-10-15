@@ -1,0 +1,29 @@
+{
+  "nl": "风险登记：查询有风险编号、负责人；表格展示风险编号、风险等级、负责人，其中「风险等级」列需要自定义渲染（按等级用不同颜色的标签展示）；支持新增、编辑、删除。",
+  "nlEn": "Risk register: query by risk no. and owner; the table shows risk no., risk level, and owner, where the \"risk level\" column needs custom rendering (colored tags per level); supports add, edit, and delete.",
+  "fixedFields": ["riskNo", "riskLevel", "owner"],
+  "pinnedDims": ["propSet", "actions", "extPoints:riskLevel", "target"],
+  "config": {
+    "name": "RiskRegister",
+    "apiUrl": "/api/risks",
+    "target": "antdv",
+    "fields": [
+      { "prop": "riskNo", "label": "风险编号", "formtype": "Input" },
+      {
+        "prop": "riskLevel",
+        "label": "风险等级",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "高", "value": "high" },
+          { "label": "中", "value": "mid" },
+          { "label": "低", "value": "low" }
+        ],
+        "render": "(_, { row }) => h(Tag, { color: row.riskLevel === 'high' ? 'red' : row.riskLevel === 'mid' ? 'orange' : 'green' }, () => row.riskLevelLabel)"
+      },
+      { "prop": "owner", "label": "负责人", "formtype": "Input" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：antdv 自定义 render（a-tag 染色）。schema 模式不 emit render 源码，故 target 差异只体现于字段/按钮组件名，与本 render 桩无关。"
+}

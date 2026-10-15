@@ -1,0 +1,79 @@
+{
+  "nl": "案件处置管理（单文件组件）：查询有案件编号；表格展示案件编号、案件状态、处置结论、经办人；支持新增、编辑、删除。表单里「处置结论」在案件已结案后不可编辑（禁用）。",
+  "nlEn": "Case-disposition management (single-file component): query by case no.; the table shows case no., status, disposition conclusion and handler; supports add, edit and delete. In the form the \"disposition conclusion\" is not editable (disabled) once the case is closed.",
+  "fixedFields": [
+    "caseNo",
+    "status",
+    "conclusion",
+    "handler"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "reactions:conclusion",
+    "target",
+    "mode"
+  ],
+  "config": {
+    "name": "CaseDispositionManage",
+    "apiUrl": "/api/cases",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "caseNo",
+        "label": "案件编号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "案件状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "处理中",
+            "value": "open"
+          },
+          {
+            "label": "已结案",
+            "value": "closed"
+          }
+        ]
+      },
+      {
+        "prop": "conclusion",
+        "label": "处置结论",
+        "formtype": "Input",
+        "inQuery": false,
+        "reactions": [
+          {
+            "dependencies": [
+              "status"
+            ],
+            "fulfill": {
+              "disabled": {
+                "==": [
+                  {
+                    "var": "status"
+                  },
+                  "closed"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "prop": "handler",
+        "label": "经办人",
+        "formtype": "Input"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "AI-07: fulfill.disabled 条件禁用（vue2/SFC）"
+}

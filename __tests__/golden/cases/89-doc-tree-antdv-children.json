@@ -1,0 +1,18 @@
+{
+  "nl": "用 antd 风格做文档管理：查询文档标题；表格展示文档标题、更新时间；文档是树形结构，子文档放在默认的 children 字段里；支持新增、编辑、删除。",
+  "nlEn": "Document management with an Ant Design look: query by document title; the table shows document title and update time; documents are hierarchical with children under the default children field; supports add, edit and delete.",
+  "fixedFields": ["docTitle", "updatedAt"],
+  "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "config": {
+    "name": "DocTreeManage",
+    "apiUrl": "/api/docs",
+    "target": "antdv",
+    "fields": [
+      { "prop": "docTitle", "label": "文档标题", "formtype": "Input" },
+      { "prop": "updatedAt", "label": "更新时间", "formtype": "DatePicker", "inForm": false }
+    ],
+    "treeConfig": { "childrenField": "children" },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 显式写默认子键名 children（等价缺省）（antdv/schema）"
+}

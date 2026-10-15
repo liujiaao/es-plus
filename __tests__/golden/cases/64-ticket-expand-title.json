@@ -1,0 +1,40 @@
+{
+  "nl": "工单管理：查询工单标题；表格首列序号，随后展示工单标题、优先级；每行可展开查看处理人、处理备注；支持新增、编辑、删除。",
+  "nlEn": "Ticket management: query by ticket title; the table's first column is an index, then ticket title and priority; each row can expand to reveal the handler and handling remark; supports add, edit and delete.",
+  "fixedFields": ["title", "priority", "handler", "remark"],
+  "pinnedDims": ["propSet", "actions", "columns", "expandConfig"],
+  "config": {
+    "name": "TicketManage",
+    "apiUrl": "/api/tickets",
+    "fields": [
+      { "prop": "title", "label": "工单标题", "formtype": "Input" },
+      {
+        "prop": "priority",
+        "label": "优先级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "高", "value": "high" },
+          { "label": "中", "value": "medium" },
+          { "label": "低", "value": "low" }
+        ]
+      },
+      { "prop": "handler", "label": "处理人", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "remark", "label": "处理备注", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "columns": [
+      { "type": "index", "label": "序号", "width": 60 },
+      { "prop": "title", "label": "工单标题" },
+      { "prop": "priority", "label": "优先级" },
+      { "type": "expand" }
+    ],
+    "expandConfig": {
+      "title": "处理信息",
+      "fields": [
+        { "prop": "handler", "label": "处理人" },
+        { "prop": "remark", "label": "处理备注" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: expandConfig 挂到显式 columns 里已声明的 {type:'expand'} 列（位置保持）（vue3/schema）"
+}

@@ -11,6 +11,7 @@ import {
   SURFACES_EXAMPLES,
   type SurfacesExample,
   type DialogKey,
+  type DialogEntry,
 } from "../src/resources/surfaces-examples.js";
 
 // The surfaces few-shot examples are the primary steering signal for the
@@ -23,6 +24,22 @@ import {
 // This mirror must stay in lockstep with the routing in
 // packages/mcp-server/src/tools/generate-crud.ts.
 const DIALOG_TITLES: Record<DialogKey, string> = { add: "新增", edit: "编辑", view: "查看" };
+
+/**
+ * 面字段上声明的**字段级扩展键**（AI-21③ 提进入口词汇的 isHidden / reactions，及 AI-22 的 labelKey）。
+ * 这些只在 query / form 面有意义（表格列不吃 isHidden/reactions —— 与权威语义一致），
+ * 故只从这两面收集；声明了就必须出现在生成物里，否则示例在教一个「会被静默丢弃」的意图。
+ */
+function declaredFieldExtras(ex: SurfacesExample): string[] {
+  const s = ex.input.surfaces;
+  const out: string[] = [];
+  for (const f of [...(s.query ?? []), ...(s.form ?? [])]) {
+    if (f.isHidden) out.push("isHidden");
+    if (f.reactions) out.push("reactions");
+    if (f.labelKey) out.push("labelKey");
+  }
+  return [...new Set(out)];
+}
 
 function allProps(ex: SurfacesExample): string[] {
   const s = ex.input.surfaces;
@@ -40,12 +57,27 @@ function route(ex: SurfacesExample): { route: SurfacesExample["route"]; code: st
   const query: SurfaceField[] = s.query ?? [];
   const table: SurfaceField[] = s.table ?? [];
   const form: SurfaceField[] = s.form ?? [];
-  const dialogKeys: DialogKey[] = s.dialog ?? [];
+  const dialogEntries: DialogEntry[] = s.dialog ?? [];
 
   if (table.length > 0) {
     const dialogBody = form.length ? form : table;
-    const dialogs = dialogKeys.length
-      ? Object.fromEntries(dialogKeys.map((k) => [k, { title: DIALOG_TITLES[k], formItems: dialogBody }]))
+    // 镜像 generate-crud.ts 的 dialogs 合成（AI-21④：罐头键 | 全参对象）——必须与该处逐字同构。
+    const dialogs = dialogEntries.length
+      ? Object.fromEntries(
+          dialogEntries.map((d) =>
+            typeof d === "string"
+              ? [d, { title: DIALOG_TITLES[d], formItems: dialogBody }]
+              : [
+                  d.key,
+                  {
+                    title: d.title !== undefined ? d.title : (DIALOG_TITLES[d.key as DialogKey] ?? d.key),
+                    ...(d.width !== undefined ? { width: d.width } : {}),
+                    ...(d.fullscreen !== undefined ? { fullscreen: d.fullscreen } : {}),
+                    formItems: d.formItems !== undefined ? d.formItems : dialogBody,
+                  },
+                ],
+          ),
+        )
       : undefined;
     const { config } = composeCrudConfig({
       name,
@@ -66,7 +98,7 @@ function route(ex: SurfacesExample): { route: SurfacesExample["route"]; code: st
 
   const parts: string[] = [];
   if (query.length) parts.push(generateFormBlock({ fields: query, context: "query", buttons: "query", target }).code);
-  if (dialogKeys.length) {
+  if (dialogEntries.length) {
     parts.push(generateDialogBlock({ fields: form.length ? form : query, apiUrl, target }).code);
   } else if (form.length) {
     parts.push(generateFormBlock({ fields: form, context: "form", buttons: "submit", target }).code);
@@ -109,6 +141,12 @@ describe("surfaces few-shot examples", () => {
       const { code } = route(ex);
       const missing = allProps(ex).filter((p) => !propPresent(code, p));
       expect(missing, `props dropped from generated output: ${missing.join(", ")}`).toEqual([]);
+    });
+
+    it(`"${ex.label}" carries every declared isHidden / reactions into the output`, () => {
+      const { code } = route(ex);
+      const missing = declaredFieldExtras(ex).filter((k) => !code.includes(`"${k}"`) && !new RegExp(`\\b${k}\\s*:`).test(code));
+      expect(missing, `field-level extras dropped from generated output: ${missing.join(", ")}`).toEqual([]);
     });
   }
 });

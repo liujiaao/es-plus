@@ -213,6 +213,11 @@ import {
   applyAutoSpan,
   resolveButtonSide,
   resolveHttpRequest,
+  resolveReactionOverlay,
+  resolveReactionValues,
+  collectReactionDependencies,
+  setNestedValue,
+  looseEqual,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -506,9 +511,19 @@ watch(
 const formItemListFilter = computed(() => {
   const list = formItemRowsList.value || []
   const visible = list
-    .map((it) => (it ? { ...normalizeFormItem(it), dataOptions: it.dataOptions || [] } : null))
+    .map((it) => {
+      if (!it) return null
+      // AI-07 字段联动（显示派生）：overlay 必须**先于** normalizeFormItem 合并 —— normalize
+      // 才把顶层 disabled 合进 attrs.disabled（FORM_ITEM_SHORTCUT_KEYS），后设的 disabled 到不了控件。
+      const withReactions = it.reactions
+        ? { ...it, ...(resolveReactionOverlay(it.reactions, props.model) || {}) }
+        : it
+      return { ...normalizeFormItem(withReactions), dataOptions: withReactions.dataOptions || [] }
+    })
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
+      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+      if (!checkPermission(it.permissionValue)) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)
       }
@@ -521,6 +536,37 @@ const formItemListFilter = computed(() => {
   // 与 @es-plus/core 的 FormItemOption 并非同一名义类型，直接传参会被 TS 拒绝。
   // 二者结构一致（本包类型本就应转出 core 的契约，见 types/index.ts），此处只需跨过名义差异。
   return applyAutoSpan(visible as unknown as Parameters<typeof applyAutoSpan>[0]) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
+})
+
+// AI-07 字段联动（值回写）：watch source 是**依赖值的拼接串**（原始值，非数组）——
+// Vue 的 hasChanged 对原始值按值比较，故只在依赖真变时触发，无关字段编辑不重算、
+// 不覆盖用户手改。仅在结果与当前值不同才写 → 重算得同值 → 收敛终止。
+const reactionDepsKey = computed(() =>
+  collectReactionDependencies(formItemRowsList.value)
+    .map((p) => JSON.stringify(getNestedValue(props.model, p)))
+    .join('|')
+)
+// 防御性震荡上限：仅"变更时写"通常已收敛（写后重算得同值 → 不再写）；这里给一个硬上限，
+// 兜住理论上可能互相翻转的规则对（超限 warn-once 后停）。8 远超任何合法级联深度。
+const MAX_REACTION_PASSES = 8
+let warnedReactionCycle = false
+watch(reactionDepsKey, () => {
+  for (let pass = 0; pass < MAX_REACTION_PASSES; pass++) {
+    let wrote = false
+    for (const w of resolveReactionValues(formItemRowsList.value, props.model)) {
+      if (!looseEqual(getNestedValue(props.model, w.prop), w.value)) {
+        setNestedValue(props.model, w.prop, w.value)
+        wrote = true
+      }
+    }
+    if (!wrote) return
+  }
+  if (!warnedReactionCycle) {
+    warnedReactionCycle = true
+    console.warn(
+      `[es-plus] reactions 值回写在 ${MAX_REACTION_PASSES} 遍内未收敛，可能存在互相翻转的规则，已停止。`
+    )
+  }
 })
 
 // ─── 布局（对齐 vue3 签名）──────────────────────────

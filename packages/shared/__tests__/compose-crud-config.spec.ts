@@ -157,3 +157,128 @@ describe('composeCrudConfig — 端到端经 generateFromConfig(含表格子集�
     expect(config.actions).toEqual(['add', 'edit'])
   })
 })
+describe('composeCrudConfig — AI-21③ 入口词汇提级（isHidden / reactions / labelKey）', () => {
+  it('isHidden / reactions 经 compose 传入权威 config（此前会被整体丢弃）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      form: [
+        { prop: 'name', label: '名称', formtype: 'Input' },
+        {
+          prop: 'refundReason',
+          label: '退款原因',
+          formtype: 'Input',
+          isHidden: { field: 'refundType', op: 'ne', value: 'part' },
+        },
+        {
+          prop: 'city',
+          label: '城市',
+          formtype: 'Select',
+          reactions: [{ dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }] } }],
+        },
+      ],
+      actions: ['add', 'edit'],
+    })
+    const reason = config.fields.find((f) => f.prop === 'refundReason') as any
+    const city = config.fields.find((f) => f.prop === 'city') as any
+    expect(reason.isHidden).toEqual({ field: 'refundType', op: 'ne', value: 'part' })
+    expect(city.reactions).toHaveLength(1)
+    expect(city.reactions[0].dependencies).toEqual(['province'])
+  })
+
+  it('isHidden/reactions 是语义键：form 面优先于 query 面', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      query: [{ prop: 'note', label: '备注', formtype: 'Input', isHidden: { field: 'a', op: 'eq', value: 1 } }],
+      table: [{ prop: 'note', label: '备注', formtype: 'Input' }],
+      form: [{ prop: 'note', label: '备注', formtype: 'Input', isHidden: { field: 'b', op: 'eq', value: 2 } }],
+      actions: ['add'],
+    })
+    const note = config.fields.find((f) => f.prop === 'note') as any
+    expect(note.isHidden).toEqual({ field: 'b', op: 'eq', value: 2 })
+  })
+
+  it('query 面的 isHidden 在 form 面没给时保留（不是「被覆盖为空」）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      query: [{ prop: 'note', label: '备注', formtype: 'Input', isHidden: { field: 'a', op: 'eq', value: 1 } }],
+      table: [{ prop: 'note', label: '备注', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    const note = config.fields.find((f) => f.prop === 'note') as any
+    expect(note.isHidden).toEqual({ field: 'a', op: 'eq', value: 1 })
+  })
+
+  it('labelKey 与 label 同属标识：首次出现为准，冲突发告警', () => {
+    const { config, warnings } = composeCrudConfig({
+      ...base,
+      query: [{ prop: 'name', label: '名称', labelKey: 'user.name', formtype: 'Input' }],
+      table: [{ prop: 'name', label: '名称', labelKey: 'user.fullName', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    const name = config.fields.find((f) => f.prop === 'name') as any
+    expect(name.labelKey).toBe('user.name')
+    expect(warnings.some((w) => w.includes('labelKey'))).toBe(true)
+  })
+
+  it('端到端：compose → generateFromConfig 把 isHidden / labelKey 发射进 pageSchema', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      form: [
+        { prop: 'name', label: '名称', labelKey: 'user.name', formtype: 'Input' },
+        { prop: 'refundReason', label: '退款原因', formtype: 'Input', isHidden: { field: 'refundType', op: 'ne', value: 'part' } },
+      ],
+      actions: ['add', 'edit'],
+    })
+    const { code } = generateFromConfig(config as StructuredCrudConfig)
+    expect(code).toContain('"isHidden"')
+    expect(code).toContain('"labelKey": "user.name"')
+  })
+})
+
+describe('composeCrudConfig — AI-21② 顶层声明式键透传（expandConfig / treeConfig）', () => {
+  it('expandConfig / treeConfig 经 compose 透传到权威 config（此前会被整体丢弃）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'dept', label: '部门', formtype: 'Input' }],
+      actions: ['view'],
+      expandConfig: { title: '明细', fields: [{ prop: 'remark', label: '备注' }] },
+      treeConfig: { childrenField: 'subItems', expandAll: true },
+    })
+    expect(config.expandConfig).toEqual({ title: '明细', fields: [{ prop: 'remark', label: '备注' }] })
+    expect(config.treeConfig).toEqual({ childrenField: 'subItems', expandAll: true })
+  })
+
+  it('未提供时两个键都不出现在 config 里（零回归）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'dept', label: '部门', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    expect('expandConfig' in config).toBe(false)
+    expect('treeConfig' in config).toBe(false)
+  })
+})
+
+describe('composeCrudConfig — AI-23 顶层声明式键透传（mergeConfig）', () => {
+  it('mergeConfig 经 compose 透传到权威 config（此前前门无法表达）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'dept', label: '部门', formtype: 'Input' }],
+      actions: ['view'],
+      mergeConfig: { rowsBy: ['dept'] },
+    })
+    expect(config.mergeConfig).toEqual({ rowsBy: ['dept'] })
+  })
+
+  it('未提供时不出现在 config 里（零回归）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'dept', label: '部门', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    expect('mergeConfig' in config).toBe(false)
+  })
+})
+

@@ -250,9 +250,150 @@ describe('generateFromConfig — sfc mode', () => {
     expect(result.code).toContain("permissionValue: 'user:delete'")
   })
 
+  // 字段级 permissionValue ≠ 按钮级 permissions：它把「某些列/字段仅特定权限可见」落到 es-table
+  // 的 filteredColumns / es-form 的 formItemListFilter（此前 schema+prompt+scorer 都认它，组件与
+  // 生成器却都没有 → 静默丢弃）。这里锁住两条发射路径。
+  it('emits field-level permissionValue on columns in SFC mode', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        { prop: 'salary', label: '基本工资', formtype: 'InputNumber' as const, inQuery: false, permissionValue: 'salary:view' },
+      ],
+    })
+    expect(result.code).toContain("permissionValue: 'salary:view'")
+  })
+
+  it('emits field-level permissionValue into schema-mode JSON', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        { prop: 'salary', label: '基本工资', formtype: 'InputNumber' as const, inQuery: false, permissionValue: 'salary:view' },
+      ],
+    })
+    // 列（buildTableColumn）+ 弹窗表单项（buildFormItem）都写进 pageSchema JSON
+    expect(result.code).toContain('"permissionValue": "salary:view"')
+    expect(result.wrapperCode).toBeDefined()
+  })
+
   it('includes render expressions inline', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'sfc' })
     expect(result.code).toContain("render: (_, { row }) => h(ElTag")
+  })
+
+  // AI-06：声明式 isHidden 是**纯 JSON 数据**，两种模式都经 buildFormItem 发射
+  // （schema 经 inlineJson 进 pageSchema；sfc 的 formItems 同样 inlineJson）。
+  it('emits declarative isHidden into schema-mode JSON (query + dialog form items)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: { field: 'type', op: 'ne' as const, value: 'part' },
+        },
+      ],
+    })
+    // 单条件对象原样内联（未解析 defaults，逐字节等于输入）
+    expect(result.code).toContain('"isHidden": {')
+    expect(result.code).toContain('"field": "type"')
+    expect(result.code).toContain('"op": "ne"')
+    expect(result.code).toContain('"value": "part"')
+  })
+
+  it('emits declarative isHidden in SFC mode (conditions ride along with inlineJson formItems)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'list',
+          label: '名单',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: [{ field: 'a', op: 'eq' as const, value: 1 }, { field: 'b', op: 'falsy' as const }],
+        },
+      ],
+    })
+    expect(result.code).toContain('"isHidden": [')
+    expect(result.code).toContain('"op": "eq"')
+    expect(result.code).toContain('"op": "falsy"')
+  })
+
+  // AI-16：表达式形态的 isHidden 同样是纯 JSON 数据，两种模式都必须原样内联 ——
+  // 否则它在生成期被静默丢掉，三端渲染时字段永远可见。
+  it('emits expression isHidden into schema-mode JSON (or / 序关系 原样内联)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] },
+        } as never,
+      ],
+    })
+    expect(result.code).toContain('"isHidden": {')
+    expect(result.code).toContain('"or"')
+    expect(result.code).toContain('"var": "status"')
+    expect(result.code).toContain('"var": "amount"')
+  })
+
+  it('emits expression isHidden in SFC mode (inlineJson formItems)', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'reason',
+          label: '原因',
+          formtype: 'Input' as const,
+          inQuery: false,
+          isHidden: [{ field: 'a', op: 'eq' as const, value: 1 }, { '>': [{ var: 'b' }, 5] }],
+        } as never,
+      ],
+    })
+    expect(result.code).toContain('"var": "b"')
+  })
+
+  it('does NOT emit isHidden when absent (backward compatible: prior outputs byte-identical)', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    expect(result.code).not.toContain('isHidden')
+  })
+
+  it('isHidden is form-scoped — a column-only field never leaks it into the emitted columns', () => {
+    // 该字段 inQuery:false + inForm:false → 既不进查询表单也不进弹窗表单，
+    // 只会被 buildTableColumn 处理；而 isHidden 只挂在 buildFormItem 上，
+    // 故整个产物里不该出现它的条件（列级动态显隐是 hidCol 的静态语义）。
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const },
+        {
+          prop: 'shadow',
+          label: '影子列',
+          formtype: 'Input' as const,
+          inQuery: false,
+          inForm: false,
+          isHidden: { field: 'type', op: 'eq' as const, value: 'x' },
+        },
+      ],
+    })
+    expect(result.code).not.toContain('isHidden')
   })
 
   it('generates useDialog form with validation', () => {
@@ -524,6 +665,42 @@ describe('tableOptions passthrough', () => {
     expect(schema.tableOptions.tabHeight).toBeUndefined()
   })
 
+  // ── configTableOut（AI-08）─────────────────────────────────────────────────
+  // 后端响应字段映射。与 engine 同构：Zod 的 tableOptions 是普通 z.object（无
+  // passthrough），不在那里声明就会被剥掉 → NL→config 走一遍静默丢映射。
+  // 组件读的是 options.configTableOut，schema 模式发进 schema.tableOptions。
+  it('passes configTableOut into schema tableOptions（NL→config 路径）', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      tableOptions: { configTableOut: { tableData: 'list', total: 'totalCount' } },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.configTableOut).toEqual({ tableData: 'list', total: 'totalCount' })
+  })
+
+  it('omits configTableOut when not configured（不给既有配置添新键）', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.configTableOut).toBeUndefined()
+  })
+
+  // SFC 模式的 options 是手搓块（非 JSON.stringify）——漏发即静默丢弃（WS-5）。
+  // 逐键用 q() 转义（响应键名是用户数据，不是 JS 源）。
+  it('emits configTableOut into the sfc options object', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      tableOptions: { configTableOut: { tableData: 'data', current: 'pageIndex' } },
+    } as any)
+    expect(result.code).toContain("configTableOut: { tableData: 'data', current: 'pageIndex' }")
+  })
+
+  it('does not emit configTableOut in sfc mode when not configured', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'sfc' })
+    expect(result.code).not.toContain('configTableOut')
+  })
+
   it('warns that vue2 ignores virtual scrolling', () => {
     const result = generateFromConfig({
       ...baseConfig,
@@ -665,3 +842,465 @@ describe('sfc mode — regression guards', () => {
   })
 })
 
+describe('explicit table columns（AI-09 子项① groups）', () => {
+  const cfgWithColumns = {
+    name: 'UserManage',
+    apiUrl: '/api/users',
+    fields: [
+      { prop: 'name', label: '姓名', formtype: 'Input' as const },
+      // 仅进派生列（inQuery/inForm 均 false）—— 证明 columns 覆盖后它消失
+      { prop: 'derivedOnly', label: '派生列', formtype: 'Input' as const, inQuery: false, inForm: false },
+    ],
+    actions: ['add' as const, 'edit' as const, 'delete' as const],
+    columns: [
+      { type: 'selection' },
+      { prop: 'name', label: '姓名' },
+      {
+        label: '联系方式',
+        groups: [
+          { prop: 'phone', label: '手机号' },
+          { prop: 'email', label: '邮箱' },
+        ],
+      },
+    ],
+  } as any
+
+  it('schema 模式：columns 覆盖派生列（override 非 merge）+ 递归 groups 原样进 JSON', () => {
+    const result = generateFromConfig(cfgWithColumns)
+    expect(result.code).toContain('"type": "selection"')
+    expect(result.code).toContain('"groups": [')
+    expect(result.code).toContain('"label": "联系方式"')
+    // 派生列不再出现（derivedOnly 是 inQuery/inForm 均 false 的纯表格字段）
+    expect(result.code).not.toContain('"derivedOnly"')
+  })
+
+  it('schema 模式：无 columns 时派生列行为不变（回归）', () => {
+    const { columns, ...noCols } = cfgWithColumns
+    const result = generateFromConfig(noCols as any)
+    expect(result.code).toContain('"prop": "derivedOnly"')
+    expect(result.code).not.toContain('"type": "selection"')
+  })
+
+  it('sfc 模式：columns 覆盖 + 递归 groups 发射 + 操作列仍追加', () => {
+    const result = generateFromConfig({ ...cfgWithColumns, mode: 'sfc' } as any)
+    expect(result.code).toContain("type: 'selection'")
+    expect(result.code).toContain('groups: [')
+    expect(result.code).toContain("label: '联系方式'")
+    expect(result.code).not.toContain('derivedOnly')
+    // 操作列仍按 actions 追加（与派生路径一致，不让编辑/删除凭空消失）
+    expect(result.code).toContain("prop: 'operate'")
+    expect(result.code).toContain("label: '操作'")
+  })
+
+  it('sfc 模式：列字符串经 q() 转义（引号不破结构）', () => {
+    const result = generateFromConfig({
+      ...cfgWithColumns,
+      mode: 'sfc',
+      columns: [{ prop: 'name', label: "名'称" }],
+    } as any)
+    expect(result.code).toContain("label: '名\\'称'")
+    expect(result.code).not.toContain("label: '名'称'")
+  })
+
+  it('StructuredCrudConfigSchema 接受递归 groups + 无 prop/label 的非字段列', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'selection' }, { label: '组', groups: [{ prop: 'a', label: 'A' }] }],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法列 type', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'nope' }],
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝带路径分隔符的列 prop', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ prop: 'a/b', label: 'B' }],
+    })
+    expect(r.success).toBe(false)
+  })
+})
+
+describe('declarative row-expand content（AI-09 子项② expandConfig）', () => {
+  const cfg = {
+    name: 'OrderManage',
+    apiUrl: '/api/orders',
+    fields: [
+      { prop: 'orderNo', label: '订单号', formtype: 'Input' as const },
+      { prop: 'receiver', label: '收货人', formtype: 'Input' as const, inTable: false, inQuery: false },
+    ],
+    actions: ['add' as const, 'delete' as const],
+    expandConfig: {
+      title: '收货信息',
+      fields: [
+        { prop: 'receiver', label: '收货人' },
+        { prop: 'phone', label: '联系电话' },
+      ],
+    },
+  } as any
+
+  it('schema 模式：无 columns 时前置一个展开列并挂上 expandConfig', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"type": "expand"')
+    expect(result.code).toContain('"expandConfig": {')
+    expect(result.code).toContain('"title": "收货信息"')
+    // 展开列**前置**于派生列（orderNo 等字段列仍在其后）—— 只在表格 columns 数组内比较
+    // （`"prop": "orderNo"` 在查询表单里也出现，全局 indexOf 会命中表单段而失真）
+    const colsIdx = result.code.indexOf('"columns"')
+    const expandIdx = result.code.indexOf('"type": "expand"', colsIdx)
+    const firstFieldIdx = result.code.indexOf('"prop": "orderNo"', colsIdx)
+    expect(expandIdx).toBeGreaterThanOrEqual(0)
+    expect(expandIdx).toBeLessThan(firstFieldIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：columns 已声明 {type:expand} 时内容挂到它上面（不重复前置、位置保持）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      columns: [{ prop: 'orderNo', label: '订单号' }, { type: 'expand' }],
+    } as any)
+    // 只应存在**一个** expand 列（挂到已有的那个上，而非再前置一个）
+    expect(result.code.match(/"type": "expand"/g)).toHaveLength(1)
+    // 位置保持在 orderNo 之后（既不前置于首，也不追加到末）—— 只在表格 columns 数组内比较
+    const colsIdx = result.code.indexOf('"columns"')
+    const orderNoIdx = result.code.indexOf('"prop": "orderNo"', colsIdx)
+    const expandIdx = result.code.indexOf('"type": "expand"', colsIdx)
+    expect(expandIdx).toBeGreaterThan(orderNoIdx)
+    expect(result.code).toContain('"expandConfig": {')
+  })
+
+  it('sfc 模式：发射 type:expand 列 + expandConfig 对象字面量 + 操作列仍追加', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain("type: 'expand'")
+    expect(result.code).toContain('expandConfig: {"title":"收货信息"')
+    expect(result.code).toContain("prop: 'operate'")
+  })
+
+  it('无 expandConfig 时不产生展开列（回归，不给既有配置添键）', () => {
+    const { expandConfig, ...noEc } = cfg
+    const result = generateFromConfig(noEc as any)
+    expect(result.code).not.toContain('"type": "expand"')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('vxe 引擎下告警（展开内容不被 vxe 渲染）但数据保留', () => {
+    const result = generateFromConfig({ ...cfg, tableOptions: { engine: 'vxe' } } as any)
+    expect(result.warnings.some((w: string) => w.includes('vxe'))).toBe(true)
+    expect(result.code).toContain('"expandConfig": {')
+  })
+
+  it('StructuredCrudConfigSchema 接受 expandConfig（title 可选 + labelKey）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      expandConfig: { fields: [{ prop: 'a', labelKey: 'field.a' }] },
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝空 fields 的 expandConfig（空展开无意义）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      expandConfig: { fields: [] },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+
+describe('declarative tree table（AI-09 子项③ treeConfig）', () => {
+  const cfg = {
+    name: 'DeptTreeManage',
+    apiUrl: '/api/departments',
+    fields: [
+      { prop: 'deptName', label: '部门名称', formtype: 'Input' as const },
+      { prop: 'leader', label: '负责人', formtype: 'Input' as const },
+    ],
+    actions: ['add' as const, 'delete' as const],
+    treeConfig: { childrenField: 'subItems', expandAll: true },
+  } as any
+
+  it('schema 模式：发射运行时家 tableOptions.treeConfig（childrenField + expandAll）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"treeConfig": {')
+    expect(result.code).toContain('"childrenField": "subItems"')
+    expect(result.code).toContain('"expandAll": true')
+    // 运行时家落在 tableOptions 里（而非顶层 schema 的兄弟键）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const tcIdx = result.code.indexOf('"treeConfig"')
+    expect(tcIdx).toBeGreaterThan(toIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：顶层 treeConfig 缺省子键时发空对象（vxe 靠其存在进入树模式）', () => {
+    const result = generateFromConfig({ ...cfg, treeConfig: {} } as any)
+    expect(result.code).toContain('"treeConfig": {}')
+  })
+
+  it('sfc 模式：发射 options.treeConfig 块（逐键转义）', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain("treeConfig: { childrenField: 'subItems', expandAll: true },")
+  })
+
+  it('无 treeConfig 时不发射（回归，不给既有配置添键）', () => {
+    const { treeConfig, ...noTc } = cfg
+    const result = generateFromConfig(noTc as any)
+    expect(result.code).not.toContain('"treeConfig"')
+    expect(result.code).not.toContain('treeConfig:')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 treeConfig（两键皆可选）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { expandAll: true },
+    })
+    expect(r.success).toBe(true)
+    const r2 = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { childrenField: 'children' },
+    })
+    expect(r2.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（childrenField 非字符串）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      treeConfig: { childrenField: 123 },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+
+describe('declarative row merge（AI-23 mergeConfig）', () => {
+  const cfg = {
+    name: 'DeptStaffManage',
+    apiUrl: '/api/staff',
+    fields: [
+      { prop: 'dept', label: '部门', formtype: 'Input' as const },
+      { prop: 'team', label: '小组', formtype: 'Input' as const },
+      { prop: 'name', label: '姓名', formtype: 'Input' as const },
+    ],
+    actions: ['add' as const, 'edit' as const],
+    mergeConfig: { rowsBy: ['dept', 'team'] },
+  } as any
+
+  it('schema 模式：发射运行时家 tableOptions.mergeConfig（rowsBy 原序保留）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"mergeConfig": {')
+    expect(result.code).toContain('"rowsBy": [')
+    // 运行时家落在 tableOptions 里（而非顶层 schema 的兄弟键）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const mcIdx = result.code.indexOf('"mergeConfig"')
+    expect(mcIdx).toBeGreaterThan(toIdx)
+    // 顺序是渲染契约（分组主轴）——不能被重排/去重
+    const payload = result.code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    expect(JSON.parse(payload[1]).tableOptions.mergeConfig).toEqual({ rowsBy: ['dept', 'team'] })
+    expect(result.warnings).toEqual([])
+  })
+
+  it('sfc 模式：发射 options.mergeConfig 块（inlineJson 序列化）', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain('mergeConfig: {"rowsBy":["dept","team"]},')
+  })
+
+  it('无 mergeConfig 时不发射（回归，不给既有配置添键）', () => {
+    const { mergeConfig, ...noMc } = cfg
+    const result = generateFromConfig(noMc as any)
+    expect(result.code).not.toContain('"mergeConfig"')
+    expect(result.code).not.toContain('mergeConfig:')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 mergeConfig（rowsBy 单列/多列）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: ['a'] } }).success).toBe(true)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: ['a', 'b'] } }).success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（rowsBy 为空 / 非数组 / 含非字符串）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: [] } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: 'a' } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: { rowsBy: [1] } }).success).toBe(false)
+    expect(StructuredCrudConfigSchema.safeParse({ ...base, mergeConfig: {} }).success).toBe(false)
+  })
+})
+
+describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () => {
+  const cfg = {
+    name: 'SkuPriceEditManage',
+    apiUrl: '/api/sku',
+    fields: [
+      { prop: 'skuName', label: '商品名称', formtype: 'Input' as const },
+      { prop: 'price', label: '价格', formtype: 'InputNumber' as const, inQuery: false },
+    ],
+    tableOptions: { engine: 'vxe', editConfig: { trigger: 'click', mode: 'cell' } },
+    columns: [
+      { prop: 'skuName', label: '商品名称', editRender: { name: '$input' } },
+      { prop: 'price', label: '价格', editRender: { name: '$input', props: { type: 'number' } } },
+    ],
+    actions: ['edit' as const],
+  } as any
+
+  it('schema 模式：发射 tableOptions.editConfig + 列 editRender（engine:vxe 无告警）', () => {
+    const result = generateFromConfig(cfg)
+    expect(result.code).toContain('"editConfig": {')
+    expect(result.code).toContain('"trigger": "click"')
+    expect(result.code).toContain('"mode": "cell"')
+    expect(result.code).toContain('"editRender": {')
+    // editConfig 落在 tableOptions 块内（运行时唯一家）
+    const toIdx = result.code.indexOf('"tableOptions"')
+    const ecIdx = result.code.indexOf('"editConfig"')
+    expect(ecIdx).toBeGreaterThan(toIdx)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('schema 模式：配置了 editConfig 但 engine 非 vxe → 告警（会被静默忽略）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      tableOptions: { editConfig: { mode: 'cell' } }, // 无 engine
+    } as any)
+    expect(result.warnings.join('\n')).toContain("editConfig requires engine: 'vxe'")
+    expect(result.warnings.join('\n')).toContain("'default'")
+  })
+
+  it('sfc 模式：发射 options.editConfig + 列 editRender 对象字面量', () => {
+    const result = generateFromConfig({ ...cfg, mode: 'sfc' } as any)
+    expect(result.code).toContain('editConfig: {"trigger":"click","mode":"cell"},')
+    expect(result.code).toContain('editRender: {"name":"$input"},')
+    expect(result.code).toContain('editRender: {"name":"$input","props":{"type":"number"}},')
+    // 该 config 有 edit 动作 → vue3 SFC 本就有 JSX 弹窗告警（与本子项无关）；只需确认
+    // 行内编辑自身不产生告警（engine:'vxe' 已给）。
+    expect(result.warnings.join('\n')).not.toContain('editConfig')
+  })
+
+  it('sfc 模式：engine 非 vxe → 告警（对三端都适用，不在 isVue2 分支内）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      mode: 'sfc',
+      tableOptions: { engine: 'virtual', editConfig: { mode: 'row' } },
+    } as any)
+    expect(result.warnings.join('\n')).toContain("editConfig requires engine: 'vxe'")
+  })
+
+  it('无 editConfig / editRender 时不发射且无告警（回归，不给既有配置添键）', () => {
+    const { tableOptions, columns, ...plain } = cfg
+    const result = generateFromConfig(plain as any)
+    expect(result.code).not.toContain('"editConfig"')
+    expect(result.code).not.toContain('"editRender"')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('sfc 模式：列 editRender 含不可序列化值 → 降级告警并省略（发射的永远能编译）', () => {
+    const result = generateFromConfig({
+      ...cfg,
+      mode: 'sfc',
+      columns: [{ prop: 'skuName', label: '商品名称', editRender: { name: '$input', props: { n: 1n } } }],
+    } as any)
+    expect(result.code).not.toContain('editRender:')
+    expect(result.warnings).toContain('列级行内编辑器 editRender 含无法序列化的值，已省略以保证编译通过。')
+  })
+
+  it('StructuredCrudConfigSchema 接受窄子集 editConfig + 列 editRender', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['edit'],
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'dblclick', mode: 'row', showStatus: true, autoClear: true } },
+      columns: [{ prop: 'a', label: 'A', editRender: { name: '$select', options: [{ label: '高', value: 'high' }], defaultValue: 'high' } }],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('StructuredCrudConfigSchema 拒绝非法形（editConfig.trigger 非枚举）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['edit'],
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'hover' } },
+    })
+    expect(r.success).toBe(false)
+  })
+})
+
+
+describe('AI-22 — tableOptions 尾部键 / 字段级 labelKey（strip-hazard 闭合）', () => {
+  const TO = { size: 'small', showHeader: false, emptyText: '无数据', snIndex: true, leftText: '左', cachePageSelection: false, defaultSort: { prop: 'a', order: 'descending' }, refetchKeepPage: true, localPagination: true }
+  const TO_KEYS = ['size', 'showHeader', 'emptyText', 'snIndex', 'leftText', 'cachePageSelection', 'defaultSort', 'refetchKeepPage', 'localPagination'] as const
+  const cfg = (extra: Record<string, unknown> = {}) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['view'],
+    tableOptions: TO,
+    ...extra,
+  })
+
+  it('Zod 解析保留全部 9 个尾部键（不被静默剥，含 false 值）', () => {
+    const r: any = StructuredCrudConfigSchema.safeParse(cfg())
+    expect(r.success).toBe(true)
+    for (const k of TO_KEYS) expect(r.data.tableOptions[k], `键 ${k} 不得被剥`).toBeDefined()
+  })
+
+  it('schema 模式把每个尾部键发射进 pageSchema.tableOptions（false 也必须落盘）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg()) as any)
+    const m = code.match(/export\s+const\s+pageSchema[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    const to: any = JSON.parse(m[1]).tableOptions
+    expect(to.size).toBe('small')
+    expect(to.showHeader).toBe(false)
+    expect(to.emptyText).toBe('无数据')
+    expect(to.snIndex).toBe(true)
+    expect(to.leftText).toBe('左')
+    expect(to.cachePageSelection).toBe(false)
+    expect(to.defaultSort).toEqual({ prop: 'a', order: 'descending' })
+    expect(to.refetchKeepPage).toBe(true)
+    expect(to.localPagination).toBe(true)
+  })
+
+  it('sfc 模式同样发射尾部键（手搓 options 块）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ mode: 'sfc' })) as any)
+    for (const k of TO_KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), k).toBe(true)
+  })
+
+  it('字段级 labelKey 优先于 i18n 派生的 field.<prop>', () => {
+    const r = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ i18n: true })) as any)
+    const r2 = generateFromConfig(StructuredCrudConfigSchema.parse({
+      name: 'T', apiUrl: '/x', i18n: true,
+      fields: [{ prop: 'a', label: 'A', labelKey: 'user.a.label', formtype: 'Input' }],
+      actions: ['view'],
+    }) as any)
+    expect(r.code + (r.wrapperCode || '')).toContain('field.a')
+    expect(r2.code + (r2.wrapperCode || '')).toContain('user.a.label')
+  })
+})

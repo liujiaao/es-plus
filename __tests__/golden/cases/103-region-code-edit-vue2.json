@@ -1,0 +1,22 @@
+{
+  "nl": "区域编码录入：单击单元格进入行内编辑；展示区域名称、编码，编码默认值 CN；支持新增、编辑。",
+  "nlEn": "Region code entry: click a cell to edit inline. Shows region name and code, where code defaults to CN. Supports add and edit.",
+  "fixedFields": ["regionName", "code"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "config": {
+    "name": "RegionCodeEditManage",
+    "apiUrl": "/api/region-code",
+    "target": "vue2",
+    "fields": [
+      { "prop": "regionName", "label": "区域名称", "formtype": "Input" },
+      { "prop": "code", "label": "编码", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click", "mode": "cell" } },
+    "columns": [
+      { "prop": "regionName", "label": "区域名称", "editRender": { "name": "$input" } },
+      { "prop": "code", "label": "编码", "editRender": { "name": "$input", "defaultValue": "CN", "autofocus": true } }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig + editRender $input defaultValue/autofocus，vue2/schema）"
+}

@@ -1,0 +1,26 @@
+{
+  "nl": "以 SFC 方式生成航班管理页：查询航班号；表格展示航班号、起飞时间、到达时间；每行可展开查看机型、座位数；支持新增、编辑、删除。",
+  "nlEn": "Generate the flight management page as an SFC: query by flight number; the table shows flight number, departure time and arrival time; each row can expand to reveal the aircraft type and seat count; supports add, edit and delete.",
+  "fixedFields": ["flightNo", "departTime", "arriveTime", "aircraft", "seats"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "mode"],
+  "config": {
+    "name": "FlightManage",
+    "apiUrl": "/api/flights",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "flightNo", "label": "航班号", "formtype": "Input" },
+      { "prop": "departTime", "label": "起飞时间", "formtype": "TimePicker", "inQuery": false },
+      { "prop": "arriveTime", "label": "到达时间", "formtype": "TimePicker", "inQuery": false },
+      { "prop": "aircraft", "label": "机型", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "seats", "label": "座位数", "formtype": "InputNumber", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "fields": [
+        { "prop": "aircraft", "label": "机型" },
+        { "prop": "seats", "label": "座位数" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（无 title，vue3/SFC）"
+}

@@ -1,0 +1,34 @@
+{
+  "nl": "会员等级管理（SFC 模式）：查询有等级名称、升级条件（下拉数据来自 /api/conditions 接口）；表格展示等级名称、升级条件、所需积分、状态；支持新增、编辑；「所需积分」列仅在有权限时可见，权限码 member:points:view；字段标签走 i18n；界面要求国际化。",
+  "nlEn": "Member level management (SFC mode): query by level name and upgrade condition (the condition dropdown data comes from the /api/conditions endpoint); the table shows level name, upgrade condition, required points, and status; supports add and edit; the \"required points\" column is visible only with permission, code member:points:view; field labels use i18n; the UI requires i18n.",
+  "fixedFields": ["levelName", "conditionId", "points", "status"],
+  "pinnedDims": ["propSet", "actions", "mode", "i18n", "apiParams:conditionId", "extPoints:points"],
+  "config": {
+    "name": "MemberLevel",
+    "apiUrl": "/api/member-levels",
+    "mode": "sfc",
+    "i18n": true,
+    "fields": [
+      { "prop": "levelName", "label": "等级名称", "formtype": "Input" },
+      {
+        "prop": "conditionId",
+        "label": "升级条件",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/conditions", "labelField": "name", "valueField": "id" }
+      },
+      { "prop": "points", "label": "所需积分", "formtype": "InputNumber", "inQuery": false, "permissionValue": "member:points:view" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "启用", "value": 1 },
+          { "label": "停用", "value": 0 }
+        ]
+      }
+    ],
+    "actions": ["add", "edit"]
+  },
+  "notes": "sfc 模式：不携带 tableBtns/dialogs/operationColumn（会被丢），也不带 formLayout（sfc 生成器忽略它）。i18n → labelKey；apiParams 字段须 inQuery:true 才会 emit 进 query formItems；permissionValue 任意模式安全。"
+}

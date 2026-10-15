@@ -1,0 +1,17 @@
+{
+  "nl": "组织架构管理：查询组织名称；表格展示组织名称、编制人数；组织是树形结构；支持新增、编辑、删除。",
+  "nlEn": "Organization management: query by organization name; the table shows organization name and headcount; organizations are hierarchical; supports add, edit and delete.",
+  "fixedFields": ["orgName", "headcount"],
+  "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "config": {
+    "name": "OrgTreeManage",
+    "apiUrl": "/api/orgs",
+    "fields": [
+      { "prop": "orgName", "label": "组织名称", "formtype": "Input" },
+      { "prop": "headcount", "label": "编制人数", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "treeConfig": {},
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项③: 裸树（默认 children 键、默认不展开）（vue3/schema）"
+}

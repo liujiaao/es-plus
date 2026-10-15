@@ -1,0 +1,50 @@
+{
+  "nl": "客户拜访跟进（vue2 / Element UI）：查询有客户名称、跟进人（下拉数据来自 /api/staff 接口）；表格展示客户名称、跟进人、拜访方式、下次拜访时间、状态；表格上方左侧「新增跟进」、右侧「批量导出」；支持新增、编辑、删除；新增、编辑、删除按钮需要权限码 visit:add、visit:edit、visit:remove；查询表单标签宽度 90px。",
+  "nlEn": "Customer visit follow-up (vue2 / Element UI): query by customer name and follower (the follower dropdown data comes from the /api/staff endpoint); the table shows customer name, follower, visit method, next visit time, and status; above the table \"New Follow-up\" is on the left and \"Batch Export\" on the right; supports add, edit, and delete; the add, edit, and delete buttons require permission codes visit:add, visit:edit, visit:remove; the query form label width is 90px.",
+  "fixedFields": ["customerName", "staffId", "method", "nextVisitAt", "status"],
+  "pinnedDims": ["propSet", "actions", "target", "apiParams:staffId", "formLayout", "tableBtns", "permissions"],
+  "config": {
+    "name": "VisitFollow",
+    "apiUrl": "/api/visits",
+    "target": "vue2",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input" },
+      {
+        "prop": "staffId",
+        "label": "跟进人",
+        "formtype": "Select",
+        "apiParams": { "url": "/api/staff", "labelField": "name", "valueField": "id" }
+      },
+      {
+        "prop": "method",
+        "label": "拜访方式",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "电话", "value": "phone" },
+          { "label": "上门", "value": "onsite" },
+          { "label": "微信", "value": "wechat" }
+        ]
+      },
+      { "prop": "nextVisitAt", "label": "下次拜访时间", "formtype": "DatePicker", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待跟进", "value": "todo" },
+          { "label": "已跟进", "value": "done" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "visit:add", "edit": "visit:edit", "delete": "visit:remove" },
+    "formLayout": { "labelWidth": "90px" },
+    "tableBtns": [
+      { "name": "新增跟进", "type": "primary", "position": "left", "dialogKey": "add" },
+      { "name": "批量导出", "position": "right", "actionType": "export" }
+    ]
+  },
+  "notes": "vue2 目标 + 四维：apiParams(跟进人下拉) + formLayout(labelWidth) + tableBtns(左/右) + permissions。"
+}

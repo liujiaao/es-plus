@@ -1,0 +1,31 @@
+{
+  "nl": "发货单管理：查询有发货单号、收货人；表格首列勾选，随后按「物流」分组表头展示承运商、运单号，另有发货单号、收货人列；支持新增、编辑、删除。",
+  "nlEn": "Shipment management: query by shipment no. and consignee; the table has a leading checkbox column, then a \"Logistics\" group header covering carrier and tracking no., plus shipment no. and consignee columns; supports add, edit, and delete.",
+  "fixedFields": ["shipmentNo", "carrier", "trackingNo", "consignee"],
+  "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "config": {
+    "name": "ShipmentManage",
+    "apiUrl": "/api/shipments",
+    "target": "vue2",
+    "fields": [
+      { "prop": "shipmentNo", "label": "发货单号", "formtype": "Input" },
+      { "prop": "carrier", "label": "承运商", "formtype": "Input" },
+      { "prop": "trackingNo", "label": "运单号", "formtype": "Input", "inQuery": false },
+      { "prop": "consignee", "label": "收货人", "formtype": "Input" }
+    ],
+    "columns": [
+      { "type": "selection", "width": 50 },
+      { "prop": "shipmentNo", "label": "发货单号" },
+      {
+        "label": "物流",
+        "groups": [
+          { "prop": "carrier", "label": "承运商" },
+          { "prop": "trackingNo", "label": "运单号" }
+        ]
+      },
+      { "prop": "consignee", "label": "收货人" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: selection + groups 组合（vue2/schema）"
+}

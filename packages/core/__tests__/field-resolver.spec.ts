@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   filterVisibleFormItems,
   calculateAutoSpan,
@@ -13,6 +13,8 @@ import {
   applyConfigTableOut,
   resolveItemValidateProps,
   resolveFormRules,
+  matchHiddenCondition,
+  compileHiddenCondition,
 } from '../src/field-resolver'
 import type { BtnConfig, FormItemOption } from '../src/types'
 
@@ -37,6 +39,106 @@ describe('field-resolver > filterVisibleFormItems', () => {
     const list = [fi({ prop: 'a' })]
     const r = filterVisibleFormItems(list, {}, {})
     expect(r[0].dataOptions).toEqual([])
+  })
+
+  // AI-06：声明式条件（未过 normalizeFormItem 的直调方也必须生效）
+  it('声明式条件对象：条件成立则过滤（直调不经 normalizeFormItem）', () => {
+    const list = [
+      fi({ prop: 'a' }),
+      fi({ prop: 'b', isHidden: { field: 'status', op: 'eq', value: 'off' } }),
+    ]
+    expect(filterVisibleFormItems(list, { status: 'img' }, {}).map((x) => x.prop)).toEqual(['a', 'b'])
+    expect(filterVisibleFormItems(list, { status: 'off' }, {}).map((x) => x.prop)).toEqual(['a'])
+  })
+
+  it('声明式条件数组（AND）：全部成立才过滤', () => {
+    const list = [
+      fi({ prop: 'a', isHidden: [{ field: 'x', op: 'eq', value: 1 }, { field: 'y', op: 'truthy' }] }),
+    ]
+    expect(filterVisibleFormItems(list, { x: 1, y: false }, {})).toHaveLength(1)
+    expect(filterVisibleFormItems(list, { x: 1, y: 1 }, {})).toHaveLength(0)
+  })
+})
+
+describe('field-resolver > matchHiddenCondition / compileHiddenCondition (AI-06)', () => {
+  it('eq 默认算子；缺省 op 等价 eq', () => {
+    expect(matchHiddenCondition({ field: 'a', value: 1 }, { a: 1 })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'eq', value: 1 }, { a: 2 })).toBe(false)
+  })
+
+  it('number ↔ string 放宽（AI 生成的 JSON 常把数字码写成字符串）', () => {
+    expect(matchHiddenCondition({ field: 'a', op: 'eq', value: 1 }, { a: '1' })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'eq', value: '1' }, { a: 1 })).toBe(true)
+    // 但不做裸 == 的其它放宽：'' 与 0 不等
+    expect(matchHiddenCondition({ field: 'a', op: 'eq', value: '' }, { a: 0 })).toBe(false)
+  })
+
+  it('ne / in / nIn', () => {
+    expect(matchHiddenCondition({ field: 'a', op: 'ne', value: 'x' }, { a: 'y' })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'in', value: ['x', 2] }, { a: '2' })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'in', value: ['x'] }, { a: 'y' })).toBe(false)
+    expect(matchHiddenCondition({ field: 'a', op: 'nIn', value: ['x'] }, { a: 'y' })).toBe(true)
+    // in/nIn 的 value 不是数组 → 不成立（fail-safe，不误隐藏）
+    expect(matchHiddenCondition({ field: 'a', op: 'in', value: 'x' }, { a: 'x' })).toBe(false)
+    expect(matchHiddenCondition({ field: 'a', op: 'nIn', value: 'x' }, { a: 'x' })).toBe(true)
+  })
+
+  it('empty / notEmpty（含 null/undefined/空数组）', () => {
+    expect(matchHiddenCondition({ field: 'a', op: 'empty' }, { a: '' })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'empty' }, { a: null })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'empty' }, {})).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'empty' }, { a: [] })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'empty' }, { a: 0 })).toBe(false)
+    expect(matchHiddenCondition({ field: 'a', op: 'notEmpty' }, { a: 0 })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'notEmpty' }, { a: [] })).toBe(false)
+  })
+
+  it('truthy / falsy', () => {
+    expect(matchHiddenCondition({ field: 'a', op: 'truthy' }, { a: 1 })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'truthy' }, { a: 0 })).toBe(false)
+    expect(matchHiddenCondition({ field: 'a', op: 'falsy' }, { a: undefined })).toBe(true)
+    expect(matchHiddenCondition({ field: 'a', op: 'falsy' }, { a: 'x' })).toBe(false)
+  })
+
+  it('嵌套路径 field 走 getNestedValue', () => {
+    expect(matchHiddenCondition({ field: 'user.type', op: 'eq', value: 'vip' }, { user: { type: 'vip' } })).toBe(true)
+  })
+
+  it('未知算子 → fail-open（不隐藏）并告警一次', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(matchHiddenCondition({ field: 'a', op: 'gt' as never, value: 1 }, { a: 2 })).toBe(false)
+    // 同一未知算子只告警一次（避免每次渲染刷屏）
+    matchHiddenCondition({ field: 'a', op: 'gt' as never, value: 1 }, { a: 2 })
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  it('非法 field（缺失 / 空串）→ fail-open', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(matchHiddenCondition({ field: '', op: 'truthy' }, { a: 1 })).toBe(false)
+    expect(matchHiddenCondition({} as never, { a: 1 })).toBe(false)
+    warn.mockRestore()
+  })
+
+  it('compileHiddenCondition：单条件 / 数组 AND / 空数组恒不隐藏', () => {
+    expect(compileHiddenCondition({ field: 'a', op: 'eq', value: 1 })({ a: 1 })).toBe(true)
+    expect(compileHiddenCondition([{ field: 'a', op: 'eq', value: 1 }, { field: 'b', op: 'truthy' }])({ a: 1, b: false })).toBe(false)
+    // 空数组 → 永不隐藏（避免「空数组 AND 恒真 → 永远隐藏」的反直觉）
+    expect(compileHiddenCondition([])({ a: 1 })).toBe(false)
+  })
+
+  it('compileHiddenCondition：表达式节点分派到新求值器（AI-16 超集）', () => {
+    const expr = { or: [{ '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] }] }
+    expect(compileHiddenCondition(expr)({ status: 'pending' })).toBe(true)
+    expect(compileHiddenCondition(expr)({ status: 'ok', amount: 200 })).toBe(true)
+    expect(compileHiddenCondition(expr)({ status: 'ok', amount: 50 })).toBe(false)
+  })
+
+  it('compileHiddenCondition：旧条件与表达式可混合成数组（逐元素分派，AND）', () => {
+    const mixed = [{ field: 'a', op: 'eq', value: 1 }, { '>': [{ var: 'b' }, 5] }]
+    expect(compileHiddenCondition(mixed)({ a: 1, b: 6 })).toBe(true)
+    expect(compileHiddenCondition(mixed)({ a: 1, b: 4 })).toBe(false)
+    expect(compileHiddenCondition(mixed)({ a: 2, b: 6 })).toBe(false)
   })
 })
 

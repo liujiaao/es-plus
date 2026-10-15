@@ -299,10 +299,10 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 Claude 的工作流：
 
 1. **`detect_project_target`** → 读 `package.json` → 知道你用 Vue 3 + Element Plus
-2. **`list_form_types`** → 拿合法控件清单（不再猜 formtype 名字）
-3. **`generate_crud_schema(target='vue3')`** → 生成 Schema
-4. **`validate_config`** → zod 校验通过
-5. **`generate_from_config`** → 输出完整 .vue
+2. **读 `esplus://conventions` / `esplus://types`** → 拿该 target 的权威约定与组件类型
+3. **`generate_crud(name, apiUrl, surfaces, target)`** → AI 自己填 `surfaces` 意图表（query / table / form / dialog 的字段按语义分配）
+4. **读回 `warnings`** → 每条指向一处可能的映射错误，改完重生成
+5. **确定性编译** → 输出可运行代码（`validate_config` / `refine_config` 负责校验与纠偏）
 6. 写入项目，注册路由
 
 **AI 全程不用猜组件库 API**——因为它通过 MCP 协议拿到的就是权威 schema。

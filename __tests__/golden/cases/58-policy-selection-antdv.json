@@ -1,0 +1,25 @@
+{
+  "nl": "保险保单管理：查询有保单号、投保人；表格首列勾选，后面展示保单号、投保人、保费、生效日期；支持新增、编辑、删除。",
+  "nlEn": "Insurance policy management: query by policy no. and policyholder; the table starts with a checkbox column, then shows policy no., policyholder, premium, and effective date; supports add, edit, and delete.",
+  "fixedFields": ["policyNo", "holder", "premium"],
+  "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "config": {
+    "name": "PolicyManage",
+    "apiUrl": "/api/policies",
+    "target": "antdv",
+    "fields": [
+      { "prop": "policyNo", "label": "保单号", "formtype": "Input" },
+      { "prop": "holder", "label": "投保人", "formtype": "Input" },
+      { "prop": "premium", "label": "保费", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "effectDate", "label": "生效日期", "formtype": "DatePicker", "inQuery": false, "inTable": false }
+    ],
+    "columns": [
+      { "type": "selection", "width": 50 },
+      { "prop": "policyNo", "label": "保单号" },
+      { "prop": "holder", "label": "投保人" },
+      { "prop": "premium", "label": "保费", "align": "right", "width": 120 }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: selection + align:right；effectDate 设 inTable:false（不在列表，故不出现在 columns 也不算漏）（antdv/schema）"
+}

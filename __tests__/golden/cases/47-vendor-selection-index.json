@@ -1,0 +1,32 @@
+{
+  "nl": "供应商管理：查询有供应商名称、联系人；表格第一列是勾选列、第二列是序号列，后面展示供应商名称、联系人和状态；支持新增、编辑、删除。",
+  "nlEn": "Vendor management: query by vendor name and contact; the table starts with a checkbox column and a row-number column, then shows vendor name, contact, and status; supports add, edit, and delete.",
+  "fixedFields": ["name", "contact", "status"],
+  "pinnedDims": ["propSet", "actions", "columns"],
+  "config": {
+    "name": "VendorManage",
+    "apiUrl": "/api/vendors",
+    "fields": [
+      { "prop": "name", "label": "供应商名称", "formtype": "Input" },
+      { "prop": "contact", "label": "联系人", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "合作中", "value": 1 },
+          { "label": "已停用", "value": 0 }
+        ]
+      }
+    ],
+    "columns": [
+      { "type": "selection", "width": 50 },
+      { "type": "index", "label": "序号", "width": 60 },
+      { "prop": "name", "label": "供应商名称" },
+      { "prop": "contact", "label": "联系人" },
+      { "prop": "status", "label": "状态" }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项①: 显式 columns — selection + index 非字段列（vue3/schema）"
+}

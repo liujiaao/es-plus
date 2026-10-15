@@ -1,0 +1,48 @@
+{
+  "nl": "费用报销：查询有报销单号、报销人；表格展示报销单号、报销人、金额、状态、提交时间；新增和编辑使用不同的弹窗——新增填报销人、金额，编辑在此基础上还能修改状态；支持新增、编辑、删除；「金额」列仅在有权限时可见，权限码 expense:amount:view；新增、编辑、删除按钮需要权限码 expense:add、expense:edit、expense:remove；查询表单分 2 列。",
+  "nlEn": "Expense claims: query by claim no. and applicant; the table shows claim no., applicant, amount, status, and submit time; add and edit use different dialogs — on add fill in applicant and amount, and on edit you can additionally change the status; supports add, edit, and delete; the \"amount\" column is visible only with permission, code expense:amount:view; the add, edit, and delete buttons require permission codes expense:add, expense:edit, expense:remove; the query form is 2 columns.",
+  "fixedFields": ["claimNo", "applicant", "amount", "status", "submitAt"],
+  "pinnedDims": ["propSet", "actions", "formLayout", "dialogs", "permissions", "extPoints:amount"],
+  "config": {
+    "name": "ExpenseClaim",
+    "apiUrl": "/api/expenses",
+    "fields": [
+      { "prop": "claimNo", "label": "报销单号", "formtype": "Input" },
+      { "prop": "applicant", "label": "报销人", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false, "permissionValue": "expense:amount:view" },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待审批", "value": "pending" },
+          { "label": "已通过", "value": "approved" },
+          { "label": "已驳回", "value": "rejected" }
+        ]
+      },
+      { "prop": "submitAt", "label": "提交时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "permissions": { "add": "expense:add", "edit": "expense:edit", "delete": "expense:remove" },
+    "formLayout": { "span": 12 },
+    "dialogs": {
+      "add": {
+        "title": "新增报销",
+        "formItems": [
+          { "prop": "applicant", "label": "报销人", "formtype": "Input" },
+          { "prop": "amount", "label": "金额", "formtype": "InputNumber" }
+        ]
+      },
+      "edit": {
+        "title": "编辑报销",
+        "formItems": [
+          { "prop": "applicant", "label": "报销人", "formtype": "Input" },
+          { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+          { "prop": "status", "label": "状态", "formtype": "Select" }
+        ]
+      }
+    }
+  },
+  "notes": "四维覆盖：formLayout(span) + dialogs + permissions + extPoints(列级 permissionValue 门控)。schema 模式顶层 permissions 仅进 summary 行，对渲染 inert。"
+}

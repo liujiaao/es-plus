@@ -1,0 +1,55 @@
+{
+  "nl": "部门职位表（单文件组件）：部门和职位两列合并，后面是姓名与月薪。支持新增、编辑。",
+  "nlEn": "Department-role table (single-file component): department and role columns merge, followed by name and salary. Supports add and edit.",
+  "fixedFields": [
+    "dept",
+    "role",
+    "name",
+    "salary"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "membership",
+    "actions",
+    "mergeConfig"
+  ],
+  "config": {
+    "name": "DeptRoleSfc",
+    "apiUrl": "/api/staff",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "role",
+        "label": "职位",
+        "formtype": "Input"
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "salary",
+        "label": "月薪",
+        "formtype": "InputNumber"
+      }
+    ],
+    "mergeConfig": {
+      "rowsBy": [
+        "dept",
+        "role"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "AI-23: vue3 + SFC 模式双列合并"
+}

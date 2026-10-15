@@ -27,6 +27,51 @@ import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 
 export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
 
+export interface FieldHiddenCondition {
+  /** Another field path in the same form model, e.g. "status" or "user.type". */
+  field: string
+  /** eq (default) | ne | in | nIn | empty | notEmpty | truthy | falsy */
+  op?: 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+  /** RHS: scalar for eq/ne, array for in/nIn; ignored by empty/notEmpty/truthy/falsy. */
+  value?: unknown
+}
+
+/**
+ * A JSON expression node (JSONLogic-shaped) — only for predicates the plain
+ * condition can't express (OR / ordering / nested NOT), e.g.
+ * \`{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }\`.
+ * Ops: var == != > >= < <= in nin empty notEmpty truthy falsy and or not if.
+ */
+export interface FieldHiddenExprNode {
+  var?: string
+  [op: string]: unknown
+}
+
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
+export interface FieldReactionFulfill {
+  /** Literal option array for this field when the rule is active. NOT an expression. */
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  /** Expression node evaluating to a boolean: make this field required. */
+  required?: FieldHiddenExprNode
+  /** Expression node evaluating to a boolean: disable this field. */
+  disabled?: FieldHiddenExprNode
+  /** Expression node returning this field's new value, written back to the model. */
+  value?: FieldHiddenExprNode
+}
+
+/**
+ * Field-level linkage / computed rule (AI-07). PLAIN JSON DATA, never a JS
+ * callback. dependencies = model paths that re-evaluate the rule (REQUIRED
+ * when fulfill.value is present); when = optional gate expression; fulfill =
+ * the values to apply. Applies to the query/add/edit forms, NOT the table column.
+ */
+export interface FieldReaction {
+  dependencies?: string[]
+  when?: FieldHiddenExprNode
+  fulfill: FieldReactionFulfill
+}
+
 export interface FormItemOption {
   prop: string
   label: string
@@ -39,6 +84,19 @@ export interface FormItemOption {
   isInitRun?: boolean
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   width?: number | string
+  /**
+   * Conditional visibility: the field is HIDDEN while the condition holds.
+   * PLAIN JSON DATA — a single condition, a single JSON expression, or an
+   * array (AND); never a JS string. Applies to the query/add/edit forms,
+   * NOT the table column.
+   */
+  isHidden?: FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
+  /**
+   * Field linkage / computed (AI-07): an array of declarative rules — this
+   * field's options / required / disabled / own value depend on other fields.
+   * PLAIN JSON DATA, never a callback; not for the table column.
+   */
+  reactions?: FieldReaction[]
   [key: string]: unknown
 }
 

@@ -156,6 +156,22 @@ export function describeDimMiss(dim, gold, pred) {
     }
     return { want: show(gold), got: show(pred) }
   }
+  if (dim === 'treeConfig') {
+    const show = (c) => {
+      const t = c.treeConfig
+      if (!t) return '（未配置）'
+      return `childrenField=${t.childrenField ?? 'children'} · expandAll=${t.expandAll === true}`
+    }
+    return { want: show(gold), got: show(pred) }
+  }
+  if (dim === 'editConfig') {
+    const show = (c) => {
+      const e = c.tableOptions?.editConfig
+      if (!e) return '（未配置）'
+      return `trigger=${e.trigger ?? 'click'} · mode=${e.mode ?? 'cell'}`
+    }
+    return { want: show(gold), got: show(pred) }
+  }
   return null
 }
 
@@ -184,6 +200,47 @@ function virtualScrollEqual(gold, pred) {
   const virt = (c) => c.tableOptions?.virtual === true
   const engine = (c) => c.tableOptions?.engine ?? 'default'
   return virt(gold) === virt(pred) && engine(gold) === engine(pred)
+}
+
+/** 后端响应字段映射：整对象等值（未声明 ≡ null）。仅当 gold 声明了非空映射时才 applicable。 */
+function configTableOutEqual(gold, pred) {
+  const g = gold.tableOptions?.configTableOut ?? null
+  const p = pred.tableOptions?.configTableOut ?? null
+  return eq(g, p)
+}
+
+/**
+ * 声明式条件显隐：gold 每个带 `isHidden` 的 field，pred 同名 field 必须存在**且整对象等值**。
+ *
+ * 深度等值（`eq`）而非 presence：条件的算子写错（`eq` 写成 `ne`）、`value` 的类型或数组
+ * 顺序不符都算未命中 —— 条件显隐是「行为契约」不是「扩展点兜底」，照着比内容才有意义
+ * （与 `configTableOut` 同为整对象等值；`extPoints` 那种只比 presence 的是因为其内容
+ * 是不可静态校验的 JS 源码串）。
+ */
+function isHiddenEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!f.isHidden) continue
+    const pf = pm.get(f.prop)
+    if (!pf || !pf.isHidden || !eq(f.isHidden, pf.isHidden)) return false
+  }
+  return true
+}
+
+/**
+ * 字段联动（AI-07）：gold 每个带 `reactions` 的 field，pred 同名 field 必须存在**且整数组深等值**。
+ *
+ * 深等值而非 presence：这是「行为契约」——`value`↔`dataOptions` 互换、`dependencies` 顺序错、
+ * `when` 谓词写错都算未命中（与 `isHidden`/`columns`/`expandConfig` 同规）。
+ */
+function reactionsEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!f.reactions) continue
+    const pf = pm.get(f.prop)
+    if (!pf || !pf.reactions || !eq(f.reactions, pf.reactions)) return false
+  }
+  return true
 }
 
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
@@ -222,6 +279,60 @@ export const CAPABILITY_SCORERS = [
   { key: 'target', applicable: (g) => g.target !== 'vue3', pass: (g, p) => g.target === p.target },
   { key: 'mode', applicable: (g) => g.mode === 'sfc', pass: (g, p) => g.mode === p.mode },
   { key: 'virtualScroll', applicable: (g) => g.tableOptions?.virtual === true || ['virtual', 'vxe'].includes(g.tableOptions?.engine), pass: virtualScrollEqual },
+  {
+    key: 'configTableOut',
+    applicable: (g) => !!(g.tableOptions?.configTableOut && Object.keys(g.tableOptions.configTableOut).length),
+    pass: configTableOutEqual,
+  },
+  {
+    key: 'isHidden',
+    applicable: (g) => g.fields.some((f) => f.isHidden !== undefined),
+    pass: isHiddenEqual,
+  },
+  {
+    // 字段联动（AI-07）：整数组深等值。选项联动/必填/禁用/值回写都是行为契约，
+    // 「写了 reactions 但 fulfillment 内容不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'reactions',
+    applicable: (g) => g.fields.some((f) => f.reactions !== undefined),
+    pass: reactionsEqual,
+  },
+  {
+    // 显式列逃生数组（AI-09 子项①）：整数组深等值。列序/多级表头/非字段列都是行为契约，
+    // 「给了 columns 但顺序或层级不对」不算命中。仅当 gold 声明非空 columns 时 applicable。
+    key: 'columns',
+    applicable: (g) => !!(g.columns && g.columns.length),
+    pass: (g, p) => eq(g.columns ?? null, p.columns ?? null),
+  },
+  {
+    // 声明式行展开内容（AI-09 子项②）：整体深等值。字段顺序/标题/标签都是渲染契约，
+    // 「给了 expandConfig 但字段序或标题不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'expandConfig',
+    applicable: (g) => !!g.expandConfig,
+    pass: (g, p) => eq(g.expandConfig ?? null, p.expandConfig ?? null),
+  },
+  {
+    // 声明式树表（AI-09 子项③）：整体深等值。childrenField / expandAll 都是行为契约，
+    // 「给了 treeConfig 但子键名或默认展开状态不对」不算命中。仅当 gold 声明时才 applicable。
+    key: 'treeConfig',
+    applicable: (g) => !!g.treeConfig,
+    pass: (g, p) => eq(g.treeConfig ?? null, p.treeConfig ?? null),
+  },
+  {
+    // vxe 行内编辑开关（AI-09 子项④）：tableOptions.editConfig 整体深等值。trigger/mode/
+    // showStatus 等都是行为契约，「给了 editConfig 但进入方式或模式不对」不算命中。
+    // （列级 editRender 已由 columns 维度整体深等覆盖。）仅当 gold 声明时才 applicable。
+    key: 'editConfig',
+    applicable: (g) => g.tableOptions?.editConfig != null,
+    pass: (g, p) => eq(g.tableOptions?.editConfig ?? null, p.tableOptions?.editConfig ?? null),
+  },
+  {
+    // 声明式合并单元格（AI-23）：顶层 mergeConfig 整体深等值。rowsBy 的**列集合与顺序**都是
+    // 渲染契约（前者决定哪几列合并、后者决定分组主轴），「给了 mergeConfig 但列不对/顺序反了」
+    // 不算命中。仅当 gold 声明时才 applicable。
+    key: 'mergeConfig',
+    applicable: (g) => !!g.mergeConfig,
+    pass: (g, p) => eq(g.mergeConfig ?? null, p.mergeConfig ?? null),
+  },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 
@@ -266,6 +377,18 @@ const FIELD_SCORERS = {
   dataOptions: (gold, pred, prop) => {
     const has = (c) => !!((fieldMap(c).get(prop)?.dataOptions ?? []).length)
     return has(gold) === has(pred)
+  },
+  isHidden: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !g.isHidden) return true // 该字段本就不要求条件显隐 → 空钉即过
+    return !!p && !!p.isHidden && eq(g.isHidden, p.isHidden)
+  },
+  reactions: (gold, pred, prop) => {
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !g.reactions) return true // 该字段本就不要求联动 → 空钉即过
+    return !!p && !!p.reactions && eq(g.reactions, p.reactions)
   },
 }
 

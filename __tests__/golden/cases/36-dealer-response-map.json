@@ -1,0 +1,32 @@
+{
+  "nl": "Vue2 经销商维护，单文件组件模式：表格展示经销商名称、联系人、电话、合作状态（合作中/已停止）；支持新增、编辑、删除，不需要查询条件。后端返回 { data: [...], total: N }。",
+  "nlEn": "Vue2 dealer maintenance in single-file-component mode: the table shows dealer name, contact, phone, and cooperation status (active/stopped); supports add, edit, and delete, with no query fields. The backend returns { data: [...], total: N }.",
+  "fixedFields": ["dealerName", "contact", "phone", "coopStatus"],
+  "pinnedDims": ["propSet", "actions", "target", "mode", "configTableOut"],
+  "config": {
+    "name": "DealerManage",
+    "apiUrl": "/api/dealers",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "dealerName", "label": "经销商名称", "formtype": "Input", "inQuery": false },
+      { "prop": "contact", "label": "联系人", "formtype": "Input", "inQuery": false },
+      { "prop": "phone", "label": "电话", "formtype": "Input", "inQuery": false },
+      {
+        "prop": "coopStatus",
+        "label": "合作状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "合作中", "value": "active" },
+          { "label": "已停止", "value": "stopped" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "tableData": "data", "total": "total" }
+    }
+  },
+  "notes": "AI-08: { data, total } mapping in SFC mode — covers the SFC options emit (vue2/sfc)"
+}

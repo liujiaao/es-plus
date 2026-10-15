@@ -1,0 +1,23 @@
+{
+  "nl": "合同金额维护：双击单元格进入行内编辑；展示合同编号、金额，金额录入框带必填提示；支持编辑。",
+  "nlEn": "Contract amount maintenance: double-click a cell to edit inline. Shows contract number and amount, where the amount input carries a required placeholder. Supports edit.",
+  "fixedFields": ["contractNo", "amount"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "target"],
+  "config": {
+    "name": "ContractAmtEditManage",
+    "apiUrl": "/api/contract",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "contractNo", "label": "合同编号", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "cell" } },
+    "columns": [
+      { "prop": "contractNo", "label": "合同编号", "editRender": { "name": "$input" } },
+      { "prop": "amount", "label": "金额", "editRender": { "name": "$input", "props": { "type": "number", "placeholder": "请输入金额" } } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig dblclick + editRender props placeholder，antdv/sfc）"
+}

@@ -1,0 +1,34 @@
+{
+  "nl": "供应商管理：查询供应商名称；表格展示供应商名称、等级（A/B/C）；每行可展开查看联系人、地址；支持新增、编辑、删除。",
+  "nlEn": "Supplier management: query by supplier name; the table shows supplier name and grade (A/B/C); each row can expand to reveal the contact and address; supports add, edit, and delete.",
+  "fixedFields": ["name", "level", "contact", "address"],
+  "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "config": {
+    "name": "SupplierManage",
+    "apiUrl": "/api/suppliers",
+    "fields": [
+      { "prop": "name", "label": "供应商名称", "formtype": "Input" },
+      {
+        "prop": "level",
+        "label": "等级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "A", "value": "A" },
+          { "label": "B", "value": "B" },
+          { "label": "C", "value": "C" }
+        ]
+      },
+      { "prop": "contact", "label": "联系人", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "address", "label": "地址", "formtype": "Input", "inTable": false, "inQuery": false }
+    ],
+    "expandConfig": {
+      "title": "联系方式",
+      "fields": [
+        { "prop": "contact", "label": "联系人" },
+        { "prop": "address", "label": "地址" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（title + 明细字段）（vue3/schema）"
+}

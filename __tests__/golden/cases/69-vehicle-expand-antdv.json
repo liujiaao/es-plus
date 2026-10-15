@@ -1,0 +1,36 @@
+{
+  "nl": "用 antd 风格做车辆管理：查询车牌号；表格展示车牌号、品牌、里程；每行可展开查看车主姓名、车主电话、保险到期日；支持新增、编辑、删除。",
+  "nlEn": "Vehicle management with an Ant Design look: query by plate number; the table shows plate number, brand and mileage; each row can expand to reveal the owner name, owner phone and insurance expiry; supports add, edit and delete.",
+  "fixedFields": ["plateNo", "brand", "mileage", "owner", "ownerPhone", "insuranceExpiry"],
+  "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "config": {
+    "name": "VehicleManage",
+    "apiUrl": "/api/vehicles",
+    "target": "antdv",
+    "fields": [
+      { "prop": "plateNo", "label": "车牌号", "formtype": "Input" },
+      { "prop": "brand", "label": "品牌", "formtype": "Input" },
+      { "prop": "mileage", "label": "里程(km)", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "owner", "label": "车主姓名", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "ownerPhone", "label": "车主电话", "formtype": "Input", "inTable": false, "inQuery": false },
+      {
+        "prop": "insuranceExpiry",
+        "label": "保险到期日",
+        "formtype": "DatePicker",
+        "inForm": false,
+        "inTable": false,
+        "inQuery": false
+      }
+    ],
+    "expandConfig": {
+      "title": "车主与保险",
+      "fields": [
+        { "prop": "owner", "label": "车主姓名" },
+        { "prop": "ownerPhone", "label": "车主电话" },
+        { "prop": "insuranceExpiry", "label": "保险到期日" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（含 DatePicker 明细字段）（antdv/schema）"
+}

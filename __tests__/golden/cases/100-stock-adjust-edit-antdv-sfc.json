@@ -1,0 +1,23 @@
+{
+  "nl": "库存调整单：双击整行进入行内编辑；展示商品名称、调整数；支持编辑。",
+  "nlEn": "Stock adjustment: double-click a row to edit inline. Shows goods name and adjustment quantity. Supports edit.",
+  "fixedFields": ["goodsName", "adjustQty"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode", "target"],
+  "config": {
+    "name": "StockAdjustEditManage",
+    "apiUrl": "/api/stock-adjust",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "goodsName", "label": "商品名称", "formtype": "Input" },
+      { "prop": "adjustQty", "label": "调整数", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "row" } },
+    "columns": [
+      { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
+      { "prop": "adjustQty", "label": "调整数", "editRender": { "name": "$input", "props": { "type": "number" } } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=row + editRender，antdv/sfc）"
+}

@@ -1,0 +1,23 @@
+{
+  "nl": "仓储货位管理，单文件组件模式：查询有货位编码；表格展示货位编码、库区、容量、使用率；支持新增、编辑、删除。后端分页用的页码字段叫 pageIndex（不是默认的 pageNo）。",
+  "nlEn": "Storage bin management in single-file-component mode: query by bin code; the table shows bin code, zone, capacity, and usage rate; supports add, edit, and delete. The backend paging page-number field is named pageIndex (not the default pageNo).",
+  "fixedFields": ["binCode", "zone", "capacity", "usageRate"],
+  "pinnedDims": ["propSet", "actions", "mode", "configTableOut"],
+  "config": {
+    "name": "StorageManage",
+    "apiUrl": "/api/storage-bins",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "binCode", "label": "货位编码", "formtype": "Input" },
+      { "prop": "zone", "label": "库区", "formtype": "Input" },
+      { "prop": "capacity", "label": "容量", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "usageRate", "label": "使用率", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableOptions": {
+      "configTableOut": { "current": "pageIndex" }
+    }
+  },
+  "notes": "AI-08: single-key override (current only) in SFC mode (vue3/sfc)"
+}

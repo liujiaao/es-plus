@@ -128,6 +128,126 @@ export type FormType =
   | 'Upload'
 
 /**
+ * `isHidden` 声明式条件的比较算子。
+ *
+ * 之所以是**数据**而非裸 JS：schema 模式（`mode: 'schema'`）的产物是纯 JSON
+ * （`inlineJson` 序列化），函数无法内联；声明式条件可被 JSON 承载、可被三端
+ * 一致求值，也留得住「可静态校验」的口子（对标 Amis `visibleOn`）。
+ *
+ *   eq / ne       —— 严格相等 / 不等（默认算子）
+ *   in / nIn      —— 值 ∈ / ∉ 右侧数组
+ *   empty / notEmpty —— 空串 / null / undefined / 空数组 判定
+ *   truthy / falsy    —— 真值 / 假值判定（`!!v`）
+ */
+export type FieldHiddenOp = 'eq' | 'ne' | 'in' | 'nIn' | 'empty' | 'notEmpty' | 'truthy' | 'falsy'
+
+/**
+ * 单条声明式显隐条件：**当条件成立时隐藏该字段**。
+ *
+ * `field` 取 model 的字段路径（支持 `user.name` 嵌套，与 `prop` 同规）。
+ * `op` 省略时按 `eq`。
+ */
+export interface FieldHiddenCondition {
+  field: string
+  op?: FieldHiddenOp
+  value?: unknown
+}
+
+/**
+ * 表达式字面量（可 JSON 序列化；**对象字面量刻意排除** —— 任何对象形态都必须是算子节点）。
+ */
+export type FieldHiddenLiteral = string | number | boolean | null
+
+/**
+ * 表达式算子（闭集）—— 与 core `expr.ts` 的 `EXPR_OPS` 同源（守卫断言逐项相等）。
+ *
+ *   var 取 model 路径值；== != 等/不等；> >= < <= 序关系；in nin 成员；
+ *   empty notEmpty 空判定；truthy falsy 真值；and or not 逻辑；if 三元。
+ */
+export type FieldHiddenExprOp =
+  | 'var'
+  | '=='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | 'in'
+  | 'nin'
+  | 'empty'
+  | 'notEmpty'
+  | 'truthy'
+  | 'falsy'
+  | 'and'
+  | 'or'
+  | 'not'
+  | 'if'
+
+/**
+ * JSON 表达式节点（AI-16 底座）—— JSONLogic 形态 / CEL 语义子集。
+ *
+ * 形如 `{ var: 'status' }`、`{ '==': [{ var: 'status' }, 'pending'] }`、
+ * `{ or: [ { '==': [...] }, { '>': [...] } ] }`。操作数可为表达式、字面量或字面量数组。
+ * 键 ∈ {@link FieldHiddenExprOp}；运行时由 core `expr.ts` 求值，Zod（shared 的
+ * `HiddenExprSchema`）是静态权威。类型刻意保持宽松 —— 权威校验在运行时与 Zod。
+ */
+export interface FieldHiddenExprNode {
+  /** 取 model 路径值（操作数是字符串路径） */
+  var?: string
+  /** 算子 → 操作数（表达式 / 字面量 / 字面量数组） */
+  [op: string]: unknown
+}
+
+/** `isHidden` 的表达式形态：单节点或节点数组。 */
+export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
+
+/**
+ * `isHidden` 的取值：单条件、条件数组（**全部成立 = AND 才隐藏**）、
+ * JSON 表达式（AI-16 超集），或原生的函数式判断（`(model, item, formProps) => boolean`）。
+ *
+ * 声明式形态由 `normalizeFormItem`（compat）在运行时编译成函数，故三端
+ * `formItemListFilter` 只需照旧调用 `isHidden`，无需感知两种形态。
+ */
+export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
+
+/**
+ * 字段联动（AI-07）的一条规则里，`fulfill` 的取值：
+ *
+ * - `dataOptions`：**字面量选项数组**（JSON 数据，非表达式）—— AI-16 DSL 刻意排除对象
+ *   字面量，`[{label,value}]` 无法由表达式构造，故「选项随另一字段变化」用**多条规则 +
+ *   各自的 `when` 谓词**表达（每个分支一套选项）
+ * - `required` / `disabled`：求值为布尔的 AI-16 **表达式节点**
+ * - `value`：求值为**本字段自己**新值的 AI-16 **表达式节点**（写回 model；此处
+ *   `dependencies` 必填）
+ *
+ * 全部为纯 JSON 数据，**绝无 JS 回调**。类型保持宽松 —— 权威校验在 Zod，
+ * 运行时求值在 core `reactions.ts`。
+ */
+export interface FieldReactionFulfill {
+  /** 字面量选项数组。非数组则该键被丢弃、保留静态 dataOptions */
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  /** 是否必填（表达式节点）。求值结果非布尔则该键被丢弃 */
+  required?: unknown
+  /** 是否禁用（表达式节点）。求值结果非布尔则该键被丢弃 */
+  disabled?: unknown
+  /** 本字段的新值（表达式节点，写回）。存在时 `dependencies` 必填 */
+  value?: unknown
+}
+
+/**
+ * 字段联动规则（AI-07，对标 Formily `x-reactions` 的声明式子集）。
+ *
+ * - `dependencies`：触发重算的 model 路径；`fulfill.value` 存在时**必填**
+ * - `when`：可选 AI-16 表达式节点，门控整条规则（假值 = 不生效）
+ * - `fulfill`：要求联动的字段属性集合
+ */
+export interface FieldReaction {
+  dependencies?: string[]
+  when?: FieldHiddenExprNode
+  fulfill: FieldReactionFulfill
+}
+
+/**
  * 表单字段选项
  *
  * 注意 render 签名：
@@ -165,8 +285,24 @@ export interface FormItemOption {
   on?: Record<string, unknown>
   /** 静态选项（Select/Radio/Checkbox/Cascader 用） */
   dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
-  /** 动态显隐判断 */
-  isHidden?: (model: ModelData, item: FormItemOption, formProps: unknown) => boolean
+  /**
+   * 动态显隐判断：返回 true 表示**隐藏**该字段。
+   *
+   * - 函数形态：`(model, item, formProps) => boolean`（原生用法）
+   * - 声明式形态：`FieldHiddenCondition | FieldHiddenCondition[]`（AI 生成 / JSON schema
+   *   用；数组为 AND）或 JSON 表达式（`FieldHiddenExpr`，AI-16 超集），由
+   *   `normalizeFormItem` 在运行时编译为函数
+   */
+  isHidden?: FieldHidden | ((model: ModelData, item: FormItemOption, formProps: unknown) => boolean)
+  /**
+   * 字段联动（AI-07，声明式，对标 Formily `x-reactions`）：本字段的值/选项/必填/禁用
+   * 由**其他字段**的当前值决定。纯 JSON 数据（**绝无 JS 回调**）。
+   *
+   * 由 core `reactions.ts` 在调用点求值：显示派生（`dataOptions`/`required`/`disabled`）
+   * 在三端 `formItemListFilter` 内合并；值回写（`fulfill.value`）由渲染层的 model watcher
+   * 落盘。表单作用域（查询表单 + 新增/编辑弹窗），**非表格列**。
+   */
+  reactions?: FieldReaction[]
   /** 自定义渲染函数（h, model, ctx） */
   render?: (h: RenderFn, model: ModelData, ctx: { row: FormItemOption; index: number }) => AnyVNode
   /** 远程加载选项配置 */
@@ -213,6 +349,14 @@ export interface FormItemOption {
   components?: Record<string, unknown>
   /** 列宽（表格场景下） */
   width?: number | string
+  /**
+   * 字段级权限编码（配合全局 `permission` 函数过滤）
+   *
+   * 与按钮级 `permissionValue` 同一机制、不同粒度：无权限时**整个表单项不渲染**
+   * （在 `formItemListFilter` 里与 `isHidden` 同层过滤）。与 `isHidden` 的区别是
+   * 前者按权限编码、后者按数据动态判定。未配置全局 `permission` 时一律放行。
+   */
+  permissionValue?: string
   /** 允许任意扩展键 */
   [key: string]: unknown
 }
@@ -359,10 +503,26 @@ export interface TableColumn {
   scopedSlots?: { customRender?: string }
   /** 分组列（嵌套表头） */
   groups?: TableColumn[]
+  /**
+   * 行展开内容（仅 `type:'expand'` 列有意义）—— AI-09 子项②。
+   *
+   * 声明式字段明细：展开行内渲染一组只读「标签: 值」（值取 `row[prop]`）。
+   * 与 `TableOptions.expandConfig`（vxe `{ accordion }`）**不同概念**：那是 vxe 引擎的
+   * 展开行为开关，这里是展开的**内容**，三端默认引擎均消费。
+   */
+  expandConfig?: ExpandRowConfig
   /** 文本超出省略号 + tooltip */
   ellipsis?: boolean
   /** 隐藏列（保留配置但不渲染） */
   hidCol?: boolean
+  /**
+   * 字段级权限编码（配合全局 `permission` 函数过滤）
+   *
+   * 与 `hidCol` 的区别：`hidCol` 是**静态**隐藏，本字段是**按权限**隐藏
+   * （在 `filteredColumns` 里与 `hidCol` 同层过滤）。与操作列 `btns[].permissionValue`
+   * 同一机制、不同粒度。未配置全局 `permission` 时一律放行。
+   */
+  permissionValue?: string
   /** 操作按钮列 */
   btns?: Array<{
     name: string
@@ -392,6 +552,30 @@ export interface TableColumn {
   }) => string
   /** 允许任意扩展键 */
   [key: string]: unknown
+}
+
+/**
+ * 行展开的**内容**描述（AI-09 子项②）。
+ *
+ * 挂在 `TableColumn.expandConfig` 上，仅 `type:'expand'` 列消费：展开行内渲染一组
+ * 只读「标签: 值」，值取 `row[field.prop]`。纯 JSON 数据 —— 可直接内联进 schema 模式
+ * 的 pageSchema，无需宿主插槽（与 antdv `#expandedRowRender` 的 slot 约定互补）。
+ */
+export interface ExpandRowConfig {
+  /** 展开区标题（可选，纯文本，不参与 i18n） */
+  title?: string
+  /** 展开区字段明细（至少一列） */
+  fields: ExpandRowField[]
+}
+
+/** 展开区的一个只读字段。`labelKey` 配合全局 t() 时优先于 `label`。 */
+export interface ExpandRowField {
+  /** 取值字段名（`row[prop]`） */
+  prop: string
+  /** 标签文本 */
+  label?: string
+  /** i18n 标签 key（配合全局 t()） */
+  labelKey?: string
 }
 
 /**
@@ -534,7 +718,7 @@ export type VxeFooterMethod = (params: {
   data: Record<string, unknown>[]
 }) => unknown[][]
 
-/** 树形数据配置（vxe engine:vxe + 树状数据） */
+/** 树形数据配置（vxe engine:vxe + 树状数据；`childrenField` / `expandAll` 亦被默认引擎认，见下） */
 export interface VxeTreeConfig {
   /** 平铺数据转树（需配合 rowField + parentField） */
   transform?: boolean
@@ -542,7 +726,10 @@ export interface VxeTreeConfig {
   rowField?: string
   /** 父节点字段名（默认 'parentId'） */
   parentField?: string
-  /** 子节点字段名（默认 'children'），vxe v4 推荐用法 */
+  /**
+   * 子节点字段名（默认 'children'），vxe v4 推荐用法。
+   * **跨端子集**：el-table / a-table 的默认引擎也读此键（翻译为 tree-props / childrenColumnName）。
+   */
   childrenField?: string
   /**
    * @deprecated vxe v4 已更名为 childrenField；仍可传入，es-plus 会自动归一化为 childrenField。
@@ -550,11 +737,14 @@ export interface VxeTreeConfig {
   children?: string
   /** transform 模式下缓存原始子节点的字段名（默认 '_X_ROW_CHILD'） */
   mapChildren?: string
-  /** 默认展开全部 */
+  /**
+   * 默认展开全部。
+   * **跨端子集**：el-table（default-expand-all）/ a-table（defaultExpandAllRows）也认。
+   */
   expandAll?: boolean
-  /** 懒加载子节点 */
+  /** 懒加载子节点（vxe 专有） */
   lazy?: boolean
-  /** 懒加载方法 */
+  /** 懒加载方法（vxe 专有） */
   loadMethod?: (params: { row: Record<string, unknown> }) => Promise<unknown[]>
 }
 

@@ -186,11 +186,19 @@ function checkFormTypeEnum() {
 const REQUIRED_FIELDS = [
   { schema: 'form-item.schema.json', path: ['properties', 'labelKey'], label: 'FormItemOption.labelKey (i18n)' },
   { schema: 'form-item.schema.json', path: ['properties', 'placeholder'], label: 'FormItemOption.placeholder' },
+  { schema: 'form-item.schema.json', path: ['properties', 'isHidden'], label: 'FormItemOption.isHidden (声明式条件显隐)' },
+  { schema: 'form-item.schema.json', path: ['properties', 'reactions'], label: 'FormItemOption.reactions (字段联动)' },
   { schema: 'table-column.schema.json', path: ['properties', 'labelKey'], label: 'TableColumn.labelKey (i18n)' },
   { schema: 'table-options.schema.json', path: ['properties', 'tabHeight'], label: 'TableOptions.tabHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'maxHeight'], label: 'TableOptions.maxHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'engine'], label: 'TableOptions.engine' },
   { schema: 'table-options.schema.json', path: ['properties', 'virtual'], label: 'TableOptions.virtual' },
+  // AI-22：新增到 JSON 单源的可写展示/行为键（此前只存在于 core TableOptions）。
+  { schema: 'table-options.schema.json', path: ['properties', 'showHeader'], label: 'TableOptions.showHeader' },
+  { schema: 'table-options.schema.json', path: ['properties', 'emptyText'], label: 'TableOptions.emptyText' },
+  { schema: 'table-options.schema.json', path: ['properties', 'defaultSort'], label: 'TableOptions.defaultSort' },
+  { schema: 'table-options.schema.json', path: ['properties', 'refetchKeepPage'], label: 'TableOptions.refetchKeepPage' },
+  { schema: 'table-options.schema.json', path: ['properties', 'localPagination'], label: 'TableOptions.localPagination' },
 ]
 
 function checkRequiredFields() {
@@ -277,7 +285,22 @@ const STRUCTURED_CONFIG_SOURCES = [
 // tableOptions 里必须覆盖 JSON 单源 table-options 中声明的高度/虚拟滚动契约字段，
 // 否则会被 Zod strip、用户设置无法生效。只校验 JSON 确实声明的字段，使守卫随单源
 // 自动扩展、又不过度约束（结构化配置本就是 TableOptions 的子集）。
-const STRUCTURED_TABLE_CONTRACT = ['heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName']
+const STRUCTURED_TABLE_CONTRACT = [
+  'heightType', 'tabHeight', 'height', 'virtual', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName',
+  // AI-22：以下键在 core `TableOptions` / JSON 单源已有、三端运行时已消费，此前两处 AI Zod
+  // 零声明（经 AI 入口传入被静默剥）。放在本块的**契约键区**（须排在 `editConfig` 之前，
+  // 因块捕获非贪婪地停在首个 `}).optional()`；`defaultSort` 带嵌套对象，进一步排在末尾）。
+  'size', 'showHeader', 'emptyText', 'snIndex', 'leftText', 'cachePageSelection', 'refetchKeepPage', 'localPagination', 'defaultSort',
+]
+
+// FieldConfigSchema 里必须声明的「AI 契约」字段。与 STRUCTURED_TABLE_CONTRACT 同因：
+// 两处 Zod（shared 权威 + mcp 内联副本）都是 z.object（无 passthrough），少声明一个键
+// 就等于把该字段**静默剥掉** —— 解析成功、零告警，配置里的值凭空消失。
+// `isHidden` 就是这类：AI-06 用声明式条件驱动显隐，若只加在 shared 而漏了 mcp，
+// 走 MCP 路径的配置里 isHidden 会被丢弃、字段永远可见（假承诺）。
+// 注意 `isHiddenFooter`（dialog 级）不是同一字段：它后面跟的是 'F' 不是 ':'，
+// 故 `\bisHidden\s*:` 不会误匹配。
+const STRUCTURED_FIELD_CONTRACT = ['isHidden', 'reactions', 'labelKey']
 
 /**
  * 剥掉行注释与块注释。
@@ -368,9 +391,30 @@ function assertButtonPositionContract(src, { constName, label, fallback }) {
   return ok
 }
 
+/**
+ * 解析 `EXPR_OPS` 白名单数组的字面量成员。
+ *
+ * 三处（core `expr.ts` 运行时权威 + shared 权威 Zod + mcp 内联副本）必须**逐一相等**：
+ * 少一项就等于「一侧放行、另一侧拒绝」的假承诺（如 AI 生成的表达式被 mcp 静默剥掉）。
+ * 返回 null 表示定位不到声明（守卫应报错，而非静默跳过）。
+ */
+function parseExprOps(src) {
+  const m = src.match(/const\s+EXPR_OPS\s*=\s*(?:Object\s*\.\s*freeze\(\s*)?\[([\s\S]*?)\]/)
+  if (!m) return null
+  return m[1]
+    .split(',')
+    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean)
+}
+
 function checkStructuredConfigZod() {
   let ok = true
   const jsonTO = readSchema('table-options.schema.json').properties ?? {}
+  const coreExprOps = parseExprOps(stripComments(read('packages/core/src/expr.ts')))
+  if (!coreExprOps) {
+    fail('未能在 core/expr.ts 定位 EXPR_OPS 白名单（表达式算子的运行时权威源）')
+    ok = false
+  }
 
   for (const { file, label } of STRUCTURED_CONFIG_SOURCES) {
     const src = stripComments(read(file))
@@ -417,6 +461,20 @@ function checkStructuredConfigZod() {
     if (!assertButtonPositionContract(src, { constName: 'TableBtnSchema', label, fallback: 1 })) ok = false
     if (!assertButtonPositionContract(src, { constName: 'ToolbarBtnSchema', label, fallback: 2 })) ok = false
 
+    // 字段契约：FieldConfigSchema 必须声明每个 AI 契约字段（否则 Zod 静默剥掉）。
+    // 只按「对象字面量块」定位，不靠行号 —— 块以列 0 的 `})` 收尾（嵌套对象均缩进，
+    // 不会误当块尾）。见 STRUCTURED_FIELD_CONTRACT 的说明。
+    const fc = src.match(/const FieldConfigSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\n\}\);?/)
+    if (!fc) { fail(`未能在 ${label} 定位 FieldConfigSchema`); ok = false }
+    else {
+      for (const f of STRUCTURED_FIELD_CONTRACT) {
+        if (!new RegExp(`\\b${f}\\s*:`).test(fc[1])) {
+          fail(`${label} 的 FieldConfigSchema 缺少契约字段 ${f}（会被 Zod 静默剥掉，配置里该字段凭空消失）`)
+          ok = false
+        }
+      }
+    }
+
     // 字段引用点也必须成对：具名 schema 写好了却没被引用，等于没修。
     for (const [field, constName] of [['tableBtns', 'TableBtnSchema'], ['toolbarBtns', 'ToolbarBtnSchema']]) {
       const ref = src.match(new RegExp(`${field}\\s*:\\s*z\\s*\\.array\\(([^)]*)\\)`))
@@ -426,9 +484,155 @@ function checkStructuredConfigZod() {
         ok = false
       }
     }
+
+    // 顶层 `columns` 逃生数组契约（AI-09 子项①）：两处 Zod 都必须声明。
+    // z.object 无 passthrough —— 漏声明等于把整段 columns 静默剥掉，表格回落到派生列、
+    // 零告警（与 isHidden 同类静默丢弃）。且 ColumnSchema 必须递归（z.lazy 自指），
+    // 否则表达不了 groups 多级表头 —— 那正是它存在的理由。
+    if (!/\bcolumns\s*:\s*z\s*\.array\(\s*ColumnSchema/.test(src)) {
+      fail(`${label} 未声明顶层 columns: z.array(ColumnSchema)（逃生列数组会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/const ColumnSchema[\s\S]{0,120}?z\s*\.lazy\(/.test(src)) {
+      fail(`${label} 的 ColumnSchema 不是递归（缺 z.lazy），无法表达 groups 多级表头`)
+      ok = false
+    }
+
+    // 顶层 `expandConfig` 行展开内容契约（AI-09 子项②）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式展开内容整段静默剥掉，
+    // 表格有展开器但内容恒空、零告警。且其 `fields` 必须非空数组（否则同样是空展开）。
+    if (!/\bexpandConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 expandConfig: z.object(...)（声明式行展开内容会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/expandConfig\s*:[\s\S]{0,600}?fields\s*:\s*z\s*\n?\s*\.array\(/.test(src)) {
+      fail(`${label} 的 expandConfig 缺少 fields: z.array(...)（展开内容为空则无意义）`)
+      ok = false
+    }
+
+    // 顶层 `treeConfig` 树表契约（AI-09 子项③）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式树表整段静默剥掉，
+    // 表格回落成扁平列表、零告警。childrenField/expandAll 是跨端窄子集。
+    if (!/\btreeConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 treeConfig: z.object(...)（声明式树表会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/treeConfig\s*:[\s\S]{0,600}?childrenField\s*:\s*z\s*\n?\s*\.string\(/.test(src)) {
+      fail(`${label} 的 treeConfig 缺少 childrenField: z.string(...)（自定义嵌套键名表达不了）`)
+      ok = false
+    }
+
+    // 顶层 `mergeConfig` 声明式合并单元格契约（AI-23）：两处 Zod 都必须声明。
+    // 同因（z.object 无 passthrough）—— 漏声明等于把声明式合并整段静默剥掉，
+    // 三端回落成「不合并」、零告警（正是本批要消灭的静默失效）。rowsBy 必须非空数组。
+    if (!/\bmergeConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明顶层 mergeConfig: z.object(...)（声明式合并单元格会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/mergeConfig\s*:[\s\S]{0,600}?rowsBy\s*:\s*z\s*\n?\s*\.array\(/.test(src)) {
+      fail(`${label} 的 mergeConfig 缺少 rowsBy: z.array(...)（没有列可合并无意义）`)
+      ok = false
+    }
+
+    // vxe 行内编辑契约（AI-09 子项④）：`tableOptions.editConfig`（表级开关）+ 列级
+    // `editRender`（列级编辑器）两处 Zod 都必须声明。同因（z.object 无 passthrough）——
+    // 漏声明等于把行内编辑配置静默剥掉，表格回落成只读、零告警。editConfig 缺 trigger、
+    // editRender 缺 name 则表达不了「怎么进入编辑 / 用哪个编辑器」。二者均仅 vxe 生效。
+    if (!/\beditConfig\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明 tableOptions.editConfig: z.object(...)（行内编辑开关会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/editConfig\s*:[\s\S]{0,400}?trigger\s*:\s*z\s*\n?\s*\.enum\(/.test(src)) {
+      fail(`${label} 的 editConfig 缺少 trigger: z.enum(...)（进入编辑的方式表达不了）`)
+      ok = false
+    }
+    if (!/\beditRender\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未在 ColumnSchema 声明 editRender: z.object(...)（列级行内编辑器会被 Zod 静默剥掉，该列永远不可编辑）`)
+      ok = false
+    }
+    if (!/editRender\s*:[\s\S]{0,400}?name\s*:\s*z\s*\.string\(/.test(src)) {
+      fail(`${label} 的 editRender 缺少 name: z.string(...)（渲染器名表达不了）`)
+      ok = false
+    }
+    // 响应映射契约（AI-08 configTableOut，顺带纳管）：AI-08 只落了 shared 权威、漏了
+    // mcp 内联副本（同类 strip 隐患，此前因 configTableOut 不在 STRUCTURED_TABLE_CONTRACT
+    // 而漏网）。两处 Zod 都必须声明，且含 tableData 键。
+    if (!/\bconfigTableOut\s*:\s*z\s*\n?\s*\.object\(/.test(src)) {
+      fail(`${label} 未声明 tableOptions.configTableOut: z.object(...)（响应映射会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/configTableOut\s*:[\s\S]{0,400}?tableData\s*:\s*z\s*\.string\(/.test(src)) {
+      fail(`${label} 的 configTableOut 缺少 tableData: z.string(...)（列表数据键映射表达不了）`)
+      ok = false
+    }
+
+    // 表达式 DSL 契约（AI-16）：`isHidden` 的表达式超集由**闭算子白名单**收敛。
+    // 两处 Zod 都必须（a）白名单与 core/expr.ts 逐项相等、（b）节点递归（z.lazy）、
+    // （c）var 走 z.strictObject 闭键、（d）算子键闭在 EXPR_OPS 内、（e）顶层联合纳入
+    // 表达式节点。任一条缺失都会让表达式被 Zod 静默剥掉 —— 字段永远可见、零告警
+    // （与 isHidden 同类静默丢弃）。
+    if (coreExprOps) {
+      const srcOps = parseExprOps(src)
+      if (!srcOps) {
+        fail(`${label} 未能定位 EXPR_OPS 白名单（表达式算子集必须与 core/expr.ts 同步）`)
+        ok = false
+      } else {
+        const core = [...coreExprOps].sort().join(',')
+        const mine = [...srcOps].sort().join(',')
+        if (core !== mine) {
+          fail(`${label} 的 EXPR_OPS 与 core/expr.ts 不一致\n    core: ${core}\n    ${label}: ${mine}`)
+          ok = false
+        }
+      }
+    }
+    if (!/HiddenExprVarSchema\s*=\s*z\s*\.strictObject\(/.test(src)) {
+      fail(`${label} 的表达式 var 节点不是 z.strictObject（开键会让非算子键混入节点，闭集被破坏）`)
+      ok = false
+    }
+    if (!/HiddenExprNodeSchema[\s\S]{0,120}?z\s*\.lazy\(/.test(src)) {
+      fail(`${label} 的表达式节点不是递归（缺 z.lazy），嵌套 or/and 表达不了`)
+      ok = false
+    }
+    if (!/EXPR_NODE_OP_SET\s*(?::[^=]+)?=\s*new Set\(\s*EXPR_OPS\.filter\(/.test(src)) {
+      fail(`${label} 的 EXPR_NODE_OP_SET 未由 EXPR_OPS 派生（算子白名单可能漂移）`)
+      ok = false
+    }
+    if (!/HiddenExprVarSchema[\s\S]{0,400}?isSafeProp/.test(src)) {
+      fail(`${label} 的 var 节点未复用 isSafeProp（__proto__ 等路径注入防线缺失）`)
+      ok = false
+    }
+    if (!/HiddenConditionListSchema[\s\S]{0,400}?HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 HiddenConditionListSchema 未纳入 HiddenExprNodeSchema（表达式 isHidden 会被静默剥掉、字段永远可见）`)
+      ok = false
+    }
+
+    // 字段联动契约（AI-07）：`reactions`（字段级规则数组）两处 Zod 都必须声明，
+    // 且 fulfillment 的表达式键必须复用 `HiddenExprNodeSchema` —— 否则（a）reactions 被
+    // Zod 静默剥掉（配置里写了、运行时无联动、零告警），或（b）退化成裸 JS 串/任意 JSON
+    // （闭算子沙箱被破坏）。`fulfill.value` 与 `dataOptions` 都必须可表达。
+    if (!/const\s+ReactionSchema\s*=\s*z/.test(src)) {
+      fail(`${label} 未声明 const ReactionSchema（字段联动规则会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/reactions\s*:\s*z\s*\.array\(\s*ReactionSchema/.test(src)) {
+      fail(`${label} 的 FieldConfigSchema 未声明 reactions: z.array(ReactionSchema)（字段联动会被 Zod 静默剥掉）`)
+      ok = false
+    }
+    if (!/ReactionFulfillSchema\s*=\s*z\s*\.object\([\s\S]{0,900}?dataOptions[\s\S]{0,900}?value/.test(src)) {
+      fail(`${label} 的 ReactionFulfillSchema 缺少 dataOptions / value（选项联动或值回写表达不了）`)
+      ok = false
+    }
+    if (!/ReactionFulfillSchema[\s\S]{0,1400}?HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 ReactionFulfillSchema 未复用 HiddenExprNodeSchema（表达式键退化成任意 JSON，闭算子沙箱被破坏）`)
+      ok = false
+    }
+    if (!/ReactionSchema\s*=\s*z[\s\S]{0,600}?when\s*:\s*HiddenExprNodeSchema/.test(src)) {
+      fail(`${label} 的 ReactionSchema 缺少 when: HiddenExprNodeSchema（规则门控表达不了 / 退化成裸 JS 串）`)
+      ok = false
+    }
   }
 
-  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化）`)
+  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化 + isHidden 表达式白名单）`)
   return ok
 }
 

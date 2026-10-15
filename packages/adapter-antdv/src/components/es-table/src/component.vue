@@ -72,13 +72,22 @@
             :virtual="isVirtual"
             :sortDirections="['ascend', 'descend', 'ascend']"
             :locale="{ emptyText: options.emptyText || '暂无数据' }"
-            :defaultExpandAllRows="false"
+            :defaultExpandAllRows="options.treeConfig?.expandAll === true"
+            :childrenColumnName="options.treeConfig?.childrenField || 'children'"
             @change="handleAdvTableChange"
             v-bind="tableBindAttrs"
           >
             <!-- 展开行 -->
             <template v-if="expandEnabled" #expandedRowRender="{ record }">
-              <slot name="expand" :row="record" />
+              <slot v-if="hasExpandSlot" name="expand" :row="record" />
+              <!-- AI-09 子项②：声明式展开内容（列上的 expandConfig 字段明细） -->
+              <div v-if="expandContent" class="es-expand-content">
+                <div v-if="expandContent.title" class="es-expand-title">{{ expandContent.title }}</div>
+                <div v-for="f in expandContent.fields" :key="f.prop" class="es-expand-field">
+                  <span class="es-expand-label">{{ fieldLabel(f) }}</span>
+                  <span class="es-expand-value">{{ cellValue(record, f.prop) }}</span>
+                </div>
+              </div>
             </template>
 
             <!-- 自定义列渲染 (bodyCell 插槽) -->
@@ -189,6 +198,8 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
   computeBoundaryRollback,
+  buildColumnSpans,
+  resolveMergeConfig,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -416,7 +427,28 @@ const hasDefaultSlot = computed(() => !!slots.default?.())
 const hasExpandSlot = computed(() => !!(slots as any).expand)
 // 展开：options.expand 或显式声明 type:'expand' 列（对齐 el-table/vxe 约定）均启用
 const hasExpandColumn = computed(() => props.columns.some((c) => c.type === 'expand'))
-const expandEnabled = computed(() => (!!props.options.expand || hasExpandColumn.value) && hasExpandSlot.value)
+// AI-09 子项②：声明式展开内容（列上的 expandConfig 字段明细）。takes 展开列里的第一个。
+const expandContent = computed(() => props.columns.find((c) => c.type === 'expand')?.expandConfig)
+const hasExpandConfig = computed(() => !!expandContent.value)
+// 展开启用条件放宽：宿主 expand 插槽**或**声明式 expandConfig 二者其一即可
+// （此前只认插槽 → 纯 JSON 的 schema 模式无法触发展开）。
+const expandEnabled = computed(
+  () => (!!props.options.expand || hasExpandColumn.value) && (hasExpandSlot.value || hasExpandConfig.value)
+)
+
+/**
+ * 行展开字段明细（AI-09 子项②）—— 展开行内的只读「标签: 值」。
+ * 标签走 `labelKey` + 全局 t()（缺省回退 label，再回退 prop）；值取 `record[prop]`。
+ */
+const fieldLabel = (f: { prop: string; label?: string; labelKey?: string }): string => {
+  const t = typeof esPlus.t === 'function' ? (esPlus.t as (k: string) => string) : undefined
+  if (f.labelKey && t) return t(f.labelKey)
+  return f.label || f.prop
+}
+const cellValue = (row: Record<string, unknown> | undefined, prop: string): unknown => {
+  const v = row ? row[prop] : undefined
+  return v == null || v === '' ? '-' : v
+}
 const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 
 const slotStyles = computed(() => {
@@ -477,7 +509,8 @@ const {
 
 // ─── 过滤列 ─────────────────────────────────────────
 const filteredColumns = computed(() => {
-  return columnRowList.value.filter((item) => !item.hidCol)
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  return columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
 })
 
 // M-4: vxe 引擎专用列（注入 operate 列的 btns→render；普通列注入 emptyPlaceholder formatter，对齐 a-table 路径行为）
@@ -619,6 +652,27 @@ const adaptedColumns = computed(() => {
     }
   }
 
+  // 合并单元格（AI-23）：a-table **没有** span-method prop，跨端通道是**列级 customCell**
+  // （`(record, rowIndex) => ({ rowSpan, colSpan })`，0 = 该格被合并掉，与 el-table/antdv 一致）。
+  // 用 core 的 buildColumnSpans 预计算每列 span，避免逐格重算。
+  // 注意：es-plus 的 `TableColumn` **不声明** customCell（adaptColumn 也不转发它），故此刻
+  // 该列不可能已带 customCell —— `typeof` 守卫是**防御性**的（防未来 adaptColumn 转发后
+  // 被静默覆盖），不是今天可达的逃生舱。
+  const mergeCfg = resolveMergeConfig(props.options)
+  if (mergeCfg) {
+    const rows = displayDataSource.value as Record<string, unknown>[]
+    for (const c of cols) {
+      const prop = (c.dataIndex ?? c.key) as string | undefined
+      if (!prop || !mergeCfg.rowsBy.includes(prop)) continue
+      if (typeof c.customCell === 'function') continue
+      const spans = buildColumnSpans(rows.map((r) => (r == null ? undefined : r[prop])))
+      c.customCell = (_record: unknown, rowIndex: number) => ({
+        rowSpan: spans[rowIndex] === undefined ? 1 : spans[rowIndex],
+        colSpan: 1,
+      })
+    }
+  }
+
   return cols
 })
 
@@ -631,6 +685,9 @@ const TABLE_INTERNAL_KEYS = new Set([
   'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount',
   'rowClassName', 'border', 'stripe', 'size', 'showHeader',
   'emptyText', 'headerCellStyle', 'highlightCurrentRow',
+  // AI-23：声明式合并单元格在默认引擎里由组件侧翻译成**列级 customCell**（a-table 无
+  // span-method prop），不是 a-table 的直接 attrs，故列入内部键。
+  'mergeConfig',
 ])
 
 const fallthroughAttrs = useAttrs()

@@ -1,0 +1,45 @@
+{
+  "nl": "病历管理：查询患者姓名；表格展示患者姓名、年龄、科室；每行可展开查看诊断结果、主治医生、入院日期；支持新增、编辑、删除。",
+  "nlEn": "Medical record management: query by patient name; the table shows patient name, age and department; each row can expand to reveal the diagnosis, attending doctor and admission date; supports add, edit and delete.",
+  "fixedFields": ["patientName", "age", "dept", "diagnosis", "doctor", "admitDate"],
+  "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "config": {
+    "name": "MedicalRecordManage",
+    "apiUrl": "/api/medical-records",
+    "fields": [
+      { "prop": "patientName", "label": "患者姓名", "formtype": "Input" },
+      { "prop": "age", "label": "年龄", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "dept",
+        "label": "科室",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "内科", "value": "internal" },
+          { "label": "外科", "value": "surgery" },
+          { "label": "儿科", "value": "pediatrics" }
+        ]
+      },
+      { "prop": "diagnosis", "label": "诊断结果", "formtype": "Input", "inTable": false, "inQuery": false },
+      { "prop": "doctor", "label": "主治医生", "formtype": "Input", "inTable": false, "inQuery": false },
+      {
+        "prop": "admitDate",
+        "label": "入院日期",
+        "formtype": "DatePicker",
+        "inForm": false,
+        "inTable": false,
+        "inQuery": false
+      }
+    ],
+    "expandConfig": {
+      "title": "诊疗详情",
+      "fields": [
+        { "prop": "diagnosis", "label": "诊断结果" },
+        { "prop": "doctor", "label": "主治医生" },
+        { "prop": "admitDate", "label": "入院日期" }
+      ]
+    },
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-09 子项②: 声明式行展开（title + 3 字段明细含日期）（vue3/schema）"
+}

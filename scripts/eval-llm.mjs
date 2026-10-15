@@ -323,7 +323,52 @@ async function main() {
     }
   }
 
-  // 按语言汇总 exactIntentCore（留出集优先，空则退回全量）。zh 作门禁、en 只观测。
+  // ── 健康门：区分「跑完但什么都没测到」与「模型确实得 0 分」─────────────────────
+  // scorers.mjs 里 propSet/formtype/membership/actions 恒 `applicable: () => true`，
+  // 因此任何**成功打分**的行都会给 applicable 累加 ≥4。故「所有维度 applicable 全零」
+  // ⟺ 没有任何 gold 走到打分器 ⟺ 本次测量根本没发生（典型成因：中继 key 失效 → 逐 case 401）。
+  // 此前这种运行会照常算出门禁 0、写 0.0% 红徽章，并由 workflow 的 always() commit-back
+  // 提交回 master —— 把一次**基础设施故障**公开发布成「模型得 0 分」。这条假信号既误导，
+  // 又天然不可察觉（看起来就像真实的灾难性回归）。故在此显式拦下，绝不发布百分比。
+  const scoredRows = rows.filter((r) => !r.error)
+  const applicableTotal = Object.values(byCapability).reduce((a, c) => a + c.applicable, 0)
+  if (applicableTotal === 0) {
+    const errSample = rows.find((r) => r.error)?.error?.split('\n')[0] ?? '(无 case 产出预测)'
+    console.error(
+      `\n[eval:llm] MEASUREMENT FAILED — ${rows.length} 行中仅 ${scoredRows.length} 行走到了打分器，` +
+        `所有维度 applicable 合计为 0。本次没有测到任何东西，拒绝把它发布成 0% 成绩。\n` +
+        `  首个错误：${errSample}`
+    )
+    // 灰度占位（AI-04 设计的 pending 态）——「没测到」必须长得和「测到 0 分」不一样。
+    // 并把**去重后的真实错误**写进产物：此前错误只打到 Actions 日志、不进产物，
+    // 于是提交回仓库的那份东西只剩一个 0.0%，事后无法诊断（2026-10-13/14 两夜即如此）。
+    const reasons = [...new Set(rows.filter((r) => r.error).map((r) => r.error.split('\n')[0]))].slice(0, 5)
+    const failedRecord = {
+      measuredAt: new Date().toISOString(),
+      model: MODEL,
+      servedModel: SERVED_MODELS.size ? [...SERVED_MODELS].join(',') : MODEL,
+      measurement: 'failed',
+      reason: 'no case reached the scorer (all rows errored) — infrastructure failure, not a 0% score',
+      cases: n,
+      rows: rows.length,
+      erroredRows: rows.length - scoredRows.length,
+      sampleErrors: reasons,
+      target: TARGET_ACCURACY,
+      passed: false,
+    }
+    const grey = (label) => ({ schemaVersion: 1, label, message: 'measurement failed', color: 'lightgrey' })
+    try {
+      writeFileSync(ACCURACY_FILE, JSON.stringify(failedRecord, null, 2) + '\n')
+      writeFileSync(BADGE_FILE, JSON.stringify(grey('heldout accuracy'), null, 2) + '\n')
+      writeFileSync(BADGE_SCOPED_FILE, JSON.stringify(grey('scoped accuracy'), null, 2) + '\n')
+      console.error('  (已写入失败记录 + 灰度徽章；数值留待下一次真正测量)')
+    } catch (err) {
+      console.warn(`  (could not write failure record: ${err.message})`)
+    }
+    process.exit(1)
+  }
+
+  // 按语言汇总 exactIntentCore（留出集优先、空则退回全量）。zh 作门禁、en 只观测。
   const langExact = (rs) => {
     const ho = rs.filter((r) => !r.fewshotDerived)
     const base = ho.length ? ho : rs

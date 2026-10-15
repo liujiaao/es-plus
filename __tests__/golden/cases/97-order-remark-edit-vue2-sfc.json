@@ -1,0 +1,23 @@
+{
+  "nl": "订单备注修改：双击整行进入行内编辑，点击其他区域自动关闭编辑；展示订单号、备注，备注多行文本；支持编辑。",
+  "nlEn": "Order remark editing: double-click a row to edit inline, and clicking elsewhere auto-closes the editor. Shows order number and remark, where remark is a multi-line textarea. Supports edit.",
+  "fixedFields": ["orderNo", "remark"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode", "target"],
+  "config": {
+    "name": "OrderRemarkEditManage",
+    "apiUrl": "/api/order-remark",
+    "target": "vue2",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "remark", "label": "备注", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "row", "autoClear": true } },
+    "columns": [
+      { "prop": "orderNo", "label": "订单号", "editRender": { "name": "$input" } },
+      { "prop": "remark", "label": "备注", "editRender": { "name": "$textarea" } }
+    ],
+    "actions": ["edit"]
+  },
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=row/autoClear + editRender $textarea，vue2/sfc）"
+}

@@ -1,0 +1,32 @@
+{
+  "nl": "订阅套餐管理：查询有套餐名称、价格；表格展示套餐名称、价格、自动续费、续费折扣、到期提醒语；支持新增、编辑、删除。表单里「续费折扣」只在开启自动续费时才显示，「到期提醒语」则在开启自动续费时隐藏。",
+  "nlEn": "Subscription plan management: query by plan name and price; the table shows plan name, price, auto-renew, renewal discount, and expiry notice; supports add, edit, and delete. In the form, \"renewal discount\" is only shown when auto-renew is on, while \"expiry notice\" is hidden when auto-renew is on.",
+  "fixedFields": ["planName", "price", "autoRenew", "renewDiscount", "expireNotice"],
+  "pinnedDims": ["propSet", "actions", "isHidden:renewDiscount", "isHidden:expireNotice"],
+  "config": {
+    "name": "SubscriptionPlanManage",
+    "apiUrl": "/api/subscription-plans",
+    "target": "vue3",
+    "fields": [
+      { "prop": "planName", "label": "套餐名称", "formtype": "Input" },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber" },
+      { "prop": "autoRenew", "label": "自动续费", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "renewDiscount",
+        "label": "续费折扣",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "isHidden": { "field": "autoRenew", "op": "falsy" }
+      },
+      {
+        "prop": "expireNotice",
+        "label": "到期提醒语",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "field": "autoRenew", "op": "truthy" }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-06: isHidden op=truthy/falsy — 同一开关字段驱动两个字段的反相显隐（vue3/schema）"
+}

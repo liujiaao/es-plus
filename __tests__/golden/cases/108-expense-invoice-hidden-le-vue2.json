@@ -1,0 +1,34 @@
+{
+  "nl": "报销单管理：查询有申请人；表格展示申请人、费用类型、金额、发票号；支持新增、编辑、删除。表单里「发票号」在金额不超过 100 元时隐藏（小额报销免票）。",
+  "nlEn": "Expense-claim management: query by applicant; the table shows applicant, expense type, amount and invoice number; supports add, edit and delete. In the form, the \"invoice number\" is hidden when the amount does not exceed 100 (small claims need no invoice).",
+  "fixedFields": ["applicant", "expenseType", "amount", "invoiceNo"],
+  "pinnedDims": ["propSet", "actions", "isHidden:invoiceNo", "target"],
+  "config": {
+    "name": "ExpenseClaimManage",
+    "apiUrl": "/api/expense-claims",
+    "target": "vue2",
+    "fields": [
+      { "prop": "applicant", "label": "申请人", "formtype": "Input" },
+      {
+        "prop": "expenseType",
+        "label": "费用类型",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "交通", "value": "trip" },
+          { "label": "餐费", "value": "meal" },
+          { "label": "住宿", "value": "hotel" }
+        ]
+      },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      {
+        "prop": "invoiceNo",
+        "label": "发票号",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": { "<=": [{ "var": "amount" }, 100] }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（序关系 <=）—— 金额不超过 100 元时隐藏发票号（vue2/schema）"
+}

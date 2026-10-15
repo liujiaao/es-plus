@@ -174,10 +174,13 @@ exports[`StructuredCrudConfigSchema — surface listing > top-level keys are sta
 [
   "actions",
   "apiUrl",
+  "columns",
   "dialogs",
+  "expandConfig",
   "fields",
   "formLayout",
   "i18n",
+  "mergeConfig",
   "mode",
   "name",
   "operationColumn",
@@ -187,6 +190,7 @@ exports[`StructuredCrudConfigSchema — surface listing > top-level keys are sta
   "tableOptions",
   "target",
   "toolbarBtns",
+  "treeConfig",
   "typescript",
 ]
 `;

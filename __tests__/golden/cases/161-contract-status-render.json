@@ -1,0 +1,29 @@
+{
+  "nl": "合同登记：查询有合同编号、签约方；表格展示合同编号、签约方、合同状态、签署日期，其中「合同状态」列需要自定义渲染（按状态用不同颜色的标签展示）；支持新增、编辑、删除。",
+  "nlEn": "Contract register: query by contract no. and party; the table shows contract no., party, contract status, and signing date, where the \"contract status\" column needs custom rendering (colored tags per status); supports add, edit, and delete.",
+  "fixedFields": ["contractNo", "party", "status", "signedAt"],
+  "pinnedDims": ["propSet", "actions", "extPoints:status", "target"],
+  "config": {
+    "name": "ContractRegister",
+    "apiUrl": "/api/contracts-register",
+    "target": "vue2",
+    "fields": [
+      { "prop": "contractNo", "label": "合同编号", "formtype": "Input" },
+      { "prop": "party", "label": "签约方", "formtype": "Input" },
+      {
+        "prop": "status",
+        "label": "合同状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "生效中", "value": "active" },
+          { "label": "已归档", "value": "archived" }
+        ],
+        "render": "(_, { row }) => h('el-tag', { attrs: { type: row.status === 'active' ? 'success' : 'info' } }, () => row.statusLabel)"
+      },
+      { "prop": "signedAt", "label": "签署日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "L5：vue2 自定义 render（el-tag 按状态染色）。收尾第三个 vue2 render 例，本轮 13 例使 render 覆盖 2 → 15、extPoints 维 13 → 26。"
+}

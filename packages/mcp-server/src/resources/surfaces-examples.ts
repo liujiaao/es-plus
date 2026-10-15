@@ -23,6 +23,21 @@ import type { SurfaceField } from "@es-plus/shared";
  */
 export type DialogKey = "add" | "edit" | "view";
 
+/**
+ * A `surfaces.dialog` entry (AI-21④): a canned key, or a full-parameter dialog
+ * (`{ key, title?, width?, fullscreen?, formItems? }`). The object form is for
+ * custom dialog ids / titles / widths and per-dialog field lists.
+ */
+export type DialogEntry =
+  | DialogKey
+  | {
+      key: string;
+      title?: string;
+      width?: string | number;
+      fullscreen?: boolean;
+      formItems?: SurfaceField[];
+    };
+
 export interface SurfacesExample {
   label: string;
   /** The natural-language request a user might give. */
@@ -39,7 +54,7 @@ export interface SurfacesExample {
       query?: SurfaceField[];
       table?: SurfaceField[];
       form?: SurfaceField[];
-      dialog?: DialogKey[];
+      dialog?: DialogEntry[];
     };
   };
 }
@@ -205,6 +220,86 @@ export const SURFACES_EXAMPLES: SurfacesExample[] = [
       },
     },
   },
+  {
+    label: "Conditional visibility (field-level isHidden on the form surface)",
+    nl: "退款单管理：表格展示退款单号、退款方式、退款原因；退款原因只有在「退款方式不是部分退款」时才需要填写。支持新增、编辑。",
+    reasoning:
+      "条件显隐是**字段级 `isHidden`**（纯 JSON 数据，绝不是函数串）：键名是 isHidden **不是 isVisible** —— 语义是「条件成立即**隐藏**」。所以「退款原因只有在『退款方式不是部分退款』时才需要填写」要**反着写**：隐藏条件 =「退款方式**是**部分退款」= `{ field: 'refundType', op: 'eq', value: 'part' }`（op 默认即 eq，此处显式写出；value 必须与该字段 dataOptions 的 value 一致）。退款原因是可空文本 → 仍属 form 面。退款方式是有限枚举 → Select + dataOptions。有表格 → 组合→generateFromConfig；isHidden 挂在退款原因字段上、随 model 实时求值。",
+    route: "compose→generateFromConfig",
+    input: {
+      name: "RefundManage",
+      apiUrl: "/api/refunds",
+      surfaces: {
+        table: [
+          { prop: "refundNo", label: "退款单号", formtype: "Input" },
+          { prop: "refundType", label: "退款方式", formtype: "Select" },
+          { prop: "refundReason", label: "退款原因", formtype: "Input" },
+        ],
+        form: [
+          { prop: "refundType", label: "退款方式", formtype: "Select", required: true, dataOptions: [{ label: "部分退款", value: "part" }, { label: "全额退款", value: "full" }] },
+          { prop: "refundReason", label: "退款原因", formtype: "Input", isHidden: { field: "refundType", op: "eq", value: "part" } },
+        ],
+        dialog: ["add", "edit"],
+      },
+    },
+  },
+  {
+    label: "Field linkage (field-level reactions on the form surface)",
+    nl: "收货地址维护：表格展示省份、城市、详细地址；城市下拉随所选省份变化（浙江→杭州/宁波，江苏→南京/苏州）。支持新增、编辑。",
+    reasoning:
+      "「一个字段的下拉随另一字段变化」= **字段级 `reactions`**（纯 JSON，无函数回调）。关键：`fulfill.dataOptions` 只能是**字面量**选项数组（表达式 DSL 刻意没有对象字面量），所以「选项随条件分支」要写成**每个分支一条规则**、各带自己的 `when`：province=zj 出一条、province=js 出一条，后声明者覆盖先声明者（last-wins）。`dependencies:['province']` 声明触发源。注意这不是 isHidden（字段不消失，只是选项变）。省份/城市都是有限枚举 → Select + dataOptions。",
+    route: "compose→generateFromConfig",
+    input: {
+      name: "AddressManage",
+      apiUrl: "/api/addresses",
+      surfaces: {
+        table: [
+          { prop: "province", label: "省份", formtype: "Select" },
+          { prop: "city", label: "城市", formtype: "Select" },
+          { prop: "detail", label: "详细地址", formtype: "Input" },
+        ],
+        form: [
+          { prop: "province", label: "省份", formtype: "Select", required: true, dataOptions: [{ label: "浙江", value: "zj" }, { label: "江苏", value: "js" }] },
+          {
+            prop: "city",
+            label: "城市",
+            formtype: "Select",
+            reactions: [
+              { dependencies: ["province"], when: { "==": [{ var: "province" }, "zj"] }, fulfill: { dataOptions: [{ label: "杭州", value: "hz" }, { label: "宁波", value: "nb" }] } },
+              { dependencies: ["province"], when: { "==": [{ var: "province" }, "js"] }, fulfill: { dataOptions: [{ label: "南京", value: "nj" }, { label: "苏州", value: "sz" }] } },
+            ],
+          },
+          { prop: "detail", label: "详细地址", formtype: "Input" },
+        ],
+        dialog: ["add", "edit"],
+      },
+    },
+  },
+  {
+    label: "Custom dialog — full-parameter surfaces.dialog entry (custom id + width)",
+    nl: "订单管理：表格展示订单号、客户、金额；点「查看详情」打开一个宽 720 的详情弹窗（订单号、客户、金额、备注）；支持新增、编辑。",
+    reasoning:
+      "「查看详情」不是罐头 add/edit/view 三键之一 → 用 `surfaces.dialog` 的**全参对象**形态：`{ key: 'detail', title: '订单详情', width: 720 }`。`formItems` 省略即默认取 form 面（详情弹窗仍按 form 面渲染输入控件；若要自定义字段表就显式给 `formItems`）。add/edit 继续用罐头键。有表格 → 组合→generateFromConfig，逐弹窗 id/title/width 落到 `schema.dialogs`。",
+    route: "compose→generateFromConfig",
+    input: {
+      name: "OrderManage",
+      apiUrl: "/api/orders",
+      surfaces: {
+        table: [
+          { prop: "orderNo", label: "订单号", formtype: "Input" },
+          { prop: "customer", label: "客户", formtype: "Input" },
+          { prop: "amount", label: "金额", formtype: "InputNumber" },
+        ],
+        form: [
+          { prop: "orderNo", label: "订单号", formtype: "Input", required: true },
+          { prop: "customer", label: "客户", formtype: "Input" },
+          { prop: "amount", label: "金额", formtype: "InputNumber" },
+          { prop: "remark", label: "备注", formtype: "Input", attrs: { type: "textarea" } },
+        ],
+        dialog: ["add", "edit", { key: "detail", title: "订单详情", width: 720 }],
+      },
+    },
+  },
 ];
 
 function buildContent(): string {
@@ -220,7 +315,13 @@ function buildContent(): string {
     "",
     "Membership is implied by WHICH list a field is in: a filter field → `surfaces.query`, a visible column → `surfaces.table`, a mutable add/edit field → `surfaces.form`. A field that appears in several surfaces is listed in each; the generator reconciles duplicates deterministically (identity first-wins, semantic from form, display from table).",
     "",
+    "`surfaces.dialog` entries are either a canned key (`\"add\"` / `\"edit\"` / `\"view\"`) or a full object `{ key, title?, width?, fullscreen?, formItems? }` — use the object form when the request names a custom dialog id/title/width or needs a per-dialog field list (the dialog body defaults to the `form` surface, else the `table` surface).",
+    "",
     "Field meaning → formtype mapping is the SAME as the config path (see `esplus://examples/nl-to-config`): enums → Select (dataOptions / apiParams), dates → DatePicker, on/off → Switch, long text → Input + attrs.type:'textarea', etc.",
+    "",
+    "**Optional config knobs (advanced):** besides `surfaces`, you may set the top-level keys `tableOptions`, `formLayout`, `operationColumn`, `tableBtns`, `toolbarBtns`, `expandConfig`, `treeConfig` when the request names those specifics (e.g. \"隐藏操作列\" → `operationColumn:false`; \"加一个导出按钮\" → `tableBtns:[{name:'导出',actionType:'export'}]`; \"空数据文案\" → `tableOptions:{emptyText:'暂无数据'}`; \"点开行看明细\" → `expandConfig:{title:'明细',fields:[{prop:'remark',label:'备注'}]}`; \"树形表格\" → `treeConfig:{expandAll:true}`). Each is forwarded verbatim into the composed config — omit it otherwise; the generator derives sensible defaults from `surfaces` alone.",
+    "",
+    "**Field-level extras:** a field entry may also carry `isHidden` (conditional visibility — plain JSON, **condition-true ⇒ hidden**; the key is `isHidden`, NOT `isVisible`, so write the hide condition), `reactions` (field linkage: `[{dependencies, when, fulfill}]`, plain JSON, never a callback) and `labelKey` (i18n label key) directly on the field object — the same field vocabulary as the config path. Only `query`/`form` fields honor `isHidden`/`reactions`.",
     "",
     "For an explicit single-component ask (or a fragment next to non-es-plus UI), the standalone tools `generate_form` / `generate_table` / `generate_dialog` take the same field vocabulary.",
     "",

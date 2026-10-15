@@ -1,0 +1,38 @@
+{
+  "nl": "售后维修管理：查询有订单号；表格展示订单号、服务方式、是否保价、寄回地址；支持新增、编辑、删除。表单里「寄回地址」在服务方式为上门服务，或已保价时隐藏（上门无需寄回、保价件走专线收件）。",
+  "nlEn": "After-sales repair management: query by order number; the table shows order number, service type, insured flag and return address; supports add, edit and delete. In the form, the \"return address\" is hidden when the service type is on-site, or the item is insured (on-site needs no return, insured items use a dedicated pickup line).",
+  "fixedFields": ["orderNo", "serviceType", "insured", "returnAddress"],
+  "pinnedDims": ["propSet", "actions", "isHidden:returnAddress", "target"],
+  "config": {
+    "name": "AfterSaleRepairManage",
+    "apiUrl": "/api/after-sale-repairs",
+    "target": "vue2",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      {
+        "prop": "serviceType",
+        "label": "服务方式",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "上门服务", "value": "onsite" },
+          { "label": "寄修", "value": "mail" }
+        ]
+      },
+      { "prop": "insured", "label": "是否保价", "formtype": "Switch", "inQuery": false },
+      {
+        "prop": "returnAddress",
+        "label": "寄回地址",
+        "formtype": "Input",
+        "inQuery": false,
+        "isHidden": {
+          "or": [
+            { "==": [{ "var": "serviceType" }, "onsite"] },
+            { "truthy": [{ "var": "insured" }] }
+          ]
+        }
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "AI-16: 表达式 isHidden（跨字段 or）—— 上门服务或已保价时隐藏寄回地址（vue2/schema）"
+}
