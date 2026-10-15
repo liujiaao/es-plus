@@ -17,9 +17,10 @@
         "dataOptions": [
           { "label": "储值卡", "value": "stored" },
           { "label": "礼品卡", "value": "gift" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "balance", "label": "余额", "formtype": "InputNumber" },
+      { "prop": "balance", "label": "余额", "formtype": "InputNumber", "inQuery": false },
       { "prop": "expired", "label": "是否过期", "formtype": "Switch", "inQuery": false },
       {
         "prop": "giftNote",

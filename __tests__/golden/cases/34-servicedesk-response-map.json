@@ -9,7 +9,7 @@
     "target": "antdv",
     "fields": [
       { "prop": "ticketNo", "label": "工单号", "formtype": "Input" },
-      { "prop": "title", "label": "标题", "formtype": "Input" },
+      { "prop": "title", "label": "标题", "formtype": "Input", "inQuery": false },
       {
         "prop": "status",
         "label": "处理状态",

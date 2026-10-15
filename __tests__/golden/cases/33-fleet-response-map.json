@@ -20,7 +20,7 @@
         ]
       },
       { "prop": "mileage", "label": "里程", "formtype": "InputNumber", "inQuery": false },
-      { "prop": "inspectDue", "label": "年检到期", "formtype": "DatePicker" }
+      { "prop": "inspectDue", "label": "年检到期", "formtype": "DatePicker", "inQuery": false }
     ],
     "actions": ["add", "edit", "delete"],
     "tableOptions": {

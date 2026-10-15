@@ -17,9 +17,10 @@
         "dataOptions": [
           { "label": "个人", "value": "personal" },
           { "label": "企业", "value": "company" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "companySize", "label": "企业规模", "formtype": "InputNumber" },
+      { "prop": "companySize", "label": "企业规模", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "taxNo",
         "label": "税号",

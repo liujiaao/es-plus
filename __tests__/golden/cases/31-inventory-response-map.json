@@ -20,7 +20,8 @@
           { "label": "未盘", "value": "pending" },
           { "label": "已盘", "value": "counted" },
           { "label": "差异", "value": "diff" }
-        ]
+        ],
+        "inQuery": false
       }
     ],
     "actions": ["add", "edit", "delete"],

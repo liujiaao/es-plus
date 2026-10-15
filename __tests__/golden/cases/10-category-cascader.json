@@ -28,6 +28,7 @@
         "prop": "parentId",
         "label": "上级分类",
         "formtype": "Cascader",
+        "inTable": false,
         "apiParams": {
           "url": "/api/categories/tree",
           "labelField": "name",

@@ -38,7 +38,8 @@
             "label": "已结案",
             "value": "closed"
           }
-        ]
+        ],
+        "inQuery": false
       },
       {
         "prop": "conclusion",
@@ -66,7 +67,8 @@
       {
         "prop": "handler",
         "label": "经办人",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       }
     ],
     "actions": [

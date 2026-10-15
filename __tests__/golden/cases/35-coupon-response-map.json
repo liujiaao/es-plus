@@ -10,7 +10,7 @@
     "fields": [
       { "prop": "name", "label": "券名", "formtype": "Input" },
       { "prop": "faceValue", "label": "面额", "formtype": "InputNumber", "inQuery": false },
-      { "prop": "validUntil", "label": "有效期", "formtype": "DatePicker" },
+      { "prop": "validUntil", "label": "有效期", "formtype": "DatePicker", "inQuery": false },
       {
         "prop": "status",
         "label": "状态",
@@ -18,7 +18,8 @@
         "dataOptions": [
           { "label": "有效", "value": "valid" },
           { "label": "过期", "value": "expired" }
-        ]
+        ],
+        "inQuery": false
       }
     ],
     "actions": ["add", "edit", "delete"],

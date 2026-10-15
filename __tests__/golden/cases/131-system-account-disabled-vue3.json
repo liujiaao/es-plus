@@ -58,7 +58,8 @@
       {
         "prop": "displayName",
         "label": "显示名",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       },
       {
         "prop": "remark",

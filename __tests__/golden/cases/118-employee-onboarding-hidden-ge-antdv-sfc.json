@@ -10,8 +10,8 @@
     "mode": "sfc",
     "fields": [
       { "prop": "employeeName", "label": "员工姓名", "formtype": "Input" },
-      { "prop": "dept", "label": "所属部门", "formtype": "Input" },
-      { "prop": "years", "label": "工龄", "formtype": "InputNumber" },
+      { "prop": "dept", "label": "所属部门", "formtype": "Input", "inQuery": false },
+      { "prop": "years", "label": "工龄", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "onboardingTask",
         "label": "新人引导",

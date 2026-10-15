@@ -536,6 +536,48 @@ console.log('meta-eval: 95% definition (meets95Definition / summarize95)')
   check(empty95.rate === null && empty95.pass === 0 && empty95.total === 0, 'summarize95: 空集回 null')
 }
 
+// ── 特征化：membership 的「裸 === 」语义（AI-33 · inQuery 陷阱的 ③）──────────
+//
+// 这里**不改** scorer 语义，只把现状钉住，让将来任何「归一化/宽容化」重构都成为一次
+// **有意识的决定**而不是顺手改。上下文：schema 里三个开关默认 true，且 eval 对
+// gold/pred **都先过 zod**，所以到 scorer 手里时「省略」已经不存在了 —— 它已经变成 `true`。
+//
+//   gold 省略  ──zod──▶  true   ┐
+//                                ├─▶ 裸 === 比较 ⟹ 与 pred 的显式 false **不等**
+//   pred 显式 false             ┘
+//
+// 这正是陷阱的机件。本仓的处置是**修语料 / 修 few-shot**（让 gold 忠实于自己的 NL，
+// 见 scripts/check-membership-trap.mjs），**不是**让 scorer 把省略当「未表态」放过 ——
+// 那种宽容化会让「NL 明说排除、模型却漏标」也白过，度量就成橡皮尺了。
+{
+  const parse = (b) =>
+    StructuredCrudConfigSchema.parse({
+      name: 'TrapProbe',
+      apiUrl: '/api/trap',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }, b],
+      actions: ['add', 'edit', 'delete'],
+    })
+  const explicit = (flag) => parse({ prop: 'b', label: 'B', formtype: 'Input', inQuery: flag })
+  const omitted = () => parse({ prop: 'b', label: 'B', formtype: 'Input' }) // 不写 inQuery
+  const member = (g, p) => CAPABILITY_SCORERS.find((s) => s.key === 'membership').pass(g, p)
+
+  check(member(explicit(false), explicit(false)), '陷阱特征化：两边都显式 false → 相等')
+  check(member(explicit(true), explicit(true)), '陷阱特征化：两边都显式 true → 相等')
+  check(member(explicit(true), explicit(false)) === false, '陷阱特征化：gold true vs pred false → 不等')
+  check(member(explicit(false), explicit(true)) === false, '陷阱特征化：gold false vs pred true → 不等')
+  // 承重的一条：**scorer 看不见「省略」** —— 省略过的 gold 与显式 true 的 gold，
+  // 对同一个 pred 判定必然一致。故陷阱不可能在 scorer 层被「识别」并原谅，只能在上游
+  // （语料/提示词）消除。「让 scorer 忽略省略」在物理上不成立，这条把该事实钉住。
+  check(
+    member(omitted(), explicit(false)) === member(explicit(true), explicit(false)),
+    '陷阱特征化：省略过的 gold 与显式 true 的 gold 对同一 pred 判定必须一致（scorer 看不见省略）'
+  )
+  check(
+    member(omitted(), explicit(true)) === true,
+    '陷阱特征化：省略过的 gold 对 pred 的显式 true → 相等（省略 = true，不是「未表态」）'
+  )
+}
+
 if (failures) {
   console.error(`\nmeta-eval FAILED: ${failures} 处断言未过`)
   process.exit(1)

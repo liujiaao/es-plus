@@ -67,7 +67,8 @@
       {
         "prop": "contact",
         "label": "联系人",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       }
     ],
     "actions": [

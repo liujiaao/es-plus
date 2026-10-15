@@ -10,7 +10,7 @@
     "mode": "sfc",
     "fields": [
       { "prop": "binCode", "label": "货位编码", "formtype": "Input" },
-      { "prop": "zone", "label": "库区", "formtype": "Input" },
+      { "prop": "zone", "label": "库区", "formtype": "Input", "inQuery": false },
       { "prop": "capacity", "label": "容量", "formtype": "InputNumber", "inQuery": false },
       { "prop": "usageRate", "label": "使用率", "formtype": "InputNumber", "inQuery": false }
     ],

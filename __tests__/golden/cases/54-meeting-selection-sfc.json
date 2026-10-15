@@ -10,7 +10,7 @@
     "fields": [
       { "prop": "subject", "label": "会议主题", "formtype": "Input" },
       { "prop": "host", "label": "主持人", "formtype": "Input", "inQuery": false },
-      { "prop": "startTime", "label": "开始时间", "formtype": "DatePicker" }
+      { "prop": "startTime", "label": "开始时间", "formtype": "DatePicker", "inQuery": false }
     ],
     "columns": [
       { "type": "selection", "width": 50 },

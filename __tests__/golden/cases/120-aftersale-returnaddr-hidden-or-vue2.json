@@ -16,7 +16,8 @@
         "dataOptions": [
           { "label": "上门服务", "value": "onsite" },
           { "label": "寄修", "value": "mail" }
-        ]
+        ],
+        "inQuery": false
       },
       { "prop": "insured", "label": "是否保价", "formtype": "Switch", "inQuery": false },
       {

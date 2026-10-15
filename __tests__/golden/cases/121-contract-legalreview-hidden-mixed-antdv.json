@@ -19,7 +19,7 @@
           { "label": "无固定期限", "value": "open" }
         ]
       },
-      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
       { "prop": "autoRenew", "label": "是否自动续约", "formtype": "Switch", "inQuery": false },
       {
         "prop": "legalReview",

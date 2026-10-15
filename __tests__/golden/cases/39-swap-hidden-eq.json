@@ -17,7 +17,8 @@
         "dataOptions": [
           { "label": "调班", "value": "duty" },
           { "label": "换班", "value": "rotate" }
-        ]
+        ],
+        "inQuery": false
       },
       {
         "prop": "swapReason",

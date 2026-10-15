@@ -17,9 +17,10 @@
           { "label": "高", "value": "high" },
           { "label": "中", "value": "medium" },
           { "label": "低", "value": "low" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "assignee", "label": "负责人", "formtype": "Input" },
+      { "prop": "assignee", "label": "负责人", "formtype": "Input", "inQuery": false },
       {
         "prop": "escalateReason",
         "label": "升级原因",

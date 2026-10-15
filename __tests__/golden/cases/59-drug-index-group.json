@@ -9,7 +9,7 @@
     "fields": [
       { "prop": "drugName", "label": "药品名称", "formtype": "Input" },
       { "prop": "spec", "label": "规格", "formtype": "Input", "inQuery": false },
-      { "prop": "stockQty", "label": "库存数量", "formtype": "InputNumber" },
+      { "prop": "stockQty", "label": "库存数量", "formtype": "InputNumber", "inQuery": false },
       { "prop": "unit", "label": "单位", "formtype": "Input", "inQuery": false }
     ],
     "columns": [

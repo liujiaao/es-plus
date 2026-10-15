@@ -9,7 +9,7 @@
     "target": "vue2",
     "fields": [
       { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
-      { "prop": "amount", "label": "订单金额", "formtype": "InputNumber" },
+      { "prop": "amount", "label": "订单金额", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "memberLevel",
         "label": "会员等级",
@@ -17,7 +17,8 @@
         "dataOptions": [
           { "label": "普通", "value": "normal" },
           { "label": "VIP", "value": "vip" }
-        ]
+        ],
+        "inQuery": false
       },
       {
         "prop": "freeShipNote",

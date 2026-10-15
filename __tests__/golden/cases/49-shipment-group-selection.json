@@ -9,7 +9,7 @@
     "target": "vue2",
     "fields": [
       { "prop": "shipmentNo", "label": "发货单号", "formtype": "Input" },
-      { "prop": "carrier", "label": "承运商", "formtype": "Input" },
+      { "prop": "carrier", "label": "承运商", "formtype": "Input", "inQuery": false },
       { "prop": "trackingNo", "label": "运单号", "formtype": "Input", "inQuery": false },
       { "prop": "consignee", "label": "收货人", "formtype": "Input" }
     ],

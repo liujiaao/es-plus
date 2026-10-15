@@ -71,7 +71,8 @@
       {
         "prop": "coverage",
         "label": "保额",
-        "formtype": "InputNumber"
+        "formtype": "InputNumber",
+        "inQuery": false
       }
     ],
     "actions": [

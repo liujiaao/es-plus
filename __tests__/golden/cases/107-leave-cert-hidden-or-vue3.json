@@ -17,10 +17,11 @@
           { "label": "年假", "value": "annual" },
           { "label": "病假", "value": "sick" },
           { "label": "事假", "value": "personal" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker" },
-      { "prop": "days", "label": "天数", "formtype": "InputNumber" },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker", "inQuery": false },
+      { "prop": "days", "label": "天数", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "sickProof",
         "label": "病假证明",

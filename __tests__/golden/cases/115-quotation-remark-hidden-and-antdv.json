@@ -17,9 +17,10 @@
           { "label": "标准品", "value": "std" },
           { "label": "其它", "value": "other" },
           { "label": "自定义", "value": "custom" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "qty", "label": "数量", "formtype": "InputNumber" },
+      { "prop": "qty", "label": "数量", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "remark",
         "label": "备注",

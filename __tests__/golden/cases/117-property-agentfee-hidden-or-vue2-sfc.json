@@ -10,7 +10,7 @@
     "mode": "sfc",
     "fields": [
       { "prop": "houseName", "label": "房源名称", "formtype": "Input" },
-      { "prop": "rent", "label": "月租", "formtype": "InputNumber" },
+      { "prop": "rent", "label": "月租", "formtype": "InputNumber", "inQuery": false },
       { "prop": "furnished", "label": "是否配家具", "formtype": "Switch", "inQuery": false },
       {
         "prop": "agentFeeNote",

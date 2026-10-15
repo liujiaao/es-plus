@@ -101,7 +101,8 @@
       {
         "prop": "submitter",
         "label": "提交人",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       }
     ],
     "actions": [

@@ -67,7 +67,8 @@
       {
         "prop": "amount",
         "label": "金额",
-        "formtype": "InputNumber"
+        "formtype": "InputNumber",
+        "inQuery": false
       }
     ],
     "actions": [

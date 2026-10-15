@@ -10,7 +10,7 @@
     "mode": "sfc",
     "fields": [
       { "prop": "deviceName", "label": "设备名称", "formtype": "Input" },
-      { "prop": "deviceCode", "label": "设备编号", "formtype": "Input" },
+      { "prop": "deviceCode", "label": "设备编号", "formtype": "Input", "inQuery": false },
       {
         "prop": "checkResult",
         "label": "巡检结果",
@@ -18,7 +18,8 @@
         "dataOptions": [
           { "label": "正常", "value": "ok" },
           { "label": "异常", "value": "fault" }
-        ]
+        ],
+        "inQuery": false
       },
       { "prop": "photoUrl", "label": "现场照片", "formtype": "Upload", "inQuery": false },
       {

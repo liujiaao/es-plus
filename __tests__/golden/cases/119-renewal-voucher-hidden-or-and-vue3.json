@@ -17,9 +17,10 @@
           { "label": "试用版", "value": "trial" },
           { "label": "标准版", "value": "std" },
           { "label": "企业版", "value": "ent" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "seats", "label": "席位", "formtype": "InputNumber" },
+      { "prop": "seats", "label": "席位", "formtype": "InputNumber", "inQuery": false },
       { "prop": "couponCode", "label": "优惠码", "formtype": "Input", "inQuery": false },
       {
         "prop": "renewalVoucher",

@@ -18,9 +18,10 @@
           { "label": "办公用品", "value": "office" },
           { "label": "设备", "value": "device" },
           { "label": "服务", "value": "service" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "budgetCode",
         "label": "预算科目编码",

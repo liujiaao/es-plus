@@ -17,9 +17,10 @@
           { "label": "交通", "value": "trip" },
           { "label": "餐费", "value": "meal" },
           { "label": "住宿", "value": "hotel" }
-        ]
+        ],
+        "inQuery": false
       },
-      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
       {
         "prop": "invoiceNo",
         "label": "发票号",

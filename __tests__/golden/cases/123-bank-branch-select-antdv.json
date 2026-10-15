@@ -100,7 +100,8 @@
       {
         "prop": "accountNo",
         "label": "账号",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       }
     ],
     "actions": [

@@ -120,6 +120,14 @@ describe('buildNlToConfigSystemPrompt — 组装与无损性', () => {
     expect(menu?.reasoning).toContain('app.use(ESPlus,{t})')
   })
 
+  it('带上「只在该排除时才写 false，省略即包含」的双向规则（inQuery 陷阱）', () => {
+    // 单边规则（只说「没提到就写 false」）会把「NL 没提查询但 gold 靠默认 true」的用例教坏；
+    // 另一单边（不写规则）则放任模型在 NL 穷举列举时漏标排除。两向都必须说清，故两向都钉。
+    expect(prompt).toContain('Exclude ONLY where the description says so')
+    expect(prompt).toContain('Do NOT invent an exclusion')
+    expect(prompt).toContain('Only an explicit `false` excludes')
+  })
+
   it('要求只输出 JSON（否则模型会裹 markdown 围栏，调用方 JSON.parse 直接抛）', () => {
     expect(prompt).toContain('Respond with ONLY the JSON object')
   })
@@ -182,6 +190,23 @@ describe('NL_TO_CONFIG_FEWSHOT — 维度覆盖（few-shot 必须教全这些能
       cfgs.some((c) => c.operationColumn !== undefined && c.operationColumn !== false),
     'target:vue2': () => cfgs.some((c) => c.target === 'vue2'),
     'target:antdv': () => cfgs.some((c) => c.target === 'antdv'),
+    // ── AI-33⑥：补齐 6 个「scorer 里有维度、COVERAGE 里无人承担」的高级能力 ──────
+    // 这 6 个键在 scorers.mjs 里各有独立维度（reactions:295 / columns:302 /
+    // expandConfig:309 / treeConfig:316 / editConfig:324 / mergeConfig:332），
+    // 但此前 COVERAGE 只到 19 条，漏了它们 —— 删掉对应 few-shot 无人报警，
+    // 模型会在该维度静默回退。补上断言即闭环（**无需新增 few-shot**：6 个维度
+    // 现有示例已全部演示，本组只是把「已被演示」这件事钉成可失败断言）。
+    'reactions（字段联动）': () => anyField((f) => f.reactions !== undefined),
+    // 多级表头的键名是 `groups`（递归 ColumnSchema，structured-config.schema.ts:288），
+    // **不是** `children` —— 组件 TableColumn.groups 同形。
+    'columns 多级表头（groups 递归）': () =>
+      cfgs.some((c) => (c.columns ?? []).some((col) => Array.isArray(col.groups) && col.groups.length > 0)),
+    'expandConfig（声明式行展开）': () => cfgs.some((c) => c.expandConfig !== undefined),
+    'treeConfig（声明式树表）': () => cfgs.some((c) => c.treeConfig !== undefined),
+    // vxe 行内编辑在 tableOptions 下（顶层无 editConfig 键）；列级 editRender 由
+    // columns 维度整体深等覆盖，与 scorers.mjs:324 的分工一致。
+    'tableOptions.editConfig（vxe 行内编辑）': () => cfgs.some((c) => c.tableOptions?.editConfig != null),
+    'mergeConfig（声明式合并单元格）': () => cfgs.some((c) => c.mergeConfig !== undefined),
   }
 
   for (const [dim, present] of Object.entries(COVERAGE)) {

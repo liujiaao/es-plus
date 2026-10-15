@@ -133,7 +133,8 @@
       {
         "prop": "address",
         "label": "详细地址",
-        "formtype": "Input"
+        "formtype": "Input",
+        "inQuery": false
       }
     ],
     "actions": [

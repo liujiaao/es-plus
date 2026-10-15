@@ -16,7 +16,8 @@
         "dataOptions": [
           { "label": "合作中", "value": 1 },
           { "label": "已停用", "value": 0 }
-        ]
+        ],
+        "inQuery": false
       }
     ],
     "columns": [
