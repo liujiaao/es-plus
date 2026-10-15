@@ -265,6 +265,38 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **边界（house doctrine）**：**不生成** `onConfirm`/`onClosed` 里的 API 调用等**业务编排**（host orchestration）；骨架里以显式 `TODO(es-plus)` 槽标注，与字段级 `render` 占位同族。业务行为正确路径是 `dialogKey` + `actionType` 事件外抛（7749620 先例），**非**塞进 AI 配置。
 - **状态**：**未落地**。
 
+### AI-33 — 度量管道修复 + 95% 口径拍板（∨ 双轨）· `M`（**信任链首位**）
+- **Why**：硬指标「≥95%」当前**无任何可信产物**。① 唯一持久产物 `__tests__/golden/last-accuracy.json` 停在 **2026-10-12 / 29 例**（语料现实 **186 例**）；② 徽章 `last-accuracy-badge{,-scoped}.json` 实测 **30.4% / 60.9% 双红**，**夜间已 3 天未刷新**（最后徽章提交 `5777583 @ 2026-10-12`）；③ **门禁与定义错位**：夜间门禁钉 `exactIntentCore`（`eval-llm.mjs:335` `gateExact = exactHeldout`、`:452` `passed: gateExact >= TARGET_ACCURACY`、`:498` `exit 1`；徽章 `:464` 同用），而「95% 定义」`definition95`（∨：scoped zero-edit ∨ ≤K 收敛）**只观测、不门禁**（`eval-llm.mjs:440` 明注「只观测、不门禁」）；④ **被测路径 ≠ 宣称主路径**：eval 编译校验**只调 `generateFromConfig`**（`eval-llm.mjs:39`/`:215`），**0 次调前门 `generate_crud`**，而该工具自称 "FRONT DOOR"（`generate-crud.ts:132`）。**管道不修，任何口径都是空口径**。
+- **口径拍板（2026-10-15）**：**头条门禁 = ∨**（scoped zero-edit ∨ ≤K=3 收敛，落 heldout）；**`exactIntentCore` 降为并列公布的诊断指标**（进报告/看板/按维度 diff，**不进 exit code**）。三者合起组成稳定解，缺一即有失效模式：**core 当门禁 → 永久红 → 红盲**；**∨ 单独当门禁 → 加简单语料即可稀释均值**；**∨ + per-dimension ratchet + core 非回归地板 → 无已知失效模式**。理由：产品形态内含 `validate_config + refine_config + 宿主重试`，「≤K 轮收敛」**就是实际使用路径**（TypeChat 同构：repair 回路是系统的一部分）；one-shot exact 当门禁 = 永久红 = 红盲（比无门禁更糟）。
+- **验收**：① **修 nightly 3 天断供**（先查 secret/调度根因）→ 跑全量付费 eval → 真数字回写 `last-accuracy.json` + 两徽章（**由 nightly workflow 回写；本地跑完须还原、不得本地提交**——本仓铁律）；② 门禁从 `exactIntentCore` 迁到 `definition95`，core 保留并列输出；③ **徽章与门禁同源**（徽章 = ∨，非 core），防「CI 绿、徽章红」次级红盲；④ **core 非回归地板**（如 <20% 直接红），防收敛腿掩盖 core 崩塌；⑤ `last-accuracy.json` 增 **`byDimension` 基线** + 「维度 < 基线 → 红」检查，**并加防「删难例洗分」守卫**；⑥ **补 6 条 few-shot COVERAGE 断言**（`packages/shared/__tests__/ai-nl-to-config-prompt.spec.ts:151` 的 `COVERAGE` 现 19 条）：`reactions`、`columns/columnGroups`、`expandConfig`、`treeConfig`、`editConfig`、**`mergeConfig`**（❌ 前序误记为 5，实为 **6**——`mergeConfig` 在 `scorers.mjs:332` 有维度、COVERAGE 里无）；⑦ **扩 heldout 到 ≥60 例纯泛化**——❌ **反噬警告**：补 COVERAGE 会迫使加 few-shot，而 few-shot 与 `FEWSHOT_DERIVED`（`eval-llm.mjs:67`）同源，**若不同步扩 heldout 则诚实语料缩水**，与目标自相矛盾；⑧ **eval 扩前门冒烟**（对 `generate_crud` 至少跑一遍）。**变异验证**：篡改 ∨ 分数 → `exit 1`；某维度退步 → 红；删 few-shot 示例 → 红。
+- **状态**：**未落地**（2026-10-15 度量可信度被打穿后立项）。**执行顺序首位**——它是其余各项的「完成定义」。
+
+### AI-29 — `vxeFirstClass` 降档 + B 档「第二腿」守卫 · `S`
+- **Why**：`vxeFirstClass`（11 键：`vxeConfig`/`vxeOn`/`toolbarConfig`/`exportConfig`/`proxyConfig`/`footerMethod`/`keyboardConfig`/`mouseConfig`/`columnConfig`/`showFooter`/`mergeFooterItems`）记 **B**（暗示 from_config 可达），但**实测 AI 面零可达**：这些键在 `packages/shared/src` 与 `packages/mcp-server/src` **只出现在 `get-component-api.ts:208-219` 的文档串**，两处 AI Zod 零声明、生成器零发射；`generate_crud_from_config` 的 `tableOptions` 是**闭合 `z.object`（`generate-from-config.ts:433-493`）→ strip**，前门 `tableOptions` 虽 `z.record`（`generate-crud.ts:82`）放行但生成器白名单不发（`structured-generator.ts` 无这些键）→ **静默丢弃、零告警**。运行时确有 `options.vxeConfig` 深合并逃生舱（`get-component-api.ts:219` 自述 last-wins）→ 它们是 **C（逃生舱）/ D**，不是 B。
+- **验收**：① `vxeFirstClass` 降 **C**（走 `vxeConfig`/`vxeOn` 逃生舱 + 教学指引）或 **D**；② `check-feature-coverage.mjs` 给 B 档 `via:'AI-Zod-absent'` 补**第二条腿**——断「声明的键**真能经 from_config 发射**」（现 `:188-193` 只查「键缺席」，从不查可发射）；③ 教学：`vxeConfig`/`vxeOn` 逃生舱用法补进 AI 提示词/示例。
+- **状态**：**未落地**（本审计 2026-10-15 命中档位虚标）。
+
+### AI-32 — 契约双份全等守卫 + MCP resource 第三份对齐 · `S`
+- **Why**：① shared zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 内联 zod3 `configShape`（20 键）当前一致，但 `check-schema-contract.mjs:281-284` 只按**枚举清单逐项断** → **往任一处加非清单键（或改 `dialogs`/`operationColumn`/`pagination`/`formLayout` 形状）→ 两守卫全绿而镜像已分叉**（mcp 侧 `z.object` 无 passthrough → 静默 strip）；`readReachability()` 只读 `generate-crud.ts`，**从不读 `generate-from-config.ts`**。② MCP resource `resources/crud-page-schema.ts:58-68` 是 **`CrudDialogConfig` 的第三份**且漂移：`render` 是 **3 参**（运行时 2 参 `(h, ctx)`）、叫 **`onCancel`**（运行时 `onClose`）、缺 `configBtn/isDraggable/maxHeight/fullscreen/onOpen`——**教给宿主 LLM 的接口与运行时契约不符**。③ `readReachability` **不下潜 `dialogs`**。
+- **验收**：① 新断言 **`configShape` 顶层键集 === `schemaKeys`**（`entry-keys.mjs` 增读 `generate-from-config.ts`）；② `readReachability()` 下潜 `dialogs`（产出 `dialogKeys`），与 AI-26 的 `STRUCTURED_DIALOG_CONTRACT` 合用；③ MCP resource 类型与运行时 `CrudDialogConfig` 逐键同步 + 守卫咬住（含 `render` 签名元数）。**变异验证**：往 `configShape` 加游离键 → 红；改 resource `onCancel`↔`onClose` → 红。
+- **状态**：**未落地**。
+
+### AI-30 — SFC/schema 表达力对齐（双模式同产物）· `M`
+- **Why**：**同一份配置换 `mode` 产物不等价**。① `estimatedRowHeight`/`overscanCount`/`rowClassName` 仅在 schema 分支发射（`structured-generator.ts:223-225`），**SFC 分支（`:577-606`）无**；② `height` 在 SFC 被门进 `if(tOpts.virtual)`（`:577-581`），schema 独立发（`:218`）；③ SFC **显式不消费** `dialogs`/`tableBtns`/`toolbarBtns`/`operationColumn`（`:379-400`，**有告警 non-silent**）。→ `virtualScroll`(A) 与行样式在 `mode:'sfc'` 下部分不可达；违背宗旨中的**模式一致**（「同一份配置、三端一致、可复现」）。
+- **验收**：① SFC 发射链补齐三键 + `height` 解绑；② `dialogs`/`tableBtns`/`toolbarBtns`/`operationColumn` 在 SFC 的降级**进台账 + 公开 SFC 能力表**（明示边界，别让用户生成失败才发现）；③ 变异验证：同一 config 两 mode 的产物差异断言。**边界**：`render`/`formatter` 的 schema 降级（TODO 槽 + 告警）是**有意 Tier-3 逃生舱**，不在本项拉平范围。
+- **状态**：**未落地**（本审计 2026-10-15 命中双模式不等价）。
+
+### AI-31 — 表单字段扩展点接线（`render`/`httpRequest`/`on`/`isInitRun`）· `M`（**需小设计**）
+- **Why**：`renderFn` 声明 **C 档「永久逃生舱」**，但 `buildFormItem`（`structured-generator.ts:1034-1095`）**从不 emit `render`**，且 `renderFields = tableFields.filter(f => f.render)`（`:157`）**只扫表格字段** → 文档站 demo 07/13「表单里的 render」在 **schema/SFC 两模式全丢且无告警**（**C 档名不副实**）。同理 `on`/`httpRequest`/`listenToCallBack`/`isInitRun`（运行时真开关，demo 06/12/13/15/18 全靠）AI Zod **零声明 → 静默 strip**，**连 Tier-3 源码串通道都没开**。另 `formLayout.span` 幽灵键（schema `:527-528` + 文档宣传，但 `es-crud-page.vue:274-284` 只消费 `labelWidth`/`minFoldRows` → **组件丢弃**）；`entryQuery`（运行时存在、AI 未建模）同族。
+- **验收（建议先出一份小设计——涉及「schema 模式纯 JSON 限制」老结构约束）**：① `buildFormItem` 补 `render` emit 或补 **`TODO(es-plus)` 占位 + 降级告警**（与表格 `render` 同待遇，过 `assertEmittableExpr` 门）；② `on`/`httpRequest`/`isInitRun`/`entryQuery` 至少给 Tier-3 源码串逃生舱或**显式登记为 C/D**（不静默）；③ `formLayout.span`（**❌ 2026-10-15 更正：不是「组件补转发一行」**——core **无 layout 级 span 消费者**，只读**字段级** `item.span`（`form-layout.ts:63`/`field-resolver.ts:174`），把 span 送进 `formLayProps` 无人读 = **假修**）：**(a) core 把 layout 级 span 当默认值应用到未配 span 的字段**，或 **(b) 从 schema/文档删除**（二选一，不许继续「文档承诺 > 运行时」）；另 `scorers.test.mjs:67` 用 `formLayout:{span:12}` 触发 formLayout 维度 = **给死键记分**，一并处理。
+- **状态**：**未落地**。**边界**：函数值键留 Tier-3；不做 DSL 化（AI-16 另一轨）。
+
+### AI-34 — 三向一致性扫描（Zod 声明 ↔ 生成器发射 ↔ 组件消费）· `S`
+- **Why**：本轮审计**同时**命中四种「漏算」——**声明未发射**（`estimatedRowHeight` 等 SFC 丢）、**发射未消费**（**❌ 更正：`hasCustomRender` 并非幽灵**——`generate-from-config.ts:648` 校验用它放行「无 formItems 的变更型弹窗」、`structured-generator.ts:288-290`/`:986-989` 生成器用它派生 TODO 槽 + 告警；真问题是它**未进运行时 `CrudDialogConfig` 类型**，属**契约不一致（AI-only key）**而非死键）、**消费未声明**（表单 `on`/`httpRequest`、dialog 5 键）、**未建模**（`entryQuery`、`isInitRun`、vxe `showFooter`/`footerData`）——但它们**分散在各条**、且**无守卫系统化咬住**；补扫一遍即防下一轮扩能力时再引入新的静默剥离。
+- **⚠ 前提更正（2026-10-15 全量实测）**：原拟「补扫」的键**大部分早已齐全**——14 键矩阵显示 `cachePageSelection`/`localPagination`/`defaultSort`/`emptyText`/`refetchKeepPage`/`snIndex`/`showHeader`/`leftText`/`heightType`/`tabHeight` **共 10 个已在 shared Zod + 生成器发射 + from_config Zod 三处齐全**（**非缺口**）；真未建模仅 **4 个**：`showFooter`/`footerData` 归 **AI-29**（vxe 键）、`isInitRun`/`entryQuery` 归 **AI-31**（字段级）。故本条**净新增 ≈ 0**，改为**机制性扫描**（详见 [AI-FULLSCENE-PLAN.md](./AI-FULLSCENE-PLAN.md) §8.3）：
+- **验收**：建一枚**三向一致性表/守卫**——对 `tableOptions` ∪ `FieldConfig` ∪ `formLayout` ∪ `DialogConfigSchema` 每个键，断「Zod 声明 ⊆ 生成器发射（双模式）∪ 显式降级登记」且「生成器发射 ⊆ 组件消费 ∪ 独立注入白名单」；四类漏算逐行非空原因。**变异验证**：任一处新增未接线键 → 红。
+- **状态**：**未落地**。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）
@@ -299,7 +331,20 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 
 ---
 
-## 建议执行波次
+## 执行波次
+
+> **全场景最优方案（执行面）**：[AI-FULLSCENE-PLAN.md](./AI-FULLSCENE-PLAN.md) — Wave 0–3 执行计划 + 三处硬伤更正（`hasCustomRender` 不可删 / `formLayout.span` 不可假修 / AI-34 无键可补）。
+
+### 当前执行计划（2026-10-15 · 依赖驱动）
+
+| 波 | 内容 | 理由 |
+|----|------|------|
+| **Wave 0 · 止血**（今天） | 提交推送 AI-29~34 → 双徽章回灰 `pending nightly` → AI-31/AI-34 更正回写 | 零成本消除「README 展示过期红数字」的信任伤口（AI-04 已设计 `pending nightly` 占位态）。 |
+| **Wave 1 · 度量地基**（2–3 天） | **AI-33**：修 nightly 断供 → 门禁迁 ∨（+ core 非回归地板 + 徽章与门禁同源）→ per-dimension ratchet → 补 **6** 维 few-shot COVERAGE（配纯 heldout 例）→ eval 扩前门冒烟 | 度量先行（无产物 = 无完成定义）；被测路径必须 = 宣称主路径。heldout 先扩到 **≥60** 再上 ∨ 门禁（23 例单例 = 4.3pp，是噪声）。 |
+| **Wave 2 · 契约守卫**（1–2 天） | **AI-26** + **AI-29** + **AI-32**：dialog 契约守卫轴 / `vxeFirstClass` 降档 + B 档第二腿 / 双份 Zod 全等断言 + MCP resource 第三份对齐 | 先有护栏再施工；锁 AI 契约 vs 运行时/资源的**三处差集**。 |
+| **Wave 3 · 接线修复**（3–5 天） | **AI-27** + **AI-30** + **AI-31** + **AI-34**：dialog 配置面收敛 / SFC-schema 对齐 / 表单扩展点接线 / 三向一致性扫描 | 修复本身；每条带 golden 用例 + 运行时见证。 |
+
+### 历史波次（Wave 1–7 · 存档）
 
 | 波 | 内容 | 理由 |
 |----|------|------|
@@ -309,6 +354,6 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 | **Wave 4 · 最高频声明式缺口**（阶段 1，Tier-1） | ~~AI-08 configTableOut（响应映射路径对象）~~ ✅ → ~~AI-06 isHidden（声明式条件）+ golden 扩 L3/L4~~ ✅ → ~~AI-09 前置（扁平vs拆分架构定稿）~~ ✅ 选 (a) `columns` 富列数组 → ~~AI-09 子项① groups（多级表头）~~ ✅ | 中心度第一（数据接线）+ 最刺眼缺口；真正的「全场景」第一步。AI-08 已落地（schema/generator/前门教学/scorer/golden 8 例/运行时见证）。AI-06 已落地（core 运行时编译 + 三端零改动 + AI Zod/生成器/scorer/golden 8 例/运行时见证 + **MCP 内联 Zod 补齐 + 守卫**）。AI-09 前置已定稿（架构抉择 (a)，依据/语义/渲染器约束见 AI-09 段）；子项① groups 已落地（Zod 递归 `columns` 双份 + 生成器双模式 + 守卫 + scorer + meta-eval + **golden L4 15 例** + 教学 + vue3 运行时见证）；子项② expand+expandConfig 已落地（顶层 `expandConfig` Zod 双份 + 生成器 `applyExpandConfig`（前置/挂现有列）+ 三端渲染 + **antdv `expandEnabled` 放宽** + scorer + meta-eval + **golden L4 15 例** + 教学 + vue3/antdv 运行时见证 + JSON 单源补键）；子项③ treeConfig 已落地（顶层 `treeConfig` Zod 双份 + 生成器双模式逐键发射 + **三端运行时接线**（el-table `treeProps`/`defaultExpandAll` · antdv `childrenColumnName`/`defaultExpandAllRows` 放宽 · vxe 零改动）+ scorer + meta-eval + **golden L4 15 例** + 教学 + vue3/antdv 运行时见证）。 |
 | **Wave 5 · 高级表格 epic**（阶段 2，Tier-1） | AI-09 拆 4 子项（~~① groups~~ ✅ → ~~② expand+expandConfig~~ ✅ → ~~③ treeConfig~~ ✅ → ~~④ editConfig~~ ✅）**epic 完结** + 架构已定稿（`columns` 富列数组）+ golden L4（≥15/维） | L4 头牌「超库上限」，类型化结构可 golden。 |
 | **Wave 6 · 表达式 DSL 基石**（阶段 3，Tier-2） | AI-16（CEL，不含 render）→ AI-07（联动/computed）+ 收窄 formatter/permissionValue/isHidden | DSL 做底座，安全解锁联动，收敛逃生舱。 |
-| **Wave 7 · 生成表达力对齐**（阶段 4） | AI-22（strip-hazard 收敛）→ AI-24（守卫先行）→ AI-21①②③④（前门表达力对齐 epic）→ AI-23（跨端合并单元格，唯一动 renderer，排最后）→ AI-25（AI 可达性台账：96 例文档特性 × 分层可达性，受守卫的单一真源）→ **AI-26（dialog 契约守卫，守卫先行，锁两条差集）→ AI-27（dialog 配置面收敛）→ AI-28（useDialog 骨架生成）** | 瓶颈不在模型在**入口边界**：最常用前门只到 schema 一小半且无守卫可见。先把 strip-hazard 与「入口 vs schema」守卫落地，再让前门一步可达全场景；合并单元格风险最高故排最后（antdv 需新增 customCell 桥）。AI-25 补上**下游侧**另一条无人守望的轴：「文档新特性落盘 → 它是否 AI 可达」，使「新特性落文档」与「AI 可达性分类」之间的缺口可被自动咬住。AI-26/27/28 再补**组件契约侧**第三条轴：交付「`useDialog` 完全能力如何 AI 可达」。AI-26 守卫先行、锁**两条**差集（① `CrudDialogConfig` 运行时 13 键 vs `DialogConfigSchema` AI 10 键 的静默剥离；② core `DialogOptions` / legacy `dialog-options.schema.json` / AI Zod 三套词汇漂移），并堵住「`check-schema-contract` 对 dialog 零断言 + `readReachability` 不下潜 `dialogs`」的盲区。AI-27 承差集①**收数据键 typed 镜像**（只收三端等价可得子集，端特化键按 `check-type-exports` 既有范式登记偏差、不硬凑 antdv）+ **sfc 源码串通道**（schema 模式明示降级）+ **消除 `openDialog` 硬编码 9 键转发的静默丢弃**；函数值键留 Tier-3。AI-28 补命令式面：`generate_dialog` 加「形态开关 + options 块」生成 `useDialog` 骨架 + 宿主槽位（**不**生成业务编排）。 |
+| **Wave 7 · 生成表达力对齐**（阶段 4） | AI-22（strip-hazard 收敛）→ AI-24（守卫先行）→ AI-21①②③④（前门表达力对齐 epic）→ AI-23（跨端合并单元格，唯一动 renderer，排最后）→ AI-25（AI 可达性台账：96 例文档特性 × 分层可达性，受守卫的单一真源）→ **AI-26（dialog 契约守卫，守卫先行，锁两条差集）→ AI-27（dialog 配置面收敛）→ AI-28（useDialog 骨架生成）** | 瓶颈不在模型在**入口边界**：最常用前门只到 schema 一小半且无守卫可见。先把 strip-hazard 与「入口 vs schema」守卫落地，再让前门一步可达全场景；合并单元格风险最高故排最后（antdv 需新增 customCell 桥）。AI-25 补上**下游侧**另一条无人守望的轴：「文档新特性落盘 → 它是否 AI 可达」，使「新特性落文档」与「AI 可达性分类」之间的缺口可被自动咬住。AI-26/27/28 再补**组件契约侧**第三条轴：交付「`useDialog` 完全能力如何 AI 可达」。AI-26 守卫先行、锁**两条**差集（① `CrudDialogConfig` 运行时 13 键 vs `DialogConfigSchema` AI 9 键 的静默剥离；② core `DialogOptions` / legacy `dialog-options.schema.json` / AI Zod 三套词汇漂移），并堵住「`check-schema-contract` 对 dialog 零断言 + `readReachability` 不下潜 `dialogs`」的盲区。AI-27 承差集①**收数据键 typed 镜像**（只收三端等价可得子集，端特化键按 `check-type-exports` 既有范式登记偏差、不硬凑 antdv）+ **sfc 源码串通道**（schema 模式明示降级）+ **消除 `openDialog` 硬编码 9 键转发的静默丢弃**；函数值键留 Tier-3。AI-28 补命令式面：`generate_dialog` 加「形态开关 + options 块」生成 `useDialog` 骨架 + 宿主槽位（**不**生成业务编排）。 |
 | **横切**（贯穿 Wave 4–6） | AI-18 provide/inject 恒吐 + AI-19 全局装配教学 | 非 schema，守头牌「零代码联动」compile+runtime。 |
 | **降优先/暂停** | AI-11（非默认低保真 SFC parity）· AI-15（RAG，场景到量再做）· AI-13（spike，host 杠杆非 server）· AI-17（平台） | 当前投入为净负担或非 server 可控。 |
