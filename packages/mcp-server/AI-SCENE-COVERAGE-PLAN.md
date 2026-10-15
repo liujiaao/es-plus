@@ -55,6 +55,11 @@
 **关键读法**：`target`/`mode`/`membership` 三维合计约 **32%** 的失分**不是模型能力问题**（F9 + inQuery 陷阱）。
 真正需要工程投入的是 `reactions`/`expandConfig`/`columns`/`editConfig` 这组高级特性。
 
+> ⚠️ **口径提醒（2026-10-15 更正）**：上表是 `byCapability`（即 `exactIntentFull` 的分维），**含** `target`/`mode`/`membership`。
+> 但**门禁指标 `exactIntentCore` 只含 prop/attr/actions/tableBtns 四维**（`scorers.mjs:469`），**不含**这三者。
+> 所以本表 **不能**用来解释徽章 39.4%；它解释的是 `exactIntentFull` 与 **`definition95`**（用户拍板的 95% 定义）。
+> 详见下方 F9「要害澄清」。
+
 #### 1.1.1 徽章史（**2026-10-15 逐夜取 Actions 日志坐实**，取代任何推测）
 
 | 日期 | 真实测量？ | 当夜成绩 | 判据（Actions 日志原文） |
@@ -225,10 +230,9 @@ PPIO 中继**账户/成员额度耗尽**。**key 有效**，是余额问题，**
 门禁的分子里混着 few-shot recall。**Wave 1.4 的「FEWSHOT_DERIVED 登记不全」从警告升级为必修项**：
 按语义（非文本相似度）逐一裁定 22 条 few-shot ↔ 186 case 的对应关系，登记全，再上闸。
 
-### F9 · `target`/`mode` 是被**扣留的宿主输入** → ≥95% 在算术上不可达（**2026-10-15 首次真实测量后确证，最要害**）
+### F9 · `target`/`mode` 是被**扣留的宿主输入** → 已拍板的「95%」在算术上不可达（**2026-10-15 首次真实测量后确证；2026-10-15 已实施**）
 
-**现象**：首次真实测量（186 例，2026-10-15）门禁 `exactIntentCore` = **39.4%**；其中
-`target` 维 **45.8%**（38/83）、`mode` 维 **39.1%**（18/46）。
+**现象**：首次真实测量（186 例，2026-10-15）`target` 维 **45.8%**（38/83）、`mode` 维 **39.1%**（18/46）。
 
 **根因（逐行核实）**：schema 里 `mode` 默认 `'schema'`、`target` 默认 `'vue3'`
 （`structured-config.schema.ts:522-523`），而**前门 `crudShape` 把二者作为显式入参**
@@ -236,34 +240,68 @@ PPIO 中继**账户/成员额度耗尽**。**key 有效**，是余额问题，**
 识别后传入，`mode` 由宿主按用户意愿选定。`INSTRUCTIONS` 亦明说「**Detect the target FIRST**, then call
 the generator」。**从不由模型从 NL 推断**。
 
-**但 `eval-llm.mjs` 只喂 `nl`（+ `fixedFields`）**（`buildInitialMessages`，`:130-137`），
+**但 `eval-llm.mjs` 只喂 `nl`（+ `fixedFields`）**（原 `buildInitialMessages`，`:130-137`），
 却要求模型产出含 `target`/`mode` 的完整 config → 模型只能回落到 schema 默认值 → 必错。
 
-**量化（NL 文本信号实测）**：
+#### 要害澄清：**被锁的是哪条指标**（此条先前记错，2026-10-15 逐行复核后更正）
 
-| 维度 | 文件名编码该维 | 其中 **NL 从未提及** |
+`scorers.mjs:469` 的 `exactIntentCore` **只含四维** —— `propF1 ∧ attrAcc ∧ actionsF1 ∧ tableBtnsMatch`，
+**`target`/`mode` 不在其中**。而门禁/徽章/`inSchemaIntentZeroEdit` 正取自它
+（`eval-llm.mjs:270` `exact = meanAll(r => r.exactIntentCore)`；`:377` `gateExact = exactHeldout ?? exact`）。
+故：
+
+| 指标 | 是否含 target/mode | 受 F9 扣留影响 |
 |---|---|---|
-| `vue3` | 12 例 | **12（100%）** |
-| `vue2` | 16 例 | 11（69%） |
-| `antdv` | 14 例 | 5（36%） |
-| `mode=sfc` | 39 例 | 25（64%） |
+| `exactIntentCore`（**门禁**、徽章、`inSchemaIntentZeroEdit`） | ❌ 不含 | **不直接受** |
+| `exactIntentFull`（`:472`，所有 applicable 维度 AND） | ✅ 含 | **受**（仅观测、不门禁） |
+| `exactIntentScoped` → **`definition95`**（`:476`，按 `pinnedDims`） | ✅ 含（75 例 pin `target`、41 例 pin `mode`） | **受** |
 
-**由此锁定的算术上限**（heldout 180 例，`target≠vue3 且 NL 无信号` ∪ `mode=sfc 且 NL 无信号`）：
-**33 + 15 + 13 = 61 例（33.9%）永不可能精确命中 → 精确命中率上限 = 66.1%**。
+> 结论修正：**39.4% 徽章是模型在四维上的真实缺口，没有被 66% 天花板压住**——
+> 该上限只压在 `exactIntentFull`（观测）与**用户已拍板的「95% = scoped zero-edit ∨ ≤K 轮收敛」**上。
+> 换言之：F9 不是徽章的解释，而是**「95% 定义」的解释**。
 
-> **结论：即便模型做完其余全部工作，「≥95%」仍数学上不可达。** 当前 39.4% 距上限 66.1% 的
-> 26.7pp 才是模型真正可进步的区间；剩下 33.9pp 是**度量构造缺陷**。
+#### 定义级证据（非文本相似度猜测）：`pinnedDims` 自己断言了 target/mode，而 NL 无任何信号
+
+语料在 `pinnedDims` 里**显式把 `target`/`mode` 列为「NL 真正锁定、须考核」的维度**
+（`scorers.mjs:429-430` 的口径），可 NL 全文没有任何平台/形态线索——
+**该 pin 无从证伪**。这类例不可能由模型命中，**与模型强弱无关**。
+
+**量化（heldout 180 例）**：
+
+| 口径 | 判据 | 死例 | 剩余上限 |
+|---|---|---|---|
+| A：`gold.target≠vue3` ∩ NL 无信号 ∪ `gold.mode=sfc` ∩ NL 无信号 | 维度 applicable 即考核 | **60（33.3%）** | **66.7%** |
+| B：`pinnedDims` 断言 target/mode ∩ NL 无信号 | 语料自证的 pin | **58（32.2%）** | **67.8%** |
+
+两法独立收敛到 **≈1/3**（缺 target 44–45、缺 mode 25–28，有重叠）。
+**并且 58 例的第二条腿也是断的**：`refinements` 语料全库仅 **5/180**（2.8%），这 58 例**无一例**带 refinements
+→ turn-0 scoped 恒假 **且** 无收敛语料可救 → **`definition95` 上限 = 67.8%**。
+
+> **结论：即便模型做完其余全部工作，已拍板的「≥95%」在 `definition95` 口径上数学不可达（上限 67.8%）。**
+> 首测 `definition95` = **0.40**（72/180）：距上限还有 27.8pp 是模型真正可进步区间，另 32.2pp 是**度量/语料构造缺陷**。
 
 **这是 F1「被测 ⊊ 宣称」在度量内部的又一次显现**——eval 测的是一条**生产上从不发生**的流程。
 
-**修法（非模型工程）**：把 `target`/`mode` 作为**给定输入**喂进 prompt（完全仿照既有的 `fixedFields` 机制，
-`:130-137` 已经在给 props）。这与生产一致：宿主先 `detect_project_target` 再生成。
-**与 F8 同属「上闸前必修」**——否则门禁把「模型猜不到的宿主输入」算成模型错误。
+#### 修法（非模型工程）——**2026-10-15 已实施**
+
+把 `target`/`mode` 作为**给定输入**喂进 prompt（仿既有 `fixedFields` 机制），与生产一致：宿主先
+`detect_project_target`、选定 mode，再生成。落点（全部为**非模型工程**的度量修正）：
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/prompt.mjs`（新） | 抽出 `buildInitialMessages(nl, fixedFields, given)` + `buildGivenLine`；纯函数、无 SDK，头注记全 F9 依据 |
+| `scripts/eval-llm.mjs:42` | 改为 import；调用点传 `{ target: gold.target, mode: gold.mode }`（Zod 已应用默认值，恒有值） |
+| `scripts/eval-llm.mjs` record | 新增 `givenInputs: ['target','mode']`——**口径自明**：非空 ⟹ 该准确率是「给定平台/形态下」的，不是「猜出来的」。旧产物无此字段 = 未修的旧口径 |
+| `scripts/eval/prompt.test.mjs`（新）+ `check:eval-prompt` | 进 `check:consistency`。钉三条：①给定则明示含「勿推断/勿覆盖」；②**未给定时逐字节等于旧 prompt**（防静默改写语料口径）；③**不给 scorer 放水**——`target`/`mode` 维度仍比对 gold vs pred，「给了却不照抄」照旧翻红 |
+
+**为什么这不是放水**：给定的是**宿主本该给的输入**，考核点从「读心」变为「回抄保真度 + 其余全部推断」；
+四维门禁与所有其它维度**一字未动**。已用确定性断言（无 LLM 调用、零成本）验证：186 例 372 个语言行的
+prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 
 **同族已知缺陷（一并列此，皆为语料/门禁构造问题，非模型缺口）**：
 ① `inQuery/inTable/inForm` 默认 `true` 陷阱 → `membership` **48.3%**（87/180）——见 [[golden-inquery-default-true-trap]]；
-② 本条 `target`/`mode` 扣留 → 上限 **66.1%**；
-③ F8 的 few-shot 登记不全 → heldout 虚高。
+② 本条 `target`/`mode` 扣留 → `definition95` 上限 **67.8%**（**已修**）；
+③ F8 的 few-shot 登记不全 → heldout 虚高（**待修**）。
 **三者修完之前，任何「准确率」数字都不可用于判定模型能力，更不可用于门禁。**
 
 
@@ -318,7 +356,7 @@ the generator」。**从不由模型从 NL 推断**。
 | 1.2 | **片段路径进 `check:consistency`**：`compile-smoke` 升格为门禁 + 新增 `check-scene-coverage`（断「四场景 × 三端 × 两模式」无空格） | 删任一场景覆盖 → 红 |
 | 1.3 | **前门进 eval**：对 `generate_crud`（含 no-table 分支）至少跑一遍 | 前门回归 → 红 |
 | 1.4 | AI-33 原 8 条（门禁迁 ∨ + core 地板 + per-dim ratchet + 徽章与门禁同源 + 补 6 维 COVERAGE + heldout ≥60 + 防删难例） | 篡改 ∨ / 维度退步 / 删语料 → 红 |
-| **1.0** | **⚠️ 前置（F9）：`target`/`mode` 作为给定输入喂入 prompt**（仿 `fixedFields`）。**不做这条，1.4 的门禁就在惩罚模型猜不到的宿主输入**（算术上限 66.1%） | 把 61 例不可推断例改为「给定 target/mode」后，上限从 66.1% → 可验证地升高 |
+| **1.0** | ✅ **已实施（F9）**：`target`/`mode` 作**给定输入**喂入 prompt（`scripts/eval/prompt.mjs`，仿 `fixedFields`）。**不做这条，「95% 定义」就在惩罚模型猜不到的宿主输入**（`definition95` 上限 67.8%） | 58 例不可推断例改为「给定 target/mode」；`check:eval-prompt` 钉住旧路径逐字节不变 + 维度不放水 → 篡改即红 |
 
 > **反噬警告（已由 F8 升级为必修项）**：补 COVERAGE 会迫使加 few-shot，而 `FEWSHOT_DERIVED`（`eval-llm.mjs:67-74`）
 > 只登记 **6** 个文件、few-shot 已有 **22** 条 → 至少 **5 个未登记的同源 case 混在 heldout 里**（见 F8，`63-…` 相似度 0.91）。
@@ -392,7 +430,8 @@ the generator」。**从不由模型从 NL 推断**。
                 （今天只对 CRUD schema 路径成立；W1.2/1.3 后才四场景成立）
 准确率 ≥95%  := 各场景 heldout 上 definition95 = scoped zero-edit ∨ ≤K=3 收敛 ≥ 95%
                 + per-dimension ratchet + core 非回归地板 + 防「删难例洗分」守卫
-                【前置·F9】target/mode 必须作**给定输入**喂入；否则精确口径上限仅 66.1%，95% 不可达
+                【前置·F9】✅ 已实施：target/mode 作**给定输入**喂入；否则 definition95 上限仅 67.8%，95% 不可达
+                          （注：锁的是 definition95 的 scoped 腿，**不是** exactIntentCore——后者只含四维）
                 【前置·F8】FEWSHOT_DERIVED 按语义补全；否则 heldout 含 few-shot recall，分子虚高
                 【前置·同族】inQuery 默认 true 陷阱修完（membership 现 48.3%，多为语料缺陷非模型缺口）
 门禁         := definition95 进 exit code；exactIntentCore 降为并列诊断

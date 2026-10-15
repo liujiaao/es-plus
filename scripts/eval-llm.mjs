@@ -40,6 +40,7 @@ import {
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
+import { buildInitialMessages } from './eval/prompt.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -126,15 +127,6 @@ async function callModel(client, system, messages) {
   return textOf(res)
 }
 
-/** 构造初始对话。B2：标了 fixedFields 时把它们喂给模型（从「猜字段」变「给定字段」）。 */
-function buildInitialMessages(nl, fixedFields) {
-  const content =
-    Array.isArray(fixedFields) && fixedFields.length
-      ? `${nl}\n\nFields (given — use EXACTLY these props; infer each field's formtype / membership / actions / layout): ${fixedFields.join(', ')}`
-      : nl
-  return [{ role: 'user', content }]
-}
-
 /**
  * 在给定对话上跑「调模型 → 取 JSON → Zod 校验」并带 <=2 次自修复重试，返回通过 Zod 的 config。
  * 会把每次尝试（含成功那次的 assistant 轮）追加进 `messages`——这样 B3 多轮精修可以**延续同一段对话**
@@ -208,7 +200,10 @@ async function main() {
       process.stdout.write(`[eval:llm] ${file} [${lang}] … `)
       try {
         // turn 0：初稿。头条分（zero-edit/scoped/propF1/…）恒为此轮，精修轮不回写 s。
-        const messages = buildInitialMessages(nl, fixedFields)
+        // F9：target/mode 是宿主输入（生产里由 detect_project_target + 宿主选 mode 决定，
+        // 见 prompt.mjs 头注），故与 fixedFields 一样作「给定」喂入，不再让模型猜。
+        // 取自 gold（Zod 已应用默认值，恒有值）——即「按契约应得的宿主上下文」。
+        const messages = buildInitialMessages(nl, fixedFields, { target: gold.target, mode: gold.mode })
         const pred = await driveToValidConfig(client, system, messages)
         let compiles = true
         try {
@@ -461,6 +456,10 @@ async function main() {
     heldoutCases: heldout.length,
     fewshotDerivedCases: fewshotRows.length,
     target: TARGET_ACCURACY,
+    // F9：本次跑批把哪些顶层输入作「宿主给定」喂给了模型。非空 ⟹ 精确命中率的口径是
+    // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。
+    // 旧产物无此字段 = 未修 F9 的口径（definition95 上限 67.8%）。见 eval/prompt.mjs 头注。
+    givenInputs: ['target', 'mode'],
     inSchemaIntentZeroEdit: Number(gateExact.toFixed(4)),
     inSchemaIntentZeroEditAll: Number(exact.toFixed(4)),
     // scoped 口径（B2，只记 NL 锁定维度；本 PR 观测、未门禁）。heldout 优先，空则退全量。
