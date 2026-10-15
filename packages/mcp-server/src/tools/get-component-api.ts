@@ -347,8 +347,8 @@ interface EsDialogProps {
 - \`update:visible\` \`(val: boolean)\` — sync via ${v.vModelSync("visible")}
 - \`closed\` \`(val: boolean)\` — fired after the dialog closes
 ${isAntdv
-      ? "- ⚠ antdv emits **no** \`open\` event — only \`update:visible\` + \`closed\`"
-      : "- \`open\` — fired when it opens"}
+      ? "- ⚠ antdv emits **no** `open` event — only `update:visible` + `closed`"
+      : "- `open` — fired when it opens"}
 
 ## Exposed instance methods (via ref) — same on all three renderers
 - \`close()\` — close (runs the \`beforeClose\` gate)
@@ -358,8 +358,8 @@ ${isAntdv
 
 ## Slots
 ${isAntdv
-      ? "- \`title\` — header / \`default\` — body / \`footer\` — footer"
-      : "- \`footer\` — footer (rendered only when neither \`configBtn\` nor \`renderFooter\` is set)"}
+      ? "- `title` — header / `default` — body / `footer` — footer"
+      : "- `footer` — footer (rendered only when neither `configBtn` nor `renderFooter` is set)"}
 
 ## render context — \`render(h, ctx, components)\`
 - \`ctx.registerRef(name, el)\` — register an inner component ref by name

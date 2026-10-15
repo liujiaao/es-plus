@@ -68,6 +68,14 @@ async function main() {
     outfile: bundle,
     platform: 'node',
     logLevel: 'silent',
+    // shared/src 会传递性引入 esbuild（CJS），其 main.js 里有 `require('fs')` 这类
+    // 无法静态分析的动态 require。esbuild 把它们改写成自带的 __require 兜底 shim，
+    // 而 shim 的首选分支是 `typeof require !== "undefined" ? require : …` ——
+    // ESM 里没有 require，于是走到 throw「Dynamic require of "fs" is not supported」。
+    // 官方解法即此 banner：在产物顶部造一个真正的 require，shim 便会直接用它。
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module';const require = __createRequire(import.meta.url);",
+    },
   })
   const shared = await import(pathToFileURL(bundle).href)
 

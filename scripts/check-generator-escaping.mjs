@@ -146,6 +146,12 @@ async function loadGenerator(cripple = false) {
     platform: 'node',
     logLevel: 'silent',
     plugins: plugin ? [plugin] : [],
+    // 同 check-generator-targets：shared/src 传递性引入 CJS 的 esbuild，其 require('fs')
+    // 被改写成 __require shim，而 shim 在 ESM 下没有 ambient require 可用 → 抛
+    // 「Dynamic require of "fs" is not supported」。造一个真 require 让它走首选分支。
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module';const require = __createRequire(import.meta.url);",
+    },
   })
   return import(pathToFileURL(outfile).href)
 }
@@ -478,9 +484,15 @@ async function main() {
 /**
  * 把 `codegen-escape.ts` 的转义器整体替换成恒等实现（只用于非空证明）。
  * 保留 `BARE_IDENTIFIER` 与 `qMember` 的类型形状，否则生成器自身会先崩掉、掩盖真问题。
+ *
+ * `assertEmittableExpr` **刻意保留真实现**：它不是转义器，而是「发射前语法闸」。
+ * 若连它一起恒等（恒返回 true），非空证明后的「守卫变红」就可能只源于它放行了垃圾串，
+ * 而转义器该有的约束力一点没被证明 —— 证明会变得空洞。故这里原样复刻真实现
+ * （见 codegen-escape.ts:186），只换转义器。
  */
 function crippleEscaperSource(path) {
   return `// ⚠️ 由 check-generator-escaping.mjs 的非空证明临时注入：全部转义器 = 恒等函数
+import { transformSync } from 'esbuild'
 export const BARE_IDENTIFIER = /^[A-Za-z_$][\\w$]*$/
 const id = (v) => String(v)
 export function q(value) { return "'" + id(value) + "'" }
@@ -492,6 +504,17 @@ export function qMustache(value) { return "'" + id(value) + "'" }
 export function numOrStr(v) { return typeof v === 'number' ? String(v) : "'" + v + "'" }
 export function sanitizeForComment(src) { return String(src) }
 export function inlineJson(value, space) { return JSON.stringify(value, null, space) }
+export function assertEmittableExpr(src) {
+  for (const loader of ['tsx', 'ts']) {
+    try {
+      transformSync('const __esplus_probe = (' + src + ');', { loader: loader })
+      return true
+    } catch (e) {
+      // 换下一个 loader 再试
+    }
+  }
+  return false
+}
 `
 }
 
