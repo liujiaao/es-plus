@@ -35,6 +35,12 @@ export const HELDOUT_FLOOR = 60
 /** ⑤ 棘轮容差。0 = 只要退步就红（比率噪声由「基线只经人工 PR 上调」治理，不靠容差）。 */
 export const RATCHET_TOL = 0
 
+/**
+ * ⑨ 健康门允许的「未打分行」上限。**0 是刻意的**，理由见 `evaluateHealth`。
+ * 留成常量是为了让「放宽这条」成为一个**显式的、要在 PR 里辩护的**决定。
+ */
+export const MAX_ERRORED_ROWS = 0
+
 const pct = (x) => `${(x * 100).toFixed(1)}%`
 
 /**
@@ -164,4 +170,76 @@ export function combine(...results) {
   const failures = results.flatMap((r) => r?.failures ?? [])
   const warnings = results.flatMap((r) => r?.warnings ?? [])
   return { ok: failures.length === 0, failures, warnings }
+}
+
+/**
+ * ⑨ 跑批顺序：**门禁语言优先**。
+ *
+ * 中继额度是有限的（2026-10-15 那一跑在 133/186 处撞上 `403 not enough member budget`）。
+ * 逐文件「zh 然后 en」交错执行时，额度耗尽会同时砍掉两种语言的同一段语料尾部 —— 于是连
+ * **门禁语言 zh** 都只剩一个按语料顺序偏置的半截样本（实测丢失的正是 46–99 整段、若干完整
+ * 特性族），既不能出分、也不能当基线。
+ *
+ * 门禁只读 zh 行、en 纯属观测，故把门禁语言整体排在前面：额度再耗尽，最坏只是观测腿残缺，
+ * 而门禁那一份是**完整且无偏**的。这把一次基础设施故障从「抹掉整次测量」降级为「少一列观测」，
+ * 并且失败**可诊断**：zh 满、en 缺 ⟺ 后段额度耗尽。
+ *
+ * 稳定排序：门禁语言内部保持语料顺序（报告可读、可与历史逐条对齐）。
+ *
+ * @param {object[]} plan 每项须带 `lang`
+ * @param {string} gatedLang 门禁语言（默认 zh，与 eval-llm 的 zhRows 一致）
+ */
+export function orderPlanGatedFirst(plan, gatedLang = 'zh') {
+  return [...plan].sort((a, b) => (a.lang === b.lang ? 0 : a.lang === gatedLang ? -1 : 1))
+}
+
+/**
+ * ⑨ 测量健康门：「**测量没发生**」必须与「**模型得低分**」长得不一样。
+ *
+ * ## 为什么需要它（2026-10-15 首跑证实）
+ *
+ * eval 把每条打不开的行都写成**全红行**（`compiles:false`、四维全 false），并且
+ * **照常计入每一个分母**。于是：
+ *
+ *   · 中继 401/403（key 错 / `not enough member budget` 额度耗尽）在语料尾部成片失败时，
+ *     产物仍带着一个**看似合理的低分**——`compileRate` 71.5% 其实就是 133/186，
+ *     也就是 **53 条 403 被当成 53 次编译失败**（而实测部分 compiles = 133/133 = 100%）。
+ *
+ * 这比「全 0」危险得多：全 0 一眼假，而 71.5% 看起来就像一个**真实的灾难性回归**，
+ * 会被当成结论、写进基线、再去驱动一轮无用的排查。
+ *
+ * ## 为什么阈值是 0 而不是「允许几条」
+ *
+ * 错误行不是噪声，是**系统性偏差**：每一条都以 0 计入分子/分母，且失败位置与语料顺序
+ * 强相关（今晚丢失的是 46–99 整段、若干完整特性族）——即活下来的子集是**选择偏置**样本，
+ * 既不能当分数、也不能当基线。故没有「小到可忽略」的错误数；**任何**打不开的行都让这次
+ * 运行不构成一次测量。
+ *
+ * @param {{applicableTotal:number, def95:{rate:number|null,total:number}, erroredRows:number, rows:number}} s
+ */
+export function evaluateHealth(s) {
+  const failures = []
+  if (!s || !s.rows) {
+    failures.push(`本次没有产出任何一行（rows=${s ? s.rows : 'n/a'}）—— 测量没发生`)
+    return { ok: false, failures }
+  }
+  if (!s.applicableTotal) {
+    // 四维 scorer 里 propSet/formtype/membership/actions 恒 applicable:true，
+    // 故凡**成功打分**的行至少累加 4。合计为 0 ⟺ 没有任何 gold 走到打分器。
+    failures.push('四维 applicable 合计为 0 —— 没有任何 gold 走到打分器，测量没发生')
+  }
+  if (s.def95?.rate === null || s.def95?.rate === undefined || !s.def95?.total) {
+    // 门禁已迁到 ∨，而 ∨ 的分母与四维**来源不同**（scoped/convergence 两条腿）。
+    // 两者必须各自检查，否则一条腿哑了会被另一条腿的绿灯遮住。
+    failures.push(`95% 定义（∨）没有分母或没算出来（total ${s.def95?.total} / rate ${s.def95?.rate}）—— 门禁数字会是 0，那是「没测」不是「得 0」`)
+  }
+  if (s.erroredRows > MAX_ERRORED_ROWS) {
+    const pctScored = s.rows ? ((s.rows - s.erroredRows) / s.rows) * 100 : 0
+    failures.push(
+      `${s.rows} 行里 ${s.erroredRows} 行打不开（仅 ${pctScored.toFixed(1)}% 走到打分器）—— ` +
+        `错误行以 0 计入所有分母，故本次每一个百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。` +
+        `拒绝把它发布成成绩。`
+    )
+  }
+  return { ok: failures.length === 0, failures }
 }

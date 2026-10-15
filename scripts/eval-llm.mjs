@@ -50,6 +50,8 @@ import {
   compareToBaseline,
   guardAntiDelete,
   applicableCountsFromCases,
+  evaluateHealth,
+  orderPlanGatedFirst,
 } from './eval/ratchet.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -190,6 +192,16 @@ async function main() {
   // 硬造只会产出恒真的伪信号。跳过必须**响亮**并计入 record —— 否则「没测」会在
   // 报告里伪装成「测了且为 0」，正是 §1.1「没有数字必须长得和数字是 0 不一样」的同一条。
   const skippedScenes = []
+  // ── 先编好「跑批计划」，再按**语言优先**排序执行 ───────────────────────────────
+  // 为什么不是「逐文件跑 zh+en」：中继额度是有限的，2026-10-15 那一跑就在 133/186 处
+  // 撞上 `403 not enough member budget`。逐文件交错时，额度耗尽会同时砍掉**两种语言**的
+  // 同一段语料尾部 —— 于是连**门禁语言 zh** 都只剩一个按语料顺序偏置的半截样本
+  // （实测：丢失的正是 46–99 整段、若干完整特性族），既不能出分、也不能当基线。
+  // 门禁只读 zh 行（见下方 zhRows），en 纯属观测；故把 zh 全部排在前面：
+  // 额度再耗尽，最坏也只是观测腿残缺，而 zh 这一份是**完整且无偏**的 —— 一次基础设施
+  // 故障从「抹掉整次测量」降级为「少一列观测」。这也让失败**可诊断**：zh 满、en 缺
+  // ⟺ 后段额度耗尽，而不是泛泛的「跑挂了」。
+  const plan = []
   for (const file of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, file), 'utf8'))
     if (!isCrudCase(raw)) {
@@ -206,9 +218,15 @@ async function main() {
     const refinements = Array.isArray(raw.refinements) && raw.refinements.length ? raw.refinements : null
     const convergesBy = Number.isInteger(raw.convergesBy) ? raw.convergesBy : null
     // 双语：中文（raw.nl）始终跑并作门禁语言；英文（raw.nlEn）有则跑、只观测。
-    const langs = [{ lang: 'zh', nl: raw.nl }]
-    if (typeof raw.nlEn === 'string' && raw.nlEn.trim()) langs.push({ lang: 'en', nl: raw.nlEn })
-    for (const { lang, nl } of langs) {
+    plan.push({ file, gold, mask, fixedFields, refinements, convergesBy, lang: 'zh', nl: raw.nl })
+    if (typeof raw.nlEn === 'string' && raw.nlEn.trim()) {
+      plan.push({ file, gold, mask, fixedFields, refinements, convergesBy, lang: 'en', nl: raw.nlEn })
+    }
+  }
+  // 门禁语言 zh 排在前（排序稳定，故语言内部仍保持语料顺序 —— 报告可读、可与历史对齐）。
+  const planOrdered = orderPlanGatedFirst(plan)
+  {
+    for (const { file, gold, mask, fixedFields, refinements, convergesBy, lang, nl } of planOrdered) {
       process.stdout.write(`[eval:llm] ${file} [${lang}] … `)
       try {
         // turn 0：初稿。头条分（zero-edit/scoped/propF1/…）恒为此轮，精修轮不回写 s。
@@ -330,29 +348,21 @@ async function main() {
     }
   }
 
-  // ── 健康门：区分「跑完但什么都没测到」与「模型确实得 0 分」─────────────────────
-  // scorers.mjs 里 propSet/formtype/membership/actions 恒 `applicable: () => true`，
-  // 因此任何**成功打分**的行都会给 applicable 累加 ≥4。故「所有维度 applicable 全零」
-  // ⟺ 没有任何 gold 走到打分器 ⟺ 本次测量根本没发生（典型成因：中继鉴权/额度失败 ——
-  // 401 key 错，或 403 not enough member budget 额度耗尽；2026-10-13/14 两夜是后者）。
-  // 判别法：servedModel 为空 ⟹ 模型一次都没应答过 ⟹ 传输/鉴权层故障，而非生成器/打分器。
-  // 此前这种运行会照常算出门禁 0、写 0.0% 红徽章，并由 workflow 的 always() commit-back
-  // 提交回 master —— 把一次**基础设施故障**公开发布成「模型得 0 分」。这条假信号既误导，
-  // 又天然不可察觉（看起来就像真实的灾难性回归）。故在此显式拦下，绝不发布百分比。
+  // ── 健康门：区分「跑完但什么都没测到 / 只测到一部分」与「模型确实得 0 分」─────────
+  // 判据与论证集中在 eval/ratchet.mjs 的 evaluateHealth（纯函数，故 CI 上免费可验；
+  // 此前只有「全 0」一条判据，2026-10-15 首跑的**部分** 403 直接漏过并被发布成 47.0%）。
+  // 判别法：**任何**打不开的行都以 0 计入所有分母 ⟹ 部分失败同样是没测到，而且更危险
+  // （低但合理的分数看起来像真实回归）。servedModel 为空 ⟹ 模型一次都没应答过。
   const scoredRows = rows.filter((r) => !r.error)
   const applicableTotal = Object.values(byCapability).reduce((a, c) => a + c.applicable, 0)
-  // 第二条「没测到」判据（AI-33②）：门禁已迁到 ∨（definition95）。若 ∨ 没有分母
-  // （total 为 0）或没算出来（rate 为 null），门禁数字会变成 0 —— 那是「测量没发生」，
-  // 不是「得 0 分」。旧判据只看四维 applicable，而 ∨ 的分母来自 scoped/convergence 两条腿，
-  // 与四维是**不同的来源**：两者必须各自被检查，否则一条腿哑了会被另一条腿的绿灯遮住。
-  const def95Unmeasured = def95.rate === null || def95.total === 0
-  if (applicableTotal === 0 || def95Unmeasured) {
+  const erroredRows = rows.length - scoredRows.length
+  const health = evaluateHealth({ applicableTotal, def95, erroredRows, rows: rows.length })
+  if (!health.ok) {
     const errSample = rows.find((r) => r.error)?.error?.split('\n')[0] ?? '(无 case 产出预测)'
     console.error(
-      `\n[eval:llm] MEASUREMENT FAILED — ${rows.length} 行中仅 ${scoredRows.length} 行走到了打分器` +
-        `（四维 applicable 合计 ${applicableTotal}；95% 定义 total ${def95.total}/rate ${def95.rate}）。` +
-        `本次没有测到任何东西，拒绝把它发布成 0% 成绩。\n` +
-        `  首个错误：${errSample}`
+      `\n[eval:llm] MEASUREMENT FAILED — 拒绝发布百分比：\n` +
+        health.failures.map((f) => `  · ${f}`).join('\n') +
+        `\n  首个错误：${errSample}`
     )
     // 灰度占位（AI-04 设计的 pending 态）——「没测到」必须长得和「测到 0 分」不一样。
     // 并把**去重后的真实错误**写进产物：此前错误只打到 Actions 日志、不进产物，
@@ -364,12 +374,13 @@ async function main() {
       servedModel: SERVED_MODELS.size ? [...SERVED_MODELS].join(',') : MODEL,
       measurement: 'failed',
       reason:
-        'measurement did not happen — infrastructure failure, not a 0% score ' +
-        `(scorer-visible rows ${scoredRows.length}/${rows.length}, four-dim applicable ${applicableTotal}, ` +
-        `definition95 total ${def95.total}/rate ${def95.rate})`,
+        'measurement did not happen (or only partially happened) — infrastructure failure, ' +
+        'not a low score; see failures[] for the exact criteria that rejected it',
+      failures: health.failures,
       cases: n,
       rows: rows.length,
-      erroredRows: rows.length - scoredRows.length,
+      scoredRows: scoredRows.length,
+      erroredRows,
       sampleErrors: reasons,
       target: TARGET_ACCURACY,
       passed: false,
@@ -526,6 +537,11 @@ async function main() {
     cases: n,
     heldoutCases: heldout.length,
     fewshotDerivedCases: fewshotRows.length,
+    // 健康门的体检结果（AI-34）：走到打分器的行数 = 全量 ⟺ 这是一次**完整**测量。
+    // 恒为 0 才允许发布百分比；非 0 时本文件根本走不到这里（已在健康门 exit 1）。
+    // 落在产物里是为了让「这份数字是完整的」**自带证据**，而不是要人去翻 Actions 日志。
+    scoredRows: scoredRows.length,
+    erroredRows,
     target: TARGET_ACCURACY,
     // F9：本次跑批把哪些顶层输入作「宿主给定」喂给了模型。非空 ⟹ 精确命中率的口径是
     // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。
