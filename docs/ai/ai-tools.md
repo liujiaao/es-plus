@@ -19,7 +19,7 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 > 生成一个用户管理页面，查询姓名、手机号、状态，表格显示姓名、邮箱、状态、创建时间，支持新增编辑删除
 ```
 
-AI 的协作流程：`detect_project_target`（识别 Vue 2 / Vue 3 / AntDV）→ `generate_crud_schema`（语义推理生成配置）→ `validate_config`（校验）→ `generate_from_config`（确定性编译）。生成的代码三端通用，且 CI 保证能编译。
+AI 的协作流程：`detect_project_target`（识别 Vue 2 / Vue 3 / AntDV）→ `generate_crud`（宿主 LLM 填充 `surfaces` 意图表：query / table / form / dialog）→ `validate_config`（校验，`refine_config` 可纠偏）→ 确定性编译。生成的代码三端通用，且 CI 保证能编译。
 
 ## CLI 工具
 

@@ -620,13 +620,16 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | Tool | 作用 | 解决的痛点 |
 |------|------|----------|
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
-| `generate_crud_page` | 自然语言 → 完整 .vue 文件 | ⚠️ **无 LLM 回退**：本地正则/关键词解析，覆盖有限，仅适合快速原型 |
-| `generate_crud_schema` | 自然语言 → 结构化 Schema | **主路径**：由宿主 LLM 语义推理生成（经 zod 校验 + 自修复） |
-| `generate_from_config` | Schema → SFC 代码 | Schema-first 流程的确定性 codegen 步骤 |
+| `generate_crud` | **前门**：填 `surfaces` 意图表（query / table / form / dialog 的任意子集）→ 组合并编译 | **主路径**：语义映射由**宿主 LLM** 完成，路由与编译由确定性代码完成 |
+| `generate_form` / `generate_table` / `generate_dialog` | 单组件片段：独立 es-form / es-table / useDialog | 明确只要一个组件，或要嵌在非 es-plus 组件旁边 |
+| `generate_crud_from_config` | 完整 `StructuredCrudConfig` → 可运行代码 | Schema-first 流程的确定性 codegen 步骤 |
+| `generate_crud_page` / `generate_crud_schema` | 自然语言 → 完整 .vue / CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`crud-engine.ts`），覆盖有限，仅适合不能推理的宿主 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
+| `refine_config` | 对已定配置做一轮纠正并回显 diff | 收敛回路：确定性校验 + diff，不回灌模型 |
 | `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |
+| `ingest_schema` | 既有 Schema → 草拟配置（需人审） | 存量项目起步 |
 
 **所有 tool 的实现都在 `@es-plus/shared`** —— 这意味着：
 - 浏览器里的 [AI CRUD 演示页](https://liujiaao.github.io/es-plus/#/ai-crud)直接调同一份代码（无需后端）
@@ -646,11 +649,10 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 Claude 的工作流是：
 
 1. 调 `detect_project_target` → 读你的 package.json → 知道你用 Vue 3 + Element Plus
-2. 调 `list_form_types` → 拿到 14 种合法控件清单
-3. 调 `generate_crud_schema(target='vue3')` → 生成 Schema
-4. 调 `validate_config` → 校验通过
-5. 调 `generate_from_config` → 输出完整 .vue 文件
-6. 写入你的项目，注册路由
+2. 读 `esplus://conventions` / `esplus://types` → 拿到该 target 的权威约定与组件类型
+3. 调 `generate_crud(name, apiUrl, surfaces, target)` → **自己填 `surfaces`**：把请求里的每个字段按**语义**分配到 query / table / form / dialog
+4. 读返回的 `warnings` → 每条都指向一处可能的映射错误，改完重生成
+5. 写入你的项目，注册路由
 
 **AI 全程不用猜组件库 API，因为它通过 MCP 协议拿到的就是权威 schema**。
 

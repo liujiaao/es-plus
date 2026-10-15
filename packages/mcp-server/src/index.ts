@@ -23,8 +23,9 @@ targets:
 
 ## Always pick the right target
 
-Every code-generating tool (generate_crud_page / generate_crud_schema /
-generate_from_config / get_component_api) accepts a \`target: 'vue3' | 'vue2' | 'antdv'\`
+Every code-generating tool (generate_crud / generate_crud_from_config /
+generate_form / generate_table / generate_dialog / generate_crud_page /
+generate_crud_schema / scaffold_page / get_component_api) accepts a \`target: 'vue3' | 'vue2' | 'antdv'\`
 parameter. **Detect the target FIRST**, then call the generator:
 
 1. Read the user's project \`package.json\` (use your file-read tool)

@@ -105,10 +105,10 @@ $ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 
 它自动：
 1. detect_project_target → 知道你用 vue3 还是 vue2
-2. list_form_types → 拿合法控件清单
-3. generate_crud_schema → 生成 schema
-4. validate_config → zod 校验
-5. generate_from_config → 输出 .vue
+2. 读 esplus://conventions + esplus://types → 拿该 target 的权威约定
+3. generate_crud → AI 自己填 surfaces（query/table/form/dialog 按语义分配）
+4. 读回 warnings → 改错重生成
+5. 确定性编译 → 输出 .vue
 
 写入项目，注册路由。你 review。
 ```
@@ -258,10 +258,10 @@ Then tell Claude:
 
 Claude runs:
 1. detect_project_target → reads YOUR package.json
-2. list_form_types → fetches valid input types
-3. generate_crud_schema → outputs spec
-4. validate_config → zod-checks
-5. generate_from_config → writes .vue
+2. reads esplus://conventions + esplus://types → authoritative conventions for that target
+3. generate_crud → the model fills `surfaces` (query/table/form/dialog by meaning)
+4. reads the warnings → fixes and regenerates
+5. deterministic compile → writes .vue
 
 Done. You review the diff.
 ```
