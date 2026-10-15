@@ -41,6 +41,7 @@ import {
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
 import { buildInitialMessages } from './eval/prompt.mjs'
+import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -65,14 +66,7 @@ const SERVED_MODELS = new Set()
 // 与 few-shot 示例（shared/src/ai-nl-to-config-prompt.ts 的 NL_TO_CONFIG_FEWSHOT）同源/近变体的用例。
 // 在这些用例上打分，测得的是"模型是否复述了它刚在 system prompt 里看到的 few-shot"，而非"泛化到未见场景"，
 // 会系统性抬高准确率数字。因此单独报告为 few-shot recall，把 >=95% 的门禁落在留出集（heldout）上。
-const FEWSHOT_DERIVED = new Set([
-  '01-user-manage.json',        // ≈ example 1（逐字相同）
-  '02-product-remote-select.json', // ≈ example 2（逐字相同）
-  '03-order-tablebtns.json',    // ≈ example 3（左右互换变体）
-  '07-vue2-task-manage.json',   // ≈ example 4（变体）
-  '09-audit-readonly.json',     // ≈ example 5（变体）
-  '16-dept-permissions.json',   // ≈ example 6（变体）
-])
+// 登记表已抽到 ./eval/fewshot-derived.mjs（含逐条语义裁定与守卫下界说明，F8）。
 
 // --require-key: turn the "no key / no SDK" no-op into a hard failure. The
 // nightly workflow passes this so a missing/rotated ANTHROPIC_API_KEY secret

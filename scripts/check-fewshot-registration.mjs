@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+/**
+ * few-shot 登记守卫（F8）。进 CI 的 check:consistency。
+ *
+ * ## 它防的是什么
+ *
+ * `NL_TO_CONFIG_FEWSHOT` 的每条 few-shot 都逐字进 system prompt。语料里若有同源/变体 case
+ * 混在 heldout，测的就是复述而非泛化 → 准确率虚高。F8 实测：登记 6 个 vs few-shot 22 条，
+ * 语料里确有大量派生 case 未被排除（`63-order-expand-detail` 与 few#19 的 NL 相似度 0.89）。
+ *
+ * ## 它怎么做
+ *
+ * 语义裁定不可机械化，但**一个保守下界可以**：
+ *   候选 ⟺ (prop 名 Jaccard ≥ 0.6 ∨ NL 字符 bigram Jaccard ≥ 0.35) ∧ actions 完全相同
+ *
+ * 该下界在 F8 里机检地抓到了 16 条新登记中的 11 条。本守卫断言：
+ *
+ *   ① **下界候选 ⊆ FEWSHOT_DERIVED** —— 新增同源 case 而忘记登记 → 红；
+ *   ② 登记的每个文件都真实存在于语料 —— 语料改名/删除后登记表变成静默死条目 → 红；
+ *   ③ 登记数 ≤ 语料总数 且 heldout 非空 —— 防「靠把语料全登记成 few-shot 洗白」。
+ *
+ * 下界**不是**全集（人工裁定会并入低相似度同源例，见 fewshot-derived.mjs 头注），
+ * 故本守卫只报「机检下界之外的额外登记」供复核，不作为失败条件。
+ */
+import { readFileSync, readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { StructuredCrudConfigSchema, NL_TO_CONFIG_FEWSHOT } from '@es-plus/shared'
+import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
+
+const PROP_MIN = 0.6
+const NL_MIN = 0.35
+
+let failures = 0
+const fail = (msg) => { failures++; console.error(`  ✗ ${msg}`) }
+
+const bg = (s) => { const t = String(s || '').replace(/[\s\p{P}]/gu, ''); const o = new Set(); for (let i = 0; i + 1 < t.length; i++) o.add(t.slice(i, i + 2)); return o }
+const jac = (a, b) => { if (!a.size || !b.size) return 0; let i = 0; for (const x of a) if (b.has(x)) i++; return i / (a.size + b.size - i) }
+const propsOf = (c) => new Set((c.fields || []).map((f) => f.prop))
+const actsOf = (c) => [...(c.actions || [])].sort().join(',')
+
+const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
+const cases = files.map((f) => {
+  const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
+  return { f, bg: bg(raw.nl), pr: propsOf(raw.config), ac: actsOf(raw.config) }
+})
+
+// ① 下界候选 ⊆ 登记表
+const candidates = new Map()
+for (const [i, x] of NL_TO_CONFIG_FEWSHOT.entries()) {
+  const pr = propsOf(x.config), ac = actsOf(x.config), b = bg(x.nl)
+  for (const c of cases) {
+    const sameActs = ac === c.ac && ac !== ''
+    if (!sameActs) continue
+    const p = jac(pr, c.pr), n = jac(b, c.bg)
+    if (p < PROP_MIN && n < NL_MIN) continue
+    if (!candidates.has(c.f)) candidates.set(c.f, { few: i + 1, prop: p, nl: n })
+  }
+}
+for (const [f, why] of [...candidates].sort()) {
+  if (!FEWSHOT_DERIVED.has(f)) {
+    fail(`${f} 与 few#${why.few} 同源却未登记（prop=${why.prop.toFixed(2)} nl=${why.nl.toFixed(2)}）`
+      + ` —— 它会以 heldout 身份给「复述」计分，请裁定后登记进 scripts/eval/fewshot-derived.mjs`)
+  }
+}
+
+// ② 登记条目必须真实存在
+for (const f of FEWSHOT_DERIVED) {
+  if (!files.includes(f)) fail(`登记表里的 ${f} 在语料中不存在（改名/删除后未同步登记表）`)
+}
+
+// ③ 防洗白：heldout 必须非空且占多数
+const heldout = files.filter((f) => !FEWSHOT_DERIVED.has(f))
+if (!heldout.length) fail('heldout 为空 —— 全部语料都被登记成 few-shot 派生，门禁失去意义')
+if (heldout.length * 2 < files.length) {
+  fail(`heldout 仅 ${heldout.length}/${files.length}，不足半数 —— 登记表疑似被滥用（防「登记洗分」）`)
+}
+
+// 报告：机检下界之外的额外登记（人工裁定覆盖，供复核，不失败）
+const manualOnly = [...FEWSHOT_DERIVED].filter((f) => !candidates.has(f)).sort()
+if (failures) {
+  console.error(`\ncheck:fewshot-registration FAILED: ${failures} 处`)
+  process.exit(1)
+}
+console.log(`[fewshot-registration] few-shot 共 ${NL_TO_CONFIG_FEWSHOT.length} 条；语料 ${files.length} 例`
+  + `（登记 ${FEWSHOT_DERIVED.size} / heldout ${heldout.length}）`)
+console.log(`[fewshot-registration] 机检下界命中 ${candidates.size} 例，全部已登记 ✔`)
+console.log(`[fewshot-registration] 人工裁定额外登记 ${manualOnly.length} 例（低相似度同源，下界抓不到）：`)
+for (const f of manualOnly) console.log(`    - ${f}`)
+console.log('[fewshot-registration] OK — 无同源未登记用例、登记表无死条目、heldout 未被洗白。')

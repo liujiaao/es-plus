@@ -13,8 +13,12 @@
  *   - `INSTRUCTIONS` 明说「Detect the target FIRST」→ 即 `detect_project_target` 的产物。
  *
  * 但旧版 eval 只喂 NL，却要求产出含 target/mode 的完整 config —— 等于让模型猜宿主输入。
- * 实测 180 例 heldout 里 61 例（33.9%）的 target/mode 在 NL 中**根本不存在**，
- * 于是精确命中率被算术锁死在 66.1% 上限，「≥95%」不可达。
+ * 实测（F8 补登记后的 heldout = 164 例）两法独立收敛到 ≈1/3：口径 A（gold 非默认维 ∩ NL 无信号）
+ * 60 例、口径 B（`pinnedDims` 断言该维 ∩ NL 无信号，语料自证）58 例。其中 58 例**两条腿全断**
+ * （turn-0 scoped 恒假，且全库仅 5/164 带 refinements）→ `definition95` 被算术锁死在 **64.6%** 上限。
+ *
+ * ⚠️ 注意锁的是 **`definition95`（scoped 腿）与 `exactIntentFull`（观测）**，**不是**门禁指标
+ * `exactIntentCore` —— 后者只含 prop/attr/actions/tableBtns 四维（scorers.mjs:469），不含 target/mode。
  *
  * 规格掩码（`fixedFields`）早有先例：把契约已定的东西**给定**，只考核真正该推断的部分。
  * 本条把 target/mode 并入同一机制，与生产对齐。**注意这不会放水**：scorers 里 `target`/`mode`

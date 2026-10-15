@@ -183,52 +183,67 @@ PPIO 中继**账户/成员额度耗尽**。**key 有效**，是余额问题，**
 **但 `.sync` 承诺了一个永不触发的子→父方向**——正是 P6 要消灭的那种「声明 ≠ 存在」。
 → 归入 Wave 5 逐条「修 or 登记」。（与 F5 的 es-table 行同源，可合并处理。）
 
-### F8 · heldout 被未登记的 few-shot 派生用例污染 → 成绩虚高（**2026-10-15 新发现，直接冲击 ≥95% 的可信度**）
+### F8 · heldout 被未登记的 few-shot 派生用例污染 → 成绩虚高（**2026-10-15 新发现；2026-10-15 已按语义补全登记**）
 
 `NL_TO_CONFIG_FEWSHOT`（`shared/src/ai-nl-to-config-prompt.ts:29`）现有 **22 条**，而 `eval-llm.mjs` 的
-`FEWSHOT_DERIVED` **只登记 6 个** case 文件（`:67-74`）。→ 其余 few-shot 若在语料里有对应 case，
+`FEWSHOT_DERIVED` 原先**只登记 6 个** case 文件。→ 其余 few-shot 若在语料里有对应 case，
 会被当作 **heldout** 计分，而模型刚在 system prompt 里逐字看过同一段 NL——**测的是复述，不是泛化**。
 
-**逐条文本比对（按字符 bigram Jaccard，阈值 0.45）确证 ≥5 例未登记且同源**：
+#### 方法学结论（比数字更重要）：文本相似度是不可靠判据
 
-| 未登记 case | 相似度 | ≈ few-shot # |
+反证就在**原先已登记的 6 例**里——`03-order-tablebtns.json` 与 few#3 的 NL 相似度仅 **0.45**、
+`09-audit-readonly.json` 与 few#5 仅 **0.30**：它们是人工判定为「**变体**」才登记进来的，
+**真同源可以低相似**。故相似度既不能证有、也不能证无。
+
+**正确判据是「配置是否是 few-shot 配置的改写」**，三条证据（按强度）：
+① **字段名集合存活**（prop Jaccard 高——改写只换 NL 措辞与列语义，`prop` 名会留下）；
+② **同一教学点的字面取值复用**（如 `configTableOut:{tableData:'list',total:'totalCount'}`、
+`tableBtns` 的「位置/类型/dialogKey」组合、`editConfig:{engine:'vxe',mode:'cell'}`）；
+③ **NOT** 仅「特征集相同而字段名与取值全换」——那属独立撰写的特性覆盖。
+
+> **这条判据纠正了纯文本相似度的两个误指**：相似度指向 `102-budget-desc-edit-vue3-sfc` 为 few#22 的同源
+> （0.32），但结构比对显示 few#22 的真正同源是 **`92-sku-price-edit-vue3`**（同域「SKU 单价」、复用
+> `skuName/price` 字段名与 vxe 行内编辑教学点）；而 `102/99/105/106` 字段名与 few#22 **无一相同** → 不登记。
+
+#### 裁定结果：22 条 few-shot ↔ **22 例**登记（heldout 180 → **164**）
+
+| few# | 派生 case | 判据 |
 |---|---|---|
-| `63-order-expand-detail.json` | **0.91** | #19（订单…每行可展开查看收货人） |
-| `122-province-city-select-vue3.json` | 0.83 | #17（省份城市管理） |
-| `77-dept-tree-vue3.json` | 0.51 | #20（部门管理树形） |
-| `31-inventory-response-map.json` | 0.50 | #15（资金台账） |
-| `172-dept-staff-merge-vue3.json` | 0.48 | #21（员工台账合并单元格） |
+| 1 | `01-user-manage` | 逐字相同（原先已登记） |
+| 2 | `02-product-remote-select` | 逐字相同（原先已登记） |
+| 3 | `03-order-tablebtns`、**`24-position-tablebtns`** | 03＝左右互换变体；24＝换域改写——字段名全换但 `tableBtns` 逐项同形（批量导出/left/export + 新增X/primary/right/dialogKey:add）且 actions 相同 |
+| 4 | `07-vue2-task-manage` | 变体（原先已登记） |
+| 5 | `09-audit-readonly`、**`21-audit-readonly-sfc`** | 09＝列名改写；21＝同域 sfc 变体（prop 0.80、actions 同为 `view`） |
+| 6 | `16-dept-permissions` | 变体（原先已登记） |
+| 13 | **`149-ticket-status-render`** | 去掉 operationColumn 半边的改写（4 个 prop 名全同 + 「状态列彩色标签」教学点同） |
+| 15 | **`31-inventory-response-map`** | 字段名全换，但 `configTableOut` 键值**逐字相同**（`{tableData:'list',total:'totalCount'}`）且 NL 同样给出该映射提示 |
+| 17 | **`122-province-city-select-vue3`**、**`135-city-multi-rule-vue3`** | 122＝prop 1.00 / NL 0.83；135＝加一列「客户名称」的改写（prop 0.75），联动教学点同 |
+| 19 | **`63-order-expand-detail`** | prop 1.00 / NL **0.89**（相似度最高的旗舰证据） |
+| 20 | **`77-dept-tree-vue3`** | 去掉两列的改写（NL 0.58、treeConfig 教学点同） |
+| 21 | **`172`/`181`/`173`/`177`/`176`/`185`/`179`（7 例）** | 整族都复用 `dept/team/name` 三元字段名；同族的 `180-city-sku-merge` 字段名全换 → **不登记** |
+| 22 | **`92-sku-price-edit-vue3`** | 同域「SKU 单价」改写，复用 `skuName/price` 与 vxe `editConfig` 教学点 |
+| 7–12, 14, 16, 18, 22 的其余族 | （无） | 最高候选 prop ≤ 0.17 → 独立撰写的特性覆盖（如 isHidden 族 40–46、response-map 族 32/33/34/38 各用**不同**映射键） |
 
-**两点必须说清**：① 0.45 是**保守**阈——few-shot #7–14/16/18/22 若被**改写**成 case（相似度更低），
-不会上榜，故 **≥5 是下界**；② 这**不是**新引入的缺陷，而是 **186 语料**才让它显形——29 例的 master 语料里
-根本没有 `63/77/122/172` 这些文件，旧口径下不可见。
+**合计 6（原）→ 22（现），heldout 180 → 164。** 登记表抽到 `scripts/eval/fewshot-derived.mjs`
+（含逐条语义裁定与判据说明）；同一份表被 `eval-llm.mjs` 与守卫共用。
 
-**方法学结论（比数字更重要）：文本相似度是不可靠判据，只能当提示，不能当裁定。**
-反证就在已登记的 6 例里——`03-order-tablebtns.json` 与 few#3 的相似度仅 **0.44**、`09-audit-readonly.json`
-与 few#5 仅 **0.28**：它们是人工判定为「**变体**」才登记进来的，**真同源可以低相似**。
-故相似度既不能证有、也不能证无。**正确做法是逐条语义裁定 22 条 few-shot ↔ 186 case**（相似度仅作排序提示）。
-（一份可用的初排见下——按「每条 few-shot 的最佳 case 匹配」生成，`★` = 相似度 ≥0.30 且未登记，
-但**低相似不等于不同源**，须人工覆盖。）
+#### 守卫：让「登记缺失」这一类缺陷不再复发
 
-| few# | 相似度 | 最佳匹配 case | 已登记 |
-|---|---|---|---|
-| 1 | 1.00 | 01-user-manage | ✅ |
-| 2 | 1.00 | 02-product-remote-select | ✅ |
-| 3 | 0.44 | 24-position-tablebtns | ❌ |
-| 4 | 0.73 | 07-vue2-task-manage | ✅ |
-| 5 | 0.31 | 21-audit-readonly-sfc | ❌ |
-| 6 | 0.86 | 16-dept-permissions | ✅ |
-| 15 | 0.50 | 31-inventory-response-map | ❌ |
-| 17 | 0.83 | 122-province-city-select-vue3 | ❌ |
-| 19 | 0.91 | 63-order-expand-detail | ❌ |
-| 20 | 0.51 | 77-dept-tree-vue3 | ❌ |
-| 21 | 0.48 | 172-dept-staff-merge-vue3 | ❌ |
-| 22 | 0.32 | 102-budget-desc-edit-vue3-sfc | ❌ |
-| 7–14, 16, 18 | 0.09–0.29 | （最高匹配亦 <0.30，多为噪声） | ❌ |
+语义裁定不可机械化，但**一个保守下界可以**——`scripts/check-fewshot-registration.mjs`（进 `check:consistency`）：
 
-**后果**：当前（含正在跑的 186 例）**heldout 数字本身偏乐观**；若直接把 ∨ 门禁压上去，
-门禁的分子里混着 few-shot recall。**Wave 1.4 的「FEWSHOT_DERIVED 登记不全」从警告升级为必修项**：
-按语义（非文本相似度）逐一裁定 22 条 few-shot ↔ 186 case 的对应关系，登记全，再上闸。
+> 机械候选 ⟺ （**prop Jaccard ≥ 0.6** ∨ **NL Jaccard ≥ 0.35**）∧ **actions 完全相同**
+
+三条断言：① 机械候选 **⊆** 登记表；② 登记的每个文件真实存在（防改名/删除后留死条目）；
+③ heldout 非空且占多数（防「把语料全登记成 few-shot」洗白）。
+
+**已实测其咬合**：把登记表换回 F8 之前的 6 条，该守卫会报 **12 例未登记**并发红
+（24/21/31/122/135/63/77/173/177/179/181/185）——即 16 条新登记中 12 条可机检捕获。
+另 6 条（`07/09/149/172/176/92`）因 actions 有差异或相似度过低而下界抓不到，
+属**人工判定覆盖**，守卫将其列为「额外登记」供复核、不作为失败条件。
+
+**后果**：此前（含 4d0fabf 那次 186 例测量）**heldout 数字偏乐观**（分子里混着 few-shot recall）。
+本项**已修**——下一次性跑批的 `heldoutCases` 将从 180 变 **164**，与旧口径**不可直接比较**。
+
 
 ### F9 · `target`/`mode` 是被**扣留的宿主输入** → 已拍板的「95%」在算术上不可达（**2026-10-15 首次真实测量后确证；2026-10-15 已实施**）
 
@@ -266,19 +281,21 @@ the generator」。**从不由模型从 NL 推断**。
 （`scorers.mjs:429-430` 的口径），可 NL 全文没有任何平台/形态线索——
 **该 pin 无从证伪**。这类例不可能由模型命中，**与模型强弱无关**。
 
-**量化（heldout 180 例）**：
+**量化（F8 补登记后的 heldout = **164** 例；括号内为 F8 前的 180 口径）**：
 
 | 口径 | 判据 | 死例 | 剩余上限 |
 |---|---|---|---|
-| A：`gold.target≠vue3` ∩ NL 无信号 ∪ `gold.mode=sfc` ∩ NL 无信号 | 维度 applicable 即考核 | **60（33.3%）** | **66.7%** |
-| B：`pinnedDims` 断言 target/mode ∩ NL 无信号 | 语料自证的 pin | **58（32.2%）** | **67.8%** |
+| A：`gold.target≠vue3` ∩ NL 无信号 ∪ `gold.mode=sfc` ∩ NL 无信号 | 维度 applicable 即考核 | **60（36.6%）**〔33.3%〕 | **63.4%** |
+| B：`pinnedDims` 断言 target/mode ∩ NL 无信号 | 语料自证的 pin | **58（35.4%）**〔32.2%〕 | **64.6%** |
 
-两法独立收敛到 **≈1/3**（缺 target 44–45、缺 mode 25–28，有重叠）。
-**并且 58 例的第二条腿也是断的**：`refinements` 语料全库仅 **5/180**（2.8%），这 58 例**无一例**带 refinements
-→ turn-0 scoped 恒假 **且** 无收敛语料可救 → **`definition95` 上限 = 67.8%**。
+两法独立收敛到 **≈1/3**（缺 target 44–45、缺 mode 25–28，有重叠）。**F8 补登记使分母 180→164
+而两个死集不变**（16 条新登记例与新死集无交集）→ **上限反而更低**：F9 与 F8 是**互相加重**的两条缺陷。
+**并且 58 例的第二条腿也是断的**：`refinements` 语料全库仅 **5/164**（3.0%），这 58 例**无一例**带 refinements
+→ turn-0 scoped 恒假 **且** 无收敛语料可救 → **`definition95` 上限 = 64.6%**。
 
-> **结论：即便模型做完其余全部工作，已拍板的「≥95%」在 `definition95` 口径上数学不可达（上限 67.8%）。**
-> 首测 `definition95` = **0.40**（72/180）：距上限还有 27.8pp 是模型真正可进步区间，另 32.2pp 是**度量/语料构造缺陷**。
+> **结论：即便模型做完其余全部工作，已拍板的「≥95%」在 `definition95` 口径上数学不可达（上限 64.6%）。**
+> 首测 `definition95` = **0.40**（72/180）。**注意该分数本身也偏乐观**（F8 未修时分子含 few-shot recall），
+> 故「距上限还有多少是模型可进步区间」需下一次性跑批（heldout=164、givenInputs 已置）重测后才有干净读数。
 
 **这是 F1「被测 ⊊ 宣称」在度量内部的又一次显现**——eval 测的是一条**生产上从不发生**的流程。
 
@@ -300,7 +317,7 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 
 **同族已知缺陷（一并列此，皆为语料/门禁构造问题，非模型缺口）**：
 ① `inQuery/inTable/inForm` 默认 `true` 陷阱 → `membership` **48.3%**（87/180）——见 [[golden-inquery-default-true-trap]]；
-② 本条 `target`/`mode` 扣留 → `definition95` 上限 **67.8%**（**已修**）；
+② 本条 `target`/`mode` 扣留 → `definition95` 上限 **64.6%**（**已修**）；
 ③ F8 的 few-shot 登记不全 → heldout 虚高（**待修**）。
 **三者修完之前，任何「准确率」数字都不可用于判定模型能力，更不可用于门禁。**
 
@@ -356,12 +373,15 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 | 1.2 | **片段路径进 `check:consistency`**：`compile-smoke` 升格为门禁 + 新增 `check-scene-coverage`（断「四场景 × 三端 × 两模式」无空格） | 删任一场景覆盖 → 红 |
 | 1.3 | **前门进 eval**：对 `generate_crud`（含 no-table 分支）至少跑一遍 | 前门回归 → 红 |
 | 1.4 | AI-33 原 8 条（门禁迁 ∨ + core 地板 + per-dim ratchet + 徽章与门禁同源 + 补 6 维 COVERAGE + heldout ≥60 + 防删难例） | 篡改 ∨ / 维度退步 / 删语料 → 红 |
-| **1.0** | ✅ **已实施（F9）**：`target`/`mode` 作**给定输入**喂入 prompt（`scripts/eval/prompt.mjs`，仿 `fixedFields`）。**不做这条，「95% 定义」就在惩罚模型猜不到的宿主输入**（`definition95` 上限 67.8%） | 58 例不可推断例改为「给定 target/mode」；`check:eval-prompt` 钉住旧路径逐字节不变 + 维度不放水 → 篡改即红 |
+| **1.0** | ✅ **已实施（F9）**：`target`/`mode` 作**给定输入**喂入 prompt（`scripts/eval/prompt.mjs`，仿 `fixedFields`）。**不做这条，「95% 定义」就在惩罚模型猜不到的宿主输入**（`definition95` 上限 64.6%） | 58 例不可推断例改为「给定 target/mode」；`check:eval-prompt` 钉住旧路径逐字节不变 + 维度不放水 → 篡改即红 |
+| **1.0b** | ✅ **已实施（F8）**：`FEWSHOT_DERIVED` 按语义裁定补全 **6 → 22**（剔 16 例未登记同源），抽到 `scripts/eval/fewshot-derived.mjs`；heldout **180 → 164** | 新增 `check:fewshot-registration`：机械下界（prop ≥0.6 ∨ NL ≥0.35，且 actions 同）⊆ 登记表 + 登记条目须真实存在 + heldout 不得被洗白。**实测**：换回旧 6 条登记表该守卫报 12 例 → 红 |
 
-> **反噬警告（已由 F8 升级为必修项）**：补 COVERAGE 会迫使加 few-shot，而 `FEWSHOT_DERIVED`（`eval-llm.mjs:67-74`）
-> 只登记 **6** 个文件、few-shot 已有 **22** 条 → 至少 **5 个未登记的同源 case 混在 heldout 里**（见 F8，`63-…` 相似度 0.91）。
-> 语料规模问题已解（186 例 → heldout ≈ **180**，单例噪声 0.56pp），**「先扩语料」前提已满足**；
-> 但 **「FEWSHOT_DERIVED 按语义补全」必须先做**，否则 ∨ 门禁的分子里混着 few-shot recall。
+> **反噬警告（F8 已完成，转为守卫约束）**：补 COVERAGE 会迫使加 few-shot，而每加一条 few-shot 都可能
+> 在语料里带出同源 case，必须同步登记进 `FEWSHOT_DERIVED`（`scripts/eval/fewshot-derived.mjs`）。
+> 该表已由 **6 → 22**（剔 16 例未登记同源），heldout **180 → 164**（单例噪声 0.61pp），
+> 「先扩语料」与「按语义补全登记」两个前提**均已满足**；
+> 且 `check:fewshot-registration` 守卫已进 `check:consistency`（机械下界 ⊆ 登记表）——
+> 今后新增同源 case 忘记登记会**直接红**（实测：换回旧 6 条登记表该守卫报 12 例）。
 
 ### Wave 2 · 契约守卫补齐（守卫先行）
 
@@ -430,16 +450,17 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
                 （今天只对 CRUD schema 路径成立；W1.2/1.3 后才四场景成立）
 准确率 ≥95%  := 各场景 heldout 上 definition95 = scoped zero-edit ∨ ≤K=3 收敛 ≥ 95%
                 + per-dimension ratchet + core 非回归地板 + 防「删难例洗分」守卫
-                【前置·F9】✅ 已实施：target/mode 作**给定输入**喂入；否则 definition95 上限仅 67.8%，95% 不可达
+                【前置·F9】✅ 已实施：target/mode 作**给定输入**喂入；否则 definition95 上限仅 64.6%，95% 不可达
                           （注：锁的是 definition95 的 scoped 腿，**不是** exactIntentCore——后者只含四维）
-                【前置·F8】FEWSHOT_DERIVED 按语义补全；否则 heldout 含 few-shot recall，分子虚高
+                【前置·F8】✅ 已实施：FEWSHOT_DERIVED 按语义补全 6→22，heldout 180→164；
+                          并有 check:fewshot-registration 守卫（机械下界 ⊆ 登记表）
                 【前置·同族】inQuery 默认 true 陷阱修完（membership 现 48.3%，多为语料缺陷非模型缺口）
 门禁         := definition95 进 exit code；exactIntentCore 降为并列诊断
 ```
 
 **稳定性前提**：scoped 与 convergence 均为**确定性打分**（scripted refinements）→ 可复现；
-语料已扩至 **186 例 → heldout ≈180**（单例 = **0.56pp**），「heldout < 60 时门禁落在噪声上」的前提**已解除**；
-但**先按语义补全 `FEWSHOT_DERIVED`（F8：≥5 例未登记同源）再上闸**——否则门禁分子含 few-shot recall。
+语料已扩至 **186 例 → heldout 164**（单例 = **0.61pp**），「heldout < 60 时门禁落在噪声上」的前提**已解除**；
+✅ `FEWSHOT_DERIVED` 已按语义补全（F8：6→22 例，剔 16 例未登记同源，守卫已进 `check:consistency`）。
 
 ---
 

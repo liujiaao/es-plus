@@ -99,7 +99,8 @@ virtualScroll / target / mode；且仓库里**没有** committed 的 `last-accur
 ### AI-05 — 填齐 eval steering few-shot 的 heldout 维度 · `S`–`M`
 - **Why**：steering prompt 只有 6 个 shot，`cascader / render / i18n / sfc-mode / virtualScroll / formLayout / 多 dialog / permissionValue / operationColumn / antdv` 一个示例都没有——LLM 对没见过示例的维度准确率断崖。补齐是几小时的活、却直接抬分。
 - **验收**：上述每个维度 ≥1 个 shot，加入后 AI-01 对应维度分可观测上升。
-- **状态**：✅ 已落地（PR-3）。`NL_TO_CONFIG_FEWSHOT` 6 → 14 shot，8 个全新域（AddressBook/MenuManage/TagManage/MetricLog/MemberManage/SalaryManage/TicketManage/CommentManage）覆盖 cascader+children / i18n+formLayout / sfc / virtualScroll / 多 dialog / permissionValue / render+operationColumn对象 / antdv；域名与 25 个 golden 名均不碰撞，`FEWSHOT_DERIVED`（静态 6 文件）不变，heldout 仍是干净泛化测试；spec 加 2 道护栏（generateFromConfig 不抛 + 17 维覆盖断言）。
+- **状态**：✅ 已落地（PR-3）。`NL_TO_CONFIG_FEWSHOT` 6 → 14 shot，8 个全新域（AddressBook/MenuManage/TagManage/MetricLog/MemberManage/SalaryManage/TicketManage/CommentManage）覆盖 cascader+children / i18n+formLayout / sfc / virtualScroll / 多 dialog / permissionValue / render+operationColumn对象 / antdv；spec 加 2 道护栏（generateFromConfig 不抛 + 17 维覆盖断言）。
+  - ❌ **2026-10-15 更正（F8）**：本条原称「域名与 25 个 golden 名均不碰撞，`FEWSHOT_DERIVED`（静态 6 文件）不变，**heldout 仍是干净泛化测试**」——该结论**已被实测推翻**。语料后扩到 186 例，逐条语义裁定后确证 **16 例未登记同源**混在 heldout（`63-order-expand-detail` 与 few#19 的 NL 相似度 **0.89**）。`FEWSHOT_DERIVED` 已由 **6 → 22**，heldout **180 → 164**，并加 `check:fewshot-registration` 守卫。教训：**「域名不碰撞」不等于「配置不是改写」**——改写会换域名却留下 `prop` 名与教学点字面值。
 
 ---
 
