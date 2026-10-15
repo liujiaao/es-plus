@@ -18,6 +18,8 @@
  *   ① **下界候选 ⊆ FEWSHOT_DERIVED** —— 新增同源 case 而忘记登记 → 红；
  *   ② 登记的每个文件都真实存在于语料 —— 语料改名/删除后登记表变成静默死条目 → 红；
  *   ③ 登记数 ≤ 语料总数 且 heldout 非空 —— 防「靠把语料全登记成 few-shot 洗白」。
+ *   ③b heldout 绝对地板 `HELDOUT_FLOOR`（AI-33⑦）—— ③ 是**相对**的（删一半语料仍过半），
+ *      绝对地板补上「语料整体缩水」这条它看不见的路。
  *
  * 下界**不是**全集（人工裁定会并入低相似度同源例，见 fewshot-derived.mjs 头注），
  * 故本守卫只报「机检下界之外的额外登记」供复核，不作为失败条件。
@@ -27,6 +29,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema, NL_TO_CONFIG_FEWSHOT } from '@es-plus/shared'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+import { HELDOUT_FLOOR } from './eval/ratchet.mjs'
 import { isCrudCase } from './eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -85,6 +88,13 @@ const heldout = crudFiles.filter((f) => !FEWSHOT_DERIVED.has(f))
 if (!heldout.length) fail('heldout 为空 —— 全部语料都被登记成 few-shot 派生，门禁失去意义')
 if (heldout.length * 2 < crudFiles.length) {
   fail(`heldout 仅 ${heldout.length}/${crudFiles.length}，不足半数 —— 登记表疑似被滥用（防「登记洗分」）`)
+}
+// ③b 绝对地板（AI-33⑦）。上面那条是**相对**守卫：把语料整体删一半，10/20 照样过半。
+// 相对守卫防「登记洗白」，绝对地板防「语料缩水」，二者互补，缺一即有一个绕过口。
+// 地板取自 ratchet.mjs 单源（不在此重定义常数，避免两处漂移）。
+if (heldout.length < HELDOUT_FLOOR) {
+  fail(`heldout 仅 ${heldout.length} 条，低于绝对地板 ${HELDOUT_FLOOR} —— 语料规模不足以支撑泛化结论`
+    + `（单例噪声会盖过真实差异；若确属有意收缩，须经 PR 评审同步下调 ratchet.mjs 的 HELDOUT_FLOOR）`)
 }
 
 // 报告：机检下界之外的额外登记（人工裁定覆盖，供复核，不失败）

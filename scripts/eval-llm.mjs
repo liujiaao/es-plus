@@ -43,6 +43,14 @@ import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence,
 import { buildInitialMessages } from './eval/prompt.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
+import {
+  combine,
+  evaluateFloor,
+  checkCorpusSize,
+  compareToBaseline,
+  guardAntiDelete,
+  applicableCountsFromCases,
+} from './eval/ratchet.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -232,7 +240,7 @@ async function main() {
           convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
         }
 
-        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence })
+        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold })
         console.log(
           `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
         )
@@ -333,11 +341,17 @@ async function main() {
   // 又天然不可察觉（看起来就像真实的灾难性回归）。故在此显式拦下，绝不发布百分比。
   const scoredRows = rows.filter((r) => !r.error)
   const applicableTotal = Object.values(byCapability).reduce((a, c) => a + c.applicable, 0)
-  if (applicableTotal === 0) {
+  // 第二条「没测到」判据（AI-33②）：门禁已迁到 ∨（definition95）。若 ∨ 没有分母
+  // （total 为 0）或没算出来（rate 为 null），门禁数字会变成 0 —— 那是「测量没发生」，
+  // 不是「得 0 分」。旧判据只看四维 applicable，而 ∨ 的分母来自 scoped/convergence 两条腿，
+  // 与四维是**不同的来源**：两者必须各自被检查，否则一条腿哑了会被另一条腿的绿灯遮住。
+  const def95Unmeasured = def95.rate === null || def95.total === 0
+  if (applicableTotal === 0 || def95Unmeasured) {
     const errSample = rows.find((r) => r.error)?.error?.split('\n')[0] ?? '(无 case 产出预测)'
     console.error(
-      `\n[eval:llm] MEASUREMENT FAILED — ${rows.length} 行中仅 ${scoredRows.length} 行走到了打分器，` +
-        `所有维度 applicable 合计为 0。本次没有测到任何东西，拒绝把它发布成 0% 成绩。\n` +
+      `\n[eval:llm] MEASUREMENT FAILED — ${rows.length} 行中仅 ${scoredRows.length} 行走到了打分器` +
+        `（四维 applicable 合计 ${applicableTotal}；95% 定义 total ${def95.total}/rate ${def95.rate}）。` +
+        `本次没有测到任何东西，拒绝把它发布成 0% 成绩。\n` +
         `  首个错误：${errSample}`
     )
     // 灰度占位（AI-04 设计的 pending 态）——「没测到」必须长得和「测到 0 分」不一样。
@@ -349,7 +363,10 @@ async function main() {
       model: MODEL,
       servedModel: SERVED_MODELS.size ? [...SERVED_MODELS].join(',') : MODEL,
       measurement: 'failed',
-      reason: 'no case reached the scorer (all rows errored) — infrastructure failure, not a 0% score',
+      reason:
+        'measurement did not happen — infrastructure failure, not a 0% score ' +
+        `(scorer-visible rows ${scoredRows.length}/${rows.length}, four-dim applicable ${applicableTotal}, ` +
+        `definition95 total ${def95.total}/rate ${def95.rate})`,
       cases: n,
       rows: rows.length,
       erroredRows: rows.length - scoredRows.length,
@@ -360,7 +377,7 @@ async function main() {
     const grey = (label) => ({ schemaVersion: 1, label, message: 'measurement failed', color: 'lightgrey' })
     try {
       writeFileSync(ACCURACY_FILE, JSON.stringify(failedRecord, null, 2) + '\n')
-      writeFileSync(BADGE_FILE, JSON.stringify(grey('heldout accuracy'), null, 2) + '\n')
+      writeFileSync(BADGE_FILE, JSON.stringify(grey('heldout 95%-definition'), null, 2) + '\n')
       writeFileSync(BADGE_SCOPED_FILE, JSON.stringify(grey('scoped accuracy'), null, 2) + '\n')
       console.error('  (已写入失败记录 + 灰度徽章；数值留待下一次真正测量)')
     } catch (err) {
@@ -377,8 +394,14 @@ async function main() {
   }
   const byLanguage = { zh: langExact(zhRows), en: enRows.length ? langExact(enRows) : null }
 
-  // 门禁数字用留出集（heldout），若留出集为空则退回全量以避免除零。
-  const gateExact = exactHeldout ?? exact
+  // 门禁数字 = 用户拍板的「95% 定义」：∨ = scoped zero-edit ∨ ≤K 轮收敛（AI-33②）。
+  // core（四维 exactIntentCore）**降为并列诊断**：它是硬诚实口径，但作为门禁会永久红
+  // （它惩罚 NL 欠定），而永久红等于红盲 —— 比没有门禁更糟（见 eval/ratchet.mjs 头注）。
+  // ∨ ≥ core 恒成立（第二条腿是 OR），故门禁确实变松了；补丁是 ④core 非回归地板 +
+  // ⑤逐维棘轮（二者同批落地，见下方「regression guards」），三者合起来才无已知失效模式。
+  const coreRate = exactHeldout ?? exact
+  const gateRate = def95.rate ?? 0
+  const gateMetric = 'definition95'
 
   console.log('\nLayer-2 LLM accuracy (model=' + MODEL + ')')
   console.log('==========================================')
@@ -393,15 +416,15 @@ async function main() {
         ` — no fragment scorer yet (Wave 1.1); their compile+coverage gate is check:scene-coverage`
     )
   }
-  console.log(`  in-schema intent zero-edit (ALL):      ${(exact * 100).toFixed(1)}%`)
+  console.log(`  in-schema intent zero-edit (ALL):      ${(exact * 100).toFixed(1)}%   (diagnostic — not the gate)`)
   if (exactHeldout !== null) {
-    console.log(`  in-schema intent zero-edit (HELDOUT):  ${(exactHeldout * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%, GATED)`)
+    console.log(`  in-schema intent zero-edit (HELDOUT):  ${(exactHeldout * 100).toFixed(1)}%   (diagnostic — the gate moved to the 95%-definition ∨, see below)`)
   }
   // scoped：只记 NL 锁定维度的良定义口径。与 core 并列展示——core 是硬诚实数字（惩罚欠定），
-  // scoped 是公平口径（不惩罚 NL 没锁的维度）。本 PR scoped 只观测，门禁仍落 core。
-  console.log(`  in-schema intent SCOPED (ALL, observed): ${(exactScoped * 100).toFixed(1)}%   (only NL-pinned dims; decision A1'-a)`)
+  // scoped 是公平口径（不惩罚 NL 没锁的维度）。它是门禁 ∨ 的**第一条腿**，但单独不构成门禁。
+  console.log(`  in-schema intent SCOPED (ALL, observed): ${(exactScoped * 100).toFixed(1)}%   (leg-1 of the gate ∨; only NL-pinned dims)`)
   if (exactScopedHeldout !== null) {
-    console.log(`  in-schema intent SCOPED (HELDOUT):     ${(exactScopedHeldout * 100).toFixed(1)}%   (not gated yet — ratchet target)`)
+    console.log(`  in-schema intent SCOPED (HELDOUT):     ${(exactScopedHeldout * 100).toFixed(1)}%   (leg-1 of the gate ∨)`)
   }
   if (exactFewshot !== null) {
     console.log(`  in-schema intent zero-edit (few-shot): ${(exactFewshot * 100).toFixed(1)}%   (recall, not generalization)`)
@@ -424,11 +447,12 @@ async function main() {
         `(${convStats.converged}/${convStats.total} converged; mean turns ${mean})`
     )
   }
-  // 「95% 定义」统一数：scoped zero-edit ∨ ≤K 轮收敛（per-case OR）。这才是定义里那个「95」。
+  // 「95% 定义」统一数：scoped zero-edit ∨ ≤K 轮收敛（per-case OR）。这就是定义里那个「95」，
+  // 也正是 exit code 读的那个数（AI-33②：门禁与定义同源，此前门禁读 core 而定义只观测）。
   if (def95.rate !== null) {
     const src = heldout.length ? 'HELDOUT' : 'ALL'
     console.log(
-      `  95%-definition (${src}, observed): ${(def95.rate * 100).toFixed(1)}%  ` +
+      `  95%-definition (${src}): ${(def95.rate * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%, GATED)  ` +
         `(scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge; ${def95.pass}/${def95.total})`
     )
   }
@@ -444,6 +468,39 @@ async function main() {
       ? `${(c.rate * 100).toFixed(0).padStart(3)}%  (${c.pass}/${c.applicable})`
       : ' n/a'
     console.log(`    ${key.padEnd(16)} ${label}`)
+  }
+
+  // ── 回归防线（AI-33 ④⑤⑦）────────────────────────────────────────────────
+  // 门禁迁到 ∨ 后，门禁**变松**（∨ ≥ core 恒成立：第二条腿是 OR）。三种失效模式各需补丁：
+  //   · core 当门禁       → 永久红 → 红盲（已改：降为诊断，改由地板守）
+  //   · ∨ 单独当门禁      → 加简单语料即可稀释均值（→ 逐维棘轮 + 防删难例）
+  //   · 棘轮自己也错       → check:ratchet 用合成变异把纯函数打穿（每次 PR 跑，离线免费）
+  // 三者合起来才无已知失效模式。此处读 __tests__/golden/accuracy-baseline.json（只由人/PR 修改）。
+  const baselineFile = join(__dirname, '..', '__tests__', 'golden', 'accuracy-baseline.json')
+  let baseline = null
+  try {
+    baseline = JSON.parse(readFileSync(baselineFile, 'utf8'))
+  } catch (err) {
+    console.warn(`  (no baseline at ${baselineFile}: ${err.message} — rate ratchet skipped)`)
+  }
+  const dimRates = Object.fromEntries(
+    CAPABILITY_SCORERS.map(({ key }) => [key, byCapability[key].applicable ? byCapability[key].rate : null])
+  )
+  // 只用 zh 行：双语 case 会在 rows 里出现两次，按行取 gold 会把语料计数翻倍（baseline 是
+  // 按**语料用例**计的）。zh 行恰好一条对一个 crud 用例。
+  const corpusCounts = applicableCountsFromCases(zhRows.filter((r) => r.gold).map((r) => r.gold), CAPABILITY_SCORERS)
+  const guards = combine(
+    evaluateFloor({ coreRate, heldoutCases: heldout.length }),
+    checkCorpusSize({ heldoutCases: heldout.length }),
+    compareToBaseline({ definition95: def95.rate, coreRate, byDimension: dimRates }, baseline),
+    guardAntiDelete(corpusCounts, baseline)
+  )
+  for (const w of guards.warnings) console.log(`  [guard] note: ${w}`)
+  if (guards.failures.length) {
+    console.error('\n  [guard] REGRESSION GUARDS FAILED:')
+    for (const f of guards.failures) console.error(`    ✗ ${f}`)
+  } else {
+    console.log(`\n  [guard] core floor / heldout size / rate ratchet / anti-delete: all OK`)
   }
 
   // Persist the last measured accuracy so a badge/dashboard has a source of
@@ -477,7 +534,11 @@ async function main() {
     // 非-crud 场景的语料条数（Wave 1.1 起与 CRUD 同目录，但无 scorer，故不进任何分母）。
     // 显式落在产物里，使「本次测量不覆盖这几条」事后可诊断，而不是让人以为它们得 0 分。
     notScored: skippedScenes.map((x) => ({ file: x.file, scene: x.scene })),
-    inSchemaIntentZeroEdit: Number(gateExact.toFixed(4)),
+    // 门禁数字（AI-33②）：= 95% 定义 ∨ = scoped zero-edit ∨ ≤K 轮收敛，与徽章同源。
+    gateMetric,
+    inSchemaIntentZeroEdit: Number(gateRate.toFixed(4)),
+    // core（四维）降为诊断并列公布 —— 不是门禁，不参与 exit code / badge。
+    coreRate: Number(coreRate.toFixed(4)),
     inSchemaIntentZeroEditAll: Number(exact.toFixed(4)),
     // scoped 口径（B2，只记 NL 锁定维度；本 PR 观测、未门禁）。heldout 优先，空则退全量。
     inSchemaIntentScoped: Number((exactScopedHeldout ?? exactScoped).toFixed(4)),
@@ -512,7 +573,7 @@ async function main() {
         },
     byCapability,
     byLanguage,
-    passed: gateExact >= TARGET_ACCURACY,
+    passed: gateRate >= TARGET_ACCURACY && guards.ok,
   }
   try {
     writeFileSync(ACCURACY_FILE, JSON.stringify(record, null, 2) + '\n')
@@ -521,14 +582,14 @@ async function main() {
     console.warn(`  (could not persist accuracy: ${err.message})`)
   }
 
-  // Shields endpoint payload. The badge reflects the GATE number (heldout
-  // in-schema intent zero-edit) — the same figure the >=95% gate reads — so the
-  // public badge can never diverge from what the gate actually enforces.
-  const pct = gateExact * 100
+  // Shields endpoint payload. The badge label changed in the SAME commit that moved
+  // the gate (AI-33②), so the badge can never diverge from what the gate enforces:
+  // both now read `gateRate` = the 95%-definition ∨, not the four-dim core.
+  const pct = gateRate * 100
   const color = pct >= 95 ? 'brightgreen' : pct >= 90 ? 'green' : pct >= 80 ? 'yellow' : 'red'
   const badge = {
     schemaVersion: 1,
-    label: 'heldout accuracy',
+    label: 'heldout 95%-definition',
     message: `${pct.toFixed(1)}%`,
     color,
   }
@@ -558,11 +619,15 @@ async function main() {
     console.warn(`  (could not write scoped badge: ${err.message})`)
   }
 
-  if (gateExact < TARGET_ACCURACY) {
-    console.error(`\n[eval:llm] heldout in-schema intent accuracy ${(gateExact * 100).toFixed(1)}% is below target ${(TARGET_ACCURACY * 100).toFixed(0)}%.`)
+  if (gateRate < TARGET_ACCURACY || !guards.ok) {
+    console.error(
+      `\n[eval:llm] gate (${gateMetric}) ${(gateRate * 100).toFixed(1)}% is below target ${(TARGET_ACCURACY * 100).toFixed(0)}%` +
+        ` (diagnostic core ${(coreRate * 100).toFixed(1)}%)${guards.ok ? '' : ' — regression guards also failed'}.\n` +
+        `  The gate is the user-ratified 95% definition: scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge.`
+    )
     process.exit(1)
   }
-  console.log(`\n[eval:llm] target met. ✔`)
+  console.log(`\n[eval:llm] target met (${gateMetric} ${(gateRate * 100).toFixed(1)}%). ✔`)
 }
 
 main().catch((err) => {
