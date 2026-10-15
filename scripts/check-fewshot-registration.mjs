@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema, NL_TO_CONFIG_FEWSHOT } from '@es-plus/shared'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+import { isCrudCase } from './eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -43,10 +44,13 @@ const propsOf = (c) => new Set((c.fields || []).map((f) => f.prop))
 const actsOf = (c) => [...(c.actions || [])].sort().join(',')
 
 const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
-const cases = files.map((f) => {
-  const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
-  return { f, bg: bg(raw.nl), pr: propsOf(raw.config), ac: actsOf(raw.config) }
-})
+// 同源性只对 CRUD 场景有意义（few-shot 与登记表都是 CRUD 配置；propsOf/actsOf 也读
+// config.fields/config.actions）。片段用例（Wave 1.1）既无 fields 语义也不在 few-shot 里，
+// 混进来只会制造假候选，故先滤掉。
+const cases = files
+  .map((f) => ({ f, raw: JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8')) }))
+  .filter(({ raw }) => isCrudCase(raw))
+  .map(({ f, raw }) => ({ f, bg: bg(raw.nl), pr: propsOf(raw.config), ac: actsOf(raw.config) }))
 
 // ① 下界候选 ⊆ 登记表
 const candidates = new Map()
@@ -72,11 +76,15 @@ for (const f of FEWSHOT_DERIVED) {
   if (!files.includes(f)) fail(`登记表里的 ${f} 在语料中不存在（改名/删除后未同步登记表）`)
 }
 
-// ③ 防洗白：heldout 必须非空且占多数
-const heldout = files.filter((f) => !FEWSHOT_DERIVED.has(f))
+// ③ 防洗白：heldout 必须非空且占多数。
+// 口径只取 CRUD 场景 —— 「heldout」是 LLM eval 的分母概念，而 eval 只评 CRUD
+// （片段场景无 scorer，见 eval-llm.mjs 的 notScored）。把片段语料算进分母会让
+// 这里的比例失真，且掩盖真正的 crud heldout 规模。
+const crudFiles = cases.map((c) => c.f)
+const heldout = crudFiles.filter((f) => !FEWSHOT_DERIVED.has(f))
 if (!heldout.length) fail('heldout 为空 —— 全部语料都被登记成 few-shot 派生，门禁失去意义')
-if (heldout.length * 2 < files.length) {
-  fail(`heldout 仅 ${heldout.length}/${files.length}，不足半数 —— 登记表疑似被滥用（防「登记洗分」）`)
+if (heldout.length * 2 < crudFiles.length) {
+  fail(`heldout 仅 ${heldout.length}/${crudFiles.length}，不足半数 —— 登记表疑似被滥用（防「登记洗分」）`)
 }
 
 // 报告：机检下界之外的额外登记（人工裁定覆盖，供复核，不失败）
@@ -86,7 +94,8 @@ if (failures) {
   process.exit(1)
 }
 console.log(`[fewshot-registration] few-shot 共 ${NL_TO_CONFIG_FEWSHOT.length} 条；语料 ${files.length} 例`
-  + `（登记 ${FEWSHOT_DERIVED.size} / heldout ${heldout.length}）`)
+  + `（crud ${crudFiles.length} → 登记 ${FEWSHOT_DERIVED.size} / heldout ${heldout.length}；`
+  + `另 ${files.length - crudFiles.length} 例非-crud 场景不进 eval 分母）`)
 console.log(`[fewshot-registration] 机检下界命中 ${candidates.size} 例，全部已登记 ✔`)
 console.log(`[fewshot-registration] 人工裁定额外登记 ${manualOnly.length} 例（低相似度同源，下界抓不到）：`)
 for (const f of manualOnly) console.log(`    - ${f}`)

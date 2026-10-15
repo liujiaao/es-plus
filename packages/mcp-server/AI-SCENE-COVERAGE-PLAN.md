@@ -74,12 +74,15 @@
 
 ### 1.2 四场景 × 测量装置矩阵（**本审计核心**）
 
-| 宣称场景 | eval-llm? | golden 语料? | vite build? | 运行时? | 实际被谁验证 |
-|---|---|---|---|---|---|
-| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0** | ❌ | ❌ | **字符串断言**：`shared/__tests__/fragment-generator.spec.ts`（`toContain`，181 行）+ `mcp-server/__tests__/generate-tools-and-prompts.spec.ts` + `scripts/compile-smoke.mjs`（esbuild 语法解析，**不在 `check:consistency`**） |
-| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0** | ❌ | ❌ | 同上 |
-| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0** | ❌ | ❌ | 同上 |
-| CRUD 组合 | ⚠️ 仅 `generateFromConfig`（**后端**），**从不调前门 `generate_crud`** | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 |
+| 宣称场景 | eval-llm? | golden 语料? | vite build? | 运行时? | 实际被谁验证 | **本轮后（Wave 1.1+1.2）** |
+|---|---|---|---|---|---|---|
+| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | **字符串断言**：`shared/__tests__/fragment-generator.spec.ts`（`toContain`，181 行）+ `mcp-server/__tests__/generate-tools-and-prompts.spec.ts` + `scripts/compile-smoke.mjs`（esbuild 语法解析，**不在 `check:consistency`**） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + `fragment:smoke` 升格进门禁**（准确率仍无 scorer，见下） |
+| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | 同上 | 同上 |
+| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | 同上 | 同上 |
+| CRUD 组合 | ⚠️ 仅 `generateFromConfig`（**后端**），**从不调前门 `generate_crud`** | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 | ➖ 未动（1.3 前门进 eval 留待下一批） |
+
+> **本轮把「有语料」这一格从 0 抬起来了**，但**只到「覆盖 + 编译」**：9 条片段语料（`frag-{table,form,dialog}-01-{vue3,vue2,antdv}.json`）保证每个场景每条端都有用例、且产物真能被 `generate*Block` 跑出来并解析通过。
+> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母、片段进 vite build 与运行时。故「eval-llm?」与「运行时?」两列**仍为 ❌**——本轮的贡献是让这两列的空白**可见且不许静默扩大**，而不是填上它们。
 
 > **❌ 初稿更正**：本节初稿把三个独立场景的验证写成「**仅** `compile-smoke` esbuild 语法解析」。**错**——
 > 它们是**有单测的**（`fragment-generator.spec.ts` 等）。但那类断言全是 `toContain` **字符串比对**：
@@ -97,6 +100,16 @@
 | AI-01~AI-34 的源码断言 | ✅ 逐条抽验**几乎全部成立**（含 `formLayout.span` 死键、`hasCustomRender` 不可删、AI-34 前提落空） |
 | 整套 Wave 0–3 地图 | ⚠️ **只画了一条路**（CRUD 配置）：AI-06/07/08/09/21/22/23/25/26/27/30/31/32/33/34 全属此路；独立 useDialog 仅 AI-28 一条且「未落地」；独立 es-table/es-form **零条目** |
 | `config.permissions` = 死键 | **❌ 更正（推翻）**：其消费者是**生成器**——`structured-generator.ts:512/516/520`、`:1285/1289/1293` 把 `permissions.add/edit/delete/...` 物化为按钮 `permissionValue`，后者真被运行时消费（三端 `esPlus.permission(code)`）。**它不是死键**；真死键只有 `formLayout.span` |
+
+### 1.4 方法论：**「本地红」≠「CI 绿」**（2026-10-15 实证）
+
+一个守卫在本地红，**不能**推出它坏了；同样，一个守卫在本地绿，**也不能**推出 CI 上跑过它。本轮实证：
+
+`check:consistency` 是 `&&` 链，第 10 步 `check:generator-targets` 在 **Linux CI 上同样红**（esbuild `__require` shim，与平台无关），于是其后 **29 项从未在 CI 执行过**。此处曾据此把 `check:generator-escaping` 的本地红误判为「Windows-only 假阳性、留给 CI」——**错**：它只是被前一步短路遮蔽，CI 上从未跑到。修完 `git` 可见的根因后它立刻在上游也红。
+
+**判据（必须执行）**：断定一项是「环境假阳性」之前，拉 CI 日志确认**该步骤真的执行过**（出现在日志里、且是它自己红的），而不是被 `&&` 链短路跳过。同时：
+- 断「假阳性」要有**逐字节证据**（如 `og:check`：LF 归一后哈希与 meta 逐字相等；`one-config:check`：TARGET 逐字内嵌样例的 LF 形态），而不是「我这机器上红」这种自陈；
+- 长 `&&` 链本身就是缺陷源 → 新门禁**往链前段插**（本轮 `check:scene-coverage` / `fragment:smoke` 即插在 `check:generator` 之前），避免再被后端失败遮蔽。
 
 ---
 
@@ -367,10 +380,12 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 
 ### Wave 1 · 让「全场景」可测（**最高杠杆，先于一切修复**）
 
+> **进度**：1.0 / 1.0b ✅（F9 / F8，已推送）· **1.1 / 1.2 ✅ 已实施（2026-10-15）** · 1.3 / 1.4 待做（下一批）
+
 | # | 动作 | 验收（变异 → 红） |
 |---|---|---|
-| 1.1 | **场景分类法**：语料统一为 `{scene, config, target, mode}`，`scene ∈ {crud, table, form, dialog}` | 新场景无语料 → 红 |
-| 1.2 | **片段路径进 `check:consistency`**：`compile-smoke` 升格为门禁 + 新增 `check-scene-coverage`（断「四场景 × 三端 × 两模式」无空格） | 删任一场景覆盖 → 红 |
+| 1.1 | ✅ **已实施（2026-10-15）**：**场景分类法** —— 单源 `scripts/eval/scenes.mjs`（`SCENES` / `SCENE_TOOL` / `sceneOf` / `modesOf` / `cellOf`）。语料统一为 `{scene, config, target, mode?}`：**`scene` 可选、缺省即 `'crud'`**（186 条既有用例一字未改），片段场景的 `target` 在**用例顶层**（片段输入本身不含 target）。新增 9 条片段语料（3 场景 × 3 端，同场景三条 config 逐字节相同、只差 target —— 这正是「一份配置 → 三端」的语料表达） | 新场景无语料 → 红 |
+| 1.2 | ✅ **已实施（2026-10-15）**：`compile-smoke` 升格为门禁（`fragment:smoke` 进 `check:consistency`）+ 新增 **`check:scene-coverage`**：①覆盖无空格（断每场景 × 每端 × 每模式，**缺格点名**）；②四个场景工具仍在 MCP 注册表（静态断言 `index.ts` 注册调用 + 工具文件里的 `server.tool("<name>")`）；③**片段语料真能编译**（每条真跑 `generate*Block`，用与 `compile-smoke` 同一把尺子 `scripts/lib/compile-check.mjs`） | 删任一场景覆盖 → 红（**实测**：删 `frag-table-01-vue3.json` → 报「缺格：table × vue3 无用例」并发红；漏标 `scene` → `check:scorers` 的 Zod 解析响亮抛错 + 覆盖门禁报缺格） |
 | 1.3 | **前门进 eval**：对 `generate_crud`（含 no-table 分支）至少跑一遍 | 前门回归 → 红 |
 | 1.4 | AI-33 原 8 条（门禁迁 ∨ + core 地板 + per-dim ratchet + 徽章与门禁同源 + 补 6 维 COVERAGE + heldout ≥60 + 防删难例） | 篡改 ∨ / 维度退步 / 删语料 → 红 |
 | **1.0** | ✅ **已实施（F9）**：`target`/`mode` 作**给定输入**喂入 prompt（`scripts/eval/prompt.mjs`，仿 `fixedFields`）。**不做这条，「95% 定义」就在惩罚模型猜不到的宿主输入**（`definition95` 上限 64.6%） | 58 例不可推断例改为「给定 target/mode」；`check:eval-prompt` 钉住旧路径逐字节不变 + 维度不放水 → 篡改即红 |
@@ -446,8 +461,20 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 ```
 前置（Wave 0 已落地）: 测量未发生 ⟹ 不发布百分比（健康门，见 F6）
                       ——「没有数字」必须长得和「数字是 0」不一样
-编译率 100%  := 四场景 × 三端 × 两模式 的**全部**语料 vite build 通过
-                （今天只对 CRUD schema 路径成立；W1.2/1.3 后才四场景成立）
+覆盖         := check:scene-coverage ✅ 已落地（W1.2）：每个场景每格都有语料，
+                缺格**点名**（「table × vue3 无用例」）；四场景工具仍在 MCP 注册表（静态断言）。
+                另断言「片段语料真能被 generate*Block 跑出产物并解析」——一条没人编译的语料是死用例。
+                ⚠️ 覆盖 ≠ 准确率：本门禁只保证「测了」，不保证「测对了」（片段无 scorer，见 §1.2）
+编译率 100%  := 真实矩阵的**全部**语料通过编译闸
+                真实矩阵 = crud: 3 端 × 2 模式 ＋ table|form|dialog: 3 端 × 1
+                ⚠️ 原文「四场景 × 三端 × **两模式**」在算术上不成立：`mode` 是 **CRUD 独有**轴
+                   （`fragment-generator.ts` 里 `\bmode\b` 零匹配；三个片段工具形状无 mode；
+                    前门 no-table 分支从不传 mode）。此处按事实更正，理由见 `scripts/eval/scenes.mjs` 头注。
+                口径分两段：
+                  · crud（186 例）→ **vite build**（真构建，golden:e2e 驱动）
+                  · 片段（9 例）→ **esbuild 语法解析**（`fragment:smoke` + `check:scene-coverage`，均已进 check:consistency）
+                    片段尚未进 vite build / 运行时，见 §1.2「本轮后」列
+                （W1.2 已落地：编译门禁覆盖到四场景的**每一格都有语料且产物可解析**）
 准确率 ≥95%  := 各场景 heldout 上 definition95 = scoped zero-edit ∨ ≤K=3 收敛 ≥ 95%
                 + per-dimension ratchet + core 非回归地板 + 防「删难例洗分」守卫
                 【前置·F9】✅ 已实施：target/mode 作**给定输入**喂入；否则 definition95 上限仅 64.6%，95% 不可达

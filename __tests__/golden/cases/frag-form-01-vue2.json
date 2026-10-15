@@ -1,0 +1,53 @@
+{
+  "scene": "form",
+  "target": "vue2",
+  "config": {
+    "fields": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input",
+        "required": true
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "禁用",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "prop": "birthday",
+        "label": "生日",
+        "formtype": "DatePicker"
+      },
+      {
+        "prop": "bio",
+        "label": "简介",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea",
+          "maxlength": 200
+        }
+      },
+      {
+        "prop": "enabled",
+        "label": "启用",
+        "formtype": "Switch"
+      }
+    ],
+    "context": "form",
+    "buttons": "submit",
+    "typescript": true
+  },
+  "nl": "做一个新增用户的表单：姓名必填、状态下拉、生日日期选择、简介多行文本、是否启用开关，底部提交按钮。",
+  "notes": "独立 es-form 场景，取 context=form + buttons=submit（与 context=query/buttons=query 的查询表单是不同发射分支）。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。"
+}

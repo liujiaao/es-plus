@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { transformSync } from 'esbuild'
 import { generateFromConfig, StructuredCrudConfigSchema } from '@es-plus/shared'
+import { SCENES, isCrudCase, sceneOf } from '../../../scripts/eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', 'cases')
@@ -435,6 +436,26 @@ function main() {
       results.push({ file, failures: refineShape })
       continue
     }
+    // 场景判别（Wave 1.1）：语料目录已统一承载四场景，`scene` 缺省即 'crud'（186 条既有
+    // 用例一字未改）。这里只管**形状**：非法场景名要响亮翻红（否则它会静默落到 crud，
+    // 再在下面 StructuredCrudConfigSchema 处报一个与真实原因无关的错）；片段场景必须带
+    // 顶层 target（片段输入本身不含 target，没有它就无法断「三端都覆盖」）。
+    const sceneShape = []
+    if (raw.scene !== undefined && !SCENES.includes(raw.scene)) {
+      sceneShape.push(`scene, when present, must be one of ${SCENES.join(' | ')} (got ${JSON.stringify(raw.scene)})`)
+    }
+    if (raw.scene !== undefined && !isCrudCase(raw) && typeof raw.target !== 'string') {
+      sceneShape.push(`scene=${sceneOf(raw)} cases must declare a top-level target (fragment input carries no target)`)
+    }
+    if (sceneShape.length) {
+      results.push({ file, failures: sceneShape })
+      continue
+    }
+    // Layer-1 打分器是**CRUD 配置 → 代码**这一条路径的尺子（它按 pageSchema 载荷、
+    // query/table 字段集、tableBtns/dialogs 结构做断言）。片段场景的产物形状完全不同，
+    // 用这把尺子量没有意义，故在此显式跳过 —— 但不是「不管」：片段语料的编译断言在
+    // check-scene-coverage.mjs，覆盖断言也在那里。
+    if (!isCrudCase(raw)) continue
     results.push({ file, failures: scoreCase(raw), bilingual: typeof raw.nlEn === 'string' })
   }
 

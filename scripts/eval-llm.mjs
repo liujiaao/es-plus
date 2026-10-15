@@ -42,6 +42,7 @@ import {
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
 import { buildInitialMessages } from './eval/prompt.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -176,8 +177,17 @@ async function main() {
   if (!files.length) skip(`no golden cases in ${CASES_DIR}`)
 
   const rows = []
+  // 非-crud 场景（片段语料，Wave 1.1 起与 CRUD 同目录）本轮**不评分**：scorer 全是
+  // CRUD 形状的（pageSchema/query/table/tableBtns），片段产物量不出有意义的分数，
+  // 硬造只会产出恒真的伪信号。跳过必须**响亮**并计入 record —— 否则「没测」会在
+  // 报告里伪装成「测了且为 0」，正是 §1.1「没有数字必须长得和数字是 0 不一样」的同一条。
+  const skippedScenes = []
   for (const file of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, file), 'utf8'))
+    if (!isCrudCase(raw)) {
+      skippedScenes.push({ file, scene: sceneOf(raw) })
+      continue
+    }
     const gold = StructuredCrudConfigSchema.parse(raw.config)
     // B2 规格掩码：pinnedDims = NL 真正锁定的维度/字段（scoped 口径只记它们）；
     // fixedFields = NL/契约明确给定的字段 prop（喂给模型）。两者均可选、可增量标注。
@@ -373,6 +383,16 @@ async function main() {
   console.log('\nLayer-2 LLM accuracy (model=' + MODEL + ')')
   console.log('==========================================')
   console.log(`  cases:                 ${n}  (heldout ${heldout.length} / fewshot-derived ${fewshotRows.length})`)
+  if (skippedScenes.length) {
+    // 响亮报出「未评分」的场景，并给出它去哪了 —— 否则报告读起来像「片段场景答对了 0 条」。
+    const byScene = SCENES.filter((s) => s !== 'crud')
+      .map((s) => `${s} ${skippedScenes.filter((x) => x.scene === s).length}`)
+      .join(' / ')
+    console.log(
+      `  NOT SCORED:            ${skippedScenes.length} case(s) outside the crud scene (${byScene})` +
+        ` — no fragment scorer yet (Wave 1.1); their compile+coverage gate is check:scene-coverage`
+    )
+  }
   console.log(`  in-schema intent zero-edit (ALL):      ${(exact * 100).toFixed(1)}%`)
   if (exactHeldout !== null) {
     console.log(`  in-schema intent zero-edit (HELDOUT):  ${(exactHeldout * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%, GATED)`)
@@ -454,6 +474,9 @@ async function main() {
     // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。
     // 旧产物无此字段 = 未修 F9 的口径（definition95 上限 67.8%）。见 eval/prompt.mjs 头注。
     givenInputs: ['target', 'mode'],
+    // 非-crud 场景的语料条数（Wave 1.1 起与 CRUD 同目录，但无 scorer，故不进任何分母）。
+    // 显式落在产物里，使「本次测量不覆盖这几条」事后可诊断，而不是让人以为它们得 0 分。
+    notScored: skippedScenes.map((x) => ({ file: x.file, scene: x.scene })),
     inSchemaIntentZeroEdit: Number(gateExact.toFixed(4)),
     inSchemaIntentZeroEditAll: Number(exact.toFixed(4)),
     // scoped 口径（B2，只记 NL 锁定维度；本 PR 观测、未门禁）。heldout 优先，空则退全量。

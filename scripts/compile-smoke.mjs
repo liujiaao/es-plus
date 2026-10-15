@@ -19,34 +19,14 @@
  * 用法：node scripts/compile-smoke.mjs
  * 退出码：0 = 全部可解析；1 = 至少一个产物解析失败。
  */
-import { transformSync } from 'esbuild'
 import { generateFormBlock, generateTableBlock, generateDialogBlock } from '@es-plus/shared'
+import { parseSource, parseSfc, parseComposable } from './lib/compile-check.mjs'
 
 const TARGETS = /** @type {const} */ (['vue3', 'vue2', 'antdv'])
 const TS = [true, false]
 
-/** 解析一段源码(只解析语法、不解析依赖)；失败则把标签+首行错误塞进 failures。 */
-function parse(src, loader, label, failures) {
-  try {
-    transformSync(src, { loader })
-  } catch (err) {
-    failures.push(`${label} — ${String(err.message).split('\n').slice(0, 2).join(' ')}`)
-  }
-}
-
-/** 一个 SFC 产物:抽出所有 <script> 块,按声明 lang 选 loader 逐块解析。 */
-function parseSfc(sfc, label, failures) {
-  const blocks = [...sfc.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-  if (blocks.length === 0) {
-    failures.push(`${label} — 产物里没有 <script> 块`)
-    return
-  }
-  for (const [, attrs, body] of blocks) {
-    const lang = (attrs.match(/lang\s*=\s*["']?([a-z]+)/i) || [])[1]?.toLowerCase()
-    const loader = lang === 'tsx' ? 'tsx' : lang === 'jsx' ? 'jsx' : lang === 'ts' ? 'ts' : 'js'
-    parse(body, loader, label, failures)
-  }
-}
+// 尺子从 scripts/lib/compile-check.mjs 引入（与 check-scene-coverage.mjs 共用同一把，
+// 避免「A 绿 B 红」变成无意义的信号）。此处不再本地定义 parse/parseSfc。
 
 const f = (prop, label, formtype, extra = {}) => ({ prop, label, formtype, ...extra })
 
@@ -111,7 +91,7 @@ function run() {
           target,
           typescript,
         })
-        parse(r.code, typescript ? 'tsx' : 'jsx', `dialog[${tag} api=${withApi}]`, failures)
+        parseComposable(r.code, typescript, `dialog[${tag} api=${withApi}]`, failures)
       }
     }
   }

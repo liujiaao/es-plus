@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
 import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95 } from './scorers.mjs'
+import { isCrudCase } from './scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '..', '__tests__', 'golden', 'cases')
@@ -442,6 +443,9 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
   const applicableCount = Object.fromEntries(CAPABILITY_SCORERS.map((s) => [s.key, 0]))
   for (const f of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
+    // 只体检 CRUD 场景：CAPABILITY_SCORERS 与掩码 token 全是 CRUD 形状的，片段用例
+    // 的 config 过不了 StructuredCrudConfigSchema（Wave 1.1 起四场景同目录）。
+    if (!isCrudCase(raw)) continue
     const g = StructuredCrudConfigSchema.parse(raw.config)
     for (const s of CAPABILITY_SCORERS) if (s.applicable(g)) applicableCount[s.key]++
 

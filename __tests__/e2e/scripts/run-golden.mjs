@@ -19,6 +19,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 
 import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
+import { isCrudCase } from '../../../scripts/eval/scenes.mjs'
 import {
   packPackage,
   copyFixtureToSandbox,
@@ -36,6 +37,9 @@ const CASES_DIR = resolve(REPO_ROOT, '__tests__/golden/cases')
 const PACKED_DIR = resolve(__dirname, '../.packed')
 
 function loadCases() {
+  // 只取 CRUD 场景：本脚本把 `config` 原样喂给 cli `--from-config` → composeCrudConfig →
+  // generateFromConfig，片段场景的 config（片段工具输入）在这里会炸。片段语料的编译
+  // 断言在 scripts/check-scene-coverage.mjs（同目录、不同尺子）。
   return readdirSync(CASES_DIR)
     .filter((f) => f.endsWith('.json'))
     .sort()
@@ -43,8 +47,9 @@ function loadCases() {
       // Golden files are { nl, config, notes? }; tolerate a bare-config file too.
       const parsed = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf-8'))
       const config = parsed && parsed.config ? parsed.config : parsed
-      return { file: f, config }
+      return { file: f, config, raw: parsed }
     })
+    .filter((c) => isCrudCase(c.raw))
 }
 
 function assertDistBuilt(target) {
