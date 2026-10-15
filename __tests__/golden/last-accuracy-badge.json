@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "heldout accuracy",
-  "message": "39.4%",
+  "label": "heldout 95%-definition",
+  "message": "47.0%",
   "color": "red"
 }

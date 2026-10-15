@@ -1,60 +1,104 @@
 {
-  "measuredAt": "2026-10-15T09:23:38.386Z",
+  "measuredAt": "2026-10-15T14:21:14.995Z",
   "model": "pa/claude-opus-4-8",
   "servedModel": "pa/venus-marble-4-8",
   "cases": 186,
-  "heldoutCases": 180,
-  "fewshotDerivedCases": 6,
+  "heldoutCases": 164,
+  "fewshotDerivedCases": 22,
   "target": 0.95,
-  "inSchemaIntentZeroEdit": 0.3944,
-  "inSchemaIntentZeroEditAll": 0.4032,
-  "inSchemaIntentScoped": 0.3778,
-  "inSchemaIntentScopedAll": 0.3925,
-  "exactIntentFull": 0.1667,
-  "exactIntentFullAll": 0.1828,
-  "propSetF1": 0.9911,
-  "attributeAccuracy": 0.9403,
-  "actionsF1": 0.9938,
-  "compileRate": 1,
+  "givenInputs": [
+    "target",
+    "mode"
+  ],
+  "notScored": [
+    {
+      "file": "frag-dialog-01-antdv.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-01-vue2.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-01-vue3.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-form-01-antdv.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-form-01-vue2.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-form-01-vue3.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-table-01-antdv.json",
+      "scene": "table"
+    },
+    {
+      "file": "frag-table-01-vue2.json",
+      "scene": "table"
+    },
+    {
+      "file": "frag-table-01-vue3.json",
+      "scene": "table"
+    }
+  ],
+  "gateMetric": "definition95",
+  "inSchemaIntentZeroEdit": 0.4695,
+  "coreRate": 0.372,
+  "inSchemaIntentZeroEditAll": 0.4086,
+  "inSchemaIntentScoped": 0.4512,
+  "inSchemaIntentScopedAll": 0.4892,
+  "exactIntentFull": 0.2561,
+  "exactIntentFullAll": 0.3011,
+  "propSetF1": 0.7074,
+  "attributeAccuracy": 0.687,
+  "actionsF1": 0.7081,
+  "compileRate": 0.7151,
   "convergence": {
     "k": 3,
     "source": "heldout",
-    "rateAtK": 1,
-    "meanTurnsToConverge": 0.8,
-    "converged": 5,
+    "rateAtK": 0.8,
+    "meanTurnsToConverge": 0.75,
+    "converged": 4,
     "total": 5
   },
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0.4,
-    "pass": 72,
-    "total": 180
+    "rate": 0.4695,
+    "pass": 77,
+    "total": 164
   },
   "byCapability": {
     "propSet": {
-      "applicable": 180,
-      "pass": 176,
-      "rate": 0.9778
+      "applicable": 114,
+      "pass": 110,
+      "rate": 0.9649
     },
     "formtype": {
-      "applicable": 180,
-      "pass": 160,
-      "rate": 0.8889
+      "applicable": 114,
+      "pass": 103,
+      "rate": 0.9035
     },
     "membership": {
-      "applicable": 180,
-      "pass": 87,
-      "rate": 0.4833
+      "applicable": 114,
+      "pass": 74,
+      "rate": 0.6491
     },
     "actions": {
-      "applicable": 180,
-      "pass": 176,
-      "rate": 0.9778
+      "applicable": 114,
+      "pass": 109,
+      "rate": 0.9561
     },
     "tableBtns": {
-      "applicable": 11,
-      "pass": 11,
+      "applicable": 10,
+      "pass": 10,
       "rate": 1
     },
     "dialogs": {
@@ -63,8 +107,8 @@
       "rate": 0.7273
     },
     "operationColumn": {
-      "applicable": 6,
-      "pass": 6,
+      "applicable": 5,
+      "pass": 5,
       "rate": 1
     },
     "permissions": {
@@ -78,9 +122,9 @@
       "rate": 1
     },
     "dataOptions": {
-      "applicable": 89,
-      "pass": 79,
-      "rate": 0.8876
+      "applicable": 74,
+      "pass": 67,
+      "rate": 0.9054
     },
     "i18n": {
       "applicable": 11,
@@ -93,69 +137,69 @@
       "rate": 1
     },
     "target": {
-      "applicable": 83,
-      "pass": 38,
-      "rate": 0.4578
+      "applicable": 53,
+      "pass": 53,
+      "rate": 1
     },
     "mode": {
-      "applicable": 46,
-      "pass": 18,
-      "rate": 0.3913
+      "applicable": 27,
+      "pass": 27,
+      "rate": 1
     },
     "virtualScroll": {
-      "applicable": 17,
-      "pass": 17,
+      "applicable": 9,
+      "pass": 9,
       "rate": 1
     },
     "configTableOut": {
-      "applicable": 8,
-      "pass": 8,
+      "applicable": 7,
+      "pass": 7,
       "rate": 1
     },
     "isHidden": {
       "applicable": 24,
-      "pass": 15,
-      "rate": 0.625
+      "pass": 17,
+      "rate": 0.7083
     },
     "reactions": {
-      "applicable": 15,
+      "applicable": 13,
       "pass": 4,
-      "rate": 0.2667
+      "rate": 0.3077
     },
     "columns": {
-      "applicable": 34,
-      "pass": 13,
-      "rate": 0.3824
+      "applicable": 7,
+      "pass": 4,
+      "rate": 0.5714
     },
     "expandConfig": {
-      "applicable": 16,
-      "pass": 4,
-      "rate": 0.25
+      "applicable": 1,
+      "pass": 0,
+      "rate": 0
     },
     "treeConfig": {
-      "applicable": 15,
-      "pass": 14,
-      "rate": 0.9333
+      "applicable": 0,
+      "pass": 0,
+      "rate": null
     },
     "editConfig": {
-      "applicable": 15,
-      "pass": 6,
-      "rate": 0.4
+      "applicable": 7,
+      "pass": 3,
+      "rate": 0.4286
     },
     "mergeConfig": {
-      "applicable": 15,
-      "pass": 15,
+      "applicable": 8,
+      "pass": 8,
       "rate": 1
     },
     "extPoints": {
-      "applicable": 25,
-      "pass": 25,
+      "applicable": 22,
+      "pass": 22,
       "rate": 1
     }
   },
   "byLanguage": {
-    "zh": 0.3944,
-    "en": 0.3833
+    "zh": 0.372,
+    "en": 0.3537
   },
   "passed": false
 }
