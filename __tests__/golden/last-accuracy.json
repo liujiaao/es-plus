@@ -1,114 +1,161 @@
 {
-  "measuredAt": "2026-10-14T08:42:25.858Z",
+  "measuredAt": "2026-10-15T09:23:38.386Z",
   "model": "pa/claude-opus-4-8",
-  "servedModel": "pa/claude-opus-4-8",
-  "cases": 29,
-  "heldoutCases": 23,
+  "servedModel": "pa/venus-marble-4-8",
+  "cases": 186,
+  "heldoutCases": 180,
   "fewshotDerivedCases": 6,
   "target": 0.95,
-  "inSchemaIntentZeroEdit": 0,
-  "inSchemaIntentZeroEditAll": 0,
-  "inSchemaIntentScoped": 0,
-  "inSchemaIntentScopedAll": 0,
-  "exactIntentFull": 0,
-  "exactIntentFullAll": 0,
-  "propSetF1": 0,
-  "attributeAccuracy": 0,
-  "actionsF1": 0,
-  "compileRate": 0,
-  "convergence": null,
+  "inSchemaIntentZeroEdit": 0.3944,
+  "inSchemaIntentZeroEditAll": 0.4032,
+  "inSchemaIntentScoped": 0.3778,
+  "inSchemaIntentScopedAll": 0.3925,
+  "exactIntentFull": 0.1667,
+  "exactIntentFullAll": 0.1828,
+  "propSetF1": 0.9911,
+  "attributeAccuracy": 0.9403,
+  "actionsF1": 0.9938,
+  "compileRate": 1,
+  "convergence": {
+    "k": 3,
+    "source": "heldout",
+    "rateAtK": 1,
+    "meanTurnsToConverge": 0.8,
+    "converged": 5,
+    "total": 5
+  },
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0,
-    "pass": 0,
-    "total": 23
+    "rate": 0.4,
+    "pass": 72,
+    "total": 180
   },
   "byCapability": {
     "propSet": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 180,
+      "pass": 176,
+      "rate": 0.9778
     },
     "formtype": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 180,
+      "pass": 160,
+      "rate": 0.8889
     },
     "membership": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 180,
+      "pass": 87,
+      "rate": 0.4833
     },
     "actions": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 180,
+      "pass": 176,
+      "rate": 0.9778
     },
     "tableBtns": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 11,
+      "pass": 11,
+      "rate": 1
     },
     "dialogs": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 11,
+      "pass": 8,
+      "rate": 0.7273
     },
     "operationColumn": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 6,
+      "pass": 6,
+      "rate": 1
     },
     "permissions": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
     },
     "apiParams": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
     },
     "dataOptions": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 89,
+      "pass": 79,
+      "rate": 0.8876
     },
     "i18n": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 11,
+      "pass": 11,
+      "rate": 1
     },
     "formLayout": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 9,
+      "pass": 9,
+      "rate": 1
     },
     "target": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 83,
+      "pass": 38,
+      "rate": 0.4578
     },
     "mode": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 46,
+      "pass": 18,
+      "rate": 0.3913
     },
     "virtualScroll": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 17,
+      "pass": 17,
+      "rate": 1
+    },
+    "configTableOut": {
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
+    },
+    "isHidden": {
+      "applicable": 24,
+      "pass": 15,
+      "rate": 0.625
+    },
+    "reactions": {
+      "applicable": 15,
+      "pass": 4,
+      "rate": 0.2667
+    },
+    "columns": {
+      "applicable": 34,
+      "pass": 13,
+      "rate": 0.3824
+    },
+    "expandConfig": {
+      "applicable": 16,
+      "pass": 4,
+      "rate": 0.25
+    },
+    "treeConfig": {
+      "applicable": 15,
+      "pass": 14,
+      "rate": 0.9333
+    },
+    "editConfig": {
+      "applicable": 15,
+      "pass": 6,
+      "rate": 0.4
+    },
+    "mergeConfig": {
+      "applicable": 15,
+      "pass": 15,
+      "rate": 1
     },
     "extPoints": {
-      "applicable": 0,
-      "pass": 0,
-      "rate": null
+      "applicable": 25,
+      "pass": 25,
+      "rate": 1
     }
   },
   "byLanguage": {
-    "zh": 0,
-    "en": 0
+    "zh": 0.3944,
+    "en": 0.3833
   },
   "passed": false
 }
