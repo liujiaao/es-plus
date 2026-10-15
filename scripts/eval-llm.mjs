@@ -356,7 +356,19 @@ async function main() {
   const scoredRows = rows.filter((r) => !r.error)
   const applicableTotal = Object.values(byCapability).reduce((a, c) => a + c.applicable, 0)
   const erroredRows = rows.length - scoredRows.length
-  const health = evaluateHealth({ applicableTotal, def95, erroredRows, rows: rows.length })
+  // 按语言分开体检：门禁腿（zh）零容忍；观测腿（en）有错则抑制其数字而非作废整次运行
+  // （理由见 evaluateHealth 头注 —— 额度硬约束下「截断即全废」会让门禁永远测不出来）。
+  const erroredIn = (rs) => rs.filter((r) => r.error).length
+  const health = evaluateHealth({
+    applicableTotal,
+    def95,
+    rows: rows.length,
+    gated: { lang: 'zh', rows: zhRows.length, errored: erroredIn(zhRows) },
+    observed: { lang: 'en', rows: enRows.length, errored: erroredIn(enRows) },
+  })
+  for (const w of health.warnings) console.warn(`[eval:llm] 警告 — ${w}`)
+  // 观测腿不完整 ⟹ 其数字一律不发布（置 null + 记原因），否则会带着 0 偏向下沉进产物。
+  const enIncomplete = erroredIn(enRows) > 0
   if (!health.ok) {
     const errSample = rows.find((r) => r.error)?.error?.split('\n')[0] ?? '(无 case 产出预测)'
     console.error(
@@ -403,7 +415,13 @@ async function main() {
     const base = ho.length ? ho : rs
     return base.length ? Number((base.reduce((a, r) => a + (r.exactIntentCore ? 1 : 0), 0) / base.length).toFixed(4)) : null
   }
-  const byLanguage = { zh: langExact(zhRows), en: enRows.length ? langExact(enRows) : null }
+  // 观测腿有错 ⟹ 不发数字（`null`），并把原因显式记在产物里 —— 与 notScored 同一原则：
+  // 「没测到」绝不能长得像「测到 0 分」，也绝不能长得像「测到 60 分」。
+  const byLanguage = {
+    zh: langExact(zhRows),
+    en: enRows.length && !enIncomplete ? langExact(enRows) : null,
+    ...(enIncomplete ? { enSuppressed: `观测腿 ${erroredIn(enRows)}/${enRows.length} 行打不开（中继故障），数字有偏故不发布；门禁腿 zh 完整` } : {}),
+  }
 
   // 门禁数字 = 用户拍板的「95% 定义」：∨ = scoped zero-edit ∨ ≤K 轮收敛（AI-33②）。
   // core（四维 exactIntentCore）**降为并列诊断**：它是硬诚实口径，但作为门禁会永久红
@@ -537,11 +555,14 @@ async function main() {
     cases: n,
     heldoutCases: heldout.length,
     fewshotDerivedCases: fewshotRows.length,
-    // 健康门的体检结果（AI-34）：走到打分器的行数 = 全量 ⟺ 这是一次**完整**测量。
-    // 恒为 0 才允许发布百分比；非 0 时本文件根本走不到这里（已在健康门 exit 1）。
-    // 落在产物里是为了让「这份数字是完整的」**自带证据**，而不是要人去翻 Actions 日志。
+    // 健康门的体检结果（AI-34）：**门禁腿**走到打分器的行数 = 全量 ⟺ 这是一次完整测量。
+    // 门禁腿有错时本文件根本走不到这里（已在健康门 exit 1）；观测腿有错则到这里，但它的
+    // 数字已被抑制（见 byLanguage.enSuppressed）。落在产物里是为了让「这份数字是完整的」
+    // **自带证据**，而不是要人去翻 Actions 日志。
     scoredRows: scoredRows.length,
     erroredRows,
+    gatedRows: { lang: 'zh', rows: zhRows.length, errored: erroredIn(zhRows) },
+    observedRows: { lang: 'en', rows: enRows.length, errored: erroredIn(enRows) },
     target: TARGET_ACCURACY,
     // F9：本次跑批把哪些顶层输入作「宿主给定」喂给了模型。非空 ⟹ 精确命中率的口径是
     // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。

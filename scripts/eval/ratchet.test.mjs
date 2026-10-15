@@ -186,44 +186,58 @@ function checkFails(result, substr, label) {
 // 低但合理的假分比全 0 危险得多：它看起来就像一次真实回归。以下用**那次运行的真实数字**
 // 作回归样本，钉住「部分失败 = 没测到」。
 {
-  const real = { cases: 186, heldoutCases: 164 }
-  // 首跑真实形状：分母齐全、四维 applicable 巨大，只有 erroredRows 暴露了它。
+  // 首跑真实形状：zh 腿 133/186 实测、53 条 403 —— 门禁腿残缺 ⟹ 整次作废。
+  // 旧健康门只判「全 0」且不分语言，于是这次运行照常发布了 47.0% 红徽章。
   const tonightsRun = evaluateHealth({
     applicableTotal: 456,
     def95: { rate: 0.4695, total: 164 },
-    erroredRows: 107,
     rows: 372,
+    gated: { lang: 'zh', rows: 186, errored: 53 },
+    observed: { lang: 'en', rows: 186, errored: 54 },
   })
-  checkFails(tonightsRun, '107 行打不开', '健康门：首跑形状必须被拦下')
+  checkFails(tonightsRun, '53 行打不开', '健康门：首跑形状（门禁腿残缺）必须被拦下')
+  checkFails(tonightsRun, '门禁语言 zh', '健康门：报错必须点名是**门禁腿**残缺（否则读者以为只是随便一条腿）')
   checkFails(tonightsRun, '系统性偏低估', '健康门：必须说清偏差方向（措辞钉住，否则换个说法就没人看懂）')
-  check(
-    tonightsRun.failures.some((f) => f.includes('107')),
-    `健康门：报错必须带上真实的失败行数（实际 = ${JSON.stringify(tonightsRun.failures)}）`
-  )
 
   // 完整测量必须过（回归样本的另一半：不能把健康运行也拦掉）。
+  const clean = evaluateHealth({
+    applicableTotal: 456, def95: { rate: 0.4695, total: 164 }, rows: 372,
+    gated: { lang: 'zh', rows: 186, errored: 0 }, observed: { lang: 'en', rows: 186, errored: 0 },
+  })
+  check(clean.ok, '健康门：两条腿都完整的测量必须放行（否则门禁是恒红的）')
+  check(clean.warnings.length === 0, '健康门：完整测量不该有警告')
+
+  // 门禁腿完整 + 观测腿残缺 ⟹ **放行门禁数字，但必须警告并要求抑制观测腿**。
+  // 这条是刻意的：额度硬约束下「截断即全废」会让门禁永远测不出来（= 永久红 = 红盲）。
+  const enLost = evaluateHealth({
+    applicableTotal: 456, def95: { rate: 0.4695, total: 164 }, rows: 372,
+    gated: { lang: 'zh', rows: 186, errored: 0 }, observed: { lang: 'en', rows: 186, errored: 107 },
+  })
+  check(enLost.ok, '健康门：门禁腿完整时，观测腿残缺不得作废整次运行（额度硬约束下的可用性）')
   check(
-    evaluateHealth({ applicableTotal: 456, def95: { rate: 0.4695, total: 164 }, erroredRows: 0, rows: 372 }).ok,
-    '健康门：erroredRows 为 0 的完整测量必须放行（否则门禁是恒红的）'
+    enLost.warnings.some((w) => w.includes('必须抑制不发布')),
+    `健康门：观测腿残缺必须警告「抑制其数字」，实际 = ${JSON.stringify(enLost.warnings)}`
   )
 
   // 三条子判据各自独立咬合（一条腿哑了不许被另一条腿遮住）。
   checkFails(
-    evaluateHealth({ applicableTotal: 0, def95: { rate: 0.5, total: 164 }, erroredRows: 0, rows: 372 }),
+    evaluateHealth({ applicableTotal: 0, def95: { rate: 0.5, total: 164 }, rows: 372, gated: { lang: 'zh', rows: 186, errored: 0 }, observed: { lang: 'en', rows: 0, errored: 0 } }),
     '没有任何 gold 走到打分器',
     '健康门：四维全零'
   )
   checkFails(
-    evaluateHealth({ applicableTotal: 456, def95: { rate: null, total: 0 }, erroredRows: 0, rows: 372 }),
+    evaluateHealth({ applicableTotal: 456, def95: { rate: null, total: 0 }, rows: 372, gated: { lang: 'zh', rows: 186, errored: 0 }, observed: { lang: 'en', rows: 186, errored: 0 } }),
     '95% 定义（∨）没有分母',
     '健康门：∨ 没算出数（旧 F6 的那条）'
   )
-  checkFails(evaluateHealth({ applicableTotal: 1, def95: { rate: 1, total: 1 }, erroredRows: 0, rows: 0 }), '测量没发生', '健康门：零行')
+  checkFails(evaluateHealth({ applicableTotal: 1, def95: { rate: 1, total: 1 }, rows: 0 }), '测量没发生', '健康门：零行')
 
-  // 自检：把 erroredRows 判据去掉，同一组断言必须咬不住 —— 证明上面对 `tonightsRun`
-  // 的那条不是「恒红」蒙对的。
-  const blind = evaluateHealth({ applicableTotal: 456, def95: { rate: 0.4695, total: 164 }, erroredRows: 0, rows: 372 })
-  check(blind.ok, '自检：同一形状但 erroredRows=0 时本应放行 —— 说明拦住首跑形状的确实是「部分失败」这条判据')
+  // 自检：把门禁腿判据去掉，同一形状必须咬不住 —— 证明拦住首跑的不是「恒红」蒙对的。
+  const blind = evaluateHealth({
+    applicableTotal: 456, def95: { rate: 0.4695, total: 164 }, rows: 372,
+    gated: { lang: 'zh', rows: 186, errored: 0 }, observed: { lang: 'en', rows: 186, errored: 53 },
+  })
+  check(blind.ok, '自检：同样 53 条错误，但落在**观测腿**时必须放行 —— 说明拦住首跑的是「门禁腿残缺」这条判据')
 }
 
 // ─── ⑨ 跑批顺序：门禁语言必须整体排在观测语言之前 ──────────────────────
@@ -276,8 +290,8 @@ function checkFails(result, substr, label) {
     'F6 健康门必须走 eval/ratchet.mjs 的 evaluateHealth（纯函数，CI 上免费可验；行为断言见上一块）'
   )
   check(
-    /erroredRows > MAX_ERRORED_ROWS/.test(ratchetSrc),
-    '健康门必须判「打不开的行数」（2026-10-15 首跑的 107 条 403 曾被当成 107 次真实失败发布成 47.0%）'
+    /gated.errored > MAX_ERRORED_ROWS/.test(ratchetSrc),
+    '健康门必须判门禁腿「打不开的行数」（2026-10-15 首跑的 107 条 403 曾被当成 107 次真实失败发布成 47.0%）'
   )
   check(
     /orderPlanGatedFirst\(plan\)/.test(src),

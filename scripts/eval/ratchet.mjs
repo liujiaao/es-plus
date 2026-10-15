@@ -215,13 +215,26 @@ export function orderPlanGatedFirst(plan, gatedLang = 'zh') {
  * 既不能当分数、也不能当基线。故没有「小到可忽略」的错误数；**任何**打不开的行都让这次
  * 运行不构成一次测量。
  *
- * @param {{applicableTotal:number, def95:{rate:number|null,total:number}, erroredRows:number, rows:number}} s
+ * ## 为什么按语言分开判（门禁腿 vs 观测腿）
+ *
+ * 判据只对**门禁腿**用「零容忍」，对**观测腿**降级为警告 + 抑制其数字。理由是**可用性**
+ * 而非宽松：中继额度是硬约束（首跑就死在 133/186），若截断一律让整次运行作废，那在额度
+ * 压力下**每一次**运行都作废 ⟹ 门禁永远测不出来 ⟹ 退化成「永久红 = 红盲」，
+ * 正是 AI-33 要消灭的那个失效模式。配合 `orderPlanGatedFirst`（门禁腿跑在前），
+ * 额度耗尽时门禁腿**已经完整**，此时该做的不是扔掉结果，而是：发布完整的门禁腿、
+ * **抑制**有偏的观测腿数字，并把「观测腿不全」显式记在产物里。
+ * 反之，门禁腿只要缺一条，一律不许发布 —— 没有例外。
+ *
+ * @param {{rows:number, applicableTotal:number, def95:{rate:number|null,total:number},
+ *          gated:{lang:string, rows:number, errored:number},
+ *          observed:{lang:string, rows:number, errored:number}}} s
  */
 export function evaluateHealth(s) {
   const failures = []
+  const warnings = []
   if (!s || !s.rows) {
     failures.push(`本次没有产出任何一行（rows=${s ? s.rows : 'n/a'}）—— 测量没发生`)
-    return { ok: false, failures }
+    return { ok: false, failures, warnings }
   }
   if (!s.applicableTotal) {
     // 四维 scorer 里 propSet/formtype/membership/actions 恒 applicable:true，
@@ -233,13 +246,21 @@ export function evaluateHealth(s) {
     // 两者必须各自检查，否则一条腿哑了会被另一条腿的绿灯遮住。
     failures.push(`95% 定义（∨）没有分母或没算出来（total ${s.def95?.total} / rate ${s.def95?.rate}）—— 门禁数字会是 0，那是「没测」不是「得 0」`)
   }
-  if (s.erroredRows > MAX_ERRORED_ROWS) {
-    const pctScored = s.rows ? ((s.rows - s.erroredRows) / s.rows) * 100 : 0
+  const gated = s.gated ?? { lang: 'zh', rows: 0, errored: 0 }
+  if (gated.errored > MAX_ERRORED_ROWS) {
+    const pctScored = gated.rows ? ((gated.rows - gated.errored) / gated.rows) * 100 : 0
     failures.push(
-      `${s.rows} 行里 ${s.erroredRows} 行打不开（仅 ${pctScored.toFixed(1)}% 走到打分器）—— ` +
-        `错误行以 0 计入所有分母，故本次每一个百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。` +
+      `门禁语言 ${gated.lang}：${gated.rows} 行里 ${gated.errored} 行打不开（仅 ${pctScored.toFixed(1)}% 走到打分器）—— ` +
+        `错误行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。` +
         `拒绝把它发布成成绩。`
     )
   }
-  return { ok: failures.length === 0, failures }
+  const observed = s.observed ?? { lang: 'en', rows: 0, errored: 0 }
+  if (observed.errored > 0) {
+    warnings.push(
+      `观测语言 ${observed.lang}：${observed.rows} 行里 ${observed.errored} 行打不开 —— 该腿数字有偏（同样以 0 计入分母），` +
+        `**必须抑制不发布**；门禁腿 ${gated.lang} 完整，故门禁数值仍然有效。`
+    )
+  }
+  return { ok: failures.length === 0, failures, warnings }
 }
