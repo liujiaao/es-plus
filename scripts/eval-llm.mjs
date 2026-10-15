@@ -326,7 +326,9 @@ async function main() {
   // ── 健康门：区分「跑完但什么都没测到」与「模型确实得 0 分」─────────────────────
   // scorers.mjs 里 propSet/formtype/membership/actions 恒 `applicable: () => true`，
   // 因此任何**成功打分**的行都会给 applicable 累加 ≥4。故「所有维度 applicable 全零」
-  // ⟺ 没有任何 gold 走到打分器 ⟺ 本次测量根本没发生（典型成因：中继 key 失效 → 逐 case 401）。
+  // ⟺ 没有任何 gold 走到打分器 ⟺ 本次测量根本没发生（典型成因：中继鉴权/额度失败 ——
+  // 401 key 错，或 403 not enough member budget 额度耗尽；2026-10-13/14 两夜是后者）。
+  // 判别法：servedModel 为空 ⟹ 模型一次都没应答过 ⟹ 传输/鉴权层故障，而非生成器/打分器。
   // 此前这种运行会照常算出门禁 0、写 0.0% 红徽章，并由 workflow 的 always() commit-back
   // 提交回 master —— 把一次**基础设施故障**公开发布成「模型得 0 分」。这条假信号既误导，
   // 又天然不可察觉（看起来就像真实的灾难性回归）。故在此显式拦下，绝不发布百分比。
