@@ -26,6 +26,52 @@
  * 该维度从「读心」变成「回抄保真度」，考核的仍是模型行为。
  */
 
+/**
+ * 把模型的这一轮回灌进对话（**就地** push 到 `messages`）。
+ *
+ * ## 为什么需要这个函数（2026-10-16 试京东云网关时撞到）
+ *
+ * `thinking: {type:'adaptive'}` 下，模型**可能产出只有 thinking 块、没有 text 块**的一轮，
+ * 此时 `textOf` 返回空串。若把空串原样推回，下一次请求就带上一个 **空的 text block** ——
+ * 宽松实现（PPIO / api.anthropic.com）默默放行，严格的实现直接
+ * `400 messages: text content blocks must be non-empty`
+ * （实测死在 `02-product-remote-select.json [en]`）。
+ *
+ * 这是**我们自己的假设漏洞**（「模型一定有 text」从未被检验过），不是中继的毛病 ——
+ * 所以修在我们这边：用显式标记代替空串，既不撒谎（不假装模型说了话）也不留空块。
+ *
+ * 住在 prompt.mjs 而非 eval-llm.mjs，理由同本文件头注：eval-llm.mjs 一 import 就跑真钱跑批，
+ * 组装/回灌逻辑必须能在这里被无 key 单测钉住（见 prompt.test.mjs 第 7 节）。
+ *
+ * @param {{role:string, content:unknown}[]} messages 就地 push
+ * @param {string} text 模型这轮的文本（可能为空串）
+ * @returns {object} push 进去的那条消息（便于断言）
+ */
+export function pushAssistant(messages, text) {
+  const msg = {
+    role: 'assistant',
+    content:
+      typeof text === 'string' && text.trim()
+        ? text
+        : '(no text block produced — the previous turn contained only reasoning)',
+  }
+  messages.push(msg)
+  return msg
+}
+
+/**
+ * 推入一条「用户纠正」轮（B3 精修 / 自修复共用）。
+ * 同样不许留空串 —— handler 侧的 `Error.message` 或 correction 理论上可能为空。
+ */
+export function pushUserCorrection(messages, text) {
+  const msg = {
+    role: 'user',
+    content: typeof text === 'string' && text.trim() ? text : '(empty correction)',
+  }
+  messages.push(msg)
+  return msg
+}
+
 /** 渲染「宿主给定」行；无 given 或无有效字段时返回空串（保持旧 prompt 逐字节不变）。 */
 export function buildGivenLine(given) {
   if (!given || typeof given !== 'object') return ''

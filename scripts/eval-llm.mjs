@@ -40,7 +40,8 @@ import {
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
-import { buildInitialMessages } from './eval/prompt.mjs'
+import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
+import { driveToValidConfig as driveToValidConfigPure } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
 import {
@@ -84,6 +85,28 @@ const SERVED_MODELS = new Set()
 // surfaces as a red build instead of a silent green skip that hides the fact
 // the accuracy number was never actually measured.
 const REQUIRE_KEY = process.argv.includes('--require-key')
+/**
+ * `--limit N` = **探针模式**：只跑前 N 条用例，**不写任何产物、不参与门禁**。
+ *
+ * ## 为什么必须有它（2026-10-15 的教训）
+ *
+ * 这个脚本花的是真钱、跑一次几十分钟，而它唯一的「配置对不对」的验证手段**就是**
+ * 跑完整一轮 —— 于是一次中继换配置/换模型（或额度耗尽）要用一整次跑才发现，
+ * 产物还长得像个成绩。探针把这个反馈环从「几十分钟 + 一次污染产物」压到「几分钟 + 零副作用」。
+ *
+ * 语义上必须**严格**如此，否则它就变成了「跑一部分然后当成成绩」的后门：
+ *   · 不写 last-accuracy.json / 徽章（一发即污染 master，而 workflow 的 always() 会提交它）；
+ *   · 不做健康门/棘轮/地板（它们的判据都建立在**全量**语料上，小样本无意义）；
+ *   · 但**逐条**断言：任何一行打不开、或没编译过，都必须红 —— 探针的全部意义就是
+ *     「这套中继能不能跑真实负载」。
+ */
+const LIMIT = (() => {
+  const i = process.argv.indexOf('--limit')
+  if (i === -1) return null
+  const n = Number(process.argv[i + 1])
+  return Number.isInteger(n) && n > 0 ? n : null
+})()
+const PROBE = LIMIT !== null
 
 function skip(msg) {
   if (REQUIRE_KEY) {
@@ -102,15 +125,6 @@ async function loadSdk() {
   } catch {
     skip('@anthropic-ai/sdk not installed (npm i -D @anthropic-ai/sdk to enable)')
   }
-}
-
-function extractJson(text) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  const body = fenced ? fenced[1] : text
-  const start = body.indexOf('{')
-  const end = body.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('no JSON object found in model output')
-  return JSON.parse(body.slice(start, end + 1))
 }
 
 function textOf(message) {
@@ -132,38 +146,18 @@ async function callModel(client, system, messages) {
   return textOf(res)
 }
 
-/**
- * 在给定对话上跑「调模型 → 取 JSON → Zod 校验」并带 <=2 次自修复重试，返回通过 Zod 的 config。
- * 会把每次尝试（含成功那次的 assistant 轮）追加进 `messages`——这样 B3 多轮精修可以**延续同一段对话**
- * 继续喂纠正，而不是另起炉灶。抽成独立函数即为复用这条自修复环。
- */
-async function driveToValidConfig(client, system, messages) {
-  let lastRaw = ''
-  for (let attempt = 0; attempt <= 2; attempt++) {
-    const raw = await callModel(client, system, messages)
-    lastRaw = raw
-    let candidate
-    try {
-      candidate = extractJson(raw)
-    } catch (err) {
-      messages.push({ role: 'assistant', content: raw })
-      messages.push({ role: 'user', content: `That was not valid JSON (${err.message}). Respond with ONLY the JSON object.` })
-      continue
-    }
-    const parsed = StructuredCrudConfigSchema.safeParse(candidate)
-    // 把模型这轮产出记入对话（无论成败）——成功时保留它，后续纠正才有上下文。
-    messages.push({ role: 'assistant', content: JSON.stringify(candidate) })
-    if (parsed.success) return parsed.data
-    const issues = parsed.error.issues
-      .slice(0, 8)
-      .map((i) => `- [${i.path.join('.') || '(root)'}] ${i.message}`)
-      .join('\n')
-    messages.push({
-      role: 'user',
-      content: `The config failed schema validation:\n${issues}\nFix these and respond with ONLY the corrected JSON object.`,
-    })
-  }
-  throw new Error(`could not obtain a schema-valid config after repairs. Last output:\n${lastRaw.slice(0, 400)}`)
+/** 自修复环（含空轮重发）已抽到 ./eval/repair-loop.mjs —— 纯函数、可脚本化单测，见该文件头注。 */
+function driveToValidConfig(client, system, messages) {
+  return driveToValidConfigPure({
+    call: (msgs) => callModel(client, system, msgs),
+    messages,
+    validate: (candidate) => {
+      const parsed = StructuredCrudConfigSchema.safeParse(candidate)
+      return parsed.success ? { success: true, data: parsed.data } : { success: false, issues: parsed.error.issues }
+    },
+    pushAssistant,
+    pushUserCorrection,
+  })
 }
 
 // 打分逻辑已抽到 ./eval/scorers.mjs（纯函数、无 SDK、可无 key 单测）。这里只负责
@@ -183,7 +177,11 @@ async function main() {
   console.log(`[eval:llm] endpoint: ${baseURL || 'https://api.anthropic.com (default)'} · model: ${MODEL}`)
   const system = buildNlToConfigSystemPrompt()
 
-  const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
+  const allFiles = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
+  // 探针模式只取前 N 条。**注意**：被切的只有「跑谁」，语料派生的一切（notScored/棘轮
+  // 计数）在全量模式下才成立，故探针模式下这些一律不参与判定（见 PROBE 分支）。
+  const files = PROBE ? allFiles.slice(0, LIMIT) : allFiles
+  const startedAt = Date.now()
   if (!files.length) skip(`no golden cases in ${CASES_DIR}`)
 
   const rows = []
@@ -250,7 +248,8 @@ async function main() {
           const scopedSeq = [s.exactIntentScoped]
           for (const ref of refinements) {
             if (scopedSeq[scopedSeq.length - 1]) break
-            messages.push({ role: 'user', content: ref.correction })
+            // 精修纠正也走同一守卫：空纠正同样会让下一次请求带着空 text block 被严格网关拒。
+            pushUserCorrection(messages, String(ref.correction ?? ''))
             const rPred = await driveToValidConfig(client, system, messages)
             scopedSeq.push(scoreAll(gold, rPred, mask).exactIntentScoped)
           }
@@ -346,6 +345,32 @@ async function main() {
       pass,
       rate: applicable ? Number((pass / applicable).toFixed(4)) : null,
     }
+  }
+
+  // ── 探针模式在此收尾：跑到了、编译过了、产物零副作用 ────────────────────────────
+  // 所有全量判据（健康门/地板/棘轮/防删）在这里**必须**短路：它们的分母是整份语料，
+  // 拿前 N 条去比只会得到假红或假绿，两种都会教人不要相信这套门禁。
+  if (PROBE) {
+    const probeErrored = rows.filter((r) => r.error)
+    const probeNoCompile = rows.filter((r) => !r.error && !r.compiles)
+    const secs = ((Date.now() - startedAt) / 1000).toFixed(1)
+    console.log(`\n[probe] 探针模式：${files.length} 条用例 → ${rows.length} 行，用时 ${secs}s` +
+      `（${(secs / Math.max(rows.length, 1)).toFixed(1)}s/行）`)
+    console.log(`[probe] endpoint ${process.env.ANTHROPIC_BASE_URL || '(default)'} · served ${[...SERVED_MODELS].join(',') || '(无)'}`)
+    console.log(`[probe] 打不开的行：${probeErrored.length} / 未编译过的行：${probeNoCompile.length}`)
+    for (const r of probeErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — ${String(r.error).split('\n')[0]}`)
+    for (const r of probeNoCompile.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — 生成成功但编译失败`)
+    if (!SERVED_MODELS.size) {
+      console.error(`[probe] ✗ 模型一次都没应答（served 为空）—— 中继鉴权/路由层没通`)
+    }
+    console.log('[probe] 未写任何产物（无 last-accuracy.json / 无徽章）、未参与门禁判定 —— 探针不许当成绩。')
+    const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || !SERVED_MODELS.size
+    if (bad) {
+      console.error('\n[probe] FAILED —— 这套中继还跑不了真实负载，别拿它开全量跑。')
+      process.exit(1)
+    }
+    console.log('\n[probe] OK —— 中继通路、生成、编译三者皆通。可以开全量跑了。✔')
+    process.exit(0)
   }
 
   // ── 健康门：区分「跑完但什么都没测到 / 只测到一部分」与「模型确实得 0 分」─────────

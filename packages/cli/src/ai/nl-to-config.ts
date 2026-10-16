@@ -78,6 +78,34 @@ export function extractJson(text: string): any {
   return JSON.parse(body.slice(start, end + 1))
 }
 
+/**
+ * 把模型的这一轮回灌进对话（**就地** push），且**永不留空 content**。
+ *
+ * ## 为什么必须有这个函数（2026-10-16 实测）
+ *
+ * `thinking: {type:'adaptive'}` 下模型**可能产出只有 thinking 块、没有 text 块**的一轮，
+ * 此时 `textOf` 返回空串。若把空串原样推回，下一次请求就带一个**空的 text block**：
+ * 宽松实现默默放行，严格的实现（实测京东云网关）直接
+ * `400 messages: text content blocks must be non-empty` —— 用户看到的是一句无从下手的 400。
+ *
+ * 这是**我们这边的假设漏洞**（「模型一定有 text」从未被检验），所以修在我们这边：
+ * 用显式标记代替空串，既不假装模型说了话，也不留非法块。
+ */
+function pushAssistant(messages: Array<{ role: 'user' | 'assistant'; content: string }>, text: string): void {
+  messages.push({
+    role: 'assistant',
+    content: text.trim() ? text : '(no text block produced — the previous turn contained only reasoning)',
+  })
+}
+
+/** 同理：纠正轮也不许留空串（`err.message` 理论上可能为空）。 */
+function pushUserCorrection(messages: Array<{ role: 'user' | 'assistant'; content: string }>, text: string): void {
+  messages.push({ role: 'user', content: text.trim() ? text : '(empty correction)' })
+}
+
+/** 空轮原地重发上限（独立于修复机会，见 nlToConfig 内注释）。 */
+const MAX_EMPTY_RETRIES = 3
+
 export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Promise<NlToConfigResult> {
   const Anthropic = await loadAnthropic()
   if (!Anthropic) throw new AiUnavailableError('sdk-missing')
@@ -91,6 +119,9 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
   ]
 
   let lastRaw = ''
+  let calls = 0
+  let emptyRetries = 0
+  const trail: string[] = []
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await client.messages.create({
       model,
@@ -99,15 +130,33 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
       system,
       messages,
     })
+    calls++
     const raw = textOf(res)
     lastRaw = raw
+
+    // ── 空轮 ────────────────────────────────────────────────────────────
+    // 空轮**不是**模型答错，是这一轮**没产出内容**。既然什么都没产出，对话状态就没变，
+    // 重发同一请求就是**纯重试**，故不吃三次修复机会（否则空轮会让真正的能力性重试被白白
+    // 吃掉，用户看到的是「模型三次都答不对」，而实际是「一次没答 + 两次答不对」）。
+    // 上限必有：若中继系统性返回空轮，重发无界会把 CLI 挂死。
+    if (!raw.trim()) {
+      if (emptyRetries < MAX_EMPTY_RETRIES) {
+        emptyRetries++
+        trail.push(`#${attempt} 空轮（无 text 块，原地重发 ${emptyRetries}/${MAX_EMPTY_RETRIES}）`)
+        attempt-- // 不消耗修复机会
+        continue
+      }
+      trail.push(`#${attempt} 空轮（无 text 块，重发已用尽）`)
+      continue
+    }
 
     let candidate: any
     try {
       candidate = extractJson(raw)
     } catch (err: any) {
-      messages.push({ role: 'assistant', content: raw })
-      messages.push({ role: 'user', content: `That was not valid JSON (${err.message}). Respond with ONLY the JSON object.` })
+      trail.push(`#${attempt} 非 JSON（${err.message}）`)
+      pushAssistant(messages, raw)
+      pushUserCorrection(messages, `That was not valid JSON (${err.message}). Respond with ONLY the JSON object.`)
       continue
     }
 
@@ -117,19 +166,25 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
       // Honor CLI target/mode when the model left them at defaults / unset.
       if (opts.target && candidate.target === undefined) config.target = opts.target
       if (opts.mode && candidate.mode === undefined) config.mode = opts.mode
-      return { config, attempts: attempt }
+      return { config, attempts: calls }
     }
 
     const issues = parsed.error.issues
       .slice(0, 8)
       .map((i) => `- [${i.path.join('.') || '(root)'}] ${i.message}`)
       .join('\n')
-    messages.push({ role: 'assistant', content: JSON.stringify(candidate) })
-    messages.push({
-      role: 'user',
-      content: `The config failed schema validation:\n${issues}\nFix these and respond with ONLY the corrected JSON object.`,
-    })
+    trail.push(`#${attempt} schema 不过（${parsed.error.issues.length} 处）`)
+    pushAssistant(messages, JSON.stringify(candidate))
+    pushUserCorrection(
+      messages,
+      `The config failed schema validation:\n${issues}\nFix these and respond with ONLY the corrected JSON object.`
+    )
   }
 
-  throw new Error(`LLM did not produce a schema-valid config after repairs. Last output:\n${lastRaw.slice(0, 400)}`)
+  // 诊断链必须**分得清三种病因**：空轮（换中继/换模型）／非 JSON（改 prompt）／schema 不过
+  // （模型真的答错了）。否则用户只拿到一句「三次都失败」，无从下手。
+  throw new Error(
+    `LLM did not produce a schema-valid config after ${calls} call(s) [${trail.join(' · ')}]. ` +
+      `Last output (${lastRaw.length} chars):\n${lastRaw.slice(0, 400)}`
+  )
 }
