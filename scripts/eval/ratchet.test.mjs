@@ -195,9 +195,13 @@ function checkFails(result, substr, label) {
     gated: { lang: 'zh', rows: 186, errored: 53 },
     observed: { lang: 'en', rows: 186, errored: 54 },
   })
-  checkFails(tonightsRun, '53 行打不开', '健康门：首跑形状（门禁腿残缺）必须被拦下')
+  checkFails(tonightsRun, '53 行**未测到**', '健康门：首跑形状（门禁腿残缺）必须被拦下')
   checkFails(tonightsRun, '门禁语言 zh', '健康门：报错必须点名是**门禁腿**残缺（否则读者以为只是随便一条腿）')
   checkFails(tonightsRun, '系统性偏低估', '健康门：必须说清偏差方向（措辞钉住，否则换个说法就没人看懂）')
+  // 判据数的是「**未测到**」的行，不是一切 error —— 2026-10-16 那次中继健康（servedModel 在、
+  // 364/372 行走到打分器）却因 zh 腿 3 行打不开整次作废，其中 2 行其实是模型真答错（= 成绩）。
+  // 措辞必须说清这条边界，否则读者会把「模型真答不出」也当成测量故障。
+  checkFails(tonightsRun, '答错', '健康门：必须写明模型**答错**的行不在此列（否则「真答不出」会被当成测量故障）')
 
   // 完整测量必须过（回归样本的另一半：不能把健康运行也拦掉）。
   const clean = evaluateHealth({
@@ -291,7 +295,18 @@ function checkFails(result, substr, label) {
   )
   check(
     /gated.errored > MAX_ERRORED_ROWS/.test(ratchetSrc),
-    '健康门必须判门禁腿「打不开的行数」（2026-10-15 首跑的 107 条 403 曾被当成 107 次真实失败发布成 47.0%）'
+    '健康门必须判门禁腿「未测到的行数」（2026-10-15 首跑的 107 条 403 曾被当成 107 次真实失败发布成 47.0%）'
+  )
+  // 「未测到」而不是「一切 error」：这一条钉的是**接线**（纯函数单测验不到它）——
+  // evaluateHealth 收的必须是 isNotMeasured 筛过的数，否则模型真答错的行会把整次运行作废。
+  check(
+    /const notMeasuredIn = \(rs\) => rs\.filter\(\(r\) => r\.error && isNotMeasured\(r\.errorKind\)\)/.test(src) &&
+      /errored: notMeasuredIn\(zhRows\)/.test(src),
+    '喂给健康门的必须是 isNotMeasured 筛出的「未测到」行，而不是一切 error 行（否则模型答错 1 例就永远红）'
+  )
+  check(
+    /errored: notMeasuredIn\(enRows\)/.test(src),
+    '观测腿同理：抑制的是「未测到」的行数（答错的行是成绩，按 0 计）'
   )
   check(
     /orderPlanGatedFirst\(plan\)/.test(src),

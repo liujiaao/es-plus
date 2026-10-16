@@ -106,6 +106,15 @@ function pushUserCorrection(messages: Array<{ role: 'user' | 'assistant'; conten
 /** 空轮原地重发上限（独立于修复机会，见 nlToConfig 内注释）。 */
 const MAX_EMPTY_RETRIES = 3
 
+/**
+ * 降级收尾的调用上限（关掉 thinking 再要一次）。
+ *
+ * 空轮重发**本质上是同一件事再问一遍**：若这例是「模型对这个 prompt 恒走纯思考轮」，
+ * 重发 N 次也还是空轮（实测 `93-stock-qty-edit-vue3` 就是 6/6 空轮，重发完全无效）。
+ * 唯一能断掉这条通路的手段是**改条件**：关掉 thinking，模型就必须直接吐文本。
+ */
+const MAX_DEGRADED_ATTEMPTS = 1
+
 export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Promise<NlToConfigResult> {
   const Anthropic = await loadAnthropic()
   if (!Anthropic) throw new AiUnavailableError('sdk-missing')
@@ -121,18 +130,33 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
   let lastRaw = ''
   let calls = 0
   let emptyRetries = 0
+  let degradedUsed = 0
+  let pendingDegraded = false
   const trail: string[] = []
   for (let attempt = 1; attempt <= 3; attempt++) {
+    const degraded = pendingDegraded
+    pendingDegraded = false
     const res = await client.messages.create({
       model,
       max_tokens: 8000,
-      thinking: { type: 'adaptive' },
+      // 降级调用**整个省掉** `thinking`（而不是传 `{type:'disabled'}`）：省略 = 不带扩展思考，
+      // 这是各家兼容实现都认得的最小公共面；`disabled` 字面量是较新的取值，严格校验的中继
+      // 可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
+      ...(degraded ? {} : { thinking: { type: 'adaptive' } }),
       system,
       messages,
     })
     calls++
     const raw = textOf(res)
     lastRaw = raw
+
+    // ── 截断 ────────────────────────────────────────────────────────────
+    // 撞到 max_tokens 的一段通常是半个 JSON，`extractJson` 必然失败。把它当成「非 JSON」
+    // 去修是徒劳的（每次都会被同样的预算截断），且会把「预算太小」误诊成「模型不懂格式」。
+    if (res?.stop_reason === 'max_tokens') {
+      trail.push(`#${attempt} 截断（stop_reason=max_tokens，${raw.length} 字符）—— 是 token 预算不够，不是模型答错`)
+      continue
+    }
 
     // ── 空轮 ────────────────────────────────────────────────────────────
     // 空轮**不是**模型答错，是这一轮**没产出内容**。既然什么都没产出，对话状态就没变，
@@ -146,7 +170,15 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
         attempt-- // 不消耗修复机会
         continue
       }
-      trail.push(`#${attempt} 空轮（无 text 块，重发已用尽）`)
+      // 重发用尽仍空 ⟹ 重发已被证明无效（同一条件再问一遍），改条件：关掉 thinking 再来一次。
+      if (degradedUsed < MAX_DEGRADED_ATTEMPTS) {
+        degradedUsed++
+        pendingDegraded = true
+        trail.push(`#${attempt} 空轮（无 text 块，重发已用尽 → 降级关 thinking 重试）`)
+        attempt-- // 换的是条件，不是模型的答卷，故同样不消耗修复机会
+        continue
+      }
+      trail.push(`#${attempt} 空轮（无 text 块，重发与降级均已用尽）`)
       continue
     }
 

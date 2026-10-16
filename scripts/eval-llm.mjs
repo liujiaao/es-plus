@@ -41,7 +41,11 @@ import {
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, describeDimMiss } from './eval/scorers.mjs'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
-import { driveToValidConfig as driveToValidConfigPure } from './eval/repair-loop.mjs'
+import {
+  driveToValidConfig as driveToValidConfigPure,
+  isNotMeasured,
+  OUTCOME,
+} from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
 import {
@@ -134,22 +138,35 @@ function textOf(message) {
     .join('\n')
 }
 
-async function callModel(client, system, messages) {
+/**
+ * 降级调用（关掉 thinking）的计数。它不是噪音：一行若**必须**靠降级才答得出，说明中继在
+ * 「剥掉 thinking 正文」这条通路上是坏的 —— 数字仍然有效（模型确实答了），但读的人有权知道
+ * 有多少行是在**与被测系统略有不同的条件**下测出来的。见 eval/repair-loop.mjs 的 MAX_DEGRADED_ATTEMPTS。
+ */
+let DEGRADED_CALLS = 0
+
+async function callModel(client, system, messages, opts = {}) {
   const res = await client.messages.create({
     model: MODEL,
     max_tokens: 8000,
-    thinking: { type: 'adaptive' },
+    // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
+    // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
+    // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
+    ...(opts.degraded ? {} : { thinking: { type: 'adaptive' } }),
     system,
     messages,
   })
+  if (opts.degraded) DEGRADED_CALLS++
   if (res.model) SERVED_MODELS.add(res.model)
-  return textOf(res)
+  // stopReason 必须带出来：它决定这一行最终是「模型答错了」（记 0 分，是成绩）还是
+  // 「被我们的 8000 token 预算截断」（没测到，不得记 0）。见 eval/repair-loop.mjs 头注。
+  return { text: textOf(res), stopReason: res.stop_reason ?? null }
 }
 
-/** 自修复环（含空轮重发）已抽到 ./eval/repair-loop.mjs —— 纯函数、可脚本化单测，见该文件头注。 */
+/** 自修复环（含空轮重发 + 降级重试）已抽到 ./eval/repair-loop.mjs —— 纯函数、可脚本化单测，见该文件头注。 */
 function driveToValidConfig(client, system, messages) {
   return driveToValidConfigPure({
-    call: (msgs) => callModel(client, system, msgs),
+    call: (msgs, opts) => callModel(client, system, msgs, opts),
     messages,
     validate: (candidate) => {
       const parsed = StructuredCrudConfigSchema.safeParse(candidate)
@@ -280,8 +297,13 @@ async function main() {
           }
         }
       } catch (err) {
-        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, fewshotDerived: FEWSHOT_DERIVED.has(file) })
-        console.log(`ERROR — ${err.message.split('\n')[0]}`)
+        // `errorKind` 是这一行最终归因的全部依据（见 eval/repair-loop.mjs 头注）：
+        // `model-failure` = 模型答错了 ⟹ 一次**合法测量**，记 0 分才诚实；
+        // 其余（空轮 / 截断 / 未知）⟹ 这一行**没测到**，按 0 分计入成绩会低估且可能被发布。
+        // 未知归因（例如 SDK 直接抛的传输异常）走白名单外的默认值 —— 保守方向是「没测到」。
+        const errorKind = err?.kind ?? null
+        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, errorKind, fewshotDerived: FEWSHOT_DERIVED.has(file) })
+        console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
       }
     }
   }
@@ -352,13 +374,18 @@ async function main() {
   // 拿前 N 条去比只会得到假红或假绿，两种都会教人不要相信这套门禁。
   if (PROBE) {
     const probeErrored = rows.filter((r) => r.error)
+    const probeNotMeasured = rows.filter((r) => r.error && isNotMeasured(r.errorKind))
+    const probeModelFail = rows.filter((r) => r.error && !isNotMeasured(r.errorKind))
     const probeNoCompile = rows.filter((r) => !r.error && !r.compiles)
     const secs = ((Date.now() - startedAt) / 1000).toFixed(1)
     console.log(`\n[probe] 探针模式：${files.length} 条用例 → ${rows.length} 行，用时 ${secs}s` +
       `（${(secs / Math.max(rows.length, 1)).toFixed(1)}s/行）`)
     console.log(`[probe] endpoint ${process.env.ANTHROPIC_BASE_URL || '(default)'} · served ${[...SERVED_MODELS].join(',') || '(无)'}`)
-    console.log(`[probe] 打不开的行：${probeErrored.length} / 未编译过的行：${probeNoCompile.length}`)
-    for (const r of probeErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — ${String(r.error).split('\n')[0]}`)
+    // 两种失败要分开看：未测到 = 中继/通路问题（换条件、换中继）；答错 = 模型/语料问题。
+    // 探针对两者**都**失败（探针的意义就是在烧 4 小时前把问题问出来），但措辞必须指对方向。
+    console.log(`[probe] 打不开的行：${probeErrored.length}（未测到 ${probeNotMeasured.length} / 答错 ${probeModelFail.length}）` +
+      ` / 未编译过的行：${probeNoCompile.length} / 降级调用 ${DEGRADED_CALLS} 次`)
+    for (const r of probeErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
     for (const r of probeNoCompile.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — 生成成功但编译失败`)
     if (!SERVED_MODELS.size) {
       console.error(`[probe] ✗ 模型一次都没应答（served 为空）—— 中继鉴权/路由层没通`)
@@ -366,7 +393,11 @@ async function main() {
     console.log('[probe] 未写任何产物（无 last-accuracy.json / 无徽章）、未参与门禁判定 —— 探针不许当成绩。')
     const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || !SERVED_MODELS.size
     if (bad) {
-      console.error('\n[probe] FAILED —— 这套中继还跑不了真实负载，别拿它开全量跑。')
+      console.error(
+        '\n[probe] FAILED —— 别拿它开全量跑。' +
+          (probeNotMeasured.length ? `未测到 ${probeNotMeasured.length} 行：中继/通路没通（换条件或换中继）。` : '') +
+          (probeModelFail.length ? `答错 ${probeModelFail.length} 行：模型/语料侧的问题（这会在全量里按 0 分计入成绩）。` : '')
+      )
       process.exit(1)
     }
     console.log('\n[probe] OK —— 中继通路、生成、编译三者皆通。可以开全量跑了。✔')
@@ -376,30 +407,61 @@ async function main() {
   // ── 健康门：区分「跑完但什么都没测到 / 只测到一部分」与「模型确实得 0 分」─────────
   // 判据与论证集中在 eval/ratchet.mjs 的 evaluateHealth（纯函数，故 CI 上免费可验；
   // 此前只有「全 0」一条判据，2026-10-15 首跑的**部分** 403 直接漏过并被发布成 47.0%）。
-  // 判别法：**任何**打不开的行都以 0 计入所有分母 ⟹ 部分失败同样是没测到，而且更危险
+  // 判别法：**任何**未测到的行都以 0 计入所有分母 ⟹ 部分失败同样是没测到，而且更危险
   // （低但合理的分数看起来像真实回归）。servedModel 为空 ⟹ 模型一次都没应答过。
   const scoredRows = rows.filter((r) => !r.error)
   const applicableTotal = Object.values(byCapability).reduce((a, c) => a + c.applicable, 0)
   const erroredRows = rows.length - scoredRows.length
+  // 「打不开」不再是同一件事（2026-10-16 run 38840019126 后补）：模型**答错**的行是一次
+  // 合法测量（正确答案就是 0 分），只有「没测到」的行才让整次运行作废。分类依据是
+  // repair-loop 抛出的 `err.kind`，白名单方向见 isNotMeasured。详述见 eval/repair-loop.mjs 头注。
+  const notMeasuredRows = rows.filter((r) => r.error && isNotMeasured(r.errorKind))
+  const modelFailureRows = rows.filter((r) => r.error && !isNotMeasured(r.errorKind))
   // 按语言分开体检：门禁腿（zh）零容忍；观测腿（en）有错则抑制其数字而非作废整次运行
   // （理由见 evaluateHealth 头注 —— 额度硬约束下「截断即全废」会让门禁永远测不出来）。
   const erroredIn = (rs) => rs.filter((r) => r.error).length
+  const notMeasuredIn = (rs) => rs.filter((r) => r.error && isNotMeasured(r.errorKind)).length
   const health = evaluateHealth({
     applicableTotal,
     def95,
     rows: rows.length,
-    gated: { lang: 'zh', rows: zhRows.length, errored: erroredIn(zhRows) },
-    observed: { lang: 'en', rows: enRows.length, errored: erroredIn(enRows) },
+    gated: { lang: 'zh', rows: zhRows.length, errored: notMeasuredIn(zhRows) },
+    observed: { lang: 'en', rows: enRows.length, errored: notMeasuredIn(enRows) },
   })
+  if (modelFailureRows.length) {
+    // 响亮报出「这些是真的答错了」——它们**在成绩里**（各分母按 0 计），不是测量故障。
+    const byKind = {}
+    for (const r of modelFailureRows) byKind[r.errorKind ?? 'unknown'] = (byKind[r.errorKind ?? 'unknown'] ?? 0) + 1
+    console.log(
+      `[eval:llm] 模型答错（**在成绩里**，按 0 分计）：${modelFailureRows.length} 行 — ` +
+        Object.entries(byKind).map(([k, v]) => `${k} ${v}`).join(' / ')
+    )
+  }
   for (const w of health.warnings) console.warn(`[eval:llm] 警告 — ${w}`)
   // 观测腿不完整 ⟹ 其数字一律不发布（置 null + 记原因），否则会带着 0 偏向下沉进产物。
   const enIncomplete = erroredIn(enRows) > 0
   if (!health.ok) {
-    const errSample = rows.find((r) => r.error)?.error?.split('\n')[0] ?? '(无 case 产出预测)'
+    // 「首个错误」优先报**未测到**的那一行：模型答错的行是成绩的一部分，把它顶在第一行会让
+    // 读者以为故障出在它身上（2026-10-16 那次的首条错误正是这类混淆）。
+    const errSample =
+      (notMeasuredRows[0] ?? rows.find((r) => r.error))?.error?.split('\n')[0] ?? '(无 case 产出预测)'
     console.error(
       `\n[eval:llm] MEASUREMENT FAILED — 拒绝发布百分比：\n` +
         health.failures.map((f) => `  · ${f}`).join('\n') +
-        `\n  首个错误：${errSample}`
+        `\n  首个未测到：${errSample}`
+    )
+    // 拒绝**发布**不等于拒绝**计算**：先把算出来的数打出来（显式标注「未发布」），否则一次
+    // 4h45m 的跑批连一个可诊断的数字都不剩（2026-10-16 run 38840019126 就是这样 —— 事后只能
+    // 靠日志重建，而那本该是免成本的事）。徽章与产物在此完全不受影响，见下方 writeFileSync。
+    const pctOr = (x) => (x === null || x === undefined ? 'n/a' : `${(x * 100).toFixed(1)}%`)
+    console.error(
+      `\n  未发布的诊断（**仅供参考，未进徽章/产物**；未测到的行以 0 计入所有分母，故这些数系统性偏低）：\n` +
+        `    cases ${n} · heldout ${heldout.length} · rows ${rows.length}（未测到 ${notMeasuredRows.length} / 答错 ${modelFailureRows.length}）\n` +
+        `    95%-definition ∨  ${pctOr(def95.rate)}  (${def95.pass}/${def95.total})  ← 门禁口径\n` +
+        `    core（四维，硬诚实口径）  ${pctOr(exactHeldout ?? exact)}\n` +
+        `    scoped  ALL ${pctOr(exactScoped)} / HELDOUT ${pctOr(exactScopedHeldout)}\n` +
+        `    full    ALL ${pctOr(exactFull)} / HELDOUT ${pctOr(exactFullHeldout)}\n` +
+        `    目标 ${(TARGET_ACCURACY * 100).toFixed(0)}% · 降级调用 ${DEGRADED_CALLS} 次`
     )
     // 灰度占位（AI-04 设计的 pending 态）——「没测到」必须长得和「测到 0 分」不一样。
     // 并把**去重后的真实错误**写进产物：此前错误只打到 Actions 日志、不进产物，
@@ -411,13 +473,19 @@ async function main() {
       servedModel: SERVED_MODELS.size ? [...SERVED_MODELS].join(',') : MODEL,
       measurement: 'failed',
       reason:
-        'measurement did not happen (or only partially happened) — infrastructure failure, ' +
-        'not a low score; see failures[] for the exact criteria that rejected it',
+        'measurement did not happen (or only partially happened) — NOT a low score. ' +
+        `${notMeasuredRows.length} row(s) unmeasured (no text block / truncated) and ` +
+        `${modelFailureRows.length} row(s) where the model genuinely failed (those ARE scored, as 0). ` +
+        'Unmeasured rows count as 0 in every denominator, so the surviving subset is selection-biased. ' +
+        'See failures[] for the exact criteria that rejected it.',
       failures: health.failures,
       cases: n,
       rows: rows.length,
       scoredRows: scoredRows.length,
       erroredRows,
+      notMeasuredRows: notMeasuredRows.length,
+      modelFailureRows: modelFailureRows.length,
+      degradedCalls: DEGRADED_CALLS,
       sampleErrors: reasons,
       target: TARGET_ACCURACY,
       passed: false,
@@ -460,6 +528,18 @@ async function main() {
   console.log('\nLayer-2 LLM accuracy (model=' + MODEL + ')')
   console.log('==========================================')
   console.log(`  cases:                 ${n}  (heldout ${heldout.length} / fewshot-derived ${fewshotRows.length})`)
+  if (modelFailureRows.length) {
+    console.log(
+      `  model failures:        ${modelFailureRows.length} row(s) — the model answered but never produced a valid` +
+        ` config; they ARE scored (as 0), not a measurement fault`
+    )
+  }
+  if (DEGRADED_CALLS) {
+    console.log(
+      `  degraded calls:        ${DEGRADED_CALLS} — answer obtained only after disabling thinking` +
+        ` (relay drops thinking bodies); those rows were measured under a slightly different condition`
+    )
+  }
   if (skippedScenes.length) {
     // 响亮报出「未评分」的场景，并给出它去哪了 —— 否则报告读起来像「片段场景答对了 0 条」。
     const byScene = SCENES.filter((s) => s !== 'crud')
@@ -586,6 +666,14 @@ async function main() {
     // **自带证据**，而不是要人去翻 Actions 日志。
     scoredRows: scoredRows.length,
     erroredRows,
+    // 归因拆开（2026-10-16）：`erroredRows` 含两类，处置相反 ——
+    // 「答错」在成绩里（各分母按 0 计），「没测到」才会让整次运行作废（门禁腿有一条即 exit 1）。
+    // 落到产物是为了让读者一眼看出这份成绩里有多少分是「模型真答不出」而非「没测到」。
+    notMeasuredRows: notMeasuredRows.length,
+    modelFailureRows: modelFailureRows.length,
+    // 有多少次调用是靠**关掉 thinking**才拿到答案的（见 repair-loop 的 MAX_DEGRADED_ATTEMPTS）。
+    // 非零 ⟹ 部分行是在与被测系统略有不同的条件下测出来的，读数字的人有权知道。
+    degradedCalls: DEGRADED_CALLS,
     gatedRows: { lang: 'zh', rows: zhRows.length, errored: erroredIn(zhRows) },
     observedRows: { lang: 'en', rows: enRows.length, errored: erroredIn(enRows) },
     target: TARGET_ACCURACY,

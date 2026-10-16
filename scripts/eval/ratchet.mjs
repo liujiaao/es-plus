@@ -36,8 +36,11 @@ export const HELDOUT_FLOOR = 60
 export const RATCHET_TOL = 0
 
 /**
- * ⑨ 健康门允许的「未打分行」上限。**0 是刻意的**，理由见 `evaluateHealth`。
+ * ⑨ 健康门允许的「未测到行」上限。**0 是刻意的**，理由见 `evaluateHealth`。
  * 留成常量是为了让「放宽这条」成为一个**显式的、要在 PR 里辩护的**决定。
+ *
+ * 注意它数的是**未测到**（`err.kind` ∈ no-answer/truncated/未知），不是一切 error ——
+ * 模型答错的行是一次合法测量，按 0 分计入成绩，不在此列。见 `evaluateHealth` 头注。
  */
 export const MAX_ERRORED_ROWS = 0
 
@@ -210,10 +213,22 @@ export function orderPlanGatedFirst(plan, gatedLang = 'zh') {
  *
  * ## 为什么阈值是 0 而不是「允许几条」
  *
- * 错误行不是噪声，是**系统性偏差**：每一条都以 0 计入分子/分母，且失败位置与语料顺序
- * 强相关（今晚丢失的是 46–99 整段、若干完整特性族）——即活下来的子集是**选择偏置**样本，
- * 既不能当分数、也不能当基线。故没有「小到可忽略」的错误数；**任何**打不开的行都让这次
- * 运行不构成一次测量。
+ * **未测到**的行不是噪声，是**系统性偏差**：每一条都以 0 计入分子/分母，且失败位置可能与
+ * 语料顺序强相关（2026-10-15 丢失的是 46–99 整段、若干完整特性族）——即活下来的子集是
+ * **选择偏置**样本，既不能当分数、也不能当基线。故没有「小到可忽略」的未测到数；**任何**
+ * 没测到的行都让这次运行不构成一次测量。
+ *
+ * ## 但「打不开」≠「没测到」（2026-10-16 run 38840019126 后补）
+ *
+ * 直到那天，判据把**一切**打不开的行都当成了测量故障。那次中继**完全健康**
+ * （`servedModel=claude-sonnet-4-6`，364/372 行走到打分器），zh 腿 3 行打不开就把整次运行
+ * 作废了 —— 可其中 2 行是**模型真的答错了**（三轮都不是合法 config）。那不是「没测到」，
+ * 那正是**要测的东西**：正确答案就是给这 2 行记 0 分，再如实发布。
+ *
+ * 混作一谈的后果是**门禁恒红**：语料里恒有 1–2 例是模型当下真答不出来的，于是中继再健康
+ * 也永远拒绝发布 —— 正是本文件下方为观测腿论证过的「永久红 = 红盲」。故判据只对**未测到**
+ * 的行零容忍；归因由 `eval/repair-loop.mjs` 的 `err.kind` 给出（白名单方向见 `isNotMeasured`：
+ * 只有被确证的 `model-failure` 才算测得的分，其余一律算没测到）。
  *
  * ## 为什么按语言分开判（门禁腿 vs 观测腿）
  *
@@ -250,15 +265,15 @@ export function evaluateHealth(s) {
   if (gated.errored > MAX_ERRORED_ROWS) {
     const pctScored = gated.rows ? ((gated.rows - gated.errored) / gated.rows) * 100 : 0
     failures.push(
-      `门禁语言 ${gated.lang}：${gated.rows} 行里 ${gated.errored} 行打不开（仅 ${pctScored.toFixed(1)}% 走到打分器）—— ` +
-        `错误行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。` +
-        `拒绝把它发布成成绩。`
+      `门禁语言 ${gated.lang}：${gated.rows} 行里 ${gated.errored} 行**未测到**（仅 ${pctScored.toFixed(1)}% 走到打分器）—— ` +
+        `未测到的行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集可能是选择偏置的。` +
+        `拒绝把它发布成成绩。（模型**答错**的行不在此列：那是一次合法测量，按 0 分计入成绩。）`
     )
   }
   const observed = s.observed ?? { lang: 'en', rows: 0, errored: 0 }
   if (observed.errored > 0) {
     warnings.push(
-      `观测语言 ${observed.lang}：${observed.rows} 行里 ${observed.errored} 行打不开 —— 该腿数字有偏（同样以 0 计入分母），` +
+      `观测语言 ${observed.lang}：${observed.rows} 行里 ${observed.errored} 行未测到 —— 该腿数字有偏（同样以 0 计入分母），` +
         `**必须抑制不发布**；门禁腿 ${gated.lang} 完整，故门禁数值仍然有效。`
     )
   }
