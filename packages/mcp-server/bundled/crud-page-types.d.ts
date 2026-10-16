@@ -10,7 +10,7 @@ export interface CrudPageSchema {
   /** 查询表单字段配置 */
   formItems?: FormItemOption[]
   /** 表单布局配置 */
-  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
   /** 工具栏按钮（显式声明，替代从 actions 自动生成，渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 表格工具栏按钮（渲染在 EsTable 上方的 configBtn 区域，code:1=左侧 code:2=右侧） */
@@ -110,7 +110,7 @@ export interface CrudDialogConfig {
   /** 内容模式 1：表单字段（简单场景） */
   formItems?: FormItemOption[]
   /** 表单布局 */
-  formLayout?: { span?: number; labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number }
   /** 内容模式 2：自定义渲染（复杂场景） */
   render?: (h: any, context: DialogRenderContext) => VNode | any
   /** 弹窗底部按钮（不传则根据 onConfirm 自动生成取消+确定） */

@@ -2,18 +2,19 @@
   "nl": "培训计划：查询有计划名称、讲师（下拉数据来自 /api/lecturers 接口）；表格展示计划名称、讲师、参训人数、开始日期、状态；新增和编辑使用不同的弹窗——新增填计划名称、讲师、开始日期，编辑在此基础上还能修改状态；支持新增、编辑、删除；界面要求国际化；查询表单分 2 列。",
   "nlEn": "Training plans: query by plan name and lecturer (the lecturer dropdown data comes from the /api/lecturers endpoint); the table shows plan name, lecturer, attendee count, start date, and status; add and edit use different dialogs — on add fill in plan name, lecturer, and start date, and on edit you can additionally change the status; supports add, edit, and delete; the UI requires i18n; the query form is 2 columns.",
   "fixedFields": ["planName", "lecturerId", "attendeeCount", "startAt", "status"],
-  "pinnedDims": ["propSet", "actions", "i18n", "apiParams:lecturerId", "formLayout", "dialogs"],
+  "pinnedDims": ["propSet", "actions", "i18n", "apiParams:lecturerId", "fieldSpan", "dialogs"],
   "config": {
     "name": "TrainingPlan",
     "apiUrl": "/api/trainings",
     "i18n": true,
     "fields": [
-      { "prop": "planName", "label": "计划名称", "formtype": "Input" },
+      { "prop": "planName", "label": "计划名称", "formtype": "Input", "querySpan": 12 },
       {
         "prop": "lecturerId",
         "label": "讲师",
         "formtype": "Select",
-        "apiParams": { "url": "/api/lecturers", "labelField": "name", "valueField": "id" }
+        "apiParams": { "url": "/api/lecturers", "labelField": "name", "valueField": "id" },
+        "querySpan": 12
       },
       { "prop": "attendeeCount", "label": "参训人数", "formtype": "InputNumber", "inQuery": false },
       { "prop": "startAt", "label": "开始日期", "formtype": "DatePicker", "inQuery": false },
@@ -30,7 +31,6 @@
       }
     ],
     "actions": ["add", "edit", "delete"],
-    "formLayout": { "span": 12 },
     "dialogs": {
       "add": {
         "title": "新增培训计划",
@@ -51,5 +51,5 @@
       }
     }
   },
-  "notes": "四维覆盖：i18n + apiParams(讲师下拉) + formLayout(span) + dialogs(新增/编辑不同表单)。"
+  "notes": "四维覆盖：i18n + apiParams(讲师下拉) + fieldSpan(querySpan) + dialogs(新增/编辑不同表单)。"
 }

@@ -38,12 +38,12 @@ const BASE_INPUT = {
   i18n: true, //               → i18n 维度 applicable
   typescript: true,
   tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' }, editConfig: { trigger: 'click', mode: 'cell' } }, // → virtualScroll + configTableOut + editConfig 维度 applicable
-  formLayout: { span: 12 }, //  → formLayout 维度 applicable
+  formLayout: { labelWidth: '100px' }, //  → formLayout 维度 applicable（AI-31③：span 是幽灵键已删，只剩 labelWidth/minFoldRows）
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
     // isHidden：条件显隐（条件成立即隐藏；base.status 是 Select，value 取数字码）
-    { prop: 'name', label: '名称', formtype: 'Input', isHidden: { field: 'status', op: 'eq', value: 1 } }, // → isHidden 维度
-    { prop: 'status', label: '状态', formtype: 'Select', dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }, // → dataOptions 维度
+    { prop: 'name', label: '名称', formtype: 'Input', querySpan: 12, isHidden: { field: 'status', op: 'eq', value: 1 } }, // → isHidden 维度 + fieldSpan 维度（查询面）
+    { prop: 'status', label: '状态', formtype: 'Select', formSpan: 12, dataOptions: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] }, // → dataOptions 维度 + fieldSpan 维度（表单面）
     { prop: 'categoryId', label: '分类', formtype: 'Select', apiParams: { url: '/api/cat', labelField: 'name', valueField: 'id' } }, // → apiParams 维度
     { prop: 'amount', label: '金额', formtype: 'Input', inQuery: false, formatter: '(row) => row.amount.toFixed(2)' }, // → extPoints 维度
     { prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', inForm: false },
@@ -57,7 +57,19 @@ const BASE_INPUT = {
   ], // → tableBtns 维度
   operationColumn: { label: '操作', btns: [{ name: '编辑', dialogKey: 'edit' }] }, // → operationColumn 维度
   dialogs: {
-    add: { title: '新增', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }] },
+    add: {
+      title: '新增',
+      // AI-27 底座数据键 + 声明式底栏：dialogs 维度的扰动/语义测试需要它们在场
+      showClose: false,
+      destroyOnClose: true,
+      closeOnClickModal: false,
+      appendTo: '#app-dialogs',
+      formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      configBtn: [
+        { name: '提交审批', type: 'primary', action: 'confirm' },
+        { name: '取消', action: 'cancel' },
+      ],
+    },
     edit: { title: '编辑', formItems: [{ prop: 'name', label: '名称', formtype: 'Input' }, { prop: 'amount', label: '金额', formtype: 'Input' }] },
   }, // → dialogs 维度
   columns: [
@@ -102,7 +114,8 @@ const PERTURB = {
   apiParams: (c) => { c.fields[2].apiParams.url = '/api/other' },
   dataOptions: (c) => { delete c.fields[1].dataOptions },
   i18n: (c) => { c.i18n = false },
-  formLayout: (c) => { c.formLayout.span = 24 },
+  formLayout: (c) => { c.formLayout.labelWidth = '120px' },
+  fieldSpan: (c) => { c.fields[0].querySpan = 24 },
   target: (c) => { c.target = 'vue3' },
   mode: (c) => { c.mode = 'schema' },
   virtualScroll: (c) => { c.tableOptions.virtual = false },
@@ -126,6 +139,72 @@ for (const { key } of CAPABILITY_SCORERS) {
   const s = scoreAll(base, pred)
   check(s.byCapability[key].pass === false, `扰动 ${key} 后该维度仍判 pass（咬不住）`)
   check(s.exactIntentFull === false, `扰动 ${key} 后 exactIntentFull 仍为 true`)
+}
+
+// 2a) dialogs 维度的 AI-27 半：底座数据键 + 声明式底栏
+//     为什么单列：这批键是**本次新收进契约**的，若只靠「扰动删 dialogs.edit」，
+//     删掉 showClose 比较也不会有任何用例变红 —— 判据会睡着（`check:scorers` 的价值就在这）。
+console.log('meta-eval: dialogs 底座数据键 + configBtn (AI-27)')
+{
+  const dlgGold = {
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['add'],
+    dialogs: {
+      add: {
+        title: '新增',
+        showClose: false,
+        destroyOnClose: true,
+        appendTo: '#app-dialogs',
+        formItems: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+        configBtn: [{ name: '提交', type: 'primary', action: 'confirm' }, { name: '取消', action: 'cancel' }],
+      },
+    },
+  }
+  const dialogsPass = (pred) => scoreAll(dlgGold, pred).byCapability.dialogs.pass
+  check(dialogsPass(clone(dlgGold)) === true, 'dialogs(AI-27): gold-vs-gold 应判正')
+
+  // 底座键：漏写 / 写反 / 值不同 都算未命中（gold 锁了就必须一模一样）
+  const dropShowClose = clone(dlgGold)
+  delete dropShowClose.dialogs.add.showClose
+  check(dialogsPass(dropShowClose) === false, 'dialogs(AI-27): 漏写 showClose 应判负')
+  const flipShowClose = clone(dlgGold)
+  flipShowClose.dialogs.add.showClose = true
+  check(dialogsPass(flipShowClose) === false, 'dialogs(AI-27): showClose 写反（false→true）应判负')
+  const wrongAppendTo = clone(dlgGold)
+  wrongAppendTo.dialogs.add.appendTo = '#other'
+  check(dialogsPass(wrongAppendTo) === false, 'dialogs(AI-27): appendTo 选择器不同应判负')
+
+  // configBtn：整数组按 name|type|action|permissionValue 比对 —— 少一个、改 action、改文案都算未命中
+  const dropBtn = clone(dlgGold)
+  dropBtn.dialogs.add.configBtn.pop()
+  check(dialogsPass(dropBtn) === false, 'dialogs(AI-27): configBtn 少一个按钮应判负')
+  const wrongAction = clone(dlgGold)
+  wrongAction.dialogs.add.configBtn[0].action = 'custom'
+  check(dialogsPass(wrongAction) === false, 'dialogs(AI-27): configBtn action 不同应判负')
+  const wrongName = clone(dlgGold)
+  wrongName.dialogs.add.configBtn[0].name = '保存'
+  check(dialogsPass(wrongName) === false, 'dialogs(AI-27): configBtn 文案不同应判负')
+
+  // gold 驱动：gold 没锁的键，pred 多写不追责（NL 没要求的东西不该罚）
+  const plainGold = {
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['add'],
+    dialogs: { add: { title: '新增', formItems: [{ prop: 'a', label: 'A', formtype: 'Input' }] } },
+  }
+  const extraKeys = clone(plainGold)
+  extraKeys.dialogs.add.showClose = false
+  extraKeys.dialogs.add.configBtn = [{ name: '随便', action: 'cancel' }]
+  check(scoreAll(plainGold, extraKeys).byCapability.dialogs.pass === true,
+    'dialogs(AI-27): gold 未声明的底座键/configBtn，pred 多写应免责')
+
+  // **边界（故意的）**：前 AI-27 时代的键（width/isDraggable/maxHeight/fullscreen/isHiddenFooter）
+  // 不进本半判据 —— 它们本就由硬编码转发，收进来会顺手改掉 `12-role-form-layout`（gold 声明
+  // width:720）的判定并动到既有维度基线。这条用例钉住「刻意不在列」，防止后人顺手扩大。
+  const widthGold = clone(plainGold)
+  widthGold.dialogs.add.width = 720
+  const widthDropped = clone(widthGold)
+  check(scoreAll(widthGold, widthDropped).byCapability.dialogs.pass === true,
+    'dialogs(AI-27): width 等前时代键刻意不参与本半判据（改了会动既有基线）')
 }
 
 // 2b) operationColumn 库默认派生等价（锁定本次 scorer 修复）

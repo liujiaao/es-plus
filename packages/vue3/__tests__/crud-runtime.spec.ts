@@ -82,9 +82,9 @@ function makeSchema(): CrudPageSchema {
   } as CrudPageSchema
 }
 
-function mountPage() {
+function mountPage(schema: CrudPageSchema = makeSchema()) {
   return mount(EsCrudPage, {
-    props: { schema: makeSchema(), httpRequest: backend.httpRequest },
+    props: { schema, httpRequest: backend.httpRequest },
     attachTo: document.body,
     global: { plugins: [ElementPlus, EsPlus] },
   })
@@ -217,6 +217,56 @@ describe('CRUD 运行时全链路（vue3, 真实组件 + 内存后端）', () =>
     expect(ds).toHaveLength(1)
   })
 
+  it('AI-27 底座键白名单：dialog 数据键真的下发到弹窗组件（拆白名单某键即红）', async () => {
+    // 为什么需要这条**运行时见证**：`check-schema-contract` 断言的是「白名单 == AI 契约的
+    // 逐键转发子集」，那是静态等式；静态等式成立并不等于运行时真的把它们交给了弹窗。
+    // 这里走真实 EsCrudPage → 真实 useDialog → 真实 EsDialog，直接读回
+    // 弹窗组件拿到的 vnode props 与挂载点，把「白名单确实转发」钉成行为事实。
+    //
+    // 把 `DIALOG_PASSTHROUGH_KEYS` 里的任一键删掉，本用例立刻红（props 上读不到它；
+    // 删 appendTo 则挂载点回落到 body）。
+    const host = document.createElement('div')
+    host.id = 'es-ai27-host'
+    document.body.appendChild(host)
+
+    const schema = makeSchema()
+    schema.dialogs!.add = {
+      ...schema.dialogs!.add,
+      modal: false,
+      showClose: false,
+      // destroyOnClose 在 useDialog 的单例分支里默认 true —— 显式传 false 才能证明
+      // 「是白名单把 false 送过去的」，而不是被默认值巧合命中。
+      destroyOnClose: false,
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+      hiddenFullBtn: true,
+      appendTo: '#es-ai27-host',
+    } as CrudPageSchema['dialogs'][string]
+
+    const wrapper = mountPage(schema)
+    await flushPromises()
+    await nextTick()
+
+    findButtonByText(wrapper.element, '新增')!.click()
+    await nextTick()
+    await flushPromises()
+
+    // ① 挂载点：appendTo 生效 → 弹窗容器挂在 #es-ai27-host 下而非 body 直下。
+    const container = document.querySelector('.dialog-containers') as HTMLElement | null
+    expect(container, '应渲染出弹窗容器').toBeTruthy()
+    expect(container!.parentElement?.id).toBe('es-ai27-host')
+
+    // ② 下发值：读回弹窗组件 vnode 上的 props。
+    const props = (container as unknown as { _vnode?: { props?: Record<string, unknown> } })._vnode?.props ?? {}
+    expect(props.modal).toBe(false)
+    expect(props.showClose).toBe(false)
+    expect(props.destroyOnClose).toBe(false)
+    expect(props.closeOnClickModal).toBe(false)
+    expect(props.closeOnPressEscape).toBe(false)
+    expect(props.hiddenFullBtn).toBe(true)
+    expect(props.appendTo).toBe('#es-ai27-host')
+  })
+
   it('列表加载失败：自动请求 reject 被吞掉并经 request-error 暴露（无 unhandled rejection）', async () => {
     // 注入一个初始列表就 reject 的后端，验证 onMounted 自动请求的 rejection
     // 被 .catch(handleAutoRequestError) 吞掉：不产生 unhandled promise rejection，
@@ -291,5 +341,126 @@ describe('CRUD 运行时全链路（vue3, 真实组件 + 内存后端）', () =>
     } finally {
       window.removeEventListener('unhandledrejection', onUnhandled)
     }
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// AI-35 —— 工具栏「显式模式」的门只认 operationColumn，不认 dialogs
+// ────────────────────────────────────────────────────────────────────────────
+// 缺陷形状：`normalizedToolbarBtns` 曾把 `schema.dialogs` 也当作「按钮面归我」的显式模式
+//   （`if (schema.toolbarBtns || schema.dialogs) …`）。于是只声明 dialogs、不写 toolbarBtns
+//   的配置（正是教程教的「新模式」写法）工具栏直接空掉：「新增」按钮不派生，
+//   `dialogs.add` 无人能打开，且全程零告警 —— 页面上「新增」入口凭空消失。
+// 正确方向（由 schema 的 `columns.describe` 已发布契约反推）：**按钮一律由
+//   `actions`/`operationColumn` 派生，`dialogs` 只定义弹窗、不参与按钮派生**。
+// 下面四例把这个门的两半都钉住：①拨错的 dialogs 不再抑制派生；②operationColumn 仍然抑制
+// （这才是「按钮面归我」）；③空 toolbarBtns 逃生舱照旧；④行内派生从未受影响。
+// ────────────────────────────────────────────────────────────────────────────
+describe('AI-35 —— dialogs 不再抑制工具栏派生（弹窗必须有人能打开）', () => {
+  /** dialogs-only：只声明弹窗，按钮面交给 actions 派生（缺陷的原始形状）。 */
+  function makeDialogsOnlySchema(withToolbarBtns?: unknown): CrudPageSchema {
+    const addConfirm = async (formData: Record<string, unknown>, ctx: any) => {
+      await backend.httpRequest({ url: '/api/create', method: 'post', formParams: { ...formData } })
+      ctx.close()
+      ctx.refresh()
+    }
+    const editConfirm = async (formData: Record<string, unknown>, ctx: any) => {
+      await backend.httpRequest({ url: '/api/update', method: 'put', formParams: { id: ctx.row.id, ...formData } })
+      ctx.close()
+      ctx.refresh()
+    }
+    const schema = {
+      columns: [
+        { prop: 'id', label: 'ID' },
+        { prop: 'name', label: '姓名' },
+      ],
+      formItems: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 8 }],
+      tableOptions: { actionUrl: '/api/list' },
+      actions: ['add', 'edit', 'delete'],
+      dialogs: {
+        add: { title: '新增', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }], onConfirm: addConfirm },
+        edit: { title: '编辑', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }], onConfirm: editConfirm },
+      },
+    } as unknown as CrudPageSchema
+    // `undefined` = 不声明（走派生）；`[]` / 数组 = 显式声明（走逃生舱）
+    if (withToolbarBtns !== undefined) (schema as any).toolbarBtns = withToolbarBtns
+    return schema
+  }
+
+  beforeEach(() => {
+    backend = createInMemoryBackend([{ id: 1, name: 'Alice' }])
+  })
+
+  afterEach(() => {
+    document.querySelectorAll('.dialog-containers, .el-overlay, .el-dialog').forEach((el) => el.remove())
+    document.body.innerHTML = ''
+  })
+
+  it('① dialogs-only：工具栏仍派生「新增」，且点它真的打开 dialogs.add（修前此处必挂）', async () => {
+    const wrapper = mountPage(makeDialogsOnlySchema())
+    await flushPromises()
+    await nextTick()
+
+    const addBtn = findButtonByText(wrapper.element, '新增')
+    expect(addBtn, 'AI-35：只声明 dialogs 不应抑制工具栏派生 —— 「新增」必须在').toBeTruthy()
+    addBtn!.click()
+    await nextTick()
+    await flushPromises()
+
+    // 声明的弹窗真的被打开了（而不是一个点了没反应的死按钮）
+    expect(document.querySelector('.el-dialog .el-input__inner'), '「新增」应打开 dialogs.add').toBeTruthy()
+  })
+
+  it('② 行内派生同样不受 dialogs 影响：先点「新增」再关掉，行内「编辑」照样能开编辑弹窗', async () => {
+    const wrapper = mountPage(makeDialogsOnlySchema())
+    await flushPromises()
+    await nextTick()
+
+    const editBtn = findButtonByText(wrapper.element, '编辑')
+    expect(editBtn, 'actions 含 edit ⇒ 行内「编辑」应派生').toBeTruthy()
+    editBtn!.click()
+    await nextTick()
+    await flushPromises()
+
+    const input = document.querySelector('.el-dialog .el-input__inner') as HTMLInputElement
+    expect(input, '行内「编辑」应打开 dialogs.edit').toBeTruthy()
+    // 打开的是 edit 而非 add：弹窗标题为「编辑」，且表单预填该行（Alice）
+    expect(document.querySelector('.dialog-title')?.textContent).toContain('编辑')
+    expect(input.value).toBe('Alice')
+  })
+
+  it('③ 显式 operationColumn 仍然整体接管按钮面：工具栏不派生「新增」（门没被拆掉）', async () => {
+    const schema = makeDialogsOnlySchema()
+    ;(schema as any).operationColumn = {
+      label: '操作',
+      btns: [{ name: '编辑', key: 'edit', type: 'primary', dialogKey: 'edit' }],
+    }
+    const wrapper = mountPage(schema)
+    await flushPromises()
+    await nextTick()
+
+    expect(
+      findButtonByText(wrapper.element, '新增'),
+      '显式 operationColumn ⇒ 按钮面归用户，工具栏不应再派生「新增」'
+    ).toBeFalsy()
+    // 用户自己声明的行内按钮照常渲染并可开弹窗
+    const editBtn = findButtonByText(wrapper.element, '编辑')
+    expect(editBtn).toBeTruthy()
+    editBtn!.click()
+    await nextTick()
+    await flushPromises()
+    expect(document.querySelector('.el-dialog .el-input__inner')).toBeTruthy()
+  })
+
+  it('④ 空 toolbarBtns 逃生舱：显式「我不需要工具栏」→ 不派生「新增」，行内仍由 actions 派生', async () => {
+    const wrapper = mountPage(makeDialogsOnlySchema([]))
+    await flushPromises()
+    await nextTick()
+
+    expect(
+      findButtonByText(wrapper.element, '新增'),
+      'toolbarBtns: [] 是「按钮面归我」的逃生舱 ⇒ 不应派生「新增」'
+    ).toBeFalsy()
+    expect(findButtonByText(wrapper.element, '编辑'), '行内按钮不归 toolbarBtns 管，仍应派生').toBeTruthy()
   })
 })

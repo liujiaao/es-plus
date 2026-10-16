@@ -92,6 +92,11 @@
 
 ### Wave 3 · 接线修复（AI-27 + AI-30 + AI-31 + AI-34，3–5 天）
 
+> **状态：✅ 本批已全部落地（2026-10-16）**——逐项状态、偏离与变异验证见 [ROADMAP.md](./ROADMAP.md) 的 AI-27 / AI-30 / AI-31 / AI-32 / AI-34 状态行。
+> 落地期间新增两条与本批直接相关的结论：
+> - **AI-27 的三处偏离**（`render`/`renderHeader`/`renderFooter` **不收**；`configBtn` 字段名是 `name` 非 ROADMAP 原文的 `label`）——理由见 ROADMAP §AI-27。
+> - **新发现 AI-35 · ✅ 已修（2026-10-16）**：显式 `dialogs` 模式下 `dialogs.add` 可能**无任何入口**（三端 `normalizedToolbarBtns` 在见到 `dialogs` 时返回 `[]`，而 `normalizedOperationColumn` 不认 `dialogs` 照旧派生 → 只有「新增」全灭且零告警）。188 例语料里 **6 例**命中。**修法**：`dialogs` 从工具栏门的判据里摘掉（三端同改，按钮照旧由 `actions` 派生）+ 生成器 `findDialogsWithoutOpener` 非静默告警 + 反向修正 AI-27 那条自相矛盾的教学规则 + `check-threeway-consistency` 新增**轴⑤ 弹窗可达性**静态锁与语料重放。**依据是已发布契约而非猜测**：schema 的 `columns.describe` 早已写「按钮仍由 `actions`/`operationColumn` 派生」。**语料零改动**——原 6 例无需补一个字节即达，反证缺陷在运行时判据。**变异验证**：把 `|| schema.dialogs` 加回 → 轴⑤ + 两处运行时见证同时红。
+
 | # | 动作 | 更正 / 边界 |
 |---|---|---|
 | 3.1 | **AI-31 表单 render 接线**：`buildFormItem`（`structured-generator.ts:1034-1095`）补 emit + esbuild 门 + 降级告警（与表格 render 同待遇） | ✅ `renderFields` 只扫表格字段（`:157`） |

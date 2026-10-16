@@ -83,7 +83,38 @@ function tableBtnsEqual(gold, pred) {
   return tableBtnKeyParts(gold).join(',,') === tableBtnKeyParts(pred).join(',,')
 }
 
-/** dialog key 集合相等 ∧ 每个 dialog 的 formItems prop 集合相等。 */
+/**
+ * AI-27 收进 AI 契约、并逐键转发到弹窗的**底座数据键**（`dialogsEqual` 只比这批）。
+ * 见 `dialogsEqual` 头注：前 AI-27 时代的 `width`/`isDraggable`/… 刻意不在列。
+ */
+const DIALOG_BASE_KEYS = [
+  'showClose', 'destroyOnClose', 'modal', 'closeOnClickModal',
+  'closeOnPressEscape', 'hiddenFullBtn', 'appendTo', 'cacheKey',
+]
+
+/**
+ * 声明式底栏按钮的可比投影：`name|type|action|permissionValue`。
+ * 不比 `click` —— 它是函数值，AI 契约里根本不存在（运行时按 `action` 现场装配），
+ */
+function normDialogBtns(btns) {
+  return (btns ?? [])
+    .map((b) => `${b?.name ?? ''}|${b?.type ?? ''}|${b?.action ?? ''}|${b?.permissionValue ?? ''}`)
+    .join(',,')
+}
+
+/**
+ * dialog key 集合相等 ∧ 每个 dialog 的 formItems prop 集合相等 ∧ **AI-27 的底座数据键/声明式底栏**相等。
+ *
+ * 为什么把底座键并进本维度而不是新开一个维度：新维度会改 applicable 分母与 `byDimension`
+ * 基线键（须等一次夜间跑批才能重定基线，本地无法验证），而 AI-27 收的这批键**语义上就是
+ * 「这个 dialog 配置对了没有」的一部分** —— 同一个 `dialogs` 意图，两半判据。故并进来：
+ * 分母不变、既有基线键不变、既有语料（无一例声明这批键）判据不变。
+ *
+ * 比法（gold 驱动，与 isHidden/reactions/fieldSpan 同规）：gold 声明了哪个键就比哪个，
+ * gold 没锁的键 pred 多写/少写不追责。`width` 等**前 AI-27 时代**的键**刻意不在此列** ——
+ * 它们本就由硬编码转发（不属本次收缩范围），收进来会顺手改掉 `12-role-form-layout` 的判定
+ * 并动到既有维度基线，把两件事混成一件。这条边界是**故意的**，不是遗漏。
+ */
 function dialogsEqual(gold, pred) {
   const gk = Object.keys(gold.dialogs ?? {}).sort()
   const pk = Object.keys(pred.dialogs ?? {}).sort()
@@ -92,6 +123,16 @@ function dialogsEqual(gold, pred) {
     const gi = (gold.dialogs[k].formItems ?? []).map((f) => f.prop).sort()
     const pi = (pred.dialogs[k]?.formItems ?? []).map((f) => f.prop).sort()
     if (gi.join(',') !== pi.join(',')) return false
+
+    const g = gold.dialogs[k]
+    const p = pred.dialogs[k] ?? {}
+    for (const key of DIALOG_BASE_KEYS) {
+      if (g[key] === undefined) continue
+      if (!eq(g[key], p[key])) return false
+    }
+    if (g.configBtn) {
+      if (normDialogBtns(g.configBtn) !== normDialogBtns(p.configBtn)) return false
+    }
   }
   return true
 }
@@ -245,6 +286,26 @@ function reactionsEqual(gold, pred) {
 
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 
+/** 该字段是否声明了列宽（查询面 querySpan 或表单面 formSpan）。 */
+const hasFieldSpan = (f) => f.querySpan !== undefined || f.formSpan !== undefined
+
+/**
+ * 字段级列宽（AI-31③）：gold 每个声明了 `querySpan`/`formSpan` 的字段，pred 同名 field 必须
+ * **完全等值**（含「gold 给了 pred 没给」= 未命中）。与 reactionsEqual/isHiddenEqual 同规：
+ * gold 驱动——gold 未声明的字段，pred 多加/漏加 span 不追责（NL 没锁它）。
+ */
+function fieldSpanEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!hasFieldSpan(f)) continue
+    const pf = pm.get(f.prop)
+    if (!pf) return false
+    if ((f.querySpan ?? null) !== (pf.querySpan ?? null)) return false
+    if ((f.formSpan ?? null) !== (pf.formSpan ?? null)) return false
+  }
+  return true
+}
+
 /** mark-never-drop 的 LLM 侧对偶：gold 每个扩展点在 pred 同名 field 上必须也存在（不比内容）。 */
 function extPointsEqual(gold, pred) {
   const pm = fieldMap(pred)
@@ -276,6 +337,19 @@ export const CAPABILITY_SCORERS = [
   { key: 'dataOptions', applicable: (g) => g.fields.some((f) => (f.dataOptions ?? []).length), pass: dataOptionsPresenceEqual },
   { key: 'i18n', applicable: (g) => g.i18n === true, pass: (g, p) => g.i18n === p.i18n },
   { key: 'formLayout', applicable: (g) => g.formLayout !== undefined, pass: (g, p) => eq(g.formLayout ?? null, p.formLayout ?? null) },
+  {
+    // 字段级列宽（AI-31③）：查询面 `querySpan` / 表单面 `formSpan` 的按字段等值。
+    //
+    // 为何单列一维：`formLayout.span` 曾是**幽灵键**（core 从不读，AI-31③ 已删），
+    // 真正的列宽/列数由**字段**决定（生成器 buildFormItem 消费 querySpan/formSpan）。
+    // 故 NL 里的「查询表单分 2 列 / 表单分 2 列」只能在字段级度量；若只删幽灵键而
+    // 不立此维，那句 NL 需求会**无维度可量**（能力静默丢失，与「mark, never drop」相悖）。
+    // 语义与 reactions/isHidden 同规：gold 驱动的**按字段等值**（gold 声明了 span 的字段，
+    // pred 同名必须同值；gold 未声明的字段，pred 猜错免责）——仅当 gold 有任一字段声明时才 applicable。
+    key: 'fieldSpan',
+    applicable: (g) => g.fields.some(hasFieldSpan),
+    pass: fieldSpanEqual,
+  },
   { key: 'target', applicable: (g) => g.target !== 'vue3', pass: (g, p) => g.target === p.target },
   { key: 'mode', applicable: (g) => g.mode === 'sfc', pass: (g, p) => g.mode === p.mode },
   { key: 'virtualScroll', applicable: (g) => g.tableOptions?.virtual === true || ['virtual', 'vxe'].includes(g.tableOptions?.engine), pass: virtualScrollEqual },

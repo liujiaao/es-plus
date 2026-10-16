@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateFromConfig } from '../src/structured-generator'
+import { generateFromConfig, findDialogsWithoutOpener } from '../src/structured-generator'
 import { StructuredCrudConfigSchema } from '../src/structured-config.schema'
 
 const baseConfig = {
@@ -113,6 +113,46 @@ describe('generateFromConfig — schema mode', () => {
     const nameCol = schema.columns.find((c: any) => c.prop === 'name')
     expect(nameCol.scopedSlots).toBeUndefined()
     expect(result.wrapperCode).toContain('#column-status')
+  })
+
+  // ── AI-31①：表单面的 render 不静默丢弃 ─────────────────────────────────────
+  // buildFormItem 没有 render 分支，而两种模式的表单项都是 JSON —— 于是「表格面够不着」
+  // 的 render（inTable:false 的查询/表单字段、弹窗 formItems）此前**静默**退化。契约：
+  // 发含源码的降级告警 + 产物里落 TODO(es-plus) 占位；同时**不**对表格面字段乱开火。
+  const formOnlyRenderField = {
+    prop: 'level', label: '等级', formtype: 'Input' as const,
+    inTable: false, inQuery: true, inForm: true,
+    render: '(_, { row }) => h(ElTag, () => row.levelLabel)',
+  }
+
+  it('AI-31① schema: warns + marks a form-face-only render field', () => {
+    const result = generateFromConfig({ ...baseConfig, fields: [...baseConfig.fields, formOnlyRenderField], mode: 'schema' })
+    expect(result.warnings.some(w => w.includes('form-item render') && w.includes('level'))).toBe(true)
+    expect(result.wrapperCode).toContain('TODO(es-plus): form-item render')
+    expect(result.wrapperCode).toContain('"level": (_, { row }) => h(ElTag, () => row.levelLabel)')
+  })
+
+  it('AI-31① schema: covers dialog formItems carrying render', () => {
+    const result = generateFromConfig({
+      ...baseConfig, mode: 'schema',
+      toolbarBtns: [{ name: '新增', dialogKey: 'add' }],
+      dialogs: { add: { title: '新增', formItems: [formOnlyRenderField] } },
+    })
+    expect(result.warnings.some(w => w.includes('form-item render') && w.includes('level'))).toBe(true)
+    expect(result.wrapperCode).toContain('TODO(es-plus): form-item render')
+  })
+
+  it('AI-31① sfc: warns + marks with a JS comment', () => {
+    const result = generateFromConfig({ ...baseConfig, fields: [...baseConfig.fields, formOnlyRenderField], mode: 'sfc' })
+    expect(result.warnings.some(w => w.includes('form-item render') && w.includes('level'))).toBe(true)
+    expect(result.code).toContain('// TODO(es-plus): form-item render')
+  })
+
+  it('AI-31①: stays silent for table-cell renders (the 15-golden shape)', () => {
+    // baseConfig.status 有 render 且 inTable 未声明（≠ false）→ 表格面消费得到，不属此列。
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    expect(result.warnings.some(w => w.includes('form-item render'))).toBe(false)
+    expect(result.wrapperCode).not.toContain('form-item render')
   })
 
   it('filters fields by inQuery/inTable/inForm', () => {
@@ -1302,5 +1342,116 @@ describe('AI-22 — tableOptions 尾部键 / 字段级 labelKey（strip-hazard �
     }) as any)
     expect(r.code + (r.wrapperCode || '')).toContain('field.a')
     expect(r2.code + (r2.wrapperCode || '')).toContain('user.a.label')
+  })
+})
+
+describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按钮派生）', () => {
+  const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
+  const dlg = { add: { title: '新增' }, edit: { title: '编辑' } }
+  const flat = (extra: Record<string, unknown>) => ({ name: 'T', apiUrl: '/x', fields: F, ...extra })
+
+  it('dialogs 存在不再抑制工具栏派生 —— 6 例语料的恢复形状', () => {
+    // 修前：`normalizedToolbarBtns` 见到 dialogs 就返回 [] → add 无入口。
+    // 修后：只有显式 operationColumn 才抑制派生，于是 add 由 actions 派生出来；
+    // 行内 edit 照旧由 actions 派生（这一半从来就没坏过）。
+    expect(findDialogsWithoutOpener(flat({ actions: ['add', 'edit', 'delete'], dialogs: dlg }) as any)).toEqual([])
+  })
+
+  it('actions 里没有 add ⇒ 派生不出入口 ⇒ 报出来（residual 形态 1）', () => {
+    expect(findDialogsWithoutOpener(flat({ actions: ['edit', 'delete'], dialogs: dlg }) as any)).toEqual(['add'])
+  })
+
+  it('显式 operationColumn 整体接管按钮面 ⇒ 工具栏不再派生 ⇒ add 无入口（residual 形态 2）', () => {
+    const cfg = flat({
+      actions: ['add', 'edit', 'delete'],
+      dialogs: dlg,
+      operationColumn: { btns: [{ name: '编辑', key: 'edit', dialogKey: 'edit' }] },
+    })
+    expect(findDialogsWithoutOpener(cfg as any)).toEqual(['add'])
+  })
+
+  it('显式 toolbarBtns / tableBtns 里的 dialogKey 算入口', () => {
+    // 工具栏显式给了 add 入口，行内 edit 仍由 actions 派生 ⇒ 两扇门都开着
+    expect(
+      findDialogsWithoutOpener(
+        flat({
+          actions: ['add', 'edit', 'delete'],
+          dialogs: dlg,
+          toolbarBtns: [{ name: '新建', dialogKey: 'add' }],
+        }) as any
+      )
+    ).toEqual([])
+    // 两个面都显式给全 ⇒ 也空集
+    expect(
+      findDialogsWithoutOpener(
+        flat({
+          actions: ['add', 'edit', 'delete'],
+          dialogs: dlg,
+          tableBtns: [{ name: '新增', dialogKey: 'add' }],
+          operationColumn: { btns: [{ name: '编辑', dialogKey: 'edit' }] },
+        }) as any
+      )
+    ).toEqual([])
+  })
+
+  it('显式空 toolbarBtns: [] 是「按钮面归我」的逃生舱 —— 行内 edit 仍在，add 没人开', () => {
+    expect(
+      findDialogsWithoutOpener(flat({ actions: ['add', 'edit', 'delete'], dialogs: dlg, toolbarBtns: [] }) as any)
+    ).toEqual(['add'])
+  })
+
+  it('operationColumn: false 两面都不派生 ⇒ 两个弹窗都无入口', () => {
+    expect(
+      findDialogsWithoutOpener(flat({ actions: ['add', 'edit', 'delete'], dialogs: dlg, operationColumn: false }) as any)
+    ).toEqual(['add', 'edit'])
+  })
+
+  it('columns 里已有操作列 ⇒ 不再派生行内按钮（只剩工具栏的 add）', () => {
+    expect(
+      findDialogsWithoutOpener(
+        flat({ actions: ['add', 'edit', 'delete'], dialogs: dlg, columns: [{ prop: 'action' }] }) as any
+      )
+    ).toEqual(['edit'])
+  })
+
+  it('没有 dialogs / 没有 legacy dialogFormItems ⇒ 空集（不是缺陷）', () => {
+    expect(findDialogsWithoutOpener(flat({ actions: ['add'] }) as any)).toEqual([])
+    expect(findDialogsWithoutOpener(flat({ actions: ['add'], dialogFormItems: [] }) as any)).toEqual([])
+  })
+
+  it('legacy dialogFormItems 路径同样纳入（宿主手写配置）', () => {
+    expect(
+      findDialogsWithoutOpener(
+        flat({
+          actions: ['add', 'edit'],
+          dialogFormItems: F,
+          toolbarBtns: [],
+          columns: [{ prop: 'action' }],
+        }) as any
+      )
+    ).toEqual(['add', 'edit'])
+  })
+
+  it('生成器在 schema 模式发「不静默」警告，且点出是哪个弹窗', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(flat({ actions: ['edit', 'delete'], dialogs: dlg })) as any
+    )
+    const hit = warnings.find((w) => /has no opener/.test(w))
+    expect(hit, warnings.join('\n')).toBeTruthy()
+    expect(hit).toContain('dialogs.add')
+  })
+
+  it('没有无入口弹窗的配置不产生该警告（别把正常配置也报一遍）', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(flat({ actions: ['add', 'edit', 'delete'], dialogs: dlg })) as any
+    )
+    expect(warnings.some((w) => /has no opener/.test(w))).toBe(false)
+  })
+
+  it('sfc 模式不报（该模式整体不消费 dialogs，已有专门降级告警，别重复噪音）', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(flat({ mode: 'sfc', actions: ['edit', 'delete'], dialogs: dlg })) as any
+    )
+    expect(warnings.some((w) => /has no opener/.test(w))).toBe(false)
   })
 })

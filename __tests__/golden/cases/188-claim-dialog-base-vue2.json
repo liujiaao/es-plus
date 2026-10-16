@@ -1,0 +1,82 @@
+{
+  "nl": "费用报销：查询条件有报销单号、状态（待审批/已通过/已驳回）；表格展示报销单号、申请人、金额、状态；表格上方有“新增报销”按钮，行内有编辑、删除。新增和编辑的弹窗每次打开都要重置成空表单，弹窗挂到 #app-dialogs 下，并且不要全屏按钮。",
+  "nlEn": "Expense claims: query conditions are claim number and status (pending / approved / rejected); the table shows claim number, applicant, amount, and status; above the table there is an \"Add Claim\" button and each row has edit and delete. The add and edit dialogs must reset to an empty form on every open, must mount under #app-dialogs, and must not have the fullscreen button.",
+  "fixedFields": ["claimNo", "applicant", "amount", "status"],
+  "pinnedDims": ["propSet", "actions", "dialogs", "formtype:status", "dataOptions:status"],
+  "config": {
+    "name": "ExpenseClaim",
+    "apiUrl": "/api/claims",
+    "target": "vue2",
+    "fields": [
+      { "prop": "claimNo", "label": "报销单号", "formtype": "Input" },
+      { "prop": "applicant", "label": "申请人", "formtype": "Input", "inQuery": false },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "待审批", "value": "pending" },
+          { "label": "已通过", "value": "approved" },
+          { "label": "已驳回", "value": "rejected" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "toolbarBtns": [
+      { "name": "新增报销", "key": "add", "type": "primary", "dialogKey": "add" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "编辑", "key": "edit", "dialogKey": "edit" },
+        { "name": "删除", "key": "delete", "confirm": "确定删除该报销单吗？" }
+      ]
+    },
+    "dialogs": {
+      "add": {
+        "title": "新增报销",
+        "destroyOnClose": true,
+        "appendTo": "#app-dialogs",
+        "hiddenFullBtn": true,
+        "formItems": [
+          { "prop": "claimNo", "label": "报销单号", "formtype": "Input" },
+          { "prop": "applicant", "label": "申请人", "formtype": "Input" },
+          { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+          {
+            "prop": "status",
+            "label": "状态",
+            "formtype": "Select",
+            "dataOptions": [
+              { "label": "待审批", "value": "pending" },
+              { "label": "已通过", "value": "approved" },
+              { "label": "已驳回", "value": "rejected" }
+            ]
+          }
+        ]
+      },
+      "edit": {
+        "title": "编辑报销",
+        "destroyOnClose": true,
+        "appendTo": "#app-dialogs",
+        "hiddenFullBtn": true,
+        "formItems": [
+          { "prop": "claimNo", "label": "报销单号", "formtype": "Input" },
+          { "prop": "applicant", "label": "申请人", "formtype": "Input" },
+          { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
+          {
+            "prop": "status",
+            "label": "状态",
+            "formtype": "Select",
+            "dataOptions": [
+              { "label": "待审批", "value": "pending" },
+              { "label": "已通过", "value": "approved" },
+              { "label": "已驳回", "value": "rejected" }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "notes": "AI-27: dialog base keys with the other truth direction — destroyOnClose (reset on every open), appendTo (#app-dialogs selector), hiddenFullBtn; vue2 target. Complements 187 (which covers the three false-valued keys + configBtn)."
+}

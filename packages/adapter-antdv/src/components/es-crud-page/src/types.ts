@@ -7,7 +7,7 @@ export interface CrudPageSchema {
   /** 查询表单字段配置（对齐 vue3） */
   formItems?: FormItemOption[]
   /** 表单布局配置（对齐 vue3） */
-  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
   /** 工具栏按钮（渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 兼容旧命名 */
@@ -109,7 +109,7 @@ export interface CrudDialogConfig {
   /** 内容模式 1：表单字段（简单场景） */
   formItems?: FormItemOption[]
   /** 表单布局 */
-  formLayout?: { span?: number; labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number }
   /** 内容模式 2：自定义渲染（复杂场景） */
   render?: (h: any, context: DialogRenderContext) => VNode | any
   /** 弹窗底部按钮（不传则根据 onConfirm 自动生成取消+确定） */
@@ -122,6 +122,29 @@ export interface CrudDialogConfig {
   fullscreen?: boolean
   /** 隐藏底部 */
   isHiddenFooter?: boolean
+  // ─── 弹窗底座数据键（AI-27）—— openDialog 白名单逐键透传 ───
+  /** 是否显示关闭入口（默认 true） */
+  showClose?: boolean
+  /** 关闭时销毁内容 */
+  destroyOnClose?: boolean
+  /** 是否需要遮罩层，默认 true */
+  modal?: boolean
+  /** 点击遮罩层是否关闭，默认 true */
+  closeOnClickModal?: boolean
+  /** 按下 ESC 是否关闭，默认 true */
+  closeOnPressEscape?: boolean
+  /** 隐藏全屏按钮 */
+  hiddenFullBtn?: boolean
+  /** 挂载点（CSS 选择器；DOM 元素无法经 JSON 传递） */
+  appendTo?: string | HTMLElement
+  /**
+   * 实例缓存键。
+   *
+   * **已登记偏差**：ant-design-vue 适配器的 `use-dialog` 未实现实例缓存，
+   * 故本键在 antdv 端**接受但空转**（vue3/vue2 端真生效）。登记见
+   * `scripts/check-type-exports.mjs` 的「有意偏差」范式。
+   */
+  cacheKey?: string
   /** 弹窗打开时回调 */
   onOpen?: (row?: Record<string, unknown>) => void
   /** 确认回调（未提供 configBtn 时自动生成确认按钮调用此方法） */

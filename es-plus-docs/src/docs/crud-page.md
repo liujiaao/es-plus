@@ -419,7 +419,7 @@ const rows = crudRef.value.getSelectedRows()
 interface CrudPageSchema {
   // 查询区
   formItems?: FormItemOption[]
-  formLayout?: { span?: number; labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
   
   // 工具栏按钮
   toolbarBtns?: CrudBtnConfig[]
@@ -483,7 +483,7 @@ interface CrudPageSchema {
 | `title` | `string \| (row?) => string` | 弹窗标题（支持动态） |
 | `width` | `string \| number` | 弹窗宽度 |
 | `formItems` | `FormItemOption[]` | 表单字段（简单模式） |
-| `formLayout` | `{ span?, labelWidth? }` | 表单布局 |
+| `formLayout` | `{ labelWidth?, minFoldRows? }` | 表单布局（列宽由**字段级** `querySpan`/`formSpan` 决定，非此处） |
 | `render` | `(h, context) => VNode` | 自定义渲染（复杂模式） |
 | `configBtn` | `DialogBtnConfig[]` | 自定义底部按钮 |
 | `isDraggable` | `boolean` | 可拖拽 |

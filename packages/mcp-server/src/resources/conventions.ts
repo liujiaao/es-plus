@@ -455,6 +455,37 @@ JSON. The contract is **mark, never drop**:
   drop the button.
 - **\`hasCustomRender\`** (DialogConfig): flags a dialog whose body needs a hand-written
   render function; the wrapper emits a placeholder comment + a \`warnings\` entry.
+  This is the supported escape for a custom dialog body: a render **function** has no
+  JSON transport, so it is declared (not passed) and implemented in the host wrapper.
+- **dialog base keys** (\`showClose\` / \`destroyOnClose\` / \`modal\` / \`closeOnClickModal\` /
+  \`closeOnPressEscape\` / \`hiddenFullBtn\` / \`appendTo\` / \`cacheKey\`): plain booleans/strings
+  forwarded verbatim to the underlying dialog. When the user asks "no closing X", "don't close
+  on mask click", "destroy the form each time it opens", "mount it inside #app-dialogs" — write
+  these keys on \`dialogs[k]\`; do not drop the requirement.
+- **\`configBtn\`** (DialogConfig): the footer buttons as JSON data —
+  \`{ name, type, action: 'confirm'|'cancel'|'custom', permissionValue }\`. The runtime attaches the
+  click handler from \`action\` (\`confirm\` validates the form then submits), so a function is
+  never needed. Omit it to get the generated cancel+confirm pair.
+
+**Not in the schema — do not emit.** The keys below exist at RUNTIME (they are
+declared on \`FormItemOption\` / \`TableOptions\` and really are consumed there), but
+they are **absent from the AI config schemas**, and those schemas are CLOSED: an
+unknown key is stripped with no error and no warning, so emitting one **silently
+loses the requirement**. Say it declaratively instead, or leave it to the host:
+
+- **\`on\`** (form item): the control's event bag (\`{ change: fn, input: fn }\`),
+  forwarded as \`onChange\`/\`onInput\` to the underlying control. Function values, so
+  it cannot travel through JSON. Map the intent: "options / required / disabled /
+  value follow another field" → \`reactions\`; "the field only shows when …" →
+  \`isHidden\`. A genuinely imperative handler is the host's code, added after
+  generation.
+- **\`httpRequest\`** / **\`listenToCallBack\`** (table level): a custom fetch function
+  and an external "reload me" subscription. Remote data is declared with
+  \`apiParams\` + a global \`httpRequest\` in the app entry; an imperative reload is
+  \`tableRef.value.httpRequestInstance()\` in host code.
+- **\`isInitRun\`** (table and form item) and **\`entryQuery\`** (table): "skip the
+  first auto-request" and "params injected on first load" — host orchestration
+  (e.g. read them from the route), not something a natural-language request defines.
 
 Every generation returns a \`warnings: string[]\`. Each entry flags an extension
 point that was emitted as a stub OR a likely mapping mistake — read them and
@@ -525,14 +556,22 @@ interface StructuredCrudConfig {
 
   // ── Query-form layout ──
   formLayout?: {
-    span?: number
     labelWidth?: string | number
     minFoldRows?: number         // query form collapses when rows exceed this
+    // NOTE (AI-31③): there is deliberately NO 'span' here. Column count is a
+    // PER-FIELD decision ('querySpan' / 'formSpan'); a layout-level 'span' was
+    // never read by any renderer, so it was removed rather than left as a key
+    // the contract would accept and silently strip.
   }
 
   // ── Advanced multi-dialog / toolbar mode ──
   // Providing ANY of toolbarBtns / tableBtns / operationColumn / dialogs
-  // switches the generator into the "new" schema wrapper (buildSchemaWrapperNew).
+  // switches the GENERATOR into the "new" schema wrapper (buildSchemaWrapperNew).
+  // NOTE (AI-35): that choice is only about which wrapper scaffold the generator
+  // emits — it is NOT the runtime's button-derivation gate. At runtime the toolbar
+  // and the row-action column keep being derived from \`actions\`; the button surface
+  // is handed over ONLY by declaring \`toolbarBtns\` and/or \`operationColumn\`. So
+  // \`dialogs: { add }\` (with \`add\` in \`actions\`) still gets its 「新增」 button.
   toolbarBtns?: ToolbarBtn[]     // buttons in the EsForm button area (legacy slot)
   tableBtns?: TableBtn[]         // toolbar buttons above the table
   operationColumn?: false | {    // row action column (false = hidden)
@@ -582,12 +621,30 @@ interface DialogConfig {
   title?: string
   width?: string | number
   formItems?: FieldConfig[]
-  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
-  hasCustomRender?: boolean     // implement render fn in wrapper SFC
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
+  hasCustomRender?: boolean     // declare a hand-written body in the wrapper SFC (no JSON transport for a render fn)
   isDraggable?: boolean
   maxHeight?: string | number
   fullscreen?: boolean
   isHiddenFooter?: boolean
+  // Base data keys — forwarded verbatim to the underlying dialog (el-dialog / a-modal)
+  // by each renderer's openDialog. Declare them instead of hand-editing the wrapper.
+  showClose?: boolean           // hide the close (X) entry; default true
+  destroyOnClose?: boolean      // reset internal state on each open
+  modal?: boolean               // render the mask; default true
+  closeOnClickModal?: boolean   // close when the mask is clicked; default true
+  closeOnPressEscape?: boolean  // close on Escape; default true
+  hiddenFullBtn?: boolean       // hide the built-in fullscreen toggle
+  appendTo?: string             // CSS selector of the mount node (a DOM element can't travel in JSON)
+  cacheKey?: string             // reuse one instance across calls (vue3/vue2 only; inert in the antdv adapter)
+  configBtn?: DialogBtn[]       // declarative footer buttons; omit for the generated cancel+confirm pair
+}
+
+interface DialogBtn {           // declarative subset — the click handler is attached by the runtime from 'action'
+  name: string
+  type?: string
+  action?: 'confirm' | 'cancel' | 'custom'
+  permissionValue?: string
 }
 \`\`\`
 

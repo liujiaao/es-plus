@@ -363,6 +363,52 @@ function scoreCase(raw) {
     }
   }
 
+  // (14) AI-27: authored dialog base data keys + the declarative `configBtn` array must be
+  //      EMITTED into `pageSchema.dialogs[k]`, not silently dropped. Same net as (12)/(13).
+  //      Why this exists: before AI-27 the generator copied only nine hard-coded dialog keys,
+  //      so a key the AI contract had just let through (`showClose:false` …) was dropped one
+  //      step later — and the runtime's `openDialog` forwarded its own hard-coded list as a
+  //      third gate. This assertion is the middle gate's regression net: delete one
+  //      `dialogSchema.KEY = …` line in `structured-generator.ts` and these cases go red.
+  //      Schema mode only — sfc mode ignores `config.dialogs` wholesale and must say so
+  //      through the degradation warning asserted in (8b).
+  const DIALOG_BASE_KEYS = [
+    'showClose', 'destroyOnClose', 'modal', 'closeOnClickModal', 'closeOnPressEscape',
+    'hiddenFullBtn', 'appendTo', 'cacheKey',
+  ]
+  if (config.mode !== 'sfc' && config.dialogs) {
+    const authoredDialogKeys = []
+    for (const [key, dlg] of Object.entries(config.dialogs)) {
+      for (const k of DIALOG_BASE_KEYS) if (dlg[k] !== undefined) authoredDialogKeys.push([key, k, dlg[k]])
+      if (dlg.configBtn) authoredDialogKeys.push([key, 'configBtn', dlg.configBtn])
+    }
+    if (authoredDialogKeys.length) {
+      const m = code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)
+      let emittedDialogs = null
+      if (m) {
+        try {
+          emittedDialogs = JSON.parse(m[1]).dialogs
+        } catch {
+          emittedDialogs = null
+        }
+      }
+      if (!emittedDialogs) {
+        failures.push('AI-27: could not parse pageSchema.dialogs for the dialog emission check')
+      } else {
+        for (const [key, k, want] of authoredDialogKeys) {
+          const got = emittedDialogs[key]?.[k]
+          if (got === undefined) {
+            failures.push(
+              `dialogs.${key}.${k} was authored but NOT emitted into pageSchema.dialogs (silently dropped — check the dialog copy block in structured-generator.ts)`
+            )
+          } else if (JSON.stringify(got) !== JSON.stringify(want)) {
+            failures.push(`dialogs.${key}.${k} = ${JSON.stringify(got)} != authored ${JSON.stringify(want)}`)
+          }
+        }
+      }
+    }
+  }
+
   return failures
 }
 

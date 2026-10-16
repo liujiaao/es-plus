@@ -247,6 +247,64 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
     },
   },
   {
+    label:
+      "Dialog base keys (showClose / closeOnClickModal / closeOnPressEscape) + declarative footer buttons (configBtn)",
+    nl: "合同管理：查询条件有合同编号、签约方；表格展示合同编号、签约方、签约金额、签约日期。新增合同要填这几项，但提交后直接进审批流——弹窗不要右上角的关闭按钮，点遮罩、按 ESC 都不许关（避免误触丢掉已填内容）；底部只保留“提交审批”和“取消”。行内保留编辑、删除。",
+    reasoning:
+      "“不要关闭按钮 / 点遮罩不关 / ESC 不关”是弹窗的**底座数据键**，值都是平面布尔，直接写进 dialogs.add：showClose:false、closeOnClickModal:false、closeOnPressEscape:false（三端同名同义；同类还有 width / isDraggable / maxHeight / fullscreen / hiddenFullBtn / appendTo / cacheKey）。" +
+      "“底部只有提交审批 + 取消”是声明式底栏 → configBtn 数组：action:'confirm' 的按钮由运行时装配成「先校验表单、再走该弹窗的提交路径」，action:'cancel' 装配成「关闭并抛 dialog-cancel」，全程不写 click 函数；configBtn 是**替换**默认底栏，不写它才会得到自动生成的「取消 + 确定」。" +
+      "**关键**：`dialogs` **不**改变按钮派生——工具栏与操作列照旧由 actions 派生（`actions:[\"add\",…]` 自带「新增」入口，弹窗因此点得开），把按钮面交出去的只有显式声明 `toolbarBtns` 与/或 `operationColumn`。这里之所以两个都显式写，是为了拿到自定义按钮文案（「新增合同」而非派生的「新增」）；一旦显式声明，每个弹窗都必须有按钮能打开它（入口按钮写 `dialogKey`），否则该弹窗成了死胡同。",
+    config: {
+      name: "ContractManage",
+      apiUrl: "/api/contracts",
+      fields: [
+        { prop: "contractNo", label: "合同编号", formtype: "Input" },
+        { prop: "party", label: "签约方", formtype: "Input" },
+        { prop: "amount", label: "签约金额", formtype: "InputNumber", inQuery: false },
+        { prop: "signDate", label: "签约日期", formtype: "DatePicker", inQuery: false },
+      ],
+      actions: ["add", "edit", "delete"],
+      toolbarBtns: [{ name: "新增合同", key: "add", type: "primary", dialogKey: "add" }],
+      operationColumn: {
+        label: "操作",
+        btns: [
+          { name: "编辑", key: "edit", dialogKey: "edit" },
+          { name: "删除", key: "delete", confirm: "确定删除该合同吗？" },
+        ],
+      },
+      dialogs: {
+        add: {
+          title: "新增合同",
+          width: "720px",
+          // 底座数据键：防止误触关窗丢内容（三个键都是平面布尔，直接进 JSON）
+          showClose: false,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          formItems: [
+            { prop: "contractNo", label: "合同编号", formtype: "Input" },
+            { prop: "party", label: "签约方", formtype: "Input" },
+            { prop: "amount", label: "签约金额", formtype: "InputNumber" },
+            { prop: "signDate", label: "签约日期", formtype: "DatePicker" },
+          ],
+          // 声明式底栏：click 由运行时按 action 装配
+          configBtn: [
+            { name: "提交审批", type: "primary", action: "confirm" },
+            { name: "取消", action: "cancel" },
+          ],
+        },
+        edit: {
+          title: "编辑合同",
+          formItems: [
+            { prop: "contractNo", label: "合同编号", formtype: "Input" },
+            { prop: "party", label: "签约方", formtype: "Input" },
+            { prop: "amount", label: "签约金额", formtype: "InputNumber" },
+            { prop: "signDate", label: "签约日期", formtype: "DatePicker" },
+          ],
+        },
+      },
+    },
+  },
+  {
     label: "Explicit target (Ant Design Vue) — config shape is identical across targets",
     nl: "（用 antd）文章管理：查询有标题、分类、发布状态（草稿/已发布）；表格展示标题、分类、发布状态、发布时间；支持增删改查。",
     reasoning:
@@ -419,6 +477,7 @@ function buildContent(): string {
     "- Declarative row merge (\"合并单元格\", \"相同的部门只显示一次\", \"分组表\", \"同一类只显示一次\") → the top-level `mergeConfig`: `{ rowsBy: ['dept', 'team'] }` (non-empty). Each named column is grouped by ADJACENT-EQUAL values: the first row of a run keeps the cell with `rowspan` = run length, the rest are merged away. `rowsBy` order IS the grouping axis — keep the columns in the order the request names them. Cross-renderer (el-table `span-method` / a-table column `customCell` / vxe `mergeMethod`) — the generator consumes it, you do NOT write a span method. DISTINCT from the FUNCTIONAL `tableOptions.spanMethod` (an arbitrary JS closure — Tier-3 and NOT cross-renderer): if both are set the explicit `spanMethod` wins and the generator warns.",
     "- Inline row editing (\"表格行内编辑\", \"双击单元格改数量\", \"点单元格直接改\") → THREE parts, all under the vxe engine: `tableOptions.engine: 'vxe'`; the table-level switch `tableOptions.editConfig` (`{ trigger?: 'click' | 'dblclick' | 'manual', mode?: 'cell' | 'row', showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }`, defaults trigger:'click' / mode:'cell'); and a per-column `columns[].editRender` on EVERY editable column (`{ name: '$input' | '$select' | '$textarea' | '$date', type?, options?, props?, autofocus?, defaultValue? }`, `$select` wants `options`). A column without `editRender` is NOT editable — `editConfig` alone is a no-op — and both are silently ignored unless the engine is vxe. Declare the editable columns via the top-level `columns` array (it REPLACES the derived columns; the operation column is still auto-appended). Function-valued `editRender.events` and custom renderers are out of scope.",
     "- Requirements the schema can't express (permission gating, computed table-cell values) → typed extension points (`permissionValue`, `formatter`, `render`) — mark them, don't drop them. (`isHidden` and `reactions` above are declarative data, NOT extension points — they cover field visibility and field linkage/computed; don't reach for formatter/render for those.)",
+    "- Host-orchestration keys are NOT part of this schema — do NOT emit `on` (a control's event bag, `{ change: fn }`), `httpRequest` (custom fetch fn), `listenToCallBack` (external reload subscription), `isInitRun` (skip the first auto-request), or `entryQuery` (params injected on first load). They exist at RUNTIME on `FormItemOption`/`TableOptions` and are truly consumed there, but the AI schemas are CLOSED: an unknown key is stripped with NO error and NO warning, so emitting one silently loses the requirement. Say it declaratively instead: \"options / required / disabled / value follow another field\" → `reactions`; \"the field only appears when …\" → `isHidden`; a real callback (custom request / imperative reload / first-run flag) is the HOST's job in code after generation — emit the config without it.",
     "- Cross-file prerequisite (permission gating / i18n): `permissionValue` (field/column/button RBAC) and i18n `labelKey` are INERT until the HOST APP ENTRY assembles the plugin — `app.use(ESPlus, { permission: (code) => …, t: (key) => … })` on vue3/antdv, `Vue.use(ESPlus, {...})` on vue2 — and remote `apiParams` needs a global `httpRequest`. Emit the config as usual; never inline permission checks or `t(...)` calls into fields/columns (the entry side is the host's job). `scaffold_page` returns a ready-to-copy `src/main.ts` (vue2: `src/main.js`) assembly boilerplate covering all three.",
     "- `target` is the ONLY thing that changes between vue3 / vue2 / antdv; the config shape is identical (多端同构).",
     "",

@@ -2,7 +2,7 @@
   "nl": "角色管理：新增编辑弹窗宽度 720px，表单分 2 列；表格展示角色名、角色编码、数据权限范围、创建时间；支持新增、编辑、删除、查看。",
   "nlEn": "Role management: the add/edit dialog is 720px wide with a 2-column form; the table shows role name, role code, data permission scope, and creation time; supports add, edit, delete, and view.",
   "fixedFields": ["roleName", "roleCode", "dataScope", "createdAt"],
-  "pinnedDims": ["propSet", "actions", "formLayout"],
+  "pinnedDims": ["propSet", "actions", "fieldSpan"],
   "config": {
     "name": "RoleManage",
     "apiUrl": "/api/roles",
@@ -10,17 +10,23 @@
       {
         "prop": "roleName",
         "label": "角色名",
-        "formtype": "Input"
+        "formtype": "Input",
+        "querySpan": 12,
+        "formSpan": 12
       },
       {
         "prop": "roleCode",
         "label": "角色编码",
-        "formtype": "Input"
+        "formtype": "Input",
+        "querySpan": 12,
+        "formSpan": 12
       },
       {
         "prop": "dataScope",
         "label": "数据权限范围",
         "formtype": "Select",
+        "querySpan": 12,
+        "formSpan": 12,
         "dataOptions": [
           {
             "label": "全部",
@@ -53,25 +59,16 @@
       "delete",
       "view"
     ],
-    "formLayout": {
-      "span": 12
-    },
     "dialogs": {
       "add": {
         "title": "新增角色",
-        "width": 720,
-        "formLayout": {
-          "span": 12
-        }
+        "width": 720
       },
       "edit": {
         "title": "编辑角色",
-        "width": 720,
-        "formLayout": {
-          "span": 12
-        }
+        "width": 720
       }
     }
   },
-  "notes": "dialog width + 2-column form layout"
+  "notes": "dialog width + 2-column add/edit form（列宽由字段级 formSpan 决定）"
 }

@@ -18,7 +18,7 @@ function loadCrudPageTypes(target: Target): string {
 
 const CRUD_PAGE_TYPES_FALLBACK = `export interface CrudPageSchema {
   formItems?: FormItemOption[]
-  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
   toolbarBtns?: CrudBtnConfig[]
   tableBtns?: TableBtnConfig[]
   columns: TableColumn[]
@@ -60,11 +60,35 @@ export interface CrudDialogConfig {
   width?: string | number
   formItems?: FormItemOption[]
   formLayout?: { labelWidth?: string | number }
-  render?: (h: unknown, instance: unknown, components: Record<string, unknown>) => unknown
+  render?: (h: any, ctx: Record<string, unknown>) => unknown
+  configBtn?: BtnConfig[]
+  isDraggable?: boolean
+  maxHeight?: string | number
+  fullscreen?: boolean
   isHiddenFooter?: boolean
+  // Dialog base data keys (AI-27): forwarded verbatim to the underlying dialog by
+  // each end's openDialog whitelist. Note: cacheKey is inert in the ant-design-vue
+  // adapter (registered deviation — its use-dialog has no instance cache).
+  showClose?: boolean
+  destroyOnClose?: boolean
+  modal?: boolean
+  closeOnClickModal?: boolean
+  closeOnPressEscape?: boolean
+  hiddenFullBtn?: boolean
+  appendTo?: string | HTMLElement
+  cacheKey?: string
+  onOpen?: (row?: Record<string, unknown>) => void
+  onConfirm?: (data: Record<string, unknown>, ctx: Record<string, unknown>) => Promise<void> | void
+  onClose?: () => void
+  /**
+   * AI-only annotation — NOT read by the EsCrudPage runtime. The generator uses
+   * it to derive a TODO slot + warning, and generate_crud_from_config uses it to
+   * allow a mutating dialog with no formItems. Kept here so hosts can see the key
+   * they may write; it is registered in scripts/lib/entry-keys.mjs
+   * RESOURCE_MIRROR_ALLOWED_EXTRAS. Mirrors the runtime contract exactly
+   * otherwise (see AI-27/AI-32; guard: check-schema-contract.mjs).
+   */
   hasCustomRender?: boolean
-  onConfirm?: (data: Record<string, unknown>, ctx: { row?: Record<string, unknown> }) => Promise<void> | void
-  onCancel?: () => void
 }
 
 export interface EsCrudPageInstance {

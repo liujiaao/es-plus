@@ -7,7 +7,7 @@ export interface CrudPageSchema {
   /** 查询表单字段配置 */
   formItems?: FormItemOption[]
   /** 表单布局配置 */
-  formLayout?: { span?: number; labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
   /** 工具栏按钮（显式声明，替代从 actions 自动生成，渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 表格工具栏按钮（渲染在 EsTable 上方的 configBtn 区域，code:1=左侧 code:2=右侧） */
@@ -107,7 +107,7 @@ export interface CrudDialogConfig {
   /** 内容模式 1：表单字段（简单场景） */
   formItems?: FormItemOption[]
   /** 表单布局 */
-  formLayout?: { span?: number; labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number }
   /** 内容模式 2：自定义渲染（复杂场景） */
   render?: (h: any, context: DialogRenderContext) => VNode | any
   /** 弹窗底部按钮（不传则根据 onConfirm 自动生成取消+确定） */
@@ -120,6 +120,25 @@ export interface CrudDialogConfig {
   fullscreen?: boolean
   /** 隐藏底部 */
   isHiddenFooter?: boolean
+  // ─── 弹窗底座数据键（AI-27）─────────────────────────────────────────
+  // 全部转发给底层 es-dialog / el-dialog，`openDialog` 的白名单逐键透传
+  // （此前是硬编码 9 键，AI 契约放行的这些键在第二步被静默丢弃）。
+  /** 是否显示关闭入口（默认 true）。false 时自绘的与原生的一起隐藏 */
+  showClose?: boolean
+  /** 关闭时销毁内容（每次打开重置内部状态） */
+  destroyOnClose?: boolean
+  /** 是否需要遮罩层，默认 true */
+  modal?: boolean
+  /** 点击遮罩层是否关闭，默认 true */
+  closeOnClickModal?: boolean
+  /** 按下 ESC 是否关闭，默认 true */
+  closeOnPressEscape?: boolean
+  /** 隐藏全屏按钮 */
+  hiddenFullBtn?: boolean
+  /** 挂载点（CSS 选择器；DOM 元素无法经 JSON 传递） */
+  appendTo?: string | HTMLElement
+  /** 实例缓存键：同键跨多次调用复用同一弹窗实例（保留内部状态） */
+  cacheKey?: string
   /** 弹窗打开时回调 */
   onOpen?: (row?: Record<string, unknown>) => void
   /** 确认回调（未提供 configBtn 时自动生成确认按钮调用此方法） */

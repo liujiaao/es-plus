@@ -132,14 +132,90 @@ function assertValidConfig(config: StructuredCrudConfig): void {
   throw new Error(`generateFromConfig: 配置未通过 StructuredCrudConfigSchema 校验\n${details}${more}`)
 }
 
+/**
+ * AI-35：**声明了却打不开的弹窗** —— 返回「没有任何入口按钮能打开」的 `dialogs` 键。
+ *
+ * 起因（AI-27 落地时实测）：三端 `es-crud-page` 的两个归一化器对「什么是显式模式」
+ * 判断**不一致** —— `normalizedToolbarBtns` 见到 `schema.dialogs` 就整块返回 `[]`
+ * （不派生工具栏按钮），而 `normalizedOperationColumn` **不认** `dialogs`、照旧从
+ * `actions` 派生操作列。后果：只声明 `dialogs` 而不声明入口按钮的配置，页面上没有任何
+ * 「新增」入口 —— 弹窗配好了却点不开，且**零告警**。
+ * 修法是让 `dialogs` 退出按钮派生（`dialogs` 定义弹窗、不定义按钮面；见三端
+ * `normalizedToolbarBtns` 注释），本函数是把该规则**算出来**的那一半：
+ *
+ * 本函数逐字镜像三端归一化器的**派生规则**，任何一侧改了规则都必须同改这里
+ * （`check-threeway-consistency.mjs` 的轴⑤ 会用「三端门必须只认 `operationColumn`」
+ * 的静态断言把它钉死，`crud-runtime.spec.ts` 再用真渲染做行为见证）。
+ *
+ * 保留的两种残余形态（修 runtime 派生也盖不住的，正是本函数存在的理由）：
+ *   1. `dialogs[add]` 但 `actions` 里没有 `add`（没有东西能派生出入口）；
+ *   2. 显式声明了 `toolbarBtns` / `operationColumn`（按钮面交给用户），但其中没有
+ *      任何 `dialogKey === add` 的按钮。
+ * 二者都是**合法但静默失败**的配置 —— 生成器据此发警告（不静默），不抛错。
+ */
+export function findDialogsWithoutOpener(config: StructuredCrudConfig): string[] {
+  const actions: string[] = config.actions?.length ? [...config.actions] : ['add', 'edit', 'delete']
+
+  // ① 有哪些弹窗（镜像 `normalizedDialogs`：显式 dialogs 优先，否则由 legacy
+  //    `dialogFormItems` + actions 派生；AI 契约里没有 dialogFormItems，宿主手写配置才有）
+  const legacyItems = (config as { dialogFormItems?: unknown[] }).dialogFormItems
+  const dialogKeys = config.dialogs
+    ? Object.keys(config.dialogs)
+    : Array.isArray(legacyItems) && legacyItems.length
+      ? ['add', 'edit', 'view'].filter((k) => actions.includes(k))
+      : []
+  if (!dialogKeys.length) return []
+
+  // ② 哪些 key 有入口（镜像 toolbar / tableBtns / operation column 三处派生）
+  const reachable = new Set<string>()
+  const oc = config.operationColumn
+
+  if (config.toolbarBtns !== undefined) {
+    for (const b of config.toolbarBtns ?? []) if (b.dialogKey) reachable.add(b.dialogKey)
+  } else if (oc === undefined) {
+    // 只声明 dialogs 不算「显式按钮面」；但显式 operationColumn 会抑制工具栏派生
+    if (actions.includes('add')) reachable.add('add')
+  }
+
+  for (const b of config.tableBtns ?? []) if (b.dialogKey) reachable.add(b.dialogKey)
+
+  if (oc !== undefined) {
+    if (oc !== false) for (const b of oc.btns ?? []) if (b.dialogKey) reachable.add(b.dialogKey)
+  } else {
+    const hasActionCol = (config.columns ?? []).some(
+      (c) => c.prop === 'action' || c.prop === 'operate' || 'btns' in c
+    )
+    if (!hasActionCol) for (const k of ['view', 'edit']) if (actions.includes(k)) reachable.add(k)
+  }
+
+  return dialogKeys.filter((k) => !reachable.has(k))
+}
+
 export function generateFromConfig(config: StructuredCrudConfig): StructuredGenerateResult {
   assertValidConfig(config)
   const mode = config.mode || 'schema'
   const result = mode === 'sfc' ? generateSFC(config) : generateSchema(config)
   // 只在这一处汇总跨模式的通用提示，避免两个模式各写一遍而分叉。
   const propWarnings = warnNonIdentifierProps(config)
-  if (propWarnings.length) {
-    return { ...result, warnings: [...propWarnings, ...(result.warnings || [])] }
+  // AI-35：只在 schema 模式报 —— sfc 模式整体不消费 `config.dialogs`（已有专门降级告警），
+  // 再说一遍「弹窗打不开」是噪音（那时根本没有弹窗）。
+  const orphanWarnings =
+    mode === 'schema'
+      ? (() => {
+          const orphans = findDialogsWithoutOpener(config)
+          if (!orphans.length) return []
+          const keys = orphans.map((k) => `dialogs.${k}`).join(', ')
+          return [
+            `${keys} has no opener: 生成的页面里没有任何按钮能打开它（无入口 = 点不开，且不会报错）。` +
+              `按当前规则，工具栏按钮由 \`actions\` 派生（\`add\` ⇒ 新增）、行内按钮由 \`actions\` 的 \`view\`/\`edit\` 派生；` +
+              `若你显式声明了 \`toolbarBtns\`/\`tableBtns\`/\`operationColumn\`，它们**整体接管**按钮面，` +
+              `就必须自己给出 \`dialogKey: "${orphans[0]}"\` 的入口按钮（或把对应动作加回 \`actions\`）。`,
+          ]
+        })()
+      : []
+  const extra = [...propWarnings, ...orphanWarnings]
+  if (extra.length) {
+    return { ...result, warnings: [...extra, ...(result.warnings || [])] }
   }
   return result
 }
@@ -166,6 +242,11 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     const hints = formatterFields.map(f => `"${f.prop}": ${sanitizeForComment(f.formatter!)}`).join('; ')
     warnings.push(`Schema mode cannot inline a formatter function (JSON cannot hold functions). Fields [${formatterFields.map(f => f.prop).join(', ')}] are emitted unformatted — re-add \`formatter\` manually. Original formatters: ${hints}. The requirement is marked, not silently dropped.`)
   }
+
+  // AI-31①：表单面的 render（`buildFormItem` 无 render 分支）此前**静默**丢。这里发
+  // 一条与 formatter 同规的降级告警，并在 wrapper SFC 里落 TODO(es-plus) 注释占位。
+  const formFaceRenderWarn = formFaceRenderWarning(config, { includeDialogs: true })
+  if (formFaceRenderWarn) warnings.push(formFaceRenderWarn)
 
   // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告。
   // 只警告 `virtual: true` 与 `engine: 'virtual'`（二者等价）—— 这两者确实会降级。
@@ -285,6 +366,20 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
         if (dlg.maxHeight) dialogSchema.maxHeight = dlg.maxHeight
         if (dlg.fullscreen) dialogSchema.fullscreen = true
         if (dlg.isHiddenFooter) dialogSchema.isHiddenFooter = true
+        // AI-27：弹窗底座数据键 —— AI 契约已放行，但生成器此前只逐键拷贝 9 个，
+        // 于是即便宿主 LLM 声明了 `showClose:false`，产物里也没有这个键
+        // （AI-27 前的第二道静默丢弃：契约放行 → 生成器丢 → 运行时无从消费）。
+        // 逐键显式拷贝、不 spread，是为了让 check-schema-contract 的
+        // `dialogSchema.KEY =` 扫描能逐个咬住「声明了却没发射」。
+        if (dlg.showClose !== undefined) dialogSchema.showClose = dlg.showClose
+        if (dlg.destroyOnClose !== undefined) dialogSchema.destroyOnClose = dlg.destroyOnClose
+        if (dlg.modal !== undefined) dialogSchema.modal = dlg.modal
+        if (dlg.closeOnClickModal !== undefined) dialogSchema.closeOnClickModal = dlg.closeOnClickModal
+        if (dlg.closeOnPressEscape !== undefined) dialogSchema.closeOnPressEscape = dlg.closeOnPressEscape
+        if (dlg.hiddenFullBtn) dialogSchema.hiddenFullBtn = true
+        if (dlg.appendTo) dialogSchema.appendTo = dlg.appendTo
+        if (dlg.cacheKey) dialogSchema.cacheKey = dlg.cacheKey
+        if (dlg.configBtn) dialogSchema.configBtn = dlg.configBtn
         if (dlg.hasCustomRender) {
           dialogSchema.hasCustomRender = true
           warnings.push(`Dialog "${sanitizeForComment(key)}" has hasCustomRender=true — implement render function in wrapper SFC.`)
@@ -409,6 +504,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     )
   }
 
+  // AI-31①：表单面的 render 在这里同样载不动 —— 查询表单与（旧式）弹窗表单都是内联 JSON
+  // （下方 `const formItems` / `const dialogFormItems`）。dialogs 不收：新式 dialogs 已被上面
+  // 的 ignoredInSfc 整体告警，重复报同一件事只会稀释信号。
+  const sfcFormFaceRenderWarn = formFaceRenderWarning(config, { includeDialogs: false })
+  if (sfcFormFaceRenderWarn) warnings.push(sfcFormFaceRenderWarn)
+
   const lines: string[] = []
 
   // Template
@@ -501,6 +602,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // formItems —— 这段 JSON 会被内联进生成 SFC 的 <script> 块，必须用 inlineJson：
   // 用户可控的 label 里写 `</script>` 否则能提前闭合宿主 script 标签（见 codegen-escape.ts）。
   const formItemsJson = inlineJson(queryFields.map(f => buildFormItem(f, 'query', config.i18n)), 2)
+  lines.push(...buildFormFaceRenderPlaceholderLines(config, '', { includeDialogs: false, dialect: 'js' }))
   lines.push(`const formItems = ${formItemsJson}`)
   lines.push(``)
 
@@ -574,11 +676,20 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`)
   if (tOpts.heightType) lines.push(`  heightType: ${q(tOpts.heightType)},`)
   if (tOpts.tabHeight) lines.push(`  tabHeight: ${numOrStr(tOpts.tabHeight)},`)
-  if (tOpts.virtual) {
-    lines.push(`  virtual: true,`)
-    if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
-    if (tOpts.height) lines.push(`  height: ${numOrStr(tOpts.height)},`)
-  }
+  // AI-30①：下列键**不得**寄生在 `if (tOpts.virtual)` 里。此前 `rowHeight`/`height` 被
+  // 该分支门住 —— 于是「配了 height 但没开 virtual」的配置在 SFC 模式下**静默丢高度**
+  // （schema 模式照发 `height: 400`，两模式产物不等价）。`height` 就是 el-table 自己的
+  // `height` prop（与虚拟滚动无关），`rowHeight`/`estimatedRowHeight`/`overscanCount` 才
+  // 是虚拟引擎的调优键 —— 但**发射**它们与开不开虚拟无关：运行时自会按引擎取用，
+  // 生成器不该替宿主决定「这个值有没有意义」而把它丢掉（「发射而非静默丢弃」，同 AI-22）。
+  if (tOpts.virtual) lines.push(`  virtual: true,`)
+  if (tOpts.rowHeight) lines.push(`  rowHeight: ${tOpts.rowHeight},`)
+  if (tOpts.height) lines.push(`  height: ${numOrStr(tOpts.height)},`)
+  // AI-30②：这三键 schema 模式早已发射（见上方 tableOptions 构造），SFC 块漏了 —— 同 config
+  // 换 mode 就丢键。逐键补上，形态与 schema 模式一致（数字直出、字符串经 q()）。
+  if (tOpts.estimatedRowHeight) lines.push(`  estimatedRowHeight: ${tOpts.estimatedRowHeight},`)
+  if (tOpts.overscanCount) lines.push(`  overscanCount: ${tOpts.overscanCount},`)
+  if (tOpts.rowClassName) lines.push(`  rowClassName: ${q(tOpts.rowClassName)},`)
   if (tOpts.engine) lines.push(`  engine: ${q(tOpts.engine)},`)
   if (tOpts.multiSelect) lines.push(`  multiSelect: true,`)
   // 后端响应字段映射：SFC 的 options 是手搓块（非 JSON.stringify），逐键用 q() 转义
@@ -765,6 +876,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
       lines.push(...buildExtensionPointSlotLines(f, target))
     }
   }
+  lines.push(...buildFormFaceRenderPlaceholderLines(config, '    ', { includeDialogs: true }))
   lines.push(`  </es-crud-page>`)
   lines.push(`</template>`)
   lines.push(``)
@@ -890,6 +1002,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
       lines.push(...buildExtensionPointSlotLines(f, target))
     }
   }
+  lines.push(...buildFormFaceRenderPlaceholderLines(config, '    ', { includeDialogs: true }))
   lines.push(`  </es-crud-page>`)
   lines.push(`</template>`)
   lines.push(``)
@@ -1009,6 +1122,86 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
   code = rewriteElementUsage(code, target)
   return code
+}
+
+/**
+ * 表单面的 render（AI-31①）。`buildFormItem` 此前**没有** render 分支 —— 文档站 demo 07/13
+ * 「表单里的 render」经 AI 入口声明后，schema / SFC 两种模式下都**静默**退化成默认控件。
+ *
+ * 判定只收「**表格面够不着**的 render」：`inTable === false` 且参与查询/表单面，以及弹窗
+ * `formItems` 自带的 render。`FieldConfig.render` 是**单一**字段级扩展点，而表格列在用它
+ * （15 个 render 语料皆是）时其源码本就是单元格签名 `(_, { row })`，把它顺带喂给表单控件
+ * 是**语义错位** —— 那些字段既不告警也不发射，正是本节只收「表格面够不着」的原因。
+ *
+ * 为什么只标记不发射（源码论证，非「偷懒」）：两条独立的硬事实各自都足以否决「注入」——
+ *   1. **载体不够**：两种模式的表单项都是 **JSON 数据**（schema 的 `pageSchema.formItems`、
+ *      SFC 内联的 `const formItems` / `const dialogFormItems`），JSON 载不动函数。
+ *   2. **签名与调用点都不对**：即使硬塞进去也不会被调用。`es-form.vue` 的 `RenderDomForm`
+ *      调用约定是 `props.render?.(h, model, { row, index })`（`es-form.vue:678`），与表格
+ *      单元格的 `(h, { row })` 不同形；更关键的是它**只在 `v-else` 分支被读**
+ *      （`es-form.vue:16-21`：有 `formtype` 走 `formInputComponents(item)`，无 `formtype` 才
+ *      用 `item.render`），而 `buildFormItem` **恒**写 `formtype`（`:1127`）。即注入的 render
+ *      是一段**永不可达**的死代码 —— 那才是真正的「假修复」。
+ * 故与本文件 `formatter` 的降级同规：发含源码的告警 + 在产物里落 `TODO(es-plus)` 注释占位
+ * —— **标记而非丢弃**。手工接线时需同时**去掉该项的 `formtype`**，render 才会被 `es-form` 调用。
+ */
+function collectFormFaceRenderFields(
+  config: StructuredCrudConfig,
+  opts: { includeDialogs?: boolean } = {}
+): FieldConfig[] {
+  const out: FieldConfig[] = []
+  const seen = new Set<string>()
+  const add = (f: FieldConfig | undefined) => {
+    if (f && f.render && f.prop && !seen.has(f.prop)) {
+      seen.add(f.prop)
+      out.push(f)
+    }
+  }
+  for (const f of config.fields) {
+    if (f.inTable === false && (f.inQuery !== false || f.inForm !== false)) add(f)
+  }
+  // 新式 dialogs 的 formItems：**schema 模式**要收（弹窗表单项在 schema 里同样载不动函数）；
+  // **SFC 模式**不收 —— 那里整个 dialogs 已被 ignoredInSfc 整体告警（见 generateSFC），
+  // 再报一次表单面的 render 只会重复同一件事。
+  if (opts.includeDialogs) {
+    for (const d of Object.values(config.dialogs ?? {})) {
+      for (const f of (d as { formItems?: FieldConfig[] }).formItems ?? []) add(f)
+    }
+  }
+  return out
+}
+
+/** 表单面 render 的降级告警文案（无此类字段则 null）；两种模式共用，避免各写一份而分叉。 */
+function formFaceRenderWarning(
+  config: StructuredCrudConfig,
+  opts: { includeDialogs?: boolean } = {}
+): string | null {
+  const fields = collectFormFaceRenderFields(config, opts)
+  if (!fields.length) return null
+  const hints = fields.map((f) => `"${f.prop}": ${sanitizeForComment(String(f.render))}`).join('; ')
+  return (
+    `A form-item render function cannot be inlined (form items are serialized as JSON data in both modes, and the form-control render signature differs from a table cell's). ` +
+    `Fields [${fields.map((f) => f.prop).join(', ')}] will fall back to the default control; a \`TODO(es-plus)\` marker is written into the generated SFC. ` +
+    `Original renders: ${hints}. The requirement is marked, not silently dropped.`
+  )
+}
+
+/** 上述标记在产物里的落点：纯注释，零运行时面。`dialect` 决定注释语法（模板 vs `<script>`）。 */
+function buildFormFaceRenderPlaceholderLines(
+  config: StructuredCrudConfig,
+  indent: string,
+  opts: { includeDialogs?: boolean; dialect?: 'html' | 'js' } = {}
+): string[] {
+  const fields = collectFormFaceRenderFields(config, opts)
+  if (!fields.length) return []
+  const js = opts.dialect === 'js'
+  const head = js ? '//' : '<!--'
+  const tail = js ? '' : ' -->'
+  const lines = [`${indent}${head} TODO(es-plus): form-item render requested but not emittable (AI-31①) — wire these in a wrapper (drop the item's \`formtype\`, es-form only calls item.render when formtype is absent):${tail}`]
+  for (const f of fields) {
+    lines.push(`${indent}${head}   "${sanitizeForComment(String(f.prop))}": ${sanitizeForComment(String(f.render))}${tail}`)
+  }
+  return lines
 }
 
 function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramework): string[] {

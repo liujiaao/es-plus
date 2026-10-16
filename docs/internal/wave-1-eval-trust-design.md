@@ -94,13 +94,16 @@ AI-02 与 AI-05 可并行；AI-04 必须最后（需要一次真实带 key 的 r
 | `apiParams` | 对应 field 的 url/labelField/valueField 相等 | gold 任一 field 有 | 02,10 |
 | `dataOptions` | 有枚举 options 的 field 集合相等（值不逐一比，比"该给的给了没"） | gold 任一 field 有 | 多 |
 | `i18n` | `i18n` 标志相等 | gold.i18n 为真 | 11,22 |
-| `formLayout` | 结构相等 | gold 有 | 12 |
+| `formLayout` | 结构相等（仅 `labelWidth`/`minFoldRows`——`span` 幽灵键已删，见下注） | gold 有 | 12 |
+| `fieldSpan` | gold 每个声明 `querySpan`/`formSpan` 的字段，pred 同名**等值** | gold 任一字段有 | 09,18,12,137,140,142,144,146 |
 | `target` | 相等 | gold 非默认 vue3 | 06,07,15,19,20 |
 | `mode` | 相等（sfc/schema） | gold.mode=='sfc' | 14,15,21,22,23 |
 | `virtualScroll` | 标志/配置一致 | gold 有 | 17,25 |
 | `extPoints` | render/formatter/permissionValue **存在性**一致（不比字符串内容——任意 JS 无法等值比） | gold 任一 field 有 | 04,18 |
 
 > `extPoints` 只验"该保留的扩展点保留了没"（mark-never-drop 的 LLM 侧对偶），不验内容——内容正确性归 §4 的 compile 层和未来 AI-10。
+>
+> **AI-31③ 修订（2026-10-16）**：`formLayout.span` 是**幽灵键**（core 无 layout 级消费者，只读字段级 `item.span`），已从两处 AI Zod + 三端类型 + 文档中删除；「查询/表单分 N 列」的真实表达是**字段级** `querySpan`/`formSpan`（生成器 `buildFormItem` 消费），故新立 `fieldSpan` 维度承接该能力——否则那句 NL 需求会无维度可量。`fieldSpan` 语义与 `reactions`/`isHidden` 同规：gold 驱动、按字段等值。
 
 ### 2.3 文件级改动
 

@@ -222,8 +222,8 @@ const FieldConfigSchema = z.object({
   inQuery: z.boolean().default(true).describe('Show as a query/filter field above the table'),
   inTable: z.boolean().default(true).describe('Show as a table column'),
   inForm: z.boolean().default(true).describe('Show in the add/edit form'),
-  querySpan: z.number().int().min(1).max(24).optional(),
-  formSpan: z.number().int().min(1).max(24).optional(),
+  querySpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the query form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
+  formSpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
   attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
@@ -243,7 +243,7 @@ const FieldConfigSchema = z.object({
     'Extension point: a JS arrow-function source string for read-only cell formatting, e.g. "(row) => row.amount.toFixed(2)". Use this to express display logic the schema can\'t otherwise capture.'
   ),
   render: z.string().optional().describe(
-    "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
+    "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (formItemOptions/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
   ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
@@ -396,20 +396,66 @@ const OperationColumnSchema = z.union([
   })
 ])
 
+/**
+ * 弹窗底部按钮的**声明式子集**（AI-27）。
+ *
+ * 运行时 `DialogBtnConfig extends BtnConfig`，但 `click` 由 `EsCrudPage` 的
+ * `resolveDialogBtns` **按 `action` 自动装配**（`confirm` → 校验后提交，`cancel` → 关闭），
+ * 所以 AI 面只收 `{ name, type, action, permissionValue }` —— 这四键足以表达
+ * 「加一个自定义按钮 / 改确定按钮样式 / 按权限码隐藏」，全部是纯 JSON，
+ * 且**逐个都有运行时消费者**。函数值（`click`）与位置类键（`position`/`code`/`direction`）
+ * 是表格/表单工具栏的概念，在弹窗底部无意义，故不收。
+ */
+const DialogBtnSchema = z.object({
+  name: z.string().min(1).describe('Button label text.'),
+  type: z.string().optional().describe("Button type, e.g. 'primary' | 'danger' | 'default'."),
+  action: z
+    .enum(['confirm', 'cancel', 'custom'])
+    .optional()
+    .describe("Button behaviour. 'confirm' = validate the dialog form then run the dialog's submit path; 'cancel' = close and emit dialog-cancel; 'custom' (or omitted) = plain button whose click must be wired by the host wrapper."),
+  permissionValue: z.string().optional().describe('Permission code; the button is filtered out unless the globally configured permission function grants it.'),
+})
+
 const DialogConfigSchema = z.object({
   title: z.string().optional(),
   width: z.union([z.string(), z.number()]).optional(),
   formItems: z.array(FieldConfigSchema).optional(),
   formLayout: z.object({
-    span: z.number().optional(),
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Form collapses when rows exceed this number'),
   }).optional(),
-  hasCustomRender: z.boolean().optional(),
-  isDraggable: z.boolean().optional(),
-  maxHeight: z.union([z.string(), z.number()]).optional(),
-  fullscreen: z.boolean().optional(),
-  isHiddenFooter: z.boolean().optional(),
+  hasCustomRender: z
+    .boolean()
+    .optional()
+    .describe('Declares that the dialog body is hand-implemented in the wrapper SFC (there is no JSON transport for a render function). Setting it relaxes the "a mutating dialog needs formItems" check and makes the generator emit a TODO(es-plus) marker; it is NOT forwarded to the dialog component.'),
+  isDraggable: z.boolean().optional().describe('Make the dialog draggable by its header.'),
+  maxHeight: z.union([z.string(), z.number()]).optional().describe('Max height of the dialog body (scrolls beyond it).'),
+  fullscreen: z.boolean().optional().describe('Open the dialog fullscreen.'),
+  isHiddenFooter: z.boolean().optional().describe('Hide the whole footer (overrides configBtn).'),
+  // ── 弹窗底座数据键（AI-27）────────────────────────────────────────────────
+  // 这 6 个 + appendTo + cacheKey 是 core `DialogOptions` 的**具名键**，三端 es-dialog
+  // 都真消费（vue3 经 attrs 透传给 el-dialog、vue2 声明为 props 或经 passThroughAttrs、
+  // antdv 声明为 props）。此前 AI 契约零声明 → 宿主 LLM 在 `.dialogs[k]` 里写它们会被
+  // Zod 静默剥掉，而运行时又**确实**有消费者（同 cachePageSelection / isHidden 一族）。
+  showClose: z.boolean().optional().describe('Show the built-in close (X) entry; default true. false hides the self-drawn X and the native one together (the dialog then only closes via footer buttons).'),
+  destroyOnClose: z.boolean().optional().describe('Destroy the dialog content on close (resets internal state each open).'),
+  modal: z.boolean().optional().describe('Render the mask/overlay; default true.'),
+  closeOnClickModal: z.boolean().optional().describe('Close when the mask is clicked; default true.'),
+  closeOnPressEscape: z.boolean().optional().describe('Close when Escape is pressed; default true.'),
+  hiddenFullBtn: z.boolean().optional().describe('Hide the built-in fullscreen toggle button.'),
+  appendTo: z
+    .string()
+    .optional()
+    .describe("CSS selector of the mount node for the dialog (e.g. 'body' or '#app-dialogs'). A DOM element cannot travel in JSON, so only the selector form is accepted — the runtime resolves it with querySelector and falls back to document.body."),
+  cacheKey: z
+    .string()
+    .optional()
+    .describe('Instance cache key: repeat calls with the same key reuse one dialog instance so its internal state survives close/reopen (recycled 10 minutes after close). The vue3/vue2 runtimes implement it; the ant-design-vue adapter does not (registered deviation) so the key is accepted but inert there.'),
+  configBtn: z
+    .array(DialogBtnSchema)
+    .min(1)
+    .optional()
+    .describe('Declarative footer buttons. When omitted a cancel+confirm pair is generated automatically. Each entry is JSON data — the click handler is attached by the runtime from `action`.'),
 })
 
 export const StructuredCrudConfigSchema = z.object({
@@ -525,14 +571,15 @@ export const StructuredCrudConfigSchema = z.object({
   permissions: z.record(z.string(), z.string()).optional().describe('Permission codes for action buttons'),
   i18n: z.boolean().default(false).describe('Use labelKey for i18n'),
   formLayout: z.object({
-    span: z.number().optional(),
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Query form collapses when rows exceed this number'),
   }).optional().describe('Query form layout config'),
   toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Toolbar buttons rendered in EsForm button area (position:left|right; defaults to right)'),
   tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (position:left|right, recommended; legacy code:1=left/2=right) rendered above EsTable'),
   operationColumn: OperationColumnSchema.optional().describe('Operation column config (false = hidden)'),
-  dialogs: z.record(z.string(), DialogConfigSchema).optional().describe('Multi-dialog configs keyed by dialog ID'),
+  dialogs: z.record(z.string(), DialogConfigSchema).optional().describe(
+    'Per-dialog configs keyed by dialog ID (add/edit/view/…). Declaring `dialogs` gives a dialog its own base keys (appearance/close behaviour, `configBtn`, `formItems`) and does NOT suppress button derivation — the toolbar and row-action buttons are still derived from `actions` unless `toolbarBtns`/`operationColumn` are declared explicitly (those two, never `dialogs`, hand the button surface over).'
+  ),
   columns: z.array(ColumnSchema).optional().describe(
     "Explicit table columns (escape hatch over the `fields`-derived columns). When present it REPLACES the derived data columns (override, not merge) — `fields` still drives the query/add/edit forms. Use it for multi-level group headers (`groups`), and non-field columns (`type`: index/selection/expand). The operation column is STILL appended from `actions`/`operationColumn` (set `operationColumn:false` to manage it yourself). Omit to keep the derived one-field-one-column behavior."
   ),

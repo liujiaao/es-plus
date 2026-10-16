@@ -64,6 +64,43 @@ import type {
 import type { BtnConfig, TableColumn } from '@es-plus/core'
 import { getNestedValue, setNestedValue, parsePathSegments } from '@es-plus/core'
 
+/**
+ * AI-27：弹窗底座键的**显式白名单**（逐键转发给 `dialog()`）。
+ *
+ * 此前是硬编码 9 键、不 spread `dialogConfig` —— AI 契约放行的 `showClose`/`modal`/… 即便
+ * 被宿主 LLM 写进 `pageSchema.dialogs[k]`，到这里仍被静默丢弃（第二道闸门）。
+ *
+ * 必须与「AI 契约键 − 特殊装配键」逐字相等（特殊装配：title 支持函数式、formItems/formLayout
+ * 参与构造 render、configBtn 由 resolveDialogBtns 装配 click、hasCustomRender 是 AI-only 注解键、
+ * render/onOpen/onConfirm/onClose 是函数值）。三端各存一份，`check-schema-contract.mjs` 断言
+ * 三份 + AI 契约等价 —— 加键却忘转发，立刻红。
+ */
+const DIALOG_PASSTHROUGH_KEYS = [
+  'width',
+  'isDraggable',
+  'maxHeight',
+  'fullscreen',
+  'isHiddenFooter',
+  'showClose',
+  'destroyOnClose',
+  'modal',
+  'closeOnClickModal',
+  'closeOnPressEscape',
+  'hiddenFullBtn',
+  'appendTo',
+  'cacheKey',
+] as const
+
+/** 按白名单抽底座数据键；未声明的不下发（避免用 undefined 覆盖弹窗自身的默认值）。 */
+function pickDialogBaseProps(config: CrudDialogConfig): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const k of DIALOG_PASSTHROUGH_KEYS) {
+    const v = (config as Record<string, unknown>)[k]
+    if (v !== undefined) out[k] = v
+  }
+  return out
+}
+
 export default defineComponent({
   name: 'EsCrudPage',
   components: { EsForm, EsTable, EsErrorBoundary },
@@ -177,7 +214,9 @@ export default defineComponent({
 
     const normalizedToolbarBtns = computed<CrudBtnConfig[]>(() => {
       if (props.schema.toolbarBtns) return props.schema.toolbarBtns
-      if (props.schema.dialogs || props.schema.operationColumn !== undefined) return []
+      // 只有显式声明 operationColumn 才是「按钮面交给用户」；dialogs 不参与按钮派生
+      // （AI-35：旧写法把 dialogs 也算作显式模式 → `dialogs: { add }` 无「新增」入口）
+      if (props.schema.operationColumn !== undefined) return []
 
       const actions = props.schema.actions || ['add', 'edit', 'delete']
       const btns: CrudBtnConfig[] = []
@@ -444,13 +483,12 @@ export default defineComponent({
 
       const configBtn = resolveDialogBtns(key, dialogConfig, formData, row || {})
 
+      const dialogBaseProps = pickDialogBaseProps(dialogConfig)
+      if (dialogBaseProps.width === undefined) dialogBaseProps.width = '600px'
+
       dialog({
+        ...dialogBaseProps,
         title,
-        width: dialogConfig.width || '600px',
-        isDraggable: dialogConfig.isDraggable,
-        maxHeight: dialogConfig.maxHeight,
-        fullscreen: dialogConfig.fullscreen,
-        isHiddenFooter: dialogConfig.isHiddenFooter,
         // 用户自定义 render
         render: dialogConfig.render
           ? (h: any, inst: any) => {

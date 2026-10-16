@@ -12,6 +12,11 @@
  *     避免 AI 工具链拿到过期 schema。
  *  3. 有意宽松的 schema 不得被加上 required（dialog-options：每个字段在权威类型里都可选），
  *     防止「补 required」这种听起来是加固、实际把合法配置判红的改动。
+ *  4. dialog 契约守卫轴（AI-26）：运行时 `CrudDialogConfig`（三端手写副本）× AI 契约
+ *     （两处手写 Zod 副本）× 生成器实际发射 —— 两条此前无人守望的差集。
+ *  5. 契约双份全等 + MCP resource 第三份对齐（AI-32）：mcp 内联 `configShape` 与 shared
+ *     权威 schema 的顶层键集必须**全等**（此前只按枚举清单逐项断，加非清单键两守卫全绿）；
+ *     `crud-page-schema.ts` 内嵌的 `CrudDialogConfig` 第三份必须与运行时契约同步。
  *
  * 用法：node scripts/check-schema-contract.mjs
  * 退出码：0 = 同步；1 = 发现漂移。
@@ -19,6 +24,16 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import {
+  readDialogContract,
+  readDialogPassthrough,
+  readReachability,
+  readDialogOptionsJsonKeys,
+  readCoreDialogOptionsKeys,
+  sliceBlock,
+  DIALOG_KEY_UNREACHABLE,
+  DIALOG_OPTIONS_JSON_ONLY,
+} from './lib/entry-keys.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -636,6 +651,248 @@ function checkStructuredConfigZod() {
   return ok
 }
 
+// ── 3b. dialog 契约守卫轴（AI-26）────────────────────────
+// 两条此前**无人守望**的差集：
+//   ① AI 面 ↔ crud 运行时面：`CrudDialogConfig`（三端 crud-page 运行时契约，13 键）
+//      vs `DialogConfigSchema`（AI 契约，9 键，非 passthrough）→ 经 AI 入口传
+//      `render`/`configBtn`/`onOpen`/`onConfirm`/`onClose` 被 Zod **静默剥掉**，
+//      而运行时 `EsCrudPage.openDialog` 真消费它们（与 AI-22 的 cachePageSelection 同族）。
+//   ② 三套词汇互不相等：core `DialogOptions` / legacy `dialog-options.schema.json`（MCP
+//      resource + CLI 消费）/ AI `DialogConfigSchema`。
+// 盲区实况：`check-schema-contract` 对 `DialogConfigSchema` 此前**零键断言**（`Dialog` 的
+// 命中全是 legacy JSON 的「不得加 required」宽松规则），`readReachability` 也**不下潜 dialogs**。
+const MCP_RESOURCE_FALLBACK_SRC = 'packages/mcp-server/src/resources/crud-page-schema.ts'
+/**
+ * MCP resource 运行时镜像里允许出现的**非运行时键**白名单。
+ *
+ * `hasCustomRender` 不是幽灵键（AI-34 已更正）：`generate-from-config.ts` 用它放行
+ * 「无 formItems 的变更型弹窗」、`structured-generator.ts` 用它派生 TODO 槽 + 告警。
+ * 但运行时 `EsCrudPage` 不消费它 —— 它是 **AI-only 注解键**，故可留在资源镜像里，
+ * 但必须逐个登记（新出现的「AI-only 键」不得悄悄混进这张教给宿主 LLM 的运行时契约）。
+ */
+const RESOURCE_MIRROR_ALLOWED_EXTRAS = {
+  hasCustomRender:
+    'AI-only 注解键：生成器据它派生 TODO 槽 + 告警、from_config 据它放行「无 formItems 的变更型弹窗」；运行时 EsCrudPage 不消费（AI-34）',
+}
+
+function checkDialogContract() {
+  let ok = true
+  const d = readDialogContract()
+  if (d === null) return false // 定位失败原因已由 lib 打印
+
+  // 两处手写 AI Zod 副本必须逐键一致（漂移 = 一侧放行、另一侧静默剥离）。
+  const sorted = (xs) => [...xs].sort().join(',')
+  if (sorted(d.sharedDialogKeys) !== sorted(d.mcpDialogKeys)) {
+    ok = fail(
+      `dialog 契约的两处 AI Zod 副本已分叉：\n    shared: [${d.sharedDialogKeys.join(', ')}]\n    mcp   : [${d.mcpDialogKeys.join(', ')}]\n` +
+        '    两份都是手工维护（zod4 / zod3 无法共享对象），必须同改'
+    )
+  }
+  // 三端 `CrudDialogConfig` 是同一契约的手写副本：任一端独有键即为漂移。
+  for (const [end, only] of Object.entries(d.runtimeDialogEndOnly)) {
+    if (only.length) {
+      ok = fail(`CrudDialogConfig 在 ${end} 端多出其余端没有的键：${only.join(', ')}（三端是同一契约的手写副本）`)
+    }
+  }
+
+  const aiSet = new Set(d.sharedDialogKeys)
+
+  // ① 运行时键 ⊆ AI 键 ∪ 登记表 —— 差集① 自此有人守望。
+  for (const k of d.runtimeDialogKeys) {
+    if (!aiSet.has(k) && !(k in DIALOG_KEY_UNREACHABLE)) {
+      ok = fail(
+        `CrudDialogConfig 的 '${k}' 既不在 AI 契约（DialogConfigSchema）也不在 DIALOG_KEY_UNREACHABLE —— ` +
+          '经 AI 入口传入会被 Zod 静默剥掉，而运行时消费它'
+      )
+    }
+  }
+  // ② 生成器发射键 ⊆ AI 键（产物里不得出现宿主 LLM 无法声明的键）。
+  for (const k of d.generatorDialogKeys) {
+    if (!aiSet.has(k)) {
+      ok = fail(`生成器发射了 AI 契约不认识的 dialog 键 '${k}'（宿主 LLM 无从声明，属幽灵键）`)
+    }
+  }
+  // ③ 反向陈旧：登记行若已进 AI 契约 → 必须删行（本表只减不增）。
+  for (const k of Object.keys(DIALOG_KEY_UNREACHABLE)) {
+    if (aiSet.has(k)) {
+      ok = fail(`DIALOG_KEY_UNREACHABLE 的 '${k}' 已在 AI 契约里 —— 陈旧登记行，收编后必须删除（本表只减不增）`)
+    }
+  }
+  for (const [k, def] of Object.entries(DIALOG_KEY_UNREACHABLE)) {
+    if (!def.tier) ok = fail(`DIALOG_KEY_UNREACHABLE 的 '${k}' 未写明 tier`)
+    if (!(def.reason && def.reason.trim())) ok = fail(`DIALOG_KEY_UNREACHABLE 的 '${k}' 未写明 reason`)
+  }
+
+  // ⑤ AI-27：三端 `openDialog` 的底座键白名单 —— 契约到运行时的**最后一道闸门**。
+  //
+  // 为什么需要它：AI Zod 放行一个键（放行 = 宿主 LLM 能写）并不等于它会到达弹窗组件。
+  // AI-27 前的实况是 `openDialog` **硬编码转发 9 键、不 spread** —— 即便契约与生成器都到位，
+  // 多出来的键在运行时被静默丢弃。这条断言把「AI 契约的逐键转发子集」与「三端白名单」
+  // 绑成等式：任一侧加键而另一侧没跟上 → 红。
+  {
+    const pt = readDialogPassthrough()
+    if (pt === null) return false
+    for (const [end, keys] of Object.entries(pt.perEnd)) {
+      if (sorted(keys) !== sorted(pt.keys)) {
+        ok = fail(
+          `openDialog 白名单在 ${end} 端与 vue3 端不一致：\n    vue3 : [${pt.keys.join(', ')}]\n    ${end.padEnd(5)}: [${keys.join(', ')}]\n` +
+            '    三端是同一契约的手写副本（同 CrudDialogConfig），必须同改'
+        )
+      }
+    }
+    const runtimeSet = new Set(d.runtimeDialogKeys)
+    for (const k of pt.keys) {
+      if (!runtimeSet.has(k)) {
+        ok = fail(`openDialog 白名单转了 '${k}'，但三端 CrudDialogConfig 没有声明它 —— 转发了宿主声明不了的键`)
+      }
+    }
+    // 期望集 = AI 契约键 − 需要特殊装配的键（它们不逐键转发）：
+    //   title（支持函数式）、formItems/formLayout（参与构造 render）、
+    //   configBtn（由 resolveDialogBtns 按 action 装配 click）、hasCustomRender（AI-only 注解键）、
+    //   render/onOpen/onConfirm/onClose（函数值，不在 AI 契约里，列出仅为自解释）。
+    const SPECIAL = new Set([
+      'title', 'formItems', 'formLayout', 'configBtn', 'hasCustomRender',
+      'render', 'renderHeader', 'renderFooter', 'onOpen', 'onConfirm', 'onClose',
+    ])
+    const expected = d.sharedDialogKeys.filter((k) => !SPECIAL.has(k))
+    const missing = expected.filter((k) => !pt.keys.includes(k))
+    const extra = pt.keys.filter((k) => !expected.includes(k))
+    if (missing.length) {
+      ok = fail(
+        `AI 契约可声明的弹窗数据键在 openDialog 白名单里被丢弃：${missing.join(', ')} —— ` +
+          '宿主 LLM 能写、生成器会发射，运行时却收不到（第二道静默丢弃）'
+      )
+    }
+    if (extra.length) {
+      ok = fail(`openDialog 白名单多出 AI 契约放行范围外的键：${extra.join(', ')}（宿主无从声明，只会是脏键）`)
+    }
+    if (ok) {
+      console.log(`✅ openDialog 底座键白名单三端一致且 == AI 契约逐键转发子集（${pt.keys.length} 键）`)
+    }
+  }
+
+  // ④ 差集②：legacy JSON 键 ⊆ core DialogOptions ∪ 裁决清单。
+  const jsonKeys = readDialogOptionsJsonKeys()
+  const coreKeys = readCoreDialogOptionsKeys()
+  if (jsonKeys === null || coreKeys === null) return false
+  const coreSet = new Set(coreKeys)
+  for (const k of jsonKeys) {
+    if (!coreSet.has(k) && !(k in DIALOG_OPTIONS_JSON_ONLY)) {
+      ok = fail(
+        `dialog-options.schema.json 的 '${k}' 在 core DialogOptions 里没有、也未登记在 DIALOG_OPTIONS_JSON_ONLY —— ` +
+          '请显式裁决「改 JSON 还是改 core」，别让它悄悄成为第 31 个键'
+      )
+    }
+  }
+  for (const [k, def] of Object.entries(DIALOG_OPTIONS_JSON_ONLY)) {
+    if (!def.verdict) ok = fail(`DIALOG_OPTIONS_JSON_ONLY 的 '${k}' 未写明 verdict（promote-core / legacy-alias / end-specific / dead）`)
+    if (!(def.reason && def.reason.trim())) ok = fail(`DIALOG_OPTIONS_JSON_ONLY 的 '${k}' 未写明 reason（本表的全部价值就是这条裁决理由）`)
+    // 陈旧：裁决为 promote-core 却已进 core → 应删行。
+    if (def.verdict === 'promote-core' && coreSet.has(k)) {
+      ok = fail(`DIALOG_OPTIONS_JSON_ONLY 的 '${k}' 裁决为 promote-core，但它已在 core DialogOptions —— 陈旧登记行，请删除`)
+    }
+  }
+
+  if (ok) {
+    console.log(
+      `✅ dialog 契约三面一致（运行时 ${d.runtimeDialogKeys.length} 键 / AI ${d.sharedDialogKeys.length} 键 ×2 副本 / ` +
+        `生成器发射 ${d.generatorDialogKeys.length} 键 / 未达登记 ${Object.keys(DIALOG_KEY_UNREACHABLE).length} 行；` +
+        `legacy JSON ${jsonKeys.length} 键 ⊆ core ${coreKeys.length} 键 ∪ 裁决 ${Object.keys(DIALOG_OPTIONS_JSON_ONLY).length} 行）`
+    )
+  }
+  return ok
+}
+
+// ── 3c. 契约双份全等 + MCP resource 第三份对齐（AI-32）──────
+// ① shared 权威 zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 内联 zod3
+//    `configShape`（20 键）此前只按**枚举清单逐项断** —— 往任一处加非清单键（或改
+//    `dialogs`/`operationColumn`/`pagination`/`formLayout` 形状）两守卫全绿而镜像已分叉，
+//    且 mcp 侧 `z.object` 无 passthrough → 静默 strip。
+// ③ MCP resource `crud-page-schema.ts` 内嵌的 `CrudDialogConfig` 是**第三份**（手写），
+//    曾漂移成 `onCancel`（运行时 `onClose`）、`render` 三参（运行时二参）、缺 5 键 ——
+//    教给宿主 LLM 的接口与运行时契约不符。
+function checkContractParity() {
+  let ok = true
+  const reach = readReachability()
+  if (reach === null) return false
+
+  // ① 顶层键集全等（不只「清单里的键存在」）。
+  const onlyShared = reach.schemaKeys.filter((k) => !reach.configShapeKeys.includes(k))
+  const onlyMcp = reach.configShapeKeys.filter((k) => !reach.schemaKeys.includes(k))
+  if (onlyShared.length || onlyMcp.length) {
+    ok = fail(
+      'shared 权威 Zod 与 mcp 内联 configShape 的顶层键集已分叉：' +
+        (onlyShared.length ? `仅 shared 有 [${onlyShared.join(', ')}]；` : '') +
+        (onlyMcp.length ? `仅 mcp 有 [${onlyMcp.join(', ')}]；` : '') +
+        'mcp 侧 z.object 无 passthrough，只加在一侧的键经那条路径会被静默 strip'
+    )
+  } else {
+    console.log(`✅ shared 权威 Zod 与 mcp 内联 configShape 顶层键全等（各 ${reach.schemaKeys.length} 键）`)
+  }
+
+  // ③ MCP resource 运行时镜像。
+  const d = readDialogContract()
+  if (d === null) return false
+  const fbSrc = stripComments(read(MCP_RESOURCE_FALLBACK_SRC))
+  const fbBlock = sliceBlock(
+    fbSrc,
+    'export interface CrudDialogConfig {',
+    '}',
+    'crud-page-schema.ts CRUD_PAGE_TYPES_FALLBACK CrudDialogConfig'
+  )
+  if (fbBlock === null) return false
+  const fbKeys = topLevelKeysOf(fbBlock)
+  const fbSet = new Set(fbKeys)
+
+  for (const k of d.runtimeDialogKeys) {
+    if (!fbSet.has(k)) {
+      ok = fail(
+        `MCP resource 的 CrudDialogConfig 镜像缺少运行时键 '${k}' —— 宿主 LLM 照它写 pageSchema 会写出运行时读不到的键`
+      )
+    }
+  }
+  for (const k of fbKeys) {
+    if (!d.runtimeDialogKeys.includes(k) && !(k in RESOURCE_MIRROR_ALLOWED_EXTRAS)) {
+      ok = fail(
+        `MCP resource 的 CrudDialogConfig 镜像多出运行时契约没有的键 '${k}' —— ` +
+          '要么删除，要么登记进 RESOURCE_MIRROR_ALLOWED_EXTRAS 并说明它是 AI-only 注解键'
+      )
+    }
+  }
+  // `render` 签名元数必须与运行时一致（(h, ctx) 二参；镜像曾写三参）。
+  // 先剥掉泛型实参再数逗号 —— `Record<string, unknown>` 里的逗号会被误当参数分隔符
+  // （实测把二参读成四参），剥泛型后计数才与肉眼一致。
+  const rm = fbBlock.match(/\brender\?\s*:\s*\(([^)]*)\)/)
+  if (!rm) {
+    ok = fail('MCP resource 的 CrudDialogConfig 镜像缺少 render 声明')
+  } else {
+    let params = rm[1]
+    let prev
+    do {
+      prev = params
+      params = params.replace(/<[^<>]*>/g, '')
+    } while (params !== prev)
+    const arity = params.split(',').filter((s) => s.trim()).length
+    if (arity !== 2) {
+      ok = fail(
+        `MCP resource 的 CrudDialogConfig 镜像 render 是 ${arity} 参，运行时为 2 参 (h, ctx) —— 教给宿主 LLM 的签名与运行时不符`
+      )
+    }
+  }
+  if (ok) {
+    console.log(`✅ MCP resource 的 CrudDialogConfig 镜像与运行时契约同步（${d.runtimeDialogKeys.length} 键 + ${Object.keys(RESOURCE_MIRROR_ALLOWED_EXTRAS).length} 个已登记 AI-only 键；render 二参）`)
+  }
+  return ok
+}
+
+/** 从块体直接取缩进 2 的顶层键（`keysInBlock` 需要原始 src，这里已有块体）。 */
+function topLevelKeysOf(block) {
+  const keys = []
+  const re = /^ {2}([A-Za-z_$][\w$]*)\??\s*:/gm
+  for (const m of block.matchAll(re)) keys.push(m[1])
+  return keys
+}
+
 // ── 汇总 ────────────────────────────────────────────────
 // 每个检查独立报绿（上面的 ✅ 由各函数自己打印），最后按名字列出失败项 ——
 // 原先只打印一行总错误，读者得自己回滚屏幕找是哪条边的 ❌。
@@ -644,6 +901,8 @@ const checks = [
   ['关键契约字段存在性', checkRequiredFields()],
   ['有意宽松的 schema 未被收紧', checkPermissiveSchemas()],
   ['结构化配置 Zod ↔ JSON 单源', checkStructuredConfigZod()],
+  ['dialog 契约守卫轴（AI-26）', checkDialogContract()],
+  ['契约双份全等 + resource 第三份（AI-32）', checkContractParity()],
 ]
 
 const failedChecks = checks.filter(([, ok]) => !ok).map(([name]) => name)

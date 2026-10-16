@@ -10,7 +10,7 @@
     "  · definition95 / coreRate / byDimension —— 只能来自付费 eval 产物，首跑后由人工填入。",
     "    字段为 null / 空对象时，比率棘轮 skip 并 warn（新克隆不红），不是静默放过。"
   ],
-  "updatedAt": "2026-10-15",
+  "updatedAt": "2026-10-16",
   "source": "manual: corpus-derived applicableCounts; rates pending first full eval run",
   "heldoutCases": 164,
   "applicableCounts": {
@@ -25,7 +25,8 @@
     "apiParams": 9,
     "dataOptions": 93,
     "i18n": 11,
-    "formLayout": 9,
+    "formLayout": 3,
+    "fieldSpan": 8,
     "target": 84,
     "mode": 46,
     "virtualScroll": 17,

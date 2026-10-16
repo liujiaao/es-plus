@@ -225,8 +225,8 @@ const FieldConfigSchema = z.object({
   inQuery: z.boolean().default(true).describe("Show as a query/filter field above the table"),
   inTable: z.boolean().default(true).describe("Show as a table column"),
   inForm: z.boolean().default(true).describe("Show in the add/edit form"),
-  querySpan: z.number().int().min(1).max(24).optional(),
-  formSpan: z.number().int().min(1).max(24).optional(),
+  querySpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the query form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
+  formSpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
   attrs: z.record(z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
@@ -260,7 +260,7 @@ const FieldConfigSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Extension point: a render-function source string for a fully custom cell/form control. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
+      "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (formItemOptions/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
     ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
@@ -405,6 +405,26 @@ const ToolbarBtnSchema = z
     return { ...b, code: (b.code ?? 2) as 1 | 2 };
   });
 
+/**
+ * Declarative subset of a dialog footer button (AI-27).
+ *
+ * The runtime `DialogBtnConfig extends BtnConfig`, but `click` is attached by
+ * `EsCrudPage`'s `resolveDialogBtns` from `action` — so the AI face only accepts
+ * `{ name, type, action, permissionValue }`: pure JSON, every key with a real
+ * runtime consumer. Function values (`click`) and toolbar-only positioning keys
+ * (`position`/`code`/`direction`) do not travel in JSON / mean nothing in a
+ * dialog footer. Keep byte-aligned with the shared `DialogBtnSchema`.
+ */
+const DialogBtnSchema = z.object({
+  name: z.string().min(1).describe("Button label text."),
+  type: z.string().optional().describe("Button type, e.g. 'primary' | 'danger' | 'default'."),
+  action: z
+    .enum(["confirm", "cancel", "custom"])
+    .optional()
+    .describe("'confirm' = validate the dialog form then run the submit path; 'cancel' = close + emit dialog-cancel; 'custom' (or omitted) = plain button the host wrapper must wire."),
+  permissionValue: z.string().optional().describe("Permission code; filtered out unless the global permission function grants it."),
+});
+
 // ── Structured config raw shape (the tool's input schema) ──────────────
 // Exposing the FULL structured shape as the tool's input — rather than a
 // single opaque `config` JSON string — turns MCP tool-use into constrained
@@ -504,7 +524,6 @@ const configShape = {
   i18n: z.boolean().default(false),
   formLayout: z
     .object({
-      span: z.number().optional(),
       labelWidth: z.union([z.string(), z.number()]).optional(),
       minFoldRows: z.number().int().optional(),
     })
@@ -554,19 +573,47 @@ const configShape = {
         formItems: z.array(FieldConfigSchema).optional(),
         formLayout: z
           .object({
-            span: z.number().optional(),
             labelWidth: z.union([z.string(), z.number()]).optional(),
             minFoldRows: z.number().int().optional(),
           })
           .optional(),
-        hasCustomRender: z.boolean().optional(),
-        isDraggable: z.boolean().optional(),
-        maxHeight: z.union([z.string(), z.number()]).optional(),
-        fullscreen: z.boolean().optional(),
-        isHiddenFooter: z.boolean().optional(),
+        hasCustomRender: z
+          .boolean()
+          .optional()
+          .describe("Declares the dialog body is hand-implemented in the wrapper SFC (a render function cannot travel in JSON). Relaxes the 'a mutating dialog needs formItems' check and emits a TODO(es-plus) marker; NOT forwarded to the dialog component."),
+        isDraggable: z.boolean().optional().describe("Make the dialog draggable by its header."),
+        maxHeight: z.union([z.string(), z.number()]).optional().describe("Max height of the dialog body (scrolls beyond it)."),
+        fullscreen: z.boolean().optional().describe("Open the dialog fullscreen."),
+        isHiddenFooter: z.boolean().optional().describe("Hide the whole footer (overrides configBtn)."),
+        // Base data keys (AI-27): named core `DialogOptions` keys that all three
+        // es-dialog implementations really consume. Undeclared here they were
+        // silently stripped from `.dialogs[k]` by this z.object. Keep byte-aligned
+        // with the shared DialogConfigSchema (guarded).
+        showClose: z.boolean().optional().describe("Show the built-in close (X) entry; default true."),
+        destroyOnClose: z.boolean().optional().describe("Destroy the dialog content on close (resets internal state each open)."),
+        modal: z.boolean().optional().describe("Render the mask/overlay; default true."),
+        closeOnClickModal: z.boolean().optional().describe("Close when the mask is clicked; default true."),
+        closeOnPressEscape: z.boolean().optional().describe("Close when Escape is pressed; default true."),
+        hiddenFullBtn: z.boolean().optional().describe("Hide the built-in fullscreen toggle button."),
+        appendTo: z
+          .string()
+          .optional()
+          .describe("CSS selector of the mount node (a DOM element cannot travel in JSON); the runtime resolves it with querySelector and falls back to document.body."),
+        cacheKey: z
+          .string()
+          .optional()
+          .describe("Instance cache key: repeat calls with the same key reuse one dialog instance (state survives close/reopen, recycled 10 min after close). Implemented by the vue3/vue2 runtimes; inert in the ant-design-vue adapter (registered deviation)."),
+        configBtn: z
+          .array(DialogBtnSchema)
+          .min(1)
+          .optional()
+          .describe("Declarative footer buttons. Omit to get the generated cancel+confirm pair. Each entry is JSON data — the click handler is attached by the runtime from `action`."),
       })
     )
-    .optional(),
+    .optional()
+    .describe(
+      "Per-dialog configs keyed by dialog ID (add/edit/view/…). Declaring `dialogs` gives a dialog its own base keys (appearance/close behaviour, `configBtn`, `formItems`) and does NOT suppress button derivation — the toolbar and row-action buttons are still derived from `actions` unless `toolbarBtns`/`operationColumn` are declared explicitly (those two, never `dialogs`, hand the button surface over)."
+    ),
   columns: z
     .array(ColumnSchema)
     .optional()

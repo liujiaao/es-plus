@@ -17,7 +17,8 @@
  *
  * 用例取 golden 子集，覆盖三种装配路径：
  *   01 legacy actions 模式（actions 推导 toolbar/行操作/弹窗；工具栏有「新增」）
- *   05 显式 dialogs 新模式（**工具栏不自动生成「新增」**，弹窗靠行内「编辑」打开）
+ *   05 显式 dialogs 模式（**AI-35 前**：工具栏不生成「新增」，弹窗只能靠行内「编辑」打开；
+ *      AI-35 后：`dialogs` 不再抑制工具栏派生，工具栏照样有「新增」——两扇门都开着）
  *   13 多 formtype（查询表单里 Select/DatePicker/Radio/Switch 混排）
  * 另单列 30：列级 permissionValue 在运行时真的门控（AI-20 的运行时验证）。
  */
@@ -74,12 +75,13 @@ function firstQueryProp(config: StructuredCrudConfig): string {
 
 // ────────────────────────────────────────────────────────────────────────────
 // 1) 三个装配路径的通用冒烟
-//    第三个元素 = 该装配路径下真正能打开弹窗的按钮文案：
-//      legacy 模式工具栏有「新增」；显式 dialogs 模式工具栏不生成「新增」，走行内「编辑」。
+//    第三个元素 = 该装配路径下真正能打开弹窗的按钮文案。
+//    AI-35 前：显式 dialogs 模式工具栏**不**生成「新增」（dialogs 被误当作「按钮面归我」的门），
+//    该用例只能退回行内「编辑」；AI-35 后两扇门都开着，三条路径统一走工具栏「新增」。
 // ────────────────────────────────────────────────────────────────────────────
 describe.each([
   ['01-user-manage.json', 'legacy actions 模式', '新增'],
-  ['05-customer-multi-dialog.json', '显式 dialogs 新模式', '编辑'],
+  ['05-customer-multi-dialog.json', '显式 dialogs 模式', '新增'],
   ['13-all-formtypes.json', '多 formtype 查询表单', '新增'],
 ])('生成物运行时冒烟 — %s（%s）', (file, _label, dialogTrigger) => {
   let config: StructuredCrudConfig

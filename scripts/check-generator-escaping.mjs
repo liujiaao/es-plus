@@ -116,7 +116,18 @@ function buildConfig(target, mode) {
     toolbarBtns: [{ name: P_JS, key: P_JS, type: P_JS, icon: P_JS }],
     tableBtns: [{ name: P_JS, key: P_JS, type: P_JS, icon: P_JS }],
     operationColumn: { label: P_JS, btns: [{ name: P_JS, key: P_JS, type: P_JS, icon: P_JS }] },
-    dialogs: { [`d${P_ATTR}`]: { title: P_JS, width: P_JS, formItems: [{ prop: 'x', label: P_JS, formtype: 'Input' }] } },
+    dialogs: {
+      [`d${P_ATTR}`]: {
+        title: P_JS,
+        width: P_JS,
+        formItems: [{ prop: 'x', label: P_JS, formtype: 'Input' }],
+        // AI-27 新增的字符串槽：底座数据键里的 appendTo/cacheKey 与声明式按钮的 name
+        // 都会流进 schema 模式产物的 JSON。归档在「每个能从配置流进生成物的字符串槽」清单里。
+        appendTo: P_JS,
+        cacheKey: P_JS,
+        configBtn: [{ name: P_JS, action: 'confirm' }],
+      },
+    },
   }
 }
 

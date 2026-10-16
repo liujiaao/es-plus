@@ -134,8 +134,11 @@ const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
 const normalizedToolbarBtns = computed<CrudBtnConfig[]>(() => {
   if (props.schema.toolbarBtns) return props.schema.toolbarBtns
 
-  // 新模式（显式配置了 dialogs 或 operationColumn）：不自动生成工具栏按钮
-  if (props.schema.dialogs || props.schema.operationColumn !== undefined) return []
+  // 显式声明了 operationColumn：按钮面交给用户，不再派生工具栏按钮
+  // （只声明 dialogs 不算 —— dialogs 定义的是弹窗、不是按钮面；AI-35：旧写法把它一并
+  //  当作「显式模式」，导致 `dialogs: { add }` 的配置页面上没有任何「新增」入口，
+  //  声明的弹窗点不开且零告警。按钮一律由 actions 派生，弹窗只负责被打开。）
+  if (props.schema.operationColumn !== undefined) return []
 
   // 旧模式：从 actions 推导
   const actions = props.schema.actions || ['add', 'edit', 'delete']
@@ -371,6 +374,46 @@ const dialogInstances = new Map<string, any>()
 // render 中按全局名解析的组件。提到 setup 顶层后 appContext 被正确捕获，单例回调跨 key 复用。
 const dialog = useDialog()
 
+/**
+ * AI-27：弹窗底座键的**显式白名单**（逐键转发给 `dialog()`）。
+ *
+ * 此前这里是硬编码的 9 键转发、且不 spread `dialogConfig` —— 于是即便 AI 契约放行了
+ * `showClose`/`modal`/`closeOnClickModal`/… 宿主 LLM 也写进了 `pageSchema.dialogs[k]`，
+ * 运行到这一步照样被**静默丢弃**（这是第二道闸门：第一道是 AI Zod 的 strip）。
+ *
+ * 白名单必须与 AI 契约里「逐键转发」的子集**逐字相等**：即 `DialogConfigSchema` 的键
+ * 减去需要特殊装配的那些 —— `title`（支持函数式）、`formItems`/`formLayout`（参与构造
+ * render）、`configBtn`（由 `resolveDialogBtns` 按 action 装配 click）、`hasCustomRender`
+ * （AI-only 注解键，不是弹窗 prop）、`render`/`onOpen`/`onConfirm`/`onClose`（函数值，不在
+ * AI 契约里）。`scripts/check-schema-contract.mjs` 读取本数组并断言这条等式：
+ * 往 AI 契约加一个数据键却忘了在这里转发 → 立刻红（三端各存一份，等价性同样被断言）。
+ */
+const DIALOG_PASSTHROUGH_KEYS = [
+  'width',
+  'isDraggable',
+  'maxHeight',
+  'fullscreen',
+  'isHiddenFooter',
+  'showClose',
+  'destroyOnClose',
+  'modal',
+  'closeOnClickModal',
+  'closeOnPressEscape',
+  'hiddenFullBtn',
+  'appendTo',
+  'cacheKey',
+] as const
+
+/** 按白名单抽底座数据键；未声明的键不下发（避免用 undefined 覆盖弹窗自身的默认值）。 */
+function pickDialogBaseProps(config: CrudDialogConfig): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const k of DIALOG_PASSTHROUGH_KEYS) {
+    const v = (config as Record<string, unknown>)[k]
+    if (v !== undefined) out[k] = v
+  }
+  return out
+}
+
 function openDialog(key: string, row?: Record<string, unknown>) {
   const dialogConfig = normalizedDialogs.value[key]
   if (!dialogConfig) return
@@ -399,13 +442,12 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 
   const configBtn = resolveDialogBtns(key, dialogConfig, formData, row || {})
 
+  const dialogBaseProps = pickDialogBaseProps(dialogConfig)
+  if (dialogBaseProps.width === undefined) dialogBaseProps.width = '600px'
+
   dialog({
+    ...dialogBaseProps,
     title,
-    width: dialogConfig.width || '600px',
-    isDraggable: dialogConfig.isDraggable,
-    maxHeight: dialogConfig.maxHeight,
-    fullscreen: dialogConfig.fullscreen,
-    isHiddenFooter: dialogConfig.isHiddenFooter,
     render: dialogConfig.render
       ? (h: any, inst: any) => {
           return dialogConfig.render!(h, {

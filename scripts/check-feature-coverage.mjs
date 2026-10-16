@@ -17,8 +17,10 @@
  *   ③ 每行 tokens ⊆ 注册表；注册表无孤儿令牌；C/D 令牌 reason 非空
  *   ④ 每个 A 档令牌的 keys ⊆ 实时可达集（crudShape ∪ schema 顶层 ∪ FieldConfig ∪ AI tableOptions）
  *      —— 咬「声称了源码里不存在的开关」
- *   ⑤ B 档令牌 via 仍成立：'FRONT_DOOR_UNREACHABLE:<k>' 要求 k 仍在册；'AI-Zod-absent' 要求 keys 确实缺失
- *      —— 一旦前门扩宽到该键，本令牌立刻红，**强制重新分类**（台账自动重开）
+ *   ⑤ B 档令牌**双支**验证：(a) `via:'FRONT_DOOR_UNREACHABLE:<k>'` 要求该键仍在册 / 前门
+ *      仍够不到；(b) **第二腿（AI-29）**`keys ⊆（AI Zod 声明 ∩ 生成器实际发射）`—— 咬
+ *      「声称 from_config 可达，实则两处 AI Zod 零声明 + 生成器零发射」（vxeFirstClass 的虚标）。
+ *      `'AI-Zod-absent'` 档已退役（与第二腿语义互斥）。
  *   ⑥ 摘要：按档 / 按组计数 + 逐行 id → tier
  *
  * 用法：node scripts/check-feature-coverage.mjs
@@ -27,7 +29,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { readReachability, FRONT_DOOR_UNREACHABLE, fail } from './lib/entry-keys.mjs'
+import { readReachability, readGeneratorEmission, FRONT_DOOR_UNREACHABLE, fail } from './lib/entry-keys.mjs'
 import { CAPABILITY_TOKENS, TIER_MEANING, rowTier } from './feature-coverage.data.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -165,34 +167,51 @@ function main() {
     }
   }
 
-  // ── ⑤ B 档令牌 via 仍成立 ──
-  // 对照物是**实时**集合（schema 顶层 \ 前门 crudShape），不是注册表本身——故前门一旦扩宽到
-  // 某键，本守卫**立即**红（不依赖 check-entry 先跑），强制重新分类。
+  // ── ⑤ B 档令牌双支验证 ──
+  // (a) 对照物是**实时**集合（schema 顶层 \ 前门 crudShape），不是注册表本身——故前门一旦
+  //     扩宽到某键，本守卫**立即**红（不依赖 check-entry 先跑），强制重新分类。
+  // (b) **第二腿（AI-29 新增）**：「声称 from_config 可达」必须**同时**证明两件事——
+  //     Zod 声明了该键（否则被静默 strip）+ 生成器真发射了该键（否则产物里没有它）。
+  //     这正是 vxeFirstClass 虚标 B 时缺的那条腿：它只被验「键缺席」，从没人验「键可发射」。
+  // AI-29 已**退役** `'AI-Zod-absent'` 档（与第二腿语义互斥），故此处不再有该分支。
   const liveFrontUnreachable = new Set(reach.schemaKeys.filter((k) => !reach.frontKeys.includes(k)))
+  const emitted = new Set(readGeneratorEmission().schemaEmittedKeys)
+  const emittable = new Set(reach.configShapeKeys.filter((k) => emitted.has(k)))
   for (const [t, def] of Object.entries(CAPABILITY_TOKENS)) {
     if (def.tier !== 'B') continue
-    if (!def.via) {
-      ok = fail(`B 档令牌 '${t}' 缺 via`)
+    if (!def.via || !def.via.startsWith('FRONT_DOOR_UNREACHABLE:')) {
+      ok = fail(
+        `B 档令牌 '${t}' 的 via 非法：'${def.via}'（唯一合法形态是 'FRONT_DOOR_UNREACHABLE:<键>'；` +
+          `'AI-Zod-absent' 已在 AI-29 退役，不可再用于 B 档）`
+      )
       continue
     }
-    if (def.via.startsWith('FRONT_DOOR_UNREACHABLE:')) {
-      const k = def.via.slice('FRONT_DOOR_UNREACHABLE:'.length)
-      if (!liveFrontUnreachable.has(k)) {
+    const k = def.via.slice('FRONT_DOOR_UNREACHABLE:'.length)
+    if (!liveFrontUnreachable.has(k)) {
+      ok = fail(
+        `B 档令牌 '${t}' 的 via 陈旧：'${k}' 已不再是前门够不到的 schema 顶层键（前门已扩宽到它）—— 请重新分类该能力`
+      )
+    }
+    if (!(k in FRONT_DOOR_UNREACHABLE)) {
+      ok = fail(`B 档令牌 '${t}' 的 via 指向 '${k}'，但该键未登记在 FRONT_DOOR_UNREACHABLE`)
+    }
+    // (b) 第二腿
+    if (!Array.isArray(def.keys) || def.keys.length === 0) {
+      ok = fail(`B 档令牌 '${t}' 未声明 keys —— 第二腿需要有「被断的对象」（声称 from_config 可达，就必须指名道姓说可达的是哪个键）`)
+      continue
+    }
+    for (const kk of def.keys) {
+      if (!emittable.has(kk)) {
+        const why = !reach.configShapeKeys.includes(kk)
+          ? 'AI Zod（from_config 的 configShape）未声明它 → 经该入口会被静默 strip'
+          : !emitted.has(kk)
+            ? '生成器从不发射它 → 产物里根本没有这个键'
+            : '未知'
         ok = fail(
-          `B 档令牌 '${t}' 的 via 陈旧：'${k}' 已不再是前门够不到的 schema 顶层键（前门已扩宽到它）—— 请重新分类该能力`
+          `B 档令牌 '${t}' 声称 '${kk}' 经 generate_crud_from_config 可达，但第二腿未过：${why}。` +
+            `若它实际只能靠逃生舱（源码串/闭包）到手，请改判 C 档`
         )
       }
-      if (!(k in FRONT_DOOR_UNREACHABLE)) {
-        ok = fail(`B 档令牌 '${t}' 的 via 指向 '${k}'，但该键未登记在 FRONT_DOOR_UNREACHABLE`)
-      }
-    } else if (def.via === 'AI-Zod-absent') {
-      for (const k of def.keys || []) {
-        if (liveSet.has(k)) {
-          ok = fail(`B 档令牌 '${t}' 声称 '${k}' 在 AI Zod 缺席，但它已在实时可达集 —— 请提升为 A 档`)
-        }
-      }
-    } else {
-      ok = fail(`B 档令牌 '${t}' 的 via 非法：'${def.via}'（应为 'FRONT_DOOR_UNREACHABLE:<键>' 或 'AI-Zod-absent'）`)
     }
   }
 

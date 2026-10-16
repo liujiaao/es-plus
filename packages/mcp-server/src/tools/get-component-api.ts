@@ -398,7 +398,7 @@ interface CrudPageProps {
 \`\`\`typescript
 interface CrudPageSchema {
   formItems?: FormItemOption[]          // query form fields
-  formLayout?: { span?, labelWidth?, minFoldRows? }
+  formLayout?: { labelWidth?, minFoldRows? }
   toolbarBtns?: CrudBtnConfig[]         // rendered in the EsForm button area
   tableBtns?: TableBtnConfig[]          // above the table, position: 'left' | 'right'
   columns: TableColumn[]                // required — table columns

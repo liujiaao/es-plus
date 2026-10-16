@@ -58,7 +58,8 @@
       "title": "异步数据表单",
       "tokens": [
         "apiParams",
-        "reactions"
+        "reactions",
+        "fieldEventFn"
       ]
     },
     {
@@ -110,7 +111,8 @@
       "title": "图片上传",
       "tokens": [
         "formtype",
-        "httpRequestFn"
+        "httpRequestFn",
+        "fieldEventFn"
       ]
     },
     {
@@ -119,7 +121,8 @@
       "title": "文件上传",
       "tokens": [
         "formtype",
-        "renderFn"
+        "renderFn",
+        "fieldEventFn"
       ]
     },
     {
@@ -135,7 +138,8 @@
       "group": "es-form",
       "title": "联动计算",
       "tokens": [
-        "reactions"
+        "reactions",
+        "fieldEventFn"
       ]
     },
     {
@@ -601,7 +605,8 @@
       "title": "适配任意后端接口",
       "tokens": [
         "configTableOut",
-        "httpRequestFn"
+        "httpRequestFn",
+        "fieldEventFn"
       ]
     },
     {
@@ -661,7 +666,8 @@
       "group": "linkage",
       "title": "EsCrudPage 一键 CRUD",
       "tokens": [
-        "crudPage"
+        "crudPage",
+        "fieldEventFn"
       ],
       "note": "EsCrudPage 单 schema = AI 主产物（前门）"
     },

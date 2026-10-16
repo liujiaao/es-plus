@@ -282,7 +282,7 @@ export const docsData: Record<string, any> = {
       ],
       'CrudPageSchema': [
         { name: 'formItems', type: 'FormItemOption[]', default: '[]', desc: '查询表单字段配置（同 EsForm formItemList）' },
-        { name: 'formLayout', type: '{ span, labelWidth }', default: '-', desc: '表单布局配置' },
+        { name: 'formLayout', type: '{ labelWidth, minFoldRows }', default: '-', desc: '表单布局（列宽由字段级 querySpan/formSpan 决定）' },
         { name: 'columns', type: 'TableColumn[]', default: '-', desc: '表格列配置（必填，同 EsTable columns）' },
         { name: 'tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项配置（同 EsTable options）' },
         { name: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置' },
@@ -322,7 +322,7 @@ export const docsData: Record<string, any> = {
         { name: 'title', type: 'string | Function', default: '-', desc: '弹窗标题，支持 (row) => string 动态标题' },
         { name: 'width', type: 'string | number', default: '600px', desc: '弹窗宽度' },
         { name: 'formItems', type: 'FormItemOption[]', default: '-', desc: '表单字段（简单场景）' },
-        { name: 'formLayout', type: '{ span, labelWidth }', default: '-', desc: '表单布局' },
+        { name: 'formLayout', type: '{ labelWidth, minFoldRows }', default: '-', desc: '表单布局（列宽由字段级 querySpan/formSpan 决定）' },
         { name: 'render', type: 'Function', default: '-', desc: '自定义渲染 (h, { row, model, close, refresh }) => VNode' },
         { name: 'configBtn', type: 'DialogBtnConfig[]', default: '-', desc: '底部按钮配置，action: confirm/cancel/custom' },
         { name: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '隐藏底部按钮区域' },
