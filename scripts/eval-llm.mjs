@@ -419,7 +419,10 @@ async function main() {
   const modelFailureRows = rows.filter((r) => r.error && !isNotMeasured(r.errorKind))
   // 按语言分开体检：门禁腿（zh）零容忍；观测腿（en）有错则抑制其数字而非作废整次运行
   // （理由见 evaluateHealth 头注 —— 额度硬约束下「截断即全废」会让门禁永远测不出来）。
-  const erroredIn = (rs) => rs.filter((r) => r.error).length
+  // 只数**未测到**的行。绝不要退回 `rs.filter(r => r.error).length`（「一切 error」）：
+  // 模型真答错的行是一次**合法测量**（按 0 分计入成绩），把它也算成腿残缺，等于把
+  // **模型的成绩**当**中继的故障**上报 —— 实测 run 38871648450 的产物就写着
+  // 「观测腿 5/186 行打不开（中继故障）」，而日志里那 5 行全是 ERROR(model-failure)。
   const notMeasuredIn = (rs) => rs.filter((r) => r.error && isNotMeasured(r.errorKind)).length
   const health = evaluateHealth({
     applicableTotal,
@@ -438,8 +441,10 @@ async function main() {
     )
   }
   for (const w of health.warnings) console.warn(`[eval:llm] 警告 — ${w}`)
-  // 观测腿不完整 ⟹ 其数字一律不发布（置 null + 记原因），否则会带着 0 偏向下沉进产物。
-  const enIncomplete = erroredIn(enRows) > 0
+  // 观测腿有**未测到**的行 ⟹ 其数字一律不发布（置 null + 记原因），否则会带着 0 偏向下沉进产物。
+  // 判据必须是「未测到」而非「一切 error」：后者会让一次**模型真答不出**的运行被记成中继故障。
+  const enNotMeasured = notMeasuredIn(enRows)
+  const enIncomplete = enNotMeasured > 0
   if (!health.ok) {
     // 「首个错误」优先报**未测到**的那一行：模型答错的行是成绩的一部分，把它顶在第一行会让
     // 读者以为故障出在它身上（2026-10-16 那次的首条错误正是这类混淆）。
@@ -513,7 +518,7 @@ async function main() {
   const byLanguage = {
     zh: langExact(zhRows),
     en: enRows.length && !enIncomplete ? langExact(enRows) : null,
-    ...(enIncomplete ? { enSuppressed: `观测腿 ${erroredIn(enRows)}/${enRows.length} 行打不开（中继故障），数字有偏故不发布；门禁腿 zh 完整` } : {}),
+    ...(enIncomplete ? { enSuppressed: `观测腿 ${enNotMeasured}/${enRows.length} 行**未测到**（无 text 块 / 截断），数字有偏故不发布；门禁腿 zh 完整` } : {}),
   }
 
   // 门禁数字 = 用户拍板的「95% 定义」：∨ = scoped zero-edit ∨ ≤K 轮收敛（AI-33②）。
@@ -661,9 +666,10 @@ async function main() {
     heldoutCases: heldout.length,
     fewshotDerivedCases: fewshotRows.length,
     // 健康门的体检结果（AI-34）：**门禁腿**走到打分器的行数 = 全量 ⟺ 这是一次完整测量。
-    // 门禁腿有错时本文件根本走不到这里（已在健康门 exit 1）；观测腿有错则到这里，但它的
-    // 数字已被抑制（见 byLanguage.enSuppressed）。落在产物里是为了让「这份数字是完整的」
-    // **自带证据**，而不是要人去翻 Actions 日志。
+    // 门禁腿有错时本文件根本走不到这里（已在健康门 exit 1）；观测腿有**未测到**的行则到这里，
+    // 但它的数字已被抑制（见 byLanguage.enSuppressed）。落在产物里是为了让「这份数字是完整的」
+    // **自带证据**，而不是要人去翻 Actions 日志 —— 故这两个 `errored` 必须是**喂给健康门的同一
+    // 判据**（`notMeasuredIn`），否则产物与门禁说的不是一回事（run 38871648450 曾如此）。
     scoredRows: scoredRows.length,
     erroredRows,
     // 归因拆开（2026-10-16）：`erroredRows` 含两类，处置相反 ——
@@ -674,8 +680,8 @@ async function main() {
     // 有多少次调用是靠**关掉 thinking**才拿到答案的（见 repair-loop 的 MAX_DEGRADED_ATTEMPTS）。
     // 非零 ⟹ 部分行是在与被测系统略有不同的条件下测出来的，读数字的人有权知道。
     degradedCalls: DEGRADED_CALLS,
-    gatedRows: { lang: 'zh', rows: zhRows.length, errored: erroredIn(zhRows) },
-    observedRows: { lang: 'en', rows: enRows.length, errored: erroredIn(enRows) },
+    gatedRows: { lang: 'zh', rows: zhRows.length, errored: notMeasuredIn(zhRows) },
+    observedRows: { lang: 'en', rows: enRows.length, errored: notMeasuredIn(enRows) },
     target: TARGET_ACCURACY,
     // F9：本次跑批把哪些顶层输入作「宿主给定」喂给了模型。非空 ⟹ 精确命中率的口径是
     // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。

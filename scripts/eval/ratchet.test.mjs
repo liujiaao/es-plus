@@ -308,6 +308,23 @@ function checkFails(result, substr, label) {
     /errored: notMeasuredIn\(enRows\)/.test(src),
     '观测腿同理：抑制的是「未测到」的行数（答错的行是成绩，按 0 计）'
   )
+  // 「一切 error」这个判据**只允许有一种判据**（notMeasuredIn）。run 38871648450 的产物里
+  // 一句「观测腿 5/186 行打不开（中继故障）」，而日志里那 5 行全是 ERROR(model-failure) ——
+  // 观测腿的**抑制**与产物里的 `errored` 当时走的是另一个判据（erroredIn = 一切 error），
+  // 于是把模型的成绩上报成了中继的故障，且与健康门（走 notMeasuredIn，一条警告都没报）自相矛盾。
+  check(
+    !/erroredIn/.test(src),
+    'eval-llm.mjs 不得再有「一切 error」的 erroredIn —— 观测腿抑制与产物里的 errored 都必须走 notMeasuredIn'
+  )
+  check(
+    /const enNotMeasured = notMeasuredIn\(enRows\)/.test(src) && /const enIncomplete = enNotMeasured > 0/.test(src),
+    '观测腿残缺必须按「未测到」判（否则模型真答错会被上报成中继故障）'
+  )
+  check(
+    /gatedRows: \{ lang: 'zh', rows: zhRows\.length, errored: notMeasuredIn\(zhRows\) \}/.test(src) &&
+      /observedRows: \{ lang: 'en', rows: enRows\.length, errored: notMeasuredIn\(enRows\) \}/.test(src),
+    '产物里的 gatedRows/observedRows.errored 必须就是喂给健康门的那个数（产物自称是「自带证据」）'
+  )
   check(
     /orderPlanGatedFirst\(plan\)/.test(src),
     '跑的确实得是门禁语言优先的那份计划 —— 光有 orderPlanGatedFirst 而调用点不用它，等于没改'
