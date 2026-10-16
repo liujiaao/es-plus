@@ -1,216 +1,23 @@
 {
-  "measuredAt": "2026-10-15T14:21:14.995Z",
-  "correctedAt": "2026-10-15T14:46:52.117Z",
-  "model": "pa/claude-opus-4-8",
-  "servedModel": "pa/venus-marble-4-8",
+  "measuredAt": "2026-10-16T07:06:28.635Z",
+  "model": "claude-sonnet-4-6",
+  "servedModel": "claude-sonnet-4-6",
   "measurement": "failed",
   "reason": "measurement did not happen (or only partially happened) — infrastructure failure, not a low score; see failures[] for the exact criteria that rejected it",
   "failures": [
-    "372 行里 107 行打不开（仅 71.2% 走到打分器）—— 错误行以 0 计入所有分母，故本次每一个百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。拒绝把它发布成成绩。"
+    "门禁语言 zh：186 行里 3 行打不开（仅 98.4% 走到打分器）—— 错误行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。拒绝把它发布成成绩。"
   ],
   "cases": 186,
   "rows": 372,
-  "scoredRows": 265,
-  "erroredRows": 107,
+  "scoredRows": 364,
+  "erroredRows": 8,
   "sampleErrors": [
-    "403 not enough member budget"
+    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 2） · #2 非 JSON（no JSON object found in model output） · #3 非 JSON（no JSON object found in model output）]. Last output (82 chars):",
+    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 4） · #2 schema 不过（4 处） · #3 schema 不过（8 处）]. Last output (685 chars):",
+    "could not obtain a schema-valid config after 6 attempt(s) [#1 空轮（无 text 块，原地重发 1/3） · #1 空轮（无 text 块，原地重发 2/3） · #1 空轮（无 text 块，原地重发 3/3） · #1 空轮（无 text 块，重发已用尽） · #2 空轮（无 text 块，重发已用尽） · #3 空轮（无 text 块，重发已用尽）]. Last output (0 chars):",
+    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 2） · #2 schema 不过（7 处） · #3 schema 不过（1 处）]. Last output (681 chars):",
+    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（no JSON object found in model output） · #2 schema 不过（2 处） · #3 schema 不过（10 处）]. Last output (753 chars):"
   ],
   "target": 0.95,
-  "givenInputs": [
-    "target",
-    "mode"
-  ],
-  "notScored": [
-    {
-      "file": "frag-dialog-01-antdv.json",
-      "scene": "dialog"
-    },
-    {
-      "file": "frag-dialog-01-vue2.json",
-      "scene": "dialog"
-    },
-    {
-      "file": "frag-dialog-01-vue3.json",
-      "scene": "dialog"
-    },
-    {
-      "file": "frag-form-01-antdv.json",
-      "scene": "form"
-    },
-    {
-      "file": "frag-form-01-vue2.json",
-      "scene": "form"
-    },
-    {
-      "file": "frag-form-01-vue3.json",
-      "scene": "form"
-    },
-    {
-      "file": "frag-table-01-antdv.json",
-      "scene": "table"
-    },
-    {
-      "file": "frag-table-01-vue2.json",
-      "scene": "table"
-    },
-    {
-      "file": "frag-table-01-vue3.json",
-      "scene": "table"
-    }
-  ],
-  "passed": false,
-  "note": "本记录为事后更正（AI-34）。原产物把 107 条 403 当成 107 次真实失败，照常发布了 47.0% 红徽章；露馅处是 compileRate 71.5% = 133/186 —— 实测那 133 条 zh 的 compiles 是 133/133 = 100%。低但合理的假分比全 0 危险得多，因为它看起来像一次真实回归。被污染的原数字保留在 superseded 下以备审计。",
-  "superseded": {
-    "note": "被污染的原产物（含 107 条 403 零分行）。仅留作审计，不构成任何成绩。",
-    "definition95": {
-      "k": 3,
-      "source": "heldout",
-      "rate": 0.4695,
-      "pass": 77,
-      "total": 164
-    },
-    "coreRate": 0.372,
-    "gateMetric": "definition95",
-    "inSchemaIntentZeroEdit": 0.4695,
-    "inSchemaIntentScoped": 0.4512,
-    "exactIntentFull": 0.2561,
-    "propSetF1": 0.7074,
-    "attributeAccuracy": 0.687,
-    "actionsF1": 0.7081,
-    "compileRate": 0.7151,
-    "convergence": {
-      "k": 3,
-      "source": "heldout",
-      "rateAtK": 0.8,
-      "meanTurnsToConverge": 0.75,
-      "converged": 4,
-      "total": 5
-    },
-    "byCapability": {
-      "propSet": {
-        "applicable": 114,
-        "pass": 110,
-        "rate": 0.9649
-      },
-      "formtype": {
-        "applicable": 114,
-        "pass": 103,
-        "rate": 0.9035
-      },
-      "membership": {
-        "applicable": 114,
-        "pass": 74,
-        "rate": 0.6491
-      },
-      "actions": {
-        "applicable": 114,
-        "pass": 109,
-        "rate": 0.9561
-      },
-      "tableBtns": {
-        "applicable": 10,
-        "pass": 10,
-        "rate": 1
-      },
-      "dialogs": {
-        "applicable": 11,
-        "pass": 8,
-        "rate": 0.7273
-      },
-      "operationColumn": {
-        "applicable": 5,
-        "pass": 5,
-        "rate": 1
-      },
-      "permissions": {
-        "applicable": 8,
-        "pass": 8,
-        "rate": 1
-      },
-      "apiParams": {
-        "applicable": 8,
-        "pass": 8,
-        "rate": 1
-      },
-      "dataOptions": {
-        "applicable": 74,
-        "pass": 67,
-        "rate": 0.9054
-      },
-      "i18n": {
-        "applicable": 11,
-        "pass": 11,
-        "rate": 1
-      },
-      "formLayout": {
-        "applicable": 9,
-        "pass": 9,
-        "rate": 1
-      },
-      "target": {
-        "applicable": 53,
-        "pass": 53,
-        "rate": 1
-      },
-      "mode": {
-        "applicable": 27,
-        "pass": 27,
-        "rate": 1
-      },
-      "virtualScroll": {
-        "applicable": 9,
-        "pass": 9,
-        "rate": 1
-      },
-      "configTableOut": {
-        "applicable": 7,
-        "pass": 7,
-        "rate": 1
-      },
-      "isHidden": {
-        "applicable": 24,
-        "pass": 17,
-        "rate": 0.7083
-      },
-      "reactions": {
-        "applicable": 13,
-        "pass": 4,
-        "rate": 0.3077
-      },
-      "columns": {
-        "applicable": 7,
-        "pass": 4,
-        "rate": 0.5714
-      },
-      "expandConfig": {
-        "applicable": 1,
-        "pass": 0,
-        "rate": 0
-      },
-      "treeConfig": {
-        "applicable": 0,
-        "pass": 0,
-        "rate": null
-      },
-      "editConfig": {
-        "applicable": 7,
-        "pass": 3,
-        "rate": 0.4286
-      },
-      "mergeConfig": {
-        "applicable": 8,
-        "pass": 8,
-        "rate": 1
-      },
-      "extPoints": {
-        "applicable": 22,
-        "pass": 22,
-        "rate": 1
-      }
-    },
-    "byLanguage": {
-      "zh": 0.372,
-      "en": 0.3537
-    }
-  }
+  "passed": false
 }
