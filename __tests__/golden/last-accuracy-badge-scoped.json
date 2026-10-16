@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "label": "scoped accuracy",
-  "message": "measurement failed",
-  "color": "lightgrey"
+  "message": "53.0%",
+  "color": "red"
 }

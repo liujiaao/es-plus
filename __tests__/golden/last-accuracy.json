@@ -1,23 +1,221 @@
 {
-  "measuredAt": "2026-10-16T07:06:28.635Z",
+  "measuredAt": "2026-10-16T12:55:35.774Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
-  "measurement": "failed",
-  "reason": "measurement did not happen (or only partially happened) — infrastructure failure, not a low score; see failures[] for the exact criteria that rejected it",
-  "failures": [
-    "门禁语言 zh：186 行里 3 行打不开（仅 98.4% 走到打分器）—— 错误行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集按语料顺序偏置（非随机抽样）。拒绝把它发布成成绩。"
-  ],
   "cases": 186,
-  "rows": 372,
-  "scoredRows": 364,
-  "erroredRows": 8,
-  "sampleErrors": [
-    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 2） · #2 非 JSON（no JSON object found in model output） · #3 非 JSON（no JSON object found in model output）]. Last output (82 chars):",
-    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 4） · #2 schema 不过（4 处） · #3 schema 不过（8 处）]. Last output (685 chars):",
-    "could not obtain a schema-valid config after 6 attempt(s) [#1 空轮（无 text 块，原地重发 1/3） · #1 空轮（无 text 块，原地重发 2/3） · #1 空轮（无 text 块，原地重发 3/3） · #1 空轮（无 text 块，重发已用尽） · #2 空轮（无 text 块，重发已用尽） · #3 空轮（无 text 块，重发已用尽）]. Last output (0 chars):",
-    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（Expected property name or '}' in JSON at position 2） · #2 schema 不过（7 处） · #3 schema 不过（1 处）]. Last output (681 chars):",
-    "could not obtain a schema-valid config after 3 attempt(s) [#1 非 JSON（no JSON object found in model output） · #2 schema 不过（2 处） · #3 schema 不过（10 处）]. Last output (753 chars):"
-  ],
+  "heldoutCases": 164,
+  "fewshotDerivedCases": 22,
+  "scoredRows": 367,
+  "erroredRows": 5,
+  "notMeasuredRows": 0,
+  "modelFailureRows": 5,
+  "degradedCalls": 2,
+  "gatedRows": {
+    "lang": "zh",
+    "rows": 186,
+    "errored": 0
+  },
+  "observedRows": {
+    "lang": "en",
+    "rows": 186,
+    "errored": 5
+  },
   "target": 0.95,
+  "givenInputs": [
+    "target",
+    "mode"
+  ],
+  "notScored": [
+    {
+      "file": "frag-dialog-01-antdv.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-01-vue2.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-01-vue3.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-form-01-antdv.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-form-01-vue2.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-form-01-vue3.json",
+      "scene": "form"
+    },
+    {
+      "file": "frag-table-01-antdv.json",
+      "scene": "table"
+    },
+    {
+      "file": "frag-table-01-vue2.json",
+      "scene": "table"
+    },
+    {
+      "file": "frag-table-01-vue3.json",
+      "scene": "table"
+    }
+  ],
+  "gateMetric": "definition95",
+  "inSchemaIntentZeroEdit": 0.5549,
+  "coreRate": 0.4695,
+  "inSchemaIntentZeroEditAll": 0.4946,
+  "inSchemaIntentScoped": 0.5305,
+  "inSchemaIntentScopedAll": 0.5645,
+  "exactIntentFull": 0.2683,
+  "exactIntentFullAll": 0.3065,
+  "propSetF1": 0.9939,
+  "attributeAccuracy": 0.9485,
+  "actionsF1": 0.9953,
+  "compileRate": 1,
+  "convergence": {
+    "k": 3,
+    "source": "heldout",
+    "rateAtK": 1,
+    "meanTurnsToConverge": 0.8,
+    "converged": 5,
+    "total": 5
+  },
+  "definition95": {
+    "k": 3,
+    "source": "heldout",
+    "rate": 0.5549,
+    "pass": 91,
+    "total": 164
+  },
+  "byCapability": {
+    "propSet": {
+      "applicable": 164,
+      "pass": 159,
+      "rate": 0.9695
+    },
+    "formtype": {
+      "applicable": 164,
+      "pass": 139,
+      "rate": 0.8476
+    },
+    "membership": {
+      "applicable": 164,
+      "pass": 100,
+      "rate": 0.6098
+    },
+    "actions": {
+      "applicable": 164,
+      "pass": 161,
+      "rate": 0.9817
+    },
+    "tableBtns": {
+      "applicable": 10,
+      "pass": 10,
+      "rate": 1
+    },
+    "dialogs": {
+      "applicable": 11,
+      "pass": 8,
+      "rate": 0.7273
+    },
+    "operationColumn": {
+      "applicable": 5,
+      "pass": 5,
+      "rate": 1
+    },
+    "permissions": {
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
+    },
+    "apiParams": {
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
+    },
+    "dataOptions": {
+      "applicable": 84,
+      "pass": 69,
+      "rate": 0.8214
+    },
+    "i18n": {
+      "applicable": 11,
+      "pass": 11,
+      "rate": 1
+    },
+    "formLayout": {
+      "applicable": 9,
+      "pass": 7,
+      "rate": 0.7778
+    },
+    "target": {
+      "applicable": 81,
+      "pass": 81,
+      "rate": 1
+    },
+    "mode": {
+      "applicable": 44,
+      "pass": 44,
+      "rate": 1
+    },
+    "virtualScroll": {
+      "applicable": 16,
+      "pass": 16,
+      "rate": 1
+    },
+    "configTableOut": {
+      "applicable": 7,
+      "pass": 5,
+      "rate": 0.7143
+    },
+    "isHidden": {
+      "applicable": 24,
+      "pass": 15,
+      "rate": 0.625
+    },
+    "reactions": {
+      "applicable": 13,
+      "pass": 1,
+      "rate": 0.0769
+    },
+    "columns": {
+      "applicable": 32,
+      "pass": 11,
+      "rate": 0.3438
+    },
+    "expandConfig": {
+      "applicable": 15,
+      "pass": 5,
+      "rate": 0.3333
+    },
+    "treeConfig": {
+      "applicable": 14,
+      "pass": 13,
+      "rate": 0.9286
+    },
+    "editConfig": {
+      "applicable": 14,
+      "pass": 8,
+      "rate": 0.5714
+    },
+    "mergeConfig": {
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
+    },
+    "extPoints": {
+      "applicable": 23,
+      "pass": 23,
+      "rate": 1
+    }
+  },
+  "byLanguage": {
+    "zh": 0.4695,
+    "en": null,
+    "enSuppressed": "观测腿 5/186 行打不开（中继故障），数字有偏故不发布；门禁腿 zh 完整"
+  },
   "passed": false
 }
