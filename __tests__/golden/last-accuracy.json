@@ -1,15 +1,15 @@
 {
-  "measuredAt": "2026-10-17T12:01:55.580Z",
+  "measuredAt": "2026-10-18T12:17:29.331Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
   "cases": 188,
   "heldoutCases": 166,
   "fewshotDerivedCases": 22,
-  "scoredRows": 366,
-  "erroredRows": 10,
-  "notMeasuredRows": 1,
-  "modelFailureRows": 9,
-  "degradedCalls": 2,
+  "scoredRows": 365,
+  "erroredRows": 11,
+  "notMeasuredRows": 0,
+  "modelFailureRows": 11,
+  "degradedCalls": 7,
   "gatedRows": {
     "lang": "zh",
     "rows": 188,
@@ -18,7 +18,7 @@
   "observedRows": {
     "lang": "en",
     "rows": 188,
-    "errored": 1
+    "errored": 0
   },
   "target": 0.95,
   "givenInputs": [
@@ -64,17 +64,17 @@
     }
   ],
   "gateMetric": "definition95",
-  "inSchemaIntentZeroEdit": 0.5,
-  "coreRate": 0.4458,
-  "inSchemaIntentZeroEditAll": 0.4734,
-  "inSchemaIntentScoped": 0.4759,
-  "inSchemaIntentScopedAll": 0.5106,
-  "exactIntentFull": 0.2711,
-  "exactIntentFullAll": 0.3085,
-  "propSetF1": 0.9654,
-  "attributeAccuracy": 0.9192,
-  "actionsF1": 0.968,
-  "compileRate": 0.9734,
+  "inSchemaIntentZeroEdit": 0.488,
+  "coreRate": 0.4518,
+  "inSchemaIntentZeroEditAll": 0.484,
+  "inSchemaIntentScoped": 0.4639,
+  "inSchemaIntentScopedAll": 0.5,
+  "exactIntentFull": 0.2651,
+  "exactIntentFullAll": 0.3032,
+  "propSetF1": 0.9588,
+  "attributeAccuracy": 0.9221,
+  "actionsF1": 0.9637,
+  "compileRate": 0.9681,
   "convergence": {
     "k": 3,
     "source": "heldout",
@@ -86,40 +86,40 @@
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0.5,
-    "pass": 83,
+    "rate": 0.488,
+    "pass": 81,
     "total": 166
   },
   "byCapability": {
     "propSet": {
-      "applicable": 162,
-      "pass": 157,
-      "rate": 0.9691
+      "applicable": 161,
+      "pass": 156,
+      "rate": 0.9689
     },
     "formtype": {
-      "applicable": 162,
+      "applicable": 161,
       "pass": 137,
-      "rate": 0.8457
+      "rate": 0.8509
     },
     "membership": {
-      "applicable": 162,
-      "pass": 99,
-      "rate": 0.6111
+      "applicable": 161,
+      "pass": 100,
+      "rate": 0.6211
     },
     "actions": {
-      "applicable": 162,
-      "pass": 158,
-      "rate": 0.9753
+      "applicable": 161,
+      "pass": 157,
+      "rate": 0.9752
     },
     "tableBtns": {
       "applicable": 10,
-      "pass": 1,
-      "rate": 0.1
+      "pass": 0,
+      "rate": 0
     },
     "dialogs": {
-      "applicable": 13,
-      "pass": 8,
-      "rate": 0.6154
+      "applicable": 12,
+      "pass": 6,
+      "rate": 0.5
     },
     "operationColumn": {
       "applicable": 7,
@@ -127,8 +127,8 @@
       "rate": 1
     },
     "permissions": {
-      "applicable": 8,
-      "pass": 8,
+      "applicable": 7,
+      "pass": 7,
       "rate": 1
     },
     "apiParams": {
@@ -137,9 +137,9 @@
       "rate": 1
     },
     "dataOptions": {
-      "applicable": 83,
-      "pass": 70,
-      "rate": 0.8434
+      "applicable": 81,
+      "pass": 68,
+      "rate": 0.8395
     },
     "i18n": {
       "applicable": 11,
@@ -148,22 +148,22 @@
     },
     "formLayout": {
       "applicable": 3,
-      "pass": 2,
-      "rate": 0.6667
+      "pass": 3,
+      "rate": 1
     },
     "fieldSpan": {
-      "applicable": 7,
-      "pass": 5,
-      "rate": 0.7143
+      "applicable": 6,
+      "pass": 4,
+      "rate": 0.6667
     },
     "target": {
-      "applicable": 82,
-      "pass": 82,
+      "applicable": 79,
+      "pass": 79,
       "rate": 1
     },
     "mode": {
-      "applicable": 42,
-      "pass": 42,
+      "applicable": 43,
+      "pass": 43,
       "rate": 1
     },
     "virtualScroll": {
@@ -172,29 +172,29 @@
       "rate": 1
     },
     "configTableOut": {
-      "applicable": 6,
+      "applicable": 7,
       "pass": 6,
-      "rate": 1
+      "rate": 0.8571
     },
     "isHidden": {
-      "applicable": 24,
-      "pass": 13,
-      "rate": 0.5417
+      "applicable": 21,
+      "pass": 12,
+      "rate": 0.5714
     },
     "reactions": {
-      "applicable": 12,
-      "pass": 3,
-      "rate": 0.25
+      "applicable": 13,
+      "pass": 4,
+      "rate": 0.3077
     },
     "columns": {
-      "applicable": 31,
+      "applicable": 32,
       "pass": 11,
-      "rate": 0.3548
+      "rate": 0.3438
     },
     "expandConfig": {
-      "applicable": 14,
-      "pass": 3,
-      "rate": 0.2143
+      "applicable": 15,
+      "pass": 4,
+      "rate": 0.2667
     },
     "treeConfig": {
       "applicable": 14,
@@ -212,15 +212,14 @@
       "rate": 1
     },
     "extPoints": {
-      "applicable": 23,
-      "pass": 23,
+      "applicable": 22,
+      "pass": 22,
       "rate": 1
     }
   },
   "byLanguage": {
-    "zh": 0.4458,
-    "en": null,
-    "enSuppressed": "观测腿 1/188 行**未测到**（无 text 块 / 截断），数字有偏故不发布；门禁腿 zh 完整"
+    "zh": 0.4518,
+    "en": 0.4518
   },
   "passed": false
 }
