@@ -1,6 +1,18 @@
 {
   "scene": "form",
   "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:keyword",
+    "formtype:status",
+    "formtype:createdAt",
+    "formtype:enabled",
+    "context",
+    "buttons",
+    "formLayout.labelWidth",
+    "formLayout.minFoldRows",
+    "target"
+  ],
   "config": {
     "fields": [
       {

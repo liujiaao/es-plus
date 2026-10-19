@@ -1,6 +1,21 @@
 {
   "scene": "table",
   "target": "vue2",
+  "pinnedDims": [
+    "tableOptions.multiSelect",
+    "tableOptions.heightType",
+    "tableOptions.height",
+    "tableOptions.virtual",
+    "tableOptions.size",
+    "tableOptions.showHeader",
+    "tableOptions.emptyText",
+    "tableOptions.snIndex",
+    "tableOptions.leftText",
+    "tableOptions.defaultSort",
+    "pagination.pageSize",
+    "pagination.pageSizes",
+    "target"
+  ],
   "config": {
     "fields": [
       {

@@ -1,6 +1,18 @@
 {
   "scene": "form",
   "target": "vue3",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "formtype:birthday",
+    "formtype:bio",
+    "formtype:enabled",
+    "fieldRequired:name",
+    "fieldAttrs:bio",
+    "context",
+    "buttons"
+  ],
   "config": {
     "fields": [
       {

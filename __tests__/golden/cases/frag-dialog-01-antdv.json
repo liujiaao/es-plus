@@ -1,6 +1,14 @@
 {
   "scene": "dialog",
   "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "fieldRequired:name",
+    "mode",
+    "target"
+  ],
   "config": {
     "fields": [
       {

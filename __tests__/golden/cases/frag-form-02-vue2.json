@@ -1,6 +1,18 @@
 {
   "scene": "form",
   "target": "vue2",
+  "pinnedDims": [
+    "propSet",
+    "formtype:keyword",
+    "formtype:status",
+    "formtype:createdAt",
+    "formtype:enabled",
+    "context",
+    "buttons",
+    "formLayout.labelWidth",
+    "formLayout.minFoldRows",
+    "target"
+  ],
   "config": {
     "fields": [
       {

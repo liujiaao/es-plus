@@ -1,6 +1,16 @@
 {
   "scene": "table",
   "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "formtype:amount",
+    "formtype:createdAt",
+    "dataOptions:status",
+    "rowButtonNames",
+    "target"
+  ],
   "config": {
     "fields": [
       {

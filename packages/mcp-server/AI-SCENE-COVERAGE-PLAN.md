@@ -76,15 +76,16 @@
 
 | 宣称场景 | eval-llm? | golden 语料? | vite build? | 运行时? | 实际被谁验证 | **本轮后（Wave 1.1+1.2）** |
 |---|---|---|---|---|---|---|
-| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 字符串断言 + `vite build` + **真组件挂载**（`packages/{vue3,adapter-antdv}/__tests__/fragment-runtime.spec.ts`）+ 真实浏览器（`__tests__/e2e-runtime/tests/vue2-fragments.spec.ts`） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + 运行时回环（拉数→行渲染 / configTableOut 映射 / formatter）**（准确率仍无 scorer，见下） |
-| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（字段/按钮渲染、输入回写、formLayProps 到 prop）** |
-| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（component 形态 `open()` 开窗、composable 形态 `useXxxDialog().open()`）** |
+| 独立 `es-table`（`generate_table`） | ✅ **→ 观测（AI-45）** | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 字符串断言 + `vite build` + **真组件挂载**（`packages/{vue3,adapter-antdv}/__tests__/fragment-runtime.spec.ts`）+ 真实浏览器（`__tests__/e2e-runtime/tests/vue2-fragments.spec.ts`） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + 运行时回环（拉数→行渲染 / configTableOut 映射 / formatter）+ 准确率记分卡（AI-45，仅观测）** |
+| 独立 `es-form`（`generate_form`） | ✅ **→ 观测（AI-45）** | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（字段/按钮渲染、输入回写、formLayProps 到 prop）+ 准确率记分卡（仅观测）** |
+| 独立 `useDialog`（`generate_dialog`） | ✅ **→ 观测（AI-45）** | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ 三端（AI-43 vue3/antdv · AI-44 vue2）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（component 形态 `open()` 开窗、composable 形态 `useXxxDialog().open()`）+ 准确率记分卡（仅观测）** |
 | CRUD 组合 | ✅ 后端 `generateFromConfig` + **前门腿**（模型产出经真 `generate_crud`，含强制 no-table 覆盖） | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 | ✅ **1.3 已落地（2026-10-19，AI-40）**：eval 每条模型产出都过前门；no-table 分支靠人为清空 table 面强制覆盖（语料天然到不了） |
 
 > **本轮把「有语料」这一格从 0 抬起来了**，但**只到「覆盖 + 编译」**：18 条片段语料（`frag-{table,form,dialog}-0{1,2}-{vue3,vue2,antdv}.json`）保证每个场景每条端每个形态都有用例、且产物真能被 `generate*Block` 跑出来并解析通过；**AI-42（2026-10-19）把同一批语料接进了 golden:e2e 的真 `vite build`**（此前运行器 `.filter(isCrudCase)` 静默跳过片段）。
 > **AI-43（2026-10-19）把「运行时」这一格在 vue3 / antdv 抬起**：同一批 golden 语料经生成器落盘、运行时动态 import 并挂载真实组件，断言走**数据回环**而非 DOM 类名 —— 表格经全局 `httpRequest` 拉数并回写 `data-source`、表单渲染与输入回写、`formLayProps` 到 prop、component 形态弹窗 `open()` 开窗且默认插槽表单渲染、composable 形态 `useDialog` 创建实例。**这一轮当场咬出并修复了两个静默缺陷**：① `EsDialog` 的 vue3/vue2 版主体只有 `render` 分支、**默认插槽被静默丢弃**（antdv 一直有回退）；② 三端 `EsTable` 只认注入的 `$esPlusTable.$httpRequest`，**看不见 core 权威的顶层 `httpRequest`**（与 EsForm、自由 `httpRequest()` 不一致，独立 es-table 按文档配置即报 "no httpRequest configured"）。
 > **AI-44（2026-10-19）补齐 vue2 运行时腿**：Tier 2 Playwright fixture 新增 `fragments.html` + `scripts/gen-fragments.mjs`（从同一批 golden 语料生成六份 vue2 片段，含 composable `.tsx` 经 `@vitejs/plugin-vue2-jsx` 真编译），真实 Chromium 驱动：表格拉数（顶层 `httpRequest` 兜底）、`configTableOut` 形态映射、`formatter` 扩展点、行操作按钮派生、表单字段/输入回写、`formLayout.labelWidth` 到 DOM、component 形态弹窗（默认插槽表单体、宽度/拖拽/关闭叉、必填拦截、PUT 提交）、composable 形态弹窗（`useXxxDialog().open()`、必填拦截、POST 提交）。
-> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母。「eval-llm?」列**仍为 ❌**。
+> **AI-45（2026-10-19）把「准确率」这一格从 0 抬起（只观测、不门禁）**：`scripts/eval/fragment-scorers.mjs` 按场景把 `(gold, pred)` 拆成 applicable-only 维度（`propSet` / `formtype` / `fieldRequired` / `dataOptions` / `fieldAttrs` / `fieldLayout` / `extPoints` / `target` + 表格 `tableOptions.*`·`pagination.*` / 表单 `context`·`buttons`·`formLayout.*` / 弹窗 `mode`·`options.*`·`dialogMaskNonClosing`），并**归一化库默认值**（生成器无条件发射的 `border/stripe/highlightCurrentRow/rowkey` 与 `context='form'`、`buttons='none'`、`mode='composable'`、`pageSize=10`）——否则「省略」会被误罚，即 inQuery 默认陷阱的同构。`scripts/eval/fragment-prompt.mjs` 直接**自省运行时捕获的真实工具注册**（`scripts/lib/fragment-shapes.mjs`，esbuild 现打包 `shared/src`）生成 system prompt，不手写第二份键清单；`eval-llm.mjs` 对 18 条片段一例一次调用，校验器就是宿主 `tools/call` 用的同一份 zod3 shape，产物再喂真生成器做编译见证，结果落在产物 `fragments` 块（core / scoped(pinnedDims) / full / byScene / byDim）。两条无 key 的 meta 守卫进 `check:consistency`：`check:fragment-scorers`（gold-vs-gold 满分、每维扰动必咬、pins 真在收窄）与 `check:fragment-prompts`（prompt 覆盖每个注册键与 `.describe()` 文案）。片段可单独探针：`eval-llm --fragments`（不写产物、不参与门禁；`--limit` 按语料顺序切片永远切不到片段，故需专用开关）。
+> **仍未做**：片段进 `definition95` 分母 / 门禁。95% 定义是用户对 **CRUD 组合页**语料拍的板；把片段混进同一分母会让两套能力的回归信号都变钝。片段数字当前只观测（`eval-llm` 报告与产物 `fragments`），非零未测到行会显式报出并从分母排除。
 
 > **❌ 初稿更正**：本节初稿把三个独立场景的验证写成「**仅** `compile-smoke` esbuild 语法解析」。**错**——
 > 它们是**有单测的**（`fragment-generator.spec.ts` 等）。但那类断言全是 `toContain` **字符串比对**：
@@ -507,12 +508,14 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 覆盖         := check:scene-coverage ✅ 已落地（W1.2）：每个场景每格都有语料，
                 缺格**点名**（「table × vue3 无用例」）；四场景工具仍在 MCP 注册表（静态断言）。
                 另断言「片段语料真能被 generate*Block 跑出产物并解析」——一条没人编译的语料是死用例。
-                ⚠️ 覆盖 ≠ 准确率：本门禁只保证「测了」，不保证「测对了」（片段无 scorer，见 §1.2）
+                ⚠️ 覆盖 ≠ 准确率：本门禁只保证「测了」，不保证「测对了」。
+                   准确率由 AI-45 的片段记分卡**观测**（不进门禁，见 §1.2）。
 编译率 100%  := 真实矩阵的**全部**语料通过编译闸
-                真实矩阵 = crud: 3 端 × 2 模式 ＋ table|form|dialog: 3 端 × 1
-                ⚠️ 原文「四场景 × 三端 × **两模式**」在算术上不成立：`mode` 是 **CRUD 独有**轴
-                   （`fragment-generator.ts` 里 `\bmode\b` 零匹配；三个片段工具形状无 mode；
-                    前门 no-table 分支从不传 mode）。此处按事实更正，理由见 `scripts/eval/scenes.mjs` 头注。
+                真实矩阵 = crud: 3 端 × 2 模式 ＋ dialog: 3 端 × 2 形态 ＋ table|form: 3 端 × 1
+                ⚠️ 原文「四场景 × 三端 × **两模式**」在算术上不成立：CRUD 的 schema/sfc 两模式
+                   只覆盖 CRUD；dialog 另有 composable/component 两种**产物形态**（AI-28，
+                   `generate_dialog` 形状确有 `mode`）；table/form 无此轴。
+                   前门 no-table 分支从不传 mode。理由见 `scripts/eval/scenes.mjs` 头注。
                 口径分两段：
                   · crud（188 例）→ **vite build**（真构建，golden:e2e 驱动）
                   · 片段（18 例）→ **语法解析 + 真 vite build**：

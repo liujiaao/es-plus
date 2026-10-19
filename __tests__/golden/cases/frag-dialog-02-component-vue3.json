@@ -1,6 +1,17 @@
 {
   "scene": "dialog",
   "target": "vue3",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "fieldRequired:name",
+    "mode",
+    "options.width",
+    "options.isDraggable",
+    "options.showClose",
+    "dialogMaskNonClosing"
+  ],
   "config": {
     "fields": [
       {

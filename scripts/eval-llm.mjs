@@ -35,6 +35,7 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { z } from 'zod'
 import {
   StructuredCrudConfigSchema,
   generateFromConfig,
@@ -48,8 +49,12 @@ import {
   OUTCOME,
 } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
-import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
+import { isCrudCase, sceneOf } from './eval/scenes.mjs'
 import { setupFrontDoor, driveFrontDoor, summarizeFrontDoor } from './eval/front-door-leg.mjs'
+import { buildFragmentSystemPrompt, buildFragmentInitialMessages } from './eval/fragment-prompt.mjs'
+import { scoreFragment, describeFragmentDimMiss } from './eval/fragment-scorers.mjs'
+import { setupFragmentTools } from './lib/fragment-shapes.mjs'
+import { FRAGMENT_GENERATORS, fragmentInput } from './lib/fragment-cases.mjs'
 import {
   combine,
   evaluateFloor,
@@ -112,7 +117,15 @@ const LIMIT = (() => {
   const n = Number(process.argv[i + 1])
   return Number.isInteger(n) && n > 0 ? n : null
 })()
-const PROBE = LIMIT !== null
+/**
+ * `--fragments` = **片段探针**：只跑 18 条片段语料（table / form / dialog），CRUD 一条不跑。
+ *
+ * 语义与 `--limit` 相同 —— 它是探针，不是成绩：不写 `last-accuracy.json` / 徽章、
+ * 不参与任何门禁。存在理由：片段测的是另一套工具契约与另一套记分卡，想单独看
+ * 「调整片段 prompt 之后准确率动没动」时，没必要为 188 条 CRUD 用例付钱。
+ */
+const FRAGMENT_ONLY = process.argv.includes('--fragments')
+const PROBE = LIMIT !== null || FRAGMENT_ONLY
 
 function skip(msg) {
   if (REQUIRE_KEY) {
@@ -179,6 +192,25 @@ function driveToValidConfig(client, system, messages) {
   })
 }
 
+/**
+ * 片段场景的自修复环：同一套「空轮重发 / 截断归因 / 降级」逻辑，只把校验器换成该工具
+ * **真实注册**的 zod3 shape（`z.object(tool.shape)`，与宿主的 `tools/call` 同源）。
+ * 不能用 `StructuredCrudConfigSchema`：片段入参没有 query/table/actions 三面，
+ * 拿 CRUD schema 校验只会把每一条都判红（正是 Wave 1.1「恒真伪信号」的镜像）。
+ */
+function driveFragmentConfig(client, system, messages, schema) {
+  return driveToValidConfigPure({
+    call: (msgs, opts) => callModel(client, system, msgs, opts),
+    messages,
+    validate: (candidate) => {
+      const parsed = schema.safeParse(candidate)
+      return parsed.success ? { success: true, data: parsed.data } : { success: false, issues: parsed.error.issues }
+    },
+    pushAssistant,
+    pushUserCorrection,
+  })
+}
+
 // 打分逻辑已抽到 ./eval/scorers.mjs（纯函数、无 SDK、可无 key 单测）。这里只负责
 // 驱动模型拿到 pred，再交给 scoreAll 评分、聚合、持久化。
 
@@ -198,20 +230,45 @@ async function main() {
   // W1.3：前门腿的打包放在**任何模型调用之前** —— 它失败说明本脚本根本测不到宣称主路径，
   // 此时应当立即红，而不是先烧掉一次跑批再发现。
   const frontDoor = await setupFrontDoor()
+  // 片段场景（AI-SCENE-COVERAGE §1.2）：从**真实注册**里捕获工具名 / description / zod3 形状。
+  // prompt 由捕获结果自省生成（不手写第二份键清单），校验器即宿主 `tools/call` 用的同一形状。
+  // 与 frontDoor 同理，失败要立即红 —— 「形状都没捕获到」意味着片段这一列的测量根本不成立。
+  const fragmentTools = await setupFragmentTools()
+  const FRAGMENT_TOOL_NAMES = { table: 'generate_table', form: 'generate_form', dialog: 'generate_dialog' }
+  const fragmentSchemas = {}
+  const fragmentSystems = {}
+  for (const [scene, toolName] of Object.entries(FRAGMENT_TOOL_NAMES)) {
+    fragmentSchemas[scene] = z.object(fragmentTools[toolName].shape)
+    fragmentSystems[scene] = buildFragmentSystemPrompt(scene, fragmentTools[toolName])
+  }
 
   const allFiles = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
+  // `--fragments` 在**读语料前**就把 CRUD 文件剔掉：`--limit` 是按语料顺序切片，
+  // 而 CRUD 用例排在片段之前，所以单靠 `--limit` 永远切不到片段。
+  const scopedFiles = FRAGMENT_ONLY
+    ? allFiles.filter((f) => !isCrudCase(JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))))
+    : allFiles
   // 探针模式只取前 N 条。**注意**：被切的只有「跑谁」，语料派生的一切（notScored/棘轮
   // 计数）在全量模式下才成立，故探针模式下这些一律不参与判定（见 PROBE 分支）。
-  const files = PROBE ? allFiles.slice(0, LIMIT) : allFiles
+  const files = LIMIT !== null ? scopedFiles.slice(0, LIMIT) : scopedFiles
   const startedAt = Date.now()
-  if (!files.length) skip(`no golden cases in ${CASES_DIR}`)
+  if (!files.length) {
+    // 显式要片段却一条都没有 ⟹ 不是「没事可做」，是探针链断了（目录/过滤条件错）。
+    // 按 `skip()` 静默放行会让一次 CI 里的 `--fragments` 变成永远绿色的空跑。
+    if (FRAGMENT_ONLY) {
+      console.error(`[eval:llm] FAIL (--fragments) — ${CASES_DIR} 里没有任何片段用例`)
+      process.exit(1)
+    }
+    skip(`no golden cases in ${CASES_DIR}`)
+  }
 
   const rows = []
-  // 非-crud 场景（片段语料，Wave 1.1 起与 CRUD 同目录）本轮**不评分**：scorer 全是
-  // CRUD 形状的（pageSchema/query/table/tableBtns），片段产物量不出有意义的分数，
-  // 硬造只会产出恒真的伪信号。跳过必须**响亮**并计入 record —— 否则「没测」会在
-  // 报告里伪装成「测了且为 0」，正是 §1.1「没有数字必须长得和数字是 0 不一样」的同一条。
+  // 非-crud 语料 = 片段场景（table / form / dialog）。它们**有**自己的记分卡
+  // （`eval/fragment-scorers.mjs`），但结论只观测：gate / 徽章 / exit code 仍只读 CRUD 行
+  // （用户拍板的 95% 定义是 CRUD 语料的 scoped∨收敛）。这里只收集「没有生成器的未知场景」，
+  // 它们连编译都无从谈起，必须响亮记为 notScored 而不是静默丢弃。
   const skippedScenes = []
+  const fragmentCases = []
   // ── 先编好「跑批计划」，再按**语言优先**排序执行 ───────────────────────────────
   // 为什么不是「逐文件跑 zh+en」：中继额度是有限的，2026-10-15 那一跑就在 133/186 处
   // 撞上 `403 not enough member budget`。逐文件交错时，额度耗尽会同时砍掉**两种语言**的
@@ -225,7 +282,12 @@ async function main() {
   for (const file of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, file), 'utf8'))
     if (!isCrudCase(raw)) {
-      skippedScenes.push({ file, scene: sceneOf(raw) })
+      const scene = sceneOf(raw)
+      if (!FRAGMENT_GENERATORS[scene]) {
+        skippedScenes.push({ file, scene })
+      } else {
+        fragmentCases.push({ file, scene, raw })
+      }
       continue
     }
     const gold = StructuredCrudConfigSchema.parse(raw.config)
@@ -315,6 +377,70 @@ async function main() {
     }
   }
 
+  // ── 片段场景（table / form / dialog）：**观测**准确率 ─────────────────────────
+  // 每条用例一次「NL → 工具入参」：系统 prompt 按场景取捕获的真实工具描述，
+  // 校验器是宿主 `tools/call` 用的同一份 zod3 shape（含默认值填充），
+  // 产物再喂真生成器做编译见证。分数只进 `fragments` 块，不参与 gate / 徽章。
+  const fragmentRows = []
+  for (const { file, scene, raw } of fragmentCases) {
+    process.stdout.write(`[eval:llm] ${file} [frag:${scene}] … `)
+    const gold = fragmentInput({ raw })
+    const mask = { pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [] }
+    try {
+      if (typeof raw.nl !== 'string' || !raw.nl.trim()) throw new Error('语料缺 nl —— 无法驱动模型')
+      const messages = buildFragmentInitialMessages(raw.nl, raw.target)
+      const pred = await driveFragmentConfig(client, fragmentSystems[scene], messages, fragmentSchemas[scene])
+      let compiles = true
+      try {
+        FRAGMENT_GENERATORS[scene](pred)
+      } catch {
+        compiles = false
+      }
+      const s = scoreFragment(scene, gold, pred, mask)
+      const dimMisses = Object.entries(s.byDim)
+        .filter(([, v]) => v.applicable && !v.pass)
+        .map(([k]) => k)
+      fragmentRows.push({
+        file,
+        scene,
+        compiles,
+        error: null,
+        errorKind: null,
+        gold,
+        pred,
+        score: s,
+        dimMisses,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+      })
+      console.log(
+        `core=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}` +
+          ` full=${s.exactIntentFull ? 'ok' : 'diff'} compiles=${compiles ? 'yes' : 'NO'}`
+      )
+      if (dimMisses.length) {
+        console.log(`           dim misses: ${dimMisses.join(', ')}`)
+        for (const dim of dimMisses) {
+          const d = describeFragmentDimMiss(dim, gold, pred)
+          if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
+        }
+      }
+    } catch (err) {
+      const errorKind = err?.kind ?? null
+      fragmentRows.push({
+        file,
+        scene,
+        compiles: false,
+        error: err.message,
+        errorKind,
+        gold,
+        pred: null,
+        score: null,
+        dimMisses: [],
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+      })
+      console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
+    }
+  }
+
   // 门禁与主要数值落在中文（zh）行：英文只观测，不拖门禁，数值口径与改双语前连续。
   const zhRows = rows.filter((r) => r.lang === 'zh')
   const enRows = rows.filter((r) => r.lang === 'en')
@@ -343,6 +469,64 @@ async function main() {
   // 判红的两条只对确定性代码负责；模型侧拒绝只计数（见 setupFrontDoor 头注）。
   // 判据与聚合都在 ./eval/front-door-leg.mjs（纯函数，可脚本化单测）。
   const frontDoorStats = summarizeFrontDoor(rows)
+
+  // ── 片段场景汇总（AI-SCENE-COVERAGE §1.2；只观测）────────────────────────────
+  // 口径纪律与 CRUD 一致：`model-failure` = 模型答错了 ⟹ **在成绩里**（记 0 分）；
+  // `no-answer`/`truncated` = 没测到 ⟹ 不进分母，但必须显式报出条数。
+  // 这些数字不参与 gate / 徽章 / exit code —— 用户拍板的 95% 定义只针对 CRUD 语料。
+  const fragNotMeasuredRows = fragmentRows.filter((r) => r.error && isNotMeasured(r.errorKind))
+  const fragMeasured = fragmentRows.filter((r) => !(r.error && isNotMeasured(r.errorKind)))
+  const fragHit = (r, sel) => (r.score ? (sel(r.score) ? 1 : 0) : 0)
+  const fragMean = (rs, sel) => (rs.length ? rs.reduce((a, r) => a + fragHit(r, sel), 0) / rs.length : null)
+  const fragmentSummary = {
+    cases: fragmentRows.length,
+    measured: fragMeasured.length,
+    notMeasured: fragNotMeasuredRows.length,
+    core: fragMean(fragMeasured, (s) => s.exactIntentCore),
+    full: fragMean(fragMeasured, (s) => s.exactIntentFull),
+    scoped: fragMean(fragMeasured, (s) => s.exactIntentScoped),
+    compileRate: fragMeasured.length
+      ? fragMeasured.filter((r) => r.compiles).length / fragMeasured.length
+      : null,
+    byScene: {},
+    byDim: {},
+  }
+  for (const scene of ['table', 'form', 'dialog']) {
+    const rs = fragMeasured.filter((r) => r.scene === scene)
+    if (!rs.length) {
+      fragmentSummary.byScene[scene] = null
+      continue
+    }
+    fragmentSummary.byScene[scene] = {
+      cases: rs.length,
+      core: fragMean(rs, (s) => s.exactIntentCore),
+      full: fragMean(rs, (s) => s.exactIntentFull),
+      scoped: fragMean(rs, (s) => s.exactIntentScoped),
+      compileRate: rs.filter((r) => r.compiles).length / rs.length,
+    }
+  }
+  const fragDimAgg = {}
+  for (const r of fragMeasured) {
+    for (const [dim, v] of Object.entries(r.score?.byDim ?? {})) {
+      if (!v.applicable) continue
+      const a = (fragDimAgg[dim] ??= { applicable: 0, pass: 0 })
+      a.applicable++
+      if (v.pass) a.pass++
+    }
+  }
+  for (const [dim, a] of Object.entries(fragDimAgg)) {
+    fragmentSummary.byDim[dim] = {
+      applicable: a.applicable,
+      pass: a.pass,
+      rate: Number((a.pass / a.applicable).toFixed(4)),
+    }
+  }
+  if (fragNotMeasuredRows.length) {
+    console.warn(
+      `[eval:llm] 片段观测腿：${fragNotMeasuredRows.length}/${fragmentRows.length} 行**未测到**（无 text 块 / 截断）` +
+        ` —— 已排除在片段分母外；这些数字描述的是「测到的那些」`
+    )
+  }
 
   // B3 收敛（只观测、不门禁）：收敛语料 = 标了 refinements 的中文行；heldout 优先、空则退全量。
   // firstTurn=0 即 zero-edit 收敛（0 次纠正）；null = 喂完所有纠正仍未 scoped 命中。
@@ -390,22 +574,52 @@ async function main() {
     const probeNotMeasured = rows.filter((r) => r.error && isNotMeasured(r.errorKind))
     const probeModelFail = rows.filter((r) => r.error && !isNotMeasured(r.errorKind))
     const probeNoCompile = rows.filter((r) => !r.error && !r.compiles)
+    const probeFragErrored = fragmentRows.filter((r) => r.error)
+    const probeFragNoCompile = fragmentRows.filter((r) => !r.error && !r.compiles)
     const secs = ((Date.now() - startedAt) / 1000).toFixed(1)
-    console.log(`\n[probe] 探针模式：${files.length} 条用例 → ${rows.length} 行，用时 ${secs}s` +
-      `（${(secs / Math.max(rows.length, 1)).toFixed(1)}s/行）`)
+    const totalRows = rows.length + fragmentRows.length
+    console.log(`\n[probe] 探针模式：${files.length} 条用例 → ${totalRows} 行` +
+      `（crud ${rows.length} / 片段 ${fragmentRows.length}），用时 ${secs}s` +
+      `（${(secs / Math.max(totalRows, 1)).toFixed(1)}s/行）`)
     console.log(`[probe] endpoint ${process.env.ANTHROPIC_BASE_URL || '(default)'} · served ${[...SERVED_MODELS].join(',') || '(无)'}`)
     // 两种失败要分开看：未测到 = 中继/通路问题（换条件、换中继）；答错 = 模型/语料问题。
     // 探针对两者**都**失败（探针的意义就是在烧 4 小时前把问题问出来），但措辞必须指对方向。
     console.log(`[probe] 打不开的行：${probeErrored.length}（未测到 ${probeNotMeasured.length} / 答错 ${probeModelFail.length}）` +
       ` / 未编译过的行：${probeNoCompile.length} / 降级调用 ${DEGRADED_CALLS} 次`)
     // 前门腿同样要在探针里报：探针的意义是「开全量前把问题问出来」，前门是宣称主路径。
-    console.log(
-      `[probe] 前门腿：${frontDoorStats.rows} 行中 routed ${frontDoorStats.routed} / rejected ${frontDoorStats.rejected}（模型侧，仅记录）` +
-        ` / 产物编译失败 ${frontDoorStats.compileFailures.length} / no-table 分支覆盖 ${frontDoorStats.noTableExercised}`
-    )
+    // 但 `--fragments` 下 CRUD 行数为 0 —— 前门的两条判据（no-table 覆盖 / 路由成功）
+    // 是**针对 CRUD 模型产出**的，没有可判的样本 ≠ 失败。这里显式标「不适用」，
+    // 而不是把空集合当成红色（否则片段探针永远开不了跑）。
+    const frontDoorApplicable = frontDoorStats.rows > 0
+    if (frontDoorApplicable) {
+      console.log(
+        `[probe] 前门腿：${frontDoorStats.rows} 行中 routed ${frontDoorStats.routed} / rejected ${frontDoorStats.rejected}（模型侧，仅记录）` +
+          ` / 产物编译失败 ${frontDoorStats.compileFailures.length} / no-table 分支覆盖 ${frontDoorStats.noTableExercised}`
+      )
+    } else {
+      console.log('[probe] 前门腿：本次没有 CRUD 行 → 前门判据不适用（--fragments）')
+    }
     for (const r of probeErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
     for (const r of probeNoCompile.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — 生成成功但编译失败`)
-    if (!frontDoorStats.ok) {
+    // 片段腿：同样是「真实负载」。探针里也要先问出来（否则全量跑完才发现 18 条全 400）。
+    if (fragmentRows.length) {
+      const pct = (x) => (x === null || x === undefined ? 'n/a' : `${(x * 100).toFixed(1)}%`)
+      console.log(
+        `[probe] 片段腿：${fragmentRows.length} 条（table ${fragmentRows.filter((r) => r.scene === 'table').length}` +
+          ` / form ${fragmentRows.filter((r) => r.scene === 'form').length}` +
+          ` / dialog ${fragmentRows.filter((r) => r.scene === 'dialog').length}）` +
+          ` — 打不开 ${probeFragErrored.length} / 未编译过 ${probeFragNoCompile.length}` +
+          ` / 未测到 ${fragmentSummary.notMeasured}`
+      )
+      console.log(
+        `[probe] 片段准确率（观测）：core ${pct(fragmentSummary.core)} · scoped ${pct(fragmentSummary.scoped)}` +
+          ` · full ${pct(fragmentSummary.full)} · compiles ${pct(fragmentSummary.compileRate)}` +
+          `（分母 measured=${fragmentSummary.measured}）`
+      )
+      for (const r of probeFragErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [frag:${r.scene}] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
+      for (const r of probeFragNoCompile.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [frag:${r.scene}] — 生成成功但编译失败`)
+    }
+    if (frontDoorApplicable && !frontDoorStats.ok) {
       for (const m of frontDoorStats.compileFailures.slice(0, 3)) console.error(`[probe]   ✗ 前门产物编译失败：${m}`)
       if (frontDoorStats.noTableExercised === 0) console.error('[probe]   ✗ 前门的 no-table 分支一次都没走到（见 check-front-door 头注）')
       if (frontDoorStats.routed === 0) console.error('[probe]   ✗ 前门没有成功路由任何一行模型产出')
@@ -414,7 +628,7 @@ async function main() {
       console.error(`[probe] ✗ 模型一次都没应答（served 为空）—— 中继鉴权/路由层没通`)
     }
     console.log('[probe] 未写任何产物（无 last-accuracy.json / 无徽章）、未参与门禁判定 —— 探针不许当成绩。')
-    const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || !SERVED_MODELS.size || !frontDoorStats.ok
+    const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || probeFragErrored.length > 0 || probeFragNoCompile.length > 0 || !SERVED_MODELS.size || (frontDoorApplicable && !frontDoorStats.ok)
     if (bad) {
       console.error(
         '\n[probe] FAILED —— 别拿它开全量跑。' +
@@ -515,6 +729,9 @@ async function main() {
       modelFailureRows: modelFailureRows.length,
       degradedCalls: DEGRADED_CALLS,
       sampleErrors: reasons,
+      // 片段腿不受 CRUD 健康门影响（它是另一套语料/另一套记分卡）：把测到的原样带上，
+      // 免得一次 CRUD 侧的中继故障把片段唯一的观测也一起抹掉。
+      fragments: fragmentSummary,
       target: TARGET_ACCURACY,
       passed: false,
     }
@@ -569,13 +786,10 @@ async function main() {
     )
   }
   if (skippedScenes.length) {
-    // 响亮报出「未评分」的场景，并给出它去哪了 —— 否则报告读起来像「片段场景答对了 0 条」。
-    const byScene = SCENES.filter((s) => s !== 'crud')
-      .map((s) => `${s} ${skippedScenes.filter((x) => x.scene === s).length}`)
-      .join(' / ')
+    // 只剩「没有片段生成器的未知场景」会走到这里；不是片段语料（那些已进 fragmentRows）。
     console.log(
-      `  NOT SCORED:            ${skippedScenes.length} case(s) outside the crud scene (${byScene})` +
-        ` — no fragment scorer yet (Wave 1.1); their compile+coverage gate is check:scene-coverage`
+      `  NOT SCORED:            ${skippedScenes.length} case(s) with an unknown scene` +
+        ` (${skippedScenes.map((x) => `${x.file}:${x.scene}`).join(', ')})`
     )
   }
   console.log(`  in-schema intent zero-edit (ALL):      ${(exact * 100).toFixed(1)}%   (diagnostic — not the gate)`)
@@ -626,6 +840,33 @@ async function main() {
   }
   if (byLanguage.en !== null) {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
+  }
+
+  // 片段场景（AI-SCENE-COVERAGE §1.2）：**观测**数字，与 CRUD 门禁彻底分开。
+  // 没有把片段塞进 gate 是刻意的 —— 95% 定义是用户对 CRUD 语料拍的板；片段进分母会
+  // 把「片段答得怎样」混进「CRUD 组合页答得怎样」，两个数的回归信号都会变钝。
+  if (fragmentSummary.cases) {
+    const fp = (x) => (x === null || x === undefined ? 'n/a' : `${(x * 100).toFixed(1)}%`)
+    console.log(`\n  fragment scenes (observed — NOT gated):`)
+    console.log(
+      `    cases ${fragmentSummary.cases} · measured ${fragmentSummary.measured} · not measured ${fragmentSummary.notMeasured}`
+    )
+    console.log(
+      `    core ${fp(fragmentSummary.core)} · scoped(pinnedDims) ${fp(fragmentSummary.scoped)} · full ${fp(fragmentSummary.full)} · compiles ${fp(fragmentSummary.compileRate)}`
+    )
+    for (const scene of ['table', 'form', 'dialog']) {
+      const s = fragmentSummary.byScene[scene]
+      if (!s) continue
+      console.log(
+        `    ${scene.padEnd(6)} core ${fp(s.core)} · scoped ${fp(s.scoped)} · full ${fp(s.full)} · compiles ${fp(s.compileRate)}  (${s.cases})`
+      )
+    }
+    console.log(`  by fragment dimension (measured rows; n/a = no case exercises it)`)
+    console.log('  ------------------------------------------')
+    for (const dim of Object.keys(fragmentSummary.byDim).sort()) {
+      const c = fragmentSummary.byDim[dim]
+      console.log(`    ${dim.padEnd(34)} ${(c.rate * 100).toFixed(0).padStart(3)}%  (${c.pass}/${c.applicable})`)
+    }
   }
 
   console.log(`\n  by capability (${heldout.length ? 'heldout' : 'all'} cases; n/a = no case exercises it)`)
@@ -716,9 +957,38 @@ async function main() {
     // 「给定目标平台/产出形态下」的准确率（与生产一致），**不是**「模型从 NL 猜出 target/mode」。
     // 旧产物无此字段 = 未修 F9 的口径（definition95 上限 67.8%）。见 eval/prompt.mjs 头注。
     givenInputs: ['target', 'mode'],
-    // 非-crud 场景的语料条数（Wave 1.1 起与 CRUD 同目录，但无 scorer，故不进任何分母）。
-    // 显式落在产物里，使「本次测量不覆盖这几条」事后可诊断，而不是让人以为它们得 0 分。
+    // 真正「没有生成器、连编译都无从谈起」的未知场景（应为空）。片段语料**不再**在这里：
+    // 它们有记分卡且会真实跑，见下方 `fragments`。
     notScored: skippedScenes.map((x) => ({ file: x.file, scene: x.scene })),
+    // 片段场景（table / form / dialog）的准确率 —— **只观测，不进 gate / 徽章 / exit code**。
+    // 口径：core = 四维硬诚实；scoped = 只 AND `pinnedDims`（NL 真正锁定的维度）；
+    // full = gold 声明的全部维度。`notMeasured` 行排除在分母外（中继故障 ≠ 模型答错），
+    // 而 `errorKind === 'model-failure'` 的行**在**分母里、按 0 计。byDim 让回归能定位到
+    // 「formtype 掉了」还是「容器级词汇掉了」。
+    fragments: {
+      cases: fragmentSummary.cases,
+      measured: fragmentSummary.measured,
+      notMeasured: fragmentSummary.notMeasured,
+      core: fragmentSummary.core === null ? null : Number(fragmentSummary.core.toFixed(4)),
+      scoped: fragmentSummary.scoped === null ? null : Number(fragmentSummary.scoped.toFixed(4)),
+      full: fragmentSummary.full === null ? null : Number(fragmentSummary.full.toFixed(4)),
+      compileRate: fragmentSummary.compileRate === null ? null : Number(fragmentSummary.compileRate.toFixed(4)),
+      byScene: Object.fromEntries(
+        Object.entries(fragmentSummary.byScene).map(([scene, s]) => [
+          scene,
+          s === null
+            ? null
+            : {
+                cases: s.cases,
+                core: Number(s.core.toFixed(4)),
+                scoped: Number(s.scoped.toFixed(4)),
+                full: Number(s.full.toFixed(4)),
+                compileRate: Number(s.compileRate.toFixed(4)),
+              },
+        ])
+      ),
+      byDim: fragmentSummary.byDim,
+    },
     // 门禁数字（AI-33②）：= 95% 定义 ∨ = scoped zero-edit ∨ ≤K 轮收敛，与徽章同源。
     gateMetric,
     inSchemaIntentZeroEdit: Number(gateRate.toFixed(4)),

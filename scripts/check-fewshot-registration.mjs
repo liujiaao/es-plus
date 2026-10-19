@@ -80,9 +80,9 @@ for (const f of FEWSHOT_DERIVED) {
 }
 
 // ③ 防洗白：heldout 必须非空且占多数。
-// 口径只取 CRUD 场景 —— 「heldout」是 LLM eval 的分母概念，而 eval 只评 CRUD
-// （片段场景无 scorer，见 eval-llm.mjs 的 notScored）。把片段语料算进分母会让
-// 这里的比例失真，且掩盖真正的 crud heldout 规模。
+// 口径只取 CRUD 场景 —— 「heldout」是 LLM eval **gate** 的分母概念，而 95% 定义
+// 只针对 CRUD 组合页语料（片段场景自 AI-45 起有自己的记分卡，但只观测、不进 gate）。
+// 把片段语料算进分母会让这里的比例失真，且掩盖真正的 crud heldout 规模。
 const crudFiles = cases.map((c) => c.f)
 const heldout = crudFiles.filter((f) => !FEWSHOT_DERIVED.has(f))
 if (!heldout.length) fail('heldout 为空 —— 全部语料都被登记成 few-shot 派生，门禁失去意义')

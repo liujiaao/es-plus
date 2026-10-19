@@ -1,6 +1,13 @@
 {
   "scene": "dialog",
   "target": "vue3",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "fieldRequired:name",
+    "mode"
+  ],
   "config": {
     "fields": [
       {

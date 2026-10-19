@@ -398,6 +398,19 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **变异验证（全部实测咬红，已还原）**：① 删 `formatter` 发射 ⇒ table-01「12.00」缺失；② 删 `formLayout` ⇒ form-02 `54px ≠ 110px`；③ 删 `apiUrl` ⇒ composable 提交计数 0 ≠ 1；④ 临时从 dist 移除 `resolveHttpRequest(getGlobalConfig())` 回落 ⇒ beforeEach 行数 0（片段无 prop，请求无处可发）。产物、dist、语料均已还原。
 - **仍未做（显式留档）**：片段**准确率** scorer（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母；`eval-llm?` 列仍为 ❌。**不提交、不推送**（仓铁律）。
 
+### AI-45 — 片段准确率记分卡 + 与真实工具注册同源的 prompt（**2026-10-19 已落地**）· `M`
+- **Why**：AI-42/43/44 相继填平了片段的「vite build」与「运行时」两格，但 §1.2 的「eval-llm?」列仍为 ❌——18 条片段语料**有覆盖、有编译、有运行时，却没有一个数字度量「模型把配置写对了吗」**。当时刻意不做的理由是「无 scorer 时硬造会产出恒真伪信号」；现在把 scorer 建在 gold 驱动的维度上，那个前提才消失。另一条硬约束来自 F9：`target` 是宿主给定，片段 prompt 必须与生产 `tools/list`（name + description + inputSchema）同源，不能手写第二份键清单。
+- **改动**：
+  - 新增 `scripts/eval/fragment-scorers.mjs`（纯函数）：把 `(gold, pred)` 拆成 applicable-only 维度——三场景共用 `propSet/formtype/fieldRequired/dataOptions/fieldAttrs/fieldLayout/extPoints/target`，表格另有 `apiUrl/rowButtons/rowButtonNames/tableOptions.*/pagination.*`，表单另有 `context/buttons/formLayout.*`，弹窗另有 `rowkey/mode/composableName/defaultTitle/options.*/dialogMaskNonClosing`。**归一化库默认值**（生成器无条件发射的 `border/stripe/highlightCurrentRow/rowkey` 与 `context='form'`、`buttons='none'`、`mode='composable'`、`pageSize=10`），否则「省略默认值」会被误罚（inQuery 默认陷阱的同构）。`dataOptions`/`emptyText`/`leftText` 只比 presence（NL 不说具体取值/文案）；`dialogMaskNonClosing` 是**语义**维（`modal:false` 或 `closeOnClickModal:false` 皆正确）。输出 `exactIntentCore`（硬诚实四维）/`exactIntentFull`（全部启用维度）/`exactIntentScoped`（只 AND `pinnedDims`）。
+  - `scripts/lib/fragment-shapes.mjs`：esbuild 现打包 `packages/mcp-server/src/tools/*`，捕获**真实注册**的 name/description/zod3 shape，并用 `metafile` 自证输入来自 `shared/src`（`shared/build` 零命中）。`scripts/eval/fragment-prompt.mjs` 直接自省该 shape 生成 system prompt（键、类型、optional/default、`.describe()` 文案全自动同步）；`target` 复用 CRUD 的 `buildGivenLine` 作「给定」喂入并仍比对照抄。
+  - `scripts/eval-llm.mjs`：18 条片段一例一次调用，校验器换成该工具**同一份** zod3 shape（`z.object(tool.shape)`，与宿主 `tools/call` 同源），复用既有 `driveToValidConfig` 的「空轮重发 / 截断归因 / 降级」纪律；产物再喂真生成器做编译见证；结果落在产物 `fragments` 块（core/scoped/full/compileRate + byScene + byDim），报告单列。**只观测**：gate/徽章/exit code 仍只读 CRUD 行。
+  - `scripts/eval-llm.mjs --fragments`：**片段探针**（与 `--limit` 同语义：不写产物、不参与门禁）。`--limit` 按语料顺序切片而 CRUD 排在片段前，永远切不到片段；该开关在读语料前把 CRUD 文件剔掉，只跑 18 条片段。没有 CRUD 行时前门判据显式标「不适用」（空集合 ≠ 失败），但任何一行打不开/没编译过仍然红。用于只调片段 prompt 时避免为整份 CRUD 语料付费。
+  - 语料：18 条片段用例新增 `pinnedDims`（NL 真正锁定的维度/字段）。
+  - 两条无 key meta 守卫进 `check:consistency`：`check:fragment-scorers`（gold-vs-gold 满分；**每个启用维度**扰动后该维必翻红、full 必翻红；pinned token 被扰动后 scoped 必翻红；未钉维度被扰动后 scoped 仍为 true —— 钉太宽/漏钉都咬）与 `check:fragment-prompts`（prompt 覆盖 shape 每个顶层键与一层子键、工具 description 与 `.describe()` 原文可见、场景规则与 JSON-only 契约存在、given 行「给了必照抄 / 没给不凭空出现」）。
+- **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → `18 条片段用例，50 个维度被扰动验证`（绿）；`node scripts/eval/fragment-prompt.test.mjs` 同义（3 个工具形状全覆盖）；两者进 `check:consistency`。真实跑批时片段数字出现在 `eval-llm` 报告与 `last-accuracy.json` 的 `fragments` 块；`--fragments` 探针单独跑 18 条并打印 core/scoped/full/compiles。
+- **刻意偏离**：**不**把片段并入 `definition95` 分母/门禁——95% 是用户对 CRUD 组合页语料拍的板，混入片段会让两套能力的回归信号都变钝。片段 `notMeasured` 行显式排除并报出（中继故障 ≠ 模型答错），`model-failure` 行留在分母按 0 计。
+- **仍未做**：片段进 `definition95` 分母（按上述理由延后，需用户重新拍板）。**不提交、不推送**（仓铁律）。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）
