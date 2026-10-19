@@ -36,8 +36,25 @@
     "apiUrl": "/api/users",
     "rowkey": "id",
     "composableName": "useUserDialog",
-    "typescript": true
+    "typescript": true,
+    "defaultTitle": "用户编辑"
   },
-  "nl": "做一个用户编辑弹窗的 composable：姓名必填、状态下拉，带接口地址，提交后关闭。",
-  "notes": "独立 useDialog 场景。产物是 composable 模块（非 SFC），编译尺子按 tsx 整块解析 —— 与 form/table 的 SFC 切块解析是不同的验证路径。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。"
+  "nl": "做一个用户编辑弹窗的 composable：数据接口 /api/users，composable 名 useUserDialog，默认标题「用户编辑」，姓名必填、状态下拉（启用/禁用），提交后关闭。",
+  "notes": "独立 useDialog 场景。产物是 composable 模块（非 SFC），编译尺子按 tsx 整块解析 —— 与 form/table 的 SFC 切块解析是不同的验证路径。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。 AI-46：补 fixedFields / nlStatedDims（度量有效性），NL 明示接口地址、选项与命名。",
+  "fixedFields": [
+    "name",
+    "status"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "fieldRequired:name",
+    "dataOptions:status",
+    "mode",
+    "apiUrl",
+    "composableName",
+    "defaultTitle",
+    "target"
+  ]
 }

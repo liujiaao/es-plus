@@ -162,6 +162,7 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
   resolveFormRules,
+  resolveFormLayProps,
   normalizeFormItem,
   resolveButtonSide,
   resolveHttpRequest,
@@ -365,8 +366,11 @@ export default defineComponent({
     const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
     // ─── formProps （供 el-form 使用） ──
+    // 与 vue3 / antdv 同源：`formLayProps` 是正确拼写（生成器与文档都发它），
+    // 旧拼写 `fromLayProps` 仅作 fallback。此前这里只读旧拼写，导致任何按推荐写法
+    // 传入的 `layoutFormProps.formLayProps`（labelWidth / minFoldRows …）在 vue2 上被**静默丢弃**。
     const formLayoutRef = ref<Record<string, unknown>>(
-      ((props.layoutFormProps as { fromLayProps?: Record<string, unknown> } | undefined)?.fromLayProps) || {}
+      resolveFormLayProps(props.layoutFormProps as Parameters<typeof resolveFormLayProps>[0])
     )
     /**
      * Element UI v2 的 el-form 在 `labelWidth` 缺省时会让 label 浮动在自然位置，
@@ -392,6 +396,12 @@ export default defineComponent({
       }
       const mapped = mapSize(merged.size)
       if (mapped !== undefined) merged.size = mapped
+      // Element UI v2 的 `label-width` 是 **String** 类型；传 number 时不会像
+      // Element Plus / antdv 那样自动补 `px`（三端产物应当等价）。这里显式归一，
+      // 让 `labelWidth: 110` 与 `'110px'` 在 vue2 上也得到同一个宽度。
+      if (typeof merged.labelWidth === 'number' && Number.isFinite(merged.labelWidth)) {
+        merged.labelWidth = `${merged.labelWidth}px`
+      }
       if (merged.labelWidth === undefined || merged.labelWidth === '' || merged.labelWidth === null) {
         merged.labelWidth = 'auto'
       }

@@ -71,6 +71,23 @@
     ],
     "typescript": true
   },
-  "nl": "做一个只读的用户表格：显示姓名、状态（启用/禁用）、金额、创建时间，带查看/编辑/删除三个行内按钮。",
-  "notes": "独立 es-table 场景（不经 CRUD 组合）。字段刻意走到 buildTableColumnSFC 的各分支：Select+dataOptions、InputNumber 带 align/formatter（formatter 是源码扩展点，发射前过 assertEmittableExpr 语法闸）、DatePicker。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。"
+  "nl": "做一个只读的用户表格：显示姓名、状态（启用/禁用）、金额、创建时间，带查看/编辑/删除三个行内按钮，数据接口 /api/users。",
+  "notes": "独立 es-table 场景（不经 CRUD 组合）。字段刻意走到 buildTableColumnSFC 的各分支：Select+dataOptions、InputNumber 带 align/formatter（formatter 是源码扩展点，发射前过 assertEmittableExpr 语法闸）、DatePicker。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-46：补 fixedFields / nlStatedDims（度量有效性），NL 明示接口地址、选项与命名。",
+  "fixedFields": [
+    "name",
+    "status",
+    "amount",
+    "createdAt"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:status",
+    "formtype:amount",
+    "formtype:createdAt",
+    "dataOptions:status",
+    "rowButtonNames",
+    "apiUrl",
+    "target"
+  ]
 }

@@ -39,6 +39,15 @@
  *     `fieldAttrs:bio` / `fieldLayout:amount` / `extPoints:amount`。
  *
  * 未给 mask 时 scoped 退化为 `exactIntentCore`（片段版的硬诚实四维），向后兼容。
+ *
+ * ## stated 口径（AI-46）
+ *
+ * `mask.statedDims`（语料字段 `nlStatedDims`）= NL/宿主**确实说了**的维度，语法与
+ * pinnedDims 相同。`exactIntentStated` 只 AND 这一组 —— 它回答「说了的做到了吗」。
+ * 为什么需要它：片段 gold 同时充当**运行时 fixture**，会声明 NL 从未要求的键
+ * （`rowClassName` / `cachePageSelection` / `formatter`…）。`exactIntentFull` 把它们
+ * 全部计入，数字会被语料构造方式污染；stated 把「没说的」排除在分母外，同时保留
+ * 「说了的漏做」的惩罚。`pinnedDims ⊆ nlStatedDims` 由 meta-eval 强制。
  */
 
 /** 稳定序列化（键排序）—— 与 `scorers.mjs` 同实现。 */
@@ -95,6 +104,31 @@ function normTableOptions(t) {
 function normPageSize(p) {
   return p?.pageSize ?? 10
 }
+/**
+ * CSS 长度归一：`number` / 纯数字字符串 ≡ `'Npx'`，其余字符串原样。
+ *
+ * 三端运行时已统一走 core `toCssSize`（表格 height/tabHeight、表单 labelWidth、
+ * 弹窗 width）：`420`、`'420'`、`'420px'` 渲染结果相同。记分卡若按字面比较，
+ * 模型用任一合法写法都会被判错 —— inQuery 默认陷阱的同构。
+ */
+function normCssSize(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? `${v}px` : v
+  if (typeof v === 'string') {
+    const t = v.trim()
+    return /^-?\d+(?:\.\d+)?$/.test(t) ? `${t}px` : t
+  }
+  return v
+}
+const cssEq = (a, b) => eq(normCssSize(a) ?? null, normCssSize(b) ?? null)
+/**
+ * 表格「虚拟滚动」是**语义维**：三端消费口径都是
+ * `options.virtual === true || options.engine === 'virtual'`
+ * （vue3/vue2/antdv 的 es-table 逐字同实现）。gold 同时写 `virtual:true` + `engine:'virtual'`
+ * 只是运行时 fixture 的双保险；若按两个键分别计分，一次意图会被数两遍。
+ */
+const tableVirtual = (cfg) => cfg?.tableOptions?.virtual === true || cfg?.tableOptions?.engine === 'virtual'
+/** dialog 的 rowkey：生成器 `input.rowkey || 'id'` —— 省略与显式 `'id'` 等价。 */
+const normDialogRowkey = (cfg) => cfg?.rowkey || 'id'
 function normTarget(cfg) {
   return cfg?.target ?? 'vue3'
 }
@@ -131,7 +165,14 @@ const hasExtPoint = (f) => !!(f?.render || f?.formatter)
 const fieldFormtypeEqual = (g, p) => normFormtype(g.formtype) === normFormtype(p.formtype)
 const fieldRequiredEqual = (g, p) => (g.required ?? false) === (p.required ?? false)
 const fieldOptionsPresenceEqual = (g, p) => !!(g.dataOptions ?? []).length === !!(p.dataOptions ?? []).length
-const fieldAttrTypeEqual = (g, p) => (g.attrs?.type ?? null) === (p.attrs?.type ?? null)
+/**
+ * 字段 attrs：gold 声明过的每个键都必须原样命中（pred 多出的键不罚）。
+ * 旧版只比 `attrs.type`，于是 NL 明说的 `maxlength` 写不写都一样 —— 与「gold 驱动」口径不符。
+ */
+const fieldAttrTypeEqual = (g, p) => {
+  const ga = g.attrs ?? {}
+  return Object.keys(ga).every((k) => eq(ga[k], p.attrs?.[k] ?? null))
+}
 const fieldLayoutEqual = (g, p) =>
   LAYOUT_KEYS.every((k) => eq(g?.[k] ?? null, p?.[k] ?? null))
 const fieldExtPointsEqual = (g, p) => {
@@ -226,13 +267,24 @@ function fragmentDimSpecs(scene, gold) {
     add('rowButtons', (gold?.rowButtons ?? []).length > 0, (g, p) => rowButtonKeys(g) === rowButtonKeys(p))
     add('rowButtonNames', (gold?.rowButtons ?? []).length > 0, (g, p) => rowButtonNames(g) === rowButtonNames(p))
 
-    for (const key of Object.keys(gold?.tableOptions ?? {})) {
+    const goldTableOptions = gold?.tableOptions ?? {}
+    // `virtual` / `engine` 并入语义维 `tableVirtualMode`（三端消费口径一致），不再逐键计分。
+    const VIRTUAL_KEYS = new Set(['virtual', 'engine'])
+    // 声明为 `number | string` 且运行时经 core `toCssSize` 归一的键。
+    const CSS_KEYS = new Set(['height', 'tabHeight'])
+    for (const key of Object.keys(goldTableOptions)) {
+      if (VIRTUAL_KEYS.has(key)) continue
       const presence = TEXT_PRESENCE_KEYS.has(key)
       add(`tableOptions.${key}`, true, (g, p) => {
         const gv = normTableOptions(g?.tableOptions)[key]
         const pv = normTableOptions(p?.tableOptions)[key]
-        return presence ? hasText(gv) === hasText(pv) : eq(gv ?? null, pv ?? null)
+        if (presence) return hasText(gv) === hasText(pv)
+        if (CSS_KEYS.has(key)) return cssEq(gv, pv)
+        return eq(gv ?? null, pv ?? null)
       })
+    }
+    if ('virtual' in goldTableOptions || 'engine' in goldTableOptions) {
+      add('tableVirtualMode', true, (g, p) => tableVirtual(g) === tableVirtual(p))
     }
     for (const key of Object.keys(gold?.pagination ?? {})) {
       add(`pagination.${key}`, true, (g, p) => {
@@ -247,13 +299,18 @@ function fragmentDimSpecs(scene, gold) {
     add('context', true, (g, p) => normContext(g) === normContext(p))
     add('buttons', true, (g, p) => normButtons(g) === normButtons(p))
     for (const key of Object.keys(gold?.formLayout ?? {})) {
-      add(`formLayout.${key}`, true, (g, p) => eq(g?.formLayout?.[key] ?? null, p?.formLayout?.[key] ?? null))
+      add(`formLayout.${key}`, true, (g, p) => {
+        const gv = g?.formLayout?.[key]
+        const pv = p?.formLayout?.[key]
+        // labelWidth 契约是 `number | string`，三端运行时归一（vue2 本次补齐）→ 数字与 px 等价。
+        return key === 'labelWidth' ? cssEq(gv, pv) : eq(gv ?? null, pv ?? null)
+      })
     }
   }
 
   if (scene === 'dialog') {
     add('apiUrl', gold?.apiUrl !== undefined, (g, p) => eq(g?.apiUrl ?? null, p?.apiUrl ?? null))
-    add('rowkey', gold?.rowkey !== undefined, (g, p) => eq(g?.rowkey ?? null, p?.rowkey ?? null))
+    add('rowkey', gold?.rowkey !== undefined, (g, p) => eq(normDialogRowkey(g), normDialogRowkey(p)))
     add('mode', true, (g, p) => normDialogMode(g) === normDialogMode(p))
     add('composableName', gold?.composableName !== undefined, (g, p) => eq(g?.composableName ?? null, p?.composableName ?? null))
     add('defaultTitle', gold?.defaultTitle !== undefined, (g, p) => eq(g?.defaultTitle ?? null, p?.defaultTitle ?? null))
@@ -266,7 +323,12 @@ function fragmentDimSpecs(scene, gold) {
       // **两种**等价实现（`modal:false` 或 `closeOnClickModal:false`）。若再单列
       // `options.modal`，同一意图会被数两遍，且「保留遮罩但不响应点击」这种正确落地会被判红。
       if (key === 'modal' && gold.options.modal === false) continue
-      add(`options.${key}`, true, (g, p) => eq(g?.options?.[key] ?? null, p?.options?.[key] ?? null))
+      add(`options.${key}`, true, (g, p) => {
+        const gv = g?.options?.[key]
+        const pv = p?.options?.[key]
+        // width 契约 `number | string`，三端 es-dialog 都把 number 转 px —— 两种写法等价。
+        return key === 'width' ? cssEq(gv, pv) : eq(gv ?? null, pv ?? null)
+      })
     }
   }
 
@@ -330,9 +392,12 @@ function scoreDimension(scene, gold, pred, token) {
  *
  * 返回：
  *   - `byDim`：`{ [dim]: { applicable, pass } }`，覆盖该 gold 启用的全部维度；
- *   - `exactIntentFull`：所有 applicable 维度都命中；
+ *   - `exactIntentFull`：所有 applicable 维度都命中（**诊断**口径：含 gold 为运行时
+ *     fixture 声明、NL 从未要求的键）；
  *   - `exactIntentCore`：片段版硬诚实四维（见 CORE_DIMS）；
- *   - `exactIntentScoped`：只 AND `mask.pinnedDims`；无 mask 时退化为 core。
+ *   - `exactIntentScoped`：只 AND `mask.pinnedDims`；无 mask 时退化为 core；
+ *   - `exactIntentStated`：只 AND `mask.statedDims`（语料自证的「NL/宿主确实说了」）。
+ *     这是公平口径 —— gold 驱动保证「说了的」都有维度，stated 保证「没说的」不罚。
  */
 export function scoreFragment(scene, gold, pred, mask) {
   if (!['table', 'form', 'dialog'].includes(scene)) {
@@ -357,7 +422,12 @@ export function scoreFragment(scene, gold, pred, mask) {
     ? pinned.every((t) => scoreDimension(scene, gold, pred, t))
     : exactIntentCore
 
-  return { byDim, exactIntentCore, exactIntentFull, exactIntentScoped }
+  const stated = mask && Array.isArray(mask.statedDims) ? mask.statedDims : []
+  const exactIntentStated = stated.length
+    ? stated.every((t) => scoreDimension(scene, gold, pred, t))
+    : exactIntentCore
+
+  return { byDim, exactIntentCore, exactIntentFull, exactIntentScoped, exactIntentStated }
 }
 
 /**

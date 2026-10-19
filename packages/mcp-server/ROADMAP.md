@@ -411,6 +411,16 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **刻意偏离**：**不**把片段并入 `definition95` 分母/门禁——95% 是用户对 CRUD 组合页语料拍的板，混入片段会让两套能力的回归信号都变钝。片段 `notMeasured` 行显式排除并报出（中继故障 ≠ 模型答错），`model-failure` 行留在分母按 0 计。
 - **仍未做**：片段进 `definition95` 分母（按上述理由延后，需用户重新拍板）。**不提交、不推送**（仓铁律）。
 
+### AI-46 — 片段度量有效性 + 三端尺寸契约对齐（**2026-10-19 已落地**）· `M`
+- **Why**：AI-45 的首跑把 `full=0%` 当成能力缺口，复核后发现主因是**语料构造方式**：片段 gold 同时充当运行时 fixture，声明了大量 NL 从未要求的键（`tabHeight/rowHeight/rowClassName/cachePageSelection/formatter…`）；`propSet` 全量 pin 却**没有像 188 条 CRUD 那样喂 `fixedFields`**（中文 label→camelCase prop 变成命名彩票）；NL 只说「带接口地址」而 gold 比 `/api/users` 具体值；prompt 明说「未点名就省略 `composableName`」而 gold 写死 `useUserDialog`——规则与语料自相矛盾。同时复核出三处**声明与运行时漂移**：vue2 `es-form` 只读旧拼写 `fromLayProps`（生成器发 `formLayProps` → labelWidth/minFoldRows 静默丢弃）；vue2 数字 `labelWidth` 不补 `px`（Element UI 的 `label-width` 是 String）；三端表格 `height/tabHeight` 只认 number（core 类型与 MCP zod 都声明 `number | string`）。
+- **改动**：
+  - **测量公平性**：18 条片段用例补 `fixedFields`（与 CRUD 同规矩，host 给定 prop、模型推断语义）与 `nlStatedDims`（NL/宿主确实说了的维度）；`buildFragmentInitialMessages(nl, target, fixedFields)` 复用 CRUD 的 `buildFieldsLine`，system prompt 增「照抄给定 props」规则；`scoreFragment` 新增 `exactIntentStated`（只 AND stated），`full` 降为**诊断**口径；`eval-llm` 的循环日志、`--fragments` 探针、产物 `fragments` 块与 `byScene` 同步输出 `stated`。
+  - **等价实现归一**（每一条都有运行时证据）：dialog `rowkey` 省略 ≡ `'id'`（生成器缺省）；`tableVirtualMode` 成为**语义维**（`virtual:true ≡ engine:'virtual'`，不再逐键数两遍）；`labelWidth` / `height` / `tabHeight` / `options.width` 的 `number ≡ 'Npx'`；`fieldAttrs` 改为比对 gold 声明的**全部**键（NL 明写「最多 200 字」，此前 `maxlength` 漏写不罚）。
+  - **库修复（三端同规）**：core 新增 `toCssSize`（number / 纯数字串 → `Npx`，其余字符串透传）；vue3/vue2/antdv 的 `tabHeight` computed 统一走它；vue2 `es-form` 改用 core `resolveFormLayProps`（`formLayProps` 优先、`fromLayProps` fallback）并把数字 `labelWidth` 归一为 px。
+  - **语料 NL**：明示具体 `apiUrl`、枚举 `dataOptions`、点名 `composableName`/`defaultTitle`（dialog 两例新增 `defaultTitle: '用户编辑'`，补上此前从未触发的维度）。
+- **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → 18 例 / 50 维全绿（含 `nlStatedDims` 合法性、`pinnedDims ⊆ nlStatedDims`、`fixedFields ≡ gold prop 集`、等价实现判等与错值仍红）；`node scripts/eval/fragment-prompt.test.mjs` 绿；core `compat.spec.ts` 42 例、vue2 `es-form/es-table` 48 例、vue3 `es-table` 35 例、antdv `es-table` 44 例全绿；`npm run fragment:smoke` 90 产物可解析；`check:scene-coverage` 四场景无空格；vue2 运行时见证 `vue2-fragments.spec.ts` **6/6 绿**（真实 Element UI 下 form-02 labelWidth=110px 直接证明 `formLayProps` 修复）。
+- **刻意偏离**：`stated` 是**公平观测口径**，不是门禁；片段仍不进 `definition95` 分母（需用户重新拍板）。`full` 保留为诊断，避免把「运行时 fixture 键」误读成能力缺口。**不提交、不推送**（仓铁律）。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）

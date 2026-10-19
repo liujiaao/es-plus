@@ -87,6 +87,16 @@ export function buildGivenLine(given) {
 }
 
 /**
+ * 渲染「给定字段」行。B2：把契约已定的 prop 名**给定**，只考核真正该推断的部分
+ * （formtype / membership / layout），而不是让模型从中文 label 猜 camelCase。
+ * 与 `buildGivenLine` 同一条论证：给了仍要照抄，scorers 照旧比对 —— 不是放水。
+ */
+export function buildFieldsLine(fixedFields) {
+  if (!Array.isArray(fixedFields) || !fixedFields.length) return ''
+  return `Fields (given — use EXACTLY these props; infer each field's formtype / membership / actions / layout): ${fixedFields.join(', ')}`
+}
+
+/**
  * 构造初始对话。B2：标了 fixedFields 时把它们喂给模型（从「猜字段」变「给定字段」）。
  * F9：given = 宿主给定的顶层输入（target/mode），同样明示。
  */
@@ -94,10 +104,7 @@ export function buildInitialMessages(nl, fixedFields, given) {
   const blocks = [nl]
   const givenLine = buildGivenLine(given)
   if (givenLine) blocks.push(givenLine)
-  if (Array.isArray(fixedFields) && fixedFields.length) {
-    blocks.push(
-      `Fields (given — use EXACTLY these props; infer each field's formtype / membership / actions / layout): ${fixedFields.join(', ')}`
-    )
-  }
+  const fieldsLine = buildFieldsLine(fixedFields)
+  if (fieldsLine) blocks.push(fieldsLine)
   return [{ role: 'user', content: blocks.join('\n\n') }]
 }

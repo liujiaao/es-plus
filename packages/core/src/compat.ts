@@ -38,6 +38,26 @@ export function resolveFormLayProps(
 }
 
 // ============================================================================
+// 尺寸归一化
+// ============================================================================
+
+/**
+ * 把尺寸配置归一成 CSS 长度。
+ *
+ * 三端的表格 `height` / `tabHeight`、表单 `labelWidth`、弹窗 `width` 在类型与 Zod 里
+ * 都声明为 `number | string`；但 CSS 只接受带单位的字符串。数字与「纯数字字符串」
+ * 语义等价（`420` ≡ `'420'` ≡ `'420px'`），其余字符串（`'100%'` / `'70vh'` / `'auto'`）
+ * 原样透传。运行时统一走这里，避免「声明支持 string、实现只认 number」的静默丢弃。
+ */
+export function toCssSize(value: number | string | undefined | null): string | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? `${value}px` : undefined
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return /^-?\d+(?:\.\d+)?$/.test(trimmed) ? `${trimmed}px` : trimmed
+}
+
+// ============================================================================
 // 按钮位置兼容
 // ============================================================================
 

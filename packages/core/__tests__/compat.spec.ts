@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeFormType,
   resolveFormLayProps,
+  toCssSize,
   getButtonPosition,
   isButtonLeft,
   isButtonRight,
@@ -69,6 +70,41 @@ describe('compat > resolveFormLayProps', () => {
       formLayProps: { minFoldRows: 3 },
     })
     expect(result.minFoldRows).toBe(3)
+  })
+})
+
+// ============================================================================
+// 尺寸归一化
+// ============================================================================
+
+describe('compat > toCssSize', () => {
+  it('number 补 px（含 0 与负数）', () => {
+    expect(toCssSize(420)).toBe('420px')
+    expect(toCssSize(0)).toBe('0px')
+    expect(toCssSize(-1)).toBe('-1px')
+    expect(toCssSize(12.5)).toBe('12.5px')
+  })
+
+  it('纯数字字符串与数字等价', () => {
+    expect(toCssSize('420')).toBe('420px')
+    expect(toCssSize(' 420 ')).toBe('420px')
+    expect(toCssSize('12.5')).toBe('12.5px')
+  })
+
+  it('带单位 / 关键字字符串原样透传', () => {
+    expect(toCssSize('420px')).toBe('420px')
+    expect(toCssSize('100%')).toBe('100%')
+    expect(toCssSize('70vh')).toBe('70vh')
+    expect(toCssSize('auto')).toBe('auto')
+  })
+
+  it('空值 / 非有限数 / 非数字串 → undefined', () => {
+    expect(toCssSize(undefined)).toBeUndefined()
+    expect(toCssSize(null)).toBeUndefined()
+    expect(toCssSize('')).toBeUndefined()
+    expect(toCssSize('   ')).toBeUndefined()
+    expect(toCssSize(Number.NaN)).toBeUndefined()
+    expect(toCssSize(Number.POSITIVE_INFINITY)).toBeUndefined()
   })
 })
 

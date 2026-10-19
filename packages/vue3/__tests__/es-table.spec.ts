@@ -673,3 +673,26 @@ describe('EsTable - 列级 permissionValue 门控', () => {
     expect(wrapper.findAllComponents(ColumnItem)).toHaveLength(2)
   })
 })
+
+// ── 尺寸契约：number | string 都必须是真能力（三端同规）──────────────────────
+// core `TableOptions.height/tabHeight` 与 MCP zod 都声明 `number | string`，
+// 但旧实现只认 number，字符串被静默忽略并回落 `100%` —— 声明与运行时漂移。
+describe('EsTable(vue3) — 尺寸契约 number | string', () => {
+  const heightOf = (w: any) => (w.find('.table_component').element as HTMLElement).style.height
+
+  it('height：数字 / 纯数字字符串 / px 字符串等价', () => {
+    expect(heightOf(mountTable({ options: { heightType: 'height', height: 420 } as any }))).toBe('420px')
+    expect(heightOf(mountTable({ options: { heightType: 'height', height: '420' } as any }))).toBe('420px')
+    expect(heightOf(mountTable({ options: { heightType: 'height', height: '420px' } as any }))).toBe('420px')
+  })
+
+  it('tabHeight：字符串被采纳（旧实现静默忽略）且优先于 height', () => {
+    expect(
+      heightOf(mountTable({ options: { heightType: 'height', height: 420, tabHeight: '40px' } as any }))
+    ).toBe('40px')
+  })
+
+  it('百分比等带单位字符串原样透传', () => {
+    expect(heightOf(mountTable({ options: { heightType: 'height', height: '70vh' } as any }))).toBe('70vh')
+  })
+})

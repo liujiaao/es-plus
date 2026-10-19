@@ -385,10 +385,15 @@ async function main() {
   for (const { file, scene, raw } of fragmentCases) {
     process.stdout.write(`[eval:llm] ${file} [frag:${scene}] … `)
     const gold = fragmentInput({ raw })
-    const mask = { pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [] }
+    const mask = {
+      pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [],
+      // 「NL/宿主确实说了」的维度。与 pinnedDims 分开：pinned 只收窄 scoped（门禁观测腿），
+      // stated 是公平口径（gold 为运行时 fixture 声明、NL 未要求的键不进分母）。
+      statedDims: Array.isArray(raw.nlStatedDims) ? raw.nlStatedDims : [],
+    }
     try {
       if (typeof raw.nl !== 'string' || !raw.nl.trim()) throw new Error('语料缺 nl —— 无法驱动模型')
-      const messages = buildFragmentInitialMessages(raw.nl, raw.target)
+      const messages = buildFragmentInitialMessages(raw.nl, raw.target, raw.fixedFields)
       const pred = await driveFragmentConfig(client, fragmentSystems[scene], messages, fragmentSchemas[scene])
       let compiles = true
       try {
@@ -414,6 +419,7 @@ async function main() {
       })
       console.log(
         `core=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}` +
+          ` stated=${s.exactIntentStated ? 'ok' : 'X'}` +
           ` full=${s.exactIntentFull ? 'ok' : 'diff'} compiles=${compiles ? 'yes' : 'NO'}`
       )
       if (dimMisses.length) {
@@ -485,6 +491,7 @@ async function main() {
     core: fragMean(fragMeasured, (s) => s.exactIntentCore),
     full: fragMean(fragMeasured, (s) => s.exactIntentFull),
     scoped: fragMean(fragMeasured, (s) => s.exactIntentScoped),
+    stated: fragMean(fragMeasured, (s) => s.exactIntentStated),
     compileRate: fragMeasured.length
       ? fragMeasured.filter((r) => r.compiles).length / fragMeasured.length
       : null,
@@ -502,6 +509,7 @@ async function main() {
       core: fragMean(rs, (s) => s.exactIntentCore),
       full: fragMean(rs, (s) => s.exactIntentFull),
       scoped: fragMean(rs, (s) => s.exactIntentScoped),
+      stated: fragMean(rs, (s) => s.exactIntentStated),
       compileRate: rs.filter((r) => r.compiles).length / rs.length,
     }
   }
@@ -613,7 +621,7 @@ async function main() {
       )
       console.log(
         `[probe] 片段准确率（观测）：core ${pct(fragmentSummary.core)} · scoped ${pct(fragmentSummary.scoped)}` +
-          ` · full ${pct(fragmentSummary.full)} · compiles ${pct(fragmentSummary.compileRate)}` +
+          ` · stated ${pct(fragmentSummary.stated)} · full ${pct(fragmentSummary.full)} · compiles ${pct(fragmentSummary.compileRate)}` +
           `（分母 measured=${fragmentSummary.measured}）`
       )
       for (const r of probeFragErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [frag:${r.scene}] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
@@ -962,7 +970,9 @@ async function main() {
     notScored: skippedScenes.map((x) => ({ file: x.file, scene: x.scene })),
     // 片段场景（table / form / dialog）的准确率 —— **只观测，不进 gate / 徽章 / exit code**。
     // 口径：core = 四维硬诚实；scoped = 只 AND `pinnedDims`（NL 真正锁定的维度）；
-    // full = gold 声明的全部维度。`notMeasured` 行排除在分母外（中继故障 ≠ 模型答错），
+    // stated = 只 AND `nlStatedDims`（语料自证「NL/宿主确实说了」的维度 —— 公平口径）；
+    // full = gold 声明的全部维度（**诊断**：含运行时 fixture 键，不作为能力结论）。
+    // `notMeasured` 行排除在分母外（中继故障 ≠ 模型答错），
     // 而 `errorKind === 'model-failure'` 的行**在**分母里、按 0 计。byDim 让回归能定位到
     // 「formtype 掉了」还是「容器级词汇掉了」。
     fragments: {
@@ -971,6 +981,7 @@ async function main() {
       notMeasured: fragmentSummary.notMeasured,
       core: fragmentSummary.core === null ? null : Number(fragmentSummary.core.toFixed(4)),
       scoped: fragmentSummary.scoped === null ? null : Number(fragmentSummary.scoped.toFixed(4)),
+      stated: fragmentSummary.stated === null ? null : Number(fragmentSummary.stated.toFixed(4)),
       full: fragmentSummary.full === null ? null : Number(fragmentSummary.full.toFixed(4)),
       compileRate: fragmentSummary.compileRate === null ? null : Number(fragmentSummary.compileRate.toFixed(4)),
       byScene: Object.fromEntries(
@@ -982,6 +993,7 @@ async function main() {
                 cases: s.cases,
                 core: Number(s.core.toFixed(4)),
                 scoped: Number(s.scoped.toFixed(4)),
+                stated: Number(s.stated.toFixed(4)),
                 full: Number(s.full.toFixed(4)),
                 compileRate: Number(s.compileRate.toFixed(4)),
               },

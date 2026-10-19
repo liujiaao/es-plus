@@ -3,15 +3,20 @@
  * 片段记分卡自测（meta-eval，无需 API key，进 CI 的 `check:fragment-scorers`）。
  *
  * 记分卡自己也会错。这里钉五件事：
- *   1) **语料标注合法**：18 条片段用例都必须带 `pinnedDims`，且每个 token 都是该
- *      `(scene, gold)` 下真实启用、gold 真声明了的维度。标错/标到不存在的键 → 红。
+ *   1) **语料标注合法**：18 条片段用例都必须带 `pinnedDims`、`nlStatedDims`、`fixedFields`，
+ *      且每个 token 都是该 `(scene, gold)` 下真实启用、gold 真声明了的维度。标错/标到不存在的键 → 红。
+ *      `pinnedDims ⊆ nlStatedDims`（scoped 不得惩罚 NL 未声明的意图）；`fixedFields` 必须与
+ *      gold 的 prop 集完全一致（与 188 条 CRUD 同规矩：prop 由宿主给定，语义由模型推断）。
  *   2) **gold-vs-gold 满分**：同一份 config 对自己打分，所有 applicable 维度必须全过，
- *      `exactIntentFull` / `exactIntentScoped` 均为真（否则记分卡有假阴性）。
+ *      `exactIntentFull` / `exactIntentScoped` / `exactIntentStated` 均为真（否则记分卡有假阴性）。
  *   3) **每个启用的维度都咬得住**：对每个维度做一处外科手术式改动，断言该维度翻红、
  *      `exactIntentFull` 翻红。没有扰动的维度 = 睡着的维度。
- *   4) **pinnedDims 真的在收窄**：每个 pinned token 被扰动后 `exactIntentScoped` 必须翻红；
- *      每个**未钉**的整维度被扰动后 scoped 必须**仍然为真**（钉太宽 = 欠定惩罚回来了）。
- *   5) **覆盖体检**：报告哪些维度从未被片段语料触发（补语料的信号，不致命）。
+ *   4) **pinnedDims / nlStatedDims 真的在收窄**：pinned token 被扰动后 scoped 必须翻红，
+ *      未钉的整维度被扰动后 scoped 仍为真；stated token 被扰动后 stated 必须翻红，
+ *      未声明的整维度被扰动后 stated 仍为真。
+ *   5) **等价实现归一化**：运行时已核实的等价写法（rowkey 缺省、labelWidth 数字/px、
+ *      height/tabHeight 字符串、virtual/engine、width 数字/px）必须判等；错值仍要红。
+ *   6) **覆盖体检**：报告哪些维度从未被片段语料触发（补语料的信号，不致命）。
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -48,6 +53,8 @@ for (const file of readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sor
     scene: sceneOf(raw),
     gold: { ...raw.config, target: raw.target },
     pins: raw.pinnedDims,
+    stated: raw.nlStatedDims,
+    fixedFields: raw.fixedFields,
     nl: raw.nl,
     target: raw.target,
   })
@@ -173,6 +180,14 @@ function perturbWhole(scene, dim, gold, pred) {
     delete cfg.options.closeOnClickModal
     return true
   }
+  if (dim === 'tableVirtualMode') {
+    if (!cfg.tableOptions) cfg.tableOptions = {}
+    const on = cfg.tableOptions.virtual === true || cfg.tableOptions.engine === 'virtual'
+    cfg.tableOptions.virtual = !on
+    if (on) delete cfg.tableOptions.engine
+    else cfg.tableOptions.engine = 'virtual'
+    return true
+  }
   const dot = dim.indexOf('.')
   if (dot !== -1) {
     const scope = dim.slice(0, dot)
@@ -256,17 +271,48 @@ for (const c of cases) {
       `${c.file}: pinnedDims token "${token}" 在该 (scene, gold) 下不合法/未启用`
     )
   }
+  // ── 公平口径的语料自证（AI-46）──
+  // `nlStatedDims` = NL/宿主**确实说了**的维度。每个 token 必须合法，
+  // 且 pinnedDims 必须是它的子集 —— 否则 scoped 会惩罚「从未要求」的东西。
+  check(Array.isArray(c.stated) && c.stated.length > 0, `${c.file}: 缺 nlStatedDims（公平口径无从计算）`)
+  if (Array.isArray(c.stated)) {
+    for (const token of c.stated) {
+      check(
+        isValidFragmentPinnedDim(c.scene, c.gold, token),
+        `${c.file}: nlStatedDims token "${token}" 在该 (scene, gold) 下不合法/未启用`
+      )
+    }
+    if (Array.isArray(c.pins)) {
+      for (const token of c.pins) {
+        check(
+          c.stated.includes(token),
+          `${c.file}: pinnedDims token "${token}" 不在 nlStatedDims 里 —— scoped 会惩罚 NL 未声明的意图`
+        )
+      }
+    }
+  }
+  // 固定字段必须与 gold 的 prop 集**完全一致**：少了 = 让模型猜，多了 = 给了不存在的字段。
+  check(Array.isArray(c.fixedFields) && c.fixedFields.length > 0, `${c.file}: 缺 fixedFields`)
+  if (Array.isArray(c.fixedFields)) {
+    const goldProps = (c.gold.fields ?? []).map((f) => f.prop).sort()
+    check(
+      JSON.stringify([...c.fixedFields].sort()) === JSON.stringify(goldProps),
+      `${c.file}: fixedFields (${c.fixedFields.join(',')}) 与 gold prop 集 (${goldProps.join(',')}) 不一致`
+    )
+    check(new Set(c.fixedFields).size === c.fixedFields.length, `${c.file}: fixedFields 有重复 prop`)
+  }
 }
 
 // ── 2) gold-vs-gold ──────────────────────────────────────────────────────────
 console.log('meta-eval: fragment gold-vs-gold')
 for (const c of cases) {
-  const s = scoreFragment(c.scene, c.gold, clone(c.gold), { pinnedDims: c.pins })
+  const s = scoreFragment(c.scene, c.gold, clone(c.gold), { pinnedDims: c.pins, statedDims: c.stated })
   for (const [dim, v] of Object.entries(s.byDim)) {
     if (v.applicable) check(v.pass === true, `${c.file}: gold-vs-gold 维度 ${dim} 应 pass 却为 ${v.pass}`)
   }
   check(s.exactIntentFull === true, `${c.file}: gold-vs-gold exactIntentFull 应为 true`)
   check(s.exactIntentScoped === true, `${c.file}: gold-vs-gold exactIntentScoped 应为 true`)
+  check(s.exactIntentStated === true, `${c.file}: gold-vs-gold exactIntentStated 应为 true`)
   check(s.exactIntentCore === true, `${c.file}: gold-vs-gold exactIntentCore 应为 true`)
 }
 
@@ -274,10 +320,12 @@ for (const c of cases) {
 console.log('meta-eval: fragment perturbations bite / pinnedDims really scope')
 const exercised = new Set()
 for (const c of cases) {
-  const specs = scoreFragment(c.scene, c.gold, clone(c.gold), { pinnedDims: c.pins }).byDim
+  const specs = scoreFragment(c.scene, c.gold, clone(c.gold), { pinnedDims: c.pins, statedDims: c.stated }).byDim
   const pinnedWhole = new Set(c.pins.filter((t) => !t.includes(':')))
   // 字段级 pin 也算「该维度已被锁定」——扰动首字段会撞上它，不能用来证明「未钉不罚」。
   const hasFieldPin = (dim) => c.pins.some((t) => t.startsWith(`${dim}:`))
+  const statedWhole = new Set(c.stated.filter((t) => !t.includes(':')))
+  const hasStatedField = (dim) => c.stated.some((t) => t.startsWith(`${dim}:`))
   // 语义重叠：`options.modal` 的两种正确落地都被 `dialogMaskNonClosing` 覆盖，扰动 modal 必然撞上它。
   const overlappedByPin = (dim) =>
     (dim === 'options.modal' || dim === 'options.closeOnClickModal') && c.pins.includes('dialogMaskNonClosing')
@@ -288,13 +336,22 @@ for (const c of cases) {
     const ok = perturbWhole(c.scene, dim, c.gold, pred)
     check(ok, `${c.file}: 维度 ${dim} 没有扰动器（睡着的维度）`)
     if (!ok) continue
-    const s = scoreFragment(c.scene, c.gold, pred, { pinnedDims: c.pins })
+    const s = scoreFragment(c.scene, c.gold, pred, { pinnedDims: c.pins, statedDims: c.stated })
     check(s.byDim[dim].pass === false, `${c.file}: 扰动 ${dim} 后该维度仍判 pass（咬不住）`)
     check(s.exactIntentFull === false, `${c.file}: 扰动 ${dim} 后 exactIntentFull 仍为 true`)
     if (!pinnedWhole.has(dim) && !hasFieldPin(dim) && !overlappedByPin(dim)) {
       check(
         s.exactIntentScoped === true,
         `${c.file}: 未钉的维度 ${dim} 被扰动后 scoped 仍应 true（否则 pins 钉得太宽/漏了作用域）`
+      )
+    }
+    // ── stated 口径的收窄证明（AI-46）──
+    if (statedWhole.has(dim)) {
+      check(s.exactIntentStated === false, `${c.file}: 声明的维度 ${dim} 被扰动后 stated 仍应为 false`)
+    } else if (!hasStatedField(dim)) {
+      check(
+        s.exactIntentStated === true,
+        `${c.file}: 未声明的维度 ${dim} 被扰动后 stated 仍应 true（否则 NL 没说的也在罚）`
       )
     }
   }
@@ -317,13 +374,23 @@ for (const c of cases) {
       `${c.file}: 扰动字段级 pin ${token} 后 scoped 仍为 true`
     )
   }
+  // 每个 stated token 必须真的咬住 stated（否则声明了却不计分 = 度量漏项）
+  for (const token of c.stated) {
+    const pred = clone(c.gold)
+    if (!perturbToken(c.scene, token, c.gold, pred)) continue
+    check(
+      scoreFragment(c.scene, c.gold, pred, { pinnedDims: c.pins, statedDims: c.stated })
+        .exactIntentStated === false,
+      `${c.file}: 扰动声明维度 ${token} 后 stated 仍为 true`
+    )
+  }
 }
 
 // 未被任何用例触发的维度 = heldout rate 恒 n/a（补语料信号，不致命）
 const ALL_KNOWN = new Set([
   'propSet', 'formtype', 'fieldRequired', 'dataOptions', 'fieldAttrs', 'fieldLayout', 'extPoints', 'target',
   'apiUrl', 'rowButtons', 'rowButtonNames', 'pagination.pageSize', 'pagination.pageSizes',
-  'context', 'buttons', 'formLayout.labelWidth', 'formLayout.minFoldRows',
+  'context', 'buttons', 'formLayout.labelWidth', 'formLayout.minFoldRows', 'tableVirtualMode',
   'rowkey', 'mode', 'composableName', 'defaultTitle', 'dialogMaskNonClosing',
 ])
 const never = [...ALL_KNOWN].filter((d) => !exercised.has(d))
@@ -399,6 +466,80 @@ console.log('meta-eval: formtype alias normalization')
   const s = scoreFragment('form', gold, pred, { pinnedDims: ['formtype:d'] })
   check(s.exactIntentScoped === true, 'formtype 别名（datePicker）应判等 —— 否则模型做对了却被罚')
   check(s.exactIntentFull === true, 'formtype 别名应在 full 口径也判等')
+}
+
+// ── 等价实现归一化（AI-46）────────────────────────────────────────────────────
+// 每条都对应一处**运行时已核实**的等价实现：按字面比较 = 做对了却被罚。
+console.log('meta-eval: equivalent implementations are accepted')
+{
+  const maskOf = (c) => ({ pinnedDims: c.pins, statedDims: c.stated })
+  const find = (prefix) => cases.find((x) => x.file.startsWith(prefix))
+
+  // dialog rowkey：生成器 `input.rowkey || 'id'` ⟹ 省略 ≡ 显式 'id'；错值仍要红。
+  {
+    const c = find('frag-dialog-01-vue3')
+    const omit = clone(c.gold); delete omit.rowkey
+    check(scoreFragment('dialog', c.gold, omit, maskOf(c)).byDim.rowkey.pass === true,
+      'rowkey 省略应等价于 "id"（生成器缺省）')
+    const wrong = clone(c.gold); wrong.rowkey = 'uuid'
+    check(scoreFragment('dialog', c.gold, wrong, maskOf(c)).byDim.rowkey.pass === false,
+      'rowkey 错值仍应判红')
+  }
+
+  // labelWidth：vue2 本次补齐 number→px 归一，三端等价。
+  {
+    const c = find('frag-form-02-vue3')
+    const num = clone(c.gold); num.formLayout.labelWidth = 110
+    const s = scoreFragment('form', c.gold, num, maskOf(c))
+    check(s.byDim['formLayout.labelWidth'].pass === true, 'labelWidth 数字 110 应等价于 "110px"')
+    check(s.exactIntentStated === true, 'labelWidth 数字写法不应打红 stated')
+    const wrong = clone(c.gold); wrong.formLayout.labelWidth = '120px'
+    check(scoreFragment('form', c.gold, wrong, maskOf(c)).byDim['formLayout.labelWidth'].pass === false,
+      'labelWidth 错值仍应判红')
+  }
+
+  // 表格 height / tabHeight：三端经 core toCssSize 归一。
+  {
+    const c = find('frag-table-02-vue3')
+    const str = clone(c.gold)
+    str.tableOptions.height = '420px'
+    str.tableOptions.tabHeight = '40px'
+    const s = scoreFragment('table', c.gold, str, maskOf(c))
+    check(s.byDim['tableOptions.height'].pass === true, 'height "420px" 应等价于 420')
+    check(s.byDim['tableOptions.tabHeight'].pass === true, 'tabHeight "40px" 应等价于 40')
+    check(s.exactIntentStated === true, '尺寸字符串写法不应打红 stated')
+  }
+
+  // 虚拟滚动是语义维：virtual:true ≡ engine:'virtual'，两个都不给才红。
+  {
+    const c = find('frag-table-02-vue3')
+    const viaEngine = clone(c.gold)
+    delete viaEngine.tableOptions.virtual // engine:'virtual' 仍在
+    check(scoreFragment('table', c.gold, viaEngine, maskOf(c)).byDim.tableVirtualMode.pass === true,
+      "engine:'virtual' 应等价于 virtual:true")
+    const none = clone(c.gold)
+    delete none.tableOptions.virtual
+    delete none.tableOptions.engine
+    check(scoreFragment('table', c.gold, none, maskOf(c)).byDim.tableVirtualMode.pass === false,
+      '两个键都不给应判红')
+  }
+
+  // 弹窗 width：三端 es-dialog 都把 number 转 px。
+  {
+    const c = find('frag-dialog-02-component-vue3')
+    const str = clone(c.gold); str.options.width = '720px'
+    check(scoreFragment('dialog', c.gold, str, maskOf(c)).byDim['options.width'].pass === true,
+      'width "720px" 应等价于 720')
+  }
+
+  // fieldAttrs 现在比 gold 声明的全部键（NL 明写「最多 200 字」）—— 漏写 maxlength 要红。
+  {
+    const c = find('frag-form-01-vue3')
+    const miss = clone(c.gold)
+    delete miss.fields.find((f) => f.prop === 'bio').attrs.maxlength
+    check(scoreFragment('form', c.gold, miss, maskOf(c)).byDim.fieldAttrs.pass === false,
+      'fieldAttrs 漏掉 gold 声明的 maxlength 应判红')
+  }
 }
 
 // ── 收尾 ─────────────────────────────────────────────────────────────────────

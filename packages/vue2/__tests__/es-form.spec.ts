@@ -535,3 +535,43 @@ describe('EsForm(vue2) - AI-07 字段联动 reactions', () => {
     }
   })
 })
+
+// ── layoutFormProps 解析（三端同源）────────────────────────────────────────────
+// 生成器 / 文档 / vue3 / antdv 都发 `formLayProps`（正确拼写）；core 的
+// `resolveFormLayProps` 以它为优先、旧拼写 `fromLayProps` 为 fallback。
+// 本包此前只读旧拼写 → 按推荐写法传来的 labelWidth/minFoldRows 被**静默丢弃**。
+describe('EsForm — layoutFormProps 解析与尺寸归一', () => {
+  const flush = async (vm: any) => { await vm.$nextTick(); await vm.$nextTick() }
+
+  it('formLayProps（推荐拼写）生效', async () => {
+    const vm = mountForm({ layoutFormProps: { formLayProps: { labelWidth: '110px', minFoldRows: 2 } } })
+    await flush(vm)
+    expect(findByName(vm, 'ElForm').$props.labelWidth).toBe('110px')
+  })
+
+  it('fromLayProps（旧拼写）仍作 fallback —— 不破坏既有宿主', async () => {
+    const vm = mountForm({ layoutFormProps: { fromLayProps: { labelWidth: '90px' } } })
+    await flush(vm)
+    expect(findByName(vm, 'ElForm').$props.labelWidth).toBe('90px')
+  })
+
+  it('formLayProps 优先于 fromLayProps（两者同时存在）', async () => {
+    const vm = mountForm({
+      layoutFormProps: { formLayProps: { labelWidth: '110px' }, fromLayProps: { labelWidth: '90px' } },
+    })
+    await flush(vm)
+    expect(findByName(vm, 'ElForm').$props.labelWidth).toBe('110px')
+  })
+
+  it('数字 labelWidth 归一为 px（Element UI 的 label-width 是 String，不会自动补单位）', async () => {
+    const vm = mountForm({ layoutFormProps: { formLayProps: { labelWidth: 110 } } })
+    await flush(vm)
+    expect(findByName(vm, 'ElForm').$props.labelWidth).toBe('110px')
+  })
+
+  it('未给 labelWidth 时仍兜底 auto', async () => {
+    const vm = mountForm()
+    await flush(vm)
+    expect(findByName(vm, 'ElForm').$props.labelWidth).toBe('auto')
+  })
+})

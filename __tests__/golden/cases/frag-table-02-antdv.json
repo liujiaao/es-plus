@@ -5,7 +5,7 @@
     "tableOptions.multiSelect",
     "tableOptions.heightType",
     "tableOptions.height",
-    "tableOptions.virtual",
+    "tableVirtualMode",
     "tableOptions.size",
     "tableOptions.showHeader",
     "tableOptions.emptyText",
@@ -81,10 +81,41 @@
     },
     "pagination": {
       "pageSize": 20,
-      "pageSizes": [10, 20, 50]
+      "pageSizes": [
+        10,
+        20,
+        50
+      ]
     },
     "typescript": true
   },
-  "nl": "做一个独立订单表格：多选、固定高度 420 虚拟滚动、小尺寸、不显示表头、空数据文案、开启序号列与左侧统计文字，默认按订单号降序，分页每页 20 条可选 10/20/50。",
-  "notes": "独立 es-table 的容器级词汇（Wave 4）：tableOptions 覆盖 TABLE_BLOCK_OPTION_ORDER 的 21 个条件发射键 + 分页播种（pageSize/pageSizes）。关闭表头、开着序号与左侧文字是刻意反默认的取值。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。"
+  "nl": "做一个独立订单表格，数据接口 /api/orders：显示订单号（宽 160）、状态（待发货/已发货）、金额，支持多选、固定高度 420、虚拟滚动、小尺寸、不显示表头、空数据文案、开启序号列与左侧统计文字，默认按订单号降序，分页每页 20 条可选 10/20/50。",
+  "notes": "独立 es-table 的容器级词汇（Wave 4）：tableOptions 覆盖 TABLE_BLOCK_OPTION_ORDER 的 21 个条件发射键 + 分页播种（pageSize/pageSizes）。关闭表头、开着序号与左侧文字是刻意反默认的取值。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-46：补 fixedFields / nlStatedDims（度量有效性），NL 明示接口地址、选项与命名。",
+  "fixedFields": [
+    "orderNo",
+    "status",
+    "amount"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:orderNo",
+    "formtype:status",
+    "formtype:amount",
+    "dataOptions:status",
+    "fieldLayout:orderNo",
+    "apiUrl",
+    "tableOptions.multiSelect",
+    "tableOptions.heightType",
+    "tableOptions.height",
+    "tableVirtualMode",
+    "tableOptions.size",
+    "tableOptions.showHeader",
+    "tableOptions.emptyText",
+    "tableOptions.snIndex",
+    "tableOptions.leftText",
+    "tableOptions.defaultSort",
+    "pagination.pageSize",
+    "pagination.pageSizes",
+    "target"
+  ]
 }

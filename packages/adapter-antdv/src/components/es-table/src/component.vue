@@ -201,6 +201,7 @@ import {
   computeBoundaryRollback,
   buildColumnSpans,
   resolveMergeConfig,
+  toCssSize,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -478,10 +479,11 @@ const headerBarClassList = computed(() => {
 })
 
 const tabHeight = computed(() => {
-  if (typeof props.options.tabHeight === 'number') return `${props.options.tabHeight}px`
-  if (heightType.value === 'height' && typeof props.options.height === 'number') {
-    return `${props.options.height}px`
-  }
+  // `height` / `tabHeight` 的契约是 `number | string`（core types 与 MCP zod 同口径）。
+  // 旧实现只认 number，字符串（`'420'` / `'420px'`）被静默忽略并回落 `100%` —— 声明与运行时漂移。
+  const own = toCssSize(props.options.tabHeight)
+  if (own !== undefined) return own
+  if (heightType.value === 'height') return toCssSize(props.options.height) ?? '100%'
   return '100%'
 })
 

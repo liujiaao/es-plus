@@ -688,3 +688,32 @@ describe('EsTable(ADV) - 列级 permissionValue 门控', () => {
     expect(vm.adaptedColumns).toHaveLength(2)
   })
 })
+
+// ── 尺寸契约：number | string 都必须是真能力（三端同规）──────────────────────
+describe('EsTable(antdv) — 尺寸契约 number | string', () => {
+  const heightOf = (options: Record<string, unknown>) => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [],
+        columns: [{ prop: 'id', label: 'ID', width: 80 }],
+        options: options as any,
+        pagination: { total: 0 },
+      },
+    })
+    return (wrapper.find('.table_component').element as HTMLElement).style.height
+  }
+
+  it('height：数字 / 纯数字字符串 / px 字符串等价', () => {
+    expect(heightOf({ heightType: 'height', height: 420 })).toBe('420px')
+    expect(heightOf({ heightType: 'height', height: '420' })).toBe('420px')
+    expect(heightOf({ heightType: 'height', height: '420px' })).toBe('420px')
+  })
+
+  it('tabHeight：字符串被采纳（旧实现静默忽略）且优先于 height', () => {
+    expect(heightOf({ heightType: 'height', height: 420, tabHeight: '40px' })).toBe('40px')
+  })
+
+  it('百分比等带单位字符串原样透传', () => {
+    expect(heightOf({ heightType: 'height', height: '70vh' })).toBe('70vh')
+  })
+})

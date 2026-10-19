@@ -335,3 +335,22 @@ describe('EsTable(vue2) - 列级 permissionValue 门控', () => {
     expect(tableOf(vm).filteredColumns).toHaveLength(2)
   })
 })
+
+// ── 尺寸契约：number | string 都必须是真能力（三端同规）──────────────────────
+describe('EsTable(vue2) — 尺寸契约 number | string', () => {
+  const heightOf = (props: Record<string, unknown>) => (tableOf(mountTable(props)).$el as HTMLElement).style.height
+
+  it('height：数字 / 纯数字字符串 / px 字符串等价', async () => {
+    expect(heightOf({ options: { heightType: 'height', height: 420 } })).toBe('420px')
+    expect(heightOf({ options: { heightType: 'height', height: '420' } })).toBe('420px')
+    expect(heightOf({ options: { heightType: 'height', height: '420px' } })).toBe('420px')
+  })
+
+  it('tabHeight：字符串被采纳（旧实现静默忽略）且优先于 height', () => {
+    expect(heightOf({ options: { heightType: 'height', height: 420, tabHeight: '40px' } })).toBe('40px')
+  })
+
+  it('百分比等带单位字符串原样透传', () => {
+    expect(heightOf({ options: { heightType: 'height', height: '70vh' } })).toBe('70vh')
+  })
+})

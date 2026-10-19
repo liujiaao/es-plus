@@ -156,6 +156,7 @@ export { patchHtmlRowSpans } from './vxe-print'
 export {
   normalizeFormType,
   resolveFormLayProps,
+  toCssSize,
   getCallback,
   normalizeFormItem,
   normalizeFormItemList,

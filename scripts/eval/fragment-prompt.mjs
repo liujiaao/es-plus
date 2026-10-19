@@ -30,7 +30,7 @@
  * 与生产一致（且片段数字只观测、不门禁）。
  */
 
-import { buildGivenLine } from './prompt.mjs'
+import { buildGivenLine, buildFieldsLine } from './prompt.mjs'
 
 /** 把 zod3 的包装层剥掉，同时收集 optional / default / description。 */
 function unwrap(t) {
@@ -200,6 +200,8 @@ export function buildFragmentSystemPrompt(scene, tool) {
     '   choices the user did not name. Values may be strings or numbers.',
     '5. `required`: only when the user says 必填 / required.',
     '6. Omit optional keys the user did not ask for. Do not fill in defaults.',
+    '7. If a "Fields (given …)" line lists props, emit exactly those `prop` values in `fields` —',
+    '   do not rename, drop, or invent fields. Infer everything else from the description.',
     ...SCENE_RULES[scene],
     '',
     'Output a single JSON object and nothing else.',
@@ -207,12 +209,15 @@ export function buildFragmentSystemPrompt(scene, tool) {
 }
 
 /**
- * 初始用户消息：NL + 宿主给定行（`target`）。
- * 复用 CRUD 的 `buildGivenLine`，保证两种场景的措辞与「给了就必须照抄」语义完全一致。
+ * 初始用户消息：NL + 宿主给定行（`target`）+ 给定字段行（`fixedFields`）。
+ * 复用 CRUD 的 `buildGivenLine` / `buildFieldsLine`，保证两种场景的措辞与
+ * 「给了就必须照抄」语义完全一致（片段此前**不喂** fixedFields ⟹ prop 全靠猜中文 label）。
  */
-export function buildFragmentInitialMessages(nl, target) {
+export function buildFragmentInitialMessages(nl, target, fixedFields) {
   const blocks = [String(nl)]
   const givenLine = buildGivenLine({ target })
   if (givenLine) blocks.push(givenLine)
+  const fieldsLine = buildFieldsLine(fixedFields)
+  if (fieldsLine) blocks.push(fieldsLine)
   return [{ role: 'user', content: blocks.join('\n\n') }]
 }

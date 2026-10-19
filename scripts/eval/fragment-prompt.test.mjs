@@ -8,7 +8,9 @@
  *      工具加了一个键而 prompt 没渲染出来（或渲染器漏了某类 zod 包装），此处必红；
  *   3) 工具 description 与 `.describe()` 文案原样进入 prompt（与生产 `tools/list` 同源）；
  *   4) 场景专属规则（rowButtons / context+buttons / mode）存在于对应场景；
- *   5) given 行：宿主给了 `target` 就必须明示「照抄」，没给则不得凭空出现。
+ *   5) given 行：宿主给了 `target` 就必须明示「照抄」，没给则不得凭空出现；
+ *      `fixedFields` 同理（与 188 条 CRUD 同规矩：prop 由宿主给定，语义由模型推断），
+ *      并且 system prompt 有对应的「照抄 props」规则。
  */
 
 import {
@@ -105,6 +107,24 @@ console.log('meta-eval: fragment given line')
 
   const noTarget = buildFragmentInitialMessages('一张用户表')
   check(noTarget[0].content === '一张用户表', 'given: 未给 target 时不应凭空出现 given 行')
+
+  // fixedFields：给了就必须出现在消息里且用「EXACTLY these props」措辞；
+  // 没给则不得凭空出现（保持旧 prompt 逐字节不变）。
+  const withFields = buildFragmentInitialMessages('一张用户表', 'vue3', ['name', 'status'])
+  check(withFields[0].content.includes('Fields (given — use EXACTLY these props'), 'fields: 缺 given 字段行')
+  check(withFields[0].content.includes('name, status'), 'fields: props 未列出')
+  check(withFields[0].content.includes('target=vue3'), 'fields: 与 given 行共存时不应丢 target')
+  const noFields = buildFragmentInitialMessages('一张用户表', 'vue3')
+  check(!noFields[0].content.includes('Fields (given'), 'fields: 未给 fixedFields 时不应凭空出现字段行')
+
+  // system prompt 必须教模型「照抄给定 props」，否则只有 user 行的软约束。
+  for (const [scene, toolName] of SCENES) {
+    const prompt = buildFragmentSystemPrompt(scene, tools[toolName])
+    check(
+      prompt.includes('Fields (given') && prompt.includes('exactly those `prop` values'),
+      `${scene}: system prompt 缺「照抄给定 props」规则`
+    )
+  }
 }
 
 if (failures) {
