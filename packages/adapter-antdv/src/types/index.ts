@@ -388,6 +388,8 @@ export interface DialogOptions {
   closeOnClickModal?: boolean
   closeOnPressEscape?: boolean
   beforeClose?: (done: () => void) => void
+  /** 实例缓存键：同一 cacheKey 跨多次调用复用同一弹窗实例（保留内部状态），关闭后延迟 10 分钟自动回收 */
+  cacheKey?: string
   alignCenter?: boolean
   top?: string
   modalClass?: string

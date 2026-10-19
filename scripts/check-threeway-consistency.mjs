@@ -778,6 +778,48 @@ async function main() {
       ok('轴①c height 与 virtual 解绑：`virtual: false` 时 SFC 仍发射 height')
     }
 
+    // ── 轴①d：值级等价（键在 ≠ 值对）──────────────────────────────
+    // 键级断言对这两处是瞎的：
+    //   - headerCellStyle 一度在 SFC 里**写死** `#f5f7fa`（键在、值被默认值顶掉）；
+    //   - 顶层 formLayout 一度只有 schema 模式消费（SFC 连键都不发）。
+    // 探针分别取 #ffffff 与 {labelWidth:'100px', minFoldRows:2}，故「键在、值错」与
+    // 「键在、根本没接到配置」都会当场红。
+    const sfcOptsBody = constBlock(sfcRes.code, 'options').body || ''
+    if (!sfcOptsBody.includes('#ffffff')) {
+      fail(
+        'SFC 产物的 options.headerCellStyle 未使用配置值（#ffffff）—— 可能又被写死成默认背景色（F3）。\n' +
+          '   宿主配了表头样式却播不出来 = 配置静默失效。'
+      )
+    } else {
+      ok('轴①d headerCellStyle 值级等价：SFC options 使用配置的 #ffffff')
+    }
+    const schemaFormLayout = parseSchemaJson(schemaRes.code).formLayout || {}
+    if (schemaFormLayout.labelWidth !== '100px' || schemaFormLayout.minFoldRows !== 2) {
+      fail(
+        `schema 产物顶层 formLayout 与配置不一致：期望 {labelWidth:'100px', minFoldRows:2}，` +
+          `实得 ${JSON.stringify(schemaFormLayout)}`
+      )
+    }
+    if (!sfcRes.code.includes(':layout-form-props="formLayoutProps"')) {
+      fail(
+        'SFC 模板未绑定 :layout-form-props="formLayoutProps" —— 顶层 formLayout 在 SFC 模式静默丢弃（F3）。\n' +
+          '   同一份 config 在 schema 模式生效、在 SFC 模式消失 = 两模式不等价。'
+      )
+    }
+    const formLayoutPropsBody = constBlock(sfcRes.code, 'formLayoutProps').body || ''
+    if (
+      !formLayoutPropsBody.includes('labelBtnWidth') ||
+      !formLayoutPropsBody.includes('100px') ||
+      !formLayoutPropsBody.includes('minFoldRows')
+    ) {
+      fail(
+        `SFC 的 formLayoutProps 未携带配置的 labelWidth/minFoldRows：${formLayoutPropsBody || '(未找到)'}\n` +
+          '   schema 模式的 formLayout.labelWidth 对应 SFC 的 formLayProps.labelBtnWidth（es-form 的按钮区 label 宽度）。'
+      )
+    } else {
+      ok('轴①d 顶层 formLayout 值级等价：schema 保留原键、SFC 映射为 labelBtnWidth/minFoldRows 并绑定')
+    }
+
     // ── 轴②：发射未消费 ───────────────────────────────────────────
     // core 契约类型是「三端消费面」的上界；dialog 域另加三端 `CrudDialogConfig` 的**交集**
     //（它在三端 types.ts 里，不在 core，故由 readDialogContract 提供）。

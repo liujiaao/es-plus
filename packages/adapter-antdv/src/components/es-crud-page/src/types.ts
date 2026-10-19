@@ -140,9 +140,8 @@ export interface CrudDialogConfig {
   /**
    * 实例缓存键。
    *
-   * **已登记偏差**：ant-design-vue 适配器的 `use-dialog` 未实现实例缓存，
-   * 故本键在 antdv 端**接受但空转**（vue3/vue2 端真生效）。登记见
-   * `scripts/check-type-exports.mjs` 的「有意偏差」范式。
+   * antdv 的 `use-dialog` 已实现与 vue3/vue2 同构的实例缓存（同一 cacheKey 跨多次
+   * 调用复用实例，关闭后 TTL 10 分钟回收）—— 本键在三端均真生效。
    */
   cacheKey?: string
   /** 弹窗打开时回调 */

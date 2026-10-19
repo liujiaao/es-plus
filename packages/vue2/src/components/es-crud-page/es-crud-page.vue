@@ -2,16 +2,16 @@
   <div class="es-crud-page">
     <!--
       Vue 3 → Vue 2 关键差异：
-        - v-model:data-source → :data-source.sync
-        - v-model:pagination → :pagination.sync
-      Vue 2.3+ 支持 .sync 修饰符自动展开为 :data-source + @update:data-source
+        - v-model:data-source → :data-source（**单向**：vue2 es-table 从不 emit
+          update:dataSource，`.sync` 会承诺一个永不触发的方向）
+        - v-model:pagination → :pagination.sync（该事件真的会 emit）
     -->
     <es-error-boundary @error="onCrudError">
       <es-table
         ref="tableRef"
         :columns="mergedColumns"
         :options="mergedOptions"
-        :data-source.sync="tableData"
+        :data-source="tableData"
         :pagination.sync="paginationState"
         v-bind="$attrs"
       >
@@ -37,7 +37,7 @@
  *
  * 与 Vue 3 版本的关键差异：
  *   1. <script setup> + defineProps/defineEmits/defineExpose → defineComponent + setup()
- *   2. v-model:* → .sync 修饰符
+ *   2. v-model:* → .sync 修饰符（例外：data-source 只能单向 —— 组件从不 emit update:dataSource）
  *   3. ElMessageBox 替换为：
  *      a) Element UI 的 MessageBox.confirm（兼容 Vue.use(ElementUI) 全局注册）
  *      b) 或通过 Vue.prototype.$confirm（同样由 Element UI 全局注册）

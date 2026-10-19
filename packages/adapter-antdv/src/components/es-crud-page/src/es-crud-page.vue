@@ -70,9 +70,8 @@ import type { BtnConfig, TableColumn } from '../../../types'
  * render/onOpen/onConfirm/onClose 是函数值）。三端各存一份，`check-schema-contract.mjs` 断言
  * 三份 + AI 契约等价 —— 加键却忘转发，立刻红。
  *
- * 注意：`cacheKey` 在 antdv 端**已登记空转**（适配器的 use-dialog 未实现实例缓存，
- * 见 `types.ts` 的 CrudDialogConfig.cacheKey 与 check-type-exports 的偏差登记）。
- * 它仍留在白名单里：白名单的语义是「AI 契约放行的数据键都往下发」，端侧是否实现由偏差登记表达。
+ * 注意：`cacheKey` 与 vue3/vue2 同义 —— antdv 的 use-dialog 已实现实例缓存（关闭后
+ * TTL 10 分钟回收），本键在三端均真生效。它不在组件模板里消费，而是由 `dialog()` 读取。
  */
 const DIALOG_PASSTHROUGH_KEYS = [
   'width',

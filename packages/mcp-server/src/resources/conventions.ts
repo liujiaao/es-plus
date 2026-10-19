@@ -209,6 +209,7 @@ function buildConventionsContent(target: Target): string {
 Valid values: ${VALID_FORM_TYPES.join(", ")}
 - All types are PascalCase (DatePicker, TimePicker, ColorPicker, etc.)
 - Legacy camelCase "datePicker"/"timePicker" still work but PascalCase is recommended
+${isAntdv ? '- ColorPicker: Ant Design Vue has no ColorPicker component — the renderer degrades it to a native <input type="color"> (no alpha/preset/history, and it does NOT trigger a-form-item validation). Prefer Input if validation matters.' : ""}
 
 ## Button Keys
 Built-in keys: ${BUILT_IN_BTN_KEYS.join(", ")}
@@ -636,7 +637,7 @@ interface DialogConfig {
   closeOnPressEscape?: boolean  // close on Escape; default true
   hiddenFullBtn?: boolean       // hide the built-in fullscreen toggle
   appendTo?: string             // CSS selector of the mount node (a DOM element can't travel in JSON)
-  cacheKey?: string             // reuse one instance across calls (vue3/vue2 only; inert in the antdv adapter)
+  cacheKey?: string             // reuse one instance across calls (all three renderers; 10-min TTL after close)
   configBtn?: DialogBtn[]       // declarative footer buttons; omit for the generated cancel+confirm pair
 }
 

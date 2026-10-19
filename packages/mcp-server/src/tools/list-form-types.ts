@@ -4,7 +4,7 @@ import { FORM_TYPES } from "@es-plus/shared";
 export function registerListFormTypes(server: McpServer) {
   server.tool(
     "list_form_types",
-    `List all ${FORM_TYPES.length} available form field types (formtype) in @es-plus/vue3 with descriptions and usage examples.`,
+    `List all ${FORM_TYPES.length} available form field types (formtype) shared by es-plus on all three targets (vue3 / vue2 / antdv), with descriptions and usage examples.`,
     {},
     async () => {
       const lines = FORM_TYPES.map(
@@ -13,8 +13,10 @@ export function registerListFormTypes(server: McpServer) {
       );
 
       const output = [
-        "# @es-plus/vue3 Form Types (formtype)\n",
-        "Available types for the `formtype` property in `FormItemOption`:\n",
+        "# es-plus Form Types (formtype)\n",
+        "Available types for the `formtype` property in `FormItemOption`.\n",
+        "The enum is shared by @es-plus/vue3, @es-plus/vue2 and @es-plus/adapter-antdv;",
+        "only the underlying UI component differs per target.\n",
         ...lines,
         "",
         "---",

@@ -250,11 +250,6 @@ const props = withDefaults(
   },
 )
 
-const emit = defineEmits<{
-  confirm: [formRef: unknown, model: Record<string, unknown>]
-  reset: [formRef: unknown, model: Record<string, unknown>]
-}>()
-
 const instance = getCurrentInstance()
 const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}

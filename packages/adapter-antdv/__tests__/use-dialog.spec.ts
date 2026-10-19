@@ -261,6 +261,131 @@ describe('useDialog — 返回值与 vue3/vue2 的 DialogResult 同构', () => {
 })
 
 /**
+ * cacheKey 实例缓存（Wave 5：与 vue3/vue2 对齐）。
+ *
+ * 此前本端没有缓存通道：cacheKey 既不下发也不复用，`check-type-exports.mjs` 把它
+ * 登记成「有意偏差」。现在三端同构 —— 同一 cacheKey 跨调用复用实例（保留内部状态），
+ * 关闭后 TTL 10 分钟回收；cacheKey 只是 hook 的缓存键，**不得**漏进组件 props。
+ */
+describe('useDialog — cacheKey 实例缓存', () => {
+  // 每个 vNode 必须是独立对象 —— 文件上方有个用例用 mockReturnValue 固定了返回值，
+  // 那会让「重新创建」与「命中缓存」在引用上无法区分。
+  beforeEach(() => {
+    mockCreateVNode.mockImplementation((_comp: any, props: any) => ({
+      _isMock: true,
+      props,
+      component: { props: { ...props } },
+      appContext: null,
+    }))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('同一 cacheKey 第二次调用复用实例（不新建 vNode）', () => {
+    const dialog = useDialog()
+    const first = dialog({ cacheKey: 'k1', title: 'A' })
+    expect(mockCreateVNode).toHaveBeenCalledTimes(1)
+
+    const second = dialog({ cacheKey: 'k1', title: 'B' })
+    expect(mockCreateVNode).toHaveBeenCalledTimes(1)
+    expect(second.instance).toBe(first.instance)
+  })
+
+  it('cacheKey 不下发到组件（仅作为 hook 缓存键）', () => {
+    const dialog = useDialog()
+    dialog({ cacheKey: 'k1', title: 'A' })
+    expect(mockCreateVNode.mock.calls[0][1]?.cacheKey).toBeUndefined()
+  })
+
+  it('close 只翻转该缓存实例的 visible，不卸载容器', () => {
+    const dialog = useDialog()
+    const { instance, close } = dialog({ cacheKey: 'k1', title: 'A' })
+    close()
+    expect(instance.component.props.visible).toBe(false)
+    // 缓存实例关闭后仍留在 DOM，等待 TTL 回收
+    expect(document.body.childElementCount).toBe(1)
+  })
+
+  it('关闭后重新打开：visible 置回 true，且省略的 prop 回退到创建时的基线', () => {
+    const dialog = useDialog()
+    const first = dialog({ cacheKey: 'k1', title: 'A' })
+    first.close()
+
+    dialog({ cacheKey: 'k1', title: 'B' })
+    expect(first.instance.component.props.title).toBe('B')
+    expect(first.instance.component.props.visible).toBe(true)
+
+    // 本次省略 title → 回退基线 A，而不是残留上一次调用写的 B
+    dialog({ cacheKey: 'k1' })
+    expect(first.instance.component.props.title).toBe('A')
+  })
+
+  it('关闭后 10 分钟 → 自动销毁并移除容器；重新打开会取消定时器', () => {
+    vi.useFakeTimers()
+    const dialog = useDialog()
+    const { close } = dialog({ cacheKey: 'k1', title: 'A' })
+
+    close()
+    // 关闭动作由组件 emit closed 触发，缓存包装在 onClosed 里武装 TTL
+    const wrappedOnClosed = mockCreateVNode.mock.calls[0][1]?.onClosed
+    wrappedOnClosed?.()
+
+    // 到期前重新打开 → 定时器取消
+    vi.advanceTimersByTime(9 * 60 * 1000)
+    dialog({ cacheKey: 'k1' })
+    close()
+    wrappedOnClosed?.()
+
+    vi.advanceTimersByTime(9 * 60 * 1000)
+    // 第二次关闭重新计时，尚未满 10 分钟 → 容器仍在
+    expect(document.body.childElementCount).toBe(1)
+
+    mockRender.mockClear()
+    vi.advanceTimersByTime(2 * 60 * 1000)
+    expect(mockRender).toHaveBeenCalledWith(null, expect.anything())
+    expect(document.body.childElementCount).toBe(0)
+  })
+
+  it('destroy(cacheKey) 只销毁该缓存实例，不误伤单例 vNode', () => {
+    const dialog = useDialog()
+    const single = dialog({ title: 'single' })
+    const { instance: cached, destroy } = dialog({ cacheKey: 'k1', title: 'cached' })
+
+    destroy('k1')
+
+    // 单例实例仍可用：再次调用复用同一个 instance
+    const again = dialog({ title: 'single-2' })
+    expect(again.instance).toBe(single.instance)
+
+    // 被销毁的缓存实例不再命中：同 cacheKey 会重新创建
+    const callsBefore = mockCreateVNode.mock.calls.length
+    const reopened = dialog({ cacheKey: 'k1', title: 'cached-2' })
+    expect(mockCreateVNode).toHaveBeenCalledTimes(callsBefore + 1)
+    expect(reopened.instance).not.toBe(cached)
+  })
+
+  it('destroy() 无参 = 单例 + 全部缓存一起销毁', () => {
+    const dialog = useDialog()
+    dialog({ title: 'single' })
+    dialog({ cacheKey: 'k1', title: 'cached' })
+
+    ;(dialog as any).destroy()
+
+    expect(document.body.childElementCount).toBe(0)
+  })
+
+  it('onlyInstance 模式同样支持 cacheKey 复用', () => {
+    const dialog = useDialog(undefined, { onlyInstance: true })
+    const first = dialog({ cacheKey: 'k1', title: 'A' })
+    const second = dialog({ cacheKey: 'k1', title: 'B' })
+    expect(mockCreateVNode).toHaveBeenCalledTimes(1)
+    expect(second.instance).toBe(first.instance)
+  })
+})
+
+/**
  * 宿主作用域销毁（卸载）时的回收。
  *
  * 弹窗容器是手工 append 到 appendTo 的，不在任何组件子树里 —— 宿主卸载不会连带移除它，

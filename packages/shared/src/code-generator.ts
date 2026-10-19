@@ -336,7 +336,9 @@ export function generateScaffold(
     lines.push(`      :columns="columns"`);
     lines.push(`      :options="options"`);
     if (isVue2) {
-      lines.push(`      :data-source.sync="tableData"`);
+      // F7：vue2 es-table 从不 emit `update:dataSource` —— `.sync` 会承诺一个永不触发的方向。
+      // 表格数据仍作为受控输入传入；`pagination` 会 emit，`.sync` 成立。
+      lines.push(`      :data-source="tableData"`);
       lines.push(`      :pagination.sync="pagination"`);
     } else {
       lines.push(`      v-model:data-source="tableData"`);

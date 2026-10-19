@@ -31,7 +31,7 @@
 | 差异维度 | Vue 3 (es-plus) | Vue 2 (es-eui) | 影响范围 |
 |---------|----------------|----------------|---------|
 | 渲染函数签名 | `h(Comp, { modelValue, 'onUpdate:modelValue': fn })` | `createElement(Comp, { props: { value }, on: { input: fn } })` | 全部 16 种表单输入 + 自定义渲染 |
-| v-model 语法 | `v-model:visible`, `v-model:data-source` | `:visible.sync`, `:data-source.sync` | 所有双向绑定模板 |
+| v-model 语法 | `v-model:visible`, `v-model:data-source` | `:visible.sync`, `:data-source`（单向，组件不 emit `update:dataSource`） | 所有双向绑定模板 |
 | `<script setup>` | 所有 .vue 文件 | 不支持 | 7 个主要组件文件 |
 | 组件实例化 | `createVNode()` + `render(vnode, container)` | `Vue.extend()` + `new Ctor().$mount()` | useDialog 整个实现 |
 | 组件通信 | `provide/inject` (app-level) | `$parent/$children` 遍历 | EsForm ↔ EsTable 联动 |

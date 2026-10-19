@@ -6,7 +6,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -321,7 +321,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -656,7 +656,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -974,7 +974,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -1290,7 +1290,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -1580,7 +1580,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -1878,7 +1878,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />
@@ -2137,7 +2137,7 @@ exports[`generateCrudPage (target=vue2) — snapshot tests > generates stable ou
     ref="tableRef"
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />

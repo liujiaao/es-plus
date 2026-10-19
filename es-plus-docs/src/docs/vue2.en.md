@@ -89,7 +89,7 @@ const columns = [
 | Style | `@es-plus/vue3/dist/style.css` | `@es-plus/vue2/dist/style.css` |
 | Vue version | `vue@^3.4` | `vue@^2.7` |
 | Slots | `<template #header>` | `<template slot="header">` |
-| `v-model` on data-source | `v-model:data-source` | `:data-source.sync` |
+| `v-model` on data-source | `v-model:data-source` | `:data-source` (one-way — the component never emits `update:dataSource`) |
 | `useDialog` | Composition API | Available via `Vue.use(ESPlus)` injection |
 
 The render target — Element Plus vs Element UI — is the only thing that changes inside the components. All ES-Plus configuration fields are identical.

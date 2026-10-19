@@ -116,7 +116,7 @@ export default { name: 'EsDialog' }
 </script>
 
 <script setup lang="ts">
-import { ref, reactive, computed, inject, watch, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
+import { ref, reactive, computed, inject, watch, onMounted, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
 import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
@@ -179,6 +179,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:visible': [visible: boolean]
   closed: [val: boolean]
+  // 对齐 vue3/vue2：弹窗显示时派发 open（声明式 visible 翻转与程序化 useDialog 挂载两条路径）
+  open: []
 }>()
 
 const instance = getCurrentInstance()
@@ -209,6 +211,14 @@ provide('bodyFormInstance', (e: unknown) => {
 const dialogVisible = ref(props.visible !== false)
 watch(() => props.visible, (val) => {
   if (val !== undefined) dialogVisible.value = val
+  // 声明式切换 visible false→true 时补发 open（对齐 vue3）
+  if (val) emit('open')
+})
+
+// 程序化调用（useDialog）挂载时 visible 已为 true，watch 不会触发，
+// 需在此补发 open，保证 onOpen 生命周期回调可用（对齐 vue3）。
+onMounted(() => {
+  if (props.visible) emit('open')
 })
 
 // 原生关闭按钮只在「调用方没有自绘头部」时放出。

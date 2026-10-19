@@ -16,7 +16,7 @@ function targetNotes(target: Target): string {
   if (target === "vue2") {
     return `Target = @es-plus/vue2 (Vue 2.7 + Element UI):
 - Wrapper/SFC uses \`defineComponent({ setup() { ... return {...} } })\`, NOT <script setup>.
-- Template multi-target binding uses \`:data-source.sync\` / \`:pagination.sync\`, NOT \`v-model:xxx\`.
+- Template multi-target binding: \`:pagination.sync\` (the component does emit \`update:pagination\`), but \`:data-source\` must stay ONE-WAY — vue2 es-table never emits \`update:dataSource\`, so \`.sync\` there is a promise that can never fire. No \`v-model:xxx\`.
 - UI-library symbols: \`Message\` / \`MessageBox\` from 'element-ui' (NOT ElMessage/ElMessageBox).
 - Status tags: <el-tag :type="... ? 'success' : 'danger'">.
 - Element UI has NO virtual scrolling (no el-table-v2) — do not emit \`virtual: true\` or \`engine: 'virtual'\` for this target. \`engine: 'vxe'\` IS available and is the supported large-data path here (vxe-table itself supports Vue 2).

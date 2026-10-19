@@ -209,7 +209,7 @@ const btns = [/* ... */]
   <es-table
     :columns="columns"
     :options="options"
-    :data-source.sync="tableData"
+    :data-source="tableData"
     :pagination.sync="pagination"
   >
     <es-form :model="form" :form-item-list="formItems" :config-btn="btns" />
@@ -248,7 +248,9 @@ export default {
 ```
 
 :::tip Vue 2 v-model 语法
-Vue 2 使用 `:prop.sync` 替代 Vue 3 的 `v-model:prop`，例如 `:data-source.sync` 等价于 Vue 3 的 `v-model:data-source`。
+Vue 2 使用 `:prop.sync` 替代 Vue 3 的 `v-model:prop`（例如 `:pagination.sync` 等价于 `v-model:pagination`）。
+
+**例外：`data-source` 只能单向。** Vue 2 版 `EsTable` 从不 emit `update:dataSource`（Vue 2.6 下的响应式回环防护），所以 `:data-source.sync` 是一个**永远不会触发的方向** —— 请写 `:data-source="tableData"`。数据更新通过组件的请求/分页逻辑落到内部 `tableData`，或由你调用组件方法后自行维护。
 :::
 
 ---
@@ -332,12 +334,14 @@ export default {
 | 渲染函数 `h` | 全局 `import { h } from 'vue'` | `render: (h, ctx) => ...` 中传入的 `createElement` |
 | Provide / Inject | `app.provide()` | `Vue.mixin({ provide: { ... } })`（内部已处理） |
 | 插件安装 | `app.use(EsPlus)` | `Vue.use(EsPlus)` |
-| `httpRequest` 数据渲染 | **受控**：需绑定 `v-model:data-source` 才渲染请求结果 | **非受控兜底**：内部 `tableData` 直接渲染，未绑定 `:data-source.sync` 也能显示 |
+| `httpRequest` 数据渲染 | **受控**：需绑定 `v-model:data-source` 才渲染请求结果 | **非受控兜底**：内部 `tableData` 直接渲染，未绑定 `:data-source` 也能显示 |
 
-:::warning httpRequest 模式请始终绑定 `:data-source.sync`
-三端渲染契约有一处刻意保留的差异：`@es-plus/vue3` 采用**受控**数据流，`httpRequest`/`actionUrl` 拉取的数据必须绑定 `v-model:data-source` 才会渲染；`@es-plus/vue2` 与 `@es-plus/adapter-antdv` 则额外提供**内部 `tableData` 兜底**，未绑定 `:data-source.sync` 也能显示请求结果。
+:::warning httpRequest 模式请始终绑定 `:data-source`（单向）
+三端渲染契约有一处刻意保留的差异：`@es-plus/vue3` 采用**受控**数据流，`httpRequest`/`actionUrl` 拉取的数据必须绑定 `v-model:data-source` 才会渲染；`@es-plus/vue2` 与 `@es-plus/adapter-antdv` 则额外提供**内部 `tableData` 兜底**，未绑定 `:data-source` 也能显示请求结果。
 
-为使配置在三端无缝迁移，**请始终为 `httpRequest`/`actionUrl` 模式的 `EsTable` 绑定 `:data-source.sync`**（本文所有远程数据示例均已如此），这样切换到任一渲染器行为都一致。
+为使配置在三端无缝迁移，**请始终为 `httpRequest`/`actionUrl` 模式的 `EsTable` 绑定 `:data-source`**（本文所有远程数据示例均已如此），这样切换到任一渲染器行为都一致。
+
+注意 Vue 2 这条绑定是**单向**的：组件从不 emit `update:dataSource`，写 `.sync` 不会报错，但那个回写方向永远不会发生。
 :::
 
 ---

@@ -38,6 +38,75 @@ export const FORM_RENDER_CONTRACT = {
 }
 
 /**
+ * 三端组件的**对外事件**契约（单源，W2.3 / F5 + F7）
+ *
+ * 判据是「声明 ⇄ 存在」：
+ *   - 一端声明了、另一端没声明 → 同一份宿主代码在两端一静默一触发（跨端分叉）；
+ *   - 声明了却**没有任何 emit 调用点** → 宿主写 `@confirm` 得到静默 ——
+ *     这正是 `禁止声明了等于承诺不存在的能力` 的最隐蔽形态（编译过、类型对、零报错）。
+ *
+ * 形态：`{ [component]: { sources, expected, deviation?, why? } }`
+ *   - `expected`：三端应当一致声明的事件全集（**权威清单**，不靠从源码反推 ——
+ *     否则三端一起漂移时守卫会跟着漂）。
+ *   - `deviation[renderer] = { keys: [...], reason }`：该端**有意缺席**的事件；
+ *     `keys` 必须真的缺席（补上后要删登记 —— 只减不增），`reason` 非空。
+ *   - 每个实际声明的事件都必须在**同一文件**里至少有一个 `emit('name'` 调用点
+ *     （`stripComments` 之后匹配，注释里写 `emit('x')` 不算数）。
+ *
+ * 已裁决的偏差：
+ *   - es-form `confirm`/`reset`：vue3/antdv 曾声明并定义却零调用点，vue2 连声明都没有。
+ *     正确方向是**删除**（查询/重置由 triggerEvent 在内部联动表格，antdv 头注早已写明），
+ *     而不是在三端补一套新的向外事件。
+ *   - es-table `update:dataSource`：vue2 引擎**有意移除**回传（组件注释自述），
+ *     故 vue2 不声明；片段/SFC/legacy 生成器的 vue2 分支也不得发 `.sync`（F7）。
+ */
+export const EMIT_CONTRACT = {
+  'es-form': {
+    sources: {
+      vue3: 'packages/vue3/src/components/es-form/src/es-form.vue',
+      vue2: 'packages/vue2/src/components/es-form/es-form.vue',
+      antdv: 'packages/adapter-antdv/src/components/es-form/src/es-form.vue',
+    },
+    expected: [],
+    why: 'es-form 的查询/重置在内部联动 es-table（triggerEvent），不向外派发事件。',
+  },
+  'es-dialog': {
+    sources: {
+      vue3: 'packages/vue3/src/components/es-dialog/src/component.vue',
+      vue2: 'packages/vue2/src/components/es-dialog/component.vue',
+      antdv: 'packages/adapter-antdv/src/components/es-dialog/src/component.vue',
+    },
+    expected: ['update:visible', 'closed', 'open'],
+    why: '弹窗生命周期：update:visible（v-model 回写）/ closed（真实关闭）/ open（显示）。',
+  },
+  'es-table': {
+    sources: {
+      vue3: 'packages/vue3/src/components/es-table/src/component.vue',
+      vue2: 'packages/vue2/src/components/es-table/component.vue',
+      antdv: 'packages/adapter-antdv/src/components/es-table/src/component.vue',
+    },
+    expected: [
+      'update:dataSource',
+      'update:pagination',
+      'pagination-current-change',
+      'size-change',
+      'change-table-sort',
+      'request-error',
+    ],
+    deviation: {
+      vue2: {
+        keys: ['update:dataSource'],
+        reason:
+          'Vue 2 引擎有意移除 update:dataSource 回传：httpRequest 模式下数据落在内部 tableData，' +
+          'props.dataSource 恒为空（component.vue 注释自述）。保留单向 :data-source 输入；' +
+          '片段/SFC 生成器同步改发单向绑定（F7）。',
+      },
+    },
+    why: '表格事件：数据回写 / 分页 / 排序 / 自动加载失败外抛。',
+  },
+}
+
+/**
  * 三端 formtype 的**行为层**契约（单源）。
  *
  * FORM_RENDER_CONTRACT 只回答「这个 formtype 绑到了哪个组件」。但 C 系列缺陷全都满足

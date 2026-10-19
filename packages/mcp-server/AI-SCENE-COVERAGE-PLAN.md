@@ -135,12 +135,21 @@
 > **F3 补证（2026-10-15 逐行复核片段路径）**：`headerCellStyle` 的硬编码**不止 SFC**——
 > 片段生成器 `fragment-generator.ts:257` 同样写死 `{ background: '#f5f7fa' }`，
 > 且 `tableOptions` 根本无处可传用户值。→ 该偏差**两模式同病、系统性**，不是单模式失手。
+>
+> **F3 已修（2026-10-19，AI-37）**：SFC `headerCellStyle` 尊重用户值、顶层 `formLayout` 映射为
+> `layoutFormProps` 并绑定；片段 `TableBlockInput.tableOptions.headerCellStyle` 与
+> `generate_table` 的 zod 面同步打通。`check:threeway` 新增**轴①d 值级等价**（探针 `#ffffff` /
+> `labelWidth:'100px'` / `minFoldRows:2`），「键在、值被写死」与「键在、配置没接上」都会当场红。
 
 对照：`dialogs`/`tableBtns`/`toolbarBtns`/`operationColumn` 在 SFC 下**有**集中告警（`:389-410`）。即"有告警的都在，没告警的反而静默丢"。
 
 ### F4 · dialog 契约三向漂移 + 独立 useDialog 三端不等价
 - 运行时 `CrudDialogConfig` **13 键** vs AI `DialogConfigSchema` **9 键**（**闭合对象 → 静默剥**）。
-- antdv `useDialog` **完全没有 `cacheKey`/TTL**（vue3/vue2 有）；已登记 `MEMBER_DEVIATIONS`（`check-type-exports.mjs:103`）。
+- antdv `useDialog` 曾**没有 `cacheKey`/TTL**（vue3/vue2 有），并登记在 `MEMBER_DEVIATIONS`。
+  **已修（2026-10-19，AI-38）**：antdv 的 hook 补上与 vue3 同构的实例缓存（基线 props 覆盖、
+  `onClosed` 重包装、关闭后 10 分钟 TTL 回收、`destroy(cacheKey?)`），偏差登记行已删除
+  （`check-type-exports` 的过期登记检查反向咬住）；`scripts/check-exports` 的「已登记缺项」
+  从 3 处降到 2 处（剩 `PaginationConfig.layout` 与 `DialogOptions.loading`）。
 
 ### F5 · emits 契约无人守望（逐条复验）
 
@@ -151,6 +160,12 @@
 | es-table `update:dataSource` | vue2 **已移除**（代码注释 `component.vue:1013` 自述） | **有意为之**，但只在散文注释里、无机器守卫 |
 
 任何 `check-*.mjs` 都**不校验 emits**。
+
+**F5 已修（2026-10-19，AI-37）**：新增 `EMIT_CONTRACT`（`scripts/renderer-contract.mjs`）与
+`check-renderer-parity` 第 7 块四断言（缺事件 / 未收录事件 / 陈旧登记 / 声明⇄调用点）。三处裁决：
+es-form 的 `confirm`/`reset` 是**死声明**（零调用点）→ 从 vue3/antdv **删除**（不新增向外事件）；
+antdv es-dialog **补 `open`**（watch + onMounted 两条路径）；vue2 `update:dataSource` 缺席**登记为
+deviation**（reason 非空），生成器同步改发单向绑定（见 F7）。
 
 ### F6 · 度量管道无法区分「测量未发生」与「模型得 0 分」（**Wave 0 复核时新发现，最紧急**）
 
@@ -195,6 +210,12 @@ PPIO 中继**账户/成员额度耗尽**。**key 有效**，是余额问题，**
 **今日无害**（无 `apiUrl` 时父→子方向仍生效，有 `apiUrl` 时表格内部取数自渲染；片段里没人读 `tableData`），
 **但 `.sync` 承诺了一个永不触发的子→父方向**——正是 P6 要消灭的那种「声明 ≠ 存在」。
 → 归入 Wave 5 逐条「修 or 登记」。（与 F5 的 es-table 行同源，可合并处理。）
+
+**F7 已修（2026-10-19，AI-37）**：三条 vue2 生成路径（片段 / SFC / legacy `crud-engine`）一律发
+**单向** `:data-source`；`pagination` 保持 `.sync`（该事件真的会 emit）。`target.ts#rewriteVModelSync`
+在统一改写入口收口 legacy 路径。mcp prompt、vue2 `es-crud-page` 头注/模板、`es-plus-docs` zh/en 与
+`docs/internal` 适配分析同步更正（不再教 `.sync`）。vue2 例外在 `EMIT_CONTRACT.deviation` 里带原因登记，
+`check-renderer-parity` 第 7 块守护。
 
 ### F8 · heldout 被未登记的 few-shot 派生用例污染 → 成绩虚高（**2026-10-15 新发现；2026-10-15 已按语义补全登记**）
 
@@ -442,17 +463,22 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 
 逐条「修 or 登记」，禁止「声明了等于承诺不存在的能力」：
 
-| 偏差 | 建议 |
+| 偏差 | 裁决与落地 |
 |---|---|
-| antdv `useDialog` 无 `cacheKey`/TTL | **修**（对齐 vue3/vue2） |
-| antdv `ColorPicker` 降级原生 input | 登记（已有 `FORM_RENDER_CONTRACT:27`）+ AI 教学告知 |
-| `engine:'virtual'` 真引擎 vue3-only | 登记 + AI 侧明确「三端安全子集」 |
-| vue2 es-table 无 `update:dataSource` | 从注释升格为**机器登记**；**并修片段生成器**（F7：vue2 分支不该发 `.sync`，或改为单向 `:data-source`） |
+| antdv `useDialog` 无 `cacheKey`/TTL | ✅ **已修（2026-10-19，AI-38）**：补齐与 vue3 同构的实例缓存 + TTL；`MEMBER_DEVIATIONS` 登记行删除（过期登记会被 `check-type-exports` 咬红）；教学面（`conventions.ts` / `get-component-api.ts` / `crud-page-schema.ts` fallback）同步改为「三端均生效」 |
+| antdv `ColorPicker` 降级原生 input | ✅ **登记 + 教学已落地**：守卫在 `FORM_RENDER_CONTRACT`（含 `deviation`），教学在 `conventions.ts` 的 formtype 段与 `get-component-api.ts` 的 `formtype` 注释（antdv 分支） |
+| `engine:'virtual'` 真引擎 vue3-only | ✅ **源码复核后更正**：并非 vue3-only —— vue2 忽略并告警（已登记/教学），antdv 4 原生 `a-table :virtual` 真生效（`component.vue:72/351`）。教学与 `check-type-exports` 注释里的旧表述已更正 |
+| vue2 es-table 无 `update:dataSource` | ✅ **已修（AI-37）**：机器登记进 `EMIT_CONTRACT.deviation`，片段/SFC/legacy 生成器统一发单向 `:data-source` |
 
 ### Wave 6 · 准确率工程（与 W1 并行收口）
 
-- `formLayout.span` 死键：core 落地为「未配字段默认 span」**或**从 schema/文档删除（二选一）；同步修 `scorers.test.mjs:40` 的「给死键记分」
-- 清理零覆盖工具（`list_form_types` / `generate_crud_page` / `generate_crud_schema`）：**删或补测试**，不许悬空
+- ✅ `formLayout.span` 死键：已按 (b) 从 schema/文档删除（AI-31），`scorers.test.mjs` 的
+  「给死键记分」fixture 同步改活键。
+- ✅ **零覆盖工具已补齐测试（2026-10-19，AI-39）**：`list_form_types` / `generate_crud_page` /
+  `generate_crud_schema` 此前**无任何测试**。新增 `__tests__/legacy-tools.spec.ts`（8 例）钉住
+  MCP 面路由：formtype 枚举与 `FORM_TYPES` 单源一致、schema/sfc 模式分支、三端包名、schema JSON
+  与目标无关（三端逐值相同）、vue2 SFC 不发 `:data-source.sync`（F7 回归）。同时修正
+  `list_form_types` 把 formtype 说成 `@es-plus/vue3` 专属的过期文案（三端共用同一枚举）。
 
 ---
 

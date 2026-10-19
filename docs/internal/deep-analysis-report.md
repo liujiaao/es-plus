@@ -85,7 +85,7 @@ if (willInstallPlugins && component.isPlugin && component.Plugin) return
 
 | API | vue3 | vue2 | antdv |
 |---|---|---|---|
-| `useDialog` 返回 | `{instance, close, destroy}` + `cacheKey` + 10min TTL | 同 vue3 | **裸 vNode，无 cacheKey、无 DialogResult** |
+| `useDialog` 返回 | `{instance, close, destroy}` + `cacheKey` + 10min TTL | 同 vue3 | 同 vue3（2026-10-19 补齐 `cacheKey`/TTL，见 AI-38） |
 | `validateField` | `Promise<boolean>` | **`void`**（await 不会等待） | `Promise<boolean>` |
 | `update:dataSource` | 有 | **无**（刻意移除） | 有 |
 | 虚拟滚动 | 支持 | **不支持**（降级告警） | ADV 原生 |

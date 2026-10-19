@@ -10,7 +10,7 @@
  *  │ 维度                   │ vue3 (Element Plus)        │ vue2 (Element UI)            │ antdv (Ant Design Vue)       │
  *  ├────────────────────────┼───────────────────────────┼──────────────────────────────┼──────────────────────────────┤
  *  │ Vue 版本 / 语法        │ Vue 3 <script setup>       │ Vue 2.7 defineComponent+setup │ Vue 3 <script setup>         │
- *  │ v-model 多目标         │ v-model:data-source        │ :data-source.sync            │ v-model:data-source          │
+ *  │ v-model 多目标         │ v-model:data-source        │ :data-source（单向）          │ v-model:data-source          │
  *  │ 消息提示               │ ElMessage (element-plus)   │ Message (element-ui)         │ message (ant-design-vue)     │
  *  │ 确认弹窗               │ ElMessageBox.confirm(..)   │ MessageBox.confirm(..)       │ Modal.confirm({..}) 对象式    │
  *  │ 状态标签               │ <el-tag :type>             │ <el-tag :type>               │ <a-tag :color> (green/red)   │
@@ -250,18 +250,22 @@ export function buildStatusTagTemplate(opts: {
  * Vue 2.3+ 支持 .sync 修饰符，效果等价。
  *
  * 例：
- *   v-model:data-source="tableData"  →  :data-source.sync="tableData"
  *   v-model:pagination="pagination"  →  :pagination.sync="pagination"
+ *
+ * 例外（F7）：
+ *   v-model:data-source="tableData"  →  :data-source="tableData"   （**单向**）
+ *   vue2 es-table 从不 emit `update:dataSource`（组件注释自述已移除），`.sync`
+ *   会承诺一个永不触发的子→父方向。声明了却不存在 = 假承诺，故一律降为单向输入。
  *
  * 注意：纯 v-model="xxx"（无冒号目标）在 Vue 2 中也合法，无需转换。
  */
 export function rewriteVModelSync(template: string, target: TargetFramework): string {
   // 仅 vue2 需要 .sync；vue3 / antdv 均为 Vue 3 语法，保持 v-model:xxx
   if (target !== 'vue2') return template
-  return template.replace(
-    /v-model:([\w-]+)="([^"]+)"/g,
-    ':$1.sync="$2"'
-  )
+  // F7：先摘掉 data-source —— 它的双向方向在 vue2 不存在（见上方注释）。
+  return template
+    .replace(/v-model:data-source="([^"]+)"/g, ':data-source="$1"')
+    .replace(/v-model:([\w-]+)="([^"]+)"/g, ':$1.sync="$2"')
 }
 
 /**

@@ -22,6 +22,8 @@ const tableShape = {
       rowkey: z.string().default("id"),
       highlightCurrentRow: z.boolean().default(true),
       multiSelect: z.boolean().optional(),
+      // F3 补证：片段路径也必须能收到用户表头样式（此前写死默认背景 → 配置静默失效）。
+      headerCellStyle: z.record(z.string()).optional(),
     })
     .optional(),
   rowButtons: z

@@ -122,9 +122,29 @@ describe('generateTableBlock — 边界', () => {
     expect(code).not.toContain('handleDelete')
   })
 
-  it('vue2 用 .sync + defineComponent', () => {
+  it('tableOptions.headerCellStyle 透传到 options（F3 补证：不再写死默认背景）', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: { headerCellStyle: { background: '#ffffff' } },
+    })
+    expect(code).toContain('headerCellStyle: {"background":"#ffffff"}')
+    expect(code).not.toContain('#f5f7fa')
+  })
+
+  it('未提供 headerCellStyle → 回落到默认背景（保持既有产物）', () => {
+    const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders' })
+    expect(code).toContain('headerCellStyle: {"background":"#f5f7fa"}')
+  })
+
+  it('vue2 数据源发单向 :data-source（F7：组件从不 emit update:dataSource）+ 分页仍用 .sync', () => {
     const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders', target: 'vue2' })
-    expect(code).toContain(':data-source.sync="tableData"')
+    // F7：vue2 es-table 自述已移除 update:dataSource 回传 —— `.sync` 会承诺一个
+    // 永不触发的子→父方向（声明了却不存在的能力），故只发单向输入。
+    expect(code).toContain(':data-source="tableData"')
+    expect(code).not.toContain(':data-source.sync')
+    // pagination 是例外：vue2 仍 emit update:pagination，`.sync` 成立。
+    expect(code).toContain(':pagination.sync="pagination"')
     expect(code).toContain('export default defineComponent({')
     expect(code).toContain('return { columns, options, tableData, tableRef, pagination }')
   })

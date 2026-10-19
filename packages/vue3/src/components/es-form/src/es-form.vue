@@ -150,6 +150,10 @@ export default { name: 'EsForm' }
 </script>
 
 <script setup lang="ts">
+// 注意：本组件**不向外派发** confirm / reset。查询与重置由内部 `clickBtn` →
+// `queryTableRequest` 通过 triggerEvent 联动父级 es-table（三端同一行为，antdv 文件头
+// 早已写明）。此前这里声明并定义了 confirm/reset 却零调用点 —— 宿主写 `@confirm`
+// 只会得到静默。声明了却永不触发 = 承诺了不存在的能力，故一并删除（F5a）。
 import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
 import {
   ElRow,
@@ -210,11 +214,6 @@ const props = withDefaults(
     rules: () => ({})
   }
 )
-
-const emit = defineEmits<{
-  confirm: [formRef: unknown, model: Record<string, unknown>]
-  reset: [formRef: unknown, model: Record<string, unknown>]
-}>()
 
 const instance = getCurrentInstance()
 const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
@@ -503,9 +502,6 @@ const initFormItemOptions = (item: FormItemOption) => {
   }
   return opts
 }
-
-const confirm = () => emit('confirm', refs.value, props.model)
-const reset = () => emit('reset', refs.value, props.model)
 
 // 自定义弹窗
 const createDialogInstance = (() =>

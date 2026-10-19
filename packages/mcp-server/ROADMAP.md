@@ -317,6 +317,32 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **硬指标（可验收）**：`fragment-generator.spec.ts` 4 例（TS/JS 缺省值、component 同形、不给则逐字节不变）；`generate-tools-and-prompts.spec.ts` 5 例（罐头键名字/缺省标题、全参 entry 四键落地、多 entry 两段且名不覆盖、零字段告警、标题判别告警）+ 1 例（有表支重复 key 告警）；`surfaces-examples.spec.ts` 新增示例后 46 例全绿（旧示例的 prop 断言面同时扩大）。**变异验证（全部实测咬红，已还原）**：把 `fields` 改回 `hasForm ? form : query` → 全参 entry 用例红；名字硬编码 `useFormDialog` → 多 entry 用例红；删零字段告警 → 对应用例红；删有表支重复 key 收集 → 重复 key 用例红；不传 `defaultTitle` → 缺省标题断言红。
 - **边界**：不动有表支的字段优先级与 `CrudDialogConfig` 形状；不改 `open()` 契约；不给前门开 `mode` 轴（零-JSX 形态仍由 AI-28 的显式指路句传达，前门产物恒为 composable）。
 
+### AI-37 — 三端 emits 契约守卫 + F5/F7 收口 + F3 残项（**2026-10-19 已落地**）· `S`
+- **Why**：`check:parity` 只守 formtype 键集 / 组件绑定 / 列语义，**对外事件**无人守望。三处真实分叉：① es-form 的 vue3/antdv 声明 `confirm`/`reset` 却**零 `emit` 调用点**（vue2 连声明都没有）——宿主 `@confirm` 永远静默，而编译、类型、门禁全绿；② antdv es-dialog 漏声明 `open`（vue3/vue2 有）——同一份宿主代码在两端触发、在这一端静默；③ vue2 es-table **有意移除** `update:dataSource`，但片段 / SFC / legacy 三条生成器仍发 `:data-source.sync`（F7）——`.sync` 承诺一个永不触发的子→父方向，且该事实只写在散文注释里、无机器守卫。另 F3 残项：SFC 的 `headerCellStyle` 写死 `#f5f7fa`、顶层 `formLayout` 在 SFC 模式从不消费、片段路径的 `headerCellStyle` 无处传。
+- **修法**：
+  - **守卫先行**：`renderer-contract.mjs` 新增 `EMIT_CONTRACT` 单源（`es-form` 空集 / `es-dialog` 三事件 / `es-table` 六事件 + vue2 `update:dataSource` deviation，reason 非空）；`check-renderer-parity.mjs` 新增**第 7 块四断言**：① 缺事件（`expected − exemption`）② 契约未收录事件 ③ **陈旧登记**（该端已声明仍留在 `deviation.keys`，只减不增）④ **声明 ⇄ 存在**（每个声明的事件必须同文件有 `emit('x'` 调用点，`stripComments` 后匹配）。
+  - **es-form 死声明删除**（不是给三端补新事件）：查询/重置由内部 `triggerEvent` 联动 es-table，antdv 文件头早已写明；vue3 的零调用点 `confirm`/`reset` 定义一并删除。
+  - **antdv es-dialog 补 `open`**：`watch(visible)` 在 false→true 时补发；`onMounted` 覆盖程序化 `useDialog` 挂载（此时 watch 不触发）。
+  - **F7 单向**：`fragment-generator.ts` / `structured-generator.ts` / `code-generator.ts` 的 vue2 一律发 `:data-source`（`pagination` 仍 `.sync`，该事件真的会 emit）；`target.ts#rewriteVModelSync` 在**统一改写入口**先把 `v-model:data-source` 降为单向，故 legacy `crud-engine` 路径同步收口。教学面四处同改：mcp `crud-page` prompt、vue2 `es-crud-page` 头注/模板、`es-plus-docs` zh/en、`docs/internal` 适配分析。
+  - **F3 残项**：SFC `headerCellStyle` 尊重用户值；顶层 `formLayout` → SFC `layoutFormProps`（`labelWidth → labelBtnWidth`、`minFoldRows` 直传、`rowLayProps.gutter = 16`）；片段 `TableBlockInput.tableOptions.headerCellStyle` 透传，`generate_table` 的 zod3 面同步。
+- **硬指标（可验收）**：`check:parity` 第 7 块四断言（任何一端多/少/假声明/陈旧登记即红）；`check:threeway` 新增**轴①d 值级等价**（SFC `options` 必含探针值 `#ffffff`、SFC 必绑 `:layout-form-props="formLayoutProps"` 且该块含 `labelBtnWidth`/`100px`/`minFoldRows`、schema 顶层 `formLayout` 深度相等）；vue3 es-form 改为**否定断言**（`emitted('confirm')` 为 undefined + 组件无 `emits` 选项）；antdv dialog `open` 4 例（挂载 true / 挂载 false / false→true / true→false）；shared 三条生成器 spec 与 legacy 快照同步；片段 `headerCellStyle` 透传 2 例。
+- **变异验证（全部实测咬红，已还原）**：删 antdv `open: []` ⇒ 缺事件；把 `emit('open')` 改 `void 0` ⇒ 「声明了却无调用点」；往 vue3 es-form 注入死 `confirm` ⇒ 「契约未收录」+「无调用点」；删 vue2 deviation ⇒ 缺事件；给 vue2 补声明却留 deviation ⇒ 陈旧登记；SFC `headerCellStyle` 改回写死 ⇒ 轴①d 红；删 `:layout-form-props` ⇒ 轴①d 红。
+- **回归**：`check:parity` / `check:threeway` / `check:schema` / `check:generator` / `check:contract` / `check:api` / `check:fragment` 全绿；shared 578、vue3 558、antdv dialog 8 全绿；`typecheck` shared/vue3/adapter-antdv 干净。**不提交、不推送**（仓铁律）。
+
+### AI-38 — Wave 5 组件偏差裁决收口：antdv `useDialog` 实例缓存 + ColorPicker/虚拟引擎教学（**2026-10-19 已落地**）· `S`
+- **Why**：Wave 5 的剩余三条偏差里，`cacheKey` 是**能力缺口而非教学缺口**——antdv 的 `use-dialog` 完全没有实例缓存，传入的键被静默丢弃，只能靠 `MEMBER_DEVIATIONS` 把「声明了等于承诺不存在的能力」登记成有意偏差。另两条（ColorPicker 降级、`engine:'virtual'`）已有守卫/实现，但教学面仍有**过期表述**：`conventions.ts`/`crud-page-schema.ts` 教「cacheKey 在 antdv 空转」，若照抄会把宿主 LLM 引向错误取舍；`check-type-exports` 的注释还写着「virtual 在 vue2/antdv 忽略」，而 antdv 4 的 `:virtual` 真生效（`component.vue:72/351`）。
+- **修法**：
+  - **antdv `use-dialog.ts` 对齐 vue3**：抽出共享的 `instanceCache`（`Map<cacheKey, {vNode, container, baseProps, timer}>`）+ `tryCacheHit` / `closeCache` / `armCacheDestroy` / `destroyCache` / `toCacheProps` / `openCached`；两分支（默认单例 / `onlyInstance`）都支持 `cacheKey`。语义逐条对齐：同一 cacheKey 复用实例；每次打开以**创建时基线 props**为底叠加本次 opts（省略即回退，不残留上次值）；关闭不卸载、`onClosed` 每次重包装并重武装 **10 分钟 TTL**；`destroy(cacheKey?)` 只销毁该缓存 / 无参销毁单例 + 全部缓存；`cacheKey` 只是 hook 的缓存键，**不得**漏进组件 props（`pickProps` 剥离）。`DialogResult.destroy` 签名从 `() => void` 扩为 `(cacheKey?: string) => void`（纯增量，兼容旧写法）。
+  - **契约与教学同步**：antdv `DialogOptions` 显式声明 `cacheKey`；删除 `MEMBER_DEVIATIONS` 的 `DialogOptions.@es-plus/adapter-antdv.cacheKey` 行（过期登记会被守卫反向咬红）；更新 `CrudDialogConfig` 注释、`conventions.ts`、`crud-page-schema.ts` fallback、`get-component-api.ts` 的 `docUseDialog`（改「三端均支持」）+ `docEsForm` 的 `formtype` 注释（antdv ColorPicker 降级细节）；`check-type-exports` 的 virtual 注释改为「vue2 忽略 / antdv 4 原生透传」。
+- **硬指标（可验收）**：`check:exports` 的**过期登记反向断言**（删实现却留登记、或补实现却不删登记，两个方向都红）+ 「已登记缺项」计数下降；antdv `use-dialog.spec.ts` 新增 8 例：同 key 复用（不新建 vNode）/ `cacheKey` 不下发 / close 只翻 visible / 重开回退基线 / TTL 到期回收 + 重开取消定时器 / `destroy(cacheKey)` 不误伤单例 / 无参 destroy 全清 / `onlyInstance` 同样复用。
+- **变异验证（实测咬红，已还原）**：把 `pickProps` 改成直传（cacheKey 进 props）⇒ 「cacheKey 不下发」红；去掉 `armCacheDestroy` ⇒ TTL 用例红；`destroyCache` 无参分支漏掉幂等/仅删指定 key ⇒ 对应用例红。**回归**：antdv `use-dialog.spec.ts` 36/36、`check:exports` 绿、antdv typecheck 干净。**不提交、不推送**（仓铁律）。
+
+### AI-39 — Wave 6 零覆盖工具补齐（`list_form_types` / `generate_crud_page` / `generate_crud_schema`）（**2026-10-19 已落地**）· `S`
+- **Why**：三个已注册的 MCP 工具**零测试覆盖**——底层 `generateCrudPage`/`generateCrudSchema` 有 golden，但 MCP 面的分支（schema/sfc、三端包名、默认值）与文案从未被执行过。它们仍被 `index.ts` 的 server instructions、`conventions.ts` 与 `detect-project-target.ts` 引用，删掉是**表面变更**而非清理，故选择「补测试」。顺带发现 `list_form_types` 把三端共用的 formtype 枚举说成 `@es-plus/vue3` 专属（过期教学）。
+- **修法**：新增 `packages/mcp-server/__tests__/legacy-tools.spec.ts`（8 例）：① `list_form_types` 输出覆盖 `FORM_TYPES` 全部条目 + 标题计数不再是 vue3 专属；② `generate_crud_page` schema 模式吐出可 `JSON.parse` 的 `CrudPageSchema` 块 + wrapper；③ 三端 import 包名正确且 **schema JSON 与目标无关（逐值相等）**；④ sfc 模式不走 schema 包装段；⑤ vue2 sfc 不发 `:data-source.sync`（F7 回归锁）；⑥ `generate_crud_schema` 的默认/antdv 路由。`list-form-types.ts` 的工具描述与输出标题改为三端中性。
+- **硬指标（可验收）**：新增 spec 8/8；描述断言钉住 `FORM_TYPES.length` 与 `vue3/vue2/antdv` 三词（文案回退成 vue3-only 即红）；`schemaJsonFrom` 强制产物必须是合法 JSON（路由/拼接坏了直接抛）。
+- **回归**：mcp `typecheck` 干净、mcp spec 全绿（235 → 243）。**不提交、不推送**（仓铁律）。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）

@@ -24,7 +24,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { FORM_RENDER_CONTRACT, FORM_BEHAVIOR_CONTRACT, COLUMN_CONTRACT } from './renderer-contract.mjs'
+import { FORM_RENDER_CONTRACT, FORM_BEHAVIOR_CONTRACT, COLUMN_CONTRACT, EMIT_CONTRACT } from './renderer-contract.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -67,6 +67,73 @@ function extractMapKeys(path) {
   const src = readStripped(path)
   const keys = [...src.matchAll(/^\s*'([A-Z][a-zA-Z0-9]*)',\s*$/gm)].map((m) => m[1])
   return { keys, set: new Set(keys) }
+}
+
+/**
+ * 抽取一个组件文件声明的事件名（已 stripComments）。
+ *
+ * 支持两种声明形态：
+ *   - Vue 3 `<script setup>`：`defineEmits<{ 'update:visible': [v: boolean]; open: [] }>()`
+ *   - Vue 2 Options API：`emits: ['update:visible', 'closed', 'open'],`
+ *
+ * defineEmits 的泛型体用**花括号配平**截取（不能用非贪婪正则 —— 事件参数本身可能含
+ * `}`）；块内逐行只认「行首且不在类型元组内部」的 `key:`，避免把 `[formRef: unknown]`
+ * 这种参数名当成事件名。
+ */
+function extractDeclaredEmits(src) {
+  const open = src.indexOf('defineEmits<')
+  if (open !== -1) {
+    const brace = src.indexOf('{', open)
+    if (brace !== -1) {
+      let depth = 0
+      for (let i = brace; i < src.length; i++) {
+        if (src[i] === '{') depth++
+        else if (src[i] === '}') {
+          depth--
+          if (depth === 0) return new Set(parseEmitBlock(src.slice(brace + 1, i)))
+        }
+      }
+    }
+  }
+  const m = src.match(/emits\s*:\s*\[([\s\S]*?)\]/)
+  if (m) return new Set([...m[1].matchAll(/'([^']+)'|"([^"]+)"/g)].map((x) => x[1] ?? x[2]))
+  return new Set()
+}
+
+/** 逐行解析 defineEmits 的类型块：只收顶层（深度 0）的 `key:`。 */
+function parseEmitBlock(body) {
+  const keys = []
+  let depth = 0
+  let collecting = false
+  let current = ''
+  const flush = () => {
+    if (collecting) {
+      // 逐字符收集会把行首缩进一起收进来，匹配前先去掉空白。
+      const m = current.trim().match(/^(?:'([^']+)'|"([^"]+)"|([A-Za-z_$][\w$]*))\s*:/)
+      if (m) keys.push(m[1] ?? m[2] ?? m[3])
+    }
+    current = ''
+    collecting = false
+  }
+  for (const ch of body) {
+    if (ch === '\n') {
+      flush()
+      collecting = depth === 0
+      continue
+    }
+    if (!collecting && depth === 0 && ch !== ' ' && ch !== '\t') collecting = true
+    if (collecting) current += ch
+    if (ch === '(' || ch === '[' || ch === '{') depth++
+    else if (ch === ')' || ch === ']' || ch === '}') depth--
+  }
+  flush()
+  return keys
+}
+
+/** 同一文件里是否存在该事件的 emit 调用点（已 stripComments）。 */
+function hasEmitCallSite(src, key) {
+  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`\\bemit\\s*\\(\\s*['"]${esc}['"]`).test(src)
 }
 
 /**
@@ -351,6 +418,76 @@ function main() {
       if (!reason || !reason.trim()) {
         fail = true
         console.error(`❌ COLUMN_CONTRACT ${rowId}/${renderer}: knownGaps 未说明原因`)
+      }
+    }
+  }
+
+  // 7. 事件契约层：三端组件「声明了的事件」必须①三端一致（或登记有意缺席）②真有 emit 调用点。
+  //    只查 formtype/列语义时，两个真实缺陷都看不见：
+  //      - vue3/antdv 的 es-form 声明 confirm/reset，却零调用点（宿主 @confirm 得到静默）；
+  //      - antdv 的 es-dialog 漏声明 open（同端宿主代码在 vue3/vue2 触发、在这里静默）。
+  for (const [component, spec] of Object.entries(EMIT_CONTRACT)) {
+    const expected = new Set(spec.expected || [])
+    for (const name of RENDERER_NAMES) {
+      const file = spec.sources?.[name]
+      if (!file) {
+        fail = true
+        console.error(`❌ EMIT_CONTRACT ${component}/${name}: 未声明 sources —— 会静默漏检`)
+        continue
+      }
+      const text = readStripped(file)
+      const declared = extractDeclaredEmits(text)
+      const dev = spec.deviation?.[name]
+      if (dev && (!dev.reason || !dev.reason.trim())) {
+        fail = true
+        console.error(`❌ EMIT_CONTRACT ${component}/${name}: deviation 未说明原因`)
+      }
+      const exempt = new Set(dev?.keys || [])
+      for (const k of exempt) {
+        if (!expected.has(k)) {
+          fail = true
+          console.error(
+            `❌ EMIT_CONTRACT ${component}/${name}: deviation.keys 里的 '${k}' 不在 expected —— 登记错位（豁免不了任何东西）`
+          )
+        }
+      }
+      // 7a. 该端缺事件：expected − exempt 内的必须全部声明。
+      const missing = [...expected].filter((k) => !declared.has(k) && !exempt.has(k))
+      if (missing.length) {
+        fail = true
+        console.error(
+          `❌ EMIT_CONTRACT ${component}/${name}: 缺事件 [${missing.join(' / ')}]` +
+            `\n   ${spec.why || ''}` +
+            `\n   ${file}`
+        )
+      }
+      // 7b. 该端多事件：声明了契约之外的事件 —— 要么进 expected，要么显式登记。
+      const extra = [...declared].filter((k) => !expected.has(k))
+      if (extra.length) {
+        fail = true
+        console.error(
+          `❌ EMIT_CONTRACT ${component}/${name}: 契约未收录的事件 [${extra.join(' / ')}] —— ` +
+            `跨端口径无法核对；请进 expected 或登记 deviation`
+        )
+      }
+      // 7c. 登记只减不增：该端已经声明了登记为「缺席」的事件 ⟹ 删掉登记行。
+      const stale = [...exempt].filter((k) => declared.has(k))
+      if (stale.length) {
+        fail = true
+        console.error(
+          `❌ EMIT_CONTRACT ${component}/${name}: 陈旧登记 [${stale.join(' / ')}] —— ` +
+            `该端已声明它，必须从 deviation.keys 删除（只减不增）`
+        )
+      }
+      // 7d. 声明 ⇄ 存在：每个声明的事件都必须至少有一个 emit 调用点。
+      for (const k of declared) {
+        if (!hasEmitCallSite(text, k)) {
+          fail = true
+          console.error(
+            `❌ EMIT_CONTRACT ${component}/${name}: 声明了 '${k}' 却没有任何 emit 调用点 —— ` +
+              `宿主写 @${k.replace(/^update:/, '')} 只会得到静默（声明了却不存在的能力）\n   ${file}`
+          )
+        }
       }
     }
   }

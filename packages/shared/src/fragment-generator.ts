@@ -172,6 +172,8 @@ export interface TableBlockInput {
     rowkey?: string
     highlightCurrentRow?: boolean
     multiSelect?: boolean
+    /** 表头单元格样式。缺省 `{ background: '#f5f7fa' }`；此前片段路径写死该值（F3 补证）。 */
+    headerCellStyle?: Record<string, string>
   }
   /**
    * 可选操作列按钮。刻意只发 `triggerEvent: true`(事件上抛)而不内联 click 处理体——
@@ -206,7 +208,10 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push('    :columns="columns"')
   lines.push('    :options="options"')
   if (isVue2) {
-    lines.push('    :data-source.sync="tableData"')
+    // F7：vue2 es-table **从不 `emit('update:dataSource')`**（组件注释自述已移除），
+    // 故这里只能发**单向** `:data-source` —— `.sync` 会承诺一个永不触发的子→父方向。
+    // pagination 是例外：vue2 仍 emit `update:pagination`，`.sync` 成立。
+    lines.push('    :data-source="tableData"')
     lines.push('    :pagination.sync="pagination"')
   } else {
     lines.push('    v-model:data-source="tableData"')
@@ -262,7 +267,9 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(`  border: ${t.border !== false},`)
   lines.push(`  stripe: ${t.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${t.highlightCurrentRow !== false},`)
-  lines.push(`  headerCellStyle: { background: '#f5f7fa' },`)
+  // F3 补证：此前这里写死 `#f5f7fa`，用户值无处可传 —— 片段与 SFC 同病、系统性静默丢弃。
+  // 现在尊重 `tableOptions.headerCellStyle`，缺省仍回落到原来的默认背景。
+  lines.push(`  headerCellStyle: ${inlineJson(t.headerCellStyle || { background: '#f5f7fa' })},`)
   if (input.apiUrl) lines.push(`  apiParams: { url: ${q(input.apiUrl)} },`)
   lines.push(`  rowkey: ${q(t.rowkey || 'id')},`)
   if (t.multiSelect) lines.push('  multiSelect: true,')
@@ -313,14 +320,14 @@ export type DialogBlockMode = 'composable' | 'component'
  *     `onClosed`/`beforeClose`）：骨架自己装配这些，且函数不能走 JSON；
  *   - 刻意**不含**端特化键（`alignCenter`/`top`/`modalClass`/`loading`）：
  *     `scripts/check-type-exports.mjs` 已把 `DialogOptions` 的跨端成员差登记在案
- *     （vue2 的 Element UI 无 `alignCenter`、antdv 无 `loading`/`cacheKey`），
+ *     （vue2 的 Element UI 无 `alignCenter`、antdv 无 `loading`），
  *     收进来 = 承诺一个三端不等价的能力。
  *
  * `appendTo` 只收选择器**字符串**：DOM 元素不可能出现在 JSON 里（与 AI-27 的
  * `.dialogs[k].appendTo` 同口径，运行时用 querySelector 解析）。
  *
  * `cacheKey` 只在 `mode:'composable'` 下有效 —— 它是 `useDialog()` hook 的
- * **实例缓存**键（vue3/vue2 的 hook 里实装、antdv 已登记为无此机制），声明式
+ * **实例缓存**键（三端均在各自 hook 里实装），声明式
  * `<es-dialog>` 不经那条通道。component 模式下传入会**显式告警并忽略**，不静默发出去。
  */
 export interface DialogBlockOptions {
@@ -583,12 +590,12 @@ function generateDialogComponent(p: {
 
   // ── 选项落地：模板属性 ────────────────────────────────────────────────
   // cacheKey 是 useDialog() hook 的实例缓存键，声明式 <es-dialog> 不经那条通道
-  // （vue3/vue2 的实现在 hook 里，antdv 已登记无此机制）→ 显式告警 + 不发射，
+  // （三端的实现在各自 hook 里）→ 显式告警 + 不发射，
   // 绝不静默写成一个 el-dialog 认不得的脏属性。
   if (opts.cacheKey !== undefined) {
     warnings.push(
       "options.cacheKey 在 mode='component' 下没有消费者 —— 它是 useDialog() hook 的实例缓存键" +
-        '（vue3/vue2 在 hook 内实现，antdv 已登记无此机制），声明式 <es-dialog> 走不到那条通道，故已忽略。' +
+        '（三端均在 hook 内实现），声明式 <es-dialog> 走不到那条通道，故已忽略。' +
         "需要状态跨次打开保留时用 mode='composable'。"
     )
   }

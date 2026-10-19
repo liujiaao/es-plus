@@ -510,6 +510,17 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   const sfcFormFaceRenderWarn = formFaceRenderWarning(config, { includeDialogs: false })
   if (sfcFormFaceRenderWarn) warnings.push(sfcFormFaceRenderWarn)
 
+  // F3（W2.4）：顶层 formLayout 此前只有 schema 模式消费（EsCrudPage 的 formLayoutProps），
+  // SFC 模式从不读 —— 同一份 config 换 mode 布局就静默丢失。这里按 EsCrudPage 的映射
+  // （labelWidth → labelBtnWidth、minFoldRows 直传、rowLayProps.gutter=16）把等价的
+  // layoutFormProps 绑到查询 es-form。`span` 已于 AI-31③ 从契约删除（layout 级无消费者，
+  // 列数是逐字段的 querySpan/formSpan）。
+  const sfcFormLayout = (config.formLayout || {}) as { labelWidth?: string | number; minFoldRows?: number }
+  const sfcFormLayProps: Record<string, unknown> = {}
+  if (sfcFormLayout.labelWidth !== undefined) sfcFormLayProps.labelBtnWidth = sfcFormLayout.labelWidth
+  if (sfcFormLayout.minFoldRows) sfcFormLayProps.minFoldRows = sfcFormLayout.minFoldRows
+  const hasSfcFormLayout = Object.keys(sfcFormLayProps).length > 0
+
   const lines: string[] = []
 
   // Template
@@ -519,14 +530,20 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`    :columns="columns"`)
   lines.push(`    :options="options"`)
   if (isVue2) {
-    lines.push(`    :data-source.sync="tableData"`)
+    // F7：vue2 es-table 从不 emit `update:dataSource`，`.sync` 是永不触发的假承诺；
+    // 只发单向输入。`pagination` 仍会 emit `update:pagination`，`.sync` 成立。
+    lines.push(`    :data-source="tableData"`)
     lines.push(`    :pagination.sync="pagination"`)
   } else {
     lines.push(`    v-model:data-source="tableData"`)
     lines.push(`    v-model:pagination="pagination"`)
   }
   lines.push(`  >`)
-  lines.push(`    <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns" />`)
+  lines.push(
+    `    <es-form :model="queryForm" :form-item-list="formItems" :config-btn="queryBtns"` +
+      (hasSfcFormLayout ? ` :layout-form-props="formLayoutProps"` : '') +
+      ` />`,
+  )
   lines.push(`  </es-table>`)
   lines.push(`</template>`)
   lines.push(``)
@@ -604,6 +621,12 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   const formItemsJson = inlineJson(queryFields.map(f => buildFormItem(f, 'query', config.i18n)), 2)
   lines.push(...buildFormFaceRenderPlaceholderLines(config, '', { includeDialogs: false, dialect: 'js' }))
   lines.push(`const formItems = ${formItemsJson}`)
+  if (hasSfcFormLayout) {
+    // 与 schema 模式（EsCrudPage.formLayoutProps）等价：labelWidth 映射到按钮区 label 宽度。
+    lines.push(
+      `const formLayoutProps = { rowLayProps: { gutter: 16 }, formLayProps: ${inlineJson(sfcFormLayProps)} }`,
+    )
+  }
   lines.push(``)
 
   // queryBtns
@@ -671,7 +694,10 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(`  border: ${tOpts.border !== false},`)
   lines.push(`  stripe: ${tOpts.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`)
-  lines.push(`  headerCellStyle: { background: '#f5f7fa' },`)
+  // F3（W2.4）：`headerCellStyle` 一度在这里写死 `{ background: '#f5f7fa' }` ——
+  // schema 模式尊重用户值（上方 tableOptions 构造的 `tOpts.headerCellStyle || 默认`），
+  // SFC 却把它静默换回默认值：同 config 换 mode 表头样式就变，且零告警。
+  lines.push(`  headerCellStyle: ${inlineJson(tOpts.headerCellStyle || { background: '#f5f7fa' })},`)
   lines.push(`  apiParams: { url: ${q(config.apiUrl)} },`)
   lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`)
   if (tOpts.heightType) lines.push(`  heightType: ${q(tOpts.heightType)},`)

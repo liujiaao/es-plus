@@ -67,8 +67,8 @@ export interface CrudDialogConfig {
   fullscreen?: boolean
   isHiddenFooter?: boolean
   // Dialog base data keys (AI-27): forwarded verbatim to the underlying dialog by
-  // each end's openDialog whitelist. Note: cacheKey is inert in the ant-design-vue
-  // adapter (registered deviation — its use-dialog has no instance cache).
+  // each end's openDialog whitelist. cacheKey is honored on all three renderers
+  // (instance cache with a 10-min TTL after close).
   showClose?: boolean
   destroyOnClose?: boolean
   modal?: boolean

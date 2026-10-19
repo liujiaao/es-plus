@@ -59,8 +59,9 @@ describe(`generateCrudPage (target=${TARGET}) — contract compliance`, () => {
 
     it(`${example.label}: uses :sync v-model syntax (not v-model:prop)`, () => {
       const result = generateCrudPage(example.prompt, TARGET)
-      // Vue 2 emits `:data-source.sync` etc. Vue 3's `v-model:data-source`
-      // must NOT appear in the vue2 output.
+      // Vue 2 的 pagination 发 `:pagination.sync`；data-source 是例外（F7）：vue2
+      // es-table 从不 emit update:dataSource，故只发单向 `:data-source`。
+      // Vue 3 的 `v-model:xxx` 必须不出现在 vue2 输出里。
       expect(result.code).not.toMatch(/v-model:[a-zA-Z-]+="/)
     })
 

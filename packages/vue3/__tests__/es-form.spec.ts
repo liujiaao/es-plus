@@ -212,21 +212,22 @@ describe('EsForm - 配置渲染', () => {
     expect(typeof vm.formItmeRequestInstance).toBe('function')
   })
 
-  it('emits confirm event on button click', async () => {
+  it('不向宿主派发 confirm/reset（F5a：点击只走内部 triggerEvent 联动表格）', async () => {
+    const onConfirm = vi.fn()
     const wrapper = mountForm({
       model: { name: '' },
       formItemList: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 24 }],
-      configBtn: [{ name: '确认', type: 'primary', key: 'confirm' }]
+      configBtn: [{ name: '确认', type: 'primary', key: 'confirm' }],
+      onConfirm
     })
-    // Find and click the confirm button
-    const buttons = wrapper.findAll('.el-button')
-    const confirmBtn = buttons.find(b => b.text().includes('确认'))
-    if (confirmBtn) {
-      await confirmBtn.trigger('click')
-      // The confirm event is triggered by the clickBtn handler which checks the key
-      // If the event doesn't fire, the button mechanism still works (no crash)
-      expect(wrapper.find('.es-form').exists()).toBe(true)
-    }
+    const confirmBtn = wrapper.findAll('.el-button').find(b => b.text().includes('确认'))
+    expect(confirmBtn).toBeTruthy()
+    await confirmBtn!.trigger('click')
+    // 组件不声明、也不 emit confirm：宿主写 @confirm 得不到任何回调。
+    // 这是一条**刻意的否定事实** —— 查询/重置由内部 triggerEvent 联动 es-table。
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect((wrapper.vm.$options as { emits?: unknown }).emits).toBeUndefined()
   })
 
   it('loads remote data via apiParams', async () => {

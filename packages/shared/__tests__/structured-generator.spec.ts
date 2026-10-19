@@ -636,10 +636,14 @@ describe('multi-target generation (vue3 / vue2 / antdv)', () => {
     expect(wrapperCode).toContain("from 'element-ui'")
     expect(wrapperCode).toContain('MessageBox.confirm')
     expect(wrapperCode).not.toContain('ElMessageBox')
-    // vue2 SFC template must use .sync, not v-model:xxx
+    // vue2 SFC template must use .sync, not v-model:xxx —— 但 data-source 是例外（F7）：
+    // vue2 es-table 从不 emit update:dataSource，`.sync` 是假承诺，只能发单向。
     const sfc = generateFromConfig(cfgFor('vue2', 'sfc')).code
-    expect(sfc).toContain(':data-source.sync=')
+    expect(sfc).toContain(':data-source="tableData"')
+    expect(sfc).not.toContain(':data-source.sync')
     expect(sfc).not.toContain('v-model:data-source')
+    // pagination 仍会 emit update:pagination，`.sync` 成立。
+    expect(sfc).toContain(':pagination.sync=')
   })
 
   it('antdv wrapper uses Modal.confirm + a-tag color semantics', () => {

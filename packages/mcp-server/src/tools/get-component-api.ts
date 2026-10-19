@@ -25,6 +25,8 @@ interface TargetVars {
   elementCss: string;
   scriptSetup: string;
   vModelSync: (prop: string) => string;
+  /** data-source 的绑定写法：vue2 是单向特例（组件从不 emit update:dataSource）。 */
+  vDataSource: string;
   jsxNote: string;
 }
 
@@ -35,6 +37,7 @@ const TARGETS: Record<Target, TargetVars> = {
     elementCss: "element-plus/dist/index.css",
     scriptSetup: "<script setup>",
     vModelSync: (prop) => `v-model:${prop}`,
+    vDataSource: "v-model:data-source",
     jsxNote: "Use `<script setup lang=\"tsx\">` for JSX.",
   },
   vue2: {
@@ -43,6 +46,8 @@ const TARGETS: Record<Target, TargetVars> = {
     elementCss: "element-ui/lib/theme-chalk/index.css",
     scriptSetup: "<script>\nimport { defineComponent } from 'vue'\nexport default defineComponent({\n  setup() { /* ... */ }\n})",
     vModelSync: (prop) => `:${prop}.sync`,
+    // F7：vue2 es-table 从不 emit `update:dataSource` —— `.sync` 会承诺一个永不触发的方向。
+    vDataSource: ":data-source (one-way — vue2 never emits update:dataSource)",
     jsxNote: "Vue 2.7's `<script setup>` works but JSX requires the @vue/babel-preset-jsx plugin. defineComponent + setup() is the safer fallback.",
   },
   antdv: {
@@ -51,6 +56,7 @@ const TARGETS: Record<Target, TargetVars> = {
     elementCss: "ant-design-vue/dist/reset.css",
     scriptSetup: "<script setup>",
     vModelSync: (prop) => `v-model:${prop}`,
+    vDataSource: "v-model:data-source",
     jsxNote: "Use `<script setup lang=\"tsx\">` for JSX (Vue 3 syntax, identical to vue3).",
   },
 };
@@ -71,7 +77,7 @@ function docEsForm(v: TargetVars): string {
 interface FormItemOption {
   prop: string              // Field key in model
   label: string             // Display label
-  formtype?: FormType       // Input/Select/DatePicker/TimePicker/Switch/Rate/Upload/...
+  formtype?: FormType       // Input/Select/DatePicker/TimePicker/Switch/Rate/Upload/...${v.esPlusPkg === '@es-plus/adapter-antdv' ? '\n                            // antdv: ColorPicker degrades to a native <input type="color"> — no alpha/preset/history, and it does NOT trigger a-form-item validation' : ''}
   span?: number             // Grid span (1-24, default 6)
   attrs?: Record<string, unknown>  // Pass-through to ${v.elementPkg} component
   dataOptions?: Array<{ label: string; value: unknown }>  // Options for Select/Radio/Checkbox
@@ -125,7 +131,7 @@ function docEsTable(v: TargetVars): string {
 |------|------|-------------|
 | columns | \`TableColumn[]\` | Column definitions |
 | options | \`TableOptions\` | Table behavior configuration |
-| dataSource (${v.vModelSync("data-source")}) | \`any[]\` | Table data array |
+| dataSource (${v.vDataSource}) | \`any[]\` | Table data array |
 | pagination (${v.vModelSync("pagination")}) | \`PaginationConfig\` | Pagination state |
 
 ## TableColumn Interface
@@ -294,8 +300,9 @@ interface DialogOptions {
   modalClass?: string         // custom class on the mask
 }
 \`\`\`
-Cross-renderer members: **antdv declares neither \`cacheKey\` nor \`loading\`** (its hook has no
-instance cache, and its dialog has no body-loading mask) — passing them there is silently ignored.
+Cross-renderer members: **antdv does not declare \`loading\`** (its dialog has no body-loading
+mask) — passing it there is silently ignored. \`cacheKey\` is supported on all three renderers
+(instance cache, 10-min TTL after close).
 
 ## Return value
 \`\`\`typescript

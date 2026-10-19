@@ -97,12 +97,7 @@ const MEMBER_DEVIATIONS = new Map([
     'PaginationConfig.@es-plus/adapter-antdv.layout',
     'a-pagination 没有 layout 字符串 prop —— 对应能力由 showTotal / showSizeChanger / showQuickJumper 三个布尔表达，本端无对应物。' +
       '（vue3 / vue2 的 el-pagination 有 layout，且已让 `:pagination="{ layout }"` 经 computed 回落生效；antdv 若照抄声明就是撒谎。）' +
-      '与「virtual 在 vue2/antdv 忽略」「分页 size 在本端只认 small」同属一个取舍：不是漏实现，是底层组件无此概念。',
-  ],
-  [
-    'DialogOptions.@es-plus/adapter-antdv.cacheKey',
-    'antdv 的 use-dialog 没有实例缓存机制（vue3 的 useDialog 有 instanceCache + TTL 回收）。' +
-      '本端传入 cacheKey 会被 eslint 之外的所有路径静默忽略，故不声明 —— 声明了等于承诺一个不存在的功能。',
+      '与「virtual 在 vue2 忽略（antdv 4 原样透传给 a-table）」「分页 size 在本端只认 small」同属一个取舍：不是漏实现，是底层组件无此概念。',
   ],
   [
     'DialogOptions.@es-plus/adapter-antdv.loading',
