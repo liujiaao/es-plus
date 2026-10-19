@@ -26,8 +26,18 @@ const vue2PkgRequire = createRequire(
 )
 const vue2Compiler = vue2PkgRequire('vue/compiler-sfc')
 
+// AI-44：片段 fixture 要跑 `generate_dialog` 的 composable 形态（fence='tsx'，
+// 弹窗体是 Vue-2 风格 JSX render）。Vue 2 的 JSX 语义（属性落 attrs、`h` 从 render
+// 参数取）与根 node_modules 的 Vue 3 JSX 插件不兼容，必须用 @vitejs/plugin-vue2-jsx。
+//
+// 为什么经 createRequire 从 packages/vue2 解析而不是普通 import：
+// 它的 peer 是 Vue 2，而根依赖树被 workspace 提升成了 Vue 3 —— 直接放进**根**
+// devDependencies 会 ERESOLVE。包本身装在工作区的 packages/vue2/node_modules 下。
+const vueJsxMod = vue2PkgRequire('@vitejs/plugin-vue2-jsx')
+const vueJsx = vueJsxMod.default || vueJsxMod
+
 export default defineConfig({
-  plugins: [vue({ compiler: vue2Compiler as any })],
+  plugins: [vue({ compiler: vue2Compiler as any }), vueJsx()],
   resolve: {
     alias: [{ find: /^vue$/, replacement: vue2Runtime }],
     // 去重，确保整个依赖图只有一份 Vue 2.7 实例

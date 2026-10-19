@@ -1,13 +1,13 @@
 # Tier 2 运行时 E2E（Playwright）
 
 在 es-plus 的分层 E2E 模型里，本目录是 **Tier 2**：用真实浏览器（Chromium）渲染真实 Element UI + 真实
-`@es-plus/vue2` 构建产物，驱动 CRUD 全链路。
+`@es-plus/vue2` 构建产物，驱动 **CRUD 全链路**与**六份 golden 片段产物**。
 
 | 层级 | 位置 | 手段 | 覆盖 |
 | --- | --- | --- | --- |
 | Tier 0 | `__tests__/e2e/` | pack tarball → install → `es-plus create` → `vite build` | 生成代码能编译（无运行时/浏览器） |
-| Tier 1 | `packages/{vue3,adapter-antdv}/__tests__/crud-runtime.spec.ts` | vitest + happy-dom 挂载真实组件 + 内存后端 | 增删改查全链路（vue3 / antdv） |
-| **Tier 2** | **本目录** | **Playwright + 真实 Chromium + vite dev fixture** | **增删改查全链路（vue2）** |
+| Tier 1 | `packages/{vue3,adapter-antdv}/__tests__/{crud-runtime,fragment-runtime}.spec.ts` | vitest + happy-dom 挂载真实组件 + 内存后端 | 增删改查全链路 + golden 片段（vue3 / antdv） |
+| **Tier 2** | **本目录** | **Playwright + 真实 Chromium + vite dev fixture** | **增删改查全链路 + golden 片段（vue2）** |
 
 ## 为什么 vue2 用 Tier 2 而不是 Tier 1
 
@@ -21,17 +21,28 @@ element-ui 的编译期 CJS `_interopRequireDefault(require('vue'))` 在 vitest 
 
 ```
 __tests__/e2e-runtime/
-  playwright.config.ts     # webServer 自动起 vue2/ 的 vite dev；单 chromium project
+  playwright.config.ts     # webServer 先 gen-fragments 再起 vue2/ 的 vite dev；单 chromium project
   vue2/                    # 真实 vite vue2 应用（fixture）
-    vite.config.ts         # 关键：alias vue→Vue 2.7（根 node_modules/vue 是 Vue 3！）+ 显式 Vue2 compiler-sfc
-    src/{main.ts,App.vue,schema.ts,backend.ts}
+    vite.config.ts         # 关键：alias vue→Vue 2.7（根 node_modules/vue 是 Vue 3！）+ 显式 Vue2 compiler-sfc + @vitejs/plugin-vue2-jsx
+    fragments.html         # 片段 fixture 入口（CRUD 走 index.html）
+    scripts/gen-fragments.mjs  # 从 golden 语料现生成六份 vue2 片段到 src/fragments/（gitignore）
+    src/{main.ts,App.vue,schema.ts,backend.ts}          # CRUD fixture
+    src/{fragments-main.ts,FragmentsApp.vue,fragments-backend.ts}  # 片段 fixture
   tests/vue2-crud.spec.ts  # 列表加载 → 新增 → 编辑 → 删除
+  tests/vue2-fragments.spec.ts  # 6 份生成片段：表格拉数/映射/formatter、表单、两种弹窗形态
 ```
 
 - **消费产物**：fixture 经 workspace 软链消费 `@es-plus/vue2` 的 `dist/es-plus-vue2.js`（发布产物）与
   `@es-plus/core` 的 `build/index.js`。跑测前需保证 `packages/vue2` 已 `vite build`。
 - **注入缝**：内存后端（`src/backend.ts`，与 Tier 1 同构）通过 `EsCrudPage` 的 `:http-request` prop 注入，
   按 url 路由 `/api/list|create|update|delete`，列表返回 `{records, rows}`。挂到 `window.__backend` 供 spec 断言计数。
+- **片段 fixture（AI-44）**：入口 `src/fragments-main.ts` **只**用 `Vue.use(ESPlus, { httpRequest })` 配顶层请求函数
+  ——生成出来的片段自身没有 `:http-request` prop，因此这同时是全局 `httpRequest` 兜底（AI-43）的运行时见证。
+  六份片段由 `scripts/gen-fragments.mjs` 在 dev server 启动前现生成（build 缺失 / 语料非法 / fence 不符 → 逐条报错并 exit 1，
+  不做兜底）；产物目录 `src/fragments/` 已进 `.gitignore`；`fragments-backend.ts` 按 URL 分流，未知 URL **抛错**。
+- **Vue 2 JSX**：dialog composable 片段是 `.tsx`，由 `@vitejs/plugin-vue2-jsx` 编译。该插件 peer 依赖 Vue **2**，
+  放进根 devDependencies 会因根 hoist 的 Vue 3 触发 ERESOLVE，故声明在 `packages/vue2/package.json`，
+  `vite.config.ts` 用 `createRequire(packages/vue2/package.json)` 解析。
 - **Vue 版本冲突**：本 monorepo 根 `node_modules/vue` 是 **Vue 3**（从 vue3 包提升）。fixture 的 `vite.config.ts`
   必须把 `vue` 精确别名到 `packages/vue2/node_modules/vue` 的 2.7 runtime-esm，并把 Vue 2.7 的 `vue/compiler-sfc`
   显式传给 `@vitejs/plugin-vue2`（否则插件会误用根的 Vue 3 编译器）。
@@ -45,7 +56,7 @@ __tests__/e2e-runtime/
 # 2) 首次安装浏览器（数十~上百 MB 下载）
 npx playwright install chromium
 
-# 3) 跑 Tier 2
+# 3) 跑 Tier 2（webServer 会自动先跑 gen-fragments.mjs，无需手动生成片段）
 npm run test:e2e:runtime
 # 或： npx playwright test -c __tests__/e2e-runtime/playwright.config.ts
 ```
@@ -56,4 +67,4 @@ npm run test:e2e:runtime
 ## 注意
 
 - 本层**不并入** `test:e2e` 与默认 CI 流水（浏览器下载成本）；作为独立可选步骤执行。
-- 目前仅 vue2；vue3/antdv 已由 Tier 1 覆盖。结构预留，将来可在 `e2e-runtime/` 下加同构 fixture 复用本 harness。
+- 目前仅 vue2（CRUD + 片段）；vue3/antdv 已由 Tier 1 覆盖。结构预留，将来可在 `e2e-runtime/` 下加同构 fixture 复用本 harness。

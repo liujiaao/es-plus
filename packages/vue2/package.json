@@ -83,6 +83,7 @@
     "@types/node": "^20.0.0",
     "@vue/composition-api": "^1.7.2",
     "@vitejs/plugin-vue2": "^2.3.0",
+    "@vitejs/plugin-vue2-jsx": "^1.1.1",
     "vxe-table": "^3.8.0",
     "element-ui": "^2.15.14",
     "sass": "^1.70.0",

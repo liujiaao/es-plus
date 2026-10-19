@@ -20,7 +20,10 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npx --no-install vite --port 51730 --strictPort',
+    // AI-44：先把 golden 语料生成为 vue2 片段落到 fixture 的 src/fragments/，
+    // 再起 dev server。生成失败必须阻断启动（否则页面会以「模块不存在」的方式
+    // 报一个与真正原因无关的错）。
+    command: 'node ./scripts/gen-fragments.mjs && npx --no-install vite --port 51730 --strictPort',
     cwd: './vue2',
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,

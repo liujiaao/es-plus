@@ -385,7 +385,18 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
   - 守卫补强：`packages/vue2/__tests__/es-table.spec.ts` 增「只配顶层 `httpRequest` 也发请求」；`packages/vue2/__tests__/es-dialog-show-close.spec.ts` 增「默认插槽不再静默丢弃」——vue2 没有 Tier-1 片段挂载，这两条是 slot 与解析链的单元级见证。
 - **硬指标（可验收）**：`npx vitest run __tests__/fragment-runtime.spec.ts` 在 `packages/vue3` 与 `packages/adapter-antdv` 各 **6/6 绿**（覆盖 table×2 / form×2 / dialog×2，全部来自 golden 语料，不是手写样张）；vue2 两条回归绿。既有回归：vue3 `crud-runtime` + `generated-runtime` + `use-dialog` **57/57**；antdv `crud-runtime` + `es-table` + `scenario-table-advanced` + `es-dialog-open-emit` **84/84**；vue2 相关 spec **21/21**。
 - **变异验证（全部实测咬红，已还原）**：① vue3 表格回落改成 `null` ⇒ 片段表格「拉数 0 次」；② vue3 弹窗删 `<slot v-else />` ⇒ 片段弹窗文本只剩「编辑取消确定」；③ vue2 同两处变异 ⇒ 对应两条单测红。还原后全部复绿。
-- **仍未做（显式留档）**：**vue2 片段运行时**（Tier 2 playwright 仍只接 CRUD；本批只给它两条单元级守卫）；片段**准确率** scorer 与 `definition95` 分母不变。`eval-llm?` 列仍为 ❌。**不提交、不推送**（仓铁律）。
+- **仍未做（显式留档）**：**vue2 片段运行时**（Tier 2 playwright 仍只接 CRUD；本批只给它两条单元级守卫）——**已由下一批 AI-44 收口**；片段**准确率** scorer 与 `definition95` 分母不变。`eval-llm?` 列仍为 ❌。**不提交、不推送**（仓铁律）。
+
+### AI-44 — vue2 片段运行时见证：Tier 2 收编六份 golden 片段（**2026-10-19 已落地**）· `M`
+- **Why**：AI-43 把「运行时?」这一格在 vue3 / antdv 抬起（Tier 1 vitest 挂载），vue2 只留了两条**单元级**守卫（slot 回退、全局 `httpRequest` 回落）——一条片段产物在 vue2 是否真能渲染，仍无人守望；而 §1.2 的矩阵此时对三端都写 ✅，实际却是「两端 Tier 1 + 一端单元」的不对称。`__tests__/e2e-runtime` 的 Tier 2 已经能把 vue2 CRUD 跑在真实 Chromium 里，缺的只是把同一批 golden 片段接进这套 harness。
+- **修法**：
+  - 新增 `__tests__/e2e-runtime/vue2/scripts/gen-fragments.mjs`：dev server 启动**前**从 golden 语料出发，用 `packages/shared/build` 的 `generateTableBlock` / `generateFormBlock` / `generateDialogBlock` 生成六份 vue2 片段（table×2 / form×2 / dialog component `.vue` + dialog composable `.tsx`）到 `src/fragments/`（已进 `.gitignore`）。任何一步缺失（build 不存在、导出名不对、语料 JSON 非法、fence 与预期不符）**逐条列出并 exit 1**，不做兜底。
+  - 新增 `src/FragmentsApp.vue` / `src/fragments-main.ts` / `fragments.html` / `src/fragments-backend.ts`：静态 import 六份生成物、分区块挂载；入口**只**通过 `Vue.use(ESPlus, { httpRequest })` 配顶层请求函数（片段自身没有 `:http-request` prop）——顺带把 AI-43 的全局兜底变成运行时见证；内存后端按 URL 分流，未知 URL **抛错而非静默返回空**，并暴露 `calls`（`usersList` / `ordersList` / `submits` / `requests`）与 `window.__unhandled`。
+  - 新增 `tests/vue2-fragments.spec.ts`（6 例）：① table-01 拉数→行渲染、`formatter` 到 DOM（`12.00` / `3.50`）、行操作按钮派生；② table-02 `configTableOut:{total:'total',tableData:'list'}` 真被请求层消费、`showHeader:false`、`pagination.pageSize` 播种（`.el-pagination__sizes` 精确取，避开 jumper 在前的 DOM 顺序）；③ form-01 字段/textarea/按钮、输入回写宿主 model、无 `apiUrl` 不提交；④ form-02 `formLayout.labelWidth` 到 `getComputedStyle`（110px）；⑤ dialog component 形态：`open(title,row)` 预填、默认插槽表单体、`width=720` / `isDraggable` 光标 / `showClose:false`、必填拦截（`submits` 仍 0）、PUT `/api/users/1`；⑥ dialog composable 形态：`useXxxDialog().open()`、必填拦截、POST `/api/users`。每例断言 `__unhandled` 为空。
+  - `vite.config.ts` 经 `createRequire(packages/vue2/package.json)` 加载 `@vitejs/plugin-vue2-jsx`（peer Vue 2；放根 devDependencies 会 ERESOLVE，因为根 hoist 的是 Vue 3），`playwright.config.ts` 的 webServer 命令前置 `node ./scripts/gen-fragments.mjs`。
+- **硬指标（可验收）**：`npx playwright test` 于 `__tests__/e2e-runtime` **13/13 绿**（7 条 CRUD + 6 条片段），真实 Chromium + 真实 Element UI + `@es-plus/vue2` dist；六份片段每次由 golden 语料现生成，不存在手工样张。
+- **变异验证（全部实测咬红，已还原）**：① 删 `formatter` 发射 ⇒ table-01「12.00」缺失；② 删 `formLayout` ⇒ form-02 `54px ≠ 110px`；③ 删 `apiUrl` ⇒ composable 提交计数 0 ≠ 1；④ 临时从 dist 移除 `resolveHttpRequest(getGlobalConfig())` 回落 ⇒ beforeEach 行数 0（片段无 prop，请求无处可发）。产物、dist、语料均已还原。
+- **仍未做（显式留档）**：片段**准确率** scorer（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母；`eval-llm?` 列仍为 ❌。**不提交、不推送**（仓铁律）。
 
 ---
 

@@ -36,5 +36,8 @@ coverage/
 packages/*/__tests__/.tmp-fragments/
 .tmp-inspect/
 
+# Tier 2 片段 fixture：gen-fragments.mjs 从 golden 语料生成的片段产物（AI-44）
+__tests__/e2e-runtime/vue2/src/fragments/
+
 # 会话工作记录（本地留存，不进版本库）
 .session-notes/
