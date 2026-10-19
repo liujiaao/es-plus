@@ -317,14 +317,6 @@ export const DIALOG_OPTIONS_JSON_ONLY = {
     verdict: 'dead',
     reason: '全仓零消费者 → 死键，AI-28 裁决删除',
   },
-  confirmText: {
-    verdict: 'promote-core',
-    reason: 'vue3 + vue2 es-dialog 真实 prop（component.vue）；antdv 无对应物 → 提 core 命名键 + antdv 按偏差范式登记',
-  },
-  cancelText: {
-    verdict: 'promote-core',
-    reason: '同 confirmText：vue3 + vue2 es-dialog 真实 prop，antdv 无对应物',
-  },
   onOpen: {
     verdict: 'legacy-alias',
     reason: '属 CrudDialogConfig（crud-page 弹窗打开回调），被误收进 dialog-options（es-dialog 无此 prop）→ AI-27 只保留在 crud 面，本处删除',

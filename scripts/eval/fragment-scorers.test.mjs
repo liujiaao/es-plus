@@ -3,7 +3,8 @@
  * 片段记分卡自测（meta-eval，无需 API key，进 CI 的 `check:fragment-scorers`）。
  *
  * 记分卡自己也会错。这里钉五件事：
- *   1) **语料标注合法**：18 条片段用例都必须带 `pinnedDims`、`nlStatedDims`、`fixedFields`，
+ *   1) **语料标注合法**：每条片段用例（2026-10-19 起 63 条，每场景 ≥20）都必须带
+ *      `pinnedDims`、`nlStatedDims`、`fixedFields`，
  *      且每个 token 都是该 `(scene, gold)` 下真实启用、gold 真声明了的维度。标错/标到不存在的键 → 红。
  *      `pinnedDims ⊆ nlStatedDims`（scoped 不得惩罚 NL 未声明的意图）；`fixedFields` 必须与
  *      gold 的 prop 集完全一致（与 188 条 CRUD 同规矩：prop 由宿主给定，语义由模型推断）。
@@ -15,7 +16,8 @@
  *      未钉的整维度被扰动后 scoped 仍为真；stated token 被扰动后 stated 必须翻红，
  *      未声明的整维度被扰动后 stated 仍为真。
  *   5) **等价实现归一化**：运行时已核实的等价写法（rowkey 缺省、labelWidth 数字/px、
- *      height/tabHeight 字符串、virtual/engine、width 数字/px）必须判等；错值仍要红。
+ *      height↔tabHeight（含「maxHeight 下 height 是死键」）、virtual/engine、width 数字/px）
+ *      必须判等；错值仍要红。
  *   6) **覆盖体检**：报告哪些维度从未被片段语料触发（补语料的信号，不致命）。
  */
 
@@ -59,7 +61,7 @@ for (const file of readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sor
     target: raw.target,
   })
 }
-check(cases.length === 18, `片段语料应为 18 条，实得 ${cases.length}`)
+check(cases.length >= 60, `片段语料应 ≥60 条（每场景 ≥20），实得 ${cases.length}`)
 
 // ── 扰动原语 ──────────────────────────────────────────────────────────────────
 const FORMTYPES = ['Input', 'Select', 'DatePicker', 'Switch', 'InputNumber', 'Radio', 'Checkbox']
@@ -103,9 +105,12 @@ function perturbWhole(scene, dim, gold, pred) {
     return true
   }
   if (dim === 'fieldAttrs') {
-    const f = firstField((x) => x.attrs?.type !== undefined)
+    // 与维度适用条件对齐（AI-51）：整维度覆盖「声明了任意 attrs 键」的字段，
+    // 扰 `placeholder`/`maxlength` 同样须咬住 —— 不止 `attrs.type`。
+    const f = firstField((x) => x.attrs && Object.keys(x.attrs).length > 0)
     if (!f) return false
-    f.attrs.type = f.attrs.type === 'textarea' ? 'password' : 'textarea'
+    const k = Object.keys(f.attrs)[0]
+    f.attrs[k] = bump(f.attrs[k])
     return true
   }
   if (dim === 'fieldLayout') {
@@ -116,10 +121,57 @@ function perturbWhole(scene, dim, gold, pred) {
     return true
   }
   if (dim === 'extPoints') {
-    const f = firstField((x) => x.render || x.formatter)
+    const f = firstField((x) => x.render !== undefined || x.formatter !== undefined || x.permissionValue !== undefined)
     if (!f) return false
     delete f.render
     delete f.formatter
+    delete f.permissionValue
+    return true
+  }
+  if (dim === 'isHidden') {
+    const f = firstField((x) => x.isHidden !== undefined)
+    if (!f) return false
+    f.isHidden = bump(f.isHidden)
+    return true
+  }
+  if (dim === 'reactions') {
+    const f = firstField((x) => Array.isArray(x.reactions))
+    if (!f) return false
+    // 追加一条空规则：单条数组经 bump 会原样保留（[v[0]]），无法证明咬合力。
+    f.reactions = [...f.reactions, { dependencies: ['__probe'], fulfill: {} }]
+    return true
+  }
+  if (dim === 'fieldSpan') {
+    const f = firstField((x) => x.querySpan !== undefined || x.formSpan !== undefined)
+    if (!f) return false
+    const k = f.querySpan !== undefined ? 'querySpan' : 'formSpan'
+    f[k] = bump(f[k])
+    return true
+  }
+  if (dim === 'fieldRules') {
+    const f = firstField((x) => (x.rules ?? []).some((r) => r.type || r.pattern || r.min !== undefined || r.max !== undefined || r.trigger))
+    if (!f) return false
+    const r = f.rules.find((x) => x.type || x.pattern || x.min !== undefined || x.max !== undefined || x.trigger)
+    if (r.type !== undefined) r.type = r.type === 'email' ? 'url' : 'email'
+    else if (r.pattern !== undefined) r.pattern = r.pattern + '-x'
+    else if (r.min !== undefined) r.min = r.min + 1
+    else r.max = r.max + 1
+    return true
+  }
+  if (dim === 'apiParams') {
+    const f = firstField((x) => x.apiParams !== undefined)
+    if (!f) return false
+    f.apiParams.url = f.apiParams.url + '-x'
+    return true
+  }
+  if (dim === 'labelKey') {
+    const f = firstField((x) => x.labelKey !== undefined)
+    if (!f) return false
+    f.labelKey = f.labelKey + '.x'
+    return true
+  }
+  if (dim === 'i18n') {
+    cfg.i18n = !(cfg.i18n ?? false)
     return true
   }
   if (dim === 'target') {
@@ -131,13 +183,16 @@ function perturbWhole(scene, dim, gold, pred) {
     cfg.apiUrl = cfg.apiUrl + '-x'
     return true
   }
+  if (dim === 'noApiUrl') {
+    cfg.apiUrl = '/api/__probe'
+    return true
+  }
   if (dim === 'rowButtons') {
     const b = (cfg.rowButtons ?? [])[0]
     if (!b) return false
-    // 只改 type/key：`rowButtonNames` 是独立维度，改名会同时打红它 → 无法证明 rowButtons 自己的咬合力
-    if (b.type) b.type = b.type + '-x'
-    else if (b.key) b.key = b.key + '-x'
-    else b.type = 'primary'
+    // 只改 type：`rowButtonNames` 是独立维度，改名会同时打红它 → 无法证明 rowButtons 自己的咬合力。
+    // `key` 不再计分（它在 Zod/类型里可选、NL 从不提）——扰动它咬不住，改用 type。
+    b.type = b.type ? b.type + '-x' : 'primary'
     return true
   }
   if (dim === 'rowButtonNames') {
@@ -236,7 +291,13 @@ function perturbField(dim, prop, gold, pred) {
   }
   if (dim === 'fieldAttrs') {
     if (!f.attrs) f.attrs = {}
-    f.attrs.type = f.attrs.type === 'textarea' ? 'password' : 'textarea'
+    const keys = Object.keys(f.attrs)
+    if (!keys.length) {
+      f.attrs = { type: 'textarea' }
+      return true
+    }
+    const k = keys[0]
+    f.attrs[k] = bump(f.attrs[k])
     return true
   }
   if (dim === 'fieldLayout') {
@@ -247,6 +308,38 @@ function perturbField(dim, prop, gold, pred) {
   if (dim === 'extPoints') {
     delete f.render
     delete f.formatter
+    delete f.permissionValue
+    return true
+  }
+  if (dim === 'isHidden') {
+    f.isHidden = bump(f.isHidden)
+    return true
+  }
+  if (dim === 'reactions') {
+    f.reactions = [...(f.reactions ?? []), { dependencies: ['__probe'], fulfill: {} }]
+    return true
+  }
+  if (dim === 'fieldSpan') {
+    const k = f.querySpan !== undefined ? 'querySpan' : 'formSpan'
+    f[k] = bump(f[k])
+    return true
+  }
+  if (dim === 'fieldRules') {
+    const r = (f.rules ?? []).find((x) => x.type || x.pattern || x.min !== undefined || x.max !== undefined || x.trigger)
+    if (!r) return false
+    if (r.type !== undefined) r.type = r.type === 'email' ? 'url' : 'email'
+    else if (r.pattern !== undefined) r.pattern = r.pattern + '-x'
+    else if (r.min !== undefined) r.min = r.min + 1
+    else r.max = r.max + 1
+    return true
+  }
+  if (dim === 'apiParams') {
+    if (!f.apiParams) return false
+    f.apiParams.url = f.apiParams.url + '-x'
+    return true
+  }
+  if (dim === 'labelKey') {
+    f.labelKey = f.labelKey + '.x'
     return true
   }
   return false
@@ -326,9 +419,11 @@ for (const c of cases) {
   const hasFieldPin = (dim) => c.pins.some((t) => t.startsWith(`${dim}:`))
   const statedWhole = new Set(c.stated.filter((t) => !t.includes(':')))
   const hasStatedField = (dim) => c.stated.some((t) => t.startsWith(`${dim}:`))
-  // 语义重叠：`options.modal` 的两种正确落地都被 `dialogMaskNonClosing` 覆盖，扰动 modal 必然撞上它。
+  // 语义重叠：`options.modal` 的两种正确落地都被 `dialogMaskNonClosing` 覆盖，扰动 modal 必然撞上它；
+  // `rowButtonNames` 是 `rowButtons`（name|type）的严格子集，钉了后者就必然钉住前者。
   const overlappedByPin = (dim) =>
-    (dim === 'options.modal' || dim === 'options.closeOnClickModal') && c.pins.includes('dialogMaskNonClosing')
+    ((dim === 'options.modal' || dim === 'options.closeOnClickModal') && c.pins.includes('dialogMaskNonClosing')) ||
+    (dim === 'rowButtonNames' && c.pins.includes('rowButtons'))
   for (const dim of Object.keys(specs)) {
     if (!specs[dim].applicable) continue // N/A 维度没有可扰动的值，不参与咬合验证
     exercised.add(dim)
@@ -389,7 +484,8 @@ for (const c of cases) {
 // 未被任何用例触发的维度 = heldout rate 恒 n/a（补语料信号，不致命）
 const ALL_KNOWN = new Set([
   'propSet', 'formtype', 'fieldRequired', 'dataOptions', 'fieldAttrs', 'fieldLayout', 'extPoints', 'target',
-  'apiUrl', 'rowButtons', 'rowButtonNames', 'pagination.pageSize', 'pagination.pageSizes',
+  'isHidden', 'reactions', 'fieldSpan', 'fieldRules', 'apiParams', 'labelKey', 'i18n',
+  'apiUrl', 'noApiUrl', 'rowButtons', 'rowButtonNames', 'pagination.pageSize', 'pagination.pageSizes',
   'context', 'buttons', 'formLayout.labelWidth', 'formLayout.minFoldRows', 'tableVirtualMode',
   'rowkey', 'mode', 'composableName', 'defaultTitle', 'dialogMaskNonClosing',
 ])
@@ -399,29 +495,66 @@ if (never.length) console.log(`  note: 以下维度未被任何片段语料触�
 // ── 诊断描述器 ───────────────────────────────────────────────────────────────
 console.log('meta-eval: describeFragmentDimMiss')
 {
-  const d = describeFragmentDimMiss('tableOptions.height', { tableOptions: { height: 420 } }, { tableOptions: {} })
-  check(d && d.want === '420' && d.got === '(未设置)', 'describeFragmentDimMiss: tableOptions.height 诊断不符')
+  // height 诊断走「有效高度」：height 只在 heightType='height' 时生效（maxHeight/auto 下是死键）。
+  const d = describeFragmentDimMiss(
+    'tableOptions.height',
+    { tableOptions: { heightType: 'height', height: 420 } },
+    { tableOptions: {} }
+  )
+  check(d && d.want === '"420px"' && d.got === '(未设置)', 'describeFragmentDimMiss: tableOptions.height 诊断不符')
+  const dead = describeFragmentDimMiss(
+    'tableOptions.height',
+    { tableOptions: { heightType: 'maxHeight', height: 420 } },
+    { tableOptions: { heightType: 'maxHeight', height: 420 } }
+  )
+  check(dead && dead.want === '(未设置)', 'describeFragmentDimMiss: 死键 height 不应显示为有效高度')
   check(describeFragmentDimMiss('propSet', {}, {}) === null, 'describeFragmentDimMiss: 非 dyn 维度应返回 null')
 }
 
 // ── 5) scoped 收窄的正面用例：漏钉的维度不罚 ─────────────────────────────────
 console.log('meta-eval: unpinned field-level dims are exempt')
 {
-  const gold = clone(cases.find((c) => c.file.startsWith('frag-table-01-vue3')).gold)
-  const pins = cases.find((c) => c.file.startsWith('frag-table-01-vue3')).pins
+  // table-02 的 fieldLayout / tableOptions.border 都只进 stated（nl 明说、但刻意不 pin）；
+  // 扰动后 full 应红、scoped 不应罚 —— 这正是「pinnedDims 真的收窄」的正面用例。
+  const gold = clone(cases.find((c) => c.file.startsWith('frag-table-02-vue3')).gold)
+  const pins = cases.find((c) => c.file.startsWith('frag-table-02-vue3')).pins
   const pred = clone(gold)
-  // extPoints:amount 未钉；删掉 formatter 后 scoped 仍应 true（full 应 false）
-  delete pred.fields.find((f) => f.prop === 'amount').formatter
+  delete pred.fields.find((f) => f.prop === 'orderNo').width
   const s = scoreFragment('table', gold, pred, { pinnedDims: pins })
-  check(s.byDim.extPoints.pass === false, 'unpinned: extPoints 扰动应翻红（full）')
-  check(s.exactIntentFull === false, 'unpinned: extPoints 扰动后 full 应 false')
-  check(s.exactIntentScoped === true, 'unpinned: extPoints 未被钉，scoped 不应罚')
+  check(s.byDim.fieldLayout.pass === false, 'unpinned: fieldLayout 扰动应翻红（full）')
+  check(s.exactIntentFull === false, 'unpinned: fieldLayout 扰动后 full 应 false')
+  check(s.exactIntentScoped === true, 'unpinned: fieldLayout 未被钉，scoped 不应罚')
 
   // 未钉的 tableOptions.border 同理
   const pred2 = clone(gold)
   pred2.tableOptions.border = false
   check(scoreFragment('table', gold, pred2, { pinnedDims: pins }).exactIntentScoped === true,
     'unpinned: tableOptions.border 未钉，scoped 不应罚')
+}
+
+// ── 表格场景不启用表单专属字段维（AI-51：产物里的零消费者键）──────────────────
+console.log('meta-eval: table scene ignores form-only field dims')
+{
+  const c = cases.find((x) => x.file.startsWith('frag-table-05-vue3'))
+  const gold = clone(c.gold)
+  // 扰动 formtype / dataOptions：独立表格产物（buildTableColumnSFC）不读这两个键，生成的
+  // SFC 逐字节相同，故 full 也**不应**翻红，维度应当是 N/A。
+  const pred = clone(gold)
+  for (const f of pred.fields) f.formtype = f.formtype === 'Input' ? 'InputNumber' : 'Input'
+  pred.fields[0].dataOptions = [{ label: 'x', value: 'x' }]
+  const s = scoreFragment('table', gold, pred, {})
+  check(s.byDim.formtype.applicable === false, 'table: formtype 在独立表格场景应为 N/A')
+  check(s.byDim.dataOptions.applicable === false, 'table: dataOptions 在独立表格场景应为 N/A')
+  check(s.exactIntentFull === true, 'table: 扰动零消费者键不应让 full 翻红')
+  // pin 不能绕过场景口径：字段级 token 也必须是该场景启用的维度。
+  check(isValidFragmentPinnedDim('table', gold, 'formtype:id') === false,
+    'table: formtype:id 不应是合法 pin（整维在该场景不适用）')
+  // 表单场景照常启用（对照，防止把 gating 写过头）。
+  const fc = cases.find((x) => x.file.startsWith('frag-form-04-vue3'))
+  check(scoreFragment('form', fc.gold, fc.gold, {}).byDim.formtype.applicable === true,
+    'form: formtype 仍应适用（控制组）')
+  check(isValidFragmentPinnedDim('form', fc.gold, 'formtype:email') === true,
+    'form: formtype:email 仍应是合法 pin')
 }
 
 // ── 语义维：两种「点遮罩不关」的正确落地都必须判对，且不得被重复计数 ─────────
@@ -498,16 +631,35 @@ console.log('meta-eval: equivalent implementations are accepted')
       'labelWidth 错值仍应判红')
   }
 
-  // 表格 height / tabHeight：三端经 core toCssSize 归一。
+  // 表格高度：`height` / `tabHeight` 是**同一个**运行时旋钮（三端 es-table 的 tabHeight
+  // computed：tabHeight 优先，height 只在 heightType='height' 时生效）。
   {
-    const c = find('frag-table-02-vue3')
+    const c = find('frag-table-02-vue3') // gold: heightType='height', height=420
     const str = clone(c.gold)
     str.tableOptions.height = '420px'
-    str.tableOptions.tabHeight = '40px'
     const s = scoreFragment('table', c.gold, str, maskOf(c))
     check(s.byDim['tableOptions.height'].pass === true, 'height "420px" 应等价于 420')
-    check(s.byDim['tableOptions.tabHeight'].pass === true, 'tabHeight "40px" 应等价于 40')
     check(s.exactIntentStated === true, '尺寸字符串写法不应打红 stated')
+
+    // 等价落地：把固定高度写进 tabHeight（运行期优先键）也应判等。
+    const viaTab = clone(c.gold)
+    delete viaTab.tableOptions.height
+    viaTab.tableOptions.tabHeight = 420
+    check(scoreFragment('table', c.gold, viaTab, maskOf(c)).byDim['tableOptions.height'].pass === true,
+      'tabHeight:420 与 heightType=height + height:420 运行期等价')
+
+    // 死键：heightType='maxHeight' 时 `height` 完全不生效，不能等价于 tabHeight。
+    const c6 = find('frag-table-06-vue3') // gold: heightType='maxHeight', tabHeight=520
+    const dead = clone(c6.gold)
+    delete dead.tableOptions.tabHeight
+    dead.tableOptions.height = 520
+    check(scoreFragment('table', c6.gold, dead, maskOf(c6)).byDim['tableOptions.tabHeight'].pass === false,
+      "heightType='maxHeight' 时 height 是死键，不能等价于 tabHeight")
+
+    const wrong = clone(c6.gold)
+    wrong.tableOptions.tabHeight = 521
+    check(scoreFragment('table', c6.gold, wrong, maskOf(c6)).byDim['tableOptions.tabHeight'].pass === false,
+      'tabHeight 错值仍应判红')
   }
 
   // 虚拟滚动是语义维：virtual:true ≡ engine:'virtual'，两个都不给才红。
@@ -532,6 +684,26 @@ console.log('meta-eval: equivalent implementations are accepted')
       'width "720px" 应等价于 720')
   }
 
+  // headerCellStyle：三端都把对象原样作为 CSS style 绑定，纯色背景的简写/长写渲染等价；
+  // 渐变/错色仍要红（否则会把「背景写法不同」当成通行证）。
+  {
+    const c = find('frag-table-05-vue3') // gold: { background:'#eef2f7', color:'#333333' }
+    const long = clone(c.gold)
+    long.tableOptions.headerCellStyle = { backgroundColor: '#eef2f7', color: '#333333' }
+    check(scoreFragment('table', c.gold, long, maskOf(c)).byDim['tableOptions.headerCellStyle'].pass === true,
+      'headerCellStyle 纯色 background 与 backgroundColor 应判等')
+
+    const grad = clone(c.gold)
+    grad.tableOptions.headerCellStyle = { background: 'linear-gradient(#fff,#000)', color: '#333333' }
+    check(scoreFragment('table', c.gold, grad, maskOf(c)).byDim['tableOptions.headerCellStyle'].pass === false,
+      '渐变 background 不能判等（简写含更多语义）')
+
+    const wrongColor = clone(c.gold)
+    wrongColor.tableOptions.headerCellStyle = { backgroundColor: '#ffffff', color: '#333333' }
+    check(scoreFragment('table', c.gold, wrongColor, maskOf(c)).byDim['tableOptions.headerCellStyle'].pass === false,
+      '背景色写错仍应判红')
+  }
+
   // fieldAttrs 现在比 gold 声明的全部键（NL 明写「最多 200 字」）—— 漏写 maxlength 要红。
   {
     const c = find('frag-form-01-vue3')
@@ -539,6 +711,162 @@ console.log('meta-eval: equivalent implementations are accepted')
     delete miss.fields.find((f) => f.prop === 'bio').attrs.maxlength
     check(scoreFragment('form', c.gold, miss, maskOf(c)).byDim.fieldAttrs.pass === false,
       'fieldAttrs 漏掉 gold 声明的 maxlength 应判红')
+  }
+
+  // 适用性一致（AI-51）：gold 只有 placeholder/maxlength（没有 attrs.type）时，整维
+  // `fieldAttrs` 仍须适用 —— 否则 full 口径恒绿，而 `fieldAttrs:<prop>` 又能钉住它。
+  {
+    const c = find('frag-form-04-vue3')
+    const miss = clone(c.gold)
+    delete miss.fields.find((f) => f.prop === 'name').attrs.maxlength
+    const s = scoreFragment('form', c.gold, miss, maskOf(c))
+    check(s.byDim.fieldAttrs.applicable === true, 'fieldAttrs：无 attrs.type 也应适用（与字段 token 对齐）')
+    check(s.byDim.fieldAttrs.pass === false, 'fieldAttrs：漏写 maxlength 在整维口径也应判红')
+  }
+
+  // fieldRules：message 是文案（中文措辞不可推断）→ 忽略；校验行为键仍要咬。
+  {
+    const c = find('frag-form-04-vue3')
+    const alt = clone(c.gold)
+    alt.fields.find((f) => f.prop === 'email').rules[0].message = '另一种错误提示'
+    const s = scoreFragment('form', c.gold, alt, maskOf(c))
+    check(s.byDim.fieldRules.pass === true, 'rules 的 message 文案差异不应判红')
+    check(s.exactIntentFull === true, 'rules message 差异不应打红 full')
+    const wrong = clone(c.gold)
+    delete wrong.fields.find((f) => f.prop === 'phone').rules
+    check(scoreFragment('form', c.gold, wrong, maskOf(c)).byDim.fieldRules.pass === false,
+      '漏掉 phone 的 pattern 规则应判红')
+    const typo = clone(c.gold)
+    typo.fields.find((f) => f.prop === 'age').rules[0].min = 16
+    check(scoreFragment('form', c.gold, typo, maskOf(c)).byDim.fieldRules.pass === false,
+      'min 写错应判红')
+
+    // 等价编码：把 required 单列一条规则（带 trigger）—— 剥离 required/message 后只剩
+    // trigger 的空规则无校验行为，不得因此判红（gold 把 required 写在字段键上）。
+    const split = clone(c.gold)
+    const email = split.fields.find((f) => f.prop === 'email')
+    email.rules = [{ required: true, message: '邮箱必填', trigger: 'blur' }, ...email.rules]
+    const ss = scoreFragment('form', c.gold, split, maskOf(c))
+    check(ss.byDim.fieldRules.pass === true, 'required 单列一条规则（仅 trigger）应判等')
+    check(ss.exactIntentStated === true, '等价规则拆分不应打红 stated')
+  }
+
+  // apiParams：method 缺省 ≡ GET；url 与 gold 声明的 labelField/valueField 仍要咬。
+  {
+    const c = find('frag-form-07-vue3')
+    const noMethod = clone(c.gold)
+    delete noMethod.fields.find((f) => f.prop === 'dept').apiParams.method
+    check(scoreFragment('form', c.gold, noMethod, maskOf(c)).byDim.apiParams.pass === true,
+      'apiParams.method 缺省应等价于 GET')
+    const wrongUrl = clone(c.gold)
+    wrongUrl.fields.find((f) => f.prop === 'dept').apiParams.url = '/api/other'
+    check(scoreFragment('form', c.gold, wrongUrl, maskOf(c)).byDim.apiParams.pass === false,
+      'apiParams.url 写错应判红')
+    const wrongField = clone(c.gold)
+    wrongField.fields.find((f) => f.prop === 'role').apiParams.labelField = 'title'
+    check(scoreFragment('form', c.gold, wrongField, maskOf(c)).byDim.apiParams.pass === false,
+      'gold 声明的 labelField 写错应判红')
+  }
+
+  // 引擎语义：vxe ≠ 默认引擎（旧实现把两者都折算成布尔 false —— 修掉的度量 bug）。
+  {
+    const c = find('frag-table-06-vue3')
+    check(scoreFragment('table', c.gold, clone(c.gold), maskOf(c)).byDim.tableVirtualMode.pass === true,
+      'gold-vs-gold engine vxe 应 pass')
+    const none = clone(c.gold)
+    delete none.tableOptions.engine
+    check(scoreFragment('table', c.gold, none, maskOf(c)).byDim.tableVirtualMode.pass === false,
+      '把 vxe 省略成默认引擎应判红')
+    const virt = clone(c.gold)
+    virt.tableOptions.virtual = true
+    check(scoreFragment('table', c.gold, virt, maskOf(c)).byDim.tableVirtualMode.pass === false,
+      '把 vxe 换成虚拟引擎应判红（两者运行时行为不同）')
+  }
+
+  // rowButtons 只认 name|type：`key` 在 Zod/类型里可选、NL 从不提 —— 省略不该判红。
+  {
+    const c = find('frag-table-03-vue3')
+    const noKey = clone(c.gold)
+    for (const b of noKey.rowButtons) delete b.key
+    const s = scoreFragment('table', c.gold, noKey, maskOf(c))
+    check(s.byDim.rowButtons.pass === true, '省略 rowButtons.key 应判等（key 可选且 NL 从不提）')
+    check(s.exactIntentStated === true, '省略 key 不应打红 stated/pinned 口径')
+    const wrongType = clone(c.gold)
+    wrongType.rowButtons[1].type = 'danger'
+    check(scoreFragment('table', c.gold, wrongType, maskOf(c)).byDim.rowButtons.pass === false,
+      'rowButtons.type 写错仍应判红')
+  }
+
+  // isHidden：旧条件 / 等价 JSONLogic 二元节点 / 条件数组 vs `and` —— 三种写法运行时等价。
+  {
+    const c = find('frag-form-05-vue3')
+    const asExpr = clone(c.gold)
+    // gold: { field: 'refundType', op: 'ne', value: '全额' } ⟺ { '!=': [{ var: 'refundType' }, '全额'] }
+    asExpr.fields.find((f) => f.prop === 'reason').isHidden = { '!=': [{ var: 'refundType' }, '全额'] }
+    const asAnd = clone(c.gold)
+    // gold: 条件数组（AND）⟺ JSONLogic { and: [...] }（同为 AND，顺序无语义）
+    const arr = asAnd.fields.find((f) => f.prop === 'voucher').isHidden
+    asAnd.fields.find((f) => f.prop === 'voucher').isHidden = { and: [...arr].reverse() }
+    for (const [name, pred] of [['表达式节点', asExpr], ['and 节点+逆序', asAnd]]) {
+      const s = scoreFragment('form', c.gold, pred, maskOf(c))
+      check(s.byDim.isHidden.pass === true, `isHidden ${name}写法应判等（运行时语义相同）`)
+      check(s.exactIntentStated === true, `isHidden ${name}写法不应打红 stated`)
+    }
+    // 表达式算子塞进旧条件是**真实错误**（运行时未知算子 fail-open）—— 必须判红。
+    const invalidLegacy = clone(c.gold)
+    invalidLegacy.fields.find((f) => f.prop === 'reason').isHidden = { field: 'refundType', op: '!=', value: '全额' }
+    check(scoreFragment('form', c.gold, invalidLegacy, maskOf(c)).byDim.isHidden.pass === false,
+      '旧条件里用表达式算子（op:!=）应判红 —— 运行时会被忽略')
+    // 选项 value 不可推断：条件取值按各自 dataOptions 的 value→label 归一后再比。
+    const slugValues = clone(c.gold)
+    const opt = slugValues.fields.find((f) => f.prop === 'refundType')
+    opt.dataOptions = [{ label: '全额', value: 'full' }, { label: '部分', value: 'partial' }]
+    slugValues.fields.find((f) => f.prop === 'reason').isHidden.value = 'full'
+    slugValues.fields.find((f) => f.prop === 'voucher').isHidden[0].value = 'partial'
+    const s = scoreFragment('form', c.gold, slugValues, maskOf(c))
+    check(s.byDim.isHidden.pass === true, '条件取值经各自 options 映射后相同应判等（slug vs label）')
+  }
+
+  // reactions：`when`/`required` 只接受表达式节点；旧条件形态在运行时非法，必须判红。
+  {
+    const c = find('frag-form-06-vue3')
+    const good = clone(c.gold)
+    good.fields.find((f) => f.prop === 'city').reactions[0].fulfill.required = {
+      '==': [{ var: 'country' }, 'us'],
+    }
+    check(scoreFragment('form', c.gold, good, maskOf(c)).byDim.reactions.pass === true,
+      'reactions.required 用等价表达式节点应判等')
+    const legacyWhen = clone(c.gold)
+    legacyWhen.fields.find((f) => f.prop === 'province').reactions[0].when = {
+      field: 'country', op: 'eq', value: 'cn',
+    }
+    check(scoreFragment('form', c.gold, legacyWhen, maskOf(c)).byDim.reactions.pass === false,
+      'reactions.when 用旧条件形态应判红（该位置只接受表达式节点）')
+    const bareBool = clone(c.gold)
+    bareBool.fields.find((f) => f.prop === 'city').reactions[0].fulfill.required = true
+    check(scoreFragment('form', c.gold, bareBool, maskOf(c)).byDim.reactions.pass === false,
+      'reactions.required 用裸 boolean 应判红（Zod 只接受表达式节点）')
+
+    // 等价编码：无 `when`、`fulfill.required` 用同一表达式。core `ruleActive` 缺省生效、
+    // required 又按表达式求值 ⟹ 两者运行期等价；模型省掉 when 不得罚（AI-51）。
+    const noWhen = clone(c.gold)
+    delete noWhen.fields.find((f) => f.prop === 'city').reactions[0].when
+    const sn = scoreFragment('form', c.gold, noWhen, maskOf(c))
+    check(sn.byDim.reactions.pass === true, 'reactions 省略 when、required 用同一表达式应判等（运行时等价）')
+    check(sn.exactIntentStated === true, '等价编码不应打红 stated')
+  }
+
+  // 对象型 tableOptions：gold 声明过的子键要咬，pred 多出的 schema 合法默认（enabled）不罚。
+  {
+    const c = find('frag-table-06-vue3')
+    const withEnabled = clone(c.gold)
+    withEnabled.tableOptions.editConfig.enabled = true
+    check(scoreFragment('table', c.gold, withEnabled, maskOf(c)).byDim['tableOptions.editConfig'].pass === true,
+      'editConfig 多写 enabled:true（Zod 合法默认）不应判红')
+    const wrongSub = clone(c.gold)
+    wrongSub.tableOptions.editConfig.autoClear = false
+    check(scoreFragment('table', c.gold, wrongSub, maskOf(c)).byDim['tableOptions.editConfig'].pass === false,
+      'editConfig 声明子键写错仍应判红')
   }
 }
 

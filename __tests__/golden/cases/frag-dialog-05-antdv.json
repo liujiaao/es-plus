@@ -1,0 +1,79 @@
+{
+  "scene": "dialog",
+  "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:remark",
+    "fieldRequired:name",
+    "fieldAttrs:remark",
+    "mode",
+    "composableName",
+    "defaultTitle",
+    "apiUrl",
+    "rowkey",
+    "options.cacheKey",
+    "options.appendTo",
+    "options.maxHeight",
+    "options.hiddenFullBtn",
+    "options.closeOnPressEscape",
+    "options.width"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input",
+        "required": true
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ],
+    "apiUrl": "/api/users",
+    "rowkey": "userId",
+    "mode": "composable",
+    "composableName": "useUserDialog",
+    "defaultTitle": "编辑用户",
+    "options": {
+      "cacheKey": "userDialog",
+      "appendTo": "#app",
+      "maxHeight": "60vh",
+      "hiddenFullBtn": true,
+      "closeOnPressEscape": false,
+      "width": 640
+    },
+    "typescript": true
+  },
+  "nl": "做一个用户弹窗的 composable（名称 useUserDialog）：接口 /api/users、主键 userId；默认标题「编辑用户」；选项：实例缓存键 userDialog、挂载到 #app、最大高度 60vh、隐藏内置全屏按钮、按 Esc 不关闭、宽 640；姓名必填、备注多行文本。",
+  "notes": "composable 实例缓存 + 挂载点 + 最大高度 + 数字宽 + 自定义主键。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。",
+  "fixedFields": [
+    "name",
+    "remark"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:remark",
+    "fieldRequired:name",
+    "fieldAttrs:remark",
+    "mode",
+    "composableName",
+    "defaultTitle",
+    "apiUrl",
+    "rowkey",
+    "options.cacheKey",
+    "options.appendTo",
+    "options.maxHeight",
+    "options.hiddenFullBtn",
+    "options.closeOnPressEscape",
+    "options.width",
+    "target"
+  ]
+}

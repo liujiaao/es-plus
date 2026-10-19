@@ -24,6 +24,15 @@
  *   - **不可静默 strip**：每个 gold 声明过的 `tableOptions` / `formLayout` / `options` /
  *     `pagination` 键各自成为一个维度（`tableOptions.height` 这种带点的名字），
  *     少写/写错/写反都定位到具体键，而不是一句「整个容器不对」。
+ *   - **AI-47 扩充**：字段级 `isHidden` / `reactions` / `fieldSpan` / `apiParams` /
+ *     `fieldRules` / `labelKey` 与容器级 `i18n` 各自成维；`extPoints` 纳入
+ *     `permissionValue`（CRUD scorer 早已如此，片段面此前漏项）。这些键都有真实
+ *     运行时消费者（`buildFormItem` / `buildTableColumn` 发射 → core 归一动词），
+ *     此前语料为零 ⟹ 写错也没有数字会动。
+ *   - **AI-51 场景作用域**：独立表格片段的 `fields` 只进 `buildTableColumn(SFC)`，
+ *     表单专属键（formtype/required/dataOptions/attrs/rules/isHidden/reactions/span/
+ *     apiParams）在产物里零消费者 ⟹ 表格场景**不启用**这些维度；`isValidFragmentPinnedDim`
+ *     同步要求字段级 pin 的整维在该场景适用（否则 pin 能绕过场景口径）。
  *
  * ## 为什么不做成一个总分
  *
@@ -36,7 +45,8 @@
  *   - 整维度：`propSet` / `rowButtonNames` / `tableOptions.height` / `formLayout.labelWidth` /
  *     `options.width` / `dialogMaskNonClosing` …；
  *   - 字段级：`formtype:status` / `fieldRequired:name` / `dataOptions:status` /
- *     `fieldAttrs:bio` / `fieldLayout:amount` / `extPoints:amount`。
+ *     `fieldAttrs:bio` / `fieldLayout:amount` / `extPoints:amount`
+ *     （仅当该维在当前场景启用；独立表格的 fields 不消费表单专属键 —— 见上方 AI-51）。
  *
  * 未给 mask 时 scoped 退化为 `exactIntentCore`（片段版的硬诚实四维），向后兼容。
  *
@@ -121,12 +131,41 @@ function normCssSize(v) {
 }
 const cssEq = (a, b) => eq(normCssSize(a) ?? null, normCssSize(b) ?? null)
 /**
- * 表格「虚拟滚动」是**语义维**：三端消费口径都是
+ * 表格「引擎」是**语义维**：三端消费口径都是
  * `options.virtual === true || options.engine === 'virtual'`
  * （vue3/vue2/antdv 的 es-table 逐字同实现）。gold 同时写 `virtual:true` + `engine:'virtual'`
  * 只是运行时 fixture 的双保险；若按两个键分别计分，一次意图会被数两遍。
+ *
+ * AI-47 修正：旧实现返回**布尔**（`virtual || engine==='virtual'`），于是
+ * `engine:'vxe'` 与「省略」判等 —— `vxe` 与默认引擎是两种不同运行时，必须分开。
+ * 现在比较**有效引擎**：`virtual:true` 优先（三端运行时口径），否则取 `engine`，
+ * 缺省为 `'default'`。
  */
-const tableVirtual = (cfg) => cfg?.tableOptions?.virtual === true || cfg?.tableOptions?.engine === 'virtual'
+const tableEngine = (cfg) => {
+  const t = cfg?.tableOptions ?? {}
+  if (t.virtual === true) return 'virtual'
+  return t.engine ?? 'default'
+}
+/**
+ * 表格「容器高度」也是**语义维**：三端 `es-table` 的 `tabHeight` computed 逐字同实现 ——
+ * `tabHeight` 优先，`height` **只在 `heightType === 'height'` 时**生效，其余高度类型
+ * 直接忽略（`useTableResize` 的 `resizeTabHeight` 同口径）。
+ *
+ * 逐键字面比较会同时犯两个错：`{heightType:'height', height:420}` 与模型写的
+ * `tabHeight:420` 运行期等价却判错；`{heightType:'maxHeight', height:520}` 的 `height`
+ * 是**死键**（不生效）却判对。故 `height` / `tabHeight` 两个维度都按这个有效高度比较。
+ * `heightType` 本身仍由它自己的维度比较（固定 vs 封顶是两种运行时行为）。
+ */
+const effectiveTableHeight = (cfg) => {
+  const t = cfg?.tableOptions ?? {}
+  if (t.tabHeight !== undefined && t.tabHeight !== null && t.tabHeight !== '') {
+    return normCssSize(t.tabHeight) ?? null
+  }
+  if ((t.heightType ?? 'auto') === 'height' && t.height !== undefined && t.height !== null && t.height !== '') {
+    return normCssSize(t.height) ?? null
+  }
+  return null
+}
 /** dialog 的 rowkey：生成器 `input.rowkey || 'id'` —— 省略与显式 `'id'` 等价。 */
 const normDialogRowkey = (cfg) => cfg?.rowkey || 'id'
 function normTarget(cfg) {
@@ -160,7 +199,9 @@ const normFormtype = (t) => FRAGMENT_FORMTYPE_ALIASES[t] ?? t
 
 const LAYOUT_KEYS = ['align', 'width', 'minWidth', 'fixed', 'ellipsis']
 const hasLayout = (f) => LAYOUT_KEYS.some((k) => f?.[k] !== undefined)
-const hasExtPoint = (f) => !!(f?.render || f?.formatter)
+/** 扩展点 = 「模型必须写一段声明式/JS 源码串」的键集合（含字段级权限编码，与 CRUD 同规）。 */
+const EXT_POINT_KEYS = ['render', 'formatter', 'permissionValue']
+const hasExtPoint = (f) => EXT_POINT_KEYS.some((k) => f?.[k] !== undefined)
 
 const fieldFormtypeEqual = (g, p) => normFormtype(g.formtype) === normFormtype(p.formtype)
 const fieldRequiredEqual = (g, p) => (g.required ?? false) === (p.required ?? false)
@@ -176,9 +217,207 @@ const fieldAttrTypeEqual = (g, p) => {
 const fieldLayoutEqual = (g, p) =>
   LAYOUT_KEYS.every((k) => eq(g?.[k] ?? null, p?.[k] ?? null))
 const fieldExtPointsEqual = (g, p) => {
-  for (const kind of ['render', 'formatter']) if (g?.[kind] && !p?.[kind]) return false
+  for (const kind of EXT_POINT_KEYS) {
+    if (g?.[kind] !== undefined && p?.[kind] === undefined) return false
+  }
   return true
 }
+
+// ── AI-47：此前无维度的字段声明式键（均有真实运行时消费者）────────────────────
+
+/**
+ * 旧条件（`{field, op, value}`）的合法算子集 —— 与 core `matchHiddenCondition` /
+ * 权威 Zod `HIDDEN_OPS` 同一份闭集。
+ */
+const LEGACY_HIDDEN_OPS = new Set(['eq', 'ne', 'in', 'nIn', 'empty', 'notEmpty', 'truthy', 'falsy'])
+/** 与旧条件**语义等价**的 JSONLogic 二元算子（其余算子只能以表达式形态出现）。 */
+const EXPR_TO_LEGACY_OP = { '==': 'eq', '!=': 'ne', in: 'in', nin: 'nIn' }
+
+/**
+ * 条件里引用的取值按**该配置自己的** `dataOptions` 归一到 label。
+ *
+ * 语料已定「选项 value 不可推断、不计分」（`dataOptions` 维度只比挂载集合），
+ * 但 `isHidden` 天然引用了 value：模型给 `{label:'全额', value:'full'}` 后写
+ * `value:'full'` 是自洽的，gold 写 `value:'全额'`（label 即 value）同样自洽。
+ * 直接比原值 = 因不可推断的选择判错（inQuery 默认陷阱同构）。按各自 options 的
+ * value→label 映射后再比，语义相同就判等；映射不到的原样返回。
+ */
+function resolveOptionValue(cfg, field, value) {
+  const f = fieldMap(cfg).get(field)
+  const opts = Array.isArray(f?.dataOptions) ? f.dataOptions : []
+  if (Array.isArray(value)) return value.map((v) => resolveOptionValue(cfg, field, v))
+  const hit = opts.find((o) => o && eq(o.value, value))
+  return hit && typeof hit.label === 'string' ? hit.label : value
+}
+
+const cmpKey = (a, b) => {
+  const x = JSON.stringify(canon(a))
+  const y = JSON.stringify(canon(b))
+  return x < y ? -1 : x > y ? 1 : 0
+}
+
+/** 表达式节点归一：键排序 + `and`/`or` 操作数排序（交换律）。 */
+function canonExprNode(node) {
+  if (Array.isArray(node)) return node.map(canonExprNode)
+  if (node && typeof node === 'object') {
+    const keys = Object.keys(node)
+    if (keys.length === 1 && (keys[0] === 'and' || keys[0] === 'or')) {
+      const op = keys[0]
+      const args = (Array.isArray(node[op]) ? node[op] : [node[op]]).map(canonExprNode).sort(cmpKey)
+      return { [op]: args }
+    }
+    const out = {}
+    for (const k of keys.sort()) out[k] = canonExprNode(node[k])
+    return out
+  }
+  return node
+}
+
+/**
+ * `isHidden` 归一：旧条件、等价的 JSONLogic 二元节点、以及「条件数组 vs `and`」
+ * 三种写法归一为同一形态后再比较。
+ *
+ * 三种写法在运行时**都合法且语义相同**（core `compileHiddenCondition` 对数组逐项
+ * 求值、对表达式节点走 `isHiddenExpr`）。模型用任一写法都算做对 —— 若按结构全等
+ * 判分，合法的等价表述会被罚，正是 formtype 别名归一要解决的同一条边界。
+ * 表达式算子塞进旧条件（如 `{field, op:'!='}`）**不归一**：运行时未知算子 fail-open，
+ * 是真实错误，必须判错。
+ */
+function canonHidden(node, cfg) {
+  if (Array.isArray(node)) {
+    return { and: node.map((n) => canonHidden(n, cfg)).sort(cmpKey) }
+  }
+  if (node && typeof node === 'object' && typeof node.field === 'string') {
+    const op = node.op ?? 'eq'
+    if (!LEGACY_HIDDEN_OPS.has(op)) return { invalidLegacy: canon(node) }
+    return { cond: [node.field, op, resolveOptionValue(cfg, node.field, node.value)] }
+  }
+  if (node && typeof node === 'object') {
+    const keys = Object.keys(node)
+    if (keys.length === 1 && keys[0] === 'and') {
+      const args = (Array.isArray(node.and) ? node.and : [node.and]).map((n) => canonHidden(n, cfg)).sort(cmpKey)
+      return { and: args }
+    }
+    if (keys.length === 1 && EXPR_TO_LEGACY_OP[keys[0]]) {
+      const op = keys[0]
+      const args = Array.isArray(node[op]) ? node[op] : [node[op]]
+      if (args.length === 2 && args[0] && typeof args[0] === 'object' && typeof args[0].var === 'string') {
+        return { cond: [args[0].var, EXPR_TO_LEGACY_OP[op], resolveOptionValue(cfg, args[0].var, args[1])] }
+      }
+    }
+    return { expr: canonExprNode(node) }
+  }
+  return { literal: node }
+}
+
+/** 声明式显隐：上面三种等价写法归一后比较。 */
+const fieldIsHiddenEqual = (g, p, goldCfg, predCfg) =>
+  eq(canonHidden(g?.isHidden ?? null, goldCfg), canonHidden(p?.isHidden ?? null, predCfg))
+
+/**
+ * 字段联动：`{dependencies?, when?, fulfill}` 规则数组。
+ *
+ * 与 `isHidden` 不同，`when`/`fulfill.required|disabled|value` **只接受表达式节点**
+ * （权威 Zod 同款），旧条件形态在此是真实非法输入 —— 故这里只做表达式归一
+ * （`and`/`or` 交换律、键序），不把旧条件折算成等价表达式。
+ * `dependencies` 只表示「哪些路径触发重算」，顺序无语义，排序后比。
+ *
+ * **等价编码（AI-51，源码核实）**：core `resolveReactionOverlay` 对无 `when` 的规则
+ * 直接生效（`ruleActive` 缺省 true），再把 `fulfill.required|disabled` 当表达式求值。
+ * 因此 `{required: E}` 与 `{when: E, required: E}` **运行时完全等价**：
+ *   E 为真 → 两者都写 true；E 为假 → 前者写 false，后者不生效、保留静态值
+ *   （静态值缺省即 false）。模型省掉 `when` 是合法写法，按字面比会把它罚掉
+ *   （与 `dialogMaskNonClosing` 的两种等价落地同族）。只在「无 when + fulfill 只含
+ *   布尔键 + 这些键的表达式彼此相同」时归一；`required: true`（常量）仍不折成门控。
+ */
+function canonReactionRule(rule) {
+  const BOOL_KEYS = ['required', 'disabled']
+  const out = {}
+  if (rule?.dependencies !== undefined) out.dependencies = [...rule.dependencies].sort()
+  const f = rule?.fulfill ?? {}
+  const fulfill = {}
+  if (f.dataOptions !== undefined) fulfill.dataOptions = canonExprNode(f.dataOptions)
+  for (const k of [...BOOL_KEYS, 'value']) {
+    if (f[k] !== undefined) fulfill[k] = canonExprNode(f[k])
+  }
+  let when = rule?.when !== undefined ? canonExprNode(rule.when) : undefined
+  if (when === undefined && Object.keys(f).length > 0 && Object.keys(f).every((k) => BOOL_KEYS.includes(k))) {
+    const nodes = BOOL_KEYS.filter((k) => f[k] !== undefined).map((k) => JSON.stringify(fulfill[k]))
+    if (nodes.length > 0 && nodes.every((n) => n === nodes[0])) when = JSON.parse(nodes[0])
+  }
+  if (when !== undefined) out.when = when
+  out.fulfill = fulfill
+  return out
+}
+const fieldReactionsEqual = (g, p) =>
+  eq((g?.reactions ?? []).map(canonReactionRule), (p?.reactions ?? []).map(canonReactionRule))
+
+/**
+ * 栅格跨度：`querySpan`/`formSpan` 的**有效值**比较。
+ *
+ * `buildFormItem` 的发射口径是
+ *   query: `querySpan || (DatePicker|TimePicker ? 8 : 6)`；form: `formSpan || 24`。
+ * 因此「省略」与「显式写默认值」产物等价 —— 与 rowkey/labelWidth 同一类归一。
+ */
+const DEFAULT_QUERY_SPAN = (f) => (f?.formtype === 'DatePicker' || f?.formtype === 'TimePicker' ? 8 : 6)
+const effQuerySpan = (f) => f?.querySpan ?? DEFAULT_QUERY_SPAN(f)
+const effFormSpan = (f) => f?.formSpan ?? 24
+/**
+ * 只比 gold **声明过的**那一侧：form 场景里 `querySpan` 没有消费者，gold 没写就不该
+ * 因为模型顺手补了一个 querySpan 而判红（gold 驱动的同一条边界）。
+ */
+const fieldSpanEqual = (g, p) =>
+  (g?.querySpan === undefined || effQuerySpan(g) === effQuerySpan(p)) &&
+  (g?.formSpan === undefined || effFormSpan(g) === effFormSpan(p))
+const declaresSpan = (f) => f?.querySpan !== undefined || f?.formSpan !== undefined
+
+/**
+ * 非必填校验规则：按五元组结构比较，**忽略 `message` 与 `required`**。
+ *
+ * - `message` 是文案（中文措辞无从推断，gold 写死会变成命名彩票）；
+ * - `required` 已由 `fieldRequired` 维度计分，重复计入 = 一次意图数两遍。
+ * 只比较真正改变校验行为的键（pattern/min/max/type/trigger）。
+ *
+ * **等价编码（AI-51）**：模型常把 `required: true` 单列成一条规则
+ * （`{required:true, message, trigger:'blur'}`）。剥离 `required`/`message` 后它只剩
+ * `trigger` —— 没有校验项的空规则在 Element/antdv 校验器里是**无行为的**，不能因此
+ * 判红（否则「required 写在字段键上」与「required 单列一条规则」两种正确写法只有
+ * 一种得分）。故只保留含非 trigger 校验项的规则。
+ */
+const RULE_KEYS = ['pattern', 'min', 'max', 'type', 'trigger']
+const RULE_BEHAVIOR_KEYS = ['pattern', 'min', 'max', 'type']
+const normRules = (f) =>
+  (f?.rules ?? [])
+    .map((r) => {
+      const o = {}
+      for (const k of RULE_KEYS) if (r?.[k] !== undefined) o[k] = r[k]
+      return o
+    })
+    .filter((o) => RULE_BEHAVIOR_KEYS.some((k) => o[k] !== undefined))
+    .map((o) => JSON.stringify(canon(o)))
+    .sort()
+const hasNonRequiredRule = (f) => normRules(f).length > 0
+const fieldRulesEqual = (g, p) => eq(normRules(g), normRules(p))
+
+/**
+ * 远程选项源：`url` 必比；`method` 缺省 `GET`（core 请求默认）等价；`labelField`/`valueField`
+ * 只在 gold 显式声明时比（运行时对它们有默认映射，模型省略不算错）。
+ */
+const apiMethod = (a) => a?.method ?? 'GET'
+const fieldApiParamsEqual = (g, p) => {
+  const ga = g?.apiParams
+  const pa = p?.apiParams
+  if (!ga) return !pa
+  if (!pa) return false
+  if (!eq(ga.url, pa.url) || apiMethod(ga) !== apiMethod(pa)) return false
+  for (const k of ['labelField', 'valueField']) {
+    if (ga[k] !== undefined && !eq(ga[k], pa[k] ?? null)) return false
+  }
+  return true
+}
+
+/** i18n 标签键：显式覆盖才计分（`i18n:true` 派生的 `field.<prop>` 由 `i18n` 维度覆盖）。 */
+const fieldLabelKeyEqual = (g, p) => (g?.labelKey ?? null) === (p?.labelKey ?? null)
 
 const FIELD_SCORERS = {
   formtype: fieldFormtypeEqual,
@@ -187,6 +426,32 @@ const FIELD_SCORERS = {
   fieldAttrs: fieldAttrTypeEqual,
   fieldLayout: fieldLayoutEqual,
   extPoints: fieldExtPointsEqual,
+  isHidden: fieldIsHiddenEqual,
+  reactions: fieldReactionsEqual,
+  fieldSpan: fieldSpanEqual,
+  fieldRules: fieldRulesEqual,
+  apiParams: fieldApiParamsEqual,
+  labelKey: fieldLabelKeyEqual,
+}
+
+/**
+ * 字段级 token 的 gold 前置条件：钉 `dim:prop` 时 gold 的该字段**必须真的声明了**该键。
+ * 否则语料标注可以把「NL 说了、gold 没写」伪装成被度量（gold-vs-gold 恒真，模型凭空
+ * 写对/写错都测不到）。
+ */
+const FIELD_TOKEN_REQUIRES = {
+  formtype: (f) => f?.formtype !== undefined,
+  fieldRequired: (f) => f?.required !== undefined,
+  dataOptions: (f) => (f?.dataOptions ?? []).length > 0,
+  fieldAttrs: (f) => !!f?.attrs && Object.keys(f.attrs).length > 0,
+  fieldLayout: hasLayout,
+  extPoints: hasExtPoint,
+  isHidden: (f) => f?.isHidden !== undefined,
+  reactions: (f) => f?.reactions !== undefined,
+  fieldSpan: declaresSpan,
+  fieldRules: hasNonRequiredRule,
+  apiParams: (f) => f?.apiParams !== undefined,
+  labelKey: (f) => f?.labelKey !== undefined,
 }
 
 // ── 整维度判定（gold 驱动）────────────────────────────────────────────────────
@@ -210,8 +475,11 @@ const dataOptionsEqual = (g, p) => {
 }
 const fieldAttrsEqual = (g, p) => {
   const pm = fieldMap(p)
+  // AI-51：此前只判「声明了 `attrs.type` 的字段」，与 `fieldAttrTypeEqual`（比 gold 声明的
+  // **全部** attrs 键）及 `FIELD_TOKEN_REQUIRES.fieldAttrs` 不一致 ⇒ NL 明写的
+  // `placeholder`/`maxlength` 在整维口径下无人守望，只有字段级 pin 才测得到。
   for (const f of g?.fields ?? []) {
-    if (f.attrs?.type === undefined) continue
+    if (!f?.attrs || Object.keys(f.attrs).length === 0) continue
     const pf = pm.get(f.prop)
     if (!pf || !fieldAttrTypeEqual(f, pf)) return false
   }
@@ -235,10 +503,73 @@ const extPointsEqual = (g, p) => {
   }
   return true
 }
+/** gold 里「声明了某键的字段」逐字段全等（pred 多出的键/字段不罚 —— gold 驱动）。 */
+const perDeclaredField = (declares, cmp) => (g, p) => {
+  const pm = fieldMap(p)
+  for (const f of g?.fields ?? []) {
+    if (!declares(f)) continue
+    const pf = pm.get(f.prop)
+    // 判定器可接收整份 config（`isHidden` 的选项取值归一需要两侧各自的 dataOptions）。
+    if (!pf || !cmp(f, pf, g, p)) return false
+  }
+  return true
+}
+const isHiddenEqual = perDeclaredField((f) => f?.isHidden !== undefined, fieldIsHiddenEqual)
+const reactionsEqual = perDeclaredField((f) => f?.reactions !== undefined, fieldReactionsEqual)
+const fieldSpanEqualWhole = perDeclaredField(declaresSpan, fieldSpanEqual)
+const fieldRulesEqualWhole = perDeclaredField(hasNonRequiredRule, fieldRulesEqual)
+const apiParamsEqual = perDeclaredField((f) => f?.apiParams !== undefined, fieldApiParamsEqual)
+const labelKeyEqual = perDeclaredField((f) => f?.labelKey !== undefined, fieldLabelKeyEqual)
+
+/** 普通对象（排除 null / 数组）—— 声明式容器键的判定入口。 */
+const isPlainObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+
+/**
+ * gold 驱动的对象比较：**gold 声明过的子键**逐键命中，pred 多出的子键不罚。
+ *
+ * 与 `fieldAttrs` 同一条边界：`tableOptions.editConfig` 的 `enabled` 等键在 Zod 里
+ * 是可选旋钮，NL 只说「双击进入、按单元格、显示状态、自动清空」。模型顺手写
+ * `enabled: true`（语义默认）与省略在运行时等价；按整对象全等判分会把做对的答案罚掉。
+ * 漏写/写错 gold 声明过的子键仍然判红（`defaultSort.prop`、`configTableOut.total` …）。
+ */
+const objDeclaredEqual = (g, p, leafEq) => {
+  if (!isPlainObj(g)) return leafEq(g, p)
+  if (!isPlainObj(p)) return false
+  return Object.keys(g).every((k) => objDeclaredEqual(g[k], p[k], leafEq))
+}
+
+/** CSS 颜色字面量（`#hex` / `rgb(a)` / `hsl(a)`）—— 只有这类值在简写/长写间语义相等。 */
+const isColorLiteral = (v) =>
+  typeof v === 'string' && /^(?:#[0-9a-f]{3,8}|(?:rgb|hsl)a?\([^)]*\))$/i.test(v.trim())
+
+/**
+ * 表头样式对象是**原样作为 CSS style 绑定**的（vue3/antdv `:style`、vue2
+ * `header-cell-style`、三端 vxe `headerCellStyle`），组件不做键名映射。于是「纯色背景」
+ * 写成简写 `background` 还是长写 `backgroundColor`，渲染结果一致 —— 按字面键名判分
+ * 会把做对的答案罚掉（CSS 尺寸 / 有效引擎同族的等价陷阱）。
+ *
+ * 只在值是**颜色字面量**时归一：`background: 'linear-gradient(...)'`、多值简写等与
+ * `backgroundColor` 不等价，仍按字面比较。
+ */
+const normHeaderCellStyle = (v) => {
+  if (!isPlainObj(v)) return v
+  if (v.backgroundColor !== undefined) return v
+  if (!isColorLiteral(v.background)) return v
+  const { background, ...rest } = v
+  return { ...rest, backgroundColor: background }
+}
 
 const rowButtonNames = (cfg) => (cfg?.rowButtons ?? []).map((b) => b.name).sort().join(',')
+
+/**
+ * 行按钮身份 = `name|type`。
+ *
+ * `key` 刻意**不计分**：它在 `generate_table` 的 Zod 与 `TableRowButton` 里都是可选，
+ * NL 从不提它（「详情」「取消（warning）」只说名字与类型），生成器缺省不发射。
+ * 计分会让「完全按 NL 写对」的答案因少一个不可推断的标识符判错 —— inQuery 陷阱同构。
+ */
 const rowButtonKeys = (cfg) =>
-  (cfg?.rowButtons ?? []).map((b) => `${b.name}|${b.type ?? ''}|${b.key ?? ''}`).sort().join(',,,')
+  (cfg?.rowButtons ?? []).map((b) => `${b.name}|${b.type ?? ''}`).sort().join(',,,')
 const maskNonClosing = (cfg) => cfg?.options?.modal === false || cfg?.options?.closeOnClickModal === false
 
 /** 文本型容器键：只判 presence（NL 说「空数据文案」但不说文案内容）。 */
@@ -252,26 +583,52 @@ function fragmentDimSpecs(scene, gold) {
   const specs = []
   const add = (key, applicable, pass) => specs.push({ key, applicable: !!applicable, pass })
 
-  // ── 三场景共用 ──
+  // AI-51：独立表格片段的 `fields` **只进 `buildTableColumn(SFC)`**（prop/label/labelKey/
+  // width/minWidth/align/fixed/ellipsis/render/formatter/permissionValue），表单专属键
+  // （formtype/required/dataOptions/attrs/rules/isHidden/reactions/span/apiParams）在该
+  // 产物里**零消费者**：模型写什么，生成的 SFC 都逐字节相同。给它们计分等于测试模型
+  // 猜「ID 是 Input 还是 InputNumber」——与 AI-46 的「中文 label→prop 命名彩票」同构，
+  // 正是 inQuery 默认陷阱那一类幻影度量。故表格场景**不启用**这些维度（form/dialog
+  // 的 fields 进 buildFormItem，照常计分）。对应 pin 由 meta-eval 当场咬。
+  const isTable = scene === 'table'
+
+  // ── 三场景共用（表格列真正消费的键）──
   add('propSet', true, propSetEqual)
-  add('formtype', (gold?.fields ?? []).length > 0, formtypeEqual)
-  add('fieldRequired', (gold?.fields ?? []).some((f) => f.required !== undefined), fieldRequiredAllEqual)
-  add('dataOptions', (gold?.fields ?? []).some((f) => (f.dataOptions ?? []).length), dataOptionsEqual)
-  add('fieldAttrs', (gold?.fields ?? []).some((f) => f.attrs?.type !== undefined), fieldAttrsEqual)
+  add('formtype', !isTable && (gold?.fields ?? []).length > 0, formtypeEqual)
+  add('fieldRequired', !isTable && (gold?.fields ?? []).some((f) => f.required !== undefined), fieldRequiredAllEqual)
+  add('dataOptions', !isTable && (gold?.fields ?? []).some((f) => (f.dataOptions ?? []).length), dataOptionsEqual)
+  // AI-51：适用性判据曾只认 `attrs.type`，而 `fieldAttrsEqual` 实际比较 gold 声明的
+  // **全部** attrs 键（`placeholder`/`maxlength` …）。二者不一致会让「无 type 的 attrs」
+  // 在整维口径下不适用（full 恒绿），却能被 `fieldAttrs:<prop>` 钉住 —— 同一份 gold
+  // 对同一维度给出两种适用性。现与 `FIELD_TOKEN_REQUIRES.fieldAttrs` 对齐。
+  add('fieldAttrs', !isTable && (gold?.fields ?? []).some((f) => f?.attrs && Object.keys(f.attrs).length > 0), fieldAttrsEqual)
   add('fieldLayout', (gold?.fields ?? []).some(hasLayout), fieldLayoutEqualWhole)
   add('extPoints', (gold?.fields ?? []).some(hasExtPoint), extPointsEqual)
+  // AI-47：此前无度量的声明式字段键（同样只有表单/弹窗体消费）。
+  add('isHidden', !isTable && (gold?.fields ?? []).some((f) => f?.isHidden !== undefined), isHiddenEqual)
+  add('reactions', !isTable && (gold?.fields ?? []).some((f) => f?.reactions !== undefined), reactionsEqual)
+  add('fieldSpan', !isTable && (gold?.fields ?? []).some(declaresSpan), fieldSpanEqualWhole)
+  add('fieldRules', !isTable && (gold?.fields ?? []).some(hasNonRequiredRule), fieldRulesEqualWhole)
+  add('apiParams', !isTable && (gold?.fields ?? []).some((f) => f?.apiParams !== undefined), apiParamsEqual)
+  add('labelKey', (gold?.fields ?? []).some((f) => f?.labelKey !== undefined), labelKeyEqual)
+  add('i18n', gold?.i18n === true, (g, p) => (g?.i18n ?? false) === (p?.i18n ?? false))
   add('target', true, (g, p) => normTarget(g) === normTarget(p))
 
   if (scene === 'table') {
     add('apiUrl', gold?.apiUrl !== undefined, (g, p) => eq(g?.apiUrl ?? null, p?.apiUrl ?? null))
+    // 「不接接口、数据手动接入」也是声明式意图（生成器会告警并留 tableData ref）：
+    // gold 不声明 apiUrl 时，多写一个接口地址是真实偏差，不能因为「没有维度」而免罚。
+    add('noApiUrl', gold?.apiUrl === undefined, (g, p) => p?.apiUrl === undefined)
     add('rowButtons', (gold?.rowButtons ?? []).length > 0, (g, p) => rowButtonKeys(g) === rowButtonKeys(p))
     add('rowButtonNames', (gold?.rowButtons ?? []).length > 0, (g, p) => rowButtonNames(g) === rowButtonNames(p))
 
     const goldTableOptions = gold?.tableOptions ?? {}
     // `virtual` / `engine` 并入语义维 `tableVirtualMode`（三端消费口径一致），不再逐键计分。
     const VIRTUAL_KEYS = new Set(['virtual', 'engine'])
-    // 声明为 `number | string` 且运行时经 core `toCssSize` 归一的键。
-    const CSS_KEYS = new Set(['height', 'tabHeight'])
+    // 声明为 `number | string` 且运行时经 core `toCssSize` 归一的高度键。两者是**同一个**
+    // 运行时旋钮（`tabHeight` 优先、`height` 仅在 heightType='height' 生效），故都按
+    // `effectiveTableHeight` 比较，而不是逐键字面相等。
+    const HEIGHT_KEYS = new Set(['height', 'tabHeight'])
     for (const key of Object.keys(goldTableOptions)) {
       if (VIRTUAL_KEYS.has(key)) continue
       const presence = TEXT_PRESENCE_KEYS.has(key)
@@ -279,12 +636,14 @@ function fragmentDimSpecs(scene, gold) {
         const gv = normTableOptions(g?.tableOptions)[key]
         const pv = normTableOptions(p?.tableOptions)[key]
         if (presence) return hasText(gv) === hasText(pv)
-        if (CSS_KEYS.has(key)) return cssEq(gv, pv)
-        return eq(gv ?? null, pv ?? null)
+        if (HEIGHT_KEYS.has(key)) return eq(effectiveTableHeight(g), effectiveTableHeight(p))
+        // 纯色背景的 CSS 简写/长写渲染等价（见 `normHeaderCellStyle`）。
+        if (key === 'headerCellStyle') return objDeclaredEqual(normHeaderCellStyle(gv), normHeaderCellStyle(pv), eq)
+        return objDeclaredEqual(gv ?? null, pv ?? null, eq)
       })
     }
     if ('virtual' in goldTableOptions || 'engine' in goldTableOptions) {
-      add('tableVirtualMode', true, (g, p) => tableVirtual(g) === tableVirtual(p))
+      add('tableVirtualMode', true, (g, p) => tableEngine(g) === tableEngine(p))
     }
     for (const key of Object.keys(gold?.pagination ?? {})) {
       add(`pagination.${key}`, true, (g, p) => {
@@ -310,6 +669,8 @@ function fragmentDimSpecs(scene, gold) {
 
   if (scene === 'dialog') {
     add('apiUrl', gold?.apiUrl !== undefined, (g, p) => eq(g?.apiUrl ?? null, p?.apiUrl ?? null))
+    // 无 apiUrl = 「只校验并回调成功」的显式落地（工具契约原文）：多写接口同样判红。
+    add('noApiUrl', gold?.apiUrl === undefined, (g, p) => p?.apiUrl === undefined)
     add('rowkey', gold?.rowkey !== undefined, (g, p) => eq(normDialogRowkey(g), normDialogRowkey(p)))
     add('mode', true, (g, p) => normDialogMode(g) === normDialogMode(p))
     add('composableName', gold?.composableName !== undefined, (g, p) => eq(g?.composableName ?? null, p?.composableName ?? null))
@@ -326,8 +687,9 @@ function fragmentDimSpecs(scene, gold) {
       add(`options.${key}`, true, (g, p) => {
         const gv = g?.options?.[key]
         const pv = p?.options?.[key]
-        // width 契约 `number | string`，三端 es-dialog 都把 number 转 px —— 两种写法等价。
-        return key === 'width' ? cssEq(gv, pv) : eq(gv ?? null, pv ?? null)
+        // width / maxHeight 契约都是 `number | string`，三端 es-dialog 按 CSS 尺寸消费 ——
+        // `480`、`'480'`、`'480px'` 等价；`'60vh'` 这类带单位串原样比较。
+        return key === 'width' || key === 'maxHeight' ? cssEq(gv, pv) : eq(gv ?? null, pv ?? null)
       })
     }
   }
@@ -337,7 +699,10 @@ function fragmentDimSpecs(scene, gold) {
 
 /** 片段版「硬诚实」维度（无 pinnedDims 时的 scoped 退路；与 CRUD core 的定位一致）。 */
 const CORE_DIMS = {
-  table: ['propSet', 'formtype', 'fieldRequired', 'rowButtonNames'],
+  // AI-51：表格场景的 `formtype`/`fieldRequired` 在独立表格产物里零消费者（见
+  // `fragmentDimSpecs`），放进 core 只会被适用性过滤掉 → core 退化成「只剩 propSet」。
+  // 换成表格真正消费且 NL 通常明说的列属性：列布局、接口地址、行按钮名。
+  table: ['propSet', 'fieldLayout', 'apiUrl', 'rowButtonNames'],
   form: ['propSet', 'formtype', 'fieldRequired', 'context', 'buttons'],
   dialog: ['propSet', 'formtype', 'fieldRequired', 'mode'],
 }
@@ -361,8 +726,16 @@ export function fragmentScorableDims(scene, gold) {
  */
 export function isValidFragmentPinnedDim(scene, gold, token) {
   const { dim, field } = parsePinnedDim(token)
+  // AI-51：整维不适用 ⇒ 字段级 pin 也非法。否则「表格场景不启用 formtype」这些键仍能
+  // 被 `formtype:id` 绕过场景口径计分（`scoreDimension` 的字段分支不查适用性）。
+  if (!fragmentDimSpecs(scene, gold).some((s) => s.key === dim && s.applicable)) return false
   if (field !== undefined) {
-    return FRAGMENT_FIELD_SCORABLE_DIMS.includes(dim) && fieldMap(gold).has(field)
+    if (!FRAGMENT_FIELD_SCORABLE_DIMS.includes(dim)) return false
+    const gf = fieldMap(gold).get(field)
+    if (!gf) return false
+    // AI-47：gold 必须真的声明了该键，否则 token 恒真（标了却没度量）。
+    const requires = FIELD_TOKEN_REQUIRES[dim]
+    return requires ? !!requires(gf) : true
   }
   return fragmentDimSpecs(scene, gold).some((s) => s.key === dim && s.applicable)
 }
@@ -378,7 +751,8 @@ function scoreDimension(scene, gold, pred, token) {
     }
     const g = fieldMap(gold).get(field)
     const p = fieldMap(pred).get(field)
-    return !!g && !!p && !!scorer(g, p)
+    // 第 3/4 参是整份 config：`isHidden` 的选项取值归一需要两侧各自的 dataOptions。
+    return !!g && !!p && !!scorer(g, p, gold, pred)
   }
   const spec = fragmentDimSpecs(scene, gold).find((s) => s.key === dim)
   if (!spec) {
@@ -439,12 +813,19 @@ export function describeFragmentDimMiss(dim, gold, pred) {
   if (parts.length !== 2) return null
   const [scope, key] = parts
   const read = (cfg) => {
-    if (scope === 'tableOptions') return normTableOptions(cfg?.tableOptions)[key]
+    if (scope === 'tableOptions') {
+      // height / tabHeight 是同一个运行时旋钮（见 effectiveTableHeight）：诊断里也显示
+      // 有效高度，否则「gold 写 tabHeight、pred 写 height」会显示成两个不同的键值。
+      if (key === 'height' || key === 'tabHeight') return effectiveTableHeight(cfg)
+      return normTableOptions(cfg?.tableOptions)[key]
+    }
     if (scope === 'pagination') return key === 'pageSize' ? normPageSize(cfg?.pagination) : cfg?.pagination?.[key]
     if (scope === 'formLayout') return cfg?.formLayout?.[key]
     if (scope === 'options') return cfg?.options?.[key]
     return undefined
   }
-  const show = (v) => (v === undefined ? '(未设置)' : JSON.stringify(v))
+  // null（有效高度不存在）与 undefined（未设置）都按「未设置」显示 —— 否则诊断里
+  // maxHeight 下的死键 `height` 会显示成字符串 "null"。
+  const show = (v) => (v == null ? '(未设置)' : JSON.stringify(v))
   return { want: show(read(gold)), got: show(read(pred)) }
 }

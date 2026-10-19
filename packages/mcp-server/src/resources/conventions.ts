@@ -526,9 +526,9 @@ interface StructuredCrudConfig {
     border?: boolean
     stripe?: boolean
     rowkey?: string
-    heightType?: 'height' | 'auto' | 'maxHeight'
-    tabHeight?: number | string // table container height (works with heightType)
-    height?: number | string
+    heightType?: 'height' | 'auto' | 'maxHeight' // 'height' = fixed, 'maxHeight' = capped, 'auto' = unconstrained
+    tabHeight?: number | string // table height consumed for EVERY heightType (overrides height; maxHeight = cap)
+    height?: number | string // container height; used ONLY when heightType === 'height'
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>

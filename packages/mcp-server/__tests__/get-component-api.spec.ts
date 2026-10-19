@@ -51,15 +51,13 @@ describe('get_component_api — every doc is well-formed markdown', () => {
 })
 
 describe('get_component_api — EsDialog per-target branches', () => {
-  it('antdv documents that it emits no `open` (and does not list it as a normal emit)', async () => {
-    const doc = await call({ component: 'EsDialog', target: 'antdv' })
-    expect(doc).toContain('antdv emits **no** `open` event')
-    expect(doc).not.toContain('`open` — fired when it opens')
-  })
-
-  it.each(['vue3', 'vue2'] as const)('%s lists `open` as a normal emit', async (target) => {
+  // antdv 曾真的不 emit `open`，文档与测试都锁了那个事实；后来三端对齐（声明式
+  // visible 翻转 + 程序化挂载两条路径都 emit），本断言随之翻面 —— 文档不得再说
+  // 「antdv 没有 open」。
+  it.each(TARGETS)('%s lists `open` as a normal emit', async (target) => {
     const doc = await call({ component: 'EsDialog', target })
     expect(doc).toContain('`open` — fired when it opens')
+    expect(doc).not.toContain('antdv emits **no** `open` event')
   })
 
   it.each(TARGETS)('%s exposes the uniform {close,closed,toggleFullscreen,doClose}', async (target) => {

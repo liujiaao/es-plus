@@ -1,0 +1,109 @@
+{
+  "scene": "form",
+  "target": "vue2",
+  "pinnedDims": [
+    "propSet",
+    "formtype:email",
+    "formtype:phone",
+    "formtype:age",
+    "formtype:name",
+    "fieldRequired:email",
+    "fieldRequired:name",
+    "fieldRules:email",
+    "fieldRules:phone",
+    "fieldRules:age",
+    "fieldAttrs:age",
+    "fieldAttrs:name",
+    "context",
+    "buttons"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "email",
+        "label": "邮箱",
+        "formtype": "Input",
+        "required": true,
+        "rules": [
+          {
+            "pattern": "^[^@]+@[^@]+$",
+            "message": "请输入有效邮箱",
+            "trigger": "blur"
+          },
+          {
+            "type": "email",
+            "message": "请输入有效邮箱",
+            "trigger": "blur"
+          }
+        ]
+      },
+      {
+        "prop": "phone",
+        "label": "手机号",
+        "formtype": "Input",
+        "rules": [
+          {
+            "pattern": "^1\\d{10}$",
+            "message": "手机号格式不正确",
+            "trigger": "blur"
+          }
+        ]
+      },
+      {
+        "prop": "age",
+        "label": "年龄",
+        "formtype": "InputNumber",
+        "rules": [
+          {
+            "min": 18,
+            "max": 65,
+            "type": "integer",
+            "message": "年龄需在 18-65 之间",
+            "trigger": "change"
+          }
+        ],
+        "attrs": {
+          "placeholder": "请输入年龄"
+        }
+      },
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input",
+        "required": true,
+        "attrs": {
+          "placeholder": "请输入姓名",
+          "maxlength": 20
+        }
+      }
+    ],
+    "context": "form",
+    "buttons": "submit",
+    "typescript": true
+  },
+  "nl": "做一个用户表单：邮箱必填，正则 ^[^@]+@[^@]+$、type email、失焦触发；手机号正则 ^1\\d{10}$、失焦触发；年龄整数 18-65、值变触发、占位「请输入年龄」；姓名必填、最多 20 字、占位「请输入姓名」；底部保存/重置。",
+  "notes": "非必填校验规则（pattern/type/min/max/trigger）+ attrs（placeholder/maxlength）。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。 AI-51：`type:\"email\"` 走 async-validator 的 `type` 校验器，**不**执行同一条规则里的 `pattern`；NL 同时要求正则与 type email，故拆成两条规则（合并写法会静默丢掉正则）。",
+  "fixedFields": [
+    "email",
+    "phone",
+    "age",
+    "name"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:email",
+    "formtype:phone",
+    "formtype:age",
+    "formtype:name",
+    "fieldRequired:email",
+    "fieldRequired:name",
+    "fieldRules:email",
+    "fieldRules:phone",
+    "fieldRules:age",
+    "fieldAttrs:age",
+    "fieldAttrs:name",
+    "context",
+    "buttons",
+    "target"
+  ]
+}

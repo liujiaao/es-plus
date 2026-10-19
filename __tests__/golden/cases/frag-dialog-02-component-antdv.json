@@ -8,6 +8,8 @@
     "fieldRequired:name",
     "mode",
     "options.width",
+    "options.maxHeight",
+    "options.appendTo",
     "options.isDraggable",
     "options.showClose",
     "dialogMaskNonClosing",
@@ -51,7 +53,7 @@
     "typescript": true,
     "defaultTitle": "用户编辑"
   },
-  "nl": "做一个用户编辑弹窗的组件（不要 composable、不引 JSX 插件）：数据接口 /api/users，默认标题「用户编辑」，姓名必填、状态下拉（启用/禁用），宽 720、可拖拽、不显示关闭叉、点遮罩不关。",
+  "nl": "做一个用户编辑弹窗的组件（不要 composable、不引 JSX 插件）：数据接口 /api/users，默认标题「用户编辑」，姓名必填、状态下拉（启用/禁用），宽 720、最大高度 70vh、挂载到 #app、可拖拽、不显示关闭叉、点遮罩不关。",
   "notes": "AI-28 mode='component' 形态：产物是自包含 <es-dialog> SFC（fence='vue'），编译尺子走 parseSfc 切 <script> 块 —— 与 01 的 composable 整块 tsx 解析是不同验证路径。options 覆盖三条发射分支：字符串（maxHeight/appendTo 静态 attr）、数字（width 绑定 attr）、布尔假值（showClose/modal 必须真的发出来，不能被 falsy 判丢）。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）—— 该腿与 vue3 腿在 component 形态下**共用同一段发射代码**（`:visible` 走 `v-model`、`defineExpose` 暴露），逐字节只有 `@es-plus/adapter-antdv` 这个包名不同；它的价值是证明「三端矩阵无空格」而不是分叉验证（vue2 腿才是真分叉）。 AI-46：补 fixedFields / nlStatedDims（度量有效性），NL 明示接口地址、选项与命名。",
   "fixedFields": [
     "name",
@@ -66,6 +68,8 @@
     "mode",
     "apiUrl",
     "options.width",
+    "options.maxHeight",
+    "options.appendTo",
     "options.isDraggable",
     "options.showClose",
     "dialogMaskNonClosing",

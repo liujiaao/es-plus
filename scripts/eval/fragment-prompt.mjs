@@ -188,7 +188,13 @@ export function buildFragmentSystemPrompt(scene, tool) {
     tool.description,
     '',
     'Input schema (a single JSON object; "optional" keys may be omitted):',
-    ...renderShape(tool.shape),
+    // depth=2：生产宿主看到的是 MCP 的**完整 JSON Schema**（嵌套 properties 都在），
+    // 而 depth=1 会把 `fields[].rules` / `fields[].dataOptions` 的子键压成一行
+    // `object[]` —— 实测模型因此整组丢掉 rules（AI-47 的 fieldRules miss）。
+    // AI-47 复测：`fields[].reactions[].fulfill` 是第三层，depth=2 时仍被压成
+    // `object`，模型把 `fulfill.required` 写成裸 `true`。故放到 depth=3；
+    // 递归到 depth 0 即停，`dataOptions.children` 这类自指不会撑爆 prompt。
+    ...renderShape(tool.shape, { depth: 3 }),
     '',
     'Rules:',
     '1. Respond with ONLY the JSON object — no prose, no markdown fences, no comments.',

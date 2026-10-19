@@ -25,6 +25,7 @@
     :centered="props.alignCenter !== false && !props.top"
     :mask="props.modal !== false"
     :footer="props.isHiddenFooter ? null : undefined"
+    :getContainer="props.appendTo"
     @cancel="handleClose"
     @update:open="onUpdateOpen"
   >
@@ -63,18 +64,20 @@
       </div>
     </template>
 
-    <!-- 主体内容 -->
-    <div class="dialog_body_layouts" :style="initDialogHeight">
-      <RenderJsx
-        v-if="props.render"
-        :render="props.render"
-        :instance="getCurrentInstanceModel"
-        :components="slotComponents"
-        :refs="renderBodyRefsObject"
-        :locale="antLocale"
-      />
-      <slot v-else />
-    </div>
+    <!-- 主体内容：loading 与 vue3/vue2 的 v-loading 对齐（a-modal 无此能力，用 a-spin 包裹 body） -->
+    <a-spin :spinning="props.loading">
+      <div class="dialog_body_layouts" :style="initDialogHeight">
+        <RenderJsx
+          v-if="props.render"
+          :render="props.render"
+          :instance="getCurrentInstanceModel"
+          :components="slotComponents"
+          :refs="renderBodyRefsObject"
+          :locale="antLocale"
+        />
+        <slot v-else />
+      </div>
+    </a-spin>
 
     <!-- 底部按钮 -->
     <template #footer v-if="!props.isHiddenFooter">
@@ -130,7 +133,7 @@ import RenderJsx from './render-jsx.vue'
 // 本地导入并按模板标签命名（AModal↔<a-modal> 等），使模板解析为直接组件引用而非全局 resolveComponent。
 // 对齐 @es-plus/vue3（其 EsDialog 直接 import ElDialog/ElButton/ElIcon），确保在 useDialog 命令式
 // 渲染的脱离子树（appContext 为 null，全局注册不可见）中仍能解析弹窗骨架组件。
-import { Modal as AModal, Button as AButton, Space as ASpace } from 'ant-design-vue'
+import { Modal as AModal, Button as AButton, Space as ASpace, Spin as ASpin } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
 // ─── Props（onClosed 不声明为 prop，让其作为事件监听器流入）──
@@ -150,6 +153,7 @@ const props = withDefaults(
     appendTo?: string | HTMLElement
     fullscreen?: boolean
     showClose?: boolean
+    loading?: boolean
     destroyOnClose?: boolean
     modal?: boolean
     closeOnClickModal?: boolean
@@ -163,6 +167,7 @@ const props = withDefaults(
     title: '弹窗',
     width: '600px',
     showClose: true,
+    loading: false,
     fullscreen: false,
     destroyOnClose: false,
     modal: true,
@@ -435,6 +440,7 @@ const filteredAttrs = computed(() => {
     'title', 'width', 'render', 'renderHeader', 'renderFooter',
     'configBtn', 'onClosed', 'isDraggable', 'hiddenFullBtn',
     'isHiddenFooter', 'maxHeight', 'appendTo', 'fullscreen', 'showClose',
+    'loading',
     'destroyOnClose', 'modal', 'closeOnClickModal', 'closeOnPressEscape',
     'beforeClose', 'alignCenter', 'top', 'modalClass', 'visible',
   ])

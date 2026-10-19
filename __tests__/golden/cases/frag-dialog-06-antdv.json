@@ -1,0 +1,97 @@
+{
+  "scene": "dialog",
+  "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:contact",
+    "formtype:level",
+    "formtype:active",
+    "fieldRequired:name",
+    "dataOptions:level",
+    "i18n",
+    "labelKey:name",
+    "mode",
+    "defaultTitle",
+    "apiUrl",
+    "rowkey",
+    "options.width",
+    "options.showClose"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "name",
+        "label": "供应商名称",
+        "labelKey": "field.supplierName",
+        "formtype": "Input",
+        "required": true
+      },
+      {
+        "prop": "contact",
+        "label": "联系人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "level",
+        "label": "等级",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "一级",
+            "value": "1"
+          },
+          {
+            "label": "二级",
+            "value": "2"
+          },
+          {
+            "label": "三级",
+            "value": "3"
+          }
+        ]
+      },
+      {
+        "prop": "active",
+        "label": "合作状态",
+        "formtype": "Switch"
+      }
+    ],
+    "mode": "component",
+    "i18n": true,
+    "defaultTitle": "新增供应商",
+    "apiUrl": "/api/suppliers",
+    "rowkey": "supplierId",
+    "options": {
+      "width": 760,
+      "showClose": false
+    },
+    "typescript": true
+  },
+  "nl": "做一个供应商弹窗的组件（mode=component）并启用 i18n：供应商名称显式 labelKey field.supplierName；默认标题「新增供应商」；接口 /api/suppliers、主键 supplierId；宽 760、不显示关闭叉；名称必填；联系人文本；等级下拉（一级/二级/三级）；合作状态开关。",
+  "notes": "component + i18n + 显式 labelKey + 自定义主键 + showClose:false。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。",
+  "fixedFields": [
+    "name",
+    "contact",
+    "level",
+    "active"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:name",
+    "formtype:contact",
+    "formtype:level",
+    "formtype:active",
+    "fieldRequired:name",
+    "dataOptions:level",
+    "i18n",
+    "labelKey:name",
+    "mode",
+    "defaultTitle",
+    "apiUrl",
+    "rowkey",
+    "options.width",
+    "options.showClose",
+    "target"
+  ]
+}

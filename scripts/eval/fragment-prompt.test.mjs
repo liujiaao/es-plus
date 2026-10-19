@@ -80,6 +80,100 @@ for (const [scene, toolName] of SCENES) {
   check(prompt.includes('Output a single JSON object and nothing else.'), `${scene}: 缺末行输出约束`)
 }
 
+console.log('meta-eval: teaching surface (every non-obvious key carries .describe())')
+{
+  /**
+   * 片段 prompt 的**唯一**教学来源是工具 shape 的 `.describe()`（不喂 few-shot）。
+   * 于是「镜像了键、没镜像文案」= 宿主 LLM 看得到键名、看不到语义，实测就会漏掉
+   * 整类维度（AI-47 的 fieldRules / isHidden / reactions 三例）。这里钉住那些
+   * 光看键名推不出含义的键：文案一旦被删（或加键时忘写），此处必红。
+   */
+  const descOf = (t) => {
+    let cur = t
+    const seen = new Set()
+    while (cur && cur._def && !seen.has(cur)) {
+      seen.add(cur)
+      if (cur._def.description) return cur._def.description
+      const d = cur._def
+      if (d.typeName === 'ZodOptional' || d.typeName === 'ZodNullable' || d.typeName === 'ZodDefault') cur = d.innerType
+      else if (d.typeName === 'ZodEffects') cur = d.schema
+      else break
+    }
+    return ''
+  }
+  /** 沿 [a, b] 路径下潜一层（a 必须是对象/对象数组）。 */
+  const at = (shape, path) => {
+    const [head, child] = path
+    const headType = shape?.[head]
+    if (!headType) return null
+    if (!child) return headType
+    return nestedShape(headType)?.[child] ?? null
+  }
+
+  const TEACHING = {
+    // 三个场景的 fields[] 都来自同一份 surfaceFieldSchema
+    fields: [
+      ['rules'], ['isHidden'], ['reactions'], ['querySpan'], ['formSpan'],
+      ['apiParams'], ['permissionValue'],
+    ],
+    // rules 的子键：光看 pattern/trigger 的键名推不出「JS 正则源码」「何时校验」
+    'fields.rules': [['pattern'], ['message'], ['trigger'], ['type']],
+    table: [
+      ['rowButtons'],
+      ['tableOptions', 'virtual'], ['tableOptions', 'engine'],
+      ['tableOptions', 'rowHeight'], ['tableOptions', 'estimatedRowHeight'],
+      ['tableOptions', 'overscanCount'], ['tableOptions', 'rowClassName'],
+      ['tableOptions', 'tabHeight'], ['tableOptions', 'size'],
+      ['tableOptions', 'showHeader'], ['tableOptions', 'emptyText'],
+      ['tableOptions', 'snIndex'], ['tableOptions', 'leftText'],
+      ['tableOptions', 'cachePageSelection'], ['tableOptions', 'refetchKeepPage'],
+      ['tableOptions', 'localPagination'], ['tableOptions', 'configTableOut'],
+      ['tableOptions', 'defaultSort'],
+      ['pagination', 'pageSize'], ['pagination', 'pageSizes'],
+    ],
+    dialog: [
+      ['options', 'appendTo'], ['options', 'cacheKey'], ['options', 'maxHeight'],
+      ['options', 'isHiddenFooter'],
+    ],
+  }
+  for (const [scene, toolName] of SCENES) {
+    const shape = tools[toolName].shape
+    const groups = [['fields', TEACHING.fields], ['fields.rules', TEACHING['fields.rules']]]
+    if (scene === 'table') groups.push(['table', TEACHING.table])
+    if (scene === 'dialog') groups.push(['dialog', TEACHING.dialog])
+    for (const [label, paths] of groups) {
+      // fields 组与 fields.rules 组都要先进到数组元素形状里再取子键。
+      const container =
+        label === 'fields'
+          ? nestedShape(shape.fields)
+          : label === 'fields.rules'
+            ? nestedShape(nestedShape(shape.fields)?.rules)
+            : shape
+      for (const path of paths) {
+        const type = at(container, path)
+        check(!!type, `${scene}: 找不到教学键 ${label}.${path.join('.')}（键被改名/删除了？）`)
+        check(
+          !type || descOf(type).trim().length > 0,
+          `${scene}: ${label}.${path.join('.')} 缺 .describe() —— 宿主 LLM 只看得到键名，语义丢失`
+        )
+      }
+    }
+  }
+}
+
+// AI-51：`generate_table` 的字段形状里 `formtype` 放宽为 optional（独立表格产物只走
+// buildTableColumn(SFC)，零消费）；表单/弹窗仍必填（控件类型决定渲染）。两者必须分开，
+// 否则「必填却无产物消费者」的幻影要求会回到表格工具上。
+{
+  const fieldOf = (toolName) => tools[toolName].shape.fields?.element?.shape
+  check(fieldOf('generate_table')?.formtype?.isOptional?.() === true,
+    'generate_table: formtype 应为 optional（表格列产物不消费它）')
+  for (const name of ['generate_form', 'generate_dialog']) {
+    check(fieldOf(name)?.formtype?.isOptional?.() === false,
+      `${name}: formtype 仍应必填（表单控件类型决定渲染，控制组）`)
+  }
+}
+
 console.log('meta-eval: fragment scene rules')
 {
   const t = buildFragmentSystemPrompt('table', tools.generate_table)

@@ -16,7 +16,7 @@
       :width="typeof width === 'number' ? width + 'px' : width"
       :show-close="showNativeClose"
       :fullscreen="isFullscreen"
-      :append-to-body="appendToBody"
+      :append-to-body="resolvedAppendToBody"
       :modal-append-to-body="modalAppendToBody"
       :close-on-click-modal="closeOnClickModal"
       :close-on-press-escape="closeOnPressEscape"
@@ -142,8 +142,6 @@ export default defineComponent({
     hiddenFullBtn: { type: Boolean, default: false },
     width: { type: [String, Number], default: '50%' },
     isDraggable: { type: Boolean, default: false },
-    confirmText: { type: String, default: '' },
-    cancelText: { type: String, default: '' },
     configBtn: { type: Array as () => BtnConfig[], default: () => [] },
     maxHeight: { type: [String, Number], default: undefined },
     isHiddenFooter: { type: Boolean, default: false },
@@ -168,6 +166,31 @@ export default defineComponent({
     const lyFormInstance = ref<unknown>(null)
     const renderBodyRefsObject = reactive<Record<string, unknown>>({})
     const isFullscreen = ref(!!props.fullscreen)
+    /**
+     * appendTo：Element UI 2.x 的 el-dialog **只有布尔 `append-to-body`**，没有
+     * 「选择器挂载点」能力（Element Plus 的 `appendTo`、antdv 的 `getContainer` 有）。
+     *
+     * 此前 `appendTo` 只在 props 里声明、模板从不读 —— 声明式
+     * `<es-dialog append-to="#app">` 被**静默丢弃**（与 cacheKey 同族）。
+     * 现在：给了 appendTo（或 appendToBody）就打开 `append-to-body`，
+     * 让弹窗至少脱离当前 DOM 层级；`appendTo:'body'` 语义完全一致，
+     * 非 body 选择器/DOM 元素则在挂载时**显式告警**这一端能力缺口，
+     * 绝不静默假装支持。
+     */
+    const resolvedAppendToBody = computed(() => !!props.appendToBody || props.appendTo !== undefined)
+    watch(
+      () => props.appendTo,
+      (v) => {
+        if (v === undefined || v === 'body') return
+        console.warn(
+          '[EsDialog] Element UI 2.x 的 el-dialog 不支持选择器级 appendTo（' +
+            String(v) +
+            '）：已退化为 append-to-body 挂到 body。需要精确挂载容器请用 useDialog、' +
+            '或改用 vue3 / antdv 端的 <es-dialog>。'
+        )
+      },
+      { immediate: true }
+    )
     // markRaw：dialogInstance 是活的 Vue 组件实例。放进会被 composition-api 遍历的
     // 结构前打 raw 标记，作为 Vue 2.6 polyfill customReactive 深度遍历 vm 的防御。
     const dialogInstance = markRaw(instance)
@@ -486,6 +509,7 @@ export default defineComponent({
       renderBodyRefsObject,
       // computeds
       filteredAttrs,
+      resolvedAppendToBody,
       showNativeClose,
       initDialogCls,
       initDialogHeight,

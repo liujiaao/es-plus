@@ -1,14 +1,28 @@
 import { z } from 'zod'
 import { VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from './contract.js'
 
+// 教学面：`.describe()` 是宿主 LLM 唯一能看到的语义（CRUD prompt / 片段 prompt 都从
+// 这里或它的 zod3 镜像自省）。规则子键此前裸奔，模型只能靠猜 pattern/trigger 的含义。
 const FieldRuleSchema = z.object({
-  required: z.boolean().optional(),
-  pattern: z.string().optional(),
-  min: z.number().optional(),
-  max: z.number().optional(),
-  type: z.enum(['string', 'number', 'email', 'url', 'integer']).optional(),
-  message: z.string(),
-  trigger: z.enum(['blur', 'change']).optional(),
+  required: z
+    .boolean()
+    .optional()
+    .describe("Enforce a value with this rule (same effect as field-level `required`; prefer the field-level key for unconditional requirements)."),
+  pattern: z
+    .string()
+    .optional()
+    .describe('RegExp SOURCE STRING the value must match (e.g. "^1\\d{10}$"), not a RegExp object.'),
+  min: z.number().optional().describe("Minimum length for strings / minimum value for numbers."),
+  max: z.number().optional().describe("Maximum length for strings / maximum value for numbers."),
+  type: z
+    .enum(['string', 'number', 'email', 'url', 'integer'])
+    .optional()
+    .describe("Value type validated by this rule."),
+  message: z.string().describe("Message shown when the rule fails — REQUIRED, write it in the user's language."),
+  trigger: z
+    .enum(['blur', 'change'])
+    .optional()
+    .describe("'blur' validates when the field loses focus; 'change' validates while the value changes."),
 })
 
 const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
@@ -199,7 +213,7 @@ const ReactionSchema = z
       .optional()
       .describe('Model paths that trigger re-evaluation of this rule. REQUIRED when `fulfill.value` is present.'),
     when: HiddenExprNodeSchema.optional().describe(
-      'Optional gate expression: the rule applies only when it evaluates truthy. Plain JSON data, never a JS function string.'
+      'Optional gate expression: the rule applies only when it evaluates truthy. Must be a JSONLogic EXPRESSION NODE (e.g. { "==": [{ var: "country" }, "us"] }) — never the { field, op, value } legacy condition form (that form belongs to isHidden), never a bare boolean. Plain JSON data, never a JS function string.'
     ),
     fulfill: ReactionFulfillSchema,
   })
@@ -247,10 +261,10 @@ const FieldConfigSchema = z.object({
   ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
-    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold). A condition may ALSO be a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. The legacy {field,op,value} form remains valid and is preferred for simple cases. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
+    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold) and may mix the two forms. TWO forms, never mixed within one node: (1) legacy condition `{ field, op, value }` whose `op` is one of eq | ne | in | nIn | empty | notEmpty | truthy | falsy (default eq) — preferred for simple comparisons; (2) a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. An expression op inside a legacy `{field, op, value}` node is INVALID (runtime warns and treats the field as visible) — use form (2) for `>`, `!=`, etc. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
   ),
   reactions: z.array(ReactionSchema).optional().describe(
-    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column."
+    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column."
   ),
 })
 
@@ -470,9 +484,24 @@ export const StructuredCrudConfigSchema = z.object({
     border: z.boolean().default(true),
     stripe: z.boolean().default(true),
     rowkey: z.string().default('id'),
-    heightType: z.enum(['height', 'auto', 'maxHeight']).optional(),
-    tabHeight: z.union([z.number(), z.string()]).optional().describe('Table container height (works with heightType); number → px, string → raw CSS value'),
-    height: z.union([z.number(), z.string()]).optional(),
+    heightType: z
+      .enum(['height', 'auto', 'maxHeight'])
+      .optional()
+      .describe(
+        "How the container height is applied: 'height' = fixed height (value from `height`, or `tabHeight` if set); 'maxHeight' = capped at `tabHeight` (a `height` value is IGNORED); 'auto' = no container height constraint. Default 'auto'."
+      ),
+    tabHeight: z
+      .union([z.number(), z.string()])
+      .optional()
+      .describe(
+        "Table height consumed for EVERY heightType: under 'height' it overrides `height`; under 'maxHeight' it is the cap. number → px, string → raw CSS value (e.g. '60vh'). Prefer it over `height` whenever a concrete height is needed — it is the only height key that applies when heightType is 'maxHeight'."
+      ),
+    height: z
+      .union([z.number(), z.string()])
+      .optional()
+      .describe(
+        "Container height used ONLY when heightType is 'height' (ignored for 'auto' / 'maxHeight' — use tabHeight there). Takes precedence over nothing: an explicit tabHeight always wins."
+      ),
     multiSelect: z.boolean().optional(),
     highlightCurrentRow: z.boolean().default(true),
     headerCellStyle: z.record(z.string(), z.string()).optional(),
@@ -562,8 +591,8 @@ export const StructuredCrudConfigSchema = z.object({
       ),
   }).optional(),
   pagination: z.object({
-    pageSize: z.number().int().default(10),
-    pageSizes: z.array(z.number().int()).optional(),
+    pageSize: z.number().int().default(10).describe('Rows per page on first render (default 10).'),
+    pageSizes: z.array(z.number().int()).optional().describe('Selectable page-size options shown in the pager, e.g. [10, 20, 50].'),
   }).optional(),
   mode: z.enum(['schema', 'sfc']).default('schema').describe('Output mode'),
   target: z.enum(['vue3', 'vue2', 'antdv']).default('vue3').describe('Target framework: "vue3" (@es-plus/vue3 + Element Plus, default), "vue2" (@es-plus/vue2 + Element UI), or "antdv" (@es-plus/adapter-antdv + Ant Design Vue)'),

@@ -1,0 +1,118 @@
+{
+  "scene": "form",
+  "target": "vue2",
+  "pinnedDims": [
+    "propSet",
+    "formtype:country",
+    "formtype:province",
+    "formtype:city",
+    "dataOptions:country",
+    "reactions:province",
+    "reactions:city",
+    "context",
+    "buttons"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "country",
+        "label": "国家",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "中国",
+            "value": "cn"
+          },
+          {
+            "label": "美国",
+            "value": "us"
+          }
+        ]
+      },
+      {
+        "prop": "province",
+        "label": "省份",
+        "formtype": "Select",
+        "reactions": [
+          {
+            "dependencies": [
+              "country"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "country"
+                },
+                "cn"
+              ]
+            },
+            "fulfill": {
+              "dataOptions": [
+                {
+                  "label": "北京",
+                  "value": "bj"
+                },
+                {
+                  "label": "上海",
+                  "value": "sh"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "prop": "city",
+        "label": "城市",
+        "formtype": "Input",
+        "reactions": [
+          {
+            "dependencies": [
+              "country"
+            ],
+            "when": {
+              "==": [
+                {
+                  "var": "country"
+                },
+                "us"
+              ]
+            },
+            "fulfill": {
+              "required": {
+                "==": [
+                  {
+                    "var": "country"
+                  },
+                  "us"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "context": "form",
+    "buttons": "submit",
+    "typescript": true
+  },
+  "nl": "做一个地址表单：国家（中国/美国）；省份下拉联动国家——依赖 country，当国家等于 cn 时候选为北京(bj)/上海(sh)；城市在国家等于 us 时必填；底部保存/重置。",
+  "notes": "声明式 reactions：fulfill.dataOptions（字面量选项）+ fulfill.required（布尔表达式）。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。",
+  "fixedFields": [
+    "country",
+    "province",
+    "city"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:country",
+    "formtype:province",
+    "formtype:city",
+    "dataOptions:country",
+    "reactions:province",
+    "reactions:city",
+    "context",
+    "buttons",
+    "target"
+  ]
+}

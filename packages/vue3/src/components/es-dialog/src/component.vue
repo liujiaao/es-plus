@@ -1,5 +1,14 @@
 <template>
   <div class="dp-dialog_wrapper">
+    <!--
+      appendTo 此前是**声明了却从不读**的死 prop（`withDefaults` 里收了、模板里没绑）：
+      声明式 `<es-dialog append-to="#app">` 的挂载目标被静默丢弃（与 cacheKey 同族，
+      但这里底层库支持）。Element Plus 2.14 的 el-dialog 用
+      teleport :to="appendTo"、:disabled="appendTo !== 'body' ? false : !appendToBody"
+      选择挂载点，故显式转发；给了 appendTo 就打开 append-to-body
+      （appendTo === 'body' 时 teleport 的启用开关只认 appendToBody）。
+      不传 appendTo 时 appendToBody 保持 false —— 渲染位置与修复前逐字节一致。
+    -->
     <el-dialog
       :class="['dg-dialog', initDialogCls]"
       v-bind="filteredAttrs"
@@ -9,6 +18,8 @@
       :show-close="showNativeClose"
       :before-close="onBeforeClose"
       :fullscreen="isFullscreen"
+      :append-to="props.appendTo"
+      :append-to-body="props.appendTo !== undefined"
     >
       <template #header>
         <template v-if="props.renderHeader">
@@ -100,12 +111,12 @@ const props = withDefaults(
   defineProps<{
     title?: string
     visible?: boolean
-    appendTo?: object | string
+    // 与 el-dialog 的 appendTo 同型（Element Plus 的 teleport :to 接受选择器或元素）。
+    // 此前写成 object | string 与底层不兼容，转发时 typecheck 直接挡住。
+    appendTo?: string | HTMLElement
     hiddenFullBtn?: boolean
     width?: string | number
     isDraggable?: boolean
-    confirmText?: string
-    cancelText?: string
     configBtn?: BtnConfig[]
     maxHeight?: string | number
     isHiddenFooter?: boolean

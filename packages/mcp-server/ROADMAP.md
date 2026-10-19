@@ -421,7 +421,97 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → 18 例 / 50 维全绿（含 `nlStatedDims` 合法性、`pinnedDims ⊆ nlStatedDims`、`fixedFields ≡ gold prop 集`、等价实现判等与错值仍红）；`node scripts/eval/fragment-prompt.test.mjs` 绿；core `compat.spec.ts` 42 例、vue2 `es-form/es-table` 48 例、vue3 `es-table` 35 例、antdv `es-table` 44 例全绿；`npm run fragment:smoke` 90 产物可解析；`check:scene-coverage` 四场景无空格；vue2 运行时见证 `vue2-fragments.spec.ts` **6/6 绿**（真实 Element UI 下 form-02 labelWidth=110px 直接证明 `formLayProps` 修复）。
 - **刻意偏离**：`stated` 是**公平观测口径**，不是门禁；片段仍不进 `definition95` 分母（需用户重新拍板）。`full` 保留为诊断，避免把「运行时 fixture 键」误读成能力缺口。**不提交、不推送**（仓铁律）。
 
+### AI-47 — 片段语料扩到 63 例（每场景 ≥20）+ 六类字段维度的度量补齐（**2026-10-19 已落地**）· `M`
+- **Why**：AI-46 修好了「公平口径」，但 18 条语料（每场景 6 例）只覆盖了词汇面的一小角：`isHidden` / `reactions` / `querySpan/formSpan` / `apiParams` / `rules` / `labelKey` / `i18n` / `permissionValue` **没有任何一条语料**——这些键在 `buildFormItem` / `buildTableColumn` 里有真实发射点、在 core 有真实消费者，模型写错也不会有数字动。用户拍板：**片段仍只观测，先把每场景从 6 例扩到 ≥20（总 ≥60），再谈 95% 门禁**。
+- **改动**：
+  - **语料**：新增 15 组 × 3 端 = 45 条（`frag-{table,form,dialog}-03..07-{vue3,vue2,antdv}.json`），总数 63（table 21 / form 21 / dialog 21）。每组 `nl` 明示所有被 pin 的语义（含具体 URL/选项值/JSON 结构），`nlStatedDims` 自证「说了什么」，`pinnedDims ⊆ nlStatedDims`，`fixedFields ≡ gold prop 集`。覆盖：表格分页/排序/行按钮 type、多选态持久化 + `configTableOut`、虚拟引擎 + 行高/估高/overscan/行类名/表头样式、`engine:'vxe'` + `editConfig` + 固定列 + formatter、i18n + 显式 labelKey + `permissionValue` + 无接口（`noApiUrl`）；表单 query 上下文 + `querySpan`、`rules`（pattern/min/max/type/trigger）+ attrs、`isHidden` 单条件与条件数组（AND）、`reactions`（dataOptions + required 表达式）、i18n + 远程选项 `apiParams` + `formSpan` + `attrs.disabled`；弹窗 composable 无接口、component 全屏/隐藏页脚/销毁/Esc、实例缓存 `cacheKey` + `appendTo` + `maxHeight` + 自定义 rowkey、component + i18n + labelKey + `showClose:false`、component + 数字 `maxHeight` + `appendTo:'body'`。
+  - **记分卡**（`scripts/eval/fragment-scorers.mjs`）：新增字段维度 `isHidden` / `reactions` / `fieldSpan` / `fieldRules` / `apiParams` / `labelKey` 与容器维 `i18n`、`noApiUrl`；`extPoints` 纳入 `permissionValue`（与 CRUD scorer 同规）。归一化：`querySpan/formSpan` 按生成器的**有效默认值**比较（省略 ≡ 默认，但非默认值必须写）；`rules` **忽略 `message` 与 `required`**（文案不可推断、required 已由 `fieldRequired` 计分），只比 pattern/min/max/type/trigger；`apiParams` 的 `method` 缺省 ≡ GET，`labelField/valueField` 只在 gold 声明时比；`options.maxHeight` 与 width 同样做 number↔px 归一。
+  - **修掉的度量 bug**：`tableVirtualMode` 旧实现返回布尔，`engine:'vxe'` 与「省略默认引擎」被判等（两者运行时行为完全不同）。现在比较**有效引擎**（`virtual:true` → `'virtual'`，否则 `engine ?? 'default'`）。
+  - **标注守卫**：字段级 token 现在要求 gold 的该字段**真的声明了**对应键（`FIELD_TOKEN_REQUIRES`），否则「NL 说了、gold 没写」的 token 会恒真，形同虚设。
+  - **meta-eval**：语料下限 18 → **≥60**；新增六类扰动器与等价断言（rules message 差异判等、method 缺省判等、vxe ↔ 默认/virtual 判红、maxHeight 数字↔px 判等）；`rowButtonNames` 与 `rowButtons` 的语义包含关系显式登记（钉了后者必然钉住前者）。
+- **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → **63 条片段用例，66 个维度被扰动验证**（绿）；`node scripts/check-scene-coverage.mjs` → 四场景无空格、**63/63 片段产物在三端均可解析并真进 vite build**；`npm run fragment:smoke` → 90 个片段产物可解析；`check:fragment` / `check:fragment-prompts` / `check:membership-trap` / `check:fewshot-registration` 全绿。
+- **探针（实测记录，非成绩）**：`--fragments`（deepseek-v4-pro 中继，2026-10-19）**全量 63 条全部测到**（未测到 0 / 答错 0 / 降级 0 次，用时 1298.6s ≈ 20.6s/行）：**core 95.2% · scoped 77.8% · stated 77.8% · full 63.5% · compiles 100%**。原先 `--limit 9` 的 4/9 记录是中继 `Connection error` / 超时（未测到，不计分母），已被这次全量覆盖。miss 集中在四类：`rowButtons`（table-03/07 六行）——NL 明写「行内按钮」，模型整组丢弃；`fieldRules` / `isHidden` / `reactions`（form-04/05/06 九行）——正是 AI-49 修的教学面缺口；其余 `full` 腿的 miss 多为 NL 未声明的运行时 fixture 键（`table-02` 的 rowHeight/overscan/configTableOut 等），与 AI-46 的诊断口径一致。**探针未写任何产物、未参与门禁**。
+- **刻意偏离**：仍**不**把片段并入 `definition95` 分母/门禁（用户拍板）；`noApiUrl` 是新增的「否定语义」维度（gold 无接口而 pred 凭空加接口 = 真实偏差），只在表/弹窗场景启用。**不提交、不推送**（仓铁律）。
+
 ---
+
+### AI-48 — `appendTo` 在声明式 `<es-dialog>` 上是死 prop：三端接线 + 显式降级（**2026-10-19 已落地**）· `S`
+- **Why**（AI-47 扩语料时对源码复核当场发现；正是 AI-47 语料 pin 的那条语义）：`frag-dialog-02/07` 的 component 形态都声明了 `options.appendTo`，但产物里的 `append-to` 属性在三端**没有消费者**：
+  - vue3：`withDefaults(defineProps<{ appendTo?: object | string }>())` 声明了，模板**从未绑定** → 被静默丢弃；
+  - vue2：props 里声明了 `appendTo`，模板只用布尔 `appendToBody`（`component.vue:19`）→ 静默丢弃；
+  - antdv：`appendTo` 被列进 `filteredAttrs` 的忽略名单（`component.vue:437`）且未转发 `getContainer` → 静默丢弃。
+  这与 `permissionValue` 同族（声明了、有文档、无消费者）。**底层能力并非都不支持**：Element Plus 2.14 的 `el-dialog` 自带 `appendTo`（teleport `:to`）+ `appendToBody`（启用开关）；antdv `a-modal` 有 `getContainer`；只有 Element UI 2.x 的 `el-dialog` 是布尔 `append-to-body`、没有选择器级挂载点。
+- **改动**（按「正确的方向」三端同步适配，能力缺口显式化）：
+  - **vue3**：`<el-dialog>` 显式 `:append-to="props.appendTo"` + `:append-to-body="props.appendTo !== undefined"`（`appendTo==='body'` 时 teleport 的启用开关只认 `appendToBody`；不传时 `false` ⇒ 渲染位置零变化）。顺带把 prop 类型从 `object | string` 修正为 `string | HTMLElement` —— 旧类型与 el-dialog 的 `appendTo` 不兼容，typecheck 当场挡住，说明「随手转发」也走不通。
+  - **antdv**：`:getContainer="props.appendTo"`（不传保持 `undefined`，让 a-modal / ConfigProvider 的默认容器继续生效）。
+  - **vue2**：`appendToBody || appendTo !== undefined` → `append-to-body`；`appendTo==='body'` 语义完全等价；非 body 选择器/DOM 元素在挂载时**显式 `console.warn`**（Element UI 2.x 无选择器级挂载点），注明改用 `useDialog` 或 vue3/antdv。
+  - **生成器**：`DialogBlockOptions.appendTo` 头注写清三种模式/三端的落地方式；`mode:'component'` + `target:'vue2'` + 非 `'body'` 时在**生成时**再告警一次（同 `cacheKey` 的口径：降级可以、静默不行）。
+  - **教学面**：`dialogOptionsSchema.appendTo` 的 `.describe` 补 component 模式的三端行为；`get-component-api` 的 `EsDialogProps.appendTo` 按 target 追加注释（vue2 降级说明 / antdv→getContainer / vue3→el-dialog appendTo）。
+- **硬指标（可验收）**：
+  - 新增三份端侧 spec：`es-dialog-append-to.spec.ts`（vue3 5 例含 **teleport 端到端**「弹窗节点真在目标容器里」；vue2 4 例含告警断言与 `appendTo:'body'` 不告警；antdv 2 例断言 `a-modal.getContainer`）；
+  - `fragment-generator.spec.ts` 新增 4 例：composable 三端正常发射且不告警 / component 正常发射 / vue2 component 非 body 显式告警 / vue2 component `'body'` 不告警；
+  - 两份片段运行时见证（vue3/antdv 的 `fragment-runtime.spec.ts` dialog component 例）改为**先建 `#app` 容器、再断言内容与节点落在容器内**——它们此前能过，恰恰是因为 `appendTo` 被丢掉了。
+- **回归**：vue3（105 例）、vue2（111 例）、antdv（23 例）、mcp-server（253 例）相关套件全绿；`check-fragment-contract` / `check-schema-contract` / `check-threeway-consistency` / `check-scene-coverage`（63/63）/ `fragment:smoke`（90 产物）全绿；五处 typecheck（mcp-server / vue3 / vue2 / antdv / shared 构建链）全绿。**不提交、不推送**（仓铁律）。
+
+---
+
+### AI-49 — 片段工具「镜像了键、没镜像文案」：教学面同步 + 回归守卫（**2026-10-19 已落地**）· `S`
+- **Why**（AI-47 全量探针暴露，非猜测）：片段的 system prompt **只自省工具 shape 的 `.describe()`**（`scripts/eval/fragment-prompt.mjs` 头注：与生产 `tools/list` 同源，刻意不喂 few-shot），所以「zod3 镜像有键、无文案」= 宿主 LLM 看得到键名、看不到语义。实测：`_fragment-shapes.ts` 的 `tableBlockOptionsSchema` **26 个键零 `.describe()`**，而 shared 权威副本有 15 条；`FieldRuleSchema` 两处（shared zod4 + mcp zod3）**7 个子键全裸**；`querySpan`/`formSpan`/`configTableOut`/`pagination`/`formLayout` 同理。对应 miss：form-04 `fieldRules`、form-05 `isHidden`、form-06 `reactions`（九行全部 `scoped=X stated=X`）；table-02 的 `full` 腿整组 `tableOptions` 运行时键缺失。**这不是模型能力结论，而是教学面缺陷**——同一形状在 CRUD 前门教得更多。
+- **改动**（只动文案与形状描述，零运行时/校验语义变化）：
+  - `_fragment-shapes.ts`：`tableBlockOptionsSchema` 逐条镜像 shared `tableOptions` 的 `.describe()`（`tabHeight`/`virtual`/`engine`/`rowHeight`/`estimatedRowHeight`/`overscanCount`/`rowClassName`/`size`/`showHeader`/`emptyText`/`snIndex`/`leftText`/`cachePageSelection`/`refetchKeepPage`/`localPagination`/`defaultSort`/`editConfig.trigger/mode`/`configTableOut`）；`tablePaginationSchema`/`formLayoutSchema` 补键文案；`surfaceFieldSchema` 补 `querySpan`/`formSpan`/`rules`/`permissionValue`，并把 `isHidden`/`reactions` 扩到与权威副本同等篇幅（含 ops、AND 语义、last-wins）。
+  - `FieldRuleSchema` **两处同改**（shared `structured-config.schema.ts` + mcp 镜像）：`pattern`（JS 正则**源码字符串**，不是 RegExp 对象）、`message`（必填、用用户语言）、`trigger`（blur/change 何时校验）、`min`/`max`/`type`/`required`。
+  - `structured-config.schema.ts` 顶层 `pagination` 补 `pageSize`/`pageSizes` 文案（两副本一致）。
+  - **渲染深度**：`scripts/eval/fragment-prompt.mjs` 的 `renderShape` 调用从 depth=1 提到 **depth=2**。depth=1 把 `fields[].rules` / `fields[].dataOptions` 的子键压成一行 `object[]`，而生产宿主看到的是 MCP 的**完整 JSON Schema**（嵌套 properties 全在）——片段 prompt 此前比生产少教一层，rules 的子键文案根本进不了 prompt。递归到 depth 0 即停，`dataOptions.children` 这类自指不会撑爆（prompt 行数：table 112 / form 70 / dialog 84）。
+- **硬指标（可验收）**：`scripts/eval/fragment-prompt.test.mjs`（`check:fragment-prompts`）新增「教学面」段——对三个场景断言一批**光看键名推不出语义**的键必须带非空 `.describe()`（`fields.rules` 及其 4 个子键、`isHidden`、`reactions`、`querySpan`/`formSpan`、`apiParams`、`permissionValue`；table 的 `rowButtons` 与 20 个 `tableOptions` 键 + `pagination` 两键；dialog 的 `appendTo`/`cacheKey`/`maxHeight`/`isHiddenFooter`）。变异验证：删掉 `pagination.pageSizes` 的 `.describe()` → 该守卫红（已实跑）。
+- **回归**：`check-fragment-contract` 绿（键集/发射顺序不受文案影响）、`check-schema-contract` 全绿、`npm run typecheck -w packages/mcp-server` 绿、mcp-server 253 例绿。
+- **边界**：只改 `.describe()` 与测试，**不**改 zod 校验、生成器、门禁；片段仍只观测。**不提交、不推送**（仓铁律）。
+
+---
+
+### AI-50 — EsDialog 幻影能力清理：`confirmText`/`cancelText`/`submit` 删除 + 文档↔源码守卫（**2026-10-19 已落地**）· `S`
+- **Why**（AI-48 复核 `appendTo` 时顺带审计出的一族，非猜测）：
+  - `confirmText` / `cancelText`：**vue3/vue2 只在 props 里声明，模板与脚本零读取**（antdv 连声明都没有），却被 README 列为可用属性。声明式传它 = 静默无效。
+  - `submit` 事件：`packages/vue3/README.md` Events 表列出，**源码从未 emit**，三端 `defineEmits` 均无此键。
+  - `get-component-api.ts` 的 `configBtn` 文案称「省略时自动生成默认按钮」，**与实现相反**（省略且无 footer 插槽 ⇒ 底部为空）。
+  - 同族裁决先例：`formLayout.span`（声明无消费者 → **删除**，不发明）。底层库真有能力的（`appendTo`）才接线，见 AI-48。
+- **改动**：
+  - 删除三端 prop：vue3 `defineProps`、vue2 options `props`、`shared/schemas/dialog-options.schema.json`（经 `schemas:sync` 同步三消费方）、`get-component-api.ts` 的 `docEsDialog`。
+  - README：删 `confirmText`/`cancelText` 行；Events 表用真实存在的 `open` 替换幻影 `submit`；补 `showClose`/`loading`/`beforeClose` 三行（源码早已声明、文档漏写）。
+  - **useDialog `DialogOptions` 表收敛到 core 类型**（同族漂移）：删 legacy JSON 照抄的 9 个 core 未命名键（`height`/`key`/`center`/`showDefaultButtons`/`lockScroll`/`customClass`/`appendToBody`/`onlyInstance`/`onOpen`，前两者由 `maxHeight`/`cacheKey` 取代，`onlyInstance` 是 hook 第二参、本就在独立小节，`onOpen` 属 `CrudDialogConfig`），补 6 个真实命名/消费却被漏写的键（`visible`/`beforeClose`/`cacheKey`/`alignCenter`/`top`/`modalClass`）。这一步直接消除「文档宣传死键」的同一类风险。
+  - `entry-keys.mjs` 的 `DIALOG_OPTIONS_JSON_ONLY`：两行在裁决（`dead`）落地、JSON/README/prop 三处删除完成后**删行**（表纪律：裁决落地即删行；`showDefaultButtons`/`lockScroll` 因删除尚未落地、仍需占行）。
+  - **三端一致性修复**：antdv 此前**连 `loading` 都没声明**（`a-modal` 无此能力）⇒ `<es-dialog :loading>` 在该端被静默丢弃。现补 `loading` prop（默认 `false`）并用 `<a-spin :spinning>` 包裹 body，与 vue3/vue2 的 `v-loading` 同义；`loading` 同时加入 `filteredAttrs` 忽略名单（否则会漏透传给 a-modal）。
+  - `get-component-api.ts`：`configBtn` 文案改为「省略时底部为空，不自动生成」，`appendTo` 类型同步为 `string | HTMLElement`；**删除「antdv 不 emit `open`」的陈旧断言**（三端早已对齐 emit open，`es-dialog-open-emit.spec.ts` 有见证），Emits 段三端统一；Props 段补三端都消费的 `destroyOnClose`/`modal`/`closeOnClickModal`/`closeOnPressEscape`/`top`（此前漏教）。对应测试从「antdv 没有 open」翻面为三端均列出 `open`。
+- **硬指标（可验收）**：`scripts/check-readme-claims.mjs`（`npm run check:readme`）新增两段：
+  - **EsDialog API 表 ↔ 源码相等**：Props 表集合 === `defineProps` 键集（双向，文档多出 = 幻影、文档缺少 = 漏文档）；Events 表 === `defineEmits` 键集。
+  - **幻影 prop 扫描（三端）**：每个声明 prop 的标识符在组件文件内必须出现 ≥2 次（声明 + 真实读取），否则红。
+  - **useDialog `DialogOptions` 表 == core `DialogOptions` 命名键集**（25 键，排除 `[key:string]: unknown` 索引签名；索引签名让「漏命名」永不报类型错，只能靠此断言盯住）。
+  - 变异验证 4 项（已实跑）：加 `confirmText?: string` → Props 差集 + 幻影扫描同时红；Events 表加 `submit` 行 → Events 差集红；删 `showClose` 文档行 → 「文档缺少」红；DialogOptions 表加 `foo` 行 → 文档多出红。
+  - 运行时见证：新增 `adapter-antdv/__tests__/es-dialog-loading.spec.ts` 3 例（默认无 `.ant-spin-spinning`、`loading:true` 出现、false→true 响应式切换；a-spin 的 spinner 经 `debounce(delay)` 落地，需等 100ms 宏任务）。
+- **回归**：`check:readme` 绿；`check:schema`（dialog 三面一致 21/18 键）绿；`check:fragment`、`check:entry`、`check:feature-coverage`、`check:scene-coverage`、`check:threeway`、`check:contract`、`check:api` 全绿；其余 24 个 `check:*`（exports/scorers/parity/scaffold/schema-validator/generator/...）逐条绿；mcp-server/vue3/vue2/antdv typecheck 绿；shared 594 例、mcp-server 253 例、antdv 627 例、vue3 572 例绿；`schemas:sync`/`schemas:check`、`docs:check`、`sites:check`、`check:site-claims` 一致。
+- **边界**：只删「声明零读取」的能力，**不**补 `confirmText`/`cancelText` 的实现（与 `formLayout.span` 同裁决）；`showDefaultButtons` 已是裁决 `dead`、本轮不动。**不提交、不推送**（仓铁律）。
+
+---
+
+### AI-51 — 片段度量的第六轮：零消费者键出分母 + 五类等价/公平缺陷（**2026-10-19 已落地**）· `S`
+- **Why**（AI-47 全量探针 + 单例 dump 暴露，逐条对源码复核，非猜测）：
+  1. **独立表格片段的表单专属键是幻影计量**：`generate_table` 的 `fields` 只进 `buildTableColumn` / `buildTableColumnSFC`（只读 prop/label/labelKey/width/minWidth/align/fixed/ellipsis/render/formatter/permissionValue）；`fragment-generator.ts` 对 `formtype` **零引用**，`buildTableColumn` 也不发 `dataOptions`/`required`/`attrs`/`rules`。模型写 `InputNumber` 还是 `Input`，生成的 SFC **逐字节相同**——却把 `formtype:*` 钉进 `pinnedDims` **和** `nlStatedDims`（如 table-05 的 NL 只说「ID（宽 80）」）。这是 AI-46「中文 label→prop 命名彩票」的同构缺陷，也是 inQuery 默认陷阱那一类「罚不可推断的选择」。
+  2. **`fieldAttrs` 适用性两套口径**：整维适用性只认 `attrs.type`，而 `fieldAttrsEqual` 与 `FIELD_TOKEN_REQUIRES` 实际比 gold 声明的**全部** attrs 键。结果 form-04-antdv 出现 `scoped=X stated=X full=ok` 且无维度 miss 的自相矛盾（整维 N/A ⇒ full 恒绿，字段级 pin 又能罚）。
+  3. **form-04 邮箱规则在运行时自相矛盾**：gold 把 `pattern` 与 `type:'email'` 写在同一条规则；async-validator 的 `getValidationMethod` 按 `type` 分派（`validators.email` → `type` 校验器），只跑 `required`+`type`，**同条规则里的 `pattern` 是死键**。NL 明写「正则 + type email」⟹ 要两者都生效**必须拆成两条规则**（模型的输出正是拆开的，反而更忠实）。
+  4. **`headerCellStyle` 简写/长写**：三端都把该对象**原样绑定为 CSS style**（vue3/antdv `:style`、vue2 `header-cell-style`、三端 vxe `headerCellStyle`），纯色背景写 `background:'#f3f4f6'` 与 `backgroundColor:'#f3f4f6'` 渲染一致；旧 scorer 按字面判错（table-05-antdv）。
+  5. **两处 rules/联动的等价写法未归一**：`{required:E}` ≡ `{when:E, required:E}`（core `ruleActive`：无 `when` 即激活；`evalBooleanKey` 把 `required/disabled` 当表达式求值）；`required:true` 单独成一条规则（带 `trigger`）≡ 与行为规则合并（`normRules` 旧版把 required-only 规则也算进集合，form-04-vue2/vue3 因此误罚）。
+- **改动**：
+  - **场景作用域**（`fragment-scorers.mjs`）：`fragmentDimSpecs` 对 `scene==='table'` 不再启用 formtype/fieldRequired/dataOptions/fieldAttrs/isHidden/reactions/fieldSpan/fieldRules/apiParams；`isValidFragmentPinnedDim` 新增「字段级 pin 的整维必须在当前场景启用」（否则 `formtype:id` 能绕过场景口径）；`CORE_DIMS.table` 从 `formtype/fieldRequired` 换成表格真正消费的 `fieldLayout/apiUrl`（原两项在表格被过滤后 core 会退化成只剩 `propSet`）。
+  - **`generate_table` 形状**（`_fragment-shapes.ts` + `generate-table.ts`）：新增 `tableFieldSchema = surfaceFieldSchema.extend({ formtype: optional })`，**只**给表格工具放宽——共享 shape 的必填是为表单/弹窗（控件类型决定渲染），对表格是「必填却无消费者」的幻影要求；其余键/文案逐字不变，契约守卫仍逐键对照 shared `SurfaceField`。
+  - **等价归一**：`normHeaderCellStyle`（仅颜色字面量做 `background`→`backgroundColor`，渐变/多值仍字面比较）；`canonReactionRule`（无 `when` 且 `fulfill` 仅有 required/disabled 且表达式相同 ⇒ 补出等价 `when`）；`normRules`（只有 `required`/`trigger`、无行为键的规则不计入集合）。
+  - **适用性对齐**：`fieldAttrs` 整维改用与 `fieldAttrsEqual`/`FIELD_TOKEN_REQUIRES` 同一判据（任意 attrs 键），`fieldAttrsEqual` 同步由「只判 `attrs.type`」改为「判 gold 声明的全部 attrs 键」。
+  - **语料公平性**：dialog-02 ×3 NL 补「最大高度 70vh、挂载到 #app」并 pin/stated `options.maxHeight`/`options.appendTo`；table-01 ×3 NL 补「右对齐、保留两位小数、不高亮当前行」并 pin/stated `fieldLayout:amount`/`extPoints:amount`、stated `tableOptions.highlightCurrentRow`；table-02 ×3 NL 把「虚拟滚动」改为「同时给 virtual 与 engine=virtual」（教学允许三端用 vxe，原措辞与 `engine:'vxe'` 二义）；**全部 21 条表格语料移除 `formtype:*`/`dataOptions:*` 的 pin 与 stated**；form-04 ×3 邮箱规则拆为 `pattern` + `type` 两条（notes 记录 async-validator 依据）。
+  - **meta-eval**：新增 `table scene ignores form-only field dims`（扰动 formtype/dataOptions 后 full 仍绿、`formtype:id` 不是合法 pin、form 场景控制组仍适用）；`unpinned` 用例改用 table-02 的 fieldLayout（table-01 的 extPoints 已被 pin）；新增 headerCellStyle 简写判等/渐变判红/错色判红、reactions 省略 `when` 判等、rules 拆分判等、fieldAttrs 整维适用性与漏 `maxlength` 判红；`fragment-prompt.test.mjs` 新增 optionality 断言（表格 optional、表单/弹窗必填）。
+- **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → **63 条片段用例，66 个维度被扰动验证**（绿）；`node scripts/eval/fragment-prompt.test.mjs` 绿（含新 optionality 断言）；`check:fragment` / `check:scene-coverage`（63/63 三端可解析并进 vite build）/ `check:entry` / `check:front-door` / `check:schema` / `check:threeway` / `check:contract` / `check:schema-validator` / `check:data-schemas` / `check:generator` 全绿；`npm run typecheck -w packages/mcp-server` 绿；mcp-server **253 例**绿；`npm run build:libs` 绿。
+- **刻意偏离**：①表格场景**不测** `formtype`（工具形状仍保留该键、只放宽为 optional），因为独立表格产物不消费它；②`full` 仍是诊断口径（含 NL 未声明的运行时 fixture 键）；③片段仍**不**进 `definition95` 分母/门禁（用户拍板）。**不提交、不推送**（仓铁律）。
+
+---
+
+
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）
 

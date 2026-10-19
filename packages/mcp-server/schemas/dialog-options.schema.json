@@ -127,14 +127,6 @@
       "type": "boolean",
       "description": "Show default Confirm/Cancel buttons"
     },
-    "confirmText": {
-      "type": "string",
-      "description": "Custom text for the confirm button"
-    },
-    "cancelText": {
-      "type": "string",
-      "description": "Custom text for the cancel button"
-    },
     "onClosed": {
       "description": "Callback fired after dialog is fully closed"
     },

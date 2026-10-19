@@ -1,0 +1,90 @@
+{
+  "scene": "dialog",
+  "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:title",
+    "formtype:content",
+    "formtype:level",
+    "dataOptions:level",
+    "fieldAttrs:title",
+    "mode",
+    "defaultTitle",
+    "noApiUrl",
+    "options.fullscreen",
+    "options.isHiddenFooter",
+    "options.destroyOnClose",
+    "options.closeOnPressEscape"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "attrs": {
+          "disabled": true
+        }
+      },
+      {
+        "prop": "content",
+        "label": "内容",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      },
+      {
+        "prop": "level",
+        "label": "级别",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "高",
+            "value": "high"
+          },
+          {
+            "label": "中",
+            "value": "mid"
+          },
+          {
+            "label": "低",
+            "value": "low"
+          }
+        ]
+      }
+    ],
+    "mode": "component",
+    "defaultTitle": "查看详情",
+    "options": {
+      "fullscreen": true,
+      "isHiddenFooter": true,
+      "destroyOnClose": true,
+      "closeOnPressEscape": false
+    },
+    "typescript": true
+  },
+  "nl": "做一个查看详情弹窗的组件（mode=component，自包含 SFC、不要 JSX）：全屏；隐藏整个底部按钮；关闭时销毁内容；按 Esc 不关闭；标题输入禁用；内容多行文本；级别下拉（高/中/低）；默认标题「查看详情」。",
+  "notes": "component 形态 + fullscreen/isHiddenFooter/destroyOnClose/closeOnPressEscape 反默认取值。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。",
+  "fixedFields": [
+    "title",
+    "content",
+    "level"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:title",
+    "formtype:content",
+    "formtype:level",
+    "dataOptions:level",
+    "fieldAttrs:title",
+    "mode",
+    "defaultTitle",
+    "noApiUrl",
+    "options.fullscreen",
+    "options.isHiddenFooter",
+    "options.destroyOnClose",
+    "options.closeOnPressEscape",
+    "target"
+  ]
+}

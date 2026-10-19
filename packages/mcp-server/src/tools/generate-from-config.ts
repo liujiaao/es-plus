@@ -190,7 +190,7 @@ const ReactionSchema = z
       .optional()
       .describe("Model paths that retrigger this rule. REQUIRED when `fulfill.value` is present."),
     when: HiddenExprNodeSchema.optional().describe(
-      "Optional gate expression: the rule applies only while it evaluates truthy. Plain JSON data, never a JS source string."
+      'Optional gate expression: the rule applies only while it evaluates truthy. Must be a JSONLogic EXPRESSION NODE (e.g. { "==": [{ var: "country" }, "us"] }) — never the { field, op, value } legacy condition form (that belongs to isHidden), never a bare boolean. Plain JSON data, never a JS source string.'
     ),
     fulfill: ReactionFulfillSchema,
   })
@@ -264,13 +264,13 @@ const FieldConfigSchema = z.object({
     ),
   permissionValue: z.string().optional(),
   isHidden: HiddenConditionListSchema.optional().describe(
-    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? }, a single JSON expression, or an array of them (array = AND). A JSON expression (JSONLogic-shaped) is only needed when a plain condition cannot express the predicate — OR, AND-OR mixes, ordering (>, <=), or nested NOT: e.g. { or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }; ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Prefer the plain { field, op, value } form for simple cases. Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
+    'Conditional visibility: the field is HIDDEN while the condition holds. PLAIN JSON DATA (never a JS source string). A single { field, op?, value? }, a single JSON expression, or an array of them (array = AND, may mix both forms). TWO forms, never mixed within one node: (1) legacy condition { field, op, value } whose op is one of eq | ne | in | nIn | empty | notEmpty | truthy | falsy (default eq) — preferred for simple cases; (2) a JSON expression (JSONLogic-shaped), needed when a plain condition cannot express the predicate — OR, ordering (>, <=), or nested NOT: e.g. { or: [ { "==": [{ var: "status" }, "pending"] }, { ">": [{ var: "amount" }, 100] } ] }; expression ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. An expression op inside a legacy {field, op, value} node is INVALID (runtime warns and treats the field as visible) — use form (2) for those. Applies to the query/filter form and the add/edit dialog forms, NOT the table column. Distinct from permissionValue (a permission code): use isHidden when visibility depends on another field\'s value.'
   ),
   reactions: z
     .array(ReactionSchema)
     .optional()
     .describe(
-      "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT the table column."
+      "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT the table column."
     ),
 });
 
@@ -455,9 +455,24 @@ const configShape = {
       border: z.boolean().default(true),
       stripe: z.boolean().default(true),
       rowkey: z.string().default("id"),
-      heightType: z.enum(["height", "auto", "maxHeight"]).optional(),
-      tabHeight: z.union([z.number(), z.string()]).optional(),
-      height: z.union([z.number(), z.string()]).optional(),
+      heightType: z
+        .enum(["height", "auto", "maxHeight"])
+        .optional()
+        .describe(
+          "How the container height is applied: 'height' = fixed height (value from `height`, or `tabHeight` if set); 'maxHeight' = capped at `tabHeight` (a `height` value is IGNORED); 'auto' = no container height constraint. Default 'auto'."
+        ),
+      tabHeight: z
+        .union([z.number(), z.string()])
+        .optional()
+        .describe(
+          "Table height consumed for EVERY heightType: under 'height' it overrides `height`; under 'maxHeight' it is the cap. number → px, string → raw CSS value (e.g. '60vh'). Prefer it over `height` whenever a concrete height is needed — it is the only height key that applies when heightType is 'maxHeight'."
+        ),
+      height: z
+        .union([z.number(), z.string()])
+        .optional()
+        .describe(
+          "Container height used ONLY when heightType is 'height' (ignored for 'auto' / 'maxHeight' — use tabHeight there). Takes precedence over nothing: an explicit tabHeight always wins."
+        ),
       multiSelect: z.boolean().optional(),
       highlightCurrentRow: z.boolean().default(true),
       headerCellStyle: z.record(z.string()).optional(),

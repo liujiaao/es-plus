@@ -347,8 +347,8 @@ interface EsDialogProps {
   title?: string
   visible?: boolean              // ${v.vModelSync("visible")}
   width?: string | number
-  appendTo?: object | string     // mount target (default: body)
-  configBtn?: BtnConfig[]        // footer buttons (auto-generated if omitted)
+  appendTo?: string | HTMLElement // mount target (default: body)${v.esPlusPkg === "@es-plus/vue2" ? " — Element UI 2.x only supports the boolean append-to-body: a non-'body' selector degrades to body and warns at runtime" : v.esPlusPkg === "@es-plus/adapter-antdv" ? " — forwarded to a-modal getContainer" : " — forwarded to el-dialog appendTo"}
+  configBtn?: BtnConfig[]        // footer buttons — NOTHING is rendered when omitted (no implicit confirm/cancel); use this or the footer slot
   maxHeight?: string | number
   isDraggable?: boolean
   fullscreen?: boolean           // initial fullscreen state
@@ -356,8 +356,11 @@ interface EsDialogProps {
   isHiddenFooter?: boolean       // hide the footer entirely
   showClose?: boolean            // show the close (X) button — default true
   loading?: boolean              // loading mask over the body
-  confirmText?: string
-  cancelText?: string
+  destroyOnClose?: boolean       // destroy body content on close
+  modal?: boolean                // show the overlay mask — default true
+  closeOnClickModal?: boolean    // click mask to close — default true
+  closeOnPressEscape?: boolean   // ESC to close — default true
+  top?: string                   // dialog top offset (e.g. '15vh')
   render?: (h, ctx, components) => VNode    // body content
   renderHeader?: (h, instance) => VNode     // custom header
   renderFooter?: (h, instance) => VNode     // custom footer
@@ -368,9 +371,7 @@ interface EsDialogProps {
 ## Emits
 - \`update:visible\` \`(val: boolean)\` — sync via ${v.vModelSync("visible")}
 - \`closed\` \`(val: boolean)\` — fired after the dialog closes
-${isAntdv
-      ? "- ⚠ antdv emits **no** `open` event — only `update:visible` + `closed`"
-      : "- `open` — fired when it opens"}
+- \`open\` — fired when it opens (same on all three renderers)
 
 ## Exposed instance methods (via ref) — same on all three renderers
 - \`close()\` — close (runs the \`beforeClose\` gate)

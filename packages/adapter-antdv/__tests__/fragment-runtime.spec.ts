@@ -151,6 +151,12 @@ describe('片段运行时（adapter-antdv）', () => {
   })
 
   it('dialog（component 形态）：open() 开窗 + 默认插槽表单真渲染 + 预填', async () => {
+    // 该语料带 options.appendTo='#app'，EsDialog 现在真的把它转发为 a-modal 的
+    // getContainer（此前被 filteredAttrs 忽略名单吃掉）。目标容器须在挂载前存在。
+    const host = document.createElement('div')
+    host.id = 'app'
+    document.body.appendChild(host)
+
     const mod = await importGenerated('./.tmp-fragments/dialog-component.vue')
     const wrapper = mount(mod.default, { attachTo: document.body, global: mountPlugin(createInMemoryBackend([])) })
     await nextTick()
@@ -160,12 +166,14 @@ describe('片段运行时（adapter-antdv）', () => {
     await nextTick()
     await flushPromises()
 
-    // a-modal 默认 teleport 到 document.body —— 观察点与 vue3 的 el-dialog 不同。
-    expect(textOf(document.body)).toContain('编辑')
+    // a-modal 经 getContainer 把内容 teleport 到 #app。
+    expect(textOf(host)).toContain('编辑')
     // 默认插槽内容是关键：EsDialog 若只渲染 render 分支，这里会只剩标题与按钮。
-    expect(textOf(document.body)).toContain('姓名')
-    const inputs = Array.from(document.querySelectorAll('input')) as HTMLInputElement[]
+    expect(textOf(host)).toContain('姓名')
+    const inputs = Array.from(host.querySelectorAll('input')) as HTMLInputElement[]
     expect(inputs.some((i) => i.value === '张三')).toBe(true)
+    // appendTo 落到位的直接证据
+    expect(host.querySelector('.ant-modal')).not.toBeNull()
   })
 
   it('dialog（composable 形态）：useXxxDialog().open() 创建弹窗并渲染表单', async () => {

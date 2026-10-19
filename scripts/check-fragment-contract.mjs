@@ -314,12 +314,65 @@ function main() {
     }
   }
 
+  // ── 9. reactions 结构镜像（AI-47）──
+  // 片段侧刻意**不**镜像递归算子校验（归 shared 权威 Zod），但结构键必须一致：
+  // 形状少一个键 = 工具入参静默 strip；多一个键 = 教出一个运行时读不懂的键。
+  // 这组键也是 prompt 自省的直接输入（`reactions` 曾因 `z.any()` 被渲染成 `any[]`，
+  // 模型把 `fulfill.required` 写成裸 `true`）。
+  {
+    const sharedSchemaSrc = read('packages/shared/src/structured-config.schema.ts')
+    const keysAt = (block, indent) => {
+      const re = new RegExp(`^ {${indent}}([A-Za-z_$][\\w$]*)\\??\\s*:`, 'gm')
+      return [...block.matchAll(re)].map((m) => m[1])
+    }
+    // shared 的 ReactionSchema 是 `z\n  .object({`（键缩进 4），且块尾跟 `.refine(...)` ——
+    // 用下一个顶层 const 当边界，避免把 refine 的键算进来。
+    const shReactionStart = 'const ReactionSchema = z'
+    const i = sharedSchemaSrc.indexOf(shReactionStart)
+    const j = sharedSchemaSrc.indexOf('const FieldConfigSchema', i)
+    let shReactionBlock = i === -1 || j === -1 ? null : sharedSchemaSrc.slice(i + shReactionStart.length, j)
+    // shared 的属性键在 `.object({ ... })` 里；块尾的顶层 `.refine(...)`（缩进 2）
+    // 也有 `message` 键，不计入结构镜像。注意 `dependencies` 内部还有一个缩进 6 的
+    // `.refine(isSafeProp, …)` —— 必须按缩进定位顶层那条，否则会把块截断成一行。
+    if (shReactionBlock) {
+      const refineAt = shReactionBlock.indexOf('\n  .refine(')
+      if (refineAt !== -1) shReactionBlock = shReactionBlock.slice(0, refineAt)
+    }
+    const shFulfillBlock = sliceBlock(sharedSchemaSrc, 'const ReactionFulfillSchema = z.object({', '})', 'shared ReactionFulfillSchema')
+    const fgReactionBlock = sliceBlock(fshapesSrc, 'const ReactionSchema = z.object({', '});', 'fragment ReactionSchema')
+    const fgFulfillBlock = sliceBlock(fshapesSrc, 'const ReactionFulfillSchema = z.object({', '});', 'fragment ReactionFulfillSchema')
+    if (shReactionBlock === null || shFulfillBlock === null || fgReactionBlock === null || fgFulfillBlock === null) {
+      process.exit(1)
+    }
+    const pairs = [
+      ['ReactionSchema', keysAt(shReactionBlock, 4), keysAt(fgReactionBlock, 2)],
+      ['ReactionFulfillSchema', keysAt(shFulfillBlock, 2), keysAt(fgFulfillBlock, 2)],
+    ]
+    for (const [label, sharedKeys, fragmentKeys] of pairs) {
+      const a = new Set(sharedKeys)
+      const b = new Set(fragmentKeys)
+      const onlyShared = diff(a, b)
+      const onlyFragment = diff(b, a)
+      if (onlyShared.length) {
+        ok = fail(`片段 zod3 ${label} 缺少 shared 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
+      }
+      if (onlyFragment.length) {
+        ok = fail(`片段 zod3 ${label} 多出 shared 没有的键：${onlyFragment.join(', ')}（教出一个运行时读不懂的键）`)
+      }
+    }
+    // 形状必须真的被字段引用（否则退回 `z.any()` 时上面的一致性检查仍在，却在教 `any[]`）。
+    // 正则兼容 CRLF（仓库在 Windows 上检出时是 CRLF）。
+    if (!/reactions:\s*z\s*\r?\n\s*\.array\(ReactionSchema\)/.test(fshapesSrc)) {
+      ok = fail('surfaceFieldSchema.reactions 不再是 z.array(ReactionSchema) —— prompt 会退回 `any[]`，模型又把 fulfill.required 写成裸 boolean')
+    }
+  }
+
   if (ok) {
     console.log(
       `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === zod3 surfaceFieldSchema ${zKeys.size} 键，成员标志均未泄漏；` +
         `dialog 选项 ${dboKeys.size} 键双份一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键；` +
         `tableOptions ${tboKeys.size} 键双份一致 ⊆ core TableOptions ${coreTblKeys.size} 键，发射枚举全覆盖；` +
-        `formLayout / pagination 接口 ≡ 发射枚举 ≡ zod3 镜像）`
+        `formLayout / pagination 接口 ≡ 发射枚举 ≡ zod3 镜像；reactions 结构 ≡ shared 权威）`
     )
     process.exit(0)
   }

@@ -1,14 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateTableBlock } from "@es-plus/shared";
-import { surfaceFieldSchema, renderFragmentOutput, tableBlockOptionsSchema, tablePaginationSchema } from "./_fragment-shapes.js";
+import { tableFieldSchema, renderFragmentOutput, tableBlockOptionsSchema, tablePaginationSchema } from "./_fragment-shapes.js";
 
 /**
  * 入参形状（导出供 `validate_config({type:'es-table-config'})` 复用 —— 工具的 Zod
  * 形状就是该配置类型的**唯一真源**，不另写第三份字段清单）。
  */
 export const tableShape = {
-  fields: z.array(surfaceFieldSchema).min(1).describe("Table columns — one per column the user described"),
+  fields: z.array(tableFieldSchema).min(1).describe("Table columns — one per column the user described"),
   apiUrl: z
     .string()
     .optional()

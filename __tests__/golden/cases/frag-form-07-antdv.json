@@ -1,0 +1,108 @@
+{
+  "scene": "form",
+  "target": "antdv",
+  "pinnedDims": [
+    "propSet",
+    "formtype:dept",
+    "formtype:role",
+    "formtype:userName",
+    "formtype:remark",
+    "i18n",
+    "labelKey:userName",
+    "apiParams:dept",
+    "apiParams:role",
+    "fieldSpan:dept",
+    "fieldSpan:role",
+    "fieldAttrs:role",
+    "fieldAttrs:userName",
+    "context",
+    "buttons",
+    "formLayout.labelWidth",
+    "formLayout.minFoldRows"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Select",
+        "formSpan": 12,
+        "apiParams": {
+          "url": "/api/depts",
+          "method": "GET",
+          "labelField": "name",
+          "valueField": "id"
+        }
+      },
+      {
+        "prop": "role",
+        "label": "角色",
+        "formtype": "Select",
+        "formSpan": 12,
+        "apiParams": {
+          "url": "/api/roles",
+          "labelField": "name",
+          "valueField": "id"
+        },
+        "attrs": {
+          "disabled": true
+        }
+      },
+      {
+        "prop": "userName",
+        "label": "姓名",
+        "formtype": "Input",
+        "labelKey": "field.userName",
+        "attrs": {
+          "placeholder": "请输入姓名"
+        }
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea",
+          "maxlength": 300
+        }
+      }
+    ],
+    "i18n": true,
+    "context": "form",
+    "buttons": "submit",
+    "formLayout": {
+      "labelWidth": "120px",
+      "minFoldRows": 3
+    },
+    "typescript": true
+  },
+  "nl": "做一个启用 i18n 的用户表单：部门选项来自 /api/depts（GET，名称字段 name、值字段 id），占 12 格；角色选项来自 /api/roles（名称 name、值 id），占 12 格、禁用；姓名显式 labelKey field.userName、占位「请输入姓名」；备注多行文本最多 300 字；底部保存/重置；标签宽 120px；超过 3 行折叠。",
+  "notes": "i18n + 显式 labelKey + 远程选项 apiParams（method 缺省归一）+ formSpan + attrs.disabled + formLayout。 target=antdv（同场景三条用例 config 逐字节相同，只差 target）。 AI-47：扩充片段语料（每场景 ≥20 例），nlStatedDims 自证「NL 确实说了」。",
+  "fixedFields": [
+    "dept",
+    "role",
+    "userName",
+    "remark"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "formtype:dept",
+    "formtype:role",
+    "formtype:userName",
+    "formtype:remark",
+    "i18n",
+    "labelKey:userName",
+    "apiParams:dept",
+    "apiParams:role",
+    "fieldSpan:dept",
+    "fieldSpan:role",
+    "fieldAttrs:role",
+    "fieldAttrs:userName",
+    "fieldAttrs:remark",
+    "context",
+    "buttons",
+    "formLayout.labelWidth",
+    "formLayout.minFoldRows",
+    "target"
+  ]
+}

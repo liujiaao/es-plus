@@ -152,11 +152,160 @@ function checkReductionClaim() {
   }
 }
 
+// ── 5. vue3 README 的 EsDialog API 表 ↔ 源码事实 ────────
+// 背景：README 曾列出 `confirmText`/`cancelText`（vue3/vue2 只声明、模板零读取）
+// 与 `submit` 事件（源码从未 emit）。幻影能力写进文档会被宿主与 AI 直接采信，
+// 比代码缺陷更难发现 —— 故这里做相等性校验：
+//   Props 表 ⊆ 且 ⊇ defineProps 键；Events 表 ⊆ 且 ⊇ defineEmits 键。
+function checkEsDialogApiClaims() {
+  const readme = read('packages/vue3/README.md')
+  const at = readme.indexOf('## EsDialog 弹窗组件')
+  if (at === -1) {
+    fail('packages/vue3/README.md 未找到「## EsDialog 弹窗组件」小节（若改了标题，请同步本脚本）')
+    return
+  }
+  const rest = readme.slice(at)
+  const nextH2 = rest.search(/\n## /)
+  const section = nextH2 === -1 ? rest : rest.slice(0, nextH2)
+
+  const tableRows = (heading) => {
+    const i = section.indexOf(heading)
+    if (i === -1) return null
+    const body = section.slice(i + heading.length)
+    const stop = body.search(/\n#{2,3} /)
+    const block = stop === -1 ? body : body.slice(0, stop)
+    // 首列即 API 名；跳过分隔行（---）与表头（属性/事件）
+    return [...block.matchAll(/^\|\s*([A-Za-z_$][\w:$]*)\s*\|/gm)]
+      .map((m) => m[1])
+      .filter((k) => !['属性', '事件', '参数'].includes(k))
+  }
+
+  const docProps = tableRows('### Props')
+  const docEvents = tableRows('### Events')
+  if (!docProps || !docProps.length) {
+    fail('EsDialog 小节未找到 Props 表（若改了结构，请同步本脚本）')
+    return
+  }
+  if (!docEvents) {
+    fail('EsDialog 小节未找到 Events 表（若改了结构，请同步本脚本）')
+    return
+  }
+
+  const src = read('packages/vue3/src/components/es-dialog/src/component.vue')
+  const propsBlock = src.match(/defineProps<\{([\s\S]*?)\}>\(\)/)
+  const emitsBlock = src.match(/defineEmits<\{([\s\S]*?)\}>\(\)/)
+  if (!propsBlock || !emitsBlock) {
+    fail('未能从 vue3 es-dialog 源码定位 defineProps / defineEmits（若改了写法，请同步本脚本）')
+    return
+  }
+  const codeProps = [...propsBlock[1].matchAll(/^\s*([A-Za-z_$][\w$]*)\??\s*:/gm)].map((m) => m[1])
+  const codeEvents = [...emitsBlock[1].matchAll(/^\s*'?([\w:]+)'?\s*:/gm)].map((m) => m[1])
+
+  const diff = (doc, code, label) => {
+    const missing = code.filter((k) => !doc.includes(k)) // 源码有、文档没有
+    const extra = doc.filter((k) => !code.includes(k)) // 文档有、源码没有（幻影）
+    if (missing.length || extra.length) {
+      fail(
+        `EsDialog ${label} 表与源码不一致：` +
+          (extra.length ? `文档多出 [${extra.join(', ')}]（源码未声明）；` : '') +
+          (missing.length ? `文档缺少 [${missing.join(', ')}]` : '')
+      )
+    } else {
+      console.log(`✅ es-dialog ${label} 表与源码声明一致（${doc.length} 项）`)
+    }
+  }
+  diff(docProps, codeProps, 'Props')
+  diff(docEvents, codeEvents, 'Events')
+}
+
+// ── 5b. 「声明了却零读取」的幻影 prop（三端）────────────
+// confirmText/cancelText 正是这一类：props 里有、模板与脚本从不读，却被文档宣传。
+// 判据：标识符在组件文件中的出现次数必须 > 1（至少 1 处声明 + 1 处真实读取）。
+// 这比「文档↔声明」更严：能咬住三端各自悄悄多出来的死 prop。
+function checkPhantomDialogProps() {
+  const ends = [
+    { file: 'packages/vue3/src/components/es-dialog/src/component.vue', kind: 'generic', label: 'vue3' },
+    { file: 'packages/vue2/src/components/es-dialog/component.vue', kind: 'options', label: 'vue2' },
+    { file: 'packages/adapter-antdv/src/components/es-dialog/src/component.vue', kind: 'generic', label: 'antdv' },
+  ]
+  for (const { file, kind, label } of ends) {
+    // 先归一化行尾：仓内 .vue 在 Windows 检出为 CRLF，`\n  },` 这类锚点会失配。
+    const src = read(file).replace(/\r\n/g, '\n')
+    const block =
+      kind === 'generic'
+        ? src.match(/defineProps<\{([\s\S]*?)\}>\(\)/)?.[1]
+        : src.match(/props:\s*\{([\s\S]*?)\n\s{2}\},\n\s{2}emits/)?.[1]
+    if (!block) {
+      fail(`未能从 ${label} es-dialog 源码定位 props 声明（若改了写法，请同步本脚本）`)
+      continue
+    }
+    const names = [
+      ...new Set([...block.matchAll(/^\s{2,4}([A-Za-z_$][\w$]*)\s*[?:]?\s*[:(]/gm)].map((m) => m[1])),
+    ]
+    const phantoms = names.filter((n) => {
+      const occurrences = src.match(new RegExp(`\\b${n}\\b`, 'g')) || []
+      return occurrences.length < 2
+    })
+    if (phantoms.length) {
+      fail(`${label} es-dialog 的 prop [${phantoms.join(', ')}] 只声明、从不读取（幻影能力）`)
+    } else {
+      console.log(`✅ ${label} es-dialog 无只声明不读取的 prop（${names.length} 个）`)
+    }
+  }
+}
+
+// ── 5c. vue3 README 的 useDialog DialogOptions 表 ↔ core 类型 ────
+// 背景：该表长期照抄 legacy `dialog-options.schema.json`（含 `height`/`key`/`center`/
+// `showDefaultButtons`/`lockScroll`/`customClass`/`appendToBody`/`onlyInstance`/`onOpen`
+// 九个 core 未命名的键），同时漏掉 core 真实命名、运行时真消费的
+// `visible`/`beforeClose`/`cacheKey`/`alignCenter`/`top`/`modalClass`。
+// `[key: string]: unknown` 索引签名让「漏命名」不报类型错 —— 只能靠本断言盯住。
+// 判据：文档表集合 === core `DialogOptions` 的命名键集合（索引签名不计）。
+function checkDialogOptionsClaims() {
+  const readme = read('packages/vue3/README.md')
+  const i = readme.indexOf('### DialogOptions 配置')
+  if (i === -1) {
+    fail('packages/vue3/README.md 未找到「### DialogOptions 配置」小节（若改了标题，请同步本脚本）')
+    return
+  }
+  const body = readme.slice(i + '### DialogOptions 配置'.length)
+  const stop = body.search(/\n#{2,3} /)
+  const block = stop === -1 ? body : body.slice(0, stop)
+  const docKeys = [...block.matchAll(/^\|\s*([A-Za-z_$][\w$]*)\s*\|/gm)]
+    .map((m) => m[1])
+    .filter((k) => !['参数', '属性', '事件'].includes(k))
+
+  const src = read('packages/core/src/types.ts').replace(/\r\n/g, '\n')
+  const iface = src.match(/export interface DialogOptions\s*\{([\s\S]*?)\n\}/)?.[1]
+  if (!iface) {
+    fail('未能从 core/src/types.ts 定位 `export interface DialogOptions`（若改了写法，请同步本脚本）')
+    return
+  }
+  const codeKeys = [...iface.matchAll(/^\s{2}([A-Za-z_$][\w$]*)\??\s*:/gm)]
+    .map((m) => m[1])
+    .filter((k) => k !== 'key') // 排除索引签名 [key: string]: unknown 前先看它不匹配本正则
+
+  const missing = codeKeys.filter((k) => !docKeys.includes(k))
+  const extra = docKeys.filter((k) => !codeKeys.includes(k))
+  if (missing.length || extra.length) {
+    fail(
+      'useDialog DialogOptions 表与 core 类型不一致：' +
+        (extra.length ? `文档多出 [${extra.join(', ')}]（core 未命名）；` : '') +
+        (missing.length ? `文档缺少 [${missing.join(', ')}]` : '')
+    )
+  } else {
+    console.log(`✅ useDialog DialogOptions 表与 core 类型一致（${docKeys.length} 项）`)
+  }
+}
+
 const contractTypes = readContractTypes()
 const formTypes = readFormTypes()
 if (contractTypes) checkContractTypeCount(contractTypes)
 if (formTypes) checkFormTypes(formTypes)
 checkReductionClaim()
+checkEsDialogApiClaims()
+checkPhantomDialogProps()
+checkDialogOptionsClaims()
 
 if (failed) {
   console.error('\nREADME 声明与源码事实不符 —— 请修正 README 或本脚本的匹配规则。')

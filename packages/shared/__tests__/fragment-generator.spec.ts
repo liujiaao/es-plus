@@ -388,6 +388,33 @@ describe('generateDialogBlock — mode=component', () => {
     expect(warnings.some((w) => w.includes("mode='composable'"))).toBe(true)
   })
 
+  it('appendTo 在 component 模式下正常发射（vue3/antdv 组件真消费）', () => {
+    const { code, warnings } = generateDialogBlock({ ...base, options: { appendTo: '#app' } })
+    expect(code).toContain('append-to="#app"')
+    expect(warnings.some((w) => w.includes('appendTo'))).toBe(false)
+  })
+
+  it('appendTo 在 vue2 的 component 模式下显式告警（Element UI 无选择器级挂载点）', () => {
+    const { code, warnings } = generateDialogBlock({
+      ...base,
+      target: 'vue2',
+      options: { appendTo: '#app' },
+    })
+    // 仍发射（组件端退化为 append-to-body），但生成时就把能力缺口点名
+    expect(code).toContain('append-to="#app"')
+    expect(warnings.some((w) => w.includes('appendTo') && w.includes('#app'))).toBe(true)
+    expect(warnings.some((w) => w.includes("mode='composable'"))).toBe(true)
+  })
+
+  it("appendTo='body' 在 vue2 的 component 模式下不告警（语义完全等价）", () => {
+    const { warnings } = generateDialogBlock({
+      ...base,
+      target: 'vue2',
+      options: { appendTo: 'body' },
+    })
+    expect(warnings.some((w) => w.includes('appendTo'))).toBe(false)
+  })
+
   it('component 模式不产生 JSX 插件告警，但要提醒全局装配前提', () => {
     const { warnings } = generateDialogBlock(base)
     expect(warnings.some((w) => w.includes('plugin-vue-jsx') || w.includes('babel-preset-jsx'))).toBe(false)
@@ -419,6 +446,16 @@ describe('generateDialogBlock — options（composable 模式）', () => {
     const { code, warnings } = generateDialogBlock({ fields: dialogFields, options: { cacheKey: 'k1' } })
     expect(code).toContain("cacheKey: 'k1',")
     expect(warnings.some((w) => w.includes('cacheKey'))).toBe(false)
+  })
+
+  it('appendTo 在 composable 模式下正常发射（三端 useDialog 都支持选择器）', () => {
+    const { code, warnings } = generateDialogBlock({
+      fields: dialogFields,
+      options: { appendTo: '#app' },
+      target: 'vue2',
+    })
+    expect(code).toContain("appendTo: '#app',")
+    expect(warnings.some((w) => w.includes('appendTo'))).toBe(false)
   })
 
   it('同选项不同传参插入顺序 → 产物逐字节相同（确定性）', () => {

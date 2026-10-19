@@ -671,9 +671,10 @@ const options = {
 | isHiddenFooter | `boolean` | `false` | 隐藏底部按钮区 |
 | maxHeight | `string \| number` | — | 内容区最大高度 |
 | appendTo | `string \| HTMLElement` | — | 挂载目标 |
-| confirmText | `string` | — | 确认按钮文本 |
-| cancelText | `string` | — | 取消按钮文本 |
-| configBtn | `BtnConfig[]` | `[]` | 底部按钮配置 |
+| showClose | `boolean` | `true` | 显示关闭按钮。内置头部由组件自绘；自定义 `renderHeader` 时显示原生按钮。传 `false` 彻底隐藏 |
+| loading | `boolean` | `false` | 弹窗内容加载态（body 区域遮罩） |
+| beforeClose | `(done) => void` | — | 关闭前拦截：X / 遮罩 / ESC 统一经此闸门，调用 `done()` 才真正关闭 |
+| configBtn | `BtnConfig[]` | `[]` | 底部按钮配置（省略且无 footer 插槽时底部为空，不会自动生成按钮） |
 | render | `Function` | — | 自定义内容渲染函数 |
 | renderHeader | `Function` | — | 自定义头部渲染函数 |
 | renderFooter | `Function` | — | 自定义底部渲染函数 |
@@ -684,7 +685,7 @@ const options = {
 |------|------|
 | update:visible | 显示状态变化 |
 | closed | 弹窗关闭后触发 |
-| submit | 点击确认时触发 |
+| open | 弹窗打开时触发 |
 
 ---
 
@@ -716,32 +717,29 @@ dialog({
 |------|------|--------|------|
 | title | `string` | — | 弹窗标题 |
 | width | `string \| number` | `'50%'` | 弹窗宽度 |
-| key | `string` | — | 唯一标识（相同 key 复用实例） |
-| height | `string \| number` | — | 弹窗高度 |
-| maxHeight | `string \| number` | — | 内容区最大高度 |
+| visible | `boolean` | — | 显示状态（编程式调用通常由 hook 控制） |
 | render | `(h, instance, components) => VNode` | — | 内容渲染函数 |
 | renderHeader | `(h, instance) => VNode` | — | 头部渲染函数 |
 | renderFooter | `(h, instance) => VNode` | — | 底部渲染函数 |
 | configBtn | `BtnConfig[]` | `[]` | 底部按钮配置 |
+| onClosed | `() => void` | — | 关闭后回调 |
 | isDraggable | `boolean` | `false` | 是否可拖拽 |
-| fullscreen | `boolean` | `false` | 是否全屏 |
 | hiddenFullBtn | `boolean` | `false` | 隐藏全屏按钮 |
 | isHiddenFooter | `boolean` | `false` | 隐藏底部 |
-| center | `boolean` | — | 垂直居中 |
-| closeOnClickModal | `boolean` | `true` | 点击遮罩关闭（继承 el-dialog 默认值） |
-| closeOnPressEscape | `boolean` | `true` | 按 ESC 关闭（继承 el-dialog 默认值） |
+| maxHeight | `string \| number` | — | 内容区最大高度 |
+| appendTo | `string \| HTMLElement` | — | 挂载目标（vue3 teleport；antdv getContainer；vue2 退化为 append-to-body） |
+| fullscreen | `boolean` | `false` | 是否全屏 |
+| loading | `boolean` | `false` | 加载状态（body 区域遮罩） |
 | showClose | `boolean` | `true` | 显示关闭按钮。内置头部由组件自绘；自定义 `renderHeader` 时显示原生按钮。传 `false` 彻底隐藏 |
 | destroyOnClose | `boolean` | — | 关闭时销毁 |
-| showDefaultButtons | `boolean` | — | 显示默认确定/取消按钮 |
-| loading | `boolean` | `false` | 加载状态 |
-| customClass | `string` | — | 自定义样式类 |
-| appendToBody | `boolean` | — | 挂载到 body |
-| appendTo | `string \| HTMLElement` | — | 挂载目标 |
-| modal | `boolean` | — | 显示遮罩 |
-| lockScroll | `boolean` | — | 锁定滚动 |
-| onlyInstance | `boolean` | — | 单实例模式（复用同一弹窗） |
-| onClosed | `() => void` | — | 关闭回调 |
-| onOpen | `() => void` | — | 打开回调 |
+| modal | `boolean` | `true` | 显示遮罩 |
+| closeOnClickModal | `boolean` | `true` | 点击遮罩关闭 |
+| closeOnPressEscape | `boolean` | `true` | 按 ESC 关闭 |
+| beforeClose | `(done) => void` | — | 关闭前拦截：调用 `done()` 才真正关闭 |
+| cacheKey | `string` | — | 实例缓存键：同一 cacheKey 跨多次调用复用同一弹窗实例，关闭后延迟回收 |
+| alignCenter | `boolean` | 底层默认 | 垂直居中（vue3 交给 el-dialog，默认不居中；antdv 端默认居中） |
+| top | `string` | `'15vh'` | 弹窗顶部边距 |
+| modalClass | `string` | — | 遮罩层自定义类名 |
 
 ### configBtn click 回调签名
 

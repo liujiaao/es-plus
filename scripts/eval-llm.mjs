@@ -118,7 +118,7 @@ const LIMIT = (() => {
   return Number.isInteger(n) && n > 0 ? n : null
 })()
 /**
- * `--fragments` = **片段探针**：只跑 18 条片段语料（table / form / dialog），CRUD 一条不跑。
+ * `--fragments` = **片段探针**：只跑片段语料（table / form / dialog；2026-10-19 起 63 条），CRUD 一条不跑。
  *
  * 语义与 `--limit` 相同 —— 它是探针，不是成绩：不写 `last-accuracy.json` / 徽章、
  * 不参与任何门禁。存在理由：片段测的是另一套工具契约与另一套记分卡，想单独看
@@ -381,6 +381,26 @@ async function main() {
   // 每条用例一次「NL → 工具入参」：系统 prompt 按场景取捕获的真实工具描述，
   // 校验器是宿主 `tools/call` 用的同一份 zod3 shape（含默认值填充），
   // 产物再喂真生成器做编译见证。分数只进 `fragments` 块，不参与 gate / 徽章。
+  // 调试子集：`ESPLUS_FRAG_ONLY=frag-form-05-vue3,frag-table-03-vue3` 只跑指定用例。
+  // 与 `--limit` 同理是**探针**（不写产物、不参与门禁），用于单案例诊断；
+  // 打一行显式日志，避免把子集数字误读成全量成绩。
+  const fragOnly = (process.env.ESPLUS_FRAG_ONLY || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (fragOnly.length) {
+    const kept = fragmentCases.filter((c) => fragOnly.includes(c.file.replace(/\.json$/, '')))
+    if (!kept.length) {
+      console.error(`[probe] ESPLUS_FRAG_ONLY 没有匹配到任何用例：${fragOnly.join(', ')}`)
+    } else {
+      console.log(
+        `[probe] 调试子集：只跑 ${kept.length}/${fragmentCases.length} 条（${kept
+          .map((c) => c.file.replace(/\.json$/, ''))
+          .join(', ')}）—— 数字不代表全量`
+      )
+      fragmentCases.splice(0, fragmentCases.length, ...kept)
+    }
+  }
   const fragmentRows = []
   for (const { file, scene, raw } of fragmentCases) {
     process.stdout.write(`[eval:llm] ${file} [frag:${scene}] … `)
@@ -427,6 +447,10 @@ async function main() {
         for (const dim of dimMisses) {
           const d = describeFragmentDimMiss(dim, gold, pred)
           if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
+        }
+        // 单案例诊断：`ESPLUS_FRAG_DUMP=1` 打印模型原始 tool 入参（不落盘）。
+        if (process.env.ESPLUS_FRAG_DUMP === '1') {
+          console.log(`             pred: ${JSON.stringify(pred)}`)
         }
       }
     } catch (err) {

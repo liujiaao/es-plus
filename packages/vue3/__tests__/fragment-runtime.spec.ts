@@ -154,6 +154,13 @@ describe('片段运行时（vue3）', () => {
   })
 
   it('dialog（component 形态）：defineExpose 的 open() 真能开窗并预填', async () => {
+    // 该语料带 options.appendTo='#app'。EsDialog 现在**真的**把它转发给 el-dialog
+    // （此前是声明了却不读的死 prop），故目标容器必须在挂载前存在；
+    // 同时观察点随 teleport 走 —— 内容不再在 wrapper 里，而在 #app 内。
+    const host = document.createElement('div')
+    host.id = 'app'
+    document.body.appendChild(host)
+
     const mod = await importGenerated('./.tmp-fragments/dialog-component.vue')
     const wrapper = mount(mod.default, { attachTo: document.body, global: mountPlugin() })
     await nextTick()
@@ -164,10 +171,13 @@ describe('片段运行时（vue3）', () => {
     await flushPromises()
 
     // es-dialog 用 visible v-model；开窗后真实渲染出表单与预填值。
-    expect(wrapper.text()).toContain('编辑')
-    expect(wrapper.text()).toContain('姓名')
-    const inputs = wrapper.findAll('input')
-    expect(inputs.some((i) => (i.element as HTMLInputElement).value === '张三')).toBe(true)
+    expect(host.textContent).toContain('编辑')
+    expect(host.textContent).toContain('姓名')
+    const inputs = Array.from(host.querySelectorAll('input')) as HTMLInputElement[]
+    expect(inputs.some((i) => i.value === '张三')).toBe(true)
+    // appendTo 落到位的直接证据：弹窗节点在该容器里（不只是 props 上转发）。
+    // 该语料 modal:false —— 没有 .el-overlay，故直接看 .el-dialog。
+    expect(host.querySelector('.el-dialog')).not.toBeNull()
   })
 
   it('dialog（composable 形态）：useXxxDialog().open() 真能创建弹窗实例并渲染表单', async () => {

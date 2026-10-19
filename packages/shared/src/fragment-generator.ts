@@ -522,6 +522,11 @@ export type DialogBlockMode = 'composable' | 'component'
  *
  * `appendTo` 只收选择器**字符串**：DOM 元素不可能出现在 JSON 里（与 AI-27 的
  * `.dialogs[k].appendTo` 同口径，运行时用 querySelector 解析）。
+ * - `mode:'composable'`：三端 `useDialog()` 都用它决定容器挂载点；
+ * - `mode:'component'`：vue3 转发给 el-dialog 的 `appendTo`（Element Plus 2.14+）、
+ *   antdv 转发给 a-modal 的 `getContainer`；**vue2 的 Element UI 2.x 只有布尔
+ *   `append-to-body`**，故非 `'body'` 的选择器在那里退化为挂到 body 并**显式告警**
+ *   （不静默假装支持）。
  *
  * `cacheKey` 只在 `mode:'composable'` 下有效 —— 它是 `useDialog()` hook 的
  * **实例缓存**键（三端均在各自 hook 里实装），声明式
@@ -800,6 +805,16 @@ function generateDialogComponent(p: {
       "options.cacheKey 在 mode='component' 下没有消费者 —— 它是 useDialog() hook 的实例缓存键" +
         '（三端均在 hook 内实现），声明式 <es-dialog> 走不到那条通道，故已忽略。' +
         "需要状态跨次打开保留时用 mode='composable'。"
+    )
+  }
+  // vue2 的 Element UI 2.x el-dialog 只有布尔 append-to-body，没有选择器级挂载点。
+  // 组件端会退化为挂到 body 并发运行时告警；这里在**生成时**再点一次名，
+  // 让能力缺口在产物落盘前就可见（同 cacheKey 的口径：降级可以，静默不行）。
+  if (target === 'vue2' && opts.appendTo !== undefined && opts.appendTo !== 'body') {
+    warnings.push(
+      `options.appendTo='${opts.appendTo}' 在 vue2（Element UI 2.x）的声明式 <es-dialog> 上不可精确落地 —— ` +
+        'el-dialog 只支持布尔 append-to-body，产物会退化为挂到 body。' +
+        "需要精确挂载容器请用 mode='composable'（useDialog 的 appendTo 三端都支持），或改用 vue3 / antdv。"
     )
   }
   warnings.push(
