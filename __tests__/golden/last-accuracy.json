@@ -1,24 +1,24 @@
 {
-  "measuredAt": "2026-10-16T12:55:35.774Z",
+  "measuredAt": "2026-10-18T12:17:29.331Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
-  "cases": 186,
-  "heldoutCases": 164,
+  "cases": 188,
+  "heldoutCases": 166,
   "fewshotDerivedCases": 22,
-  "scoredRows": 367,
-  "erroredRows": 5,
+  "scoredRows": 365,
+  "erroredRows": 11,
   "notMeasuredRows": 0,
-  "modelFailureRows": 5,
-  "degradedCalls": 2,
+  "modelFailureRows": 11,
+  "degradedCalls": 7,
   "gatedRows": {
     "lang": "zh",
-    "rows": 186,
+    "rows": 188,
     "errored": 0
   },
   "observedRows": {
     "lang": "en",
-    "rows": 186,
-    "errored": 5
+    "rows": 188,
+    "errored": 0
   },
   "target": 0.95,
   "givenInputs": [
@@ -64,17 +64,17 @@
     }
   ],
   "gateMetric": "definition95",
-  "inSchemaIntentZeroEdit": 0.5549,
-  "coreRate": 0.4695,
-  "inSchemaIntentZeroEditAll": 0.4946,
-  "inSchemaIntentScoped": 0.5305,
-  "inSchemaIntentScopedAll": 0.5645,
-  "exactIntentFull": 0.2683,
-  "exactIntentFullAll": 0.3065,
-  "propSetF1": 0.9939,
-  "attributeAccuracy": 0.9485,
-  "actionsF1": 0.9953,
-  "compileRate": 1,
+  "inSchemaIntentZeroEdit": 0.488,
+  "coreRate": 0.4518,
+  "inSchemaIntentZeroEditAll": 0.484,
+  "inSchemaIntentScoped": 0.4639,
+  "inSchemaIntentScopedAll": 0.5,
+  "exactIntentFull": 0.2651,
+  "exactIntentFullAll": 0.3032,
+  "propSetF1": 0.9588,
+  "attributeAccuracy": 0.9221,
+  "actionsF1": 0.9637,
+  "compileRate": 0.9681,
   "convergence": {
     "k": 3,
     "source": "heldout",
@@ -86,49 +86,49 @@
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0.5549,
-    "pass": 91,
-    "total": 164
+    "rate": 0.488,
+    "pass": 81,
+    "total": 166
   },
   "byCapability": {
     "propSet": {
-      "applicable": 164,
-      "pass": 159,
-      "rate": 0.9695
+      "applicable": 161,
+      "pass": 156,
+      "rate": 0.9689
     },
     "formtype": {
-      "applicable": 164,
-      "pass": 139,
-      "rate": 0.8476
+      "applicable": 161,
+      "pass": 137,
+      "rate": 0.8509
     },
     "membership": {
-      "applicable": 164,
+      "applicable": 161,
       "pass": 100,
-      "rate": 0.6098
+      "rate": 0.6211
     },
     "actions": {
-      "applicable": 164,
-      "pass": 161,
-      "rate": 0.9817
+      "applicable": 161,
+      "pass": 157,
+      "rate": 0.9752
     },
     "tableBtns": {
       "applicable": 10,
-      "pass": 10,
-      "rate": 1
+      "pass": 0,
+      "rate": 0
     },
     "dialogs": {
-      "applicable": 11,
-      "pass": 8,
-      "rate": 0.7273
+      "applicable": 12,
+      "pass": 6,
+      "rate": 0.5
     },
     "operationColumn": {
-      "applicable": 5,
-      "pass": 5,
+      "applicable": 7,
+      "pass": 7,
       "rate": 1
     },
     "permissions": {
-      "applicable": 8,
-      "pass": 8,
+      "applicable": 7,
+      "pass": 7,
       "rate": 1
     },
     "apiParams": {
@@ -137,9 +137,9 @@
       "rate": 1
     },
     "dataOptions": {
-      "applicable": 84,
-      "pass": 69,
-      "rate": 0.8214
+      "applicable": 81,
+      "pass": 68,
+      "rate": 0.8395
     },
     "i18n": {
       "applicable": 11,
@@ -147,18 +147,23 @@
       "rate": 1
     },
     "formLayout": {
-      "applicable": 9,
-      "pass": 7,
-      "rate": 0.7778
+      "applicable": 3,
+      "pass": 3,
+      "rate": 1
+    },
+    "fieldSpan": {
+      "applicable": 6,
+      "pass": 4,
+      "rate": 0.6667
     },
     "target": {
-      "applicable": 81,
-      "pass": 81,
+      "applicable": 79,
+      "pass": 79,
       "rate": 1
     },
     "mode": {
-      "applicable": 44,
-      "pass": 44,
+      "applicable": 43,
+      "pass": 43,
       "rate": 1
     },
     "virtualScroll": {
@@ -168,18 +173,18 @@
     },
     "configTableOut": {
       "applicable": 7,
-      "pass": 5,
-      "rate": 0.7143
+      "pass": 6,
+      "rate": 0.8571
     },
     "isHidden": {
-      "applicable": 24,
-      "pass": 15,
-      "rate": 0.625
+      "applicable": 21,
+      "pass": 12,
+      "rate": 0.5714
     },
     "reactions": {
       "applicable": 13,
-      "pass": 1,
-      "rate": 0.0769
+      "pass": 4,
+      "rate": 0.3077
     },
     "columns": {
       "applicable": 32,
@@ -188,8 +193,8 @@
     },
     "expandConfig": {
       "applicable": 15,
-      "pass": 5,
-      "rate": 0.3333
+      "pass": 4,
+      "rate": 0.2667
     },
     "treeConfig": {
       "applicable": 14,
@@ -198,8 +203,8 @@
     },
     "editConfig": {
       "applicable": 14,
-      "pass": 8,
-      "rate": 0.5714
+      "pass": 6,
+      "rate": 0.4286
     },
     "mergeConfig": {
       "applicable": 8,
@@ -207,15 +212,14 @@
       "rate": 1
     },
     "extPoints": {
-      "applicable": 23,
-      "pass": 23,
+      "applicable": 22,
+      "pass": 22,
       "rate": 1
     }
   },
   "byLanguage": {
-    "zh": 0.4695,
-    "en": null,
-    "enSuppressed": "观测腿 5/186 行打不开（中继故障），数字有偏故不发布；门禁腿 zh 完整"
+    "zh": 0.4518,
+    "en": 0.4518
   },
   "passed": false
 }
