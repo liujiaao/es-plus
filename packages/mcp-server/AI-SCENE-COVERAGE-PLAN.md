@@ -76,13 +76,14 @@
 
 | 宣称场景 | eval-llm? | golden 语料? | vite build? | 运行时? | 实际被谁验证 | **本轮后（Wave 1.1+1.2）** |
 |---|---|---|---|---|---|---|
-| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | **字符串断言**：`shared/__tests__/fragment-generator.spec.ts`（`toContain`，181 行）+ `mcp-server/__tests__/generate-tools-and-prompts.spec.ts` + `scripts/compile-smoke.mjs`（esbuild 语法解析，**不在 `check:consistency`**） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + `fragment:smoke` 升格进门禁**（准确率仍无 scorer，见下） |
-| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | 同上 | 同上 |
-| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | 同上 | 同上 |
+| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ vue3/antdv（AI-43）** | 字符串断言 + `vite build` + **真组件挂载**（`packages/{vue3,adapter-antdv}/__tests__/fragment-runtime.spec.ts`） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + 运行时回环（拉数→行渲染）**（vue2 运行时仍缺；准确率仍无 scorer，见下） |
+| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ vue3/antdv（AI-43）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（字段/按钮渲染、输入回写、formLayProps 到 prop）** |
+| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ **→ ✅ vue3/antdv（AI-43）** | 同上 | **✅ 语料 3 条 + 编译 + 运行时（component 形态 `open()` 开窗、composable 形态 `useXxxDialog().open()`）** |
 | CRUD 组合 | ✅ 后端 `generateFromConfig` + **前门腿**（模型产出经真 `generate_crud`，含强制 no-table 覆盖） | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 | ✅ **1.3 已落地（2026-10-19，AI-40）**：eval 每条模型产出都过前门；no-table 分支靠人为清空 table 面强制覆盖（语料天然到不了） |
 
 > **本轮把「有语料」这一格从 0 抬起来了**，但**只到「覆盖 + 编译」**：18 条片段语料（`frag-{table,form,dialog}-0{1,2}-{vue3,vue2,antdv}.json`）保证每个场景每条端每个形态都有用例、且产物真能被 `generate*Block` 跑出来并解析通过；**AI-42（2026-10-19）把同一批语料接进了 golden:e2e 的真 `vite build`**（此前运行器 `.filter(isCrudCase)` 静默跳过片段）。
-> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母、片段**运行时**挂载。故「eval-llm?」与「运行时?」两列**仍为 ❌**——本轮的贡献是让这两列的空白**可见且不许静默扩大**，并先填上「vite build」这一格。
+> **AI-43（2026-10-19）把「运行时」这一格在 vue3 / antdv 抬起**：同一批 golden 语料经生成器落盘、运行时动态 import 并挂载真实组件，断言走**数据回环**而非 DOM 类名 —— 表格经全局 `httpRequest` 拉数并回写 `data-source`、表单渲染与输入回写、`formLayProps` 到 prop、component 形态弹窗 `open()` 开窗且默认插槽表单渲染、composable 形态 `useDialog` 创建实例。**这一轮当场咬出并修复了两个静默缺陷**：① `EsDialog` 的 vue3/vue2 版主体只有 `render` 分支、**默认插槽被静默丢弃**（antdv 一直有回退）；② 三端 `EsTable` 只认注入的 `$esPlusTable.$httpRequest`，**看不见 core 权威的顶层 `httpRequest`**（与 EsForm、自由 `httpRequest()` 不一致，独立 es-table 按文档配置即报 "no httpRequest configured"）。
+> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母、**vue2 片段运行时**（Tier 2 playwright 只接了 CRUD；vue2 仅有表格 `httpRequest` 与弹窗默认插槽的单元级守卫）。「eval-llm?」列**仍为 ❌**。
 
 > **❌ 初稿更正**：本节初稿把三个独立场景的验证写成「**仅** `compile-smoke` esbuild 语法解析」。**错**——
 > 它们是**有单测的**（`fragment-generator.spec.ts` 等）。但那类断言全是 `toContain` **字符串比对**：
@@ -91,7 +92,7 @@
 
 **证据**：`eval-llm.mjs` 只 import/call `generateFromConfig`（`:39` / `:215`）；186 例 golden 全是 `StructuredCrudConfig`；
 `scripts/compile-smoke.mjs`（唯一编译级片段门）**不在 `check:consistency`**（`package.json` 的 `check:consistency` 串里无该项）；
-运行时三层的分层见 `__tests__/e2e-runtime/README.md`（Tier 0 编译 / Tier 1 vitest / Tier 2 playwright），**三层都只驱动 CRUD 链**。
+运行时三层的分层见 `__tests__/e2e-runtime/README.md`（Tier 0 编译 / Tier 1 vitest / Tier 2 playwright）。**AI-43 后**：Tier 0 覆盖 CRUD + 全部片段；Tier 1 覆盖 CRUD（vue3/antdv）与片段（vue3/antdv，`fragment-runtime.spec.ts`）；**Tier 2 仍只驱动 vue2 CRUD 链**（vue2 片段运行时尚未接）。
 
 ### 1.3 既有规划复核
 
@@ -517,7 +518,8 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
                     `fragment:smoke` + `check:scene-coverage`（esbuild 语法，已进 check:consistency）
                     + `golden:e2e`（真构建，AI-42 起同一运行器覆盖片段；`check:scene-coverage`
                       的 (c) 段断言「片段没被运行器过滤掉」，加回 `.filter(isCrudCase)` 即红）
-                    片段**运行时**挂载仍未做，见 §1.2「本轮后」列
+                    + **运行时**（AI-43）：vue3 / antdv 的 `fragment-runtime.spec.ts`
+                      把同一批语料挂载到真实组件，断言数据回环（vue2 见 §1.2 注）
                 （W1.2 已落地：编译门禁覆盖到四场景的**每一格都有语料且产物可解析**）
 准确率 ≥95%  := 各场景 heldout 上 definition95 = scoped zero-edit ∨ ≤K=3 收敛 ≥ 95%
                 + per-dimension ratchet + core 非回归地板 + 防「删难例洗分」守卫

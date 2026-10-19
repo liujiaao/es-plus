@@ -150,6 +150,7 @@ import {
   getNestedValue,
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
+  resolveHttpRequest,
   computeBoundaryRollback,
   buildRowSpanMethod,
   resolveMergeConfig,
@@ -820,12 +821,24 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
 
   if (props.options.httpRequest) {
     requestHandler(props.options.httpRequest)
-  } else if ($esPlusTable.$httpRequest) {
-    requestHandler($esPlusTable.$httpRequest as Function)
   } else {
-    // 无任何请求函数 → fail 让 Promise settle，避免挂起（isCurrent=true，非淘汰请求）
-    if (ticket === requestTicket.value) loadingStatus.value = false
-    if (typeof fail === 'function') fail(new Error('no httpRequest configured'), true)
+    // 回落顺序：注入的 $esPlusTable.$httpRequest（更具体）→ core 的全局解析。
+    // 后者必须走 resolveHttpRequest：它同时认顶层 `httpRequest`（core 权威字段，
+    // 也是文档推荐写法）与 `EsTable.methods.$httpRequest`。此前这里只看注入值，
+    // 于是「只配 app.use(EsPlus, { httpRequest })」的应用里，独立 es-table 直接报
+    // "no httpRequest configured" —— 而同一个配置下 EsForm 的远端下拉与自由的
+    // httpRequest() 都能用（与 docs/config.ts 的承诺三端不一致）。
+    const resolved =
+      ($esPlusTable.$httpRequest as Function | undefined) ||
+      (resolveHttpRequest(getGlobalConfig()) as Function | null) ||
+      undefined
+    if (resolved) {
+      requestHandler(resolved)
+    } else {
+      // 无任何请求函数 → fail 让 Promise settle，避免挂起（isCurrent=true，非淘汰请求）
+      if (ticket === requestTicket.value) loadingStatus.value = false
+      if (typeof fail === 'function') fail(new Error('no httpRequest configured'), true)
+    }
   }
 }
 

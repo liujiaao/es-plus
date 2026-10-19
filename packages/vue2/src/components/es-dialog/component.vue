@@ -54,6 +54,9 @@
           :render="render"
           :components="dialogComponents"
         />
+        <!-- 默认插槽：`<es-dialog><es-form /></es-dialog>` 的主体内容。
+             此前只有 render 分支，插槽被静默丢弃（同 vue3；antdv 版一直有回退）。 -->
+        <slot v-else />
       </div>
 
       <template v-if="!isHiddenFooter" #footer>

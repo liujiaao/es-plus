@@ -73,3 +73,35 @@ describe('EsDialog（vue2）— showClose 选项', () => {
     expect(vm.showClose).toBe(true)
   })
 })
+
+describe('EsDialog（vue2）— 默认插槽', () => {
+  /**
+   * 回归：模板主体此前只有 `render` 分支、没有 `<slot v-else />`，
+   * 于是 `<es-dialog><es-form /></es-dialog>`（AI 生成器的 component 形态）
+   * 的表单被**静默丢弃** —— 标题/按钮照常渲染，唯独内容不见。
+   * vue3 同病，antdv 一直有回退；三端现已对齐。
+   */
+  const SlotElDialog = {
+    name: 'ElDialog',
+    render(this: { $slots: Record<string, unknown> }, h: (tag: string, children?: unknown) => unknown) {
+      // 只透传默认插槽（EsDialog 的 dialog_body_layouts），足以观察主体内容。
+      return h('div', this.$slots.default)
+    },
+  }
+
+  it('声明式子节点在 render 缺席时仍渲染（不再静默丢弃）', async () => {
+    const EsDialogWithStub = {
+      ...(EsDialog as unknown as Record<string, unknown>),
+      components: { RenderJsx, 'el-dialog': SlotElDialog },
+    }
+    const vm = new Vue({
+      render: (h: any) =>
+        h(EsDialogWithStub as any, { props: { visible: true } }, [
+          h('div', { class: 'body-probe' }, 'BODY-CONTENT'),
+        ]),
+    }).$mount() as { $el: HTMLElement }
+    await Vue.nextTick()
+    await Vue.nextTick()
+    expect(vm.$el.textContent).toContain('BODY-CONTENT')
+  })
+})

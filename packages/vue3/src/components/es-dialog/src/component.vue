@@ -38,6 +38,11 @@
             :locale="locale"
           />
         </template>
+        <!-- 默认插槽：声明式用法 `<es-dialog><es-form /></es-dialog>` 的主体内容。
+             此前这里只有 render 分支、没有 slot 回退，插槽内容被**静默丢弃**
+             （标题/按钮照常渲染，唯独表单不见）——antdv 版一直有 `<slot v-else />`，
+             vue2/vue3 漏了。AI 生成器的 component 形态弹窗正是这种写法。 -->
+        <slot v-else />
       </div>
 
       <template #footer v-if="!props.isHiddenFooter">

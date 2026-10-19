@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import Vue from 'vue'
+import { configureEsPlus, resetGlobalConfig } from '@es-plus/core'
 import EsTable from '../src/components/es-table/component.vue'
 
 function mountTable(props: Record<string, unknown> = {}): any {
@@ -59,6 +60,27 @@ describe('EsTable(vue2) - 请求 settle', () => {
     // 裸数组响应应直接作为表格数据（回归：此前数组响应渲染空表）
     expect(table.tableData).toHaveLength(1)
     expect(table.tableData[0]).toEqual({ id: 1 })
+  })
+
+  it('只配顶层 httpRequest（app.use(EsPlus, { httpRequest })）→ 表格也发请求', async () => {
+    // 三端对齐回归：EsTable 此前只认注入的 $esPlusTable.$httpRequest，
+    // 完全看不见 core 的权威字段（顶层 httpRequest）。同一个配置下 EsForm 的
+    // 远端下拉与自由的 httpRequest() 都能用，唯独独立 es-table 报
+    // "no httpRequest configured"。修法：回落到 resolveHttpRequest(getGlobalConfig())。
+    const httpRequest = vi.fn().mockResolvedValue({ records: 0, rows: [] })
+    configureEsPlus({ httpRequest })
+    try {
+      const vm = mountTable({
+        options: { apiParams: { url: '/api/list' }, isInitRun: false }
+      })
+      await vm.$nextTick()
+      const table = tableOf(vm)
+      expect(await settleWithin(table.httpRequestInstance())).toBe('settled')
+      expect(httpRequest).toHaveBeenCalledTimes(1)
+      expect(httpRequest.mock.calls[0][0].url).toBe('/api/list')
+    } finally {
+      resetGlobalConfig()
+    }
   })
 })
 

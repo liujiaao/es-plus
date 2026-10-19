@@ -376,6 +376,17 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **变异验证（全部实测咬红，已还原）**：① `loadCases` 里把 `fragments` 过滤成空（复刻原 `.filter(isCrudCase)`）⇒ 18 条「没收录该片段用例」；② tsx 分支不再写 `src/App.vue` ⇒ 3 条 dialog composable「沙箱文件计划里没有 App.vue」；③ `FRAGMENT_GENERATORS` 删 `form` ⇒ 6 条 form「没有片段生成器」。改完均恢复，`check:scene-coverage` 复回绿。
 - **仍未做（显式留档）**：片段**运行时**挂载（Tier 1/Tier 2）——本批只填「vite build」格；§1.2 的「运行时?」列仍为 ❌，作为下一批（AI-43）的开工项。片段准确率 scorer / `definition95` 分母不变。**不提交、不推送**（仓铁律）。
 
+### AI-43 — 片段运行时见证 + 当场咬出的两处静默缺陷（**2026-10-19 已落地**）· `M`
+- **Why**：AI-42 把片段送进了真 `vite build`，但「能编译 ≠ 能跑」。§1.2 的「运行时?」列在三个独立场景仍是 ❌，而 golden 的 Tier-0 只证明打包器接受产物。补 Tier-1 挂载（vue3 / antdv）时立刻暴露两个**静默**缺陷——都是「声明了但运行时不生效」，且都被编译级门禁完全放过。
+- **修法**：
+  - 新增 `packages/vue3/__tests__/fragment-runtime.spec.ts` 与 `packages/adapter-antdv/__tests__/fragment-runtime.spec.ts`（同构）：读同一批 golden 片段 config → `generate*Block` 在运行时写盘到 `__tests__/.tmp-fragments/` → 以**变量说明符**动态 import（vitest 模块 runner 按需完成 SFC/TSX 编译）→ 挂载真实 `ElementPlus`/`EsPlus` 插件与内存后端。断言选**数据回环 / 组件 prop**，不依赖厂商 DOM 细节：① 表格挂载即拉数、行真渲染、操作按钮派生；② pagination 的 `pageSize/pageSizes` 到 `EsTable` prop；③ 表单字段渲染 + 输入回写 reactive model；④ `layoutFormProps.formLayProps` 到 `EsForm` prop；⑤ component 形态弹窗 `defineExpose().open()` 开窗、默认插槽表单渲染、预填生效；⑥ composable 形态 `useXxxDialog().open()` 经 `useDialog` 创建实例并渲染。产物目录写进 `.gitignore`，`afterAll` 清理。
+  - **缺陷①（vue3 + vue2）**：`EsDialog` 主体只有 `props.render` 分支，**默认插槽没有任何回退** ⇒ `<es-dialog><es-form /></es-dialog>`（AI 生成器 component 形态的正式写法）的表单被静默丢弃，只剩标题与按钮；antdv 一直有 `<slot v-else />`。修法：vue3/vue2 同步补默认插槽回退（三端一致）。
+  - **缺陷②（三端）**：`EsTable` 的请求解析只认 `props.options.httpRequest` 与注入的 `$esPlusTable.$httpRequest`，**看不见 core 权威的顶层 `httpRequest`**。于是只按文档写 `app.use(EsPlus, { httpRequest })` 的应用里，EsForm 的远端下拉、自由 `httpRequest()` 都能用，**唯独独立 es-table 报 "no httpRequest configured"**。修法：三端在既有优先级之后回落到 `resolveHttpRequest(getGlobalConfig())`（与 EsForm 同一条解析链），不翻转 `options.httpRequest > 注入值 > 全局` 的顺序。
+  - 守卫补强：`packages/vue2/__tests__/es-table.spec.ts` 增「只配顶层 `httpRequest` 也发请求」；`packages/vue2/__tests__/es-dialog-show-close.spec.ts` 增「默认插槽不再静默丢弃」——vue2 没有 Tier-1 片段挂载，这两条是 slot 与解析链的单元级见证。
+- **硬指标（可验收）**：`npx vitest run __tests__/fragment-runtime.spec.ts` 在 `packages/vue3` 与 `packages/adapter-antdv` 各 **6/6 绿**（覆盖 table×2 / form×2 / dialog×2，全部来自 golden 语料，不是手写样张）；vue2 两条回归绿。既有回归：vue3 `crud-runtime` + `generated-runtime` + `use-dialog` **57/57**；antdv `crud-runtime` + `es-table` + `scenario-table-advanced` + `es-dialog-open-emit` **84/84**；vue2 相关 spec **21/21**。
+- **变异验证（全部实测咬红，已还原）**：① vue3 表格回落改成 `null` ⇒ 片段表格「拉数 0 次」；② vue3 弹窗删 `<slot v-else />` ⇒ 片段弹窗文本只剩「编辑取消确定」；③ vue2 同两处变异 ⇒ 对应两条单测红。还原后全部复绿。
+- **仍未做（显式留档）**：**vue2 片段运行时**（Tier 2 playwright 仍只接 CRUD；本批只给它两条单元级守卫）；片段**准确率** scorer 与 `definition95` 分母不变。`eval-llm?` 列仍为 ❌。**不提交、不推送**（仓铁律）。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）
