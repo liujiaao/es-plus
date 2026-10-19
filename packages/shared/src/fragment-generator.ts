@@ -2,7 +2,7 @@ import { buildFormItem, buildTableColumnSFC, getDefaultValue, inferTsType } from
 import type { FieldConfig, StructuredCrudConfig } from './structured-config.schema.js'
 import type { SurfaceField } from './compose-crud-config.js'
 import { getEsPlusPackageName, type TargetFramework, DEFAULT_TARGET } from './target.js'
-import { q, qBt, qKey, qMember, inlineJson } from './codegen-escape.js'
+import { q, qBt, qKey, qMember, inlineJson, qAttr } from './codegen-escape.js'
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC } from './contract.js'
 
 /**
@@ -26,6 +26,12 @@ export interface FragmentResult {
   code: string
   summary: string
   warnings: string[]
+  /**
+   * 产物围栏（AI-28）：`'tsx'` = composable 模块（整块按 tsx/jsx 解析），
+   * `'vue'` = SFC（按 `<script>` 块切块解析）。缺省 = 该场景只有一种形态
+   * （form/table 恒 `'vue'`，dialog 在 AI-28 前恒 `'tsx'`），调用方传的兜底值生效。
+   */
+  fence?: 'vue' | 'tsx'
 }
 
 export interface FormBlockInput {
@@ -293,6 +299,88 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   return { code, summary, warnings }
 }
 
+/** 独立弹窗的产物形态（AI-28）：编程式 composable ｜ 声明式 SFC。 */
+export type DialogBlockMode = 'composable' | 'component'
+
+/**
+ * 弹窗底座选项（AI-28）—— core `DialogOptions` 里**可声明式表达**的那一子集。
+ *
+ * 为什么是这一组、而不是 `DialogOptions` 全量：这个结构是**入参**，它同时被两个
+ * 消费者读 —— 声明式那一支（SFC 的 `<es-dialog>` 属性）与编程式那一支
+ * （`dialog({...})` 的键）。所以只收**两支都真消费**的键：
+ *   - 刻意**不含** `title`：它是 `open(title, …)` 的入参，收进来就有两个真源；
+ *   - 刻意**不含**函数值键（`render`/`renderHeader`/`renderFooter`/`configBtn`/
+ *     `onClosed`/`beforeClose`）：骨架自己装配这些，且函数不能走 JSON；
+ *   - 刻意**不含**端特化键（`alignCenter`/`top`/`modalClass`/`loading`）：
+ *     `scripts/check-type-exports.mjs` 已把 `DialogOptions` 的跨端成员差登记在案
+ *     （vue2 的 Element UI 无 `alignCenter`、antdv 无 `loading`/`cacheKey`），
+ *     收进来 = 承诺一个三端不等价的能力。
+ *
+ * `appendTo` 只收选择器**字符串**：DOM 元素不可能出现在 JSON 里（与 AI-27 的
+ * `.dialogs[k].appendTo` 同口径，运行时用 querySelector 解析）。
+ *
+ * `cacheKey` 只在 `mode:'composable'` 下有效 —— 它是 `useDialog()` hook 的
+ * **实例缓存**键（vue3/vue2 的 hook 里实装、antdv 已登记为无此机制），声明式
+ * `<es-dialog>` 不经那条通道。component 模式下传入会**显式告警并忽略**，不静默发出去。
+ */
+export interface DialogBlockOptions {
+  width?: string | number
+  maxHeight?: string | number
+  isDraggable?: boolean
+  fullscreen?: boolean
+  isHiddenFooter?: boolean
+  showClose?: boolean
+  destroyOnClose?: boolean
+  modal?: boolean
+  closeOnClickModal?: boolean
+  closeOnPressEscape?: boolean
+  hiddenFullBtn?: boolean
+  appendTo?: string
+  cacheKey?: string
+}
+
+/**
+ * 选项发射顺序（**冻结**）：产物对调用方传参的插入顺序不敏感，同选项必得同产物。
+ * `width` 不在此列 —— 它有一个历史默认值 `'560px'`，单独发射（见两支的实现）。
+ */
+const DIALOG_OPTION_ORDER = [
+  'maxHeight',
+  'isDraggable',
+  'fullscreen',
+  'isHiddenFooter',
+  'showClose',
+  'destroyOnClose',
+  'modal',
+  'closeOnClickModal',
+  'closeOnPressEscape',
+  'hiddenFullBtn',
+  'appendTo',
+  'cacheKey',
+] as const
+
+/** 选项值 → 源码字面量。字符串走 `q()`（转义 `'`/换行/`</`），布尔与数字原样。 */
+function optLiteral(v: unknown): string {
+  return typeof v === 'string' ? q(v) : String(v)
+}
+
+/** camelCase 选项名 → SFC 模板里的 kebab-case 属性名（house 风格，同 `:form-item-list`）。 */
+function kebab(name: string): string {
+  return name.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())
+}
+
+/**
+ * 选项 → `<es-dialog>` 的属性行。
+ *
+ * 为什么字符串走**静态属性**、布尔/数字走**绑定**：`width="720"` 是字符串 "720"，
+ * 对 el-dialog 的 `width` 来说不是合法 CSS 长度（数字必须绑成表达式才是 720px
+ * 那条分支）；反过来 `max-height="70vh"` 静态属性最省事也最可读。
+ */
+function dialogAttr(name: string, value: unknown): string {
+  return typeof value === 'string'
+    ? `    ${name}="${qAttr(value)}"`
+    : `    :${name}="${String(value)}"`
+}
+
 export interface DialogBlockInput {
   /** 弹窗内表单字段。 */
   fields: SurfaceField[]
@@ -305,15 +393,37 @@ export interface DialogBlockInput {
   i18n?: boolean
   /** 导出的 composable 名,默认 'useFormDialog'。 */
   composableName?: string
+  /**
+   * 产物形态（AI-28）。缺省 `'composable'` —— 与 AI-28 之前**逐字节一致**（零回归）。
+   *  - `'composable'`：`useXxxDialog()` composable（`.tsx`/`.jsx` 模块），弹窗体是 JSX render；
+   *  - `'component'`：自包含 `<es-dialog>` SFC（模板 + `<script setup>`，vue2 走
+   *    `defineComponent` + `setup()`），**不需要 JSX 插件**，`open(title, row?, onSuccess?)`
+   *    经 `defineExpose`（vue2：setup 的 return）暴露给宿主。
+   */
+  mode?: DialogBlockMode
+  /** 弹窗底座选项（core `DialogOptions` 的声明式子集，见 {@link DialogBlockOptions}）。 */
+  options?: DialogBlockOptions
+  /**
+   * `open()` 的缺省标题（AI-36）。**不改变集成契约**：`open(title, ...)` 的首参仍是唯一真源，
+   * 调用方传了就以传入值为准；这里只给「不传 title」的场景一个确定性默认值。
+   *
+   * 存在的理由：前门的 `surfaces.dialog[].title` 是**声明式**标题，而 composable/SFC 支的
+   * `open(title)` 是**命令式**入参 —— 没有这条通道时，前门拿到的 title 只能写进说明文字，
+   * 产物里无处落地（静默丢弃）。table-bearing 支的 `CrudDialogConfig.title` 也是这个语义。
+   */
+  defaultTitle?: string
 }
 
 /**
- * 独立弹窗 —— 产出一个 `useXxxDialog()` composable(**.tsx/.jsx 模块**,非 SFC)。
- * 弹窗体是一个 EsForm(JSX render),复用 buildFormItem/getDefaultValue。
+ * 独立弹窗。两种产物形态（AI-28，`input.mode`）：
+ *  - `'composable'`（默认）：一个 `useXxxDialog()` composable（**.tsx/.jsx 模块**，非 SFC）。
+ *    弹窗体是一个 EsForm（JSX render），复用 buildFormItem/getDefaultValue。
+ *  - `'component'`：一个自包含 `<es-dialog>` **SFC**（见 {@link generateDialogComponent}），
+ *    不需要 JSX 插件。
  *
- * `open(title, row?, onSuccess?)` 是与宿主的集成契约:提交成功后回调 `onSuccess`,
- * 独立弹窗没有自己的表格可刷新 —— 由宿主在 onSuccess 里刷新它自己的 es-table。
- * 这正是"弹窗 + 独立表格/原生组件"混排时的确定性接法,不靠 LLM 临场发挥。
+ * 两支的集成契约**同形**：`open(title, row?, onSuccess?)` —— 提交成功后回调 `onSuccess`，
+ * 独立弹窗没有自己的表格可刷新，由宿主在 onSuccess 里刷新它自己的 es-table。
+ * 这正是"弹窗 + 独立表格/原生组件"混排时的确定性接法，不靠 LLM 临场发挥。
  */
 export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   const target = resolveTarget(input.target)
@@ -325,15 +435,24 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   const name = input.composableName || 'useFormDialog'
   const esPlusPkg = getEsPlusPackageName(target)
   const warnings: string[] = []
+  const opts = input.options ?? {}
 
+  // 两端共用的一条核对提醒（内联 render 的 Tag 语义按 Element 产出）。
+  if (target === 'antdv' && fields.some((f) => f.render)) {
+    warnings.push('target=antdv: 内联 render() 按 Element 语义(Tag type=)产出,Ant Design Vue 的 Tag 用 color —— 请核对。')
+  }
+
+  // ── 声明式形态（AI-28）：自包含 <es-dialog> SFC ──────────────────────────
+  if (input.mode === 'component') {
+    return generateDialogComponent({ target, isVue2, ts, i18n, fields, rowkey, esPlusPkg, opts, apiUrl: input.apiUrl, defaultTitle: input.defaultTitle, warnings })
+  }
+
+  // ── 编程式形态：useXxxDialog() composable ─────────────────────────────────
   // JSX render 的编译前提(与 generateFromConfig 的 SFC 弹窗同口径)
   if (isVue2) {
     warnings.push('target=vue2: 弹窗用 JSX render —— 需项目启用 @vue/babel-preset-jsx(或 @vitejs/plugin-vue2-jsx)。')
   } else {
     warnings.push(`target=${target}: 弹窗用 JSX render —— 模块以 ${ts ? '.tsx' : '.jsx'} 产出,需安装并注册 @vitejs/plugin-vue-jsx。`)
-  }
-  if (target === 'antdv' && fields.some((f) => f.render)) {
-    warnings.push('target=antdv: 内联 render() 按 Element 语义(Tag type=)产出,Ant Design Vue 的 Tag 用 color —— 请核对。')
   }
 
   const lines: string[] = []
@@ -349,9 +468,11 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   lines.push(`export function ${name}() {`)
   lines.push('  const dialog = useDialog()')
   lines.push('')
+  // defaultTitle 只改首参的缺省值，不改签名形状（AI-36）。
+  const titleDefault = input.defaultTitle !== undefined ? ` = ${q(input.defaultTitle)}` : ''
   const openSig = ts
-    ? `  function open(title: string, row: any = {}, onSuccess?: (data: any) => void) {`
-    : `  function open(title, row = {}, onSuccess) {`
+    ? `  function open(title: string${titleDefault}, row: any = {}, onSuccess?: (data: any) => void) {`
+    : `  function open(title${titleDefault}, row = {}, onSuccess) {`
   lines.push(openSig)
 
   const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
@@ -366,7 +487,12 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
 
   lines.push('    dialog({')
   lines.push('      title,')
-  lines.push(`      width: '560px',`)
+  // width 有历史默认值 '560px'（未给 options 时逐字节不变）；其余键只在给了才发。
+  lines.push(`      width: ${opts.width === undefined ? `'560px'` : optLiteral(opts.width)},`)
+  for (const k of DIALOG_OPTION_ORDER) {
+    const v = opts[k as keyof DialogBlockOptions]
+    if (v !== undefined) lines.push(`      ${k}: ${optLiteral(v)},`)
+  }
   lines.push('      render: (h, { registerRef }) => (')
   lines.push('        <EsForm')
   lines.push(`          ref={el => el && registerRef('form', el)}`)
@@ -404,6 +530,7 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   const summary = [
     `Generated standalone dialog composable ${name}() (target=${target}):`,
     `- ${fields.length} form field(s)`,
+    input.defaultTitle !== undefined ? `- Default title: ${input.defaultTitle} (used when open() is called without one)` : null,
     input.apiUrl ? `- Submit via httpRequest: ${input.apiUrl} (POST on 新增, PUT otherwise)` : '- No apiUrl — validate + onSuccess(formData) only',
     `- Integration: open(title, row?, onSuccess?) — host refreshes its own table in onSuccess`,
     ts ? `- Emit as .tsx (JSX render)` : '- Emit as .jsx (JSX render)',
@@ -414,5 +541,199 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
         : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
   ].filter(Boolean).join('\n')
 
-  return { code, summary, warnings }
+  return { code, summary, warnings, fence: 'tsx' }
 }
+
+/**
+ * 声明式形态（AI-28）—— 自包含 `<es-dialog>` **SFC**。
+ *
+ * 为什么要有这一支：`generate_dialog` 此前只发 composable，而 composable 的弹窗体是
+ * **JSX render**（模块必须是 `.tsx`/`.jsx`，宿主得装 `@vitejs/plugin-vue-jsx` 或
+ * `@vue/babel-preset-jsx`）。对「只想在模板里摆一个弹窗」的宿主，这道编译前提是纯成本，
+ * 且与它既有的 Options API / 模板写法不搭。声明式形态把同一份骨架换成模板 + `<es-dialog>`，
+ * **零 JSX 依赖**，集成契约仍是 `open(title, row?, onSuccess?)`。
+ *
+ * 与 composable 支的**逐条对齐**（避免两种形态行为漂移）：
+ *  - 弹窗体同样是 EsForm（`buildFormItem` 同一套原子构造器）；
+ *  - 每次 `open` 都把表单重置回默认值再叠 `row`（composable 支靠 `reactive({...defaults, ...row})`
+ *    重建，这里靠 `Object.assign(formData, DEFAULTS, row)` 等价达成）；
+ *  - 「查看」标题 ⇒ 只出一个「关闭」按钮（沿用 `title === '查看'` 的既有启发式）；
+ *  - 校验失败静默中止、成功后 `close()` + `onSuccess(formData)`；
+ *  - `apiUrl` 给了才发 `httpRequest`（新增 POST / 否则 PUT）。
+ *
+ * 边界（house doctrine，与字段级 render 占位同族）：**不生成业务编排**。
+ * 提交之外的业务逻辑是宿主的事，骨架里以 `TODO(es-plus)` 槽显式标出；要「按 actionType
+ * 外抛事件」的正确路径是 CRUD 页的 `dialogs[k]` + `toolbarBtns`（7749620 先例），
+ * 不是往这个片段里塞逻辑。
+ */
+function generateDialogComponent(p: {
+  target: TargetFramework
+  isVue2: boolean
+  ts: boolean
+  i18n: boolean
+  fields: SurfaceField[]
+  rowkey: string
+  esPlusPkg: string
+  opts: DialogBlockOptions
+  apiUrl?: string
+  defaultTitle?: string
+  warnings: string[]
+}): FragmentResult {
+  const { target, isVue2, ts, i18n, fields, rowkey, esPlusPkg, opts, apiUrl, defaultTitle, warnings } = p
+
+  // ── 选项落地：模板属性 ────────────────────────────────────────────────
+  // cacheKey 是 useDialog() hook 的实例缓存键，声明式 <es-dialog> 不经那条通道
+  // （vue3/vue2 的实现在 hook 里，antdv 已登记无此机制）→ 显式告警 + 不发射，
+  // 绝不静默写成一个 el-dialog 认不得的脏属性。
+  if (opts.cacheKey !== undefined) {
+    warnings.push(
+      "options.cacheKey 在 mode='component' 下没有消费者 —— 它是 useDialog() hook 的实例缓存键" +
+        '（vue3/vue2 在 hook 内实现，antdv 已登记无此机制），声明式 <es-dialog> 走不到那条通道，故已忽略。' +
+        "需要状态跨次打开保留时用 mode='composable'。"
+    )
+  }
+  warnings.push(
+    'mode=component：产物是自包含 <es-dialog> SFC（无需 JSX 插件）。前提是宿主已全局装配 es-plus' +
+      '（app.use(EsPlus)），否则模板里的 <es-dialog>/<es-form> 标签解析不到。'
+  )
+
+  const lines: string[] = []
+
+  // ── template ──
+  lines.push('<template>')
+  lines.push('  <es-dialog')
+  lines.push(isVue2 ? '    :visible.sync="visible"' : '    v-model:visible="visible"')
+  lines.push('    :title="title"')
+  lines.push(dialogAttr('width', opts.width === undefined ? '560px' : opts.width))
+  for (const k of DIALOG_OPTION_ORDER) {
+    if (k === 'cacheKey') continue // 已告警并忽略，见上
+    const v = opts[k as keyof DialogBlockOptions]
+    if (v !== undefined) lines.push(dialogAttr(kebab(k), v))
+  }
+  lines.push('    :config-btn="configBtn"')
+  lines.push('  >')
+  lines.push('    <es-form')
+  lines.push('      ref="formRef"')
+  lines.push('      :model="formData"')
+  lines.push('      :form-item-list="formItems"')
+  lines.push(`      :layout-form-props="{ formLayProps: { labelWidth: '100px', isBtnHidden: true } }"`)
+  lines.push('    />')
+  lines.push('  </es-dialog>')
+  lines.push('</template>')
+  lines.push('')
+
+  // ── script 头：vue3/antdv 用 <script setup>，vue2 用 defineComponent + setup() ──
+  const scriptLang = ts ? 'ts' : ''
+  if (isVue2) {
+    lines.push(scriptLang ? `<script lang="${scriptLang}">` : '<script>')
+  } else {
+    lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : '<script setup>')
+  }
+
+  const vueImports = isVue2 ? ['defineComponent', 'computed', 'reactive', 'ref'] : ['computed', 'reactive', 'ref']
+  lines.push(`import { ${vueImports.join(', ')} } from 'vue'`)
+  const esPlusNamed: string[] = []
+  if (apiUrl) esPlusNamed.push('httpRequest')
+  if (esPlusNamed.length) lines.push(`import { ${esPlusNamed.join(', ')} } from '${esPlusPkg}'`)
+  lines.push('')
+
+  if (isVue2) {
+    lines.push('export default defineComponent({')
+    lines.push('  setup() {')
+  }
+
+  // TS 接口（复用 inferTsType，与 generateFormBlock 同一口径）+ 默认值对象
+  if (ts && fields.length > 0) {
+    lines.push('interface DialogModel {')
+    for (const f of fields) {
+      lines.push(`  ${qKey(f.prop)}: ${inferTsType(f as unknown as FieldConfig)}`)
+    }
+    lines.push('}')
+    lines.push('')
+  }
+  const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
+  lines.push(`const DEFAULTS${ts ? ': DialogModel' : ''} = { ${defaults} }`)
+  lines.push(`const formData = reactive${ts ? '<DialogModel>' : ''}({ ...DEFAULTS })`)
+  lines.push('const visible = ref(false)')
+  lines.push(`const title = ref('')`)
+  lines.push(`const formRef = ref${ts ? '<{ validate: () => Promise<unknown> } | null>' : ''}(null)`)
+  lines.push(ts ? `let onSuccess: ((data: DialogModel) => void) | undefined` : 'let onSuccess')
+  lines.push('')
+
+  const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, 'form', i18n)), 2)
+  lines.push(`const formItems = ${formItemsJson}`)
+  lines.push('')
+
+  // 集成契约 —— 与 composable 支同形（含「每次 open 重置为默认值再叠 row」）
+  const titleDefault = defaultTitle !== undefined ? ` = ${q(defaultTitle)}` : ''
+  const openSig = ts
+    ? `function open(t: string${titleDefault}, row: Partial<DialogModel> = {}, success?: (data: DialogModel) => void) {`
+    : `function open(t${titleDefault}, row = {}, success) {`
+  lines.push(openSig)
+  lines.push('  title.value = t')
+  lines.push('  Object.assign(formData, DEFAULTS, row)')
+  lines.push('  onSuccess = success')
+  lines.push('  visible.value = true')
+  lines.push('}')
+  lines.push('')
+  lines.push('function close() {')
+  lines.push('  visible.value = false')
+  lines.push('}')
+  lines.push('')
+  lines.push('async function handleConfirm() {')
+  lines.push('  try {')
+  lines.push('    await formRef.value?.validate()')
+  lines.push('  } catch {')
+  lines.push('    return // 校验未通过:静默中止,等用户修正')
+  lines.push('  }')
+  lines.push('  // TODO(es-plus): 宿主编排槽 —— 提交前后的额外业务逻辑写在这里')
+  if (apiUrl) {
+    lines.push(`  const method = title.value === '新增' ? 'POST' : 'PUT'`)
+    lines.push(`  const url = title.value === '新增' ? ${q(apiUrl)} : \`${qBt(apiUrl)}/\${formData${qMember(rowkey)}}\``)
+    lines.push(`  await httpRequest({ url, method, data: formData })`)
+  }
+  lines.push('  close()')
+  lines.push('  onSuccess?.(formData)')
+  lines.push('}')
+  lines.push('')
+  lines.push(`const isView = computed(() => title.value === '查看')`)
+  lines.push('const configBtn = computed(() => isView.value')
+  lines.push('  ? [')
+  lines.push(`    { name: '关闭', click: () => close() }`)
+  lines.push('  ]')
+  lines.push('  : [')
+  lines.push(`    { name: '取消', click: () => close() },`)
+  lines.push(`    { name: '确定', type: 'primary', click: () => handleConfirm() }`)
+  lines.push('  ])')
+
+  if (isVue2) {
+    lines.push('')
+    lines.push('    return { visible, title, formData, formRef, formItems, configBtn, open, close }')
+    lines.push('  }')
+    lines.push('})')
+  } else {
+    lines.push('')
+    lines.push('defineExpose({ open })')
+  }
+
+  lines.push('</script>')
+
+  const code = lines.join('\n')
+  const summary = [
+    `Generated standalone <es-dialog> SFC (target=${target}):`,
+    `- ${fields.length} form field(s)`,
+    defaultTitle !== undefined ? `- Default title: ${defaultTitle} (used when open() is called without one)` : null,
+    apiUrl ? `- Submit via httpRequest: ${apiUrl} (POST on 新增, PUT otherwise)` : '- No apiUrl — validate + onSuccess(formData) only',
+    `- Integration: open(title, row?, onSuccess?)${isVue2 ? ' (exposed from setup())' : ' (via defineExpose)'} — host refreshes its own table in onSuccess`,
+    '- No JSX plugin required (template + <es-dialog>)',
+    ts ? '- TypeScript enabled' : '- Plain JavaScript',
+    isVue2
+      ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
+      : target === 'antdv'
+        ? '- Target: Vue 3 + Ant Design Vue (@es-plus/adapter-antdv)'
+        : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
+  ].filter(Boolean).join('\n')
+
+  return { code, summary, warnings, fence: 'vue' }
+}
+

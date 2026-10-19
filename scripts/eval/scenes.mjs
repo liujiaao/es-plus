@@ -25,14 +25,21 @@
  *    会在 `StructuredCrudConfigSchema.parse` 处**响亮抛错**（eval-llm / check:scorers 双方）。
  *    即「忘记标注」是响的，「标错」才会静默，故另有 `check-scene-coverage` 的形状校验兜底。
  *
- * 2. **`mode` 是 CRUD 独有的轴**，片段场景没有（见 `modesOf`）。这不是遗漏而是事实：
- *    `packages/shared/src/fragment-generator.ts` 里 `\bmode\b` 零匹配，三个片段工具
- *    （generate-form/table/dialog）的输入形状里没有 `mode`，前门 `generate-crud.ts`
- *    的 no-table 分支也从不传 `mode`。片段产物恒为单件（form/table 一个 SFC，dialog
- *    一个 tsx/jsx 模块），没有 schema-vs-sfc 之分。
- *    ⚠️ 故计划的验收语「四场景 × 三端 × **两模式**」在算术上不成立，真实矩阵是
- *    `crud` 3 端 × 2 模式、`table|form|dialog` 3 端 × 1。`MODELESS` 用 `null` 表示
- *    「该场景根本没有这条轴」，与「这一格缺语料」区分开 —— 后者才该翻红。
+ * 2. **`mode` 轴按场景分域**（见 `modesOf`）——两个场景各有一条 `mode` 轴，
+ *    **取值域不同、且互不相干**：
+ *      - `crud`：`schema | sfc`（`generateFromConfig` 的两条发射路径）；
+ *      - `dialog`：`composable | component`（AI-28 起 `generateDialogBlock` 有两种产物
+ *        形态：前者是 `.tsx/.jsx` 模块，后者是自包含 `<es-dialog>` SFC）；
+ *      - `table` / `form`：无此轴，恒单格 `MODELESS`。
+ *    ⚠️ 历史更正：本注原文断言「`fragment-generator.ts` 里 `\bmode\b` 零匹配、片段
+ *    产物恒为单件、没有 schema-vs-sfc 之分」——AI-28 落地 dialog 的第二种形态后**该
+ *    前提已被证伪**（`fragment-generator.ts` 现有 `DialogBlockMode` + `mode` 分支）。
+ *    但**结论「片段没有 schema-vs-sfc 之分」仍然成立**：dialog 的 `mode` 是**产物形态**
+ *    （composable 模块 vs SFC），不是 CRUD 那条 schema/sfc 轴；form/table 依旧单形态。
+ *    故真实矩阵是 `crud` 3 端 × 2 模式、`dialog` 3 端 × 2 形态、`table|form` 3 端 × 1
+ *    —— 计划验收语「四场景 × 三端 × 两模式」的**算术**仍不成立（两模式只覆盖 2/4 场景），
+ *    此处按事实实现。`MODELESS` 用 `null` 表示「该场景根本没有这条轴」，与「这一格缺语料」
+ *    区分开 —— 后者才该翻红。
  */
 
 /** 未标 `scene` 时的默认场景。 */
@@ -55,12 +62,28 @@ export const SCENE_TOOL = Object.freeze({
 /** 仅 CRUD 有的模式轴（`generateFromConfig` 的 schema / sfc 两条发射路径）。 */
 export const MODES = Object.freeze(['schema', 'sfc'])
 
+/**
+ * dialog 场景的**产物形态**轴（AI-28）。
+ * 与 {@link MODES} 同名不同域：`composable` = `useXxxDialog()` 的 `.tsx/.jsx` 模块
+ * （对话体是 JSX render，需 JSX 插件）；`component` = 自包含 `<es-dialog>` SFC（无需插件）。
+ * 两者对外契约相同（`open(title, row?, onSuccess?)`），故语料必须两形态各覆盖一遍 ——
+ * 否则「宣称支持的形态」与「真被测的形态」不符（正是本门禁要防的那类缺口）。
+ */
+export const DIALOG_MODES = Object.freeze(['composable', 'component'])
+
 /** 表示「该场景没有这条轴」（区别于「这条轴上缺一格语料」）。 */
 export const MODELESS = null
 
-/** 该场景的语料应覆盖哪些 mode；片段场景返回 `[null]`（单格，表示无此轴）。 */
+/**
+ * 该场景的语料应覆盖哪些 mode/形态。
+ * - `crud` → {@link MODES}（schema/sfc）
+ * - `dialog` → {@link DIALOG_MODES}（composable/component，AI-28）
+ * - `table`/`form` → `[MODELESS]`（单格，表示无此轴）
+ */
 export function modesOf(scene) {
-  return scene === 'crud' ? MODES : [MODELESS]
+  if (scene === 'crud') return MODES
+  if (scene === 'dialog') return DIALOG_MODES
+  return [MODELESS]
 }
 
 export function isScene(value) {
@@ -89,12 +112,20 @@ export function isCrudCase(caseObj) {
  * - CRUD 场景：`target`/`mode` 在 `config` 内（schema 有默认值，故解析后恒有值）。
  *   `config.target`/`config.mode` 可能被省略 —— 调用方若传的是**未经 Zod 解析**的
  *   raw config，这里落到与 schema 一致的默认值（vue3 / schema）。
+ * - dialog 场景：`mode` 是**产物形态**（`composable`/`component`，在 `config` 内，
+ *   缺省 `composable` —— 与工具 zod 的 `.default('composable')` 一致）。
+ * - table/form：`MODELESS`。
  */
 export function cellOf(caseObj) {
   const scene = sceneOf(caseObj)
   const config = caseObj?.config || {}
   const target = scene === DEFAULT_SCENE ? config.target || 'vue3' : caseObj?.target
-  const mode = scene === DEFAULT_SCENE ? config.mode || 'schema' : MODELESS
+  const mode =
+    scene === DEFAULT_SCENE
+      ? config.mode || 'schema'
+      : scene === 'dialog'
+        ? config.mode || 'composable'
+        : MODELESS
   return { scene, target, mode }
 }
 

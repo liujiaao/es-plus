@@ -180,9 +180,29 @@ export interface PaginationConfig {
 export interface DialogOptions {
   title?: string
   width?: string | number
+  visible?: boolean
   render?: (h: RenderFunction, instance: unknown, components: Record<string, unknown>) => VNode
+  renderHeader?: (h: RenderFunction, instance: unknown) => VNode
+  renderFooter?: (h: RenderFunction, instance: unknown) => VNode
   configBtn?: BtnConfig[]
+  onClosed?: () => void
   isDraggable?: boolean
+  hiddenFullBtn?: boolean
+  isHiddenFooter?: boolean
+  maxHeight?: string | number
+  appendTo?: string | HTMLElement
+  fullscreen?: boolean
+  loading?: boolean
+  showClose?: boolean
+  destroyOnClose?: boolean
+  modal?: boolean
+  closeOnClickModal?: boolean
+  closeOnPressEscape?: boolean
+  beforeClose?: (done: () => void) => void
+  cacheKey?: string
+  alignCenter?: boolean
+  top?: string
+  modalClass?: string
   [key: string]: unknown
 }
 `;

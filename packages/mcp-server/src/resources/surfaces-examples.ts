@@ -192,6 +192,31 @@ export const SURFACES_EXAMPLES: SurfacesExample[] = [
     },
   },
   {
+    label: "Standalone custom dialog (no table) — per-dialog fields, title and width",
+    nl: "做一个「订单编辑」弹窗：订单号、客户、金额，宽度 720，提交到 /api/orders，不要表格。",
+    reasoning:
+      "只要一个自定义弹窗、没有表格 → 不填 table/query/form，直接把弹窗写进 surfaces.dialog 的全参对象：key/title/width/formItems 一次给全。无表格子集 → 片段发射器按**每个 dialog entry 各发一段** composable（名字由 key 派生，如 useDetailDialog），该弹窗的 formItems 优先于共用弹窗体，title 成为 open() 的缺省标题，width/fullscreen 落到弹窗选项。",
+    route: "fragment",
+    input: {
+      name: "OrderEditDialog",
+      apiUrl: "/api/orders",
+      surfaces: {
+        dialog: [
+          {
+            key: "detail",
+            title: "订单编辑",
+            width: 720,
+            formItems: [
+              { prop: "orderNo", label: "订单号", formtype: "Input" },
+              { prop: "customer", label: "客户", formtype: "Input" },
+              { prop: "amount", label: "金额", formtype: "InputNumber" },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
     label: "Explicit target (vue2) — surfaces shape is identical across targets",
     nl: "（vue2 项目）任务管理：查询任务名、优先级（高/中/低）；表格展示任务名、优先级、截止日期；支持新增、编辑。",
     reasoning:

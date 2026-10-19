@@ -21,10 +21,17 @@
  *
  * ## 关于「两模式」
  *
- * `mode`（schema/sfc）是 **CRUD 独有**的轴：`fragment-generator.ts` 里 `\bmode\b`
- * 零匹配，三个片段工具的形状里没有 mode，前门 no-table 分支也从不传 mode。
- * 故断言矩阵是 `crud`: 3 端 × 2 模式、`table|form|dialog`: 3 端 × 1 —— 计划原文的
- * 「四场景 × 三端 × 两模式」在算术上不成立，此处按事实实现（见 scenes.mjs 头注）。
+ * `mode` 轴**按场景分域**：`crud` 是 `schema|sfc`（`generateFromConfig` 的两条发射路径）；
+ * `dialog` 是 `composable|component`（AI-28 起 `generateDialogBlock` 的两种**产物形态**）；
+ * `table`/`form` 无此轴。故断言矩阵是 `crud`: 3 端 × 2、`dialog`: 3 端 × 2 形态、
+ * `table|form`: 3 端 × 1 —— 计划原文的「四场景 × 三端 × 两模式」在算术上不成立
+ * （两模式只覆盖 4 个场景里的 2 个），此处按事实实现（见 scenes.mjs 头注）。
+ *
+ * ⚠️ 历史更正：本节原文断言「`fragment-generator.ts` 里 `\bmode\b` 零匹配」——
+ * AI-28 落地 dialog 第二形态后该前提**已被证伪**（现有 `DialogBlockMode` + mode 分支）。
+ * 结论（片段**没有** schema-vs-sfc 之分）仍成立：dialog 的 mode 是产物形态，不是
+ * CRUD 那条轴。故 (b) 段现在**读产物自报的 `fence` 分派解析尺子**，并当场断言
+ * `fence` 与形态一致 —— 往 component 语料里塞 tsx 产物会被这里咬住。
  *
  * ## 明确不做
  *
@@ -134,8 +141,18 @@ for (const c of cases) {
   }
   const before = failures.length
   if (c.scene === 'dialog') {
-    // dialog 产物是 composable 模块（非 SFC），整体按 tsx/jsx 解析。
-    parseComposable(r.code, input.typescript !== false, label, failures)
+    // dialog 有两种产物形态（AI-28）：composable = .tsx/.jsx 模块整块解析；
+    // component = 自包含 SFC 切 <script> 块解析。形态由用例的 config.mode 给出，
+    // 但**以产物自报的 fence 为准**并当场比对 —— 形态与围栏错配即红。
+    const mode = cellOf(c.raw).mode
+    const expectedFence = mode === 'component' ? 'vue' : 'tsx'
+    if (r.fence !== expectedFence) {
+      fail(`${label}: fence=${r.fence} ≠ ${expectedFence}（mode=${mode} 的产物形态与围栏错配）`)
+    } else if (mode === 'component') {
+      parseSfc(r.code, label, failures)
+    } else {
+      parseComposable(r.code, input.typescript !== false, label, failures)
+    }
   } else {
     parseSfc(r.code, label, failures)
   }

@@ -30,10 +30,19 @@ const DIALOG_TITLES: Record<DialogKey, string> = { add: "新增", edit: "编辑"
  * 这些只在 query / form 面有意义（表格列不吃 isHidden/reactions —— 与权威语义一致），
  * 故只从这两面收集；声明了就必须出现在生成物里，否则示例在教一个「会被静默丢弃」的意图。
  */
+/**
+ * 全参 dialog entry 自带的字段表（罐头字符串没有自己的字段）。
+ * 这些字段同样是「声明了就必须出现在产物里」的意图 —— AI-36 之前无表支会整表丢弃。
+ */
+function dialogEntryFields(d: DialogEntry): SurfaceField[] {
+  return typeof d === "string" ? [] : (d.formItems ?? []);
+}
+
 function declaredFieldExtras(ex: SurfacesExample): string[] {
   const s = ex.input.surfaces;
   const out: string[] = [];
-  for (const f of [...(s.query ?? []), ...(s.form ?? [])]) {
+  const fields = [...(s.query ?? []), ...(s.form ?? []), ...(s.dialog ?? []).flatMap(dialogEntryFields)];
+  for (const f of fields) {
     if (f.isHidden) out.push("isHidden");
     if (f.reactions) out.push("reactions");
     if (f.labelKey) out.push("labelKey");
@@ -47,6 +56,8 @@ function allProps(ex: SurfacesExample): string[] {
   for (const list of [s.query, s.table, s.form]) {
     for (const f of list ?? []) props.add(f.prop);
   }
+  // 逐弹窗字段表也是声明过的 prop —— 无表支若丢掉它，示例就在教一个死意图。
+  for (const d of s.dialog ?? []) for (const f of dialogEntryFields(d)) props.add(f.prop);
   return [...props];
 }
 
@@ -99,7 +110,39 @@ function route(ex: SurfacesExample): { route: SurfacesExample["route"]; code: st
   const parts: string[] = [];
   if (query.length) parts.push(generateFormBlock({ fields: query, context: "query", buttons: "query", target }).code);
   if (dialogEntries.length) {
-    parts.push(generateDialogBlock({ fields: form.length ? form : query, apiUrl, target }).code);
+    // 镜像 generate-crud.ts 的无表 dialog 循环（AI-36）：每个 entry 各发一段，
+    // fields = entry.formItems ?? (form ?? query)，title/width/fullscreen 一并落地。
+    const dialogBody = form.length ? form : query;
+    const usedNames = new Set<string>();
+    for (const d of dialogEntries) {
+      const canned = typeof d === "string";
+      const key = canned ? d : d.key;
+      const title = canned ? DIALOG_TITLES[d] : d.title !== undefined ? d.title : (DIALOG_TITLES[d.key as DialogKey] ?? d.key);
+      const fields = canned ? dialogBody : d.formItems !== undefined ? d.formItems : dialogBody;
+      const pascal = key
+        .split(/[^A-Za-z0-9]+/)
+        .filter(Boolean)
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join("");
+      const base = `use${pascal || "Form"}Dialog`;
+      let name = base;
+      let n = 1;
+      while (usedNames.has(name)) name = `${base}${++n}`;
+      usedNames.add(name);
+      const options: Record<string, unknown> = {};
+      if (!canned && d.width !== undefined) options.width = d.width;
+      if (!canned && d.fullscreen !== undefined) options.fullscreen = d.fullscreen;
+      parts.push(
+        generateDialogBlock({
+          fields,
+          apiUrl,
+          target,
+          composableName: name,
+          defaultTitle: title,
+          ...(Object.keys(options).length ? { options: options as never } : {}),
+        }).code,
+      );
+    }
   } else if (form.length) {
     parts.push(generateFormBlock({ fields: form, context: "form", buttons: "submit", target }).code);
   }

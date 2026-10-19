@@ -113,11 +113,12 @@ export const surfaceFieldSchema = z.object({
   permissionValue: z.string().optional(),
 });
 
-/** Format a FragmentResult (code + summary + warnings) into MCP text output. */
+/** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。 */
 export function renderFragmentOutput(
-  result: { code: string; summary: string; warnings: string[] },
+  result: { code: string; summary: string; warnings: string[]; fence?: "vue" | "tsx" },
   fence: "vue" | "tsx",
 ): { content: Array<{ type: "text"; text: string }> } {
+  const effective = result.fence ?? fence;
   const out: string[] = [result.summary];
   if (result.warnings.length > 0) {
     out.push("");
@@ -125,8 +126,45 @@ export function renderFragmentOutput(
     for (const w of result.warnings) out.push(`  - ${w}`);
   }
   out.push("", "---", "");
-  out.push("```" + fence);
+  out.push("```" + effective);
   out.push(result.code);
   out.push("```");
   return { content: [{ type: "text", text: out.join("\n") }] };
 }
+
+/**
+ * `generate_dialog` 的弹窗底座选项（AI-28）—— core `DialogOptions` 里**可声明式表达**
+ * 的那一子集，与 shared `DialogBlockOptions`（`packages/shared/src/fragment-generator.ts`）
+ * **手工双份同源**（zod4 ↔ zod3 不能共用对象）。
+ *
+ * 刻意不收：`title`（`open(title, …)` 的入参，单一真源）、函数值键
+ * （`render`/`renderHeader`/`renderFooter`/`configBtn`/`onClosed`/`beforeClose`）、
+ * 端特化键（`alignCenter`/`top`/`modalClass`/`loading` —— `check-type-exports.mjs`
+ * 已登记为跨端偏差）。`appendTo` 只收选择器字符串（DOM 元素走不了 JSON）。
+ *
+ * 这份副本**受守卫咬住**：`scripts/check-fragment-contract.mjs` 断它 ≡ 上面那个
+ * shared 接口，且两者都 ⊆ core `DialogOptions` 的具名键 —— 往这里加一个 core 不认的
+ * 键（或只改一侧）都会红。`z.object` 无 passthrough：跑偏了就是**静默 strip**。
+ */
+export const dialogOptionsSchema = z.object({
+  width: z
+    .union([z.string(), z.number()])
+    .optional()
+    .describe("Dialog width (default '560px'; a number is emitted as a px width, a string is used verbatim)."),
+  maxHeight: z.union([z.string(), z.number()]).optional().describe("Max height of the dialog body (scrolls beyond it)."),
+  isDraggable: z.boolean().optional().describe("Make the dialog draggable by its header."),
+  fullscreen: z.boolean().optional().describe("Open the dialog fullscreen."),
+  isHiddenFooter: z.boolean().optional().describe("Hide the whole footer (the skeleton's buttons go with it — only use this if the body closes itself)."),
+  showClose: z.boolean().optional().describe("Show the close (X) entry; default true."),
+  destroyOnClose: z.boolean().optional().describe("Destroy the dialog content on close (resets inner state each open)."),
+  modal: z.boolean().optional().describe("Render the mask/overlay; default true."),
+  closeOnClickModal: z.boolean().optional().describe("Close when the mask is clicked; default true."),
+  closeOnPressEscape: z.boolean().optional().describe("Close when Escape is pressed; default true."),
+  hiddenFullBtn: z.boolean().optional().describe("Hide the built-in fullscreen toggle."),
+  appendTo: z.string().optional().describe("CSS selector of the mount node (e.g. 'body'); only the selector form — a DOM element cannot travel in JSON."),
+  cacheKey: z
+    .string()
+    .optional()
+    .describe("Instance cache key — state survives close/reopen (recycled 10 min after close). Composable mode only: the declarative mode='component' SFC has no such channel and warns+ignores it."),
+});
+

@@ -108,7 +108,93 @@ describe("generate_crud front door — surface routing", () => {
       surfaces: { form: [field("name", "名称")], dialog: ["add"] },
     });
     expect(res.isError).toBeFalsy();
-    expect(res.content[0].text).toContain("Dialog composable (useFormDialog)");
+    // 名字由 key 派生（AI-36）：多弹窗不得共用 useFormDialog。
+    expect(res.content[0].text).toContain("Dialog composable (useAddDialog)");
+    // 罐头键的标题落到 open() 的缺省参数，而不是只写在说明文字里。
+    expect(res.content[0].text).toContain("function open(title: string = '新增'");
+  });
+
+  it("no-table 全参 dialog：formItems / title / width / fullscreen 逐条落地（AI-36）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        dialog: [
+          {
+            key: "detail",
+            title: "订单编辑",
+            width: 720,
+            fullscreen: false,
+            formItems: [field("orderNo", "订单号"), field("customer", "客户")],
+          },
+        ],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    const text = res.content[0].text;
+    // 逐弹窗字段表优先于共用的 form/query 面（这里两者都为空，仍须发射这两列）。
+    expect(text).toContain('"prop": "orderNo"');
+    expect(text).toContain('"prop": "customer"');
+    // 标题 → open() 缺省参数；宽度/全屏 → 弹窗选项。
+    expect(text).toContain("function open(title: string = '订单编辑'");
+    expect(text).toContain("width: 720");
+    expect(text).toContain("fullscreen: false");
+    // key 派生名字，且不再出现共用的 useFormDialog。
+    expect(text).toContain("Dialog composable (useDetailDialog)");
+    expect(text).not.toContain("export function useFormDialog(");
+  });
+
+  it("no-table 多弹窗：每个 entry 各发一段、名字互不覆盖（AI-36）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        form: [field("name", "名称")],
+        dialog: ["add", { key: "detail", title: "详情", formItems: [field("orderNo", "订单号")] }],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    const text = res.content[0].text;
+    expect(text).toContain("Dialog composable (useAddDialog)");
+    expect(text).toContain("Dialog composable (useDetailDialog)");
+    expect(text.match(/^## Dialog composable/gm)?.length).toBe(2);
+    // 共用体（form 面）进 add；detail 用自己那列。
+    expect(text).toContain('"prop": "orderNo"');
+  });
+
+  it("no-table 弹窗零字段：显式告警而不是静默发空壳（AI-36）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { dialog: ["add"] },
+    });
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain("surfaces.dialog['add'] 没有任何可发射的字段");
+  });
+
+  it("no-table 自定义标题会改变提交方法/只读判别时，显式告警（AI-36）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        form: [field("name", "名称")],
+        dialog: [{ key: "add", title: "新建用户" }, { key: "view", title: "详情" }],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    const text = res.content[0].text;
+    expect(text).toContain("该弹窗将以 PUT 提交");
+    expect(text).toContain("只读形态按标题 '查看' 判别");
+  });
+
+  it("no-table dialog 支显式指路零-JSX 的 mode='component'（AI-28 能力缺口不得静默）", async () => {
+    // 前门的 dialog 词汇是 `surfaces.dialog`，刻意不再开一条 `mode` 轴（见 generate-crud.ts
+    // 的说明）。所以「不依赖 JSX 插件的自包含弹窗」这条能力，前门唯一的传达方式就是产物里
+    // 这句指路 —— 它一旦被删，能力缺口就变回静默。此断言即该句的守卫。
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { form: [field("name", "名称")], dialog: ["add"] },
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("```tsx"); // 前门这支恒发 composable
+    expect(text).toContain("generate_dialog");
+    expect(text).toContain("mode: 'component'");
   });
 
   it("form-only (no table, no dialog) emits a standalone submit form", async () => {
@@ -335,8 +421,18 @@ describe("generate_crud front door — surface routing", () => {
     expect(text).toContain('"新增"');
   });
 
-
-
+  it("surfaces.dialog 重复 key 显式告警（不被 Object.fromEntries 静默覆盖）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: {
+        table: [field("name", "名称")],
+        form: [field("name", "名称")],
+        dialog: ["add", { key: "add", title: "另一个新增" }],
+      },
+    });
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain("surfaces.dialog 里 'add' 出现了多次");
+  });
 
 });
 
@@ -385,6 +481,77 @@ describe("standalone fragment tools", () => {
     });
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("```tsx");
+  });
+
+  it("generate_dialog mode=component emits an SFC (```vue) with the options injected", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateDialog(server);
+    const res = await tools.generate_dialog.handler({
+      fields: [field("name", "名称")],
+      apiUrl: "/api/users",
+      target: "vue3",
+      mode: "component",
+      options: { width: 720, showClose: false, maxHeight: "70vh" },
+      typescript: true,
+      i18n: false,
+    });
+    expect(res.isError).toBeFalsy();
+    const text = res.content[0].text;
+    // 围栏必须跟着形态走（AI-28 前 dialog 恒发 ```tsx）
+    expect(text).toContain("```vue");
+    expect(text).not.toContain("```tsx");
+    expect(text).toContain("<es-dialog");
+    // options 真的穿过 zod3 形状落进模板（若镜像漏键，zod 会静默 strip → 这里红）
+    expect(text).toContain(':width="720"');
+    expect(text).toContain(':show-close="false"');
+    expect(text).toContain('max-height="70vh"');
+  });
+
+  it("generate_dialog 的 options 键被 zod3 形状认下（不静默 strip）", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateDialog(server);
+    // 铺满 dialogOptionsSchema 的全部 13 键；任一键被 strip 都会让对应 attr/键缺席。
+    const res = await tools.generate_dialog.handler({
+      fields: [field("name", "名称")],
+      mode: "component",
+      options: {
+        width: 720,
+        maxHeight: "70vh",
+        isDraggable: true,
+        fullscreen: true,
+        isHiddenFooter: true,
+        showClose: false,
+        destroyOnClose: true,
+        modal: false,
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+        hiddenFullBtn: true,
+        appendTo: "#app",
+        cacheKey: "k1",
+      },
+      typescript: false,
+      i18n: false,
+    });
+    const text = res.content[0].text;
+    for (const attr of [
+      ':width="720"',
+      'max-height="70vh"',
+      ':is-draggable="true"',
+      ':fullscreen="true"',
+      ':is-hidden-footer="true"',
+      ':show-close="false"',
+      ':destroy-on-close="true"',
+      ':modal="false"',
+      ':close-on-click-modal="false"',
+      ':close-on-press-escape="false"',
+      ':hidden-full-btn="true"',
+      'append-to="#app"',
+    ]) {
+      expect(text, `选项属性 ${attr} 未发射（形状可能把它 strip 了）`).toContain(attr);
+    }
+    // cacheKey 在 component 模式下告警而非发射
+    expect(text).not.toContain('cache-key');
+    expect(text).toContain("cacheKey");
   });
 });
 

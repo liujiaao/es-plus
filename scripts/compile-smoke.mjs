@@ -12,6 +12,9 @@
  *   - `<es-form>` / `<es-table>` SFC → 抽出每个 <script> 块，按声明 lang 选 loader 用
  *     esbuild.transformSync 解析（TS/JSX 语法错误会抛）；
  *   - dialog composable → 本身就是一个 .tsx/.jsx 模块（非 SFC），整体按 tsx/jsx 解析。
+ *   - dialog component（AI-28 mode='component'）→ 与 form/table 同待遇的 SFC，
+ *     按 `<script>` 块解析。两种模式**按下标分派**（读产物自报的 `fence`），
+ *     所以「component 模式却发了 tsx」这类错配会在解析前就被 fence 断言咬住。
  *
  * 覆盖不到的是模板编译与依赖解析（那是 e2e 的职责），但「片段发射器拼出语法错误代码」
  * 这一类真实故障从此在 PR 上就会红——与 score-golden 对配置路径的保证同级。
@@ -82,16 +85,33 @@ function run() {
         }
       }
 
-      // ── generate_dialog:有/无 apiUrl(整体是 .tsx/.jsx 模块) ──
-      for (const withApi of [true, false]) {
-        count++
-        const r = generateDialogBlock({
-          fields: FORM_FIELDS,
-          apiUrl: withApi ? '/api/items' : undefined,
-          target,
-          typescript,
-        })
-        parseComposable(r.code, typescript, `dialog[${tag} api=${withApi}]`, failures)
+      // ── generate_dialog:两种产物形态 × 有/无 apiUrl ──
+      // mode='composable'(缺省) → .tsx/.jsx 模块；mode='component'(AI-28) → 自包含 SFC。
+      // 两者的 fence 必须与形态一致,否则「产物形态」与「解析尺子」会错配(变异验证靶点)。
+      for (const mode of /** @type {const} */ (['composable', 'component'])) {
+        for (const withApi of [true, false]) {
+          count++
+          const r = generateDialogBlock({
+            fields: FORM_FIELDS,
+            apiUrl: withApi ? '/api/items' : undefined,
+            // AI-36：open() 的缺省标题（两种形态都要能解析 `title: string = '...'`）。
+            defaultTitle: '新增',
+            options: mode === 'component'
+              ? { width: 720, maxHeight: '70vh', isDraggable: true, showClose: false, modal: false, appendTo: '#dlg' }
+              : { width: 720, maxHeight: '70vh', modal: false, cacheKey: 'k1' },
+            mode,
+            target,
+            typescript,
+          })
+          const label = `dialog[${tag} mode=${mode} api=${withApi}]`
+          const expectedFence = mode === 'component' ? 'vue' : 'tsx'
+          if (r.fence !== expectedFence) {
+            failures.push(`${label}: fence=${r.fence} ≠ ${expectedFence}(形态与围栏错配)`)
+            continue
+          }
+          if (mode === 'component') parseSfc(r.code, label, failures)
+          else parseComposable(r.code, typescript, label, failures)
+        }
       }
     }
   }

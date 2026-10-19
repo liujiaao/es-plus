@@ -269,6 +269,7 @@ ${v.jsxNote}
 interface DialogOptions {
   title?: string
   width?: string | number
+  visible?: boolean              // dialog visibility (imperative calls usually pass true)
   render?: (h, instance, components) => VNode   // Dialog body content
   renderHeader?: (h, instance) => VNode         // Custom header
   renderFooter?: (h, instance) => VNode         // Custom footer
@@ -278,9 +279,23 @@ interface DialogOptions {
   hiddenFullBtn?: boolean     // Hide fullscreen toggle
   isHiddenFooter?: boolean    // Hide footer entirely
   maxHeight?: string | number
+  appendTo?: string | HTMLElement   // mount target (default: body)
   fullscreen?: boolean
+  loading?: boolean           // loading mask over the body
+  showClose?: boolean         // show the close (X) button — default true
+  destroyOnClose?: boolean    // destroy the body on close (resets inner state)
+  modal?: boolean             // render the mask — default true
+  closeOnClickModal?: boolean // click the mask closes — default true
+  closeOnPressEscape?: boolean// ESC closes — default true
+  beforeClose?: (done: () => void) => void   // intercept close; call done() to proceed
+  cacheKey?: string           // reuse one cached instance across calls (state kept)
+  alignCenter?: boolean       // vertically centered
+  top?: string                // CSS margin-top of the dialog (default '15vh')
+  modalClass?: string         // custom class on the mask
 }
 \`\`\`
+Cross-renderer members: **antdv declares neither \`cacheKey\` nor \`loading\`** (its hook has no
+instance cache, and its dialog has no body-loading mask) — passing them there is silently ignored.
 
 ## Return value
 \`\`\`typescript
