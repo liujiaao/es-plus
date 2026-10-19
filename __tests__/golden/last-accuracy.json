@@ -1,15 +1,15 @@
 {
-  "measuredAt": "2026-10-18T12:17:29.331Z",
+  "measuredAt": "2026-10-19T11:18:54.242Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
   "cases": 188,
   "heldoutCases": 166,
   "fewshotDerivedCases": 22,
-  "scoredRows": 365,
-  "erroredRows": 11,
-  "notMeasuredRows": 0,
-  "modelFailureRows": 11,
-  "degradedCalls": 7,
+  "scoredRows": 228,
+  "erroredRows": 148,
+  "notMeasuredRows": 146,
+  "modelFailureRows": 2,
+  "degradedCalls": 1,
   "gatedRows": {
     "lang": "zh",
     "rows": 188,
@@ -18,7 +18,7 @@
   "observedRows": {
     "lang": "en",
     "rows": 188,
-    "errored": 0
+    "errored": 146
   },
   "target": 0.95,
   "givenInputs": [
@@ -36,6 +36,18 @@
     },
     {
       "file": "frag-dialog-01-vue3.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-02-component-antdv.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-02-component-vue2.json",
+      "scene": "dialog"
+    },
+    {
+      "file": "frag-dialog-02-component-vue3.json",
       "scene": "dialog"
     },
     {
@@ -64,17 +76,17 @@
     }
   ],
   "gateMetric": "definition95",
-  "inSchemaIntentZeroEdit": 0.488,
-  "coreRate": 0.4518,
-  "inSchemaIntentZeroEditAll": 0.484,
-  "inSchemaIntentScoped": 0.4639,
-  "inSchemaIntentScopedAll": 0.5,
-  "exactIntentFull": 0.2651,
-  "exactIntentFullAll": 0.3032,
-  "propSetF1": 0.9588,
-  "attributeAccuracy": 0.9221,
-  "actionsF1": 0.9637,
-  "compileRate": 0.9681,
+  "inSchemaIntentZeroEdit": 0.512,
+  "coreRate": 0.5,
+  "inSchemaIntentZeroEditAll": 0.5213,
+  "inSchemaIntentScoped": 0.488,
+  "inSchemaIntentScopedAll": 0.5266,
+  "exactIntentFull": 0.2831,
+  "exactIntentFullAll": 0.3191,
+  "propSetF1": 0.9895,
+  "attributeAccuracy": 0.9475,
+  "actionsF1": 0.9921,
+  "compileRate": 0.9947,
   "convergence": {
     "k": 3,
     "source": "heldout",
@@ -86,40 +98,40 @@
   "definition95": {
     "k": 3,
     "source": "heldout",
-    "rate": 0.488,
-    "pass": 81,
+    "rate": 0.512,
+    "pass": 85,
     "total": 166
   },
   "byCapability": {
     "propSet": {
-      "applicable": 161,
-      "pass": 156,
-      "rate": 0.9689
+      "applicable": 165,
+      "pass": 162,
+      "rate": 0.9818
     },
     "formtype": {
-      "applicable": 161,
-      "pass": 137,
-      "rate": 0.8509
+      "applicable": 165,
+      "pass": 145,
+      "rate": 0.8788
     },
     "membership": {
-      "applicable": 161,
-      "pass": 100,
-      "rate": 0.6211
+      "applicable": 165,
+      "pass": 103,
+      "rate": 0.6242
     },
     "actions": {
-      "applicable": 161,
-      "pass": 157,
-      "rate": 0.9752
+      "applicable": 165,
+      "pass": 163,
+      "rate": 0.9879
     },
     "tableBtns": {
       "applicable": 10,
-      "pass": 0,
-      "rate": 0
+      "pass": 2,
+      "rate": 0.2
     },
     "dialogs": {
-      "applicable": 12,
-      "pass": 6,
-      "rate": 0.5
+      "applicable": 13,
+      "pass": 8,
+      "rate": 0.6154
     },
     "operationColumn": {
       "applicable": 7,
@@ -127,8 +139,8 @@
       "rate": 1
     },
     "permissions": {
-      "applicable": 7,
-      "pass": 7,
+      "applicable": 8,
+      "pass": 8,
       "rate": 1
     },
     "apiParams": {
@@ -137,9 +149,9 @@
       "rate": 1
     },
     "dataOptions": {
-      "applicable": 81,
-      "pass": 68,
-      "rate": 0.8395
+      "applicable": 84,
+      "pass": 72,
+      "rate": 0.8571
     },
     "i18n": {
       "applicable": 11,
@@ -152,18 +164,18 @@
       "rate": 1
     },
     "fieldSpan": {
-      "applicable": 6,
-      "pass": 4,
-      "rate": 0.6667
+      "applicable": 7,
+      "pass": 5,
+      "rate": 0.7143
     },
     "target": {
-      "applicable": 79,
-      "pass": 79,
+      "applicable": 82,
+      "pass": 82,
       "rate": 1
     },
     "mode": {
-      "applicable": 43,
-      "pass": 43,
+      "applicable": 44,
+      "pass": 44,
       "rate": 1
     },
     "virtualScroll": {
@@ -177,24 +189,24 @@
       "rate": 0.8571
     },
     "isHidden": {
-      "applicable": 21,
-      "pass": 12,
-      "rate": 0.5714
+      "applicable": 24,
+      "pass": 15,
+      "rate": 0.625
     },
     "reactions": {
-      "applicable": 13,
-      "pass": 4,
-      "rate": 0.3077
+      "applicable": 12,
+      "pass": 3,
+      "rate": 0.25
     },
     "columns": {
       "applicable": 32,
-      "pass": 11,
-      "rate": 0.3438
+      "pass": 10,
+      "rate": 0.3125
     },
     "expandConfig": {
       "applicable": 15,
-      "pass": 4,
-      "rate": 0.2667
+      "pass": 3,
+      "rate": 0.2
     },
     "treeConfig": {
       "applicable": 14,
@@ -203,8 +215,8 @@
     },
     "editConfig": {
       "applicable": 14,
-      "pass": 6,
-      "rate": 0.4286
+      "pass": 5,
+      "rate": 0.3571
     },
     "mergeConfig": {
       "applicable": 8,
@@ -212,14 +224,15 @@
       "rate": 1
     },
     "extPoints": {
-      "applicable": 22,
-      "pass": 22,
+      "applicable": 23,
+      "pass": 23,
       "rate": 1
     }
   },
   "byLanguage": {
-    "zh": 0.4518,
-    "en": 0.4518
+    "zh": 0.5,
+    "en": null,
+    "enSuppressed": "观测腿 146/188 行**未测到**（无 text 块 / 截断），数字有偏故不发布；门禁腿 zh 完整"
   },
   "passed": false
 }
