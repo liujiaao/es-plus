@@ -102,6 +102,18 @@ describe("generate_crud front door — surface routing", () => {
     expect(res.content[0].text).toContain("## Query form (QueryForm.vue)");
   });
 
+  it("no-table 的 formLayout 必须透传给查询表单（Wave 4：修前顶层 formLayout 被静默丢弃）", async () => {
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { query: [field("keyword", "关键词")] },
+      formLayout: { labelWidth: "110px", minFoldRows: 2 },
+    });
+    expect(res.isError).toBeFalsy();
+    // 若前门只收不传，这段产物里不会出现 layoutFormProps（生成器只在给了 formLayout 时才发）。
+    expect(res.content[0].text).toContain('const layoutFormProps = { formLayProps: {"labelWidth":"110px","minFoldRows":2} }');
+    expect(res.content[0].text).toContain(':layout-form-props="layoutFormProps"');
+  });
+
   it("form + dialog (no table) emits a dialog composable", async () => {
     const res = await crudHandler()({
       ...baseCrud,

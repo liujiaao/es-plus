@@ -37,6 +37,50 @@ export const SCHEMA_SRC = 'packages/shared/src/structured-config.schema.ts'
 export const COMPOSE_SRC = 'packages/shared/src/compose-crud-config.ts'
 export const GENERATOR_SRC = 'packages/shared/src/structured-generator.ts'
 export const CORE_TYPES_SRC = 'packages/core/src/types.ts'
+export const FRAGMENT_SHAPES_SRC = 'packages/mcp-server/src/tools/_fragment-shapes.ts'
+
+/**
+ * 三个独立场景工具（Wave 4）的 Zod 入参形状 —— `readReachability` 的泛化对象。
+ *
+ * 为什么必须逐个登记：`generate_table` / `generate_form` / `generate_dialog` 是
+ * **独立工具形状**，与 `crudShape` 完全不同。只切 `crudShape` 的守卫看不见它们；
+ * 于是给片段工具加一个 schema 不认识的键 = **新开一条无守卫入口**（LLM 以为填了、
+ * 生成器收不到）。本表把「所有生成工具形状」变成可遍历集合。
+ */
+export const FRAGMENT_TOOL_SRC = {
+  table: {
+    file: 'packages/mcp-server/src/tools/generate-table.ts',
+    start: 'export const tableShape = {',
+    label: 'generate-table.ts tableShape',
+  },
+  form: {
+    file: 'packages/mcp-server/src/tools/generate-form.ts',
+    start: 'export const formShape = {',
+    label: 'generate-form.ts formShape',
+  },
+  dialog: {
+    file: 'packages/mcp-server/src/tools/generate-dialog.ts',
+    start: 'export const dialogShape = {',
+    label: 'generate-dialog.ts dialogShape',
+  },
+}
+
+/**
+ * 片段工具顶层键里**不是**权威 schema 顶层键的合法例外（片段独有语义）——
+ * 每键必须写明原因，空原因会红。与 `FRONT_DOOR_ONLY` 同纪律：**只减不增**，
+ * 工具不再接收某键时删行（删漏 → 守卫的陈旧检查红）。
+ */
+export const FRAGMENT_TOOL_ONLY = {
+  rowButtons:
+    '独立表格的操作列按钮（事件上抛）。权威 schema 的按钮面是 actions/operationColumn（派生式），片段刻意只发 triggerEvent 事件，无对应顶层入参',
+  context: "独立表单的 span 口径（query/form）；CRUD 页由字段落在哪个面派生，无同名顶层键",
+  buttons: '独立表单的底部按钮罐头（none/query/submit）；CRUD 页对应 toolbarBtns，形态不同',
+  rowkey: '独立弹窗 PUT 的主键参数（拼 `${apiUrl}/${formData[rowkey]}`）；schema 侧主键走 tableOptions.rowkey',
+  composableName: '独立弹窗的导出函数名（片段独有，schema 侧整页生成无此概念）',
+  defaultTitle: "open() 的缺省标题（AI-36）。schema 侧弹窗标题走 dialogs[k].title（声明式），语义不同",
+  options:
+    '独立弹窗的底座选项（DialogBlockOptions = core DialogOptions 的声明式子集）；schema 侧逐键平铺在 dialogs[k] 上，不叫 options',
+}
 /** MCP resource `esplus://schemas/dialog-options` 实际服务的那一份（`resources/schemas.ts` 的 SCHEMAS_DIR）。 */
 export const DIALOG_OPTIONS_JSON_SRC = 'packages/mcp-server/schemas/dialog-options.schema.json'
 /**
@@ -293,7 +337,11 @@ export const DIALOG_OPTIONS_JSON_ONLY = {
  *   - `schemaKeys`：`StructuredCrudConfigSchema` 顶层键；
  *   - `sfKeys`：`SurfaceField` 字段词汇；
  *   - `fcKeys`：`FieldConfig` 权威字段词汇；
- *   - `tableOptionsKeys`：AI Zod 的 `tableOptions` 嵌套键（缩进 4）。
+ *   - `tableOptionsKeys`：AI Zod 的 `tableOptions` 嵌套键（缩进 4）；
+ *   - `formLayoutKeys` / `paginationKeys`：权威 schema 的同名嵌套块；
+ *   - `fragmentShapes`：三个独立工具的顶层键（table/form/dialog，Wave 4 泛化）；
+ *   - `fragmentTableOptionsKeys` / `fragmentFormLayoutKeys` / `fragmentPaginationKeys`：
+ *     片段工具镜像的容器级键（zod3，`_fragment-shapes.ts`）。
  *
  * 任一定位失败（选择器失效）→ 打印 ❌ 并返回 `null`，调用方须 `process.exit(1)` 拒绝静默放行。
  */
@@ -302,6 +350,7 @@ export function readReachability() {
   const frontSrc = stripComments(read(FRONT_DOOR_SRC))
   const composeSrc = stripComments(read(COMPOSE_SRC))
   const fromCfgSrc = stripComments(read(FROM_CONFIG_SRC))
+  const fragmentShapesSrc = stripComments(read(FRAGMENT_SHAPES_SRC))
 
   const crudBlock = sliceBlock(frontSrc, 'const crudShape = {', '} as const', 'generate-crud.ts crudShape')
   const schemaBlock = sliceBlock(
@@ -318,6 +367,24 @@ export function readReachability() {
     '  }).optional(),',
     'structured-config.schema.ts tableOptions'
   )
+  // 顶层 `formLayout` 与 `DialogConfigSchema` 里的同名块**缩进相同**（都是 2），
+  // indexOf 会先命中 dialog 那个；顶层块在文件中更靠后，故用 lastIndexOf 定位。
+  const flIdx = schemaSrc.lastIndexOf('  formLayout: z.object({')
+  const formLayoutBlock =
+    flIdx === -1
+      ? null
+      : sliceBlock(
+          schemaSrc.slice(flIdx),
+          '  formLayout: z.object({',
+          "  }).optional().describe('Query form layout config'),",
+          'structured-config.schema.ts formLayout'
+        )
+  const paginationBlock = sliceBlock(
+    schemaSrc,
+    '  pagination: z.object({',
+    '  }).optional(),',
+    'structured-config.schema.ts pagination'
+  )
   // AI-32①：mcp 内联副本的顶层键（`configShape`，直接作为 `server.tool` 的 zod3 raw shape）。
   const configShapeBlock = sliceBlock(
     fromCfgSrc,
@@ -333,14 +400,46 @@ export function readReachability() {
     'structured-config.schema.ts DialogConfigSchema'
   )
 
+  // Wave 4：三个独立工具的顶层形状（泛化 —— 不再只切 crudShape）+ 容器级 zod3 镜像。
+  const fragmentShapes = {}
+  for (const [name, def] of Object.entries(FRAGMENT_TOOL_SRC)) {
+    const src = stripComments(read(def.file))
+    const block = sliceBlock(src, def.start, '} as const', def.label)
+    if (block === null) return null
+    fragmentShapes[name] = topLevelKeys(block)
+  }
+  const fragmentTableOptionsBlock = sliceBlock(
+    fragmentShapesSrc,
+    'export const tableBlockOptionsSchema = z.object({',
+    '});',
+    '_fragment-shapes.ts tableBlockOptionsSchema'
+  )
+  const fragmentFormLayoutBlock = sliceBlock(
+    fragmentShapesSrc,
+    'export const formLayoutSchema = z.object({',
+    '});',
+    '_fragment-shapes.ts formLayoutSchema'
+  )
+  const fragmentPaginationBlock = sliceBlock(
+    fragmentShapesSrc,
+    'export const tablePaginationSchema = z.object({',
+    '});',
+    '_fragment-shapes.ts tablePaginationSchema'
+  )
+
   if (
     crudBlock === null ||
     schemaBlock === null ||
     sfBlock === null ||
     fcBlock === null ||
     tableBlock === null ||
+    formLayoutBlock === null ||
+    paginationBlock === null ||
     configShapeBlock === null ||
-    dialogBlock === null
+    dialogBlock === null ||
+    fragmentTableOptionsBlock === null ||
+    fragmentFormLayoutBlock === null ||
+    fragmentPaginationBlock === null
   ) {
     return null
   }
@@ -351,8 +450,14 @@ export function readReachability() {
     sfKeys: topLevelKeys(sfBlock),
     fcKeys: topLevelKeys(fcBlock),
     tableOptionsKeys: topLevelKeys(tableBlock, 4),
+    formLayoutKeys: topLevelKeys(formLayoutBlock, 4),
+    paginationKeys: topLevelKeys(paginationBlock, 4),
     configShapeKeys: topLevelKeys(configShapeBlock),
     dialogKeys: topLevelKeys(dialogBlock),
+    fragmentShapes,
+    fragmentTableOptionsKeys: topLevelKeys(fragmentTableOptionsBlock),
+    fragmentFormLayoutKeys: topLevelKeys(fragmentFormLayoutBlock),
+    fragmentPaginationKeys: topLevelKeys(fragmentPaginationBlock),
   }
 }
 

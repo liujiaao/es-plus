@@ -46,6 +46,13 @@ export {
   type TableBlockInput,
   type TableRowButton,
   type DialogBlockInput,
+  // Wave 4：独立场景的完整配置类型 + 容器级数据子集
+  type EsTableConfig,
+  type EsFormConfig,
+  type EsDialogConfig,
+  type TableBlockOptions,
+  type EsTablePagination,
+  type EsFormLayout,
 } from './fragment-generator.js'
 export {
   buildNlToConfigSystemPrompt,

@@ -12,6 +12,7 @@
  *   nl ──(Anthropic, claude-opus-5, adaptive thinking, few-shot system prompt)──▶ config'
  *      ──(StructuredCrudConfigSchema.safeParse + self-repair loop, <=2 retries)──▶ valid config'
  *      ──(field-level F1 vs golden + generateFromConfig compile check)──▶ score
+ *      ──(same config → REAL generate_crud handler, incl. forced no-table)──▶ front-door leg (W1.3)
  *
  * Metrics:
  *   - prop-set F1 (did it find the right fields?)
@@ -48,6 +49,7 @@ import {
 } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf, SCENES } from './eval/scenes.mjs'
+import { setupFrontDoor, driveFrontDoor, summarizeFrontDoor } from './eval/front-door-leg.mjs'
 import {
   combine,
   evaluateFloor,
@@ -193,6 +195,9 @@ async function main() {
   const client = new Anthropic(baseURL ? { baseURL } : {})
   console.log(`[eval:llm] endpoint: ${baseURL || 'https://api.anthropic.com (default)'} · model: ${MODEL}`)
   const system = buildNlToConfigSystemPrompt()
+  // W1.3：前门腿的打包放在**任何模型调用之前** —— 它失败说明本脚本根本测不到宣称主路径，
+  // 此时应当立即红，而不是先烧掉一次跑批再发现。
+  const frontDoor = await setupFrontDoor()
 
   const allFiles = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
   // 探针模式只取前 N 条。**注意**：被切的只有「跑谁」，语料派生的一切（notScored/棘轮
@@ -257,6 +262,8 @@ async function main() {
           compiles = false
         }
         const s = scoreAll(gold, pred, mask)
+        // W1.3 前门腿：同一条模型产出再喂一次真 `generate_crud`（不额外调模型）。
+        const fd = await driveFrontDoor(frontDoor, pred)
 
         // B3：中文语言 + 标了 refinements 时，延续同一段对话逐条喂纠正，记录每轮 scoped 命中，
         // 直到收敛或喂完。初稿已 scoped 命中则 0 次纠正即收敛（zero-edit），不再调用模型。
@@ -274,7 +281,7 @@ async function main() {
           convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
         }
 
-        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold })
+        rows.push({ file, lang, ...s, compiles, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd })
         console.log(
           `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
         )
@@ -302,7 +309,7 @@ async function main() {
         // 其余（空轮 / 截断 / 未知）⟹ 这一行**没测到**，按 0 分计入成绩会低估且可能被发布。
         // 未知归因（例如 SDK 直接抛的传输异常）走白名单外的默认值 —— 保守方向是「没测到」。
         const errorKind = err?.kind ?? null
-        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, errorKind, fewshotDerived: FEWSHOT_DERIVED.has(file) })
+        rows.push({ file, lang, exactIntentCore: false, exactIntentFull: false, exactIntentScoped: false, byCapability: {}, compiles: false, error: err.message, errorKind, fewshotDerived: FEWSHOT_DERIVED.has(file), frontDoor: null })
         console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
       }
     }
@@ -330,6 +337,12 @@ async function main() {
   const propF1 = meanAll((r) => r.propF1?.f1 ?? 0)
   const attrAcc = meanAll((r) => r.attrAcc ?? 0)
   const actF1 = meanAll((r) => r.actionsF1?.f1 ?? 0)
+
+  // ── 前门腿汇总（W1.3）──────────────────────────────────────────────────────
+  // 只有模型**真的产出了配置**的行才有前门观测（error 行为 null，与 compiles 同一分母纪律）。
+  // 判红的两条只对确定性代码负责；模型侧拒绝只计数（见 setupFrontDoor 头注）。
+  // 判据与聚合都在 ./eval/front-door-leg.mjs（纯函数，可脚本化单测）。
+  const frontDoorStats = summarizeFrontDoor(rows)
 
   // B3 收敛（只观测、不门禁）：收敛语料 = 标了 refinements 的中文行；heldout 优先、空则退全量。
   // firstTurn=0 即 zero-edit 收敛（0 次纠正）；null = 喂完所有纠正仍未 scoped 命中。
@@ -385,13 +398,23 @@ async function main() {
     // 探针对两者**都**失败（探针的意义就是在烧 4 小时前把问题问出来），但措辞必须指对方向。
     console.log(`[probe] 打不开的行：${probeErrored.length}（未测到 ${probeNotMeasured.length} / 答错 ${probeModelFail.length}）` +
       ` / 未编译过的行：${probeNoCompile.length} / 降级调用 ${DEGRADED_CALLS} 次`)
+    // 前门腿同样要在探针里报：探针的意义是「开全量前把问题问出来」，前门是宣称主路径。
+    console.log(
+      `[probe] 前门腿：${frontDoorStats.rows} 行中 routed ${frontDoorStats.routed} / rejected ${frontDoorStats.rejected}（模型侧，仅记录）` +
+        ` / 产物编译失败 ${frontDoorStats.compileFailures.length} / no-table 分支覆盖 ${frontDoorStats.noTableExercised}`
+    )
     for (const r of probeErrored.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
     for (const r of probeNoCompile.slice(0, 3)) console.error(`[probe]   ✗ ${r.file} [${r.lang}] — 生成成功但编译失败`)
+    if (!frontDoorStats.ok) {
+      for (const m of frontDoorStats.compileFailures.slice(0, 3)) console.error(`[probe]   ✗ 前门产物编译失败：${m}`)
+      if (frontDoorStats.noTableExercised === 0) console.error('[probe]   ✗ 前门的 no-table 分支一次都没走到（见 check-front-door 头注）')
+      if (frontDoorStats.routed === 0) console.error('[probe]   ✗ 前门没有成功路由任何一行模型产出')
+    }
     if (!SERVED_MODELS.size) {
       console.error(`[probe] ✗ 模型一次都没应答（served 为空）—— 中继鉴权/路由层没通`)
     }
     console.log('[probe] 未写任何产物（无 last-accuracy.json / 无徽章）、未参与门禁判定 —— 探针不许当成绩。')
-    const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || !SERVED_MODELS.size
+    const bad = probeErrored.length > 0 || probeNoCompile.length > 0 || !SERVED_MODELS.size || !frontDoorStats.ok
     if (bad) {
       console.error(
         '\n[probe] FAILED —— 别拿它开全量跑。' +
@@ -576,6 +599,12 @@ async function main() {
   console.log(`  attribute acc (avg):   ${(attrAcc * 100).toFixed(1)}%`)
   console.log(`  actions F1 (avg):      ${(actF1 * 100).toFixed(1)}%`)
   console.log(`  compiles:              ${(compileRate * 100).toFixed(1)}%`)
+  console.log(
+    `  front-door (model out): routed ${frontDoorStats.routed}/${frontDoorStats.rows}` +
+      ` · rejected ${frontDoorStats.rejected} (model-side, recorded not gated)` +
+      ` · compile failures ${frontDoorStats.compileFailures.length} (GATED)` +
+      ` · no-table exercised ${frontDoorStats.noTableExercised} (GATED)`
+  )
   // B3 收敛（只观测）：≤K 轮内收敛率 + 平均收敛轮数。「95% = scoped zero-edit ∨ ≤K 轮收敛」
   // 的第二条腿。converged/total 旁证——语料小、未收敛会把均值拉偏，必须一起看。
   if (convStats.total) {
@@ -705,6 +734,17 @@ async function main() {
     attributeAccuracy: Number(attrAcc.toFixed(4)),
     actionsF1: Number(actF1.toFixed(4)),
     compileRate: Number(compileRate.toFixed(4)),
+    // W1.3 前门腿：**模型产出**经真 `generate_crud` 的落地情况（不动模型调用，纯确定性代码）。
+    // `compileFailures` / `noTableExercised` 是门禁判据（见 setupFrontDoor 头注）；
+    // `rejected` 是模型侧拒绝（isError / 过不了 crudShape），只记录不判红。
+    frontDoor: {
+      rows: frontDoorStats.rows,
+      routed: frontDoorStats.routed,
+      rejected: frontDoorStats.rejected,
+      compileFailures: frontDoorStats.compileFailures.length,
+      noTableExercised: frontDoorStats.noTableExercised,
+      ok: frontDoorStats.ok,
+    },
     // B3 收敛（只观测、不门禁）。收敛语料为空时整块为 null，表明本次没跑精修语料。
     convergence: convStats.total
       ? {
@@ -729,7 +769,7 @@ async function main() {
         },
     byCapability,
     byLanguage,
-    passed: gateRate >= TARGET_ACCURACY && guards.ok,
+    passed: gateRate >= TARGET_ACCURACY && guards.ok && frontDoorStats.ok,
   }
   try {
     writeFileSync(ACCURACY_FILE, JSON.stringify(record, null, 2) + '\n')
@@ -775,10 +815,15 @@ async function main() {
     console.warn(`  (could not write scoped badge: ${err.message})`)
   }
 
-  if (gateRate < TARGET_ACCURACY || !guards.ok) {
+  if (gateRate < TARGET_ACCURACY || !guards.ok || !frontDoorStats.ok) {
+    const fdWhy = frontDoorStats.ok
+      ? ''
+      : `\n  Front-door leg failed (W1.3): compile failures ${frontDoorStats.compileFailures.length}, ` +
+        `no-table exercised ${frontDoorStats.noTableExercised}, routed ${frontDoorStats.routed}/${frontDoorStats.rows}.` +
+        `\n  This is a defect in the claimed main path, NOT a model-accuracy result.`
     console.error(
       `\n[eval:llm] gate (${gateMetric}) ${(gateRate * 100).toFixed(1)}% is below target ${(TARGET_ACCURACY * 100).toFixed(0)}%` +
-        ` (diagnostic core ${(coreRate * 100).toFixed(1)}%)${guards.ok ? '' : ' — regression guards also failed'}.\n` +
+        ` (diagnostic core ${(coreRate * 100).toFixed(1)}%)${guards.ok ? '' : ' — regression guards also failed'}.${fdWhy}\n` +
         `  The gate is the user-ratified 95% definition: scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge.`
     )
     process.exit(1)

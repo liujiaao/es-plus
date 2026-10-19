@@ -286,9 +286,22 @@ function checkFails(result, substr, label) {
   check(!/gateExact/.test(src), 'eval-llm.mjs 里不得再有 gateExact（core 当门禁的旧形态）')
   check(/const gateRate = def95\.rate \?\? 0/.test(src), '门禁数字必须来自 def95.rate')
   check(/const gateMetric = 'definition95'/.test(src), '产物必须记下门禁指标名 gateMetric')
-  check(/passed: gateRate >= TARGET_ACCURACY && guards\.ok/.test(src), 'passed 必须 = 门禁 ∧ 回归防线')
+  check(
+    /passed: gateRate >= TARGET_ACCURACY && guards\.ok(?: && frontDoorStats\.ok)?,/.test(src),
+    'passed 必须 = 门禁 ∧ 回归防线（可再加**布尔**守卫，但准确率数字只能来自 gateRate）'
+  )
   check(/const pct = gateRate \* 100/.test(src), '徽章数字必须与门禁同源（gateRate）')
-  check(/if \(gateRate < TARGET_ACCURACY \|\| !guards\.ok\)/.test(src), 'exit code 必须只看 gateRate')
+  // 准确率门禁只有 gateRate 一个数字来源；其余 disjunct 允许**布尔守卫**（回归防线 / 前门腿），
+  // 因为它们是「确定性缺陷」而不是第二个准确率口径 —— 混进 core/scoped/full 才是红盲（AI-33②）。
+  const exitLine = (src.match(/if \(gateRate < TARGET_ACCURACY[^\n]*\)/) ?? [''])[0]
+  check(
+    exitLine.trim().startsWith('if (gateRate < TARGET_ACCURACY'),
+    'exit code 必须以 gateRate < TARGET_ACCURACY 为主判据'
+  )
+  check(
+    !/coreRate|exactHeldout|exactScoped|exactFull|exactIntent/.test(exitLine),
+    'exit code 不得引入 gateRate 以外的准确率数字（core/scoped/full 只能并列公布）'
+  )
   check(
     /evaluateHealth/.test(src),
     'F6 健康门必须走 eval/ratchet.mjs 的 evaluateHealth（纯函数，CI 上免费可验；行为断言见上一块）'

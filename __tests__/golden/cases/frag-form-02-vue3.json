@@ -1,0 +1,47 @@
+{
+  "scene": "form",
+  "target": "vue3",
+  "config": {
+    "fields": [
+      {
+        "prop": "keyword",
+        "label": "关键字",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "禁用",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "prop": "createdAt",
+        "label": "创建时间",
+        "formtype": "DatePicker"
+      },
+      {
+        "prop": "enabled",
+        "label": "仅看启用",
+        "formtype": "Switch"
+      }
+    ],
+    "context": "query",
+    "buttons": "query",
+    "formLayout": {
+      "labelWidth": "110px",
+      "minFoldRows": 2
+    },
+    "typescript": true
+  },
+  "nl": "做一个独立查询表单：关键字、状态、创建时间、仅看启用开关，label 宽 110px，超过两行折叠，底部查询/重置按钮。",
+  "notes": "独立 es-form 的容器级词汇（Wave 4）：formLayout.labelWidth/minFoldRows 经 layoutFormProps.formLayProps 下沉；buttons=query 提供折叠开关的承载区（buttons=none 时生成器会告警）。 target=vue3（同场景三条用例 config 逐字节相同，只差 target）。"
+}

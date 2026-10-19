@@ -77,7 +77,7 @@
 | 1.5 | `last-accuracy.json` 增 `byDimension` 基线 + 「维度 < 基线 → 红」检查；**并加防「删难例洗分」守卫** | 某维度退步 / 难例被抽走 → 红 |
 | 1.6 | **补 6 条 few-shot COVERAGE 断言**：`reactions`、`columns/columnGroups`、`expandConfig`、`treeConfig`、`editConfig`、**`mergeConfig`** | ❌ **更正：是 6 个不是 5**（你漏了 `mergeConfig`：`scorers.mjs:332` 有该维度、COVERAGE 19 条里无）；删示例 → 红 |
 | 1.7 | **扩 heldout 到 ≥60 例**（纯泛化），与 1.6 的新 few-shot 分离 | ❌ **反噬警告**：补 COVERAGE 会迫使加 few-shot → 若不同步扩 `FEWSHOT_DERIVED`（`eval-llm.mjs:67`）与 heldout，**诚实语料缩水**，与目标自相矛盾 |
-| 1.8 | **eval 扩前门冒烟**：对 `generate_crud` 至少跑一遍 | 被测路径 = 宣称主路径 |
+| 1.8 | ✅ **已落地（2026-10-19，AI-40）**：**eval 扩前门冒烟** —— `check-front-door`（语料侧，确定性）+ eval 的**前门腿**（模型产出侧，含 no-table 分支强制覆盖）；共享原语 `scripts/lib/front-door.mjs`，分类/聚合 `scripts/eval/front-door-leg.mjs` | **被测路径 = 宣称主路径**：eval 的 `passed`/exit code 读 `frontDoorStats.ok`；`check:front-door-leg` 脚本化钉住七类分类（变异 → 红） |
 
 ### Wave 2 · 契约守卫（AI-26 + AI-29 + AI-32，1–2 天）
 

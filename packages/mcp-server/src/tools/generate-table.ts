@@ -1,9 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateTableBlock } from "@es-plus/shared";
-import { surfaceFieldSchema, renderFragmentOutput } from "./_fragment-shapes.js";
+import { surfaceFieldSchema, renderFragmentOutput, tableBlockOptionsSchema, tablePaginationSchema } from "./_fragment-shapes.js";
 
-const tableShape = {
+/**
+ * 入参形状（导出供 `validate_config({type:'es-table-config'})` 复用 —— 工具的 Zod
+ * 形状就是该配置类型的**唯一真源**，不另写第三份字段清单）。
+ */
+export const tableShape = {
   fields: z.array(surfaceFieldSchema).min(1).describe("Table columns — one per column the user described"),
   apiUrl: z
     .string()
@@ -15,17 +19,14 @@ const tableShape = {
     .describe("Target renderer: vue3 (Element Plus), vue2 (Element UI), antdv (Ant Design Vue)"),
   typescript: z.boolean().default(true),
   i18n: z.boolean().default(false).describe("Use labelKey for i18n"),
-  tableOptions: z
-    .object({
-      border: z.boolean().default(true),
-      stripe: z.boolean().default(true),
-      rowkey: z.string().default("id"),
-      highlightCurrentRow: z.boolean().default(true),
-      multiSelect: z.boolean().optional(),
-      // F3 补证：片段路径也必须能收到用户表头样式（此前写死默认背景 → 配置静默失效）。
-      headerCellStyle: z.record(z.string()).optional(),
-    })
-    .optional(),
+  tableOptions: tableBlockOptionsSchema
+    .optional()
+    .describe(
+      "Container options — the SAME declarative subset as generate_crud's tableOptions (core TableOptions minus function values): appearance (border/stripe/size/showHeader/emptyText/leftText), height (heightType/tabHeight/height), columns (multiSelect/snIndex), state (cachePageSelection), row (rowkey/rowClassName/defaultSort), request (refetchKeepPage/localPagination/configTableOut), engine (virtual/engine/rowHeight/estimatedRowHeight/overscanCount), inline edit (editConfig — requires engine:'vxe').",
+    ),
+  pagination: tablePaginationSchema
+    .optional()
+    .describe("Pagination seed ({pageSize, pageSizes}); current/total are managed by the component."),
   rowButtons: z
     .array(
       z.object({

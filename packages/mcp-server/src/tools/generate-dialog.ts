@@ -3,7 +3,11 @@ import { z } from "zod";
 import { generateDialogBlock } from "@es-plus/shared";
 import { surfaceFieldSchema, renderFragmentOutput, dialogOptionsSchema } from "./_fragment-shapes.js";
 
-const dialogShape = {
+/**
+ * 入参形状（导出供 `validate_config({type:'es-dialog-config'})` 复用 —— 工具的 Zod
+ * 形状就是该配置类型的**唯一真源**）。
+ */
+export const dialogShape = {
   fields: z.array(surfaceFieldSchema).min(1).describe("Form fields shown inside the dialog"),
   apiUrl: z
     .string()

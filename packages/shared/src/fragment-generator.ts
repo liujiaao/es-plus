@@ -44,7 +44,30 @@ export interface FormBlockInput {
   context?: 'query' | 'form'
   /** 底部按钮:'none'(默认,隐藏按钮区)/ 'query'(查询+重置)/ 'submit'(保存+重置)。 */
   buttons?: 'none' | 'query' | 'submit'
+  /** 表单布局（Wave 4）：与权威 schema 顶层的 `formLayout` 同一形状、同一消费面。 */
+  formLayout?: EsFormLayout
 }
+
+/**
+ * 独立表单的布局键（Wave 4）—— 权威 schema 顶层 `formLayout` 的数据子集，
+ * 映射到 `es-form` 的 `layoutFormProps.formLayProps`（`labelWidth` / `minFoldRows`
+ * 都是 es-form 的真实 prop；此前独立表单这两项写死/不可达）。
+ */
+export interface EsFormLayout {
+  /** 表单 label 宽度（映射 `formLayProps.labelWidth`）。 */
+  labelWidth?: string | number
+  /** 超过 N 行折叠（映射 `formLayProps.minFoldRows`；需要按钮区，`buttons:'none'` 时会告警）。 */
+  minFoldRows?: number
+}
+
+/** `formLayout` 的发射枚举（与 {@link EsFormLayout} 键集相等，守卫钉住）。 */
+export const FORM_LAYOUT_KEYS = ['labelWidth', 'minFoldRows'] as const
+
+/**
+ * 独立表单的完整配置（= `generate_form` 的入参；Wave 4 起容器级词汇复用
+ * 权威 `formLayout` 数据子集，见 {@link EsFormLayout}）。
+ */
+export type EsFormConfig = FormBlockInput
 
 function resolveTarget(t?: TargetFramework): TargetFramework {
   return t === 'vue2' || t === 'antdv' ? t : DEFAULT_TARGET
@@ -64,13 +87,27 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   const buttons = input.buttons ?? 'none'
   const fields = input.fields
   const warnings: string[] = []
+  const layout = input.formLayout ?? {}
+  const hasLayout = input.formLayout !== undefined
+
+  if (layout.minFoldRows !== undefined && buttons === 'none') {
+    warnings.push(
+      "formLayout.minFoldRows 需要按钮区承载折叠开关，但 buttons:'none' 会隐藏整个按钮区（isBtnHidden）—— 该配置在运行时不可见。要折叠请同时传 buttons:'query' 或 'submit'。",
+    )
+  }
 
   const lines: string[] = []
 
   // Template
   lines.push('<template>')
   const btnAttr = buttons === 'none' ? '' : ' :config-btn="configBtn"'
-  const hideBtn = buttons === 'none' ? ' :layout-form-props="{ formLayProps: { isBtnHidden: true } }"' : ''
+  // 无 formLayout 时保持既有逐字节产物（按钮区隐藏仍走内联字面量）；
+  // 给了 formLayout 才引入 layoutFormProps 常量（labelWidth/minFoldRows 有处可落地）。
+  const hideBtn = hasLayout
+    ? ' :layout-form-props="layoutFormProps"'
+    : buttons === 'none'
+      ? ' :layout-form-props="{ formLayProps: { isBtnHidden: true } }"'
+      : ''
   lines.push(`  <es-form :model="model" :form-item-list="formItems"${btnAttr}${hideBtn} />`)
   lines.push('</template>')
   lines.push('')
@@ -110,6 +147,17 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, context, i18n)), 2)
   lines.push(`const formItems = ${formItemsJson}`)
 
+  // 布局（Wave 4）：只有给了 formLayout 才引入常量 —— 未给时保持既有产物逐字节不变。
+  // 遍历 FORM_LAYOUT_KEYS（而非逐键手写），接口加键却不发射在结构上不可能。
+  if (hasLayout) {
+    const formLayProps: Record<string, unknown> = {}
+    if (buttons === 'none') formLayProps.isBtnHidden = true
+    for (const k of FORM_LAYOUT_KEYS) {
+      if (layout[k] !== undefined) formLayProps[k] = layout[k]
+    }
+    lines.push(`const layoutFormProps = { formLayProps: ${inlineJson(formLayProps)} }`)
+  }
+
   // 可选按钮
   if (buttons !== 'none') {
     lines.push('')
@@ -128,6 +176,7 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   if (isVue2) {
     const exposed = ['model', 'formItems']
     if (buttons !== 'none') exposed.push('configBtn')
+    if (hasLayout) exposed.push('layoutFormProps')
     lines.push('')
     lines.push(`    return { ${exposed.join(', ')} }`)
     lines.push('  }')
@@ -140,6 +189,9 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   const summary = [
     `Generated standalone <es-form> block (target=${target}):`,
     `- ${fields.length} field(s), span context=${context}, buttons=${buttons}`,
+    hasLayout
+      ? `- Form layout: ${FORM_LAYOUT_KEYS.filter((k) => layout[k] !== undefined).map((k) => `${k}=${String(layout[k])}`).join(', ') || '(isBtnHidden only)'}`
+      : '',
     ts ? '- TypeScript enabled' : '',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
@@ -158,6 +210,113 @@ export interface TableRowButton {
   key?: string
 }
 
+/**
+ * 独立 `<es-table>` 的**容器级**选项（Wave 4）。
+ *
+ * 与权威 AI 侧 `tableOptions`（`structured-config.schema.ts` 的
+ * `StructuredCrudConfigSchema` 里那一块）**逐键相同** —— 它本身已经是 core
+ * `TableOptions` 里「可声明式、JSON 可承载」的子集。此前片段路径只收 5 个布尔，
+ * 文档站 demo 能配的 `size`/`emptyText`/`height`/`defaultSort`/`localPagination` 等
+ * 在独立表格里 AI 生成不出来（独立场景的表达力 ≪ 组合页）。
+ *
+ * 守卫（单一真源，勿另写清单）：
+ *   - `scripts/check-entry-contract.mjs`：本接口键集 === 权威 `tableOptions` 键集；
+ *   - `scripts/check-fragment-contract.mjs`：本接口 === zod3 镜像
+ *     `tableBlockOptionsSchema`，且每个键都出现在发射枚举
+ *     （{@link TABLE_BLOCK_ALWAYS} ∪ {@link TABLE_BLOCK_OPTION_ORDER}）里 ——
+ *     「声明了、生成器却读不到」就是静默丢弃。
+ */
+export interface TableBlockOptions {
+  border?: boolean
+  stripe?: boolean
+  rowkey?: string
+  heightType?: 'auto' | 'height' | 'maxHeight'
+  tabHeight?: number | string
+  height?: number | string
+  multiSelect?: boolean
+  highlightCurrentRow?: boolean
+  headerCellStyle?: Record<string, string>
+  virtual?: boolean
+  engine?: 'default' | 'virtual' | 'vxe'
+  rowHeight?: number
+  estimatedRowHeight?: number
+  overscanCount?: number
+  rowClassName?: string
+  size?: 'large' | 'default' | 'small'
+  showHeader?: boolean
+  emptyText?: string
+  snIndex?: boolean
+  leftText?: string
+  cachePageSelection?: boolean
+  refetchKeepPage?: boolean
+  localPagination?: boolean
+  defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  editConfig?: {
+    trigger?: 'click' | 'dblclick' | 'manual'
+    mode?: 'cell' | 'row'
+    showStatus?: boolean
+    showUpdateStatus?: boolean
+    showInsertStatus?: boolean
+    autoClear?: boolean
+    enabled?: boolean
+  }
+  configTableOut?: { total?: string; tableData?: string; pageSize?: string; current?: string }
+}
+
+/**
+ * `tableOptions` 里**无条件发射**的键（有历史默认值，省略时回落）。与
+ * {@link TABLE_BLOCK_OPTION_ORDER} 合起来必须恰等于 {@link TableBlockOptions} 的键集
+ * —— `check-fragment-contract.mjs` 断这一条。
+ */
+export const TABLE_BLOCK_ALWAYS = [
+  'border',
+  'stripe',
+  'highlightCurrentRow',
+  'headerCellStyle',
+  'rowkey',
+] as const
+
+/**
+ * `tableOptions` 里**只在给了值时才发射**的键，顺序冻结（产物对入参插入顺序不敏感）。
+ * 发射循环直接遍历本数组 —— 因此不存在「接口声明了、循环没枚举」的死键。
+ */
+export const TABLE_BLOCK_OPTION_ORDER = [
+  'heightType',
+  'tabHeight',
+  'height',
+  'virtual',
+  'rowHeight',
+  'estimatedRowHeight',
+  'overscanCount',
+  'rowClassName',
+  'engine',
+  'multiSelect',
+  'configTableOut',
+  'editConfig',
+  'size',
+  'showHeader',
+  'emptyText',
+  'snIndex',
+  'leftText',
+  'cachePageSelection',
+  'defaultSort',
+  'refetchKeepPage',
+  'localPagination',
+] as const
+
+/**
+ * 独立表格的 `pagination` 播种键（权威 schema 顶层 `pagination` 的数据子集）。
+ * 独立表格此前把 `{ current:1, pageSize:10, total:0 }` 写死 —— `localPagination`
+ * 与自定义 pageSize 因此无处可传。
+ */
+export interface EsTablePagination {
+  pageSize?: number
+  pageSizes?: number[]
+}
+
+/** `pagination` 的发射枚举（与 {@link EsTablePagination} 键集相等，守卫钉住）。 */
+export const PAGINATION_KEYS = ['pageSize', 'pageSizes'] as const
+
 export interface TableBlockInput {
   /** 列字段(复用 FieldConfig 词汇)。 */
   fields: SurfaceField[]
@@ -166,21 +325,33 @@ export interface TableBlockInput {
   target?: TargetFramework
   typescript?: boolean
   i18n?: boolean
-  tableOptions?: {
-    border?: boolean
-    stripe?: boolean
-    rowkey?: string
-    highlightCurrentRow?: boolean
-    multiSelect?: boolean
-    /** 表头单元格样式。缺省 `{ background: '#f5f7fa' }`；此前片段路径写死该值（F3 补证）。 */
-    headerCellStyle?: Record<string, string>
-  }
+  tableOptions?: TableBlockOptions
+  /** 分页播种（pageSize/pageSizes）；`total`/`current` 由组件自管。 */
+  pagination?: EsTablePagination
   /**
    * 可选操作列按钮。刻意只发 `triggerEvent: true`(事件上抛)而不内联 click 处理体——
    * 独立表格没有 openForm/handleDelete 的上下文,内联会产生悬空引用导致编译失败。
    * 宿主监听 es-table 的事件自行处理。
    */
   rowButtons?: TableRowButton[]
+}
+
+/**
+ * 独立表格的完整配置（= `generate_table` 的入参；Wave 4 起容器级词汇复用
+ * `TableOptions` 的 JSON 数据子集，见 {@link TableBlockOptions}）。
+ * 命名与 `EsFormConfig` / `EsDialogConfig` 同族，便于宿主一次性理解三个独立场景。
+ */
+export type EsTableConfig = TableBlockInput
+
+/**
+ * 表格选项值 → 源码字面量。
+ * 字符串走 `q()`（转义 `'`/换行/`</`）、数字/布尔直出、对象/数组走 `inlineJson`
+ * （`configTableOut`/`editConfig`/`defaultSort` 都是纯 JSON 数据）。
+ */
+function optionLiteral(v: unknown): string {
+  if (typeof v === 'string') return q(v)
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  return inlineJson(v)
 }
 
 /**
@@ -193,11 +364,19 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   const ts = input.typescript ?? true
   const i18n = input.i18n ?? false
   const fields = input.fields
-  const t = input.tableOptions ?? {}
+  const t: TableBlockOptions = input.tableOptions ?? {}
   const warnings: string[] = []
 
   if (!input.apiUrl) {
     warnings.push('未提供 apiUrl —— 生成的表格不会自动取数,请为 tableData 手动接入数据源(或改用 compose/CRUD 页)。')
+  }
+
+  // 与 schema 模式同一条核对（AI-09 子项④）：editConfig 只在 vxe 引擎下生效。
+  // 片段路径此前连这个键都收不到，自然不会告警；现在收得进就必须同样非静默。
+  if (t.editConfig && t.engine !== 'vxe') {
+    warnings.push(
+      `tableOptions.editConfig requires engine: 'vxe' — the current engine is '${t.engine ?? 'default'}', so inline editing will be silently ignored at runtime.`,
+    )
   }
 
   const lines: string[] = []
@@ -262,7 +441,9 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(']')
   lines.push('')
 
-  // options
+  // options —— 与 schema 模式同一套键（Wave 4）：`TABLE_BLOCK_ALWAYS` 有默认值、
+  // `TABLE_BLOCK_OPTION_ORDER` 逐键「给了才发」。循环直接遍历冻结数组，
+  // 因此接口里不可能存在「声明了却永不发射」的键（守卫在 check-fragment-contract）。
   lines.push('const options = {')
   lines.push(`  border: ${t.border !== false},`)
   lines.push(`  stripe: ${t.stripe !== false},`)
@@ -272,13 +453,29 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(`  headerCellStyle: ${inlineJson(t.headerCellStyle || { background: '#f5f7fa' })},`)
   if (input.apiUrl) lines.push(`  apiParams: { url: ${q(input.apiUrl)} },`)
   lines.push(`  rowkey: ${q(t.rowkey || 'id')},`)
-  if (t.multiSelect) lines.push('  multiSelect: true,')
+  for (const k of TABLE_BLOCK_OPTION_ORDER) {
+    const v = t[k]
+    // `false` 是这些键的有效取值（showHeader:false / cachePageSelection:false …），
+    // 故判据是 `!== undefined` 而不是真值 —— 与 schema 模式的 AI-22 注释同口径。
+    if (v === undefined) continue
+    lines.push(`  ${k}: ${optionLiteral(v)},`)
+  }
   lines.push('}')
   lines.push('')
 
   lines.push('const tableData = ref([])')
   lines.push('const tableRef = ref(null)')
-  lines.push('const pagination = ref({ current: 1, pageSize: 10, total: 0 })')
+  const pag = input.pagination ?? {}
+  const pagParts: string[] = ['current: 1']
+  // 权威 schema 的 `pagination.pageSize` 缺省 10 —— 片段此前把 `pageSize: 10` 写死，
+  // 现在仍以它为缺省（未给 pagination 时产物逐字节不变），只让调用方有机会覆盖。
+  const pagDefaults: Record<string, unknown> = { pageSize: 10 }
+  for (const k of PAGINATION_KEYS) {
+    const v = pag[k] !== undefined ? pag[k] : pagDefaults[k]
+    if (v !== undefined) pagParts.push(`${k}: ${optionLiteral(v)}`)
+  }
+  pagParts.push('total: 0')
+  lines.push(`const pagination = ref({ ${pagParts.join(', ')} })`)
 
   if (isVue2) {
     lines.push('')
@@ -420,6 +617,12 @@ export interface DialogBlockInput {
    */
   defaultTitle?: string
 }
+
+/**
+ * 独立弹窗的完整配置（= `generate_dialog` 的入参；容器级词汇复用
+ * `DialogBlockOptions` —— core `DialogOptions` 的声明式数据子集，AI-28 已落地）。
+ */
+export type EsDialogConfig = DialogBlockInput
 
 /**
  * 独立弹窗。两种产物形态（AI-28，`input.mode`）：

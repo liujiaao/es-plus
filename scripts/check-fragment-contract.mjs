@@ -25,6 +25,14 @@
  *  5. 教学面不得教幻影键:`resources/types.ts` 的 `TYPES_FALLBACK_VUE3.DialogOptions`
  *     具名键 ⊆ core 的具名键,且**必须覆盖** `dialogOptionsSchema` 的全部键 ——
  *     `generate_dialog` 的 `options` 收的每个键,宿主要在类型资源里看得到。
+ *  6. 片段 `tableOptions`(Wave 4):shared `TableBlockOptions` === zod3
+ *     `tableBlockOptionsSchema`,两者都 ⊆ core `TableOptions` 的具名键;且键集恰等于
+ *     `TABLE_BLOCK_ALWAYS ∪ TABLE_BLOCK_OPTION_ORDER`(两者不重叠)—— 接口声明了却不在
+ *     发射枚举里 = 接受入参却永不注入产物。
+ *  7. 片段 `formLayout` / `pagination`(Wave 4):`EsFormLayout` / `EsTablePagination`
+ *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ zod3 镜像(三处全等)。
+ *     片段与**权威 schema** 同名嵌套块的等价性由 `check-entry-contract.mjs` 断言(6),
+ *     两条守卫各守一侧:本脚本守手写副本漂移,那条守片段↔权威收窄。
  *
  * 用法:node scripts/check-fragment-contract.mjs
  * 退出码:0 = 同步;1 = 发现漂移。
@@ -84,6 +92,20 @@ function quotedMembers(block) {
     keys.push(m[1])
   }
   return keys
+}
+
+/**
+ * 从 `export const <name> = [...] as const` 抓全部带引号成员（单行/多行通吃）。
+ * `quotedMembers` 只认多行缩进写法，而 Wave 4 的 `PAGINATION_KEYS` / `FORM_LAYOUT_KEYS`
+ * 是单行数组 —— 这里统一按字面量抓，避免为书写风格再分两套解析。
+ */
+function constArrayMembers(src, name, label) {
+  const m = src.match(new RegExp(`export const ${name} = \\[([^\\]]*)\\] as const`))
+  if (m === null) {
+    fail(`未能在 ${label} 定位 ${name}`)
+    return null
+  }
+  return [...m[1].matchAll(/'([A-Za-z_$][\w$]*)'/g)].map((x) => x[1])
 }
 
 const diff = (a, b) => [...a].filter((k) => !b.has(k))
@@ -181,10 +203,123 @@ function main() {
     )
   }
 
+  // ── 6. 片段 tableOptions(Wave 4)：shared 接口 ≡ zod3 镜像 ⊆ core TableOptions ──
+  const fgenSrc = read(FRAGMENT_GENERATOR_SRC)
+  const fshapesSrc = read(FRAGMENT_SHAPES_SRC)
+  const tboBlock = sliceBlock(fgenSrc, 'export interface TableBlockOptions {', '}', 'TableBlockOptions')
+  const tbozBlock = sliceBlock(
+    fshapesSrc,
+    'export const tableBlockOptionsSchema = z.object({',
+    '});',
+    'tableBlockOptionsSchema'
+  )
+  const coreTblBlock = sliceBlock(read(CORE_TYPES_SRC), 'export interface TableOptions {', '}', 'core TableOptions')
+  if (tboBlock === null || tbozBlock === null || coreTblBlock === null) process.exit(1)
+
+  const tboKeys = new Set(topLevelKeys(tboBlock))
+  const tbozKeys = new Set(topLevelKeys(tbozBlock))
+  const coreTblKeys = new Set(topLevelKeys(coreTblBlock))
+
+  // 6a. 双份镜像逐键一致（zod 无 passthrough：跑偏了就是静默 strip）。
+  const tboOnlyShared = diff(tboKeys, tbozKeys)
+  const tboOnlyZod = diff(tbozKeys, tboKeys)
+  if (tboOnlyShared.length) {
+    ok = fail(`zod3 tableBlockOptionsSchema 缺少 TableBlockOptions 的键：${tboOnlyShared.join(', ')}（工具入参会静默 strip）`)
+  }
+  if (tboOnlyZod.length) {
+    ok = fail(`zod3 tableBlockOptionsSchema 多出 TableBlockOptions 没有的键：${tboOnlyZod.join(', ')}（镜像凭空多键）`)
+  }
+
+  // 6b. ⊆ core TableOptions 的具名键（承诺的选项运行时必须读得懂）。
+  const tboPhantom = diff(tboKeys, coreTblKeys)
+  if (tboPhantom.length) {
+    ok = fail(`TableBlockOptions 含 core TableOptions 不认的键：${tboPhantom.join(', ')}（承诺了一个 runtime 读不懂的选项）`)
+  }
+
+  // 6c. 发射全覆盖：键集 ≡ TABLE_BLOCK_ALWAYS ∪ TABLE_BLOCK_OPTION_ORDER。
+  const tbaKeys = constArrayMembers(fgenSrc, 'TABLE_BLOCK_ALWAYS', 'TABLE_BLOCK_ALWAYS')
+  const tboOrderKeys = constArrayMembers(fgenSrc, 'TABLE_BLOCK_OPTION_ORDER', 'TABLE_BLOCK_OPTION_ORDER')
+  if (tbaKeys === null || tboOrderKeys === null) process.exit(1)
+  const tbaSet = new Set(tbaKeys)
+  const tboOrderSet = new Set(tboOrderKeys)
+  const tboNeverEmitted = diff(tboKeys, new Set([...tbaKeys, ...tboOrderKeys]))
+  const tboDead = diff(new Set([...tbaSet, ...tboOrderSet]), tboKeys)
+  if (tboNeverEmitted.length) {
+    ok = fail(
+      `TableBlockOptions 的键 ${tboNeverEmitted.join(', ')} 不在 TABLE_BLOCK_ALWAYS / TABLE_BLOCK_OPTION_ORDER 里 —— ` +
+        '工具会接受该入参却**永不注入产物**（静默丢弃）；把键加进发射枚举或从接口删掉'
+    )
+  }
+  if (tboDead.length) {
+    ok = fail(`TABLE_BLOCK_ALWAYS / TABLE_BLOCK_OPTION_ORDER 含 TableBlockOptions 没有的键：${tboDead.join(', ')}（发射循环里的死条目）`)
+  }
+  // 两个发射枚举不得重叠（否则产物里同一键出现两次）。
+  const tboDuplicated = [...tbaKeys].filter((k) => tboOrderSet.has(k))
+  if (tboDuplicated.length) {
+    ok = fail(`TABLE_BLOCK_ALWAYS 与 TABLE_BLOCK_OPTION_ORDER 重复键：${tboDuplicated.join(', ')}（产物会重复发射同一选项）`)
+  }
+
+  // ── 7. 片段 formLayout / pagination(Wave 4)：接口 ≡ 发射枚举 ≡ zod3 镜像 ──
+  const pairSpecs = [
+    {
+      label: 'formLayout',
+      iface: 'export interface EsFormLayout {',
+      constName: 'FORM_LAYOUT_KEYS',
+      zod: 'export const formLayoutSchema = z.object({',
+    },
+    {
+      label: 'pagination',
+      iface: 'export interface EsTablePagination {',
+      constName: 'PAGINATION_KEYS',
+      zod: 'export const tablePaginationSchema = z.object({',
+    },
+  ]
+  for (const spec of pairSpecs) {
+    const ifaceBlock = sliceBlock(fgenSrc, spec.iface, '}', `${spec.label} interface`)
+    const zodBlock = sliceBlock(fshapesSrc, spec.zod, '});', `${spec.label} zod mirror`)
+    const constKeys = constArrayMembers(fgenSrc, spec.constName, spec.constName)
+    if (ifaceBlock === null || zodBlock === null || constKeys === null) process.exit(1)
+    const ifaceKeys = new Set(topLevelKeys(ifaceBlock))
+    const zodKeys = new Set(topLevelKeys(zodBlock))
+    const constSet = new Set(constKeys)
+    const ifaceOnly = [...ifaceKeys].filter((k) => !constSet.has(k))
+    const constOnly = [...constSet].filter((k) => !ifaceKeys.has(k))
+    if (ifaceOnly.length || constOnly.length) {
+      ok = fail(
+        `片段 ${spec.label}：接口与 ${spec.constName} 不等价（接口多 [${ifaceOnly.join(', ') || '无'}]、枚举多 [${constOnly.join(', ') || '无'}]）` +
+          ' —— 接口声明了却不在发射枚举里 = 静默丢弃'
+      )
+    }
+    const zodOnlyIface = diff(zodKeys, ifaceKeys)
+    const ifaceOnlyZod = diff(ifaceKeys, zodKeys)
+    if (zodOnlyIface.length) {
+      ok = fail(`zod3 ${spec.label} 镜像多出接口没有的键：${zodOnlyIface.join(', ')}`)
+    }
+    if (ifaceOnlyZod.length) {
+      ok = fail(`zod3 ${spec.label} 镜像缺少接口的键：${ifaceOnlyZod.join(', ')}（工具入参会静默 strip）`)
+    }
+  }
+
+  // ── 8. 发射必须由冻结数组驱动（而非逐键手写循环 —— 那正是死键的温床）──
+  for (const [label, constName] of [
+    ['tableOptions', 'TABLE_BLOCK_OPTION_ORDER'],
+    ['pagination', 'PAGINATION_KEYS'],
+    ['formLayout', 'FORM_LAYOUT_KEYS'],
+  ]) {
+    if (!fgenSrc.includes(`of ${constName}`)) {
+      ok = fail(
+        `fragment-generator 的 ${label} 发射未遍历 ${constName} —— ` +
+          '逐键手写会让「接口加了键、循环没跟上」重新变成无守卫缺口'
+      )
+    }
+  }
+
   if (ok) {
     console.log(
       `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === zod3 surfaceFieldSchema ${zKeys.size} 键，成员标志均未泄漏；` +
-        `dialog 选项 ${dboKeys.size} 键双份一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键）`
+        `dialog 选项 ${dboKeys.size} 键双份一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键；` +
+        `tableOptions ${tboKeys.size} 键双份一致 ⊆ core TableOptions ${coreTblKeys.size} 键，发射枚举全覆盖；` +
+        `formLayout / pagination 接口 ≡ 发射枚举 ≡ zod3 镜像）`
     )
     process.exit(0)
   }

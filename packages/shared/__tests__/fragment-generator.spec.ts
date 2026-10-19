@@ -75,6 +75,48 @@ describe('generateFormBlock — antdv', () => {
   })
 })
 
+describe('generateFormBlock — formLayout（Wave 4）', () => {
+  it('labelWidth/minFoldRows 落 layoutFormProps.formLayProps，模板统一绑定该常量', () => {
+    const { code, summary } = generateFormBlock({
+      fields,
+      buttons: 'query',
+      formLayout: { labelWidth: '96px', minFoldRows: 3 },
+    })
+    expect(code).toContain('const layoutFormProps = { formLayProps: {"labelWidth":"96px","minFoldRows":3} }')
+    expect(code).toContain(':layout-form-props="layoutFormProps"')
+    expect(code).not.toContain('{ formLayProps: { isBtnHidden: true } }')
+    expect(summary).toContain('labelWidth=96px')
+    expect(summary).toContain('minFoldRows=3')
+  })
+
+  it('不给 formLayout → 产物与 Wave 4 之前逐字节一致（none 支仍内联 isBtnHidden）', () => {
+    const { code } = generateFormBlock({ fields, buttons: 'none' })
+    expect(code).toContain(':layout-form-props="{ formLayProps: { isBtnHidden: true } }"')
+    expect(code).not.toContain('layoutFormProps')
+  })
+
+  it('buttons=none + formLayout → isBtnHidden 合并进 formLayProps（隐藏语义不丢）', () => {
+    const { code } = generateFormBlock({ fields, formLayout: { labelWidth: 120 } })
+    expect(code).toContain('const layoutFormProps = { formLayProps: {"isBtnHidden":true,"labelWidth":120} }')
+    expect(code).toContain(':layout-form-props="layoutFormProps"')
+  })
+
+  it('buttons=none 时 minFoldRows 不可见 → 显式告警（不静默）', () => {
+    const { warnings } = generateFormBlock({ fields, formLayout: { minFoldRows: 2 } })
+    expect(warnings.some((w) => w.includes('minFoldRows') && w.includes("buttons:'none'"))).toBe(true)
+  })
+
+  it('vue2：layoutFormProps 必须进 setup() 的 return（否则模板拿不到）', () => {
+    const { code } = generateFormBlock({
+      fields,
+      target: 'vue2',
+      buttons: 'query',
+      formLayout: { minFoldRows: 2 },
+    })
+    expect(code).toContain('return { model, formItems, configBtn, layoutFormProps }')
+  })
+})
+
 const columns = [
   { prop: 'name', label: '名称', formtype: 'Input', width: 120 },
   { prop: 'amount', label: '金额', formtype: 'Input', align: 'right', formatter: '(row) => Number(row.amount).toFixed(2)' },
@@ -147,6 +189,78 @@ describe('generateTableBlock — 边界', () => {
     expect(code).toContain(':pagination.sync="pagination"')
     expect(code).toContain('export default defineComponent({')
     expect(code).toContain('return { columns, options, tableData, tableRef, pagination }')
+  })
+})
+
+describe('generateTableBlock — 容器级词汇（Wave 4）', () => {
+  it('数据键按冻结顺序注入 options（JSON 值内联、字符串加引号）', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: {
+        size: 'small',
+        showHeader: false,
+        emptyText: '暂无数据',
+        height: 400,
+        rowClassName: 'row-cls',
+        defaultSort: { prop: 'name', order: 'descending' },
+      },
+    })
+    expect(code).toContain("  size: 'small',")
+    // false 是有效取值 —— 判据必须是 !== undefined（真值判断会吞掉 false）
+    expect(code).toContain('  showHeader: false,')
+    expect(code).toContain("  emptyText: '暂无数据',")
+    expect(code).toContain('  height: 400,')
+    expect(code).toContain("  rowClassName: 'row-cls',")
+    expect(code).toContain('  defaultSort: {"prop":"name","order":"descending"},')
+    // 冻结顺序：height(4) < rowClassName(8) < size(13) < showHeader(14) < emptyText(15) < defaultSort(19)
+    const at = (k: string) => code.indexOf(`\n  ${k}:`)
+    expect(at('height')).toBeLessThan(at('rowClassName'))
+    expect(at('rowClassName')).toBeLessThan(at('size'))
+    expect(at('size')).toBeLessThan(at('showHeader'))
+    expect(at('showHeader')).toBeLessThan(at('emptyText'))
+    expect(at('emptyText')).toBeLessThan(at('defaultSort'))
+  })
+
+  it('未给的键一律不发射（缺省不污染产物）', () => {
+    const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders' })
+    for (const k of ['size', 'showHeader', 'emptyText', 'height', 'rowClassName', 'defaultSort', 'engine']) {
+      expect(code).not.toContain(`\n  ${k}:`)
+    }
+    // 有默认值的键仍然无条件发射（保持既有产物）
+    expect(code).toContain('  border: true,')
+    expect(code).toContain('  stripe: true,')
+    expect(code).toContain('  highlightCurrentRow: true,')
+    expect(code).toContain("  rowkey: 'id',")
+  })
+
+  it('pagination 播种 pageSize/pageSizes；current/total 仍由组件托管', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      pagination: { pageSize: 20, pageSizes: [10, 20, 50] },
+    })
+    expect(code).toContain('const pagination = ref({ current: 1, pageSize: 20, pageSizes: [10,20,50], total: 0 })')
+  })
+
+  it('未给 pagination → 保持历史默认 { current:1, pageSize:10, total:0 }', () => {
+    const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders' })
+    expect(code).toContain('const pagination = ref({ current: 1, pageSize: 10, total: 0 })')
+  })
+
+  it('editConfig 在非 vxe 引擎下显式告警（运行时会被静默忽略）', () => {
+    const { warnings } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: { editConfig: { trigger: 'click' } },
+    })
+    expect(warnings.some((w) => w.includes('editConfig') && w.includes('vxe'))).toBe(true)
+    const ok = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'click' } },
+    })
+    expect(ok.warnings.some((w) => w.includes('editConfig'))).toBe(false)
   })
 })
 

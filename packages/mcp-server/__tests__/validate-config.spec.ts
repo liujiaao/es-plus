@@ -3,6 +3,9 @@ import {
   validatePayload,
   validateStructuredConfig,
   STRUCTURED_CRUD_TYPE,
+  ES_TABLE_TYPE,
+  ES_FORM_TYPE,
+  ES_DIALOG_TYPE,
 } from "../src/tools/validate-config.js";
 import { listAvailableSchemas } from "@es-plus/shared";
 
@@ -101,5 +104,113 @@ describe("validate_config — 结构化配置走 Zod", () => {
     const r = validatePayload({});
     expect(r.valid).toBe(false);
     expect(r.errors.length).toBeGreaterThan(0);
+  });
+});
+
+// Wave 4：独立组件场景的三种配置类型。判据直接复用工具的 Zod 形状（同一份真源），
+// 因此这里断言的是「工具收什么，validate_config 就判什么」——而不是另有一套字段清单。
+const tableField = { prop: "orderNo", label: "订单号", formtype: "Input" };
+const formField = { prop: "userName", label: "用户名", formtype: "Input" };
+const dialogField = { prop: "userName", label: "用户名", formtype: "Input" };
+
+describe("validate_config — es-table-config（Wave 4）", () => {
+  it("合法的独立表格配置（含 26 键 tableOptions 与分页播种）判为合法", () => {
+    const r = validatePayload(
+      {
+        fields: [tableField],
+        apiUrl: "/api/orders",
+        tableOptions: {
+          border: true,
+          stripe: false,
+          rowkey: "id",
+          height: 400,
+          size: "small",
+          showHeader: false,
+          emptyText: "暂无数据",
+          defaultSort: { prop: "orderNo", order: "descending" },
+          editConfig: { trigger: "click", mode: "cell" },
+        },
+        pagination: { pageSize: 20, pageSizes: [10, 20, 50] },
+      },
+      ES_TABLE_TYPE,
+    );
+    expect(r.valid).toBe(true);
+    expect(r.errors).toEqual([]);
+  });
+
+  it("tableOptions.size 非法 → 路径 /tableOptions/size + 列出合法取值（zod3 options → values 归一）", () => {
+    const r = validatePayload(
+      { fields: [tableField], tableOptions: { size: "huge" } },
+      ES_TABLE_TYPE,
+    );
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.startsWith("/tableOptions/size: "))).toBe(true);
+    const hint = r.suggestions.find((s) => s.startsWith("Valid values for /tableOptions/size:"));
+    expect(hint).toBeDefined();
+    expect(hint).toContain("small");
+    expect(hint).toContain("large");
+  });
+
+  it("缺 fields → /fields 必填错误", () => {
+    const r = validatePayload({ apiUrl: "/api/orders" }, ES_TABLE_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.startsWith("/fields: "))).toBe(true);
+  });
+});
+
+describe("validate_config — es-form-config（Wave 4）", () => {
+  it("合法：formLayout（labelWidth/minFoldRows）与 buttons 罐头都被接受", () => {
+    const r = validatePayload(
+      { fields: [formField], buttons: "query", formLayout: { labelWidth: "96px", minFoldRows: 2 } },
+      ES_FORM_TYPE,
+    );
+    expect(r.valid).toBe(true);
+  });
+
+  it("buttons 非法 → 枚举建议列出 none/query/submit", () => {
+    const r = validatePayload({ fields: [formField], buttons: "save" }, ES_FORM_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.startsWith("/buttons: "))).toBe(true);
+    const hint = r.suggestions.find((s) => s.startsWith("Valid values for /buttons:"));
+    expect(hint).toBeDefined();
+    for (const v of ["none", "query", "submit"]) expect(hint).toContain(v);
+  });
+
+  it("fields 为空数组 → 下限错误（与工具 .min(1) 同判据）", () => {
+    const r = validatePayload({ fields: [] }, ES_FORM_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.startsWith("/fields: "))).toBe(true);
+  });
+});
+
+describe("validate_config — es-dialog-config（Wave 4）", () => {
+  it("合法：composable/component 两形态与 options 底座都可校验", () => {
+    const r = validatePayload(
+      {
+        fields: [dialogField],
+        apiUrl: "/api/users",
+        mode: "component",
+        options: { width: 640, fullscreen: false },
+      },
+      ES_DIALOG_TYPE,
+    );
+    expect(r.valid).toBe(true);
+  });
+
+  it("mode 非法 → 枚举建议列出 composable/component", () => {
+    const r = validatePayload({ fields: [dialogField], mode: "jsx" }, ES_DIALOG_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.some((e) => e.startsWith("/mode: "))).toBe(true);
+    const hint = r.suggestions.find((s) => s.startsWith("Valid values for /mode:"));
+    expect(hint).toBeDefined();
+    expect(hint).toContain("composable");
+    expect(hint).toContain("component");
+  });
+
+  it("三种片段类型都不会回落到 Ajv（不再出现 Schema not found）", () => {
+    for (const t of [ES_TABLE_TYPE, ES_FORM_TYPE, ES_DIALOG_TYPE]) {
+      const r = validatePayload({ fields: [dialogField] }, t);
+      expect(r.errors.join("\n")).not.toContain("Schema not found");
+    }
   });
 });

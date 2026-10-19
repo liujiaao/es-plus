@@ -76,13 +76,13 @@
 
 | 宣称场景 | eval-llm? | golden 语料? | vite build? | 运行时? | 实际被谁验证 | **本轮后（Wave 1.1+1.2）** |
 |---|---|---|---|---|---|---|
-| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | **字符串断言**：`shared/__tests__/fragment-generator.spec.ts`（`toContain`，181 行）+ `mcp-server/__tests__/generate-tools-and-prompts.spec.ts` + `scripts/compile-smoke.mjs`（esbuild 语法解析，**不在 `check:consistency`**） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + `fragment:smoke` 升格进门禁**（准确率仍无 scorer，见下） |
-| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | 同上 | 同上 |
-| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ | ❌ | 同上 | 同上 |
-| CRUD 组合 | ⚠️ 仅 `generateFromConfig`（**后端**），**从不调前门 `generate_crud`** | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 | ➖ 未动（1.3 前门进 eval 留待下一批） |
+| 独立 `es-table`（`generate_table`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | **字符串断言**：`shared/__tests__/fragment-generator.spec.ts`（`toContain`，181 行）+ `mcp-server/__tests__/generate-tools-and-prompts.spec.ts` + `scripts/compile-smoke.mjs`（esbuild 语法解析，**不在 `check:consistency`**） | **✅ 语料 3 条 + `check:scene-coverage` 编译断言 + `fragment:smoke` 升格进门禁**（准确率仍无 scorer，见下） |
+| 独立 `es-form`（`generate_form`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | 同上 | 同上 |
+| 独立 `useDialog`（`generate_dialog`） | ❌ | ❌ **0 → ✅ 3**（3 端） | ❌ **→ ✅ 6（AI-42）** | ❌ | 同上 | 同上 |
+| CRUD 组合 | ✅ 后端 `generateFromConfig` + **前门腿**（模型产出经真 `generate_crud`，含强制 no-table 覆盖） | ✅ 186 | ✅ | ✅ vue3/antdv（Tier 1 vitest `crud-runtime.spec.ts`）+ vue2（Tier 2 playwright `e2e-runtime`） | config→code 断言 + vite build + 真实浏览器挂载 | ✅ **1.3 已落地（2026-10-19，AI-40）**：eval 每条模型产出都过前门；no-table 分支靠人为清空 table 面强制覆盖（语料天然到不了） |
 
-> **本轮把「有语料」这一格从 0 抬起来了**，但**只到「覆盖 + 编译」**：9 条片段语料（`frag-{table,form,dialog}-01-{vue3,vue2,antdv}.json`）保证每个场景每条端都有用例、且产物真能被 `generate*Block` 跑出来并解析通过。
-> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母、片段进 vite build 与运行时。故「eval-llm?」与「运行时?」两列**仍为 ❌**——本轮的贡献是让这两列的空白**可见且不许静默扩大**，而不是填上它们。
+> **本轮把「有语料」这一格从 0 抬起来了**，但**只到「覆盖 + 编译」**：18 条片段语料（`frag-{table,form,dialog}-0{1,2}-{vue3,vue2,antdv}.json`）保证每个场景每条端每个形态都有用例、且产物真能被 `generate*Block` 跑出来并解析通过；**AI-42（2026-10-19）把同一批语料接进了 golden:e2e 的真 `vite build`**（此前运行器 `.filter(isCrudCase)` 静默跳过片段）。
+> **仍未做**：片段**准确率**评分器（无 scorer 时硬造会产出恒真伪信号）、片段进 `definition95` 分母、片段**运行时**挂载。故「eval-llm?」与「运行时?」两列**仍为 ❌**——本轮的贡献是让这两列的空白**可见且不许静默扩大**，并先填上「vite build」这一格。
 
 > **❌ 初稿更正**：本节初稿把三个独立场景的验证写成「**仅** `compile-smoke` esbuild 语法解析」。**错**——
 > 它们是**有单测的**（`fragment-generator.spec.ts` 等）。但那类断言全是 `toContain` **字符串比对**：
@@ -401,13 +401,13 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 
 ### Wave 1 · 让「全场景」可测（**最高杠杆，先于一切修复**）
 
-> **进度**：1.0 / 1.0b ✅（F9 / F8，已推送）· **1.1 / 1.2 ✅ 已实施（2026-10-15）** · 1.3 / 1.4 待做（下一批）
+> **进度**：1.0 / 1.0b ✅（F9 / F8，已推送）· **1.1 / 1.2 ✅ 已实施（2026-10-15）** · **1.3 ✅ 已实施（2026-10-19，AI-40）** · 1.4 由 AI-33 收口（门禁迁 ∨ / 地板 / 棘轮已落地）
 
 | # | 动作 | 验收（变异 → 红） |
 |---|---|---|
 | 1.1 | ✅ **已实施（2026-10-15）**：**场景分类法** —— 单源 `scripts/eval/scenes.mjs`（`SCENES` / `SCENE_TOOL` / `sceneOf` / `modesOf` / `cellOf`）。语料统一为 `{scene, config, target, mode?}`：**`scene` 可选、缺省即 `'crud'`**（186 条既有用例一字未改），片段场景的 `target` 在**用例顶层**（片段输入本身不含 target）。新增 9 条片段语料（3 场景 × 3 端，同场景三条 config 逐字节相同、只差 target —— 这正是「一份配置 → 三端」的语料表达） | 新场景无语料 → 红 |
 | 1.2 | ✅ **已实施（2026-10-15）**：`compile-smoke` 升格为门禁（`fragment:smoke` 进 `check:consistency`）+ 新增 **`check:scene-coverage`**：①覆盖无空格（断每场景 × 每端 × 每模式，**缺格点名**）；②四个场景工具仍在 MCP 注册表（静态断言 `index.ts` 注册调用 + 工具文件里的 `server.tool("<name>")`）；③**片段语料真能编译**（每条真跑 `generate*Block`，用与 `compile-smoke` 同一把尺子 `scripts/lib/compile-check.mjs`） | 删任一场景覆盖 → 红（**实测**：删 `frag-table-01-vue3.json` → 报「缺格：table × vue3 无用例」并发红；漏标 `scene` → `check:scorers` 的 Zod 解析响亮抛错 + 覆盖门禁报缺格） |
-| 1.3 | **前门进 eval**：对 `generate_crud`（含 no-table 分支）至少跑一遍 | 前门回归 → 红 |
+| 1.3 | ✅ **已实施（2026-10-19，AI-40）**：**前门进 eval** —— 每条模型产出经真 `generate_crud`（含 no-table 分支强制覆盖）；共享原语抽到 `scripts/lib/front-door.mjs`，分类/聚合在 `scripts/eval/front-door-leg.mjs` | **前门回归 → 红**：eval 的 `passed`/exit code 读 `frontDoorStats.ok`（编译失败 ∨ 未覆盖 no-table ∨ 零路由）；`check:front-door-leg` 脚本化钉住分类 |
 | 1.4 | AI-33 原 8 条（门禁迁 ∨ + core 地板 + per-dim ratchet + 徽章与门禁同源 + 补 6 维 COVERAGE + heldout ≥60 + 防删难例） | 篡改 ∨ / 维度退步 / 删语料 → 红 |
 | **1.0** | ✅ **已实施（F9）**：`target`/`mode` 作**给定输入**喂入 prompt（`scripts/eval/prompt.mjs`，仿 `fixedFields`）。**不做这条，「95% 定义」就在惩罚模型猜不到的宿主输入**（`definition95` 上限 64.6%） | 58 例不可推断例改为「给定 target/mode」；`check:eval-prompt` 钉住旧路径逐字节不变 + 维度不放水 → 篡改即红 |
 | **1.0b** | ✅ **已实施（F8）**：`FEWSHOT_DERIVED` 按语义裁定补全 **6 → 22**（剔 16 例未登记同源），抽到 `scripts/eval/fewshot-derived.mjs`；heldout **180 → 164** | 新增 `check:fewshot-registration`：机械下界（prop ≥0.6 ∨ NL ≥0.35，且 actions 同）⊆ 登记表 + 登记条目须真实存在 + heldout 不得被洗白。**实测**：换回旧 6 条登记表该守卫报 12 例 → 红 |
@@ -459,6 +459,21 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
 >
 > 幸运的是 `tableOptionsKeys` **已被抽取**（`:153-158`）——`片段 tableOptions ⊆ 权威 tableOptions` 这条断言只差接线。
 
+**✅ 已落地（2026-10-19，AI-40）**
+
+| 项 | 落地 | 硬指标如何被强制 |
+|---|---|---|
+| `EsTableConfig` | `TableBlockOptions` **26 键**（= 权威 AI `tableOptions` 全等镜像）+ `EsTablePagination {pageSize,pageSizes}`；发射由 `TABLE_BLOCK_ALWAYS` / `TABLE_BLOCK_OPTION_ORDER` / `PAGINATION_KEYS` 三个冻结数组驱动 | `check-fragment-contract` ⑥：接口 ≡ zod3 镜像 ⊆ core `TableOptions`，且键集 **恰等于** 两个发射枚举（不重叠）；⑦：接口 ≡ 发射枚举 ≡ zod3；⑧：生成器必须 `of <冻结数组>`（逐键手写即红） |
+| `EsFormConfig` | 新增 `formLayout {labelWidth,minFoldRows}` → `layoutFormProps.formLayProps`；`buttons:'none'` 时 `minFoldRows` **显式告警**（运行时不可见）；vue2 同步进 `setup()` 的 return | `check-fragment-contract` ⑦（`EsFormLayout` ≡ `FORM_LAYOUT_KEYS` ≡ zod `formLayoutSchema`）+ vitest 5 例（含「未给 formLayout 时产物逐字节不变」） |
+| `EsDialogConfig` | 类型出口（形状即已有 `DialogBlockInput`，无新增键） | — |
+| `validate_config` | 新增 `es-table-config` / `es-form-config` / `es-dialog-config` 三类型，**直接复用**三个工具的 Zod 形状（不抄第三份字段清单）；zod3 `invalid_enum_value/options` → zod4 `invalid_value/values` 归一 | `check-entry-contract` ⑦：路由数组必须列全三个常量、`fragmentSchemaFor` 每个都有 `case`、且从三个工具模块 import 形状（实测：从路由数组摘掉一项，修前全绿 → 修后红） |
+| 守卫泛化 | `readReachability()` 从「单个 `crudShape`」泛化为**遍历 `FRAGMENT_TOOL_SRC`**（table/form/dialog），并新增权威 `formLayoutKeys`/`paginationKeys` 抽取（顶层与 `DialogConfigSchema` 内同名块缩进相同，用 `lastIndexOf` 定位） | `check-entry-contract` ⑤：三个片段形状顶层键 ⊆ schema 顶层键 ∪ `FRAGMENT_TOOL_ONLY`（7 行，原因非空、只减不增 + 陈旧检查）；⑥：容器级三组键集**全等**（子集不够 —— 子集允许权威加键、片段悄悄收窄） |
+| 前门静默丢弃 | `generate_crud` 无表分支此前收了顶层 `formLayout` 却不传给 `generateFormBlock` —— 已转发（AI-40 顺带修） | 前门 `crudShape` 与片段形状同受 ⑤⑥ 约束 |
+| 语料 | `frag-table-02-{vue3,vue2,antdv}`（21 个条件发射键 + 分页播种）、`frag-form-02-*`（labelWidth/minFoldRows） | `check:scene-coverage` 编译 18/18 可解析 |
+
+**变异验证（逐项实跑咬红）**：往 `TableBlockOptions` 加未发射键 → ⑥/⑦ 三红；从 zod3 镜像删 `showHeader` → ⑥ + entry ⑥ 双红；`formShape` 加 schema 未知键 → entry ⑤ 红；`EsFormLayout.minFoldRows` 改名 → ⑦ 三红；`validate_config` 路由数组摘掉 `ES_FORM_TYPE` → entry ⑦ 红。**未动组件源码**，与「纯加法」风险约束一致。
+
+
 ### Wave 5 · 三端组件偏差裁决（**新增**）
 
 逐条「修 or 登记」，禁止「声明了等于承诺不存在的能力」：
@@ -497,9 +512,12 @@ prompt 均正确注入，`fixedFields` 老路径逐字节不变。
                    （`fragment-generator.ts` 里 `\bmode\b` 零匹配；三个片段工具形状无 mode；
                     前门 no-table 分支从不传 mode）。此处按事实更正，理由见 `scripts/eval/scenes.mjs` 头注。
                 口径分两段：
-                  · crud（186 例）→ **vite build**（真构建，golden:e2e 驱动）
-                  · 片段（9 例）→ **esbuild 语法解析**（`fragment:smoke` + `check:scene-coverage`，均已进 check:consistency）
-                    片段尚未进 vite build / 运行时，见 §1.2「本轮后」列
+                  · crud（188 例）→ **vite build**（真构建，golden:e2e 驱动）
+                  · 片段（18 例）→ **语法解析 + 真 vite build**：
+                    `fragment:smoke` + `check:scene-coverage`（esbuild 语法，已进 check:consistency）
+                    + `golden:e2e`（真构建，AI-42 起同一运行器覆盖片段；`check:scene-coverage`
+                      的 (c) 段断言「片段没被运行器过滤掉」，加回 `.filter(isCrudCase)` 即红）
+                    片段**运行时**挂载仍未做，见 §1.2「本轮后」列
                 （W1.2 已落地：编译门禁覆盖到四场景的**每一格都有语料且产物可解析**）
 准确率 ≥95%  := 各场景 heldout 上 definition95 = scoped zero-edit ∨ ≤K=3 收敛 ≥ 95%
                 + per-dimension ratchet + core 非回归地板 + 防「删难例洗分」守卫

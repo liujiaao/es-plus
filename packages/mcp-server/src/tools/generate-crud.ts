@@ -284,6 +284,9 @@ export function registerGenerateCrud(server: McpServer) {
             target: args.target,
             typescript: args.typescript,
             i18n: args.i18n,
+            // Wave 4：表外分支此前把顶层 formLayout 静默丢掉（crudShape 收了、片段不接）。
+            // 查询表单正是 formLayout 的原生消费面（labelWidth / minFoldRows 折叠）。
+            ...(args.formLayout ? { formLayout: args.formLayout } : {}),
           });
           allWarnings.push(...r.warnings);
           sections.push(["## Query form (QueryForm.vue)", "", r.summary, "", "```vue", r.code, "```"].join("\n"));

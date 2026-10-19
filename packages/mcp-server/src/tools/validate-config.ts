@@ -4,8 +4,12 @@ import {
   validateConfig,
   listAvailableSchemas,
   validateAndRepair,
+  zodIssuesToResult,
   type ValidationResult,
 } from "@es-plus/shared";
+import { tableShape } from "./generate-table.js";
+import { formShape } from "./generate-form.js";
+import { dialogShape } from "./generate-dialog.js";
 
 /**
  * `generate_crud_from_config` 的入参（StructuredCrudConfig）在 `packages/shared/schemas/`
@@ -24,6 +28,67 @@ import {
  * 只会得到「no schema with key or ref」这类与配置本身无关的错误。
  */
 export const STRUCTURED_CRUD_TYPE = "structured-crud-config";
+
+/**
+ * 独立组件场景的三种配置类型（Wave 4）。
+ *
+ * 与 `STRUCTURED_CRUD_TYPE` 同一模式：它们不是 `packages/shared/schemas/` 下的 JSON
+ * Schema，而是**片段工具的 Zod 入参形状**（`generate-table/form/dialog.ts` 的
+ * `xxxShape`）。这里直接复用那份形状 —— 同一份判据，不再抄第三份字段清单：
+ * 工具收什么，`validate_config` 就判什么。
+ */
+export const ES_TABLE_TYPE = "es-table-config";
+export const ES_FORM_TYPE = "es-form-config";
+export const ES_DIALOG_TYPE = "es-dialog-config";
+
+const FRAGMENT_CONFIG_TYPES = [ES_TABLE_TYPE, ES_FORM_TYPE, ES_DIALOG_TYPE] as const;
+type FragmentConfigType = (typeof FRAGMENT_CONFIG_TYPES)[number];
+
+/**
+ * 片段配置的 Zod 判据（zod3）。惰性构建，避免模块加载顺序带来的副作用。
+ *
+ * 注意 zod3 与 zod4 的 issue 词汇差异：zod3 的枚举错误码是 `invalid_enum_value`
+ * 且合法值是 `options`，而 shared 的 `zodIssuesToResult` 按 zod4 的
+ * `invalid_value`/`values` 渲染建议 —— 这里做一次归一化，保证两种分支给宿主的
+ * 错误/建议串形态一致（Ajv 分支用 `/path: message`，这里也一样）。
+ */
+function fragmentSchemaFor(type: FragmentConfigType) {
+  switch (type) {
+    case ES_TABLE_TYPE:
+      return z.object(tableShape);
+    case ES_FORM_TYPE:
+      return z.object(formShape);
+    case ES_DIALOG_TYPE:
+      return z.object(dialogShape);
+  }
+}
+
+function validateFragmentConfig(config: unknown, type: FragmentConfigType): ValidationResult {
+  const result = fragmentSchemaFor(type).safeParse(config);
+  if (result.success) return { valid: true, errors: [], suggestions: [] };
+
+  const issues = result.error.issues.map((issue) => {
+    const raw = issue as unknown as {
+      code?: string;
+      options?: unknown[];
+      values?: unknown[];
+      expected?: string;
+      minimum?: number;
+      maximum?: number;
+    };
+    return {
+      path: issue.path,
+      message: issue.message,
+      // zod3 → zod4 词汇归一（见上方注释）
+      code: raw.code === "invalid_enum_value" ? "invalid_value" : raw.code,
+      expected: raw.expected,
+      values: raw.values ?? raw.options,
+      minimum: raw.minimum,
+      maximum: raw.maximum,
+    };
+  });
+  return zodIssuesToResult(issues);
+}
 
 /**
  * 用权威 Zod schema 校验结构化配置。
@@ -45,6 +110,9 @@ export function validateStructuredConfig(config: unknown): ValidationResult {
  */
 export function validatePayload(config: unknown, type?: string): ValidationResult {
   if (type === STRUCTURED_CRUD_TYPE) return validateStructuredConfig(config);
+  if (type !== undefined && (FRAGMENT_CONFIG_TYPES as readonly string[]).includes(type)) {
+    return validateFragmentConfig(config, type as FragmentConfigType);
+  }
   return validateConfig(config, type);
 }
 
@@ -61,7 +129,8 @@ export function registerValidateConfig(server: McpServer) {
         .optional()
         .describe(
           `Schema type to validate against. Available: ${listAvailableSchemas().join(", ")}, ` +
-            `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config). ` +
+            `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config), ` +
+            `${ES_TABLE_TYPE} / ${ES_FORM_TYPE} / ${ES_DIALOG_TYPE} (the inputs of generate_table / generate_form / generate_dialog). ` +
             `Defaults to "form-item".`
         ),
     },

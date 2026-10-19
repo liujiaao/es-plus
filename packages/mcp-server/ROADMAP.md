@@ -343,6 +343,39 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **硬指标（可验收）**：新增 spec 8/8；描述断言钉住 `FORM_TYPES.length` 与 `vue3/vue2/antdv` 三词（文案回退成 vue3-only 即红）；`schemaJsonFrom` 强制产物必须是合法 JSON（路由/拼接坏了直接抛）。
 - **回归**：mcp `typecheck` 干净、mcp spec 全绿（235 → 243）。**不提交、不推送**（仓铁律）。
 
+### AI-40 — 前门进 eval（W1.3）：模型产出经真 `generate_crud` 落地 + no-table 分支强制覆盖（**2026-10-19 已落地**）· `S`
+- **Why**：`check-front-door.mjs`（AI-33 ⑧）只把**语料**喂过前门；付费 eval 的 `compileRate` 仍只调后端 `generateFromConfig`——也就是说**模型产出**从未经过宣称主路径。语料侧永远覆盖不到的前门 `no-table` 分支（见 `check-front-door.mjs` 头注）在 eval 里同样零覆盖。W1.3 的验收「前门回归 → 红」缺少一个**模型产出**维度的咬合点。
+- **修法**：
+  - 抽出 `scripts/lib/front-door.mjs`（共享单源）：`captureFrontDoor`（esbuild 现打包 + `metafile` 自证输入来自 `shared/src`）/ `fieldProjector` / `deriveSurfaces` / `frontDoorArgs` / `fencedBlocks` / `compileBlocks`。`check-front-door.mjs` 改为消费它（不再各写一份；`argsFor` 也共用 `frontDoorArgs`，守卫与 eval 测的是同一份入参装配）。
+  - 新增 `scripts/eval/front-door-leg.mjs`：`setupFrontDoor`（每次跑批**在任何模型调用前**捕获真 handler，失败立即红——不先烧一次跑批）；`driveFrontDoor`（把每条 `pred` 投影成 surfaces → 喂真 handler → 再**强制清空 table 面**跑一次 no-table 分支 → 用同一把编译尺子解析两段产物）；`summarizeFrontDoor`（纯函数聚合）。
+  - `scripts/eval-llm.mjs` 接线：每行在 `scoreAll` 后调用 `driveFrontDoor`（**不额外调模型**），探针模式也报；产物新增 `frontDoor { rows,routed,rejected,compileFailures,noTableExercised,ok }`。
+- **判红边界（刻意区分，防红盲）**：**编译失败**与**no-table 分支一次没走成**（或零路由）判红——它们是确定性代码的缺陷；前门对模型产出的**拒绝**（isError / 过不了 `crudShape`）只记录不判红——那是模型侧问题，已由分数反映，混作一谈会让「模型答错」伪装成「前门回归」。
+- **硬指标（可验收）**：`check:front-door-leg`（新 npm script，进 `check:consistency`）用脚本化 handler 钉住七类分类：table / fragment / 空 surfaces 的正确拒绝 / `unrouted` / 编译失败收集 / 形状拒绝与抛错只记录 / 聚合门禁（编译失败 ∨ 未覆盖 no-table ∨ 零路由 ⇒ `ok=false`）；eval 侧 `passed` 与 exit code 均含 `frontDoorStats.ok`。
+- **变异验证（实测咬红，已还原）**：① 不再清空 `table` 面再调 handler ⇒ 「no-table 被强制覆盖」「第二次调用必须清空 table 面」两条红；② `summarizeFrontDoor.ok` 去掉编译失败条件 ⇒ 「任一编译失败 ⟹ ok=false」红。**回归**：`check:front-door` 188/188 仍绿（重构后零行为变化）；真 handler 冒烟（golden-01）`branch=table · noTable=ok · compileFailures=0`。**不提交、不推送**（仓铁律）。
+
+### AI-41 — Wave 4 独立组件场景对齐：`EsTableConfig` / `EsFormConfig` / `EsDialogConfig` 容器级词汇 + 守卫泛化（**2026-10-19 已落地**）· `M`
+- **Why**：字段级词汇三个片段工具早已共用且很宽，窄的是**容器级**——`generate_table` 的 `tableOptions` 只有 5 个布尔（权威 AI `tableOptions` 有 26 键）、`generate_form` 没有 `formLayout`、`generate_dialog` 的底座选项此前已由 AI-28 补齐。结果是「文档站 demo 能做的独立表格/表单选项，AI 生成不出来」。更关键的是守卫结构性盲区：`check-entry-contract` 的 `readReachability()` 只切 `crudShape`，新增片段工具形状 = **新开一条无守卫入口**（LLM 填了、生成器收不到）。
+- **修法**：
+  - **shared `fragment-generator.ts`**：`TableBlockOptions`（26 键 = 权威 AI `tableOptions` 全等镜像）、`EsTablePagination {pageSize,pageSizes}`、`EsFormLayout {labelWidth,minFoldRows}`；发射由 `TABLE_BLOCK_ALWAYS` / `TABLE_BLOCK_OPTION_ORDER` / `PAGINATION_KEYS` / `FORM_LAYOUT_KEYS` 四个**冻结数组**驱动（遍历数组，而非逐键手写）。未给 `formLayout` / `pagination` 时产物**逐字节不变**（分页仍默认 `pageSize:10`）。`editConfig` 在非 vxe 引擎下显式告警；`buttons:'none'` + `minFoldRows` 显式告警。
+  - **mcp zod3 镜像**：`_fragment-shapes.ts` 新增 `tableBlockOptionsSchema` / `tablePaginationSchema` / `formLayoutSchema`；三个工具形状改为 `export const xxxShape`（**工具形状 = 该配置类型的唯一真源**）。
+  - **`validate_config`**：新增 `es-table-config` / `es-form-config` / `es-dialog-config` 三类型，直接 `z.object(xxxShape)` 复用工具判据；zod3 的 `invalid_enum_value/options` 归一为 zod4 的 `invalid_value/values`，错误/建议串形态与 Ajv 支一致。
+  - **守卫泛化**：`readReachability()` 遍历 `FRAGMENT_TOOL_SRC`（table/form/dialog）并抽取权威 `formLayoutKeys`/`paginationKeys`（顶层与 `DialogConfigSchema` 内同名块缩进相同，用 `lastIndexOf` 定位）。
+  - **顺带修静默丢弃**：`generate_crud` 无表分支收了顶层 `formLayout` 却不传给 `generateFormBlock` —— 已转发。
+- **硬指标（可验收）**：`check-entry-contract` ⑤ 三个片段形状顶层键 ⊆ schema 顶层键 ∪ `FRAGMENT_TOOL_ONLY`（7 行、原因非空、陈旧反向检查）；⑥ 容器级 `tableOptions`/`formLayout`/`pagination` 三组键集**全等**（子集允许权威加键、片段悄悄收窄 ⇒ 必须全等）；⑦ `validate_config` 路由数组列全三常量 + `fragmentSchemaFor` 每常量有 `case` + 从三个工具模块 import 形状。`check-fragment-contract` ⑥ 接口 ≡ zod3 ≡ ⊆ core `TableOptions` 且 ≡ 发射枚举；⑦ `formLayout`/`pagination` 三处全等；⑧ 发射必须 `of <冻结数组>`。语料 `frag-table-02-*` / `frag-form-02-*` 六例（`check:scene-coverage` 18/18 可解析）；vitest 新增 shared 10 例 + mcp 9 例（三种配置类型）+ 前门 1 例（no-table `formLayout` 真透传）。
+- **变异验证（全部实测咬红，已还原）**：`TableBlockOptions` 加未发射键 ⇒ ⑥/⑦ 三红；zod3 镜像删 `showHeader` ⇒ ⑥ + entry ⑥ 双红；`formShape` 加 schema 未知键 ⇒ entry ⑤ 红；`EsFormLayout.minFoldRows` 改名 ⇒ ⑦ 三红；`validate_config` 路由数组摘掉 `ES_FORM_TYPE` ⇒ entry ⑦ 红（**修前该变异全绿** —— 「类型名出现在文件里」是假绿，已改为断言路由数组与 switch case）。
+- **回归**：`check:fragment` / `check:entry` / `check:scene-coverage` / `check:threeway` / `check:front-door` / `check:front-door-leg` / `check:fewshot-registration` / `check:membership-trap` 全绿；shared+mcp 842 tests 全绿；两端 typecheck 干净。`check:consistency` 仅剩 `one-config:check` / `og:check` 两个 **Windows 已知假阳性**（CI 绿；未在 Windows 重生成）。**组件源码零改动**。**不提交、不推送**（仓铁律）。
+
+### AI-42 — 片段进真 `vite build`：golden:e2e 收编 18 条片段语料 + 「不许静默跳过」守卫（**2026-10-19 已落地**）· `M`
+- **Why**：`AI-SCENE-COVERAGE-PLAN.md` §1.2 的「vite build?」列在三个片段场景一直是 ❌。`check-scene-coverage` 只做 esbuild **语法解析**（证明「拼出来的能解析」），而 `__tests__/e2e/scripts/run-golden.mjs` 的 `loadCases()` 里写着 `.filter((c) => isCrudCase(c.raw))` —— 片段用例被**静默**排除在真构建之外。语料从 9 → 18 例、三种产物形态（SFC / `<es-dialog>` SFC / `<script setup>` 宿主 + `.tsx` composable）全部落地后，这条过滤依然全绿：**测了没有**这件事没人守望。
+- **修法**：
+  - 新增 `scripts/lib/fragment-cases.mjs`（执行计划单源）：`FRAGMENT_GENERATORS`（场景→生成器，`check-scene-coverage` 与 e2e 共用）、`loadGoldenCases()`（读目录 → `{crud, fragments, errors}`，非法 JSON 不抛、由调用方决定出口）、`fragmentInput` / `generateFragment` / `fragmentSandboxFiles`。
+  - `fragmentSandboxFiles()` 把「一条用例 → 沙箱要落哪些文件」变成纯函数：`fence:'vue'` → 产物直写 `src/App.vue`；`fence:'tsx'`（dialog composable）→ 模块写 `src/<composableName>.tsx|jsx`，另写一个**只 import + 取用**的最小宿主 SFC（vue3/antdv 用 `<script setup>`，vue2 用 options `setup()`，因为 plugin-vue2 不认 `<script setup>`）。返回值恒含 `src/App.vue`，调用方无需理解形态。
+  - `run-golden.mjs`：`loadCases()` 改为返回 `{crud, fragments}` 并 **export**（被守卫 import）；主循环按 `c.kind` 分派 —— CRUD 走 `--from-config`，片段直接把文件写进同一沙箱，随后**同一把** `build()`；新增 `--kind crud|fragment` 过滤（便于单独验证片段链路而不跑 188 条 CRUD）；补 main-guard，import 无副作用。
+  - `check-scene-coverage.mjs`：删掉本地 `FRAGMENT_GENERATORS` 副本（改从 lib 引），新增断言段 **(c)**——import **运行器自己的** `loadCases`，逐条断言片段用例在名单里、且 `fragmentSandboxFiles()` 产出含 `src/App.vue`。用它而不是「再扫一遍目录」，因为后者只能证明「文件在磁盘上」，证明不了运行器会构建它。
+- **硬指标（可验收）**：`check:scene-coverage` 的 (c) 段对 18 条片段用例逐条点名（缺失/无入口 → 红）；`golden:e2e` 对三端各 6 例片段真跑 `vite build`，**18/18 通过**（含 vue3/antdv dialog composable 的 `.tsx` 宿主与 vue2 的 `@vitejs/plugin-vue2-jsx` 路径）。测试命令：`node __tests__/e2e/scripts/run-golden.mjs --kind fragment`（三端合计 ~18 次构建；需先 `npm run build:libs` 与三端 `vite build`）。
+- **变异验证（全部实测咬红，已还原）**：① `loadCases` 里把 `fragments` 过滤成空（复刻原 `.filter(isCrudCase)`）⇒ 18 条「没收录该片段用例」；② tsx 分支不再写 `src/App.vue` ⇒ 3 条 dialog composable「沙箱文件计划里没有 App.vue」；③ `FRAGMENT_GENERATORS` 删 `form` ⇒ 6 条 form「没有片段生成器」。改完均恢复，`check:scene-coverage` 复回绿。
+- **仍未做（显式留档）**：片段**运行时**挂载（Tier 1/Tier 2）——本批只填「vite build」格；§1.2 的「运行时?」列仍为 ❌，作为下一批（AI-43）的开工项。片段准确率 scorer / `definition95` 分母不变。**不提交、不推送**（仓铁律）。
+
 ---
 
 ## Q6 · 全球同类库的借鉴点（approach / spike，横切支撑上面各项）

@@ -45,15 +45,14 @@
  * 用法：`node scripts/check-front-door.mjs`
  * 退出码：0 = 六类断言全过；1 = 任一红。
  */
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { build } from 'esbuild'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { isCrudCase } from './eval/scenes.mjs'
-import { parseSfc, parseSource, parseComposable } from './lib/compile-check.mjs'
 import { FRONT_DOOR_UNREACHABLE } from './lib/entry-keys.mjs'
+// 打包/捕获前门、字段投影、面推导、围栏块编译 —— 与 eval 的「前门腿」共用同一份实现
+// （各写一份必然漂移，而漂移会让「eval 测到的」不等于「本守卫断言的」）。
+import { captureFrontDoor, fieldProjector, deriveSurfaces, frontDoorArgs, DIALOG_ACCEPTED, fencedBlocks, compileBlocks, ROOT } from './lib/front-door.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CASES_DIR = join(ROOT, '__tests__', 'golden', 'cases')
 
 let failed = false
@@ -63,118 +62,9 @@ const fail = (msg) => {
 }
 const note = (msg) => console.log(`   ${msg}`)
 
-/** 从 ```` ```lang ```` 围栏里抽出所有代码块（lang 归一化：vue / tsx / ts / js）。 */
-function fencedBlocks(text) {
-  const out = []
-  for (const m of text.matchAll(/```([a-zA-Z]*)[ \t]*\r?\n([\s\S]*?)```/g)) {
-    const raw = m[1].toLowerCase()
-    const lang = raw === 'vue' ? 'vue' : raw === 'tsx' ? 'tsx' : raw === 'json' ? 'json' : raw === 'js' || raw === 'jsx' ? 'js' : 'ts'
-    out.push({ lang, code: m[2] })
-  }
-  return out
-}
-
-/** 用共享尺子解析产物里每个围栏块；返回失败描述（空数组 = 全过）。 */
-function compileBlocks(text, label) {
-  const failures = []
-  for (const { lang, code } of fencedBlocks(text)) {
-    if (lang === 'vue') parseSfc(code, label, failures)
-    else if (lang === 'tsx') parseComposable(code, true, label, failures)
-    else if (lang === 'json') {
-      try {
-        JSON.parse(code)
-      } catch (err) {
-        failures.push(`${label} — JSON 载荷解析失败：${String(err.message).split('\n')[0]}`)
-      }
-    } else parseSource(code, lang, label, failures)
-  }
-  return failures
-}
-
-/**
- * 打包并捕获前门的真 handler / 真形状。
- * `metafile` 用于自证打包拉的是 `shared/src`（见文件头注）。
- */
-async function captureFrontDoor() {
-  const tmp = mkdtempSync(join(ROOT, 'node_modules', 'es-front-door-'))
-  const entry = join(tmp, 'entry.ts')
-  try {
-    writeFileSync(
-      entry,
-      [
-        "import { registerGenerateCrud } from '../../packages/mcp-server/src/tools/generate-crud.ts'",
-        "import { surfaceFieldSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
-        "export { composeCrudConfig } from '@es-plus/shared'",
-        'export function capture() {',
-        '  let cap = null',
-        '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
-        '  registerGenerateCrud(fake)',
-        '  return { cap, surfaceFieldSchema }',
-        '}',
-      ].join('\n'),
-      'utf8'
-    )
-    const outfile = join(tmp, 'front-door.mjs')
-    const result = await build({
-      entryPoints: [entry],
-      bundle: true,
-      format: 'esm',
-      outfile,
-      platform: 'node',
-      logLevel: 'silent',
-      metafile: true,
-      alias: { '@es-plus/shared': join(ROOT, 'packages', 'shared', 'src', 'index.ts') },
-      banner: {
-        js: "import { createRequire as __createRequire } from 'node:module';const require = __createRequire(import.meta.url);",
-      },
-    })
-    const inputs = Object.keys(result.metafile.inputs)
-    const fromBuild = inputs.filter((p) => /shared[\\/]build[\\/]/.test(p))
-    const fromSrc = inputs.filter((p) => /shared[\\/]src[\\/]/.test(p))
-    return { mod: await import(pathToFileURL(outfile).href), tmp, fromBuild, fromSrc }
-  } catch (err) {
-    // 打包/导入失败也要清干净临时目录，别在 node_modules 里留垃圾。
-    rmSync(tmp, { recursive: true, force: true })
-    throw err
-  }
-}
-
-/** 把 gold 的一个字段投影成前门字段词汇（只保留 `surfaceFieldSchema` 认识的键）。 */
-function fieldProjector(surfaceKeys) {
-  return (f) => {
-    const o = {}
-    for (const k of Object.keys(f)) if (surfaceKeys.has(k)) o[k] = f[k]
-    return o
-  }
-}
-
-/**
- * gold config → 前门 `surfaces`。
- * 面成员由 `inQuery/inTable/inForm !== false` 决定（与 `compose-crud-config.ts:178-180`
- * 的写入方向相反、语义相同）；dialog 用「全参对象」形式，只带前门形状接受的键。
- */
-function deriveSurfaces(config, project) {
-  const query = config.fields.filter((f) => f.inQuery !== false).map(project)
-  const table = config.fields.filter((f) => f.inTable !== false).map(project)
-  const form = config.fields.filter((f) => f.inForm !== false).map(project)
-  const dialog = config.dialogs
-    ? Object.entries(config.dialogs).map(([key, d]) => ({
-        key,
-        ...(d.title !== undefined ? { title: d.title } : {}),
-        ...(d.width !== undefined ? { width: d.width } : {}),
-        ...(d.fullscreen !== undefined ? { fullscreen: d.fullscreen } : {}),
-        ...(d.formItems !== undefined ? { formItems: d.formItems.map(project) } : {}),
-      }))
-    : undefined
-  return { query, table, form, dialog }
-}
-
-/** 前门形状里没有的 dialog 子键（前门表达不了，报告用）。 */
-const DIALOG_ACCEPTED = new Set(['key', 'title', 'width', 'fullscreen', 'formItems'])
-
 async function main() {
   console.log('[front-door] 打包并捕获真 handler…')
-  const { mod, tmp, fromBuild, fromSrc } = await captureFrontDoor()
+  const { mod, cleanup, fromBuild, fromSrc } = await captureFrontDoor()
   try {
     if (fromBuild.length > 0) {
       fail(
@@ -229,26 +119,8 @@ async function main() {
         }
       }
 
-      const argsFor = (table) => ({
-        name: config.name,
-        apiUrl: config.apiUrl,
-        surfaces: { query: surfaces.query, table, form: surfaces.form, dialog: surfaces.dialog },
-        target: config.target,
-        mode: config.mode,
-        typescript: config.typescript,
-        i18n: config.i18n,
-        actions: config.actions,
-        permissions: config.permissions,
-        pagination: config.pagination,
-        tableOptions: config.tableOptions,
-        formLayout: config.formLayout,
-        operationColumn: config.operationColumn,
-        tableBtns: config.tableBtns,
-        toolbarBtns: config.toolbarBtns,
-        expandConfig: config.expandConfig,
-        treeConfig: config.treeConfig,
-        mergeConfig: config.mergeConfig,
-      })
+      // 顶层透传键与 eval 的前门腿共用一份装配（见 lib/front-door.mjs 的 frontDoorArgs）。
+      const argsFor = (table) => frontDoorArgs(config, { ...surfaces, table })
 
       // ① 可表达性：推导出的 surfaces 必须过真的 crudShape。
       const parsed = crudShapeObj.safeParse(argsFor(surfaces.table))
@@ -360,7 +232,7 @@ async function main() {
       console.log('\n[front-door] 前门路由 / 编译 / 成员关系 round-trip 全部通过 ✔')
     }
   } finally {
-    rmSync(tmp, { recursive: true, force: true })
+    cleanup()
   }
 }
 

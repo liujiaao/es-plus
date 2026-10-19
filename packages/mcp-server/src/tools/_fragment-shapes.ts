@@ -133,6 +133,73 @@ export function renderFragmentOutput(
 }
 
 /**
+ * `generate_table` 的容器级选项（Wave 4）—— shared `TableBlockOptions` 的 zod3 镜像，
+ * 键集与权威 AI 侧 `StructuredCrudConfigSchema.tableOptions` **逐键相同**
+ * （它本身已是 core `TableOptions` 里 JSON 可承载的声明式子集）。
+ *
+ * 手工双份同源（shared zod4 的 schema 不能跨包复用）：`scripts/check-fragment-contract.mjs`
+ * 断本对象 ≡ shared `TableBlockOptions` ≡ 权威 `tableOptions` 键集，且每个键都在发射枚举里
+ * —— `z.object` 无 passthrough，跑偏了就是静默 strip。
+ */
+export const tableBlockOptionsSchema = z.object({
+  border: z.boolean().default(true),
+  stripe: z.boolean().default(true),
+  rowkey: z.string().default("id"),
+  heightType: z.enum(["height", "auto", "maxHeight"]).optional(),
+  tabHeight: z.union([z.number(), z.string()]).optional(),
+  height: z.union([z.number(), z.string()]).optional(),
+  multiSelect: z.boolean().optional(),
+  highlightCurrentRow: z.boolean().default(true),
+  headerCellStyle: z.record(z.string()).optional(),
+  virtual: z.boolean().optional(),
+  engine: z.enum(["default", "virtual", "vxe"]).optional(),
+  rowHeight: z.number().optional(),
+  estimatedRowHeight: z.number().optional(),
+  overscanCount: z.number().int().optional(),
+  rowClassName: z.string().optional(),
+  size: z.enum(["large", "default", "small"]).optional(),
+  showHeader: z.boolean().optional(),
+  emptyText: z.string().optional(),
+  snIndex: z.boolean().optional(),
+  leftText: z.string().optional(),
+  cachePageSelection: z.boolean().optional(),
+  refetchKeepPage: z.boolean().optional(),
+  localPagination: z.boolean().optional(),
+  defaultSort: z.object({ prop: z.string(), order: z.enum(["ascending", "descending"]) }).optional(),
+  editConfig: z
+    .object({
+      trigger: z.enum(["click", "dblclick", "manual"]).optional(),
+      mode: z.enum(["cell", "row"]).optional(),
+      showStatus: z.boolean().optional(),
+      showUpdateStatus: z.boolean().optional(),
+      showInsertStatus: z.boolean().optional(),
+      autoClear: z.boolean().optional(),
+      enabled: z.boolean().optional(),
+    })
+    .optional(),
+  configTableOut: z
+    .object({
+      total: z.string().optional(),
+      tableData: z.string().optional(),
+      pageSize: z.string().optional(),
+      current: z.string().optional(),
+    })
+    .optional(),
+});
+
+/** `generate_table` 的分页播种（权威 schema 顶层 `pagination` 的数据子集）。 */
+export const tablePaginationSchema = z.object({
+  pageSize: z.number().int().optional(),
+  pageSizes: z.array(z.number().int()).optional(),
+});
+
+/** `generate_form` 的表单布局（权威 schema 顶层 `formLayout` 的数据子集）。 */
+export const formLayoutSchema = z.object({
+  labelWidth: z.union([z.string(), z.number()]).optional(),
+  minFoldRows: z.number().int().optional(),
+});
+
+/**
  * `generate_dialog` 的弹窗底座选项（AI-28）—— core `DialogOptions` 里**可声明式表达**
  * 的那一子集，与 shared `DialogBlockOptions`（`packages/shared/src/fragment-generator.ts`）
  * **手工双份同源**（zod4 ↔ zod3 不能共用对象）。

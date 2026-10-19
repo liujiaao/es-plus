@@ -9,7 +9,7 @@
  * `toContain` 字符串断言（证明「源码里有这串字」）与 esbuild **语法**解析
  * （证明「拼出来的能解析」）——两者都不是「这个场景真的被测了」的见证。
  *
- * 本门禁把「宣称支持的场景」变成**可失败断言**，两类：
+ * 本门禁把「宣称支持的场景」变成**可失败断言**，三类：
  *
  *   (a) **覆盖无空格**：每个场景都要有语料，且覆盖到该场景全部 target
  *       （crud 另需覆盖两个 mode）。缺哪一格就**点名哪一格**。
@@ -18,6 +18,12 @@
  *   (b) **片段语料真能编译**：一条语料若没人编译就是个死用例。这里把每条片段用例
  *       真跑一遍 `generate*Block`，再用与 `compile-smoke.mjs` **同一把尺子**
  *       （`scripts/lib/compile-check.mjs`）解析产物。
+ *
+ *   (c) **片段真的进 golden:e2e 的 vite build**（AI-42）：(b) 只是 esbuild 语法解析，
+ *       证明不了打包器能解析模板/依赖。这里 import 运行器自己的 `loadCases`，断言每条
+ *       片段用例都在它的名单里、且能产出含 `src/App.vue` 的沙箱文件计划 ——
+ *       运行器曾用 `.filter(isCrudCase)` 静默跳过全部片段（语料 9→18 例也不红），
+ *       本条就是那类回归的守望者。
  *
  * ## 关于「两模式」
  *
@@ -35,7 +41,8 @@
  *
  * ## 明确不做
  *
- * 不评片段准确率（无 scorer，硬造会产出恒真伪信号）。片段本轮的口径是**覆盖 + 编译**；
+ * 不评片段准确率（无 scorer，硬造会产出恒真伪信号）。片段本轮的口径是**覆盖 + 语法
+ * 编译 + 真 vite build**（后者由 golden:e2e 执行，本条只保证「它没被跳过」）；
  * 准确率要等片段 scorer 落地后再进 `definition95` 分母。
  *
  * 用法：node scripts/check-scene-coverage.mjs
@@ -44,9 +51,12 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { generateFormBlock, generateTableBlock, generateDialogBlock } from '@es-plus/shared'
 import { SCENES, SCENE_TOOL, modesOf, cellOf, cellName, sceneOf } from './eval/scenes.mjs'
+import { FRAGMENT_GENERATORS, generateFragment, fragmentSandboxFiles } from './lib/fragment-cases.mjs'
 import { parseSfc, parseComposable } from './lib/compile-check.mjs'
+// 运行器自己的用例加载器 —— 见 (c) 段：片段有没有被 `.filter(isCrudCase)` 静默跳过，
+// 必须问**它**（而不是我们再扫一遍目录，那只会证明「文件在磁盘上」）。
+import { loadCases as loadE2ECases } from '../__tests__/e2e/scripts/run-golden.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -57,12 +67,8 @@ const ALL_TARGETS = ['vue3', 'vue2', 'antdv']
 const failures = []
 const fail = (msg) => failures.push(msg)
 
-/** 场景 → 真正把该场景跑出产物的生成器（用于 (b) 的编译断言）。 */
-const FRAGMENT_GENERATORS = {
-  table: (input) => generateTableBlock(input),
-  form: (input) => generateFormBlock(input),
-  dialog: (input) => generateDialogBlock(input),
-}
+// 场景 → 生成器的单源在 scripts/lib/fragment-cases.mjs（与 golden:e2e 共用）：
+// 两处各写一份映射，只会让「哪条用例被谁跑」再次分叉。
 
 // ── 读语料 ──────────────────────────────────────────────
 const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
@@ -134,7 +140,7 @@ for (const c of cases) {
   const input = { ...c.raw.config, target: c.raw.target }
   let r
   try {
-    r = gen(input)
+    r = generateFragment(c)
   } catch (err) {
     fail(`${label}: 生成器抛错 — ${err.message}`)
     continue
@@ -159,6 +165,38 @@ for (const c of cases) {
   fragmentResults.push({ label, ok: failures.length === before })
 }
 
+// ── (c) 片段必须真的进 golden:e2e 的 vite build ────────────
+// 反例具体长这样：run-golden.mjs 曾经 `.filter(isCrudCase)`，片段产物只有 esbuild
+// 语法解析、没有真构建，而语料从 9 → 18 例门禁照绿（静默跳过）。这里问**运行器自己的
+// 加载器**（不是重新扫目录 —— 那只能证明文件在磁盘上），并断言每条片段用例都能产出
+// 含 `src/App.vue` 的沙箱文件计划。把过滤加回去 / 生成器不再落 App.vue → 本段点名变红。
+let e2eCases
+try {
+  e2eCases = loadE2ECases()
+} catch (err) {
+  fail(`golden:e2e 的 loadCases 抛错 — ${err.message}`)
+}
+const fragmentCaseFiles = cases.filter((c) => c.scene !== 'crud').map((c) => c.file)
+if (e2eCases) {
+  const runnerFragmentFiles = new Set(e2eCases.fragments.map((c) => c.file))
+  for (const file of fragmentCaseFiles) {
+    if (!runnerFragmentFiles.has(file)) {
+      fail(`${file}: golden:e2e 的 loadCases 没收录该片段用例 —— 它不会进 vite build（静默跳过）`)
+      continue
+    }
+    let plan
+    try {
+      plan = fragmentSandboxFiles(cases.find((c) => c.file === file))
+    } catch (err) {
+      fail(`${file}: 无法产出 golden:e2e 的沙箱文件 — ${err.message}`)
+      continue
+    }
+    if (!plan.files.some((f) => f.path === 'src/App.vue')) {
+      fail(`${file}: 沙箱文件计划里没有 src/App.vue —— vite build 的入口不存在`)
+    }
+  }
+}
+
 // ── 报告 ────────────────────────────────────────────────
 const byScene = (s) => cases.filter((c) => c.scene === s).length
 console.log('[scene-coverage] 语料格覆盖')
@@ -169,7 +207,7 @@ for (const scene of SCENES) {
   console.log(`  ${scene.padEnd(7)} ${hit}/${cells.length} 格 · ${String(byScene(scene)).padEnd(3)} 例${modeNote}`)
 }
 if (fragmentResults.length) {
-  console.log(`[scene-coverage] 片段语料编译：${fragmentResults.filter((x) => x.ok).length}/${fragmentResults.length} 可解析`)
+  console.log(`[scene-coverage] 片段语料编译：${fragmentResults.filter((x) => x.ok).length}/${fragmentResults.length} 可解析，全部进 golden:e2e 的 vite build`)
 } else {
   fail('没有任何片段语料被编译 —— 覆盖断言形同虚设')
 }
@@ -179,4 +217,4 @@ if (failures.length) {
   for (const m of failures) console.error(`   - ${m}`)
   process.exit(1)
 }
-console.log('✅ check:scene-coverage：四场景覆盖无空格，片段语料产物全部可解析。')
+console.log('✅ check:scene-coverage：四场景覆盖无空格，片段语料产物全部可解析且真进 vite build。')

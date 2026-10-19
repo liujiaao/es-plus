@@ -1,9 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateFormBlock } from "@es-plus/shared";
-import { surfaceFieldSchema, renderFragmentOutput } from "./_fragment-shapes.js";
+import { surfaceFieldSchema, renderFragmentOutput, formLayoutSchema } from "./_fragment-shapes.js";
 
-const formShape = {
+/**
+ * 入参形状（导出供 `validate_config({type:'es-form-config'})` 复用 —— 工具的 Zod
+ * 形状就是该配置类型的**唯一真源**）。
+ */
+export const formShape = {
   fields: z.array(surfaceFieldSchema).min(1).describe("Form fields — one per input the user described"),
   target: z
     .enum(["vue3", "vue2", "antdv"])
@@ -19,6 +23,11 @@ const formShape = {
     .enum(["none", "query", "submit"])
     .default("none")
     .describe("Footer buttons: 'none' (hide button row), 'query' (查询+重置), 'submit' (保存+重置)"),
+  formLayout: formLayoutSchema
+    .optional()
+    .describe(
+      "Form layout — the SAME declarative shape as generate_crud's top-level formLayout: labelWidth (maps to es-form's formLayProps.labelWidth) and minFoldRows (collapse after N rows; requires a visible button area, so pair it with buttons:'query'/'submit').",
+    ),
 } as const;
 
 export function registerGenerateForm(server: McpServer) {
