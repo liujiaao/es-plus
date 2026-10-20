@@ -82,10 +82,18 @@ const TEXT_PRESENCE_KEYS = new Set(['emptyText', 'leftText'])
  * 对某个**整维度**做一处扰动（就地修改 pred）。返回 false 表示该维度没有扰动器
  * （测试会把它记为失败——「没有扰动的维度 = 睡着的维度」）。
  */
-function perturbWhole(scene, dim, gold, pred) {
+function perturbWhole(scene, dim, gold, pred, pins = []) {
   const cfg = pred
   const firstField = (predicate) => (cfg.fields ?? []).find(predicate)
-  if (dim === 'propSet') return (cfg.fields.pop(), true)
+  if (dim === 'propSet') {
+    // 删一个**未被字段级 pin 引用**的字段：删掉被 pin 的字段会让 scoped 因 pin 查找
+    // 落空而变红，那不是「propSet 未钉」的反证（见下方 scoped 收窄断言）。
+    const pinnedProps = new Set(pins.filter((t) => t.includes(':')).map((t) => t.split(':')[1]))
+    const idx = cfg.fields.findIndex((f) => !pinnedProps.has(f.prop))
+    if (idx >= 0) cfg.fields.splice(idx, 1)
+    else cfg.fields.pop()
+    return true
+  }
   if (dim === 'formtype') {
     const f = firstField((x) => x.formtype)
     if (!f) return false
@@ -428,7 +436,7 @@ for (const c of cases) {
     if (!specs[dim].applicable) continue // N/A 维度没有可扰动的值，不参与咬合验证
     exercised.add(dim)
     const pred = clone(c.gold)
-    const ok = perturbWhole(c.scene, dim, c.gold, pred)
+    const ok = perturbWhole(c.scene, dim, c.gold, pred, c.pins)
     check(ok, `${c.file}: 维度 ${dim} 没有扰动器（睡着的维度）`)
     if (!ok) continue
     const s = scoreFragment(c.scene, c.gold, pred, { pinnedDims: c.pins, statedDims: c.stated })
@@ -749,6 +757,27 @@ console.log('meta-eval: equivalent implementations are accepted')
     const ss = scoreFragment('form', c.gold, split, maskOf(c))
     check(ss.byDim.fieldRules.pass === true, 'required 单列一条规则（仅 trigger）应判等')
     check(ss.exactIntentStated === true, '等价规则拆分不应打红 stated')
+
+    // 等价编码：同 trigger 下把 {type:'integer', min, max} 拆成三条 —— async-validator
+    // 的 integer 校验器跑 type+range，运行时约束集合相同，不得判红。
+    const splitRange = clone(c.gold)
+    const age = splitRange.fields.find((f) => f.prop === 'age')
+    age.rules = [
+      { type: 'integer', message: '必须是整数', trigger: 'change' },
+      { min: 18, message: '不能小于 18', trigger: 'change' },
+      { max: 65, message: '不能大于 65', trigger: 'change' },
+    ]
+    check(scoreFragment('form', c.gold, splitRange, maskOf(c)).byDim.fieldRules.pass === true,
+      'type+min+max 拆成同 trigger 的三条规则应判等（运行时约束相同）')
+
+    // 反例：把 pattern 塞回 type:'email' 的同一条规则 —— email 校验器不跑 pattern，
+    // 约束集合里 pattern 整条消失，必须判红（否则 AI-51 的 dispatch 修复被回退）。
+    const merged = clone(c.gold)
+    merged.fields.find((f) => f.prop === 'email').rules = [
+      { pattern: '^[^@]+@[^@]+$', type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
+    ]
+    check(scoreFragment('form', c.gold, merged, maskOf(c)).byDim.fieldRules.pass === false,
+      'pattern+type 合在一条规则应判红（async-validator 按 type 分派，pattern 是死键）')
   }
 
   // apiParams：method 缺省 ≡ GET；url 与 gold 声明的 labelField/valueField 仍要咬。

@@ -158,6 +158,18 @@ console.log('meta-eval: teaching surface (every non-obvious key carries .describ
         )
       }
     }
+    // AI-51：async-validator 的 `getValidationMethod` 按 `rule.type` 分派 —— 同一
+    // 条规则里的 `pattern` 是死键。教学句一旦被删，「正则 + type 同时明说」的 NL
+    // （form-04）就会稳定丢 pattern；文本长度上限同理（gold 用 attrs.maxlength）。
+    const rulesDesc = descOf(nestedShape(shape.fields)?.rules)
+    check(
+      rulesDesc.includes('TWO separate rules'),
+      `${scene}: rules 未教「pattern + type 必须拆成两条规则」`
+    )
+    check(
+      rulesDesc.includes('attrs.maxlength'),
+      `${scene}: rules 未教「文本长度上限优先 attrs.maxlength」`
+    )
   }
 }
 

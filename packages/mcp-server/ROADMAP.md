@@ -509,6 +509,25 @@ ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「�
 - **硬指标（可验收）**：`node scripts/eval/fragment-scorers.test.mjs` → **63 条片段用例，66 个维度被扰动验证**（绿）；`node scripts/eval/fragment-prompt.test.mjs` 绿（含新 optionality 断言）；`check:fragment` / `check:scene-coverage`（63/63 三端可解析并进 vite build）/ `check:entry` / `check:front-door` / `check:schema` / `check:threeway` / `check:contract` / `check:schema-validator` / `check:data-schemas` / `check:generator` 全绿；`npm run typecheck -w packages/mcp-server` 绿；mcp-server **253 例**绿；`npm run build:libs` 绿。
 - **刻意偏离**：①表格场景**不测** `formtype`（工具形状仍保留该键、只放宽为 optional），因为独立表格产物不消费它；②`full` 仍是诊断口径（含 NL 未声明的运行时 fixture 键）；③片段仍**不**进 `definition95` 分母/门禁（用户拍板）。**不提交、不推送**（仓铁律）。
 
+### AI-52 — 片段探针收尾：async-validator 分派等价 + 教学面补句 + table-02 语料对齐（**2026-10-20 已落地**）· `S`
+- **Why**（AI-51 全量探针的收尾观测，逐条对 `node_modules/async-validator/dist-node/index.js` 复核）：
+  1. **规则分组 ≠ 运行时行为**：form-04 的 miss 一半来自「同 trigger 下把 `{type:'integer',min,max}` 拆成三条」——`integer` 校验器跑 type+range，约束集合与 gold 相同，旧 `normRules` 按规则分组比较把合法拆分罚红；而 `{pattern,type:'email'}` 合在一条时 `validators.email = type$1` 只做类型判断，pattern 是死键，必须判红。同一比较器必须同时接受前者、咬住后者。
+  2. **教学面缺两句**：`rules.describe()` 没说 `type` 会独占分派（模型会把 pattern 合回 type 规则），也没说「最多 20 字」优先 `attrs.maxlength`（`max` 规则只校验、不限制输入）。
+  3. **table-02 语料自相矛盾**：gold 的 `amount.align:'right'` 未写进 NL，而 `fieldLayout` 是 core 整维 ⇒ 罚了不可推断的 fixture 键（与 inQuery 默认陷阱、fieldAttrs 适用性同构）。
+- **改动**：
+  - `scripts/eval/fragment-scorers.mjs`：`normRules` 改为按 **async-validator 实际执行的约束集合**比较（无 type/`string` → pattern+range；`integer|number|float` → range；`email|url|hex` → 仅 type）；同 trigger 的拆分/合并等价，`pattern+type` 合并因 pattern 被丢弃仍判红。
+  - `packages/mcp-server/src/tools/_fragment-shapes.ts`：`rules.describe()` 补两句（pattern+type 拆两条规则；文本长度上限优先 `attrs.maxlength`）。
+  - `__tests__/golden/cases/frag-table-02-*.json` ×3：NL 补「金额（右对齐）」，pin/stated `fieldLayout:amount`。
+  - `scripts/eval/fragment-prompt.test.mjs`：三场景都必须教到上述两句（删文案即红）。
+  - `scripts/eval/fragment-scorers.test.mjs`：`type+min+max` 拆分判等、`pattern+type` 合并判红；propSet 扰动改为删「未被字段级 pin 引用」的字段（旧写法删末字段会让 `fieldLayout:<prop>` pin 查找落空，误报 scoped）。
+- **硬指标（可验收）**：`check:fragment-prompts` 绿（含两句教学断言）；`check:fragment-scorers` → 63 例 / 66 维 + 新等价/反例断言绿；`check:fragment` / `check:scene-coverage`（63/63）绿；`npm run typecheck -w packages/mcp-server` 绿；mcp-server **253 例**绿。
+- **探针（2026-10-20，`--fragments`、不写产物、不参与门禁）**：
+  - **AI-51 基线**（探针 3，63/63 实测、1439.9 s）：core 95.2% · scoped 93.7% · stated 93.7% · full 88.9% · compiles 100%。6 条 miss = table-02 ×3（`fieldLayout`）+ form-04 ×3（`fieldRules`/`fieldAttrs`），本批全部归因修复。
+  - **修复后全量**（探针 5，63/63 实测、0 未测到、1230.5 s）：**core 100.0% · scoped 98.4% · stated 98.4% · full 93.7% · compiles 100.0%**（scoped 62/63、full 59/63）。
+  - **剩余 miss 的性质**：`frag-form-06-antdv` 的 `reactions` ×1 —— 模型额外写了 `country != cn → dataOptions: []`（清空陈旧候选，NL 未要求也不矛盾；单例 6 次复跑 5 次全绿，采样边界）；table-02 ×3 的 `full` 只差 NL 未声明的 fixture 键（`stripe`/`rowkey`/`rowHeight`…），`scoped`/`stated` 全绿 —— 正是 `full` 作为诊断口径的定义。
+  - 探针 4 因中继 23 行 `Connection error` 只测到 40/63，判为**不构成测量**并整轮重跑（`MAX_ERRORED_ROWS=0` 的应有行为）。
+- **刻意偏离**：不因「额外但不矛盾的联动」放宽 `reactions` 比较（它改变运行时、且 LAST WINS 不能靠集合包含证明安全）；片段仍只观测、不进 `definition95`。
+
 ---
 
 

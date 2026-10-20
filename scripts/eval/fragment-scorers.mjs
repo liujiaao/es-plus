@@ -379,23 +379,39 @@ const declaresSpan = (f) => f?.querySpan !== undefined || f?.formSpan !== undefi
  * 只比较真正改变校验行为的键（pattern/min/max/type/trigger）。
  *
  * **等价编码（AI-51）**：模型常把 `required: true` 单列成一条规则
- * （`{required:true, message, trigger:'blur'}`）。剥离 `required`/`message` 后它只剩
- * `trigger` —— 没有校验项的空规则在 Element/antdv 校验器里是**无行为的**，不能因此
- * 判红（否则「required 写在字段键上」与「required 单列一条规则」两种正确写法只有
- * 一种得分）。故只保留含非 trigger 校验项的规则。
+ * （`{required:true, message, trigger:'blur'}`）—— 剥离后没有校验项的空规则在
+ * Element/antdv 校验器里是**无行为的**，不能因此判红（否则「required 写在字段键上」
+ * 与「required 单列一条规则」两种正确写法只有一种得分）。
+ *
+ * 再把规则集展开成「运行时**实际执行**的约束集合」：
+ *
+ * async-validator 的 `getValidationMethod` 按 `rule.type` 分派到**一个**校验器，各校验器
+ * 执行的键不同（见 `dist-node/index.js`）：
+ *   - 无 type / type:'string' → `string` 校验器：pattern + min/max；
+ *   - type:'integer' | 'number' | 'float' → 编号校验器：min/max（**不跑 pattern**）；
+ *   - type:'email' | 'url' | 'hex' → 只做类型判断（min/max/pattern 全是死键）。
+ * 所以「一条规则写全」与「同 trigger 下拆成多条规则」在运行时等价（约束集合相同），
+ * 而 `{pattern, type:'email'}` 合在一条里会**丢掉 pattern** —— 两者不能混为一谈。
+ * 按约束集合（而非规则分组）比较，既接受合法的拆分/合并，又咬住 dispatch 造成的死键。
  */
-const RULE_KEYS = ['pattern', 'min', 'max', 'type', 'trigger']
-const RULE_BEHAVIOR_KEYS = ['pattern', 'min', 'max', 'type']
-const normRules = (f) =>
-  (f?.rules ?? [])
-    .map((r) => {
-      const o = {}
-      for (const k of RULE_KEYS) if (r?.[k] !== undefined) o[k] = r[k]
-      return o
-    })
-    .filter((o) => RULE_BEHAVIOR_KEYS.some((k) => o[k] !== undefined))
-    .map((o) => JSON.stringify(canon(o)))
-    .sort()
+const RANGE_TYPES = new Set(['integer', 'float', 'number'])
+const normRules = (f) => {
+  const out = new Set()
+  for (const r of f?.rules ?? []) {
+    const trigger = r?.trigger
+    const t = r?.type
+    const push = (k, v) => out.add(JSON.stringify(canon({ k, v, trigger })))
+    // `type:'string'` 与省略 type 走同一个校验器（getType 缺省 string）—— 运行时等价。
+    const isString = t === undefined || t === 'string'
+    if (isString || RANGE_TYPES.has(t)) {
+      if (r?.min !== undefined) push('min', r.min)
+      if (r?.max !== undefined) push('max', r.max)
+    }
+    if (isString && r?.pattern !== undefined) push('pattern', r.pattern)
+    if (t !== undefined && t !== 'string') push('type', t)
+  }
+  return [...out].sort()
+}
 const hasNonRequiredRule = (f) => normRules(f).length > 0
 const fieldRulesEqual = (g, p) => eq(normRules(g), normRules(p))
 
