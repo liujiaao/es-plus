@@ -118,7 +118,9 @@ Two passes, every time:
    plus \`esplus://conventions\` + \`esplus://types\` for the target.
 2. **Draft** the surfaces: map each requested field by MEANING, not keywords —
    status/type/enum → Select (dataOptions, or apiParams for remote); date/time →
-   DatePicker/TimePicker; image/file → Upload; on/off → Switch. Membership is
+   DatePicker/TimePicker; image/file → Upload; on/off → Switch; any numeric
+   value (amount / price / quantity / stock / count / money / integer) →
+   InputNumber. Membership is
    implied by WHICH surface list a field appears in: a filter field goes in
    \`surfaces.query\`, a visible column in \`surfaces.table\`, a mutable add/edit
    field in \`surfaces.form\`. A field that appears in several surfaces is listed

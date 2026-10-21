@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { VALID_FORM_TYPES } from "@es-plus/shared";
 
 type Target = "vue3" | "vue2" | "antdv";
 
@@ -25,12 +26,12 @@ The FormItemOption schema is framework-invariant — the SAME JSON works for vue
 FormItemOption interface:
 - prop: string (field key)
 - label: string (display label)
-- formtype: 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+- formtype: ${VALID_FORM_TYPES.map((t) => `'${t}'`).join(" | ")} — infer it from the field's MEANING, not its name: status/enum → Select, date/time → DatePicker/TimePicker, image/file → Upload, on/off → Switch, and any numeric value (amount / price / quantity / stock / count / money / integer) → InputNumber
 - span: number (grid width, 1-24)
 - attrs: object (pass-through props to the ${uiLib} component — e.g. type, placeholder, valueFormat)
 - dataOptions: Array<{ label: string, value: any }> (for Select/Radio/Checkbox)
 - rules: array (${uiLib} validation rules)
-- isHidden: dynamic visibility. Either a predicate function (model, item, formProps) => boolean, OR a declarative PLAIN JSON condition { field, op?, value? } / an array (AND) — HIDDEN while the condition holds. \`field\` is another field path; op = eq (default) | ne | in | nIn | empty | notEmpty | truthy | falsy. Form-scope (query + add/edit), not the table column.
+- isHidden: dynamic visibility. Either a predicate function (model, item, formProps) => boolean, OR a declarative PLAIN JSON condition { field, op?, value? } / an array (AND) — HIDDEN while the condition holds. \`field\` is another field path; op = eq (default) | ne | in | nIn | empty | notEmpty | truthy | falsy. Only for predicates the plain form cannot express (OR, ordering > / <=, nested NOT) use the JSON-expression form instead — same \`isHidden\` key, JSONLogic-shaped, e.g. { or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }; expression ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Form-scope (query + add/edit), not the table column.
 
 Common patterns:
 - Text input: { prop: 'name', label: '姓名', formtype: 'Input', span: 12 }

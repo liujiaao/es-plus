@@ -225,12 +225,14 @@ function templateBlocks(src) {
  * 断言会静默漏报（写这条时实测踩到）。而转义正确的产物里那个位置是 `&quot;`，
  * 伪属性名后面也不会有字面 `="`，所以放宽分隔符不会制造误报。
  *
- * **已登记的残留（不是本守卫的判据，仅供知情）**：`qAttr` 的实体转义挡住了「凭空多出一个
- * 属性」，但 Vue 会把属性名里的实体**解码**后再校验，于是 `prop` 里带 `"` 时插槽名
+ * **已消除的残留（记在这里免得再被“重发现”）**：旧实现里 `qAttr` 的实体转义挡住了「凭空
+ * 多出一个属性」，但 Vue 会把属性名里的实体**解码**后再校验，于是 `prop` 里带 `"` 时插槽名
  * `#column-…&quot;…` 仍会被模板编译器判为非法属性名（实测 `compileTemplate` 报
- * `Attribute name cannot contain U+0022`）。这是 fail-closed：产物编译不过，而不是可执行注入，
- * 且只能由「本来就不可能是合法插槽名」的 `prop` 触发。`qAttr` 的实体化本身是**正确**的 ——
- * 实测 `:type="row[&#39;x&#39;] …"` 能正常编译（Vue 解析表达式前会解码实体）。
+ * `Attribute name cannot contain U+0022`）—— fail-closed，但产物编译不过。现在
+ * `buildExtensionPointSlotLines` 先用 `isStaticSlotNameSafe` 判「这个 prop 写不写得出静态
+ * 插槽名」，写不出就**整条属性不发射**（留 TODO 注释 + 告警点名），所以这类坏属性已不再产生。
+ * `qAttr` / `qExprAttr` 仍各守其位：`qAttr` 管属性值定界符，`:type` 里的表达式走
+ * `qExprAttr`（`'` / `&` 保持裸，实体化会让 Volar 报 TS1003/TS1005）。
  */
 function tagAttributes(tpl) {
   const attrs = []
@@ -379,7 +381,24 @@ async function checkOutputs(produced) {
           `属性值整体需要 HTML 实体转义（qAttr）`
       )
     }
-    const boundWithSentinel = attrs.filter((a) => /^:(type|color)$/.test(a.name) && a.value.includes(S_ATTR))
+    // 静态插槽名注入面：qAttr 实体化 `"` 曾让产物写出 `#column-b&quot;…` —— 挡住了伪属性，
+    // 但属性名里的实体会被 Vue 解码后判非法（Attribute name cannot contain U+0022）。
+    // 现在 `isStaticSlotNameSafe` 直接**不发射**这类插槽（留 TODO + 告警），所以引号载荷
+    // 的 prop 不得产生任何 `<template #column-…>` 属性。
+    const bSlots = tpls.flatMap(tagAttributes).filter((a) => a.name.startsWith('#column-b'))
+    if (bSlots.length) {
+      problems.push(
+        `${where}：引号载荷的 prop 仍产生了静态插槽名（${bSlots.map((a) => a.name).join(', ')}）—— ` +
+          `属性名里不可能表达它，产物会被模板编译器判非法`
+      )
+    }
+    // 属性值载荷：存在绑定属性时，至少有一个属性值带着**可表达**的载荷哨兵
+    // （S_MUST / S_JS）。引号载荷（S_ATTR）走不到这里 —— 它的 prop 写不成静态插槽名，
+    // 整条属性不发射；这一点由上面那条反向断言钉住，而不是靠「属性值里必须有引号」。
+    const BOUND_PAYLOADS = [S_MUST, S_JS]
+    const boundWithSentinel = attrs.filter(
+      (a) => /^:(type|color)$/.test(a.name) && BOUND_PAYLOADS.some((s) => a.value.includes(s))
+    )
     // 只在**该 mode 本来就产出绑定属性**时要求它带上载荷：
     //   - schema 模式把状态列渲染成 `<el-tag :type="…">` 模板片段 → 属性位置在场，必须被载荷走到；
     //   - sfc 模式把 render 内联进 `<script>`（`render: statusTag`），模板里根本没有属性位置，
@@ -389,7 +408,7 @@ async function checkOutputs(produced) {
     const hasBoundAttr = attrs.some((a) => /^:(type|color)$/.test(a.name))
     if (hasBoundAttr && !boundWithSentinel.length) {
       problems.push(
-        `${where}：存在 \`:type\`/\`:color\` 属性，但没有一个属性值带上载荷哨兵 ${S_ATTR} —— ` +
+        `${where}：存在 \`:type\`/\`:color\` 属性，但没有一个属性值带上载荷哨兵（${BOUND_PAYLOADS.join(' / ')}）—— ` +
           `属性上下文其实没被载荷走到，上面那条注入断言形同虚设（假绿）`
       )
     }
@@ -512,6 +531,9 @@ export function qAttr(value) { return '"' + id(value) + '"' }
 // 双引号属性里的表达式只实体化双引号字符（其余保持原样给 Volar/TS 解析，见真实现头注）；
 // 恒等化即「不挡双引号」—— 非空证明要证明的正是这一类失效。
 export function qExprAttr(value) { return id(value) }
+// 插槽名可表达性判定 = emission 安全层的一部分：恒等化为「永远可表达」，让引号/空白 prop
+// 重新走进静态插槽名 —— 非空证明要证明的正是这一层不在了守卫就会红。
+export function isStaticSlotNameSafe() { return true }
 export function qKey(prop) { return BARE_IDENTIFIER.test(prop) ? prop : "'" + prop + "'" }
 export function qMember(prop) { return BARE_IDENTIFIER.test(prop) ? "." + prop : "['" + prop + "']" }
 export function qMustache(value) { return "'" + id(value) + "'" }

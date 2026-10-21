@@ -23,6 +23,11 @@ import { collectUnknownKeys, formatUnknownKey } from "@es-plus/shared";
  * 判据复用 shared 的 `collectUnknownKeys`（与 `validate_config` 同一份实现），因此
  * 嵌套层（`surfaces.dialog[].formFields`）同样能被点名，并带近似键建议。
  *
+ * **前提：嵌套形状自己也必须 `.passthrough()`。** SDK 传进 handler 的是 `safeParse`
+ * 的**结果**（`validateToolInput`），而 zod 的 `z.object()` 默认可把嵌套未知键剥掉 ——
+ * 只给顶层 passthrough 时，`collectUnknownKeys` 拿到的值里已经没有那个拼写了，闸门
+ * 静默失效。故 `_fragment-shapes.ts` 与本文件覆盖到的所有嵌套对象都显式 passthrough。
+ *
  * 一次性套在 `registerTools` 的入口，而不是改 15 个工具文件：新增工具自动继承，
  * 不会再出现「第 16 个工具忘了加」这种结构性遗漏。
  */

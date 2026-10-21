@@ -55,9 +55,12 @@ es-plus create user-management \
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `<name>` | 页面名称（kebab-case） | **必填** |
+| `<name>` | 页面名称（kebab-case） | **必填**（`--from-config` 可省略，用配置里的 `name`） |
 | `-d, --description` | 跳过交互，直接用此描述生成 | 无（进入交互模式） |
-| `-o, --output <path>` | 输出文件路径 | `./src/views/<PascalName>.vue` |
+| `-o, --output <path>` | 输出路径。**`--mode sfc` 是文件路径**（写单个 `.vue`）；**`--mode schema`（默认）是目录**（写 `schema.ts` + `<PascalName>.vue`） | sfc: `./src/views/<PascalName>.vue`；schema: `./src/views/<kebab-name>/` |
+| `-m, --mode <mode>` | 输出形态：`schema`（CrudPageSchema + 最小 wrapper）或 `sfc`（自包含单文件） | 未传时交给生成路径决定（内置生成器按 `schema`；`--ai` 由模型按需求判定） |
+| `-t, --target <target>` | 渲染端：`vue3` / `vue2` / `antdv` | 未传时交给生成路径决定（内置生成器按 `vue3`；`--ai` 由模型按需求判定；`--from-config` 以配置文件里的 `target` 优先） |
+| `-f, --force` | 覆盖已存在的产物，不再逐个询问 | 关 |
 | `-c, --from-config <path>` | 从结构化 JSON 配置生成（生产模式，配置驱动） | 无 |
 | `--ai` | 用 LLM（Anthropic）真正推理 NL→config，再走确定性生成器；检测到 `ANTHROPIC_API_KEY` 时自动启用。`--no-ai` 可强制走内置生成器 | 检测到 key 时开 |
 
@@ -413,7 +416,12 @@ click: async (_, { close, getRefs }) => {
 
 ### Q: 支持 TypeScript 吗？
 
-生成的是 `<script setup>` 格式（JavaScript）。如需 TypeScript，将 `<script setup>` 改为 `<script setup lang="ts">` 并添加类型注解即可。
+支持，但**两条生成路径的默认值不同**，以实际产物为准：
+
+| 路径 | 产物 | 切换方式 |
+|------|------|----------|
+| 内置（正则）生成器（未走 `--ai` / `--from-config`） | wrapper 是**纯 JavaScript** 的 `<script setup>`；`schema.ts` 只用 `import type` | 手工把 `<script setup>` 改为 `<script setup lang="ts">` 并加类型注解 |
+| 结构化配置（`--from-config`） / LLM（`--ai`） | 默认 **TypeScript**（`<script setup lang="ts">`） | 在配置文件里写 `"typescript": false` 即回到 JavaScript |
 
 ### Q: 生成的代码依赖什么？
 

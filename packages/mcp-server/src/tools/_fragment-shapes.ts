@@ -10,6 +10,16 @@ import { VALID_FORM_TYPES, FORM_TYPE_ALIASES } from "@es-plus/shared";
  * those are derived by composeCrudConfig, not supplied per surface). The two
  * zod versions can't share objects safely; scripts/check-fragment-contract.mjs
  * guards this copy against drift from the shared SurfaceField contract.
+ *
+ * ## 为什么本文件每个对象形状都是 `.passthrough()`（AN-26 续）
+ *
+ * MCP SDK 在调用 handler **之前**先按工具 schema `safeParse`（`validateToolInput`），
+ * 而 zod 的 `z.object()` 默认 **strip**：嵌套层（`fields[0].formtype` 拼成 `formType`、
+ * `options.widht`）在 args 到达 handler 前就已经消失 —— 只给顶层 passthrough 不够，
+ * `_arg-guard` 的 `collectUnknownKeys` 拿到的值里根本没有那个键，于是闸门静默失效。
+ * 这里全部 passthrough，让拼写错误活到 handler，由闸门判红并给 did-you-mean。
+ * （含 `.passthrough()` 的嵌套对象在 JSON Schema 里表现为 `additionalProperties: true`；
+ * 可接受：比「静默丢弃」严格更好，且教学仍由 `.describe()` 承担。）
  */
 
 const UNSAFE_PROP_SEGMENT = /^(?:__proto__|constructor|prototype)$/;
@@ -42,7 +52,7 @@ const FieldRuleSchema = z.object({
     .enum(["blur", "change"])
     .optional()
     .describe("'blur' validates when the field loses focus; 'change' validates while the value changes."),
-});
+}).passthrough();
 
 const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
   z.object({
@@ -50,7 +60,7 @@ const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
     value: z.union([z.string(), z.number(), z.boolean()]),
     disabled: z.boolean().optional(),
     children: z.array(DataOptionSchema).optional(),
-  })
+  }).passthrough()
 );
 
 /**
@@ -78,7 +88,7 @@ const ReactionFulfillSchema = z.object({
   value: ExprNodeSchema.optional().describe(
     "Expression node evaluating to this field's new value, written back to the model (requires a non-empty `dependencies`)."
   ),
-});
+}).passthrough();
 
 /** 联动规则的结构镜像（权威：shared `ReactionSchema`）。 */
 const ReactionSchema = z.object({
@@ -88,7 +98,7 @@ const ReactionSchema = z.object({
     .describe("Model paths that retrigger this rule. REQUIRED when `fulfill.value` is present."),
   when: ExprNodeSchema.optional().describe("Optional gate expression: the rule applies only while it evaluates truthy."),
   fulfill: ReactionFulfillSchema,
-});
+}).passthrough();
 
 /**
  * A single field as described within ONE surface (query / table / form).
@@ -112,7 +122,7 @@ export const surfaceFieldSchema = z.object({
   formtype: z
     .enum([...VALID_FORM_TYPES, ...Object.keys(FORM_TYPE_ALIASES)] as unknown as [string, ...string[]])
     .describe(
-      "Pick by the field's MEANING, not by keyword: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/file → Upload; long text → Input (attrs.type:'textarea'); on/off → Switch; multi-choice → Checkbox; tree → Cascader; score → Rate. Default Input."
+      "Pick by the field's MEANING, not by keyword: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/file → Upload; long text → Input (attrs.type:'textarea'); on/off → Switch; multi-choice → Checkbox; tree → Cascader; score → Rate; numeric value (amount/price/quantity/stock/count/money/integer) → InputNumber. Default Input."
     ),
   querySpan: z
     .number()
@@ -200,7 +210,7 @@ export const surfaceFieldSchema = z.object({
     .describe(
       "Permission CODE gating this field (RBAC, checked by the host's global permission(code)) — NOT a data-driven condition: use `isHidden` for show/hide by another field's value, `reactions` for options/required/disabled linkage."
     ),
-});
+}).passthrough();
 
 /**
  * `generate_table` 的字段形状（AI-51）。
@@ -321,6 +331,7 @@ export const tableBlockOptionsSchema = z.object({
     .describe("Paginate already-fetched data client-side instead of requesting each page from the API."),
   defaultSort: z
     .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
+    .passthrough()
     .optional()
     .describe("Default sort applied on first render."),
   editConfig: z
@@ -333,6 +344,7 @@ export const tableBlockOptionsSchema = z.object({
       autoClear: z.boolean().optional(),
       enabled: z.boolean().optional(),
     })
+    .passthrough()
     .optional(),
   configTableOut: z
     .object({
@@ -341,6 +353,7 @@ export const tableBlockOptionsSchema = z.object({
       pageSize: z.string().optional(),
       current: z.string().optional(),
     })
+    .passthrough()
     .optional()
     .describe(
       'Map the LIST API response onto table semantics when the backend does not use the default flat shape. Default mapping is { total: "records", tableData: "rows", pageSize: "pageSize", current: "pageNo" }. Each value is the FLAT response key (no deep paths — the component only reads top-level keys). e.g. a backend returning { list: [...], count: N } → { tableData: "list", total: "count" }. Only the keys you set are remapped; omit a key to keep its default.'
@@ -358,6 +371,7 @@ export const tableBlockOptionsSchema = z.object({
       expandAll: z.boolean().optional().describe('Start with every node expanded.'),
       lazy: z.boolean().optional().describe('Lazy-load children (vxe only; the loader function itself is a Tier-3 extension point).'),
     })
+    .passthrough()
     .optional()
     .describe(
       "vxe-only rich tree config. Use transform:true + rowField + parentField to build a tree from FLAT rows; for nested `children` arrays on every renderer use the CRUD config's top-level `treeConfig`."
@@ -368,9 +382,10 @@ export const tableBlockOptionsSchema = z.object({
       accordion: z.boolean().optional().describe('Accordion mode: at most one row expanded at a time.'),
       lazy: z.boolean().optional().describe('Lazy-load expand content (vxe only; the loader function itself is a Tier-3 extension point).'),
     })
+    .passthrough()
     .optional()
     .describe('vxe-only row-expand switch (paired with an expand column).'),
-});
+}).passthrough();
 
 /** `generate_table` 的分页播种（权威 schema 顶层 `pagination` 的数据子集）。 */
 export const tablePaginationSchema = z.object({
@@ -379,13 +394,13 @@ export const tablePaginationSchema = z.object({
     .array(z.number().int())
     .optional()
     .describe("Selectable page-size options shown in the pager, e.g. [10, 20, 50]."),
-});
+}).passthrough();
 
 /** `generate_form` 的表单布局（权威 schema 顶层 `formLayout` 的数据子集）。 */
 export const formLayoutSchema = z.object({
   labelWidth: z.union([z.string(), z.number()]).optional().describe("Label column width, e.g. '110px' (number → px)."),
   minFoldRows: z.number().int().optional().describe("Form collapses when the number of rows exceeds this value."),
-});
+}).passthrough();
 
 /**
  * `generate_dialog` 的弹窗底座选项（AI-28）—— core `DialogOptions` 里**可声明式表达**
@@ -428,5 +443,5 @@ export const dialogOptionsSchema = z.object({
     .string()
     .optional()
     .describe("Instance cache key — state survives close/reopen (recycled 10 min after close). Composable mode only: the declarative mode='component' SFC has no such channel and warns+ignores it."),
-});
+}).passthrough();
 

@@ -12,7 +12,7 @@ import {
   isPathInside,
   CLI_TARGETS,
 } from '../src/utils/strings'
-import { detectSchemaType } from '../src/commands/validate'
+import { detectSchemaType, validateFileConfig } from '../src/commands/validate'
 import { createCommand } from '../src/commands/create'
 import { scaffoldCommand } from '../src/commands/scaffold'
 import { extractJson, AiUnavailableError } from '../src/ai/nl-to-config'
@@ -100,6 +100,47 @@ describe('validate.detectSchemaType', () => {
     expect(detectSchemaType(null)).toBe('form-item')
     expect(detectSchemaType('x')).toBe('form-item')
   })
+  it('结构化 CRUD 整页配置 → structured-crud-config（即便同时带 columns）', () => {
+    const cfg = {
+      name: 'OrderManage',
+      apiUrl: '/api/orders',
+      fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ prop: 'orderNo' }],
+    }
+    expect(detectSchemaType(cfg)).toBe('structured-crud-config')
+  })
+})
+
+describe('validate.validateFileConfig — 结构化配置走 Zod 闸', () => {
+  it('合法整页配置 → valid，且报告 structured-crud-config', () => {
+    const { schemaType, result } = validateFileConfig({
+      name: 'OrderManage',
+      apiUrl: '/api/orders',
+      fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+      actions: ['add'],
+    })
+    expect(schemaType).toBe('structured-crud-config')
+    expect(result.valid).toBe(true)
+  })
+
+  it('未知键判红（与 MCP validate_config 同一口径）', () => {
+    const { result } = validateFileConfig({
+      name: 'OrderManage',
+      apiUrl: '/api/orders',
+      fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+      actions: ['add'],
+      tableOptions: { rowKey: 'id' },
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.join('\n')).toContain('/tableOptions/rowKey')
+    expect(result.suggestions.join('\n')).toContain('rowkey')
+  })
+
+  it('显式 --schema 覆盖检测', () => {
+    const { schemaType } = validateFileConfig({ label: '姓名' }, 'form-item')
+    expect(schemaType).toBe('form-item')
+  })
 })
 
 describe('nl-to-config.extractJson', () => {
@@ -173,6 +214,17 @@ describe('fs.writeGeneratedFiles', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it.skipIf(process.platform !== 'win32')('拒绝 Windows 保留设备名（-o NUL 写入会被静默吞掉）', () => {
+    const dir = mkTmp()
+    try {
+      expect(() => writeGeneratedFiles([{ path: join(dir, 'NUL'), content: 'x' }], dir)).toThrow(
+        /保留设备名/
+      )
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('strings.isSafePathSegment — 路径穿越防护', () => {
@@ -184,6 +236,12 @@ describe('strings.isSafePathSegment — 路径穿越防护', () => {
 
   it('拒绝 Windows 会规范化的结尾空格 / 点（".. "、"a."）', () => {
     for (const seg of ['.. ', ' ..', 'a.', 'a. ', '. ']) {
+      expect(isSafePathSegment(seg), seg).toBe(false)
+    }
+  })
+
+  it('拒绝 Windows 保留设备名（NUL/CON/COM1/LPT9，带扩展名同样拒绝）', () => {
+    for (const seg of ['NUL', 'nul', 'CON', 'PRN', 'AUX', 'COM1', 'com9', 'LPT1', 'lpt9', 'NUL.txt', 'con.js']) {
       expect(isSafePathSegment(seg), seg).toBe(false)
     }
   })
@@ -272,6 +330,66 @@ describe('create — [name] 路径穿越拦截（接线级）', () => {
       ])
       expect(process.exitCode).toBe(1)
       expect(existsSync(outFile)).toBe(false)
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('create --from-config — 与 MCP 前门同一口径（修复环 + 权威校验）', () => {
+  it('`dialogs: ["add"]` 罐头简写不再被判死：修复环展开后正常生成', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-cfg-repair-'))
+    const outDir = join(dir, 'out')
+    const cfgPath = join(dir, 'cfg.json')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      writeFileSync(cfgPath, JSON.stringify({
+        name: 'OrderManage',
+        apiUrl: '/api/orders',
+        fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+        actions: ['add'],
+        dialogs: ['add'],
+      }))
+      await createCommand.parseAsync([
+        'node', 'create', '--from-config', cfgPath, '-o', outDir, '--force'
+      ])
+      // 成功路径不设置 exitCode（Node 视 undefined 为 0）
+      expect(process.exitCode ?? 0).toBe(0)
+      expect(existsSync(join(outDir, 'schema.ts'))).toBe(true)
+      // 修复必须可见：不是静默改写
+      expect(logSpy.mock.calls.map((c: unknown[]) => c.join(' ')).join('\n')).toContain('自动归一')
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('未知键不再静默剥掉：CLI 与 MCP 一样判红并给出拼写建议', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-cfg-unknown-'))
+    const outDir = join(dir, 'out')
+    const cfgPath = join(dir, 'cfg.json')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      writeFileSync(cfgPath, JSON.stringify({
+        name: 'OrderManage',
+        apiUrl: '/api/orders',
+        fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+        actions: ['add'],
+        tableOptions: { rowKey: 'id' }, // 应为 rowkey
+      }))
+      await createCommand.parseAsync([
+        'node', 'create', '--from-config', cfgPath, '-o', outDir, '--force'
+      ])
+      expect(process.exitCode).toBe(1)
+      const out = logSpy.mock.calls.map((c: unknown[]) => c.join(' ')).join('\n')
+      expect(out).toContain('/tableOptions/rowKey')
+      expect(out).toContain('did you mean "rowkey"')
+      expect(existsSync(outDir)).toBe(false)
     } finally {
       logSpy.mockRestore()
       process.exitCode = prevExit

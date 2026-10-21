@@ -22,8 +22,9 @@ import { resolveToolProfile, type ToolProfile } from "../profile.js";
  * 根本跑不了，`validate_config({config, type: "structured-crud-config"})` 只会回一句
  * 「Schema not found. Available: form-item, ...」，而那个名字本来就不在可用列表里。
  *
- * 这里给它一个显式的类型名，并走 Zod —— 与 CLI `--from-config` 是同一条校验路径
- * （`packages/cli/src/commands/create.ts` 同样直接调 `StructuredCrudConfigSchema.safeParse`），
+ * 这里给它一个显式的类型名，并走 Zod —— 与 CLI `--from-config` / `validate` 是同一条校验
+ * 路径（`packages/cli/src/commands/create.ts` 走 `repairConfig` + `validateAndRepair`，
+ * `validate.ts` 的 `structured-crud-config` 分支直接调 `validateAndRepair`），
  * 同一个权威 schema，不会再分叉出第三份字段清单。
  *
  * 为什么不复用 `validateConfig`（Ajv）：两者返回形态一致（`ValidationResult`），
@@ -154,7 +155,7 @@ export function registerValidateConfig(server: McpServer, profile: ToolProfile =
       : `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config)`;
   server.tool(
     "validate_config",
-    "Validate an es-plus JSON configuration against its schema. Returns validation errors and fix suggestions.",
+    "Validate an es-plus JSON configuration against its schema. Returns validation errors and fix suggestions. READ-ONLY: it judges and never repairs — format mistakes that the generators auto-fix (key aliases, relocated/nested keys, null placeholders, 'false'-style string booleans, dialog shorthands like dialogs:[\"add\"]) are reported here as errors. Use this to inspect a config; the generator tools repair such mistakes before generating (they report each repair).",
     {
       config: z
         .string()

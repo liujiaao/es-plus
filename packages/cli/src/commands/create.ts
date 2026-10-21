@@ -3,7 +3,7 @@ import prompts from "prompts";
 import pc from "picocolors";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
+import { generateCrudPage, generateCrudSchema, generateFromConfig, PRESET_EXAMPLES, repairConfig, validateAndRepair } from '@es-plus/shared';
 import { nlToConfig, AiUnavailableError } from '../ai/nl-to-config.js';
 import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, isSafePathSegment, isPathInside, CLI_TARGETS } from '../utils/strings.js';
 import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
@@ -77,7 +77,7 @@ async function emitFromStructuredConfig(config: any, nameArg: string | undefined
 
 export const createCommand = new Command("create")
   .argument("[name]", "page name (kebab-case, e.g. user-management)")
-  .option("-o, --output <path>", "output file path")
+  .option("-o, --output <path>", "output path — a FILE for --mode sfc, a DIRECTORY for --mode schema (defaults: src/views/<PascalName>.vue / src/views/<name>/)")
   .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
   .option("-m, --mode <mode>", "output mode: schema (default) or sfc")
   .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
@@ -127,20 +127,39 @@ export const createCommand = new Command("create")
         return;
       }
 
-      const validation = StructuredCrudConfigSchema.safeParse(parsed);
-      if (!validation.success) {
+      // 与 MCP 前门同一条前门（C2·A3 + AN-24）：先跑确定性修复环（别名 / 搬迁 / null /
+      // 成员布尔 / 弹窗简写），再用权威 schema 判定。此前这里直接 `safeParse`，比 MCP 少两步，
+      // 后果都是**静默的**：
+      //   ① 修复环能救的写法（`dialogs: ["add"]`、`"false"` 布尔、null 占位）在 CLI 被判死，
+      //      同一个配置文件走 MCP 能生成、走 CLI 报错；
+      //   ② `safeParse().data` 已把未知键剥掉，于是 `generateFromConfig` 里那条「这些键不在
+      //      配置 schema 里，生成时会被忽略」的告警**永远看不到**它们 —— 拼错的键（rowKey）
+      //      在 CLI 路径是纯静默：产物里没有它，也没有任何提示。
+      const prepared = repairConfig(parsed);
+      const repaired = prepared.config as any;
+      const validation = validateAndRepair(repaired);
+      if (!validation.valid) {
         console.log(pc.red("Config validation failed:"));
-        for (const err of (validation.error as any).issues || (validation.error as any).errors || []) {
-          console.log(pc.red(`  ${(err.path || []).join(".")}: ${err.message}`));
+        for (const err of validation.errors) console.log(pc.red(`  ${err}`));
+        if (validation.suggestions.length > 0) {
+          console.log(pc.yellow("Suggestions:"));
+          for (const s of validation.suggestions) console.log(pc.yellow(`  → ${s}`));
         }
         process.exitCode = 1;
         return;
       }
 
-      const config = validation.data as any;
+      const config = repaired;
+      // 修复/归一记录必须在这里打：生成器内部的 repairConfig 收到的是**已修复**的配置，
+      // 第二轮不会再产生记录 —— 若留给 `generateFromConfig` 的 warnings，CLI 路径就是静默改写。
+      if (prepared.renames.length > 0 || prepared.repairs.length > 0) {
+        console.log(pc.yellow("\n⚠️ 配置已自动归一/修复（生成前）："));
+        for (const r of prepared.renames) console.log(pc.yellow(`  - 自动归一：${r.from} → ${r.to}（${r.note}）`));
+        for (const r of prepared.repairs) console.log(pc.yellow(`  - 自动修复：${r.path}（${r.note}）`));
+      }
       // 目标框架优先级：配置文件显式 target > CLI --target > 默认 vue3
-      // 注意：schema 对 target 施加了 .default('vue3')，safeParse 后 config.target 恒有值，
-      // 无法区分「配置显式写 vue3」与「配置省略」。故改用原始 parsed.target 判定显式性，
+      // 修复环**不补** schema 默认值，故 `config.target` 就是文件里写的内容；但仍用原始
+      // parsed.target 判「显式性」，让这条规则不依赖修复环的实现细节。
       // 仅当配置未显式给出 target 时才回落到 CLI --target（cliTarget 已含 vue3 兜底）。
       if (parsed == null || (parsed as any).target === undefined) {
         config.target = cliTarget;
@@ -204,27 +223,40 @@ export const createCommand = new Command("create")
     // Enabled by --ai, or automatically when ANTHROPIC_API_KEY is present; --no-ai forces regex.
     const wantAi = options.ai !== false && (options.ai === true || !!process.env.ANTHROPIC_API_KEY);
     if (wantAi) {
+      let aiConfig: any;
+      let attempts = 0;
       try {
         // 不先问 `aiAvailable()` 再决定是否进入：那个「探测 + 分支」正是静默降级的来源
         // （key 已设置但 SDK 未安装时探测返回 false，而 --ai 未显式给定时整段跳过、不留
         // 任何提示 —— 用户以为用了 AI，实际拿到的是正则生成器）。直接调用，让
         // `AiUnavailableError` 带着**确切原因**走同一条可见的降级提示。
         console.log(pc.cyan(`\n🤖 正在用 LLM 推理配置 (NL→config)...`));
-        const { config, attempts } = await nlToConfig(description!, {
+        const out = await nlToConfig(description!, {
           // 只在用户真的传了标志时下发：否则把决定权留给模型对 NL 的解读。
           target: explicitTarget ? cliTarget : undefined,
           mode: explicitMode ? mode : undefined,
         });
-        // 日志必须报告**实际**目标/模式：模型可以按 NL 选它们，打印 CLI 默认值会撒谎。
-        console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试，target=${config.target}, mode=${config.mode}）→ 走确定性生成器`));
-        await emitFromStructuredConfig(config, name, options.output, !!options.force);
-        return;
+        aiConfig = out.config;
+        attempts = out.attempts;
       } catch (err: any) {
         const unavailable = err instanceof AiUnavailableError;
         const detail = unavailable ? err.message : (err?.message || String(err));
         console.log(
           pc.yellow(`\n⚠️ ${unavailable ? 'AI 路径不可用' : 'LLM 路径失败'}，降级到内置生成器：${detail}`)
         );
+      }
+      // 生成/落盘**不放进**上面的 try：它失败时降级到正则生成器会用同一路径覆盖产物，
+      // 且以 0 退出 —— 用户拿到「名为 AI 生成、实为正则」的页面却没有任何错误信号。
+      if (aiConfig) {
+        // 日志必须报告**实际**目标/模式：模型可以按 NL 选它们，打印 CLI 默认值会撒谎。
+        console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试，target=${aiConfig.target}, mode=${aiConfig.mode}）→ 走确定性生成器`));
+        try {
+          await emitFromStructuredConfig(aiConfig, name, options.output, !!options.force);
+        } catch (err: any) {
+          console.log(pc.red(`✗ 生成/写盘失败：${err?.message || String(err)}`));
+          process.exitCode = 1;
+        }
+        return;
       }
     }
 

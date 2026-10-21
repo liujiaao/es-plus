@@ -14,6 +14,7 @@ import {
   inlineJson,
   findNonJsonValues,
   BARE_IDENTIFIER,
+  isStaticSlotNameSafe,
   assertEmittableExpr,
 } from './codegen-escape.js'
 import {
@@ -220,13 +221,27 @@ function sanitizeExplicitColumns(
 function warnNonIdentifierProps(config: StructuredCrudConfig): string[] {
   const props = (config.fields || []).map((f) => f?.prop).filter((p): p is string => typeof p === 'string')
   const odd = props.filter((p) => p && !BARE_IDENTIFIER.test(p))
-  if (!odd.length) return []
+  // 需要扩展点插槽（render）的字段里，prop 写不成静态插槽名的那几个：产物里不发射插槽
+  // （见 buildExtensionPointSlotLines 的占位分支），必须点名，否则「渲染函数没生效」
+  // 看起来像生成器的 bug。
+  const unrepresentable = (config.fields || [])
+    .filter((f) => f?.render && typeof f.prop === 'string' && !isStaticSlotNameSafe(`column-${f.prop}`))
+    .map((f) => f.prop)
+  const unrepresentableWarning = unrepresentable.length
+    ? [
+        `prop 含空白/引号等字符，无法写成静态插槽名：${unrepresentable.join(', ')} —— 这些字段的 \`render\` 不会发射扩展点插槽` +
+          `（\`#column-foo bar\` 会被模板解析成插槽 \`column-foo\` + 伪属性 \`bar\`），产物里只留 TODO 注释。请改用合法标识符作 prop。`,
+      ]
+    : []
+
+  if (!odd.length) return unrepresentableWarning
   const nested = odd.filter((p) => /[.[\]]/.test(p))
   return [
     `prop 不是裸标识符：${odd.join(', ')}。生成侧已按需加引号（产物可编译），` +
       (nested.length
         ? `但嵌套路径（${nested.join(', ')}）在 mode=sfc 下**初始默认值不生效**（reactive 建的是扁平键）——请改用 mode=schema，或自行初始化嵌套结构。`
         : `建议改用标识符以免下游工具（如按 prop 生成的插槽名）难以处理。`),
+    ...unrepresentableWarning,
   ]
 }
 
@@ -585,7 +600,23 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
         if (dlg.hiddenFullBtn) dialogSchema.hiddenFullBtn = true
         if (dlg.appendTo) dialogSchema.appendTo = dlg.appendTo
         if (dlg.cacheKey) dialogSchema.cacheKey = dlg.cacheKey
-        if (dlg.configBtn) dialogSchema.configBtn = dlg.configBtn
+        if (dlg.configBtn) {
+          dialogSchema.configBtn = dlg.configBtn
+          // schema 模式下弹窗由 <es-crud-page> 在运行时装配：它只给 `confirm` / `cancel`
+          // 挂 click（es-crud-page 的 resolveDialogBtns），`custom`（或省略 action）原样
+          // 返回 —— 产出一个**点了没反应**的按钮，而 schema 模式又没有 wrapper SFC 可供
+          // 宿主补 click。这里不改数据（契约允许），但必须点名，否则死按钮是静默的。
+          const dead = (dlg.configBtn as Array<{ name?: string; action?: string }>).filter(
+            (b) => b.action !== 'confirm' && b.action !== 'cancel'
+          )
+          for (const b of dead) {
+            warnings.push(
+              `Dialog "${sanitizeForComment(key)}" 的 configBtn "${sanitizeForComment(String(b.name ?? '(unnamed)'))}" ` +
+                `action=${b.action ? `'${sanitizeForComment(String(b.action))}'` : 'omitted'}：schema 模式下运行时只装配 ` +
+                `confirm/cancel 的 click，这个按钮会是死按钮 —— 改用 mode:'sfc'（click 在 wrapper 里补）或删掉它。`
+            )
+          }
+        }
         if (dlg.hasCustomRender) {
           dialogSchema.hasCustomRender = true
           warnings.push(`Dialog "${sanitizeForComment(key)}" has hasCustomRender=true — implement render function in wrapper SFC.`)
@@ -1522,6 +1553,15 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
   const lines: string[] = []
   // prop 落在这里是 **HTML 属性值** 位置（#column-xxx 插槽名），q()/qBt() 都放行 `"`，
   // 必须走 qAttr：实测 prop 含 `"@mouseover="` 会凭空注入一个 HTML 事件属性。
+  // 但 qAttr 只转义属性**值**的定界符，救不了属性**名**里的空白/引号 —— 这类 prop
+  // 写不出静态插槽名（`#column-foo bar` 会拆成插槽 `column-foo` + 伪属性 `bar`）。
+  // 不发射坏模板：留占位注释，告警由 `warnNonIdentifierProps` 统一发（两种 mode 各一份）。
+  const slotName = `column-${field.prop}`
+  if (!isStaticSlotNameSafe(slotName)) {
+    return [
+      `    <!-- TODO(es-plus): custom render for "${sanitizeForComment(String(field.label))}" — prop ${sanitizeForComment(String(field.prop))} 含空白/引号等字符，写不成静态插槽名 #${sanitizeForComment(slotName)}。请改用已存在的普通列名，或在宿主里自行绑定该插槽。 -->`,
+    ]
+  }
   lines.push(`    <template #column-${qAttr(field.prop)}="{ row }">`)
   lines.push(`      <!-- TODO(es-plus): custom render for "${sanitizeForComment(String(field.label))}" — replace this default stub with your markup. -->`)
   if (field.render) {
@@ -1619,7 +1659,11 @@ function applyExpandConfig(
   if (engine === 'vxe') {
     warnings.push('expandConfig 的声明式展开内容不会被 vxe 引擎渲染（vxe 展开内容走插槽）——数据已保留，但需宿主提供 expand 插槽或改用默认引擎。')
   } else if (engine === 'virtual' || (config.tableOptions as Record<string, unknown> | undefined)?.virtual) {
-    warnings.push('expandConfig 的声明式展开内容不会被虚拟滚动引擎渲染（el-table-v2 无 detail row）——数据已保留，但需改用默认引擎。')
+    // vue2 + Element UI 没有虚拟引擎：运行时**降级为普通 el-table**（并自己 warn），
+    // 普通 el-table 的展开列照常渲染 —— 对 vue2 发「不会被渲染」是假告警。
+    if ((config.target ?? DEFAULT_TARGET) !== 'vue2') {
+      warnings.push('expandConfig 的声明式展开内容不会被虚拟滚动引擎渲染（el-table-v2 无 detail row）——数据已保留，但需改用默认引擎。')
+    }
   }
   const out = columns.map((c) => ({ ...c }))
   const idx = out.findIndex((c) => c.type === 'expand')

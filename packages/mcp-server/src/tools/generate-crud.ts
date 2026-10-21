@@ -5,6 +5,7 @@ import {
   generateFromConfig,
   generateFormBlock,
   generateDialogBlock,
+  buildPreflight,
   formatPreflight,
   validateAndRepair,
 } from "@es-plus/shared";
@@ -51,6 +52,9 @@ const dialogEntrySchema = z.union([
           "This dialog's own field list. When omitted: the `form` surface if present, else the `table` surface (table-bearing) or the `query` surface (no table).",
         ),
     })
+    // AN-26（续）：passthrough 让 `formItmes` 这类拼写活到 handler，由 `_arg-guard`
+    // 点名判红；默认 strip 会让它在 SDK 解析阶段就消失（见 `_arg-guard.ts` 头注）。
+    .passthrough()
     .describe("A full-parameter dialog — use when the request needs a custom id/title/width or a per-dialog field list."),
 ]);
 
@@ -66,6 +70,9 @@ const surfacesShape = z
         'Which dialogs the request needs: a canned key ("add"/"edit"/"view") or a full object { key, title?, width?, fullscreen?, formItems? }.',
       ),
   })
+  // 同上：`surfaces.formFields` 这类近义键必须活到闸门，而不是被 zod strip 后
+  // 生成一个「只读页」并报成功。
+  .passthrough()
   .describe("The intent table — set only the surfaces the request implies. Any subset is valid.");
 
 const crudShape = {
@@ -438,6 +445,43 @@ export function registerGenerateCrud(server: McpServer) {
           header.push("", "⚠️ Warnings:");
           for (const w of uniqueWarnings) header.push(`  - ${w}`);
         }
+        // AN-15：无表片段同样**不**自成一体 —— 查询表单的远程下拉、弹窗 composable 的
+        // 提交都要经全局 httpRequest；labelKey 要 t()；permissionValue 缺 permission()
+        // 时失败方向是放行。此前这条支完全不输出前置清单，宿主只拿到代码，那些前提
+        // 只能靠猜。判据与整页共用 `buildPreflight`，不另写一份启发式。
+        const fragmentCarriers: any[] = [
+          ...query,
+          ...form,
+          ...dialogEntries.flatMap((d: any) =>
+            d && typeof d === "object" && Array.isArray(d.formItems) ? d.formItems : [],
+          ),
+        ];
+        const hasRemoteOptions = fragmentCarriers.some((f) => f && typeof f === "object" && f.apiParams);
+        const dialogSubmits = hasDialog && !!args.apiUrl;
+        const fragmentPreflight = buildPreflight(
+          {
+            target: args.target,
+            mode: "sfc",
+            i18n: args.i18n,
+            fields: fragmentCarriers,
+            usesRemoteData: hasRemoteOptions || dialogSubmits,
+            // 默认文案讲的是「表取 apiUrl」，片段里没有表 —— 自报一句对得上产物的原因。
+            remoteReason: [
+              hasRemoteOptions
+                ? "Remote option sources (apiParams.url) are fetched through the global httpRequest; unconfigured, those controls throw an explicit \"全局 httpRequest 未配置\" error."
+                : "",
+              dialogSubmits
+                ? `The dialog composable submits to "${String(args.apiUrl)}" through the global httpRequest (onSuccess only fires after a successful call); unconfigured, submitting throws an explicit "全局 httpRequest 未配置" error.`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" "),
+            // 前门无表支的弹窗体是 JSX render（src/tools/generate-dialog 的 composable 形态）。
+            jsxRender: hasDialog,
+          },
+          { target: args.target, mode: "sfc" },
+        );
+        header.push("", formatPreflight(fragmentPreflight));
         header.push("", "---", "");
         return { content: [{ type: "text", text: header.join("\n") + "\n" + sections.join("\n\n---\n\n") }] };
       } catch (error: any) {

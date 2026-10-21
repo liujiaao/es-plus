@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildPreflight,
+  checkPreflightShape,
   buildScaffoldPreflight,
   formatPreflight,
   type PreflightId,
@@ -312,6 +313,61 @@ describe('doctorPage — 静态扫描的诚实边界', () => {
     })
     expect(report.findings.find((f) => f.id === 'jsx')!.status).toBe('missing')
     expect(report.ok).toBe(false)
+  })
+})
+
+describe('checkPreflightShape — 形状不可读时不得给出「全 ok」', () => {
+  // 失败方向：形状错的载体被 `carriersOf` 静默跳过 ⟹ preflight 说「不需要 permission」，
+  // 而 permission 缺失时运行时是**放行**。所以这些形状必须被点名，而不是被忽略。
+  it('合法输入（完整配置 / 部分配置 / dialogs.add=null）→ 无 issue', () => {
+    expect(
+      checkPreflightShape({
+        name: 'UserManage',
+        apiUrl: '/api/users',
+        fields: [{ prop: 'name', permissionValue: 'user:add' }],
+        tableOptions: { rowkey: 'id' },
+      }),
+    ).toEqual([])
+    expect(checkPreflightShape({ target: 'vue3', mode: 'schema', actions: ['add'], fields: [] })).toEqual([])
+    expect(checkPreflightShape({ dialogs: { add: null, edit: {} } })).toEqual([])
+    expect(checkPreflightShape({ operationColumn: false })).toEqual([])
+  })
+
+  it('collects paths for every carrier list preflight reads', () => {
+    const issues = checkPreflightShape({
+      fields: 'a,b',
+      columns: [{ btns: 'edit', groups: [{ groups: 'x' }] }],
+      toolbarBtns: [1],
+      tableBtns: {},
+      operationColumn: { btns: 'del' },
+      expandConfig: { fields: 'x' },
+      dialogs: { edit: 'oops', view: { formItems: 'x', configBtn: [null] } },
+    })
+    const paths = issues.map((i) => i.path)
+    expect(paths).toContain('/fields')
+    expect(paths).toContain('/columns/0/btns')
+    expect(paths).toContain('/columns/0/groups/0/groups')
+    expect(paths).toContain('/toolbarBtns/0')
+    expect(paths).toContain('/tableBtns')
+    expect(paths).toContain('/operationColumn/btns')
+    expect(paths).toContain('/expandConfig/fields')
+    expect(paths).toContain('/dialogs/edit')
+    expect(paths).toContain('/dialogs/view/formItems')
+    expect(paths).toContain('/dialogs/view/configBtn/0')
+  })
+
+  it('rejects non-object roots and bad scalar knobs', () => {
+    for (const bad of [null, undefined, [], 'x', 42]) {
+      const issues = checkPreflightShape(bad)
+      expect(issues.length).toBeGreaterThan(0)
+      expect(issues[0]!.path).toBe('/')
+    }
+    const issues = checkPreflightShape({ mode: 'jsx', target: 'vue4', actions: 'add', permissions: [] })
+    expect(issues.map((i) => i.path)).toEqual(['/actions', '/permissions', '/mode', '/target'])
+  })
+
+  it('未知键放行（调用方常传整份 StructuredCrudConfig）', () => {
+    expect(checkPreflightShape({ name: 'X', apiUrl: '/x', tableOptions: {}, foo: 1 })).toEqual([])
   })
 })
 

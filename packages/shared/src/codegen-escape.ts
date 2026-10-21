@@ -74,6 +74,21 @@ export function qAttr(value: unknown): string {
 }
 
 /**
+ * 静态插槽名是否可表达（`#column-xxx`）。
+ *
+ * `qAttr` 负责把内容放进属性**值**并转义 `"` 等；它救不了「属性**名**里出现空白」——
+ * HTML 的静态属性名以空白分隔，`prop: 'foo bar'` 会生成
+ * `<template #column-foo bar="{ row }">`：插槽名变成 `column-foo`，`bar="{ row }"`
+ * 成了一个伪属性，产物既匹配不上运行时按 `column-foo bar` 取的插槽，也可能直接解析失败。
+ * 引号/尖括号/反引号/`=` 同理（实体在属性名里不参与解码，entity 化也无效）。
+ *
+ * 调用方在 false 时应**不发射**静态插槽，改为写占位注释并告警 —— 不静默产出坏模板。
+ */
+export function isStaticSlotNameSafe(name: unknown): boolean {
+  return /^[^\s"'<>`=/]+$/.test(String(name))
+}
+
+/**
  * 双引号 HTML 属性里的 **JS 表达式**（`:type="…"` / `:color="…"`，见 target.ts 的状态标签）。
  *
  * 与 `qAttr` 的差别只在「哪些字符必须实体化」：

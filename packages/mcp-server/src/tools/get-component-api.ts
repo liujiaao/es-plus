@@ -164,13 +164,14 @@ interface TableOptions {
   configTableOut?: Record<string, string>  // Response field mapping
   rowkey?: string             // Row unique key
   isInitRun?: boolean         // Auto-fetch on mount (default true)
-  heightType?: 'auto' | 'height'  // Height mode
-  height?: number | string    // Container height value (used with heightType)
+  heightType?: 'auto' | 'height' | 'maxHeight'  // 'height' = fixed height; 'maxHeight' = capped at tabHeight (a 'height' value is IGNORED); 'auto' = no container height constraint. Default 'auto'
+  tabHeight?: number | string  // Height consumed for EVERY heightType: under 'height' it overrides 'height'; under 'maxHeight' it is the cap. number → px, string → raw CSS value
+  height?: number | string    // Container height used ONLY when heightType is 'height' (ignored for 'auto' / 'maxHeight')
 
   // Virtual scrolling (el-table-v2, suitable for 10k+ rows)
   // Vue 3 only — Vue 2 + Element UI fallback to standard ElTable scrolling.
   virtual?: boolean
-  engine?: 'default' | 'virtual'
+  engine?: 'default' | 'virtual' | 'vxe'   // 'vxe' swaps in vxe-table (same columns/dataSource API)
   rowHeight?: number
   estimatedRowHeight?: number
   overscanCount?: number
@@ -279,7 +280,7 @@ interface DialogOptions {
   render?: (h, instance, components) => VNode   // Dialog body content
   renderHeader?: (h, instance) => VNode         // Custom header
   renderFooter?: (h, instance) => VNode         // Custom footer
-  configBtn?: BtnConfig[]     // Footer buttons (auto-generated if not using renderFooter)
+  configBtn?: BtnConfig[]     // Footer buttons — NOTHING is rendered when omitted (no implicit confirm/cancel), same as the <es-dialog> component
   onClosed?: () => void
   isDraggable?: boolean       // Draggable dialog
   hiddenFullBtn?: boolean     // Hide fullscreen toggle

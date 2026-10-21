@@ -141,3 +141,21 @@ describe('create — AI 不可用时降级必须可见', () => {
     expect(logs()).not.toContain('AI 路径不可用')
   })
 })
+
+describe('create --ai — 落盘失败不得被「降级」掩盖', () => {
+  it('确定性生成器抛错 → 报「生成/写盘失败」、exit 1，且不被正则产物覆盖', async () => {
+    // 模型给出的配置 schema 非法（fields 为空）→ generateFromConfig 在写盘前抛错。
+    // 旧实现把 emitFromStructuredConfig 也包在 LLM 的 try 里：错误被当成「LLM 路径失败」，
+    // 随后正则生成器用**同一路径**写出一份完全不同的页面并以 0 退出 —— 用户拿到
+    // 「名为 AI 生成、实为正则」的产物，且没有任何错误信号。
+    mocks.nlToConfig.mockResolvedValue({ config: { ...MODEL_CONFIG, fields: [] }, attempts: 1 })
+    const outDir = join(dir, 'out')
+    await createCommand.parseAsync([
+      'node', 'create', 'order-manage', '-d', '做一个订单列表', '--ai', '-o', outDir, '--force',
+    ])
+    expect(process.exitCode).toBe(1)
+    expect(logs()).toContain('生成/写盘失败')
+    expect(logs()).not.toContain('LLM 路径失败')
+    expect(existsSync(join(outDir, 'schema.ts'))).toBe(false)
+  })
+})

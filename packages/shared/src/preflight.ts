@@ -67,6 +67,14 @@ export interface PreflightInput {
    */
   usesRemoteData?: boolean
   /**
+   * `http-request` 一项在 usesRemoteData=true 时的原因文案覆盖。
+   *
+   * 默认文案按 **CRUD 整页**（schema/sfc）解释「表会取 apiUrl」；前门的**无表**片段
+   * （查询表单的远程下拉、弹窗 composable 的提交）是另一种产物，套用整页说法会指错
+   * 对象。这类调用方自报一句更准确的原因，避免清单说一句与会看到的东西对不上的话。
+   */
+  remoteReason?: string
+  /**
    * 产物里是否真的有 JSX 语法。默认按生成器的实际判据推导
    * （`mode=sfc` ∧ 有 add/edit/view 动作 ⟹ 弹窗 render 走 JSX）。
    * `generateScaffold` 的 dialog 只是 `useDialog()`，没有 JSX，故显式传 false。
@@ -133,6 +141,154 @@ function carriersOf(input: PreflightInput): PreflightCarrier[] {
   if (input.operationColumn) push(input.operationColumn.btns)
   push(input.expandConfig?.fields)
   return out
+}
+
+/**
+ * 校验「送进 preflight 的那份配置」的**形状**。
+ *
+ * 为什么需要：`buildPreflight` 靠载体（字段/列/按钮）上的 `permissionValue` / `labelKey`
+ * 判定「本页面是否需要 `permission()` / `t()`」。形状错的时候（`fields: "a,b"`、
+ * `formFields: […]`、按钮写成字符串）载体被静默跳过，于是清单说「不需要权限」——
+ * 而 `permission` 缺失时**失败方向是放行**（core 默认 allow-all）。也就是说，
+ * 一份畸形配置换来的不是报错，而是「全 ok」的假绿。
+ *
+ * 这里刻意只校验 `PreflightInput` 真正读到的键，且**放行未知键**：调用方交给
+ * `doctor_page` 的往往是整份 `StructuredCrudConfig`（`name`/`apiUrl`/`tableOptions`…），
+ * 那部分不归本函数判定（完整配置由 `validateAndRepair` 负责）。两者职责不重叠：
+ * 本函数只回答「这份对象能不能被当作 preflight 的输入来读」。
+ *
+ * 返回空数组 = 可以读。返回的 `path` 用 `/` 开头，与 zod 的 issue 路径同形。
+ */
+export interface PreflightShapeIssue {
+  path: string
+  message: string
+}
+
+export function checkPreflightShape(input: unknown): PreflightShapeIssue[] {
+  const issues: PreflightShapeIssue[] = []
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === 'object' && !Array.isArray(v)
+  const path = (base: string, key: string | number): string =>
+    `${base}/${typeof key === 'number' ? key : key.replace(/~/g, '~0').replace(/\//g, '~1')}`
+
+  if (!isPlainObject(input)) {
+    return [{ path: '/', message: 'config 必须是对象（{ … }），否则无法判定有哪些权限/翻译门' }]
+  }
+
+  /** 载体数组：必须是对象数组（字符串会被 `carriersOf` 静默跳过 ⟹ 假绿）。 */
+  const checkCarrierList = (value: unknown, base: string, label: string) => {
+    if (value === undefined) return
+    if (!Array.isArray(value)) {
+      issues.push({ path: base, message: `${label} 必须是数组` })
+      return
+    }
+    value.forEach((item, i) => {
+      if (!isPlainObject(item)) {
+        issues.push({
+          path: path(base, i),
+          message: `${label} 的每一项必须是对象（含 prop / label / permissionValue 等键），当前是 ${describeType(item)}`,
+        })
+      }
+    })
+  }
+
+  const checkColumns = (value: unknown, base: string) => {
+    if (value === undefined) return
+    if (!Array.isArray(value)) {
+      issues.push({ path: base, message: 'columns 必须是数组' })
+      return
+    }
+    value.forEach((col, i) => {
+      const colPath = path(base, i)
+      if (!isPlainObject(col)) {
+        issues.push({ path: colPath, message: `columns 的每一项必须是对象，当前是 ${describeType(col)}` })
+        return
+      }
+      checkCarrierList(col.btns, `${colPath}/btns`, 'columns[].btns')
+      checkColumns(col.groups, `${colPath}/groups`)
+    })
+  }
+
+  checkCarrierList(input.fields, '/fields', 'fields')
+  checkColumns(input.columns, '/columns')
+  checkCarrierList(input.toolbarBtns, '/toolbarBtns', 'toolbarBtns')
+  checkCarrierList(input.tableBtns, '/tableBtns', 'tableBtns')
+
+  if (input.operationColumn !== undefined && input.operationColumn !== false) {
+    if (!isPlainObject(input.operationColumn)) {
+      issues.push({
+        path: '/operationColumn',
+        message: `operationColumn 必须是对象或 false，当前是 ${describeType(input.operationColumn)}`,
+      })
+    } else {
+      checkCarrierList(input.operationColumn.btns, '/operationColumn/btns', 'operationColumn.btns')
+    }
+  }
+
+  if (input.expandConfig !== undefined) {
+    if (!isPlainObject(input.expandConfig)) {
+      issues.push({
+        path: '/expandConfig',
+        message: `expandConfig 必须是对象，当前是 ${describeType(input.expandConfig)}`,
+      })
+    } else {
+      checkCarrierList(input.expandConfig.fields, '/expandConfig/fields', 'expandConfig.fields')
+    }
+  }
+
+  if (input.dialogs !== undefined) {
+    if (!isPlainObject(input.dialogs)) {
+      issues.push({
+        path: '/dialogs',
+        message: `dialogs 必须是以弹窗 id 为键的对象，当前是 ${describeType(input.dialogs)}`,
+      })
+    } else {
+      for (const [id, dialog] of Object.entries(input.dialogs)) {
+        // `dialogs.add: null` 是前门可修复的输入形态（repairConfig 会补成 `{}`），
+        // doctor 拿到未修复的配置时不该因此判红。
+        if (dialog === null || dialog === undefined) continue
+        const dialogPath = path('/dialogs', id)
+        if (!isPlainObject(dialog)) {
+          issues.push({
+            path: dialogPath,
+            message: `dialogs.${id} 必须是对象或 null，当前是 ${describeType(dialog)}`,
+          })
+          continue
+        }
+        checkCarrierList(dialog.formItems, `${dialogPath}/formItems`, `dialogs.${id}.formItems`)
+        checkCarrierList(dialog.configBtn, `${dialogPath}/configBtn`, `dialogs.${id}.configBtn`)
+      }
+    }
+  }
+
+  if (input.actions !== undefined) {
+    if (!Array.isArray(input.actions) || input.actions.some((a) => typeof a !== 'string')) {
+      issues.push({ path: '/actions', message: 'actions 必须是字符串数组（如 ["add","edit","query"]）' })
+    }
+  }
+  if (input.permissions !== undefined && !isPlainObject(input.permissions)) {
+    issues.push({
+      path: '/permissions',
+      message: `permissions 必须是「动作 → 权限码」的对象，当前是 ${describeType(input.permissions)}`,
+    })
+  }
+  if (input.mode !== undefined && input.mode !== 'schema' && input.mode !== 'sfc') {
+    issues.push({ path: '/mode', message: `mode 只能是 "schema" 或 "sfc"，当前是 ${JSON.stringify(input.mode)}` })
+  }
+  if (input.target !== undefined && !['vue3', 'vue2', 'antdv'].includes(input.target as string)) {
+    issues.push({
+      path: '/target',
+      message: `target 只能是 "vue3" / "vue2" / "antdv"，当前是 ${JSON.stringify(input.target)}`,
+    })
+  }
+
+  return issues
+}
+
+function describeType(v: unknown): string {
+  if (v === null) return 'null'
+  if (Array.isArray(v)) return 'array'
+  return typeof v
 }
 
 function uiLibrary(target: TargetFramework): {
@@ -213,9 +369,9 @@ export function buildPreflight(
       title: 'Global httpRequest',
       required: usesRemoteData,
       reason: usesRemoteData
-        ? mode === 'schema'
+        ? (input.remoteReason ?? (mode === 'schema'
           ? `The wrapper SFC calls the free function httpRequest() on mount and after delete/add/edit; this config's table fetches "apiUrl" through it. Unconfigured, it throws an explicit "全局 httpRequest 未配置" error — the page stays empty.`
-          : `The table's apiParams.url is fetched through the global httpRequest; unconfigured, the table throws an explicit "全局 httpRequest 未配置" error on mount.`
+          : `The table's apiParams.url is fetched through the global httpRequest; unconfigured, the table throws an explicit "全局 httpRequest 未配置" error on mount.`))
         : 'This artifact declares no apiParams / remote fetch, so httpRequest is never called.',
       action: "httpRequest: (params) => axios(params) — inside the plugin options (entry below).",
     },

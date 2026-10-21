@@ -25,7 +25,7 @@ const TYPES_FALLBACK_VUE3 = `// @es-plus/vue3 TypeScript Type Definitions (bundl
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 
-export type FormType = 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+export type FormType = 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
 
 export interface FieldHiddenCondition {
   /** Another field path in the same form model, e.g. "status" or "user.type". */

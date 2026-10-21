@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { VALID_FORM_TYPES } from "@es-plus/shared";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 type Target = "vue3" | "vue2" | "antdv";
@@ -73,7 +74,7 @@ Key concepts:
 
 ${targetNotes(target)}
 
-Available formtype values: Input, Select, DatePicker, TimePicker, Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
+Available formtype values: ${VALID_FORM_TYPES.join(', ')}
 
 Rules:
 1. Query form fields use span: 6 (or 8 for date ranges)

@@ -75,6 +75,32 @@ describe("工具入参闸门 — 未知键不再静默消失", () => {
     expect(res.content[0].text).toContain("/surfaces/dialog/0/formFields");
   });
 
+  it("经 SDK 同款 safeParse 后，嵌套拼写仍活到闸门（回归：嵌套也被 strip）", async () => {
+    // SDK 的 validateToolInput 传进 handler 的是 safeParse 的结果。若嵌套形状是
+    // zod 默认 strip，拼写在这里就已消失，闸门看到的是「合法入参」。
+    const parsed = tools.generate_crud.schema.parse({
+      ...baseCrud,
+      surfaces: { form: [field], dialog: [{ key: "add", formItmes: [field] }] },
+    });
+    expect(parsed.surfaces.dialog[0].formItmes).toBeDefined();
+    const res = await tools.generate_crud.handler(parsed);
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("/surfaces/dialog/0/formItmes");
+    expect(res.content[0].text).toContain('did you mean "formItems"');
+  });
+
+  it("字段级拼写（formType → formtype）同样点名 + 建议", async () => {
+    const parsed = tools.generate_crud.schema.parse({
+      ...baseCrud,
+      surfaces: { form: [{ ...field, formType: "Select" }] },
+    });
+    const res = await tools.generate_crud.handler(parsed);
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).toContain("/surfaces/form/0/formType");
+    expect(text).toContain('did you mean "formtype"');
+  });
+
   it("合法入参照常生成（不误杀）", async () => {
     const res = await tools.generate_crud.handler({ ...baseCrud });
     expect(res.isError).toBeFalsy();

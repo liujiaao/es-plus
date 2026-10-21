@@ -52,10 +52,19 @@ export function esPlusPkgFor(target: CliTarget): string {
 }
 
 /**
+ * Windows 保留设备名。在 NT 命名空间里它们**永远是设备**，与所在目录无关 ——
+ * `-o NUL` 会把产物写进空设备（写完即消失，无报错），`-o CON` / `-o COM1` 同理，
+ * 带扩展名也一样（`NUL.txt`）。这类「成功但没有文件」的静默失败正是本函数要挡的。
+ * 大小写不敏感，比较的是**基名**（调用方传入的就是单个路径段）。
+ */
+const WINDOWS_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i
+
+/**
  * 判断一个「由页面名派生的文件/目录基名」是否安全。
  *
- * 只拒绝与路径穿越相关的形态：路径分隔符、`.` / `..`、Windows 盘符前缀。
- * 不限制中文等其余字符 —— LLM 可能产出中文页面名，那是合法的（非穿越）文件名。
+ * 只拒绝与路径穿越 / 无法落盘相关的形态：路径分隔符、`.` / `..`、Windows 盘符前缀、
+ * Windows 保留设备名。不限制中文等其余字符 —— LLM 可能产出中文页面名，那是合法的
+ * （非穿越）文件名。
  *
  * 背景：`name` 此前只约束 `min(1)`，`toPascalCase` 也不剥离分隔符，
  * 于是 `--from-config` 载入不可信配置时可通过 `name: "../../evil"` 把文件写出输出目录。
@@ -68,6 +77,7 @@ export function isSafePathSegment(segment: string): boolean {
   if (segment === '.' || segment === '..') return false
   if (/[\\/]/.test(segment)) return false
   if (/^[A-Za-z]:/.test(segment)) return false
+  if (WINDOWS_DEVICE_NAME.test(segment)) return false
   return true
 }
 

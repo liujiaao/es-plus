@@ -535,7 +535,9 @@ const DialogConfigSchema = z.object({
     .array(DialogBtnSchema)
     .min(1)
     .optional()
-    .describe('Declarative footer buttons. When omitted a cancel+confirm pair is generated automatically. Each entry is JSON data — the click handler is attached by the runtime from `action`.'),
+    .describe(
+      "Declarative footer buttons. When omitted a cancel+confirm pair is generated automatically by <es-crud-page>. 'confirm' / 'cancel' get their click handler attached by the runtime from `action`; 'custom' (or an omitted action) gets NO handler — in mode:'schema' the generated wrapper is template-only, so a custom button stays dead (use mode:'sfc' to wire it, or drop it).",
+    ),
 })
 
 export const StructuredCrudConfigSchema = z.object({

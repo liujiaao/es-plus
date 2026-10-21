@@ -67,8 +67,15 @@ function sliceBlock(src, startMarker, closeLine, label) {
   const rest = src.slice(i + startMarker.length)
   // 列 0 的 closeLine(接口是 `}`、zod 对象是 `});`)标记块结束。用 \n+字面量 定位,
   // 避开把 closeLine 当正则(`});` 里的 `)` 会被解析成未配对括号)。
-  const needle = '\n' + closeLine
-  const end = rest.indexOf(needle)
+  //
+  // zod 对象带 `.passthrough()` 时块尾是 `}).passthrough();` —— 这不是写法漂移,
+  // 而是**入参闸门的前提**(`_arg-guard.ts`:SDK 用 safeParse 的结果调用 handler,
+  // 嵌套 strip 会把拼写错误吃掉）。故 `});` 的两种收尾都认,块内容仍只到对象右花括号。
+  const needles = closeLine === '});' ? ['\n});', '\n}).passthrough();'] : ['\n' + closeLine]
+  // 取**最早**出现的候选收尾。逐个 indexOf 后取首个命中会在块尾是
+  // `}).passthrough();` 时跳到下一个 schema 的 `});`,把后面的键吞进来。
+  const hits = needles.map((n) => rest.indexOf(n)).filter((idx) => idx !== -1)
+  const end = hits.length > 0 ? Math.min(...hits) : -1
   if (end === -1) {
     fail(`未能在 ${label} 定位块结束符 ${JSON.stringify(closeLine)}`)
     return null
@@ -158,7 +165,8 @@ function main() {
   const coreDlgKeys = new Set(topLevelKeys(coreDlgBlock))
   const fbDlgKeys = new Set(topLevelKeys(fbDlgBlock))
 
-  // 4a. 双份镜像逐键一致（zod 对象无 passthrough：跑偏了就是静默 strip）。
+  // 4a. 双份镜像逐键一致（zod 对象是 passthrough：未知键由闸门报错而非静默 strip，
+  //     所以键集跑偏不会自己暴露——镜像漂移必须在这里静态钉住）。
   const onlyShared = diff(dboKeys, dozKeys)
   const onlyZod = diff(dozKeys, dboKeys)
   if (onlyShared.length) {

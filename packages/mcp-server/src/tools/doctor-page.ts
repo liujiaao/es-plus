@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { doctorPage, formatDoctor, type PreflightInput } from "@es-plus/shared";
+import {
+  checkPreflightShape,
+  doctorPage,
+  formatDoctor,
+  type PreflightInput,
+} from "@es-plus/shared";
 
 /**
  * AN-15③：检查宿主**已有**的入口装配。
@@ -39,6 +44,34 @@ export function registerDoctorPage(server: McpServer) {
     },
     async ({ entry, target, config, viteConfig }) => {
       try {
+        // config 决定「哪些前置项按需要检查」。形状错了（`fields: "…"`、把
+        // `formFields` 当 `fields`、按钮写成字符串）时，preflight 会把这些载体
+        // 静默跳过，于是本需要的权限/翻译门被判成「不需要」—— 报告全 ok，正是
+        // 本工具最该避免的假绿（permission 缺失时失败方向是**放行**）。
+        // 只校验 preflight 真正读到的键（放行 name/apiUrl 等其余配置键）。
+        if (config !== undefined) {
+          const shapeIssues = checkPreflightShape(config);
+          if (shapeIssues.length > 0) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: [
+                    "✗ The `config` argument is not a readable preflight input — doctor did NOT run.",
+                    "",
+                    "An ill-shaped config makes preflight treat permission / i18n / httpRequest as " +
+                      "\"not needed\", which reads as all-ok while those capabilities are in fact silently inert. " +
+                      "Pass the config object the page was generated from (or omit `config` to require every capability).",
+                    "",
+                    "Shape errors:",
+                    ...shapeIssues.map((i) => `  - ${i.path}: ${i.message}`),
+                  ].join("\n"),
+                },
+              ],
+              isError: true,
+            };
+          }
+        }
         const report = doctorPage({
           entry,
           target: (target || "vue3") as "vue3" | "vue2" | "antdv",

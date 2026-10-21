@@ -110,8 +110,10 @@ describe('generateFromConfig — schema mode', () => {
     expect(wrapperCode).not.toContain('&amp;')
   })
 
-  it('still entity-escapes `"` in bound expressions（注入防线不退化）', () => {
-    // 反例守卫：`"` 一旦裸奔就会提前结束属性值 —— 只放宽 `'`/`&`，不放宽 `"`。
+  it('hostile prop 不再写出静态插槽名（注入面整条不发射）', () => {
+    // 反例守卫：`"` 一旦裸奔就会提前结束属性值 —— 但更彻底的做法是**不发射**这个
+    // 属性，因为 HTML 属性名里不可能出现 `"`（实体也不参与解码）。旧行为是
+    // `#column-b&quot;…`：挡住了注入，却仍让模板编译器报非法属性名。
     const evil = {
       ...baseConfig,
       mode: 'schema' as const,
@@ -127,11 +129,18 @@ describe('generateFromConfig — schema mode', () => {
         },
       ],
     }
-    const { wrapperCode } = generateFromConfig(evil as any)
-    // 两个属性位置都必须实体化 `"`（属性名里的插槽名 + :type 的表达式）；mustache 里的
-    // 裸 `"` 是合法的，不在判据内。
-    expect(wrapperCode).toContain('#column-b&quot;@mouseover=&quot;alert(1)=')
-    expect(wrapperCode).toContain(`:type="row['b&quot;@mouseover=&quot;alert(1)'] === 1`)
+    const result = generateFromConfig(evil as any)
+    const wrapperCode = result.wrapperCode!
+    // 注入面：不存在 `#column-` 开头的坏属性（裸引号或实体化都算）。
+    // 只扫 **属性位置**（`<template #column-…`）—— TODO 注释里回显原 prop 不参与解析。
+    expect(wrapperCode).not.toMatch(/<template\s+#column-b/)
+    expect(wrapperCode).not.toContain('#column-b&quot;')
+    // 需求不静默丢：留 TODO 注释 + 告警点名
+    expect(wrapperCode).toContain('TODO(es-plus)')
+    expect(result.warnings.join('\n')).toContain('无法写成静态插槽名')
+    expect(result.warnings.join('\n')).toContain('b"@mouseover=')
+    // 同页的正常字段不受牵连
+    expect(wrapperCode).toContain('#column-status="{ row }"')
   })
 
   it('wires render fields to a scoped slot the wrapper actually renders', () => {

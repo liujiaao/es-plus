@@ -8,7 +8,7 @@
  * 会闭合宿主脚本块。
  */
 import { describe, it, expect } from 'vitest'
-import { sanitizeForComment } from '../src/codegen-escape.js'
+import { sanitizeForComment, isStaticSlotNameSafe, qAttr, qExprAttr } from '../src/codegen-escape.js'
 
 describe('sanitizeForComment', () => {
   it('转义 `</`：注释里不会残留任何能闭合宿主 <script> 的序列', () => {
@@ -38,5 +38,31 @@ describe('sanitizeForComment', () => {
   it('普通文本逐字节不变（正常路径零漂移）', () => {
     const src = "(_, { row }) => h(ElTag, () => row.statusLabel)"
     expect(sanitizeForComment(src)).toBe(src)
+  })
+})
+
+describe('qAttr / qExprAttr — 属性值定界符', () => {
+  it('qAttr 实体化 `"` 并转义 HTML 元字符（属性值不会被提前收尾）', () => {
+    expect(qAttr('x"@mouseover="alert(1)')).toBe('x&quot;@mouseover=&quot;alert(1)')
+    expect(qAttr('<a>&')).toBe('&lt;a&gt;&amp;')
+  })
+
+  it('qExprAttr 只实体化 `"`，`\'`/`&` 保持裸（Volar 把属性值原样交给 TS）', () => {
+    expect(qExprAttr(`row.x === 'a' && b`)).toBe(`row.x === 'a' && b`)
+    expect(qExprAttr('row["a"]')).toBe('row[&quot;a&quot;]')
+  })
+})
+
+describe('isStaticSlotNameSafe — 静态插槽名可表达性', () => {
+  it('裸标识符 / 点号路径 / 带中划线 → 可写进 #column-xxx', () => {
+    for (const p of ['status', 'userName', 'user.name', 'a[0].b', 'col-name', '状态']) {
+      expect(isStaticSlotNameSafe(`column-${p}`)).toBe(true)
+    }
+  })
+
+  it('空白 / 引号 / 尖括号 / 反引号 / 等号 → 不可表达（会拆坏属性名）', () => {
+    for (const p of ['foo bar', 'a\tb', 'a"b', "a'b", 'a<b', 'a>b', 'a`b', 'a=b', 'a/b']) {
+      expect(isStaticSlotNameSafe(`column-${p}`)).toBe(false)
+    }
   })
 })

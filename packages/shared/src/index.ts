@@ -18,12 +18,14 @@ export {
 export {
   buildPreflight,
   buildScaffoldPreflight,
+  checkPreflightShape,
   formatPreflight,
   type PreflightId,
   type PreflightCarrier,
   type PreflightInput,
   type PreflightItem,
   type PreflightReport,
+  type PreflightShapeIssue,
 } from './preflight.js'
 // AN-15③:宿主入口静态检查（doctor_page）—— 字面量扫描，三态 ok/missing/unverified
 export {
