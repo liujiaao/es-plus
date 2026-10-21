@@ -56,7 +56,7 @@ export interface PreflightInput {
   permissions?: Record<string, string>
   fields?: readonly PreflightCarrier[]
   columns?: readonly PreflightCarrier[]
-  dialogs?: Record<string, { formItems?: readonly PreflightCarrier[] }>
+  dialogs?: Record<string, { formItems?: readonly PreflightCarrier[]; configBtn?: readonly PreflightCarrier[] }>
   toolbarBtns?: readonly PreflightCarrier[]
   tableBtns?: readonly PreflightCarrier[]
   operationColumn?: false | { btns?: readonly PreflightCarrier[] }
@@ -105,9 +105,29 @@ function carriersOf(input: PreflightInput): PreflightCarrier[] {
     if (!Array.isArray(list)) return
     for (const x of list) if (x && typeof x === 'object') out.push(x)
   }
+  /**
+   * 表格列是**递归**结构（`groups` 多级表头）：每一层列自身可带 `permissionValue`，
+   * 且 `btns`（行内操作按钮）同样按权限码过滤。只扫顶层会把「分组子列按权限隐藏」
+   * 与「列内按钮按权限隐藏」这两类门漏掉 —— preflight 于是宣称「本配置没有权限门」，
+   * 而产物里明明有 permissionValue，缺 `permission()` 时**失败方向是放行**。
+   */
+  const pushColumns = (list: readonly PreflightCarrier[] | undefined) => {
+    if (!Array.isArray(list)) return
+    for (const col of list) {
+      if (!col || typeof col !== 'object') continue
+      out.push(col)
+      push((col as { btns?: readonly PreflightCarrier[] }).btns)
+      pushColumns((col as { groups?: readonly PreflightCarrier[] }).groups)
+    }
+  }
   push(input.fields)
-  push(input.columns)
-  for (const d of Object.values(input.dialogs ?? {})) push(d?.formItems)
+  pushColumns(input.columns)
+  for (const d of Object.values(input.dialogs ?? {})) {
+    push(d?.formItems)
+    // 弹窗底部按钮（AI-27 configBtn）是独立于表单字段的权限载体：只收 formItems
+    // 会漏掉「确定按钮按权限显示」这类门。
+    push(d?.configBtn)
+  }
   push(input.toolbarBtns)
   push(input.tableBtns)
   if (input.operationColumn) push(input.operationColumn.btns)

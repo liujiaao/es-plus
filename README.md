@@ -12,7 +12,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 [![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
 
-<sub>准确率徽章 = 夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）实测的 in-schema intent「零编辑」命中率，门禁即此数；**不是营销数字**。语料目前 188 例（留出 166 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
+<sub>准确率徽章 = 夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）实测的 in-schema intent「零编辑」命中率，门禁即此数；**不是营销数字**。语料目前 216 例（留出 194 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
 
 **[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 

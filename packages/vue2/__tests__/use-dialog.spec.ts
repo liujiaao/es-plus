@@ -211,6 +211,26 @@ describe('useDialog — 单例模式', () => {
     expect(() => dialog.destroy()).not.toThrow()
   })
 
+  // 回归：只关一个弹窗时用 destroyCurrent —— destroy() 无参会连带清空全部 cacheKey 缓存。
+  it('destroyCurrent() 只销毁单例，不影响 cacheKey 缓存', () => {
+    const dialog = useDialog()
+    const cachedVm = createMockVm()
+    MockCtor.mockImplementation(() => cachedVm)
+    dialog({ cacheKey: 'k-keep' } as any)
+
+    MockCtor.mockImplementation(() => vm)
+    dialog({} as any)
+    dialog.destroyCurrent()
+
+    expect(vm.$destroy).toHaveBeenCalled()
+    expect(cachedVm.$destroy).not.toHaveBeenCalled()
+
+    // 再以同 cacheKey 打开 → 命中缓存（不重新挂载、不新建实例）
+    const mountsBefore = cachedVm.$mount.mock.calls.length
+    dialog({ cacheKey: 'k-keep' } as any)
+    expect(cachedVm.$mount.mock.calls.length).toBe(mountsBefore)
+  })
+
   it('关闭链路经 update:visible 桥接翻转 vm.visible=false（编程式无父级 .sync）', () => {
     const dialog = useDialog()
     dialog({} as any)

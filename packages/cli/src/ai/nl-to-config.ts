@@ -32,8 +32,16 @@ export class AiUnavailableError extends Error {
 
 export interface NlToConfigOptions {
   model?: string
-  /** Applied to the resulting config when the model did not set it. */
+  /**
+   * CLI **显式**给定的目标框架：给定时一律覆盖模型在配置里写的值。
+   *
+   * 依据：模型给的 `target` 只是对 NL 的解读（提示词确实教了「明确要 Vue2/Ant Design
+   * Vue → 写 target」），而 `--target` 是用户的确定性指令；两者冲突时后者的语义更强。
+   * 调用方必须**只在用户真的传了标志**时才传（不要把命令的默认值当显式选择塞进来），
+   * 否则「NL 里说要 antdv」的既有教学就会被默认值静默压掉。
+   */
   target?: 'vue3' | 'vue2' | 'antdv'
+  /** 同上：CLI 显式的 `--mode` 覆盖模型给的 `mode`。 */
   mode?: 'schema' | 'sfc'
 }
 
@@ -117,9 +125,12 @@ const MAX_EMPTY_RETRIES = 3
 const MAX_DEGRADED_ATTEMPTS = 1
 
 export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Promise<NlToConfigResult> {
+  // 先查环境变量：不需要任何 I/O，且没有 key 时 SDK 装没装都不影响结论（`aiAvailable`
+  // 也是这个顺序）。反过来先报 sdk-missing 的话，两样都缺的用户会先被要求装包、
+  // 装完才被告知还缺 key —— 一次可避免的往返。
+  if (!process.env.ANTHROPIC_API_KEY) throw new AiUnavailableError('no-key')
   const Anthropic = await loadAnthropic()
   if (!Anthropic) throw new AiUnavailableError('sdk-missing')
-  if (!process.env.ANTHROPIC_API_KEY) throw new AiUnavailableError('no-key')
 
   const client = new Anthropic()
   const model = opts.model || process.env.ESPLUS_AI_MODEL || 'claude-opus-5'
@@ -198,9 +209,14 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
     const parsed = StructuredCrudConfigSchema.safeParse(prepared.config)
     if (parsed.success) {
       const config = parsed.data as StructuredCrudConfig
-      // Honor CLI target/mode when the model left them at defaults / unset.
-      if (opts.target && candidate.target === undefined) config.target = opts.target
-      if (opts.mode && candidate.mode === undefined) config.mode = opts.mode
+      // CLI 显式选择**覆盖**模型值（调用方只在用户真的传了标志时才给，见 NlToConfigOptions）。
+      //
+      // 这里不再判「模型是否省略了 target/mode」：schema 对二者施加了 `.default()`，
+      // 解析后恒有值，无法区分「省略」与「显式写默认值」；拿修复前的 candidate 去判则
+      // 与**真正被解析的对象**脱节（normalize 会搬键/删别名）。覆盖语义与判定对象
+      // 因此都不再有歧义。
+      if (opts.target) config.target = opts.target
+      if (opts.mode) config.mode = opts.mode
       return { config, attempts: calls }
     }
 

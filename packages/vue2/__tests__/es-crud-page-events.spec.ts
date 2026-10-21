@@ -109,4 +109,25 @@ describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
     expect(onRowClick).toHaveBeenCalledTimes(1)
     expect(onRowClick).toHaveBeenCalledWith(row)
   })
+
+  // 回归：显式 operationColumn.btns 里除 name/type/permissionValue 之外的契约键
+  // （尤其是文档化的 `hidden`）此前被「三键重建」静默丢掉 —— 行内动态隐藏永远不生效。
+  it('透传 operationColumn.btns 的 hidden / icon（es-table 逐行消费 hidden）', async () => {
+    const hidden = (row: Record<string, unknown>) => row.status !== 'pending'
+    const { page } = mountPage({
+      columns,
+      operationColumn: {
+        btns: [
+          { name: '编辑', type: 'primary', dialogKey: 'edit' },
+          { name: '审批', type: 'warning', key: 'approve', icon: 'Check', hidden },
+        ],
+      },
+    })
+    await page.$nextTick()
+    const cols = page.$refs.tableRef.columns as any[]
+    const btn = cols.find((c: any) => c.prop === 'operate').btns.find((b: any) => b.name === '审批')
+    expect(btn.hidden).toBe(hidden)
+    expect(btn.icon).toBe('Check')
+    expect(typeof btn.clickEvent).toBe('function')
+  })
 })

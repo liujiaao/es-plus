@@ -139,3 +139,48 @@ describe('nlToConfig 自修复环 — 空轮与回灌', () => {
     await expect(nlToConfig('做一个订单列表')).rejects.toThrow(/7 call\(s\).*Last output \(0 chars\)/s)
   })
 })
+
+/**
+ * CLI 标志的优先级：`--target` / `--mode` 是用户的**确定性指令**，模型给的
+ * `target`/`mode` 只是对 NL 的解读（提示词确实教了「明确要 Vue2 / Ant Design Vue /
+ * SFC → 写这两个键」）。两者冲突时 CLI 必须赢 —— 旧实现只在「模型省略」时才覆盖，
+ * 而模型恰恰在**用户最需要标志生效**的那些描述里（提到了框架/形态）给出这两个键，
+ * 于是 `--target antdv` 被静默忽略。
+ *
+ * 调用方只在用户真的传了标志时才下发（命令默认值不算显式选择），这一侧由
+ * `create-ai.spec.ts` 钉住。
+ */
+describe('nlToConfig — 显式 target/mode 覆盖模型值', () => {
+  beforeEach(() => {
+    process.env.ANTHROPIC_API_KEY = 'test-key'
+    create.mockReset()
+  })
+
+  it('模型省略 target/mode → 显式值生效（未被 schema 默认吃掉）', async () => {
+    scripted([reply([JSON.stringify(VALID)])])
+    const res = await nlToConfig('做一个订单列表', { target: 'antdv', mode: 'sfc' })
+    expect(res.config.target).toBe('antdv')
+    expect(res.config.mode).toBe('sfc')
+  })
+
+  it('模型也给了 target/mode → 显式标志仍然覆盖（模型的选择只是 NL 解读）', async () => {
+    scripted([reply([JSON.stringify({ ...VALID, target: 'vue2', mode: 'sfc' })])])
+    const res = await nlToConfig('做一个 Vue2 的订单页', { target: 'antdv', mode: 'schema' })
+    expect(res.config.target).toBe('antdv')
+    expect(res.config.mode).toBe('schema')
+  })
+
+  it('调用方未给 → 保留模型的值（NL 里点名框架/形态仍然有效）', async () => {
+    scripted([reply([JSON.stringify({ ...VALID, target: 'antdv', mode: 'sfc' })])])
+    const res = await nlToConfig('明确要 Ant Design Vue 的 SFC')
+    expect(res.config.target).toBe('antdv')
+    expect(res.config.mode).toBe('sfc')
+  })
+
+  it('两边都没给 → 回落 schema 默认（vue3 / schema）', async () => {
+    scripted([reply([JSON.stringify(VALID)])])
+    const res = await nlToConfig('做一个订单列表')
+    expect(res.config.target).toBe('vue3')
+    expect(res.config.mode).toBe('schema')
+  })
+})

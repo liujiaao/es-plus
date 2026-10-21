@@ -78,6 +78,22 @@ describe('RenderPlan — 键账本与生成器一致', () => {
     expect(obj.downgrades().map((e) => e.key)).toContain('operationColumn')
   })
 
+  it('空 dialogs record 视同未声明（否则 legacy 派生被跳过 → 点不开的死按钮）', () => {
+    // B7：`repairConfig` 删掉 `dialogs.add: null` 后留下 `dialogs: {}`。若它算「已声明」，
+    // 页面会被切进新弹窗模式：legacy 的 dialogFormItems 不发射，而工具栏仍由 actions
+    // 派生「新增」→ openDialog('add') 找不到配置直接 return。
+    const empty = buildRenderPlan(base({ dialogs: {} }), { mode: 'schema' })
+    expect(empty.entries.dialogs.disposition).toBe('absent')
+    expect(empty.renders('dialogs')).toBe(false)
+    // 新弹窗模式的判定键一个都不 render ⇒ 生成器走 legacy 通道
+    expect(empty.anyRenders(['dialogs', 'toolbarBtns', 'tableBtns', 'operationColumn'])).toBe(false)
+
+    // 非空 record 照旧是声明
+    const one = buildRenderPlan(base({ dialogs: { add: { title: '新增' } } }), { mode: 'schema' })
+    expect(one.entries.dialogs.disposition).toBe('emit')
+    expect(one.anyRenders(['dialogs', 'toolbarBtns', 'tableBtns', 'operationColumn'])).toBe(true)
+  })
+
   it('helpers：emits / renders / anyRenders 与 disposition 一致', () => {
     const plan = buildRenderPlan(base({ operationColumn: false }), { mode: 'schema' })
     expect(plan.emits('operationColumn')).toBe(true)

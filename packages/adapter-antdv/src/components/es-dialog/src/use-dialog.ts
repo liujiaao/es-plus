@@ -32,6 +32,11 @@ export interface DialogCallable {
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void
+  /**
+   * 只销毁**当前**实例（单例 vNode / 本次容器），**不动**任何 cacheKey 缓存。
+   * `destroy()` 无参会连带清空别人的缓存（对齐 vue3/vue2）。
+   */
+  destroyCurrent: () => void
 }
 
 export type DialogCallableWithDestroy = DialogCallable
@@ -244,6 +249,9 @@ export function useDialog(
       destroyCache()
     }
 
+    // 只销毁本次容器，不动缓存（见 DialogCallable.destroyCurrent）
+    const destroyCurrent = () => close()
+
     const DialogComponent = (dialogOptions: DialogOptions) => {
       const cacheKey = (dialogOptions as Record<string, unknown>).cacheKey as string | undefined
 
@@ -279,6 +287,7 @@ export function useDialog(
     const callable = ((dialogOptions: DialogOptions) => DialogComponent(dialogOptions)) as DialogCallableWithDestroy
     callable.close = close
     callable.destroy = destroy
+    callable.destroyCurrent = destroyCurrent
 
     // 宿主组件作用域销毁（卸载）时回收：弹窗容器是**手工**追加到 appendTo 的，
     // 不属于任何组件子树，宿主卸载不会连带移除它；缓存实例的 TTL 定时器同理。
@@ -297,17 +306,22 @@ export function useDialog(
     }
   }
 
+  // 只销毁单例 vNode，不动任何 cacheKey 缓存（见 DialogCallable.destroyCurrent）
+  const destroyCurrent = () => {
+    if (vNode) {
+      render(null, container)
+      container.remove()
+      vNode = null
+    }
+  }
+
   const destroy = (cacheKey?: string) => {
     // 传 cacheKey 只销毁该缓存实例，不误伤单例 vNode；不传则单例 + 全部缓存一起销毁
     if (cacheKey) {
       destroyCache(cacheKey)
       return
     }
-    if (vNode) {
-      render(null, container)
-      container.remove()
-      vNode = null
-    }
+    destroyCurrent()
     destroyCache()
   }
 
@@ -360,6 +374,7 @@ export function useDialog(
   const callable = ((dialogOptions: DialogOptions) => DialogComponent(dialogOptions)) as DialogCallableWithDestroy
   callable.close = close
   callable.destroy = destroy
+  callable.destroyCurrent = destroyCurrent
 
   // 同上：destroy() = 卸载 vNode 并移除手工追加到 appendTo 的 container
   if (getCurrentScope()) onScopeDispose(() => destroy())

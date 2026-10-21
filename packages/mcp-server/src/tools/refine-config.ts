@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { diffConfig, summarizeDiff, type ConfigDiff, type StructuredCrudConfig } from "@es-plus/shared";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 import { validateStructuredConfig } from "./validate-config.js";
 
 // 精修层(B3)对 MCP 的暴露:给定上一轮的 pin(previous)与宿主 LLM 按本轮 NL 纠正**已改写好**的
@@ -47,10 +48,19 @@ export function buildRefineResult(input: BuildRefineResultInput): BuildRefineRes
   return { valid: true, errors: [], suggestions: [], diff, summary: summarizeDiff(diff) };
 }
 
-export function registerRefineConfig(server: McpServer) {
+export function registerRefineConfig(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
+  // AN-26：`front-door` 下 `generate_crud_from_config` **不注册**。描述末句原本教宿主
+  // 「把 revised 交给它」，在那个 profile 里是一条死路（tool not found）。这里按档位换
+  // 指代：full 仍指向高级路径；front-door 指向唯一前门，并说明本工具的定位（校验/差异）。
+  const nextStep =
+    profile === "front-door"
+      ? "When you're happy, use `revised` as the reference for filling `generate_crud`'s `surfaces` — the front door composes the config and the code for you. This tool stays the validator/differ for a config you hand-author."
+      : "Pass `revised` to generate_crud_from_config once you're happy.";
   server.tool(
     "refine_config",
-    "Apply ONE round of refinement to a pinned CRUD config. The pin is just the StructuredCrudConfig JSON you (the host) already hold — there is no server-side session. YOU apply the user's natural-language correction to produce the `revised` config, then call this tool with the `previous` (last-pinned) and `revised` JSON. It deterministically (1) validates `revised` against the authoritative schema and (2) returns a structured DIFF of what this round changed (fields added/removed, formtype/membership/layout changes, actions). If `revised` is invalid, you get the schema errors instead of a diff — fix and retry. Pass `revised` to generate_crud_from_config once you're happy. This tool does NOT call a model; the reasoning is yours.",
+    "Apply ONE round of refinement to a pinned CRUD config. The pin is just the StructuredCrudConfig JSON you (the host) already hold — there is no server-side session. YOU apply the user's natural-language correction to produce the `revised` config, then call this tool with the `previous` (last-pinned) and `revised` JSON. It deterministically (1) validates `revised` against the authoritative schema and (2) returns a structured DIFF of what this round changed — fields added/removed, formtype/membership changes, actions, AND changed top-level blocks (dialogs / formLayout / tableOptions / buttons / columns / permissions / generation options), so a round that only adds an edit dialog or widens the form is not reported as \"no change\". If `revised` is invalid, you get the schema errors instead of a diff — fix and retry. " +
+      nextStep +
+      " This tool does NOT call a model; the reasoning is yours.",
     {
       previous: z
         .string()

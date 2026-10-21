@@ -317,6 +317,32 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
       })
       .optional()
       .describe("Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine:'vxe'. Function-valued fields (events) and custom-registered renderers are out of scope (Tier-3)."),
+    // 列级 `expandConfig`（AI-09 子项② 的列内形态）。与顶层同形状、同语义，钉在
+    // `type:'expand'` 列上 —— 用于「展开器不在首列」或「columns 是唯一真相」的配置。
+    //
+    // 为什么必须声明：Zod 默认 strip 未知键，而**生成器的列契约白名单正是从本
+    // schema 的 ColumnSchema 推导**（structured-generator.ts 的 `columnContractKeys`）。
+    // 漏声明 = 只在展开列上写 expandConfig 的配置在 schema 模式被 `sanitizeExplicitColumns`
+    // 剥掉、展开器内容恒空，且零告警（SFC 模式的 pushSfcColumn 本来就会发它）。
+    // 两层同时给出时顶层胜（生成器的 applyExpandConfig / SFC 分支都这样合并）。
+    expandConfig: z
+      .object({
+        title: z.string().optional().describe('Optional title shown at the top of the expanded row.'),
+        fields: z
+          .array(
+            z.object({
+              prop: z.string().min(1).describe('Row field to display (value = `row[prop]`).'),
+              label: z.string().optional().describe('Label text for this field.'),
+              labelKey: z.string().optional().describe('i18n label key (used with a global t() function; takes precedence over `label`).'),
+            })
+          )
+          .min(1)
+          .describe('Read-only fields rendered inside the expanded row, one per line as `label: value`.'),
+      })
+      .optional()
+      .describe(
+        "Row-expand content declared ON the `type:'expand'` column (AI-09 子项②). Same shape/semantics as the top-level `expandConfig`; use it when the expander is not the leading column or when `columns` is the source of truth. If BOTH are set, the top-level one wins on the expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
+      ),
   })
 )
 
@@ -504,7 +530,7 @@ const DialogConfigSchema = z.object({
   cacheKey: z
     .string()
     .optional()
-    .describe('Instance cache key: repeat calls with the same key reuse one dialog instance so its internal state survives close/reopen (recycled 10 minutes after close). The vue3/vue2 runtimes implement it; the ant-design-vue adapter does not (registered deviation) so the key is accepted but inert there.'),
+    .describe('Instance cache key: repeat calls with the same key reuse one dialog instance so its internal state survives close/reopen (recycled 10 minutes after close). Implemented identically by all three runtimes (vue3 / vue2 / ant-design-vue).'),
   configBtn: z
     .array(DialogBtnSchema)
     .min(1)

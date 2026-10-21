@@ -94,3 +94,71 @@ describe('diffConfig — 两份配置的结构化差异', () => {
     expect(d.actionsAdded).toEqual(['add', 'edit', 'delete'])
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 顶层结构块：字段之外的改动也必须可见
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('diffConfig — 顶层结构块（dialogs / formLayout / tableOptions / 按钮面）', () => {
+  it('只加了一个编辑弹窗 → 不再回「无差异」', () => {
+    // 修前：diff 只比字段/操作，`dialogs` 的增删一律 isEmpty=true，
+    // 宿主据此会以为本轮「加编辑弹窗」的纠正没生效。
+    const prev = base()
+    const next = base() as any
+    next.dialogs = { edit: { title: '编辑订单', width: 600 } }
+    const d = diffConfig(prev, next)
+    expect(d.isEmpty).toBe(false)
+    expect(d.blocksChanged.map((b) => b.key)).toEqual(['dialogs'])
+    expect((d.blocksChanged[0].from as unknown) ?? undefined).toBeUndefined()
+    expect((d.blocksChanged[0].to as any).edit.title).toBe('编辑订单')
+    expect(summarizeDiff(d).join('\n')).toContain('~ dialogs:')
+  })
+
+  it('formLayout 改宽度 → 被捕获（此前完全不可见）', () => {
+    const prev = { ...base(), formLayout: { labelWidth: '100px' } } as any
+    const next = { ...base(), formLayout: { labelWidth: '140px', minFoldRows: 2 } } as any
+    const d = diffConfig(prev, next)
+    expect(d.isEmpty).toBe(false)
+    expect(d.blocksChanged).toEqual([
+      { key: 'formLayout', from: { labelWidth: '100px' }, to: { labelWidth: '140px', minFoldRows: 2 } },
+    ])
+  })
+
+  it('tableOptions 改斑马纹 / 按钮面增删 → 各自一条', () => {
+    const prev = { ...base(), tableOptions: { stripe: false }, tableBtns: [{ name: '导出' }] } as any
+    const next = {
+      ...base(),
+      tableOptions: { stripe: true },
+      tableBtns: [{ name: '导出' }, { name: '打印' }],
+      operationColumn: { btns: [{ name: '查看' }] },
+    } as any
+    const d = diffConfig(prev, next)
+    expect(d.blocksChanged.map((b) => b.key).sort()).toEqual(['operationColumn', 'tableBtns', 'tableOptions'])
+  })
+
+  it('块内键序不同不算差异（深比较按排序后的键）', () => {
+    const prev = { ...base(), tableOptions: { border: true, stripe: true } } as any
+    const next = { ...base(), tableOptions: { stripe: true, border: true } } as any
+    expect(diffConfig(prev, next).isEmpty).toBe(true)
+  })
+
+  it('生成选项：缺省与显式 schema 默认值等价（target/mode/typescript/i18n 不误报）', () => {
+    const prev = base()
+    const next = { ...base(), target: 'vue3', mode: 'schema', typescript: true, i18n: false } as any
+    expect(diffConfig(prev, next).isEmpty).toBe(true)
+    // 真正换 target 必须报
+    const changed = { ...base(), target: 'vue2' } as any
+    expect(diffConfig(prev, changed).blocksChanged).toEqual([{ key: 'target', from: 'vue3', to: 'vue2' }])
+  })
+
+  it('块级渲染会截断长 JSON（dialogs 很大时不淹没回显）', () => {
+    const next = base() as any
+    next.dialogs = Object.fromEntries(
+      Array.from({ length: 20 }, (_, i) => [`dlg${i}`, { title: `弹窗 ${i}`, width: 600 + i }]),
+    )
+    const text = summarizeDiff(diffConfig(base(), next)).join('\n')
+    expect(text).toContain('~ dialogs: ∅ → {')
+    expect(text).toContain('…')
+    expect(text.length).toBeLessThan(400)
+  })
+})

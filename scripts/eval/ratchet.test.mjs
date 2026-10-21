@@ -171,6 +171,9 @@ function checkFails(result, substr, label) {
 
   const r = guardAntiDelete(counts, baseline)
   check(r.ok, `真实语料防删守卫判红：\n      ${r.failures.join('\n      ')}`)
+  // 漂移提示必须进测试输出（AN-04）：语料跨越 ±10% 时，红/绿之外还要让人看见
+  // 「基线该更新了」。只写进返回值等于没写 —— check:ratchet 是唯一会跑这段的入口。
+  for (const w of r.warnings) console.warn(`[ratchet] ⚠️  ${w}`)
 
   // 语料级计数必须覆盖基线声明的**每一维**（缺一维即为该维零语料/被删）
   const missing = Object.keys(baseline.applicableCounts ?? {}).filter((k) => counts[k] === undefined)

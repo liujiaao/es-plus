@@ -29,6 +29,8 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
+import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+import { isCrudCase } from './eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -409,12 +411,32 @@ function checkPhilosophyDocClaims() {
 
 // ── 7. AI 准确率声明 ↔ 夜间 eval artifact ─────────────────
 // AN-27：README / 理念文档曾写死「~95%（AI 写的代码可用率）」「语料目前 25 例」，
-// 而 artifact 实测是 48.8% / 188 例（heldout 166）。数字必须绑定 artifact：
+// 而 artifact 实测是 48.8% / 188 例（heldout 166）。数字必须绑定**权威来源**：
 //   · 门禁目标 = artifact.target（README 改成 99% 必须红）；
-//   · 语料规模 = artifact.cases / heldoutCases；
 //   · 徽章读数 = artifact.definition95.rate（徽章本身由 eval 从 artifact 生成）；
+//   · 语料规模 = **当前语料**（不是 artifact 的 cases）；
 //   · 正文**不得**写死当前准确率 —— 当前值只有一个权威来源（徽章/artifact），
 //     否则每夜 artifact 变动都会让文案变成另一份真相。
+//
+// 为什么语料规模不绑 artifact：artifact 描述的是**上一次付费跑批**的语料快照。
+// 语料随时会长（AI-47.. 一轮就 +60 条），而付费跑批受中继额度限制 —— 把「语料目前 N 例」
+// 绑到 artifact 上，等于要求文案在两次跑批之间**持续低报**真实语料，且让门禁在无额度时
+// 无法满足。语料规模与 scorer 无关，直接从 `__tests__/golden/cases` 现算即可
+// （与 `check-readme-claims.mjs` 的 `checkCorpusSizeClaim` 同一口径）。
+function liveCorpusSize() {
+  const dir = join(ROOT, '__tests__', 'golden', 'cases')
+  let crud = 0
+  let heldout = 0
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith('.json')) continue
+    const raw = JSON.parse(readFileSync(join(dir, f), 'utf-8'))
+    if (!isCrudCase(raw)) continue
+    crud++
+    if (!FEWSHOT_DERIVED.has(f)) heldout++
+  }
+  return { crud, heldout }
+}
+
 function checkAccuracyClaims() {
   const art = readJson('__tests__/golden/last-accuracy.json')
   const badge = readJson('__tests__/golden/last-accuracy-badge.json')
@@ -438,8 +460,14 @@ function checkAccuracyClaims() {
 
   const targetPct = Number((art.target * 100).toFixed(1))
   const currentPct = Number((rate * 100).toFixed(1))
-  const cases = art.cases
-  const heldout = art.heldoutCases
+  const { crud: cases, heldout } = liveCorpusSize()
+  // artifact 的语料快照可以比当前语料小（跑批之后又加了语料）——这不是错误；
+  // 但**大于**当前语料意味着用例被删了，那会让上次测量的分母失去参照，必须点名。
+  if (typeof art.cases === 'number' && art.cases > cases) {
+    fail(
+      `artifact 记录了 ${art.cases} 条语料，当前语料只有 ${cases} 条 —— 疑似删除了用例（删例会稀释测量口径）`,
+    )
+  }
 
   // 徽章必须由 artifact 生成（label 带目标，message 是当前读数）。
   const badgeMsg = String(badge.message ?? '')
@@ -527,8 +555,8 @@ function checkAccuracyClaims() {
 
   if (!failed) {
     console.log(
-      `✅ AI 准确率声明与 artifact 同源（目标 ${targetPct}% / 当前徽章 ${currentPct}% / ` +
-        `语料 ${cases} 例、留出 ${heldout} 例）`,
+      `✅ AI 准确率声明与权威来源同源（门禁目标/徽章来自 artifact：${targetPct}% / ${currentPct}%；` +
+        `语料规模来自当前语料：${cases} 例、留出 ${heldout} 例）`,
     )
   }
 }
@@ -551,6 +579,50 @@ function checkCliDocFigure() {
   }
 }
 
+// ── 8. 文档版本脚注 ↔ packages/*/package.json ─────────────
+// why-es-plus 末尾的脚注长期写「Vue3 1.4.1 / Vue2 1.0.0 / Shared 1.1.0 / CLI 1.2.0 /
+// MCP-Server 1.2.0」，实际已是 1.7.0 / 1.4.0 / 1.4.1 / 1.4.0 / 1.4.1 —— 脚注是读者判断
+// 「这份文档有多新」的唯一依据，写错就等于谎报时效，而它没有任何守卫。
+// 判据：每个标签的版本必须**等于**对应 package.json 的 version（不做范围/前缀比较）。
+const VERSION_FOOTNOTE_LABELS = {
+  Vue3: 'vue3',
+  Vue2: 'vue2',
+  AntDV: 'adapter-antdv',
+  Core: 'core',
+  Shared: 'shared',
+  CLI: 'cli',
+  'MCP-Server': 'mcp-server',
+}
+
+function checkVersionFootnotes() {
+  for (const file of ['docs/why-es-plus.md', 'docs/why-es-plus.en.md']) {
+    const src = read(file)
+    if (!src) continue
+    const line = src.split('\n').find((l) => l.startsWith('<small>'))
+    if (!line) {
+      fail(`${file} 未找到版本脚注（<small> 行）—— 若删除了该表述，请同步本守卫`)
+      continue
+    }
+    const found = new Map()
+    for (const m of line.matchAll(/([A-Za-z][A-Za-z0-9-]*)\s+(\d+\.\d+\.\d+)/g)) {
+      if (m[1] in VERSION_FOOTNOTE_LABELS) found.set(m[1], m[2])
+    }
+    for (const [label, pkg] of Object.entries(VERSION_FOOTNOTE_LABELS)) {
+      const actual = readJson(`packages/${pkg}/package.json`)?.version
+      if (!actual) {
+        fail(`无法读取 packages/${pkg}/package.json 的 version（脚注里的 ${label} 无从核对）`)
+        continue
+      }
+      if (!found.has(label)) {
+        fail(`${file} 的版本脚注缺少 ${label} 版本（当前应为 ${actual}）`)
+      } else if (found.get(label) !== actual) {
+        fail(`${file} 的版本脚注写 ${label} ${found.get(label)}，packages/${pkg} 实际是 ${actual}`)
+      }
+    }
+  }
+  if (!failed) console.log('✅ 文档版本脚注与各包 package.json 一致')
+}
+
 checkOneConfigClaims()
 checkRendererCount()
 checkFormTypeClaims()
@@ -558,6 +630,7 @@ checkSiteHomeFigures()
 checkPhilosophyDocClaims()
 checkAccuracyClaims()
 checkCliDocFigure()
+checkVersionFootnotes()
 
 if (failed) {
   console.error('\n站点数字声明与实测事实不符 —— 改文案或重新运行对应生成脚本。')

@@ -128,26 +128,68 @@ export function mapElementNameToAntdv(vue3Name: string): string {
   return map[vue3Name] || vue3Name
 }
 
+/** 用户源码占位符前缀（含 NUL，绝不可能出现在正常源码里）。 */
+const USER_SRC_SENTINEL = '\u0000esplus:user-src:'
+
+/**
+ * 把用户源码段换成占位符，返回「遮盖后的文本」+「还原函数」。
+ *
+ * 为什么需要：`render` / `formatter` 是**用户写的**函数源码串，生成器只是原样内联。
+ * `rewriteElementUsage` 是文本级改名，若直接作用在整份产物上，用户表达式里的
+ * `ElMessage` / `ElTag`（包括字符串字面量、注释里的同名文本）会被一起改掉 ——
+ * 那是悄悄改用户的代码，产物与用户写的东西不再一致。改名只应作用于**生成器自己**
+ * 发射的标识符（B9）。
+ *
+ * 同一段源码可能出现两次（原样内联一次、`sanitizeForComment` 后的注释再出现一次），
+ * 调用方把两种形态都传进来即可；不存在的形态直接跳过。
+ */
+function maskUserSources(code: string, sources: readonly string[]) {
+  const saved: string[] = []
+  let masked = code
+  for (const src of sources) {
+    if (!src || !masked.includes(src)) continue
+    const token = `${USER_SRC_SENTINEL}${saved.length}\u0000`
+    masked = masked.split(src).join(token)
+    saved.push(src)
+  }
+  const restore = (text: string) =>
+    saved.reduce((acc, src, i) => acc.split(`${USER_SRC_SENTINEL}${i}\u0000`).join(src), text)
+  return { masked, restore }
+}
+
 /**
  * 在生成的代码体内替换 ElMessage / ElTag 等使用引用为目标 UI 库命名
  * （针对 import 之后的具体标识符调用；ElMessageBox 的结构差异由 buildDeleteConfirmBlock 处理）
+ *
+ * `protect`：用户源码段（`fields[].render` / `fields[].formatter`）。这些段先被换成
+ * 占位符，改名完再原样还原 —— 用户写 `h(ElTag, …)` 还是 `h(Tag, …)`、字符串里是不是
+ * `'ElMessage'`，都不由生成器替他改（B9）。
  */
-export function rewriteElementUsage(code: string, target: TargetFramework): string {
+export function rewriteElementUsage(
+  code: string,
+  target: TargetFramework,
+  protect: readonly string[] = [],
+): string {
   if (target === 'vue3') return code
+  const { masked, restore } = maskUserSources(code, protect)
   if (target === 'antdv') {
-    return code
-      .replace(/\bElMessageBox\b/g, 'Modal')
-      .replace(/\bElMessage\b/g, 'message')
-      .replace(/\bElNotification\b/g, 'notification')
-      .replace(/\bElTag\b/g, 'Tag')
+    return restore(
+      masked
+        .replace(/\bElMessageBox\b/g, 'Modal')
+        .replace(/\bElMessage\b/g, 'message')
+        .replace(/\bElNotification\b/g, 'notification')
+        .replace(/\bElTag\b/g, 'Tag'),
+    )
   }
   // vue2
-  return code
-    // 仅替换"作为标识符使用"的位置（前后不是字母数字下划线）
-    .replace(/\bElMessageBox\b/g, 'MessageBox')
-    .replace(/\bElMessage\b/g, 'Message')
-    .replace(/\bElNotification\b/g, 'Notification')
-    .replace(/\bElTag\b/g, 'Tag')
+  return restore(
+    masked
+      // 仅替换"作为标识符使用"的位置（前后不是字母数字下划线）
+      .replace(/\bElMessageBox\b/g, 'MessageBox')
+      .replace(/\bElMessage\b/g, 'Message')
+      .replace(/\bElNotification\b/g, 'Notification')
+      .replace(/\bElTag\b/g, 'Tag'),
+  )
 }
 
 /**

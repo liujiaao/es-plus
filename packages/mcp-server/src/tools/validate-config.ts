@@ -12,6 +12,7 @@ import {
 import { tableShape } from "./generate-table.js";
 import { formShape } from "./generate-form.js";
 import { dialogShape } from "./generate-dialog.js";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 /**
  * `generate_crud_from_config` 的入参（StructuredCrudConfig）在 `packages/shared/schemas/`
@@ -72,16 +73,22 @@ function fragmentSchemaFor(type: FragmentConfigType) {
 
 function validateFragmentConfig(config: unknown, type: FragmentConfigType): ValidationResult {
   const schema = fragmentSchemaFor(type);
-  const result = schema.safeParse(config);
-  if (result.success) return { valid: true, errors: [], suggestions: [], unknownKeys: [] };
-
-  // AN-08：zod 的 `unrecognized_keys` 只给键名，不给「你是不是想写 X」。这里用同一份
-  // 形状再走一遍只读收集，补出 Levenshtein 建议；两处判据同源（都来自 schema），
-  // 不会出现「zod 说未知、建议器说已知」的分叉。
+  // 未知键的判据不能只靠根对象上的 `.strict()`：嵌套对象（`tableOptions.rowKey`、
+  // `options.widht`）在 zod 里默认 **strip**，根对象解析成功时那些键已经无声消失，
+  // 宿主只会看到「✓ 合法」。故无论解析成败都先做一次只读收集；成功但存在未知键
+  // 同样判红 —— 与 `validateAndRepair`（structured-crud-config）同一口径。
   const unknownKeys = collectUnknownKeys(schema, config);
+  const unknownErrors = unknownKeys.map(formatUnknownKey);
   const unknownSuggestions = unknownKeys
     .map((f) => (f.suggestion ? formatUnknownKey(f) : ""))
     .filter(Boolean);
+
+  const result = schema.safeParse(config);
+  if (result.success) {
+    if (unknownKeys.length === 0) return { valid: true, errors: [], suggestions: [], unknownKeys };
+    // 根 `.strict()` 未触发 ⇒ 未知键在**嵌套**层；它们才是本条要堵的静默丢弃。
+    return { valid: false, errors: unknownErrors, suggestions: unknownSuggestions, unknownKeys };
+  }
 
   const issues = result.error.issues.map((issue) => {
     const raw = issue as unknown as {
@@ -138,7 +145,13 @@ export function validatePayload(config: unknown, type?: string): ValidationResul
   return validateConfig(config, type);
 }
 
-export function registerValidateConfig(server: McpServer) {
+export function registerValidateConfig(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
+  // AN-26：`front-door` 档下高级路径不注册，但结构化校验在这里**仍然可用** —— 宿主可能
+  // 手工写配置（或摄取层产出的草稿）。所以只换「这份配置从哪来」的说法，不删这个类型。
+  const structuredHint =
+    profile === "front-door"
+      ? `${STRUCTURED_CRUD_TYPE} (the structured CRUD config the front door composes for you; validate a hand-authored one here)`
+      : `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config)`;
   server.tool(
     "validate_config",
     "Validate an es-plus JSON configuration against its schema. Returns validation errors and fix suggestions.",
@@ -151,7 +164,7 @@ export function registerValidateConfig(server: McpServer) {
         .optional()
         .describe(
           `Schema type to validate against. Available: ${listAvailableSchemas().join(", ")}, ` +
-            `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config), ` +
+            `${structuredHint}, ` +
             `${ES_TABLE_TYPE} / ${ES_FORM_TYPE} / ${ES_DIALOG_TYPE} (the inputs of generate_table / generate_form / generate_dialog). ` +
             `Defaults to "form-item".`
         ),
@@ -184,6 +197,10 @@ export function registerValidateConfig(server: McpServer) {
 
         return {
           content: [{ type: "text", text: output }],
+          // 「配置非法」是一次**失败**的工具调用：宿主若按 `result.isError` 分支
+          // （MCP 客户端普遍如此）决定「要不要修了重发」，缺了它就会把红字正文
+          // 当成成功结果直接采用。与上面 JSON 解析失败、下方异常两支保持同一口径。
+          isError: true,
         };
       } catch (error: any) {
         if (error instanceof SyntaxError) {

@@ -184,6 +184,16 @@ function readTarget(config: StructuredCrudConfig): TargetFramework {
   return t === 'vue2' || t === 'antdv' ? t : DEFAULT_TARGET
 }
 
+/** `dialogs` 是「声明了至少一个弹窗」才算声明；空 record 什么都不表达（见 buildRenderPlan）。 */
+function hasDialogEntries(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value as Record<string, unknown>).length > 0
+  )
+}
+
 /**
  * 按 config 落位账本。`mode` / `target` 可显式覆盖（生成器内部已解析过时避免二次推断）。
  */
@@ -200,6 +210,18 @@ export function buildRenderPlan(
     const rule = RENDER_PLAN_CONTRACT[key] as PlanRule
     const present = rule.always === true || (config as unknown as Record<string, unknown>)[key] !== undefined
     let disposition: RenderDisposition = present ? rule[mode] : 'absent'
+
+    // 逐配置细化：空 `dialogs` record == 未声明。
+    //
+    // `dialogs: {}` 什么都不表达，却会把页面切进「新弹窗模式」：legacy 的
+    // `dialogFormItems` 派生被整段跳过，而工具栏按钮仍由 `actions` 派生 —— 于是
+    // `actions: ['add', …]` 的页面照样渲染「新增」，点下去 `openDialog('add')` 找不到
+    // 配置直接 return：一个点不开、也不报错的死按钮。`repairConfig` 把 `dialogs.add: null`
+    // 当作未声明删掉之后，正好落到这个形态（审计 B7）。
+    // 空 record 按**缺席**处理：与「没写 dialogs」同义，legacy 派生照常生效。
+    if (key === 'dialogs' && present && !hasDialogEntries(config.dialogs)) {
+      disposition = 'absent'
+    }
 
     // 逐配置细化：sfc 的 operationColumn 只有 `false` 能真实表达（隐藏操作列）。
     if (key === 'operationColumn' && present && mode === 'sfc' && config.operationColumn === false) {

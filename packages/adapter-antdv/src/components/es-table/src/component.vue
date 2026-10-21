@@ -588,7 +588,12 @@ const adaptedColumns = computed(() => {
   // AN-09：前置列判据走 core 单源（选择 → 序号 → 展开）。ADV 的差异在**消费者**：
   // 选择列由 rowSelection 渲染、展开列由 expandedRowRender 整行渲染，二者都不是数据列，
   // 因此这里只把序号列注入列集合。
-  for (const spec of synthesizeLeadingColumns(props.options, visible)) {
+  //
+  // 判据必须喂**原始列**（`columnRowList`），不能喂 `filteredColumns`：core 的契约是
+  // 「columns 原始列（未做权限/隐藏过滤）」。喂过滤后的列会让被 `hidCol` / 列级权限筛掉的
+  // `type:'index'` 列不再「算作已声明」，于是又合成一条默认序号列 —— 用户的隐藏/拒绝被
+  // 合成列直接推翻（权限列甚至会因此可见）。vue3/vue2 传的都是原始列，三端同规。
+  for (const spec of synthesizeLeadingColumns(props.options, columnRowList.value)) {
     if (spec.type === 'index') cols.push(createSnAdvColumn())
   }
 

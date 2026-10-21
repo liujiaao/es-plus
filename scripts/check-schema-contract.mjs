@@ -545,6 +545,26 @@ function checkStructuredConfigZod() {
       fail(`${label} 的 expandConfig 缺少 fields: z.array(...)（展开内容为空则无意义）`)
       ok = false
     }
+    // 列级 `expandConfig`（AI-09 子项② 的列内形态）：ColumnSchema 也必须声明。
+    // 生成器的**列契约白名单直接从 shared 的 ColumnSchema 推导**（structured-generator.ts
+    // 的 columnContractKeys），漏声明 = 「只在展开列上写 expandConfig」的配置在 schema
+    // 模式被整键剥掉、展开器内容恒空且零告警（而 SFC 模式的 pushSfcColumn 本就会发它 ——
+    // 同一份配置换 mode 产物不等价）。上面那条顶层正则只按键名匹配，覆盖不到列内位置，
+    // 所以这里先切出 ColumnSchema 块再查。
+    {
+      const colStart = src.indexOf('const ColumnSchema')
+      // 允许 CRLF：CI 与本地两份检出的行尾可能不同（列 0 的 `)` 才是 ColumnSchema 的收尾，
+      // 块内所有闭合括号都有缩进）。
+      const colEnd = colStart >= 0 ? /\r?\n\)[;,]?\r?\n/.exec(src.slice(colStart)) : null
+      const colBlock = colEnd ? src.slice(colStart, colStart + colEnd.index) : ''
+      if (!colBlock) {
+        fail(`${label} 未能定位 ColumnSchema 块（列级契约无从核对）`)
+        ok = false
+      } else if (!/\bexpandConfig\s*:\s*z\s*\n?\s*\.object\(/.test(colBlock)) {
+        fail(`${label} 的 ColumnSchema 未声明 expandConfig: z.object(...)（列上声明的展开内容会被 Zod 静默剥掉，展开器恒空）`)
+        ok = false
+      }
+    }
 
     // 顶层 `treeConfig` 树表契约（AI-09 子项③）：两处 Zod 都必须声明。
     // 同因（z.object 无 passthrough）—— 漏声明等于把声明式树表整段静默剥掉，

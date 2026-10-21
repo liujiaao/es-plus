@@ -111,6 +111,63 @@ describe('collectUnknownKeys — 形状遍历', () => {
     expect(findings).toEqual([])
   })
 
+  it('联合类型：isHidden 条件里把 op 拼成 opp —— 记录型分支不得否决这条发现', () => {
+    // 修前：`collectUnion` 对**全部**对象分支取交集，表达式分支是 `z.record(...)`，
+    // 结构上放行任何键 ⇒ findings 为空 ⇒ `opp` 被 zod 静默剥掉、`op` 回落到默认
+    // `eq`，语义从「不等于」变成「等于」，且宿主看到的是「✓ 合法」。
+    const findings = collectUnknownKeys(StructuredCrudConfigSchema, {
+      ...base(),
+      fields: [
+        {
+          prop: 'name',
+          label: '名称',
+          formtype: 'Input',
+          isHidden: { field: 'status', opp: 'eq', value: 1 },
+        },
+      ],
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0].path).toEqual(['fields', 0, 'isHidden'])
+    expect(findings[0].key).toBe('opp')
+    expect(findings[0].suggestion).toBe('op')
+    expect(formatUnknownKey(findings[0])).toContain('did you mean "op"')
+  })
+
+  it('联合类型：isHidden 数组形态同样能报出元素里的拼写错误', () => {
+    const findings = collectUnknownKeys(StructuredCrudConfigSchema, {
+      ...base(),
+      fields: [
+        {
+          prop: 'name',
+          label: '名称',
+          formtype: 'Input',
+          isHidden: [{ field: 'status', op: 'eq', value: 1, valeu: 2 }],
+        },
+      ],
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0].path).toEqual(['fields', 0, 'isHidden', 0])
+    expect(findings[0].key).toBe('valeu')
+    expect(findings[0].suggestion).toBe('value')
+  })
+
+  it('联合类型：表达式形态的 isHidden（算子键 or/==）不误报', () => {
+    // 收窄必须真的按分支选：记录型表达式分支接受该值，条件分支拒绝 ——
+    // 若把条件分支的 findings 算进来，`or`/`==` 会被误报成未知键。
+    const findings = collectUnknownKeys(StructuredCrudConfigSchema, {
+      ...base(),
+      fields: [
+        {
+          prop: 'name',
+          label: '名称',
+          formtype: 'Input',
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }] },
+        },
+      ],
+    })
+    expect(findings).toEqual([])
+  })
+
   it('透明包装（optional/default/effects/lazy）逐层解包后仍能看见内层形状', () => {
     // tableBtns 的元素是 ZodEffects（superRefine + transform）包着 ZodObject
     const findings = collectUnknownKeys(StructuredCrudConfigSchema, {

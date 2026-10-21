@@ -382,6 +382,16 @@ describe('EsTable(vue2) — AN-09 前置列合成', () => {
     expect(types(vm)).toEqual(['index', undefined])
   })
 
+  // 同 vue3/antdv：判据看原始列。hidCol 的 type:'index' 仍算已声明，不得被合成列推翻。
+  it('hidCol 的 type:index 列仍算已声明 → 不合成默认序号列', async () => {
+    const vm = mountTable({
+      columns: [{ type: 'index', hidCol: true }, { prop: 'id', label: 'ID' }],
+      options: { snIndex: true },
+    })
+    await vm.$nextTick()
+    expect(types(vm)).toEqual([undefined])
+  })
+
   it('开关全关 → 不注入（默认行为不变）', async () => {
     const vm = mountTable({})
     await vm.$nextTick()

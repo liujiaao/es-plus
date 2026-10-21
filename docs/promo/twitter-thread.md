@@ -88,9 +88,9 @@ AI 写组件库的标准翻车：
 ES-Plus（@es-plus/vue3 + @es-plus/vue2）：
 
 ✅ 一份 JSON Schema 同时驱动 Vue 3 + Vue 2 渲染器
-✅ MCP server 暴露 8 个 tools，Claude/Cursor 一行接入
+✅ MCP server 暴露 15 个 tools，Claude/Cursor 一行接入
 ✅ zod 校验所有 AI 生成的配置，错了立即重试
-✅ CI 矩阵跑 4 个组合的 vite build，证明"AI 生成的代码能编"
+✅ CI 矩阵跑 6 个组合（3 个渲染端 × 2 种模式）的 vite build，证明"AI 生成的代码能编"
 
 最后一项是我没在任何同类组件库见过的工程水准。
 ```
@@ -241,9 +241,9 @@ That's what MCP (Model Context Protocol) is for.
 ES-Plus (@es-plus/vue3 + @es-plus/vue2):
 
 ✅ One JSON schema, two renderers (Vue 3 + Element Plus, Vue 2 + Element UI)
-✅ Official MCP server exposes 8 tools — one-line Claude/Cursor integration
+✅ Official MCP server exposes 15 tools — one-line Claude/Cursor integration
 ✅ Every AI-generated config zod-validated; auto-retry on failure
-✅ CI matrix runs `vite build` on AI-generated code across 4 combos per push
+✅ CI matrix runs `vite build` on AI-generated code across 6 combos per push
 
 That last one is engineering rigor I haven't seen in any peer library.
 ```
@@ -328,7 +328,7 @@ Star, try, roast — all welcome.
 > vue-pure-admin 是项目模板，ES-Plus 是组件库，它俩互补。常见组合：vue-pure-admin 做骨架 + ES-Plus 写每个 CRUD 页。
 
 被问"AI 写出来真的能直接用？"：
-> 我们 CI 每次 push 都跑这件事——pack tarball → 装到 fresh Vite 项目 → 让 CLI 生成代码 → `vite build`。4 个组合（vue3/vue2 × schema/sfc）全过才能 merge。看 .github/workflows/e2e.yml。
+> 我们 CI 每次 push 都跑这件事——pack tarball → 装到 fresh Vite 项目 → 让 CLI 生成代码 → `vite build`。6 个组合（vue3/vue2/antdv × schema/sfc）全过才能 merge。看 .github/workflows/e2e.yml。
 
 被问"Vue 2 真的好用？"：
 > 一份 schema 两个渲染器，行为字节级一致（共享 @es-plus/core）。Vue 2.7 + composition-api 支持，Vue 2.6 也可以。

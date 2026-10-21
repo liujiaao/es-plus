@@ -189,6 +189,33 @@ function checkSuite(api) {
     },
     '',
   )
+  // 联合必须**先收窄到接受该值的分支**再取交集：表达式分支是 `z.record(...)`，结构上
+  // 放行任何键；若它参与交集，下面这条 `opp` 会被整条洗白 —— 而 zod 随后把 `opp` 静默
+  // 剥掉、`op` 回落默认 `eq`，语义从「不等于」变成「等于」，宿主却看到「✓ 合法」。
+  expectFindings(
+    'A11 联合收窄（isHidden 里 opp 拼错）',
+    {
+      ...base(),
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input', isHidden: { field: 'status', opp: 'eq', value: 1 } }],
+    },
+    '/fields/0/isHidden/opp=>op',
+  )
+  // 反过来也要成立：表达式形态不得被条件分支的 findings 误伤（`or` / 算子键是记录键）。
+  expectFindings(
+    'A12 联合收窄（isHidden 表达式形态不误报）',
+    {
+      ...base(),
+      fields: [
+        {
+          prop: 'name',
+          label: '名称',
+          formtype: 'Input',
+          isHidden: { or: [{ '==': [{ var: 'status' }, 'pending'] }] },
+        },
+      ],
+    },
+    '',
+  )
   if (collectUnknownKeys(api.STRUCTURED_SCHEMA, null).length || collectUnknownKeys(api.STRUCTURED_SCHEMA, 'x').length) {
     problems.push('A8 非对象输入必须返回空（类型错误由 Zod 自己报，不重复）')
   }

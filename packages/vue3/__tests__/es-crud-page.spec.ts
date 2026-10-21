@@ -57,6 +57,7 @@ const mountCrudPage = (props: Record<string, unknown> = {}, options: Record<stri
           props: ['columns', 'options', 'dataSource', 'pagination'],
           methods: {
             httpRequestInstance: vi.fn(),
+            refresh: vi.fn().mockResolvedValue(undefined),
             getSelectionRows: () => []
           }
         },
@@ -90,6 +91,7 @@ const shallowMountCrudPage = (props: Record<string, unknown> = {}) =>
           props: ['columns', 'options', 'dataSource', 'pagination'],
           methods: {
             httpRequestInstance: vi.fn(),
+            refresh: vi.fn().mockResolvedValue(undefined),
             getSelectionRows: () => []
           }
         },
@@ -263,6 +265,21 @@ describe('EsCrudPage', () => {
       expect(typeof vm.refresh).toBe('function')
     })
 
+    // 回归：refresh() 必须走表格的 refresh()（keepPage:true），而不是 httpRequestInstance()
+    // （后者默认 keepPage:false，编辑/删除确认后会把用户从第 N 页踢回第 1 页）。
+    it('refresh() delegates to table refresh (keepPage) instead of httpRequestInstance', async () => {
+      const wrapper = mountCrudPage()
+      const vm = wrapper.vm as any
+      const table = wrapper.findComponent({ name: 'EsTable' })
+
+      await vm.refresh()
+
+      // VTU 会把 methods 绑定到 vm 上，spy 身份经 $options.methods 取原始函数
+      const methods = (table.vm as any).$options.methods
+      expect(methods.refresh).toHaveBeenCalledTimes(1)
+      expect(methods.httpRequestInstance).not.toHaveBeenCalled()
+    })
+
     it('exposes getSelectedRows method', () => {
       const wrapper = mountCrudPage()
       const vm = wrapper.vm as any
@@ -402,6 +419,30 @@ describe('EsCrudPage', () => {
       expect(actionCol.btns.some((b: any) => b.name === '查看')).toBe(true)
       expect(actionCol.btns.some((b: any) => b.name === '编辑')).toBe(false)
       expect(actionCol.btns.some((b: any) => b.name === '删除')).toBe(false)
+    })
+
+    // 回归：显式 operationColumn.btns 里除 name/type/permissionValue 之外的契约键
+    // （尤其是文档化的 `hidden`）此前被「三键重建」静默丢掉 —— 行内动态隐藏永远不生效。
+    it('透传 operationColumn.btns 的 hidden / icon（es-table 逐行消费 hidden）', () => {
+      const hidden = (row: Record<string, unknown>) => row.status !== 'pending'
+      const wrapper = mountCrudPage({
+        schema: {
+          columns: [{ prop: 'name', label: '姓名' }],
+          operationColumn: {
+            btns: [
+              { name: '编辑', type: 'primary', dialogKey: 'edit' },
+              { name: '审批', type: 'warning', key: 'approve', icon: 'Check', hidden }
+            ]
+          }
+        }
+      })
+      const table = wrapper.findComponent({ name: 'EsTable' })
+      const actionCol = (table.props('columns') as any[]).find((c: any) => c.prop === 'operate')
+      const btn = actionCol.btns.find((b: any) => b.name === '审批')
+      expect(btn.hidden).toBe(hidden)
+      expect(btn.icon).toBe('Check')
+      // 点击始终由 CRUD 页接管（clickEvent 覆盖用户的 click，但不丢其余键）
+      expect(typeof btn.clickEvent).toBe('function')
     })
 
     it('includes view button when actions include view', () => {

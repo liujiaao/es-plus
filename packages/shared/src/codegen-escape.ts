@@ -161,9 +161,23 @@ export function numOrStr(v: number | string): string {
   return typeof v === 'number' ? String(v) : q(v)
 }
 
-/** HTML 注释内容：不能含 `--`，且需单行；折叠空白并把连续短横替换为破折号，截断超长源码。 */
+/**
+ * 注释内容：不能含 `--`，需单行，且**不得含 `</`**；折叠空白并把连续短横替换为破折号，
+ * 截断超长源码。
+ *
+ * 为什么 `</` 必须在这里也转义：本函数既写 HTML 注释（模板），也写 `//` 行注释
+ * （`<script setup>` 内）。后者最容易被忽略 —— HTML 解析**先于** JS 处理 `<script>`
+ * 块，`// ... "</script>"` 里的结束标签照样会闭合宿主脚本块，把同一行后面的生成代码
+ * 甩成文档正文（`render`/`formatter` 是用户可控源码，可构造这条载荷）。
+ * `<\/` 在两种注释里都只是两个普通字符，可读性几乎不变。
+ */
 export function sanitizeForComment(src: string): string {
-  return src.replace(/\s+/g, ' ').replace(/--+/g, '—').trim().slice(0, 200)
+  return src
+    .replace(/\s+/g, ' ')
+    .replace(/--+/g, '—')
+    .replace(/<\//g, '<\\/')
+    .trim()
+    .slice(0, 200)
 }
 
 /**

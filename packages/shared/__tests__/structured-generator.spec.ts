@@ -687,8 +687,15 @@ describe('multi-target generation (vue3 / vue2 / antdv)', () => {
     const legacy = generateFromConfig(cfgFor('vue2', 'schema')).wrapperCode
     expect(legacy).toMatch(/return \{[^}]*\bpageSchema\b[^}]*\}/)
 
-    const multi = generateFromConfig({ ...baseConfig, target: 'vue2', mode: 'schema', typescript: true, dialogs: {} } as any)
-      .wrapperCode
+    // 必须用**非空** dialogs —— 空 record 现在按「未声明」处理（见 render-plan.ts），
+    // 会落回 legacy builder，这条断言就会在「看起来通过」的情况下失去覆盖对象。
+    const multi = generateFromConfig({
+      ...baseConfig,
+      target: 'vue2',
+      mode: 'schema',
+      typescript: true,
+      dialogs: { add: { title: '新增', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }] } },
+    } as any).wrapperCode
     expect(multi).toMatch(/return \{[^}]*\bpageSchema\b[^}]*\}/)
 
     // 反例守卫：模板确实在用 pageSchema，否则上面的断言就只是钉了一个无用绑定。
@@ -1137,6 +1144,59 @@ describe('declarative row-expand content（AI-09 子项② expandConfig）', () 
     })
     expect(r.success).toBe(false)
   })
+
+  // ── 列级 expandConfig（列内形态）────────────────────────────────────────────
+  // 生成器的列契约白名单**从 ColumnSchema 推导**（structured-generator.ts 的
+  // columnContractKeys），而 SFC 模式的 pushSfcColumn 本来就会发列上的 expandConfig。
+  // 列级键此前没进 ColumnSchema ⇒ schema 模式被 sanitizeExplicitColumns 整键剥掉：
+  // 同一个配置换 mode，展开器在 SFC 下有内容、在 schema 下恒空，且零告警。
+  const colLevelCfg = {
+    ...cfg,
+    expandConfig: undefined,
+    columns: [
+      { prop: 'orderNo', label: '订单号' },
+      {
+        type: 'expand',
+        expandConfig: { title: '收货信息', fields: [{ prop: 'phone', label: '联系电话' }] },
+      },
+    ],
+  }
+
+  it('schema 模式：列上的 expandConfig 不被剥（无顶层 expandConfig 时也能展开）', () => {
+    const result = generateFromConfig(colLevelCfg as any)
+    expect(result.code).toContain('"type": "expand"')
+    expect(result.code).toContain('"expandConfig": {')
+    expect(result.code).toContain('"title": "收货信息"')
+    expect(result.warnings).toEqual([])
+  })
+
+  it('sfc 模式：列上的 expandConfig 同样发射（两模式等价）', () => {
+    const result = generateFromConfig({ ...colLevelCfg, mode: 'sfc' } as any)
+    expect(result.code).toContain('expandConfig: {"title":"收货信息"')
+  })
+
+  it('StructuredCrudConfigSchema 保留 columns[].expandConfig（Zod 默认 strip 会静默丢）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'expand', expandConfig: { fields: [{ prop: 'a', label: 'A' }] } }],
+    })
+    expect(r.success).toBe(true)
+    expect((r as any).data.columns[0].expandConfig).toEqual({ fields: [{ prop: 'a', label: 'A' }] })
+  })
+
+  it('列级 expandConfig 空 fields 同样被拒（与顶层同形状）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      columns: [{ type: 'expand', expandConfig: { fields: [] } }],
+    })
+    expect(r.success).toBe(false)
+  })
 })
 
 describe('declarative tree table（AI-09 子项③ treeConfig）', () => {
@@ -1402,6 +1462,23 @@ describe('AN-11 — 静默丢弃收口（转义 / 非 JSON 值 / 权限与行内
     // 现由 findNonJsonValues 显式点名具体路径。
     expect(result.warnings.join('\n')).toContain('btns[0].click')
     expect(result.code).not.toMatch(/\bbtns:\s*\[/)
+  })
+
+  // AN-11③：表单面 render 降级成 **`//` 行注释**（AI-31① 的 TODO 标记）。行注释里的
+  // `</script>` 同样会被 HTML 解析器当成宿主 script 块的结束标签 —— HTML 解析先于 JS，
+  // 注释语法救不了它。所以 sanitizeForComment 必须打断 `</`（此前只处理空白与 `--`）。
+  it('③ 表单面降级注释里的 </script> 被转义（`//` 注释挡不住 HTML 解析）', () => {
+    const evil = 'A</script><script>alert(1)</script>'
+    const result = generateFromConfig({
+      ...base,
+      mode: 'sfc',
+      // inTable:false + render → 走表单面降级通道，render 只以注释形态落地
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input', inTable: false, render: evil }],
+    } as any)
+
+    expect(result.code).toContain('"name": A<\\/script><script>alert(1)<\\/script>')
+    // 原始串绝不能出现：出现处即宿主 <script> 提前闭合
+    expect(result.code).not.toContain(evil)
   })
 
   it('③ schema 模式：/permissions 无落点 → 告警点名键名（不再静默丢）', () => {
@@ -1907,4 +1984,84 @@ describe('AN-10 列选项：省略号契约键 + 默认排序列可排序', () =
     )
     expect(out.columns[0]).not.toHaveProperty('sortable')
   })
+})
+
+describe('B7 — 空 dialogs 不得把页面切成「新弹窗模式」', () => {
+  const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
+  const flat = (extra: Record<string, unknown>) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: F,
+    actions: ['add', 'edit', 'delete'],
+    ...extra,
+  })
+
+  // 修前：`dialogs.add: null` 被 repairConfig 删成 `dialogs: {}`，而 `{}` 仍算「已声明」
+  // → 生成器走新弹窗模式，产物里 `"dialogs": {}`、没有 dialogFormItems；工具栏照旧由
+  // actions 派生「新增」，点下去 openDialog('add') 拿不到配置直接 return —— 死按钮。
+  for (const [label, dialogs] of [
+    ['repair 后的空 record', {}],
+    ['null 弹窗（修复环删键）', { add: null }],
+  ] as const) {
+    it(`${label} → 回退 legacy 派生，产物不出现空 dialogs`, () => {
+      const r = generateFromConfig(flat({ dialogs }) as any)
+      // 产物里没有 dialogs 键；legacy 的逐字段表与入口按钮都还在
+      expect(r.code).not.toContain('"dialogs"')
+      expect(r.code).toContain('"dialogFormItems"')
+      expect(r.code).toContain('"actions"')
+      // 摘要按同一条规则报数：legacy 的一个通用弹窗 = 1，不是 0
+      expect(r.summary).toContain('1 dialog(s) configured')
+      expect(r.summary).toContain('Legacy actions mode')
+    })
+  }
+
+  it('null 弹窗在警告里点名（修复不静默）', () => {
+    const r = generateFromConfig(flat({ dialogs: { add: null } }) as any)
+    expect(r.warnings.join('\n')).toContain('/dialogs/add')
+  })
+
+  it('非空 dialogs 仍走新弹窗模式（不误伤真实声明）', () => {
+    const r = generateFromConfig(flat({ dialogs: { add: { title: '新增' } } }) as any)
+    expect(r.code).toContain('"dialogs"')
+    expect(r.code).not.toContain('"dialogFormItems"')
+    expect(r.summary).toContain('Multi-dialog mode')
+    expect(r.summary).toContain('1 dialog(s) configured')
+  })
+})
+
+describe('B9 — rewriteElementUsage 不改写用户 render/formatter 源码', () => {
+  // 用户源码里刻意同时放：目标库符号名（ElTag）、字符串字面量里的同名文本（'ElMessage:'）
+  const renderSrc = "(_, { row }) => h(ElTag, { type: 'success' }, () => 'ElMessage:' + row.status)"
+  const formatterSrc = "(row) => row.no + ' ElMessage'"
+  const cfg = (mode: 'schema' | 'sfc', target: 'vue2' | 'antdv') => ({
+    name: 'T',
+    apiUrl: '/x',
+    mode,
+    target,
+    fields: [
+      { prop: 'status', label: '状态', formtype: 'Input' as const, render: renderSrc, formatter: formatterSrc },
+    ],
+    actions: ['add', 'edit', 'delete'] as const,
+  })
+
+  for (const target of ['vue2', 'antdv'] as const) {
+    it(`${target} SFC：render/formatter 逐字保留，生成器自身的 ElMessage 仍按目标库改名`, () => {
+      const r = generateFromConfig(cfg('sfc', target) as any)
+      // 用户源码原样（含 h(ElTag) 与字符串 'ElMessage:'）—— 生成器不替用户改名
+      expect(r.code).toContain(`render: ${renderSrc}`)
+      expect(r.code).toContain(`formatter: ${formatterSrc}`)
+      expect(r.code).not.toContain('h(Tag, { type:')
+      // 保护不误伤生成器自己的发射：删除确认里的 ElMessage 仍要映射
+      expect(r.code).toContain(target === 'vue2' ? 'Message.success' : 'message.success')
+      expect(r.code).not.toContain('ElMessage.success(\'删除成功\')')
+    })
+
+    it(`${target} schema：TODO 注释里回显的 render 源码也逐字保留`, () => {
+      const r = generateFromConfig(cfg('schema', target) as any)
+      expect(r.wrapperCode).toContain(`requested render: ${renderSrc}`)
+      expect(r.wrapperCode).not.toContain('requested render: (_, { row }) => h(Tag')
+      // 生成器自己的 ElMessage 仍被映射（wrapper 的删除路径）
+      expect(r.wrapperCode).toContain(target === 'vue2' ? 'Message.success' : 'message.success')
+    })
+  }
 })

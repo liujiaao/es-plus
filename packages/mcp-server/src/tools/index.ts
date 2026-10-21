@@ -14,14 +14,15 @@ import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
 import { registerIngestSchema } from "./ingest-schema.js";
 import { registerRefineConfig } from "./refine-config.js";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
+import { withArgGuard } from "./_arg-guard.js";
 
 /**
  * AN-26 —— 工具面 profile。
  *
- * `full`（默认）：注册全部工具。**默认值刻意是 full**，与 ARCHITECTURE §9.4 的
- * 弃用流程一致（「先改描述 → 再加 profile 开关（默认关闭）→ 大版本移除」）：
- * 在没有一个 minor 周期的描述过渡前就默认隐藏高级/legacy 工具，会让按现有
- * 文档调用 `generate_crud_from_config` 的宿主忽然找不到工具。
+ * 定义与解析已下沉到 `src/profile.ts`（见那里的说明）：提示词/资源也要按**同一份**
+ * profile 适配，故不能让它们反向依赖这 15 个工具的注册模块。这里 re-export，
+ * 既有 `import { resolveToolProfile } from "./tools/index.js"` 不受影响。
  *
  * `front-door`：只留「前门 + 确定性支撑 + 单面片段」。
  *   · 保留 `generate_crud`（唯一前门）、`generate_form/table/dialog`（单组件显式诉求，
@@ -30,22 +31,16 @@ import { registerRefineConfig } from "./refine-config.js";
  *     `doctor_page`、`detect_project_target`；
  *   · 隐藏 `generate_crud_from_config`（hand-authored 高级路径）、
  *     `generate_crud_page` / `generate_crud_schema`（regex 解析的 legacy fallback）。
- *
- * 选择读环境变量而不读 CLI flag：MCP 服务器由宿主 launcher 启动，环境变量是
- * 双方都能配置的唯一通道（`ESPLUS_MCP_PROFILE=front-door`）。
  */
-export type ToolProfile = "full" | "front-door";
-
-/** 解析 profile；未知值按 `full` 处理并留给调用方决定是否告警（不静默改变工具面）。 */
-export function resolveToolProfile(raw = process.env.ESPLUS_MCP_PROFILE): ToolProfile {
-  const value = String(raw ?? "").trim().toLowerCase();
-  return value === "front-door" ? "front-door" : "full";
-}
+export { resolveToolProfile, type ToolProfile };
 
 export function registerTools(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   const frontDoorOnly = profile === "front-door";
+  // 入参未知键闸门（见 `_arg-guard.ts`）：SDK 默认 strip，拼错的参数会静默消失。
+  // 只在**注册入口**套一次 —— 15 个工具文件保持原样，新增工具自动继承。
+  server = withArgGuard(server);
 
-  registerDetectProjectTarget(server);
+  registerDetectProjectTarget(server, profile);
   // Front door — the preferred entry for any composite / CRUD request.
   registerGenerateCrud(server);
   // Standalone single-surface tools (explicit single-component asks, or embedding
@@ -62,12 +57,12 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
     // a typed config. Same deterministic generator as the front door.
     registerGenerateFromConfig(server);
   }
-  registerValidateConfig(server);
+  registerValidateConfig(server, profile);
   registerListFormTypes(server);
   // 摄取层:把既有 schema 预填成一份草拟 StructuredCrudConfig(需人审修订后再 generate)。
-  registerIngestSchema(server);
+  registerIngestSchema(server, profile);
   // 精修层:对已 pin 的配置做一轮 NL 纠正后,确定性校验新配置并回显本轮 diff。
-  registerRefineConfig(server);
+  registerRefineConfig(server, profile);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
   registerDoctorPage(server);

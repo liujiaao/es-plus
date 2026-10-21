@@ -9,6 +9,7 @@ import {
   DEFAULT_CONFIG_TABLE_OUT,
   CRUD_PAGE_BTN_CLICK_KEYS,
 } from "@es-plus/shared";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 type Target = "vue3" | "vue2" | "antdv";
 
@@ -199,10 +200,32 @@ function robustHttpRequest(): string {
       }`;
 }
 
-function buildConventionsContent(target: Target): string {
+function buildConventionsContent(target: Target, profile: ToolProfile = "full"): string {
   const v = TARGETS[target];
   const isVue2 = target === "vue2";
   const isAntdv = target === "antdv";
+  // AN-26：profile=front-door 时 `generate_crud_from_config` 不注册。下文这一节大部分
+  // 讲的是**配置形状本身**（它仍是生成器的输入模型，也是 `validate_config` /
+  // `refine_config` 的判据），保留；但标题与「该去调哪个工具」的两行必须换成实际
+  // 注册的那个前门，否则宿主照着文档调用会拿到 tool not found。
+  const structuredConfigIntro =
+    profile === "front-door"
+      ? `# Structured Config (the model generate_crud fills for you)
+
+## When to Use
+This server runs \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`,
+\`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.
+- \`generate_crud\`: fill its \`surfaces\` intent table (query / table / form / dialog) —
+  the routing builds this StructuredCrudConfig for you, deterministically.
+- Read this section to understand that emitted config, and to check a
+  hand-authored one with \`validate_config({ type: 'structured-crud-config' })\`
+  or \`refine_config\` (both stay available in this profile).`
+      : `# Structured Config Tool (generate_crud_from_config)
+
+## When to Use
+Use \`generate_crud_from_config\` instead of \`generate_crud_page\` when you need production-ready code.
+- \`generate_crud_page\`: Quick prototyping from natural language (has TODOs, placeholder data)
+- \`generate_crud_from_config\`: Production code from structured JSON (zero TODOs, real API URLs)`;
   return `# ${v.esPlusPkg} Code Generation Conventions (target=${target})
 
 ## Form Types (formtype)
@@ -494,12 +517,7 @@ resolve each one before shipping.
 
 ---
 
-# Structured Config Tool (generate_crud_from_config)
-
-## When to Use
-Use \`generate_crud_from_config\` instead of \`generate_crud_page\` when you need production-ready code.
-- \`generate_crud_page\`: Quick prototyping from natural language (has TODOs, placeholder data)
-- \`generate_crud_from_config\`: Production code from structured JSON (zero TODOs, real API URLs)
+${structuredConfigIntro}
 
 ## Production Readiness Checklist
 Before constructing a StructuredCrudConfig, AI clients MUST verify:
@@ -725,7 +743,7 @@ ${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use
 ${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
-export function registerConventionsResource(server: McpServer) {
+export function registerConventionsResource(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   // Four URIs:
   //   esplus://conventions       — vue3 (backward-compat default)
   //   esplus://conventions/vue3  — explicit vue3
@@ -752,7 +770,7 @@ export function registerConventionsResource(server: McpServer) {
       },
       async () => ({
         contents: [
-          { uri, mimeType: "text/plain", text: buildConventionsContent(target) },
+          { uri, mimeType: "text/plain", text: buildConventionsContent(target, profile) },
         ],
       })
     );

@@ -226,6 +226,19 @@ describe("generate_crud front door — surface routing", () => {
     expect(res.content[0].text).toContain("## Form (FormBlock.vue)");
   });
 
+  it("form-only 的 formLayout 也必须透传（与查询分支同一口径）", async () => {
+    // 修前只有查询分支转发 formLayout，纯表单分支静默丢弃 —— 而工具描述承诺旋钮
+    // 「forwarded verbatim」，宿主按描述填写却拿不到 labelWidth / minFoldRows。
+    const res = await crudHandler()({
+      ...baseCrud,
+      surfaces: { form: [field("name", "名称")] },
+      formLayout: { labelWidth: "120px", minFoldRows: 3 },
+    });
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain('const layoutFormProps = { formLayProps: {"labelWidth":"120px","minFoldRows":3} }');
+    expect(res.content[0].text).toContain(':layout-form-props="layoutFormProps"');
+  });
+
   // ── AI-21①：前门 passthrough 键（tableOptions/formLayout/operationColumn/tableBtns/toolbarBtns）──
   // 复用 generate_crud_from_config 那组「MCP 参数 schema 保留 X」的范式：先证明 MCP 工具的
   // zod 形状**不静默剥**这些键（嵌套 z.object 会剥未声明子键），再证明它们经前门一路存活到生成物。

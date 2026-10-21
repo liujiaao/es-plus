@@ -141,6 +141,20 @@ export function compareToBaseline(current, baseline, { tol = RATCHET_TOL } = {})
     return { ok: true, failures, warnings }
   }
 
+  // 比率基线是**惰性**的：`null` 时 `cmp` 直接跳过，棘轮看起来绿，其实没在比。
+  // 这不是错误（首次全量跑批前确实没有真值），但必须可见 —— 否则「防线已就绪」是错觉。
+  // 批次 C：至少把「未填」这件事打出来；填数仍需人工 PR（见 accuracy-baseline.json 头注）。
+  for (const [key, label] of [
+    ['definition95', 'definition95（∨）'],
+    ['coreRate', 'coreRate'],
+  ]) {
+    if (typeof baseline[key] !== 'number') {
+      warnings.push(
+        `基线未填 ${label}（null）—— 比率棘轮对这项不生效；首次 post-AN-01 全量跑批后请人工填入`
+      )
+    }
+  }
+
   const cmp = (label, cur, base) => {
     if (typeof base !== 'number') return
     if (typeof cur !== 'number' || Number.isNaN(cur)) {

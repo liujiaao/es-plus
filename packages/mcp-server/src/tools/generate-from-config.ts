@@ -334,6 +334,28 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
       })
       .optional()
       .describe("Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine:'vxe'. Function-valued fields (events) and custom-registered renderers are out of scope (Tier-3)."),
+    // Column-level `expandConfig` — mirrors the shared authoritative ColumnSchema.
+    // Must be declared here too: Zod strips unknown keys, and the generator's column
+    // contract allowlist is derived from the shared ColumnSchema while THIS copy is
+    // what validates tool arguments (a stripped key = empty expander, no warning).
+    expandConfig: z
+      .object({
+        title: z.string().optional().describe("Optional title shown at the top of the expanded row."),
+        fields: z
+          .array(
+            z.object({
+              prop: z.string().min(1).describe("Row field to display (value = `row[prop]`)."),
+              label: z.string().optional().describe("Label text for this field."),
+              labelKey: z.string().optional().describe("i18n label key (used with a global t() function; takes precedence over `label`)."),
+            })
+          )
+          .min(1)
+          .describe("Read-only fields rendered inside the expanded row, one per line as `label: value`."),
+      })
+      .optional()
+      .describe(
+        "Row-expand content declared ON the `type:'expand'` column (AI-09 子项②). Same shape/semantics as the top-level `expandConfig`; use it when the expander is not the leading column or when `columns` is the source of truth. If BOTH are set, the top-level one wins on the expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
+      ),
   })
 );
 
@@ -659,7 +681,7 @@ const configShape = {
         cacheKey: z
           .string()
           .optional()
-          .describe("Instance cache key: repeat calls with the same key reuse one dialog instance (state survives close/reopen, recycled 10 min after close). Implemented by the vue3/vue2 runtimes; inert in the ant-design-vue adapter (registered deviation)."),
+          .describe("Instance cache key: repeat calls with the same key reuse one dialog instance (state survives close/reopen, recycled 10 min after close). Implemented identically by all three runtimes (vue3 / vue2 / ant-design-vue)."),
         configBtn: z
           .array(DialogBtnSchema)
           .min(1)

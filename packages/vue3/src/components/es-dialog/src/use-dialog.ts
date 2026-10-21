@@ -21,6 +21,12 @@ export interface DialogCallable {
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void
+  /**
+   * 只销毁**当前**实例（单例 vNode / 本次容器），**不动**任何 cacheKey 缓存。
+   * 供"关闭这一弹窗"这类场景使用：`destroy()` 无参会连带清空别人的缓存，
+   * 会把 `dialogs: { add: {cacheKey:'add'}, edit: {…} }` 里的 add 缓存一起误删。
+   */
+  destroyCurrent: () => void
 }
 
 export type DialogCallableWithDestroy = DialogCallable
@@ -229,6 +235,9 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       destroyCache()
     }
 
+    // 只销毁本次容器，不动缓存（见 DialogCallable.destroyCurrent）
+    const destroyCurrent = () => close()
+
     const DialogComponent = (dialogOptions: DialogOptions) => {
       const cacheKey = (dialogOptions as Record<string, unknown>).cacheKey as string | undefined
 
@@ -260,6 +269,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
     DialogComponent.close = close
     DialogComponent.destroy = destroy
+    ;(DialogComponent as any).destroyCurrent = destroyCurrent
 
     // 宿主组件作用域销毁（卸载）时回收本 hook 持有的一切：
     // 弹窗容器是**手工**追加到 body 的，不属于任何组件的子树，宿主卸载不会连带移除；
@@ -279,17 +289,22 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }
     }
 
+    // 只销毁单例 vNode，不动任何 cacheKey 缓存（见 DialogCallable.destroyCurrent）
+    const destroyCurrent = () => {
+      if (vNode) {
+        render(null, container)
+        container.remove()
+        vNode = null
+      }
+    }
+
     const destroy = (cacheKey?: string) => {
       // 传 cacheKey 只销毁该缓存实例，不误伤单例 vNode；不传则单例 + 全部缓存一起销毁
       if (cacheKey) {
         destroyCache(cacheKey)
         return
       }
-      if (vNode) {
-        render(null, container)
-        container.remove()
-        vNode = null
-      }
+      destroyCurrent()
       destroyCache()
     }
 
@@ -336,6 +351,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
     DialogComponent.close = close
     DialogComponent.destroy = destroy
+    ;(DialogComponent as any).destroyCurrent = destroyCurrent
 
     // 同上：destroy() 无参 = 拆掉单例 vNode 并移除它的 container + 清空全部缓存
     if (getCurrentScope()) onScopeDispose(() => destroy())

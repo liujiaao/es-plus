@@ -359,7 +359,7 @@ Most component libraries' "AI friendliness" is just talk — "our API names are 
 
 > **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
 
-1. **The MCP server** exposes 8 tools and 4 resource categories; the AI reads them over the protocol
+1. **The MCP server** exposes 15 tools, 8 resource families and 3 prompts (3 legacy/advanced tools are hidden under `ESPLUS_MCP_PROFILE=front-door`); the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
 
@@ -616,7 +616,7 @@ The classic large-company arc: hand-write everything early, hit the pain wall, t
 
 This section is what sets ES-Plus apart from **every other** admin component library.
 
-### 7.1 The 8 MCP Server Tools
+### 7.1 The 15 MCP Server Tools
 
 See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts):
 
@@ -633,6 +633,7 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | `get_component_api` | Returns a component's props / events / slots | What the AI sees is protocol-level API docs |
 | `scaffold_page` | Multi-page scaffold | Creates a related group of pages at once |
 | `ingest_schema` | Existing schema → drafted config (needs human review) | Starting point for legacy projects |
+| `doctor_page` | Static-checks the host entry against the preflight checklist (UI library / plugin registration / `httpRequest` / `permission` / `t` / JSX) | The last mile of "the generated code is right but the app won't run" |
 
 **All tools are implemented in `@es-plus/shared`**, which means:
 - The [AI CRUD demo page](https://liujiaao.github.io/es-plus/#/ai-crud) in your browser calls the same code (no backend required)
@@ -686,7 +687,7 @@ matrix:
   mode:   [schema, sfc]     ← two generation modes
 ```
 
-Every push and PR runs **4 combinations**, each with this pipeline:
+Every push and PR runs **6 combinations** (3 renderers × 2 modes), each with this pipeline:
 
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → generate tarballs
 2. Copy a fresh fixture ([__tests__/e2e/fixtures/vue3-fresh](../__tests__/e2e/fixtures/vue3-fresh) / [vue2-fresh](../__tests__/e2e/fixtures/vue2-fresh)) into a sandbox
@@ -916,4 +917,4 @@ ES-Plus is the first admin component library to deliver all three.
 
 ---
 
-<small>This document corresponds to ES-Plus v1.4.1 / Vue3 1.4.1 / Vue2 1.0.0 / Shared 1.1.0 / CLI 1.2.0 / MCP-Server 1.2.0 (May 2026). All linked source files point to the current master branch of the repository.</small>
+<small>This document corresponds to (2026-10): Vue3 1.7.0 / Vue2 1.4.0 / AntDV 1.3.0 / Core 1.3.0 / Shared 1.4.1 / CLI 1.4.0 / MCP-Server 1.4.1. All linked source files point to the current master branch of the repository.</small>

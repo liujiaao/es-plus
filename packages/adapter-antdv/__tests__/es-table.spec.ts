@@ -311,6 +311,31 @@ describe('EsTable — AN-09 前置列合成', () => {
     // 显式列的 width 覆盖默认值（默认值只兜底）
     expect(sn[0].width).toBe(70)
   })
+
+  // 回归：判据必须看**原始列**（core `synthesizeLeadingColumns` 的 @param 明写
+  // 「原始列（未做权限/隐藏过滤）」；vue3/vue2 传的都是 columnRowList.value）。
+  // ADV 此前把 filteredColumns 传进去 → 被 hidCol / 权限筛掉的 type:'index' 列
+  // 不再「算作已声明」，于是又合成一条默认序号列 —— 用户的隐藏/拒绝被合成列推翻。
+  it('hidCol 的 type:index 列仍算已声明 → 不再合成默认序号列', () => {
+    const cols = colsOf({ snIndex: true }, [{ type: 'index', hidCol: true }, { prop: 'name', label: 'Name' }])
+    expect(cols.filter((c) => c.dataIndex === '_sn')).toHaveLength(0)
+    expect(cols.map((c) => c.dataIndex)).toEqual(['name'])
+  })
+
+  it('无权限的 type:index 列不得被合成列「复活」（权限未被绕过）', async () => {
+    const { configureEsPlus, resetGlobalConfig } = await import('@es-plus/core')
+    try {
+      configureEsPlus({ permission: (v: string) => v !== 'sn:view' })
+      const cols = colsOf({ snIndex: true }, [
+        { type: 'index', permissionValue: 'sn:view' },
+        { prop: 'name', label: 'Name' },
+      ])
+      expect(cols.filter((c) => c.dataIndex === '_sn')).toHaveLength(0)
+      expect(cols.map((c) => c.dataIndex)).toEqual(['name'])
+    } finally {
+      resetGlobalConfig()
+    }
+  })
 })
 
 describe('EsTable — 暴露的实例方法', () => {

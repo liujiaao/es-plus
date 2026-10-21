@@ -258,25 +258,48 @@ The AI calls the MCP server's `generate_crud` front door (or a standalone fragme
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes every tool below. With `ESPLUS_MCP_PROFILE=front-door`, the advanced and legacy tools are hidden and only `generate_crud`, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **15 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the front door, the single-surface fragments, and the deterministic support tools remain.
 
-| Tool | Purpose |
-|------|---------|
-| `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. |
-| `generate_crud_from_config` | **ADVANCED** — generate from a STRUCTURED, typed config you already hold (persisted, diffed, or refined). Same deterministic generator as the front door. |
-| `generate_crud_page` | **LEGACY FALLBACK** (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. |
-| `generate_crud_schema` | **LEGACY FALLBACK** (no-LLM) — CrudPageSchema JSON + wrapper SFC from a regex parser. |
-| `generate_form` | Build an `EsForm` `formItemList` array |
-| `generate_table` | Build an `EsTable` `columns` array |
-| `validate_config` | Validate a config object against the live schema (judge-only; it does not rewrite) |
-| `list_form_types` | List the supported `formtype` values and their renderers |
+| Tool | Purpose | front-door |
+|------|---------|:----------:|
+| `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. | ✅ |
+| `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`) | ✅ |
+| `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination) | ✅ |
+| `generate_dialog` | **Fragment** — a reusable `useXxxDialog()` composable (default) or a self-contained `<es-dialog>` SFC | ✅ |
+| `detect_project_target` | Read the host `package.json` and pick `vue3` / `vue2` / `antdv` — **run this before any `generate_*`** | ✅ |
+| `validate_config` | Validate a config against the live schema (judge-only; it does not rewrite) | ✅ |
+| `ingest_schema` | Draft a config from OpenAPI / JSON Schema / sample JSON / TS interface / SQL DDL (deterministic, a head start you then edit) | ✅ |
+| `refine_config` | One round of refinement on a pinned config: validate `revised` + return a structured diff | ✅ |
+| `list_form_types` | List the 14 shared `formtype` values and their renderers | ✅ |
+| `get_component_api` | Component API and type docs | ✅ |
+| `scaffold_page` | Minimal page scaffold | ✅ |
+| `doctor_page` | Static-check the host entry against the es-plus preflight checklist (ok / missing / unverified) | ✅ |
+| `generate_crud_from_config` | **ADVANCED** — generate from a STRUCTURED, typed config you already hold (persisted, diffed, or refined). Same deterministic generator as the front door. | ⛔ |
+| `generate_crud_page` | **LEGACY FALLBACK** (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. | ⛔ |
+| `generate_crud_schema` | **LEGACY FALLBACK** (no-LLM) — `CrudPageSchema` JSON + wrapper SFC from the same regex parser. | ⛔ |
+
+The profile only changes which tools are *listed* — the hidden three share the same deterministic generator as `generate_crud`. Prompts, resources and tool descriptions are adapted from the same profile, so the host is never told to call a tool that isn't registered.
 
 ## Resources Exposed by the Server
 
-- `schema://es-form` — JSON Schema for `formItemList` items
-- `schema://es-table` — JSON Schema for `columns` and `options`
-- `schema://es-crud-page` — JSON Schema for full CRUD pages
-- `types://es-plus` — TypeScript types extracted from `packages/vue3/src/types`
+Eight resource families (target-specific variants for `vue3` / `vue2` / `antdv` where noted):
+
+- `esplus://conventions` — generation rules (formtype, button keys, multi-dialog mode, `configureEsPlus`); `/vue3`, `/vue2`, `/antdv`
+- `esplus://crud-page-schema` — `EsCrudPage` schema and usage examples; `/vue3`, `/vue2`, `/antdv`
+- `esplus://schemas/{form-item,table-column,table-options,dialog-options,btn-config,api-params}` — JSON Schema per config shape
+- `esplus://types` — TypeScript type definitions extracted from the renderers; `/vue3`, `/vue2`, `/antdv`
+- `esplus://examples` — 8 preset CRUD page examples with full code; `/vue3`, `/vue2`, `/antdv`
+- `esplus://examples/nl-to-config` — few-shot pairs for natural language → `StructuredCrudConfig`
+- `esplus://examples/surfaces` — few-shot for the `surfaces` intent table
+- `esplus://design-extraction` — how to transcribe a mockup (images must be transcribed by the host first)
+
+## Prompts Exposed by the Server
+
+| Prompt | Parameters | Purpose |
+|--------|------------|---------|
+| `crud-page` | `description`, `target?`, `mode?` | Full CRUD page system prompt with es-plus best practices |
+| `form-config` | `description`, `target?` | Generate only a `formItemList` JSON array |
+| `spec-to-surfaces` | `spec`, `target?`, `mode?` | Turn a PRD / user story / wireframe transcription into `generate_crud` `surfaces` (the first mile) |
 
 ## Local Development
 

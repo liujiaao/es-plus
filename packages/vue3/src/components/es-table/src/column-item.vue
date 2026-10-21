@@ -11,7 +11,7 @@
           v-if="scope && scope.row"
           :row="scope.row"
           :index="scope.$index"
-          :data-key="item.key"
+          :data-key="item.prop || item.key"
           :render="item.render"
         />
         <span v-else>-</span>

@@ -54,4 +54,29 @@ describe("buildRefineResult — 校验 revised + 回显本轮 diff", () => {
     expect(r.valid).toBe(true);
     expect(r.diff!.fieldsAdded).toEqual(["orderNo", "amount"]);
   });
+
+  it("只加一个编辑弹窗 → diff 不再回「无差异」", () => {
+    // 精修轮里最常见的纠正之一：给页面补一个编辑弹窗。修前 diff 只比
+    // 字段/操作，`dialogs` 的变化被当成「无差异」，宿主以为纠正没生效。
+    const revised = JSON.parse(JSON.stringify(pinned));
+    revised.dialogs = { edit: { title: "编辑订单", width: 600 } };
+    const r = buildRefineResult({ previous: pinned, revised });
+    expect(r.valid).toBe(true);
+    expect(r.diff!.isEmpty).toBe(false);
+    expect(r.diff!.blocksChanged.map((b) => b.key)).toEqual(["dialogs"]);
+    expect(r.summary.join("\n")).toContain("~ dialogs:");
+  });
+
+  it("改 formLayout / tableOptions → 各自可见", () => {
+    const prev = { ...pinned, formLayout: { labelWidth: "100px" }, tableOptions: { stripe: false } } as any;
+    const revised = {
+      ...pinned,
+      formLayout: { labelWidth: "140px" },
+      tableOptions: { stripe: true },
+    } as any;
+    const r = buildRefineResult({ previous: prev, revised });
+    expect(r.diff!.blocksChanged.map((b) => b.key).sort()).toEqual(["formLayout", "tableOptions"]);
+    expect(r.summary.join("\n")).toContain("~ formLayout:");
+    expect(r.summary.join("\n")).toContain("~ tableOptions:");
+  });
 });

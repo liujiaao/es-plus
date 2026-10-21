@@ -93,7 +93,9 @@ const crudShape = {
   tableOptions: tableOptionsSchema
     .optional()
     .describe(
-      "Table options, forwarded into the composed config (border/stripe/rowkey/heightType/tabHeight/height/multiSelect/emptyText/size/defaultSort/leftText/engine/virtual/editConfig/configTableOut/tableOptions.treeConfig/tableOptions.expandConfig/…). The full key set and per-key semantics are the same as generate_crud_from_config; unknown keys are rejected."
+      // 不点名 `generate_crud_from_config`：`front-door` 档下它不注册，而这里只是拿它当
+      // 「键集与语义的参照」。指代同一个结构化配置块，两种 profile 下都成立。
+      "Table options, forwarded verbatim into the composed config's `tableOptions` block (border/stripe/rowkey/heightType/tabHeight/height/multiSelect/emptyText/size/defaultSort/leftText/engine/virtual/editConfig/configTableOut/tableOptions.treeConfig/tableOptions.expandConfig/…). The full key set and per-key semantics are the same as `StructuredCrudConfig.tableOptions`; unknown keys are rejected."
     ),
   formLayout: formLayoutSchema
     .optional()
@@ -418,6 +420,10 @@ export function registerGenerateCrud(server: McpServer) {
             target: args.target,
             typescript: args.typescript,
             i18n: args.i18n,
+            // 顶层 formLayout 的原生消费面就是表单：查询分支早已转发（见上），
+            // 纯表单分支此前漏了 —— 工具描述承诺旋钮「forwarded verbatim」，
+            // 实际 labelWidth / minFoldRows 在无表、无弹窗的请求里静默消失。
+            ...(args.formLayout ? { formLayout: args.formLayout } : {}),
           });
           allWarnings.push(...r.warnings);
           sections.push(["## Form (FormBlock.vue)", "", r.summary, "", "```vue", r.code, "```"].join("\n"));

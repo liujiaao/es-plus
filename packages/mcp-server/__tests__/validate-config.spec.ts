@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   validatePayload,
   validateStructuredConfig,
+  registerValidateConfig,
   STRUCTURED_CRUD_TYPE,
   ES_TABLE_TYPE,
   ES_FORM_TYPE,
@@ -267,5 +268,59 @@ describe("AN-08 未知键 — 片段配置（.strict()）", () => {
     const r = validatePayload({ ...tableConfig(), apiUr: "/api/x" }, ES_TABLE_TYPE);
     expect(r.valid).toBe(false);
     expect(r.suggestions.join("\n")).toContain('did you mean "apiUrl"');
+  });
+
+  it("嵌套对象的未知键也要判红（根 .strict() 看不见它）", () => {
+    // 修前：只有根对象 `.strict()`，`tableOptions.widht` 被 zod 默认 strip ⇒ 解析成功、
+    // 宿主看到「✓ Configuration is valid!」，而那个键从未生效。
+    const r = validatePayload(
+      { ...tableConfig(), tableOptions: { rowkey: "id", widht: 100 } },
+      ES_TABLE_TYPE,
+    );
+    expect(r.valid).toBe(false);
+    const paths = r.unknownKeys.map((f) => `${f.path.join("/")}/${f.key}`);
+    expect(paths).toContain("tableOptions/widht");
+    expect(r.errors.join("\n")).toContain("widht");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MCP 失败语义：配置非法必须 isError（宿主按它决定「要不要修了重发」）
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("validate_config — 工具返回的 isError", () => {
+  /** 捕获 server.tool 注册出来的真实 handler（不启 MCP 传输层）。 */
+  function handler() {
+    let captured: { handler: (args: any) => any } | undefined;
+    const server = {
+      tool(_name: string, _desc: string, _shape: any, h: (args: any) => any) {
+        captured = { handler: h };
+      },
+    } as any;
+    registerValidateConfig(server);
+    expect(captured).toBeDefined();
+    return captured!.handler;
+  }
+
+  it("非法配置 → isError: true（且正文仍给出逐条错误）", async () => {
+    const res = await handler()({
+      config: JSON.stringify({ ...validConfig(), tableOptions: { rowKey: "id" } }),
+      type: STRUCTURED_CRUD_TYPE,
+    });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("Configuration has errors");
+    expect(res.content[0].text).toContain("rowKey");
+  });
+
+  it("合法配置 → 不带 isError", async () => {
+    const res = await handler()({ config: JSON.stringify(validConfig()), type: STRUCTURED_CRUD_TYPE });
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain("valid");
+  });
+
+  it("坏 JSON → isError: true", async () => {
+    const res = await handler()({ config: "{ nope", type: STRUCTURED_CRUD_TYPE });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("Invalid JSON");
   });
 });

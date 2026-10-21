@@ -88,7 +88,6 @@ const openStepDialog = () => {
         }
       </div>
     ),
-    isHiddenFooter: true,
     renderFooter: (h, { close }) => (
       <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 10px 20px; width: 100%">
         {isDone.value

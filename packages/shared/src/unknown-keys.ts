@@ -1,5 +1,6 @@
-// 刻意不 import zod：本模块只读 `_def`，既不用 zod 的方法，也不该在类型层绑定
-// 「是哪一个 zod 实例」（shared 是 v4，mcp-server 解析到根目录的 v3）。
+// 刻意不 import zod：本模块只读 `_def`，也不该在类型层绑定「是哪一个 zod 实例」
+// （shared 是 v4，mcp-server 解析到根目录的 v3）。唯一调用的方法 `safeParse` 是两代
+// 共有的**行为契约**（联合分支选择用，见 `acceptsValue`），不依赖构造器同一性。
 
 /**
  * AN-08 —— **未知键**的确定性收集（让「Schema 校验」名副其实）。
@@ -41,11 +42,14 @@
  * - `z.any` / `z.unknown` / `z.never` / 标量：没有「键」的概念。
  * - `z.map` / `z.set`：JSON 不可承载，视为不透明。
  *
- * ## 联合类型：只有「每个候选形状都不认」才算未知
+ * ## 联合类型：先选「接受该值」的候选，再在它们之间取交集
  *
  * `operationColumn: false | {...}`、`isHidden: 条件 | 表达式 | 数组` 都是联合。
- * 若逐分支报告，`field/op/value` 会在表达式分支里被误判成未知键。故对**能承载对象**的
- * 分支分别收集，取**交集**：一个键只有在所有候选对象形状里都不存在时才是未知键。
+ * 若逐分支报告，`field/op/value` 会在表达式分支里被误判成未知键；但若对所有对象分支
+ * 一律取交集，记录型分支（`isHidden` 的算子节点 `z.record(...)`）结构上放行任何键，
+ * 会把真实拼写错误（`opp`）整体否决掉。故先用各分支的 `safeParse` 收窄到**真正接受
+ * 该值**的候选（见 `acceptsValue`），再只在它们之间取交集：一个键只有在所有**匹配的**
+ * 候选对象形状里都不存在时才是未知键。
  */
 
 /** 一条未知键报告。 */
@@ -206,16 +210,43 @@ function findingsKey(f: UnknownKeyFinding): string {
   return `${f.path.join('/')}::${f.key}`
 }
 
-/** 联合：只保留「每个能承载对象的候选都不认」的键（见文件头）。 */
+/**
+ * 该分支是否**接受**这个值。
+ *
+ * 联合的语义是「候选形状之一」，而 `_def` 读不出「哪个候选真的匹配」：`isHidden` 的
+ * 表达式分支是 `z.record(...)`，结构上对**任何**键都放行（真正的约束在 `.refine`
+ * 的键集检查里），若让它参与键判定的交集，`{ field, opp, value }` 里拼错的 `opp`
+ * 会被这条记录分支投成「合法」，错误键随即被 zod 静默剥掉、`op` 回落到默认 `eq` ——
+ * 语义从「不等于」变成「等于」，且全程零告警。这里用候选分支自己的 `safeParse`
+ * 选出「真的接受该值」的分支，只在这些分支之间取交集。
+ *
+ * 这**不**违反「不绑定 zod 实例/版本」的约束：只调 `safeParse` 这一两代共有的
+ * 方法契约，不 import zod、不做 `instanceof`。拿不到该方法时视为接受（退回旧口径）。
+ */
+function acceptsValue(schema: AnyZod, value: unknown): boolean {
+  const fn = (schema as unknown as { safeParse?: (v: unknown) => { success?: boolean } }).safeParse
+  if (typeof fn !== 'function') return true
+  try {
+    return fn.call(schema, value)?.success === true
+  } catch {
+    return true // 分支自身抛错不应让「未知键」判定整体失效
+  }
+}
+
+/** 联合：在**接受该值**的候选对象分支之间取 findings 交集（见文件头「联合类型」）。 */
 function collectUnion(options: AnyZod[], value: unknown, path: (string | number)[], out: UnknownKeyFinding[]): void {
+  const objectOptions = options.filter(isObjectCapable)
+  if (objectOptions.length === 0) return
+  const accepted = objectOptions.filter((option) => acceptsValue(option, value))
+  // 没有任何分支接受 ⇒ 值本身非法（zod 会报 union 错），未知键不是主因：
+  // 退回「全部对象分支取交集」，保持旧口径、不额外制造噪音。
+  const candidates = accepted.length > 0 ? accepted : objectOptions
   const perOption: UnknownKeyFinding[][] = []
-  for (const option of options) {
-    if (!isObjectCapable(option)) continue
+  for (const option of candidates) {
     const findings: UnknownKeyFinding[] = []
     collect(option, value, path, findings, 0)
     perOption.push(findings)
   }
-  if (perOption.length === 0) return
   let intersection = perOption[0]
   for (let i = 1; i < perOption.length; i++) {
     const present = new Set(perOption[i].map(findingsKey))

@@ -1,13 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { StructuredCrudConfigInput } from "@es-plus/shared";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 /**
  * Curated few-shot NL → StructuredCrudConfig pairs.
  *
  * These REPLACE keyword tables as the primary steering signal for NL→config.
  * The host LLM reads these examples plus the field-level `.describe()` guidance
- * baked into the generate_crud_from_config input schema, then reasons about the
- * user's request semantically — it is not limited by any keyword's coverage.
+ * of the config-generating tool's input schema, then reasons about the user's
+ * request semantically — it is not limited by any keyword's coverage.
+ * (front-door profile: the equivalent steering surface is `surfaces` — see the
+ * `useLine` branch in `buildContent`.)
  *
  * Each example is a real, schema-valid config; nl-to-config-examples.spec.ts
  * validates every one against the authoritative StructuredCrudConfigSchema so
@@ -459,11 +462,18 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
   },
 ];
 
-function buildContent(): string {
+function buildContent(profile: ToolProfile = "full"): string {
+  // AN-26：front-door 下 `generate_crud_from_config` 未注册 —— 这些 few-shot 仍然
+  // 是「按语义映射字段」的最佳教材（前门填 surfaces 用的是同一套判断），但不能再
+  // 让宿主「把它当成交给某个工具的输入」去调那个不存在的工具。
+  const useLine =
+    profile === "front-door"
+      ? "Use these to learn the semantic mapping rules the front door embodies: `generate_crud` builds this same config for you from its `surfaces` table. Read them before filling `surfaces`, and as the authoritative reference when you hand-author a config for `validate_config({ type: 'structured-crud-config' })` / `refine_config`. They show how to REASON from a request to a config — map fields by MEANING, not keywords:"
+      : "Use these when constructing the `generate_crud_from_config` input. They show how to REASON from a request to a config — map fields by MEANING, not keywords:";
   const intro = [
     "# Natural-language → StructuredCrudConfig — few-shot examples",
     "",
-    "Use these when constructing the `generate_crud_from_config` input. They show how to REASON from a request to a config — map fields by MEANING, not keywords:",
+    useLine,
     "",
     "- Enumerated states (status/type/gender) → `Select` with `dataOptions`, or `apiParams` when options come from an API.",
     "- Dates/times → `DatePicker`/`TimePicker`; images/files → `Upload`; on/off → `Switch`.",
@@ -505,18 +515,20 @@ function buildContent(): string {
   return intro + blocks.join("\n");
 }
 
-export function registerNlToConfigExamplesResource(server: McpServer) {
+export function registerNlToConfigExamplesResource(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   const uri = "esplus://examples/nl-to-config";
   server.resource(
     "examples-nl-to-config",
     uri,
     {
       description:
-        "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read this before calling generate_crud_from_config — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points.",
+        profile === "front-door"
+          ? "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read before filling generate_crud's surfaces — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points; also the reference shape for validate_config / refine_config."
+          : "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read this before calling generate_crud_from_config — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points.",
       mimeType: "text/markdown",
     },
     async () => ({
-      contents: [{ uri, mimeType: "text/markdown", text: buildContent() }],
+      contents: [{ uri, mimeType: "text/markdown", text: buildContent(profile) }],
     })
   );
 }

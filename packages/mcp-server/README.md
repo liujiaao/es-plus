@@ -253,11 +253,11 @@ mcp-server-es-plus --help        # 用法说明
 表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除
 ```
 
-AI 会自动调用 MCP Server 的 `generate_crud_page` 工具，返回完整可运行的 `.vue` 文件，包含：
+AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 `surfaces` 意图表（query / table / form / dialog 各放哪些字段、要哪些弹窗），路由与三端编译由确定性代码完成，产物包含：
 
-- 查询表单（自动推断 Input / Select / DatePicker 等控件类型）
+- 查询表单（字段类型按语义映射到 Input / Select / DatePicker 等）
 - 数据表格（含状态列渲染、操作按钮）
-- 新增/编辑弹窗（含表单验证）
+- 新增/编辑弹窗（声明式配置，含表单验证）
 - 删除确认提示
 - 分页与接口请求模板
 
@@ -267,11 +267,25 @@ AI 会自动调用 MCP Server 的 `generate_crud_page` 工具，返回完整可�
 
 ## 工具 (Tools)
 
-MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **15 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_crud_from_config` 是**首选**（配置驱动、由你——AI 客户端——做真正的语义推理），`generate_crud_page` 是**无 LLM 的正则兜底**（准确率受关键词表覆盖度限制）。优先前者。
+> **生成路径优先级**：`generate_crud` 是**唯一前门**（自然语言请求走它 —— 你把需求填成 `surfaces`，路由由确定性代码完成）。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+>
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留前门、单面片段与确定性支撑工具（共 12 个）。
 
-### generate_crud_from_config（首选 / 推荐）
+### generate_crud（唯一前门 / FRONT DOOR）
+
+自然语言请求的统一入口。入参是 `surfaces` 意图表：query / table / form / dialog 各放哪些字段、要哪些弹窗。**有表格**的请求走 golden 覆盖的单一生成器（一次成码）；**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+
+### generate_form / generate_table / generate_dialog（单面片段）
+
+用户明确只要**一个**表单 / 表格 / 弹窗时，产出**自包含**的 `.vue` 片段（或不需 JSX 的 `<es-dialog>` SFC），可放在原生/第三方组件旁边。**不要用它们手工拼整页 CRUD** —— 前门的弹窗是声明式的，走前门即可。
+
+### detect_project_target
+
+读宿主 `package.json` 判定 `vue3` / `vue2` / `antdv`。**在任何 `generate_*` 之前调用**，否则只能默认 `vue3`。
+
+### generate_crud_from_config（ADVANCED / 已持有类型化配置时用）
 
 从**结构化配置**（带类型的字段，而非 JSON 字符串）生成生产级 CRUD 页面。这是主生成路径：
 
@@ -285,11 +299,12 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 
 ### generate_crud_page（兜底 / no-LLM fallback）
 
-从自然语言生成 CRUD 页面（.vue SFC）。**它用正则/关键词解析，不做真正推理**——仅用于快速原型，或你无法草拟结构化配置时。日常请优先 `generate_crud_from_config`。
+从自然语言生成 CRUD 页面（.vue SFC）。**它用正则/关键词解析，不做真正推理**——仅用于快速原型，或你无法草拟结构化配置时。日常请优先 `generate_crud`（前门）。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `description` | string | 页面功能描述（中文或英文） |
+| `mode` | `'schema' \| 'sfc'`（可选） | `schema`（默认）= CrudPageSchema + 包装 SFC；`sfc` = 完整 SFC |
 | `target` | `'vue3' \| 'vue2' \| 'antdv'`（可选） | 渲染目标，未传则自动检测 |
 
 **描述技巧**：
@@ -313,8 +328,8 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 | 字段关键词 | 自动映射为 |
 |-----------|-----------|
 | 状态、类型、分类、级别、来源 | Select 下拉选择 |
-| 日期、创建时间、更新时间 | datePicker 日期选择器 |
-| 时间、时刻 | timePicker 时间选择器 |
+| 日期、创建时间、更新时间 | DatePicker 日期选择器 |
+| 时间、时刻 | TimePicker 时间选择器 |
 | 开关、启用、是否 | Switch 开关 |
 | 评分、星级 | Rate 评分 |
 | 头像、图片、文件、附件 | Upload 上传 |
@@ -326,6 +341,10 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 | 穿梭、分配 | Transfer 穿梭框 |
 | 其他 | Input 输入框 |
 
+### generate_crud_schema（兜底 / 输出 CrudPageSchema）
+
+与 `generate_crud_page` 同属正则/关键词引擎，但产物是 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态），参数同为 `description` + 可选 `target`。日常请优先 `generate_crud`（前门）—— 两者共用同一套确定性生成器。
+
 ### validate_config
 
 校验 JSON 配置是否符合 es-plus 组件规范，返回错误详情和修复建议（Vue 3 / Vue 2 共用同一份 Schema）。
@@ -335,8 +354,9 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 | `config` | string | JSON 配置字符串 |
 | `type` | string? | Schema 类型，不传按 `form-item` 校验 |
 
-支持的 Schema 类型：`form-item`、`table-column`、`table-options`、`dialog-options`，
-以及 `structured-crud-config` —— 即 `generate_crud_from_config` 的入参。
+支持的 Schema 类型：`form-item`、`table-column`、`table-options`、`dialog-options`、`btn-config`、`api-params`，
+以及 `structured-crud-config`（前门在内部合成的整页配置；手工写好的也可以在这里校验 / `generate_crud_from_config` 的入参）
+与 `es-table-config` / `es-form-config` / `es-dialog-config`（`generate_table` / `generate_form` / `generate_dialog` 的入参）。
 
 **草拟完结构化配置后先自查一遍**，不要等生成报错：
 
@@ -346,6 +366,26 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 
 它按 `generate_crud_from_config` 的同一份 Zod schema（`packages/shared/src/structured-config.schema.ts`）
 判定，错误路径与 `fields[0].formtype` 这类写法一一对应，因此 `generate → 校验 → 编译` 三步都跑得通。
+
+### ingest_schema
+
+从**既有 schema** 预填草拟配置（确定性、不调模型）。支持 `openapi` / `jsonSchema` / `sample-json` / `ts-interface` / `sql-ddl` 五种输入：按数据的**类型**映射 `formtype`（`integer → InputNumber`、`boolean → Switch`、日期字符串 → `DatePicker`、`string + enum → Select`、`array + enum → Checkbox`、其余 `Input`），TS 的 JSDoc / SQL 的 `COMMENT` 成为 label，非可选成员 / `NOT NULL`、`PRIMARY KEY` 成为 `required`。**这是起点不是终点**：拿回草稿后要人工修订，再交给前门或 `generate_crud_from_config`。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `text` | string | schema 原文 |
+| `kind` | enum | `openapi` / `jsonSchema` / `sample-json` / `ts-interface` / `sql-ddl` |
+| `name` | string? | 覆盖页面名（PascalCase）；默认取 schema title |
+| `apiUrl` | string? | 覆盖 REST 基础地址；默认是必须替换的占位符 |
+
+### refine_config
+
+对已 pin 的配置做**一轮**精修（服务端无会话：pin 就是宿主手里那份 JSON）。宿主把用户的纠正应用成 `revised`，连同 `previous` 传入；工具确定性地校验 `revised` 并返回**结构化 diff**（字段增删、`formtype`/归属、`actions`，以及 `dialogs` / `formLayout` / `tableOptions` / 按钮 / `columns` / `permissions` 等顶层块的变化）。校验失败时返回 schema 错误而非 diff。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `previous` | string? | 上一版已 pin 配置的 JSON（首轮省略） |
+| `revised` | string | 本轮修订后的配置 JSON |
 
 ### list_form_types
 
@@ -403,14 +443,18 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 
 | 资源 URI | 内容 |
 |----------|------|
+| `esplus://conventions` | 生成规范（formtype、按钮 key、多弹窗、`configureEsPlus`）；`/vue3`、`/vue2`、`/antdv` |
+| `esplus://crud-page-schema` | `EsCrudPage` 的 schema 与用法示例；`/vue3`、`/vue2`、`/antdv` |
 | `esplus://schemas/form-item` | 表单项配置 JSON Schema |
 | `esplus://schemas/table-column` | 表格列配置 JSON Schema |
 | `esplus://schemas/table-options` | 表格选项 JSON Schema |
 | `esplus://schemas/dialog-options` | 弹窗配置 JSON Schema |
 | `esplus://schemas/btn-config` | 按钮配置 JSON Schema |
 | `esplus://schemas/api-params` | 远程数据加载 JSON Schema |
-| `esplus://types` | 完整 TypeScript 类型定义 |
-| `esplus://examples` | 8 个预设 CRUD 示例（含生成代码） |
+| `esplus://types` | 完整 TypeScript 类型定义；`/vue3`、`/vue2`、`/antdv` |
+| `esplus://examples` | 8 个预设 CRUD 示例（含生成代码）；`/vue3`、`/vue2`、`/antdv` |
+| `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot |
+| `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot |
 | `esplus://design-extraction` | PRD / 线框 → surfaces 的提取契约（检查清单、正反例；图片由宿主视觉转写，server 不接收图片） |
 
 ---

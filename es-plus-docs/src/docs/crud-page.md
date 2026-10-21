@@ -543,7 +543,7 @@ interface CrudPageSchema {
 
 ### 使用 MCP Server 生成
 
-AI 编码工具可通过 `generate_crud_from_config` 工具生成 EsCrudPage 的完整配置：
+AI 编码工具通过 `generate_crud`（前门）生成 EsCrudPage 的完整配置 —— 你只需描述每个面要哪些字段，路由与三端编译由确定性代码完成；已持有类型化配置时可用 `generate_crud_from_config`（ADVANCED）直通，产物与前者相同。
 
 ```json
 {
@@ -605,6 +605,8 @@ const schema = {
 ### Q: 如何混用新旧模式？
 
 不建议混用。如果提供了 `toolbarBtns`、`operationColumn` 或 `dialogs` 中的任一配置，组件将使用新模式。否则从 `actions` + `dialogFormItems` 推导。
+
+> **空 `dialogs: {}` 等于没写**：它不表达「零个弹窗」，也不把页面切到新弹窗模式 —— 否则修掉 `dialogs.add: null` 之后会剩下一个空 record，页面进入多弹窗模式却又没有 `add` 弹窗，工具栏的「新增」按钮就成了点不开的死按钮。声明弹窗至少要有一个键。
 
 ### Q: 如何程序化控制弹窗？
 

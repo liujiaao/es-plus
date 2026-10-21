@@ -376,6 +376,21 @@ describe('useDialog — cacheKey 实例缓存', () => {
     expect(document.body.childElementCount).toBe(0)
   })
 
+  // 回归：只关一个弹窗（无 cacheKey）时不能调 destroy() 无参，否则会清掉别人的缓存。
+  it('destroyCurrent() 只销毁单例，保留 cacheKey 缓存', () => {
+    const dialog = useDialog()
+    dialog({ title: 'single' })
+    const { instance: cached } = dialog({ cacheKey: 'k1', title: 'cached' })
+
+    dialog.destroyCurrent()
+    mockRender.mockClear()
+
+    const again = dialog({ cacheKey: 'k1', title: 'cached-2' })
+    expect(again.instance).toBe(cached)
+    // 缓存实例没有被卸载（未再 render(null, container)）
+    expect(mockRender).not.toHaveBeenCalled()
+  })
+
   it('onlyInstance 模式同样支持 cacheKey 复用', () => {
     const dialog = useDialog(undefined, { onlyInstance: true })
     const first = dialog({ cacheKey: 'k1', title: 'A' })

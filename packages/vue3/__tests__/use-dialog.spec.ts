@@ -61,6 +61,19 @@ describe('useDialog - 生命周期', () => {
       expect(container).toBeNull()
     })
 
+    // 回归：destroy() 无参 = 单例 + 全部缓存；只关一个弹窗必须用 destroyCurrent()，
+    // 否则 `dialogs.add` 关闭会把 `dialogs.edit` 的 cacheKey 缓存一起抹掉。
+    it('destroyCurrent removes the singleton but keeps cacheKey caches alive', () => {
+      const dialog = useDialog()
+      const cached = dialog({ title: '缓存', render: () => h('div', 'c'), cacheKey: 'k-keep' })
+      dialog({ title: '单例', render: () => h('div', 's') })
+
+      dialog.destroyCurrent()
+
+      const again = dialog({ title: '缓存2', render: () => h('div', 'c2'), cacheKey: 'k-keep' })
+      expect(again.instance).toBe(cached.instance)
+    })
+
     it('reuses instance on second call', () => {
       const dialog = useDialog()
       const r1 = dialog({ title: '第一次', render: () => h('div', '1') })

@@ -61,6 +61,36 @@ describe('buildPreflight — required 由本配置推导', () => {
     expect(byId(r, 'permission').reason).toContain('2 action permission code(s)')
   })
 
+  // 回归：权限码不只挂在字段/工具栏按钮上。列内按钮、分组子列、弹窗底部按钮都是载体，
+  // 漏收 ⇒ preflight 宣称「本配置没有权限门」，而产物里明明有 permissionValue
+  // （缺 permission() 时失败方向是**放行**）。
+  it('permission counts columns[].btns / nested groups / dialogs[k].configBtn', () => {
+    expect(
+      byId(
+        buildPreflight({ ...base, columns: [{ prop: 'a', btns: [{ name: '编辑', permissionValue: 'a:edit' }] }] }),
+        'permission',
+      ).required,
+    ).toBe(true)
+    expect(
+      byId(
+        buildPreflight({
+          ...base,
+          columns: [{ label: '分组', groups: [{ prop: 'b', permissionValue: 'b:read' }] }],
+        }),
+        'permission',
+      ).required,
+    ).toBe(true)
+    expect(
+      byId(
+        buildPreflight({
+          ...base,
+          dialogs: { add: { configBtn: [{ name: '确定', permissionValue: 'x:add' }] } },
+        }),
+        'permission',
+      ).required,
+    ).toBe(true)
+  })
+
   it('i18n is required by config.i18n or by any labelKey (columns / dialogs / expandConfig)', () => {
     expect(byId(buildPreflight({ ...base, i18n: true }), 'i18n').required).toBe(true)
     expect(byId(buildPreflight({ ...base, columns: [{ labelKey: 'col.name' }] }), 'i18n').required).toBe(true)
@@ -157,6 +187,22 @@ describe('generateFromConfig exposes the same preflight', () => {
     expect(byId(r.preflight!, 'permission').required).toBe(true)
     expect(byId(r.preflight!, 'i18n').required).toBe(true)
     expect(byId(r.preflight!, 'jsx').required).toBe(false)
+  })
+
+  // 端到端：只把权限码写在弹窗底部按钮上（configBtn），生成物的 preflight 也必须报门。
+  it('a permission code carried only by dialogs[k].configBtn still gates', () => {
+    const r = generateFromConfig({
+      name: 'X',
+      apiUrl: '/api/x',
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add'],
+      dialogs: { add: { configBtn: [{ name: '确定', action: 'confirm', permissionValue: 'x:add' }] } },
+      mode: 'schema',
+      target: 'vue3',
+    })
+    const p = byId(r.preflight!, 'permission')
+    expect(p.required).toBe(true)
+    expect(p.reason).toContain('1 permission gate')
   })
 })
 

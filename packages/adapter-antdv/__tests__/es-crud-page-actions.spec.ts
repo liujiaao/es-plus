@@ -96,6 +96,27 @@ describe('EsCrudPage (antdv) — AN-06 action 面', () => {
     const w = mountPage({ columns } as CrudPageSchema)
     expect(rowBtns(w)).toEqual([])
   })
+
+  // 回归：显式 operationColumn.btns 里除 name/type/permissionValue 之外的契约键
+  // （尤其是文档化的 `hidden`）此前被「三键重建」静默丢掉 —— 行内动态隐藏永远不生效。
+  it('透传 operationColumn.btns 的 hidden / icon（es-table 逐行消费 hidden）', () => {
+    const hidden = (row: Record<string, unknown>) => row.status !== 'pending'
+    const w = mountPage({
+      columns,
+      operationColumn: {
+        btns: [
+          { name: '编辑', type: 'primary', dialogKey: 'edit' },
+          { name: '审批', type: 'warning', key: 'approve', icon: 'Check', hidden },
+        ],
+      },
+    } as CrudPageSchema)
+    const table = w.findComponent({ name: 'EsTable' })
+    const actionCol = (table.props('columns') as any[]).find((c: any) => c.prop === 'operate')
+    const btn = actionCol.btns.find((b: any) => b.name === '审批')
+    expect(btn.hidden).toBe(hidden)
+    expect(btn.icon).toBe('Check')
+    expect(typeof btn.clickEvent).toBe('function')
+  })
 })
 
 /**

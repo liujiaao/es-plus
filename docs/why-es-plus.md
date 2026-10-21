@@ -356,7 +356,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 > **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
 
-1. **MCP server** 暴露 8 个 tools + 4 类 resources，AI 通过协议读取
+1. **MCP server** 暴露 15 个 tools、8 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 3 个 legacy/高级工具），AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
 
@@ -613,7 +613,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 
 这一节是 ES-Plus 区别于其他**所有**中后台组件库的关键。
 
-### 7.1 MCP Server 暴露的 8 个 Tools
+### 7.1 MCP Server 暴露的 15 个 Tools
 
 参见 [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts)：
 
@@ -630,6 +630,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |
 | `ingest_schema` | 既有 Schema → 草拟配置（需人审） | 存量项目起步 |
+| `doctor_page` | 静态检查宿主入口的 preflight 清单（UI 库 / 插件注册 / `httpRequest` / `permission` / `t` / JSX） | 「代码生成对了但跑不起来」的最后一公里 |
 
 **所有 tool 的实现都在 `@es-plus/shared`** —— 这意味着：
 - 浏览器里的 [AI CRUD 演示页](https://liujiaao.github.io/es-plus/#/ai-crud)直接调同一份代码（无需后端）
@@ -683,7 +684,7 @@ matrix:
   mode:   [schema, sfc]     ← 两种生成模式
 ```
 
-每个 push / PR 都会跑 **4 个组合**，每个组合的流程是：
+每个 push / PR 都会跑 **6 个组合**（3 个渲染端 × 2 种模式），每个组合的流程是：
 
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → 生成 tarball
 2. 拷贝 fresh fixture（[__tests__/e2e/fixtures/vue3-fresh](../__tests__/e2e/fixtures/vue3-fresh) / [vue2-fresh](../__tests__/e2e/fixtures/vue2-fresh)）到沙箱
@@ -913,4 +914,4 @@ ES-Plus 是较早把这三件事都做齐的中后台组件库之一。
 
 ---
 
-<small>本文档版本对应 ES-Plus v1.4.1 / Vue3 1.4.1 / Vue2 1.0.0 / Shared 1.1.0 / CLI 1.2.0 / MCP-Server 1.2.0（2026-05）。所有引用的源文件链接均指向当前仓库 master 分支。</small>
+<small>本文档版本对应（2026-10）：Vue3 1.7.0 / Vue2 1.4.0 / AntDV 1.3.0 / Core 1.3.0 / Shared 1.4.1 / CLI 1.4.0 / MCP-Server 1.4.1。所有引用的源文件链接均指向当前仓库 master 分支。</small>

@@ -31,6 +31,11 @@ export interface DialogCallable {
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void
+  /**
+   * 只销毁**当前**实例（单例 vm / 本次 vm），**不动**任何 cacheKey 缓存。
+   * `destroy()` 无参会连带清空别人的缓存（对齐 vue3/antdv）。
+   */
+  destroyCurrent: () => void
 }
 
 export type DialogCallableWithDestroy = DialogCallable
@@ -308,14 +313,30 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       }, 300)
     }
 
-    /** 统一对外返回结构（多实例模式），语义同单例分支 */
-    const buildResult = (dialogVm: any) => ({
-      instance: dialogVm,
-      close,
-      destroy: (k?: string) => DialogComponent.destroy(k),
-    })
+    /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
+    const destroy = (k?: string) => {
+      if (k) {
+        destroyCache(k)
+        return
+      }
+      // 无参：销毁当前实例 + 全部缓存
+      if (lastVm) {
+        lastVm.$destroy()
+        if (lastVm.$el && lastVm.$el.parentNode) {
+          lastVm.$el.parentNode.removeChild(lastVm.$el)
+        }
+        lastVm = null
+      }
+      destroyCache()
+    }
 
-    const DialogComponent = (dialogOptions: DialogOptions) => {
+    /** 统一对外返回结构（多实例模式），语义同单例分支 */
+    const buildResult = (dialogVm: any) => ({ instance: dialogVm, close, destroy })
+
+    // 具体弹窗入口先单独成函数，再由下面的 Object.assign 与静态键合成对外 callable。
+    // 不能在这里直接叫 DialogComponent 并在函数体里引用它：`buildResult` 曾用
+    // `DialogComponent.destroy(k)` 回指自身，形成自引用推断，TS 会退化成 any。
+    const callable = (dialogOptions: DialogOptions) => {
       // ── cacheKey 快速路径 ──
       const cached = tryCacheHit(dialogOptions as Record<string, unknown>)
       if (cached) return buildResult(cached)
@@ -357,27 +378,22 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       return buildResult(lastVm)
     }
 
-    DialogComponent.close = close
-    DialogComponent.destroy = (k?: string) => {
-      if (k) {
-        destroyCache(k)
-        return
-      }
-      // 无参：销毁当前实例 + 全部缓存
-      if (lastVm) {
-        lastVm.$destroy()
-        if (lastVm.$el && lastVm.$el.parentNode) {
-          lastVm.$el.parentNode.removeChild(lastVm.$el)
-        }
-        lastVm = null
-      }
-      destroyCache()
-    }
+    // 三个静态键经 Object.assign 一次性挂上：它们会进入 callable 的**推断类型**，
+    // 实现签名因此真正满足 `DialogCallable`（含 destroyCurrent）。此前用
+    // `(DialogComponent as any).destroyCurrent = …` 事后赋值：运行时确实有这个键，
+    // 但类型里没有 —— 第一条 overload(`=> DialogCallableWithDestroy`) 的返回类型
+    // 与实现签名不兼容，直接 TS2394（vue3 端因别的自引用把返回类型推成了 any 才侥幸躲过）。
+    const DialogComponent: DialogCallable = Object.assign(callable, {
+      close,
+      destroy,
+      // 只销毁当前实例（close 会在 300ms 动画后销毁 lastVm），不动缓存
+      destroyCurrent: close,
+    })
 
     // 宿主组件卸载时回收编程式弹窗：$el 是手工 append 到目标节点的，不在任何组件
     // 子树里，宿主卸载不会连带移除；缓存实例的 TTL 定时器同理。
     // destroy() 无参 = 销毁当前实例 + 全部缓存。
-    if (getCurrentInstance()) onUnmounted(() => DialogComponent.destroy())
+    if (getCurrentInstance()) onUnmounted(() => destroy())
     return DialogComponent
   } else {
     // ─── 单例模式：复用同一弹窗实例 ───
@@ -406,7 +422,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
      */
     const buildResult = (dialogVm: any) => ({ instance: dialogVm, close, destroy })
 
-    const DialogComponent = (dialogOptions: DialogOptions) => {
+    const callable = (dialogOptions: DialogOptions) => {
       // ── cacheKey 快速路径（独立于单例 vm）──
       const cacheKey = (dialogOptions as Record<string, unknown>).cacheKey as string | undefined
       if (cacheKey) {
@@ -459,9 +475,8 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       return buildResult(newVm)
     }
 
-    DialogComponent.close = close
-    DialogComponent.destroy = (k?: string) => {
-      // 传 cacheKey 只销毁该缓存实例，不误伤单例 vm；不传则单例 + 全部缓存一起销毁
+    /** 对外 destroy：传 cacheKey 只销毁该缓存实例，不误伤单例 vm；不传则单例 + 全部缓存一起销毁 */
+    const destroyAll = (k?: string) => {
       if (k) {
         destroyCache(k)
         return
@@ -470,8 +485,17 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       destroyCache()
     }
 
+    // 同多实例分支：静态键走 Object.assign 进入推断类型，实现签名才真正满足
+    // `DialogCallable`（详见上面的说明）。
+    const DialogComponent: DialogCallable = Object.assign(callable, {
+      close,
+      destroy: destroyAll,
+      // 只销毁单例 vm，不动任何 cacheKey 缓存（见 DialogCallable.destroyCurrent）
+      destroyCurrent: destroy,
+    })
+
     // 同上：destroy() 无参 = 拆掉单例 vm 并移除其 $el + 清空全部缓存
-    if (getCurrentInstance()) onUnmounted(() => DialogComponent.destroy())
+    if (getCurrentInstance()) onUnmounted(() => destroyAll())
     return DialogComponent
   }
 }

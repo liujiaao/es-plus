@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 type Target = "vue3" | "vue2" | "antdv";
 
@@ -28,9 +29,10 @@ function targetNotes(target: Target): string {
 - Template multi-target binding uses \`v-model:data-source\` / \`v-model:pagination\`.
 - UI-library symbols: \`message\` (function) and \`Modal.confirm({ title, content, async onOk(){} })\` from 'ant-design-vue' (object form, NOT the Element Promise .then form).
 - Status tags: <a-tag :color="... ? 'green' : 'red'"> — Ant tags use \`color\`, NOT \`type\`.
-  IMPORTANT: in SFC mode an inline column render() written with Element semantics
-  (h(Tag, { type })) will NOT map colors correctly — prefer mode=schema, which
-  emits a correct <a-tag :color> slot automatically.`;
+  IMPORTANT: an inline column render() is emitted VERBATIM — the generator does not
+  rename identifiers inside your source or map colors. Write it for antdv (\`h(Tag, { color: 'green' })\`,
+  importing Tag from 'ant-design-vue'); Element-style \`h(ElTag, { type })\` will not work.
+  Prefer mode=schema, which emits a correct <a-tag :color> slot automatically.`;
   }
   return `Target = @es-plus/vue3 (Vue 3 + Element Plus):
 - Wrapper/SFC uses <script setup>; dialogs' JSX render needs lang="tsx"/"jsx" + @vitejs/plugin-vue-jsx.
@@ -39,8 +41,25 @@ function targetNotes(target: Target): string {
 - Status tags: <el-tag :type="... ? 'success' : 'danger'">.`;
 }
 
-function buildSystemPrompt(target: Target): string {
+function buildSystemPrompt(target: Target, profile: ToolProfile = "full"): string {
   const pkg = PKG[target];
+  // AN-26：front-door 下三个工具（1 高级 + 2 legacy）不在工具表里。这段提示词若仍
+  // 指挥宿主「去调 generate_crud_from_config」，宿主只会拿到 tool not found ——
+  // 提示词必须与**实际注册的工具面**同源，故按 profile 二选一。
+  const preferredPath =
+    profile === "front-door"
+      ? `Preferred path: for most requests, fill the \`surfaces\` intent table
+(query / table / form / dialog + their field lists) and call the \`generate_crud\`
+tool rather than hand-writing the SFC — routing to the golden-covered generator
+is deterministic code, not your choice. For an explicit single-component ask use
+\`generate_form\` / \`generate_table\` / \`generate_dialog\`; never hand-assemble a
+CRUD page from them. (This server runs \`ESPLUS_MCP_PROFILE=front-door\`:
+\`generate_crud_from_config\`, \`generate_crud_page\` and \`generate_crud_schema\` are
+NOT registered.)`
+      : `Preferred path: for most requests, DRAFT a StructuredCrudConfig and call the
+\`generate_crud_from_config\` tool rather than hand-writing the SFC — it maps
+your typed config to correct, compilable per-target code deterministically. Use
+hand-written output only when the request is outside the schema's expressiveness.`;
   return `You are an expert at generating ${pkg} CRUD pages. ${pkg} is a config-driven component library (one JSON config, three renderers — the schema is framework-invariant).
 
 IMPORTANT — pick the right renderer first: call the \`detect_project_target\` tool with the user's package.json to confirm the target (vue3 / vue2 / antdv) before generating. Do not assume vue3.
@@ -71,10 +90,7 @@ Rules:
 12. EsCrudPage @btn-click event keys: "add-confirm" for add dialog submit, "edit-confirm" for edit dialog submit
 13. For custom column rendering in schema mode, set the column's \`scopedSlots: { customRender: 'column-<prop>' }\` and provide a matching \`<template #column-<prop>="{ row }">\` in the wrapper — es-table only renders a column slot when scopedSlots.customRender is set
 
-Preferred path: for most requests, DRAFT a StructuredCrudConfig and call the
-\`generate_crud_from_config\` tool rather than hand-writing the SFC — it maps
-your typed config to correct, compilable per-target code deterministically. Use
-hand-written output only when the request is outside the schema's expressiveness.
+${preferredPath}
 
 Self-review checklist — run this against the ORIGINAL request BEFORE emitting:
 - Every field the user named is present, with a formtype chosen by MEANING
@@ -89,14 +105,14 @@ Self-review checklist — run this against the ORIGINAL request BEFORE emitting:
   / render) and NOT silently dropped.
 
 Before generating code, read these MCP resources for accurate types and conventions:
-- esplus://examples/nl-to-config — few-shot NL→config with reasoning (read for the config path)
+- esplus://examples/nl-to-config — few-shot NL→config with reasoning (semantic field mapping)
 - esplus://types — live TypeScript definitions
 - esplus://conventions — generation rules and patterns
 - esplus://crud-page-schema — EsCrudPage API and usage examples
 `;
 }
 
-export function registerCrudPagePrompt(server: McpServer) {
+export function registerCrudPagePrompt(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   server.prompt(
     "crud-page",
     "Generate a complete es-plus CRUD page (vue3 / vue2 / antdv) from a description",
@@ -127,7 +143,7 @@ export function registerCrudPagePrompt(server: McpServer) {
             role: "user",
             content: {
               type: "text",
-              text: `${buildSystemPrompt(t)}\n\nPlease generate a CRUD page (target=${t}) based on this requirement:\n\n${description}${modeInstruction}\n\nProvide the complete code with proper imports, reactive state, and all configurations.`,
+              text: `${buildSystemPrompt(t, profile)}\n\nPlease generate a CRUD page (target=${t}) based on this requirement:\n\n${description}${modeInstruction}\n\nProvide the complete code with proper imports, reactive state, and all configurations.`,
             },
           },
         ],

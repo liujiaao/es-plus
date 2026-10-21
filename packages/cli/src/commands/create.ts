@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { generateCrudPage, generateCrudSchema, generateFromConfig, StructuredCrudConfigSchema, PRESET_EXAMPLES } from '@es-plus/shared';
-import { nlToConfig, aiAvailable, AiUnavailableError } from '../ai/nl-to-config.js';
+import { nlToConfig, AiUnavailableError } from '../ai/nl-to-config.js';
 import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, isSafePathSegment, isPathInside, CLI_TARGETS } from '../utils/strings.js';
 import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
 
@@ -79,11 +79,11 @@ export const createCommand = new Command("create")
   .argument("[name]", "page name (kebab-case, e.g. user-management)")
   .option("-o, --output <path>", "output file path")
   .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
-  .option("-m, --mode <mode>", "output mode: schema (default) or sfc", "schema")
+  .option("-m, --mode <mode>", "output mode: schema (default) or sfc")
   .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
   .option("--ai", "use an LLM (Anthropic) to reason NL→config; auto-enabled when ANTHROPIC_API_KEY is set. Use --no-ai to force the built-in generator")
   .option("--no-ai", "force the built-in (regex) generator even when ANTHROPIC_API_KEY is set")
-  .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)", "vue3")
+  .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)")
   .option("-f, --force", "overwrite existing output files without prompting")
   .description("Generate a CRUD page from natural language description or structured config")
   .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string; ai?: boolean; force?: boolean }) => {
@@ -95,6 +95,11 @@ export const createCommand = new Command("create")
     }
     // 校验 target，默认 vue3；同时允许 config 文件本身的 target 字段覆盖（仅 fromConfig 模式）
     const cliTarget: 'vue3' | 'vue2' | 'antdv' = normalizeTarget(options.target);
+    // 「用户是否显式传了 --target」必须与归一后的默认值分开记录：默认值 vue3 不能冒充
+    // 用户选择。AI 路径里模型会按 NL 判定 target（few-shot 明写「明确要 Vue2 / Ant
+    // Design Vue → target:"vue2"/"antdv"」），若把默认值当显式指令传进去，这个解读会被
+    // 一个用户从未传过的标志静默压掉。
+    const explicitTarget = options.target !== undefined;
     // Structured config mode — production-ready generation
     if (options.fromConfig) {
       const configPath = resolve(process.cwd(), options.fromConfig);
@@ -156,6 +161,8 @@ export const createCommand = new Command("create")
     }
     let description = options.description;
     const mode = options.mode === "sfc" ? "sfc" : "schema";
+    // 同 explicitTarget：--mode 的缺省是 schema，但「没传」不等于「用户要 schema」。
+    const explicitMode = options.mode !== undefined;
 
     if (!description) {
       const presetChoices = [
@@ -197,19 +204,27 @@ export const createCommand = new Command("create")
     // Enabled by --ai, or automatically when ANTHROPIC_API_KEY is present; --no-ai forces regex.
     const wantAi = options.ai !== false && (options.ai === true || !!process.env.ANTHROPIC_API_KEY);
     if (wantAi) {
-      if (await aiAvailable()) {
-        try {
-          console.log(pc.cyan(`\n🤖 正在用 LLM 推理配置 (NL→config, target=${cliTarget})...`));
-          const { config, attempts } = await nlToConfig(description!, { target: cliTarget, mode });
-          console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试）→ 走确定性生成器`));
-          await emitFromStructuredConfig(config, name, options.output, !!options.force);
-          return;
-        } catch (err: any) {
-          const detail = err instanceof AiUnavailableError ? err.message : (err?.message || String(err));
-          console.log(pc.yellow(`\n⚠️ LLM 路径失败，降级到内置生成器：${detail}`));
-        }
-      } else if (options.ai === true) {
-        console.log(pc.yellow("\n⚠️ 已请求 --ai，但 @anthropic-ai/sdk 未安装或 ANTHROPIC_API_KEY 未设置；降级到内置生成器。"));
+      try {
+        // 不先问 `aiAvailable()` 再决定是否进入：那个「探测 + 分支」正是静默降级的来源
+        // （key 已设置但 SDK 未安装时探测返回 false，而 --ai 未显式给定时整段跳过、不留
+        // 任何提示 —— 用户以为用了 AI，实际拿到的是正则生成器）。直接调用，让
+        // `AiUnavailableError` 带着**确切原因**走同一条可见的降级提示。
+        console.log(pc.cyan(`\n🤖 正在用 LLM 推理配置 (NL→config)...`));
+        const { config, attempts } = await nlToConfig(description!, {
+          // 只在用户真的传了标志时下发：否则把决定权留给模型对 NL 的解读。
+          target: explicitTarget ? cliTarget : undefined,
+          mode: explicitMode ? mode : undefined,
+        });
+        // 日志必须报告**实际**目标/模式：模型可以按 NL 选它们，打印 CLI 默认值会撒谎。
+        console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试，target=${config.target}, mode=${config.mode}）→ 走确定性生成器`));
+        await emitFromStructuredConfig(config, name, options.output, !!options.force);
+        return;
+      } catch (err: any) {
+        const unavailable = err instanceof AiUnavailableError;
+        const detail = unavailable ? err.message : (err?.message || String(err));
+        console.log(
+          pc.yellow(`\n⚠️ ${unavailable ? 'AI 路径不可用' : 'LLM 路径失败'}，降级到内置生成器：${detail}`)
+        );
       }
     }
 

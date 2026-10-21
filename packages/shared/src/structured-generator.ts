@@ -39,6 +39,24 @@ function readTarget(config: StructuredCrudConfig): TargetFramework {
   return t === 'vue2' || t === 'antdv' ? t : DEFAULT_TARGET
 }
 
+/**
+ * B9：产物里**属于用户**的源码段（`fields[].render` / `fields[].formatter`）。
+ * 生成器的字符串改名（`rewriteElementUsage`）必须跳过它们：用户写的是哪个库的命名
+ * （`h(ElTag, …)` 还是 `h(Tag, …)`）、字符串字面量里有什么，都由用户决定，生成器只负责
+ * 原样内联 —— 改了就是替用户改代码，而不是适配生成器自己发射的东西。
+ * 注释里回显的是 `sanitizeForComment` 形态，一并交出去（schema 模式的 TODO 注释）。
+ */
+function userSourceSegments(config: StructuredCrudConfig): string[] {
+  const out: string[] = []
+  for (const f of config.fields) {
+    for (const src of [f.render, f.formatter]) {
+      if (typeof src !== 'string' || !src) continue
+      out.push(src, sanitizeForComment(src))
+    }
+  }
+  return out
+}
+
 interface TableOpts {
   border?: boolean
   stripe?: boolean
@@ -619,7 +637,10 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
 
   const code = `${tsImport}${schemaJson}\n`
 
-  const dialogCount = config.dialogs ? Object.keys(config.dialogs).length : (hasDialog ? 1 : 0)
+  // 空 `dialogs` record 已被 plan 当作缺席（见 render-plan.ts）——摘要按同一条规则报数，
+  // 否则会出现「产物里根本没有 dialogs，摘要却说 0 个弹窗」的自相矛盾。
+  const dialogKeys = config.dialogs ? Object.keys(config.dialogs).length : 0
+  const dialogCount = dialogKeys || (hasDialog ? 1 : 0)
   const summary = [
     `Generated CrudPageSchema (structured mode, target=${target}):`,
     `- ${queryFields.length} query fields, ${tableFields.length} table columns`,
@@ -669,12 +690,14 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
 
   // 行内编辑仅 vxe 引擎生效（AI-09 子项④ / AN-11④）：见 generateFromConfig 里的统一判定。
 
-  // antdv + SFC + 列 render：render 字符串按 Element 语义编写（h(ElTag, { type })），
-  // 生成器只能重命名符号（ElTag→Tag），无法把 { type: 'success' } 改写为 antdv 的
-  // { color: 'green' }。提醒用户核对，或改用 mode=schema（走 buildStatusTagTemplate 生成
-  // 正确的 <a-tag :color>）。
+  // antdv + SFC + 列 render：render 源码**原样内联**（B9：生成器不改写用户源码里的
+  // 标识符），因此按 Element 语义写的 `h(ElTag, { type })` 会原封不动出现在 antdv 产物里
+  // —— ElTag 未导入、Tag 也不用 `type`。提醒用户按目标库写（或改用 mode=schema，
+  // 由 buildStatusTagTemplate 生成正确的 <a-tag :color>）。
   if (target === 'antdv' && hasRender) {
-    warnings.push('target=antdv + mode=sfc: inline column render() is emitted using Element Plus semantics (e.g. <Tag type="success">). Ant Design Vue\'s Tag uses `color` (green/red), not `type`. Adjust the render props, or use mode=schema which generates a correct <a-tag :color> slot automatically.')
+    warnings.push(
+      'target=antdv + mode=sfc: inline column render() source is emitted VERBATIM (the generator does not rewrite identifiers in your code). Write it against Ant Design Vue — `import { Tag } from \'ant-design-vue\'` and `h(Tag, { color: … })`, since a-Tag uses `color` (green/red), not Element\'s `type`. Alternatively use mode=schema, which generates a correct <a-tag :color> slot automatically.',
+    )
   }
 
   // WS-5「标记而非静默丢弃」：SFC 模式当前只从 actions 推导单个通用弹窗与操作列，
@@ -1095,7 +1118,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
 
   // 目标 UI 库命名替换：ElMessage/ElMessageBox/ElTag → 对应命名
   // （antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理，此处仅收尾标识符）
-  code = rewriteElementUsage(code, target)
+  code = rewriteElementUsage(code, target, userSourceSegments(config))
 
   const summary = [
     `Generated full SFC (structured mode, target=${target}):`,
@@ -1237,7 +1260,7 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
 
   let code = lines.join('\n')
   // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
-  code = rewriteElementUsage(code, target)
+  code = rewriteElementUsage(code, target, userSourceSegments(config))
   return code
 }
 
@@ -1408,7 +1431,7 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
 
   let code = lines.join('\n')
   // 目标 UI 库命名替换（antdv 的 ElMessageBox 结构差异已由 buildDeleteConfirmBlock 处理）
-  code = rewriteElementUsage(code, target)
+  code = rewriteElementUsage(code, target, userSourceSegments(config))
   return code
 }
 

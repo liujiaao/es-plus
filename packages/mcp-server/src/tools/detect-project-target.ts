@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 // Detect which es-plus target (vue3 / vue2 / antdv) the user's project should use,
 // based on the contents of its package.json. MCP-aware clients (Claude Code,
@@ -163,10 +164,17 @@ export function detect(pkgJsonText: string): DetectResult {
   };
 }
 
-export function registerDetectProjectTarget(server: McpServer) {
+export function registerDetectProjectTarget(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
+  // AN-26：`front-door` 档下 `generate_crud_page` / `generate_crud_schema` 不注册。
+  // 这条工具是「先探目标再生成」链路的第一环，若它点名的是不存在的工具，整条链在
+  // 第一步之后就断了（宿主拿到 tool not found，或干脆跳过探目标去默认 vue3）。
+  const generators =
+    profile === "front-door"
+      ? "generate_crud / generate_form / generate_table / generate_dialog / get_component_api"
+      : "generate_crud_page / generate_crud_schema / get_component_api";
   server.tool(
     "detect_project_target",
-    "Detect which es-plus target (vue3 / vue2 / antdv) matches the user's project, given the project's package.json content. The MCP client (e.g. Claude Code) reads the file from the workspace and passes it here. Use this BEFORE calling generate_crud_page / generate_crud_schema / get_component_api so you pick the right target instead of defaulting to vue3.",
+    `Detect which es-plus target (vue3 / vue2 / antdv) matches the user's project, given the project's package.json content. The MCP client (e.g. Claude Code) reads the file from the workspace and passes it here. Use this BEFORE calling ${generators} so you pick the right target instead of defaulting to vue3.`,
     {
       packageJson: z
         .string()
@@ -185,7 +193,7 @@ export function registerDetectProjectTarget(server: McpServer) {
         ...Object.entries(result.signals).map(([k, v]) => `  - ${k}: ${v}`),
         Object.keys(result.signals).length === 0 ? "  (none)" : "",
         "",
-        `Next step: pass target='${result.target}' to generate_crud_page / generate_crud_schema / get_component_api / etc.`,
+        `Next step: pass target='${result.target}' to ${generators} / etc.`,
       ]
         .filter(Boolean)
         .join("\n");

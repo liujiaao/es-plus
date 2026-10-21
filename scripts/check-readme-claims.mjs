@@ -14,9 +14,11 @@
  * 用法：node scripts/check-readme-claims.mjs
  * 退出码：0 = 一致；1 = 发现漂移。
  */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
+import { isCrudCase } from './eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -298,6 +300,43 @@ function checkDialogOptionsClaims() {
   }
 }
 
+// ── 6. 语料规模声明（crud 例数 / heldout 例数）必须从语料本身派生 ──────
+// README 曾写「语料目前 188 例（留出 166 例）」，而语料已长到 216/194 —— 数字是手写的，
+// 就一定会漂。这里按与 eval 同一口径现算：crud = isCrudCase 的用例，heldout = crud 去掉
+// few-shot 派生登记（scripts/eval/fewshot-derived.mjs）。README 两语种各一处声明。
+function checkCorpusSizeClaim() {
+  const dir = join(ROOT, '__tests__', 'golden', 'cases')
+  const files = readdirSync(dir).filter((f) => f.endsWith('.json'))
+  let crud = 0
+  let heldout = 0
+  for (const f of files) {
+    const raw = JSON.parse(readFileSync(join(dir, f), 'utf-8'))
+    if (!isCrudCase(raw)) continue
+    crud++
+    if (!FEWSHOT_DERIVED.has(f)) heldout++
+  }
+
+  const targets = [
+    { file: 'README.md', re: /语料目前\s*(\d+)\s*例（留出\s*(\d+)\s*例）/ },
+    { file: 'README.en.md', re: /The corpus is\s*(\d+)\s*cases today\s*\((\d+)\s*heldout\)/ },
+  ]
+  for (const { file, re } of targets) {
+    const m = read(file).match(re)
+    if (!m) {
+      fail(`${file} 未找到语料规模声明（若改了表述，请同步本脚本）`)
+      continue
+    }
+    const [, claimedCrud, claimedHeldout] = m.map(Number)
+    if (claimedCrud !== crud || claimedHeldout !== heldout) {
+      fail(
+        `${file} 声明语料 ${claimedCrud} 例（留出 ${claimedHeldout}），实际 crud ${crud} 例（heldout ${heldout}）`
+      )
+    } else {
+      console.log(`✅ ${file} 语料规模一致（crud ${crud} / heldout ${heldout}）`)
+    }
+  }
+}
+
 const contractTypes = readContractTypes()
 const formTypes = readFormTypes()
 if (contractTypes) checkContractTypeCount(contractTypes)
@@ -306,6 +345,7 @@ checkReductionClaim()
 checkEsDialogApiClaims()
 checkPhantomDialogProps()
 checkDialogOptionsClaims()
+checkCorpusSizeClaim()
 
 if (failed) {
   console.error('\nREADME 声明与源码事实不符 —— 请修正 README 或本脚本的匹配规则。')

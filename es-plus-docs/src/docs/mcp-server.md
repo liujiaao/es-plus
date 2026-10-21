@@ -248,11 +248,55 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下工具（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **15 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留前门、单面片段与支撑工具）：
+
+| 工具 | 定位 | front-door |
+|------|------|:----------:|
+| `generate_crud` | **唯一前门**：自然语言 → 三端可编译的 CRUD 页面 | ✅ |
+| `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
+| `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
+| `generate_dialog` | 单面片段：独立 `useXxxDialog()` composable 或 `<es-dialog>` SFC | ✅ |
+| `detect_project_target` | 读宿主 `package.json` 判定 `vue3` / `vue2` / `antdv` | ✅ |
+| `validate_config` | 确定性校验配置（只判不改） | ✅ |
+| `ingest_schema` | OpenAPI / JSON Schema / 示例 JSON / TS 接口 / SQL DDL → 草拟配置 | ✅ |
+| `refine_config` | 对已 pin 的配置做一轮精修：校验 + 结构化 diff | ✅ |
+| `list_form_types` | 列出全部 `formtype` 及其渲染器 | ✅ |
+| `get_component_api` | 组件 API / 类型文档 | ✅ |
+| `scaffold_page` | 最小页面脚手架 | ✅ |
+| `doctor_page` | 静态检查宿主入口是否满足 preflight 清单 | ✅ |
+| `generate_crud_from_config` | **ADVANCED**：已持有类型化配置时的直通生成 | ⛔ |
+| `generate_crud_page` | **LEGACY FALLBACK**：正则/关键词解析（无 LLM 兜底） | ⛔ |
+| `generate_crud_schema` | **LEGACY FALLBACK**：正则 → CrudPageSchema + 包装 SFC | ⛔ |
+
+> profile 是**工具面**的开关，不是能力差异：被隐藏的三个工具与 `generate_crud` 共用同一套确定性生成器，隐藏它们只是为了让宿主在前门与 legacy 路径之间没有选择歧义。提示词、resources 与工具描述会按同一份 profile 同步调整。
 
 ### generate_crud（唯一前门 / FRONT DOOR）
 
 **功能**：自然语言请求的统一入口。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+
+### generate_form / generate_table / generate_dialog（单面片段）
+
+**功能**：当用户明确只要**一个**表单 / 表格 / 弹窗（而不是整页 CRUD）时，产出**自包含**的 `.vue` 片段，可以放在原生或第三方组件旁边而不与宿主作用域冲突。字段词汇与 `generate_crud` 完全一致。
+
+| 工具 | 产物 | 适用 |
+|------|------|------|
+| `generate_form` | 自带 reactive model + `formItemList` 的 `<es-form>` SFC | 搜索栏、设置表单、嵌在自定义布局里的表单 |
+| `generate_table` | 自带 columns/options/数据源与分页 ref 的 `<es-table>` SFC | 独立列表；给 `apiUrl` 即经 `apiParams` 自动请求 |
+| `generate_dialog` | `mode='composable'`（默认）→ 可复用的 `useXxxDialog()`；`mode='component'` → 自包含 `<es-dialog>` SFC | 独立新增/编辑弹窗，或与单独生成的表格配套 |
+
+> **不要用片段工具手工拼整页 CRUD**：`generate_crud` 的弹窗是声明式配置，走前门一次成码且有 golden 覆盖。片段工具只适合「用户明确只要一个面」。`generate_dialog` 的 composable 形态需要宿主启用 JSX 插件（弹窗体是 JSX render），`mode='component'` 则不需要。
+
+### detect_project_target
+
+**功能**：读宿主项目的 `package.json` 内容（由宿主用文件读取工具读出后原样传入），判定该用哪个 target：`vue3`（`@es-plus/vue3`）、`vue2`（`@es-plus/vue2`）还是 `antdv`（`@es-plus/adapter-antdv`）。
+
+**何时调用**：在任何 `generate_*` **之前**。否则只能默认 `vue3` —— 在 Vue 2 或 Ant Design Vue 项目里会生成语法正确、但依赖装不上的代码。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| packageJson | string | ✅ | 宿主 `package.json` 的**原始字符串**内容 |
 
 ### generate_crud_from_config（ADVANCED / 已持有类型化配置时用）
 
@@ -295,7 +339,7 @@ mcp-server-es-plus --help        # 用法说明
     { "prop": "status", "label": "状态", "formtype": "Select",
       "dataOptions": [{ "label": "启用", "value": 1 }, { "label": "禁用", "value": 0 }],
       "render": "(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.status === 1 ? '启用' : '禁用')" },
-    { "prop": "createTime", "label": "创建时间", "formtype": "datePicker",
+    { "prop": "createTime", "label": "创建时间", "formtype": "DatePicker",
       "attrs": { "type": "daterange", "valueFormat": "YYYY-MM-DD" }, "inForm": false, "querySpan": 8 }
   ],
   "actions": ["add", "edit", "delete"],
@@ -386,7 +430,7 @@ mcp-server-es-plus --help        # 用法说明
 |------|------|------|
 | `prop` | string | 后端字段名 |
 | `label` | string | 显示标签 |
-| `formtype` | string | 表单类型（13 种） |
+| `formtype` | string | 表单类型（14 种，见 `list_form_types`） |
 | `inQuery` | boolean | 是否在查询表单中显示（默认 true） |
 | `inTable` | boolean | 是否在表格中显示（默认 true） |
 | `inForm` | boolean | 是否在弹窗表单中显示（默认 true） |
@@ -426,8 +470,10 @@ AI：[读取 esplus://conventions 获取规范]
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | description | string | ✅ | 页面需求的自然语言描述（支持中文/英文） |
+| mode | `schema`\|`sfc` | 否 | `schema`（默认）= `CrudPageSchema` JSON + 包装 SFC；`sfc` = 完整 SFC |
+| target | `vue3`\|`vue2`\|`antdv` | 否 | 默认 `vue3` |
 
-**输出**：完整的 Vue 3 SFC 代码，包含：
+**输出**（`mode=sfc`）：完整的 Vue SFC 代码，包含：
 - `<template>` — EsTable + EsForm 组合
 - `<script setup>` — 响应式状态、配置对象、useDialog 弹窗逻辑
 
@@ -453,16 +499,29 @@ AI：[调用 generate_crud_page] 生成包含查询表单、数据表格、操�
 "订单列表，支持查看详情和导出"
 ```
 
+### generate_crud_schema（LEGACY FALLBACK / 输出 CrudPageSchema）
+
+**功能**：与 `generate_crud_page` 同属正则/关键词引擎，但产物是 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态），直接可被 `EsCrudPage` 消费。
+
+> **优先用 `generate_crud`（前门）**。两者共用同一套确定性生成器，前门多了 `surfaces` 路由与片段分派；此工具只为「快速原型 / 无 LLM 宿主 / 明确要 schema 形态」保留。支持 `target: vue3 | vue2 | antdv`（schema JSON 与 target 无关，只有包装 SFC 语法不同）。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| description | string | ✅ | 页面需求的自然语言描述 |
+| target | `vue3`\|`vue2`\|`antdv` | 否 | 默认 `vue3` |
+
 ### validate_config
 
-**功能**：校验 @es-plus/vue3 JSON 配置是否符合 Schema，并给出修复建议
+**功能**：校验 es-plus JSON 配置是否符合 Schema（三端共用同一份 schema），并给出修复建议。**只判不改**：它不会替你重写配置。
 
 **输入参数**：
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | config | string | ✅ | JSON 格式的配置字符串 |
-| type | string | 否 | Schema 类型，默认 `form-item`。可选：`form-item`、`table-column`、`table-options`、`dialog-options`、`btn-config`、`api-params` |
+| type | string | 否 | 默认 `form-item`。可选：`form-item`、`table-column`、`table-options`、`dialog-options`、`btn-config`、`api-params`；`structured-crud-config`（前门在内部合成的整页配置；手工写好的也可以在这里校验）/ `generate_crud_from_config` 的入参；`es-table-config` / `es-form-config` / `es-dialog-config`（`generate_table` / `generate_form` / `generate_dialog` 的入参） |
 
 **示例对话**：
 
@@ -472,17 +531,17 @@ AI：[调用 generate_crud_page] 生成包含查询表单、数据表格、操�
 
 AI：[调用 validate_config]
     ✗ formtype 值 "Inputx" 不在允许的枚举范围内
-    → 有效值：Input, Select, datePicker, timePicker, Slider, ColorPicker, 
-      Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
+    → 有效值：Input, InputNumber, Select, DatePicker, TimePicker, Slider,
+      ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, Rate, Upload
 ```
 
 ### list_form_types
 
-**功能**：列出 @es-plus/vue3 支持的全部 13 种表单字段类型
+**功能**：列出三端（vue3 / vue2 / antdv）共享的全部 14 种表单字段类型
 
 **输入参数**：无
 
-**输出**：每种 formtype 的名称、描述和适用场景
+**输出**：每种 formtype 的名称、描述、示例；枚举与 `VALID_FORM_TYPES` 同源（PascalCase 为推荐写法，`datePicker` / `timePicker` 旧写法仍兼容）
 
 **示例对话**：
 
@@ -491,9 +550,10 @@ AI：[调用 validate_config]
 
 AI：[调用 list_form_types]
     1. Input — 输入框（文本/数字/密码）
-    2. Select — 下拉选择器（单选/多选）
-    3. datePicker — 日期选择器
-    ...共 13 种
+    2. InputNumber — 数字输入框
+    3. Select — 下拉选择器（单选/多选）
+    4. DatePicker — 日期选择器
+    ...共 14 种
 ```
 
 ### get_component_api
@@ -536,32 +596,82 @@ AI：[调用 scaffold_page { name: "order-list", features: ["query", "table", "d
     生成包含基本结构的 .vue 文件，所有配置项为空数组待填充
 ```
 
+### ingest_schema
+
+**功能**：从**既有 schema** 预填一份草拟 `StructuredCrudConfig`（确定性、不调模型）。支持五种输入：OpenAPI JSON、JSON Schema、示例 JSON 对象、TypeScript 接口/类型字面量、SQL `CREATE TABLE` DDL。映射规则按**数据类型**：`integer → InputNumber`、`boolean → Switch`、日期字符串 → `DatePicker`、`string + enum → Select`、`array + enum → Checkbox`、其余 `Input`；TS 的 JSDoc / SQL 的 `COMMENT` 成为 label，非可选成员 / `NOT NULL`、`PRIMARY KEY` 成为 `required`。
+
+**定位**：这是**起点**不是终点 —— 拿回草稿后要人工修订（收窄查询字段、补 schema 表达不了的按钮/弹窗/权限），再交给 `generate_crud_from_config` 或前门。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| text | string | ✅ | schema 原文（格式由 `kind` 决定） |
+| kind | `openapi`\|`jsonSchema`\|`sample-json`\|`ts-interface`\|`sql-ddl` | ✅ | 输入格式 |
+| name | string | 否 | 覆盖页面名（PascalCase）；默认取 schema title |
+| apiUrl | string | 否 | 覆盖 REST 基础地址；默认是必须替换的占位符 |
+
+### refine_config
+
+**功能**：对已 pin 的配置做**一轮**精修。pin 就是宿主手里那份 `StructuredCrudConfig` JSON —— **服务端没有会话**。宿主先把用户这句纠正应用成 `revised`，再传入 `previous`（上一版）与 `revised`，工具确定性地（1）按权威 schema 校验 `revised`，（2）返回本轮**结构化 diff**：字段增删、`formtype`/归属变化、`actions`，以及 `dialogs` / `formLayout` / `tableOptions` / 按钮 / `columns` / `permissions` / 生成选项等顶层块的变化。
+
+**为什么不是「把话丢给模型」**：一轮只改一个弹窗或放宽表单，若只比 `fields` 会被误报成「无变化」。校验失败时返回的是 schema 错误而不是 diff —— 修完重试即可。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| previous | string | 否 | 上一版已 pin 配置的 JSON 字符串（首轮省略） |
+| revised | string | ✅ | 本轮修订后的配置 JSON 字符串 |
+
+### doctor_page
+
+**功能**：对宿主**入口文件**做静态检查，对照 es-plus 的 preflight 清单：UI 库、`ESPlus` 插件注册、`httpRequest`、`permission`、`t`、JSX transform。可一并传入「页面由哪份配置生成」（只要求该页面真正用到的能力）与 `vite.config`（自动导入 / JSX 插件）。
+
+**判据是字面扫描**，结果三态：`ok` / `missing` / **`unverified`**（可能由其他方式满足，需人工确认）。`unverified` 不等于通过 —— 它只是说「这里看不出来」。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| entry | string | ✅ | 入口源码，如 `src/main.ts`（vue2 为 `src/main.js`） |
+| target | `vue3`\|`vue2`\|`antdv` | 否 | 默认 `vue3` |
+| config | object | 否 | 该页面生成自的配置（按需收敛必查项） |
+| viteConfig | string | 否 | `vite.config.*` 源码（UI 自动导入 / JSX 插件） |
+
 ## MCP Resources（可读取资源）
 
-AI 工具可以主动读取以下资源来获取上下文信息：
+AI 工具可以主动读取以下资源来获取上下文信息（共 **8 类**）：
 
 | URI | 内容说明 |
 |-----|----------|
-| `esplus://conventions` | 代码生成规范（formtype、按钮key、多弹窗模式、configureEsPlus等） |
+| `esplus://conventions` | 代码生成规范（formtype、按钮 key、多弹窗模式、`configureEsPlus` 等）。按 target 分版：`/vue3`、`/vue2`、`/antdv`，无后缀 = vue3 |
+| `esplus://crud-page-schema` | `EsCrudPage` 的完整 schema 与用法示例，同样分 `/vue3`、`/vue2`、`/antdv` |
 | `esplus://schemas/form-item` | FormItemOption 完整 JSON Schema 定义 |
 | `esplus://schemas/table-column` | TableColumn 完整 JSON Schema 定义 |
 | `esplus://schemas/table-options` | TableOptions 完整 JSON Schema 定义 |
 | `esplus://schemas/dialog-options` | DialogOptions 完整 JSON Schema 定义 |
 | `esplus://schemas/btn-config` | BtnConfig 按钮配置 JSON Schema |
 | `esplus://schemas/api-params` | ApiParams 远程数据加载 JSON Schema |
-| `esplus://types` | 完整 TypeScript 类型定义文件（所有接口） |
-| `esplus://examples` | 6 个预设 CRUD 页面示例（含完整代码） |
+| `esplus://types` | 完整 TypeScript 类型定义文件（所有接口）。分 `/vue3`、`/vue2`、`/antdv` |
+| `esplus://examples` | 8 个预设 CRUD 页面示例（含完整代码）。分 `/vue3`、`/vue2`、`/antdv` |
+| `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot 对（前门入参的写法参照） |
+| `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot（query/table/form/dialog 各面怎么写） |
+| `esplus://design-extraction` | 设计稿/截图转写规范（图片须由宿主先转成文字，服务端不收图） |
 
 **作用**：当 AI 工具需要精确了解某个配置项的类型定义时，会自动读取对应的 Schema 资源，确保生成的代码类型正确。
 
+> 资源文本与工具面**同源**：`front-door` profile 下，引导句会自动改写成「去调前门」，不会让宿主去找被隐藏的工具。
+
 ## MCP Prompts（提示模板）
 
-提供结构化的系统提示模板，帮助 AI 更准确地生成代码：
+提供结构化的系统提示模板，帮助 AI 更准确地生成代码（共 **3 个**）：
 
 | Prompt 名 | 参数 | 用途 |
 |-----------|------|------|
-| `crud-page` | `description: string` | 包含 es-plus 最佳实践的 CRUD 页面生成系统提示 |
-| `form-config` | `description: string` | 仅生成 formItemList JSON 配置的系统提示 |
+| `crud-page` | `description: string`、`target?: vue3\|vue2\|antdv`、`mode?: schema\|sfc` | 包含 es-plus 最佳实践的 CRUD 页面生成系统提示 |
+| `form-config` | `description: string`、`target?: vue3\|vue2\|antdv` | 仅生成 `formItemList` JSON 配置的系统提示 |
+| `spec-to-surfaces` | `spec: string`、`target?: vue3\|vue2\|antdv`、`mode?: schema\|sfc` | 把 PRD / 用户故事 / 线框转写变成 `generate_crud` 的 `surfaces` 意图表（「第一公里」） |
 
 ## 使用场景与示例
 
@@ -574,10 +684,10 @@ AI 工具可以主动读取以下资源来获取上下文信息：
      - 操作：新增、编辑、删除
 ```
 
-AI 自动调用 `generate_crud_page`，生成约 80 行的完整 `.vue` 文件，包括：
+AI 调用 `generate_crud`（前门）：把需求填成 `surfaces` 意图表 → 确定性路由到 golden 覆盖的生成器，产出：
 - 查询表单（3 个字段 + 查询/重置/新增按钮）
 - 数据表格（5 列 + 操作列）
-- useDialog 弹窗（新增/编辑表单）
+- 弹窗（新增/编辑表单；声明式配置，无需手写 useDialog 胶水）
 
 ### 场景 2：查询 API 用法
 
@@ -619,9 +729,9 @@ AI：[调用 scaffold_page { name: "report-dashboard", features: ["query", "tabl
 
 AI：[读取 esplus://schemas/form-item 了解字段结构]
     向 formItems 中添加：
-    { prop: 'dateRange', label: '日期范围', formtype: 'datePicker', 
+    { prop: 'dateRange', label: '日期范围', formtype: 'DatePicker',
       attrs: { type: 'daterange', valueFormat: 'YYYY-MM-DD' }, span: 8 }
-    { prop: 'reportType', label: '报表类型', formtype: 'Select', 
+    { prop: 'reportType', label: '报表类型', formtype: 'Select',
       dataOptions: [...], span: 6 }
 ```
 
@@ -638,17 +748,16 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 ┌────────────────────────────────────────────────────┐
 │              @es-plus/mcp-server                    │
 │                                                    │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────┐  │
-│  │  Tools (5)  │  │ Resources(8) │  │Prompts(2)│  │
-│  │             │  │              │  │          │  │
-│  │ 解析描述 →   │  │ JSON Schema  │  │ 系统提示 │  │
-│  │ 生成配置 →   │  │ TS 类型定义  │  │ 最佳实践 │  │
-│  │ 输出代码    │  │ 预设示例     │  │          │  │
-│  └─────────────┘  └──────────────┘  └──────────┘  │
+│  ┌─────────────────┐  ┌──────────────┐  ┌──────────┐  │
+│  │  Tools (15)     │  │Resources (8 类)│  │Prompts(3)│  │
+│  │ 前门 + 单面片段  │  │ JSON Schema  │  │ 系统提示 │  │
+│  │ + 确定性支撑     │  │ TS 类型定义  │  │ 最佳实践 │  │
+│  │                 │  │ 预设示例     │  │          │  │
+│  └─────────────────┘  └──────────────┘  └──────────┘  │
 │                                                    │
 │  Core Engine:                                      │
-│  ├── crud-engine    (NLP → Config)                 │
-│  ├── code-generator (Config → .vue SFC)            │
+│  ├── front-door router (surfaces → 生成器)          │
+│  ├── structured-generator (Config → 三端 SFC)       │
 │  └── schema-validator (JSON Schema 校验)           │
 └────────────────────────────────────────────────────┘
                        │
@@ -677,7 +786,7 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 | 关键词 | 推断 formtype | 示例 |
 |--------|--------------|------|
 | 状态、类型、分类、性别、级别 | Select | "状态" → Select + 启用/禁用选项 |
-| 日期、时间、创建时间 | datePicker | "日期范围" → datePicker + daterange |
+| 日期、时间、创建时间 | DatePicker | "日期范围" → DatePicker + daterange |
 | 开关、是否、启用 | Switch | "是否启用" → Switch |
 | 评分、星级 | Rate | "满意度评分" → Rate |
 | 颜色 | ColorPicker | "标签颜色" → ColorPicker |
@@ -737,5 +846,8 @@ MCP Server 生成的是标准 @es-plus/vue3 配置代码。如果需要调整风
 
 | 版本 | 变更 |
 |------|------|
+| 1.4.x | 工具面 15 个（`generate_crud` 前门 / 单面片段 / `detect_project_target` / `ingest_schema` / `refine_config` / `doctor_page` 等）、8 类 resources、3 个 prompts；新增 `front-door` profile |
 | 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |
+
+> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 15 / `front-door` 12）。

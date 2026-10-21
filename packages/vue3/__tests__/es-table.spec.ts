@@ -232,6 +232,30 @@ describe('EsTable - 自动请求配置', () => {
     expect(mockRequest).toHaveBeenCalled()
   })
 
+  // 回归：请求模式的数据落在内部 `tableData`，随后经 `update:dataSource` 回传。
+  // 但**父组件不绑 v-model 时没人接这个回传** —— vue2/antdv 的渲染数据源都优先取
+  // 内部 tableData（vue2 注释明写「兼容父组件不使用 .sync」），vue3 此前只透传
+  // props.dataSource，于是自给自足的请求表格渲染为空表（数据拿到了、界面看不到）。
+  it('父组件未接 update:dataSource 时，请求结果仍然渲染（内部 tableData 兜底）', async () => {
+    const mockRequest = vi.fn().mockResolvedValue({
+      total: 100, size: 10, page: 1, list: sampleData
+    })
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: defaultColumns,
+      options: {
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' },
+        configTableOut: { total: 'total', pageSize: 'size', current: 'page', tableData: 'list' }
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 0 }
+    })
+    await flushPromises()
+    expect((wrapper.vm as any).displayDataSource).toHaveLength(2)
+    const rows = wrapper.findAll('.el-table__body-wrapper .el-table__row')
+    expect(rows.length).toBe(2)
+  })
+
   it('maps response fields via configTableOut', async () => {
     const mockRequest = vi.fn().mockResolvedValue({
       total: 100, size: 10, page: 1, list: sampleData
@@ -727,6 +751,18 @@ describe('EsTable(vue3) — AN-09 前置列合成', () => {
       options: { snIndex: true },
     })
     expect(columnTypes(wrapper)).toEqual(['index', undefined, undefined, undefined])
+  })
+
+  // 判据必须看**原始列**（core `synthesizeLeadingColumns` 的 @param 明写「原始列（未做
+  // 权限/隐藏过滤）」）：被 hidCol/权限筛掉的 `type:'index'` 列仍算已声明，否则用户的
+  // 隐藏会被一条合成列推翻（antdv 端曾把过滤后的列喂进去，见其同款回归用例）。
+  it('hidCol 的 type:index 列仍算已声明 → 不合成默认序号列', () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      columns: [{ type: 'index', hidCol: true }, ...defaultColumns],
+      options: { snIndex: true },
+    })
+    expect(columnTypes(wrapper)).toEqual([undefined, undefined, undefined])
   })
 
   it('开关全关 → 不注入（默认行为不变）', () => {

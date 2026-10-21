@@ -22,6 +22,24 @@ export interface FieldChange {
   changes: FieldAttrChange[]
 }
 
+/**
+ * 顶层**结构块**的一处变更（`dialogs` / `formLayout` / `tableOptions` / 按钮面…）。
+ *
+ * 为什么需要它：字段级 diff 只回答「哪个字段的哪个属性变了」。精修轮里最常见的纠正
+ * 恰恰在字段之外 —— 加一个编辑弹窗（`dialogs`）、把查询表单加宽（`formLayout`）、
+ * 表格开斑马纹（`tableOptions`）、给工具栏加导出按钮（`tableBtns`）。这些改动此前
+ * 一律返回「无差异」，宿主会以为本轮纠正没生效。这里按**整块深比较**回答「哪一块变了」，
+ * 不做块内逐键展开（那会让回显淹没在细节里；块内明细看整份配置回显）。
+ */
+export interface BlockChange {
+  /** 顶层键名。 */
+  key: string
+  /** 变更前（缺席为 undefined）。 */
+  from: unknown
+  /** 变更后（缺席为 undefined）。 */
+  to: unknown
+}
+
 export interface ConfigDiff {
   /** 页面名变更（仅在变化时出现）。 */
   name?: { from: string; to: string }
@@ -37,6 +55,8 @@ export interface ConfigDiff {
   actionsAdded: string[]
   /** next 移除的操作。 */
   actionsRemoved: string[]
+  /** 字段/操作之外、发生变化的顶层结构块（见 {@link BlockChange}）。 */
+  blocksChanged: BlockChange[]
   /** 整份配置无任何差异时为 true。 */
   isEmpty: boolean
 }
@@ -48,6 +68,73 @@ export interface ConfigDiff {
  */
 const SCALAR_ATTRS = ['label', 'formtype', 'inQuery', 'inTable', 'inForm', 'align', 'width', 'required'] as const
 const MEMBERSHIP_ATTRS = new Set(['inQuery', 'inTable', 'inForm'])
+
+/**
+ * 参与「整块深比较」的顶层键。
+ *
+ * 选键标准：**精修轮里会被真实修改、且此前完全不可见**的那些。字段级 diff 已经覆盖
+ * `fields`（增删改）与 `actions`（增删），这里补齐其余结构面：
+ *  - 布局/外观：`formLayout`、`tableOptions`、`pagination`
+ *  - 弹窗与按钮面：`dialogs`、`toolbarBtns`、`tableBtns`、`operationColumn`
+ *  - 表结构逃生舱：`columns`、`expandConfig`、`treeConfig`、`mergeConfig`
+ *  - 权限与生成选项：`permissions`、`target`、`mode`、`typescript`、`i18n`
+ *
+ * 刻意**不**展开块内逐键（`dialogs.add.title`）—— 回显要能一眼读完；块级 from/to
+ * 已足以让宿主确认「这轮改了哪一块」，细节在整份 revised 配置里。
+ */
+const STRUCTURAL_BLOCKS = [
+  'formLayout',
+  'tableOptions',
+  'pagination',
+  'columns',
+  'dialogs',
+  'toolbarBtns',
+  'tableBtns',
+  'operationColumn',
+  'expandConfig',
+  'treeConfig',
+  'mergeConfig',
+  'permissions',
+  'target',
+  'mode',
+  'typescript',
+  'i18n',
+] as const
+
+/** 生成选项的 schema 默认值：缺省 ↔ 显式默认值不算变更（同成员布尔的归一原则）。 */
+const BLOCK_DEFAULTS: Record<string, unknown> = {
+  target: 'vue3',
+  mode: 'schema',
+  typescript: true,
+  i18n: false,
+}
+
+/** 深拷贝并把对象键排序：块比较与**键书写顺序无关**（`{a,b}` 与 `{b,a}` 同义）。 */
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      const v = (value as Record<string, unknown>)[key]
+      if (v === undefined) continue // 与「缺席」同义，不制造伪差异
+      out[key] = canonicalize(v)
+    }
+    return out
+  }
+  return value
+}
+
+/** 取块值，并把生成选项的 schema 默认值补齐（缺省 ↔ 显式默认值也算相等）。 */
+function blockValue(config: StructuredCrudConfig | undefined | null, key: string): unknown {
+  const raw = (config as unknown as Record<string, unknown> | undefined | null)?.[key]
+  return raw === undefined && key in BLOCK_DEFAULTS ? BLOCK_DEFAULTS[key] : raw
+}
+
+/** 归一化的可比串（undefined 用哨兵，避免和字符串 "undefined" 混淆）。 */
+function blockSignature(config: StructuredCrudConfig | undefined | null, key: string): string {
+  const value = blockValue(config, key)
+  return value === undefined ? '\u0000<absent>' : JSON.stringify(canonicalize(value))
+}
 
 function attrValue(field: FieldConfig, attr: string): unknown {
   const raw = (field as Record<string, unknown>)[attr]
@@ -98,12 +185,20 @@ export function diffConfig(
   const actionsAdded = [...nextActions].filter((a) => !prevActions.has(a))
   const actionsRemoved = [...prevActions].filter((a) => !nextActions.has(a))
 
+  // 结构块：按整块深比较（键序无关）。见 STRUCTURAL_BLOCKS 的选键标准。
+  const blocksChanged: BlockChange[] = []
+  for (const key of STRUCTURAL_BLOCKS) {
+    if (blockSignature(prev, key) === blockSignature(next, key)) continue
+    blocksChanged.push({ key, from: blockValue(prev, key), to: blockValue(next, key) })
+  }
+
   const diff: ConfigDiff = {
     fieldsAdded,
     fieldsRemoved,
     fieldsChanged,
     actionsAdded,
     actionsRemoved,
+    blocksChanged,
     isEmpty: false,
   }
   if (prev?.name !== next?.name && (prev?.name !== undefined || next?.name !== undefined)) {
@@ -120,12 +215,20 @@ export function diffConfig(
     fieldsRemoved.length === 0 &&
     fieldsChanged.length === 0 &&
     actionsAdded.length === 0 &&
-    actionsRemoved.length === 0
+    actionsRemoved.length === 0 &&
+    blocksChanged.length === 0
 
   return diff
 }
 
 const show = (v: unknown): string => (v === undefined ? '∅' : JSON.stringify(v))
+
+/** 块级回显的紧凑渲染：整块 JSON 可能很长（`dialogs`），截断到 120 字符足以定位。 */
+function showBlock(v: unknown): string {
+  if (v === undefined) return '∅'
+  const text = JSON.stringify(v)
+  return text.length > 120 ? `${text.slice(0, 117)}…` : text
+}
 
 /** 把 ConfigDiff 渲染成逐行可读文本（供 refine_config 工具回显）。无差异时回单行提示。 */
 export function summarizeDiff(diff: ConfigDiff): string[] {
@@ -141,5 +244,6 @@ export function summarizeDiff(diff: ConfigDiff): string[] {
   }
   for (const a of diff.actionsAdded) lines.push(`+ 操作 ${a}`)
   for (const a of diff.actionsRemoved) lines.push(`- 操作 ${a}`)
+  for (const b of diff.blocksChanged) lines.push(`~ ${b.key}: ${showBlock(b.from)} → ${showBlock(b.to)}`)
   return lines
 }

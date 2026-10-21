@@ -17,7 +17,7 @@
 
 - 一个 8 字段查询 + 6 列表格 + 编辑弹窗的页面，**从 250 行降到 30 行**
 - AI 生成的代码**编译通过率 ~95%**（社区方案普遍 ~40%）
-- CI 矩阵每次 push 都跑 4 个组合的 `vite build`，**契约级保证 AI 写出来的代码能跑**
+- CI 矩阵每次 push 都跑 6 个组合（3 个渲染端 × 2 种模式）的 `vite build`，**契约级保证 AI 写出来的代码能跑**
 
 GitHub：<https://github.com/liujiaao/es-plus>  
 在线演示：<https://liujiaao.github.io/es-plus/>
@@ -285,7 +285,7 @@ app.use(ESPlus, { permission: (v) => userPermissions.includes(v) })
 
 这一节是 ES-Plus 区别于所有其他中后台组件库的关键。
 
-### 5.1 MCP Server 暴露 8 个 tools
+### 5.1 MCP Server 暴露 15 个 tools
 
 ```bash
 # 一行接入 Claude Code
@@ -325,11 +325,11 @@ Claude 的工作流：
 
 ```yaml
 matrix:
-  target: [vue3, vue2]      # 两个渲染器
-  mode:   [schema, sfc]     # 两种生成模式
+  target: [vue3, vue2, antdv]   # 三个渲染端
+  mode:   [schema, sfc]         # 两种生成模式
 ```
 
-每次 push / PR 都跑 4 个组合，每个组合：
+每次 push / PR 都跑 6 个组合，每个组合：
 
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → 生成 tarball
 2. 拷贝 fresh fixture 到沙箱
@@ -565,7 +565,7 @@ Star、Try、骂街都欢迎。
 > 它是项目模板（提供完整骨架 + 路由 + 权限），ES-Plus 是组件库，互补关系。常见组合：vue-pure-admin 做骨架 + ES-Plus 写每个 CRUD 页。
 
 **"AI 生成的代码真能用？"**  
-> CI 每次 push 都跑——pack tarball → 装 fresh Vite 项目 → CLI 生成代码 → `vite build`。4 个组合（vue3/vue2 × schema/sfc）全过才能 merge。仓库 `.github/workflows/e2e.yml` 公开可查。
+> CI 每次 push 都跑——pack tarball → 装 fresh Vite 项目 → CLI 生成代码 → `vite build`。6 个组合（vue3/vue2/antdv × schema/sfc）全过才能 merge。仓库 `.github/workflows/e2e.yml` 公开可查。
 
 **"Vue 2 真的好用？"**  
 > 一份 schema 两个渲染器，行为字节级一致（共享 `@es-plus/core`）。Vue 2.7 + composition-api 默认支持，Vue 2.6 也兼容。

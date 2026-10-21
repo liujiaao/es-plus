@@ -396,7 +396,12 @@ const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof prop
 const isLocalPagination = computed(
   () => props.options?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
 )
-// 模板渲染用的数据源：本地分页时切当前页，否则原样透传 dataSource。
+// 模板渲染用的数据源：本地分页时切当前页，否则优先内部请求数据、再回退 props.dataSource。
+//
+// 请求模式的结果落在内部 `tableData`，随后只会经 `update:dataSource` 回传 —— 父组件若
+// 不绑 v-model（`:data-source` 一次性传值/干脆不传），那条回传就没人接，表格会拿到数据
+// 却渲染空表。vue2（`effectiveDataSource`）与 antdv（`displayDataSource`）都以内部
+// tableData 优先兜底，三端同规；仅当内部无数据时才透传 props.dataSource。
 const displayDataSource = computed(() => {
   if (isLocalPagination.value) {
     const src = Array.isArray(props.dataSource) ? props.dataSource : []
@@ -405,7 +410,7 @@ const displayDataSource = computed(() => {
     const start = (cur - 1) * size
     return src.slice(start, start + size)
   }
-  return props.dataSource
+  return tableData.value.length ? tableData.value : props.dataSource
 })
 // 依据全量 dataSource 回填 total/showPagination + 边界回收（当前页超范围则回退）。
 const syncLocalPagination = () => {

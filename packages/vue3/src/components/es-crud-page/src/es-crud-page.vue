@@ -237,7 +237,13 @@ const mergedColumns = computed<TableColumn[]>(() => {
 
   if (opCol === false || opCol === undefined) return cols
 
+  // 保留用户声明的其余键（hidden / icon / disabled …），只覆盖四个运行时键。
+  // `hidden` 由 es-table 的 operate 列渲染器读取（三端同构：`typeof btn.hidden === 'function'
+  // ? !btn.hidden(row) : !btn.hidden`），是**文档化契约**（docs/crud-page.md「行内动态隐藏」
+  // 示例）。此前这里按三键重建按钮对象，`hidden` 被静默丢掉 —— 「审批仅待审行可见」这类
+  // 配置永远不生效，且零报错。clickEvent 覆盖用户的 click（点击语义由 CRUD 页接管）。
   const actionBtns = opCol.btns.map((btn) => ({
+    ...btn,
     name: btn.name,
     type: btn.type,
     permissionValue: btn.permissionValue,
@@ -399,7 +405,14 @@ function onCrudError(err: unknown, info: string) {
   console.error('[EsCrudPage] 子树渲染错误已被错误边界拦截：', info, err)
 }
 
-const dialogInstances = new Map<string, any>()
+interface DialogInstanceEntry {
+  /** useDialog 返回的可调用对象（带 destroy / destroyCurrent） */
+  hook: any
+  /** 该弹窗配置的 cacheKey（无则 undefined）——决定关闭时的回收策略 */
+  cacheKey?: string
+}
+
+const dialogInstances = new Map<string, DialogInstanceEntry>()
 
 // useDialog() 必须在 setup 顶层调用：它在【调用时刻】通过 getCurrentInstance() 捕获 appContext。
 // 若放在 openDialog（DOM 事件回调）内调用，此刻无活动组件实例 → getCurrentInstance() 为 null →
@@ -453,7 +466,10 @@ function openDialog(key: string, row?: Record<string, unknown>) {
 
   emit('dialog-open', key, row)
 
-  dialogInstances.set(key, dialog)
+  // 只有显式配置了非空 cacheKey 才走缓存通道；否则关闭即销毁本次实例
+  const cacheKey =
+    typeof dialogConfig.cacheKey === 'string' && dialogConfig.cacheKey ? dialogConfig.cacheKey : undefined
+  dialogInstances.set(key, { hook: dialog, cacheKey })
 
   const formData = reactive<Record<string, unknown>>({})
   if (dialogConfig.formItems) {
@@ -509,21 +525,26 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         : undefined,
     configBtn,
     onClosed: () => {
-      const d = dialogInstances.get(key)
+      const entry = dialogInstances.get(key)
       dialogInstances.delete(key)
-      // 单例模式 close() 只隐藏不卸载；这里真正 render(null) 卸载，避免隐藏弹窗常驻 body 泄漏
-      d?.destroy?.()
+      // cacheKey 弹窗关闭时**不**销毁：保留缓存实例正是 cacheKey 的语义，
+      // 由 useDialog 的 TTL（10 分钟）回收。
+      // 无 cacheKey 时只销毁当前单例 vNode —— 不能调 destroy() 无参：
+      // 那会连带清空**其它**弹窗的 cacheKey 缓存（`dialogs.add` 关闭即抹掉 `edit` 缓存）。
+      if (entry && !entry.cacheKey) entry.hook?.destroyCurrent?.()
       dialogConfig.onClose?.()
     }
   })
 }
 
 function closeDialog(key: string) {
-  const dialog = dialogInstances.get(key)
-  if (dialog) {
+  const entry = dialogInstances.get(key)
+  if (entry) {
     dialogInstances.delete(key)
-    // 用 destroy()（render null + 移除容器）而非 close()（仅 visible=false），避免泄漏隐藏弹窗
-    dialog.destroy()
+    // 显式关闭 = 丢弃该弹窗：有 cacheKey 只清自己那条缓存，无 cacheKey 只销毁当前实例。
+    // 不能用 destroy() 无参（会清空全部缓存）。
+    if (entry.cacheKey) entry.hook?.destroy?.(entry.cacheKey)
+    else entry.hook?.destroyCurrent?.()
   }
 }
 
@@ -632,8 +653,14 @@ async function validateAndConfirm(
 // ─── 公共方法 ───
 
 function refresh() {
+  // 刷新**当前页**：走表格的 refresh()（内部 keepPage:true），而不是 httpRequestInstance()。
+  // httpRequestInstance 默认 keepPage=false，会把用户从第 N 页踢回第 1 页——编辑/删除确认后
+  // 刷新即触发，属于明显的交互倒退。保留 httpRequestInstance 兜底以兼容不暴露 refresh 的
+  // 旧版表格实现。
   // 失败已由 es-table 内部 surfaceRequestError 暴露（emit request-error），这里吞掉 rejection 避免 unhandled
-  return tableRef.value?.httpRequestInstance?.()?.catch(() => {})
+  const t = tableRef.value
+  const req = typeof t?.refresh === 'function' ? t.refresh() : t?.httpRequestInstance?.()
+  return req && typeof req.catch === 'function' ? req.catch(() => {}) : Promise.resolve()
 }
 
 function getSelectedRows(): Record<string, unknown>[] {

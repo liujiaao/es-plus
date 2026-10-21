@@ -331,7 +331,11 @@ export default defineComponent({
 
       if (opCol === false || opCol === undefined) return cols
 
+      // 保留用户声明的其余键（hidden / icon / confirm …），只覆盖四个运行时键。
+      // `hidden` 由 es-table 的 operate 列渲染器读取（文档化契约，见 docs/crud-page.md）；
+      // 此前按三键重建按钮对象会静默丢掉它 —— 行内动态隐藏永远不生效且零报错。
       const actionBtns = (opCol as OperationColumnConfig).btns.map((btn) => ({
+        ...btn,
         name: btn.name,
         type: btn.type,
         permissionValue: btn.permissionValue,
@@ -470,7 +474,13 @@ export default defineComponent({
     }
 
     // ─── 弹窗管理 ─────
-    const dialogInstances = new Map<string, ReturnType<typeof useDialog>>()
+    interface DialogInstanceEntry {
+      /** useDialog 返回的可调用对象（带 destroy / destroyCurrent） */
+      hook: ReturnType<typeof useDialog>
+      /** 该弹窗配置的 cacheKey（无则 undefined）——决定关闭时的回收策略 */
+      cacheKey?: string
+    }
+    const dialogInstances = new Map<string, DialogInstanceEntry>()
 
     // useDialog() 在 setup 顶层调用（而非 openDialog 事件回调内）：与 vue3/antdv 三端保持一致的
     // 组合式调用位置。vue2 版 useDialog 基于 Vue.extend、不依赖 appContext（全局插件经原型链继承），
@@ -483,7 +493,10 @@ export default defineComponent({
 
       emit('dialog-open', key, row)
 
-      dialogInstances.set(key, dialog)
+      // 只有显式配置了非空 cacheKey 才走缓存通道；否则关闭即销毁本次实例
+      const cacheKey =
+        typeof dialogConfig.cacheKey === 'string' && dialogConfig.cacheKey ? dialogConfig.cacheKey : undefined
+      dialogInstances.set(key, { hook: dialog, cacheKey })
 
       // Vue 2.7 的 reactive() 沿用 Vue 2 Observer：向已响应式对象「后加」的键不是响应式的
       // （经典限制，需 $set）。若先 reactive({}) 再逐字段赋值，model[prop] 读取时不建立依赖，
@@ -573,19 +586,23 @@ export default defineComponent({
         configBtn,
         // useDialog 的 onClosed 通过 extractEventHandlers 转为 'closed' 事件
         onClosed: () => {
-          const d = dialogInstances.get(key)
+          const entry = dialogInstances.get(key)
           dialogInstances.delete(key)
-          d?.destroy?.()
+          // cacheKey 弹窗关闭时保留缓存实例（由 useDialog 的 TTL 回收）；
+          // 无 cacheKey 时只销毁当前实例，不能调 destroy() 无参（会清空全部缓存）。
+          if (entry && !entry.cacheKey) entry.hook?.destroyCurrent?.()
           dialogConfig.onClose?.()
         },
       })
     }
 
     function closeDialog(key: string) {
-      const dialog = dialogInstances.get(key)
-      if (dialog) {
+      const entry = dialogInstances.get(key)
+      if (entry) {
         dialogInstances.delete(key)
-        dialog.destroy()
+        // 显式关闭 = 丢弃该弹窗：有 cacheKey 只清自己那条缓存，无 cacheKey 只销毁当前实例。
+        if (entry.cacheKey) entry.hook?.destroy?.(entry.cacheKey)
+        else entry.hook?.destroyCurrent?.()
       }
     }
 
@@ -688,9 +705,13 @@ export default defineComponent({
 
     // ─── 公共方法 ─────
     function refresh() {
+      // 刷新**当前页**：表格 refresh() 内部 keepPage:true；httpRequestInstance 默认
+      // keepPage:false（会跳回第 1 页，对齐 vue3/antdv）。
       // 失败已由 es-table 内部 surfaceRequestError + emit('request-error') 暴露，
       // 这里吞掉 rejection 避免 unhandled promise rejection（对齐 vue3）。
-      return (tableRef.value as any)?.httpRequestInstance?.()?.catch(() => {})
+      const t = tableRef.value as any
+      const req = typeof t?.refresh === 'function' ? t.refresh() : t?.httpRequestInstance?.()
+      return req && typeof req.catch === 'function' ? req.catch(() => {}) : Promise.resolve()
     }
 
     function getSelectedRows(): Record<string, unknown>[] {
