@@ -131,6 +131,16 @@ function ingestJsonSchemaObject(
       continue
     }
 
+    // `allOf` / `oneOf` / `anyOf` 的合并语义这里不展开（确定性优先，见文件头）——
+    // 但**不能静默**：组合 schema 的顶层通常没有 `type`，下面会按 Input 兜底，
+    // 使用者若不知道「只读了顶层」，会把兜底产物当成真实推断。
+    const composition = (['allOf', 'oneOf', 'anyOf'] as const).filter((k) => Array.isArray(raw[k]))
+    if (composition.length > 0) {
+      warnings.push(
+        `字段 "${key}" 使用 ${composition.join('/')} 组合 schema —— 未合并子 schema,只读取顶层 type/enum;formtype 可能不准,请人工核对。`,
+      )
+    }
+
     const type = normalizeSchemaType(raw)
     // 枚举可能挂在字段本身(string enum)或数组 items 上(array of enum)。
     const items = raw.items && typeof raw.items === 'object' ? (raw.items as Record<string, unknown>) : null

@@ -71,7 +71,12 @@ export function detect(pkgJsonText: string): DetectResult {
   if (deps["ant-design-vue"]) signals["ant-design-vue"] = deps["ant-design-vue"];
 
   // Tier 1 — explicit es-plus package present is the strongest signal.
-  if (deps["@es-plus/adapter-antdv"]) {
+  // 但 `@es-plus/adapter-antdv` 要求 **Vue 3** 运行时：一个明确是 Vue 2（`vue@2`）
+  // 且装了 `@es-plus/vue2` 的项目里，残留的 antdv 依赖不是新代码的渲染端 ——
+  // 否则会把 Vue 2 工程判成 antdv（high），生成的代码整份跑不起来。
+  const vueMajor = parseSemverMajor(deps.vue);
+  const antdvOverriddenByVue2 = vueMajor === 2 && !!deps["@es-plus/vue2"];
+  if (deps["@es-plus/adapter-antdv"] && !antdvOverriddenByVue2) {
     return {
       target: "antdv",
       confidence: "high",
@@ -91,7 +96,11 @@ export function detect(pkgJsonText: string): DetectResult {
     return {
       target: "vue2",
       confidence: "high",
-      reasoning: "Project already depends on @es-plus/vue2.",
+      reasoning:
+        "Project already depends on @es-plus/vue2." +
+        (antdvOverriddenByVue2
+          ? " @es-plus/adapter-antdv is ignored: it requires a Vue 3 runtime, but this project pins vue@2."
+          : ""),
       signals,
     };
   }
@@ -117,7 +126,6 @@ export function detect(pkgJsonText: string): DetectResult {
   }
 
   // Tier 2 — infer from Vue major version + Element layer.
-  const vueMajor = parseSemverMajor(deps.vue);
   const hasElementPlus = !!deps["element-plus"];
   const hasElementUI = !!deps["element-ui"];
   const hasAntdv = !!deps["ant-design-vue"];

@@ -130,6 +130,28 @@ describe('ingestSchema — JSON Schema', () => {
     expect(r.warnings.join('\n')).toContain('$ref')
   })
 
+  it('allOf/oneOf/anyOf 组合 schema 不静默兜底（告警点名组合关键字）', () => {
+    const r = ingestSchema(
+      JSON.stringify({
+        properties: {
+          amount: { allOf: [{ type: 'number' }] },
+          kind: { oneOf: [{ type: 'string' }, { type: 'null' }] },
+          extra: { anyOf: [{ type: 'boolean' }] },
+        },
+      }),
+      'jsonSchema',
+    )
+    const joined = r.warnings.join('\n')
+    expect(joined).toContain('amount')
+    expect(joined).toContain('allOf')
+    expect(joined).toContain('kind')
+    expect(joined).toContain('oneOf')
+    expect(joined).toContain('extra')
+    expect(joined).toContain('anyOf')
+    // 未展开子 schema ⇒ 退回 Input，但使用者已被告知要人工核对
+    expect(r.fields.find((f) => f.prop === 'amount')!.formtype).toBe('Input')
+  })
+
   it('嵌套对象 / 裸数组各发一条兜底告警', () => {
     const r = ingestSchema(
       JSON.stringify({ properties: { meta: { type: 'object' }, list: { type: 'array' } } }),

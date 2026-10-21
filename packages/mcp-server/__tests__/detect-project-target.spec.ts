@@ -46,6 +46,44 @@ describe('detect — tier 1: explicit es-plus packages (high confidence)', () =>
     expect(r.confidence).toBe('high')
     expect(r.signals['@es-plus/adapter-antdv']).toBe('^1.0.0')
   })
+
+  // `@es-plus/adapter-antdv` 要求 Vue 3 运行时。Vue 2 工程里残留的 antdv 依赖
+  // （升级中途、monorepo 里别的包装的）不该把整份工程判成 antdv —— 生成的代码会
+  // 在 vue@2 上跑不起来，而 detect 的答案会一路带进后续所有生成器。
+  it('vue@2 + @es-plus/vue2 + 残留 @es-plus/adapter-antdv → vue2，且说明 antdv 被忽略', () => {
+    const r = detect(stringify({
+      dependencies: {
+        vue: '^2.7.16',
+        'element-ui': '^2.15.14',
+        '@es-plus/vue2': '^1.0.0',
+        '@es-plus/adapter-antdv': '^1.0.0',
+      },
+    }))
+    expect(r.target).toBe('vue2')
+    expect(r.confidence).toBe('high')
+    expect(r.reasoning).toContain('@es-plus/adapter-antdv is ignored')
+    // 信号里仍然如实列出 antdv —— 被忽略 ≠ 假装没装
+    expect(r.signals['@es-plus/adapter-antdv']).toBe('^1.0.0')
+  })
+
+  it('vue@3 + @es-plus/vue2 + @es-plus/adapter-antdv → antdv（antdv 覆盖只针对 vue@2）', () => {
+    const r = detect(stringify({
+      dependencies: {
+        vue: '^3.4.0',
+        '@es-plus/vue2': '^1.0.0',
+        '@es-plus/adapter-antdv': '^1.0.0',
+      },
+    }))
+    expect(r.target).toBe('antdv')
+    expect(r.confidence).toBe('high')
+  })
+
+  it('@es-plus/vue2 但没写 vue 版本（vue 从别处解析）→ 不触发覆盖，仍判 antdv', () => {
+    const r = detect(stringify({
+      dependencies: { '@es-plus/vue2': '^1.0.0', '@es-plus/adapter-antdv': '^1.0.0' },
+    }))
+    expect(r.target).toBe('antdv')
+  })
 })
 
 describe('detect — antdv inference (Ant Design Vue)', () => {
