@@ -76,9 +76,50 @@ describe("buildIngestDraft — 摄取 → 草拟配置", () => {
     expect(warnings.join("\n")).toContain("未能从该 schema 抽取任何字段");
   });
 
-  it("不支持的 kind → 无 config + stub 告警透传", () => {
+  it("ts-interface / sql-ddl 也能草拟出通过 Zod 的配置", () => {
+    const sources = [
+      {
+        kind: "ts-interface" as const,
+        text: `interface Ticket {
+  id: number
+  /** 标题 */
+  title: string
+  priority: 'high' | 'low'
+}`,
+        name: "Ticket",
+        prop: "priority",
+        formtype: "Select",
+        label: "标题",
+      },
+      {
+        kind: "sql-ddl" as const,
+        text: `CREATE TABLE ticket (
+  id INT NOT NULL,
+  title VARCHAR(80) NOT NULL COMMENT '标题',
+  priority ENUM('high', 'low')
+)`,
+        name: "Ticket",
+        prop: "priority",
+        formtype: "Select",
+        label: "标题",
+      },
+    ];
+
+    for (const s of sources) {
+      const { config } = buildIngestDraft({ kind: s.kind, text: s.text, apiUrl: "/api/tickets" });
+      expect(config).toBeDefined();
+      expect(config!.name).toBe(s.name);
+      expect(config!.fields.find((f) => f.prop === s.prop)?.formtype).toBe(s.formtype);
+      expect(config!.fields.find((f) => f.prop === s.prop)?.dataOptions?.length).toBe(2);
+      expect(config!.fields.find((f) => f.prop === "title")?.label).toBe(s.label);
+      // 与 generate_crud_from_config 同一份 schema:草稿必须过闸。
+      expect(validateStructuredConfig(config).valid).toBe(true);
+    }
+  });
+
+  it("空 interface → 无 config + 兜底告警", () => {
     const { config, warnings } = buildIngestDraft({ kind: "ts-interface", text: "interface X {}" });
     expect(config).toBeUndefined();
-    expect(warnings.join("\n")).toContain("暂未支持");
+    expect(warnings.join("\n")).toContain("未能从该 schema 抽取任何字段");
   });
 });

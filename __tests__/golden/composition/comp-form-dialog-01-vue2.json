@@ -1,0 +1,62 @@
+{
+  "id": "comp-form-dialog-01-vue2",
+  "scene": "composition",
+  "shape": "form+dialog",
+  "target": "vue2",
+  "mode": "schema",
+  "name": "CustomerSignup",
+  "apiUrl": "/api/customers",
+  "surfaces": {
+    "form": [
+      {
+        "prop": "customerName",
+        "label": "客户姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "phone",
+        "label": "手机号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "level",
+        "label": "客户等级",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "普通",
+            "value": "normal"
+          },
+          {
+            "label": "VIP",
+            "value": "vip"
+          }
+        ]
+      }
+    ],
+    "dialog": [
+      "add",
+      "edit"
+    ]
+  },
+  "expect": {
+    "dialogBlocks": [
+      {
+        "key": "add",
+        "fields": [
+          "customerName",
+          "phone",
+          "level"
+        ]
+      },
+      {
+        "key": "edit",
+        "fields": [
+          "customerName",
+          "phone",
+          "level"
+        ]
+      }
+    ]
+  }
+}

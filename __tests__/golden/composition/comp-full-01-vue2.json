@@ -1,0 +1,124 @@
+{
+  "id": "comp-full-01-vue2",
+  "scene": "composition",
+  "shape": "full",
+  "target": "vue2",
+  "mode": "schema",
+  "name": "UserManage",
+  "apiUrl": "/api/users",
+  "surfaces": {
+    "query": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "禁用",
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "table": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "禁用",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "prop": "createdAt",
+        "label": "创建时间",
+        "formtype": "DatePicker"
+      }
+    ],
+    "form": [
+      {
+        "prop": "name",
+        "label": "姓名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "启用",
+            "value": 1
+          },
+          {
+            "label": "禁用",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ],
+    "dialog": [
+      "add",
+      "edit"
+    ]
+  },
+  "expect": {
+    "membership": {
+      "name": [
+        "query",
+        "table",
+        "form"
+      ],
+      "status": [
+        "query",
+        "table",
+        "form"
+      ],
+      "createdAt": [
+        "table"
+      ],
+      "remark": [
+        "form"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ],
+    "dialogKeys": [
+      "add",
+      "edit"
+    ],
+    "legacyDialogFormItems": false,
+    "operationColumn": null
+  }
+}

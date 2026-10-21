@@ -1,0 +1,167 @@
+{
+  "actions": {
+    "schema": "emit",
+    "sfc": "derive",
+    "evidence": {
+      "schema": "actions",
+      "sfc": "queryBtns"
+    }
+  },
+  "apiUrl": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "apiParams",
+      "sfc": "apiParams"
+    }
+  },
+  "columns": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "columns",
+      "sfc": "columns"
+    }
+  },
+  "dialogs": {
+    "schema": "emit",
+    "sfc": "downgrade",
+    "evidence": {
+      "schema": "dialogs",
+      "sfc": null
+    },
+    "reason": "dialogs (per-dialog titles/formItems/layout — a single generic dialog is derived from actions instead)"
+  },
+  "expandConfig": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "expandConfig",
+      "sfc": "expandConfig"
+    }
+  },
+  "fields": {
+    "schema": "derive",
+    "sfc": "derive",
+    "evidence": {
+      "schema": "formItems",
+      "sfc": "formItems"
+    }
+  },
+  "formLayout": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "formLayout",
+      "sfc": "layoutFormProps"
+    }
+  },
+  "i18n": {
+    "schema": "meta",
+    "sfc": "meta",
+    "evidence": {
+      "schema": null,
+      "sfc": null
+    }
+  },
+  "mergeConfig": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "mergeConfig",
+      "sfc": "mergeConfig"
+    }
+  },
+  "mode": {
+    "schema": "meta",
+    "sfc": "meta",
+    "evidence": {
+      "schema": null,
+      "sfc": null
+    }
+  },
+  "name": {
+    "schema": "meta",
+    "sfc": "meta",
+    "evidence": {
+      "schema": null,
+      "sfc": null
+    }
+  },
+  "operationColumn": {
+    "schema": "emit",
+    "sfc": "downgrade",
+    "evidence": {
+      "schema": "operationColumn",
+      "sfc": null
+    },
+    "reason": "operationColumn (width/label/fixed; only `false` is honored in sfc mode)"
+  },
+  "pagination": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "pagination",
+      "sfc": "pagination"
+    }
+  },
+  "permissions": {
+    "schema": "downgrade",
+    "sfc": "emit",
+    "evidence": {
+      "schema": null,
+      "sfc": "permissionValue"
+    },
+    "reason": "schema mode has no action→permission channel; use mode=sfc or declare operationColumn.btns[].permissionValue / toolbarBtns[].permissionValue explicitly"
+  },
+  "tableBtns": {
+    "schema": "emit",
+    "sfc": "downgrade",
+    "evidence": {
+      "schema": "tableBtns",
+      "sfc": null
+    },
+    "reason": "tableBtns (toolbar buttons + code:1/2 positioning)"
+  },
+  "tableOptions": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "border",
+      "sfc": "border"
+    }
+  },
+  "target": {
+    "schema": "meta",
+    "sfc": "meta",
+    "evidence": {
+      "schema": null,
+      "sfc": null
+    }
+  },
+  "toolbarBtns": {
+    "schema": "emit",
+    "sfc": "downgrade",
+    "evidence": {
+      "schema": "toolbarBtns",
+      "sfc": null
+    },
+    "reason": "toolbarBtns (form-area buttons + position/dialogKey)"
+  },
+  "treeConfig": {
+    "schema": "emit",
+    "sfc": "emit",
+    "evidence": {
+      "schema": "treeConfig",
+      "sfc": "treeConfig"
+    }
+  },
+  "typescript": {
+    "schema": "meta",
+    "sfc": "meta",
+    "evidence": {
+      "schema": null,
+      "sfc": null
+    }
+  }
+}

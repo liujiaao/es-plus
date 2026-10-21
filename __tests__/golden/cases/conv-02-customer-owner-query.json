@@ -1,0 +1,67 @@
+{
+  "nl": "客户档案：初版只要能按名称搜索；表格展示名称、负责人、日期、状态（合作中/已暂停）；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "owner",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:owner"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "负责人也要能按名字搜，方便按销售跟进人筛选。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv02CustomerOwnerQuery",
+    "apiUrl": "/api/customer-owner-query",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "合作中",
+            "value": "active"
+          },
+          {
+            "label": "已暂停",
+            "value": "paused"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（负责人）。结构同 conv-01：初版只锁名称查询。"
+}

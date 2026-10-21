@@ -1,0 +1,19 @@
+{
+  "id": "prd-20-contact-directory",
+  "product": "员工通讯录",
+  "target": "vue3",
+  "spec": "员工通讯录。\n\n【查询区】姓名、部门、手机号\n【列表】姓名、部门、职位、手机号、邮箱\n通讯录只读，不提供新增、编辑或删除。",
+  "config": {
+    "name": "ContactDirectory",
+    "apiUrl": "/api/contacts",
+    "target": "vue3",
+    "fields": [
+      { "prop": "name", "label": "姓名", "formtype": "Input", "inForm": false },
+      { "prop": "dept", "label": "部门", "formtype": "Select", "inForm": false },
+      { "prop": "title", "label": "职位", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "phone", "label": "手机号", "formtype": "Input", "inForm": false },
+      { "prop": "email", "label": "邮箱", "formtype": "Input", "inQuery": false, "inForm": false }
+    ]
+  },
+  "notes": "只读 + 查询；职位/邮箱只在列表。"
+}

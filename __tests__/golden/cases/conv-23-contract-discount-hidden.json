@@ -1,0 +1,72 @@
+{
+  "nl": "合同管理：表格展示标题、合同类型（框架/普通）、折扣率、金额；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "contractType",
+    "discount",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "isHidden:discount"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "合同类型不是框架合同时，折扣率字段就不显示了。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv23ContractDiscountHidden",
+    "apiUrl": "/api/contract-discount-hidden",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "contractType",
+        "label": "合同类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "框架",
+            "value": "framework"
+          },
+          {
+            "label": "普通",
+            "value": "normal"
+          }
+        ]
+      },
+      {
+        "prop": "discount",
+        "label": "折扣率",
+        "formtype": "InputNumber",
+        "inQuery": false,
+        "isHidden": {
+          "field": "contractType",
+          "op": "ne",
+          "value": "framework"
+        }
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "isHidden 铰链（折扣率）。"
+}

@@ -1,0 +1,62 @@
+{
+  "nl": "供应商管理：表格展示名称、状态（合作中/已终止）；地址只在新增/编辑弹窗里填，列表里不显示；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "status",
+    "address"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inTable:address"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "地址也要在列表里显示，发货时直接看得到。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv09SupplierAddressTable",
+    "apiUrl": "/api/supplier-address-table",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "合作中",
+            "value": "active"
+          },
+          {
+            "label": "已终止",
+            "value": "ended"
+          }
+        ]
+      },
+      {
+        "prop": "address",
+        "label": "地址",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": false,
+        "inForm": true
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inTable 铰链（地址）。结构同 conv-08。"
+}

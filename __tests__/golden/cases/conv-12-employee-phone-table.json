@@ -1,0 +1,62 @@
+{
+  "nl": "员工管理：表格展示名称、状态（在职/离职）；手机号只在新增/编辑弹窗里填，列表里不显示；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "status",
+    "phone"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inTable:phone"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "手机号也要在列表里显示，方便行政联系。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv12EmployeePhoneTable",
+    "apiUrl": "/api/employee-phone-table",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "在职",
+            "value": "active"
+          },
+          {
+            "label": "离职",
+            "value": "left"
+          }
+        ]
+      },
+      {
+        "prop": "phone",
+        "label": "手机号",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": false,
+        "inForm": true
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inTable 铰链（手机号）。隐私字段常被模型默认藏起来，纠正后才展示。"
+}

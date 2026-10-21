@@ -1,0 +1,32 @@
+{
+  "id": "prd-15-course-management",
+  "product": "课程管理",
+  "target": "vue3",
+  "spec": "课程管理。\n\n【查询区】课程名称、讲师\n【列表】课程名称、讲师、课时、价格、状态、创建时间\n【新增/编辑表单】课程名称、讲师、课时、价格、状态、课程简介（多行文本）\n【工具栏】新增\n【行操作】编辑、删除\n说明：课程简介只在表单维护；创建时间系统生成。",
+  "config": {
+    "name": "CourseManage",
+    "apiUrl": "/api/courses",
+    "target": "vue3",
+    "fields": [
+      { "prop": "courseName", "label": "课程名称", "formtype": "Input" },
+      { "prop": "instructor", "label": "讲师", "formtype": "Input" },
+      { "prop": "hours", "label": "课时", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inQuery": false },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      {
+        "prop": "description",
+        "label": "课程简介",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "负例 N5：课程简介 form-only；创建时间 table-only。"
+}

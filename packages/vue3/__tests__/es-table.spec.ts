@@ -696,3 +696,140 @@ describe('EsTable(vue3) — 尺寸契约 number | string', () => {
     expect(heightOf(mountTable({ options: { heightType: 'height', height: '70vh' } as any }))).toBe('70vh')
   })
 })
+
+// ─── AN-09 前置非数据列合成（默认 el-table 引擎）────────────────────────
+// 修前：multiSelect / snIndex / expand 三个开关只被虚拟引擎与三份 vxe 适配器消费，
+// 默认引擎完全无视 —— 同一份配置切引擎就少一列，静默无提示。
+describe('EsTable(vue3) — AN-09 前置列合成', () => {
+  const columnTypes = (wrapper: any): Array<string | undefined> =>
+    wrapper.findAllComponents(ColumnItem).map((c: any) => (c.props('cols') as TableColumn).type)
+
+  it('multiSelect + snIndex → 选择列、序号列前置（顺序与 vxe 引擎一致）', () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      options: { multiSelect: true, snIndex: true },
+    })
+    expect(columnTypes(wrapper)).toEqual(['selection', 'index', undefined, undefined, undefined])
+  })
+
+  it('三开全开 → 选择 → 序号 → 展开', () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      options: { multiSelect: true, snIndex: true, expand: true },
+    })
+    expect(columnTypes(wrapper).slice(0, 3)).toEqual(['selection', 'index', 'expand'])
+  })
+
+  it('显式声明 type 列 → 不重复注入', () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      columns: [{ type: 'index', label: '序' }, ...defaultColumns],
+      options: { snIndex: true },
+    })
+    expect(columnTypes(wrapper)).toEqual(['index', undefined, undefined, undefined])
+  })
+
+  it('开关全关 → 不注入（默认行为不变）', () => {
+    const wrapper = mountTable({ dataSource: sampleData })
+    expect(columnTypes(wrapper)).toEqual([undefined, undefined, undefined])
+  })
+
+  it('序号列表头渲染为 #（默认宽度 60 不参与 width→minWidth 转换）', () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      options: { snIndex: true },
+    })
+    const indexCol = wrapper
+      .findAllComponents(ColumnItem)
+      .map((c: any) => c.props('cols') as TableColumn)
+      .find(c => c.type === 'index')
+    expect(indexCol?.label).toBe('#')
+    expect(indexCol?.width).toBe(60)
+    expect(indexCol?.minWidth).toBeUndefined()
+  })
+})
+
+// ─── AN-10 列选项（默认 el-table 引擎）────────────────────────────────────
+// 修前：生成器发的是 el-table 专有的 `showOverflowTooltip`，且只简单列那条
+// `v-else-if` 生效；带 render/scopedSlots/groups 的列即使写了 ellipsis 也不截断。
+// 现 IR 统一 `ellipsis`，在 columnBindAttr 里翻译，覆盖**所有**渲染分支。
+describe('EsTable(vue3) — AN-10 省略号 / 默认排序', () => {
+  const colOf = (wrapper: any) => wrapper.findComponent(ElTableColumn)
+
+  it('ellipsis → el-table-column 的 show-overflow-tooltip', () => {
+    const wrapper = mountTable({ columns: [{ prop: 'name', label: '姓名', ellipsis: true }] })
+    expect(colOf(wrapper).props('showOverflowTooltip')).toBe(true)
+  })
+
+  it('ellipsis + render：自定义单元格分支也带 show-overflow-tooltip（修前该分支没有）', () => {
+    const wrapper = mountTable({
+      columns: [
+        {
+          prop: 'name',
+          label: '姓名',
+          ellipsis: true,
+          render: (_h: any, { value }: any) => String(value ?? ''),
+        },
+      ],
+    })
+    expect(colOf(wrapper).props('showOverflowTooltip')).toBe(true)
+  })
+
+  it('存量写法 showOverflowTooltip 原样透传（向后兼容）', () => {
+    const wrapper = mountTable({
+      columns: [{ prop: 'name', label: '姓名', showOverflowTooltip: true } as any],
+    })
+    expect(colOf(wrapper).props('showOverflowTooltip')).toBe(true)
+  })
+
+  it('未设置省略号 → 不开 tooltip', () => {
+    const wrapper = mountTable({ columns: [{ prop: 'name', label: '姓名' }] })
+    expect(colOf(wrapper).props('showOverflowTooltip')).toBeFalsy()
+  })
+
+  it('options.defaultSort → el-table 的 defaultSort（显式映射，不靠偶然透传）', () => {
+    const wrapper = mountTable({
+      options: { defaultSort: { prop: 'name', order: 'descending' } } as any,
+    })
+    expect(wrapper.findComponent(ElTable).props('defaultSort')).toEqual({
+      prop: 'name',
+      order: 'descending',
+    })
+  })
+})
+
+/**
+ * AN-11⑥ —— 虚拟滚动引擎的 `row-click` 转发。
+ *
+ * el-table / vxe 两条路径都靠 attrs 透传把父级的 `onRowClick` 送到引擎
+ * （`tableBindAttrs` / `vxePassthroughAttrs`），唯独 virtual 分支是显式绑定、
+ * 一个 on* 都没接 —— 于是 `<es-table @row-click>` 在 virtual 引擎下被静默吞掉。
+ */
+describe('EsTable - AN-11⑥ virtual 引擎 row-click', () => {
+  const virtualStub = {
+    name: 'VirtualEngine',
+    template: '<div class="virtual-stub" />',
+    props: ['columns', 'dataSource', 'tableHeight', 'options', 'parentSlots']
+  }
+
+  it('virtual-engine 冒泡的 row-click → 父级监听真的收到', () => {
+    const onRowClick = vi.fn()
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: sampleData,
+        columns: defaultColumns,
+        options: { virtual: true } as unknown as TableOptions
+      },
+      attrs: { onRowClick },
+      global: {
+        components: globalComponents,
+        stubs: { VirtualEngine: virtualStub }
+      }
+    })
+    const engine = wrapper.findComponent({ name: 'VirtualEngine' })
+    expect(engine.exists()).toBe(true)
+    engine.vm.$emit('row-click', { id: 1 }, new Event('click'))
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+    expect(onRowClick.mock.calls[0][0]).toEqual({ id: 1 })
+  })
+})

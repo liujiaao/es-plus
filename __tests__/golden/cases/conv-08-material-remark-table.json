@@ -1,0 +1,62 @@
+{
+  "nl": "物料管理：表格展示名称、状态（可用/停用）；备注只在新增/编辑弹窗里填，列表里不显示；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "status",
+    "remark"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inTable:remark"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "备注也要在列表里显示，盘点时方便一眼看到。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv08MaterialRemarkTable",
+    "apiUrl": "/api/material-remark-table",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "可用",
+            "value": "active"
+          },
+          {
+            "label": "停用",
+            "value": "disabled"
+          }
+        ]
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": false,
+        "inForm": true
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inTable 铰链：初版 NL **显式**说「备注只在弹窗里填，列表不显示」，模型会把 inTable 置 false（结构性 miss）；纠正后才翻成 true。"
+}

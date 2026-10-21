@@ -88,11 +88,6 @@ export const DECLARED_NOT_EMITTED = {
     reason: '**改名发射**：表单面列宽落成 formItem 的 `span`（`context==="form"` 分支，默认 24）。同 `querySpan`。',
     emittedAs: { key: 'span', domain: 'formItem' },
   },
-  'fields.ellipsis': {
-    tier: 'B',
-    reason: '**改名发射**：`buildTableColumn`（schema 模式）与 `buildTableColumnSFC`（sfc 模式）都把它落成列的 `showOverflowTooltip: true` —— 即 Element（Plus/UI）`el-table-column` 的原生 prop 名。语义到位、键名不同；但**该词形不在 core `TableColumn` 里**，见 EMITTED_NOT_CONSUMED 的 `column.showOverflowTooltip` 行（virtual/vxe 引擎读的是 `ellipsis`，不读它）。',
-    emittedAs: { key: 'showOverflowTooltip', domain: 'column' },
-  },
   'fields.required': {
     tier: 'B',
     reason: '**改形发射**：落成 formItem 的 `formItemOptions.rules[]`（`buildFormItem` 的 `context==="form"` 分支，含 Select/Radio 等 → 中文「请选择」文案 + trigger:change）。**仅表单面**：查询面不校验，故 `inQuery:true ∧ inForm:false` 的字段上 `required` 无可达面（语义上本就无意义）。',
@@ -101,10 +96,9 @@ export const DECLARED_NOT_EMITTED = {
     tier: 'B',
     reason: '**改形发射**：落进 `formItemOptions.rules[]`（逐条保留 message/required/pattern/min/max/type/trigger）。同 `required`，仅表单面生效。',
   },
-  'fields.label': {
-    tier: 'B',
-    reason: '**条件发射**：`i18n:true` 且未显式给 `labelKey` 时，label 被 `labelKey: field.<prop>` 取代（i18n 派生优先序的最末一级）。故两模式产物里 label 可能缺席 —— 是优先序的正常结果，不是丢弃。',
-  },
+  // `fields.label` 不再登记：AN-14 起 `buildFormItem` **恒发** `label`（`FormItemOption.label`
+  // 是必填），i18n 派生只在它旁边追加 `labelKey`。此前「label 被 labelKey 取代而缺席」的
+  // 条件发射已不复存在 —— 按本表纪律（能发射了就必须删行）行已移除。
   // ── FieldConfig：源码扩展点（两模式产物形态不同，逐模式登记）────────────────
   // `render`/`formatter` 探针取真值时**两个模式都发射**，故它们不落本表（轴① 直接过）。
   // 记录在这里的是它们的**形态差**，供读者不必再翻源码：
@@ -143,7 +137,9 @@ export const EMITTED_NOT_CONSUMED = {
       { file: 'packages/vue2/src/components/es-table/column-item.vue', pattern: /const columnBindAttr = / },
     ],
     reason:
-      '**半通道键（本表首行，实缺陷）**：core `TableColumn` 命名的同义键是 `ellipsis`，但派生的表格列由 `buildTableColumn`（schema 模式）与 `buildTableColumnSFC`（sfc 模式）发射成 `showOverflowTooltip: true` —— 三端只把它当**未知键**经 `columnBindAttr` 原样透传给 `el-table-column`（Element Plus/UI 恰好有同名原生 prop，故走 Element 默认引擎时「碰巧能用」）。三端自己的省略号读取点读的是 `ellipsis`：vue3 `engines/use-column-adapter.ts`（virtual 引擎）与 `engines/use-vxe-column-adapter.ts`（vxe → `showOverflow: tooltip`）、vue3/vue2 `column-item.vue` 的 `v-else-if="cols.ellipsis"` 模板分支。结论：**配了 `ellipsis` 的字段在 virtual/vxe 引擎下静默失去省略号**；core `TableColumn` 不收该词形，故登记在此而非「修 contract」。正解是派生路径改发 `ellipsis`（与显式列路径 `pushSfcColumn` 一致），需一次产物快照/golden 对齐裁决，故本轮只登记、不改。',
+      '**存量词形（AN-10 已收口，仍保留一行）**：它是 el-table 的原生 prop 名，作为显式列的遗留写法留在 AI 列契约（`structured-config.schema.ts` 的 `ColumnSchema`）里，所以仍可能出现在产物中；但 core `TableColumn` 不收该词形，故登记在此而非「修 contract」。' +
+      'AN-10 之前的真实缺陷是：**派生列**也发这个键 —— 只有 vue3/vue2 默认引擎经 `columnBindAttr` 原样透传时「碰巧能用」，virtual/vxe/antv 三端全部静默丢弃。' +
+      '现已修：派生路径改发契约键 `ellipsis`（`buildTableColumn` / `buildTableColumnSFC` / 片段路径一致），三端读取点同时把 `ellipsis` 与这个存量键一并认 —— 见 `packages/shared/src/structured-generator.ts` 与 `renderer-contract.mjs` 的 `column:ellipsis` 行。',
   },
 }
 

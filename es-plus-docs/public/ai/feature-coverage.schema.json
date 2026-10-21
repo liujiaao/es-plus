@@ -4,7 +4,7 @@
   "description": "文档站 96 例特性演示 × 分层可达性的单一真源。结构守卫：scripts/check-feature-coverage.mjs；Ajv 校验：scripts/check-data-schemas.mjs。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["note", "tiers", "demos"],
+  "required": ["note", "tiers", "demos", "sites"],
   "properties": {
     "$schema": { "type": "string" },
     "note": { "type": "string", "minLength": 1 },
@@ -45,6 +45,53 @@
             "description": "能力令牌（须 ∈ scripts/feature-coverage.data.mjs 的 CAPABILITY_TOKENS）"
           },
           "note": { "type": "string" }
+        }
+      }
+    },
+    "sites": {
+      "description": "AN-28：es-eui / es-pc 两站案例台账（由 scripts/gen-site-coverage.mjs 从磁盘 + demos 派生；未匹配单源演示的案例显式记 D + reason）",
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["site", "root", "refs", "uncovered", "cases"],
+        "properties": {
+          "site": { "type": "string", "enum": ["es-eui", "es-pc"] },
+          "root": { "type": "string", "minLength": 1 },
+          "refs": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "映射到单源演示的案例数（验收要求 > 0）"
+          },
+          "uncovered": { "type": "integer", "minimum": 0 },
+          "cases": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "demo", "tokens", "tier"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "demo": {
+                  "type": ["string", "null"],
+                  "description": "对应的单源演示 id；null = 未覆盖（必须 D 档 + reason）"
+                },
+                "tokens": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "tier": { "type": "string", "enum": ["A", "B", "C", "D"] },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "未覆盖案例为何记 D 档"
+                }
+              }
+            }
+          }
         }
       }
     }

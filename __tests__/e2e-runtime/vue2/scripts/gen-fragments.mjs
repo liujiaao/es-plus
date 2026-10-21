@@ -82,3 +82,55 @@ if (problems.length) {
   process.exit(1)
 }
 console.log(`[gen-fragments] 6/6 片段已写入 ${OUT_DIR}`)
+
+// ── AN-17：三组件组合的 **no-table** 形状（form+dialog）────────────────────────
+//
+// 组合语料（`__tests__/golden/composition/`）里 form+dialog 的产物**不是** CRUD 页面：
+// 前门（`generate-crud.ts` 的 no-table 分支）为每个 dialog entry 发一段 composable，
+// 弹窗体 = form 面。这里按**同一条装配规则**生成两份产物（add / edit），证明
+// 「一份 form 面 + 多个 dialog key」真的能各自成为独立 composable，而不是只发一个。
+const COMPOSITION_CASES = join(REPO_ROOT, '__tests__', 'golden', 'composition')
+const COMPOSITION_FILE = 'comp-form-dialog-01-vue2.json'
+const COMPOSITION_DIALOGS = [
+  { key: 'add', title: '新增', out: 'composition-dialog-add.tsx', composableName: 'useCustomerAddDialog' },
+  { key: 'edit', title: '编辑', out: 'composition-dialog-edit.tsx', composableName: 'useCustomerEditDialog' },
+]
+
+const compPath = join(COMPOSITION_CASES, COMPOSITION_FILE)
+if (!existsSync(compPath)) {
+  console.error(`[gen-fragments] 缺少组合语料 ${compPath}`)
+  process.exit(1)
+}
+const compCase = JSON.parse(readFileSync(compPath, 'utf-8'))
+const compFields = compCase?.surfaces?.form
+if (!Array.isArray(compFields) || compFields.length === 0) {
+  console.error(`[gen-fragments] ${COMPOSITION_FILE} 没有 surfaces.form —— 组合语料的 form+dialog 形状必须带表单面`)
+  process.exit(1)
+}
+
+const compProblems = []
+for (const d of COMPOSITION_DIALOGS) {
+  const result = shared.generateDialogBlock({
+    fields: compFields,
+    apiUrl: compCase.apiUrl,
+    target: 'vue2',
+    typescript: true,
+    composableName: d.composableName,
+    defaultTitle: d.title,
+  })
+  if (!result || typeof result.code !== 'string' || result.code.trim() === '') {
+    compProblems.push(`${d.out}：生成器返回空 code`)
+    continue
+  }
+  if (result.fence !== 'tsx') {
+    compProblems.push(`${d.out}：围栏应为 tsx，实际 ${String(result.fence)}`)
+    continue
+  }
+  writeFileSync(join(OUT_DIR, d.out), result.code)
+  console.log(`[gen-fragments] ✓ ${COMPOSITION_FILE} → ${d.out} (${result.code.split('\n').length} 行)`)
+}
+if (compProblems.length) {
+  console.error(`[gen-fragments] 组合片段 ${compProblems.length} 项失败：\n  - ${compProblems.join('\n  - ')}`)
+  process.exit(1)
+}
+console.log(`[gen-fragments] 组合 form+dialog：${COMPOSITION_DIALOGS.length}/${COMPOSITION_DIALOGS.length} 已写入 ${OUT_DIR}`)

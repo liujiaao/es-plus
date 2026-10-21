@@ -248,13 +248,19 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 6 个工具：
+配置完成后，AI 工具会自动发现并使用以下工具（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留前门、单面片段与支撑工具）：
 
-### generate_crud_from_config（首选 / 推荐）
+### generate_crud（唯一前门 / FRONT DOOR）
+
+**功能**：自然语言请求的统一入口。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+
+### generate_crud_from_config（ADVANCED / 已持有类型化配置时用）
 
 **功能**：从**结构化配置**生成**生产级** CRUD 页面代码（零 TODO、零占位符）
 
-这是**首选生成路径**。与 `generate_crud_page`（正则关键词兜底）不同，此工具的入参是一套**类型化字段**（不是一坨 JSON 字符串）——由你（AI 客户端）阅读自然语言需求后，按字段**语义**逐项填空。这把「约束解码」这个提升一次成码率的最强杠杆交回给宿主 LLM：字段的 `.describe()` 语义指引与枚举合法值都内嵌在工具的 JSON schema 里，直接约束你的输出。
+这是**高级路径**：当你已经持有一份类型化配置（持久化、做过于 diff、或刚经 `refine_config` 修订）时直接使用。**自然语言请求请走 `generate_crud`（前门）** —— 它把「填整份配置」压缩成「填 `surfaces`」，路由由确定性代码完成。
+
+与 `generate_crud_page`（正则关键词兜底）不同，此工具的入参是一套**类型化字段**（不是一坨 JSON 字符串）——由你（AI 客户端）按字段**语义**逐项填空。字段的 `.describe()` 语义指引与枚举合法值都内嵌在工具的 JSON schema 里，直接约束你的输出。
 
 > **推理在你这边**：读需求 → 填 `name`（PascalCase）/ `apiUrl`（真实地址）/ `fields[]`（`prop`/`label`/`formtype` + `inQuery`/`inTable`/`inForm`）/ `actions[]`。schema 无法表达的业务逻辑（自定义校验、跨字段计算、副作用）**不要静默丢弃**，而是落成带标记的扩展点（`formatter`/`render` 串），并在返回的 `warnings` 里显式列出。调用前先读 `esplus://conventions`、`esplus://examples/nl-to-config`、`esplus://types`，草拟后对照原始需求自审一遍再调用。
 
@@ -409,11 +415,11 @@ AI：[读取 esplus://conventions 获取规范]
 
 ---
 
-### generate_crud_page（兜底 / no-LLM fallback）
+### generate_crud_page（LEGACY FALLBACK / no-LLM 兜底）
 
 **功能**：从自然语言描述生成完整的 `.vue` CRUD 页面——**基于正则/关键词解析**，准确率受关键词覆盖度限制。
 
-> **优先用 `generate_crud_from_config`**。此工具不借助你的语义推理，纯靠内置关键词表匹配字段类型，仅适合快速原型，或你确实无法草拟结构化配置时的兜底。它同样支持 `mode`（schema/sfc）与 `target`（vue3/vue2/antdv）。
+> **优先用 `generate_crud`（前门）；已持有配置时用 `generate_crud_from_config`（ADVANCED）**。此工具不借助你的语义推理，纯靠内置关键词表匹配字段类型，仅适合快速原型、离线/无 LLM 宿主，或你确实无法草拟结构化配置时的兜底。它同样支持 `mode`（schema/sfc）与 `target`（vue3/vue2/antdv）。
 
 **输入参数**：
 
@@ -662,7 +668,7 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 
 ## 自然语言解析规则（仅限 generate_crud_page 兜底）
 
-> 以下关键词表**只**用于 `generate_crud_page` 的正则启发式解析。`generate_crud_from_config`（首选）不走这些表——它由你按字段语义推断，不受关键词覆盖度限制。
+> 以下关键词表**只**用于 `generate_crud_page` 的正则启发式解析。`generate_crud`（前门）与 `generate_crud_from_config`（ADVANCED）都不走这些表——路由或字段语义由确定性代码/宿主推理决定，不受关键词覆盖度限制。
 
 `generate_crud_page` 工具使用基于规则的 NLP 引擎，支持以下模式：
 

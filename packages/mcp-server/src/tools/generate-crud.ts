@@ -5,10 +5,19 @@ import {
   generateFromConfig,
   generateFormBlock,
   generateDialogBlock,
+  formatPreflight,
   validateAndRepair,
 } from "@es-plus/shared";
 import { surfaceFieldSchema } from "./_fragment-shapes.js";
-import { buildSemanticWarnings, formatValidationError } from "./generate-from-config.js";
+import { buildSemanticWarnings, formatValidationError, TableBtnSchema, ToolbarBtnSchema } from "./generate-from-config.js";
+import {
+  tableOptionsSchema,
+  formLayoutSchema,
+  operationColumnSchema,
+  expandConfigSchema,
+  treeConfigSchema,
+  mergeConfigSchema,
+} from "./_front-door-knobs.js";
 
 /**
  * FRONT DOOR. The host LLM's one reasoning step is to fill `surfaces` — which of
@@ -81,51 +90,76 @@ const crudShape = {
   pagination: z
     .object({ pageSize: z.number().int().default(10), pageSizes: z.array(z.number().int()).optional() })
     .optional(),
-  tableOptions: z
-    .record(z.string(), z.any())
+  tableOptions: tableOptionsSchema
     .optional()
     .describe(
-      "Table options, forwarded verbatim into the composed config (border/stripe/rowkey/heightType/height/multiSelect/emptyText/size/defaultSort/leftText/engine/…). Full contract: see generate_crud_from_config.",
+      "Table options, forwarded into the composed config (border/stripe/rowkey/heightType/tabHeight/height/multiSelect/emptyText/size/defaultSort/leftText/engine/virtual/editConfig/configTableOut/tableOptions.treeConfig/tableOptions.expandConfig/…). The full key set and per-key semantics are the same as generate_crud_from_config; unknown keys are rejected."
     ),
-  formLayout: z
-    .record(z.string(), z.any())
+  formLayout: formLayoutSchema
     .optional()
-    .describe("Query form layout (span / labelWidth / minFoldRows)."),
-  operationColumn: z
-    .union([z.literal(false), z.record(z.string(), z.any())])
+    .describe(
+      "Query form layout ({ labelWidth?, minFoldRows? }). Column count is PER FIELD via querySpan — formLayout has no span key; an unknown key is rejected."
+    ),
+  operationColumn: operationColumnSchema
     .optional()
-    .describe("Operation column config (`false` hides it); forwarded verbatim."),
+    .describe("Operation column config (`false` hides it): { label?, width?, fixed?, btns: [{ name, key?, type?, icon?, dialogKey?, confirm?, permissionValue? }] }."),
   tableBtns: z
-    .array(z.any())
+    .array(TableBtnSchema)
     .optional()
-    .describe('Table toolbar buttons rendered above EsTable, e.g. [{ label: "导出", action: "export" }].'),
+    .describe(
+      'Table toolbar buttons rendered above EsTable, e.g. [{ name: "导出", actionType: "export", position: "left" }]. ' +
+        'Canonical keys are `name` + `actionType` + `position`; the legacy aliases `label`/`action` are accepted and normalized.'
+    ),
   toolbarBtns: z
-    .array(z.any())
+    .array(ToolbarBtnSchema)
     .optional()
-    .describe("Toolbar buttons rendered in the EsForm button area (position:left|right)."),
-  expandConfig: z
-    .record(z.string(), z.any())
+    .describe("Toolbar buttons rendered in the EsForm button area (position:left|right; defaults right). Unknown keys are rejected."),
+  expandConfig: expandConfigSchema
     .optional()
     .describe(
-      "Declarative row-expand content ({ title?, fields: [{prop, label?, labelKey?}] }) — the table gets ONE row-expander showing a read-only field list. Forwarded verbatim; full contract: see generate_crud_from_config.",
+      "Declarative row-expand content ({ title?, fields: [{prop, label?, labelKey?}] }) — the table gets ONE row-expander showing a read-only field list. Distinct from tableOptions.expandConfig (vxe-only switch). Unknown keys are rejected."
     ),
-  treeConfig: z
-    .record(z.string(), z.any())
+  treeConfig: treeConfigSchema
     .optional()
     .describe(
-      "Declarative tree table ({ childrenField?, expandAll? }) — renders parent/child levels from each row's nested child array (row-key emitted automatically). Forwarded verbatim; distinct from tableOptions.treeConfig (vxe-only).",
+      "Declarative tree table ({ childrenField?, expandAll? }) — renders parent/child levels from each row's nested child array (row-key emitted automatically). Distinct from tableOptions.treeConfig (vxe-only). Unknown keys are rejected."
     ),
-  mergeConfig: z
-    .record(z.string(), z.any())
+  mergeConfig: mergeConfigSchema
     .optional()
     .describe(
-      "Declarative row-merge ({ rowsBy: ['dept','team'] }) — merges those columns across consecutive rows with EQUAL values (the standard 'grouped rows' table). Cross-renderer (el-table / a-table / vxe); forwarded verbatim. Full contract: see generate_crud_from_config.",
+      "Declarative row-merge ({ rowsBy: ['dept','team'] }) — merges those columns across consecutive rows with EQUAL values (the standard 'grouped rows' table). Cross-renderer (el-table / a-table / vxe). Unknown keys are rejected."
     ),
   rowkey: z.string().optional().describe("Primary key for dialog PUT url / delete (default 'id')"),
 } as const;
 
 function titleFor(key: string): string {
   return DIALOG_TITLES[key] ?? key;
+}
+
+/**
+ * AN-06③：顶层 `rowkey` 此前只喂给独立的 dialog 块，**没有**进入组合配置。
+ *
+ * 后果：`rowkey: "orderNo"` 的页面，独立弹窗块按 `orderNo` 拼 URL，而已组合的
+ * `pageSchema.tableOptions.rowkey` 仍是默认 `id` —— 于是 wrapper 里弹窗 PUT 和行删除
+ * 都按 `id` 拼 URL（`/api/orders/undefined`，或更糟：改到错误的行）。
+ * 生成器读的就是 `tableOptions.rowkey`，所以顶层值必须并进去。
+ *
+ * 冲突时取**顶层**（它是本工具的显式参数，且独立 dialog 块用的也是它）并告警，
+ * 不静默二选一。
+ */
+function withRowkey(
+  tableOptions: Record<string, unknown> | undefined,
+  rowkey: string | undefined,
+): { tableOptions: Record<string, unknown> | undefined; warning?: string } {
+  if (!rowkey) return { tableOptions };
+  const prev = tableOptions?.rowkey;
+  return {
+    tableOptions: { ...(tableOptions ?? {}), rowkey },
+    warning:
+      prev !== undefined && prev !== rowkey
+        ? `rowkey 冲突：tableOptions.rowkey="${String(prev)}" vs 顶层 rowkey="${rowkey}" —— 取顶层（弹窗 PUT / 删除 URL 与独立 dialog 块必须用同一个键）。`
+        : undefined,
+  };
 }
 
 /**
@@ -211,6 +245,7 @@ export function registerGenerateCrud(server: McpServer) {
               })()
             : undefined;
 
+          const rowkeyOpt = withRowkey(args.tableOptions, args.rowkey);
           const { config, warnings: composeWarnings } = composeCrudConfig({
             name: args.name,
             apiUrl: args.apiUrl,
@@ -224,7 +259,7 @@ export function registerGenerateCrud(server: McpServer) {
             actions: args.actions,
             permissions: args.permissions,
             pagination: args.pagination,
-            tableOptions: args.tableOptions,
+            tableOptions: rowkeyOpt.tableOptions,
             formLayout: args.formLayout,
             operationColumn: args.operationColumn,
             tableBtns: args.tableBtns,
@@ -234,6 +269,7 @@ export function registerGenerateCrud(server: McpServer) {
             treeConfig: args.treeConfig,
             mergeConfig: args.mergeConfig,
           });
+          if (rowkeyOpt.warning) composeWarnings.unshift(rowkeyOpt.warning);
 
           // 前门确定性校验(C2·A3):组合出的 config 先过权威 Zod 判定,非法则回结构化错误、不生成。
           const check = validateAndRepair(config);
@@ -261,6 +297,10 @@ export function registerGenerateCrud(server: McpServer) {
           if (allWarnings.length > 0) {
             out.push("", "⚠️ Warnings (non-blocking — review and re-generate if any indicate a mapping mistake):");
             for (const w of allWarnings) out.push(`  - ${w}`);
+          }
+          // AN-15：与 generate_crud_from_config 同一份前置清单（同一个 formatPreflight）。
+          if (result.preflight) {
+            out.push("", formatPreflight(result.preflight));
           }
           out.push("", "---", "");
           if (result.wrapperCode) {

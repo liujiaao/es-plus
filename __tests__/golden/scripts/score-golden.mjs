@@ -20,8 +20,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { transformSync } from 'esbuild'
 import { generateFromConfig, StructuredCrudConfigSchema } from '@es-plus/shared'
+import { compileProduct, fmtError } from '../../../scripts/eval/compile-leg.mjs'
 import { SCENES, isCrudCase, sceneOf } from '../../../scripts/eval/scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -30,37 +30,23 @@ const CASES_DIR = join(__dirname, '..', 'cases')
 /** @typedef {{ file: string, failures: string[] }} CaseResult */
 
 /**
- * 语法校验 —— 本层此前只做字符串匹配（countOccurrences / propPresent），
+ * 语法/编译校验 —— 本层在补合成之前只做字符串匹配（countOccurrences / propPresent），
  * 因此**语法坏掉的生成物照样能通过 PR 门禁**：唯一的「能编译」证明在夜间的
  * golden-e2e（vite build），而它不阻塞合并、也不阻塞部署。
  *
- * 这里补一次真实解析，成本是毫秒级、无需 npm install：
- *   - schema 模式产出 `export const pageSchema = {<JSON>}` → 直接 JSON.parse 其载荷；
- *   - 两种模式的 SFC → 抽出 <script> 块交给 esbuild 解析（TS 语法错误会抛出）。
- *
- * 覆盖不到的是模板编译与依赖解析（那是 golden-e2e 的职责），但「生成器拼出语法错误代码」
- * 这一类真实故障从此在 PR 上就会红。
+ * AN-12 起用 Tier A 编译腿（`scripts/eval/compile-leg.mjs`）：
+ *   - schema 模式产出 `export const pageSchema = {<JSON>}` → JSON 载荷单独 JSON.parse
+ *     （比「模块能解析」更严格，能挡住拼坏的对象字面量）；
+ *   - 两种模式的产物（schema: code + wrapper；sfc: 整份 SFC）→ 真编译：脚本过
+ *     `compileScript`、**模板过 `compileTemplate`**。旧尺子只把 `<script>` 块交给
+ *     esbuild，模板从未被 Vue 编译器看过 —— 坏 mustache / 非法插槽名能一路绿到 PR 门禁。
  */
 function checkSyntax({ mode, code, wrapper, failures }) {
-  /** esbuild 解析一段 TS/JS，返回错误信息或 null（只解析、不解析依赖） */
-  const parseTs = (src, label) => {
-    try {
-      transformSync(src, { loader: 'ts' })
-      return null
-    } catch (err) {
-      return `${label} failed to parse — ${String(err.message).split('\n')[0]}`
-    }
-  }
-
   if (mode !== 'sfc') {
     // schema 模式的 code 是一个 TS 模块：
     //   import type { CrudPageSchema } from '@es-plus/vue3'
     //   export const pageSchema: CrudPageSchema = { ...JSON... }
     // （typescript:false 时为 `export const pageSchema = { ... }`，无类型注解）
-    const moduleErr = parseTs(code, 'schema mode: pageSchema module')
-    if (moduleErr) failures.push(moduleErr)
-
-    // 载荷必须是合法 JSON —— 这比「模块能解析」更严格，且能挡住生成器拼坏对象字面量
     const m = code.match(/export\s+const\s+pageSchema\b[^=]*=\s*(\{[\s\S]*\})\s*$/)
     if (!m) {
       failures.push('schema mode: could not locate the `pageSchema` object literal')
@@ -73,27 +59,8 @@ function checkSyntax({ mode, code, wrapper, failures }) {
     }
   }
 
-  // SFC（schema 模式的 wrapper / sfc 模式的 code）的 <script> 块必须能被解析
-  const sfcs = []
-  if (mode === 'sfc') {
-    if (code.trim()) sfcs.push(['sfc code', code])
-  } else if (wrapper && wrapper.trim()) {
-    sfcs.push(['wrapper', wrapper])
-  }
-  for (const [label, sfc] of sfcs) {
-    const blocks = [...sfc.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-    for (const [, attrs, body] of blocks) {
-      // 生成器产出的是 <script setup lang="tsx">（含 JSX 渲染函数）——用 'ts' 解析 JSX
-      // 会误报「Expected ">" but found ...」。按声明语言选择 loader。
-      const lang = (attrs.match(/lang\s*=\s*["']?([a-z]+)/i) || [])[1]?.toLowerCase()
-      const loader = lang === 'tsx' ? 'tsx' : lang === 'jsx' ? 'jsx' : lang === 'ts' ? 'ts' : 'js'
-      try {
-        transformSync(body, { loader })
-      } catch (err) {
-        failures.push(`${label}: <script> block failed to parse — ${err.message.split('\n').slice(0, 2).join(' ')}`)
-      }
-    }
-  }
+  const leg = compileProduct({ code, wrapperCode: wrapper }, { filename: 'golden.ts' })
+  if (!leg.ok) failures.push(`compile leg failed — ${fmtError(leg.error)}`)
 }
 
 function isVisible(field, key) {

@@ -509,12 +509,36 @@ const id = (v) => String(v)
 export function q(value) { return "'" + id(value) + "'" }
 export function qBt(value) { return "\`" + id(value) + "\`" }
 export function qAttr(value) { return '"' + id(value) + '"' }
+// 双引号属性里的表达式只实体化双引号字符（其余保持原样给 Volar/TS 解析，见真实现头注）；
+// 恒等化即「不挡双引号」—— 非空证明要证明的正是这一类失效。
+export function qExprAttr(value) { return id(value) }
 export function qKey(prop) { return BARE_IDENTIFIER.test(prop) ? prop : "'" + prop + "'" }
 export function qMember(prop) { return BARE_IDENTIFIER.test(prop) ? "." + prop : "['" + prop + "']" }
 export function qMustache(value) { return "'" + id(value) + "'" }
 export function numOrStr(v) { return typeof v === 'number' ? String(v) : "'" + v + "'" }
 export function sanitizeForComment(src) { return String(src) }
 export function inlineJson(value, space) { return JSON.stringify(value, null, space) }
+export function findNonJsonValues(value, path = '') {
+  // 与 assertEmittableExpr 同理：它**不是**转义器，而是「无法 JSON 化的成员」探测器，
+  // 必须保留真实现 —— 换掉它会让 btns/expandConfig/editRender 的告警路径在非空证明里失真。
+  const at = (key) => /^[A-Za-z_$][\\w$]*$/.test(key) ? (path ? path + '.' + key : key) : path + '[' + JSON.stringify(key) + ']'
+  if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') return [path || '(root)']
+  if (value === null || typeof value !== 'object') return []
+  if (Array.isArray(value)) {
+    const out = []
+    value.forEach((v, i) => {
+      if (!(i in value) || v === undefined) out.push(path + '[' + i + ']')
+      else out.push(...findNonJsonValues(v, path + '[' + i + ']'))
+    })
+    return out
+  }
+  const out = []
+  for (const [k, v] of Object.entries(value)) {
+    if (v === undefined) continue
+    out.push(...findNonJsonValues(v, at(k)))
+  }
+  return out
+}
 export function assertEmittableExpr(src) {
   for (const loader of ['tsx', 'ts']) {
     try {

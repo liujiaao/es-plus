@@ -317,3 +317,27 @@ describe('useVxeColumnAdapter — footerFormatter 一等公民字段', () => {
     expect(col.footerFormatter({ items: [], _columnIndex: 0, column: [], columns: [] })).toBe('sum')
   })
 })
+
+// ─── AN-10 省略号（契约键 ellipsis + 存量写法 showOverflowTooltip）─────────
+// 修前 vxe 适配器只认 `col.showOverflow`（vxe 自己的键），生成器发的
+// `showOverflowTooltip` 与 IR 的 `ellipsis` **都被静默丢弃** —— 同一份配置在
+// el-table 有 tooltip、切到 vxe 就没有。
+describe('useVxeColumnAdapter（vue3）— AN-10 省略号', () => {
+  it('契约键 ellipsis → showOverflow:\'tooltip\'', () => {
+    const cols = ref([{ prop: 'name', label: '姓名', ellipsis: true }] as TableColumn[])
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBe('tooltip')
+  })
+
+  it('存量写法 showOverflowTooltip 一并认', () => {
+    const cols = ref([{ prop: 'name', label: '姓名', showOverflowTooltip: true }] as any)
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBe('tooltip')
+  })
+
+  it('未设置 → 不发 showOverflow（不制造默认截断）', () => {
+    const cols = ref([{ prop: 'name', label: '姓名' }] as TableColumn[])
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBeUndefined()
+  })
+})

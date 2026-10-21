@@ -1,0 +1,17 @@
+{
+  "id": "prd-07-employee-search-form-only",
+  "product": "员工查询表单",
+  "target": "vue3",
+  "spec": "这是一个独立的员工查询表单，不属于列表页。\n\n【表单字段】姓名（输入框）、部门（下拉）、入职日期（日期选择）\n【按钮】查询、重置\n没有结果列表，也没有新增或编辑。",
+  "config": {
+    "name": "EmployeeSearch",
+    "apiUrl": "/api/employees/search",
+    "target": "vue3",
+    "fields": [
+      { "prop": "name", "label": "姓名", "formtype": "Input", "inTable": false, "inForm": false },
+      { "prop": "dept", "label": "部门", "formtype": "Select", "inTable": false, "inForm": false },
+      { "prop": "hiredAt", "label": "入职日期", "formtype": "DatePicker", "inTable": false, "inForm": false }
+    ]
+  },
+  "notes": "无表分支：query-only，前门应发独立查询表单片段；不得补一张假列表。"
+}

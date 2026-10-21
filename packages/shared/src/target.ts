@@ -26,7 +26,7 @@
  *  - 不在运行时被引用，纯构建产物输出工具
  */
 
-import { q, qAttr, qMember, qMustache } from './codegen-escape.js'
+import { q, qAttr, qExprAttr, qMember, qMustache } from './codegen-escape.js'
 
 export type TargetFramework = 'vue3' | 'vue2' | 'antdv'
 
@@ -210,11 +210,13 @@ export function buildDeleteConfirmBlock(opts: {
  *  - antdv：<a-tag :color="... 'green' : 'red'">
  *
  * 两个位置需要**两套**转义，缺一不可：
- *  - `:type=` / `:color=` 是**双引号包起来的 HTML 属性值**。`qMember` 给的是 JS 表达式
- *    形态（`row['b"x']`），其中的 `"` 在 JS 里合法，却会把外层属性值撑破。所以整条表达式
- *    还要再过一遍 `qAttr`（实体化），HTML 解析器解码后仍是同一条 JS 表达式。
+ *  - `:type=` / `:color=` 是**双引号包起来的 HTML 属性值**，里面是**JS 表达式**。
+ *    `qMember` 给的是 JS 表达式形态（`row['b"x']`），其中的 `"` 在 JS 里合法，却会把
+ *    外层属性值撑破 —— 所以整条表达式要过 `qExprAttr`：它**只**实体化 `"`。
+ *    不能整条走 `qAttr`：`'` / `&` 的实体不会影响 HTML 定界，却会被 Volar 原样交给
+ *    类型检查器（`&#39;` → TS1003、`&amp;&amp;` → TS1005），让生成页面在 IDE 里报错。
  *    实测 `prop: 'b"@mouseover="alert(1)'` 会生成
- *    `<el-tag :type="row['b"@mouseover="alert(1)'] === 1 ? …">` —— 凭空多出一个事件属性。
+ *    `<el-tag :type="row['b&quot;@mouseover=&quot;alert(1)'] === 1 ? …">` —— 属性没有被撑破。
  *  - `{{ … }}` 是 mustache，`qMember` 已经走 `qMustache` 挡住 `}}` 提前收尾。
  */
 export function buildStatusTagTemplate(opts: {
@@ -232,14 +234,14 @@ export function buildStatusTagTemplate(opts: {
   if (opts.target === 'antdv') {
     const colorExpr = `row${qMember(prop)} === 1 ? 'green' : 'red'`
     return [
-      `${indent}<a-tag :color="${qAttr(colorExpr)}">`,
+      `${indent}<a-tag :color="${qExprAttr(colorExpr)}">`,
       `${indent}  ${text}`,
       `${indent}</a-tag>`,
     ]
   }
   const typeExpr = `row${qMember(prop)} === 1 ? 'success' : 'danger'`
   return [
-    `${indent}<el-tag :type="${qAttr(typeExpr)}">`,
+    `${indent}<el-tag :type="${qExprAttr(typeExpr)}">`,
     `${indent}  ${text}`,
     `${indent}</el-tag>`,
   ]

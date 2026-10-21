@@ -1,0 +1,62 @@
+{
+  "nl": "合同管理：表格展示标题、编码、状态（生效中/已到期）；合同编号由系统自动生成，表单里不用填；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "code",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inForm:code"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "合同编号也允许手工填写，续签时要沿用原标题的编号。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv14ContractCodeForm",
+    "apiUrl": "/api/contract-code-form",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": true,
+        "inForm": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "生效中",
+            "value": "active"
+          },
+          {
+            "label": "已到期",
+            "value": "expired"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inForm 铰链（编号）。结构同 conv-13。"
+}

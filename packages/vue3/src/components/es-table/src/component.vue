@@ -32,6 +32,7 @@
               :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
+              @row-click="handleVirtualRowClick"
             />
             <!-- vxe 高性能引擎：attrs 穿透管道将 <es-table @xxx> 事件转发到 vxe-grid -->
             <vxe-engine
@@ -74,7 +75,7 @@
                   <div class="es-empty-description">{{ options.emptyText || '暂无数据' }}</div>
                 </div>
               </template>
-              <column-item v-for="(cols, index) in filteredColumns" :key="cols.prop || cols.key || index" :cols="{ ...cols, columnIndex: index }">
+              <column-item v-for="(cols, index) in filteredColumns" :key="cols.prop || cols.key || cols.type || index" :cols="{ ...cols, columnIndex: index }">
                 <template v-if="cols.scopedSlots && cols.scopedSlots.customRender" #[cols.scopedSlots.customRender]="{ scope }">
                   <slot v-bind="{ ...cols, columnIndex: index, row: scope.row, column: scope.column }" :name="cols.scopedSlots.customRender" :scope="scope" />
                 </template>
@@ -155,6 +156,7 @@ import {
   buildRowSpanMethod,
   resolveMergeConfig,
   toCssSize,
+  buildLeadingColumns,
 } from '@es-plus/core'
 import type { TableColumn, PaginationConfig } from '../../../types'
 
@@ -474,7 +476,11 @@ const filteredColumns = computed(() => {
     }
   }
 
-  return list
+  // AN-09：前置非数据列（选择 → 序号 → 展开）由 core 单源合成，顺序/宽度与 vxe / 虚拟引擎一致。
+  // 已显式声明同类型列（含 hidCol 隐藏列）时不重复注入；合成列没有 prop/key，
+  // 因此不参与上面的 formatter 注入，也不参与 width→minWidth 转换（放在最后一步）。
+  const leadingColumns = buildLeadingColumns(props.options, columnRowList.value) as unknown as TableColumn[]
+  return [...leadingColumns, ...list]
 })
 
 // es-table 内部选项键，不应传递给 el-table
@@ -509,6 +515,20 @@ const tableAttrs = computed(() => {
 // 合并 options attrs 和父级 fallthrough attrs，供 el-table 使用
 const fallthroughAttrs = useAttrs()
 
+/**
+ * 虚拟滚动引擎的行点击转发（AN-11⑥）。
+ *
+ * el-table / vxe 两条路径都靠 attrs 透传把父级的 `onRowClick` 送到引擎
+ * （`tableBindAttrs` / `vxePassthroughAttrs`），唯独 virtual 分支是显式绑定、一个 on*
+ * 都没接 —— 于是 `<es-table @row-click>` 在 virtual 引擎下被静默吞掉。这里补上同一条边。
+ */
+const handleVirtualRowClick = (row: Record<string, unknown>, event: Event) => {
+  const handler = fallthroughAttrs.onRowClick as
+    | ((row: Record<string, unknown>, event: Event) => void)
+    | undefined
+  handler?.(row, event)
+}
+
 // 非事件 attrs 透传给根 div（保留 class/style/data-* 等）
 const rootPassthroughAttrs = computed(() => {
   const result: Record<string, unknown> = {}
@@ -539,6 +559,13 @@ const tableBindAttrs = computed(() => {
   const result: Record<string, unknown> = { ...tableAttrs.value, ...filteredFallthrough }
   if (props.options.rowkey) {
     result.rowKey = props.options.rowkey
+  }
+  // 默认排序（AN-10）：options.defaultSort → el-table 的 `default-sort`（camelCase 绑定同义）。
+  // 显式映射而不是靠 TABLE_INTERNAL_KEYS 之外的键「碰巧流过去」：①三端契约要可断言；
+  // ②el-table 只有在**目标列 sortable** 时才展示默认排序状态 —— 派生列的 sortable 由生成器
+  // 补（见 shared/structured-generator 的 AN-10 分支），这里只负责把值送到。
+  if (props.options.defaultSort) {
+    result.defaultSort = props.options.defaultSort
   }
   // 树表（AI-09 子项③）：运行时家 options.treeConfig → el-table 原生 prop。
   // el-table 渲染树靠「row-key + 行数据里的嵌套子数组」，tree-props 只用于自定义子键名，

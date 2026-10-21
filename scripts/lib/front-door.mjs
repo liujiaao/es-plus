@@ -21,7 +21,11 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
-import { parseSfc, parseSource, parseComposable } from './compile-check.mjs'
+import { fencedBlocks } from './compile-check.mjs'
+import { compileFences } from '../eval/compile-leg.mjs'
+
+// 围栏抽取的实现在共享尺子里（`compile-check.mjs`）；这里 re-export 保持既有导入面不破。
+export { fencedBlocks }
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -41,7 +45,17 @@ export async function captureFrontDoor() {
       [
         "import { registerGenerateCrud } from '../../packages/mcp-server/src/tools/generate-crud.ts'",
         "import { surfaceFieldSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
+        // AN-19: bundle the published extraction resource so the paid PRD leg uses
+        // the SAME text a client reads (no second hand-written contract).
+        "import { buildDesignExtractionContent } from '../../packages/mcp-server/src/resources/design-extraction.ts'",
         "export { composeCrudConfig } from '@es-plus/shared'",
+        "export { generateFromConfig } from '@es-plus/shared'",
+        // AN-21: `check-tool-shapes.mjs` introspects the front-door (zod 3) knobs and
+        // the shared authoritative (zod 4) schema in ONE bundle, so each side is read
+        // with its own Zod generation — no cross-version object reuse.
+        "export { StructuredCrudConfigSchema } from '@es-plus/shared'",
+        "export { z } from 'zod'",
+        'export { buildDesignExtractionContent }',
         'export function capture() {',
         '  let cap = null',
         '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
@@ -145,30 +159,15 @@ export function frontDoorArgs(config, surfaces) {
   }
 }
 
-/** 从 ```` ```lang ```` 围栏里抽出所有代码块（lang 归一化：vue / tsx / ts / js）。 */
-export function fencedBlocks(text) {
-  const out = []
-  for (const m of text.matchAll(/```([a-zA-Z]*)[ \t]*\r?\n([\s\S]*?)```/g)) {
-    const raw = m[1].toLowerCase()
-    const lang = raw === 'vue' ? 'vue' : raw === 'tsx' ? 'tsx' : raw === 'json' ? 'json' : raw === 'js' || raw === 'jsx' ? 'js' : 'ts'
-    out.push({ lang, code: m[2] })
-  }
-  return out
-}
-
-/** 用共享尺子解析产物里每个围栏块；返回失败描述（空数组 = 全过）。 */
+/**
+ * 用 Tier A 编译腿（AN-12）校验产物里每个围栏块；返回失败描述（空数组 = 全过）。
+ *
+ * 与 eval 的 `compiles` **同一把尺子**：SFC 过 `compileScript` + `compileTemplate`
+ * （模板真的编译），模块过 esbuild。此前这里只解析 `<script>` 块 —— 前门的
+ * `compileFailures` 是门禁判据，模板坏掉的产物不该因为「脚本能解析」而放行。
+ * 围栏为空时返回 []：调用方（front-door-leg）已把「没有任何围栏」单独记成 rejected。
+ */
 export function compileBlocks(text, label) {
-  const failures = []
-  for (const { lang, code } of fencedBlocks(text)) {
-    if (lang === 'vue') parseSfc(code, label, failures)
-    else if (lang === 'tsx') parseComposable(code, true, label, failures)
-    else if (lang === 'json') {
-      try {
-        JSON.parse(code)
-      } catch (err) {
-        failures.push(`${label} — JSON 载荷解析失败：${String(err.message).split('\n')[0]}`)
-      }
-    } else parseSource(code, lang, label, failures)
-  }
-  return failures
+  if (fencedBlocks(text).length === 0) return []
+  return compileFences(text, label)
 }

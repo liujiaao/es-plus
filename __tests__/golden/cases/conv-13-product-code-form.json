@@ -1,0 +1,69 @@
+{
+  "nl": "商品管理：表格展示名称、编码、状态（上架/下架）、金额；编码由系统自动生成，表单里不用填；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "code",
+    "status",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inForm:code"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "编码也允许手工录入，老数据导入时系统生成不了。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv13ProductCodeForm",
+    "apiUrl": "/api/product-code-form",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": true,
+        "inForm": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "上架",
+            "value": "on"
+          },
+          {
+            "label": "下架",
+            "value": "off"
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inForm 铰链：初版 NL 明说「系统自动生成，表单不用填」→ 模型置 inForm:false（结构性 miss）；纠正后翻 true。注意与 inTable 铰链方向相反，防止 scorer 只测一侧。"
+}

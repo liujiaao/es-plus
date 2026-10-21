@@ -6,6 +6,7 @@ import { registerNlToConfigExamplesResource } from "./nl-to-config-examples.js";
 import { registerSurfacesExamplesResource } from "./surfaces-examples.js";
 import { registerConventionsResource } from "./conventions.js";
 import { registerCrudPageSchemaResource } from "./crud-page-schema.js";
+import { registerDesignExtractionResource } from "./design-extraction.js";
 
 export function registerResources(server: McpServer) {
   registerSchemaResources(server);
@@ -15,4 +16,5 @@ export function registerResources(server: McpServer) {
   registerSurfacesExamplesResource(server);
   registerConventionsResource(server);
   registerCrudPageSchemaResource(server);
+  registerDesignExtractionResource(server);
 }

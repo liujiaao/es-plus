@@ -339,17 +339,69 @@ describe('EsCrudPage', () => {
   })
 
   describe('actions configuration', () => {
-    it('defaults to add/edit/delete actions when not specified', () => {
+    // AN-06：此前的兜底是 `props.schema.actions || ['add','edit','delete']` —— 缺 actions
+    // 时**猜**一套 CRUD，于是只读页多出删除按钮、只导出页多出三种写操作。现按 schema
+    // 结构推导（core `resolveCrudActions`）：显式 → dialogs key → dialogFormItems → 只读。
+    it('无 actions / 无 dialogs / 无 dialogFormItems → 只读（不再凭空多出 add/edit/delete）', () => {
       const wrapper = mountCrudPage({
         schema: { columns: [{ prop: 'id', label: 'ID' }] }
       })
       const table = wrapper.findComponent({ name: 'EsTable' })
       const columnsProp = table.props('columns') as any[]
+      // 既没有操作列，也没有「新增」按钮 —— 该 schema 没有任何可打开的表单弹窗。
+      expect(columnsProp.some((c: any) => c.prop === 'operate')).toBe(false)
+    })
+
+    it('旧 schema（只有 dialogFormItems、无 actions）仍渲染 add/edit/delete —— 兼容分支不变', () => {
+      const wrapper = mountCrudPage({
+        schema: {
+          columns: [{ prop: 'name', label: '姓名' }],
+          dialogFormItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }]
+        }
+      })
+      const table = wrapper.findComponent({ name: 'EsTable' })
+      const columnsProp = table.props('columns') as any[]
       const actionCol = columnsProp.find((c: any) => c.prop === 'operate')
       expect(actionCol).toBeDefined()
-      // Should have edit and delete buttons (view not included by default)
       expect(actionCol.btns.some((b: any) => b.name === '编辑')).toBe(true)
       expect(actionCol.btns.some((b: any) => b.name === '删除')).toBe(true)
+    })
+
+    it('新模式（只有 dialogs、无 actions）→ 从 dialog key 推导 add/edit，不补 delete', () => {
+      const wrapper = mountCrudPage({
+        schema: {
+          columns: [{ prop: 'name', label: '姓名' }],
+          dialogs: {
+            add: { title: '新增', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }] },
+            edit: { title: '编辑', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }] }
+          }
+        }
+      })
+      const table = wrapper.findComponent({ name: 'EsTable' })
+      const actionCol = (table.props('columns') as any[]).find((c: any) => c.prop === 'operate')
+      expect(actionCol).toBeDefined()
+      expect(actionCol.btns.some((b: any) => b.name === '编辑')).toBe(true)
+      // 没有 delete 弹窗可供推导 —— 不能因为「大多数 CRUD 都有删除」就猜一个。
+      expect(actionCol.btns.some((b: any) => b.name === '删除')).toBe(false)
+    })
+
+    it('显式 actions [add, view] → 有「新增」与「查看」，没有「编辑/删除」', () => {
+      const wrapper = mountCrudPage({
+        schema: {
+          columns: [{ prop: 'name', label: '姓名' }],
+          formItems: [{ prop: 'name', label: '姓名', formtype: 'Input', span: 8 }],
+          dialogs: {
+            add: { title: '新增', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }] },
+            view: { title: '查看', formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }] }
+          },
+          actions: ['add', 'view']
+        }
+      })
+      const table = wrapper.findComponent({ name: 'EsTable' })
+      const actionCol = (table.props('columns') as any[]).find((c: any) => c.prop === 'operate')
+      expect(actionCol.btns.some((b: any) => b.name === '查看')).toBe(true)
+      expect(actionCol.btns.some((b: any) => b.name === '编辑')).toBe(false)
+      expect(actionCol.btns.some((b: any) => b.name === '删除')).toBe(false)
     })
 
     it('includes view button when actions include view', () => {
@@ -497,6 +549,31 @@ describe('EsCrudPage', () => {
         await nextTick()
         expect(wrapper.emitted('export')).toBeTruthy()
       }
+    })
+
+    // ─── AN-11⑥：两个「只写进 defineEmits、从不 emit」的死事件 ───
+    it('query 按钮点击 → 发起新搜索并派发 query 事件（带当前查询模型）', async () => {
+      const wrapper = mountCrudPage({ schema: schemaWithForm })
+      const form = wrapper.findComponent({ name: 'EsForm' })
+      const configBtn = form.props('configBtn') as any[]
+      const queryBtn = configBtn.find((b: any) => b.key === 'query')
+      expect(queryBtn).toBeDefined()
+      // 查询键不能再用 triggerEvent（那条分支由 EsForm 独占、不回调 click），必须自带 click
+      expect(queryBtn.triggerEvent).toBeFalsy()
+      queryBtn.click()
+      await nextTick()
+      // 查询模型由 formItems 的 prop 初始化（见组件里 immediate 的 watch）
+      expect(wrapper.emitted('query')).toEqual([[{ name: '', status: '' }]])
+    })
+
+    it('内层 es-table 的 row-click → 转发为本组件的 row-click', async () => {
+      const wrapper = mountCrudPage()
+      const row = { id: 1, name: '张三' }
+      // Vue 3 会把已声明的事件从 $attrs 摘掉，故不会经 v-bind="$attrs" 落到内层；
+      // 组件必须显式监听（本用例守的就是这条接线）。
+      wrapper.findComponent({ name: 'EsTable' }).vm.$emit('row-click', row)
+      await nextTick()
+      expect(wrapper.emitted('row-click')).toEqual([[row]])
     })
   })
 })

@@ -1,0 +1,67 @@
+{
+  "nl": "配送管理：表格展示标题、送达时段、日期、状态（待配送/已送达）；送达时段按时段记录；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "timeSlot",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "formtype:timeSlot"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "送达时段用时间选择器，只需要选具体时刻。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv19DeliveryTimeslotTimepicker",
+    "apiUrl": "/api/delivery-timeslot-timepicker",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "timeSlot",
+        "label": "送达时段",
+        "formtype": "TimePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待配送",
+            "value": "pending"
+          },
+          {
+            "label": "已送达",
+            "value": "delivered"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "formtype 铰链：初版说「按时段记录」但不点名控件，模型可能落 Select 或 Input；纠正为 TimePicker。"
+}

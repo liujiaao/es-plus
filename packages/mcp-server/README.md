@@ -2,6 +2,10 @@
 
 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方 MCP Server —— 让 AI 编码工具自动生成 CRUD 页面。同一 Schema 可生成 Vue 3 或 Vue 2 版本代码。
 
+> **维护基线（先读这两份）**
+> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、15 个工具的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
+> - [AI-NATIVE-REMEDIATION-PLAN.md](./AI-NATIVE-REMEDIATION-PLAN.md) —— 面向「真实编译 100% + 准确率 95%」的 `AN-01..AN-29` 可执行计划、阶段门禁与验收口径。
+
 ## 客户端兼容矩阵
 
 | 客户端 | MCP 支持 | 推荐配置文件 |
@@ -275,6 +279,9 @@ MCP Server 提供多个工具，AI 编码工具会根据你的描述自动选择
 - schema 无法表达的业务逻辑 → 落成**带标记的扩展点**（`formatter`/`render` 串 + `TODO(es-plus)` 桩 + `warnings`），显式暴露而非静默丢弃。
 - 生成前先读 `esplus://conventions`、`esplus://examples/nl-to-config`、`esplus://types`；草拟后对照原始请求**自审**再调用。
 - 返回 `warnings[]` —— 交付前逐条解决。
+- 返回 **`preflight` 前置清单**：宿主入口必须配齐的 `httpRequest` / `permission` / `t` / JSX 插件 / UI 库。
+  它按**本配置**逐项判定 required（没有 `permissionValue` 就不要求 `permission`），并附一份可直接复制的入口样板。
+  清单来自 `packages/shared/src/preflight.ts`，与 `scaffold_page` 是**同一个** builder。
 
 ### generate_crud_page（兜底 / no-LLM fallback）
 
@@ -354,14 +361,39 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 
 ### scaffold_page
 
-生成最小化页面脚手架，适合需要手动填充配置的场景。
+生成最小化页面脚手架，适合需要手动填充配置的场景。返回值与生成物**共用同一份 `preflight` 清单**
+（`buildScaffoldPreflight`），并附可直接复制的入口样板。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `name` | string | 页面名称（kebab-case） |
 | `features` | string[]? | 功能列表，默认 `['query', 'table']` |
+| `target` | enum? | `vue3`（默认）/ `vue2` / `antdv` |
 
 可选 features：`query`（查询表单）、`table`（数据表格）、`dialog`（弹窗）
+
+清单里 `httpRequest` 只在含 `table` 时 required（查询-only 脚手架不取远端数据）；
+`dialog` 走 `useDialog()`，没有 JSX render，因此**不**要求 JSX 插件。
+
+### doctor_page
+
+检查宿主**已有**的入口装配是否满足前置清单。传入入口源码（可选 `viteConfig` 与生成该页面用的
+`config`），按三态报告每一项：
+
+- `ok` —— 找到了证据；
+- `missing` —— 确定缺失（对应能力会静默失效，权限项甚至是**失败即放行**）；
+- `unverified` —— 字面量扫描看不到（`app.use(ESPlus, options)`、`...spread`、未提供 `viteConfig`），
+  **不是通过**，报告会明确写出需人工确认。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `entry` | string | 应用入口源码（`src/main.ts`；vue2 为 `src/main.js`） |
+| `target` | enum? | `vue3`（默认）/ `vue2` / `antdv` |
+| `config` | object? | 生成该页面所用的配置；给出后只要求它真正用到的能力 |
+| `viteConfig` | string? | `vite.config.*` 源码，用于验证 UI 库自动导入与 JSX 插件 |
+
+扫描前会**剥掉注释** —— 入口样板注释里就写着 `permission / t / httpRequest`，
+不剥注释会把「只在注释里提过」误判为「已配置」。
 
 ---
 
@@ -379,6 +411,7 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 | `esplus://schemas/api-params` | 远程数据加载 JSON Schema |
 | `esplus://types` | 完整 TypeScript 类型定义 |
 | `esplus://examples` | 8 个预设 CRUD 示例（含生成代码） |
+| `esplus://design-extraction` | PRD / 线框 → surfaces 的提取契约（检查清单、正反例；图片由宿主视觉转写，server 不接收图片） |
 
 ---
 
@@ -388,6 +421,7 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 |--------|------|------|
 | `crud-page` | `description` | 生成完整 CRUD 页面的系统提示 |
 | `form-config` | `description` | 仅生成表单配置 JSON 的系统提示 |
+| `spec-to-surfaces` | `spec`, `target?`, `mode?` | 把文本 PRD / 线框转写稿转成 `generate_crud` 的 surfaces 意图表（第一英里） |
 
 ---
 

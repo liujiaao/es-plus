@@ -140,6 +140,14 @@ const columnBindAttr = (cols: TableColumn) => {
     options.align = 'center'
   }
 
+  // AN-10：契约键 `ellipsis` → el-table 原生 `show-overflow-tooltip`。
+  // 放在这里而不是只放在下面的 ellipsis 分支：`render`/`scopedSlots`/`groups` 分支各自
+  // 直接 `v-bind="columnBindAttr(...)"`，只有这一处能把省略号带给**所有**渲染分支。
+  // 同时保留 `showOverflowTooltip` 原样透传（存量配置/显式列仍可能写它）。
+  if (cols.ellipsis === true && !options.showOverflowTooltip) {
+    options.showOverflowTooltip = true
+  }
+
   return options
 }
 

@@ -119,15 +119,6 @@
                 :render="getColumnRender(column)"
               />
 
-              <!-- 省略号列 -->
-              <a-tooltip
-                v-else-if="column.ellipsis && text != null && String(text).length > 20"
-                :title="text"
-                placement="top"
-              >
-                <span class="ellipsis-text">{{ text }}</span>
-              </a-tooltip>
-
               <!-- scopedSlots 列 -->
               <template v-else-if="getColumnScopedSlotName(column)">
                 <slot
@@ -135,6 +126,16 @@
                   :name="getColumnScopedSlotName(column)"
                 />
               </template>
+
+              <!--
+                省略号（AN-10）：刻意**不**在这里手搓 tooltip 分支。
+                修前这里有一条 `column.ellipsis && text.length > 20` 的 a-tooltip 分支：
+                  1. 它排在 render/scopedSlots **之前**，两者同时存在时自定义单元格被静默吞掉；
+                  2. 它直接用原始 `text`，同一列的 formatter 被绕过（与 vue3/vue2 不一致）；
+                  3. 20 字是拍脑袋阈值，与列宽无关。
+                省略号交给列上的 `advCol.ellipsis = true`（antd 的 CSS 截断 + 原生 title），
+                这样 formatter / customRender / bodyCell 插槽都能正常叠加。
+              -->
             </template>
           </a-table>
         </div>
@@ -202,6 +203,7 @@ import {
   buildColumnSpans,
   resolveMergeConfig,
   toCssSize,
+  synthesizeLeadingColumns,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -582,11 +584,12 @@ const resolvedRowSelection = computed(() => {
 const adaptedColumns = computed(() => {
   const cols: Record<string, unknown>[] = []
   const visible = filteredColumns.value
-  const hasIndexCol = visible.some((c) => c.type === 'index')
 
-  // 序号列（options.snIndex 注入；已存在 type:'index' 列时跳过，避免重复）
-  if (props.options.snIndex && !hasIndexCol) {
-    cols.push(createSnAdvColumn())
+  // AN-09：前置列判据走 core 单源（选择 → 序号 → 展开）。ADV 的差异在**消费者**：
+  // 选择列由 rowSelection 渲染、展开列由 expandedRowRender 整行渲染，二者都不是数据列，
+  // 因此这里只把序号列注入列集合。
+  for (const spec of synthesizeLeadingColumns(props.options, visible)) {
+    if (spec.type === 'index') cols.push(createSnAdvColumn())
   }
 
   const t = typeof esPlus.t === 'function' ? (esPlus.t as (k: string) => string) : undefined
@@ -639,6 +642,19 @@ const adaptedColumns = computed(() => {
     }
 
     cols.push(advCol)
+  }
+
+  // AN-10：`tableOptions.defaultSort` → 目标列的 `defaultSortOrder`。
+  // a-table 没有整表 default-sort prop（此前该键在 ADV 上**完全没人读**，静默失效），
+  // 默认排序状态只能落在列上。门槛与 el-table 一致：只有可排序列才认 —— antd 在无
+  // `sorter` 时同样静默忽略 `defaultSortOrder`，这里不硬塞 `sorter`（那会让不可排序
+  // 的列凭空可点，反而与 vue3/vue2 不一致）。
+  const ds = props.options.defaultSort
+  if (ds && ds.prop) {
+    const target = cols.find((c) => c.dataIndex === ds.prop)
+    if (target && target.sorter) {
+      target.defaultSortOrder = ds.order === 'descending' ? 'descend' : 'ascend'
+    }
   }
 
   // 宽度自适应：如果没有弹性列，将最后一列的 width → minWidth
@@ -698,6 +714,10 @@ const tableBindAttrs = computed(() => {
   const result: Record<string, unknown> = {}
   if (props.options.rowkey) result.rowKey = props.options.rowkey
   for (const [k, v] of Object.entries(fallthroughAttrs)) {
+    // AN-11⑥：`onRowClick` 由 `resolvedCustomRow` 翻译成 a-table 的行点击回调，
+    // 不能再原样落到 a-table 上（a-table 没有 row-click 事件，会变成一枚挂在根节点、
+    // 名字为 rowclick 的惰性 DOM 监听）。
+    if (k === 'onRowClick') continue
     if (!TABLE_INTERNAL_KEYS.has(k)) result[k] = v
   }
   return result
@@ -727,19 +747,32 @@ const resolvedRowClassName = computed(() => {
   }
 })
 
+/**
+ * 行属性（对齐 vue3 的 rowStyle/highlightCurrentRow）+ **行点击**（AN-11⑥）。
+ *
+ * a-table 没有 `row-click` 事件：行事件只能经 `customRow` 返回的 `onClick` 挂。
+ * 此前 `<es-table @row-click>` 在 ADV 端把 `onRowClick` 当普通 attr 绑到 a-table 上，
+ * 变成一枚永不触发的 DOM 监听 —— 与 vue3/vue2（原生事件透传）结构性不一致。
+ * 这里读 `fallthroughAttrs.onRowClick`（与 vue3 同口径：row-click 都是**透传**而非
+ * 声明事件，`useAttrs()` 响应式，父级换监听器无需重挂），并与高亮共用同一个 onClick。
+ */
 const resolvedCustomRow = computed((): any => {
   const rowStyle = props.options.rowStyle
   const highlighted = props.options.highlightCurrentRow
   const rk = rowKeyValue.value
-  if (!rowStyle && !highlighted) return undefined
+  const onRowClick = fallthroughAttrs.onRowClick as
+    | ((record: Record<string, unknown>, index: number, event: Event) => void)
+    | undefined
+  if (!rowStyle && !highlighted && !onRowClick) return undefined
   return (record: Record<string, unknown>, index: number) => {
     const s: Record<string, unknown> = {}
     if (typeof rowStyle === 'function') Object.assign(s, rowStyle({ row: record, rowIndex: index }))
     else if (rowStyle) Object.assign(s, rowStyle)
-    const onClick = highlighted
-      ? () => { currentRowKey.value = (record as any)?.[rk] ?? index }
-      : undefined
-    return { style: Object.keys(s).length ? s : undefined, onClick }
+    const onClick = (event: Event) => {
+      if (highlighted) currentRowKey.value = (record as any)?.[rk] ?? index
+      onRowClick?.(record, index, event)
+    }
+    return { style: Object.keys(s).length ? s : undefined, onClick: (highlighted || onRowClick) ? onClick : undefined }
   }
 })
 
@@ -1338,13 +1371,5 @@ defineExpose({
     background-color: #fff;
     border-radius: 6px;
   }
-}
-
-.ellipsis-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: inline-block;
-  max-width: 100%;
 }
 </style>

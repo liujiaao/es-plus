@@ -1,0 +1,67 @@
+{
+  "nl": "满意度回访：表格展示名称、满意度、日期、状态（已完成/待回访）；满意度在回访后录入；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "score",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "formtype:score"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "满意度用 1–5 星的评分控件，回访时直接点星星。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv17VisitScoreRate",
+    "apiUrl": "/api/visit-score-rate",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "score",
+        "label": "满意度",
+        "formtype": "Rate",
+        "inQuery": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "已完成",
+            "value": "done"
+          },
+          {
+            "label": "待回访",
+            "value": "pending"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "formtype 铰链：初版「满意度在回访后录入」不指明控件，模型常落 Input/InputNumber；纠正给出「星级评分」→ Rate。"
+}

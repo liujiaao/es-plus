@@ -14,6 +14,7 @@
         :data-source="tableData"
         :pagination.sync="paginationState"
         v-bind="$attrs"
+        @row-click="onRowClick"
       >
         <es-form
           v-if="schema.formItems && schema.formItems.length"
@@ -62,7 +63,7 @@ import type {
   DialogActionContext,
 } from './types'
 import type { BtnConfig, TableColumn } from '@es-plus/core'
-import { getNestedValue, setNestedValue, parsePathSegments } from '@es-plus/core'
+import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions } from '@es-plus/core'
 
 /**
  * AI-27：弹窗底座键的**显式白名单**（逐键转发给 `dialog()`）。
@@ -191,6 +192,14 @@ export default defineComponent({
     })
 
     // ─── 弹窗归一化（向后兼容旧 dialogFormItems / actions 模式） ─────
+    /**
+     * 生效的 action 集（AN-06）。见 core 的 `resolveCrudActions`：显式 `actions`
+     * （含 `[]` = 只读）→ `dialogs` key 推导 → `dialogFormItems` 旧兼容 → `[]`。
+     * 不再用 `props.schema.actions || ['add','edit','delete']` —— 那会让只读的新模式
+     * 页面凭空多出「删除」并真的发 DELETE。
+     */
+    const resolvedActions = computed(() => resolveCrudActions(props.schema))
+
     const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
       if (props.schema.dialogs) return props.schema.dialogs
       if (!props.schema.dialogFormItems?.length) return {}
@@ -202,7 +211,7 @@ export default defineComponent({
       } as CrudDialogConfig
 
       const result: Record<string, CrudDialogConfig> = {}
-      const actions = props.schema.actions || ['add', 'edit', 'delete']
+      const actions = resolvedActions.value
 
       if (actions.includes('add')) result.add = { ...dialogBase, title: '新增' }
       if (actions.includes('edit')) result.edit = { ...dialogBase, title: '编辑' }
@@ -218,7 +227,7 @@ export default defineComponent({
       // （AI-35：旧写法把 dialogs 也算作显式模式 → `dialogs: { add }` 无「新增」入口）
       if (props.schema.operationColumn !== undefined) return []
 
-      const actions = props.schema.actions || ['add', 'edit', 'delete']
+      const actions = resolvedActions.value
       const btns: CrudBtnConfig[] = []
 
       if (actions.includes('add')) {
@@ -254,7 +263,7 @@ export default defineComponent({
       () => {
         if (props.schema.operationColumn !== undefined) return props.schema.operationColumn
 
-        const actions = props.schema.actions || ['add', 'edit', 'delete']
+        const actions = resolvedActions.value
         const hasActionCol = props.schema.columns?.some(
           (c) => c.prop === 'action' || c.prop === 'operate' || c.btns
         )
@@ -290,7 +299,17 @@ export default defineComponent({
       if (props.schema.queryBtns) return props.schema.queryBtns
 
       const baseBtns: BtnConfig[] = [
-        { name: '查询', type: 'primary', key: 'query', triggerEvent: true } as BtnConfig,
+        // AN-11⑥：`query` 事件此前只声明、从未 emit。它不能挂在 `triggerEvent` 上 ——
+        // 那条分支由 EsForm 独占（只用注入的表格实例发起请求，不回调这里的 click）。
+        // 故查询键自己发起一次「新搜索」（回到第 1 页，与 EsForm 的 queryTableRequest 同口径），
+        // 再带着当前查询模型派发事件；重置键仍交给 EsForm 的 triggerEvent（重置表单 + 刷新）。
+        {
+          name: '查询', type: 'primary', key: 'query',
+          click: () => {
+            ;(tableRef.value as any)?.httpRequestInstance?.(queryModel, { keepPage: false })?.catch?.(() => {})
+            emit('query', { ...queryModel })
+          },
+        } as BtnConfig,
         { name: '重置', key: 'rest', triggerEvent: true } as BtnConfig,
       ]
 
@@ -381,6 +400,18 @@ export default defineComponent({
     })
 
     // ─── 工具栏按钮处理 ─────
+
+    /**
+     * 行点击转发（AN-11⑥）。
+     *
+     * `row-click` 此前只写在 `emits` 里、三个端**从未 emit**。Vue 2 的 `$listeners`
+     * 不会被 `v-bind="$attrs"` 带走，所以必须在这里显式接上内层 es-table
+     * （它已用 `v-on="$listeners"` 把事件透给 el-table / vxe-grid）再 emit 出去。
+     */
+    function onRowClick(row: Record<string, unknown>) {
+      emit('row-click', row)
+    }
+
     async function handleToolbarBtnClick(btn: CrudBtnConfig) {
       const key = btn.key || btn.actionType || ''
 
@@ -689,6 +720,7 @@ export default defineComponent({
       mergedOptions,
       mergedFormBtns,
       formLayoutProps,
+      onRowClick,
       // exposed
       ...exposed,
     }

@@ -254,18 +254,22 @@ Once configured, ask the AI things like:
 - *"Add a status filter (enum: active/archived) to the search form."*
 - *"Make the price column right-aligned and format as currency."*
 
-The AI calls the MCP server's `generate_crud_page` / `generate_form` / `validate_schema` tools and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
+The AI calls the MCP server's `generate_crud` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
 
 ## Tools Exposed by the Server
 
+The default `full` profile exposes every tool below. With `ESPLUS_MCP_PROFILE=front-door`, the advanced and legacy tools are hidden and only `generate_crud`, the single-surface fragments, and the deterministic support tools remain.
+
 | Tool | Purpose |
 |------|---------|
-| `generate_crud_from_config` | **Primary path** — generate a production-ready CRUD page from a STRUCTURED, typed config (you fill typed fields; MCP inputSchema constrains the decoding). Prefer this. |
-| `generate_crud_page` | Fallback (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. Use only for quick prototypes. |
+| `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. |
+| `generate_crud_from_config` | **ADVANCED** — generate from a STRUCTURED, typed config you already hold (persisted, diffed, or refined). Same deterministic generator as the front door. |
+| `generate_crud_page` | **LEGACY FALLBACK** (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. |
+| `generate_crud_schema` | **LEGACY FALLBACK** (no-LLM) — CrudPageSchema JSON + wrapper SFC from a regex parser. |
 | `generate_form` | Build an `EsForm` `formItemList` array |
 | `generate_table` | Build an `EsTable` `columns` array |
-| `validate_schema` | Validate a config object against the live JSON Schema |
-| `list_examples` | Return curated `EsForm` / `EsTable` / `EsCrudPage` snippets |
+| `validate_config` | Validate a config object against the live schema (judge-only; it does not rewrite) |
+| `list_form_types` | List the supported `formtype` values and their renderers |
 
 ## Resources Exposed by the Server
 

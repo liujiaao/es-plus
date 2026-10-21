@@ -214,3 +214,58 @@ describe("validate_config — es-dialog-config（Wave 4）", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AN-08：未知键
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("AN-08 未知键 — 结构化配置（error）", () => {
+  it("tableOptions.rowKey → 不合法，且给出 did you mean rowkey", () => {
+    const r = validatePayload({ ...validConfig(), tableOptions: { rowKey: "id" } }, STRUCTURED_CRUD_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.join("\n")).toContain('未知键 "rowKey"');
+    expect(r.errors.join("\n")).toContain('did you mean "rowkey"');
+    expect(r.unknownKeys?.[0]).toMatchObject({ path: ["tableOptions"], key: "rowKey", suggestion: "rowkey" });
+  });
+
+  it("x-* 扩展键不拦（合法）", () => {
+    const r = validatePayload({ ...validConfig(), "x-owner": "team-a" }, STRUCTURED_CRUD_TYPE);
+    expect(r.valid).toBe(true);
+    expect(r.unknownKeys).toEqual([]);
+  });
+
+  it("嵌套/数组元素里的未知键也报（fields[0].widht）", () => {
+    const r = validatePayload(
+      {
+        ...validConfig(),
+        fields: [{ prop: "userName", label: "用户名", formtype: "Input", widht: 100 }],
+      },
+      STRUCTURED_CRUD_TYPE,
+    );
+    expect(r.valid).toBe(false);
+    expect(r.unknownKeys?.[0]).toMatchObject({ path: ["fields", 0], key: "widht", suggestion: "width" });
+  });
+});
+
+describe("AN-08 未知键 — 片段配置（.strict()）", () => {
+  const tableConfig = () => ({ fields: [{ prop: "name", label: "名称", formtype: "Input" }] });
+
+  it("合法片段仍然合法（strict 不误杀已知可选键）", () => {
+    const r = validatePayload({ ...tableConfig(), apiUrl: "/api/x", pagination: { pageSize: 20 } }, ES_TABLE_TYPE);
+    expect(r.valid).toBe(true);
+    expect(r.unknownKeys).toEqual([]);
+  });
+
+  it("片段里的未知键被拒（修前被静默剥掉）", () => {
+    const r = validatePayload({ ...tableConfig(), widht: 100 }, ES_TABLE_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.errors.join("\n")).toContain("widht");
+    expect(r.unknownKeys.map((f) => f.key)).toEqual(["widht"]);
+  });
+
+  it("已知键的拼写错误给出建议", () => {
+    const r = validatePayload({ ...tableConfig(), apiUr: "/api/x" }, ES_TABLE_TYPE);
+    expect(r.valid).toBe(false);
+    expect(r.suggestions.join("\n")).toContain('did you mean "apiUrl"');
+  });
+});

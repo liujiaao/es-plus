@@ -1,0 +1,65 @@
+{
+  "id": "comp-form-dialog-02-antdv",
+  "scene": "composition",
+  "shape": "form+dialog",
+  "target": "antdv",
+  "mode": "schema",
+  "name": "TicketSubmit",
+  "apiUrl": "/api/tickets",
+  "surfaces": {
+    "form": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input"
+      },
+      {
+        "prop": "type",
+        "label": "类型",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "故障",
+            "value": "bug"
+          },
+          {
+            "label": "需求",
+            "value": "feature"
+          }
+        ]
+      },
+      {
+        "prop": "description",
+        "label": "描述",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ],
+    "dialog": [
+      "add",
+      "view"
+    ]
+  },
+  "expect": {
+    "dialogBlocks": [
+      {
+        "key": "add",
+        "fields": [
+          "title",
+          "type",
+          "description"
+        ]
+      },
+      {
+        "key": "view",
+        "fields": [
+          "title",
+          "type",
+          "description"
+        ]
+      }
+    ]
+  }
+}

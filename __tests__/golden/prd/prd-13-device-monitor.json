@@ -1,0 +1,19 @@
+{
+  "id": "prd-13-device-monitor",
+  "product": "设备监控",
+  "target": "vue3",
+  "spec": "设备监控。\n\n【查询区】设备编号、状态\n【列表】设备编号、设备名称、状态、最后上报时间、创建时间\n监控页只读，不能新增、编辑或删除。",
+  "config": {
+    "name": "DeviceMonitor",
+    "apiUrl": "/api/devices",
+    "target": "vue3",
+    "fields": [
+      { "prop": "deviceNo", "label": "设备编号", "formtype": "Input", "inForm": false },
+      { "prop": "deviceName", "label": "设备名称", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inForm": false },
+      { "prop": "lastReportedAt", "label": "最后上报时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ]
+  },
+  "notes": "只读 + 两个 system 时间列。"
+}

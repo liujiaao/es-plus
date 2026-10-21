@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import { StructuredCrudConfigSchema, generateAppEntry } from "@es-plus/shared";
 import { registerGenerateCrud } from "../src/tools/generate-crud.js";
 import { registerGenerateFromConfig } from "../src/tools/generate-from-config.js";
 import { registerGenerateForm } from "../src/tools/generate-form.js";
 import { registerGenerateTable } from "../src/tools/generate-table.js";
 import { registerGenerateDialog } from "../src/tools/generate-dialog.js";
 import { registerScaffoldPage } from "../src/tools/scaffold-page.js";
+import { registerDoctorPage } from "../src/tools/doctor-page.js";
 import { registerPrompts } from "../src/prompts/index.js";
 
 // These exercise the deterministic generate_* front door / fragment tools and
@@ -80,6 +82,10 @@ describe("generate_crud front door — surface routing", () => {
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("## Schema (schema.ts)");
     expect(res.content[0].text).toContain("## Wrapper SFC (Page.vue)");
+    // AN-15：前置清单随产物输出（与 generate_crud_from_config 同一份 formatPreflight）
+    expect(res.content[0].text).toContain("## Preflight — host prerequisites");
+    expect(res.content[0].text).toContain("**[required]** **UI library — Element Plus");
+    expect(res.content[0].text).toContain("**[required]** **Global httpRequest**");
   });
 
   it("table-bearing request in sfc mode emits a single SFC", async () => {
@@ -90,6 +96,8 @@ describe("generate_crud front door — surface routing", () => {
     });
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("## Generated SFC");
+    // sfc + dialog ⟹ 弹窗 render 是 JSX，前置清单必须点出 JSX 转换
+    expect(res.content[0].text).toContain("**[required]** **JSX transform");
   });
 
   it("query-only (no table) emits a standalone query fragment", async () => {
@@ -231,7 +239,7 @@ describe("generate_crud front door — surface routing", () => {
       surfaces: { table: [field("name", "名称")] },
       tableOptions: { border: false, emptyText: "暂无数据", heightType: "auto", size: "small" },
       formLayout: { labelWidth: "100px", minFoldRows: 2 },
-      operationColumn: { label: "操作", width: 160, btns: [{ name: "编辑", actionType: "edit" }] },
+      operationColumn: { label: "操作", width: 160, btns: [{ name: "编辑", dialogKey: "edit" }] },
       tableBtns: [{ name: "导出", actionType: "export" }],
       toolbarBtns: [{ name: "批量删除", actionType: "delete" }],
     });
@@ -239,9 +247,65 @@ describe("generate_crud front door — surface routing", () => {
     // 五键逐一原样存活（若形状声明为嵌套 z.object，未声明的子键会被吞掉）
     expect(parsed.tableOptions).toEqual({ border: false, emptyText: "暂无数据", heightType: "auto", size: "small" });
     expect(parsed.formLayout).toEqual({ labelWidth: "100px", minFoldRows: 2 });
-    expect(parsed.operationColumn).toEqual({ label: "操作", width: 160, btns: [{ name: "编辑", actionType: "edit" }] });
-    expect(parsed.tableBtns).toEqual([{ name: "导出", actionType: "export" }]);
-    expect(parsed.toolbarBtns).toEqual([{ name: "批量删除", actionType: "delete" }]);
+    expect(parsed.operationColumn).toEqual({ label: "操作", width: 160, btns: [{ name: "编辑", dialogKey: "edit" }] });
+    expect(parsed.tableBtns).toEqual([{ name: "导出", actionType: "export", code: 1 }]);
+    expect(parsed.toolbarBtns).toEqual([{ name: "批量删除", actionType: "delete", code: 2 }]);
+  });
+
+  // ── AN-21：旋钮显式形状 + .strict() ──────────────────────────────────────
+  // 形状化的目的不只是「JSON Schema 里有键」，更是**拼错的键立刻报错**。此前
+  // z.record(z.any()) / z.any() 会把任何拼写错误静默放行，AI 以为改了表格行为，
+  // 生成物里其实什么都没变。这里逐旋钮证明「未知键 → 解析失败」。
+  it("未知旋钮/子键在工具层报错（AN-21：不留静默 strip）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const shape = tools.generate_crud.shape;
+    const probes: Array<Record<string, unknown>> = [
+      { tableOptions: { bogusKnob: 1 } },
+      { tableOptions: { editConfig: { bogusNested: 1 } } },
+      { formLayout: { span: 12 } }, // span 是字段级 querySpan/formSpan，formLayout 没有该键
+      { operationColumn: { bogusKnob: 1 } },
+      { expandConfig: { bogusKnob: 1 } },
+      { treeConfig: { bogusKnob: 1 } },
+      { mergeConfig: { bogusKnob: 1 } },
+    ];
+    for (const probe of probes) {
+      const r = z.object(shape).safeParse({
+        ...baseCrud,
+        surfaces: { table: [field("name", "名称")] },
+        ...probe,
+      });
+      expect(r.success, `未知键未报错：${JSON.stringify(probe)}`).toBe(false);
+    }
+  });
+
+  // ── AN-07：工具描述里的示例必须「照抄即可用」─────────────────────────
+  // 此前 tableBtns 的 describe 写的是 `[{ label: "导出", action: "export" }]`，
+  // 而 schema 只认 `{ name, actionType }`：照抄示例 = Zod 静默 strip 两个键 =
+  // 解析成功却没有名字/动作的空壳（tableBtns 维度实测 2/10）。本断言把「示例」
+  // 本身也变成被测对象：description 里的那段 JSON 必须能过权威 schema。
+  it("工具描述里的 tableBtns 示例照抄必须通过权威 schema（AN-07）", () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrud(server);
+    const desc: string = tools.generate_crud.shape.tableBtns.description;
+    const example = desc.match(/\[\{[\s\S]*?\}\]/)?.[0];
+    expect(example, `tableBtns 描述里没有可解析的数组示例：${desc}`).toBeTruthy();
+    // 描述里的示例是 JS 对象字面量（键不带引号）—— 补引号后按 JSON 解析，
+    // 避免用 eval/new Function 把「被测文本」当代码执行。
+    const literal = example!.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":');
+    const buttons = JSON.parse(literal);
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: "Page",
+      apiUrl: "/api/x",
+      fields: [field("name", "名称")],
+      actions: ["add"],
+      tableBtns: buttons,
+    });
+    expect(r.success, JSON.stringify((r as any).error?.issues)).toBe(true);
+    const btn = (r as any).data.tableBtns[0];
+    expect(btn.name).toBe("导出");
+    expect(btn.actionType).toBe("export");
+    expect(btn.code).toBe(1); // position:'left' 归一化
   });
 
   it("passthrough 键经前门转发、落进生成的 pageSchema", async () => {
@@ -604,6 +668,42 @@ describe("front door — deterministic validate gate (C2·A3)", () => {
     expect(res.content[0].text).toContain("```");
   });
 
+  // AN-24：确定性修复环在**校验之前**跑。常见格式错误（null = 未声明、成员布尔字面量）
+  // 不应把宿主推进「生成失败 → 让模型重写 → 再失败」的循环。
+  it("repairable format errors are fixed before the gate (AN-24)", async () => {
+    const res = await fromConfigHandler()({
+      ...validFromConfig,
+      formLayout: null,
+      fields: [field("userName", "用户名", "Input", { inQuery: "false" })],
+    });
+    expect(res.isError).toBeFalsy();
+    const text = res.content[0].text;
+    expect(text).toContain("自动修复：/formLayout");
+    expect(text).toContain("自动修复：/fields/0/inQuery");
+    expect(text).toContain("```");
+  });
+
+  it("repair does not launder a genuinely invalid config", async () => {
+    const res = await fromConfigHandler()({
+      ...validFromConfig,
+      formLayout: null,
+      fields: [field("u", "U", "Nope")],
+    });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("/fields/0/formtype");
+  });
+
+  // AN-15：生成物必须携带前置清单；不需要的项要明确写「不需要」，而不是让宿主猜。
+  it("emits the preflight checklist (permission correctly marked not-needed)", async () => {
+    const text = (await fromConfigHandler()(validFromConfig)).content[0].text;
+    expect(text).toContain("## Preflight — host prerequisites");
+    expect(text).toContain("**[required]** **Global httpRequest**");
+    // 该 config 没有任何 permissionValue/permissions ⟹ 明确标 [not needed]
+    expect(text).toContain("[not needed] **Global permission()**");
+    expect(text).toContain("### App entry — src/main.ts (copy once)");
+    expect(text).toContain("app.use(ESPlus, {");
+  });
+
   // AI-06：MCP 参数 schema（configShape）必须声明 isHidden —— 否则 Zod 默认 strip，
   // 走 MCP 路径的配置里声明式显隐条件会被**静默剥掉**（字段永远可见）。这里通过
   // z.object(shape) 真解析一遍，把「源码里有没有声明」升级为「解析后还在不在」。
@@ -840,6 +940,10 @@ describe("scaffold_page — SFC + 入口装配样板", () => {
     expect(text).toContain("permission:");
     expect(text).toContain("t:");
     expect(text).toContain("httpRequest:");
+    // AN-15②：scaffold 与生成物共用同一份前置清单（含 required 判定与入口样板）
+    expect(text).toContain("## Preflight — host prerequisites");
+    expect(text).toContain("### App entry — src/main.ts (copy once)");
+    expect(text).toContain("**[required]** **Global httpRequest**");
   });
 
   it("vue2：入口块标题是 src/main.js，装配用 Vue.use(ESPlus", async () => {
@@ -855,5 +959,58 @@ describe("scaffold_page — SFC + 入口装配样板", () => {
     expect(text).not.toContain("app.use(ESPlus");
     expect(text).toContain("permission:");
     expect(text).toContain("t:");
+  });
+});
+
+// AN-15③：doctor_page 只做字面量静态扫描；这里钉住它对**完整入口**判绿、
+// 对 `app.use(ESPlus)` 判红（httpRequest 缺失），以及 config 让 [not needed] 项不误报。
+function doctorHandler() {
+  const { server, tools } = makeMockServer();
+  registerDoctorPage(server);
+  expect(tools.doctor_page).toBeDefined();
+  return tools.doctor_page.handler;
+}
+
+describe("doctor_page — 宿主入口静态检查", () => {
+  const configNeedingGates = {
+    target: "vue3",
+    mode: "schema",
+    actions: ["add"],
+    fields: [{ prop: "name", label: "名称", formtype: "Input", permissionValue: "user:add" }],
+  };
+
+  it("a complete entry satisfies the checklist", async () => {
+    const res = await doctorHandler()({
+      entry: generateAppEntry("vue3"),
+      target: "vue3",
+      config: configNeedingGates,
+      viteConfig: "export default { plugins: [vue(), vueJsx()] }",
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("## Doctor");
+    expect(text).toContain("✅");
+    expect(text).not.toContain("❌");
+    expect(text).toContain("All required prerequisites");
+  });
+
+  it("bare app.use(ESPlus) ⇒ httpRequest missing", async () => {
+    const res = await doctorHandler()({
+      entry: "import ESPlus from '@es-plus/vue3'\napp.use(ESPlus)",
+      target: "vue3",
+      config: configNeedingGates,
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("❌ **Global httpRequest** — missing");
+    expect(text).toContain("MISSING");
+  });
+
+  it("no config ⇒ every capability is checked (permission/t no longer [not needed])", async () => {
+    const res = await doctorHandler()({
+      entry: "import ESPlus from '@es-plus/vue3'\napp.use(ESPlus, { httpRequest: (p) => axios(p) })",
+      target: "vue3",
+    });
+    const text = res.content[0].text;
+    expect(text).toContain("❌ **Global permission()** — missing");
+    expect(text).toContain("❌ **Global t() (i18n)** — missing");
   });
 });

@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { readReachability, readGeneratorEmission, FRONT_DOOR_UNREACHABLE, fail } from './lib/entry-keys.mjs'
 import { CAPABILITY_TOKENS, TIER_MEANING, rowTier } from './feature-coverage.data.mjs'
+import { buildSiteCoverage } from './lib/site-coverage.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -142,6 +143,12 @@ function main() {
       if (!(t in CAPABILITY_TOKENS)) ok = fail(`${d.id} 引用了未注册令牌 '${t}'`)
     }
   }
+  // AN-28：站点台账的令牌同样算「被引用」，否则 `siteUncovered` 会被误判成孤儿。
+  for (const site of manifest.sites ?? []) {
+    for (const c of site.cases ?? []) {
+      for (const t of c.tokens ?? []) usedTokens.add(t)
+    }
+  }
   const orphanTokens = Object.keys(CAPABILITY_TOKENS).filter((t) => !usedTokens.has(t))
   if (orphanTokens.length) ok = fail(`注册表存在无人引用的孤儿令牌：${orphanTokens.join(', ')}`)
   for (const [t, def] of Object.entries(CAPABILITY_TOKENS)) {
@@ -215,6 +222,42 @@ function main() {
     }
   }
 
+  // ── ⑤b 三站案例台账：es-eui / es-pc 目录 ↔ sites 段 ──
+  // 验收：两站各自的「映射数」> 0；未映射案例必须显式 D + reason；台账必须与磁盘现算一致。
+  const sites = manifest.sites
+  if (!Array.isArray(sites) || sites.length !== 2) {
+    ok = fail('feature-coverage.json 缺少 sites 段（应为 es-eui / es-pc 两条）—— 运行 npm run sites:coverage:gen')
+  } else {
+    const built = buildSiteCoverage(demos, ROOT)
+    if (JSON.stringify(sites) !== JSON.stringify(built)) {
+      ok = fail('sites 台账与磁盘不同步（站点目录增删/改名，或映射规则变了）—— 运行 npm run sites:coverage:gen')
+    }
+    for (const site of sites) {
+      if (!(site.refs > 0)) {
+        ok = fail(`${site.site} 未映射任何单源演示（refs=${site.refs}，验收要求 > 0）`)
+      }
+      if (site.cases.length !== site.refs + site.uncovered) {
+        ok = fail(
+          `${site.site} 的计数不自洽：cases ${site.cases.length} ≠ refs ${site.refs} + uncovered ${site.uncovered}`,
+        )
+      }
+      for (const c of site.cases) {
+        if (!c.demo && c.tier !== 'D') {
+          ok = fail(`${site.site}/${c.id} 未匹配单源演示却不是 D 档（tier=${c.tier}）`)
+        }
+        if (!c.demo && !(c.reason && c.reason.trim())) {
+          ok = fail(`${site.site}/${c.id} 未匹配单源演示且未写 D 档 reason`)
+        }
+        for (const t of c.tokens) {
+          if (!(t in CAPABILITY_TOKENS)) ok = fail(`${site.site}/${c.id} 引用了未注册令牌 '${t}'`)
+        }
+        if (c.tier !== rowTier(c.tokens)) {
+          ok = fail(`${site.site}/${c.id} 的 tier=${c.tier} 与令牌派生档 ${rowTier(c.tokens)} 不符`)
+        }
+      }
+    }
+  }
+
   // ── ⑥ 摘要 ──
   const tierCount = {}
   const groupCount = {}
@@ -233,6 +276,14 @@ function main() {
   console.log(
     `✅ AI 可达性台账一致（${demos.length} 例；分档 ${tierLine}；` +
       `分组 ${groupLine}；引用↔磁盘↔台账三方 1:1）`
+  )
+  console.log(
+    '   —— 三站案例台账（AN-28）—— ' +
+      (Array.isArray(sites)
+        ? sites
+            .map((s) => `${s.site} ${s.cases.length} 例（映射 ${s.refs} / D ${s.uncovered}）`)
+            .join('；')
+        : '缺失'),
   )
   console.log('   —— 逐行分档（A 前门声明式 / B from_config / C 逃生舱·函数值 / D 非 AI 目标）——')
   for (const d of demos) {

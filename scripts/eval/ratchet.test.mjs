@@ -25,8 +25,10 @@ import {
   HELDOUT_FLOOR,
   evaluateFloor,
   checkCorpusSize,
+  checkConvergenceSample,
   compareToBaseline,
   guardAntiDelete,
+  deriveMinApplicable,
   applicableCountsFromCases,
   combine,
   evaluateHealth,
@@ -76,6 +78,15 @@ function checkFails(result, substr, label) {
   checkFails(checkCorpusSize({}), '低于地板', 'heldout：字段缺失')
 }
 
+// ─── ⑩ 收敛腿样本数（AN-02） ─────────────────────────────────────────
+{
+  check(checkConvergenceSample(30).ok, '收敛样本：恰等于 30 应判过')
+  check(checkConvergenceSample(31).ok, '收敛样本：多于 30 应判过')
+  checkFails(checkConvergenceSample(5), '低于地板 30', '收敛样本：5 条（AN-02 之前的真实状态）必须红')
+  checkFails(checkConvergenceSample(0), '低于地板 30', '收敛样本：零条必须红（没跑 ≠ 收敛率为 0）')
+  checkFails(checkConvergenceSample(undefined), '低于地板 30', '收敛样本：缺失必须红')
+}
+
 // ─── ⑤ 比率棘轮 ────────────────────────────────────────────────────
 {
   const base = { definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1.0 } }
@@ -121,19 +132,30 @@ function checkFails(result, substr, label) {
 
 // ─── ⑤ 防删难例（合成） ─────────────────────────────────────────────
 {
-  const base = { applicableCounts: { mergeConfig: 15, reactions: 15 } }
-  check(
-    guardAntiDelete({ mergeConfig: 15, reactions: 15 }, base).ok,
-    '防删：计数持平应判过'
-  )
-  check(
-    guardAntiDelete({ mergeConfig: 15, reactions: 15, columns: 34 }, base).ok,
-    '防删：新增维度/语料应判过（棘轮只拦减少）'
-  )
-  checkFails(guardAntiDelete({ mergeConfig: 13, reactions: 15 }, base), '从 15 掉到 13', '防删：删 2 例')
-  checkFails(guardAntiDelete({ reactions: 15 }, base), '疑似删除了该维度', '防删：整维消失')
+  // legacy（v1）：只有 applicableCounts → 精确相等（升级前的行为，保持不误红）
+  const old = { applicableCounts: { mergeConfig: 15, reactions: 15 } }
+  check(guardAntiDelete({ mergeConfig: 15, reactions: 15 }, old).ok, '防删(v1)：计数持平应判过')
+  check(guardAntiDelete({ mergeConfig: 15, reactions: 15, columns: 34 }, old).ok, '防删(v1)：新增维度/语料应判过')
+  checkFails(guardAntiDelete({ mergeConfig: 13, reactions: 15 }, old), '从 15 掉到 13', '防删(v1)：删 2 例')
+  checkFails(guardAntiDelete({ reactions: 15 }, old), '疑似删除了该维度', '防删(v1)：整维消失')
   const boot = guardAntiDelete({}, null)
   check(boot.ok && boot.warnings.length > 0, '防删：无基线应跳过 + warn')
+
+  // v2（AN-04）：硬地板 + ±10% 漂移提示。
+  const counts = { mergeConfig: 15, reactions: 15 }
+  const v2 = { applicableCounts: counts, minApplicable: deriveMinApplicable(counts) }
+  check(v2.minApplicable.mergeConfig === 13, 'deriveMinApplicable: 15 的下限应为 13（留 10% 余量）')
+  check(guardAntiDelete(counts, v2).ok, '防删(v2)：计数持平应判过')
+  check(guardAntiDelete({ mergeConfig: 16, reactions: 20 }, v2).ok, '防删(v2)：语料**增长**不得判红（这是旧精确相等的主要假红源）')
+  check(guardAntiDelete({ mergeConfig: 13, reactions: 15 }, v2).ok, '防删(v2)：恰在下限（15→13）应判过')
+  checkFails(guardAntiDelete({ mergeConfig: 12, reactions: 15 }, v2), '低于地板', '防删(v2)：跌破下限（删 3 例）必须红')
+  checkFails(guardAntiDelete({ reactions: 15 }, v2), '疑似删除了该维度', '防删(v2)：整维消失')
+  const drift = guardAntiDelete({ mergeConfig: 15, reactions: 19 }, v2)
+  check(drift.ok, '防删(v2)：+27% 漂移只提示、不判红')
+  check(
+    drift.warnings.some((w) => w.includes('跨越 ±10%')),
+    `防删(v2)：跨越 ±10% 必须提示写回基线，实际 = ${JSON.stringify(drift.warnings)}`
+  )
 }
 
 // ─── 真实语料上的防删守卫（离线，不需要付费跑） ─────────────────────────
@@ -154,13 +176,30 @@ function checkFails(result, substr, label) {
   const missing = Object.keys(baseline.applicableCounts ?? {}).filter((k) => counts[k] === undefined)
   check(missing.length === 0, `真实语料缺少基线声明的维度：${missing.join(', ')}`)
 
+  // AN-04 v2：基线必须带 minApplicable，否则会退回「精确相等」——语料一长就假红。
+  check(!!baseline.minApplicable, 'accuracy-baseline.json 必须带 minApplicable（AN-04 v2）')
+  // AN-18：片段腿的 scoped 地板必须在基线里（fail closed：没有阈值 = 绿灯只因为没人设线）。
+  check(
+    typeof baseline.fragmentScopedMin === 'number' &&
+      baseline.fragmentScopedMin >= 0 &&
+      baseline.fragmentScopedMin <= 1,
+    'accuracy-baseline.json 必须带 fragmentScopedMin（0..1，AN-18 片段腿门禁）'
+  )
+  check(
+    Object.keys(baseline.minApplicable ?? {}).length === Object.keys(baseline.applicableCounts ?? {}).length,
+    'minApplicable 与 applicableCounts 必须覆盖同一组维度'
+  )
+  for (const [dim, floor] of Object.entries(baseline.minApplicable ?? {})) {
+    check(floor <= counts[dim], `基线下限 ${dim}:${floor} 高于当前语料计数 ${counts[dim]}（基线写超前了）`)
+  }
+
   // 变异自检：抽掉两条 mergeConfig 用例后，真实守卫必须红（证明这条断言真有分辨力，
   // 而不是因为恒真才通过）。
   const withoutMerge = golds.filter((g) => !g.mergeConfig)
   const mutated = applicableCountsFromCases(withoutMerge, CAPABILITY_SCORERS)
   checkFails(
     guardAntiDelete(mutated, baseline),
-    'mergeConfig 的适用用例数从',
+    '低于地板',
     '真实语料变异：抽掉 mergeConfig 用例'
   )
 
@@ -287,15 +326,36 @@ function checkFails(result, substr, label) {
   check(/const gateRate = def95\.rate \?\? 0/.test(src), '门禁数字必须来自 def95.rate')
   check(/const gateMetric = 'definition95'/.test(src), '产物必须记下门禁指标名 gateMetric')
   check(
-    /passed: gateRate >= TARGET_ACCURACY && guards\.ok(?: && frontDoorStats\.ok)?,/.test(src),
-    'passed 必须 = 门禁 ∧ 回归防线（可再加**布尔**守卫，但准确率数字只能来自 gateRate）'
+    /passed:\s*gateRate >= TARGET_ACCURACY &&\s*guards\.ok &&\s*frontDoorStats\.ok &&\s*compileRate === 1 &&\s*fragmentStats\.ok,/.test(src),
+    'passed 必须 = 门禁 ∧ 回归防线（另允许布尔守卫：前门腿 / AN-13 编译门 / AN-18 片段腿；准确率数字只能来自 gateRate）'
+  )
+  // AN-13：编译门是**确定性缺陷**守卫（产物编译不过 ≠ 准确率口径），必须真的进 passed，
+  // 否则「compileRate 100%」又退回成一句没人执行的宣称。
+  check(
+    /passed:[\s\S]{0,220}?&&\s*compileRate === 1\b/.test(src),
+    'AN-13：编译门（compileRate === 1）必须进入 passed'
+  )
+  // AN-18：片段腿（独立分母）同样必须是**布尔守卫**进 passed，且 exit code 与 passed 同源 ——
+  // 否则「片段门禁化」只落在报告里，夜间照样绿。
+  check(
+    /passed:[\s\S]{0,220}?fragmentStats\.ok,/.test(src),
+    'AN-18：片段腿（fragmentStats.ok）必须进入 passed'
+  )
+  check(
+    /if \(\s*gateRate < TARGET_ACCURACY[\s\S]{0,220}?!fragmentStats\.ok\s*\)/.test(src),
+    'AN-18：片段腿红时必须让 exit code 红（与 passed 同源）'
+  )
+  check(
+    /import \{ summarizeFragmentLeg \} from '\.\/eval\/fragment-leg\.mjs'/.test(src),
+    'AN-18：片段腿判据必须来自纯函数模块 eval/fragment-leg.mjs（可离线单测）'
   )
   check(/const pct = gateRate \* 100/.test(src), '徽章数字必须与门禁同源（gateRate）')
   // 准确率门禁只有 gateRate 一个数字来源；其余 disjunct 允许**布尔守卫**（回归防线 / 前门腿），
   // 因为它们是「确定性缺陷」而不是第二个准确率口径 —— 混进 core/scoped/full 才是红盲（AI-33②）。
-  const exitLine = (src.match(/if \(gateRate < TARGET_ACCURACY[^\n]*\)/) ?? [''])[0]
+  // 判据块允许换行排版（AN-18 加入片段腿后更长了），但主判据必须是 gateRate。
+  const exitLine = (src.match(/if \(\s*gateRate < TARGET_ACCURACY[\s\S]*?\)\s*\{/) ?? [''])[0]
   check(
-    exitLine.trim().startsWith('if (gateRate < TARGET_ACCURACY'),
+    /if \(\s*gateRate < TARGET_ACCURACY/.test(exitLine),
     'exit code 必须以 gateRate < TARGET_ACCURACY 为主判据'
   )
   check(

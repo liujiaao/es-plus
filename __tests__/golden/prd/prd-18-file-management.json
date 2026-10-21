@@ -1,0 +1,28 @@
+{
+  "id": "prd-18-file-management",
+  "product": "文件管理",
+  "target": "vue3",
+  "spec": "文件管理。\n\n【查询区】文件名称、文件类型\n【列表】文件名称、文件类型、大小、上传人、上传时间\n【工具栏】上传文件\n【弹窗】标题「上传文件」；字段：文件（上传）、备注\n说明：上传人、上传时间、大小由系统生成；页面没有行内编辑。",
+  "config": {
+    "name": "FileManage",
+    "apiUrl": "/api/files",
+    "target": "vue3",
+    "fields": [
+      { "prop": "fileName", "label": "文件名称", "formtype": "Input", "inForm": false },
+      { "prop": "fileType", "label": "文件类型", "formtype": "Select", "inForm": false },
+      { "prop": "size", "label": "大小", "formtype": "InputNumber", "inQuery": false, "inForm": false },
+      { "prop": "uploader", "label": "上传人", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "uploadedAt", "label": "上传时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "upload": {
+        "title": "上传文件",
+        "formItems": [
+          { "prop": "file", "label": "文件", "formtype": "Upload" },
+          { "prop": "remark", "label": "备注", "formtype": "Input" }
+        ]
+      }
+    }
+  },
+  "notes": "无共享 form，但有自定义 upload 弹窗（逐弹窗 formItems）；系统字段 table-only。"
+}

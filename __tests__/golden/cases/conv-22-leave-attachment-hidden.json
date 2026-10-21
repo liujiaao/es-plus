@@ -1,0 +1,76 @@
+{
+  "nl": "请假管理：表格展示名称、请假类型（病假/事假/年假）、证明附件、日期；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "leaveType",
+    "attachment",
+    "date"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "isHidden:attachment"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "请假类型不是病假时，证明附件字段隐藏。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv22LeaveAttachmentHidden",
+    "apiUrl": "/api/leave-attachment-hidden",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "leaveType",
+        "label": "请假类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "病假",
+            "value": "sick"
+          },
+          {
+            "label": "事假",
+            "value": "personal"
+          },
+          {
+            "label": "年假",
+            "value": "annual"
+          }
+        ]
+      },
+      {
+        "prop": "attachment",
+        "label": "证明附件",
+        "formtype": "Upload",
+        "inQuery": false,
+        "isHidden": {
+          "field": "leaveType",
+          "op": "ne",
+          "value": "sick"
+        }
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "isHidden 铰链（附件）。与 conv-21 同机制、不同字段类型（Upload）。"
+}

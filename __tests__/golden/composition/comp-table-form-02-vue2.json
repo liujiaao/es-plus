@@ -1,0 +1,79 @@
+{
+  "id": "comp-table-form-02-vue2",
+  "scene": "composition",
+  "shape": "table+form",
+  "target": "vue2",
+  "mode": "schema",
+  "name": "RoleManage",
+  "apiUrl": "/api/roles",
+  "surfaces": {
+    "table": [
+      {
+        "prop": "roleName",
+        "label": "角色名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input"
+      },
+      {
+        "prop": "enabled",
+        "label": "启用",
+        "formtype": "Switch"
+      }
+    ],
+    "form": [
+      {
+        "prop": "roleName",
+        "label": "角色名",
+        "formtype": "Input"
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input"
+      },
+      {
+        "prop": "enabled",
+        "label": "启用",
+        "formtype": "Switch"
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "membership": {
+      "roleName": [
+        "table",
+        "form"
+      ],
+      "code": [
+        "table",
+        "form"
+      ],
+      "enabled": [
+        "table",
+        "form"
+      ],
+      "remark": [
+        "form"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ],
+    "dialogKeys": [],
+    "legacyDialogFormItems": true,
+    "operationColumn": null
+  }
+}

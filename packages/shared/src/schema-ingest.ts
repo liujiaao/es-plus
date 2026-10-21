@@ -228,6 +228,402 @@ function ingestSampleJson(
   return { fields }
 }
 
+// ── 通用扫描小工具（TS / SQL 共用）───────────────────────────
+
+/**
+ * 从 `{` / `(` 处取平衡闭合内的文本。
+ * 字符串与注释里的括号不计 —— 否则 `DEFAULT '}'` 或 `enum('a(b')` 会提前截断。
+ */
+function sliceBalanced(text: string, openIndex: number): string | null {
+  const open = text[openIndex]
+  if (open !== '{' && open !== '(') return null
+  const close = open === '{' ? '}' : ')'
+  let depth = 0
+  let quote: string | null = null
+  for (let i = openIndex; i < text.length; i++) {
+    const ch = text[i]
+    if (quote) {
+      if (ch === '\\') i++
+      else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      const nl = text.indexOf('\n', i)
+      i = nl === -1 ? text.length : nl
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2)
+      i = end === -1 ? text.length : end + 1
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      continue
+    }
+    if (ch === open) depth++
+    else if (ch === close) {
+      depth--
+      if (depth === 0) return text.slice(openIndex + 1, i)
+    }
+  }
+  return null
+}
+
+/** 按顶层分隔符切分；括号/泛型/字符串/注释内部的分隔符不切。 */
+function splitTopLevel(text: string, sepChars: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let depth = 0
+  let quote: string | null = null
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quote) {
+      cur += ch
+      if (ch === '\\') cur += text[++i] ?? ''
+      else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      const nl = text.indexOf('\n', i)
+      i = nl === -1 ? text.length : nl - 1
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2)
+      i = end === -1 ? text.length : end + 1
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      cur += ch
+      continue
+    }
+    if ('([{<'.includes(ch)) {
+      depth++
+      cur += ch
+      continue
+    }
+    if (')]}>'.includes(ch)) {
+      depth = Math.max(0, depth - 1)
+      cur += ch
+      continue
+    }
+    if (depth === 0 && sepChars.includes(ch)) {
+      out.push(cur)
+      cur = ''
+      continue
+    }
+    cur += ch
+  }
+  out.push(cur)
+  return out.map((s) => s.trim()).filter(Boolean)
+}
+
+function stripIdent(s: string): string {
+  return s.replace(/^[`"'[]/, '').replace(/[`"'\]]$/, '')
+}
+
+// ── TypeScript interface / type 字面量 ──────────────────────
+
+/**
+ * 切出 TS 类型体的成员；紧邻成员的 JSDoc 保留为 label。
+ * 只按顶层换行/分号切（内联对象、泛型参数里的分隔符不切）。
+ */
+function splitTsMembers(body: string): Array<{ raw: string; doc?: string }> {
+  const chunks: string[] = []
+  let cur = ''
+  let depth = 0
+  let quote: string | null = null
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]
+    if (quote) {
+      cur += ch
+      if (ch === '\\') cur += body[++i] ?? ''
+      else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '/' && body[i + 1] === '/') {
+      const nl = body.indexOf('\n', i)
+      i = nl === -1 ? body.length : nl - 1
+      continue
+    }
+    if (ch === '/' && body[i + 1] === '*') {
+      const end = body.indexOf('*/', i + 2)
+      cur += body.slice(i, end === -1 ? body.length : end + 2)
+      i = end === -1 ? body.length : end + 1
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      cur += ch
+      continue
+    }
+    if (ch === '(' || ch === '[' || ch === '{') depth++
+    else if (ch === ')' || ch === ']' || ch === '}') depth = Math.max(0, depth - 1)
+    if (depth === 0 && (ch === '\n' || ch === ';')) {
+      chunks.push(cur)
+      cur = ''
+      continue
+    }
+    cur += ch === '\n' ? ' ' : ch
+  }
+  chunks.push(cur)
+
+  const out: Array<{ raw: string; doc?: string }> = []
+  let pendingDoc: string | undefined
+  const normalizeDoc = (s: string) =>
+    s
+      .split('\n')
+      .map((l) => l.replace(/^\s*\*?\s?/, '').trim())
+      .filter(Boolean)
+      .join(' ')
+
+  for (const chunk of chunks) {
+    const trimmed = chunk.trim()
+    if (!trimmed) continue
+    // 纯 JSDoc 块（注释独占一行/被换行切开）→ 挂到下一个成员。
+    const pure = /^\/\*\*([\s\S]*?)\*\/$/.exec(trimmed)
+    if (pure) {
+      pendingDoc = normalizeDoc(pure[1]) || undefined
+      continue
+    }
+    const m = /^\/\*\*([\s\S]*?)\*\/\s*([\s\S]*)$/.exec(trimmed)
+    if (m) {
+      const doc = normalizeDoc(m[1]) || pendingDoc
+      out.push({ raw: m[2].trim(), doc })
+    } else {
+      out.push({ raw: trimmed, doc: pendingDoc })
+    }
+    pendingDoc = undefined
+  }
+  return out.filter((x) => x.raw)
+}
+
+type IngestTypeDescriptor = TypeDescriptor & { enumVals?: unknown[] }
+
+/** TS 类型表达式 → 摄取层的最小判定输入。未知命名类型告警并兜底 Input。 */
+function parseTsType(raw: string, warnings: string[], key: string): IngestTypeDescriptor {
+  const literal = (s: string): string | null => {
+    const m = /^(['"`])([\s\S]*)\1$/.exec(s)
+    return m ? m[2] : null
+  }
+  // `string | null` 去掉 null/undefined；字面量联合 = 枚举。
+  const members = splitTopLevel(raw, '|').filter((s) => s !== 'null' && s !== 'undefined')
+  if (members.length === 0) return { type: 'string' }
+  if (members.length > 1) {
+    const lits = members.map(literal)
+    if (lits.every((v) => v !== null)) {
+      return { type: 'string', hasEnum: true, enumVals: lits as string[] }
+    }
+    warnings.push(
+      `字段 "${key}" 是联合类型(${members.join(' | ')})—— 已按首个分支兜底；需要枚举请写成字符串字面量联合。`,
+    )
+    return parseTsType(members[0], warnings, key)
+  }
+
+  let s = members[0]
+  if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim()
+
+  let arrayItem: string | null = null
+  if (s.endsWith('[]')) arrayItem = s.slice(0, -2).trim()
+  else {
+    const arr = /^(?:ReadonlyArray|Array)\s*<([\s\S]+)>$/.exec(s)
+    if (arr) arrayItem = arr[1].trim()
+  }
+  if (arrayItem !== null) {
+    const inner = parseTsType(arrayItem, warnings, key)
+    return inner.hasEnum
+      ? { type: 'array', hasEnum: true, enumVals: inner.enumVals }
+      : { type: 'array' }
+  }
+
+  if (s === 'string') return { type: 'string' }
+  if (s === 'number' || s === 'bigint') return { type: 'number' }
+  if (s === 'boolean') return { type: 'boolean' }
+  if (s === 'Date') return { type: 'string', format: 'date-time' }
+  if (s === 'any' || s === 'unknown' || s === 'null' || s === 'undefined') return { type: 'string' }
+  const lit = literal(s)
+  if (lit !== null) return { type: 'string', hasEnum: true, enumVals: [lit] }
+  if (s.startsWith('{') || /^(?:Record|Map|Set|object)\b/.test(s)) return { type: 'object' }
+
+  warnings.push(`字段 "${key}" 的类型 "${s}" 未能识别 —— 已按 Input 兜底(嵌套类型请手工展开)。`)
+  return { type: 'string' }
+}
+
+/**
+ * 解析 `interface X { ... }` / `type X = { ... }`。
+ * 只做「类型 → formtype」：非可选成员标记 required（TS 语义），JSDoc 首行作 label。
+ */
+function ingestTsInterface(
+  text: string,
+  warnings: string[],
+): { name?: string; fields: SurfaceField[] } {
+  const declRe = /\b(?:export\s+)?(?:default\s+)?(?:interface|type)\s+([A-Za-z_$][\w$]*)\s*(?:<[^>{}]*>)?\s*(?:=\s*)?\{/g
+  const decls = [...text.matchAll(declRe)]
+  if (decls.length === 0) {
+    warnings.push('没有找到 interface / type 字面量声明 —— 无法抽取字段。')
+    return { fields: [] }
+  }
+  if (decls.length > 1) {
+    warnings.push(
+      `发现多个 interface/type 声明(${decls.map((m) => m[1]).join(', ')})—— 已取第一个 "${decls[0][1]}"。`,
+    )
+  }
+  const first = decls[0]
+  const openIndex = (first.index ?? 0) + first[0].lastIndexOf('{')
+  const body = sliceBalanced(text, openIndex)
+  if (body === null) {
+    warnings.push(`interface "${first[1]}" 的花括号不完整 —— 无法抽取字段。`)
+    return { fields: [] }
+  }
+
+  const fields: SurfaceField[] = []
+  for (const member of splitTsMembers(body)) {
+    const m = /^(?:readonly\s+|public\s+|private\s+|protected\s+)?([A-Za-z_$][\w$]*|"[^"]+"|'[^']+')\s*(\?)?\s*:\s*([\s\S]+)$/.exec(
+      member.raw,
+    )
+    if (!m) {
+      warnings.push(`成员 "${member.raw.slice(0, 40)}" 不是 "prop: type" 形态 —— 已忽略。`)
+      continue
+    }
+    const prop = stripIdent(m[1])
+    const optional = m[2] === '?'
+    const desc = parseTsType(m[3], warnings, prop)
+    const formtype = defaultFormtypeForType(desc)
+    const field: SurfaceField = { prop, label: member.doc ?? prop, formtype }
+    if (!optional) field.required = true
+    if (
+      desc.hasEnum &&
+      desc.enumVals?.length &&
+      (formtype === 'Select' || formtype === 'Checkbox' || formtype === 'Radio')
+    ) {
+      field.dataOptions = enumToDataOptions(desc.enumVals)
+    }
+    if (desc.type === 'object') {
+      warnings.push(`字段 "${prop}" 是嵌套对象 —— 已按 Input 兜底,可能需手工展开。`)
+    }
+    if (desc.type === 'array' && !desc.hasEnum) {
+      warnings.push(`字段 "${prop}" 是无枚举数组 —— 已按 Input 兜底。`)
+    }
+    fields.push(field)
+  }
+  if (fields.length === 0) warnings.push('interface 体里没有可摄取的数据字段。')
+  return { name: pascalCase(first[1]), fields }
+}
+
+// ── SQL DDL ─────────────────────────────────────────────────
+
+const SQL_INT_TYPES = new Set([
+  'INT', 'INTEGER', 'TINYINT', 'SMALLINT', 'MEDIUMINT', 'BIGINT',
+  'SERIAL', 'BIGSERIAL', 'SMALLSERIAL', 'INT2', 'INT4', 'INT8',
+])
+const SQL_NUM_TYPES = new Set(['DECIMAL', 'NUMERIC', 'FLOAT', 'DOUBLE', 'REAL', 'MONEY'])
+const SQL_BOOL_TYPES = new Set(['BOOLEAN', 'BOOL', 'BIT'])
+const SQL_DATETIME_TYPES = new Set(['DATETIME', 'TIMESTAMP', 'TIMESTAMPTZ'])
+const SQL_BINARY_TYPES = new Set(['BLOB', 'BINARY', 'VARBINARY', 'BYTEA', 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB'])
+const SQL_JSON_TYPES = new Set(['JSON', 'JSONB'])
+const SQL_STRING_TYPES = new Set([
+  'CHAR', 'CHARACTER', 'NCHAR', 'VARCHAR', 'NVARCHAR', 'TEXT', 'TINYTEXT', 'MEDIUMTEXT',
+  'LONGTEXT', 'CLOB', 'UUID', 'STRING', 'VARYING',
+])
+
+/** SQL 列类型 → 摄取层最小判定输入；`ENUM/SET(...)` 的值进 dataOptions。 */
+function parseSqlType(raw: string, warnings: string[], key: string): IngestTypeDescriptor {
+  const enumMatch = /^\s*(ENUM|SET)\s*\(([\s\S]*)\)\s*$/i.exec(raw)
+  if (enumMatch) {
+    const vals = splitTopLevel(enumMatch[2], ',')
+      .map((s) => s.trim().replace(/^(['"])([\s\S]*)\1$/, '$2'))
+      .filter(Boolean)
+    return vals.length ? { type: 'string', hasEnum: true, enumVals: vals } : { type: 'string' }
+  }
+
+  // 去掉长度/精度参数与 UNSIGNED/ZEROFILL 修饰后取首词（DOUBLE PRECISION → DOUBLE）。
+  const base = raw
+    .trim()
+    .toUpperCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\bUNSIGNED\b|\bZEROFILL\b/g, ' ')
+    .trim()
+  const head = base.split(/\s+/)[0] ?? ''
+
+  if (SQL_INT_TYPES.has(head)) return { type: 'integer' }
+  if (SQL_NUM_TYPES.has(head)) return { type: 'number' }
+  if (SQL_BOOL_TYPES.has(head)) return { type: 'boolean' }
+  if (head === 'DATE') return { type: 'string', format: 'date' }
+  if (SQL_DATETIME_TYPES.has(head)) return { type: 'string', format: 'date-time' }
+  if (head === 'TIME' || head === 'TIMETZ') return { type: 'string', format: 'time' }
+  if (SQL_BINARY_TYPES.has(head)) return { type: 'string', format: 'binary' }
+  if (SQL_JSON_TYPES.has(head)) return { type: 'object' }
+  if (SQL_STRING_TYPES.has(head)) return { type: 'string' }
+
+  warnings.push(`字段 "${key}" 的 SQL 类型 "${raw.trim()}" 未能识别 —— 已按 Input 兜底。`)
+  return { type: 'string' }
+}
+
+/**
+ * 解析 `CREATE TABLE ... (...)`（MySQL / PostgreSQL 常见列定义）。
+ * 表级约束（PRIMARY KEY (...)、KEY、CONSTRAINT、FOREIGN KEY…）整条跳过；
+ * `NOT NULL` / `PRIMARY KEY` 标记 required，`COMMENT '...'` 作 label。
+ */
+function ingestSqlDdl(
+  text: string,
+  warnings: string[],
+): { name?: string; fields: SurfaceField[] } {
+  const tableRe = /\bCREATE\s+(?:TEMP(?:ORARY)?\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)\s*\(/gi
+  const tables = [...text.matchAll(tableRe)]
+  if (tables.length === 0) {
+    warnings.push('没有找到 CREATE TABLE 声明 —— 无法抽取字段。')
+    return { fields: [] }
+  }
+  if (tables.length > 1) {
+    warnings.push(`发现 ${tables.length} 个 CREATE TABLE —— 已取第一个 "${tables[0][1]}"。`)
+  }
+  const first = tables[0]
+  const openIndex = (first.index ?? 0) + first[0].lastIndexOf('(')
+  const body = sliceBalanced(text, openIndex)
+  if (body === null) {
+    warnings.push('CREATE TABLE 的括号不完整 —— 无法抽取字段。')
+    return { fields: [] }
+  }
+
+  const tableName = stripIdent(first[1].split('.').pop() ?? '')
+  const CONSTRAINT_RE = /\s+(?=NOT\s+NULL\b|NULL\b|DEFAULT\b|PRIMARY\s+KEY\b|UNIQUE\b|AUTO_INCREMENT\b|AUTOINCREMENT\b|COMMENT\b|REFERENCES\b|CHECK\b|COLLATE\b|GENERATED\b|ON\s+UPDATE\b)/i
+
+  const fields: SurfaceField[] = []
+  for (const item of splitTopLevel(body, ',')) {
+    if (/^(?:CONSTRAINT|PRIMARY\s+KEY|UNIQUE|KEY|INDEX|FOREIGN\s+KEY|CHECK|FULLTEXT|SPATIAL)\b/i.test(item)) {
+      continue
+    }
+    const m = /^(`[^`]+`|"[^"]+"|\[[^\]]+\]|[A-Za-z_][\w$]*)\s+([\s\S]+)$/.exec(item)
+    if (!m) {
+      warnings.push(`列定义 "${item.slice(0, 40)}" 无法识别 —— 已忽略。`)
+      continue
+    }
+    const prop = stripIdent(m[1])
+    const rest = m[2]
+    const typeText = rest.split(CONSTRAINT_RE)[0].trim()
+    const desc = parseSqlType(typeText, warnings, prop)
+    const formtype = defaultFormtypeForType(desc)
+    const comment = /\bCOMMENT\s+(['"])([\s\S]*?)\1/i.exec(rest)
+    const field: SurfaceField = { prop, label: comment?.[2]?.trim() || prop, formtype }
+    if (/\bNOT\s+NULL\b|\bPRIMARY\s+KEY\b/i.test(rest)) field.required = true
+    if (
+      desc.hasEnum &&
+      desc.enumVals?.length &&
+      (formtype === 'Select' || formtype === 'Checkbox' || formtype === 'Radio')
+    ) {
+      field.dataOptions = enumToDataOptions(desc.enumVals)
+    }
+    if (desc.type === 'object') {
+      warnings.push(`字段 "${prop}" 是 JSON 对象 —— 已按 Input 兜底,可能需手工展开。`)
+    }
+    fields.push(field)
+  }
+  if (fields.length === 0) warnings.push('CREATE TABLE 体里没有可摄取的列。')
+  return { name: pascalCase(tableName), fields }
+}
+
 // ── 入口 ─────────────────────────────────────────────────────
 
 /**
@@ -236,17 +632,20 @@ function ingestSampleJson(
  * - `jsonSchema`:解析 JSON,读 properties(+required+enum+title)。
  * - `openapi`:取 components.schemas 的首个 schema,复用 jsonSchema 路径;YAML 本版只告警。
  * - `sample-json`:按 typeof + ISO 日期启发推断(无 enum 信息)。
- * - `ts-interface` / `sql-ddl`:本版 stub,返回空 + 指引告警。
+ * - `ts-interface`:`interface X { ... }` / `type X = { ... }`;JSDoc 作 label,类型→formtype。
+ * - `sql-ddl`:`CREATE TABLE ...`;列类型→formtype,`COMMENT` 作 label,`NOT NULL` 作 required。
  */
 export function ingestSchema(text: string, kind: SchemaKind): IngestResult {
-  if (kind === 'ts-interface' || kind === 'sql-ddl') {
-    return {
-      fields: [],
-      warnings: [`kind "${kind}" 暂未支持 —— 请改用 JSON Schema / OpenAPI / 样例 JSON。`],
-    }
+  const warnings: string[] = []
+  if (kind === 'ts-interface') {
+    const out = ingestTsInterface(text, warnings)
+    return { name: out.name, fields: out.fields, warnings }
+  }
+  if (kind === 'sql-ddl') {
+    const out = ingestSqlDdl(text, warnings)
+    return { name: out.name, fields: out.fields, warnings }
   }
 
-  const warnings: string[] = []
   let parsed: unknown
   try {
     parsed = JSON.parse(text)

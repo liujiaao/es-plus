@@ -40,7 +40,15 @@ const CHECK = process.argv.includes('--check')
 /** 事件处理 / 取数函数的命名前缀（两个口径里「胶水」的定义，两侧同一规则） */
 const GLUE_PREFIXES = ['handle', 'fetch', 'open', 'load', 'on']
 
-const nonEmptyLines = (text) => text.replace(/\r\n/g, '\n').split('\n').filter((l) => l.trim() !== '')
+/**
+ * 行尾归一。嵌入产出（`code.text`）的源码必须按 LF 入库：否则 Windows 检出
+ * （core.autocrlf=true）会生成含 `\r\n` 的 JSON，与仓库里的 LF 版内容不等，
+ * `--check` 在本机恒红、CI 恒绿 —— 门禁失去意义。归一后产出与平台无关，
+ * `--check` 在本机与 CI 上判的是同一件事。
+ */
+const toLF = (text) => text.replace(/\r\n?/g, '\n')
+
+const nonEmptyLines = (text) => toLF(text).split('\n').filter((l) => l.trim() !== '')
 
 /** 抽出 <template>…</template> 区 */
 function templateBlock(text) {
@@ -77,7 +85,7 @@ function glueBlocks(text) {
 
 function measure(file) {
   const text = readText(file)
-  const total = text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n').length
+  const total = toLF(text).replace(/\n$/, '').split('\n').length
   const nonEmpty = nonEmptyLines(text).length
   const tpl = nonEmptyLines(templateBlock(text)).length
   const glue = glueBlocks(text).reduce((n, b) => n + nonEmptyLines(b).length, 0)
@@ -136,8 +144,8 @@ function build() {
       esplus: { templateLines: esplus.templateLines, glueLines: esplus.glueLines, totalLines: esplus.total },
     },
     code: {
-      native: { label: '原生写法（Element Plus）', file: 'native.vue', text: readText(files.native) },
-      esplus: { label: 'ES-Plus 配置写法', file: 'esplus.vue', text: readText(files.esplus) },
+      native: { label: '原生写法（Element Plus）', file: 'native.vue', text: toLF(readText(files.native)) },
+      esplus: { label: 'ES-Plus 配置写法', file: 'esplus.vue', text: toLF(readText(files.esplus)) },
     },
   }
 }

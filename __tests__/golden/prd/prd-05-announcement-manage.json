@@ -1,0 +1,30 @@
+{
+  "id": "prd-05-announcement-manage",
+  "product": "公告管理",
+  "target": "vue3",
+  "spec": "公告管理。\n\n【查询区】标题、发布状态\n【列表】标题、发布状态、发布人、发布时间\n【新增/编辑表单】标题、内容、发布状态\n【工具栏】新增\n【行操作】编辑、删除\n说明：发布人、发布时间由系统生成。",
+  "config": {
+    "name": "AnnouncementManage",
+    "apiUrl": "/api/announcements",
+    "target": "vue3",
+    "fields": [
+      { "prop": "title", "label": "标题", "formtype": "Input" },
+      {
+        "prop": "content",
+        "label": "内容",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      },
+      { "prop": "publishStatus", "label": "发布状态", "formtype": "Select" },
+      { "prop": "publisher", "label": "发布人", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "publishedAt", "label": "发布时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "负例 N5：内容只在表单（长文本），发布人/发布时间只在列表。"
+}

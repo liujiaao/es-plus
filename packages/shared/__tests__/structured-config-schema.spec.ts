@@ -222,6 +222,35 @@ describe('StructuredCrudConfigSchema — tableBtns 定位字段（position ↔ c
     expect(parseBtn({ name: '新增' }).code).toBe(1)
   })
 
+  // ── AN-07：别名归一化（label→name / action→actionType）───────────────
+  // 前门工具描述曾把示例写成 `{ label, action }`，而 schema 只认 `{ name, actionType }`：
+  // Zod 默认 strip 未知键 ⟹ 照抄示例「解析成功、按钮却是空壳」（tableBtns 维度实测 2/10）。
+  it('别名 label/action 归一化为 name/actionType，且别名键不残留', () => {
+    const btn = parseBtn({ label: '导出', action: 'export' })
+    expect(btn.name).toBe('导出')
+    expect(btn.actionType).toBe('export')
+    // 别名键必须消失：留着会让下游同时看到 name 与 label 两个可能不一致的真相。
+    expect('label' in btn).toBe(false)
+    expect('action' in btn).toBe(false)
+  })
+
+  it('规范键优先于别名（并存时不取别名）', () => {
+    const btn = parseBtn({ name: '导出', label: 'X', actionType: 'export', action: 'import' })
+    expect(btn.name).toBe('导出')
+    expect(btn.actionType).toBe('export')
+  })
+
+  it('name 与 label 都没有 → 解析失败（不放过无名按钮）', () => {
+    const r = StructuredCrudConfigSchema.safeParse({
+      name: 'Page',
+      apiUrl: '/api/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+      actions: ['add'],
+      tableBtns: [{ action: 'export' }],
+    })
+    expect(r.success).toBe(false)
+  })
+
   it('toolbarBtns 同样接受 position（不再被 strip）', () => {
     const r = StructuredCrudConfigSchema.safeParse({
       name: 'Page',

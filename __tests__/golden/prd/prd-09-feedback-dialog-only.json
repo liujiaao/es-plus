@@ -1,0 +1,30 @@
+{
+  "id": "prd-09-feedback-dialog-only",
+  "product": "意见反馈弹窗",
+  "target": "vue3",
+  "spec": "页面上只有一个「意见反馈」弹窗，没有列表和查询。\n\n弹窗标题：意见反馈。字段：反馈内容（多行文本）、联系方式。",
+  "config": {
+    "name": "FeedbackDialog",
+    "apiUrl": "/api/feedback",
+    "target": "vue3",
+    "fields": [
+      { "prop": "content", "label": "反馈内容", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false },
+      { "prop": "contact", "label": "联系方式", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false }
+    ],
+    "dialogs": {
+      "feedback": {
+        "title": "意见反馈",
+        "formItems": [
+          {
+            "prop": "content",
+            "label": "反馈内容",
+            "formtype": "Input",
+            "attrs": { "type": "textarea" }
+          },
+          { "prop": "contact", "label": "联系方式", "formtype": "Input" }
+        ]
+      }
+    }
+  },
+  "notes": "无表分支 + 自定义弹窗 key/title + 逐弹窗 formItems。"
+}

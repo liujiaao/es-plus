@@ -105,6 +105,12 @@ export interface CrudDialogConfig {
   hiddenFullBtn?: boolean
   appendTo?: string | HTMLElement
   cacheKey?: string
+  /**
+   * AI-only 注解键（AN-14）：弹窗体是函数，无法经 JSON 传输；生成器看到它会转成
+   * wrapper SFC 里的 `TODO(es-plus)` 占位并告警。**不是**弹窗 prop —— 运行时白名单
+   * `DIALOG_PASSTHROUGH_KEYS` 刻意不转发它（见 es-crud-page.vue 的注释）。
+   */
+  hasCustomRender?: boolean
   onOpen?: (row?: Record<string, unknown>) => void
   onConfirm?: (
     data: Record<string, unknown>,

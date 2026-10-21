@@ -1,0 +1,25 @@
+{
+  "id": "prd-03-product-management",
+  "product": "商品管理",
+  "target": "vue3",
+  "spec": "商品管理。\n\n【查询区】商品名称、分类、状态\n【列表】商品名称、分类、价格、库存、状态、创建时间\n【新增/编辑表单】商品名称、分类、价格、库存、状态\n【工具栏】新增\n【行操作】编辑、查看、删除\n说明：创建时间为系统字段。",
+  "config": {
+    "name": "ProductManage",
+    "apiUrl": "/api/products",
+    "target": "vue3",
+    "fields": [
+      { "prop": "productName", "label": "商品名称", "formtype": "Input" },
+      { "prop": "category", "label": "分类", "formtype": "Select" },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber" },
+      { "prop": "stock", "label": "库存", "formtype": "InputNumber" },
+      { "prop": "status", "label": "状态", "formtype": "Select" },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" },
+      "view": { "title": "查看" }
+    }
+  },
+  "notes": "正例：价格/库存按含义用 InputNumber。"
+}

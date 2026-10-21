@@ -1,0 +1,78 @@
+{
+  "nl": "采购单管理：初版只要能按名称搜索；表格展示采购名称、供应商、金额、日期、状态（待审核/已通过/已驳回）；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "supplier",
+    "amount",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:supplier"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "供应商也要能在查询条件里按名称搜，不只是在表格里展示。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv01PurchaseSupplierQuery",
+    "apiUrl": "/api/purchase-supplier-query",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "采购名称",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "supplier",
+        "label": "供应商",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待审核",
+            "value": "pending"
+          },
+          {
+            "label": "已通过",
+            "value": "approved"
+          },
+          {
+            "label": "已驳回",
+            "value": "rejected"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链：初版 NL 明说「只按名称搜索」，模型对未提及字段恒置 inQuery:false（few-shot 也如此教），故 turn-0 在 inQuery:supplier 上结构性 miss；一句自然追加后第 1 轮收敛。"
+}

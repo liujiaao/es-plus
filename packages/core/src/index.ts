@@ -71,6 +71,10 @@ export {
 } from './form-layout'
 export type { RowLayoutInfo, FormLayoutResult } from './form-layout'
 
+// ─── EsCrudPage action 面解析（三端共用，AN-06）───────────────
+export { resolveCrudActions, LEGACY_CRUD_ACTIONS } from './crud-actions'
+export type { CrudActionsSource } from './crud-actions'
+
 // ─── 跨页选择 ─────────────────────────────────────────────────
 export {
   createSelectionState,
@@ -148,6 +152,16 @@ export { buildFirstClassGridOptions } from './vxe-engine'
 // a-table customCell / vxe mergeMethod），故三端等价由构造保证。
 export { buildColumnSpans, buildRowSpanMethod, resolveMergeConfig } from './merge-span'
 export type { MergeConfig, MergeRow } from './merge-span'
+
+// ─── 前置非数据列合成（AN-09：选择 / 序号 / 展开，五个列产出路径共用一个判据）──
+export {
+  synthesizeLeadingColumns,
+  buildLeadingColumns,
+  leadingColumnToTableColumn,
+  LEADING_COLUMN_ORDER,
+  LEADING_COLUMN_DEFAULTS,
+} from './table-columns'
+export type { LeadingColumnSpec, LeadingColumnType } from './table-columns'
 
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'

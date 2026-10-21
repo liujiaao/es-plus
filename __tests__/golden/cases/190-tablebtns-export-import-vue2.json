@@ -1,0 +1,33 @@
+{
+  "nl": "订单管理（vue2 项目）：表格上方左侧是“导出订单”和“导入订单”两个按钮；表格展示订单号、订单金额、状态。",
+  "nlEn": "Order management (vue2 project): above the table there are two buttons on the left, \"Export Orders\" and \"Import Orders\"; the table shows order number, order amount, and status.",
+  "fixedFields": ["orderNo", "amount", "status"],
+  "pinnedDims": ["propSet", "actions", "tableBtns"],
+  "config": {
+    "name": "OrderManage",
+    "apiUrl": "/api/orders",
+    "target": "vue2",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "amount", "label": "订单金额", "formtype": "InputNumber", "inQuery": false },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          { "label": "待付款", "value": "pending" },
+          { "label": "已付款", "value": "paid" },
+          { "label": "已取消", "value": "cancelled" }
+        ]
+      }
+    ],
+    "actions": ["export"],
+    "tableBtns": [
+      { "name": "导出订单", "position": "left", "actionType": "export" },
+      { "name": "导入订单", "position": "left", "actionType": "import" }
+    ],
+    "toolbarBtns": []
+  },
+  "notes": "AN-07 export/import：两个 tableBtns 都走 actionType（export / import），position:'left' 显式声明。toolbarBtns: [] 是**显式空数组** —— 它接管表单工具条按钮面（不再按 actions 派生），否则同一页会出现两组「导出」。actions 只声明 export：import 在本用例里是按钮级动作，不是页面级 CRUD 动作。"
+}

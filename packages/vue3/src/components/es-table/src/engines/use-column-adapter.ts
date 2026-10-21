@@ -1,5 +1,6 @@
 import { computed, h, ref, type Ref, type Slots, type VNode } from 'vue'
 import { ElCheckbox, ElIcon, ElTooltip } from 'element-plus'
+import { synthesizeLeadingColumns } from '@es-plus/core'
 import type { TableColumn } from '../../../../types'
 
 export interface VirtualColumn {
@@ -65,23 +66,16 @@ export function useColumnAdapter(
 ): Ref<VirtualColumn[]> {
   return computed(() => {
     const result: VirtualColumn[] = []
-    const hasSelectionCol = columns.value.some(c => c.type === 'selection')
-    const hasIndexCol = columns.value.some(c => c.type === 'index')
-    const hasExpandCol = columns.value.some(c => c.type === 'expand')
 
-    // options.multiSelect 注入选择列（仅当 columns 中没有 type:'selection' 时）
-    if (options.multiSelect && !hasSelectionCol) {
-      result.push(createSelectionColumn(options))
-    }
-
-    // options.expand 注入展开列（仅当 columns 中没有 type:'expand' 时）
-    if (options.expand && !hasExpandCol) {
-      result.push(createExpandColumn(options))
-    }
-
-    // options.snIndex 注入序号列（仅当 columns 中没有 type:'index' 时）
-    if (options.snIndex && !hasIndexCol) {
-      result.push(createIndexColumn())
+    // AN-09：开关 → 前置列的判据收敛到 `synthesizeLeadingColumns`（选择 → 序号 → 展开），
+    // 与 vxe 适配器和两个默认引擎共用同一份顺序/宽度/去重规则。
+    for (const spec of synthesizeLeadingColumns(
+      { multiSelect: options.multiSelect, snIndex: options.snIndex, expand: options.expand },
+      columns.value
+    )) {
+      if (spec.type === 'selection') result.push(createSelectionColumn(options))
+      else if (spec.type === 'index') result.push(createIndexColumn())
+      else result.push(createExpandColumn(options))
     }
 
     for (const col of columns.value) {
@@ -152,7 +146,8 @@ function adaptColumn(col: TableColumn, options: ColumnAdapterOptions): VirtualCo
     base.cellRenderer = createRenderCellRenderer(col)
   } else if (col.scopedSlots?.customRender && options.parentSlots) {
     base.cellRenderer = createSlotCellRenderer(col, options.parentSlots)
-  } else if (col.ellipsis) {
+  // AN-10：契约键 `ellipsis`；`showOverflowTooltip` 是 el-table 的存量写法，一并认。
+  } else if (col.ellipsis || (col as any).showOverflowTooltip) {
     base.cellRenderer = createEllipsisCellRenderer(col)
   } else if (col.formatter) {
     base.cellRenderer = createFormatterCellRenderer(col)

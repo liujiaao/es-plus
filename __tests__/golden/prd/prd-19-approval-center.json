@@ -1,0 +1,22 @@
+{
+  "id": "prd-19-approval-center",
+  "product": "审批中心",
+  "target": "vue3",
+  "spec": "审批中心。\n\n【列表】申请单号、申请人、申请类型、当前状态、提交时间\n【行操作】查看\n审批中心只用于查看，没有筛选区，也没有新增或编辑表单。",
+  "config": {
+    "name": "ApprovalCenter",
+    "apiUrl": "/api/approvals",
+    "target": "vue3",
+    "fields": [
+      { "prop": "requestNo", "label": "申请单号", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "applicant", "label": "申请人", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "requestType", "label": "申请类型", "formtype": "Select", "inQuery": false, "inForm": false },
+      { "prop": "status", "label": "当前状态", "formtype": "Select", "inQuery": false, "inForm": false },
+      { "prop": "submittedAt", "label": "提交时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "view": { "title": "查看" }
+    }
+  },
+  "notes": "只有 table + view；无 query、无 form、无 add/edit。"
+}

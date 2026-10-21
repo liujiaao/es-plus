@@ -7,8 +7,9 @@ import {
   type StructuredCrudConfigInput,
 } from "@es-plus/shared";
 
-// 摄取层对 MCP 的暴露:把一份结构化 schema(OpenAPI / JSON Schema / 样例 JSON)确定性地
-// 翻成一份**草拟好的** StructuredCrudConfig,供宿主 LLM 微调后再调 generate_crud_from_config。
+// 摄取层对 MCP 的暴露:把一份结构化 schema(OpenAPI / JSON Schema / 样例 JSON /
+// TypeScript interface / SQL DDL)确定性地翻成一份**草拟好的** StructuredCrudConfig,
+// 供宿主 LLM 微调后再调 generate_crud_from_config。
 // 刻意不直接出代码——摄取只能定「类型→formtype」这条轴,查询面取舍、按钮、弹窗等仍由
 // LLM 按原始需求补全。保持工具可组合:ingest(预填) → 人改 → generate(落地)。
 
@@ -73,9 +74,9 @@ export function buildIngestDraft(input: BuildIngestDraftInput): BuildIngestDraft
 export function registerIngestSchema(server: McpServer) {
   server.tool(
     "ingest_schema",
-    "Pre-fill a structured CRUD config from an existing schema (OpenAPI JSON, JSON Schema, or a sample JSON object). Deterministic, no LLM: it maps each property's DATA TYPE to a formtype (integer→InputNumber, boolean→Switch, string+format:date→DatePicker, string+enum→Select, array+enum→Checkbox, else Input). Use this as a HEAD START, then review & edit the draft (narrow the query fields, add buttons/dialogs/permissions the schema can't express) and pass it to generate_crud_from_config. OpenAPI YAML is not supported in this version — convert to JSON first. 'ts-interface' and 'sql-ddl' are not yet supported.",
+    "Pre-fill a structured CRUD config from an existing schema (OpenAPI JSON, JSON Schema, a sample JSON object, a TypeScript interface/type literal, or SQL CREATE TABLE DDL). Deterministic, no LLM: it maps each property's DATA TYPE to a formtype (integer→InputNumber, boolean→Switch, string+date→DatePicker, string+enum→Select, array+enum→Checkbox, else Input). For ts-interface, JSDoc becomes the label and non-optional members become required; for sql-ddl, COMMENT becomes the label and NOT NULL/PRIMARY KEY become required. Use this as a HEAD START, then review & edit the draft (narrow the query fields, add buttons/dialogs/permissions the schema can't express) and pass it to generate_crud_from_config. OpenAPI YAML is not supported in this version — convert to JSON first.",
     {
-      text: z.string().min(1).describe("The schema source text (JSON for openapi/jsonSchema; a JSON object or array for sample-json)."),
+      text: z.string().min(1).describe("The schema source text (JSON for openapi/jsonSchema; a JSON object or array for sample-json; TypeScript interface/type source for ts-interface; CREATE TABLE DDL for sql-ddl)."),
       kind: z.enum(INGEST_KINDS).describe("Which kind of schema `text` is."),
       name: z.string().optional().describe("Override the page name (PascalCase). Defaults to the schema title, else a placeholder."),
       apiUrl: z.string().optional().describe("Override the REST base URL, e.g. \"/api/users\". Defaults to a placeholder you must replace."),

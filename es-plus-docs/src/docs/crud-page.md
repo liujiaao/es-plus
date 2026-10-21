@@ -363,7 +363,8 @@ dialogs: {
 | `dialog-cancel` | `(dialogKey: string)` | 弹窗取消按钮点击 |
 | `dialog-open` | `(dialogKey: string, row?: Record<string, unknown>)` | 弹窗打开时 |
 | `btn-click` | `(key: string, payload?: Record<string, unknown>)` | 非弹窗按钮点击 |
-| `query` | `(model: Record<string, unknown>)` | 查询按钮点击 |
+| `query` | `(model: Record<string, unknown>)` | 查询按钮点击（携带当前查询表单模型） |
+| `row-click` | `(row: Record<string, unknown>)` | 表格行点击（三端一致；vue3/vue2 透传原生事件，ADV 由 a-table 的 `customRow` 翻译） |
 | `add` | `()` | 新增按钮点击（向后兼容） |
 | `edit` | `(row: Record<string, unknown>)` | 编辑按钮点击（向后兼容） |
 | `delete` | `(row: Record<string, unknown>)` | 删除按钮点击（向后兼容） |

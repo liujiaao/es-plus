@@ -124,7 +124,10 @@ test('form-02：formLayout.labelWidth 真到 DOM（110px）+ query 按钮分支'
 test('dialog（component 形态）：open() 开窗、预填、默认插槽表单体、宽度/拖拽/关闭叉', async ({ page }) => {
   await page.locator('[data-test="open-component-dialog"]').click()
 
-  const dialog = section(page, 'frag-dialogs').locator('.el-dialog')
+  // ⚠ 该语料带 `options.appendTo='#app'`：vue2 的 Element UI 只有布尔 append-to-body
+  // （AI-48 显式降级 + 告警），弹窗**真的挂到了 body**，不再留在 section 内 ——
+  // 所以这里按 body 级定位，而不是 `section(...).locator('.el-dialog')`。
+  const dialog = page.locator('.el-dialog')
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('.dialog-title')).toHaveText('编辑')
 
@@ -181,5 +184,95 @@ test('dialog（composable 形态）：useXxxDialog().open() 创建弹窗 → 校
   expect(after.submits).toBe(1)
   expect(after.requests.find((r) => r.method === 'POST')?.url).toBe('/api/users')
   expect(after.requests.find((r) => r.method === 'POST')?.data.name).toBe('赵六')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('dialog（component 形态）：新增 → POST /api/users（AN-16）', async ({ page }) => {
+  // 方法映射是**运行时由 title 派生**的（生成器 `title === '新增' ? 'POST' : 'PUT'`），
+  // 记分卡里没有这个维度 —— 只有真跑一次才能证明「新增走 POST、编辑走 PUT」。
+  await page.locator('[data-test="open-component-new-dialog"]').click()
+
+  // appendTo='#app' 在 vue2 退化为 append-to-body（AI-48）—— 弹窗在 body 级。
+  const dialog = page.locator('.el-dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.dialog-title')).toHaveText('新增')
+  await expect(dialog.locator('.el-form-item', { hasText: '姓名' }).locator('input').first()).toHaveValue('王五')
+
+  await dialog.getByRole('button', { name: '确定' }).click()
+  await expect(dialog).toBeHidden()
+
+  const after = await calls(page)
+  expect(after.submits).toBe(1)
+  expect(after.requests.find((r) => r.method === 'POST')?.url).toBe('/api/users')
+  expect(after.requests.find((r) => r.method === 'POST')?.data.name).toBe('王五')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('dialog（component 形态）：查看 → 只读（只有关闭、无确定/取消、不发请求）（AN-16）', async ({ page }) => {
+  await page.locator('[data-test="open-readonly-dialog"]').click()
+
+  // 同上：appendTo 在 vue2 退化为 append-to-body（AI-48）。
+  const dialog = page.locator('.el-dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.dialog-title')).toHaveText('查看')
+  // 只读形态的判据是「按钮集合」：只有关闭。三端同一启发式（title === '查看'）。
+  await expect(dialog.getByRole('button', { name: '关闭' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: '确定' })).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: '取消' })).toHaveCount(0)
+  // 预填仍在：只读不是空壳。
+  await expect(dialog.locator('.el-form-item', { hasText: '姓名' }).locator('input').first()).toHaveValue('张三')
+  expect((await calls(page)).submits).toBe(0)
+
+  await dialog.getByRole('button', { name: '关闭' }).click()
+  await expect(dialog).toBeHidden()
+  expect((await calls(page)).submits).toBe(0)
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('dialog（composable 形态）：取消只关窗、不发请求（AN-16）', async ({ page }) => {
+  await page.locator('[data-test="open-composable-dialog"]').click()
+
+  const dialog = page.locator('.el-dialog', { hasText: '新增' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: '取消' }).click()
+  await expect(dialog).toBeHidden()
+
+  const after = await calls(page)
+  expect(after.submits).toBe(0)
+  expect(after.requests.filter((r) => r.method !== 'GET')).toHaveLength(0)
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('组合 form+dialog：一份表单面派生 add/edit 两个 composable（AN-17）', async ({ page }) => {
+  // 组合语料 comp-form-dialog-01-vue2 的产物**不是** CRUD 页面 —— 前门 no-table 分支
+  // 为每个 dialog entry 各发一段 composable，弹窗体 = form 面。两段必须都能独立打开，
+  // 且字段来自同一份 form 面（客户姓名/手机号/客户等级）。
+  await page.locator('[data-test="open-composition-add"]').click()
+
+  // 页面上常驻着按需打开的 component 形态弹窗（隐藏态也会留下 .el-dialog 节点），
+  // 故用 `:visible` 只看当前真正打开的那一个。
+  const add = page.locator('.el-dialog:visible')
+  await expect(add).toBeVisible()
+  await expect(add.locator('.dialog-title')).toHaveText('新增')
+  for (const label of ['客户姓名', '手机号', '客户等级']) {
+    await expect(add.locator('.el-form-item__label', { hasText: label }).first()).toBeVisible()
+  }
+  await add.getByRole('button', { name: '取消' }).click()
+  await expect(add).toBeHidden()
+
+  // 第二个 dialog key 是**另一段**产物（useCustomerEditDialog），不是复用 add 那一段。
+  await page.locator('[data-test="open-composition-edit"]').click()
+  const edit = page.locator('.el-dialog:visible')
+  await expect(edit).toBeVisible()
+  await expect(edit.locator('.dialog-title')).toHaveText('编辑')
+  await expect(
+    edit.locator('.el-form-item', { hasText: '客户姓名' }).locator('input').first()
+  ).toHaveValue('赵六')
+  await expect(edit.locator('.el-form-item__label', { hasText: '客户等级' }).first()).toBeVisible()
+
+  // 只开窗 + 取消：不发任何写请求。
+  expect((await calls(page)).submits).toBe(0)
+  await edit.getByRole('button', { name: '取消' }).click()
+  await expect(edit).toBeHidden()
   expect(await unhandled(page)).toHaveLength(0)
 })

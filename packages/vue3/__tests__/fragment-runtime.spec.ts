@@ -36,7 +36,7 @@ import {
   generateFormBlock,
   generateDialogBlock,
 } from '../../shared/src/fragment-generator'
-import { createInMemoryBackend } from './runtime-harness'
+import { createInMemoryBackend, findButtonByText } from './runtime-harness'
 
 const __dirname_ = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname_, '..', '..', '..', '__tests__', 'golden', 'cases')
@@ -67,6 +67,42 @@ function mountPlugin(backend: ReturnType<typeof createInMemoryBackend> = createI
 function cleanupDom() {
   document.querySelectorAll('.dialog-containers, .el-overlay, .el-dialog').forEach((el) => el.remove())
   document.body.innerHTML = ''
+}
+
+/**
+ * AN-16：弹窗提交的观察后端。`runtime-harness` 的内存后端按 CRUD 的四条固定 URL 路由，
+ * 弹窗片段发的是自己的 `apiUrl`（`/api/users`），落到它的「默认列表」分支就看不到方法。
+ * 这里只记录请求并回 `{ code: 0 }` —— 弹窗不消费响应，断言锚点是**发了什么**。
+ */
+function createRecordingBackend() {
+  const requests: Array<{ url: string; method: string; data: Record<string, any> }> = []
+  const httpRequest = async (req: Record<string, any>) => {
+    requests.push({ url: String(req.url), method: String(req.method ?? 'GET'), data: req.data ?? {} })
+    return { code: 0 }
+  }
+  return { httpRequest, requests }
+}
+
+/** 元素当前是否不可见（ElDialog 关闭后通常保留 DOM 并 `display:none`）。 */
+function isHidden(el: Element | null): boolean {
+  if (!el) return true
+  return (el as HTMLElement).style.display === 'none' || getComputedStyle(el as HTMLElement).display === 'none'
+}
+
+/**
+ * 弹窗是否已收起。
+ *
+ * 观察点必须选对：Element Plus 的 `v-show`（`dialog.vue` 里 `[[vShow, visible]]`）挂在
+ * **最外层**容器上 —— `modal:true` 时是 `.el-overlay`，`modal:false` 时是
+ * `.el-modal-dialog`（ElOverlay 无遮罩分支只保留 `overlayClass`）。内部 `.el-dialog`
+ * 自身始终可见，拿它判「关了没」恒为 false。
+ * 内容被 `destroyOnClose` 卸载时 `[role=dialog]` 直接消失，同样视为已收起。
+ */
+function isDialogClosed(root: ParentNode): boolean {
+  const inner = root.querySelector('[role="dialog"]')
+  if (!inner) return true
+  const shell = (inner.closest('.el-overlay, .el-modal-dialog') as HTMLElement | null) ?? (inner as HTMLElement)
+  return isHidden(shell)
 }
 
 beforeAll(() => {
@@ -180,6 +216,61 @@ describe('片段运行时（vue3）', () => {
     expect(host.querySelector('.el-dialog')).not.toBeNull()
   })
 
+  it('dialog（component 形态）：确定 → PUT/POST、view 只读、关闭真关窗（AN-16）', async () => {
+    // 与上一条同一份语料、同一个 appendTo 容器；这条盯**提交/只读/关闭**三件事，
+    // 它们都不是配置字段（方法由运行时 title 派生），只能在这里见证。
+    const host = document.createElement('div')
+    host.id = 'app'
+    document.body.appendChild(host)
+
+    const backend = createRecordingBackend()
+    const mod = await importGenerated('./.tmp-fragments/dialog-component.vue')
+    const wrapper = mount(mod.default, {
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, [EsPlus, { httpRequest: backend.httpRequest }]] as any },
+    })
+    await nextTick()
+
+    // ── 编辑 → PUT `${apiUrl}/${row[rowkey]}` ──
+    ;(wrapper.vm as any).open('编辑', { id: 1, name: '张三', status: 1 })
+    await nextTick()
+    await flushPromises()
+    findButtonByText(host, '确定')!.click()
+    await flushPromises()
+    await nextTick()
+    expect(backend.requests).toHaveLength(1)
+    expect(backend.requests[0]).toMatchObject({ method: 'PUT', url: '/api/users/1' })
+    expect(backend.requests[0].data.name).toBe('张三')
+    expect(isDialogClosed(host)).toBe(true)
+
+    // ── 新增 → POST apiUrl ──
+    ;(wrapper.vm as any).open('新增', { name: '王五' })
+    await nextTick()
+    await flushPromises()
+    findButtonByText(host, '确定')!.click()
+    await flushPromises()
+    await nextTick()
+    expect(backend.requests).toHaveLength(2)
+    expect(backend.requests[1]).toMatchObject({ method: 'POST', url: '/api/users' })
+    expect(backend.requests[1].data.name).toBe('王五')
+
+    // ── 查看 → 只读：只有「关闭」，没有「确定/取消」；且不发任何请求 ──
+    ;(wrapper.vm as any).open('查看', { id: 1, name: '张三' })
+    await nextTick()
+    await flushPromises()
+    expect(host.textContent).toContain('查看')
+    expect(findButtonByText(host, '关闭')).not.toBeNull()
+    expect(findButtonByText(host, '确定')).toBeNull()
+    expect(findButtonByText(host, '取消')).toBeNull()
+    expect(backend.requests).toHaveLength(2)
+
+    // ── 关闭 → 弹窗真的收起 ──
+    findButtonByText(host, '关闭')!.click()
+    await flushPromises()
+    await nextTick()
+    expect(isDialogClosed(host)).toBe(true)
+  })
+
   it('dialog（composable 形态）：useXxxDialog().open() 真能创建弹窗实例并渲染表单', async () => {
     const mod = await importGenerated('./.tmp-fragments/dialog-composable.tsx')
     expect(typeof mod.useUserDialog).toBe('function')
@@ -194,5 +285,40 @@ describe('片段运行时（vue3）', () => {
     expect(document.querySelector('.dialog-containers')).toBeTruthy()
     expect(document.body.textContent).toContain('新增')
     expect(document.body.textContent).toContain('姓名')
+  })
+
+  it('dialog（composable 形态）：确定 → POST、取消关窗（AN-16）', async () => {
+    const backend = createRecordingBackend()
+    configureEsPlus({ httpRequest: backend.httpRequest })
+
+    // 先清掉上一条用例可能留下的容器（useDialog 的实例挂在 body）。
+    cleanupDom()
+    const mod = await importGenerated('./.tmp-fragments/dialog-composable.tsx')
+    const dialog = mod.useUserDialog()
+
+    dialog.open('新增', { name: '赵六' })
+    await nextTick()
+    await flushPromises()
+    findButtonByText(document.body, '确定')!.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(backend.requests).toHaveLength(1)
+    expect(backend.requests[0]).toMatchObject({ method: 'POST', url: '/api/users' })
+    expect(backend.requests[0].data.name).toBe('赵六')
+    // 提交后 close()：单例模式的 `close()` 只翻转 visible（容器由 `destroy()` 才移除，
+    // 见 use-dialog.ts 单例分支），故观察点是「弹窗收起」而不是「容器消失」。
+    expect(isDialogClosed(document.body)).toBe(true)
+
+    // 再开一次，验证「取消」只关窗、不发请求（单例复用同一 vNode）。
+    dialog.open('新增', { name: '赵六' })
+    await nextTick()
+    await flushPromises()
+    expect(isDialogClosed(document.body)).toBe(false)
+    findButtonByText(document.body, '取消')!.click()
+    await flushPromises()
+    await nextTick()
+    expect(backend.requests).toHaveLength(1)
+    expect(isDialogClosed(document.body)).toBe(true)
   })
 })

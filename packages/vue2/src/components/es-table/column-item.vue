@@ -192,6 +192,13 @@ export default defineComponent({
         options.align = 'center'
       }
 
+      // AN-10：契约键 `ellipsis` → el-table 原生 `show-overflow-tooltip`（同 vue3）。
+      // 放在 columnBindAttr 而不是只放在 ellipsis 分支：groups/scopedSlots/render 分支
+      // 各自直接 v-bind 这里的结果，只有这一处能覆盖所有渲染分支。
+      if (cols.ellipsis === true && !options.showOverflowTooltip) {
+        options.showOverflowTooltip = true
+      }
+
       return options
     }
 

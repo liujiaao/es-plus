@@ -1,0 +1,33 @@
+{
+  "id": "prd-16-expense-claim",
+  "product": "报销管理",
+  "target": "vue3",
+  "spec": "报销管理。\n\n【查询区】报销单号、报销人、审批状态\n【列表】报销单号、报销人、金额、审批状态、提交时间\n【新增/编辑表单】报销人、金额、费用类型、报销说明（多行文本）\n【工具栏】新增\n【行操作】编辑、查看、删除\n说明：报销单号、提交时间系统生成。",
+  "config": {
+    "name": "ExpenseClaim",
+    "apiUrl": "/api/expenses",
+    "target": "vue3",
+    "fields": [
+      { "prop": "claimNo", "label": "报销单号", "formtype": "Input", "inForm": false },
+      { "prop": "applicant", "label": "报销人", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "status", "label": "审批状态", "formtype": "Select" },
+      { "prop": "submittedAt", "label": "提交时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      { "prop": "expenseType", "label": "费用类型", "formtype": "Select", "inQuery": false, "inTable": false },
+      {
+        "prop": "description",
+        "label": "报销说明",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" },
+      "view": { "title": "查看" }
+    }
+  },
+  "notes": "系统单号可在 query/table、不可在 form；费用类型/说明 form-only。"
+}

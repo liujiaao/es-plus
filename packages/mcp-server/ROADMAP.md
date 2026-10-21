@@ -3,6 +3,9 @@
 > 工程内部路线图，不是公开文案（公开 AI 页文案在 [docs/ai/ai-tools.md](../../docs/ai/ai-tools.md)）。
 > 来源：2026-10 的能力评估（Q5 四优先级 + Q6 五个全球借鉴点）+ 2026-10-13 复核评审（三端源码核对 + 业界主流做法检验）。
 >
+> **当前执行真源**：[AI-NATIVE-REMEDIATION-PLAN.md](./AI-NATIVE-REMEDIATION-PLAN.md)（`AN-01..AN-29`，含阶段门禁与验收口径）；
+> 系统行为基线见 [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md)。本文件保留历史 AI-xx backlog 与决策依据，排期以 AN 计划为准。
+>
 > **Wave 1 技术实施方案**：[docs/internal/wave-1-eval-trust-design.md](../../docs/internal/wave-1-eval-trust-design.md)（P0 + AI-05，拆成 PR-1~4）。
 > **Wave 2 技术实施方案**：[docs/internal/wave-2-production-trust-design.md](../../docs/internal/wave-2-production-trust-design.md)（信任地基：C1 编译门 / A1' scoped 指标 / A2' ingest / A3' refine / C2 前门 validate）。
 >
@@ -107,7 +110,7 @@ virtualScroll / target / mode；且仓库里**没有** committed 的 `last-accur
 ## Wave 2 · 生产信任地基 ✅ 已交付（设计见 wave-2-production-trust-design.md）
 
 ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「敢不敢说生产可用」，并占回「Wave 2」号位（消除与下方 schema 表达力的撞号）：
-- `ingest_schema`（openapi / jsonSchema / sample-json → 草稿 config；ts-interface / sql-ddl 未支持）
+- `ingest_schema`（openapi / jsonSchema / sample-json / ts-interface / sql-ddl → 草稿 config）
 - `generate_crud_from_config` 前门 + `validateAndRepair`（shared，Zod 阻断式校验，只判不改、无模型回灌）
 - `refine_config`（确定性 validate + diff，不喂模型，多轮精修）
 - `validate_config`（structured-crud → Zod；其余 → Ajv）

@@ -2,6 +2,7 @@ import Ajv from "ajv"
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
+import type { UnknownKeyFinding } from "./unknown-keys.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_SCHEMAS_DIR = join(__dirname, "../schemas")
@@ -10,6 +11,14 @@ export interface ValidationResult {
   valid: boolean
   errors: string[]
   suggestions: string[]
+  /**
+   * AN-08：形状里不存在的键（**只对 Zod 单源的 `validateAndRepair` 填充**）。
+   *
+   * 为什么必须是独立字段而不只是并进 `errors`：宿主需要在下一轮**定向**修键
+   * （路径 + 建议键），字符串错误串只够给人看。Ajv 分支不填（JSON Schema 有
+   * `additionalProperties` 自己的语义）。缺省 = 未做未知键检查。
+   */
+  unknownKeys?: UnknownKeyFinding[]
 }
 
 export function createSchemaValidator(schemasDir?: string) {

@@ -345,6 +345,31 @@ export const tableBlockOptionsSchema = z.object({
     .describe(
       'Map the LIST API response onto table semantics when the backend does not use the default flat shape. Default mapping is { total: "records", tableData: "rows", pageSize: "pageSize", current: "pageNo" }. Each value is the FLAT response key (no deep paths — the component only reads top-level keys). e.g. a backend returning { list: [...], count: N } → { tableData: "list", total: "count" }. Only the keys you set are remapped; omit a key to keep its default.'
     ),
+  // AN-08：与 shared 权威 tableOptions 逐键对齐（check-fragment-contract 断键集相等）。
+  // vxe 的具名键、JSON 可承载子集；函数型 loadMethod/toggleMethod 不进 AI 契约。
+  treeConfig: z
+    .object({
+      transform: z.boolean().optional().describe('Build the tree client-side from FLAT rows (needs rowField + parentField). vxe only.'),
+      rowField: z.string().optional().describe("Row id field for transform mode (default 'id')."),
+      parentField: z.string().optional().describe("Parent id field for transform mode (default 'parentId')."),
+      childrenField: z.string().optional().describe("Child array field (default 'children')."),
+      children: z.string().optional().describe('@deprecated vxe v4 alias of childrenField; normalized at runtime.'),
+      mapChildren: z.string().optional().describe("Field that caches original children in transform mode (default '_X_ROW_CHILD')."),
+      expandAll: z.boolean().optional().describe('Start with every node expanded.'),
+      lazy: z.boolean().optional().describe('Lazy-load children (vxe only; the loader function itself is a Tier-3 extension point).'),
+    })
+    .optional()
+    .describe(
+      "vxe-only rich tree config. Use transform:true + rowField + parentField to build a tree from FLAT rows; for nested `children` arrays on every renderer use the CRUD config's top-level `treeConfig`."
+    ),
+  expandConfig: z
+    .object({
+      expandAll: z.boolean().optional().describe('Expand every row by default.'),
+      accordion: z.boolean().optional().describe('Accordion mode: at most one row expanded at a time.'),
+      lazy: z.boolean().optional().describe('Lazy-load expand content (vxe only; the loader function itself is a Tier-3 extension point).'),
+    })
+    .optional()
+    .describe('vxe-only row-expand switch (paired with an expand column).'),
 });
 
 /** `generate_table` 的分页播种（权威 schema 顶层 `pagination` 的数据子集）。 */

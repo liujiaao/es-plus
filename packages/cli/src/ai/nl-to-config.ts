@@ -1,5 +1,6 @@
 import {
   StructuredCrudConfigSchema,
+  repairConfig,
   buildNlToConfigSystemPrompt,
   type StructuredCrudConfig,
 } from '@es-plus/shared'
@@ -192,7 +193,9 @@ export async function nlToConfig(nl: string, opts: NlToConfigOptions = {}): Prom
       continue
     }
 
-    const parsed = StructuredCrudConfigSchema.safeParse(candidate)
+    // AN-24：先跑确定性修复环，再做 schema 判定。无歧义的格式错误不应消耗模型一轮。
+    const prepared = repairConfig(candidate)
+    const parsed = StructuredCrudConfigSchema.safeParse(prepared.config)
     if (parsed.success) {
       const config = parsed.data as StructuredCrudConfig
       // Honor CLI target/mode when the model left them at defaults / unset.

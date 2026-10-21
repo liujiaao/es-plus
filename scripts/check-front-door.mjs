@@ -22,6 +22,11 @@
  *   ⑤ round-trip（承重断言）：`composeCrudConfig(推导的 surfaces)` 的
  *      **字段成员关系**必须与 gold 的三面划分逐字段一致。只断言「没抛异常」是不够的 ——
  *      成员关系写错（`inQuery: true` 之类的常量）照样能生成、照样能编译，但语义全错。
+ *      入参按真 handler 的装配（含 actions / dialogs / tableBtns / 各顶层开关）喂，
+ *      否则验的是 compose 的推导分支而不是页面真实产物。
+ *   ⑤b 动作面保真（AN-06）：gold 声明了 `actions` / `dialogs` / `tableBtns` 时，
+ *      组合结果必须原样保留（少一个键不会编译失败，只会让页面少/多按钮 —— 曾因三端
+ *      各自硬编码 add/edit/delete 兜底，把只读页变成能删）。
  *   ⑥ 报告：可表达 N 条、因逃生舱不可表达 M 条（**点名**，绝不静默跳过）。
  *
  * ## 技术路线
@@ -104,6 +109,7 @@ async function main() {
     const routeMsgs = []
     const compileMsgs = []
     const roundMsgs = []
+    const actionMsgs = []
 
     for (const file of files) {
       const raw = JSON.parse(readFileSync(join(CASES_DIR, file), 'utf8'))
@@ -163,12 +169,44 @@ async function main() {
       }
 
       // ⑤ round-trip 成员关系（承重断言）。
+      // 入参必须与真 handler 一致（`generate-crud.ts:241-263`）—— 只喂 query/table/form
+      // 会让 actions/tableBtns 走 compose 的**推导**分支，测出来的就不是页面真实产物。
+      const dialogBody = surfaces.form.length ? surfaces.form : surfaces.table
+      const dialogs = surfaces.dialog
+        ? Object.fromEntries(
+            surfaces.dialog.map((d) => [
+              String(d.key),
+              {
+                title: d.title !== undefined ? d.title : String(d.key),
+                ...(d.width !== undefined ? { width: d.width } : {}),
+                ...(d.fullscreen !== undefined ? { fullscreen: d.fullscreen } : {}),
+                formItems: d.formItems !== undefined ? d.formItems : dialogBody,
+              },
+            ])
+          )
+        : undefined
       const composed = composeCrudConfig({
         name: config.name,
         apiUrl: config.apiUrl,
+        target: config.target,
+        mode: config.mode,
+        typescript: config.typescript,
+        i18n: config.i18n,
         query: surfaces.query,
         table: surfaces.table,
         form: surfaces.form,
+        actions: config.actions,
+        permissions: config.permissions,
+        pagination: config.pagination,
+        tableOptions: config.tableOptions,
+        formLayout: config.formLayout,
+        operationColumn: config.operationColumn,
+        tableBtns: config.tableBtns,
+        toolbarBtns: config.toolbarBtns,
+        dialogs,
+        expandConfig: config.expandConfig,
+        treeConfig: config.treeConfig,
+        mergeConfig: config.mergeConfig,
       }).config
       const goldMem = new Map(config.fields.map((f) => [f.prop, [f.inQuery !== false, f.inTable !== false, f.inForm !== false]]))
       const compMem = new Map(composed.fields.map((f) => [f.prop, [f.inQuery === true, f.inTable === true, f.inForm === true]]))
@@ -190,6 +228,28 @@ async function main() {
       } else {
         roundOk++
       }
+
+      // ⑤b 动作面保真（AN-06）：actions / dialog key / tableBtns 决定页面上有哪些按钮。
+      // 少一个键既不会编译失败、也不会少字段 —— 只会让页面少/多按钮（曾靠三端各自
+      // 硬编码 add/edit/delete 兜底，把「页面只读」变成「页面能删」），故必须逐条比。
+      const keyList = (xs) => [...xs].sort().join('|')
+      if (Array.isArray(config.actions) && keyList(config.actions) !== keyList(composed.actions ?? [])) {
+        actionMsgs.push(
+          `${file} — actions 不保真：gold [${config.actions.join(', ')}] vs composed [${(composed.actions ?? []).join(', ')}]`
+        )
+      }
+      const goldDialogKeys = Object.keys(config.dialogs ?? {})
+      const compDialogKeys = Object.keys(composed.dialogs ?? {})
+      if (keyList(goldDialogKeys) !== keyList(compDialogKeys)) {
+        actionMsgs.push(
+          `${file} — dialog key 不保真：gold [${goldDialogKeys.join(', ')}] vs composed [${compDialogKeys.join(', ')}]`
+        )
+      }
+      const goldTb = Array.isArray(config.tableBtns) ? config.tableBtns.length : null
+      const compTb = Array.isArray(composed.tableBtns) ? composed.tableBtns.length : null
+      if (goldTb !== compTb) {
+        actionMsgs.push(`${file} — tableBtns 不保真：gold ${goldTb ?? '未声明'} 条 vs composed ${compTb ?? '未声明'} 条`)
+      }
     }
 
     // 生效缺口：只减不增清单（逃生舱由用户拍板，登记在 lib/entry-keys.mjs 的 FRONT_DOOR_UNREACHABLE）。
@@ -202,6 +262,10 @@ async function main() {
     if (roundMsgs.length) {
       fail(`round-trip 成员关系 ${roundMsgs.length} 条不忠实（承重断言⑤）：`)
       for (const m of roundMsgs.slice(0, 5)) console.error(`     ✗ ${m}`)
+    }
+    if (actionMsgs.length) {
+      fail(`round-trip 动作面 ${actionMsgs.length} 条不忠实（AN-06 ⑤b）：`)
+      for (const m of actionMsgs.slice(0, 5)) console.error(`     ✗ ${m}`)
     }
     if (routeMsgs.length) {
       fail(`no-table 路由断言③ ${routeMsgs.length} 条未过：`)

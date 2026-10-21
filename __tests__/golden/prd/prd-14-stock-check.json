@@ -1,0 +1,23 @@
+{
+  "id": "prd-14-stock-check",
+  "product": "库存盘点",
+  "target": "vue3",
+  "spec": "库存盘点。\n\n【列表】商品名称、仓库、账面库存、实盘库存、差异\n【新增/编辑表单】商品名称、仓库、账面库存、实盘库存\n【工具栏】新增\n【行操作】编辑、删除\n页面没有筛选条件。",
+  "config": {
+    "name": "StockCheck",
+    "apiUrl": "/api/stock-checks",
+    "target": "vue3",
+    "fields": [
+      { "prop": "productName", "label": "商品名称", "formtype": "Input", "inQuery": false },
+      { "prop": "warehouse", "label": "仓库", "formtype": "Input", "inQuery": false },
+      { "prop": "bookStock", "label": "账面库存", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "actualStock", "label": "实盘库存", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "diff", "label": "差异", "formtype": "InputNumber", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "负例 N4：没有筛选区 → query 必须为空；差异是计算列 → 不进 form。"
+}

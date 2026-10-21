@@ -1,0 +1,26 @@
+{
+  "id": "prd-08-leave-request-form-only",
+  "product": "请假申请",
+  "target": "vue3",
+  "spec": "只需要一个「发起请假」表单，不需要列表。\n\n【表单字段】申请人、请假类型（下拉）、开始日期、结束日期、请假事由（多行文本）\n【按钮】提交、取消",
+  "config": {
+    "name": "LeaveRequest",
+    "apiUrl": "/api/leaves",
+    "target": "vue3",
+    "fields": [
+      { "prop": "applicant", "label": "申请人", "formtype": "Input", "inQuery": false, "inTable": false },
+      { "prop": "leaveType", "label": "请假类型", "formtype": "Select", "inQuery": false, "inTable": false },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker", "inQuery": false, "inTable": false },
+      { "prop": "endDate", "label": "结束日期", "formtype": "DatePicker", "inQuery": false, "inTable": false },
+      {
+        "prop": "reason",
+        "label": "请假事由",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ]
+  },
+  "notes": "无表分支：form-only；多行文本按含义用 Input + textarea。"
+}

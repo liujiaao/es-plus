@@ -1,0 +1,46 @@
+{
+  "nl": "物料管理：表格上方左侧是“批量导出”按钮，右侧是“新增物料”按钮；表格展示物料编码、物料名称、库存数量；行内有编辑、删除；新增和编辑弹窗里填写物料编码、物料名称、库存数量。",
+  "nlEn": "Material management: above the table, the \"Batch Export\" button is on the left and the \"Add Material\" button is on the right; the table shows material code, material name, and stock quantity; each row has edit and delete; the add and edit dialogs contain material code, material name, and stock quantity.",
+  "fixedFields": ["materialCode", "materialName", "stock"],
+  "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn", "dialogs"],
+  "config": {
+    "name": "MaterialManage",
+    "apiUrl": "/api/materials",
+    "fields": [
+      { "prop": "materialCode", "label": "物料编码", "formtype": "Input" },
+      { "prop": "materialName", "label": "物料名称", "formtype": "Input" },
+      { "prop": "stock", "label": "库存数量", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "actions": ["add", "edit", "delete"],
+    "tableBtns": [
+      { "name": "批量导出", "position": "left", "actionType": "export" },
+      { "name": "新增物料", "type": "primary", "position": "right", "dialogKey": "add" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "编辑", "dialogKey": "edit" },
+        { "name": "删除", "confirm": "确定删除该物料吗？" }
+      ]
+    },
+    "dialogs": {
+      "add": {
+        "title": "新增物料",
+        "formItems": [
+          { "prop": "materialCode", "label": "物料编码", "formtype": "Input" },
+          { "prop": "materialName", "label": "物料名称", "formtype": "Input" },
+          { "prop": "stock", "label": "库存数量", "formtype": "InputNumber" }
+        ]
+      },
+      "edit": {
+        "title": "编辑物料",
+        "formItems": [
+          { "prop": "materialCode", "label": "物料编码", "formtype": "Input" },
+          { "prop": "materialName", "label": "物料名称", "formtype": "Input" },
+          { "prop": "stock", "label": "库存数量", "formtype": "InputNumber" }
+        ]
+      }
+    }
+  },
+  "notes": "AN-07 左/右：tableBtns 同时使用推荐字段 position:'left'/'right'，且一个按钮走 actionType（导出）、一个走 dialogKey（打开新增弹窗）。评分口径 name|归一化 code|actionType 必须与渲染器落位一致 —— 若 position 被 strip 或 dialogKey 被丢，按钮会跑边或点不开弹窗。"
+}

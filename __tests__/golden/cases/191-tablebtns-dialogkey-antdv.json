@@ -1,0 +1,47 @@
+{
+  "nl": "供应商管理：表格上方右侧是“新增供应商”按钮；表格展示供应商名称、联系人、联系电话；行内有“详情”和删除按钮，点详情打开只读的供应商详情弹窗（只有关闭按钮）。",
+  "nlEn": "Supplier management: above the table, the \"Add Supplier\" button is on the right; the table shows supplier name, contact person, and phone number; each row has a \"Details\" button and a delete button; clicking Details opens a read-only supplier detail dialog with only a close button.",
+  "fixedFields": ["supplierName", "contact", "phone"],
+  "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn", "dialogs"],
+  "config": {
+    "name": "SupplierManage",
+    "apiUrl": "/api/suppliers",
+    "target": "antdv",
+    "fields": [
+      { "prop": "supplierName", "label": "供应商名称", "formtype": "Input" },
+      { "prop": "contact", "label": "联系人", "formtype": "Input" },
+      { "prop": "phone", "label": "联系电话", "formtype": "Input", "inQuery": false }
+    ],
+    "actions": ["add", "view", "delete"],
+    "tableBtns": [
+      { "name": "新增供应商", "type": "primary", "position": "right", "dialogKey": "add" }
+    ],
+    "operationColumn": {
+      "label": "操作",
+      "btns": [
+        { "name": "详情", "dialogKey": "detail" },
+        { "name": "删除", "confirm": "确定删除该供应商吗？" }
+      ]
+    },
+    "dialogs": {
+      "add": {
+        "title": "新增供应商",
+        "formItems": [
+          { "prop": "supplierName", "label": "供应商名称", "formtype": "Input" },
+          { "prop": "contact", "label": "联系人", "formtype": "Input" },
+          { "prop": "phone", "label": "联系电话", "formtype": "Input" }
+        ]
+      },
+      "detail": {
+        "title": "供应商详情",
+        "isHiddenFooter": true,
+        "formItems": [
+          { "prop": "supplierName", "label": "供应商名称", "formtype": "Input" },
+          { "prop": "contact", "label": "联系人", "formtype": "Input" },
+          { "prop": "phone", "label": "联系电话", "formtype": "Input" }
+        ]
+      }
+    }
+  },
+  "notes": "AN-07 dialogKey：自定义弹窗 key（detail，不在 add/edit/view 内建集合里）必须靠 tableBtns / operationColumn 的 dialogKey 打开 —— 弹窗自身不会凭空生成按钮。本用例同时钉住：只读详情用 isHiddenFooter（底栏只剩关闭），且 actions 里的 view 不要求存在名为 view 的弹窗（由 detail 承担）。"
+}

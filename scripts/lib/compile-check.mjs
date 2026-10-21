@@ -16,6 +16,23 @@
  */
 import { transformSync } from 'esbuild'
 
+/**
+ * 从 ```` ```lang ```` 围栏里抽出所有代码块（lang 归一化：vue / tsx / ts / js / json）。
+ *
+ * 单源：`scripts/lib/front-door.mjs` 与 `scripts/eval/compile-leg.mjs` 共用这一份。
+ * 各写一份的下场在 AI-42 已经见过：前门腿认得 ```` ```vue ````，别的腿把它当 `ts`
+ * 丢给脚本解析器 —— 「同一段产物 A 腿绿 B 腿红」。
+ */
+export function fencedBlocks(text) {
+  const out = []
+  for (const m of String(text).matchAll(/```([a-zA-Z]*)[ \t]*\r?\n([\s\S]*?)```/g)) {
+    const raw = m[1].toLowerCase()
+    const lang = raw === 'vue' ? 'vue' : raw === 'tsx' ? 'tsx' : raw === 'json' ? 'json' : raw === 'js' || raw === 'jsx' ? 'js' : 'ts'
+    out.push({ lang, code: m[2] })
+  }
+  return out
+}
+
 /** 按 `<script lang="...">` 声明挑 loader；未知/缺省回落到 js。 */
 export function loaderForLang(lang) {
   const l = String(lang || '').toLowerCase()

@@ -1,0 +1,71 @@
+{
+  "nl": "订单列表：初版只要能按标题搜索；表格展示标题、日期、状态（待付款/已付款/已取消）、金额；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "date",
+    "status",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:date"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "日期也要能按区间筛选，平常要查某段时间的订单。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv03OrderDateQuery",
+    "apiUrl": "/api/order-date-query",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待付款",
+            "value": "unpaid"
+          },
+          {
+            "label": "已付款",
+            "value": "paid"
+          },
+          {
+            "label": "已取消",
+            "value": "canceled"
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（日期区间）。日期字段是模型最容易从查询面丢掉的类型（历史实测 want-true-got-false）。"
+}

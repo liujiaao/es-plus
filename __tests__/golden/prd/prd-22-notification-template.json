@@ -1,0 +1,30 @@
+{
+  "id": "prd-22-notification-template",
+  "product": "通知模板",
+  "target": "vue3",
+  "spec": "通知模板管理。\n\n【查询区】模板名称、通知类型\n【列表】模板名称、通知类型、状态、更新时间\n【新增/编辑表单】模板名称、通知类型、状态、模板内容（多行文本）\n【工具栏】新增\n【行操作】编辑、删除\n说明：更新时间系统生成；模板内容只在表单维护。",
+  "config": {
+    "name": "NotificationTemplate",
+    "apiUrl": "/api/notification-templates",
+    "target": "vue3",
+    "fields": [
+      { "prop": "templateName", "label": "模板名称", "formtype": "Input" },
+      { "prop": "noticeType", "label": "通知类型", "formtype": "Select" },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inQuery": false },
+      { "prop": "updatedAt", "label": "更新时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      {
+        "prop": "content",
+        "label": "模板内容",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "内容 form-only，更新时间 table-only。"
+}

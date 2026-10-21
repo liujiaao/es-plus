@@ -47,6 +47,12 @@ describe('generateAppEntry — 三端入口装配样板', () => {
     expect(entry).toContain('httpRequest:')
     expect(entry).toContain('@es-plus/vue3')
     expect(entry).toContain('src/main.ts')
+    // AN-15：默认 target 也必须装配自己的 UI 库与 es-plus 样式 —— 否则「照抄入口」的
+    // 用户拿到的是 el-* 全部未知元素的页面（生成物本身编译通过）。
+    expect(entry).toContain("import ElementPlus from 'element-plus'")
+    expect(entry).toContain("import 'element-plus/dist/index.css'")
+    expect(entry).toContain('app.use(ElementPlus)')
+    expect(entry).toContain("import '@es-plus/vue3/dist/style.css'")
   })
 
   it('antdv：额外前置 app.use(Antd) 且包名指向 adapter-antdv', () => {
@@ -57,6 +63,7 @@ describe('generateAppEntry — 三端入口装配样板', () => {
     expect(entry).toContain('permission:')
     expect(entry).toContain('t:')
     expect(entry).toContain('httpRequest:')
+    expect(entry).toContain("import '@es-plus/adapter-antdv/dist/style.css'")
   })
 
   it('vue2：Vue.use(ESPlus, …) —— 且不含 app.use(ESPlus，文件名为 main.js', () => {
@@ -69,6 +76,7 @@ describe('generateAppEntry — 三端入口装配样板', () => {
     expect(entry).toContain('t:')
     expect(entry).toContain('httpRequest:')
     expect(entry).toContain('src/main.js')
+    expect(entry).toContain("import '@es-plus/vue2/dist/style.css'")
   })
 
   it('默认 target（未传参）等同 vue3', () => {

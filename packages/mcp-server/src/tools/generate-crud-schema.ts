@@ -5,7 +5,7 @@ import { generateCrudSchema } from "@es-plus/shared";
 export function registerGenerateCrudSchema(server: McpServer) {
   server.tool(
     "generate_crud_schema",
-    "Generate CrudPageSchema JSON + minimal wrapper SFC from a natural language description. Recommended over full SFC mode — produces simpler, more maintainable output using <es-crud-page> component. Supports vue3 (default) / vue2 / antdv targets.",
+    "LEGACY FALLBACK (deprecated): generate CrudPageSchema JSON + minimal wrapper SFC from a natural language description using a REGEX/keyword parser. For natural-language requests use generate_crud (the front-door tool); for a config you already hold use generate_crud_from_config (ADVANCED) — both compile through the same deterministic generator. Keep this only for a quick prototype or a no-LLM host. Produces <es-crud-page> schema output. Supports vue3 (default) / vue2 / antdv targets.",
     {
       description: z
         .string()

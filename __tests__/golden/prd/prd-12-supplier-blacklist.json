@@ -1,0 +1,31 @@
+{
+  "id": "prd-12-supplier-blacklist",
+  "product": "供应商黑名单",
+  "target": "vue3",
+  "spec": "供应商列表。\n\n【列表】供应商名称、联系人、电话\n【行操作】加入黑名单\n【弹窗】标题「加入黑名单」；字段：拉黑原因（多行文本）、生效日期\n列表不提供筛选，也没有新增或编辑表单。",
+  "config": {
+    "name": "SupplierBlacklist",
+    "apiUrl": "/api/suppliers",
+    "target": "vue3",
+    "fields": [
+      { "prop": "supplierName", "label": "供应商名称", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "contact", "label": "联系人", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "phone", "label": "电话", "formtype": "Input", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "blacklist": {
+        "title": "加入黑名单",
+        "formItems": [
+          {
+            "prop": "reason",
+            "label": "拉黑原因",
+            "formtype": "Input",
+            "attrs": { "type": "textarea" }
+          },
+          { "prop": "effectiveAt", "label": "生效日期", "formtype": "DatePicker" }
+        ]
+      }
+    }
+  },
+  "notes": "自定义弹窗且逐弹窗字段：不能只回 canned 'add'，也不能把这两个字段塞进共享 form。"
+}

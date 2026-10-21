@@ -652,6 +652,126 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['edit'],
     },
   },
+  {
+    nl: '客户合同管理：查询条件有合同编号和客户名称；表格第一列是复选框，之后依次展示合同编号、客户名称、合同金额、签约日期（按这个顺序）；支持新增、编辑、删除。',
+    reasoning:
+      '「第一列是复选框」是非字段列 —— 扁平 `fields` 表达不了，必须用顶层 `columns`，写 `{ type: "selection", width: 50 }`（其余非字段列：`index` 序号、`expand` 展开器）。`columns` 一旦给出就**整体覆盖**派生列（override 非 merge），所以「表格展示…」点名的每个字段都必须按 NL 给出的**顺序**逐个写进 `columns`；漏写一个，该列就直接消失。操作列仍然由 `actions` 自动追加，不要写进 `columns`。`fields` 继续驱动查询表单与新增/编辑表单（查询字段照常标 inQuery）。',
+    config: {
+      name: 'ContractSelectionManage',
+      apiUrl: '/api/contracts',
+      fields: [
+        { prop: 'contractNo', label: '合同编号', formtype: 'Input' },
+        { prop: 'customerName', label: '客户名称', formtype: 'Input' },
+        { prop: 'amount', label: '合同金额', formtype: 'InputNumber', inQuery: false },
+        { prop: 'signedAt', label: '签约日期', formtype: 'DatePicker', inQuery: false },
+      ],
+      columns: [
+        { type: 'selection', width: 50 },
+        { prop: 'contractNo', label: '合同编号' },
+        { prop: 'customerName', label: '客户名称' },
+        { prop: 'amount', label: '合同金额' },
+        { prop: 'signedAt', label: '签约日期' },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '报销管理：查询条件有报销单号；表格展示报销单号、报销类型、金额、收款方、备注；支持新增、编辑、删除。新增/编辑时，报销类型选「其他」就必须填写备注；选「个人」时收款方自动填「个人」，其余类型自动填「公司」。',
+    reasoning:
+      '「选某值时必须填写」= 字段级 `reactions` 的 `fulfill.required`（求值为布尔的 JSONLogic 表达式节点，**不是**裸 boolean，也不是 `{field,op,value}` 旧条件）；「某值自动填另一字段」= 同字段的 `fulfill.value`（表达式 `if`，三操作数允许 else 分支）——两者都是纯 JSON，绝不是 JS 回调。`fulfill.value` 规则**必须**带非空 `dependencies`（否则任何编辑都会重算并覆盖用户手改）。`required` 不需要 `when`：表达式本身已编码条件，运行时直接按求值结果切换必填。注意 `remark` 同时是表格列与表单字段（不是 isHidden —— 字段始终可见，只是条件必填）。',
+    config: {
+      name: 'ExpenseLinkageManage',
+      apiUrl: '/api/expenses',
+      fields: [
+        { prop: 'expenseNo', label: '报销单号', formtype: 'Input' },
+        {
+          prop: 'expenseType',
+          label: '报销类型',
+          formtype: 'Select',
+          inQuery: false,
+          dataOptions: [
+            { label: '个人', value: 'personal' },
+            { label: '公司', value: 'company' },
+            { label: '其他', value: 'other' },
+          ],
+        },
+        { prop: 'amount', label: '金额', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'payee',
+          label: '收款方',
+          formtype: 'Input',
+          inQuery: false,
+          reactions: [
+            {
+              dependencies: ['expenseType'],
+              fulfill: {
+                value: {
+                  if: [
+                    { '==': [{ var: 'expenseType' }, 'personal'] },
+                    '个人',
+                    '公司',
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          prop: 'remark',
+          label: '备注',
+          formtype: 'Input',
+          inQuery: false,
+          attrs: { type: 'textarea' },
+          reactions: [
+            {
+              dependencies: ['expenseType'],
+              fulfill: { required: { '==': [{ var: 'expenseType' }, 'other'] } },
+            },
+          ],
+        },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
+  {
+    nl: '请假单管理：查询条件有请假人和状态（待审/通过/驳回）；表格展示请假人、请假类型、开始日期、天数、状态；支持新增、查看。查看弹窗标题改成「请假详情」，底部只保留一个「关闭」按钮。',
+    reasoning:
+      '「查看弹窗标题 / 底部只留一个关闭按钮」是 `dialogs.view` 的**基础键**：`title` 覆盖默认标题，`configBtn` 是纯 JSON 数组（这里是 `[{ name: "关闭", action: "cancel" }]`），运行时按 `action` 装配点击行为（"confirm" 校验并提交、"cancel" 直接关闭）——**绝不能**在 JSON 里写 `click` 函数。声明 `dialogs` 不会关掉按钮派生：`actions: ["add","view"]` 仍自动派生「新增」工具栏按钮与「查看」行按钮，二者分别打开 add/view 弹窗，无需再写 toolbarBtns/operationColumn。',
+    config: {
+      name: 'LeaveViewDialogManage',
+      apiUrl: '/api/leaves',
+      fields: [
+        { prop: 'leavePerson', label: '请假人', formtype: 'Input' },
+        { prop: 'leaveType', label: '请假类型', formtype: 'Select', inQuery: false, dataOptions: [{ label: '事假', value: 'personal' }, { label: '病假', value: 'sick' }, { label: '年假', value: 'annual' }] },
+        { prop: 'startDate', label: '开始日期', formtype: 'DatePicker', inQuery: false },
+        { prop: 'days', label: '天数', formtype: 'InputNumber', inQuery: false },
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '待审', value: 'pending' },
+            { label: '通过', value: 'approved' },
+            { label: '驳回', value: 'rejected' },
+          ],
+        },
+      ],
+      dialogs: {
+        view: {
+          title: '请假详情',
+          formItems: [
+            { prop: 'leavePerson', label: '请假人', formtype: 'Input' },
+            { prop: 'leaveType', label: '请假类型', formtype: 'Select' },
+            { prop: 'startDate', label: '开始日期', formtype: 'DatePicker' },
+            { prop: 'days', label: '天数', formtype: 'InputNumber' },
+            { prop: 'status', label: '状态', formtype: 'Select' },
+          ],
+          configBtn: [{ name: '关闭', action: 'cancel' }],
+        },
+      },
+      actions: ['add', 'view'],
+    },
+  },
 ]
 
 /**

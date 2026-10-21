@@ -354,3 +354,102 @@ describe('EsTable(vue2) — 尺寸契约 number | string', () => {
     expect(heightOf({ options: { heightType: 'height', height: '70vh' } })).toBe('70vh')
   })
 })
+
+// ─── AN-09 前置非数据列合成（默认 el-table 引擎，对齐 vue3）──────────────
+// 修前：multiSelect / snIndex / expand 只被 vxe 适配器消费，默认引擎完全无视。
+describe('EsTable(vue2) — AN-09 前置列合成', () => {
+  const types = (vm: any): Array<string | undefined> =>
+    tableOf(vm).filteredColumns.map((c: any) => c.type)
+
+  it('multiSelect + snIndex → 选择列、序号列前置', async () => {
+    const vm = mountTable({ options: { multiSelect: true, snIndex: true } })
+    await vm.$nextTick()
+    expect(types(vm)).toEqual(['selection', 'index', undefined])
+  })
+
+  it('三开全开 → 选择 → 序号 → 展开', async () => {
+    const vm = mountTable({ options: { multiSelect: true, snIndex: true, expand: true } })
+    await vm.$nextTick()
+    expect(types(vm)).toEqual(['selection', 'index', 'expand', undefined])
+  })
+
+  it('显式声明 type 列 → 不重复注入', async () => {
+    const vm = mountTable({
+      columns: [{ type: 'index', label: '序' }, { prop: 'id', label: 'ID' }],
+      options: { snIndex: true },
+    })
+    await vm.$nextTick()
+    expect(types(vm)).toEqual(['index', undefined])
+  })
+
+  it('开关全关 → 不注入（默认行为不变）', async () => {
+    const vm = mountTable({})
+    await vm.$nextTick()
+    expect(types(vm)).toEqual([undefined])
+  })
+
+  it('序号列取 core 默认值（宽 60 / 表头 #），不参与 width→minWidth 转换', async () => {
+    const vm = mountTable({ options: { snIndex: true } })
+    await vm.$nextTick()
+    const col = tableOf(vm).filteredColumns.find((c: any) => c.type === 'index')
+    expect(col).toMatchObject({ type: 'index', label: '#', width: 60 })
+    expect(col.minWidth).toBeUndefined()
+  })
+})
+
+// ─── AN-10 列选项（默认 el-table 引擎）────────────────────────────────────
+// 与 vue3 同口径：契约键 `ellipsis` 在 columnBindAttr 里翻译成 Element UI 的
+// `show-overflow-tooltip`（覆盖 render / scopedSlots / groups 分支），
+// options.defaultSort 显式送到 el-table 的 default-sort。
+// 本文件不加载真实 element-ui（见文件头），故 `el-table-column` 以未注册元素渲染，
+// v-bind 的键会变成该元素的属性 —— 正好可直接断言翻译结果。
+describe('EsTable(vue2) — AN-10 省略号 / 默认排序', () => {
+  const firstColEl = (vm: any): HTMLElement =>
+    vm.$el.querySelector('el-table-column') as HTMLElement
+  // 两条来源属性名不同：模板里的字面量 `show-overflow-tooltip`（简单列分支）
+  // 与 columnBindAttr 里的驼峰键（render/scopedSlots/groups 分支）—— DOM 属性名不区分大小写。
+  const hasTooltip = (vm: any): boolean =>
+    firstColEl(vm).hasAttribute('show-overflow-tooltip') ||
+    firstColEl(vm).hasAttribute('showoverflowtooltip')
+
+  it('ellipsis → el-table-column 上带 show-overflow-tooltip', async () => {
+    const vm = mountTable({ columns: [{ prop: 'id', label: 'ID', ellipsis: true }] })
+    await vm.$nextTick()
+    expect(hasTooltip(vm)).toBe(true)
+  })
+
+  it('ellipsis + render：自定义单元格分支也带 show-overflow-tooltip（修前没有）', async () => {
+    const vm = mountTable({
+      columns: [
+        {
+          prop: 'id',
+          label: 'ID',
+          ellipsis: true,
+          render: (h: any, { value }: any) => h('span', String(value ?? '')),
+        },
+      ],
+    })
+    await vm.$nextTick()
+    expect(hasTooltip(vm)).toBe(true)
+  })
+
+  it('存量写法 showOverflowTooltip 原样透传（向后兼容）', async () => {
+    const vm = mountTable({ columns: [{ prop: 'id', label: 'ID', showOverflowTooltip: true }] })
+    await vm.$nextTick()
+    expect(hasTooltip(vm)).toBe(true)
+  })
+
+  it('未设置省略号 → 不开 tooltip', async () => {
+    const vm = mountTable({})
+    await vm.$nextTick()
+    expect(hasTooltip(vm)).toBe(false)
+  })
+
+  it('options.defaultSort → el-table 的 defaultSort 绑定', async () => {
+    const vm = mountTable({ options: { defaultSort: { prop: 'id', order: 'descending' } } })
+    await vm.$nextTick()
+    const bind = tableOf(vm).tableBindAttrs
+    // Vue 2.7 setup 返回值在实例上自动解包（computed → 普通对象）
+    expect(bind.defaultSort).toEqual({ prop: 'id', order: 'descending' })
+  })
+})

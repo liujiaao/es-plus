@@ -4,6 +4,7 @@
  * 将 ES-Plus TableColumn 转换为 Ant Design Vue 的 columns 配置。
  * 对齐 @es-plus/vue3 use-column-adapter 的列处理（labelKey/sortable/groups/emptyPlaceholder）。
  */
+import { LEADING_COLUMN_DEFAULTS, synthesizeLeadingColumns } from '@es-plus/core'
 import type { TableColumn } from '../../../types'
 
 /**
@@ -50,8 +51,9 @@ export function adaptColumn(
     advCol.fixed = col.fixed
   }
 
-  // 省略号
-  if (col.ellipsis) advCol.ellipsis = true
+  // 省略号（AN-10）：契约键是 `ellipsis`；`showOverflowTooltip` 是 el-table 的存量写法，
+  // 一并认（否则同一份配置在 vue3/vue2 有 tooltip、到 a-table 静默消失）。
+  if (col.ellipsis || (col as any).showOverflowTooltip) advCol.ellipsis = true
 
   // 排序：sortable:'custom'（服务端）与 sortable:true 均映射为 sorter:true，
   // 由 a-table @change 的 sorter 触发服务端排序（对齐 vue3 sortable:'custom'）。
@@ -77,12 +79,14 @@ export function adaptColumn(
  * @param col ES-Plus 列配置（可选，提供时取其 label/width/align）
  */
 export function createSnAdvColumn(col?: TableColumn): Record<string, unknown> {
+  // 默认宽度 / 标题取 core 的单一来源（AN-09），避免三端序号列各写一份字面量
+  const defaults = LEADING_COLUMN_DEFAULTS.index
   return {
     dataIndex: '_sn',
     key: '_sn',
-    title: (col?.label as string) || '#',
-    width: typeof col?.width === 'number' ? col.width : 60,
-    align: col?.align || 'center',
+    title: (col?.label as string) || defaults.label,
+    width: typeof col?.width === 'number' ? col.width : defaults.width,
+    align: col?.align || defaults.align,
     customRender: ({ index }: { index: number }) => index + 1,
   }
 }
@@ -101,11 +105,10 @@ export function adaptColumns(
   } = {},
 ): Record<string, unknown>[] {
   const result: Record<string, unknown>[] = []
-  const hasIndexCol = columns.some((c) => c.type === 'index')
 
-  // 序号列（options.snIndex 注入；已存在 type:'index' 列时跳过，避免重复）
-  if (options.snIndex && !hasIndexCol) {
-    result.push(createSnAdvColumn())
+  // 序号列（options.snIndex 注入；已存在 type:'index' 列时跳过，避免重复）—— 判据走 core 单源
+  for (const spec of synthesizeLeadingColumns({ snIndex: options.snIndex }, columns)) {
+    if (spec.type === 'index') result.push(createSnAdvColumn())
   }
 
   for (const [i, col] of columns.entries()) {

@@ -1,0 +1,73 @@
+{
+  "id": "comp-table-form-01-vue2",
+  "scene": "composition",
+  "shape": "table+form",
+  "target": "vue2",
+  "mode": "schema",
+  "name": "DeptManage",
+  "apiUrl": "/api/depts",
+  "surfaces": {
+    "table": [
+      {
+        "prop": "deptName",
+        "label": "部门名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "leader",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "memberCount",
+        "label": "人数",
+        "formtype": "InputNumber"
+      }
+    ],
+    "form": [
+      {
+        "prop": "deptName",
+        "label": "部门名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "leader",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "membership": {
+      "deptName": [
+        "table",
+        "form"
+      ],
+      "leader": [
+        "table",
+        "form"
+      ],
+      "memberCount": [
+        "table"
+      ],
+      "remark": [
+        "form"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit"
+    ],
+    "dialogKeys": [],
+    "legacyDialogFormItems": true,
+    "operationColumn": null
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "prd-04-role-permission",
+  "product": "角色管理",
+  "target": "vue3",
+  "spec": "角色权限管理。\n\n【查询区】角色名称、状态\n【列表】角色名称、描述、状态、更新时间\n【新增/编辑表单】角色名称、描述、状态\n【工具栏】新增\n【行操作】编辑、删除\n说明：更新时间由系统生成。",
+  "config": {
+    "name": "RoleManage",
+    "apiUrl": "/api/roles",
+    "target": "vue3",
+    "fields": [
+      { "prop": "roleName", "label": "角色名称", "formtype": "Input" },
+      { "prop": "description", "label": "描述", "formtype": "Input" },
+      { "prop": "status", "label": "状态", "formtype": "Select" },
+      { "prop": "updatedAt", "label": "更新时间", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "更新时间只在列表出现；不因「编辑表单常带更新时间」而误入 form。"
+}

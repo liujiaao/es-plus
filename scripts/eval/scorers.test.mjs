@@ -520,6 +520,7 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
 {
   const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
   const applicableCount = Object.fromEntries(CAPABILITY_SCORERS.map((s) => [s.key, 0]))
+  let convergenceCases = 0
   for (const f of files) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
     // 只体检 CRUD 场景：CAPABILITY_SCORERS 与掩码 token 全是 CRUD 形状的，片段用例
@@ -527,6 +528,7 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
     if (!isCrudCase(raw)) continue
     const g = StructuredCrudConfigSchema.parse(raw.config)
     for (const s of CAPABILITY_SCORERS) if (s.applicable(g)) applicableCount[s.key]++
+    if (Array.isArray(raw.refinements) && raw.refinements.length) convergenceCases++
 
     // 掩码标注合法性（B2）：token 必须可记分；`维度:字段` 与 fixedFields 引用的 prop 必须真实存在。
     // 这把「NL 到底锁了什么」的标注钉死在 config 的真实字段上，杜绝 formtype:amuont 这类笔误静默免责。
@@ -547,6 +549,9 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
   if (uncovered.length) {
     console.warn(`  ⚠ 未被 golden 语料触发的维度（heldout rate 恒为 n/a，考虑补语料）：${uncovered.join(', ')}`)
   }
+  // AN-02：收敛腿样本数。5 条时删一条摆动 20pp，不构成能力结论；30 是「可当结论」的门槛。
+  console.log(`    收敛语料（refinements） ${convergenceCases} 条（地板 30）`)
+  check(convergenceCases >= 30, `收敛语料仅 ${convergenceCases} 条，低于地板 30（AN-02）`)
 }
 
 // 5) B3 收敛判定（firstConvergedTurn / summarizeConvergence）：纯函数、无 API key
@@ -578,8 +583,16 @@ console.log('meta-eval: convergence (firstConvergedTurn / summarizeConvergence)'
   check(sum.converged === 3, 'summarizeConvergence: converged=3（null 不计）')
   check(Math.abs(sum.rateAtK - 2 / 4) < 1e-9, 'summarizeConvergence: ≤3 轮内收敛 2/4') // turn 0 与 2，4 超 K、null 不算
   check(Math.abs(sum.meanTurnsToConverge - (0 + 2 + 4) / 3) < 1e-9, 'summarizeConvergence: 均值仅计已收敛 (0+2+4)/3')
+  // AN-02 拆腿：turn0（零编辑）与 scripted（纠正后 ≤K）必须分开，二者之和 = withinK。
+  check(sum.turn0 === 1, 'summarizeConvergence: turn0=1（只有 firstTurn 0）')
+  check(sum.scripted === 1, 'summarizeConvergence: scripted=1（firstTurn 2；4 超 K 不计）')
+  check(sum.withinK === 2, 'summarizeConvergence: withinK = turn0 + scripted')
   const empty = summarizeConvergence([], 3)
-  check(empty.rateAtK === null && empty.meanTurnsToConverge === null && empty.total === 0, 'summarizeConvergence: 空语料回 null')
+  check(
+    empty.rateAtK === null && empty.meanTurnsToConverge === null && empty.total === 0 &&
+      empty.turn0 === 0 && empty.scripted === 0 && empty.withinK === 0,
+    'summarizeConvergence: 空语料回 null/0'
+  )
 }
 
 // 6) 「95% 定义」统一判定（meets95Definition / summarize95）：scoped zero-edit ∨ ≤K 轮收敛
@@ -655,6 +668,90 @@ console.log('meta-eval: 95% definition (meets95Definition / summarize95)')
     member(omitted(), explicit(true)) === true,
     '陷阱特征化：省略过的 gold 对 pred 的显式 true → 相等（省略 = true，不是「未表态」）'
   )
+}
+
+// ── 7) AN-01：真空真、dataOptions 公平判据、core 与维度同源 ─────────────────────
+//
+// 这一节钉的是「数字为什么可信」而不是某个维度的业务语义。三条都是**曾经真实抬高过
+// 准确率**的机件，改回去任何一条，95% 就会重新变成橡皮尺。
+console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
+{
+  const gold = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
+  // 模型一个 prop 都没猜对（或干脆没给字段）。
+  const noShared = { fields: [{ prop: 'zzz', label: 'Z', formtype: 'Select' }], actions: ['add'] }
+  const s = scoreAll(gold, noShared)
+  check(s.byCapability.formtype.applicable === true, 'formtype: gold 用了它 → 仍 applicable（不能靠置不适用逃出分母）')
+  check(s.byCapability.formtype.pass === false, 'formtype: 零共享字段 → 必须判负（`[].every` 恒真的真空真已修）')
+  check(s.byCapability.membership.pass === false, 'membership: 零共享字段 → 必须判负')
+  check(s.attrAcc === null, 'attrAcc: 零共享字段 → null（无定义，不得置 1）')
+  check(s.exactIntentCore === false, 'core: 零共享字段 → false')
+  const emptyPred = scoreAll(gold, { fields: [], actions: ['add'] })
+  check(emptyPred.byCapability.formtype.pass === false, 'formtype: pred.fields 为空 → 判负')
+  check(emptyPred.attrAcc === null, 'attrAcc: pred.fields 为空 → null')
+  check(emptyPred.exactIntentCore === false, 'core: pred.fields 为空 → false')
+
+  // dataOptions：标签树是「可推断的」（NL 说了分类名），value 码是后端约定（NL 没说）。
+  const optGold = {
+    fields: [
+      {
+        prop: 'status',
+        label: '状态',
+        formtype: 'Select',
+        dataOptions: [
+          { label: '草稿', value: 'draft' },
+          { label: '已发布', value: 'published' },
+        ],
+      },
+    ],
+    actions: ['add'],
+  }
+  const dv = (pred) => scoreAll(optGold, pred).byCapability.dataOptions.pass
+  check(dv(clone(optGold)) === true, 'dataOptions: gold-vs-gold 应判正')
+
+  // value 码不同但标签正确 → **免责**（要求猜中 value 等于读心）
+  const diffValues = clone(optGold)
+  diffValues.fields[0].dataOptions[0].value = 'DRAFT'
+  diffValues.fields[0].dataOptions[1].value = 2
+  check(dv(diffValues) === true, 'dataOptions: 标签一致、value 码不同 → 应免责（后端约定不可推断）')
+
+  // 标签写错 → 判负（这正是旧「只测 presence」放过的东西）
+  const wrongLabel = clone(optGold)
+  wrongLabel.fields[0].dataOptions[0].label = '暂存'
+  check(dv(wrongLabel) === false, 'dataOptions: 标签不同 → 判负')
+
+  // 漏一项 → 判负
+  const fewer = clone(optGold)
+  fewer.fields[0].dataOptions.pop()
+  check(dv(fewer) === false, 'dataOptions: 少一个选项 → 判负')
+
+  // 重复的 value → 判负（下拉会出现两个同值项，是真实缺陷）
+  const dupValue = clone(optGold)
+  dupValue.fields[0].dataOptions[1].value = 'draft'
+  check(dv(dupValue) === false, 'dataOptions: 重复 value → 判负')
+
+  // 层级被拍平（cascader 子项变平级）→ 标签树不同 → 判负
+  const cascGold = {
+    fields: [
+      {
+        prop: 'region',
+        label: '地区',
+        formtype: 'Cascader',
+        dataOptions: [{ label: '浙江', value: 'zj', children: [{ label: '杭州', value: 'hz' }] }],
+      },
+    ],
+    actions: ['add'],
+  }
+  const flat = { fields: [{ prop: 'region', label: '地区', formtype: 'Cascader', dataOptions: [{ label: '浙江', value: 'zj' }, { label: '杭州', value: 'hz' }] }], actions: ['add'] }
+  check(scoreAll(cascGold, flat).byCapability.dataOptions.pass === false, 'dataOptions: 层级拍平 → 判负')
+
+  // core 的 tableBtns 必须与维度同源（旧 core 只比 code，会把「名字完全不同」判过）
+  const tbGold = { fields: gold.fields, actions: ['add'], tableBtns: [{ name: '导出', actionType: 'export' }] }
+  const renamed = clone(tbGold)
+  renamed.tableBtns[0].name = '导出数据'
+  const ts = scoreAll(tbGold, renamed)
+  check(ts.byCapability.tableBtns.applicable === true, 'tableBtns: gold 声明了 → applicable')
+  check(ts.byCapability.tableBtns.pass === false, 'tableBtns: 名称不同 → 维度判负')
+  check(ts.exactIntentCore === false, 'core: tableBtns 名称不同 → core 必须一起判负（同源）')
 }
 
 if (failures) {

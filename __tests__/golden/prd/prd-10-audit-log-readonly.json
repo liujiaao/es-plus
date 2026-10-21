@@ -1,0 +1,19 @@
+{
+  "id": "prd-10-audit-log-readonly",
+  "product": "审计日志",
+  "target": "vue3",
+  "spec": "审计日志。\n\n【查询区】操作人、操作类型、操作时间\n【列表】操作人、操作类型、操作对象、操作时间、IP 地址\n审计日志只读，不允许修改或删除。",
+  "config": {
+    "name": "AuditLog",
+    "apiUrl": "/api/audit-logs",
+    "target": "vue3",
+    "fields": [
+      { "prop": "operator", "label": "操作人", "formtype": "Input", "inForm": false },
+      { "prop": "actionType", "label": "操作类型", "formtype": "Select", "inForm": false },
+      { "prop": "target", "label": "操作对象", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "operatedAt", "label": "操作时间", "formtype": "DatePicker", "inForm": false },
+      { "prop": "ip", "label": "IP 地址", "formtype": "Input", "inQuery": false, "inForm": false }
+    ]
+  },
+  "notes": "只读：form 必须为空，dialog 也必须为空。"
+}

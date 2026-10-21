@@ -1,6 +1,8 @@
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC, OPERATION_COLUMN_PROP_CRUD_PAGE, CRUD_PAGE_BTN_CLICK_KEYS } from './contract.js'
 import type { StructuredCrudConfig, FieldConfig } from './structured-config.schema.js'
 import { StructuredCrudConfigSchema } from './structured-config.schema.js'
+import { repairConfig } from './repair-config.js'
+import { collectUnknownKeys, formatUnknownKey, isExtensionKey } from './unknown-keys.js'
 import {
   q,
   qBt,
@@ -10,6 +12,7 @@ import {
   numOrStr,
   sanitizeForComment,
   inlineJson,
+  findNonJsonValues,
   BARE_IDENTIFIER,
   assertEmittableExpr,
 } from './codegen-escape.js'
@@ -22,6 +25,9 @@ import {
   buildStatusTagTemplate,
   rewriteElementUsage,
 } from './target.js'
+import { capabilityWarnings } from './capability.js'
+import { buildPreflight, type PreflightInput, type PreflightReport } from './preflight.js'
+import { buildRenderPlan, type RenderPlan } from './render-plan.js'
 
 export type { StructuredCrudConfig }
 
@@ -77,6 +83,27 @@ interface TableOpts {
   defaultSort?: { prop: string; order: 'ascending' | 'descending' }
   refetchKeepPage?: boolean
   localPagination?: boolean
+  /**
+   * AN-08：vxe 树表（JSON 子集）。与顶层 `config.treeConfig`（跨端窄子集）合并到
+   * 运行时唯一家 `tableOptions.treeConfig`，顶层覆盖同名字键。
+   */
+  treeConfig?: {
+    transform?: boolean
+    rowField?: string
+    parentField?: string
+    childrenField?: string
+    /** @deprecated vxe v4 别名，运行时归一为 childrenField。 */
+    children?: string
+    mapChildren?: string
+    expandAll?: boolean
+    lazy?: boolean
+  }
+  /** AN-08：vxe 行展开开关（JSON 子集）。与顶层 `config.expandConfig` 是不同层。 */
+  expandConfig?: {
+    expandAll?: boolean
+    accordion?: boolean
+    lazy?: boolean
+  }
 }
 
 export interface StructuredGenerateResult {
@@ -84,6 +111,83 @@ export interface StructuredGenerateResult {
   wrapperCode?: string
   summary: string
   warnings: string[]
+  /**
+   * AN-15：宿主入口的前置清单（httpRequest / permission / t / JSX / UI 库）。
+   * 只有 `generateFromConfig` 会挂上它 —— 内部两个 `generateXxx` 是无配置事实的纯发射器。
+   */
+  preflight?: PreflightReport
+}
+
+/**
+ * AN-08：`tableOptions.treeConfig` 的**唯一合并点**。
+ *
+ * 树表配置有两层来源，运行时却只有一个家（`tableOptions.treeConfig`）：
+ *   - 顶层 `config.treeConfig`：跨端窄子集（`childrenField` / `expandAll`），
+ *     el-table / a-table / vxe 都认 —— 这是「声明式树表」（AI-09 子项③）；
+ *   - `config.tableOptions.treeConfig`：vxe 富子集（`transform` / `rowField` /
+ *     `parentField` / `mapChildren` …）。
+ *
+ * 合并方向：vxe 富键铺底，顶层窄键覆盖。同一键只能有一个真相，而顶层是「跨端承诺」，
+ * 必须赢 —— 否则同一份配置在 vxe 与 el-table 上会长出两棵不同的树。
+ * 两者都没声明时返回 undefined（不凭空发 `treeConfig`，否则默认引擎会误入树模式）。
+ */
+function resolveTreeOptions(
+  tOpts: TableOpts,
+  config: StructuredCrudConfig
+): Record<string, unknown> | undefined {
+  const rich = tOpts.treeConfig
+  const narrow = config.treeConfig
+  if (!rich && !narrow) return undefined
+  return {
+    ...(rich ?? {}),
+    // 用 `!== undefined` 而不是真值判断：顶层显式写 `expandAll: false` 必须能覆盖
+    // 富子集里的 `true`（否则「声明式树表」关不掉 vxe 的默认展开）。
+    ...(narrow?.childrenField !== undefined ? { childrenField: narrow.childrenField } : {}),
+    ...(narrow?.expandAll !== undefined ? { expandAll: narrow.expandAll } : {}),
+  }
+}
+
+/**
+ * AN-08：显式 `columns` 的**契约键白名单**，直接取自 `ColumnSchema` 自身（不另写一份清单）。
+ *
+ * 为什么需要它：schema 模式此前把 `config.columns` **原样**展开进 `pageSchema`，而 SFC 模式
+ * 只发结构化键 —— 于是同一个未知键在两种模式里命运不同：schema 模式**泄漏**进产物、SFC
+ * 模式被丢弃。泄漏的不只是拼写错误：列级 `formatter` 是**字符串**，而运行时
+ * `use-column-adapter` 直接 `formatter(...)` 调用它 —— 字符串会在渲染时抛
+ * `formatter is not a function`。入口告警说「产物中不存在这些键」，这里把这句话变成真的。
+ */
+let columnContractKeysCache: Set<string> | undefined
+function columnContractKeys(): Set<string> {
+  if (columnContractKeysCache) return columnContractKeysCache
+  const def = (s: unknown) => (s as { _def?: Record<string, unknown> })?._def
+  let node: unknown = (StructuredCrudConfigSchema as unknown as { shape?: { columns?: unknown } }).shape?.columns
+  // optional → array → lazy → object（只走这四层，遇见别的形状就停）
+  for (let i = 0; i < 8 && node; i++) {
+    const d = def(node)
+    if (!d) break
+    if (d.innerType) node = d.innerType
+    else if (d.element) node = d.element
+    else if (typeof d.getter === 'function') node = (d.getter as () => unknown)()
+    else break
+  }
+  columnContractKeysCache = new Set(Object.keys((def(node)?.shape as Record<string, unknown>) ?? {}))
+  return columnContractKeysCache
+}
+
+/** 递归剥掉显式列里**不属于列契约**的键（保留 `x-*`）。`groups` 自指递归。 */
+function sanitizeExplicitColumns(
+  columns: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const keys = columnContractKeys()
+  const walk = (col: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(col)) {
+      if (!keys.has(k) && !isExtensionKey(k)) continue
+      out[k] = k === 'groups' && Array.isArray(v) ? (v as Array<Record<string, unknown>>).map(walk) : v
+    }
+    return out
+  }
+  return columns.map(walk)
 }
 
 /**
@@ -191,10 +295,44 @@ export function findDialogsWithoutOpener(config: StructuredCrudConfig): string[]
   return dialogKeys.filter((k) => !reachable.has(k))
 }
 
-export function generateFromConfig(config: StructuredCrudConfig): StructuredGenerateResult {
+export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredGenerateResult {
+  // AN-08：入口归一。AN-07 的 tableBtns 别名（label/action）与顶层
+  // `rowkey → tableOptions.rowkey` 都在 `normalizeConfig` 里（单源），生成器不再各写一份。
+  // 归一**只做有据可查的搬迁**；拼写错误不在这里猜（见 normalize-config.ts 头注）。
+  //
+  // AN-24：在归一之后跑确定性修复环（null / 成员布尔 / 弹窗字段简写）。修复同样只做
+  // 有据可查的改动，且以「schema issue 数严格下降」为准入条件（见 repair-config.ts）。
+  // 两件事都发生在 `assertValidConfig` 之前 —— 常见格式错误不该让整页不产出。
+  const repaired = repairConfig(rawConfig)
+  const config = repaired.config as StructuredCrudConfig
   assertValidConfig(config)
+  const entryWarnings: string[] = [
+    ...repaired.renames.map((r) => `自动归一：${r.from} → ${r.to}（${r.note}）`),
+    ...repaired.repairs.map((r) => `自动修复：${r.path}（${r.note}）`),
+  ]
+  // AN-08：未知键在**生成侧是告警**（过渡期），在 `validate_config` 里是 error。
+  // 生成不该因为一个拼错的键就整页不产出；但也绝不静默 —— Zod 会把它剥掉，
+  // 产物里没有这个键，宿主必须在警告里看到它。
+  const unknownKeys = collectUnknownKeys(StructuredCrudConfigSchema, config)
+  if (unknownKeys.length) {
+    entryWarnings.push(
+      `以下键不在配置 schema 里，生成时会被忽略（产物中不存在这些键）：${unknownKeys
+        .map((f) => formatUnknownKey(f))
+        .join('；')}。拼写错误请改正；确属自定义元数据请使用 \`x-\` 前缀。`,
+    )
+  }
   const mode = config.mode || 'schema'
-  const result = mode === 'sfc' ? generateSFC(config) : generateSchema(config)
+  // AN-22：先落「每个顶层键在这个 mode 下怎么处理」的账本，两个发射器都消费它。
+  // 账本与 `StructuredCrudConfig` 的键集由 `check:render-plan` 对账（新增键漏登记 → 红）。
+  const plan = buildRenderPlan(config, { mode, target: readTarget(config) })
+  const result = mode === 'sfc' ? generateSFC(config, plan) : generateSchema(config, plan)
+  // AN-15：前置清单与本文件是**同一份 config 的两种视图** —— 生成什么由上面的 result 决定，
+  // 要让它在宿主里真的工作还需要什么，由 buildPreflight 按同一 config 判定（permission /
+  // labelKey / apiParams / JSX 都从生成器实际读取的键推出，不另写一份启发式）。
+  const preflight = buildPreflight(config as unknown as PreflightInput, {
+    target: readTarget(config),
+    mode,
+  })
   // 只在这一处汇总跨模式的通用提示，避免两个模式各写一遍而分叉。
   const propWarnings = warnNonIdentifierProps(config)
   // AI-35：只在 schema 模式报 —— sfc 模式整体不消费 `config.dialogs`（已有专门降级告警），
@@ -213,14 +351,64 @@ export function generateFromConfig(config: StructuredCrudConfig): StructuredGene
           ]
         })()
       : []
-  const extra = [...propWarnings, ...orphanWarnings]
+  const extra = [
+    ...entryWarnings,
+    ...propWarnings,
+    ...orphanWarnings,
+    // AN-11③④：两种「配了却不会发生任何事」的静默丢弃，按 mode 判一次（两种模式共用）。
+    ...inlineEditWarnings(config),
+    ...(mode === 'schema' ? schemaModePermissionWarnings(config) : []),
+  ]
   if (extra.length) {
-    return { ...result, warnings: [...extra, ...(result.warnings || [])] }
+    return { ...result, preflight, warnings: [...extra, ...(result.warnings || [])] }
   }
-  return result
+  return { ...result, preflight }
 }
 
-function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult {
+/**
+ * 行内编辑的「配了却无事发生」判定（AN-11④）。
+ *
+ * 两条独立的死路，都要显式说出来：
+ *   ①`tableOptions.editConfig` 只在 vxe 引擎被读 —— 默认 / virtual 引擎完全不看它；
+ *   ②即便引擎是 vxe，**只有列上声明了 `editRender` 的单元格才可编辑**（vxe 自身的契约）。
+ * 两种情况运行时都是静默 no-op：页面看起来正常、双击没反应、控制台也不报错。
+ */
+function inlineEditWarnings(config: StructuredCrudConfig): string[] {
+  const tOpts = (config.tableOptions || {}) as Record<string, unknown>
+  if (tOpts.editConfig === undefined) return []
+  if (tOpts.engine !== 'vxe') {
+    return [
+      `tableOptions.editConfig requires engine: 'vxe' — the current engine is '${(tOpts.engine as string) || 'default'}', so inline editing will be silently ignored at runtime.`,
+    ]
+  }
+  type ColLike = { editRender?: unknown; groups?: ColLike[] }
+  const hasEditRender = (list: ColLike[]): boolean =>
+    list.some((c) => c.editRender != null || (Array.isArray(c.groups) && hasEditRender(c.groups)))
+  if (hasEditRender((config.columns || []) as ColLike[])) return []
+  return [
+    'tableOptions.editConfig is set on the vxe engine, but no column declares `editRender` — vxe only makes a cell editable when its column carries one, so no cell will be editable. Add `columns[].editRender` (e.g. { "name": "$input" }).',
+  ]
+}
+
+/**
+ * `permissions` 在 schema 模式里的归宿（AN-11③）。
+ *
+ * schema 模式的按钮是**运行时**由 core `resolveCrudActions` 从 `actions` 推导的
+ * （`schema.actions = [...config.actions]`），`CrudPageSchema` 里没有「动作 → 权限码」
+ * 的落点；而 sfc 模式会把 `permissions.{add,export,import,view,edit,delete}` 写进按钮的
+ * `permissionValue`。同一份配置换 mode，权限门就静默消失 —— 故这里显式告警，
+ * 并给出两条真正可行的替代（sfc 模式 / 显式写 `operationColumn.btns[].permissionValue`）。
+ */
+function schemaModePermissionWarnings(config: StructuredCrudConfig): string[] {
+  const perms = config.permissions
+  if (!perms || Object.keys(perms).length === 0) return []
+  return [
+    `mode=schema ignores /permissions (${Object.keys(perms).join(', ')}): schema-mode buttons are derived at runtime from /actions and CrudPageSchema has no per-button permission slot. ` +
+      `Use mode=sfc to get permissionValue on derived buttons, or declare them explicitly via operationColumn.btns[].permissionValue / toolbarBtns[].permissionValue.`,
+  ]
+}
+
+function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): StructuredGenerateResult {
   const warnings: string[] = []
   const target = readTarget(config)
   const queryFields = config.fields.filter(f => f.inQuery !== false)
@@ -228,7 +416,9 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   const formFields = config.fields.filter(f => f.inForm !== false)
   const hasDelete = config.actions.includes('delete')
   const hasDialog = config.actions.includes('add') || config.actions.includes('edit') || config.actions.includes('view')
-  const useNewDialogMode = !!(config.dialogs || config.toolbarBtns || config.tableBtns || config.operationColumn !== undefined)
+  // AN-22：按钮面的四个键任一被声明 → 新模式（由 plan 决定，不再手写 || 链）。
+  // `operationColumn:false` 也是声明（它的语义是「隐藏操作列」），必须进新模式。
+  const useNewDialogMode = plan.anyRenders(['dialogs', 'toolbarBtns', 'tableBtns', 'operationColumn'])
 
   const renderFields = tableFields.filter(f => f.render)
   if (renderFields.length > 0) {
@@ -248,28 +438,17 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   const formFaceRenderWarn = formFaceRenderWarning(config, { includeDialogs: true })
   if (formFaceRenderWarn) warnings.push(formFaceRenderWarn)
 
-  // Vue 2 不支持虚拟滚动 (Element UI 无 el-table-v2)，提前发出警告。
-  // 只警告 `virtual: true` 与 `engine: 'virtual'`（二者等价）—— 这两者确实会降级。
+  // target 级能力差异统一由能力矩阵判定（AN-09）。此前这里是三处手写 if，新增键没人知道
+  // 该不该补告警。矩阵只对 `none` 发声：vue2 的 `virtual`/`rowHeight` 一类确实会被运行时
+  // 忽略 → 告警；`editConfig` 这种「仅 vxe 引擎生效」与 target 无关，仍由下面的引擎判定处理。
   //
-  // **`engine: 'vxe'` 刻意不警告**：vue2 有完整的 vxe 适配器
+  // **`engine: 'vxe'` 刻意不在矩阵里告警**：vue2 有完整的 vxe 适配器
   // （`packages/vue2/src/components/es-table/engines/vxe-engine.vue`，带单测），
-  // 生成物里的 `engine` 也原样透传（见下方 `...(tOpts.engine ? …)`），
-  // 运行时确实走 vxe 引擎；三端对 vxe-table 的依赖声明也完全一致
-  // （optional peerDependency，vue2 用 ^3.8.0）。vue3/antdv 下不警告，vue2 下同样不该警告。
-  // 此前这里用「vxe 引擎只存在于 vue3/antdv、vue2 会退回普通 el-table」告警 ——
-  // 那是 vue2 引入 vxe 引擎（2026-07-28）之前的旧事实，属**错误告警**：
-  // 它会让一个完全可用的 vue2 配置收到「你的配置被忽略了」的假信息。
-  const tOptsForWarn = (config.tableOptions || {}) as Record<string, unknown>
-  const wantsVirtual2 = target === 'vue2' && (tOptsForWarn.virtual || tOptsForWarn.engine === 'virtual')
-  if (wantsVirtual2) {
-    warnings.push('target=vue2: Element UI does not support virtual scrolling (no el-table-v2). The "virtual" option will be ignored at runtime — use normal el-table for large datasets and consider server-side pagination, or switch to the vxe engine (`engine: \'vxe\'`), which vue2 does support.')
-  }
+  // 生成物里的 `engine` 也原样透传，运行时确实走 vxe 引擎 —— 告警会变成假信息。
+  warnings.push(...capabilityWarnings(target, config as unknown as Record<string, unknown>))
 
-  // 行内编辑仅 vxe 引擎生效（AI-09 子项④）：配置了 editConfig 但引擎不是 vxe →
-  // 默认/virtual 引擎会在运行时静默忽略，发告警以免「配了却毫无反应」的假承诺。
-  if (tOptsForWarn.editConfig !== undefined && tOptsForWarn.engine !== 'vxe') {
-    warnings.push(`tableOptions.editConfig requires engine: 'vxe' — the current engine is '${(tOptsForWarn.engine as string) || 'default'}', so inline editing will be silently ignored at runtime.`)
-  }
+  // 行内编辑仅 vxe 引擎生效（AI-09 子项④ / AN-11④）：告警统一在 generateFromConfig 里
+  // 按配置判一次（两种 mode 同一条规则），不再每个模式各写一份。
 
   const schema: Record<string, unknown> = {}
 
@@ -281,12 +460,25 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   // 否则从 `fields` 派生「一字段一列」。override **非** merge —— 给了 columns 就
   // 不再混入派生列（避免排序 / 同 prop 重复的二义）。操作列不在此处：schema 模式下
   // 它由 es-crud-page 按 operationColumn/actions 在运行时追加（见 SFC 分支注释）。
+  // AN-08：显式列先按列契约剥键**再**叠 expandConfig（后者注入的是合法键，不该被剥）。
+  // 之前 schema 模式原样展开 `config.columns`，SFC 模式只发结构化键 —— 同一份配置两种
+  // 模式产物不同（含 `formatter` 字符串时 schema 产物会在运行时报 not a function）。
+  const tOpts: TableOpts = (config.tableOptions || {}) as TableOpts
   schema.columns =
     config.columns && config.columns.length > 0
-      ? applyExpandConfig(config.columns as Array<Record<string, unknown>>, config, warnings)
-      : applyExpandConfig(tableFields.map(f => buildTableColumn(f, config.i18n)), config, warnings)
+      ? applyExpandConfig(sanitizeExplicitColumns(config.columns as Array<Record<string, unknown>>), config, warnings)
+      : // AN-10：`defaultSort` 指向的派生列补 `sortable: true`。三端都只在**列可排序**时
+        // 展示默认排序状态（el-table 的 default-sort / a-table 的 defaultSortOrder 无 sortable
+        // 时一律静默无效），而 FieldConfig 本身没有 sortable 键 —— 不补的话「默认按 X 倒序」
+        // 这条 NL 在三端都不会发生任何事。显式 columns 路径由用户自己写 sortable。
+        applyExpandConfig(
+          tableFields.map(f => buildTableColumn(f, config.i18n, tOpts.defaultSort?.prop === f.prop)),
+          config,
+          warnings
+        )
 
-  const tOpts: TableOpts = (config.tableOptions || {}) as TableOpts
+  // AN-08：树表的两层来源在此合并一次，schema 模式只发这一份。
+  const treeOpts = resolveTreeOptions(tOpts, config)
   schema.tableOptions = {
     border: tOpts.border !== false,
     stripe: tOpts.stripe !== false,
@@ -318,18 +510,14 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     ...(tOpts.defaultSort ? { defaultSort: tOpts.defaultSort } : {}),
     ...(tOpts.refetchKeepPage !== undefined ? { refetchKeepPage: tOpts.refetchKeepPage } : {}),
     ...(tOpts.localPagination !== undefined ? { localPagination: tOpts.localPagination } : {}),
-    // 顶层 treeConfig（AI-09 子项③）→ 运行时唯一家 tableOptions.treeConfig。
+    // 顶层 treeConfig（AI-09 子项③）+ tableOptions.treeConfig（AN-08）→ 运行时唯一家
+    // tableOptions.treeConfig。合并规则见 resolveTreeOptions（顶层覆盖同名字键）。
     // vxe 原样认 childrenField/expandAll；el-table/a-table 在组件侧翻译成 tree-props /
     // childrenColumnName + default-expand-all(-rows)。即便子键为空也发（vxe 靠 treeConfig
     // 的存在进入树模式；默认引擎靠行数据里的嵌套子数组，treeConfig 存在不产生副作用）。
-    ...(config.treeConfig
-      ? {
-          treeConfig: {
-            ...(config.treeConfig.childrenField ? { childrenField: config.treeConfig.childrenField } : {}),
-            ...(config.treeConfig.expandAll ? { expandAll: true } : {}),
-          },
-        }
-      : {}),
+    ...(treeOpts ? { treeConfig: treeOpts } : {}),
+    // tableOptions.expandConfig（AN-08）：vxe 行展开开关（JSON 子集），原样透传。
+    ...(tOpts.expandConfig ? { expandConfig: tOpts.expandConfig } : {}),
     // 顶层 mergeConfig（AI-23）→ 运行时唯一家 tableOptions.mergeConfig。
     // 三端组件侧读到它后各自落地：el-table spanMethod / a-table 列级 customCell /
     // vxe mergeMethod（求值全部复用 core buildRowSpanMethod，三端等价由构造保证）。
@@ -337,24 +525,24 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   }
 
   // Query form layout (minFoldRows for collapse)
-  if (config.formLayout) {
+  if (plan.emits('formLayout')) {
     schema.formLayout = config.formLayout
   }
 
   // New multi-dialog mode
   if (useNewDialogMode) {
-    if (config.toolbarBtns) {
+    if (plan.emits('toolbarBtns')) {
       schema.toolbarBtns = config.toolbarBtns
     }
-    if (config.tableBtns) {
+    if (plan.emits('tableBtns')) {
       schema.tableBtns = config.tableBtns
     }
-    if (config.operationColumn !== undefined) {
+    if (plan.emits('operationColumn')) {
       schema.operationColumn = config.operationColumn
     }
-    if (config.dialogs) {
+    if (plan.emits('dialogs')) {
       const schemaDialogs: Record<string, unknown> = {}
-      for (const [key, dlg] of Object.entries(config.dialogs)) {
+      for (const [key, dlg] of Object.entries(config.dialogs ?? {})) {
         const dialogSchema: Record<string, unknown> = {}
         if (dlg.title) dialogSchema.title = dlg.title
         if (dlg.width) dialogSchema.width = dlg.width
@@ -393,10 +581,29 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
     if (formFields.length > 0 && hasDialog) {
       schema.dialogFormItems = formFields.map(f => buildFormItem(f, 'form', config.i18n))
     }
-    schema.actions = config.actions
   }
 
-  schema.pagination = { pageSize: config.pagination?.pageSize || 10 }
+  // AN-06：`actions` **两种模式都发射**。
+  //
+  // 此前它只在 legacy 分支里出现，于是新模式（只发 `dialogs`）的页面必须靠组件端
+  // `props.schema.actions || ['add','edit','delete']` 兜底 —— 那个兜底是**猜**的：
+  // `actions:['view']` 的只读页照样渲染「新增/编辑/删除」，点删除真的发 DELETE；
+  // 反过来 `actions:['export','import']` 的页也会多出三种写操作。
+  // 发出真实意图后，组件端只按 schema 结构推导（见 core `resolveCrudActions`），不再猜。
+  //
+  // 位置放在分支之后：legacy 的键序（dialogFormItems → actions → pagination）保持不变，
+  // 只有新模式新增一个键，`one-config:check` 的差异面因此最小。
+  schema.actions = [...config.actions]
+
+  // AN-08：schema 模式此前只发 `pageSize` —— 配置里声明的 `pagination.pageSizes`
+  // （每页条数选项）被静默丢掉，而 SFC 模式照发（见下方 `pagination` ref）。同一份配置
+  // 换 mode 分页器的可选条数就变了，且零告警。两个模式必须等价。
+  schema.pagination = {
+    pageSize: config.pagination?.pageSize || 10,
+    ...(Array.isArray(config.pagination?.pageSizes) && config.pagination!.pageSizes!.length
+      ? { pageSizes: [...config.pagination!.pageSizes!] }
+      : {}),
+  }
 
   // 用 inlineJson 而非裸 JSON.stringify：schema 会被内联进 wrapper SFC 的 <script>，
   // 用户可控的 label 含 `</script>` 时否则能提前闭合宿主 script 标签。正常内容字节不变。
@@ -433,7 +640,7 @@ function generateSchema(config: StructuredCrudConfig): StructuredGenerateResult 
   return { code, wrapperCode, summary, warnings }
 }
 
-function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
+function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): StructuredGenerateResult {
   const warnings: string[] = []
   const target = readTarget(config)
   const isVue2 = target === 'vue2'
@@ -446,29 +653,21 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   const hasRender = tableFields.some(f => f.render)
   const ts = config.typescript
 
-  // Vue 2 SFC 模式提醒：JSX render 需 babel-preset-jsx-vue2，且 Element UI 无虚拟滚动
+  // Vue 2 SFC 模式提醒：JSX render 需 babel-preset-jsx-vue2（target 级能力差异见下方矩阵）
   if (isVue2) {
     if (hasDialog) {
       warnings.push('target=vue2 + mode=sfc: dialog uses JSX render — ensure your project includes @vue/babel-preset-jsx (or use mode=schema for simpler output).')
-    }
-    const tOptsForWarn = (config.tableOptions || {}) as Record<string, unknown>
-    // `engine: 'vxe'` 不警告 —— vue2 有 vxe 适配器，见 schema 模式同处的说明。
-    if (tOptsForWarn.virtual || tOptsForWarn.engine === 'virtual') {
-      warnings.push('target=vue2: virtual scrolling is not supported in Element UI — option will be ignored.')
     }
   } else if (hasDialog) {
     // vue3 / antdv：弹窗 render 用 JSX，需 <script setup lang="tsx|jsx"> + @vitejs/plugin-vue-jsx
     warnings.push(`target=${target} + mode=sfc: dialog uses a JSX render function, so the generated <script setup> is emitted with lang="${ts ? 'tsx' : 'jsx'}". Ensure @vitejs/plugin-vue-jsx is installed and registered in vite.config (alongside @vitejs/plugin-vue). Use mode=schema if you prefer a JSX-free wrapper.`)
   }
 
-  // 行内编辑仅 vxe 引擎生效（AI-09 子项④）：配置了 editConfig 但引擎不是 vxe → 告警
-  //（对三端都适用，故在 isVue2 分支之外）。见 schema 模式同处说明。
-  {
-    const tOptsWarn = (config.tableOptions || {}) as Record<string, unknown>
-    if (tOptsWarn.editConfig !== undefined && tOptsWarn.engine !== 'vxe') {
-      warnings.push(`tableOptions.editConfig requires engine: 'vxe' — the current engine is '${(tOptsWarn.engine as string) || 'default'}', so inline editing will be silently ignored at runtime.`)
-    }
-  }
+  // target 级能力差异：与 mode 无关（schema / sfc 两种产物落到同一套运行时），
+  // 因此两种 mode 都从同一张矩阵取告警（AN-09）。
+  warnings.push(...capabilityWarnings(target, config as unknown as Record<string, unknown>))
+
+  // 行内编辑仅 vxe 引擎生效（AI-09 子项④ / AN-11④）：见 generateFromConfig 里的统一判定。
 
   // antdv + SFC + 列 render：render 字符串按 Element 语义编写（h(ElTag, { type })），
   // 生成器只能重命名符号（ElTag→Tag），无法把 { type: 'success' } 改写为 antdv 的
@@ -515,7 +714,9 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // （labelWidth → labelBtnWidth、minFoldRows 直传、rowLayProps.gutter=16）把等价的
   // layoutFormProps 绑到查询 es-form。`span` 已于 AI-31③ 从契约删除（layout 级无消费者，
   // 列数是逐字段的 querySpan/formSpan）。
-  const sfcFormLayout = (config.formLayout || {}) as { labelWidth?: string | number; minFoldRows?: number }
+  const sfcFormLayout = plan.emits('formLayout')
+    ? ((config.formLayout || {}) as { labelWidth?: string | number; minFoldRows?: number })
+    : {}
   const sfcFormLayProps: Record<string, unknown> = {}
   if (sfcFormLayout.labelWidth !== undefined) sfcFormLayProps.labelBtnWidth = sfcFormLayout.labelWidth
   if (sfcFormLayout.minFoldRows) sfcFormLayProps.minFoldRows = sfcFormLayout.minFoldRows
@@ -575,9 +776,20 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // Element 命名映射（ElMessage/ElTag → Vue 2 的 Message/Tag）
   const epImports: string[] = []
   if (hasRender) epImports.push('ElTag')
+  // 弹窗提交路径（openForm 的确定按钮）无条件调用 ElMessage.success/error ——
+  // 此前只在 hasDelete 时导入，于是「没有删除动作但有弹窗」的产物在 vue-tsc 里
+  // 报 `Cannot find name 'ElMessage'`（antdv 端是 `message`）：语法能过、类型不过。
   if (hasDelete) epImports.push('ElMessageBox', 'ElMessage')
+  else if (hasDialog) epImports.push('ElMessage')
   if (epImports.length > 0) {
     lines.push(buildElementImport(epImports, target))
+  }
+  // AN-14：TS 模式下给「表单项 / 按钮 / 列 / 表格选项」加类型注解。
+  // 不加注解时数组字面量会被**放宽**成 `{ formtype: string }` / `{ type: string }`，
+  // 赋给 `:form-item-list` / `:config-btn` 时在 vue-tsc 里报 TS2322 —— 产物语法正确、
+  // 类型不正确。注解同时把拼错的键（如 `formtype` 写成 `formType`）变成类型错误。
+  if (ts) {
+    lines.push(`import type { FormItemOption, BtnConfig, TableColumn, TableOptions } from '${esPlusPkg}'`)
   }
   lines.push(``)
 
@@ -588,7 +800,11 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   }
 
   // TypeScript interface
-  if (ts && queryFields.length > 0) {
+  // AN-14：`reactive<QueryForm>` 的泛型必须与 interface 的**发射条件**一致 ——
+  // 此前 interface 只在有查询字段时发射，而 reactive 的泛型无条件写，于是「无查询字段的
+  // TS 产物」引用了一个不存在的类型（vue-tsc: Cannot find name 'QueryForm'）。
+  const hasQueryFormType = ts && queryFields.length > 0
+  if (hasQueryFormType) {
     lines.push(`interface QueryForm {`)
     for (const f of queryFields) {
       const tsType = inferTsType(f)
@@ -600,7 +816,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
 
   // Reactive state
   const modelInit = queryFields.map(f => `${qKey(f.prop)}: ${getDefaultValue(f)}`).join(', ')
-  if (ts) {
+  if (hasQueryFormType) {
     lines.push(`const queryForm = reactive<QueryForm>({ ${modelInit} })`)
   } else {
     lines.push(`const queryForm = reactive({ ${modelInit} })`)
@@ -620,7 +836,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   // 用户可控的 label 里写 `</script>` 否则能提前闭合宿主 script 标签（见 codegen-escape.ts）。
   const formItemsJson = inlineJson(queryFields.map(f => buildFormItem(f, 'query', config.i18n)), 2)
   lines.push(...buildFormFaceRenderPlaceholderLines(config, '', { includeDialogs: false, dialect: 'js' }))
-  lines.push(`const formItems = ${formItemsJson}`)
+  lines.push(`const formItems${ts ? ': FormItemOption[]' : ''} = ${formItemsJson}`)
   if (hasSfcFormLayout) {
     // 与 schema 模式（EsCrudPage.formLayoutProps）等价：labelWidth 映射到按钮区 label 宽度。
     lines.push(
@@ -630,7 +846,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(``)
 
   // queryBtns
-  lines.push(`const queryBtns = [`)
+  lines.push(`const queryBtns${ts ? ': BtnConfig[]' : ''} = [`)
   lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', triggerEvent: true },`)
   lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
   if (config.actions.includes('add')) {
@@ -649,7 +865,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   lines.push(``)
 
   // columns
-  lines.push(`const columns = [`)
+  lines.push(`const columns${ts ? ': TableColumn[]' : ''} = [`)
   // AI-09 子项②：顶层 `expandConfig` 在此落到展开列。若 columns 里没有 `type:'expand'`
   // 列，前置一个（展开列与数据列正交，不破坏 columns 的 override 语义）。
   const hasExpandColSfc = ((config.columns ?? []) as Array<Record<string, unknown>>).some((c) => c.type === 'expand')
@@ -671,7 +887,15 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     }
   }
   // operation column
-  const actionBtns = buildActionBtns(config)
+  //
+  // AN-22：sfc 模式此前无条件从 actions 派生操作列 —— `operationColumn:false`
+  // （「隐藏操作列」）既不生效也**不告警**（上面的 ignoredInSfc 只登记 truthy 值），
+  // 同一份 config 换 mode 就多出一列按钮。plan 把 `false` 落成 emit（抑制即语义），
+  // 对象形态才落 downgrade（并在 ignoredInSfc 里点名）。
+  const actionBtns =
+    plan.entries.operationColumn.disposition === 'emit' && config.operationColumn === false
+      ? []
+      : buildActionBtns(config)
   if (actionBtns.length > 0) {
     lines.push(`  {`)
     lines.push(`    prop: '${OPERATION_COLUMN_PROP_SFC}',`)
@@ -690,7 +914,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
 
   // options
   const tOpts: TableOpts = (config.tableOptions || {}) as TableOpts
-  lines.push(`const options = {`)
+  lines.push(`const options${ts ? ': TableOptions' : ''} = {`)
   lines.push(`  border: ${tOpts.border !== false},`)
   lines.push(`  stripe: ${tOpts.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`)
@@ -741,13 +965,22 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
   if (tOpts.defaultSort) lines.push(`  defaultSort: ${inlineJson(tOpts.defaultSort)},`)
   if (tOpts.refetchKeepPage !== undefined) lines.push(`  refetchKeepPage: ${tOpts.refetchKeepPage},`)
   if (tOpts.localPagination !== undefined) lines.push(`  localPagination: ${tOpts.localPagination},`)
-  // 顶层 treeConfig（AI-09 子项③）→ options.treeConfig。手搓块逐键 q() 转义（同 configTableOut）。
-  if (config.treeConfig) {
-    const tcParts: string[] = []
-    if (config.treeConfig.childrenField) tcParts.push(`childrenField: ${q(config.treeConfig.childrenField)}`)
-    if (config.treeConfig.expandAll) tcParts.push(`expandAll: true`)
-    lines.push(`  treeConfig: { ${tcParts.join(', ')} },`)
+  // 顶层 treeConfig（AI-09 子项③）+ tableOptions.treeConfig（AN-08）→ options.treeConfig。
+  // 只有窄子集时保持既有的手搓逐键发射（产物逐字不变）；出现 vxe 富键时整体 inlineJson
+  // （纯 JSON 数据，且转义 </script> —— 与 editConfig/defaultSort 同路）。
+  const treeOpts = resolveTreeOptions(tOpts, config)
+  if (treeOpts) {
+    if (!tOpts.treeConfig) {
+      const tcParts: string[] = []
+      if (config.treeConfig?.childrenField) tcParts.push(`childrenField: ${q(config.treeConfig.childrenField)}`)
+      if (config.treeConfig?.expandAll !== undefined) tcParts.push(`expandAll: ${config.treeConfig.expandAll}`)
+      lines.push(`  treeConfig: { ${tcParts.join(', ')} },`)
+    } else {
+      lines.push(`  treeConfig: ${inlineJson(treeOpts)},`)
+    }
   }
+  // tableOptions.expandConfig（AN-08）：vxe 行展开开关，纯 JSON → inlineJson。
+  if (tOpts.expandConfig) lines.push(`  expandConfig: ${inlineJson(tOpts.expandConfig)},`)
   // 顶层 mergeConfig（AI-23）→ options.mergeConfig。rowsBy 是字符串数组（纯 JSON）→ inlineJson 序列化。
   if (config.mergeConfig) {
     lines.push(`  mergeConfig: ${inlineJson({ rowsBy: config.mergeConfig.rowsBy })},`)
@@ -798,7 +1031,7 @@ function generateSFC(config: StructuredCrudConfig): StructuredGenerateResult {
     lines.push(``)
 
     const dialogFormItemsJson = inlineJson(formFields.map(f => buildFormItem(f, 'form', config.i18n)), 4)
-    lines.push(`  const dialogFormItems = ${dialogFormItemsJson}`)
+    lines.push(`  const dialogFormItems${ts ? ': FormItemOption[]' : ''} = ${dialogFormItemsJson}`)
     lines.push(``)
 
     lines.push(`  dialog({`)
@@ -988,7 +1221,11 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
   lines.push(...body)
 
   if (isVue2) {
-    const exposed = ['crudRef', 'fetchData', 'handleBtnClick']
+    // AN-14：`pageSchema` 是从 './schema' import 进来的**绑定**，Vue 2 的 template
+    // 只能解析 setup() 的返回值 —— 不 return 就取不到，`:schema="pageSchema"` 会静默
+    // 变成 undefined（页面空表、无任何报错）。vue-tsc 把它报成
+    // `TS2339: Property 'pageSchema' does not exist on type 'CreateComponentPublicInstance…'`。
+    const exposed = ['crudRef', 'fetchData', 'handleBtnClick', 'pageSchema']
     if (hasDelete) exposed.splice(2, 0, 'handleDelete')
     lines.push(``)
     lines.push(`    return { ${exposed.join(', ')} }`)
@@ -1013,6 +1250,14 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   const hasDelete = config.actions.includes('delete')
   const dialogs = config.dialogs || {}
   const customRenderDialogs = Object.entries(dialogs).filter(([, d]) => d.hasCustomRender)
+
+  // AN-06②：`import` 在 wrapper 里只有「明确提示未实现」的占位分支（见 handleBtnClick）。
+  // 生成期就要说清楚，免得宿主以为脚手架已经接了上传。
+  if (config.actions.includes('import')) {
+    warnings.push(
+      'actions 含 "import"：生成的 wrapper 不含上传实现，点击「导入」只会提示「导入尚未实现」——请在 handleBtnClick 中接入上传/IPC 逻辑。'
+    )
+  }
 
   lines.push(`<template>`)
   lines.push(`  <es-crud-page`)
@@ -1098,6 +1343,13 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
   body.push(`${indent}function handleDialogConfirm(dialogKey${ts ? ': string' : ''}, data${ts ? ': any' : ''}) {`)
   const dialogEntries = Object.entries(dialogs).filter(([, d]) => !d.hasCustomRender)
   for (const [key] of dialogEntries) {
+    // AN-06②：`view` 弹窗**只读**，提交时不得发写请求。
+    //
+    // 此前它对每个非 `add` 的 key 都发 PUT —— 包括 `view`。于是「查看」弹窗里点「确定」
+    // 会把整行原样 PUT 回去：一次纯粹的读操作产生了写副作用（乐观锁版本号被顶掉、
+    // 审计日志多一条"修改"、后端钩子被触发）。查看弹窗没有可写的东西，直接跳过。
+    // 其余自定义 key（如 `approve`）保持 PUT，沿用既有约定；宿主可在 `onConfirm` 里覆盖。
+    if (key === 'view') continue
     const method = key === 'add' ? 'POST' : 'PUT'
     const url = key === 'add' ? `${q(config.apiUrl)}` : `\`${qBt(config.apiUrl)}/\${data${qMember(tOpts.rowkey || 'id')}}\``
     body.push(`${indent}  if (dialogKey === ${q(key)}) {`)
@@ -1119,6 +1371,15 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
     body.push(`${indent}    window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(payload || {}).toString()}\`)`)
     body.push(`${indent}  }`)
   }
+  if (config.actions.includes('import')) {
+    // AN-06②：`import` 此前在 wrapper 里**没有任何分支** —— 按钮渲染出来了、点击
+    // 静默无反应（`handleImport` 是 legacy 分支的函数，新模式根本没有它）。
+    // 生成的脚手架无法替宿主决定上传方式（表单上传 / OSS / 分片），故给出显式提示，
+    // 让「未实现」在界面上可见，而不是一个死按钮。
+    body.push(`${indent}  if (key === 'import') {`)
+    body.push(`${indent}    ElMessage.warning('导入尚未实现：请在 handleBtnClick 中接入上传逻辑')`)
+    body.push(`${indent}  }`)
+  }
   body.push(`${indent}}`)
 
   // Custom render dialog placeholders
@@ -1134,7 +1395,8 @@ function buildSchemaWrapperNew(config: StructuredCrudConfig, renderFields: Field
 
   // Vue 2: 闭合 setup() 并把所有顶层声明 return 出去
   if (isVue2) {
-    const exposed = ['crudRef', 'fetchData', 'handleDialogConfirm', 'handleBtnClick']
+    // AN-14：同 buildSchemaWrapper —— pageSchema 必须经 setup() 返回才进得了模板作用域。
+    const exposed = ['crudRef', 'fetchData', 'handleDialogConfirm', 'handleBtnClick', 'pageSchema']
     if (hasDelete) exposed.splice(2, 0, 'handleDelete')
     lines.push(``)
     lines.push(`    return { ${exposed.join(', ')} }`)
@@ -1253,8 +1515,12 @@ function buildExtensionPointSlotLines(field: FieldConfig, target: TargetFramewor
 export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18n?: boolean): Record<string, unknown> {
   const item: Record<string, unknown> = {
     prop: field.prop,
-    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>` → label。
-    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
+    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>`。
+    // `label` 始终保留：它是 `FormItemOption` 的**必填**字段（labelKey 只是优先显示的
+    // 翻译键，翻译缺失时回落到 label）。此前 i18n 模式下只发 labelKey，产物在
+    // `FormItemOption[]` 上直接报 TS2741（缺 label）—— 类型契约与发射器不一致。
+    label: field.label,
+    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : {}),
     formtype: field.formtype,
     span: context === 'query'
       ? (field.querySpan || (field.formtype === 'DatePicker' || field.formtype === 'TimePicker' ? 8 : 6))
@@ -1339,7 +1605,14 @@ function applyExpandConfig(
   return out
 }
 
-export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<string, unknown> {
+/**
+ * 派生表格列（一字段一列）。
+ *
+ * @param i18n 是否走 `labelKey` 派生
+ * @param defaultSorted 该列是否被 `tableOptions.defaultSort` 点名 —— 是则补 `sortable: true`
+ *   （AN-10：默认排序只在列可排序时生效；`FieldConfig` 无 sortable 键，所以由生成器补齐）
+ */
+export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSorted = false): Record<string, unknown> {
   const col: Record<string, unknown> = {
     prop: field.prop,
     // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>` → label。
@@ -1349,7 +1622,10 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<str
   if (field.minWidth) col.minWidth = field.minWidth
   if (field.align) col.align = field.align
   if (field.fixed) col.fixed = field.fixed
-  if (field.ellipsis) col.showOverflowTooltip = true
+  if (defaultSorted) col.sortable = true
+  // AN-10：契约为 `ellipsis`（三端都认）。此前发 `showOverflowTooltip` —— 那是 el-table 的
+  // 原生 prop，只有 vue3/vue2 默认引擎吃，vxe ×3 / 虚拟引擎 / a-table 全部**静默丢弃**。
+  if (field.ellipsis) col.ellipsis = true
   // Schema mode cannot inline render expressions, so the wrapper emits a
   // `<template #column-<prop>>` scoped slot. es-table (all three renderers)
   // only renders that slot when the column declares scopedSlots.customRender,
@@ -1371,8 +1647,8 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean): Record<str
  *
  * 键顺序固定为「标识 → 尺寸 → 行为 → 权限 → 嵌套」，与派生列风格一致；缺省键一律省略，
  * 产物可读。`type`/`ellipsis`/`groups` 均按渲染契约原名发射（vue3/vue2 `column-item.vue`
- * 直接读 `type`（原生透传）与 `ellipsis`（:57），不读 `showOverflowTooltip`——派生路径
- * 把它规范成 el-table 原生 prop 是另一条路，显式列按用户所写原样保留）。
+ * 直接读 `type`（原生透传）与 `ellipsis`）。AN-10 之后派生路径与显式列路径**同一个词形**
+ * （`ellipsis`）；`showOverflowTooltip` 只是用户显式写下的存量写法，原样保留给三端兼容层。
  */
 function pushSfcColumn(
   col: Record<string, unknown>,
@@ -1413,39 +1689,35 @@ function pushSfcColumn(
     lines.push(`${inner}],`)
   }
   // btns 是数据显示（name/type/permissionValue），不是源码扩展点 → 用 JSON 序列化。
-  // 含函数等不可序列化值时省略 + 告警，保持「发射的永远能编译」。
+  // AN-11①：改用 `inlineJson`（转义 `</script>`）—— 这些值同样会被内联进宿主 SFC 的
+  // `<script>` 块，裸 `JSON.stringify` 让列级按钮名里的 `</script>` 能提前闭合脚本。
+  // AN-11②：`JSON.stringify` **不会**因为函数而抛错（对象里的函数被静默删掉、数组里的
+  // 静默变 null），原先的 `try/catch + 告警` 是死代码。改由 `findNonJsonValues` 显式点名。
   if (Array.isArray(col.btns) && col.btns.length > 0) {
-    let serialized: string | null = null
-    try {
-      serialized = JSON.stringify(col.btns)
-    } catch {
-      serialized = null
+    const nonJson = findNonJsonValues(col.btns, 'btns')
+    if (nonJson.length > 0) {
+      warnings.push(`显式 columns 里的 btns 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过；按钮的 click 请改用 name/type/dialogKey 或字段级扩展点。`)
+    } else {
+      lines.push(`${inner}btns: ${inlineJson(col.btns)},`)
     }
-    if (serialized !== null) lines.push(`${inner}btns: ${serialized},`)
-    else warnings.push('显式 columns 里的 btns 含无法序列化的值（如函数），已省略以保证编译通过。')
   }
-  // expandConfig（AI-09 子项②）是纯 JSON 数据（title/fields 字段明细）→ 同 btns 用 JSON 序列化。
+  // expandConfig（AI-09 子项②）是纯 JSON 数据（title/fields 字段明细）→ 同 btns。
   if (col.expandConfig !== undefined && col.expandConfig !== null) {
-    let serialized: string | null = null
-    try {
-      serialized = JSON.stringify(col.expandConfig)
-    } catch {
-      serialized = null
+    const nonJson = findNonJsonValues(col.expandConfig, 'expandConfig')
+    if (nonJson.length > 0) {
+      warnings.push(`行展开 expandConfig 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      lines.push(`${inner}expandConfig: ${inlineJson(col.expandConfig)},`)
     }
-    if (serialized !== null) lines.push(`${inner}expandConfig: ${serialized},`)
-    else warnings.push('行展开 expandConfig 含无法序列化的值，已省略以保证编译通过。')
   }
-  // editRender（AI-09 子项④）→ 列级行内编辑器，纯 JSON 数据 → 同 btns/expandConfig 用 JSON 序列化。
-  // 含函数等不可序列化值时省略 + 告警，保持「发射的永远能编译」。
+  // editRender（AI-09 子项④）→ 列级行内编辑器，纯 JSON 数据 → 同 btns/expandConfig。
   if (col.editRender !== undefined && col.editRender !== null) {
-    let serialized: string | null = null
-    try {
-      serialized = JSON.stringify(col.editRender)
-    } catch {
-      serialized = null
+    const nonJson = findNonJsonValues(col.editRender, 'editRender')
+    if (nonJson.length > 0) {
+      warnings.push(`列级行内编辑器 editRender 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      lines.push(`${inner}editRender: ${inlineJson(col.editRender)},`)
     }
-    if (serialized !== null) lines.push(`${inner}editRender: ${serialized},`)
-    else warnings.push('列级行内编辑器 editRender 含无法序列化的值，已省略以保证编译通过。')
   }
   lines.push(`${indent}},`)
 }
@@ -1472,7 +1744,10 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   if (field.minWidth) parts.push(`minWidth: ${numOrStr(field.minWidth)}`)
   if (field.align) parts.push(`align: ${q(field.align)}`)
   if (field.fixed) parts.push(`fixed: ${typeof field.fixed === 'boolean' ? field.fixed : q(field.fixed)}`)
-  if (field.ellipsis) parts.push(`showOverflowTooltip: true`)
+  // AN-10：与 schema 模式同一口径 —— `defaultSort` 点名的派生列补 sortable；省略号发 `ellipsis`
+  // 契约键（不再发 el-table 专有的 `showOverflowTooltip`，见 buildTableColumn 注释）。
+  if (config.tableOptions?.defaultSort?.prop === field.prop) parts.push(`sortable: true`)
+  if (field.ellipsis) parts.push(`ellipsis: true`)
   // 字段级权限编码：字符串权限码（非表达式），经 q() 转义后内联 —— 运行时由 es-table 的
   // filteredColumns 按全局 permission(code) 过滤（无权限则该列不渲染）。刻意不过 assertEmittableExpr：
   // 它是权限码不是 JS 源码。与静态 hidCol 同层。

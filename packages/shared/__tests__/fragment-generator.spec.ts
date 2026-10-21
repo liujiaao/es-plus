@@ -498,3 +498,62 @@ describe('generateDialogBlock — defaultTitle（AI-36）', () => {
     expect(code).toContain("function open(title = '编辑', row = {}, onSuccess)")
   })
 })
+
+describe('generateTableBlock — AN-10 列选项（省略号 / 默认排序）', () => {
+  const cols = [
+    { prop: 'name', label: '名称', formtype: 'Input', ellipsis: true },
+    { prop: 'publishTime', label: '发布时间', formtype: 'DatePicker' },
+    { prop: 'amount', label: '金额', formtype: 'InputNumber' },
+  ]
+
+  it('ellipsis 发契约键 `ellipsis`（不发 el-table 专有的 showOverflowTooltip）', () => {
+    const { code } = generateTableBlock({ fields: cols, apiUrl: '/api/o' })
+    expect(code).toContain('ellipsis: true')
+    expect(code).not.toContain('showOverflowTooltip')
+  })
+
+  it('tableOptions.defaultSort 的目标列补 sortable: true —— 只有它，别的一列都不补', () => {
+    const { code } = generateTableBlock({
+      fields: cols,
+      apiUrl: '/api/o',
+      tableOptions: { defaultSort: { prop: 'publishTime', order: 'descending' } },
+    })
+    // 片段里 sortable 只该出现一次（目标列）
+    expect((code.match(/sortable: true/g) || []).length).toBe(1)
+    // 它必须落在 publishTime 的列块里
+    const colBlock = code.slice(code.indexOf("prop: 'publishTime'"))
+    const nextCol = colBlock.indexOf('},\n  {')
+    expect(colBlock.slice(0, nextCol === -1 ? 400 : nextCol)).toContain('sortable: true')
+    expect(code).toContain('defaultSort: {"prop":"publishTime","order":"descending"}')
+  })
+
+  it('无 defaultSort → 片段里没有任何 sortable', () => {
+    const { code } = generateTableBlock({ fields: cols, apiUrl: '/api/o' })
+    expect(code).not.toContain('sortable: true')
+  })
+})
+
+describe('AN-11⑤ — 片段表单的 render / formatter 不再静默丢', () => {
+  it('字段带 render → 告警点名 prop，控件仍按 formtype 发射', () => {
+    const { code, warnings } = generateFormBlock({
+      fields: [{ prop: 'status', label: '状态', formtype: 'Input', render: '(h) => h("b")' }],
+    } as any)
+    expect(warnings.join('\n')).toContain('片段表单不消费字段级 render')
+    expect(warnings.join('\n')).toContain('"status"')
+    // 标记而非假装支持：formtype 照常发射（es-form 只在无 formtype 时才读 item.render）
+    expect(code).toContain('"formtype": "Input"')
+  })
+
+  it('字段带 formatter → 告警说明它是表格单元格扩展点', () => {
+    const { warnings } = generateFormBlock({
+      fields: [{ prop: 'amount', label: '金额', formtype: 'Input', formatter: '(row) => row.amount' }],
+    } as any)
+    expect(warnings.join('\n')).toContain('片段表单不消费字段级 formatter')
+    expect(warnings.join('\n')).toContain('"amount"')
+  })
+
+  it('两个都没有 → 不发这两条告警（不制造噪音）', () => {
+    const { warnings } = generateFormBlock({ fields })
+    expect(warnings.join('\n')).not.toContain('片段表单不消费字段级')
+  })
+})

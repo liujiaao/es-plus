@@ -1,0 +1,31 @@
+{
+  "id": "prd-11-member-management",
+  "product": "会员管理",
+  "target": "vue3",
+  "spec": "会员管理。\n\n【查询区】会员姓名、会员等级\n【列表】会员姓名、手机号、会员等级、积分、注册时间\n【新增/编辑表单】会员姓名、手机号、会员等级、备注（多行文本）\n【工具栏】新增\n【行操作】编辑、删除\n说明：备注只在表单中维护，不在列表展示；注册时间系统生成。",
+  "config": {
+    "name": "MemberManage",
+    "apiUrl": "/api/members",
+    "target": "vue3",
+    "fields": [
+      { "prop": "memberName", "label": "会员姓名", "formtype": "Input" },
+      { "prop": "phone", "label": "手机号", "formtype": "Input" },
+      { "prop": "level", "label": "会员等级", "formtype": "Select" },
+      { "prop": "points", "label": "积分", "formtype": "InputNumber", "inQuery": false, "inForm": false },
+      { "prop": "registeredAt", "label": "注册时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "负例 N5：备注 form-only，积分/注册时间 table-only。"
+}

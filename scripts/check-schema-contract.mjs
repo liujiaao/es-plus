@@ -376,7 +376,28 @@ function assertButtonPositionContract(src, { constName, label, fallback }) {
   if (!block) {
     return fail(`${label} 未能定位 ${constName} 的 .transform()（position 必须落成一致的 code）`)
   }
-  const [, fields, transformBody] = block
+  const [, fields, rawTransform] = block
+  // AN-07：表格按钮的归一化收敛到 `normalizeTableBtn()`（Zod transform 与生成器入口共用
+  // 同一实现）。此时 `.transform()` 只有一行调用，position→code 的逻辑在 helper 里；
+  // 断言必须**跟进 helper**，否则收敛本身会让这条守卫静默失明（它只认字面量函数体）。
+  let transformBody = rawTransform
+  if (/normalizeTableBtn\s*\(/.test(rawTransform)) {
+    // 签名带泛型（`normalizeTableBtn<T extends Record<string, any>>`），别按 `name(` 精确匹配。
+    //
+    // AN-21：mcp 副本改为**从 shared import** 该 helper（不再手抄一份），所以本文件里
+    // 定位不到时要去 shared 权威文件里找 —— 否则「消除重复实现」这个正确动作会把守卫
+    // 直接变红，逼着人再抄回去。跨文件只允许指向这一个权威实现。
+    const helperRe = /export\s+function\s+normalizeTableBtn[\s\S]*?\n\}/
+    const helper =
+      src.match(helperRe) ??
+      stripComments(read('packages/shared/src/structured-config.schema.ts')).match(helperRe)
+    if (!helper) {
+      return fail(
+        `${label} 的 .transform() 调用了 normalizeTableBtn，但本文件与 shared 权威 Zod 里都定位不到该函数 —— 归一化实现缺失`
+      )
+    }
+    transformBody += `\n${helper[0]}`
+  }
   if (!/\bcode\s*:/.test(fields)) {
     ok = fail(`${label} 的 ${constName} 缺少 code 字段（1=left,2=right；下游按 code 读取定位信息）`)
   }

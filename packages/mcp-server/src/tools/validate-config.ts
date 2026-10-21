@@ -5,6 +5,8 @@ import {
   listAvailableSchemas,
   validateAndRepair,
   zodIssuesToResult,
+  collectUnknownKeys,
+  formatUnknownKey,
   type ValidationResult,
 } from "@es-plus/shared";
 import { tableShape } from "./generate-table.js";
@@ -51,21 +53,35 @@ type FragmentConfigType = (typeof FRAGMENT_CONFIG_TYPES)[number];
  * 且合法值是 `options`，而 shared 的 `zodIssuesToResult` 按 zod4 的
  * `invalid_value`/`values` 渲染建议 —— 这里做一次归一化，保证两种分支给宿主的
  * 错误/建议串形态一致（Ajv 分支用 `/path: message`，这里也一样）。
+ *
+ * AN-08：片段入参**本就应当精确**（没有「宿主扩展键」的承诺），故 `.strict()`：
+ * 未知键从「解析成功、键被静默剥掉」变成一条 issue。注意 MCP SDK 的 `server.tool()`
+ * 只接受 `ZodRawShape`，协议层无法替工具加 strict —— 这条判据因此落在
+ * `validate_config`（同一份形状的权威判据）上，工具自身那一层维持原样。
  */
 function fragmentSchemaFor(type: FragmentConfigType) {
   switch (type) {
     case ES_TABLE_TYPE:
-      return z.object(tableShape);
+      return z.object(tableShape).strict();
     case ES_FORM_TYPE:
-      return z.object(formShape);
+      return z.object(formShape).strict();
     case ES_DIALOG_TYPE:
-      return z.object(dialogShape);
+      return z.object(dialogShape).strict();
   }
 }
 
 function validateFragmentConfig(config: unknown, type: FragmentConfigType): ValidationResult {
-  const result = fragmentSchemaFor(type).safeParse(config);
-  if (result.success) return { valid: true, errors: [], suggestions: [] };
+  const schema = fragmentSchemaFor(type);
+  const result = schema.safeParse(config);
+  if (result.success) return { valid: true, errors: [], suggestions: [], unknownKeys: [] };
+
+  // AN-08：zod 的 `unrecognized_keys` 只给键名，不给「你是不是想写 X」。这里用同一份
+  // 形状再走一遍只读收集，补出 Levenshtein 建议；两处判据同源（都来自 schema），
+  // 不会出现「zod 说未知、建议器说已知」的分叉。
+  const unknownKeys = collectUnknownKeys(schema, config);
+  const unknownSuggestions = unknownKeys
+    .map((f) => (f.suggestion ? formatUnknownKey(f) : ""))
+    .filter(Boolean);
 
   const issues = result.error.issues.map((issue) => {
     const raw = issue as unknown as {
@@ -87,7 +103,13 @@ function validateFragmentConfig(config: unknown, type: FragmentConfigType): Vali
       maximum: raw.maximum,
     };
   });
-  return zodIssuesToResult(issues);
+  const rendered = zodIssuesToResult(issues);
+  return {
+    valid: false,
+    errors: rendered.errors,
+    suggestions: [...rendered.suggestions, ...unknownSuggestions],
+    unknownKeys,
+  };
 }
 
 /**

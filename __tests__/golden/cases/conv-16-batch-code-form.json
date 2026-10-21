@@ -1,0 +1,69 @@
+{
+  "nl": "生产批次：表格展示名称、编码、日期、状态（生产中/已入库）；批次号由系统自动生成，表单里不用填；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "code",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inForm:code"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "批次号也允许手工录入，试产批次系统不自动编号。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv16BatchCodeForm",
+    "apiUrl": "/api/batch-code-form",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": true,
+        "inForm": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "生产中",
+            "value": "producing"
+          },
+          {
+            "label": "已入库",
+            "value": "stored"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inForm 铰链（批次号）。"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "prd-21-project-list",
+  "product": "项目管理",
+  "target": "vue3",
+  "spec": "项目管理。\n\n【列表】项目名称、负责人、项目状态、开始日期、结束日期\n【新增/编辑表单】项目名称、负责人、项目状态、开始日期、结束日期\n【工具栏】新增\n【行操作】编辑、删除\n没有筛选区。",
+  "config": {
+    "name": "ProjectManage",
+    "apiUrl": "/api/projects",
+    "target": "vue3",
+    "fields": [
+      { "prop": "projectName", "label": "项目名称", "formtype": "Input", "inQuery": false },
+      { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false },
+      { "prop": "status", "label": "项目状态", "formtype": "Select", "inQuery": false },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker", "inQuery": false },
+      { "prop": "endDate", "label": "结束日期", "formtype": "DatePicker", "inQuery": false }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "有表、有表单、无查询：query 必须为空而不是照抄 table。"
+}

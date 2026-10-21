@@ -8,6 +8,7 @@
         v-model:data-source="tableData"
         v-model:pagination="paginationState"
         v-bind="$attrs"
+        @row-click="onRowClick"
       >
         <es-form
           v-if="schema.formItems && schema.formItems.length"
@@ -32,7 +33,7 @@ import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import useDialog from '../../es-dialog/src/use-dialog'
-import { getNestedValue, setNestedValue } from '@es-plus/core'
+import { getNestedValue, setNestedValue, resolveCrudActions } from '@es-plus/core'
 import type {
   CrudPageSchema,
   CrudAction,
@@ -103,6 +104,16 @@ const paginationState = ref({
 
 // ─── 向后兼容：归一化配置 ───
 
+/**
+ * 生效的 action 集（AN-06）。
+ *
+ * 三端此前各自硬编码 `props.schema.actions || ['add','edit','delete']`，于是在
+ * **新对话框模式**（生成器只发 `dialogs`、不发 `actions`）里，页面会凭空多出
+ * add/edit/delete —— `actions:['view']` 的只读页照样渲染「删除」并真的发 DELETE。
+ * 推导规则见 core 的 `resolveCrudActions`（显式 → dialogs key → dialogFormItems → 只读）。
+ */
+const resolvedActions = computed(() => resolveCrudActions(props.schema))
+
 const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
   if (props.schema.dialogs) return props.schema.dialogs
 
@@ -116,7 +127,7 @@ const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
   } as CrudDialogConfig
 
   const result: Record<string, CrudDialogConfig> = {}
-  const actions = props.schema.actions || ['add', 'edit', 'delete']
+  const actions = resolvedActions.value
 
   if (actions.includes('add')) {
     result.add = { ...dialogBase, title: '新增' }
@@ -141,7 +152,7 @@ const normalizedToolbarBtns = computed<CrudBtnConfig[]>(() => {
   if (props.schema.operationColumn !== undefined) return []
 
   // 旧模式：从 actions 推导
-  const actions = props.schema.actions || ['add', 'edit', 'delete']
+  const actions = resolvedActions.value
   const btns: CrudBtnConfig[] = []
 
   if (actions.includes('add')) {
@@ -161,7 +172,7 @@ const normalizedOperationColumn = computed<OperationColumnConfig | false | undef
   if (props.schema.operationColumn !== undefined) return props.schema.operationColumn
 
   // 旧模式：从 actions 推导
-  const actions = props.schema.actions || ['add', 'edit', 'delete']
+  const actions = resolvedActions.value
   const hasActionCol = props.schema.columns?.some((c) => c.prop === 'action' || c.prop === 'operate' || c.btns)
   if (hasActionCol) return undefined
 
@@ -193,7 +204,17 @@ const mergedFormBtns = computed<BtnConfig[]>(() => {
   if (props.schema.queryBtns) return props.schema.queryBtns
 
   const baseBtns: BtnConfig[] = [
-    { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
+    // AN-11⑥：`query` 事件此前只声明、从未 emit。它不能挂在 `triggerEvent` 上 ——
+    // 那条分支由 EsForm 独占（只用注入的表格实例发起请求，不回调这里的 click）。
+    // 故查询键自己发起一次「新搜索」（回到第 1 页，与 EsForm 的 queryTableRequest 同口径），
+    // 再带着当前查询模型派发事件；重置键仍交给 EsForm 的 triggerEvent（重置表单 + 刷新）。
+    {
+      name: '查询', type: 'primary', key: 'query',
+      click: () => {
+        ;(tableRef.value as any)?.httpRequestInstance?.(queryModel, { keepPage: false })?.catch?.(() => {})
+        emit('query', { ...queryModel })
+      },
+    },
     { name: '重置', key: 'rest', triggerEvent: true },
   ]
 
@@ -287,6 +308,18 @@ const formLayoutProps = computed(() => {
 })
 
 // ─── 工具栏按钮处理 ───
+
+/**
+ * 行点击转发（AN-11⑥）。
+ *
+ * `row-click` 此前只写在 `defineEmits` 里、三个端**从未 emit** —— 而 Vue 3 会把
+ * 已声明的事件从 `$attrs` 摘掉，宿主的 `@row-click` 既收不到事件、也不会经
+ * `v-bind="$attrs"` 落到内层 es-table 上，是彻底的静默失效。这里显式接线：
+ * es-table 的 row-click（el-table/vxe/virtual 三引擎）→ 本组件 emit。
+ */
+function onRowClick(row: Record<string, unknown>) {
+  emit('row-click', row)
+}
 
 async function handleToolbarBtnClick(btn: CrudBtnConfig) {
   const key = btn.key || btn.actionType || ''

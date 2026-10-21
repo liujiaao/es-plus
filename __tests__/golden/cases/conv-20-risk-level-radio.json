@@ -1,0 +1,81 @@
+{
+  "nl": "风险登记：表格展示名称、风险等级、负责人、状态（待评估/已关闭）；风险等级分低/中/高三档；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "level",
+    "owner",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "formtype:level"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "风险等级用单选按钮，三个档次一眼能选，不要下拉。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv20RiskLevelRadio",
+    "apiUrl": "/api/risk-level-radio",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "level",
+        "label": "风险等级",
+        "formtype": "Radio",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "低",
+            "value": "low"
+          },
+          {
+            "label": "中",
+            "value": "mid"
+          },
+          {
+            "label": "高",
+            "value": "high"
+          }
+        ]
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待评估",
+            "value": "pending"
+          },
+          {
+            "label": "已关闭",
+            "value": "closed"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "formtype 铰链：枚举字段默认落 Select；纠正显式要求 Radio。注意 gold 仍带 dataOptions，但 pinned 只钉控件类型（选项标签由 dataOptions 维度另行覆盖）。"
+}

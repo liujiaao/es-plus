@@ -96,6 +96,24 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     )
   }
 
+  // AN-11⑤：片段表单的 `render` / `formatter` 此前**静默**丢（`buildFormItem` 两个都不发射）。
+  // 与完整页同一套源码论证：表单项是 JSON 数据，载不动函数；且 `es-form` 只在**无 formtype**
+  // 时才读 `item.render`，而 `buildFormItem` 恒写 formtype —— 硬塞进去也是永不可达的死代码。
+  // 故标记而非假装支持。`formatter` 本就是**表格单元格**的扩展点，对表单项无意义。
+  const renderFields = fields.filter((f) => (f as unknown as FieldConfig).render)
+  if (renderFields.length > 0) {
+    warnings.push(
+      `片段表单不消费字段级 render —— ${renderFields.map((f) => `"${f.prop}"`).join(', ')} 已按 formtype 发射默认控件。` +
+        '（表单项是 JSON 数据、载不动函数；es-form 只在无 formtype 时才读 item.render。）需要自定义控件请手写 item.render 并去掉该项 formtype。',
+    )
+  }
+  const formatterFields = fields.filter((f) => (f as unknown as FieldConfig).formatter)
+  if (formatterFields.length > 0) {
+    warnings.push(
+      `片段表单不消费字段级 formatter —— ${formatterFields.map((f) => `"${f.prop}"`).join(', ')} 的 formatter 是**表格单元格**扩展点，对表单项无意义（表单里的取值/回显由控件自身负责）。`,
+    )
+  }
+
   const lines: string[] = []
 
   // Template
@@ -261,6 +279,24 @@ export interface TableBlockOptions {
     enabled?: boolean
   }
   configTableOut?: { total?: string; tableData?: string; pageSize?: string; current?: string }
+  /** AN-08：vxe 树表（JSON 子集；函数型 loadMethod 不进 AI 契约）。 */
+  treeConfig?: {
+    transform?: boolean
+    rowField?: string
+    parentField?: string
+    childrenField?: string
+    /** @deprecated vxe v4 别名，运行时归一为 childrenField。 */
+    children?: string
+    mapChildren?: string
+    expandAll?: boolean
+    lazy?: boolean
+  }
+  /** AN-08：vxe 行展开开关（JSON 子集）。 */
+  expandConfig?: {
+    expandAll?: boolean
+    accordion?: boolean
+    lazy?: boolean
+  }
 }
 
 /**
@@ -302,6 +338,9 @@ export const TABLE_BLOCK_OPTION_ORDER = [
   'defaultSort',
   'refetchKeepPage',
   'localPagination',
+  // AN-08：vxe 树表 / 行展开（纯 JSON → optionLiteral 走 inlineJson）。
+  'treeConfig',
+  'expandConfig',
 ] as const
 
 /**
@@ -414,8 +453,13 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     lines.push('  setup() {')
   }
 
-  // columns —— 复用 buildTableColumnSFC(只读 config.i18n)
-  const cfgLike = { i18n } as unknown as StructuredCrudConfig
+  // columns —— 复用 buildTableColumnSFC（只读 config.i18n 与 tableOptions.defaultSort）
+  // AN-10：片段路径同样要把 defaultSort 传进去，否则「默认按 X 倒序」的片段里目标列
+  // 没有 sortable，el-table / a-table 都不会显示默认排序状态（只有 vxe 会静默按 field 排）。
+  const cfgLike = {
+    i18n,
+    tableOptions: { defaultSort: t.defaultSort },
+  } as unknown as StructuredCrudConfig
   lines.push('const columns = [')
   for (const f of fields) {
     lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)

@@ -127,6 +127,12 @@ export const CAPABILITY_TOKENS = {
   useDialogApi: { tier: 'D', reason: 'useDialog 命令式 composable（宿主调用），非 schema 面' },
   hostOrchestration: { tier: 'D', reason: '宿主编排：ElSteps 分步 / 拖拽 / 异步组件 / ResizeObserver / 运行时增删与手工联动' },
   hostSkeleton: { tier: 'D', reason: '整页骨架 / 布局拼装（后台页等），非单配置可覆盖' },
+  siteUncovered: {
+    tier: 'D',
+    reason:
+      '站点案例未匹配到同名单源演示（es-eui / es-pc 台账）—— 显式登记为 D，不猜能力令牌；' +
+      '补上对应演示后重跑 `npm run sites:coverage:gen` 即自动升档',
+  },
 }
 
 /**

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerTools } from "./tools/index.js";
+import { registerTools, resolveToolProfile } from "./tools/index.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 
@@ -110,6 +110,12 @@ Two passes, every time:
 4. **Call** \`generate_crud\` (or \`generate_crud_from_config\`), then **read the
    returned warnings** — each one flags a likely mapping mistake; fix and
    regenerate.
+5. **Read the \`preflight\` section** at the end of the result. It lists the HOST
+   prerequisites (\`app.use(ESPlus, { httpRequest, permission, t })\`, the UI
+   library, and — for mode=sfc dialogs — the JSX plugin) with a copy-once entry
+   boilerplate. These do not break compilation; the matching capability silently
+   turns inert, and a missing \`permission\` fails OPEN. When the host already has
+   an entry, pass it to \`doctor_page\` and act on every \`missing\` line.
 
 ## Resources
 
@@ -142,7 +148,22 @@ const server = new McpServer({
   name: "es-plus-mcp-server",
   version: pkg.version,
 }, {
-  instructions: INSTRUCTIONS,
+  // AN-26：profile=front-door 时 3 个工具（1 高级 + 2 legacy）不在工具表里，instructions
+  // 不能再让宿主去调它们 —— 这段提示只在 front-door 模式下追加。
+  instructions:
+    INSTRUCTIONS +
+    (resolveToolProfile() === "front-door"
+      ? `
+## Tool profile (front-door)
+
+This server runs with \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`
+(advanced, hand-authored config) and \`generate_crud_page\` / \`generate_crud_schema\`
+(legacy regex fallbacks) are NOT registered. Use \`generate_crud\` for every
+request; for an explicit single-component ask use \`generate_form\`,
+\`generate_table\` or \`generate_dialog\`. Restart the server without
+\`ESPLUS_MCP_PROFILE\` (or set it to \`full\`) to expose the advanced/legacy tools.
+`
+      : ""),
 });
 
 registerTools(server);

@@ -1,6 +1,6 @@
 {
-  "nl": "部门员工表（自定义列顺序）：按部门、小组、姓名、月薪四列展示，部门列按相邻相同合并；月薪列用自定义格式化。支持新增、编辑。",
-  "nlEn": "Department staff table (custom column order): shows department, team, name and salary; the department column merges across adjacent equal values, and the salary column uses a custom formatter. Supports add and edit.",
+  "nl": "部门员工表（自定义列顺序）：按部门、小组、姓名、月薪四列展示，部门列按相邻相同合并。支持新增、编辑。",
+  "nlEn": "Department staff table (custom column order): shows department, team, name and salary; the department column merges across adjacent equal values. Supports add and edit.",
   "fixedFields": [
     "dept",
     "team",
@@ -54,8 +54,7 @@
       },
       {
         "prop": "salary",
-        "label": "月薪",
-        "formatter": "(row) => row.salary"
+        "label": "月薪"
       }
     ],
     "mergeConfig": {
@@ -68,5 +67,5 @@
       "edit"
     ]
   },
-  "notes": "AI-23: mergeConfig 与显式 columns 逃生数组共存（合并与列定义正交，互不干扰）"
+  "notes": "AI-23: mergeConfig 与显式 columns 逃生数组共存（合并与列定义正交，互不干扰）。AN-08 移除了列级 formatter 字符串：JSON 配置承载不了函数，运行时列适配器会 `formatter(...)` 直接调用 → 字符串会在渲染时抛 not a function；列级自定义格式化属于源码扩展点，不在配置契约内"
 }

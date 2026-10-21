@@ -18,9 +18,13 @@ import type { CrudAction } from './contract.js'
  *
  * 字段协调优先级(固定):
  *   - 标识(prop/label/formtype):首次出现为准,冲突发告警(不静默改写)
- *   - 语义(required/rules/dataOptions/apiParams/attrs):form 面优先(覆盖 query)
+ *   - 语义(required/rules/dataOptions/apiParams/attrs):form 面优先,其次 query,最后 table
  *   - 展示(width/minWidth/align/fixed/ellipsis/formatter/render):table 面优先
  *   - querySpan 来自 query 面、formSpan 来自 form 面
+ *
+ * AN-08：语义键此前只从 query/form 两面拷贝 —— 只在 table 面声明 `required` 的字段会被
+ * 静默丢掉（组合结果里没有这个键，表单也就不必填）。三面都拷贝，table 作为最低优先级
+ * 铺底：既有「form 覆盖 query」的语义逐字不变，只是不再产生无声丢弃。
  */
 
 /** 单个「面」里的字段描述 —— 与 `FieldConfig` 共用词汇,但不含 inQuery/inTable/inForm(由组合推导)。 */
@@ -154,7 +158,10 @@ export function composeCrudConfig(input: ComposeCrudInput): ComposeResult {
   for (const f of query) if (f.querySpan !== undefined) acc.get(f.prop)!.querySpan = f.querySpan
   for (const f of form) if (f.formSpan !== undefined) acc.get(f.prop)!.formSpan = f.formSpan
 
-  // 3) 语义:query 先铺底,form 覆盖(form 面所有)。
+  // 3) 语义:table 铺底 → query → form（form 覆盖 query 的既有语义不变）。
+  //    AN-08：table 面此前完全不拷贝 —— 只在表格面写 `required`/`dataOptions` 的字段，
+  //    组合结果里这些键凭空消失（表单不必填、下拉没选项），且零告警。
+  for (const f of table) copyDefinedKeys(acc.get(f.prop)!, f as unknown as Record<string, unknown>, SEMANTIC_KEYS)
   for (const f of query) copyDefinedKeys(acc.get(f.prop)!, f as unknown as Record<string, unknown>, SEMANTIC_KEYS)
   for (const f of form) copyDefinedKeys(acc.get(f.prop)!, f as unknown as Record<string, unknown>, SEMANTIC_KEYS)
 

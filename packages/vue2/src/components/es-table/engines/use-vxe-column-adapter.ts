@@ -1,5 +1,6 @@
 import { computed } from '../../../vue-compat'
 import type { Ref } from '../../../vue-compat'
+import { synthesizeLeadingColumns } from '@es-plus/core'
 import type { TableColumn, TableOptions } from '@es-plus/core'
 
 function unrefOptions(options: Ref<TableOptions> | TableOptions): TableOptions {
@@ -50,14 +51,21 @@ export function useVxeColumnAdapter(
     const colList = columns.value
     const opts = unrefOptions(options)
 
-    if (opts.multiSelect && !colList.some(c => c.type === 'selection')) {
-      cols.push({ type: 'checkbox', width: 50, fixed: 'left', align: 'center' })
-    }
-    if (opts.snIndex && !colList.some(c => c.type === 'index')) {
-      cols.push({ type: 'seq', width: 60, title: '#', align: 'center' })
-    }
-    if (opts.expand && !colList.some(c => c.type === 'expand')) {
-      cols.push({ type: 'expand', width: 50, fixed: 'left', align: 'center', slots: { content: 'expand' } })
+    // AN-09：前置列（选择 → 序号 → 展开）由 core 单源合成（与 vue3/antdv 同规则）。
+    for (const spec of synthesizeLeadingColumns(opts, colList)) {
+      if (spec.type === 'selection') {
+        cols.push({ type: 'checkbox', width: spec.width, fixed: spec.fixed, align: spec.align })
+      } else if (spec.type === 'index') {
+        cols.push({ type: 'seq', width: spec.width, title: spec.label, align: spec.align })
+      } else {
+        cols.push({
+          type: 'expand',
+          width: spec.width,
+          fixed: spec.fixed,
+          align: spec.align,
+          slots: { content: 'expand' },
+        })
+      }
     }
 
     for (const col of colList) {
@@ -151,7 +159,8 @@ function adaptSingleCol(
   if (col.minWidth) base.minWidth = col.minWidth as number | string
   if (col.fixed) base.fixed = col.fixed === true ? 'left' : col.fixed as 'left' | 'right'
   if (col.sortable) base.sortable = true
-  if (col.ellipsis) base.showOverflow = 'tooltip'
+  // AN-10：契约键 `ellipsis`；`showOverflowTooltip` 是 el-table 的存量写法，一并认（三端同规则）。
+  if (col.ellipsis || (col as any).showOverflowTooltip) base.showOverflow = 'tooltip'
   if ((col as any).treeNode) base.treeNode = true
 
   if (hasRender(col)) {

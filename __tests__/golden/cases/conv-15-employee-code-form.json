@@ -1,0 +1,69 @@
+{
+  "nl": "员工管理：表格展示名称、编码、部门、状态（在职/离职）；工号由 HR 系统生成，表单里不用填；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "code",
+    "department",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inForm:code"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "工号也要能在表单里手工指定，外包人员没有 HR 工号。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv15EmployeeCodeForm",
+    "apiUrl": "/api/employee-code-form",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "code",
+        "label": "编码",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": true,
+        "inForm": false
+      },
+      {
+        "prop": "department",
+        "label": "部门",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "在职",
+            "value": "active"
+          },
+          {
+            "label": "离职",
+            "value": "left"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inForm 铰链（工号）。"
+}

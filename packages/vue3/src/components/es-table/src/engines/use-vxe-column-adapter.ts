@@ -1,4 +1,5 @@
 import { computed, unref, type Ref } from 'vue'
+import { synthesizeLeadingColumns } from '@es-plus/core'
 import type { TableColumn, TableOptions } from '../../../../types'
 
 export interface VxeColumnOption {
@@ -33,14 +34,22 @@ export function useVxeColumnAdapter(
     const colList = columns.value
     const opts = unref(options)
 
-    if (opts.multiSelect && !colList.some(c => c.type === 'selection')) {
-      cols.push({ type: 'checkbox', width: 50, fixed: 'left', align: 'center' })
-    }
-    if (opts.snIndex && !colList.some(c => c.type === 'index')) {
-      cols.push({ type: 'seq', width: 60, title: '#', align: 'center' })
-    }
-    if (opts.expand && !colList.some(c => c.type === 'expand')) {
-      cols.push({ type: 'expand', width: 50, fixed: 'left', align: 'center', slots: { content: 'expand' } })
+    // AN-09：前置列（选择 → 序号 → 展开）由 core 单源合成，三份 vxe 适配器与两个
+    // 默认引擎共用同一份顺序/宽度/去重规则。
+    for (const spec of synthesizeLeadingColumns(opts, colList)) {
+      if (spec.type === 'selection') {
+        cols.push({ type: 'checkbox', width: spec.width, fixed: spec.fixed, align: spec.align })
+      } else if (spec.type === 'index') {
+        cols.push({ type: 'seq', width: spec.width, title: spec.label, align: spec.align })
+      } else {
+        cols.push({
+          type: 'expand',
+          width: spec.width,
+          fixed: spec.fixed,
+          align: spec.align,
+          slots: { content: 'expand' },
+        })
+      }
     }
 
     for (const col of colList) {
@@ -125,7 +134,8 @@ function adaptSingleCol(
   if (col.minWidth) base.minWidth = col.minWidth as number | string
   if (col.fixed) base.fixed = col.fixed === true ? 'left' : col.fixed as 'left' | 'right'
   if (col.sortable) base.sortable = true
-  if (col.ellipsis) base.showOverflow = 'tooltip'
+  // AN-10：契约键 `ellipsis`；`showOverflowTooltip` 是 el-table 的存量写法，一并认（三端同规则）。
+  if (col.ellipsis || (col as any).showOverflowTooltip) base.showOverflow = 'tooltip'
   // 显式 treeNode 透传（treeConfig 场景下用户可指定任意列作为树节点列）
   if ((col as any).treeNode) base.treeNode = true
 

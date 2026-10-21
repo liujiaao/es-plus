@@ -1,0 +1,19 @@
+{
+  "id": "prd-06-activity-search",
+  "product": "活动检索",
+  "target": "vue3",
+  "spec": "活动检索页。\n\n【查询区】活动名称、开始日期\n【列表】活动名称、渠道、预算、开始日期、结束日期\n本页仅用于检索和浏览，不提供新增或编辑入口。",
+  "config": {
+    "name": "ActivitySearch",
+    "apiUrl": "/api/activities",
+    "target": "vue3",
+    "fields": [
+      { "prop": "activityName", "label": "活动名称", "formtype": "Input", "inForm": false },
+      { "prop": "channel", "label": "渠道", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "budget", "label": "预算", "formtype": "InputNumber", "inQuery": false, "inForm": false },
+      { "prop": "startDate", "label": "开始日期", "formtype": "DatePicker", "inForm": false },
+      { "prop": "endDate", "label": "结束日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
+    ]
+  },
+  "notes": "只有 query + table；没有 form/dialog。"
+}

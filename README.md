@@ -12,7 +12,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 [![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
 
-<sub>准确率徽章 = 夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）实测的 in-schema intent「零编辑」命中率，门禁即此数；**不是营销数字**。语料目前 25 例，是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径。</sub>
+<sub>准确率徽章 = 夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）实测的 in-schema intent「零编辑」命中率，门禁即此数；**不是营销数字**。语料目前 188 例（留出 166 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
 
 **[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 
@@ -437,6 +437,8 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 > "生成一个用户管理页面，查询姓名、手机号、状态，表格显示姓名、邮箱、状态、创建时间，支持新增编辑删除"
 
 AI 自动调用 MCP Server 生成完整可运行的 .vue 文件。
+
+工具面遵循「一个前门 + 确定性支撑」：**`generate_crud` 是唯一前门**（你只填 `surfaces` 意图表，路由与编译是确定性代码）。`generate_crud_from_config` 标注 **ADVANCED**（已持有类型化配置时用），`generate_crud_page` / `generate_crud_schema` 标注 **LEGACY FALLBACK**（no-LLM 正则兜底）。`ESPLUS_MCP_PROFILE=front-door` 可隐藏高级与 legacy 工具，只留前门与单面片段。完整工具清单、选择决策树与分层依据见 [`packages/mcp-server/AI-NATIVE-ARCHITECTURE.md`](./packages/mcp-server/AI-NATIVE-ARCHITECTURE.md)。
 
 ### @es-plus/cli — 命令行工具
 

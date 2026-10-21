@@ -1,0 +1,59 @@
+{
+  "nl": "订单管理：表格展示名称、金额、状态（待付款/已付款）；支持新增、编辑。",
+  "fixedFields": [
+    "name",
+    "amount",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "还要支持批量导入，历史订单要一次性搬进来。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv25OrderImportAction",
+    "apiUrl": "/api/order-import-action",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待付款",
+            "value": "unpaid"
+          },
+          {
+            "label": "已付款",
+            "value": "paid"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "import"
+    ]
+  },
+  "notes": "actions 铰链（import）。与 conv-24 互补：一个加导出、一个加导入。"
+}

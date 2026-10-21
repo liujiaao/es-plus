@@ -106,7 +106,7 @@
 
             <column-item
               v-for="(cols, index) in filteredColumns"
-              :key="cols.prop || cols.key || index"
+              :key="cols.prop || cols.key || cols.type || index"
               :cols="Object.assign({}, cols, { columnIndex: index })"
             >
               <template
@@ -215,6 +215,7 @@ import {
   buildRowSpanMethod,
   resolveMergeConfig,
   toCssSize,
+  buildLeadingColumns,
   type TableColumn,
   type PaginationConfig,
   type TableOptions,
@@ -817,7 +818,11 @@ export default defineComponent({
         }
       }
 
-      return list
+      // AN-09：前置非数据列（选择 → 序号 → 展开）由 core 单源合成，顺序/宽度与 vue3 / vxe 引擎一致。
+      // 已显式声明同类型列（含 hidCol 隐藏列）时不重复注入；合成列没有 prop/key，
+      // 因此不参与上面的 formatter 注入，也不参与 width→minWidth 转换（放在最后一步）。
+      const leadingColumns = buildLeadingColumns(mergedOptions.value, columnRowList.value)
+      return [...leadingColumns, ...list]
     })
 
     const tableAttrs = computed(() => {
@@ -896,6 +901,12 @@ export default defineComponent({
       const result: Record<string, unknown> = { ...tableAttrs.value, ...(attrs as any) }
       if (props.options.rowkey) {
         result.rowKey = props.options.rowkey
+      }
+      // 默认排序（AN-10）：options.defaultSort → Element UI 的 `default-sort`，与 vue3 同口径。
+      // 目标列的 sortable 由生成器补（见 shared/structured-generator 的 AN-10 分支）：
+      // el-table 对**不可排序列**的 default-sort 一律静默忽略。
+      if (props.options.defaultSort) {
+        result.defaultSort = props.options.defaultSort
       }
       // 树表（AI-09 子项③）：options.treeConfig → el-table（Element UI）原生 prop，
       // 与 vue3 同款映射 —— tree-props 仅在自定义子键名时发，expandAll → default-expand-all。

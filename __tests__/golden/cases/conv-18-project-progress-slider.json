@@ -1,0 +1,67 @@
+{
+  "nl": "项目管理：表格展示名称、进度、负责人、状态（进行中/已完成）；进度按百分比记录；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "progress",
+    "owner",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "formtype:progress"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "进度用滑块拖 0–100，比手填数字直观。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv18ProjectProgressSlider",
+    "apiUrl": "/api/project-progress-slider",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "progress",
+        "label": "进度",
+        "formtype": "Slider",
+        "inQuery": false
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "进行中",
+            "value": "doing"
+          },
+          {
+            "label": "已完成",
+            "value": "done"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "formtype 铰链：百分比进度若不点明控件，模型多落 InputNumber；纠正后才用 Slider。"
+}

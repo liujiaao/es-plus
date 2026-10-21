@@ -1,0 +1,31 @@
+{
+  "id": "prd-17-customer-lead",
+  "product": "客户线索",
+  "target": "vue3",
+  "spec": "客户线索管理。\n\n【查询区】客户名称、线索来源\n【列表】客户名称、联系人、线索来源、负责人、创建时间\n【新增/编辑表单】客户名称、联系人、线索来源、备注\n【工具栏】新增\n【行操作】编辑、删除\n说明：负责人由系统分配，仅列表展示；创建时间系统生成。",
+  "config": {
+    "name": "CustomerLead",
+    "apiUrl": "/api/leads",
+    "target": "vue3",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input" },
+      { "prop": "contact", "label": "联系人", "formtype": "Input", "inQuery": false },
+      { "prop": "source", "label": "线索来源", "formtype": "Select" },
+      { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false, "inForm": false },
+      { "prop": "createdAt", "label": "创建时间", "formtype": "DatePicker", "inQuery": false, "inForm": false },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": { "type": "textarea" },
+        "inQuery": false,
+        "inTable": false
+      }
+    ],
+    "dialogs": {
+      "add": { "title": "新增" },
+      "edit": { "title": "编辑" }
+    }
+  },
+  "notes": "系统分配的负责人只在列表；备注只在表单。"
+}

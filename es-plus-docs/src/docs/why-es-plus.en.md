@@ -625,8 +625,8 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | `detect_project_target` | Reads package.json, infers vue2/vue3 | AI no longer guesses which Vue version you're on |
 | `generate_crud` | **Front door**: fill the `surfaces` intent table (any subset of query / table / form / dialog) → composed and compiled | **Main path**: semantic mapping is done by the **host LLM**; routing and compilation are deterministic code |
 | `generate_form` / `generate_table` / `generate_dialog` | Single-surface fragments: standalone es-form / es-table / useDialog | When you want exactly one component, or a fragment beside non-es-plus components |
-| `generate_crud_from_config` | Full `StructuredCrudConfig` → runnable code | The codegen step in a Schema-first flow |
-| `generate_crud_page` / `generate_crud_schema` | Natural language → full .vue / CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`crud-engine.ts`), limited coverage — only for hosts that can't reason |
+| `generate_crud_from_config` | **ADVANCED**: full `StructuredCrudConfig` → runnable code (use when you already hold a typed config) | The codegen step in a Schema-first flow; natural-language requests go through the front door |
+| `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**: natural language → full .vue / CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`crud-engine.ts`), limited coverage — only for hosts that can't reason |
 | `validate_config` | zod-validates a config | Bad AI output is caught and retried instantly |
 | `refine_config` | One corrective pass over a pinned config, echoing the diff | Convergence loop: deterministic validate + diff, no model round-trip |
 | `list_form_types` | Returns the 14 formtypes + descriptions | AI no longer guesses which control names are valid |
@@ -741,7 +741,7 @@ Assume the team uses Claude Code, and 50% of new pages are AI-generated (the res
 
 | Item | Without MCP | With MCP |
 |---|---------|--------|
-| Usable rate of AI-generated code | ~40% (often guesses APIs wrong) | ~95% (schema constraint + zod validation) |
+| Usable rate of AI-generated code | ~40% (often guesses APIs wrong) | target ≥95%; current value = the badge (definition95, heldout) |
 | AI generation + manual cleanup per page | 30 min | 8 min |
 | 15 AI-generated pages | 15 × 30 = 450 min | 15 × 8 = 120 min |
 

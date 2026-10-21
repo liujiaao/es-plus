@@ -39,8 +39,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --legacy-peer-deps
-      - name: Build @es-plus/shared
-        run: npm run build --workspace @es-plus/shared
+      # `@es-plus/shared` 是生成器的运行时依赖；三个组件包只有 `dist/index.d.ts`，
+      # 却是 Tier B 类型腿（AN-14）解析 props/emits 的唯一来源 —— 缺了腿只会显式
+      # skipped 而不会静默变绿（见 scripts/eval/typecheck-leg.mjs 头注）。
+      - name: Build libs + component packages
+        run: npm run build:components
       # Optional dep — installed only for this eval job, never a runtime dep.
       - name: Install Anthropic SDK
         run: npm install --no-save @anthropic-ai/sdk --legacy-peer-deps

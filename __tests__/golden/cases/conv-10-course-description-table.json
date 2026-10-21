@@ -1,0 +1,62 @@
+{
+  "nl": "课程管理：表格展示标题、状态（招生中/已结课）；描述只在新增/编辑弹窗里填，列表里不显示；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "status",
+    "description"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inTable:description"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "描述也要在列表里显示，运营要快速对比课程内容。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv10CourseDescriptionTable",
+    "apiUrl": "/api/course-description-table",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "招生中",
+            "value": "open"
+          },
+          {
+            "label": "已结课",
+            "value": "closed"
+          }
+        ]
+      },
+      {
+        "prop": "description",
+        "label": "描述",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": false,
+        "inForm": true
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inTable 铰链（长文本）。长文本默认进表格时会被截断，模型也可能因此主动不放进列表。"
+}

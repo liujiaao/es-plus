@@ -1,0 +1,81 @@
+{
+  "nl": "工单管理：初版只要能按标题搜索；表格展示标题、级别（低/中/高）、日期、状态（待处理/已完成）；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "level",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:level"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "级别也要能当筛选项，按紧急程度过滤工单。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv04TicketLevelQuery",
+    "apiUrl": "/api/ticket-level-query",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "level",
+        "label": "级别",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "低",
+            "value": "low"
+          },
+          {
+            "label": "中",
+            "value": "mid"
+          },
+          {
+            "label": "高",
+            "value": "high"
+          }
+        ]
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待处理",
+            "value": "pending"
+          },
+          {
+            "label": "已完成",
+            "value": "done"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（枚举型字段）。校验「状态能筛」不代表「级别能筛」——维度只钉级别。"
+}

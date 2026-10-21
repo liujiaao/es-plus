@@ -1,0 +1,60 @@
+{
+  "nl": "审核台账：表格展示名称、状态（待审核/已通过）、日期；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "status",
+    "date"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "再加一个导出按钮，审核完要导出明细给财务。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv24AuditExportAction",
+    "apiUrl": "/api/audit-export-action",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "待审核",
+            "value": "pending"
+          },
+          {
+            "label": "已通过",
+            "value": "approved"
+          }
+        ]
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete",
+      "export"
+    ]
+  },
+  "notes": "actions 铰链：初版明说「新增、编辑、删除」→ 模型不会凭空加 export；纠正后才补 `export`。pinned actions 是整集 F1，turn-0 结构性 miss。"
+}

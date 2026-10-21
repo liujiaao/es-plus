@@ -100,6 +100,40 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.warnings[0]).toContain('status')
   })
 
+  it('status-tag bound expression stays raw（AN-14：实体化会让 Volar 报语法错）', () => {
+    // `:type="… 'success' : 'danger'"` 位于双引号属性值里：`'` 与 `&` 越不过定界，
+    // 实体化只为「解码后仍是同一表达式」——但 Volar 把属性值原样交给 TS，
+    // `&#39;` → TS1003、`&amp;&amp;` → TS1005，生成页在 IDE / vue-tsc 里满屏红叉。
+    const { wrapperCode } = generateFromConfig({ ...baseConfig, mode: 'schema' })
+    expect(wrapperCode).toContain(`:type="row.status === 1 ? 'success' : 'danger'"`)
+    expect(wrapperCode).not.toContain('&#39;')
+    expect(wrapperCode).not.toContain('&amp;')
+  })
+
+  it('still entity-escapes `"` in bound expressions（注入防线不退化）', () => {
+    // 反例守卫：`"` 一旦裸奔就会提前结束属性值 —— 只放宽 `'`/`&`，不放宽 `"`。
+    const evil = {
+      ...baseConfig,
+      mode: 'schema' as const,
+      fields: [
+        {
+          prop: 'b"@mouseover="alert(1)', label: 'X', formtype: 'Input' as const,
+          render: '(_, { row }) => row.x',
+        },
+        {
+          prop: 'status', label: '状态', formtype: 'Select' as const,
+          dataOptions: [{ label: '启用', value: 1 }],
+          render: '(_, { row }) => row.status',
+        },
+      ],
+    }
+    const { wrapperCode } = generateFromConfig(evil as any)
+    // 两个属性位置都必须实体化 `"`（属性名里的插槽名 + :type 的表达式）；mustache 里的
+    // 裸 `"` 是合法的，不在判据内。
+    expect(wrapperCode).toContain('#column-b&quot;@mouseover=&quot;alert(1)=')
+    expect(wrapperCode).toContain(`:type="row['b&quot;@mouseover=&quot;alert(1)'] === 1`)
+  })
+
   it('wires render fields to a scoped slot the wrapper actually renders', () => {
     // Schema mode can't inline render, so the column must declare
     // scopedSlots.customRender AND the wrapper must emit the matching
@@ -646,6 +680,22 @@ describe('multi-target generation (vue3 / vue2 / antdv)', () => {
     expect(sfc).toContain(':pagination.sync=')
   })
 
+  it('vue2 schema wrapper exposes pageSchema from setup()（AN-14）', () => {
+    // Vue 2 的 template 只能解析 setup() 返回值；pageSchema 是 import 进来的绑定，
+    // 不 return 就取不到 —— `:schema="pageSchema"` 静默变 undefined（空页面，无报错）。
+    // 两个 builder（legacy / multi-dialog）各有一份 return，必须都覆盖。
+    const legacy = generateFromConfig(cfgFor('vue2', 'schema')).wrapperCode
+    expect(legacy).toMatch(/return \{[^}]*\bpageSchema\b[^}]*\}/)
+
+    const multi = generateFromConfig({ ...baseConfig, target: 'vue2', mode: 'schema', typescript: true, dialogs: {} } as any)
+      .wrapperCode
+    expect(multi).toMatch(/return \{[^}]*\bpageSchema\b[^}]*\}/)
+
+    // 反例守卫：模板确实在用 pageSchema，否则上面的断言就只是钉了一个无用绑定。
+    expect(legacy).toContain(':schema="pageSchema"')
+    expect(multi).toContain(':schema="pageSchema"')
+  })
+
   it('antdv wrapper uses Modal.confirm + a-tag color semantics', () => {
     const { wrapperCode } = generateFromConfig(cfgFor('antdv', 'schema'))
     expect(wrapperCode).toContain('Modal.confirm({')
@@ -867,6 +917,24 @@ describe('sfc mode — regression guards', () => {
 
   // 2.2=A: sfc mode does not consume dialogs/tableBtns/operationColumn — WS-5
   // requires surfacing that as a warning rather than silently dropping.
+  it('AN-07: tableBtns aliases (label/action) are normalized before emission', () => {
+    // 别名只在 Zod `.parse()` 的返回值上归一，而生成器不消费解析结果 ——
+    // 不在入口再走一遍，产物里就会是 `label`/`action`，三端渲染器读 `name` 得到 undefined。
+    const result = generateFromConfig({
+      name: 'Material',
+      apiUrl: '/api/materials',
+      fields: [{ prop: 'code', label: '编码', formtype: 'Input' }],
+      actions: ['add'],
+      tableBtns: [{ label: '导出', action: 'export', position: 'left' }],
+    } as any)
+    expect(result.code).toContain('"name": "导出"')
+    expect(result.code).toContain('"actionType": "export"')
+    expect(result.code).toContain('"code": 1')
+    // 别名键不得残留（否则下游同时看到 name 与 label 两个真相）。
+    expect(result.code).not.toContain('"label": "导出"')
+    expect(result.code).not.toContain('"action": "export"')
+  })
+
   it('warns (does not silently drop) when sfc ignores dialogs/tableBtns/operationColumn (2.2)', () => {
     const result = generateFromConfig({
       name: 'Campaign',
@@ -1271,7 +1339,9 @@ describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () =
       columns: [{ prop: 'skuName', label: '商品名称', editRender: { name: '$input', props: { n: 1n } } }],
     } as any)
     expect(result.code).not.toContain('editRender:')
-    expect(result.warnings).toContain('列级行内编辑器 editRender 含无法序列化的值，已省略以保证编译通过。')
+    // AN-11②：告警必须点名**具体路径**（旧文案只说「含无法序列化的值」，且依赖
+    // `JSON.stringify` 抛错 —— 而它对手上的函数/BigInt 之外的值根本不抛，是死代码）
+    expect(result.warnings).toContain('列级行内编辑器 editRender 含无法 JSON 化的值（editRender.props.n）—— 整键已省略以保证编译通过。')
   })
 
   it('StructuredCrudConfigSchema 接受窄子集 editConfig + 列 editRender', () => {
@@ -1295,6 +1365,81 @@ describe('vxe inline editing（AI-09 子项④ editConfig + editRender）', () =
       tableOptions: { engine: 'vxe', editConfig: { trigger: 'hover' } },
     })
     expect(r.success).toBe(false)
+  })
+})
+
+
+describe('AN-11 — 静默丢弃收口（转义 / 非 JSON 值 / 权限与行内编辑告警）', () => {
+  const base = {
+    name: 'An11Manage',
+    apiUrl: '/api/an11',
+    fields: [{ prop: 'name', label: '名称', formtype: 'Input' as const }],
+    actions: ['add' as const],
+  }
+
+  it('① SFC 显式列 btns 里的 </script> 被转义（不能提前闭合宿主脚本块）', () => {
+    const evil = 'A</script><script>alert(1)</script>'
+    const result = generateFromConfig({
+      ...base,
+      mode: 'sfc',
+      columns: [{ prop: 'name', label: '名称', btns: [{ name: evil, type: 'primary' }] }],
+    } as any)
+
+    // inlineJson 把 `</script` 改写为 `<\/script`（JSON 与 JS 语义均不变）
+    expect(result.code).toContain('A<\\/script><script>alert(1)<\\/script>')
+    // 未转义的原始串绝不能出现在产物里 —— HTML 解析器会在它出现处闭合 <script>
+    expect(result.code).not.toContain(evil)
+  })
+
+  it('② SFC 显式列 btns 含函数 → 告警点名字段路径并整键省略', () => {
+    const result = generateFromConfig({
+      ...base,
+      mode: 'sfc',
+      columns: [{ prop: 'name', label: '名称', btns: [{ name: '按钮', click: () => 1 }] }],
+    } as any)
+
+    // 旧实现依赖 `JSON.stringify` 抛错，而它对手上的函数根本不抛 —— 是死代码。
+    // 现由 findNonJsonValues 显式点名具体路径。
+    expect(result.warnings.join('\n')).toContain('btns[0].click')
+    expect(result.code).not.toMatch(/\bbtns:\s*\[/)
+  })
+
+  it('③ schema 模式：/permissions 无落点 → 告警点名键名（不再静默丢）', () => {
+    const result = generateFromConfig({ ...base, permissions: { add: 'sys:an11:add' } } as any)
+
+    expect(result.warnings.join('\n')).toContain('mode=schema ignores /permissions')
+    expect(result.warnings.join('\n')).toContain('add')
+  })
+
+  it('③b sfc 模式消费 /permissions → 不发 schema 专属告警，且落到按钮 permissionValue', () => {
+    const result = generateFromConfig({
+      ...base,
+      mode: 'sfc',
+      permissions: { add: 'sys:an11:add' },
+    } as any)
+
+    expect(result.warnings.join('\n')).not.toContain('mode=schema ignores /permissions')
+    expect(result.code).toContain("permissionValue: 'sys:an11:add'")
+  })
+
+  it('④ vxe editConfig 但无列声明 editRender → 告警（否则双击静默无反应）', () => {
+    const result = generateFromConfig({
+      ...base,
+      actions: ['edit'],
+      tableOptions: { engine: 'vxe', editConfig: { mode: 'cell' } },
+    } as any)
+
+    expect(result.warnings.join('\n')).toContain('no column declares `editRender`')
+  })
+
+  it('④b editConfig 配在非 vxe 引擎 → 告警引擎不匹配', () => {
+    const result = generateFromConfig({
+      ...base,
+      actions: ['edit'],
+      tableOptions: { editConfig: { mode: 'cell' } },
+    } as any)
+
+    expect(result.warnings.join('\n')).toContain("requires engine: 'vxe'")
   })
 })
 
@@ -1457,5 +1602,309 @@ describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按�
       StructuredCrudConfigSchema.parse(flat({ mode: 'sfc', actions: ['edit', 'delete'], dialogs: dlg })) as any
     )
     expect(warnings.some((w) => /has no opener/.test(w))).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AN-08：未知键 / 别名归一 / 表域语义键（tableOptions.treeConfig、expandConfig、pageSizes）
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AN-08 未知键：生成侧告警（不静默、不阻断）', () => {
+  const cfg = () => ({
+    name: 'UnknownKeyDemo',
+    apiUrl: '/api/demo',
+    fields: [{ prop: 'name', label: '名称', formtype: 'Input' as const }],
+    actions: ['add' as const],
+  })
+
+  it('tableOptions.rowKey（大小写错）→ 警告点名 + did you mean rowkey', () => {
+    const result = generateFromConfig({ ...cfg(), tableOptions: { rowKey: 'id' } } as any)
+    const hit = result.warnings.find((w) => w.includes('未知键 "rowKey"'))
+    expect(hit, result.warnings.join('\n')).toBeTruthy()
+    expect(hit).toContain('did you mean "rowkey"')
+    // 生成照常进行（过渡期语义：告警，不抛错）
+    expect(result.code).toContain('export const pageSchema')
+  })
+
+  it('顶层拼写错也会被点出来（不会只说「成功」）', () => {
+    const result = generateFromConfig({ ...cfg(), nme: 'X' } as any)
+    expect(result.warnings.join('\n')).toContain('未知键 "nme"')
+  })
+
+  it('x-* 扩展键不告警（有意的元数据）', () => {
+    const result = generateFromConfig({ ...cfg(), 'x-owner': 'team-a' } as any)
+    expect(result.warnings.some((w) => w.includes('未知键'))).toBe(false)
+  })
+
+  it('合规配置零告警（回归：别让干净输入也背一句噪音）', () => {
+    const result = generateFromConfig(cfg() as any)
+    expect(result.warnings.some((w) => w.includes('未知键'))).toBe(false)
+  })
+})
+
+describe('AN-08 入口归一：顶层 rowkey 并入 tableOptions', () => {
+  it('生成前搬迁，并给出「自动归一」告警', () => {
+    const result = generateFromConfig({
+      name: 'RowkeyDemo',
+      apiUrl: '/api/demo',
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add'],
+      rowkey: 'uid',
+    } as any)
+    expect(result.warnings.join('\n')).toContain('/rowkey → /tableOptions/rowkey')
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.rowkey).toBe('uid')
+  })
+})
+
+describe('AN-08 表域语义键：tableOptions.treeConfig / expandConfig', () => {
+  const cfg = () => ({
+    name: 'VxeTreeDemo',
+    apiUrl: '/api/tree',
+    fields: [{ prop: 'name', label: '名称', formtype: 'Input' as const }],
+    actions: ['view' as const],
+    tableOptions: {
+      engine: 'vxe',
+      treeConfig: { transform: true, rowField: 'id', parentField: 'pid', expandAll: true },
+      expandConfig: { accordion: true },
+    },
+  })
+
+  it('schema 模式：原样发射 vxe 语义子集', () => {
+    const result = generateFromConfig(cfg() as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.treeConfig).toEqual({
+      transform: true,
+      rowField: 'id',
+      parentField: 'pid',
+      expandAll: true,
+    })
+    expect(schema.tableOptions.expandConfig).toEqual({ accordion: true })
+    expect(result.warnings.some((w) => w.includes('未知键'))).toBe(false)
+  })
+
+  it('sfc 模式：以对象字面量发射', () => {
+    const result = generateFromConfig({ ...cfg(), mode: 'sfc' } as any)
+    expect(result.code).toContain('treeConfig: {"transform":true,"rowField":"id","parentField":"pid","expandAll":true},')
+    expect(result.code).toContain('expandConfig: {"accordion":true},')
+  })
+
+  it('顶层 treeConfig 与 tableOptions.treeConfig 合并：顶层同名字键覆盖（跨渲染器同一承诺）', () => {
+    const result = generateFromConfig({
+      ...cfg(),
+      treeConfig: { childrenField: 'subItems', expandAll: false },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    // 富键保留，窄键覆盖同名键
+    expect(schema.tableOptions.treeConfig).toMatchObject({
+      transform: true,
+      rowField: 'id',
+      childrenField: 'subItems',
+      expandAll: false,
+    })
+  })
+
+  it('只给顶层 treeConfig 时，不把 tableOptions 里的其他键丢掉', () => {
+    const result = generateFromConfig({
+      name: 'TreeOnly',
+      apiUrl: '/api/tree',
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['view'],
+      tableOptions: { border: false },
+      treeConfig: { childrenField: 'kids' },
+    } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.tableOptions.border).toBe(false)
+    expect(schema.tableOptions.treeConfig).toEqual({ childrenField: 'kids' })
+  })
+})
+
+describe('AN-08 pagination.pageSizes（schema 模式也发射）', () => {
+  const cfg = {
+    name: 'PageSizesDemo',
+    apiUrl: '/api/demo',
+    fields: [{ prop: 'name', label: '名称', formtype: 'Input' as const }],
+    actions: ['view' as const],
+  }
+
+  it('声明了就进 pageSchema.pagination.pageSizes', () => {
+    const result = generateFromConfig({ ...cfg, pagination: { pageSize: 20, pageSizes: [10, 20, 50] } } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.pagination).toEqual({ pageSize: 20, pageSizes: [10, 20, 50] })
+  })
+
+  it('没声明时不产生这个键（不改变既有产物）', () => {
+    const result = generateFromConfig({ ...cfg, pagination: { pageSize: 20 } } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.pagination).toEqual({ pageSize: 20 })
+  })
+})
+
+describe('AN-08 显式 columns：契约键之外不泄漏进产物', () => {
+  // 背景：schema 模式曾把 `config.columns` **原样**展开，SFC 模式只发结构化键 —— 同一份
+  // 配置两种模式产物不同。最危险的不是拼写错误而是列级 `formatter` **字符串**：
+  // `use-column-adapter` 直接 `col.formatter(...)` 调用，字符串会在渲染时抛 not a function。
+  const cfg = (columns: Array<Record<string, unknown>>) => ({
+    name: 'ExplicitColsDemo',
+    apiUrl: '/api/demo',
+    fields: [
+      { prop: 'name', label: '名称', formtype: 'Input' as const },
+      { prop: 'salary', label: '月薪', formtype: 'InputNumber' as const },
+    ],
+    actions: ['add' as const],
+    columns,
+  })
+  const parseSchema = (code: string) => JSON.parse(code.replace(/^.*?= /, '').replace(/\n$/, ''))
+
+  it('列级 formatter（JSON 里的字符串）被剥掉，并在警告里点名', () => {
+    const result = generateFromConfig(
+      cfg([
+        { prop: 'name', label: '名称' },
+        { prop: 'salary', label: '月薪', formatter: '(row) => row.salary' },
+      ]) as any,
+    )
+    const schema = parseSchema(result.code)
+    expect(schema.columns[1]).toEqual({ prop: 'salary', label: '月薪' })
+    expect(result.code).not.toContain('formatter')
+    const hit = result.warnings.find((w) => w.includes('未知键 "formatter"'))
+    expect(hit, result.warnings.join('\n')).toBeTruthy()
+  })
+
+  it('列内拼写错（widht）同样剥掉并给建议', () => {
+    const result = generateFromConfig(
+      cfg([{ prop: 'name', label: '名称', widht: 120 }]) as any,
+    )
+    const schema = parseSchema(result.code)
+    expect(schema.columns[0]).toEqual({ prop: 'name', label: '名称' })
+    const joined = result.warnings.join('\n')
+    expect(joined).toContain('未知键 "widht"')
+    expect(joined).toContain('did you mean "width"')
+  })
+
+  it('groups 递归内的未知键也被剥（分组表头的子列同规则）', () => {
+    const result = generateFromConfig(
+      cfg([
+        {
+          label: '投放信息',
+          groups: [{ prop: 'name', label: '名称', widht: 80 }],
+        },
+      ]) as any,
+    )
+    const schema = parseSchema(result.code)
+    expect(schema.columns[0]).toEqual({ label: '投放信息', groups: [{ prop: 'name', label: '名称' }] })
+    expect(result.warnings.join('\n')).toContain('未知键 "widht"')
+  })
+
+  it('列上的 x-* 扩展键保留（有意的元数据，不是拼写错误）', () => {
+    const result = generateFromConfig(
+      cfg([{ prop: 'name', label: '名称', 'x-owner': 'team-a' }]) as any,
+    )
+    const schema = parseSchema(result.code)
+    expect(schema.columns[0]).toEqual({ prop: 'name', label: '名称', 'x-owner': 'team-a' })
+    expect(result.warnings.some((w) => w.includes('未知键'))).toBe(false)
+  })
+
+  it('两种模式对同一份显式列产出一致的键集合（不再「schema 泄漏、sfc 丢弃」）', () => {
+    const dirty = cfg([{ prop: 'name', label: '名称', formatter: 'x', widht: 1 }])
+    const schemaOut = parseSchema(generateFromConfig(dirty as any).code)
+    const sfcOut = generateFromConfig({ ...dirty, mode: 'sfc' } as any).code
+    expect(Object.keys(schemaOut.columns[0]).sort()).toEqual(['label', 'prop'])
+    expect(sfcOut).not.toContain('formatter')
+    expect(sfcOut).not.toContain('widht')
+  })
+})
+
+describe('AN-10 列选项：省略号契约键 + 默认排序列可排序', () => {
+  const parseJson = (code: string) =>
+    JSON.parse(code.replace(/^.*?= /, '').replace(/\n$/, ''))
+  const cfg = (fields: any[], tableOptions?: any) => ({
+    name: 'ColOptionDemo',
+    apiUrl: '/api/demo',
+    fields,
+    actions: ['view' as const],
+    ...(tableOptions ? { tableOptions } : {}),
+  })
+
+  it('schema 模式：ellipsis 发契约键 `ellipsis`，不再发 el-table 专有的 showOverflowTooltip', () => {
+    const out = parseJson(
+      generateFromConfig(cfg([{ prop: 'name', label: '名称', formtype: 'Input', ellipsis: true }]) as any).code,
+    )
+    expect(out.columns[0].ellipsis).toBe(true)
+    // 关键回归：非 el 引擎（vxe ×3 / 虚拟 / a-table）会**静默丢弃**这个键
+    expect(out.columns[0]).not.toHaveProperty('showOverflowTooltip')
+    expect(JSON.stringify(out.columns[0])).not.toContain('showOverflowTooltip')
+  })
+
+  it('sfc 模式：同一份字段 → 同一个键（不残留 showOverflowTooltip）', () => {
+    const code = generateFromConfig({
+      ...cfg([{ prop: 'name', label: '名称', formtype: 'Input', ellipsis: true }]),
+      mode: 'sfc',
+    } as any).code
+    expect(code).toContain('ellipsis: true')
+    expect(code).not.toContain('showOverflowTooltip')
+  })
+
+  it('ellipsis 未设置时不发该键（不制造默认值）', () => {
+    const out = parseJson(
+      generateFromConfig(cfg([{ prop: 'name', label: '名称', formtype: 'Input' }]) as any).code,
+    )
+    expect(out.columns[0]).not.toHaveProperty('ellipsis')
+  })
+
+  it('defaultSort 点名的派生列补 sortable: true（el-table / a-table 依赖它才展示默认排序状态）', () => {
+    const out = parseJson(
+      generateFromConfig(
+        cfg(
+          [
+            { prop: 'name', label: '名称', formtype: 'Input' },
+            { prop: 'publishTime', label: '发布时间', formtype: 'DatePicker' },
+          ],
+          { defaultSort: { prop: 'publishTime', order: 'descending' } },
+        ) as any,
+      ).code,
+    )
+    const target = out.columns.find((c: any) => c.prop === 'publishTime')
+    expect(target.sortable).toBe(true)
+    // 只给目标列补：别的列凭空可排序会让表头多出排序箭头
+    expect(out.columns.find((c: any) => c.prop === 'name')).not.toHaveProperty('sortable')
+    // 顺带确认值本身仍原样发射
+    expect(out.tableOptions.defaultSort).toEqual({ prop: 'publishTime', order: 'descending' })
+  })
+
+  it('sfc 模式：defaultSort 同样补 sortable: true', () => {
+    const code = generateFromConfig({
+      ...cfg(
+        [
+          { prop: 'name', label: '名称', formtype: 'Input' },
+          { prop: 'publishTime', label: '发布时间', formtype: 'DatePicker' },
+        ],
+        { defaultSort: { prop: 'publishTime', order: 'descending' } },
+      ),
+      mode: 'sfc',
+    } as any).code
+    // 目标列块内必须出现 sortable（简单断言：sortable 出现次数 1，且与 defaultSort 同行存在）
+    expect((code.match(/sortable: true/g) || []).length).toBe(1)
+    expect(code).toContain('defaultSort: {"prop":"publishTime","order":"descending"}')
+  })
+
+  it('没有 defaultSort 时不给任何派生列补 sortable（不制造可排序表头）', () => {
+    const out = parseJson(
+      generateFromConfig(cfg([{ prop: 'name', label: '名称', formtype: 'Input' }]) as any).code,
+    )
+    expect(out.columns[0]).not.toHaveProperty('sortable')
+  })
+
+  it('显式 columns 路径不补 sortable：用户自己写（不覆盖其意图）', () => {
+    const out = parseJson(
+      generateFromConfig({
+        name: 'ExplicitDemo',
+        apiUrl: '/api/demo',
+        fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+        columns: [{ prop: 'name', label: '名称' }],
+        tableOptions: { defaultSort: { prop: 'name', order: 'descending' } },
+        actions: ['view'],
+      } as any).code,
+    )
+    expect(out.columns[0]).not.toHaveProperty('sortable')
   })
 })

@@ -207,6 +207,31 @@ describe('NL_TO_CONFIG_FEWSHOT — 维度覆盖（few-shot 必须教全这些能
     // columns 维度整体深等覆盖，与 scorers.mjs:324 的分工一致。
     'tableOptions.editConfig（vxe 行内编辑）': () => cfgs.some((c) => c.tableOptions?.editConfig != null),
     'mergeConfig（声明式合并单元格）': () => cfgs.some((c) => c.mergeConfig !== undefined),
+    // ── AN-23：把「只写在规则里、没有示例承担」的子维度钉住 ──────────────────
+    // columns 的非字段列不止 index：复选框（selection）也必须是模型见过的形态。
+    'columns 非字段列（selection）': () =>
+      cfgs.some((c) => (c.columns ?? []).some((col) => col.type === 'selection')),
+    // vxe 行内编辑真正生效靠列级 editRender —— 只有 editConfig 是空转（见规则原文）。
+    'columns[].editRender（列级编辑器）': () =>
+      cfgs.some((c) => (c.columns ?? []).some((col) => col.editRender !== undefined)),
+    // reactions 不止「选项联动」：条件必填 / 自动写回同样必须被演示。
+    'reactions.fulfill.required（条件必填）': () =>
+      anyField((f) => (f.reactions ?? []).some((r) => r.fulfill.required !== undefined)),
+    'reactions.fulfill.value + dependencies（自动写回）': () =>
+      anyField((f) =>
+        (f.reactions ?? []).some(
+          (r) => r.fulfill.value !== undefined && (r.dependencies ?? []).length > 0
+        )
+      ),
+    // 弹窗自定义标题与底部按钮是 dialogs 的两个高频基础键。
+    'dialogs[k].title（自定义标题）': () =>
+      cfgs.some((c) =>
+        Object.values(c.dialogs ?? {}).some((d) => typeof d.title === 'string' && d.title.length > 0)
+      ),
+    'dialogs[k].configBtn（自定义底部按钮）': () =>
+      cfgs.some((c) =>
+        Object.values(c.dialogs ?? {}).some((d) => (d.configBtn ?? []).length > 0)
+      ),
   }
 
   for (const [dim, present] of Object.entries(COVERAGE)) {

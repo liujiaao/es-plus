@@ -40,6 +40,13 @@ export async function setupFrontDoor() {
     cap,
     shape: z.object(cap.shape),
     project: fieldProjector(new Set(Object.keys(surfaceFieldSchema.shape))),
+    // AN-19: the published first-mile contract, bundled from the SAME resource
+    // module the MCP server registers. Consumers must fail loudly if it is absent
+    // rather than silently measuring against an empty/duplicated contract.
+    extractionContract:
+      typeof captured.mod.buildDesignExtractionContent === 'function'
+        ? captured.mod.buildDesignExtractionContent()
+        : null,
   }
 }
 

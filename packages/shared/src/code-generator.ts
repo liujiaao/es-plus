@@ -273,6 +273,7 @@ export function generateAppEntry(target: TargetFramework = DEFAULT_TARGET): stri
       `import 'element-ui/lib/theme-chalk/index.css'`,
       `import axios from 'axios'`,
       `import ESPlus from '${pkg}'`,
+      `import '${pkg}/dist/style.css'`,
       ``,
       `Vue.use(ElementUI)`,
       `Vue.use(ESPlus, {`,
@@ -289,13 +290,21 @@ export function generateAppEntry(target: TargetFramework = DEFAULT_TARGET): stri
   if (target === 'antdv') {
     lines.push(`import Antd from 'ant-design-vue'`);
     lines.push(`import 'ant-design-vue/dist/reset.css'`);
+  } else {
+    // vue3 默认 UI 库。此前后缺这一支：antdv/vue2 都装配了自己的 UI 库，唯独默认 target
+    // 的样板让人「照抄入口」却没有 ElementPlus —— 产物模板里的 el-* 全是未知元素。
+    lines.push(`import ElementPlus from 'element-plus'`);
+    lines.push(`import 'element-plus/dist/index.css'`);
   }
   lines.push(`import ESPlus from '${pkg}'`);
+  lines.push(`import '${pkg}/dist/style.css'`);
   lines.push(``);
   lines.push(`const app = createApp(App)`);
   lines.push(``);
   if (target === 'antdv') {
     lines.push(`app.use(Antd)`);
+  } else {
+    lines.push(`app.use(ElementPlus)`);
   }
   lines.push(`app.use(ESPlus, {`);
   lines.push(...optionBlock);

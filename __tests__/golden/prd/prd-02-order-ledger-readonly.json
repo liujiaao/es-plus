@@ -1,0 +1,19 @@
+{
+  "id": "prd-02-order-ledger-readonly",
+  "product": "订单台账",
+  "target": "vue3",
+  "spec": "订单台账。\n\n【查询区】订单号、状态、下单时间\n【列表】订单号、客户、金额、状态、下单时间\n页面只读，不提供新增、编辑或删除。",
+  "config": {
+    "name": "OrderLedger",
+    "apiUrl": "/api/orders",
+    "target": "vue3",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input", "inForm": false },
+      { "prop": "customer", "label": "客户", "formtype": "Input", "inForm": false },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inForm": false },
+      { "prop": "status", "label": "状态", "formtype": "Select", "inForm": false },
+      { "prop": "orderedAt", "label": "下单时间", "formtype": "DatePicker", "inForm": false }
+    ]
+  },
+  "notes": "负例 N1：只读页面绝不能因为「列表页通常有新增」而补出 form/dialog。"
+}

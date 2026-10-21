@@ -282,3 +282,49 @@ describe('composeCrudConfig — AI-23 顶层声明式键透传（mergeConfig）'
   })
 })
 
+
+describe('AN-08 语义键：只写在 table 面的也不丢（铺底，低优先级）', () => {
+  it('table 面独有的 required/dataOptions 进入组合结果', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          required: true,
+          dataOptions: [{ label: '启用', value: 1 }],
+        },
+      ],
+      form: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    const status = config.fields.find((f) => f.prop === 'status')! as Record<string, unknown>
+    // 修前：这两个键在组合结果里凭空消失，且零告警
+    expect(status.required).toBe(true)
+    expect(status.dataOptions).toEqual([{ label: '启用', value: 1 }])
+  })
+
+  it('优先级不变：form 仍然覆盖 query 仍然覆盖 table', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'status', label: '状态', formtype: 'Select', required: true, attrs: { a: 't' } }],
+      query: [{ prop: 'status', label: '状态', formtype: 'Select', attrs: { a: 'q' } }],
+      form: [{ prop: 'status', label: '状态', formtype: 'Select', attrs: { a: 'f' } }],
+    })
+    const status = config.fields.find((f) => f.prop === 'status')! as Record<string, unknown>
+    expect(status.required).toBe(true) // 只有 table 面声明 → 保留
+    expect(status.attrs).toEqual({ a: 'f' }) // form 面仍最高
+  })
+
+  it('三面都不声明时不出键（不制造空值）', () => {
+    const { config } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['view'],
+    })
+    const name = config.fields.find((f) => f.prop === 'name')! as Record<string, unknown>
+    expect('required' in name).toBe(false)
+    expect('dataOptions' in name).toBe(false)
+  })
+})

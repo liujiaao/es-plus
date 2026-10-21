@@ -1,0 +1,141 @@
+{
+  "id": "comp-full-02-vue2",
+  "scene": "composition",
+  "shape": "full",
+  "target": "vue2",
+  "mode": "schema",
+  "name": "OrderManage",
+  "apiUrl": "/api/orders",
+  "surfaces": {
+    "query": [
+      {
+        "prop": "orderNo",
+        "label": "订单号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "待付款",
+            "value": "pending"
+          },
+          {
+            "label": "已完成",
+            "value": "done"
+          }
+        ]
+      }
+    ],
+    "table": [
+      {
+        "prop": "orderNo",
+        "label": "订单号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "待付款",
+            "value": "pending"
+          },
+          {
+            "label": "已完成",
+            "value": "done"
+          }
+        ]
+      },
+      {
+        "prop": "createdAt",
+        "label": "下单时间",
+        "formtype": "DatePicker"
+      }
+    ],
+    "form": [
+      {
+        "prop": "orderNo",
+        "label": "订单号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber"
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "dataOptions": [
+          {
+            "label": "待付款",
+            "value": "pending"
+          },
+          {
+            "label": "已完成",
+            "value": "done"
+          }
+        ]
+      },
+      {
+        "prop": "remark",
+        "label": "备注",
+        "formtype": "Input",
+        "attrs": {
+          "type": "textarea"
+        }
+      }
+    ],
+    "dialog": [
+      "add",
+      "edit",
+      "view"
+    ]
+  },
+  "expect": {
+    "membership": {
+      "orderNo": [
+        "query",
+        "table",
+        "form"
+      ],
+      "amount": [
+        "table",
+        "form"
+      ],
+      "status": [
+        "query",
+        "table",
+        "form"
+      ],
+      "createdAt": [
+        "table"
+      ],
+      "remark": [
+        "form"
+      ]
+    },
+    "actions": [
+      "add",
+      "edit",
+      "view"
+    ],
+    "dialogKeys": [
+      "add",
+      "edit",
+      "view"
+    ],
+    "legacyDialogFormItems": false,
+    "operationColumn": null
+  }
+}

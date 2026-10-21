@@ -32,8 +32,37 @@ export const CORE_FLOOR = 0.2
 /** ⑦ heldout 绝对地板。相对守卫（heldout ≥ 半数）防洗白，绝对地板防语料整体缩水。 */
 export const HELDOUT_FLOOR = 60
 
+/**
+ * ⑩ 收敛腿的最小样本数（AN-02）。
+ *
+ * 只有 5 条时，「≤3 轮收敛 4/5 = 80%」的置信区间宽到没有意义 —— 删掉一条就摆动 20pp。
+ * 30 是能让「第二条腿」被当作能力结论而非个例的最低门槛（也意味着它真的在贡献 95% 定义）。
+ */
+export const CONVERGE_SAMPLE_FLOOR = 30
+
 /** ⑤ 棘轮容差。0 = 只要退步就红（比率噪声由「基线只经人工 PR 上调」治理，不靠容差）。 */
 export const RATCHET_TOL = 0
+
+/**
+ * 适用用例数的**漂移提示**阈值（AN-04）。
+ *
+ * 为什么防删守卫不能再用「精确相等」：语料是会长的（AI-47..AI-52 一轮就加了 60+ 条），
+ * 而旧基线把 188 条时代的计数写死 —— 于是**每一次语料变更都会红一次**，守卫随即变成
+ * 噪声（恒红 = 红盲，本仓最贵的教训之一）。
+ *
+ * 新判据分两层：
+ *   · **硬地板** `minApplicable[dim]`：低于它 = 真的删了难例 → 红；
+ *   · **漂移提示** ±10%：跨越就要求「在基线里更新并说明」，否则说明语料正在悄悄变，
+ *     比率棘轮的分母失去参照。
+ */
+export const APPLICABLE_DRIFT = 0.1
+
+/** 由观测计数推导硬地板（向下取整，留出 10% 的合法语料微调空间）。 */
+export function deriveMinApplicable(counts, { drift = APPLICABLE_DRIFT } = {}) {
+  return Object.fromEntries(
+    Object.entries(counts).map(([dim, n]) => [dim, Math.floor(n * (1 - drift))])
+  )
+}
 
 /**
  * ⑨ 健康门允许的「未测到行」上限。**0 是刻意的**，理由见 `evaluateHealth`。
@@ -72,6 +101,24 @@ export function checkCorpusSize(summary, { floor = HELDOUT_FLOOR } = {}) {
     failures.push(
       `heldout 仅 ${summary?.heldoutCases ?? 0} 条，低于地板 ${floor} ` +
         `—— 语料规模不足以支撑泛化结论（单例噪声过大，门禁会落在噪声上）`
+    )
+  }
+  return { ok: failures.length === 0, failures }
+}
+
+/**
+ * ⑩ 收敛腿样本数地板（AN-02）：`total` = 本次真正跑了精修语料的行数。
+ *
+ * 注意判据是「**跑了**多少条」，不是「收敛了多少条」—— 收敛率低是模型问题（该发布），
+ * 样本太少是度量问题（不该发布）。这与健康门同一原则：没测到 ≠ 得 0 分。
+ */
+export function checkConvergenceSample(total, { floor = CONVERGE_SAMPLE_FLOOR } = {}) {
+  const failures = []
+  const n = typeof total === 'number' ? total : 0
+  if (n < floor) {
+    failures.push(
+      `收敛腿只有 ${n} 条语料，低于地板 ${floor} —— 「≤K 轮收敛 ∨」这条腿的比率会落在单例噪声上` +
+        `（删掉一条即摆动 ${n ? (100 / n).toFixed(1) : '∞'}pp），不足以支撑 95% 定义`
     )
   }
   return { ok: failures.length === 0, failures }
@@ -124,26 +171,68 @@ export function compareToBaseline(current, baseline, { tol = RATCHET_TOL } = {})
  * `byDimension.mergeConfig.rate` 可能仍是 1.0，而该能力已经无人验收。
  * 故另立一条**计数**断言：某维的适用用例数（语料级）不得低于基线。
  *
+ * ## v2（AN-04）：地板 + 漂移提示，不再精确相等
+ *
+ * `minApplicable` = 由基线观测数推导的硬地板（见 `deriveMinApplicable`）。语料**增长**
+ * 永远是安全的（不会红），只有**跌破地板**才红。跨过 ±10% 的增/减只发警告，要求把
+ * 新计数写回基线 —— 既不误杀正常语料迭代，也不让分母悄悄漂走。
+ *
+ * 旧格式（只有 `applicableCounts`、无 `minApplicable`）按**精确相等**比较，行为不变，
+ * 免得升级当天就出现一批无法解释的红。
+ *
  * @param {Record<string, number>} currentCounts 语料级 applicable 计数
- * @param {null|{applicableCounts?:Record<string, number>}} baseline
+ * @param {null|{minApplicable?:Record<string,number>, applicableCounts?:Record<string,number>}} baseline
  */
-export function guardAntiDelete(currentCounts, baseline) {
+export function guardAntiDelete(currentCounts, baseline, { drift = APPLICABLE_DRIFT } = {}) {
   const failures = []
   const warnings = []
-  const base = baseline?.applicableCounts
-  if (!base) {
-    warnings.push('基线无 applicableCounts（首跑前）—— 跳过防删守卫')
+  const floors = baseline?.minApplicable
+  const observed = baseline?.applicableCounts
+  if (!floors && !observed) {
+    warnings.push('基线无 minApplicable/applicableCounts（首跑前）—— 跳过防删守卫')
     return { ok: true, failures, warnings }
   }
-  for (const [dim, n] of Object.entries(base)) {
-    const cur = currentCounts?.[dim]
-    if (cur === undefined) {
-      failures.push(`维度 ${dim} 在基线的计数表里存在、本次却完全缺席 —— 疑似删除了该维度`)
+
+  const cur = (dim) => currentCounts?.[dim]
+  const missing = (dim) =>
+    failures.push(`维度 ${dim} 在基线的计数表里存在、本次却完全缺席 —— 疑似删除了该维度`)
+
+  if (floors) {
+    // v2：只对硬地板判红。计数增长不红（语料可以长大）。
+    for (const [dim, floor] of Object.entries(floors)) {
+      const n = cur(dim)
+      if (n === undefined) {
+        missing(dim)
+      } else if (n < floor) {
+        failures.push(
+          `维度 ${dim} 的适用用例数 ${n} 低于地板 ${floor} —— 疑似删除了难例` +
+            `（删例可稀释均值：比率棘轮看得见 rate，看不见分母）`
+        )
+      }
+    }
+    // 漂移提示：仍以「基线当时观测到的数」为参照（而不是地板），>±10% 要求写回并说明。
+    for (const [dim, n] of Object.entries(observed ?? {})) {
+      const now = cur(dim)
+      if (typeof now === 'number' && n > 0 && Math.abs(now - n) / n > drift) {
+        warnings.push(
+          `维度 ${dim} 适用用例数 ${n} → ${now}（跨越 ±${drift * 100}%）—— ` +
+            `若为有意增删语料，请更新 accuracy-baseline.json 的 applicableCounts 并说明`
+        )
+      }
+    }
+    return { ok: failures.length === 0, failures, warnings }
+  }
+
+  // v1（legacy）：精确相等，保持原行为。
+  for (const [dim, n] of Object.entries(observed)) {
+    const now = cur(dim)
+    if (now === undefined) {
+      missing(dim)
       continue
     }
-    if (cur < n) {
+    if (now < n) {
       failures.push(
-        `维度 ${dim} 的适用用例数从 ${n} 掉到 ${cur} —— 疑似删除了难例` +
+        `维度 ${dim} 的适用用例数从 ${n} 掉到 ${now} —— 疑似删除了难例` +
           `（删例可稀释均值：比率棘轮看得见 rate，看不见分母）`
       )
     }

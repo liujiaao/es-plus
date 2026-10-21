@@ -1,0 +1,39 @@
+{
+  "id": "ingest-ts-01-ticket",
+  "kind": "ts-interface",
+  "source": "/** 工单 */\nexport interface Ticket {\n  /** 工单 ID */\n  id: number\n  /** 标题 */\n  title: string\n  /** 状态 */\n  status: 'open' | 'processing' | 'done'\n  /** 优先级 */\n  priority: 'high' | 'normal' | 'low'\n  /** 标签 */\n  tags?: string[]\n  /** 截止时间 */\n  dueAt?: Date\n  /** 客户 */\n  customer: { id: number; name: string }\n}\n",
+  "expect": {
+    "name": "Ticket",
+    "fields": [
+      { "prop": "id", "label": "工单 ID", "formtype": "InputNumber", "required": true },
+      { "prop": "title", "label": "标题", "formtype": "Input", "required": true },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "required": true,
+        "dataOptions": [
+          { "label": "open", "value": "open" },
+          { "label": "processing", "value": "processing" },
+          { "label": "done", "value": "done" }
+        ]
+      },
+      {
+        "prop": "priority",
+        "label": "优先级",
+        "formtype": "Select",
+        "required": true,
+        "dataOptions": [
+          { "label": "high", "value": "high" },
+          { "label": "normal", "value": "normal" },
+          { "label": "low", "value": "low" }
+        ]
+      },
+      { "prop": "tags", "label": "标签", "formtype": "Input" },
+      { "prop": "dueAt", "label": "截止时间", "formtype": "DatePicker" },
+      { "prop": "customer", "label": "客户", "formtype": "Input", "required": true }
+    ],
+    "warningsContain": ["无枚举数组", "嵌套对象"]
+  },
+  "notes": "JSDoc → label；非可选成员 → required；字符串字面量联合 → Select；可选数组/对象走告警兜底。"
+}

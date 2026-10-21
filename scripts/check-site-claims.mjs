@@ -407,7 +407,133 @@ function checkPhilosophyDocClaims() {
   if (!failed) console.log('✅ 理念文档（zh/en）的数字与实测同源、旧口径已清除')
 }
 
-// ── 7. CLI 文档里的生成物规模 ────────────────────────────
+// ── 7. AI 准确率声明 ↔ 夜间 eval artifact ─────────────────
+// AN-27：README / 理念文档曾写死「~95%（AI 写的代码可用率）」「语料目前 25 例」，
+// 而 artifact 实测是 48.8% / 188 例（heldout 166）。数字必须绑定 artifact：
+//   · 门禁目标 = artifact.target（README 改成 99% 必须红）；
+//   · 语料规模 = artifact.cases / heldoutCases；
+//   · 徽章读数 = artifact.definition95.rate（徽章本身由 eval 从 artifact 生成）；
+//   · 正文**不得**写死当前准确率 —— 当前值只有一个权威来源（徽章/artifact），
+//     否则每夜 artifact 变动都会让文案变成另一份真相。
+function checkAccuracyClaims() {
+  const art = readJson('__tests__/golden/last-accuracy.json')
+  const badge = readJson('__tests__/golden/last-accuracy-badge.json')
+  if (!art || !badge) return
+
+  // 先确认 artifact 本身就是一次**完整测量**：未测到的行以 0 计分时，
+  // 任何「当前准确率」都不可用来对外宣称（见 eval measurement-completeness）。
+  if (art.notMeasuredRows !== 0) {
+    fail(
+      `last-accuracy.json 的 notMeasuredRows=${art.notMeasuredRows}（应为 0）—— ` +
+        '这次跑批不构成完整测量，不能用它绑定公开声明',
+    )
+    return
+  }
+  const rate = art.definition95?.rate
+  const total = art.definition95?.total
+  if (typeof rate !== 'number' || typeof total !== 'number') {
+    fail('last-accuracy.json 缺少 definition95.rate / total，无法绑定公开声明')
+    return
+  }
+
+  const targetPct = Number((art.target * 100).toFixed(1))
+  const currentPct = Number((rate * 100).toFixed(1))
+  const cases = art.cases
+  const heldout = art.heldoutCases
+
+  // 徽章必须由 artifact 生成（label 带目标，message 是当前读数）。
+  const badgeMsg = String(badge.message ?? '')
+  if (badgeMsg !== `${currentPct}%`) {
+    fail(
+      `last-accuracy-badge.json 的 message 是 ${badgeMsg}，artifact 的 definition95 是 ` +
+        `${currentPct}%（${rate} × ${total} 例）—— 徽章必须由 artifact 生成`,
+    )
+  }
+  if (!String(badge.label ?? '').includes(`${targetPct}%-definition`)) {
+    fail(
+      `last-accuracy-badge.json 的 label（${badge.label}）应包含 ${targetPct}%-definition ` +
+        '（门禁目标来自 artifact.target）',
+    )
+  }
+
+  // README 两语：语料规模 / 留出集 / 门禁目标都必须等于 artifact，且指向 artifact。
+  const readmeCases = [
+    {
+      file: 'README.md',
+      casesRe: /语料目前\s*(\d+)\s*例/,
+      heldoutRe: /留出\s*(\d+)\s*例/,
+      targetRe: /门禁目标\s*≥\s*([\d.]+)\s*%/,
+    },
+    {
+      file: 'README.en.md',
+      casesRe: /corpus is\s*(\d+)\s*cases/i,
+      heldoutRe: /(\d+)\s*heldout/i,
+      targetRe: /gate target is\s*≥\s*([\d.]+)\s*%/i,
+    },
+  ]
+  for (const spec of readmeCases) {
+    const src = read(spec.file)
+    if (!src) continue
+    const mc = src.match(spec.casesRe)
+    const mh = src.match(spec.heldoutRe)
+    const mt = src.match(spec.targetRe)
+    if (!mc) fail(`${spec.file} 未给出语料规模（应写「${cases} 例/cases」）`)
+    else if (Number(mc[1]) !== cases) {
+      fail(`${spec.file} 写语料 ${mc[1]} 例，artifact 是 ${cases} 例——请改文案（不得手改计数口径）`)
+    }
+    if (!mh) fail(`${spec.file} 未给出留出集规模（应写「${heldout} 例/heldout」）`)
+    else if (Number(mh[1]) !== heldout) {
+      fail(`${spec.file} 写留出 ${mh[1]} 例，artifact 是 ${heldout} 例`)
+    }
+    if (!mt) fail(`${spec.file} 未给出门禁目标（应写「≥${targetPct}%」）`)
+    else if (Number(mt[1]) !== targetPct) {
+      fail(
+        `${spec.file} 写门禁目标 ${mt[1]}%，artifact.target 是 ${targetPct}%——` +
+          '宣称必须与门禁同源',
+      )
+    }
+    if (!src.includes('last-accuracy.json')) {
+      fail(`${spec.file} 未指向 __tests__/golden/last-accuracy.json（当前读数的唯一权威来源）`)
+    }
+  }
+
+  // 理念文档：提到 definition95 的行必须给目标 + 指向徽章，且不得写死当前读数。
+  for (const file of ['docs/why-es-plus.md', 'docs/why-es-plus.en.md']) {
+    const src = read(file)
+    if (!src) continue
+    const lines = src.split(/\r?\n/).filter((line) => line.includes('definition95'))
+    if (lines.length === 0) {
+      fail(`${file} 的 AI 协作收益行未用 definition95 口径（易与徽章读数脱节）`)
+      continue
+    }
+    for (const line of lines) {
+      const mt = line.match(/≥\s*([\d.]+)\s*%/)
+      if (!mt) {
+        fail(`${file} 提到 definition95 但未给门禁目标 ≥${targetPct}%：${line.trim()}`)
+      } else if (Number(mt[1]) !== targetPct) {
+        fail(`${file} 写目标 ${mt[1]}%，artifact.target 是 ${targetPct}%：${line.trim()}`)
+      }
+      if (!/徽章|badge/i.test(line)) {
+        fail(`${file} 提到 definition95 但未指向徽章（当前读数不得写死在正文）：${line.trim()}`)
+      }
+      if (/definition95\s*=\s*[\d.]+\s*%/.test(line)) {
+        fail(
+          `${file} 写死了当前 definition95 读数：${line.trim()} —— ` +
+            '夜间 eval 会改这个数字，正文只写目标并指向徽章',
+        )
+      }
+    }
+  }
+
+  if (!failed) {
+    console.log(
+      `✅ AI 准确率声明与 artifact 同源（目标 ${targetPct}% / 当前徽章 ${currentPct}% / ` +
+        `语料 ${cases} 例、留出 ${heldout} 例）`,
+    )
+  }
+}
+
+// ── 8. CLI 文档里的生成物规模 ────────────────────────────
 // cli.md 曾写「包装 SFC（~30 行）」。实测 generateCrudSchema 的三端包装 SFC 分别是
 // 43 / 49 / 45 非空行（三字段页面），旧数字既不准也无来源。这里登记旧值防止回退；
 // 新的区间数字是测量快照，生成器改动后应重测（重测方式：用 esbuild 打包
@@ -430,6 +556,7 @@ checkRendererCount()
 checkFormTypeClaims()
 checkSiteHomeFigures()
 checkPhilosophyDocClaims()
+checkAccuracyClaims()
 checkCliDocFigure()
 
 if (failed) {

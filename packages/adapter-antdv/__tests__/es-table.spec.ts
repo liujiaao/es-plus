@@ -271,6 +271,48 @@ describe('EsTable — 选择 (multiSelect)', () => {
   })
 })
 
+/**
+ * AN-09 —— 前置列合成（与 vue3 / vue2 同一判据，ADV 的差异在消费者）。
+ *
+ * ADV 的两处差异是**语义**而不是漂移：选择列由 `rowSelection` 渲染、展开列由
+ * `expandedRowRender` 整行渲染，二者都不进 `adaptedColumns`。序号列是三端共有的
+ * 数据列，因此它必须：(1) 走 core 默认值（title `#` / width 60 / center），
+ * (2) 排在最前，(3) 显式 `type:'index'` 时不被重复注入。
+ */
+describe('EsTable — AN-09 前置列合成', () => {
+  const baseProps = {
+    dataSource: [{ id: '1', name: 'A' }],
+    columns: [{ prop: 'name', label: 'Name' }],
+    pagination: { total: 1 },
+  }
+  const colsOf = (options: any, columns?: any[]) => {
+    const wrapper = mount(EsTable, {
+      props: { ...baseProps, columns: columns ?? baseProps.columns, options },
+    })
+    return (wrapper.vm as any).adaptedColumns as any[]
+  }
+
+  it('snIndex → 序号列取 core 默认（title # / width 60 / center）', () => {
+    const cols = colsOf({ snIndex: true })
+    expect(cols[0]).toMatchObject({ dataIndex: '_sn', title: '#', width: 60, align: 'center' })
+    expect(typeof cols[0].customRender).toBe('function')
+  })
+
+  it('multiSelect + snIndex → 序号列仍在首位（选择不进列集合）', () => {
+    const cols = colsOf({ multiSelect: true, snIndex: true, rowkey: 'id' })
+    expect(cols[0]).toMatchObject({ dataIndex: '_sn' })
+    expect(cols.map((c) => c.dataIndex)).toEqual(['_sn', 'name'])
+  })
+
+  it("显式 type:'index' 列 + options.snIndex → 只保留显式那条（不重复）", () => {
+    const cols = colsOf({ snIndex: true }, [{ type: 'index', width: 70 }, { prop: 'name', label: 'Name' }])
+    const sn = cols.filter((c) => c.dataIndex === '_sn')
+    expect(sn).toHaveLength(1)
+    // 显式列的 width 覆盖默认值（默认值只兜底）
+    expect(sn[0].width).toBe(70)
+  })
+})
+
 describe('EsTable — 暴露的实例方法', () => {
   const baseProps = {
     dataSource: [],
@@ -715,5 +757,128 @@ describe('EsTable(antdv) — 尺寸契约 number | string', () => {
 
   it('百分比等带单位字符串原样透传', () => {
     expect(heightOf({ heightType: 'height', height: '70vh' })).toBe('70vh')
+  })
+})
+
+describe('EsTable(ADV) — AN-10 列选项（省略号 / 默认排序）', () => {
+  const colsOf = (options: any, columns: any[]) => {
+    const wrapper = mount(EsTable, {
+      props: { dataSource: [{ id: '1', name: 'A' }], columns, options, pagination: { total: 1 } },
+    })
+    return (wrapper.vm as any).adaptedColumns as any[]
+  }
+
+  it('契约键 ellipsis → 列 ellipsis（a-table 的 CSS 截断 + 原生 title）', () => {
+    const cols = colsOf({}, [{ prop: 'name', label: 'Name', ellipsis: true }])
+    expect(cols[0].ellipsis).toBe(true)
+  })
+
+  it('存量写法 showOverflowTooltip 一并认（老配置换端不静默失效）', () => {
+    const cols = colsOf({}, [{ prop: 'name', label: 'Name', showOverflowTooltip: true } as any])
+    expect(cols[0].ellipsis).toBe(true)
+  })
+
+  it('未设置省略号 → 不发 ellipsis（不制造默认截断）', () => {
+    const cols = colsOf({}, [{ prop: 'name', label: 'Name' }])
+    expect(cols[0].ellipsis).toBeUndefined()
+  })
+
+  it('ellipsis + formatter 可叠加：formatter 仍落 customRender（不再被省略号分支吞掉）', () => {
+    const cols = colsOf({}, [
+      { prop: 'name', label: 'Name', ellipsis: true, formatter: (row: any) => `#${row.name}` },
+    ])
+    expect(cols[0].ellipsis).toBe(true)
+    expect(typeof cols[0].customRender).toBe('function')
+    // formatter 真的被调用（此前 a-tooltip 分支直接吐原始 text，绕过它）
+    expect(cols[0].customRender({ text: 'A', record: { name: 'A' } })).toBe('#A')
+  })
+
+  it('defaultSort → 目标列 defaultSortOrder（a-table 无整表 prop）', () => {
+    const cols = colsOf(
+      { defaultSort: { prop: 'name', order: 'descending' } },
+      [
+        { prop: 'name', label: 'Name', sortable: true },
+        { prop: 'other', label: 'Other' },
+      ],
+    )
+    expect(cols[0].defaultSortOrder).toBe('descend')
+    // 别的列不沾默认排序状态
+    expect(cols[1].defaultSortOrder).toBeUndefined()
+  })
+
+  it('ascending → ascend', () => {
+    const cols = colsOf(
+      { defaultSort: { prop: 'name', order: 'ascending' } },
+      [{ prop: 'name', label: 'Name', sortable: true }],
+    )
+    expect(cols[0].defaultSortOrder).toBe('ascend')
+  })
+
+  it('目标列不可排序 → 不落 defaultSortOrder（antd 同样静默忽略，也不硬塞 sorter）', () => {
+    const cols = colsOf(
+      { defaultSort: { prop: 'name', order: 'descending' } },
+      [{ prop: 'name', label: 'Name' }],
+    )
+    expect(cols[0].defaultSortOrder).toBeUndefined()
+    expect(cols[0].sorter).toBeUndefined()
+  })
+
+  it('defaultSort 指向不存在的列 → 静默跳过，不抛错', () => {
+    expect(() =>
+      colsOf(
+        { defaultSort: { prop: 'nope', order: 'descending' } },
+        [{ prop: 'name', label: 'Name', sortable: true }],
+      ),
+    ).not.toThrow()
+  })
+})
+
+/**
+ * AN-11⑥ —— `<es-table @row-click>` 在 ADV 端此前是**死监听**。
+ *
+ * a-table 没有 `row-click` 事件：行点击只能经 `customRow` 返回的 `onClick` 挂。
+ * 之前 `onRowClick` 被当普通 attr 绑到 a-table 上（永不触发），与 vue3/vue2
+ * （原生事件透传）结构性不一致。
+ */
+describe('EsTable — AN-11⑥ row-click → customRow', () => {
+  const baseProps = {
+    dataSource: [{ id: '1', name: '张三' }],
+    columns: [{ prop: 'name', label: '姓名' }],
+    options: {} as any,
+    pagination: { total: 1 },
+  }
+  const findTable = (wrapper: any) => wrapper.findComponent({ name: 'ATable' })
+
+  it('父级 @row-click → a-table customRow 的 onClick 真的回调', () => {
+    const onRowClick = vi.fn()
+    const wrapper = mount(EsTable, { props: baseProps, attrs: { onRowClick } })
+    const customRow = findTable(wrapper).props('customRow')
+    expect(typeof customRow).toBe('function')
+    const rowProps = customRow({ id: '1', name: '张三' }, 0)
+    expect(typeof rowProps.onClick).toBe('function')
+    rowProps.onClick(new Event('click'))
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+    expect(onRowClick.mock.calls[0][0]).toEqual({ id: '1', name: '张三' })
+    expect(onRowClick.mock.calls[0][1]).toBe(0)
+  })
+
+  it('无监听且无 rowStyle/highlight 时 customRow 仍为 undefined（不无谓给每行挂监听）', () => {
+    const wrapper = mount(EsTable, {
+      props: { ...baseProps, options: { highlightCurrentRow: false } as any },
+    })
+    expect(findTable(wrapper).props('customRow')).toBeUndefined()
+  })
+
+  it('highlightCurrentRow 与 row-click 共用同一个 onClick（两件事都发生）', () => {
+    const onRowClick = vi.fn()
+    const wrapper = mount(EsTable, {
+      props: { ...baseProps, options: { highlightCurrentRow: true } as any },
+      attrs: { onRowClick },
+    })
+    const customRow = findTable(wrapper).props('customRow')
+    customRow({ id: '1' }, 0).onClick(new Event('click'))
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+    // 高亮内部状态真的被写进去（component.vue 的 currentRowKey）
+    expect((wrapper.vm as any).currentRowKey).toBe('1')
   })
 })

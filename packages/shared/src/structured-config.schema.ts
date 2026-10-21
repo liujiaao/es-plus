@@ -363,9 +363,38 @@ const ToolbarBtnSchema = z
     return { ...b, code: (b.code ?? 2) as 1 | 2 }
   })
 
+/**
+ * AN-07：表格按钮的规范键归一 —— `label→name`、`action→actionType`，
+ * 并保持 `position → code` 的既有归一（表格按钮默认左侧）。
+ *
+ * 单源实现：Zod 的 `.transform()` 与生成器入口（`generateFromConfig`）都调它。
+ * 为什么生成器要单独调一次？`transform` 只作用于 `.parse()` 的**返回值**，而
+ * `generateFromConfig` 刻意不消费 parse 结果（见 `assertValidConfig` 头注：schema 带大量
+ * `.default()`，改用解析值会顺带改写既有语义）。只把别名加进 Zod 而不在生成器入口归一，
+ * 结果就是「校验通过、产物里按钮仍没有名字」—— 正是本项要消灭的那种静默。
+ */
+export function normalizeTableBtn<T extends Record<string, any>>(b: T) {
+  const rest = { ...b }
+  delete rest.label
+  delete rest.action
+  const actionType = b.actionType ?? b.action
+  return {
+    ...rest,
+    name: (b.name ?? b.label) as string,
+    code: (b.position === 'right' ? 2 : b.position === 'left' ? 1 : (b.code ?? 1)) as 1 | 2,
+    ...(actionType !== undefined ? { actionType } : {}),
+  }
+}
+
 const TableBtnSchema = z
   .object({
-    name: z.string().min(1),
+    // AN-07：`name` 不是必填本身，而是「name ?? label」归一化后的结果 —— 见下方
+    // superRefine（两个都没有才算错）。前门此前把示例写成 `{ label, action }`，
+    // 而 schema 只认 `{ name, actionType }`：Zod 默认 strip 未知键，照抄示例会得到
+    // 「成功解析、按钮却没有名字/动作」的空壳（实测 tableBtns 维度 2/10）。
+    name: z.string().min(1).optional(),
+    /** @deprecated `name` 的别名（宿主 LLM / 旧示例常写 label）。归一化后不保留。 */
+    label: z.string().optional().describe('Alias of `name` (legacy example shape: label/action)'),
     key: z.string().optional(),
     type: z.string().optional(),
     icon: z.string().optional(),
@@ -373,8 +402,19 @@ const TableBtnSchema = z
     code: z.union([z.literal(1), z.literal(2)]).optional().describe('1=left, 2=right (legacy alias of position; normalized automatically)'),
     dialogKey: z.string().optional(),
     actionType: z.string().optional(),
+    /** @deprecated `actionType` 的别名（旧示例写法）。归一化后不保留。 */
+    action: z.string().optional().describe('Alias of `actionType` (legacy example shape: label/action)'),
     confirm: z.union([z.string(), z.boolean()]).optional(),
     permissionValue: z.string().optional(),
+  })
+  .superRefine((b, ctx) => {
+    // 归一化后仍没有名字 = 按钮点不出来的空壳；在解析期报错，而不是让下游渲染一个空按钮。
+    if (!b.name && !b.label) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'tableBtns[] 缺少 name（别名 label 也未给）—— 按钮必须有显示名',
+      })
+    }
   })
   // position 与 code 的关系在合并层收敛，避免两处语义分叉。
   //
@@ -385,10 +425,10 @@ const TableBtnSchema = z
   //
   // 归一化策略：position 为准，若只给 position 则同步生成一致的 code。
   // 这样既不再丢 position，又保证下游（渲染器 / golden 评分器 / 生成物 JSON）读 code 永远正确。
-  .transform((b) => ({
-    ...b,
-    code: (b.position === 'right' ? 2 : b.position === 'left' ? 1 : (b.code ?? 1)) as 1 | 2,
-  }))
+  //
+  // AN-07：同时把别名收敛到规范键 —— `label→name`、`action→actionType`，并**删掉别名键**
+  // （否则下游会同时看到 name 与 label，两处可能不一致）。superRefine 已保证此时 name 非空。
+  .transform((b) => normalizeTableBtn(b))
 
 const RowBtnSchema = z.object({
   name: z.string().min(1),
@@ -588,6 +628,57 @@ export const StructuredCrudConfigSchema = z.object({
       .optional()
       .describe(
         'Map the LIST API response onto table semantics when the backend does not use the default flat shape. Default mapping is { total: "records", tableData: "rows", pageSize: "pageSize", current: "pageNo" }. Each value is the FLAT response key (no deep paths — the component only reads top-level keys). e.g. a backend returning { list: [...], count: N } → { tableData: "list", total: "count" }. Only the keys you set are remapped; omit a key to keep its default.'
+      ),
+    // ── AN-08：补 schema 缺失键，避免误杀 ────────────────────────────────
+    // `tableOptions.treeConfig` / `tableOptions.expandConfig` 是 core `TableOptions`
+    // 的具名键、vxe 引擎真消费，且官方示例
+    // （es-plus-docs/src/components/examples/vxe-table/TreeData.vue）就写着
+    // `treeConfig: { rowField, parentField, transform }`。此前 AI Zod 零声明：
+    // 经结构化配置传入会被**静默剥掉**，页面不是树表、且零告警。
+    //
+    // 只收 **JSON 可承载** 的子集：`loadMethod` / `toggleMethod` 是函数（Tier-3 扩展点），
+    // 不进 AI 契约。与顶层 `treeConfig`（跨端窄子集）是**不同层**：两者都写时由生成器
+    // 合并到运行时唯一家 `tableOptions.treeConfig`，顶层覆盖同名字键（见 structured-generator）。
+    //
+    // 位置：放在 `configTableOut` 之后。`check-schema-contract` 的 tableOptions 块捕获
+    // 非贪婪地停在首个 `}).optional()`（即 `defaultSort`），此后的键不在其捕获区，
+    // 因此这两个嵌套对象**不能**插在 `defaultSort` 之前，否则会让契约键整段失检。
+    treeConfig: z
+      .object({
+        transform: z
+          .boolean()
+          .optional()
+          .describe('Build the tree client-side from FLAT rows (needs rowField + parentField). vxe only.'),
+        rowField: z.string().optional().describe("Row id field for transform mode (default 'id')."),
+        parentField: z.string().optional().describe("Parent id field for transform mode (default 'parentId')."),
+        childrenField: z.string().optional().describe("Child array field (default 'children')."),
+        children: z.string().optional().describe("@deprecated vxe v4 alias of childrenField; normalized at runtime."),
+        mapChildren: z
+          .string()
+          .optional()
+          .describe("Field that caches original children in transform mode (default '_X_ROW_CHILD')."),
+        expandAll: z.boolean().optional().describe('Start with every node expanded.'),
+        lazy: z
+          .boolean()
+          .optional()
+          .describe('Lazy-load children (vxe only; the loader function itself is a Tier-3 extension point and cannot travel in JSON).'),
+      })
+      .optional()
+      .describe(
+        "vxe-only rich tree config (the SAME-NAME top-level `treeConfig` is the cross-renderer narrow subset; when both are set the generator merges them into tableOptions.treeConfig with the top-level key winning). Use `treeConfig.transform:true + rowField + parentField` to build a tree from FLAT rows; use the top-level `treeConfig` for nested `children` arrays on el-table / a-table."
+      ),
+    expandConfig: z
+      .object({
+        expandAll: z.boolean().optional().describe('Expand every row by default.'),
+        accordion: z.boolean().optional().describe('Accordion mode: at most one row expanded at a time.'),
+        lazy: z
+          .boolean()
+          .optional()
+          .describe('Lazy-load expand content (vxe only; the loader function itself is a Tier-3 extension point).'),
+      })
+      .optional()
+      .describe(
+        "vxe-only row-expand switch (paired with `expand: true` / an expand column). Distinct from the top-level `expandConfig` (declarative read-only field list honored by all three renderers)."
       ),
   }).optional(),
   pagination: z.object({

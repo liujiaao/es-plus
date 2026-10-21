@@ -34,12 +34,6 @@ function eq(a, b) {
   return JSON.stringify(canon(a)) === JSON.stringify(canon(b))
 }
 
-function setEq(a, b) {
-  if (a.size !== b.size) return false
-  for (const x of a) if (!b.has(x)) return false
-  return true
-}
-
 export function f1(goldSet, predSet) {
   const tp = [...goldSet].filter((x) => predSet.has(x)).length
   const fp = predSet.size - tp
@@ -63,13 +57,24 @@ function sharedFields(gold, pred) {
 
 // ── 维度判定（pass: (gold, pred) => boolean）─────────────────────────────────
 
+/**
+ * 为什么空交集必须判负（AN-01 修正）
+ *
+ * `[].every(...)` 恒为 true。旧写法让「模型把 prop 全写错 / 一个都没对上」的行在
+ * formtype / membership 两个维度上白拿 pass —— 维度率被系统性抬高，且与 propSet 的
+ * 判定自相矛盾（同一行 propSet 已经判负）。这不是保守宽松，是**真空真**。
+ * 维度仍然 applicable（gold 确实用了它），只是这一行**一个都没命中** = 未命中。
+ */
 function formtypeEqual(gold, pred) {
-  return sharedFields(gold, pred).every(({ g, p }) => g.formtype === p.formtype)
+  const shared = sharedFields(gold, pred)
+  return shared.length > 0 && shared.every(({ g, p }) => g.formtype === p.formtype)
 }
 
 function membershipEqual(gold, pred) {
-  return sharedFields(gold, pred).every(
-    ({ g, p }) => g.inQuery === p.inQuery && g.inTable === p.inTable && g.inForm === p.inForm
+  const shared = sharedFields(gold, pred)
+  return (
+    shared.length > 0 &&
+    shared.every(({ g, p }) => g.inQuery === p.inQuery && g.inTable === p.inTable && g.inForm === p.inForm)
   )
 }
 
@@ -231,10 +236,50 @@ function apiParamsEqual(gold, pred) {
   return true
 }
 
-/** 比「该挂静态 options 的 field 挂了没」——presence 集合相等，不逐一比 options 内容。 */
-function dataOptionsPresenceEqual(gold, pred) {
-  const propsWith = (c) => new Set(c.fields.filter((f) => (f.dataOptions ?? []).length).map((f) => f.prop))
-  return setEq(propsWith(gold), propsWith(pred))
+/**
+ * 选项**标签树**（AN-01）：只取 label/children，丢弃 value。
+ *
+ * 为什么不像 isHidden/reactions 那样整数组深等值：`value` 是**后端数据模型的约定**
+ * （`draft` / `1` / `unpaid`…），NL 在中文语料里只给标签（「草稿/已发布」），
+ * 让模型猜中 value 等于要求它读心；拿它判负会把「语义正确」的产物系统性打成 miss。
+ * 但**只比 presence**又太弱（标签写错、漏项、层级拍平都能过）。
+ *
+ * 故取中间判据：标签树（含层级与顺序）必须一致；value 只校验**数量与唯一性**
+ * （漏项/重复值是真错，具体取值不计）。这是本仓「可推断的才计分」的一贯边界。
+ */
+function optionLabelTree(opts) {
+  return (opts ?? []).map((o) => [
+    o.label,
+    (o.children ?? []).length ? optionLabelTree(o.children) : null,
+  ])
+}
+
+/** 展平后的 value 列表（含 children），仅用于计数与唯一性。 */
+function optionValues(opts) {
+  const out = []
+  for (const o of opts ?? []) {
+    out.push(o.value)
+    if ((o.children ?? []).length) out.push(...optionValues(o.children))
+  }
+  return out
+}
+
+/** gold 每个挂 dataOptions 的字段，pred 同名字段必须有同标签树 + 同选项数的选项。 */
+function dataOptionsEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  let any = false
+  for (const f of gold.fields) {
+    if (!(f.dataOptions ?? []).length) continue
+    any = true
+    const pf = pm.get(f.prop)
+    if (!pf || !(pf.dataOptions ?? []).length) return false
+    if (!eq(optionLabelTree(f.dataOptions), optionLabelTree(pf.dataOptions))) return false
+    const gv = optionValues(f.dataOptions)
+    const pv = optionValues(pf.dataOptions)
+    if (gv.length !== pv.length) return false
+    if (new Set(pv.map(String)).size !== pv.length) return false
+  }
+  return any
 }
 
 function virtualScrollEqual(gold, pred) {
@@ -334,7 +379,7 @@ export const CAPABILITY_SCORERS = [
   { key: 'operationColumn', applicable: (g) => g.operationColumn !== undefined, pass: operationColumnEqual },
   { key: 'permissions', applicable: (g) => !!(g.permissions && Object.keys(g.permissions).length), pass: permissionsEqual },
   { key: 'apiParams', applicable: (g) => g.fields.some((f) => f.apiParams), pass: apiParamsEqual },
-  { key: 'dataOptions', applicable: (g) => g.fields.some((f) => (f.dataOptions ?? []).length), pass: dataOptionsPresenceEqual },
+  { key: 'dataOptions', applicable: (g) => g.fields.some((f) => (f.dataOptions ?? []).length), pass: dataOptionsEqual },
   { key: 'i18n', applicable: (g) => g.i18n === true, pass: (g, p) => g.i18n === p.i18n },
   { key: 'formLayout', applicable: (g) => g.formLayout !== undefined, pass: (g, p) => eq(g.formLayout ?? null, p.formLayout ?? null) },
   {
@@ -449,8 +494,15 @@ const FIELD_SCORERS = {
     return !!p && !!p.apiParams && eq(g.apiParams, p.apiParams)
   },
   dataOptions: (gold, pred, prop) => {
-    const has = (c) => !!((fieldMap(c).get(prop)?.dataOptions ?? []).length)
-    return has(gold) === has(pred)
+    const g = fieldMap(gold).get(prop)
+    const p = fieldMap(pred).get(prop)
+    if (!g || !(g.dataOptions ?? []).length) return true // 该字段本就不要求静态选项 → 空钉即过
+    if (!p || !(p.dataOptions ?? []).length) return false
+    // 与 dataOptionsEqual 同源判据：标签树 + 选项数量/唯一性（value 字面值不判，理由见函数头注）。
+    if (!eq(optionLabelTree(g.dataOptions), optionLabelTree(p.dataOptions))) return false
+    const gv = optionValues(g.dataOptions)
+    const pv = optionValues(p.dataOptions)
+    return gv.length === pv.length && new Set(pv.map(String)).size === pv.length
   },
   isHidden: (gold, pred, prop) => {
     const g = fieldMap(gold).get(prop)
@@ -532,15 +584,21 @@ export function scoreAll(gold, pred, mask) {
       else attrMisses.push(`${prop}.${a} (want ${g[a]}, got ${p[a]})`)
     }
   }
-  const attrAcc = attrTotal === 0 ? 1 : attrHits / attrTotal
+  // 属性准确率**只在有共享字段时才有定义**。旧写法在零共享字段时返回 1（"没有可错的"），
+  // 于是一个 prop 全写错的行把诊断均值抬到 98.9%。返回 null = 该行不适用；
+  // eval 聚合时只对 numeric 行取均值，并单独报出「属性可测行数」。
+  const attrAcc = attrTotal === 0 ? null : attrHits / attrTotal
 
   const actionsF1 = f1(new Set(gold.actions), new Set(pred.actions))
 
-  const codes = (c) => (c.tableBtns || []).map((b) => b.code ?? 1).sort().join(',')
-  const tableBtnsMatch = codes(gold) === codes(pred)
+  // 与 `tableBtns` 维度同源（name|归一化 code|actionType），不再只比 code。
+  // 旧口径下「按钮文案/作用写错、code 写对」仍算 core 命中 —— 与维度判定自相矛盾。
+  const tableBtnsMatch = tableBtnsEqual(gold, pred)
 
-  // 历史门禁口径（prop + 4 属性 + actions + tableBtn-code），保持数值连续性。
-  const exactIntentCore = propF1.f1 === 1 && attrAcc === 1 && actionsF1.f1 === 1 && tableBtnsMatch
+  // 历史门禁口径（prop + 4 属性 + actions + tableBtns）。attrTotal=0 时属性无可测项，
+  // 不能算命中（否则「prop 全错」会被 attrAcc 的真空真放行）。
+  const exactIntentCore =
+    propF1.f1 === 1 && attrTotal > 0 && attrHits === attrTotal && actionsF1.f1 === 1 && tableBtnsMatch
 
   // 更严：该 case 所有 applicable 维度都命中。只观测，不门禁。
   const exactIntentFull = Object.values(byCapability).every((c) => (c.applicable ? c.pass : true))
@@ -588,14 +646,18 @@ export function firstConvergedTurn(scores) {
  *   - rateAtK           : firstTurn !== null && firstTurn <= k 的占比（≤K 轮内收敛率）
  *   - meanTurnsToConverge: 已收敛案例 firstTurn 的均值（未收敛不计入；null 若无一收敛）
  *   - converged / total : 旁证——高均值+极少收敛不至于被误读为「平均很快」
+ *   - turn0 / scripted  : **两条腿拆开**（AN-02）。turn0 = 初稿即 scoped 命中（零编辑）；
+ *     scripted = 脚本化纠正后（firstTurn 1..k）才收敛。二者混算会把「宿主/脚本把答案说出来了」
+ *     记成「模型一次就做对」—— 95% 定义里它们是 OR 的两条腿，但报告必须能分开看。
  * @param {Array<{ firstTurn: number|null }>} rows
  * @param {number} k
  */
 export function summarizeConvergence(rows, k) {
   const total = Array.isArray(rows) ? rows.length : 0
-  if (!total) return { rateAtK: null, meanTurnsToConverge: null, converged: 0, total: 0 }
+  if (!total) return { rateAtK: null, meanTurnsToConverge: null, converged: 0, total: 0, turn0: 0, scripted: 0, withinK: 0 }
   const convergedAny = rows.filter((r) => r.firstTurn !== null && r.firstTurn !== undefined)
   const withinK = convergedAny.filter((r) => r.firstTurn <= k)
+  const turn0 = rows.filter((r) => r.firstTurn === 0).length
   const meanTurns = convergedAny.length
     ? convergedAny.reduce((a, r) => a + r.firstTurn, 0) / convergedAny.length
     : null
@@ -604,6 +666,10 @@ export function summarizeConvergence(rows, k) {
     meanTurnsToConverge: meanTurns,
     converged: convergedAny.length,
     total,
+    turn0,
+    // ≤K 内、但需要纠正才收敛的样本 = 第二条腿真实贡献的部分。
+    scripted: withinK.filter((r) => r.firstTurn > 0).length,
+    withinK: withinK.length,
   }
 }
 

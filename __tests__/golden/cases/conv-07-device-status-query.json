@@ -1,0 +1,71 @@
+{
+  "nl": "设备台账：初版只要能按名称搜索；表格展示名称、状态（在用/闲置/报废）、日期、负责人；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "status",
+    "date",
+    "owner"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:status"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "状态也要能筛选，只想看闲置的设备。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv07DeviceStatusQuery",
+    "apiUrl": "/api/device-status-query",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "在用",
+            "value": "in_use"
+          },
+          {
+            "label": "闲置",
+            "value": "idle"
+          },
+          {
+            "label": "报废",
+            "value": "scrapped"
+          }
+        ]
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（状态）。与 29-asset-status 同类但字段/场景不同；钉住「状态」这条最常见的漏筛。"
+}

@@ -388,5 +388,79 @@ export const COLUMN_CONTRACT = {
         'vue3/antdv 按 v4 键名 `mergeMethod`。三端都复用 core 的 buildRowSpanMethod，语义一致。',
     },
   },
+  // —— 列选项：省略号（AN-10，契约键 `ellipsis`）——
+  //    生成器此前发的是 `showOverflowTooltip` —— 那是 **el-table 原生 prop**，只有 vue3/vue2
+  //    的默认引擎吃；vxe ×3 / 虚拟引擎 / a-table 全部静默丢弃（同一份配置三端两种结果）。
+  //    现 IR 统一 `ellipsis`，存量 `showOverflowTooltip` 三端一并认（向后兼容），
+  //    每条路径各自翻译成自己的机制。
+  'column:ellipsis': {
+    why:
+      '列级省略号：契约键 `ellipsis` 必须翻译成各端真正的机制 —— vue3/vue2 默认引擎译成 el-table 的 ' +
+      'showOverflowTooltip，vxe ×3 译成 showOverflow:\'tooltip\'，antdv 译成列 ellipsis（CSS 省略 + 原生 title）；' +
+      '存量写法 `showOverflowTooltip` 三端一并认，否则老配置换端后静默消失',
+    sources: {
+      vue3: [
+        'packages/vue3/src/components/es-table/src/column-item.vue',
+        'packages/vue3/src/components/es-table/src/engines/use-vxe-column-adapter.ts',
+        'packages/vue3/src/components/es-table/src/engines/use-column-adapter.ts',
+      ],
+      vue2: [
+        'packages/vue2/src/components/es-table/column-item.vue',
+        'packages/vue2/src/components/es-table/engines/use-vxe-column-adapter.ts',
+      ],
+      antdv: [
+        'packages/adapter-antdv/src/components/es-table/src/column-adapter.ts',
+        'packages/adapter-antdv/src/components/es-table/src/engines/use-vxe-column-adapter.ts',
+      ],
+    },
+    tokens: {
+      // 默认引擎的翻译点 + 引擎路径的翻译点（两段文本拼接后同一段里匹配）。
+      vue3: ['options.showOverflowTooltip', 'base.showOverflow', 'createEllipsisCellRenderer'],
+      vue2: ['options.showOverflowTooltip', 'base.showOverflow'],
+      antdv: ['advCol.ellipsis', 'base.showOverflow'],
+    },
+    deviation: {
+      antdv:
+        'a-table 的列 ellipsis 是 CSS 省略 + 浏览器原生 title 提示；el-table 的 show-overflow-tooltip 与 ' +
+        'vxe 的 showOverflow:\'tooltip\' 是带浮层的 tooltip。**可见效果等价**（截断 + 悬停看全文），' +
+        '但浮层组件不同 —— 这是 a-table 没有对应 prop 导致的机制差异，非语义差异。',
+    },
+  },
+  // —— 列选项：默认排序（AN-10，`tableOptions.defaultSort`）——
+  //    坑在「默认排序状态挂在列上」：el-table 要整表 `default-sort` **且**目标列 sortable；
+  //    vxe 走 sortConfig.defaultSort；a-table 根本没有整表 prop，只有列级 `defaultSortOrder`
+  //    —— 此前 antdv 完全没读 defaultSort（静默失效）。
+  'column:defaultSort': {
+    why:
+      '默认排序：vue3/vue2 默认引擎把 tableOptions.defaultSort 送到 el-table 的 default-sort，' +
+      'antdv 默认引擎译成目标列的 defaultSortOrder（a-table 无整表 prop），三端 vxe 引擎译成 sortConfig.defaultSort'
+      + '（语法不同，语义同）；三端都只在**目标列可排序**时生效，派生列的 sortable 由生成器补',
+    sources: {
+      vue3: [
+        'packages/vue3/src/components/es-table/src/component.vue',
+        'packages/vue3/src/components/es-table/src/engines/vxe-engine.vue',
+      ],
+      vue2: [
+        'packages/vue2/src/components/es-table/component.vue',
+        'packages/vue2/src/components/es-table/engines/vxe-engine.vue',
+      ],
+      antdv: [
+        'packages/adapter-antdv/src/components/es-table/src/component.vue',
+        'packages/adapter-antdv/src/components/es-table/src/engines/vxe-engine.vue',
+      ],
+    },
+    tokens: {
+      vue3: ['result.defaultSort', 'defaultSort: { field: ds.prop'],
+      vue2: ['result.defaultSort', 'defaultSort: { field: ds.prop'],
+      // 决定性 token：`defaultSortOrder` 只在「真把状态落到列上」时出现。
+      antdv: ['target.defaultSortOrder', 'defaultSort: { field: ds.prop'],
+    },
+    deviation: {
+      antdv:
+        'a-table 没有整表 default-sort，默认排序状态只能落在列上的 `defaultSortOrder`（ascend/descend）；' +
+        'el-table 走 `default-sort`（ascending/descending）。同样地，antd 在列无 sorter 时忽略 defaultSortOrder，' +
+        '与 el-table 的「列需 sortable」同构 —— 组件不硬塞 sorter，保持三端「只对可排序列生效」一致。',
+    },
+  },
 }
 

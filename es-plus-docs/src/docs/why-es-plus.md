@@ -622,8 +622,8 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
 | `generate_crud` | **前门**：填 `surfaces` 意图表（query / table / form / dialog 的任意子集）→ 组合并编译 | **主路径**：语义映射由**宿主 LLM** 完成，路由与编译由确定性代码完成 |
 | `generate_form` / `generate_table` / `generate_dialog` | 单组件片段：独立 es-form / es-table / useDialog | 明确只要一个组件，或要嵌在非 es-plus 组件旁边 |
-| `generate_crud_from_config` | 完整 `StructuredCrudConfig` → 可运行代码 | Schema-first 流程的确定性 codegen 步骤 |
-| `generate_crud_page` / `generate_crud_schema` | 自然语言 → 完整 .vue / CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`crud-engine.ts`），覆盖有限，仅适合不能推理的宿主 |
+| `generate_crud_from_config` | **ADVANCED**：完整 `StructuredCrudConfig` → 可运行代码（已持有类型化配置时用） | Schema-first 流程的确定性 codegen 步骤；自然语言请求走前门 |
+| `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**：自然语言 → 完整 .vue / CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`crud-engine.ts`），覆盖有限，仅适合不能推理的宿主 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
 | `refine_config` | 对已定配置做一轮纠正并回显 diff | 收敛回路：确定性校验 + diff，不回灌模型 |
 | `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
@@ -738,7 +738,7 @@ matrix:
 
 | 项 | 不接 MCP | 接 MCP |
 |---|---------|--------|
-| AI 写的代码可用率 | ~40%（猜 API 经常错） | ~95%（schema 约束 + zod 校验） |
+| AI 写的代码可用率 | ~40%（猜 API 经常错） | 目标 ≥95%；当前实测见徽章（definition95，heldout） |
 | AI 生成 + 人工修正时长（单页） | 30 分钟 | 8 分钟 |
 | 15 个 AI 生成页面工时 | 15 × 30 = 450 min | 15 × 8 = 120 min |
 

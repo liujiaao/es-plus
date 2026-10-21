@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateFromConfig, validateAndRepair, type ValidationResult, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { generateFromConfig, formatPreflight, validateAndRepair, normalizeTableBtn, repairConfig, type ValidationResult, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
 
 const FieldRuleSchema = z.object({
   required: z.boolean().optional(),
@@ -340,14 +340,23 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
 /**
  * Table toolbar button — mirrors the shared authoritative TableBtnSchema.
  *
+ * Accepts `name`/`actionType` and their **legacy aliases** `label`/`action`
+ * (AN-07/AN-21): the shipped few-shot and older hosts write `{ label, action }`.
+ * Before this, Zod's default unknown-key stripping turned such a button into a
+ * nameless, action-less shell with no error — exactly the tableBtns dimension
+ * bug that cost 2/10. `normalizeTableBtn` is imported from shared (not copied)
+ * so the two copies cannot drift; `check-schema-contract.mjs` follows the import
+ * and asserts its position→code priority.
+ *
  * Accepts both `position` (recommended by the renderer contract) and `code`
  * (legacy alias), and normalizes them so the emitted `code` always agrees with
  * `position`. Without the transform, Zod's unknown-key stripping would turn
  * `position: "right"` into `code: 1` (left) silently.
  */
-const TableBtnSchema = z
+export const TableBtnSchema = z
   .object({
-    name: z.string().min(1),
+    name: z.string().min(1).optional(),
+    label: z.string().optional().describe("Alias of `name` (legacy example shape: label/action)"),
     key: z.string().optional(),
     type: z.string().optional(),
     icon: z.string().optional(),
@@ -355,13 +364,19 @@ const TableBtnSchema = z
     code: z.union([z.literal(1), z.literal(2)]).optional().describe("1=left, 2=right (legacy alias of position; normalized automatically)"),
     dialogKey: z.string().optional(),
     actionType: z.string().optional(),
+    action: z.string().optional().describe("Alias of `actionType` (legacy example shape: label/action)"),
     confirm: z.union([z.string(), z.boolean()]).optional(),
     permissionValue: z.string().optional(),
   })
-  .transform((b) => ({
-    ...b,
-    code: (b.position === "right" ? 2 : b.position === "left" ? 1 : (b.code ?? 1)) as 1 | 2,
-  }));
+  .superRefine((b, ctx) => {
+    if (!b.name && !b.label) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "tableBtns[] 缺少 name（别名 label 也未给）—— 按钮必须有显示名",
+      });
+    }
+  })
+  .transform((b) => normalizeTableBtn(b));
 
 /**
  * Form-area toolbar button — mirrors the shared authoritative ToolbarBtnSchema.
@@ -379,7 +394,7 @@ const TableBtnSchema = z
  * this schema (as it was omitted from the shared one) means Zod strips it, and a
  * config that writes `direction: "left"` silently renders right.
  */
-const ToolbarBtnSchema = z
+export const ToolbarBtnSchema = z
   .object({
     name: z.string().min(1),
     key: z.string().optional(),
@@ -523,6 +538,33 @@ const configShape = {
         .optional()
         .describe(
           "Map the LIST API response onto table semantics when the backend does not use the default flat shape { records, rows, pageSize, pageNo }. Each value is the FLAT response key (no deep paths). e.g. { list, count } → { tableData: 'list', total: 'count' }. Only the keys you set are remapped."
+        ),
+      // AN-08：与 shared 权威 schema 逐键对齐（守卫断两份镜像键集相同）。
+      // vxe 的具名键，JSON 可承载子集；函数型 loadMethod/toggleMethod 不进 AI 契约。
+      treeConfig: z
+        .object({
+          transform: z.boolean().optional().describe("Build the tree client-side from FLAT rows (needs rowField + parentField). vxe only."),
+          rowField: z.string().optional().describe("Row id field for transform mode (default 'id')."),
+          parentField: z.string().optional().describe("Parent id field for transform mode (default 'parentId')."),
+          childrenField: z.string().optional().describe("Child array field (default 'children')."),
+          children: z.string().optional().describe("@deprecated vxe v4 alias of childrenField; normalized at runtime."),
+          mapChildren: z.string().optional().describe("Field that caches original children in transform mode (default '_X_ROW_CHILD')."),
+          expandAll: z.boolean().optional().describe("Start with every node expanded."),
+          lazy: z.boolean().optional().describe("Lazy-load children (vxe only; the loader function itself is a Tier-3 extension point)."),
+        })
+        .optional()
+        .describe(
+          "vxe-only rich tree config (the SAME-NAME top-level `treeConfig` is the cross-renderer narrow subset; when both are set the generator merges them into tableOptions.treeConfig with the top-level key winning)."
+        ),
+      expandConfig: z
+        .object({
+          expandAll: z.boolean().optional().describe("Expand every row by default."),
+          accordion: z.boolean().optional().describe("Accordion mode: at most one row expanded at a time."),
+          lazy: z.boolean().optional().describe("Lazy-load expand content (vxe only; the loader function itself is a Tier-3 extension point)."),
+        })
+        .optional()
+        .describe(
+          "vxe-only row-expand switch (paired with `expand: true` / an expand column). Distinct from the top-level `expandConfig` (declarative read-only field list honored by all three renderers)."
         ),
     })
     .optional(),
@@ -760,12 +802,18 @@ export function formatValidationError(result: ValidationResult): string {
 export function registerGenerateFromConfig(server: McpServer) {
   server.tool(
     "generate_crud_from_config",
-    "Generate a production-ready CRUD page from a STRUCTURED config (typed fields — not a JSON blob). This is the PRIMARY generation path: prefer it over generate_crud_page (which uses regex-based NL parsing and is a no-LLM fallback). You (the AI client) do the reasoning — read the natural-language request, then FILL these typed fields directly: name (PascalCase), apiUrl (real endpoint), fields[] (prop/label/formtype + inQuery/inTable/inForm), actions[]. The field descriptions tell you how to map meaning → formtype. For requirements the schema can't express, emit a marked extension point (formatter/render string) rather than dropping them. Supports target:'vue3'|'vue2'|'antdv' (default vue3). Read esplus://conventions, esplus://examples/nl-to-config and esplus://types first; after drafting, self-review against the original request before calling.",
+    "ADVANCED path — hand-authored StructuredCrudConfig (typed fields, not a JSON blob). For a natural-language request, use generate_crud (the front door) instead: it asks you for `surfaces` and routes deterministically, so you do not have to fill the whole config. Use this tool when you ALREADY hold a typed config (e.g. one you persist, diff, or edited via refine_config) or need direct access to config keys the front door does not expose. It runs the same deterministic generator and schema gate as the front door. You (the AI client) do the reasoning — read the natural-language request, then FILL these typed fields directly: name (PascalCase), apiUrl (real endpoint), fields[] (prop/label/formtype + inQuery/inTable/inForm), actions[]. The field descriptions tell you how to map meaning → formtype. For requirements the schema can't express, emit a marked extension point (formatter/render string) rather than dropping them. Supports target:'vue3'|'vue2'|'antdv' (default vue3). Read esplus://conventions, esplus://examples/nl-to-config and esplus://types first; after drafting, self-review against the original request before calling.",
     configShape,
     async (config: any) => {
       try {
+        // AN-24：先跑确定性修复环（别名/搬迁/null/成员布尔/弹窗简写），再校验。
+        // 这样常见格式错误不会在「校验 → 让模型重写 → 再校验」里白白消耗一轮。
+        // `validate_config` 工具**不**走这里，仍是只判不改的诊断面。
+        const prepared = repairConfig(config);
+        const repaired = prepared.config as any;
+
         // 前门确定性校验(C2·A3):非法 config 在这里就回结构化错误 + 建议,不进生成、不产半成品。
-        const check = validateAndRepair(config);
+        const check = validateAndRepair(repaired);
         if (!check.valid) {
           return {
             content: [{ type: "text", text: formatValidationError(check) }],
@@ -773,10 +821,14 @@ export function registerGenerateFromConfig(server: McpServer) {
           };
         }
 
-        const result = generateFromConfig(config);
+        const result = generateFromConfig(repaired);
 
-        const semanticWarnings = buildSemanticWarnings(config);
-        const allWarnings = [...result.warnings, ...semanticWarnings];
+        const semanticWarnings = buildSemanticWarnings(repaired);
+        const repairWarnings = [
+          ...prepared.renames.map((r) => `自动归一：${r.from} → ${r.to}（${r.note}）`),
+          ...prepared.repairs.map((r) => `自动修复：${r.path}（${r.note}）`),
+        ];
+        const allWarnings = [...repairWarnings, ...result.warnings, ...semanticWarnings];
 
 
         const output: string[] = [result.summary];
@@ -787,6 +839,13 @@ export function registerGenerateFromConfig(server: McpServer) {
           for (const w of allWarnings) {
             output.push(`  - ${w}`);
           }
+        }
+
+        // AN-15：宿主入口前置清单。放在代码之前 —— 它回答的是「这段代码要跑起来还缺什么」，
+        // 与 warnings（配置本身的映射问题）是两件事，故两段分开、不混进 warnings 列表。
+        if (result.preflight) {
+          output.push("");
+          output.push(formatPreflight(result.preflight));
         }
 
         output.push("");

@@ -859,5 +859,1779 @@
         "vxeFirstClass"
       ]
     }
+  ],
+  "sites": [
+    {
+      "site": "es-eui",
+      "root": "es-eui/src/examples",
+      "refs": 33,
+      "uncovered": 55,
+      "cases": [
+        {
+          "id": "combination/BatchEdit",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/BatchOperation",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/DataFlowManagement",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/DialogEsForm",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/DialogEsTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/DialogNativeForm",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/EditableGridSubmit",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/FormTableMultiSelect",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/FormWithTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/ImportData",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/MasterDetail",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/PermissionButtons",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/QueryFormLinkage",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/RowApproval",
+          "demo": "advanced/08-row-approval",
+          "tokens": [
+            "operationColumn",
+            "renderBtnFn",
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "combination/StepForm",
+          "demo": "advanced/04-step-form",
+          "tokens": [
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "combination/TabMultiTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/AsyncContent",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Basic",
+          "demo": "dialog/01-basic",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "dialog/Confirm",
+          "demo": "dialog/03-confirm",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "dialog/CustomStyle",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Draggable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/DynamicBtn",
+          "demo": "dialog/10-dynamic-btn",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "dialog/FormDialog",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Fullscreen",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Lifecycle",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Loading",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/MultiInstance",
+          "demo": "dialog/11-multi-instance",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "dialog/RealWorld",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/RenderComplexDialog",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/RenderComponent",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/RenderTableDialog",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/StepDialog",
+          "demo": "dialog/09-step-dialog",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "form/ApiRequest",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/Basic",
+          "demo": "form/01-basic",
+          "tokens": [
+            "formtype",
+            "validation",
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "form/ComputedFields",
+          "demo": "form/15-computed-fields",
+          "tokens": [
+            "reactions",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "form/Controls",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/CustomRender",
+          "demo": "form/07-custom-render",
+          "tokens": [
+            "formtype",
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "form/DetailMode",
+          "demo": "form/17-detail-mode",
+          "tokens": [
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "form/DynamicField",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/DynamicRule",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/ImageUpload",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/Layout",
+          "demo": "form/02-layout",
+          "tokens": [
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "form/MultiImageUpload",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/PolicyForm",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/RegionLinkage",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/RemoteRegionLinkage",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/Validation",
+          "demo": "form/05-validation",
+          "tokens": [
+            "validation",
+            "validatorFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "table/ActionColumn",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/AutoRequest",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/Basic",
+          "demo": "table/01-basic",
+          "tokens": [
+            "columnsDecl"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "table/ComplexMerge",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/ConfigBtn",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/CrudEdgeCases",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/CurrentRow",
+          "demo": "table/17-current-row",
+          "tokens": [
+            "tableBase",
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "table/CustomHttp",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/DetailDrawer",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/EditTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/ExpandRow",
+          "demo": "vxe-table/03-expand-row",
+          "tokens": [
+            "columnsDecl",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "table/FixedColumns",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/FullHeight",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/GroupColumn",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/LazyLoadTree",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/Linkage",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/MergeCells",
+          "demo": "vxe-table/15-merge-cells",
+          "tokens": [
+            "columnGroups",
+            "spanMethodFn",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "table/MultiSelect",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/OptimisticToggle",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/RealWorld",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/RemoteCrud",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/RenderColumn",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "table/Sort",
+          "demo": "table/06-sort",
+          "tokens": [
+            "columnSortable",
+            "defaultSort"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "table/TreeTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "vue2-compat/RechargeForm",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "vue2-compat/RechargeRecord",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "vxe-table/BasicSwitch",
+          "demo": "vxe-table/01-basic-switch",
+          "tokens": [
+            "virtualScroll"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "vxe-table/CellEdit",
+          "demo": "vxe-table/06-cell-edit",
+          "tokens": [
+            "inlineEdit",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/ColumnResize",
+          "demo": "vxe-table/09-column-resize",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/CrudWithDialog",
+          "demo": "vxe-table/14-crud-with-dialog",
+          "tokens": [
+            "virtualScroll",
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "vxe-table/CustomRender",
+          "demo": "vxe-table/05-custom-render",
+          "tokens": [
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/EscapeHatch",
+          "demo": "vxe-table/13-escape-hatch",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/ExpandRow",
+          "demo": "vxe-table/03-expand-row",
+          "tokens": [
+            "columnsDecl",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/FooterSummary",
+          "demo": "vxe-table/12-footer-summary",
+          "tokens": [
+            "formatterFn",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/MergeCells",
+          "demo": "vxe-table/15-merge-cells",
+          "tokens": [
+            "columnGroups",
+            "spanMethodFn",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/ProxyConfig",
+          "demo": "vxe-table/11-proxy-config",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/RowEdit",
+          "demo": "vxe-table/07-row-edit",
+          "tokens": [
+            "inlineEdit",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/SelectionIndex",
+          "demo": "vxe-table/02-selection-index",
+          "tokens": [
+            "columnsDecl"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "vxe-table/SortFormatter",
+          "demo": "vxe-table/04-sort-formatter",
+          "tokens": [
+            "columnSortable",
+            "formatterFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/ToolbarExport",
+          "demo": "vxe-table/08-toolbar-export",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "vxe-table/TreeData",
+          "demo": "vxe-table/10-tree-data",
+          "tokens": [
+            "treeConfig",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        }
+      ]
+    },
+    {
+      "site": "es-pc",
+      "root": "es-pc/src/views",
+      "refs": 93,
+      "uncovered": 17,
+      "cases": [
+        {
+          "id": "Advanced",
+          "demo": "dialog/05-advanced",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "AiTools",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "Cases",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "EsCrudPage",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "EsDialog",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "EsForm",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "EsTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "EsVxeTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "Guide",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "Home",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "NotFound",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "QuickStart",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-advanced/AdminPage",
+          "demo": "advanced/16-admin-page",
+          "tokens": [
+            "hostSkeleton"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/AnyBackendApi",
+          "demo": "advanced/10-any-backend-api",
+          "tokens": [
+            "configTableOut",
+            "httpRequestFn",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/AutoFitHeight",
+          "demo": "advanced/09-auto-fit-height",
+          "tokens": [
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/CascadeFormTable",
+          "demo": "advanced/14-cascade-form-table",
+          "tokens": [
+            "fieldVisibility",
+            "httpRequestFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/ConditionalBtns",
+          "demo": "advanced/11-conditional-btns",
+          "tokens": [
+            "operationColumn",
+            "renderBtnFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/CrossPageSelect",
+          "demo": "advanced/03-cross-page-select",
+          "tokens": [
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/CrudPage",
+          "demo": "advanced/17-crud-page",
+          "tokens": [
+            "crudPage",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/DialogTableForm",
+          "demo": "advanced/12-dialog-table-form",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/DynamicFormQuery",
+          "demo": "advanced/13-dynamic-form-query",
+          "tokens": [
+            "fieldVisibility",
+            "apiParams",
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/FormTable",
+          "demo": "advanced/01-form-table",
+          "tokens": [
+            "formLayout",
+            "configTableOut"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/FormTableDialog",
+          "demo": "advanced/05-form-table-dialog",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/OneLineCrud",
+          "demo": "advanced/07-one-line-crud",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/OrderExpandTable",
+          "demo": "advanced/06-order-expand-table",
+          "tokens": [
+            "expandConfig",
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/RowApproval",
+          "demo": "advanced/08-row-approval",
+          "tokens": [
+            "operationColumn",
+            "renderBtnFn",
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/StepForm",
+          "demo": "advanced/04-step-form",
+          "tokens": [
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/StepImportWizard",
+          "demo": "advanced/15-step-import-wizard",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/VirtualTable",
+          "demo": "advanced/18-virtual-table",
+          "tokens": [
+            "virtualScroll",
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/VirtualTableCrud",
+          "demo": "advanced/23-virtual-table-crud",
+          "tokens": [
+            "virtualScroll",
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/VirtualTableCustomRender",
+          "demo": "advanced/21-virtual-table-custom-render",
+          "tokens": [
+            "virtualScroll",
+            "renderFn",
+            "formatterFn",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/VirtualTableRowStyle",
+          "demo": "advanced/22-virtual-table-row-style",
+          "tokens": [
+            "virtualScroll",
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-advanced/VirtualTableSelect",
+          "demo": "advanced/20-virtual-table-select",
+          "tokens": [
+            "virtualScroll",
+            "renderFn",
+            "operationColumn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-advanced/VirtualTableSort",
+          "demo": "advanced/19-virtual-table-sort",
+          "tokens": [
+            "virtualScroll",
+            "columnSortable",
+            "columnStyle"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "es-advanced/ZeroCodeQuery",
+          "demo": "advanced/02-zero-code-query",
+          "tokens": [
+            "apiParams",
+            "reactions",
+            "configTableOut"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-crud/Basic",
+          "demo": "crud-page/01-basic",
+          "tokens": [
+            "operationColumn"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-crud/CustomFooter",
+          "demo": "crud-page/07-custom-footer",
+          "tokens": [
+            "dialogs",
+            "renderBtnFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-crud/CustomRender",
+          "demo": "crud-page/03-custom-render",
+          "tokens": [
+            "dialogs",
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-crud/DynamicTitle",
+          "demo": "crud-page/04-dynamic-title",
+          "tokens": [
+            "dialogs",
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-crud/FullBusiness",
+          "demo": "crud-page/10-full-business",
+          "tokens": [
+            "dialogs",
+            "renderFn",
+            "renderBtnFn",
+            "configTableOut"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-crud/HiddenColumn",
+          "demo": "crud-page/09-hidden-column",
+          "tokens": [
+            "operationColumn",
+            "toolbarBtns"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-crud/MultiDialog",
+          "demo": "crud-page/02-multi-dialog",
+          "tokens": [
+            "toolbarBtns",
+            "operationColumn",
+            "dialogs"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-crud/Permission",
+          "demo": "crud-page/06-permission",
+          "tokens": [
+            "permissions"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-crud/ProgramOpen",
+          "demo": "crud-page/08-program-open",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-crud/RowConfirm",
+          "demo": "crud-page/05-row-confirm",
+          "tokens": [
+            "operationColumn",
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Advanced",
+          "demo": "dialog/05-advanced",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Async",
+          "demo": "dialog/06-async",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Basic",
+          "demo": "dialog/01-basic",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Confirm",
+          "demo": "dialog/03-confirm",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/DetailPreview",
+          "demo": "dialog/07-detail-preview",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/DynamicBtn",
+          "demo": "dialog/10-dynamic-btn",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Form",
+          "demo": "dialog/02-form",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/FormTableDialog",
+          "demo": "dialog/12-form-table-dialog",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/MultiInstance",
+          "demo": "dialog/11-multi-instance",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/NestedModal",
+          "demo": "dialog/04-nested-modal",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/StepDialog",
+          "demo": "dialog/09-step-dialog",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/TableDialog",
+          "demo": "dialog/08-table-dialog",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-form/AdvancedButtons",
+          "demo": "form/11-advanced-buttons",
+          "tokens": [
+            "toolbarBtns",
+            "renderBtnFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/AsyncOptions",
+          "demo": "form/06-async-options",
+          "tokens": [
+            "apiParams",
+            "reactions",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/Basic",
+          "demo": "form/01-basic",
+          "tokens": [
+            "formtype",
+            "validation",
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/Cascader",
+          "demo": "form/10-cascader",
+          "tokens": [
+            "formtype"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/ComputedFields",
+          "demo": "form/15-computed-fields",
+          "tokens": [
+            "reactions",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/Conditional",
+          "demo": "form/03-conditional",
+          "tokens": [
+            "fieldVisibility",
+            "reactions"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/CustomButton",
+          "demo": "form/16-custom-button",
+          "tokens": [
+            "renderBtnFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/CustomRender",
+          "demo": "form/07-custom-render",
+          "tokens": [
+            "formtype",
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/DateTimeRange",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-form/Detail",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-form/Dialog",
+          "demo": "form/08-dialog",
+          "tokens": [
+            "formtype",
+            "dialogs"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/Dynamic",
+          "demo": "form/04-dynamic",
+          "tokens": [
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-form/FileUpload",
+          "demo": "form/13-file-upload",
+          "tokens": [
+            "formtype",
+            "renderFn",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/Layout",
+          "demo": "form/02-layout",
+          "tokens": [
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/Preferences",
+          "demo": "form/14-preferences",
+          "tokens": [
+            "formtype"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/SearchForm",
+          "demo": "form/18-search-form",
+          "tokens": [
+            "fieldVisibility",
+            "apiParams",
+            "formLayout"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/Upload",
+          "demo": "form/12-upload",
+          "tokens": [
+            "formtype",
+            "httpRequestFn",
+            "fieldEventFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-form/Validation",
+          "demo": "form/05-validation",
+          "tokens": [
+            "validation",
+            "validatorFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/Basic",
+          "demo": "table/01-basic",
+          "tokens": [
+            "columnsDecl"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "es-table/CallbackPipeline",
+          "demo": "table/16-callback-pipeline",
+          "tokens": [
+            "configTableOut",
+            "pagination",
+            "httpRequestFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/CellMerge",
+          "demo": "table/12-cell-merge",
+          "tokens": [
+            "mergeConfig",
+            "spanMethodFn",
+            "tableBase"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/CurrentRow",
+          "demo": "table/17-current-row",
+          "tokens": [
+            "tableBase",
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-table/Custom",
+          "demo": "table/03-custom",
+          "tokens": [
+            "renderFn",
+            "formatterFn",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/DynamicColumns",
+          "demo": "table/15-dynamic-columns",
+          "tokens": [
+            "columnsDecl",
+            "formatterFn",
+            "hostOrchestration"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-table/Edit",
+          "demo": "table/05-edit",
+          "tokens": [
+            "inlineEdit"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-table/Expand",
+          "demo": "table/11-expand",
+          "tokens": [
+            "expandConfig",
+            "treeConfig"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-table/Fixed",
+          "demo": "table/08-fixed",
+          "tokens": [
+            "columnStyle",
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-table/Group",
+          "demo": "table/07-group",
+          "tokens": [
+            "columnGroups"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "es-table/Pagination",
+          "demo": "table/09-pagination",
+          "tokens": [
+            "configTableOut",
+            "pagination",
+            "httpRequestFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/QueryTable",
+          "demo": "table/13-query-table",
+          "tokens": [
+            "formLayout",
+            "apiParams",
+            "httpRequestFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/RemoteData",
+          "demo": "table/10-remote-data",
+          "tokens": [
+            "configTableOut",
+            "pagination",
+            "httpRequestFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/RowActions",
+          "demo": "table/14-row-actions",
+          "tokens": [
+            "operationColumn",
+            "renderBtnFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-table/Selection",
+          "demo": "table/04-selection",
+          "tokens": [
+            "tableBase",
+            "pagination"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-table/Sort",
+          "demo": "table/06-sort",
+          "tokens": [
+            "columnSortable",
+            "defaultSort"
+          ],
+          "tier": "B"
+        },
+        {
+          "id": "es-table/TableHeight",
+          "demo": "table/18-table-height",
+          "tokens": [
+            "tableBase"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-table/Toolbar",
+          "demo": "table/02-toolbar",
+          "tokens": [
+            "tableBtns",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/Basic",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-vxe/ColumnResize",
+          "demo": "vxe-table/09-column-resize",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/CrudWithDialog",
+          "demo": "vxe-table/14-crud-with-dialog",
+          "tokens": [
+            "virtualScroll",
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-vxe/CustomRender",
+          "demo": "vxe-table/05-custom-render",
+          "tokens": [
+            "renderFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/EscapeHatch",
+          "demo": "vxe-table/13-escape-hatch",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/ExpandRow",
+          "demo": "vxe-table/03-expand-row",
+          "tokens": [
+            "columnsDecl",
+            "sfcSlot"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/FooterSummary",
+          "demo": "vxe-table/12-footer-summary",
+          "tokens": [
+            "formatterFn",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/GroupsHeader",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-vxe/InlineEdit",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-vxe/MergeCells",
+          "demo": "vxe-table/15-merge-cells",
+          "tokens": [
+            "columnGroups",
+            "spanMethodFn",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/ProxyConfig",
+          "demo": "vxe-table/11-proxy-config",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/RowEdit",
+          "demo": "vxe-table/07-row-edit",
+          "tokens": [
+            "inlineEdit",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/Selection",
+          "demo": "table/04-selection",
+          "tokens": [
+            "tableBase",
+            "pagination"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-vxe/SortFormatter",
+          "demo": "vxe-table/04-sort-formatter",
+          "tokens": [
+            "columnSortable",
+            "formatterFn"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/ToolbarExport",
+          "demo": "vxe-table/08-toolbar-export",
+          "tokens": [
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/TreeData",
+          "demo": "vxe-table/10-tree-data",
+          "tokens": [
+            "treeConfig",
+            "vxeFirstClass"
+          ],
+          "tier": "C"
+        },
+        {
+          "id": "es-vxe/VirtualScroll",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        }
+      ]
+    }
   ]
 }

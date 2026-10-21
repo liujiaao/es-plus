@@ -281,3 +281,24 @@ describe('useVxeColumnAdapter（vue2）— labelKey 国际化', () => {
     expect((adaptedColumns.value[0] as any).title).toBe('姓名')
   })
 })
+
+// ─── 9. AN-10 省略号（契约键 ellipsis + 存量写法 showOverflowTooltip）──────
+describe('useVxeColumnAdapter（vue2）— AN-10 省略号', () => {
+  it('契约键 ellipsis → showOverflow:\'tooltip\'', () => {
+    const cols = ref<TableColumn[]>([col({ prop: 'name', ellipsis: true } as any)])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBe('tooltip')
+  })
+
+  it('存量写法 showOverflowTooltip 一并认', () => {
+    const cols = ref<TableColumn[]>([col({ prop: 'name', showOverflowTooltip: true } as any)])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBe('tooltip')
+  })
+
+  it('未设置 → 不发 showOverflow', () => {
+    const cols = ref<TableColumn[]>([col({ prop: 'name' })])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    expect((adaptedColumns.value[0] as any).showOverflow).toBeUndefined()
+  })
+})

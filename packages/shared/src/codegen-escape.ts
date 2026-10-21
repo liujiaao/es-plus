@@ -73,6 +73,21 @@ export function qAttr(value: unknown): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * 双引号 HTML 属性里的 **JS 表达式**（`:type="…"` / `:color="…"`，见 target.ts 的状态标签）。
+ *
+ * 与 `qAttr` 的差别只在「哪些字符必须实体化」：
+ *  - `"` **必须**实体化：否则提前结束属性值，后面的内容会被读成伪属性（注入）；
+ *  - `'` / `&` / `<` / `>` **不能**实体化：HTML 解析只在**定界之后**才解码实体，
+ *    解码结果不会重新参与定界，所以这几个字符在双引号属性值里本来就越不过边界；
+ *    但 Volar 的模板虚拟代码把属性值**按原样**交给 TS 解析器，实体化会直接把表达式
+ *    变成语法错 —— 实测 `&#39;` 报 TS1003、`&amp;&amp;` 报 TS1005，每个生成页面在
+ *    IDE / `vue-tsc` 里满屏红叉（AN-14 用 vue-tsc 抽样时被咬到）。
+ */
+export function qExprAttr(expr: unknown): string {
+  return String(expr).replace(/"/g, '&quot;')
+}
+
 /** 裸标识符：可直接写在「对象字面量键 / TS 接口成员名」位置的形态。 */
 export const BARE_IDENTIFIER = /^[A-Za-z_$][\w$]*$/
 
@@ -164,6 +179,43 @@ export function sanitizeForComment(src: string): string {
  */
 export function inlineJson(value: unknown, space?: string | number): string {
   return JSON.stringify(value, null, space).replace(/<\/(script)/gi, '<\\/$1')
+}
+
+/**
+ * 找出一个值里**无法用 JSON 表达**的成员（函数 / symbol / undefined / BigInt）。
+ *
+ * 为什么必须有这个函数：`JSON.stringify` **不会**对手上这些值抛错 ——
+ * 对象里的函数被**静默删掉**（`{a:1,b:()=>1}` → `{"a":1}`），数组里的函数被换成
+ * `null`（`[()=>1]` → `[null]`），BigInt 才抛。于是 `try { JSON.stringify(x) }
+ * catch { 省略 + 告警 }` 这套写法**永远不会触发告警**，真正的状态是「配置里写了
+ * 函数、产物里凭空少了这个键，且没有任何提示」—— 正是 AN-11 要消灭的静默丢弃。
+ *
+ * 返回的是**路径列表**（`btns[0].click`），让告警能点名具体是哪一项，而不是只说
+ * 「含函数」。空数组 = 可安全 JSON 化。
+ */
+export function findNonJsonValues(value: unknown, path = ''): string[] {
+  const at = (key: string) =>
+    /^[A-Za-z_$][\w$]*$/.test(key) ? (path ? `${path}.${key}` : key) : `${path}[${JSON.stringify(key)}]`
+  if (typeof value === 'function') return [path || '(root)']
+  if (typeof value === 'symbol') return [path || '(root)']
+  if (typeof value === 'bigint') return [path || '(root)']
+  if (value === null || typeof value !== 'object') return []
+  if (Array.isArray(value)) {
+    const out: string[] = []
+    value.forEach((v, i) => {
+      // 稀疏数组的洞 / 显式 undefined 都会落成 null —— 算作无法表达
+      if (!(i in value) || v === undefined) out.push(`${path}[${i}]`)
+      else out.push(...findNonJsonValues(v, `${path}[${i}]`))
+    })
+    return out
+  }
+  const out: string[] = []
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    // 对象上的 undefined 与「键不存在」在 JSON 里完全等价，是有意的省略，不算丢弃。
+    if (v === undefined) continue
+    out.push(...findNonJsonValues(v, at(k)))
+  }
+  return out
 }
 
 /**

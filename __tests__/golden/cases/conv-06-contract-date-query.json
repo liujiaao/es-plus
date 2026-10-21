@@ -1,0 +1,74 @@
+{
+  "nl": "合同管理：初版只要能按标题搜索；表格展示标题、负责人、金额、日期、状态（生效中/已到期）；支持新增、编辑、删除。",
+  "fixedFields": [
+    "title",
+    "owner",
+    "amount",
+    "date",
+    "status"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:date"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "日期也要能查，主管要按签约时间做统计。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv06ContractDateQuery",
+    "apiUrl": "/api/contract-date-query",
+    "fields": [
+      {
+        "prop": "title",
+        "label": "标题",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input",
+        "inQuery": false
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      },
+      {
+        "prop": "date",
+        "label": "日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "生效中",
+            "value": "active"
+          },
+          {
+            "label": "已到期",
+            "value": "expired"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（日期）。与 conv-03 同族但场景/字段组合不同，避免同一模板刷条数。"
+}

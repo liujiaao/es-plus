@@ -174,13 +174,16 @@ function balanced(src, from, open = '[', close = ']') {
   return null
 }
 
-/** 取 `const <name> = ` 之后的配对块（`[` 或 `{`）。 */
+/**
+ * 取 `const <name> = ` 之后的配对块（`[` 或 `{`）。
+ *
+ * TS 投影（AN-14：`typescript:true` 的产物）会在名字与 `=` 之间插类型注解
+ * （`const options: TableOptions = {`），故这里**不能**按 `const ${name} = ` 字面量查。
+ */
 function constBlock(code, name) {
-  const i = code.indexOf(`const ${name} = `)
-  if (i === -1) return { found: false, open: null, body: null }
-  const at = code.indexOf('=', i) + 1
-  let j = at
-  while (j < code.length && /\s/.test(code[j])) j++
+  const m = new RegExp(`const\\s+${name}\\s*(?::\\s*[^=]+?)?\\s*=\\s*`).exec(code)
+  if (!m) return { found: false, open: null, body: null }
+  const j = m.index + m[0].length
   const ch = code[j]
   if (ch === '[') return { found: true, open: '[', body: balanced(code, j, '[', ']') }
   if (ch === '{') return { found: true, open: '{', body: balanced(code, j, '{', '}') }
@@ -310,6 +313,18 @@ const PROBE = {
     defaultSort: { prop: 'probe', order: 'ascending' },
     editConfig: { trigger: 'click', mode: 'cell' },
     configTableOut: { total: 't', tableData: 'd', pageSize: 'p', current: 'c' },
+    // AN-08：表域语义键。探针必须**设满** AI 契约声明的每一个键 —— 少设一个，轴①
+    // 就会把「探针没给」误读成「生成器不发射」。
+    treeConfig: {
+      transform: true,
+      rowField: 'id',
+      parentField: 'pid',
+      childrenField: 'children',
+      mapChildren: '_X_ROW_CHILD',
+      expandAll: true,
+      lazy: false,
+    },
+    expandConfig: { expandAll: true, accordion: false, lazy: false },
   },
 }
 
@@ -518,9 +533,8 @@ function entryProp(entry) {
  * 字段面域（`formItem`/`column`）返回 `{ all, probe }` 两套：
  *   - `probe` 只含**探针字段**（`prop === PROBE_PROP`）发射的键 —— 轴①（声明未发射）用它，
  *     因为「AI 给这个字段声明的每个键，是否真落到了这个字段上」才是要问的问题。
- *     若用 `all`，推导出来的**操作列**（`prop:'operate'`，带 `label`/`btns`）会污染答案：
- *     例如 `fields.label` 在 i18n 模式下被 `labelKey` 取代、探针字段上确实没有 `label`，
- *     但操作列有 —— 用 `all` 就会把这条登记行误判成「陈旧」。
+ *     用 `all` 会被派生条目（`operate` 操作列自带 `label`/`btns`）污染：AI 字段键若在探针
+ *     字段上条件缺席、却与派生列的同名键撞车，登记行就会被误判成「陈旧」。
  *   - `all` 含全部条目 —— 轴②（发射未消费）用它，覆盖面不能因为投影而缩小。
  */
 function readSchemaProduct(code) {
@@ -632,9 +646,8 @@ async function main() {
     // 字段面（formItem/column）有**两套集合**：
     //   - `all`：全部条目（含派生的 `operate` 操作列）—— 轴② 用它，覆盖面不缩水；
     //   - `probe`：只看探针字段那一列/那一项 —— 轴① 用它，问的才是「AI 给这个字段声明的键，
-    //     有没有真落到**这个字段**上」。用 `all` 会被派生条目污染：`fields.label` 在 i18n
-    //     模式下被 `labelKey` 取代（探针字段上真没有 `label`），但操作列有 `label:'操作'`，
-    //     于是那行登记会被误判成「陈旧」。投影后 `fields.label` 重新落回登记行。
+    //     有没有真落到**这个字段**上」。用 `all` 会被派生条目污染：`operate` 操作列自带
+    //     `label`/`btns`，与 AI 字段键同名就会让条件缺席的登记行被误判成「陈旧」。
     const emittedTableOptions = new Set([...s.tableOptions, ...f.tableOptions])
     const emittedFormItemAll = new Set([...s.formItem.all, ...f.formItem.all])
     const emittedColumnAll = new Set([...s.column.all, ...f.column.all])

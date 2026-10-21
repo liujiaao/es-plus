@@ -1,11 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateScaffold, generateAppEntry } from "@es-plus/shared";
+import { buildScaffoldPreflight, formatPreflight, generateScaffold } from "@es-plus/shared";
 
+/**
+ * AN-15②：脚手架与生成物**共用** `buildPreflight`（经 `buildScaffoldPreflight`）。
+ *
+ * 此前这里是手写的一段入口样板 + 一句「缺一则对应能力失效」的散文。散文没法被断言，
+ * 而清单可以：同一个 builder 同时喂给 `generate_crud` / `generate_crud_from_config`，
+ * 两处一旦分叉，其中一处就开始说谎。若要检查宿主**已有**入口，用 `doctor_page`。
+ */
 export function registerScaffoldPage(server: McpServer) {
   server.tool(
     "scaffold_page",
-    "Generate a minimal es-plus page scaffold (.vue SFC) — plus the app-entry assembly boilerplate (`app.use(ESPlus, { permission, t, httpRequest })`, vue2: `Vue.use`) that makes permissionValue / i18n labelKey / remote apiParams actually work. Supports vue3 (default) / vue2 / antdv targets. Use this when you need a blank starting template.",
+    "Generate a minimal es-plus page scaffold (.vue SFC) — plus the SAME `preflight` checklist that generated CRUD pages emit (httpRequest / permission / t / JSX plugin / UI library), with a copy-once app-entry boilerplate (vue3: `app.use(ESPlus, { permission, t, httpRequest })`, vue2: `Vue.use`). Supports vue3 (default) / vue2 / antdv targets. Use this when you need a blank starting template; use `doctor_page` to check an entry the host already has.",
     {
       name: z
         .string()
@@ -26,10 +33,9 @@ export function registerScaffoldPage(server: McpServer) {
     async ({ name, features, target }) => {
       try {
         const tgt = (target || "vue3") as "vue3" | "vue2" | "antdv";
-        const code = generateScaffold(name, features, tgt);
-        const entry = generateAppEntry(tgt);
-        const entryFile = tgt === "vue2" ? "src/main.js" : "src/main.ts";
         const featureList = features || ["query", "table"];
+        const code = generateScaffold(name, featureList, tgt);
+        const preflight = buildScaffoldPreflight({ target: tgt, features: featureList });
         return {
           content: [
             {
@@ -37,8 +43,7 @@ export function registerScaffoldPage(server: McpServer) {
               text:
                 `Generated scaffold for "${name}" (target=${tgt}) with features: ${featureList.join(", ")}\n\n` +
                 `${code}\n\n` +
-                `// ───── ${entryFile}（应用入口装配样板，复制一次；permission / t / httpRequest 缺一则对应能力失效）─────\n` +
-                `${entry}`,
+                formatPreflight(preflight),
             },
           ],
         };

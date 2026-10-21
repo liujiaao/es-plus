@@ -11,7 +11,7 @@ Make AI-generated CRUD pages **safe to merge**: the LLM writes a single JSON con
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
 [![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
 
-<sub>The accuracy badge = the nightly Layer-2 eval's measured in-schema-intent "zero-edit" hit rate on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — the exact number the gate enforces, **not a marketing figure**. The corpus is 25 cases today: a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts.</sub>
+<sub>The accuracy badge = the nightly Layer-2 eval's measured in-schema-intent "zero-edit" hit rate on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — the exact number the gate enforces, **not a marketing figure**. The corpus is 188 cases today (166 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
 
 **[Documentation](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD Generator](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
 
@@ -434,6 +434,8 @@ Then just say in your AI chat:
 > "Generate a user management page with search fields: name, phone, status. Table columns: name, email, status, created time. Support add, edit, delete."
 
 The AI auto-calls the MCP Server and generates a complete, runnable `.vue` file.
+
+The tool surface follows one front door plus deterministic support: **`generate_crud` is the only FRONT DOOR** (you fill the `surfaces` intent table; routing and compilation are deterministic code). `generate_crud_from_config` is labelled **ADVANCED** (use it when you already hold a typed config), and `generate_crud_page` / `generate_crud_schema` are **LEGACY FALLBACK** (no-LLM regex parsing). `ESPLUS_MCP_PROFILE=front-door` hides the advanced and legacy tools, leaving only the front door and single-surface fragments. See [`packages/mcp-server/AI-NATIVE-ARCHITECTURE.md`](./packages/mcp-server/AI-NATIVE-ARCHITECTURE.md) for the full tool list, selection tree, and tiering rationale.
 
 ### @es-plus/cli — Command Line Tool
 

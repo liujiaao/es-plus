@@ -1,0 +1,77 @@
+{
+  "nl": "商品管理：初版只要能按名称搜索；表格展示名称、类型（实物/虚拟）、状态（上架/下架）、金额；支持新增、编辑、删除。",
+  "fixedFields": [
+    "name",
+    "type",
+    "status",
+    "amount"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "inQuery:type"
+  ],
+  "refinements": [
+    {
+      "turn": 1,
+      "correction": "类型也要能筛选，实物和虚拟商品要分开看。"
+    }
+  ],
+  "convergesBy": 1,
+  "config": {
+    "name": "Conv05ProductTypeQuery",
+    "apiUrl": "/api/product-type-query",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "名称",
+        "formtype": "Input",
+        "inQuery": true
+      },
+      {
+        "prop": "type",
+        "label": "类型",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "实物",
+            "value": "physical"
+          },
+          {
+            "label": "虚拟",
+            "value": "virtual"
+          }
+        ]
+      },
+      {
+        "prop": "status",
+        "label": "状态",
+        "formtype": "Select",
+        "inQuery": false,
+        "dataOptions": [
+          {
+            "label": "上架",
+            "value": "on"
+          },
+          {
+            "label": "下架",
+            "value": "off"
+          }
+        ]
+      },
+      {
+        "prop": "amount",
+        "label": "金额",
+        "formtype": "InputNumber",
+        "inQuery": false
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "inQuery 铰链（类型）。与 conv-04 同族，换一个高频字段。"
+}

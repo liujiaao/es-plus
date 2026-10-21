@@ -12,7 +12,8 @@
     "options.appendTo",
     "options.isDraggable",
     "options.showClose",
-    "dialogMaskNonClosing"
+    "dialogMaskNonClosing",
+    "target"
   ],
   "config": {
     "fields": [

@@ -175,7 +175,7 @@ P2 准确率轨：                            ▼                    ▼
 
 ### 4.2 文件级改动
 
-- **新增** `packages/shared/src/schema-ingest.ts`：`ingestSchema(text, kind)` + `defaultFormtypeForType(type)`。无运行时新依赖（OpenAPI/JSON Schema 为 `JSON.parse` + 遍历；sample-json 同理；ts-interface/sql-ddl 可后置到用 esbuild/轻量正则，先 stub）。
+- **新增** `packages/shared/src/schema-ingest.ts`：`ingestSchema(text, kind)` + `defaultFormtypeForType(type)`。无运行时新依赖（OpenAPI/JSON Schema 为 `JSON.parse` + 遍历；sample-json 同理；ts-interface/sql-ddl 可后置到用 esbuild/轻量正则，先 stub；**两类已于 AN-20 用轻量扫描器落地**）。
 - **~~改~~（落地修正：不改）** [ai-nl-to-config-prompt.ts](../../packages/shared/src/ai-nl-to-config-prompt.ts) 的 formtype 规则段。**源码核实后发现这是两条不同的轴**：prompt / 字段 `.describe` 教的是**按字段含义**推断（status→Select、头像→Upload），而 `defaultFormtypeForType` 是**按数据类型**推断（integer→InputNumber）。强行让语义 prompt「引用」数据类型表是错配。改为：`defaultFormtypeForType` 作为**数据类型轴**的单一事实源（供摄取层用），语义 prompt 保持不动；真正可守护的一致性 = `defaultFormtypeForType` **对输入域全覆盖且输出恒 ∈ `VALID_FORM_TYPES`**（无 undefined 落空），这正面堵住 Wave-1「fall-through 教错」坑。该不变量以 **vitest 全覆盖断言**实现（见 §4.3），而非 `check:*.mjs`——它本质是代码执行属性（既有 check 脚本都是文本巡检，验不了全覆盖），且 repo 刚修过的 shared-build 排序 CI 坑让「跑脚本前须先 build」的新门禁得不偿失。
 - **新增** MCP 工具 `ingest_schema`（[`packages/mcp-server/src/tools/ingest-schema.ts`](../../packages/mcp-server/src/tools/ingest-schema.ts)，薄封装）：入参 `{ text, kind, name?, apiUrl? }`，内部 `ingestSchema → composeCrudConfig(table/form=摄取字段)`，出参一份**草拟好的 `StructuredCrudConfig` JSON + 合并告警**（供宿主 LLM 审阅修订后再调 `generate_crud_from_config`，占位 name/apiUrl 显式告警）。注册进 [tools/index.ts](../../packages/mcp-server/src/tools/index.ts)。
 - **延后** CLI 子命令 `es-plus ingest <file>`（本 PR 决策：引擎 + MCP 工具先行，CLI 另开小步——它只是薄壳）。
@@ -188,7 +188,7 @@ P2 准确率轨：                            ▼                    ▼
 
 ### 4.4 PR-A2' 验收  ✅
 
-- ✅ 3 种高价值来源可用（jsonSchema / openapi / sample-json；ts-interface / sql-ddl 为 stub + 指引告警）。
+- ✅ 3 种高价值来源可用（jsonSchema / openapi / sample-json）；**AN-20（2026-10-20）补齐 ts-interface / sql-ddl**（轻量扫描器，见 AI-NATIVE-REMEDIATION-PLAN.md 的 AN-20 落地记录）。
 - ✅ `defaultFormtypeForType` 对输入域**全覆盖且输出恒 ∈ `VALID_FORM_TYPES`**（vitest 全覆盖断言守护，替代原「与 prompt 文字同源」口径——见 §4.2 落地修正）。
 - ✅ 摄取 → `composeCrudConfig` → `generateFromConfig(mode=schema)` 全链产物过 esbuild（`transformSync` loader:ts）解析（schema-ingest.spec.ts 端到端用例）。
 - ✅ 门禁全绿：shared 422 测试、mcp 112 测试（覆盖率 branches 85.9≥77 / stmts 46.67≥27）、`check:scorers` / `test:golden` 25/25 / `fragment:smoke` 78/78、workspace typecheck。
