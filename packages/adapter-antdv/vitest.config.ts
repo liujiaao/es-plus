@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue(), vueJsx()],
@@ -25,6 +26,14 @@ export default defineConfig({
         functions: 68,
         lines: 84,
       },
+    },
+  },
+  resolve: {
+    alias: {
+      // 生成物按**真实用法** import 包名（`import { useDialog } from '@es-plus/adapter-antdv'`）。
+      // 单测作业只构建 core/shared，不构建本包 dist，包名入口 `./dist/…` 不存在 ——
+      // 把自身包名指回源码，让「产物怎么被消费」与「测试怎么加载」是同一份实现。
+      '@es-plus/adapter-antdv': resolve(__dirname, 'src/index.ts'),
     },
   },
 })

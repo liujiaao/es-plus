@@ -25,7 +25,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src'),
+      // 生成物按**真实用法** import 包名（`import { useDialog } from '@es-plus/vue3'`）。
+      // 单测作业只构建 core/shared，不构建本包 dist，包名入口 `./dist/…` 不存在 ——
+      // 把自身包名指回源码，让「产物怎么被消费」与「测试怎么加载」是同一份实现。
+      '@es-plus/vue3': resolve(__dirname, 'src/index.ts'),
     }
   }
 })
