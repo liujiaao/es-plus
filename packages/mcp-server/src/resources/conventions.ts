@@ -107,7 +107,8 @@ export default defineComponent({
 - \`engine: 'vxe'\` IS supported: @es-plus/vue2 ships its own vxe engine
   (\`engines/vxe-engine.vue\`), so \`engine: 'vxe'\` switches to vxe-table — which
   itself supports Vue 2 — and is this target's recommended large-data path
-- \`scrollToRow\` instance method is no-op
+- \`scrollToRow\` is a no-op on the default el-table engine (Element UI has no
+  equivalent API); the vxe engine (\`engine: 'vxe'\`) implements it
 - JSX requires \`@vue/babel-preset-jsx\` setup; default project may need config
 
 ## Migration Path Vue 2 → Vue 3

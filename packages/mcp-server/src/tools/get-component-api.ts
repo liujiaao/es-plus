@@ -184,7 +184,7 @@ interface TableOptions {
 - \`clearSelection()\` — Clear row selection
 - \`getSelectionRows()\` — Get selected rows
 - \`toggleRowSelection(row, selected?)\` — Toggle row checkbox
-- \`scrollToRow(index)\` — Scroll to row by index (virtual mode, vue3 only)
+- \`scrollToRow(index)\` — Scroll to row by index. Implemented by the vxe engine (all three targets) and the virtual engine (vue3); a no-op on the default el-table / a-table engine
 - \`refresh()\` — Reload current page
 
 ## Import

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateFromConfig, findDialogsWithoutOpener } from '../src/structured-generator'
+import { generateFromConfig, findDialogsWithoutOpener, findDialogButtonsWithoutDialog } from '../src/structured-generator'
 import { StructuredCrudConfigSchema } from '../src/structured-config.schema'
 
 const baseConfig = {
@@ -1745,6 +1745,166 @@ describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按�
       StructuredCrudConfigSchema.parse(flat({ mode: 'sfc', actions: ['edit', 'delete'], dialogs: dlg })) as any
     )
     expect(warnings.some((w) => /has no opener/.test(w))).toBe(false)
+  })
+})
+
+// AI-35 的对偶：AI-35 管「弹窗没人能打开」，这里管「按钮指向的弹窗不存在」。
+// 三端 `openDialog(key)` 在 `normalizedDialogs[key]` 缺席时**直接 return** —— 不报错、
+// 不 emit `dialog-open`（行内按钮连 edit/view/btn-click 也不会 emit），于是按钮成了
+// 死按钮。触发面有两类：显式 `dialogs` 只覆盖了部分动作（含 `dialogs.add: null`
+// 被 repairConfig 删除后的形状），以及声明了按钮面但不声明 `dialogs`（此时生成器
+// 走新模式、不再发射 legacy `dialogFormItems`，运行时一张弹窗都没有）。
+describe('AI-35 对偶 — 按钮指向的弹窗不存在（openDialog 直接返回）', () => {
+  const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
+  const flat = (extra: Record<string, unknown>) => ({ name: 'T', apiUrl: '/x', fields: F, ...extra })
+
+  it('显式 dialogs 只覆盖 edit ⇒ 派生的「新增」是死按钮', () => {
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({ actions: ['add', 'edit'], dialogs: { edit: { title: '编辑' } } }) as any
+      )
+    ).toEqual(['toolbar "新增" (dialogKey: "add")'])
+  })
+
+  it('显式 dialogs 只覆盖 add ⇒ 派生的行内「编辑」是死按钮', () => {
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({ actions: ['add', 'edit'], dialogs: { add: { title: '新增' } } }) as any
+      )
+    ).toEqual(['row "编辑" (dialogKey: "edit")'])
+  })
+
+  it('dialogs.add: null 经修复删除后只剩空 dialogs ⇒ 「新增」仍是死按钮', () => {
+    // 这正是审计里点名的形状：null 被当作「未声明」删掉，但 actions 仍派生按钮。
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(
+        flat({ actions: ['add'], dialogs: {} })
+      ) as any
+    )
+    expect(warnings.some((w) => w.includes('点了不会有任何反应'))).toBe(true)
+    expect(warnings.some((w) => w.includes('dialogKey: "add"'))).toBe(true)
+  })
+
+  it('既无 dialogs 又无表单字段（全 inForm:false）⇒ legacy 弹窗为空 ⇒ 死按钮', () => {
+    const cfg = {
+      name: 'T',
+      apiUrl: '/x',
+      fields: [{ prop: 'a', label: 'A', formtype: 'Input', inForm: false, inQuery: false }],
+      actions: ['add'],
+    }
+    expect(findDialogButtonsWithoutDialog(cfg as any)).toEqual(['toolbar "新增" (dialogKey: "add")'])
+  })
+
+  it('未声明 dialogs 且字段进表单 ⇒ legacy 会发射 dialogFormItems ⇒ 不报', () => {
+    expect(findDialogButtonsWithoutDialog(flat({ actions: ['add', 'edit', 'delete'] }) as any)).toEqual([])
+  })
+
+  it('显式 toolbarBtns / tableBtns / operationColumn 的 dialogKey 同样核对', () => {
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({
+          actions: ['add'],
+          dialogs: { add: { title: '新增' } },
+          toolbarBtns: [{ name: '新建', dialogKey: 'add' }],
+        }) as any
+      )
+    ).toEqual([])
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({
+          actions: ['add'],
+          dialogs: { add: { title: '新增' } },
+          tableBtns: [{ name: '复制', dialogKey: 'copy' }],
+        }) as any
+      )
+    ).toEqual(['tableBtns[0] "复制" (dialogKey: "copy")'])
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({
+          actions: ['edit'],
+          dialogs: { edit: { title: '编辑' } },
+          operationColumn: { btns: [{ name: '修改', dialogKey: 'modify' }] },
+        }) as any
+      )
+    ).toEqual(['operationColumn.btns[0] "修改" (dialogKey: "modify")'])
+  })
+
+  it('operationColumn:false / columns 自带操作列 ⇒ 不派生行内按钮 ⇒ 不误报', () => {
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({ actions: ['edit'], dialogs: { add: {} }, operationColumn: false }) as any
+      )
+    ).toEqual([])
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({ actions: ['edit'], dialogs: { add: {} }, columns: [{ prop: 'action' }] }) as any
+      )
+    ).toEqual([])
+  })
+
+  it('没有 dialogKey 的按钮（宿主自己补 click）不参与核对', () => {
+    expect(
+      findDialogButtonsWithoutDialog(
+        flat({ actions: ['export'], dialogs: {}, tableBtns: [{ name: '导出' }] }) as any
+      )
+    ).toEqual([])
+  })
+
+  it('生成器在 schema 模式发警告、sfc 模式不重复噪音', () => {
+    const cfg = flat({ actions: ['add'], dialogs: { edit: {} } })
+    const schemaWarnings = generateFromConfig(StructuredCrudConfigSchema.parse(cfg) as any).warnings
+    expect(schemaWarnings.some((w) => w.includes('点了不会有任何反应'))).toBe(true)
+    const sfcWarnings = generateFromConfig(
+      StructuredCrudConfigSchema.parse({ ...cfg, mode: 'sfc' }) as any
+    ).warnings
+    expect(sfcWarnings.some((w) => w.includes('点了不会有任何反应'))).toBe(false)
+  })
+})
+
+// 三端 `mergedColumns` 在合并列表之前直接 `cols.push(操作列)`：显式 `columns` 里
+// 已经自带一条带 `btns` 的操作列时，页面上会出现**两条**操作列（运行时无从知道
+// 用户想要哪一条，也不会报错）。生成器据此告警（mark, never drop）。
+describe('显式 operationColumn 与 columns 自带操作列重复', () => {
+  const base = (extra: Record<string, unknown>) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' as const }],
+    actions: ['edit'],
+    dialogs: { edit: { title: '编辑' } },
+    ...extra,
+  })
+
+  it('两者都声明 ⇒ 告警', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(
+        base({
+          columns: [{ prop: 'operate', btns: [{ name: '编辑', dialogKey: 'edit' }] }],
+          operationColumn: { btns: [{ name: '编辑', dialogKey: 'edit' }] },
+        })
+      ) as any
+    )
+    expect(warnings.some((w) => w.includes('两个操作列'))).toBe(true)
+  })
+
+  it('operationColumn:false + 自带 btns 列是受支持写法 ⇒ 不报', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(
+        base({
+          columns: [{ prop: 'operate', btns: [{ name: '编辑', dialogKey: 'edit' }] }],
+          operationColumn: false,
+        })
+      ) as any
+    )
+    expect(warnings.some((w) => w.includes('两个操作列'))).toBe(false)
+  })
+
+  it('只声明 operationColumn（columns 无操作列）⇒ 不报', () => {
+    const { warnings } = generateFromConfig(
+      StructuredCrudConfigSchema.parse(
+        base({ operationColumn: { btns: [{ name: '编辑', dialogKey: 'edit' }] } })
+      ) as any
+    )
+    expect(warnings.some((w) => w.includes('两个操作列'))).toBe(false)
   })
 })
 

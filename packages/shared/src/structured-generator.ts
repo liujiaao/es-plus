@@ -400,6 +400,77 @@ export function findDialogsWithoutOpener(config: StructuredCrudConfig): string[]
   return dialogKeys.filter((k) => !reachable.has(k))
 }
 
+/**
+ * AI-35 的**对偶**：按钮指向的弹窗不存在 —— 返回「点了也不会有反应」的按钮描述。
+ *
+ * 三端 `es-crud-page.openDialog(key)` 在 `normalizedDialogs[key]` 缺席时第一行就
+ * `return`：不报错、不 emit `dialog-open`；行内按钮连 `edit`/`view`/`btn-click` 也
+ * 不会 emit（工具栏按钮停在 `add` 事件）。于是按钮还在、弹窗没了，界面**静默失效**。
+ *
+ * 两类真实触发面：
+ *   1. 显式 `dialogs` 只覆盖了部分动作。含 `dialogs.add: null` 被 `repairConfig`
+ *      当作「未声明」删掉后的形状（`actions` 仍派生「新增」）。
+ *   2. 声明了按钮面（`toolbarBtns`/`tableBtns`/`operationColumn`）但没声明 `dialogs`：
+ *      生成器据此走**新模式**，不再发射 legacy `dialogFormItems`，运行时一张弹窗都没有，
+ *      任何 `dialogKey` 都无处可去。
+ *
+ * 弹窗键集逐字镜像 `generateSchema`：显式 `dialogs` 优先；否则（仅 legacy 分支）
+ * 由 `formFields`（`inForm !== false`）+ `actions` 派生 —— 注意生成器**不**读
+ * `config.dialogFormItems`（那是运行时 schema 键，AI 契约里没有），`formFields`
+ * 为空时 legacy 也不会发射弹窗。
+ *
+ * 只报 `dialogKey` 非空的按钮：不带 `dialogKey` 的按钮由宿主的 `click` 自行处理。
+ */
+export function findDialogButtonsWithoutDialog(config: StructuredCrudConfig): string[] {
+  const actions: string[] = config.actions?.length ? [...config.actions] : ['add', 'edit', 'delete']
+  const formFields = config.fields.filter((f) => f.inForm !== false)
+  const hasDialogAction = actions.some((a) => a === 'add' || a === 'edit' || a === 'view')
+
+  // ① 运行时会有哪些弹窗（镜像 generateSchema 的 useNewDialogMode / legacy 分支）
+  const newMode =
+    config.dialogs !== undefined ||
+    config.toolbarBtns !== undefined ||
+    config.tableBtns !== undefined ||
+    config.operationColumn !== undefined
+  const dialogKeys = newMode
+    ? new Set(Object.keys(config.dialogs ?? {}))
+    : formFields.length > 0 && hasDialogAction
+      ? new Set(['add', 'edit', 'view'].filter((k) => actions.includes(k)))
+      : new Set<string>()
+
+  const dead: string[] = []
+  const check = (where: string, btn: { name?: unknown; dialogKey?: unknown } | undefined) => {
+    const key = btn?.dialogKey
+    if (typeof key !== 'string' || !key || dialogKeys.has(key)) return
+    const label = typeof btn?.name === 'string' && btn.name ? `"${btn.name}"` : '(unnamed)'
+    dead.push(`${where} ${label} (dialogKey: "${key}")`)
+  }
+
+  // ② 三处按钮面（镜像 normalizedToolbarBtns / tableBtns / normalizedOperationColumn）
+  if (config.toolbarBtns !== undefined) {
+    ;(config.toolbarBtns ?? []).forEach((b, i) => check(`toolbarBtns[${i}]`, b))
+  } else if (config.operationColumn === undefined && actions.includes('add')) {
+    check('toolbar', { name: '新增', dialogKey: 'add' })
+  }
+
+  ;(config.tableBtns ?? []).forEach((b, i) => check(`tableBtns[${i}]`, b))
+
+  const oc = config.operationColumn
+  if (oc !== undefined) {
+    if (oc !== false) (oc.btns ?? []).forEach((b, i) => check(`operationColumn.btns[${i}]`, b))
+  } else {
+    const hasActionCol = (config.columns ?? []).some(
+      (c) => c.prop === 'action' || c.prop === 'operate' || 'btns' in c
+    )
+    if (!hasActionCol) {
+      if (actions.includes('view')) check('row', { name: '查看', dialogKey: 'view' })
+      if (actions.includes('edit')) check('row', { name: '编辑', dialogKey: 'edit' })
+    }
+  }
+
+  return dead
+}
+
 export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredGenerateResult {
   // AN-08：入口归一。AN-07 的 tableBtns 别名（label/action）与顶层
   // `rowkey → tableOptions.rowkey` 都在 `normalizeConfig` 里（单源），生成器不再各写一份。
@@ -456,11 +527,44 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
           ]
         })()
       : []
+  // AI-35 的对偶：按钮还在、弹窗没了 ⇒ openDialog 直接返回，界面静默失效。
+  // 同样只在 schema 模式报：sfc 模式不发射 `dialogs`/`toolbarBtns` 面（已有降级告警）。
+  const deadButtonWarnings =
+    mode === 'schema'
+      ? (() => {
+          const dead = findDialogButtonsWithoutDialog(config)
+          if (!dead.length) return []
+          return [
+            `以下按钮点了不会有任何反应：${dead.join('；')}。` +
+              `运行时 \`openDialog(key)\` 在 \`dialogs\` 里找不到对应键时直接返回 —— 不报错，` +
+              `也不 emit \`dialog-open\`（行内按钮连 edit/view/btn-click 都不会发）。` +
+              `补上对应的 \`dialogs.<key>\`、从 \`actions\` 去掉该动作，或让按钮不带 \`dialogKey\` 改由宿主 click 处理。`,
+          ]
+        })()
+      : []
+  // 三端 `mergedColumns` 在合并列表前直接 `cols.push(操作列)` —— 显式 `columns` 已经
+  // 自带一条带 `btns` 的操作列时，页面上会出现**两条**操作列。运行时无法猜用户想要
+  // 哪一条（也不会报错），所以只能在这里点名。`operationColumn:false` + 自带列是
+  // **受支持**的写法（显式关闭派生、自己管操作列），不在此列。
+  const duplicateOpColumnWarnings =
+    mode === 'schema' &&
+    config.operationColumn &&
+    (config.columns ?? []).some(
+      (c) => c.prop === 'action' || c.prop === 'operate' || 'btns' in c
+    )
+      ? [
+          `同时声明了 columns 里带 \`btns\` 的列与 \`operationColumn\` —— 运行时会把 ` +
+            `\`operationColumn\` 再追加为一列，页面上会出现两个操作列。两者只留一个：` +
+            `删掉 columns 里的那一列，或改用 \`operationColumn: false\` 自己管操作列。`,
+        ]
+      : []
   const extra = [
     ...entryWarnings,
     ...propWarnings,
     ...renderFieldsExcludedByColumnsWarnings(config),
     ...orphanWarnings,
+    ...deadButtonWarnings,
+    ...duplicateOpColumnWarnings,
     // AN-11③④：两种「配了却不会发生任何事」的静默丢弃，按 mode 判一次（两种模式共用）。
     ...inlineEditWarnings(config),
     ...(mode === 'schema' ? schemaModePermissionWarnings(config) : []),
