@@ -341,3 +341,38 @@ describe('useVxeColumnAdapter（vue3）— AN-10 省略号', () => {
     expect((adaptedColumns.value[0] as any).showOverflow).toBeUndefined()
   })
 })
+
+// ─── 显式前导列尊重列配置 ───────────────────────────────────────────────────
+// 修前三处 vxe 适配器对 selection/index/expand 只认数字宽度、把 expand 硬编码
+// `fixed:'left'`、把 align 写死 center —— 同一列在 el-table 引擎按配置走，
+// 切到 vxe 就变样。显式值是用户意图，必须优先于引擎默认。
+describe('useVxeColumnAdapter（vue3）— 显式前导列尊重列配置', () => {
+  it('字符串宽度（120px）不再被默认值替换', () => {
+    const cols = ref([{ type: 'index', label: '#', width: '120px' }] as TableColumn[])
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    expect((adaptedColumns.value[0] as any).width).toBe('120px')
+  })
+
+  it('expand 列的显式 fixed / align 生效（不再硬编码 left / center）', () => {
+    const cols = ref([{ type: 'expand', fixed: 'right', align: 'left' }] as TableColumn[])
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    const c = adaptedColumns.value[0] as any
+    expect(c.fixed).toBe('right')
+    expect(c.align).toBe('left')
+  })
+
+  it('fixed:false 的 selection 列不再被强制左固定', () => {
+    const cols = ref([{ type: 'selection', fixed: false, width: 44 }] as TableColumn[])
+    const { adaptedColumns } = useVxeColumnAdapter(cols, baseOptions())
+    const c = adaptedColumns.value[0] as any
+    expect(c.fixed).toBeUndefined()
+    expect(c.width).toBe(44)
+  })
+
+  it('index 列显式 fixed:true → left（未显式时保持不固定）', () => {
+    const on = useVxeColumnAdapter(ref([{ type: 'index', fixed: true }] as TableColumn[]), baseOptions())
+    expect((on.adaptedColumns.value[0] as any).fixed).toBe('left')
+    const off = useVxeColumnAdapter(ref([{ type: 'index' }] as TableColumn[]), baseOptions())
+    expect((off.adaptedColumns.value[0] as any).fixed).toBeUndefined()
+  })
+})

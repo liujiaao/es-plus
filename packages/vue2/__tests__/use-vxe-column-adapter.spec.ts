@@ -302,3 +302,28 @@ describe('useVxeColumnAdapter（vue2）— AN-10 省略号', () => {
     expect((adaptedColumns.value[0] as any).showOverflow).toBeUndefined()
   })
 })
+
+// ─── 显式前导列尊重列配置（与 vue3/antdv 同规则）───────────────────────────
+describe('useVxeColumnAdapter（vue2）— 显式前导列尊重列配置', () => {
+  it('字符串宽度（120px）不再被默认值替换', () => {
+    const cols = ref<TableColumn[]>([col({ type: 'index', label: '#', width: '120px' })])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    expect((adaptedColumns.value[0] as any).width).toBe('120px')
+  })
+
+  it('expand 列的显式 fixed / align 生效', () => {
+    const cols = ref<TableColumn[]>([col({ type: 'expand', fixed: 'right', align: 'left' })])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    const c = adaptedColumns.value.find((x: any) => x.type === 'expand') as any
+    expect(c?.fixed).toBe('right')
+    expect(c?.align).toBe('left')
+  })
+
+  it('fixed:false 的 selection 列不再被强制左固定', () => {
+    const cols = ref<TableColumn[]>([col({ type: 'selection', fixed: false, width: 44 })])
+    const { adaptedColumns } = useVxeColumnAdapter(cols as any, makeOptions())
+    const c = adaptedColumns.value.find((x: any) => x.type === 'checkbox') as any
+    expect(c?.fixed).toBeUndefined()
+    expect(c?.width).toBe(44)
+  })
+})

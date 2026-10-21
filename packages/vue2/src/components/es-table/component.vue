@@ -446,6 +446,9 @@ export default defineComponent({
     const tableContainerRef = ref<HTMLElement | null>(null)
     const tableId = ref(`table_${Math.random().toString(36).substring(2, 12)}`)
     const tableData = ref<Record<string, unknown>[]>([])
+    // 请求模式是否已拿到过响应：一旦为 true，tableData 就是渲染唯一真相 ——
+    // 否则请求返回空页（tableData=[]）会回落父级旧 dataSource，删空后仍显示上一页的行。
+    const hasRequested = ref(false)
 
     // Effective data source: 内部 tableData 优先（接口请求的数据），
     // 兼容父组件不使用 .sync 但又希望看到接口拉取数据的场景。
@@ -459,7 +462,7 @@ export default defineComponent({
         const start = (cur - 1) * size
         return src.slice(start, start + size)
       }
-      if (tableData.value && tableData.value.length) return tableData.value
+      if (tableData.value.length || hasRequested.value) return tableData.value
       return props.dataSource
     })
     const columnRowList = ref<TableColumn[]>([...props.columns])
@@ -1069,6 +1072,7 @@ export default defineComponent({
       if (Array.isArray(row)) {
         if (keyList.includes('tableData')) {
           tableData.value = row as Record<string, unknown>[]
+          hasRequested.value = true
           if (keyList.includes('total')) {
             paginationConfig.value = { ...paginationConfig.value, total: row.length }
             showPagination.value = true
@@ -1088,6 +1092,7 @@ export default defineComponent({
           const rowData = row[value as string] ?? findValueByKey(row, value as string)
           if (key === 'tableData') {
             tableData.value = Array.isArray(rowData) ? rowData : []
+            hasRequested.value = true
           } else {
             paginationPatch[key] =
               typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0

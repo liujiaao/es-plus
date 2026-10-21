@@ -201,3 +201,28 @@ describe('adaptColumn — 对齐默认值与列身份确定性（三端同构）
     expect(child.key).toBe('col_0_0')
   })
 })
+
+// ─── 嵌套字段路径 ───────────────────────────────────────────────────────────
+// a-table 的 dataIndex 字符串按**字面键**取值（'user.name' 会被当成名为 user.name 的
+// 顶层键），嵌套字段必须传数组路径；而 el-table / vxe 都原生支持点号路径。修前同一
+// 份 `prop:'user.name'` 配置在 vue3/vue2 有值、在 antdv 渲染空单元格。
+describe('adaptColumn — 嵌套 prop 路径', () => {
+  it('user.name → dataIndex [user, name]（key 保持原字符串）', () => {
+    const result = adaptColumn({ prop: 'user.name', label: '姓名' })
+    expect(result.dataIndex).toEqual(['user', 'name'])
+    expect(result.key).toBe('user.name')
+  })
+
+  it('分组子列同样转数组路径', () => {
+    const result = adaptColumn({
+      label: '用户',
+      groups: [{ prop: 'user.dept.name', label: '部门' }],
+    })
+    const child = (result.children as Record<string, unknown>[])[0]
+    expect(child.dataIndex).toEqual(['user', 'dept', 'name'])
+  })
+
+  it('无点号的 prop 保持字符串', () => {
+    expect(adaptColumn({ prop: 'name', label: '姓名' }).dataIndex).toBe('name')
+  })
+})

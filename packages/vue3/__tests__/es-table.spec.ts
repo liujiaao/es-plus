@@ -869,3 +869,25 @@ describe('EsTable - AN-11⑥ virtual 引擎 row-click', () => {
     expect(onRowClick.mock.calls[0][0]).toEqual({ id: 1 })
   })
 })
+
+// ─── 请求模式：空页不回显父级旧 dataSource ─────────────────────────────────
+// 修前 `displayDataSource` 是 `tableData.length ? tableData : props.dataSource`：
+// 请求已返回空页（tableData=[]）时回落父级旧数据 → 用户删到 0 条仍看到上一页的行。
+// 正确语义：只要请求模式已返回过响应，tableData 就是唯一真相（空也是真相）。
+describe('EsTable — 请求模式空页', () => {
+  it('请求返回空页时不回显父级旧 dataSource', async () => {
+    const mockRequest = vi.fn().mockResolvedValue({ total: 0, size: 10, page: 1, list: [] })
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      columns: defaultColumns,
+      options: {
+        httpRequest: mockRequest,
+        apiParams: { url: '/api/list' },
+        configTableOut: { total: 'total', pageSize: 'size', current: 'page', tableData: 'list' },
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 0 },
+    })
+    await flushPromises()
+    expect((wrapper.vm as any).displayDataSource).toHaveLength(0)
+  })
+})

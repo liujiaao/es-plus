@@ -166,6 +166,12 @@ export const createCommand = new Command("create")
       }
       const pageName = name || toKebabCase(config.name);
 
+      // README 契约：`--from-config` 与 `--ai` 都默认 TypeScript。`--ai` 路径经
+      // StructuredCrudConfigSchema 解析吃到 `typescript: true` 默认值；本路径只做校验、
+      // 不 parse（避免其他 `.default()` 改写配置语义），必须在此补同一条默认 —— 否则
+      // 同一份配置换条 CLI 路径就产出不同语言（修前这里是 undefined → JS）。
+      if ((config as any).typescript === undefined) (config as any).typescript = true;
+
       console.log(pc.cyan(`\n⏳ 正在从结构化配置生成 (${config.mode || 'schema'} 模式, target=${config.target})...`));
 
       await emitFromStructuredConfig(config, pageName, options.output, !!options.force);

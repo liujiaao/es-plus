@@ -907,3 +907,28 @@ describe('EsTable — AN-11⑥ row-click → customRow', () => {
     expect((wrapper.vm as any).currentRowKey).toBe('1')
   })
 })
+
+// ─── 请求模式：空页不回显父级旧 dataSource ─────────────────────────────────
+describe('EsTable(antdv) — 请求模式空页', () => {
+  it('请求返回空页时不回显父级旧 dataSource', async () => {
+    const httpRequest = vi.fn().mockResolvedValue({ total: 0, size: 10, page: 1, list: [] })
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [{ id: '1', name: '旧数据' }],
+        columns: [{ prop: 'id', label: 'ID' }, { prop: 'name', label: '姓名' }],
+        options: {
+          httpRequest,
+          apiParams: { url: '/api/list' },
+          configTableOut: { total: 'total', pageSize: 'size', current: 'page', tableData: 'list' },
+          isInitRun: false,
+        } as any,
+        pagination: { pageSize: 10 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    await vm.httpRequestInstance()
+    await nextTick()
+    expect(vm.displayDataSource).toHaveLength(0)
+  })
+})

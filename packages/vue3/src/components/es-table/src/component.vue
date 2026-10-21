@@ -239,6 +239,9 @@ const paginationRef = ref<HTMLElement | null>(null)
 const tableContainerRef = ref<HTMLElement | null>(null)
 const tableId = ref(`table_${Math.random().toString(36).substring(2, 12)}`)
 const tableData = ref<Record<string, unknown>[]>([])
+// 请求模式是否已拿到过响应：一旦为 true，tableData 就是渲染唯一真相 ——
+// 否则请求返回空页（tableData=[]）会回落父级旧 dataSource，删空后仍显示上一页的行。
+const hasRequested = ref(false)
 const columnRowList = ref<TableColumn[]>([...props.columns])
 
 watch(
@@ -410,7 +413,7 @@ const displayDataSource = computed(() => {
     const start = (cur - 1) * size
     return src.slice(start, start + size)
   }
-  return tableData.value.length ? tableData.value : props.dataSource
+  return tableData.value.length || hasRequested.value ? tableData.value : props.dataSource
 })
 // 依据全量 dataSource 回填 total/showPagination + 边界回收（当前页超范围则回退）。
 const syncLocalPagination = () => {
@@ -751,6 +754,7 @@ const formatConfigOut = (row: Record<string, unknown> | unknown[], keyList: stri
   if (Array.isArray(row)) {
     if (keyList.includes('tableData')) {
       tableData.value = row as Record<string, unknown>[]
+      hasRequested.value = true
       if (keyList.includes('total')) {
         paginationConfig.value.total = row.length
         showPagination.value = true
@@ -766,6 +770,7 @@ const formatConfigOut = (row: Record<string, unknown> | unknown[], keyList: stri
       const rowData = row[value as string] ?? findValueByKey(row, value as string)
       if (key === 'tableData') {
         tableData.value = Array.isArray(rowData) ? rowData : []
+        hasRequested.value = true
       } else {
         ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
         // 服务端返回了 configTableOut 映射的 total 字段，即表示该表启用了服务端分页，

@@ -57,17 +57,18 @@ export function useVxeColumnAdapter(
       if (col.type === 'selection') {
         cols.push({
           type: 'checkbox',
-          width: typeof col.width === 'number' ? col.width : 50,
-          fixed: col.fixed === true ? 'left' : (col.fixed as 'left' | 'right') || 'left',
-          align: 'center',
+          width: leadingWidth(col, 50),
+          fixed: leadingFixed(col, 'left'),
+          align: leadingAlign(col),
           ...((col as any).vxeColumn || {}),
         })
       } else if (col.type === 'index') {
         cols.push({
           type: 'seq',
           title: resolveTitle(col, t),
-          width: typeof col.width === 'number' ? col.width : 60,
-          align: 'center',
+          width: leadingWidth(col, 60),
+          fixed: leadingFixed(col),
+          align: leadingAlign(col),
           ...((col as any).vxeColumn || {}),
         })
       } else if (col.type === 'expand') {
@@ -79,9 +80,9 @@ export function useVxeColumnAdapter(
         cols.push({
           type: 'expand',
           title: resolveTitle(col, t),
-          width: typeof col.width === 'number' ? col.width : 50,
-          fixed: 'left',
-          align: 'center',
+          width: leadingWidth(col, 50),
+          fixed: leadingFixed(col, 'left'),
+          align: leadingAlign(col),
           slots: { content: expandContentSlot },
           ...((col as any).vxeColumn || {}),
         })
@@ -113,6 +114,23 @@ export function useVxeColumnAdapter(
 function resolveTitle(col: TableColumn, t?: (key: string) => string): string {
   if (col.labelKey && t) return t(col.labelKey as string)
   return (col.label || '') as string
+}
+
+// ─── 显式前导列（selection / index / expand）的字段解析 ─────────────────────
+// 与 vue3 / vue2 同一规则：用户配置优先，未配置才回落到引擎默认。
+function leadingWidth(col: TableColumn, fallback: number): number | string {
+  const w = col.width as unknown
+  return w === undefined || w === null || w === '' ? fallback : (w as number | string)
+}
+
+function leadingFixed(col: TableColumn, fallback?: 'left'): 'left' | 'right' | undefined {
+  if (col.fixed === true) return 'left'
+  if (col.fixed === false) return undefined
+  return (col.fixed as 'left' | 'right' | undefined) || fallback
+}
+
+function leadingAlign(col: TableColumn): 'left' | 'center' | 'right' {
+  return ((col.align as 'left' | 'center' | 'right') || 'center')
 }
 
 function adaptSingleCol(

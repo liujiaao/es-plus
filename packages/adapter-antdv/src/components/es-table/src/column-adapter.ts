@@ -28,7 +28,14 @@ export function adaptColumn(
     return advCol
   }
 
-  advCol.dataIndex = col.prop || col.key
+  // a-table 的 `dataIndex` 字符串按**字面键**取值（'user.name' 会被当成顶层键
+  // 'user.name'），嵌套字段必须传数组路径；el-table / vxe 都原生支持点号路径。
+  // 不转换的话，同一份 prop:'user.name' 在 vue3/vue2 有值、在 antdv 渲染空单元格。
+  const boundKey = col.prop || col.key
+  advCol.dataIndex =
+    typeof boundKey === 'string' && boundKey.indexOf('.') > 0
+      ? boundKey.split('.')
+      : boundKey
   // key 兜底必须是**确定性**的：此前用 Math.random()，导致既无 key 又无 prop 的列
   // 每次重算（computed 重新求值）都拿到新身份，使 a-table 的列状态（排序/筛选/列宽）
   // 与快照失稳。改用调用方传入的位置路径。

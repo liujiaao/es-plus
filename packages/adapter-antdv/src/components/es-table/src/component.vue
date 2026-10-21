@@ -270,6 +270,9 @@ const headBarRef = ref<HTMLElement | null>(null)
 const paginationRef = ref<HTMLElement | null>(null)
 const tableContainerRef = ref<HTMLElement | null>(null)
 const tableData = ref<Record<string, unknown>[]>([])
+// 请求模式是否已拿到过响应：一旦为 true，tableData 就是渲染唯一真相 ——
+// 否则请求返回空页（tableData=[]）会回落父级旧 dataSource，删空后仍显示上一页的行。
+const hasRequested = ref(false)
 const columnRowList = ref<TableColumn[]>([...props.columns])
 const loadingStatus = ref(false)
 // 请求序号（递增 ticket）：每次 queryTableListMethod 调用自增，只有最新序号的结果被采纳。
@@ -414,7 +417,7 @@ const displayDataSource = computed(() => {
     const start = (cur - 1) * size
     return src.slice(start, start + size)
   }
-  return tableData.value.length ? tableData.value : props.dataSource
+  return tableData.value.length || hasRequested.value ? tableData.value : props.dataSource
 })
 // 依据全量 dataSource 回填 total + 边界回收（当前页超范围则回退到最后有效页）。
 const syncLocalPagination = () => {
@@ -656,7 +659,7 @@ const adaptedColumns = computed(() => {
   // 的列凭空可点，反而与 vue3/vue2 不一致）。
   const ds = props.options.defaultSort
   if (ds && ds.prop) {
-    const target = cols.find((c) => c.dataIndex === ds.prop)
+    const target = cols.find((c) => columnBoundPath(c) === ds.prop)
     if (target && target.sorter) {
       target.defaultSortOrder = ds.order === 'descending' ? 'descend' : 'ascend'
     }
@@ -686,10 +689,10 @@ const adaptedColumns = computed(() => {
   if (mergeCfg) {
     const rows = displayDataSource.value as Record<string, unknown>[]
     for (const c of cols) {
-      const prop = (c.dataIndex ?? c.key) as string | undefined
+      const prop = columnBoundPath(c)
       if (!prop || !mergeCfg.rowsBy.includes(prop)) continue
       if (typeof c.customCell === 'function') continue
-      const spans = buildColumnSpans(rows.map((r) => (r == null ? undefined : r[prop])))
+      const spans = buildColumnSpans(rows.map((r) => (r == null ? undefined : readColumnValue(r, prop))))
       c.customCell = (_record: unknown, rowIndex: number) => ({
         rowSpan: spans[rowIndex] === undefined ? 1 : spans[rowIndex],
         colSpan: 1,
@@ -862,6 +865,24 @@ const getColumnDataIndex = (column: any) => getColumnEsCol(column)?.prop || colu
 const getColumnScopedSlot = (column: any) => getColumnEsCol(column)?.scopedSlots?.customRender
 const getColumnScopedSlotName = (column: any): string | undefined => getColumnScopedSlot(column)
 
+/**
+ * 列的绑定路径（点号标量）：原始 prop 优先；a-table 的 dataIndex 可能是数组路径
+ * （嵌套字段），join 回点号后与 defaultSort / mergeConfig 里的 prop 可比。
+ */
+function columnBoundPath(column: any): string | undefined {
+  const esProp = column?._esCol?.prop
+  if (typeof esProp === 'string' && esProp) return esProp
+  const di = column?.dataIndex
+  if (Array.isArray(di)) return di.join('.')
+  return typeof di === 'string' ? di : undefined
+}
+
+/** 按点号路径读行值（与 el-table / vxe 的嵌套字段取值语义一致）。 */
+function readColumnValue(row: Record<string, unknown>, path: string): unknown {
+  if (path.indexOf('.') < 0) return row[path]
+  return path.split('.').reduce<any>((acc, key) => (acc == null ? undefined : acc[key]), row)
+}
+
 function getOperateBtns(column: any, row: Record<string, unknown>): any[] {
   const esCol = (column as any)?._esCol || {}
   const sourceBtns = esCol.btns
@@ -916,6 +937,7 @@ function formatConfigOut(row: Record<string, unknown> | unknown[], keyList: stri
   if (Array.isArray(row)) {
     if (keyList.includes('tableData')) {
       tableData.value = row as Record<string, unknown>[]
+      hasRequested.value = true
       if (keyList.includes('total')) {
         paginationConfig.value.total = row.length
       }
@@ -928,6 +950,7 @@ function formatConfigOut(row: Record<string, unknown> | unknown[], keyList: stri
       const rowData = row[value as string] ?? findValueByKey(row, value as string)
       if (key === 'tableData') {
         tableData.value = Array.isArray(rowData) ? rowData : []
+        hasRequested.value = true
       } else {
         ;(paginationConfig.value as any)[key] = typeof rowData === 'number' ? rowData : parseInt(rowData as string, 10) || 0
       }

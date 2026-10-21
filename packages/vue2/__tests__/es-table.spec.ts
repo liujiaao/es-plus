@@ -463,3 +463,24 @@ describe('EsTable(vue2) — AN-10 省略号 / 默认排序', () => {
     expect(bind.defaultSort).toEqual({ prop: 'id', order: 'descending' })
   })
 })
+
+// ─── 请求模式：空页不回显父级旧 dataSource ─────────────────────────────────
+describe('EsTable(vue2) — 请求模式空页', () => {
+  it('请求返回空页时不回显父级旧 dataSource', async () => {
+    const httpRequest = vi.fn().mockResolvedValue({ total: 0, size: 10, page: 1, list: [] })
+    const vm = mountTable({
+      dataSource: [{ id: 1, name: '旧数据' }],
+      options: {
+        httpRequest,
+        apiParams: { url: '/api/list' },
+        configTableOut: { total: 'total', pageSize: 'size', current: 'page', tableData: 'list' },
+        isInitRun: false,
+      },
+    })
+    await vm.$nextTick()
+    const table = tableOf(vm)
+    await table.httpRequestInstance()
+    await vm.$nextTick()
+    expect(table.effectiveDataSource).toHaveLength(0)
+  })
+})

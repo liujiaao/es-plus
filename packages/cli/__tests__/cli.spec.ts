@@ -397,3 +397,63 @@ describe('create --from-config — 与 MCP 前门同一口径（修复环 + 权�
     }
   })
 })
+
+// ─── 默认语言：两条 CLI 路径一致 ─────────────────────────────────────────────
+// README 契约：`--from-config` 与 `--ai` 都默认 TypeScript。`--ai` 经 schema 解析吃到
+// `typescript: true` 默认值；`--from-config` 只校验不 parse（避免其他 default 改写语义），
+// 修前 `config.typescript` 是 undefined → 产物是 JS，同一份配置换条路径语言就变了。
+describe('create --from-config — typescript 默认值', () => {
+  it('配置未写 typescript 时默认生成 TypeScript（import type + lang="ts"）', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-cfg-ts-'))
+    const outDir = join(dir, 'out')
+    const cfgPath = join(dir, 'cfg.json')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      writeFileSync(cfgPath, JSON.stringify({
+        name: 'OrderManage',
+        apiUrl: '/api/orders',
+        fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+        actions: ['add'],
+        dialogs: { add: { title: '新增', formItems: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }] } },
+      }))
+      await createCommand.parseAsync([
+        'node', 'create', '--from-config', cfgPath, '-o', outDir, '--force'
+      ])
+      expect(process.exitCode ?? 0).toBe(0)
+      expect(readFileSync(join(outDir, 'schema.ts'), 'utf8')).toContain('import type { CrudPageSchema }')
+      expect(readFileSync(join(outDir, 'OrderManage.vue'), 'utf8')).toContain('lang="ts"')
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('显式 typescript:false 仍生成 JavaScript（默认值不覆盖用户意图）', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'esplus-cfg-js-'))
+    const outDir = join(dir, 'out')
+    const cfgPath = join(dir, 'cfg.json')
+    const prevExit = process.exitCode
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      writeFileSync(cfgPath, JSON.stringify({
+        name: 'OrderManage',
+        apiUrl: '/api/orders',
+        fields: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }],
+        actions: ['add'],
+        typescript: false,
+        dialogs: { add: { title: '新增', formItems: [{ prop: 'orderNo', label: '订单号', formtype: 'Input' }] } },
+      }))
+      await createCommand.parseAsync([
+        'node', 'create', '--from-config', cfgPath, '-o', outDir, '--force'
+      ])
+      expect(process.exitCode ?? 0).toBe(0)
+      expect(readFileSync(join(outDir, 'schema.ts'), 'utf8')).not.toContain('import type { CrudPageSchema }')
+    } finally {
+      logSpy.mockRestore()
+      process.exitCode = prevExit
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
