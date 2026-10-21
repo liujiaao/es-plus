@@ -42,7 +42,12 @@ const sha = (parts) => {
 export function corpusFingerprint(files, dir = CASES_DIR) {
   const parts = []
   for (const f of files) {
-    parts.push(f, readFileSync(join(dir, f)))
+    // 指纹要回答的是「语料内容变了吗」，不是「这份检出用 CRLF 还是 LF」。
+    // Windows（core.autocrlf=true）与 CI 的检出字节不同；不归一化的话同一份语料
+    // 会算出两个哈希，`check:artifact-freshness` 就把平台差异误报成「语料已变更」，
+    // 真实变更反而淹没在噪声里。LF 检出（CI）归一化后哈希不变。
+    const text = readFileSync(join(dir, f), 'utf8').replace(/\r\n/g, '\n')
+    parts.push(f, Buffer.from(text, 'utf8'))
   }
   return sha(parts)
 }

@@ -14,11 +14,13 @@
  * 与 eval 的分工：eval 用同一批函数比对**真跑产物**的比率；本文件比对**语料级计数**
  * 与合成数据的比率边界。两者共用 `ratchet.mjs`，不各自重实现。
  */
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
 import { CAPABILITY_SCORERS } from './scorers.mjs'
+import { corpusFingerprint } from './artifact.mjs'
 import { isCrudCase } from './scenes.mjs'
 import {
   CORE_FLOOR,
@@ -409,6 +411,29 @@ function checkFails(result, substr, label) {
   const legacy = src.replace('const gateRate = def95.rate ?? 0', 'const gateExact = exactHeldout ?? exact')
   const caught = !/gateExact/.test(legacy) ? false : !/const gateRate = def95\.rate \?\? 0/.test(legacy)
   check(caught, '自检：旧写法（core 当门禁）必须被这组断言咬住')
+}
+
+// ── 语料指纹跨平台稳定（Windows CRLF 检出 vs CI LF 检出） ──────────────────
+// 指纹进产物的 `corpusHash`，`check:artifact-freshness` 用它判断「语料变没变」。
+// 若同一份语料在两个平台上算出两个哈希，守卫就会把行尾差异误报成语料变更。
+{
+  const tmp = mkdtempSync(join(tmpdir(), 'esplus-corpus-'))
+  try {
+    mkdirSync(join(tmp, 'lf'))
+    mkdirSync(join(tmp, 'crlf'))
+    const body = '{\n  "cases": 1\n}\n'
+    writeFileSync(join(tmp, 'lf', 'a.json'), body)
+    writeFileSync(join(tmp, 'crlf', 'a.json'), body.replace(/\n/g, '\r\n'))
+    const lf = corpusFingerprint(['a.json'], join(tmp, 'lf'))
+    check(
+      corpusFingerprint(['a.json'], join(tmp, 'crlf')) === lf,
+      '语料指纹必须对行尾不敏感（Windows CRLF 与 CI LF 得到同一哈希）'
+    )
+    writeFileSync(join(tmp, 'crlf', 'a.json'), body.replace('1', '2'))
+    check(corpusFingerprint(['a.json'], join(tmp, 'crlf')) !== lf, '语料内容变化必须改变指纹')
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
 }
 
 if (failures) {
