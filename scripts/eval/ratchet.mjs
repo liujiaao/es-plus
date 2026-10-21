@@ -155,6 +155,15 @@ export function compareToBaseline(current, baseline, { tol = RATCHET_TOL } = {})
     }
   }
 
+  // 逐维基线同理：`{}` 会让下面的循环一次都不进 —— 看起来「逐维棘轮 all OK」，
+  // 实际一个维度都没比。空表与 null 一样必须可见（否则「防线已就绪」是错觉）。
+  const dimEntries = Object.entries(baseline.byDimension ?? {})
+  if (dimEntries.length === 0) {
+    warnings.push(
+      '基线 byDimension 为空 —— 逐维比率棘轮不生效；首次完整跑批后请按 byCapability 的 rate 填入'
+    )
+  }
+
   const cmp = (label, cur, base) => {
     if (typeof base !== 'number') return
     if (typeof cur !== 'number' || Number.isNaN(cur)) {
@@ -167,7 +176,7 @@ export function compareToBaseline(current, baseline, { tol = RATCHET_TOL } = {})
   cmp('definition95（∨）', current.definition95, baseline.definition95)
   cmp('coreRate', current.coreRate, baseline.coreRate)
 
-  for (const [dim, base] of Object.entries(baseline.byDimension ?? {})) {
+  for (const [dim, base] of dimEntries) {
     const cur = current.byDimension?.[dim]
     if (typeof cur !== 'number') {
       failures.push(`维度 ${dim} 在基线里有、本次缺席 —— 疑似删除了该 scorer 维度（或它不再被任何用例触发）`)

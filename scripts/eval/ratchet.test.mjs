@@ -22,6 +22,7 @@ import { StructuredCrudConfigSchema } from '@es-plus/shared'
 import { CAPABILITY_SCORERS } from './scorers.mjs'
 import { corpusFingerprint } from './artifact.mjs'
 import { isCrudCase } from './scenes.mjs'
+import { FEWSHOT_DERIVED } from './fewshot-derived.mjs'
 import {
   CORE_FLOOR,
   HELDOUT_FLOOR,
@@ -130,6 +131,26 @@ function checkFails(result, substr, label) {
   const boot = compareToBaseline({ definition95: 0, coreRate: 0, byDimension: {} }, null)
   check(boot.ok, '棘轮：无基线应跳过而非误红')
   check(boot.warnings.length > 0, '棘轮：无基线应给出 warn（不许静默）')
+
+  // 「基线存在但比率为 null / 逐维为空」也必须可见：这类基线下 cmp 全部直接 return、
+  // 逐维循环一次不进 —— 结论是绿，但一个数都没比过。此前没有任何提示（"all OK" 是错觉）。
+  const inert = compareToBaseline(
+    { definition95: 0.5, coreRate: 0.5, byDimension: {} },
+    { definition95: null, coreRate: null, byDimension: {} }
+  )
+  check(inert.ok, '棘轮：惰性基线（null 比率）不得判红 —— 首次跑批前确实没有真值')
+  check(
+    inert.warnings.some((w) => w.includes('基线未填 definition95')),
+    `棘轮：基线 definition95 为 null 时必须提示「未填」，实际 = ${JSON.stringify(inert.warnings)}`
+  )
+  check(
+    inert.warnings.some((w) => w.includes('基线未填 coreRate')),
+    `棘轮：基线 coreRate 为 null 时必须提示「未填」，实际 = ${JSON.stringify(inert.warnings)}`
+  )
+  check(
+    inert.warnings.some((w) => w.includes('byDimension 为空')),
+    `棘轮：逐维基线为空时必须提示「不生效」，实际 = ${JSON.stringify(inert.warnings)}`
+  )
 }
 
 // ─── ⑤ 防删难例（合成） ─────────────────────────────────────────────
@@ -163,9 +184,11 @@ function checkFails(result, substr, label) {
 // ─── 真实语料上的防删守卫（离线，不需要付费跑） ─────────────────────────
 {
   const golds = []
+  const crudFiles = []
   for (const f of readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()) {
     const raw = JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8'))
     if (!isCrudCase(raw)) continue
+    crudFiles.push(f)
     golds.push(StructuredCrudConfigSchema.parse(raw.config))
   }
   const counts = applicableCountsFromCases(golds, CAPABILITY_SCORERS)
@@ -176,6 +199,21 @@ function checkFails(result, substr, label) {
   // 漂移提示必须进测试输出（AN-04）：语料跨越 ±10% 时，红/绿之外还要让人看见
   // 「基线该更新了」。只写进返回值等于没写 —— check:ratchet 是唯一会跑这段的入口。
   for (const w of r.warnings) console.warn(`[ratchet] ⚠️  ${w}`)
+
+  // AN-04 v2：基线必须带 version / heldoutCases —— 二者曾是无人的死字段。
+  // `heldoutCases` 是公开的**语料规模**声明（README/站点引用它），必须与语料实际一致：
+  // 216 条 crud − 22 条 few-shot 派生 = 194 条 heldout。若只把它当注释，语料缩水时
+  // 文案会继续宣称旧规模；这里让它在每次 PR 上咬人。
+  check(
+    Number.isInteger(baseline.version) && baseline.version >= 3,
+    `accuracy-baseline.json 的 version 必须是整数且 ≥3（AN-04 v2），实际 = ${JSON.stringify(baseline.version)}`
+  )
+  const heldoutCount = crudFiles.filter((f) => !FEWSHOT_DERIVED.has(f)).length
+  check(
+    baseline.heldoutCases === heldoutCount,
+    `accuracy-baseline.json 的 heldoutCases=${baseline.heldoutCases} 与语料实际 heldout ` +
+      `${heldoutCount}（crud ${crudFiles.length} − few-shot 派生）不符 —— 语料规模变了就要同步基线`
+  )
 
   // 语料级计数必须覆盖基线声明的**每一维**（缺一维即为该维零语料/被删）
   const missing = Object.keys(baseline.applicableCounts ?? {}).filter((k) => counts[k] === undefined)

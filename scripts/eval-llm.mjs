@@ -168,7 +168,19 @@ const PRD_ONLY = process.argv.includes('--prd')
  * 它强制探针模式（不写产物），不允许把诊断口径当成绩。
  */
 const USE_FIXED_FIELDS = process.argv.includes('--fixed-fields')
-const PROBE = LIMIT !== null || FRAGMENT_ONLY || PRD_ONLY || USE_FIXED_FIELDS
+/**
+ * `ESPLUS_FRAG_ONLY=…` = **片段调试子集**（见下方片段语料执行处）。
+ *
+ * 它只裁片段语料，CRUD 照跑全量 —— 若不进 `PROBE`，一次「只看 2 条片段用例」的调试运行
+ * 会照常写出 `last-accuracy.json`，而 `fragments` 块的 scoped/compile 数字来自子集：
+ * 产物自称全量、片段腿却只测了 2 条（且 AN-18 后片段腿已进门禁）。故与 `--limit` 同语义，
+ * 必须在脚本入口就固定成探针（env 解析放在这里，而不是使用点，否则 PROBE 看不到它）。
+ */
+const FRAG_ONLY = (process.env.ESPLUS_FRAG_ONLY || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+const PROBE = LIMIT !== null || FRAGMENT_ONLY || PRD_ONLY || USE_FIXED_FIELDS || FRAG_ONLY.length > 0
 
 function skip(msg) {
   if (REQUIRE_KEY) {
@@ -518,16 +530,12 @@ async function main() {
   // 校验器是宿主 `tools/call` 用的同一份 zod3 shape（含默认值填充），
   // 产物再喂真生成器做编译见证。分数只进 `fragments` 块，不参与 gate / 徽章。
   // 调试子集：`ESPLUS_FRAG_ONLY=frag-form-05-vue3,frag-table-03-vue3` 只跑指定用例。
-  // 与 `--limit` 同理是**探针**（不写产物、不参与门禁），用于单案例诊断；
-  // 打一行显式日志，避免把子集数字误读成全量成绩。
-  const fragOnly = (process.env.ESPLUS_FRAG_ONLY || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-  if (fragOnly.length) {
-    const kept = fragmentCases.filter((c) => fragOnly.includes(c.file.replace(/\.json$/, '')))
+  // 与 `--limit` 同理是**探针**（不写产物、不参与门禁 —— 已在入口处并入 PROBE），
+  // 用于单案例诊断；打一行显式日志，避免把子集数字误读成全量成绩。
+  if (FRAG_ONLY.length) {
+    const kept = fragmentCases.filter((c) => FRAG_ONLY.includes(c.file.replace(/\.json$/, '')))
     if (!kept.length) {
-      console.error(`[probe] ESPLUS_FRAG_ONLY 没有匹配到任何用例：${fragOnly.join(', ')}`)
+      console.error(`[probe] ESPLUS_FRAG_ONLY 没有匹配到任何用例：${FRAG_ONLY.join(', ')}`)
     } else {
       console.log(
         `[probe] 调试子集：只跑 ${kept.length}/${fragmentCases.length} 条（${kept
@@ -1367,7 +1375,17 @@ async function main() {
     console.error('\n  [guard] REGRESSION GUARDS FAILED:')
     for (const f of guards.failures) console.error(`    ✗ ${f}`)
   } else {
-    console.log(`\n  [guard] core floor / heldout size / rate ratchet / anti-delete: all OK`)
+    // 比率棘轮在基线比率为 null 时**整段跳过**（cmp 遇非数字直接 return）。此前这里一律打印
+    // "... rate ratchet ... all OK"，把「没在比」说成了「比过了」。基线未填时如实打 SKIPPED
+    // （上方 [guard] note 已说明哪几项未填、怎么填）。
+    const rateRatchetActive =
+      !!baseline && (typeof baseline.definition95 === 'number' || typeof baseline.coreRate === 'number')
+    console.log(
+      `\n  [guard] core floor / heldout size / anti-delete: all OK` +
+        (rateRatchetActive
+          ? ' · rate ratchet: all OK'
+          : ' · rate ratchet: SKIPPED（基线 definition95/coreRate 为 null，棘轮未生效）')
+    )
   }
 
   // Persist the last measured accuracy so a badge/dashboard has a source of

@@ -539,6 +539,7 @@ __tests__/golden/cases/
 | `check:site-claims` | 公开声明（目标 / 当前徽章 / 语料规模与 artifact 绑定，AN-27） |
 | `check:tool-surface` | 唯一 FRONT DOOR + profile 两档工具集合（AN-26） |
 | `check:scorers` / `check:ratchet` | 评分器 / 棘轮 |
+| `check:artifact-self` | 产物自证判据的 meta-eval（完整测量必须自带门禁分 + 收敛样本 ≥30；徽章与产物双向对齐） |
 
 完整命令见根 [package.json](../../package.json) 的 `check:*`。
 

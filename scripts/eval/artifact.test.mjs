@@ -1,0 +1,199 @@
+#!/usr/bin/env node
+/**
+ * 产物自证（`verifyArtifact`）的 meta-eval —— 无需 API key，进 CI 的 check:consistency。
+ *
+ * 为什么需要它：`check:artifact-freshness` 只拿**仓库里当前那一份**产物跑一遍。若判据本身
+ * 被悄悄放宽（例如 `definition95` 缺失时直接跳过、徽章 message 解析失败就 `continue`），
+ * 那份真产物照样绿 —— 守卫的失效不会被它自己的绿光照亮。这里用合成产物 + 临时徽章把
+ * 每条判据打穿：
+ *
+ *   · **完整测量必须自带门禁分**：`measurement: complete` 却不能提供 `definition95`
+ *     ⟹ 红（手改 / 写入方漏字段都长这样）。
+ *   · **收敛腿样本地板**：95% 定义 = scoped ∨ ≤K 轮收敛；收敛语料只有 5 条时「第二条腿」
+ *     只是噪声，产物不得自称完整测量。
+ *   · **徽章（公开发布面）双向对齐**：畸形 message、灰度徽章配真实分数、数字徽章配无分数
+ *     的产物，三种漂移都必须红 —— 此前它们被静默跳过。
+ *
+ * 徽章路径经 `ctx.badgeFiles` 注入临时文件：判据行为不该由仓库里那一对徽章的当前状态决定。
+ */
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { verifyArtifact } from './artifact.mjs'
+
+let checks = 0
+const failures = []
+function check(cond, msg) {
+  checks++
+  if (cond) return
+  failures.push(msg)
+  console.error(`  ✗ ${msg}`)
+}
+/** 断言某次判定**红了**且消息命中预期子串（只断「红了」会掩盖报错跑偏）。 */
+function checkFails(result, substr, label) {
+  check(result.failures.length > 0, `${label}: 应当判红，实际通过`)
+  check(
+    result.failures.some((m) => m.includes(substr)),
+    `${label}: 报错未命中预期子串 ${JSON.stringify(substr)}；实际 = ${JSON.stringify(result.failures)}`
+  )
+}
+const clean = (result) => result.failures.length === 0
+
+const tmp = mkdtempSync(join(tmpdir(), 'esplus-artifact-'))
+let badgeSeq = 0
+/** 写一个临时徽章文件，返回 [路径, 取值器]（取值器默认读 definition95.rate）。 */
+function badgeFile(obj, pick = (a) => a.definition95?.rate) {
+  const p = join(tmp, `badge-${badgeSeq++}.json`)
+  writeFileSync(p, JSON.stringify(obj))
+  return [p, pick]
+}
+
+/** 一条结构完整的「完整测量」产物（各用例在其上做单点变异）。 */
+const complete = (over = {}) => ({
+  commit: 'deadbeef',
+  runId: 'run-1',
+  artifactSource: 'nightly',
+  corpusHash: 'hash-1',
+  corpusFiles: 216,
+  fixedFieldsUsed: false,
+  measurement: 'complete',
+  definition95: { k: 3, source: 'heldout', rate: 0.96, pass: 96, total: 100 },
+  convergence: { k: 3, total: 40, rateAtK: 0.6 },
+  attributeAccuracy: 0.99,
+  attributeRows: 100,
+  ...over,
+})
+
+// ─── 结构：完整测量必须自带 definition95 与收敛腿 ─────────────────────────
+{
+  check(clean(verifyArtifact(complete(), { badgeFiles: [] })), '完整测量（合格形状）必须判过')
+
+  const noD95 = complete()
+  delete noD95.definition95
+  checkFails(verifyArtifact(noD95, { badgeFiles: [] }), '缺少 definition95 块', '完整测量缺 definition95')
+
+  const noConv = complete()
+  delete noConv.convergence
+  checkFails(verifyArtifact(noConv, { badgeFiles: [] }), '缺少 convergence 块', '完整测量缺 convergence')
+
+  checkFails(
+    verifyArtifact(complete({ convergence: { total: 5 } }), { badgeFiles: [] }),
+    '低于地板 30',
+    '收敛腿样本 5 条（AN-02 之前的真实状态）必须判红'
+  )
+  checkFails(
+    verifyArtifact(complete({ convergence: { total: '40' } }), { badgeFiles: [] }),
+    '低于地板 30',
+    '收敛腿样本非整数必须判红（不能把字符串当真值）'
+  )
+  check(
+    clean(verifyArtifact(complete({ convergence: { total: 30 } }), { badgeFiles: [] })),
+    '收敛腿样本恰等于地板 30 应判过'
+  )
+
+  // 门禁腿完整、观测腿残缺：同一套要求（门禁数字仍必须可核对）。
+  check(
+    clean(verifyArtifact(complete({ measurement: 'complete-gated-leg-only' }), { badgeFiles: [] })),
+    'complete-gated-leg-only（合格形状）必须判过'
+  )
+  checkFails(
+    verifyArtifact(complete({ measurement: 'complete-gated-leg-only', convergence: { total: 5 } }), {
+      badgeFiles: [],
+    }),
+    '低于地板 30',
+    'complete-gated-leg-only 同样受收敛样本地板约束'
+  )
+
+  // 失败产物**不**要求分数：那正是「没测到」的形状。
+  check(
+    clean(
+      verifyArtifact(
+        {
+          commit: 'deadbeef',
+          runId: 'run-2',
+          artifactSource: 'nightly',
+          corpusHash: 'hash-1',
+          corpusFiles: 216,
+          fixedFieldsUsed: false,
+          measurement: 'failed',
+          failures: ['health gate'],
+          passed: false,
+        },
+        { badgeFiles: [] }
+      )
+    ),
+    'measurement=failed 但带 failures[] 的产物必须判过（不要求分数）'
+  )
+  checkFails(
+    verifyArtifact(complete({ measurement: 'failed' }), { badgeFiles: [] }),
+    '缺少 `failures[]`',
+    'measurement=failed 但缺 failures[] 必须判红'
+  )
+}
+
+// ─── 徽章与产物双向对齐（公开发布面） ─────────────────────────────────────
+{
+  check(
+    clean(verifyArtifact(complete(), { badgeFiles: [badgeFile({ message: '96.0%' })] })),
+    '徽章数字与产物一致（1 位小数四舍五入）应判过'
+  )
+  checkFails(
+    verifyArtifact(complete(), { badgeFiles: [badgeFile({ message: '95.0%' })] }),
+    '产物是 96.0%',
+    '徽章数字与产物不符必须判红'
+  )
+  checkFails(
+    verifyArtifact(complete(), { badgeFiles: [badgeFile({ message: 'pending' })] }),
+    '既不是百分比也不是灰度占位',
+    '畸形徽章 message 必须判红（此前被静默跳过）'
+  )
+  checkFails(
+    verifyArtifact(complete(), { badgeFiles: [badgeFile({ message: 96 })] }),
+    '既不是百分比也不是灰度占位',
+    '非字符串 message 同样必须判红'
+  )
+  checkFails(
+    verifyArtifact(complete(), { badgeFiles: [badgeFile({ message: 'measurement failed' })] }),
+    '仍写着 measurement failed',
+    '产物有分数而徽章仍是灰度，必须判红（发布面落后于产物）'
+  )
+  check(
+    clean(
+      verifyArtifact(
+        { ...complete(), measurement: 'failed', failures: ['x'], definition95: undefined },
+        { badgeFiles: [badgeFile({ message: 'measurement failed' })] }
+      )
+    ),
+    '失败产物 + 灰度徽章应判过'
+  )
+  checkFails(
+    verifyArtifact(
+      { ...complete(), measurement: 'failed', failures: ['x'], definition95: undefined },
+      { badgeFiles: [badgeFile({ message: '96.0%' })] }
+    ),
+    '产物没有对应分数',
+    '徽章有数字而产物没分数，必须判红（公开面不得先于测量）'
+  )
+  // 片段/ scoped 徽章走各自的取值器，不是复用 definition95。
+  check(
+    clean(
+      verifyArtifact(complete({ inSchemaIntentScoped: 0.85 }), {
+        badgeFiles: [badgeFile({ message: '85.0%' }, (a) => a.inSchemaIntentScoped)],
+      })
+    ),
+    'scoped 徽章按自身取值器比对'
+  )
+  // 徽章文件缺失不是失败（失败产物可能只写灰度；文件本身也可能尚未生成）。
+  check(
+    clean(verifyArtifact(complete(), { badgeFiles: [[join(tmp, 'does-not-exist.json'), (a) => a.definition95?.rate]] })),
+    '徽章文件缺失时跳过徽章判据（不判红）'
+  )
+}
+
+rmSync(tmp, { recursive: true, force: true })
+
+if (failures.length) {
+  console.error(`\nartifact meta-eval FAILED: ${failures.length}/${checks} 处断言未过`)
+  process.exit(1)
+}
+console.log(`artifact meta-eval OK — ${checks} 条判据全部咬得住（完整测量自证 + 徽章双向对齐）。✔`)

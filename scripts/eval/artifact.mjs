@@ -18,6 +18,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// 收敛腿样本地板：与 eval 的守卫共用同一个常量（写死第二份必然漂移）。
+import { CONVERGE_SAMPLE_FLOOR } from './ratchet.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
@@ -105,6 +107,8 @@ export const REQUIRED_IDENTITY_KEYS = [
  * @param {string|null} [ctx.headCommit]  当前 HEAD
  * @param {string|null} [ctx.corpusHash]  当前语料指纹
  * @param {number} [ctx.target]           门禁目标（默认 0.95）
+ * @param {Array<[string, (a:object)=>unknown]>} [ctx.badgeFiles]
+ *        徽章文件与取值器（默认仓库内那对；仅供单测注入临时文件）
  */
 export function verifyArtifact(artifact, ctx = {}) {
   const failures = []
@@ -250,6 +254,24 @@ export function verifyArtifact(artifact, ctx = {}) {
     }
   }
   if (measurement === 'complete' || measurement === 'complete-gated-leg-only') {
+    // 「完整测量」是一句**强声明**：它说门禁腿一条不缺。于是门禁数字本身必须存在 ——
+    // 否则产物自称完整、却拿不出可核对的分母/分子（手改、字段被删、写入方漏字段都长这样）。
+    if (!d95 || typeof d95 !== 'object') {
+      failures.push(`measurement=${measurement} 但产物缺少 definition95 块 —— 门禁数字无从核对`)
+    }
+    // 95% 定义 = scoped ∨ ≤K 轮收敛。收敛腿样本不足时那个 OR 实际只剩第一条腿，
+    // 「完整测量」就不再成立（AN-02：<CONVERGE_SAMPLE_FLOOR 条时比率落在单例噪声上）。
+    // eval 侧已有同一判据（checkConvergenceSample 进 guards），此处让**产物自身**也自证 ——
+    // 否则一份绕过 guards 写出/手改的产物会把 5/5 的收敛率当完整成绩发布。
+    const conv = artifact.convergence
+    if (!conv || typeof conv !== 'object') {
+      failures.push(`measurement=${measurement} 但缺少 convergence 块 —— 95% 定义的第二条腿无法核对`)
+    } else if (!Number.isInteger(conv.total) || conv.total < CONVERGE_SAMPLE_FLOOR) {
+      failures.push(
+        `收敛腿样本 total=${conv.total} 低于地板 ${CONVERGE_SAMPLE_FLOOR} —— ` +
+          `第二条腿的比率会落在单例噪声上，不构成完整测量`
+      )
+    }
     if (typeof artifact.passed === 'boolean' && d95 && typeof d95.rate === 'number') {
       // `passed` 还含 guards/frontDoor，故只能单方向校验：分数达标却标 passed=false 是可疑的，
       // 但 `passed=true` 而分数不达标则是**确定**的谎报。
@@ -263,23 +285,42 @@ export function verifyArtifact(artifact, ctx = {}) {
   }
 
   // ── 3. 徽章必须等于产物（徽章是公开发布面，最容易与产物分叉） ──
-  for (const [file, pick] of [
+  // 路径可经 `ctx.badgeFiles` 覆盖，仅为可测性：单测用临时徽章把每条判据打穿，
+  // 不依赖仓库里当前那一对（否则测试结果会被产物状态左右）。
+  const badgeTargets = ctx.badgeFiles ?? [
     [BADGE_FILE, (a) => a.definition95?.rate],
     [BADGE_SCOPED_FILE, (a) => a.inSchemaIntentScoped],
-  ]) {
+  ]
+  for (const [file, pick] of badgeTargets) {
     let badge = null
     try {
       badge = JSON.parse(readFileSync(file, 'utf8'))
     } catch {
       continue // 徽章缺失不算失败：失败产物写的是灰度徽章，由 measurement 判定。
     }
+    const name = file.split(/[\\/]/).pop()
     const rate = pick(artifact)
     const message = badge?.message
-    if (message === 'measurement failed') continue
-    // 比数值而非比字符串：产物存 4 位小数、徽章显示 1 位，边界值（x.x5）上字符串会假红。
+    // 灰度占位只能配「没有分数」的产物。若产物已有真实分数而徽章仍是灰的，说明公开发布面
+    // 落后于产物（读者看到「没测到」，仓库里却已有一个数字）—— 两个方向都必须对齐。
+    if (message === 'measurement failed') {
+      if (typeof rate === 'number') {
+        failures.push(`${name} 仍写着 measurement failed，但产物已有分数 ${(rate * 100).toFixed(1)}%`)
+      }
+      continue
+    }
+    // 徽章消息必须要么是百分比、要么是灰度占位。畸形消息（拼错、"pending"、手改成 "95"）
+    // 此前被静默跳过 —— 于是公开面可以与产物无关地漂移，而守卫全绿。
     const m = typeof message === 'string' ? /^(-?\d+(?:\.\d+)?)%$/.exec(message) : null
-    if (m && typeof rate === 'number' && Math.abs(Number(m[1]) - rate * 100) > 0.05) {
-      failures.push(`${file.split(/[\\/]/).pop()} 写着 ${message}，产物是 ${(rate * 100).toFixed(1)}%`)
+    if (!m) {
+      failures.push(`${name} 的 message=${JSON.stringify(message)} 既不是百分比也不是灰度占位 —— 无法与产物核对`)
+      continue
+    }
+    if (typeof rate !== 'number') {
+      failures.push(`${name} 写着 ${message}，但产物没有对应分数（测量失败或字段缺失）—— 公开面不得先于测量`)
+    } else if (Math.abs(Number(m[1]) - rate * 100) > 0.05) {
+      // 比数值而非比字符串：产物存 4 位小数、徽章显示 1 位，边界值（x.x5）上字符串会假红。
+      failures.push(`${name} 写着 ${message}，产物是 ${(rate * 100).toFixed(1)}%`)
     }
   }
 

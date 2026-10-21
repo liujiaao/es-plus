@@ -29,6 +29,9 @@ jobs:
   eval-llm:
     name: NL→config accuracy vs golden
     runs-on: ubuntu-latest
+    # 全量约 3h（中继 27–60 s/行 × 372 行）。上限 5h 只用来**兜住挂死**的中继：
+    # 没有它，一次卡住的请求会占满 GitHub 的 6h 默认上限，白烧 runner 且挡住后续夜间跑批。
+    timeout-minutes: 300
     # Needed only for the badge commit-back below; everything else is read-only.
     permissions:
       contents: write
@@ -45,8 +48,10 @@ jobs:
       - name: Build libs + component packages
         run: npm run build:components
       # Optional dep — installed only for this eval job, never a runtime dep.
+      # 锁版本：`npm install @anthropic-ai/sdk` 会随 npm 缓存在**不同夜**装到不同 minor，
+      # 中继一旦换协议/改返回值，夜间数字就会在「代码没动」的情况下漂移。评测口径必须可复现。
       - name: Install Anthropic SDK
-        run: npm install --no-save @anthropic-ai/sdk --legacy-peer-deps
+        run: npm install --no-save @anthropic-ai/sdk@0.137.0 --legacy-peer-deps
       - name: Run LLM accuracy eval
         id: eval
         env:
