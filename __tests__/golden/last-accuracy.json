@@ -1,23 +1,78 @@
 {
-  "measuredAt": "2026-10-20T08:38:20.848Z",
+  "commit": "f1f9c064d16a32acfeab1a5251aa01f5c2191208",
+  "runId": "39569942422",
+  "artifactSource": "ci",
+  "corpusHash": "8670f0554c3048c8",
+  "corpusFiles": 279,
+  "fixedFieldsUsed": false,
+  "measuredAt": "2026-10-21T08:42:51.572Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
   "measurement": "failed",
-  "reason": "measurement did not happen (or only partially happened) — NOT a low score. 376 row(s) unmeasured (no text block / truncated) and 0 row(s) where the model genuinely failed (those ARE scored, as 0). Unmeasured rows count as 0 in every denominator, so the surviving subset is selection-biased. See failures[] for the exact criteria that rejected it.",
+  "reason": "measurement did not happen (or only partially happened) — NOT a low score. 407 row(s) unmeasured (no text block / truncated) and 0 row(s) where the model genuinely failed (those ARE scored, as 0). Unmeasured rows count as 0 in every denominator, so the surviving subset is selection-biased. See failures[] for the exact criteria that rejected it.",
   "failures": [
-    "四维 applicable 合计为 0 —— 没有任何 gold 走到打分器，测量没发生",
-    "门禁语言 zh：188 行里 188 行**未测到**（仅 0.0% 走到打分器）—— 未测到的行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集可能是选择偏置的。拒绝把它发布成成绩。（模型**答错**的行不在此列：那是一次合法测量，按 0 分计入成绩。）"
+    "门禁语言 zh：216 行里 216 行**未测到**（仅 0.0% 走到打分器）—— 未测到的行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集可能是选择偏置的。拒绝把它发布成成绩。（模型**答错**的行不在此列：那是一次合法测量，按 0 分计入成绩。）"
   ],
-  "cases": 188,
-  "rows": 376,
+  "cases": 216,
+  "rows": 407,
   "scoredRows": 0,
-  "erroredRows": 376,
-  "notMeasuredRows": 376,
+  "erroredRows": 407,
+  "notMeasuredRows": 407,
   "modelFailureRows": 0,
   "degradedCalls": 0,
+  "compileRate": null,
+  "compileMeasured": 0,
+  "compileCompiled": 0,
+  "compileFailure": 0,
+  "modelFailureCompile": 0,
+  "typecheck": {
+    "skipped": "没有 zh 行的模型产出（片段-only / 全部未测到）"
+  },
   "sampleErrors": [
     "403 {\"error\":{\"code\":\"1301\",\"message\":\"无配额可用\"}}"
   ],
+  "fragments": {
+    "cases": 63,
+    "measured": 0,
+    "notMeasured": 63,
+    "core": null,
+    "full": null,
+    "scoped": null,
+    "stated": null,
+    "compileRate": null,
+    "compileMeasured": 0,
+    "compileCompiled": 0,
+    "compileFailure": 0,
+    "byScene": {
+      "table": null,
+      "form": null,
+      "dialog": null
+    },
+    "byDim": {},
+    "scopedMin": 0.7778,
+    "gateOk": false,
+    "gateFailures": [
+      "片段腿 63 条全部未测到（measured=0）—— 这不是 0 分，是没测",
+      "片段腿 63/63 行**未测到**（无 text 块 / 截断）—— 未测到的行以 0 计入分母且活下来的子集可能选择偏置，本腿不构成一次完整测量",
+      "片段腿没有任何可编译产物（所有行都未产出结果）—— 编译门没有分母",
+      "片段 scoped 没有数字（基线地板 77.8%）—— 测量缺失或该口径被移除"
+    ]
+  },
+  "prd": {
+    "cases": 22,
+    "measured": 0,
+    "notMeasured": 22,
+    "presenceRate": null,
+    "membershipRate": null,
+    "membershipCorrect": 0,
+    "membershipTotal": 0,
+    "dialogRate": null,
+    "exactRate": null,
+    "compileRate": null,
+    "compileMeasured": 0,
+    "compileCompiled": 0,
+    "compileFailure": 0
+  },
   "target": 0.95,
   "passed": false
 }
