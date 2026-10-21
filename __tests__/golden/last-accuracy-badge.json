@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "label": "heldout 95%-definition",
-  "message": "48.8%",
-  "color": "red"
+  "message": "measurement failed",
+  "color": "lightgrey"
 }
