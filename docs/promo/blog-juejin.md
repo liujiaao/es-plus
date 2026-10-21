@@ -552,7 +552,7 @@ Star、Try、骂街都欢迎。
 1. **代码对比图** —— 左原生 250 行截图、右 ES-Plus 30 行截图，标题 "同一页面，少 88% 代码"
 2. **Trace 时间轴截图** —— AI CRUD 演示页 trace tab，显示 7 条 MCP tool 调用轨迹
 3. **MCP 接入终端截图** —— `claude mcp add es-plus` 一行命令 + Claude 调用 tool 的对话截图
-4. **CI 矩阵截图** —— GitHub Actions 4 个 e2e 任务全绿
+4. **CI 矩阵截图** —— GitHub Actions e2e 矩阵（6 种 target×mode 组合）全绿
 
 ---
 

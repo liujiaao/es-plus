@@ -316,7 +316,7 @@ Star, try, roast — all welcome.
 1. **代码对比图**：左边 Element Plus 250 行截图，右边 ES-Plus 30 行截图，标题 "Same page, 88% less code"
 2. **Trace 时间轴截图**：浏览器 AI CRUD 演示页的 Trace tab，显示 7 条 MCP tool 调用轨迹
 3. **MCP 接入终端截图**：`claude mcp add es-plus -- ...` 一行命令 + Claude 调用 tool 的对话截图
-4. **CI 矩阵截图**：GitHub Actions 上 4 个 e2e 任务全绿的截图
+4. **CI 矩阵截图**：GitHub Actions 上 e2e 矩阵（6 种 target×mode 组合）全绿的截图
 5. **架构图**：Schema → vue3 / vue2 / mcp-server 三向分发的 ASCII 图
 
 ### 配套话术（评论区/回复）

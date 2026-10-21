@@ -210,6 +210,78 @@ function sanitizeExplicitColumns(
 }
 
 /**
+ * 显式 `columns` 里**数据列**的 prop 集合（`groups` 多级表头递归）。
+ *
+ * `type:'index'|'selection'|'expand'` 是非数据列：它们不消费 `#column-<prop>` 插槽，
+ * 也没有「单元格内容」可言。`prop` 缺失的列同理。
+ */
+function explicitDataColumnProps(columns: Array<Record<string, unknown>>): Set<string> {
+  const out = new Set<string>()
+  const walk = (cols: Array<Record<string, unknown>>): void => {
+    for (const c of cols) {
+      if (Array.isArray(c.groups)) walk(c.groups as Array<Record<string, unknown>>)
+      else if (!c.type && typeof c.prop === 'string') out.add(c.prop)
+    }
+  }
+  walk(columns)
+  return out
+}
+
+/**
+ * 让显式 `columns` 里**与字段级 render 同 prop** 的数据列声明
+ * `scopedSlots.customRender`。
+ *
+ * 为什么必须做：`es-table`（三端 `column-item.vue` / `component.vue`）只在列上
+ * 有 `scopedSlots.customRender` 时才渲染 `#column-<name>` 插槽；派生列由
+ * `buildTableColumn` 负责挂这个键，显式列路径此前不挂 —— 于是 wrapper 里为
+ * `fields[].render` 发射的扩展点插槽**没有任何消费者**（死模板，单元格仍显示原值，
+ * 且用户以为 render 生效了）。显式列是结构化路径，不能承载函数；字段级 `render`
+ * 正是文档承诺的扩展点，这里把它接上。
+ *
+ * 只对「插槽名可静态表达」的 prop 挂：`buildExtensionPointSlotLines` 对含空白/引号的
+ * prop 只发 TODO 注释、不发射插槽，此时挂 `scopedSlots` 反而会让单元格渲染成空白。
+ */
+function attachFieldRenderSlots(
+  columns: Array<Record<string, unknown>>,
+  renderFields: FieldConfig[],
+): Array<Record<string, unknown>> {
+  const props = new Set(
+    renderFields
+      .filter((f) => typeof f.prop === 'string' && isStaticSlotNameSafe(`column-${f.prop}`))
+      .map((f) => f.prop)
+  )
+  if (props.size === 0) return columns
+  const walk = (cols: Array<Record<string, unknown>>): Array<Record<string, unknown>> =>
+    cols.map((c) => {
+      if (Array.isArray(c.groups)) return { ...c, groups: walk(c.groups as Array<Record<string, unknown>>) }
+      if (!c.type && typeof c.prop === 'string' && props.has(c.prop)) {
+        return { ...c, scopedSlots: { customRender: `column-${c.prop}` } }
+      }
+      return c
+    })
+  return walk(columns)
+}
+
+/**
+ * 显式 `columns` 是 **override 非 merge**：`fields` 里声明了 `render`、却没有对应数据列
+ * 的字段，其扩展点插槽无处可挂（schema 模式过去会发射一个死插槽）。两种 mode 都要点名，
+ * 否则用户只看到「render 没生效」。
+ */
+function renderFieldsExcludedByColumnsWarnings(config: StructuredCrudConfig): string[] {
+  const cols = config.columns as Array<Record<string, unknown>> | undefined
+  if (!cols || cols.length === 0) return []
+  const props = explicitDataColumnProps(cols)
+  const excluded = (config.fields || []).filter(
+    (f) => f.inTable !== false && f.render && !props.has(f.prop)
+  )
+  if (excluded.length === 0) return []
+  return [
+    `Fields [${excluded.map((f) => f.prop).join(', ')}] declare a \`render\` function but have no matching column in the explicit \`columns\` array (override, not merge) — the render has no cell to attach to and no extension-point slot was emitted. ` +
+      `Add a column with that prop, or drop \`columns\` to derive the columns from \`fields\`.`,
+  ]
+}
+
+/**
  * prop 不是裸标识符时的提示（仅提示，不拒绝）。
  *
  * 生成侧已经把这类 prop 安全地引号化（`qKey`），所以产物是可编译的 —— 但对 `a.b` /
@@ -387,6 +459,7 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
   const extra = [
     ...entryWarnings,
     ...propWarnings,
+    ...renderFieldsExcludedByColumnsWarnings(config),
     ...orphanWarnings,
     // AN-11③④：两种「配了却不会发生任何事」的静默丢弃，按 mode 判一次（两种模式共用）。
     ...inlineEditWarnings(config),
@@ -453,7 +526,17 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
   // `operationColumn:false` 也是声明（它的语义是「隐藏操作列」），必须进新模式。
   const useNewDialogMode = plan.anyRenders(['dialogs', 'toolbarBtns', 'tableBtns', 'operationColumn'])
 
-  const renderFields = tableFields.filter(f => f.render)
+  // 显式 `columns` 是 override 非 merge：只有**真的发射成数据列**的字段才有插槽可挂。
+  // 被 columns 排除的字段不发射插槽（死模板），改由 `renderFieldsExcludedByColumnsWarnings`
+  // 在两种 mode 下统一点名。
+  const explicitColumnPropSet =
+    config.columns && config.columns.length > 0
+      ? explicitDataColumnProps(config.columns as Array<Record<string, unknown>>)
+      : null
+  const allRenderFields = tableFields.filter(f => f.render)
+  const renderFields = explicitColumnPropSet
+    ? allRenderFields.filter(f => explicitColumnPropSet.has(f.prop))
+    : allRenderFields
   if (renderFields.length > 0) {
     warnings.push(`Schema mode cannot inline a render function. Fields [${renderFields.map(f => f.prop).join(', ')}] emit a marked \`TODO(es-plus)\` extension-point slot in the wrapper SFC (a default status-tag stub echoing your requested render) — replace the stub with the real markup. The requirement is preserved as a marker, not dropped.`)
   }
@@ -499,7 +582,14 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
   const tOpts: TableOpts = (config.tableOptions || {}) as TableOpts
   schema.columns =
     config.columns && config.columns.length > 0
-      ? applyExpandConfig(sanitizeExplicitColumns(config.columns as Array<Record<string, unknown>>), config, warnings)
+      ? applyExpandConfig(
+          attachFieldRenderSlots(
+            sanitizeExplicitColumns(config.columns as Array<Record<string, unknown>>),
+            renderFields
+          ),
+          config,
+          warnings
+        )
       : // AN-10：`defaultSort` 指向的派生列补 `sortable: true`。三端都只在**列可排序**时
         // 展示默认排序状态（el-table 的 default-sort / a-table 的 defaultSortOrder 无 sortable
         // 时一律静默无效），而 FieldConfig 本身没有 sortable 键 —— 不补的话「默认按 X 倒序」
@@ -930,9 +1020,18 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
     // 显式列逃生数组（override 非 merge）：数据列的顺序/构成完全由 columns 决定，
     // `fields` 不再派生表格列。逐列递归发射（`groups` 多级表头自指）。操作列仍按
     // 下方 actionBtns 追加（与派生路径一致，schema 模式同语义）。
+    //
+    // 字段级源码扩展点（render/formatter）不是列结构的一部分，列 JSON 也表达不了，
+    // 故仍按 prop 从 `fields` 认领并内联 —— 否则同一份配置加个 `columns` 就静默丢掉
+    // 自定义单元格/格式化。被 columns 排除的 render 字段由入口告警点名（两种 mode 共用）。
+    const extensionFields = new Map(
+      tableFields
+        .filter((f) => f.render || f.formatter)
+        .map((f) => [f.prop, f] as const)
+    )
     for (const c of config.columns as Array<Record<string, unknown>>) {
       const col = config.expandConfig && c.type === 'expand' ? { ...c, expandConfig: config.expandConfig } : c
-      pushSfcColumn(col, lines, '  ', warnings)
+      pushSfcColumn(col, lines, '  ', warnings, extensionFields)
     }
   } else {
     for (const f of tableFields) {
@@ -1722,6 +1821,7 @@ function pushSfcColumn(
   lines: string[],
   indent: string,
   warnings: string[],
+  extensionFields?: Map<string, FieldConfig>,
 ): void {
   const inner = `${indent}  `
   lines.push(`${indent}{`)
@@ -1751,9 +1851,16 @@ function pushSfcColumn(
   if (Array.isArray(col.groups) && col.groups.length > 0) {
     lines.push(`${inner}groups: [`)
     for (const g of col.groups as Array<Record<string, unknown>>) {
-      pushSfcColumn(g, lines, `${inner}  `, warnings)
+      pushSfcColumn(g, lines, `${inner}  `, warnings, extensionFields)
     }
     lines.push(`${inner}],`)
+  } else if (!col.type && typeof col.prop === 'string') {
+    // 字段级源码扩展点（render/formatter）：显式列的结构由用户决定，但函数型扩展点
+    // 无法写进列 JSON —— 与派生列同一条契约，按 prop 认领并内联（见 sourceExtensionParts）。
+    const field = extensionFields?.get(col.prop)
+    if (field) {
+      for (const part of sourceExtensionParts(field, warnings)) lines.push(`${inner}${part},`)
+    }
   }
   // btns 是数据显示（name/type/permissionValue），不是源码扩展点 → 用 JSON 序列化。
   // AN-11①：改用 `inlineJson`（转义 `</script>`）—— 这些值同样会被内联进宿主 SFC 的
@@ -1819,10 +1926,24 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // filteredColumns 按全局 permission(code) 过滤（无权限则该列不渲染）。刻意不过 assertEmittableExpr：
   // 它是权限码不是 JS 源码。与静态 hidCol 同层。
   if (field.permissionValue) parts.push(`permissionValue: ${q(field.permissionValue)}`)
-  // formatter/render 是源码扩展点，原样内联。发射前过语法闸（assertEmittableExpr）：
-  // 畸形字符串内联进对象字面量会让整个 SFC 编译失败，而本函数不抛错 —— 坏码会静默
-  // 产出。闸不过就**省略该扩展点 + 降级告警**（与 schema 模式「emit unformatted + warn」
-  // 一致），于是「发射的东西永远能编译」成为结构性保证。
+  parts.push(...sourceExtensionParts(field, warnings))
+  return `{ ${parts.join(', ')} }`
+}
+
+/**
+ * 字段级**源码扩展点**（`formatter` / `render`）的发射片段 —— SFC 模式专用。
+ *
+ * 两处消费：派生列（`buildTableColumnSFC`）与显式 `columns` 里与字段同 prop 的数据列
+ * （`pushSfcColumn`）。显式列是结构化路径，不能承载函数；但 `FieldConfig.render/formatter`
+ * 本就是文档承诺的字段级扩展点，显式列若丢掉它们，同一份配置换 `columns` 就静默失去格式化
+ * / 自定义单元格（schema 模式已按扩展点插槽接上，见 `attachFieldRenderSlots`）。
+ *
+ * 发射前过语法闸（`assertEmittableExpr`）：畸形字符串内联进对象字面量会让整个 SFC 编译
+ * 失败，而生成器不抛错 —— 坏码会静默产出。闸不过就**省略该扩展点 + 降级告警**
+ * （与 schema 模式「emit unformatted + warn」一致）。
+ */
+function sourceExtensionParts(field: FieldConfig, warnings?: string[]): string[] {
+  const parts: string[] = []
   if (field.formatter) {
     if (assertEmittableExpr(field.formatter)) {
       parts.push(`formatter: ${field.formatter}`)
@@ -1837,7 +1958,7 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
       warnings?.push(`Field "${field.prop}" 的 render 不是合法的 JS/TS 表达式，已省略以保证编译通过（原文：${sanitizeForComment(field.render)}）。请修正后手动补回。`)
     }
   }
-  return `{ ${parts.join(', ')} }`
+  return parts
 }
 
 export function buildActionBtns(config: StructuredCrudConfig): string[] {

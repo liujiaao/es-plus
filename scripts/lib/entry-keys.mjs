@@ -170,8 +170,13 @@ export function sliceBlock(src, startMarker, closeLine, label) {
     return null
   }
   const rest = src.slice(i + startMarker.length)
-  const needle = '\n' + closeLine
-  const end = rest.indexOf(needle)
+  // `});` 收尾的 zod 块也可能写成 `}).passthrough();`（片段形状刻意 passthrough：
+  // 未知键由上游闸门报错，而不是静默 strip）。两种收尾都要认，并取**最早**命中 ——
+  // 只认第一种会越过本块、把后续对象的 `});` 当成结束符，吞掉本块后面的键。
+  const needles =
+    closeLine === '});' ? ['\n});', '\n}).passthrough();'] : ['\n' + closeLine]
+  const hits = needles.map((n) => rest.indexOf(n)).filter((idx) => idx !== -1)
+  const end = hits.length > 0 ? Math.min(...hits) : -1
   if (end === -1) {
     fail(`未能在 ${label} 定位块结束符 ${JSON.stringify(closeLine)}（选择器失效，请检查脚本）`)
     return null

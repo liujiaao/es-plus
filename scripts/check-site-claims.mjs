@@ -441,25 +441,47 @@ function checkAccuracyClaims() {
   const art = readJson('__tests__/golden/last-accuracy.json')
   const badge = readJson('__tests__/golden/last-accuracy-badge.json')
   if (!art || !badge) return
-
-  // 先确认 artifact 本身就是一次**完整测量**：未测到的行以 0 计分时，
-  // 任何「当前准确率」都不可用来对外宣称（见 eval measurement-completeness）。
-  if (art.notMeasuredRows !== 0) {
-    fail(
-      `last-accuracy.json 的 notMeasuredRows=${art.notMeasuredRows}（应为 0）—— ` +
-        '这次跑批不构成完整测量，不能用它绑定公开声明',
-    )
+  if (typeof art.target !== 'number') {
+    fail('last-accuracy.json 缺少 target（门禁目标），无法校验公开声明')
     return
   }
-  const rate = art.definition95?.rate
-  const total = art.definition95?.total
-  if (typeof rate !== 'number' || typeof total !== 'number') {
-    fail('last-accuracy.json 缺少 definition95.rate / total，无法绑定公开声明')
-    return
+
+  const measurement = art.measurement
+  const failedRun = measurement === 'failed'
+
+  // ── 完整性判据必须按**腿**看，而不是一刀切 `notMeasuredRows` ────────────
+  //   · complete                → 所有腿都测到（notMeasuredRows = 0）
+  //   · complete-gated-leg-only → 只有**门禁腿**（zh）必须测到；观测腿（en）允许
+  //                               有「未测到」行，其读数在产物里被抑制（byLanguage.en）
+  //   · failed                  → 这次根本不构成测量：不绑定任何读数，但公开面也
+  //                               不得出现读数（见下方徽章校验）
+  //   · 无 measurement（旧格式）→ 沿用旧口径 notMeasuredRows = 0
+  // 此前一律要求 notMeasuredRows === 0，把合法的 complete-gated-leg-only 判死，
+  // 也与 `measurement` 字段自身的语义矛盾。
+  if (!failedRun) {
+    if (measurement === 'complete-gated-leg-only') {
+      const gatedErrored = art.gatedRows?.errored
+      if (!Number.isInteger(gatedErrored)) {
+        fail(
+          'last-accuracy.json 标了 complete-gated-leg-only，但缺少 gatedRows.errored —— ' +
+            '无法证明门禁腿（zh）是完整测量',
+        )
+        return
+      }
+      if (gatedErrored !== 0) {
+        fail(`门禁腿（zh）有 ${gatedErrored} 行未测到 —— 这次跑批不能支撑公开读数`)
+        return
+      }
+    } else if (art.notMeasuredRows !== 0) {
+      fail(
+        `last-accuracy.json 的 notMeasuredRows=${art.notMeasuredRows}（应为 0）—— ` +
+          '这次跑批不构成完整测量，不能用它绑定公开声明',
+      )
+      return
+    }
   }
 
   const targetPct = Number((art.target * 100).toFixed(1))
-  const currentPct = Number((rate * 100).toFixed(1))
   const { crud: cases, heldout } = liveCorpusSize()
   // artifact 的语料快照可以比当前语料小（跑批之后又加了语料）——这不是错误；
   // 但**大于**当前语料意味着用例被删了，那会让上次测量的分母失去参照，必须点名。
@@ -469,22 +491,8 @@ function checkAccuracyClaims() {
     )
   }
 
-  // 徽章必须由 artifact 生成（label 带目标，message 是当前读数）。
-  const badgeMsg = String(badge.message ?? '')
-  if (badgeMsg !== `${currentPct}%`) {
-    fail(
-      `last-accuracy-badge.json 的 message 是 ${badgeMsg}，artifact 的 definition95 是 ` +
-        `${currentPct}%（${rate} × ${total} 例）—— 徽章必须由 artifact 生成`,
-    )
-  }
-  if (!String(badge.label ?? '').includes(`${targetPct}%-definition`)) {
-    fail(
-      `last-accuracy-badge.json 的 label（${badge.label}）应包含 ${targetPct}%-definition ` +
-        '（门禁目标来自 artifact.target）',
-    )
-  }
-
   // README 两语：语料规模 / 留出集 / 门禁目标都必须等于 artifact，且指向 artifact。
+  // 这三项是与**当前语料**的对账，与本次跑批是否成功无关 —— 失败产物也要查。
   const readmeCases = [
     {
       file: 'README.md',
@@ -551,6 +559,57 @@ function checkAccuracyClaims() {
         )
       }
     }
+  }
+
+  if (failedRun) {
+    // 失败产物的唯一合法公开状态是「measurement failed」。徽章若还挂着旧读数，
+    // 访客会把一次**没测成**的跑批当成最新成绩 —— 这正是产物 state 要防的假绿。
+    for (const file of [
+      '__tests__/golden/last-accuracy-badge.json',
+      '__tests__/golden/last-accuracy-badge-scoped.json',
+    ]) {
+      const b = readJson(file)
+      if (b && b.message !== 'measurement failed') {
+        fail(`${file} 在失败产物上声称「${b.message}」—— 失败测量不支撑任何准确率读数`)
+      }
+    }
+    if (!failed) {
+      console.log(
+        'ℹ️ last-accuracy.json 是失败产物（measurement=failed）：只校验语料/目标声明与徽章状态，不绑定读数',
+      )
+    }
+    return
+  }
+
+  // 徽章必须由 artifact 生成（label 带目标，message 是当前读数）。
+  const rate = art.definition95?.rate
+  const total = art.definition95?.total
+  if (typeof rate !== 'number' || typeof total !== 'number') {
+    fail('last-accuracy.json 缺少 definition95.rate / total，无法绑定公开声明')
+    return
+  }
+  const currentPct = Number((rate * 100).toFixed(1))
+  const badgeMsg = String(badge.message ?? '')
+  // 比数值而非比字符串：徽章生成器用 `toFixed(1)`（`75.0%`），这里若按
+  // `${currentPct}%`（`75%`）比字符串，任何恰好落在整十/整尾数的读数都会假红
+  // —— 与 `scripts/eval/artifact.mjs` 的徽章校验同一口径。
+  const badgePct = /^(-?\d+(?:\.\d+)?)%$/.exec(badgeMsg)
+  if (!badgePct) {
+    fail(
+      `last-accuracy-badge.json 的 message 不是百分比读数：${badgeMsg} —— ` +
+        `artifact 的 definition95 是 ${currentPct}%（${rate} × ${total} 例）`,
+    )
+  } else if (Math.abs(Number(badgePct[1]) - currentPct) > 0.05) {
+    fail(
+      `last-accuracy-badge.json 的 message 是 ${badgeMsg}，artifact 的 definition95 是 ` +
+        `${currentPct}%（${rate} × ${total} 例）—— 徽章必须由 artifact 生成`,
+    )
+  }
+  if (!String(badge.label ?? '').includes(`${targetPct}%-definition`)) {
+    fail(
+      `last-accuracy-badge.json 的 label（${badge.label}）应包含 ${targetPct}%-definition ` +
+        '（门禁目标来自 artifact.target）',
+    )
   }
 
   if (!failed) {

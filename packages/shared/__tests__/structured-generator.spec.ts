@@ -158,6 +158,63 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.wrapperCode).toContain('#column-status')
   })
 
+  // ── 显式 columns × 字段级 render：插槽必须有消费者 ──────────────────────────
+  // 显式 columns 是 override 非 merge。此前 wrapper 仍按 `fields` 为每个 render 字段
+  // 发射 `#column-x`，而显式列从不声明 `scopedSlots.customRender` —— 插槽无人消费，
+  // render 静默不生效（单元格显示原值）。
+  const explicitCols = {
+    columns: [
+      { prop: 'name', label: '姓名' },
+      { prop: 'status', label: '状态' },
+    ],
+  }
+
+  it('explicit columns（schema）：命中列的数据列挂上 scopedSlots.customRender', () => {
+    const result = generateFromConfig({ ...baseConfig, mode: 'schema', ...explicitCols } as any)
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    const statusCol = schema.columns.find((c: any) => c.prop === 'status')
+    expect(statusCol.scopedSlots).toEqual({ customRender: 'column-status' })
+    expect(result.wrapperCode).toContain('#column-status="{ row }"')
+    expect(result.warnings.join('\n')).not.toContain('no matching column')
+  })
+
+  it('explicit columns（schema）：被排除的 render 字段不发死插槽，并点名告警', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'schema',
+      columns: [{ prop: 'name', label: '姓名' }],
+    } as any)
+    expect(result.wrapperCode).not.toContain('#column-status')
+    const warns = result.warnings.join('\n')
+    expect(warns).toContain('no matching column')
+    expect(warns).toContain('status')
+  })
+
+  it('explicit columns（sfc）：命中列的 render/formatter 仍按字段级扩展点内联', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      fields: baseConfig.fields.map((f) =>
+        f.prop === 'phone' ? { ...f, formatter: '(_, __, cell) => `+86 ${cell}`' } : f
+      ),
+      columns: [...explicitCols.columns, { prop: 'phone', label: '手机号' }],
+    } as any)
+    const code = result.code
+    // render 与 formatter 都落在显式列对象里（与派生列同一发射点/同一语法闸）
+    expect(code).toContain("render: (_, { row }) => h(ElTag")
+    expect(code).toContain('formatter: (_, __, cell) => `+86 ${cell}`')
+    expect(result.warnings.join('\n')).not.toContain('no matching column')
+  })
+
+  it('explicit columns（sfc）：groups 子列同样认领字段级 render', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc',
+      columns: [{ label: '分组', groups: [{ prop: 'status', label: '状态' }] }],
+    } as any)
+    expect(result.code).toContain("render: (_, { row }) => h(ElTag")
+  })
+
   // ── AI-31①：表单面的 render 不静默丢弃 ─────────────────────────────────────
   // buildFormItem 没有 render 分支，而两种模式的表单项都是 JSON —— 于是「表格面够不着」
   // 的 render（inTable:false 的查询/表单字段、弹窗 formItems）此前**静默**退化。契约：
