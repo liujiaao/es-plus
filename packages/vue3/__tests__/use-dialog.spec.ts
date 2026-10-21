@@ -85,6 +85,33 @@ describe('useDialog - 生命周期', () => {
       expect(r2.instance?.component?.props?.visible).toBe(true)
     })
 
+    // ─── 回归：单例复用时 `onXxx` 必须写进 vNode.props（component.props 是死槽）───
+    it('单例复用：第二次调用传入的 onClosed 生效，旧回调不再触发', () => {
+      const first = vi.fn()
+      const second = vi.fn()
+      const dialog = useDialog()
+      const r1 = dialog({ title: '添加', render: () => h('div', '1'), onClosed: first })
+      const r2 = dialog({ title: '编辑', render: () => h('div', '2'), onClosed: second })
+      expect(r2.instance).toBe(r1.instance) // 前提：确实复用了同一实例
+
+      r2.instance.component.emit('closed', true)
+
+      // 回归：此前复用走 `Object.assign(component.props, dialogOptions)`，
+      // `on*` 写进无人读取的槽 —— 这里跑的还是第一次那批回调（first 被调、second 从不）
+      expect(second).toHaveBeenCalledTimes(1)
+      expect(first).not.toHaveBeenCalled()
+    })
+
+    it('单例复用时省略 onClosed：上一次的回调不再触发', () => {
+      const first = vi.fn()
+      const dialog = useDialog()
+      dialog({ title: 'a', render: () => h('div', 'a'), onClosed: first })
+      const r2 = dialog({ title: 'b', render: () => h('div', 'b') })
+
+      r2.instance.component.emit('closed', true)
+      expect(first).not.toHaveBeenCalled()
+    })
+
     it('calls onClosed callback when dialog closes', () => {
       const onClosed = vi.fn()
       const dialog = useDialog()
@@ -252,6 +279,21 @@ describe('useDialog - 生命周期', () => {
       // 缓存实例关闭后不立即卸载，仅 visible=false
       expect(instance?.component?.props?.visible).toBe(false)
       expect(document.querySelectorAll('.dialog-containers').length).toBeGreaterThan(0)
+    })
+
+    // 回归：程序化关闭不经过组件事件（不 emit 'closed'），TTL 必须在 closeCache 里补武装
+    it('程序化 close() 关闭缓存实例后同样武装 TTL（不会永久常驻）', () => {
+      vi.useFakeTimers()
+      try {
+        const dialog = useDialog()
+        const { close } = dialog({ title: '缓存', render: () => h('div', 'x'), cacheKey: 'k-ttl' })
+        close()
+        // 程序中没有人 emit 'closed' —— 此前 TTL 只挂在 onClosed 包装上，永不回收
+        vi.advanceTimersByTime(10 * 60 * 1000)
+        expect(document.querySelectorAll('.dialog-containers').length).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('destroy(cacheKey) removes that cached container', () => {

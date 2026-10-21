@@ -251,23 +251,39 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     return cached
   }
 
+  /**
+   * 武装缓存实例的「延迟自动销毁」定时器（每次关闭都重新计时）。
+   *
+   * 两条关闭路径都必须调它：组件 emit('closed')（用户点 X / 取消 / 遮罩 / ESC）
+   * 与程序化 `close()`（直接翻转 visible，**不**经组件事件）。只挂 `$on('closed')`
+   * 会漏掉后者 —— 编程式关闭的缓存实例从此常驻，动态 cacheKey 时内存无界增长。
+   */
+  const armCacheDestroy = (cacheKey: string, vm: any) => {
+    clearTimeout((vm as any).__cacheTimeout)
+    ;(vm as any).__cacheTimeout = setTimeout(() => {
+      if (vm.visible === false && instanceCache.get(cacheKey) === vm) {
+        instanceCache.delete(cacheKey)
+        vm.$destroy()
+        if (vm.$el?.parentNode) vm.$el.parentNode.removeChild(vm.$el)
+      }
+    }, CACHE_TTL)
+  }
+
+  /** 关闭指定 cacheKey 缓存实例（翻转 visible 并武装 TTL），不销毁 —— 缓存语义 */
+  const closeCache = (cacheKey: string) => {
+    const vm = instanceCache.get(cacheKey)
+    if (!vm || vm.visible === false) return
+    vm.visible = false
+    armCacheDestroy(cacheKey, vm)
+  }
+
   /** 将新实例写入缓存，关闭后延迟自动销毁（每次关闭都重新计时） */
   const cacheInstance = (cacheKey: string, vm: any, baseProps: Record<string, unknown>) => {
     instanceCache.set(cacheKey, vm)
     // 记录创建时的基线 props，供 tryCacheHit 做「省略即回退」的 props 覆盖
     ;(vm as any).__baseProps = baseProps
     // 用 $on（非 $once）：实例复用后每次关闭都会重新武装定时器，避免只生效一次导致泄漏
-    const armDestroyTimer = () => {
-      clearTimeout((vm as any).__cacheTimeout)
-      ;(vm as any).__cacheTimeout = setTimeout(() => {
-        if (vm.visible === false && instanceCache.get(cacheKey) === vm) {
-          instanceCache.delete(cacheKey)
-          vm.$destroy()
-          if (vm.$el?.parentNode) vm.$el.parentNode.removeChild(vm.$el)
-        }
-      }, CACHE_TTL)
-    }
-    vm.$on('closed', armDestroyTimer)
+    vm.$on('closed', () => armCacheDestroy(cacheKey, vm))
   }
 
   /** 销毁指定/全部缓存实例 */
@@ -333,13 +349,27 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     /** 统一对外返回结构（多实例模式），语义同单例分支 */
     const buildResult = (dialogVm: any) => ({ instance: dialogVm, close, destroy })
 
+    /**
+     * 缓存实例的返回结构：`close` 只翻转 visible 并武装 TTL —— **不**销毁。
+     *
+     * 此前缓存命中/创建都复用了上面的 `close`，它会在 300ms 后 `$destroy()` 目标实例：
+     * 于是 `d({cacheKey:'add'}); d.close()` 把缓存本身拆了，`cacheKey` 的意义（跨次打开
+     * 保留内部状态）当场失效；缓存命中时 `close` 还指向 `lastVm`（可能是**另一个**
+     * 弹窗），关错实例、本实例原地不动。与 vue3 的 `close: () => closeCache(cacheKey)` 对齐。
+     */
+    const buildCacheResult = (dialogVm: any, cacheKey: string) => ({
+      instance: dialogVm,
+      close: () => closeCache(cacheKey),
+      destroy,
+    })
+
     // 具体弹窗入口先单独成函数，再由下面的 Object.assign 与静态键合成对外 callable。
     // 不能在这里直接叫 DialogComponent 并在函数体里引用它：`buildResult` 曾用
     // `DialogComponent.destroy(k)` 回指自身，形成自引用推断，TS 会退化成 any。
     const callable = (dialogOptions: DialogOptions) => {
       // ── cacheKey 快速路径 ──
       const cached = tryCacheHit(dialogOptions as Record<string, unknown>)
-      if (cached) return buildResult(cached)
+      if (cached) return buildCacheResult(cached, (dialogOptions as Record<string, unknown>).cacheKey as string)
 
       if (dialogOptions.visible === undefined) {
         dialogOptions.visible = true
@@ -374,6 +404,7 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       createdVm = lastVm
       if (cacheKey) {
         cacheInstance(cacheKey, lastVm, pickProps(dialogOptions as Record<string, unknown>))
+        return buildCacheResult(lastVm, cacheKey)
       }
       return buildResult(lastVm)
     }
@@ -427,14 +458,32 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       const cacheKey = (dialogOptions as Record<string, unknown>).cacheKey as string | undefined
       if (cacheKey) {
         const cached = tryCacheHit(dialogOptions as Record<string, unknown>)
-        if (cached) return buildResult(cached)
+        // close 必须指向**本次这个**缓存实例：单例 close 关的是 `vm`（可能为 null 或
+        // 另一个弹窗），既关不掉缓存实例，又可能误伤单例。
+        if (cached) return { instance: cached, close: () => closeCache(cacheKey), destroy: destroyAll }
       }
 
       // 单例模式（无 cacheKey）：已有实例 → 复用
       if (!cacheKey && vm) {
-        applyOptionsToVm(vm, dialogOptions as Record<string, unknown>)
-        vm.visible = true
-        return buildResult(vm)
+        const reusedVm = vm
+        // 事件必须跟着换（applyEvents=true）：/ 只写 props 的话，第二次调用传的
+        // onClosed 永远不生效，关闭时跑的仍是第一次那批回调。
+        // 但**不能**直接下发用户的裸回调 —— 创建时套的包装里压着 destroyOnClose 的
+        // 延迟销毁（见下方 mergedOptions.onClosed），覆盖掉它等于静默丢掉清理路径。
+        // 这里按同一规则重新包一层，等价于「用本次 options 再创建一次」。
+        const nextProps = pickProps(dialogOptions as Record<string, unknown>)
+        const originalOnClosed = nextProps.onClosed as Function | undefined
+        nextProps.onClosed = (...args: unknown[]) => {
+          originalOnClosed?.(...args)
+          // destroyOnClose 的**生效值**是 vm 上的当前 prop（本次没传就沿用创建时的
+          // 缺省 true），不能用 dialogOptions 判 —— 省略会在复用路径上静默变成「不销毁」。
+          setTimeout(() => {
+            if (vm === reusedVm && vm.visible === false && reusedVm.destroyOnClose) destroy()
+          }, 300)
+        }
+        applyOptionsToVm(reusedVm, nextProps, true)
+        reusedVm.visible = true
+        return buildResult(reusedVm)
       }
 
       const mergedOptions: DialogOptions = {
@@ -469,9 +518,10 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
       createdVm = newVm
       if (cacheKey) {
         cacheInstance(cacheKey, newVm, pickProps(mergedOptions as Record<string, unknown>))
-      } else {
-        vm = newVm
+        // 同多实例分支：缓存实例的 close 必须是「隐藏 + 武装 TTL」，不是销毁。
+        return { instance: newVm, close: () => closeCache(cacheKey), destroy: destroyAll }
       }
+      vm = newVm
       return buildResult(newVm)
     }
 

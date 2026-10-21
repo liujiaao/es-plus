@@ -271,6 +271,11 @@ async function main() {
       fail(`no-table 路由断言③ ${routeMsgs.length} 条未过：`)
       for (const m of routeMsgs.slice(0, 5)) console.error(`     ✗ ${m}`)
     }
+    // 断言③ 的见证下限：一条都路由不过去时，下面那句「N 条路由到片段发射器」
+    // 打印的是 0，断言③ 本身却仍然全绿 —— 守卫在空转（语料/路由改坏了也看不见）。
+    if (noTableRouted === 0) {
+      fail('no-table 路由断言③ 没有任何见证（0 条走到片段发射器）—— 断言在空转，请检查语料是否还有纯 query/form 面。')
+    }
     if (compileMsgs.length) {
       fail(`产物语法解析（断言④）${compileMsgs.length} 处失败：`)
       for (const m of compileMsgs.slice(0, 5)) console.error(`     ✗ ${m}`)

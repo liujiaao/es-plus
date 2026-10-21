@@ -161,6 +161,32 @@ describe('useDialog — 单例模式', () => {
     expect(vm.visible).toBe(true)
   })
 
+  // ─── 回归：单例复用时 on* 必须跟着换（此前 applyEvents 默认 false）───────────
+  it('单例复用：第二次调用传入的 onClosed 生效，旧回调不再触发', () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const dialog = useDialog()
+    dialog({ onClosed: first } as any)
+    dialog({ onClosed: second } as any)
+
+    ;(vm as any).$emit('closed', true)
+
+    // 回归：applyOptionsToVm 默认 applyEvents=false，on* 被整段跳过，
+    // 关闭时跑的仍是第一次那批回调（first 被调、second 从不）
+    expect(second).toHaveBeenCalledWith(true)
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  it('单例复用时省略 onClosed：上一次的回调不再触发', () => {
+    const first = vi.fn()
+    const dialog = useDialog()
+    dialog({ onClosed: first } as any)
+    dialog({} as any)
+
+    ;(vm as any).$emit('closed', true)
+    expect(first).not.toHaveBeenCalled()
+  })
+
   it('默认 propsData 包含 visible:true, width:"50%", destroyOnClose:true', () => {
     const dialog = useDialog()
     dialog({} as any)
@@ -431,6 +457,55 @@ describe('useDialog — cacheKey 复用时的回调更新', () => {
       vi.advanceTimersByTime(10 * 60 * 1000)
 
       expect(vm.$destroy).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+// ─── 回归：缓存实例的 close 语义（隐藏 + 武装 TTL，不是销毁）─────────────────
+describe('useDialog — 缓存实例的 close 语义', () => {
+  it('close() 只隐藏并武装 TTL：300ms 后不销毁，10 分钟后才回收', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog()
+      const { close } = dialog({ cacheKey: 'k-close' } as any)
+      // 真实实例创建时 propsData.visible=true；mock 不套用 propsData，手动还原前提
+      vm.visible = true
+
+      close()
+      expect(vm.visible).toBe(false)
+
+      // 回归：此前缓存结果复用了单例 close —— 它在 300ms 后把缓存实例 $destroy 了，
+      // `cacheKey` 的「跨次打开保留内部状态」当场失效
+      vi.advanceTimersByTime(300)
+      expect(vm.$destroy).not.toHaveBeenCalled()
+
+      // 真正的回收点是 TTL
+      vi.advanceTimersByTime(10 * 60 * 1000)
+      expect(vm.$destroy).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('缓存命中的结果自带 close：关闭的是该缓存实例，而不是单例', () => {
+    vi.useFakeTimers()
+    try {
+      const dialog = useDialog()
+      // 先建立单例（vm 指向它）
+      dialog({ title: '单例' } as any)
+      // 再建缓存实例（mock 复用同一个 vm，这里只验证 close 走的是哪条路径）
+      dialog({ cacheKey: 'k-hit' } as any)
+      const hit = dialog({ cacheKey: 'k-hit' } as any)
+      vm.visible = true
+
+      hit.close()
+
+      expect(vm.visible).toBe(false)
+      // 缓存 close 不应触发「300ms 后销毁」这条单例路径
+      vi.advanceTimersByTime(300)
+      expect(vm.$destroy).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }

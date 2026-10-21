@@ -137,11 +137,15 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
     return cached
   }
 
-  /** 关闭指定 cacheKey 缓存实例（翻转其 vNode 的 visible） */
+  /** 关闭指定 cacheKey 缓存实例（翻转其 vNode 的 visible 并武装 TTL） */
   const closeCache = (cacheKey: string) => {
     const cached = instanceCache.get(cacheKey)
     if (cached && cached.vNode?.component) {
       cached.vNode.component.props.visible = false
+      // 程序化关闭**不**经过组件事件（直接写 props.visible，不会 emit 'closed'），
+      // 而 TTL 只挂在 onClosed 包装上 —— 不在这里补武装，`d.close()` 关掉的缓存实例
+      // 就再也不回收，动态 cacheKey 时内存无界增长。
+      armCacheDestroy(cacheKey)
     }
   }
 
@@ -321,8 +325,18 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
 
       // 单例模式（无 cacheKey）：已有实例 → 复用
       if (!cacheKey && vNode && vNode.component) {
-        Object.assign(vNode.component.props, dialogOptions)
-        vNode.component.props.visible = true
+        // 复用必须走 applyPropsToVNode（见其注释）：`onXxx` 只认 vNode.props，
+        // 直接 Object.assign 到 component.props 的话，本次调用传的 onClosed 永远不生效，
+        // 关闭时跑的仍是**第一次**那批回调（add 的回调在 edit 弹窗上触发）。
+        const nextProps = pickProps(dialogOptions as Record<string, unknown>)
+        const originalOnClosed = nextProps.onClosed as Function | undefined
+        // 与首次创建同一条包装：手工 render 的 vNode 收不到父级 v-model 回写
+        // `update:visible`，关闭动作要靠 close() 自己落 visible=false。
+        nextProps.onClosed = (...args: unknown[]) => {
+          originalOnClosed?.(...args)
+          close()
+        }
+        applyPropsToVNode(vNode, { ...nextProps, visible: true })
         return { instance: vNode, close, destroy }
       }
 

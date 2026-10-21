@@ -108,6 +108,9 @@ describe("generate_crud front door — surface routing", () => {
     expect(res.isError).toBeFalsy();
     expect(res.content[0].text).toContain("standalone fragment");
     expect(res.content[0].text).toContain("## Query form (QueryForm.vue)");
+    // AN-15：无表片段同样带前置清单（与整页共用 buildPreflight）——
+    // 此前这条支只给代码，宿主要配哪些全局项只能靠猜。
+    expect(res.content[0].text).toContain("## Preflight — host prerequisites");
   });
 
   it("no-table 的 formLayout 必须透传给查询表单（Wave 4：修前顶层 formLayout 被静默丢弃）", async () => {

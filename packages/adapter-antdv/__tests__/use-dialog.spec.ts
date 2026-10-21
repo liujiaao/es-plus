@@ -113,6 +113,32 @@ describe('useDialog — 默认模式（onlyInstance:false）', () => {
     expect(onClosed).toHaveBeenCalled()
   })
 
+  // ─── 回归：单例复用时 `onXxx` 必须写进 vNode.props（component.props 是死槽）───
+  it('单例复用：第二次调用传入的 onClosed 生效，旧回调不再触发', () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const dialog = useDialog()
+    const r1 = dialog({ title: '添加', onClosed: first })
+    const r2 = dialog({ title: '编辑', onClosed: second })
+    expect(r2.instance).toBe(r1.instance) // 前提：确实复用了同一实例
+
+    // 复用路径把包装写回 vNode.props；emit 按 vNode.props 派发
+    r2.instance.props.onClosed?.()
+
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  it('单例复用时省略 onClosed：上一次的回调不再触发', () => {
+    const first = vi.fn()
+    const dialog = useDialog()
+    dialog({ title: 'a', onClosed: first })
+    const r2 = dialog({ title: 'b' })
+
+    r2.instance.props.onClosed?.()
+    expect(first).not.toHaveBeenCalled()
+  })
+
   it('mergedOptions 默认包含 visible:true + width:"50%"', () => {
     const dialog = useDialog()
     dialog({})
@@ -306,6 +332,17 @@ describe('useDialog — cacheKey 实例缓存', () => {
     expect(instance.component.props.visible).toBe(false)
     // 缓存实例关闭后仍留在 DOM，等待 TTL 回收
     expect(document.body.childElementCount).toBe(1)
+  })
+
+  // 回归：程序化关闭不经过组件事件（不 emit 'closed'），TTL 必须在 closeCache 里补武装
+  it('程序化 close() 关闭缓存实例后同样武装 TTL（不会永久常驻）', () => {
+    vi.useFakeTimers()
+    const dialog = useDialog()
+    const { close } = dialog({ cacheKey: 'k-ttl', title: 'A' })
+    close()
+    // 程序中没有人 emit 'closed' —— 此前 TTL 只挂在 onClosed 包装上，永不回收
+    vi.advanceTimersByTime(10 * 60 * 1000)
+    expect(document.body.childElementCount).toBe(0)
   })
 
   it('关闭后重新打开：visible 置回 true，且省略的 prop 回退到创建时的基线', () => {
