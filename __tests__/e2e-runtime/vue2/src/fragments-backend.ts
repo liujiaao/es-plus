@@ -28,7 +28,7 @@ export interface FragmentBackend {
 }
 
 export function createFragmentBackend(): FragmentBackend {
-  let users = [
+  const users = [
     { id: 1, name: '张三', status: 1, amount: 12, createdAt: '2026-01-01' },
     { id: 2, name: '李四', status: 0, amount: 3.5, createdAt: '2026-01-02' },
   ]

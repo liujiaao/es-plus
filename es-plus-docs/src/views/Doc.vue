@@ -63,6 +63,10 @@ import { useI18n } from 'vue-i18n'
 import { Top } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
+// highlight.js 的 common bundle 不含 Vue SFC 语言：文档里 ```vue 代码块会触发
+// 「Could not find the language 'vue'」并降级成无高亮。SFC ≈ HTML 模板 + 内嵌脚本/样式，
+// 用 xml 定义注册为 'vue'（xml 支持内嵌 <script>/<style>），至少保住标签着色。
+import xml from 'highlight.js/lib/languages/xml'
 import DemoBlock from '@/components/doc/DemoBlock.vue'
 import { installAppPlugins } from '@/utils/install-app-plugins'
 import { rewriteInternalDocLinks } from '@/utils/doc-links'
@@ -96,6 +100,7 @@ import { useHead } from '@unhead/vue'
 const route = useRoute()
 
 hljs.configure({ ignoreUnescapedHTML: true })
+hljs.registerLanguage('vue', xml)
 
 const escapeAttr = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

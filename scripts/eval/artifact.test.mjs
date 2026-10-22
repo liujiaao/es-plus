@@ -62,7 +62,7 @@ const complete = (over = {}) => ({
   attributeAccuracy: 0.99,
   attributeRows: 100,
   ...over,
-})
+});
 
 // ─── 结构：完整测量必须自带 definition95 与收敛腿 ─────────────────────────
 {

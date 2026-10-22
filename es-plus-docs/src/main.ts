@@ -37,7 +37,9 @@ head.push({
     { name: 'twitter:card', content: 'summary_large_image' },
   ],
   link: [
-    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    // 必须带 base：GitHub Pages 部署在 /es-plus/ 子路径，绝对路径 /favicon.svg
+    // 会指向站点根（liujiaao.github.io/favicon.svg）→ 线上 404。
+    { rel: 'icon', type: 'image/svg+xml', href: `${import.meta.env.BASE_URL}favicon.svg` },
   ],
 })
 app.use(head)

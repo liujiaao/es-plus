@@ -48,7 +48,7 @@ async function importGenerated(spec: string): Promise<any> {
 
 /** 内存后端：与 vue3 的 runtime-harness 同契约（列表返回 {records, rows}）。 */
 function createInMemoryBackend(seed: Array<Record<string, unknown>>) {
-  let store = seed.map((r) => ({ ...r }))
+  const store = seed.map((r) => ({ ...r }))
   const calls = { list: 0 }
   const httpRequest = async (req: Record<string, any>) => {
     const { formParams = {}, pageIndex = 1, pageSize = 10 } = req

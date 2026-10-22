@@ -47,8 +47,8 @@ function eq(actual, expected, msg) {
   )
 }
 
-const surf = (query = [], table = [], form = [], dialog = []) => ({ query, table, form, dialog })
-const f = (label, prop = label) => ({ prop, label, formtype: 'Input' })
+const surf = (query = [], table = [], form = [], dialog = []) => ({ query, table, form, dialog });
+const f = (label, prop = label) => ({ prop, label, formtype: 'Input' });
 
 // ─── normalization ──────────────────────────────────────────────────────────
 {
