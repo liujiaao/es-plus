@@ -49,6 +49,8 @@ import {
   driveToValidConfig as driveToValidConfigPure,
   isNotMeasured,
   OUTCOME,
+  withTransportRetry,
+  createTransportRetryGate,
 } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
@@ -231,17 +233,48 @@ function textOf(message) {
  */
 let DEGRADED_CALLS = 0
 
+/**
+ * 传输层重试次数。一次全量跑批 4 小时，中继偶发抖动是常态：**连接层**失败若直接变成
+ * 「未测到」，一行就能让门禁腿整批作废。只在 `isTransientTransportError` 为真时重试
+ * （连接错误 / 429 / 5xx），4xx 不重试。产物体里记录它，读数字的人知道这次跑批抖过。
+ */
+let TRANSPORT_RETRIES = 0
+
+/**
+ * 中继「整段不可用」vs「偶发抖动」的断路器（见 eval/repair-loop.mjs 的 createTransportRetryGate）。
+ * 没有它，一次持续 2 小时的中继故障会让**每一行**都把整条退避阶梯睡完，把跑批拖成双倍时长
+ * 却仍然产出一份作废的产物；有它，连续 3 行连重试都用尽之后就直接快速失败。
+ */
+const transportGate = createTransportRetryGate()
+
 async function callModel(client, system, messages, opts = {}) {
-  const res = await client.messages.create({
-    model: MODEL,
-    max_tokens: opts.maxTokens ?? MAX_TOKENS,
-    // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
-    // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
-    // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
-    ...(opts.degraded ? {} : { thinking: { type: 'adaptive' } }),
-    system,
-    messages,
-  })
+  let res
+  try {
+    res = await withTransportRetry(
+      () =>
+        client.messages.create({
+          model: MODEL,
+          max_tokens: opts.maxTokens ?? MAX_TOKENS,
+          // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
+          // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
+          // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
+          ...(opts.degraded ? {} : { thinking: { type: 'adaptive' } }),
+          system,
+          messages,
+        }),
+      {
+        attempts: transportGate.attemptsFor(),
+        onRetry: (err, n) => {
+          TRANSPORT_RETRIES++
+          console.warn(`[eval:llm] 传输重试 ${n} 次：${String(err?.message ?? err).split('\n')[0]}`)
+        },
+      }
+    )
+  } catch (err) {
+    transportGate.recordFailure(err)
+    throw err
+  }
+  transportGate.recordSuccess()
   if (opts.degraded) DEGRADED_CALLS++
   if (res.model) SERVED_MODELS.add(res.model)
   // stopReason 必须带出来：它决定这一行最终是「模型答错了」（记 0 分，是成绩）还是
@@ -307,8 +340,16 @@ async function main() {
   // the native /v1/messages protocol (x-api-key auth) — an OpenAI-only endpoint
   // will NOT work with this SDK.
   const baseURL = process.env.ANTHROPIC_BASE_URL
-  const client = new Anthropic(baseURL ? { baseURL } : {})
-  console.log(`[eval:llm] endpoint: ${baseURL || 'https://api.anthropic.com (default)'} · model: ${MODEL}`)
+  // 重试与超时**由我们**掌握，不用 SDK 内置的（默认 maxRetries=2）：
+  //   · 内置重试对本脚本不可见 —— 它不计入 `transportRetries`，产物就无法自证中继抖过没有；
+  //   · 两套重试叠在一起会把最坏等待时间乘起来（SDK 3 次 × 我们 5 次 × 超时）。
+  // 超时必须显式有界：SDK 默认 10 分钟/请求，一个挂住的中继就能让单行吃掉一小时。
+  const timeout = Number(process.env.ESPLUS_EVAL_TIMEOUT_MS) || 180000
+  const client = new Anthropic({ ...(baseURL ? { baseURL } : {}), maxRetries: 0, timeout })
+  console.log(
+    `[eval:llm] endpoint: ${baseURL || 'https://api.anthropic.com (default)'} · model: ${MODEL}` +
+      ` · per-request timeout: ${timeout} ms`
+  )
   const system = buildNlToConfigSystemPrompt()
   // W1.3：前门腿的打包放在**任何模型调用之前** —— 它失败说明本脚本根本测不到宣称主路径，
   // 此时应当立即红，而不是先烧掉一次跑批再发现。
@@ -1149,6 +1190,9 @@ async function main() {
       notMeasuredRows: notMeasuredRows.length,
       modelFailureRows: modelFailureRows.length,
       degradedCalls: DEGRADED_CALLS,
+      // 传输层重试次数（见 withTransportRetry）。非零 ⟹ 中继这次抖过；这正是「失败记录」最该
+      // 自证的东西：读者要能区分「中继整段时间不可用」与「偶发抖动后被重试救回」。
+      transportRetries: TRANSPORT_RETRIES,
       // 测量失败时**仍**公布编译腿数字：它是确定性代码的性质，不受中继故障影响，
       // 而且正是读者用来区分「产物坏了」与「没测到」的证据（见 summarizeCompile 头注）。
       compileRate: compileRate === null ? null : Number(compileRate.toFixed(4)),
@@ -1222,6 +1266,14 @@ async function main() {
     console.log(
       `  degraded calls:        ${DEGRADED_CALLS} — answer obtained only after disabling thinking` +
         ` (relay drops thinking bodies); those rows were measured under a slightly different condition`
+    )
+  }
+  if (TRANSPORT_RETRIES) {
+    // 只提示、不判红：重试**成功**了 ⟹ 这些行是正常测到的（它们与「未测到」的区别正是
+    // 2026-10-22 那次 184 行 Connection error 的教训）。写出来是为了让读者知道中继当时抖过。
+    console.log(
+      `  transport retries:     ${TRANSPORT_RETRIES} — transient connection/429/5xx failures retried` +
+        ` in place; the affected rows ARE measured (nothing was silently reclassified)`
     )
   }
   if (skippedScenes.length) {
@@ -1457,6 +1509,10 @@ async function main() {
     // 有多少次调用是靠**关掉 thinking**才拿到答案的（见 repair-loop 的 MAX_DEGRADED_ATTEMPTS）。
     // 非零 ⟹ 部分行是在与被测系统略有不同的条件下测出来的，读数字的人有权知道。
     degradedCalls: DEGRADED_CALLS,
+    // 传输层重试次数（见 repair-loop 的 withTransportRetry）。非零 ⟹ 中继抖过但对本份成绩
+    // 无影响（被重试救回）。它是「这次数字为什么可信」的一部分：没有它，一次抖动留下的
+    // 只能是失败记录，而有了它，成功的跑批也能自证「我们没有把抖动算成模型答错」。
+    transportRetries: TRANSPORT_RETRIES,
     gatedRows: { lang: 'zh', rows: zhRows.length, errored: notMeasuredIn(zhRows) },
     observedRows: { lang: 'en', rows: enRows.length, errored: notMeasuredIn(enRows) },
     target: TARGET_ACCURACY,

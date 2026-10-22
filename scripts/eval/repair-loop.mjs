@@ -102,6 +102,88 @@ export function extractJson(text) {
 }
 
 /**
+ * 传输层故障（与模型产出无关）—— 值得**原地重试**的那一类错误。
+ *
+ * 与 `truncated` / `empty` 的区别：后者是「调用成功了，但没拿到可用产出」，由自修复环按
+ * 归因处理；这里说的是**调用根本没落地**（SDK `APIConnectionError` / 429 / 5xx）。
+ * 一次 4 小时的全量跑批里，中继偶发抖动是常态；让一行连接错误直接变成「未测到」，
+ * 再经由门禁腿零容忍把整次跑批作废，代价与病因完全不成比例（2026-10-22 实测：
+ * 京东云中继在 zh 120–265 连续 184 行 `Connection error.`，随后自行恢复）。
+ *
+ * 判据只认**传输层**信号：SDK 的 `APIConnectionError`/`APIConnectionTimeoutError` 名字、
+ * HTTP 429/5xx、以及无 status 时的网络错误关键字。绝不把 4xx（鉴权/参数错）当可重试 ——
+ * 那会把「key 配错」拖成 4 小时的重试风暴。
+ */
+export function isTransientTransportError(err) {
+  if (!err) return false
+  const name = String(err.name ?? '')
+  if (name === 'APIConnectionError' || name === 'APIConnectionTimeoutError') return true
+  const status = err.status ?? err.statusCode
+  if (typeof status === 'number' && (status === 429 || (status >= 500 && status <= 599))) return true
+  if (typeof status === 'number') return false
+  return /connection error|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(
+    String(err.message ?? '')
+  )
+}
+
+/**
+ * 对一个异步调用做**有界**传输重试（指数退避）。`sleep` 可注入，故单测零等待。
+ *
+ * 不重试非传输错误；重试用尽后**抛出最后一个错误**（上层照旧归因为「未测到」）。
+ * @param {() => Promise<any>} fn
+ * @param {{attempts?: number, baseDelayMs?: number, sleep?: (ms:number)=>Promise<void>, onRetry?: (err:Error, n:number)=>void}} [opts]
+ */
+export async function withTransportRetry(fn, opts = {}) {
+  const { attempts = 5, baseDelayMs = 3000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onRetry } = opts
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (!isTransientTransportError(err) || i === attempts - 1) throw err
+      onRetry?.(err, i + 1)
+      await sleep(baseDelayMs * 2 ** i)
+    }
+  }
+  throw lastErr
+}
+
+/**
+ * 传输重试的**断路器**：把「中继整段不可用」与「偶发抖动」分开处置。
+ *
+ * 光有重试会把系统性故障变得更贵而不是更好：中继整段倒下时，每一行都要把整条退避阶梯
+ * 走完（2026-10-22 的实况是连续 184 行失败），于是 4 小时的跑批变成 6 小时，最后还是
+ * 一份作废的产物。反过来，偶发抖动恰恰是重试唯一能救的场景。
+ *
+ * 判据用**连续**耗尽次数：连续 `tripAfter` 个逻辑调用连重试都用尽 ⟹ 大概率是整段不可用，
+ * 后续调用改成一击即走（`attempts = 1`，不睡不退避）；任何一次成功立刻复位。
+ * 用「连续」而不是「累计」，是因为抖动是散点、故障是连片 —— 累计计数会被散点误触发，
+ * 而误触发只会让一次本可救回的调用少几次重试，方向安全（不会把答错记成没测到）。
+ *
+ * @param {{tripAfter?: number, attempts?: number}} [opts]
+ */
+export function createTransportRetryGate({ tripAfter = 3, attempts = 5 } = {}) {
+  let streak = 0
+  return {
+    /** 本次调用该给几次尝试。 */
+    attemptsFor: () => (streak >= tripAfter ? 1 : attempts),
+    /** 调用（含重试）最终成功 ⟹ 中继是通的，复位。 */
+    recordSuccess: () => {
+      streak = 0
+    },
+    /** 调用彻底失败 ⟹ 只有**传输层**失败才计入连败（4xx 是配置错，不是中继抖）。 */
+    recordFailure: (err) => {
+      streak = isTransientTransportError(err) ? streak + 1 : 0
+    },
+    /** 当前连续耗尽次数（诊断/日志用）。 */
+    get streak() {
+      return streak
+    },
+  }
+}
+
+/**
  * @param {object} o
  * @param {(messages: object[], opts?: {degraded?: boolean, maxTokens?: number}) => Promise<{text: string, stopReason?: string|null}>} o.call
  *        取模型这一轮的产出（可注入以单测）。`opts.degraded` 为真时**必须关掉 thinking**，

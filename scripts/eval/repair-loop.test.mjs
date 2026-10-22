@@ -6,7 +6,7 @@
  * 这里用**脚本化的 `call`**（预置每轮返回什么）把语义钉死 —— 这不能用跑真钱跑批来验，
  * 因为真实模型不会按你要的顺序犯错。
  *
- * 钉住的六条：
+ * 钉住的八条：
  *   1) **空轮不消耗修复机会**：`[空, 坏, 好]` 必须成功（2026-10-16 实测的回归形状：
  *      `01-user-manage [zh]` 第 1 轮空轮 + 后两轮 schema 不过 → 被误判成能力缺口）。
  *   2) **空轮有界**：全程空轮必须在重发 + 降级都用尽后**失败**，不得挂死。
@@ -19,11 +19,17 @@
  *   7) **截断后预算翻倍且封顶**：`stop_reason=max_tokens` 是我们给的预算不够 ⟹ 下一次调用必须
  *      带着翻倍后的 `maxTokens` 重试；到 `maxTokenCap` 后不得再承诺加预算。否则复杂 case
  *      会三连撞同一个上限，整次跑批因一行「没测到」作废（2026-10-22 opus-4-6 实测）。
+ *   8) **传输层重试只重试传输层**：连接错误 / 429 / 5xx 原地重试并退避；401/400 **一次都不得**
+ *      重试（否则「key 配错」会被拖成重试风暴）。连续多行耗尽 ⟹ 断路器改为一击即走。
+ *      2026-10-22 京东云中继连续 184 行 `Connection error.` 把整次跑批变成「没测到」。
  */
 import {
   driveToValidConfig,
   extractJson,
   isNotMeasured,
+  isTransientTransportError,
+  withTransportRetry,
+  createTransportRetryGate,
   MAX_REPAIR_ATTEMPTS,
   MAX_EMPTY_RETRIES,
   MAX_DEGRADED_ATTEMPTS,
@@ -259,7 +265,98 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
   check(legacy.call.calls[0]?.opts === undefined, '未指定基础预算时，调用不得携带 opts（交给 call 的默认值）')
 }
 
-// ── 8) extractJson 边界（纯函数） ────────────────────────────────────
+// ── 8) 传输层重试：只重试「调用没落地」的那一类，且有界 ─────────────────
+{
+  // 判据：SDK 的连接错误名、HTTP 429/5xx、无 status 时的网络错误措辞。
+  const connErr = Object.assign(new Error('Connection error.'), { name: 'APIConnectionError' })
+  const timeoutErr = Object.assign(new Error('Request timed out.'), { name: 'APIConnectionTimeoutError' })
+  check(isTransientTransportError(connErr), 'APIConnectionError 必须可重试（2026-10-22 中继抖动的真实形状）')
+  check(isTransientTransportError(timeoutErr), 'APIConnectionTimeoutError 必须可重试')
+  check(isTransientTransportError({ status: 429, message: 'rate limited' }), '429 必须可重试')
+  check(isTransientTransportError({ status: 503, message: 'unavailable' }), '5xx 必须可重试')
+  check(isTransientTransportError({ status: 500, message: 'boom' }), '500 必须可重试')
+  // 4xx 是**配置错**（key 失效、参数不合法）：重试只会把一次快速失败拖成重试风暴。
+  check(!isTransientTransportError({ status: 401, message: 'unauthorized' }), '401 绝不可重试（key 配错）')
+  check(!isTransientTransportError({ status: 400, message: 'bad request' }), '400 绝不可重试（参数错）')
+  check(!isTransientTransportError({ status: 403, message: 'forbidden' }), '403 绝不可重试（额度/权限）')
+  check(!isTransientTransportError(null), 'null 不是传输错误')
+  // 无 status 时只能看措辞 —— 这是 SDK 把连接层错误包成通用 Error 时的兜底。
+  check(isTransientTransportError(new Error('ECONNRESET')), '无 status 时 ECONNRESET 必须可重试')
+  check(!isTransientTransportError(new Error('schema validation failed')), '普通业务错误不得被当成传输错误')
+
+  /** 造一个「前 n 次按序抛错、之后成功」的调用，并记录注入的退避时长（单测零等待）。 */
+  const flaky = (errors, value = 'ok') => {
+    const delays = []
+    let i = 0
+    const fn = async () => {
+      if (i < errors.length) throw errors[i++]
+      return value
+    }
+    const opts = { sleep: async (ms) => void delays.push(ms) }
+    return { fn, delays, opts, calls: () => i }
+  }
+
+  // 抖动一次后成功 ⟹ 返回结果，退避一次 3000ms。
+  {
+    const f = flaky([connErr])
+    const out = await withTransportRetry(f.fn, f.opts)
+    check(out === 'ok', '一次抖动后必须重试成功并返回结果')
+    check(f.delays.join(',') === '3000', `第一次退避应为 3000ms，实际 ${f.delays.join(',')}`)
+  }
+  // 退避必须是指数：3s → 6s → 12s → 24s（上限 5 次 = 4 次退避）。
+  {
+    const f = flaky([connErr, connErr, connErr, connErr, connErr])
+    let threw = null
+    try {
+      await withTransportRetry(f.fn, f.opts)
+    } catch (e) {
+      threw = e
+    }
+    check(threw === connErr, '重试用尽后必须抛出**最后一个**错误（上层要照旧归因/记录）')
+    check(f.calls() === 5, `默认最多 5 次尝试，实际 ${f.calls()}`)
+    check(f.delays.join(',') === '3000,6000,12000,24000', `退避必须指数增长，实际 ${f.delays.join(',')}`)
+  }
+  // 401 一次都不重试：这是「key 配错」不能被拖成 4 小时重试风暴的唯一保证。
+  {
+    const f = flaky([{ status: 401, message: 'unauthorized' }])
+    let threw = null
+    try {
+      await withTransportRetry(f.fn, f.opts)
+    } catch (e) {
+      threw = e
+    }
+    check(threw?.status === 401, '401 必须原样抛出')
+    check(f.calls() === 1 && f.delays.length === 0, `401 不得重试（调用 ${f.calls()} 次、退避 ${f.delays.length} 次）`)
+  }
+  // onRetry 的次数必须等于实际重试次数（产物里的 transportRetries 就靠它计数）。
+  {
+    const f = flaky([connErr, connErr])
+    const seen = []
+    await withTransportRetry(f.fn, { ...f.opts, onRetry: (e, n) => seen.push(n) })
+    check(seen.join(',') === '1,2', `onRetry 应收到 1,2，实际 ${seen.join(',')}`)
+  }
+
+  // 断路器：连续 3 个逻辑调用耗尽 ⟹ 改为一击即走（不给中继整段故障烧跑批时长的机会）。
+  {
+    const gate = createTransportRetryGate({ tripAfter: 3, attempts: 5 })
+    check(gate.attemptsFor() === 5, '断路器初始状态应给满重试次数')
+    gate.recordFailure(connErr)
+    gate.recordFailure(connErr)
+    check(gate.attemptsFor() === 5, '连续 2 次耗尽还不足以判定「整段不可用」（抖动是散点）')
+    gate.recordFailure(connErr)
+    check(gate.attemptsFor() === 1, '连续 3 次耗尽后必须改为一击即走')
+    gate.recordSuccess()
+    check(gate.attemptsFor() === 5, '任何一次成功都必须复位（中继恢复了就要重新给重试）')
+    // 4xx 不是中继抖动：它不得把断路器打开（否则一次 key 配错会永久关掉重试）。
+    gate.recordFailure({ status: 401, message: 'unauthorized' })
+    gate.recordFailure({ status: 401, message: 'unauthorized' })
+    gate.recordFailure({ status: 401, message: 'unauthorized' })
+    check(gate.attemptsFor() === 5, '4xx 失败不得打开断路器（那是配置错，不是中继不可用）')
+    check(gate.streak === 0, `4xx 必须清空连败计数，实际 ${gate.streak}`)
+  }
+}
+
+// ── 9) extractJson 边界（纯函数） ────────────────────────────────────
 {
   check(extractJson('{"a":1}').a === 1, 'extractJson：裸对象')
   check(extractJson('```json\n{"a":1}\n```').a === 1, 'extractJson：围栏')
@@ -279,5 +376,6 @@ if (failures) {
 }
 console.log(
   '\nmeta-eval OK — 自修复环：空轮不消耗机会且两条退路都有界，三种病因各自点名，' +
-    '归因区分「没测到 / 答错了」，降级重试只在重发用尽时 fire，截断后预算翻倍且封顶，回灌不留空块。✔'
+    '归因区分「没测到 / 答错了」，降级重试只在重发用尽时 fire，截断后预算翻倍且封顶，' +
+    '传输重试只重试传输层且有界，回灌不留空块。✔'
 )
