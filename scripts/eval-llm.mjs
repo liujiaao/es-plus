@@ -101,6 +101,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const MODEL = process.env.ESPLUS_EVAL_MODEL || 'claude-opus-5'
 const TARGET_ACCURACY = Number(process.env.ESPLUS_EVAL_TARGET || '0.95')
 
+/**
+ * 单次调用的**基础**输出预算（`max_tokens`）。**只影响「给模型多少写完的机会」，不进任何评分口径**。
+ *
+ * 默认 8000 是 sonnet 时代的经验值；`thinking: adaptive` 的模型（如 claude-opus-4-6）在
+ * 复杂配置上会先花掉七八千 token 思考，正文只剩几百字符就撞 `stop_reason=max_tokens` ——
+ * repair-loop 把截断归因为「没测到」（正确：不是模型答错），但门禁腿有一条没测到，
+ * 整次跑批就作废。故 repair-loop 收到截断后会把**该行**的预算翻倍重试（最高 4×），
+ * 正常行仍按基础预算跑，不为个别复杂 case 付全量延迟。
+ *
+ * 2026-10-22 实测：8000 下 opus-4-6 在复杂 case 上截断（本机全量 142/216 zh 时已 4 条）。
+ * 可用 `ESPLUS_EVAL_MAX_TOKENS` 整体调高基础预算；产物里记录 `maxTokens` 供复现。
+ */
+const MAX_TOKENS = Number(process.env.ESPLUS_EVAL_MAX_TOKENS) || 8000
+/** 截断升级的天花板（基础预算的 4 倍，且不超过 64k）。 */
+const MAX_TOKEN_CAP = Math.min(MAX_TOKENS * 4, 64000)
+
 // Every model id the server actually answered with, across the whole run.
 // A relay/gateway can silently route a requested id to a different backend
 // (e.g. PPIO maps `pa/claude-opus-4-8` → its internal `pa/venus-marble-4-8`),
@@ -218,7 +234,7 @@ let DEGRADED_CALLS = 0
 async function callModel(client, system, messages, opts = {}) {
   const res = await client.messages.create({
     model: MODEL,
-    max_tokens: 8000,
+    max_tokens: opts.maxTokens ?? MAX_TOKENS,
     // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
     // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
     // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
@@ -229,7 +245,8 @@ async function callModel(client, system, messages, opts = {}) {
   if (opts.degraded) DEGRADED_CALLS++
   if (res.model) SERVED_MODELS.add(res.model)
   // stopReason 必须带出来：它决定这一行最终是「模型答错了」（记 0 分，是成绩）还是
-  // 「被我们的 8000 token 预算截断」（没测到，不得记 0）。见 eval/repair-loop.mjs 头注。
+  // 「被我们的 token 预算截断」（没测到，不得记 0）。见 eval/repair-loop.mjs 头注；
+  // 预算默认 8000，可经 `ESPLUS_EVAL_MAX_TOKENS` 调高（thinking 型模型容易先烧光预算）。
   return { text: textOf(res), stopReason: res.stop_reason ?? null }
 }
 
@@ -249,6 +266,9 @@ function driveToValidConfig(client, system, messages) {
     },
     pushAssistant,
     pushUserCorrection,
+    // 截断是预算问题：该行预算从 MAX_TOKENS 起逐次翻倍，最高 MAX_TOKEN_CAP。
+    maxTokens: MAX_TOKENS,
+    maxTokenCap: MAX_TOKEN_CAP,
   })
 }
 
@@ -268,6 +288,9 @@ function driveFragmentConfig(client, system, messages, schema) {
     },
     pushAssistant,
     pushUserCorrection,
+    // 截断是预算问题：该行预算从 MAX_TOKENS 起逐次翻倍，最高 MAX_TOKEN_CAP。
+    maxTokens: MAX_TOKENS,
+    maxTokenCap: MAX_TOKEN_CAP,
   })
 }
 
@@ -1110,6 +1133,7 @@ async function main() {
       measuredAt: new Date().toISOString(),
       model: MODEL,
       servedModel: SERVED_MODELS.size ? [...SERVED_MODELS].join(',') : MODEL,
+      maxTokens: MAX_TOKENS,
       measurement: 'failed',
       reason:
         'measurement did not happen (or only partially happened) — NOT a low score. ' +
@@ -1409,6 +1433,9 @@ async function main() {
     measuredAt: new Date().toISOString(),
     model: MODEL,
     servedModel,
+    // 本次跑批的单次输出预算（见 MAX_TOKENS 注释）。8000 与调高后的数字不可直接横向比较：
+    // 预算太小会让复杂 case 以「未测到」退出，而不会把它记成低分。
+    maxTokens: MAX_TOKENS,
     // 「这份数字是被完整测到的」——观测腿有未测到行时仍发布门禁腿，但状态必须写清楚，
     // 免得读者把 `en: null` 当成「en 只有 0 分」或「这次没跑」。
     measurement: enIncomplete ? 'complete-gated-leg-only' : 'complete',

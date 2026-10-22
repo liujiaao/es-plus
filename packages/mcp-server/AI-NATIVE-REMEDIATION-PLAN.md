@@ -276,6 +276,7 @@ npm run check:scorers
 - **偏离**设计第 1 条（“baseline 只存 `rate` 与 `minApplicable`”）：`accuracy-baseline.json` 仍**保留观测到的 `applicableCounts`**，`minApplicable` 由它推导。理由：漂移提示需要“当时的数”作参照；只留地板就分不出“少了 1 例（合法）”与“少了 14%”。
 - 基线升 `version: 2`，`applicableCounts` 刷新到当前语料（213 条 crud）；`definition95` / `coreRate` / `byDimension` **刻意留空**并注明原因：AN-01 之前的数字是 `fixedFields` 泄漏 + 真空维度抬高的，填进去会让 AN-01 后的**第一次**跑批因“非退步”而红。填充动作挂在首次按新口径的全量跑批之后（同时记 `runId` / `commit`）。
 - `ratchet.test.mjs` 拆 v1/v2 两段合成断言 + 真实语料断言（`minApplicable` 覆盖同一组维度、地板不高于当前计数）+ 变异自检（抽掉 `mergeConfig` 用例必须红）。
+- **批次 C 续（2026-10-21）**：`compareToBaseline` 遇到 `null` 的比率基线不再静默 `return` —— 逐键打印「未填，棘轮对此维度不生效」，避免「rate ratchet all OK」被误读成全维度受守护；`applicableCounts` / `minApplicable` 已随语料刷到 216 crud / 194 heldout（**tableBtns 15 / dialogs 15 / operationColumn 12 / dataOptions 120 / target 87 / isHidden 27 / membership 216**），`guardAntiDelete` 的 ±10% 漂移提示改为真的打印到 `check:ratchet` 输出（此前只写进 `r.warnings`，测试不读）。比率真值仍待首次按 AN-01 口径的全量跑批。
 
 ---
 

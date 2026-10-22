@@ -37,7 +37,8 @@
  * 故本模块把一行「打不开」归成三类，抛出的 `err.kind` 就是它：
  *
  *   · `no-answer`      —— 一次 text 块都没拿到 ⟹ **没测到**（不得记 0，那是冤枉）
- *   · `truncated`      —— 撞到 `max_tokens=8000` ⟹ **没测到**（是我们的预算不够，不是模型）
+ *   · `truncated`      —— 撞到 `max_tokens` 预算 ⟹ **没测到**（是我们的预算不够，不是模型；
+ *                        默认 8000，thinking 型模型可经 `ESPLUS_EVAL_MAX_TOKENS` 调高）
  *   · `model-failure`  —— 至少拿到过一次真产出（有 text、未被截断），但仍拿不到合法 config
  *                        ⟹ **测到了，模型就是答错了** ⟹ 记 0 分才是诚实答案
  *
@@ -102,13 +103,15 @@ export function extractJson(text) {
 
 /**
  * @param {object} o
- * @param {(messages: object[], opts?: {degraded?: boolean}) => Promise<{text: string, stopReason?: string|null}>} o.call
+ * @param {(messages: object[], opts?: {degraded?: boolean, maxTokens?: number}) => Promise<{text: string, stopReason?: string|null}>} o.call
  *        取模型这一轮的产出（可注入以单测）。`opts.degraded` 为真时**必须关掉 thinking**，
- *        理由见 MAX_DEGRADED_ATTEMPTS。
+ *        理由见 MAX_DEGRADED_ATTEMPTS；`opts.maxTokens` 为本轮输出预算（截断升级用）。
  * @param {object[]} o.messages 就地追加（多轮精修要靠同一数组延续上下文）
  * @param {(candidate: object) => {success: boolean, data?: object, issues?: {path:string[], message:string}[]}} o.validate
  * @param {(messages: object[], text: string) => object} o.pushAssistant 见 ./prompt.mjs
  * @param {(messages: object[], text: string) => object} o.pushUserCorrection 见 ./prompt.mjs
+ * @param {number|null} [o.maxTokens] 基础输出预算；null = 不显式传（交给 call 的默认值）
+ * @param {number} [o.maxTokenCap] 截断后逐次翻倍的上限。见下方 truncation 分支。
  * @returns {Promise<object>} 通过校验的 config
  * @throws {Error & {kind: string, calls: number, attemptKinds: string[]}} 拿不到合法 config 时
  */
@@ -121,6 +124,8 @@ export async function driveToValidConfig({
   maxRepairs = MAX_REPAIR_ATTEMPTS,
   maxEmptyRetries = MAX_EMPTY_RETRIES,
   maxDegraded = MAX_DEGRADED_ATTEMPTS,
+  maxTokens = null,
+  maxTokenCap = 32000,
 }) {
   const trail = []
   /** 每次**物理调用**产出了什么：'real'（有文本且未被截断）/ 'empty'（无文本）/ 'truncated'。 */
@@ -129,20 +134,33 @@ export async function driveToValidConfig({
   let emptyRetries = 0
   let degradedUsed = 0
   let pendingDegraded = false
+  /**
+   * 本行的输出预算。截断是**预算**问题，不是模型的答卷：翻倍后重试是唯一对症的动作
+   * （原实现每次都用同一预算重试，于是复杂 case 连撞 3 次、整次跑批因一行「没测到」作废）。
+   * 只有真撞过截断的行才会付出更高的预算/延迟，正常行仍按基础预算跑。
+   */
+  let tokenBudget = maxTokens
 
   for (let attempt = 0; attempt < maxRepairs; attempt++) {
-    const opts = pendingDegraded ? { degraded: true } : undefined
+    const opts = {}
+    if (pendingDegraded) opts.degraded = true
+    if (tokenBudget != null) opts.maxTokens = tokenBudget
     pendingDegraded = false
-    const out = await call(messages, opts)
+    const out = await call(messages, Object.keys(opts).length ? opts : undefined)
     const text = typeof out?.text === 'string' ? out.text : ''
     const stopReason = out?.stopReason ?? null
     lastRaw = text
 
     if (stopReason === 'max_tokens') {
       // 被自己的 token 预算截断：这一段通常是半个 JSON，`extractJson` 必然失败。
-      // 记成模型答错会把「预算太小」误诊成「能力不足」，且再修 3 次也修不回来（每次都被截）。
+      // 记成模型答错会把「预算太小」误诊成「能力不足」，且用同一预算再修 3 次也修不回来。
       kinds.push('truncated')
-      trail.push(`#${attempt + 1} 截断（stop_reason=max_tokens，${text.length} 字符）—— 是 token 预算不够，不是模型答错`)
+      const raised = tokenBudget == null ? null : Math.min(tokenBudget * 2, maxTokenCap)
+      const bump = raised != null && raised > tokenBudget ? `，下次预算提到 ${raised}` : ''
+      if (raised != null && raised > tokenBudget) tokenBudget = raised
+      trail.push(
+        `#${attempt + 1} 截断（stop_reason=max_tokens，${text.length} 字符）—— 是 token 预算不够，不是模型答错${bump}`
+      )
       continue
     }
 

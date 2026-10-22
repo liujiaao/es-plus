@@ -16,6 +16,9 @@
  *   5) **归因可分辨**（2026-10-16 全量跑后补）：`空轮/截断` ⟹ 「没测到」，`答错` ⟹ 一次
  *      **合法测量**。混作一谈会让「模型真答不出 1 例」把整次运行作废 ⟹ 中继健康也永远红。
  *   6) **降级重试真的会 fire**：重发用尽后必须关掉 thinking 再来一次，且**只在**这一情形下 fire。
+ *   7) **截断后预算翻倍且封顶**：`stop_reason=max_tokens` 是我们给的预算不够 ⟹ 下一次调用必须
+ *      带着翻倍后的 `maxTokens` 重试；到 `maxTokenCap` 后不得再承诺加预算。否则复杂 case
+ *      会三连撞同一个上限，整次跑批因一行「没测到」作废（2026-10-22 opus-4-6 实测）。
  */
 import {
   driveToValidConfig,
@@ -223,7 +226,40 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
   )
 }
 
-// ── 7) extractJson 边界（纯函数） ────────────────────────────────────
+// ── 7) 截断升级：预算是「我们的」故障，翻倍重试才有机会救回来 ─────────────
+{
+  // 第 1 次撞预算，第 2 次（预算翻倍后）答出合法 config ⟹ 这一行是**测到了**，
+  // 而不是因为 8000 不够被记成「没测到」。2026-10-22 opus-4-6 全量实测的回归形状。
+  const rescued = await run([TRUNCATED, JSON_OK], { maxTokens: 8000, maxTokenCap: 32000 })
+  check(rescued.ok, '截断后预算翻倍重试必须能救回这一行（否则整次跑批因我们的预算作废）')
+  check(
+    rescued.call.calls[0]?.opts?.maxTokens === 8000,
+    `首次调用应使用基础预算 8000，实际 ${rescued.call.calls[0]?.opts?.maxTokens}`
+  )
+  check(
+    rescued.call.calls[1]?.opts?.maxTokens === 16000,
+    `截断后下一次调用预算应翻倍到 16000，实际 ${rescued.call.calls[1]?.opts?.maxTokens}`
+  )
+
+  // 连续截断：逐次翻倍但**不得超过**上限（无界抬高预算 = 用钱掩盖配置错误）。
+  const capped = await run([TRUNCATED], { maxTokens: 8000, maxTokenCap: 32000 })
+  const budgets = capped.call.calls.map((c) => c.opts?.maxTokens)
+  check(
+    budgets.join(',') === '8000,16000,32000',
+    `预算必须是 8000 → 16000 → 32000（封顶），实际 ${budgets.join(',')}`
+  )
+  check(capped.err.kind === OUTCOME.TRUNCATED, '封顶后仍截断，归因仍是「没测到」（不得记成模型答错）')
+  check(
+    (capped.err.message.match(/下次预算提到/g) ?? []).length === 2,
+    '只有「真的抬高过」的两次才可承诺加预算；到顶那一次不得再承诺（诊断必须与实际动作一致）'
+  )
+
+  // 不传预算时不得凭空塞 `opts.maxTokens`（调用方的默认值仍然是唯一来源）。
+  const legacy = await run([JSON_OK])
+  check(legacy.call.calls[0]?.opts === undefined, '未指定基础预算时，调用不得携带 opts（交给 call 的默认值）')
+}
+
+// ── 8) extractJson 边界（纯函数） ────────────────────────────────────
 {
   check(extractJson('{"a":1}').a === 1, 'extractJson：裸对象')
   check(extractJson('```json\n{"a":1}\n```').a === 1, 'extractJson：围栏')
@@ -243,5 +279,5 @@ if (failures) {
 }
 console.log(
   '\nmeta-eval OK — 自修复环：空轮不消耗机会且两条退路都有界，三种病因各自点名，' +
-    '归因区分「没测到 / 答错了」，降级重试只在重发用尽时 fire，回灌不留空块。✔'
+    '归因区分「没测到 / 答错了」，降级重试只在重发用尽时 fire，截断后预算翻倍且封顶，回灌不留空块。✔'
 )
