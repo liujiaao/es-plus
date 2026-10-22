@@ -141,14 +141,19 @@ jobs:
         run: npm run fragment:smoke
 
   golden-compile:
-    # 整个 golden 语料（25 个用例 × 三个渲染目标）真实 `vite build` 编译。
-    # 此前只在夜间跑（eval-llm.yml），而夜间任务不阻塞合并、也不阻塞部署 ——
-    # 生成器产出「能通过字符串断言但编译不过」的代码时，PR 上是绿的。
+    # 整个 golden 语料（279 个构建单元 = CRUD 216 + 片段 63，跨 vue3/vue2/antdv）
+    # 真实 `vite build` 编译。此前只在夜间跑（eval-llm.yml），而夜间任务不阻塞合并、
+    # 也不阻塞部署 —— 生成器产出「能通过字符串断言但编译不过」的代码时，PR 上是绿的。
     # e2e.yml 的 6 个组合虽然也在 PR 编译，但每个组合只覆盖 2 个合成页面；
     # 这里覆盖的是全部策划用例的广度。
     name: Golden corpus compiles (all targets)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 超时不是修辞：GitHub 把超时的 job 记为 **cancelled**，于是 deploy-docs 的
+    # `workflow_run.conclusion == 'success'` 门控不成立 → 部署整段 skipped（线上停在旧包）。
+    # 2026-10-22 实测：28.4 分钟跑完 211/279 例（≈8.1 s/例，每条一次 vite build），
+    # 全集约 40 分钟 —— 30 分钟必然被砍。给 60 分钟留冷缓存余量；语料再长要同步调这里
+    # （`node -e "import('./__tests__/e2e/scripts/run-golden.mjs')..."` 可数总数）。
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
