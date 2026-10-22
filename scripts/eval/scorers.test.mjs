@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95 } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, describeDimMiss, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95 } from './scorers.mjs'
 import { isCrudCase } from './scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -752,6 +752,117 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
   check(ts.byCapability.tableBtns.applicable === true, 'tableBtns: gold 声明了 → applicable')
   check(ts.byCapability.tableBtns.pass === false, 'tableBtns: 名称不同 → 维度判负')
   check(ts.exactIntentCore === false, 'core: tableBtns 名称不同 → core 必须一起判负（同源）')
+}
+
+// ── describeDimMiss 与 pass 同源（`want === got` 当且仅当该维度 pass）──────────
+/**
+ * 这个不变量写在 `describeDimMiss` 的头注里，却一直没有测试 —— 2026-10-22 全量跑批
+ * 的日志里就出现了它被违反的铁证：`101-schedule-date-edit-vue3` 打的是
+ * `editConfig: want trigger=click · mode=cell | got trigger=click · mode=cell`
+ * （两侧一模一样）却同时标成 miss。读日志的人只能得出「记分卡坏了」。
+ *
+ * 打印器是诊断的**唯一**出口：它说谎时，一次跑批里 60+ 条真实 miss 全部不可定位，
+ * 而 `dialogs` 的底座键/声明式底栏、`treeConfig`、`columns` 三个维度**根本没有打印器**
+ * （返回 null），对应 miss 在日志里就是一行无声的维度名。
+ *
+ * 判据取双向：相等必须 pass，pass 必须相等。反方向也要钉，否则「永远打印随机串」
+ * 也能让 want≠got 恒成立 —— 那是把日志变成一个更吵的骗局。
+ */
+{
+  const scorerOf = (key) => CAPABILITY_SCORERS.find((s) => s.key === key)
+  /** 断言：该维度在 (g,p) 上判负，且诊断投影必须能把它讲出来。 */
+  const expectMiss = (key, g, p, label) => {
+    const s = scorerOf(key)
+    if (!s) return check(false, `${key}: 维度不存在`)
+    check(s.applicable(g) === true, `${key}: 夹具应 applicable（${label}）`)
+    check(s.pass(g, p) === false, `${key}: ${label} → 应判负`)
+    const d = describeDimMiss(key, g, p)
+    check(!!d, `${key}: ${label} → 判负时必须有诊断投影（当前返回 null，日志里只剩一个维度名）`)
+    if (!d) return
+    check(
+      d.want !== d.got,
+      `${key}: ${label} → 判负时投影必须不同（got = ${JSON.stringify(d.got)}，want = ${JSON.stringify(d.want)}）`
+    )
+  }
+  /** 断言：该维度判正，且投影两侧相同（否则 `want === got` 就不再等价于 pass）。 */
+  const expectHit = (key, g, p, label) => {
+    const s = scorerOf(key)
+    check(s.pass(g, p) === true, `${key}: ${label} → 应判正`)
+    const d = describeDimMiss(key, g, p)
+    if (!d) return // 维度没有投影（attr 类由 attrMisses 覆盖），不承诺
+    check(d.want === d.got, `${key}: ${label} → 判正时投影必须相同（want=${JSON.stringify(d.want)} got=${JSON.stringify(d.got)}）`)
+  }
+
+  // tableBtns / operationColumn：本来就是同源（tableBtnKeyParts / effectiveRowBtns），钉住不回退。
+  expectHit('tableBtns', base, clone(base), 'gold-vs-gold')
+  {
+    const p = clone(base)
+    p.tableBtns[0].actionType = 'custom'
+    expectMiss('tableBtns', base, p, 'actionType 被改')
+  }
+  expectHit('operationColumn', base, clone(base), 'gold-vs-gold')
+  {
+    const p = clone(base)
+    p.operationColumn.btns[0].name = '修改'
+    expectMiss('operationColumn', base, p, '行按钮 name 被改')
+  }
+
+  // dialogs：判据含 formItems / 底座键 / 声明式底栏三半，打印器必须三半都在。
+  expectHit('dialogs', base, clone(base), 'gold-vs-gold')
+  {
+    const p = clone(base)
+    p.dialogs.add.formItems[0].prop = 'nameX'
+    expectMiss('dialogs', base, p, 'formItems 的 prop 被改')
+  }
+  {
+    // 底座数据键（AI-27）：gold 声明了 showClose=false，pred 写 true。
+    const p = clone(base)
+    p.dialogs.add.showClose = true
+    expectMiss('dialogs', base, p, '底座键 showClose 被改（旧打印器只看 formItems，会打出两侧相同）')
+  }
+  {
+    // 声明式底栏：action 写成 confirm→cancel 是真实可渲染、但语义相反的产物。
+    const p = clone(base)
+    p.dialogs.add.configBtn[0].action = 'cancel'
+    expectMiss('dialogs', base, p, '底栏按钮 action 被改（旧打印器根本不看 configBtn）')
+  }
+
+  // treeConfig：判据是整对象深等值。
+  {
+    const g = { ...clone(base), treeConfig: { childrenField: 'children', expandAll: true } }
+    expectHit('treeConfig', g, clone(g), 'gold-vs-gold')
+    const p = clone(g)
+    p.treeConfig.expandAll = false
+    expectMiss('treeConfig', g, p, 'expandAll 被改')
+  }
+
+  // editConfig：判据是整对象深等值 —— 这正是生产日志里「want === got 却 miss」的形状：
+  // 打印器只印 trigger/mode，而模型多写了一个键（或少写了），深等值因此不成立。
+  expectHit('editConfig', base, clone(base), 'gold-vs-gold')
+  {
+    const p = clone(base)
+    p.tableOptions.editConfig.showStatus = true
+    expectMiss('editConfig', base, p, '模型多写了一个未锁定的键（日志曾对此打出两侧相同）')
+  }
+
+  // columns：62 条 miss 在日志里**完全无声**（没有投影，也没有 prop 级差异输出）。
+  {
+    const g = {
+      ...clone(base),
+      columns: [
+        { type: 'selection', width: 50 },
+        { prop: 'name', label: '名称' },
+        { prop: 'status', label: '状态' },
+      ],
+    }
+    expectHit('columns', g, clone(g), 'gold-vs-gold')
+    const p = clone(g)
+    p.columns.pop()
+    expectMiss('columns', g, p, '漏掉一列')
+    const p2 = clone(g)
+    p2.columns[1].label = '名字'
+    expectMiss('columns', g, p2, '列 label 被改')
+  }
 }
 
 if (failures) {

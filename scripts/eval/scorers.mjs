@@ -174,10 +174,53 @@ function operationColumnEqual(gold, pred) {
 }
 
 /**
- * 结构化维度（tableBtns / operationColumn / dialogs）的「期望 vs 实得」可读键 —— 供 eval 诊断输出。
- * 与各维度 pass() **同源**（复用同一套键函数），所以 `want === got` 当且仅当该维度 pass；
- * 这正是定位「模型究竟把按钮 name/actionType/行按钮 写成了什么」的那一行。
- * 其余维度返回 null（它们的差异已由 attrMisses / propF1 等既有输出覆盖）。
+ * 深等值维度（columns / treeConfig / editConfig）的投影 —— 与 `eq()` **同源**：
+ * 直接印 `canon()` 规范化后的 JSON，故两侧字符串相等 ⟺ `eq()` 为真，不存在
+ * 「打印器只取子集、日志说两侧相同却报 miss」的空隙。
+ *
+ * 为什么不再手写可读摘要：这三个维度的判据是**整对象深等值**，任何手写摘要都必然漏键，
+ * 一漏就在日志里制造「want === got 却是 miss」的矛盾（2026-10-22 全量跑批实测，
+ * `101-schedule-date-edit-vue3` 的 editConfig 就是这样）。可读性让位于忠实性：
+ * 诊断的价值在于**能定位**，不在于短。
+ */
+const canonicalView = (v) => (v === undefined || v === null ? '（未配置）' : JSON.stringify(canon(v)))
+
+/**
+ * `dialogs` 维度的投影 —— 与 `dialogsEqual` **逐半同源**：dialog key 集合、每个 dialog 的
+ * formItems prop 集合、gold 声明的底座键（`DIALOG_BASE_KEYS`）、gold 声明了 `configBtn` 时的
+ * 声明式底栏投影（`normDialogBtns`）。
+ *
+ * 底座键与底栏都按 **gold 门控**打印（gold 没锁的键 pred 多写不追责），因此
+ * `want === got` 当且仅当 `dialogsEqual` 为真；同时也把「模型把 showClose 写反 / 把
+ * confirm 写成 cancel」这类真实 miss 从「一行无声的维度名」变成可读证据。
+ */
+function dialogsView(gold, cfg) {
+  const gd = gold.dialogs ?? {}
+  const cd = cfg.dialogs ?? {}
+  const keys = [...new Set([...Object.keys(gd), ...Object.keys(cd)])].sort()
+  if (!keys.length) return '（未配置）'
+  const one = (d, k) => {
+    if (!(k in d)) return `${k}:（缺）`
+    const it = d[k] ?? {}
+    const g = gd[k] ?? {}
+    const props = (it.formItems ?? []).map((f) => f.prop).sort().join(',')
+    const base = DIALOG_BASE_KEYS.filter((key) => g[key] !== undefined)
+      .map((key) => `${key}=${JSON.stringify(canon(it[key]))}`)
+      .join(',')
+    const btns = g.configBtn !== undefined ? ` btn[${normDialogBtns(it.configBtn)}]` : ''
+    return `${k}:[${props}]${base ? `{${base}}` : ''}${btns}`
+  }
+  return keys.map((k) => one(cd, k)).join(' ; ')
+}
+
+/**
+ * 结构化维度（tableBtns / operationColumn / dialogs / treeConfig / editConfig / columns）的
+ * 「期望 vs 实得」键 —— 供 eval 诊断输出。
+ *
+ * **不变量：`want === got` 当且仅当该维度 pass。** 每个分支都必须与对应 pass() 同源
+ * （复用同一套键函数，或直接印 `canon()` 的深等值投影）；`scripts/eval/scorers.test.mjs`
+ * 里有一整节双向断言钉住它 —— 这条不变量是诊断可信度的全部依据，破一次就有 60+ 条
+ * 真实 miss 不可定位。
  */
 export function describeDimMiss(dim, gold, pred) {
   if (dim === 'tableBtns') {
@@ -194,29 +237,19 @@ export function describeDimMiss(dim, gold, pred) {
     return { want: show(gold), got: show(pred) }
   }
   if (dim === 'dialogs') {
-    const show = (c) => {
-      const d = c.dialogs ?? {}
-      const keys = Object.keys(d).sort()
-      if (!keys.length) return '（未配置）'
-      return keys.map((k) => `${k}:[${(d[k].formItems ?? []).map((f) => f.prop).sort().join(',')}]`).join(' ; ')
-    }
-    return { want: show(gold), got: show(pred) }
+    return { want: dialogsView(gold, gold), got: dialogsView(gold, pred) }
   }
   if (dim === 'treeConfig') {
-    const show = (c) => {
-      const t = c.treeConfig
-      if (!t) return '（未配置）'
-      return `childrenField=${t.childrenField ?? 'children'} · expandAll=${t.expandAll === true}`
-    }
-    return { want: show(gold), got: show(pred) }
+    return { want: canonicalView(gold.treeConfig), got: canonicalView(pred.treeConfig) }
   }
   if (dim === 'editConfig') {
-    const show = (c) => {
-      const e = c.tableOptions?.editConfig
-      if (!e) return '（未配置）'
-      return `trigger=${e.trigger ?? 'click'} · mode=${e.mode ?? 'cell'}`
+    return {
+      want: canonicalView(gold.tableOptions?.editConfig),
+      got: canonicalView(pred.tableOptions?.editConfig),
     }
-    return { want: show(gold), got: show(pred) }
+  }
+  if (dim === 'columns') {
+    return { want: canonicalView(gold.columns), got: canonicalView(pred.columns) }
   }
   return null
 }

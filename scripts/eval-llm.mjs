@@ -549,8 +549,10 @@ async function main() {
           .map(([k]) => k)
         if (dimMisses.length) {
           console.log(`           dim misses: ${dimMisses.join(', ')}`)
-          // 结构化维度（tableBtns/operationColumn/dialogs）逐例展开「期望 vs 实得」——
-          // 其余维度的差异 attrMisses/propF1 已覆盖，这里只补 scorer 原本只报维度名的三者。
+          // 结构化维度逐例展开「期望 vs 实得」——由 describeDimMiss 决定覆盖哪些维度
+          // （tableBtns/operationColumn/dialogs/treeConfig/editConfig/columns）。**不变量**：
+          // 打印出的 want === got 当且仅当该维度 pass（scorers.test.mjs 有双向断言）；
+          // 因此「日志说两侧相同却报 miss」只可能是打印器撒谎，不会再被误读成记分卡坏了。
           for (const dim of dimMisses) {
             const d = describeDimMiss(dim, gold, pred)
             if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
