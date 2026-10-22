@@ -30,7 +30,7 @@ import {
   extractJson,
   isNotMeasured,
   isTransientTransportError,
-  withTransportRetry,
+  isTimeoutError,
   createResilientTransport,
   MAX_REPAIR_ATTEMPTS,
   MAX_EMPTY_RETRIES,
@@ -269,11 +269,36 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
 
 // ── 8) 传输层重试：只重试「调用没落地」的那一类，且有界 ─────────────────
 {
-  // 判据：SDK 的连接错误名、HTTP 429/5xx、无 status 时的网络错误措辞。
-  const connErr = Object.assign(new Error('Connection error.'), { name: 'APIConnectionError' })
-  const timeoutErr = Object.assign(new Error('Request timed out.'), { name: 'APIConnectionTimeoutError' })
+  /**
+   * 复刻 `@anthropic-ai/sdk@0.137.0` **真实抛出**的错误形状：
+   * `err.name === 'Error'`、`err.status === undefined`，只有 `constructor.name` 与
+   * message 可辨（实测见 repair-loop.mjs 头注）。
+   *
+   * 为什么非要用这个夹具：第一版判据只认 `err.name`，而夹具是「自己造一个带 name 的错误」，
+   * 于是测试绿、线上 `Request timed out.` 全部漏判 —— 测试证明的是夹具的假设，不是 SDK 的行为。
+   * 夹具在这里**自证**它复刻的是 SDK 而不是一个理想化的错误。
+   */
+  const sdkError = (kind, message) => {
+    const Ctor = {
+      APIConnectionError: class extends Error {},
+      APIConnectionTimeoutError: class extends Error {},
+    }[kind]
+    const e = new Ctor(message)
+    check(
+      e.name === 'Error' && e.status === undefined && e.constructor.name === kind,
+      `错误夹具必须复刻 SDK 形态（name=Error / status=undefined / ctor=${kind}），实际 ${e.name}/${e.status}/${e.constructor.name}`
+    )
+    return e
+  }
+  const connErr = sdkError('APIConnectionError', 'Connection error.')
+  const timeoutErr = sdkError('APIConnectionTimeoutError', 'Request timed out.')
+
   check(isTransientTransportError(connErr), 'APIConnectionError 必须可重试（2026-10-22 中继抖动的真实形状）')
-  check(isTransientTransportError(timeoutErr), 'APIConnectionTimeoutError 必须可重试')
+  check(isTransientTransportError(timeoutErr), 'APIConnectionTimeoutError 必须可重试（漏判它会让 8 行 zh 变「未测到」）')
+  check(isTransientTransportError(new Error('Request timed out.')), '仅凭措辞也要认出超时（SDK 不设 name）')
+  check(isTimeoutError(timeoutErr), 'isTimeoutError 必须认出 APIConnectionTimeoutError')
+  check(isTimeoutError(new Error('Request timed out.')), 'isTimeoutError 必须认出仅凭措辞的超时')
+  check(!isTimeoutError(connErr), '连接错误不是超时（处置不同：先走完重试）')
   check(isTransientTransportError({ status: 429, message: 'rate limited' }), '429 必须可重试')
   check(isTransientTransportError({ status: 503, message: 'unavailable' }), '5xx 必须可重试')
   check(isTransientTransportError({ status: 500, message: 'boom' }), '500 必须可重试')
@@ -285,58 +310,6 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
   // 无 status 时只能看措辞 —— 这是 SDK 把连接层错误包成通用 Error 时的兜底。
   check(isTransientTransportError(new Error('ECONNRESET')), '无 status 时 ECONNRESET 必须可重试')
   check(!isTransientTransportError(new Error('schema validation failed')), '普通业务错误不得被当成传输错误')
-
-  /** 造一个「前 n 次按序抛错、之后成功」的调用，并记录注入的退避时长（单测零等待）。 */
-  const flaky = (errors, value = 'ok') => {
-    const delays = []
-    let i = 0
-    const fn = async () => {
-      if (i < errors.length) throw errors[i++]
-      return value
-    }
-    const opts = { sleep: async (ms) => void delays.push(ms) }
-    return { fn, delays, opts, calls: () => i }
-  }
-
-  // 抖动一次后成功 ⟹ 返回结果，退避一次 3000ms。
-  {
-    const f = flaky([connErr])
-    const out = await withTransportRetry(f.fn, f.opts)
-    check(out === 'ok', '一次抖动后必须重试成功并返回结果')
-    check(f.delays.join(',') === '3000', `第一次退避应为 3000ms，实际 ${f.delays.join(',')}`)
-  }
-  // 退避必须是指数：3s → 6s → 12s → 24s（上限 5 次 = 4 次退避）。
-  {
-    const f = flaky([connErr, connErr, connErr, connErr, connErr])
-    let threw = null
-    try {
-      await withTransportRetry(f.fn, f.opts)
-    } catch (e) {
-      threw = e
-    }
-    check(threw === connErr, '重试用尽后必须抛出**最后一个**错误（上层要照旧归因/记录）')
-    check(f.calls() === 5, `默认最多 5 次尝试，实际 ${f.calls()}`)
-    check(f.delays.join(',') === '3000,6000,12000,24000', `退避必须指数增长，实际 ${f.delays.join(',')}`)
-  }
-  // 401 一次都不重试：这是「key 配错」不能被拖成 4 小时重试风暴的唯一保证。
-  {
-    const f = flaky([{ status: 401, message: 'unauthorized' }])
-    let threw = null
-    try {
-      await withTransportRetry(f.fn, f.opts)
-    } catch (e) {
-      threw = e
-    }
-    check(threw?.status === 401, '401 必须原样抛出')
-    check(f.calls() === 1 && f.delays.length === 0, `401 不得重试（调用 ${f.calls()} 次、退避 ${f.delays.length} 次）`)
-  }
-  // onRetry 的次数必须等于实际重试次数（产物里的 transportRetries 就靠它计数）。
-  {
-    const f = flaky([connErr, connErr])
-    const seen = []
-    await withTransportRetry(f.fn, { ...f.opts, onRetry: (e, n) => seen.push(n) })
-    check(seen.join(',') === '1,2', `onRetry 应收到 1,2，实际 ${seen.join(',')}`)
-  }
 
   /**
    * 造一个可观测的运输层：注入 sleep（零等待），记录退避与冷却两类等待。
@@ -355,6 +328,15 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
     })
     return { t, sleeps, retries, cooldowns }
   }
+  /** 造一个「前 n 次按序抛错、之后成功」的调用（单测零等待）。 */
+  const flaky = (errors, value = 'ok') => {
+    let i = 0
+    const fn = async () => {
+      if (i < errors.length) throw errors[i++]
+      return value
+    }
+    return { fn, calls: () => i }
+  }
   const failing = (err) => async () => {
     throw err
   }
@@ -367,6 +349,65 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
         /* 预期的失败 */
       }
     }
+  }
+
+  // 抖动一次后成功 ⟹ 返回结果，退避一次 3000ms、不进冷却。
+  {
+    const { t, sleeps, retries, cooldowns } = mk()
+    const f = flaky([connErr])
+    const out = await t.run(f.fn)
+    check(out === 'ok', '一次抖动后必须重试成功并返回结果')
+    check(sleeps.join(',') === '3000', `第一次退避应为 3000ms，实际 ${sleeps.join(',')}`)
+    check(retries.join(',') === '1', `onRetry 应收到 1，实际 ${retries.join(',')}`)
+    check(cooldowns.length === 0, '单次抖动不得进冷却（否则每行都要多等 30s）')
+  }
+  // 退避必须是指数：3s → 6s → 12s → 24s（上限 5 次 = 4 次退避）。
+  {
+    const { t, sleeps } = mk()
+    const f = flaky([connErr, connErr, connErr, connErr, connErr])
+    let threw = null
+    try {
+      await t.run(f.fn)
+    } catch (e) {
+      threw = e
+    }
+    check(threw === connErr, '重试用尽后必须抛出**最后一个**错误（上层要照旧归因/记录）')
+    check(f.calls() === 5, `默认最多 5 次尝试，实际 ${f.calls()}`)
+    check(sleeps.join(',') === '3000,6000,12000,24000', `退避必须指数增长，实际 ${sleeps.join(',')}`)
+  }
+  // 401 一次都不重试：这是「key 配错」不能被拖成 4 小时重试风暴的唯一保证。
+  {
+    const { t, sleeps } = mk()
+    const f = flaky([{ status: 401, message: 'unauthorized' }])
+    let threw = null
+    try {
+      await t.run(f.fn)
+    } catch (e) {
+      threw = e
+    }
+    check(threw?.status === 401, '401 必须原样抛出')
+    check(f.calls() === 1 && sleeps.length === 0, `401 不得重试（调用 ${f.calls()} 次、等待 ${sleeps.length} 次）`)
+  }
+  // onRetry 的次数必须等于实际重试次数（产物里的 transportRetries 就靠它计数）。
+  {
+    const { t, retries } = mk()
+    const f = flaky([connErr, connErr])
+    await t.run(f.fn)
+    check(retries.join(',') === '1,2', `onRetry 应收到 1,2，实际 ${retries.join(',')}`)
+  }
+  // **超时当场升级为冷却**：不再原样撞满剩余 4 次（每次一个完整超时窗口）。
+  {
+    const { t, sleeps, cooldowns, retries } = mk()
+    let n = 0
+    const out = await t.run(async () => {
+      n++
+      if (n === 1) throw timeoutErr // 第一次就挂了整整一个超时窗口
+      return 'ok'
+    })
+    check(out === 'ok', '超时后冷却等待应能把这一行救回来')
+    check(retries.length === 0, `超时不得走「再撞 4 次」的正常重试（实际重试 ${retries.length} 次）`)
+    check(cooldowns.join(',') === '30000', `超时应直接进冷却并等 30000ms，实际 ${cooldowns.join(',')}`)
+    check(sleeps.join(',') === '30000', `超时只应产生一次冷却等待，实际 ${sleeps.join(',')}`)
   }
 
   // 正常模式：连续 3 个调用耗尽后进入冷却期。
@@ -388,21 +429,8 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
       return 'ok'
     })
     check(out === 'ok', '冷却期必须等中继回来并返回结果（这正是 2026-10-22 那次被浪费掉的机会）')
-    check(
-      cooldowns.join(',') === '30000',
-      `冷却期应等待 30000ms 后重试，实际 ${cooldowns.join(',')}`
-    )
+    check(cooldowns.join(',') === '30000', `冷却期应等待 30000ms 后重试，实际 ${cooldowns.join(',')}`)
     check(t.streak === 0, '恢复后必须复位连败计数（后续行重新享有正常重试）')
-    // 恢复之后不得再走冷却路径：一次单点抖动应回到「正常模式重试」而不是继续冷却。
-    const { t: t3, cooldowns: cd3, sleeps: sl3 } = mk()
-    let k = 0
-    await t3.run(async () => {
-      k++
-      if (k === 1) throw connErr
-      return 'ok'
-    })
-    check(cd3.length === 0, '未触发断路的抖动不得走冷却路径（否则每行都要多等 30s）')
-    check(sl3.join(',') === '3000', `未触发的抖动应只退避 3000ms，实际 ${sl3.join(',')}`)
   }
 
   // 冷却必须**有界**：中继长期不回来时，等满单次预算就抛原错误（不挂死 CI）。

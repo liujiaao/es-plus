@@ -1196,7 +1196,7 @@ async function main() {
       notMeasuredRows: notMeasuredRows.length,
       modelFailureRows: modelFailureRows.length,
       degradedCalls: DEGRADED_CALLS,
-      // 传输层重试次数（见 withTransportRetry）。非零 ⟹ 中继这次抖过；这正是「失败记录」最该
+      // 传输层重试次数（见 createResilientTransport）。非零 ⟹ 中继这次抖过；这正是「失败记录」最该
       // 自证的东西：读者要能区分「中继整段时间不可用」与「偶发抖动后被重试救回」。
       transportRetries: TRANSPORT_RETRIES,
       // 中继整段不可用时的冷却等待（见 createResilientTransport）——失败记录里最该先看的一行：
@@ -1527,7 +1527,7 @@ async function main() {
     // 有多少次调用是靠**关掉 thinking**才拿到答案的（见 repair-loop 的 MAX_DEGRADED_ATTEMPTS）。
     // 非零 ⟹ 部分行是在与被测系统略有不同的条件下测出来的，读数字的人有权知道。
     degradedCalls: DEGRADED_CALLS,
-    // 传输层重试次数（见 repair-loop 的 withTransportRetry）。非零 ⟹ 中继抖过但对本份成绩
+    // 传输层重试次数（见 repair-loop 的 createResilientTransport）。非零 ⟹ 中继抖过但对本份成绩
     // 无影响（被重试救回）。它是「这次数字为什么可信」的一部分：没有它，一次抖动留下的
     // 只能是失败记录，而有了它，成功的跑批也能自证「我们没有把抖动算成模型答错」。
     transportRetries: TRANSPORT_RETRIES,

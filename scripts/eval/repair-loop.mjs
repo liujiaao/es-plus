@@ -110,43 +110,50 @@ export function extractJson(text) {
  * 再经由门禁腿零容忍把整次跑批作废，代价与病因完全不成比例（2026-10-22 实测：
  * 京东云中继在 zh 120–265 连续 184 行 `Connection error.`，随后自行恢复）。
  *
- * 判据只认**传输层**信号：SDK 的 `APIConnectionError`/`APIConnectionTimeoutError` 名字、
- * HTTP 429/5xx、以及无 status 时的网络错误关键字。绝不把 4xx（鉴权/参数错）当可重试 ——
- * 那会把「key 配错」拖成 4 小时的重试风暴。
+ * ## 为什么既看 `constructor.name` 又看措辞（2026-10-22 第三次实测踩中）
+ *
+ * `@anthropic-ai/sdk` 0.137.0 的 `APIConnectionError` / `APIConnectionTimeoutError`
+ * **不设 `err.name`**（实测 `name === "Error"`，`status === undefined`），只剩
+ * `constructor.name` 与 message 两处可辨。第一版判据只认 `err.name`，于是
+ * `Request timed out.` **既没被重试、也没计入连败** —— 中继整段卡死时，十分钟的连接错误
+ * 还能靠 `Connection error.` 的措辞兜住，五分钟的挂起却全部漏网，跑批里 8 行 zh 直接
+ * 变成「未测到」（整次跑批因此必然作废）。故这份判据必须对**真实抛出的对象**成立 ——
+ * 单测也据此构造（见 repair-loop.test.mjs：用 `Object.create` 复刻 SDK 的形态，
+ * 连 `name` 都保持 "Error"），不允许用「自己造一个带 name 的错误」来证明判据有效。
+ *
+ * 判据只认**传输层**信号：SDK 连接/超时类（构造器名）、HTTP 429/5xx、以及无 status 时的
+ * 网络错误关键字。绝不把 4xx（鉴权/参数错）当可重试 —— 那会把「key 配错」拖成重试风暴。
  */
 export function isTransientTransportError(err) {
   if (!err) return false
   const name = String(err.name ?? '')
-  if (name === 'APIConnectionError' || name === 'APIConnectionTimeoutError') return true
+  const ctor = String(err.constructor?.name ?? '')
+  const isConnClass =
+    name === 'APIConnectionError' ||
+    name === 'APIConnectionTimeoutError' ||
+    ctor === 'APIConnectionError' ||
+    ctor === 'APIConnectionTimeoutError'
+  if (isConnClass) return true
   const status = err.status ?? err.statusCode
   if (typeof status === 'number' && (status === 429 || (status >= 500 && status <= 599))) return true
   if (typeof status === 'number') return false
-  return /connection error|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(
+  return /connection error|request timed out|timed out|timeout|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(
     String(err.message ?? '')
   )
 }
 
 /**
- * 对一个异步调用做**有界**传输重试（指数退避）。`sleep` 可注入，故单测零等待。
+ * 是不是**超时**（而不是一次立刻断开的连接错误）。
  *
- * 不重试非传输错误；重试用尽后**抛出最后一个错误**（上层照旧归因为「未测到」）。
- * @param {() => Promise<any>} fn
- * @param {{attempts?: number, baseDelayMs?: number, sleep?: (ms:number)=>Promise<void>, onRetry?: (err:Error, n:number)=>void}} [opts]
+ * 两者在处置上必须分开：连接错误可能只是中继抖了一下，值得先把几次重试走完；
+ * 超时的含义是「等了整整一个请求超时、一个字节都没回」——那是**整段卡死**的强信号，
+ * 再原样撞 4 次（每次 5 分钟）只是在用跑批时长换同一个结论。故超时直接进入冷却等待。
  */
-export async function withTransportRetry(fn, opts = {}) {
-  const { attempts = 5, baseDelayMs = 3000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onRetry } = opts
-  let lastErr
-  for (let i = 0; i < attempts; i++) {
-    try {
-      return await fn()
-    } catch (err) {
-      lastErr = err
-      if (!isTransientTransportError(err) || i === attempts - 1) throw err
-      onRetry?.(err, i + 1)
-      await sleep(baseDelayMs * 2 ** i)
-    }
-  }
-  throw lastErr
+export function isTimeoutError(err) {
+  if (!err) return false
+  if (String(err.name ?? '') === 'APIConnectionTimeoutError') return true
+  if (String(err.constructor?.name ?? '') === 'APIConnectionTimeoutError') return true
+  return /timed out|timeout|ETIMEDOUT/i.test(String(err.message ?? ''))
 }
 
 /**
@@ -173,8 +180,13 @@ export async function withTransportRetry(fn, opts = {}) {
  * 判据：只有 `isTransientTransportError` 为真的失败才等待；4xx（key 配错 / 参数错）立刻抛，
  * 绝不让一次鉴权错误把跑批挂 45 分钟。
  *
+ * **超时（`isTimeoutError`）直接进冷却**：一次请求超时的含义是「等了整整一个超时窗口、
+ * 一个字节都没回」，这比一次立刻断开的连接错误严苛得多，再原样撞 4 次只是在用跑批时长
+ * 换同一个结论。2026-10-22 16:45 那次实测：中继挂起 5 分钟，8 行 zh 以 `Request timed out.`
+ * 变成「未测到」，而判据当时只认 `err.name`（SDK 不设它）⟹ 既没重试也没进冷却。
+ *
  * @param {object} [opts]
- * @param {number} [opts.perCallAttempts] 正常模式下单次调用的重试次数（见 withTransportRetry）
+ * @param {number} [opts.perCallAttempts] 正常模式下单次调用的重试次数
  * @param {number} [opts.baseDelayMs]     正常模式的退避基数（3s → 6s → 12s → 24s）
  * @param {number} [opts.tripAfter]       连续多少个调用耗尽才算「中继整段不可用」
  * @param {number} [opts.cooldownBaseMs]  冷却期首次等待时长
@@ -200,42 +212,56 @@ export function createResilientTransport({
   let streak = 0
   let totalWaitedMs = 0
   return {
+    /**
+     * 跑一次调用。两种模式在**同一循环**里切换（而不是两条独立路径）：超时需要在
+     * 「正常模式的第 1 次失败」当场升级为冷却，拆成两个函数反而要跳出再跳回。
+     */
     async run(fn) {
-      if (streak >= tripAfter) {
-        // ── 冷却期：中继整段不可用 —— 等它回来 ──────────────────────────
-        let waitedMs = 0
-        let cooldownMs = cooldownBaseMs
-        for (;;) {
-          try {
-            const value = await fn()
-            streak = 0 // 回得来 ⟹ 恢复正常模式（后续行重新享有正常重试）
-            return value
-          } catch (err) {
-            if (!isTransientTransportError(err)) {
-              streak = 0 // 4xx 是配置错，不是「中继不可用」，不能让断路状态续命
-              throw err
-            }
-            const next = Math.min(cooldownMs, cooldownMaxMs)
-            if (waitedMs + next > perOutageBudgetMs || totalWaitedMs + next > totalOutageBudgetMs) {
-              // 预算用尽 ⟹ 停止等待，把原错误交回上层（照旧归因「未测到」，诚实失败）
-              throw err
-            }
-            onWait?.({ cooldownMs: next, waitedMs })
-            await sleep(next)
-            waitedMs += next
-            totalWaitedMs += next
-            cooldownMs = next * 2
+      let cooling = streak >= tripAfter
+      let attemptsLeft = perCallAttempts
+      let backoffMs = baseDelayMs
+      let waitedMs = 0
+      let cooldownMs = cooldownBaseMs
+      for (;;) {
+        try {
+          const value = await fn()
+          streak = 0 // 成功 ⟹ 中继是通的，复位（后续行重新享有正常重试）
+          return value
+        } catch (err) {
+          if (!isTransientTransportError(err)) {
+            streak = 0 // 4xx 是配置错，不是「中继不可用」，不能让冷却状态续命
+            throw err
           }
+          // 超时 = 整段卡死的强信号：当场升级为冷却，不再原样撞满剩余次数。
+          if (!cooling && isTimeoutError(err)) {
+            cooling = true
+            streak = tripAfter
+          }
+          if (!cooling) {
+            attemptsLeft -= 1
+            if (attemptsLeft > 0) {
+              onRetry?.(err, perCallAttempts - attemptsLeft)
+              await sleep(backoffMs)
+              backoffMs *= 2
+              continue
+            }
+            // 正常模式耗尽：这一行没测到，但**只记一档连败**（抖动是散点，不是连片）。
+            streak = Math.min(streak + 1, tripAfter)
+            throw err
+          }
+          // ── 冷却期：中继整段不可用 —— 等它回来 ────────────────────────
+          const next = Math.min(cooldownMs, cooldownMaxMs)
+          if (waitedMs + next > perOutageBudgetMs || totalWaitedMs + next > totalOutageBudgetMs) {
+            // 预算用尽 ⟹ 停止等待，把原错误交回上层（照旧归因「未测到」，诚实失败）
+            streak = tripAfter
+            throw err
+          }
+          onWait?.({ cooldownMs: next, waitedMs })
+          await sleep(next)
+          waitedMs += next
+          totalWaitedMs += next
+          cooldownMs = next * 2
         }
-      }
-      // ── 正常模式：单次调用有界重试 ────────────────────────────────
-      try {
-        const value = await withTransportRetry(fn, { attempts: perCallAttempts, baseDelayMs, sleep, onRetry })
-        streak = 0
-        return value
-      } catch (err) {
-        streak = isTransientTransportError(err) ? streak + 1 : 0
-        throw err
       }
     },
     /** 当前连续耗尽次数（诊断/日志用）。 */
