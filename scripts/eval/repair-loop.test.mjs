@@ -20,8 +20,10 @@
  *      带着翻倍后的 `maxTokens` 重试；到 `maxTokenCap` 后不得再承诺加预算。否则复杂 case
  *      会三连撞同一个上限，整次跑批因一行「没测到」作废（2026-10-22 opus-4-6 实测）。
  *   8) **传输层重试只重试传输层**：连接错误 / 429 / 5xx 原地重试并退避；401/400 **一次都不得**
- *      重试（否则「key 配错」会被拖成重试风暴）。连续多行耗尽 ⟹ 断路器改为一击即走。
- *      2026-10-22 京东云中继连续 184 行 `Connection error.` 把整次跑批变成「没测到」。
+ *      重试（否则「key 配错」会被拖成重试风暴）。连续多个调用耗尽 ⟹ 中继**整段不可用** ⟹
+ *      冷却期**等它回来**（有界），而不是把剩下的几百行在故障窗口里全部烧掉。
+ *      2026-10-22 两次实测：一次连续 184 行 `Connection error.`，一次前 9 行正常、case 10 起
+ *      集体失败而中继几分钟后自己恢复 —— 都是「没等」把短暂抖动放大成整次跑批作废。
  */
 import {
   driveToValidConfig,
@@ -29,7 +31,7 @@ import {
   isNotMeasured,
   isTransientTransportError,
   withTransportRetry,
-  createTransportRetryGate,
+  createResilientTransport,
   MAX_REPAIR_ATTEMPTS,
   MAX_EMPTY_RETRIES,
   MAX_DEGRADED_ATTEMPTS,
@@ -336,23 +338,151 @@ const TRUNCATED = { text: '{"name":"Order", "fields":[{"prop":"a"', stopReason: 
     check(seen.join(',') === '1,2', `onRetry 应收到 1,2，实际 ${seen.join(',')}`)
   }
 
-  // 断路器：连续 3 个逻辑调用耗尽 ⟹ 改为一击即走（不给中继整段故障烧跑批时长的机会）。
+  /**
+   * 造一个可观测的运输层：注入 sleep（零等待），记录退避与冷却两类等待。
+   * `cooldowns` 只收冷却期（onWait）的时长，`sleeps` 收全部注入的等待 —— 两者分开记，
+   * 否则「退避走了几次」与「冷却等了多久」会被混成一串数字。
+   */
+  const mk = (overrides = {}) => {
+    const sleeps = []
+    const retries = []
+    const cooldowns = []
+    const t = createResilientTransport({
+      sleep: async (ms) => void sleeps.push(ms),
+      onRetry: (err, n) => retries.push(n),
+      onWait: ({ cooldownMs }) => cooldowns.push(cooldownMs),
+      ...overrides,
+    })
+    return { t, sleeps, retries, cooldowns }
+  }
+  const failing = (err) => async () => {
+    throw err
+  }
+  /** 连续 tripAfter 个调用耗尽 ⟹ 进入冷却期（这段路径本身由下面的用例断言）。 */
+  const trip = async (t, err = connErr) => {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await t.run(failing(err))
+      } catch {
+        /* 预期的失败 */
+      }
+    }
+  }
+
+  // 正常模式：连续 3 个调用耗尽后进入冷却期。
   {
-    const gate = createTransportRetryGate({ tripAfter: 3, attempts: 5 })
-    check(gate.attemptsFor() === 5, '断路器初始状态应给满重试次数')
-    gate.recordFailure(connErr)
-    gate.recordFailure(connErr)
-    check(gate.attemptsFor() === 5, '连续 2 次耗尽还不足以判定「整段不可用」（抖动是散点）')
-    gate.recordFailure(connErr)
-    check(gate.attemptsFor() === 1, '连续 3 次耗尽后必须改为一击即走')
-    gate.recordSuccess()
-    check(gate.attemptsFor() === 5, '任何一次成功都必须复位（中继恢复了就要重新给重试）')
-    // 4xx 不是中继抖动：它不得把断路器打开（否则一次 key 配错会永久关掉重试）。
-    gate.recordFailure({ status: 401, message: 'unauthorized' })
-    gate.recordFailure({ status: 401, message: 'unauthorized' })
-    gate.recordFailure({ status: 401, message: 'unauthorized' })
-    check(gate.attemptsFor() === 5, '4xx 失败不得打开断路器（那是配置错，不是中继不可用）')
-    check(gate.streak === 0, `4xx 必须清空连败计数，实际 ${gate.streak}`)
+    const { t } = mk()
+    check(t.streak === 0, '初始连败计数应为 0')
+    await trip(t)
+    check(t.streak === 3, `连续 3 个调用耗尽后连败计数应为 3，实际 ${t.streak}`)
+  }
+
+  // 冷却期**等它回来**：不是快速失败，而是按 30s 退避重试，成功即恢复。
+  {
+    const { t, cooldowns } = mk()
+    await trip(t)
+    let n = 0
+    const out = await t.run(async () => {
+      n++
+      if (n === 1) throw connErr // 冷却期第一次尝试仍在故障窗口里
+      return 'ok'
+    })
+    check(out === 'ok', '冷却期必须等中继回来并返回结果（这正是 2026-10-22 那次被浪费掉的机会）')
+    check(
+      cooldowns.join(',') === '30000',
+      `冷却期应等待 30000ms 后重试，实际 ${cooldowns.join(',')}`
+    )
+    check(t.streak === 0, '恢复后必须复位连败计数（后续行重新享有正常重试）')
+    // 恢复之后不得再走冷却路径：一次单点抖动应回到「正常模式重试」而不是继续冷却。
+    const { t: t3, cooldowns: cd3, sleeps: sl3 } = mk()
+    let k = 0
+    await t3.run(async () => {
+      k++
+      if (k === 1) throw connErr
+      return 'ok'
+    })
+    check(cd3.length === 0, '未触发断路的抖动不得走冷却路径（否则每行都要多等 30s）')
+    check(sl3.join(',') === '3000', `未触发的抖动应只退避 3000ms，实际 ${sl3.join(',')}`)
+  }
+
+  // 冷却必须**有界**：中继长期不回来时，等满单次预算就抛原错误（不挂死 CI）。
+  {
+    const { t, cooldowns } = mk({ perOutageBudgetMs: 90000 })
+    await trip(t)
+    let threw = null
+    try {
+      await t.run(failing(connErr))
+    } catch (e) {
+      threw = e
+    }
+    check(threw === connErr, '等待预算用尽后必须抛出原错误（上层照旧归因为「未测到」）')
+    check(
+      cooldowns.join(',') === '30000,60000',
+      `单次预算 90000ms 只容得下 30000+60000，实际 ${cooldowns.join(',')}`
+    )
+    check(t.totalWaitedMs === 90000, `累计等待应恰为 90000ms，实际 ${t.totalWaitedMs}`)
+  }
+
+  // 冷却期遇到 4xx（key 配错）必须立刻抛，绝不把跑批挂 45 分钟。
+  {
+    const { t, cooldowns } = mk()
+    await trip(t)
+    let threw = null
+    try {
+      await t.run(failing({ status: 401, message: 'unauthorized' }))
+    } catch (e) {
+      threw = e
+    }
+    check(threw?.status === 401, '冷却期遇到 401 必须原样抛出')
+    check(cooldowns.length === 0, '冷却期遇到 4xx 不得等待（那是配置错，不是中继不可用）')
+    check(t.streak === 0, '4xx 必须清空连败计数（否则一次 key 配错会让断路状态续命）')
+  }
+
+  // 全程等待预算：多次故障累计不得超过 totalOutageBudgetMs。
+  {
+    const { t, cooldowns } = mk({ perOutageBudgetMs: 60000, totalOutageBudgetMs: 90000 })
+    // 一次故障只能用掉「单次预算」允许的那一段（30s + 60s 会超 60s，故只等 30s）。
+    await trip(t)
+    try {
+      await t.run(failing(connErr))
+    } catch {
+      /* 单次预算用尽 */
+    }
+    check(cooldowns.join(',') === '30000', `第一次故障应等 30000ms，实际 ${cooldowns.join(',')}`)
+    // 恢复一次（成功即复位），再来一次故障：仍按单次预算等 30s，累计到 60s。
+    await t.run(async () => 'ok')
+    await trip(t)
+    try {
+      await t.run(failing(connErr))
+    } catch {
+      /* 单次预算用尽 */
+    }
+    check(cooldowns.join(',') === '30000,30000', `第二次故障应再等 30000ms，实际 ${cooldowns.join(',')}`)
+    // 第三次故障：累计 90000ms 正好用尽全程预算。
+    await t.run(async () => 'ok')
+    await trip(t)
+    try {
+      await t.run(failing(connErr))
+    } catch {
+      /* 单次预算用尽 */
+    }
+    check(
+      cooldowns.join(',') === '30000,30000,30000',
+      `第三次故障应仍能等到全程预算用尽，实际 ${cooldowns.join(',')}`
+    )
+    check(t.totalWaitedMs === 90000, `累计等待应恰为全程预算 90000ms，实际 ${t.totalWaitedMs}`)
+    // 第四次故障：全程预算已用尽 ⟹ 一次都不得再等（跑批必须诚实结束，不得挂死）。
+    await t.run(async () => 'ok')
+    await trip(t)
+    try {
+      await t.run(failing(connErr))
+    } catch {
+      /* 全程预算用尽 */
+    }
+    check(
+      cooldowns.join(',') === '30000,30000,30000',
+      `全程预算用尽后不得再等待，实际 ${cooldowns.join(',')}`
+    )
   }
 }
 
@@ -377,5 +507,5 @@ if (failures) {
 console.log(
   '\nmeta-eval OK — 自修复环：空轮不消耗机会且两条退路都有界，三种病因各自点名，' +
     '归因区分「没测到 / 答错了」，降级重试只在重发用尽时 fire，截断后预算翻倍且封顶，' +
-    '传输重试只重试传输层且有界，回灌不留空块。✔'
+    '传输重试只重试传输层且有界，中继整段不可用时冷却等待而非烧光剩余行，回灌不留空块。✔'
 )

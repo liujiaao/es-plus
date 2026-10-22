@@ -49,8 +49,7 @@ import {
   driveToValidConfig as driveToValidConfigPure,
   isNotMeasured,
   OUTCOME,
-  withTransportRetry,
-  createTransportRetryGate,
+  createResilientTransport,
 } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
@@ -239,42 +238,49 @@ let DEGRADED_CALLS = 0
  * （连接错误 / 429 / 5xx），4xx 不重试。产物体里记录它，读数字的人知道这次跑批抖过。
  */
 let TRANSPORT_RETRIES = 0
+/** 冷却期（中继整段不可用）的等待次数与累计时长，进产物。 */
+let OUTAGE_WAITS = 0
+let OUTAGE_WAIT_MS = 0
 
 /**
- * 中继「整段不可用」vs「偶发抖动」的断路器（见 eval/repair-loop.mjs 的 createTransportRetryGate）。
- * 没有它，一次持续 2 小时的中继故障会让**每一行**都把整条退避阶梯睡完，把跑批拖成双倍时长
- * 却仍然产出一份作废的产物；有它，连续 3 行连重试都用尽之后就直接快速失败。
+ * 中继「整段不可用」vs「偶发抖动」的处置（见 eval/repair-loop.mjs 的 createResilientTransport）。
+ *
+ * 这一版是**第二次**修正：上一版「连续 3 行耗尽就一击即走」在 2026-10-22 11:19–11:26 的
+ * 实测里把一次**几分钟**的中继抖动放大成了一整次作废跑批（前 9 行正常，case 10 起连接错误，
+ * 断路器打开后 398 行在 1–2 分钟内集体失败，而跑完之后几分钟中继自己就恢复了）。
+ * 正确动作是**原地等它回来**：冷却期按 30s→300s 退避重试，等待有界（单次 45 分钟 /
+ * 全程 90 分钟，可用 ESPLUS_EVAL_OUTAGE_WAIT_MS / ESPLUS_EVAL_OUTAGE_WAIT_TOTAL_MS 调）。
  */
-const transportGate = createTransportRetryGate()
+const transport = createResilientTransport({
+  perOutageBudgetMs: Number(process.env.ESPLUS_EVAL_OUTAGE_WAIT_MS) || 45 * 60 * 1000,
+  totalOutageBudgetMs: Number(process.env.ESPLUS_EVAL_OUTAGE_WAIT_TOTAL_MS) || 90 * 60 * 1000,
+  onRetry: (err, n) => {
+    TRANSPORT_RETRIES++
+    console.warn(`[eval:llm] 传输重试 ${n} 次：${String(err?.message ?? err).split('\n')[0]}`)
+  },
+  onWait: ({ cooldownMs, waitedMs }) => {
+    OUTAGE_WAITS++
+    OUTAGE_WAIT_MS += cooldownMs
+    console.warn(
+      `[eval:llm] 中继不可用，冷却 ${Math.round(cooldownMs / 1000)}s 后重试` +
+        `（本次已等 ${Math.round((waitedMs + cooldownMs) / 1000)}s，全程累计 ${Math.round(OUTAGE_WAIT_MS / 1000)}s）`
+    )
+  },
+})
 
 async function callModel(client, system, messages, opts = {}) {
-  let res
-  try {
-    res = await withTransportRetry(
-      () =>
-        client.messages.create({
-          model: MODEL,
-          max_tokens: opts.maxTokens ?? MAX_TOKENS,
-          // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
-          // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
-          // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
-          ...(opts.degraded ? {} : { thinking: { type: 'adaptive' } }),
-          system,
-          messages,
-        }),
-      {
-        attempts: transportGate.attemptsFor(),
-        onRetry: (err, n) => {
-          TRANSPORT_RETRIES++
-          console.warn(`[eval:llm] 传输重试 ${n} 次：${String(err?.message ?? err).split('\n')[0]}`)
-        },
-      }
-    )
-  } catch (err) {
-    transportGate.recordFailure(err)
-    throw err
-  }
-  transportGate.recordSuccess()
+  const res = await transport.run(() =>
+    client.messages.create({
+      model: MODEL,
+      max_tokens: opts.maxTokens ?? MAX_TOKENS,
+      // 降级调用**整个省掉** `thinking` 字段（而不是传 `{type:'disabled'}`）：省略 =
+      // 不带扩展思考，这是各家兼容实现都认得的最小公共面；`disabled` 字面量则是较新的取值，
+      // 严格校验的中继可能直接 400 —— 而这条路径存在的全部意义就是「别再把这一轮变成空轮」。
+      ...(opts.degraded ? {} : { thinking: { type: 'adaptive' } }),
+      system,
+      messages,
+    })
+  )
   if (opts.degraded) DEGRADED_CALLS++
   if (res.model) SERVED_MODELS.add(res.model)
   // stopReason 必须带出来：它决定这一行最终是「模型答错了」（记 0 分，是成绩）还是
@@ -1193,6 +1199,10 @@ async function main() {
       // 传输层重试次数（见 withTransportRetry）。非零 ⟹ 中继这次抖过；这正是「失败记录」最该
       // 自证的东西：读者要能区分「中继整段时间不可用」与「偶发抖动后被重试救回」。
       transportRetries: TRANSPORT_RETRIES,
+      // 中继整段不可用时的冷却等待（见 createResilientTransport）——失败记录里最该先看的一行：
+      // 若 outageWaits > 0 且预算已用尽，说明我们**等过**但中继没回来，而不是没等。
+      outageWaits: OUTAGE_WAITS,
+      outageWaitMs: OUTAGE_WAIT_MS,
       // 测量失败时**仍**公布编译腿数字：它是确定性代码的性质，不受中继故障影响，
       // 而且正是读者用来区分「产物坏了」与「没测到」的证据（见 summarizeCompile 头注）。
       compileRate: compileRate === null ? null : Number(compileRate.toFixed(4)),
@@ -1274,6 +1284,14 @@ async function main() {
     console.log(
       `  transport retries:     ${TRANSPORT_RETRIES} — transient connection/429/5xx failures retried` +
         ` in place; the affected rows ARE measured (nothing was silently reclassified)`
+    )
+  }
+  if (OUTAGE_WAITS) {
+    // 中继整段不可用时我们**等过**：跑批总时长因此变长，而这份成绩是等回来之后的正常测量。
+    // 不写出来，读者会把「跑了 4 小时」误当成「每行都慢」。
+    console.log(
+      `  relay outage waits:    ${OUTAGE_WAITS} wait(s), ${Math.round(OUTAGE_WAIT_MS / 1000)}s total` +
+        ` — the relay was unavailable; rows were measured after it came back (not marked unmeasured)`
     )
   }
   if (skippedScenes.length) {
@@ -1513,6 +1531,10 @@ async function main() {
     // 无影响（被重试救回）。它是「这次数字为什么可信」的一部分：没有它，一次抖动留下的
     // 只能是失败记录，而有了它，成功的跑批也能自证「我们没有把抖动算成模型答错」。
     transportRetries: TRANSPORT_RETRIES,
+    // 中继整段不可用时的冷却等待（见 createResilientTransport）：非零 ⟹ 这份成绩是在中继
+    // 恢复后测到的，跑批总时长里包含这段等待 —— 不属于模型的耗时，读「每行几秒」时必须剔除。
+    outageWaits: OUTAGE_WAITS,
+    outageWaitMs: OUTAGE_WAIT_MS,
     gatedRows: { lang: 'zh', rows: zhRows.length, errored: notMeasuredIn(zhRows) },
     observedRows: { lang: 'en', rows: enRows.length, errored: notMeasuredIn(enRows) },
     target: TARGET_ACCURACY,

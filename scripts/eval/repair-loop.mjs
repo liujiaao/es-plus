@@ -150,35 +150,101 @@ export async function withTransportRetry(fn, opts = {}) {
 }
 
 /**
- * 传输重试的**断路器**：把「中继整段不可用」与「偶发抖动」分开处置。
+ * 中继「整段不可用」时的**冷却等待**：把「偶发抖动」与「中继挂了一阵」分开处置。
  *
- * 光有重试会把系统性故障变得更贵而不是更好：中继整段倒下时，每一行都要把整条退避阶梯
- * 走完（2026-10-22 的实况是连续 184 行失败），于是 4 小时的跑批变成 6 小时，最后还是
- * 一份作废的产物。反过来，偶发抖动恰恰是重试唯一能救的场景。
+ * ## 为什么不能只做「连续失败就一击即走」（2026-10-22 第三次全量实测，第一次修复被推翻）
  *
- * 判据用**连续**耗尽次数：连续 `tripAfter` 个逻辑调用连重试都用尽 ⟹ 大概率是整段不可用，
- * 后续调用改成一击即走（`attempts = 1`，不睡不退避）；任何一次成功立刻复位。
- * 用「连续」而不是「累计」，是因为抖动是散点、故障是连片 —— 累计计数会被散点误触发，
- * 而误触发只会让一次本可救回的调用少几次重试，方向安全（不会把答错记成没测到）。
+ * 只做断路器的问题在**故障窗口的利用方式**：断路器一旦打开，剩下几百行会在故障窗口里
+ * 被**全部**打成「未测到」——而窗口本身往往只有几分钟（那次的实况：跑批 11:19 开始、
+ * 11:26 结束，前 9 行正常，case 10 起连接错误，3 行耗尽重试后断路器打开，其余 398 行
+ * 在 1–2 分钟内集体失败；跑完之后几分钟中继自己就恢复了）。也就是说，一次**短暂的**
+ * 中继抖动，被我们自己的「快速失败」放大成了一整次无效跑批：本该等 10 分钟，结果把
+ * 3 小时的钱和一次夜间窗口一起丢掉。
  *
- * @param {{tripAfter?: number, attempts?: number}} [opts]
+ * 故冷却期**不是**快速失败，而是**原地等它回来**：单次尝试 → 失败则按 30s/60s/120s/
+ * 240s/300s（封顶）退避重试，直到成功或本轮等待预算用尽。一行等在中继上，总比几百行
+ * 一起作废便宜得多 —— 每行的语义也没变：等回来之后它照常被测量。
+ *
+ * 等待必须**有界**，否则「key 已失效 / 中继长期不可用」会把跑批挂成 CI 超时：
+ *   · `perOutageBudgetMs`  单次故障最多等多久（默认 45 分钟）
+ *   · `totalOutageBudgetMs` 整次跑批累计最多等多久（默认 90 分钟）
+ * 预算用尽后**抛出原错误**（上层照旧归因为「未测到」），跑批诚实结束而不是永远挂着。
+ *
+ * 判据：只有 `isTransientTransportError` 为真的失败才等待；4xx（key 配错 / 参数错）立刻抛，
+ * 绝不让一次鉴权错误把跑批挂 45 分钟。
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.perCallAttempts] 正常模式下单次调用的重试次数（见 withTransportRetry）
+ * @param {number} [opts.baseDelayMs]     正常模式的退避基数（3s → 6s → 12s → 24s）
+ * @param {number} [opts.tripAfter]       连续多少个调用耗尽才算「中继整段不可用」
+ * @param {number} [opts.cooldownBaseMs]  冷却期首次等待时长
+ * @param {number} [opts.cooldownMaxMs]   冷却期单次等待上限
+ * @param {number} [opts.perOutageBudgetMs]
+ * @param {number} [opts.totalOutageBudgetMs]
+ * @param {(ms:number)=>Promise<void>} [opts.sleep] 可注入，故单测零等待
+ * @param {(err:Error, n:number)=>void} [opts.onRetry]     正常模式的每次重试
+ * @param {(info:{cooldownMs:number, waitedMs:number})=>void} [opts.onWait] 冷却期的每次等待
  */
-export function createTransportRetryGate({ tripAfter = 3, attempts = 5 } = {}) {
+export function createResilientTransport({
+  perCallAttempts = 5,
+  baseDelayMs = 3000,
+  tripAfter = 3,
+  cooldownBaseMs = 30000,
+  cooldownMaxMs = 300000,
+  perOutageBudgetMs = 45 * 60 * 1000,
+  totalOutageBudgetMs = 90 * 60 * 1000,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+  onRetry,
+  onWait,
+} = {}) {
   let streak = 0
+  let totalWaitedMs = 0
   return {
-    /** 本次调用该给几次尝试。 */
-    attemptsFor: () => (streak >= tripAfter ? 1 : attempts),
-    /** 调用（含重试）最终成功 ⟹ 中继是通的，复位。 */
-    recordSuccess: () => {
-      streak = 0
-    },
-    /** 调用彻底失败 ⟹ 只有**传输层**失败才计入连败（4xx 是配置错，不是中继抖）。 */
-    recordFailure: (err) => {
-      streak = isTransientTransportError(err) ? streak + 1 : 0
+    async run(fn) {
+      if (streak >= tripAfter) {
+        // ── 冷却期：中继整段不可用 —— 等它回来 ──────────────────────────
+        let waitedMs = 0
+        let cooldownMs = cooldownBaseMs
+        for (;;) {
+          try {
+            const value = await fn()
+            streak = 0 // 回得来 ⟹ 恢复正常模式（后续行重新享有正常重试）
+            return value
+          } catch (err) {
+            if (!isTransientTransportError(err)) {
+              streak = 0 // 4xx 是配置错，不是「中继不可用」，不能让断路状态续命
+              throw err
+            }
+            const next = Math.min(cooldownMs, cooldownMaxMs)
+            if (waitedMs + next > perOutageBudgetMs || totalWaitedMs + next > totalOutageBudgetMs) {
+              // 预算用尽 ⟹ 停止等待，把原错误交回上层（照旧归因「未测到」，诚实失败）
+              throw err
+            }
+            onWait?.({ cooldownMs: next, waitedMs })
+            await sleep(next)
+            waitedMs += next
+            totalWaitedMs += next
+            cooldownMs = next * 2
+          }
+        }
+      }
+      // ── 正常模式：单次调用有界重试 ────────────────────────────────
+      try {
+        const value = await withTransportRetry(fn, { attempts: perCallAttempts, baseDelayMs, sleep, onRetry })
+        streak = 0
+        return value
+      } catch (err) {
+        streak = isTransientTransportError(err) ? streak + 1 : 0
+        throw err
+      }
     },
     /** 当前连续耗尽次数（诊断/日志用）。 */
     get streak() {
       return streak
+    },
+    /** 整次跑批累计等待时长（进产物，读数字的人有权知道这次等过多久）。 */
+    get totalWaitedMs() {
+      return totalWaitedMs
     },
   }
 }
