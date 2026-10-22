@@ -94,6 +94,12 @@ export default defineConfig(({ mode }) => {
         // 走 facade 文件（src/utils/shared-browser.ts）是因为 shared 的 index 顺带
         // re-export 了 node:fs 依赖的 schema-validator —— 浏览器 bundler 解析不了。
         { find: '@es-plus/shared', replacement: resolve(__dirname, 'src/utils/shared-browser.ts') },
+        // codegen-escape.ts 顶层 `import { transformSync } from 'esbuild'`（扩展点语法闸）。
+        // esbuild 是 Node 原生包，其 JS 入口引用 `process` —— 打进浏览器包会让首页路由
+        // 加载直接抛 `ReferenceError: process is not defined`。Node 侧（CLI/MCP/eval/测试）
+        // 仍用真 esbuild；只有文档站这个浏览器宿主换成配平+形态判断的近似闸。
+        // 用正则精确匹配，避免误伤潜在的 `esbuild-wasm` 等子包。
+        { find: /^esbuild$/, replacement: resolve(__dirname, 'src/utils/esbuild-browser-shim.ts') },
         // @es-plus/core 显式指向 monorepo 工作区（src 或 build），避免被当裸依赖预打包成陈旧副本。
         // 字符串前缀匹配同时覆盖子路径（如 @es-plus/core/shared）。
         { find: '@es-plus/core', replacement: esCoreTarget },
