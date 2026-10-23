@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const statusMap: Record<string, string> = { active: '在职', leave: '离职', trial: '试用期' }
 

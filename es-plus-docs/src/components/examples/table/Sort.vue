@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref } from 'vue'
 
 const tableData = ref([

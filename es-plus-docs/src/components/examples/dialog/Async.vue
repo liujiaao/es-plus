@@ -7,7 +7,7 @@
 <script setup>
 import { h, defineAsyncComponent } from 'vue'
 import { ElLoading } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

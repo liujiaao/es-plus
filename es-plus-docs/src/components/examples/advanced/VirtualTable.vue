@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const tableRef = ref<InstanceType<typeof EsTable> | null>(null)
 

@@ -10,7 +10,7 @@
 import { h } from 'vue'
 import { ElMessage, ElIcon } from 'element-plus'
 import { WarningFilled, CircleCheck, QuestionFilled } from '@element-plus/icons-vue'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

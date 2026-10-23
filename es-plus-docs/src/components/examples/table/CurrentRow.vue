@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref, computed, h } from 'vue'
 import { ElTag, ElMessage } from 'element-plus'
 import { Refresh, Delete } from '@element-plus/icons-vue'

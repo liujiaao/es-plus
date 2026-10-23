@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref, computed, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 

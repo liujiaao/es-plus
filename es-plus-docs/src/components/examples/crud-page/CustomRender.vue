@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { EsCrudPage } from 'es-plus'
+import { EsCrudPage } from '@es-plus/vue3'
 import { h, ref } from 'vue'
 import { ElMessage, ElUpload, ElButton, ElIcon, ElProgress } from 'element-plus'
 

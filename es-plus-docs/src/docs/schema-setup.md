@@ -105,7 +105,7 @@ ES-Plus 公开了 `formItemList` 与 `columns` 的 JSON Schema，配置到 IDE �
 JSON Schema 只对 `.json` 生效。在 `.ts` / `.vue` 里直接 import 类型即可：
 
 ```ts
-import type { LayoutFormItemConfig, EsTableColumn } from 'es-plus'
+import type { LayoutFormItemConfig, EsTableColumn } from '@es-plus/vue3'
 
 const formItems: LayoutFormItemConfig[] = [
   { prop: 'name', label: '姓名', formtype: 'Input', span: 12 }

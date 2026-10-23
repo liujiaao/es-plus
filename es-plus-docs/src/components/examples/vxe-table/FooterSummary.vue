@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const departments = ['技术部', '产品部', '设计部', '市场部']
 let seq = 10

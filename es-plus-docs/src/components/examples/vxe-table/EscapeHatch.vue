@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { ref, h, computed } from 'vue'
 import { ElTag } from 'element-plus'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const clickInfo = ref('')
 

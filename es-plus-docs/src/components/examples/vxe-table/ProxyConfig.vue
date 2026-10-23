@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { EsTable, EsForm } from 'es-plus'
+import { EsTable, EsForm } from '@es-plus/vue3'
 
 const tableRef = ref<InstanceType<typeof EsTable> | null>(null)
 

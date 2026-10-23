@@ -7,7 +7,7 @@
 
 <script setup lang="jsx">
 import { ElDescriptions, ElDescriptionsItem, ElTag, ElDivider } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

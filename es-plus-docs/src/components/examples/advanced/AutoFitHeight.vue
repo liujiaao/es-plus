@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="jsx">
-import { EsTable, EsForm } from 'es-plus'
+import { EsTable, EsForm } from '@es-plus/vue3'
 import { ref, reactive, computed } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'

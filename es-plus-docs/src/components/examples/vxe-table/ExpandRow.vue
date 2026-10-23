@@ -28,7 +28,7 @@
 
 <script setup lang="tsx">
 import { ref, computed } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const columns = [
   { type: 'expand', width: 50, render: (h, { row }) => { return  <div style="padding: 16px; background: #f5f7fa; border-radius: 4px;">

@@ -7,7 +7,7 @@
 <script setup lang="jsx">
 import { ref } from 'vue'
 import { ElMessage, ElRadioGroup, ElRadio, ElInput } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

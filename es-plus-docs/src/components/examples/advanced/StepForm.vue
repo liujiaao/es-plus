@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { ref, h, nextTick } from 'vue'
 import { ElMessage, ElSteps, ElStep, ElDescriptions, ElDescriptionsItem } from 'element-plus'
 

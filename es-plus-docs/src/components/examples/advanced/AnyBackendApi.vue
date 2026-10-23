@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="jsx">
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref, computed } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
 

@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { EsCrudPage, configureEsPlus } from 'es-plus'
+import { EsCrudPage, configureEsPlus } from '@es-plus/vue3'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 

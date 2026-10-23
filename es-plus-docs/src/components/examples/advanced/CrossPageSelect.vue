@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="jsx">
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref } from 'vue'
 import { ElMessage, ElTag, ElAlert, ElMessageBox } from 'element-plus'
 

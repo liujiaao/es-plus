@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { EsCrudPage } from 'es-plus'
+import { EsCrudPage } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
 
 const mockData = [

@@ -7,7 +7,7 @@
 <script setup lang="jsx">
 import { ref } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
-import { EsTable,  useDialog } from 'es-plus'
+import { EsTable,  useDialog } from '@es-plus/vue3'
 import { fetchProducts } from '@/utils/mock-api'
 
 const dialog = useDialog()

@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { ref, reactive } from 'vue'
 
 const formRef = ref(null)

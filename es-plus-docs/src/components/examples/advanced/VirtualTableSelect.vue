@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const tableRef = ref<InstanceType<typeof EsTable> | null>(null)
 const selectedCount = ref(0)

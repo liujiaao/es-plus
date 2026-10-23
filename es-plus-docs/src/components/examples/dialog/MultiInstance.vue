@@ -8,7 +8,7 @@
 
 <script setup lang="jsx">
 import { ElDescriptions, ElDescriptionsItem, ElTag, ElMessage } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const users = {
   1: { id: 1, name: '张三', role: 'admin', dept: '技术部', status: 'active', email: 'zhangsan@example.com' },

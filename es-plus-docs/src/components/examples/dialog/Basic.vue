@@ -8,7 +8,7 @@
 <script setup>
 import { h } from 'vue'
 import { ElMessage, ElButton } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

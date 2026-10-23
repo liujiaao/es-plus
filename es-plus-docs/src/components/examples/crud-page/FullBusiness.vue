@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { EsCrudPage } from 'es-plus'
+import { EsCrudPage } from '@es-plus/vue3'
 import { h, ref } from 'vue'
 import { ElMessage, ElTag, ElDescriptions, ElDescriptionsItem } from 'element-plus'
 

@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const columns = [
   { prop: 'id', label: 'ID', width: 80 },

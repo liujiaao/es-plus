@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="jsx">
-import { EsTable, EsForm } from 'es-plus'
+import { EsTable, EsForm } from '@es-plus/vue3'
 import { ref, reactive, watch, computed } from 'vue'
 import { ElTag } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'

@@ -7,7 +7,7 @@
 <script setup lang="jsx">
 import { ref, computed } from 'vue'
 import { ElMessage, ElSteps, ElStep, ElResult, ElButton } from 'element-plus'
-import { EsForm,  useDialog } from 'es-plus'
+import { EsForm,  useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 

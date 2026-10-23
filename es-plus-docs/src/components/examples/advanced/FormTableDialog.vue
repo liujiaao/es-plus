@@ -20,7 +20,7 @@
 <script setup lang="jsx">
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElTag, ElMessageBox } from 'element-plus'
-import { EsTable, EsForm,  useDialog } from 'es-plus'
+import { EsTable, EsForm,  useDialog } from '@es-plus/vue3'
 import { fetchProducts } from '@/utils/mock-api'
 
 const queryFormRef = ref(null)

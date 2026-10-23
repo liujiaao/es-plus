@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 

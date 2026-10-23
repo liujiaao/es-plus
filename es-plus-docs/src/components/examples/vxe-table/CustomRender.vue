@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { ref, h, computed } from 'vue'
 import { ElTag, ElProgress, ElAvatar } from 'element-plus'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 
 const scoreColor = (score: number) => score >= 80 ? 'success' : score >= 60 ? 'warning' : 'exception'
 const statusType: Record<string, any> = { active: 'success', leave: 'danger', trial: 'warning' }

@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Printer, Refresh, Plus, Delete } from '@element-plus/icons-vue'

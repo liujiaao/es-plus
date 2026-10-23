@@ -25,7 +25,7 @@
 
 <script setup>
 // import { h } from 'vue'
-import { EsTable } from 'es-plus'
+import { EsTable } from '@es-plus/vue3'
 import { ElButton, ElTag, ElProgress, ElAvatar } from 'element-plus'
 
 const tableData = [

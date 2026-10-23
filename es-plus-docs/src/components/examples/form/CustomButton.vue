@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 

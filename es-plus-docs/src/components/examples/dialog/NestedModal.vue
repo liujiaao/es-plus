@@ -7,7 +7,7 @@
 <script setup lang="jsx">
 import { reactive } from 'vue'
 import { ElInput } from 'element-plus'
-import { useDialog } from 'es-plus'
+import { useDialog } from '@es-plus/vue3'
 
 const dialog = useDialog()
 const nestedDialog = useDialog()

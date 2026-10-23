@@ -12,7 +12,7 @@
 
 <script setup lang="tsx">
 import { ref } from 'vue'
-import { EsCrudPage } from 'es-plus'
+import { EsCrudPage } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
 
 const crudRef = ref<InstanceType<typeof EsCrudPage> | null>(null)

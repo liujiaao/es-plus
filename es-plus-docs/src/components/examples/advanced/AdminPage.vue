@@ -20,7 +20,7 @@
 <script setup lang="jsx">
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElTag, ElButton } from 'element-plus'
-import { EsForm, EsTable, useDialog } from 'es-plus'
+import { EsForm, EsTable, useDialog } from '@es-plus/vue3'
 
 const tableRef = ref(null)
 const dialog = useDialog()

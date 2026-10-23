@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { ref, computed, h } from 'vue'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElButton, ElMessageBox, ElDialog } from 'element-plus'

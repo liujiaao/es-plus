@@ -31,7 +31,7 @@
 import { ref, reactive, h, watch, computed } from 'vue'
 import { ElTag } from 'element-plus'
 import { Printer } from '@element-plus/icons-vue'
-import { EsTable, EsForm, patchHtmlRowSpans } from 'es-plus'
+import { EsTable, EsForm, patchHtmlRowSpans } from '@es-plus/vue3'
 
 
 // ─── 表格实例 ──────────────────────────────────────────────────

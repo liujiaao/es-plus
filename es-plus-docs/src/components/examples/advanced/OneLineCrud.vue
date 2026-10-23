@@ -27,7 +27,7 @@
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElTag, ElMessageBox, ElAlert } from 'element-plus'
-import { EsTable, EsForm,  useDialog } from 'es-plus'
+import { EsTable, EsForm,  useDialog } from '@es-plus/vue3'
 import { fetchProducts } from '@/utils/mock-api'
 
 const tableRef = ref(null)
