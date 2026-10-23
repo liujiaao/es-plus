@@ -365,8 +365,13 @@ function checkFails(result, substr, label) {
 {
   const src = readFileSync(join(ROOT, 'scripts', 'eval-llm.mjs'), 'utf8')
   const ratchetSrc = readFileSync(join(ROOT, 'scripts', 'eval', 'ratchet.mjs'), 'utf8')
+  // 聚合已抽到 `eval/run-metrics.mjs`（跑批与离线复算共用的唯一实现），故「门禁数字
+  // 来自 def95.rate」这条不变量现在钉在**那个文件**上；eval-llm 只允许消费，不许再算一份。
+  const metricsSrc = readFileSync(join(ROOT, 'scripts', 'eval', 'run-metrics.mjs'), 'utf8')
   check(!/gateExact/.test(src), 'eval-llm.mjs 里不得再有 gateExact（core 当门禁的旧形态）')
-  check(/const gateRate = def95\.rate \?\? 0/.test(src), '门禁数字必须来自 def95.rate')
+  check(!/gateExact/.test(metricsSrc), 'run-metrics.mjs 里不得有 gateExact（口径唯一实现也不能回流）')
+  check(/const gateRate = def95\.rate \?\? 0/.test(metricsSrc), '门禁数字必须来自 def95.rate（run-metrics 是唯一实现）')
+  check(!/const gateRate =/.test(src), 'eval-llm.mjs 不得自行再算 gateRate —— 必须来自 computeCrudMetrics（否则双真源）')
   check(/const gateMetric = 'definition95'/.test(src), '产物必须记下门禁指标名 gateMetric')
   check(
     /passed:\s*gateRate >= TARGET_ACCURACY &&\s*guards\.ok &&\s*frontDoorStats\.ok &&\s*compileRate === 1 &&\s*fragmentStats\.ok,/.test(src),
@@ -446,8 +451,8 @@ function checkFails(result, substr, label) {
     '跑的确实得是门禁语言优先的那份计划 —— 光有 orderPlanGatedFirst 而调用点不用它，等于没改'
   )
   // 反例自检：把「core 当门禁」的旧写法喂进同一组断言，必须至少咬住一条。
-  const legacy = src.replace('const gateRate = def95.rate ?? 0', 'const gateExact = exactHeldout ?? exact')
-  const caught = !/gateExact/.test(legacy) ? false : !/const gateRate = def95\.rate \?\? 0/.test(legacy)
+  const legacy = metricsSrc.replace('const gateRate = def95.rate ?? 0', 'const gateRate = exactHeldout ?? exact')
+  const caught = !/const gateRate = def95\.rate \?\? 0/.test(legacy)
   check(caught, '自检：旧写法（core 当门禁）必须被这组断言咬住')
 }
 

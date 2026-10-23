@@ -43,7 +43,9 @@ import {
   repairConfig,
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
-import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, summarizeConvergence, summarize95, meets95Definition, describeDimMiss } from './eval/scorers.mjs'
+import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, meets95Definition, describeDimMiss } from './eval/scorers.mjs'
+import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './eval/run-metrics.mjs'
+import { createDumpWriter, goldHashOf, RULER_VERSION } from './eval/dump.mjs'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
 import {
   driveToValidConfig as driveToValidConfigPure,
@@ -56,7 +58,7 @@ import { isCrudCase, sceneOf } from './eval/scenes.mjs'
 import { setupFrontDoor, driveFrontDoor, summarizeFrontDoor } from './eval/front-door-leg.mjs'
 import { buildFragmentSystemPrompt, buildFragmentInitialMessages } from './eval/fragment-prompt.mjs'
 import { scoreFragment, describeFragmentDimMiss } from './eval/fragment-scorers.mjs'
-import { compileProduct, compileFragment, summarizeCompile, fmtError } from './eval/compile-leg.mjs'
+import { compileProduct, compileFragment, fmtError } from './eval/compile-leg.mjs'
 import { summarizeFragmentLeg } from './eval/fragment-leg.mjs'
 import { loadPrdCases, scorePrdSurfaces, summarizePrd, drivePrdSurfaces } from './eval/prd-leg.mjs'
 import { buildPrdSystemPrompt, buildPrdInitialMessages } from './eval/prd-prompt.mjs'
@@ -185,6 +187,28 @@ const PRD_ONLY = process.argv.includes('--prd')
  * 它强制探针模式（不写产物），不允许把诊断口径当成绩。
  */
 const USE_FIXED_FIELDS = process.argv.includes('--fixed-fields')
+/**
+ * `--dump-pred <path>` = 把每一行的**模型原始产出**落成 JSONL（pred + gold + mask）。
+ *
+ * ## 为什么它不是探针开关
+ *
+ * 它零副作用、不改任何判据，唯一作用是让「这批模型产出」在跑完之后还能被**另一套尺子**
+ * 重算。此前预测从不落盘 ⟹ 每改一次 scorer 都要再付 3.5 小时 + 一份配额，且新旧口径
+ * 无法在同一批产出上对照（只能跨批次比，而模型/语料/中继都在变）。
+ * 故它可与任何模式组合（探针也行），全量跑批**应当**始终开启。
+ *
+ * 未给路径却写了开关 = 用法错误，直接红 —— 静默不落盘正是本仓反复栽过的「静默跳过」。
+ */
+const DUMP_PRED = (() => {
+  const i = process.argv.indexOf('--dump-pred')
+  if (i === -1) return null
+  const p = process.argv[i + 1]
+  if (!p || p.startsWith('--')) {
+    console.error('✗ --dump-pred 需要一个输出路径，例如 --dump-pred .tmp-audit/pred.jsonl')
+    process.exit(2)
+  }
+  return p
+})()
 /**
  * `ESPLUS_FRAG_ONLY=…` = **片段调试子集**（见下方片段语料执行处）。
  *
@@ -430,6 +454,25 @@ async function main() {
   }
 
   const rows = []
+  // ── 预测落盘（P0）────────────────────────────────────────────────────────────
+  // 逐行 append，进程被杀也保住已跑完的行。meta 首行写下「这份 dump 属于哪一版语料/
+  // 哪一把尺子」——复算前必须比对，否则语料或尺子变过，数字就是跨版本混算。
+  const dump = createDumpWriter(DUMP_PRED)
+  if (dump.enabled) {
+    dump.write({
+      kind: 'meta',
+      schemaVersion: 1,
+      rulerVersion: RULER_VERSION,
+      commit: identity.commit ?? null,
+      corpusHash: identity.corpusHash ?? null,
+      corpusFiles: allFiles.length,
+      model: MODEL,
+      fixedFieldsUsed: USE_FIXED_FIELDS,
+      convergeK: CONVERGE_K,
+      createdAt: new Date().toISOString(),
+    })
+    console.log(`[eval:llm] 预测落盘 → ${dump.path}（尺子 ${RULER_VERSION}）`)
+  }
   // Tier B 类型腿的候选（AN-14）：成功行留下**模型产出**的 config，跑完后按 target 抽样
   // 走 `vue-tsc`。不存进 row（产物会变大且含非序列化值），只在内存里传到腿那一步。
   const tcCandidates = []
@@ -518,6 +561,9 @@ async function main() {
         // B3：中文语言 + 标了 refinements 时，延续同一段对话逐条喂纠正，记录每轮 scoped 命中，
         // 直到收敛或喂完。初稿已 scoped 命中则 0 次纠正即收敛（zero-edit），不再调用模型。
         let convergence
+        // 每一轮精修的模型产出都要落盘：否则离线复算只能算 turn-0，收敛腿（95% 的第二条腿）
+        // 就永远无法在新尺子下重算。
+        const turnPreds = []
         if (lang === 'zh' && refinements) {
           const scopedSeq = [s.exactIntentScoped]
           for (const ref of refinements) {
@@ -525,6 +571,7 @@ async function main() {
             // 精修纠正也走同一守卫：空纠正同样会让下一次请求带着空 text block 被严格网关拒。
             pushUserCorrection(messages, String(ref.correction ?? ''))
             const rPred = await driveToValidConfig(client, system, messages)
+            turnPreds.push(rPred)
             scopedSeq.push(scoreAll(gold, rPred, mask).exactIntentScoped)
           }
           const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
@@ -532,6 +579,27 @@ async function main() {
         }
 
         rows.push({ file, lang, ...s, compiles, noThrow, compileError, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd })
+        // 落盘：gold + mask + 逐轮 pred 足以离线重算全部 CRUD 指标（含收敛腿）。
+        // `compiles` 是确定性代码的产物，跟着落盘只为复算时能重出 Tier A 数字。
+        dump.write({
+          kind: 'crud',
+          file,
+          lang,
+          gold,
+          mask,
+          fewshotDerived: FEWSHOT_DERIVED.has(file),
+          convergesBy,
+          // 有精修语料 ⟹ 该行**必须**重建 convergence（即使 turn-0 已命中、turns 为空，
+          // firstTurn 也是 0 而不是「无收敛腿」）。只看 turns.length 会把它误判成普通行。
+          hasRefinements: Boolean(refinements),
+          turn0: pred,
+          turns: turnPreds,
+          compiles,
+          noThrow,
+          compileError,
+          error: null,
+          errorKind: null,
+        })
         // 类型腿只吃门禁语言（zh）的模型产出：en 腿与 zh 共用同一份 pred 语义但语料不同，
         // 且 en 不参与门禁；把它混进抽样会稀释每端的真实样本。
         if (lang === 'zh') tcCandidates.push({ id: file, target: gold.target, config: pred })
@@ -591,6 +659,25 @@ async function main() {
           fewshotDerived: FEWSHOT_DERIVED.has(file),
           frontDoor: null,
           gold,
+        })
+        // 错误行也落盘：复算必须能重建**分母**。只落成功行会让「未测到」从分母里消失，
+        // 把一次中继故障洗成高准确率（本仓 2026-10-15 的 47.0% 事故就是这一类）。
+        dump.write({
+          kind: 'crud',
+          file,
+          lang,
+          gold,
+          mask,
+          fewshotDerived: FEWSHOT_DERIVED.has(file),
+          convergesBy,
+          hasRefinements: Boolean(refinements),
+          turn0: null,
+          turns: [],
+          compiles: false,
+          noThrow: true,
+          compileError: null,
+          error: err.message,
+          errorKind,
         })
         console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
       }
@@ -674,6 +761,21 @@ async function main() {
         dimMisses,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
       })
+      // 片段 likewise：gold + mask + pred 足以离线重算片段 scoped / 维度。
+      dump.write({
+        kind: 'fragment',
+        file,
+        scene,
+        gold,
+        mask,
+        pred,
+        compiles,
+        noThrow,
+        compileError,
+        error: null,
+        errorKind: null,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+      })
       console.log(
         `core=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}` +
           ` stated=${s.exactIntentStated ? 'ok' : 'X'}` +
@@ -706,6 +808,20 @@ async function main() {
         dimMisses: [],
         fewshotDerived: FEWSHOT_DERIVED.has(file),
       })
+      dump.write({
+        kind: 'fragment',
+        file,
+        scene,
+        gold,
+        mask,
+        pred: null,
+        compiles: false,
+        noThrow: true,
+        compileError: null,
+        error: err.message,
+        errorKind,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+      })
       console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
     }
   }
@@ -725,8 +841,9 @@ async function main() {
     const plannedPrd = LIMIT !== null ? prdCases.slice(0, LIMIT) : prdCases
     for (const c of plannedPrd) {
       process.stdout.write(`[eval:llm] ${c.file} [prd] … `)
+      // goldConfig 提到 try 外：catch 里的 dump 也要能记录这一行的语料侧输入。
+      const goldConfig = { target: 'vue3', ...c.raw.config }
       try {
-        const goldConfig = { target: 'vue3', ...c.raw.config }
         const prdGold = deriveSurfaces(goldConfig, frontDoor.project)
         // 宿主给定项（生产里由项目探测/路由表决定）——只测「面与字段」，不测这些常量。
         const messages = buildPrdInitialMessages(c.spec, {
@@ -759,6 +876,18 @@ async function main() {
           landing,
           fewshotDerived: false,
         })
+        // PRD 腿只观测、不进门禁；落盘保留 pred + goldConfig，便于日后在**同一批产出**上
+        // 重算第一英里指标（surfaces 需要前门 project 上下文，故 rescore 暂不重算 PRD）。
+        dump.write({
+          kind: 'prd',
+          file: c.file,
+          id: c.id,
+          pred,
+          goldConfig,
+          compiles,
+          error: null,
+          errorKind: null,
+        })
         const pct = (ok) => (ok ? 'ok' : 'X')
         console.log(
           `exact=${pct(score.exact)} presence=${pct(score.presence.ok)}` +
@@ -784,36 +913,52 @@ async function main() {
           landing: null,
           fewshotDerived: false,
         })
+        dump.write({
+          kind: 'prd',
+          file: c.file,
+          id: c.id,
+          pred: null,
+          goldConfig,
+          compiles: false,
+          error: err.message,
+          errorKind,
+        })
         console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
       }
     }
   }
   const prdSummary = summarizePrd(prdRows)
 
-  // 门禁与主要数值落在中文（zh）行：英文只观测，不拖门禁，数值口径与改双语前连续。
-  const zhRows = rows.filter((r) => r.lang === 'zh')
-  const enRows = rows.filter((r) => r.lang === 'en')
-  const n = zhRows.length
-  const heldout = zhRows.filter((r) => !r.fewshotDerived)
-  const fewshotRows = zhRows.filter((r) => r.fewshotDerived)
-  const meanOf = (rs) => (sel) => (rs.length ? rs.reduce((a, r) => a + sel(r), 0) / rs.length : 0)
-  const meanAll = meanOf(zhRows)
-  const meanHeldout = meanOf(heldout)
-  const meanFewshot = meanOf(fewshotRows)
-  const exact = meanAll((r) => (r.exactIntentCore ? 1 : 0))
-  const exactHeldout = heldout.length ? meanHeldout((r) => (r.exactIntentCore ? 1 : 0)) : null
-  const exactFewshot = fewshotRows.length ? meanFewshot((r) => (r.exactIntentCore ? 1 : 0)) : null
-  const exactFull = meanAll((r) => (r.exactIntentFull ? 1 : 0))
-  const exactFullHeldout = heldout.length ? meanHeldout((r) => (r.exactIntentFull ? 1 : 0)) : null
-  // scoped 口径（B2）：只对 NL 锁定维度记分。本 PR 只观测、不门禁（门禁仍落 core，决策 A1'-a）。
-  const exactScoped = meanAll((r) => (r.exactIntentScoped ? 1 : 0))
-  const exactScopedHeldout = heldout.length ? meanHeldout((r) => (r.exactIntentScoped ? 1 : 0)) : null
-  const propF1 = meanAll((r) => r.propF1?.f1 ?? 0)
-  // 属性准确率只在「有共享字段」的行上有定义（scorers 返回 null）。对 null 行取 0 会把
-  // 「无可测项」当成「全错」，取 1 又会真空抬高 —— 故只在可测行上取均值并公布分母。
-  const attrRows = zhRows.filter((r) => typeof r.attrAcc === 'number')
-  const attrAcc = attrRows.length ? attrRows.reduce((a, r) => a + r.attrAcc, 0) / attrRows.length : null
-  const actF1 = meanAll((r) => r.actionsF1?.f1 ?? 0)
+  // 指标聚合的**唯一实现**在 `eval/run-metrics.mjs`：`rescore.mjs` 离线复算同一份
+  // dump 时复用这段代码，于是「复算 = 产物」由构造保证，而不是靠两段复制品对齐。
+  // 判据本身（scoped 维度集 / 95% 定义 / 各维度聚合口径）仍只在 `eval/scorers.mjs`。
+  const metrics = computeCrudMetrics(rows, { convergeK: CONVERGE_K })
+  const {
+    zhRows,
+    enRows,
+    n,
+    heldout,
+    fewshotRows,
+    exact,
+    exactHeldout,
+    exactFewshot,
+    exactFull,
+    exactFullHeldout,
+    exactScoped,
+    exactScopedHeldout,
+    propF1,
+    attrRows,
+    attrAcc,
+    actF1,
+    convHeldout,
+    convStats,
+    def95,
+    compileStats,
+    compileRate,
+    byCapability,
+    coreRate,
+    gateRate,
+  } = metrics
 
   // ── 前门腿汇总（W1.3）──────────────────────────────────────────────────────
   // 只有模型**真的产出了配置**的行才有前门观测（error 行为 null，与 compiles 同一分母纪律）。
@@ -825,62 +970,9 @@ async function main() {
   // 口径纪律与 CRUD 一致：`model-failure` = 模型答错了 ⟹ **在成绩里**（记 0 分）；
   // `no-answer`/`truncated` = 没测到 ⟹ 不进分母，但必须显式报出条数。
   // 这些数字不参与 gate / 徽章 / exit code —— 用户拍板的 95% 定义只针对 CRUD 语料。
-  const fragNotMeasuredRows = fragmentRows.filter((r) => r.error && isNotMeasured(r.errorKind))
-  const fragMeasured = fragmentRows.filter((r) => !(r.error && isNotMeasured(r.errorKind)))
-  // 编译口径与 CRUD 的 Tier A 腿（AN-13）同一把尺子：分母 = **真有产物**的行。
-  // 此前 `compileRate` 用 `measured` 当分母，把「模型答错、根本没产出」也算成编译失败 ——
-  // 那会把模型语义 miss 误归因成发射器回归，并让 AN-18 的 `compileRate === 1` 门禁恒红。
-  // 未测到仍由本文件的片段门禁单独判红（见 `summarizeFragmentLeg`）。
-  const fragCompile = summarizeCompile(fragmentRows)
-  const fragHit = (r, sel) => (r.score ? (sel(r.score) ? 1 : 0) : 0)
-  const fragMean = (rs, sel) => (rs.length ? rs.reduce((a, r) => a + fragHit(r, sel), 0) / rs.length : null)
-  const fragmentSummary = {
-    cases: fragmentRows.length,
-    measured: fragMeasured.length,
-    notMeasured: fragNotMeasuredRows.length,
-    core: fragMean(fragMeasured, (s) => s.exactIntentCore),
-    full: fragMean(fragMeasured, (s) => s.exactIntentFull),
-    scoped: fragMean(fragMeasured, (s) => s.exactIntentScoped),
-    stated: fragMean(fragMeasured, (s) => s.exactIntentStated),
-    compileRate: fragCompile.rate,
-    compileMeasured: fragCompile.measured,
-    compileCompiled: fragCompile.compiled,
-    compileFailure: fragCompile.failure,
-    byScene: {},
-    byDim: {},
-  }
-  for (const scene of ['table', 'form', 'dialog']) {
-    const rs = fragMeasured.filter((r) => r.scene === scene)
-    if (!rs.length) {
-      fragmentSummary.byScene[scene] = null
-      continue
-    }
-    const sceneCompile = summarizeCompile(fragmentRows.filter((r) => r.scene === scene))
-    fragmentSummary.byScene[scene] = {
-      cases: rs.length,
-      core: fragMean(rs, (s) => s.exactIntentCore),
-      full: fragMean(rs, (s) => s.exactIntentFull),
-      scoped: fragMean(rs, (s) => s.exactIntentScoped),
-      stated: fragMean(rs, (s) => s.exactIntentStated),
-      compileRate: sceneCompile.rate,
-    }
-  }
-  const fragDimAgg = {}
-  for (const r of fragMeasured) {
-    for (const [dim, v] of Object.entries(r.score?.byDim ?? {})) {
-      if (!v.applicable) continue
-      const a = (fragDimAgg[dim] ??= { applicable: 0, pass: 0 })
-      a.applicable++
-      if (v.pass) a.pass++
-    }
-  }
-  for (const [dim, a] of Object.entries(fragDimAgg)) {
-    fragmentSummary.byDim[dim] = {
-      applicable: a.applicable,
-      pass: a.pass,
-      rate: Number((a.pass / a.applicable).toFixed(4)),
-    }
-  }
+  // 编译口径与 CRUD 的 Tier A 腿（AN-13）同一把尺子：分母 = **真有产物**的行；
+  // 聚合与 rescore 共用 `eval/run-metrics.mjs` 的同一份实现。
+  const { fragmentSummary, fragNotMeasuredRows } = computeFragmentMetrics(fragmentRows, isNotMeasured)
 
   // ── 片段腿门禁（AN-18）─────────────────────────────────────────────────────
   // 基线在此处读取（而不是等到下方回归防线才读），因为片段门禁的 scoped 地板来自它。
@@ -904,52 +996,12 @@ async function main() {
     )
   }
 
-  // B3 收敛（只观测、不门禁）：收敛语料 = 标了 refinements 的中文行；heldout 优先、空则退全量。
-  // firstTurn=0 即 zero-edit 收敛（0 次纠正）；null = 喂完所有纠正仍未 scoped 命中。
-  const CONVERGE_K = 3
-  const convZhRows = zhRows.filter((r) => r.convergence)
-  const convHeldout = convZhRows.filter((r) => !r.fewshotDerived)
-  const convSource = convHeldout.length ? convHeldout : convZhRows
-  const convStats = summarizeConvergence(
-    convSource.map((r) => ({ firstTurn: r.convergence.firstTurn })),
-    CONVERGE_K
-  )
-
-  // 「95% 定义」统一数（只观测、不门禁）：scoped zero-edit ∨ ≤K 轮收敛，按 per-row OR 聚合。
-  // 这把 scoped 第一条腿与 convergence 第二条腿合成一个真实数字——此前两条腿分开报、无人算 OR。
-  // heldout 优先（门禁总体），空则退全量以避免除零。
-  const def95Rows = heldout.length ? heldout : zhRows
-  const def95 = summarize95(def95Rows, CONVERGE_K)
-
-  // ── Tier A 编译门（AN-13）─────────────────────────────────────────────────
-  // 分母 = **真有产物的行**（`error` 为空）。未测到（no-answer/truncated）与模型答错
-  // （model-failure）都没有产物：把前者算作编译失败会让一次中继故障污染编译门，把后者
-  // 算进去会让 `compileRate === 1` 在 95% 准确率目标下**永远**不可达（永久红 = 红盲）。
-  // 未测到的行仍由健康门对门禁腿零容忍判红（`evaluateHealth`），不靠这条口径兜底。
-  // 口径与两个失败类别的拆解在 `compile-leg.mjs` 的 `summarizeCompile` 头注。
-  const compileStats = summarizeCompile(zhRows, (r) => meets95Definition(r, CONVERGE_K))
-  const compileRate = compileStats.rate
-
-  // 按维度在留出集上聚合：applicable=被多少 case 用到，pass=命中数，rate=命中率。
-  // 这是能定位回归到具体维度的诊断信号（AI-01 的核心产物）。
-  const capRows = heldout.length ? heldout : rows
-  const byCapability = {}
-  for (const { key } of CAPABILITY_SCORERS) {
-    let applicable = 0
-    let pass = 0
-    for (const r of capRows) {
-      const c = r.byCapability?.[key]
-      if (c && c.applicable) {
-        applicable++
-        if (c.pass) pass++
-      }
-    }
-    byCapability[key] = {
-      applicable,
-      pass,
-      rate: applicable ? Number((pass / applicable).toFixed(4)) : null,
-    }
-  }
+  // B3 收敛 / 95% 定义 / Tier A 编译门 / 逐维聚合：全部在 `computeCrudMetrics`
+  // （`eval/run-metrics.mjs`）里，与 `rescore.mjs` 共用同一份实现。
+  //   · 收敛：firstTurn=0 即 zero-edit 收敛；null = 喂完所有纠正仍未 scoped 命中。
+  //   · 95% 定义：scoped zero-edit ∨ ≤K 轮收敛，按 per-row OR 聚合（heldout 优先）。
+  //   · Tier A 编译门分母 = **真有产物的行**（`error` 为空；理由见 `compile-leg.mjs` 头注）。
+  //   · 逐维：applicable=被多少 case 用到，pass=命中数（`capRows` 含 en，沿用既有口径）。
 
   // ── Tier B 类型腿（AN-14，只观测）────────────────────────────────────────────
   // 与 Tier A 的分工见 `typecheck-leg.mjs` 头注：Tier A 证明「能编译」，Tier B 用
@@ -1261,8 +1313,9 @@ async function main() {
   // （它惩罚 NL 欠定），而永久红等于红盲 —— 比没有门禁更糟（见 eval/ratchet.mjs 头注）。
   // ∨ ≥ core 恒成立（第二条腿是 OR），故门禁确实变松了；补丁是 ④core 非回归地板 +
   // ⑤逐维棘轮（二者同批落地，见下方「regression guards」），三者合起来才无已知失效模式。
-  const coreRate = exactHeldout ?? exact
-  const gateRate = def95.rate ?? 0
+  // `coreRate` / `gateRate` 已由上方 `computeCrudMetrics` 一并算好：
+  //   gateRate = 95% 定义 ∨（scoped zero-edit ∨ ≤K 轮收敛），与徽章同源；
+  //   coreRate = 四维 exactIntentCore，降为并列诊断（永久红 = 红盲，见 eval/ratchet.mjs 头注）。
   const gateMetric = 'definition95'
 
   console.log('\nLayer-2 LLM accuracy (model=' + MODEL + ')')
