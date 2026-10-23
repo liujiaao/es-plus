@@ -22,6 +22,7 @@ import { ref, reactive, h } from 'vue'
 import { message, Tag, Modal } from 'ant-design-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
 import { fetchProducts } from '@/utils/mock-api'
+import { tagColor } from '@/utils/antdv-colors'
 
 const queryFormRef = ref(null)
 const tableRef = ref(null)
@@ -75,7 +76,7 @@ const queryBtns = [
     }
   },
   {
-    name: '新增', type: 'success', size: 'small', icon: 'PlusOutlined',
+    name: '新增', type: 'primary', size: 'small', icon: 'PlusOutlined',
     click: () => openAddDialog()
   },
   {
@@ -94,7 +95,7 @@ const columns = [
     width: 120,
     render: (_, { row }) => {
       const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag type={typeMap[row.category] || 'info'} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(typeMap[row.category] || 'info')} size="small">{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
@@ -109,8 +110,8 @@ const columns = [
     width: 160,
     render: (_, { row }) => {
       return <div>
-        <a-button type="primary" size="small" text onClick={() => openEditDialog(row)}>编辑</a-button>
-        <a-button type="danger" size="small" text onClick={() => handleDelete(row)} style="margin-left: 8px">删除</a-button>
+        <a-button type="text" size="small" onClick={() => openEditDialog(row)}>编辑</a-button>
+        <a-button type="text" danger size="small" onClick={() => handleDelete(row)} style="margin-left: 8px">删除</a-button>
       </div>
     }
   }
@@ -155,7 +156,7 @@ const tableOptions = {
 
 const handleDelete = async (row) => {
   try {
-    await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}" 吗？`, okType: 'warning' })
+    await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}" 吗？`, okType: 'primary', okButtonProps: { danger: true } })
     message.success('删除成功（模拟）')
     tableRef.value?.httpRequestInstance()
   } catch {}
@@ -168,7 +169,7 @@ const handleBatchDelete = async () => {
     return
   }
   try {
-    await Modal.confirm({ title: '提示', content: `确定删除选中的 ${selection.length} 条数据吗？`, okType: 'warning' })
+    await Modal.confirm({ title: '提示', content: `确定删除选中的 ${selection.length} 条数据吗？`, okType: 'primary', okButtonProps: { danger: true } })
     message.success('批量删除成功（模拟）')
     tableRef.value?.httpRequestInstance()
   } catch {}

@@ -66,7 +66,7 @@ const schema = {
       configBtn: [
         { name: '取消', action: 'cancel' },
         { name: '拒绝', type: 'danger', key: 'reject', action: 'custom' },
-        { name: '通过', type: 'success', key: 'pass', action: 'confirm' }
+        { name: '通过', type: 'primary', key: 'pass', action: 'confirm' }
       ]
     }
   }

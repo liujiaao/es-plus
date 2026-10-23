@@ -87,7 +87,7 @@ const openEditDialog = (row) => {
 }
 
 const handleDelete = (row) => {
-  Modal.confirm({ title: '删除确认', content: `确定要删除「${row.name}」吗？`, okType: 'warning' })
+  Modal.confirm({ title: '删除确认', content: `确定要删除「${row.name}」吗？`, okType: 'primary', okButtonProps: { danger: true } })
     .then(() => {
       tableData.value = tableData.value.filter((r) => r.id !== row.id)
       message.success('删除成功')

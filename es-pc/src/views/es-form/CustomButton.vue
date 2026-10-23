@@ -63,7 +63,7 @@ const renderBtn = () => {
           content: '确定放弃编辑？未保存的内容将丢失',
           okText: '确定',
           cancelText: '取消',
-          okType: 'warning',
+          okType: 'primary', okButtonProps: { danger: true },
           onOk: () => {
             message.info('已取消编辑')
           }

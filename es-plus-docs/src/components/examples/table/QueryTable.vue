@@ -7,28 +7,28 @@
       :columns="columns"
       :options="tableOptions"
     >
-      <template #default>
-        <div class="search-bar">
-          <el-input v-model="searchForm.keyword" placeholder="订单号/客户名" clearable style="width: 180px" />
-          <el-select v-model="searchForm.status" placeholder="订单状态" clearable style="width: 130px">
-            <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
-          </el-select>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </div>
-      </template>
+      <!--
+        查询区同样是「配置」：字段数组 → 表单，按钮 key=query/rest + triggerEvent → 自动联动表格。
+        整页没有 handleSearch / handleReset 之类的胶水代码。
+      -->
+      <es-form
+        :model="query"
+        :form-item-list="queryItems"
+        :config-btn="queryBtns"
+        :layout-form-props="layoutProps"
+      />
     </es-table>
   </div>
 </template>
 
 <script setup>
-import { EsTable } from 'es-plus'
+import { EsForm, EsTable } from '@es-plus/vue3'
 import { ref, reactive, h } from 'vue'
 import { ElTag } from 'element-plus'
 
 const tableRef = ref()
 const tableData = ref([])
-const searchForm = reactive({ keyword: '', status: '' })
+const query = reactive({ keyword: '', status: '' })
 const pagination = ref({ pageSize: 10, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
 const statusOptions = [
@@ -46,7 +46,21 @@ const statusMap = {
   cancelled: { text: '已取消', type: 'info' }
 }
 
-// 模拟后端接口
+// 查询表单：一个字段一行配置
+const queryItems = [
+  { prop: 'keyword', label: '关键词', formtype: 'Input', span: 6, attrs: { placeholder: '订单号/客户名', clearable: true } },
+  { prop: 'status', label: '状态', formtype: 'Select', span: 6, dataOptions: statusOptions, attrs: { placeholder: '全部状态', clearable: true } }
+]
+
+// 按钮即联动：key=query 触发查询（回到第 1 页），key=rest 重置字段并刷新
+const queryBtns = [
+  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
+  { name: '重置', key: 'rest', triggerEvent: true }
+]
+
+const layoutProps = { fromLayProps: { labelWidth: '60px' }, rowLayProps: { gutter: 16 } }
+
+// 模拟后端接口（真实项目里换成 httpRequest，或直接给 apiParams.url）
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 10, keyword, status } = params || {}
   const allData = Array.from({ length: 86 }, (_, i) => ({
@@ -58,8 +72,8 @@ const mockRequest = async (params) => {
     date: `2024-01-${String((i % 28) + 1).padStart(2, '0')}`
   }))
   let filtered = allData
-  if (keyword) filtered = filtered.filter(d => d.orderNo.includes(keyword) || d.customer.includes(keyword))
-  if (status) filtered = filtered.filter(d => d.status === status)
+  if (keyword) filtered = filtered.filter((d) => d.orderNo.includes(keyword) || d.customer.includes(keyword))
+  if (status) filtered = filtered.filter((d) => d.status === status)
   const total = filtered.length
   const start = (pageIndex - 1) * pageSize
   return { data: filtered.slice(start, start + pageSize), total, pageSize, pageIndex }
@@ -77,7 +91,6 @@ const columns = [
   {
     prop: 'status',
     label: '状态',
-
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
       return h(ElTag, { type: s.type, size: 'small' }, () => s.text)
@@ -86,30 +99,17 @@ const columns = [
   { prop: 'date', label: '日期', width: 120 }
 ]
 
-// apiParams.model 自动合并搜索参数到每次请求
+// apiParams.model 自动把查询条件并入每次请求（分页参数由表格注入）
 const tableOptions = {
   border: true,
   httpRequest: mockRequest,
-  apiParams: { url: '/api/orders', method: 'GET', model: searchForm },
+  apiParams: { url: '/api/orders', method: 'GET', model: query },
   configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' }
-}
-
-const handleSearch = () => tableRef.value?.httpRequestInstance()
-const handleReset = () => {
-  searchForm.keyword = ''
-  searchForm.status = ''
-  tableRef.value?.httpRequestInstance()
 }
 </script>
 
 <style scoped>
 .example-query-table {
   padding: 0;
-}
-.search-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding-bottom: 10px;
 }
 </style>

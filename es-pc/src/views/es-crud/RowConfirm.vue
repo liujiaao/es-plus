@@ -48,14 +48,14 @@ const schema = {
   },
   toolbarBtns: [
     { name: '新增文档', type: 'primary', icon: 'PlusOutlined', dialogKey: 'add' },
-    { name: '批量归档', type: 'warning', confirm: '确定将所有已发布文档归档吗？', actionType: 'archive' }
+    { name: '批量归档', type: 'primary', confirm: '确定将所有已发布文档归档吗？', actionType: 'archive' }
   ],
   operationColumn: {
     label: '操作',
     width: 260,
     btns: [
       { name: '编辑', type: 'primary', dialogKey: 'edit' },
-      { name: '发布', type: 'success', key: 'publish', confirm: '确定发布此文档？发布后不可撤回。' },
+      { name: '发布', type: 'primary', key: 'publish', confirm: '确定发布此文档？发布后不可撤回。' },
       { name: '删除', type: 'danger', key: 'delete', confirm: '此操作将永久删除该文档，是否继续？' }
     ]
   },

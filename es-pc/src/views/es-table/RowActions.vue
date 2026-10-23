@@ -34,7 +34,7 @@ const tableData = ref([
 
 const handleDelete = async (row) => {
   try {
-    await Modal.confirm({ title: '提示', content: `确定删除 "${row.name}" 吗？`, okType: 'warning' })
+    await Modal.confirm({ title: '提示', content: `确定删除 "${row.name}" 吗？`, okType: 'primary', okButtonProps: { danger: true } })
     tableData.value = tableData.value.filter(d => d.id !== row.id)
     message.success('删除成功')
   } catch { /* 取消 */ }
@@ -61,7 +61,7 @@ const columns = [
       { name: '编辑', type: 'primary', 
       clickEvent: (row) => message.info(`编辑: ${row.name}`) },
       { name: '提交审核',
-       type: 'warning',
+       type: 'primary',
         clickEvent: (row) => message.success(`已提交: ${row.name}`) },
       { name: '删除', type: 'danger',
        clickEvent: (row) => handleDelete(row) }
@@ -74,8 +74,8 @@ const tableOptions = {
   // leftText: '产品列表',
   configBtn: [
     { name: '新增', type: 'primary', icon: 'Plus', code: 2, click: () => message.success('新增产品') },
-    { name: '批量审核', type: 'warning', code: 2, disabled: () => userRole.value !== 'admin', click: () => message.success('批量审核') },
-    { name: '导出', type: 'success', icon: 'Download', code: 2, click: () => message.success('导出数据') }
+    { name: '批量审核', type: 'primary', code: 2, disabled: () => userRole.value !== 'admin', click: () => message.success('批量审核') },
+    { name: '导出', type: 'default', icon: 'Download', code: 2, click: () => message.success('导出数据') }
   ]
 }
 </script>

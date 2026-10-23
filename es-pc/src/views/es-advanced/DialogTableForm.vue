@@ -17,6 +17,7 @@ import { ref, reactive } from 'vue'
 import { message, Tag } from 'ant-design-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
 import { fetchProducts } from '@/utils/mock-api'
+import { tagColor } from '@/utils/antdv-colors'
 
 const selectDialog = useDialog()
 const editDialog = useDialog()
@@ -41,7 +42,7 @@ const selectColumns = [
     prop: 'category', label: '分类', width: 100,
     render: (_, { row }) => {
       const c = categoryMap[row.category] || { text: row.category, type: 'info' }
-      return <Tag type={c.type} size="small">{c.text}</Tag>
+      return <Tag color={tagColor(c.type)} size="small">{c.text}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 80, formatter: (r) => `$${r.price}` },
@@ -49,7 +50,7 @@ const selectColumns = [
     prop: 'operate', label: '操作', width: 120,
     btns: [
       { name: '编辑', type: 'primary', clickEvent: (row) => openEditDialog(row) },
-      { name: '选择', type: 'success', clickEvent: (row) => addProduct(row) }
+      { name: '选择', type: 'primary', clickEvent: (row) => addProduct(row) }
     ]
   }
 ]

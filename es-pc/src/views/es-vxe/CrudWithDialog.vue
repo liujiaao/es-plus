@@ -78,7 +78,7 @@ const formItems = [
 const formBtns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true, icon: 'Search' },
   { name: '重置', key: 'rest', triggerEvent: true, icon: 'RefreshLeft' },
-  { name: '新增', type: 'success', icon: 'Plus', click: () => openForm(null) },
+  { name: '新增', type: 'primary', icon: 'Plus', click: () => openForm(null) },
 ]
 
 // 表格区

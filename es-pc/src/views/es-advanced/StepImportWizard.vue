@@ -157,7 +157,7 @@ const openImportDialog = () => {
         }
       },
       {
-        name: '确认导入', type: 'success',
+        name: '确认导入', type: 'primary',
         disabled: () => currentStep.value !== 2,
         click: (_, { close }) => {
           message.success(`成功导入 ${step2Model.data.filter(d => d.valid).length} 条数据（模拟）`)

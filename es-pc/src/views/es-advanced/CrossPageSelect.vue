@@ -32,6 +32,7 @@
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref } from 'vue'
 import { message, Tag, Alert, Modal } from 'ant-design-vue'
+import { tagColor } from '@/utils/antdv-colors'
 
 const tableRef = ref(null)
 const tableData = ref([])
@@ -59,7 +60,7 @@ const columns = [
     prop: 'status', label: '状态', width: 80,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag type={s.type} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
     }
   }
 ]
@@ -95,7 +96,7 @@ const tableOptions = {
 const handleBatchAction = async () => {
   const rows = tableRef.value?.getSelectionRows?.() || []
   try {
-    await Modal.confirm({ title: '跨页批量操作', content: `已跨页选中 ${rows.length} 条数据（来自多个分页），确定执行批量操作？`, okType: 'info' })
+    await Modal.confirm({ title: '跨页批量操作', content: `已跨页选中 ${rows.length} 条数据（来自多个分页），确定执行批量操作？`, okType: 'primary' })
     message.success(`已处理 ${rows.length} 条数据（模拟）`)
     tableRef.value?.clearAllSelection?.()
     selectedCount.value = 0

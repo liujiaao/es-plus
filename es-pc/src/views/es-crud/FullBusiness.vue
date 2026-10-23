@@ -59,7 +59,7 @@ const schema = {
   },
   toolbarBtns: [
     { name: '新增用户', type: 'primary', icon: 'PlusOutlined', dialogKey: 'add' },
-    { name: '批量启用', type: 'success', confirm: '确定批量启用选中用户？', actionType: 'batchEnable' },
+    { name: '批量启用', type: 'primary', confirm: '确定批量启用选中用户？', actionType: 'batchEnable' },
     { name: '导出', icon: 'DownloadOutlined', actionType: 'export' }
   ],
   operationColumn: {

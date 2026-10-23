@@ -37,7 +37,7 @@
     <div class="step-actions">
       <a-button v-if="currentStep > 0" @click="currentStep--">上一步</a-button>
       <a-button v-if="currentStep < 2" type="primary" @click="handleNext">下一步</a-button>
-      <a-button v-if="currentStep === 2" type="success" @click="submitForm">提交</a-button>
+      <a-button v-if="currentStep === 2" type="primary" @click="submitForm">提交</a-button>
     </div>
   </div>
 </template>

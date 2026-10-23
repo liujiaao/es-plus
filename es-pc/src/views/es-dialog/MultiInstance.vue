@@ -1,8 +1,8 @@
 <template>
   <div class="example-dialog-multi-instance">
     <a-button type="primary" @click="openUserDetail(1)">查看用户 A</a-button>
-    <a-button type="success" @click="openUserDetail(2)">查看用户 B</a-button>
-    <a-button type="warning" @click="openUserDetail(3)">查看用户 C</a-button>
+    <a-button @click="openUserDetail(2)">查看用户 B</a-button>
+    <a-button @click="openUserDetail(3)">查看用户 C</a-button>
   </div>
 </template>
 

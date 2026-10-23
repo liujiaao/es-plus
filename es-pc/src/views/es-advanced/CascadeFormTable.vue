@@ -23,6 +23,7 @@ import { EsTable, EsForm } from '@es-plus/adapter-antdv'
 import { ref, reactive, watch, computed } from 'vue'
 import { Tag } from 'ant-design-vue'
 import { fetchProducts } from '@/utils/mock-api'
+import { tagColor } from '@/utils/antdv-colors'
 
 const tableRef = ref(null)
 const formRef = ref(null)
@@ -121,7 +122,7 @@ const columns = [
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
       const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag type={typeMap[row.category] || 'info'} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(typeMap[row.category] || 'info')} size="small">{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

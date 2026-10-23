@@ -46,13 +46,13 @@ const columns = [
     // JSX写法示例
     render: (h, { row }) => {
       const statusMap = {
-        active: { text: '活跃', type: 'success' },
-        inactive: { text: '不活跃', type: 'info' },
-        pending: { text: '待处理', type: 'warning' }
+        active: { text: '活跃', color: 'green' },
+        inactive: { text: '不活跃', color: 'default' },
+        pending: { text: '待处理', color: 'orange' }
       }
       const status = statusMap[row.status] || statusMap.pending
-      // 使用 JSX 写法
-      return <Tag type={status.type} size="small">{status.text}</Tag>
+      // 使用 JSX 写法（Antdv 的 Tag 用 color，不是 type）
+      return <Tag color={status.color} size="small">{status.text}</Tag>
     }
   }
 ]

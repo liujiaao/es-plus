@@ -22,6 +22,7 @@
 import { ref } from 'vue'
 import { message, Tag, Modal, Alert } from 'ant-design-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
+import { tagColor } from '@/utils/antdv-colors'
 
 const tableRef = ref(null)
 const dialog = useDialog()
@@ -44,7 +45,7 @@ const columns = [
     prop: 'status', label: '状态', width: 80,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag type={s.type} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
     }
   },
   { prop: 'date', label: '日期', width: 110 },
@@ -82,7 +83,7 @@ const columns = [
         }
       },
       {
-        name: '提交审核', type: 'warning',
+        name: '提交审核', type: 'primary',
         clickEvent: (row) => {
           if (row.status !== 'draft' && row.status !== 'rejected') {
             message.warning('仅草稿/已驳回状态可提交')
@@ -93,7 +94,7 @@ const columns = [
         }
       },
       {
-        name: '撤回', type: 'info',
+        name: '撤回', type: 'default',
         clickEvent: (row) => {
           if (row.status !== 'pending') {
             message.warning('仅待审状态可撤回')
@@ -104,7 +105,7 @@ const columns = [
         }
       },
       {
-        name: '发布', type: 'success',
+        name: '发布', type: 'primary',
         clickEvent: (row) => {
           if (row.status !== 'approved') {
             message.warning('仅已审状态可发布')
@@ -122,7 +123,7 @@ const columns = [
             return
           }
           try {
-            await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'warning' })
+            await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
             message.success('删除成功（模拟）')
             tableRef.value?.httpRequestInstance()
           } catch {}

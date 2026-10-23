@@ -29,6 +29,7 @@ import { ref, reactive } from 'vue'
 import { message, Tag, Modal, Alert } from 'ant-design-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
 import { fetchProducts } from '@/utils/mock-api'
+import { tagColor } from '@/utils/antdv-colors'
 
 const tableRef = ref(null)
 const dialog = useDialog()
@@ -49,7 +50,7 @@ const columns = [
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
       const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag type={map[row.category] || 'info'} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(map[row.category] || 'info')} size="small">{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
@@ -82,7 +83,7 @@ const tableOptions = {
 
 const handleDelete = async (row) => {
   try {
-    await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'warning' })
+    await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
     message.success('删除成功（模拟）')
     tableRef.value?.httpRequestInstance()
   } catch {}

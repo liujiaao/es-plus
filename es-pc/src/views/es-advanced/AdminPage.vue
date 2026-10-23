@@ -73,7 +73,7 @@ const queryBtns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true, icon: 'Search' },
   { name: '重置', key: 'rest', triggerEvent: true, icon: 'RefreshLeft' },
   {
-    name: '新增', type: 'success', icon: 'PlusOutlined',
+    name: '新增', type: 'primary', icon: 'PlusOutlined',
     click: () => openEditDialog(null)
   }
 ]

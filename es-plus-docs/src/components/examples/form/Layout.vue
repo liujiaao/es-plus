@@ -5,13 +5,12 @@
       :form-item-list="formItems"
       :config-btn="configBtn"
       :layout-form-props="layoutProps"
-      @confirm="handleSubmit"
     />
   </div>
 </template>
 
 <script setup>
-import { EsForm } from 'es-plus'
+import { EsForm } from '@es-plus/vue3'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -85,10 +84,6 @@ const layoutProps = {
   rowLayProps: {
     gutter: 20
   }
-}
-
-const handleSubmit = () => {
-  ElMessage.success('表单提交成功')
 }
 </script>
 

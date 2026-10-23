@@ -111,7 +111,7 @@ const handleClearAll = () => {
 
 const handleBatchDelete = async () => {
   try {
-    await Modal.confirm({ title: '提示', content: `确定删除选中的 ${selectedCount.value} 项吗？`, okType: 'warning' })
+    await Modal.confirm({ title: '提示', content: `确定删除选中的 ${selectedCount.value} 项吗？`, okType: 'primary', okButtonProps: { danger: true } })
     const selectedIds = Object.values(selectionsByPage)
       .flat()
       .map(item => item.id)

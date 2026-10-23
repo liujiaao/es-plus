@@ -26,13 +26,14 @@ const tableRef = ref(null)
 const dialog = useDialog()
 const selectionCount = ref(0)
 
+// Ant Design Vue 的 Tag 只认 color：预设色名（red/orange/green…）或 success/warning 这类状态值
 const statusMap = {
-  pending: { text: '待审批', type: 'warning' },
-  approved: { text: '已通过', type: 'success' },
-  rejected: { text: '已驳回', type: 'danger' }
+  pending: { text: '待审批', color: 'orange' },
+  approved: { text: '已通过', color: 'green' },
+  rejected: { text: '已驳回', color: 'red' }
 }
 
-const typeMap = { leave: 'danger', overtime: 'warning', travel: '', expense: 'success' }
+const typeMap = { leave: 'red', overtime: 'orange', travel: 'default', expense: 'green' }
 
 const tableData = ref(
   Array.from({ length: 12 }, (_, i) => ({
@@ -56,7 +57,7 @@ const columns = [
   { prop: 'applicant', label: '申请人', width: 90 },
   {
     prop: 'type', label: '类型', width: 90,
-    render: (_, { row }) => <Tag type={typeMap[row.type]} size="small">{row.reason}</Tag>
+    render: (_, { row }) => <Tag color={typeMap[row.type]} size="small">{row.reason}</Tag>
   },
   { prop: 'date', label: '日期', width: 120 },
   {
@@ -66,14 +67,14 @@ const columns = [
   {
     prop: 'status', label: '状态', width: 100,
     render: (_, { row }) => {
-      const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag type={s.type} size="small">{s.text}</Tag>
+      const s = statusMap[row.status] || { text: '-', color: 'default' }
+      return <Tag color={s.color} size="small">{s.text}</Tag>
     }
   },
   {
     prop: 'operate', label: '操作', width: 160,
     btns: [
-      { name: '通过', type: 'success', clickEvent: (row) => handleSingleApproval(row, 'approved') },
+      { name: '通过', type: 'primary', clickEvent: (row) => handleSingleApproval(row, 'approved') },
       { name: '驳回', type: 'danger', clickEvent: (row) => handleSingleApproval(row, 'rejected') }
     ]
   }
@@ -93,7 +94,7 @@ const handleSingleApproval = async (row, status) => {
     await Modal.confirm({
       title: '审批确认',
       content: `确定${label} "${row.applicant}" 的申请吗？`,
-      okType: status === 'approved' ? 'success' : 'warning'
+      okType: 'primary', okButtonProps: { danger: status === 'rejected' }
     })
     row.status = status
     message.success(`${label}成功`)

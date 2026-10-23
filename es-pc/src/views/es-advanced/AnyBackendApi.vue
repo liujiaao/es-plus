@@ -30,6 +30,7 @@
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref, computed } from 'vue'
 import { Tag, Alert } from 'ant-design-vue'
+import { tagColor } from '@/utils/antdv-colors'
 
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
@@ -49,7 +50,7 @@ const columns = [
     prop: 'status', label: '状态',
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag type={s.type} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
     }
   },
   { prop: 'salary', label: '薪资', width: 120, formatter: (r) => `¥${r.salary.toLocaleString()}` },

@@ -1,9 +1,9 @@
 <template>
   <div class="example-dialog-advanced">
     <a-button type="primary" @click="openDraggable">可拖拽弹窗</a-button>
-    <a-button type="success" @click="openCustomHeaderFooter">自定义头尾</a-button>
+    <a-button type="primary" @click="openCustomHeaderFooter">自定义头尾</a-button>
     <a-button @click="openFullscreen">全屏弹窗</a-button>
-    <a-button type="warning" @click="openMaxHeight">限高弹窗</a-button>
+    <a-button @click="openMaxHeight">限高弹窗</a-button>
   </div>
 </template>
 
