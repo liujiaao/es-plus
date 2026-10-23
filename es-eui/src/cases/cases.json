@@ -107,7 +107,7 @@
           "links": {
             "vue3": "/guide/permission-i18n",
             "antdv": "/guide",
-            "vue2": "/guide/configuration"
+            "vue2": "/guide/configuration#permission"
           }
         }
       ]
@@ -158,7 +158,7 @@
           "links": {
             "vue3": "/components/es-crud-page",
             "antdv": "/es-crud-page",
-            "vue2": "/component/combination"
+            "vue2": "/component/escrudpage"
           }
         }
       ]

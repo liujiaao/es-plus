@@ -20,7 +20,7 @@
 
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
-import { ElTag, ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton, ElTag, ElMessage, ElMessageBox } from 'element-plus'
 import { EsForm, EsTable } from 'es-plus'
 
 const tableRef = ref()
@@ -45,7 +45,7 @@ const queryBtns = [
 
 const layoutProps = { fromLayProps: { labelWidth: '80px' }, rowLayProps: { gutter: 16 } }
 
-// 列声明（状态列的 Tag 与操作列按钮走 render / tableBtns 逃生舱，这部分不是零成本）
+// 列声明（状态列的 Tag 与操作列按钮走 render 逃生舱，这部分不是零成本）
 const columns = [
   { prop: 'name', label: '姓名', minWidth: 120 },
   {
@@ -58,6 +58,15 @@ const columns = [
   },
   { prop: 'deptName', label: '部门', minWidth: 140 },
   { prop: 'createdAt', label: '创建时间', minWidth: 170 },
+  {
+    label: '操作', width: 180, fixed: 'right',
+    render: (_, { row }) => (
+      <>
+        <ElButton link type="primary" onClick={() => handleEdit(row)}>编辑</ElButton>
+        <ElButton link type="danger" onClick={() => handleDelete(row)}>删除</ElButton>
+      </>
+    ),
+  },
 ]
 
 const tableOptions = {
@@ -66,10 +75,6 @@ const tableOptions = {
   rowkey: 'id',
   apiParams: { url: '/api/users', method: 'POST', model: query },
   configTableOut: { total: 'total', tableData: 'data', current: 'current', pageSize: 'pageSize' },
-  tableBtns: [
-    { title: '编辑', code: 2, props: { link: true, type: 'primary' }, fn: (row) => handleEdit(row) },
-    { title: '删除', code: 2, props: { link: true, type: 'danger' }, fn: (row) => handleDelete(row) },
-  ],
 }
 
 const handleEdit = (row) => {

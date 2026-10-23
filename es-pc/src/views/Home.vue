@@ -6,7 +6,11 @@
       <p class="hero-desc">
         {{ brand.slogan.subtitle }}
         <br />
-        同一份 Schema 跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用，AI 生成即编译。
+        <!-- 此前写「跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用」—— 把
+             两个 UI 库与两个 Vue 版本并列成四件事，容易被读成「四个框架」。实际是
+             三个渲染端：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue。 -->
+        同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue
+        三端复用，AI 生成即编译。
       </p>
       <div class="hero-renderer">
         <span class="renderer-badge">本站渲染器：Ant Design Vue</span>
@@ -44,13 +48,21 @@
       </p>
       <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值 -->
       <CodeDiff
-        left-title="传统写法"
-        right-title="ES-Plus"
+        left-title="传统写法（Element Plus）"
+        right-title="ES-Plus 配置写法（Element Plus）"
         :left-lines="`${oneConfig.breakdown.native.totalLines} 行`"
         :right-lines="`${oneConfig.breakdown.esplus.totalLines} 行`"
         :left-code="oneConfig.code.native.text"
         :right-code="oneConfig.code.esplus.text"
       />
+      <!-- 本站是 Ant Design Vue 渲染端，而品牌单源的对比样例用的是 Element Plus 语法。
+           不写这句，访客会以为本站的「ES-Plus」样例就是 antdv 写法（此前正是如此）。 -->
+      <p class="l2-note">
+        两段样例都用 Element Plus 语法，比较的是「同一页面、同一功能范围」的代码量（品牌单源实测）。
+        本站是 <strong>Ant Design Vue 渲染端</strong>：同一份配置只需把 import 换成
+        <code>@es-plus/adapter-antdv</code>，字段 / 列 / 按钮配置一字不改 ——
+        三端实际渲染效果见下方「三端通用」。
+      </p>
     </div>
 
     <!-- 三端通用：同一份 Schema 源码 + 三端渲染快照 -->
@@ -352,6 +364,26 @@ const techs = [
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
+}
+
+/* 对比卡下方的口径说明：本站是 antdv 渲染端，而样例源码是 Element Plus 语法 */
+.l2-note {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-left: 3px solid var(--es-brand-primary);
+  border-radius: 4px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.l2-note code {
+  background: #f0f5ff;
+  color: var(--es-brand-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .feature-card {

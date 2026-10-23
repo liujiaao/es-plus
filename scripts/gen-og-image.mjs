@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { readText } from './lib/text-sync.mjs'
+import { readText, normalizeEol } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -36,10 +36,23 @@ const OUT_META = join(ROOT, 'docs', 'brand', 'og-image.meta.json')
 
 const CHECK = process.argv.includes('--check')
 
+/**
+ * 可选：指定 Playwright 用哪个浏览器内核渲染（如 `OG_BROWSER_CHANNEL=msedge`）。
+ * 默认留空 = 用 Playwright 自带的 chromium（CI 上就是这样）；本机没装内置内核时
+ * 可以用系统已装的 Edge/Chrome，否则脚本只能报「Executable doesn't exist」。
+ * 渲染内核与字体不同 → PNG 像素可能不同，这是必然的；门禁比对的是**输入哈希**，
+ * 不是 PNG 字节，所以不影响一致性判定。
+ */
+const CHANNEL = process.env.OG_BROWSER_CHANNEL || ''
+
 /** 输入指纹：文案 + 配色变了就必须重新生成，否则卡片上会是旧口号/旧颜色 */
 function inputHash() {
-  const slogan = readText(SLOGAN)
-  const tokens = readText(TOKENS)
+  // 行尾符是 **git 检出的产物**，不是内容（见 scripts/lib/text-sync.mjs 的说明）：
+  // 直接用 readText 的结果做哈希，同一份内容在 Windows（CRLF）与 Linux CI（LF）
+  // 会算出不同的值 → `og:check` 在本机恒红、AI 只能靠人记住「这是假阳性」。
+  // 归一化之后哈希只反映内容，跨平台一致。
+  const slogan = normalizeEol(readText(SLOGAN))
+  const tokens = normalizeEol(readText(TOKENS))
   const brand = tokens.match(/--es-brand-primary:\s*(#[0-9a-fA-F]{3,8})/)?.[1] || ''
   const accent = tokens.match(/--es-brand-accent:\s*(#[0-9a-fA-F]{3,8})/)?.[1] || ''
   return {
@@ -132,7 +145,7 @@ async function main() {
     process.exit(1)
   }
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch(CHANNEL ? { channel: CHANNEL } : {})
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 })
   await page.setContent(cardHtml(input), { waitUntil: 'load' })
   await page.waitForTimeout(300)

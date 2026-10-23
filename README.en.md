@@ -38,7 +38,7 @@ And it's a solid CRUD library first: enterprise back-office apps are 80% CRUD �
 | Template `<el-dialog v-model="visible">` | Function call `dialog({ title, render })` |
 | Manual pagination event handlers | Pagination auto-triggers request |
 
-**Same page, same scope: 76.5% less markup and event glue code (115 → 27 lines), 44.1% fewer whole-file lines (136 → 76); zero event handlers for query / reset / pagination / fetching.**
+**Same page, same scope: 76.5% less markup and event glue code (115 → 27 lines), 40.4% fewer whole-file lines (136 → 81); zero event handlers for query / reset / pagination / fetching.**
 
 > Figures are measured by `npm run one-config:gen` from `docs/brand/one-config/{native,esplus}.vue`
 > and locked by `npm run check:site-claims`. Metric: template lines + `handle*`/`fetch*` event & fetch functions.

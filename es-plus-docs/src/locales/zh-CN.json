@@ -144,7 +144,7 @@
     "step3Title": "开始使用",
     "footerTagline": "企业级配置化前端组件库",
     "compStatGlue": "模板 + 事件胶水代码",
-    "comparisonNote": "以上数字由构建脚本从本节展示的两段源码实测得出，不是估值：模板区行数 + handle*/fetch* 事件与取数函数行数 115 → 27 行（−76.5%）；整页非空行 136 → 76 行（−44.1%）。字段与列的声明两侧都要写，故不计入降幅。源码见仓库 docs/brand/one-config/。",
+    "comparisonNote": "以上数字由构建脚本从本节展示的两段源码实测得出，不是估值：模板区行数 + handle*/fetch* 事件与取数函数行数 115 → 27 行（−76.5%）；整页非空行 136 → 81 行（−40.4%）。字段与列的声明两侧都要写，故不计入降幅。源码见仓库 docs/brand/one-config/。",
     "linesSuffix": " 行"
   },
   "notFound": {

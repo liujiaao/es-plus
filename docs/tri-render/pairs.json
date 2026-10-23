@@ -9,9 +9,9 @@
       "label": "Vue 3 · Ant Design Vue",
       "pkg": "@es-plus/adapter-antdv",
       "pairs": 68,
-      "medianDelta": 10,
-      "le10": 35,
-      "le20": 50,
+      "medianDelta": 11,
+      "le10": 34,
+      "le20": 49,
       "ge100": 2,
       "best": "table/Basic.vue"
     },
@@ -20,7 +20,7 @@
       "label": "Vue 2 · Element UI",
       "pkg": "@es-plus/vue2",
       "pairs": 29,
-      "medianDelta": 71,
+      "medianDelta": 64,
       "le10": 0,
       "le20": 0,
       "ge100": 7,
@@ -39,7 +39,7 @@
       "changed": [
         11
       ],
-      "code": "<template>\n  <div class=\"example-basic-table\">\n    <es-table\n      :data-source=\"tableData\"\n      :columns=\"columns\"\n      :options=\"{ border: true, stripe: true }\"\n    />\n  </div>\n</template>\n\n<script setup>\nimport { EsTable } from 'es-plus'\nconst tableData = [\n  { name: '张三', age: 28, address: '北京市朝阳区', email: 'zhangsan@example.com' },\n  { name: '李四', age: 32, address: '上海市浦东新区', email: 'lisi@example.com' },\n  { name: '王五', age: 24, address: '广州市天河区', email: 'wangwu@example.com' },\n  { name: '赵六', age: 30, address: '深圳市南山区', email: 'zhaoliu@example.com' }\n]\n\nconst columns = [\n  { prop: 'name', label: '姓名', width: 100 },\n  { prop: 'age', label: '年龄', width: 80, align: 'center' },\n  { prop: 'address', label: '地址', minWidth: 150 },\n  { prop: 'email', label: '邮箱', minWidth: 180 }\n]\n</script>\n\n<style scoped>\n.example-basic-table {\n  padding: 0;\n}\n</style>\n"
+      "code": "<template>\n  <div class=\"example-basic-table\">\n    <es-table\n      :data-source=\"tableData\"\n      :columns=\"columns\"\n      :options=\"{ border: true, stripe: true }\"\n    />\n  </div>\n</template>\n\n<script setup>\nimport { EsTable } from '@es-plus/vue3'\nconst tableData = [\n  { name: '张三', age: 28, address: '北京市朝阳区', email: 'zhangsan@example.com' },\n  { name: '李四', age: 32, address: '上海市浦东新区', email: 'lisi@example.com' },\n  { name: '王五', age: 24, address: '广州市天河区', email: 'wangwu@example.com' },\n  { name: '赵六', age: 30, address: '深圳市南山区', email: 'zhaoliu@example.com' }\n]\n\nconst columns = [\n  { prop: 'name', label: '姓名', width: 100 },\n  { prop: 'age', label: '年龄', width: 80, align: 'center' },\n  { prop: 'address', label: '地址', minWidth: 150 },\n  { prop: 'email', label: '邮箱', minWidth: 180 }\n]\n</script>\n\n<style scoped>\n.example-basic-table {\n  padding: 0;\n}\n</style>\n"
     },
     "target": {
       "label": "Vue 3 · Ant Design Vue",

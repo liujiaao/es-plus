@@ -203,6 +203,14 @@ const diffData = [
     ep: 'on: { success, remove, change, preview }',
     adv: 'onSuccess / onRemove / onChange / onPreview',
   },
+  {
+    key: '6',
+    // 适配器会把这两个语义色降级并打开发期告警（adapter-antdv/src/utils/shared.ts）。
+    // 此前三站文档都没写这一条，访客在 antdv 站看到的灰按钮没有任何解释。
+    scene: '按钮语义色',
+    ep: 'type: "success" / "warning" / "info"',
+    adv: '无内建色板 → 降级为 default（开发期一次性告警）；请用 primary / danger 或自定义 class',
+  },
 ]
 </script>
 

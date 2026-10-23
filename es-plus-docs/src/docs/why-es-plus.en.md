@@ -41,14 +41,14 @@ Take a "User Management" page — **4 query fields + a 4-column table with an ac
 | Everything else (imports / state / constants) | — | **36** |
 | **Total** | | **151** |
 
-**The ES-Plus version of the same page is 85 lines** (template 18 + events 9 + other 58): query / reset / pagination / fetching need **zero event handlers** — `triggerEvent: true` wires the whole loop.
+**The ES-Plus version of the same page is 90 lines** (template 18 + events 9 + other 63): query / reset / pagination / fetching need **zero event handlers** — `triggerEvent: true` wires the whole loop.
 
 The bigger point: those **115 lines of markup and event glue** (61 + 54) are exactly what looks identical on every CRUD page, with only the field names changed — as config they shrink to **27 lines** (-76.5%). On a project with 20 CRUD pages, that's **1760 lines that could just evaporate**.
 
 > Every figure above is measured by `npm run one-config:gen` from `docs/brand/one-config/{native,esplus}.vue`,
 > and locked by `npm run check:site-claims`. Both samples implement the same page with the same feature scope —
 > no ellipses, no stubs. Metric: template lines + `handle*`/`fetch*` event & fetch functions.
-> Whole-file non-empty lines: 136 → 76 (-44.1%).
+> Whole-file non-empty lines: 136 → 81 (-40.4%).
 
 ### 1.2 The Hidden Costs of That Dead Code
 
@@ -535,7 +535,7 @@ import type {
 | Dimension | Vanilla Element | ES-Plus |
 |------|------------|---------|
 | Learning curve | Low, well-documented | Medium — you need to internalize the config-driven mindset |
-| Lines per page | 151 | 85 (markup + glue: 115 → 27) |
+| Lines per page | 151 | 90 (markup + glue: 115 → 27) |
 | Cross-cutting change | Edit N pages | Edit 1 config or 1 global default |
 | Customization headroom | 100% | 95% (the extreme 5% uses the `render` escape hatch) |
 | Best for | Landing pages, marketing, a small number of admin pages | Admin panels, internal tools, CRUD-heavy apps |
@@ -719,11 +719,11 @@ Assume a **30-page CRUD admin project** with a 3-person frontend team and a 6-mo
 
 | Item | Vanilla Element | ES-Plus | Savings |
 |---|------------|---------|-----|
-| 30-page total lines | 30 × 250 = 7,500 | 30 × 30 = 900 | **6,600 lines** |
-| Hours to write 30 pages | 7,500 ÷ 30 lines/hr = 250 hr | 900 ÷ 30 = 30 hr | **220 hr** |
-| Hours to code-review | 7,500 ÷ 100 lines/hr = 75 hr | 900 ÷ 100 = 9 hr | **66 hr** |
+| 30-page total lines | 30 × 151 = 4,530 | 30 × 90 = 2,700 | **1,830 lines** |
+| Hours to write 30 pages | 4,530 ÷ 30 lines/hr = 151 hr | 2,700 ÷ 30 = 90 hr | **61 hr** |
+| Hours to code-review | 4,530 ÷ 100 lines/hr = 45 hr | 2,700 ÷ 100 = 27 hr | **18 hr** |
 
-**Direct savings: ~286 hours ≈ 7 working weeks (about a month and a half of one frontend engineer's work).**
+**Direct savings: ~79 hours ≈ 2 working weeks.**
 
 ### 8.2 Savings on Cross-Cutting Requirements
 

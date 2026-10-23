@@ -144,7 +144,7 @@
     "step3Title": "Use",
     "footerTagline": "Enterprise-grade configurable frontend component library",
     "compStatGlue": "markup + event glue code",
-    "comparisonNote": "Every figure above is measured by a build script from the two files shown in this section — not an estimate: template lines + handle*/fetch* event & fetch functions 115 → 27 (-76.5%); whole-file non-empty lines 136 → 76 (-44.1%). Field and column declarations are written on both sides, so they are excluded. Source: docs/brand/one-config/.",
+    "comparisonNote": "Every figure above is measured by a build script from the two files shown in this section — not an estimate: template lines + handle*/fetch* event & fetch functions 115 → 27 (-76.5%); whole-file non-empty lines 136 → 81 (-40.4%). Field and column declarations are written on both sides, so they are excluded. Source: docs/brand/one-config/.",
     "linesSuffix": " lines"
   },
   "notFound": {

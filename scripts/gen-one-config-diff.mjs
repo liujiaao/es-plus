@@ -100,6 +100,34 @@ function measure(file) {
 
 const pct = (from, to) => Math.round(((from - to) / from) * 1000) / 10
 
+/**
+ * 功能等价性守卫。
+ *
+ * 比例只有在「两侧干的是同一件事」时才有意义。此前 esplus.vue 把 `tableBtns` 写进了
+ * `<es-table>` 的 options —— 而 es-table **不消费** tableBtns（只有 EsCrudPage 消费），
+ * 于是操作列根本不渲染：右边少一列，左边有，算出来的降幅建立在一个不可运行的页面上。
+ *
+ * 这类错误不会被类型检查发现（options 是宽类型），也不会被行数统计发现，
+ * 只能从「两侧都该有的东西是否都在」来卡。
+ */
+function assertEquivalent(nativeText, esplusText) {
+  const errors = []
+  const hasNativeOps = /label="操作"/.test(nativeText) && /编辑/.test(nativeText) && /删除/.test(nativeText)
+  const hasEsplusOps = /label:\s*'操作'/.test(esplusText) && /编辑/.test(esplusText) && /删除/.test(esplusText)
+  if (!hasNativeOps) errors.push('native.vue 缺少「操作」列（编辑/删除按钮）')
+  if (!hasEsplusOps) errors.push('esplus.vue 缺少「操作」列（编辑/删除按钮）—— 两侧功能不等价，降幅没有意义')
+  if (/tableBtns/.test(esplusText)) {
+    errors.push(
+      'esplus.vue 出现 tableBtns：该字段只由 EsCrudPage 消费，写在 <es-table> 的 options 里操作列不会渲染',
+    )
+  }
+  if (errors.length) {
+    console.error('❌ 「一份配置」对比样例不等价：')
+    for (const e of errors) console.error('   - ' + e)
+    process.exit(1)
+  }
+}
+
 function build() {
   const files = {
     native: join(SRC_DIR, 'native.vue'),
@@ -115,13 +143,16 @@ function build() {
 
   const native = measure(files.native)
   const esplus = measure(files.esplus)
+  assertEquivalent(readText(files.native), readText(files.esplus))
 
   return {
     $comment:
       '由 scripts/gen-one-config-diff.mjs 从 docs/brand/one-config/{native,esplus}.vue 实测生成，禁止手改。' +
       '站点展示的行数与降幅就是这里算出来的，改源码即改数字。',
     title: '用户管理 · 同一页面的两种写法（查询 + 列表 + 分页 + 行内操作）',
-    scope: '两侧实现同一页面、同一功能范围，均为完整可运行代码（无省略号、无 stub）',
+    scope:
+      '两侧实现同一页面、同一功能范围（查询 + 列表 + 分页 + 行内操作），均为完整可运行代码（无省略号）；' +
+      '「编辑」动作两侧一致为演示级（弹消息，不接真实接口），删除动作两侧都会真实发起请求',
     metric:
       'markupPlusGlue = 模板区行数 + 脚本区「事件处理与取数函数」（handle* / fetch* / open* / load* / on*）行数 —— ' +
       '即 es-plus 真正消除的那部分；字段与列的声明两侧都必写，故不计入，另给 wholeFile 口径（整页非空行）。',

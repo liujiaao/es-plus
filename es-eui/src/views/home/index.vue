@@ -125,10 +125,12 @@
             es-plus 用 <strong>EsForm 嵌套 EsTable</strong> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。
           </p>
         </div>
-        <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值 -->
+        <!-- 两段代码来自品牌单源（docs/brand/one-config/*.vue），行数徽章是实测值。
+             样例源码是 Vue 3 + Element Plus 语法（品牌单源全站共用一份）；本站是 Vue 2 + Element UI，
+             所以标题里显式标注渲染端，避免读者照着 `<script setup>` 抄到 Vue 2 页面里。 -->
         <CodeDiff
-          left-title="传统写法"
-          right-title="ES-Plus"
+          left-title="传统写法（Vue 3 + Element Plus）"
+          right-title="ES-Plus（Vue 3 + Element Plus）"
           :left-lines="oneConfig.breakdown.native.totalLines + ' 行'"
           :right-lines="oneConfig.breakdown.esplus.totalLines + ' 行'"
           :left-code="oneConfig.code.native.text"
@@ -374,7 +376,7 @@ methods: {
                 </div>
                 <div class="code-body">
                   <pre><code class="language-vue">&lt;template&gt;
-  &lt;!-- 配置化声明，代码量减少 80% --&gt;
+  &lt;!-- 配置化声明，模板与事件胶水代码减少 77% --&gt;
   &lt;es-table
     :columns="columns"
     :options="tableOptions"
@@ -590,7 +592,7 @@ export default {
         {
           icon: 'el-icon-document-checked',
           title: '配置化开发',
-          desc: 'JSON配置替代模板代码，代码量减少60%以上，所有配置集中管理，修改一目了然'
+          desc: 'JSON 配置替代模板代码：模板与事件胶水代码实测减少 77%，所有配置集中管理，修改一目了然'
         },
         {
           icon: 'el-icon-magic-stick',
