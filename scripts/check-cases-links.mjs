@@ -24,7 +24,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -68,9 +68,20 @@ function routerPaths(relPath, { vue2 = false } = {}) {
   const src = read(relPath)
   if (!src) return null
   const paths = new Set()
+  /** full path → 组件文件（相对仓库根）；供 #anchor 校验定位目标模板 */
+  const files = new Map()
   const stack = [] // [{ indent, full }]，indent 是**路由对象**的缩进（不是 path 行的缩进）
   let pendingObjectIndent = null
+  let lastFull = null
   for (const line of src.split('\n')) {
+    // 记录「该路由渲染哪个文件」—— 带 #anchor 的链接要落到页内锚点，
+    // 光知道路径存在不够，还得能证明目标组件的模板里真有那个 id。
+    const comp = /component:\s*\(\)\s*=>\s*import\(\s*['"]([^'"]+)['"]\s*\)/.exec(line)
+    if (comp && lastFull) {
+      files.set(lastFull, normalizeComponent(relPath, comp[1]))
+      continue
+    }
+
     // 单行写法：{ path: 'quickstart', ... }  —— 对象缩进即 `{` 的缩进
     const single = /^(\s*)\{\s*path:\s*['"]([^'"]*)['"]/.exec(line)
     // 多行写法：对象以单独一行 `{` 开始，`path:` 在其下一行且缩进 +2。
@@ -100,11 +111,19 @@ function routerPaths(relPath, { vue2 = false } = {}) {
     else full = `${parent === '/' ? '' : parent}/${raw}`
     full = full.replace(/\/+$/, '') || '/'
     paths.add(full)
+    lastFull = full
     if (parent) paths.add(parent.replace(/\/+$/, '') || '/')
     stack.push({ indent: objIndent, full })
   }
   if (!paths.size) fail(`未能从 ${relPath} 解析出任何路由（路由写法变了请同步本脚本）`)
-  return paths
+  return { paths, files }
+}
+
+/** 把 `../views/docs/X.vue` 按路由文件所在目录解析成仓库相对路径 */
+function normalizeComponent(routerPath, spec) {
+  if (!spec.startsWith('.')) return null // 包名/别名导入，脚本不解析
+  const dir = dirname(join(ROOT, routerPath))
+  return relative(ROOT, join(dir, spec)).replace(/\\/g, '/')
 }
 
 /**
@@ -163,12 +182,13 @@ function checkCrossSiteUrlImpl() {
 function main() {
   const cases = JSON.parse(read('docs/cases/cases.json') || '{}')
   const sites = {
-    vue3: docsPages(),
+    // 主文档站是动态段路由，拿不到「路径 → 组件文件」映射；它的案例链接不带锚点
+    vue3: { paths: docsPages(), files: new Map() },
     antdv: routerPaths('es-pc/src/router/index.js'),
     vue2: routerPaths('es-eui/src/router/index.js', { vue2: true }),
   }
   for (const [k, v] of Object.entries(sites)) {
-    if (!v) fail(`未能取得 ${k} 站的路由集合`)
+    if (!v || !v.paths) fail(`未能取得 ${k} 站的路由集合`)
   }
   if (failed) {
     console.error('\n链接校验无法进行 —— 路由解析失败会让所有链接「看起来合法」，故直接失败。')
@@ -176,16 +196,19 @@ function main() {
   }
 
   let checked = 0
+  let anchors = 0
   for (const level of cases.levels || []) {
     for (const c of level.cases || []) {
       for (const [site, link] of Object.entries(c.links || {})) {
         checked++
-        const set = sites[site]
-        if (!set) {
+        const siteInfo = sites[site]
+        if (!siteInfo) {
           fail(`案例 #${c.id}（${c.title}）的链接指向未知站点 key：${site}`)
           continue
         }
-        const norm = link.replace(/\/+$/, '') || '/'
+        // `#anchor` 是页内落点，不参与路由匹配；拆出来单独校验
+        const [rawPath, anchor] = link.split('#')
+        const norm = rawPath.replace(/\/+$/, '') || '/'
         // 「能解析」不等于「去对了地方」：指向站点根的链接能通过路由检查，
         // 但案例卡的「查看案例」落到首页等于没有落点。L2 头号案例此前就是这样
         // （antdv 写 "/"，而承载它的页面是 es-pc 的 /advanced）。
@@ -196,11 +219,32 @@ function main() {
           )
           continue
         }
-        if (!set.has(norm)) {
+        if (!siteInfo.paths.has(norm)) {
           fail(
             `案例 #${c.id}「${c.title}」的 ${site} 链接 ${link} 在该站路由中不存在` +
-              `（该站可用路径示例：${[...set].slice(0, 6).join(', ')}…）` +
+              `（该站可用路径示例：${[...siteInfo.paths].slice(0, 6).join(', ')}…）` +
               ' —— 三站均已补 404 兜底路由，这类链接点进去会落到 404 页',
+          )
+          continue
+        }
+        if (!anchor) continue
+        anchors++
+        // 锚点也要能落地：路由存在但页内没有这个 id，链接会停在页首，
+        // 看起来「指对了页面」实际没落到内容上（本轮 case 8 就是这样被发现的）。
+        const file = siteInfo.files.get(norm)
+        if (!file) {
+          fail(
+            `案例 #${c.id}「${c.title}」的 ${site} 链接带 #${anchor}，` +
+              `但脚本无法从路由表定位 ${norm} 渲染的组件文件 —— 锚点无法校验`,
+          )
+          continue
+        }
+        const html = read(file)
+        if (html === null) continue
+        if (!new RegExp(`id=["']${anchor}["']`).test(html)) {
+          fail(
+            `案例 #${c.id}「${c.title}」的 ${site} 链接锚点 #${anchor} 在 ${file} 中不存在` +
+              ' —— 点进去会停在页首，等于没有落到内容',
           )
         }
       }
@@ -208,10 +252,10 @@ function main() {
   }
 
   if (failed) {
-    console.error('\n案例目录存在指向不存在页面的链接。')
+    console.error('\n案例目录存在指向不存在页面（或页内锚点）的链接。')
     process.exit(1)
   }
-  console.log(`✅ 案例目录的 ${checked} 条站内链接在三站路由中全部存在`)
+  console.log(`✅ 案例目录的 ${checked} 条站内链接在三站路由中全部存在（其中 ${anchors} 条带锚点，已校验目标页含对应 id）`)
 }
 
 checkCrossSiteUrlImpl()

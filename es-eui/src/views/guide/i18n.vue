@@ -10,8 +10,8 @@
         多语言支持
       </h1>
       <p class="hero-desc">
-        ES-Plus 提供完整的国际化解决方案，支持多语言切换、自定义语言包和动态语言加载。
-        让你的中后台应用轻松适配全球化需求。
+        ES-Plus 不自带语言包 —— 它把「标签怎么翻译」交给宿主：字段配 labelKey，全局配置里给一个 t 函数，
+        表单标签与表格列头就随你的 vue-i18n / Element UI 语言一起切换。
       </p>
     </section>
 
@@ -31,29 +31,29 @@
           <div class="feature-icon">
             <i class="el-icon-s-check" />
           </div>
-          <h3>内置语言包</h3>
-          <p>内置中英文语言包，开箱即用，支持 Element UI 语言同步切换</p>
+          <h3>labelKey 驱动</h3>
+          <p>表单字段与表格列写 labelKey，标签由你提供的 t 函数解析，随宿主语言包切换</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
             <i class="el-icon-edit" />
           </div>
-          <h3>自定义扩展</h3>
-          <p>支持自定义语言包扩展和覆盖，满足业务个性化需求</p>
+          <h3>零绑定</h3>
+          <p>不锁定任何 i18n 库：vue-i18n、Element UI locale 或自己的字典表，包成一个 t 函数即可</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
             <i class="el-icon-refresh" />
           </div>
-          <h3>动态切换</h3>
-          <p>支持运行时动态切换语言，无需刷新页面即可生效</p>
+          <h3>优雅回退</h3>
+          <p>labelKey → label → prop：没配 t、或键缺失时退回静态 label，不会渲染成空白</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
             <i class="el-icon-download" />
           </div>
-          <h3>按需加载</h3>
-          <p>支持语言包异步加载，减少首屏加载时间</p>
+          <h3>三端一致</h3>
+          <p>同一份 labelKey 在 Vue 3 + Element Plus、Vue 3 + Ant Design Vue、Vue 2 + Element UI 上解析结果相同</p>
         </div>
       </div>
     </section>
@@ -88,7 +88,7 @@
                   复制
                 </button>
               </div>
-              <pre v-pre><code>npm install vue-i18n --save</code></pre>
+              <pre v-pre data-copy="install"><code>npm install vue-i18n --save</code></pre>
             </div>
           </div>
         </div>
@@ -111,7 +111,7 @@
                   复制
                 </button>
               </div>
-              <pre v-pre><code>// src/i18n/index.js
+              <pre v-pre data-copy="i18nConfig"><code>// src/i18n/index.js
 import Vue from 'vue'
 import VueI18n from 'vue-i18n'
 import ElementLocale from 'element-ui/lib/locale'
@@ -173,13 +173,13 @@ export default i18n</code></pre>
                   复制
                 </button>
               </div>
-              <pre v-pre><code>import Vue from 'vue'
+              <pre v-pre data-copy="mainImport"><code>import Vue from 'vue'
 import App from './App.vue'
 import i18n from './i18n'
 import EsPlus from '@es-plus/vue2'
 
 Vue.use(EsPlus, {
-  i18n: (key, value) => i18n.t(key, value)
+  t: (key) => i18n.t(key)   // 可选：不传则 labelKey 回退到 label
 })
 
 new Vue({
@@ -245,7 +245,7 @@ new Vue({
               复制
             </button>
           </div>
-          <pre v-pre><code>&lt;template&gt;
+          <pre v-pre data-copy="switchComponent"><code>&lt;template&gt;
   &lt;div class="lang-switcher"&gt;
     &lt;el-dropdown @command="handleLangChange"&gt;
       &lt;el-button type="primary"&gt;
@@ -306,55 +306,58 @@ export default {
             复制
           </button>
         </div>
-        <pre v-pre><code>// src/i18n/locale/zh-CN.js
+        <pre v-pre data-copy="customLocale"><code>// src/i18n/locale/zh-CN.js
 export default {
-  // ES-Plus 组件文案覆盖
-  es: {
+  // Element UI 自带文案（空数据、筛选按钮等）——沿用 Element UI 的 el 命名空间，
+  // 这些文案由 Element UI 自己读，ES-Plus 不接管
+  el: {
     table: {
       emptyText: '暂无数据',
-      confirmDelete: '确定要删除这条记录吗？',
-      batchDelete: '确定要删除选中的 {count} 条记录吗？'
-    },
-    form: {
-      pleaseSelect: '请选择',
-      pleaseInput: '请输入',
-      validateError: '表单验证失败，请检查输入'
-    },
-    dialog: {
-      confirm: '确定',
-      cancel: '取消',
-      close: '关闭'
+      confirmFilter: '筛选',
+      resetFilter: '重置',
+      sumText: '合计'
     }
   },
-  // 业务文案
-  app: {
-    title: 'ES-Plus 管理系统',
-    logout: '退出登录',
-    switchLangSuccess: '语言切换成功'
+  // 业务文案：在 EsForm 字段 / EsTable 列上写 labelKey 引用
+  biz: {
+    userName: '姓名',
+    userStatus: '状态',
+    appTitle: 'ES-Plus 管理系统'
   }
 }
 
-// 在 i18n/index.js 中引入
+// src/i18n/index.js
+import Vue from 'vue'
+import VueI18n from 'vue-i18n'
+import ElementLocale from 'element-ui/lib/locale'
+import zhElement from 'element-ui/lib/locale/lang/zh-CN'
+import enElement from 'element-ui/lib/locale/lang/en'
+import EsPlus from '@es-plus/vue2'
 import customZh from './locale/zh-CN'
 import customEn from './locale/en'
 
-const messages = {
-  en: {
-    ...enElement,
-    ...esEuiEn,
-    ...customEn
-  },
-  'zh-CN': {
-    ...zhElement,
-    ...esEuiZh,
-    ...customZh
+Vue.use(VueI18n)
+
+const i18n = new VueI18n({
+  locale: 'zh-CN',
+  messages: {
+    en: { ...enElement, ...customEn },
+    'zh-CN': { ...zhElement, ...customZh }
   }
-}</code></pre>
+})
+
+// Element UI 跟随当前语言
+ElementLocale.i18n((key, value) => i18n.t(key, value))
+
+// 关键一步：把 t 交给 ES-Plus，labelKey 才会被解析
+Vue.use(EsPlus, {
+  t: (key) => i18n.t(key)
+})</code></pre>
       </div>
 
       <div class="tip-box info">
         <i class="el-icon-info-filled" />
-        <p><strong>提示</strong>：自定义语言包可以覆盖 ES-Plus 默认文案，也可以添加业务专属的多语言内容。</p>
+        <p><strong>提示</strong>：ES-Plus 自身不带文案表 —— 组件里的中文标签一律来自配置（<code>label</code>）或 <code>labelKey</code> + 全局 <code>t</code> 函数；Element UI 的按钮/空数据文案则走它自己的 <code>el</code> 命名空间。业务文案按需并入即可。</p>
       </div>
     </section>
 
@@ -383,7 +386,7 @@ const messages = {
             复制
           </button>
         </div>
-        <pre v-pre><code>// src/i18n/index.js
+        <pre v-pre data-copy="asyncLoad"><code>// src/i18n/index.js
 import Vue from 'vue'
 import VueI18n from 'vue-i18n'
 
@@ -475,7 +478,7 @@ export default i18n</code></pre>
                   复制
                 </button>
               </div>
-              <pre v-pre><code>&lt;!-- 使用 $t 方法 --&gt;
+              <pre v-pre data-copy="usageTemplate"><code>&lt;!-- 使用 $t 方法 --&gt;
 &lt;template&gt;
   &lt;div&gt;
     &lt;h1&gt;{{ $t('app.title') }}&lt;/h1&gt;
@@ -507,7 +510,7 @@ export default i18n</code></pre>
                   复制
                 </button>
               </div>
-              <pre v-pre><code>export default {
+              <pre v-pre data-copy="usageScript"><code>export default {
   data() {
     return {
       message: 'Welcome'
@@ -550,7 +553,7 @@ export default i18n</code></pre>
                   复制
                 </button>
               </div>
-              <pre v-pre><code>// 在 useDialog 的 JSX 中使用
+              <pre v-pre data-copy="usageJsx"><code>// 在 useDialog 的 JSX 中使用
 import { useDialog } from '@es-plus/vue2'
 
 export default {
@@ -641,32 +644,19 @@ export default {
               复制
             </button>
           </div>
-          <pre v-pre><code>{
-  es: {
-    table: {
-      emptyText: '暂无数据',
-      loadingText: '加载中...',
-      total: '共 {total} 条',
-      selected: '已选择 {count} 项',
-      confirmDelete: '确定删除？',
-      batchDelete: '确定删除选中的 {count} 条记录？'
-    },
-    form: {
-      pleaseSelect: '请选择',
-      pleaseInput: '请输入',
-      validateError: '验证失败',
-      submitSuccess: '提交成功',
-      submitError: '提交失败'
-    },
-    dialog: {
-      confirm: '确定',
-      cancel: '取消',
-      close: '关闭',
-      maximize: '最大化',
-      restore: '还原'
-    }
-  }
-}</code></pre>
+          <pre v-pre data-copy="localeStructure"><code>// 1. ES-Plus 本身没有文案表，它读的是宿主给的 t 函数
+Vue.use(EsPlus, { t: (key) => i18n.t(key) })
+
+// 2. 字段 / 列上写 labelKey，标签走 t(labelKey)
+const formItems = [
+  { prop: 'name', labelKey: 'biz.userName', label: '姓名' }
+]
+const columns = [
+  { prop: 'status', labelKey: 'biz.userStatus', label: '状态' }
+]
+
+// 3. 回退顺序：labelKey → label → prop
+//    没有 t 函数、或键不存在时，退回静态 label，不会渲染成空白</code></pre>
         </div>
       </div>
     </section>
@@ -699,106 +689,24 @@ export default {
       this.$message.success(lang === 'zh-CN' ? '已切换到简体中文' : 'Switched to English')
     },
     copyCode(type) {
-      const codes = {
-        install: 'npm install vue-i18n --save',
-        i18nConfig: `// src/i18n/index.js
-import Vue from 'vue'
-import VueI18n from 'vue-i18n'
-import ElementLocale from 'element-ui/lib/locale'
-import enElement from 'element-ui/lib/locale/lang/en'
-import zhElement from 'element-ui/lib/locale/lang/zh-CN'
-
-Vue.use(VueI18n)
-
-const messages = {
-  en: { ...enElement },
-  'zh-CN': { ...zhElement }
-}
-
-const i18n = new VueI18n({
-  locale: 'zh-CN',
-  fallbackLocale: 'zh-CN',
-  messages
-})
-
-ElementLocale.i18n((key, value) => i18n.t(key, value))
-export default i18n`,
-        mainImport: `import Vue from 'vue'
-import App from './App.vue'
-import i18n from './i18n'
-import EsPlus from '@es-plus/vue2'
-
-Vue.use(EsPlus, {
-  i18n: (key, value) => i18n.t(key, value)
-})
-
-new Vue({ i18n, render: h => h(App) }).$mount('#app')`,
-        switchComponent: `// 语言切换组件
-&lt;el-dropdown @command="handleLangChange"&gt;
-  &lt;el-button type="primary"&gt;
-    语言
-  &lt;/el-button&gt;
-  &lt;el-dropdown-menu slot="dropdown"&gt;
-    &lt;el-dropdown-item command="zh-CN"&gt;简体中文&lt;/el-dropdown-item&gt;
-    &lt;el-dropdown-item command="en"&gt;English&lt;/el-dropdown-item&gt;
-  &lt;/el-dropdown-menu&gt;
-&lt;/el-dropdown&gt;`,
-        customLocale: `// 自定义语言包
-export default {
-  es: {
-    table: {
-      emptyText: '暂无数据',
-      confirmDelete: '确定要删除吗？'
-    },
-    form: {
-      pleaseSelect: '请选择'
-    }
-  }
-}`,
-        asyncLoad: `// 异步加载语言包
-export async function loadLocaleMessages(locale) {
-  if (Object.keys(i18n.getLocaleMessage(locale)).length > 0) {
-    return Promise.resolve()
-  }
-  const messages = await import(\`./locale/\${locale}.js\`)
-  i18n.setLocaleMessage(locale, messages.default)
-}`,
-        usageTemplate: `<!-- 模板中使用 --&gt;
-&lt;h1&gt;ES-Plus 管理系统&lt;/h1&gt;
-&lt;p&gt;欢迎使用 ES-Plus&lt;/p&gt;`,
-        usageScript: `// 脚本中使用
-this.$message.success('提交成功')
-// 切换语言
-this.$i18n.locale = 'en'`,
-        usageJsx: `// JSX 中使用
-content: (
-  &lt;div&gt;确定&lt;/div&gt;
-)`,
-        localeStructure: `{
-  es: {
-    table: { emptyText: '暂无数据' },
-    form: { pleaseSelect: '请选择' },
-    dialog: { confirm: '确定' }
-  }
-}`
-      }
-      
-      const code = codes[type]
-      if (code) {
-        if (this.$copyText) {
-          this.$copyText(code).then(() => {
-            this.$message.success('代码已复制到剪贴板')
-          })
-        } else {
-          // 降级处理
-          const textarea = document.createElement('textarea')
-          textarea.value = code
-          document.body.appendChild(textarea)
-          textarea.select()
-          document.execCommand('copy')
-          document.body.removeChild(textarea)
+      // 直接复制页面上展示的那份代码：以前这里另抄了一份常量表，
+      // 展示与复制各改各的，复制出去的早已不是读者看到的内容。
+      const el = this.$el.querySelector(`[data-copy="${type}"]`)
+      const code = el ? el.innerText : ''
+      if (!code) return
+      if (this.$copyText) {
+        this.$copyText(code).then(() => {
           this.$message.success('代码已复制到剪贴板')
-        }
+        })
+      } else {
+        // 降级处理
+        const textarea = document.createElement('textarea')
+        textarea.value = code
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        this.$message.success('代码已复制到剪贴板')
       }
     }
   }

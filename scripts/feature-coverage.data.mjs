@@ -2,7 +2,7 @@
  * AI 可达性台账 · 能力令牌注册表（AI-25）
  *
  * 配套：
- *   - 单一真源数据 `docs/ai/feature-coverage.json`（96 行 = 文档站 96 例特性演示）；
+ *   - 单一真源数据 `docs/ai/feature-coverage.json`（97 行 = 文档站 97 例特性演示）；
  *   - 静态守卫 `scripts/check-feature-coverage.mjs`（本文件是断言③④⑤的权威）。
  *
  * 层级模型（4 档）——每行的 tier **由其引用的令牌派生**：行内**任一**令牌为 C，整行即 C

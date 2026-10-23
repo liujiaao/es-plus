@@ -369,6 +369,76 @@ Vue.use(EsPlus, {
       </div>
     </section>
 
+    <!-- Permission & i18n -->
+    <section id="permission" class="section">
+      <div class="section-header">
+        <div class="section-icon green">
+          <i class="el-icon-key" />
+        </div>
+        <h2 class="section-title">
+          按钮权限与多语言
+        </h2>
+      </div>
+      <p class="section-desc">
+        <code>permission</code> 与 <code>t</code> 也是全局配置项，它们不挂在某个组件下，
+        而是作为顶层键传给 <code>Vue.use(EsPlus, options)</code>：
+      </p>
+
+      <div class="config-item">
+        <div class="config-header">
+          <h3 class="config-name">
+            $permission
+          </h3>
+          <span class="config-badge optional">可选</span>
+        </div>
+        <p class="config-desc">
+          权限校验函数 <code>(value: string) =&gt; boolean</code>。<strong>不配置则视为全部放行</strong>，
+          所以没有权限体系的项目无需关心它。配置后，组件会拿字段、列、按钮上的
+          <code>permissionValue</code> 逐项调用它，返回 <code>false</code> 的直接不渲染
+          （不是禁用 —— DOM 里根本不会出现）。
+        </p>
+        <div class="code-block">
+          <pre v-pre><code>Vue.use(EsPlus, {
+  // 未配置时所有 permissionValue 一律放行
+  permission: (value) =&gt; userPermissions.includes(value)
+})</code></pre>
+        </div>
+        <p class="config-desc">
+          生效位置：EsForm 的 <code>configBtn</code> 与字段级 <code>permissionValue</code>、
+          EsTable 的列级 <code>permissionValue</code> 与行内按钮、EsDialog 的 <code>configBtn</code>、
+          EsCrudPage 透传的 <code>toolbarBtns</code> / <code>operationColumn.btns</code>。
+        </p>
+      </div>
+
+      <div class="config-item">
+        <div class="config-header">
+          <h3 class="config-name">
+            $t
+          </h3>
+          <span class="config-badge optional">可选</span>
+        </div>
+        <p class="config-desc">
+          翻译函数 <code>(key: string) =&gt; string</code>。ES-Plus 本身不带文案表：
+          字段与列上写 <code>labelKey</code>，组件用全局 <code>t</code> 去翻译，
+          取不到就回退 <code>label</code>，再取不到回退 <code>prop</code>。
+        </p>
+        <div class="code-block">
+          <pre v-pre><code>Vue.use(EsPlus, {
+  t: (key) =&gt; i18n.t(key)
+})
+
+// 字段/列上：
+// { prop: 'userName', labelKey: 'user.name', label: '姓名' }</code></pre>
+        </div>
+        <p class="config-desc">
+          完整的语言包组织方式、Element UI 自带文案（<code>el.*</code>）的处理，
+          见 <router-link to="/guide/i18n">
+            i18n 国际化
+          </router-link> 专页。
+        </p>
+      </div>
+    </section>
+
     <!-- Config Summary Table -->
     <section class="section">
       <div class="section-header">

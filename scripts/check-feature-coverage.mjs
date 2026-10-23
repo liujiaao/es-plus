@@ -5,7 +5,7 @@
  * 背景：用户问「支持功能案例达到了多少程度？全场景适配？」——此前只能人工盘点。
  * 本守卫把「**新特性落文档 → 它是否 AI 可达、属哪一档**」变成**可自动咬住**的轴。
  *
- * 单一真源：`docs/ai/feature-coverage.json`（96 行 = 文档站 96 例特性演示）。
+ * 单一真源：`docs/ai/feature-coverage.json`（97 行 = 文档站 97 例特性演示）。
  * 三集必须 1:1（守卫不可空转的根基——对照物是另两套**非本文件产生**的集合）：
  *   1. 磁盘：`es-plus-docs/src/components/examples/<cat>/<Pascal>.vue` × 96
  *   2. 引用：`component-doc.data.ts` + `advanced-doc.data.ts` 的 `getComponent('<cat>/<NN>-<slug>')`

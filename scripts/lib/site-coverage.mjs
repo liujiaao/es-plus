@@ -28,6 +28,7 @@ export const SITE_ROOTS = [
       table: 'table',
       dialog: 'dialog',
       'vxe-table': 'vxe-table',
+      crud: 'crud-page',
       combination: null,
       'vue2-compat': null,
       _mock: null,

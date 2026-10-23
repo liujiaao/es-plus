@@ -1,4 +1,4 @@
-# ES-EUI 组件库开发文档
+# ES-Plus · Vue 2 + Element UI 渲染器文档
 
 ## 目录
 
@@ -12,12 +12,12 @@
 - [最佳实践](#最佳实践)
 - [常见问题](#常见问题)
 - [综合评价与市场对比](#综合评价与市场对比分析)
-- [在线文档访问地址:https://liujiaao.github.io/es-eui/](https://liujiaao.github.io/es-eui/)
+- [在线文档](https://liujiaao.github.io/es-plus/es-eui/) · [主站](https://liujiaao.github.io/es-plus/)
 ---
 
 ## 概述
 
-ES-EUI 是基于 Element UI 二次封装的企业级中后台组件库，提供了表格、表单、弹窗等常用组件的增强功能，支持配置化开发，大幅提升开发效率。
+本站展示 **es-plus 在 Vue 2 + Element UI 上的渲染结果**：同一份 schema / formItemList / columns 配置，在 Vue 3 + Element Plus、Vue 3 + Ant Design Vue 与 Vue 2 + Element UI 三端渲染（es-plus 本身不替代 Element，也不要求你迁移到 Vue 3）。
 
 ### 核心特性
 
@@ -31,14 +31,22 @@ ES-EUI 是基于 Element UI 二次封装的企业级中后台组件库，提供�
 
 ## 安装与配置
 
+> 包名是 `@es-plus/vue2`。`es-eui` 只是本站文档站点的工程名，**不是**可安装的包，
+> `import ... from 'es-eui'` 在业务项目里解析不到。本页所有示例已改用真实包名。
+
+```bash
+npm install @es-plus/vue2 element-ui vue@2
+# Vue 2.6 另需 @vue/composition-api（Vue 2.7+ 自带，install() 会自动处理）
+```
+
 ### 1. 全局引入组件库（推荐）
 
 ```javascript
 // main.js
 import Vue from 'vue'
 import http from '@/assets/common/server/request.js' // 导入封装好的axios请求模块
-import ESEUI from 'es-eui'
-import 'es-eui/dist/es-eui.css'
+import ESEUI from '@es-plus/vue2'
+import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ESEUI, {
   // EsTable 组件配置
@@ -114,8 +122,8 @@ Vue.use(ESEUI, {
 如果只需要使用部分组件，可以在单个页面中按需引入：
 
 ```javascript
-import { EsTable, EsForm, useDialog } from 'es-eui'
-import 'es-eui/dist/es-eui.css'
+import { EsTable, EsForm, useDialog } from '@es-plus/vue2'
+import '@es-plus/vue2/dist/style.css'
 export default {
   components: { EsTable, EsForm },
   data() {
@@ -307,7 +315,7 @@ tableOptions: {
 
 ```javascript
 // 刷新表格数据
-this.$refs.tableRef.httpRquestInstace({ ...params })
+this.$refs.tableRef.httpRequestInstance({ ...params })
 
 // 切换行选择状态
 this.$refs.tableRef.toggleSelection(rows)
@@ -562,7 +570,7 @@ export default {
 {
   prop: 'extraField',
   label: '额外字段',
-  isHiden: (model, item, formProps) => {
+  isHidden: (model, item, formProps) => {
     return model.type !== 'advanced'  // 返回 true 则隐藏
   }
 }
@@ -733,8 +741,8 @@ this.$refs.formRef.$httpRequest({
 ### 基础用法
 
 ```javascript
-import { useDialog } from 'es-eui'
-import 'es-eui/dist/es-eui.css'
+import { useDialog } from '@es-plus/vue2'
+import '@es-plus/vue2/dist/style.css'
 const myDialog = useDialog()
 
 // 打开弹窗
@@ -841,8 +849,8 @@ const { close, instance } = useDialog({ ... })
 
 ```vue
 <script>
-import { useDialog } from 'es-eui'
-import 'es-eui/dist/es-eui.css'
+import { useDialog } from '@es-plus/vue2'
+import '@es-plus/vue2/dist/style.css'
 import PolicyForm from './components/PolicyForm.vue'
 
 const addDialog = useDialog()
@@ -1206,14 +1214,14 @@ tableOptions: {
 
 ### Q: 表格数据不刷新？
 
-**A:** 确保 `data-source` 使用了 `.sync` 修饰符，或者手动调用表格实例的 `httpRquestInstace` 方法：
+**A:** 确保 `data-source` 使用了 `.sync` 修饰符，或者手动调用表格实例的 `httpRequestInstance` 方法：
 
 ```javascript
 // 方式1：使用 .sync
 <es-table :data-source.sync="tableData" />
 
 // 方式2：手动刷新
-this.$refs.tableRef.httpRquestInstace({ ...params })
+this.$refs.tableRef.httpRequestInstance({ ...params })
 ```
 
 ### Q: 表单验证不生效？
@@ -1294,8 +1302,8 @@ watch: {
 
 | 维度 | ES-EUI | 评价 |
 |------|--------|------|
-| 表格开发 | JSON 配置生成完整表格 | 开发效率提升 60%+ |
-| 表单开发 | 声明式配置替代模板编写 | 代码量减少 50%+ |
+| 表格开发 | JSON 配置生成完整表格 | 模板与事件胶水代码实测减少 77% |
+| 表单开发 | 声明式配置替代模板编写 | 查询 / 重置 / 翻页 / 取数由配置接管 |
 | 弹窗调用 | 函数式命令调用 | 使用简洁直观 |
 
 **优势体现：**
@@ -1323,7 +1331,7 @@ watch: {
   - 字段映射配置
 
 ✅ 表单功能
-  - 12+ 内置组件类型
+  - 14 种内置表单控件（formtype）
   - 动态验证规则
   - 联动效果支持
   - 折叠布局
@@ -1386,7 +1394,7 @@ watch: {
 | UI 风格 | 简约商务 | Material Design | 风格差异大 |
 | 配置化 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ES-EUI 中后台配置更强 |
 | 移动端 | ⭐⭐ | ⭐⭐⭐⭐⭐ | Vuetify 响应式更好 |
-| 组件数量 | 核心 4 个 | 80+ | Vuetify 更全面 |
+| 组件数量 | 核心 4 个（另含 2 个辅助） | 80+ | Vuetify 更全面 |
 | 学习成本 | 低 | 中等 | ES-EUI 上手更快 |
 
 **结论：**
@@ -1478,7 +1486,7 @@ watch: {
 
 ES-EUI 是一款**面向 Vue 2 企业级中后台场景的高效二次封装组件库**，其核心价值在于：
 
-1. **极致的配置化开发体验** - JSON 驱动，代码量减少 50%+
+1. **极致的配置化开发体验** - JSON 驱动，模板与事件胶水代码实测减少 77%
 2. **深度集成的企业功能** - 表单表格联动、分页缓存等开箱即用
 3. **低学习成本** - 基于 Element UI，团队上手快
 
@@ -1507,7 +1515,7 @@ ES-EUI 是 Vue 2 中后台项目的**效率利器**，适合追求快速交付�
 ## 贡献指南
 
 1. 遵循现有代码风格和命名规范
-2. 新增组件需在 `src/components/es-eui/index.js` 中注册
+2. 新增组件需在 `packages/vue2/src/index.ts` 中导出并注册到 `install()`
 3. 编写必要的单元测试
 4. 更新本文档相关内容
 

@@ -334,6 +334,190 @@ function checkSiteHomeFigures() {
   if (!failed) console.log('✅ 三站首页的数字声明均与实测事实一致（含「0 行联动胶水」的坐实）')
 }
 
+// ── 5b. es-eui 正文里「降幅类百分比」必须等于实测 ───────────────
+// 上一段只覆盖 es-eui 首页的 hero 统计与 advantages 两个**结构**。散落在同一站点
+// 正文里的同类声明完全不受约束，于是同一个降幅在站内出现三个互相矛盾的数字：
+//   · home 的 solutions 写「代码量减少 60% 以上」；
+//   · EsTableDocs 的 hero 写「开发效率提升 80%」；
+//   · README 写「提升 60%+」「代码量减少 50%+」。
+// 三个数字彼此不等，也都不等于品牌单源实测的模板+胶水降幅（77%）。它们恰好是
+// 「可验证」这个卖点本身 —— 所以按同一条口径扫全站，而不是逐个结构补丁。
+const CLAIM_PCT_PATTERNS = [
+  /(?:减少|提升|降低|节省|加速)(?:了)?[^。\n]{0,10}?(\d+(?:\.\d+)?)\s*%/g,
+  /(\d+(?:\.\d+)?)\s*%\s*(?:以上|左右)?[^。\n]{0,6}?(?:减少|提升|降低|节省|加速)/g,
+]
+
+function checkEuiPercentClaims() {
+  if (!diff) return
+  const expected = diff.metrics.markupPlusGlue.reduction
+  const files = []
+  const walk = (rel) => {
+    const abs = join(ROOT, rel)
+    if (!existsSync(abs)) return
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`
+      if (entry.isDirectory()) walk(child)
+      else if (/\.(vue|md)$/.test(entry.name)) files.push(child)
+    }
+  }
+  // 三站一并扫：同一条降幅声明在任一站点漂移都属于同一类问题。
+  // （2026-10-23 扩展：es-plus-docs 的 getting-started.md 当时写的是「减少 70%」。）
+  walk('es-eui/src')
+  walk('es-pc/src')
+  walk('es-plus-docs/src/docs')
+  walk('es-plus-docs/src/views')
+  files.push('es-eui/README.md')
+
+  let checked = 0
+  for (const file of files) {
+    const src = read(file)
+    if (!src) continue
+    for (const re of CLAIM_PCT_PATTERNS) {
+      for (const m of src.matchAll(re)) {
+        checked++
+        if (!near(Number(m[1]), expected)) {
+          fail(
+            `${file} 的降幅声明「${m[0].trim()}」与实测不符 —— ` +
+              `模板+胶水实测降幅是 ${expected}%（口径见 docs/brand/one-config-diff.json）`,
+          )
+        }
+      }
+    }
+  }
+  if (!failed) console.log(`✅ 三站正文降幅声明与实测一致（${checked} 处，均为 ${expected}%）`)
+}
+
+// ── 5d. 「三个渲染器」不得被写成「四个框架」 ──────────────────
+// antdv 站首页曾把两个 UI 库与两个 Vue 版本并列成四件事（「跨 Element Plus /
+// Ant Design Vue / Vue 2 / Vue 3 复用」），读者会理解成支持四个框架。
+// 实际情况是**三个渲染端**：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + ADVD。
+// 注释里解释这段历史是允许的，所以先剥掉 HTML / JS 注释再扫。
+function stripComments(src) {
+  return src
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((l) => !/^\s*\/\//.test(l))
+    .join('\n')
+}
+
+// ── 5e. Ant Design Vue 示例不得使用它不认识的 type ───────────
+// Antdv 的 Button 只认 default / primary / dashed / text / link（危险走 danger 布尔），
+// Tag 只认 color（预设色名或 success/warning 这类状态值）。示例里写
+// `<a-button type="success">` / `<Tag type="danger">` 不会报错，但**样式静默失效** ——
+// 而这类代码正是会被读者复制走的。Element Plus 的语义色写法此处全部非法。
+// Modal.confirm 的 okType 同理：只认 primary/default/dashed/text/link，危险操作用
+// `okButtonProps: { danger: true }`。写成 `okType: 'warning'` 不会报错，按钮只是静默退回默认色。
+const ANTDV_INVALID = [
+  [/<a-button[^>]*\btype="(success|warning|info|danger)"/g, 'a-button 的 type 只能是 default/primary/dashed/text/link，危险走 danger 布尔'],
+  // 4.x 的 Button 没有 text 布尔属性（只有 type="text"），裸写 `text` 会当成无效 attr 透传到 DOM。
+  [/<a-button[^>]*\stext(?=[\s>/])/g, 'a-button 用 type="text"，没有 text 布尔属性'],
+  [/\bokType\s*:\s*['"](success|warning|info)['"]/g, "Modal 的 okType 只认 primary/default/dashed/text/link，危险操作用 okButtonProps: { danger: true }"],
+  [/\bcancelType\s*:\s*['"](success|warning|info)['"]/g, 'Modal 的 cancelType 只认 primary/default/dashed/text/link'],
+  [/<a-tag[^>]*\btype=/g, 'a-tag 用 color，没有 type'],
+  [/<Tag\b[^>]*\btype=/g, 'JSX <Tag> 用 color，没有 type'],
+]
+
+function checkAntdvInvalidTypes() {
+  const files = []
+  const walk = (rel) => {
+    const abs = join(ROOT, rel)
+    if (!existsSync(abs)) return
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`
+      if (entry.isDirectory()) walk(child)
+      else if (/\.(vue|jsx|tsx)$/.test(entry.name)) files.push(child)
+    }
+  }
+  walk('es-pc/src')
+  for (const file of files) {
+    const src = read(file)
+    if (!src) continue
+    for (const [re, why] of ANTDV_INVALID) {
+      for (const m of src.matchAll(re)) {
+        fail(`${file} 用了 Antdv 不认的写法「${m[0].trim()}」—— ${why}`)
+      }
+    }
+  }
+  if (!failed) console.log(`✅ antdv 示例未使用 Element Plus 的语义色 type（扫 ${files.length} 个文件）`)
+}
+
+
+
+const FOUR_THINGS = [/四个框架/, /四框架/, /four\s+frameworks/i, /\b4\s+renderers?\b/i]
+
+function checkRendererWording() {
+  const files = [
+    'es-pc/src/views/Home.vue',
+    'es-eui/src/views/home/index.vue',
+    'es-plus-docs/src/views/Home.vue',
+  ]
+  let checked = 0
+  for (const file of files) {
+    const src = read(file)
+    if (!src) continue
+    const text = stripComments(src)
+    checked++
+    for (const re of FOUR_THINGS) {
+      const m = text.match(re)
+      if (m) {
+        fail(
+          `${file} 出现「${m[0]}」—— 三端是三个渲染器` +
+            '（Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue），' +
+            '不是四个框架',
+        )
+      }
+    }
+  }
+  if (!failed) console.log(`✅ 三站首页未把三端写成「四个框架」（扫 ${checked} 个文件）`)
+}
+
+// ── 5c. 已弃用的错拼 API 不得作为教学口径出现在站点 ───────────────
+// `isHiden`（少一个 d）是 vue2 端的历史拼写错误，仅作兼容别名保留；
+// vue3 / adapter-antdv 会静默忽略它。三端文档却把它当成字段属性来教：
+//   · es-eui 的 EsForm 示例 5 个字段全用 isHiden（开发期每条都打弃用告警）；
+//   · es-eui 的 API 表 / 开发手册把它写成属性名；
+//   · 主站 component-doc 的案例描述也写着「isHiden + on.change」。
+// 读者照抄后换到 vue3 端就不生效 —— 这与「一份配置三端通用」直接冲突。
+const DEPRECATED_PROP = 'isHiden'
+const DEPRECATION_NOTE = /(isHidden|弃用|兼容别名|拼写错误|错拼)/
+
+function checkDeprecatedPropNames() {
+  const files = []
+  const walk = (rel) => {
+    const abs = join(ROOT, rel)
+    if (!existsSync(abs)) return
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`
+      if (entry.isDirectory()) walk(child)
+      else if (/\.(vue|md|ts|js)$/.test(entry.name)) files.push(child)
+    }
+  }
+  walk('es-plus-docs/src/docs')
+  walk('es-plus-docs/src/views')
+  walk('es-eui/src')
+  walk('es-pc/src')
+  files.push('es-eui/README.md')
+
+  let hits = 0
+  for (const file of files) {
+    const src = read(file)
+    if (!src) continue
+    const lines = src.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].includes(DEPRECATED_PROP)) continue
+      // 明确标注「错拼 / 兼容别名 / 请用 isHidden」的说明行允许保留
+      if (DEPRECATION_NOTE.test(lines[i])) continue
+      hits++
+      fail(
+        `${file}:${i + 1} 把已弃用的错拼 \`${DEPRECATED_PROP}\` 当作正常 API 使用/讲解 —— ` +
+          '三端统一为 `isHidden`（vue3 / antdv 端会忽略错拼版本）',
+      )
+    }
+  }
+  if (!failed) console.log(`✅ 站点未把已弃用的错拼 \`${DEPRECATED_PROP}\` 当教学口径（扫描 ${files.length} 个文件）`)
+}
+
 // ── 6. 镜像到站点的理念文档（why-es-plus.md/.en.md）──
 // 它是「为什么用 ES-Plus」的立论文档，成本论证全部建立在那对行数上。
 // 此前写的是「~250 行 → ~30 行、节省 ~210 行、3,600 行死代码」，描述的还是
@@ -404,6 +588,38 @@ function checkPhilosophyDocClaims() {
     // 逐项拆解必须加起来等于整页行数（防止只改一处留下不自洽的表）
     if (!src.includes(`${nb.templateLines}`) || !src.includes(`${nb.totalLines}`)) {
       fail(`${file} 的逐项拆解未使用实测值（模板 ${nb.templateLines} / 合计 ${nb.totalLines}）`)
+    }
+
+    // ES-Plus 侧的整页行数同样必须同源。
+    // 2026-10-23 实测到的一次漂移：操作列从 `tableBtns`（es-table 不消费，按钮根本不渲染）
+    // 改成 `columns[].render` 后，右侧从 85 行涨到 90 行，而文档/镜像仍写 85 —— 上面那些
+    // 断言只盯 native 侧的 61/151 和胶水的 115/27，右侧整页行数一路无人管。
+    const wholePageRe = file.endsWith('.en.md')
+      ? new RegExp(`same page is\\s*${eb.totalLines}\\s*lines`)
+      : new RegExp(`同样的页面是\\s*${eb.totalLines}\\s*行`)
+    if (!wholePageRe.test(src)) {
+      fail(`${file} 未写出 ES-Plus 侧整页实测行数（应为「${eb.totalLines} 行」）`)
+    }
+    // 30 页外推必须按实测重算，否则一处改动会让整张 ROI 表静默失真
+    // （英文排版用千分位逗号，比对时先剥掉逗号）
+    const total30 = 30 * eb.totalLines
+    const saved30 = 30 * nb.totalLines - total30
+    const flat = src.replace(/,/g, '')
+    if (!flat.includes(String(total30)) || !flat.includes(String(saved30))) {
+      fail(`${file} 的 30 页外推未按实测重算（应出现 ${total30} 与节省 ${saved30}）`)
+    }
+    const STALE_ESPLUS = [
+      [/\b85\s*行/, '85 行（旧的 ES-Plus 侧整页行数）'],
+      [/\b85\s+lines/, '85 lines（旧的 ES-Plus 侧整页行数）'],
+      [/\b2550\b/, '2550（旧的 30 页外推）'],
+      [/\b1980\b/, '1980（旧的 30 页节省行数）'],
+      [/\b66\s*小时/, '66 小时（旧的工时节省）'],
+      [/\b66\s+hr/, '66 hr（旧的工时节省）'],
+    ]
+    for (const [re, label] of STALE_ESPLUS) {
+      if (re.test(src)) {
+        fail(`${file} 残留旧口径数字「${label}」—— 右侧整页行数已实测为 ${eb.totalLines}`)
+      }
     }
   }
   if (!failed) console.log('✅ 理念文档（zh/en）的数字与实测同源、旧口径已清除')
@@ -686,6 +902,10 @@ checkOneConfigClaims()
 checkRendererCount()
 checkFormTypeClaims()
 checkSiteHomeFigures()
+checkEuiPercentClaims()
+checkRendererWording()
+checkAntdvInvalidTypes()
+checkDeprecatedPropNames()
 checkPhilosophyDocClaims()
 checkAccuracyClaims()
 checkCliDocFigure()

@@ -1,11 +1,12 @@
 # 快速开始
 
-ES-Plus 是企业级中后台组件库，通过配置化方式将常见 CRUD 页面代码量减少 70%。提供两套渲染层：
+ES-Plus 是企业级中后台组件库，通过配置化方式将常见 CRUD 页面的模板与事件胶水代码减少 76.5%。提供三个渲染端：
 
 - **`@es-plus/vue3`** — Vue 3 + Element Plus（活跃开发）
 - **`@es-plus/vue2`** — Vue 2 + Element UI（同 schema 兼容版本）
+- **`@es-plus/adapter-antdv`** — Vue 3 + Ant Design Vue（同一份 schema 的第三端）
 
-两个包共用同一份 `columns` / `formItemList` / `options` JSON 配置。本指南以 Vue 3 为主示例，Vue 2 用法详见 [Vue 2 指南](/guide/vue2)。
+三个包共用同一份 `columns` / `formItemList` / `options` JSON 配置。本指南以 Vue 3 + Element Plus 为主示例；Vue 2 用法详见 [Vue 2 指南](/guide/vue2)，Ant Design Vue 端详见 [Ant Design Vue 适配](/guide/adapter-antdv)。
 
 :::tip v1.4.0 包名重命名
 v1.4.0 起，原 `es-plus-ui` 已重命名为 **`@es-plus/vue3`**。旧包仍可通过 stub 正常使用，但已被 `npm deprecate` 标记。详见 [迁移指南](/guide/migration)。
@@ -154,8 +155,9 @@ const columns = [
 
 const options = {
   border: true,
-  httpRequest: async ({ page }) => {
-    const res = await fetch(`/api/list?page=${page.current}&size=${page.pageSize}`)
+  httpRequest: async (params) => {
+    // 载荷 = { ...apiParams.model, pageIndex, pageSize }
+    const res = await fetch(`/api/list?page=${params.pageIndex}&size=${params.pageSize}`)
     return res.json()
   }
 }

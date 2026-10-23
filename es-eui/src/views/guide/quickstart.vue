@@ -448,7 +448,7 @@ export default {
         type: 'warning'
       }).then(() => {
         this.$message.success('删除成功')
-        this.$refs.userTable.httpRquestInstace()
+        this.$refs.userTable.httpRequestInstance()
       })
     }
   }
@@ -595,7 +595,7 @@ export default {
                   this.saveData(instance.model).then(() => {
                     this.$message.success('保存成功')
                     close()
-                    this.$refs.userTable.httpRquestInstace()
+                    this.$refs.userTable.httpRequestInstance()
                   })
                 }
               })
@@ -881,7 +881,7 @@ export default {
                   this.saveData(instance.model).then(() => {
                     this.$message.success('保存成功')
                     close()
-                    this.$refs.userTable.httpRquestInstace()
+                    this.$refs.userTable.httpRequestInstance()
                   })
                 }
               })

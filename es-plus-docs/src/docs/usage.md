@@ -464,8 +464,9 @@ const columns = [
 
 const options = {
   border: true,
-  httpRequest: async ({ page }) => {
-    const res = await fetch(`/api/list?page=${page.current}&size=${page.pageSize}`)
+  httpRequest: async (params) => {
+    // 载荷 = { ...apiParams.model, pageIndex, pageSize }
+    const res = await fetch(`/api/list?page=${params.pageIndex}&size=${params.pageSize}`)
     return res.json()
   }
 }

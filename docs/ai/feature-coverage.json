@@ -1,6 +1,6 @@
 {
   "$schema": "https://liujiaao.github.io/es-plus/ai/feature-coverage.schema.json",
-  "note": "AI 可达性台账：文档站 96 例特性演示 × 分层可达性。单一真源——由 scripts/check-feature-coverage.mjs 守卫，与磁盘 examples/**/*.vue、两个 *.data.ts 的 getComponent 引用三方 1:1 咬合。行档由 tokens 最弱档派生。",
+  "note": "AI 可达性台账：文档站 97 例特性演示 × 分层可达性。单一真源——由 scripts/check-feature-coverage.mjs 守卫，与磁盘 examples/**/*.vue、两个 *.data.ts 的 getComponent 引用三方 1:1 咬合。行档由 tokens 最弱档派生。",
   "tiers": {
     "A": "前门声明式一步可达（generate_crud）",
     "B": "声明式，但需 generate_crud_from_config（前门刻意不收）",
@@ -166,6 +166,14 @@
         "fieldVisibility",
         "apiParams",
         "formLayout"
+      ]
+    },
+    {
+      "id": "form/19-all-formtypes",
+      "group": "es-form",
+      "title": "全量控件（14 种 formtype）",
+      "tokens": [
+        "formtype"
       ]
     },
     {
@@ -864,7 +872,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 33,
+      "refs": 35,
       "uncovered": 55,
       "cases": [
         {
@@ -1010,6 +1018,24 @@
           ],
           "tier": "D",
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "crud/Basic",
+          "demo": "crud-page/01-basic",
+          "tokens": [
+            "operationColumn"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "crud/MultiDialog",
+          "demo": "crud-page/02-multi-dialog",
+          "tokens": [
+            "toolbarBtns",
+            "operationColumn",
+            "dialogs"
+          ],
+          "tier": "A"
         },
         {
           "id": "dialog/AsyncContent",

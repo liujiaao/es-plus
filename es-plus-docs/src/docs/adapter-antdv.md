@@ -142,6 +142,7 @@ EsForm 的 `formItemList`、EsTable 的 `columns` / `options`、EsCrudPage 的 `
 | 加载状态 | `v-loading` 指令 | `<a-spin>` 包裹 |
 | 确认弹窗 | `ElMessageBox.confirm()` | `Modal.confirm()` |
 | ColorPicker | `<ElColorPicker>` | `input[type=color]`（降级，ADV 4.x 无内置） |
+| 按钮语义色 | `type: 'success' / 'warning' / 'info'` 有内建色板 | ADV 无内建色板 → **降级为 `default`**，并在开发期打印一次性告警；请改用 `primary` / `danger` 或自定义 class |
 | 表单 v-model | `modelValue` / `onUpdate:modelValue` | `value` / `onUpdate:value` 等（内部已映射） |
 | `httpRequest` 数据渲染 | **受控**：表格渲染 `props.dataSource`，请求结果经 `update:dataSource` 回传，**需绑定 `v-model:data-source`** 才会显示 | **非受控兜底**：内部 `tableData` 直接渲染请求结果，未绑定 `v-model:data-source` 也能显示 |
 

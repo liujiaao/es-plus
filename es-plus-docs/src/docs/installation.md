@@ -120,7 +120,7 @@ export default defineConfig({
 ```
 
 配置后，模板中使用 `<es-table>`、`<es-form>` 时，构建工具会自动注入：
-- `es-plus-ui/dist/style.css`（es-plus 自身样式）
+- `@es-plus/vue3/dist/style.css`（es-plus 自身样式）
 - es-plus 内部依赖的所有 Element Plus 组件的按需样式
 
 :::tip 不会重复引入
@@ -148,7 +148,7 @@ EsPlusResolver({
 
 | 你的项目配置 | 需要做什么 |
 |---|---|
-| 全量引入 `import 'element-plus/dist/index.css'` | 只需 `import 'es-plus-ui/dist/style.css'`，无需 resolver |
+| 全量引入 `import 'element-plus/dist/index.css'` | 只需 `import '@es-plus/vue3/dist/style.css'`，无需 resolver |
 | `ElementPlusResolver()` 按需导入 | 必须添加 `EsPlusResolver()` |
 | `ElementPlusResolver()` + 自定义主题 | 添加 `EsPlusResolver({ importStyle: 'sass' })` |
 

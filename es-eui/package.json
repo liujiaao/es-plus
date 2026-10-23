@@ -12,8 +12,7 @@
     "preserve": "node ../scripts/gen-element-theme.mjs && node scripts/generate-raw-sources.js && npm run build:esplus",
     "element-theme:sync": "node ../scripts/gen-element-theme.mjs",
     "element-theme:check": "node ../scripts/gen-element-theme.mjs --check",
-    "lint": "vue-cli-service lint",
-    "deploy": "gh-pages -d dist"
+    "lint": "vue-cli-service lint"
   },
   "dependencies": {
     "@es-plus/core": "file:../packages/core",
