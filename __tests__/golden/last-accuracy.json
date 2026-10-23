@@ -1,82 +1,620 @@
 {
-  "commit": "f926d914d9ce58846c5ecb8002ee3282ef30e0be",
-  "runId": "39748694819",
-  "artifactSource": "ci",
+  "commit": "303e049a2a8c4c1d39382786ba11e510f89460a4",
+  "runId": null,
+  "artifactSource": "local",
   "corpusHash": "8670f0554c3048c8",
   "corpusFiles": 279,
   "fixedFieldsUsed": false,
-  "measuredAt": "2026-10-22T08:45:55.383Z",
-  "model": "claude-sonnet-4-6",
-  "servedModel": "claude-sonnet-4-6",
+  "measuredAt": "2026-10-22T12:27:35.794Z",
+  "model": "claude-opus-4-6",
+  "servedModel": "claude-opus-4-6",
   "maxTokens": 8000,
-  "measurement": "failed",
-  "reason": "measurement did not happen (or only partially happened) — NOT a low score. 407 row(s) unmeasured (no text block / truncated) and 0 row(s) where the model genuinely failed (those ARE scored, as 0). Unmeasured rows count as 0 in every denominator, so the surviving subset is selection-biased. See failures[] for the exact criteria that rejected it.",
-  "failures": [
-    "门禁语言 zh：216 行里 216 行**未测到**（仅 0.0% 走到打分器）—— 未测到的行以 0 计入所有分母，故本次每一个门禁百分比都是系统性偏低估，且活下来的子集可能是选择偏置的。拒绝把它发布成成绩。（模型**答错**的行不在此列：那是一次合法测量，按 0 分计入成绩。）"
-  ],
+  "measurement": "complete",
   "cases": 216,
-  "rows": 407,
-  "scoredRows": 0,
-  "erroredRows": 407,
-  "notMeasuredRows": 407,
+  "heldoutCases": 194,
+  "fewshotDerivedCases": 22,
+  "scoredRows": 407,
+  "erroredRows": 0,
+  "notMeasuredRows": 0,
   "modelFailureRows": 0,
   "degradedCalls": 0,
-  "transportRetries": 0,
-  "outageWaits": 0,
-  "outageWaitMs": 0,
-  "compileRate": null,
-  "compileMeasured": 0,
-  "compileCompiled": 0,
-  "compileFailure": 0,
-  "modelFailureCompile": 0,
-  "typecheck": {
-    "skipped": "没有 zh 行的模型产出（片段-only / 全部未测到）"
+  "transportRetries": 3,
+  "outageWaits": 4,
+  "outageWaitMs": 120000,
+  "gatedRows": {
+    "lang": "zh",
+    "rows": 216,
+    "errored": 0
   },
-  "sampleErrors": [
-    "403 {\"error\":{\"code\":\"1301\",\"message\":\"无配额可用\"}}"
+  "observedRows": {
+    "lang": "en",
+    "rows": 191,
+    "errored": 0
+  },
+  "target": 0.95,
+  "givenInputs": [
+    "target",
+    "mode"
   ],
+  "notScored": [],
   "fragments": {
     "cases": 63,
-    "measured": 0,
-    "notMeasured": 63,
-    "core": null,
-    "full": null,
-    "scoped": null,
-    "stated": null,
-    "compileRate": null,
-    "compileMeasured": 0,
-    "compileCompiled": 0,
-    "compileFailure": 0,
-    "byScene": {
-      "table": null,
-      "form": null,
-      "dialog": null
-    },
-    "byDim": {},
+    "measured": 63,
+    "notMeasured": 0,
+    "core": 0.5556,
+    "scoped": 0.5556,
     "scopedMin": 0.7778,
+    "scopedGateOk": false,
+    "stated": 0.5556,
+    "full": 0.5079,
+    "compileRate": 1,
+    "compileMeasured": 63,
+    "compileCompiled": 63,
+    "compileFailure": 0,
     "gateOk": false,
     "gateFailures": [
-      "片段腿 63 条全部未测到（measured=0）—— 这不是 0 分，是没测",
-      "片段腿 63/63 行**未测到**（无 text 块 / 截断）—— 未测到的行以 0 计入分母且活下来的子集可能选择偏置，本腿不构成一次完整测量",
-      "片段腿没有任何可编译产物（所有行都未产出结果）—— 编译门没有分母",
-      "片段 scoped 没有数字（基线地板 77.8%）—— 测量缺失或该口径被移除"
-    ]
+      "片段 scoped 退步：本次 55.6% < 基线地板 77.8%（阈值只经评审下调；若是语料/教学面有意变更，请更新基线并说明）"
+    ],
+    "byScene": {
+      "table": {
+        "cases": 21,
+        "core": 0.4286,
+        "scoped": 0.4286,
+        "stated": 0.4286,
+        "full": 0.2857,
+        "compileRate": 1
+      },
+      "form": {
+        "cases": 21,
+        "core": 0.5714,
+        "scoped": 0.5714,
+        "stated": 0.5714,
+        "full": 0.5714,
+        "compileRate": 1
+      },
+      "dialog": {
+        "cases": 21,
+        "core": 0.6667,
+        "scoped": 0.6667,
+        "stated": 0.6667,
+        "full": 0.6667,
+        "compileRate": 1
+      }
+    },
+    "byDim": {
+      "propSet": {
+        "applicable": 63,
+        "pass": 35,
+        "rate": 0.5556
+      },
+      "formtype": {
+        "applicable": 42,
+        "pass": 42,
+        "rate": 1
+      },
+      "fieldRequired": {
+        "applicable": 21,
+        "pass": 17,
+        "rate": 0.8095
+      },
+      "dataOptions": {
+        "applicable": 33,
+        "pass": 32,
+        "rate": 0.9697
+      },
+      "target": {
+        "applicable": 63,
+        "pass": 63,
+        "rate": 1
+      },
+      "apiUrl": {
+        "applicable": 33,
+        "pass": 33,
+        "rate": 1
+      },
+      "rowkey": {
+        "applicable": 12,
+        "pass": 12,
+        "rate": 1
+      },
+      "mode": {
+        "applicable": 21,
+        "pass": 21,
+        "rate": 1
+      },
+      "composableName": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "defaultTitle": {
+        "applicable": 21,
+        "pass": 21,
+        "rate": 1
+      },
+      "dialogMaskNonClosing": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "options.width": {
+        "applicable": 15,
+        "pass": 15,
+        "rate": 1
+      },
+      "options.maxHeight": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "options.isDraggable": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "options.showClose": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "options.appendTo": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "fieldAttrs": {
+        "applicable": 18,
+        "pass": 15,
+        "rate": 0.8333
+      },
+      "noApiUrl": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "options.fullscreen": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "options.isHiddenFooter": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "options.destroyOnClose": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "options.closeOnPressEscape": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "options.cacheKey": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "options.hiddenFullBtn": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "labelKey": {
+        "applicable": 9,
+        "pass": 3,
+        "rate": 0.3333
+      },
+      "i18n": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "context": {
+        "applicable": 21,
+        "pass": 21,
+        "rate": 1
+      },
+      "buttons": {
+        "applicable": 21,
+        "pass": 21,
+        "rate": 1
+      },
+      "formLayout.labelWidth": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "formLayout.minFoldRows": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "fieldSpan": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "fieldRules": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "isHidden": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "reactions": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "apiParams": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "fieldLayout": {
+        "applicable": 18,
+        "pass": 9,
+        "rate": 0.5
+      },
+      "extPoints": {
+        "applicable": 12,
+        "pass": 12,
+        "rate": 1
+      },
+      "rowButtons": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "rowButtonNames": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "tableOptions.border": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "tableOptions.stripe": {
+        "applicable": 9,
+        "pass": 6,
+        "rate": 0.6667
+      },
+      "tableOptions.rowkey": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.highlightCurrentRow": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.multiSelect": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.heightType": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "tableOptions.height": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.rowHeight": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.estimatedRowHeight": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.overscanCount": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.rowClassName": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.size": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.showHeader": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.emptyText": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.snIndex": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.leftText": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "tableOptions.cachePageSelection": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.refetchKeepPage": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.localPagination": {
+        "applicable": 3,
+        "pass": 0,
+        "rate": 0
+      },
+      "tableOptions.defaultSort": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableOptions.configTableOut": {
+        "applicable": 6,
+        "pass": 3,
+        "rate": 0.5
+      },
+      "tableVirtualMode": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "pagination.pageSize": {
+        "applicable": 9,
+        "pass": 9,
+        "rate": 1
+      },
+      "pagination.pageSizes": {
+        "applicable": 6,
+        "pass": 6,
+        "rate": 1
+      },
+      "tableOptions.headerCellStyle": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "tableOptions.editConfig": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      },
+      "tableOptions.tabHeight": {
+        "applicable": 3,
+        "pass": 3,
+        "rate": 1
+      }
+    }
   },
   "prd": {
     "cases": 22,
-    "measured": 0,
-    "notMeasured": 22,
-    "presenceRate": null,
-    "membershipRate": null,
-    "membershipCorrect": 0,
-    "membershipTotal": 0,
-    "dialogRate": null,
-    "exactRate": null,
-    "compileRate": null,
-    "compileMeasured": 0,
-    "compileCompiled": 0,
+    "measured": 22,
+    "notMeasured": 0,
+    "presenceRate": 1,
+    "membershipRate": 0.9526,
+    "membershipCorrect": 181,
+    "membershipTotal": 190,
+    "dialogRate": 1,
+    "exactRate": 0.7273,
+    "compileRate": 1,
+    "compileMeasured": 22,
+    "compileCompiled": 22,
     "compileFailure": 0
   },
-  "target": 0.95,
+  "gateMetric": "definition95",
+  "inSchemaIntentZeroEdit": 0.2268,
+  "coreRate": 0.1546,
+  "inSchemaIntentZeroEditAll": 0.1944,
+  "inSchemaIntentScoped": 0.1959,
+  "inSchemaIntentScopedAll": 0.2269,
+  "exactIntentFull": 0.0773,
+  "exactIntentFullAll": 0.1111,
+  "propSetF1": 0.7391,
+  "attributeAccuracy": 0.9401,
+  "attributeRows": 210,
+  "actionsF1": 0.9909,
+  "compileRate": 1,
+  "compileMeasured": 216,
+  "compileCompiled": 216,
+  "compileFailure": 0,
+  "modelFailureCompile": 161,
+  "compileFailureSamples": [],
+  "typecheck": {
+    "samplePerTarget": 10,
+    "sampled": 30,
+    "measured": 30,
+    "checked": 30,
+    "ok": 30,
+    "rate": 1,
+    "failure": 0,
+    "modelFailureTypecheck": 24,
+    "notRun": 0,
+    "failureSamples": []
+  },
+  "frontDoor": {
+    "rows": 407,
+    "routed": 407,
+    "rejected": 0,
+    "compileFailures": 0,
+    "noTableExercised": 406,
+    "ok": true
+  },
+  "convergence": {
+    "k": 3,
+    "source": "heldout",
+    "rateAtK": 0.5333,
+    "meanTurnsToConverge": 0.38,
+    "converged": 16,
+    "total": 30,
+    "turn0": 10,
+    "scripted": 6,
+    "withinK": 16
+  },
+  "definition95": {
+    "k": 3,
+    "source": "heldout",
+    "rate": 0.2268,
+    "pass": 44,
+    "total": 194
+  },
+  "byCapability": {
+    "propSet": {
+      "applicable": 194,
+      "pass": 70,
+      "rate": 0.3608
+    },
+    "formtype": {
+      "applicable": 194,
+      "pass": 172,
+      "rate": 0.8866
+    },
+    "membership": {
+      "applicable": 194,
+      "pass": 123,
+      "rate": 0.634
+    },
+    "actions": {
+      "applicable": 194,
+      "pass": 188,
+      "rate": 0.9691
+    },
+    "tableBtns": {
+      "applicable": 13,
+      "pass": 3,
+      "rate": 0.2308
+    },
+    "dialogs": {
+      "applicable": 15,
+      "pass": 3,
+      "rate": 0.2
+    },
+    "operationColumn": {
+      "applicable": 9,
+      "pass": 9,
+      "rate": 1
+    },
+    "permissions": {
+      "applicable": 8,
+      "pass": 8,
+      "rate": 1
+    },
+    "apiParams": {
+      "applicable": 8,
+      "pass": 6,
+      "rate": 0.75
+    },
+    "dataOptions": {
+      "applicable": 111,
+      "pass": 47,
+      "rate": 0.4234
+    },
+    "i18n": {
+      "applicable": 11,
+      "pass": 11,
+      "rate": 1
+    },
+    "formLayout": {
+      "applicable": 3,
+      "pass": 2,
+      "rate": 0.6667
+    },
+    "fieldSpan": {
+      "applicable": 7,
+      "pass": 3,
+      "rate": 0.4286
+    },
+    "target": {
+      "applicable": 84,
+      "pass": 84,
+      "rate": 1
+    },
+    "mode": {
+      "applicable": 44,
+      "pass": 44,
+      "rate": 1
+    },
+    "virtualScroll": {
+      "applicable": 16,
+      "pass": 16,
+      "rate": 1
+    },
+    "configTableOut": {
+      "applicable": 7,
+      "pass": 7,
+      "rate": 1
+    },
+    "isHidden": {
+      "applicable": 27,
+      "pass": 5,
+      "rate": 0.1852
+    },
+    "reactions": {
+      "applicable": 13,
+      "pass": 1,
+      "rate": 0.0769
+    },
+    "columns": {
+      "applicable": 32,
+      "pass": 4,
+      "rate": 0.125
+    },
+    "expandConfig": {
+      "applicable": 15,
+      "pass": 2,
+      "rate": 0.1333
+    },
+    "treeConfig": {
+      "applicable": 14,
+      "pass": 13,
+      "rate": 0.9286
+    },
+    "editConfig": {
+      "applicable": 14,
+      "pass": 6,
+      "rate": 0.4286
+    },
+    "mergeConfig": {
+      "applicable": 8,
+      "pass": 7,
+      "rate": 0.875
+    },
+    "extPoints": {
+      "applicable": 23,
+      "pass": 16,
+      "rate": 0.6957
+    }
+  },
+  "byLanguage": {
+    "zh": 0.1546,
+    "en": 0.1775
+  },
   "passed": false
 }
