@@ -1549,7 +1549,6 @@ export default {
   },
   methods: {
     onSearchClick() {
-      console.log('links///')
       this.handleSearch()
     },
     onResetClick(model, refs) {
@@ -1981,6 +1980,259 @@ export default {
   }
 }
 </script>
+`
+export const RAW_crud_Basic = `<template>
+  <div class="example-crud-basic">
+    <es-crud-page
+      ref="crud"
+      :schema="schema"
+      @btn-click="onBtnClick"
+      @dialog-confirm="onDialogConfirm"
+    />
+  </div>
+</template>
+
+<script>
+/**
+ * EsCrudPage —— 一份 schema 生成「查询表单 + 表格 + 分页 + 新增/编辑弹窗」。
+ *
+ * 三个配置面：
+ *   formItems        查询表单字段（交给 EsForm）
+ *   columns          表格列（交给 EsTable）
+ *   dialogs          弹窗表（add / edit / view 会被自动识别）
+ *   toolbarBtns      表格上方按钮；operationColumn 是行内操作列
+ * 按钮上的 dialogKey 决定「点它开哪个弹窗」。
+ */
+
+// 演示数据：46 条，前端切片分页，不发网络请求
+const ALL_ROWS = Array.from({ length: 46 }, (_, i) => ({
+  id: i + 1,
+  name: ['张三', '李四', '王五', '赵六', '孙七'][i % 5],
+  phone: \`138\${String(i).padStart(8, '0')}\`,
+  status: i % 3 === 0 ? 0 : 1,
+  createTime: \`2024-0\${(i % 9) + 1}-\${String((i % 28) + 1).padStart(2, '0')}\`
+}))
+
+let nextId = 47
+
+const statusOptions = [
+  { label: '启用', value: 1 },
+  { label: '禁用', value: 0 }
+]
+
+export default {
+  name: 'CrudBasic',
+  data() {
+    return {
+      rows: ALL_ROWS.map((r) => ({ ...r })),
+      schema: {
+        // ① 查询表单
+        formItems: [
+          { prop: 'name', label: '姓名', formtype: 'Input', span: 6, attrs: { placeholder: '请输入姓名', clearable: true } },
+          { prop: 'status', label: '状态', formtype: 'Select', span: 6, dataOptions: statusOptions, attrs: { placeholder: '请选择状态', clearable: true } }
+        ],
+        // 声明了 operationColumn 就视为「按钮面交给用户」，工具栏按钮不再自动派生，
+        // 所以这里显式给一个「新增」。dialogKey 指向 dialogs 里的 add。
+        toolbarBtns: [{ name: '新增', type: 'primary', key: 'add', dialogKey: 'add' }],
+        // ② 表格
+        columns: [
+          { prop: 'name', label: '姓名', width: 120 },
+          { prop: 'phone', label: '手机号', width: 160 },
+          { prop: 'status', label: '状态', width: 100 },
+          { prop: 'createTime', label: '创建时间', minWidth: 140 }
+        ],
+        // 行内操作列用 operationColumn 声明（而不是手写一列 btns）：
+        // 组件会给每个按钮接上 clickEvent，dialogKey / confirm / click 才会生效。
+        operationColumn: {
+          label: '操作',
+          width: 150,
+          btns: [
+            { name: '编辑', type: 'primary', dialogKey: 'edit' },
+            { name: '删除', type: 'danger', confirm: '确定删除该记录？', click: (row) => this.removeRow(row) }
+          ]
+        },
+        tableOptions: {
+          border: true,
+          stripe: true,
+          rowkey: 'id',
+          httpRequest: this.fetchRows
+        },
+        // ③ 弹窗
+        dialogs: {
+          add: {
+            title: '新增用户',
+            width: '520px',
+            formItems: this.formFields(),
+            onConfirm: (data) => this.saveRow(null, data)
+          },
+          edit: {
+            title: (row) => \`编辑「\${row.name}」\`,
+            width: '520px',
+            formItems: this.formFields(),
+            onConfirm: (data, { row }) => this.saveRow(row, data)
+          }
+        }
+      }
+    }
+  },
+  methods: {
+    // 列 / 表单共用一套字段（新增和编辑一致，只是标题与回填不同）
+    formFields() {
+      return [
+        {
+          prop: 'name',
+          label: '姓名',
+          formtype: 'Input',
+          formItemOptions: { rules: [{ required: true, message: '请输入姓名' }] }
+        },
+        { prop: 'phone', label: '手机号', formtype: 'Input' },
+        { prop: 'status', label: '状态', formtype: 'Select', dataOptions: statusOptions }
+      ]
+    },
+    // 表格取数：签名与表格的 httpRequest 一致，返回 { data, total }
+    async fetchRows({ pageIndex, pageSize, formParams } = {}) {
+      let rows = this.rows
+      const name = formParams && formParams.name
+      const status = formParams && formParams.status
+      if (name) rows = rows.filter((r) => r.name.includes(name))
+      if (status !== '' && status !== undefined && status !== null) {
+        rows = rows.filter((r) => r.status === status)
+      }
+      const start = (pageIndex - 1) * pageSize
+      return {
+        data: rows.slice(start, start + pageSize),
+        total: rows.length
+      }
+    },
+    saveRow(row, data) {
+      if (row) Object.assign(row, data)
+      else this.rows.unshift({ ...data, id: nextId++, createTime: new Date().toISOString().slice(0, 10) })
+      this.refreshTable()
+    },
+    removeRow(row) {
+      this.rows = this.rows.filter((r) => r.id !== row.id)
+      this.refreshTable()
+      this.\$message.success(\`已删除「\${row.name}」\`)
+    },
+    refreshTable() {
+      // EsCrudPage 暴露的 refresh()：刷新当前页（不会跳回第一页）
+      const crud = this.\$refs.crud
+      if (crud && typeof crud.refresh === 'function') crud.refresh()
+    },
+    onBtnClick(key, data) {
+      this.\$message.success(\`按钮 \${key}：\${JSON.stringify(data || {})}\`)
+    },
+    // dialog-confirm 在弹窗配置的 onConfirm 之后触发，适合在这里记审计日志 / 埋点
+    onDialogConfirm(key, data) {
+      this.\$message.success(\`弹窗 \${key} 已确认：\${data && data.name}\`)
+    }
+  }
+}
+</script>
+
+<style scoped>
+.example-crud-basic {
+  padding: 0;
+}
+</style>
+`
+export const RAW_crud_MultiDialog = `<template>
+  <div class="example-crud-multi-dialog">
+    <es-crud-page ref="crud" :schema="schema" />
+  </div>
+</template>
+
+<script>
+/**
+ * 多弹窗：同一张表挂「详情」和「编辑」两个弹窗。
+ *
+ * dialogs 里的键就是按钮 dialogKey 取的值；
+ * 需要完全自定义内容时用 render(h, { row, model, registerRef, close, refresh })。
+ */
+const ROWS = [
+  { id: 1, name: '张三', dept: '技术部', role: 'admin', score: 92 },
+  { id: 2, name: '李四', dept: '产品部', role: 'user', score: 78 },
+  { id: 3, name: '王五', dept: '设计部', role: 'user', score: 85 }
+]
+
+export default {
+  name: 'CrudMultiDialog',
+  data() {
+    return {
+      rows: ROWS.map((r) => ({ ...r })),
+      schema: {
+        columns: [
+          { prop: 'name', label: '姓名', width: 120 },
+          { prop: 'dept', label: '部门', width: 140 },
+          { prop: 'role', label: '角色', width: 100 },
+          { prop: 'score', label: '评分', width: 90 }
+        ],
+        // 行内操作列用 operationColumn 声明（而不是手写一列 btns）：
+        // 组件会给每个按钮接上 clickEvent，dialogKey / confirm / click 才会生效。
+        operationColumn: {
+          label: '操作',
+          width: 160,
+          btns: [
+            { name: '详情', type: 'primary', dialogKey: 'view' },
+            { name: '编辑', dialogKey: 'edit' }
+          ]
+        },
+        tableOptions: { border: true, rowkey: 'id', httpRequest: this.fetchRows },
+        dialogs: {
+          // 只读详情：用 render 自定义内容，没有表单
+          view: {
+            title: (row) => \`详情 - \${row && row.name}\`,
+            width: '460px',
+            isHiddenFooter: true,
+            render: (h, { row }) =>
+              h('el-descriptions', { props: { column: 2, border: true } }, [
+                h('el-descriptions-item', { props: { label: '姓名' } }, row.name),
+                h('el-descriptions-item', { props: { label: '部门' } }, row.dept),
+                h('el-descriptions-item', { props: { label: '角色' } }, row.role),
+                h('el-descriptions-item', { props: { label: '评分' } }, String(row.score))
+              ])
+          },
+          // 可编辑：同一份字段配置，onConfirm 里写回
+          edit: {
+            title: (row) => \`编辑 - \${row && row.name}\`,
+            width: '460px',
+            formItems: [
+              { prop: 'name', label: '姓名', formtype: 'Input' },
+              { prop: 'dept', label: '部门', formtype: 'Input' },
+              {
+                prop: 'role',
+                label: '角色',
+                formtype: 'Select',
+                dataOptions: [
+                  { label: '管理员', value: 'admin' },
+                  { label: '普通用户', value: 'user' }
+                ]
+              }
+            ],
+            onConfirm: (data, { row, close }) => {
+              Object.assign(row, data)
+              this.\$message.success(\`已保存「\${row.name}」\`)
+              close()
+            }
+          }
+        }
+      }
+    }
+  },
+  methods: {
+    async fetchRows({ pageIndex, pageSize } = {}) {
+      const start = (pageIndex - 1) * pageSize
+      return { data: this.rows.slice(start, start + pageSize), total: this.rows.length }
+    }
+  }
+}
+</script>
+
+<style scoped>
+.example-crud-multi-dialog {
+  padding: 0;
+}
+</style>
 `
 export const RAW_dialog_AsyncContent = `<template>
   <div>
@@ -3760,7 +4012,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入公司名称' },
-          isHiden: (model) => model.userType !== 'company'
+          isHidden: (model) => model.userType !== 'company'
         },
         {
           prop: 'businessLicense',
@@ -3768,7 +4020,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入营业执照号' },
-          isHiden: (model) => model.userType !== 'company'
+          isHidden: (model) => model.userType !== 'company'
         },
         {
           prop: 'personalName',
@@ -3776,7 +4028,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入个人姓名' },
-          isHiden: (model) => model.userType !== 'personal'
+          isHidden: (model) => model.userType !== 'personal'
         },
         {
           prop: 'idCard',
@@ -3784,7 +4036,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入身份证号' },
-          isHiden: (model) => model.userType !== 'personal'
+          isHidden: (model) => model.userType !== 'personal'
         }
       ]
     }
@@ -3844,7 +4096,7 @@ export default {
               ]
             : []
         },
-        isHiden: () => !this.formData.requireEmail
+        isHidden: () => !this.formData.requireEmail
       }
     ]
   },
@@ -9764,6 +10016,8 @@ export const RAW_SOURCES = {
   'combination/RowApproval': RAW_combination_RowApproval,
   'combination/StepForm': RAW_combination_StepForm,
   'combination/TabMultiTable': RAW_combination_TabMultiTable,
+  'crud/Basic': RAW_crud_Basic,
+  'crud/MultiDialog': RAW_crud_MultiDialog,
   'dialog/AsyncContent': RAW_dialog_AsyncContent,
   'dialog/Basic': RAW_dialog_Basic,
   'dialog/Confirm': RAW_dialog_Confirm,

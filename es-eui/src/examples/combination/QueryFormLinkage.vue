@@ -112,7 +112,6 @@ export default {
   },
   methods: {
     onSearchClick() {
-      console.log('links///')
       this.handleSearch()
     },
     onResetClick(model, refs) {

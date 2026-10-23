@@ -48,6 +48,12 @@
           useDialog 弹窗
         </router-link>
         <router-link
+          to="/component/escrudpage"
+          class="nav-item"
+        >
+          EsCrudPage 整页
+        </router-link>
+        <router-link
           to="/component/combination"
           class="nav-item"
         >

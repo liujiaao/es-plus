@@ -74,6 +74,9 @@ import CombinationBatchEdit from './combination/BatchEdit.vue'
 import CombinationEditableGridSubmit from './combination/EditableGridSubmit.vue'
 import CombinationImportData from './combination/ImportData.vue'
 
+import CrudBasic from './crud/Basic.vue'
+import CrudMultiDialog from './crud/MultiDialog.vue'
+
 import VxeTableBasicSwitch from './vxe-table/BasicSwitch.vue'
 import VxeTableSelectionIndex from './vxe-table/SelectionIndex.vue'
 import VxeTableExpandRow from './vxe-table/ExpandRow.vue'
@@ -162,6 +165,8 @@ const componentMap = {
   './combination/BatchEdit.vue': CombinationBatchEdit,
   './combination/EditableGridSubmit.vue': CombinationEditableGridSubmit,
   './combination/ImportData.vue': CombinationImportData,
+  './crud/Basic.vue': CrudBasic,
+  './crud/MultiDialog.vue': CrudMultiDialog,
   './vxe-table/BasicSwitch.vue': VxeTableBasicSwitch,
   './vxe-table/SelectionIndex.vue': VxeTableSelectionIndex,
   './vxe-table/ExpandRow.vue': VxeTableExpandRow,
@@ -203,7 +208,7 @@ export const formExamples = [
   { key: 'Controls', title: '常用控件展示', description: '14 种控件类型，通过 formtype 配置即可切换：Input、Radio、Select、Checkbox、Switch、DatePicker、Rate 等。' },
   { key: 'Layout', title: '栅格布局与折叠', description: '通过 layoutFormProps 配置栅格布局，minfoldRows 实现折叠展开效果。' },
   { key: 'Validation', title: '表单验证', description: '内置验证规则支持：required、min、max、pattern、email 等，configBtn 配置提交按钮自动触发验证。' },
-  { key: 'DynamicField', title: '动态字段显示', description: '通过 isHiden 函数根据其他字段值动态显示/隐藏表单项。' },
+  { key: 'DynamicField', title: '动态字段显示', description: '通过 isHidden 函数根据其他字段值动态显示/隐藏表单项。' },
   { key: 'CustomRender', title: '自定义渲染', description: '通过 render 函数自定义表单项渲染，支持富文本编辑器、颜色选择器等复杂控件。' },
   { key: 'DynamicRule', title: '动态验证规则', description: '通过 :key 强制重新渲染表单，实现验证规则的动态切换。' },
   { key: 'PolicyForm', title: '政策编辑表单（实战）', description: '复杂企业级表单示例，包含多种控件类型、JSX 自定义渲染和分布式布局。' },
@@ -260,6 +265,11 @@ export const dialogExamples = [
   { key: 'MultiInstance', title: '多实例弹窗', description: 'onlyInstance: false 下同一 useDialog 可同时打开多个互不干扰的实例。' },
   { key: 'AsyncContent', title: '异步内容弹窗', description: '打开后加载远程数据，instance.loading 控制遮罩，数据到达自动重渲染。' },
   { key: 'DynamicBtn', title: '动态按钮弹窗', description: 'configBtn 的 disabled 支持函数形式，随内容实时启停（审批场景）。' },
+]
+
+export const crudExamples = [
+  { key: 'MultiDialog', title: '多弹窗 CRUD', description: '一张表挂「详情」「编辑」两个弹窗：「详情」用 render 自定义内容，「编辑」用 formItems + onConfirm 写回。' },
+  { key: 'Basic', title: '基础 CRUD 页', description: '一份 schema 生成查询表单 + 表格 + 分页 + 新增/编辑弹窗；toolbarBtns 与 operationColumn 上的 dialogKey 决定开哪个弹窗。' },
 ]
 
 export const combinationExamples = [

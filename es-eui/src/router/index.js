@@ -90,6 +90,11 @@ const routes = [
         component: () => import('../views/docs/EsDialogDocs.vue')
       },
       {
+        path: 'escrudpage',
+        name: 'EsCrudPageDocs',
+        component: () => import('../views/docs/EsCrudPageDocs.vue')
+      },
+      {
         path: 'combination',
         name: 'CombinationDocs',
         component: () => import('../views/docs/CombinationDocs.vue')
@@ -143,7 +148,11 @@ const router = new VueRouter({
   mode: 'hash',
   base: process.env.BASE_URL,
   routes,
-  scrollBehavior() {
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    // 案例卡会带 `#anchor` 落到页内某一节（如 /guide/configuration#permission）。
+    // 以前这里无条件回到顶部，锚点被吞掉、链接看起来「指向了页面」但没落到内容上。
+    if (to.hash) return { selector: to.hash, offset: { x: 0, y: 88 } }
     return { x: 0, y: 0 }
   }
 })
