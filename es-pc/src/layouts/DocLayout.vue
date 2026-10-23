@@ -37,29 +37,31 @@
     <a-layout class="doc-body">
       <!-- 侧边栏 -->
       <a-layout-sider class="doc-sider" width="260">
+        <!-- 每个条目都用 <router-link> 承载：<a-menu-item> 渲染出来是 <li>，
+             只靠 @click + router.push 的话，这里根本没有 <a href> —— 右键
+             「在新标签页打开」、复制链接、搜索引擎抓取全都拿不到地址。 -->
         <a-menu
           v-model:selectedKeys="selectedKeys"
           v-model:openKeys="openKeys"
           mode="inline"
           :style="{ borderInlineEnd: 'none' }"
-          @click="handleMenuClick"
         >
           <!-- 概览 -->
           <a-menu-item key="home">
             <template #icon><HomeOutlined /></template>
-            <span>首页</span>
+            <router-link to="/" class="menu-link">首页</router-link>
           </a-menu-item>
 
           <!-- 核心案例（L1–L5 场景化梯度） -->
           <a-menu-item key="cases">
             <template #icon><ThunderboltOutlined /></template>
-            <span>核心案例</span>
+            <router-link to="/cases" class="menu-link">核心案例</router-link>
           </a-menu-item>
 
           <!-- 快速上手 -->
           <a-menu-item key="guide">
             <template #icon><RocketOutlined /></template>
-            <span>快速上手</span>
+            <router-link to="/guide" class="menu-link">快速上手</router-link>
           </a-menu-item>
 
           <!-- 组件 -->
@@ -68,16 +70,16 @@
             <template #title>组件</template>
 
             <a-menu-item key="es-form">
-              <span>EsForm 动态表单</span>
+              <router-link to="/es-form" class="menu-link">EsForm 动态表单</router-link>
             </a-menu-item>
             <a-menu-item key="es-table">
-              <span>EsTable 动态表格</span>
+              <router-link to="/es-table" class="menu-link">EsTable 动态表格</router-link>
             </a-menu-item>
             <a-menu-item key="es-dialog">
-              <span>EsDialog 动态弹窗</span>
+              <router-link to="/es-dialog" class="menu-link">EsDialog 动态弹窗</router-link>
             </a-menu-item>
             <a-menu-item key="es-crud-page">
-              <span>EsCrudPage CRUD页面</span>
+              <router-link to="/es-crud-page" class="menu-link">EsCrudPage CRUD页面</router-link>
             </a-menu-item>
           </a-sub-menu>
 
@@ -87,17 +89,17 @@
             <template #title>高级</template>
 
             <a-menu-item key="advanced">
-              <span>高级联动</span>
+              <router-link to="/advanced" class="menu-link">高级联动</router-link>
             </a-menu-item>
             <a-menu-item key="es-vxe-table">
-              <span>vxe 高性能引擎</span>
+              <router-link to="/es-vxe-table" class="menu-link">vxe 高性能引擎</router-link>
             </a-menu-item>
           </a-sub-menu>
 
           <!-- AI 工具链 -->
           <a-menu-item key="ai-tools">
             <template #icon><RobotOutlined /></template>
-            <span>AI 工具链</span>
+            <router-link to="/ai-tools" class="menu-link">AI 工具链</router-link>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -122,7 +124,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import {
   // 不再引入 BookOutlined：它此前被当作本站 logo，现已换成统一的「ES」品牌标记
   GithubOutlined,
@@ -138,7 +140,6 @@ import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
 import { SITES, SITE_KEY } from '@/utils/sites'
 
 const adapterVersion = ADAPTER_ANTDV_VERSION
-const router = useRouter()
 const route = useRoute()
 
 const currentSite = SITE_KEY
@@ -170,11 +171,6 @@ const routeNameToMenuKey = (name) => {
 
 const selectedKeys = ref([routeNameToMenuKey(route.name)])
 const openKeys = ref(['components-group', 'advanced-group'])
-
-function handleMenuClick({ key }) {
-  // 所有子路由均挂载在 DocLayout 的 '/' 下，home 是唯一特例（path 为 ''）
-  router.push(key === 'home' ? '/' : `/${key}`)
-}
 </script>
 
 <style scoped>
@@ -244,6 +240,17 @@ function handleMenuClick({ key }) {
   position: sticky;
   top: 64px;
   overflow-y: auto;
+
+  /* 菜单条目里的真实链接：铺满整行，颜色/下划线继承菜单样式 */
+  .menu-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: inherit;
+    }
+  }
 }
 
 .doc-content {

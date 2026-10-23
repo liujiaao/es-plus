@@ -7,10 +7,11 @@
     
     <div class="playground-container">
       <div class="playground-toolbar">
+        <!-- EP 3.0 起 el-radio-button 的 `label` 不再充当 value（会打印弃用告警），改用 value -->
         <el-radio-group v-model="activeComponent" size="large">
-          <el-radio-button label="es-form">EsForm</el-radio-button>
-          <el-radio-button label="es-table">EsTable</el-radio-button>
-          <el-radio-button label="use-dialog">useDialog</el-radio-button>
+          <el-radio-button value="es-form">EsForm</el-radio-button>
+          <el-radio-button value="es-table">EsTable</el-radio-button>
+          <el-radio-button value="use-dialog">useDialog</el-radio-button>
         </el-radio-group>
       </div>
       

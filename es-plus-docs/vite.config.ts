@@ -103,6 +103,15 @@ export default defineConfig(({ mode }) => {
         // @es-plus/core 显式指向 monorepo 工作区（src 或 build），避免被当裸依赖预打包成陈旧副本。
         // 字符串前缀匹配同时覆盖子路径（如 @es-plus/core/shared）。
         { find: '@es-plus/core', replacement: esCoreTarget },
+        // 示例代码里写的是**发布包名** `@es-plus/vue3`（与安装文档一致，复制即用），
+        // 站点内部沿用历史别名 `es-plus`（file: 依赖）。两个名字都指向同一入口，
+        // 避免「示例可跑但复制到项目里 Cannot find module」这类文档与事实分叉。
+        { find: '@es-plus/vue3/components/es-form', replacement: aliasTarget },
+        { find: '@es-plus/vue3/components/es-table', replacement: aliasTarget },
+        { find: '@es-plus/vue3/components/es-dialog', replacement: aliasTarget },
+        { find: '@es-plus/vue3/components/svg-icon', replacement: aliasTarget },
+        { find: '@es-plus/vue3/types', replacement: aliasTarget },
+        { find: '@es-plus/vue3', replacement: aliasTarget },
         // 所有 es-plus 子路径统一指向同一入口（dist 模式指向打包产物，否则指向源码）
         { find: 'es-plus/components/es-form', replacement: aliasTarget },
         { find: 'es-plus/components/es-table', replacement: aliasTarget },

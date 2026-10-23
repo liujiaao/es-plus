@@ -71,30 +71,8 @@ import DemoBlock from '@/components/doc/DemoBlock.vue'
 import { installAppPlugins } from '@/utils/install-app-plugins'
 import { rewriteInternalDocLinks } from '@/utils/doc-links'
 
-// Raw markdown imports — eliminates template-string escaping issues
-import gettingStartedMd from '@/docs/getting-started.md?raw'
-import installationMd from '@/docs/installation.md?raw'
-import usageMd from '@/docs/usage.md?raw'
-import vue2Md from '@/docs/vue2.md?raw'
-import adapterAntdvMd from '@/docs/adapter-antdv.md?raw'
-import mcpServerMd from '@/docs/mcp-server.md?raw'
-import cliMd from '@/docs/cli.md?raw'
-import permissionI18nMd from '@/docs/permission-i18n.md?raw'
-import migrationMd from '@/docs/migration.md?raw'
-// 英文迁移指南：单源是根 docs/migrate-v1.4.md（由 sync-docs.mjs 镜像）。文件名保持
-// migrate-v1.4 是有意为之 —— 已发布到 npm 的多个包 README 链接了这个路径（GitHub blob），
-// 改名会让那些线上链接立刻 404，而 npm 上的 README 无法回改。
-// 内容独立于中文版（中文版侧重「从原生 Element Plus 迁移」，英文版侧重包名重命名
-// 与 Vue 2 渲染器接入），不是逐句翻译 —— 此前它沉睡在 docs/migrate-v1.4.md，从未发布。
-import migrationEnMd from '@/docs/migrate-v1.4.md?raw'
-import changelogMd from '@/docs/changelog.md?raw'
-import schemaSetupMd from '@/docs/schema-setup.md?raw'
-import whyEsPlusMd from '@/docs/why-es-plus.md?raw'
-// English variants (only translated anchor docs exist)
-import gettingStartedEnMd from '@/docs/getting-started.en.md?raw'
-import mcpServerEnMd from '@/docs/mcp-server.en.md?raw'
-import vue2EnMd from '@/docs/vue2.en.md?raw'
-import whyEsPlusEnMd from '@/docs/why-es-plus.en.md?raw'
+// 指南注册表（Doc.vue 与搜索索引共用的单一来源）
+import { docsData } from '@/docs/doc-registry'
 import { useHead } from '@unhead/vue'
 
 const route = useRoute()
@@ -135,23 +113,6 @@ const md: MarkdownIt = new MarkdownIt({
     return wrapCode(md.utils.escapeHtml(str), lang, str)
   }
 })
-
-// 文档数据 — content is sourced from .md files via ?raw imports
-type DocEntry = { title: string; content: string; titleEn?: string; contentEn?: string }
-const docsData: Record<string, DocEntry> = {
-  'why-es-plus': { title: '为什么是 ES-Plus', content: whyEsPlusMd, titleEn: 'Why ES-Plus', contentEn: whyEsPlusEnMd },
-  'getting-started': { title: '快速开始', content: gettingStartedMd, titleEn: 'Getting Started', contentEn: gettingStartedEnMd },
-  'installation': { title: '安装', content: installationMd },
-  'usage': { title: '使用', content: usageMd },
-  'vue2': { title: 'Vue 2 指南', content: vue2Md, titleEn: 'Vue 2 Guide', contentEn: vue2EnMd },
-  'adapter-antdv': { title: 'Ant Design Vue 适配器', content: adapterAntdvMd, titleEn: 'Ant Design Vue Adapter' },
-  'mcp-server': { title: 'MCP Server', content: mcpServerMd, titleEn: 'MCP Server', contentEn: mcpServerEnMd },
-  'cli': { title: 'CLI 工具', content: cliMd },
-  'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },
-  'schema-setup': { title: 'IDE 配置自动补全', content: schemaSetupMd },
-  'migration': { title: '迁移指南', content: migrationMd, titleEn: 'Migration Guide', contentEn: migrationEnMd },
-  'changelog': { title: '更新日志', content: changelogMd }
-}
 
 const { t, locale } = useI18n()
 
@@ -217,10 +178,16 @@ const renderedContent = computed(() => {
   // 先展开 ::: 容器（内部 markdown 已渲染为 HTML），再渲染整体
   const withContainers = renderContainers(preprocessed)
   const html = md.render(withContainers)
-  // Add IDs to headings for TOC linking
+  // Add IDs to headings for TOC linking.
+  // 同名小节（例如两处「基本用法」）会得到同一个 id → 目录项 key 重复、锚点互相抢跳。
+  // 用出现次数做后缀（第二次起 -2、-3…），与常见的锚点约定一致。
+  const seenIds = new Map<string, number>()
   const withHeadingIds = html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
     const text = content.replace(/<[^>]+>/g, '').trim()
-    const id = text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
+    const base = text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '') || 'section'
+    const n = (seenIds.get(base) || 0) + 1
+    seenIds.set(base, n)
+    const id = n === 1 ? base : `${base}-${n}`
     return `<h${level} id="${id}">${content}</h${level}>`
   })
   // hash 路由：把 .md 里的站内绝对链接 /guide/xxx 改写为 #/guide/xxx

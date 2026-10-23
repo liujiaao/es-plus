@@ -80,6 +80,8 @@ export const docsData: Record<string, any> = {
       'DialogOptions': [
         { name: 'title', type: 'string', desc: '弹窗标题' },
         { name: 'width', type: 'string | number', desc: '弹窗宽度，默认 "50%"' },
+        { name: 'visible', type: 'boolean', desc: '显示状态。useDialog 未显式传入时补 true；缓存实例的开关也靠翻转它' },
+        { name: 'loading', type: 'boolean', desc: '内容加载态：true 时在弹窗主体显示 loading 遮罩，默认 false' },
         { name: 'render', type: '(h, instance, components) => VNode', desc: '内容渲染函数；h 为 Vue createVNode，instance 为弹窗实例，components 包含所有注册的 el-icon 图标' },
         { name: 'renderHeader', type: '(h, instance) => VNode', desc: '头部渲染函数（覆盖默认标题区）' },
         { name: 'renderFooter', type: '(h, instance) => VNode', desc: '底部渲染函数（覆盖默认按钮区）' },
@@ -96,6 +98,8 @@ export const docsData: Record<string, any> = {
         { name: 'destroyOnClose', type: 'boolean', desc: '关闭时销毁内容区，下次打开重新渲染，默认 true（useDialog 已注入）' },
         { name: 'modal', type: 'boolean', desc: '是否显示遮罩层，默认 true' },
         { name: 'alignCenter', type: 'boolean', desc: '是否垂直居中，默认 false' },
+        { name: 'top', type: 'string', desc: '弹窗距顶部的距离（仅非居中时生效），默认 "15vh"' },
+        { name: 'modalClass', type: 'string', desc: '遮罩层的自定义类名' },
         { name: 'showClose', type: 'boolean', desc: '是否显示关闭按钮，默认 true；传 false 彻底隐藏（内置头部自绘的与自定义头部时原生的都隐藏）' },
         { name: 'onClosed', type: '() => void', desc: '弹窗完全关闭后的回调（过渡动画结束时触发）' },
       ],
@@ -108,6 +112,8 @@ export const docsData: Record<string, any> = {
       'useDialog 参数': [
         { name: 'Component', type: 'Component (可选)', desc: '自定义弹窗内容组件，不传则使用内置 EsDialog；传入 DialogOptions.render 可替代' },
         { name: 'opt.onlyInstance', type: 'boolean', desc: 'true：单实例模式，同一 useDialog 返回的函数每次调用复用同一个弹窗实例（更新 props）；false（默认）：每次调用创建新实例' },
+        { name: 'opt.cacheKey', type: 'string', desc: '实例缓存键：同名 cacheKey 的弹窗关闭后不卸载（TTL 延迟回收），下次打开复用并保留内部状态；同时是 destroy(cacheKey) 的寻址键' },
+        { name: 'opt.(其余 DialogOptions 字段)', type: 'DialogOptions', desc: 'title / width / render / configBtn / isDraggable / fullscreen / beforeClose 等原样下发到弹窗组件' },
       ],
     },
   },

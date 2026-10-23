@@ -92,8 +92,9 @@ import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Fuse from 'fuse.js'
+import { docsData } from '@/docs/doc-registry'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const RECENT_KEY = 'es-plus-doc-recent-search'
 const RECENT_MAX = 5
@@ -160,52 +161,39 @@ interface SearchEntry {
   level: number
 }
 
-// Build search index from all .md files at build time
-const mdModules = import.meta.glob('@/docs/*.md', { as: 'raw', eager: true }) as Record<string, string>
-
 // Match Doc.vue's heading-id slugify logic exactly
 const slugify = (text: string) =>
   text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
 
-// File-name → category mapping
-const FILE_CATEGORY: Record<string, string> = {
-  'getting-started': '指南',
-  'installation': '指南',
-  'usage': '指南',
-  'vue2': '指南',
-  'mcp-server': '指南',
-  'cli': '指南',
-  'permission-i18n': '指南',
-  'migration': '指南',
-  'changelog': '指南',
-  'crud-page': '组件',
-}
-
+// 搜索索引**只**来自指南注册表：与 Doc.vue 渲染的路由同源。
+// 此前按 @/docs/*.md 全量 glob 建索引，于是 *.en.md、migrate-v1.4.md、crud-page.md
+// 这些没有路由的文件也会出现在结果里，点进去是「页面未找到」。
 const buildIndex = (): SearchEntry[] => {
   const entries: SearchEntry[] = []
-  for (const filePath in mdModules) {
-    const raw = mdModules[filePath]
-    const fileName = filePath.split('/').pop()?.replace(/\.md$/, '') || ''
-    const category = FILE_CATEGORY[fileName] || '文档'
-    const routePath = `/guide/${fileName}`
+  const isEn = locale.value === 'en-US'
+  for (const slug of Object.keys(docsData)) {
+    const doc = docsData[slug]
+    const raw = isEn && doc.contentEn ? doc.contentEn : doc.content
+    const pageTitle = (isEn && doc.titleEn) || doc.title
+    const category = '指南'
+    const routePath = `/guide/${slug}`
 
-    // Strip code blocks before scanning headings, so ``` ## ``` inside fences doesn't trigger
+    // Strip code blocks before scanning headings, so `## ` inside fences doesn't trigger
     const stripped = raw.replace(/```[\s\S]*?```/g, '')
     const lines = stripped.split('\n')
 
-    let pageTitle = fileName
+    let pageHeading = ''
     const headings: { level: number; text: string; lineIdx: number }[] = []
     lines.forEach((line, idx) => {
       const m = /^(#{1,3})\s+(.+?)\s*$/.exec(line)
       if (m) {
         const level = m[1].length
         const text = m[2].replace(/[*_`]/g, '').trim()
-        if (level === 1 && pageTitle === fileName) pageTitle = text
+        if (level === 1 && !pageHeading) pageHeading = text
         headings.push({ level, text, lineIdx: idx })
       }
     })
 
-    // Build per-heading entries (extract body up to next heading as content)
     headings.forEach((h, i) => {
       const next = headings[i + 1]
       const bodyLines = lines.slice(h.lineIdx + 1, next ? next.lineIdx : h.lineIdx + 20)
@@ -218,7 +206,7 @@ const buildIndex = (): SearchEntry[] => {
 
       const path = h.level === 1 ? routePath : `${routePath}#${slugify(h.text)}`
       entries.push({
-        title: h.level === 1 ? h.text : `${pageTitle} › ${h.text}`,
+        title: h.level === 1 ? h.text : `${pageHeading || pageTitle} › ${h.text}`,
         path,
         category,
         content,
@@ -229,9 +217,11 @@ const buildIndex = (): SearchEntry[] => {
   return entries
 }
 
-const searchData: SearchEntry[] = buildIndex()
+const searchData = ref<SearchEntry[]>(buildIndex())
+// 语言切换后重建索引，否则英文站搜到的仍是中文正文
+watch(locale, () => { searchData.value = buildIndex() })
 
-const fuse = new Fuse(searchData, {
+const fuse = computed(() => new Fuse(searchData.value, {
   keys: [
     { name: 'title', weight: 0.6 },
     { name: 'content', weight: 0.3 },
@@ -240,11 +230,11 @@ const fuse = new Fuse(searchData, {
   threshold: 0.4,
   ignoreLocation: true,
   minMatchCharLength: 2,
-})
+}))
 
 const results = computed(() => {
   if (!searchQuery.value) return []
-  return fuse.search(searchQuery.value).slice(0, 30).map(r => r.item)
+  return fuse.value.search(searchQuery.value).slice(0, 30).map(r => r.item)
 })
 
 const dialogVisible = computed({

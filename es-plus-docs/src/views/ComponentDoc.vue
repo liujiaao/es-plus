@@ -68,7 +68,8 @@
           <h2 class="section-title">{{ t('componentDoc.api') }}</h2>
 
           <template v-for="(items, key) in currentDoc.api" :key="key">
-            <div class="api-block">
+            <!-- 空表（如 EsForm 的 events: []）整块省略，避免出现只有表头的「Events」 -->
+            <div class="api-block" v-if="Array.isArray(items) && items.length">
               <h3 class="api-subtitle">{{ apiTitleMap[key as string] || key }}</h3>
               <el-table :data="items" border>
                 <el-table-column prop="name" label="名称" width="220" />
