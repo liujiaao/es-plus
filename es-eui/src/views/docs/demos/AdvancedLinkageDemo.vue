@@ -136,26 +136,26 @@ export default {
           name: '查询',
           type: 'primary',
           key: 'search',
-          onClick: () => this.handleMainSearch()
+          click: () => this.handleMainSearch()
         },
         {
           name: '重置',
           key: 'reset',
-          onClick: () => this.handleMainReset()
+          click: () => this.handleMainReset()
         },
         {
           name: '批量上架',
           type: 'success',
           key: 'batchPublish',
           disabled: true,
-          onClick: () => this.handleBatchPublish()
+          click: () => this.handleBatchPublish()
         },
         {
           name: '批量下架',
           type: 'warning',
           key: 'batchUnpublish',
           disabled: true,
-          onClick: () => this.handleBatchUnpublish()
+          click: () => this.handleBatchUnpublish()
         }
       ],
       mainTableColumns: [
@@ -262,7 +262,7 @@ export default {
           {
             name: '关闭',
             key: 'close',
-            onClick: (vm, { close }) => close()
+            click: (vm, { close }) => close()
           }
         ]
       })
@@ -337,13 +337,13 @@ export default {
           {
             name: '取消',
             key: 'cancel',
-            onClick: (vm, { close }) => close()
+            click: (vm, { close }) => close()
           },
           {
             name: '保存',
             type: 'primary',
             key: 'save',
-            onClick: (vm, { close }) => {
+            click: (vm, { close }) => {
               const index = this.mainTableData.findIndex(item => item.id === row.id)
               if (index > -1) {
                 this.mainTableData[index] = { ...this.mainTableData[index], ...this.editForm }

@@ -54,7 +54,7 @@
               <span class="layer-item">columnItem.vue</span>
               <span class="layer-item">RenderDom</span>
               <span class="layer-item">RenderBtn</span>
-              <span class="layer-item">httpRquestInstace()</span>
+              <span class="layer-item">httpRequestInstance()</span>
             </div>
           </div>
           <div class="arch-arrow">
@@ -258,7 +258,6 @@ Vue.use(EsPlus, {
       :data-source.sync="dataSource"
       :pagination="pagination"
       :options="tableOpts"
-      :config-btn="tableBtns"
     /&gt;
   &lt;/div&gt;
 &lt;/template&gt;
@@ -294,12 +293,13 @@ export default {
       tableOpts: {
         isInitRun: true,
         apiParams: { url: '/api/employees' },
-        border: true
-      },
-      tableBtns: [
-        { name: '新增', type: 'primary', icon: 'el-icon-plus', direction: 'left',
-          onClick(model, ref, refreshFn) { /* 打开新增弹窗 */ } }
-      ]
+        border: true,
+        // 顶部按钮是 options.configBtn —— EsTable 没有同名 prop
+        configBtn: [
+          { name: '新增', type: 'primary', icon: 'el-icon-plus', direction: 'left',
+            click(table) { /* 打开新增弹窗；入参是 EsTable 实例 */ } }
+        ]
+      }
     }
   }
 }
@@ -426,10 +426,10 @@ export default {
                 <td>用于 Select/Radio/Checkbox/Cascader 的选项数据。格式：<code>[{ label: '选项名', value: '选项值' }]</code>。<br>支持函数动态返回：<code>() => this.getDynamicOptions()</code></td>
               </tr>
               <tr>
-                <td><code>isHiden</code></td>
+                <td><code>isHidden</code></td>
                 <td>Function</td>
                 <td><span class="badge optional">否</span></td>
-                <td>条件渲染函数：<code>(model, item, formProps) => boolean</code>。返回 <code>true</code> 则隐藏该字段</td>
+                <td>条件渲染函数：<code>(model, item, formProps) =&gt; boolean</code>。返回 <code>true</code> 则隐藏该字段。<br><small>错拼 <code>isHiden</code> 仅为 Vue 2 兼容别名（会告警），三端不通用，请用 <code>isHidden</code></small></td>
               </tr>
               <tr>
                 <td><code>render</code></td>
@@ -488,7 +488,7 @@ export default {
           <ul>
             <li><code>formtype</code> 和 <code>render</code> 至少有其一：<code>formtype</code> 使用内置控件，<code>render</code> 自定义渲染</li>
             <li><code>prop</code> 支持函数时，会在组件初始化时调用一次以确定字段名（不会动态重新调用）</li>
-            <li><code>isHiden</code> 返回 true 的字段会被完全移除出 DOM，不会参与布局计算</li>
+            <li><code>isHidden</code> 返回 true 的字段会被完全移除出 DOM，不会参与布局计算</li>
             <li><code>attrs.disabled</code> 支持函数时，每次渲染都会重新调用获取最新值</li>
           </ul>
         </div>
@@ -559,8 +559,7 @@ export default {
               <tr><td><code>key</code></td><td>String</td><td>当 <code>triggerEvent: true</code> 时：<code>query</code> 触发表格刷新，<code>rest</code> 重置表单并刷新</td></tr>
               <tr><td><code>direction</code></td><td>String</td><td>仅 <code>btnColSpanRow: true</code> 时生效：<code>left</code> 左区 / <code>right</code>(默认) 右区</td></tr>
               <tr><td><code>triggerEvent</code></td><td>Boolean</td><td>是否触发内置事件：<code>query</code> 查询表格，<code>rest</code> 重置表单</td></tr>
-              <tr><td><code>onClick</code></td><td>Function</td><td>点击回调：<code>(model, formRef, parentRefreshFn) => void</code></td></tr>
-              <tr><td><code>click</code></td><td>Function</td><td>同 onClick，兼容旧版 API</td></tr>
+              <tr><td><code>click</code></td><td>Function</td><td>点击回调：<code>(model, formRef, httpRequestInstance) => void</code>。只认 <code>click</code>，写 <code>onClick</code> 不会触发</td></tr>
               <tr><td><code>disabled</code></td><td>Boolean | Function</td><td>是否禁用，支持函数动态判断</td></tr>
               <tr><td><code>loading</code></td><td>Boolean</td><td>是否显示加载状态</td></tr>
               <tr><td><code>size</code></td><td>String</td><td>按钮尺寸</td></tr>
@@ -632,7 +631,7 @@ export default {
   prop: 'rejectReason', label: '驳回原因', span: 12, formtype: 'Input',
   attrs: { type: 'textarea', rows: 3 },
   // 仅当审核状态为"驳回"时显示
-  isHiden: (model) => model.auditStatus !== 'rejected'
+  isHidden: (model) => model.auditStatus !== 'rejected'
 }</code></pre>
         </div>
 
@@ -675,6 +674,7 @@ export default {
       <!-- 4.0 Props -->
       <div class="content-card">
         <h3>4.0 Props 速查表</h3>
+        <p>表格顶部按钮<strong>不是 prop</strong>，写在 <code>options.configBtn</code>（见 4.2）。</p>
         <div class="api-table-wrap">
           <table class="api-table">
             <thead><tr><th>Prop</th><th>类型</th><th>默认值</th><th>说明</th></tr></thead>
@@ -683,7 +683,6 @@ export default {
               <tr><td><code>dataSource</code></td><td>Array</td><td>[]</td><td>表格数据源（支持 <code>.sync</code> 修饰符）</td></tr>
               <tr><td><code>options</code></td><td>Object</td><td>{}</td><td>表格选项配置（核心配置入口）</td></tr>
               <tr><td><code>pagination</code></td><td>Object</td><td>{}</td><td>分页配置：<code>{ current, pageSize, total }</code></td></tr>
-              <tr><td><code>configBtn</code></td><td>Array</td><td>[]</td><td>表格顶部的操作按钮（复用 EsForm 的 configBtn 结构）</td></tr>
               <tr><td><code>showHeaderBar</code></td><td>Boolean</td><td>true</td><td>是否显示表格顶部插槽区域</td></tr>
               <tr><td><code>headBarClass</code></td><td>String | Object</td><td>''</td><td>表格顶部区域的样式类</td></tr>
               <tr>
@@ -880,7 +879,7 @@ export default {
               <tr><td><code>permissionValue</code></td><td>String</td><td>权限值，用于按钮级别的权限控制</td></tr>
               <tr><td><code>isHide</code></td><td>Function | Boolean</td><td>隐藏按钮：<code>() => !hasPermission('delete')</code></td></tr>
               <tr><td><code>direction</code></td><td>String</td><td>按钮位置：<code>left</code>(左侧) 或 <code>right</code>(右侧，默认)</td></tr>
-              <tr><td><code>onClick</code></td><td>Function</td><td>点击回调：<code>(dataSource, refs, refreshFn) => void</code></td></tr>
+              <tr><td><code>click</code></td><td>Function</td><td>点击回调：<code>(table) => void</code>，入参是 EsTable 实例（可调 <code>table.httpRequestInstance()</code> 刷新）。只认 <code>click</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -1021,12 +1020,11 @@ export default {
           /&gt;
         ),
         configBtn: [
-          { name: '取消', type: 'text', onClick: (vm, { close }) => close() },
-          { name: '保存', type: 'primary', onClick: (vm, { close, getRefs }) => {
+          { name: '取消', type: 'text', click: (vm, { close }) => close() },
+          { name: '保存', type: 'primary', click: (vm, { close, getRefs }) => {
             const form = getRefs('editForm')
-            form.validate((valid) => {
-              if (valid) { this.handleSave(); close() }
-            })
+            // EsForm.validate() 返回 Promise：通过 resolve，不通过 reject（不接回调参数）
+            form.validate().then(() => { this.handleSave(); close() }).catch(() => {})
           }}
         ]
       })
@@ -1052,26 +1050,27 @@ export default {
               </tr>
             </thead>
             <tbody>
-              <tr><td><code>key</code></td><td>String</td><td>'__default__'</td><td>弹窗唯一标识。同一 key 的弹窗只会创建一次（第二次调用返回已缓存的实例，可用于防止重复弹窗或恢复已关闭弹窗）</td></tr>
+              <tr><td><code>cacheKey</code></td><td>String</td><td>—</td><td>实例缓存键（<code>useDialog</code> 调用参数，不是 EsDialog 的 prop）。传了才缓存：同一 cacheKey 第二次调用复用已创建实例，不传则每次新建</td></tr>
               <tr><td><code>title</code></td><td>String</td><td>''</td><td>弹窗标题</td></tr>
-              <tr><td><code>width</code></td><td>String</td><td>'50%'</td><td>弹窗宽度</td></tr>
-              <tr><td><code>height</code></td><td>String</td><td>''</td><td>弹窗高度</td></tr>
-              <tr><td><code>maxHeight</code></td><td>String</td><td>''</td><td>弹窗最大高度</td></tr>
+              <tr><td><code>width</code></td><td>String / Number</td><td>'50%'</td><td>弹窗宽度</td></tr>
+              <tr><td><code>maxHeight</code></td><td>String / Number</td><td>undefined</td><td>内容区最大高度（组件没有 <code>height</code>）</td></tr>
               <tr><td><code>fullscreen</code></td><td>Boolean</td><td>false</td><td>是否全屏显示</td></tr>
-              <tr><td><code>center</code></td><td>Boolean</td><td>true</td><td>标题是否居中</td></tr>
-              <tr><td><code>closeOnClickModal</code></td><td>Boolean</td><td>false</td><td>点击遮罩是否关闭</td></tr>
-              <tr><td><code>closeOnPressEscape</code></td><td>Boolean</td><td>false</td><td>按 ESC 是否关闭</td></tr>
+              <tr><td><code>beforeClose</code></td><td>Function</td><td>—</td><td>关闭闸门：存在时 X / 遮罩 / ESC 关闭前先交给 <code>done()</code> 决定</td></tr>
+              <tr><td><code>closeOnClickModal</code></td><td>Boolean</td><td>true</td><td>点击遮罩是否关闭</td></tr>
+              <tr><td><code>closeOnPressEscape</code></td><td>Boolean</td><td>true</td><td>按 ESC 是否关闭</td></tr>
               <tr><td><code>showClose</code></td><td>Boolean</td><td>true</td><td>是否显示右上角关闭按钮</td></tr>
-              <tr><td><code>lockScroll</code></td><td>Boolean</td><td>true</td><td>弹窗打开时是否锁定 body 滚动</td></tr>
-              <tr><td><code>modal</code></td><td>Boolean</td><td>true</td><td>是否显示遮罩层</td></tr>
               <tr><td><code>modalAppendToBody</code></td><td>Boolean</td><td>true</td><td>遮罩是否插入到 body</td></tr>
-              <tr><td><code>appendToBody</code></td><td>Boolean</td><td>true</td><td>弹窗本体是否插入到 body</td></tr>
-              <tr><td><code>destroyOnClose</code></td><td>Boolean</td><td>true</td><td>关闭时销毁 DOM（涉及内存释放，一般保持 true）</td></tr>
-              <tr><td><code>showDefaultButtons</code></td><td>Boolean</td><td>false</td><td>是否显示默认的取消/确认按钮</td></tr>
+              <tr><td><code>appendToBody</code></td><td>Boolean</td><td>false</td><td>弹窗本体是否插入到 body</td></tr>
+              <tr><td><code>appendTo</code></td><td>String / Element</td><td>undefined</td><td>挂载点；Element UI 只支持布尔 <code>append-to-body</code>，传非 body 元素会显式告警</td></tr>
+              <tr><td><code>destroyOnClose</code></td><td>Boolean</td><td>false</td><td>关闭时销毁内容 DOM（缓存实例请保持 false）</td></tr>
+              <tr><td><code>isHiddenFooter</code></td><td>Boolean</td><td>false</td><td>是否隐藏底部按钮区（组件没有 <code>showDefaultButtons</code>）</td></tr>
               <tr><td><code>isDraggable</code></td><td>Boolean</td><td>false</td><td>是否启用拖拽功能</td></tr>
               <tr><td><code>hiddenFullBtn</code></td><td>Boolean</td><td>false</td><td>是否隐藏全屏按钮</td></tr>
               <tr><td><code>loading</code></td><td>Boolean</td><td>false</td><td>是否显示加载状态</td></tr>
               <tr><td><code>render</code></td><td>Function</td><td>—</td><td>弹窗内容渲染函数：<code>(createElement) => VNode</code>。支持 JSX</td></tr>
+              <tr><td><code>renderHeader</code></td><td>Function</td><td>—</td><td>自定义头部渲染函数</td></tr>
+              <tr><td><code>renderFooter</code></td><td>Function</td><td>—</td><td>自定义底部渲染函数</td></tr>
+              <tr><td><code>components</code></td><td>Object</td><td>{}</td><td>render 里可用的组件映射（EsTable / EsForm）</td></tr>
               <tr><td><code>configBtn</code></td><td>Array</td><td>[]</td><td>弹窗底部按钮配置</td></tr>
               <tr><td><code>onOpen</code></td><td>Function</td><td>—</td><td>弹窗打开时的回调</td></tr>
               <tr><td><code>onClosed</code></td><td>Function</td><td>—</td><td>弹窗关闭后的回调</td></tr>
@@ -1082,27 +1081,27 @@ export default {
 
       <div class="content-card">
         <h3>5.3 configBtn 回调参数</h3>
-        <p>useDialog 的 configBtn 中，<code>onClick</code> 回调接收三个参数：</p>
+        <p>useDialog 的 configBtn 中，只有 <code>click</code> 会被调用（没有 <code>onClick</code>），签名是 <code>click(vm, { close, getRefs, dialogInstance })</code>：</p>
         <table class="api-table">
           <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
           <tbody>
             <tr><td><code>vm</code></td><td>VueComponent</td><td>render 函数返回的最外层组件实例（可通过 vm.$refs 访问内部 ref）</td></tr>
             <tr><td><code>{ close }</code></td><td>Object</td><td><code>close()</code> 方法用于关闭弹窗并销毁实例</td></tr>
             <tr><td><code>{ getRefs }</code></td><td>Object</td><td><code>getRefs(refName)</code> 获取内部组件的 ref 实例</td></tr>
-            <tr><td><code>{ dialogVm }</code></td><td>Object</td><td>EsDialog 组件的 Vue 实例</td></tr>
+            <tr><td><code>{ dialogInstance }</code></td><td>Object</td><td>EsDialog 组件的 Vue 实例</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="content-card">
         <h3>5.4 实例缓存机制</h3>
-        <p>useDialog 通过 <code>key</code> 参数支持实例缓存。相同 <code>key</code> 的弹窗只会创建一个 Vue 实例，重复调用会返回已缓存的实例（而不是创建新弹窗）。</p>
+        <p>useDialog 通过 <code>cacheKey</code> 参数支持实例缓存。相同 <code>cacheKey</code> 的弹窗只会创建一个 Vue 实例，重复调用会返回已缓存的实例（而不是创建新弹窗）；不传 <code>cacheKey</code> 则每次都新建，关闭后销毁。</p>
         <div class="tips-box tips-box--success">
           <h4>&#128161; 缓存使用技巧</h4>
           <ul>
-            <li><strong>不同内容弹窗</strong>：使用不同的 <code>key</code>，如 <code>'edit-' + row.id</code></li>
-            <li><strong>防止重复弹窗</strong>：使用固定 <code>key</code>，第二次调用不会创建新窗口</li>
-            <li><strong>相同 key 返回</strong>：<code>{ close, instance }</code>，可以通过 <code>instance.$emit('update:visible', true)</code> 重新显示</li>
+            <li><strong>不同内容弹窗</strong>：使用不同的 <code>cacheKey</code>，如 <code>'edit-' + row.id</code></li>
+            <li><strong>防止重复弹窗</strong>：使用固定 <code>cacheKey</code>，第二次调用不会创建新窗口</li>
+            <li><strong>相同 cacheKey 返回</strong>：<code>{ instance, close, destroy }</code>，可以再次调用 <code>dialog(options)</code> 唤醒缓存实例</li>
           </ul>
         </div>
       </div>
@@ -1147,7 +1146,7 @@ export default {
           <h4>&#128161; 联动原理</h4>
           <ol>
             <li>EsTable 通过 <code>findForm(child.$children)</code> 递归查找子组件树中 <code>$options.name === 'EsForm'</code> 的组件</li>
-            <li>EsForm 按钮设置 <code>triggerEvent: true</code> + <code>key: 'query'</code> 时，调用 <code>$parent.httpRquestInstace(model)</code></li>
+            <li>EsForm 按钮设置 <code>triggerEvent: true</code> + <code>key: 'query'</code> 时，调用 <code>$parent.httpRequestInstance(model)</code></li>
             <li>EsTable 自动将表单的 <code>model</code> 数据合并到 <code>apiParams</code> 请求参数中</li>
           </ol>
         </div>
@@ -1179,9 +1178,9 @@ export default {
           /&gt;
         ),
         configBtn: [
-          { name: '取消', type: 'text', onClick: (vm, { close }) => close() },
+          { name: '取消', type: 'text', click: (vm, { close }) => close() },
           { name: '保存', type: 'primary', loading: this.saving,
-            onClick: async (vm, { close, getRefs }) => {
+            click: async (vm, { close, getRefs }) => {
               const form = getRefs('crudForm')
               const valid = await form.validate().catch(() => false)
               if (valid) {
@@ -1189,7 +1188,7 @@ export default {
                 this.$message.success('保存成功')
                 close()
                 // 刷新表格
-                this.$refs.mainTable.httpRquestInstace()
+                this.$refs.mainTable.httpRequestInstance()
               }
             }
           }
@@ -1280,7 +1279,7 @@ export default {
     return {
       pipeSteps: [
         { name: 'brcb(params)', desc: '请求前参数转换。接收合并后的请求参数，返回最终参数' },
-        { name: 'httpRquestInstace()', desc: '调用 $httpRequest 或 options.httpRequest 发起 HTTP 请求' },
+        { name: 'httpRequestInstance()', desc: '调用 $httpRequest 或 options.httpRequest 发起 HTTP 请求' },
         { name: 'formatConfigout(res)', desc: '按 configTableOut / configFormOut 映射响应字段' },
         { name: 'qrcb(res)', desc: '响应后数据回调。可在渲染前修改数据结构' },
         { name: '更新 dataSource', desc: '表格数据 + 分页信息更新到组件状态，触发重新渲染' }
@@ -1294,7 +1293,7 @@ export default {
       commPatterns: [
         { title: '表单查询 → 表格刷新', desc: '通过 triggerEvent 自动触发，无需手动写查询逻辑', code: 'key: "query", triggerEvent: true' },
         { title: '表格选择 → 弹窗操作', desc: 'handleSelectionChange 记录选中行，传入弹窗', code: '@selection-change="handleSelectionChange"' },
-        { title: '弹窗保存 → 表格刷新', desc: '关闭弹窗后调用表格的 httpRquestInstace() 刷新', code: 'this.$refs.mainTable.httpRquestInstace()' },
+        { title: '弹窗保存 → 表格刷新', desc: '关闭弹窗后调用表格的 httpRequestInstance() 刷新', code: 'this.$refs.mainTable.httpRequestInstance()' },
         { title: '弹窗保存 → 表单刷新', desc: '关闭新增弹窗后刷新查询表单的重置方法', code: 'this.$refs.searchForm.resetFields()' }
       ],
       formTypes: [

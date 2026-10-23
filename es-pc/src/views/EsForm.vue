@@ -196,6 +196,56 @@
       size="small"
       bordered
     />
+
+    <h2>方法</h2>
+    <p>通过 <code>ref</code> 调用，三端同名同义（<code>this.$refs.form.xxx()</code>）。</p>
+    <a-table
+      :dataSource="formMethods"
+      :columns="methodColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>FormItemOption 配置</h2>
+    <p>
+      <code>formItemList</code> 的每一项。字段名与语义三端一致；本端（Ant Design Vue）的
+      <code>attrs</code> / <code>props</code> 会合并后透传给底层控件。
+    </p>
+    <a-table
+      :dataSource="formItemOptions"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>LayoutFormProps 配置</h2>
+    <p>
+      推荐写 <code>formLayProps</code>；<code>fromLayProps</code> 是旧拼写，仅作兼容保留，
+      新代码请勿使用。
+    </p>
+    <a-table
+      :dataSource="layoutFormProps"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>BtnConfig 配置</h2>
+    <p>
+      按钮的点击回调只有键名 <code>click</code>（没有 <code>onClick</code>）；
+      <code>key</code> 为 <code>query</code> / <code>rest</code> 且 <code>triggerEvent</code>
+      为 <code>true</code> 时，组件内部自动触发表格查询或重置。
+    </p>
+    <a-table
+      :dataSource="formBtns"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
   </div>
 </template>
 
@@ -229,12 +279,91 @@ const propColumns = [
   { title: '说明', dataIndex: 'desc', key: 'desc' },
 ]
 
+const methodColumns = [
+  { title: '方法', dataIndex: 'prop', key: 'prop', width: 200 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+  { title: '参数', dataIndex: 'params', key: 'params', width: 160 },
+]
+
 const formProps = [
   { key: '1', prop: 'model', type: 'object', default: '{}', desc: '表单数据模型' },
-  { key: '2', prop: 'form-item-list', type: 'FormItemOption[]', default: '[]', desc: '表单项配置数组' },
-  { key: '3', prop: 'config-btn', type: 'BtnConfig[]', default: '[]', desc: '操作按钮配置' },
-  { key: '4', prop: 'layout-form-props', type: 'LayoutFormProps', default: '{}', desc: '表单布局配置' },
+  { key: '2', prop: 'formItemList', type: 'FormItemOption[]', default: '[]', desc: '表单项配置数组' },
+  { key: '3', prop: 'configBtn', type: 'BtnConfig[]', default: '[]', desc: '操作按钮配置' },
+  { key: '4', prop: 'layoutFormProps', type: 'LayoutFormProps', default: '{}', desc: '表单布局配置' },
   { key: '5', prop: 'rules', type: 'object', default: '{}', desc: '验证规则' },
+  { key: '6', prop: 'renderBtn', type: 'Function | boolean', default: 'false', desc: '自定义按钮区渲染函数 (row, model, formItemList, h) => VNode' },
+  { key: '7', prop: 'btnColSpanRow', type: 'boolean', default: 'true', desc: 'true = 按钮独占一行；false = 接在最后一个字段后' },
+  { key: '8', prop: 'fieldFieldOutput', type: 'Function', default: '-', desc: '字段级 apiParams 的请求字段映射钩子 (defaults) => defaults' },
+]
+
+const formMethods = [
+  { key: '1', prop: 'validate', params: '()', desc: '校验整个表单，返回 Promise<boolean>（不通过时 reject，需 catch）' },
+  { key: '2', prop: 'validateField', params: '(props)', desc: '校验指定字段' },
+  { key: '3', prop: 'resetFields', params: '()', desc: '重置表单（恢复初始值并清除校验）' },
+  { key: '4', prop: 'clearValidate', params: '(props?)', desc: '只清除验证状态，不改数据' },
+  { key: '5', prop: 'scrollToField', params: '(prop)', desc: '滚动到指定字段' },
+  { key: '6', prop: 'getFormRef', params: '()', desc: '取底层 a-form 实例' },
+  { key: '7', prop: 'formItmeRequestInstance', params: '(propsList)', desc: '手动触发字段级数据请求（源码即此拼写，非笔误可改）' },
+]
+
+const formItemOptions = [
+  { key: '1', prop: 'prop', type: 'string', default: '-', desc: '字段名（必填，支持 user.name 这类嵌套路径）' },
+  { key: '2', prop: 'label', type: 'string', default: '-', desc: '标签文本' },
+  { key: '3', prop: 'labelKey', type: 'string', default: '-', desc: '国际化 key，配置了全局 t 函数时优先于 label' },
+  { key: '4', prop: 'formtype', type: 'string', default: '-', desc: '控件类型：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload' },
+  { key: '5', prop: 'span', type: 'number', default: '6', desc: '栅格占位（1-24）' },
+  { key: '6', prop: 'placeholder', type: 'string', default: '-', desc: '占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）' },
+  { key: '7', prop: 'clearable', type: 'boolean', default: '-', desc: '可清除快捷方式，自动注入 attrs.clearable（attrs 同名优先）' },
+  { key: '8', prop: 'disabled', type: 'boolean', default: '-', desc: '禁用快捷方式，自动注入 attrs.disabled / props.disabled（attrs 同名优先）' },
+  { key: '9', prop: 'attrs', type: 'object', default: '-', desc: '透传给控件的属性袋；与 props 合并后交给底层组件' },
+  { key: '10', prop: 'props', type: 'object', default: '-', desc: '透传给控件的组件 props 袋（与 attrs 合并）' },
+  { key: '11', prop: 'on', type: 'object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
+  { key: '12', prop: 'dataOptions', type: 'Array<{ label, value }>', default: '-', desc: '静态选项（Select / Radio / Checkbox / Cascader）' },
+  { key: '13', prop: 'isHidden', type: 'Function | 声明式条件', default: '-', desc: '返回 true 表示隐藏该字段；(model, item, formProps) => boolean，也可写 JSON 条件' },
+  { key: '14', prop: 'reactions', type: 'FieldReaction[]', default: '-', desc: '声明式字段联动（纯 JSON）：选项 / 必填 / 禁用 / 值由其他字段决定' },
+  { key: '15', prop: 'render', type: 'Function', default: '-', desc: '自定义渲染 (h, model, { row, index }) => VNode' },
+  { key: '16', prop: 'apiParams', type: 'ApiParams', default: '-', desc: '远程选项配置 { url, method, model, headers }' },
+  { key: '17', prop: 'httpRequest', type: 'Function', default: '-', desc: '自定义请求方法，覆盖全局配置' },
+  { key: '18', prop: 'isInitRun', type: 'boolean', default: 'true', desc: '初始化时是否自动加载接口数据' },
+  { key: '19', prop: 'callOptionListFormat', type: 'Function', default: '-', desc: '(data) => [{ label, value }]，转换接口响应' },
+  { key: '20', prop: 'listenToCallBack', type: 'Object', default: '-', desc: '请求/响应回调管线 { beforeRequest, afterResponse, responseTransform }' },
+  { key: '21', prop: 'required', type: 'boolean', default: '-', desc: '是否必填（与 rules 二选一；formItemOptions.required 优先）' },
+  { key: '22', prop: 'rules', type: 'Array', default: '-', desc: '字段校验规则，与表单级 rules 叠加（formItemOptions.rules 优先）' },
+  { key: '23', prop: 'formItemOptions', type: 'object', default: '-', desc: '直接透传给 a-form-item 的低层逃生舱，其中 required / rules 优先于上面的快捷字段' },
+  { key: '24', prop: 'width', type: 'number | string', default: '-', desc: '字段宽度（表格场景下列宽）' },
+  { key: '25', prop: 'permissionValue', type: 'string', default: '-', desc: '字段级权限编码：无权限时整个表单项不渲染（未配置全局 permission 时放行）' },
+]
+
+const layoutFormProps = [
+  { key: '1', prop: 'rowLayProps', type: 'object', default: '-', desc: '透传给 a-row 的属性，如 { gutter: 16 }' },
+  { key: '2', prop: 'formLayProps', type: 'object', default: '-', desc: '表单本体配置（推荐写法）' },
+  { key: '3', prop: 'formLayProps.labelWidth', type: 'string | number', default: '-', desc: '标签宽度' },
+  { key: '4', prop: 'formLayProps.size', type: 'string', default: '-', desc: '控件尺寸：large / middle / small' },
+  { key: '5', prop: 'formLayProps.minFoldRows', type: 'number', default: '0', desc: '超过多少行折叠（0 = 不折叠）' },
+  { key: '6', prop: 'formLayProps.isBtnHidden', type: 'boolean', default: 'false', desc: '隐藏内置按钮区' },
+  { key: '7', prop: 'formLayProps.btnColSpan', type: 'number', default: '-', desc: '按钮所在列的 span' },
+  { key: '8', prop: 'formLayProps.labelBtnWidth', type: 'string | number', default: '-', desc: '按钮区标签宽度' },
+  { key: '9', prop: 'fromLayProps', type: 'object', default: '-', desc: '旧拼写（同 formLayProps 的键），仅为兼容保留，新代码请改用 formLayProps' },
+  { key: '10', prop: 'setOptions', type: 'boolean', default: '-', desc: '是否启用设置下拉' },
+]
+
+const formBtns = [
+  { key: '1', prop: 'name', type: 'string', default: '-', desc: '按钮文本' },
+  { key: '2', prop: 'key', type: 'string', default: '-', desc: '按钮唯一标识；query / rest 配合 triggerEvent 触发联动' },
+  { key: '3', prop: 'type', type: 'string', default: 'default', desc: '按钮类型：primary / default / dashed / text / link / danger' },
+  { key: '4', prop: 'size', type: 'string', default: '-', desc: '按钮尺寸：large / middle / small' },
+  { key: '5', prop: 'icon', type: 'string', default: '-', desc: '图标名称' },
+  { key: '6', prop: 'position', type: 'string', default: 'left', desc: '按钮位置：left / right' },
+  { key: '7', prop: 'code', type: '1 | 2', default: '-', desc: '位置旧写法：2 视为 right，其余视为 left（position 优先）' },
+  { key: '8', prop: 'direction', type: 'string', default: '-', desc: '按钮区方向：left / right' },
+  { key: '9', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态' },
+  { key: '10', prop: 'disabled', type: 'boolean | Function', default: 'false', desc: '禁用状态，支持函数动态判断' },
+  { key: '11', prop: 'permissionValue', type: 'string', default: '-', desc: '按钮级权限编码' },
+  { key: '12', prop: 'triggerEvent', type: 'boolean', default: 'false', desc: 'true 时由组件内部自动触发表格查询 / 表单重置（仅 key 为 query / rest 生效）' },
+  { key: '13', prop: 'click', type: 'Function', default: '-', desc: '(model, formRef, httpRequestInstance) => void；只有 click 这一个键名' },
+  { key: '14', prop: 'dialogKey', type: 'string', default: '-', desc: '在 EsCrudPage 中绑定要打开的弹窗' },
+  { key: '15', prop: 'actionType', type: 'string', default: '-', desc: '在 EsCrudPage 中声明内置动作' },
+  { key: '16', prop: 'confirm', type: 'string | boolean', default: '-', desc: '点击前的二次确认文案（true 用默认文案）' },
 ]
 </script>
 

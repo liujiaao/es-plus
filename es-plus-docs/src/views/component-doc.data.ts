@@ -10,7 +10,7 @@ const rawSFCs = import.meta.glob('@/components/examples/**/*.vue', {
 
 // 惰性加载器：仅当示例真正渲染时才编译/加载对应 SFC。
 // 之前用 { eager: true } 会在首次进入任意 /advanced/* 或 /components/* 文档页时
-// 一次性编译全部 96 个示例（含重型 vxe/JSX），造成路由切换特别慢。
+// 一次性编译全部示例（含重型 vxe/JSX），造成路由切换特别慢。
 const componentLoaders = import.meta.glob(
   '@/components/examples/**/*.vue'
 ) as Record<string, () => Promise<{ default: any }>>
@@ -64,9 +64,10 @@ export const docsData: Record<string, any> = {
       { name: '自适应', desc: '支持响应式布局，自动折叠展开', icon: 'Monitor' }
     ],
     examples: [
-      { key: 'basic', title: '基础配置表单', description: '通过 formItemList JSON 配置生成完整表单，涵盖所有原生表单类型。', component: getComponent('form/01-basic'), code: code('form/01-basic') },
+      { key: 'basic', title: '最简表单', description: '三个字段、零事件代码：formItemList 声明字段即得完整表单。', component: getComponent('form/01-basic'), code: code('form/01-basic') },
+      { key: 'all-formtypes', title: '14 种表单控件一览', description: 'Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload —— 全部来自 formItemList，没有一行手写控件。', component: getComponent('form/19-all-formtypes'), code: code('form/19-all-formtypes') },
       { key: 'layout', title: '布局与折叠', description: '24 栅格布局 + 自动折叠展开，支持响应式自适应。', component: getComponent('form/02-layout'), code: code('form/02-layout') },
-      { key: 'conditional', title: '条件联动表单', description: '模型驱动字段显隐，isHiden + on.change 实现字段间联动。', component: getComponent('form/03-conditional'), code: code('form/03-conditional') },
+      { key: 'conditional', title: '条件联动表单', description: '模型驱动字段显隐，isHidden + on.change 实现字段间联动。', component: getComponent('form/03-conditional'), code: code('form/03-conditional') },
       { key: 'dynamic', title: '动态增减表单', description: '运行时动态增删表单项，支持数组类型表单与动态验证。', component: getComponent('form/04-dynamic'), code: code('form/04-dynamic') },
       { key: 'validation', title: '表单验证', description: '集成 Element Plus 验证体系，支持 rules、pattern、自定义 validator。', component: getComponent('form/05-validation'), code: code('form/05-validation') },
       { key: 'async-options', title: '异步数据表单', description: 'apiParams 自动加载下拉选项 + on.change 驱动级联联动。', component: getComponent('form/06-async-options'), code: code('form/06-async-options') },
@@ -97,7 +98,7 @@ export const docsData: Record<string, any> = {
       'FormItemOption': [
         { name: 'prop', type: 'string', default: '-', desc: '字段名（必填）' },
         { name: 'label', type: 'string', default: '-', desc: '标签文本（必填）' },
-        { name: 'formtype', type: 'string', default: '-', desc: '输入类型：Input/Select/datePicker/timePicker/Slider/ColorPicker/Transfer/Cascader/Radio/Checkbox/Switch/Rate/Upload' },
+        { name: 'formtype', type: 'string', default: '-', desc: '控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容' },
         { name: 'span', type: 'number', default: '6', desc: '栅格占位（24 列布局）' },
         { name: 'attrs', type: 'Object', default: '-', desc: '透传给 Element Plus 组件的属性（placeholder、clearable 等）' },
         { name: 'on', type: 'Object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
@@ -113,13 +114,16 @@ export const docsData: Record<string, any> = {
         { name: 'width', type: 'number | string', default: '-', desc: '字段宽度' }
       ],
       'LayoutFormProps': [
-        { name: 'fromLayProps', type: 'Object', default: '-', desc: '表单级别属性' },
-        { name: 'fromLayProps.labelWidth', type: 'string', default: '-', desc: '标签宽度，如 "100px"' },
-        { name: 'fromLayProps.minFoldRows', type: 'number', default: '-', desc: '折叠时显示的行数，0 不折叠' },
-        { name: 'fromLayProps.isBtnHidden', type: 'boolean', default: '-', desc: '是否隐藏按钮区域' },
-        { name: 'fromLayProps.btnColSpan', type: 'number', default: '-', desc: '按钮列占位宽度' },
-        { name: 'rowLayProps', type: 'Object', default: '-', desc: '行级别属性' },
-        { name: 'rowLayProps.gutter', type: 'number', default: '-', desc: '栅格间距' },
+        { name: 'rowLayProps', type: 'Object', default: '-', desc: '行级别属性（透传给 el-row）' },
+        { name: 'rowLayProps.gutter', type: 'number', default: '20', desc: '栅格间距' },
+        { name: 'formLayProps', type: 'Object', default: '-', desc: '表单本体配置（推荐写法）' },
+        { name: 'formLayProps.labelWidth', type: 'string | number', default: '-', desc: '标签宽度，如 "100px"' },
+        { name: 'formLayProps.size', type: 'string', default: '-', desc: '控件尺寸：large / default / small' },
+        { name: 'formLayProps.minFoldRows', type: 'number', default: '0', desc: '折叠时显示的行数，0 不折叠' },
+        { name: 'formLayProps.isBtnHidden', type: 'boolean', default: 'false', desc: '是否隐藏内置按钮区域' },
+        { name: 'formLayProps.btnColSpan', type: 'number', default: '-', desc: '按钮所在列的 span' },
+        { name: 'formLayProps.labelBtnWidth', type: 'string | number', default: '-', desc: '按钮区标签宽度' },
+        { name: 'fromLayProps', type: 'Object', default: '-', desc: '旧拼写（键同 formLayProps），仅为兼容保留，新代码请改用 formLayProps' },
         { name: 'setOptions', type: 'boolean', default: '-', desc: '是否启用设置下拉' }
       ],
       'BtnConfig': [
@@ -132,10 +136,9 @@ export const docsData: Record<string, any> = {
         { name: 'click', type: 'Function', default: '-', desc: '(model, formRef, httpRequestInstance) => void' },
         { name: 'triggerEvent', type: 'boolean', default: '-', desc: 'true 时自动触发表格查询/表单重置' }
       ],
-      events: [
-        { name: 'confirm', params: '(formRef, model)', desc: '点击确认按钮时触发' },
-        { name: 'reset', params: '(formRef, model)', desc: '点击重置按钮时触发' }
-      ],
+      // EsForm 不向外派发 confirm / reset：查询与重置由按钮的 triggerEvent 在组件内部完成
+      // （见 es-form.vue 顶部注释）。此前这里列了两条不存在的事件，宿主照着写只会得到静默 no-op。
+      events: [],
       methods: [
         { name: 'validate', params: '-', desc: '校验整个表单，返回 Promise<boolean>' },
         { name: 'resetFields', params: '-', desc: '重置所有字段' },
@@ -169,7 +172,7 @@ export const docsData: Record<string, any> = {
       { key: 'remote-data', title: '远程数据表格', description: 'actionUrl + httpRequest + configTableOut 完整远程数据请求与分页。', component: getComponent('table/10-remote-data'), code: code('table/10-remote-data') },
       { key: 'expand', title: '展开行与树形', description: 'type:expand 展开行 + children 树形数据两种层级展示模式。', component: getComponent('table/11-expand'), code: code('table/11-expand') },
       { key: 'cell-merge', title: '单元格合并与行样式', description: 'spanMethod 合并单元格 + rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
-      { key: 'query-table', title: '配置化查询表格', description: 'entryQuery 自动合并搜索参数 + httpRequestInstance 手动刷新，零手动联动代码。', component: getComponent('table/13-query-table'), code: code('table/13-query-table') },
+      { key: 'query-table', title: '配置化查询表格', description: '查询区也是配置：es-form 嵌套进 es-table，按钮 key=query/rest + triggerEvent 自动联动，整页没有 handleSearch / handleReset。', component: getComponent('table/13-query-table'), code: code('table/13-query-table') },
       { key: 'row-actions', title: '行操作按钮与动态显隐', description: 'btns 配置化行操作按钮 + configBtn 的 isHide/disabled 函数式控制。', component: getComponent('table/14-row-actions'), code: code('table/14-row-actions') },
       { key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
       { key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
@@ -201,10 +204,14 @@ export const docsData: Record<string, any> = {
         { name: 'render', type: 'Function', default: '-', desc: '(h, { row, value, index }) => VNode' },
         { name: 'scopedSlots', type: 'Object', default: '-', desc: '{ customRender: string } 插槽配置（虚拟模式兼容）' },
         { name: 'groups', type: 'TableColumn[]', default: '-', desc: '多级表头子列（虚拟模式扁平化渲染）' },
+        { name: 'expandConfig', type: 'Object', default: '-', desc: '展开行内容 { title?, fields }，仅 type: "expand" 列消费' },
         { name: 'hidCol', type: 'boolean', default: '-', desc: '是否隐藏该列' },
+        { name: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
         { name: 'btns', type: 'Array', default: '-', desc: '行操作按钮 [{ name, type?, clickEvent? }]' },
         { name: 'type', type: 'string', default: '-', desc: '特殊列类型：selection/expand/index' },
-        { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' }
+        { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' },
+        { name: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
+        { name: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' }
       ],
       'TableOptions': [
         { name: 'border', type: 'boolean', default: 'false', desc: '是否显示边框' },
@@ -230,26 +237,73 @@ export const docsData: Record<string, any> = {
         { name: 'apiParams', type: 'ApiParams', default: '-', desc: 'API 请求配置 { url, method, model, headers }' },
         { name: 'configTableOut', type: 'Object', default: '-', desc: '响应字段映射 { total, tableData, pageSize, current }' },
         { name: 'listenToCallBack', type: 'Object', default: '-', desc: '请求/响应回调管线 { brcb, qrcb }' },
-        { name: 'entryQuery', type: 'Object', default: '-', desc: '默认查询参数' },
+        { name: 'entryQuery', type: 'Object', default: '-', desc: '固定并入每次请求体的默认参数（与分页参数、apiParams.model 合并）' },
         { name: 'actionUrl', type: 'string', default: '-', desc: '请求地址（简写）' },
         { name: 'isInitRun', type: 'boolean', default: '-', desc: '初始化时是否自动请求数据' },
-        { name: 'configBtn', type: 'Array', default: '-', desc: '顶部操作按钮配置' },
-        { name: 'leftText', type: 'string', default: '-', desc: '顶部左侧文本' }
+        { name: 'configBtn', type: 'Array', default: '-', desc: '顶部操作按钮配置（TableOptions 的键，不是组件 prop）' },
+        { name: 'leftText', type: 'string', default: '-', desc: '顶部左侧文本' },
+        { name: 'headerCellStyle', type: 'Object', default: '-', desc: '表头单元格样式' },
+        { name: 'headerCellClassName', type: 'string | Function', default: '-', desc: '表头单元格类名' },
+        { name: 'showHeader', type: 'boolean', default: 'true', desc: '是否显示表头' },
+        { name: 'emptyText', type: 'string', default: '-', desc: '空数据时的占位文本' },
+        { name: 'rowStyle', type: 'Object | Function', default: '-', desc: '行内样式，支持 ({ row, rowIndex }) => object' },
+        { name: 'defaultSort', type: 'Object', default: '-', desc: '默认排序 { prop, order: "ascending" | "descending" }' },
+        { name: 'spanMethod', type: 'Function', default: '-', desc: '合并单元格 ({ row, column, rowIndex, columnIndex }) => [rowspan, colspan]' },
+        { name: 'cellClassName', type: 'string | Function', default: '-', desc: '单元格类名' },
+        { name: 'cellStyle', type: 'Object | Function', default: '-', desc: '单元格样式' },
+        { name: 'refetchKeepPage', type: 'boolean', default: 'false', desc: '请求式刷新时保留当前页码' },
+        { name: 'localPagination', type: 'boolean', default: 'false', desc: '本地分页（对已加载数据切片，不发请求）' },
+        { name: 'vxeConfig', type: 'Object', default: '-', desc: 'vxe 引擎：整体透传给 vxe-grid 的配置' },
+        { name: 'vxeOn', type: 'Object', default: '-', desc: 'vxe 引擎：透传给 vxe-grid 的事件监听' },
+        { name: 'showFooter', type: 'boolean', default: 'false', desc: 'vxe：显示表尾' },
+        { name: 'footerMethod', type: 'Function', default: '-', desc: 'vxe：表尾计算 ({ columns, data }) => 二维数组' },
+        { name: 'footerData', type: 'Array', default: '-', desc: 'vxe：静态表尾数据（二维数组）' },
+        { name: 'editConfig', type: 'Object', default: '-', desc: 'vxe：行内编辑配置' },
+        { name: 'keepSource', type: 'boolean', default: '-', desc: 'vxe：保留原始行数据（配合 revertData）' },
+        { name: 'treeConfig', type: 'Object', default: '-', desc: 'vxe：树形表格配置' },
+        { name: 'proxyConfig', type: 'Object', default: '-', desc: 'vxe：数据代理配置' },
+        { name: 'expandConfig', type: 'Object', default: '-', desc: 'vxe：展开行为配置（与列上的 expandConfig「展开内容」不是同一概念）' },
+        { name: 'seqConfig', type: 'Object', default: '-', desc: 'vxe：序号列配置' },
+        { name: 'printConfig', type: 'Object | boolean', default: '-', desc: 'vxe：打印配置' },
+        { name: 'exportConfig', type: 'Object | boolean', default: '-', desc: 'vxe：导出配置' },
+        { name: 'toolbarConfig', type: 'Object | boolean', default: '-', desc: 'vxe：工具栏配置' },
+        { name: 'columnConfig', type: 'Object', default: '-', desc: 'vxe：列配置面板' },
+        { name: 'keyboardConfig', type: 'Object', default: '-', desc: 'vxe：键盘导航配置' },
+        { name: 'mouseConfig', type: 'Object', default: '-', desc: 'vxe：鼠标行为配置' },
+        { name: 'clipboardConfig', type: 'Object', default: '-', desc: 'vxe：剪贴板配置' },
+        { name: 'validConfig', type: 'Object', default: '-', desc: 'vxe：校验提示配置' }
       ],
       events: [
-        { name: 'update:dataSource', params: '(data)', desc: '数据更新（v-model 自动触发）' },
+        { name: 'update:dataSource', params: '(data)', desc: '数据更新（v-model:data-source 自动触发）' },
         { name: 'update:pagination', params: '(pagination)', desc: '分页更新（v-model:pagination 自动触发）' },
         { name: 'pagination-current-change', params: '(pagination)', desc: '页码变化时触发' },
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
-        { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' }
+        { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' },
+        { name: 'request-error', params: '(error)', desc: '自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null' }
       ],
       methods: [
-        { name: 'httpRequestInstance', params: '(model?)', desc: '手动触发表格数据请求' },
+        { name: 'httpRequestInstance', params: '(model?, { keepPage }?)', desc: '手动取数。默认回到第 1 页（搜索语义），keepPage: true 保留当前页' },
+        { name: 'refresh', params: '(model?)', desc: '刷新当前页：保留页码重新取数并重排；本地/静态数据只重排' },
+        { name: 'reload', params: '(model?)', desc: '回到第 1 页重新取数（等价于一次新查询）' },
+        { name: 'doLayout', params: '-', desc: '仅重排列宽/布局，不重新取数（旧 refresh 行为的逃生舱）' },
+        { name: 'requestError', params: 'Ref<unknown>', desc: '最近一次自动加载的错误；成功后复位为 null' },
         { name: 'getSelectionRows', params: '-', desc: '获取选中行（含跨页缓存）。注：跨页选择不通过事件暴露，需通过此方法或 ref 主动读取' },
         { name: 'clearSelection', params: '-', desc: '清除当前页选择' },
         { name: 'clearAllSelection', params: '-', desc: '清除所有页面选择（含跨页缓存）' },
-        { name: 'refresh', params: '-', desc: '强制重新计算表格布局' },
-        { name: 'scrollToRow', params: '(rowIndex)', desc: '滚动到指定行（virtual 模式 / vxe 引擎均支持；el-table 引擎无此接口）' }
+        { name: 'toggleRowSelection', params: '(row, selected?)', desc: '命令式勾选单行；省略 selected 时切换。el-table / virtual / vxe 三引擎同签名' },
+        { name: 'scrollToRow', params: '(rowIndex)', desc: '滚动到指定行（virtual 模式 / vxe 引擎均支持；el-table 引擎无此接口）' },
+        { name: 'getUpdateRecords', params: '-', desc: 'vxe 行内编辑：已修改的行（engine: "vxe" 时有效）' },
+        { name: 'getInsertRecords', params: '-', desc: 'vxe 行内编辑：新增的行' },
+        { name: 'getRemoveRecords', params: '-', desc: 'vxe 行内编辑：已删除的行' },
+        { name: 'revertData', params: '(rows?)', desc: 'vxe 行内编辑：还原未保存的改动' },
+        { name: 'clearActived', params: '-', desc: 'vxe 行内编辑：清除当前激活（编辑中）单元格' },
+        { name: 'clearValidate', params: '-', desc: 'vxe 行内编辑：清除校验状态' },
+        { name: 'validate', params: '(rows?)', desc: 'vxe 行内编辑：校验表格（可指定行），返回 Promise' },
+        { name: 'vxeInstance', params: '-', desc: 'vxe 原始实例，访问 vxe-table 全部方法/事件（engine: "vxe" 时有效）' }
+      ],
+      slots: [
+        { name: 'default', params: '-', desc: '表格上方自定义区域（headerBar）。最常用的是把 <es-form> 嵌进来做查询区——配合按钮 triggerEvent 即可自动联动' },
+        { name: '<你的插槽名>', params: '{ row, column, $index }', desc: '列作用域插槽：列配置写 scopedSlots: { customRender: "你的插槽名" } 即可接到它；也可改用列上的 render 函数' }
       ]
     }
   },
@@ -287,19 +341,31 @@ export const docsData: Record<string, any> = {
         { name: 'tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项配置（同 EsTable options）' },
         { name: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置' },
         { name: 'toolbarBtns', type: 'CrudBtnConfig[]', default: '-', desc: '工具栏按钮（见 CrudBtnConfig 表）' },
+        { name: 'tableBtns', type: 'TableBtnConfig[]', default: '-', desc: '表格工具栏按钮（渲染在 EsTable 上方；position: left/right）。键与 CrudBtnConfig 相同（另含已废弃的 code），只有 EsCrudPage 消费该字段，写进 EsTable 的 options 不会生效' },
         { name: 'operationColumn', type: 'OperationColumnConfig | false', default: '-', desc: '操作列配置，false 隐藏操作列（见 OperationColumnConfig 表）' },
         { name: 'dialogs', type: 'Record<string, CrudDialogConfig>', default: '-', desc: '多弹窗配置，key 为弹窗标识（见 CrudDialogConfig 表）' },
-        { name: 'actions (deprecated)', type: 'CrudAction[]', default: '-', desc: '旧版快捷动作，建议改用 toolbarBtns + operationColumn' }
+        { name: 'actions (deprecated)', type: 'CrudAction[]', default: '-', desc: '旧版快捷动作，建议改用 toolbarBtns + operationColumn' },
+        { name: 'dialogFormItems (deprecated)', type: 'FormItemOption[]', default: '-', desc: '旧版单弹窗表单，建议改用 dialogs' },
+        { name: 'dialogOptions (deprecated)', type: 'DialogOptions', default: '-', desc: '旧版单弹窗配置，建议改用 dialogs' },
+        { name: 'queryBtns (deprecated)', type: 'BtnConfig[]', default: '-', desc: '旧版查询按钮，建议改用 toolbarBtns' }
       ],
       'CrudBtnConfig': [
-        { name: 'name', type: 'string', default: '-', desc: '按钮文本' },
+        { name: 'name', type: 'string', default: '必填', desc: '按钮文本' },
+        { name: 'key', type: 'string', default: '-', desc: '按钮唯一标识；query / add / export 有内建语义，其余经 btn-click 派发' },
         { name: 'type', type: 'string', default: '-', desc: '按钮类型：primary/success/warning/danger' },
+        { name: 'size', type: 'string', default: '-', desc: '按钮尺寸；tableBtns 缺省为 small' },
         { name: 'icon', type: 'string', default: '-', desc: '图标名称（Element Plus Icons）' },
-        { name: 'key', type: 'string', default: '-', desc: '按钮唯一标识' },
+        { name: 'position', type: 'string', default: 'left', desc: '左右位置：left / right（tableBtns 用它分组；toolbarBtns 由 EsForm 按钮区布局决定）' },
+        { name: 'code', type: '1 | 2', default: '-', desc: '位置旧写法：2 视为 right，其余视为 left（position 优先）' },
+        { name: 'direction', type: 'string', default: '-', desc: '按钮排列方向：left / right（弹窗与表格的按钮底座读取；toolbarBtns 不读取）' },
+        { name: 'loading', type: 'boolean', default: 'false', desc: '加载态（禁用点击并显示 loading）' },
+        { name: 'disabled', type: 'boolean | Function', default: 'false', desc: '禁用状态，支持函数动态判断' },
+        { name: 'permissionValue', type: 'string', default: '-', desc: '权限标识，配合全局 permission 函数控制显隐' },
+        { name: 'triggerEvent', type: 'boolean', default: 'false', desc: '仅 toolbarBtns：key 为 query / rest 时点击触发一次表格刷新' },
+        { name: 'click', type: 'Function', default: '-', desc: '(model, formRef?) => void；tableBtns 中的 click 会被 CRUD 页接管（改走 dialogKey / actionType）' },
         { name: 'dialogKey', type: 'string', default: '-', desc: '点击时打开的弹窗 key（自动绑定 dialogs 中的配置）' },
         { name: 'actionType', type: 'string', default: '-', desc: '语义动作类型（用于 btn-click 事件 emit）' },
-        { name: 'confirm', type: 'string | boolean', default: '-', desc: '点击前确认提示文字' },
-        { name: 'permissionValue', type: 'string', default: '-', desc: '权限标识，配合全局 permission 函数控制显隐' }
+        { name: 'confirm', type: 'string | boolean', default: '-', desc: '点击前确认提示文字' }
       ],
       'OperationColumnConfig': [
         { name: 'label', type: 'string', default: '操作', desc: '列标题' },
@@ -322,13 +388,22 @@ export const docsData: Record<string, any> = {
         { name: 'title', type: 'string | Function', default: '-', desc: '弹窗标题，支持 (row) => string 动态标题' },
         { name: 'width', type: 'string | number', default: '600px', desc: '弹窗宽度' },
         { name: 'formItems', type: 'FormItemOption[]', default: '-', desc: '表单字段（简单场景）' },
-        { name: 'formLayout', type: '{ labelWidth, minFoldRows }', default: '-', desc: '表单布局（列宽由字段级 querySpan/formSpan 决定）' },
+        { name: 'formLayout', type: '{ labelWidth }', default: '-', desc: '弹窗表单布局（只认 labelWidth；列宽由字段级 span 决定）' },
         { name: 'render', type: 'Function', default: '-', desc: '自定义渲染 (h, { row, model, close, refresh }) => VNode' },
         { name: 'configBtn', type: 'DialogBtnConfig[]', default: '-', desc: '底部按钮配置，action: confirm/cancel/custom' },
         { name: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '隐藏底部按钮区域' },
         { name: 'isDraggable', type: 'boolean', default: 'false', desc: '可拖拽' },
         { name: 'fullscreen', type: 'boolean', default: 'false', desc: '全屏' },
         { name: 'maxHeight', type: 'string | number', default: '-', desc: '最大高度' },
+        { name: 'showClose', type: 'boolean', default: 'true', desc: '显示关闭入口（自绘的与原生的一起隐藏）' },
+        { name: 'destroyOnClose', type: 'boolean', default: '-', desc: '关闭时销毁内容（每次打开重置内部状态）' },
+        { name: 'modal', type: 'boolean', default: 'true', desc: '是否需要遮罩层' },
+        { name: 'closeOnClickModal', type: 'boolean', default: 'true', desc: '点击遮罩层是否关闭' },
+        { name: 'closeOnPressEscape', type: 'boolean', default: 'true', desc: '按下 ESC 是否关闭' },
+        { name: 'hiddenFullBtn', type: 'boolean', default: 'false', desc: '隐藏全屏按钮' },
+        { name: 'appendTo', type: 'string', default: '-', desc: '挂载点（CSS 选择器；DOM 元素无法经 JSON 传递）' },
+        { name: 'cacheKey', type: 'string', default: '-', desc: '实例缓存键：同键跨多次调用复用同一弹窗实例（保留内部状态）' },
+        { name: 'hasCustomRender', type: 'boolean', default: '-', desc: 'AI 生成器注解键：生成器据此转成 TODO 占位。运行时白名单刻意不转发，不是弹窗 prop' },
         { name: 'onOpen', type: 'Function', default: '-', desc: '弹窗打开时回调 (row?) => void' },
         { name: 'onConfirm', type: 'Function', default: '-', desc: '确认回调 (data, { close, refresh, getRefs, row }) => void' },
         { name: 'onClose', type: 'Function', default: '-', desc: '弹窗关闭时回调' }

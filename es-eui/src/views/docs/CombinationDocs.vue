@@ -56,7 +56,7 @@
         <tr>
           <td>查询列表页</td>
           <td>EsForm + EsTable</td>
-          <td>使用 options.apiParams 配置接口，手动查询时调用 httpRquestInstace()</td>
+          <td>使用 options.apiParams 配置接口，手动查询时调用 httpRequestInstance()</td>
         </tr>
         <tr>
           <td>新增/编辑弹窗</td>
@@ -103,18 +103,18 @@
       <tbody>
         <tr>
           <td>EsTable</td>
-          <td>httpRquestInstace()</td>
+          <td>httpRequestInstance()</td>
           <td>手动触发表格数据刷新</td>
         </tr>
         <tr>
           <td>EsTable</td>
-          <td>getSelectedRow()</td>
-          <td>获取当前选中行</td>
+          <td>getSelectionRows()</td>
+          <td>获取当前选中的行（数组）</td>
         </tr>
         <tr>
           <td>EsForm</td>
-          <td>validate(callback)</td>
-          <td>表单验证</td>
+          <td>validate()</td>
+          <td>表单验证，返回 Promise&lt;boolean&gt;，校验不通过时 reject</td>
         </tr>
         <tr>
           <td>EsForm</td>
@@ -123,8 +123,8 @@
         </tr>
         <tr>
           <td>EsForm</td>
-          <td>setFormData(data)</td>
-          <td>设置表单数据</td>
+          <td>getFormRef()</td>
+          <td>获取内部 el-form 实例；表单数据本身通过 model prop（v-model）双向绑定，没有 setFormData</td>
         </tr>
         <tr>
           <td>useDialog</td>

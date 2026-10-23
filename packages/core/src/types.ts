@@ -513,6 +513,13 @@ export interface TableColumn {
   expandConfig?: ExpandRowConfig
   /** 文本超出省略号 + tooltip */
   ellipsis?: boolean
+  /**
+   * 空值占位文本，默认 `'-'`
+   *
+   * 单元格值为 `null` / `undefined` / `''` 时显示该文本（三端一致）。
+   * 此前的类型漏声明了它，只能在索引签名下「碰巧」通过类型检查。
+   */
+  emptyPlaceholder?: string
   /** 隐藏列（保留配置但不渲染） */
   hidCol?: boolean
   /**

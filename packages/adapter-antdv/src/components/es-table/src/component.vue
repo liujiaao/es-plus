@@ -216,8 +216,12 @@ const props = withDefaults(
     initTabHeight?: number
     headBarClass?: string | Record<string, unknown>
     showHeaderBar?: boolean
-    dataSource: Record<string, unknown>[]
-    columns: TableColumn[]
+    // dataSource / columns 与 vue3 端保持一致为**可选**：两处都有默认值（[]），
+    // 而请求模式（apiParams / proxyConfig）根本不传 dataSource。此处若声明为必填，
+    // Vue 会在每个请求模式的页面上报 `Missing required prop: "dataSource"` ——
+    // 三端类型契约不容许这种分叉。
+    dataSource?: Record<string, unknown>[]
+    columns?: TableColumn[]
     options?: TableOptions
     pagination?: PaginationConfig
   }>(),

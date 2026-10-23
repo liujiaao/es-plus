@@ -116,12 +116,12 @@ export default {
                       name: '查询',
                       type: 'primary',
                       key: 'search',
-                      onClick: () => this.handleDialogSearch()
+                      click: () => this.handleDialogSearch()
                     },
                     {
                       name: '重置',
                       key: 'reset',
-                      onClick: () => this.handleDialogReset()
+                      click: () => this.handleDialogReset()
                     }
                   ]
                 }
@@ -154,7 +154,7 @@ export default {
             type: 'primary',
             icon: 'el-icon-plus',
             key: 'add',
-            onClick: () => this.handleAddUser()
+            click: () => this.handleAddUser()
           },
           {
             name: '批量删除',
@@ -162,12 +162,12 @@ export default {
             icon: 'el-icon-delete',
             key: 'batchDelete',
             disabled: true,
-            onClick: () => this.handleBatchDelete()
+            click: () => this.handleBatchDelete()
           },
           {
             name: '关闭',
             key: 'close',
-            onClick: (vm, { close }) => close()
+            click: (vm, { close }) => close()
           }
         ]
       })

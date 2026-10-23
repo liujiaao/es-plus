@@ -83,6 +83,33 @@
             <td>Array</td>
             <td>[]</td>
           </tr>
+          <tr>
+            <td>renderBtn</td>
+            <td>自定义按钮区渲染函数 (row, model, formItemList, h) =&gt; VNode</td>
+            <td>Function | Boolean</td>
+            <td>false</td>
+          </tr>
+          <tr>
+            <td>btnColSpanRow</td>
+            <td>true = 按钮独占一行；false = 接在最后一个字段后</td>
+            <td>Boolean</td>
+            <td>true</td>
+          </tr>
+          <tr>
+            <td>rules</td>
+            <td>form 级校验规则（与全局 <code>EsForm.rules</code> 合并，字段名以本 prop 优先）</td>
+            <td>Object</td>
+            <td>{}</td>
+          </tr>
+          <tr>
+            <td>fieldFieldOutput</td>
+            <td>
+              字段级 <code>apiParams</code> 的请求字段映射钩子
+              <code>(defaults) =&gt; defaults</code>，也可在全局配置 <code>EsForm.fieldFieldOutput</code> 统一设置
+            </td>
+            <td>Function</td>
+            <td>undefined</td>
+          </tr>
         </tbody>
       </table>
 
@@ -98,8 +125,8 @@
         <tbody>
           <tr>
             <td>prop</td>
-            <td>字段名（支持函数动态返回）</td>
-            <td>String/Function</td>
+            <td>字段名（必填，支持 <code>user.name</code> 这类嵌套路径；也支持函数动态返回）</td>
+            <td>String</td>
           </tr>
           <tr>
             <td>label</td>
@@ -107,8 +134,16 @@
             <td>String</td>
           </tr>
           <tr>
+            <td>labelKey</td>
+            <td>国际化 key，配置了全局 <code>t</code> 函数时优先于 label</td>
+            <td>String</td>
+          </tr>
+          <tr>
             <td>formtype</td>
-            <td>控件类型：Input/Select/Radio/Checkbox/Switch/DatePicker/TimePicker/Cascader/Rate/Upload</td>
+            <td>
+              控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker /
+              Cascader / Radio / Checkbox / Switch / Slider / Rate / ColorPicker / Transfer / Upload
+            </td>
             <td>String</td>
           </tr>
           <tr>
@@ -117,29 +152,29 @@
             <td>Number</td>
           </tr>
           <tr>
+            <td>placeholder</td>
+            <td>占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）</td>
+            <td>String</td>
+          </tr>
+          <tr>
+            <td>clearable</td>
+            <td>可清除快捷方式，自动注入 attrs.clearable（attrs 同名优先）</td>
+            <td>Boolean</td>
+          </tr>
+          <tr>
+            <td>disabled</td>
+            <td>禁用快捷方式，自动注入 attrs.disabled（attrs 同名优先）</td>
+            <td>Boolean</td>
+          </tr>
+          <tr>
             <td>attrs</td>
-            <td>控件属性（支持 disabled 为函数）</td>
+            <td>透传给控件的属性袋（支持 disabled 为函数）</td>
             <td>Object</td>
           </tr>
           <tr>
-            <td>formItemOptions</td>
-            <td>表单项选项：labelWidth、rules、style 等</td>
+            <td>props</td>
+            <td>透传给控件的组件 props 袋（Vue 2 严格区分 props / attrs）</td>
             <td>Object</td>
-          </tr>
-          <tr>
-            <td>dataOptions</td>
-            <td>选项数据（Select/Radio/Checkbox）</td>
-            <td>Array</td>
-          </tr>
-          <tr>
-            <td>isHiden</td>
-            <td>条件显示函数 (model) => Boolean</td>
-            <td>Function</td>
-          </tr>
-          <tr>
-            <td>render</td>
-            <td>自定义渲染函数 (h, model, row) => VNode</td>
-            <td>Function</td>
           </tr>
           <tr>
             <td>on</td>
@@ -147,14 +182,87 @@
             <td>Object</td>
           </tr>
           <tr>
+            <td>dataOptions</td>
+            <td>选项数据（Select / Radio / Checkbox / Cascader）</td>
+            <td>Array</td>
+          </tr>
+          <tr>
+            <td>isHidden</td>
+            <td>
+              条件显示函数 (model) =&gt; Boolean。<br />
+              <small>三端统一使用 <code>isHidden</code>；Vue 2 早期文档里的错拼 <code>isHiden</code>
+                仅作为兼容别名保留（会打印弃用告警），vue3 / adapter-antdv 端会忽略，请勿再使用。</small>
+            </td>
+            <td>Function</td>
+          </tr>
+          <tr>
+            <td>reactions</td>
+            <td>声明式字段联动（纯 JSON）：选项 / 必填 / 禁用 / 值由其他字段决定</td>
+            <td>Array</td>
+          </tr>
+          <tr>
+            <td>render</td>
+            <td>自定义渲染函数 (h, model, row) => VNode</td>
+            <td>Function</td>
+          </tr>
+          <tr>
             <td>apiParams</td>
             <td>接口请求配置 { url, method, model, headers, options, httpRequest, listenToCallBack }</td>
             <td>Object</td>
+          </tr>
+          <tr>
+            <td>httpRequest</td>
+            <td>自定义请求方法，覆盖全局配置</td>
+            <td>Function</td>
+          </tr>
+          <tr>
+            <td>isInitRun</td>
+            <td>初始化时是否自动加载接口数据</td>
+            <td>Boolean</td>
+          </tr>
+          <tr>
+            <td>callOptionListFormat</td>
+            <td>(data) =&gt; [{ label, value }]，转换接口响应</td>
+            <td>Function</td>
+          </tr>
+          <tr>
+            <td>listenToCallBack</td>
+            <td>请求 / 响应回调管线</td>
+            <td>Object</td>
+          </tr>
+          <tr>
+            <td>required</td>
+            <td>是否必填（与 rules 二选一；formItemOptions.required 优先）</td>
+            <td>Boolean</td>
+          </tr>
+          <tr>
+            <td>rules</td>
+            <td>字段校验规则，与表单级 rules 叠加（formItemOptions.rules 优先）</td>
+            <td>Array</td>
+          </tr>
+          <tr>
+            <td>formItemOptions</td>
+            <td>表单项选项：labelWidth、rules、style 等（直接透传给 el-form-item，其中 required / rules 优先于上面的快捷字段）</td>
+            <td>Object</td>
+          </tr>
+          <tr>
+            <td>width</td>
+            <td>字段宽度（表格场景下列宽）</td>
+            <td>Number / String</td>
+          </tr>
+          <tr>
+            <td>permissionValue</td>
+            <td>字段级权限编码：无权限时整个表单项不渲染（未配置全局 permission 时放行）</td>
+            <td>String</td>
           </tr>
         </tbody>
       </table>
 
       <h3>LayoutFormProps 配置</h3>
+      <p>
+        推荐写 <code>formLayProps</code>；三端都接受旧拼写 <code>fromLayProps</code>（仅作兼容，
+        新代码请勿使用）。校验规则请用组件级 <code>rules</code> prop，它不是本对象的键。
+      </p>
       <table class="table-props">
         <thead>
           <tr>
@@ -166,40 +274,58 @@
         </thead>
         <tbody>
           <tr>
-            <td>fromLayProps.labelWidth</td>
-            <td>标签宽度</td>
-            <td>String</td>
-            <td>'100px'</td>
-          </tr>
-          <tr>
-            <td>fromLayProps.size</td>
-            <td>控件尺寸：large/medium/small/mini</td>
-            <td>String</td>
-            <td>'mini'</td>
-          </tr>
-          <tr>
-            <td>fromLayProps.minfoldRows</td>
-            <td>超过多少行折叠</td>
+            <td>rowLayProps.gutter</td>
+            <td>栅格间距</td>
             <td>Number</td>
-            <td>0（不折叠）</td>
+            <td>20</td>
           </tr>
           <tr>
-            <td>fromLayProps.isBtnHiden</td>
-            <td>是否隐藏按钮</td>
+            <td>formLayProps.labelWidth</td>
+            <td>标签宽度</td>
+            <td>String / Number</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>formLayProps.size</td>
+            <td>控件尺寸：large / medium / small / mini</td>
+            <td>String</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>formLayProps.minFoldRows</td>
+            <td>超过多少行折叠（0 = 不折叠）。旧拼写 minfoldRows 同样接受，小写优先</td>
+            <td>Number</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td>formLayProps.isBtnHidden</td>
+            <td>是否隐藏按钮区。旧拼写 isBtnHiden（少一个 d）同样接受，旧拼写优先</td>
             <td>Boolean</td>
             <td>false</td>
           </tr>
           <tr>
-            <td>fromLayProps.rules</td>
-            <td>表单验证规则</td>
-            <td>Object</td>
-            <td>{}</td>
+            <td>formLayProps.btnColSpan</td>
+            <td>按钮所在列的 span</td>
+            <td>Number</td>
+            <td>-</td>
           </tr>
           <tr>
-            <td>rowLayProps.gutter</td>
-            <td>栅格间距</td>
-            <td>Number</td>
-            <td>10</td>
+            <td>formLayProps.labelBtnWidth</td>
+            <td>按钮区标签宽度</td>
+            <td>String / Number</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>fromLayProps</td>
+            <td>旧拼写（键同 formLayProps），仅为兼容保留</td>
+            <td>Object</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>setOptions</td>
+            <td>是否启用设置下拉</td>
+            <td>Boolean</td>
+            <td>-</td>
           </tr>
         </tbody>
       </table>
@@ -216,18 +342,38 @@
         <tbody>
           <tr>
             <td>validate</td>
-            <td>表单验证</td>
-            <td>(callback) => void</td>
+            <td>表单验证，返回 Promise&lt;boolean&gt;（校验不通过时 reject，需 catch）</td>
+            <td>()</td>
+          </tr>
+          <tr>
+            <td>validateField</td>
+            <td>校验指定字段</td>
+            <td>(props)</td>
           </tr>
           <tr>
             <td>resetFields</td>
-            <td>重置表单</td>
+            <td>重置表单（恢复初始值并清除校验）</td>
             <td>-</td>
           </tr>
           <tr>
             <td>clearValidate</td>
-            <td>清除验证状态</td>
+            <td>只清除验证状态，不改数据</td>
+            <td>(props?)</td>
+          </tr>
+          <tr>
+            <td>scrollToField</td>
+            <td>滚动到指定字段</td>
+            <td>(prop)</td>
+          </tr>
+          <tr>
+            <td>getFormRef</td>
+            <td>取底层 el-form 实例</td>
             <td>-</td>
+          </tr>
+          <tr>
+            <td>formItmeRequestInstance</td>
+            <td>手动触发字段级数据请求（源码即此拼写，非笔误可改）</td>
+            <td>(propsList: string[])</td>
           </tr>
         </tbody>
       </table>
@@ -251,7 +397,7 @@
           <li><strong>动态禁用</strong>：使用函数形式 <code>disabled: () => this.isDisabled</code></li>
           <li><strong>动态规则</strong>：通过 key 强制刷新表单 <code>:key="ruleKey"</code></li>
           <li><strong>验证规则</strong>：在 <code>formItemOptions.rules</code> 中定义，支持 required/pattern/validator</li>
-          <li><strong>性能优化</strong>：复杂表单使用 <code>isHiden</code> 替代 v-if，避免频繁重建组件</li>
+          <li><strong>性能优化</strong>：复杂表单使用 <code>isHidden</code> 替代 v-if，避免频繁重建组件</li>
         </ol>
       </div>
 

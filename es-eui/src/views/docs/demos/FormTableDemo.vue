@@ -121,20 +121,20 @@ export default {
           type: 'primary',
           key: 'query',
           triggerEvent: true,
-          onClick: () => this.handleSearch()
+          click: () => this.handleSearch()
         },
         {
           name: '重置',
           key: 'reset',
           triggerEvent: true,
-          onClick: () => this.handleReset()
+          click: () => this.handleReset()
         },
         {
           name: '批量删除',
           type: 'danger',
           key: 'batchDelete',
           disabled: true,
-          onClick: () => this.handleBatchDelete()
+          click: () => this.handleBatchDelete()
         }
       ],
       tableColumns: [

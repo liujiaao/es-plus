@@ -50,7 +50,7 @@ export default {
               ]
             : []
         },
-        isHiden: () => !this.formData.requireEmail
+        isHidden: () => !this.formData.requireEmail
       }
     ]
   },

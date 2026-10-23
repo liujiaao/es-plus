@@ -141,9 +141,48 @@
     <a-divider />
 
     <h2>API / 属性</h2>
+    <p>
+      属性以本渲染端（Vue 3 + Ant Design Vue）为准。与 Element Plus 端的差异：
+      <code>appendTo</code> 在这里是挂载容器（等价于 Element Plus 的同名属性）；
+      Element Plus 及其 Vue 2 端独有的 <code>appendToBody</code> / <code>modalAppendToBody</code> / <code>components</code>
+      在本端不存在，请改用 <code>appendTo</code>。本端独有的 <code>top</code> / <code>modalClass</code>，
+      在 Element Plus 端对应 <code>top</code> / <code>modal-class</code>。
+    </p>
     <a-table
       :dataSource="dialogProps"
       :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>事件</h2>
+    <a-table
+      :dataSource="dialogEvents"
+      :columns="eventColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>ConfigBtn 配置</h2>
+    <p>
+      <code>configBtn</code> 的每一项。<code>click</code> 的签名是
+      <code>(bodyRef, { close, getRefs, dialogInstance })</code>——只有 <code>click</code>，
+      没有 <code>onClick</code>；其余未列出的键会透传给底层按钮。
+    </p>
+    <a-table
+      :dataSource="dialogBtns"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>方法</h2>
+    <a-table
+      :dataSource="dialogMethods"
+      :columns="methodColumns"
       :pagination="false"
       size="small"
       bordered
@@ -175,14 +214,67 @@ const propColumns = [
   { title: '说明', dataIndex: 'desc', key: 'desc' },
 ]
 
+const eventColumns = [
+  { title: '事件', dataIndex: 'event', key: 'event', width: 220 },
+  { title: '回调参数', dataIndex: 'params', key: 'params', width: 200 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+]
+
+const methodColumns = [
+  { title: '方法', dataIndex: 'prop', key: 'prop', width: 200 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+]
+
 const dialogProps = [
-  { key: '1', prop: 'title', type: 'string | function', default: '""', desc: '弹窗标题，支持函数动态标题' },
-  { key: '2', prop: 'width', type: 'string | number', default: '520', desc: '弹窗宽度' },
-  { key: '3', prop: 'render', type: 'function', default: '-', desc: '自定义渲染内容' },
-  { key: '4', prop: 'configBtn', type: 'BtnConfig[]', default: '[]', desc: '底部按钮配置' },
-  { key: '5', prop: 'onClosed', type: 'function', default: '-', desc: '关闭后回调' },
-  { key: '6', prop: 'isDraggable', type: 'boolean', default: 'false', desc: '是否可拖拽' },
-  { key: '7', prop: 'fullscreen', type: 'boolean', default: 'false', desc: '是否全屏' },
+  { key: '1', prop: 'title', type: 'string | function', default: "'弹窗'", desc: '弹窗标题，支持函数动态标题' },
+  { key: '2', prop: 'width', type: 'string | number', default: "'600px'", desc: '弹窗宽度' },
+  { key: '3', prop: 'visible', type: 'boolean', default: 'false', desc: '是否显示（配合 v-model:visible）' },
+  { key: '4', prop: 'render', type: 'function', default: '-', desc: '自定义渲染内容 (h, instance, components) => VNode' },
+  { key: '5', prop: 'renderHeader', type: 'function', default: '-', desc: '自定义头部渲染 (h, instance) => VNode' },
+  { key: '6', prop: 'renderFooter', type: 'function', default: '-', desc: '自定义底部渲染 (h, instance) => VNode' },
+  { key: '7', prop: 'configBtn', type: 'BtnConfig[]', default: '[]', desc: '底部按钮配置' },
+  { key: '8', prop: 'isDraggable', type: 'boolean', default: 'false', desc: '是否可拖拽' },
+  { key: '9', prop: 'fullscreen', type: 'boolean', default: 'false', desc: '是否全屏' },
+  { key: '10', prop: 'hiddenFullBtn', type: 'boolean', default: 'false', desc: '是否隐藏全屏按钮' },
+  { key: '11', prop: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '是否隐藏底部按钮区' },
+  { key: '12', prop: 'maxHeight', type: 'string | number', default: '-', desc: '内容区最大高度' },
+  { key: '13', prop: 'appendTo', type: 'string | HTMLElement', default: '-', desc: '挂载点' },
+  { key: '14', prop: 'showClose', type: 'boolean', default: 'true', desc: '是否显示右上角关闭按钮' },
+  { key: '15', prop: 'loading', type: 'boolean', default: 'false', desc: '是否显示加载状态' },
+  { key: '16', prop: 'destroyOnClose', type: 'boolean', default: 'false', desc: '关闭时销毁内容 DOM' },
+  { key: '17', prop: 'modal', type: 'boolean', default: 'true', desc: '是否显示遮罩' },
+  { key: '18', prop: 'closeOnClickModal', type: 'boolean', default: 'true', desc: '点击遮罩是否关闭' },
+  { key: '19', prop: 'closeOnPressEscape', type: 'boolean', default: 'true', desc: '按 ESC 是否关闭' },
+  { key: '20', prop: 'beforeClose', type: 'function', default: '-', desc: '关闭闸门：存在时先交给 done() 决定' },
+  { key: '21', prop: 'alignCenter', type: 'boolean', default: 'true', desc: '是否垂直居中' },
+  { key: '22', prop: 'top', type: 'string', default: '-', desc: '距顶部距离' },
+  { key: '23', prop: 'modalClass', type: 'string', default: '-', desc: '遮罩层样式类' },
+]
+
+const dialogEvents = [
+  { key: '1', event: 'update:visible', params: '(visible)', desc: '显隐变化（配合 v-model:visible）' },
+  { key: '2', event: 'closed', params: '(visible)', desc: '关闭后回调（useDialog 里也可写成 onClosed 选项）' },
+  { key: '3', event: 'open', params: '-', desc: '弹窗显示时派发（声明式与 useDialog 两条路径都发）' },
+]
+
+const dialogMethods = [
+  { key: '1', prop: 'close', params: '()', desc: '关闭弹窗' },
+  { key: '2', prop: 'closed', params: '()', desc: '关闭弹窗（close 的别名）' },
+  { key: '3', prop: 'toggleFullscreen', params: '()', desc: '切换全屏' },
+  { key: '4', prop: 'doClose', params: '()', desc: '执行关闭流程（受 beforeClose 约束）' },
+]
+
+const dialogBtns = [
+  { key: '1', prop: 'name', type: 'string', default: '-', desc: '按钮文本' },
+  { key: '2', prop: 'key', type: 'string', default: '-', desc: '按钮唯一标识' },
+  { key: '3', prop: 'type', type: 'string', default: 'default', desc: '按钮类型：primary / default / dashed / text / link / danger' },
+  { key: '4', prop: 'size', type: 'string', default: '-', desc: '按钮尺寸：large / middle / small' },
+  { key: '5', prop: 'icon', type: 'string', default: '-', desc: '图标名称' },
+  { key: '6', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态' },
+  { key: '7', prop: 'disabled', type: 'boolean | Function', default: 'false', desc: '禁用状态，支持函数动态判断' },
+  { key: '8', prop: 'permissionValue', type: 'string', default: '-', desc: '按钮级权限编码' },
+  { key: '9', prop: 'direction', type: 'string', default: '-', desc: '按钮区方向：left / right' },
+  { key: '10', prop: 'click', type: 'Function', default: '-', desc: '(bodyRef, { close, getRefs, dialogInstance }) => void' },
 ]
 </script>
 

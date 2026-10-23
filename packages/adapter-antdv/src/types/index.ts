@@ -251,6 +251,8 @@ export interface TableColumn {
    */
   expandConfig?: { title?: string; fields: Array<{ prop: string; label?: string; labelKey?: string }> }
   ellipsis?: boolean
+  /** 空值占位文本，默认 '-'（null / undefined / '' 时显示） */
+  emptyPlaceholder?: string
   hidCol?: boolean
   /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
   permissionValue?: string

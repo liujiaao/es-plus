@@ -214,6 +214,51 @@
       size="small"
       bordered
     />
+
+    <h2>TableColumn 配置</h2>
+    <p>
+      <code>columns</code> 的每一项。三端字段名一致；<code>cellClassName</code> /
+      <code>headerCellClassName</code> 是本端（Ant Design Vue 的列定义）独有的透传键。
+    </p>
+    <a-table
+      :dataSource="tableColumns"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>TableOptions 配置</h2>
+    <p>
+      <code>options</code> 的每一项。带「vxe」标注的只在
+      <code>options.engine: 'vxe'</code> 下有行为。
+    </p>
+    <a-table
+      :dataSource="tableOptions"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>事件</h2>
+    <a-table
+      :dataSource="tableEvents"
+      :columns="eventColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>方法</h2>
+    <p>通过 <code>ref</code> 调用，三端同名同义。带「vxe」标注的只在 <code>options.engine: 'vxe'</code> 下有行为。</p>
+    <a-table
+      :dataSource="tableMethods"
+      :columns="methodColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
   </div>
 </template>
 
@@ -247,13 +292,142 @@ const propColumns = [
   { title: '说明', dataIndex: 'desc', key: 'desc' },
 ]
 
+const eventColumns = [
+  { title: '事件', dataIndex: 'event', key: 'event', width: 220 },
+  { title: '回调参数', dataIndex: 'params', key: 'params', width: 220 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+]
+
+const methodColumns = [
+  { title: '方法', dataIndex: 'prop', key: 'prop', width: 200 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+  { title: '参数', dataIndex: 'params', key: 'params', width: 160 },
+]
+
 const tableProps = [
-  { key: '1', prop: 'data-source', type: 'array', default: '[]', desc: '表格数据（静态模式）' },
+  { key: '1', prop: 'dataSource', type: 'array', default: '[]', desc: '表格数据（静态模式）' },
   { key: '2', prop: 'columns', type: 'TableColumn[]', default: '[]', desc: '列配置' },
   { key: '3', prop: 'options', type: 'TableOptions', default: '{}', desc: '表格选项（含请求、边框、行样式等）' },
   { key: '4', prop: 'pagination', type: 'PaginationConfig', default: '{}', desc: '分页配置' },
-  { key: '5', prop: 'init-tab-height', type: 'number', default: '400', desc: '初始表格高度' },
-  { key: '6', prop: 'show-header-bar', type: 'boolean', default: 'true', desc: '是否显示头部栏区域' },
+  { key: '5', prop: 'initTabHeight', type: 'number', default: '400', desc: '初始表格高度' },
+  { key: '6', prop: 'showHeaderBar', type: 'boolean', default: 'true', desc: '是否显示头部栏区域' },
+  { key: '7', prop: 'headBarClass', type: 'string | object', default: "''", desc: '头部栏区域的样式类' },
+]
+
+const tableEvents = [
+  { key: '1', event: 'update:dataSource', params: '(data)', desc: '数据变化（配合 v-model:data-source）' },
+  { key: '2', event: 'update:pagination', params: '(pagination)', desc: '分页变化（配合 v-model:pagination）' },
+  { key: '3', event: 'pagination-current-change', params: '(pagination)', desc: '翻页' },
+  { key: '4', event: 'size-change', params: '(pagination, size)', desc: '每页条数变化' },
+  { key: '5', event: 'change-table-sort', params: '(column)', desc: '排序变化' },
+  { key: '6', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
+]
+
+const tableMethods = [
+  { key: '1', prop: 'httpRequestInstance', params: '(model?, { keepPage }?)', desc: '手动触发数据请求（默认回到第 1 页；keepPage: true 保留当前页）' },
+  { key: '2', prop: 'requestError', params: '-', desc: '最近一次自动加载的错误（成功后清空）' },
+  { key: '3', prop: 'getSelectionRows', params: '-', desc: '取当前勾选行' },
+  { key: '4', prop: 'clearSelection', params: '-', desc: '清空选中' },
+  { key: '5', prop: 'clearAllSelection', params: '-', desc: '清空全部选中（含 vxe 引擎）' },
+  { key: '6', prop: 'toggleRowSelection', params: '(row, selected?)', desc: '切换某一行的选中状态' },
+  { key: '7', prop: 'refresh', params: '(model?)', desc: '刷新当前页（保留页码重新取数）' },
+  { key: '8', prop: 'reload', params: '(model?)', desc: '重新加载并回到第 1 页' },
+  { key: '9', prop: 'doLayout', params: '-', desc: '重新计算表格布局（列宽错位时调用）' },
+  { key: '10', prop: 'scrollToRow', params: '(index)', desc: '滚动到指定行' },
+  { key: '11', prop: 'getUpdateRecords', params: '-', desc: 'vxe：取已修改行' },
+  { key: '12', prop: 'getInsertRecords', params: '-', desc: 'vxe：取新增行' },
+  { key: '13', prop: 'getRemoveRecords', params: '-', desc: 'vxe：取删除行' },
+  { key: '14', prop: 'revertData', params: '(rows?)', desc: 'vxe：还原行数据（不传则还原全部）' },
+  { key: '15', prop: 'clearActived', params: '-', desc: 'vxe：关闭所有已激活的单元格编辑态' },
+  { key: '16', prop: 'clearValidate', params: '-', desc: 'vxe：清除行内校验提示' },
+  { key: '17', prop: 'validate', params: '(rows?)', desc: 'vxe：触发行内校验，返回 Promise' },
+  { key: '18', prop: 'vxeInstance', params: '-', desc: 'vxe：取底层 vxe-grid 实例' },
+]
+
+const tableColumns = [
+  { key: '1', prop: 'prop', type: 'string', default: '-', desc: '数据字段名' },
+  { key: '2', prop: 'key', type: 'string', default: '-', desc: '列唯一标识（与 prop 二选一）' },
+  { key: '3', prop: 'label', type: 'string', default: '-', desc: '列标题' },
+  { key: '4', prop: 'labelKey', type: 'string', default: '-', desc: '国际化 key，配置了全局 t 函数时优先于 label' },
+  { key: '5', prop: 'width', type: 'number | string', default: '-', desc: '列宽度' },
+  { key: '6', prop: 'minWidth', type: 'number | string', default: '-', desc: '最小列宽' },
+  { key: '7', prop: 'align', type: 'string', default: 'center', desc: '对齐方式：left / center / right' },
+  { key: '8', prop: 'fixed', type: 'boolean | string', default: '-', desc: '固定列：left / right / true（等价 left）' },
+  { key: '9', prop: 'type', type: 'string', default: '-', desc: '内置列类型：index / selection / expand' },
+  { key: '10', prop: 'sortable', type: 'boolean | "custom"', default: '-', desc: '可排序；"custom" 表示由后端排序' },
+  { key: '11', prop: 'formatter', type: 'Function', default: '-', desc: '(row) => string，格式化函数' },
+  { key: '12', prop: 'render', type: 'Function', default: '-', desc: '(h, { row, value, index }) => VNode' },
+  { key: '13', prop: 'scopedSlots', type: 'Object', default: '-', desc: '{ customRender: "插槽名" }' },
+  { key: '14', prop: 'groups', type: 'TableColumn[]', default: '-', desc: '多级分组表头的子列' },
+  { key: '15', prop: 'expandConfig', type: 'Object', default: '-', desc: '展开行内容 { title?, fields }，仅 type: "expand" 列消费' },
+  { key: '16', prop: 'ellipsis', type: 'boolean', default: '-', desc: '超出省略并显示 Tooltip' },
+  { key: '17', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '空值占位文本（null / undefined / 空串时显示）' },
+  { key: '18', prop: 'hidCol', type: 'boolean', default: '-', desc: '隐藏该列（保留配置不渲染）' },
+  { key: '19', prop: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
+  { key: '20', prop: 'btns', type: 'Array', default: '-', desc: '操作列按钮 [{ name, type?, icon?, permissionValue?, hidden?, clickEvent? }]' },
+  { key: '21', prop: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
+  { key: '22', prop: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' },
+  { key: '23', prop: 'cellClassName', type: 'string | Function', default: '-', desc: '本端独有：单元格类名（a-table 列透传）' },
+  { key: '24', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '本端独有：表头单元格类名（a-table 列透传）' },
+]
+
+const tableOptions = [
+  { key: '1', prop: 'border', type: 'boolean', default: 'false', desc: '是否显示边框' },
+  { key: '2', prop: 'stripe', type: 'boolean', default: 'false', desc: '斑马纹（Ant Design Vue 无原生 stripe，按行样式实现）' },
+  { key: '3', prop: 'size', type: 'string', default: 'small', desc: '表格尺寸：large / middle / small' },
+  { key: '4', prop: 'headerCellStyle', type: 'object', default: '-', desc: '表头单元格样式' },
+  { key: '5', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '表头单元格类名' },
+  { key: '6', prop: 'highlightCurrentRow', type: 'boolean', default: 'true', desc: '高亮当前行' },
+  { key: '7', prop: 'showHeader', type: 'boolean', default: 'true', desc: '是否显示表头' },
+  { key: '8', prop: 'emptyText', type: 'string', default: '-', desc: '空数据时的占位文本' },
+  { key: '9', prop: 'multiSelect', type: 'boolean', default: 'false', desc: '启用多选列' },
+  { key: '10', prop: 'expand', type: 'boolean', default: 'false', desc: '启用展开行' },
+  { key: '11', prop: 'snIndex', type: 'boolean', default: 'false', desc: '显示序号列' },
+  { key: '12', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态' },
+  { key: '13', prop: 'cachePageSelection', type: 'boolean', default: 'true', desc: '跨页记忆选中项（需配 rowkey）' },
+  { key: '14', prop: 'heightType', type: 'string', default: 'auto', desc: '高度类型：auto / height / maxHeight' },
+  { key: '15', prop: 'tabHeight', type: 'number | string', default: '-', desc: '表格容器高度（推荐）' },
+  { key: '16', prop: 'height', type: 'number | string', default: '-', desc: '固定高度（tabHeight 的别名，heightType: "height" 时生效）' },
+  { key: '17', prop: 'rowkey', type: 'string', default: '-', desc: '行唯一标识字段名（跨页选择 / 虚拟滚动必填）' },
+  { key: '18', prop: 'rowClassName', type: 'string | Function', default: '-', desc: '行类名，支持 ({ row, rowIndex }) => string' },
+  { key: '19', prop: 'rowStyle', type: 'object | Function', default: '-', desc: '行内样式，支持 ({ row, rowIndex }) => object' },
+  { key: '20', prop: 'defaultSort', type: 'Object', default: '-', desc: '默认排序 { prop, order: "ascending" | "descending" }' },
+  { key: '21', prop: 'spanMethod', type: 'Function', default: '-', desc: '合并单元格 ({ row, column, rowIndex, columnIndex }) => [rowspan, colspan]' },
+  { key: '22', prop: 'cellClassName', type: 'string | Function', default: '-', desc: '单元格类名' },
+  { key: '23', prop: 'cellStyle', type: 'object | Function', default: '-', desc: '单元格样式' },
+  { key: '24', prop: 'isInitRun', type: 'boolean', default: 'false', desc: '初始化时自动请求数据' },
+  { key: '25', prop: 'actionUrl', type: 'string', default: '-', desc: '请求地址（apiParams.url 的简写）' },
+  { key: '26', prop: 'apiParams', type: 'ApiParams', default: '-', desc: '请求配置 { url, method, model, headers, options }' },
+  { key: '27', prop: 'httpRequest', type: 'Function', default: '-', desc: '自定义请求方法 (params) => Promise，覆盖全局配置' },
+  { key: '28', prop: 'listenToCallBack', type: 'Object', default: '-', desc: '请求/响应回调管线 { brcb, qrcb }（兼容 { beforeRequest, afterResponse }）' },
+  { key: '29', prop: 'configTableOut', type: 'Object', default: '-', desc: '响应字段映射 { total, tableData, pageSize, current }' },
+  { key: '30', prop: 'entryQuery', type: 'object', default: '-', desc: '并入每次请求体的固定参数' },
+  { key: '31', prop: 'refetchKeepPage', type: 'boolean', default: 'false', desc: '请求式刷新时保留当前页码' },
+  { key: '32', prop: 'localPagination', type: 'boolean', default: 'false', desc: '本地分页（对已加载数据切片，不发请求）' },
+  { key: '33', prop: 'configBtn', type: 'BtnConfig[]', default: '-', desc: '表格顶部操作按钮（见 EsForm 页的 BtnConfig 配置；它是 TableOptions 的键，不是组件 prop）' },
+  { key: '34', prop: 'leftText', type: 'string', default: '-', desc: '头部栏左侧文本' },
+  { key: '35', prop: 'virtual', type: 'boolean', default: 'false', desc: '虚拟滚动' },
+  { key: '36', prop: 'engine', type: 'string', default: 'default', desc: '渲染引擎：default / virtual / vxe' },
+  { key: '37', prop: 'rowHeight', type: 'number', default: '50', desc: '虚拟滚动的行高' },
+  { key: '38', prop: 'estimatedRowHeight', type: 'number', default: '-', desc: '动态行高预估值' },
+  { key: '39', prop: 'overscanCount', type: 'number', default: '2', desc: '可视区外预渲染行数' },
+  { key: '40', prop: 'showFooter', type: 'boolean', default: 'false', desc: 'vxe：显示表尾' },
+  { key: '41', prop: 'footerMethod', type: 'Function', default: '-', desc: 'vxe：表尾计算 ({ columns, data }) => 二维数组' },
+  { key: '42', prop: 'footerData', type: 'Array', default: '-', desc: 'vxe：静态表尾数据（二维数组）' },
+  { key: '43', prop: 'editConfig', type: 'object', default: '-', desc: 'vxe：行内编辑配置' },
+  { key: '44', prop: 'keepSource', type: 'boolean', default: '-', desc: 'vxe：保留原始行数据（配合 revertData）' },
+  { key: '45', prop: 'treeConfig', type: 'Object', default: '-', desc: 'vxe：树形表格配置' },
+  { key: '46', prop: 'proxyConfig', type: 'Object', default: '-', desc: 'vxe：数据代理配置' },
+  { key: '47', prop: 'expandConfig', type: 'Object', default: '-', desc: 'vxe：展开行为配置（与列上的 expandConfig「展开内容」不是同一概念）' },
+  { key: '48', prop: 'seqConfig', type: 'Object', default: '-', desc: 'vxe：序号列配置' },
+  { key: '49', prop: 'printConfig', type: 'Object | true', default: '-', desc: 'vxe：打印配置' },
+  { key: '50', prop: 'exportConfig', type: 'object', default: '-', desc: 'vxe：导出配置' },
+  { key: '51', prop: 'toolbarConfig', type: 'object', default: '-', desc: 'vxe：工具栏配置' },
+  { key: '52', prop: 'columnConfig', type: 'object', default: '-', desc: 'vxe：列配置面板' },
+  { key: '53', prop: 'keyboardConfig', type: 'object', default: '-', desc: 'vxe：键盘导航配置' },
+  { key: '54', prop: 'mouseConfig', type: 'object', default: '-', desc: 'vxe：鼠标行为配置' },
+  { key: '55', prop: 'clipboardConfig', type: 'object', default: '-', desc: 'vxe：剪贴板配置' },
+  { key: '56', prop: 'validConfig', type: 'object', default: '-', desc: 'vxe：校验提示配置' },
 ]
 </script>
 

@@ -41,9 +41,11 @@
           "Checkbox",
           "Switch",
           "Rate",
-          "Upload"
+          "Upload",
+          "datePicker",
+          "timePicker"
         ],
-        "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted."
+        "description": "Input component type. Maps to the corresponding Element Plus component. PascalCase is recommended; 'datePicker'/'timePicker' (camelCase) are deprecated but still accepted — they are normalized to DatePicker/TimePicker at runtime (normalizeFormType), so they are listed here too. Keep this enum in sync with VALID_FORM_TYPES ∪ FORM_TYPE_ALIASES."
       },
       "span": {
         "type": "integer",
@@ -122,7 +124,10 @@
         "description": "Field width (number for px, string for CSS value)"
       },
       "isHidden": {
-        "description": "Function (model, item, formProps) => boolean. Returns true to hide the field conditionally"
+        "description": "Conditional visibility. Returns true to HIDE the field while the condition holds. Three forms: (1) function (model, item, formProps) => boolean; (2) declarative plain-JSON condition — { field, op?, value? } or an array of them (array = AND). op ∈ eq|ne|in|nIn|empty|notEmpty|truthy|falsy (default eq). (3) a plain-JSON expression (JSONLogic-shaped) for predicates form (2) can't express (OR / ordering / nested NOT) — { var: 'status' } or an operator node like { '==': [{ var: 'status' }, 'pending'] }, { or: [...] }, { and: [...] }; ops = var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. Data only, never a JS source string. Declarative conditions are compiled to a predicate at runtime by normalizeFormItem. Applies to the query/filter form and the add/edit dialog forms, NOT the table column."
+      },
+      "reactions": {
+        "description": "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Array of rules `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger the rule (REQUIRED when `fulfill.value` is present); `when` is a plain-JSON expression gating the rule; `fulfill` supplies `dataOptions` (a LITERAL option array — the expression DSL forbids object literals, so branch by declaring one rule per case with its own `when`), `required`/`disabled` (boolean expression nodes) and/or `value` (this field's new value, written back to the model). Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Evaluated live against the form model by the three renderers. Applies to the query/filter form and the add/edit dialog forms, NOT the table column."
       },
       "render": {
         "description": "Custom render function (h, model, ctx) => VNode. Used when formtype is not set"

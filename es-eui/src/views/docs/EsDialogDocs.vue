@@ -47,6 +47,13 @@
       </div>
 
       <h2>Parameters</h2>
+      <el-alert
+        type="info"
+        :closable="false"
+        style="margin-bottom: 12px"
+        title="三端属性以各自渲染端为准"
+        description="appendToBody / modalAppendToBody / components 只在 Vue 2 + Element UI 端存在（Element UI 的 el-dialog 没有「选择器挂载点」，appendTo 会退化为打开 append-to-body）。Vue 3 + Ant Design 端的 modal / alignCenter / top / modalClass，在本端对应 el-dialog 原生属性 modal / center / top / custom-class，经 attrs 透传。"
+      />
       <table class="table-props">
         <thead>
           <tr>
@@ -59,11 +66,11 @@
         </thead>
         <tbody>
           <tr>
-            <td>key</td>
-            <td>弹窗唯一标识，用于缓存</td>
+            <td>cacheKey</td>
+            <td>实例缓存键（useDialog 调用参数，不是 EsDialog 的 prop）：同 cacheKey 复用同一实例；不传则不缓存，关闭即销毁</td>
             <td>String</td>
             <td>—</td>
-            <td>'__default__'</td>
+            <td>—</td>
           </tr>
           <tr>
             <td>title</td>
@@ -73,50 +80,71 @@
             <td>''</td>
           </tr>
           <tr>
-            <td>width</td>
-            <td>弹窗宽度</td>
-            <td>String</td>
-            <td>—</td>
-            <td>'50%'</td>
-          </tr>
-          <tr>
-            <td>height</td>
-            <td>弹窗高度</td>
-            <td>String</td>
-            <td>—</td>
-            <td>''</td>
-          </tr>
-          <tr>
-            <td>maxHeight</td>
-            <td>弹窗最大高度</td>
-            <td>String</td>
-            <td>—</td>
-            <td>''</td>
-          </tr>
-          <tr>
-            <td>center</td>
-            <td>是否居中</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>customClass</td>
-            <td>自定义样式类</td>
-            <td>String</td>
-            <td>—</td>
-            <td>''</td>
-          </tr>
-          <tr>
-            <td>closeOnClickModal</td>
-            <td>是否允许点击遮罩关闭</td>
+            <td>visible</td>
+            <td>是否显示</td>
             <td>Boolean</td>
             <td>—</td>
             <td>false</td>
           </tr>
           <tr>
+            <td>width</td>
+            <td>弹窗宽度</td>
+            <td>String / Number</td>
+            <td>—</td>
+            <td>'50%'</td>
+          </tr>
+          <tr>
+            <td>maxHeight</td>
+            <td>内容区最大高度（Element UI 没有 height，只有这个）</td>
+            <td>String / Number</td>
+            <td>—</td>
+            <td>undefined</td>
+          </tr>
+          <tr>
+            <td>appendTo</td>
+            <td>挂载点。Element UI 只支持布尔 append-to-body，传非 body 元素会显式告警</td>
+            <td>Object / String</td>
+            <td>body / DOM 元素</td>
+            <td>undefined</td>
+          </tr>
+          <tr>
+            <td>appendToBody</td>
+            <td>弹窗是否插入 body</td>
+            <td>Boolean</td>
+            <td>—</td>
+            <td>false</td>
+          </tr>
+          <tr>
+            <td>modalAppendToBody</td>
+            <td>遮罩是否插入 body</td>
+            <td>Boolean</td>
+            <td>—</td>
+            <td>true</td>
+          </tr>
+          <tr>
+            <td>closeOnClickModal</td>
+            <td>点击遮罩是否关闭</td>
+            <td>Boolean</td>
+            <td>—</td>
+            <td>true</td>
+          </tr>
+          <tr>
             <td>closeOnPressEscape</td>
-            <td>是否允许按 ESC 关闭</td>
+            <td>按 ESC 是否关闭</td>
+            <td>Boolean</td>
+            <td>—</td>
+            <td>true</td>
+          </tr>
+          <tr>
+            <td>beforeClose</td>
+            <td>关闭闸门：存在时 X / 遮罩 / ESC 关闭前先交给 done() 决定</td>
+            <td>Function</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>destroyOnClose</td>
+            <td>关闭后是否销毁内容</td>
             <td>Boolean</td>
             <td>—</td>
             <td>false</td>
@@ -129,57 +157,8 @@
             <td>true</td>
           </tr>
           <tr>
-            <td>lockScroll</td>
-            <td>是否锁定滚动</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>modal</td>
-            <td>是否显示遮罩</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>modalAppendToBody</td>
-            <td>遮罩是否插入 body</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>appendToBody</td>
-            <td>弹窗是否插入 body</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>appendToSelector</td>
-            <td>弹窗插入的选择器</td>
-            <td>String</td>
-            <td>—</td>
-            <td>'.app-container'</td>
-          </tr>
-          <tr>
-            <td>destroyOnClose</td>
-            <td>关闭时是否销毁</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>true</td>
-          </tr>
-          <tr>
-            <td>showDefaultButtons</td>
-            <td>是否显示默认按钮</td>
-            <td>Boolean</td>
-            <td>—</td>
-            <td>false</td>
-          </tr>
-          <tr>
             <td>loading</td>
-            <td>是否显示加载状态</td>
+            <td>内容加载态（el-loading 遮罩）</td>
             <td>Boolean</td>
             <td>—</td>
             <td>false</td>
@@ -190,34 +169,6 @@
             <td>Boolean</td>
             <td>—</td>
             <td>false</td>
-          </tr>
-          <tr>
-            <td>configBtn</td>
-            <td>按钮配置数组</td>
-            <td>Array</td>
-            <td>—</td>
-            <td>[]</td>
-          </tr>
-          <tr>
-            <td>render</td>
-            <td>渲染函数 (支持 JSX)</td>
-            <td>Function</td>
-            <td>—</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td>onClosed</td>
-            <td>关闭回调</td>
-            <td>Function</td>
-            <td>—</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td>onOpen</td>
-            <td>打开回调</td>
-            <td>Function</td>
-            <td>—</td>
-            <td>—</td>
           </tr>
           <tr>
             <td>hiddenFullBtn</td>
@@ -232,6 +183,83 @@
             <td>Boolean</td>
             <td>—</td>
             <td>false</td>
+          </tr>
+          <tr>
+            <td>isHiddenFooter</td>
+            <td>是否隐藏底部按钮区</td>
+            <td>Boolean</td>
+            <td>—</td>
+            <td>false</td>
+          </tr>
+          <tr>
+            <td>configBtn</td>
+            <td>底部按钮配置数组（见下表「ConfigBtn 配置」）</td>
+            <td>Array</td>
+            <td>—</td>
+            <td>[]</td>
+          </tr>
+          <tr>
+            <td>render</td>
+            <td>内容渲染函数（支持 JSX）</td>
+            <td>Function</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>renderHeader</td>
+            <td>自定义头部渲染函数</td>
+            <td>Function</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>renderFooter</td>
+            <td>自定义底部渲染函数</td>
+            <td>Function</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>components</td>
+            <td>render 里可用的组件映射（EsTable / EsForm）</td>
+            <td>Object</td>
+            <td>—</td>
+            <td>{}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <el-alert
+        type="info"
+        :closable="false"
+        style="margin-bottom: 16px"
+        title="center / customClass / top / lockScroll 等 el-dialog 原生属性未在组件内声明，会经 $attrs 透传到 el-dialog；组件没有 height（用 maxHeight）、appendToSelector、appendToClose、showDefaultButtons。"
+      />
+
+      <h2>Events</h2>
+      <table class="table-props">
+        <thead>
+          <tr>
+            <th>事件</th>
+            <th>说明</th>
+            <th>回调参数</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>update:visible</td>
+            <td>显示态变化（配合 .sync）</td>
+            <td>visible: Boolean</td>
+          </tr>
+          <tr>
+            <td>open</td>
+            <td>弹窗打开后触发</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>closed</td>
+            <td>关闭动画结束后触发</td>
+            <td>—</td>
           </tr>
         </tbody>
       </table>
@@ -270,15 +298,8 @@
             <td>—</td>
           </tr>
           <tr>
-            <td>onClick</td>
-            <td>点击事件（回调参数见下表）</td>
-            <td>Function</td>
-            <td>—</td>
-            <td>—</td>
-          </tr>
-          <tr>
             <td>click</td>
-            <td>点击事件（高级用法，instance 作为第一个参数）</td>
+            <td>点击事件，签名 <code>(currentRef, { close, getRefs, dialogInstance })</code>（见下表）</td>
             <td>Function</td>
             <td>—</td>
             <td>—</td>
@@ -328,11 +349,16 @@
             <td>弹窗实例（可访问弹窗内部数据）</td>
             <td>VueComponent</td>
           </tr>
+          <tr>
+            <td>destroy</td>
+            <td>立即销毁实例（不经关闭动画，也不保留缓存）</td>
+            <td>Function</td>
+          </tr>
         </tbody>
       </table>
 
       <h2>按钮回调参数</h2>
-      <p>按钮的 <code>onClick</code> 或 <code>click</code> 回调函数接收以下参数：</p>
+      <p>只有 <code>click</code>（组件没有 <code>onClick</code>）：第一个参数是弹窗内容区的 ref，第二个参数是下面这个对象。</p>
       <table class="table-props">
         <thead>
           <tr>
@@ -350,10 +376,10 @@
           <tr>
             <td>getRefs</td>
             <td>获取弹窗内容中的 ref（支持字符串或对象形式）</td>
-            <td>Function/Object</td>
+            <td>Function</td>
           </tr>
           <tr>
-            <td>dialogVm</td>
+            <td>dialogInstance</td>
             <td>弹窗实例</td>
             <td>VueComponent</td>
           </tr>

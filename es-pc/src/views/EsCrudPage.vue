@@ -127,6 +127,85 @@
       size="small"
       bordered
     />
+
+    <h2>Schema 结构</h2>
+    <p>
+      schema 的每个顶层键分别交给一个子组件：<code>formItems</code> 交给 EsForm，
+      <code>columns</code> / <code>tableOptions</code> / <code>pagination</code> 交给 EsTable，
+      <code>dialogs</code> 交给弹窗层。三端字段名与语义一致。
+    </p>
+    <a-table
+      :dataSource="crudSchema"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>CrudBtnConfig 按钮配置</h2>
+    <p>
+      <code>toolbarBtns</code> 的每一项；<code>tableBtns</code>（TableBtnConfig）键相同，
+      另有 <code>position</code> / <code>code</code> 决定渲染在表格上方的左侧还是右侧。
+    </p>
+    <a-table
+      :dataSource="crudBtnConfigs"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>OperationColumnConfig 操作列配置</h2>
+    <a-table
+      :dataSource="crudOperationColumns"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>RowBtnConfig 行按钮配置</h2>
+    <p>
+      <code>operationColumn.btns</code> 的每一项，渲染成操作列里的按钮。
+    </p>
+    <a-table
+      :dataSource="crudRowBtns"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>Dialogs 配置</h2>
+    <p>
+      <code>dialogs</code> 的每个键对应一个弹窗实例，按钮上的 <code>dialogKey</code> 决定打开哪一个。
+    </p>
+    <a-table
+      :dataSource="crudDialogs"
+      :columns="propColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>事件</h2>
+    <a-table
+      :dataSource="crudEvents"
+      :columns="eventColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
+
+    <h2>方法</h2>
+    <p>通过 <code>ref</code> 调用，三端同名同义。</p>
+    <a-table
+      :dataSource="crudMethods"
+      :columns="methodColumns"
+      :pagination="false"
+      size="small"
+      bordered
+    />
   </div>
 </template>
 
@@ -152,14 +231,110 @@ const propColumns = [
   { title: '说明', dataIndex: 'desc', key: 'desc' },
 ]
 
+const eventColumns = [
+  { title: '事件', dataIndex: 'event', key: 'event', width: 220 },
+  { title: '回调参数', dataIndex: 'params', key: 'params', width: 220 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+]
+
+const methodColumns = [
+  { title: '方法 / 属性', dataIndex: 'prop', key: 'prop', width: 200 },
+  { title: '说明', dataIndex: 'desc', key: 'desc' },
+]
+
 const crudProps = [
-  { key: '1', prop: 'schema', type: 'CrudPageSchema', default: '{}', desc: 'CRUD 页面完整配置' },
-  { key: '2', prop: 'schema.formItems', type: 'FormItemOption[]', default: '[]', desc: '查询表单字段' },
-  { key: '3', prop: 'schema.columns', type: 'TableColumn[]', default: '[]', desc: '表格列配置' },
-  { key: '4', prop: 'schema.tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项' },
-  { key: '5', prop: 'schema.toolbarBtns', type: 'BtnConfig[]', default: '[]', desc: '工具栏按钮' },
-  { key: '6', prop: 'schema.operationColumn', type: 'object', default: '{}', desc: '操作列配置' },
-  { key: '7', prop: 'schema.dialogs', type: 'Record<string, DialogOptions>', default: '{}', desc: '弹窗配置集合' },
+  { key: '1', prop: 'schema', type: 'CrudPageSchema', default: '{}', desc: 'CRUD 页面完整配置（见下方 Schema 结构）' },
+  { key: '2', prop: 'httpRequest', type: 'Function', default: '-', desc: '请求函数 (params) => Promise，也可写在 schema.tableOptions 里' },
+  { key: '3', prop: 'autoLoad', type: 'boolean', default: 'true', desc: '挂载后是否自动加载首屏数据' },
+]
+
+const crudSchema = [
+  { key: '1', prop: 'formItems', type: 'FormItemOption[]', default: '[]', desc: '查询表单字段配置（透传给 EsForm 的 formItemList）；为空则不渲染查询表单' },
+  { key: '2', prop: 'formLayout', type: 'object', default: '-', desc: '查询表单布局：labelWidth、minFoldRows' },
+  { key: '3', prop: 'toolbarBtns', type: 'CrudBtnConfig[]', default: '-', desc: '工具栏按钮（渲染在 EsForm 的按钮区）；不声明时按推导出的 actions 自动生成' },
+  { key: '4', prop: 'tableBtns', type: 'TableBtnConfig[]', default: '-', desc: '表格工具栏按钮，渲染在 EsTable 上方的 configBtn 区，可用 position 指定左右' },
+  { key: '5', prop: 'columns', type: 'TableColumn[]', default: '-', desc: '表格列配置（必填，同 EsTable columns）' },
+  { key: '6', prop: 'tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项配置，与 EsTable 的 options 同源' },
+  { key: '7', prop: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置 { pageIndex, pageSize, total }' },
+  { key: '8', prop: 'operationColumn', type: 'OperationColumnConfig | false', default: '-', desc: '操作列配置；false 隐藏操作列，对象则按给的定义渲染' },
+  { key: '9', prop: 'dialogs', type: 'Record<string, CrudDialogConfig>', default: '-', desc: '多弹窗配置，键名即按钮 dialogKey 取的值（见下方 Dialogs 配置）' },
+  { key: '10', prop: 'actions', type: 'CrudAction[]', default: '-', desc: '已废弃：用 toolbarBtns + operationColumn 替代' },
+  { key: '11', prop: 'dialogFormItems / dialogOptions / queryBtns', type: '-', default: '-', desc: '已废弃：用 dialogs / toolbarBtns 替代' },
+]
+
+const crudBtnConfigs = [
+  { key: '1', prop: 'name', type: 'string', default: '必填', desc: '按钮文本' },
+  { key: '2', prop: 'key', type: 'string', default: '-', desc: '按钮标识；query / add / export 有内建语义，其余经 btn-click 派发' },
+  { key: '3', prop: 'type', type: 'string', default: '-', desc: '按钮风格：primary / success / warning / danger（映射到 a-button）' },
+  { key: '4', prop: 'size', type: 'string', default: '-', desc: '按钮尺寸；tableBtns 缺省 small' },
+  { key: '5', prop: 'icon', type: 'string', default: '-', desc: '图标名称' },
+  { key: '6', prop: 'position', type: 'string', default: 'left', desc: '左右位置：left / right（tableBtns 用它分组；toolbarBtns 由 EsForm 按钮区布局决定）' },
+  { key: '7', prop: 'code', type: '1 | 2', default: '-', desc: '位置旧写法：2 视为 right，其余视为 left（position 优先）' },
+  { key: '8', prop: 'direction', type: 'string', default: '-', desc: '按钮排列方向：left / right（弹窗与表格的按钮底座读取；toolbarBtns 不读取）' },
+  { key: '9', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态（禁用点击并显示 loading）' },
+  { key: '10', prop: 'disabled', type: 'boolean | Function', default: 'false', desc: '禁用状态，支持函数动态判断' },
+  { key: '11', prop: 'permissionValue', type: 'string', default: '-', desc: '按钮级权限编码，无权限时不渲染' },
+  { key: '12', prop: 'triggerEvent', type: 'boolean', default: 'false', desc: '仅 toolbarBtns：key 为 query / rest 时点击触发一次表格刷新' },
+  { key: '13', prop: 'click', type: 'Function', default: '-', desc: '(model, formRef?) => void；tableBtns 中的 click 会被 CRUD 页接管（改走 dialogKey / actionType）' },
+  { key: '14', prop: 'dialogKey', type: 'string', default: '-', desc: '点击时打开 dialogs 里对应的弹窗' },
+  { key: '15', prop: 'actionType', type: 'string', default: '-', desc: '语义动作（如 export / import），无 key 时兜底作语义键' },
+  { key: '16', prop: 'confirm', type: 'string | boolean', default: '-', desc: '点击前的二次确认（true 用默认文案）' },
+]
+
+const crudOperationColumns = [
+  { key: '1', prop: 'label', type: 'string', default: '操作', desc: '列标题' },
+  { key: '2', prop: 'width', type: 'number | string', default: '-', desc: '列宽，缺省按按钮数自动计算（btns.length * 80 + 20）' },
+  { key: '3', prop: 'fixed', type: 'boolean | string', default: 'right', desc: '固定方向' },
+  { key: '4', prop: 'btns', type: 'RowBtnConfig[]', default: '必填', desc: '行操作按钮列表' },
+]
+
+const crudRowBtns = [
+  { key: '1', prop: 'name', type: 'string', default: '必填', desc: '按钮文字' },
+  { key: '2', prop: 'key', type: 'string', default: '-', desc: '按钮标识（用于 btn-click 事件与内建 edit / view / delete 语义）' },
+  { key: '3', prop: 'type', type: 'string', default: '-', desc: '按钮类型' },
+  { key: '4', prop: 'icon', type: 'string', default: '-', desc: '图标' },
+  { key: '5', prop: 'permissionValue', type: 'string', default: '-', desc: '权限标识' },
+  { key: '6', prop: 'dialogKey', type: 'string', default: '-', desc: '点击时打开的弹窗 key，自动将当前行数据传入' },
+  { key: '7', prop: 'confirm', type: 'string | boolean', default: '-', desc: '点击前确认提示（如删除确认）' },
+  { key: '8', prop: 'hidden', type: 'boolean | Function', default: '-', desc: '是否隐藏，支持 (row) => boolean 动态判断' },
+  { key: '9', prop: 'click', type: 'Function', default: '-', desc: '自定义点击处理 (row, { refresh, getSelectedRows, openDialog }) => void；提供后不再走 dialogKey' },
+]
+
+const crudDialogs = [
+  { key: '1', prop: 'title', type: 'string | Function', default: '-', desc: '弹窗标题，可传 (row) => string 按行生成' },
+  { key: '2', prop: 'width', type: 'string | number', default: '-', desc: '弹窗宽度' },
+  { key: '3', prop: 'formItems / formLayout', type: 'FormItemOption[] / object', default: '-', desc: '弹窗内表单的字段与布局，与 EsForm 的配置同源' },
+  { key: '4', prop: 'render', type: 'Function', default: '-', desc: '完全自定义内容：(h, { row, model, close, refresh }) => VNode' },
+  { key: '5', prop: 'configBtn', type: 'DialogBtnConfig[]', default: '-', desc: '底部按钮配置，action 可取 confirm / cancel / custom' },
+  { key: '6', prop: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '隐藏默认底部按钮（自绘导航时用）' },
+  { key: '7', prop: 'maxHeight / fullscreen / isDraggable', type: 'string | number / boolean', default: '-', desc: '弹窗样式与交互' },
+  { key: '8', prop: 'showClose / destroyOnClose / modal / closeOnClickModal / closeOnPressEscape / hiddenFullBtn / appendTo / cacheKey', type: '-', default: '-', desc: '弹窗底座属性，逐键透传给弹窗层；cacheKey 复用时保留内部状态' },
+  { key: '9', prop: 'hasCustomRender', type: 'boolean', default: '-', desc: 'AI 生成器注解键：生成器据此转成 TODO 占位；运行时白名单刻意不转发，不是弹窗 prop' },
+  { key: '10', prop: 'onOpen / onConfirm / onClose', type: 'Function', default: '-', desc: '生命周期回调；onConfirm(data, { close, refresh, getRefs, row })' },
+]
+
+const crudEvents = [
+  { key: '1', event: 'query', params: '(model)', desc: '查询条件变化' },
+  { key: '2', event: 'add', params: '-', desc: '点击新增' },
+  { key: '3', event: 'edit', params: '(row)', desc: '点击编辑' },
+  { key: '4', event: 'delete', params: '(row)', desc: '点击删除' },
+  { key: '5', event: 'view', params: '(row)', desc: '点击查看' },
+  { key: '6', event: 'export', params: '(model)', desc: '点击导出' },
+  { key: '7', event: 'row-click', params: '(row)', desc: '行点击' },
+  { key: '8', event: 'btn-click', params: '(key, payload?)', desc: '工具栏按钮点击（携带按钮 key）' },
+  { key: '9', event: 'dialog-confirm', params: '(dialogKey, data)', desc: '弹窗确认' },
+  { key: '10', event: 'dialog-cancel', params: '(dialogKey)', desc: '弹窗取消' },
+  { key: '11', event: 'dialog-open', params: '(dialogKey, row?)', desc: '弹窗打开' },
+]
+
+const crudMethods = [
+  { key: '1', prop: 'refresh', params: '()', desc: '刷新表格（保留当前查询条件）' },
+  { key: '2', prop: 'getSelectedRows', params: '()', desc: '取表格当前勾选行' },
+  { key: '3', prop: 'tableRef', params: '-', desc: '底层 EsTable 实例' },
+  { key: '4', prop: 'formRef', params: '-', desc: '底层 EsForm 实例' },
+  { key: '5', prop: 'queryModel', params: '-', desc: '查询表单的 model 对象' },
+  { key: '6', prop: 'openDialog', params: '(dialogKey, row?)', desc: '打开指定弹窗' },
+  { key: '7', prop: 'closeDialog', params: '(dialogKey?)', desc: '关闭弹窗（不传则关当前）' },
 ]
 </script>
 

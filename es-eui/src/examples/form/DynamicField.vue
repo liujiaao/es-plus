@@ -37,7 +37,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入公司名称' },
-          isHiden: (model) => model.userType !== 'company'
+          isHidden: (model) => model.userType !== 'company'
         },
         {
           prop: 'businessLicense',
@@ -45,7 +45,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入营业执照号' },
-          isHiden: (model) => model.userType !== 'company'
+          isHidden: (model) => model.userType !== 'company'
         },
         {
           prop: 'personalName',
@@ -53,7 +53,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入个人姓名' },
-          isHiden: (model) => model.userType !== 'personal'
+          isHidden: (model) => model.userType !== 'personal'
         },
         {
           prop: 'idCard',
@@ -61,7 +61,7 @@ export default {
           span: 12,
           formtype: 'Input',
           attrs: { placeholder: '请输入身份证号' },
-          isHiden: (model) => model.userType !== 'personal'
+          isHidden: (model) => model.userType !== 'personal'
         }
       ]
     }
