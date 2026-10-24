@@ -1,9 +1,14 @@
 /**
  * Pre-build script: reads all .vue example files and generates
  * src/examples/raw-sources.generated.js with raw source code strings.
+ *
+ * `--check` 只比对不落盘：生成物是提交进库的派生物，需要一条「检出后是否与源码同步」
+ * 的守卫（与仓库里其它 sync 脚本的 --check 约定一致）。
  */
 const fs = require('fs')
 const path = require('path')
+
+const isCheck = process.argv.includes('--check')
 
 const examplesDir = path.resolve(__dirname, '../src/examples')
 const outputFile = path.resolve(__dirname, '../src/examples/raw-sources.generated.js')
@@ -14,6 +19,9 @@ const outputFile = path.resolve(__dirname, '../src/examples/raw-sources.generate
 // 不排就同一份源码在不同机器/检出上产出不同字节的生成物 —— 这个文件的定位是「提交进库的
 // 派生物」，顺序不稳就等于每次换环境都产生一次无意义的 diff。当前 88 个键在 Windows 上
 // 恰好已是有序的，所以补上 sort() 对本机产物逐字节无变化，只是把「恰好」变成「保证」。
+//
+// 行尾同样要归一：`core.autocrlf` 检出后源码是 CRLF，直接内嵌会让生成物随平台变化
+// （Windows 上 CRLF、Linux 上 LF），并且 `\r` 会原样出现在代码展示里。
 function walk(dir, base) {
   const results = []
   const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -24,7 +32,8 @@ function walk(dir, base) {
     } else if (entry.name.endsWith('.vue')) {
       const relative = path.relative(base, fullPath).replace(/\\/g, '/')
       const key = relative.replace(/\.vue$/, '')
-      const content = fs.readFileSync(fullPath, 'utf-8')
+      // `\r+\n` 一次性吃掉重复的 CR（历史文件里出现过 `\r\r\n`，逐字符替换会凭空多出空行）
+      const content = fs.readFileSync(fullPath, 'utf-8').replace(/\r+\n/g, '\n').replace(/\r/g, '\n')
       results.push({ key, content })
     }
   }
@@ -59,5 +68,16 @@ for (const { key } of sources) {
 }
 output += '}\n'
 
-fs.writeFileSync(outputFile, output)
-console.log(`Generated raw sources for ${sources.length} files → ${outputFile}`)
+if (isCheck) {
+  const current = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : ''
+  if (current !== output) {
+    console.error(
+      `raw sources out of date (${sources.length} files) → 运行 node es-eui/scripts/generate-raw-sources.js 重新生成`
+    )
+    process.exit(1)
+  }
+  console.log(`raw sources up to date (${sources.length} files)`)
+} else {
+  fs.writeFileSync(outputFile, output)
+  console.log(`Generated raw sources for ${sources.length} files → ${outputFile}`)
+}

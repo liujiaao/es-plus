@@ -1897,7 +1897,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
+            pageSize: 'limit',
             tableData: 'users'
           },
           listenToCallBack: {
@@ -1926,7 +1926,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
+            pageSize: 'limit',
             tableData: 'posts'
           },
           listenToCallBack: {
@@ -1952,7 +1952,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
+            pageSize: 'limit',
             tableData: 'products'
           },
           listenToCallBack: {
@@ -8083,7 +8083,6 @@ export const RAW_vue2_compat_RechargeRecord = `<template>
       :data-source.sync="tableData"
       :pagination.sync="pagination"
       :class="['dong-table']"
-      @row-click="handleRowClick"
     >
           <es-form
         :model="queryForm"
@@ -8314,7 +8313,6 @@ export default defineComponent({
             name: '提交',
             type: 'primary',
             click: async (instance, { close }) => {
-              console.log('formName', instance.validate)
               const formCmp = instance
               if (!formCmp) return
               const valid = await formCmp.validate()
@@ -8394,9 +8392,8 @@ export default defineComponent({
         position: 'left',
         icon: 'el-icon-refresh',
         click: (...res) => {
-          const {formInstance, tableRef} = res[0]
-          console.log('shuaxin///', tableRef.proxy.httpRequestInstance)
-            tableRef.proxy.httpRequestInstance()
+          const { tableRef } = res[0]
+          tableRef.proxy.httpRequestInstance()
           // if (tableRef.value && typeof tableRef.value.queryList === 'function') {
           //   tableRef.value.queryList()
           // }
@@ -8529,10 +8526,6 @@ export default defineComponent({
         minFoldRows: 1
       }
     }
-   const handleRowClick = (row, column, event) => {
-       console.log('row click333', row, column, event)
-   }
-
     return {
       queryForm,
       tableData,
@@ -8542,8 +8535,7 @@ export default defineComponent({
       queryBtns,
       columns,
       options,
-      layoutFormProps,
-      handleRowClick
+      layoutFormProps
     }
   }
 })

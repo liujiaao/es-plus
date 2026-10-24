@@ -55,7 +55,7 @@
     <!-- 操作列 -->
     <section id="actions">
       <h2>操作列</h2>
-      <p>在列配置中添加 <code>btns</code> 数组定义操作按钮。</p>
+      <p>在列配置中添加 <code>btns</code> 数组定义操作按钮；<code>hidden</code> 同时按行状态与角色求值。工具栏的新增、批量审核（按勾选行）、导出都真实落到数据源。</p>
             <CodeDemo :source="rawSFCs['./es-table/RowActions.vue']">
         <EsTableRowActions />
       </CodeDemo>

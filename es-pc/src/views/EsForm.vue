@@ -110,7 +110,7 @@
 
     <section id="advanced-buttons">
       <h2>按钮左右分栏</h2>
-      <p><code>btnColSpanRow</code> + <code>direction</code> 实现左右分栏按钮区。</p>
+      <p><code>btnColSpanRow</code> + <code>direction</code> 实现左右分栏按钮区；查询真的过滤下方结果集，导出是真的 CSV 文件。</p>
             <CodeDemo :source="rawSFCs['./es-form/AdvancedButtons.vue']">
         <EsFormAdvancedButtons />
       </CodeDemo>

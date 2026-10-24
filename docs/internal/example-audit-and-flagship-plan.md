@@ -20,7 +20,7 @@
 
 3. **两个已发组件三站零案例**：`EsErrorBoundary`、`SvgIcon`。三端都已导出、有源码、无文档页、无示例。
 
-4. **真实缺陷不多但确实存在**：假按钮（导出/查询只弹 toast）、标题与内容不符、死文件带 11 处 `console.log`、
+4. **真实缺陷不多但确实存在**：假按钮（导出/查询只弹 toast）、标题与内容不符、参考示例里的调试残留、
    3 个文件 CRCRLF 行尾、代码展示里的悬空空白行。
 
 5. **冗余不是"复制粘贴"**：三站同名示例已各自演进（字面重复 ≈ 0）。冗余在**能力颗粒度**——
@@ -34,7 +34,7 @@
 | --- | --- | --- |
 | 主站示例 `.vue` | 97 | `es-plus-docs/src/components/examples/**`，97/97 已登记 |
 | AntDV 站示例 `.vue` | 110 | `es-pc/src/views/**`，其中 98 个 `CodeDemo` 登记 |
-| Vue2 站示例 `.vue` | 91 | `es-eui/src/examples/**`，89 登记 + 2 个 `vue2-compat` 死文件 |
+| Vue2 站示例 `.vue` | 91 | `es-eui/src/examples/**`，89 登记 + 2 个 `vue2-compat` 参考示例 |
 | 合计 | 298 | 四道站点守卫全绿 |
 
 源码依据（用于判断"能力是否真的存在"，而非只看宣传）：
@@ -58,8 +58,8 @@
 | D2 | P0 | `component-doc.data.ts:70,73,82,85` | 导航文案直接写"`isHidden` + `on.change` 实现联动"、"`on.change + on.input` 实现计算" | 同上 | 文案把"胶水写法"当成推荐解法 |
 | D3 | P1 | `form/AdvancedButtons.vue:63,73`（docs 与 pc 各一份） | "导出"与"查询"只 `ElMessage.success(JSON.stringify(model))`，无任何数据动作 | 两个文件同样实现 | 假交互，且是"高级按钮区"这个标题下的主案例 |
 | D4 | P1 | `table/RowActions.vue:96-99` | 工具栏"新增 / 批量审核 / 导出"只弹 toast；行内按钮是真的 | 行内 `handleEdit/handleSubmit/handleDelete` 真改数据 | 一半真一半假，观众无法判断哪半可信 |
-| D5 | P1 | `es-eui/src/examples/combination/DataFlowManagement.vue:1` | 标题"数据流管理"，内容是最小行内编辑；与 `EditableGridSubmit.vue`（脏数据跟踪批量提交）语义冲突 | 文件 93 行，无数据流、无流程 | 标题不达意，违反"标题必须突出侧重点" |
-| D6 | P1 | `es-eui/src/examples/vue2-compat/RechargeRecord.vue`（9 处 `console.log`）、`RechargeForm.vue`（2 处） | 死文件（路由只留一行注释引用），仍被 `raw-sources` 打包，含 `TODO: 替换为真实接口` | 两个文件均未登记 | 调试代码随产物发布 |
+| D5 | P1 | `es-eui/src/examples/combination/DataFlowManagement.vue:1` | **复核更正**：文件名叫 "DataFlowManagement"，但导航标题已是「行内编辑 + EsForm」，与内容一致；只是**文件名**陈旧 | 文件 93 行；`examples/index.js` 的 sidebar 标题正确 | 仅文件名不达意，不改代码，记为命名遗留 |
+| D6 | P1 | `es-eui/src/examples/vue2-compat/RechargeRecord.vue`、`RechargeForm.vue` | **复核更正**：这两个文件是 `router/index.js:140-145` 明确保留的「参考示例」，文件头也有说明；`[brcb]`/`[qrcb]` 日志是文档化的调试辅助 | 路由注释 + 文件头注释 | 不是死文件；只清 3 处明显残留（`formName`/`shuaxin///`/`row click333` 及其空转的 `@row-click` 绑定） |
 | D7 | P1 | `packages/vue3/src/index.ts:14` 与三端组件目录 | `EsErrorBoundary`、`SvgIcon` 三端已导出，三站 0 示例、0 文档页 | 全仓 `grep` 示例目录命中 0 | 6 个组件里有 2 个对用户不可见 |
 | D8 | P2 | `es-pc/src/views/Cases.vue`（全文）、`es-eui/.../TabMultiTable.vue`（3 行）、`es-eui/.../raw-sources.generated.js` | CRCRLF（`\r\r\n`）行尾 | `cat -A` 可见 `^M^M$` | 代码块可能多出空行、diff 噪音、生成物字节不稳 |
 | D9 | P2 | `AdvancedButtons.vue:52`（docs 与 pc） | `attrs` 对象里有一行只含 4 个空格的悬空行；daterange 同时给了 `placeholder` 与 `start/end-placeholder` | 代码 tab 原样展示 | 展示代码不够干净 |
@@ -232,9 +232,9 @@
 
 - D3 假按钮：`AdvancedButtons` 的导出改为真的生成 CSV；查询改为真的过滤一张小表。
 - D4 `RowActions` 工具栏三键接真实动作（新增插一行、批量审核改状态、导出 CSV）。
-- D5 `DataFlowManagement.vue` 改名"行内编辑（最小版）"或并入 `EditableGridSubmit`。
-- D6 删除 `vue2-compat/` 两个死文件（连同路由注释），重生成 `raw-sources.generated.js`。
-- D8 统一行尾为 LF（`Cases.vue`、`TabMultiTable.vue`、重生成的 `raw-sources`）。
+- D5 `DataFlowManagement.vue` —— **复核后不改**：仅文件名陈旧，导航标题已正确（见 §2 更正）。
+- D6 **复核后不删**：`vue2-compat/` 是刻意保留的参考示例；只清 3 处调试残留。
+- D8 统一行尾为 LF（`Cases.vue`、`TabMultiTable.vue`、重生成的 `raw-sources`）；生成器归一化行尾并新增 `--check`。
 - D9 清掉悬空空白行与冗余 `placeholder`（docs + pc 两份）。
 - 守卫：`node scripts/check-cases-links.mjs`、`node scripts/generate-raw-sources.js`、`cd es-eui && npm run build`。
 
@@ -293,7 +293,7 @@ npm run -s check:site-api-drift
 | 旗舰案例真的能用 | 构建通过 + 手动走一遍主路径（查询→勾选→批量→详情→刷新） |
 | 标题达意 | 每条案例标题能在 12 字内说清"它证明什么" |
 | 无调试残留 | 示例目录 `console.log` 计数为 0（白名单除外） |
-| 行尾卫生 | 全仓无 `\r\r\n`；`raw-sources` 有 `--check` 模式 |
+| 行尾卫生 | 全仓无 `\r\r\n`；`npm run check:raw-sources` 通过（生成物与源码同步） |
 
 ---
 
