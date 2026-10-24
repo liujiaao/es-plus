@@ -439,5 +439,77 @@ export const docsData: Record<string, any> = {
         { name: 'formRef', params: '-', desc: '内部 EsForm 组件实例' }
       ]
     }
+  },
+  'es-error-boundary': {
+    title: 'EsErrorBoundary 错误边界',
+    description:
+      '组件级错误围栏：子树在渲染 / 生命周期 / 侦听器里出错时只降级这一块，通过 error 事件上报、reset() 原地恢复 —— 一个坏组件不会拖垮整页。',
+    features: [
+      { name: '故障隔离', desc: '只降级出错的子树，边界外照常交互', icon: 'WarningFilled' },
+      { name: '降级 UI 可定制', desc: 'fallback 插槽拿到 error / reset；零配置时用 fallbackText', icon: 'Edit' },
+      { name: '错误上报', desc: 'error 事件带 (err, info)，可直接接埋点与日志', icon: 'Bell' },
+      { name: '原地恢复', desc: 'reset() 清除错误态，修好数据即重新挂载子树', icon: 'RefreshRight' }
+    ],
+    examples: [
+      {
+        key: 'basic',
+        title: '故障注入台：一处坏掉，整页还在',
+        description:
+          '两个会抛错的子组件分别走「自定义 fallback + reset」与「只给 fallback-text + ref.reset()」两条恢复路径；error 事件实时落到日志，边界外的按钮全程可点 —— 隔离是能被操作验证的。',
+        component: getComponent('error-boundary/basic'),
+        code: code('error-boundary/basic')
+      }
+    ],
+    api: {
+      props: [
+        { name: 'fallbackText', type: 'string', default: "''", desc: '默认降级文案；未提供 fallback 插槽时显示' }
+      ],
+      slots: [
+        { name: 'default', params: '-', desc: '正常渲染的子树：其渲染 / 生命周期 / 侦听器错误会被本边界捕获' },
+        { name: 'fallback', params: '{ error, reset }', desc: '捕获错误后替代渲染；error 为原始错误，reset() 清除错误态（须先修好数据）' }
+      ],
+      events: [
+        {
+          name: 'error',
+          params: '(err, info)',
+          desc: '捕获到子树错误时触发；info 是出错钩子名（如 render function）。边界返回 false，错误不再冒泡到 app.config.errorHandler'
+        }
+      ],
+      methods: [
+        { name: 'reset', params: '-', desc: '清除错误态并重新挂载子树；若导致错误的数据没修好，会立刻再次降级' }
+      ]
+    }
+  },
+  'svg-icon': {
+    title: 'SvgIcon 图标',
+    description:
+      '统一的图标出口：雪碧图符号按 currentColor 着色、尺寸随字号，也能直接吃 http(s) 外部图片 —— 业务里不必再各写一套 <svg><use>。',
+    features: [
+      { name: '雪碧图符号', desc: 'iconClass 自动拼成 #icon-xxx，引用页面注入的 <symbol>', icon: 'Picture' },
+      { name: '随主题着色', desc: 'fill: currentColor，放进按钮/标签自动跟随颜色与禁用态', icon: 'Brush' },
+      { name: '尺寸即字号', desc: '宽高都是 1em，字号多大图标就多大，无需尺寸 prop', icon: 'FullScreen' },
+      { name: '外部图片', desc: '协议开头（http(s)/mailto/tel/open）自动切到外部图片模式', icon: 'Link' }
+    ],
+    examples: [
+      {
+        key: 'basic',
+        title: '一个图标出口：尺寸 / 着色 / 类名 / 外部图片',
+        description:
+          '内联一份雪碧图即可跑：字号控制尺寸、color 控制颜色、className 追加装饰样式，最后的协议地址切到外部图片模式。组件只输出那一个 1em 的图标，其余全部交给宿主。',
+        component: getComponent('svg-icon/basic'),
+        code: code('svg-icon/basic')
+      }
+    ],
+    api: {
+      props: [
+        {
+          name: 'iconClass',
+          type: 'string',
+          default: '必填',
+          desc: '图标名。非协议开头 → 渲染 <svg><use href="#icon-{iconClass}">；以 http(s)/mailto/tel/open 开头 → 外部图片模式'
+        },
+        { name: 'className', type: 'string', default: "''", desc: '追加到根节点的类名，装饰性样式不必改组件' }
+      ]
+    }
   }
 }

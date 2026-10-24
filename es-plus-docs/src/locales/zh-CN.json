@@ -29,6 +29,8 @@
     "esForm": "EsForm 高级表单",
     "esTable": "EsTable 高级表格",
     "esCrudPage": "EsCrudPage 高级CRUD",
+    "esErrorBoundary": "EsErrorBoundary 错误边界",
+    "svgIcon": "SvgIcon 图标",
     "useDialog": "useDialog 弹窗",
     "linkage": "高级联动组合",
     "vxeTable": "高性能 vxe-table 表格",

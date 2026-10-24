@@ -63,3 +63,16 @@ const resolvedIcon = computed(() => {
   return getAdvIcon(val, 14) ? getAdvIcon(val, 14) : null
 })
 </script>
+
+<style scoped>
+/* 与 @es-plus/vue3 / @es-plus/vue2 的 SvgIcon 对齐：宽高 1em、颜色继承 currentColor。
+   此前本端没有这段样式，雪碧图分支会退化成浏览器默认的 <svg>（300×150、黑色），
+   与另两端的表现完全不一致。 */
+.svg-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  fill: currentColor;
+  overflow: hidden;
+}
+</style>

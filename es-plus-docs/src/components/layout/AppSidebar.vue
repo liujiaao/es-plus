@@ -23,7 +23,7 @@
 import { watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled, Cpu, Odometer, Collection } from '@element-plus/icons-vue'
+import { Edit, Grid, ChatDotRound, Connection, Monitor, Switch, MagicStick, Lock, Document, SetUp, Promotion, Box, Reading, Tools, StarFilled, Cpu, Odometer, Collection, Warning, Picture } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -67,6 +67,8 @@ const sections = [
       { path: '/components/es-form', labelKey: 'sidebar.esForm', icon: markRaw(Edit) },
       { path: '/components/es-table', labelKey: 'sidebar.esTable', icon: markRaw(Grid) },
       { path: '/components/es-crud-page', labelKey: 'sidebar.esCrudPage', icon: markRaw(Document) },
+      { path: '/components/es-error-boundary', labelKey: 'sidebar.esErrorBoundary', icon: markRaw(Warning) },
+      { path: '/components/svg-icon', labelKey: 'sidebar.svgIcon', icon: markRaw(Picture) },
       // Playground 是 EsForm / EsTable / useDialog 的实时配置编辑器，按内容归到组件组；
       // 此前它挂在「AI 工具链」下与 MCP / CLI 并列 —— 那不是 AI 功能，分组会误导。
       { path: '/playground', labelKey: 'sidebar.playground', icon: markRaw(Monitor) },

@@ -29,6 +29,8 @@
     "esForm": "EsForm",
     "esTable": "EsTable",
     "esCrudPage": "EsCrudPage",
+    "esErrorBoundary": "EsErrorBoundary",
+    "svgIcon": "SvgIcon",
     "useDialog": "useDialog",
     "linkage": "Linkage Composition",
     "vxeTable": "High-perf vxe-table",

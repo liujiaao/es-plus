@@ -54,6 +54,18 @@
           EsCrudPage 整页
         </router-link>
         <router-link
+          to="/component/eserrorboundary"
+          class="nav-item"
+        >
+          EsErrorBoundary 错误边界
+        </router-link>
+        <router-link
+          to="/component/svgicon"
+          class="nav-item"
+        >
+          SvgIcon 图标
+        </router-link>
+        <router-link
           to="/component/combination"
           class="nav-item"
         >

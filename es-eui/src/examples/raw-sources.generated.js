@@ -4523,6 +4523,256 @@ export default defineComponent({
 })
 </script>
 `
+export const RAW_error_boundary_Basic = `<template>
+  <div class="eb-workbench">
+    <div class="eb-bar">
+      <el-button size="mini" type="danger" plain data-testid="eb-break-revenue" @click="breakWidget('revenue')">
+        让指标卡抛错
+      </el-button>
+      <el-button size="mini" type="danger" plain data-testid="eb-break-trend" @click="breakWidget('trend')">
+        让趋势图抛错
+      </el-button>
+      <span class="eb-isolation">
+        边界外仍然可用：
+        <el-button size="mini" data-testid="outside-counter" @click="outsideClicks++">
+          普通按钮 · 已点 {{ outsideClicks }} 次
+        </el-button>
+      </span>
+    </div>
+
+    <!-- ① 自定义降级 UI：fallback 插槽拿到 { error, reset } -->
+    <es-error-boundary @error="logError">
+      <template #default>
+        <broken-widget :broken="revenueBroken" :message="REVENUE_ERROR">
+          <div class="eb-widget__title">实时营收</div>
+          <div class="eb-kpi">
+            <strong>¥128,400</strong>
+            <span class="eb-up">+12.8%</span>
+          </div>
+        </broken-widget>
+      </template>
+
+      <template #fallback="{ error, reset }">
+        <div class="eb-fallback" data-testid="eb-fallback">
+          <p class="eb-fallback__title">指标卡已被错误边界围住</p>
+          <p class="eb-fallback__msg">{{ error && error.message }}</p>
+          <el-button size="mini" type="primary" data-testid="eb-retry" @click="repairRevenue(reset)">
+            修复数据并重试
+          </el-button>
+        </div>
+      </template>
+    </es-error-boundary>
+
+    <!-- ② 零配置降级：只给 fallback-text；恢复走 ref.reset() -->
+    <es-error-boundary
+      ref="trendBoundary"
+      fallback-text="趋势图已降级：数据源不可用（未提供 fallback 插槽时的默认文案）"
+      @error="logError"
+    >
+      <template #default>
+        <broken-widget :broken="trendBroken" :message="TREND_ERROR">
+          <div class="eb-widget__title">近 7 日趋势</div>
+          <div class="eb-bars">
+            <i v-for="(height, index) in [38, 52, 44, 68, 58, 76, 88]" :key="index" :style="{ height: height + '%' }" />
+          </div>
+        </broken-widget>
+      </template>
+    </es-error-boundary>
+    <el-button v-if="trendBroken" size="mini" data-testid="eb-retry-trend" @click="repairTrend">
+      修复趋势图
+    </el-button>
+
+    <div class="eb-log">
+      <div class="eb-log__head">error 事件（{{ logs.length }}）</div>
+      <p v-if="!logs.length" class="eb-log__empty">尚未捕获到错误</p>
+      <p v-for="(item, index) in logs" :key="index" class="eb-log__row" data-testid="eb-log-row">
+        <code>{{ item.info }}</code>
+        <span>{{ item.message }}</span>
+      </p>
+    </div>
+
+    <p class="eb-note">
+      <code>&lt;es-error-boundary&gt;</code> 只捕获<strong>子树</strong>在渲染 / 生命周期 / 侦听器里抛出的错误
+      （自身渲染出错需要再往外包一层）。捕获后返回 <code>false</code> 阻止错误继续冒泡到
+      <code>Vue.config.errorHandler</code>，因此故障只影响这一块，整页不会白屏。
+      <code>reset()</code> 只清错误态 —— 必须先修好导致错误的数据再调用，否则重新渲染会立刻再次降级。
+      与 EsTable 逐单元格 render 的 try/catch 互补：后者兜单个格子，本边界兜整棵子树。
+    </p>
+  </div>
+</template>
+
+<script>
+const REVENUE_ERROR = '指标接口返回空数组：同比无法计算'
+const TREND_ERROR = '趋势数据缺列：series 字段为 null'
+
+/**
+ * 一个「会坏的子组件」：broken 为 true 时在 render 里直接抛错。
+ * 抛错点必须在边界内部的子组件里 —— 错误边界不捕获自身渲染错误。
+ */
+const BrokenWidget = {
+  name: 'BrokenWidget',
+  props: {
+    broken: { type: Boolean, default: false },
+    message: { type: String, default: '子组件渲染失败' },
+  },
+  render(h) {
+    if (this.broken) throw new Error(this.message)
+    return h('div', { class: 'eb-widget' }, this.\$slots.default)
+  },
+}
+
+export default {
+  name: 'ErrorBoundaryBasic',
+  components: { BrokenWidget },
+  data() {
+    return {
+      REVENUE_ERROR,
+      TREND_ERROR,
+      revenueBroken: false,
+      trendBroken: false,
+      outsideClicks: 0,
+      logs: [],
+    }
+  },
+  methods: {
+    breakWidget(target) {
+      if (target === 'revenue') this.revenueBroken = true
+      else this.trendBroken = true
+    },
+    /** 先修数据、再清错误态 —— 反过来的话重渲染会立刻再抛一次 */
+    repairRevenue(reset) {
+      this.revenueBroken = false
+      if (reset) reset()
+    },
+    repairTrend() {
+      this.trendBroken = false
+      this.\$refs.trendBoundary.reset()
+    },
+    logError(err, info) {
+      this.logs.unshift({ info, message: (err && err.message) || String(err) })
+      if (this.logs.length > 4) this.logs.pop()
+    },
+  },
+}
+</script>
+
+<style>
+/* 案例内类名统一 eb- 前缀，避免污染全局 */
+.eb-workbench {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px;
+}
+.eb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.eb-isolation {
+  margin-left: auto;
+  font-size: 12px;
+  color: #909399;
+}
+.eb-widget {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: #fafcff;
+}
+.eb-widget__title {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+.eb-kpi {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.eb-kpi strong {
+  font-size: 26px;
+  color: #303133;
+  font-variant-numeric: tabular-nums;
+}
+.eb-up {
+  font-size: 13px;
+  color: #67c23a;
+}
+.eb-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 72px;
+}
+.eb-bars i {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, #79bbff 0%, #409eff 100%);
+}
+.eb-fallback {
+  border: 1px solid #fbc4c4;
+  background: #fef0f0;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.eb-fallback__title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f56c6c;
+}
+.eb-fallback__msg {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #a33;
+  font-family: 'Fira Code', monospace;
+}
+.eb-log {
+  margin-top: 10px;
+  border-top: 1px dashed #ebeef5;
+  padding-top: 8px;
+  font-size: 12px;
+}
+.eb-log__head {
+  color: #909399;
+  margin-bottom: 4px;
+}
+.eb-log__empty {
+  margin: 0;
+  color: #c0c4cc;
+}
+.eb-log__row {
+  margin: 2px 0;
+  color: #606266;
+  display: flex;
+  gap: 8px;
+}
+.eb-log__row code {
+  color: #409eff;
+  background: #ecf5ff;
+  border-radius: 3px;
+  padding: 0 5px;
+  font-family: 'Fira Code', monospace;
+}
+.eb-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #909399;
+}
+.eb-note code {
+  background: #f5f5f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'Fira Code', monospace;
+  color: #d63384;
+}
+</style>
+`
 export const RAW_form_ApiRequest = `<template>
   <es-form
     :form-item-list="formItemList"
@@ -6293,6 +6543,141 @@ export default {
   }
 }
 </script>
+`
+export const RAW_svg_icon_Basic = `<template>
+  <div class="si-workbench">
+    <!--
+      演示用雪碧图：真实项目里由 svg-sprite-loader 在构建时注入，这里内联一份 <symbol>，
+      保证示例在任何环境（含离线）都能直接跑。容器用 width/height:0 + overflow:hidden 藏起来 ——
+      display:none 在部分浏览器里会让 <use> 引用失效。
+    -->
+    <svg class="si-sprite" aria-hidden="true" focusable="false">
+      <symbol id="icon-es-bolt" viewBox="0 0 24 24">
+        <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+      </symbol>
+      <symbol id="icon-es-heart" viewBox="0 0 24 24">
+        <path d="M12 21s-7-4.6-9.3-8.5A5.3 5.3 0 0 1 12 6.2a5.3 5.3 0 0 1 9.3 6.3C19 16.4 12 21 12 21z" />
+      </symbol>
+      <symbol id="icon-es-grid" viewBox="0 0 24 24">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+      </symbol>
+    </svg>
+
+    <div class="si-row">
+      <span class="si-label">尺寸 = 字号</span>
+      <svg-icon icon-class="es-bolt" data-testid="icon-16" style="font-size: 16px" />
+      <svg-icon icon-class="es-bolt" data-testid="icon-24" style="font-size: 24px" />
+      <svg-icon icon-class="es-bolt" data-testid="icon-32" style="font-size: 32px" />
+      <svg-icon icon-class="es-bolt" data-testid="icon-48" style="font-size: 48px" />
+      <span class="si-hint">宽高都是 1em，字号多大图标就多大</span>
+    </div>
+
+    <div class="si-row">
+      <span class="si-label">颜色 = currentColor</span>
+      <svg-icon icon-class="es-heart" data-testid="icon-red" style="font-size: 28px; color: #f56c6c" />
+      <svg-icon icon-class="es-heart" data-testid="icon-green" style="font-size: 28px; color: #67c23a" />
+      <svg-icon icon-class="es-heart" data-testid="icon-blue" style="font-size: 28px; color: #409eff" />
+      <el-button size="mini" type="primary">
+        <svg-icon icon-class="es-heart" style="margin-right: 4px" />放在按钮里
+      </el-button>
+      <span class="si-hint">fill: currentColor —— 放进按钮/标签就自动跟随主题与禁用态</span>
+    </div>
+
+    <div class="si-row">
+      <span class="si-label">className 追加类名</span>
+      <svg-icon icon-class="es-grid" class-name="si-badge" data-testid="icon-badge" style="font-size: 26px" />
+      <span class="si-hint">className="si-badge" 追加到根节点，装饰性样式不必改组件</span>
+    </div>
+
+    <div class="si-row">
+      <span class="si-label">外部图片模式</span>
+      <svg-icon :icon-class="externalUrl" class-name="si-external" data-testid="icon-external" style="font-size: 32px; color: #409eff" />
+      <code class="si-url">{{ externalUrl }}</code>
+    </div>
+
+    <p class="si-note">
+      <code>iconClass</code> 不以协议开头时渲染 <code>&lt;svg&gt;&lt;use xlink:href="#icon-{iconClass}"&gt;</code>，
+      图标本体来自页面里的雪碧图；以 <code>http(s):</code> / <code>mailto:</code> / <code>tel:</code> / <code>open</code>
+      开头时切到外部图片模式（mask 染成 currentColor）。大小、颜色、附加类名三件事全部由宿主决定，
+      组件只负责输出那一个 <code>1em</code> 的图标。
+    </p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'SvgIconBasic',
+  data() {
+    return {
+      // 外部图片模式要求 iconClass 以协议开头，所以这里取「本站绝对地址」——
+      // 文件来自 public/icons/star-badge.svg（构建时原样拷进产物根目录）。
+      externalUrl: \`\${window.location.origin}\${process.env.BASE_URL}icons/star-badge.svg\`,
+    }
+  },
+}
+</script>
+
+<style>
+/* 案例内类名统一 si- 前缀，避免污染全局 */
+.si-workbench {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px;
+}
+.si-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.si-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 0;
+  border-bottom: 1px dashed #f2f3f5;
+}
+.si-row:last-of-type {
+  border-bottom: 0;
+}
+.si-label {
+  width: 128px;
+  flex: none;
+  font-size: 12px;
+  color: #909399;
+}
+.si-hint {
+  font-size: 12px;
+  color: #909399;
+}
+.si-badge {
+  padding: 0.3em;
+  border-radius: 50%;
+  color: #409eff;
+  background: #ecf5ff;
+  box-sizing: content-box;
+}
+.si-url {
+  font-size: 11px;
+  color: #909399;
+  font-family: 'Fira Code', monospace;
+  word-break: break-all;
+}
+.si-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #909399;
+}
+.si-note code {
+  background: #f5f5f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'Fira Code', monospace;
+  color: #d63384;
+}
+</style>
 `
 export const RAW_table_ActionColumn = `<template>
   <es-table
@@ -11723,6 +12108,7 @@ export const RAW_SOURCES = {
   'dialog/RenderComponent': RAW_dialog_RenderComponent,
   'dialog/RenderTableDialog': RAW_dialog_RenderTableDialog,
   'dialog/StepDialog': RAW_dialog_StepDialog,
+  'error-boundary/Basic': RAW_error_boundary_Basic,
   'form/ApiRequest': RAW_form_ApiRequest,
   'form/Basic': RAW_form_Basic,
   'form/ComputedFields': RAW_form_ComputedFields,
@@ -11739,6 +12125,7 @@ export const RAW_SOURCES = {
   'form/RegionLinkage': RAW_form_RegionLinkage,
   'form/RemoteRegionLinkage': RAW_form_RemoteRegionLinkage,
   'form/Validation': RAW_form_Validation,
+  'svg-icon/Basic': RAW_svg_icon_Basic,
   'table/ActionColumn': RAW_table_ActionColumn,
   'table/AutoRequest': RAW_table_AutoRequest,
   'table/Basic': RAW_table_Basic,

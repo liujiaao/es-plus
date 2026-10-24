@@ -96,6 +96,9 @@ import VxeTableEscapeHatch from './vxe-table/EscapeHatch.vue'
 import VxeTableCrudWithDialog from './vxe-table/CrudWithDialog.vue'
 import VxeTableMergeCells from './vxe-table/MergeCells.vue'
 
+import ErrorBoundaryBasic from './error-boundary/Basic.vue'
+import SvgIconBasic from './svg-icon/Basic.vue'
+
 const componentMap = {
   './form/Basic.vue': FormBasic,
   './form/Controls.vue': FormControls,
@@ -188,11 +191,13 @@ const componentMap = {
   './vxe-table/EscapeHatch.vue': VxeTableEscapeHatch,
   './vxe-table/CrudWithDialog.vue': VxeTableCrudWithDialog,
   './vxe-table/MergeCells.vue': VxeTableMergeCells,
+  './error-boundary/Basic.vue': ErrorBoundaryBasic,
+  './svg-icon/Basic.vue': SvgIconBasic,
 }
 
 /**
  * Get Vue component by category and key.
- * @param {string} category - 'form' | 'table' | 'dialog' | 'combination' | 'vxe-table'
+ * @param {string} category - 'form' | 'table' | 'dialog' | 'crud' | 'combination' | 'vxe-table' | 'error-boundary' | 'svg-icon'
  * @param {string} key - PascalCase filename without .vue, e.g. 'Basic', 'AutoRequest'
  */
 export function getComponent(category, key) {
@@ -316,4 +321,22 @@ export const vxeTableExamples = [
   { key: 'EscapeHatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。' },
   { key: 'CrudWithDialog', title: '完整 CRUD + useDialog', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 —— 完整业务闭环。' },
   { key: 'MergeCells', title: '复杂合并单元格', description: '两级分组表头（4 组）+ spanMethod 行列动态合并 + mergeFooterItems 表尾合并 + 可编辑实时重算；表单联动切换合并模式。' },
+]
+
+export const errorBoundaryExamples = [
+  {
+    key: 'Basic',
+    title: '故障注入台：一处坏掉，整页还在',
+    description:
+      '两个会抛错的子组件分别走「自定义 fallback + reset」与「只给 fallback-text + ref.reset()」两条恢复路径；error 事件实时落到日志，边界外的按钮全程可点 —— 隔离是能被操作验证的。'
+  },
+]
+
+export const svgIconExamples = [
+  {
+    key: 'Basic',
+    title: '一个图标出口：尺寸 / 着色 / 类名 / 外部图片',
+    description:
+      '内联一份雪碧图即可跑：字号控制尺寸、color 控制颜色、className 追加装饰样式，最后的协议地址切到外部图片模式。组件只输出那一个 1em 的图标，其余全部交给宿主。'
+  },
 ]

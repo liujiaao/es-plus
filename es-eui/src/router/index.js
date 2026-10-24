@@ -95,6 +95,16 @@ const routes = [
         component: () => import('../views/docs/EsCrudPageDocs.vue')
       },
       {
+        path: 'eserrorboundary',
+        name: 'EsErrorBoundaryDocs',
+        component: () => import('../views/docs/EsErrorBoundaryDocs.vue')
+      },
+      {
+        path: 'svgicon',
+        name: 'SvgIconDocs',
+        component: () => import('../views/docs/SvgIconDocs.vue')
+      },
+      {
         path: 'combination',
         name: 'CombinationDocs',
         component: () => import('../views/docs/CombinationDocs.vue')

@@ -47,6 +47,18 @@ const routes = [
         component: () => import('@/views/EsCrudPage.vue'),
       },
       {
+        path: 'es-error-boundary',
+        name: 'EsErrorBoundary',
+        meta: { title: 'EsErrorBoundary 错误边界' },
+        component: () => import('@/views/EsErrorBoundary.vue'),
+      },
+      {
+        path: 'svg-icon',
+        name: 'SvgIcon',
+        meta: { title: 'SvgIcon 图标' },
+        component: () => import('@/views/SvgIcon.vue'),
+      },
+      {
         path: 'advanced',
         name: 'Advanced',
         meta: { title: '高级联动' },

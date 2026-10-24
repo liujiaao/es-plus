@@ -87,6 +87,12 @@
             <a-menu-item key="es-crud-page">
               <router-link to="/es-crud-page" class="menu-link">EsCrudPage CRUD页面</router-link>
             </a-menu-item>
+            <a-menu-item key="es-error-boundary">
+              <router-link to="/es-error-boundary" class="menu-link">EsErrorBoundary 错误边界</router-link>
+            </a-menu-item>
+            <a-menu-item key="svg-icon">
+              <router-link to="/svg-icon" class="menu-link">SvgIcon 图标</router-link>
+            </a-menu-item>
           </a-sub-menu>
 
           <!-- 高级 -->
@@ -170,6 +176,8 @@ const routeNameToMenuKey = (name) => {
     'EsTable': 'es-table',
     'EsDialog': 'es-dialog',
     'EsCrudPage': 'es-crud-page',
+    'EsErrorBoundary': 'es-error-boundary',
+    'SvgIcon': 'svg-icon',
     'Advanced': 'advanced',
     'EsVxeTable': 'es-vxe-table',
     'AiTools': 'ai-tools',
