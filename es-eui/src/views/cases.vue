@@ -9,6 +9,19 @@
         </p>
       </div>
 
+      <!-- 旗舰案例：把单个组件案例串成完整业务闭环；三站加载同一份纯 JSON schema -->
+      <router-link to="/flagship-approval" class="flagship-cta">
+        <span class="flagship-cta-badge">旗舰案例</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">合同审批工作台：一份纯 JSON 驱动的完整审批闭环</span>
+          <span class="flagship-cta-desc">
+            查询联动 · 跨页勾选 · 批量审批 · 行级/列级权限 · 审批详情与驳回 —— 三端加载同一份
+            schema（0 个函数），请求与权限由宿主注入
+          </span>
+        </span>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
+
       <section
         v-for="level in levels"
         :key="level.id"
@@ -116,6 +129,57 @@ export default {
 
 .level {
   margin-bottom: 36px;
+}
+
+.flagship-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  border: 1px solid #d6e4ff;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0f7ff, #ffffff 60%);
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.flagship-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.flagship-cta-badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+}
+
+.flagship-cta-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flagship-cta-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.flagship-cta-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #606266;
+}
+
+.flagship-cta-arrow {
+  margin-left: auto;
+  font-size: 20px;
+  color: var(--es-brand-primary);
 }
 
 .level-header {

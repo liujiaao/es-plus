@@ -13,6 +13,14 @@ const routes = [
       { path: '', name: 'Home', meta: { title: '首页' }, component: Home },
       { path: 'quickstart', name: 'QuickStart', meta: { title: '30 秒上手' }, component: QuickStart },
       { path: 'cases', name: 'Cases', meta: { title: '核心案例' }, component: Cases },
+      {
+        // 旗舰案例「合同审批工作台」：整页由 docs/cases/flagship-approval.json 驱动，
+        // 三站加载同一份字节（scripts/sync-cases.mjs 分发）
+        path: 'flagship-approval',
+        name: 'FlagshipApproval',
+        meta: { title: '旗舰案例：合同审批工作台' },
+        component: () => import('@/views/FlagshipApproval.vue'),
+      },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
       {
         path: 'es-form',

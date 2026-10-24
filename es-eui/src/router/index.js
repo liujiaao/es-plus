@@ -116,6 +116,14 @@ const routes = [
     component: () => import('../views/cases.vue')
   },
 
+  // 旗舰案例「合同审批工作台」：整页由 docs/cases/flagship-approval.json 驱动，
+  // 三站加载同一份字节（scripts/sync-cases.mjs 分发）
+  {
+    path: '/flagship-approval',
+    name: 'FlagshipApproval',
+    component: () => import('../views/flagship-approval.vue')
+  },
+
   // 主题
   {
     path: '/theme',

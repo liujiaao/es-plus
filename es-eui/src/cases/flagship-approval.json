@@ -1,0 +1,196 @@
+{
+  "formItems": [
+    {
+      "prop": "keyword",
+      "label": "合同/客户",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": { "placeholder": "编号、名称或客户", "clearable": true }
+    },
+    {
+      "prop": "contractType",
+      "label": "合同类型",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": { "placeholder": "全部类型", "clearable": true },
+      "dataOptions": [
+        { "label": "采购合同", "value": "采购合同" },
+        { "label": "服务合同", "value": "服务合同" },
+        { "label": "租赁合同", "value": "租赁合同" }
+      ]
+    },
+    {
+      "prop": "clauseTemplate",
+      "label": "条款模板",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": { "placeholder": "先选合同类型", "clearable": true },
+      "reactions": [
+        {
+          "dependencies": ["contractType"],
+          "when": { "==": [{ "var": "contractType" }, "采购合同"] },
+          "fulfill": {
+            "dataOptions": [
+              { "label": "标准采购条款 v2", "value": "标准采购条款 v2" },
+              { "label": "框架采购条款 v4", "value": "框架采购条款 v4" }
+            ]
+          }
+        },
+        {
+          "dependencies": ["contractType"],
+          "when": { "==": [{ "var": "contractType" }, "服务合同"] },
+          "fulfill": {
+            "dataOptions": [
+              { "label": "运维服务条款 v1", "value": "运维服务条款 v1" },
+              { "label": "创意服务条款 v2", "value": "创意服务条款 v2" },
+              { "label": "法律服务条款 v1", "value": "法律服务条款 v1" }
+            ]
+          }
+        },
+        {
+          "dependencies": ["contractType"],
+          "when": { "==": [{ "var": "contractType" }, "租赁合同"] },
+          "fulfill": {
+            "dataOptions": [
+              { "label": "房屋租赁条款 v3", "value": "房屋租赁条款 v3" },
+              { "label": "仓储租赁条款 v2", "value": "仓储租赁条款 v2" }
+            ]
+          }
+        },
+        {
+          "dependencies": ["contractType", "clauseTemplate"],
+          "fulfill": {
+            "value": {
+              "if": [
+                {
+                  "in": [
+                    { "var": "clauseTemplate" },
+                    {
+                      "if": [
+                        { "==": [{ "var": "contractType" }, "采购合同"] },
+                        ["标准采购条款 v2", "框架采购条款 v4"],
+                        {
+                          "if": [
+                            { "==": [{ "var": "contractType" }, "服务合同"] },
+                            ["运维服务条款 v1", "创意服务条款 v2", "法律服务条款 v1"],
+                            {
+                              "if": [
+                                { "==": [{ "var": "contractType" }, "租赁合同"] },
+                                ["房屋租赁条款 v3", "仓储租赁条款 v2"],
+                                []
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                { "var": "clauseTemplate" },
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "prop": "status",
+      "label": "审批状态",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": { "placeholder": "全部状态", "clearable": true },
+      "dataOptions": [
+        { "label": "待审批", "value": "待审批" },
+        { "label": "已通过", "value": "已通过" },
+        { "label": "已驳回", "value": "已驳回" }
+      ]
+    }
+  ],
+  "formLayout": { "labelWidth": "90px", "minFoldRows": 2 },
+  "columns": [
+    { "prop": "contractNo", "label": "合同编号", "width": 140 },
+    { "prop": "title", "label": "合同名称", "minWidth": 200 },
+    { "prop": "customer", "label": "客户", "width": 150 },
+    { "prop": "contractType", "label": "类型", "width": 100 },
+    { "prop": "clauseTemplate", "label": "条款模板", "width": 150 },
+    { "prop": "amountText", "label": "金额（元）", "width": 130, "align": "right", "permissionValue": "contract:amount" },
+    { "prop": "status", "label": "审批状态", "width": 110 },
+    { "prop": "approver", "label": "审批人", "width": 100 },
+    { "prop": "createdAt", "label": "提交时间", "width": 120 }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "multiSelect": true,
+    "rowkey": "id",
+    "cachePageSelection": true,
+    "apiParams": { "url": "/api/contracts" },
+    "configTableOut": { "tableData": "data", "total": "total", "pageSize": "pageSize", "current": "pageIndex" }
+  },
+  "pagination": { "pageSize": 5, "pageSizes": [5, 10, 20] },
+  "tableBtns": [
+    {
+      "name": "批量通过",
+      "type": "primary",
+      "key": "batchApprove",
+      "icon": "Check",
+      "permissionValue": "contract:approve",
+      "confirm": "确认批量通过勾选的合同？（支持跨页勾选）"
+    },
+    {
+      "name": "导出所选",
+      "key": "export",
+      "icon": "Download",
+      "actionType": "export",
+      "permissionValue": "contract:export"
+    }
+  ],
+  "operationColumn": {
+    "label": "审批操作",
+    "width": 210,
+    "fixed": "right",
+    "btns": [
+      { "name": "查看", "type": "primary", "dialogKey": "detail", "permissionValue": "contract:view" },
+      { "name": "通过", "type": "success", "key": "approve", "confirm": "确认通过该合同？", "permissionValue": "contract:approve" },
+      { "name": "驳回", "type": "danger", "dialogKey": "reject", "permissionValue": "contract:reject" }
+    ]
+  },
+  "dialogs": {
+    "detail": {
+      "title": "合同审批详情",
+      "width": "760px",
+      "isHiddenFooter": true,
+      "formLayout": { "labelWidth": "96px" },
+      "formItems": [
+        { "prop": "contractNo", "label": "合同编号", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "contractType", "label": "合同类型", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "title", "label": "合同名称", "formtype": "Input", "span": 24, "attrs": { "disabled": true } },
+        { "prop": "customer", "label": "客户", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "clauseTemplate", "label": "条款模板", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "amountText", "label": "合同金额", "formtype": "Input", "span": 12, "attrs": { "disabled": true }, "permissionValue": "contract:amount" },
+        { "prop": "status", "label": "审批状态", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "approver", "label": "审批人", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "createdAt", "label": "提交时间", "formtype": "Input", "span": 12, "attrs": { "disabled": true } },
+        { "prop": "rejectReason", "label": "驳回原因", "formtype": "Input", "span": 24, "attrs": { "type": "textarea", "rows": 2, "disabled": true } }
+      ]
+    },
+    "reject": {
+      "title": "驳回合同",
+      "width": "560px",
+      "formLayout": { "labelWidth": "96px" },
+      "formItems": [
+        {
+          "prop": "rejectReason",
+          "label": "驳回原因",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": { "type": "textarea", "rows": 3, "placeholder": "驳回后合同会退回申请人修改" },
+          "formItemOptions": {
+            "rules": [{ "required": true, "message": "驳回必须填写原因", "trigger": "blur" }]
+          }
+        }
+      ]
+    }
+  }
+}

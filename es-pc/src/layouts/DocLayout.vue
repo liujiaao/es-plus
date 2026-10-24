@@ -58,6 +58,12 @@
             <router-link to="/cases" class="menu-link">核心案例</router-link>
           </a-menu-item>
 
+          <!-- 旗舰案例：一份纯 JSON 的完整审批闭环（三站同源） -->
+          <a-menu-item key="flagship-approval">
+            <template #icon><TrophyOutlined /></template>
+            <router-link to="/flagship-approval" class="menu-link">旗舰案例 · 合同审批</router-link>
+          </a-menu-item>
+
           <!-- 快速上手 -->
           <a-menu-item key="guide">
             <template #icon><RocketOutlined /></template>
@@ -134,6 +140,7 @@ import {
   ExperimentOutlined,
   RobotOutlined,
   SwapOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons-vue'
 import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
@@ -157,6 +164,7 @@ const routeNameToMenuKey = (name) => {
     'Home': 'home',
     'QuickStart': 'quickstart',
     'Cases': 'cases',
+    'FlagshipApproval': 'flagship-approval',
     'Guide': 'guide',
     'EsForm': 'es-form',
     'EsTable': 'es-table',

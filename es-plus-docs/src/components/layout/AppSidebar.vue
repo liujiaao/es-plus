@@ -56,6 +56,7 @@ const sections = [
     titleKey: 'sidebar.section.cases',
     items: [
       { path: '/cases', labelKey: 'sidebar.cases', icon: markRaw(Collection) },
+      { path: '/flagship-approval', labelKey: 'sidebar.flagship', icon: markRaw(StarFilled) },
       { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
       { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
     ],

@@ -18,6 +18,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Cases.vue')
   },
   {
+    // 旗舰案例「合同审批工作台」：整页由 docs/cases/flagship-approval.json 驱动，
+    // 三站加载同一份字节（scripts/sync-cases.mjs 分发）
+    path: '/flagship-approval',
+    name: 'flagship-approval',
+    component: () => import('@/views/FlagshipApproval.vue')
+  },
+  {
     path: '/guide/:name',
     name: 'guide',
     component: () => import('@/views/Doc.vue')
