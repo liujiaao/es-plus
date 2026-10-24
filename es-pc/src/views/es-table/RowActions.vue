@@ -17,10 +17,10 @@ import { message, Modal, Tag } from 'ant-design-vue'
 const userRole = ref('admin')
 
 const statusMap = {
-  draft: { text: '草稿', type: 'info' },
-  pending: { text: '待审核', type: 'warning' },
-  approved: { text: '已通过', type: 'success' },
-  rejected: { text: '已驳回', type: 'danger' }
+  draft: { text: '草稿', color: 'default' },
+  pending: { text: '待审核', color: 'warning' },
+  approved: { text: '已通过', color: 'success' },
+  rejected: { text: '已驳回', color: 'error' }
 }
 
 const tableData = ref([
@@ -32,12 +32,17 @@ const tableData = ref([
   { id: 6, name: '产品F', status: 'approved', creator: '周八' }
 ])
 
+// 注意：antdv 的 Modal.confirm 返回 { destroy, update }，不是 Promise，
+// 直接 await 会在弹窗出现前就继续执行（取消也照删）。这里用 onOk/onCancel 包一层。
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
+
 const handleDelete = async (row) => {
-  try {
-    await Modal.confirm({ title: '提示', content: `确定删除 "${row.name}" 吗？`, okType: 'primary', okButtonProps: { danger: true } })
-    tableData.value = tableData.value.filter(d => d.id !== row.id)
-    message.success('删除成功')
-  } catch { /* 取消 */ }
+  const ok = await confirmBox({ title: '提示', content: `确定删除 "${row.name}" 吗？`, okType: 'primary', okButtonProps: { danger: true } })
+  if (!ok) return
+  tableData.value = tableData.value.filter(d => d.id !== row.id)
+  message.success('删除成功')
 }
 
 const columns = [
@@ -48,8 +53,8 @@ const columns = [
     label: '状态',
     width: 100,
     render: (_, { row }) => {
-      const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return h(Tag, { type: s.type, size: 'small' }, () => s.text)
+      const s = statusMap[row.status] || { text: '-', color: 'default' }
+      return h(Tag, { color: s.color }, () => s.text)
     }
   },
   { prop: 'creator', label: '创建人', width: 100 },

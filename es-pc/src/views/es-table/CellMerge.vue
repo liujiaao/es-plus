@@ -3,7 +3,7 @@
     <es-table
       :data-source="tableData"
       :columns="columns"
-      :options="{ border: true, stripe: true, spanMethod: spanMethod, rowClassName: tableRowClassName }"
+      :options="{ border: true, stripe: true, mergeConfig: { rowsBy: ['name', 'project'] }, rowClassName: tableRowClassName }"
     />
   </div>
 </template>
@@ -40,55 +40,8 @@ const columns = [
   }
 ]
 
-// 合并单元格方法
-const spanMethod = ({ row, column, rowIndex, columnIndex }) => {
-  const currentRow = tableData.value[rowIndex]
-  if (!currentRow) {
-    return { rowspan: 1, colspan: 1 }
-  }
-
-  // 合并部门列 - 相同部门合并
-  if (columnIndex === 0) {
-    const prevRow = tableData.value[rowIndex - 1]
-
-    if (prevRow && prevRow.name === currentRow.name) {
-      return { rowspan: 0, colspan: 0 }
-    }
-
-    // 计算相同部门的连续行数
-    let rowspan = 1
-    for (let i = rowIndex + 1; i < tableData.value.length; i++) {
-      if (tableData.value[i].name === currentRow.name) {
-        rowspan++
-      } else {
-        break
-      }
-    }
-    return { rowspan, colspan: 1 }
-  }
-
-  // 合并项目列 - 相同项目和部门
-  if (columnIndex === 1) {
-    const prevRow = tableData.value[rowIndex - 1]
-
-    if (prevRow && prevRow.name === currentRow.name && prevRow.project === currentRow.project) {
-      return { rowspan: 0, colspan: 0 }
-    }
-
-    let rowspan = 1
-    for (let i = rowIndex + 1; i < tableData.value.length; i++) {
-      if (tableData.value[i].name === currentRow.name && tableData.value[i].project === currentRow.project) {
-        rowspan++
-      } else {
-        break
-      }
-    }
-    return { rowspan, colspan: 1 }
-  }
-
-  return { rowspan: 1, colspan: 1 }
-}
-
+// 合并单元格：a-table 没有 span-method prop，跨端可移植的写法是声明式 mergeConfig
+// （按列「相邻行取值相等」自动分组）。函数式 spanMethod 只在 el-table / vxe 引擎可用。
 const tableRowClassName = ({ row }) => {
   if (row.progress === 100) {
     return 'row-completed'

@@ -18,7 +18,7 @@
     />
     <div class="selection-info">
       <a-alert
-        :title="`已选择 ${selectedCount} 项（跨 ${selectedPages} 页）`"
+        :message="`已选择 ${selectedCount} 项（跨 ${selectedPages} 页）`"
         :type="selectedCount ? 'success' : 'info'"
         show-icon
       />
@@ -109,19 +109,23 @@ const handleClearAll = () => {
   message.info('已清空所有选择')
 }
 
+// Modal.confirm 返回 { destroy, update } 而非 Promise，必须用 onOk/onCancel 包一层才等得到结果
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
+
 const handleBatchDelete = async () => {
-  try {
-    await Modal.confirm({ title: '提示', content: `确定删除选中的 ${selectedCount.value} 项吗？`, okType: 'primary', okButtonProps: { danger: true } })
-    const selectedIds = Object.values(selectionsByPage)
-      .flat()
-      .map(item => item.id)
-    allData.value = allData.value.filter(item => !selectedIds.includes(item.id))
-    pagination.value.total = allData.value.length
-    Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
-    message.success('删除成功')
-  } catch {
-    // 取消
-  }
+  const ok = await confirmBox({ title: '提示', content: `确定删除选中的 ${selectedCount.value} 项吗？`, okType: 'primary', okButtonProps: { danger: true } })
+  if (!ok) return
+  const selectedIds = Object.values(selectionsByPage)
+    .flat()
+    .map(item => item.id)
+  allData.value = allData.value.filter(item => !selectedIds.includes(item.id))
+  pagination.value.total = allData.value.length
+  // 删掉的行走的是响应式数据，但表格内部勾选态还留着它们的 id，一并清掉
+  tableRef.value?.clearAllSelection?.()
+  Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
+  message.success('删除成功')
 }
 </script>
 

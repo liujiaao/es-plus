@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-sort-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 排序 + 固定列 + 序号</h4>
+    <h4 style="margin-bottom: 12px; color: #606266;">排序与固定列 — sortable + fixed 左右冻结</h4>
     <es-table
       ref="tableRef"
       :columns="columns"

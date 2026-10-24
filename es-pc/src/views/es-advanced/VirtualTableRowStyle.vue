@@ -1,8 +1,8 @@
 <template>
   <div class="virtual-row-style-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 行样式 + 高亮 + 行事件</h4>
+    <h4 style="margin-bottom: 12px; color: #606266;">行样式与高亮 — rowClassName + row-click 事件</h4>
     <div style="margin-bottom: 12px; font-size: 13px; color: #909399;">
-      <span>单击行高亮，双击弹出详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
+      <span>单击行高亮并查看详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
     </div>
     <es-table
       ref="tableRef"
@@ -10,6 +10,7 @@
       :options="tableOptions"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
+      @row-click="handleRowClick"
     />
     <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: #f5f7fa; border-radius: 4px; font-size: 13px;">
       <strong>当前选中行：</strong>{{ clickedRow.name }} — {{ clickedRow.taskName }} ({{ clickedRow.status }})
@@ -79,6 +80,12 @@ function generateData(count: number) {
 }
 
 const tableData = ref<Record<string, unknown>[]>([])
+
+// es-table 把父级 @row-click 翻译成 a-table 的 customRow.onClick（component.vue 的 resolvedCustomRow）
+const handleRowClick = (row: Record<string, unknown>) => {
+  clickedRow.value = row
+  message.info(`选中：${row.name} — ${row.taskName}`)
+}
 
 onMounted(() => {
   tableData.value = generateData(10000)

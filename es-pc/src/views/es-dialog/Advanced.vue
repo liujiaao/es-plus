@@ -4,14 +4,48 @@
     <a-button type="primary" @click="openCustomHeaderFooter">自定义头尾</a-button>
     <a-button @click="openFullscreen">全屏弹窗</a-button>
     <a-button @click="openMaxHeight">限高弹窗</a-button>
+    <a-button @click="openCached">缓存实例（cacheKey）</a-button>
   </div>
 </template>
 
 <script setup lang="jsx">
+import { defineComponent, ref } from 'vue'
 import { message, Button } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
 
 const dialog = useDialog()
+
+// 缓存实例的内联组件：text 是它自己的本地状态。
+// 关掉弹窗不卸载实例，所以再打开时这里输入过的内容还在。
+const DraftBox = defineComponent({
+  setup() {
+    const text = ref('')
+    return () => (
+      <div style="padding: 20px">
+        <p>关闭后再点一次「缓存实例」，下面输入的内容还在——实例被 cacheKey 缓存住了（10 分钟未再打开才回收）。</p>
+        <input
+          style="width: 100%; padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; box-sizing: border-box"
+          placeholder="随便输入点什么，关闭再打开看看"
+          value={text.value}
+          onInput={(e) => { text.value = e.target.value }}
+        />
+        <p style="margin-top: 10px; color: #8c8c8c">当前输入：{text.value || '（空）'}</p>
+      </div>
+    )
+  }
+})
+
+const openCached = () => {
+  dialog({
+    title: '缓存实例（cacheKey）',
+    width: '480px',
+    cacheKey: 'advanced-cache-demo',
+    render: () => <DraftBox />,
+    configBtn: [
+      { name: '关闭', click: (_, { close }) => close() }
+    ]
+  })
+}
 
 const openDraggable = () => {
   dialog({
@@ -31,7 +65,10 @@ const openDraggable = () => {
 }
 
 const openCustomHeaderFooter = () => {
-  dialog({
+  // renderFooter 的第二参只有 getRefs、拿不到 close，
+  // 用 dialog() 的返回值捕获关闭句柄（回调执行时 instance 已赋值）
+  let instance
+  instance = dialog({
     title: '自定义头尾',
     width: '700px',
     render: () => (
@@ -41,20 +78,19 @@ const openCustomHeaderFooter = () => {
     ),
     renderHeader: () => (
       <div style="display: flex; align-items: center; gap: 8px; padding: 0 20px">
-        <span style="font-size: 18px; font-weight: bold; color: #409EFF">自定义头部</span>
-        <span style="font-size: 12px; color: #909399; background: #f0f9eb; padding: 2px 8px; border-radius: 4px">NEW</span>
+        <span style="font-size: 18px; font-weight: bold; color: #1677ff">自定义头部</span>
+        <span style="font-size: 12px; color: #389e0d; background: #f6ffed; padding: 2px 8px; border-radius: 4px">NEW</span>
       </div>
     ),
     renderFooter: () => (
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; width: 100%">
-        <span style="font-size: 12px; color: #909399">自定义底部信息</span>
+        <span style="font-size: 12px; color: #8c8c8c">自定义底部信息</span>
         <div style="display: flex; gap: 12px">
-          <Button onClick={() => message.info('点击了取消')}>取消</Button>
-          <Button type="primary" onClick={() => message.success('点击了确认')}>确认</Button>
+          <Button onClick={() => instance?.close()}>取消</Button>
+          <Button type="primary" onClick={() => { message.success('已确认'); instance?.close() }}>确认</Button>
         </div>
       </div>
-    ),
-    isHiddenFooter: true
+    )
   })
 }
 

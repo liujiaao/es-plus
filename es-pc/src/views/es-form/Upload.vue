@@ -142,7 +142,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '100px',
     size: 'small'
   },

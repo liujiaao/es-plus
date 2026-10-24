@@ -24,6 +24,5 @@ app.use(VxeTable)
 app.use(router)
 app.use(ESPlus, {
   globalProperties: true,
-  permission: (value) => true,
 })
 app.mount('#app')

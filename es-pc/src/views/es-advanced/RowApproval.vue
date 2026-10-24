@@ -74,8 +74,9 @@ const columns = [
   {
     prop: 'operate', label: '操作', width: 160,
     btns: [
-      { name: '通过', type: 'primary', clickEvent: (row) => handleSingleApproval(row, 'approved') },
-      { name: '驳回', type: 'danger', clickEvent: (row) => handleSingleApproval(row, 'rejected') }
+      // hidden 按行求值：已处理的行不再出现按钮，避免重复审批
+      { name: '通过', type: 'primary', hidden: (row) => row.status !== 'pending', clickEvent: (row) => handleSingleApproval(row, 'approved') },
+      { name: '驳回', type: 'danger', hidden: (row) => row.status !== 'pending', clickEvent: (row) => handleSingleApproval(row, 'rejected') }
     ]
   }
 ]
@@ -88,17 +89,21 @@ const tableOptions = {
   tabHeight: 400
 }
 
+// Modal.confirm 返回 { destroy, update } 而非 Promise，必须用 onOk/onCancel 包一层才等得到结果
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
+
 const handleSingleApproval = async (row, status) => {
   const label = status === 'approved' ? '通过' : '驳回'
-  try {
-    await Modal.confirm({
-      title: '审批确认',
-      content: `确定${label} "${row.applicant}" 的申请吗？`,
-      okType: 'primary', okButtonProps: { danger: status === 'rejected' }
-    })
-    row.status = status
-    message.success(`${label}成功`)
-  } catch {}
+  const ok = await confirmBox({
+    title: '审批确认',
+    content: `确定${label} "${row.applicant}" 的申请吗？`,
+    okType: 'primary', okButtonProps: { danger: status === 'rejected' }
+  })
+  if (!ok) return
+  row.status = status
+  message.success(`${label}成功`)
 }
 
 const openBatchDialog = (action) => {

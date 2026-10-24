@@ -17,8 +17,8 @@
     </es-table>
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
-          <b>isHidden + formItmeRequestInstance</b> — 表单项动态显隐零模板代码，
+        <template #message>
+          <b>isHidden + watch 级联</b> — 表单项动态显隐零模板代码，
           级联选项按需加载，apiParams.model 自动同步表单值到请求。
         </template>
       </Alert>
@@ -98,7 +98,7 @@ const queryItems = computed(() => [
 ])
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px' },
+  formLayProps: { labelWidth: '70px' },
   rowLayProps: { gutter: 16 }
 }
 
@@ -127,7 +127,7 @@ const columns = [
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
       const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(map[row.category] || 'info')} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(map[row.category] || 'info')}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

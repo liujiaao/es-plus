@@ -56,17 +56,17 @@ const columns = [
     prop: 'active',
     label: '状态',
     width: 80,
-    render: (_, { row }) => h(Tag, { type: row.active ? 'success' : 'info', size: 'small' }, () => row.active ? '在职' : '离职')
+    render: (_, { row }) => h(Tag, { color: row.active ? 'success' : 'default' }, () => row.active ? '在职' : '离职')
   },
   { prop: 'joinDate', label: '入职日期' }
 ]
 
 const tableOptions = {
   border: true,
-  // 默认参数：每次请求自动携带
-  // entryQuery: { typeCode: 1 },
+  // 默认参数：没有兄弟 EsForm 时，entryQuery 就是每次请求的基准 formParams
+  entryQuery: { typeCode: 1 },
   httpRequest: mockBackendRequest,
-  apiParams: { url: '/api/employees', method: 'GET', model: { typeCode: 1 } },
+  apiParams: { url: '/api/employees', method: 'GET' },
   // 字段映射：后端字段 → 前端字段
   configTableOut: {
     total: 'total_count',
@@ -76,14 +76,14 @@ const tableOptions = {
   },
   // 请求回调管线
   listenToCallBack: {
-    // 请求前拦截：前端字段 → 后端字段
-    brcb: (params) => ({
+    // 请求前拦截：前端字段 → 后端字段（返回值替换请求参数）
+    beforeRequest: (params) => ({
       ...params,
       pageNum: params.pageIndex,
       deptName: params.department
     }),
-    // 响应后拦截：后端数据 → 前端格式
-    qrcb: (res) => {
+    // 响应后拦截：后端数据 → 前端格式（返回值**替换**响应体，必须原样返回）
+    afterResponse: (res) => {
       if (res?.result_data) {
         res.result_data = res.result_data.map(d => ({
           id: d.user_id,

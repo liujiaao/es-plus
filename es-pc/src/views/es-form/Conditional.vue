@@ -33,7 +33,19 @@ const formItems = [
     dataOptions: [
       { label: '企业用户', value: 'company' },
       { label: '个人用户', value: 'personal' }
-    ]
+    ],
+    on: {
+      change: (val) => {
+        // 切换分支时清掉另一支的残留值，避免提交时带上不属于当前类型的字段
+        if (val === 'company') {
+          formModel.personalName = ''
+          formModel.personalIdCard = ''
+        } else if (val === 'personal') {
+          formModel.companyName = ''
+          formModel.companyScale = ''
+        }
+      }
+    }
   },
   // 企业用户专用字段
   {

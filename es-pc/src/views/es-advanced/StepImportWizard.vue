@@ -96,7 +96,7 @@ const openImportDialog = () => {
               ref={(el) => { if (el) registerRef('step1Form', el) }}
               model={step1Model}
               formItemList={step1Items}
-              layoutFormProps={{ fromLayProps: { labelWidth: '100px' } }}
+              layoutFormProps={{ formLayProps: { labelWidth: '100px' } }}
             />
           </div>
         )
@@ -133,7 +133,7 @@ const openImportDialog = () => {
             ref={(el) => { if (el) registerRef('step3Form', el) }}
             model={step3Model}
             formItemList={step3Items}
-            layoutFormProps={{ fromLayProps: { labelWidth: '100px' } }}
+            layoutFormProps={{ formLayProps: { labelWidth: '100px' } }}
           />
         </div>
       )

@@ -8,7 +8,7 @@
       :layout-form-props="layoutProps"
     />
 
-    <a-modal v-model:open="txtPreviewVisible" title="文本内容预览" width="600px" ::mask-closable="true">
+    <a-modal v-model:open="txtPreviewVisible" title="文本内容预览" width="600px">
       <pre class="txt-preview-content">{{ txtPreviewContent }}</pre>
     </a-modal>
   </div>
@@ -129,11 +129,11 @@ const formItems = [
     span: 24,
     formtype: 'Upload' as const,
     props: {
-      action: '/api/upload',
       accept: 'image/*,.xls,.xlsx,.doc,.docx,.pdf,.ppt,.pptx,.txt,.zip,.rar,.7z',
       listType: 'text' as const,
       multiple: true,
-      showFileList: true,
+      // 自定义 httpRequest 全权接管上传，无需 action；
+      // 文件列表默认就显示（ADV 的 showUploadList 默认 true）
       // ADV 用 maxCount 限制数量（适配器已支持 EP limit→maxCount 映射，二者等价）
       maxCount: 10,
       // 如需按 EP 写法，也可直接写 limit: 10，适配器会自动映射为 maxCount
@@ -284,7 +284,7 @@ const configBtn: BtnConfig[] = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '100px',
     size: 'small'
   },

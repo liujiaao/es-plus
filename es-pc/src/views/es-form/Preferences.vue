@@ -106,7 +106,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '100px', size: 'default' },
+  formLayProps: { labelWidth: '100px', size: 'default' },
   rowLayProps: { gutter: 20 }
 }
 </script>

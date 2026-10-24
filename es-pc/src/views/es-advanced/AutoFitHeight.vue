@@ -2,10 +2,10 @@
   <div class="example-auto-fit-height">
     <div class="demo-controls">
       <a-radio-group v-model:value="heightMode" size="small">
-        <a-radio-button label="fixed">固定高度 400px</a-radio-button>
-        <a-radio-button label="fixed600">固定高度 600px</a-radio-button>
+        <a-radio-button value="fixed">固定高度 400px</a-radio-button>
+        <a-radio-button value="fixed600">固定高度 600px</a-radio-button>
       </a-radio-group>
-      <span class="mode-hint">切换后表格自动重算高度，表单展开/收起也会触发重算</span>
+      <span class="mode-hint">`heightType: 'height'` 下表格高度 = 容器 − 查询表单 − 分页，展开/收起表单时自动重算</span>
     </div>
     <es-table
       :key="heightMode"
@@ -23,7 +23,7 @@
     </es-table>
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
+        <template #message>
           <b>heightType: 'height' + tabHeight</b> — a-table 高度自动 = 容器 - 表单 - 分页。
           表单展开/收起时 ResizeObserver 自动触发高度重算，无需手动监听。
         </template>
@@ -67,7 +67,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px', minFoldRows: 1 },
+  formLayProps: { labelWidth: '70px', minFoldRows: 1 },
   rowLayProps: { gutter: 16 }
 }
 

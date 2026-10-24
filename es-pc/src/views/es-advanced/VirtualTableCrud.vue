@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-crud-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 完整 CRUD 场景（httpRequest + 分页 + useDialog）</h4>
+    <h4 style="margin-bottom: 12px; color: #606266;">完整 CRUD — httpRequest + 分页 + useDialog</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -12,7 +12,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -100,9 +100,7 @@ const formBtns = [
 
 // =========== 表格配置 ===========
 // 列宽合计 ~1310px，故意大于 CodePlayground 预览区（1000~1100），
-// 这样可以演示横向滚动能力。配合 virtual-engine.vue 的
-// `scrollbarAlwaysOn:true`，横滚条会常驻底部，用户立刻可见可拖。
-// fixed:'right' 操作列在横滚时贴在右侧不动。
+// 用来演示横向滚动；fixed:'right' 操作列在横滚时贴在右侧不动。
 const columns = [
   { type: 'selection', width: 50 },
   { type: 'index', label: '#', width: 60 },
@@ -111,8 +109,8 @@ const columns = [
   { prop: 'position', label: '职位', width: 120 },
   { prop: 'status', label: '状态', width: 90,
     render: (_h: any, { row }: any) => {
-      const map: Record<string, string> = { '在职': 'success', '离职': 'danger', '试用期': 'warning' }
-      return h(Tag, { type: (map[row.status as string] || 'info') as any, size: 'small' }, () => row.status)
+      const map: Record<string, string> = { '在职': 'success', '离职': 'error', '试用期': 'warning' }
+      return h(Tag, { color: map[row.status as string] || 'default' }, () => row.status)
     }
   },
   { prop: 'phone', label: '联系电话', width: 140 },
@@ -129,10 +127,8 @@ const columns = [
 ]
 
 const tableOptions = {
-  virtual: true,
   border: true,
   rowkey: 'id',
-  rowHeight: 48,
   heightType: 'height' as const,
   tabHeight: 500,
   httpRequest: mockApiRequest,
@@ -141,7 +137,6 @@ const tableOptions = {
   configBtn: [
     { name: '新增', type: 'primary' as const, code: 1, click: () => openAddDialog() },
     { name: '批量删除', type: 'danger' as const, code: 1, click: () => handleBatchDelete() },
-    { name: '导出', type: 'primary' as const, code: 2, click: () => {} },
   ],
 }
 
@@ -164,12 +159,22 @@ function openAddDialog() {
         { prop: 'phone', label: '电话', formtype: 'Input', span: 24 },
         { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 },
       ],
-      layoutFormProps: { fromLayProps: { isBtnHidden: true, labelWidth: '50px' } },
+      layoutFormProps: { formLayProps: { isBtnHidden: true, labelWidth: '50px' } },
     } as any),
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '确定', type: 'primary', click: (_: any, { close, getRefs }: any) => {
         getRefs('formRef')?.validate().then(() => {
+          // 真正落库：mockDatabase 是模块级数组，mockApiRequest 每次都从它切片
+          const id = mockDatabase.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
+          mockDatabase.unshift({
+            id,
+            status: '在职',
+            joinDate: new Date().toISOString().slice(0, 10),
+            salary: 0,
+            address: '',
+            ...formData,
+          })
           message.success('新增成功')
           tableRef.value?.httpRequestInstance()
           close()
@@ -192,11 +197,14 @@ function openEditDialog(row: Record<string, unknown>) {
         { prop: 'position', label: '职位', formtype: 'Input', span: 24 },
         { prop: 'phone', label: '电话', formtype: 'Input', span: 24 },
       ],
-      layoutFormProps: { fromLayProps: { isBtnHidden: true } },
+      layoutFormProps: { formLayProps: { isBtnHidden: true } },
     } as any),
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '保存', type: 'primary', click: (_: any, { close }: any) => {
+        // 写回 mockDatabase 中同 id 的记录（formData 是 row 的浅拷贝）
+        const target = mockDatabase.find(r => r.id === formData.id)
+        if (target) Object.assign(target, { ...formData })
         message.success('修改成功')
         tableRef.value?.httpRequestInstance()
         close()
@@ -213,6 +221,8 @@ function handleDelete(row: Record<string, unknown>) {
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '确定删除', type: 'danger', click: (_: any, { close }: any) => {
+        const idx = mockDatabase.findIndex(r => r.id === row.id)
+        if (idx > -1) mockDatabase.splice(idx, 1)
         message.success('删除成功')
         tableRef.value?.httpRequestInstance()
         close()
@@ -227,7 +237,12 @@ function handleBatchDelete() {
     message.warning('请先选择数据')
     return
   }
-  message.success(`批量删除 ${rows.length} 条数据`)
+  const ids = new Set(rows.map(r => r.id))
+  for (let i = mockDatabase.length - 1; i >= 0; i--) {
+    if (ids.has(mockDatabase[i].id)) mockDatabase.splice(i, 1)
+  }
+  tableRef.value?.clearAllSelection?.()
+  message.success(`批量删除 ${ids.size} 条数据`)
   tableRef.value?.httpRequestInstance()
 }
 </script>

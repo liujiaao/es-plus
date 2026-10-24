@@ -165,7 +165,7 @@
     <!-- 当前行 -->
     <section id="current-row">
       <h2>当前行与主从联动</h2>
-      <p><code>highlightCurrentRow</code> 行高亮 + <code>@current-change</code> 事件驱动从表。</p>
+      <p><code>highlightCurrentRow</code> 自动高亮当前行 + <code>@row-click</code> 事件驱动从表（antdv 无 el-table 的 <code>current-change</code>，行事件统一走 <code>@row-click</code>）。</p>
             <CodeDemo :source="rawSFCs['./es-table/CurrentRow.vue']">
         <EsTableCurrentRow />
       </CodeDemo>
@@ -175,8 +175,8 @@
 
     <!-- 动态列 -->
     <section id="dynamic-columns">
-      <h2>动态列与汇总行</h2>
-      <p><code>hidCol</code> 动态列显隐 + 汇总行配置。</p>
+      <h2>动态列显隐</h2>
+      <p><code>hidCol</code> 按列身份显隐（不重建数组，列顺序 / 宽度 / 固定位保持不变）。</p>
             <CodeDemo :source="rawSFCs['./es-table/DynamicColumns.vue']">
         <EsTableDynamicColumns />
       </CodeDemo>
@@ -187,7 +187,7 @@
     <!-- 查询表格 -->
     <section id="query-table">
       <h2>配置化查询表格</h2>
-      <p><code>entryQuery</code> 自动合并搜索参数 + <code>httpRequestInstance</code> 手动刷新，零手动联动代码。</p>
+      <p><code>apiParams.model</code> 自动合并搜索参数 + <code>httpRequestInstance</code> 手动刷新，零手动联动代码。</p>
             <CodeDemo :source="rawSFCs['./es-table/QueryTable.vue']">
         <EsTableQueryTable />
       </CodeDemo>
@@ -320,7 +320,8 @@ const tableEvents = [
   { key: '3', event: 'pagination-current-change', params: '(pagination)', desc: '翻页' },
   { key: '4', event: 'size-change', params: '(pagination, size)', desc: '每页条数变化' },
   { key: '5', event: 'change-table-sort', params: '(column)', desc: '排序变化' },
-  { key: '6', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
+  { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行；跨页全集用 getSelectionRows()' },
+  { key: '7', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
 ]
 
 const tableMethods = [
@@ -341,7 +342,10 @@ const tableMethods = [
   { key: '15', prop: 'clearActived', params: '-', desc: 'vxe：关闭所有已激活的单元格编辑态' },
   { key: '16', prop: 'clearValidate', params: '-', desc: 'vxe：清除行内校验提示' },
   { key: '17', prop: 'validate', params: '(rows?)', desc: 'vxe：触发行内校验，返回 Promise' },
-  { key: '18', prop: 'vxeInstance', params: '-', desc: 'vxe：取底层 vxe-grid 实例' },
+  { key: '18', prop: 'exportData', params: '(opts?)', desc: 'vxe：导出当前数据（xlsx/csv/xml/html）' },
+  { key: '19', prop: 'print', params: '(opts?)', desc: 'vxe：调用打印，可传 { html } 打印修正后的 HTML' },
+  { key: '20', prop: 'getPrintHtml', params: '(opts?)', desc: 'vxe：取表格 HTML（合并区需配合 patchHtmlRowSpans 修正）' },
+  { key: '21', prop: 'vxeInstance', params: '-', desc: 'vxe：取底层 vxe-grid 实例' },
 ]
 
 const tableColumns = [
@@ -406,11 +410,11 @@ const tableOptions = [
   { key: '32', prop: 'localPagination', type: 'boolean', default: 'false', desc: '本地分页（对已加载数据切片，不发请求）' },
   { key: '33', prop: 'configBtn', type: 'BtnConfig[]', default: '-', desc: '表格顶部操作按钮（见 EsForm 页的 BtnConfig 配置；它是 TableOptions 的键，不是组件 prop）' },
   { key: '34', prop: 'leftText', type: 'string', default: '-', desc: '头部栏左侧文本' },
-  { key: '35', prop: 'virtual', type: 'boolean', default: 'false', desc: '虚拟滚动' },
-  { key: '36', prop: 'engine', type: 'string', default: 'default', desc: '渲染引擎：default / virtual / vxe' },
-  { key: '37', prop: 'rowHeight', type: 'number', default: '50', desc: '虚拟滚动的行高' },
-  { key: '38', prop: 'estimatedRowHeight', type: 'number', default: '-', desc: '动态行高预估值' },
-  { key: '39', prop: 'overscanCount', type: 'number', default: '2', desc: '可视区外预渲染行数' },
+  { key: '35', prop: 'virtual', type: 'boolean', default: 'false', desc: '虚拟滚动开关。antdv 端不生效（a-table 无虚拟表格），置 true 会告警并回退默认引擎' },
+  { key: '36', prop: 'engine', type: 'string', default: 'default', desc: '渲染引擎：default / vxe 可用；virtual 在本端仅告警忽略，大数据量请用 vxe' },
+  { key: '37', prop: 'rowHeight', type: 'number', default: '50', desc: '虚拟滚动的行高（仅 vue3 虚拟引擎使用，本端忽略）' },
+  { key: '38', prop: 'estimatedRowHeight', type: 'number', default: '-', desc: '动态行高预估值（仅 vue3 虚拟引擎使用，本端忽略）' },
+  { key: '39', prop: 'overscanCount', type: 'number', default: '2', desc: '可视区外预渲染行数（仅 vue3 虚拟引擎使用，本端忽略）' },
   { key: '40', prop: 'showFooter', type: 'boolean', default: 'false', desc: 'vxe：显示表尾' },
   { key: '41', prop: 'footerMethod', type: 'Function', default: '-', desc: 'vxe：表尾计算 ({ columns, data }) => 二维数组' },
   { key: '42', prop: 'footerData', type: 'Array', default: '-', desc: 'vxe：静态表尾数据（二维数组）' },

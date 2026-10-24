@@ -2,13 +2,13 @@
   <div class="es-vxe-page">
     <h1>vxe 高性能引擎</h1>
     <p class="subtitle">
-      ES-Plus 的 <code>EsTable</code> 支持三套渲染引擎，<code>engine: 'vxe'</code> 切换到底层 vxe-table，获得行内编辑、导出、树形数据等企业级能力——<strong>同一份 columns 配置，三套引擎通用</strong>。
+      ES-Plus 的 <code>EsTable</code> 支持多套渲染引擎，<code>engine: 'vxe'</code> 切换到底层 vxe-table，获得行内编辑、导出、树形数据等企业级能力——<strong>同一份 columns 配置，各引擎通用</strong>。本端有默认 a-table 与 vxe 两套（虚拟滚动只在 vxe 引擎下提供）。
     </p>
 
     <a-divider />
 
     <section id="engines">
-      <h2>🚀 三套渲染引擎</h2>
+      <h2>🚀 两套渲染引擎</h2>
       <a-table :dataSource="engines" :columns="engineColumns" :pagination="false" size="middle" bordered />
     </section>
 
@@ -89,7 +89,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       </CodeDemo>
 
       <h3>合并单元格（企业级）</h3>
-      <p>三级表头 + <code>spanMethod</code> 行列混合合并 + <code>vxeConfig.mergeHeaderItems / mergeFooterItems</code> 表头表尾合并，可编辑实时重算达成率；<code>patchHtmlRowSpans</code> 修正合并单元格分页打印（表头每页重复）。</p>
+      <p>两级分组表头 + <code>spanMethod</code> 动态行合并 + <code>vxeConfig.mergeFooterItems</code> 表尾合并，可编辑实时重算达成率；<code>patchHtmlRowSpans</code> 修正合并单元格分页打印（表头每页重复）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/MergeCells.vue']">
         <EsVxeMergeCells />
       </CodeDemo>
@@ -174,10 +174,11 @@ import EsVxeCrudWithDialog from './es-vxe/CrudWithDialog.vue'
 const rawSFCs = import.meta.glob('./es-vxe/*.vue', { query: '?raw', import: 'default', eager: true })
 
 // vxe 引擎是跨渲染器的：vue3 / vue2 / antdv 三端均支持 engine: 'vxe'，且同一份 columns 配置通用。
+// 注意：`virtual`（a-table :virtual）在本端不成立 —— antdv 的 a-table 没有虚拟滚动，
+// 万行以上请直接用下面这条 vxe + vxeConfig.scrollY。
 const engines = [
   { engine: '默认（a-table）', desc: '几十 ~ 几千行，标准场景', flag: '默认' },
-  { engine: 'virtual（a-table :virtual）', desc: '上万行，虚拟滚动', flag: 'options.virtual' },
-  { engine: 'vxe（vxe-table）', desc: '行内编辑 / 导出 / 树形 / 多级表头', flag: "engine: 'vxe'" },
+  { engine: 'vxe（vxe-table）', desc: '上万行虚拟滚动 / 行内编辑 / 导出 / 树形 / 多级表头', flag: "engine: 'vxe'" },
 ]
 
 const engineColumns = [

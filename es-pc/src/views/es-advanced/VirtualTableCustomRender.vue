@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-render-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 自定义渲染 + Tooltip + 格式化</h4>
+    <h4 style="margin-bottom: 12px; color: #606266;">自定义渲染 — Progress / Tag / 具名插槽</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -42,7 +42,7 @@ const columns = [
     render: (_h: any, { row }: any) => {
       const tags = row.tags as string[]
       return h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap' } },
-        tags.map(tag => h(Tag, { size: 'small', type: tag.length > 2 ? 'warning' : 'success' }, () => tag))
+        tags.map(tag => h(Tag, { color: tag.length > 2 ? 'warning' : 'success' }, () => tag))
       )
     }
   },

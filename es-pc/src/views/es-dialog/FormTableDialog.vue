@@ -41,16 +41,22 @@ const columns = [
     return <Tag color={s.color}>{s.text}</Tag>
   }},
   { prop: 'manager', label: '负责人' },
-  { prop: 'budget', label: '预算', width: 120, formatter: (r) => `¥${r.budget.toLocaleString()}` }
+  { prop: 'budget', label: '预算', width: 120, formatter: (r) => `¥${r.budget.toLocaleString()}` },
+  // 行操作按钮挂在「操作列」的 btns 上（表格级 options.btns 不是契约键，放那儿不会渲染）
+  {
+    prop: 'operate',
+    label: '操作',
+    width: 150,
+    btns: [
+      { name: '编辑', type: 'primary', clickEvent: (row) => openEditDialog(row) },
+      { name: '删除', type: 'danger', clickEvent: (row) => handleDelete(row) }
+    ]
+  }
 ]
 
 const tableOptions = {
   border: true,
-  leftText: '项目列表',
-  btns: [
-    { name: '编辑', type: 'primary', size: 'small', clickEvent: (row) => openEditDialog(row) },
-    { name: '删除', type: 'danger', size: 'small', clickEvent: (row) => handleDelete(row) }
-  ]
+  leftText: '项目列表'
 }
 
 const openEditDialog = (row) => {
@@ -64,7 +70,7 @@ const openEditDialog = (row) => {
         model={formData.value}
         formItemList={formItems}
         rules={formRules}
-        layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }}
+        layoutFormProps={{ formLayProps: { labelWidth: '80px' } }}
       />
     ),
     configBtn: [
@@ -87,12 +93,17 @@ const openEditDialog = (row) => {
 }
 
 const handleDelete = (row) => {
-  Modal.confirm({ title: '删除确认', content: `确定要删除「${row.name}」吗？`, okType: 'primary', okButtonProps: { danger: true } })
-    .then(() => {
+  // Modal.confirm 返回 { destroy, update } 而非 Promise，只能用 onOk 承接
+  Modal.confirm({
+    title: '删除确认',
+    content: `确定要删除「${row.name}」吗？`,
+    okType: 'primary',
+    okButtonProps: { danger: true },
+    onOk: () => {
       tableData.value = tableData.value.filter((r) => r.id !== row.id)
       message.success('删除成功')
-    })
-    .catch(() => {})
+    },
+  })
 }
 
 const openCRUD = () => {
@@ -121,7 +132,7 @@ const openCRUD = () => {
                 model={formData.value}
                 formItemList={formItems}
                 rules={formRules}
-                layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }}
+                layoutFormProps={{ formLayProps: { labelWidth: '80px' } }}
               />
             ),
             configBtn: [

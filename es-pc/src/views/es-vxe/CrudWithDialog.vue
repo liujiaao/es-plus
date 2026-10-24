@@ -11,7 +11,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1, labelWidth: '70px' } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1, labelWidth: '70px' } }"
       />
     </es-table>
   </div>
@@ -144,7 +144,7 @@ function openForm(row) {
           { prop: 'salary', label: '薪资', formtype: 'InputNumber', span: 24, attrs: { min: 0 } },
           { prop: 'status', label: '状态', formtype: 'Select', span: 24, dataOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'leave' }] },
         ],
-        layoutFormProps: { fromLayProps: { isBtnHidden: true, labelWidth: '80px' } },
+        layoutFormProps: { formLayProps: { isBtnHidden: true, labelWidth: '80px' } },
       }),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },

@@ -70,7 +70,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px', minFoldRows: 1 },
+  formLayProps: { labelWidth: '70px', minFoldRows: 1 },
   rowLayProps: { gutter: 16 }
 }
 

@@ -86,7 +86,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '80px',
     btnColSpan: 24
   }

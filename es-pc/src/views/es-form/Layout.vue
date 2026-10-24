@@ -5,7 +5,6 @@
       :form-item-list="formItems"
       :config-btn="configBtn"
       :layout-form-props="layoutProps"
-      @confirm="handleSubmit"
     />
   </div>
 </template>
@@ -49,8 +48,7 @@ const configBtn = [
     name: '导出',
     key: 'export',
     direction: 'left',
-    icon: 'DownloadOutlined',
-    click: (model) => {
+    icon: 'DownloadOutlined',    click: (model) => {
       message.success('导出数据: ' + JSON.stringify(model))
     }
   },
@@ -68,7 +66,7 @@ const configBtn = [
     name: '重置',
     key: 'rest',
     direction: 'right',
-    icon: 'RefreshLeft',
+    icon: 'Refresh',
     click: (_, formRef) => {
       formRef?.resetFields()
       message.info('已重置')
@@ -77,18 +75,13 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '80px',
-    labelPosition: 'right',
     minFoldRows: 2  // 超过2行自动折叠
   },
   rowLayProps: {
     gutter: 20
   }
-}
-
-const handleSubmit = () => {
-  message.success('表单提交成功')
 }
 </script>
 

@@ -8,7 +8,7 @@
       :layout-form-props="layoutProps"
     />
     <div class="search-result" v-if="resultVisible">
-      <a-alert type="success" :closable="false" :title="`查询到 ${resultCount} 条结果`" />
+      <a-alert type="success" :closable="false" :message="`查询到 ${resultCount} 条结果`" />
     </div>
   </div>
 </template>
@@ -152,7 +152,7 @@ const configBtn = computed(() => [
 ])
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '80px', size: 'small', minFoldRows: 4, btnColSpan: 24 },
+  formLayProps: { labelWidth: '80px', size: 'small', minFoldRows: 4, btnColSpan: 24 },
   rowLayProps: { gutter: 16 }
 }
 </script>

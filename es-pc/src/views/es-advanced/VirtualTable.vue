@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-table-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">EsTable 虚拟滚动 — 1 万行数据</h4>
+    <h4 style="margin-bottom: 12px; color: #606266;">万行数据 — 一次渲染 1 万条（默认引擎）</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -30,11 +30,9 @@ const columns = [
 ]
 
 const tableOptions = {
-  virtual: true,
   border: true,
   // multiSelect: true,
   rowkey: 'id',
-  rowHeight: 48,
   heightType: 'height' as const,
   tabHeight: 500,
 }
@@ -64,7 +62,8 @@ const tableData = ref<Record<string, unknown>[]>([])
 
 onMounted(() => {
   // 注：EsTable 内部对 dataSource 做了深度监听（deep watch），数据量过大时会冻结主线程。
-  // 此处使用 1 万条数据以兼顾演示效果与响应速度；如需更大数据量，建议先优化 EsTable 的监听策略。
+  // 此处使用 1 万条数据以兼顾演示效果与响应速度；如需更大数据量，改用 vxe 引擎的
+  // 虚拟滚动（engine: 'vxe' + vxeConfig.scrollY），a-table 本身不提供虚拟滚动。
   tableData.value = generateMockData(10000)
   pagination.value.total = tableData.value.length
 })

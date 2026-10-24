@@ -39,8 +39,8 @@ const columns = [
     label: '状态',
     width: 100,
     render: (_, { row }) => {
-      const type = row.status === 'active' ? 'success' : 'info'
-      return h(Tag, { type, size: 'small' }, () => row.status === 'active' ? '活跃' : '不活跃')
+      const color = row.status === 'active' ? 'success' : 'default'
+      return h(Tag, { color }, () => row.status === 'active' ? '活跃' : '不活跃')
     }
   }
 ]

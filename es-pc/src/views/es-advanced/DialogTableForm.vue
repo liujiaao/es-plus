@@ -119,7 +119,7 @@ const openEditDialog = (row) => {
       { name: '取消', click: (_, { close }) => close() },
       { name: '保存', type: 'primary', click: (_, { close }) => {
         Object.assign(row, formModel)
-        message.success('保存成功（模拟）')
+        message.success('保存成功')
         close()
       }}
     ]

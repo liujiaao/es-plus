@@ -8,6 +8,7 @@
     />
     <div style="margin-bottom: 8px; font-size: 13px; color: #606266">
       单击单元格：<a-tag v-if="clickInfo" color="processing">{{ clickInfo }}</a-tag>
+      <span style="margin-left: 16px">排序事件：<a-tag v-if="sortInfo" color="processing">{{ sortInfo }}</a-tag></span>
     </div>
     <es-table
       :columns="columns"
@@ -24,10 +25,12 @@ import { Tag } from 'ant-design-vue'
 import { EsTable } from '@es-plus/adapter-antdv'
 
 const clickInfo = ref('')
+const sortInfo = ref('')
 
 const columns = [
   { prop: 'id', label: 'ID', width: 70 },
-  { prop: 'name', label: '姓名', minWidth: 120 },
+  // sortable 是 a-table / vxe 共有的列配置，vxe 引擎原样透传给 vxe-column
+  { prop: 'name', label: '姓名', minWidth: 120, sortable: true },
   {
     prop: 'level', label: '级别', width: 100,
     render: (_h, { value }) => {
@@ -49,13 +52,13 @@ const tableOptions = {
     scrollX: { enabled: true, gt: 10 },
     scrollY: { enabled: true, gt: 100 },
   },
-  // vxeOn：vxe 原生事件注入
+  // vxeOn：vxe 原生事件注入（只进这份配置，不污染 es-plus 的一等公民事件）
   vxeOn: {
     'cell-click': ({ row, column }) => {
       clickInfo.value = `行:${row.name} 列:${column.title || column.field}`
     },
     'sort-change': ({ field, order }) => {
-      console.log('[vxeOn sort-change]', field, order)
+      sortInfo.value = order ? `${field} ${order === 'asc' ? '升序' : '降序'}` : `${field} 取消排序`
     },
   },
 }

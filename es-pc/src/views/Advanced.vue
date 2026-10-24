@@ -124,7 +124,7 @@
 
     <section id="conditional-btns">
       <h2>条件行操作按钮</h2>
-      <p><code>btns</code> 声明式行操作 — 替代冗长 v-if slot，按钮行为随行数据动态变化。</p>
+      <p><code>btns</code> + <code>hidden(row)</code> 声明式行操作 — 替代冗长 v-if slot，每行显示哪些按钮随行数据变化。</p>
             <CodeDemo :source="rawSFCs['./es-advanced/ConditionalBtns.vue']">
         <ConditionalBtns />
       </CodeDemo>
@@ -185,10 +185,14 @@
 
     <a-divider />
 
-    <!-- 虚拟滚动基础 -->
-    <section id="virtual-table">
-      <h2>虚拟滚动基础</h2>
-      <p><code>options.virtual: true</code> 开启虚拟滚动，大数据量流畅渲染。</p>
+    <!-- 万行数据 -->
+    <section id="large-data">
+      <h2>万行数据</h2>
+      <p>
+        一次渲染 1 万行。<strong>注意：a-table 没有虚拟滚动</strong> ——
+        <code>options.virtual</code> 在 antdv 端会告警并回退默认引擎；真正需要虚拟滚动请用
+        <code>engine: 'vxe'</code>（见「vxe 高性能引擎 → 虚拟滚动」）。
+      </p>
       <a-alert
         v-if="!showVirtual"
         type="info"
@@ -206,10 +210,10 @@
 
     <a-divider />
 
-    <!-- 虚拟滚动进阶 -->
-    <section id="virtual-advanced">
-      <h2>虚拟滚动进阶</h2>
-      <p>虚拟模式下排序、固定列、多选、自定义渲染、行样式与完整 CRUD。</p>
+    <!-- 大数据量进阶 -->
+    <section id="large-data-advanced">
+      <h2>大数据量进阶</h2>
+      <p>1 万行数据下的排序、固定列、多选、自定义渲染、行样式与完整 CRUD。</p>
       <a-alert
         v-if="!showVirtualAdvanced"
         type="info"

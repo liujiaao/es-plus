@@ -3,6 +3,7 @@
     <es-crud-page
       ref="crudRef"
       :schema="schema"
+      @dialog-open="handleDialogOpen"
       @dialog-confirm="handleDialogConfirm"
       @btn-click="handleBtnClick"
     />
@@ -10,50 +11,62 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { EsCrudPage } from '@es-plus/adapter-antdv'
-import { h, ref } from 'vue'
+import { message } from 'ant-design-vue'
+
 const crudRef = ref(null)
+
+const DEPTS = ['技术部', '产品部', '运营部', '市场部']
+const ROLES = ['管理员', '开发者', '编辑', '访客']
 
 const mockUsers = Array.from({ length: 25 }, (_, i) => ({
   id: i + 1,
   name: ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十'][i % 8],
   email: `user${i + 1}@company.com`,
-  dept: ['技术部', '产品部', '运营部', '市场部'][i % 4],
-  role: ['管理员', '开发者', '编辑', '访客'][i % 4],
+  dept: DEPTS[i % 4],
+  role: ROLES[i % 4],
   status: i % 5 === 0 ? 'disabled' : 'active',
   createTime: `2024-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, '0')}`
 }))
 
+const toOptions = (list) => list.map((v) => ({ label: v, value: v }))
+const deptOptions = toOptions(DEPTS)
+const roleOptions = toOptions(ROLES)
+const statusOptions = [
+  { label: '正常', value: 'active' },
+  { label: '禁用', value: 'disabled' }
+]
+
 const schema = {
   formItems: [
     { prop: 'name', label: '姓名', formtype: 'Input' },
-    { prop: 'dept', label: '部门', formtype: 'Select',
-      dataOptions: [
-        { label: '技术部', value: '技术部' },
-        { label: '产品部', value: '产品部' },
-        { label: '运营部', value: '运营部' },
-        { label: '市场部', value: '市场部' }
-      ] },
-    { prop: 'status', label: '状态', formtype: 'Select',
-      dataOptions: [
-        { label: '正常', value: 'active' },
-        { label: '禁用', value: 'disabled' }
-      ] }
+    { prop: 'dept', label: '部门', formtype: 'Select', dataOptions: deptOptions },
+    { prop: 'status', label: '状态', formtype: 'Select', dataOptions: statusOptions }
   ],
   columns: [
+    { type: 'selection', width: 50 },
     { prop: 'name', label: '姓名', width: 80 },
     { prop: 'email', label: '邮箱', minWidth: 160 },
     { prop: 'dept', label: '部门', width: 90 },
     { prop: 'role', label: '角色', width: 80 },
-    { prop: 'status', label: '状态', width: 80 },
+    { prop: 'status', label: '状态', width: 80,
+      formatter: (row) => (row.status === 'active' ? '正常' : '禁用') },
     { prop: 'createTime', label: '创建日期', width: 120 }
   ],
   tableOptions: {
     border: true,
     apiParams: { url: '/api/mock' },
-    httpRequest: async ({ pageIndex, pageSize }) => {
+    httpRequest: async ({ pageIndex, pageSize, formParams }) => {
+      let filtered = mockUsers
+      if (formParams?.name) filtered = filtered.filter((u) => u.name.includes(formParams.name))
+      if (formParams?.dept) filtered = filtered.filter((u) => u.dept === formParams.dept)
+      if (formParams?.status) {
+        // 注意：Select 清空后值是 ''，不能被当成「筛 status === ''」
+        filtered = filtered.filter((u) => u.status === formParams.status)
+      }
       const start = (pageIndex - 1) * pageSize
-      return { data: mockUsers.slice(start, start + pageSize), total: mockUsers.length, pageSize, pageIndex }
+      return { data: filtered.slice(start, start + pageSize), total: filtered.length, pageSize, pageIndex }
     },
     configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' }
   },
@@ -83,51 +96,26 @@ const schema = {
           formItemOptions: { rules: [{ required: true, message: '请输入邮箱' }] } },
         { prop: 'dept', label: '部门', formtype: 'Select',
           formItemOptions: { rules: [{ required: true, message: '请选择部门' }] },
-          dataOptions: [
-            { label: '技术部', value: '技术部' },
-            { label: '产品部', value: '产品部' },
-            { label: '运营部', value: '运营部' },
-            { label: '市场部', value: '市场部' }
-          ] },
-        { prop: 'role', label: '角色', formtype: 'Select',
-          dataOptions: [
-            { label: '管理员', value: '管理员' },
-            { label: '开发者', value: '开发者' },
-            { label: '编辑', value: '编辑' },
-            { label: '访客', value: '访客' }
-          ] }
+          dataOptions: deptOptions },
+        { prop: 'role', label: '角色', formtype: 'Select', dataOptions: roleOptions }
       ]
     },
     edit: {
+      // 函数式标题：拿到当前行，标题跟着数据走
       title: (row) => `编辑用户 — ${row?.name || ''}`,
       width: '550px',
       formItems: [
         { prop: 'name', label: '姓名', formtype: 'Input' },
         { prop: 'email', label: '邮箱', formtype: 'Input' },
-        { prop: 'dept', label: '部门', formtype: 'Select',
-          dataOptions: [
-            { label: '技术部', value: '技术部' },
-            { label: '产品部', value: '产品部' },
-            { label: '运营部', value: '运营部' },
-            { label: '市场部', value: '市场部' }
-          ] },
-        { prop: 'role', label: '角色', formtype: 'Select',
-          dataOptions: [
-            { label: '管理员', value: '管理员' },
-            { label: '开发者', value: '开发者' },
-            { label: '编辑', value: '编辑' },
-            { label: '访客', value: '访客' }
-          ] },
-        { prop: 'status', label: '状态', formtype: 'Select',
-          dataOptions: [
-            { label: '正常', value: 'active' },
-            { label: '禁用', value: 'disabled' }
-          ] }
+        { prop: 'dept', label: '部门', formtype: 'Select', dataOptions: deptOptions },
+        { prop: 'role', label: '角色', formtype: 'Select', dataOptions: roleOptions },
+        { prop: 'status', label: '状态', formtype: 'Select', dataOptions: statusOptions }
       ]
     },
     detail: {
       title: (row) => `用户详情 — ${row?.name || ''}`,
       width: '500px',
+      // 只读详情：render 完全接管内容，且不需要底部按钮
       isHiddenFooter: true,
       render: (h, { row }) => {
         return h('div', { style: 'padding: 10px 0;' }, [
@@ -154,14 +142,60 @@ const schema = {
   }
 }
 
+// 编辑弹窗的表单不含 id，靠打开弹窗的那一行定位
+let editingRow = null
+const handleDialogOpen = (key, row) => {
+  if (key === 'edit') editingRow = row || null
+}
+
 const handleDialogConfirm = (key, data) => {
-  message.success(`[${key}] 保存成功: ${data.name || data.email}`)
+  if (key === 'add') {
+    mockUsers.unshift({
+      id: mockUsers.reduce((max, u) => Math.max(max, u.id), 0) + 1,
+      name: data.name,
+      email: data.email,
+      dept: data.dept,
+      role: data.role || '访客',
+      status: 'active',
+      createTime: new Date().toISOString().slice(0, 10)
+    })
+    message.success(`已新增用户: ${data.name}`)
+  }
+  if (key === 'edit' && editingRow) {
+    Object.assign(editingRow, data)
+    message.success(`已保存用户: ${data.name}`)
+  }
+  crudRef.value?.refresh?.()
 }
 
 const handleBtnClick = (key, payload) => {
-  if (key === 'delete') message.success(`已删除用户: ${payload?.name}`)
-  if (key === 'export') message.info('正在导出用户列表...')
-  if (key === 'batchEnable') message.success('批量启用完成')
+  if (key === 'delete') {
+    const index = mockUsers.findIndex((u) => u.id === payload?.id)
+    if (index > -1) mockUsers.splice(index, 1)
+    crudRef.value?.refresh?.()
+    message.success(`已删除用户: ${payload?.name}`)
+  }
+  if (key === 'batchEnable') {
+    const selected = crudRef.value?.getSelectedRows?.() ?? []
+    if (!selected.length) return message.warning('请先勾选要启用的用户')
+    selected.forEach((u) => { u.status = 'active' })
+    crudRef.value?.refresh?.()
+    message.success(`已启用 ${selected.length} 个用户`)
+  }
+  if (key === 'export') {
+    const header = ['ID', '姓名', '邮箱', '部门', '角色', '状态', '创建日期']
+    const rows = mockUsers.map((u) => [
+      u.id, u.name, u.email, u.dept, u.role, u.status === 'active' ? '正常' : '禁用', u.createTime
+    ])
+    const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '用户列表.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+    message.success(`已导出 ${mockUsers.length} 个用户`)
+  }
 }
 </script>
 

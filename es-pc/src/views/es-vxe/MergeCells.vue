@@ -4,7 +4,7 @@
       type="info"
       show-icon
       style="margin-bottom: 10px"
-      message="企业级复杂合并：三级表头 + spanMethod 行列混合合并 + vxeConfig.mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；editRender 可编辑单元格实时重算达成率；patchHtmlRowSpans 修正合并单元格打印"
+      message="企业级复杂合并：两级分组表头（4 组） + spanMethod 动态行合并 + mergeFooterItems 多行表尾合并；editRender 可编辑单元格实时重算达成率；patchHtmlRowSpans 修正合并单元格打印"
     />
 
     <es-form :model="queryForm" :form-item-list="formItems" style="margin-bottom: 8px" />
@@ -14,7 +14,7 @@
       <a-button type="primary" size="small" @click="handlePrintPreview">打印全部</a-button>
       <a-button size="small" @click="handlePrintDept('技术事业部')">打印技术事业部</a-button>
       <a-button size="small" @click="handlePrintDept('产品事业部')">打印产品事业部</a-button>
-      <span style="font-size: 12px; color: #909399">分页打印时三级表头自动在每页重复（CSS: thead display:table-header-group）</span>
+      <span style="font-size: 12px; color: #909399">分页打印时分组表头自动在每页重复（CSS: thead display:table-header-group）</span>
     </a-space>
 
     <es-table
@@ -32,7 +32,6 @@ import { Tag } from 'ant-design-vue'
 import { EsTable, EsForm, patchHtmlRowSpans } from '@es-plus/adapter-antdv'
 
 const tableRef = ref(null)
-const getGrid = () => tableRef.value?.vxeInstance?.()
 
 const PRINT_STYLE = `
   @page { margin: 1.5cm; size: A4 landscape; }
@@ -47,14 +46,15 @@ const PRINT_STYLE = `
 `
 
 // vxe print 不执行 spanMethod（与之互斥），用 patchHtmlRowSpans 修正 tbody rowspan/colspan。
-// getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 的 thead{display:table-header-group} 实现每页重复表头。
+// getPrintHtml 保留完整两级 <thead>，PRINT_STYLE 的 thead{display:table-header-group} 实现每页重复表头。
 // ci 是 tbody <td> 的 DOM 顺序 = 叶子列全局顺序，用 leafFields[ci] 取 field。
+// 打印走 EsTable 的公共方法（内部已下沉到 vxe 的 <vxe-table> 实例，不依赖 vxeInstance()）。
 async function doPrint(data, opts) {
-  const grid = getGrid()
-  if (!grid) return
+  const table = tableRef.value
+  if (!table) return
   const em = queryForm.enableMerge
-  const { html } = await grid.getPrintHtml({ ...opts, data })
-  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
+  const { html } = await table.getPrintHtml({ ...opts, data })
+  table.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
 }
 
 function handlePrintPreview() {
@@ -116,7 +116,7 @@ const tableData = ref(buildTableData())
 // enableMerge / dept 变了重建 data：触发 vxe-grid 重渲染，重新执行 spanMethod
 watch([() => queryForm.dept, () => queryForm.enableMerge], () => { tableData.value = buildTableData() })
 
-// ─── 列配置：三级表头结构 ──────────────────────────────────────
+// ─── 列配置：分组表头结构（groups = 第一行分组，叶子列为第二行） ─────
 const rateRender = (_h, { value }) => {
   const c = value >= 100 ? '#52c41a' : value >= 90 ? '#faad14' : '#f5222d'
   return h('span', { style: { color: c, fontWeight: 'bold' } }, value + '%')
@@ -151,8 +151,13 @@ const columns = [
       { prop: 'h2Rate', label: '达成率', width: 80, align: 'center', render: rateRender },
     ],
   },
-  { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
-  { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' },
+  {
+    label: '年度汇总',
+    groups: [
+      { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
+      { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' },
+    ],
+  },
 ]
 
 // 从 columns 动态展开叶子列 field 顺序，colIndex → field
@@ -175,7 +180,7 @@ function computeSpan(data, rowIndex, field, enableMerge) {
   return { rowspan: 1, colspan: 1 }
 }
 
-// spanMethod：行列混合动态合并（vxe v4 回调不传 data，从闭包取 tableData.value）
+// spanMethod：动态行合并（vxe v4 回调不传 data，从闭包取 tableData.value）
 // 注意：多级表头下 columnIndex 是「组内相对索引」（每组从 0 重新计数），不能用它查 leafFields；
 // 直接用 column.field 最稳妥（getPrintHtml 的 patchHtmlRowSpans 回调用叶子列 DOM 顺序 leafFields[ci]）。
 function spanMethod({ rowIndex, column }) {
@@ -225,10 +230,9 @@ const tableOptions = computed(() => ({
   printConfig: { sheetName: '员工KPI绩效考核表' },
   _merge: queryForm.enableMerge, // 注入 reactive 依赖
   vxeConfig: {
-    // 静态表头合并：年度目标 + 年度完成 合并为"年度汇总"
-    mergeHeaderItems: [{ row: 0, col: 9, rowspan: 1, colspan: 2 }],
     // 静态表尾合并：总计行合并事业部+团队两列
     mergeFooterItems: [{ row: 2, col: 0, rowspan: 1, colspan: 2 }],
+    // 表头合并走 columns.groups（两级分组表头），不再手写 mergeHeaderCells
   },
 }))
 </script>

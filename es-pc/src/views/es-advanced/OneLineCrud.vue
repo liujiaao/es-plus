@@ -15,7 +15,7 @@
     </es-table>
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
+        <template #message>
           <b>useDialog + EsForm JSX render</b> — 弹窗表单无需模板声明，registerRef 获取表单实例进行验证，
           整个 CRUD 弹窗仅需一个函数调用。
         </template>
@@ -63,9 +63,17 @@ const columns = [
   }
 ]
 
+// 本地数据源：首次请求时拉一次并缓存，之后新增 / 编辑 / 删除都作用在它上面，
+// 提交后刷新表格才能看到真实变化（而不是只弹一句「成功」）。
+let localRows = null
+const ensureRows = async () => {
+  if (!localRows) localRows = (await fetchProducts()).map((r) => ({ ...r }))
+  return localRows
+}
+
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 5 } = params || {}
-  const all = await fetchProducts()
+  const all = await ensureRows()
   const total = all.length
   const start = (pageIndex - 1) * pageSize
   return { data: all.slice(start, start + pageSize), total, pageSize, pageIndex }
@@ -81,12 +89,19 @@ const tableOptions = {
   tabHeight: 380
 }
 
+// Modal.confirm 返回 { destroy, update } 而非 Promise，必须用 onOk/onCancel 包一层才等得到结果
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
+
 const handleDelete = async (row) => {
-  try {
-    await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
-    message.success('删除成功（模拟）')
-    tableRef.value?.httpRequestInstance()
-  } catch {}
+  const ok = await confirmBox({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
+  if (!ok) return
+  const all = await ensureRows()
+  const idx = all.findIndex((r) => r.id === row.id)
+  if (idx > -1) all.splice(idx, 1)
+  message.success('删除成功')
+  tableRef.value?.httpRequestInstance()
 }
 
 // 一个函数完成 CRUD 弹窗：新增传空，编辑传 row
@@ -102,7 +117,9 @@ const openDialog = (row) => {
         ref={(el) => { if (el) registerRef('crudForm', el) }}
         model={formModel}
         formItemList={[
-          { prop: 'title', label: '名称', formtype: 'Input', span: 24, attrs: { placeholder: '请输入名称' } },
+          { prop: 'title', label: '名称', formtype: 'Input', span: 24,
+            attrs: { placeholder: '请输入名称' },
+            formItemOptions: { rules: [{ required: true, message: '请输入名称' }] } },
           { prop: 'price', label: '价格', formtype: 'Input', span: 12, attrs: { placeholder: '价格', type: 'number' } },
           { prop: 'category', label: '分类', formtype: 'Select', span: 12, dataOptions: categoryOptions },
           { prop: 'description', label: '描述', formtype: 'Input', span: 24, attrs: { type: 'textarea', rows: 3, placeholder: '描述' } }
@@ -111,8 +128,28 @@ const openDialog = (row) => {
     ),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },
-      { name: '提交', type: 'primary', click: (_, { close, getRefs }) => {
-        message.success(`${isEdit ? '编辑' : '新增'}成功（模拟）`)
+      { name: '提交', type: 'primary', click: async (_, { close, getRefs }) => {
+        // registerRef('crudForm') 注册的表单实例：validate() 拒绝即校验未过，直接中止提交
+        try {
+          await getRefs('crudForm')?.validate?.()
+        } catch {
+          return
+        }
+        const all = await ensureRows()
+        const payload = {
+          title: formModel.title,
+          price: Number(formModel.price) || 0,
+          category: formModel.category,
+          description: formModel.description
+        }
+        if (isEdit) {
+          const target = all.find((r) => r.id === row.id)
+          if (target) Object.assign(target, payload)
+        } else {
+          const id = all.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
+          all.unshift({ id, ...payload })
+        }
+        message.success(isEdit ? '编辑成功' : '新增成功')
         close()
         tableRef.value?.httpRequestInstance()
       }}

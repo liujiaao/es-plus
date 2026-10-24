@@ -11,16 +11,30 @@
         权限: {{ rolePermissions[currentRole].join(', ') }}
       </span>
     </div>
-    <es-crud-page :key="currentRole" :schema="schema" @dialog-confirm="handleConfirm" @btn-click="handleBtn" />
+    <es-crud-page
+      :key="currentRole"
+      ref="crudRef"
+      :schema="schema"
+      @dialog-open="handleDialogOpen"
+      @dialog-confirm="handleConfirm"
+      @btn-click="handleBtn"
+    />
   </div>
 </template>
 
 <script setup>
 import { EsCrudPage, configureEsPlus } from '@es-plus/adapter-antdv'
-import { ref, watch } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { message } from 'ant-design-vue'
 
 const currentRole = ref('admin')
+const crudRef = ref(null)
+
+// 编辑弹窗的表单不含 id，靠打开弹窗的那一行定位
+let editingRow = null
+const handleDialogOpen = (key, row) => {
+  if (key === 'edit') editingRow = row || null
+}
 
 const rolePermissions = {
   admin: ['user:add', 'user:edit', 'user:delete', 'user:export'],
@@ -29,15 +43,22 @@ const rolePermissions = {
 }
 
 const applyPermission = (role) => {
+  // 写入模块级单例：组件内部 inject('$EsPlus') 拿到的是「读时回落」视图，
+  // 因此这里改完，已挂载的表格/按钮在下一次渲染时就能读到新判定函数。
   configureEsPlus({
     permission: (value) => rolePermissions[role].includes(value)
   })
 }
 applyPermission('admin')
 
-const handleRoleChange = (role) => {
-  applyPermission(role)
+// a-radio-group 的 @change 给的是 RadioChangeEvent 对象，不是选中的值；
+// v-model:value 已先把 currentRole 更新好，直接读它即可
+const handleRoleChange = () => {
+  applyPermission(currentRole.value)
 }
+
+// 离开示例时恢复「全部放行」，避免权限状态泄漏给其它示例页
+onUnmounted(() => configureEsPlus({ permission: () => true }))
 
 const mockData = [
   { id: 1, name: '张三', dept: '技术部', level: '高级' },
@@ -57,7 +78,7 @@ const schema = {
   tableOptions: {
     border: true,
     apiParams: { url: '/api/mock' },
-    httpRequest: async () => ({ data: mockData, total: 3, pageSize: 10, pageIndex: 1 }),
+    httpRequest: async () => ({ data: mockData, total: mockData.length, pageSize: 10, pageIndex: 1 }),
     configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' }
   },
   toolbarBtns: [
@@ -92,8 +113,31 @@ const schema = {
   }
 }
 
-const handleConfirm = (key, data) => message.success(`[${key}] ${data.name}`)
-const handleBtn = (key) => message.info(`按钮: ${key}`)
+const handleConfirm = (key, data) => {
+  if (key === 'add') {
+    mockData.unshift({
+      id: mockData.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+      name: data.name || '-',
+      dept: data.dept || '-',
+      level: '初级'
+    })
+  } else if (key === 'edit' && editingRow) {
+    Object.assign(editingRow, data)
+  }
+  crudRef.value?.refresh?.()
+  message.success(`[${key}] ${data.name}`)
+}
+
+const handleBtn = (key, row) => {
+  if (key === 'delete') {
+    const index = mockData.findIndex((r) => r.id === row?.id)
+    if (index > -1) mockData.splice(index, 1)
+    crudRef.value?.refresh?.()
+    message.success(`已删除: ${row?.name}`)
+    return
+  }
+  message.info(`按钮: ${key}`)
+}
 </script>
 
 <style scoped>

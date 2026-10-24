@@ -47,8 +47,10 @@ const statusMap = {
 }
 
 // 模拟后端接口
+// 注意参数分层：分页在顶层（pageIndex/pageSize），表单搜索值在 formParams 里
 const mockRequest = async (params) => {
-  const { pageIndex = 1, pageSize = 10, keyword, status } = params || {}
+  const { pageIndex = 1, pageSize = 10, formParams = {} } = params || {}
+  const { keyword, status } = formParams
   const allData = Array.from({ length: 86 }, (_, i) => ({
     id: 1001 + i,
     orderNo: `ORD-2024-${String(i + 1).padStart(3, '0')}`,

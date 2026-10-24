@@ -95,7 +95,7 @@ const renderBtn = () => {
 }
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '80px', size: 'small' },
+  formLayProps: { labelWidth: '80px', size: 'small' },
   rowLayProps: { gutter: 16 }
 }
 </script>

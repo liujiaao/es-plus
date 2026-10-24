@@ -3,10 +3,10 @@
     <div class="api-switch">
       <span class="switch-label">切换后端接口格式：</span>
       <a-radio-group v-model:value="apiFormat" size="small">
-        <a-radio-group label="standard">标准格式</a-radio-group>
-        <a-radio-group label="snake">蛇形命名</a-radio-group>
-        <a-radio-group label="nested">嵌套结构</a-radio-group>
-        </a-radio-group>
+        <a-radio-button value="standard">标准格式</a-radio-button>
+        <a-radio-button value="snake">蛇形命名</a-radio-button>
+        <a-radio-button value="nested">嵌套结构</a-radio-button>
+      </a-radio-group>
     </div>
     <es-table
       :key="apiFormat"
@@ -17,7 +17,7 @@
     />
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
+        <template #message>
           <b>configTableOut + qrcb</b> — 三种后端响应格式，仅需修改配置即可适配，无需写任何适配代码。
           传统方式需要为每种后端格式写数据转换层。
         </template>

@@ -68,7 +68,9 @@ const openStepDialog = () => {
   const schema = computed(() => stepSchemas[currentStep.value])
   const isLastStep = computed(() => currentStep.value === stepSchemas.length - 1)
 
-  dialog({
+  // renderFooter 的第二参拿不到 close，用 dialog() 返回值捕获关闭句柄
+  let instance
+  instance = dialog({
     title: '创建项目',
     width: '620px',
     render: (h, { registerRef }) => (
@@ -83,15 +85,15 @@ const openStepDialog = () => {
               model={formData.value}
               formItemList={schema.value.items}
               rules={schema.value.rules}
-              layoutFormProps={{ fromLayProps: { labelWidth: '90px' } }}
+              layoutFormProps={{ formLayProps: { labelWidth: '90px' } }}
             />
         }
       </div>
     ),
-    renderFooter: (h, { close }) => (
+    renderFooter: (h) => (
       <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 10px 20px; width: 100%">
         {isDone.value
-          ? <Button type="primary" onClick={() => close()}>完成</Button>
+          ? <Button type="primary" onClick={() => instance?.close()}>完成</Button>
           : [
               currentStep.value > 0 && <Button onClick={() => { currentStep.value--; formRef?.clearValidate() }}>上一步</Button>,
               <Button type="primary" onClick={() => {

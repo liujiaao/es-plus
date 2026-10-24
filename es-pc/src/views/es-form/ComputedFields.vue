@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { EsForm } from '@es-plus/adapter-antdv'
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 const productMap: Record<string, { name: string; price: number; unit: string }> = {
@@ -52,6 +52,11 @@ const recalc = () => {
   formModel.total = Math.round(formModel.subtotal * disc / 100)
 }
 
+// 数量/折扣任一变化就重算。用 watch 而不是在控件上挂 on：antdv 各控件的事件名不统一
+// （a-input 是 input，a-slider 只有 update:value / change），watch 跟着 model 走，
+// 换控件类型也不用改联动逻辑。
+watch(() => [formModel.quantity, formModel.discount], recalc)
+
 const formItems = [
   {
     prop: 'product',
@@ -81,16 +86,14 @@ const formItems = [
     label: '数量',
     span: 8,
     formtype: 'Input' as const,
-    attrs: { type: 'number', min: 1, placeholder: '请输入数量' },
-    on: { input: () => recalc() }
+    attrs: { type: 'number', min: 1, placeholder: '请输入数量' }
   },
   {
     prop: 'discount',
     label: '折扣(%)',
     span: 8,
     formtype: 'Slider' as const,
-    attrs: { min: 50, max: 100, step: 5, showStops: true },
-    on: { input: () => recalc() }
+    attrs: { min: 50, max: 100, step: 5, showStops: true }
   },
   {
     prop: 'subtotal',
@@ -132,7 +135,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '90px', size: 'small' },
+  formLayProps: { labelWidth: '90px', size: 'small' },
   rowLayProps: { gutter: 16 }
 }
 </script>

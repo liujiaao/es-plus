@@ -1,6 +1,7 @@
 <template>
   <div class="example-dynamic-form">
     <es-form
+      ref="formRef"
       :model="formModel"
       :form-item-list="dynamicItems"
     />
@@ -8,7 +9,7 @@
       <a-button type="primary" @click="addField">
         <PlusOutlined /> 添加字段
       </a-button>
-      <a-button @click="showResult">查看结果</a-button>
+      <a-button @click="showResult">校验并查看结果</a-button>
     </div>
     <a-modal v-model:open="resultVisible" title="表单数据" width="500px">
       <pre>{{ JSON.stringify(formModel.fields, null, 2) }}</pre>
@@ -19,9 +20,10 @@
 <script setup>
 import { EsForm } from '@es-plus/adapter-antdv'
 import { ref, computed, h } from 'vue'
-import { Button, Modal } from 'ant-design-vue'
+import { Button, Modal, message } from 'ant-design-vue'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
+const formRef = ref(null)
 const formModel = ref({
   fields: [{ name: '字段1', value: '' }]
 })
@@ -35,7 +37,11 @@ const dynamicItems = computed(() => {
       label: `名称${index + 1}`,
       formtype: 'Input',
       span: 10,
-      attrs: { placeholder: '字段名称' }
+      attrs: { placeholder: '字段名称' },
+      // 规则随行 index 一起派生：新增的行天然带校验，不需手动挂规则
+      formItemOptions: {
+        rules: [{ required: true, message: '请输入字段名称' }]
+      }
     },
     {
       prop: `fields[${index}].value`,
@@ -72,7 +78,10 @@ const removeField = async (index) => {
 }
 
 const showResult = () => {
-  resultVisible.value = true
+  formRef.value
+    ?.validate()
+    .then(() => { resultVisible.value = true })
+    .catch(() => { message.error('请先填写字段名称') })
 }
 </script>
 

@@ -9,6 +9,7 @@
       :schema="schema"
       @dialog-confirm="handleDialogConfirm"
       @dialog-open="handleDialogOpen"
+      @btn-click="handleBtnClick"
     />
   </div>
 </template>
@@ -83,12 +84,39 @@ const openEditRow = () => {
   crudRef.value?.openDialog('edit', { id: 99, name: '模拟项目', owner: '程序调用', progress: 60 })
 }
 
+// 记录本次打开编辑弹窗的行，保存时据此回写
+let currentEditingRow = null
+
+const handleDialogOpen = (key, row) => {
+  if (key === 'edit') currentEditingRow = row || null
+  message.info(`弹窗打开: ${key}${row ? ` (行: ${row.name})` : ''}`)
+}
+
 const handleDialogConfirm = (key, data) => {
+  const progress = Number(data.progress) || 0
+  if (key === 'add') {
+    mockData.unshift({
+      id: mockData.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+      name: data.name || '-',
+      owner: data.owner || '-',
+      progress
+    })
+  } else if (key === 'edit' && currentEditingRow) {
+    const target = mockData.find((r) => r.id === currentEditingRow.id)
+    if (target) Object.assign(target, data, { progress })
+    // 程序化打开的「模拟行」不在数据里：保存后补进去，效果可见
+    else mockData.unshift({ ...currentEditingRow, ...data, progress })
+  }
+  crudRef.value?.refresh?.()
   message.success(`[${key}] 保存: ${data.name}, 进度: ${data.progress}%`)
 }
 
-const handleDialogOpen = (key, row) => {
-  message.info(`弹窗打开: ${key}${row ? ` (行: ${row.name})` : ''}`)
+const handleBtnClick = (key, row) => {
+  if (key !== 'delete') return
+  const idx = mockData.findIndex((r) => r.id === row?.id)
+  if (idx > -1) mockData.splice(idx, 1)
+  crudRef.value?.refresh?.()
+  message.success(`已删除：${row?.name}`)
 }
 </script>
 

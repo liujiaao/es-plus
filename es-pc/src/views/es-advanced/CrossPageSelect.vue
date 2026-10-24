@@ -19,7 +19,7 @@
     </es-table>
     <div class="hint">
       <Alert type="info" :closable="false" show-icon>
-        <template #title>
+        <template #message>
           切换分页后选择不丢失 — <b>rowkey + cachePageSelection</b> 解决 a-table 跨页选择丢失的痛点。
           getSelectionRows() 返回所有页面的选中数据。
         </template>
@@ -39,6 +39,11 @@ const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
 const selectedCount = ref(0)
+
+// Modal.confirm 返回 { destroy, update } 而非 Promise，必须用 onOk/onCancel 包一层才等得到结果
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
 
 const handleSelectionChange = (rows) => {
   selectedCount.value = rows?.length || 0
@@ -95,12 +100,11 @@ const tableOptions = {
 
 const handleBatchAction = async () => {
   const rows = tableRef.value?.getSelectionRows?.() || []
-  try {
-    await Modal.confirm({ title: '跨页批量操作', content: `已跨页选中 ${rows.length} 条数据（来自多个分页），确定执行批量操作？`, okType: 'primary' })
-    message.success(`已处理 ${rows.length} 条数据（模拟）`)
-    tableRef.value?.clearAllSelection?.()
-    selectedCount.value = 0
-  } catch {}
+  const ok = await confirmBox({ title: '跨页批量操作', content: `已跨页选中 ${rows.length} 条数据（来自多个分页），确定执行批量操作？`, okType: 'primary' })
+  if (!ok) return
+  message.success(`已处理 ${rows.length} 条数据（模拟）`)
+  tableRef.value?.clearAllSelection?.()
+  selectedCount.value = 0
 }
 </script>
 

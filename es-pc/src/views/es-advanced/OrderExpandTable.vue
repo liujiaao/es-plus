@@ -12,6 +12,13 @@
             :columns="itemColumns"
             :options="itemTableOptions"
           />
+          <!-- a-table 的合计行是 #summary 插槽，EsTable 未透出；这里按数据自算一行，
+               比配一个不会生效的 showSummary 更诚实 -->
+          <div class="expand-total">
+            <span>合计</span>
+            <span>{{ row.items.reduce((s, i) => s + i.quantity, 0) }} 件</span>
+            <span>¥{{ row.items.reduce((s, i) => s + i.subtotal, 0).toLocaleString() }}</span>
+          </div>
         </div>
       </template>
     </es-table>
@@ -91,16 +98,7 @@ const itemColumns = [
 
 const itemTableOptions = {
   border: true,
-  size: 'small',
-  showSummary: true,
-  summaryMethod: ({ columns, data }) => {
-    return columns.map((col, index) => {
-      if (index === 0) return '合计'
-      if (col.property === 'quantity') return data.reduce((sum, r) => sum + (r.quantity || 0), 0)
-      if (col.property === 'subtotal') return `¥${data.reduce((sum, r) => sum + (r.subtotal || 0), 0).toLocaleString()}`
-      return ''
-    })
-  }
+  size: 'small'
 }
 </script>
 
@@ -111,5 +109,16 @@ const itemTableOptions = {
 .expand-wrapper {
   padding: 12px 20px;
   background: #fafafa;
+}
+.expand-total {
+  display: flex;
+  gap: 40px;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #595959;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-top: none;
 }
 </style>

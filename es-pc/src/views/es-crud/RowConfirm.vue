@@ -1,7 +1,9 @@
 <template>
   <div class="example-crud-row-confirm">
     <es-crud-page
+      ref="crudRef"
       :schema="schema"
+      @dialog-open="handleDialogOpen"
       @dialog-confirm="handleDialogConfirm"
       @btn-click="handleBtnClick"
     />
@@ -12,6 +14,10 @@
 import { EsCrudPage } from '@es-plus/adapter-antdv'
 import { ref } from 'vue'
 import { message } from 'ant-design-vue'
+
+const crudRef = ref(null)
+
+const STATUS_LABEL = { draft: '草稿', review: '审核中', published: '已发布', archived: '已归档' }
 
 const mockData = ref([
   { id: 1, title: '年度报告 2024', type: '财务', status: 'published' },
@@ -36,7 +42,8 @@ const schema = {
   columns: [
     { prop: 'title', label: '标题', minWidth: 160 },
     { prop: 'type', label: '类型', width: 100 },
-    { prop: 'status', label: '状态', width: 100 }
+    { prop: 'status', label: '状态', width: 100,
+      formatter: (row) => STATUS_LABEL[row.status] || row.status }
   ],
   tableOptions: {
     border: true,
@@ -92,14 +99,48 @@ const schema = {
   }
 }
 
+// 弹窗保存：新增 / 编辑都真正落到本地数据，再刷新列表
+let currentEditingRow = null
+
+const handleDialogOpen = (dialogKey, row) => {
+  if (dialogKey === 'edit') currentEditingRow = row || null
+}
+
 const handleDialogConfirm = (dialogKey, data) => {
-  message.success(`[${dialogKey}] 确认: ${data.title}`)
+  if (dialogKey === 'add') {
+    mockData.value.unshift({
+      id: mockData.value.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+      title: data.title || '-',
+      type: data.type || '产品',
+      status: 'draft'
+    })
+  } else if (dialogKey === 'edit' && currentEditingRow) {
+    const target = mockData.value.find((r) => r.id === currentEditingRow.id)
+    if (target) Object.assign(target, data)
+  }
+  crudRef.value?.refresh?.()
+  message.success(`[${dialogKey}] 已保存: ${data.title}`)
 }
 
 const handleBtnClick = (key, payload) => {
-  if (key === 'delete') message.success(`已删除: ${payload?.title}`)
-  if (key === 'publish') message.success(`已发布: ${payload?.title}`)
-  if (key === 'archive') message.info('批量归档完成')
+  const target = mockData.value.find((r) => r.id === payload?.id)
+  if (key === 'delete') {
+    mockData.value = mockData.value.filter((r) => r.id !== payload?.id)
+    crudRef.value?.refresh?.()
+    message.success(`已删除: ${payload?.title}`)
+  }
+  if (key === 'publish') {
+    if (target) target.status = 'published'
+    crudRef.value?.refresh?.()
+    message.success(`已发布: ${payload?.title}`)
+  }
+  // 批量归档：把所有已发布文档置为归档态，让工具栏动作也真的改变数据
+  if (key === 'archive') {
+    const count = mockData.value.filter((r) => r.status === 'published').length
+    mockData.value.forEach((r) => { if (r.status === 'published') r.status = 'archived' })
+    crudRef.value?.refresh?.()
+    message.info(`已归档 ${count} 篇已发布文档`)
+  }
 }
 </script>
 

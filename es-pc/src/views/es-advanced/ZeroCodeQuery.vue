@@ -21,7 +21,7 @@
     </es-table>
     <div class="code-hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
+        <template #message>
           无需手写：查询事件绑定、重置清空逻辑、分页请求、loading 状态、数据赋值。
           <b>triggerEvent + apiParams.model</b> 自动完成全部联动。
         </template>
@@ -56,7 +56,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px' },
+  formLayProps: { labelWidth: '70px' },
   rowLayProps: { gutter: 16 }
 }
 

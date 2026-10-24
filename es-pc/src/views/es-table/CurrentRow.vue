@@ -6,7 +6,7 @@
         :data-source="orders"
         :columns="masterColumns"
         :options="masterOptions"
-        @current-change="handleOrderSelect"
+        @row-click="handleOrderSelect"
       />
     </div>
     <div class="detail-section">
@@ -21,16 +21,17 @@
 
 <script setup>
 import { EsTable } from '@es-plus/adapter-antdv'
+import { Tag, message } from 'ant-design-vue'
 import { ref, computed, h } from 'vue'
-import { ReloadOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 const masterRef = ref()
 const currentOrder = ref(null)
 
+// antdv 的 Tag 用 color 表达语义色（不是 el-tag 的 type）
 const statusMap = {
-  paid: { text: '已支付', type: 'success' },
-  pending: { text: '待支付', type: 'warning' },
-  shipped: { text: '已发货', type: '' }
+  paid: { text: '已支付', color: 'success' },
+  pending: { text: '待支付', color: 'warning' },
+  shipped: { text: '已发货', color: 'processing' }
 }
 
 const orders = ref([
@@ -70,10 +71,9 @@ const masterColumns = [
   {
     prop: 'status',
     label: '状态',
-   
     render: (_, { row }) => {
-      const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return h(Tag, { type: s.type, size: 'small' }, () => s.text)
+      const s = statusMap[row.status] || { text: '-', color: 'default' }
+      return h(Tag, { color: s.color }, () => s.text)
     }
   },
   { prop: 'amount', label: '金额', width: 120, formatter: (r) => `¥${r.amount.toLocaleString()}` }
@@ -84,8 +84,8 @@ const masterOptions = {
   highlightCurrentRow: true,
   leftText: '订单列表',
   configBtn: [
-    { name: '刷新', icon: 'Refresh', code: 2, click: () => { message.success('已刷新') } },
-    { name: '清空选中', icon: 'Delete', code: 2, click: () => { currentOrder.value = null } }
+    { name: '刷新', icon: 'Refresh', position: 'right', click: () => { message.success('已刷新') } },
+    { name: '清空选中', icon: 'Delete', position: 'right', click: () => { currentOrder.value = null } }
   ]
 }
 
@@ -98,24 +98,17 @@ const detailColumns = [
   { prop: 'subtotal', label: '小计', width: 120, formatter: (r) => `¥${r.subtotal.toLocaleString()}` }
 ]
 
-const getDetailSummaries = ({ columns, data }) => {
-  const sums = []
-  columns.forEach((col, index) => {
-    if (index === 0) { sums[index] = '合计'; return }
-    if (col.property === 'subtotal') {
-      sums[index] = `¥${data.reduce((s, d) => s + d.subtotal, 0).toLocaleString()}`
-    } else {
-      sums[index] = ''
-    }
-  })
-  return sums
-}
+const detailTotal = computed(() =>
+  currentItems.value.reduce((s, d) => s + d.subtotal, 0)
+)
 
+// a-table 没有汇总行（summaryMethod 是 el-table 专有），
+// 这里把合计放进 leftText，主从联动 + 跑马灯式的头部信息一次演示
 const detailOptions = computed(() => ({
   border: true,
-  showSummary: true,
-  summaryMethod: getDetailSummaries,
-  leftText: currentOrder.value ? `订单明细 — ${currentOrder.value.id}` : '订单明细（请选择订单）'
+  leftText: currentOrder.value
+    ? `订单明细 — ${currentOrder.value.id}　合计 ¥${detailTotal.value.toLocaleString()}`
+    : '订单明细（点击上方订单行查看）'
 }))
 
 const handleOrderSelect = (row) => {

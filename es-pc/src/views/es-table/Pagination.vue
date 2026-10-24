@@ -39,7 +39,7 @@ const columns = [
     prop: 'userId',
     label: '用户',
     width: 100,
-    render: (_, { row }) => h(Tag, { size: 'small' }, () => `用户${row.userId}`)
+    render: (_, { row }) => h(Tag, null, () => `用户${row.userId}`)
   }
 ]
 

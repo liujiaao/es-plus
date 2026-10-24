@@ -8,7 +8,7 @@
     />
     <div class="sort-info" v-if="lastSort">
       <a-alert
-        :title="`当前排序: ${lastSort.prop} - ${lastSort.order === 'ascending' ? '升序' : '降序'}`"
+        :message="`当前排序: ${lastSort.prop} - ${lastSort.order === 'ascending' ? '升序' : '降序'}（数据由 handleSort 重排，等价于把请求参数发给后端）`"
         type="info"
         show-icon
       />
@@ -36,11 +36,28 @@ const columns = [
 ]
 
 const lastSort = ref(null)
+// 清除排序时用来还原的原始顺序
+const originData = tableData.value.map((r) => ({ ...r }))
+
+// a-table 的 sorter:true 是「排序事件」而不是本地排序 —— 组件把
+// { prop, order } 交给你，由你决定怎么排（真实项目里是带上 order 重新请求后端）。
+// 这里数据在本地，就直接重排，效果与后端排序一致。
+const comparators = {
+  name: (a, b) => a.name.localeCompare(b.name, 'zh'),
+  age: (a, b) => a.age - b.age,
+  score: (a, b) => a.score - b.score,
+  salary: (a, b) => a.salary - b.salary
+}
 
 const handleSort = ({ prop, order }) => {
   lastSort.value = { prop, order }
-  // 实际项目中这里会触发后端排序
-  console.log('排序:', prop, order)
+  // 第三次点击会清除排序（order 为 null），此时恢复原始顺序
+  if (!order) {
+    tableData.value = originData.map((r) => ({ ...r }))
+    return
+  }
+  const cmp = comparators[prop]
+  if (cmp) tableData.value = [...tableData.value].sort((a, b) => (order === 'ascending' ? cmp(a, b) : -cmp(a, b)))
 }
 </script>
 

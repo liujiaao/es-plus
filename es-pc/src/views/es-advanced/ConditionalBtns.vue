@@ -9,9 +9,9 @@
     />
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
-        <template #title>
-          <b>btns + clickEvent</b> — 一行配置声明行操作按钮，替代 a-table 冗长的 v-if / template slot 写法。
-          按钮行为随行数据动态变化，无需手动判断。
+        <template #message>
+          <b>btns + hidden + clickEvent</b> — 一行配置声明行操作按钮，替代 a-table 冗长的 v-if / template slot 写法。
+          每行显示哪些按钮由 <code>hidden(row)</code> 谓词决定，状态机不在模板里、也不在点击回调里。
         </template>
       </Alert>
     </div>
@@ -29,6 +29,11 @@ const dialog = useDialog()
 const tableData = ref([])
 const pagination = ref({ pageSize: 10, current: 1, total: 0, pageSizes: [10, 20] })
 
+// Modal.confirm 返回 { destroy, update } 而非 Promise，必须用 onOk/onCancel 包一层才等得到结果
+const confirmBox = (options) => new Promise((resolve) => {
+  Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
+})
+
 const statusMap = {
   draft: { text: '草稿', type: 'info' },
   pending: { text: '待审', type: 'warning' },
@@ -45,7 +50,7 @@ const columns = [
     prop: 'status', label: '状态', width: 80,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)}>{s.text}</Tag>
     }
   },
   { prop: 'date', label: '日期', width: 110 },
@@ -75,7 +80,7 @@ const columns = [
               { name: '取消', click: (_, { close }) => close() },
               { name: '保存', type: 'primary', click: (_, { close }) => {
                 Object.assign(row, formModel.value)
-                message.success('保存成功（模拟）')
+                message.success('保存成功')
                 close()
               }}
             ]
@@ -84,64 +89,59 @@ const columns = [
       },
       {
         name: '提交审核', type: 'primary',
+        // 状态机落在**声明层**：hidden 谓词决定这行到底有没有这个按钮，
+        // clickEvent 里不再需要 if (状态不对) return
+        hidden: (row) => row.status !== 'draft' && row.status !== 'rejected',
         clickEvent: (row) => {
-          if (row.status !== 'draft' && row.status !== 'rejected') {
-            message.warning('仅草稿/已驳回状态可提交')
-            return
-          }
           row.status = 'pending'
           message.success('已提交审核')
         }
       },
       {
         name: '撤回', type: 'default',
+        hidden: (row) => row.status !== 'pending',
         clickEvent: (row) => {
-          if (row.status !== 'pending') {
-            message.warning('仅待审状态可撤回')
-            return
-          }
           row.status = 'draft'
           message.info('已撤回')
         }
       },
       {
         name: '发布', type: 'primary',
+        hidden: (row) => row.status !== 'approved',
         clickEvent: (row) => {
-          if (row.status !== 'approved') {
-            message.warning('仅已审状态可发布')
-            return
-          }
           row.status = 'published'
           message.success('已发布')
         }
       },
       {
         name: '删除', type: 'danger',
+        hidden: (row) => row.status === 'published',
         clickEvent: async (row) => {
-          if (row.status === 'published') {
-            message.warning('已发布文章不可删除，请先下线')
-            return
-          }
-          try {
-            await Modal.confirm({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
-            message.success('删除成功（模拟）')
-            tableRef.value?.httpRequestInstance()
-          } catch {}
+          const ok = await confirmBox({ title: '提示', content: `确定删除 "${row.title}"？`, okType: 'primary', okButtonProps: { danger: true } })
+          if (!ok) return
+          const idx = allArticles.findIndex((r) => r.id === row.id)
+          if (idx > -1) allArticles.splice(idx, 1)
+          message.success('删除成功')
+          tableRef.value?.httpRequestInstance()
         }
       }
     ]
   }
 ]
 
+// 模块级数据源：行内按钮改状态 / 编辑 / 删除都落在它上面，
+// 刷新表格后改动仍然可见（若每次请求现造数组，任何刷新都会把改动冲掉）。
+const allArticles = Array.from({ length: 18 }, (_, i) => ({
+  id: 2001 + i,
+  title: ['Vue3 实战指南', 'React 设计模式', 'TypeScript 进阶', 'Node.js 微服务', 'CSS 布局技巧', '算法与数据结构'][i % 6],
+  author: ['张三', '李四', '王五'][i % 3],
+  status: ['draft', 'pending', 'approved', 'rejected', 'published'][i % 5],
+  date: `2024-03-${String((i % 28) + 1).padStart(2, '0')}`
+}))
+
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 10 } = params || {}
-  const all = Array.from({ length: 18 }, (_, i) => ({
-    id: 2001 + i,
-    title: ['Vue3 实战指南', 'React 设计模式', 'TypeScript 进阶', 'Node.js 微服务', 'CSS 布局技巧', '算法与数据结构'][i % 6],
-    author: ['张三', '李四', '王五'][i % 3],
-    status: ['draft', 'pending', 'approved', 'rejected', 'published'][i % 5],
-    date: `2024-03-${String((i % 28) + 1).padStart(2, '0')}`
-  }))
+  const all = allArticles
   const total = all.length
   const start = (pageIndex - 1) * pageSize
   return { data: all.slice(start, start + pageSize), total, pageSize, pageIndex }

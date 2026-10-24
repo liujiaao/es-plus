@@ -11,7 +11,7 @@
         :model="queryModel"
         :form-item-list="queryItems"
         :config-btn="queryBtns"
-        :layout-form-props="{ fromLayProps: { labelWidth: '80px', minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { labelWidth: '80px', minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -26,17 +26,20 @@ const tableRef = ref(null)
 const dialog = useDialog()
 
 // --- Mock data ---
+// 模块级可变数组：新增/编辑/删除都作用在它上面，刷新表格后仍然可见。
+// 若在 generateData 里现造数组，任何一次 refresh 都会把改动冲掉（「假 CRUD」）。
+const allUsers = Array.from({ length: 57 }, (_, i) => ({
+  id: i + 1,
+  name: `用户${i + 1}`,
+  email: `user${i + 1}@example.com`,
+  role: ['管理员', '编辑', '访客'][i % 3],
+  status: ['active', 'inactive', 'banned'][i % 3],
+  createdAt: `2025-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, '0')}`
+}))
 let idCounter = 100
+
 const generateData = (pageIndex = 1, pageSize = 10, keyword = '', status = '') => {
-  const allData = Array.from({ length: 57 }, (_, i) => ({
-    id: i + 1,
-    name: `用户${i + 1}`,
-    email: `user${i + 1}@example.com`,
-    role: ['管理员', '编辑', '访客'][i % 3],
-    status: ['active', 'inactive', 'banned'][i % 3],
-    createdAt: `2025-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, '0')}`
-  }))
-  let filtered = allData
+  let filtered = allUsers
   if (keyword) filtered = filtered.filter(r => r.name.includes(keyword) || r.email.includes(keyword))
   if (status) filtered = filtered.filter(r => r.status === status)
   const start = (pageIndex - 1) * pageSize
@@ -82,7 +85,7 @@ const queryBtns = [
 const tableData = ref([])
 const pagination = ref({ pageSize: 10, current: 1, total: 0 })
 
-const statusMap = { active: 'success', inactive: 'info', banned: 'danger' }
+const statusMap = { active: 'success', inactive: 'default', banned: 'error' }
 const statusText = { active: '激活', inactive: '停用', banned: '封禁' }
 
 const columns = [
@@ -92,7 +95,7 @@ const columns = [
   { prop: 'role', label: '角色', width: 100 },
   {
     prop: 'status', label: '状态', width: 90,
-    render: (_, { row }) => h(Tag, { type: statusMap[row.status], size: 'small' }, () => statusText[row.status])
+    render: (_, { row }) => h(Tag, { color: statusMap[row.status] }, () => statusText[row.status])
   },
   { prop: 'createdAt', label: '创建日期', width: 130 },
   {
@@ -139,7 +142,7 @@ const openEditDialog = (row) => {
         ref={(el) => { if (el) registerRef('formRef', el) }}
         model={formData}
         formItemList={formItems}
-        layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }}
+        layoutFormProps={{ formLayProps: { labelWidth: '80px' } }}
       />
     ),
     configBtn: [
@@ -152,6 +155,10 @@ const openEditDialog = (row) => {
             if (!isEdit) {
               formData.id = ++idCounter
               formData.createdAt = new Date().toISOString().slice(0, 10)
+              allUsers.unshift({ ...formData })
+            } else {
+              const target = allUsers.find((u) => u.id === formData.id)
+              if (target) Object.assign(target, { ...formData })
             }
             message.success(isEdit ? '保存成功' : '新增成功')
             close()
@@ -173,6 +180,8 @@ const handleDelete = (row) => {
       {
         name: '删除', type: 'danger', icon: 'DeleteOutlined',
         click: (_, { close }) => {
+          const idx = allUsers.findIndex((u) => u.id === row.id)
+          if (idx > -1) allUsers.splice(idx, 1)
           message.success('删除成功')
           close()
           tableRef.value?.httpRequestInstance()

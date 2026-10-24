@@ -180,7 +180,7 @@
 
     <section id="file-upload">
       <h2>文件上传</h2>
-      <p>支持图片、PDF、TXT、Word、Excel、PPT 预览下载及 ZIP 下载，自定义文件列表与操作按钮。</p>
+      <p>图片 / PDF 新窗口预览、TXT 内联预览，Office 文档提示走下载；自定义文件列表项（图标 / 大小 / 预览 / 下载 / 删除）。</p>
             <CodeDemo :source="rawSFCs['./es-form/FileUpload.vue']">
         <EsFormFileUpload />
       </CodeDemo>

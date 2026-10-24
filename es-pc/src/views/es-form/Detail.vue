@@ -2,7 +2,7 @@
   <div class="example-form-detail">
     <div class="mode-toggle">
       <span>模式：</span>
-      <a-switch v-model:checked="isEdit" checked-children="编辑" inchecked-children="详情" @change="onModeChange" />
+      <a-switch v-model:checked="isEdit" checked-children="编辑" un-checked-children="详情" @change="onModeChange" />
     </div>
     <es-form
       ref="formRef"
@@ -85,7 +85,7 @@ const baseFormItems = [
     label: '启用状态',
     span: 12,
     formtype: 'Switch' as const,
-    attrs: { activeText: '启用', inactiveText: '禁用' }
+    attrs: { 'active-text': '启用', 'inactive-text': '禁用' }
   }
 ]
 
@@ -127,7 +127,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '100px', size: 'small' },
+  formLayProps: { labelWidth: '100px', size: 'small' },
   rowLayProps: { gutter: 16 }
 }
 </script>

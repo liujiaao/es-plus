@@ -234,6 +234,14 @@ const pageSchema: any = {
 
 function handleDialogConfirm(dialogKey: string, data: Record<string, any>) {
   if (dialogKey === 'add') {
+    // 真正写进 mockOrders，否则 refresh 后数据又回到初始 8 条（假 CRUD）
+    const id = mockOrders.reduce((m, r) => Math.max(m, r.id), 0) + 1
+    mockOrders.unshift({
+      ...data,
+      id,
+      orderNo: data.orderNo || `ORD${Date.now()}`,
+      createTime: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+    } as any)
     message.success(`新增订单成功: ${data.goods || data.customer}`)
   } else if (dialogKey === 'download') {
     message.success('下载任务已提交')
@@ -243,6 +251,8 @@ function handleDialogConfirm(dialogKey: string, data: Record<string, any>) {
 
 function handleBtnClick(key: string, payload?: Record<string, any>) {
   if (key === 'delete') {
+    const idx = mockOrders.findIndex((o) => o.id === payload?.id)
+    if (idx > -1) mockOrders.splice(idx, 1)
     message.success(`已删除订单: ${payload?.orderNo}`)
     crudRef.value?.refresh()
   }
