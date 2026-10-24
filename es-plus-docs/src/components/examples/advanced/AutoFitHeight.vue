@@ -66,7 +66,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px', minFoldRows: 1 },
+  formLayProps: { labelWidth: '70px', minFoldRows: 1 },
   rowLayProps: { gutter: 16 }
 }
 
@@ -94,10 +94,14 @@ const columns = [
 
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
-  const { pageIndex = 1, pageSize = 5, keyword, category } = { ...formParams, ...rest }
+  const { pageIndex = 1, pageSize = 5, keyword, category, rating, sortBy } = { ...formParams, ...rest }
   let filtered = await fetchProducts()
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
+  // 查询区的每个字段都要落到请求上，否则控件只是摆设
+  if (rating) filtered = filtered.filter(item => (item.rating?.rate ?? 0) >= Number(rating))
+  if (sortBy === 'price_asc') filtered = [...filtered].sort((a, b) => a.price - b.price)
+  if (sortBy === 'price_desc') filtered = [...filtered].sort((a, b) => b.price - a.price)
   const total = filtered.length
   const start = (pageIndex - 1) * pageSize
   return { data: filtered.slice(start, start + pageSize), total, pageSize, pageIndex }

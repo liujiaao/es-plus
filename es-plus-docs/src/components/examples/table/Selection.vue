@@ -117,6 +117,8 @@ const handleBatchDelete = async () => {
       .map(item => item.id)
     allData.value = allData.value.filter(item => !selectedIds.includes(item.id))
     pagination.value.total = allData.value.length
+    // 删掉的行走的是响应式数据，但表格内部勾选态还留着它们的 id，一并清掉
+    tableRef.value?.clearAllSelection?.()
     Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
     ElMessage.success('删除成功')
   } catch {

@@ -1,14 +1,12 @@
 <template>
   <div class="example-cascade-form-table">
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
     >
       <es-form
-        ref="formRef"
         :model="queryModel"
         :form-item-list="queryItems"
         :config-btn="queryBtns"
@@ -24,8 +22,6 @@ import { ref, reactive, watch, computed } from 'vue'
 import { ElTag } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'
 
-const tableRef = ref(null)
-const formRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
@@ -105,7 +101,7 @@ const queryItems = computed(() => [
 ])
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px' },
+  formLayProps: { labelWidth: '70px' },
   rowLayProps: { gutter: 16 }
 }
 
@@ -118,12 +114,14 @@ const columns = [
   { prop: 'id', label: 'ID', width: 60 },
   { prop: 'title', label: '商品名称', minWidth: 180 },
   {
-    prop: 'category', label: '分类', width: 120,
+    prop: 'category', label: '分类', width: 110,
     render: (_, { row }) => {
-      const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
+      const typeMap = { electronics: 'danger', clothing: 'success', jewelery: 'warning' }
       return <ElTag type={typeMap[row.category] || 'info'} size="small">{row.category}</ElTag>
     }
   },
+  { prop: 'subCategory', label: '子分类', width: 90 },
+  { prop: 'brand', label: '品牌', width: 100 },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
   {
     prop: 'rating', label: '评分', width: 80,
@@ -131,14 +129,44 @@ const columns = [
   }
 ]
 
+// fakestoreapi 只返回一级 category（服装是 "men's clothing"/"women's clothing"），
+// 这里把接口数据补成演示用的三级结构：子分类/品牌由本地补齐，真实项目由后端直接返回
+const SUBCATEGORY_OF = {
+  electronics: ['phone', 'computer', 'accessory'],
+  'men\'s clothing': ['men'],
+  'women\'s clothing': ['women'],
+  jewelery: ['ring', 'necklace']
+}
+const BRAND_OF = {
+  phone: ['apple', 'samsung'],
+  computer: ['macbook', 'thinkpad'],
+  accessory: ['logitech', 'anker'],
+  men: ['nike', 'adidas'],
+  women: ['zara', 'hm'],
+  ring: ['tiffany'],
+  necklace: ['cartier']
+}
+
+const enrichProduct = (item, i) => {
+  const list = SUBCATEGORY_OF[item.category] || ['phone']
+  const subCategory = list[i % list.length]
+  const brands = BRAND_OF[subCategory] || []
+  const category = item.category === 'electronics'
+    ? 'electronics'
+    : item.category === 'jewelery' ? 'jewelery' : 'clothing'
+  return { ...item, category, subCategory, brand: brands.length ? brands[i % brands.length] : '' }
+}
+
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
-  const { pageIndex = 1, pageSize = 5, keyword, category } = { ...formParams, ...rest }
+  const { pageIndex = 1, pageSize = 5, keyword, category, subCategory, brand } = { ...formParams, ...rest }
 
-  let filtered = await fetchProducts()
+  let filtered = (await fetchProducts()).map(enrichProduct)
 
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
+  if (subCategory) filtered = filtered.filter(item => item.subCategory === subCategory)
+  if (brand) filtered = filtered.filter(item => item.brand === brand)
 
   const total = filtered.length
   const start = (pageIndex - 1) * pageSize

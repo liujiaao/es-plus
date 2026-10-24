@@ -1,9 +1,9 @@
 <template>
   <div>
     <el-alert type="info" :closable="false" style="margin-bottom:10px"
-      description="proxyConfig 服务端分页：vxe 自管分页状态；EsForm 与 EsTable 为兄弟结构，按钮通过 click 回调调用 commitProxy('query') 触发表格刷新" />
+      description="proxyConfig 服务端分页：vxe 自管分页状态；EsForm 与 EsTable 为兄弟结构，按钮通过 click 回调调用 commitProxy('reload') 重置到第 1 页并重新请求" />
     <!-- 注意：triggerEvent 仅对 EsForm 嵌套在 EsTable 内部的场景生效（依赖 inject 获取父表格实例），
-         兄弟结构下必须手动 click 回调调用 tableRef.vxeInstance().commitProxy('query') -->
+         兄弟结构下必须手动 click 回调调用 tableRef.vxeInstance().commitProxy('reload') -->
     <es-form
       :model="queryForm"
       :form-item-list="formItems"
@@ -42,12 +42,13 @@ const formItems = [
 
 // triggerEvent 依赖 EsForm 嵌套在 EsTable 内部（通过 inject 获取父表格实例），
 // 兄弟结构下 inject 拿不到引用，必须用手动 click 回调。
-// 在 proxyConfig 模式下，commitProxy('query') 会触发 vxe 重新请求分页数据。
+// 查询/重置用 reload：它会把分页重置到第 1 页再请求；
+// query 只沿用当前页码（适合删改后的原地刷新），在第 5 页搜索可能筛出空页。
 const formBtns = [
   {
     name: '查询', type: 'primary' as const, icon: 'Search',
     click: () => {
-      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('query')
+      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('reload')
     },
   },
   {
@@ -55,7 +56,7 @@ const formBtns = [
     click: () => {
       queryForm.keyword = ''
       queryForm.department = ''
-      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('query')
+      ;(tableRef.value as any)?.vxeInstance?.()?.commitProxy?.('reload')
     },
   },
 ]
@@ -105,6 +106,8 @@ const tableOptions = {
       },
     },
   },
-  pagerConfig: { pageSize: 10, pageSizes: [10, 20, 50] },
+  // pagerConfig 走 vxeConfig 逃生舱：引擎只在 proxyConfig 场景下按 vxeConfig.pagerConfig
+  // 启用并配置分页器；写在 options 顶层不会被读取。
+  vxeConfig: { pagerConfig: { pageSize: 10, pageSizes: [10, 20, 50] } },
 }
 </script>

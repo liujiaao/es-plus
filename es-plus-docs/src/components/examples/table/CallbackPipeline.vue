@@ -63,10 +63,10 @@ const columns = [
 
 const tableOptions = {
   border: true,
-  // 默认参数：每次请求自动携带
-  // entryQuery: { typeCode: 1 },
+  // entryQuery：没有内嵌 EsForm 时的默认请求参数，每次请求自动携带
+  entryQuery: { typeCode: 1 },
   httpRequest: mockBackendRequest,
-  apiParams: { url: '/api/employees', method: 'GET', model: { typeCode: 1 } },
+  apiParams: { url: '/api/employees', method: 'GET' },
   // 字段映射：后端字段 → 前端字段
   configTableOut: {
     total: 'total_count',

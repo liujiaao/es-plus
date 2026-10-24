@@ -11,7 +11,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
     <!-- 全屏缩放退出按钮：vxe-grid zoom() 会覆盖整个视口，configBtn 被遮挡，
@@ -37,11 +37,15 @@ const tableRef = ref<InstanceType<typeof EsTable> | null>(null)
 const dialog = useDialog()
 let idSeq = 20
 
-// 全屏缩放状态：vxe-grid zoom() 会切换全屏/还原，通过 vxeOn.zoom 事件追踪
+// 全屏缩放状态：vxe-grid 的 zoom() 是 toggle，状态以 isMaximized() 为准（不能用本地取反猜）
 const isZoomed = ref(false)
+function toggleZoom(getVxeGrid?: () => any) {
+  const grid = getVxeGrid ? getVxeGrid() : (tableRef.value as any)?.vxeInstance?.()
+  grid?.zoom?.()
+  isZoomed.value = !!grid?.isMaximized?.()
+}
 function exitZoom() {
-  ;(tableRef.value as any)?.vxeInstance?.()?.zoom?.()
-  isZoomed.value = false
+  toggleZoom()
 }
 
 // 模拟后端数据池
@@ -70,6 +74,12 @@ function mockRequest(params: Record<string, unknown>): Promise<Record<string, un
       }
       if (formParams?.status) {
         filtered = filtered.filter(r => r.status === formParams.status)
+      }
+      if (formParams?.position) {
+        filtered = filtered.filter(r => r.position.includes(formParams.position))
+      }
+      if (formParams?.salary) {
+        filtered = filtered.filter(r => String(r.salary).includes(String(formParams.salary)))
       }
       const start = ((pageIndex || 1) - 1) * (pageSize || 10)
       resolve({
@@ -104,13 +114,12 @@ const formItems = [
 const formBtns = [
   { name: '查询', type: 'primary' as const, key: 'query', triggerEvent: true, icon: 'Search' },
   { name: '重置', type: 'default' as const, key: 'rest', triggerEvent: true, icon: 'RefreshLeft' },
-  // { name: '新增', type: 'success' as const, icon: 'Plus', click: () => openForm(null) },
 ]
 
 // 表格区
 const statusMap: Record<string, any> = { active: ['在职', 'success'], leave: ['离职', 'danger'] }
 
-const columns = [
+const columns: any[] = [
   { type: 'selection', width: 50 },
   { type: 'index', label: '序号', width: 70 },
   { prop: 'name', label: '姓名', minWidth: 120 },
@@ -136,7 +145,7 @@ const columns = [
   },
 ]
 
-const tableOptions = {
+const tableOptions: any = {
      height:600,
    heightType: 'height',
   engine: 'vxe' as const,
@@ -147,6 +156,8 @@ const tableOptions = {
   configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },
   // printConfig: true 展开为 {}（vxe 必需，否则 print() 报错"缺少必要的 print-config 参数"）
   printConfig: true as const,
+  // 列设置弹窗由 vxe 的 custom 模块提供：不装模块时 grid.openCustom 不存在
+  vxeConfig: { customConfig: true },
   // configBtn 工具栏：通过 getVxeGrid()（es-table 注入的惰性求值函数）获取 vxe-grid 实例
   // 全屏按钮点击时手动切换 isZoomed 状态，驱动浮动退出按钮显隐
   configBtn: [
@@ -156,10 +167,7 @@ const tableOptions = {
     },
     {
       name: '全屏', icon: 'FullScreen', code: 2 as const,
-      click: ({ getVxeGrid }: any) => {
-        getVxeGrid?.()?.zoom?.()
-        isZoomed.value = true
-      },
+      click: ({ getVxeGrid }: any) => toggleZoom(getVxeGrid),
     },
     {
       name: '列设置', icon: 'Setting', code: 2 as const,
@@ -167,11 +175,12 @@ const tableOptions = {
     },
     {
       name: '导出', icon: 'Download', code: 2 as const,
-      click: ({ getVxeGrid }: any) => getVxeGrid?.()?.exportData?.(),
+      // 导出/打印走 EsTable 的公共方法；vxe4 的 grid 不代理这两个方法
+      click: () => tableRef.value?.exportData?.(),
     },
     {
       name: '打印', icon: 'Printer', code: 2 as const,
-      click: ({ getVxeGrid }: any) => getVxeGrid?.()?.print?.(),
+      click: () => tableRef.value?.print?.(),
     },
   ] as any,
 }
@@ -197,7 +206,7 @@ function openForm(row: any) {
         { prop: 'salary', label: '薪资', formtype: 'Input' as const, span: 24, attrs: { type: 'number' } },
         { prop: 'status', label: '状态', formtype: 'Select' as const, span: 24, dataOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'leave' }] },
       ],
-      layoutFormProps: { fromLayProps: { isBtnHidden: true, labelWidth: '80px' } },
+      layoutFormProps: { formLayProps: { isBtnHidden: true, labelWidth: '80px' } },
     } as any),
     configBtn: [
       {
@@ -223,7 +232,12 @@ function openForm(row: any) {
 }
 
 async function deleteRow(row: any) {
-  await ElMessageBox.confirm(`确定删除「${row.name}」？`, '提示', { type: 'warning' })
+  // ElMessageBox.confirm 取消时是 reject，不 catch 会抛未捕获的 Promise 异常
+  try {
+    await ElMessageBox.confirm(`确定删除「${row.name}」？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
   const idx = mockDatabase.findIndex(r => r.id === row.id)
   if (idx > -1) mockDatabase.splice(idx, 1)
   tableRef.value?.httpRequestInstance()

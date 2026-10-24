@@ -16,8 +16,8 @@ const users = {
   3: { id: 3, name: '王五', role: 'user', dept: '设计部', status: 'inactive', email: 'wangwu@example.com' }
 }
 
-// onlyInstance: true — 每个调用创建独立弹窗实例，可同时打开多个
-const detailDialog = useDialog(null, { onlyInstance: false })
+// onlyInstance: true — 每次调用创建独立弹窗实例，可同时打开多个
+const detailDialog = useDialog(null, { onlyInstance: true })
 
 const openUserDetail = (userId) => {
   const user = users[userId]

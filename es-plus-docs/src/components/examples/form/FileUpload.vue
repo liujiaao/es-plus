@@ -1,7 +1,6 @@
 <template>
   <div class="example-form-file-upload">
     <es-form
-      ref="formRef"
       :model="formModel"
       :form-item-list="formItems"
       :config-btn="configBtn"
@@ -21,7 +20,6 @@ import { UploadFilled, PictureFilled, Document, FolderOpened, View, Download, De
 import { EsForm } from '@es-plus/vue3'
 import type { BtnConfig } from '@es-plus/vue3'
 
-const formRef = ref()
 const formModel = reactive<{ files: any[] }>({ files: [] })
 const txtPreviewVisible = ref(false)
 const txtPreviewContent = ref('')
@@ -234,11 +232,8 @@ const formItems = [
         // 手动把 url 绑定到 file 对象上，供 preview/download 使用
         file.url = response.url
         file.link = response.link
-        // 同步到 formModel
-        const all = file.raw?.parentList || []
-        formModel.files = all
-          .filter((f: any) => f.status === 'success')
-          .map((f: any) => ({ name: f.name, size: f.size, url: f.url, link: f.url, raw: f.raw, status: f.status }))
+        // 不需要自己同步 formModel：use-form-inputs 会在本回调之后
+        // 立即把 ElUpload 的 fileList 写回 model（onSuccess 是 Function prop，被库接管）
       },
       remove: (_file: any, uploadFiles: any[]) => {
         formModel.files = uploadFiles
@@ -279,7 +274,7 @@ const configBtn: BtnConfig[] = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '100px',
     size: 'small' as const
   },

@@ -1,6 +1,19 @@
 <template>
   <div class="example-dialog-table">
     <el-button type="primary" @click="openProductPicker">商品选择弹窗</el-button>
+
+    <!-- 回填结果：跨页勾选的商品在这里可见、可移除 -->
+    <div v-if="selectedProducts.length" class="selection-result">
+      <span class="label">已选 {{ selectedProducts.length }} 件：</span>
+      <el-tag
+        v-for="p in selectedProducts"
+        :key="p.id"
+        closable
+        style="margin-right: 6px"
+        @close="selectedProducts = selectedProducts.filter((it) => it.id !== p.id)"
+      >{{ p.title }}</el-tag>
+      <el-button link type="primary" @click="selectedProducts = []">清空</el-button>
+    </div>
   </div>
 </template>
 
@@ -108,5 +121,16 @@ const openProductPicker = () => {
 <style scoped>
 .example-dialog-table {
   padding: 20px;
+}
+.selection-result {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.selection-result .label {
+  color: #606266;
+  font-size: 14px;
 }
 </style>

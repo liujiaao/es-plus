@@ -86,9 +86,10 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
-    labelWidth: '80px',
-    btnColSpan: 24
+  formLayProps: {
+    labelWidth: '80px'
+    // 按钮区默认独占一行（btnColSpanRow 默认 true），
+    // 行内再按 direction: 'left' | 'right' 把按钮分到两端
   }
 }
 </script>

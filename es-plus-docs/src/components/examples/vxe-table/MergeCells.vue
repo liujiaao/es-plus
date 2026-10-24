@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-alert type="info" :closable="false" style="margin-bottom:10px"
-      description="企业级复杂合并：三级表头 + spanMethod 行列混合合并 + vxeConfig.mergeCells 静态合并 + mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；表单控合并/筛选" />
+      description="企业级复杂合并：两级分组表头（4 组） + spanMethod 动态行合并 + mergeFooterItems 多行表尾合并；表单控合并模式/筛选，patchHtmlRowSpans 让合并单元格可打印" />
 
     <es-form
       :model="queryForm"
@@ -15,7 +15,7 @@
       <el-button size="small" @click="handlePrintAll">打印全部</el-button>
       <el-button size="small" @click="handlePrintDept('技术事业部')">打印技术事业部</el-button>
       <el-button size="small" @click="handlePrintDept('产品事业部')">打印产品事业部</el-button>
-      <span style="font-size:12px; color:#909399">分页打印时三级表头在每页自动重复（CSS: thead display:table-header-group）</span>
+      <span style="font-size:12px; color:#909399">分页打印时分组表头在每页自动重复（CSS: thead display:table-header-group）</span>
     </div>
 
     <es-table
@@ -36,7 +36,6 @@ import { EsTable, EsForm, patchHtmlRowSpans } from '@es-plus/vue3'
 
 // ─── 表格实例 ──────────────────────────────────────────────────
 const tableRef = ref<any>(null)
-const getGrid = () => tableRef.value?.vxeInstance?.()
 
 const PRINT_STYLE = `
   @page { margin: 1.5cm; size: A4 landscape; }
@@ -58,14 +57,15 @@ function computeSpan(data: any[], rowIndex: number, field: string, enableMerge: 
 }
 
 // vxe print 不执行 mergeMethod（与 spanMethod 互斥），用 patchHtmlRowSpans 修正 tbody rowspan。
-// getPrintHtml 保留完整三级 <thead>，PRINT_STYLE 中的 thead{display:table-header-group} 实现每页重复表头。
+// getPrintHtml 保留完整两级 <thead>，PRINT_STYLE 中的 thead{display:table-header-group} 实现每页重复表头。
 // 注意：patchHtmlRowSpans 回调的 ci 是 tbody <td> 的 DOM 顺序 = 叶子列全局顺序，用 leafFields[ci] 取 field。
+// 打印走 EsTable 的公共方法（内部已下沉到 vxe 的 <vxe-table> 实例，不依赖 vxeInstance()）。
 async function doPrint(data: any[], opts: Record<string, any>) {
-  const grid = getGrid()
-  if (!grid) return
+  const table = tableRef.value
+  if (!table) return
   const em = queryForm.enableMerge
-  const { html } = await grid.getPrintHtml({ ...opts, data })
-  grid.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
+  const { html } = await table.getPrintHtml({ ...opts, data })
+  table.print({ ...opts, html: patchHtmlRowSpans(html, (ri, ci) => computeSpan(data, ri, leafFields[ci], em)) })
 }
 
 function handlePrintPreview() {
@@ -135,7 +135,7 @@ const tableData = ref(buildTableData())
 // enableMerge 变了也要重建 data：触发 vxe-grid 重新渲染，才能重新执行 spanMethod 读到新的合并模式
 watch([() => queryForm.dept, () => queryForm.enableMerge], () => { tableData.value = buildTableData() })
 
-// ─── 列配置：三级表头结构 ──────────────────────────────────────
+// ─── 列配置：分组表头结构（groups = 第一行分组，叶子列为第二行） ──
 const columns: any[] = [
   // 第一组：组织架构（3 列）
   {
@@ -175,9 +175,13 @@ const columns: any[] = [
         } },
     ],
   },
-  // 年度汇总
-  { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' as const },
-  { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' as const },
+  // 第四组：年度汇总（同样是 groups → 与前三组并排成两级表头）
+  {
+    label: '年度汇总', groups: [
+      { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' as const },
+      { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' as const },
+    ],
+  },
 ]
 
 // 从 columns 配置动态展开叶子列 field 顺序，colIndex → field，不依赖手动数下标
@@ -187,7 +191,7 @@ const leafFields: string[] = (columns as any[]).flatMap(col =>
 const MERGE_ALWAYS = ['dept', 'team']                    // enableMerge 为真时都合并
 const MERGE_FULL   = ['totalTarget', 'totalActual']      // enableMerge === true 时才合并
 
-// ─── spanMethod：行列混合动态合并 ──────────────────────────────
+// ─── spanMethod：动态行合并（相同部门/团队纵向合并） ─────────────
 // 注意：vxe-grid v4 的 spanMethod 回调不传 data，必须从闭包中取 tableData.value
 // 注意：多级表头下 vxe 的 columnIndex 是「组内相对索引」（每组从 0 重新计数），
 // 不能按叶子列全局顺序索引；直接用 column.field 最稳妥。
@@ -258,15 +262,12 @@ const tableOptions = computed(() => ({
   printConfig: { sheetName: '员工KPI绩效考核表' },
   _merge: queryForm.enableMerge, // ← 注入 reactive 依赖：enableMerge 变化时 computed 重算
   vxeConfig: {
-    // 静态表头合并：年度目标 + 年度完成 两列标题合并为"年度汇总"
-    mergeHeaderItems: [
-      { row: 0, col: 9, rowspan: 1, colspan: 2 },
-    ],
     // 静态表尾合并：总计行合并事业部+团队两列
     mergeFooterItems: [
       { row: 2, col: 0, rowspan: 1, colspan: 2 },
     ],
-    // 注意：body 单元格不使用 mergeCells（与 spanMethod 冲突），改由 spanMethod 统一处理
+    // 注意：body 单元格不使用 mergeCells（与 spanMethod 冲突），改由 spanMethod 统一处理。
+    // 表头合并走 columns.groups（两级分组表头），不再手写 mergeHeaderCells。
   },
 } as any))
 </script>

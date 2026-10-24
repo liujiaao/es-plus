@@ -6,22 +6,7 @@
       v-model:data-source="pagedData"
       v-model:pagination="pagination"
     >
-      <!-- 展开行内容通过 scopedSlots 自定义 -->
-      <!-- <template #expand="{ row }">
-        <div style="padding: 16px; background: #f5f7fa; border-radius: 4px;">
-          <el-descriptions :column="3" border size="small">
-            <el-descriptions-item label="员工ID">{{ row.id }}</el-descriptions-item>
-            <el-descriptions-item label="姓名">{{ row.name }}</el-descriptions-item>
-            <el-descriptions-item label="部门">{{ row.department }}</el-descriptions-item>
-            <el-descriptions-item label="职位">{{ row.position }}</el-descriptions-item>
-            <el-descriptions-item label="手机">{{ row.phone }}</el-descriptions-item>
-            <el-descriptions-item label="邮箱">{{ row.email }}</el-descriptions-item>
-            <el-descriptions-item label="薪资" :span="3">
-              <el-tag type="success">{{ row.salary }} 元/月</el-tag>
-            </el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </template> -->
+    <!-- 展开区内容写在 columns 的 type:'expand' 列上（render 函数），见下方 columns 定义 -->
     </es-table>
   </div>
 </template>

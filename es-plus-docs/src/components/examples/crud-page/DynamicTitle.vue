@@ -1,15 +1,20 @@
 <template>
   <div class="example-crud-dynamic-title">
     <es-crud-page
+      ref="crudRef"
       :schema="schema"
+      @dialog-open="handleDialogOpen"
       @dialog-confirm="handleDialogConfirm"
     />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { EsCrudPage } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
+
+const crudRef = ref(null)
 
 const mockData = [
   { id: 1, name: '张三', age: 28, email: 'zhangsan@example.com', role: '前端工程师' },
@@ -95,8 +100,28 @@ const schema = {
   }
 }
 
+// 编辑弹窗的表单不含 id，靠打开弹窗的那一行定位
+let editingRow = null
+const handleDialogOpen = (key, row) => {
+  if (key === 'edit') editingRow = row || null
+}
+
 const handleDialogConfirm = (dialogKey, data) => {
-  ElMessage.success(`[${dialogKey}] 保存: ${data.name}`)
+  if (dialogKey === 'add') {
+    mockData.unshift({
+      id: mockData.reduce((max, r) => Math.max(max, r.id), 0) + 1,
+      name: data.name,
+      age: Number(data.age) || 0,
+      email: data.email || '',
+      role: data.role || '-'
+    })
+    ElMessage.success(`已新增: ${data.name}`)
+  }
+  if (dialogKey === 'edit' && editingRow) {
+    Object.assign(editingRow, data, { age: Number(data.age) || 0 })
+    ElMessage.success(`已保存: ${data.name}`)
+  }
+  crudRef.value?.refresh?.()
 }
 </script>
 

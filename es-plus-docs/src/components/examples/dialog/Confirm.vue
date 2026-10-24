@@ -3,12 +3,13 @@
     <el-button type="danger" @click="confirmDelete">删除确认</el-button>
     <el-button type="warning" @click="confirmPublish">发布确认</el-button>
     <el-button @click="confirmLogout">退出登录</el-button>
+    <el-button @click="confirmBeforeClose">关闭前拦截</el-button>
   </div>
 </template>
 
 <script setup>
 import { h } from 'vue'
-import { ElMessage, ElIcon } from 'element-plus'
+import { ElMessage, ElMessageBox, ElIcon } from 'element-plus'
 import { WarningFilled, CircleCheck, QuestionFilled } from '@element-plus/icons-vue'
 import { useDialog } from '@es-plus/vue3'
 
@@ -70,6 +71,41 @@ const confirmLogout = () => {
       { name: '取消', click: (currentRef, { close }) => close() },
       { name: '确定退出', type: 'primary', click: (currentRef, { close }) => {
         ElMessage.success('已退出登录')
+        close()
+      }}
+    ],
+  })
+}
+
+const confirmBeforeClose = () => {
+  // 只要输入过内容就算「有未保存改动」；关闭前拦一道
+  let dirty = false
+  dialog({
+    title: '关闭前拦截',
+    width: '460px',
+    // beforeClose(done)：不调用 done() 就不关闭。点 X / 遮罩 / ESC 都会先经过这里
+    beforeClose: async (done) => {
+      if (!dirty) return done()
+      try {
+        await ElMessageBox.confirm('内容还没保存，确定要关闭吗？', '提示', { type: 'warning' })
+        done()
+      } catch {
+        // 用户选择留在弹窗里
+      }
+    },
+    render: () => h('div', { style: 'padding: 20px' }, [
+      h('p', { style: 'margin-bottom: 10px; color: #606266' }, '在上面的输入框里写点东西，再点右上角 X 试试。'),
+      h('textarea', {
+        rows: 4,
+        placeholder: '随便写点什么…',
+        style: 'width: 100%; padding: 8px; border: 1px solid #dcdfe6; border-radius: 4px; box-sizing: border-box',
+        onInput: () => { dirty = true }
+      })
+    ]),
+    configBtn: [
+      { name: '取消', click: (currentRef, { close }) => close() },
+      { name: '保存并关闭', type: 'primary', click: (currentRef, { close }) => {
+        ElMessage.success('已保存')
         close()
       }}
     ],

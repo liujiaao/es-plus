@@ -1,17 +1,23 @@
 <template>
   <div class="example-crud-custom-footer">
     <es-crud-page
+      ref="crudRef"
       :schema="schema"
       @dialog-confirm="handleDialogConfirm"
       @dialog-cancel="handleDialogCancel"
-      @btn-click="handleBtnClick"
     />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { EsCrudPage } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
+
+const crudRef = ref(null)
+
+// 当前审批的行：onOpen 时记下，拒绝/通过后据此改本地状态并刷新列表
+let currentRow = null
 
 const mockData = [
   { id: 1, title: '采购申请 #2024001', amount: 12000, applicant: '张三', status: '待审批' },
@@ -53,6 +59,8 @@ const schema = {
     approve: {
       title: (row) => `审批 — ${row?.title || ''}`,
       width: '500px',
+      // onOpen 在表单数据就绪后调用：记下当前行，供拒绝/通过回写状态
+      onOpen: (row) => { currentRow = row },
       formItems: [
         { prop: 'remark',
           label: '审批意见', 
@@ -65,7 +73,30 @@ const schema = {
       ],
       configBtn: [
         { name: '取消', action: 'cancel' },
-        { name: '拒绝', type: 'danger', key: 'reject', action: 'custom' },
+        {
+          name: '拒绝',
+          type: 'danger',
+          key: 'reject',
+          action: 'custom',
+          // action: 'custom' 不会替我们接线，click 必须自己写。
+          // 取值走表单实例 (EsForm 不暴露 model)：getFormRef() → el-form 的 model
+          click: async (_instance, { close, getRefs }) => {
+            const form = getRefs('dialogForm')
+            try {
+              await form?.validate?.()
+            } catch {
+              return // 校验失败：表单已标红，停在本弹窗
+            }
+            const remark = form?.getFormRef?.()?.model?.remark
+            if (!remark) return ElMessage.warning('请填写审批意见')
+            if (currentRow) {
+              currentRow.status = '已拒绝'
+              crudRef.value?.refresh?.()
+            }
+            ElMessage.warning(`已拒绝，意见：${remark}`)
+            close()
+          }
+        },
         { name: '通过', type: 'success', key: 'pass', action: 'confirm' }
       ]
     }
@@ -73,15 +104,15 @@ const schema = {
 }
 
 const handleDialogConfirm = (key, data) => {
+  if (currentRow) {
+    currentRow.status = '已通过'
+    crudRef.value?.refresh?.()
+  }
   ElMessage.success(`[${key}] 审批通过，意见: ${data.remark}`)
 }
 
 const handleDialogCancel = (key) => {
   ElMessage.info(`[${key}] 已取消`)
-}
-
-const handleBtnClick = (key, payload) => {
-  if (key === 'reject') ElMessage.warning(`已拒绝，意见: ${payload?.remark || '无'}`)
 }
 </script>
 

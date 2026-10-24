@@ -51,7 +51,7 @@ const editFormItems = [
   { prop: 'desc', label: '描述', formtype: 'Input', span: 24, attrs: { type: 'textarea', rows: 3 } }
 ]
 
-const layoutProps = { fromLayProps: { labelWidth: '80px' } }
+const layoutProps = { formLayProps: { labelWidth: '80px' } }
 
 const openAddDialog = () => {
   const formData = ref({ name: '', type: '', status: 'active', desc: '' })

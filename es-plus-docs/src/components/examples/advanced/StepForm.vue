@@ -12,14 +12,14 @@
         ref="step1Ref"
         :model="formData"
         :form-item-list="step1Items"
-        :layout-form-props="{ fromLayProps: { labelWidth: '100px' } }"
+        :layout-form-props="{ formLayProps: { labelWidth: '100px' } }"
       />
       <es-form
         v-if="currentStep === 1"
         ref="step2Ref"
         :model="formData"
         :form-item-list="step2Items"
-        :layout-form-props="{ fromLayProps: { labelWidth: '100px' } }"
+        :layout-form-props="{ formLayProps: { labelWidth: '100px' } }"
       />
       <div v-if="currentStep === 2" class="review-section">
         <el-descriptions :column="2" border>
@@ -44,7 +44,7 @@
 
 <script setup>
 import { EsForm } from '@es-plus/vue3'
-import { ref, h, nextTick } from 'vue'
+import { ref } from 'vue'
 import { ElMessage, ElSteps, ElStep, ElDescriptions, ElDescriptionsItem } from 'element-plus'
 
 const currentStep = ref(0)
@@ -109,15 +109,15 @@ const step2Items = [
 const step1Ref = ref(null)
 const step2Ref = ref(null)
 
+// el-form 的 validate() 校验失败会 reject，必须 try/catch：
+// 否则「下一步」在校验不通过时抛未捕获的 Promise 异常，用户看不到推进效果也看不到错误来源
 const handleNext = async () => {
-  if (currentStep.value === 0) {
-    await nextTick()
-    const valid = await step1Ref.value?.validate?.()
-    if (valid) currentStep.value++
-  } else if (currentStep.value === 1) {
-    await nextTick()
-    const valid = await step2Ref.value?.validate?.()
-    if (valid) currentStep.value++
+  const formRef = currentStep.value === 0 ? step1Ref.value : step2Ref.value
+  try {
+    await formRef?.validate?.()
+    currentStep.value++
+  } catch {
+    // 校验失败：el-form 已在字段下方标红，停留当前步
   }
 }
 

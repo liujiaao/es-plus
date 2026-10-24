@@ -1,7 +1,6 @@
 <template>
   <div class="example-form-search">
     <es-form
-      ref="formRef"
       :model="formModel"
       :form-item-list="formItems"
       :config-btn="configBtn"
@@ -18,7 +17,6 @@ import { EsForm } from '@es-plus/vue3'
 import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
-const formRef = ref()
 const resultVisible = ref(false)
 const resultCount = ref(0)
 const showMore = ref(false)
@@ -152,7 +150,7 @@ const configBtn = computed(() => [
 ])
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '80px', size: 'small', minFoldRows: 4, btnColSpan: 24 },
+  formLayProps: { labelWidth: '80px', size: 'small', minFoldRows: 4, btnColSpan: 24 },
   rowLayProps: { gutter: 16 }
 }
 </script>

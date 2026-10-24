@@ -44,10 +44,12 @@ const onProductChange = (val: string) => {
   recalc()
 }
 
-// 数量/折扣变化 → 重算
-const recalc = () => {
-  const qty = formModel.quantity || 0
-  const disc = formModel.discount ?? 100
+// 数量/折扣变化 → 重算。
+// 参数用于接收控件本次抛出的新值：el-input 的 input 事件先于 model 写回触发，
+// 此时直接读 formModel 会拿到上一次的旧值（金额慢一拍）。
+const recalc = (quantity?: unknown, discount?: unknown) => {
+  const qty = Number(quantity ?? formModel.quantity) || 0
+  const disc = Number(discount ?? formModel.discount ?? 100)
   formModel.subtotal = formModel.price * qty
   formModel.total = Math.round(formModel.subtotal * disc / 100)
 }
@@ -82,7 +84,7 @@ const formItems = [
     span: 8,
     formtype: 'Input' as const,
     attrs: { type: 'number', min: 1, placeholder: '请输入数量' },
-    on: { input: () => recalc() }
+    on: { input: (val: unknown) => recalc(val) }
   },
   {
     prop: 'discount',
@@ -90,7 +92,7 @@ const formItems = [
     span: 8,
     formtype: 'Slider' as const,
     attrs: { min: 50, max: 100, step: 5, showStops: true },
-    on: { input: () => recalc() }
+    on: { input: (val: unknown) => recalc(undefined, val) }
   },
   {
     prop: 'subtotal',
@@ -117,7 +119,6 @@ const configBtn = [
     click: (model: Record<string, unknown>) => {
       if (!model.product) { ElMessage.warning('请选择商品'); return }
       ElMessage.success(`下单成功！折后总价 ¥${model.total}`)
-      console.log('订单数据:', model)
     }
   },
   {
@@ -132,7 +133,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '90px', size: 'small' },
+  formLayProps: { labelWidth: '90px', size: 'small' },
   rowLayProps: { gutter: 16 }
 }
 </script>

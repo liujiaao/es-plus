@@ -2,7 +2,6 @@
   <div class="example-current-row">
     <div class="master-section">
       <es-table
-        ref="masterRef"
         :data-source="orders"
         :columns="masterColumns"
         :options="masterOptions"
@@ -23,9 +22,8 @@
 import { EsTable } from '@es-plus/vue3'
 import { ref, computed, h } from 'vue'
 import { ElTag, ElMessage } from 'element-plus'
-import { Refresh, Delete } from '@element-plus/icons-vue'
+import { Delete } from '@element-plus/icons-vue'
 
-const masterRef = ref()
 const currentOrder = ref(null)
 
 const statusMap = {
@@ -85,8 +83,15 @@ const masterOptions = {
   highlightCurrentRow: true,
   leftText: '订单列表',
   configBtn: [
-    { name: '刷新', icon: Refresh, code: 2, click: () => { ElMessage.success('已刷新') } },
-    { name: '清空选中', icon: Delete, code: 2, click: () => { currentOrder.value = null } }
+    // 只保留真实生效的动作：清空右侧明细，回到「请选择订单」空态。
+    // （行高亮由点击切换，组件未暴露 setCurrentRow —— 不摆一个点了没反应的「刷新」）
+    {
+      name: '清空明细', icon: Delete, code: 2,
+      click: () => {
+        if (!currentOrder.value) { ElMessage.info('还没有选中的订单'); return }
+        currentOrder.value = null
+      }
+    }
   ]
 }
 

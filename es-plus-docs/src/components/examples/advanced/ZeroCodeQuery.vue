@@ -6,7 +6,6 @@
       <ElTag type="success" size="large" effect="dark">es-plus 配置 10 行</ElTag>
     </div>
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
@@ -36,7 +35,6 @@ import { ref, reactive } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'
 
-const tableRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 const queryModel = reactive({ keyword: '', category: '' })
@@ -56,7 +54,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px' },
+  formLayProps: { labelWidth: '70px' },
   rowLayProps: { gutter: 16 }
 }
 

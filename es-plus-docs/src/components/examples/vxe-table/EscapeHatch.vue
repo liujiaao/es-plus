@@ -4,6 +4,7 @@
       description="vxeConfig 深度合并原生 vxe-grid 配置（逃生舱，不经过 es-plus 适配层）；vxeOn 事件注入（onCellClick → cell-click）" />
     <div style="margin-bottom:8px;font-size:13px;color:#606266">
       单击单元格：<el-tag v-if="clickInfo" size="small" type="info">{{ clickInfo }}</el-tag>
+      <span style="margin-left:16px">排序事件：<el-tag v-if="sortInfo" size="small" type="primary">{{ sortInfo }}</el-tag></span>
     </div>
     <es-table
       :columns="columns"
@@ -20,15 +21,17 @@ import { ElTag } from 'element-plus'
 import { EsTable } from '@es-plus/vue3'
 
 const clickInfo = ref('')
+const sortInfo = ref('')
 
-const columns = [
+const columns: any[] = [
   { prop: 'id', label: 'ID', width: 70 },
-  { prop: 'name', label: '姓名', minWidth: 120 },
+  // sortable 是 el-table / vxe 共有的列配置，vxe 引擎原样透传给 vxe-column
+  { prop: 'name', label: '姓名', minWidth: 120, sortable: true },
   { prop: 'level', label: '级别', width: 100,
     render: (_h: any, { value }: any) => {
-      // el-tag 的 type 不接受空字符串，未命中时用 undefined 走默认样式
-      const colors: Record<string, string> = { P6: 'warning', P7: 'success', P8: 'danger' }
-      return h(ElTag, { type: colors[value] || undefined, size: 'small' }, () => value)
+      // 用字面量联合类型：索引不到时返回 undefined，el-tag 自动走默认样式
+      const colors: Record<string, 'warning' | 'success' | 'danger'> = { P6: 'warning', P7: 'success', P8: 'danger' }
+      return h(ElTag, { type: colors[value], size: 'small' }, () => value)
     }
   },
   { prop: 'department', label: '部门', width: 120 },
@@ -50,12 +53,13 @@ const tableOptions = {
   },
 
   // vxeOn：vxe 原生事件注入（onXxx → xxx 事件名）
+  // 只在这份配置里声明，不污染 es-plus 的一等公民事件（row-click 等）
   vxeOn: {
     'cell-click': ({ row, column }: any) => {
       clickInfo.value = `行:${row.name} 列:${column.title || column.field}`
     },
     'sort-change': ({ field, order }: any) => {
-      console.log('[vxeOn sort-change]', field, order)
+      sortInfo.value = order ? `${field} ${order === 'asc' ? '升序' : '降序'}` : `${field} 取消排序`
     },
   },
 }

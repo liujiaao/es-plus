@@ -43,7 +43,7 @@ const openDialog = () => {
     render: (h,instance) => h(EsForm, {
       model: formData.value,
       formItemList: formItems,
-      layoutFormProps: { fromLayProps: { labelWidth: '80px' } }
+      layoutFormProps: { formLayProps: { labelWidth: '80px' } }
     }),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },
@@ -89,7 +89,7 @@ const openEditDialog = () => {
     render: () => {
         return <EsForm model={editData.value}
         formItemList={formItems}
-        layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }} />
+        layoutFormProps={{ formLayProps: { labelWidth: '80px' } }} />
     },
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },

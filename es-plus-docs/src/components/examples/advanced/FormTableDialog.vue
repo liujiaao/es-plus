@@ -1,7 +1,6 @@
 <template>
   <div class="example-advanced-form-table">
     <es-form
-      ref="queryFormRef"
       :model="queryModel"
       :form-item-list="queryItems"
       :config-btn="queryBtns"
@@ -23,7 +22,6 @@ import { ElMessage, ElTag, ElMessageBox } from 'element-plus'
 import { EsTable, EsForm,  useDialog } from '@es-plus/vue3'
 import { fetchProducts } from '@/utils/mock-api'
 
-const queryFormRef = ref(null)
 const tableRef = ref(null)
 const dialog = useDialog()
 
@@ -54,7 +52,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px', minFoldRows: 1 },
+  formLayProps: { labelWidth: '70px', minFoldRows: 1 },
   rowLayProps: { gutter: 16 }
 }
 
@@ -116,11 +114,19 @@ const columns = [
   }
 ]
 
+// 本地数据源：首次请求拉一次并缓存，增删改都作用在它上面，
+// 提交后刷新表格能看到真实变化（而不是只弹一句「成功」）。
+let localRows = null
+const ensureRows = async () => {
+  if (!localRows) localRows = (await fetchProducts()).map((r) => ({ ...r }))
+  return localRows
+}
+
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
   const { pageIndex = 1, pageSize = 5, keyword, category, priceRange } = { ...formParams, ...rest }
 
-  let filtered = await fetchProducts()
+  let filtered = await ensureRows()
 
   if (keyword) {
     filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
@@ -156,7 +162,10 @@ const tableOptions = {
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm(`确定删除 "${row.title}" 吗？`, '提示', { type: 'warning' })
-    ElMessage.success('删除成功（模拟）')
+    const all = await ensureRows()
+    const idx = all.findIndex((r) => r.id === row.id)
+    if (idx > -1) all.splice(idx, 1)
+    ElMessage.success('删除成功')
     tableRef.value?.httpRequestInstance()
   } catch {}
 }
@@ -169,7 +178,13 @@ const handleBatchDelete = async () => {
   }
   try {
     await ElMessageBox.confirm(`确定删除选中的 ${selection.length} 条数据吗？`, '提示', { type: 'warning' })
-    ElMessage.success('批量删除成功（模拟）')
+    const ids = new Set(selection.map((r) => r.id))
+    const all = await ensureRows()
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (ids.has(all[i].id)) all.splice(i, 1)
+    }
+    tableRef.value?.clearAllSelection?.()
+    ElMessage.success(`批量删除成功，共 ${ids.size} 条`)
     tableRef.value?.httpRequestInstance()
   } catch {}
 }
@@ -191,8 +206,17 @@ const openAddDialog = () => {
     }),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },
-      { name: '提交', type: 'primary', click: (_, { close }) => {
-        ElMessage.success('新增成功（模拟）')
+      { name: '提交', type: 'primary', click: async (_, { close }) => {
+        const all = await ensureRows()
+        const id = all.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
+        all.unshift({
+          id,
+          title: formModel.title,
+          price: Number(formModel.price) || 0,
+          category: formModel.category,
+          description: formModel.description
+        })
+        ElMessage.success('新增成功')
         close()
         tableRef.value?.httpRequestInstance()
       }}
@@ -217,8 +241,18 @@ const openEditDialog = (row) => {
     }),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },
-      { name: '提交', type: 'primary', click: (_, { close }) => {
-        ElMessage.success('编辑成功（模拟）')
+      { name: '提交', type: 'primary', click: async (_, { close }) => {
+        const all = await ensureRows()
+        const target = all.find((r) => r.id === row.id)
+        if (target) {
+          Object.assign(target, {
+            title: formModel.title,
+            price: Number(formModel.price) || 0,
+            category: formModel.category,
+            description: formModel.description
+          })
+        }
+        ElMessage.success('编辑成功')
         close()
         tableRef.value?.httpRequestInstance()
       }}

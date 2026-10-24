@@ -30,7 +30,7 @@ const formModel = ref({
   attachments: []
 })
 
-const layoutProps = { fromLayProps: { labelWidth: '90px' }, rowLayProps: { gutter: 16 } }
+const layoutProps = { formLayProps: { labelWidth: '90px' }, rowLayProps: { gutter: 16 } }
 
 const cityOptions = [
   { label: '北京', value: 'beijing' },

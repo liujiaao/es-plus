@@ -18,8 +18,9 @@
     <div class="hint">
       <ElAlert type="success" :closable="false" show-icon>
         <template #title>
-          <b>configTableOut + qrcb</b> — 三种后端响应格式，仅需修改配置即可适配，无需写任何适配代码。
-          传统方式需要为每种后端格式写数据转换层。
+          <b>configTableOut + qrcb</b> — 三种后端响应格式，分页信封靠
+          <code>configTableOut</code> 声明（<code>nested</code> 用简单 key 名即可递归查找），
+          行内字段重命名用一段 <code>qrcb</code> 集中完成，业务侧 columns 与页面代码始终只有一套。
         </template>
       </ElAlert>
     </div>

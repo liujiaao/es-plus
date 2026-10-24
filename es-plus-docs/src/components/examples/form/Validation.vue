@@ -40,7 +40,18 @@ const rules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    { min: 6, message: '密码长度至少6位', trigger: 'blur' },
+    // 自定义 validator：同步函数返回 Error 即校验失败；换成 async 即支持远程校验
+    {
+      trigger: 'blur',
+      validator: (_rule, value, callback) => {
+        if (value && (!/[a-zA-Z]/.test(value) || !/\d/.test(value))) {
+          callback(new Error('密码需同时包含字母和数字'))
+        } else {
+          callback()
+        }
+      }
+    }
   ]
 }
 
@@ -51,11 +62,10 @@ const formItems = [
   { prop: 'password', label: '密码', formtype: 'Input', span: 24, attrs: { placeholder: '至少6位', type: 'password', showPassword: true } }
 ]
 
-// 按钮配置 - 使用 key: 'query' 触发表单验证
+// 按钮配置：提交显式 validate()；重置用 key:'rest'，组件内部会调 resetFields()
 const configBtn = [
   {
     name: '提交',
-    key: 'query',
     type: 'primary',
     direction: 'right',
     icon: 'Check',
@@ -63,7 +73,6 @@ const configBtn = [
       try {
         await formRef.validate()
         ElMessage.success('验证通过，表单提交成功！')
-        console.log('提交的表单数据:', model)
       } catch {
         ElMessage.warning('请检查表单填写是否正确')
       }
@@ -76,17 +85,6 @@ const configBtn = [
     icon: 'RefreshLeft'
   }
 ]
-
-// 确认提交 - 配合 key: 'query' 使用，组件内部会自动验证
-const handleConfirm = (formRefInstance, model) => {
-  ElMessage.success('验证通过，表单提交成功！')
-  console.log('提交的表单数据:', model)
-}
-
-// 重置表单
-const handleReset = (formRefInstance, model) => {
-  ElMessage.info('表单已重置')
-}
 </script>
 
 <style scoped>

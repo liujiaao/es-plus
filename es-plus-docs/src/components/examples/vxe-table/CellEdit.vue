@@ -58,6 +58,9 @@ const columns = [
 // updateCount 无法用 computed 响应 vxe 内部 store 变化，改用 ref + vxeOn 事件驱动更新
 const updateCount = ref(0)
 
+// 数据版本号：保存后自增，让 pagedData 重新求值，vxe 据此重建 keepSource 快照并清空脏标记
+const dataVersion = ref(0)
+
 const tableOptions = {
   engine: 'vxe' as const,
   border: true,
@@ -67,10 +70,8 @@ const tableOptions = {
   editConfig: { mode: 'cell' as const, trigger: 'click' as const },
   vxeOn: {
     'edit-closed': () => {
-      // 直接从内部 table 获取更新行数
-      const grid = (tableRef.value as any)?.vxeInstance?.()
-      const $table = grid?.getRefMaps?.()?.refTable?.value
-      updateCount.value = $table?.getUpdateRecords?.()?.length ?? 0
+      // EsTable 已把 vxe 的行内编辑 CRUD 下沉暴露：直接 getUpdateRecords()
+      updateCount.value = tableRef.value?.getUpdateRecords?.()?.length ?? 0
     },
   },
 }
@@ -88,42 +89,32 @@ const allData = Array.from({ length: 15 }, (_, i) => ({
 pagination.value.total = allData.length
 
 const pagedData = computed(() => {
+  dataVersion.value // 依赖版本号：保存后重新取切片，驱动 vxe 重置编辑状态
   const start = (pagination.value.current - 1) * pagination.value.pageSize
   return allData.slice(start, start + pagination.value.pageSize)
 })
 
 async function saveChanges() {
-  // 1. 获取 EsTable 实例
   const esTable = tableRef.value as any
   if (!esTable) { ElMessage.warning('表格实例未就绪'); return }
 
-  // 2. 获取 vxe-grid 实例
-  const grid = esTable.vxeInstance?.()
-  if (!grid) { ElMessage.warning('vxe 引擎未就绪'); return }
-
-  // 3. 获取内部 <vxe-table> 实例（grid.getRefMaps().refTable）
-  const refMaps = grid.getRefMaps?.()
-  const refTable = refMaps?.refTable
-  const $table = refTable?.value ?? refTable  // refTable 是 Vue ref，unwarp .value
-  if (!$table) { ElMessage.warning('内部 table 未就绪'); return }
-
-  // 4. 提交当前编辑中的单元格
-  await $table.clearEdit?.()
-
-  // 5. 从内部 table 直接获取已修改行
-  const rows = $table.getUpdateRecords?.() ?? []
+  // 先结束当前正在编辑的单元格，保证最后一步输入也进入记录
+  await esTable.clearActived?.()
+  const rows = esTable.getUpdateRecords?.() ?? []
 
   if (!rows.length) {
     ElMessage.info('没有修改的数据')
     return
   }
+  // vxe 是就地修改行对象，这里把它们视为已落库（真实项目在此调用保存接口）
   ElMessage.success(`已保存 ${rows.length} 条修改`)
+  dataVersion.value++
+  updateCount.value = 0
 }
 
 async function revertAll() {
-  const grid = (tableRef.value as any)?.vxeInstance?.()
-  const $table = grid?.getRefMaps?.()?.refTable?.value
-  await $table?.revertData?.()
+  const esTable = tableRef.value as any
+  await esTable?.revertData?.()
   updateCount.value = 0
   ElMessage.info('已撤销所有修改')
 }

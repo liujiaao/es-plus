@@ -2,6 +2,7 @@
   <div class="example-dialog-basic">
     <el-button type="primary" @click="openDialog">打开基础弹窗</el-button>
     <el-button @click="openWithContent">带内容弹窗</el-button>
+    <el-button @click="openScrollable">限高滚动弹窗</el-button>
   </div>
 </template>
 
@@ -51,6 +52,24 @@ const openWithContent = () => {
         }
       }
     ]
+  })
+}
+
+const openScrollable = () => {
+  dialog({
+    title: '限高滚动',
+    width: '480px',
+    // maxHeight：内容超过该高度时弹窗体内部滚动，而不是把页面撑长
+    maxHeight: '240px',
+    render: () =>
+      h(
+        'div',
+        { style: 'padding: 10px' },
+        Array.from({ length: 30 }, (_, i) =>
+          h('p', { style: 'margin: 6px 0' }, `第 ${i + 1} 行：内容超出 maxHeight 时弹窗内部滚动`)
+        )
+      ),
+    configBtn: [{ name: '知道了', type: 'primary', click: (_, { close }) => close() }]
   })
 }
 </script>

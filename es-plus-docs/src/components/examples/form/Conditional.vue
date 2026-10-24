@@ -33,7 +33,20 @@ const formItems = [
     dataOptions: [
       { label: '企业用户', value: 'company' },
       { label: '个人用户', value: 'personal' }
-    ]
+    ],
+    // on.change 拿到控件的 change 事件参数（此处为选中值）：
+    // 切换类型时清空另一分支的残留值，避免隐藏字段带着旧值一起提交
+    on: {
+      change: (val) => {
+        if (val === 'company') {
+          formModel.personalName = ''
+          formModel.personalIdCard = ''
+        } else {
+          formModel.companyName = ''
+          formModel.companyScale = ''
+        }
+      }
+    }
   },
   // 企业用户专用字段
   {

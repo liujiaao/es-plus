@@ -233,7 +233,7 @@ const defaultFormItems = [
 
 const formModel = ref({ name: '', age: '', email: '' })
 const formItems = ref([...defaultFormItems])
-const formLayout = ref({ fromLayProps: { labelWidth: '80px' } })
+const formLayout = ref({ formLayProps: { labelWidth: '80px' } })
 const formResult = ref(null)
 const formConfigCode = ref(JSON.stringify(defaultFormItems, null, 2))
 /** 应用配置时的校验问题（非空则内联提示，且不应用） */

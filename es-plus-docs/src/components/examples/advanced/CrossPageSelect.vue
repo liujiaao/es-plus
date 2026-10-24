@@ -13,7 +13,7 @@
           <el-button type="primary" :disabled="!selectedCount" @click="handleBatchAction">
             批量操作 ({{ selectedCount }} 条跨页选中)
           </el-button>
-          <el-button @click="tableRef?.clearAllSelection?.()">清空所有选择</el-button>
+          <el-button @click="clearAll">清空所有选择</el-button>
         </div>
       </template>
     </es-table>
@@ -30,7 +30,7 @@
 
 <script setup lang="jsx">
 import { EsTable } from '@es-plus/vue3'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { ElMessage, ElTag, ElAlert, ElMessageBox } from 'element-plus'
 
 const tableRef = ref(null)
@@ -39,8 +39,17 @@ const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 2
 
 const selectedCount = ref(0)
 
-const handleSelectionChange = (rows) => {
-  selectedCount.value = rows?.length || 0
+// selection-change 的载荷只带「当前页」的选中行；跨页全集必须问实例要。
+// 等一轮 nextTick：组件内部的跨页缓存先落库，这里再读才拿得到全量。
+const handleSelectionChange = async () => {
+  await nextTick()
+  selectedCount.value = tableRef.value?.getSelectionRows?.()?.length || 0
+}
+
+// 清空选择不会派发 selection-change（数据没变、只是勾选没了），计数手动归零
+const clearAll = () => {
+  tableRef.value?.clearAllSelection?.()
+  selectedCount.value = 0
 }
 
 const statusMap = {

@@ -73,8 +73,9 @@ const columns = [
   {
     prop: 'operate', label: '操作', width: 160,
     btns: [
-      { name: '通过', type: 'success', clickEvent: (row) => handleSingleApproval(row, 'approved') },
-      { name: '驳回', type: 'danger', clickEvent: (row) => handleSingleApproval(row, 'rejected') }
+      // hidden 按行求值：已处理的行不再出现按钮，避免重复审批
+      { name: '通过', type: 'success', hidden: (row) => row.status !== 'pending', clickEvent: (row) => handleSingleApproval(row, 'approved') },
+      { name: '驳回', type: 'danger', hidden: (row) => row.status !== 'pending', clickEvent: (row) => handleSingleApproval(row, 'rejected') }
     ]
   }
 ]

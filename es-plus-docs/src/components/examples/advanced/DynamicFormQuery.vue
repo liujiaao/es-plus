@@ -1,14 +1,12 @@
 <template>
   <div class="example-dynamic-form-query">
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
     >
       <es-form
-        ref="formRef"
         :model="queryModel"
         :form-item-list="queryItems"
         :config-btn="queryBtns"
@@ -18,7 +16,7 @@
     <div class="hint">
       <ElAlert type="success" :closable="false" show-icon>
         <template #title>
-          <b>isHidden + formItmeRequestInstance</b> — 表单项动态显隐零模板代码，
+          <b>isHidden + watch 级联</b> — 表单项动态显隐零模板代码，
           级联选项按需加载，apiParams.model 自动同步表单值到请求。
         </template>
       </ElAlert>
@@ -32,8 +30,6 @@ import { ref, reactive, watch, computed } from 'vue'
 import { ElTag, ElAlert } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'
 
-const tableRef = ref(null)
-const formRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
@@ -97,7 +93,7 @@ const queryItems = computed(() => [
 ])
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px' },
+  formLayProps: { labelWidth: '70px' },
   rowLayProps: { gutter: 16 }
 }
 
@@ -123,12 +119,14 @@ const columns = [
   { prop: 'id', label: 'ID', width: 60 },
   { prop: 'title', label: '商品名称', minWidth: 180 },
   {
-    prop: 'category', label: '分类', width: 120,
+    prop: 'category', label: '分类', width: 110,
     render: (_, { row }) => {
-      const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
+      const map = { electronics: 'danger', clothing: 'success', jewelery: 'warning' }
       return <ElTag type={map[row.category] || 'info'} size="small">{row.category}</ElTag>
     }
   },
+  { prop: 'subCategory', label: '子分类', width: 90 },
+  { prop: 'brand', label: '品牌', width: 100 },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
   {
     prop: 'rating', label: '评分', width: 80,
@@ -136,12 +134,40 @@ const columns = [
   }
 ]
 
+// fakestoreapi 只返回一级 category（且服装是 "men's clothing"/"women's clothing"），
+// 这里把真实接口数据补成演示用的三级结构：子分类/品牌由本地补齐，真实项目由后端直接返回
+const SUBCATEGORY_OF = {
+  electronics: ['phone', 'computer'],
+  'men\'s clothing': ['men'],
+  'women\'s clothing': ['women'],
+  jewelery: ['ring']
+}
+const BRAND_OF = {
+  phone: ['apple', 'samsung'],
+  computer: ['macbook', 'thinkpad'],
+  men: ['nike'],
+  women: ['zara'],
+  ring: ['tiffany']
+}
+
+const enrichProduct = (item, i) => {
+  const list = SUBCATEGORY_OF[item.category] || ['phone']
+  const subCategory = list[i % list.length]
+  const brands = BRAND_OF[subCategory] || ['apple']
+  const category = item.category === 'electronics'
+    ? 'electronics'
+    : item.category === 'jewelery' ? 'jewelery' : 'clothing'
+  return { ...item, category, subCategory, brand: brands[i % brands.length] }
+}
+
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
-  const { pageIndex = 1, pageSize = 5, keyword, category, priceRange } = { ...formParams, ...rest }
-  let filtered = await fetchProducts()
+  const { pageIndex = 1, pageSize = 5, keyword, category, subCategory, brand, priceRange } = { ...formParams, ...rest }
+  let filtered = (await fetchProducts()).map(enrichProduct)
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
+  if (subCategory) filtered = filtered.filter(item => item.subCategory === subCategory)
+  if (brand) filtered = filtered.filter(item => item.brand === brand)
   if (priceRange) {
     if (priceRange === '100+') filtered = filtered.filter(item => item.price >= 100)
     else {

@@ -64,6 +64,8 @@ const renderBtn = (row: any, model: Record<string, unknown>, _list: unknown, h: 
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
+          // 真正放弃：清空已填内容，否则提示「丢失」却没有丢弃
+          Object.assign(formModel, { title: '', category: '', content: '' })
           ElMessage.info('已取消编辑')
         }).catch(() => {})
       }
@@ -74,7 +76,6 @@ const renderBtn = (row: any, model: Record<string, unknown>, _list: unknown, h: 
       },
       onClick: () => {
         ElMessage.success('草稿已保存: ' + model.title)
-        console.log('草稿:', model)
       }
     }, '保存草稿'),
     h('span', {
@@ -86,14 +87,13 @@ const renderBtn = (row: any, model: Record<string, unknown>, _list: unknown, h: 
         await new Promise(r => setTimeout(r, 1200))
         submitting.value = false
         ElMessage.success('发布成功！')
-        console.log('发布:', model)
       }
     }, submitting.value ? '发布中...' : '立即发布')
   ])
 }
 
 const layoutProps = {
-  fromLayProps: { labelWidth: '80px', size: 'small' },
+  formLayProps: { labelWidth: '80px', size: 'small' },
   rowLayProps: { gutter: 16 }
 }
 </script>

@@ -74,7 +74,7 @@ const columns = [
               { name: '取消', click: (_, { close }) => close() },
               { name: '保存', type: 'primary', click: (_, { close }) => {
                 Object.assign(row, formModel.value)
-                ElMessage.success('保存成功（模拟）')
+                ElMessage.success('保存成功')
                 close()
               }}
             ]
@@ -123,7 +123,9 @@ const columns = [
           }
           try {
             await ElMessageBox.confirm(`确定删除 "${row.title}"？`, '提示', { type: 'warning' })
-            ElMessage.success('删除成功（模拟）')
+            const idx = allArticles.findIndex((r) => r.id === row.id)
+            if (idx > -1) allArticles.splice(idx, 1)
+            ElMessage.success('删除成功')
             tableRef.value?.httpRequestInstance()
           } catch {}
         }
@@ -132,15 +134,19 @@ const columns = [
   }
 ]
 
+// 模块级数据源：行内按钮改状态 / 编辑 / 删除都落在它上面，
+// 刷新表格后改动仍然可见（若每次请求现造数组，任何刷新都会把改动冲掉）。
+const allArticles = Array.from({ length: 18 }, (_, i) => ({
+  id: 2001 + i,
+  title: ['Vue3 实战指南', 'React 设计模式', 'TypeScript 进阶', 'Node.js 微服务', 'CSS 布局技巧', '算法与数据结构'][i % 6],
+  author: ['张三', '李四', '王五'][i % 3],
+  status: ['draft', 'pending', 'approved', 'rejected', 'published'][i % 5],
+  date: `2024-03-${String((i % 28) + 1).padStart(2, '0')}`
+}))
+
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 10 } = params || {}
-  const all = Array.from({ length: 18 }, (_, i) => ({
-    id: 2001 + i,
-    title: ['Vue3 实战指南', 'React 设计模式', 'TypeScript 进阶', 'Node.js 微服务', 'CSS 布局技巧', '算法与数据结构'][i % 6],
-    author: ['张三', '李四', '王五'][i % 3],
-    status: ['draft', 'pending', 'approved', 'rejected', 'published'][i % 5],
-    date: `2024-03-${String((i % 28) + 1).padStart(2, '0')}`
-  }))
+  const all = allArticles
   const total = all.length
   const start = (pageIndex - 1) * pageSize
   return { data: all.slice(start, start + pageSize), total, pageSize, pageIndex }

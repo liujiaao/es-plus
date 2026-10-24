@@ -1,6 +1,7 @@
 <template>
   <div class="example-dynamic-form">
     <es-form
+      ref="formRef"
       :model="formModel"
       :form-item-list="dynamicItems"
     />
@@ -24,16 +25,19 @@ const formModel = ref({
   fields: [{ name: '字段1', value: '' }]
 })
 
+const formRef = ref(null)
 const resultVisible = ref(false)
 
 const dynamicItems = computed(() => {
   return formModel.value.fields.map((item, index) => [
-    { 
-      prop: `fields[${index}].name`, 
-      label: `名称${index + 1}`, 
-      formtype: 'Input', 
+    {
+      prop: `fields[${index}].name`,
+      label: `名称${index + 1}`,
+      formtype: 'Input',
       span: 10,
-      attrs: { placeholder: '字段名称' }
+      attrs: { placeholder: '字段名称' },
+      // 规则随动态字段一起声明：新加的每一行都自带必填校验
+      rules: [{ required: true, message: '请输入字段名称', trigger: 'blur' }]
     },
     { 
       prop: `fields[${index}].value`, 
@@ -69,7 +73,13 @@ const removeField = async (index) => {
   }
 }
 
-const showResult = () => {
+const showResult = async () => {
+  // 动态字段的 rules 同样走 el-form 校验：任一行名称为空都会拦住
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return
+  }
   resultVisible.value = true
 }
 </script>

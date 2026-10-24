@@ -1,6 +1,7 @@
 <template>
   <div class="example-crud-hidden-column">
     <es-crud-page
+      ref="crudRef"
       :schema="schema"
       @btn-click="handleBtnClick"
     />
@@ -8,8 +9,11 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { EsCrudPage } from '@es-plus/vue3'
 import { ElMessage } from 'element-plus'
+
+const crudRef = ref(null)
 
 const mockData = Array.from({ length: 20 }, (_, i) => ({
   id: i + 1,
@@ -54,9 +58,28 @@ const schema = {
   operationColumn: false
 }
 
+// 导出为 CSV（带 BOM，Excel 打开不乱码）；真实项目换成后端导出接口
+const exportLogs = () => {
+  if (!mockData.length) return ElMessage.warning('没有可导出的日志')
+  const header = ['事件', '操作人', 'IP 地址', '时间', '级别']
+  const rows = mockData.map((r) => [r.event, r.operator, r.ip, r.time, r.level])
+  const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '操作日志.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success(`已导出 ${mockData.length} 条日志`)
+}
+
 const handleBtnClick = (key) => {
-  if (key === 'export') ElMessage.success('日志导出成功')
-  if (key === 'clear') ElMessage.warning('日志已清空')
+  if (key === 'export') exportLogs()
+  if (key === 'clear') {
+    mockData.splice(0, mockData.length)
+    crudRef.value?.refresh?.()
+    ElMessage.warning('日志已清空')
+  }
 }
 </script>
 

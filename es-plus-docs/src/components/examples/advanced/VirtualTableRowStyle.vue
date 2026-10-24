@@ -2,7 +2,7 @@
   <div class="virtual-row-style-demo">
     <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 行样式 + 高亮 + 行事件</h4>
     <div style="margin-bottom: 12px; font-size: 13px; color: #909399;">
-      <span>单击行高亮，双击弹出详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
+      <span>单击行高亮、双击打开详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
     </div>
     <es-table
       ref="tableRef"
@@ -10,6 +10,8 @@
       :options="tableOptions"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
+      @row-click="handleRowClick"
+      @row-dblclick="handleRowDblclick"
     />
     <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: #f5f7fa; border-radius: 4px; font-size: 13px;">
       <strong>当前选中行：</strong>{{ clickedRow.name }} — {{ clickedRow.taskName }} ({{ clickedRow.status }})
@@ -79,6 +81,17 @@ function generateData(count: number) {
 }
 
 const tableData = ref<Record<string, unknown>[]>([])
+
+// virtual 引擎会把父级 @row-click / @row-dblclick 转发给行
+// （component.vue 的 forwardVirtualRowEvent：虚拟分支是显式绑定，不靠 attrs 透传）
+const handleRowClick = (row: Record<string, unknown>) => {
+  clickedRow.value = row
+  ElMessage.info(`选中：${row.name} — ${row.taskName}`)
+}
+
+const handleRowDblclick = (row: Record<string, unknown>) => {
+  ElMessage.success(`双击打开详情：${row.taskName}（${row.name}）`)
+}
 
 onMounted(() => {
   tableData.value = generateData(30000)

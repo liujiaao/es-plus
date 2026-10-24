@@ -12,7 +12,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -141,7 +141,6 @@ const tableOptions = {
   configBtn: [
     { name: '新增', type: 'primary' as const, code: 1, click: () => openAddDialog() },
     { name: '批量删除', type: 'danger' as const, code: 1, click: () => handleBatchDelete() },
-    { name: '导出', type: 'primary' as const, code: 2, click: () => {} },
   ],
 }
 
@@ -164,12 +163,22 @@ function openAddDialog() {
         { prop: 'phone', label: '电话', formtype: 'Input', span: 24 },
         { prop: 'email', label: '邮箱', formtype: 'Input', span: 24 },
       ],
-      layoutFormProps: { fromLayProps: { isBtnHidden: true, labelWidth: '50px' } },
+      layoutFormProps: { formLayProps: { isBtnHidden: true, labelWidth: '50px' } },
     } as any),
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '确定', type: 'primary', click: (_: any, { close, getRefs }: any) => {
         getRefs('formRef')?.validate().then(() => {
+          // 真正落库：mockDatabase 是模块级数组，mockApiRequest 每次都从它切片
+          const id = mockDatabase.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
+          mockDatabase.unshift({
+            id,
+            status: '在职',
+            joinDate: new Date().toISOString().slice(0, 10),
+            salary: 0,
+            address: '',
+            ...formData,
+          })
           ElMessage.success('新增成功')
           tableRef.value?.httpRequestInstance()
           close()
@@ -192,11 +201,14 @@ function openEditDialog(row: Record<string, unknown>) {
         { prop: 'position', label: '职位', formtype: 'Input', span: 24 },
         { prop: 'phone', label: '电话', formtype: 'Input', span: 24 },
       ],
-      layoutFormProps: { fromLayProps: { isBtnHidden: true } },
+      layoutFormProps: { formLayProps: { isBtnHidden: true } },
     } as any),
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '保存', type: 'primary', click: (_: any, { close }: any) => {
+        // 写回 mockDatabase 中同 id 的记录（formData 是 row 的浅拷贝）
+        const target = mockDatabase.find(r => r.id === formData.id)
+        if (target) Object.assign(target, { ...formData })
         ElMessage.success('修改成功')
         tableRef.value?.httpRequestInstance()
         close()
@@ -213,6 +225,8 @@ function handleDelete(row: Record<string, unknown>) {
     configBtn: [
       { name: '取消', click: (_: any, { close }: any) => close() },
       { name: '确定删除', type: 'danger', click: (_: any, { close }: any) => {
+        const idx = mockDatabase.findIndex(r => r.id === row.id)
+        if (idx > -1) mockDatabase.splice(idx, 1)
         ElMessage.success('删除成功')
         tableRef.value?.httpRequestInstance()
         close()
@@ -227,7 +241,12 @@ function handleBatchDelete() {
     ElMessage.warning('请先选择数据')
     return
   }
-  ElMessage.success(`批量删除 ${rows.length} 条数据`)
+  const ids = new Set(rows.map(r => r.id))
+  for (let i = mockDatabase.length - 1; i >= 0; i--) {
+    if (ids.has(mockDatabase[i].id)) mockDatabase.splice(i, 1)
+  }
+  tableRef.value?.clearAllSelection?.()
+  ElMessage.success(`批量删除 ${ids.size} 条数据`)
   tableRef.value?.httpRequestInstance()
 }
 </script>

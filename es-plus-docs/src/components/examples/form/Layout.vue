@@ -76,7 +76,7 @@ const configBtn = [
 ]
 
 const layoutProps = {
-  fromLayProps: {
+  formLayProps: {
     labelWidth: '80px',
     labelPosition: 'right',
     minFoldRows: 2  // 超过2行自动折叠

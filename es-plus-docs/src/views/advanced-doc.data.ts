@@ -63,18 +63,18 @@ export const docsData: Record<string, any> = {
       { name: '嵌套支持', desc: '支持弹窗嵌套，自动管理层级', icon: 'Connection' }
     ],
     examples: [
-      { key: 'basic', title: '弹窗基础与变体', description: '基础调用 + 内容弹窗 + 抽屉变体 + 滚动内容。', component: getComponent('dialog/01-basic'), code: code('dialog/01-basic') },
+      { key: 'basic', title: '弹窗基础与内容变体', description: '三种最小调用：纯提示、多段内容、maxHeight 限高内部滚动。', component: getComponent('dialog/01-basic'), code: code('dialog/01-basic') },
       { key: 'form', title: '表单弹窗', description: '弹窗中使用 EsForm，支持表单验证与提交闭环。', component: getComponent('dialog/02-form'), code: code('dialog/02-form') },
-      { key: 'confirm', title: '确认与消息弹窗', description: '图标化确认弹窗，覆盖 success/warning/error 消息提示。', component: getComponent('dialog/03-confirm'), code: code('dialog/03-confirm') },
+      { key: 'confirm', title: '确认弹窗：三档语气 + 关闭拦截', description: '图标与按钮 type 同步语气：危险删除（danger）、警告发布（warning）、中立退出（primary）；beforeClose 让点 X 前先确认是否丢弃改动。', component: getComponent('dialog/03-confirm'), code: code('dialog/03-confirm') },
       { key: 'nested-modal', title: '嵌套弹窗', description: '独立 useDialog 实例，支持父子弹窗通信与层级管理。', component: getComponent('dialog/04-nested-modal'), code: code('dialog/04-nested-modal') },
-      { key: 'advanced', title: '高级弹窗', description: '可拖拽 + 自定义头尾 + 全屏 + 限高，覆盖高级定制场景。', component: getComponent('dialog/05-advanced'), code: code('dialog/05-advanced') },
+      { key: 'advanced', title: '弹窗定制与实例缓存', description: '可拖拽、自定义头尾、全屏、maxHeight 限高，以及 cacheKey 缓存实例：关闭再打开，内容还在。', component: getComponent('dialog/05-advanced'), code: code('dialog/05-advanced') },
       { key: 'async', title: '异步组件弹窗', description: 'defineAsyncComponent 实现弹窗内容延迟加载。', component: getComponent('dialog/06-async'), code: code('dialog/06-async') },
       { key: 'detail-preview', title: '详情预览弹窗', description: 'ElDescriptions 配置化详情展示，isHiddenFooter 无按钮模式，动态渲染不同业务对象。', component: getComponent('dialog/07-detail-preview'), code: code('dialog/07-detail-preview') },
       { key: 'table-dialog', title: '弹窗内嵌表格', description: '弹窗中放置 EsTable + multiSelect 多选 + registerRef 获取表格实例读取选中行。', component: getComponent('dialog/08-table-dialog'), code: code('dialog/08-table-dialog') },
-      { key: 'step-dialog', title: '分步向导弹窗', description: 'ElSteps + 多步骤 EsForm 切换，每步独立校验，configBtn 动态按钮控制上一步/下一步/提交。', component: getComponent('dialog/09-step-dialog'), code: code('dialog/09-step-dialog') },
+      { key: 'step-dialog', title: '分步向导弹窗', description: 'ElSteps + 多步骤 EsForm 切换，每步独立校验；renderFooter 按当前步骤动态渲染上一步/下一步/提交。', component: getComponent('dialog/09-step-dialog'), code: code('dialog/09-step-dialog') },
       { key: 'dynamic-btn', title: '动态按钮状态弹窗', description: '审批场景：Radio 切换操作类型，按钮 disabled 函数式动态禁用，条件校验。', component: getComponent('dialog/10-dynamic-btn'), code: code('dialog/10-dynamic-btn') },
-      { key: 'multi-instance', title: '多实例独立弹窗', description: 'onlyInstance: false 模式，同时打开多个独立弹窗，各自拖拽互不影响。', component: getComponent('dialog/11-multi-instance'), code: code('dialog/11-multi-instance') },
-      { key: 'form-table-dialog', title: '表单+表格+弹窗闭环', description: '弹窗内 EsTable 展示数据 + btns 行操作触发编辑弹窗 + configBtn 新增弹窗，三级弹窗嵌套 CRUD。', component: getComponent('dialog/12-form-table-dialog'), code: code('dialog/12-form-table-dialog') }
+      { key: 'multi-instance', title: '多实例独立弹窗', description: 'onlyInstance: true 模式：每次调用创建独立容器，可同时打开多个弹窗，各自拖拽互不影响。', component: getComponent('dialog/11-multi-instance'), code: code('dialog/11-multi-instance') },
+      { key: 'form-table-dialog', title: '表单+表格+弹窗闭环', description: '弹窗内 EsTable 展示数据 + 操作列 btns 触发编辑弹窗 + configBtn 新增弹窗，两级弹窗嵌套 CRUD。', component: getComponent('dialog/12-form-table-dialog'), code: code('dialog/12-form-table-dialog') }
     ],
     api: {
       'DialogOptions': [
@@ -111,7 +111,7 @@ export const docsData: Record<string, any> = {
       ],
       'useDialog 参数': [
         { name: 'Component', type: 'Component (可选)', desc: '自定义弹窗内容组件，不传则使用内置 EsDialog；传入 DialogOptions.render 可替代' },
-        { name: 'opt.onlyInstance', type: 'boolean', desc: 'true：单实例模式，同一 useDialog 返回的函数每次调用复用同一个弹窗实例（更新 props）；false（默认）：每次调用创建新实例' },
+        { name: 'opt.onlyInstance', type: 'boolean', desc: 'true：每次调用新建一个弹窗实例（多实例并发）；false（默认）：复用同一实例（更新 props）' },
         { name: 'opt.cacheKey', type: 'string', desc: '实例缓存键：同名 cacheKey 的弹窗关闭后不卸载（TTL 延迟回收），下次打开复用并保留内部状态；同时是 destroy(cacheKey) 的寻址键' },
         { name: 'opt.(其余 DialogOptions 字段)', type: 'DialogOptions', desc: 'title / width / render / configBtn / isDraggable / fullscreen / beforeClose 等原样下发到弹窗组件' },
       ],
@@ -135,7 +135,7 @@ export const docsData: Record<string, any> = {
       { key: 'one-line-crud', title: '极简CRUD弹窗', description: 'useDialog + JSX EsForm — 一个函数完成增/编辑弹窗，registerRef 获取表单实例验证。', component: getComponent('advanced/07-one-line-crud'), code: code('advanced/07-one-line-crud') },
       { key: 'row-approval', title: '行操作审批流程', description: 'btns条件行操作 + 批量选择 + 弹窗(表格+表单)审批。', component: getComponent('advanced/08-row-approval'), code: code('advanced/08-row-approval') },
       { key: 'auto-fit-height', title: '自适应高度表格', description: 'heightType + tabHeight + ResizeObserver 自动重算，表单展开/收起时表格高度自适应。', component: getComponent('advanced/09-auto-fit-height'), code: code('advanced/09-auto-fit-height') },
-      { key: 'any-backend-api', title: '适配任意后端接口', description: 'configTableOut + brcb/qrcb — 切换3种后端格式仅需改配置，零适配代码。', component: getComponent('advanced/10-any-backend-api'), code: code('advanced/10-any-backend-api') },
+      { key: 'any-backend-api', title: '适配任意后端接口', description: 'configTableOut 声明响应信封（嵌套 key 递归查找）+ qrcb 集中重命名行字段：换后端只动配置，页面代码不变。', component: getComponent('advanced/10-any-backend-api'), code: code('advanced/10-any-backend-api') },
       { key: 'conditional-btns', title: '条件行操作按钮', description: 'btns 声明式行操作 — 替代 el-table 冗长 v-if slot，按钮行为随行数据动态变化。', component: getComponent('advanced/11-conditional-btns'), code: code('advanced/11-conditional-btns') },
       { key: 'dialog-table-form', title: '弹窗内表格嵌套表单', description: '两级useDialog嵌套：弹窗表格 → 行btns → 嵌套弹窗表单编辑。', component: getComponent('advanced/12-dialog-table-form'), code: code('advanced/12-dialog-table-form') },
       { key: 'dynamic-form-query', title: '动态表单查询', description: 'isHidden 函数式显隐 + 级联选项加载 + apiParams.model 自动同步，零模板代码。', component: getComponent('advanced/13-dynamic-form-query'), code: code('advanced/13-dynamic-form-query') },
@@ -147,7 +147,7 @@ export const docsData: Record<string, any> = {
       { key: 'virtual-table-sort', title: '虚拟表格排序+固定列', description: '虚拟模式下排序、固定列、序号列、斑马纹完整兼容，5 万行数据即时排序。', component: getComponent('advanced/19-virtual-table-sort'), code: code('advanced/19-virtual-table-sort') },
       { key: 'virtual-table-select', title: '虚拟表格多选+操作', description: '虚拟模式多选 + 行高亮 + 操作按钮(render/btns) + getSelectionRows 获取选中。', component: getComponent('advanced/20-virtual-table-select'), code: code('advanced/20-virtual-table-select') },
       { key: 'virtual-table-custom-render', title: '虚拟表格自定义渲染', description: '虚拟模式 render/scopedSlots/ellipsis/formatter 四种自定义渲染方式完整兼容。', component: getComponent('advanced/21-virtual-table-custom-render'), code: code('advanced/21-virtual-table-custom-render') },
-      { key: 'virtual-table-row-style', title: '虚拟表格行样式+事件', description: '虚拟模式 rowClassName + highlightCurrentRow + 行点击/双击事件完整兼容。', component: getComponent('advanced/22-virtual-table-row-style'), code: code('advanced/22-virtual-table-row-style') },
+      { key: 'virtual-table-row-style', title: '虚拟表格行样式+事件', description: '虚拟模式 rowClassName（按数据上色）+ highlightCurrentRow 当前行 + @row-click / @row-dblclick 事件。', component: getComponent('advanced/22-virtual-table-row-style'), code: code('advanced/22-virtual-table-row-style') },
       { key: 'virtual-table-crud', title: '虚拟表格完整CRUD', description: '虚拟模式 EsForm+EsTable+useDialog 完整 CRUD 场景：查询筛选+新增编辑删除+批量操作。', component: getComponent('advanced/23-virtual-table-crud'), code: code('advanced/23-virtual-table-crud') }
     ]
   },
@@ -165,7 +165,7 @@ export const docsData: Record<string, any> = {
     examples: [
       { key: 'basic-switch', title: '引擎切换', description: '一行配置在 el-table（默认）与 vxe-table（高性能）之间切换，列配置/数据/联动完全兼容。', component: getComponent('vxe-table/01-basic-switch'), code: code('vxe-table/01-basic-switch') },
       { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
-      { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行，通过 #expand 具名插槽自定义展开内容，支持 ElDescriptions 详情卡。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
+      { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行的内容用列 render 返回（ElDescriptions 详情卡），不写插槽、不写模板。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
       { key: 'sort-formatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。', component: getComponent('vxe-table/04-sort-formatter'), code: code('vxe-table/04-sort-formatter') },
       { key: 'custom-render', title: '自定义 render 渲染', description: 'render(h, {value, row, index}) 与 el-table 相同 API，vxe 引擎通过 RenderDomTb 桥接透传，无缝兼容。', component: getComponent('vxe-table/05-custom-render'), code: code('vxe-table/05-custom-render') },
       { key: 'cell-edit', title: '单元格编辑', description: 'editConfig.mode:"cell" 单元格编辑，editRender $input/$select，getUpdateRecords 获取修改记录。', component: getComponent('vxe-table/06-cell-edit'), code: code('vxe-table/06-cell-edit') },
@@ -173,11 +173,11 @@ export const docsData: Record<string, any> = {
       { key: 'toolbar-export', title: '工具栏与导出', description: 'toolbarConfig 内置缩放/全屏/自定义列；exportConfig 导出 CSV；print 打印。', component: getComponent('vxe-table/08-toolbar-export'), code: code('vxe-table/08-toolbar-export') },
       { key: 'column-resize', title: '列宽调整与键盘鼠标', description: 'columnConfig.resizable 拖拽调列宽；keyboardConfig 方向键导航；mouseConfig.selected 框选（类 Excel）。', component: getComponent('vxe-table/09-column-resize'), code: code('vxe-table/09-column-resize') },
       { key: 'tree-data', title: '树形数据', description: 'treeConfig.transform 自动将 {id, parentId} 扁平数组构造树形，expandAll/collapseAll 展开折叠。', component: getComponent('vxe-table/10-tree-data'), code: code('vxe-table/10-tree-data') },
-      { key: 'proxy-config', title: 'proxyConfig 服务端分页', description: 'proxyConfig.ajax.query 接管请求，vxe 自管分页，EsForm 搜索触发 commitProxy("reload") 重载。', component: getComponent('vxe-table/11-proxy-config'), code: code('vxe-table/11-proxy-config') },
+      { key: 'proxy-config', title: 'proxyConfig 服务端分页', description: 'proxyConfig.ajax.query 接管请求，vxe 自管分页；表单与表格兄弟布局，查询/重置回调 commitProxy("reload") 重置页码并重查。', component: getComponent('vxe-table/11-proxy-config'), code: code('vxe-table/11-proxy-config') },
       { key: 'footer-summary', title: '汇总行 footerMethod', description: 'showFooter + footerMethod 动态计算合计行，随数据变化实时更新。', component: getComponent('vxe-table/12-footer-summary'), code: code('vxe-table/12-footer-summary') },
       { key: 'escape-hatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。', component: getComponent('vxe-table/13-escape-hatch'), code: code('vxe-table/13-escape-hatch') },
       { key: 'crud-with-dialog', title: '完整 CRUD + useDialog', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 — 完整业务闭环。', component: getComponent('vxe-table/14-crud-with-dialog'), code: code('vxe-table/14-crud-with-dialog') },
-      { key: 'merge-cells', title: '复杂合并单元格：静态 + 动态 + 表单联动', description: '三级表头 groups + spanMethod 行列动态合并 + vxeConfig.mergeCells 静态合并 + mergeFooterItems 多行表尾；表单控合并开关。', component: getComponent('vxe-table/15-merge-cells'), code: code('vxe-table/15-merge-cells') },
+      { key: 'merge-cells', title: '分组表头 + 动态行合并 + 打印', description: '两级分组表头 groups + spanMethod 动态行合并 + mergeFooterItems 多行表尾；表单控合并模式，patchHtmlRowSpans 让合并单元格可打印。', component: getComponent('vxe-table/15-merge-cells'), code: code('vxe-table/15-merge-cells') },
     ],
     api: {
       'TableOptions（vxe 引擎新增项）': [
@@ -196,10 +196,10 @@ export const docsData: Record<string, any> = {
         { name: 'clipboardConfig', type: '{ isCopy?, isPaste? }', desc: 'Ctrl+C 复制 / Ctrl+V 粘贴单元格内容，需先开启 mouseConfig.selected:true' },
         { name: 'validConfig', type: '{ autoPos?, message? }', desc: 'autoPos:true 校验后自动定位首个错误格；message:"tooltip"|"modal" 错误提示方式' },
         { name: 'treeConfig', type: '{ transform?, rowField?, parentField?, expandAll? }', desc: 'transform:true 自动将扁平 [{id,parentId}] 构造树形；某列需设置 vxeColumn.treeNode:true 作为展开节点列' },
-        { name: 'proxyConfig', type: '{ autoLoad?, ajax: { query, queryAll? }, props? }', desc: 'vxe 接管分页：ajax.query({ page, form }) 返回后端数据；props.list/total 映射响应字段；autoLoad:true 挂载自动请求' },
+        { name: 'proxyConfig', type: '{ autoLoad?, ajax: { query, queryAll? }, response? }', desc: 'vxe 接管分页：ajax.query({ page, form }) 返回后端数据；response.list/total 映射响应字段（vxe 4.6+ 推荐，旧写法 props 仍兼容）；autoLoad:true 挂载自动请求。commitProxy("reload") 重置到第 1 页再查，commitProxy("query") 沿用当前页' },
         { name: 'expandConfig', type: '{ trigger?, accordion?, lazy?, loadMethod? }', desc: 'trigger:"row"|"manual"；accordion:true 手风琴模式；lazy+loadMethod 懒加载展开内容' },
         { name: 'seqConfig', type: '{ startIndex?, seqMethod? }', desc: '序号列配置：startIndex 指定起始序号（默认 1），seqMethod 自定义生成函数；配合 snIndex:true 使用' },
-        { name: 'vxeConfig', type: 'VxeGridProps', desc: '逃生舱：深度合并至 vxe-grid 原生配置，优先级高于所有一等公民字段，可设置 mergeHeaderItems / mergeCells / mergeFooterItems 等静态合并' },
+        { name: 'vxeConfig', type: 'VxeGridProps', desc: '逃生舱：深度合并至 vxe-grid 原生配置，优先级高于所有一等公民字段，可设置 mergeHeaderCells / mergeCells / mergeFooterItems 等静态合并' },
         { name: 'vxeOn', type: 'Record<string, Function>', desc: '逃生舱：注入 vxe 原生事件，键名为 vxe 事件名（kebab-case），如 "cell-click"、"edit-closed"、"zoom"、"scroll"' },
       ],
       'TableOptions（通用字段 · vxe 注意事项）': [

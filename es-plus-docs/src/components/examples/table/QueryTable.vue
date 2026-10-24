@@ -1,7 +1,6 @@
 <template>
   <div class="example-query-table">
     <es-table
-      ref="tableRef"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
       :columns="columns"
@@ -26,7 +25,6 @@ import { EsForm, EsTable } from '@es-plus/vue3'
 import { ref, reactive, h } from 'vue'
 import { ElTag } from 'element-plus'
 
-const tableRef = ref()
 const tableData = ref([])
 const query = reactive({ keyword: '', status: '' })
 const pagination = ref({ pageSize: 10, current: 1, total: 0, pageSizes: [5, 10, 20] })
@@ -58,11 +56,13 @@ const queryBtns = [
   { name: '重置', key: 'rest', triggerEvent: true }
 ]
 
-const layoutProps = { fromLayProps: { labelWidth: '60px' }, rowLayProps: { gutter: 16 } }
+const layoutProps = { formLayProps: { labelWidth: '60px' }, rowLayProps: { gutter: 16 } }
 
 // 模拟后端接口（真实项目里换成 httpRequest，或直接给 apiParams.url）
+// 注意参数分层：分页在顶层（pageIndex/pageSize），表单搜索值在 formParams 里
 const mockRequest = async (params) => {
-  const { pageIndex = 1, pageSize = 10, keyword, status } = params || {}
+  const { pageIndex = 1, pageSize = 10, formParams = {} } = params || {}
+  const { keyword, status } = formParams
   const allData = Array.from({ length: 86 }, (_, i) => ({
     id: 1001 + i,
     orderNo: `ORD-2024-${String(i + 1).padStart(3, '0')}`,

@@ -41,17 +41,23 @@ const fulfillOptions = [
 ]
 
 const mockOrders = [
-  { id: 1, goods: '华为 Mate 60 Pro', orderNo: 'ORD20240101001', channel: 'online', workOrderNo: 'WO001', totalPrice: 6999, status: 'completed', rewardPoints: 200, customer: '张三', phone: '13800138001', createTime: '2024-01-15 09:30', completeTime: '2024-01-20 14:00', batch: 'B2024-01' },
-  { id: 2, goods: 'iPhone 15 Pro Max', orderNo: 'ORD20240101002', channel: 'offline', workOrderNo: 'WO002', totalPrice: 9999, status: 'shipped', rewardPoints: 300, customer: '李四', phone: '13800138002', createTime: '2024-02-10 11:20', completeTime: '', batch: 'B2024-01' },
-  { id: 3, goods: '小米14 Ultra', orderNo: 'ORD20240201003', channel: 'live', workOrderNo: 'WO003', totalPrice: 5999, status: 'paid', rewardPoints: 150, customer: '王五', phone: '13800138003', createTime: '2024-03-05 16:45', completeTime: '', batch: 'B2024-02' },
-  { id: 4, goods: 'MacBook Pro 16', orderNo: 'ORD20240301004', channel: 'third', workOrderNo: 'WO004', totalPrice: 19999, status: 'pending', rewardPoints: 500, customer: '赵六', phone: '13800138004', createTime: '2024-03-18 08:00', completeTime: '', batch: 'B2024-02' },
-  { id: 5, goods: 'iPad Air 6', orderNo: 'ORD20240301005', channel: 'online', workOrderNo: 'WO005', totalPrice: 4799, status: 'completed', rewardPoints: 120, customer: '钱七', phone: '13800138005', createTime: '2024-04-02 10:30', completeTime: '2024-04-08 09:15', batch: 'B2024-03' },
-  { id: 6, goods: 'Samsung Galaxy S24', orderNo: 'ORD20240401006', channel: 'offline', workOrderNo: 'WO006', totalPrice: 7999, status: 'cancelled', rewardPoints: 0, customer: '孙八', phone: '13800138006', createTime: '2024-04-15 14:20', completeTime: '', batch: 'B2024-03' },
-  { id: 7, goods: 'OPPO Find X7', orderNo: 'ORD20240401007', channel: 'live', workOrderNo: 'WO007', totalPrice: 4999, status: 'completed', rewardPoints: 130, customer: '周九', phone: '13800138007', createTime: '2024-05-01 09:00', completeTime: '2024-05-06 17:30', batch: 'B2024-04' },
-  { id: 8, goods: 'vivo X100 Pro', orderNo: 'ORD20240501008', channel: 'online', workOrderNo: 'WO008', totalPrice: 4999, status: 'paid', rewardPoints: 130, customer: '吴十', phone: '13800138008', createTime: '2024-05-20 13:10', completeTime: '', batch: 'B2024-04' }
+  { id: 1, goods: '华为 Mate 60 Pro', orderNo: 'ORD20240101001', channel: 'online', workOrderNo: 'WO001', totalPrice: 6999, status: 'completed', rewardPoints: 200, customer: '张三', phone: '13800138001', createTime: '2024-01-15 09:30', completeTime: '2024-01-20 14:00', batch: 'B2024-01', fulfillType: 'express' },
+  { id: 2, goods: 'iPhone 15 Pro Max', orderNo: 'ORD20240101002', channel: 'offline', workOrderNo: 'WO002', totalPrice: 9999, status: 'shipped', rewardPoints: 300, customer: '李四', phone: '13800138002', createTime: '2024-02-10 11:20', completeTime: '', batch: 'B2024-01', fulfillType: 'city' },
+  { id: 3, goods: '小米14 Ultra', orderNo: 'ORD20240201003', channel: 'live', workOrderNo: 'WO003', totalPrice: 5999, status: 'paid', rewardPoints: 150, customer: '王五', phone: '13800138003', createTime: '2024-03-05 16:45', completeTime: '', batch: 'B2024-02', fulfillType: 'pickup' },
+  { id: 4, goods: 'MacBook Pro 16', orderNo: 'ORD20240301004', channel: 'third', workOrderNo: 'WO004', totalPrice: 19999, status: 'pending', rewardPoints: 500, customer: '赵六', phone: '13800138004', createTime: '2024-03-18 08:00', completeTime: '', batch: 'B2024-02', fulfillType: 'express' },
+  { id: 5, goods: 'iPad Air 6', orderNo: 'ORD20240301005', channel: 'online', workOrderNo: 'WO005', totalPrice: 4799, status: 'completed', rewardPoints: 120, customer: '钱七', phone: '13800138005', createTime: '2024-04-02 10:30', completeTime: '2024-04-08 09:15', batch: 'B2024-03', fulfillType: 'city' },
+  { id: 6, goods: 'Samsung Galaxy S24', orderNo: 'ORD20240401006', channel: 'offline', workOrderNo: 'WO006', totalPrice: 7999, status: 'cancelled', rewardPoints: 0, customer: '孙八', phone: '13800138006', createTime: '2024-04-15 14:20', completeTime: '', batch: 'B2024-03', fulfillType: 'pickup' },
+  { id: 7, goods: 'OPPO Find X7', orderNo: 'ORD20240401007', channel: 'live', workOrderNo: 'WO007', totalPrice: 4999, status: 'completed', rewardPoints: 130, customer: '周九', phone: '13800138007', createTime: '2024-05-01 09:00', completeTime: '2024-05-06 17:30', batch: 'B2024-04', fulfillType: 'express' },
+  { id: 8, goods: 'vivo X100 Pro', orderNo: 'ORD20240501008', channel: 'online', workOrderNo: 'WO008', totalPrice: 4999, status: 'paid', rewardPoints: 130, customer: '吴十', phone: '13800138008', createTime: '2024-05-20 13:10', completeTime: '', batch: 'B2024-04', fulfillType: 'city' }
 ]
 
 // ─── 通用 httpRequest ───
+
+const inDateRange = (value: string, range: string[] | string | undefined) => {
+  if (!Array.isArray(range) || range.length !== 2 || !range[0]) return true
+  const day = value.slice(0, 10)
+  return day >= range[0] && day <= range[1]
+}
 
 const mockHttpRequest = async ({ pageIndex, pageSize, formParams }: any) => {
   await new Promise(resolve => setTimeout(resolve, 300))
@@ -64,6 +70,9 @@ const mockHttpRequest = async ({ pageIndex, pageSize, formParams }: any) => {
   if (formParams?.status) filtered = filtered.filter(i => i.status === formParams.status)
   if (formParams?.workOrderNo) filtered = filtered.filter(i => i.workOrderNo.includes(formParams.workOrderNo))
   if (formParams?.batch) filtered = filtered.filter(i => i.batch.includes(formParams.batch))
+  if (formParams?.fulfillType) filtered = filtered.filter(i => i.fulfillType === formParams.fulfillType)
+  filtered = filtered.filter(i => inDateRange(i.createTime, formParams?.createTime))
+  filtered = filtered.filter(i => !formParams?.completeTime?.length || inDateRange(i.completeTime, formParams.completeTime))
   const start = (pageIndex - 1) * pageSize
   return { data: filtered.slice(start, start + pageSize), total: filtered.length, pageIndex, pageSize }
 }
@@ -233,6 +242,24 @@ const pageSchema: any = {
 
 function handleDialogConfirm(dialogKey: string, data: Record<string, any>) {
   if (dialogKey === 'add') {
+    // 真正落库到本地 mock 数据：刷新后新订单出现在列表里（真实项目换成后端接口）
+    const nextId = mockOrders.reduce((max, o) => Math.max(max, o.id), 0) + 1
+    mockOrders.unshift({
+      id: nextId,
+      goods: data.goods || '-',
+      orderNo: `ORD${Date.now()}`,
+      channel: data.channel || 'online',
+      workOrderNo: `WO${String(nextId).padStart(3, '0')}`,
+      totalPrice: Number(data.totalPrice) || 0,
+      status: data.status || 'pending',
+      rewardPoints: Number(data.rewardPoints) || 0,
+      customer: data.customer || '-',
+      phone: data.phone || '-',
+      createTime: Array.isArray(data.createTime) ? data.createTime[0] : (data.createTime || ''),
+      completeTime: '',
+      batch: 'B2024-NEW',
+      fulfillType: data.fulfillType || 'express'
+    })
     ElMessage.success(`新增订单成功: ${data.goods || data.customer}`)
   } else if (dialogKey === 'download') {
     ElMessage.success('下载任务已提交')
@@ -242,11 +269,13 @@ function handleDialogConfirm(dialogKey: string, data: Record<string, any>) {
 
 function handleBtnClick(key: string, payload?: Record<string, any>) {
   if (key === 'delete') {
+    const index = mockOrders.findIndex(o => o.id === payload?.id || o.orderNo === payload?.orderNo)
+    if (index > -1) mockOrders.splice(index, 1)
     ElMessage.success(`已删除订单: ${payload?.orderNo}`)
     crudRef.value?.refresh()
   }
   if (key === 'import') {
-    ElMessage.info('正在打开 Excel 导入...')
+    ElMessage.info('示例：真实项目在此接入 Excel 导入接口')
   }
 }
 </script>

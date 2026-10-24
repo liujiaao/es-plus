@@ -44,8 +44,10 @@ const columns = [
     editRender: { name: '$input', props: { type: 'number', min: 0 } },
     vxeColumn: { rules: [{ required: true, type: 'number', min: 1, message: '薪资必须 > 0' }] } },
   {
-    label: '操作', width: 90,
-    btns: [{ text: '删除', type: 'danger', click: ({ row }: any) => deleteRow(row) }],
+    // prop:'operate' 是「操作列」的契约键：es-table 据此把 btns 编译成 render 插槽，
+    // 每项按钮读 name / type / clickEvent(row) / hidden / permissionValue
+    prop: 'operate', label: '操作', width: 90,
+    btns: [{ name: '删除', type: 'danger', clickEvent: (row: any) => deleteRow(row) }],
   },
 ]
 
@@ -72,7 +74,8 @@ const tableData = ref(
 )
 pagination.value.total = tableData.value.length
 
-// 获取内部 <vxe-table> 实例（insertAt / remove / getUpdateRecords 等 CRUD 方法都在内部 table 上）
+// insertAt / remove 只存在于内部 <vxe-table>（grid 不代理它们），故仍需 refTable 句柄；
+// 而读记录 / 撤销 / 校验走 EsTable 已暴露的公共方法，不必再往下钻
 const vxe = () => {
   const grid = (tableRef.value as any)?.vxeInstance?.()
   return grid?.getRefMaps?.()?.refTable?.value
@@ -83,10 +86,10 @@ const updateCount = ref(0)
 const deleteCount = ref(0)
 
 function refreshCounts() {
-  const v = vxe()
-  insertCount.value = v?.getInsertRecords?.()?.length ?? 0
-  updateCount.value = v?.getUpdateRecords?.()?.length ?? 0
-  deleteCount.value = v?.getRemoveRecords?.()?.length ?? 0
+  const t = tableRef.value as any
+  insertCount.value = t?.getInsertRecords?.()?.length ?? 0
+  updateCount.value = t?.getUpdateRecords?.()?.length ?? 0
+  deleteCount.value = t?.getRemoveRecords?.()?.length ?? 0
 }
 
 async function addRow() {
@@ -100,18 +103,31 @@ async function deleteRow(row: any) {
 }
 
 async function validateAndSave() {
-  const errMap = await vxe()?.validate?.()
+  const t = tableRef.value as any
+  await t?.clearActived?.()
+  const errMap = await t?.validate?.()
   if (errMap) {
     ElMessage.error('校验失败，请修正错误')
     return
   }
-  const inserts = vxe()?.getInsertRecords?.() ?? []
-  const updates = vxe()?.getUpdateRecords?.() ?? []
-  ElMessage.success(`保存成功：新增 ${inserts.length}，修改 ${updates.length}`)
+  const inserts = t?.getInsertRecords?.() ?? []
+  const updates = t?.getUpdateRecords?.() ?? []
+  const removes = new Set<number>((t?.getRemoveRecords?.() ?? []).map((r: any) => r.id))
+
+  // 把三类改动合并成一份新数据源交给表格：vxe 重新载入后脏标记（新增/修改/删除）随之清空
+  const merged = new Map<number, any>()
+  tableData.value.forEach((r: any) => merged.set(r.id, { ...r }))
+  ;[...inserts, ...updates].forEach((r: any) => merged.set(r.id, { ...r }))
+  removes.forEach((id: number) => merged.delete(id))
+  tableData.value = [...merged.values()]
+  pagination.value.total = tableData.value.length
+
+  ElMessage.success(`保存成功：新增 ${inserts.length}，修改 ${updates.length}，删除 ${removes.size}`)
+  refreshCounts()
 }
 
-function revertAll() {
-  vxe()?.revertData?.()
+async function revertAll() {
+  await (tableRef.value as any)?.revertData?.()
   refreshCounts()
   ElMessage.info('已撤销所有修改')
 }

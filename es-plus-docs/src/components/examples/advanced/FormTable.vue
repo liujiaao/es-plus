@@ -1,7 +1,6 @@
 <template>
   <div class="example-advanced-form-table">
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
@@ -23,7 +22,6 @@ import { ref, reactive } from 'vue'
 import { ElTag } from 'element-plus'
 import { fetchProducts } from '@/utils/mock-api'
 
-const tableRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 
@@ -69,7 +67,7 @@ const queryItems = [
 ]
 
 const layoutFormProps = {
-  fromLayProps: { labelWidth: '70px', minFoldRows: 1 },
+  formLayProps: { labelWidth: '70px', minFoldRows: 1 },
   rowLayProps: { gutter: 16 }
 }
 

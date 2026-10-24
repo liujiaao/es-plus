@@ -75,10 +75,10 @@ export const docsData: Record<string, any> = {
       { key: 'dialog', title: '弹窗表单', description: '在弹窗中使用 EsForm，展示表单与弹窗的无缝集成。', component: getComponent('form/08-dialog'), code: code('form/08-dialog') },
       { key: 'datetime-range', title: '日期时间范围', description: '完整覆盖日期、时间、日期时间范围选择场景。', component: getComponent('form/09-datetime-range'), code: code('form/09-datetime-range') },
       { key: 'cascader', title: '级联选择器', description: '使用 Cascader 组件实现多级联动选择。', component: getComponent('form/10-cascader'), code: code('form/10-cascader') },
-      { key: 'advanced-buttons', title: '高级按钮区', description: 'btnColSpanRow + direction 实现左右分栏按钮区，支持 renderBtn 完全自定义。', component: getComponent('form/11-advanced-buttons'), code: code('form/11-advanced-buttons') },
+      { key: 'advanced-buttons', title: '高级按钮区', description: 'direction: left/right 把按钮分到两端：导出居左，查询/重置居右，无需手写布局。', component: getComponent('form/11-advanced-buttons'), code: code('form/11-advanced-buttons') },
       { key: 'upload', title: '图片上传', description: '支持 picture-card 多图上传、自定义 httpRequest、预览删除等完整上传功能。', component: getComponent('form/12-upload'), code: code('form/12-upload') },
-      { key: 'file-upload', title: '文件上传', description: '支持图片、PDF、TXT、Word、Excel、PPT 预览下载及 ZIP 下载，自定义文件列表与操作按钮。', component: getComponent('form/13-file-upload'), code: code('form/13-file-upload') },
-      { key: 'preferences', title: '偏好设置', description: 'Radio、Checkbox、Switch、Slider、ColorPicker、Rate 六种组件配置化示例，覆盖全部基础表单类型。', component: getComponent('form/14-preferences'), code: code('form/14-preferences') },
+      { key: 'file-upload', title: '文件上传', description: '图片 / PDF / TXT 在线预览，Office 文档与压缩包下载，自定义文件列表渲染与操作按钮。', component: getComponent('form/13-file-upload'), code: code('form/13-file-upload') },
+      { key: 'preferences', title: '偏好设置', description: 'Radio、Checkbox、Switch、Slider、ColorPicker、Rate 六种选择类控件的纯配置化写法。', component: getComponent('form/14-preferences'), code: code('form/14-preferences') },
       { key: 'computed-fields', title: '联动计算', description: 'on.change + on.input 实现商品选择→自动填充单价→数量折扣→实时计算总价。', component: getComponent('form/15-computed-fields'), code: code('form/15-computed-fields') },
       { key: 'custom-button', title: '自定义按钮区', description: 'renderBtn 完全自定义按钮区域，支持异步提交、保存草稿、确认弹窗等交互。', component: getComponent('form/16-custom-button'), code: code('form/16-custom-button') },
       { key: 'detail-mode', title: '详情模式', description: '编辑/详情双模式切换：详情模式禁用所有字段并隐藏按钮，编辑模式恢复可交互。', component: getComponent('form/17-detail-mode'), code: code('form/17-detail-mode') },
@@ -160,20 +160,20 @@ export const docsData: Record<string, any> = {
       { name: '联动', desc: '与 EsForm 无缝联动', icon: 'Connection' }
     ],
     examples: [
-      { key: 'basic', title: '基础表格', description: '通过 columns JSON 配置生成完整表格。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
+      { key: 'basic', title: '配置化基础表格', description: '一份 columns JSON 渲染整张表格，不写模板、不写插槽。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
       { key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
       { key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
       { key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
       { key: 'edit', title: '行内编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
       { key: 'sort', title: '排序表格', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
       { key: 'group', title: '分组表头', description: 'groups 嵌套列配置实现多级分组表头。', component: getComponent('table/07-group'), code: code('table/07-group') },
-      { key: 'fixed', title: '固定列与高度', description: 'fixed 固定列 + 自适应高度，适合宽表展示。', component: getComponent('table/08-fixed'), code: code('table/08-fixed') },
+      { key: 'fixed', title: '固定列与固定高度', description: 'fixed 固定列 + heightType: height 固定高度，宽表横向滚动时关键列始终可见。', component: getComponent('table/08-fixed'), code: code('table/08-fixed') },
       { key: 'pagination', title: '分页表格', description: '配置 httpRequest + configTableOut 对接免费接口，v-model 双向绑定自动分页。', component: getComponent('table/09-pagination'), code: code('table/09-pagination') },
       { key: 'remote-data', title: '远程数据表格', description: 'actionUrl + httpRequest + configTableOut 完整远程数据请求与分页。', component: getComponent('table/10-remote-data'), code: code('table/10-remote-data') },
       { key: 'expand', title: '展开行与树形', description: 'type:expand 展开行 + children 树形数据两种层级展示模式。', component: getComponent('table/11-expand'), code: code('table/11-expand') },
-      { key: 'cell-merge', title: '单元格合并与行样式', description: 'spanMethod 合并单元格 + rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
+      { key: 'cell-merge', title: '声明式行合并与行样式', description: 'mergeConfig.rowsBy 声明式合并单元格（同一份 JSON 三端通用，无需手写 span 函数）+ rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
       { key: 'query-table', title: '配置化查询表格', description: '查询区也是配置：es-form 嵌套进 es-table，按钮 key=query/rest + triggerEvent 自动联动，整页没有 handleSearch / handleReset。', component: getComponent('table/13-query-table'), code: code('table/13-query-table') },
-      { key: 'row-actions', title: '行操作按钮与动态显隐', description: 'btns 配置化行操作按钮 + configBtn 的 isHide/disabled 函数式控制。', component: getComponent('table/14-row-actions'), code: code('table/14-row-actions') },
+      { key: 'row-actions', title: '行操作按钮与动态显隐', description: 'btns 配置化行操作：hidden 按行状态显隐、configBtn disabled 按当前角色禁用，切换角色即可观察。', component: getComponent('table/14-row-actions'), code: code('table/14-row-actions') },
       { key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
       { key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
       { key: 'current-row', title: '当前行与主从联动', description: 'highlightCurrentRow 行高亮 + @current-change 事件驱动从表 + 汇总统计。', component: getComponent('table/17-current-row'), code: code('table/17-current-row') },
@@ -279,6 +279,7 @@ export const docsData: Record<string, any> = {
         { name: 'pagination-current-change', params: '(pagination)', desc: '页码变化时触发' },
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
         { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' },
+        { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组；开启 cachePageSelection 时跨页全集用 getSelectionRows() 取' },
         { name: 'request-error', params: '(error)', desc: '自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null' }
       ],
       methods: [
@@ -299,6 +300,9 @@ export const docsData: Record<string, any> = {
         { name: 'clearActived', params: '-', desc: 'vxe 行内编辑：清除当前激活（编辑中）单元格' },
         { name: 'clearValidate', params: '-', desc: 'vxe 行内编辑：清除校验状态' },
         { name: 'validate', params: '(rows?)', desc: 'vxe 行内编辑：校验表格（可指定行），返回 Promise' },
+        { name: 'exportData', params: '(opts?)', desc: 'vxe 导出：导出当前数据（xlsx/csv/xml/html，opts 即 vxe exportData 配置）' },
+        { name: 'print', params: '(opts?)', desc: 'vxe 打印：调用 vxe 打印；可传 { html } 打印 getPrintHtml 修正过的 HTML' },
+        { name: 'getPrintHtml', params: '(opts?)', desc: 'vxe 打印：取表格 HTML 字符串（vxe 打印不执行 spanMethod，合并区需配合 patchHtmlRowSpans 修正）' },
         { name: 'vxeInstance', params: '-', desc: 'vxe 原始实例，访问 vxe-table 全部方法/事件（engine: "vxe" 时有效）' }
       ],
       slots: [
@@ -317,16 +321,16 @@ export const docsData: Record<string, any> = {
       { name: '程序化控制', desc: 'openDialog/closeDialog 方法支持外部程序化控制弹窗', icon: 'Setting' }
     ],
     examples: [
-      { key: 'basic', title: '基础 CRUD', description: '最简 actions 模式：查询+表格+新增编辑删除，展示旧版 schema 驱动。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
-      { key: 'multi-dialog', title: '多弹窗绑定', description: 'toolbarBtns + operationColumn + dialogs 完整展示按钮-弹窗绑定。', component: getComponent('crud-page/02-multi-dialog'), code: code('crud-page/02-multi-dialog') },
-      { key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs 使用 render 函数渲染自定义组件（文件上传、统计面板）。', component: getComponent('crud-page/03-custom-render'), code: code('crud-page/03-custom-render') },
-      { key: 'dynamic-title', title: '动态标题与回填', description: 'edit 弹窗 title 为函数 + 表单自动回填行数据。', component: getComponent('crud-page/04-dynamic-title'), code: code('crud-page/04-dynamic-title') },
-      { key: 'row-confirm', title: '行确认与删除', description: '操作列 confirm 确认提示 + btn-click 事件处理删除/发布。', component: getComponent('crud-page/05-row-confirm'), code: code('crud-page/05-row-confirm') },
-      { key: 'permission', title: '权限控制按钮', description: 'permissionValue 配合 configureEsPlus permission 函数控制按钮显隐。', component: getComponent('crud-page/06-permission'), code: code('crud-page/06-permission') },
-      { key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 自定义三按钮（取消/拒绝/通过）实现审批场景。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
-      { key: 'program-open', title: '程序化控制弹窗', description: '通过 ref.openDialog / closeDialog 程序化控制弹窗打开。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
-      { key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏操作，只读列表场景。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
-      { key: 'full-business', title: '完整业务场景', description: '用户管理全功能：多弹窗+动态标题+render详情+确认+导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
+      { key: 'basic', title: '基础 CRUD', description: '只写一行 actions：工具栏、操作列、弹窗全部自动派生；增删改真正落到数据源。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
+      { key: 'multi-dialog', title: '多弹窗绑定', description: '一个页面挂新增/编辑/批量分配三个弹窗，按钮到弹窗全靠 dialogKey 绑定。', component: getComponent('crud-page/02-multi-dialog'), code: code('crud-page/02-multi-dialog') },
+      { key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs.render 接管弹窗：拖拽上传真的入库，统计面板读的是实时数据。', component: getComponent('crud-page/03-custom-render'), code: code('crud-page/03-custom-render') },
+      { key: 'dynamic-title', title: '动态标题与回填', description: 'title 写成函数跟着行数据变，编辑弹窗按 prop 路径自动回填选中行。', component: getComponent('crud-page/04-dynamic-title'), code: code('crud-page/04-dynamic-title') },
+      { key: 'row-confirm', title: '行确认与删除', description: '危险操作先走 confirm 二次确认，确认后才真正删除/发布/批量归档。', component: getComponent('crud-page/05-row-confirm'), code: code('crud-page/05-row-confirm') },
+      { key: 'permission', title: '权限控制按钮', description: 'permissionValue + configureEsPlus(permission)：切角色即时隐藏无权按钮。', component: getComponent('crud-page/06-permission'), code: code('crud-page/06-permission') },
+      { key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
+      { key: 'program-open', title: '程序化控制弹窗', description: 'ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
+      { key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
+      { key: 'full-business', title: '完整业务场景', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
     ],
     api: {
       props: [

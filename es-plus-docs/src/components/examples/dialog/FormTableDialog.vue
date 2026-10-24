@@ -41,16 +41,23 @@ const columns = [
     return <ElTag type={s.type} size="small">{s.text}</ElTag>
   }},
   { prop: 'manager', label: '负责人' },
-  { prop: 'budget', label: '预算', width: 120, formatter: (r) => `¥${r.budget.toLocaleString()}` }
+  { prop: 'budget', label: '预算', width: 120, formatter: (r) => `¥${r.budget.toLocaleString()}` },
+  {
+    // btns 是「列」的配置（prop/key 必须是 operate），不是表级配置：
+    // 放在 tableOptions 里组件不会消费，操作按钮根本不渲染
+    prop: 'operate',
+    label: '操作',
+    width: 140,
+    btns: [
+      { name: '编辑', type: 'primary', clickEvent: (row) => openEditDialog(row) },
+      { name: '删除', type: 'danger', clickEvent: (row) => handleDelete(row) }
+    ]
+  }
 ]
 
 const tableOptions = {
   border: true,
-  leftText: '项目列表',
-  btns: [
-    { name: '编辑', type: 'primary', size: 'small', clickEvent: (row) => openEditDialog(row) },
-    { name: '删除', type: 'danger', size: 'small', clickEvent: (row) => handleDelete(row) }
-  ]
+  leftText: '项目列表'
 }
 
 const openEditDialog = (row) => {
@@ -64,7 +71,7 @@ const openEditDialog = (row) => {
         model={formData.value}
         formItemList={formItems}
         rules={formRules}
-        layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }}
+        layoutFormProps={{ formLayProps: { labelWidth: '80px' } }}
       />
     ),
     configBtn: [
@@ -121,7 +128,7 @@ const openCRUD = () => {
                 model={formData.value}
                 formItemList={formItems}
                 rules={formRules}
-                layoutFormProps={{ fromLayProps: { labelWidth: '80px' } }}
+                layoutFormProps={{ formLayProps: { labelWidth: '80px' } }}
               />
             ),
             configBtn: [
