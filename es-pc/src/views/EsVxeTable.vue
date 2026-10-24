@@ -34,8 +34,8 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
     <section id="examples">
       <h2>📝 案例</h2>
 
-      <h3>基础表格</h3>
-      <p>使用 <code>engine: 'vxe'</code> 切换到 vxe 引擎，其余配置与标准引擎完全一致。</p>
+      <h3>引擎切换工作台：500 → 5 万行</h3>
+      <p>同一份工单数据现场切换 <code>a-table</code> / <code>vxe-grid</code>：实测渲染耗时与表体 DOM 行数；勾选、排序、列宽写在配置里随引擎保留；5 万行只给 vxe —— <code>engine</code> 是可观测的能力上限，不是架构二选一。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/Basic.vue']">
         <EsVxeBasic />
       </CodeDemo>

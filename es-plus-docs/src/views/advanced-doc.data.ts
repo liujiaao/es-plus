@@ -154,7 +154,7 @@ export const docsData: Record<string, any> = {
   },
   'vxe-table': {
     title: '高性能 vxe-table 表格',
-    description: '通过 options.engine: "vxe" 一行切换至 vxe-table 高性能引擎，获得行内编辑、树形数据、导出、工具栏、服务端分页等企业级能力，同时保持 es-plus 配置化与联动范式不变。',
+    description: '通过 options.engine: "vxe" 一行切换至 vxe-table 高性能引擎，获得虚拟滚动、行内编辑、树形数据、导出、工具栏、服务端分页等企业级能力，同时保持 es-plus 配置化与联动范式不变。引擎可以运行期切换：同一份 columns / data 在两个渲染层之间现场迁移，勾选、排序、列宽随配置保留。',
     features: [
       { name: '一行切换引擎', desc: 'options.engine: "vxe" 即可切换，列配置/联动/render 零改动', icon: 'Switch' },
       { name: '行内编辑', desc: 'cell/row 两种模式，editRender 配置 $input/$select，内置校验', icon: 'Edit' },
@@ -164,7 +164,7 @@ export const docsData: Record<string, any> = {
       { name: '逃生舱', desc: 'vxeConfig 深度合并原生配置，vxeOn 注入任意 vxe 事件', icon: 'Tools' },
     ],
     examples: [
-      { key: 'basic-switch', title: '引擎切换', description: '一行配置在 el-table（默认）与 vxe-table（高性能）之间切换，列配置/数据/联动完全兼容。', component: getComponent('vxe-table/01-basic-switch'), code: code('vxe-table/01-basic-switch') },
+      { key: 'basic-switch', title: '引擎切换工作台：500 → 5 万行', description: '同一份工单数据现场切换 el-table / vxe：实测渲染耗时与表体 DOM 行数；勾选、排序、列宽写在配置里随引擎保留；5 万行只给 vxe —— 把 engine 从"玩具开关"变成可观测的能力上限。', component: getComponent('vxe-table/01-basic-switch'), code: code('vxe-table/01-basic-switch') },
       { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
       { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行的内容用列 render 返回（ElDescriptions 详情卡），不写插槽、不写模板。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
       { key: 'sort-formatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。', component: getComponent('vxe-table/04-sort-formatter'), code: code('vxe-table/04-sort-formatter') },
