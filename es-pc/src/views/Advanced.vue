@@ -176,8 +176,11 @@
     <a-divider />
 
     <section id="step-import-wizard">
-      <h2>分步导入向导</h2>
-      <p>useDialog 多步骤：配置表单 → 预览表格 → 确认提交，<code>configBtn</code> 动态按钮。</p>
+      <h2>可回滚的批量导入</h2>
+      <p>
+        CSV 前端校验（必填 / 枚举 / 数字 / 重复）→ 错误行就地修正 → 每 3 条一批提交；服务端只裁决审批阈值，
+        被拒行修正后只补交待导入行；结果表由 <code>entryQuery</code> 带入批次号重查，整批可回滚。
+      </p>
             <CodeDemo :source="rawSFCs['./es-advanced/StepImportWizard.vue']">
         <StepImportWizard />
       </CodeDemo>

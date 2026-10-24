@@ -1,136 +1,383 @@
 <template>
-  <div class="example-step-import">
-    <el-button type="primary" @click="openImportDialog">导入数据</el-button>
-    <!-- 导入结果落在页面上：每完成一次向导，这里多出这次通过校验的行 -->
-    <div v-if="importedRows.length" class="import-result">
-      <p class="import-result__title">已导入 {{ importedRows.length }} 条</p>
-      <el-table :data="importedRows" size="small" border style="max-width: 620px">
-        <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="dept" label="部门" width="110" />
-        <el-table-column prop="importType" label="类型" width="110" />
-        <el-table-column prop="salary" label="薪资">
-          <template #default="{ row }">¥{{ row.salary.toLocaleString() }}</template>
-        </el-table-column>
-      </el-table>
+  <div class="import-wizard">
+    <p class="wizard-hint">
+      粘贴 CSV → 前端校验（必填 / 枚举 / 数字 / 重复）→ 错误行就地修正 → 每 3 条一批提交。
+      服务端只裁决业务规则（薪资超过 ¥20,000 需审批），被拒行修正后再提交，
+      <strong>只补交待导入 / 失败行，已成功的行不会重提</strong>。导入结果由
+      <code>entryQuery</code> 带入批次号重新查询，整批可回滚。
+    </p>
+
+    <div class="wizard-actions">
+      <el-button type="primary" @click="openWizard">导入员工数据</el-button>
+      <span v-if="lastBatchId" class="batch-meta">
+        批次 <code>{{ lastBatchId }}</code> · {{ batchRowCount }} 条
+      </span>
     </div>
+
+    <template v-if="lastBatchId">
+      <div class="batch-bar">
+        <span>结果表由 <code>entryQuery: { batchId }</code> 触发重新请求，不是本地赋值</span>
+        <el-button link type="danger" size="small" @click="rollbackBatch">回滚该批次</el-button>
+      </div>
+      <es-table ref="resultRef" :columns="resultColumns" :options="resultOptions" />
+    </template>
   </div>
 </template>
 
 <script setup lang="jsx">
-import { ref, reactive } from 'vue'
-import { ElMessage, ElSteps, ElStep } from 'element-plus'
+import { ref, reactive, computed, nextTick } from 'vue'
+import { ElMessage, ElTag, ElInput, ElButton, ElSteps, ElStep } from 'element-plus'
 import { EsTable, EsForm, useDialog } from '@es-plus/vue3'
 
-// 跨弹窗存活：向导确认后把通过校验的行追加到这里
-const importedRows = ref([])
+const DEPARTMENTS = ['技术部', '产品部', '市场部', '财务部']
+const DEPT_OPTIONS = DEPARTMENTS.map((d) => ({ label: d, value: d }))
+// 「HR 系统里已存在的员工」：前端查重是导入的第一道闸
+const ROSTER = new Set(['孙七', '钱一'])
+const APPROVAL_LIMIT = 20000
+const CHUNK_SIZE = 3
+const SAMPLE_CSV = [
+  '姓名,部门,薪资',
+  '张三,技术部,12000',
+  '李四,销售部,9000',
+  '王五,产品部,',
+  '张三,技术部,12000',
+  '赵六,财务部,abc',
+  '孙七,市场部,15000',
+  '周八,产品部,22000',
+  '吴九,技术部,9800'
+].join('\n')
+
+// ── 假后端：按批次整批存取，回滚 = 整批删除 ──
+const batches = reactive([])
+const lastBatchId = ref('')
+const resultRef = ref(null)
+let batchSeq = 0
+
+const findBatch = (id) => batches.find((batch) => batch.id === id)
+const batchRowCount = computed(() => {
+  const batch = lastBatchId.value ? findBatch(lastBatchId.value) : null
+  return batch ? batch.rows.length : 0
+})
+
+// entryQuery 在「请求发出时」取值，所以 formParams 里一定有当前批次号
+const fetchBatchRows = (payload) =>
+  new Promise((resolve) => {
+    const batchId = payload && payload.formParams && payload.formParams.batchId
+    setTimeout(() => {
+      const rows = (findBatch(batchId) || { rows: [] }).rows
+      resolve({ code: 0, result: { rows, total: rows.length } })
+    }, 260)
+  })
+
+const resultColumns = [
+  { prop: 'lineNo', label: '行', width: 56, align: 'center' },
+  { prop: 'name', label: '姓名', minWidth: 100 },
+  { prop: 'dept', label: '部门', width: 100 },
+  { prop: 'salary', label: '薪资', width: 110, align: 'right', formatter: (row) => `¥${Number(row.salary).toLocaleString()}` },
+  { prop: 'batchId', label: '批次', minWidth: 150 }
+]
+
+const resultOptions = computed(() => ({
+  border: true,
+  size: 'small',
+  rowkey: 'lineNo',
+  heightType: 'height',
+  tabHeight: 200,
+  httpRequest: fetchBatchRows,
+  apiParams: { url: '/api/import/rows', model: {} },
+  entryQuery: { batchId: lastBatchId.value },
+  configTableOut: { tableData: 'rows', total: 'total' }
+}))
+
+const rollbackBatch = () => {
+  const index = batches.findIndex((batch) => batch.id === lastBatchId.value)
+  if (index === -1) return
+  batches.splice(index, 1)
+  resultRef.value && resultRef.value.reload()
+  ElMessage.success(`已回滚批次 ${lastBatchId.value}：后端整批删除，按同一批次号重查为空`)
+}
 
 const dialog = useDialog()
 
-const generateMockImportData = (count, type) => {
-  const names = ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十']
-  const depts = ['技术部', '产品部', '市场部', '财务部']
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    name: names[i % names.length],
-    dept: depts[i % depts.length],
-    type,
-    salary: [8000, 12000, 18000, 25000][i % 4],
-    valid: i % 7 !== 0,
-    error: i % 7 === 0 ? '姓名格式错误' : ''
-  }))
-}
+const openWizard = () => {
+  const step = ref(0)
+  const csvText = ref(SAMPLE_CSV)
+  const rows = reactive([])
+  const logs = reactive([])
+  const fixingId = ref(null)
+  const fixModel = reactive({ name: '', dept: '', salary: null })
+  const submitting = ref(false)
+  const batchId = ref('')
+  let fixFormRef = null
 
-const openImportDialog = () => {
-  const currentStep = ref(0)
-  const step1Model = reactive({ importType: 'employee', source: 'excel', sheet: 'Sheet1' })
-  const step2Model = reactive({ data: [] })
-  const step3Model = reactive({ confirmName: '', remark: '' })
-
-  const step1Items = [
-    { prop: 'importType', label: '导入类型', formtype: 'Select', span: 24,
-      dataOptions: [
-        { label: '员工数据', value: 'employee' },
-        { label: '薪资数据', value: 'salary' },
-        { label: '考勤数据', value: 'attendance' }
-      ],
-      attrs: { placeholder: '选择导入类型' }
-    },
-    { prop: 'source', label: '数据来源', formtype: 'Radio', span: 24,
-      dataOptions: [
-        { label: 'Excel文件', value: 'excel' },
-        { label: 'CSV文件', value: 'csv' },
-        { label: '手动输入', value: 'manual' }
-      ]
-    },
-    { prop: 'sheet', label: '工作表', formtype: 'Input', span: 24,
-      isHidden: (model) => model.source !== 'excel',
-      attrs: { placeholder: '工作表名称' }
+  const validateRow = (row) => {
+    const errors = []
+    if (!row.name) errors.push('姓名必填')
+    else if (ROSTER.has(row.name)) errors.push(`系统中已存在「${row.name}」`)
+    if (!DEPARTMENTS.includes(row.dept)) errors.push(`部门必须是 ${DEPARTMENTS.join(' / ')}`)
+    if (row.salary === null || row.salary === undefined || Number.isNaN(Number(row.salary))) {
+      errors.push('薪资必填且必须是数字')
+    } else if (Number(row.salary) <= 0) {
+      errors.push('薪资必须大于 0')
     }
-  ]
-
-  const previewColumns = [
-    { prop: 'id', label: '序号', width: 60 },
-    { prop: 'name', label: '姓名', width: 80 },
-    { prop: 'dept', label: '部门', width: 90 },
-    { prop: 'type', label: '类型', width: 80 },
-    { prop: 'salary', label: '薪资',  formatter: (r) => `¥${r.salary.toLocaleString()}` },
-    {
-      prop: 'valid', label: '校验', 
-      render: (_, { row }) => row.valid
-        ? <span style="color: #67c23a">通过</span>
-        : <span style="color: #f56c6c">{row.error}</span>
-    }
-  ]
-
-  const step3Items = [
-    { prop: 'confirmName', label: '确认人', formtype: 'Input', span: 24, attrs: { placeholder: '请输入确认人姓名' } },
-    { prop: 'remark', label: '备注', formtype: 'Input', span: 24, attrs: { placeholder: '导入备注（选填）', type: 'textarea', rows: 2 } }
-  ]
-
-  const loadPreviewData = () => {
-    step2Model.data = generateMockImportData(12, step1Model.importType)
+    const dup = rows.find(
+      (other) => other.id < row.id && other.name === row.name && other.dept === row.dept && other.salary === row.salary
+    )
+    if (row.name && dup) errors.push(`与第 ${dup.id} 行重复`)
+    return errors
   }
 
+  const validateAll = () => {
+    rows.forEach((row) => {
+      if (row.status === 'imported') return
+      row.errors = validateRow(row)
+      if (row.errors.length) row.status = 'invalid'
+      else if (row.status !== 'failed') row.status = 'ready'
+    })
+  }
+
+  const invalidCount = computed(() => rows.filter((row) => row.status === 'invalid').length)
+  const importedCount = computed(() => rows.filter((row) => row.status === 'imported').length)
+  const readyCount = computed(() => rows.filter((row) => row.status === 'ready').length)
+  const pendingRows = computed(() => rows.filter((row) => row.status === 'ready' || row.status === 'failed'))
+  const allDone = computed(() => rows.length > 0 && pendingRows.value.length === 0 && invalidCount.value === 0)
+
+  const parseCsv = () => {
+    const lines = csvText.value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+    if (lines.length && /^(姓名|name)/i.test(lines[0])) lines.shift()
+    const parsed = lines.map((line, index) => {
+      const [name = '', dept = '', salary = ''] = line.split(/[,\t，]/).map((cell) => cell.trim())
+      return {
+        id: index + 1,
+        lineNo: index + 1,
+        name,
+        dept,
+        salary: salary === '' ? null : Number(salary),
+        errors: [],
+        status: 'ready',
+        serverMsg: ''
+      }
+    })
+    if (!parsed.length) {
+      ElMessage.warning('没有解析到数据行')
+      return
+    }
+    rows.splice(0, rows.length, ...parsed)
+    logs.splice(0, logs.length)
+    step.value = 1
+    validateAll()
+  }
+
+  const startFix = (row) => {
+    fixingId.value = row.id
+    fixModel.name = row.name
+    fixModel.dept = row.dept
+    fixModel.salary = Number.isNaN(Number(row.salary)) ? null : row.salary
+  }
+
+  const cancelFix = () => {
+    fixingId.value = null
+  }
+
+  const applyFix = async () => {
+    let result = true
+    try {
+      result = await (fixFormRef && fixFormRef.validate())
+    } catch (error) {
+      result = false
+    }
+    if (result === false) return
+    const target = rows.find((row) => row.id === fixingId.value)
+    if (!target) return
+    target.name = String(fixModel.name || '').trim()
+    target.dept = fixModel.dept
+    target.salary = fixModel.salary === null || fixModel.salary === '' ? null : Number(fixModel.salary)
+    target.serverMsg = ''
+    target.status = 'ready'
+    validateAll()
+    if (target.status === 'invalid') {
+      ElMessage.error(`仍未通过校验：${target.errors[0]}`)
+      return
+    }
+    fixingId.value = null
+  }
+
+  // 服务端：只裁决业务规则，不重复前端格式校验
+  const serverDecision = (chunk) =>
+    new Promise((resolve) => {
+      setTimeout(() => {
+        const accepted = []
+        const rejected = []
+        chunk.forEach((row) => {
+          if (Number(row.salary) > APPROVAL_LIMIT) {
+            rejected.push({
+              id: row.id,
+              message: `薪资 ¥${Number(row.salary).toLocaleString()} 超过审批阈值 ¥${APPROVAL_LIMIT.toLocaleString()}`
+            })
+          } else {
+            accepted.push(row)
+          }
+        })
+        resolve({ accepted, rejected })
+      }, 240)
+    })
+
+  const ensureBatch = () => {
+    if (!batchId.value) {
+      batchSeq += 1
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      batchId.value = `IMP-${stamp}-${String(batchSeq).padStart(3, '0')}`
+      batches.push({ id: batchId.value, rows: [] })
+    }
+    return findBatch(batchId.value)
+  }
+
+  const publishBatch = async () => {
+    // 批次号可能已在首次成功后发布；这里仍要 reload，补交待导入行后表格才看得到最新结果
+    lastBatchId.value = batchId.value
+    await nextTick()
+    resultRef.value && resultRef.value.reload()
+  }
+
+  const submitPending = async () => {
+    const pending = rows.filter((row) => row.status === 'ready' || row.status === 'failed')
+    if (!pending.length) return
+    submitting.value = true
+    const batch = ensureBatch()
+    logs.push(`批次 ${batch.id} 开始提交：${pending.length} 条，每批 ${CHUNK_SIZE} 条`)
+    let rejectedTotal = 0
+    try {
+      const chunks = []
+      for (let i = 0; i < pending.length; i += CHUNK_SIZE) chunks.push(pending.slice(i, i + CHUNK_SIZE))
+      for (let i = 0; i < chunks.length; i += 1) {
+        const { accepted, rejected } = await serverDecision(chunks[i])
+        accepted.forEach((row) => {
+          row.status = 'imported'
+          row.serverMsg = ''
+          batch.rows.push({ ...row, batchId: batch.id })
+        })
+        rejected.forEach(({ id, message: reason }) => {
+          const target = rows.find((row) => row.id === id)
+          if (!target) return
+          target.status = 'failed'
+          target.serverMsg = reason
+        })
+        rejectedTotal += rejected.length
+        const names = rejected.map(({ id }) => (rows.find((row) => row.id === id) || {}).name).filter(Boolean)
+        logs.push(
+          `第 ${i + 1}/${chunks.length} 批：成功 ${accepted.length} 条${rejected.length ? ` · 被拒 ${rejected.length} 条（${names.join('、')}）` : ''}`
+        )
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      }
+      await publishBatch()
+      if (rejectedTotal) ElMessage.warning(`本轮被拒 ${rejectedTotal} 条，修正后可再次提交`)
+      else ElMessage.success(`已导入 ${batch.rows.length} 条，点「完成」回到页面查看批次`)
+    } finally {
+      submitting.value = false
+    }
+  }
+
+  const previewColumns = [
+    { prop: 'lineNo', label: '行', width: 52, align: 'center' },
+    { prop: 'name', label: '姓名', width: 90 },
+    { prop: 'dept', label: '部门', width: 90 },
+    {
+      prop: 'salary',
+      label: '薪资',
+      width: 100,
+      align: 'right',
+      formatter: (row) => (row.salary === null || Number.isNaN(Number(row.salary)) ? '—' : `¥${Number(row.salary).toLocaleString()}`)
+    },
+    {
+      prop: 'status',
+      label: '状态',
+      width: 88,
+      render: (_, { row }) => {
+        const map = {
+          invalid: ['待修正', 'danger'],
+          ready: ['待导入', 'warning'],
+          imported: ['已导入', 'success'],
+          failed: ['被拒', 'danger']
+        }
+        const [text, type] = map[row.status] || ['—', 'info']
+        return <ElTag size="small" type={type}>{text}</ElTag>
+      }
+    },
+    {
+      prop: 'problem',
+      label: '问题',
+      minWidth: 170,
+      render: (_, { row }) => {
+        const message = row.errors[0] || row.serverMsg
+        return message ? <span style={{ color: '#f56c6c' }}>{message}</span> : <span style={{ color: '#c0c4cc' }}>—</span>
+      }
+    },
+    {
+      prop: 'operate',
+      label: '操作',
+      width: 76,
+      btns: [
+        {
+          name: '修正',
+          type: 'primary',
+          hidden: (row) => row.status !== 'invalid' && row.status !== 'failed',
+          clickEvent: startFix
+        }
+      ]
+    }
+  ]
+
+  const previewOptions = { border: true, size: 'small', rowkey: 'id', heightType: 'height', tabHeight: 260 }
+
+  const fixFormItems = [
+    {
+      prop: 'name',
+      label: '姓名',
+      formtype: 'Input',
+      span: 8,
+      formItemOptions: { rules: [{ required: true, message: '请输入姓名' }] }
+    },
+    {
+      prop: 'dept',
+      label: '部门',
+      formtype: 'Select',
+      span: 8,
+      dataOptions: DEPT_OPTIONS,
+      formItemOptions: { rules: [{ required: true, message: '请选择部门' }] }
+    },
+    {
+      prop: 'salary',
+      label: '薪资',
+      formtype: 'InputNumber',
+      span: 8,
+      attrs: { min: 1, style: 'width: 100%' },
+      formItemOptions: { rules: [{ required: true, message: '请输入薪资' }] }
+    }
+  ]
+
   dialog({
-    title: '数据导入向导',
-    width: '800px',
-    render: (h, { registerRef }) => {
+    title: '批量导入向导',
+    width: '860px',
+    render: () => {
       const stepsEl = (
-        <ElSteps active={currentStep.value} finishStatus="success" simple style="margin-bottom: 20px">
-          <ElStep title="配置" />
-          <ElStep title="预览" />
-          <ElStep title="确认" />
+        <ElSteps active={step.value} simple finishStatus="success" style="margin-bottom: 16px">
+          <ElStep title="读取 CSV" />
+          <ElStep title="校验并导入" />
         </ElSteps>
       )
 
-      if (currentStep.value === 0) {
+      if (step.value === 0) {
         return (
           <div>
             {stepsEl}
-            <EsForm
-              ref={(el) => { if (el) registerRef('step1Form', el) }}
-              model={step1Model}
-              formItemList={step1Items}
-              layoutFormProps={{ formLayProps: { labelWidth: '100px' } }}
-            />
-          </div>
-        )
-      }
-
-      if (currentStep.value === 1) {
-        return (
-          <div>
-            {stepsEl}
-            <div style={{ marginBottom: '8px', color: '#909399', fontSize: '13px' }}>
-              共 {step2Model.data.length} 条数据，
-              有效 {step2Model.data.filter(d => d.valid).length} 条，
-              异常 {step2Model.data.filter(d => !d.valid).length} 条
-            </div>
-            <EsTable
-              dataSource={step2Model.data}
-              columns={previewColumns}
-              options={{ border: true, size: 'small', heightType: 'height', tabHeight: 300 }}
-            />
+            <ElInput v-model={csvText.value} type="textarea" rows={8} placeholder="每行一条：姓名,部门,薪资" />
+            <p class="csv-tip">
+              第一行表头可省略；分隔符支持 <code>,</code> / <code>，</code> / Tab。示例里刻意混入了
+              部门不存在、薪资缺失、非数字、重复行和系统中已存在的员工。
+            </p>
           </div>
         )
       }
@@ -138,51 +385,68 @@ const openImportDialog = () => {
       return (
         <div>
           {stepsEl}
-          <el-descriptions column={2} border size="small" style="margin-bottom: 16px">
-            <el-descriptions-item label="导入类型">{step1Model.importType === 'employee' ? '员工数据' : step1Model.importType}</el-descriptions-item>
-            <el-descriptions-item label="数据来源">{step1Model.source === 'excel' ? 'Excel文件' : step1Model.source}</el-descriptions-item>
-            <el-descriptions-item label="数据条数">{step2Model.data.length}</el-descriptions-item>
-            <el-descriptions-item label="有效数据">{step2Model.data.filter(d => d.valid).length}</el-descriptions-item>
-          </el-descriptions>
-          <EsForm
-            ref={(el) => { if (el) registerRef('step3Form', el) }}
-            model={step3Model}
-            formItemList={step3Items}
-            layoutFormProps={{ formLayProps: { labelWidth: '100px' } }}
-          />
+          <div class="wizard-summary">
+            共 {rows.length} 行 · 可导入 {readyCount.value} · 待修正 {invalidCount.value} · 已导入 {importedCount.value}
+          </div>
+          <EsTable dataSource={rows} columns={previewColumns} options={previewOptions} />
+          {fixingId.value !== null && (
+            <div class="fix-panel">
+              <div class="fix-title">修正第 {fixingId.value} 行</div>
+              <EsForm
+                ref={(el) => {
+                  if (el) fixFormRef = el
+                }}
+                model={fixModel}
+                formItemList={fixFormItems}
+                layoutFormProps={{ formLayProps: { labelWidth: '56px', size: 'small' } }}
+              />
+              <div class="fix-actions">
+                <ElButton size="small" onClick={cancelFix}>
+                  取消
+                </ElButton>
+                <ElButton size="small" type="primary" onClick={applyFix}>
+                  保存修正
+                </ElButton>
+              </div>
+            </div>
+          )}
+          {logs.length > 0 && (
+            <ul class="import-log">
+              {logs.map((line, index) => (
+                <li key={index}>{line}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )
     },
     configBtn: [
-      { name: '取消', click: (_, { close }) => close() },
+      { name: '关闭', click: (_, { close }) => close() },
       {
-        name: '上一步', disabled: () => currentStep.value === 0,
-        click: () => { if (currentStep.value > 0) currentStep.value-- }
-      },
-      {
-        name: '下一步', type: 'primary',
-        disabled: () => currentStep.value >= 2,
+        name: '上一步',
+        disabled: () => step.value === 0 || submitting.value || importedCount.value > 0,
         click: () => {
-          if (currentStep.value === 0) {
-            loadPreviewData()
-            currentStep.value = 1
-          } else if (currentStep.value === 1) {
-            currentStep.value = 2
-          }
+          step.value = 0
         }
       },
       {
-        name: '确认导入', type: 'success',
-        disabled: () => currentStep.value !== 2,
-        click: (_, { close }) => {
-          const valid = step2Model.data.filter((d) => d.valid)
-          // 真正落库：通过校验的行进入页面上的导入结果，而不是只弹一句提示
-          importedRows.value = [
-            ...valid.map((d) => ({ ...d, importType: step1Model.importType })),
-            ...importedRows.value
-          ]
-          const who = step3Model.confirmName ? `（确认人：${step3Model.confirmName}）` : ''
-          ElMessage.success(`已导入 ${valid.length} 条数据${who}`)
+        name: '解析并校验',
+        type: 'primary',
+        disabled: () => step.value === 1 || submitting.value,
+        click: parseCsv
+      },
+      {
+        name: '提交',
+        type: 'success',
+        disabled: () => step.value === 0 || submitting.value || invalidCount.value > 0 || pendingRows.value.length === 0,
+        click: submitPending
+      },
+      {
+        name: '完成',
+        type: 'primary',
+        disabled: () => !allDone.value || submitting.value,
+        click: async (_, { close }) => {
+          await publishBatch()
           close()
         }
       }
@@ -191,16 +455,88 @@ const openImportDialog = () => {
 }
 </script>
 
-<style scoped>
-.example-step-import {
+<style>
+/* 弹窗内容由 useDialog 挂到 body，拿不到 scoped 属性，故类名统一前缀、样式全局化 */
+.import-wizard {
   padding: 0;
 }
-.import-result {
-  margin-top: 12px;
-}
-.import-result__title {
-  margin: 0 0 8px;
+
+.import-wizard .wizard-hint {
+  margin: 0 0 14px;
   font-size: 13px;
-  color: #67c23a;
+  line-height: 1.8;
+  color: #606266;
+}
+
+.import-wizard .wizard-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-wizard .batch-meta {
+  font-size: 13px;
+  color: #909399;
+}
+
+.import-wizard .batch-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 14px 0 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.import-wizard code,
+.el-dialog .csv-tip code {
+  background: #f5f5f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  color: #d63384;
+}
+
+.el-dialog .csv-tip {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #909399;
+}
+
+.el-dialog .wizard-summary {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.el-dialog .fix-panel {
+  margin-top: 12px;
+  padding: 12px 12px 4px;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.el-dialog .fix-title {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.el-dialog .fix-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.el-dialog .import-log {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #606266;
 }
 </style>
