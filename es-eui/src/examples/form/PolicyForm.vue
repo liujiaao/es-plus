@@ -28,8 +28,8 @@ export default {
         policyContentType: '1'
       },
       layoutProps: {
-        fromLayProps: {
-          isBtnHiden: true,
+        formLayProps: {
+          isBtnHidden: true,
           labelWidth: '120px',
           size: 'small'
         },

@@ -89,7 +89,7 @@ export default defineComponent({
     })
 
     const layoutFormProps = {
-      fromLayProps: { labelWidth: '90px', size: 'small' },
+      formLayProps: { labelWidth: '90px', size: 'small' },
       rowLayProps: { gutter: 20 }
     }
 

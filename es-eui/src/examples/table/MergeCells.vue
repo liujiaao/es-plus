@@ -26,45 +26,10 @@ export default {
       ],
       options: {
         border: true,
-        spanMethod: ({ row, column, rowIndex, columnIndex }) => {
-          if (columnIndex === 0) {
-            const categoryRowSpan = this.getCategoryRowSpan(row.category, rowIndex)
-            if (categoryRowSpan > 0) {
-              return { rowspan: categoryRowSpan, colspan: 1 }
-            } else {
-              return { rowspan: 0, colspan: 0 }
-            }
-          }
-        }
+        // 声明式合并：同一份 JSON 在三端（el-table / a-table / vxe）都成立，
+        // 不需要手写 span 函数。rowsBy 里的列按「相邻行值相等」切段合并。
+        mergeConfig: { rowsBy: ['category'] }
       }
-    }
-  },
-  methods: {
-    getCategoryRowSpan(category, rowIndex) {
-      const data = this.data
-      if (rowIndex === 0) {
-        let rowspan = 1
-        for (let i = rowIndex + 1; i < data.length; i++) {
-          if (data[i].category === category) {
-            rowspan++
-          } else {
-            break
-          }
-        }
-        return rowspan
-      }
-      if (rowIndex > 0 && data[rowIndex - 1].category === category) {
-        return 0
-      }
-      let rowspan = 1
-      for (let i = rowIndex + 1; i < data.length; i++) {
-        if (data[i].category === category) {
-          rowspan++
-        } else {
-          break
-        }
-      }
-      return rowspan
     }
   }
 }

@@ -23,7 +23,7 @@ export default {
         name: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [

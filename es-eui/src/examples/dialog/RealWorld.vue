@@ -149,7 +149,7 @@ export default {
               ]}
               model={this.realWorldFormData}
               layout-form-props={{
-                fromLayProps: { labelWidth: '100px', size: 'small' },
+                formLayProps: { labelWidth: '100px', size: 'small' },
                 rowLayProps: { gutter: 20 }
               }}
             />
@@ -257,7 +257,7 @@ export default {
               ]}
               model={this.realWorldFormData}
               layout-form-props={{
-                fromLayProps: { labelWidth: '100px', size: 'small' },
+                formLayProps: { labelWidth: '100px', size: 'small' },
                 rowLayProps: { gutter: 20 }
               }}
             />

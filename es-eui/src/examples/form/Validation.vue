@@ -1,6 +1,5 @@
 <template>
   <es-form
-    ref="validateForm"
     :form-item-list="formItemList"
     :model="formData"
     :config-btn="configBtn"
@@ -71,6 +70,26 @@ export default {
             ]
           },
           attrs: { type: 'password', placeholder: '至少6位' }
+        },
+        {
+          prop: 'confirmPassword',
+          label: '确认密码',
+          span: 12,
+          formtype: 'Input',
+          formItemOptions: {
+            rules: [
+              { required: true, message: '请再次输入密码', trigger: 'blur' },
+              // 跨字段校验：validator 里直接读同一份 formData，改密码后确认框失焦即重算
+              {
+                validator: (rule, value, callback) => {
+                  if (value !== this.formData.password) callback(new Error('两次输入的密码不一致'))
+                  else callback()
+                },
+                trigger: 'blur'
+              }
+            ]
+          },
+          attrs: { type: 'password', placeholder: '与密码保持一致' }
         }
       ],
       configBtn: [
@@ -94,17 +113,6 @@ export default {
           }
         }
       ]
-    }
-  },
-  methods: {
-    submitForm() {
-      this.$refs.validateForm.validate((valid) => {
-        if (valid) {
-          this.$message.success('验证通过！')
-        } else {
-          this.$message.error('请检查表单填写')
-        }
-      })
     }
   }
 }

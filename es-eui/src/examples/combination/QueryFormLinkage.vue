@@ -6,7 +6,7 @@
         ref="queryForm"
         :form-item-list="queryFormItems"
         :model="queryFormData"
-        :layout-form-props="{ fromLayProps: { size: 'mini' }, rowLayProps: { gutter: 10 } }"
+        :layout-form-props="{ formLayProps: { size: 'mini' }, rowLayProps: { gutter: 10 } }"
         :configBtn="configBtn"
       />
     </div>
@@ -31,7 +31,6 @@
         configTableOut: {
           total: 'total',
           pageSize: 'limit',
-          current: 'skip',
           tableData: 'users'
         },
         listenToCallBack: {

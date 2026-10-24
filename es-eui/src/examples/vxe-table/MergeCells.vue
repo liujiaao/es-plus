@@ -4,7 +4,7 @@
       type="info"
       :closable="false"
       style="margin-bottom: 10px;"
-      description="企业级复杂合并：三级表头 + spanMethod 行列混合动态合并 + vxeConfig.mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；表单联动切换合并模式 / 事业部筛选"
+      description="企业级复杂合并：两级分组表头（4 组） + spanMethod 行列动态合并 + mergeFooterItems 多行表尾合并 + 可编辑单元格实时重算达成率；表单联动切换合并模式 / 事业部筛选"
     />
 
     <es-form
@@ -17,7 +17,7 @@
       <el-button size="mini" type="primary" icon="el-icon-printer" @click="handlePrintAll">打印全部</el-button>
       <el-button size="mini" @click="handlePrintDept('技术事业部')">打印技术事业部</el-button>
       <el-button size="mini" @click="handlePrintDept('产品事业部')">打印产品事业部</el-button>
-      <span style="font-size: 12px; color: #909399;">分页打印时三级表头在每页自动重复（thead display:table-header-group）</span>
+      <span style="font-size: 12px; color: #909399;">分页打印时分组表头在每页自动重复（thead display:table-header-group）</span>
     </div>
 
     <es-table
@@ -31,10 +31,12 @@
 
 <script lang="jsx">
 /**
- * 复杂合并单元格 —— 三级表头 + spanMethod 动态合并 + 表头/表尾静态合并
+ * 复杂合并单元格 —— 两级分组表头 + spanMethod 动态合并 + 表尾静态合并
  *
  * 关键点（Vue2）：
- *   1. 三级表头用列 groups 嵌套表达；vxeConfig.mergeHeaderItems / mergeFooterItems 做静态合并。
+ *   1. 两级表头用列 groups 嵌套表达（分组行 + 叶子列两个层级）；表尾多行合并走
+ *      vxeConfig.mergeFooterItems。表头合并不再手写 mergeHeaderCells —— groups
+ *      已经表达了几何关系，手写 leaf 下标会在加列时静默错位。
  *   2. spanMethod({ rowIndex, column }) 从闭包 tableData.value 读数据按 column.field 做行合并
  *      （vxe 回调不传 data；多级表头下 columnIndex 是组内相对索引，故用 field 而非索引）；
  *      MERGE_ALWAYS 恒合并，MERGE_FULL 仅「全部合并」时合并。
@@ -133,7 +135,7 @@ export default defineComponent({
     // ─── 达成率彩色渲染 ─────────────────────────────────────────
     const rateColor = (value) => (value >= 100 ? '#67c23a' : value >= 90 ? '#e6a23c' : '#f56c6c')
 
-    // ─── 列配置：三级表头结构 ───────────────────────────────────
+    // ─── 列配置：两级分组表头结构（groups = 分组行，叶子列为第二行） ──
     const columns = [
       {
         label: '组织架构',
@@ -168,8 +170,13 @@ export default defineComponent({
           }
         ]
       },
-      { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
-      { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' }
+      {
+        label: '年度汇总',
+        groups: [
+          { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
+          { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' }
+        ]
+      }
     ]
 
     // 从 columns 动态展开叶子列 field 顺序（colIndex → field），不手数下标
@@ -248,9 +255,9 @@ export default defineComponent({
       printConfig: { sheetName: '员工KPI绩效考核表' },
       _merge: queryForm.enableMerge, // 注入 reactive 依赖：enableMerge 变化时 computed 重算
       vxeConfig: {
-        // 静态表头合并：年度目标 + 年度完成 两列标题合并
-        mergeHeaderItems: [{ row: 0, col: 9, rowspan: 1, colspan: 2 }],
-        // 静态表尾合并：总计行合并事业部+团队两列
+        // 静态表尾合并：总计行合并事业部+团队两列。
+        // 表头不手写合并项（vxe 的键是 mergeHeaderCells，且 col 是叶子列全局下标，
+        // 加列即错位）—— 表头几何交给 columns.groups 表达。
         mergeFooterItems: [{ row: 2, col: 0, rowspan: 1, colspan: 2 }]
       }
     }))

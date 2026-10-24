@@ -21,10 +21,10 @@ export default {
         field6: ''
       },
       layoutProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '120px',
           size: 'small',
-          minfoldRows: 2
+          minFoldRows: 2
         },
         rowLayProps: {
           gutter: 20
@@ -86,7 +86,7 @@ export default {
           label: '字段6（被折叠）',
           span: 8,
           formtype: 'Input',
-          attrs: { placeholder: '超过minfoldRows折叠' }
+          attrs: { placeholder: '超过minFoldRows折叠' }
         }
       ]
     }

@@ -375,10 +375,11 @@ export default defineComponent({
 
       // 2) 后端返回字段 → 内部约定字段映射
       //    DummyJSON 返回 { users, total, skip, limit }
+      //    注意：current 期望「页码」，而 skip 是偏移量（(page-1)*limit），
+      //    映射过来会把分页器拨到错误页码，所以这里不声明 current。
       configTableOut: {
         total: 'total',
         pageSize: 'limit',
-        current: 'skip',
         tableData: 'users'
       },
 

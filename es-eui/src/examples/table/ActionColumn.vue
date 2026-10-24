@@ -7,6 +7,11 @@
 </template>
 
 <script>
+/**
+ * 声明式操作列：列的 key 为 'operate' + 给 btns 数组，组件自动渲染行内按钮。
+ * 不需要写 render、不需要手拼 el-button —— 按钮的文案 / 语义色 / 权限 / 显隐 /
+ * 回调全在配置里。
+ */
 export default {
   data() {
     return {
@@ -17,23 +22,27 @@ export default {
       columns: [
         { key: 'id', label: 'ID', width: 80 },
         { key: 'name', label: '名称' },
-        { key: 'status', label: '状态' },
         {
-          key: 'action',
+          key: 'status',
+          label: '状态',
+          width: 100,
+          render: (h, { row }) => (
+            <el-tag type={row.status === '1' ? 'success' : 'info'} size="small">
+              {row.status === '1' ? '已上架' : '未上架'}
+            </el-tag>
+          )
+        },
+        {
+          key: 'operate',
           label: '操作',
           width: 200,
-          render: (h, { row }) => {
-            return (
-              <div>
-                <el-button size="mini" type="text" on-click={() => this.handleView(row)}>查看</el-button>
-                <el-button size="mini" type="text" on-click={() => this.handleEdit(row)}>编辑</el-button>
-                {row.status === '0' && (
-                  <el-button size="mini" type="text" on-click={() => this.handlePublish(row)}>上架</el-button>
-                )}
-                <el-button size="mini" type="text" style="color: #f56c6c;" on-click={() => this.handleDelete(row)}>删除</el-button>
-              </div>
-            )
-          }
+          btns: [
+            { name: '查看', clickEvent: (row) => this.handleView(row) },
+            { name: '编辑', type: 'primary', clickEvent: (row) => this.handleEdit(row) },
+            // hidden 返回 true 时该行的这个按钮不渲染
+            { name: '上架', type: 'success', hidden: (row) => row.status === '1', clickEvent: (row) => this.handlePublish(row) },
+            { name: '删除', type: 'danger', clickEvent: (row) => this.handleDelete(row) }
+          ]
         }
       ],
       options: { border: true }

@@ -32,7 +32,7 @@ export default {
             ]}
             model={this.formData}
             layout-form-props={{
-              fromLayProps: { labelWidth: '80px' },
+              formLayProps: { labelWidth: '80px' },
               rowLayProps: { gutter: 20 }
             }}
           />

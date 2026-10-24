@@ -75,18 +75,25 @@ export default {
           httpRequest: this.fetchRows
         },
         // ③ 弹窗
+        // onConfirm 一旦由用户接管，组件就不再自动关闭弹窗 —— 必须自己调 close()
         dialogs: {
           add: {
             title: '新增用户',
             width: '520px',
             formItems: this.formFields(),
-            onConfirm: (data) => this.saveRow(null, data)
+            onConfirm: (data, { close }) => {
+              this.saveRow(null, data)
+              close()
+            }
           },
           edit: {
             title: (row) => `编辑「${row.name}」`,
             width: '520px',
             formItems: this.formFields(),
-            onConfirm: (data, { row }) => this.saveRow(row, data)
+            onConfirm: (data, { row, close }) => {
+              this.saveRow(row, data)
+              close()
+            }
           }
         }
       }

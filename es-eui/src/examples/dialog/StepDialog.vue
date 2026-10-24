@@ -86,7 +86,7 @@ export default defineComponent({
                   model={model}
                   form-item-list={stepItems[step]}
                   rules={stepRules[step]}
-                  layout-form-props={{ fromLayProps: { labelWidth: '80px', size: 'small' } }}
+                  layout-form-props={{ formLayProps: { labelWidth: '80px', size: 'small' } }}
                 />
               ) : (
                 <div style="padding: 4px 8px; line-height: 2;">

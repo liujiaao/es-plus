@@ -60,7 +60,7 @@ export default {
             ]}
             model={this.userFormData}
             layout-form-props={{
-              fromLayProps: { labelWidth: '80px', size: 'small' },
+              formLayProps: { labelWidth: '80px', size: 'small' },
               rowLayProps: { gutter: 20 }
             }}
           />

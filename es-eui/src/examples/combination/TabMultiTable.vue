@@ -50,8 +50,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'users'
           },
           listenToCallBack: {
@@ -80,8 +79,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'posts'
           },
           listenToCallBack: {
@@ -107,8 +105,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'products'
           },
           listenToCallBack: {

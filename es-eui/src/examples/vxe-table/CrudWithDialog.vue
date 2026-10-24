@@ -15,7 +15,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
     <!-- 全屏缩放退出按钮：vxe-grid zoom() 覆盖整个视口，configBtn 被遮挡，
@@ -144,7 +144,7 @@ export default defineComponent({
               { prop: 'salary', label: '薪资', span: 24, formtype: 'Input', attrs: { type: 'number' } },
               { prop: 'status', label: '状态', span: 24, formtype: 'Select', dataOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'leave' }] }
             ]}
-            layout-form-props={{ fromLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
+            layout-form-props={{ formLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
           />
         ),
         configBtn: [

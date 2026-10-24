@@ -49,21 +49,22 @@ export default {
         configTableOut: {
           total: 'total',
           pageSize: 'limit',
-          current: 'skip',
           tableData: 'products'
         },
         listenToCallBack: {
-          brcb: (params) => {
-            console.log('【自定义请求拦截】请求参数:', params)
+          // beforeRequest：请求前把分页参数改写成后端认识的 limit / skip
+          beforeRequest: (params) => {
             const { pageSize, pageIndex } = params
             return {
               limit: pageSize,
               skip: (pageIndex - 1) * pageSize
             }
           },
-          qrcb: (res) => {
-            console.log('【自定义响应拦截】响应结果:', res)
-            this.$message.success('数据加载成功（通过自定义 httpRequest）')
+          // afterResponse：返回值会**替换**响应体，所以必须把 res 原样返回。
+          // 只弹提示不返回，组件会把提示对象当数据，表格直接变空。
+          afterResponse: (res) => {
+            this.$message.success(`数据加载成功，本页 ${res.products?.length ?? 0} 条`)
+            return res
           }
         }
       }

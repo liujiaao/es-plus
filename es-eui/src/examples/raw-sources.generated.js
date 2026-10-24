@@ -18,7 +18,7 @@ export const RAW_combination_BatchEdit = `<template>
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -93,7 +93,7 @@ export default defineComponent({
                 dataOptions: STATUS_OPTIONS, attrs: { disabled: !patchForm.useStatus }
               }
             ]}
-            layout-form-props={{ fromLayProps: { isBtnHidden: true, labelWidth: '90px' } }}
+            layout-form-props={{ formLayProps: { isBtnHidden: true, labelWidth: '90px' } }}
           />
         ),
         configBtn: [
@@ -1200,7 +1200,7 @@ export default {
                 ]}
                 model={formData}
                 layout-form-props={{
-                  fromLayProps: { labelWidth: '80px', size: 'small' },
+                  formLayProps: { labelWidth: '80px', size: 'small' },
                   rowLayProps: { gutter: 15 }
                 }}
               />
@@ -1428,7 +1428,7 @@ export default defineComponent({
       }
     ]
 
-    const layout = { fromLayProps: { labelWidth: '80px', size: 'small', inline: true } }
+    const layout = { formLayProps: { labelWidth: '80px', size: 'small', inline: true } }
 
     return { role, allowed, model, formItems, formButtons, data, columns, layout }
   }
@@ -1443,7 +1443,7 @@ export const RAW_combination_QueryFormLinkage = `<template>
         ref="queryForm"
         :form-item-list="queryFormItems"
         :model="queryFormData"
-        :layout-form-props="{ fromLayProps: { size: 'mini' }, rowLayProps: { gutter: 10 } }"
+        :layout-form-props="{ formLayProps: { size: 'mini' }, rowLayProps: { gutter: 10 } }"
         :configBtn="configBtn"
       />
     </div>
@@ -1468,7 +1468,6 @@ export const RAW_combination_QueryFormLinkage = `<template>
         configTableOut: {
           total: 'total',
           pageSize: 'limit',
-          current: 'skip',
           tableData: 'users'
         },
         listenToCallBack: {
@@ -1803,7 +1802,7 @@ export default defineComponent({
       industry: [{ required: true, message: '请选择行业', trigger: 'change' }]
     }
 
-    const layout = { fromLayProps: { labelWidth: '120px', size: 'small' } }
+    const layout = { formLayProps: { labelWidth: '120px', size: 'small' } }
 
     const industryLabel = computed(
       () => industryOptions.find((o) => o.value === model.industry)?.label || '—'
@@ -1881,8 +1880,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'users'
           },
           listenToCallBack: {
@@ -1911,8 +1909,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'posts'
           },
           listenToCallBack: {
@@ -1938,8 +1935,7 @@ export default {
           },
           configTableOut: {
             total: 'total',
-            pageSize: 'limit',
-            current: 'skip',
+            pageSize: 'limit',
             tableData: 'products'
           },
           listenToCallBack: {
@@ -2058,18 +2054,25 @@ export default {
           httpRequest: this.fetchRows
         },
         // ③ 弹窗
+        // onConfirm 一旦由用户接管，组件就不再自动关闭弹窗 —— 必须自己调 close()
         dialogs: {
           add: {
             title: '新增用户',
             width: '520px',
             formItems: this.formFields(),
-            onConfirm: (data) => this.saveRow(null, data)
+            onConfirm: (data, { close }) => {
+              this.saveRow(null, data)
+              close()
+            }
           },
           edit: {
             title: (row) => \`编辑「\${row.name}」\`,
             width: '520px',
             formItems: this.formFields(),
-            onConfirm: (data, { row }) => this.saveRow(row, data)
+            onConfirm: (data, { row, close }) => {
+              this.saveRow(row, data)
+              close()
+            }
           }
         }
       }
@@ -2327,42 +2330,229 @@ export default {
 }
 </script>
 `
-export const RAW_dialog_Confirm = `<template>
-  <div>
-    <el-button @click="openConfirm">确认弹窗</el-button>
+export const RAW_dialog_CachedInstance = `<template>
+  <div class="example-dialog-cached">
+    <el-button type="primary" @click="open">缓存实例（cacheKey）</el-button>
+    <span class="tip">在输入框里写点东西 → 关闭 → 再点一次，内容还在</span>
   </div>
 </template>
 
-<script>
+<script lang="jsx">
+/**
+ * 实例缓存弹窗 —— cacheKey 让「关闭」不等于「销毁」
+ *
+ * 关键点：
+ *   1. 传 cacheKey 时，关闭只把 visible 置 false，组件实例留在内存里；
+ *      再次用同一 cacheKey 打开会复用该实例 —— 表单草稿、滚动位置、tab 选中都还在
+ *   2. 缓存实例 10 分钟内没再被打开才真正销毁（每次打开会重新计时）
+ *   3. 不传 cacheKey 的弹窗关闭即销毁，这是默认行为，适合纯展示内容
+ *
+ * 适用：多步表单中途关掉去查资料、审批填写到一半切走、弹窗内嵌有状态的编辑器
+ */
+import { defineComponent } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
 
-export default {
-  methods: {
-    openConfirm() {
-      const { close } = useDialog()({
-        title: '确认操作',
-        render: () => '确定要执行此操作吗？',
+export default defineComponent({
+  name: 'DialogCachedInstance',
+  setup() {
+    const dialog = useDialog()
+
+    const open = () => {
+      // 草稿状态放在 render 内部组件里，才能证明「实例复用了、状态没丢」；
+      // 若放在 open() 外部，看起来一样但其实是外部状态，说服不了人
+      dialog({
+        title: '缓存实例（cacheKey）',
+        width: '480px',
+        cacheKey: 'eui-cached-draft',
+        render: (h) => h(DraftBox),
+        configBtn: [{ name: '关闭', key: 'close', click: (_, { close }) => close() }]
+      })
+    }
+
+    return { open }
+  }
+})
+
+// 草稿组件：text 是它自己的本地 state，实例被复用时不会重新初始化
+const DraftBox = {
+  name: 'DraftBox',
+  data() {
+    return { text: '' }
+  },
+  render(h) {
+    return (
+      <div style="padding: 20px;">
+        <p style="margin-bottom: 10px; color: #606266;">
+          关闭后再点一次「缓存实例」，下面输入的内容还在 —— 实例被 cacheKey 缓存住了（10 分钟未再打开才回收）。
+        </p>
+        <el-input
+          value={this.text}
+          placeholder="随便输入点什么，关闭再打开看看"
+          on-input={(v) => { this.text = v }}
+        />
+        <p style="margin-top: 10px; color: #909399;">当前输入：{this.text || '（空）'}</p>
+      </div>
+    )
+  }
+}
+</script>
+
+<style scoped>
+.example-dialog-cached {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tip {
+  color: #909399;
+  font-size: 13px;
+}
+</style>
+`
+export const RAW_dialog_Confirm = `<template>
+  <div class="example-dialog-confirm">
+    <el-button type="danger" @click="confirmDelete">删除确认</el-button>
+    <el-button type="warning" @click="confirmPublish">发布确认</el-button>
+    <el-button @click="confirmBeforeClose">关闭前拦截</el-button>
+    <span class="tip">
+      第三个按钮：先在输入框里写点东西，再点右上角 X —— 会先问你「内容还没保存」，选「留下」就关不掉
+    </span>
+  </div>
+</template>
+
+<script lang="jsx">
+/**
+ * 确认弹窗 —— configBtn 自定义按钮语义 + beforeClose 关闭闸门
+ *
+ * 关键点：
+ *   1. 确认逻辑写在按钮的 click 里，close() 由回调参数给出（不依赖 this）
+ *   2. beforeClose(done)：不调用 done() 就不关闭。X 按钮 / 遮罩点击 / ESC 三条关闭路径
+ *      都会先经过它；configBtn 里的 close() 是显式关闭，按设计绕过闸门
+ *   3. 三端（Vue3+Element / Vue3+AntD / Vue2+Element）语义一致
+ */
+import { defineComponent } from '@vue/composition-api'
+import { useDialog } from '@es-plus/vue2'
+import { Message, MessageBox, Icon } from 'element-ui'
+
+export default defineComponent({
+  name: 'DialogConfirm',
+  setup() {
+    const dialog = useDialog()
+
+    const confirmDelete = () => {
+      dialog({
+        title: '确认删除',
+        width: '400px',
+        render: (h) => (
+          <div style="display: flex; align-items: center; padding: 20px;">
+            <Icon type="el-icon-warning" style="font-size: 40px; color: #f56c6c; margin-right: 16px;" />
+            <div>
+              <p style="font-size: 16px; margin-bottom: 8px;">确定要删除这条数据吗？</p>
+              <p style="color: #909399; font-size: 14px;">删除后数据将无法恢复，请谨慎操作。</p>
+            </div>
+          </div>
+        ),
         configBtn: [
+          { name: '取消', key: 'cancel', click: (_, { close }) => close() },
           {
-            name: '取消',
-            key: 'cancel',
-            click: (_, { close }) => close()
-          },
-          {
-            name: '确定',
-            type: 'primary',
+            name: '确定删除',
+            type: 'danger',
             key: 'confirm',
             click: (_, { close }) => {
-              this.\$message.success('操作成功')
+              Message.success('删除成功')
               close()
             }
           }
         ]
       })
     }
+
+    const confirmPublish = () => {
+      dialog({
+        title: '确认发布',
+        width: '400px',
+        render: (h) => (
+          <div style="display: flex; align-items: center; padding: 20px;">
+            <Icon type="el-icon-success" style="font-size: 40px; color: #e6a23c; margin-right: 16px;" />
+            <div>
+              <p style="font-size: 16px; margin-bottom: 8px;">确定要发布这篇文章吗？</p>
+              <p style="color: #909399; font-size: 14px;">发布后将对所有用户可见。</p>
+            </div>
+          </div>
+        ),
+        configBtn: [
+          { name: '取消', key: 'cancel', click: (_, { close }) => close() },
+          {
+            name: '立即发布',
+            type: 'primary',
+            key: 'confirm',
+            click: (_, { close }) => {
+              Message.success('发布成功')
+              close()
+            }
+          }
+        ]
+      })
+    }
+
+    const confirmBeforeClose = () => {
+      // 只要输入过内容就算「有未保存改动」；关闭前拦一道
+      let dirty = false
+      dialog({
+        title: '关闭前拦截',
+        width: '460px',
+        beforeClose: (done) => {
+          if (!dirty) return done()
+          MessageBox.confirm('内容还没保存，确定要关闭吗？', '提示', {
+            confirmButtonText: '关闭',
+            cancelButtonText: '留下',
+            type: 'warning'
+          })
+            .then(() => done())
+            .catch(() => { /* 用户选择留在弹窗里 */ })
+        },
+        render: (h) => (
+          <div style="padding: 20px;">
+            <p style="margin-bottom: 10px; color: #606266;">在上面的输入框里写点东西，再点右上角 X 试试。</p>
+            <el-input
+              type="textarea"
+              rows={4}
+              placeholder="随便写点什么…"
+              on-input={() => { dirty = true }}
+            />
+          </div>
+        ),
+        configBtn: [
+          { name: '取消', key: 'cancel', click: (_, { close }) => close() },
+          {
+            name: '保存并关闭',
+            type: 'primary',
+            key: 'save',
+            click: (_, { close }) => {
+              Message.success('已保存')
+              close()
+            }
+          }
+        ]
+      })
+    }
+
+    return { confirmDelete, confirmPublish, confirmBeforeClose }
   }
-}
+})
 </script>
+
+<style scoped>
+.example-dialog-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tip {
+  color: #909399;
+  font-size: 13px;
+}
+</style>
 `
 export const RAW_dialog_CustomStyle = `<template>
   <div>
@@ -2543,7 +2733,7 @@ export default {
             ]}
             model={this.formData}
             layout-form-props={{
-              fromLayProps: { labelWidth: '80px' },
+              formLayProps: { labelWidth: '80px' },
               rowLayProps: { gutter: 20 }
             }}
           />
@@ -2661,8 +2851,8 @@ export const RAW_dialog_MultiInstance = `<template>
  * 多实例弹窗 —— 同一个 useDialog 可同时存在多个实例
  *
  * 关键点：
- *   1. useDialog 默认 onlyInstance: false，每次调用返回的函数都会新建一个实例，
- *      多个实例可同时存在、互不干扰（各自维护 visible 与内容）
+ *   1. useDialog 默认 onlyInstance: false（复用同一个实例）；传 onlyInstance: true
+ *      后每次调用都新建独立实例，多个实例可同时存在、互不干扰（各自维护 visible 与内容）
  *   2. 每个实例有独立的 close/destroy，关闭其一不影响其它
  *   3. 适合「详情弹窗上再叠加子弹窗」「批量并列查看」等场景
  */
@@ -2673,8 +2863,8 @@ export default defineComponent({
   name: 'DialogMultiInstance',
   setup() {
     const count = ref(0)
-    // 复用同一个 factory；每次调用创建一个新实例（onlyInstance 默认 false）
-    const dialogFactory = useDialog(null, { onlyInstance: false })
+    // 复用同一个 factory；onlyInstance: true ⇒ 每次调用创建一个新实例
+    const dialogFactory = useDialog(null, { onlyInstance: true })
 
     const openOne = () => {
       count.value += 1
@@ -2860,7 +3050,7 @@ export default {
               ]}
               model={this.realWorldFormData}
               layout-form-props={{
-                fromLayProps: { labelWidth: '100px', size: 'small' },
+                formLayProps: { labelWidth: '100px', size: 'small' },
                 rowLayProps: { gutter: 20 }
               }}
             />
@@ -2968,7 +3158,7 @@ export default {
               ]}
               model={this.realWorldFormData}
               layout-form-props={{
-                fromLayProps: { labelWidth: '100px', size: 'small' },
+                formLayProps: { labelWidth: '100px', size: 'small' },
                 rowLayProps: { gutter: 20 }
               }}
             />
@@ -3194,7 +3384,7 @@ export default {
             ]}
             model={this.userFormData}
             layout-form-props={{
-              fromLayProps: { labelWidth: '80px', size: 'small' },
+              formLayProps: { labelWidth: '80px', size: 'small' },
               rowLayProps: { gutter: 20 }
             }}
           />
@@ -3379,7 +3569,7 @@ export default defineComponent({
                   model={model}
                   form-item-list={stepItems[step]}
                   rules={stepRules[step]}
-                  layout-form-props={{ fromLayProps: { labelWidth: '80px', size: 'small' } }}
+                  layout-form-props={{ formLayProps: { labelWidth: '80px', size: 'small' } }}
                 />
               ) : (
                 <div style="padding: 4px 8px; line-height: 2;">
@@ -3449,7 +3639,7 @@ export default {
         category: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [
@@ -3652,7 +3842,7 @@ export default defineComponent({
     ]
 
     const layoutFormProps = {
-      fromLayProps: { labelWidth: '100px', size: 'small' },
+      formLayProps: { labelWidth: '100px', size: 'small' },
       rowLayProps: { gutter: 20 }
     }
 
@@ -3685,7 +3875,7 @@ export default {
         content: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [
@@ -3763,10 +3953,17 @@ export const RAW_form_CustomRender = `<template>
   <es-form
     :form-item-list="formItemList"
     :model="formData"
+    :config-btn="configBtn"
   />
 </template>
 
 <script>
+/**
+ * 自定义渲染：表单项用 render(h, model, { row }) 接管，想放什么控件就放什么控件，
+ * 校验 / 提交 / 布局仍归 EsForm 管（值直接写回 model[row.prop]）。
+ *
+ * 这里放两个内置表单类型覆盖不了的控件：富文本编辑器 + 色板。
+ */
 export default {
   name: 'FormCustomRender',
   data() {
@@ -3774,23 +3971,46 @@ export default {
       formData: {
         title: '',
         content: '',
-        themeColor: 'var(--es-brand-primary)',
-        showTags: false,
-        tags: []
+        themeColor: 'var(--es-brand-primary)'
       },
+      configBtn: [
+        {
+          name: '提交',
+          type: 'primary',
+          click: (model, formRef) => {
+            formRef.validate((valid) => {
+              if (!valid) {
+                this.\$message.error('请先填写标题')
+                return
+              }
+              this.\$message.success('已提交：' + JSON.stringify(model))
+            })
+          }
+        }
+      ],
       formItemList: [
         {
           prop: 'title',
           label: '标题',
           span: 24,
           formtype: 'Input',
-          attrs: { placeholder: '请输入标题' }
+          attrs: { placeholder: '请输入标题' },
+          formItemOptions: {
+            rules: [{ required: true, message: '请输入标题', trigger: 'blur' }]
+          }
         },
         {
           prop: 'content',
           label: '富文本内容',
           span: 24,
           render: (h, model, { row }) => {
+            // mousedown + preventDefault：保住 contenteditable 里的选区，
+            // 否则点按钮时焦点先被抢走，execCommand 命令落不到选中文本上
+            const tool = (cmd, text) =>
+              h('el-button', {
+                props: { size: 'mini' },
+                on: { mousedown: (e) => { e.preventDefault(); document.execCommand(cmd) } }
+              }, text)
             return h('div', {
               style: {
                 border: '1px solid #dcdfe6',
@@ -3805,11 +4025,7 @@ export default {
                   paddingBottom: '5px',
                   marginBottom: '10px'
                 }
-              }, [
-                h('el-button', { props: { size: 'mini' } }, 'B'),
-                h('el-button', { props: { size: 'mini' } }, 'I'),
-                h('el-button', { props: { size: 'mini' } }, 'U')
-              ]),
+              }, [tool('bold', 'B'), tool('italic', 'I'), tool('underline', 'U')]),
               h('div', {
                 attrs: { contenteditable: true },
                 style: { minHeight: '60px', outline: 'none' },
@@ -3818,48 +4034,48 @@ export default {
                     model[row.prop] = e.target.innerText
                   }
                 }
-              }, model[row.prop] || '')
+                // 刻意不给 children / innerHTML：Vue 每次重渲染都不会改写节点内容，
+                // 光标和加粗等富文本格式才不会被冲掉（值只单向回写 model）
+              })
             ])
           }
         },
         {
           prop: 'themeColor',
           label: '主题色',
-          span: 12,
+          span: 24,
           render: (h, model, { row }) => {
             const colors = ['var(--es-brand-primary)', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
-            return h('div', {
-              style: { display: 'flex', gap: '10px' }
-            }, colors.map(color =>
-              h('div', {
-                style: {
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '4px',
-                  backgroundColor: color,
-                  cursor: 'pointer',
-                  border: model[row.prop] === color
-                    ? '2px solid #000'
-                    : '1px solid #dcdfe6'
-                },
-                on: {
-                  click: () => {
-                    model[row.prop] = color
+            return h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+              ...colors.map(color =>
+                h('div', {
+                  style: {
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '4px',
+                    backgroundColor: color,
+                    cursor: 'pointer',
+                    border: model[row.prop] === color
+                      ? '2px solid #000'
+                      : '1px solid #dcdfe6'
+                  },
+                  on: {
+                    click: () => {
+                      model[row.prop] = color
+                    }
                   }
+                })
+              ),
+              // 预览条真的用选中的颜色，选择结果一眼可见
+              h('span', {
+                style: {
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  backgroundColor: model[row.prop]
                 }
-              })
-            ))
-          }
-        },
-        {
-          prop: 'showTags',
-          label: '显示标签',
-          span: 12,
-          formtype: 'Switch',
-          on: {
-            change: () => {
-              this.dynamicRuleKey = Date.now()
-            }
+              }, '主题预览')
+            ])
           }
         }
       ]
@@ -3959,7 +4175,7 @@ export default defineComponent({
     })
 
     const layoutFormProps = {
-      fromLayProps: { labelWidth: '90px', size: 'small' },
+      formLayProps: { labelWidth: '90px', size: 'small' },
       rowLayProps: { gutter: 20 }
     }
 
@@ -4045,68 +4261,96 @@ export default {
 </script>
 `
 export const RAW_form_DynamicRule = `<template>
-  <es-form
-    :key="formKey"
-    :form-item-list="formItemList"
-    :model="formData"
-  />
+  <div>
+    <es-form
+      :form-item-list="formItemList"
+      :model="formData"
+      :config-btn="configBtn"
+    />
+    <p class="tip">
+      打开「需要邮箱」后，邮箱字段出现并要求必填；关闭后字段隐藏且不再参与校验 ——
+      规则随 <code>formData.requireEmail</code> 实时变化，无需重建表单实例。
+    </p>
+  </div>
 </template>
 
 <script>
+/**
+ * 动态校验规则：formItemList 用 computed 派生，
+ * 规则数组跟着 formData 变化，EsForm 侦听到新列表后按新规则重新渲染/校验。
+ */
 export default {
   name: 'FormDynamicRule',
   data() {
     return {
-      formKey: 0,
       formData: {
         name: '',
         email: '',
         requireEmail: false
       },
-      formItemList: []
+      configBtn: [
+        {
+          name: '校验并提交',
+          type: 'primary',
+          click: (model, formRef) => {
+            formRef.validate((valid) => {
+              if (valid) this.\$message.success('校验通过，提交数据：' + JSON.stringify(model))
+              else this.\$message.error('请检查表单填写')
+            })
+          }
+        }
+      ]
     }
   },
-  created() {
-    this.formItemList = [
-      {
-        prop: 'name',
-        label: '姓名',
-        span: 12,
-        formtype: 'Input',
-        formItemOptions: {
-          rules: [{ required: true, message: '请输入姓名' }]
-        }
-      },
-      {
-        prop: 'requireEmail',
-        label: '需要邮箱',
-        span: 12,
-        formtype: 'Switch'
-      },
-      {
-        prop: 'email',
-        label: '邮箱',
-        span: 12,
-        formtype: 'Input',
-        formItemOptions: {
-          rules: this.formData.requireEmail
-            ? [
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '邮箱格式错误' }
-              ]
-            : []
+  computed: {
+    formItemList() {
+      // 显式读一次 requireEmail：规则数组是在 computed 求值时算出来的，
+      // 不读这个开关就不会建立依赖 —— 列表永远缓存首帧的 []，开关拨了也不重算。
+      const requireEmail = this.formData.requireEmail
+      return [
+        {
+          prop: 'name',
+          label: '姓名',
+          span: 12,
+          formtype: 'Input',
+          formItemOptions: {
+            rules: [{ required: true, message: '请输入姓名' }]
+          }
         },
-        isHidden: () => !this.formData.requireEmail
-      }
-    ]
-  },
-  methods: {
-    updateRules() {
-      this.formKey++
+        {
+          prop: 'requireEmail',
+          label: '需要邮箱',
+          span: 12,
+          formtype: 'Switch'
+        },
+        {
+          prop: 'email',
+          label: '邮箱',
+          span: 12,
+          formtype: 'Input',
+          isHidden: () => !this.formData.requireEmail,
+          formItemOptions: {
+            rules: requireEmail
+              ? [
+                  { required: true, message: '请输入邮箱' },
+                  { type: 'email', message: '邮箱格式错误' }
+                ]
+              : []
+          }
+        }
+      ]
     }
   }
 }
 </script>
+
+<style scoped>
+.tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+</style>
 `
 export const RAW_form_ImageUpload = `<template>
   <es-form
@@ -4133,7 +4377,7 @@ export default {
         name: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [
@@ -4268,10 +4512,10 @@ export default {
         field6: ''
       },
       layoutProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '120px',
           size: 'small',
-          minfoldRows: 2
+          minFoldRows: 2
         },
         rowLayProps: {
           gutter: 20
@@ -4333,7 +4577,7 @@ export default {
           label: '字段6（被折叠）',
           span: 8,
           formtype: 'Input',
-          attrs: { placeholder: '超过minfoldRows折叠' }
+          attrs: { placeholder: '超过minFoldRows折叠' }
         }
       ]
     }
@@ -4374,7 +4618,7 @@ export default {
         description: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [
@@ -4516,8 +4760,8 @@ export default {
         policyContentType: '1'
       },
       layoutProps: {
-        fromLayProps: {
-          isBtnHiden: true,
+        formLayProps: {
+          isBtnHidden: true,
           labelWidth: '120px',
           size: 'small'
         },
@@ -4677,7 +4921,7 @@ export default {
         address: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       configBtn: [
@@ -4822,7 +5066,7 @@ export default {
         district: ''
       },
       layoutProps: {
-        fromLayProps: { labelWidth: '100px', size: 'small' },
+        formLayProps: { labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       formItemList: [
@@ -4956,7 +5200,6 @@ export default {
 `
 export const RAW_form_Validation = `<template>
   <es-form
-    ref="validateForm"
     :form-item-list="formItemList"
     :model="formData"
     :config-btn="configBtn"
@@ -5027,6 +5270,26 @@ export default {
             ]
           },
           attrs: { type: 'password', placeholder: '至少6位' }
+        },
+        {
+          prop: 'confirmPassword',
+          label: '确认密码',
+          span: 12,
+          formtype: 'Input',
+          formItemOptions: {
+            rules: [
+              { required: true, message: '请再次输入密码', trigger: 'blur' },
+              // 跨字段校验：validator 里直接读同一份 formData，改密码后确认框失焦即重算
+              {
+                validator: (rule, value, callback) => {
+                  if (value !== this.formData.password) callback(new Error('两次输入的密码不一致'))
+                  else callback()
+                },
+                trigger: 'blur'
+              }
+            ]
+          },
+          attrs: { type: 'password', placeholder: '与密码保持一致' }
         }
       ],
       configBtn: [
@@ -5051,17 +5314,6 @@ export default {
         }
       ]
     }
-  },
-  methods: {
-    submitForm() {
-      this.\$refs.validateForm.validate((valid) => {
-        if (valid) {
-          this.\$message.success('验证通过！')
-        } else {
-          this.\$message.error('请检查表单填写')
-        }
-      })
-    }
   }
 }
 </script>
@@ -5075,6 +5327,11 @@ export const RAW_table_ActionColumn = `<template>
 </template>
 
 <script>
+/**
+ * 声明式操作列：列的 key 为 'operate' + 给 btns 数组，组件自动渲染行内按钮。
+ * 不需要写 render、不需要手拼 el-button —— 按钮的文案 / 语义色 / 权限 / 显隐 /
+ * 回调全在配置里。
+ */
 export default {
   data() {
     return {
@@ -5085,23 +5342,27 @@ export default {
       columns: [
         { key: 'id', label: 'ID', width: 80 },
         { key: 'name', label: '名称' },
-        { key: 'status', label: '状态' },
         {
-          key: 'action',
+          key: 'status',
+          label: '状态',
+          width: 100,
+          render: (h, { row }) => (
+            <el-tag type={row.status === '1' ? 'success' : 'info'} size="small">
+              {row.status === '1' ? '已上架' : '未上架'}
+            </el-tag>
+          )
+        },
+        {
+          key: 'operate',
           label: '操作',
           width: 200,
-          render: (h, { row }) => {
-            return (
-              <div>
-                <el-button size="mini" type="text" on-click={() => this.handleView(row)}>查看</el-button>
-                <el-button size="mini" type="text" on-click={() => this.handleEdit(row)}>编辑</el-button>
-                {row.status === '0' && (
-                  <el-button size="mini" type="text" on-click={() => this.handlePublish(row)}>上架</el-button>
-                )}
-                <el-button size="mini" type="text" style="color: #f56c6c;" on-click={() => this.handleDelete(row)}>删除</el-button>
-              </div>
-            )
-          }
+          btns: [
+            { name: '查看', clickEvent: (row) => this.handleView(row) },
+            { name: '编辑', type: 'primary', clickEvent: (row) => this.handleEdit(row) },
+            // hidden 返回 true 时该行的这个按钮不渲染
+            { name: '上架', type: 'success', hidden: (row) => row.status === '1', clickEvent: (row) => this.handlePublish(row) },
+            { name: '删除', type: 'danger', clickEvent: (row) => this.handleDelete(row) }
+          ]
         }
       ],
       options: { border: true }
@@ -5173,8 +5434,7 @@ export default {
         },
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
-          current: 'skip',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
@@ -5712,21 +5972,22 @@ export default {
         configTableOut: {
           total: 'total',
           pageSize: 'limit',
-          current: 'skip',
           tableData: 'products'
         },
         listenToCallBack: {
-          brcb: (params) => {
-            console.log('【自定义请求拦截】请求参数:', params)
+          // beforeRequest：请求前把分页参数改写成后端认识的 limit / skip
+          beforeRequest: (params) => {
             const { pageSize, pageIndex } = params
             return {
               limit: pageSize,
               skip: (pageIndex - 1) * pageSize
             }
           },
-          qrcb: (res) => {
-            console.log('【自定义响应拦截】响应结果:', res)
-            this.\$message.success('数据加载成功（通过自定义 httpRequest）')
+          // afterResponse：返回值会**替换**响应体，所以必须把 res 原样返回。
+          // 只弹提示不返回，组件会把提示对象当数据，表格直接变空。
+          afterResponse: (res) => {
+            this.\$message.success(\`数据加载成功，本页 \${res.products?.length ?? 0} 条\`)
+            return res
           }
         }
       }
@@ -5806,7 +6067,7 @@ export const RAW_table_DetailDrawer = `<template>
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
 
@@ -6395,7 +6656,6 @@ export default {
 `
 export const RAW_table_Linkage = `<template>
   <es-table
-    :data-source="data"
     :columns="columns"
     :pagination="pagination"
     :options="options"
@@ -6410,10 +6670,17 @@ export const RAW_table_Linkage = `<template>
 </template>
 
 <script>
+/**
+ * 查询表单联动 + 请求参数改写 + 分页
+ *
+ * 链路：EsForm 查询按钮 → es-table 收集表单模型 → beforeRequest 改写参数
+ *      → 自定义 httpRequest 取数 → configTableOut 映射回分页
+ * 表单里的每一格都真的参与过滤，翻页也真的换数据。
+ */
 export default {
   data() {
     return {
-      data: [],
+      postsCache: null,
       columns: [
         { key: 'id', label: '编号', width: 80 },
         { key: 'title', label: '标题' },
@@ -6421,26 +6688,25 @@ export default {
           key: 'userId',
           label: '用户ID',
           width: 100,
-          render: (h, { row }) => (
-            <el-tag size="mini">用户{row.userId}</el-tag>
-          )
+          render: (h, { row }) => <el-tag size="mini">用户{row.userId}</el-tag>
         },
         {
           key: 'body',
           label: '内容',
-          render: (h, { row }) => <span>{row.body.substring(0, 50) + '...'}</span>
+          render: (h, { row }) => <span>{String(row.body || '').slice(0, 50)}...</span>
         }
       ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 0 },
+      pagination: { current: 1, pageSize: 10, total: 0 },
       options: {
         isInitRun: true,
         border: true,
         heightType: 'maxHeight',
         apiParams: {
           url: 'https://jsonplaceholder.typicode.com/posts',
-          method: 'get',
-          model: {}
+          method: 'get'
         },
+        // 真实取数：jsonplaceholder 的 /posts 不支持分页参数，所以一次拉全量再本地切片
+        httpRequest: (params) => this.fetchPosts(params),
         configTableOut: {
           total: 'total',
           pageSize: 'pageSize',
@@ -6448,28 +6714,11 @@ export default {
           tableData: 'data'
         },
         listenToCallBack: {
-          brcb: (params) => {
-            const result = {}
-            if (params.userId && params.userId !== '') {
-              result.userId = params.userId
-            }
-            if (params.title && params.title.trim()) {
-              result.q = params.title.trim()
-            }
-            console.log('联动查询参数:', result)
-            return result
-          },
-          qrcb: (res) => {
-            console.log('响应数据结构:', res)
-            if (Array.isArray(res.data)) {
-              return {
-                data: res.data.slice(0, 10),
-                total: 100,
-                pageSize: 10,
-                pageIndex: 1
-              }
-            }
-            return res
+          // 请求前拦截：把「标题搜索」映射成后端认识的 q，其余参数原样保留
+          beforeRequest: (params) => {
+            const { title, ...rest } = params
+            const q = typeof title === 'string' ? title.trim() : ''
+            return q ? { ...rest, q } : rest
           }
         }
       },
@@ -6497,23 +6746,45 @@ export default {
           span: 8,
           formtype: 'Input',
           attrs: { placeholder: '请输入标题关键词', clearable: true }
-        },
-        {
-          prop: 'resetPlaceholder',
-          label: '内容',
-          span: 8,
-          formtype: 'Input',
-          attrs: { disabled: true }
         }
       ],
       layoutProps: {
-        fromLayProps: { labelWidth: '80px', size: 'small' },
+        formLayProps: { labelWidth: '80px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       configBtn: [
         { name: '查询', type: 'primary', key: 'query', triggerEvent: true, icon: 'el-icon-search' },
         { name: '重置', key: 'rest', triggerEvent: true, icon: 'el-icon-refresh' }
       ]
+    }
+  },
+  methods: {
+    /** 全量只拉一次，后续查询 / 翻页都走内存 */
+    async loadPosts() {
+      if (!this.postsCache) {
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts')
+        if (!res.ok) throw new Error(\`HTTP \${res.status}: \${res.statusText}\`)
+        this.postsCache = await res.json()
+      }
+      return this.postsCache
+    },
+    async fetchPosts(params = {}) {
+      const { formParams = {} } = params
+      const { userId, q, pageIndex = 1, pageSize = 10 } = formParams
+      const all = await this.loadPosts()
+      const keyword = String(q || '').toLowerCase()
+      const filtered = all.filter((post) => {
+        if (userId && String(post.userId) !== String(userId)) return false
+        if (keyword && !post.title.toLowerCase().includes(keyword)) return false
+        return true
+      })
+      const start = (pageIndex - 1) * pageSize
+      return {
+        data: filtered.slice(start, start + pageSize),
+        total: filtered.length,
+        pageIndex,
+        pageSize
+      }
     }
   }
 }
@@ -6547,45 +6818,10 @@ export default {
       ],
       options: {
         border: true,
-        spanMethod: ({ row, column, rowIndex, columnIndex }) => {
-          if (columnIndex === 0) {
-            const categoryRowSpan = this.getCategoryRowSpan(row.category, rowIndex)
-            if (categoryRowSpan > 0) {
-              return { rowspan: categoryRowSpan, colspan: 1 }
-            } else {
-              return { rowspan: 0, colspan: 0 }
-            }
-          }
-        }
+        // 声明式合并：同一份 JSON 在三端（el-table / a-table / vxe）都成立，
+        // 不需要手写 span 函数。rowsBy 里的列按「相邻行值相等」切段合并。
+        mergeConfig: { rowsBy: ['category'] }
       }
-    }
-  },
-  methods: {
-    getCategoryRowSpan(category, rowIndex) {
-      const data = this.data
-      if (rowIndex === 0) {
-        let rowspan = 1
-        for (let i = rowIndex + 1; i < data.length; i++) {
-          if (data[i].category === category) {
-            rowspan++
-          } else {
-            break
-          }
-        }
-        return rowspan
-      }
-      if (rowIndex > 0 && data[rowIndex - 1].category === category) {
-        return 0
-      }
-      let rowspan = 1
-      for (let i = rowIndex + 1; i < data.length; i++) {
-        if (data[i].category === category) {
-          rowspan++
-        } else {
-          break
-        }
-      }
-      return rowspan
     }
   }
 }
@@ -6645,8 +6881,7 @@ export default {
         httpRequest: (params) => this.fetchWithCORS(params),
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
-          current: 'skip',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
@@ -6799,7 +7034,6 @@ export const RAW_table_RealWorld = `<template>
   <div class="policy-manage">
     <es-table
       ref="policyTable"
-      :data-source="data"
       :columns="columns"
       :pagination="pagination"
       :options="options"
@@ -6819,14 +7053,28 @@ import { useDialog } from '@es-plus/vue2'
 
 const policyDialog = useDialog()
 
+const STATUS_MAP = { '0': '草稿', '1': '上架中', '2': '已下架' }
+
+/**
+ * 本地数据源。查询、新增、编辑、删除全部真正作用在 allPolicies 上，
+ * 再由 httpRequest 按当前查询条件分页返回 —— 这样刷新之后数据不会
+ * 又变回初始那几条，也不会出现「提示成功但表格没变」的假 CRUD。
+ */
+const seedPolicies = () => [
+  { id: 'P001', title: '夏季促销政策', tags: '促销', status: '1', publishingMethodName: '立即发布', scheduledReleaseTime: '2024-06-01', validDateStart: '2024-06-01', validDateEnd: '2024-08-31', createTime: '2024-05-25', createBy: '张三' },
+  { id: 'P002', title: '新用户优惠', tags: '优惠', status: '0', publishingMethodName: '定时发布', scheduledReleaseTime: '2024-07-15', validDateStart: '2024-07-15', validDateEnd: '2024-12-31', createTime: '2024-06-10', createBy: '李四' },
+  { id: 'P003', title: '老客复购返券', tags: '复购', status: '1', publishingMethodName: '立即发布', scheduledReleaseTime: '2024-07-01', validDateStart: '2024-07-01', validDateEnd: '2024-09-30', createTime: '2024-06-24', createBy: '王五' },
+  { id: 'P004', title: '国庆满减', tags: '活动', status: '2', publishingMethodName: '定时发布', scheduledReleaseTime: '2024-10-01', validDateStart: '2024-10-01', validDateEnd: '2024-10-07', createTime: '2024-09-20', createBy: '赵六' },
+  { id: 'P005', title: '会员日双倍积分', tags: '积分', status: '0', publishingMethodName: '立即发布', scheduledReleaseTime: '2024-08-08', validDateStart: '2024-08-08', validDateEnd: '2024-08-08', createTime: '2024-07-30', createBy: '钱七' }
+]
+
 export default {
   data() {
     return {
-      data: [
-        { id: 'P001', title: '夏季促销政策', status: '1', tags: '促销', publishingMethodName: '立即发布', scheduledReleaseTime: '2024-06-01', validDateStart: '2024-06-01', validDateEnd: '2024-08-31', createTime: '2024-05-25', createBy: '张三' },
-        { id: 'P002', title: '新用户优惠', status: '0', tags: '优惠', publishingMethodName: '定时发布', scheduledReleaseTime: '2024-07-15', validDateStart: '2024-07-15', validDateEnd: '2024-12-31', createTime: '2024-06-10', createBy: '李四' }
-      ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 2 },
+      allPolicies: seedPolicies(),
+      pagination: { current: 1, pageSize: 10, total: 0 },
+      // 弹窗表单的模型：结构与表格行一致，编辑时直接覆盖，新增时用空模板
+      dialogModel: {},
       columns: [
         { key: 'id', label: '政策编号', fixed: 'left', width: 100 },
         { key: 'title', label: '政策标题', width: 150 },
@@ -6835,10 +7083,11 @@ export default {
           key: 'status',
           label: '状态',
           width: 100,
-          render: (h, { row }) => {
-            const statusMap = { '0': '草稿', '1': '上架中', '2': '已下架' }
-            return <el-tag type={row.status === '1' ? 'success' : 'info'} size="small">{statusMap[row.status]}</el-tag>
-          }
+          render: (h, { row }) => (
+            <el-tag type={row.status === '1' ? 'success' : row.status === '2' ? 'info' : 'warning'} size="small">
+              {STATUS_MAP[row.status] || '-'}
+            </el-tag>
+          )
         },
         { key: 'publishingMethodName', label: '发布方式', width: 100 },
         { key: 'scheduledReleaseTime', label: '发布时间', width: 140 },
@@ -6851,59 +7100,40 @@ export default {
           label: '操作',
           width: 220,
           fixed: 'right',
-          render: (h, { row }) => {
-            return (
-              <div>
-                <el-button size="mini" type="text" on-click={() => this.handleView(row)}>查看</el-button>
-                <el-button size="mini" type="text" on-click={() => this.handleEdit(row)}>编辑</el-button>
-                {(row.status === '0' || row.status === '2') && (
-                  <el-button size="mini" type="text" on-click={() => this.handlePublish(row)}>上架</el-button>
-                )}
-                {row.status === '1' && (
-                  <el-button size="mini" type="text" on-click={() => this.handleUnpublish(row)}>下架</el-button>
-                )}
-                <el-button size="mini" type="text" style="color: #f56c6c;" on-click={() => this.handleDelete(row)}>删除</el-button>
-              </div>
-            )
-          }
+          render: (h, { row }) => (
+            <div>
+              <el-button size="mini" type="text" on-click={() => this.handleView(row)}>查看</el-button>
+              <el-button size="mini" type="text" on-click={() => this.openPolicyDialog('edit', row)}>编辑</el-button>
+              {row.status === '1'
+                ? <el-button size="mini" type="text" on-click={() => this.handleUnpublish(row)}>下架</el-button>
+                : <el-button size="mini" type="text" on-click={() => this.handlePublish(row)}>上架</el-button>}
+              <el-button size="mini" type="text" style="color: #f56c6c;" on-click={() => this.handleDelete(row)}>删除</el-button>
+            </div>
+          )
         }
       ],
       options: {
+        isInitRun: true,
         border: true,
         tabHeight: 300,
         heightType: 'height',
-        size: 'mini'
+        size: 'mini',
+        apiParams: { url: '/api/policy/list', method: 'get' },
+        // 真实请求函数：读本地数据源并按查询表单过滤 + 分页
+        httpRequest: (params) => this.fetchPolicies(params),
+        configTableOut: { total: 'total', tableData: 'list', pageSize: 'pageSize', current: 'pageIndex' }
       },
       formData: {
         policyCode: '',
         policyTitle: '',
         policyStatus: '',
-        policyTag: '',
-        publishType: '',
-        effectiveTimeRange: [],
-        publishTimeRange: []
+        effectiveTimeRange: []
       },
       formConfig: [
+        { prop: 'policyCode', label: '政策编号', span: 8, formtype: 'Input', formItemOptions: { labelWidth: '100px' }, attrs: { placeholder: '请输入政策编号', clearable: true } },
+        { prop: 'policyTitle', label: '政策名称', span: 8, formtype: 'Input', attrs: { placeholder: '请输入政策标题', clearable: true } },
         {
-          prop: 'policyCode',
-          label: '政策编号',
-          span: 8,
-          formtype: 'Input',
-          formItemOptions: { labelWidth: '100px' },
-          attrs: { placeholder: '请输入政策编号', clearable: true }
-        },
-        {
-          prop: 'policyTitle',
-          label: '政策名称',
-          span: 8,
-          formtype: 'Input',
-          attrs: { placeholder: '请输入政策标题', clearable: true }
-        },
-        {
-          prop: 'policyStatus',
-          label: '文章状态',
-          span: 8,
-          formtype: 'Select',
+          prop: 'policyStatus', label: '文章状态', span: 8, formtype: 'Select',
           formItemOptions: { labelWidth: '100px' },
           attrs: { placeholder: '请选择文章状态', clearable: true },
           dataOptions: [
@@ -6914,36 +7144,79 @@ export default {
           ]
         },
         {
-          label: '政策生效时间范围',
-          span: 8,
+          prop: 'effectiveTimeRange', label: '政策生效时间范围', span: 8, formtype: 'datePicker',
           formItemOptions: { labelWidth: '140px' },
-          prop: 'effectiveTimeRange',
-          formtype: 'datePicker',
-          attrs: {
-            valueFormat: 'yyyy-MM-dd HH:mm:ss',
-            type: 'datetimerange',
-            startPlaceholder: '开始日期',
-            endPlaceholder: '结束日期',
-            style: 'width: 100%'
-          }
+          attrs: { valueFormat: 'yyyy-MM-dd', type: 'daterange', startPlaceholder: '开始日期', endPlaceholder: '结束日期', style: 'width: 100%' }
         }
       ],
+      dialogFormItems: [
+        { prop: 'title', label: '政策标题', span: 24, formtype: 'Input', attrs: { placeholder: '请输入政策标题' }, formItemOptions: { rules: [{ required: true, message: '请输入政策标题', trigger: 'blur' }] } },
+        { prop: 'tags', label: '政策标签', span: 24, formtype: 'Input', attrs: { placeholder: '如：促销 / 优惠' } },
+        {
+          prop: 'status', label: '状态', span: 24, formtype: 'Select',
+          dataOptions: [
+            { label: '草稿', value: '0' },
+            { label: '上架中', value: '1' },
+            { label: '已下架', value: '2' }
+          ]
+        },
+        {
+          prop: 'publishingMethodName', label: '发布方式', span: 24, formtype: 'Select',
+          dataOptions: [
+            { label: '立即发布', value: '立即发布' },
+            { label: '定时发布', value: '定时发布' }
+          ]
+        },
+        { prop: 'scheduledReleaseTime', label: '发布时间', span: 24, formtype: 'datePicker', attrs: { type: 'date', valueFormat: 'yyyy-MM-dd', style: 'width: 100%' } },
+        { prop: 'validDateStart', label: '生效时间', span: 12, formtype: 'datePicker', attrs: { type: 'date', valueFormat: 'yyyy-MM-dd', style: 'width: 100%' } },
+        { prop: 'validDateEnd', label: '失效时间', span: 12, formtype: 'datePicker', attrs: { type: 'date', valueFormat: 'yyyy-MM-dd', style: 'width: 100%' } },
+        { prop: 'createBy', label: '创建人', span: 24, formtype: 'Input', attrs: { placeholder: '请输入创建人' } }
+      ],
       layoutProps: {
-        fromLayProps: { minfoldRows: 1, labelWidth: '100px', size: 'small' },
+        formLayProps: { minFoldRows: 1, labelWidth: '100px', size: 'small' },
         rowLayProps: { gutter: 20 }
       },
       configBtn: [
-        { direction: 'left', name: '新增', icon: 'el-icon-plus', size: 'mini', type: 'primary', click: () => this.handleAdd() },
+        { direction: 'left', name: '新增', icon: 'el-icon-plus', size: 'mini', type: 'primary', click: () => this.openPolicyDialog('add') },
         { type: 'primary', size: 'mini', name: '查询', icon: 'el-icon-search', key: 'query', triggerEvent: true },
         { type: 'warning', key: 'rest', size: 'mini', name: '重置', icon: 'el-icon-refresh', triggerEvent: true }
       ]
     }
   },
   methods: {
-    handleAdd() {
+    /** es-table 的请求函数：查询表单 + 分页 → 本地数据源切片 */
+    fetchPolicies(params = {}) {
+      const { pageIndex = 1, pageSize = 10, formParams = {} } = params
+      const q = formParams || {}
+      const [start, end] = Array.isArray(q.effectiveTimeRange) ? q.effectiveTimeRange : []
+      const rows = this.allPolicies.filter((row) => {
+        if (q.policyCode && !row.id.includes(q.policyCode)) return false
+        if (q.policyTitle && !row.title.includes(q.policyTitle)) return false
+        if (q.policyStatus && row.status !== q.policyStatus) return false
+        // 时间范围按「区间有交集」过滤，而不是要求完全包含
+        if (start && row.validDateEnd < start) return false
+        if (end && row.validDateStart > end) return false
+        return true
+      })
+      const from = (pageIndex - 1) * pageSize
+      return Promise.resolve({
+        list: rows.slice(from, from + pageSize),
+        total: rows.length,
+        pageIndex,
+        pageSize
+      })
+    },
+    refresh(keepPage = false) {
+      return this.\$refs.policyTable?.httpRequestInstance(undefined, { keepPage })?.catch(() => {})
+    },
+    openPolicyDialog(mode, row) {
+      const isEdit = mode === 'edit'
+      this.dialogModel = isEdit
+        ? { ...row }
+        : { id: '', title: '', tags: '', status: '0', publishingMethodName: '立即发布', scheduledReleaseTime: '', validDateStart: '', validDateEnd: '', createBy: '当前用户' }
       policyDialog({
-        title: '新增政策',
-        width: '75%',
+        title: isEdit ? \`编辑政策 — \${row.title}\` : '新增政策',
+        width: '620px',
         isDraggable: true,
         closeOnClickModal: false,
         configBtn: [
@@ -6951,42 +7224,49 @@ export default {
             key: 'save',
             type: 'primary',
             size: 'mini',
-            name: '提交',
+            name: '保存',
             click: (instance, { close, getRefs }) => {
-              const { formData } = instance
-              // 在实际项目中调用 API 提交数据
-              this.\$message.success('新增成功: ' + JSON.stringify(formData))
-              close()
-              this.\$refs.policyTable?.httpRequestInstance()
+              const form = getRefs('policyForm')
+              const commit = () => {
+                this.commitPolicy()
+                close()
+                this.refresh(true)
+              }
+              // EsForm 暴露的 validate() 校验不通过时 reject，这里据它拦截非法提交
+              if (form && typeof form.validate === 'function') form.validate().then(commit).catch(() => {})
+              else commit()
             }
           },
-          {
-            key: 'cancel',
-            size: 'mini',
-            name: '取消',
-            click: (instance, { close }) => close()
-          }
+          { key: 'cancel', size: 'mini', name: '取消', click: (instance, { close }) => close() }
         ],
-        render: (h) => {
-          return (
-            <es-form
-              ref="policyform"
-              model={{}}
-              form-item-list={[
-                { prop: 'title', label: '政策标题', span: 24, formtype: 'Input', attrs: { placeholder: '请输入政策标题' } },
-                { prop: 'tags', label: '政策标签', span: 24, formtype: 'Input', attrs: { placeholder: '请输入标签' } }
-              ]}
-              layout-form-props={{ fromLayProps: { labelWidth: '120px', size: 'small' } }}
-            />
-          )
-        }
+        render: (h) => (
+          <es-form
+            ref="policyForm"
+            model={this.dialogModel}
+            form-item-list={this.dialogFormItems}
+            layout-form-props={{ formLayProps: { labelWidth: '110px', size: 'small' }, rowLayProps: { gutter: 16 } }}
+          />
+        )
       })
     },
-    handleView(row) {
-      this.\$message.info('查看: ' + row.title)
+    commitPolicy() {
+      const model = this.dialogModel
+      if (model.id) {
+        const target = this.allPolicies.find((row) => row.id === model.id)
+        if (target) Object.assign(target, model)
+        this.\$message.success(\`已保存：\${model.title}\`)
+      } else {
+        const seq = this.allPolicies.reduce((max, row) => Math.max(max, Number(String(row.id).slice(1)) || 0), 0) + 1
+        this.allPolicies.unshift({
+          ...model,
+          id: \`P\${String(seq).padStart(3, '0')}\`,
+          createTime: new Date().toISOString().slice(0, 10)
+        })
+        this.\$message.success(\`已新增：\${model.title}\`)
+      }
     },
-    handleEdit(row) {
-      this.\$message.info('编辑: ' + row.title)
+    handleView(row) {
+      this.\$message.info(\`查看：\${row.title}（\${STATUS_MAP[row.status]}）\`)
     },
     handlePublish(row) {
       row.status = '1'
@@ -7001,11 +7281,14 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        const idx = this.data.findIndex(item => item.id === row.id)
-        if (idx > -1) this.data.splice(idx, 1)
-        this.\$message.success('删除成功: ' + row.title)
-      }).catch(() => {})
+      })
+        .then(() => {
+          const idx = this.allPolicies.findIndex((item) => item.id === row.id)
+          if (idx > -1) this.allPolicies.splice(idx, 1)
+          this.\$message.success('删除成功: ' + row.title)
+          this.refresh(true)
+        })
+        .catch(() => {})
     }
   }
 }
@@ -7028,7 +7311,7 @@ export const RAW_table_RemoteCrud = `<template>
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -7112,7 +7395,7 @@ export default defineComponent({
               { prop: 'salary', label: '薪资', span: 24, formtype: 'Input', attrs: { type: 'number' } },
               { prop: 'status', label: '状态', span: 24, formtype: 'Select', dataOptions: STATUS_OPTIONS }
             ]}
-            layout-form-props={{ fromLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
+            layout-form-props={{ formLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
           />
         ),
         configBtn: [
@@ -8044,10 +8327,11 @@ export default defineComponent({
 
       // 2) 后端返回字段 → 内部约定字段映射
       //    DummyJSON 返回 { users, total, skip, limit }
+      //    注意：current 期望「页码」，而 skip 是偏移量（(page-1)*limit），
+      //    映射过来会把分页器拨到错误页码，所以这里不声明 current。
       configTableOut: {
         total: 'total',
         pageSize: 'limit',
-        current: 'skip',
         tableData: 'users'
       },
 
@@ -8462,7 +8746,7 @@ export const RAW_vxe_table_CrudWithDialog = `<template>
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
     <!-- 全屏缩放退出按钮：vxe-grid zoom() 覆盖整个视口，configBtn 被遮挡，
@@ -8591,7 +8875,7 @@ export default defineComponent({
               { prop: 'salary', label: '薪资', span: 24, formtype: 'Input', attrs: { type: 'number' } },
               { prop: 'status', label: '状态', span: 24, formtype: 'Select', dataOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'leave' }] }
             ]}
-            layout-form-props={{ fromLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
+            layout-form-props={{ formLayProps: { isBtnHidden: true, labelWidth: '80px' } }}
           />
         ),
         configBtn: [
@@ -9081,7 +9365,7 @@ export const RAW_vxe_table_MergeCells = `<template>
       type="info"
       :closable="false"
       style="margin-bottom: 10px;"
-      description="企业级复杂合并：三级表头 + spanMethod 行列混合动态合并 + vxeConfig.mergeHeaderItems 表头合并 + mergeFooterItems 多行表尾合并；表单联动切换合并模式 / 事业部筛选"
+      description="企业级复杂合并：两级分组表头（4 组） + spanMethod 行列动态合并 + mergeFooterItems 多行表尾合并 + 可编辑单元格实时重算达成率；表单联动切换合并模式 / 事业部筛选"
     />
 
     <es-form
@@ -9094,7 +9378,7 @@ export const RAW_vxe_table_MergeCells = `<template>
       <el-button size="mini" type="primary" icon="el-icon-printer" @click="handlePrintAll">打印全部</el-button>
       <el-button size="mini" @click="handlePrintDept('技术事业部')">打印技术事业部</el-button>
       <el-button size="mini" @click="handlePrintDept('产品事业部')">打印产品事业部</el-button>
-      <span style="font-size: 12px; color: #909399;">分页打印时三级表头在每页自动重复（thead display:table-header-group）</span>
+      <span style="font-size: 12px; color: #909399;">分页打印时分组表头在每页自动重复（thead display:table-header-group）</span>
     </div>
 
     <es-table
@@ -9108,10 +9392,12 @@ export const RAW_vxe_table_MergeCells = `<template>
 
 <script lang="jsx">
 /**
- * 复杂合并单元格 —— 三级表头 + spanMethod 动态合并 + 表头/表尾静态合并
+ * 复杂合并单元格 —— 两级分组表头 + spanMethod 动态合并 + 表尾静态合并
  *
  * 关键点（Vue2）：
- *   1. 三级表头用列 groups 嵌套表达；vxeConfig.mergeHeaderItems / mergeFooterItems 做静态合并。
+ *   1. 两级表头用列 groups 嵌套表达（分组行 + 叶子列两个层级）；表尾多行合并走
+ *      vxeConfig.mergeFooterItems。表头合并不再手写 mergeHeaderCells —— groups
+ *      已经表达了几何关系，手写 leaf 下标会在加列时静默错位。
  *   2. spanMethod({ rowIndex, column }) 从闭包 tableData.value 读数据按 column.field 做行合并
  *      （vxe 回调不传 data；多级表头下 columnIndex 是组内相对索引，故用 field 而非索引）；
  *      MERGE_ALWAYS 恒合并，MERGE_FULL 仅「全部合并」时合并。
@@ -9210,7 +9496,7 @@ export default defineComponent({
     // ─── 达成率彩色渲染 ─────────────────────────────────────────
     const rateColor = (value) => (value >= 100 ? '#67c23a' : value >= 90 ? '#e6a23c' : '#f56c6c')
 
-    // ─── 列配置：三级表头结构 ───────────────────────────────────
+    // ─── 列配置：两级分组表头结构（groups = 分组行，叶子列为第二行） ──
     const columns = [
       {
         label: '组织架构',
@@ -9245,8 +9531,13 @@ export default defineComponent({
           }
         ]
       },
-      { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
-      { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' }
+      {
+        label: '年度汇总',
+        groups: [
+          { prop: 'totalTarget', label: '年度目标', width: 100, align: 'center' },
+          { prop: 'totalActual', label: '年度完成', width: 100, align: 'center' }
+        ]
+      }
     ]
 
     // 从 columns 动态展开叶子列 field 顺序（colIndex → field），不手数下标
@@ -9325,9 +9616,9 @@ export default defineComponent({
       printConfig: { sheetName: '员工KPI绩效考核表' },
       _merge: queryForm.enableMerge, // 注入 reactive 依赖：enableMerge 变化时 computed 重算
       vxeConfig: {
-        // 静态表头合并：年度目标 + 年度完成 两列标题合并
-        mergeHeaderItems: [{ row: 0, col: 9, rowspan: 1, colspan: 2 }],
-        // 静态表尾合并：总计行合并事业部+团队两列
+        // 静态表尾合并：总计行合并事业部+团队两列。
+        // 表头不手写合并项（vxe 的键是 mergeHeaderCells，且 col 是叶子列全局下标，
+        // 加列即错位）—— 表头几何交给 columns.groups 表达。
         mergeFooterItems: [{ row: 2, col: 0, rowspan: 1, colspan: 2 }]
       }
     }))
@@ -10020,6 +10311,7 @@ export const RAW_SOURCES = {
   'crud/MultiDialog': RAW_crud_MultiDialog,
   'dialog/AsyncContent': RAW_dialog_AsyncContent,
   'dialog/Basic': RAW_dialog_Basic,
+  'dialog/CachedInstance': RAW_dialog_CachedInstance,
   'dialog/Confirm': RAW_dialog_Confirm,
   'dialog/CustomStyle': RAW_dialog_CustomStyle,
   'dialog/Draggable': RAW_dialog_Draggable,

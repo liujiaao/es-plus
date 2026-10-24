@@ -12,8 +12,8 @@
  * 多实例弹窗 —— 同一个 useDialog 可同时存在多个实例
  *
  * 关键点：
- *   1. useDialog 默认 onlyInstance: false，每次调用返回的函数都会新建一个实例，
- *      多个实例可同时存在、互不干扰（各自维护 visible 与内容）
+ *   1. useDialog 默认 onlyInstance: false（复用同一个实例）；传 onlyInstance: true
+ *      后每次调用都新建独立实例，多个实例可同时存在、互不干扰（各自维护 visible 与内容）
  *   2. 每个实例有独立的 close/destroy，关闭其一不影响其它
  *   3. 适合「详情弹窗上再叠加子弹窗」「批量并列查看」等场景
  */
@@ -24,8 +24,8 @@ export default defineComponent({
   name: 'DialogMultiInstance',
   setup() {
     const count = ref(0)
-    // 复用同一个 factory；每次调用创建一个新实例（onlyInstance 默认 false）
-    const dialogFactory = useDialog(null, { onlyInstance: false })
+    // 复用同一个 factory；onlyInstance: true ⇒ 每次调用创建一个新实例
+    const dialogFactory = useDialog(null, { onlyInstance: true })
 
     const openOne = () => {
       count.value += 1

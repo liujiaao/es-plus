@@ -15,7 +15,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
   </div>
@@ -90,7 +90,7 @@ export default defineComponent({
                 dataOptions: STATUS_OPTIONS, attrs: { disabled: !patchForm.useStatus }
               }
             ]}
-            layout-form-props={{ fromLayProps: { isBtnHidden: true, labelWidth: '90px' } }}
+            layout-form-props={{ formLayProps: { isBtnHidden: true, labelWidth: '90px' } }}
           />
         ),
         configBtn: [

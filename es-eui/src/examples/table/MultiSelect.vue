@@ -52,8 +52,7 @@ export default {
         httpRequest: (params) => this.fetchWithCORS(params),
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
-          current: 'skip',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {

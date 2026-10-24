@@ -86,7 +86,7 @@ export default defineComponent({
       }
     ]
 
-    const layout = { fromLayProps: { labelWidth: '80px', size: 'small', inline: true } }
+    const layout = { formLayProps: { labelWidth: '80px', size: 'small', inline: true } }
 
     return { role, allowed, model, formItems, formButtons, data, columns, layout }
   }

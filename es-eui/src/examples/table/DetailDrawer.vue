@@ -15,7 +15,7 @@
         :model="queryForm"
         :form-item-list="formItems"
         :config-btn="formBtns"
-        :layout-form-props="{ fromLayProps: { minFoldRows: 1 } }"
+        :layout-form-props="{ formLayProps: { minFoldRows: 1 } }"
       />
     </es-table>
 

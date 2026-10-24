@@ -93,7 +93,7 @@ export default defineComponent({
       industry: [{ required: true, message: '请选择行业', trigger: 'change' }]
     }
 
-    const layout = { fromLayProps: { labelWidth: '120px', size: 'small' } }
+    const layout = { formLayProps: { labelWidth: '120px', size: 'small' } }
 
     const industryLabel = computed(
       () => industryOptions.find((o) => o.value === model.industry)?.label || '—'
