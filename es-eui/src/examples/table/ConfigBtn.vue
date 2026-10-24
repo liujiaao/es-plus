@@ -30,7 +30,9 @@ export default {
             icon: 'el-icon-plus',
             type: 'primary',
             click: () => {
-              this.$message.success('点击了新增按钮')
+              const nextId = this.data.reduce((max, r) => Math.max(max, r.id), 0) + 1
+              this.data.unshift({ id: nextId, name: `新用户${nextId}`, age: 20, email: `user${nextId}@example.com` })
+              this.$message.success('已新增一行')
             }
           },
           {
@@ -38,7 +40,8 @@ export default {
             name: '导入',
             icon: 'el-icon-upload2',
             click: () => {
-              this.$message.info('点击了导入按钮')
+              // 导入依赖真实的文件选择与后端接口，示例里不伪造上传结果
+              this.$message.info('导入需接入后端上传接口（示例未接）')
             }
           },
           {
@@ -47,7 +50,16 @@ export default {
             icon: 'el-icon-download',
             type: 'warning',
             click: () => {
-              this.$message.info('点击了导出按钮')
+              const header = ['ID', '姓名', '年龄', '邮箱']
+              const rows = this.data.map((r) => [r.id, r.name, r.age, r.email])
+              const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+              const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+              const a = document.createElement('a')
+              a.href = url
+              a.download = '用户列表.csv'
+              a.click()
+              URL.revokeObjectURL(url)
+              this.$message.success(`已导出 ${this.data.length} 条`)
             }
           },
           {
@@ -56,7 +68,8 @@ export default {
             icon: 'el-icon-search',
             isHide: false,
             click: () => {
-              this.$message.info('点击了高级搜索按钮')
+              // code: 1 渲染左侧、code: 2 渲染右侧 —— 本例演示左右分栏
+              this.$message.info('高级搜索（右侧按钮区）')
             }
           }
         ],

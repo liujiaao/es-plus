@@ -65,7 +65,7 @@ export default defineComponent({
       engine: 'vxe',
       border: true,
       rowkey: 'id',
-      sortable: true,
+      // 排序是列级能力：sortable 写在 columns 上；表级没有 sortable 这个配置项
       height: 420,
       heightType: 'height'
     }

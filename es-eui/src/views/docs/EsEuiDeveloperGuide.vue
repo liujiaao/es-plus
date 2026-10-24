@@ -279,7 +279,7 @@ export default {
         { name: '查询', type: 'primary', key: 'query', triggerEvent: true, icon: 'el-icon-search' },
         { name: '重置', key: 'rest', triggerEvent: true, icon: 'el-icon-refresh' }
       ],
-      formLayout: { fromLayProps: { labelWidth: '80px' } },
+      formLayout: { formLayProps: { labelWidth: '80px' } },
 
       // 表格配置
       dataSource: [],
@@ -529,12 +529,12 @@ export default {
             <tbody>
               <tr><td><code>rowLayProps</code></td><td>Object</td><td><code>el-row</code> 的配置：<code>{ gutter: 10, type: 'flex', justify: 'start' }</code></td></tr>
               <tr>
-                <td><code>fromLayProps</code></td><td>Object</td><td>
-                  表单层级配置：
+                <td><code>formLayProps</code></td><td>Object</td><td>
+                  表单层级配置（旧拼写 <code>fromLayProps</code> 仍作兼容，推荐用 <code>formLayProps</code>）：
                   <ul style="margin:4px 0 0 16px">
                     <li><code>labelWidth</code> — 统一标签宽度，默认 'auto'</li>
                     <li><code>size</code> — 统一尺寸，默认 'mini'</li>
-                    <li><code>minfoldRows</code> — 超过此行数自动折叠。如设为 2，则第 3 行开始折叠</li>
+                    <li><code>minFoldRows</code> — 超过此行数自动折叠。如设为 2，则第 3 行开始折叠（旧拼写 <code>minfoldRows</code> 兼容）</li>
                     <li><code>isBtnHiden</code> — 隐藏表单按钮区（适用于弹窗内表单）</li>
                     <li><code>btnColSpan</code> — 按钮区占用的列数</li>
                   </ul>
