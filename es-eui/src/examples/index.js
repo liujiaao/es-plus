@@ -69,6 +69,7 @@ import CombinationDataFlowManagement from './combination/DataFlowManagement.vue'
 import CombinationBatchOperation from './combination/BatchOperation.vue'
 import CombinationTabMultiTable from './combination/TabMultiTable.vue'
 import CombinationMasterDetail from './combination/MasterDetail.vue'
+import CombinationMasterDetailFlow from './combination/MasterDetailFlow.vue'
 import CombinationStepForm from './combination/StepForm.vue'
 import CombinationRowApproval from './combination/RowApproval.vue'
 import CombinationPermissionButtons from './combination/PermissionButtons.vue'
@@ -163,6 +164,7 @@ const componentMap = {
   './combination/BatchOperation.vue': CombinationBatchOperation,
   './combination/TabMultiTable.vue': CombinationTabMultiTable,
   './combination/MasterDetail.vue': CombinationMasterDetail,
+  './combination/MasterDetailFlow.vue': CombinationMasterDetailFlow,
   './combination/StepForm.vue': CombinationStepForm,
   './combination/RowApproval.vue': CombinationRowApproval,
   './combination/PermissionButtons.vue': CombinationPermissionButtons,
@@ -289,6 +291,7 @@ export const combinationExamples = [
   { key: 'BatchOperation', title: '批量操作', description: 'EsTable 多选 + useDialog 批量操作确认与执行。' },
   { key: 'TabMultiTable', title: '多标签页表格', description: 'el-tabs 切换不同 EsTable，每个标签页独立管理数据。' },
   { key: 'MasterDetail', title: '主子表联动编辑', description: 'useDialog + EsForm + EsTable 主子表，Vue.observable 管理明细数据，动态计算合计。' },
+  { key: 'MasterDetailFlow', title: '主表点选 → 从表重查', description: '点订单行 → 从表按订单号重查（嵌套信封用 configTableOut 声明映射）；编辑明细 → 主表金额与「已修改」标记回写。listenToCallBack 只做响应加工，不是跨组件信号。' },
   { key: 'StepForm', title: '分步表单', description: 'el-steps + 多个 EsForm 共用 model，逐步 validate 校验，末步核对后提交。' },
   { key: 'RowApproval', title: '行审批流转', description: '声明式 operate 列 btns（hidden 函数动态显隐）+ 行级状态流转 + 驳回原因弹窗。' },
   { key: 'PermissionButtons', title: '按钮权限控制', description: '按角色切换 $EsPlus.permission，EsForm configBtn 与 EsTable operate btns 的 permissionValue 联动显隐。' },

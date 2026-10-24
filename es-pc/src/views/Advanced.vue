@@ -185,6 +185,20 @@
 
     <a-divider />
 
+    <!-- 主子联动 -->
+    <section id="master-detail-flow">
+      <h2>主表点选 → 从表重查</h2>
+      <p>
+        点订单行 → 从表按订单号重新请求（嵌套信封用 <code>configTableOut</code> 声明映射）；
+        编辑明细 → 主表金额与「已修改」标记回写。<code>listenToCallBack</code> 只做响应加工，不是跨组件信号。
+      </p>
+      <CodeDemo :source="rawSFCs['./es-advanced/MasterDetailFlow.vue']">
+        <MasterDetailFlow />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
     <!-- 万行数据 -->
     <section id="large-data">
       <h2>万行数据（a-table 无虚拟滚动）</h2>
@@ -273,6 +287,7 @@ import AnyBackendApi from './es-advanced/AnyBackendApi.vue'
 import AutoFitHeight from './es-advanced/AutoFitHeight.vue'
 import StepForm from './es-advanced/StepForm.vue'
 import StepImportWizard from './es-advanced/StepImportWizard.vue'
+import MasterDetailFlow from './es-advanced/MasterDetailFlow.vue'
 
 // 虚拟滚动示例初始化时会生成 1 万条数据，EsTable 对 dataSource 的深度监听会导致主线程短暂冻结，
 // 故用 defineAsyncComponent 懒加载 + 按钮触发，避免首屏渲染时整个页面卡死。

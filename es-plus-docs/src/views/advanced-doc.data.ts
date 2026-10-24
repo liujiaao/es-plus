@@ -148,7 +148,8 @@ export const docsData: Record<string, any> = {
       { key: 'virtual-table-select', title: '虚拟表格多选+操作', description: '虚拟模式多选 + 行高亮 + 操作按钮(render/btns) + getSelectionRows 获取选中。', component: getComponent('advanced/20-virtual-table-select'), code: code('advanced/20-virtual-table-select') },
       { key: 'virtual-table-custom-render', title: '虚拟表格自定义渲染', description: '虚拟模式 render/scopedSlots/ellipsis/formatter 四种自定义渲染方式完整兼容。', component: getComponent('advanced/21-virtual-table-custom-render'), code: code('advanced/21-virtual-table-custom-render') },
       { key: 'virtual-table-row-style', title: '虚拟表格行样式+事件', description: '虚拟模式 rowClassName（按数据上色）+ highlightCurrentRow 当前行 + @row-click / @row-dblclick 事件。', component: getComponent('advanced/22-virtual-table-row-style'), code: code('advanced/22-virtual-table-row-style') },
-      { key: 'virtual-table-crud', title: '虚拟表格完整CRUD', description: '虚拟模式 EsForm+EsTable+useDialog 完整 CRUD 场景：查询筛选+新增编辑删除+批量操作。', component: getComponent('advanced/23-virtual-table-crud'), code: code('advanced/23-virtual-table-crud') }
+      { key: 'virtual-table-crud', title: '虚拟表格完整CRUD', description: '虚拟模式 EsForm+EsTable+useDialog 完整 CRUD 场景：查询筛选+新增编辑删除+批量操作。', component: getComponent('advanced/23-virtual-table-crud'), code: code('advanced/23-virtual-table-crud') },
+      { key: 'master-detail-flow', title: '主表点选 → 从表重查', description: '点订单行 → 从表按订单号重查（嵌套信封用 configTableOut 声明映射）；编辑明细 → 主表金额与「已修改」标记回写。listenToCallBack 只做响应加工，不是跨组件信号。', component: getComponent('advanced/24-master-detail-flow'), code: code('advanced/24-master-detail-flow') }
     ]
   },
   'vxe-table': {
