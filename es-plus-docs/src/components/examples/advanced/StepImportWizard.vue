@@ -1,13 +1,28 @@
 <template>
   <div class="example-step-import">
     <el-button type="primary" @click="openImportDialog">导入数据</el-button>
+    <!-- 导入结果落在页面上：每完成一次向导，这里多出这次通过校验的行 -->
+    <div v-if="importedRows.length" class="import-result">
+      <p class="import-result__title">已导入 {{ importedRows.length }} 条</p>
+      <el-table :data="importedRows" size="small" border style="max-width: 620px">
+        <el-table-column prop="name" label="姓名" width="100" />
+        <el-table-column prop="dept" label="部门" width="110" />
+        <el-table-column prop="importType" label="类型" width="110" />
+        <el-table-column prop="salary" label="薪资">
+          <template #default="{ row }">¥{{ row.salary.toLocaleString() }}</template>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElSteps, ElStep } from 'element-plus'
-import { EsTable, EsForm,  useDialog } from '@es-plus/vue3'
+import { EsTable, EsForm, useDialog } from '@es-plus/vue3'
+
+// 跨弹窗存活：向导确认后把通过校验的行追加到这里
+const importedRows = ref([])
 
 const dialog = useDialog()
 
@@ -160,7 +175,14 @@ const openImportDialog = () => {
         name: '确认导入', type: 'success',
         disabled: () => currentStep.value !== 2,
         click: (_, { close }) => {
-          ElMessage.success(`已导入 ${step2Model.data.filter((d) => d.valid).length} 条数据（示例无后端，仅演示向导流程）`)
+          const valid = step2Model.data.filter((d) => d.valid)
+          // 真正落库：通过校验的行进入页面上的导入结果，而不是只弹一句提示
+          importedRows.value = [
+            ...valid.map((d) => ({ ...d, importType: step1Model.importType })),
+            ...importedRows.value
+          ]
+          const who = step3Model.confirmName ? `（确认人：${step3Model.confirmName}）` : ''
+          ElMessage.success(`已导入 ${valid.length} 条数据${who}`)
           close()
         }
       }
@@ -172,5 +194,13 @@ const openImportDialog = () => {
 <style scoped>
 .example-step-import {
   padding: 0;
+}
+.import-result {
+  margin-top: 12px;
+}
+.import-result__title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #67c23a;
 }
 </style>
