@@ -95,7 +95,7 @@ const columns = [
     width: 120,
     render: (_, { row }) => {
       const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(typeMap[row.category] || 'info')} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(typeMap[row.category] || 'info')}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

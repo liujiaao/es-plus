@@ -1,9 +1,9 @@
 <template>
   <div class="example-zero-code-query">
     <div class="comparison-header">
-      <Tag color="red" size="large">传统写法 50+ 行</Tag>
+      <Tag color="red">传统写法 50+ 行</Tag>
       <span class="arrow">→</span>
-      <Tag color="green" size="large">es-plus 配置 10 行</Tag>
+      <Tag color="green">es-plus 配置 10 行</Tag>
     </div>
     <es-table
       :columns="columns"
@@ -72,7 +72,7 @@ const columns = [
     render: (_, { row }) => {
       // Ant Design Vue 的 Tag 用 color（预设色名或 success/warning 这类状态值），没有 type
       const colorMap = { 'electronics': 'red', 'jewelery': 'orange', "men's clothing": 'default', "women's clothing": 'green' }
-      return <Tag color={colorMap[row.category] || 'blue'} size="small">{row.category}</Tag>
+      return <Tag color={colorMap[row.category] || 'blue'}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

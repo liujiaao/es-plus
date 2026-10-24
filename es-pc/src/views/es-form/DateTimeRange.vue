@@ -45,7 +45,7 @@ const formItems = [
     span: 8,
     attrs: {
       type: 'daterange',
-      rangeSeparator: '至',
+      separator: '至',
       startPlaceholder: '开始日期',
       endPlaceholder: '结束日期',
       format: 'YYYY-MM-DD',
@@ -70,7 +70,7 @@ const formItems = [
     span: 8,
     attrs: {
       isRange: true,
-      rangeSeparator: '至',
+      separator: '至',
       startPlaceholder: '开始时间',
       endPlaceholder: '结束时间',
       format: 'HH:mm:ss',
@@ -96,7 +96,7 @@ const formItems = [
     span: 8,
     attrs: {
       type: 'datetimerange',
-      rangeSeparator: '至',
+      separator: '至',
       startPlaceholder: '开始时间',
       endPlaceholder: '结束时间',
       format: 'YYYY-MM-DD HH:mm:ss',

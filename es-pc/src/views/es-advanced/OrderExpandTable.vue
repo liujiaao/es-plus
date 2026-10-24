@@ -83,7 +83,7 @@ const orderColumns = [
     prop: 'status', label: '状态', width: 100,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)}>{s.text}</Tag>
     }
   },
   { prop: 'total', label: '总金额', width: 120, formatter: (r) => `¥${r.total.toLocaleString()}` }

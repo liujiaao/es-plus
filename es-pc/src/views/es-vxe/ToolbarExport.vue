@@ -4,7 +4,7 @@
       type="info"
       show-icon
       style="margin-bottom: 10px"
-      message="toolbarConfig 工具栏：内置缩放、全屏、刷新按钮；exportConfig 支持导出 CSV/Excel（需安装 exceljs 插件）"
+      message="toolbarConfig 统一开关工具栏：zoom 缩放、custom 列自定义、print 打印、export 导出（本示例把 refresh 关掉了）；exportConfig 指定导出格式与文件名，CSV 为内置能力，导出 Excel 需额外安装 exceljs 插件"
     />
     <es-table
       :columns="columns"

@@ -27,7 +27,7 @@
       v-else
       :data-source="treeData"
       :columns="treeColumns"
-      :options="{ border: true, rowKey: 'id' }"
+      :options="{ border: true, rowkey: 'id' }"
     />
   </div>
 </template>
@@ -35,7 +35,6 @@
 <script setup>
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref } from 'vue'
-import { Descriptions, DescriptionsItem, RadioGroup, RadioButton } from 'ant-design-vue'
 
 const showMode = ref('expand')
 

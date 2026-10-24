@@ -7,7 +7,11 @@
       :layout-form-props="layoutProps"
     />
     <div class="search-result" v-if="resultVisible">
-      <a-alert type="success" :closable="false" :message="`查询到 ${resultCount} 条结果`" />
+      <a-alert type="success" :closable="false" :message="`查询到 ${resultCount} 条结果（本地模拟数据）`" />
+      <ul class="result-list">
+        <li v-for="item in matchedPreview" :key="item.title">{{ item.title }}</li>
+        <li v-if="resultCount > matchedPreview.length">… 还有 {{ resultCount - matchedPreview.length }} 条</li>
+      </ul>
     </div>
   </div>
 </template>
@@ -19,7 +23,28 @@ import { message } from 'ant-design-vue'
 
 const resultVisible = ref(false)
 const resultCount = ref(0)
+const matchedPreview = ref<{ title: string }[]>([])
 const showMore = ref(false)
+
+// 本地模拟数据：查询结果是真算出来的，不是随机数
+const issuePool = Array.from({ length: 48 }, (_, i) => ({
+  title: `${['登录页', '订单列表', '报表导出', '权限配置', '消息中心'][i % 5]}问题 ${i + 1}`,
+  type: ['feature', 'bug', 'improvement', 'docs'][i % 4],
+  status: ['pending', 'active', 'done', 'closed'][(i * 3) % 4],
+  priority: ['urgent', 'high', 'medium', 'low'][i % 4],
+  assignee: ['zhangsan', 'lisi', 'wangwu'][i % 3]
+}))
+
+function queryIssues(model: Record<string, any>) {
+  const keyword = String(model.keyword || '').trim()
+  return issuePool.filter((it) =>
+    (!keyword || it.title.includes(keyword)) &&
+    (!model.type || it.type === model.type) &&
+    (!model.status || it.status === model.status) &&
+    (!model.priority || it.priority === model.priority) &&
+    (!model.assignee || it.assignee === model.assignee)
+  )
+}
 
 const formModel = reactive({
   keyword: '',
@@ -132,10 +157,11 @@ const configBtn = computed(() => [
     direction: 'right',
     icon: 'Search',
     click: (model: Record<string, unknown>) => {
-      resultCount.value = Math.floor(Math.random() * 50) + 1
+      const rows = queryIssues(model)
+      resultCount.value = rows.length
+      matchedPreview.value = rows.slice(0, 5)
       resultVisible.value = true
       message.success('查询完成')
-      console.log('查询条件:', model)
     }
   },
   {
@@ -145,6 +171,7 @@ const configBtn = computed(() => [
     click: (_: unknown, formRefInstance: { resetFields: () => void } | null) => {
       formRefInstance?.resetFields()
       resultVisible.value = false
+      matchedPreview.value = []
     }
   }
 ])
@@ -158,4 +185,6 @@ const layoutProps = {
 <style scoped>
 .example-form-search { padding: 20px; }
 .search-result { margin-top: 12px; }
+.result-list { margin: 8px 0 0; padding-left: 20px; color: #606266; font-size: 13px; line-height: 1.9; }
+.result-list { margin: 8px 0 0; padding-left: 20px; color: #606266; font-size: 13px; line-height: 1.9; }
 </style>

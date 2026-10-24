@@ -29,9 +29,9 @@ const columns = [
   { prop: 'progress', label: '完成进度', width: 180,
     render: (_h: any, { row }: any) => {
       const val = row.progress as number
-      const status = val >= 100 ? 'success' : val >= 60 ? '' : 'warning'
+      const status = val >= 100 ? 'success' : val >= 60 ? 'normal' : 'exception'
       return h(Progress, {
-        percentage: val,
+        percent: val,
         status,
         strokeWidth: 6,
         style: { width: '140px' },
@@ -56,10 +56,8 @@ const columns = [
 ]
 
 const tableOptions = {
-  virtual: true,
   border: true,
   rowkey: 'id',
-  rowHeight: 52,
   heightType: 'height' as const,
   tabHeight: 480,
 }

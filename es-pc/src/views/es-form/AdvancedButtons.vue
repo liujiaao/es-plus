@@ -11,7 +11,7 @@
 
 <script setup>
 import { EsForm } from '@es-plus/adapter-antdv'
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { message } from 'ant-design-vue'
 
 const formModel = reactive({

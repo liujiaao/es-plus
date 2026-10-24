@@ -48,7 +48,7 @@ const columns = [
       }
       const status = statusMap[row.status] || statusMap.pending
       // 使用 JSX 写法（Antdv 的 Tag 用 color，不是 type）
-      return <Tag color={status.color} size="small">{status.text}</Tag>
+      return <Tag color={status.color}>{status.text}</Tag>
     }
   }
 ]

@@ -18,8 +18,9 @@
     <div class="hint">
       <Alert type="success" :closable="false" show-icon>
         <template #message>
-          <b>configTableOut + qrcb</b> — 三种后端响应格式，仅需修改配置即可适配，无需写任何适配代码。
-          传统方式需要为每种后端格式写数据转换层。
+          <b>configTableOut + qrcb</b> — 同一套表格配置适配三种后端响应（标准 / snake_case / 嵌套）：
+          configTableOut 负责分页与列表字段的映射，qrcb 只做一次字段重命名，columns 与表格组件完全不用改。
+          传统方式要为每种后端格式写一层数据转换。
         </template>
       </Alert>
     </div>
@@ -50,7 +51,7 @@ const columns = [
     prop: 'status', label: '状态',
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)}>{s.text}</Tag>
     }
   },
   { prop: 'salary', label: '薪资', width: 120, formatter: (r) => `¥${r.salary.toLocaleString()}` },

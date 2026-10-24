@@ -39,12 +39,10 @@ const columns = [
 ]
 
 const tableOptions = {
-  virtual: true,
   border: true,
   stripe: false,
   highlightCurrentRow: true,
   rowkey: 'id',
-  rowHeight: 48,
   heightType: 'height' as const,
   tabHeight: 420,
   rowClassName: ({ row }: any) => {

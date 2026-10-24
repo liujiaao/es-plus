@@ -122,10 +122,13 @@ const columns = [
   {
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
-      const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(map[row.category] || 'info')}>{row.category}</Tag>
+      const typeMap = { electronics: 'danger', clothing: 'success', jewelery: 'warning' }
+      const labelMap = { electronics: '电子产品', clothing: '服装', jewelery: '珠宝' }
+      return <Tag color={tagColor(typeMap[row.category] || 'info')}>{labelMap[row.category] || row.category}</Tag>
     }
   },
+  { prop: 'subCategory', label: '子分类', width: 90, formatter: (r) => subLabel[r.subCategory] || r.subCategory },
+  { prop: 'brand', label: '品牌', width: 100, formatter: (r) => brandLabel[r.brand] || r.brand },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
   {
     prop: 'rating', label: '评分', width: 80,
@@ -133,12 +136,32 @@ const columns = [
   }
 ]
 
+// 级联的值要能命中数据：Fake Store 只有 electronics / jewelery / men's|women's clothing，
+// 先归一成三分法，再按索引派生当前分类下的子分类与品牌
+const mainCategoryOf = (category) =>
+  category === 'electronics' || category === 'jewelery' ? category : 'clothing'
+
+const enrichProducts = (list) => list.map((p, i) => {
+  const category = mainCategoryOf(p.category)
+  const subs = subCategoryMap[category].map((s) => s.value)
+  const subCategory = subs[i % subs.length]
+  const brands = brandMap[subCategory]
+  return { ...p, category, subCategory, brand: brands[i % brands.length].value }
+})
+
+const subLabel = {}
+const brandLabel = {}
+Object.values(subCategoryMap).flat().forEach((o) => { subLabel[o.value] = o.label })
+Object.values(brandMap).flat().forEach((o) => { brandLabel[o.value] = o.label })
+
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
-  const { pageIndex = 1, pageSize = 5, keyword, category, priceRange } = { ...formParams, ...rest }
-  let filtered = await fetchProducts()
+  const { pageIndex = 1, pageSize = 5, keyword, category, subCategory, brand, priceRange } = { ...formParams, ...rest }
+  let filtered = enrichProducts(await fetchProducts())
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
+  if (subCategory) filtered = filtered.filter(item => item.subCategory === subCategory)
+  if (brand) filtered = filtered.filter(item => item.brand === brand)
   if (priceRange) {
     if (priceRange === '100+') filtered = filtered.filter(item => item.price >= 100)
     else {

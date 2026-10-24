@@ -31,8 +31,6 @@ const formModel = reactive({
   status: true
 })
 
-const departmentMap: Record<string, string> = { tech: '技术部', product: '产品部', design: '设计部' }
-const roleMap: Record<string, string> = { admin: '管理员', editor: '编辑者', viewer: '查看者' }
 
 const baseFormItems = [
   {

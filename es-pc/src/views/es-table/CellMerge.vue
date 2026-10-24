@@ -32,8 +32,8 @@ const columns = [
 
     render: (_, { row }) => {
       return h(Progress, {
-        percentage: row.progress,
-        status: row.progress >= 80 ? 'success' : row.progress >= 50 ? '' : 'exception',
+        percent: row.progress,
+        status: row.progress >= 80 ? 'success' : row.progress >= 50 ? 'normal' : 'exception',
         style: 'width: 100%'
       })
     }

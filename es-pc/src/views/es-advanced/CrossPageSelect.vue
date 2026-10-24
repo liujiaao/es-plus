@@ -74,7 +74,7 @@ const columns = [
     prop: 'status', label: '状态', width: 80,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', type: 'info' }
-      return <Tag color={tagColor(s.type)} size="small">{s.text}</Tag>
+      return <Tag color={tagColor(s.type)}>{s.text}</Tag>
     }
   }
 ]

@@ -1,6 +1,12 @@
 <template>
   <div class="example-dialog-table">
     <a-button type="primary" @click="openProductPicker">商品选择弹窗</a-button>
+    <!-- 把弹窗里选中的结果回显出来，才能看出「弹窗内表格 + 跨页选择」真的把数据带回来了 -->
+    <div v-if="selectedProducts.length" class="picked">
+      <span class="picked-label">已选 {{ selectedProducts.length }} 个商品：</span>
+      <a-tag v-for="p in selectedProducts" :key="p.id" color="blue">{{ p.title }}</a-tag>
+      <a-button type="link" size="small" @click="selectedProducts = []">清空</a-button>
+    </div>
   </div>
 </template>
 
@@ -108,5 +114,16 @@ const openProductPicker = () => {
 <style scoped>
 .example-dialog-table {
   padding: 20px;
+}
+.picked {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.picked-label {
+  font-size: 13px;
+  color: #606266;
 }
 </style>

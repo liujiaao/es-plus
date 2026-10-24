@@ -73,7 +73,8 @@ const schema = {
             ])
           }),
           h('div', { style: 'margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;' }, [
-            h(Button, { onClick: close }, () => '取消'),
+            // 取消时清空暂存列表，否则下次打开弹窗会残留上一次选的文件
+            h(Button, { onClick: () => { pendingFiles.value = []; close() } }, () => '取消'),
             h(Button, {
               type: 'primary',
               onClick: () => {

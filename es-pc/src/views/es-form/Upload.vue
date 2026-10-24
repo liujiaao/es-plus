@@ -53,8 +53,7 @@ const formItems = [
       accept: 'image/*',
       listType: 'picture-card',
       maxCount: 9,
-      multiple: true,
-      showFileList: true
+      multiple: true
     },
     // 自定义上传请求（必须在 props 外面）
     httpRequest: (options: { file: File }) => {
@@ -127,7 +126,6 @@ const configBtn = [
     click: (model: Record<string, unknown>) => {
       const files = (model.gallery as any[]).map((f: any) => f.name).join(', ')
       message.success(`提交成功！已上传 ${files || 0} 个文件`)
-      console.log('表单数据:', model)
     }
   },
   {

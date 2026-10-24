@@ -83,7 +83,7 @@ const columns = [
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
       const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(map[row.category] || 'info')} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(map[row.category] || 'info')}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

@@ -7,6 +7,8 @@
       @dialog-confirm="handleDialogConfirm"
       @btn-click="handleBtnClick"
     />
+    <!-- excel导入：工具栏按钮只负责唤起，真正解析在 handleImportFile -->
+    <input ref="importInput" type="file" accept=".csv,text/csv" style="display: none" @change="handleImportFile" />
   </div>
 </template>
 
@@ -16,6 +18,10 @@ import { EsCrudPage } from '@es-plus/adapter-antdv'
 import { message } from 'ant-design-vue'
 
 const crudRef = ref<InstanceType<typeof EsCrudPage> | null>(null)
+const importInput = ref<HTMLInputElement | null>(null)
+
+// 下载弹窗内嵌的 EsCrudPage 实例（render 里注册）：保存时读它的勾选行
+let downloadCrudEl: any = null
 
 // ─── Mock Data ───
 
@@ -49,7 +55,8 @@ const mockOrders = [
   { id: 6, goods: 'Samsung Galaxy S24', orderNo: 'ORD20240401006', channel: 'offline', workOrderNo: 'WO006', totalPrice: 7999, status: 'cancelled', rewardPoints: 0, customer: '孙八', phone: '13800138006', createTime: '2024-04-15 14:20', completeTime: '', batch: 'B2024-03' },
   { id: 7, goods: 'OPPO Find X7', orderNo: 'ORD20240401007', channel: 'live', workOrderNo: 'WO007', totalPrice: 4999, status: 'completed', rewardPoints: 130, customer: '周九', phone: '13800138007', createTime: '2024-05-01 09:00', completeTime: '2024-05-06 17:30', batch: 'B2024-04' },
   { id: 8, goods: 'vivo X100 Pro', orderNo: 'ORD20240501008', channel: 'online', workOrderNo: 'WO008', totalPrice: 4999, status: 'paid', rewardPoints: 130, customer: '吴十', phone: '13800138008', createTime: '2024-05-20 13:10', completeTime: '', batch: 'B2024-04' }
-]
+  // 履约方式是查询表单里的筛选项，数据里必须有，否则选了也筛不出任何行
+].map((o, i) => ({ ...o, fulfillType: ['express', 'city', 'pickup'][i % 3] }))
 
 // ─── 通用 httpRequest ───
 
@@ -64,11 +71,40 @@ const mockHttpRequest = async ({ pageIndex, pageSize, formParams }: any) => {
   if (formParams?.status) filtered = filtered.filter(i => i.status === formParams.status)
   if (formParams?.workOrderNo) filtered = filtered.filter(i => i.workOrderNo.includes(formParams.workOrderNo))
   if (formParams?.batch) filtered = filtered.filter(i => i.batch.includes(formParams.batch))
+  if (formParams?.fulfillType) filtered = filtered.filter(i => i.fulfillType === formParams.fulfillType)
+  // 日期范围是 [start, end]（valueFormat: 'YYYY-MM-DD'），按天比较；完成时间为空的行不参与该筛选
+  if (Array.isArray(formParams?.createTime) && formParams.createTime.length === 2) {
+    const [s, e] = formParams.createTime
+    filtered = filtered.filter(i => {
+      const d = String(i.createTime || '').slice(0, 10)
+      return d && d >= s && d <= e
+    })
+  }
+  if (Array.isArray(formParams?.completeTime) && formParams.completeTime.length === 2) {
+    const [s, e] = formParams.completeTime
+    filtered = filtered.filter(i => {
+      const d = String(i.completeTime || '').slice(0, 10)
+      return d && d >= s && d <= e
+    })
+  }
   const start = (pageIndex - 1) * pageSize
   return { data: filtered.slice(start, start + pageSize), total: filtered.length, pageIndex, pageSize }
 }
 
 // ─── 下载弹窗内嵌 EsCrudPage 的 schema ───
+
+// 把行数据导成 CSV（带 BOM，Excel 打开中文不乱码）
+function exportCsv(rows: Record<string, any>[], filename: string) {
+  const header = ['goods', 'orderNo', 'channel', 'totalPrice', 'status']
+  const lines = [header.join(','), ...rows.map((r) => header.map((k) => r[k] ?? '').join(','))]
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 const downloadCrudSchema: any = {
   formItems: [
@@ -132,6 +168,8 @@ const pageSchema: any = {
     { prop: 'goods', label: '商品信息', minWidth: 150 },
     { prop: 'orderNo', label: '订单编号', minWidth: 140 },
     { prop: 'channel', label: '来源渠道', width: 100 },
+    { prop: 'fulfillType', label: '履约方式', width: 100,
+      formatter: (r: any) => ({ express: '快递配送', city: '同城配送', pickup: '到店自提' }[r.fulfillType] || '-') },
     { prop: 'workOrderNo', label: '工单信息', width: 100 },
     { prop: 'totalPrice', label: '订单总价', width: 100 },
     { prop: 'status', label: '订单状态', width: 100 },
@@ -169,10 +207,26 @@ const pageSchema: any = {
       width: '900px',
       render: (_h: any, { registerRef }: any) => (
         <EsCrudPage
-          ref={(el: any) => el && registerRef('downloadCrud', el)}
+          ref={(el: any) => {
+            if (el) {
+              downloadCrudEl = el
+              registerRef('downloadCrud', el)
+            }
+          }}
           schema={downloadCrudSchema}
         />
       ),
+      // 「保存」= 导出弹窗内勾选的订单；没勾选就留在弹窗里提示
+      onConfirm: (_data: any, { close }: any) => {
+        const rows = downloadCrudEl?.getSelectedRows?.() || []
+        if (!rows.length) {
+          message.warning('请先勾选要下载的订单')
+          throw new Error('empty-selection')
+        }
+        exportCsv(rows, '订单下载.csv')
+        message.success(`已下载 ${rows.length} 条订单`)
+        close()
+      },
       configBtn: [
         { name: '取消', action: 'cancel' },
         { name: '保存', type: 'primary', action: 'confirm' }
@@ -244,9 +298,42 @@ function handleDialogConfirm(dialogKey: string, data: Record<string, any>) {
     } as any)
     message.success(`新增订单成功: ${data.goods || data.customer}`)
   } else if (dialogKey === 'download') {
-    message.success('下载任务已提交')
+    // 真正的导出在弹窗配置的 onConfirm 里完成，这里只刷新主表
   }
   crudRef.value?.refresh()
+}
+
+// excel导入：读取 CSV（首行表头），逐行并入 mockOrders 后刷新表格
+function handleImportFile(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  file.text().then((text) => {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim())
+    if (lines.length < 2) {
+      message.warning('CSV 没有数据行')
+      input.value = ''
+      return
+    }
+    const header = lines[0].split(',').map((s) => s.trim())
+    let id = mockOrders.reduce((m, r) => Math.max(m, r.id), 0)
+    const added = lines.slice(1).map((line) => {
+      const cells = line.split(',').map((s) => s.trim())
+      const row: Record<string, any> = {
+        id: ++id, fulfillType: 'express', rewardPoints: 0,
+        createTime: '', completeTime: '', batch: '导入'
+      }
+      header.forEach((k, i) => {
+        if (cells[i] === undefined || cells[i] === '') return
+        row[k] = k === 'totalPrice' ? Number(cells[i]) : cells[i]
+      })
+      return row
+    })
+    mockOrders.unshift(...added)
+    input.value = ''
+    crudRef.value?.refresh()
+    message.success(`已导入 ${added.length} 条订单`)
+  })
 }
 
 function handleBtnClick(key: string, payload?: Record<string, any>) {
@@ -257,7 +344,9 @@ function handleBtnClick(key: string, payload?: Record<string, any>) {
     crudRef.value?.refresh()
   }
   if (key === 'import') {
-    message.info('正在打开 Excel 导入...')
+    // actionType:'import' 只负责发起，具体解析走 handleImportFile（选 CSV 文件）
+    message.info('请选择 CSV 文件（表头：goods,orderNo,channel,totalPrice,status）')
+    importInput.value?.click()
   }
 }
 </script>

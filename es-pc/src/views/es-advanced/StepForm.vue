@@ -1,6 +1,7 @@
 <template>
   <div class="example-advanced-step-form">
-    <a-steps :active="currentStep" finish-status="success" simple>
+    <!-- ADV 的 Steps 用 current（从 0 开始），没有 finishStatus / simple -->
+    <a-steps :current="currentStep">
       <a-step title="基本信息" />
       <a-step title="配置信息" />
       <a-step title="确认提交" />
@@ -22,7 +23,7 @@
         :layout-form-props="{ formLayProps: { labelWidth: '100px' } }"
       />
       <div v-if="currentStep === 2" class="review-section">
-        <a-descriptions :column="2" border>
+        <a-descriptions :column="2" bordered>
           <a-descriptions-item label="项目名称">{{ formData.name }}</a-descriptions-item>
           <a-descriptions-item label="项目类型">{{ formData.type }}</a-descriptions-item>
           <a-descriptions-item label="负责人">{{ formData.manager }}</a-descriptions-item>
@@ -45,7 +46,7 @@
 <script setup>
 import { EsForm } from '@es-plus/adapter-antdv'
 import { ref } from 'vue'
-import { message, Steps, Step, Descriptions, DescriptionsItem } from 'ant-design-vue'
+import { message } from 'ant-design-vue'
 
 const currentStep = ref(0)
 

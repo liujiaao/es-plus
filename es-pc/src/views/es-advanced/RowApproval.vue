@@ -57,9 +57,11 @@ const columns = [
   { prop: 'applicant', label: '申请人', width: 90 },
   {
     prop: 'type', label: '类型', width: 90,
-    render: (_, { row }) => <Tag color={typeMap[row.type]} size="small">{row.reason}</Tag>
+    render: (_, { row }) => <Tag color={typeMap[row.type]}>{row.reason}</Tag>
   },
   { prop: 'date', label: '日期', width: 120 },
+  { prop: 'approvalReason', label: '审批意见', minWidth: 120,
+    render: (_, { row }) => row.approvalReason || '-' },
   {
     prop: 'amount', label: '金额', width: 100,
     formatter: (r) => r.amount ? `¥${r.amount.toLocaleString()}` : '-'
@@ -68,7 +70,7 @@ const columns = [
     prop: 'status', label: '状态', width: 100,
     render: (_, { row }) => {
       const s = statusMap[row.status] || { text: '-', color: 'default' }
-      return <Tag color={s.color} size="small">{s.text}</Tag>
+      return <Tag color={s.color}>{s.text}</Tag>
     }
   },
   {
@@ -143,10 +145,16 @@ const openBatchDialog = (action) => {
     ),
     configBtn: [
       { name: '取消', click: (_, { close }) => close() },
-      { name: `确定${label}`, type: action === 'approve' ? 'success' : 'danger', click: (_, { close }) => {
+      // ADV 的 Button 没有 success 类型，通过用 primary
+      { name: `确定${label}`, type: action === 'approve' ? 'primary' : 'danger', click: (_, { close }) => {
+        // 审批原因写回行数据，表格「审批意见」列据此展示（否则填了也白填）
+        const reason = formModel.reason || (action === 'approve' ? '同意' : '驳回')
         selection.forEach(item => {
           const source = tableData.value.find(d => d.id === item.id)
-          if (source) source.status = action === 'approve' ? 'approved' : 'rejected'
+          if (source) {
+            source.status = action === 'approve' ? 'approved' : 'rejected'
+            source.approvalReason = reason
+          }
         })
         message.success(`已批量${label} ${selection.length} 条申请`)
         close()

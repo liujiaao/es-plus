@@ -9,7 +9,10 @@
     >
       <template #default>
         <div class="toolbar">
-          <a-button type="primary" icon="PlusOutlined" @click="openDialog()">新增</a-button>
+          <a-button type="primary" @click="openDialog()">
+            <template #icon><PlusOutlined /></template>
+            新增
+          </a-button>
         </div>
       </template>
     </es-table>
@@ -50,7 +53,7 @@ const columns = [
     prop: 'category', label: '分类', width: 120,
     render: (_, { row }) => {
       const map = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(map[row.category] || 'info')} size="small">{row.category}</Tag>
+      return <Tag color={tagColor(map[row.category] || 'info')}>{row.category}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },

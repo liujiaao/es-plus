@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { EsForm } from '@es-plus/adapter-antdv'
-import { reactive, computed, watch } from 'vue'
+import { reactive, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
 const productMap: Record<string, { name: string; price: number; unit: string }> = {

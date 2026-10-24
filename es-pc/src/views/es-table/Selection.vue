@@ -99,7 +99,8 @@ const handlePageChange = (pag) => {
 const handleSizeChange = (pag, size) => {
   pagination.value.pageSize = size
   pagination.value.current = pag.current
-  // 页大小变化后页边界改变，清除跨页记忆
+  // 页大小变化后页边界改变，清除跨页记忆（表格内部的勾选缓存也要一起清）
+  tableRef.value?.clearAllSelection?.()
   Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
 }
 

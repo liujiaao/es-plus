@@ -48,10 +48,10 @@ const formItems = [
   { prop: 'username', label: '用户名', formtype: 'Input', span: 24, attrs: { placeholder: '3-20个字符', allowClear: true } },
   { prop: 'email', label: '邮箱', formtype: 'Input', span: 12, attrs: { placeholder: 'example@mail.com', allowClear: true } },
   { prop: 'phone', label: '手机号', formtype: 'Input', span: 12, attrs: { placeholder: '11位手机号', allowClear: true } },
-  { prop: 'password', label: '密码', formtype: 'Input', span: 24, attrs: { placeholder: '至少6位', type: 'password', showPassword: true } }
+  { prop: 'password', label: '密码', formtype: 'Input', span: 24, attrs: { placeholder: '至少6位', type: 'password' } }
 ]
 
-// 按钮配置 - 使用 key: 'query' 触发表单验证
+// 按钮配置 —— 提交按钮的 click 里显式 validate()，失败时提示而不是假成功
 const configBtn = [
   {
     name: '提交',
@@ -63,7 +63,6 @@ const configBtn = [
       try {
         await formRef.validate()
         message.success('验证通过，表单提交成功！')
-        console.log('提交的表单数据:', model)
       } catch {
         message.warning('请检查表单填写是否正确')
       }
@@ -76,17 +75,6 @@ const configBtn = [
     icon: 'RefreshLeft'
   }
 ]
-
-// 确认提交 - 配合 key: 'query' 使用，组件内部会自动验证
-const handleConfirm = (formRefInstance, model) => {
-  message.success('验证通过，表单提交成功！')
-  console.log('提交的表单数据:', model)
-}
-
-// 重置表单
-const handleReset = (formRefInstance, model) => {
-  message.info('表单已重置')
-}
 </script>
 
 <style scoped>

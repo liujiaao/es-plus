@@ -115,12 +115,15 @@ const columns = [
   { prop: 'id', label: 'ID', width: 60 },
   { prop: 'title', label: '商品名称', minWidth: 180 },
   {
-    prop: 'category', label: '分类', width: 120,
+    prop: 'category', label: '主分类', width: 100,
     render: (_, { row }) => {
-      const typeMap = { 'electronics': 'danger', 'jewelery': 'warning', "men's clothing": '', "women's clothing": 'success' }
-      return <Tag color={tagColor(typeMap[row.category] || 'info')} size="small">{row.category}</Tag>
+      const typeMap = { electronics: 'danger', clothing: 'success', jewelery: 'warning' }
+      const labelMap = { electronics: '电子产品', clothing: '服装', jewelery: '珠宝' }
+      return <Tag color={tagColor(typeMap[row.category] || 'info')}>{labelMap[row.category] || row.category}</Tag>
     }
   },
+  { prop: 'subCategory', label: '子分类', width: 90, formatter: (r) => subLabel[r.subCategory] || r.subCategory },
+  { prop: 'brand', label: '品牌', width: 100, formatter: (r) => brandLabel[r.brand] || r.brand },
   { prop: 'price', label: '价格', width: 100, formatter: (r) => `$${r.price}` },
   {
     prop: 'rating', label: '评分', width: 80,
@@ -128,14 +131,35 @@ const columns = [
   }
 ]
 
+// 级联选择的值要能真正落到数据上：Fake Store 的分类只有
+// electronics / jewelery / men's clothing / women's clothing，先归一成三分法，
+// 再按索引派生属于当前分类的子分类与品牌，三级筛选才都有命中项。
+const mainCategoryOf = (category) =>
+  category === 'electronics' || category === 'jewelery' ? category : 'clothing'
+
+const enrichProducts = (list) => list.map((p, i) => {
+  const category = mainCategoryOf(p.category)
+  const subs = subCategoryMap[category].map((s) => s.value)
+  const subCategory = subs[i % subs.length]
+  const brands = brandMap[subCategory]
+  return { ...p, category, subCategory, brand: brands[i % brands.length].value }
+})
+
+const subLabel = {}
+const brandLabel = {}
+Object.values(subCategoryMap).flat().forEach((o) => { subLabel[o.value] = o.label })
+Object.values(brandMap).flat().forEach((o) => { brandLabel[o.value] = o.label })
+
 const mockRequest = async (params) => {
   const { formParams, ...rest } = params || {}
-  const { pageIndex = 1, pageSize = 5, keyword, category } = { ...formParams, ...rest }
+  const { pageIndex = 1, pageSize = 5, keyword, category, subCategory, brand } = { ...formParams, ...rest }
 
-  let filtered = await fetchProducts()
+  let filtered = enrichProducts(await fetchProducts())
 
   if (keyword) filtered = filtered.filter(item => item.title.toLowerCase().includes(keyword.toLowerCase()))
   if (category) filtered = filtered.filter(item => item.category === category)
+  if (subCategory) filtered = filtered.filter(item => item.subCategory === subCategory)
+  if (brand) filtered = filtered.filter(item => item.brand === brand)
 
   const total = filtered.length
   const start = (pageIndex - 1) * pageSize

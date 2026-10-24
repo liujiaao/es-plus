@@ -40,7 +40,8 @@ const tableOptions = {
     rowField: 'id',
     parentField: 'parentId',
     children: 'children',
-    mapChildren: '_X_ROW_CHILD',
+    // 注意键名是 mapChildrenField（不是 mapChildren）——转换后的子节点挂在这个字段上
+    mapChildrenField: '_X_ROW_CHILD',
     transform: true,
   },
 }

@@ -6,7 +6,7 @@
 
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
-import { message, Steps, Step } from 'ant-design-vue'
+import { message, Steps, Step, Descriptions, DescriptionsItem } from 'ant-design-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
 
 const dialog = useDialog()
@@ -80,8 +80,9 @@ const openImportDialog = () => {
     title: '数据导入向导',
     width: '800px',
     render: (h, { registerRef }) => {
+      // ADV 的 Steps 用 current；finishStatus / simple 是 React 版 API，传了不生效
       const stepsEl = (
-        <Steps active={currentStep.value} finishStatus="success" simple style="margin-bottom: 20px">
+        <Steps current={currentStep.value} style="margin-bottom: 20px">
           <Step title="配置" />
           <Step title="预览" />
           <Step title="确认" />
@@ -123,12 +124,13 @@ const openImportDialog = () => {
       return (
         <div>
           {stepsEl}
-          <a-descriptions column={2} border size="small" style="margin-bottom: 16px">
-            <a-descriptions-item label="导入类型">{step1Model.importType === 'employee' ? '员工数据' : step1Model.importType}</a-descriptions-item>
-            <a-descriptions-item label="数据来源">{step1Model.source === 'excel' ? 'Excel文件' : step1Model.source}</a-descriptions-item>
-            <a-descriptions-item label="数据条数">{step2Model.data.length}</a-descriptions-item>
-            <a-descriptions-item label="有效数据">{step2Model.data.filter(d => d.valid).length}</a-descriptions-item>
-          </a-descriptions>
+          {/* JSX 里标签大小写决定「组件 / 原生元素」，必须用 import 进来的大写组件名 */}
+          <Descriptions column={2} bordered size="small" style="margin-bottom: 16px">
+            <DescriptionsItem label="导入类型">{step1Model.importType === 'employee' ? '员工数据' : step1Model.importType}</DescriptionsItem>
+            <DescriptionsItem label="数据来源">{step1Model.source === 'excel' ? 'Excel文件' : step1Model.source}</DescriptionsItem>
+            <DescriptionsItem label="数据条数">{step2Model.data.length}</DescriptionsItem>
+            <DescriptionsItem label="有效数据">{step2Model.data.filter(d => d.valid).length}</DescriptionsItem>
+          </Descriptions>
           <EsForm
             ref={(el) => { if (el) registerRef('step3Form', el) }}
             model={step3Model}
@@ -160,7 +162,8 @@ const openImportDialog = () => {
         name: '确认导入', type: 'primary',
         disabled: () => currentStep.value !== 2,
         click: (_, { close }) => {
-          message.success(`成功导入 ${step2Model.data.filter(d => d.valid).length} 条数据（模拟）`)
+          // 向导只演示前端流程：校验通过的行没有真正发送到后端
+          message.success(`已通过校验 ${step2Model.data.filter(d => d.valid).length} 条（演示：未提交后端）`)
           close()
         }
       }

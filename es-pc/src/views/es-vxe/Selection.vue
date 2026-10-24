@@ -11,6 +11,7 @@
       :options="tableOptions"
       v-model:data-source="pagedData"
       v-model:pagination="pagination"
+      @selection-change="onSelectionChange"
     />
   </div>
 </template>
@@ -53,6 +54,11 @@ const pagedData = computed(() => {
   const start = (pagination.value.current - 1) * pagination.value.pageSize
   return allData.slice(start, start + pagination.value.pageSize)
 })
+
+// 勾选变化实时更新计数（vxe 引擎同样转出公共 selection-change，签名与 el-table 一致）
+function onSelectionChange(rows) {
+  selectedCount.value = rows?.length || 0
+}
 
 function showSelected() {
   const rows = tableRef.value?.getSelectionRows?.() || []

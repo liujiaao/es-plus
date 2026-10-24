@@ -19,7 +19,7 @@
 
 <script setup lang="jsx">
 import { ref, reactive, h } from 'vue'
-import { message, Tag, Button } from 'ant-design-vue'
+import { message, Tag } from 'ant-design-vue'
 import { EsForm, EsTable, useDialog } from '@es-plus/adapter-antdv'
 
 const tableRef = ref(null)

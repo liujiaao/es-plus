@@ -103,7 +103,8 @@ const toggleEdit = (row) => {
   row.editing = !row.editing
 }
 
-const handleCellClick = (row, column, cell, event) => {
+// 三端统一签名 (row, column, event)：antdv 由列级 customCell.onClick 桥接过来
+const handleCellClick = (row, column, event) => {
   if (column.label === '操作') return
   event.stopPropagation()
   if (!row.editing) {

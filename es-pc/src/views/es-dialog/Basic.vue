@@ -7,7 +7,7 @@
 
 <script setup>
 import { h } from 'vue'
-import { message, Button } from 'ant-design-vue'
+import { message } from 'ant-design-vue'
 import { useDialog } from '@es-plus/adapter-antdv'
 
 const dialog = useDialog()

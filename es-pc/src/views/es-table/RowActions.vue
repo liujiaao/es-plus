@@ -11,7 +11,6 @@
 <script setup>
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref, h } from 'vue'
-import { PlusOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal, Tag } from 'ant-design-vue'
 
 const userRole = ref('admin')

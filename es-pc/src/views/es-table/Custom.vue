@@ -26,7 +26,7 @@
 <script setup>
 // import { h } from 'vue'
 import { EsTable } from '@es-plus/adapter-antdv'
-import { Button, Tag, Progress, Avatar } from 'ant-design-vue'
+import { Button } from 'ant-design-vue'
 
 const tableData = [
   { id: 1, name: '项目A', status: 'active', progress: 75, manager: '张三', avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png' },

@@ -42,7 +42,7 @@ const selectColumns = [
     prop: 'category', label: '分类', width: 100,
     render: (_, { row }) => {
       const c = categoryMap[row.category] || { text: row.category, type: 'info' }
-      return <Tag color={tagColor(c.type)} size="small">{c.text}</Tag>
+      return <Tag color={tagColor(c.type)}>{c.text}</Tag>
     }
   },
   { prop: 'price', label: '价格', width: 80, formatter: (r) => `$${r.price}` },
