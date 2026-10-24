@@ -33,6 +33,8 @@
               @sort-change="changeTableSort"
               @selection-change="handleVirtualEngineSelectionChange"
               @row-click="handleVirtualRowClick"
+              @row-dblclick="handleVirtualRowDblclick"
+              @row-contextmenu="handleVirtualRowContextmenu"
             />
             <!-- vxe 高性能引擎：attrs 穿透管道将 <es-table @xxx> 事件转发到 vxe-grid -->
             <vxe-engine
@@ -524,18 +526,25 @@ const tableAttrs = computed(() => {
 const fallthroughAttrs = useAttrs()
 
 /**
- * 虚拟滚动引擎的行点击转发（AN-11⑥）。
+ * 虚拟滚动引擎的行事件转发（AN-11⑥）。
  *
- * el-table / vxe 两条路径都靠 attrs 透传把父级的 `onRowClick` 送到引擎
+ * el-table / vxe 两条路径都靠 attrs 透传把父级的 `onRowClick` 等送到引擎
  * （`tableBindAttrs` / `vxePassthroughAttrs`），唯独 virtual 分支是显式绑定、一个 on*
  * 都没接 —— 于是 `<es-table @row-click>` 在 virtual 引擎下被静默吞掉。这里补上同一条边。
+ *
+ * 行双击 / 右键同理：virtual-engine 会 emit `row-dblclick` / `row-contextmenu`，
+ * 组件不接就等于这两个能力只存在于引擎里、对外不可见。
  */
-const handleVirtualRowClick = (row: Record<string, unknown>, event: Event) => {
-  const handler = fallthroughAttrs.onRowClick as
+const forwardVirtualRowEvent = (attr: string) => {
+  const handler = fallthroughAttrs[attr] as
     | ((row: Record<string, unknown>, event: Event) => void)
     | undefined
-  handler?.(row, event)
+  return (row: Record<string, unknown>, event: Event) => handler?.(row, event)
 }
+
+const handleVirtualRowClick = forwardVirtualRowEvent('onRowClick')
+const handleVirtualRowDblclick = forwardVirtualRowEvent('onRowDblclick')
+const handleVirtualRowContextmenu = forwardVirtualRowEvent('onRowContextmenu')
 
 // 非事件 attrs 透传给根 div（保留 class/style/data-* 等）
 const rootPassthroughAttrs = computed(() => {
