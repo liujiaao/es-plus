@@ -66,10 +66,10 @@ export default {
             name: '提交',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('policyform')
-              const valid = await formRef.validate()
+              // validate() 校验不通过是 reject —— 不 catch 会变成未处理的 Promise 拒绝
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
                 this.$message.success('提交成功！')
-                console.log('表单数据：', this.realWorldFormData)
                 close()
               }
             }
@@ -174,10 +174,9 @@ export default {
             name: '保存',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('policyform')
-              const valid = await formRef.validate()
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
                 this.$message.success('保存成功！')
-                console.log('编辑数据：', this.realWorldFormData)
                 close()
               }
             }

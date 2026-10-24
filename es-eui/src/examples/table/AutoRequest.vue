@@ -26,7 +26,8 @@ export default {
           )
         }
       ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 0 },
+      // 分页读 current；请求里的 pageIndex 由组件按 current 生成
+      pagination: { current: 1, pageSize: 10, total: 0 },
       options: {
         isInitRun: true,
         border: true,
@@ -38,10 +39,12 @@ export default {
         },
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
+          // brcb（beforeRequest 的简写）把分页参数改写成 dummyjson 的 limit / skip；
+          // 返回值会整体替换请求参数，所以后端要的字段必须一次写全
           brcb: (params) => {
             const { pageSize, pageIndex } = params
             return {

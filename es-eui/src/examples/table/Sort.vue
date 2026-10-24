@@ -47,15 +47,16 @@ export default defineComponent({
         label: '分数',
         width: 120,
         sortable: true,
-        // 自定义排序：确保按数值大小而非字符串比较
-        sortMethod: (a, b) => a.score - b.score
+        // 自定义排序：el-table 传进来的是「单元格值」（util.js: sortMethod(a.value, b.value)），
+        // 不是整行 —— 写成 (a, b) => a.score - b.score 只会得到 NaN，点了等于没排
+        sortMethod: (a, b) => a - b
       },
       {
         prop: 'entryDate',
         label: '入职日期',
         sortable: true,
-        // 按时间戳排序，避免字符串比较造成的误差
-        sortMethod: (a, b) => new Date(a.entryDate) - new Date(b.entryDate)
+        // 同样按单元格值转时间戳，避免 'YYYY-MM-DD' 字符串比较的误差
+        sortMethod: (a, b) => new Date(a) - new Date(b)
       }
     ]
 

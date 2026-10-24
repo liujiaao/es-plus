@@ -172,7 +172,9 @@ export default {
             key: 'submit',
             click: async (vm, { close, getRefs }) => {
               const formRef = getRefs('masterForm')
-              const valid = await formRef.validate()
+              // validate() 校验不通过时是 reject，不是返回 false —— 不 catch 会变成
+              // 未处理的 Promise 拒绝，且后面的提交逻辑照跑
+              const valid = await formRef.validate().catch(() => false)
               if (!valid) return
               if (detailList.length === 0) {
                 this.$message.warning('请至少添加一条明细')
@@ -201,9 +203,6 @@ export default {
     },
     removeDetail(detailList, index) {
       detailList.splice(index, 1)
-    },
-    calculateTotal(detailList) {
-      return detailList.reduce((sum, item) => sum + item.qty * item.price, 0)
     }
   }
 }

@@ -7,7 +7,7 @@ export const RAW_combination_BatchEdit = `<template>
       type="success"
       :closable="false"
       style="margin-bottom: 10px;"
-      description="多选批量编辑：勾选若干行 → 批量修改部门/状态 → api.batchUpdate 一次提交 → refetch 当前页并清空勾选。工具栏实时显示已选数量。"
+      description="多选批量编辑：勾选若干行 → 批量修改部门/状态 → api.batchUpdate 一次提交 → 重新拉取当前页并清空勾选。"
     />
     <es-table
       ref="tableRef"
@@ -113,8 +113,10 @@ export default defineComponent({
                 const res = await api.batchUpdate(ids, patch)
                 Message.success(\`已更新 \${res.count} 条\`)
                 close()
-                tableRef.value?.httpRequestInstance()
-                tableRef.value?.clearSelection?.()
+                // 先清跨页勾选（含 cachePageSelection 记忆），再重新取数，
+                // 否则 refetch 后 restoreSelectionForPage 会把刚清掉的勾选又勾回来
+                tableRef.value?.clearAllSelection?.()
+                tableRef.value?.httpRequestInstance?.()
               } catch (e) {
                 Message.error(e.message)
               } finally {
@@ -229,6 +231,8 @@ export default {
             click: (_, { close }) => {
               const ids = this.selection.map(item => item.id)
               this.tableData = this.tableData.filter(item => !ids.includes(item.id))
+              // 行删掉了，勾选态也要一起清（el-table 不会因为数据源变小就清空选中集合）
+              this.\$refs.batchTable?.clearAllSelection()
               this.selection = []
               this.\$message.success(\`已删除 \${ids.length} 条记录\`)
               close()
@@ -263,6 +267,7 @@ export default {
                   item.status = '启用'
                 }
               })
+              this.\$refs.batchTable?.clearAllSelection()
               this.selection = []
               this.\$message.success(\`已更新 \${ids.length} 条记录\`)
               close()
@@ -441,9 +446,9 @@ export default {
             key: 'save',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('esFormInDialog')
-              const valid = await formRef.validate()
+              // EsForm.validate() 校验不通过是 reject —— 不 catch 会变成未处理的 Promise 拒绝
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
-                console.log('表单数据:', formData)
                 this.\$message.success('保存成功')
                 close()
               }
@@ -866,14 +871,12 @@ export default {
         this.\$message.warning('请至少选择一条记录')
         return
       }
-      console.log('提交数据：', {
-        formData: this.formData,
-        selection: this.selection
-      })
-      this.\$message.success('提交成功')
+      this.\$message.success(\`已提交 \${this.selection.length} 条记录\`)
     },
     handleReset() {
       this.\$refs.form.resetFields()
+      // 清勾选要调表格实例：只把 selection 置空，行上的勾选框还留着，界面与数据就对不上了
+      this.\$refs.table?.clearAllSelection()
       this.selection = []
     }
   }
@@ -908,9 +911,6 @@ export default {
       },
       formWithTableItems: []
     }
-  },
-  created() {
-    // Defer to mounted to avoid EsForm height calc loop with embedded table
   },
   mounted() {
     this.\$nextTick(() => {
@@ -949,13 +949,13 @@ export default {
                   label: '单价',
                   width: 150,
                   render: (h, { row: item }) => (
-                    <el-input
+                    <el-input-number
                       v-model={item.price}
+                      min={0}
+                      precision={2}
                       size="small"
-                      style="width: 100px;"
-                    >
-                      <template slot="prepend">¥</template>
-                    </el-input>
+                      style="width: 120px;"
+                    />
                   )
                 },
                 {
@@ -963,7 +963,7 @@ export default {
                   label: '小计',
                   render: (h, { row: item }) => (
                     <span style="color: #f56c6c; font-weight: bold;">
-                      ¥{item.quantity * item.price}
+                      ¥{(item.quantity * item.price).toFixed(2)}
                     </span>
                   )
                 },
@@ -992,15 +992,17 @@ export default {
       this.formWithTableData.items.splice(index, 1)
     },
     submitFormWithTable() {
-      console.log('订单数据:', this.formWithTableData)
-      this.\$message.success('提交成功')
+      const items = this.formWithTableData.items
+      if (!items.length) {
+        this.\$message.warning('请先添加订单明细')
+        return
+      }
+      const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0)
+      this.\$message.success(\`提交成功：\${items.length} 条明细，合计 ¥\${total.toFixed(2)}\`)
     },
     resetFormWithTable() {
-      this.formWithTableData = {
-        orderNo: '',
-        customer: '',
-        items: []
-      }
+      this.\$refs.orderForm?.resetFields()
+      this.formWithTableData.items = []
     }
   }
 }
@@ -1303,7 +1305,9 @@ export default {
             key: 'submit',
             click: async (vm, { close, getRefs }) => {
               const formRef = getRefs('masterForm')
-              const valid = await formRef.validate()
+              // validate() 校验不通过时是 reject，不是返回 false —— 不 catch 会变成
+              // 未处理的 Promise 拒绝，且后面的提交逻辑照跑
+              const valid = await formRef.validate().catch(() => false)
               if (!valid) return
               if (detailList.length === 0) {
                 this.\$message.warning('请至少添加一条明细')
@@ -1332,9 +1336,6 @@ export default {
     },
     removeDetail(detailList, index) {
       detailList.splice(index, 1)
-    },
-    calculateTotal(detailList) {
-      return detailList.reduce((sum, item) => sum + item.qty * item.price, 0)
     }
   }
 }
@@ -1440,7 +1441,6 @@ export const RAW_combination_QueryFormLinkage = `<template>
     <!-- 查询表单区域 -->
     <div class="query-section">
       <es-form
-        ref="queryForm"
         :form-item-list="queryFormItems"
         :model="queryFormData"
         :layout-form-props="{ formLayProps: { size: 'mini' }, rowLayProps: { gutter: 10 } }"
@@ -1459,60 +1459,61 @@ export const RAW_combination_QueryFormLinkage = `<template>
         stripe: true,
         tabHeight: 250,
         heightType: 'height',
-        isInitRun: false,
+        isInitRun: true,
         apiParams: {
           url: 'https://dummyjson.com/users',
           method: 'get'
         },
-        httpRequest: (params) => fetchWithCORS(params),
+        httpRequest: (params) => this.requestUsers(params),
         configTableOut: {
           total: 'total',
           pageSize: 'limit',
           tableData: 'users'
-        },
-        listenToCallBack: {
-          brcb: (params) => {
-            const { pageSize, pageIndex } = params
-            return {
-              limit: pageSize,
-              skip: (pageIndex - 1) * pageSize
-            }
-          }
         }
       }"
     />
   </div>
 </template>
 
-<script>
+<script lang="jsx">
+/**
+ * 查询表单联动 —— 演示「表单条件 → 表格数据」的联动
+ *
+ * 关键点：
+ *   1. 表单与表格是兄弟节点：表格不会自动收集表单值，筛选条件统一由 requestUsers
+ *      读取组件上的 queryFormData；查询按钮再调 \`httpRequestInstance(model, { keepPage: false })\`
+ *      回到第 1 页（keepPage=false 表示搜索语义）
+ *   2. \`watch(queryFormData, deep)\` 让条件变化自动触发查询（与页面描述一致）
+ *   3. 筛选在 \`httpRequest\` 里真正作用于数据，而不是只改 URL 参数
+ */
 export default {
   data() {
     return {
       queryFormData: {
         name: '',
-        status: '',
-        dateRange: []
+        gender: '',
+        birthRange: []
       },
       configBtn: [
-        { name: '查询', type: 'primary', click: this.onSearchClick },
-        { name: '重置', click: this.onResetClick }
+        { name: '查询', type: 'primary', click: () => this.handleSearch() },
+        { name: '重置', click: (model, formRef) => formRef && formRef.resetFields() }
       ],
       queryFormItems: [
         { prop: 'name', label: '姓名', span: 6, formtype: 'Input', attrs: { placeholder: '请输入姓名' } },
         {
-          prop: 'status',
-          label: '状态',
+          prop: 'gender',
+          label: '性别',
           span: 6,
           formtype: 'Select',
           dataOptions: [
             { label: '全部', value: '' },
-            { label: '启用', value: '1' },
-            { label: '禁用', value: '0' }
+            { label: '男', value: 'male' },
+            { label: '女', value: 'female' }
           ]
         },
         {
-          prop: 'dateRange',
-          label: '时间范围',
+          prop: 'birthRange',
+          label: '出生日期',
           span: 8,
           formtype: 'DatePicker',
           attrs: {
@@ -1525,8 +1526,9 @@ export default {
         }
       ],
       tableData: [],
+      // 分页读 current（不是 pageIndex）
       pagination: {
-        pageIndex: 1,
+        current: 1,
         pageSize: 10,
         total: 0
       },
@@ -1546,45 +1548,60 @@ export default {
       ]
     }
   },
-  methods: {
-    onSearchClick() {
-      this.handleSearch()
-    },
-    onResetClick(model, refs) {
-      this.handleReset(refs)
-    },
-    fetchWithCORS(params) {
-      const { url, formParams, headers = {}, method = 'get' } = params
-      let requestUrl = url
-      if (method.toLowerCase() === 'get' && formParams) {
-        const queryParams = new URLSearchParams()
-        Object.keys(formParams).forEach(key => {
-          if (formParams[key] !== undefined && formParams[key] !== null && formParams[key] !== '') {
-            queryParams.append(key, formParams[key])
-          }
-        })
-        const queryString = queryParams.toString()
-        if (queryString) {
-          requestUrl += (requestUrl.includes('?') ? '&' : '?') + queryString
-        }
-      }
-      return fetch(requestUrl, {
-        method: method.toUpperCase(),
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
-        credentials: 'omit'
-      }).then(res => res.json())
-    },
-    handleSearch() {
-      this.\$refs.tableWithQuery.httpRequestInstance()
-    },
-    handleReset(refs) {
-      refs.resetFields()
-      this.\$nextTick(() => {
+  watch: {
+    // 条件一变就查（deep 才能捕捉 dateRange 数组内的变化）
+    queryFormData: {
+      deep: true,
+      handler() {
         this.handleSearch()
+      }
+    }
+  },
+  created() {
+    // 一次性拉全量后缓存在实例上，后续筛选/分页都在本地做
+    this.allUsers = null
+  },
+  methods: {
+    async fetchAllUsers() {
+      if (!this.allUsers) {
+        const res = await fetch('https://dummyjson.com/users?limit=100', { credentials: 'omit' })
+        if (!res.ok) throw new Error(\`拉取用户失败：HTTP \${res.status}\`)
+        const json = await res.json()
+        this.allUsers = json.users || []
+      }
+      return this.allUsers
+    },
+    async requestUsers(params) {
+      const { pageIndex = 1, pageSize = 10 } = params || {}
+      const users = await this.fetchAllUsers()
+      // 直接读组件的查询条件而不是 params.formParams：表单是表格的兄弟节点，
+      // 翻页请求只带 pageIndex/pageSize，不会带表单值 —— 用 formParams 会让第 2 页丢筛选
+      const query = this.queryFormData
+      const keyword = String(query.name || '').trim().toLowerCase()
+
+      const rows = users.filter((u) => {
+        if (keyword && !\`\${u.firstName}\${u.lastName}\`.toLowerCase().includes(keyword)) return false
+        if (query.gender && u.gender !== query.gender) return false
+        const range = query.birthRange
+        if (Array.isArray(range) && range.length === 2) {
+          const birth = String(u.birthDate || '').slice(0, 10)
+          const [start, end] = range
+          if (!birth || birth < start || birth > end) return false
+        }
+        return true
       })
+
+      const start = (pageIndex - 1) * pageSize
+      return {
+        users: rows.slice(start, start + pageSize),
+        total: rows.length,
+        limit: pageSize,
+        skip: start
+      }
+    },
+    // 查询语义 = 回到第 1 页；keepPage: false 由组件内部把 current 置 1
+    handleSearch() {
+      this.\$refs.tableWithQuery?.httpRequestInstance(this.queryFormData, { keepPage: false })
     }
   }
 }
@@ -1810,7 +1827,8 @@ export default defineComponent({
 
     const next = async () => {
       const formRef = step.value === 0 ? form0.value : form1.value
-      const ok = await formRef?.validate()
+      // 校验不通过是 reject，catch 成 false 才能停在当前步
+      const ok = await formRef?.validate().catch(() => false)
       if (ok) step.value += 1
     }
     const prev = () => { step.value -= 1 }
@@ -2321,7 +2339,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openDialog() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '基础弹窗',
         render: () => '这是一个基础弹窗'
       })
@@ -2426,8 +2444,9 @@ export const RAW_dialog_Confirm = `<template>
  *
  * 关键点：
  *   1. 确认逻辑写在按钮的 click 里，close() 由回调参数给出（不依赖 this）
- *   2. beforeClose(done)：不调用 done() 就不关闭。X 按钮 / 遮罩点击 / ESC 三条关闭路径
- *      都会先经过它；configBtn 里的 close() 是显式关闭，按设计绕过闸门
+ *   2. beforeClose(done)：不调用 done() 就不关闭。X 按钮 / 遮罩点击 / ESC，以及
+ *      configBtn 里拿到的 close()，走的是同一道闸门（close → handleClose → runBeforeClose）；
+ *      确实需要绕过时用弹窗实例暴露的 doClose()
  *   3. 三端（Vue3+Element / Vue3+AntD / Vue2+Element）语义一致
  */
 import { defineComponent } from '@vue/composition-api'
@@ -2529,6 +2548,8 @@ export default defineComponent({
             type: 'primary',
             key: 'save',
             click: (_, { close }) => {
+              // close() 也要过 beforeClose：先把 dirty 清掉，否则「已保存」后还会再问一遍未保存
+              dirty = false
               Message.success('已保存')
               close()
             }
@@ -2566,7 +2587,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openCustomStyle() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '自定义样式',
         customClass: 'custom-dialog',
         render: () => '这个弹窗有自定义样式'
@@ -2603,7 +2624,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openDraggable() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '可拖拽弹窗',
         isDraggable: true,
         render: () => '这个弹窗可以拖拽移动'
@@ -2773,7 +2794,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openFullscreen() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '全屏弹窗',
         fullscreen: true,
         render: () => '这是一个全屏弹窗'
@@ -2795,7 +2816,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openLifecycle() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '生命周期示例',
         render: () => '查看控制台输出',
         onOpen: () => {
@@ -2967,10 +2988,10 @@ export default {
             name: '提交',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('policyform')
-              const valid = await formRef.validate()
+              // validate() 校验不通过是 reject —— 不 catch 会变成未处理的 Promise 拒绝
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
                 this.\$message.success('提交成功！')
-                console.log('表单数据：', this.realWorldFormData)
                 close()
               }
             }
@@ -3075,10 +3096,9 @@ export default {
             name: '保存',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('policyform')
-              const valid = await formRef.validate()
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
                 this.\$message.success('保存成功！')
-                console.log('编辑数据：', this.realWorldFormData)
                 close()
               }
             }
@@ -3308,9 +3328,9 @@ export default {
             click: async (_, { close, getRefs }) => {
               // 校验「基本信息」表单（项目名称必填）——通过命名 ref 取到 es-form 实例
               const basicForm = getRefs('basicForm')
-              const valid = await basicForm?.validate()
+              // 校验不通过是 reject，catch 成 false 才能拦住保存
+              const valid = await basicForm?.validate().catch(() => false)
               if (!valid) return
-              console.log('配置数据：', this.complexFormData)
               this.\$message.success('配置保存成功')
               close()
             }
@@ -3399,12 +3419,12 @@ export default {
             name: '保存',
             type: 'primary',
             key: 'save',
-            // 使用 getRefs 获取表单组件引用；EsForm.validate() 返回 Promise<boolean>
+            // 使用 getRefs 获取表单组件引用；EsForm.validate() 返回 Promise<boolean>，
+            // 且校验不通过是 reject —— 必须 catch 成 false
             click: async (_, { close, getRefs }) => {
               const formRef = getRefs('userForm')
-              const valid = await formRef.validate()
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
-                console.log('表单数据：', this.userFormData)
                 this.\$message.success('保存成功')
                 close()
               }
@@ -3590,7 +3610,8 @@ export default defineComponent({
                     type="primary"
                     on-click={async () => {
                       const form = inst.getRefs().stepForm
-                      const ok = await form?.validate()
+                      // 校验不通过是 reject，catch 成 false 才能停在当前步
+                      const ok = await form?.validate().catch(() => false)
                       if (ok) currentStep.value += 1
                     }}
                   >
@@ -4735,6 +4756,7 @@ export const RAW_form_PolicyForm = `<template>
     ref="policyForm"
     :form-item-list="formItemList"
     :model="formData"
+    :config-btn="configBtn"
     :layout-form-props="layoutProps"
   />
 </template>
@@ -4750,15 +4772,19 @@ export default {
         effectiveTimeRange: '',
         invalidTimeRange: '',
         policyTag: '',
-        ispolicyTag: 'always',
+        isPolicyTag: 'always',
         policyStatus: '0',
         policyReleaseType: '1',
         policyReleaseDate: '',
         coverImage: '',
         policyLinkContent: '',
-        policyEitorContent: '',
+        policyEditorContent: '',
         policyContentType: '1'
       },
+      configBtn: [
+        { name: '校验并提交', type: 'primary', click: () => this.validateForm() },
+        { name: '重置', click: () => this.\$refs.policyForm.resetFields() }
+      ],
       layoutProps: {
         formLayProps: {
           isBtnHidden: true,
@@ -4811,7 +4837,7 @@ export default {
           ]
         },
         prop: 'effectiveTimeRange',
-        formtype: 'datePicker',
+        formtype: 'DatePicker',
         attrs: {
           valueFormat: 'yyyy-MM-dd HH:mm:ss',
           type: 'datetime',
@@ -4831,7 +4857,7 @@ export default {
                 <el-input v-model={model.policyTag} placeholder="请输入政策标签" />
               </el-col>
               <el-col span={10}>
-                <el-radio-group v-model={model.ispolicyTag}>
+                <el-radio-group v-model={model.isPolicyTag}>
                   <el-radio label="always">显示</el-radio>
                   <el-radio label="hide">隐藏</el-radio>
                 </el-radio-group>
@@ -4851,7 +4877,6 @@ export default {
           ]
         },
         formtype: 'Radio',
-        attrs: { disabled: () => false },
         dataOptions: [
           { label: '草稿', value: '0' },
           { label: '上架', value: '1' },
@@ -4890,12 +4915,15 @@ export default {
     ]
   },
   methods: {
-    validateForm() {
-      this.\$refs.policyForm.validate((valid) => {
-        if (valid) {
-          console.log('验证通过', this.formData)
-        }
-      })
+    async validateForm() {
+      // EsForm.validate() 校验不通过是 reject（与 Element Plus / AntD 同语义），
+      // 不是回调风格，也不是 resolve(false) —— 必须 catch 才能拿到「不通过」
+      const ok = await this.\$refs.policyForm.validate().catch(() => false)
+      if (!ok) {
+        this.\$message.warning('请先补全必填项')
+        return
+      }
+      this.\$message.success(\`校验通过：\${this.formData.policyName}\`)
     }
   }
 }
@@ -5422,7 +5450,8 @@ export default {
           )
         }
       ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 0 },
+      // 分页读 current；请求里的 pageIndex 由组件按 current 生成
+      pagination: { current: 1, pageSize: 10, total: 0 },
       options: {
         isInitRun: true,
         border: true,
@@ -5434,10 +5463,12 @@ export default {
         },
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
+          // brcb（beforeRequest 的简写）把分页参数改写成 dummyjson 的 limit / skip；
+          // 返回值会整体替换请求参数，所以后端要的字段必须一次写全
           brcb: (params) => {
             const { pageSize, pageIndex } = params
             return {
@@ -5590,7 +5621,7 @@ export const RAW_table_ConfigBtn = `<template>
   <es-table
     :data-source="data"
     :columns="columns"
-    :options="options"
+    :options="tableOptions"
   />
 </template>
 
@@ -5640,7 +5671,7 @@ export default {
             click: () => {
               const header = ['ID', '姓名', '年龄', '邮箱']
               const rows = this.data.map((r) => [r.id, r.name, r.age, r.email])
-              const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\\n')
+              const csv = '\\uFEFF' + [header, ...rows].map((cols) => cols.join(',')).join('\\n')
               const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
               const a = document.createElement('a')
               a.href = url
@@ -5660,9 +5691,14 @@ export default {
               this.\$message.info('高级搜索（右侧按钮区）')
             }
           }
-        ],
-        leftText: '已选择 0 项'
+        ]
       }
+    }
+  },
+  computed: {
+    // leftText 是静态字符串，用 computed 跟随行数变化，避免写死一个会过期的数字
+    tableOptions() {
+      return { ...this.options, leftText: \`共 \${this.data.length} 条数据\` }
     }
   }
 }
@@ -5935,12 +5971,18 @@ export default defineComponent({
 </script>
 `
 export const RAW_table_CustomHttp = `<template>
-  <es-table
-    :data-source="data"
-    :columns="columns"
-    :pagination="pagination"
-    :options="options"
-  />
+  <div>
+    <div style="margin-bottom: 10px; color: #909399; font-size: 13px;">
+      自定义 httpRequest：在 fetch 上注入 X-Token 请求头、统一错误处理；beforeRequest 改写分页参数，
+      afterResponse 拿到响应后统一提示（返回值会替换响应体，因此必须原样返回）。
+    </div>
+    <es-table
+      :data-source="data"
+      :columns="columns"
+      :pagination="pagination"
+      :options="options"
+    />
+  </div>
 </template>
 
 <script>
@@ -5970,7 +6012,8 @@ export default {
           )
         }
       ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 0 },
+      // 分页读 current；请求里的 pageIndex 由组件按 current 生成
+      pagination: { current: 1, pageSize: 10, total: 0 },
       options: {
         isInitRun: true,
         border: true,
@@ -5998,8 +6041,10 @@ export default {
           },
           // afterResponse：返回值会**替换**响应体，所以必须把 res 原样返回。
           // 只弹提示不返回，组件会把提示对象当数据，表格直接变空。
+          // 注意 res 是 customHttpRequest 包过一层的 { data }，取业务字段要先剥这一层。
           afterResponse: (res) => {
-            this.\$message.success(\`数据加载成功，本页 \${res.products?.length ?? 0} 条\`)
+            const body = res && res.data ? res.data : res
+            this.\$message.success(\`数据加载成功，本页 \${body.products?.length ?? 0} 条\`)
             return res
           }
         }
@@ -6026,17 +6071,10 @@ export default {
 
       const customHeaders = {
         'Content-Type': 'application/json',
-        'X-Custom-Header': 'es-table-demo',
+        'X-Token': 'demo-token-123',
         'X-Request-Time': new Date().toISOString(),
         ...headers
       }
-
-      console.log('【自定义 httpRequest】请求配置:', {
-        url: requestUrl,
-        method,
-        headers: customHeaders,
-        formParams
-      })
 
       return fetch(requestUrl, {
         method: method.toUpperCase(),
@@ -6049,12 +6087,8 @@ export default {
           }
           return res.json()
         })
-        .then(data => {
-          console.log('【自定义 httpRequest】响应数据:', data)
-          return { data }
-        })
+        .then(data => ({ data }))
         .catch(err => {
-          console.error('【自定义 httpRequest】请求失败:', err)
           this.\$message.error('请求失败: ' + err.message)
           throw err
         })
@@ -6859,7 +6893,8 @@ export const RAW_table_MultiSelect = `<template>
       :columns="columns"
       :pagination="pagination"
       :options="options"
-      @selection-change="handleSelectionChange"
+      @selection-change="syncSelection"
+      @pagination-current-change="syncSelection"
     />
   </div>
 </template>
@@ -6879,11 +6914,13 @@ export default {
         { key: 'gender', label: '性别', width: 80 },
         { key: 'email', label: '邮箱' }
       ],
-      pagination: { pageIndex: 1, pageSize: 5, total: 0 },
+      // 分页读 current（不是 pageIndex）；pageIndex 是「请求参数名」，由组件内部按 current 生成
+      pagination: { current: 1, pageSize: 5, total: 0 },
       options: {
         isInitRun: true,
         border: true,
         multiSelect: true,
+        // 跨页记忆：翻页后自动把上一页勾过的行勾回来
         cachePageSelection: true,
         rowkey: 'id',
         size: 'small',
@@ -6894,7 +6931,7 @@ export default {
         httpRequest: (params) => this.fetchWithCORS(params),
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
@@ -6933,8 +6970,12 @@ export default {
         credentials: 'omit'
       }).then(res => res.json())
     },
-    handleSelectionChange(rows) {
-      this.selectedRows = rows
+    // el-table 抛出的 selection-change 只是「当前页」的勾选数组；跨页累计要问表格实例
+    // getSelectionRows()（cachePageSelection 打开后它返回所有页的勾选并集）。
+    syncSelection() {
+      this.\$nextTick(() => {
+        this.selectedRows = this.\$refs.table?.getSelectionRows() || []
+      })
     },
     clearAllSelection() {
       this.\$refs.table?.clearAllSelection()
@@ -6948,8 +6989,6 @@ export default {
       }
       const names = allSelected.map(row => \`\${row.firstName} \${row.lastName}\`).join(', ')
       this.\$message.success(\`共选择 \${allSelected.length} 项: \${names}\`)
-      console.log('【跨页选择】所有选中项:', allSelected)
-      console.log('【跨页选择】选中项ID:', allSelected.map(row => row.id))
     }
   }
 }
@@ -7612,15 +7651,16 @@ export default defineComponent({
         label: '分数',
         width: 120,
         sortable: true,
-        // 自定义排序：确保按数值大小而非字符串比较
-        sortMethod: (a, b) => a.score - b.score
+        // 自定义排序：el-table 传进来的是「单元格值」（util.js: sortMethod(a.value, b.value)），
+        // 不是整行 —— 写成 (a, b) => a.score - b.score 只会得到 NaN，点了等于没排
+        sortMethod: (a, b) => a - b
       },
       {
         prop: 'entryDate',
         label: '入职日期',
         sortable: true,
-        // 按时间戳排序，避免字符串比较造成的误差
-        sortMethod: (a, b) => new Date(a.entryDate) - new Date(b.entryDate)
+        // 同样按单元格值转时间戳，避免 'YYYY-MM-DD' 字符串比较的误差
+        sortMethod: (a, b) => new Date(a) - new Date(b)
       }
     ]
 

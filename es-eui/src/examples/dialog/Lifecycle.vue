@@ -10,7 +10,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openLifecycle() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '生命周期示例',
         render: () => '查看控制台输出',
         onOpen: () => {

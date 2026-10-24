@@ -75,12 +75,12 @@ export default {
             name: '保存',
             type: 'primary',
             key: 'save',
-            // 使用 getRefs 获取表单组件引用；EsForm.validate() 返回 Promise<boolean>
+            // 使用 getRefs 获取表单组件引用；EsForm.validate() 返回 Promise<boolean>，
+            // 且校验不通过是 reject —— 必须 catch 成 false
             click: async (_, { close, getRefs }) => {
               const formRef = getRefs('userForm')
-              const valid = await formRef.validate()
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
-                console.log('表单数据：', this.userFormData)
                 this.$message.success('保存成功')
                 close()
               }

@@ -136,9 +136,9 @@ export default {
             click: async (_, { close, getRefs }) => {
               // 校验「基本信息」表单（项目名称必填）——通过命名 ref 取到 es-form 实例
               const basicForm = getRefs('basicForm')
-              const valid = await basicForm?.validate()
+              // 校验不通过是 reject，catch 成 false 才能拦住保存
+              const valid = await basicForm?.validate().catch(() => false)
               if (!valid) return
-              console.log('配置数据：', this.complexFormData)
               this.$message.success('配置保存成功')
               close()
             }

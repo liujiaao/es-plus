@@ -69,9 +69,9 @@ export default {
             key: 'save',
             click: async (instance, { close, getRefs }) => {
               const formRef = getRefs('esFormInDialog')
-              const valid = await formRef.validate()
+              // EsForm.validate() 校验不通过是 reject —— 不 catch 会变成未处理的 Promise 拒绝
+              const valid = await formRef.validate().catch(() => false)
               if (valid) {
-                console.log('表单数据:', formData)
                 this.$message.success('保存成功')
                 close()
               }

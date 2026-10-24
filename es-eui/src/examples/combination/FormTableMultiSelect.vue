@@ -68,14 +68,12 @@ export default {
         this.$message.warning('请至少选择一条记录')
         return
       }
-      console.log('提交数据：', {
-        formData: this.formData,
-        selection: this.selection
-      })
-      this.$message.success('提交成功')
+      this.$message.success(`已提交 ${this.selection.length} 条记录`)
     },
     handleReset() {
       this.$refs.form.resetFields()
+      // 清勾选要调表格实例：只把 selection 置空，行上的勾选框还留着，界面与数据就对不上了
+      this.$refs.table?.clearAllSelection()
       this.selection = []
     }
   }

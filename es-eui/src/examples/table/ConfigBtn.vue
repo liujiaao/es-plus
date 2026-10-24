@@ -2,7 +2,7 @@
   <es-table
     :data-source="data"
     :columns="columns"
-    :options="options"
+    :options="tableOptions"
   />
 </template>
 
@@ -52,7 +52,7 @@ export default {
             click: () => {
               const header = ['ID', '姓名', '年龄', '邮箱']
               const rows = this.data.map((r) => [r.id, r.name, r.age, r.email])
-              const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+              const csv = '\uFEFF' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
               const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
               const a = document.createElement('a')
               a.href = url
@@ -72,9 +72,14 @@ export default {
               this.$message.info('高级搜索（右侧按钮区）')
             }
           }
-        ],
-        leftText: '已选择 0 项'
+        ]
       }
+    }
+  },
+  computed: {
+    // leftText 是静态字符串，用 computed 跟随行数变化，避免写死一个会过期的数字
+    tableOptions() {
+      return { ...this.options, leftText: `共 ${this.data.length} 条数据` }
     }
   }
 }

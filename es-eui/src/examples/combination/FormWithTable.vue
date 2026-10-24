@@ -27,9 +27,6 @@ export default {
       formWithTableItems: []
     }
   },
-  created() {
-    // Defer to mounted to avoid EsForm height calc loop with embedded table
-  },
   mounted() {
     this.$nextTick(() => {
       this.buildFormWithTableItems()
@@ -67,13 +64,13 @@ export default {
                   label: '单价',
                   width: 150,
                   render: (h, { row: item }) => (
-                    <el-input
+                    <el-input-number
                       v-model={item.price}
+                      min={0}
+                      precision={2}
                       size="small"
-                      style="width: 100px;"
-                    >
-                      <template slot="prepend">¥</template>
-                    </el-input>
+                      style="width: 120px;"
+                    />
                   )
                 },
                 {
@@ -81,7 +78,7 @@ export default {
                   label: '小计',
                   render: (h, { row: item }) => (
                     <span style="color: #f56c6c; font-weight: bold;">
-                      ¥{item.quantity * item.price}
+                      ¥{(item.quantity * item.price).toFixed(2)}
                     </span>
                   )
                 },
@@ -110,15 +107,17 @@ export default {
       this.formWithTableData.items.splice(index, 1)
     },
     submitFormWithTable() {
-      console.log('订单数据:', this.formWithTableData)
-      this.$message.success('提交成功')
+      const items = this.formWithTableData.items
+      if (!items.length) {
+        this.$message.warning('请先添加订单明细')
+        return
+      }
+      const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0)
+      this.$message.success(`提交成功：${items.length} 条明细，合计 ¥${total.toFixed(2)}`)
     },
     resetFormWithTable() {
-      this.formWithTableData = {
-        orderNo: '',
-        customer: '',
-        items: []
-      }
+      this.$refs.orderForm?.resetFields()
+      this.formWithTableData.items = []
     }
   }
 }

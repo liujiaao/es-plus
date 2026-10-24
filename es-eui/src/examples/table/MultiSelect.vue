@@ -17,7 +17,8 @@
       :columns="columns"
       :pagination="pagination"
       :options="options"
-      @selection-change="handleSelectionChange"
+      @selection-change="syncSelection"
+      @pagination-current-change="syncSelection"
     />
   </div>
 </template>
@@ -37,11 +38,13 @@ export default {
         { key: 'gender', label: '性别', width: 80 },
         { key: 'email', label: '邮箱' }
       ],
-      pagination: { pageIndex: 1, pageSize: 5, total: 0 },
+      // 分页读 current（不是 pageIndex）；pageIndex 是「请求参数名」，由组件内部按 current 生成
+      pagination: { current: 1, pageSize: 5, total: 0 },
       options: {
         isInitRun: true,
         border: true,
         multiSelect: true,
+        // 跨页记忆：翻页后自动把上一页勾过的行勾回来
         cachePageSelection: true,
         rowkey: 'id',
         size: 'small',
@@ -52,7 +55,7 @@ export default {
         httpRequest: (params) => this.fetchWithCORS(params),
         configTableOut: {
           total: 'total',
-          pageSize: 'limit',
+          pageSize: 'limit',
           tableData: 'users'
         },
         listenToCallBack: {
@@ -91,8 +94,12 @@ export default {
         credentials: 'omit'
       }).then(res => res.json())
     },
-    handleSelectionChange(rows) {
-      this.selectedRows = rows
+    // el-table 抛出的 selection-change 只是「当前页」的勾选数组；跨页累计要问表格实例
+    // getSelectionRows()（cachePageSelection 打开后它返回所有页的勾选并集）。
+    syncSelection() {
+      this.$nextTick(() => {
+        this.selectedRows = this.$refs.table?.getSelectionRows() || []
+      })
     },
     clearAllSelection() {
       this.$refs.table?.clearAllSelection()
@@ -106,8 +113,6 @@ export default {
       }
       const names = allSelected.map(row => `${row.firstName} ${row.lastName}`).join(', ')
       this.$message.success(`共选择 ${allSelected.length} 项: ${names}`)
-      console.log('【跨页选择】所有选中项:', allSelected)
-      console.log('【跨页选择】选中项ID:', allSelected.map(row => row.id))
     }
   }
 }

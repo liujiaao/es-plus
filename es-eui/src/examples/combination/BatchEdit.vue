@@ -4,7 +4,7 @@
       type="success"
       :closable="false"
       style="margin-bottom: 10px;"
-      description="多选批量编辑：勾选若干行 → 批量修改部门/状态 → api.batchUpdate 一次提交 → refetch 当前页并清空勾选。工具栏实时显示已选数量。"
+      description="多选批量编辑：勾选若干行 → 批量修改部门/状态 → api.batchUpdate 一次提交 → 重新拉取当前页并清空勾选。"
     />
     <es-table
       ref="tableRef"
@@ -110,8 +110,10 @@ export default defineComponent({
                 const res = await api.batchUpdate(ids, patch)
                 Message.success(`已更新 ${res.count} 条`)
                 close()
-                tableRef.value?.httpRequestInstance()
-                tableRef.value?.clearSelection?.()
+                // 先清跨页勾选（含 cachePageSelection 记忆），再重新取数，
+                // 否则 refetch 后 restoreSelectionForPage 会把刚清掉的勾选又勾回来
+                tableRef.value?.clearAllSelection?.()
+                tableRef.value?.httpRequestInstance?.()
               } catch (e) {
                 Message.error(e.message)
               } finally {

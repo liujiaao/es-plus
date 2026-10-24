@@ -101,7 +101,8 @@ export default defineComponent({
 
     const next = async () => {
       const formRef = step.value === 0 ? form0.value : form1.value
-      const ok = await formRef?.validate()
+      // 校验不通过是 reject，catch 成 false 才能停在当前步
+      const ok = await formRef?.validate().catch(() => false)
       if (ok) step.value += 1
     }
     const prev = () => { step.value -= 1 }

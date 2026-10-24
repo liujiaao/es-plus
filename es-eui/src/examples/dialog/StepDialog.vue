@@ -107,7 +107,8 @@ export default defineComponent({
                     type="primary"
                     on-click={async () => {
                       const form = inst.getRefs().stepForm
-                      const ok = await form?.validate()
+                      // 校验不通过是 reject，catch 成 false 才能停在当前步
+                      const ok = await form?.validate().catch(() => false)
                       if (ok) currentStep.value += 1
                     }}
                   >

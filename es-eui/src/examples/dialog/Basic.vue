@@ -10,7 +10,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openDialog() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '基础弹窗',
         render: () => '这是一个基础弹窗'
       })

@@ -66,6 +66,8 @@ export default {
             click: (_, { close }) => {
               const ids = this.selection.map(item => item.id)
               this.tableData = this.tableData.filter(item => !ids.includes(item.id))
+              // 行删掉了，勾选态也要一起清（el-table 不会因为数据源变小就清空选中集合）
+              this.$refs.batchTable?.clearAllSelection()
               this.selection = []
               this.$message.success(`已删除 ${ids.length} 条记录`)
               close()
@@ -100,6 +102,7 @@ export default {
                   item.status = '启用'
                 }
               })
+              this.$refs.batchTable?.clearAllSelection()
               this.selection = []
               this.$message.success(`已更新 ${ids.length} 条记录`)
               close()

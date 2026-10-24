@@ -1,10 +1,16 @@
 <template>
-  <es-table
-    :data-source="data"
-    :columns="columns"
-    :pagination="pagination"
-    :options="options"
-  />
+  <div>
+    <div style="margin-bottom: 10px; color: #909399; font-size: 13px;">
+      自定义 httpRequest：在 fetch 上注入 X-Token 请求头、统一错误处理；beforeRequest 改写分页参数，
+      afterResponse 拿到响应后统一提示（返回值会替换响应体，因此必须原样返回）。
+    </div>
+    <es-table
+      :data-source="data"
+      :columns="columns"
+      :pagination="pagination"
+      :options="options"
+    />
+  </div>
 </template>
 
 <script>
@@ -34,7 +40,8 @@ export default {
           )
         }
       ],
-      pagination: { pageIndex: 1, pageSize: 10, total: 0 },
+      // 分页读 current；请求里的 pageIndex 由组件按 current 生成
+      pagination: { current: 1, pageSize: 10, total: 0 },
       options: {
         isInitRun: true,
         border: true,
@@ -62,8 +69,10 @@ export default {
           },
           // afterResponse：返回值会**替换**响应体，所以必须把 res 原样返回。
           // 只弹提示不返回，组件会把提示对象当数据，表格直接变空。
+          // 注意 res 是 customHttpRequest 包过一层的 { data }，取业务字段要先剥这一层。
           afterResponse: (res) => {
-            this.$message.success(`数据加载成功，本页 ${res.products?.length ?? 0} 条`)
+            const body = res && res.data ? res.data : res
+            this.$message.success(`数据加载成功，本页 ${body.products?.length ?? 0} 条`)
             return res
           }
         }
@@ -90,17 +99,10 @@ export default {
 
       const customHeaders = {
         'Content-Type': 'application/json',
-        'X-Custom-Header': 'es-table-demo',
+        'X-Token': 'demo-token-123',
         'X-Request-Time': new Date().toISOString(),
         ...headers
       }
-
-      console.log('【自定义 httpRequest】请求配置:', {
-        url: requestUrl,
-        method,
-        headers: customHeaders,
-        formParams
-      })
 
       return fetch(requestUrl, {
         method: method.toUpperCase(),
@@ -113,12 +115,8 @@ export default {
           }
           return res.json()
         })
-        .then(data => {
-          console.log('【自定义 httpRequest】响应数据:', data)
-          return { data }
-        })
+        .then(data => ({ data }))
         .catch(err => {
-          console.error('【自定义 httpRequest】请求失败:', err)
           this.$message.error('请求失败: ' + err.message)
           throw err
         })

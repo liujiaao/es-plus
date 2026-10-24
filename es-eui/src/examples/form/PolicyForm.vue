@@ -3,6 +3,7 @@
     ref="policyForm"
     :form-item-list="formItemList"
     :model="formData"
+    :config-btn="configBtn"
     :layout-form-props="layoutProps"
   />
 </template>
@@ -18,15 +19,19 @@ export default {
         effectiveTimeRange: '',
         invalidTimeRange: '',
         policyTag: '',
-        ispolicyTag: 'always',
+        isPolicyTag: 'always',
         policyStatus: '0',
         policyReleaseType: '1',
         policyReleaseDate: '',
         coverImage: '',
         policyLinkContent: '',
-        policyEitorContent: '',
+        policyEditorContent: '',
         policyContentType: '1'
       },
+      configBtn: [
+        { name: '校验并提交', type: 'primary', click: () => this.validateForm() },
+        { name: '重置', click: () => this.$refs.policyForm.resetFields() }
+      ],
       layoutProps: {
         formLayProps: {
           isBtnHidden: true,
@@ -79,7 +84,7 @@ export default {
           ]
         },
         prop: 'effectiveTimeRange',
-        formtype: 'datePicker',
+        formtype: 'DatePicker',
         attrs: {
           valueFormat: 'yyyy-MM-dd HH:mm:ss',
           type: 'datetime',
@@ -99,7 +104,7 @@ export default {
                 <el-input v-model={model.policyTag} placeholder="请输入政策标签" />
               </el-col>
               <el-col span={10}>
-                <el-radio-group v-model={model.ispolicyTag}>
+                <el-radio-group v-model={model.isPolicyTag}>
                   <el-radio label="always">显示</el-radio>
                   <el-radio label="hide">隐藏</el-radio>
                 </el-radio-group>
@@ -119,7 +124,6 @@ export default {
           ]
         },
         formtype: 'Radio',
-        attrs: { disabled: () => false },
         dataOptions: [
           { label: '草稿', value: '0' },
           { label: '上架', value: '1' },
@@ -158,12 +162,15 @@ export default {
     ]
   },
   methods: {
-    validateForm() {
-      this.$refs.policyForm.validate((valid) => {
-        if (valid) {
-          console.log('验证通过', this.formData)
-        }
-      })
+    async validateForm() {
+      // EsForm.validate() 校验不通过是 reject（与 Element Plus / AntD 同语义），
+      // 不是回调风格，也不是 resolve(false) —— 必须 catch 才能拿到「不通过」
+      const ok = await this.$refs.policyForm.validate().catch(() => false)
+      if (!ok) {
+        this.$message.warning('请先补全必填项')
+        return
+      }
+      this.$message.success(`校验通过：${this.formData.policyName}`)
     }
   }
 }

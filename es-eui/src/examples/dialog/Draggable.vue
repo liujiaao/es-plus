@@ -10,7 +10,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openDraggable() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '可拖拽弹窗',
         isDraggable: true,
         render: () => '这个弹窗可以拖拽移动'

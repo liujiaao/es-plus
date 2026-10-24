@@ -15,8 +15,9 @@
  *
  * 关键点：
  *   1. 确认逻辑写在按钮的 click 里，close() 由回调参数给出（不依赖 this）
- *   2. beforeClose(done)：不调用 done() 就不关闭。X 按钮 / 遮罩点击 / ESC 三条关闭路径
- *      都会先经过它；configBtn 里的 close() 是显式关闭，按设计绕过闸门
+ *   2. beforeClose(done)：不调用 done() 就不关闭。X 按钮 / 遮罩点击 / ESC，以及
+ *      configBtn 里拿到的 close()，走的是同一道闸门（close → handleClose → runBeforeClose）；
+ *      确实需要绕过时用弹窗实例暴露的 doClose()
  *   3. 三端（Vue3+Element / Vue3+AntD / Vue2+Element）语义一致
  */
 import { defineComponent } from '@vue/composition-api'
@@ -118,6 +119,8 @@ export default defineComponent({
             type: 'primary',
             key: 'save',
             click: (_, { close }) => {
+              // close() 也要过 beforeClose：先把 dirty 清掉，否则「已保存」后还会再问一遍未保存
+              dirty = false
               Message.success('已保存')
               close()
             }

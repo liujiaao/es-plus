@@ -10,7 +10,7 @@ import { useDialog } from '@es-plus/vue2'
 export default {
   methods: {
     openCustomStyle() {
-      const { close } = useDialog()({
+      useDialog()({
         title: '自定义样式',
         customClass: 'custom-dialog',
         render: () => '这个弹窗有自定义样式'
