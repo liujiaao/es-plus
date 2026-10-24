@@ -43,7 +43,7 @@ const queryBtns = [
   { name: '重置', key: 'rest', triggerEvent: true },
 ]
 
-const layoutProps = { fromLayProps: { labelWidth: '80px' }, rowLayProps: { gutter: 16 } }
+const layoutProps = { formLayProps: { labelWidth: '80px' }, rowLayProps: { gutter: 16 } }
 
 // 列声明（状态列的 Tag 与操作列按钮走 render 逃生舱，这部分不是零成本）
 const columns = [

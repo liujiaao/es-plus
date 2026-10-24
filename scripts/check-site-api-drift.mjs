@@ -242,7 +242,14 @@ const PAGES = [
     sections: [
       { title: 'Props', kind: 'props', component: 'EsTable' },
       { title: 'Methods', kind: 'exposed', component: 'EsTable' },
-      { title: 'Events', kind: 'emits', component: 'EsTable' },
+      {
+        title: 'Events',
+        kind: 'emits',
+        component: 'EsTable',
+        allow: {
+          'selection-change': 'el-table / vxe-grid 原生事件，经 v-on="$listeners" 透传，组件自身不 emit',
+        },
+      },
     ],
   },
   {
@@ -322,6 +329,39 @@ const COMPONENTS = {
   },
 }
 
+// ── 透传事件：真实可用，但不由组件 emit ──────────────────────────────
+//
+// `selection-change` 是 el-table / vxe-grid 的原生事件：三端都把宿主写下的监听器透传到
+// 内层表格（vue2 靠 `v-on="$listeners"`，vue3 靠 `fallthroughAttrs`），组件自身从不
+// emit。文档必须写（读者要用它），但源码 emits 里永远查不到 —— 直接豁免会让守卫从
+// 「查幻影 API」退化成「永久谎言」。所以每条豁免都先证明透传链路还在：源文件里仍要
+// 出现该事件名（`@selection-change`）或它的 onXxx 形式（`onSelectionChange`）。
+const FORWARDED_EVENTS = {
+  'selection-change': {
+    why: 'el-table / vxe-grid 原生事件，由 attrs 透传',
+    files: [
+      'packages/vue2/src/components/es-table/component.vue',
+      'packages/vue3/src/components/es-table/src/component.vue',
+    ],
+  },
+}
+
+function assertForwardedEvent(event) {
+  const cfg = FORWARDED_EVENTS[event]
+  if (!cfg) return
+  const onName = 'on' + event.replace(/[-_](\w)/g, (_, c) => c.toUpperCase())
+  for (const file of cfg.files) {
+    const src = read(file)
+    if (!src) continue
+    if (!src.includes(event) && !src.includes(onName)) {
+      fail(
+        `${file} 已不再引用 ${event} 的透传链路 —— 文档里的「${cfg.why}」不再成立，` +
+          `请删掉该文档表项与这条豁免`,
+      )
+    }
+  }
+}
+
 // ─────────────────────────── 校验 ───────────────────────────
 
 const api = {}
@@ -357,7 +397,10 @@ for (const page of PAGES) {
     if (!componentApi) continue
     const allow = section.allow || {}
     for (const key of cells) {
-      if (allow[key]) continue
+      if (allow[key]) {
+        assertForwardedEvent(key)
+        continue
+      }
       if (!componentApi[section.kind].includes(key)) {
         fail(
           `${page.file}「${section.title}」表里的 ${key} 在 ${section.component} 的 ${section.kind} 中不存在` +
@@ -494,10 +537,13 @@ for (const page of ADAPTER_PAGES) {
 const VUE3_DOC_FILE = 'es-plus-docs/src/views/component-doc.data.ts'
 const VUE3_COMPONENTS = {
   'es-form': { file: 'packages/vue3/src/components/es-form/src/es-form.vue', noEmits: true },
-  'es-table': { file: 'packages/vue3/src/components/es-table/src/component.vue' },
+  'es-table': {
+    file: 'packages/vue3/src/components/es-table/src/component.vue',
+    // 透传事件：文档要写，但不在 defineEmits 里（见 FORWARDED_EVENTS）
+    forwarded: ['selection-change'],
+  },
   'es-crud-page': { file: 'packages/vue3/src/components/es-crud-page/src/es-crud-page.vue' },
 }
-
 const vue3Doc = read(VUE3_DOC_FILE)
 if (vue3Doc) {
   for (const [key, cfg] of Object.entries(VUE3_COMPONENTS)) {
@@ -529,13 +575,18 @@ if (vue3Doc) {
       }
       const arrBody = blockAt(api, api.indexOf('[', at)) || ''
       const docKeys = [...arrBody.matchAll(/name:\s*'([^']+)'/g)].map((m) => m[1])
+      const forwarded = cfg.forwarded || []
       for (const k of docKeys) {
-        if (!sourceKeys.includes(k)) {
-          fail(
-            `${VUE3_DOC_FILE}「${key}」的 ${arrName} 里 ${k} 在源码 ${sourceLabel} 中不存在` +
-              ` —— 读者照抄会静默失效（源码现有：${sourceKeys.slice(0, 8).join(', ')}…）`,
-          )
+        if (sourceKeys.includes(k)) continue
+        if (forwarded.includes(k)) {
+          // 文档里写了、defineEmits 里没有，但内层表格会透传——先证明链路还在
+          assertForwardedEvent(k)
+          continue
         }
+        fail(
+          `${VUE3_DOC_FILE}「${key}」的 ${arrName} 里 ${k} 在源码 ${sourceLabel} 中不存在` +
+            ` —— 读者照抄会静默失效（源码现有：${sourceKeys.slice(0, 8).join(', ')}…）`,
+        )
       }
       for (const k of sourceKeys) {
         if (!docKeys.includes(k)) {

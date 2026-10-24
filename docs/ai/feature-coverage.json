@@ -873,7 +873,7 @@
       "site": "es-eui",
       "root": "es-eui/src/examples",
       "refs": 35,
-      "uncovered": 55,
+      "uncovered": 56,
       "cases": [
         {
           "id": "combination/BatchEdit",
@@ -1053,6 +1053,15 @@
             "useDialogApi"
           ],
           "tier": "D"
+        },
+        {
+          "id": "dialog/CachedInstance",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
         },
         {
           "id": "dialog/Confirm",
