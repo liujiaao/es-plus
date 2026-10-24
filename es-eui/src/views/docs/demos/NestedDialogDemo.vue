@@ -51,7 +51,7 @@ export default {
         }
       ],
       mainLayoutProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '100px',
           size: 'small'
         }
@@ -182,7 +182,7 @@ export default {
                 formItemList: this.memberFormConfig,
                 model: this.memberForm,
                 layoutFormProps: {
-                  fromLayProps: {
+                  formLayProps: {
                     labelWidth: '80px',
                     size: 'small'
                   }

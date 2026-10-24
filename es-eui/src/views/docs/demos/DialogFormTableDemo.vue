@@ -58,7 +58,7 @@ export default {
         }
       ],
       dialogLayoutProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '80px',
           size: 'small'
         },

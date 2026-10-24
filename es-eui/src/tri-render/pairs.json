@@ -9,9 +9,9 @@
       "label": "Vue 3 · Ant Design Vue",
       "pkg": "@es-plus/adapter-antdv",
       "pairs": 68,
-      "medianDelta": 11,
-      "le10": 34,
-      "le20": 49,
+      "medianDelta": 16,
+      "le10": 19,
+      "le20": 41,
       "ge100": 2,
       "best": "table/Basic.vue"
     },
@@ -20,10 +20,10 @@
       "label": "Vue 2 · Element UI",
       "pkg": "@es-plus/vue2",
       "pairs": 29,
-      "medianDelta": 64,
+      "medianDelta": 71,
       "le10": 0,
       "le20": 0,
-      "ge100": 7,
+      "ge100": 9,
       "best": "table/Basic.vue"
     }
   ],

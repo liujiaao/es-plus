@@ -79,7 +79,7 @@ export default {
       },
       selectedMainRows: [],
       mainLayoutProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '80px',
           size: 'small'
         },
@@ -324,7 +324,7 @@ export default {
                 formItemList: this.editFormConfig,
                 model: this.editForm,
                 layoutFormProps: {
-                  fromLayProps: {
+                  formLayProps: {
                     labelWidth: '100px',
                     size: 'small'
                   }

@@ -64,7 +64,7 @@ export default {
       },
       selectedRows: [],
       layoutFormProps: {
-        fromLayProps: {
+        formLayProps: {
           labelWidth: '80px',
           size: 'small'
         },

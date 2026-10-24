@@ -606,6 +606,9 @@
         <tr><td>clearActived</td><td>vxe：关闭所有已激活的单元格编辑态</td><td>-</td></tr>
         <tr><td>clearValidate</td><td>vxe：清除行内校验提示</td><td>-</td></tr>
         <tr><td>validate</td><td>vxe：触发行内校验，返回 Promise</td><td>(rows?)</td></tr>
+        <tr><td>exportData</td><td>vxe：导出当前数据（xlsx/csv/xml/html）</td><td>(opts?)</td></tr>
+        <tr><td>print</td><td>vxe：调用打印，可传 { html } 打印修正后的 HTML</td><td>(opts?)</td></tr>
+        <tr><td>getPrintHtml</td><td>vxe：取表格 HTML（合并区需配合 patchHtmlRowSpans 修正）</td><td>(opts?)</td></tr>
         <tr><td>vxeInstance</td><td>vxe：取底层 vxe-grid 实例</td><td>-</td></tr>
       </tbody>
     </table>
@@ -624,6 +627,7 @@
         <tr><td>pagination-current-change</td><td>翻页</td><td>(pagination)</td></tr>
         <tr><td>size-change</td><td>每页条数变化</td><td>(pagination, size)</td></tr>
         <tr><td>change-table-sort</td><td>排序变化（vxe 引擎下参数为 sortInfo 对象）</td><td>(column)</td></tr>
+        <tr><td>selection-change</td><td>勾选变化（当前页选中行；跨页全集用 getSelectionRows() 取）</td><td>(rows)</td></tr>
         <tr><td>request-error</td><td>自动加载失败（错误同时可从 <code>requestError</code> 读到）</td><td>(error)</td></tr>
       </tbody>
     </table>

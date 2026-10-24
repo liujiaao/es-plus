@@ -108,7 +108,7 @@
           </tr>
           <tr>
             <td>vxeConfig</td>
-            <td>逃生舱：深度合并至 vxe-grid 原生配置，优先级高于一等公民字段，可设 mergeHeaderItems / mergeFooterItems / pagerConfig 等</td>
+            <td>逃生舱：深度合并至 vxe-grid 原生配置，优先级高于一等公民字段，可设 mergeCells / mergeHeaderCells / mergeFooterItems / pagerConfig 等</td>
             <td>VxeGridProps</td>
           </tr>
           <tr>
