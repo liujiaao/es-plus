@@ -104,7 +104,7 @@
             </tr>
             <tr>
               <td>pagination</td>
-              <td>分页配置 { pageIndex, pageSize, total }，经 <code>:pagination.sync</code> 双向绑定</td>
+              <td>分页配置 { current, pageSize, total, pageSizes }（请求参数里叫 pageIndex），经 <code>:pagination.sync</code> 双向绑定</td>
               <td>Object</td>
               <td>—</td>
             </tr>

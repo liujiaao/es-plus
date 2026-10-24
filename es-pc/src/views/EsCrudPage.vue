@@ -255,7 +255,7 @@ const crudSchema = [
   { key: '4', prop: 'tableBtns', type: 'TableBtnConfig[]', default: '-', desc: '表格工具栏按钮，渲染在 EsTable 上方的 configBtn 区，可用 position 指定左右' },
   { key: '5', prop: 'columns', type: 'TableColumn[]', default: '-', desc: '表格列配置（必填，同 EsTable columns）' },
   { key: '6', prop: 'tableOptions', type: 'TableOptions', default: '{}', desc: '表格选项配置，与 EsTable 的 options 同源' },
-  { key: '7', prop: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置 { pageIndex, pageSize, total }' },
+  { key: '7', prop: 'pagination', type: 'PaginationConfig', default: '-', desc: '分页配置 { current, pageSize, total, pageSizes }（pageIndex 只是请求参数名）' },
   { key: '8', prop: 'operationColumn', type: 'OperationColumnConfig | false', default: '-', desc: '操作列配置；false 隐藏操作列，对象则按给的定义渲染' },
   { key: '9', prop: 'dialogs', type: 'Record<string, CrudDialogConfig>', default: '-', desc: '多弹窗配置，键名即按钮 dialogKey 取的值（见下方 Dialogs 配置）' },
   { key: '10', prop: 'actions', type: 'CrudAction[]', default: '-', desc: '已废弃：用 toolbarBtns + operationColumn 替代' },

@@ -71,7 +71,7 @@
         </tr>
         <tr>
           <td>pagination</td>
-          <td>分页配置 { pageIndex, pageSize, total }</td>
+          <td>分页配置 { current, pageSize, total, pageSizes }（请求参数里叫 pageIndex）</td>
           <td>Object</td>
           <td>{}</td>
         </tr>
