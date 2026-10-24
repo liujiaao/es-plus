@@ -66,7 +66,7 @@
     <!-- 工具栏按钮 -->
     <section id="toolbar">
       <h2>工具栏按钮左右分栏</h2>
-      <p><code>configBtn</code> 的 <code>code: 1 / 2</code> 把按钮分到左右两端；插槽按钮在左侧，导出 / 打印 / 刷新都真跑。</p>
+      <p><code>configBtn</code> 的 <code>code: 1 / 2</code> 把按钮分到左右两端；插槽按钮在左侧，导出 / 打印 / 刷新都在浏览器里真跑，批量删除按勾选真删。</p>
             <CodeDemo :source="rawSFCs['./es-table/Toolbar.vue']">
         <EsTableToolbar />
       </CodeDemo>

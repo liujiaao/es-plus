@@ -1,6 +1,7 @@
 <template>
   <div class="example-toolbar-table">
     <es-table
+      ref="tableRef"
       :data-source="tableData"
       :columns="columns"
       :options="tableOptions"
@@ -23,8 +24,10 @@
 <script setup>
 import { EsTable } from '@es-plus/adapter-antdv'
 import { ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { DownloadOutlined, PrinterOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+
+const tableRef = ref()
 
 // 原始数据：刷新 = 从这份「后端快照」重新取一遍，改动（新增）随之回滚
 const originData = [
@@ -36,12 +39,36 @@ const originData = [
 const tableData = ref(originData.map((r) => ({ ...r })))
 
 const columns = [
+  { type: 'selection', width: 55 },
   { prop: 'id', label: 'ID', width: 60 },
   { prop: 'name', label: '产品名称', minWidth: 150 },
   { prop: 'category', label: '分类', width: 100 },
   { prop: 'price', label: '价格', width: 100, formatter: (row) => `¥${row.price}` },
   { prop: 'stock', label: '库存', width: 100 }
 ]
+
+// 导出 / 打印只取有 prop 的业务列，跳过 selection 这种纯交互列
+const dataColumns = columns.filter((c) => c.prop)
+
+// 勾选状态由表格自己维护（含跨页缓存），所以这里直接问 getSelectionRows()
+const handleBatchDelete = () => {
+  const rows = tableRef.value?.getSelectionRows?.() || []
+  if (!rows.length) {
+    message.warning('请先勾选要删除的产品')
+    return
+  }
+  Modal.confirm({
+    title: '批量删除',
+    content: `确定删除选中的 ${rows.length} 条产品吗？`,
+    okType: 'danger',
+    onOk() {
+      const ids = new Set(rows.map((r) => r.id))
+      tableData.value = tableData.value.filter((r) => !ids.has(r.id))
+      tableRef.value?.clearAllSelection?.()
+      message.success(`已删除 ${ids.size} 条`)
+    }
+  })
+}
 
 const tableOptions = {
   border: true,
@@ -57,10 +84,11 @@ const tableOptions = {
         message.success('已新增一行')
       }
     },
-    { name: '批量删除', type: 'danger', icon: 'Delete', code: 2, click: () => message.warning('点击了批量删除') }
+    { name: '批量删除', type: 'danger', icon: 'Delete', code: 2, click: handleBatchDelete }
   ],
   leftText: '产品列表'
 }
+
 
 // 刷新 = 丢弃本地改动、回到「后端」那一份数据（有 httpRequest 时这里换成 httpRequestInstance()）
 const handleRefresh = () => {
@@ -73,8 +101,8 @@ const handleRefresh = () => {
 // 这里用最小的浏览器能力补上，保证每个按钮都真的可用。
 const handleExport = () => {
   const lines = [
-    columns.map(c => c.label).join(','),
-    ...tableData.value.map(row => columns.map(c => row[c.prop]).join(','))
+    dataColumns.map(c => c.label).join(','),
+    ...tableData.value.map(row => dataColumns.map(c => row[c.prop]).join(','))
   ]
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -87,9 +115,9 @@ const handleExport = () => {
 }
 
 const handlePrint = () => {
-  const head = columns.map(c => `<th>${c.label}</th>`).join('')
+  const head = dataColumns.map(c => `<th>${c.label}</th>`).join('')
   const body = tableData.value
-    .map(row => `<tr>${columns.map(c => `<td>${row[c.prop]}</td>`).join('')}</tr>`)
+    .map(row => `<tr>${dataColumns.map(c => `<td>${row[c.prop]}</td>`).join('')}</tr>`)
     .join('')
   const win = window.open('', '_blank')
   if (!win) return
