@@ -350,8 +350,15 @@ export function useFormInputs() {
               'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
             },
             () =>
+              // 选项文案必须走默认插槽：`children` 形态的选项在 antdv 里
+              // `fieldNames.label` 被改写为 `'children'`（vc-select/utils/valueUtil 的
+              // fillFieldNames），只传 `label` prop 会被忽略，下拉与回显都会退化成 value。
               row.dataOptions?.map((opt, idx) =>
-                hFn(SelectOption, { key: idx, value: opt.value, label: opt.label, disabled: opt.disabled }),
+                hFn(
+                  SelectOption,
+                  { key: idx, value: opt.value, label: opt.label, disabled: opt.disabled },
+                  () => opt.label ?? String(opt.value),
+                ),
               ),
           )
         },
