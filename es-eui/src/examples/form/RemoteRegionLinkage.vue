@@ -61,7 +61,6 @@ export default {
           },
           listenToCallBack: {
             crtn: (data) => {
-              console.log('省份crtn回调data///', data)
               if (Array.isArray(data)) {
                 return data.slice(0, 10).map((item, index) => ({
                   label: item.address?.city || '省份' + (index + 1),
@@ -72,10 +71,9 @@ export default {
             }
           },
           on: {
-            change: (value) => {
+            change: () => {
               this.formData.city = ''
               this.formData.district = ''
-              console.log('省份变化///', value)
               this.$refs.remoteRegionForm.formItmeRequestInstance(['city'])
             }
           }
@@ -91,7 +89,6 @@ export default {
           },
           listenToCallBack: {
             crtn: (data) => {
-              console.log('城市crtn回调data///', data)
               if (Array.isArray(data)) {
                 return data.slice(0, 8).map((item, index) => ({
                   label: item.title?.substring(0, 6) || '城市' + (index + 1),
@@ -109,7 +106,7 @@ export default {
           },
           dataOptions: [],
           on: {
-            change: (value) => {
+            change: () => {
               this.formData.district = ''
               this.$refs.remoteRegionForm.formItmeRequestInstance(['district'])
             }
@@ -126,7 +123,6 @@ export default {
           },
           listenToCallBack: {
             crtn: (data) => {
-              console.log('城市crtn回调data///', data)
               if (Array.isArray(data)) {
                 return data.slice(0, 8).map((item, index) => ({
                   label: item.title?.substring(0, 6) || '城市' + (index + 1),

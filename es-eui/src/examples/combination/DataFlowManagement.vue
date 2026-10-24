@@ -83,7 +83,6 @@ export default {
       delete row._original
     },
     saveAll() {
-      console.log('保存所有数据:', this.inlineEditData)
       this.inlineEditData.forEach(item => {
         item.editing = false
       })

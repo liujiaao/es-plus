@@ -94,9 +94,6 @@ export default {
             ])
           },
           on: {
-            success: (response, file, fileList) => {
-              console.log('this.multiUploadFormData', this.formData)
-            },
             remove: (file, fileList) => {
               this.formData.gallery = [...fileList]
             },
