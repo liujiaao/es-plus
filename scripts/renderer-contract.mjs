@@ -45,13 +45,26 @@ export const FORM_RENDER_CONTRACT = {
  *   - 声明了却**没有任何 emit 调用点** → 宿主写 `@confirm` 得到静默 ——
  *     这正是 `禁止声明了等于承诺不存在的能力` 的最隐蔽形态（编译过、类型对、零报错）。
  *
- * 形态：`{ [component]: { sources, expected, deviation?, why? } }`
- *   - `expected`：三端应当一致声明的事件全集（**权威清单**，不靠从源码反推 ——
+ * 投递方式有两种，`expected` 是两者的并集（对外能力清单）：
+ *   1. **组件 emit**：声明进 emits 并真有调用点；
+ *   2. **原生透传**：内层表格的原生事件经 attrs / `$listeners` 直接送到宿主，组件自身
+ *      不 emit（若再 emit 一次就是双触发）。这类事件必须用 `forwarded` 登记，并逐引擎
+ *      证明投递链路仍在 —— 只写「豁免」而不证明，守卫会从「查幻影 API」退化成
+ *      「永久谎言」（该教训已在 check-site-api-drift 的 FORWARDED_EVENTS 上吃过一次）。
+ *
+ * 形态：`{ [component]: { sources, expected, deviation?, forwarded?, why? } }`
+ *   - `expected`：三端应当一致对外提供的事件全集（**权威清单**，不靠从源码反推 ——
  *     否则三端一起漂移时守卫会跟着漂）。
  *   - `deviation[renderer] = { keys: [...], reason }`：该端**有意缺席**的事件；
  *     `keys` 必须真的缺席（补上后要删登记 —— 只减不增），`reason` 非空。
+ *   - `forwarded[renderer][event] = { reason, paths: [...] }`：该端**由内层组件透传**、
+ *     emit 声明里刻意没有的事件。每个 `path` 钉在一个引擎上：
+ *     `{ engine, anchor, anchorTokens, sourceTokens? }` —— `anchor` 是引擎开标签前缀，
+ *     开标签切片内必须出现全部 `anchorTokens`（防止 vue2 两个引擎共用 token、删掉一个还绿）；
+ *     `sourceTokens` 在全文出现即可（用于桥接函数等不在开标签里的证据）。
  *   - 每个实际声明的事件都必须在**同一文件**里至少有一个 `emit('name'` 调用点
- *     （`stripComments` 之后匹配，注释里写 `emit('x')` 不算数）。
+ *     （`stripComments` 之后匹配，注释里写 `emit('x')` 不算数）；透传事件反过来：
+ *     已登记为 forwarded 的端**不得**再声明它（投递方式互斥，二选一）。
  *
  * 已裁决的偏差：
  *   - es-form `confirm`/`reset`：vue3/antdv 曾声明并定义却零调用点，vue2 连声明都没有。
@@ -86,6 +99,7 @@ export const EMIT_CONTRACT = {
       antdv: 'packages/adapter-antdv/src/components/es-table/src/component.vue',
     },
     expected: [
+      'selection-change',
       'update:dataSource',
       'update:pagination',
       'pagination-current-change',
@@ -102,7 +116,56 @@ export const EMIT_CONTRACT = {
           '片段/SFC 生成器同步改发单向绑定（F7）。',
       },
     },
-    why: '表格事件：数据回写 / 分页 / 排序 / 自动加载失败外抛。',
+    forwarded: {
+      vue3: {
+        'selection-change': {
+          reason:
+            'el-table / vxe-grid / virtual-engine 的原生事件：默认与 vxe 引擎经 attrs 透传，' +
+            'virtual 引擎显式绑定后转调 attrs 上的宿主监听器；组件不 emit，避免与原生派发重复。' +
+            '三端载荷一致：当前页选中行数组（跨页全集用 getSelectionRows()）。',
+          paths: [
+            {
+              engine: 'el-table',
+              anchor: '<el-table',
+              anchorTokens: ['v-bind="tableBindAttrs"', '@selection-change="handleTableSelectionChange"'],
+              sourceTokens: ['const tableBindAttrs = computed', 'filteredFallthrough[k] = v'],
+            },
+            {
+              engine: 'vxe-grid',
+              anchor: '<vxe-engine',
+              anchorTokens: ['v-bind="vxePassthroughAttrs"', '@selection-change="handleVirtualSelectionChange"'],
+            },
+            {
+              engine: 'virtual-engine',
+              anchor: '<virtual-engine',
+              anchorTokens: ['@selection-change="handleVirtualEngineSelectionChange"'],
+              sourceTokens: ['fallthroughAttrs.onSelectionChange'],
+            },
+          ],
+        },
+      },
+      vue2: {
+        'selection-change': {
+          reason:
+            'Element UI / vxe-grid 的原生事件：两个引擎都经 v-on="$listeners" 透传，' +
+            'Vue 2 的 _g 会把宿主监听器与显式内部监听合并为数组；组件不 emit，避免双触发。' +
+            'virtual 引擎在 Vue 2 不支持，降级 el-table，链路同上。',
+          paths: [
+            {
+              engine: 'vxe-grid',
+              anchor: '<vxe-engine',
+              anchorTokens: ['v-on="$listeners"', '@selection-change="handleTableSelectionChange"'],
+            },
+            {
+              engine: 'el-table',
+              anchor: '<el-table',
+              anchorTokens: ['v-on="$listeners"', '@selection-change="handleTableSelectionChange"'],
+            },
+          ],
+        },
+      },
+    },
+    why: '表格事件：选择变化 / 数据回写 / 分页 / 排序 / 自动加载失败外抛。',
   },
 }
 

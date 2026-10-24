@@ -15,6 +15,8 @@
  *   6. 表格列语义三端一致（COLUMN_CONTRACT：内置列类型 index/selection/expand、groups 深度、
  *      expandConfig、列级 permissionValue/hidCol、声明式合并单元格 mergeConfig）—— 正向 token +
  *      反向 forbid + deviation/knownGaps 原因非空。
+ *   7. 事件契约（EMIT_CONTRACT）：声明的必须有 emit 调用点；由内层组件原生透传的必须
+ *      逐引擎证明链路仍在（见 renderer-contract.mjs 的 forwarded 说明）。
  *
  * 用法：
  *   node scripts/check-renderer-parity.mjs            # 校验（CI 用）
@@ -137,6 +139,27 @@ function hasEmitCallSite(src, key) {
 }
 
 /**
+ * 枚举 anchor 的**全部**出现位置并切出各自的开标签。
+ *
+ * 不能只用 `indexOf(anchor)`：vue2 的 HTML 注释里就写着 `<el-table>`，
+ * 首个命中点可能落在注释里，切出来的片段没有属性、会把真实链路误判为已删除。
+ * 调用方用「任一切片含全部 anchorTokens」确认监听器绑在真实引擎标签上。
+ */
+function openTagSlices(src, anchor) {
+  const slices = []
+  let from = 0
+  for (;;) {
+    const at = src.indexOf(anchor, from)
+    if (at < 0) break
+    const end = src.indexOf('>', at)
+    if (end < 0) break
+    slices.push(src.slice(at, end + 1))
+    from = at + anchor.length
+  }
+  return slices
+}
+
+/**
  * TS 联合类型静态校验源：从指定文件中用正则截出一段联合声明，抽取其 '成员' 字面量。
  * - core FormType：`export type FormType =\n  | 'Input'\n  | ...`
  * - antdv 内联：`formtype?: 'Input' | 'Select' | ...`（单行）
@@ -206,6 +229,22 @@ function extractUnionMembers({ path, slice }) {
 function main() {
   const valid = readValidFormTypes()
   let fail = false
+
+  // 透传证明的匹配器自证：合成串正例必须命中、反例必须不命中。
+  // 否则 anchorTokens 校验可能恒真（等于没查）或恒假（一登记就红），
+  // 守卫会从「证明链路还在」退化成「登记即放行」。
+  {
+    const probe = '<el-table v-bind="tableBindAttrs" @selection-change="h">'
+    const slices = openTagSlices(probe, '<el-table')
+    if (!slices.some((s) => ['v-bind="tableBindAttrs"'].every((t) => s.includes(t)))) {
+      fail = true
+      console.error('❌ 透传证明匹配器失效：合成串里的 anchorToken 未被识别')
+    }
+    if (slices.some((s) => ['v-on="$listeners"'].every((t) => s.includes(t)))) {
+      fail = true
+      console.error('❌ 透传证明匹配器恒真：合成串里不存在的 token 也被匹配')
+    }
+  }
 
   const rendererSets = {}
   for (const [name, path] of RENDERER_INPUTS) {
@@ -451,8 +490,73 @@ function main() {
           )
         }
       }
-      // 7a. 该端缺事件：expected − exempt 内的必须全部声明。
-      const missing = [...expected].filter((k) => !declared.has(k) && !exempt.has(k))
+      // 7f. 透传投递：登记的每条事件都必须真有一条可验证的引擎链路，
+      //     且该端不能再声明它（声明 + emit 与透传互斥，二选一）。
+      const fwdCfg = spec.forwarded?.[name] || {}
+      for (const [evt, cfg] of Object.entries(fwdCfg)) {
+        if (!expected.has(evt)) {
+          fail = true
+          console.error(
+            `❌ EMIT_CONTRACT ${component}/${name}: forwarded 里的 '${evt}' 不在 expected —— 登记错位（豁免不了任何东西）`
+          )
+        }
+        if (declared.has(evt)) {
+          fail = true
+          console.error(
+            `❌ EMIT_CONTRACT ${component}/${name}: '${evt}' 已在该端声明 —— 投递方式互斥，` +
+              `请删掉 forwarded 登记（或改回透传）`
+          )
+        }
+        if (!cfg.reason || !cfg.reason.trim()) {
+          fail = true
+          console.error(`❌ EMIT_CONTRACT ${component}/${name}: forwarded '${evt}' 未说明原因`)
+        }
+        const paths = Array.isArray(cfg.paths) ? cfg.paths : []
+        if (!paths.length) {
+          fail = true
+          console.error(
+            `❌ EMIT_CONTRACT ${component}/${name}: forwarded '${evt}' 没有登记任何引擎投递路径 —— ` +
+              `等于没有证明`
+          )
+        }
+        for (const p of paths) {
+          const label = `${component}/${name} '${evt}' @ ${p?.engine || '?'}`
+          if (!p?.engine || !p?.anchor || !Array.isArray(p.anchorTokens) || !p.anchorTokens.length) {
+            fail = true
+            console.error(`❌ EMIT_CONTRACT ${label}: 路径缺 engine / anchor / anchorTokens`)
+            continue
+          }
+          const slices = openTagSlices(text, p.anchor)
+          if (!slices.length) {
+            fail = true
+            console.error(
+              `❌ EMIT_CONTRACT ${label}: 源码里找不到锚点 ${p.anchor} —— 透传链路可能已被删除`
+            )
+            continue
+          }
+          if (!slices.some((s) => p.anchorTokens.every((t) => s.includes(t)))) {
+            fail = true
+            console.error(
+              `❌ EMIT_CONTRACT ${label}: ${p.anchor} 开标签内缺少 [${p.anchorTokens.join(' / ')}] —— ` +
+                `该引擎不再透传 ${evt}`
+            )
+          }
+          for (const t of p.sourceTokens || []) {
+            if (!text.includes(t)) {
+              fail = true
+              console.error(
+                `❌ EMIT_CONTRACT ${label}: 缺少桥接证据 '${t}' —— 透传链路可能只在标签上、实际已被短路`
+              )
+            }
+          }
+        }
+      }
+      const forwardedListed = new Set(Object.keys(fwdCfg))
+
+      // 7a. 该端缺事件：expected − exempt − 透传 内的必须全部声明。
+      const missing = [...expected].filter(
+        (k) => !declared.has(k) && !exempt.has(k) && !forwardedListed.has(k)
+      )
       if (missing.length) {
         fail = true
         console.error(
@@ -502,8 +606,22 @@ function main() {
     0
   )
   const columnCount = Object.keys(COLUMN_CONTRACT).length
+  const forwardedEvents = Object.values(EMIT_CONTRACT).reduce(
+    (n, spec) => n + Object.values(spec.forwarded || {}).reduce((m, byEvent) => m + Object.keys(byEvent).length, 0),
+    0
+  )
+  const forwardedPaths = Object.values(EMIT_CONTRACT).reduce(
+    (n, spec) =>
+      n +
+      Object.values(spec.forwarded || {}).reduce(
+        (m, byEvent) => m + Object.values(byEvent).reduce((k, cfg) => k + (cfg.paths?.length || 0), 0),
+        0
+      ),
+    0
+  )
   console.log(
-    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定 + ${behaviorCount} 条行为契约 + ${columnCount} 条列契约一致（${valid.keys.length} 项 formtype），与 VALID_FORM_TYPES / renderer-contract 单源同步`
+    `✅ 三端 formPutList 键集 + TS 联合类型 + 组件绑定 + ${behaviorCount} 条行为契约 + ${columnCount} 条列契约一致（${valid.keys.length} 项 formtype），` +
+      `另有 ${forwardedEvents} 条透传投递登记（${forwardedPaths} 条引擎投递路径已逐段证明），与 VALID_FORM_TYPES / renderer-contract 单源同步`
   )
 }
 
