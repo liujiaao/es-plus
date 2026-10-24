@@ -160,7 +160,7 @@ const openImportDialog = () => {
         name: '确认导入', type: 'success',
         disabled: () => currentStep.value !== 2,
         click: (_, { close }) => {
-          ElMessage.success(`成功导入 ${step2Model.data.filter(d => d.valid).length} 条数据（模拟）`)
+          ElMessage.success(`已导入 ${step2Model.data.filter((d) => d.valid).length} 条数据（示例无后端，仅演示向导流程）`)
           close()
         }
       }

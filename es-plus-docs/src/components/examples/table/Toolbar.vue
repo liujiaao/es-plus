@@ -1,6 +1,7 @@
 <template>
   <div class="example-toolbar-table">
     <es-table
+      ref="tableRef"
       :data-source="tableData"
       :columns="columns"
       :options="tableOptions"
@@ -28,14 +29,30 @@ const originData = [
   { id: 4, name: '产品D', category: '服装', price: 89, stock: 200 }
 ]
 const tableData = ref(originData.map((r) => ({ ...r })))
+const tableRef = ref(null)
 
 const columns = [
+  { type: 'selection', width: 45 },
   { prop: 'id', label: 'ID', width: 60 },
   { prop: 'name', label: '产品名称', minWidth: 150 },
   { prop: 'category', label: '分类', width: 100 },
   { prop: 'price', label: '价格', width: 100, formatter: (row) => `¥${row.price}` },
   { prop: 'stock', label: '库存', width: 100 }
 ]
+
+// 导出/打印只认有 prop 的列（选择列没有数据字段）
+const dataColumns = columns.filter((c) => c.prop)
+
+const handleBatchDelete = () => {
+  const rows = tableRef.value?.getSelectionRows?.() || []
+  if (!rows.length) {
+    ElMessage.warning('请先勾选要删除的行')
+    return
+  }
+  const ids = new Set(rows.map((r) => r.id))
+  tableData.value = tableData.value.filter((r) => !ids.has(r.id))
+  ElMessage.success(`已删除 ${rows.length} 行`)
+}
 
 const tableOptions = {
   border: true,
@@ -51,7 +68,7 @@ const tableOptions = {
         ElMessage.success('已新增一行')
       }
     },
-    { name: '批量删除', type: 'danger', icon: Delete, code: 2, click: () => ElMessage.warning('点击了批量删除') }
+    { name: '批量删除', type: 'danger', icon: Delete, code: 2, click: handleBatchDelete }
   ],
   leftText: '产品列表'
 }
@@ -67,8 +84,8 @@ const handleRefresh = () => {
 // 这里用最小的浏览器能力补上，保证每个按钮都真的可用。
 const handleExport = () => {
   const lines = [
-    columns.map(c => c.label).join(','),
-    ...tableData.value.map(row => columns.map(c => row[c.prop]).join(','))
+    dataColumns.map(c => c.label).join(','),
+    ...tableData.value.map(row => dataColumns.map(c => row[c.prop]).join(','))
   ]
   // ﻿：BOM，让 Excel 按 UTF-8 打开中文不乱码
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -82,9 +99,9 @@ const handleExport = () => {
 }
 
 const handlePrint = () => {
-  const head = columns.map(c => `<th>${c.label}</th>`).join('')
+  const head = dataColumns.map(c => `<th>${c.label}</th>`).join('')
   const body = tableData.value
-    .map(row => `<tr>${columns.map(c => `<td>${row[c.prop]}</td>`).join('')}</tr>`)
+    .map(row => `<tr>${dataColumns.map(c => `<td>${row[c.prop]}</td>`).join('')}</tr>`)
     .join('')
   const win = window.open('', '_blank')
   if (!win) return

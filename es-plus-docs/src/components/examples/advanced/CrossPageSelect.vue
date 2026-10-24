@@ -73,18 +73,21 @@ const columns = [
   }
 ]
 
+// 跨页批量的数据源放在模块级：批量操作后真的从「后端」删掉，
+// 再刷新表格就能看到列表变短 —— 不是在弹窗里报个数字了事。
+const allEmployees = Array.from({ length: 32 }, (_, i) => ({
+  id: 1001 + i,
+  name: ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十'][i % 8],
+  department: ['技术部', '产品部', '市场部', '财务部'][i % 4],
+  position: ['工程师', '经理', '总监', '专员'][i % 4],
+  status: ['active', 'leave', 'resigned'][i % 3]
+}))
+
 const mockRequest = async (params) => {
   const { pageIndex = 1, pageSize = 5 } = params || {}
-  const allData = Array.from({ length: 32 }, (_, i) => ({
-    id: 1001 + i,
-    name: ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十'][i % 8],
-    department: ['技术部', '产品部', '市场部', '财务部'][i % 4],
-    position: ['工程师', '经理', '总监', '专员'][i % 4],
-    status: ['active', 'leave', 'resigned'][i % 3]
-  }))
-  const total = allData.length
+  const total = allEmployees.length
   const start = (pageIndex - 1) * pageSize
-  return { data: allData.slice(start, start + pageSize), total, pageSize, pageIndex }
+  return { data: allEmployees.slice(start, start + pageSize), total, pageSize, pageIndex }
 }
 
 // rowkey: 唯一标识字段 → 跨页选择持久化
@@ -105,13 +108,21 @@ const handleBatchAction = async () => {
   const rows = tableRef.value?.getSelectionRows?.() || []
   try {
     await ElMessageBox.confirm(
-      `已跨页选中 ${rows.length} 条数据（来自多个分页），确定执行批量操作？`,
-      '跨页批量操作',
-      { type: 'info' }
+      `已跨页选中 ${rows.length} 条数据（来自多个分页），确定删除？`,
+      '跨页批量删除',
+      { type: 'warning' }
     )
-    ElMessage.success(`已处理 ${rows.length} 条数据（模拟）`)
+    const ids = new Set(rows.map((r) => r.id))
+    for (let i = allEmployees.length - 1; i >= 0; i--) {
+      if (ids.has(allEmployees[i].id)) allEmployees.splice(i, 1)
+    }
     tableRef.value?.clearAllSelection?.()
     selectedCount.value = 0
+    // 删到当前页空了就退回最后一页，再让实例按当前页码重新取数
+    const maxPage = Math.max(1, Math.ceil(allEmployees.length / pagination.value.pageSize))
+    if (pagination.value.current > maxPage) pagination.value.current = maxPage
+    tableRef.value?.httpRequestInstance?.()
+    ElMessage.success(`已删除 ${rows.length} 条数据`)
   } catch {}
 }
 </script>
