@@ -2769,7 +2769,6 @@ export default {
             type: 'primary',
             key: 'save',
             click: (_, { close }) => {
-              console.log('表单数据：', this.formData)
               this.\$message.success('保存成功')
               close()
             }
@@ -2806,6 +2805,9 @@ export default {
 export const RAW_dialog_Lifecycle = `<template>
   <div>
     <el-button @click="openLifecycle">生命周期</el-button>
+    <p class="lifecycle-tip">
+      打开 {{ openCount }} 次 / 关闭 {{ closeCount }} 次<span v-if="lastEvent">，最近：{{ lastEvent }}</span>
+    </p>
   </div>
 </template>
 
@@ -2813,22 +2815,36 @@ export const RAW_dialog_Lifecycle = `<template>
 import { useDialog } from '@es-plus/vue2'
 
 export default {
+  data() {
+    return { openCount: 0, closeCount: 0, lastEvent: '' }
+  },
   methods: {
     openLifecycle() {
       useDialog()({
         title: '生命周期示例',
-        render: () => '查看控制台输出',
+        // 回调把次数与时刻写到页面上，不用开控制台也能看到
+        render: () => \`这是第 \${this.openCount + 1} 次打开；关闭后页面上的计数会更新\`,
         onOpen: () => {
-          console.log('弹窗打开了')
+          this.openCount++
+          this.lastEvent = \`onOpen @ \${new Date().toLocaleTimeString()}\`
         },
         onClosed: () => {
-          console.log('弹窗关闭了')
+          this.closeCount++
+          this.lastEvent = \`onClosed @ \${new Date().toLocaleTimeString()}\`
         }
       })
     }
   }
 }
 </script>
+
+<style scoped>
+.lifecycle-tip {
+  margin-top: 10px;
+  color: #606266;
+  font-size: 13px;
+}
+</style>
 `
 export const RAW_dialog_Loading = `<template>
   <div>
@@ -3488,7 +3504,6 @@ export default {
             type: 'primary',
             key: 'confirm',
             click: (_, { close }) => {
-              console.log('选中的行：', this.selectedRows)
               this.\$message.success(\`已选择 \${this.selectedRows.length} 个用户\`)
               close()
             }
@@ -3675,7 +3690,6 @@ export default {
           },
           listenToCallBack: {
             crtn: (data) => {
-              console.log('API 返回的数据为:', data)
               if (Array.isArray(data)) {
                 return data.slice(0, 10).map(item => ({
                   label: item.title?.substring(0, 20) || item.name || '未知',
@@ -4237,10 +4251,7 @@ export default {
           dataOptions: [
             { label: '个人用户', value: 'personal' },
             { label: '企业用户', value: 'company' }
-          ],
-          on: {
-            change: (val) => console.log('类型切换:', val)
-          }
+          ]
         },
         {
           prop: 'companyName',
@@ -4467,9 +4478,6 @@ export default {
             ])
           },
           on: {
-            success: (response, file, fileList) => {
-              console.log('上传成功:', response, file, fileList)
-            },
             remove: (file, fileList) => {
               this.formData.avatar = [...fileList]
             },
@@ -4478,7 +4486,6 @@ export default {
             },
             preview: (file) => {
               if (file.url) {
-                console.log('预览文件:', file.url)
                 dialogImageUrl({
                   title: '图片预览',
                   key: 'dialogImageUrl1',
@@ -4954,7 +4961,6 @@ export default {
           type: 'primary',
           click: (model) => {
             this.\$message.success('提交成功！')
-            console.log('表单数据:', model)
           }
         },
         {
@@ -5046,12 +5052,7 @@ export default {
                 }
               ]
             }
-          ],
-          on: {
-            change: (value) => {
-              console.log('省市区选择变化:', value)
-            }
-          }
+          ]
         },
         {
           prop: 'address',

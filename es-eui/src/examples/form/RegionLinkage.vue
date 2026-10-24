@@ -27,7 +27,6 @@ export default {
           type: 'primary',
           click: (model) => {
             this.$message.success('提交成功！')
-            console.log('表单数据:', model)
           }
         },
         {
@@ -119,12 +118,7 @@ export default {
                 }
               ]
             }
-          ],
-          on: {
-            change: (value) => {
-              console.log('省市区选择变化:', value)
-            }
-          }
+          ]
         },
         {
           prop: 'address',

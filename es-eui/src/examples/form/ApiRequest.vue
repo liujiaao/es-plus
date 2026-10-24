@@ -33,7 +33,6 @@ export default {
           },
           listenToCallBack: {
             crtn: (data) => {
-              console.log('API 返回的数据为:', data)
               if (Array.isArray(data)) {
                 return data.slice(0, 10).map(item => ({
                   label: item.title?.substring(0, 20) || item.name || '未知',

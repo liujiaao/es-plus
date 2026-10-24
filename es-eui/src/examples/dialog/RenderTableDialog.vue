@@ -50,7 +50,6 @@ export default {
             type: 'primary',
             key: 'confirm',
             click: (_, { close }) => {
-              console.log('选中的行：', this.selectedRows)
               this.$message.success(`已选择 ${this.selectedRows.length} 个用户`)
               close()
             }

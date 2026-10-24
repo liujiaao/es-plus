@@ -26,10 +26,7 @@ export default {
           dataOptions: [
             { label: '个人用户', value: 'personal' },
             { label: '企业用户', value: 'company' }
-          ],
-          on: {
-            change: (val) => console.log('类型切换:', val)
-          }
+          ]
         },
         {
           prop: 'companyName',

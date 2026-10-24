@@ -257,7 +257,7 @@ export const dialogExamples = [
   { key: 'Draggable', title: '可拖拽弹窗', description: 'isDraggable: true 开启弹窗拖拽功能。' },
   { key: 'Fullscreen', title: '全屏弹窗', description: 'fullscreen: true 开启全屏弹窗模式。' },
   { key: 'Loading', title: '加载态：先开后填', description: '先开弹窗占位，instance.loading 控制遮罩，数据到达后再回填内容——避免点按钮后长时间无反馈。' },
-  { key: 'Lifecycle', title: '生命周期', description: 'onOpen / onClosed 生命周期回调监听弹窗打开和关闭。' },
+  { key: 'Lifecycle', title: '生命周期：回调驱动页面状态', description: 'onOpen / onClosed 回调把打开/关闭次数与时刻写到页面上，不用开控制台。' },
   { key: 'CustomStyle', title: 'customClass 容器样式', description: 'customClass 给弹窗外层挂自定义类名，圆角/背景/阴影等视觉细节不用改组件源码。' },
   { key: 'RenderComponent', title: 'JSX 渲染 EsForm 表单', description: '使用 JSX render 函数渲染 EsForm，getRefs 获取表单实例进行验证。' },
   { key: 'RenderTableDialog', title: 'JSX 渲染 EsTable 表格', description: '使用 JSX render 函数渲染 EsTable，支持多选和事件监听。' },

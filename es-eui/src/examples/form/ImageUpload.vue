@@ -93,9 +93,6 @@ export default {
             ])
           },
           on: {
-            success: (response, file, fileList) => {
-              console.log('上传成功:', response, file, fileList)
-            },
             remove: (file, fileList) => {
               this.formData.avatar = [...fileList]
             },
@@ -104,7 +101,6 @@ export default {
             },
             preview: (file) => {
               if (file.url) {
-                console.log('预览文件:', file.url)
                 dialogImageUrl({
                   title: '图片预览',
                   key: 'dialogImageUrl1',

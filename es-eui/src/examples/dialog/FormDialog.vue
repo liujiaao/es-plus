@@ -48,7 +48,6 @@ export default {
             type: 'primary',
             key: 'save',
             click: (_, { close }) => {
-              console.log('表单数据：', this.formData)
               this.$message.success('保存成功')
               close()
             }
