@@ -21,7 +21,7 @@
 
     <!-- 分页请求 -->
     <section id="pagination">
-      <h2>分页请求</h2>
+      <h2>httpRequest + configTableOut 分页</h2>
       <p>配置 <code>apiParams</code> 和 <code>httpRequest</code> 实现服务端分页，通过 <code>configTableOut</code> 映射响应字段。</p>
             <CodeDemo :source="rawSFCs['./es-table/Pagination.vue']">
         <EsTablePagination />
@@ -43,8 +43,8 @@
 
     <!-- 多选 -->
     <section id="selection">
-      <h2>多选</h2>
-      <p>通过 <code>type: 'selection'</code> 开启多选列。</p>
+      <h2>多选与跨页记忆</h2>
+      <p><code>type: 'selection'</code> 开启多选列；翻页后已选项自动回勾，<code>getSelectionRows()</code> 拿跨页并集。</p>
             <CodeDemo :source="rawSFCs['./es-table/Selection.vue']">
         <EsTableSelection />
       </CodeDemo>
@@ -65,8 +65,8 @@
 
     <!-- 工具栏按钮 -->
     <section id="toolbar">
-      <h2>工具栏按钮</h2>
-      <p>通过 <code>configBtn</code> 在表格上方添加工具栏操作按钮。</p>
+      <h2>工具栏按钮左右分栏</h2>
+      <p><code>configBtn</code> 的 <code>code: 1 / 2</code> 把按钮分到左右两端；插槽按钮在左侧，导出 / 打印 / 刷新都真跑。</p>
             <CodeDemo :source="rawSFCs['./es-table/Toolbar.vue']">
         <EsTableToolbar />
       </CodeDemo>
@@ -76,7 +76,7 @@
 
     <!-- 行内编辑 -->
     <section id="edit">
-      <h2>行内编辑</h2>
+      <h2>点击单元格即编辑</h2>
       <p>表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。</p>
             <CodeDemo :source="rawSFCs['./es-table/Edit.vue']">
         <EsTableEdit />
@@ -120,7 +120,7 @@
 
     <!-- 自适应高度 -->
     <section id="height">
-      <h2>自适应容器高度</h2>
+      <h2>继承父容器高度</h2>
       <p><code>heightType: height</code> 继承父容器高度 + ResizeObserver 自动计算。</p>
             <CodeDemo :source="rawSFCs['./es-table/TableHeight.vue']">
         <EsTableTableHeight />
@@ -186,7 +186,7 @@
 
     <!-- 查询表格 -->
     <section id="query-table">
-      <h2>配置化查询表格</h2>
+      <h2>配置化查询：零 handleSearch</h2>
       <p><code>apiParams.model</code> 自动合并搜索参数 + <code>httpRequestInstance</code> 手动刷新，零手动联动代码。</p>
             <CodeDemo :source="rawSFCs['./es-table/QueryTable.vue']">
         <EsTableQueryTable />

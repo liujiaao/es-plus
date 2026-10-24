@@ -68,11 +68,11 @@ export const docsData: Record<string, any> = {
       { key: 'all-formtypes', title: '14 种表单控件一览', description: 'Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload —— 全部来自 formItemList，没有一行手写控件。', component: getComponent('form/19-all-formtypes'), code: code('form/19-all-formtypes') },
       { key: 'layout', title: '布局与折叠', description: '24 栅格布局 + 自动折叠展开，支持响应式自适应。', component: getComponent('form/02-layout'), code: code('form/02-layout') },
       { key: 'conditional', title: '条件联动表单', description: '模型驱动字段显隐，isHidden + on.change 实现字段间联动。', component: getComponent('form/03-conditional'), code: code('form/03-conditional') },
-      { key: 'dynamic', title: '动态增减表单', description: '运行时动态增删表单项，支持数组类型表单与动态验证。', component: getComponent('form/04-dynamic'), code: code('form/04-dynamic') },
-      { key: 'validation', title: '表单验证', description: '集成 Element Plus 验证体系，支持 rules、pattern、自定义 validator。', component: getComponent('form/05-validation'), code: code('form/05-validation') },
+      { key: 'dynamic', title: '运行期增删表单项', description: '运行时动态增删表单项，支持数组类型表单与动态验证。', component: getComponent('form/04-dynamic'), code: code('form/04-dynamic') },
+      { key: 'validation', title: '校验：rules + 自定义 validator', description: '集成 Element Plus 验证体系，支持 rules、pattern、自定义 validator。', component: getComponent('form/05-validation'), code: code('form/05-validation') },
       { key: 'async-options', title: '异步数据表单', description: 'apiParams 自动加载下拉选项 + on.change 驱动级联联动。', component: getComponent('form/06-async-options'), code: code('form/06-async-options') },
       { key: 'custom-render', title: '自定义渲染表单', description: 'render 函数扩展能力，支持 Upload、Transfer、Slider、ColorPicker 等复杂组件。', component: getComponent('form/07-custom-render'), code: code('form/07-custom-render') },
-      { key: 'dialog', title: '弹窗表单', description: '在弹窗中使用 EsForm，展示表单与弹窗的无缝集成。', component: getComponent('form/08-dialog'), code: code('form/08-dialog') },
+      { key: 'dialog', title: '弹窗内嵌表单', description: '在弹窗中使用 EsForm，展示表单与弹窗的无缝集成。', component: getComponent('form/08-dialog'), code: code('form/08-dialog') },
       { key: 'datetime-range', title: '日期时间范围', description: '完整覆盖日期、时间、日期时间范围选择场景。', component: getComponent('form/09-datetime-range'), code: code('form/09-datetime-range') },
       { key: 'cascader', title: '级联选择器', description: '使用 Cascader 组件实现多级联动选择。', component: getComponent('form/10-cascader'), code: code('form/10-cascader') },
       { key: 'advanced-buttons', title: '高级按钮区', description: 'direction: left/right 把按钮分到两端：导出居左，查询/重置居右，无需手写布局。', component: getComponent('form/11-advanced-buttons'), code: code('form/11-advanced-buttons') },
@@ -164,11 +164,11 @@ export const docsData: Record<string, any> = {
       { key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
       { key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
       { key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
-      { key: 'edit', title: '行内编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
-      { key: 'sort', title: '排序表格', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
+      { key: 'edit', title: '点击单元格即编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
+      { key: 'sort', title: '前端 / 后端排序', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
       { key: 'group', title: '分组表头', description: 'groups 嵌套列配置实现多级分组表头。', component: getComponent('table/07-group'), code: code('table/07-group') },
       { key: 'fixed', title: '固定列与固定高度', description: 'fixed 固定列 + heightType: height 固定高度，宽表横向滚动时关键列始终可见。', component: getComponent('table/08-fixed'), code: code('table/08-fixed') },
-      { key: 'pagination', title: '分页表格', description: '配置 httpRequest + configTableOut 对接免费接口，v-model 双向绑定自动分页。', component: getComponent('table/09-pagination'), code: code('table/09-pagination') },
+      { key: 'pagination', title: '分页表格：v-model 自动翻页', description: '配置 httpRequest + configTableOut 对接免费接口，v-model 双向绑定自动分页。', component: getComponent('table/09-pagination'), code: code('table/09-pagination') },
       { key: 'remote-data', title: '远程数据表格', description: 'actionUrl + httpRequest + configTableOut 完整远程数据请求与分页。', component: getComponent('table/10-remote-data'), code: code('table/10-remote-data') },
       { key: 'expand', title: '展开行与树形', description: 'type:expand 展开行 + children 树形数据两种层级展示模式。', component: getComponent('table/11-expand'), code: code('table/11-expand') },
       { key: 'cell-merge', title: '声明式行合并与行样式', description: 'mergeConfig.rowsBy 声明式合并单元格（同一份 JSON 三端通用，无需手写 span 函数）+ rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
@@ -321,7 +321,7 @@ export const docsData: Record<string, any> = {
       { name: '程序化控制', desc: 'openDialog/closeDialog 方法支持外部程序化控制弹窗', icon: 'Setting' }
     ],
     examples: [
-      { key: 'basic', title: '基础 CRUD', description: '只写一行 actions：工具栏、操作列、弹窗全部自动派生；增删改真正落到数据源。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
+      { key: 'basic', title: '基础 CRUD：一行 actions 派生', description: '只写一行 actions：工具栏、操作列、弹窗全部自动派生；增删改真正落到数据源。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
       { key: 'multi-dialog', title: '多弹窗绑定', description: '一个页面挂新增/编辑/批量分配三个弹窗，按钮到弹窗全靠 dialogKey 绑定。', component: getComponent('crud-page/02-multi-dialog'), code: code('crud-page/02-multi-dialog') },
       { key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs.render 接管弹窗：拖拽上传真的入库，统计面板读的是实时数据。', component: getComponent('crud-page/03-custom-render'), code: code('crud-page/03-custom-render') },
       { key: 'dynamic-title', title: '动态标题与回填', description: 'title 写成函数跟着行数据变，编辑弹窗按 prop 路径自动回填选中行。', component: getComponent('crud-page/04-dynamic-title'), code: code('crud-page/04-dynamic-title') },
@@ -330,7 +330,7 @@ export const docsData: Record<string, any> = {
       { key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
       { key: 'program-open', title: '程序化控制弹窗', description: 'ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
       { key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
-      { key: 'full-business', title: '完整业务场景', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
+      { key: 'full-business', title: '完整业务：多弹窗 + 导出', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
     ],
     api: {
       props: [

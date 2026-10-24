@@ -22,8 +22,8 @@
 
     <!-- 多弹窗 -->
     <section id="multi-dialog">
-      <h2>多弹窗</h2>
-      <p>通过 <code>dialogs</code> 配置多个不同弹窗（新增、编辑、详情等）。</p>
+      <h2>多弹窗绑定</h2>
+      <p><code>dialogs</code> 一个键对应一个弹窗实例，按钮的 <code>dialogKey</code> 决定打开哪一个（新增 / 编辑 / 详情）。</p>
             <CodeDemo :source="rawSFCs['./es-crud/MultiDialog.vue']">
         <EsCrudMultiDialog />
       </CodeDemo>

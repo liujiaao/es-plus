@@ -38,7 +38,7 @@
     {
       "id": "form/04-dynamic",
       "group": "es-form",
-      "title": "动态增减表单",
+      "title": "运行期增删表单项",
       "tokens": [
         "hostOrchestration"
       ]
@@ -46,7 +46,7 @@
     {
       "id": "form/05-validation",
       "group": "es-form",
-      "title": "表单验证",
+      "title": "校验：rules + 自定义 validator",
       "tokens": [
         "validation",
         "validatorFn"
@@ -74,7 +74,7 @@
     {
       "id": "form/08-dialog",
       "group": "es-form",
-      "title": "弹窗表单",
+      "title": "弹窗内嵌表单",
       "tokens": [
         "formtype",
         "dialogs"
@@ -215,7 +215,7 @@
     {
       "id": "table/05-edit",
       "group": "es-table",
-      "title": "行内编辑",
+      "title": "点击单元格即编辑",
       "tokens": [
         "inlineEdit"
       ]
@@ -223,7 +223,7 @@
     {
       "id": "table/06-sort",
       "group": "es-table",
-      "title": "排序表格",
+      "title": "前端 / 后端排序",
       "tokens": [
         "columnSortable",
         "defaultSort"
@@ -250,7 +250,7 @@
     {
       "id": "table/09-pagination",
       "group": "es-table",
-      "title": "分页表格",
+      "title": "分页表格：v-model 自动翻页",
       "tokens": [
         "configTableOut",
         "pagination",
@@ -346,7 +346,7 @@
     {
       "id": "crud-page/01-basic",
       "group": "es-crud-page",
-      "title": "基础 CRUD",
+      "title": "基础 CRUD：一行 actions 派生",
       "tokens": [
         "operationColumn"
       ]
@@ -425,7 +425,7 @@
     {
       "id": "crud-page/10-full-business",
       "group": "es-crud-page",
-      "title": "完整业务场景",
+      "title": "完整业务：多弹窗 + 导出",
       "tokens": [
         "dialogs",
         "renderFn",

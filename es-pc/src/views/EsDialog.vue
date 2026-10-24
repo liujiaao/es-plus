@@ -43,8 +43,8 @@
 
     <!-- 确认弹窗 -->
     <section id="confirm">
-      <h2>确认弹窗</h2>
-      <p>使用 Confirm 模式快速创建确认对话框。</p>
+      <h2>确认弹窗：三档语气 + 关闭拦截</h2>
+      <p>danger / warning / neutral 三档语气，<code>configBtn</code> 自定义按钮；<code>beforeClose(done)</code> 拦住 X / 遮罩 / ESC。</p>
             <CodeDemo :source="rawSFCs['./es-dialog/Confirm.vue']">
         <EsDialogConfirm />
       </CodeDemo>
@@ -54,8 +54,8 @@
 
     <!-- 高级弹窗 -->
     <section id="advanced">
-      <h2>高级弹窗</h2>
-      <p>可拖拽 + 自定义头尾 + 全屏 + 限高。</p>
+      <h2>定制与实例缓存</h2>
+      <p>可拖拽、自定义头尾、全屏、限高；<code>cacheKey</code> 缓存实例，关掉再开输入内容还在。</p>
             <CodeDemo :source="rawSFCs['./es-dialog/Advanced.vue']">
         <EsDialogAdvanced />
       </CodeDemo>

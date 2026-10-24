@@ -92,8 +92,8 @@
     <a-divider />
 
     <section id="form-table-dialog">
-      <h2>完整 CRUD 示例</h2>
-      <p>EsForm + EsTable + useDialog 组合实现完整的增删改查。</p>
+      <h2>表单 + 表格 + useDialog 增改</h2>
+      <p>EsForm 查询 + EsTable 列表 + <code>useDialog</code> 弹窗，新增 / 编辑 / 单删 / 批删都落到同一份数据。</p>
             <CodeDemo :source="rawSFCs['./es-advanced/FormTableDialog.vue']">
         <FormTableDialog />
       </CodeDemo>
@@ -187,7 +187,7 @@
 
     <!-- 万行数据 -->
     <section id="large-data">
-      <h2>万行数据</h2>
+      <h2>万行数据（a-table 无虚拟滚动）</h2>
       <p>
         一次渲染 1 万行。<strong>注意：a-table 没有虚拟滚动</strong> ——
         <code>options.virtual</code> 在 antdv 端会告警并回退默认引擎；真正需要虚拟滚动请用

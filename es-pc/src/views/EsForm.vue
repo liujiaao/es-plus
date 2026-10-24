@@ -29,7 +29,7 @@
     <a-divider />
 
     <section id="conditional">
-      <h2>条件显隐 & 联动</h2>
+      <h2>条件显隐 + 字段联动</h2>
       <p>模型驱动字段显隐，<code>isHidden</code> + <code>on.change</code> 实现字段间联动。</p>
             <CodeDemo :source="rawSFCs['./es-form/Conditional.vue']">
         <EsFormConditional />
@@ -39,7 +39,7 @@
     <a-divider />
 
     <section id="async">
-      <h2>异步加载选项</h2>
+      <h2>异步选项：apiParams + 级联</h2>
       <p><code>apiParams</code> 自动加载下拉选项 + 级联联动。</p>
             <CodeDemo :source="rawSFCs['./es-form/AsyncOptions.vue']">
         <EsFormAsyncOptions />
@@ -59,8 +59,8 @@
     <a-divider />
 
     <section id="custom">
-      <h2>自定义渲染</h2>
-      <p><code>render</code> 函数扩展复杂组件。</p>
+      <h2>render 接管任意控件</h2>
+      <p><code>render(h, model)</code> 直接接管控件：头像上传、评分、滑块、穿梭框都不需要额外封装。</p>
             <CodeDemo :source="rawSFCs['./es-form/CustomRender.vue']">
         <EsFormCustomRender />
       </CodeDemo>
@@ -69,8 +69,8 @@
     <a-divider />
 
     <section id="detail">
-      <h2>详情模式</h2>
-      <p>编辑/详情双模式切换。</p>
+      <h2>详情 / 编辑双模式</h2>
+      <p>同一份 <code>formItems</code>，详情模式整表禁用并隐藏按钮区，切回编辑即可改。</p>
             <CodeDemo :source="rawSFCs['./es-form/Detail.vue']">
         <EsFormDetail />
       </CodeDemo>
@@ -109,7 +109,7 @@
     <a-divider />
 
     <section id="advanced-buttons">
-      <h2>高级按钮区</h2>
+      <h2>按钮左右分栏</h2>
       <p><code>btnColSpanRow</code> + <code>direction</code> 实现左右分栏按钮区。</p>
             <CodeDemo :source="rawSFCs['./es-form/AdvancedButtons.vue']">
         <EsFormAdvancedButtons />
@@ -139,7 +139,7 @@
     <a-divider />
 
     <section id="dynamic">
-      <h2>动态增减表单</h2>
+      <h2>运行期增删表单项</h2>
       <p>运行时动态增删表单项，支持数组类型表单与动态验证。</p>
             <CodeDemo :source="rawSFCs['./es-form/Dynamic.vue']">
         <EsFormDynamic />
@@ -149,7 +149,7 @@
     <a-divider />
 
     <section id="computed-fields">
-      <h2>联动计算</h2>
+      <h2>联动计算：选商品自动算总价</h2>
       <p><code>on.change</code> + <code>on.input</code> 实现商品选择 → 自动填充单价 → 数量折扣 → 实时计算总价。</p>
             <CodeDemo :source="rawSFCs['./es-form/ComputedFields.vue']">
         <EsFormComputedFields />
