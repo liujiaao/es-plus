@@ -8,7 +8,9 @@
     />
     <div class="sort-info" v-if="lastSort">
       <a-alert
-        :message="`当前排序: ${lastSort.prop} - ${lastSort.order === 'ascending' ? '升序' : '降序'}（数据由 handleSort 重排，等价于把请求参数发给后端）`"
+        :message="lastSort.order
+          ? `当前排序: ${lastSort.prop} - ${lastSort.order === 'ascending' ? '升序' : '降序'}（数据由 handleSort 重排，等价于把请求参数发给后端）`
+          : `已清除 ${lastSort.prop} 的排序，恢复原始顺序`"
         type="info"
         show-icon
       />

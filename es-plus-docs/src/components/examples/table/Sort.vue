@@ -7,18 +7,14 @@
       @change-table-sort="handleSort"
     />
     <div class="sort-info" v-if="lastSort">
-      <el-alert
-        :title="`当前排序: ${lastSort.prop} - ${lastSort.order === 'ascending' ? '升序' : '降序'}`"
-        type="info"
-        show-icon
-      />
+      <el-alert :title="sortText" type="info" show-icon />
     </div>
   </div>
 </template>
 
 <script setup>
 import { EsTable } from '@es-plus/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const tableData = ref([
   { name: '张三', age: 28, score: 85, salary: 15000 },
@@ -36,6 +32,12 @@ const columns = [
 ]
 
 const lastSort = ref(null)
+
+const sortText = computed(() => {
+  const { prop, order } = lastSort.value
+  if (!order) return `已清除 ${prop} 的排序`
+  return `当前排序: ${prop} - ${order === 'ascending' ? '升序' : '降序'}`
+})
 
 const handleSort = ({ prop, order }) => {
   lastSort.value = { prop, order }
