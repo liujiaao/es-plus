@@ -240,7 +240,8 @@
 
 ### 批 2 · 声明式标杆（F2）
 
-- 新增 `declarative-linkage.config.ts` + `DeclarativeLinkage.vue`（三站各一）。
+- 新增 `declarative-linkage.config.js` + `DeclarativeLinkage.vue`（三站各一）。配置用 `.js` 而非 `.ts`：
+  Vue2 站（es-eui/webpack）没有 TS loader，而这份文件是**纯数据**，`.js` 三端通吃、也更能说明"配置即 JSON"。
 - 导航文案：`component-doc.data.ts:70,73,82` 改为"声明式 `reactions` 解法见…，回调解法仅作对照"。
 - 新增 `scripts/check-declarative-demo.mjs`（断言配置纯 JSON），接入 `check:consistency`。
 - 守卫：`npm run check:docs-layout`、三站构建。

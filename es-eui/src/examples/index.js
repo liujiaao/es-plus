@@ -13,6 +13,7 @@ import FormRemoteRegionLinkage from './form/RemoteRegionLinkage.vue'
 import FormImageUpload from './form/ImageUpload.vue'
 import FormMultiImageUpload from './form/MultiImageUpload.vue'
 import FormComputedFields from './form/ComputedFields.vue'
+import FormDeclarativeLinkage from './form/DeclarativeLinkage.vue'
 import FormDetailMode from './form/DetailMode.vue'
 
 import TableBasic from './table/Basic.vue'
@@ -109,6 +110,7 @@ const componentMap = {
   './form/ImageUpload.vue': FormImageUpload,
   './form/MultiImageUpload.vue': FormMultiImageUpload,
   './form/ComputedFields.vue': FormComputedFields,
+  './form/DeclarativeLinkage.vue': FormDeclarativeLinkage,
   './form/DetailMode.vue': FormDetailMode,
   './table/Basic.vue': TableBasic,
   './table/AutoRequest.vue': TableAutoRequest,
@@ -220,6 +222,7 @@ export const formExamples = [
   { key: 'ImageUpload', title: '单图片上传', description: 'Upload 组件集成，自定义 httpRequest 实现图片上传预览，useDialog 实现大图预览。' },
   { key: 'MultiImageUpload', title: '多图片上传', description: '多图片上传模式，listType 设置为 picture-card，支持批量上传和预览。' },
   { key: 'ComputedFields', title: '字段联动计算', description: 'watch 监听字段变化自动回填与计算（单价×数量=小计，×折扣=应付），派生字段只读展示。' },
+  { key: 'DeclarativeLinkage', title: '报销单：零回调联动', description: '省→市→门店三级下拉、选了城市才要求发票号、大区自动带出并锁定、金额 > 5000 才要求说明、非部分退款时隐藏退款原因 —— 全部来自一份纯 JSON（reactions + JSON 表达式），示例里 0 个函数。' },
   { key: 'DetailMode', title: '详情/编辑模式', description: '同一份 formItemList 通过 computed 切换 attrs.disabled，实现详情与编辑双模式复用。' },
 ]
 

@@ -30,9 +30,23 @@
 
     <section id="conditional">
       <h2>条件显隐 + 字段联动</h2>
-      <p>模型驱动字段显隐，<code>isHidden</code> + <code>on.change</code> 实现字段间联动。</p>
+      <p>模型驱动字段显隐，<code>isHidden</code> + <code>on.change</code> 实现字段间联动；声明式解法（0 个回调）见下方「报销单」。</p>
             <CodeDemo :source="rawSFCs['./es-form/Conditional.vue']">
         <EsFormConditional />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
+    <section id="declarative-linkage">
+      <h2>报销单：零回调联动</h2>
+      <p>
+        省 → 市 → 门店三级下拉、可选城市才要求发票号、大区自动带出并锁定、金额 &gt; 5000 才要求说明、
+        非部分退款时隐藏退款原因 —— 全部来自一份<strong>纯 JSON</strong>（<code>reactions</code> + JSON 表达式），
+        示例里 0 个函数。展开表单下方可看驱动它的配置原文。
+      </p>
+      <CodeDemo :source="rawSFCs['./es-form/DeclarativeLinkage.vue']">
+        <EsFormDeclarativeLinkage />
       </CodeDemo>
     </section>
 
@@ -254,6 +268,7 @@ import CodeDemo from '@/components/CodeDemo.vue'
 import EsFormBasic from './es-form/Basic.vue'
 import EsFormLayout from './es-form/Layout.vue'
 import EsFormConditional from './es-form/Conditional.vue'
+import EsFormDeclarativeLinkage from './es-form/DeclarativeLinkage.vue'
 import EsFormAsyncOptions from './es-form/AsyncOptions.vue'
 import EsFormValidation from './es-form/Validation.vue'
 import EsFormCustomRender from './es-form/CustomRender.vue'
