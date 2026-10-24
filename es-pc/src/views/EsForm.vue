@@ -49,7 +49,7 @@
     <a-divider />
 
     <section id="validation">
-      <h2>表单验证</h2>
+      <h2>校验：rules + 自定义 validator</h2>
       <p>集成 Ant Design Vue 验证体系，支持 rules、pattern、自定义 validator。</p>
             <CodeDemo :source="rawSFCs['./es-form/Validation.vue']">
         <EsFormValidation />
@@ -169,8 +169,8 @@
     <a-divider />
 
     <section id="dialog">
-      <h2>弹窗表单</h2>
-      <p>在弹窗中使用 EsForm，展示表单与弹窗的无缝集成。</p>
+      <h2>弹窗内嵌表单</h2>
+      <p>弹窗里直接放 EsForm：确定前先校验，通过后回写结果再 close，弹窗与表单共用一份 model。</p>
             <CodeDemo :source="rawSFCs['./es-form/Dialog.vue']">
         <EsFormDialog />
       </CodeDemo>

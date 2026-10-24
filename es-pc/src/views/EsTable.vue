@@ -87,8 +87,8 @@
 
     <!-- 排序 -->
     <section id="sort">
-      <h2>排序</h2>
-      <p>前端排序与后端排序两种模式。</p>
+      <h2>排序：事件驱动 + 后端重排</h2>
+      <p>antdv 侧 <code>sortable</code> 统一映射为 <code>sorter: true</code>，只发排序事件、不本地排；示例在 <code>change-table-sort</code> 里重排，真实项目带 order 重新请求。第三次点击清除排序并还原原始顺序。</p>
             <CodeDemo :source="rawSFCs['./es-table/Sort.vue']">
         <EsTableSort />
       </CodeDemo>
