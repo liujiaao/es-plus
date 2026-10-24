@@ -63,7 +63,7 @@ const exportLogs = () => {
   if (!mockData.length) return ElMessage.warning('没有可导出的日志')
   const header = ['事件', '操作人', 'IP 地址', '时间', '级别']
   const rows = mockData.map((r) => [r.event, r.operator, r.ip, r.time, r.level])
-  const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+  const csv = '\uFEFF' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const a = document.createElement('a')
   a.href = url

@@ -266,7 +266,6 @@ const configBtn: BtnConfig[] = [
       }
       const names = files.map((f: any) => f.name).join('、')
       message.success(`提交成功！已上传 ${files.length} 个文件: ${names}`)
-      console.log('表单数据:', model)
     }
   },
   {

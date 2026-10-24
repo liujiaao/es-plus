@@ -111,7 +111,6 @@ const configBtn = [
     click: (model: Record<string, unknown>) => {
       message.success('保存成功')
       isEdit.value = false
-      console.log('保存数据:', model)
     }
   },
   {

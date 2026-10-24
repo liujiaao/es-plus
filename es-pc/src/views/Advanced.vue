@@ -205,7 +205,9 @@
           <a-button type="primary" size="small" @click="showVirtual = true">加载示例</a-button>
         </template>
       </a-alert>
-      <VirtualTable v-if="showVirtual" />
+      <CodeDemo v-if="showVirtual" :source="rawSFCs['./es-advanced/VirtualTable.vue']">
+        <VirtualTable />
+      </CodeDemo>
     </section>
 
     <a-divider />

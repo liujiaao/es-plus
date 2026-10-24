@@ -567,7 +567,7 @@
     {
       "id": "advanced/05-form-table-dialog",
       "group": "linkage",
-      "title": "完整CRUD示例",
+      "title": "表单 + 表格 + useDialog 增改",
       "tokens": [
         "useDialogApi"
       ]
@@ -682,7 +682,7 @@
     {
       "id": "advanced/18-virtual-table",
       "group": "linkage",
-      "title": "虚拟滚动基础",
+      "title": "虚拟滚动：10 万行",
       "tokens": [
         "virtualScroll",
         "tableBase"

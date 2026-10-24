@@ -76,7 +76,6 @@ const renderBtn = () => {
       },
       onClick: () => {
         message.success('草稿已保存: ' + formModel.title)
-        console.log('草稿:', formModel)
       }
     }, '保存草稿'),
     h('span', {
@@ -88,7 +87,6 @@ const renderBtn = () => {
         await new Promise(r => setTimeout(r, 1200))
         submitting.value = false
         message.success('发布成功！')
-        console.log('发布:', formModel)
       }
     }, submitting.value ? '发布中...' : '立即发布')
   ])

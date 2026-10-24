@@ -73,7 +73,6 @@ const formItems = computed(() => [
     on: {
       onChange: (_value: string) => {
         // 省份变化时清空城市和区县
-        console.log('省份变化', _value)
         formModel.city = ''
         formModel.district = ''
         // 调用 formItmeRequestInstance 手动触发 city 表单项的接口请求

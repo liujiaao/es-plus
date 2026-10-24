@@ -91,7 +91,6 @@ const configBtn = [
     icon: 'Check',
     click: (model) => {
       message.success('偏好设置已保存')
-      console.log('偏好数据:', model)
     }
   },
   {

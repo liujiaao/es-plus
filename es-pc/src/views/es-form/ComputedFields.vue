@@ -120,7 +120,6 @@ const configBtn = [
     click: (model: Record<string, unknown>) => {
       if (!model.product) { message.warning('请选择商品'); return }
       message.success(`下单成功！折后总价 ¥${model.total}`)
-      console.log('订单数据:', model)
     }
   },
   {

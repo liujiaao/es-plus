@@ -123,7 +123,7 @@ const handleConfirm = (key, data) => {
     Object.assign(editingRow, data)
   }
   crudRef.value?.refresh?.()
-  ElMessage.success(`[${key}] ${data.name}`)
+  ElMessage.success(key === 'add' ? `已新增 ${data.name}` : `已保存 ${data.name}`)
 }
 
 const handleBtn = (key, row) => {
@@ -134,7 +134,20 @@ const handleBtn = (key, row) => {
     ElMessage.success(`已删除: ${row?.name}`)
     return
   }
-  ElMessage.info(`按钮: ${key}`)
+  // actionType:'export' 的工具栏按钮会同时 emit 'export' 与 btn-click('export', queryModel)，
+  // 这里接住后者把当前数据集真正导成 CSV（无后端也能核对导出内容）
+  if (key === 'export') {
+    const header = ['id', 'name', 'dept', 'level']
+    const lines = [header.join(','), ...mockData.map((r) => header.map((k) => r[k]).join(','))]
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '人员列表.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success(`已导出 ${mockData.length} 条`)
+  }
 }
 </script>
 

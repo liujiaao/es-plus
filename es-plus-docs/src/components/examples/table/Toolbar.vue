@@ -87,8 +87,8 @@ const handleExport = () => {
     dataColumns.map(c => c.label).join(','),
     ...tableData.value.map(row => dataColumns.map(c => row[c.prop]).join(','))
   ]
-  // ﻿：BOM，让 Excel 按 UTF-8 打开中文不乱码
-  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  // \uFEFF：BOM，让 Excel 按 UTF-8 打开中文不乱码
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

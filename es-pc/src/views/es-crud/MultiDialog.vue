@@ -132,7 +132,7 @@ const handleBtnClick = (key, payload) => {
   if (key === 'export') {
     const header = ['姓名', '手机号', '部门', '状态']
     const rows = mockData.map((r) => [r.name, r.phone, r.dept, r.status === 1 ? '在职' : '离职'])
-    const csv = '﻿' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
+    const csv = '\uFEFF' + [header, ...rows].map((cols) => cols.join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
