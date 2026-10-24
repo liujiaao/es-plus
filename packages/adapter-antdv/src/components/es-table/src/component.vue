@@ -54,6 +54,8 @@
           />
 
           <!-- 表格主体 -->
+          <!-- 排序方向交给 a-table 默认值（ascend → descend → 清除）：不传 sortDirections，
+               与 el-table（第三击清除）/ vxe（clearable）保持同序，三端排序事件才能同构 -->
           <a-table
             v-else
             ref="tableRef"
@@ -70,7 +72,6 @@
             :customRow="resolvedCustomRow"
             :customHeaderRow="resolvedCustomHeaderRow"
             :scroll="tableScroll"
-            :sortDirections="['ascend', 'descend', 'ascend']"
             :locale="{ emptyText: options.emptyText || '暂无数据' }"
             :defaultExpandAllRows="options.treeConfig?.expandAll === true"
             :childrenColumnName="options.treeConfig?.childrenField || 'children'"
@@ -865,7 +866,9 @@ function handleAdvTableChange(
   sorter: any
 ) {
   // 对齐 vue3 changeTableSort：直接 emit { column, prop, order }，含排序清除（order: null）
-  if (sorter && (sorter as any).column) {
+  // 清除时 a-table 的 sorter 走「legacy」形态：column 变成 undefined、只留 field，
+  // 所以判据用 field，而不是 column —— 否则第三击清除永远不发事件，外部数据停留在旧排序。
+  if (sorter && (sorter as any).field) {
     const s = sorter as { column: Record<string, unknown>; order: string | null; field: string }
     const order = s.order === 'ascend' ? 'ascending' : s.order === 'descend' ? 'descending' : null
     emit('change-table-sort', { column: s.column, prop: s.field, order })

@@ -28,6 +28,9 @@ const ICON_NAME_MAP: Record<string, string> = {
   Delete: 'DeleteOutlined',
   View: 'EyeOutlined',
   Refresh: 'ReloadOutlined',
+  // EP 的「重置」按钮用左右向的 RefreshLeft/RefreshRight，ADV 对应撤销/重做
+  RefreshLeft: 'UndoOutlined',
+  RefreshRight: 'RedoOutlined',
   Tools: 'ToolOutlined',
   Setting: 'SettingOutlined',
   // 导航类

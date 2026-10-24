@@ -932,3 +932,30 @@ describe('EsTable(antdv) — 请求模式空页', () => {
     expect(vm.displayDataSource).toHaveLength(0)
   })
 })
+
+
+describe('EsTable — 排序事件三端同构', () => {
+  const props = {
+    dataSource: [{ id: '1', name: '张三' }],
+    columns: [{ prop: 'name', label: '姓名', sortable: true }],
+    options: {} as any,
+    pagination: { total: 1 },
+  }
+
+  it('第三击清除也发 change-table-sort（order: null）', async () => {
+    const wrapper = mount(EsTable, { props })
+    const table = wrapper.findComponent({ name: 'ATable' })
+    // a-table 清除时的 legacy sorter：column 变 undefined，只保留 field
+    table.vm.$emit('change', {}, {}, { column: undefined, order: undefined, field: 'name' })
+    await nextTick()
+    const events = wrapper.emitted('change-table-sort')
+    expect(events).toBeTruthy()
+    expect(events![events!.length - 1][0]).toMatchObject({ prop: 'name', order: null })
+  })
+
+  it('不传 sortDirections，交给 a-table 默认（ascend → descend → 清除）', () => {
+    const wrapper = mount(EsTable, { props })
+    const table = wrapper.findComponent({ name: 'ATable' })
+    expect(table.props('sortDirections')).toBeUndefined()
+  })
+})

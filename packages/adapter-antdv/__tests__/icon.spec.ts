@@ -24,6 +24,12 @@ describe('图标解析', () => {
     const vnode = getAdvIcon('NonExistentIconXYZ')
     expect(vnode).toBeNull()
   })
+
+  it('EP 的重置图标 RefreshLeft/RefreshRight 有对应（Undo/Redo）', () => {
+    // 缺映射时重置按钮会静默变成无图标，示例里看不出来
+    expect(getAdvIcon('RefreshLeft')).not.toBeNull()
+    expect(getAdvIcon('RefreshRight')).not.toBeNull()
+  })
 })
 
 describe('getAdvIconComponent', () => {
