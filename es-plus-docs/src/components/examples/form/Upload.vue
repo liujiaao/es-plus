@@ -101,8 +101,7 @@ const formItems = [
       ])
     },
     on: {
-      success: (_response: any, file: any, fileList: any[]) => {
-        console.log('上传成功:', file.name, fileList)
+      success: (_response: any, _file: any, fileList: any[]) => {
         formModel.gallery = [...fileList]
       },
       remove: (_file: any, fileList: any[]) => {
@@ -129,7 +128,6 @@ const configBtn = [
     click: (model: Record<string, unknown>) => {
       const files = (model.gallery as any[]).map((f: any) => f.name).join(', ')
       ElMessage.success(`提交成功！已上传 ${files || 0} 个文件`)
-      console.log('表单数据:', model)
     }
   },
   {

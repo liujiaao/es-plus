@@ -89,9 +89,8 @@ const configBtn = [
     type: 'primary',
     direction: 'right',
     icon: 'Check',
-    click: (model: Record<string, unknown>) => {
+    click: () => {
       ElMessage.success('偏好设置已保存')
-      console.log('偏好数据:', model)
     }
   },
   {

@@ -131,11 +131,10 @@ const configBtn = computed(() => [
     type: 'primary',
     direction: 'right',
     icon: 'Search',
-    click: (model: Record<string, unknown>) => {
+    click: () => {
       resultCount.value = Math.floor(Math.random() * 50) + 1
       resultVisible.value = true
       ElMessage.success('查询完成')
-      console.log('查询条件:', model)
     }
   },
   {

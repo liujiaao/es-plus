@@ -110,10 +110,9 @@ const configBtn = [
     type: 'primary',
     direction: 'right',
     icon: 'Check',
-    click: (model: Record<string, unknown>) => {
+    click: () => {
       ElMessage.success('保存成功')
       isEdit.value = false
-      console.log('保存数据:', model)
     }
   },
   {

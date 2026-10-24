@@ -40,7 +40,6 @@ const lastSort = ref(null)
 const handleSort = ({ prop, order }) => {
   lastSort.value = { prop, order }
   // 实际项目中这里会触发后端排序
-  console.log('排序:', prop, order)
 }
 </script>
 
