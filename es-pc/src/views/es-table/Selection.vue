@@ -12,7 +12,7 @@
       :columns="columns"
       :options="tableOptions"
       :pagination="pagination"
-      @selection-change="handleSelectionChange"
+      @selection-change="syncSelection"
       @pagination-current-change="handlePageChange"
       @size-change="handleSizeChange"
     />
@@ -28,11 +28,13 @@
 
 <script setup>
 import { EsTable } from '@es-plus/adapter-antdv'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 
 const tableRef = ref()
-const selectionsByPage = reactive({})
+// 跨页并集由表格自己维护（cachePageSelection）：这里只存一份镜像给模板用。
+// 注意 selection-change 的参数只是「当前页」的勾选，跨页数量必须问 getSelectionRows()。
+const selectedRows = ref([])
 
 const allData = ref([
   { id: 1, name: '张三', age: 28, department: '技术部' },
@@ -79,34 +81,46 @@ const currentPageData = computed(() => {
   return allData.value.slice(start, end)
 })
 
-const handleSelectionChange = (selection) => {
-  const page = pagination.value.current
-  selectionsByPage[page] = selection
+// 勾选变化（含翻页后 restoreSelectionForPage 自动回勾）时刷新镜像。
+// 回勾发生在组件自己的 nextTick 里，这里等两拍再读才能拿到回勾后的并集。
+const syncSelection = () => {
+  nextTick(() => {
+    nextTick(() => {
+      selectedRows.value = tableRef.value?.getSelectionRows?.() || []
+    })
+  })
 }
 
-const selectedCount = computed(() => {
-  return Object.values(selectionsByPage).reduce((sum, arr) => sum + arr.length, 0)
-})
+const selectedCount = computed(() => selectedRows.value.length)
 
+// 选中的行分散在几页里 —— 按行 id 在 allData 中的位置换算页码
 const selectedPages = computed(() => {
-  return Object.values(selectionsByPage).filter(arr => arr.length > 0).length
+  const size = pagination.value.pageSize
+  const pages = new Set()
+  for (const row of selectedRows.value) {
+    const index = allData.value.findIndex((item) => item.id === row.id)
+    if (index > -1) pages.add(Math.floor(index / size))
+  }
+  return pages.size
 })
 
 const handlePageChange = (pag) => {
   pagination.value.current = pag.current
+  // 翻页后组件会回勾本页已选行，selection-change 不一定再触发，手动同步一次
+  syncSelection()
 }
 
 const handleSizeChange = (pag, size) => {
   pagination.value.pageSize = size
   pagination.value.current = pag.current
-  // 页大小变化后页边界改变，清除跨页记忆（表格内部的勾选缓存也要一起清）
+  // 页大小变化后页边界改变，跨页缓存的语义已经不成立，勾选与镜像一起清空
   tableRef.value?.clearAllSelection?.()
-  Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
+  selectedRows.value = []
 }
 
 const handleClearAll = () => {
   tableRef.value?.clearAllSelection?.()
-  Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
+  selectedRows.value = []
   message.info('已清空所有选择')
 }
 
@@ -118,14 +132,12 @@ const confirmBox = (options) => new Promise((resolve) => {
 const handleBatchDelete = async () => {
   const ok = await confirmBox({ title: '提示', content: `确定删除选中的 ${selectedCount.value} 项吗？`, okType: 'primary', okButtonProps: { danger: true } })
   if (!ok) return
-  const selectedIds = Object.values(selectionsByPage)
-    .flat()
-    .map(item => item.id)
+  const selectedIds = selectedRows.value.map((item) => item.id)
   allData.value = allData.value.filter(item => !selectedIds.includes(item.id))
   pagination.value.total = allData.value.length
   // 删掉的行走的是响应式数据，但表格内部勾选态还留着它们的 id，一并清掉
   tableRef.value?.clearAllSelection?.()
-  Object.keys(selectionsByPage).forEach(k => delete selectionsByPage[k])
+  selectedRows.value = []
   message.success('删除成功')
 }
 </script>
