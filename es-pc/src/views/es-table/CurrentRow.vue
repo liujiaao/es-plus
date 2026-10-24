@@ -2,7 +2,6 @@
   <div class="example-current-row">
     <div class="master-section">
       <es-table
-        ref="masterRef"
         :data-source="orders"
         :columns="masterColumns"
         :options="masterOptions"
@@ -24,7 +23,6 @@ import { EsTable } from '@es-plus/adapter-antdv'
 import { Tag, message } from 'ant-design-vue'
 import { ref, computed, h } from 'vue'
 
-const masterRef = ref()
 const currentOrder = ref(null)
 
 // antdv 的 Tag 用 color 表达语义色（不是 el-tag 的 type）
@@ -84,8 +82,15 @@ const masterOptions = {
   highlightCurrentRow: true,
   leftText: '订单列表',
   configBtn: [
-    { name: '刷新', icon: 'Refresh', position: 'right', click: () => { message.success('已刷新') } },
-    { name: '清空选中', icon: 'Delete', position: 'right', click: () => { currentOrder.value = null } }
+    // 只保留真实生效的动作：清空右侧明细，回到「请选择订单」空态。
+    // （行高亮由点击切换，组件未暴露 setCurrentRow —— 不摆一个点了没反应的「刷新」）
+    {
+      name: '清空明细', icon: 'Delete', position: 'right',
+      click: () => {
+        if (!currentOrder.value) { message.info('还没有选中的订单'); return }
+        currentOrder.value = null
+      }
+    }
   ]
 }
 

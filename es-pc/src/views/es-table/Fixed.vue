@@ -1,7 +1,6 @@
 <template>
   <div class="example-table-fixed">
     <es-table
-      ref="tableRef"
       :data-source="tableData"
       :columns="columns"
       :options="{
@@ -16,10 +15,7 @@
 
 <script setup lang="jsx">
 import { EsTable } from '@es-plus/adapter-antdv'
-import { ref } from 'vue'
 import { Tag } from 'ant-design-vue'
-
-const tableRef = ref(null)
 
 const tableData = Array.from({ length: 50 }, (_, i) => ({
   id: i + 1,

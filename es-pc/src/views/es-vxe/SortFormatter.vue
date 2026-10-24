@@ -37,7 +37,8 @@ const columns = [
   { prop: 'joinDate', label: '入职日期', width: 130, sortable: true },
 ]
 
-const tableOptions = { engine: 'vxe', border: true, rowkey: 'id', sortable: true }
+// 排序是列级能力：sortable 写在 columns 上；表级没有 sortable 这个配置项
+const tableOptions = { engine: 'vxe', border: true, rowkey: 'id' }
 
 const pagination = ref({ pageSize: 10, current: 1, total: 0 })
 const departments = ['技术部', '产品部', '设计部', '市场部']

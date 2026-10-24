@@ -1,7 +1,6 @@
 <template>
   <div class="example-form-search">
     <es-form
-      ref="formRef"
       :model="formModel"
       :form-item-list="formItems"
       :config-btn="configBtn"
@@ -18,7 +17,6 @@ import { EsForm } from '@es-plus/adapter-antdv'
 import { ref, reactive, computed } from 'vue'
 import { message } from 'ant-design-vue'
 
-const formRef = ref()
 const resultVisible = ref(false)
 const resultCount = ref(0)
 const showMore = ref(false)

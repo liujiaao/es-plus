@@ -6,7 +6,6 @@
       <Tag color="green" size="large">es-plus 配置 10 行</Tag>
     </div>
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
@@ -36,7 +35,6 @@ import { ref, reactive } from 'vue'
 import { Tag, Alert } from 'ant-design-vue'
 import { fetchProducts } from '@/utils/mock-api'
 
-const tableRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 const queryModel = reactive({ keyword: '', category: '' })

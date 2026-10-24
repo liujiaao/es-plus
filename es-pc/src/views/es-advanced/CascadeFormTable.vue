@@ -1,14 +1,12 @@
 <template>
   <div class="example-cascade-form-table">
     <es-table
-      ref="tableRef"
       :columns="columns"
       :options="tableOptions"
       v-model:data-source="tableData"
       v-model:pagination="pagination"
     >
       <es-form
-        ref="formRef"
         :model="queryModel"
         :form-item-list="queryItems"
         :config-btn="queryBtns"
@@ -25,8 +23,6 @@ import { Tag } from 'ant-design-vue'
 import { fetchProducts } from '@/utils/mock-api'
 import { tagColor } from '@/utils/antdv-colors'
 
-const tableRef = ref(null)
-const formRef = ref(null)
 const tableData = ref([])
 const pagination = ref({ pageSize: 5, current: 1, total: 0, pageSizes: [5, 10, 20] })
 

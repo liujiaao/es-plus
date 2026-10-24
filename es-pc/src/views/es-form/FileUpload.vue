@@ -1,7 +1,6 @@
 <template>
   <div class="example-form-file-upload">
     <es-form
-      ref="formRef"
       :model="formModel"
       :form-item-list="formItems"
       :config-btn="configBtn"
@@ -21,7 +20,6 @@ import { UploadOutlined, PictureOutlined, FileOutlined, FolderOpenOutlined, EyeO
 import { EsForm } from '@es-plus/adapter-antdv'
 import type { BtnConfig } from '@es-plus/adapter-antdv'
 
-const formRef = ref()
 const formModel = reactive<{ files: any[] }>({ files: [] })
 const txtPreviewVisible = ref(false)
 const txtPreviewContent = ref('')

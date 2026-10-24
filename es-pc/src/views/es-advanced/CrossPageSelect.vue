@@ -13,7 +13,7 @@
           <a-button type="primary" :disabled="!selectedCount" @click="handleBatchAction">
             批量操作 ({{ selectedCount }} 条跨页选中)
           </a-button>
-          <a-button @click="tableRef?.clearAllSelection?.()">清空所有选择</a-button>
+          <a-button @click="clearAll">清空所有选择</a-button>
         </div>
       </template>
     </es-table>
@@ -30,7 +30,7 @@
 
 <script setup lang="jsx">
 import { EsTable } from '@es-plus/adapter-antdv'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { message, Tag, Alert, Modal } from 'ant-design-vue'
 import { tagColor } from '@/utils/antdv-colors'
 
@@ -45,8 +45,17 @@ const confirmBox = (options) => new Promise((resolve) => {
   Modal.confirm({ ...options, onOk: () => resolve(true), onCancel: () => resolve(false) })
 })
 
-const handleSelectionChange = (rows) => {
-  selectedCount.value = rows?.length || 0
+// selection-change 的载荷只带「当前页」的选中行；跨页全集必须问实例要。
+// 等一轮 nextTick：组件内部的跨页缓存先落库，这里再读才拿得到全量。
+const handleSelectionChange = async () => {
+  await nextTick()
+  selectedCount.value = tableRef.value?.getSelectionRows?.()?.length || 0
+}
+
+// 清空选择不会派发 selection-change（数据没变、只是勾选没了），计数手动归零
+const clearAll = () => {
+  tableRef.value?.clearAllSelection?.()
+  selectedCount.value = 0
 }
 
 const statusMap = {
