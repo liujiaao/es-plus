@@ -37,7 +37,7 @@
 
 import { configureEsPlus } from '@es-plus/core'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
-import { httpRequest } from '@es-plus/core'
+import { httpRequest, createGlobalConfigView } from '@es-plus/core'
 import type { Vue2Constructor } from './vue-compat'
 import { isVue27Plus, VueCompositionAPIPlugin } from './vue-compat'
 
@@ -162,10 +162,12 @@ const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
    */
   Vue.mixin({
     provide: {
-      $EsPlus: {
+      // 读时回落到模块级单例：Vue.mixin 的 provide 是 install 时的静态快照，
+      // 不加这层的话 install 之后调用 configureEsPlus() 改不动任何组件行为。
+      $EsPlus: createGlobalConfigView({
         useDialog,
         ...normalized,
-      },
+      }),
     },
   })
 }

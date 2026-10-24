@@ -494,6 +494,12 @@ export interface EsTableInstance {
   reload: (model?: Record<string, unknown>) => Promise<unknown> | void
   /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
   doLayout: () => void
+  /** 导出（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 打印（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  print: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 取打印用 HTML（保留完整多级表头，配合 patchHtmlRowSpans 修正合并单元格） */
+  getPrintHtml: (opts?: Record<string, unknown>) => Promise<{ html: string }>
 }
 
 export interface EsPlusOptions {

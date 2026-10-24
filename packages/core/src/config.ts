@@ -77,6 +77,47 @@ export function resetGlobalConfig(): void {
   globalConfig = {}
 }
 
+/**
+ * 构造 `provide('$EsPlus', ...)` 用的「读时回落」视图。
+ *
+ * 背景：三端 install() 直接用 `{ useDialog, ...options }` 做快照 provide，而组件内部一律是
+ * `inject('$EsPlus', null) ?? getGlobalConfig() ?? {}`。由于 provide 出去的对象**永远非空**，
+ * 第二条分支成了死代码 —— 于是 `install` 之后再调用 `configureEsPlus({ permission })`
+ * 完全改不动组件行为（Permission 示例里切角色不生效就是这个原因）。
+ *
+ * 这里用 Proxy 把「options 里没有的键」在**读取时**回落到模块级单例，
+ * 让 `configureEsPlus()` 与 `app.use(EsPlus, options)` 两种写法真正等价（docs/usage.md 的承诺）。
+ * 显式传入的值仍然优先；值为 undefined 时视为未提供，继续回落。
+ */
+export function createGlobalConfigView(extras: Record<string, unknown> = {}): Record<string, unknown> {
+  const own = { ...extras }
+  const globalOf = () => globalConfig as Record<string, unknown>
+  return new Proxy(own, {
+    get(target, key, receiver) {
+      const local = Reflect.get(target, key, receiver)
+      if (local !== undefined) return local
+      if (typeof key === 'symbol') return undefined
+      return globalOf()[key]
+    },
+    has(target, key) {
+      if (Reflect.has(target, key)) return true
+      return typeof key === 'string' && globalOf()[key] !== undefined
+    },
+    ownKeys(target) {
+      return [...new Set([...Reflect.ownKeys(target), ...Object.keys(globalOf())])]
+    },
+    getOwnPropertyDescriptor(target, key) {
+      const d = Reflect.getOwnPropertyDescriptor(target, key)
+      if (d) return d
+      if (typeof key !== 'string') return undefined
+      const v = globalOf()[key]
+      if (v === undefined) return undefined
+      // configurable 必须为 true：ownKeys 多报的键若不可配置会违反 Proxy 不变量
+      return { value: v, enumerable: true, configurable: true, writable: false }
+    },
+  })
+}
+
 /** 全局 HTTP 请求函数签名（AI 生成代码与用户配置共同遵守的调用契约） */
 export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
 

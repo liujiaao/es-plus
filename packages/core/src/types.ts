@@ -1177,6 +1177,15 @@ export interface EsTableInstance {
   reload: (model?: Record<string, unknown>) => Promise<unknown> | void
   /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
   doLayout: () => void
+  /**
+   * 导出：VXE 引擎走 vxe-table exportData，Element 引擎走内置导出。
+   * vxe4 的 <vxe-grid> 不代理该方法，组件内部已下沉到 <vxe-table>。
+   */
+  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 打印：内部已下沉到 <vxe-table>（vxe4 grid 不代理 print） */
+  print: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 取打印用 HTML（保留完整多级表头，配合 patchHtmlRowSpans 修正合并单元格） */
+  getPrintHtml: (opts?: Record<string, unknown>) => Promise<{ html: string }>
 }
 
 // ============================================================================
@@ -1243,5 +1252,13 @@ export interface TableEngineExposed {
   /** 触发导出（参数覆盖 options.exportConfig） */
   exportData?: (options?: VxeExportConfig) => Promise<void>
   /** 触发打印 */
-  print?: () => Promise<void>
+  print?: (options?: Record<string, unknown>) => Promise<void>
+  /**
+   * 生成打印 HTML（不直接打印）。
+   *
+   * vxe-grid 只代理 `tableComponentMethodKeys` 白名单里的方法，`print/getPrintHtml/exportData`
+   * 都不在其中 —— 引擎内部改为转发到 `getRefMaps().refTable`。三方组件统一经此处调用，
+   * 避免宿主写 `vxeInstance().getPrintHtml()` 在 vxe4 上是 undefined。
+   */
+  getPrintHtml?: (options?: Record<string, unknown>) => Promise<{ html: string }>
 }

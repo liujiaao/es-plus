@@ -525,8 +525,10 @@ export function useFormInputs() {
               props: {
                 ...userProps,
                 fileList,
-                // 自定义上传时禁用 auto-upload，由 httpRequest 接管
-                autoUpload: isCustomUpload ? false : (userProps.autoUpload !== false),
+                // 自定义上传时**不要**替用户关掉 auto-upload：el-upload 的 http-request
+                // 只在「选完文件自动上传」或显式 submit() 时才被触发，强制 false 会让
+                // 配了 httpRequest 的表单永远不上传（且不报错）。三端此前只有这里分叉。
+                autoUpload: userProps.autoUpload !== false,
                 httpRequest: httpRequestProp,
                 // 把 row.on.* 转换为 onXxx prop（覆盖在 userProps 之上：
                 // 若用户已直接在 props 里给了 onPreview，这里仍以 row.on 为优先权来源）

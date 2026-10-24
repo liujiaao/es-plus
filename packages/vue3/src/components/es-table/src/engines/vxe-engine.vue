@@ -376,7 +376,10 @@ defineExpose<TableEngineExposed>({
   revertData:       (rows?: Record<string, unknown> | Record<string, unknown>[]) => getInternalTable()?.revertData?.(rows),
 
   // ── 导出 / 打印 ─────────────────────────────────────────
-  exportData: (opts?: any) => gridRef.value?.exportData?.(opts),
-  print:      () => gridRef.value?.print?.(),
+  // vxe4 的 <vxe-grid> 只代理 tableComponentMethodKeys 白名单（不含 print/exportData/getPrintHtml），
+  // 直接 `grid.exportData()` 是 undefined 调用；统一下沉到内部 <vxe-table>。
+  exportData: (opts?: any) => getInternalTable()?.exportData?.(opts),
+  print:      (opts?: any) => getInternalTable()?.print?.(opts),
+  getPrintHtml: (opts?: any) => getInternalTable()?.getPrintHtml?.(opts),
 })
 </script>

@@ -59,6 +59,7 @@ const EXPECTED = {
     'clearAllSelection', 'toggleRowSelection', 'refresh', 'reload', 'doLayout',
     'scrollToRow', 'getUpdateRecords', 'getInsertRecords', 'getRemoveRecords',
     'revertData', 'clearActived', 'clearValidate', 'validate', 'vxeInstance',
+    'exportData', 'print', 'getPrintHtml',
   ],
   EsForm: [
     'formItmeRequestInstance', 'getFormRef', 'validate', 'resetFields',

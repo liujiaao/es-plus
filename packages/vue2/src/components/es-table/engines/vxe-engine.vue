@@ -372,8 +372,11 @@ export default defineComponent({
       revertData: (rows?: Record<string, unknown> | Record<string, unknown>[]) =>
         getInternalTable()?.revertData?.(rows),
 
-      exportData: (opts?: any) => (gridRef.value as any)?.exportData?.(opts),
-      print: () => (gridRef.value as any)?.print?.(),
+      // vxe4 的 <vxe-grid> 只代理 tableComponentMethodKeys 白名单（不含 print/exportData/getPrintHtml）；
+      // vxe3 代理全部 table 方法，这里统一下沉到内部 <vxe-table>，三端行为一致。
+      exportData: (opts?: any) => getInternalTable()?.exportData?.(opts),
+      print: (opts?: any) => getInternalTable()?.print?.(opts),
+      getPrintHtml: (opts?: any) => getInternalTable()?.getPrintHtml?.(opts),
     }
 
     if (typeof expose === 'function') {

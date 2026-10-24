@@ -325,7 +325,12 @@ export interface TableOptions {
   localPagination?: boolean
   configBtn?: BtnConfig[]
   leftText?: string
+  /**
+   * 虚拟滚动开关。保持与 vue3 端配置同形，但 **antdv 本端不生效**：
+   * a-table 没有虚拟表格，置 true 会告警并回退默认引擎（见 component.vue 的 virtualRequested）。
+   */
   virtual?: boolean
+  /** default / vxe 可用；'virtual' 在本端仅告警忽略，大数据量请用 'vxe' */
   engine?: 'default' | 'virtual' | 'vxe'
   rowHeight?: number
   estimatedRowHeight?: number
@@ -422,6 +427,12 @@ export interface EsTableInstance {
   reload: (model?: Record<string, unknown>) => Promise<unknown> | void
   /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
   doLayout: () => void
+  /** 导出（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 打印（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  print: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 取打印用 HTML（保留完整多级表头，配合 patchHtmlRowSpans 修正合并单元格） */
+  getPrintHtml: (opts?: Record<string, unknown>) => Promise<{ html: string }>
 }
 
 // ============================================================================

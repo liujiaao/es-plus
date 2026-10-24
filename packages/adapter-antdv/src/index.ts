@@ -20,7 +20,7 @@ import EsErrorBoundaryComp from './components/es-error-boundary'
 import SvgIconComp from './components/svg-icon'
 import { configureEsPlus as configureEsPlusCore } from './config'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
-import { httpRequest } from '@es-plus/core'
+import { httpRequest, createGlobalConfigView } from '@es-plus/core'
 import type { EsPlusOptions } from './types'
 
 // 与 vue3 一致：从 package.json 读取版本号
@@ -71,11 +71,8 @@ const install = (app: App, options: EsPlusOptions = {}) => {
     })
   }
 
-  // provide 全局注入
-  app.provide('$EsPlus', {
-    useDialog: useDialogOrig,
-    ...options,
-  })
+  // provide 全局注入（读时回落到模块级单例，install 之后的 configureEsPlus 依然生效）
+  app.provide('$EsPlus', createGlobalConfigView({ useDialog: useDialogOrig, ...options }))
 }
 
 // ─── 命名导出 ───────────────────────────────────────

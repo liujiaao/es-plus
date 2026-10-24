@@ -8,7 +8,7 @@ import EsErrorBoundary from './components/es-error-boundary'
 import SvgIcon from './components/svg-icon'
 import { configureEsPlus } from './config'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
-import { httpRequest } from '@es-plus/core'
+import { httpRequest, createGlobalConfigView } from '@es-plus/core'
 
 // 组件列表
 const components = [EsDialog, EsForm, EsTable, EsCrudPage, EsErrorBoundary, SvgIcon]
@@ -41,10 +41,7 @@ const install = (app: any, options: Record<string, unknown> = {}) => {
     })
   }
 
-  app.provide('$EsPlus', {
-    useDialog,
-    ...options
-  })
+  app.provide('$EsPlus', createGlobalConfigView({ useDialog, ...options }))
 }
 
 // 按需导出

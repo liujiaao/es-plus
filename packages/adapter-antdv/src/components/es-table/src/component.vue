@@ -3,7 +3,8 @@
 
   Ant Design Vue 版表格，核心差异：
   - a-table 替代 el-table，使用 columns 配置替代 el-table-column 子组件
-  - 内置 virtual 滚动 (ADV 4.x 原生支持)
+  - 无虚拟滚动：a-table 没有 el-table-v2 那套虚拟表格，options.virtual 会告警并忽略，
+    大数据量请改用 engine: 'vxe'（vxeConfig.scrollY）
   - 选择使用 rowSelection 声明式配置
   - 排序/分页变化统一由 @change 事件触发
   - a-spin 替代 v-loading 指令
@@ -69,7 +70,6 @@
             :customRow="resolvedCustomRow"
             :customHeaderRow="resolvedCustomHeaderRow"
             :scroll="tableScroll"
-            :virtual="isVirtual"
             :sortDirections="['ascend', 'descend', 'ascend']"
             :locale="{ emptyText: options.emptyText || '暂无数据' }"
             :defaultExpandAllRows="options.treeConfig?.expandAll === true"
@@ -241,6 +241,11 @@ const emit = defineEmits<{
   'pagination-current-change': [pagination: PaginationConfig]
   'size-change': [pagination: PaginationConfig, size: number]
   'change-table-sort': [column: Record<string, unknown>]
+  // 选择变化：与 el-table 的 selection-change 同名同签名（当前页选中行数组）。
+  // ADV 的选择态走 rowSelection.onChange，a-table 没有同名事件，若只靠 attrs 透传
+  // 监听器会变成 a-table 根节点上一枚永不触发的 DOM 监听 —— 故在此显式转出。
+  // options.cachePageSelection 打开时，跨页已选行请用 getSelectionRows() 取全集。
+  'selection-change': [rows: Record<string, unknown>[]]
   // 自动加载（onMounted / visibleShow 显隐）失败时派发，携带原始错误。
   // 命令式的 refresh/reload 返回 Promise 由调用方自行 catch，不经此事件。（对齐 vue3）
   'request-error': [error: unknown]
@@ -357,10 +362,19 @@ const emitPaginationUpdate = () => {
 // ─── 表格尺寸 ───────────────────────────────────────
 const tableSize = computed(() => mapSize(props.options.size, 'middle') as 'large' | 'middle' | 'small')
 
-// ─── 虚拟滚动 ─────────────────────────────────────
-const isVirtual = computed(() =>
+// ─── 虚拟滚动（本端不支持，显式告警）─────────────────
+// `virtual` / `engine: 'virtual'` 是 Element Plus（el-table-v2）的概念；
+// ant-design-vue 4.x 的 a-table 从未实现虚拟滚动，绑定 `:virtual` 只会变成一个
+// 落不到任何逻辑上的 DOM 属性 —— 与其静默失效，不如告警并指明替代方案。
+const virtualRequested = computed(() =>
   props.options.virtual === true || props.options.engine === 'virtual'
 )
+watch(virtualRequested, (requested) => {
+  if (!requested) return
+  console.warn(
+    "[es-plus] antdv 适配器不支持 options.virtual / engine: 'virtual'（a-table 无虚拟滚动），已按默认引擎渲染；大数据量请改用 engine: 'vxe'。"
+  )
+}, { immediate: true })
 
 // ─── vxe engine ─────────────────────────────────
 const isVxeEngine = computed(() => props.options.engine === 'vxe')
@@ -578,8 +592,14 @@ const hasSelection = computed(() => props.options.multiSelect || !!selectionCol.
 const resolvedRowSelection = computed(() => {
   const rs = rowSelection.value
   const col = selectionCol.value
-  if (!col) return rs
   const merged: Record<string, unknown> = { ...rs }
+  // 转出公共 selection-change（rowSelection.onChange 是 a-table 的入口，组件里再 emit 一次）
+  const innerOnChange = rs.onChange as ((keys: (string | number)[], rows: Record<string, unknown>[]) => void) | undefined
+  merged.onChange = (keys: (string | number)[], rows: Record<string, unknown>[]) => {
+    innerOnChange?.(keys, rows)
+    emit('selection-change', rows)
+  }
+  if (!col) return merged
   if (col.width) merged.columnWidth = col.width
   if (col.align) merged.columnAlign = col.align
   if (col.fixed === true) merged.fixed = 'left'
@@ -704,6 +724,28 @@ const adaptedColumns = computed(() => {
     }
   }
 
+  // ── cell-click 三端对齐 ──────────────────────────────────────────
+  // a-table 没有 cell-click 事件，跨端通道是列级 `customCell` 的 onClick。
+  // 与 mergeConfig 生成的 customCell 合并（保留 rowSpan/colSpan），并把 a-table 的
+  // `{ dataIndex, title }` 补成 es-plus 的 `{ prop, label }` 形状，让同一份
+  // `handleCellClick(row, column, cell, event)` 在 el-table / vxe / antdv 三端通用。
+  const onCellClick = (instance.attrs as Record<string, unknown>)?.onCellClick as
+    | ((record: Record<string, unknown>, column: Record<string, unknown>, event: Event) => void)
+    | undefined
+  if (typeof onCellClick === 'function') {
+    for (const c of cols) {
+      const anyCol = c as Record<string, unknown>
+      const prev = anyCol.customCell as
+        | ((record: Record<string, unknown>, rowIndex: number) => Record<string, unknown>)
+        | undefined
+      const shimmedCol = { ...anyCol, prop: anyCol.dataIndex, label: anyCol.title }
+      anyCol.customCell = (record: Record<string, unknown>, rowIndex: number) => ({
+        ...(typeof prev === 'function' ? prev(record, rowIndex) : {}),
+        onClick: (event: Event) => onCellClick(record, shimmedCol, event),
+      })
+    }
+  }
+
   return cols
 })
 
@@ -730,6 +772,9 @@ const tableBindAttrs = computed(() => {
     // 不能再原样落到 a-table 上（a-table 没有 row-click 事件，会变成一枚挂在根节点、
     // 名字为 rowclick 的惰性 DOM 监听）。
     if (k === 'onRowClick') continue
+    // AN-11⑥ 同理：`onCellClick` 由 computedColumns 翻译成列级 customCell.onClick，
+    // 原样落到 a-table 只会变成根节点上名为 cellclick 的死监听。
+    if (k === 'onCellClick') continue
     if (!TABLE_INTERNAL_KEYS.has(k)) result[k] = v
   }
   return result
@@ -1300,8 +1345,6 @@ defineExpose({
   scrollToRow: (row: number) => {
     if (isVxeEngine.value) {
       vxeEngineRef.value?.scrollToRow?.(row)
-    } else if (isVirtual.value) {
-      ;(tableRef.value as any)?.scrollTo?.(row)
     } else {
       tableRef.value?.$el?.querySelectorAll?.('.ant-table-row')?.[row]?.scrollIntoView?.({ block: 'center' })
     }
@@ -1320,7 +1363,11 @@ defineExpose({
   clearActived: () => vxeEngineRef.value?.clearActived?.(),
   clearValidate: () => vxeEngineRef.value?.clearValidate?.(),
   validate: (rows?: Record<string, unknown>[]) => vxeEngineRef.value?.validate?.(rows),
-  // vxe 原始实例（100% vxe 方法/事件访问入口；getPrintHtml/print 等经此获取）
+  // vxe 导出/打印（engine:'vxe' 时有效）
+  exportData: (opts?: Record<string, unknown>) => vxeEngineRef.value?.exportData?.(opts),
+  print: (opts?: Record<string, unknown>) => vxeEngineRef.value?.print?.(opts),
+  getPrintHtml: (opts?: Record<string, unknown>) => vxeEngineRef.value?.getPrintHtml?.(opts),
+  // vxe 原始实例（100% vxe 方法/事件访问入口）
   vxeInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null,
 })
 </script>

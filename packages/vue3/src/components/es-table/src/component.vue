@@ -31,7 +31,7 @@
               :options="props.options"
               :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
-              @selection-change="handleVirtualSelectionChange"
+              @selection-change="handleVirtualEngineSelectionChange"
               @row-click="handleVirtualRowClick"
             />
             <!-- vxe 高性能引擎：attrs 穿透管道将 <es-table @xxx> 事件转发到 vxe-grid -->
@@ -158,7 +158,7 @@ import {
   toCssSize,
   buildLeadingColumns,
 } from '@es-plus/core'
-import type { TableColumn, PaginationConfig } from '../../../types'
+import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
 
 const props = withDefaults(
   defineProps<{
@@ -728,6 +728,21 @@ const handleVirtualSelectionChange = (rows: Record<string, unknown>[]) => {
   handleSelectionChange(rows, paginationConfig.value.current || 1)
 }
 
+/**
+ * virtual 引擎的选择变化。
+ *
+ * 与 vxe 分支不同：vxe 走 `vxePassthroughAttrs` 把 `<es-table @xxx>` 原样转发给 vxe-grid，
+ * 而 virtual 分支是显式绑定、一个 on* 都没接（同 handleVirtualRowClick 处的原因）——
+ * 若不在这里补一条边，`@selection-change` 在 virtual 模式下会被静默吞掉。
+ */
+const handleVirtualEngineSelectionChange = (rows: Record<string, unknown>[]) => {
+  handleVirtualSelectionChange(rows)
+  const handler = fallthroughAttrs.onSelectionChange as
+    | ((rows: Record<string, unknown>[]) => void)
+    | undefined
+  handler?.(rows)
+}
+
 // 请求逻辑
 const checkQueryFields = (obj: Record<string, unknown>): boolean => {
   const checkListKey = ['total', 'pageSize', 'current', 'tableData']
@@ -1165,6 +1180,10 @@ defineExpose({
   clearActived: () => activeEngineRef.value?.clearActived?.(),
   clearValidate: () => activeEngineRef.value?.clearValidate?.(),
   validate: (rows?: Record<string, unknown>[]) => activeEngineRef.value?.validate?.(rows),
+  // vxe 导出/打印（engine:'vxe' 时有效）
+  exportData: (opts?: VxeExportConfig) => activeEngineRef.value?.exportData?.(opts),
+  print: (opts?: Record<string, unknown>) => activeEngineRef.value?.print?.(opts),
+  getPrintHtml: (opts?: Record<string, unknown>) => activeEngineRef.value?.getPrintHtml?.(opts),
   // vxe 原始实例（100% vxe 方法/事件访问入口）
   vxeInstance: () => isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null,
 })

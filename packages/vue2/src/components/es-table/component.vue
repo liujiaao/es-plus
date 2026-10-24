@@ -1484,6 +1484,13 @@ export default defineComponent({
       clearValidate: () => (isVxeEngine.value ? vxeEngineRef.value?.clearValidate?.() : undefined),
       validate: (rows?: Record<string, unknown>[]) =>
         isVxeEngine.value ? vxeEngineRef.value?.validate?.(rows) : undefined,
+      // ─── vxe 导出 / 打印转发（对齐 vue3 / antdv）──
+      exportData: (opts?: Record<string, unknown>) =>
+        isVxeEngine.value ? vxeEngineRef.value?.exportData?.(opts) : undefined,
+      print: (opts?: Record<string, unknown>) =>
+        isVxeEngine.value ? vxeEngineRef.value?.print?.(opts) : undefined,
+      getPrintHtml: (opts?: Record<string, unknown>) =>
+        isVxeEngine.value ? vxeEngineRef.value?.getPrintHtml?.(opts) : undefined,
       vxeInstance: () => (isVxeEngine.value ? vxeEngineRef.value?.vxeInstance?.() : null),
     }
 

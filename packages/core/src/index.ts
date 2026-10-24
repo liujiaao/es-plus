@@ -41,6 +41,7 @@ export {
   resetGlobalConfig,
   httpRequest,
   resolveHttpRequest,
+  createGlobalConfigView,
 } from './config'
 export type { EsPlusGlobalConfig, HttpRequestFn } from './config'
 
