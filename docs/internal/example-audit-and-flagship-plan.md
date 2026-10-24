@@ -1,0 +1,319 @@
+# 三站案例复核终审报告与旗舰案例方案
+
+> 日期：2026-10-24
+> 范围：`es-plus-docs`（Vue3 + Element Plus）、`es-pc`（Vue3 + Ant Design Vue）、`es-eui`（Vue2 + Element UI）
+> 定位：本文是 2026-09-14《[三站文档深度审计报告](./three-sites-audit-report.md)》之后的**案例层复核**。
+> 旧报告的 P0/P1 已全部关闭，本文不重复其结论；本文只回答"每个案例是否讲清了 es-plus 的优势"。
+
+---
+
+## 0. 结论速览
+
+1. **案例本身没坏，坏的是叙事。**
+   298 个示例文件全部登记、可解析、四道站点守卫（`check:cases-links`、`check:docs-layout`、`sites:check`、`check:site-nav`）全绿。
+   但**37 处 `isHidden` 全是函数、0 处声明式、0 处 `reactions`、0 处 JSON 表达式**——
+   三站示例整体在教用户写回调，而这正是 es-plus 宣称要消灭的"胶水代码"。
+
+2. **最强的旗舰案例其实已经存在，只是没被组织起来。**
+   `advanced/ZeroCodeQuery.vue`（零事件查询）与 `advanced/CrudPage.vue`（schema 驱动整页、嵌套 CrudPage、CSV 导入导出）
+   都达到了旗舰水准；缺的是"一条业务主线 + 横向组合"，而不是从零发明。
+
+3. **两个已发组件三站零案例**：`EsErrorBoundary`、`SvgIcon`。三端都已导出、有源码、无文档页、无示例。
+
+4. **真实缺陷不多但确实存在**：假按钮（导出/查询只弹 toast）、标题与内容不符、死文件带 11 处 `console.log`、
+   3 个文件 CRCRLF 行尾、代码展示里的悬空空白行。
+
+5. **冗余不是"复制粘贴"**：三站同名示例已各自演进（字面重复 ≈ 0）。冗余在**能力颗粒度**——
+   基础演示占绝大多数，能体现"组合联动"的案例不足，且组合案例多为"两两拼接"。
+
+---
+
+## 1. 复核方法与证据范围
+
+| 项 | 数量 | 证据 |
+| --- | --- | --- |
+| 主站示例 `.vue` | 97 | `es-plus-docs/src/components/examples/**`，97/97 已登记 |
+| AntDV 站示例 `.vue` | 110 | `es-pc/src/views/**`，其中 98 个 `CodeDemo` 登记 |
+| Vue2 站示例 `.vue` | 91 | `es-eui/src/examples/**`，89 登记 + 2 个 `vue2-compat` 死文件 |
+| 合计 | 298 | 四道站点守卫全绿 |
+
+源码依据（用于判断"能力是否真的存在"，而非只看宣传）：
+
+- `packages/core/src/reactions.ts` —— 声明式联动（纯 JSON，只读 model，fail-safe）
+- `packages/core/src/expr.ts` —— 冻结的表达式白名单（`EXPR_OPS`，无 `eval` / `new Function`）
+- `packages/core/src/field-resolver.ts:102` `compileHiddenCondition` —— `isHidden` 的 JSON 形态编译
+- `packages/core/src/config.ts` —— 全局 `permission` / `httpRequest`（决定了"纯 JSON schema 能否活体运行"）
+- 三端 `es-form` / `es-table` 的 `checkPermission` 调用点（字段 / 列 / 按钮三级权限）
+- `packages/shared/src/ai-nl-to-config-prompt.ts:511,681,813` —— AI 生成契约**要求** `reactions`，并明确禁止 `on: {}` 回调
+
+---
+
+## 2. 问题清单
+
+级别：**P0** 影响对外可信度 / **P1** 影响体验与维护 / **P2** 风格与卫生。
+
+| ID | 级别 | 位置 | 现象 | 证据 | 影响 |
+| --- | --- | --- | --- | --- | --- |
+| D1 | P0 | 三站全部示例 | 联动全用函数：`isHidden: (model) => …`，0 处 JSON 形态 | `grep` 三站：函数 37 / JSON 0 / `reactions` 0 | 配置不可序列化、不能存库、不能由 AI/服务端下发，**与头号卖点相反** |
+| D2 | P0 | `component-doc.data.ts:70,73,82,85` | 导航文案直接写"`isHidden` + `on.change` 实现联动"、"`on.change + on.input` 实现计算" | 同上 | 文案把"胶水写法"当成推荐解法 |
+| D3 | P1 | `form/AdvancedButtons.vue:63,73`（docs 与 pc 各一份） | "导出"与"查询"只 `ElMessage.success(JSON.stringify(model))`，无任何数据动作 | 两个文件同样实现 | 假交互，且是"高级按钮区"这个标题下的主案例 |
+| D4 | P1 | `table/RowActions.vue:96-99` | 工具栏"新增 / 批量审核 / 导出"只弹 toast；行内按钮是真的 | 行内 `handleEdit/handleSubmit/handleDelete` 真改数据 | 一半真一半假，观众无法判断哪半可信 |
+| D5 | P1 | `es-eui/src/examples/combination/DataFlowManagement.vue:1` | 标题"数据流管理"，内容是最小行内编辑；与 `EditableGridSubmit.vue`（脏数据跟踪批量提交）语义冲突 | 文件 93 行，无数据流、无流程 | 标题不达意，违反"标题必须突出侧重点" |
+| D6 | P1 | `es-eui/src/examples/vue2-compat/RechargeRecord.vue`（9 处 `console.log`）、`RechargeForm.vue`（2 处） | 死文件（路由只留一行注释引用），仍被 `raw-sources` 打包，含 `TODO: 替换为真实接口` | 两个文件均未登记 | 调试代码随产物发布 |
+| D7 | P1 | `packages/vue3/src/index.ts:14` 与三端组件目录 | `EsErrorBoundary`、`SvgIcon` 三端已导出，三站 0 示例、0 文档页 | 全仓 `grep` 示例目录命中 0 | 6 个组件里有 2 个对用户不可见 |
+| D8 | P2 | `es-pc/src/views/Cases.vue`（全文）、`es-eui/.../TabMultiTable.vue`（3 行）、`es-eui/.../raw-sources.generated.js` | CRCRLF（`\r\r\n`）行尾 | `cat -A` 可见 `^M^M$` | 代码块可能多出空行、diff 噪音、生成物字节不稳 |
+| D9 | P2 | `AdvancedButtons.vue:52`（docs 与 pc） | `attrs` 对象里有一行只含 4 个空格的悬空行；daterange 同时给了 `placeholder` 与 `start/end-placeholder` | 代码 tab 原样展示 | 展示代码不够干净 |
+| D10 | P2 | `dialog/Advanced.vue`（docs/pc 各 25 处）、`eui/table/CrudEdgeCases.vue`（11）、`eui/dialog/Confirm.vue`（10） | 大量内联 `style` | 行内样式计数 | 与"优雅"的自我要求不符 |
+| D11 | P2 | `es-eui` 多数表格示例用 `key:`，docs/pc 用 `prop:` | 三端都兼容（`column-item.vue` 做了双向映射），但**同一份配置**的写法漂移 | `component.vue:109`、`column-adapter.ts:34` | 削弱"一份配置三端跑"的示范性 |
+| D12 | P2 | `docs/cases/cases.json` 案例 4–15 | `links` 指向组件文档页，不是具体案例；案例 6 的 `win` 写 `apiParams + isHidden`（又是回调） | `docs/cases/cases.json` | 用户点进去看不到"那个案例" |
+
+> 说明：D8 的 `raw-sources.generated.js` 与当前源码**逐字节一致**（本次已只读重算校验，91 个条目、365259 字节），
+> 问题只是行尾混合与"无 `--check` 守卫"，不是内容漂移。
+
+---
+
+## 3. 冗余分析
+
+**结论：不要靠删案例来解决"冗余感"。**
+
+- 字面重复：docs 与 pc 同名示例的 `<script>` 归一化后 **0 组完全相同**（最近几次提交刚做过三端语义对齐）。
+- 真正的问题有两层：
+  1. **基础演示密度过高**：`form/Basic`、`table/Basic`、`dialog/Basic` 这类入门案例每站都有，
+     而 `advanced` 只有 23 个、`combination` 只有 17 个。
+  2. **组合案例是"两两拼接"**：`DialogTableForm`（弹窗 + 表格）、`FormTable`（表单 + 表格）、
+     `CascadeFormTable`（级联 + 表格）——每条只证明两个组件能拼，没有一条证明"一次交互驱动多个组件协同"。
+- 建议：**保留基础案例**（它们是 30 秒上手的入口），把组合案例升级为旗舰主线（见 §6），
+  基础案例里改为交叉引用（"这里用回调是为了对照，声明式写法见『报销单』"）。
+
+---
+
+## 4. 卖点叙事缺口（本次核心）
+
+用户提出的四点，逐条对照证据：
+
+### 4.1 配置驱动 ✗ —— 示例里的配置**不是数据**
+
+`computedFields`（三站同名）用 `on: { input: … }` 手写 `recalc`；
+`conditional`（三站同名）用 `isHidden: (model) => …`；
+`asyncOptions` 用 `on: { change }` 驱动级联。
+
+而源码侧：`packages/core/src/types.ts:211` 明确支持 `FieldHiddenExpr`（JSON 表达式），
+`types.ts:305` 支持 `reactions`，`ai-nl-to-config-prompt.ts:825` 甚至把 `on` 列为
+**"schema 会静默丢弃的宿主键"**。
+
+> 也就是说：**人工示例教的是 AI 契约明令禁止的写法。** 这是本次复核最尖锐的一条。
+
+### 4.2 简单易用 / 减少胶水代码 △ —— 只有"查询"这一条腿是干净的
+
+`ZeroCodeQuery.vue` 真正做到 0 事件（`triggerEvent: true` + `apiParams.model`）。
+但一旦涉及"字段 A 决定字段 B"，示例立刻退回函数回调，胶水代码回来了。
+
+### 4.3 灵活适配 / 可扩展 △ —— 有逃生舱，缺"同一配置换引擎"
+
+`render` 逃生舱覆盖充分（`VirtualTableCustomRender`、`vxe/EscapeHatch`、`DialogTableForm`）。
+`engine` 切换有 `vxe-table/BasicSwitch.vue`，但只是切换一个玩具表格；
+没有"同一业务页从 500 行切到 5 万行、选择与排序不丢"的证据。
+
+### 4.4 大型复杂业务 ✗ —— 没有一条案例同时用 ≥4 个横切能力
+
+现有最复杂的 `CrudPage.vue`（348 行）用了 schema 驱动、嵌套 CrudPage、CSV 导入导出，
+但**没有** `reactions`、**没有**字段/列级权限、**没有**跨页选择、**没有**引擎切换。
+真实中后台的复杂度恰恰来自这些横切能力的叠加。
+
+### 4.5 组合联动 ✗ —— 缺"一次交互、多组件响应"
+
+`CrossPageSelect.vue` 是"表格 × 选择 × 批量删除"的好例子，但只碰了表格；
+`FormTableDialog.vue` 是"表单 × 表格 × 弹窗"，但每个组件各干各的。
+没有案例展示：查询表单的 `reactions` → 表格请求参数 → 弹窗字段 → 详情子表 这样的**链式传导**。
+
+### 4.6 三端一致 △ —— 证据是"同名文件 diff"，不是"同一份文件"
+
+`docs/tri-render/` 的 `pairs.json` 证明的是"三端同名示例只差一行 import"，
+`schema.json` 是 EsForm + EsTable 的玩具配置。
+**真正能证明头号卖点的形态**是：一个 `CrudPageSchema` 文件放在 `docs/cases/`，
+三站各写一个 15 行的宿主页把它渲染出来，并公开这个 JSON 可下载。
+
+---
+
+## 5. 能力矩阵
+
+| 能力 | 源码证据 | 三端 | 现有案例 | 差距 |
+| --- | --- | --- | --- | --- |
+| `reactions` 声明式联动 | `core/reactions.ts`、三端 `es-form.vue` 的 `resolveReactionOverlay` | ✅ | **0** | 完全未展示 |
+| JSON 表达式 DSL | `core/expr.ts`（`EXPR_OPS` 白名单） | ✅ | **0** | 完全未展示 |
+| 声明式 `isHidden` | `field-resolver.ts:102` | ✅ | **0** | 37 处全是函数 |
+| 字段 / 列 / 按钮权限 | `es-form.vue:384`、`es-table:435`、`es-dialog:67` | ✅ | 4 个文件 | 未与 CRUD 主线结合 |
+| 跨页选择 | `core/table-selection.ts`、`cachePageSelection` | ✅ | 3 个文件 | 未与批量审批/权限结合 |
+| 引擎切换 | `engine: 'vxe'` | vue3/vue2 | `vxe/BasicSwitch` | 玩具数据，无业务闭环 |
+| schema 驱动整页 | `EsCrudPage` + `CrudPageSchema` | ✅ | `CrudPage.vue`、eui `crud/Basic` | 未单源、未跨端同源 |
+| 全局 `permission` / `httpRequest` | `core/config.ts` | ✅ | 权限有，全局请求无 | 纯 JSON schema 落地的关键 |
+| `mergeConfig` | 三端表格 | ✅ | 3 | 可并入旗舰 |
+| `printConfig` | `vxe-print.ts` | ✅ | 11 | 覆盖足够 |
+| `clipboardConfig` | 表格 | ✅ | 0（pc 1 处 API 表） | 缺示例 |
+| `listenToCallBack` | 表格 | ✅ | 16 | 有，但未用于"跨组件刷新"叙事 |
+| `entryQuery` | 表格 | ✅ | 2 | 有，粒度偏小 |
+| `EsErrorBoundary` | `vue3/src/index.ts:14` | ✅ | **0** | 组件隐身 |
+| `SvgIcon` | 同上 | ✅ | **0** | 组件隐身 |
+| 列 code→label 映射 | `TableColumn` **无** | ❌ | — | **纯 JSON 表格的最后一处函数洞** |
+
+最后一行是本次分析发现的**能力级缺口**：`TableColumn` 只有函数型 `formatter` / `render`，
+没有 `dataOptions` 式的 code→label 映射。于是任何"状态列显示中文 + 颜色"的表格都必须写函数，
+纯 JSON schema 无法独立完成一张业务表格。AI 侧只能生成 `render` 源码字符串（经 esbuild 编译），
+与"配置即数据"的主张相抵。
+
+---
+
+## 6. 旗舰案例设计
+
+设计原则：每条案例都要**同时**满足 ①真实中后台业务 ②原生写法明显更痛 ③能用源码证明能力存在 ④可断言验证。
+
+### F1 · 三端同源的审批工作台（旗舰中的旗舰）
+
+- **业务**：合同审批。查询条件含"合同类型 → 条款模板"联动；列表跨页勾选后批量通过；
+  行内"查看/驳回/通过"受权限码控制；点金额超过阈值的行弹出审批详情。
+- **形态**：单源 JSON `docs/cases/flagship-approval.json`（`CrudPageSchema`），
+  由 `scripts/sync-cases.mjs` 分发到三站 `src/cases/`；每站只写一个约 15 行的宿主页
+  （`configureEsPlus({ httpRequest, permission })` + `<es-crud-page :schema="schema" />`）。
+- **证明**：一份**可下载、可 diff、无函数**的 JSON，在三端活体渲染；页面提供"查看 Schema"入口。
+- **为什么原生难**：三套 UI 库各写一遍页面；权限要在模板里 `v-if` 三处；跨页勾选要自己缓存。
+- **验收**：`JSON.parse(JSON.stringify(schema))` 深等于原对象；三站同名路由截图一致；
+  切换角色（admin/editor/viewer）后按钮/列/字段同时收口。
+
+### F2 · 报销单：零回调的字段联动
+
+- **业务**：省份 → 城市 → 门店三级下拉；发票号"填了城市才必填"；大区自动等于省份且禁改；
+  金额 > 5000 时"说明"必填；退款方式 ≠ 部分退款时隐藏"退款原因"。
+- **形态**：`form/DeclarativeLinkage.vue` + 同目录 `declarative-linkage.config.ts`
+  （纯对象，`reactions` + JSON `isHidden`，**0 个函数值**）。
+- **证明**：把 `usage.md` 里已经写好的 `reactions` 文档变成可跑案例；与现有 `Conditional.vue`、`ComputedFields.vue` 并排对照。
+- **验收（可自动化）**：新增 `scripts/check-declarative-demo.mjs`，断言配置文件
+  `JSON.stringify→JSON.parse` 后深等（任何函数/undefined 都会失败），三站各一份配置。
+
+### F3 · 万行工单：同一页从 500 行切到 5 万行
+
+- **业务**：工单列表，可切 `engine: 'default' | 'vxe'`；切换后**已勾选行、排序、列宽、滚动位置**保持。
+- **形态**：`advanced/EngineSwitchWorkbench.vue`，数据用生成器造 5 万行；
+  切换控件显示"渲染耗时 / 内存"两个实测数字（`performance.now()`）。
+- **证明**：把 `engine` 从"玩具开关"升级为"业务可观测的能力上限"。
+- **为什么原生难**：换 `el-table` → `el-table-v2` → `vxe-grid` 意味着重写列定义、插槽、选择逻辑。
+
+### F4 · 主子联动：行选中驱动从表
+
+- **业务**：左侧订单表，选中一行 → 右侧明细子表按订单号请求；明细的"编辑"打开嵌套 `EsCrudPage`；
+  明细变更后主表"已修改"标记通过 `listenToCallBack` 回写。
+- **形态**：`advanced/MasterDetailFlow.vue`（替代 eui 现有 `MasterDetail.vue` 的静态版）。
+- **证明**：一次点击 → 三组件（主表 / 从表 / 弹窗）链式响应；`listenToCallBack` 从"16 处零散使用"变成主线叙事。
+
+### F5 · 可回滚的批量导入向导
+
+- **业务**：上传 CSV → 前端校验（必填/枚举/重复）→ 错误行就地修正 → 分批提交 → 部分失败可重试。
+- **形态**：`advanced/ImportWizard.vue`，复用 `StepImportWizard.vue` 的骨架但补上"错误行修复"与"回滚"。
+- **证明**：把 `StepImportWizard` 从"流程演示"升级为"真的能导入"；展示 `entryQuery` 带入批次号。
+
+### F6 · 「原生 vs es-plus」成本对照页（可选）
+
+- **形态**：不写死数字，用脚本统计同目录下 `examples/native/*.vue` 与 `examples/es/*.vue` 的
+  行数、事件处理器数、`v-if` 数，生成 `cases-metrics.json`；`Cases.vue` 展示实测值。
+- **证明**：现有 `cases.json` 的 `pain`/`win` 是手写文案，容易被质疑；实测数字可复查。
+
+### F7 · 「一句话 → 页面」：生成器产物对照（可选）
+
+- **形态**：GitHub Actions 里跑 `eval` 的同一句 NL，把 `schema-generator` 产物贴到文档；
+  重点展示生成的 `reactions` / `permissionValue` / `operationColumn` 直接可用。
+- **证明**：把"AI 可生成"从宣传语变成可复查的产物；与 F2 的纯 JSON 配置互为佐证。
+
+---
+
+## 7. 落地方案（分批提交，不 push）
+
+> 约束：按主题分批；每批只跑该批涉及的站点构建与守卫；**不提交 accuracy / eval 产物**；不 push。
+
+### 批 1 · 缺陷修复（低风险，独立可回滚）
+
+- D3 假按钮：`AdvancedButtons` 的导出改为真的生成 CSV；查询改为真的过滤一张小表。
+- D4 `RowActions` 工具栏三键接真实动作（新增插一行、批量审核改状态、导出 CSV）。
+- D5 `DataFlowManagement.vue` 改名"行内编辑（最小版）"或并入 `EditableGridSubmit`。
+- D6 删除 `vue2-compat/` 两个死文件（连同路由注释），重生成 `raw-sources.generated.js`。
+- D8 统一行尾为 LF（`Cases.vue`、`TabMultiTable.vue`、重生成的 `raw-sources`）。
+- D9 清掉悬空空白行与冗余 `placeholder`（docs + pc 两份）。
+- 守卫：`node scripts/check-cases-links.mjs`、`node scripts/generate-raw-sources.js`、`cd es-eui && npm run build`。
+
+### 批 2 · 声明式标杆（F2）
+
+- 新增 `declarative-linkage.config.ts` + `DeclarativeLinkage.vue`（三站各一）。
+- 导航文案：`component-doc.data.ts:70,73,82` 改为"声明式 `reactions` 解法见…，回调解法仅作对照"。
+- 新增 `scripts/check-declarative-demo.mjs`（断言配置纯 JSON），接入 `check:consistency`。
+- 守卫：`npm run check:docs-layout`、三站构建。
+
+### 批 3 · 旗舰主案例（F1）
+
+- 新增 `docs/cases/flagship-approval.json`；扩展 `scripts/sync-cases.mjs` 分发；
+  三站各加一个宿主页路由。
+- 守卫：`sites:check`、`check:cases-links`、`check:site-nav`、三站构建；
+  新增断言：三站渲染的是同一份 JSON（比对 hash）。
+
+### 批 4 · 组合升级（F3 / F4 / F5）
+
+- 逐条接入，每条独立提交；`listenToCallBack` 与 `entryQuery` 的叙事在此批补齐。
+
+### 批 5 · 补齐隐身组件（D7）
+
+- `EsErrorBoundary`：错误边界 + 降级 UI；`SvgIcon`：雪碧图/外部 SVG。
+- 三站各一例，导航新增两个组件页。
+
+### 批 6 · 产品小改（可选，需先拍板）
+
+- `TableColumn` 增加声明式 `dataOptions`（code→label，可选 tag 颜色 class），三端引擎消费，
+  同步 `packages/shared/schemas` 与 AI 提示词。**这是唯一需要改运行时的批次，单独评估。**
+
+### 批 7 · 对照页（F6 / F7，可选）
+
+每批的验证命令（**必须检查退出码，禁止 `| tail`**）：
+
+```bash
+node scripts/check-cases-links.mjs
+node scripts/check-docs-layout.mjs
+node scripts/gen-site-modules.mjs --check
+node scripts/check-site-nav.mjs
+npm run -s check:site-api-drift
+# 站点构建要 cd 进目录
+(cd es-plus-docs && npm run build)
+(cd es-pc && npm run build)
+(cd es-eui && npm run build)
+```
+
+---
+
+## 8. 验收标准（可判定）
+
+| 项 | 判定方式 |
+| --- | --- |
+| 案例讲的是配置而不是回调 | `check:declarative-demo` 通过（配置无函数值） |
+| 一份 JSON 三端跑 | 三站宿主页读取同一文件；hash 相同；三站路由可访问 |
+| 旗舰案例真的能用 | 构建通过 + 手动走一遍主路径（查询→勾选→批量→详情→刷新） |
+| 标题达意 | 每条案例标题能在 12 字内说清"它证明什么" |
+| 无调试残留 | 示例目录 `console.log` 计数为 0（白名单除外） |
+| 行尾卫生 | 全仓无 `\r\r\n`；`raw-sources` 有 `--check` 模式 |
+
+---
+
+## 9. 不做的事与风险
+
+- **不删基础案例**：入门入口保留，只做交叉引用与标题校准。
+- **不改运行时**（批 6 除外）：本轮 95% 工作是"把已有能力展示出来"，不是造能力。
+- **不追求单页三端同屏**：Vue2 与 Vue3 无法同应用挂载（旧审计已确认），用"同源 JSON + 三站路由"替代。
+- **不动 eval / accuracy 产物**：案例改造不改变评测语料与门槛。
+- **风险**：F2 的纯 JSON 配置若被未来 schema 变更破坏，需靠 `check:declarative-demo` 与
+  `check:schema` 双重兜底；F1 的单源 JSON 若某端适配缺失，会在批 3 的构建期暴露，不会带到线上。
+
+---
+
+## 10. 与旧审计的关系
+
+| 旧报告项 | 状态 | 本次是否重做 |
+| --- | --- | --- |
+| P0-1 三端渲染无证据 | ✅ 已修（`tri-render/pairs.json`） | 不重做，升级为 F1 的"同一份文件" |
+| P0-4 schema 手写副本 | ✅ 已修 | 不重做 |
+| P1-9 es-eui 运行期 bug | ✅ 已修 | 不重做 |
+| P1-13 死代码/误导 | ✅ 已修 | **D5/D6 是同类问题的新实例**，本次补掉 |
+| P2 设计取舍 | — | 本次把"回调示例"从取舍升级为 P0 叙事问题 |
