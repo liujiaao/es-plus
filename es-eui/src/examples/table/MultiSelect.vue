@@ -4,7 +4,7 @@
       <el-tag type="success" style="margin-right: 10px;">
         <i class="el-icon-check" /> 已选择 {{ selectedRows.length }} 项
       </el-tag>
-      <el-button size="small" type="primary" plain @click="clearAllSelection">
+      <el-button size="small" type="primary" plain @click="handleClearSelection">
         <i class="el-icon-delete" /> 清空选择
       </el-button>
       <el-button size="small" type="info" plain @click="getSelectionRows">
@@ -101,8 +101,8 @@ export default {
         this.selectedRows = this.$refs.table?.getSelectionRows() || []
       })
     },
-    clearAllSelection() {
-      this.$refs.table?.clearAllSelection()
+    handleClearSelection() {
+      this.$refs.table?.clearSelection()
       this.selectedRows = []
     },
     getSelectionRows() {

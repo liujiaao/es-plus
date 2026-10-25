@@ -166,7 +166,7 @@ export const docsData: Record<string, any> = {
     ],
     examples: [
       { key: 'basic-switch', title: '引擎切换工作台：500 → 5 万行', description: '同一份工单数据现场切换 el-table / vxe：实测渲染耗时与表体 DOM 行数；勾选、排序、列宽写在配置里随引擎保留；5 万行只给 vxe —— 把 engine 从"玩具开关"变成可观测的能力上限。', component: getComponent('vxe-table/01-basic-switch'), code: code('vxe-table/01-basic-switch') },
-      { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
+      { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；rowkey 驱动 vxe reserve：翻页不丢勾选、回页自动回勾。selection-change 只报当前页，跨页全集用 getSelectionRows()，clearSelection() 连 reserve 一起清。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
       { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行的内容用列 render 返回（ElDescriptions 详情卡），不写插槽、不写模板。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
       { key: 'sort-formatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。', component: getComponent('vxe-table/04-sort-formatter'), code: code('vxe-table/04-sort-formatter') },
       { key: 'custom-render', title: 'render 自定义列：vxe 同 API', description: 'render(h, {value, row, index}) 与 el-table 相同 API，vxe 引擎通过 RenderDomTb 桥接透传，无缝兼容。', component: getComponent('vxe-table/05-custom-render'), code: code('vxe-table/05-custom-render') },

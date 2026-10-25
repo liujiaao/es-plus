@@ -1,10 +1,12 @@
 <template>
   <div>
-    <a-space style="margin-bottom: 10px">
+    <div class="demo-toolbar">
       <a-button size="small" type="primary" @click="showSelected">获取选中行</a-button>
       <a-button size="small" @click="clearAll">清空选择</a-button>
-      <span style="font-size: 13px; color: #909399">已选 {{ selectedCount }} 行</span>
-    </a-space>
+      <span class="demo-hint">
+        跨页已选 {{ totalCount }} 行 · 上次 selection-change 载荷 {{ eventCount }} 行（当前页）
+      </span>
+    </div>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -17,12 +19,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { EsTable } from '@es-plus/adapter-antdv'
 
 const tableRef = ref(null)
-const selectedCount = ref(0)
+// 两个数刻意分开：selection-change 只给「当前页」，getSelectionRows 给「跨页全集」。
+const eventCount = ref(0)
+const totalCount = ref(0)
 
 const columns = [
   { type: 'selection', width: 50 },
@@ -30,12 +34,13 @@ const columns = [
   { prop: 'id', label: 'ID', width: 80 },
   { prop: 'name', label: '姓名', minWidth: 120 },
   { prop: 'department', label: '部门', width: 130 },
-  { prop: 'salary', label: '薪资(元)', width: 110, align: 'right' },
+  { prop: 'salary', label: '薪资', width: 110, align: 'right' },
 ]
 
 const tableOptions = {
   engine: 'vxe',
   border: true,
+  // rowkey 是跨页勾选的唯一依据；显式 type:'selection' 列与 multiSelect:true 等价。
   rowkey: 'id',
 }
 
@@ -55,19 +60,46 @@ const pagedData = computed(() => {
   return allData.slice(start, start + pagination.value.pageSize)
 })
 
-// 勾选变化实时更新计数（vxe 引擎同样转出公共 selection-change，签名与 el-table 一致）
+// 事件载荷只有当前页 —— 与 el-table / a-table 同一口径；跨页全集等下一轮再读
+// （vxe 的 reserve 记录在事件之后才落进内部集合）。
 function onSelectionChange(rows) {
-  selectedCount.value = rows?.length || 0
+  eventCount.value = rows?.length || 0
+  nextTick(refreshTotal)
+}
+
+// 翻页不触发 selection-change，但回到含已选行的页时 reserve 会重新勾上
+watch(() => pagination.value.current, () => nextTick(refreshTotal))
+
+function refreshTotal() {
+  totalCount.value = tableRef.value?.getSelectionRows?.()?.length || 0
 }
 
 function showSelected() {
   const rows = tableRef.value?.getSelectionRows?.() || []
-  selectedCount.value = rows.length
-  message.success(`已选中 ${rows.length} 行：${rows.map((r) => r.name).join('、')}`)
+  totalCount.value = rows.length
+  if (!rows.length) {
+    message.info('尚未选择任何数据')
+    return
+  }
+  message.success(`跨页已选 ${rows.length} 行：${rows.map((r) => r.name).join('、')}`)
 }
 
 function clearAll() {
   tableRef.value?.clearSelection?.()
-  selectedCount.value = 0
+  eventCount.value = 0
+  totalCount.value = 0
 }
 </script>
+
+<style scoped>
+.demo-toolbar {
+  margin-bottom: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.demo-hint {
+  font-size: 13px;
+  color: #909399;
+}
+</style>

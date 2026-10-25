@@ -577,8 +577,8 @@ listenToCallBack: {
 |------|------|
 | `httpRequestInstance(model?)` | 手动触发表格数据请求，可传入额外查询参数 |
 | `getSelectionRows()` | 获取当前选中行（含跨页缓存） |
-| `clearSelection()` | 清除当前页选择 |
-| `clearAllSelection()` | 清除所有页面选择（含跨页缓存） |
+| `clearSelection()` | 清空全部选中（含跨页缓存与 vxe reserve） |
+| `clearAllSelection()` | 同 `clearSelection()`（旧名，保留兼容） |
 | `refresh()` | 强制重新计算表格布局（`doLayout`） |
 
 ### 高级用法

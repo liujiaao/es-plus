@@ -147,7 +147,7 @@
           </tr>
           <tr>
             <td>type</td>
-            <td>selection 复选框列 / index 序号列 / expand 展开行</td>
+            <td>selection 复选框列 / index 序号列 / expand 展开行（selection 无单选形态）</td>
             <td>String</td>
           </tr>
         </tbody>
@@ -172,7 +172,7 @@
           </tr>
           <tr>
             <td>getSelectionRows() / clearSelection()</td>
-            <td>获取 / 清空多选选中行</td>
+            <td>获取 / 清空多选选中行（getSelectionRows() 是跨页全集；selection-change 只带当前页）</td>
           </tr>
         </tbody>
       </table>

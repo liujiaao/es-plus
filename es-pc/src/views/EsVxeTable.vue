@@ -65,7 +65,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       </CodeDemo>
 
       <h3 id="selection-index">多选与序号列</h3>
-      <p><code>type: 'selection'</code> 复选框列 + <code>type: 'index'</code> 序号列，<code>getSelectionRows()</code> 获取选中。</p>
+      <p><code>type: 'selection'</code> 复选框列 + <code>type: 'index'</code> 序号列。<code>rowkey</code> 驱动 reserve：翻页后已选行保留、回页自动回勾；<code>selection-change</code> 只带当前页，跨页全集用 <code>getSelectionRows()</code> 取，<code>clearSelection()</code> 连 reserve 一起清。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/Selection.vue']">
         <EsVxeSelection />
       </CodeDemo>

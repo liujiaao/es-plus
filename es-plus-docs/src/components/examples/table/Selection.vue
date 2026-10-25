@@ -114,12 +114,12 @@ const handleSizeChange = (pag, size) => {
   pagination.value.pageSize = size
   pagination.value.current = pag.current
   // 页大小变化后页边界改变，跨页缓存的语义已经不成立，整体清空
-  tableRef.value?.clearAllSelection?.()
+  tableRef.value?.clearSelection?.()
   selectedRows.value = []
 }
 
 const handleClearAll = () => {
-  tableRef.value?.clearAllSelection?.()
+  tableRef.value?.clearSelection?.()
   selectedRows.value = []
   ElMessage.info('已清空所有选择')
 }
@@ -131,7 +131,7 @@ const handleBatchDelete = async () => {
     allData.value = allData.value.filter(item => !selectedIds.includes(item.id))
     pagination.value.total = allData.value.length
     // 删掉的行走的是响应式数据，但表格内部勾选态还留着它们的 id，一并清掉
-    tableRef.value?.clearAllSelection?.()
+    tableRef.value?.clearSelection?.()
     selectedRows.value = []
     ElMessage.success('删除成功')
   } catch {

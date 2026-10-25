@@ -181,7 +181,7 @@ interface TableOptions {
 
 ## Instance Methods (via ref)
 - \`httpRequestInstance(model?)\` — Trigger data fetch
-- \`clearSelection()\` — Clear row selection
+- \`clearSelection()\` — Clear all selection (cross-page cache and vxe reserve included)
 - \`getSelectionRows()\` — Get selected rows
 - \`toggleRowSelection(row, selected?)\` — Toggle row checkbox
 - \`scrollToRow(index)\` — Scroll to row by index. Implemented by the vxe engine (all three targets) and the virtual engine (vue3); a no-op on the default el-table / a-table engine

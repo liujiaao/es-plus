@@ -146,7 +146,7 @@
         </tr>
         <tr>
           <td>highlightCurrentRow</td>
-          <td>高亮当前行</td>
+          <td>高亮当前行（单选即用它 + 行点击）</td>
           <td>Boolean</td>
           <td>true</td>
         </tr>
@@ -164,7 +164,7 @@
         </tr>
         <tr>
           <td>multiSelect</td>
-          <td>是否支持多选</td>
+          <td>是否支持多选（与列上的 type: "selection" 等价）</td>
           <td>Boolean</td>
           <td>false</td>
         </tr>
@@ -188,7 +188,7 @@
         </tr>
         <tr>
           <td>cachePageSelection</td>
-          <td>跨页记忆选中项（需配 rowkey）</td>
+          <td>跨页记忆选中项（需配 rowkey；false 时翻页即丢弃上一页勾选）</td>
           <td>Boolean</td>
           <td>true</td>
         </tr>
@@ -499,7 +499,7 @@
         </tr>
         <tr>
           <td>type</td>
-          <td>内置列类型：index / selection / expand</td>
+          <td>内置列类型：index / selection（复选框多选，无单选列）/ expand</td>
           <td>String</td>
         </tr>
         <tr>
@@ -591,9 +591,9 @@
       <tbody>
         <tr><td>httpRequestInstance</td><td>手动触发数据请求（默认回到第 1 页；keepPage: true 保留当前页）</td><td>(model?, { keepPage }?)</td></tr>
         <tr><td>requestError</td><td>最近一次自动加载的错误（成功后清空）</td><td>-</td></tr>
-        <tr><td>getSelectionRows</td><td>取当前勾选行</td><td>-</td></tr>
-        <tr><td>clearSelection</td><td>清空选中（透传底层 el-table）</td><td>-</td></tr>
-        <tr><td>clearAllSelection</td><td>清空全部选中（含固定列与 vxe 引擎）</td><td>-</td></tr>
+        <tr><td>getSelectionRows</td><td>取当前勾选行（含跨页缓存）</td><td>-</td></tr>
+        <tr><td>clearSelection</td><td>清空全部选中（含跨页缓存与 vxe reserve）</td><td>-</td></tr>
+        <tr><td>clearAllSelection</td><td>同 clearSelection（旧名，保留兼容）</td><td>-</td></tr>
         <tr><td>toggleRowSelection</td><td>切换某一行的选中状态</td><td>(row, selected?)</td></tr>
         <tr><td>refresh</td><td>刷新当前页（保留页码重新取数）</td><td>(model?)</td></tr>
         <tr><td>reload</td><td>重新加载并回到第 1 页</td><td>(model?)</td></tr>
@@ -627,7 +627,7 @@
         <tr><td>pagination-current-change</td><td>翻页</td><td>(pagination)</td></tr>
         <tr><td>size-change</td><td>每页条数变化</td><td>(pagination, size)</td></tr>
         <tr><td>change-table-sort</td><td>排序变化（vxe 引擎下参数为 sortInfo 对象）</td><td>(column)</td></tr>
-        <tr><td>selection-change</td><td>勾选变化（当前页选中行；跨页全集用 getSelectionRows() 取）</td><td>(rows)</td></tr>
+        <tr><td>selection-change</td><td>勾选变化（当前页选中行，default / vxe 同口径；跨页全集用 getSelectionRows() 取）</td><td>(rows)</td></tr>
         <tr><td>request-error</td><td>自动加载失败（错误同时可从 <code>requestError</code> 读到）</td><td>(error)</td></tr>
       </tbody>
     </table>

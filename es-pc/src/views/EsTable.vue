@@ -44,7 +44,7 @@
     <!-- 多选 -->
     <section id="selection">
       <h2>多选与跨页记忆</h2>
-      <p><code>type: 'selection'</code> 开启多选列；翻页后已选项自动回勾，<code>getSelectionRows()</code> 拿跨页并集。</p>
+      <p><code>type: 'selection'</code> 与 <code>options.multiSelect</code> 等价地开启多选列；翻页后已选项自动回勾（需配 <code>rowkey</code>）。<code>selection-change</code> 只带当前页，跨页全集用 <code>getSelectionRows()</code>；<code>cachePageSelection: false</code> 时翻页即丢弃上一页勾选。组件不提供单选列（<code>type: 'selection'</code> 恒为复选框），单选请用 <code>highlightCurrentRow</code> + 行事件。</p>
             <CodeDemo :source="rawSFCs['./es-table/Selection.vue']">
         <EsTableSelection />
       </CodeDemo>
@@ -332,16 +332,16 @@ const tableEvents = [
   { key: '3', event: 'pagination-current-change', params: '(pagination)', desc: '翻页' },
   { key: '4', event: 'size-change', params: '(pagination, size)', desc: '每页条数变化' },
   { key: '5', event: 'change-table-sort', params: '(column)', desc: '排序变化' },
-  { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行；跨页全集用 getSelectionRows()' },
+  { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行（default / vxe 同口径）；跨页全集用 getSelectionRows()' },
   { key: '7', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
 ]
 
 const tableMethods = [
   { key: '1', prop: 'httpRequestInstance', params: '(model?, { keepPage }?)', desc: '手动触发数据请求（默认回到第 1 页；keepPage: true 保留当前页）' },
   { key: '2', prop: 'requestError', params: '-', desc: '最近一次自动加载的错误（成功后清空）' },
-  { key: '3', prop: 'getSelectionRows', params: '-', desc: '取当前勾选行' },
-  { key: '4', prop: 'clearSelection', params: '-', desc: '清空选中' },
-  { key: '5', prop: 'clearAllSelection', params: '-', desc: '清空全部选中（含 vxe 引擎）' },
+  { key: '3', prop: 'getSelectionRows', params: '-', desc: '取当前勾选行（含跨页缓存）' },
+  { key: '4', prop: 'clearSelection', params: '-', desc: '清空全部选中（含跨页缓存；clearAllSelection 为同义别名）' },
+  { key: '5', prop: 'clearAllSelection', params: '-', desc: '同 clearSelection（旧名，保留兼容）' },
   { key: '6', prop: 'toggleRowSelection', params: '(row, selected?)', desc: '切换某一行的选中状态' },
   { key: '7', prop: 'refresh', params: '(model?)', desc: '刷新当前页（保留页码重新取数）' },
   { key: '8', prop: 'reload', params: '(model?)', desc: '重新加载并回到第 1 页' },
@@ -394,14 +394,14 @@ const tableOptions = [
   { key: '3', prop: 'size', type: 'string', default: 'small', desc: '表格尺寸：large / middle / small' },
   { key: '4', prop: 'headerCellStyle', type: 'object', default: '-', desc: '表头单元格样式' },
   { key: '5', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '表头单元格类名' },
-  { key: '6', prop: 'highlightCurrentRow', type: 'boolean', default: 'true', desc: '高亮当前行' },
+  { key: '6', prop: 'highlightCurrentRow', type: 'boolean', default: 'true', desc: '高亮当前行（单选即用它 + 行事件）' },
   { key: '7', prop: 'showHeader', type: 'boolean', default: 'true', desc: '是否显示表头' },
   { key: '8', prop: 'emptyText', type: 'string', default: '-', desc: '空数据时的占位文本' },
-  { key: '9', prop: 'multiSelect', type: 'boolean', default: 'false', desc: '启用多选列' },
+  { key: '9', prop: 'multiSelect', type: 'boolean', default: 'false', desc: '启用多选列（与列上的 type: "selection" 等价）' },
   { key: '10', prop: 'expand', type: 'boolean', default: 'false', desc: '启用展开行' },
   { key: '11', prop: 'snIndex', type: 'boolean', default: 'false', desc: '显示序号列' },
   { key: '12', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态' },
-  { key: '13', prop: 'cachePageSelection', type: 'boolean', default: 'true', desc: '跨页记忆选中项（需配 rowkey）' },
+  { key: '13', prop: 'cachePageSelection', type: 'boolean', default: 'true', desc: '跨页记忆选中项（需配 rowkey；false 时翻页即丢弃上一页勾选）' },
   { key: '14', prop: 'heightType', type: 'string', default: 'auto', desc: '高度类型：auto / height / maxHeight' },
   { key: '15', prop: 'tabHeight', type: 'number | string', default: '-', desc: '表格容器高度（推荐）' },
   { key: '16', prop: 'height', type: 'number | string', default: '-', desc: '固定高度（tabHeight 的别名，heightType: "height" 时生效）' },
