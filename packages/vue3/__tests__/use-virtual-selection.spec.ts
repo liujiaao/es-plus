@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useVirtualSelection } from '../src/components/es-table/src/engines/use-virtual-selection'
 
 function makeDataSource(ids: number[]) {
@@ -314,5 +314,57 @@ describe('useVirtualSelection — 跨页时的表头勾选态', () => {
     onSelectAll(true)
     ds.value = makeDataSource([7, 8, 9]).value // 当前页一行未选
     expect(indeterminate.value).toBe(false)
+  })
+})
+
+// ─── 12. 跨页选择（cachePageSelection）──────────────────────────────────────
+//
+// 回归背景：此前只存 key，翻页后 getSelectedRows 扫不到上一页的行（少报）；
+// 表头「取消全选」把跨页的键一起清掉；cachePageSelection:false 被无视。
+describe('useVirtualSelection — 跨页选择', () => {
+  it('翻页后 getSelectedRows 仍返回上一页的行（跨页全集）', () => {
+    const ds = makeDataSource([1, 2, 3])
+    const { onSelectRow, getSelectedRows } = useVirtualSelection(ds, 'id')
+    onSelectRow('1', true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    onSelectRow('4', true)
+    const ids = getSelectedRows().map((r) => r.id)
+    expect(ids).toEqual(['1', '4'])
+  })
+
+  it('getPageSelectedRows 只回当前页（selection-change 的载荷口径）', () => {
+    const ds = makeDataSource([1, 2, 3])
+    const { onSelectRow, getPageSelectedRows } = useVirtualSelection(ds, 'id')
+    onSelectRow('1', true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    onSelectRow('4', true)
+    expect(getPageSelectedRows().map((r) => r.id)).toEqual(['4'])
+  })
+
+  it('表头取消全选只清当前页，上一页的勾选保留', () => {
+    const ds = makeDataSource([1, 2, 3])
+    const { onSelectAll, selectedKeys } = useVirtualSelection(ds, 'id')
+    onSelectAll(true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    onSelectAll(false)
+    expect([...selectedKeys.value]).toEqual(['1', '2', '3'])
+  })
+
+  it('cachePageSelection:false → 翻页丢弃上一页的勾选', async () => {
+    const ds = makeDataSource([1, 2, 3])
+    const { onSelectRow, getSelectedRows, selectedKeys } = useVirtualSelection(ds, 'id', false)
+    onSelectRow('1', true)
+    ds.value = makeDataSource([4, 5, 6]).value
+    await nextTick()
+    expect(selectedKeys.value.has('1')).toBe(false)
+    expect(getSelectedRows()).toEqual([])
+  })
+
+  it('cachePageSelection:false 时本页内的勾选不受影响', async () => {
+    const ds = makeDataSource([1, 2, 3])
+    const { onSelectRow, getSelectedRows } = useVirtualSelection(ds, 'id', false)
+    onSelectRow('2', true)
+    await nextTick()
+    expect(getSelectedRows().map((r) => r.id)).toEqual(['2'])
   })
 })

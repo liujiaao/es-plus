@@ -49,7 +49,7 @@
             :table-height="tableHeight"
             :options="({ ...defaultOptions, ...options } as any)"
             :parent-slots="($slots as any)"
-            @selection-change="(rows: Record<string, unknown>[]) => handleSelectionChange(rows, paginationConfig.current || 1)"
+            @selection-change="handleVxeSelectionChange"
             @sort-change="handleVxeSortChange"
           />
 
@@ -905,6 +905,21 @@ function handleVxeSortChange(sortInfo: { column: Record<string, unknown>; prop: 
   emit('change-table-sort', sortInfo)
 }
 
+/**
+ * vxe 引擎的选择变化。
+ *
+ * 与 vue3 的关键差异：vue3 的 EsTable **没有**把 `selection-change` 声明进 emits，
+ * 宿主监听器留在 `$attrs` 里，经 `vxePassthroughAttrs` 直达引擎；ADV 为了把 a-table
+ * 的 `rowSelection.onChange` 转成同名事件，**声明**了该事件 —— 而 Vue 3 对已声明事件
+ * 的监听器不放进 `$attrs`（`isEmitListener` 过滤），于是 `v-bind="$attrs"` 不会把它
+ * 带到 vxe-engine，引擎 emit 出来只有下面这个内部处理器收得到，宿主静默收不到。
+ * 因此 vxe 分支必须和 a-table 分支一样显式转出一次。
+ */
+function handleVxeSelectionChange(rows: Record<string, unknown>[]) {
+  handleSelectionChange(rows, paginationConfig.value.current || 1)
+  emit('selection-change', rows)
+}
+
 // ─── ADV Table 统一 change 事件 ─────────────────────
 function handleAdvTableChange(
   _pag: any,
@@ -1341,6 +1356,16 @@ const doLayoutFn = () => {
 }
 
 // ─── Expose（对齐 vue3 expose 集）─────────────────────
+// 清除选择：**两引擎同义 = 清空全部**（含跨页缓存）。a-table 的
+// `clearSelection()` 只清当前页的 selectedRowKeys，跨页缓存里其它页的行还在，
+// 翻回上一页会被 `restoreSelectionForPage` 重新勾上（表现为「清空没生效」）；
+// vxe 的引擎级清空本来就整表清掉。统一成「清空全部」，`clearAllSelection`
+// 保留为同义别名（旧代码在用）。与 vue3 同一决定。
+function clearSelectionAll() {
+  clearAllSelection()
+  if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+}
+
 defineExpose({
   httpRequestInstance,
   // 最近一次自动加载（onMounted/visibleShow）的错误；成功后复位为 null（对齐 vue3）
@@ -1349,14 +1374,8 @@ defineExpose({
     if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
     return multipleSelection.value
   },
-  clearSelection: () => {
-    if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
-    else clearSelection()
-  },
-  clearAllSelection: () => {
-    clearAllSelection()
-    if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
-  },
+  clearSelection: clearSelectionAll,
+  clearAllSelection: clearSelectionAll,
   // 刷新当前页：保留页码重新取数 + 重排。统一命令式刷新入口。（对齐 vue3）
   refresh: (model?: Record<string, unknown>) => {
     if (isVxeProxyMode.value) {

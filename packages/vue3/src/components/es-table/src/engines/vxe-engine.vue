@@ -54,10 +54,9 @@ import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
 import { buildFirstClassGridOptions } from './use-vxe-grid-config'
-import { buildRowSpanMethod, resolveMergeConfig } from '@es-plus/core'
+import { buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
 import {
   normalizeVxeOrder,
-  mergeCheckboxRecords,
   applySpanShim,
   resolveInternalTable,
 } from './vxe-engine-helpers'
@@ -83,10 +82,17 @@ const emit = defineEmits<{
 const gridRef = ref<any>(null)
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
+// 跨页保留勾选：判据收敛到 core 的 wantsCrossPageSelection —— 与 el-table 路径同口径
+// （`options.multiSelect` 与显式 `type:'selection'` 列等价，`cachePageSelection:false` 一律关闭）。
+// 此前只看 multiSelect，于是同一条列配置在 el-table 端能跨页、切到 vxe 就丢勾选。
+const crossPageSelection = computed(() =>
+  wantsCrossPageSelection(props.options, props.columns)
+)
+
 // P2：多选跨页保留依赖唯一键，缺少 rowkey 时给出明确警告（仅开发环境）
-if (import.meta.env.DEV && props.options.multiSelect && !props.options.rowkey) {
+if (import.meta.env.DEV && crossPageSelection.value && !props.options.rowkey) {
   console.warn(
-    '[es-plus] engine:"vxe" + multiSelect:true 建议设置 options.rowkey，' +
+    '[es-plus] engine:"vxe" + 多选 建议设置 options.rowkey，' +
     '否则 vxe 无法通过 reserve 跨页保留已选行（当前默认以 "id" 字段作为 keyField）'
   )
 }
@@ -176,7 +182,7 @@ const gridConfig = computed(() => {
       isCurrent: opts.highlightCurrentRow !== false,
       isHover: opts.highlightCurrentRow !== false,
     },
-    checkboxConfig: opts.multiSelect
+    checkboxConfig: crossPageSelection.value
       ? { reserve: true, highlight: false }
       : undefined,
     sortConfig: {
@@ -303,12 +309,17 @@ const gridConfig = computed(() => {
 })
 
 // ─── 事件处理 ───────────────────────────────────────────────
-function handleCheckboxChange({ records, reserves }: any) {
-  emit('selection-change', mergeCheckboxRecords(records, reserves))
+// `selection-change` 的载荷口径与 el-table / a-table / 虚拟引擎一致：**只带当前页**。
+// vxe 的事件同时给出 records（当前数据里的已选）与 reserves（其它页保留的行），
+// 此前两者平铺合并后 emit —— 同一个事件在 vxe 端是跨页全集、在其它引擎是当前页，
+// 文档又白纸黑字写「当前页选中行；跨页全集用 getSelectionRows() 取」。
+// 跨页全集仍可用 getSelectionRows() 拿（见下方 defineExpose）。
+function handleCheckboxChange({ records }: any) {
+  emit('selection-change', records || [])
 }
 
-function handleCheckboxAll({ records, reserves }: any) {
-  emit('selection-change', mergeCheckboxRecords(records, reserves))
+function handleCheckboxAll({ records }: any) {
+  emit('selection-change', records || [])
 }
 
 function handleSortChange({ field, order }: any) {
@@ -357,8 +368,26 @@ defineExpose<TableEngineExposed>({
   toggleRowSelection: (row, selected) => {
     gridRef.value?.setCheckboxRow(row, selected !== false)
   },
-  clearSelection: () => gridRef.value?.clearCheckboxRow(),
-  getSelectedRows: () => gridRef.value?.getCheckboxRecords(true) || [],
+  /**
+   * 清空选择。
+   *
+   * `clearCheckboxRow()` 只遍历**当前表格数据**（`tableFullData`），开 reserve 后
+   * 其它页的行留在 `checkboxReserveRowMap` 里 —— vxe 的 JSDoc 写着「彻底清空」，
+   * 实现却按当前数据处理。少了 `clearCheckboxReserve()` 的话，用户点「清空」后
+   * 翻回上一页，reserve 会把那些行**重新勾上**（实测：清空后 reserves 仍为 [1]）。
+   * 两个方法都要调，顺序无所谓。
+   */
+  clearSelection: () => {
+    gridRef.value?.clearCheckboxRow()
+    gridRef.value?.clearCheckboxReserve?.()
+  },
+  // 当前数据已选 + 跨页保留：只调 getCheckboxRecords 会漏掉 reserve 里的其它页行
+  // （实测跨页选中 3 行只回 1 行），两边都取，按 keyField 去重。
+  getSelectedRows: () => mergeSelectedRows(
+    gridRef.value?.getCheckboxRecords?.(),
+    gridRef.value?.getCheckboxReserveRecords?.(),
+    props.options.rowkey || 'id',
+  ),
   scrollToRow: (rowIndex: number) => {
     const row = props.dataSource[rowIndex]
     if (row) gridRef.value?.scrollToRow(row)

@@ -88,9 +88,14 @@ const {
   onSelectRow,
   onSelectAll,
   getSelectedRows,
+  getPageSelectedRows,
   clearSelection,
   toggleRowSelection,
-} = useVirtualSelection(dataSourceRef, rowkey)
+} = useVirtualSelection(
+  dataSourceRef,
+  rowkey,
+  computed(() => props.options.cachePageSelection !== false)
+)
 
 const { sortState, onColumnSort, toSortChangePayload } = useVirtualSort()
 
@@ -152,7 +157,8 @@ let selectionChangeTimer: ReturnType<typeof setTimeout> | null = null
 function emitSelectionChange() {
   if (selectionChangeTimer) clearTimeout(selectionChangeTimer)
   selectionChangeTimer = setTimeout(() => {
-    emit('selection-change', getSelectedRows())
+    // 事件只带当前页；跨页全集由组件层的 getSelectionRows()（→ getSelectedRows）给出。
+    emit('selection-change', getPageSelectedRows())
   }, 0)
 }
 

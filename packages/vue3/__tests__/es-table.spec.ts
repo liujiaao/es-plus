@@ -891,3 +891,27 @@ describe('EsTable — 请求模式空页', () => {
     expect((wrapper.vm as any).displayDataSource).toHaveLength(0)
   })
 })
+
+describe('EsTable — clearSelection 清空全部（含跨页缓存）', () => {
+  it('el-table 引擎：清空后 getSelectionRows() 不再回吐旧选中（否则翻页会复活）', async () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      columns: [{ type: 'selection', width: 50 }, ...defaultColumns],
+      options: { rowkey: 'name' } as TableOptions,
+      pagination: { current: 1, pageSize: 10, total: 2 },
+    })
+    await nextTick()
+    const table = wrapper.findComponent({ name: 'ElTable' })
+    table.vm.$emit('selection-change', [sampleData[0]])
+    await nextTick()
+
+    const vm = wrapper.vm as any
+    expect(vm.getSelectionRows()).toHaveLength(1)
+
+    vm.clearSelection()
+    await nextTick()
+    // 旧实现只调 el-table 的 clearSelection()，跨页缓存里这一行还在 ——
+    // 翻回该页会被 restoreSelectionForPage 重新勾上，用户看到「清空没生效」。
+    expect(vm.getSelectionRows()).toHaveLength(0)
+  })
+})

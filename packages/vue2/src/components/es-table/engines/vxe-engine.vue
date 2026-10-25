@@ -45,7 +45,7 @@
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -83,11 +83,17 @@ export default defineComponent({
     const esPlus = inject('$EsPlus', null) ?? getGlobalConfig() ?? {}
     const tFn = computed(() => (esPlus as any).t || undefined)
 
+    // 跨页保留勾选：判据收敛到 core 的 wantsCrossPageSelection（与 el-table 路径同口径：
+    // multiSelect 与显式 type:'selection' 列等价，cachePageSelection:false 一律关闭）。
+    const crossPageSelection = computed(() =>
+      wantsCrossPageSelection(props.options, props.columns as { type?: string }[])
+    )
+
     // L3: 仅在开发环境输出 rowkey 缺失警告，避免生产环境无效日志
-    if (process.env.NODE_ENV !== 'production' && props.options.multiSelect && !props.options.rowkey) {
+    if (process.env.NODE_ENV !== 'production' && crossPageSelection.value && !props.options.rowkey) {
       // eslint-disable-next-line no-console
       console.warn(
-        '[es-plus] engine:"vxe" + multiSelect:true 建议设置 options.rowkey，' +
+        '[es-plus] engine:"vxe" + 多选 建议设置 options.rowkey，' +
         '否则 vxe 无法通过 reserve 跨页保留已选行（当前默认以 "id" 字段作为 rowId）'
       )
     }
@@ -201,7 +207,7 @@ export default defineComponent({
           isCurrent: opts.highlightCurrentRow !== false,
           isHover: opts.highlightCurrentRow !== false,
         },
-        checkboxConfig: opts.multiSelect
+        checkboxConfig: crossPageSelection.value
           ? { reserve: true, highlight: false }
           : undefined,
         sortConfig: {
@@ -312,14 +318,15 @@ export default defineComponent({
     })
 
     // ─── 事件处理 ───────────────────────────────────────────────
-    function handleCheckboxChange({ records, reserves }: any) {
-      const all = [...(records || []), ...(reserves || [])]
-      emit('selection-change', all)
+    // selection-change 只带当前页（与 el-table / a-table / 虚拟引擎、以及三站文档一致：
+    // 「当前页选中行；跨页全集用 getSelectionRows() 取」）。vxe 的 reserves 是其它页
+    // 保留的行，塞进事件会让同一个事件在不同引擎下语义不同。
+    function handleCheckboxChange({ records }: any) {
+      emit('selection-change', records || [])
     }
 
-    function handleCheckboxAll({ records, reserves }: any) {
-      const all = [...(records || []), ...(reserves || [])]
-      emit('selection-change', all)
+    function handleCheckboxAll({ records }: any) {
+      emit('selection-change', records || [])
     }
 
     function handleSortChange({ field, order }: any) {
@@ -354,8 +361,18 @@ export default defineComponent({
       toggleRowSelection: (row, selected) => {
         (gridRef.value as any)?.setCheckboxRow?.(row, selected !== false)
       },
-      clearSelection: () => (gridRef.value as any)?.clearCheckboxRow?.(),
-      getSelectedRows: () => (gridRef.value as any)?.getCheckboxRecords?.(true) || [],
+      // clearCheckboxRow 只清「当前表格数据」；reserve 里其它页的行得单独清，
+      // 否则用户点「清空」后翻回上一页，那些行会被 reserve 重新勾上（实测 reserves 仍为 [1]）。
+      clearSelection: () => {
+        (gridRef.value as any)?.clearCheckboxRow?.()
+        ;(gridRef.value as any)?.clearCheckboxReserve?.()
+      },
+      // 当前数据已选 + 跨页保留（getCheckboxRecords 只覆盖当前数据，reserve 行会漏）
+      getSelectedRows: () => mergeSelectedRows(
+        (gridRef.value as any)?.getCheckboxRecords?.(),
+        (gridRef.value as any)?.getCheckboxReserveRecords?.(),
+        props.options.rowkey || 'id'
+      ),
       scrollToRow: (rowIndex: number) => {
         const row = props.dataSource[rowIndex]
         if (row) (gridRef.value as any)?.scrollToRow?.(row)

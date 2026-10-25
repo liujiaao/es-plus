@@ -4,6 +4,8 @@ import {
   applySelectionChange,
   restoreSelectionForPage,
   clearAllSelection,
+  wantsCrossPageSelection,
+  mergeSelectedRows,
 } from '../src/table-selection'
 
 const row = (id: number, name = `n${id}`) => ({ id, name })
@@ -151,5 +153,68 @@ describe('table-selection', () => {
       // 线性实现：每行读 1 次 = pageSize；嵌套实现：200 × 200 × 2 = 80000
       expect(reads).toBeLessThanOrEqual(pageSize + selectionCount)
     })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 跨页保留判据（三份 vxe 引擎与虚拟引擎共用）
+//
+// 回归背景：三份 vxe 引擎此前只看 options.multiSelect ——
+//   · 显式 `type:'selection'` 列（el-table 端同样跨页保留）在 vxe 端丢勾选；
+//   · cachePageSelection:false（文档写明关闭跨页缓存）在 vxe 端被无视。
+// ─────────────────────────────────────────────────────────────────────────────
+describe('wantsCrossPageSelection', () => {
+  it('multiSelect:true → 跨页保留', () => {
+    expect(wantsCrossPageSelection({ multiSelect: true }, [])).toBe(true)
+  })
+
+  it('显式 type:selection 列 → 跨页保留（与 multiSelect 等价）', () => {
+    expect(wantsCrossPageSelection({}, [{ type: 'selection' }])).toBe(true)
+  })
+
+  it('cachePageSelection:false 一律关闭（即便 multiSelect:true）', () => {
+    expect(wantsCrossPageSelection({ multiSelect: true, cachePageSelection: false }, [])).toBe(false)
+    expect(
+      wantsCrossPageSelection({ cachePageSelection: false }, [{ type: 'selection' }])
+    ).toBe(false)
+  })
+
+  it('没有多选列 → 不保留', () => {
+    expect(wantsCrossPageSelection({}, [{ prop: 'name' }])).toBe(false)
+    expect(wantsCrossPageSelection({}, undefined)).toBe(false)
+  })
+
+  it('options 缺失 → 不保留（不崩溃）', () => {
+    expect(wantsCrossPageSelection(undefined, [{ type: 'selection' }])).toBe(false)
+    expect(wantsCrossPageSelection(null, null)).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// vxe 已选行合并：getCheckboxRecords() 只覆盖当前数据，跨页行在 reserve 里
+// ─────────────────────────────────────────────────────────────────────────────
+describe('mergeSelectedRows', () => {
+  it('当前数据已选 + 跨页保留 → 合并', () => {
+    expect(mergeSelectedRows([row(1), row(2)], [row(3)])).toEqual([row(1), row(2), row(3)])
+  })
+
+  it('任一侧为空/undefined → 不崩溃', () => {
+    expect(mergeSelectedRows([row(1)], undefined)).toEqual([row(1)])
+    expect(mergeSelectedRows(undefined, [row(1)])).toEqual([row(1)])
+    expect(mergeSelectedRows(undefined, undefined)).toEqual([])
+  })
+
+  it('传 rowkey 时按 key 去重（数字/字符串键同源归一化）', () => {
+    // 同一行在 `String(key)` 序列化过的页里回来时 key 是字符串：去重必须认成同一行
+    expect(mergeSelectedRows([row(1)], [{ id: '1' } as any], 'id')).toEqual([row(1)])
+  })
+
+  it('key 缺失的行不参与去重但保留', () => {
+    const noKey = { name: 'x' } as any
+    expect(mergeSelectedRows([noKey], [row(1)], 'id')).toEqual([noKey, row(1)])
+  })
+
+  it('不传 rowkey → 直接平铺（不去重）', () => {
+    expect(mergeSelectedRows([row(1)], [row(1)])).toEqual([row(1), row(1)])
   })
 })

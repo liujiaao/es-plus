@@ -959,3 +959,53 @@ describe('EsTable — 排序事件三端同构', () => {
     expect(table.props('sortDirections')).toBeUndefined()
   })
 })
+
+
+describe('EsTable(ADV) — vxe 引擎向宿主转出 selection-change', () => {
+  const props = {
+    dataSource: [{ id: 1, name: '张三' }, { id: 2, name: '李四' }],
+    columns: [{ type: 'selection', width: 50 }, { prop: 'name', label: '姓名' }],
+    options: { engine: 'vxe', rowkey: 'id' } as any,
+    pagination: { total: 2, current: 1, pageSize: 10 },
+  }
+
+  it('引擎 emit 一次 → 宿主收到一次同名事件（载荷原样）', async () => {
+    const wrapper = mount(EsTable, { props })
+    const engine = wrapper.findComponent({ name: 'VxeEngine' })
+    expect(engine.exists()).toBe(true)
+
+    // Vue 3 把**已声明**事件的监听器从 $attrs 里滤掉（isEmitListener），
+    // 所以 `v-bind="$attrs"` 不会把宿主的 @selection-change 带到 vxe-engine；
+    // 组件必须像 a-table 分支那样显式 emit 一次，否则宿主在 vxe 模式下静默收不到事件。
+    const rows = [props.dataSource[1]]
+    engine.vm.$emit('selection-change', rows)
+    await nextTick()
+
+    const events = wrapper.emitted('selection-change')
+    expect(events).toBeTruthy()
+    expect(events).toHaveLength(1)
+    expect(events![0][0]).toEqual(rows)
+  })
+})
+
+describe('EsTable(ADV) — clearSelection 清空全部（含跨页缓存）', () => {
+  it('a-table 引擎：清空后 getSelectionRows() 不再回吐旧选中（否则翻页会复活）', async () => {
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [{ id: '1', name: '张三' }, { id: '2', name: '李四' }],
+        columns: [{ type: 'selection', width: 50 }, { prop: 'name', label: '姓名' }],
+        options: { rowkey: 'id' } as any,
+        pagination: { current: 1, pageSize: 10, total: 2 },
+      },
+    })
+    await nextTick()
+    const vm = wrapper.vm as any
+    vm.resolvedRowSelection.onChange(['1'], [{ id: '1', name: '张三' }])
+    await nextTick()
+    expect(vm.getSelectionRows()).toHaveLength(1)
+
+    vm.clearSelection()
+    await nextTick()
+    expect(vm.getSelectionRows()).toHaveLength(0)
+  })
+})

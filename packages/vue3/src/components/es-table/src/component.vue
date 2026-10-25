@@ -1158,6 +1158,20 @@ provide(TABLE_CONTEXT_INJECT_KEY, () => ({
 const doLayoutFn = () =>
   activeEngineRef.value ? activeEngineRef.value?.doLayout() : tableRef.value?.doLayout?.()
 
+// 清除选择：**四引擎同义 = 清空全部**（含跨页缓存）。
+//
+// 为什么不保留「只清当前页」：el-table 的 `clearSelection()` 只清当前页的勾选，
+// 但跨页缓存（selectionsByPage / multipleSelection）里其它页的行还在 —— 用户点
+// 「清空」后翻回上一页，`restoreSelectionForPage` 会把它们**重新勾上**，表现为
+// 「清空没生效」。vxe / virtual 的引擎级清空能整表清掉（vxe 要
+// `clearCheckboxRow` + `clearCheckboxReserve` 两步，见引擎注释），所以「只清当前页」
+// 在三个引擎下本来就不一致；统一成「清空全部」既消除了幽灵选中，又只有一种语义要记。
+// `clearAllSelection` 保留为同义别名（旧代码在用）。
+function clearSelectionAll() {
+  clearAllSelection(isVxeEngine.value || isVirtual.value ? null : tableRef.value)
+  activeEngineRef.value?.clearSelection()
+}
+
 defineExpose({
   httpRequestInstance,
   // 最近一次自动加载（onMounted/visibleShow）的错误；成功后复位为 null
@@ -1165,19 +1179,8 @@ defineExpose({
   getSelectionRows: () => activeEngineRef.value
     ? activeEngineRef.value?.getSelectedRows() ?? []
     : multipleSelection.value,
-  clearSelection: () => {
-    if (isVxeEngine.value || isVirtual.value) {
-      // vxe/virtual：同步清除 useTableSelection 的跨页缓存，再清引擎内部勾选状态
-      clearAllSelection(null)
-      activeEngineRef.value?.clearSelection()
-    } else {
-      tableRef.value?.clearSelection?.()
-    }
-  },
-  clearAllSelection: () => {
-    clearAllSelection(isVxeEngine.value || isVirtual.value ? null : tableRef.value)
-    activeEngineRef.value?.clearSelection()
-  },
+  clearSelection: clearSelectionAll,
+  clearAllSelection: clearSelectionAll,
   // 刷新当前页：保留页码重新取数 + 重排。统一命令式刷新入口。
   refresh: (model?: Record<string, unknown>) => {
     if (isVxeProxyMode.value) {

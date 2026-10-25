@@ -156,6 +156,55 @@ export function restoreSelectionForPage(
 }
 
 /**
+ * 「这张表要不要跨页保留勾选」—— 三个 vxe 引擎与虚拟引擎共用的判据。
+ *
+ * 写成单源而不是每个引擎各写一遍，是因为此前三份 vxe 引擎都只看 `options.multiSelect`：
+ *   · `columns: [{ type:'selection' }]` 是**另一种写法**（el-table / a-table / 虚拟引擎
+ *     都认，且 el-table 端同样跨页保留），可切到 vxe 引擎后 reserve 不生效，翻页即丢勾选；
+ *   · `cachePageSelection: false`（文档写明「关闭跨页缓存」）在 vxe 端被无视，勾选照样跨页。
+ * 两者都表现为「同一份配置换个引擎行为就变」。
+ *
+ * @param options 只读 multiSelect / cachePageSelection
+ * @param columns 原始列（显式声明的 `type:'selection'` 与 multiSelect 等价）
+ */
+export function wantsCrossPageSelection(
+  options: { multiSelect?: boolean; cachePageSelection?: boolean } | null | undefined,
+  columns: readonly { type?: string }[] | null | undefined
+): boolean {
+  if (!options) return false
+  if (options.cachePageSelection === false) return false
+  return options.multiSelect === true || (columns ?? []).some((col) => col?.type === 'selection')
+}
+
+/**
+ * 汇总 vxe 引擎的「当前数据里已选 + 跨页保留」。
+ *
+ * vxe 的 `getCheckboxRecords()` 只覆盖**当前表格数据**：开了 `checkboxConfig.reserve`
+ * 后，前几页选中的行会进入 reserve 集合、离开当前数据，于是只调它就会少报
+ * （实测第 1 页勾 2 行、第 2 页勾 1 行，`getSelectionRows()` 只回 1 行）。
+ * 跨页行必须从 `getCheckboxReserveRecords()` 取 —— 两者天然互斥（reserve 明确排除
+ * 当前数据），这里仍按 rowkey 去重：去重是廉价的保险，不是修复某个已知重复。
+ *
+ * 不传 rowkey 时不去重（vxe 的 keyField 缺省为 'id'，调用方通常应显式传）。
+ */
+export function mergeSelectedRows<T extends Record<string, unknown>>(
+  current: T[] | undefined,
+  reserved: T[] | undefined,
+  rowkey?: string
+): T[] {
+  const all = [...(current || []), ...(reserved || [])]
+  if (!rowkey) return all
+  const seen = new Map<string, true>()
+  return all.filter((row) => {
+    const key = normalizeRowKey(row[rowkey])
+    if (key === null) return true
+    if (seen.has(key)) return false
+    seen.set(key, true)
+    return true
+  })
+}
+
+/**
  * 清空所有页的选择（含跨页缓存）
  */
 export function clearAllSelection(state: SelectionState, tableRef: TableRefLike): void {

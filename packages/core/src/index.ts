@@ -82,6 +82,8 @@ export {
   applySelectionChange,
   restoreSelectionForPage,
   clearAllSelection,
+  wantsCrossPageSelection,
+  mergeSelectedRows,
 } from './table-selection'
 export type { SelectionState, TableRefLike } from './table-selection'
 

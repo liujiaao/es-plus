@@ -1444,6 +1444,19 @@ export default defineComponent({
       else (tableRef.value as any)?.doLayout?.()
     }
 
+    /**
+     * 清除选择：**两引擎同义 = 清空全部**（含跨页缓存）。
+     *
+     * el-table 原生的 `clearSelection()` 只清当前页勾选，跨页缓存里其它页的行还在，
+     * 翻回上一页会被 `restoreSelectionForPage` 重新勾上（表现为「清空没生效」）；
+     * vxe 的引擎级清空本来就整表清掉。统一成「清空全部」，`clearAllSelection`
+     * 保留为同义别名（旧代码在用）。与 vue3 / antdv 同一决定。
+     */
+    const clearSelectionAll = () => {
+      if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
+      else clearAllSelectionInternal(tableRef.value)
+    }
+
     const exposed = {
       httpRequestInstance,
       // 最近一次自动加载（onMounted / visibleShow）的错误；成功后清空（对齐 vue3）
@@ -1452,14 +1465,8 @@ export default defineComponent({
         if (isVxeEngine.value) return vxeEngineRef.value?.getSelectedRows?.() || []
         return multipleSelection.value
       },
-      clearSelection: () => {
-        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
-        else (tableRef.value as any)?.clearSelection?.()
-      },
-      clearAllSelection: () => {
-        if (isVxeEngine.value) vxeEngineRef.value?.clearSelection?.()
-        else clearAllSelectionInternal(tableRef.value)
-      },
+      clearSelection: clearSelectionAll,
+      clearAllSelection: clearSelectionAll,
       toggleRowSelection: (row: Record<string, unknown>, selected?: boolean) => {
         if (isVxeEngine.value) vxeEngineRef.value?.toggleRowSelection?.(row, selected)
         else (tableRef.value as any)?.toggleRowSelection?.(row, selected)

@@ -14,15 +14,13 @@ export function normalizeVxeOrder(
 }
 
 /**
- * checkbox 事件的 records（当前页勾选）+ reserves（跨页保留）平铺合并
- * （handleCheckboxChange / handleCheckboxAll 使用）。
+ * checkbox 事件的 `records`（当前数据里已选的行）是 `selection-change` 的唯一载荷。
+ *
+ * 此前这里有个 `mergeCheckboxRecords(records, reserves)` 把跨页保留也平铺进来 ——
+ * 那让 vxe 端的事件载荷与 el-table / a-table / 虚拟引擎（都只带当前页）不一致，
+ * 也与三站文档「当前页选中行；跨页全集用 getSelectionRows() 取」相反。
+ * 跨页合并挪到了 core 的 `mergeSelectedRows`，服务于 `getSelectedRows()`。
  */
-export function mergeCheckboxRecords<T = Record<string, unknown>>(
-  records: T[] | undefined,
-  reserves: T[] | undefined,
-): T[] {
-  return [...(records || []), ...(reserves || [])]
-}
 
 /**
  * spanMethod → vxe mergeMethod shim（gridConfig.mergeMethod 使用）。
