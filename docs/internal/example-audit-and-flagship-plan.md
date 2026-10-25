@@ -137,6 +137,9 @@
 
 ## 5. 能力矩阵
 
+> **本表是 2026-10-24 复核当刻的基线**，作为审计证据保留、修复后不回写 —— 否则就看不出当初缺的是什么。
+> 逐行现状见 **§11.7**（含两处「原判本身写错」的更正）。
+
 | 能力 | 源码证据 | 三端 | 现有案例 | 差距 |
 | --- | --- | --- | --- | --- |
 | `reactions` 声明式联动 | `core/reactions.ts`、三端 `es-form.vue` 的 `resolveReactionOverlay` | ✅ | **0** | 完全未展示 |
@@ -160,6 +163,9 @@
 没有 `dataOptions` 式的 code→label 映射。于是任何"状态列显示中文 + 颜色"的表格都必须写函数，
 纯 JSON schema 无法独立完成一张业务表格。AI 侧只能生成 `render` 源码字符串（经 esbuild 编译），
 与"配置即数据"的主张相抵。
+
+> **2026-10-25 已落地**（批 6）：`TableColumn.dataOptions` + `tagType`（`packages/core/src/types.ts:530-594`），
+> 三端 `es-table` 同一张映射表渲染，三站 `table/CodeLabel.vue` 示教；矩阵其余行的现状见 §11.7。
 
 ---
 
@@ -404,4 +410,31 @@ Vue 只打一条 `Failed to resolve component` 警告，按钮图标静默消失
 
 覆盖边界：本案例证明「入口配置 → 组件零传参」，不覆盖 `import { httpRequest }` 自由函数
 （那是 AI 生成代码的入口，与 `resolveHttpRequest` 共用同一份实现）。
+
+### 11.7 §5 能力矩阵的现状复核（2026-10-25）
+
+§5 那张表是 2026-10-24 的基线，批 1–7 落地后有 10 行已经变了；还有 1 行的「差距」**当初就写错了** ——
+它把 `listenToCallBack` 当成跨组件信号，按那个假设设计出来的 F4 在落地时必然写不通。逐行核对如下，
+证据都是能在仓库里重新跑出来的东西（不是「我记得做过」）：
+
+| §5 行 | 2026-10-24 基线 | 2026-10-25 现状 | 证据 / 守卫 |
+| --- | --- | --- | --- |
+| `reactions` 声明式联动 | **0**，完全未展示 | 三站各 1 例 | `form/DeclarativeLinkage.vue` + `declarative-linkage.config.js`；`check:declarative-demo` 断言配置 `JSON.stringify→parse` 后深等（任何函数都会失败）、三站字节一致、且三站宿主真 import 它（不是死数据） |
+| JSON 表达式 DSL | **0** | 同上，9 个字段 / 17 个白名单算子 | 同上；表达式只经 `EXPR_OPS` 求值，无 `eval` / `new Function` |
+| 声明式 `isHidden` | 37 处全函数 | 声明式已有，函数仍在 | `DeclarativeLinkage` 的 `isHidden` 是 JSON 形态；`conditional` / `computedFields` 保留函数写法，但标题与正文已改成「声明式解法见报销单，回调仅作对照」（D2）—— 它们现在的身份是**对照组**，不是推荐解法 |
+| 权限未与 CRUD 主线结合 | 4 个零散文件 | 主线里三级权限 | `docs/cases/flagship-approval.json` 的 `permissionValue` ×7（字段 / 列 / 行内按钮）；角色切 admin/editor/viewer 三处同时收口；`check:flagship-case` 断言「每个码都登记在 `ROLE_PERMISSIONS`、且 viewer 不能审批」 |
+| 跨页选择未与批量审批结合 | 3 个零散文件 | 主线里跨页勾选 → 批量通过 | 同一份 JSON 的 `cachePageSelection` + `multiSelect`；`check:flagship-case` 断言「跨页勾选与分页契约」 |
+| 引擎切换无业务闭环 | 玩具表格 | 工作台 | `vxe-table/BasicSwitch.vue`：500 / 5,000 / 50,000 三档，实时显示表体 DOM 行数、已选行数、JS 堆；勾选、排序、列宽跨引擎保持；5 万行直接禁掉 el-table 并当场写明原因。**仍未收口**：滚动位置依赖底层引擎自己的滚动容器 —— 案例正文如实写着，没有假装它能保住 |
+| schema 整页未单源 | `CrudPage.vue` / eui `crud/Basic` | 单源四份同哈希 | `docs/cases/flagship-approval.json` 由 `scripts/sync-cases.mjs` 分发；源与三站副本 sha256 同为 `b857da158381…`；三站宿主各一薄壳 |
+| 全局 `httpRequest` | 「有，但无页面证明」 | 三站各 1 例 | 见 §11.6 |
+| `EsErrorBoundary` / `SvgIcon` | **0**，组件隐身 | 三站各 1 例 | `error-boundary/Basic.vue`、`svg-icon/Basic.vue`（es-pc 另有 `SvgIcon.vue` 组件页） |
+| 列 code→label | `TableColumn` **无** | 已实现 | `TableColumnDataOption`（`label/value/tagType/disabled/children`，`packages/core/src/types.ts:530-594`），三端 `es-table` 的 `component.vue` 都在消费；三站 `table/CodeLabel.vue` |
+| `listenToCallBack` 未用于跨组件刷新 | 差距栏这么写 | **差距栏本身是错的** | 它的语义是参数 / 响应转换钩子（`beforeRequest` / `afterResponse`），从来不是跨组件信号。F4 `advanced/MasterDetailFlow.vue` 的主从通信改成「共享状态 + `httpRequestInstance()` 重查」，并在文件头明写这条边界；`listenToCallBack` 在案例里保留真实用途（响应到达后补每行小计） |
+
+这张表的用途不是宣布「都做完了」，而是把「基线 → 现状 → 证据」钉在一起：前 10 行任何一处回退，
+点名的守卫都会红；第 11 行是**文档判断错误**，没有守卫能守，只能靠复核的人去读源码 ——
+这正是它值得单列一行、而不是悄悄改掉的原因。
+
+截至本轮，§5 表里除已删的幻影字段（R8 `clipboardConfig`）外，每一行都有可运行的案例或可跑的守卫；
+仍未被案例覆盖的只剩 §11.6 末尾那条 —— `import { httpRequest }` 自由函数。
 
