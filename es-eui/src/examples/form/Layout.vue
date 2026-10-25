@@ -30,18 +30,21 @@ export default {
           gutter: 20
         }
       },
+      // 按钮区也是布局的一部分：direction 决定按钮落在左栏还是右栏（默认右栏）
       configBtn: [
         {
-          name: '查询',
-          type: 'primary',
-          click: (model, formRef) => {
-            this.$message.success('查询参数: ' + JSON.stringify(model))
+          name: '重置',
+          direction: 'left',
+          click: (_, formRef) => {
+            formRef.resetFields()
           }
         },
         {
-          name: '重置',
-          click: (model, formRef) => {
-            formRef.resetFields()
+          name: '查询',
+          type: 'primary',
+          direction: 'right',
+          click: (model) => {
+            this.$message.success('查询参数: ' + JSON.stringify(model))
           }
         }
       ],
@@ -89,14 +92,6 @@ export default {
           attrs: { placeholder: '超过minFoldRows折叠' }
         }
       ]
-    }
-  },
-  methods: {
-    submitForm(model) {
-      this.$message.success('查询参数: ' + JSON.stringify(model))
-    },
-    resetForm(formRef) {
-      formRef.resetFields()
     }
   }
 }

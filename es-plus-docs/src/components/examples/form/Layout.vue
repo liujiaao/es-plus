@@ -42,15 +42,18 @@ const formItems = [
   { prop: 'zip', label: '邮编', formtype: 'Input', span: 8, attrs: { placeholder: '请输入邮政编码', clearable: true } }
 ]
 
-// 完整的按钮配置
+// 按钮区也是布局的一部分：`direction` 决定按钮落在左栏还是右栏（默认右栏）。
+// 两个按钮都做真事 —— 重置真的清空，查询把参数交给回调；这里没有数据源，
+// 查询的全部作用就是把「回调收到的 model」显示出来。
 const configBtn = [
   {
-    name: '导出',
-    key: 'export',
+    name: '重置',
+    key: 'rest',
     direction: 'left',
-    icon: 'Download',
-    click: (model) => {
-      ElMessage.success('导出数据: ' + JSON.stringify(model))
+    icon: 'RefreshLeft',
+    click: (_, formRef) => {
+      formRef?.resetFields()
+      ElMessage.info('已重置')
     }
   },
   {
@@ -60,17 +63,7 @@ const configBtn = [
     direction: 'right',
     icon: 'Search',
     click: (model) => {
-      ElMessage.success('查询: ' + JSON.stringify(model))
-    }
-  },
-  {
-    name: '重置',
-    key: 'rest',
-    direction: 'right',
-    icon: 'RefreshLeft',
-    click: (_, formRef) => {
-      formRef?.resetFields()
-      ElMessage.info('已重置')
+      ElMessage.success('查询参数: ' + JSON.stringify(model))
     }
   }
 ]
