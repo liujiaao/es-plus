@@ -417,7 +417,9 @@ export default defineComponent({
     }
 
     async function handleToolbarBtnClick(btn: CrudBtnConfig) {
-      const key = btn.key || btn.actionType || ''
+      // 没有 key / actionType 时退回按钮名：否则 emit 出去的是空串，宿主无法分辨点的是哪个
+      // 按钮（AI 生成的声明式按钮经常只给 name + permissionValue/dialogKey）。
+      const key = btn.key || btn.actionType || btn.name || ''
 
       if (btn.confirm) {
         const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
@@ -445,7 +447,9 @@ export default defineComponent({
 
     // ─── 行按钮处理 ─────
     async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>) {
-      const key = btn.key || ''
+      // 同上：显式 operationColumn.btns 未声明 key 时用按钮名兜底，宿主才能按名分派
+      // （「通过」/「驳回」这类无弹窗按钮若都 emit 空串，点击等于没有身份）。
+      const key = btn.key || btn.name || ''
 
       if (btn.confirm) {
         const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'

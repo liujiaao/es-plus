@@ -69,6 +69,7 @@ export interface OperationColumnConfig {
 
 export interface RowBtnConfig {
   name: string
+  /** 按钮标识 key（`btn-click` 事件里用它分派；未声明时以 name 兜底） */
   key?: string
   type?: string
   icon?: string

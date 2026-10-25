@@ -371,7 +371,7 @@ export interface FormItemOption {
 export interface BtnConfig {
   /** 按钮显示文本 */
   name: string
-  /** 按钮唯一标识（query/rest/add/export...） */
+  /** 按钮唯一标识（query/rest/add/export...）；未声明时 `btn-click` 以 name 作为标识 */
   key?: string
   /** 按钮类型 */
   type?: EsButtonType

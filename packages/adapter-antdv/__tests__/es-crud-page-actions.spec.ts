@@ -117,6 +117,23 @@ describe('EsCrudPage (antdv) — AN-06 action 面', () => {
     expect(btn.icon).toBe('Check')
     expect(typeof btn.clickEvent).toBe('function')
   })
+
+  it('行按钮未声明 key 时 btn-click 以按钮名兜底（AI 生成的按钮只有 name）', () => {
+    const w = mountPage({
+      columns,
+      operationColumn: {
+        btns: [
+          { name: '通过' },
+          { name: '驳回', permissionValue: 'approval:audit' },
+        ],
+      },
+    } as CrudPageSchema)
+    const table = w.findComponent({ name: 'EsTable' })
+    const actionCol = (table.props('columns') as any[]).find((c: any) => c.prop === 'operate')
+    const row = { id: 1, name: '张三' }
+    actionCol.btns.find((b: any) => b.name === '驳回').clickEvent(row)
+    expect(w.emitted('btn-click')?.[0]).toEqual(['驳回', row])
+  })
 })
 
 /**

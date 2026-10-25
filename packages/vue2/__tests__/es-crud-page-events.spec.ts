@@ -63,15 +63,16 @@ import type { CrudPageSchema } from '../src/components/es-crud-page/types'
 function mountPage(schema: CrudPageSchema) {
   const onQuery = vi.fn()
   const onRowClick = vi.fn()
+  const onBtnClick = vi.fn()
   const vm = new Vue({
     render: (h) =>
       h(EsCrudPage as any, {
         props: { schema, autoLoad: false },
-        on: { query: onQuery, 'row-click': onRowClick },
+        on: { query: onQuery, 'row-click': onRowClick, 'btn-click': onBtnClick },
       }),
   }).$mount() as any
   const page = vm.$children[0]
-  return { vm, page, onQuery, onRowClick }
+  return { vm, page, onQuery, onRowClick, onBtnClick }
 }
 
 const columns: CrudPageSchema['columns'] = [{ prop: 'name', label: '姓名' }]
@@ -129,5 +130,24 @@ describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
     expect(btn.hidden).toBe(hidden)
     expect(btn.icon).toBe('Check')
     expect(typeof btn.clickEvent).toBe('function')
+  })
+
+  it('行按钮未声明 key 时 btn-click 以按钮名兜底（AI 生成的按钮只有 name）', async () => {
+    const { page, onBtnClick } = mountPage({
+      columns,
+      operationColumn: {
+        btns: [
+          { name: '通过' },
+          { name: '驳回', permissionValue: 'approval:audit' },
+        ],
+      },
+    })
+    await page.$nextTick()
+    const cols = page.$refs.tableRef.columns as any[]
+    const actionCol = cols.find((c: any) => c.prop === 'operate')
+    const row = { id: 1, name: '张三' }
+    actionCol.btns.find((b: any) => b.name === '驳回').clickEvent(row)
+    expect(onBtnClick).toHaveBeenCalledTimes(1)
+    expect(onBtnClick).toHaveBeenCalledWith('驳回', row)
   })
 })
