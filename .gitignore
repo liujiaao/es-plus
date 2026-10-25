@@ -41,3 +41,6 @@ __tests__/e2e-runtime/vue2/src/fragments/
 
 # 会话工作记录（本地留存，不进版本库）
 .session-notes/
+
+# Playwright MCP 的临时产物（.yml 页面快照 / 截图），不进版本库
+.playwright-mcp/

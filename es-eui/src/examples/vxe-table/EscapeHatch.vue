@@ -8,6 +8,7 @@
     />
     <div style="margin-bottom: 8px; font-size: 13px; color: #606266;">
       单击单元格：<el-tag v-if="clickInfo" size="mini" type="info">{{ clickInfo }}</el-tag>
+      <span style="margin-left: 12px;">点表头排序：<el-tag v-if="sortInfo" size="mini" type="success">{{ sortInfo }}</el-tag></span>
     </div>
     <es-table
       :columns="columns"
@@ -36,13 +37,17 @@ export default defineComponent({
   name: 'VxeTableEscapeHatch',
   setup() {
     const clickInfo = ref('')
+    const sortInfo = ref('')
     const pagination = ref({ pageSize: 10, current: 1, total: 0 })
 
     const columns = [
-      { prop: 'id', label: 'ID', width: 70 },
+      { prop: 'id', label: 'ID', width: 70, sortable: true },
       { prop: 'name', label: '姓名', minWidth: 120 },
       {
         prop: 'level', label: '级别', width: 100,
+        // sortable 是 vxeOn['sort-change'] 能触发的**前提**：没有可排序列时那个监听器
+        // 永远不会被调用（此前就是「监听器写好了但没人能触发」的死代码）
+        sortable: true,
         render: (h, { value }) => {
           const colors = { P5: '', P6: 'warning', P7: 'success', P8: 'danger' }
           return <el-tag type={colors[value] || ''} size="small">{value}</el-tag>
@@ -68,8 +73,9 @@ export default defineComponent({
           clickInfo.value = `行:${row.name} 列:${column.title || column.field}`
         },
         'sort-change': ({ field, order }) => {
-          // eslint-disable-next-line no-console
-          console.log('[vxeOn sort-change]', field, order)
+          // 结论要**看得见**：示例页的验收口径是「0 处 console.log」——
+          // 事件载荷直接渲染到页面上，胜过去控制台里找一行日志
+          sortInfo.value = `字段:${field} 方向:${order || '默认'}`
         }
       }
     }
@@ -91,7 +97,7 @@ export default defineComponent({
     const onCurrentChange = (pager) => { pagination.value.current = pager.current }
     const onSizeChange = (pager) => { pagination.value.pageSize = pager.pageSize; pagination.value.current = pager.current }
 
-    return { clickInfo, columns, tableOptions, pagedData, pagination, onCurrentChange, onSizeChange }
+    return { clickInfo, sortInfo, columns, tableOptions, pagedData, pagination, onCurrentChange, onSizeChange }
   }
 })
 </script>

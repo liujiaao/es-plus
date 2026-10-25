@@ -318,3 +318,39 @@ npm run -s check:site-api-drift
 | P1-9 es-eui 运行期 bug | ✅ 已修 | 不重做 |
 | P1-13 死代码/误导 | ✅ 已修 | **D5/D6 是同类问题的新实例**，本次补掉 |
 | P2 设计取舍 | — | 本次把"回调示例"从取舍升级为 P0 叙事问题 |
+
+---
+
+## 11. 交付后的逐项复核（2026-10-25）
+
+批 1–7 全部落地后，按「有无遗漏 / 未完成 / 未知隐患」再走一遍。结论：批 1–7 的功能项都在
+（F1–F7、D3–D9；F3 的载体是 `vxe-table/BasicSwitch.vue`、F5 是升级后的
+`advanced/StepImportWizard.vue`），但**验收口径里有一条没有守卫**，且三处"自说自话"的数字/叙事漏在守卫之外。
+
+### 11.1 本轮修掉的（各自带守卫，防回归）
+
+| # | 问题 | 为什么算缺陷 | 修法 / 守卫 |
+| --- | --- | --- | --- |
+| R1 | `es-plus-docs` / `es-pc` 的 F7 宿主把 `configureEsPlus({ permission })` 写在模块顶层，**离开页面不恢复** | 权限是模块级单例，活得比路由久：关着审批开关离开 `/ai-generated`，`approval:audit` 之外的**所有**权限码随之被拒（`createPermission(false)` 对任何 code 都返回 false）。旗舰页与 eui 宿主都恢复了，只有这两页漏 | `onUnmounted(() => configureEsPlus({ permission: () => true }))`；`check:generated-case` 新增「离开页面恢复全局权限」一项 |
+| R2 | F6 的两组成对示例**从未真正渲染过**，只有编译检查 | 编译通过 ≠ 渲染正确；Cases 页把实算数字贴在它们旁边，示例悄悄坏掉就变成「用更少代码做到了（其实没做到）」 | `packages/vue3/__tests__/f6-cost-examples.spec.ts`：两侧挂载后行数/标签序列/查询区/分页/空值占位必须一致 |
+| R3 | `cases-metrics.json` 的 `totals.files` 存的是**两侧行数之和** | 名字与内容不符，且这个和没有含义（123 + 77 = 200 说明不了任何事） | 改成 `totals.native / totals.es` 两组，键与场景内一致 |
+| R4 | `getting-started.md` 顶部写「减少 76.5%」、同一页第 104 行写「少写 70%」；`getting-started.en.md` 写「70%」且说「Two render targets」 | 同一页两个数字、英文少一个渲染端 | 统一 76.5% / three render targets；`check:site-claims` 的降幅正则补 `少写` 与英文 `saves/cuts/reduces/less`（这正是 70% 长期漏网的原因） |
+| R5 | 案例 6 的 `win` 仍写「apiParams + isHidden」 | D2 已把「回调当推荐解法」定为叙事问题，这张卡片漏改 | 改为「apiParams 拉选项 + 声明式 isHidden（纯 JSON，非回调）」 |
+| R6 | §8 验收写「示例目录 console.log 计数为 0（白名单除外）」，但**没有任何守卫** | 于是 `vxe-table/EscapeHatch.vue` 的 `console.log('[vxeOn sort-change]')` 一直活着 —— 而且它是**死代码**：没有任何列声明 `sortable`，`sort-change` 根本不会触发 | 新增 `check:demo-residue`（322 个文件，3 条逐文件白名单）；`EscapeHatch` 给 ID/级别列加 `sortable`，排序与点选结果都渲染成页面上的 tag；`raw-sources` 重算 |
+| R7 | Cases 页的实测表与首页「减少 76.5%」并列出现，口径不同（整文件 vs 胶水代码）却不说明 | 观众会读成两个互相矛盾的数字 | 三条 Cases 页的 caveat 各加一句口径差异说明 |
+
+### 11.2 复核后仍未做的（P2，需要单独立项）
+
+| # | 项 | 规模 | 为什么不顺手做 |
+| --- | --- | --- | --- |
+| D10 | 示例里的内联 `style`（`dialog/Advanced.vue` docs+pc 各 25 处、`eui/table/CrudEdgeCases.vue` 11、`eui/dialog/Confirm.vue` 10） | 71 处 | 纯观感；抽出 scoped class 会改动代码 tab 展示的字符数（`one-config-diff` 之外的自研口径不受影响，但 diff 噪音大），建议与下一次示例改版合并 |
+| D11 | `es-eui` 示例 66 个文件、544 处列定义仍写 `key:`，docs/pc 写 `prop:` | 544 处 | 三端都兼容（`column-item.vue` 双向映射），但「同一份配置三端跑」的示范性被削弱。批量替换属机械改动，需 `tri-render:check` / `check:parity` / 三站构建同时兜底，值得单独一批 |
+| D12 | `cases.json` 案例 4–15 的 `links` 仍指向组件文档首页，不是该案例所在的小节 | 45 条链接 + 三站 demo 锚点支持 | 三站**都没有** demo 级锚点：需给 `DemoBlock`/示例卡加 `id`，再让 `check:cases-links` 校验锚点（脚本已支持 `#anchor`，但 docs 站的动态路由仍需补「路径 → 组件文件」映射）。属于新能力，不是补漏 |
+
+### 11.3 本轮新增守卫的边界（写清"不覆盖什么"）
+
+- `check:demo-residue` 只扫**示例组件**（`.vue`/`.jsx`/`.ts`）：`es-plus-docs/src/components/examples`、
+  `es-pc/src/views`、`es-eui/src/examples`。文档正文（`.md`）里的 `console.log` 是教学素材，
+  站点基础设施（`es-eui/src/utils/server/request.js`）不是示例，都不扫。
+- `f6-cost-examples.spec.ts` 只断言「两侧产出同一份可见结果」。新增对照场景时**必须**在这里补一组，
+  否则新数字仍然只有编译兜底。
