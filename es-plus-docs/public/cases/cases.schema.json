@@ -37,7 +37,7 @@
                   "type": "object",
                   "required": ["vue3", "antdv", "vue2"],
                   "additionalProperties": false,
-                  "description": "三端各自的落点路径。必须指向该站真实存在的页面，且不得是站点根（'/' 表示没有落点）。",
+                  "description": "三端各自的落点路径。必须指向该站真实存在的页面，且不得是站点根（'/' 表示没有落点）。可带 `#anchor` 落到页内某个示例上；锚点是否存在同样由 scripts/check-cases-links.mjs 校验（docs 组件/进阶页是 demo-<examples[].key>，指南页是 markdown 标题，es-pc 是 section/h3 的字面 id，es-eui 是 demo-<示例 key>）。",
                   "properties": {
                     "vue3": { "type": "string", "pattern": "^/" },
                     "antdv": { "type": "string", "pattern": "^/" },
