@@ -80,6 +80,21 @@
 
     <a-divider />
 
+    <!-- 全局请求 -->
+    <section id="global-request">
+      <h2>全局请求：整页零请求代码</h2>
+      <p>
+        <code>httpRequest</code> 在站点入口 <code>app.use(ESPlus, { httpRequest })</code> 配一次，
+        查询表单 + 表格 + 分页只声明 <code>apiParams</code>：整份 schema 可 <code>JSON.stringify</code>，
+        页面里没有一行请求代码。组件级 <code>httpRequest</code> 仍然优先，个别页面可以单独覆盖。
+      </p>
+      <CodeDemo :source="rawSFCs['./es-advanced/GlobalRequest.vue']">
+        <GlobalRequest />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
     <!-- 弹窗嵌套 -->
     <section id="dialog-table-form">
       <h2>弹窗内表格嵌套表单</h2>
@@ -280,6 +295,7 @@ import DynamicFormQuery from './es-advanced/DynamicFormQuery.vue'
 import CrossPageSelect from './es-advanced/CrossPageSelect.vue'
 import AdminPage from './es-advanced/AdminPage.vue'
 import CrudPage from './es-advanced/CrudPage.vue'
+import GlobalRequest from './es-advanced/GlobalRequest.vue'
 import DialogTableForm from './es-advanced/DialogTableForm.vue'
 import FormTableDialog from './es-advanced/FormTableDialog.vue'
 import OneLineCrud from './es-advanced/OneLineCrud.vue'

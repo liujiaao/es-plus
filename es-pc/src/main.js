@@ -13,6 +13,7 @@ import ESPlus from '@es-plus/adapter-antdv'
 import '@es-plus/adapter-antdv/dist/style.css'
 import App from './App.vue'
 import router from './router'
+import { demoHttpRequest } from './utils/demo-http'
 import './styles/design-tokens.css'
 import './styles/docs-content.css'
 import './styles/global.css'
@@ -24,5 +25,8 @@ app.use(VxeTable)
 app.use(router)
 app.use(ESPlus, {
   globalProperties: true,
+  // 全局请求只在这一处配置：示例组件一律只声明 apiParams，不传 httpRequest。
+  // 这正是「schema 可 JSON 序列化」的前提 —— 函数值进不了 JSON，只能来自入口。
+  httpRequest: demoHttpRequest,
 })
 app.mount('#app')
