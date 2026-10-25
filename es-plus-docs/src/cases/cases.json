@@ -81,7 +81,7 @@
           "id": 6,
           "title": "远程下拉 + 条件显隐",
           "pain": "分类接口拉取 + 字段联动",
-          "win": "apiParams + isHidden",
+          "win": "apiParams 拉选项 + 声明式 isHidden（纯 JSON，非回调）",
           "links": {
             "vue3": "/components/es-form",
             "antdv": "/es-form",

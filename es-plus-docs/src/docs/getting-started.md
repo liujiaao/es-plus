@@ -101,7 +101,7 @@ const handleConfirm = ({ key, model }) => {
 </script>
 ```
 
-对比传统写法，同样功能少写 **70%** 代码：
+对比传统写法，同样功能少写 **76.5%** 的模板与事件胶水代码：
 
 | 传统 Element Plus | ES-Plus |
 |---|---|

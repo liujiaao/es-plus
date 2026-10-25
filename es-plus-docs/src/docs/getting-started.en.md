@@ -1,6 +1,6 @@
 # Getting Started
 
-ES-Plus is an enterprise-grade component library that cuts CRUD page code by 70% through configuration-driven rendering. Two render targets share the same JSON schema:
+ES-Plus is an enterprise-grade component library that cuts markup and event glue code on CRUD pages by 76.5% through configuration-driven rendering. Three render targets share the same JSON schema:
 
 - **`@es-plus/vue3`** — Vue 3 + Element Plus (active development)
 - **`@es-plus/vue2`** — Vue 2 + Element UI (compatibility build)
@@ -75,7 +75,7 @@ const handleConfirm = ({ key, model }) => {
 </script>
 ```
 
-Compared to vanilla Element Plus, this saves **70%** code:
+Compared to vanilla Element Plus, this saves **76.5%** of the markup and event glue:
 
 | Vanilla Element Plus | ES-Plus |
 |---|---|
