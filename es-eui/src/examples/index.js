@@ -294,7 +294,7 @@ export const combinationExamples = [
   { key: 'QueryFormLinkage', title: '查询表单联动', description: 'EsForm + EsTable 查询联动：表单条件变化自动触发表格数据查询。' },
   { key: 'FormWithTable', title: '表单内嵌表格', description: 'EsForm 的 render 函数中内嵌 EsTable 组件。' },
   { key: 'DialogNativeForm', title: '弹窗 + 原生表单', description: 'useDialog + el-form 组合，Vue.observable 实现弹窗内响应式数据。' },
-  { key: 'DialogEsForm', title: '弹窗 + EsForm (推荐)', description: 'useDialog + EsForm 推荐方案，getRefs 验证表单。' },
+  { key: 'DialogEsForm', title: '弹窗内 EsForm：getRefs 校验', description: 'useDialog 里放 EsForm，提交前用 getRefs 拿到表单实例做校验。' },
   { key: 'DialogEsTable', title: '弹窗 + EsTable', description: 'useDialog + EsTable，弹窗内展示数据表格并支持选择。' },
   { key: 'FormTableMultiSelect', title: '多选 + 表单联动', description: 'EsForm + EsTable 多选，表单筛选与批量操作联动。' },
   { key: 'DataFlowManagement', title: '行内编辑 + EsForm', description: 'EsTable 行内编辑，render 函数动态切换编辑/查看模式。' },
@@ -316,7 +316,7 @@ export const vxeTableExamples = [
   { key: 'SelectionIndex', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。' },
   { key: 'ExpandRow', title: '展开行', description: 'type:"expand" 展开行，通过 render 自定义展开内容，支持 el-descriptions 详情卡。' },
   { key: 'SortFormatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。' },
-  { key: 'CustomRender', title: '自定义 render 渲染', description: 'render(h, { value, row, index }) 与 el-table 相同 API，vxe 引擎桥接透传，无缝兼容。' },
+  { key: 'CustomRender', title: 'render 自定义列：vxe 同 API', description: 'render(h, { value, row, index }) 与 el-table 相同 API，vxe 引擎桥接透传，无缝兼容。' },
   { key: 'CellEdit', title: '单元格编辑', description: 'editConfig.mode:"cell" 单元格编辑，editRender $input/$select，getUpdateRecords 获取修改记录。' },
   { key: 'RowEdit', title: '行编辑与校验', description: 'editConfig.mode:"row" 整行编辑，vxeColumn.rules 校验规则，getInsertRecords/getRemoveRecords 获取变更。' },
   { key: 'ToolbarExport', title: '工具栏与导出', description: 'toolbarConfig 内置缩放/全屏/自定义列；exportConfig 导出 CSV；print 打印。' },
@@ -325,7 +325,7 @@ export const vxeTableExamples = [
   { key: 'ProxyConfig', title: 'proxyConfig 服务端分页', description: 'proxyConfig.ajax.query 接管请求，vxe 自管分页，EsForm 搜索触发 commitProxy("query") 重载。' },
   { key: 'FooterSummary', title: '汇总行 footerMethod', description: 'showFooter + footerMethod 动态计算合计行，随数据变化实时更新。' },
   { key: 'EscapeHatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。' },
-  { key: 'CrudWithDialog', title: '完整 CRUD + useDialog', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 —— 完整业务闭环。' },
+  { key: 'CrudWithDialog', title: 'vxe 业务闭环：查询·多选·弹窗', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 —— 完整业务闭环。' },
   { key: 'MergeCells', title: '复杂合并单元格', description: '两级分组表头（4 组）+ spanMethod 行列动态合并 + mergeFooterItems 表尾合并 + 可编辑实时重算；表单联动切换合并模式。' },
 ]
 

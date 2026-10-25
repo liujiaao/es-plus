@@ -317,7 +317,7 @@ export const docsData: Record<string, any> = {
     }
   },
   'es-crud-page': {
-    title: 'EsCrudPage 高级CRUD',
+    title: 'EsCrudPage：schema 驱动整页',
     description: 'Schema 驱动的一站式 CRUD 页面组件，支持多弹窗架构、按钮-弹窗声明绑定、自定义渲染、权限控制。',
     features: [
       { name: '多弹窗架构', desc: 'dialogs 声明多个弹窗，toolbarBtns/operationColumn 通过 dialogKey 绑定', icon: 'CopyDocument' },

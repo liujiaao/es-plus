@@ -169,7 +169,7 @@ export const docsData: Record<string, any> = {
       { key: 'selection-index', title: '多选与序号列', description: 'type:"selection" 复选框列 + type:"index" 序号列；getSelectionRows / clearSelection 获取/清空选中。', component: getComponent('vxe-table/02-selection-index'), code: code('vxe-table/02-selection-index') },
       { key: 'expand-row', title: '展开行', description: 'type:"expand" 展开行的内容用列 render 返回（ElDescriptions 详情卡），不写插槽、不写模板。', component: getComponent('vxe-table/03-expand-row'), code: code('vxe-table/03-expand-row') },
       { key: 'sort-formatter', title: '排序与格式化', description: 'sortable 列排序 + formatter 函数格式化 + vxeColumn.formatter 原生格式化，三种写法对比。', component: getComponent('vxe-table/04-sort-formatter'), code: code('vxe-table/04-sort-formatter') },
-      { key: 'custom-render', title: '自定义 render 渲染', description: 'render(h, {value, row, index}) 与 el-table 相同 API，vxe 引擎通过 RenderDomTb 桥接透传，无缝兼容。', component: getComponent('vxe-table/05-custom-render'), code: code('vxe-table/05-custom-render') },
+      { key: 'custom-render', title: 'render 自定义列：vxe 同 API', description: 'render(h, {value, row, index}) 与 el-table 相同 API，vxe 引擎通过 RenderDomTb 桥接透传，无缝兼容。', component: getComponent('vxe-table/05-custom-render'), code: code('vxe-table/05-custom-render') },
       { key: 'cell-edit', title: '单元格编辑', description: 'editConfig.mode:"cell" 单元格编辑，editRender $input/$select，getUpdateRecords 获取修改记录。', component: getComponent('vxe-table/06-cell-edit'), code: code('vxe-table/06-cell-edit') },
       { key: 'row-edit', title: '行编辑与校验', description: 'editConfig.mode:"row" 整行编辑，vxeColumn.rules 校验规则，getInsertRecords/getRemoveRecords 获取变更。', component: getComponent('vxe-table/07-row-edit'), code: code('vxe-table/07-row-edit') },
       { key: 'toolbar-export', title: '工具栏与导出', description: 'toolbarConfig 内置缩放/全屏/自定义列；exportConfig 导出 CSV；print 打印。', component: getComponent('vxe-table/08-toolbar-export'), code: code('vxe-table/08-toolbar-export') },
@@ -178,7 +178,7 @@ export const docsData: Record<string, any> = {
       { key: 'proxy-config', title: 'proxyConfig 服务端分页', description: 'proxyConfig.ajax.query 接管请求，vxe 自管分页；表单与表格兄弟布局，查询/重置回调 commitProxy("reload") 重置页码并重查。', component: getComponent('vxe-table/11-proxy-config'), code: code('vxe-table/11-proxy-config') },
       { key: 'footer-summary', title: '汇总行 footerMethod', description: 'showFooter + footerMethod 动态计算合计行，随数据变化实时更新。', component: getComponent('vxe-table/12-footer-summary'), code: code('vxe-table/12-footer-summary') },
       { key: 'escape-hatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。', component: getComponent('vxe-table/13-escape-hatch'), code: code('vxe-table/13-escape-hatch') },
-      { key: 'crud-with-dialog', title: '完整 CRUD + useDialog', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 — 完整业务闭环。', component: getComponent('vxe-table/14-crud-with-dialog'), code: code('vxe-table/14-crud-with-dialog') },
+      { key: 'crud-with-dialog', title: 'vxe 业务闭环：查询·多选·弹窗', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 — 完整业务闭环。', component: getComponent('vxe-table/14-crud-with-dialog'), code: code('vxe-table/14-crud-with-dialog') },
       { key: 'merge-cells', title: '分组表头 + 动态行合并 + 打印', description: '两级分组表头 groups + spanMethod 动态行合并 + mergeFooterItems 多行表尾；表单控合并模式，patchHtmlRowSpans 让合并单元格可打印。', component: getComponent('vxe-table/15-merge-cells'), code: code('vxe-table/15-merge-cells') },
     ],
     api: {
