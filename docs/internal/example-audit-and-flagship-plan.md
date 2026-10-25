@@ -146,7 +146,7 @@
 | 跨页选择 | `core/table-selection.ts`、`cachePageSelection` | ✅ | 3 个文件 | 未与批量审批/权限结合 |
 | 引擎切换 | `engine: 'vxe'` | vue3/vue2 | `vxe/BasicSwitch` | 玩具数据，无业务闭环 |
 | schema 驱动整页 | `EsCrudPage` + `CrudPageSchema` | ✅ | `CrudPage.vue`、eui `crud/Basic` | 未单源、未跨端同源 |
-| 全局 `permission` / `httpRequest` | `core/config.ts` | ✅ | 权限有，全局请求无 | 纯 JSON schema 落地的关键 |
+| 全局 `permission` / `httpRequest` | `core/config.ts` | ✅ | 权限 4 个；全局请求 3 站各 1 例（2026-10-25 补） | 已补齐：入口配一次，页面只声明 `apiParams`（见 §11.6） |
 | `mergeConfig` | 三端表格 | ✅ | 3 | 可并入旗舰 |
 | `printConfig` | `vxe-print.ts` | ✅ | 11 | 覆盖足够 |
 | ~~`clipboardConfig`~~ | **无** —— vxe 里没有这个属性 | ❌ | — | **幻影字段，已删**（见 §11.4 R8）：真名 `clipConfig`，且要区域选择模块才生效 |
@@ -377,4 +377,31 @@ npm run -s check:site-api-drift
 
 > 守卫的价值在于把人已经做过的判断**固定成回归线**，不是替人做判断。这两条都刻意把
 > 「不守什么」写进了脚本注释和这张表 —— 否则半年后没人知道绿灯管到哪。
+
+### 11.6 §5 最后一个能力缺口：全局请求（2026-10-25）
+
+矩阵里的「权限有，全局请求无」不是能力缺失 —— `core/config.ts` 的 `resolveHttpRequest`
+一直支持顶层 `httpRequest`，是**没有一个页面证明纯 JSON schema 只靠入口配置就能跑起来**：
+所有示例都把 `httpRequest` 塞在 `tableOptions` 里，等于每个页面各配一份，「配置即数据」在
+最需要它的地方断了。
+
+新增三站同名案例「全局请求：页面零请求代码」（docs `advanced/25-global-request`、
+es-pc `Advanced.vue#global-request`、eui `combination/GlobalRequest`）：
+
+- 页面只有一份 `pageSchema`（查询字段 + 列 + `apiParams` + `configTableOut`），**0 个函数值**；
+- 请求函数在站点入口配一次（docs `install-app-plugins.ts`、es-pc / eui 的 `main.js`），
+  组件一律不传 `httpRequest`；
+- 表下的「请求检查器」显示全局函数被调用的次数与最近一次参数 —— 数据确实来自全局函数，
+  而不是某个藏在组件里的本地 mock（三站均用浏览器点过查询 / 分页 / 重置验证）。
+
+顺带收紧 eui 入口：原先 `$httpRequest` 在 `EsTable.methods` 与 `EsForm.methods` 里各写一份
+（两份实现重复），现合并成一个顶层 `httpRequest`（`/api/demo/*` 走本地 mock，其余地址仍交给
+原 axios 实例）。这不只是去重：注入的 `$esPlusTable.$httpRequest` 优先级**高于**全局，
+只要 `EsTable.methods.$httpRequest` 还在，「顶层 httpRequest 配了也不生效」就是 eui 独有的坑。
+
+同批修掉一个渲染缺陷：es-pc `OneLineCrud.vue` 的模板用了 `<PlusOutlined />` 但没 import，
+Vue 只打一条 `Failed to resolve component` 警告，按钮图标静默消失 —— 构建、守卫全绿都拦不住。
+
+覆盖边界：本案例证明「入口配置 → 组件零传参」，不覆盖 `import { httpRequest }` 自由函数
+（那是 AI 生成代码的入口，与 `resolveHttpRequest` 共用同一份实现）。
 
