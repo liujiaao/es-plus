@@ -284,10 +284,10 @@ export default {
       // 表格配置
       dataSource: [],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名' },
-        { key: 'department', label: '部门' },
-        { key: 'statusText', label: '状态' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名' },
+        { prop: 'department', label: '部门' },
+        { prop: 'statusText', label: '状态' }
       ],
       pagination: { current: 1, pageSize: 10, total: 0 },
       tableOpts: {
@@ -895,20 +895,20 @@ export default {
             <span class="code-lang">多级表头配置</span>
           </div>
           <pre v-pre><code>columns: [
-  { key: 'id', label: 'ID', width: 80 },
+  { prop: 'id', label: 'ID', width: 80 },
   {
     label: '个人信息',  // 父级表头
     groups: [
-      { key: 'name', label: '姓名' },
-      { key: 'age', label: '年龄' },
-      { key: 'gender', label: '性别' }
+      { prop: 'name', label: '姓名' },
+      { prop: 'age', label: '年龄' },
+      { prop: 'gender', label: '性别' }
     ]
   },
   {
     label: '工作信息',
     groups: [
-      { key: 'department', label: '部门' },
-      { key: 'position', label: '职位' }
+      { prop: 'department', label: '部门' },
+      { prop: 'position', label: '职位' }
     ]
   }
 ]</code></pre>
@@ -921,7 +921,7 @@ export default {
           </div>
           <pre v-pre><code>columns: [
   {
-    key: 'status', label: '状态',
+    prop: 'status', label: '状态',
     render: (h, { row }) => {
       const map = { '1': { type: 'success', text: '启用' }, '0': { type: 'info', text: '禁用' } }
       const item = map[row.status] || { type: 'info', text: '未知' }
@@ -929,7 +929,7 @@ export default {
     }
   },
   {
-    key: 'action', label: '操作', width: 200, fixed: 'right',
+    prop: 'action', label: '操作', width: 200, fixed: 'right',
     render: (h, { row }) => h('div', [
       h('el-button', { props: { type: 'text' }, on: { click: () => this.handleEdit(row) } }, '编辑'),
       h('el-button', { props: { type: 'text' }, on: { click: () => this.handleDelete(row) } }, '删除')

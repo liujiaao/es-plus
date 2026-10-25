@@ -12,6 +12,9 @@
  *   · 行内已有 `prop:` → 不是「用 key 代替 prop」，不管（API 表格的行数据就是这种）；
  *   · 其余（按钮 `{ name, key }`、弹窗注册 `key: 'xxxDialog'`）一律放过。
  *
+ * 扫描范围含 `views/`：快速上手与开发者指南里的代码块是**给人抄的**（`&lt;` 转义，
+ * 渲染成带高亮的样例）——只查 `examples/` 会让「文档教你写 key、示例写 prop」继续成立。
+ *
  * 用法：node scripts/check-eui-column-prop.mjs   → 0 = 干净；1 = 有 `key:` 列定义
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
@@ -19,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join, relative } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const DIR = join(ROOT, 'es-eui', 'src', 'examples')
+const DIRS = [join(ROOT, 'es-eui', 'src', 'examples'), join(ROOT, 'es-eui', 'src', 'views')]
 
 const collect = (dir, out = []) => {
   if (!existsSync(dir)) return out
@@ -33,7 +36,7 @@ const collect = (dir, out = []) => {
 
 function main() {
   const offenders = []
-  const files = collect(DIR)
+  const files = DIRS.flatMap((dir) => collect(dir))
   for (const abs of files) {
     const lines = readFileSync(abs, 'utf8').split(/\r?\n/)
     lines.forEach((line, i) => {
@@ -57,7 +60,7 @@ function main() {
   }
 
   if (offenders.length) {
-    console.error(`❌ es-eui 示例里有 ${offenders.length} 处列定义仍写 key:（应与另两端一致用 prop:）：`)
+    console.error(`❌ es-eui 的示例/文档样例里有 ${offenders.length} 处列定义仍写 key:（应与另两端一致用 prop:）：`)
     for (const o of offenders) console.error(`   ${o.file}:${o.line}  ${o.text}`)
     console.error(
       '\n适配层两种写法都认，但示例是三端对照的原料：同一份配置在 eui 写 key、另两端写 prop，\n' +
@@ -66,7 +69,7 @@ function main() {
     process.exit(1)
   }
 
-  console.log(`✅ es-eui 示例列定义统一用 prop:（扫描 ${files.length} 个 .vue）`)
+  console.log(`✅ es-eui 示例与文档样例的列定义统一用 prop:（扫描 ${files.length} 个 .vue）`)
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === join(process.argv[1])) main()

@@ -398,8 +398,8 @@ export default {
     return {
       // JSON 配置替代模板代码
       columns: [
-        { key: 'name', label: '用户名' },
-        { key: 'status', label: '状态' }
+        { prop: 'name', label: '用户名' },
+        { prop: 'status', label: '状态' }
       ],
       searchItems: [
         {
@@ -668,8 +668,8 @@ export default {
           title: '开始使用',
           code: `<es-table
   :columns="[
-        { key: 'name', label: '用户名' },
-        { key: 'status', label: '状态' }
+        { prop: 'name', label: '用户名' },
+        { prop: 'status', label: '状态' }
       ]"
   :options="{ 
     apiParams: { url: '/api/list' }

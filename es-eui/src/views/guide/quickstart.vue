@@ -400,11 +400,11 @@ export default {
         { name: '重置', key: 'rest', triggerEvent: true }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'username', label: '用户名', width: 150 },
-        { key: 'email', label: '邮箱', minWidth: 200 },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'username', label: '用户名', width: 150 },
+        { prop: 'email', label: '邮箱', minWidth: 200 },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => {
@@ -414,7 +414,7 @@ export default {
           }
         },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 150,
           fixed: 'right',
@@ -820,11 +820,11 @@ export default {
         { name: '重置', key: 'rest', triggerEvent: true }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'username', label: '用户名', width: 150 },
-        { key: 'email', label: '邮箱', minWidth: 200 },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'username', label: '用户名', width: 150 },
+        { prop: 'email', label: '邮箱', minWidth: 200 },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => {
@@ -834,7 +834,7 @@ export default {
           }
         },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 150,
           fixed: 'right',
