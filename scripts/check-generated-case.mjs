@@ -325,6 +325,19 @@ await check('权限开关先换权限、后重挂载（Vue3 用 sync watcher，V
   }
 })
 
+await check('离开页面恢复全局权限（权限是全局配置，不能泄漏到别的页面）', () => {
+  for (const host of HOSTS) {
+    const src = toLf(read(host.file))
+    // Vue3 宿主用 onUnmounted，Vue2 宿主用 beforeDestroy —— 两者都必须把 permission
+    // 恢复成「全放行」，否则关着审批开关离开本页时，approval:audit 的拒绝会跟着用户
+    // 走进之后访问的每一个页面（示例站是单页应用，全局配置活得比路由久）。
+    const restore =
+      /onUnmounted\(\(\) => configureEsPlus\(\{ permission: \(\) => true \}\)\)/.test(src) ||
+      /beforeDestroy\(\)\s*\{[\s\S]*?configureEsPlus\(\{ permission: \(\) => true \}\)/.test(src)
+    assert.ok(restore, `${host.file} 没有在卸载时恢复全局权限（离开页面后其他页面的按钮会被误拦）`)
+  }
+})
+
 await check(
   '响应字段契约：三站按各自后端口径取数（es-eui 有全局历史映射，宿主负责适配）',
   () => {

@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { EsCrudPage, configureEsPlus } from '@es-plus/vue3'
 // 单源：由 scripts/sync-cases.mjs 从 docs/cases/generated/ 分发，禁止手改
@@ -74,6 +74,12 @@ const mockHttp = createHttpRequest()
  */
 configureEsPlus({ permission: createPermission(withAudit.value) })
 watch(withAudit, (next) => configureEsPlus({ permission: createPermission(next) }), { flush: 'sync' })
+
+/**
+ * 权限是**全局**配置：离开本页必须恢复成「全放行」，否则关着审批开关离开时，
+ * `approval:audit` 的拒绝会泄漏到之后访问的每个页面（旗舰页有同样的 onUnmounted）。
+ */
+onUnmounted(() => configureEsPlus({ permission: () => true }))
 
 function refresh(message) {
   crudRef.value?.refresh?.()

@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { Modal, message } from 'ant-design-vue'
 import { EsCrudPage, configureEsPlus } from '@es-plus/adapter-antdv'
 // 单源：由 scripts/sync-cases.mjs 从 docs/cases/generated/ 分发，禁止手改
@@ -71,6 +71,12 @@ const mockHttp = createHttpRequest()
 // 权限是宿主注入的（schema 里只有权限码）：开关 → 全局权限 → 重挂载（同旗舰页的时序约束）
 configureEsPlus({ permission: createPermission(withAudit.value) })
 watch(withAudit, (next) => configureEsPlus({ permission: createPermission(next) }), { flush: 'sync' })
+
+/**
+ * 权限是**全局**配置：离开本页必须恢复成「全放行」，否则关着审批开关离开时，
+ * `approval:audit` 的拒绝会泄漏到之后访问的每个页面（旗舰页有同样的 onUnmounted）。
+ */
+onUnmounted(() => configureEsPlus({ permission: () => true }))
 
 function refresh(text) {
   crudRef.value?.refresh?.()
