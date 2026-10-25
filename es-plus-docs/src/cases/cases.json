@@ -13,9 +13,9 @@
           "pain": "8 字段查询表单要写 70 行模板",
           "win": "一行配置一个字段",
           "links": {
-            "vue3": "/components/es-form",
-            "antdv": "/es-form",
-            "vue2": "/component/esform"
+            "vue3": "/components/es-form#demo-basic",
+            "antdv": "/es-form#basic",
+            "vue2": "/component/esform#demo-Basic"
           }
         },
         {
@@ -24,9 +24,9 @@
           "pain": "列 + 操作列 + 分页要写 60 行",
           "win": "列配置 + btns 操作列",
           "links": {
-            "vue3": "/components/es-table",
-            "antdv": "/es-table",
-            "vue2": "/component/estable"
+            "vue3": "/components/es-table#demo-basic",
+            "antdv": "/es-table#basic",
+            "vue2": "/component/estable#demo-Basic"
           }
         },
         {
@@ -35,9 +35,9 @@
           "pain": "模板声明弹窗要 45 行",
           "win": "useDialog() 函数调用",
           "links": {
-            "vue3": "/advanced/use-dialog",
-            "antdv": "/es-dialog",
-            "vue2": "/component/esdialog"
+            "vue3": "/advanced/use-dialog#demo-basic",
+            "antdv": "/es-dialog#basic",
+            "vue2": "/component/esdialog#demo-Basic"
           }
         }
       ]
@@ -53,9 +53,9 @@
           "pain": "原生「查询→重置→翻页」要 4 个事件函数，还易踩「拿最新表单值」的坑",
           "win": "EsForm 嵌套 EsTable + triggerEvent:true，0 行事件代码",
           "links": {
-            "vue3": "/advanced/linkage",
-            "antdv": "/advanced",
-            "vue2": "/component/combination"
+            "vue3": "/advanced/linkage#demo-zero-code-query",
+            "antdv": "/advanced#zero-code",
+            "vue2": "/component/combination#demo-QueryFormLinkage"
           },
           "note": "antdv 端指向 es-pc 的 /advanced（内嵌 es-advanced/ZeroCodeQuery.vue）"
         }
@@ -72,9 +72,9 @@
           "pain": "批量审核跨 3 页，原生切页就丢",
           "win": "cachePageSelection 一行",
           "links": {
-            "vue3": "/components/es-table",
-            "antdv": "/es-table",
-            "vue2": "/component/estable"
+            "vue3": "/components/es-table#demo-selection",
+            "antdv": "/es-table#selection",
+            "vue2": "/component/estable#demo-MultiSelect"
           }
         },
         {
@@ -83,10 +83,11 @@
           "pain": "分类接口拉取 + 字段联动",
           "win": "apiParams 拉选项 + 声明式 isHidden（纯 JSON，非回调）",
           "links": {
-            "vue3": "/components/es-form",
-            "antdv": "/es-form",
-            "vue2": "/component/esform"
-          }
+            "vue3": "/components/es-form#demo-declarative-linkage",
+            "antdv": "/es-form#declarative-linkage",
+            "vue2": "/component/esform#demo-DeclarativeLinkage"
+          },
+          "note": "落点选「报销单：零回调联动」：卡片的 win（声明式 isHidden / 纯 JSON，非回调）只有这个示例成立。远程下拉那半在「异步数据表单」（docs/pc）与「接口请求示例」（eui）里。"
         },
         {
           "id": 7,
@@ -94,10 +95,11 @@
           "pain": "5 个 BFF 协议各不同",
           "win": "configTableOut 递归映射",
           "links": {
-            "vue3": "/components/es-table",
-            "antdv": "/es-table",
-            "vue2": "/component/estable"
-          }
+            "vue3": "/components/es-table#demo-callback-pipeline",
+            "antdv": "/es-table#callback-pipeline",
+            "vue2": "/component/estable#demo-CustomHttp"
+          },
+          "note": "eui 端没有独立的「回调管线」示例，落到最接近的 CustomHttp（自定义 httpRequest + configTableOut 字段映射）。"
         },
         {
           "id": 8,
@@ -105,9 +107,9 @@
           "pain": "权限点改名要全工程替换",
           "win": "permission 声明式",
           "links": {
-            "vue3": "/guide/permission-i18n",
-            "antdv": "/guide",
-            "vue2": "/guide/configuration#permission"
+            "vue3": "/components/es-crud-page#demo-permission",
+            "antdv": "/es-crud-page#permission",
+            "vue2": "/component/combination#demo-PermissionButtons"
           }
         }
       ]
@@ -123,10 +125,11 @@
           "pain": "el-table 卡顿",
           "win": "engine:'vxe' 虚拟滚动",
           "links": {
-            "vue3": "/advanced/vxe-table",
-            "antdv": "/es-vxe-table",
-            "vue2": "/component/vxetable"
-          }
+            "vue3": "/advanced/vxe-table#demo-basic-switch",
+            "antdv": "/es-vxe-table#virtual-scroll",
+            "vue2": "/component/vxetable#demo-BasicSwitch"
+          },
+          "note": "eui 端没有独立的虚拟滚动示例，落到 BasicSwitch（引擎切换工作台：500 → 5 万行，5 万行只给 vxe）。"
         },
         {
           "id": 10,
@@ -134,9 +137,9 @@
           "pain": "表格内直接改 + 校验",
           "win": "vxe editConfig",
           "links": {
-            "vue3": "/advanced/vxe-table",
-            "antdv": "/es-vxe-table",
-            "vue2": "/component/vxetable"
+            "vue3": "/advanced/vxe-table#demo-cell-edit",
+            "antdv": "/es-vxe-table#inline-edit",
+            "vue2": "/component/vxetable#demo-CellEdit"
           }
         },
         {
@@ -145,9 +148,9 @@
           "pain": "层级 + 组头 + 复杂报表",
           "win": "engine:'vxe'",
           "links": {
-            "vue3": "/advanced/vxe-table",
-            "antdv": "/es-vxe-table",
-            "vue2": "/component/vxetable"
+            "vue3": "/advanced/vxe-table#demo-tree-data",
+            "antdv": "/es-vxe-table#tree-data",
+            "vue2": "/component/vxetable#demo-TreeData"
           }
         },
         {
@@ -156,9 +159,9 @@
           "pain": "增删改查全闭环",
           "win": "EsCrudPage / useDialog",
           "links": {
-            "vue3": "/components/es-crud-page",
-            "antdv": "/es-crud-page",
-            "vue2": "/component/escrudpage"
+            "vue3": "/components/es-crud-page#demo-full-business",
+            "antdv": "/es-crud-page#full-business",
+            "vue2": "/component/escrudpage#demo-Basic"
           }
         }
       ]
@@ -174,9 +177,9 @@
           "pain": "进度条 / 富文本 / 图片",
           "win": "render 逃生舱",
           "links": {
-            "vue3": "/components/es-table",
-            "antdv": "/es-table",
-            "vue2": "/component/estable"
+            "vue3": "/components/es-table#demo-custom",
+            "antdv": "/es-table#custom",
+            "vue2": "/component/estable#demo-RenderColumn"
           }
         },
         {
@@ -185,9 +188,9 @@
           "pain": "需要 UI 库没有的控件",
           "win": "render 自定义组件",
           "links": {
-            "vue3": "/components/es-form",
-            "antdv": "/es-form",
-            "vue2": "/component/esform"
+            "vue3": "/components/es-form#demo-custom-render",
+            "antdv": "/es-form#custom",
+            "vue2": "/component/esform#demo-CustomRender"
           }
         },
         {
@@ -197,7 +200,7 @@
           "win": "app.use(ESPlus,{...}) + Resolver + vxeConfig/vxeOn",
           "links": {
             "vue3": "/guide/usage",
-            "antdv": "/guide",
+            "antdv": "/guide#config",
             "vue2": "/guide/configuration"
           }
         }
