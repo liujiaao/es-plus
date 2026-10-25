@@ -124,10 +124,11 @@ describe('buildFirstClassGridOptions — 列宽/键盘/鼠标/剪贴板/校验',
     expect(result.mouseConfig).toBe(mc)
   })
 
-  it('clipboardConfig → 引用直传', () => {
-    const cb = { isCopy: true, isPaste: true }
-    const result = buildFirstClassGridOptions({ clipboardConfig: cb })
-    expect(result.clipboardConfig).toBe(cb)
+  // vxe 没有 clipboardConfig 这个属性（真名 clipConfig，且要区域选择模块才生效），
+  // 传进来必须被丢弃 —— 见 scripts/check-first-class-vxe-keys.mjs
+  it('clipboardConfig → 不输出（vxe 无此属性）', () => {
+    const result = buildFirstClassGridOptions({ clipboardConfig: { isCopy: true } })
+    expect(result).not.toHaveProperty('clipboardConfig')
   })
 
   it('validConfig → 引用直传', () => {

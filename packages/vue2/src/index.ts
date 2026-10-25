@@ -235,7 +235,6 @@ export type {
   VxeColumnConfig,
   VxeKeyboardConfig,
   VxeMouseConfig,
-  VxeClipboardConfig,
   VxeValidConfig,
   VxeFooterMethod,
   TableEngineExposed,

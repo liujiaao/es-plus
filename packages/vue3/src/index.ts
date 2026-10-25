@@ -105,7 +105,6 @@ export type {
   VxeColumnConfig,
   VxeKeyboardConfig,
   VxeMouseConfig,
-  VxeClipboardConfig,
   VxeValidConfig,
   VxeFooterMethod,
   VxeTreeConfig,

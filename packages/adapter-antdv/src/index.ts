@@ -102,7 +102,7 @@ export type {
   ModelData, RenderFn, AnyVNode, EsButtonType, EsButtonSize, EsTableSize,
   FormType, ConfigTableOut, ListenToCallBack, TableEngineExposed,
   VxeEditRender, VxeEditConfig, VxeExportConfig, VxeToolbarConfig, VxeColumnConfig,
-  VxeKeyboardConfig, VxeMouseConfig, VxeClipboardConfig, VxeValidConfig, VxeFooterMethod,
+  VxeKeyboardConfig, VxeMouseConfig, VxeValidConfig, VxeFooterMethod,
   VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig,
 } from '@es-plus/core'
 // 对齐 vue3：导出 CRUD 高级类型

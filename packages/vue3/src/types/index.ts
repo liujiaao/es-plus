@@ -10,7 +10,6 @@ import type {
   VxeColumnConfig,
   VxeKeyboardConfig,
   VxeMouseConfig,
-  VxeClipboardConfig,
   VxeValidConfig,
   VxeFooterMethod,
   VxeTreeConfig,
@@ -28,7 +27,6 @@ export type {
   VxeColumnConfig,
   VxeKeyboardConfig,
   VxeMouseConfig,
-  VxeClipboardConfig,
   VxeValidConfig,
   VxeFooterMethod,
   VxeTreeConfig,
@@ -400,8 +398,6 @@ export interface TableOptions {
   keyboardConfig?: VxeKeyboardConfig
   /** Cell click highlight mode (vxe engine only) */
   mouseConfig?: VxeMouseConfig
-  /** Clipboard copy/paste; requires mouseConfig.selected (vxe engine only) */
-  clipboardConfig?: VxeClipboardConfig
   /** Cell content validation (vxe engine only) */
   validConfig?: VxeValidConfig
   /** Tree data config; requires column.treeNode:true (vxe engine only) */

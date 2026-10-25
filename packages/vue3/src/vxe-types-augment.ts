@@ -13,7 +13,7 @@
  * ── 一等公民 API（无需此文件即有类型） ──────────────────────────────────────
  * showFooter / footerMethod / footerData / editConfig / exportConfig /
  * toolbarConfig / columnConfig / keyboardConfig / mouseConfig /
- * clipboardConfig / validConfig 已在 @es-plus/core 中定义完整类型，
+ * validConfig 已在 @es-plus/core 中定义完整类型，
  * 直接在 TableOptions 中使用即可获得 IntelliSense。
  *
  * column.editRender / column.footerFormatter 同样已在 @es-plus/core 中定义。

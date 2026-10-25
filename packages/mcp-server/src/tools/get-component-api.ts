@@ -219,7 +219,7 @@ interface VxeOnlyOptions {
   proxyConfig?     // vxe owns the request + pager (EsTable hides its own pagination)
   expandConfig? seqConfig? spanMethod?
   showFooter? footerMethod? footerData?
-  keyboardConfig? mouseConfig? clipboardConfig? validConfig? printConfig?
+  keyboardConfig? mouseConfig? validConfig? printConfig?
 }
 \`\`\`
 

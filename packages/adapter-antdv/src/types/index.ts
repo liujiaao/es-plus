@@ -360,7 +360,6 @@ export interface TableOptions {
   columnConfig?: Record<string, unknown>
   keyboardConfig?: Record<string, unknown>
   mouseConfig?: Record<string, unknown>
-  clipboardConfig?: Record<string, unknown>
   validConfig?: Record<string, unknown>
   [key: string]: unknown
 }

@@ -149,7 +149,7 @@
 | 全局 `permission` / `httpRequest` | `core/config.ts` | ✅ | 权限有，全局请求无 | 纯 JSON schema 落地的关键 |
 | `mergeConfig` | 三端表格 | ✅ | 3 | 可并入旗舰 |
 | `printConfig` | `vxe-print.ts` | ✅ | 11 | 覆盖足够 |
-| `clipboardConfig` | 表格 | ✅ | 0（pc 1 处 API 表） | 缺示例 |
+| ~~`clipboardConfig`~~ | **无** —— vxe 里没有这个属性 | ❌ | — | **幻影字段，已删**（见 §11.4 R8）：真名 `clipConfig`，且要区域选择模块才生效 |
 | `listenToCallBack` | 表格 | ✅ | 16 | 有，但未用于"跨组件刷新"叙事 |
 | `entryQuery` | 表格 | ✅ | 2 | 有，粒度偏小 |
 | `EsErrorBoundary` | `vue3/src/index.ts:14` | ✅ | **0** | 组件隐身 |
@@ -339,13 +339,13 @@ npm run -s check:site-api-drift
 | R6 | §8 验收写「示例目录 console.log 计数为 0（白名单除外）」，但**没有任何守卫** | 于是 `vxe-table/EscapeHatch.vue` 的 `console.log('[vxeOn sort-change]')` 一直活着 —— 而且它是**死代码**：没有任何列声明 `sortable`，`sort-change` 根本不会触发 | 新增 `check:demo-residue`（322 个文件，3 条逐文件白名单）；`EscapeHatch` 给 ID/级别列加 `sortable`，排序与点选结果都渲染成页面上的 tag；`raw-sources` 重算 |
 | R7 | Cases 页的实测表与首页「减少 76.5%」并列出现，口径不同（整文件 vs 胶水代码）却不说明 | 观众会读成两个互相矛盾的数字 | 三条 Cases 页的 caveat 各加一句口径差异说明 |
 
-### 11.2 复核后仍未做的（P2，需要单独立项）
+### 11.2 复核后仍未做的（P2，需要单独立项）—— 2026-10-25 已全部结案
 
-| # | 项 | 规模 | 为什么不顺手做 |
+| # | 项 | 规模 | 结案方式 |
 | --- | --- | --- | --- |
-| D10 | 示例里的内联 `style`（`dialog/Advanced.vue` docs+pc 各 25 处、`eui/table/CrudEdgeCases.vue` 11、`eui/dialog/Confirm.vue` 10） | 71 处 | 纯观感；抽出 scoped class 会改动代码 tab 展示的字符数（`one-config-diff` 之外的自研口径不受影响，但 diff 噪音大），建议与下一次示例改版合并 |
-| D11 | `es-eui` 示例 66 个文件、544 处列定义仍写 `key:`，docs/pc 写 `prop:` | 544 处 | 三端都兼容（`column-item.vue` 双向映射），但「同一份配置三端跑」的示范性被削弱。批量替换属机械改动，需 `tri-render:check` / `check:parity` / 三站构建同时兜底，值得单独一批 |
-| D12 | `cases.json` 案例 4–15 的 `links` 仍指向组件文档首页，不是该案例所在的小节 | 45 条链接 + 三站 demo 锚点支持 | 三站**都没有** demo 级锚点：需给 `DemoBlock`/示例卡加 `id`，再让 `check:cases-links` 校验锚点（脚本已支持 `#anchor`，但 docs 站的动态路由仍需补「路径 → 组件文件」映射）。属于新能力，不是补漏 |
+| D10 ✅ | 示例里的内联 `style`（`dialog/Advanced.vue` docs+pc 各 25 处、`eui/table/CrudEdgeCases.vue` 11、`eui/dialog/Confirm.vue` 10） | 71 处 | 已抽成 scoped 样式块（`d535ae9`）；样式块放示例组件自己的 `<style scoped>`，代码 tab 展示的仍是原字符 |
+| D11 ✅ | `es-eui` 示例 66 个文件、544 处列定义仍写 `key:`，docs/pc 写 `prop:` | 544 处 | 示例 133 处（`f4efd03`）+ 本轮文档样例 26 处（`quickstart` / `EsEuiDeveloperGuide` / `home`）全部改 `prop:`，`check:eui-column-prop` 的扫描范围从 `examples/` 扩到 `views/` |
+| D12 ✅ | `cases.json` 案例 4–15 的 `links` 仍指向组件文档首页，不是该案例所在的小节 | 45 条链接 + 三站 demo 锚点支持 | 三站补齐 demo 级锚点（docs `demo-<key>` / es-pc 静态 `id` / eui `demo-<示例 key>`），`check:cases-links` 按四种锚点来源逐个校验；docs 站的惰性示例由 `hash-anchor.ts` 二次对准（`05492d5`、`1453450`、`a6e8c0a`） |
 
 ### 11.3 本轮新增守卫的边界（写清"不覆盖什么"）
 
@@ -354,3 +354,17 @@ npm run -s check:site-api-drift
   站点基础设施（`es-eui/src/utils/server/request.js`）不是示例，都不扫。
 - `f6-cost-examples.spec.ts` 只断言「两侧产出同一份可见结果」。新增对照场景时**必须**在这里补一组，
   否则新数字仍然只有编译兜底。
+- `check:first-class-vxe-keys` 只认 `build-grid-config.ts` 里 `opts.<key>` 的**直传字段**。走
+  `vxeConfig` 逃生舱的任意 vxe 配置不在其列（那本来就允许写上游才知道的键），
+  所以它挡的是「ES-Plus 自造 API」，不是「上游改版」。
+
+### 11.4 复核中新发现的幻影能力（2026-10-25）
+
+| # | 问题 | 证据 | 修法 |
+| --- | --- | --- | --- |
+| R8 | `TableOptions.clipboardConfig` 三端导出、文档写「Ctrl+C 复制 / Ctrl+V 粘贴，需先开启 mouseConfig.selected」，实际配了没反应 | vxe 的表属性叫 `clipConfig`（`table/src/props.js`），**没有** `clipboardConfig`；vxe-grid 只透传 `tableProps` 里声明过的键，其余进 `$attrs` 被丢弃 —— 浏览器里读 VxeGrid 实例可证：`'clipConfig' in props === true`、`'clipboardConfig' in props === false`。且 `clipConfig` 本身只在装了区域选择模块（`$xeTable.triggerCelllAreaMnEvent` 存在）时生效，免费栈会打 `vxe.error.notProp` | 删掉该字段与 `VxeClipboardConfig` 类型（三端 export / `types/index.ts` / MCP bundled / 四张 API 表 / 构建映射），`build-grid-config.ts` 留一条「刻意没有」的注释指向逃生舱 `vxeConfig.clipConfig`；新增 `check:first-class-vxe-keys` 对上游 props 断言（探针验证过：把字段加回去立刻红） |
+| R9 | 三处文案把 `mouseConfig.selected` 说成「框选（类 Excel）」 | 浏览器实测：点击单元格得 `col--selected` + 行 `row--current`，方向键能在单元格间移动 —— 是**单格选中**，不是区域框选（区域同样要给钱的模块）。`selected` 本身是好的，只是被吹大了 | 三站示例卡片 / API 表 / 正文统一改「点击选中单元格（方向键移动）」 |
+
+> 教训写进守卫注释：这类错误「名字只差两个字母、编译不报、测试不红」，唯一的确定性判据
+> 是拿上游的 props 列表对名字 —— 不是看名字像不像。
+

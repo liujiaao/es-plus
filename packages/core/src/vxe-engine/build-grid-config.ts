@@ -40,10 +40,12 @@ export function buildFirstClassGridOptions(
     result.columnConfig = { ...(opts.columnConfig as Record<string, unknown>) }
   }
 
-  // 键盘导航 / 单元格选中 / 剪贴板 / 校验（直传）
+  // 键盘导航 / 单元格选中 / 校验（直传）
+  // 刻意没有「剪贴板配置」：vxe 的表属性叫 clipConfig（不是 clipboardConfig），且仅在
+  // 装了区域选择模块（`$xeTable.triggerCelllAreaMnEvent` 存在）时才生效 —— 免费栈里
+  // 传了只会得到 notProp 警告。需要时走 `vxeConfig: { clipConfig }` 逃生舱。
   if (opts.keyboardConfig  !== undefined) result.keyboardConfig  = opts.keyboardConfig
   if (opts.mouseConfig     !== undefined) result.mouseConfig     = opts.mouseConfig
-  if (opts.clipboardConfig !== undefined) result.clipboardConfig = opts.clipboardConfig
   if (opts.validConfig     !== undefined) result.validConfig     = opts.validConfig
 
   // 显式 keepSource（可覆盖 editConfig 自动注入的 true；用户设 false 时取消跟踪）

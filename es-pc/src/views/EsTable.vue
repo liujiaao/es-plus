@@ -443,7 +443,6 @@ const tableOptions = [
   { key: '52', prop: 'columnConfig', type: 'object', default: '-', desc: 'vxe：列配置面板' },
   { key: '53', prop: 'keyboardConfig', type: 'object', default: '-', desc: 'vxe：键盘导航配置' },
   { key: '54', prop: 'mouseConfig', type: 'object', default: '-', desc: 'vxe：鼠标行为配置' },
-  { key: '55', prop: 'clipboardConfig', type: 'object', default: '-', desc: 'vxe：剪贴板配置' },
   { key: '56', prop: 'validConfig', type: 'object', default: '-', desc: 'vxe：校验提示配置' },
 ]
 </script>

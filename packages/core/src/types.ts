@@ -734,12 +734,6 @@ export interface VxeMouseConfig {
   selected?: boolean
 }
 
-/** 剪贴板配置 */
-export interface VxeClipboardConfig {
-  isCopy?: boolean
-  isPaste?: boolean
-}
-
 /** 单元格内容校验配置 */
 export interface VxeValidConfig {
   autoPos?: boolean
@@ -1013,17 +1007,11 @@ export interface TableOptions {
    */
   keyboardConfig?: VxeKeyboardConfig
   /**
-   * 单元格点击高亮选中模式
+   * 单元格点击高亮选中模式（点击单元格高亮，方向键可移动选中格）
    * @example
    * mouseConfig: { selected: true }
    */
   mouseConfig?: VxeMouseConfig
-  /**
-   * 剪贴板复制/粘贴（需配合 mouseConfig.selected 使用）
-   * @example
-   * mouseConfig: { selected: true }, clipboardConfig: { isCopy: true, isPaste: true }
-   */
-  clipboardConfig?: VxeClipboardConfig
   /**
    * 单元格内容校验（配合 column.editRender 的 rules 字段使用）
    * @example

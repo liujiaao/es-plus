@@ -4,7 +4,7 @@
       type="info"
       show-icon
       style="margin-bottom: 10px"
-      message="columnConfig.resizable 列宽拖拽；keyboardConfig 键盘导航（方向键移动）；mouseConfig 鼠标选中区域（类 Excel 体验）"
+      message="columnConfig.resizable 列宽拖拽；keyboardConfig 键盘导航（方向键移动）；mouseConfig 点击选中单元格（方向键移动）"
     />
     <es-table
       :columns="columns"

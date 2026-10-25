@@ -107,7 +107,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
       </CodeDemo>
 
       <h3 id="column-resize">列宽拖拽与键盘导航</h3>
-      <p><code>columnConfig.resizable</code> 列宽拖拽；<code>keyboardConfig</code> 方向键导航；<code>mouseConfig</code> 类 Excel 单元格选中。</p>
+      <p><code>columnConfig.resizable</code> 列宽拖拽；<code>keyboardConfig</code> 方向键导航；<code>mouseConfig</code> 点击选中单元格（方向键移动）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/ColumnResize.vue']">
         <EsVxeColumnResize />
       </CodeDemo>

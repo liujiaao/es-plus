@@ -439,12 +439,6 @@
           <td>-</td>
         </tr>
         <tr>
-          <td>clipboardConfig</td>
-          <td>vxe：剪贴板配置</td>
-          <td>Object</td>
-          <td>-</td>
-        </tr>
-        <tr>
           <td>validConfig</td>
           <td>vxe：校验提示配置</td>
           <td>Object</td>

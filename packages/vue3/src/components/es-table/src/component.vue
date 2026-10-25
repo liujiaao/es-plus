@@ -546,7 +546,7 @@ const TABLE_INTERNAL_KEYS = new Set([
   'vxeConfig', 'vxeOn',
   'showFooter', 'footerMethod', 'footerData',
   'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
-  'keyboardConfig', 'mouseConfig', 'clipboardConfig', 'validConfig',
+  'keyboardConfig', 'mouseConfig', 'validConfig',
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
   // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
   'mergeConfig',

@@ -317,7 +317,7 @@ export const vxeTableExamples = [
   { key: 'CellEdit', title: '单元格编辑', description: 'editConfig.mode:"cell" 单元格编辑，editRender $input/$select，getUpdateRecords 获取修改记录。' },
   { key: 'RowEdit', title: '行编辑与校验', description: 'editConfig.mode:"row" 整行编辑，vxeColumn.rules 校验规则，getInsertRecords/getRemoveRecords 获取变更。' },
   { key: 'ToolbarExport', title: '工具栏与导出', description: 'toolbarConfig 内置缩放/全屏/自定义列；exportConfig 导出 CSV；print 打印。' },
-  { key: 'ColumnResize', title: '列宽调整与键盘鼠标', description: 'columnConfig.resizable 拖拽调列宽；keyboardConfig 方向键导航；mouseConfig.selected 单元格选中（类 Excel）。' },
+  { key: 'ColumnResize', title: '列宽调整与键盘鼠标', description: 'columnConfig.resizable 拖拽调列宽；keyboardConfig 方向键导航；mouseConfig.selected 点击选中单元格。' },
   { key: 'TreeData', title: '树形数据', description: 'treeConfig.transform 自动将 { id, parentId } 扁平数组构造树形，expandAll/collapseAll 展开折叠。' },
   { key: 'ProxyConfig', title: 'proxyConfig 服务端分页', description: 'proxyConfig.ajax.query 接管请求，vxe 自管分页，EsForm 搜索触发 commitProxy("query") 重载。' },
   { key: 'FooterSummary', title: '汇总行 footerMethod', description: 'showFooter + footerMethod 动态计算合计行，随数据变化实时更新。' },

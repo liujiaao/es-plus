@@ -276,7 +276,6 @@ export const docsData: Record<string, any> = {
         { name: 'columnConfig', type: 'Object', default: '-', desc: 'vxe：列配置面板' },
         { name: 'keyboardConfig', type: 'Object', default: '-', desc: 'vxe：键盘导航配置' },
         { name: 'mouseConfig', type: 'Object', default: '-', desc: 'vxe：鼠标行为配置' },
-        { name: 'clipboardConfig', type: 'Object', default: '-', desc: 'vxe：剪贴板配置' },
         { name: 'validConfig', type: 'Object', default: '-', desc: 'vxe：校验提示配置' }
       ],
       events: [

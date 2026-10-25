@@ -83,7 +83,7 @@ describe('buildFirstClassGridOptions — 工具栏', () => {
   })
 })
 
-describe('buildFirstClassGridOptions — 列宽 / 键盘 / 鼠标 / 剪贴板 / 校验', () => {
+describe('buildFirstClassGridOptions — 列宽 / 键盘 / 鼠标 / 校验', () => {
   it('columnConfig → 浅拷贝输出（不影响原对象）', () => {
     const config = { resizable: true, minResizableWidth: 60 }
     const result = buildFirstClassGridOptions({ columnConfig: config })
@@ -91,20 +91,17 @@ describe('buildFirstClassGridOptions — 列宽 / 键盘 / 鼠标 / 剪贴板 / 
     expect(result.columnConfig).not.toBe(config)
   })
 
-  it('keyboardConfig / mouseConfig / clipboardConfig / validConfig → 引用直传', () => {
+  it('keyboardConfig / mouseConfig / validConfig → 引用直传', () => {
     const kb = { isArrow: true, isTab: true }
     const mc = { selected: true }
-    const cb = { isCopy: true, isPaste: true }
     const vc = { message: 'tooltip', autoPos: true }
     const result = buildFirstClassGridOptions({
       keyboardConfig: kb,
       mouseConfig: mc,
-      clipboardConfig: cb,
       validConfig: vc,
     })
     expect(result.keyboardConfig).toBe(kb)
     expect(result.mouseConfig).toBe(mc)
-    expect(result.clipboardConfig).toBe(cb)
     expect(result.validConfig).toBe(vc)
   })
 

@@ -94,7 +94,7 @@
           </tr>
           <tr>
             <td>columnConfig / keyboardConfig / mouseConfig</td>
-            <td>resizable 拖拽列宽；isArrow/isEnter/isTab 键盘导航；selected 单元格选中（类 Excel）</td>
+            <td>resizable 拖拽列宽；isArrow/isEnter/isTab 键盘导航；selected 点击选中单元格（方向键移动）</td>
             <td>Object</td>
           </tr>
           <tr>
