@@ -5826,8 +5826,7 @@ export default {
               reader.readAsDataURL(file)
               reader.onload = () => {
                 const base64Data = reader.result
-                const blob = this.dataURItoBlob(base64Data)
-                const blobUrl = URL.createObjectURL(blob)
+                const blobUrl = URL.createObjectURL(this.dataURItoBlob(base64Data))
 
                 const result = {
                   success: true,
@@ -5891,9 +5890,6 @@ export default {
         uint8Array[i] = byteString.charCodeAt(i)
       }
       return new Blob([arrayBuffer], { type: mimeString })
-    },
-    createBlobUrl(blob) {
-      return URL.createObjectURL(blob)
     }
   }
 }
@@ -6059,8 +6055,7 @@ export default {
               reader.readAsDataURL(file)
               reader.onload = () => {
                 const base64Data = reader.result
-                const blob = this.dataURItoBlob(base64Data)
-                const blobUrl = URL.createObjectURL(blob)
+                const blobUrl = URL.createObjectURL(this.dataURItoBlob(base64Data))
 
                 const result = {
                   success: true,
@@ -6124,9 +6119,6 @@ export default {
         uint8Array[i] = byteString.charCodeAt(i)
       }
       return new Blob([arrayBuffer], { type: mimeString })
-    },
-    createBlobUrl(blob) {
-      return URL.createObjectURL(blob)
     }
   }
 }

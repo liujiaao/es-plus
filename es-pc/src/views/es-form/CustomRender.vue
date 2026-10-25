@@ -10,8 +10,8 @@
 
 <script setup>
 import { EsForm } from '@es-plus/adapter-antdv'
-import { ref, reactive, h } from 'vue'
-import { message, Upload, Button, Slider, InputNumber, Rate, Transfer } from 'ant-design-vue'
+import { reactive, h } from 'vue'
+import { message, Upload, Slider, Rate, Transfer } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 
 const formModel = reactive({

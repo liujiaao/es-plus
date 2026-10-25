@@ -10,8 +10,8 @@
 
 <script setup>
 import { EsForm } from '@es-plus/vue3'
-import { ref, reactive, h } from 'vue'
-import { ElMessage, ElUpload, ElButton, ElIcon, ElSlider, ElColorPicker, ElInputNumber, ElRate, ElTransfer } from 'element-plus'
+import { reactive, h } from 'vue'
+import { ElMessage, ElUpload, ElIcon, ElSlider, ElColorPicker, ElRate, ElTransfer } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 
 const formModel = reactive({
