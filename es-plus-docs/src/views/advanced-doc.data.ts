@@ -149,7 +149,8 @@ export const docsData: Record<string, any> = {
       { key: 'virtual-table-custom-render', title: '虚拟表格自定义渲染', description: '虚拟模式 render/scopedSlots/ellipsis/formatter 四种自定义渲染方式完整兼容。', component: getComponent('advanced/21-virtual-table-custom-render'), code: code('advanced/21-virtual-table-custom-render') },
       { key: 'virtual-table-row-style', title: '虚拟表格行样式+事件', description: '虚拟模式 rowClassName（按数据上色）+ highlightCurrentRow 当前行 + @row-click / @row-dblclick 事件。', component: getComponent('advanced/22-virtual-table-row-style'), code: code('advanced/22-virtual-table-row-style') },
       { key: 'virtual-table-crud', title: '虚拟表格完整CRUD', description: '虚拟模式 EsForm+EsTable+useDialog 完整 CRUD 场景：查询筛选+新增编辑删除+批量操作。', component: getComponent('advanced/23-virtual-table-crud'), code: code('advanced/23-virtual-table-crud') },
-      { key: 'master-detail-flow', title: '主表点选 → 从表重查', description: '点订单行 → 从表按订单号重查（嵌套信封用 configTableOut 声明映射）；编辑明细 → 主表金额与「已修改」标记回写。listenToCallBack 只做响应加工，不是跨组件信号。', component: getComponent('advanced/24-master-detail-flow'), code: code('advanced/24-master-detail-flow') }
+      { key: 'master-detail-flow', title: '主表点选 → 从表重查', description: '点订单行 → 从表按订单号重查（嵌套信封用 configTableOut 声明映射）；编辑明细 → 主表金额与「已修改」标记回写。listenToCallBack 只做响应加工，不是跨组件信号。', component: getComponent('advanced/24-master-detail-flow'), code: code('advanced/24-master-detail-flow') },
+      { key: 'global-request', title: '全局请求：整页零请求代码', description: 'httpRequest 在站点入口 app.use(ESPlus, { httpRequest }) 配一次，查询表单 + 表格 + 分页只声明 apiParams：整份 schema 可 JSON 序列化，页面里没有一行请求代码。', component: getComponent('advanced/25-global-request'), code: code('advanced/25-global-request') }
     ]
   },
   'vxe-table': {
