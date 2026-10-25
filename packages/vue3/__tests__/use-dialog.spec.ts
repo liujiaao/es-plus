@@ -112,6 +112,43 @@ describe('useDialog - 生命周期', () => {
       expect(first).not.toHaveBeenCalled()
     })
 
+    // ─── 回归：本次**没传**的声明 prop 必须回到缺省值，不能沿用上一个弹窗的 ───
+    // 文档站「先开自定义头尾、再开全屏弹窗」时，第二个弹窗顶着第一个的头尾且不全屏，
+    // 根因就是复用路径只写本次传入的键。
+    it('单例复用：本次省略的 renderHeader / maxHeight / configBtn / width 不残留上一次的值', () => {
+      const dialog = useDialog()
+      const header = () => h('div', '自定义头')
+      const r1 = dialog({
+        title: '定制',
+        width: '700px',
+        maxHeight: '300px',
+        renderHeader: header,
+        configBtn: [{ name: '关闭' }],
+        render: () => h('div', '1'),
+      })
+      const r2 = dialog({ title: '普通', render: () => h('div', '2') })
+
+      expect(r2.instance).toBe(r1.instance) // 前提：确实复用了同一实例
+      const props = r2.instance.component.props
+      expect(props.title).toBe('普通')
+      expect(props.renderHeader).toBeUndefined()
+      expect(props.maxHeight).toBeUndefined()
+      expect(props.configBtn).toBeUndefined()
+      expect(props.width).toBe('50%') // 工厂缺省，而不是上一次的 700px
+    })
+
+    it('单例复用：上一次的 fullscreen 不残留到下一次', () => {
+      const dialog = useDialog()
+      const r1 = dialog({ title: '全屏', fullscreen: true, render: () => h('div', '1') })
+      // 复用会把同一个实例的 props 改掉，所以第一次的值要在第二次调用前读
+      expect(r1.instance.component.props.fullscreen).toBe(true)
+
+      const r2 = dialog({ title: '普通', render: () => h('div', '2') })
+
+      expect(r2.instance).toBe(r1.instance)
+      expect(r2.instance.component.props.fullscreen).toBe(false)
+    })
+
     it('calls onClosed callback when dialog closes', () => {
       const onClosed = vi.fn()
       const dialog = useDialog()

@@ -164,6 +164,17 @@ const renderBodyRefsObject = reactive<Record<string, any>>({})
 // fullscreen 是声明 prop（Vue 会把它从 attrs 摘走），文档语义为「初值」——
 // 对齐 vue2 `ref(!!props.fullscreen)` / antdv `ref(props.fullscreen || false)`。
 const isFullscreen = ref(!!props.fullscreen)
+
+// 但「初值」只在**每次调用**时定：useDialog 复用单例/cacheKey 实例时，
+// 本次调用的 fullscreen 是重新下发的 prop（省略的键会被复位到缺省值），
+// 而 isFullscreen 只在 setup 读过一次 —— 于是「先开任意弹窗、再开全屏弹窗」不全屏。
+// 用户点弹窗内的按钮改的是 isFullscreen 本身、不动 prop，因此这条 watcher 不会打架。
+watch(
+  () => props.fullscreen,
+  (val) => {
+    isFullscreen.value = !!val
+  }
+)
 const dialogInstance = instance
 const locale = ref(zhCn)
 
@@ -294,7 +305,12 @@ const runBeforeClose = (proceed: () => void) => {
 watch(
   () => props.visible,
   (val) => {
-    if (val) emit('open')
+    if (val) {
+      // 重新打开 = 一次新调用：全屏状态归位到本次的 fullscreen 初值
+      // （用户在弹窗里手动切换过全屏，残留到下一次打开就是错的）
+      isFullscreen.value = !!props.fullscreen
+      emit('open')
+    }
   }
 )
 

@@ -67,4 +67,32 @@ describe('EsDialog — fullscreen 选项', () => {
 
     expect(elDialogFullscreen(wrapper)).toBe(false)
   })
+
+  // ─── 回归：「初值」是**每次调用**的初值，不是进程内第一次的 ───
+  // useDialog 复用单例/cacheKey 实例时只改 props，而 isFullscreen 此前只在 setup 读过一次：
+  // 先开任意弹窗、再以 fullscreen:true 开第二个，第二个不会全屏（文档站可稳定复现）。
+  it('fullscreen prop 变化会真正切换全屏（复用实例时生效）', async () => {
+    const wrapper = await mountDialog({ fullscreen: false })
+    expect(elDialogFullscreen(wrapper)).toBe(false)
+
+    await wrapper.setProps({ fullscreen: true })
+    await nextTick()
+
+    expect(elDialogFullscreen(wrapper)).toBe(true)
+    expect(wrapper.find('.dg-dialog').classes()).toContain('dialogFull')
+  })
+
+  it('重新打开（visible 假→真）时全屏归位到本次的 fullscreen 初值', async () => {
+    const wrapper = await mountDialog({ fullscreen: true })
+    // 用户手动退出全屏（只改内部状态，不改 prop）
+    await wrapper.find('.btns .el-icon').trigger('click')
+    await nextTick()
+    expect(elDialogFullscreen(wrapper)).toBe(false)
+
+    await wrapper.setProps({ visible: false })
+    await wrapper.setProps({ visible: true })
+    await nextTick()
+
+    expect(elDialogFullscreen(wrapper)).toBe(true)
+  })
 })

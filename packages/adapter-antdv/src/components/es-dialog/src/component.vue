@@ -245,6 +245,23 @@ function onUpdateOpen(val: boolean) {
 
 // ─── 全屏 ───────────────────────────────────────────
 const isFullscreen = ref(props.fullscreen || false)
+// 「初值」只在**每次调用**时定：useDialog 复用单例/cacheKey 实例时，本次调用的
+// fullscreen 是重新下发的 prop（省略的键会被复位到缺省值），而 isFullscreen 只在
+// setup 读过一次 —— 于是「先开任意弹窗、再开全屏弹窗」不全屏（三端同病）。
+// 用户点弹窗内的按钮改的是 isFullscreen 本身、不动 prop，因此这两条 watcher 不会打架。
+watch(
+  () => props.fullscreen,
+  (val) => {
+    isFullscreen.value = !!val
+  }
+)
+watch(
+  () => props.visible,
+  (val) => {
+    // 重新打开 = 一次新调用：全屏状态归位到本次的 fullscreen 初值
+    if (val) isFullscreen.value = !!props.fullscreen
+  }
+)
 
 const modalWrapClass = computed(() => {
   const classes: string[] = []

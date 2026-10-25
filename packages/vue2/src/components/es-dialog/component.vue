@@ -166,6 +166,16 @@ export default defineComponent({
     const lyFormInstance = ref<unknown>(null)
     const renderBodyRefsObject = reactive<Record<string, unknown>>({})
     const isFullscreen = ref(!!props.fullscreen)
+    // 「初值」只在**每次调用**时定：useDialog 复用单例/cacheKey 实例时，本次调用的
+    // fullscreen 是重新下发的 prop（省略的键会被复位到缺省值），而 isFullscreen 只在
+    // setup 读过一次 —— 于是「先开任意弹窗、再开全屏弹窗」不全屏（三端同病）。
+    // 用户点弹窗内的按钮改的是 isFullscreen 本身、不动 prop，因此这条 watcher 不会打架。
+    watch(
+      () => props.fullscreen,
+      (val) => {
+        isFullscreen.value = !!val
+      }
+    )
     /**
      * appendTo：Element UI 2.x 的 el-dialog **只有布尔 `append-to-body`**，没有
      * 「选择器挂载点」能力（Element Plus 的 `appendTo`、antdv 的 `getContainer` 有）。
@@ -292,6 +302,9 @@ export default defineComponent({
       () => props.visible,
       (val) => {
         if (val) {
+          // 重新打开 = 一次新调用：全屏状态归位到本次的 fullscreen 初值
+          // （用户在弹窗里手动切换过全屏，残留到下一次打开就是错的）
+          isFullscreen.value = !!props.fullscreen
           emit('open')
           nextTick(() => {
             bindDragHandle()

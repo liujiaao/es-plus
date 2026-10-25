@@ -72,6 +72,34 @@ const applyPropsToVNode = (vNode: any, props: Record<string, unknown>) => {
   Object.assign(vNode.props, listeners)
 }
 
+/**
+ * 取组件「声明 props 的缺省值」快照，供单例复用前复位。
+ *
+ * 复用路径此前只把**本次调用传入**的键写进已挂载实例：本次省略的键
+ * （renderHeader / renderFooter / configBtn / maxHeight / width / fullscreen…）
+ * 会原样保留上一个弹窗的值 —— 先开「自定义头尾」再开普通弹窗，第二个会顶着第一个的头尾；
+ * 先开 700px 的、再开不传 width 的，宽度也留在 700px。文档站「先开任意弹窗、再开全屏弹窗
+ * 就不全屏」正是这条。cacheKey 路径早用 `baseProps` 做了同语义的回退，单例这条一直漏着。
+ */
+const propDefaultsOf = (componentType: any): Record<string, unknown> => {
+  const defs = (componentType && componentType.props) || {}
+  const out: Record<string, unknown> = {}
+  Object.keys(defs).forEach((key) => {
+    const def = defs[key]
+    if (def && typeof def === 'object' && 'default' in def) {
+      const types = Array.isArray(def.type) ? def.type : [def.type]
+      // 默认值写成工厂函数时（Object/Array）要调用取新值；Function 类型的 default 本身就是值
+      out[key] = typeof def.default === 'function' && !types.includes(Function) ? def.default() : def.default
+    } else {
+      // 无 default：Boolean 缺省 false，其余缺省 undefined（对齐 Vue 的 prop 解析规则）
+      const rawType = def && typeof def === 'object' ? def.type : def
+      const types = Array.isArray(rawType) ? rawType : [rawType]
+      out[key] = types.includes(Boolean) ? false : undefined
+    }
+  })
+  return out
+}
+
 const initInstance = (Component: any, props: DialogOptions, container: HTMLElement, appContext: any) => {
   const vNode = createVNode(Component, props)
 
@@ -328,7 +356,17 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         // 复用必须走 applyPropsToVNode（见其注释）：`onXxx` 只认 vNode.props，
         // 直接 Object.assign 到 component.props 的话，本次调用传的 onClosed 永远不生效，
         // 关闭时跑的仍是**第一次**那批回调（add 的回调在 edit 弹窗上触发）。
-        const nextProps = pickProps(dialogOptions as Record<string, unknown>)
+        //
+        // 以「组件缺省值」为底再叠本次 opts：本次省略的键必须回到缺省值，
+        // 而不是沿用上一个弹窗的（见 propDefaultsOf 的注释）。
+        // 中间两层是首次创建时的工厂缺省值（mergedOptions）：组件缺省不能盖掉工厂语义
+        // （如 antdv 组件的 destroyOnClose 缺省 false，useDialog 的语义是 true）。
+        const nextProps: Record<string, unknown> = {
+          ...propDefaultsOf(vNode.component.type),
+          width: '50%',
+          destroyOnClose: true,
+          ...pickProps(dialogOptions as Record<string, unknown>),
+        }
         const originalOnClosed = nextProps.onClosed as Function | undefined
         // 与首次创建同一条包装：手工 render 的 vNode 收不到父级 v-model 回写
         // `update:visible`，关闭动作要靠 close() 自己落 visible=false。

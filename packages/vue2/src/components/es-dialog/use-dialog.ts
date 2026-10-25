@@ -127,6 +127,33 @@ const splitProps = (
 }
 
 /**
+ * 取实例「声明 props 的缺省值」快照，供单例复用前复位（与 vue3 / antdv 同因同义）。
+ *
+ * 复用路径此前只把**本次调用传入**的键写进已挂载实例：本次省略的键
+ * （renderHeader / renderFooter / configBtn / maxHeight / width / fullscreen…）
+ * 会原样保留上一个弹窗的值 —— 先开「自定义头尾」再开普通弹窗，第二个会顶着第一个的头尾。
+ * cacheKey 路径早用 `__baseProps` 做了同语义的回退，单例这条一直漏着。
+ */
+const propDefaultsOf = (vm: any): Record<string, unknown> => {
+  const defs = (vm && vm.$options && vm.$options.props) || {}
+  const out: Record<string, unknown> = {}
+  Object.keys(defs).forEach((key) => {
+    const def = defs[key]
+    if (def && typeof def === 'object' && 'default' in def) {
+      const types = Array.isArray(def.type) ? def.type : [def.type]
+      // 默认值写成工厂函数时（Object/Array）要调用取新值；Function 类型的 default 本身就是值
+      out[key] = typeof def.default === 'function' && !types.includes(Function) ? def.default() : def.default
+    } else {
+      // 无 default：Boolean 缺省 false，其余缺省 undefined（对齐 Vue 的 prop 解析规则）
+      const rawType = def && typeof def === 'object' ? def.type : def
+      const types = Array.isArray(rawType) ? rawType : [rawType]
+      out[key] = types.includes(Boolean) ? false : undefined
+    }
+  })
+  return out
+}
+
+/**
  * 复用已存在实例时应用新 options：已声明 prop 直接写 vm[k]；
  * 未声明的透传属性汇入 vm.passThroughAttrs（若该组件声明了此 prop）。
  *
@@ -471,7 +498,16 @@ export function useDialog(Component?: any, opt: { onlyInstance?: boolean } = {})
         // 但**不能**直接下发用户的裸回调 —— 创建时套的包装里压着 destroyOnClose 的
         // 延迟销毁（见下方 mergedOptions.onClosed），覆盖掉它等于静默丢掉清理路径。
         // 这里按同一规则重新包一层，等价于「用本次 options 再创建一次」。
-        const nextProps = pickProps(dialogOptions as Record<string, unknown>)
+        //
+        // 以「组件缺省值」为底再叠本次 opts：本次省略的键必须回到缺省值，而不是沿用
+        // 上一个弹窗的（见 propDefaultsOf 的注释）。中间两层是首次创建时的工厂缺省值
+        // （mergedOptions）：本组件的 destroyOnClose 缺省是 false，useDialog 的语义是 true。
+        const nextProps: Record<string, unknown> = {
+          ...propDefaultsOf(reusedVm),
+          width: '50%',
+          destroyOnClose: true,
+          ...pickProps(dialogOptions as Record<string, unknown>),
+        }
         const originalOnClosed = nextProps.onClosed as Function | undefined
         nextProps.onClosed = (...args: unknown[]) => {
           originalOnClosed?.(...args)

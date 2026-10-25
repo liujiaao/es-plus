@@ -59,7 +59,7 @@ function createMockVm(extra: Record<string, any> = {}) {
       props: {
         title: {}, visible: {}, width: {}, destroyOnClose: {},
         appendTo: {}, loading: {}, maxHeight: {}, isDraggable: {},
-        configBtn: {}, render: {}, fullscreen: {},
+        configBtn: {}, render: {}, renderHeader: {}, fullscreen: {},
       },
     },
     visible: false,
@@ -185,6 +185,28 @@ describe('useDialog — 单例模式', () => {
 
     ;(vm as any).$emit('closed', true)
     expect(first).not.toHaveBeenCalled()
+  })
+
+  // ─── 回归：本次**没传**的声明 prop 必须回到缺省值，不能沿用上一个弹窗的 ───
+  // 文档站「先开自定义头尾、再开全屏弹窗」时第二个弹窗顶着第一个的头尾（三端同病），
+  // 根因就是复用路径只写本次传入的键。
+  it('单例复用：本次省略的 renderHeader / maxHeight / configBtn / width 不残留上一次的值', () => {
+    const dialog = useDialog()
+    const header = () => 'h'
+    dialog({
+      width: '700px',
+      maxHeight: '300px',
+      renderHeader: header,
+      configBtn: [{ name: '关闭' }],
+    } as any)
+    dialog({ title: '普通' } as any)
+
+    expect((vm as any).title).toBe('普通')
+    expect((vm as any).renderHeader).toBeUndefined()
+    expect((vm as any).maxHeight).toBeUndefined()
+    expect((vm as any).configBtn).toBeUndefined()
+    expect((vm as any).width).toBe('50%') // 工厂缺省，而不是上一次的 700px
+    expect((vm as any).destroyOnClose).toBe(true) // 工厂缺省不能被组件缺省（false）盖掉
   })
 
   it('默认 propsData 包含 visible:true, width:"50%", destroyOnClose:true', () => {
