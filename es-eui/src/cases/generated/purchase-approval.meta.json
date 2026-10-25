@@ -1,0 +1,15 @@
+{
+  "id": "purchase-approval",
+  "title": "采购申请审批页",
+  "nl": "做一个采购申请列表页：查询区有申请单号和状态（待审批/已通过/已驳回）。列表展示申请单号、申请人、金额、状态、申请时间；状态列用中文标签并带颜色；工具栏左侧有一个「新增」按钮，点击打开新增弹窗；操作列「查看」打开采购申请详情弹窗，「驳回」「通过」两个按钮需要审批权限 approval:audit。新增弹窗包含申请单号、申请人、金额、状态、驳回原因；申请单号、申请人、金额必填；驳回原因仅当状态选择「已驳回」时显示且必填。",
+  "generator": "es-plus create --ai",
+  "command": "ESPLUS_AI_MODEL=deepseek-v4-flash node packages/cli/build/index.js create purchase-approval -d \"<上方 nl>\" --ai -m schema",
+  "model": "deepseek-v4-flash",
+  "endpoint": "Anthropic Messages 兼容中继（仓库不保存地址与密钥）",
+  "generatedAt": "2026-10-25",
+  "attempts": 1,
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "note": "生成器不绑定模型：ESPLUS_AI_MODEL 可指向任意 Anthropic Messages 兼容模型；模型只产出 StructuredCrudConfig，schema / 包装 SFC 由确定性生成器写出。产物未经手工修改。"
+}

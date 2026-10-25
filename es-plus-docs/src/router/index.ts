@@ -25,6 +25,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/FlagshipApproval.vue')
   },
   {
+    // F7「一句话 → 页面」：整页由 docs/cases/generated/purchase-approval.json 驱动 ——
+    // AI 生成、未经手工修改的纯 JSON，三站加载同一份字节
+    path: '/ai-generated',
+    name: 'ai-generated',
+    component: () => import('@/views/AiGenerated.vue')
+  },
+  {
     path: '/guide/:name',
     name: 'guide',
     component: () => import('@/views/Doc.vue')

@@ -1,0 +1,368 @@
+{
+  "formItems": [
+    {
+      "prop": "applyNo",
+      "label": "申请单号",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "status",
+      "label": "状态",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      },
+      "dataOptions": [
+        {
+          "label": "待审批",
+          "value": "pending",
+          "tagType": "warning"
+        },
+        {
+          "label": "已通过",
+          "value": "approved",
+          "tagType": "success"
+        },
+        {
+          "label": "已驳回",
+          "value": "rejected",
+          "tagType": "danger"
+        }
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "prop": "applyNo",
+      "label": "申请单号"
+    },
+    {
+      "prop": "applicant",
+      "label": "申请人"
+    },
+    {
+      "prop": "amount",
+      "label": "金额"
+    },
+    {
+      "prop": "status",
+      "label": "状态",
+      "dataOptions": [
+        {
+          "label": "待审批",
+          "value": "pending",
+          "tagType": "warning"
+        },
+        {
+          "label": "已通过",
+          "value": "approved",
+          "tagType": "success"
+        },
+        {
+          "label": "已驳回",
+          "value": "rejected",
+          "tagType": "danger"
+        }
+      ]
+    },
+    {
+      "prop": "applyTime",
+      "label": "申请时间"
+    }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "highlightCurrentRow": true,
+    "headerCellStyle": {
+      "background": "#f5f7fa"
+    },
+    "apiParams": {
+      "url": "/api/purchase-applies"
+    },
+    "rowkey": "id"
+  },
+  "toolbarBtns": [
+    {
+      "name": "新增",
+      "type": "primary",
+      "position": "left",
+      "dialogKey": "add",
+      "code": 1
+    }
+  ],
+  "operationColumn": {
+    "label": "操作",
+    "btns": [
+      {
+        "name": "查看",
+        "dialogKey": "view"
+      },
+      {
+        "name": "驳回",
+        "permissionValue": "approval:audit"
+      },
+      {
+        "name": "通过",
+        "permissionValue": "approval:audit"
+      }
+    ]
+  },
+  "dialogs": {
+    "add": {
+      "title": "新增采购申请",
+      "formItems": [
+        {
+          "prop": "applyNo",
+          "label": "申请单号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入申请单号",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "applicant",
+          "label": "申请人",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入申请人",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "amount",
+          "label": "金额",
+          "formtype": "InputNumber",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入金额",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "dataOptions": [
+            {
+              "label": "待审批",
+              "value": "pending",
+              "tagType": "warning"
+            },
+            {
+              "label": "已通过",
+              "value": "approved",
+              "tagType": "success"
+            },
+            {
+              "label": "已驳回",
+              "value": "rejected",
+              "tagType": "danger"
+            }
+          ]
+        },
+        {
+          "prop": "rejectReason",
+          "label": "驳回原因",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "type": "textarea"
+          },
+          "isHidden": {
+            "field": "status",
+            "op": "ne",
+            "value": "rejected"
+          },
+          "reactions": [
+            {
+              "dependencies": [
+                "status"
+              ],
+              "fulfill": {
+                "required": {
+                  "==": [
+                    {
+                      "var": "status"
+                    },
+                    "rejected"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "view": {
+      "title": "采购申请详情",
+      "formItems": [
+        {
+          "prop": "applyNo",
+          "label": "申请单号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入申请单号",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "applicant",
+          "label": "申请人",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入申请人",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "amount",
+          "label": "金额",
+          "formtype": "InputNumber",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入金额",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "dataOptions": [
+            {
+              "label": "待审批",
+              "value": "pending",
+              "tagType": "warning"
+            },
+            {
+              "label": "已通过",
+              "value": "approved",
+              "tagType": "success"
+            },
+            {
+              "label": "已驳回",
+              "value": "rejected",
+              "tagType": "danger"
+            }
+          ]
+        },
+        {
+          "prop": "applyTime",
+          "label": "申请时间",
+          "formtype": "DatePicker",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "rejectReason",
+          "label": "驳回原因",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "type": "textarea"
+          },
+          "isHidden": {
+            "field": "status",
+            "op": "ne",
+            "value": "rejected"
+          },
+          "reactions": [
+            {
+              "dependencies": [
+                "status"
+              ],
+              "fulfill": {
+                "required": {
+                  "==": [
+                    {
+                      "var": "status"
+                    },
+                    "rejected"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "actions": [
+    "add",
+    "view"
+  ],
+  "pagination": {
+    "pageSize": 10
+  }
+}

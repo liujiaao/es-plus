@@ -64,6 +64,12 @@
             <router-link to="/flagship-approval" class="menu-link">旗舰案例 · 合同审批</router-link>
           </a-menu-item>
 
+          <!-- 一句话生成的产物页：模型只写 schema，三站加载同一份字节 -->
+          <a-menu-item key="ai-generated">
+            <template #icon><RobotOutlined /></template>
+            <router-link to="/ai-generated" class="menu-link">AI 生成 · 一句话成页</router-link>
+          </a-menu-item>
+
           <!-- 快速上手 -->
           <a-menu-item key="guide">
             <template #icon><RocketOutlined /></template>
@@ -171,6 +177,7 @@ const routeNameToMenuKey = (name) => {
     'QuickStart': 'quickstart',
     'Cases': 'cases',
     'FlagshipApproval': 'flagship-approval',
+    'AiGenerated': 'ai-generated',
     'Guide': 'guide',
     'EsForm': 'es-form',
     'EsTable': 'es-table',

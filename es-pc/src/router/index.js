@@ -21,6 +21,14 @@ const routes = [
         meta: { title: '旗舰案例：合同审批工作台' },
         component: () => import('@/views/FlagshipApproval.vue'),
       },
+      {
+        // F7「一句话 → 页面」：整页由 docs/cases/generated/purchase-approval.json 驱动 ——
+        // AI 生成、未经手工修改的纯 JSON，三站加载同一份字节
+        path: 'ai-generated',
+        name: 'AiGenerated',
+        meta: { title: '一句话生成：采购申请审批页' },
+        component: () => import('@/views/AiGenerated.vue'),
+      },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
       {
         path: 'es-form',

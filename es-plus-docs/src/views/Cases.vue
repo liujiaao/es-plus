@@ -10,17 +10,33 @@
 
     <!-- 旗舰案例：单个组件案例讲「一个能力」，这一页讲它们串成完整业务闭环。
          放在梯度之前 —— 它是三站对照「一份 JSON 三端跑」最直观的入口。 -->
-    <router-link to="/flagship-approval" class="flagship-cta">
-      <span class="flagship-cta-badge">旗舰案例</span>
-      <span class="flagship-cta-body">
-        <span class="flagship-cta-title">合同审批工作台：一份纯 JSON 驱动的完整审批闭环</span>
-        <span class="flagship-cta-desc">
-          查询联动 · 跨页勾选 · 批量审批 · 行级/列级权限 · 审批详情与驳回 —— 三端加载同一份
-          schema（0 个函数），请求与权限由宿主注入
+    <div class="cta-stack">
+      <router-link to="/flagship-approval" class="flagship-cta">
+        <span class="flagship-cta-badge">旗舰案例</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">合同审批工作台：一份纯 JSON 驱动的完整审批闭环</span>
+          <span class="flagship-cta-desc">
+            查询联动 · 跨页勾选 · 批量审批 · 行级/列级权限 · 审批详情与驳回 —— 三端加载同一份
+            schema（0 个函数），请求与权限由宿主注入
+          </span>
         </span>
-      </span>
-      <span class="flagship-cta-arrow">→</span>
-    </router-link>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
+
+      <!-- 一句话生成的产物页：旗舰页证明「手写 JSON 三端跑」，这一页证明「AI 写的 JSON
+           也直接能跑」—— 同一套渲染器、同样的 0 个函数。 -->
+      <router-link to="/ai-generated" class="flagship-cta ai-cta">
+        <span class="flagship-cta-badge ai-cta-badge">AI 生成</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">一句话 → 采购申请审批页：生成产物未经手工修改</span>
+          <span class="flagship-cta-desc">
+            条件必填（reactions）· 行按钮权限（permissionValue）· 操作列 · 码值标签（dataOptions）
+            —— 模型只写 schema，宿主只注入请求与权限
+          </span>
+        </span>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
+    </div>
 
     <section v-for="level in levels" :key="level.id" class="level">
       <div class="level-header">
@@ -100,12 +116,18 @@ const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n
   margin-bottom: 40px;
 }
 
+.cta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 8px 0 32px;
+}
+
 .flagship-cta {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px 22px;
-  margin: 8px 0 32px;
   border: 1px solid var(--primary-color-light);
   border-radius: 12px;
   background: linear-gradient(135deg, var(--primary-color-light), transparent 60%);
@@ -125,6 +147,11 @@ const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n
   font-size: 12px;
   color: #fff;
   background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
+}
+
+/* AI 产物页与旗舰页视觉同构，只换徽章色：一眼能看出「同一件事的两种来源」。 */
+.ai-cta-badge {
+  background: linear-gradient(135deg, #6f42c1, #a855f7);
 }
 
 .flagship-cta-body {

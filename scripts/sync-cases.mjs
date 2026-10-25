@@ -2,13 +2,16 @@
 /**
  * 案例目录单源同步：`docs/cases/` 为权威源，分发到三个文档站点。
  *
- * 两份单源：
+ * 三份单源：
  *   1. `cases.json` 承载 L1–L5 案例梯度（docs/internal/改造三端站点.md §3.2）——
  *      15 个案例的痛点/解法/链接，三站「核心案例」页从各自 src/cases/cases.json 读取；
  *   2. `flagship-approval.json` + `flagship-approval.mock.js` 是旗舰案例「合同审批工作台」：
  *      前者是整页的 **CrudPageSchema（纯 JSON、0 个函数）**，后者是它所依赖的 mock 后端
  *      （数据 + httpRequest + 角色权限表）。三站宿主页只有几十行，加载的却是**同一份字节**——
  *      「一份 JSON 三端跑」这条头号卖点因此可 diff、可下载、可断言。
+ *   3. `generated/purchase-approval.{json,meta.json,mock.js}` 是 F7「一句话 → 页面」的
+ *      **AI 生成产物**：schema 逐字节保存模型产出（未手工修改），meta 记录 NL / 命令 /
+ *      模型 / 时间，mock 是宿主侧数据与权限。三站同样加载同一份字节。
  *
  * 用法：
  *   node scripts/sync-cases.mjs           # 同步：拷贝单源到各站点
@@ -31,10 +34,17 @@ const SITES = [
 ]
 
 /** 单源文件 → 站点副本（同名，放在各自 src/cases/ 下）。 */
-const SOURCES = ['cases.json', 'flagship-approval.json', 'flagship-approval.mock.js'].map((name) => ({
-  source: join(ROOT, 'docs', 'cases', name),
-  targets: SITES.map((dir) => join(dir, name)),
-}))
+const SOURCES = [
+  ...['cases.json', 'flagship-approval.json', 'flagship-approval.mock.js'].map((name) => ({
+    source: join(ROOT, 'docs', 'cases', name),
+    targets: SITES.map((dir) => join(dir, name)),
+  })),
+  // F7 生成产物放 src/cases/generated/，与手写案例目录分开
+  ...['purchase-approval.json', 'purchase-approval.meta.json', 'purchase-approval.mock.js'].map((name) => ({
+    source: join(ROOT, 'docs', 'cases', 'generated', name),
+    targets: SITES.map((dir) => join(dir, 'generated', name)),
+  })),
+]
 
 const CHECK = process.argv.includes('--check')
 

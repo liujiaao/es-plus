@@ -57,6 +57,7 @@ const sections = [
     items: [
       { path: '/cases', labelKey: 'sidebar.cases', icon: markRaw(Collection) },
       { path: '/flagship-approval', labelKey: 'sidebar.flagship', icon: markRaw(StarFilled) },
+      { path: '/ai-generated', labelKey: 'sidebar.aiGenerated', icon: markRaw(MagicStick) },
       { path: '/advanced/use-dialog', labelKey: 'sidebar.useDialog', icon: markRaw(ChatDotRound) },
       { path: '/advanced/linkage', labelKey: 'sidebar.linkage', icon: markRaw(Connection) },
     ],
