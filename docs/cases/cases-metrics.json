@@ -52,9 +52,17 @@
     }
   ],
   "totals": {
-    "files": 279,
-    "events": 8,
-    "functions": 9,
-    "vIf": 5
+    "native": {
+      "lines": 159,
+      "events": 7,
+      "functions": 7,
+      "vIf": 5
+    },
+    "es": {
+      "lines": 120,
+      "events": 1,
+      "functions": 2,
+      "vIf": 0
+    }
   }
 }

@@ -158,8 +158,15 @@ function main() {
     }
   })
 
-  const sum = (key) =>
-    scenarios.reduce((acc, s) => acc + s.native[key] + s.es[key], 0)
+  // 汇总按「侧」分开累计：把两侧相加得到的是一个没有含义的数（原生 123 + es 77 = 200
+  // 说明不了任何事）。keys 与 scenarios[].native / .es 完全一致，读的人不用再猜。
+  const sumSide = (side, key) => scenarios.reduce((acc, s) => acc + s[side][key], 0)
+  const sideTotals = (side) => ({
+    lines: sumSide(side, 'lines'),
+    events: sumSide(side, 'events'),
+    functions: sumSide(side, 'functions'),
+    vIf: sumSide(side, 'vIf'),
+  })
 
   const out = {
     $comment:
@@ -167,7 +174,7 @@ function main() {
     method:
       '同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。',
     scenarios,
-    totals: { files: sum('lines'), events: sum('events'), functions: sum('functions'), vIf: sum('vIf') },
+    totals: { native: sideTotals('native'), es: sideTotals('es') },
   }
 
   const text = `${JSON.stringify(out, null, 2)}\n`
