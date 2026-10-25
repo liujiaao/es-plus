@@ -24,6 +24,7 @@
       <CodePlayground
         v-for="ex in vxeTableExamples"
         :key="ex.key"
+        :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('vxe-table', ex.key)"

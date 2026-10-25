@@ -25,6 +25,7 @@
       <CodePlayground
         v-for="ex in formExamples"
         :key="ex.key"
+        :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('form', ex.key)"

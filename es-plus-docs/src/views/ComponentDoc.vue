@@ -45,13 +45,19 @@
             {{ t('advancedDoc.crossNote') }}
           </p>
           <div class="examples-list">
+            <!--
+              :id 让每个示例有自己的落点（/components/es-table#demo-selection）。
+              锚点名由 examples[].key 决定，check:cases-links 按同一规则从
+              component-doc.data.ts 反查——改 key 会让案例卡的链接失效，那是**故意的**。
+            -->
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
               :key="index"
+              :id="'demo-' + example.key"
               :title="example.title"
               :description="example.description"
               :code="example.code"
-              :level="levelOf(index, currentDoc.examples.length)"
+              :level="levelOf(Number(index), currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -127,11 +133,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
+import { realignToHash } from '@/utils/hash-anchor'
 import { docsData as rawDocsData } from './component-doc.data'
 
 const { t } = useI18n()
@@ -225,9 +232,18 @@ const updateNav = () => {
 
 watch(() => route.params.name, updateNav, { immediate: true })
 
-onMounted(() => {
-  // hljs highlighting handled by CodePlayground component
-})
+// 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
+// 这里盯到内容长完为止（用户一动手就让位）
+let stopRealign = () => {}
+watch(
+  () => route.hash,
+  (hash) => {
+    stopRealign()
+    stopRealign = realignToHash(String(hash || ''))
+  },
+)
+onMounted(() => { stopRealign = realignToHash(String(route.hash || '')) })
+onBeforeUnmount(() => stopRealign())
 </script>
 
 <style lang="scss" scoped>

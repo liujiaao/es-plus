@@ -24,6 +24,7 @@
       <CodePlayground
         v-for="ex in tableExamples"
         :key="ex.key"
+        :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('table', ex.key)"

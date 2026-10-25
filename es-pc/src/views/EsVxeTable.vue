@@ -34,103 +34,103 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
     <section id="examples">
       <h2>📝 案例</h2>
 
-      <h3>引擎切换工作台：500 → 5 万行</h3>
+      <h3 id="engine-switch">引擎切换工作台：500 → 5 万行</h3>
       <p>同一份工单数据现场切换 <code>a-table</code> / <code>vxe-grid</code>：实测渲染耗时与表体 DOM 行数；勾选、排序、列宽写在配置里随引擎保留；5 万行只给 vxe —— <code>engine</code> 是可观测的能力上限，不是架构二选一。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/Basic.vue']">
         <EsVxeBasic />
       </CodeDemo>
 
-      <h3>排序与格式化</h3>
+      <h3 id="sort-formatter">排序与格式化</h3>
       <p><code>sortable</code> 列头排序；<code>formatter</code> 格式化显示；<code>vxeColumn.formatter</code> 走 vxe 原生格式化。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/SortFormatter.vue']">
         <EsVxeSortFormatter />
       </CodeDemo>
 
-      <h3>自定义渲染</h3>
+      <h3 id="custom-render">自定义渲染</h3>
       <p><code>render(h, { value, row })</code> 与默认引擎一致的 render 函数 API，vxe 引擎自动桥接透传（Tag / Progress / Avatar）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/CustomRender.vue']">
         <EsVxeCustomRender />
       </CodeDemo>
 
-      <h3>行内编辑（单元格）</h3>
+      <h3 id="inline-edit">行内编辑（单元格）</h3>
       <p><code>editConfig</code> 配置单元格内直接改数据，<code>getUpdateRecords()</code> 取回改动。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/InlineEdit.vue']">
         <EsVxeInlineEdit />
       </CodeDemo>
 
-      <h3>行编辑与校验</h3>
+      <h3 id="row-edit">行编辑与校验</h3>
       <p><code>editConfig.mode: 'row'</code> 整行编辑 + <code>vxeColumn.rules</code> 校验；<code>insertAt/remove/getUpdateRecords/revertData</code> 批量增删改。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/RowEdit.vue']">
         <EsVxeRowEdit />
       </CodeDemo>
 
-      <h3>多选与序号列</h3>
+      <h3 id="selection-index">多选与序号列</h3>
       <p><code>type: 'selection'</code> 复选框列 + <code>type: 'index'</code> 序号列，<code>getSelectionRows()</code> 获取选中。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/Selection.vue']">
         <EsVxeSelection />
       </CodeDemo>
 
-      <h3>展开行</h3>
+      <h3 id="expand-row">展开行</h3>
       <p><code>type: 'expand'</code> 展开行，<code>render</code> 自定义展开区内容，<code>expandConfig.trigger</code> 控制触发方式。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/ExpandRow.vue']">
         <EsVxeExpandRow />
       </CodeDemo>
 
-      <h3>树形数据</h3>
+      <h3 id="tree-data">树形数据</h3>
       <p><code>treeConfig.transform</code> 将扁平数据自动构造成树形，<code>setAllTreeExpand</code> 展开/折叠。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/TreeData.vue']">
         <EsVxeTreeData />
       </CodeDemo>
 
-      <h3>多级表头</h3>
+      <h3 id="groups-header">多级表头</h3>
       <p><code>groups</code> 将列分组，形成多级表头（组头 + 子列）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/GroupsHeader.vue']">
         <EsVxeGroupsHeader />
       </CodeDemo>
 
-      <h3>合并单元格（企业级）</h3>
+      <h3 id="merge-cells">合并单元格（企业级）</h3>
       <p>两级分组表头 + <code>spanMethod</code> 动态行合并 + <code>vxeConfig.mergeFooterItems</code> 表尾合并，可编辑实时重算达成率；<code>patchHtmlRowSpans</code> 修正合并单元格分页打印（表头每页重复）。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/MergeCells.vue']">
         <EsVxeMergeCells />
       </CodeDemo>
 
-      <h3>表尾合计</h3>
+      <h3 id="footer-summary">表尾合计</h3>
       <p><code>showFooter + footerMethod</code> 汇总行，配合动态数据实时更新合计值。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/FooterSummary.vue']">
         <EsVxeFooterSummary />
       </CodeDemo>
 
-      <h3>工具栏与导出</h3>
+      <h3 id="toolbar-export">工具栏与导出</h3>
       <p><code>toolbarConfig</code> 内置缩放/全屏/导出；<code>exportConfig</code> 导出 CSV。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/ToolbarExport.vue']">
         <EsVxeToolbarExport />
       </CodeDemo>
 
-      <h3>列宽拖拽与键盘导航</h3>
+      <h3 id="column-resize">列宽拖拽与键盘导航</h3>
       <p><code>columnConfig.resizable</code> 列宽拖拽；<code>keyboardConfig</code> 方向键导航；<code>mouseConfig</code> 类 Excel 单元格选中。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/ColumnResize.vue']">
         <EsVxeColumnResize />
       </CodeDemo>
 
-      <h3>虚拟滚动</h3>
+      <h3 id="virtual-scroll">虚拟滚动</h3>
       <p><code>vxeConfig.scrollY</code> 启用 vxe 原生虚拟滚动，万行数据滚动流畅不卡顿。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/VirtualScroll.vue']">
         <EsVxeVirtualScroll />
       </CodeDemo>
 
-      <h3>服务端分页（proxyConfig）</h3>
+      <h3 id="proxy-config">服务端分页（proxyConfig）</h3>
       <p><code>proxyConfig</code> 让 vxe 自管分页请求；EsForm 与 EsTable 兄弟结构，按钮 <code>commitProxy('query')</code> 触发刷新。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/ProxyConfig.vue']">
         <EsVxeProxyConfig />
       </CodeDemo>
 
-      <h3>逃生舱（vxeConfig / vxeOn）</h3>
+      <h3 id="escape-hatch">逃生舱（vxeConfig / vxeOn）</h3>
       <p><code>vxeConfig</code> 深度合并任意 vxe-grid 原生配置，<code>vxeOn</code> 注入原生事件——es-plus 不理解的能力都能透传。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/EscapeHatch.vue']">
         <EsVxeEscapeHatch />
       </CodeDemo>
 
-      <h3>CRUD + 弹窗（综合）</h3>
+      <h3 id="crud-with-dialog">CRUD + 弹窗（综合）</h3>
       <p>服务端搜索分页 + <code>useDialog</code> 新增/编辑表单 + 行内删除 + 工具栏导出打印，一个页面串起完整业务闭环。</p>
       <CodeDemo :source="rawSFCs['./es-vxe/CrudWithDialog.vue']">
         <EsVxeCrudWithDialog />

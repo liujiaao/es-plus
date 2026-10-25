@@ -25,6 +25,7 @@
       <CodePlayground
         v-for="ex in combinationExamples"
         :key="ex.key"
+        :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('combination', ex.key)"

@@ -69,6 +69,8 @@ export default {
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   overflow: hidden;
+  /* 锚点落点（#demo-xxx）留出顶部固定栏高度；路由里已按 88px 偏移，这里兜底 */
+  scroll-margin-top: 88px;
 }
 
 .playground-header {

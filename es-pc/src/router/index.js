@@ -99,6 +99,14 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+  // 案例卡会带 `#anchor` 落到页内某一节（如 /es-table#selection）。
+  // 以前没有 scrollBehavior，锚点只能靠浏览器默认行为，异步路由组件还没渲染完
+  // 就已经跳过了 —— 表现是「链接指对了页面，但停在页首」。
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, top: 88, behavior: 'smooth' }
+    return { top: 0 }
+  },
 })
 
 export default router

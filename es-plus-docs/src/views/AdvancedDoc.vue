@@ -39,13 +39,19 @@
             {{ t('advancedDoc.crossNote') }}
           </p>
           <div class="examples-list">
+            <!--
+              :id 让每个示例有自己的落点（/advanced/vxe-table#demo-cell-edit）。
+              锚点名由 examples[].key 决定，check:cases-links 按同一规则从
+              advanced-doc.data.ts 反查——改 key 会让案例卡的链接失效，那是**故意的**。
+            -->
             <CodePlayground
               v-for="(example, index) in currentDoc.examples"
               :key="index"
+              :id="'demo-' + example.key"
               :title="example.title"
               :description="example.description"
               :code="example.code"
-              :level="levelOf(index, currentDoc.examples.length)"
+              :level="levelOf(Number(index), currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -104,10 +110,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
+import { realignToHash } from '@/utils/hash-anchor'
 
 const { t } = useI18n()
 import { docsData as rawDocsData } from './advanced-doc.data'
@@ -160,6 +167,19 @@ watch(() => route.params.name, (name) => {
   prevDoc.value = idx > 0 ? { path: `/advanced/${keys[idx-1]}`, title: docsData[keys[idx-1]].title } : null
   nextDoc.value = idx < keys.length - 1 ? { path: `/advanced/${keys[idx+1]}`, title: docsData[keys[idx+1]].title } : null
 }, { immediate: true })
+
+// 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
+// 这里盯到内容长完为止（用户一动手就让位）
+let stopRealign = () => {}
+watch(
+  () => route.hash,
+  (hash) => {
+    stopRealign()
+    stopRealign = realignToHash(String(hash || ''))
+  },
+)
+onMounted(() => { stopRealign = realignToHash(String(route.hash || '')) })
+onBeforeUnmount(() => stopRealign())
 </script>
 
 <style lang="scss" scoped>

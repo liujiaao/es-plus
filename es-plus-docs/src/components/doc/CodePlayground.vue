@@ -206,6 +206,8 @@ watch(() => props.code, () => {
   border-radius: 8px;
   margin: 16px 0;
   overflow: hidden;
+  /* 锚点落点（#demo-xxx）要留出顶部固定栏的高度，否则标题被盖住 */
+  scroll-margin-top: 88px;
 }
 
 .playground-preview {

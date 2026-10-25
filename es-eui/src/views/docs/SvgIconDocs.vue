@@ -22,6 +22,7 @@
       <CodePlayground
         v-for="ex in svgIconExamples"
         :key="ex.key"
+        :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('svg-icon', ex.key)"

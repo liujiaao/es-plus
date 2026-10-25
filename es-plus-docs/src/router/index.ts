@@ -67,11 +67,12 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    } else {
-      return { top: 0 }
-    }
+    if (savedPosition) return savedPosition
+    // 案例卡 / 跨站链接会带 `#demo-xxx` 落到页内某个示例上。
+    // 以前这里无条件 `return { top: 0 }` —— 锚点被吞掉，链接看起来「指向了页面」
+    // 却没落到内容上（es-eui 早就按 hash 滚动，docs 一直是回顶部）。
+    if (to.hash) return { el: to.hash, top: 88, behavior: 'smooth' }
+    return { top: 0 }
   }
 })
 
