@@ -576,3 +576,60 @@ core 类型、三端适配器、事件契约与生成器 schema；收益只是�
   老版本没有也不会炸，但「清空后不复活」就没保证）。
 - `clearSelection` 的语义改动对老代码是**变强**（清得更多），不会留下脏状态；
   但「只想清当前页」的用户需要改用 `toggleRowSelection(row, false)` 逐行取消。
+
+### 11.11 复核「已修复」的边界：又抓到一条真缺陷 + 八条写清的边界（2026-10-25）
+
+#### 11.11.1 新抓到的缺陷：内建分页（`localPagination`）的跨页回显根本没生效
+
+复现（单测实测，修复前）：8 行、`pageSize: 4`、`options.localPagination: true`、
+`multiSelect` / `cachePageSelection` / `rowkey: 'id'` —— 第 1 页勾 id 1 → 翻第 2 页
+勾 id 5 → 翻回第 1 页：`getSelectionRows()` 只剩 `[5]`（id 1 丢），DOM 勾选数 0。
+
+根因：回显 watcher 监听的是 `props.dataSource`。内建分页时 `dataSource` 是全量、
+翻页只改内部 `displayDataSource` 切片，prop 引用不动 → watcher 不触发；而 el-table
+的 `setData` 在 data 引用变化时先 `clearSelection()` 并 emit `selection-change([])`，
+组件的 handler 按当前页码把该页缓存覆盖成空 —— 没有任何 restore 把它勾回来。
+请求模式同理：数据落在内部 `tableData`，父组件不绑 `v-model:data-source` 时 prop 也不变。
+
+为什么之前没发现：三站示例全是「父组件切片 + `@pagination-current-change` 自己改
+`:data-source`」的外置分页写法，正好绕开内部切片路径；vxe / virtual 自管选择状态，
+vue2 监听的是 `effectiveDataSource`（早已修过）—— 四条腿里只有 vue3 的 el-table
+内建分页这一条是断的。
+
+修法：watcher 源改为 `displayDataSource`，并跳过 vxe / virtual（自管选择），与 vue2 同规。
+守卫：`packages/vue3/__tests__/es-table.spec.ts` 新增 1 条（50 → 51），
+断言并集 `[1, 5]` **且**第 1 页真实勾选 1 个（只断言并集会漏掉「视觉没回显」）。
+
+#### 11.11.2 复核后仍然存在、这次不修的边界（逐条写影响）
+
+1. **程序化勾选/清空的事件不对称**。el-table（Element Plus）在
+   `toggleRowSelection` / `clearSelection` 时会 emit `selection-change`；vxe 的
+   `setCheckboxRow` 源码里没有 `dispatchEvent`（静默），virtual 只改 key 集合，
+   a-table 的受控 `selectedRowKeys` 变更也不触发 `onChange`。影响：命令式预置选中后
+   监听方拿不到事件，必须自己再读 `getSelectionRows()`。不修的原因：给三条腿补 emit
+   会在 `restoreSelectionForPage` 期间产生成倍事件，需要先定义「程序化勾选算不算用户
+   行为」；当前契约是「事件反映交互、跨页全集问 `getSelectionRows()`」。
+2. **数据删除后的幽灵行**。el-table 的 `selectionsByPage`、vxe 的 reserve、virtual 的
+   `rowsByKey` 都按 key 记行，删除已选行后不会自动清理（其它页的行也无从判断是否存在）。
+   影响：`getSelectionRows()` 会继续返回已删除行 —— 示例里删除后显式 `clearSelection()`，
+   这是使用约束而不是实现能兜住的事。
+3. **稳定 rowkey 是跨页选择的前提**。vxe 用 `rowConfig.keyField`（缺省 `id`）；virtual 的
+   `keyOf` 把缺键归一化成 `''` —— **多行都缺 id 时会互相连带选中**（勾一行等于勾所有缺键
+   行），`getSelectedRows()` 还会把它们折叠成一行。el-table 路径对缺键返回 `null`
+   （不参与跨页），更保守。建议（未做）：virtual 侧在开发环境对空 key 一次性告警。
+4. **无 rowkey 时 antdv 的 `toggleRowSelection` 是 no-op**（有一次性告警），
+   el-table / vxe 仍可切换 —— 这是 ant-design-vue 基于 rowKey 的框架约束，不是缺陷。
+5. **`clearSelection` 语义变强是 breaking**：依赖「只清当前页」的代码会多清；
+   只想取消某几行请用 `toggleRowSelection(row, false)`。
+6. **注入的两个清空入口语义不同**：`provide` 出去的 `toggleSelection(null)` 在
+   vue3 / vue2 的 el-table 路径仍是引擎原生「只清当前页」，而且**不清跨页缓存** ——
+   之后 `getSelectionRows()` 仍会回吐那些行；`clearAllSelection()` 才是全清。
+   （antdv 的注入版本走 composable，清的是全部，于是三端连「错」都不一致。）
+   仓库内目前没有消费者，但注入方容易踩；后续要么让 `toggleSelection(null)` 指向全清，
+   要么直接弃用它。
+7. **内部状态在 vxe 模式下是「半份」**：antdv 的 `multipleSelection` 随事件累积但无人读取
+   （`getSelectionRows` 走引擎），vue3 相反恒为空；vue2 的 `clearSelectionAll` 在 vxe
+   模式只清引擎、不复位内部缓存。对外 API 不受影响，但通过 `setupState` 注入看到的状态
+   不可信；运行期切换 `options.engine` 的极端场景会把旧勾选带回来。
+8. **内建分页没有示例，也没有浏览器回归**（承接 11.11.1）：三站都是外置分页写法。
+   建议补一个 `localPagination` + 多选的示例，把它纳入人工回归路径。
