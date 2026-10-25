@@ -21,15 +21,15 @@ const DraftBox = defineComponent({
   setup() {
     const text = ref('')
     return () => (
-      <div style="padding: 20px">
+      <div class="dialog-advanced__body">
         <p>关闭后再点一次「缓存实例」，下面输入的内容还在——实例被 cacheKey 缓存住了（10 分钟未再打开才回收）。</p>
         <input
-          style="width: 100%; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; box-sizing: border-box"
+          class="dialog-advanced__input"
           placeholder="随便输入点什么，关闭再打开看看"
           value={text.value}
           onInput={(e) => { text.value = e.target.value }}
         />
-        <p style="margin-top: 10px; color: #909399">当前输入：{text.value || '（空）'}</p>
+        <p class="dialog-advanced__tip">当前输入：{text.value || '（空）'}</p>
       </div>
     )
   }
@@ -53,9 +53,9 @@ const openDraggable = () => {
     width: '600px',
     isDraggable: true,
     render: () => (
-      <div style="padding: 20px">
+      <div class="dialog-advanced__body">
         <p>拖拽标题栏可以移动弹窗位置</p>
-        <p style="color: #909399; margin-top: 10px">释放后会记住当前位置</p>
+        <p class="dialog-advanced__tip">释放后会记住当前位置</p>
       </div>
     ),
     configBtn: [
@@ -72,20 +72,20 @@ const openCustomHeaderFooter = () => {
     title: '自定义头尾',
     width: '700px',
     render: () => (
-      <div style="padding: 20px">
+      <div class="dialog-advanced__body">
         <p>弹窗内容区域，支持自定义头部和底部</p>
       </div>
     ),
     renderHeader: () => (
-      <div style="display: flex; align-items: center; gap: 8px; padding: 0 20px">
-        <span style="font-size: 18px; font-weight: bold; color: #409EFF">自定义头部</span>
-        <span style="font-size: 12px; color: #67c23a; background: #f0f9eb; padding: 2px 8px; border-radius: 4px">NEW</span>
+      <div class="dialog-advanced__header">
+        <span class="dialog-advanced__header-title">自定义头部</span>
+        <span class="dialog-advanced__badge">NEW</span>
       </div>
     ),
     renderFooter: () => (
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; width: 100%">
-        <span style="font-size: 12px; color: #909399">自定义底部信息</span>
-        <div style="display: flex; gap: 12px">
+      <div class="dialog-advanced__footer">
+        <span class="dialog-advanced__footer-info">自定义底部信息</span>
+        <div class="dialog-advanced__footer-actions">
           <ElButton onClick={() => instance?.close()}>取消</ElButton>
           <ElButton type="primary" onClick={() => { ElMessage.success('已确认'); instance?.close() }}>确认</ElButton>
         </div>
@@ -100,9 +100,9 @@ const openFullscreen = () => {
     fullscreen: true,
     hiddenFullBtn: false,
     render: () => (
-      <div style="padding: 20px">
+      <div class="dialog-advanced__body">
         <h3>全屏模式</h3>
-        <p style="color: #909399">点击右上角按钮可切换全屏/窗口模式</p>
+        <p class="dialog-advanced__muted">点击右上角按钮可切换全屏/窗口模式</p>
       </div>
     ),
     configBtn: [
@@ -117,18 +117,11 @@ const openMaxHeight = () => {
     width: '600px',
     maxHeight: '300px',
     render: () => (
-      <div style="padding: 20px">
+      <div class="dialog-advanced__body">
         <p>当内容超过 maxHeight 时会自动出现滚动条</p>
-        <p style="margin-top: 10px">内容行 1</p>
-        <p style="margin-top: 10px">内容行 2</p>
-        <p style="margin-top: 10px">内容行 3</p>
-        <p style="margin-top: 10px">内容行 4</p>
-        <p style="margin-top: 10px">内容行 5</p>
-        <p style="margin-top: 10px">内容行 6</p>
-        <p style="margin-top: 10px">内容行 7</p>
-        <p style="margin-top: 10px">内容行 8</p>
-        <p style="margin-top: 10px">内容行 9</p>
-        <p style="margin-top: 10px">内容行 10</p>
+        {Array.from({ length: 10 }, (_, i) => (
+          <p class="dialog-advanced__line">{`内容行 ${i + 1}`}</p>
+        ))}
       </div>
     ),
     configBtn: [
@@ -141,6 +134,81 @@ const openMaxHeight = () => {
 <style scoped>
 .example-dialog-advanced {
   padding: 20px;
+  display: flex;
+  gap: 12px;
+}
+</style>
+
+<!--
+  为什么这里是**全局** `<style>` 而不是 `<style scoped>`：
+  `render` / `renderHeader` / `renderFooter` 传的是**裸函数**，不是编译后的模板插槽
+  （模板插槽会被 `withCtx` 包一层，渲染时仍带着所属组件的 scope id）。
+  这些函数在弹窗宿主组件里被调用，再 Teleport 到 body —— vnode 上根本没有本文件的
+  `data-v-xxx`，于是 `.dialog-advanced__body[data-v-xxx]` 这条规则永远匹配不上
+  （实测：类名在 DOM 上，`padding` 却是 0）。
+  代价是类名必须自己保证唯一，所以统一加 `dialog-advanced__` 前缀。
+-->
+<style>
+.dialog-advanced__body {
+  padding: 20px;
+}
+
+.dialog-advanced__input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.dialog-advanced__tip {
+  margin-top: 10px;
+  color: #909399;
+}
+
+.dialog-advanced__muted {
+  color: #909399;
+}
+
+.dialog-advanced__line {
+  margin-top: 10px;
+}
+
+.dialog-advanced__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+}
+
+.dialog-advanced__header-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #409eff;
+}
+
+.dialog-advanced__badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #67c23a;
+  background: #f0f9eb;
+}
+
+.dialog-advanced__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.dialog-advanced__footer-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.dialog-advanced__footer-actions {
   display: flex;
   gap: 12px;
 }

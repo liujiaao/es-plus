@@ -34,11 +34,11 @@ export default defineComponent({
         title: '确认删除',
         width: '400px',
         render: (h) => (
-          <div style="display: flex; align-items: center; padding: 20px;">
-            <Icon type="el-icon-warning" style="font-size: 40px; color: #f56c6c; margin-right: 16px;" />
+          <div class="dialog-confirm__row">
+            <Icon type="el-icon-warning" class="dialog-confirm__icon dialog-confirm__icon--danger" />
             <div>
-              <p style="font-size: 16px; margin-bottom: 8px;">确定要删除这条数据吗？</p>
-              <p style="color: #909399; font-size: 14px;">删除后数据将无法恢复，请谨慎操作。</p>
+              <p class="dialog-confirm__title">确定要删除这条数据吗？</p>
+              <p class="dialog-confirm__desc">删除后数据将无法恢复，请谨慎操作。</p>
             </div>
           </div>
         ),
@@ -62,11 +62,11 @@ export default defineComponent({
         title: '确认发布',
         width: '400px',
         render: (h) => (
-          <div style="display: flex; align-items: center; padding: 20px;">
-            <Icon type="el-icon-success" style="font-size: 40px; color: #e6a23c; margin-right: 16px;" />
+          <div class="dialog-confirm__row">
+            <Icon type="el-icon-success" class="dialog-confirm__icon dialog-confirm__icon--warning" />
             <div>
-              <p style="font-size: 16px; margin-bottom: 8px;">确定要发布这篇文章吗？</p>
-              <p style="color: #909399; font-size: 14px;">发布后将对所有用户可见。</p>
+              <p class="dialog-confirm__title">确定要发布这篇文章吗？</p>
+              <p class="dialog-confirm__desc">发布后将对所有用户可见。</p>
             </div>
           </div>
         ),
@@ -102,8 +102,8 @@ export default defineComponent({
             .catch(() => { /* 用户选择留在弹窗里 */ })
         },
         render: (h) => (
-          <div style="padding: 20px;">
-            <p style="margin-bottom: 10px; color: #606266;">在上面的输入框里写点东西，再点右上角 X 试试。</p>
+          <div class="dialog-confirm__body">
+            <p class="dialog-confirm__hint">在上面的输入框里写点东西，再点右上角 X 试试。</p>
             <el-input
               type="textarea"
               rows={4}
@@ -143,5 +143,51 @@ export default defineComponent({
 .tip {
   color: #909399;
   font-size: 13px;
+}
+</style>
+
+<!--
+  弹窗内容是**裸 render 函数**渲染的（不是编译后的模板插槽），调用发生在弹窗宿主组件里、
+  再传送到 body —— vnode 上没有本文件的 `data-v-xxx`，`<style scoped>` 里的
+  `.dialog-confirm__row` 永远匹配不上（三端同因，docs / pc 的弹窗示例同样处理）。
+  所以这里用全局样式，靠 `dialog-confirm__` 前缀保证唯一。
+-->
+<style>
+.dialog-confirm__row {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.dialog-confirm__icon {
+  font-size: 40px;
+  margin-right: 16px;
+}
+
+.dialog-confirm__icon--danger {
+  color: #f56c6c;
+}
+
+.dialog-confirm__icon--warning {
+  color: #e6a23c;
+}
+
+.dialog-confirm__title {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.dialog-confirm__desc {
+  color: #909399;
+  font-size: 14px;
+}
+
+.dialog-confirm__body {
+  padding: 20px;
+}
+
+.dialog-confirm__hint {
+  margin-bottom: 10px;
+  color: #606266;
 }
 </style>

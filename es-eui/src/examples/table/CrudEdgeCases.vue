@@ -3,28 +3,28 @@
     <el-alert
       type="warning"
       :closable="false"
-      style="margin-bottom: 10px;"
+      class="crud-edge__alert"
       description="三个易忽略的边界：① 服务端 422 字段错误回填到对应表单项；② 删除本页最后一条时自动回退一页；③ 删除可撤销（延迟提交，撤销窗口内可恢复）。"
     />
 
     <!-- ① 新增表单：演示 422 字段级错误回填 -->
-    <div style="border:1px solid #ebeef5;border-radius:4px;padding:14px 16px;margin-bottom:12px;">
-      <div style="font-size:13px;color:#606266;margin-bottom:10px;">
+    <div class="crud-edge__card">
+      <div class="crud-edge__hint">
         新增员工（试试重复姓名「员工1」或把薪资填成负数，观察字段错误）
       </div>
-      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <div class="crud-edge__form">
         <div>
-          <el-input v-model="addForm.name" size="small" placeholder="姓名" style="width:150px;" />
-          <div v-if="formErrors.name" style="color:#f56c6c;font-size:12px;margin-top:2px;">{{ formErrors.name }}</div>
+          <el-input v-model="addForm.name" size="small" placeholder="姓名" class="crud-edge__input" />
+          <div v-if="formErrors.name" class="crud-edge__error">{{ formErrors.name }}</div>
         </div>
         <div>
-          <el-select v-model="addForm.department" size="small" style="width:130px;">
+          <el-select v-model="addForm.department" size="small" class="crud-edge__select">
             <el-option v-for="o in departmentOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </div>
         <div>
-          <el-input v-model.number="addForm.salary" size="small" type="number" placeholder="薪资" style="width:130px;" />
-          <div v-if="formErrors.salary" style="color:#f56c6c;font-size:12px;margin-top:2px;">{{ formErrors.salary }}</div>
+          <el-input v-model.number="addForm.salary" size="small" type="number" placeholder="薪资" class="crud-edge__select" />
+          <div v-if="formErrors.salary" class="crud-edge__error">{{ formErrors.salary }}</div>
         </div>
         <el-button size="small" type="primary" :loading="adding" @click="submitAdd">新增</el-button>
       </div>
@@ -35,10 +35,10 @@
       v-if="undo"
       type="info"
       :closable="false"
-      style="margin-bottom:10px;"
+      class="crud-edge__alert"
     >
       已删除「{{ undo.row.name }}」，{{ undo.seconds }} 秒后生效。
-      <el-button type="text" style="margin-left:8px;" @click="undoDelete">撤销</el-button>
+      <el-button type="text" class="crud-edge__undo-btn" @click="undoDelete">撤销</el-button>
     </el-alert>
 
     <es-table
@@ -192,3 +192,48 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped>
+/* 模板里的元素带 data-v，scoped 在这里有效（与 dialog 的 render 函数不同，见 dialog/Confirm.vue） */
+.crud-edge__alert {
+  margin-bottom: 10px;
+}
+
+.crud-edge__card {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.crud-edge__hint {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 10px;
+}
+
+.crud-edge__form {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.crud-edge__input {
+  width: 150px;
+}
+
+.crud-edge__select {
+  width: 130px;
+}
+
+.crud-edge__error {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.crud-edge__undo-btn {
+  margin-left: 8px;
+}
+</style>
