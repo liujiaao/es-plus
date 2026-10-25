@@ -892,6 +892,59 @@ describe('EsTable — 请求模式空页', () => {
   })
 })
 
+describe('EsTable — 内建分页（localPagination）的跨页勾选回显', () => {
+  // 回归：此前回显只监听 props.dataSource。内建分页时 dataSource 是全量、翻页只改内部切片，
+  // props 引用不动 —— 于是 el-table 的 setData 先 clearSelection() 并 emit selection-change([])，
+  // 把「翻回去的那一页」的缓存覆盖成空，且没有任何 restore 把它勾回来。
+  // 实测（修复前）：第 1 页选 id 1、第 2 页选 id 5，翻回第 1 页后 getSelectionRows() 只剩 [5]。
+  it('翻回已选页：并集与勾选态都恢复', async () => {
+    const rows = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: `row-${i + 1}` }))
+    const wrapper = mountTable({
+      dataSource: rows,
+      columns: [{ type: 'selection', width: 55 }, { prop: 'id', label: 'ID' }],
+      options: {
+        localPagination: true,
+        multiSelect: true,
+        cachePageSelection: true,
+        rowkey: 'id',
+      } as TableOptions,
+      pagination: { current: 1, pageSize: 4, total: 8 },
+    })
+    await nextTick()
+
+    const table = wrapper.findComponent(ElTable)
+    const pager = wrapper.findComponent(ElPagination)
+    const vm = wrapper.vm as any
+    const ids = () => vm.getSelectionRows().map((r: { id: number }) => r.id)
+    const settle = async () => {
+      await flushPromises()
+      await nextTick()
+      await nextTick()
+    }
+
+    const select = async (row: Record<string, unknown>) => {
+      // 走 el-table 的命令式 API：内部 selection 与 selection-change 都按真实路径更新
+      const inst = table.vm as any
+      ;(inst.toggleRowSelection || inst.$?.exposed?.toggleRowSelection).call(inst, row, true)
+      await settle()
+    }
+
+    await select(rows[0])
+    expect(ids()).toEqual([1])
+
+    pager.vm.$emit('current-change', 2)
+    await settle()
+    await select(rows[4])
+    expect(ids()).toEqual([1, 5])
+
+    pager.vm.$emit('current-change', 1)
+    await settle()
+    expect(ids()).toEqual([1, 5])
+    // 回显是视觉契约：第 1 页的那一行必须真的勾着
+    expect(wrapper.findAll('.el-table__body .el-checkbox.is-checked')).toHaveLength(1)
+  })
+})
+
 describe('EsTable — clearSelection 清空全部（含跨页缓存）', () => {
   it('el-table 引擎：清空后 getSelectionRows() 不再回吐旧选中（否则翻页会复活）', async () => {
     const wrapper = mountTable({

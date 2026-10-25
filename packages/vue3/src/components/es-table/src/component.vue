@@ -731,10 +731,20 @@ watch(
   () => syncLocalPagination()
 )
 
+// 跨页选择记忆：必须监听**渲染中的真实数据**（displayDataSource），不能监听 props.dataSource。
+//
+// 内建分页（options.localPagination）时 dataSource 是全量、翻页只改内部切片，props 引用不动
+// —— 监听 props 就永远不会回显：翻回第 1 页时 el-table 的 setData 会先 clearSelection() 并
+// emit selection-change([])，把第 1 页的缓存覆盖成空，且没有任何 restore 把它勾回来
+// （实测：第 1 页选 id 1、第 2 页选 id 5，翻回第 1 页后 getSelectionRows() 只剩 [5]）。
+// 请求模式同理：数据落在内部 tableData，父组件不绑 v-model 时 props 也不变。
+// vue2 早已监听 effectiveDataSource（同一条修复），三端现在同规。
+// vxe / virtual 自管选择状态（reserve / key 集合），不参与这条回显路径。
 watch(
-  () => props.dataSource,
+  displayDataSource,
   (val) => {
-    initSelection(val, tableRef.value)
+    if (isVxeEngine.value || isVirtual.value) return
+    initSelection(Array.isArray(val) ? val as Record<string, unknown>[] : [], tableRef.value)
   },
   { deep: true }
 )
