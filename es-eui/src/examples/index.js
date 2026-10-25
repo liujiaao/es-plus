@@ -40,6 +40,7 @@ import TableRemoteCrud from './table/RemoteCrud.vue'
 import TableOptimisticToggle from './table/OptimisticToggle.vue'
 import TableDetailDrawer from './table/DetailDrawer.vue'
 import TableCrudEdgeCases from './table/CrudEdgeCases.vue'
+import TableCodeLabel from './table/CodeLabel.vue'
 
 import DialogBasic from './dialog/Basic.vue'
 import DialogConfirm from './dialog/Confirm.vue'
@@ -140,6 +141,7 @@ const componentMap = {
   './table/OptimisticToggle.vue': TableOptimisticToggle,
   './table/DetailDrawer.vue': TableDetailDrawer,
   './table/CrudEdgeCases.vue': TableCrudEdgeCases,
+  './table/CodeLabel.vue': TableCodeLabel,
   './dialog/Basic.vue': DialogBasic,
   './dialog/Confirm.vue': DialogConfirm,
   './dialog/CachedInstance.vue': DialogCachedInstance,
@@ -258,6 +260,7 @@ export const tableExamples = [
   { key: 'OptimisticToggle', title: '乐观更新 + 失败回滚', description: '切换状态立即改 UI 并异步提交，失败自动回滚原值；「模拟失败」开关演示回滚，按行 loading 防并发。' },
   { key: 'DetailDrawer', title: '只读详情抽屉', description: '列表精简、详情完整：点「查看」按 id 异步拉取最新详情并在抽屉展示加载态，详情与列表数据解耦。' },
   { key: 'CrudEdgeCases', title: 'CRUD 边界场景', description: '422 字段错误回填对应表单项、删除本页最后一条自动回退一页、删除延迟提交可撤销，三个易忽略的健壮性边界。' },
+  { key: 'CodeLabel', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 渲染成原生 el-tag（vue3 / antdv 分别是 ElTag / a-tag），不写 render 函数；未命中显示原值，空值走 emptyPlaceholder。' },
 ]
 
 export const dialogExamples = [

@@ -354,6 +354,14 @@
       ]
     },
     {
+      "id": "table/19-code-label",
+      "group": "es-table",
+      "title": "码值列：零 render 出标签",
+      "tokens": [
+        "cellDataOptions"
+      ]
+    },
+    {
       "id": "crud-page/01-basic",
       "group": "es-crud-page",
       "title": "基础 CRUD：一行 actions 派生",
@@ -907,7 +915,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 37,
+      "refs": 38,
       "uncovered": 58,
       "cases": [
         {
@@ -1418,6 +1426,14 @@
           "tier": "B"
         },
         {
+          "id": "table/CodeLabel",
+          "demo": "table/19-code-label",
+          "tokens": [
+            "cellDataOptions"
+          ],
+          "tier": "A"
+        },
+        {
           "id": "table/ComplexMerge",
           "demo": null,
           "tokens": [
@@ -1759,7 +1775,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 95,
+      "refs": 96,
       "uncovered": 22,
       "cases": [
         {
@@ -2506,6 +2522,14 @@
             "tableBase"
           ],
           "tier": "C"
+        },
+        {
+          "id": "es-table/CodeLabel",
+          "demo": "table/19-code-label",
+          "tokens": [
+            "cellDataOptions"
+          ],
+          "tier": "A"
         },
         {
           "id": "es-table/CurrentRow",

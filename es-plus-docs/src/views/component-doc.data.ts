@@ -181,7 +181,8 @@ export const docsData: Record<string, any> = {
       { key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
       { key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
       { key: 'current-row', title: '当前行与主从联动', description: 'highlightCurrentRow 行高亮 + @current-change 事件驱动从表 + 汇总统计。', component: getComponent('table/17-current-row'), code: code('table/17-current-row') },
-      { key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') }
+      { key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
+      { key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') }
     ],
     api: {
       props: [
@@ -214,6 +215,7 @@ export const docsData: Record<string, any> = {
         { name: 'btns', type: 'Array', default: '-', desc: '行操作按钮 [{ name, type?, clickEvent? }]' },
         { name: 'type', type: 'string', default: '-', desc: '特殊列类型：selection/expand/index' },
         { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' },
+        { name: 'dataOptions', type: 'TableColumnDataOption[]', default: '-', desc: '码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 ElTag；未命中原值。render / formatter 优先' },
         { name: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
         { name: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' }
       ],

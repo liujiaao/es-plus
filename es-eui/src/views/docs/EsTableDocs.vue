@@ -548,6 +548,11 @@
           <td>String</td>
         </tr>
         <tr>
+          <td>dataOptions</td>
+          <td>码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 el-tag；未命中原值。render / formatter 优先</td>
+          <td>TableColumnDataOption[]</td>
+        </tr>
+        <tr>
           <td>hidCol</td>
           <td>是否隐藏该列（保留配置不渲染）</td>
           <td>Boolean</td>

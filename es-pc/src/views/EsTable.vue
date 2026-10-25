@@ -206,6 +206,17 @@
 
     <a-divider />
 
+    <!-- 码值列声明式标签 -->
+    <section id="code-label">
+      <h2>码值列：零 render 出标签</h2>
+      <p>状态是 <code>0/1/2</code> 这样的码值，列上写一份 <code>dataOptions</code> 就得到中文标签与语义色：命中显示 label、<code>tagType</code> 渲染成 a-tag 的状态色，未命中显示原值、空值走 <code>emptyPlaceholder</code>。没有一个 render 函数，同一份 JSON 在 vue3（ElTag）/ vue2（el-tag）上同样成立。</p>
+            <CodeDemo :source="rawSFCs['./es-table/CodeLabel.vue']">
+        <EsTableCodeLabel />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
     <h2>API / 属性</h2>
     <a-table
       :dataSource="tableProps"
@@ -282,6 +293,7 @@ import EsTableCurrentRow from './es-table/CurrentRow.vue'
 import EsTableDynamicColumns from './es-table/DynamicColumns.vue'
 import EsTableQueryTable from './es-table/QueryTable.vue'
 import EsTableCallbackPipeline from './es-table/CallbackPipeline.vue'
+import EsTableCodeLabel from './es-table/CodeLabel.vue'
 
 const rawSFCs = import.meta.glob('./es-table/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -366,13 +378,14 @@ const tableColumns = [
   { key: '15', prop: 'expandConfig', type: 'Object', default: '-', desc: '展开行内容 { title?, fields }，仅 type: "expand" 列消费' },
   { key: '16', prop: 'ellipsis', type: 'boolean', default: '-', desc: '超出省略并显示 Tooltip' },
   { key: '17', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '空值占位文本（null / undefined / 空串时显示）' },
-  { key: '18', prop: 'hidCol', type: 'boolean', default: '-', desc: '隐藏该列（保留配置不渲染）' },
-  { key: '19', prop: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
-  { key: '20', prop: 'btns', type: 'Array', default: '-', desc: '操作列按钮 [{ name, type?, icon?, permissionValue?, hidden?, clickEvent? }]' },
-  { key: '21', prop: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
-  { key: '22', prop: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' },
-  { key: '23', prop: 'cellClassName', type: 'string | Function', default: '-', desc: '本端独有：单元格类名（a-table 列透传）' },
-  { key: '24', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '本端独有：表头单元格类名（a-table 列透传）' },
+  { key: '18', prop: 'dataOptions', type: 'TableColumnDataOption[]', default: '-', desc: '码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 a-tag 状态色；未命中原值。render / formatter 优先' },
+  { key: '19', prop: 'hidCol', type: 'boolean', default: '-', desc: '隐藏该列（保留配置不渲染）' },
+  { key: '20', prop: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
+  { key: '21', prop: 'btns', type: 'Array', default: '-', desc: '操作列按钮 [{ name, type?, icon?, permissionValue?, hidden?, clickEvent? }]' },
+  { key: '22', prop: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
+  { key: '23', prop: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' },
+  { key: '24', prop: 'cellClassName', type: 'string | Function', default: '-', desc: '本端独有：单元格类名（a-table 列透传）' },
+  { key: '25', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '本端独有：表头单元格类名（a-table 列透传）' },
 ]
 
 const tableOptions = [

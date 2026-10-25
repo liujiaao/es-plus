@@ -48,6 +48,11 @@ export const TIER_MEANING = {
 export const CAPABILITY_TOKENS = {
   // ── A 档：前门声明式一步可达 ──────────────────────────────────────────────
   formtype: { tier: 'A', keys: ['formtype', 'dataOptions', 'attrs'], note: '字段控件类型 / 静态选项 / 透传属性' },
+  cellDataOptions: {
+    tier: 'A',
+    keys: ['dataOptions'],
+    note: '码值→展示映射（字段级 dataOptions 由生成器复制到派生列；三端分别渲染 ElTag / el-tag / a-tag，未命中回原值）',
+  },
   apiParams: { tier: 'A', keys: ['apiParams'], note: '字段级远程选项数据源' },
   validation: { tier: 'A', keys: ['rules', 'required'], note: '必填与 rules 校验（自定义 validator 见 validatorFn）' },
   fieldVisibility: { tier: 'A', keys: ['isHidden'], note: '字段条件显隐（声明式）' },
