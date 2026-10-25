@@ -185,7 +185,7 @@ import {
   normalizeFormItem,
   resolveButtonSide,
   resolveHttpRequest,
-  resolveReactionOverlay,
+  resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
   getNestedValue,
@@ -370,12 +370,10 @@ const formItemListFilter = computed(() => {
   const visible = list
     .map((it) => {
       if (!it) return null
-      // AI-07 字段联动（显示派生）：dataOptions/required/disabled 在 normalizeFormItem **之前**
-      // 合并 —— required 经 initFormItemOptions→resolveItemValidateProps 读 item.required、
-      // disabled 需由 normalizeFormItem 注入 attrs，晚于 normalize 就都到不了控件。
-      const withReactions = it.reactions
-        ? { ...it, ...(resolveReactionOverlay(it.reactions, props.model) || {}) }
-        : it
+      // AI-07 字段联动（显示派生）：overlay 必须**先于** normalizeFormItem 合并 —— required
+      // 才能经 initFormItemOptions→resolveItemValidateProps 变成校验规则、disabled 才进 attrs。
+      // 必填文案由 label 派生（JSON 里没有 message 的位置，裸布尔会退化成英文兜底消息）。
+      const withReactions = it.reactions ? resolveReactionItem(it, props.model) : it
       return { ...normalizeFormItem(withReactions), dataOptions: withReactions.dataOptions || [] }
     })
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {

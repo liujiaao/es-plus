@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   resolveReactionOverlay,
+  resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
 } from '../src/reactions'
@@ -181,5 +182,68 @@ describe('core > reactions > collectReactionDependencies', () => {
 
   it('无 reactions → 空数组', () => {
     expect(collectReactionDependencies([{}, { reactions: [] }])).toEqual([])
+  })
+})
+
+describe('core > reactions > resolveReactionItem 合并 + 必填文案', () => {
+  const item = (extra: Record<string, unknown> = {}) => ({
+    prop: 'rejectReason',
+    label: '驳回原因',
+    formtype: 'Input',
+    reactions: [R({ dependencies: ['status'], fulfill: { required: { '==': [{ var: 'status' }, 'rejected'] } } })],
+    ...extra,
+  })
+
+  it('无 reactions → 返回原引用（调用方据此免去重渲染）', () => {
+    const plain = { prop: 'a', label: 'A' }
+    expect(resolveReactionItem(plain, M({}))).toBe(plain)
+    const empty = item({ reactions: [] })
+    expect(resolveReactionItem(empty, M({ status: 'rejected' }))).toBe(empty)
+  })
+
+  it('required 生效 → 落成带 label 文案的规则，并删掉裸布尔', () => {
+    const out = resolveReactionItem(item(), M({ status: 'rejected' })) as Record<string, unknown>
+    expect(out.required).toBeUndefined()
+    expect(out.rules).toEqual([{ required: true, message: '请输入驳回原因', trigger: ['blur', 'change'] }])
+  })
+
+  it('选择类控件用「请选择」', () => {
+    const out = resolveReactionItem(item({ formtype: 'Select' }), M({ status: 'rejected' })) as Record<string, unknown>
+    expect((out.rules as Array<{ message: string }>)[0].message).toBe('请选择驳回原因')
+  })
+
+  it('字段自带 required 规则 → 不重复添加，但仍去掉裸布尔', () => {
+    const own = [{ required: true, message: '自定义文案' }]
+    const out = resolveReactionItem(item({ rules: own }), M({ status: 'rejected' })) as Record<string, unknown>
+    expect(out.rules).toBe(own)
+    expect(out.required).toBeUndefined()
+  })
+
+  it('formItemOptions.rules 里的 required 也算自有规则', () => {
+    const optsRules = [{ required: true, message: '透传袋文案' }]
+    const out = resolveReactionItem(item({ formItemOptions: { rules: optsRules } }), M({ status: 'rejected' })) as Record<string, unknown>
+    expect(out.rules).toBeUndefined()
+    expect(out.required).toBeUndefined()
+  })
+
+  it('required 求值为 false → 保留布尔 false，不加规则', () => {
+    const out = resolveReactionItem(item(), M({ status: 'approved' }) ) as Record<string, unknown>
+    // status=approved 时表达式为 false：overlay 有 required:false，规则不再加
+    expect(out.required).toBe(false)
+    expect(out.rules).toBeUndefined()
+  })
+
+  it('dataOptions / disabled 照旧合并（不因必填文案改动而回归）', () => {
+    const it0 = {
+      prop: 'city',
+      label: '城市',
+      formtype: 'Select',
+      reactions: [
+        R({ dependencies: ['p'], fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }], disabled: { '==': [{ var: 'p' }, ''] } } }),
+      ],
+    }
+    const out = resolveReactionItem(it0, M({ p: '' })) as Record<string, unknown>
+    expect(out.dataOptions).toEqual([{ label: '杭州', value: 'hz' }])
+    expect(out.disabled).toBe(true)
   })
 })

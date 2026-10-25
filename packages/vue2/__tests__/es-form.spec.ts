@@ -473,12 +473,17 @@ describe('EsForm(vue2) - AI-07 字段联动 reactions', () => {
       ],
     })
     await dbl(vm)
-    const required = () => findAllByName(vm, 'ElFormItem')[1].$props.required
-    expect(required()).not.toBe(true)
+    // 契约（与三端一致）：reactions 派生的必填**落成一条带 label 文案的规则**，而不是裸布尔
+    // —— 裸布尔在 Element UI / Element Plus / AntD 里都会退化成「字段名 + is required」的
+    // 英文兜底消息（JSON 没有写 message 的位置）。见 core 的 resolveReactionItem。
+    const item = () => findAllByName(vm, 'ElFormItem')[1]
+    const requiredRule = () => (item().$props.rules || []).find((r: any) => r.required === true)
+    expect(requiredRule()).toBeUndefined()
 
     ;(model as any).city = 'hz'
     await dbl(vm)
-    expect(required()).toBe(true)
+    expect(requiredRule()).toEqual({ required: true, message: '请输入发票号', trigger: ['blur', 'change'] })
+    expect(item().$props.required).toBeUndefined()
   })
 
   it('disabled：条件禁用透传到 Input 控件', async () => {

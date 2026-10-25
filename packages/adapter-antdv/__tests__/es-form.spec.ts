@@ -391,11 +391,16 @@ describe('EsForm(ADV) - AI-07 字段联动 reactions', () => {
     })
     await dbl()
     const items = () => wrapper.findAllComponents(AFormItem)
-    expect(items()[1].props('required')).not.toBe(true)
+    // 契约（与三端一致）：reactions 派生的必填落成一条带 label 文案的规则，而不是裸布尔
+    // —— 裸布尔在 AntD / Element Plus / Element UI 里都会退化成「字段名 + is required」的
+    // 英文兜底消息（JSON 没有写 message 的位置）。见 core 的 resolveReactionItem。
+    const requiredRules = () => (items()[1].props('rules') || []).filter((r: any) => r.required === true)
+    expect(requiredRules()).toHaveLength(0)
 
     model.city = 'hz'
     await dbl()
-    expect(items()[1].props('required')).toBe(true)
+    expect(requiredRules()).toEqual([{ required: true, message: '请输入发票号', trigger: ['blur', 'change'] }])
+    expect(items()[1].props('required')).toBeUndefined()
   })
 
   it('disabled：条件禁用透传到控件', async () => {

@@ -152,6 +152,69 @@ export function resolveReactionOverlay(
   return overlay
 }
 
+/** 选择类控件：必填文案用「请选择」而不是「请输入」。 */
+const SELECT_LIKE_FORMTYPES = new Set([
+  'Select',
+  'Cascader',
+  'TreeSelect',
+  'DatePicker',
+  'TimePicker',
+  'DateRangePicker',
+  'Radio',
+  'RadioGroup',
+  'Checkbox',
+  'CheckboxGroup',
+  'Switch',
+])
+
+/**
+ * reactions 派生的 `required` 要落成一条**带文案**的规则，而不是裸布尔。
+ *
+ * 为什么不能只写 `required: true`：三个 UI 库在只有布尔必填时都拿「字段名 + is required」
+ * 兜底（async-validator 的默认消息，英文、还把 `rejectReason` 这类 prop 直接暴露给用户）；
+ * 而 reactions 是纯 JSON，**没有写 message 的位置**。字段本身有 `label`，由它派生即可。
+ *
+ * 显式规则优先：字段自己声明了 `required` 规则时不重复添加（也不删除它）。
+ */
+export function buildReactionRequiredRule(item: { label?: unknown; prop?: unknown; formtype?: unknown }): {
+  required: true
+  message: string
+  trigger: string[]
+} {
+  const label = typeof item.label === 'string' && item.label ? item.label : String(item.prop || '该字段')
+  const verb = SELECT_LIKE_FORMTYPES.has(String(item.formtype)) ? '请选择' : '请输入'
+  return { required: true, message: `${verb}${label}`, trigger: ['blur', 'change'] }
+}
+
+/**
+ * 显示派生 + 必填文案的一次性入口（三端 `formItemListFilter` 共用）。
+ *
+ * 合并顺序：overlay 覆盖静态值（last-wins），但 `required: true` 会被改写成一条带 label
+ * 文案的规则并删掉布尔键 —— 布尔键正是「rejectReason is required」这类英文兜底消息的来源。
+ *
+ * 无生效规则时返回**原引用**（调用方据此避免无谓的重渲染）。
+ */
+export function resolveReactionItem<T extends { reactions?: FieldReaction[]; label?: unknown; prop?: unknown; formtype?: unknown; rules?: Array<Record<string, unknown>>; formItemOptions?: Record<string, unknown>; required?: boolean }>(
+  item: T,
+  model: ModelLike
+): T {
+  const overlay = resolveReactionOverlay(item.reactions, model)
+  if (!overlay) return item
+
+  const merged: T = { ...item, ...overlay }
+  if (overlay.required === true) {
+    const optsRules = Array.isArray(item.formItemOptions?.rules)
+      ? (item.formItemOptions?.rules as Array<Record<string, unknown>>)
+      : []
+    const ownRules = Array.isArray(item.rules) ? item.rules : []
+    const hasRequiredRule = [...optsRules, ...ownRules].some((r) => r && (r as { required?: unknown }).required === true)
+    if (!hasRequiredRule) merged.rules = [...ownRules, buildReactionRequiredRule(item)]
+    // 布尔键必须去掉：否则底层组件仍会生成一条无文案的必填规则（英文默认消息）。
+    delete (merged as { required?: boolean }).required
+  }
+  return merged
+}
+
 /**
  * 值派生：给当前 model 算出所有**到期写回**（**无状态**——不含「是否变更」判断，
  * 那是渲染层的职责）。同名 prop 多规则命中时 **last-wins**。

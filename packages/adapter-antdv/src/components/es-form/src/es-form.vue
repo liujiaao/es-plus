@@ -213,7 +213,7 @@ import {
   applyAutoSpan,
   resolveButtonSide,
   resolveHttpRequest,
-  resolveReactionOverlay,
+  resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
   setNestedValue,
@@ -510,9 +510,8 @@ const formItemListFilter = computed(() => {
       if (!it) return null
       // AI-07 字段联动（显示派生）：overlay 必须**先于** normalizeFormItem 合并 —— normalize
       // 才把顶层 disabled 合进 attrs.disabled（FORM_ITEM_SHORTCUT_KEYS），后设的 disabled 到不了控件。
-      const withReactions = it.reactions
-        ? { ...it, ...(resolveReactionOverlay(it.reactions, props.model) || {}) }
-        : it
+      // 必填文案由 label 派生（JSON 里没有 message 的位置，裸布尔会退化成英文兜底消息）。
+      const withReactions = it.reactions ? resolveReactionItem(it, props.model) : it
       return { ...normalizeFormItem(withReactions), dataOptions: withReactions.dataOptions || [] }
     })
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {

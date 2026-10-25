@@ -77,6 +77,15 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
     expect(vnode.props?.value).toBe('bound-value')
   })
 
+  // 回归：空串必须转成 undefined。antdv InputNumber 会把 `Number('')=0` 写回 model，
+  // 于是「必填的金额」永远通过校验、还会以 0 提交。
+  it('InputNumber — 数字原样透传，空串传 undefined', () => {
+    const item = makeItem('InputNumber')
+    const renderFn = formInputComponents(item)!
+    expect((renderFn(h, makeModel(12), { row: item, index: 0 }) as any).props?.value).toBe(12)
+    expect((renderFn(h, makeModel(''), { row: item, index: 0 }) as any).props?.value).toBeUndefined()
+  })
+
   it('Input — attrs.disabled 为函数时被求值（对齐 vue2 / es-eui；不求值则函数恒真，控件永久禁用）', () => {
     const item = makeItem('Input', { attrs: { disabled: () => true } } as any)
     const renderFn = formInputComponents(item)!

@@ -139,6 +139,8 @@ export type { FieldHiddenExpr, FieldHiddenExprNode, FieldHiddenExprOp } from './
 // 本模块只读 model、从不写 model —— 响应式与写入均属渲染层。
 export {
   resolveReactionOverlay,
+  resolveReactionItem,
+  buildReactionRequiredRule,
   resolveReactionValues,
   collectReactionDependencies,
 } from './reactions'

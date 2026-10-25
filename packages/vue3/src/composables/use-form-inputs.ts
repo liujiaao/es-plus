@@ -102,8 +102,12 @@ export function useFormInputs() {
       [
         'InputNumber',
         (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          const raw = getNestedValue(model, row.prop)
           return hFn(ElInputNumber, {
-            modelValue: getNestedValue(model, row.prop) as any,
+            // 空串不是合法数值：ElInputNumber 挂载时会把 `Number('')=0` 写回 model，
+            // 于是「必填的金额」永远通过校验、还会以 0 提交。空值一律传 undefined，
+            // 让「未填」在 model 里保持为空（required 才拦得住）。
+            modelValue: (raw === '' ? undefined : raw) as any,
             ...rowPassThrough(row),
             'onUpdate:modelValue': (val: unknown) => {
               setNestedValue(model, row.prop, val)

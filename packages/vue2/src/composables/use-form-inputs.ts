@@ -145,7 +145,9 @@ export function useFormInputs() {
           const handlers = buildEventHandlers(row, (val) => setNestedValue(model, row.prop, val))
           return h('el-input-number', {
             attrs,
-            props: { value, ...row.props },
+            // 空串不是合法数值：el-input-number 会把 `Number('')=0` 写回 model，
+            // 于是「必填的金额」永远通过校验、还会以 0 提交。空值一律传 undefined。
+            props: { value: value === '' ? undefined : value, ...row.props },
             on: handlers,
           })
         },

@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { h } from 'vue'
 import {
   ElInput,
+  ElInputNumber,
   ElSelect,
   ElDatePicker,
   ElTimePicker,
@@ -191,6 +192,24 @@ describe('useFormInputs', () => {
       const updateFn = vnode.props?.['onUpdate:modelValue'] as (val: unknown) => void
       updateFn('new-value')
       expect(model.name).toBe('new-value')
+    })
+  })
+
+  describe('InputNumber', () => {
+    const item: FormItemOption = { prop: 'amount', label: '金额', formtype: 'InputNumber' }
+    const renderFn = formInputComponents(item)
+
+    it('数字原样透传', () => {
+      const vnode = renderFn(h, { amount: 12 }, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElInputNumber)
+      expect(vnode.props?.modelValue).toBe(12)
+    })
+
+    // 回归：空串必须转成 undefined。ElInputNumber 挂载时会把 `Number('')=0` 写回 model，
+    // 于是「必填的金额」永远通过校验、还会以 0 提交（生成配置里的 required 形同虚设）。
+    it('空串 → undefined（否则 InputNumber 会把 0 写回 model，required 永远通过）', () => {
+      const vnode = renderFn(h, { amount: '' }, { row: item, index: 0 })
+      expect(vnode.props?.modelValue).toBeUndefined()
     })
   })
 

@@ -563,6 +563,15 @@ describe('useFormInputs — formInputComponents 分支', () => {
     expect((vnode as any).tag).toBe('el-input-number')
   })
 
+  // 回归：空串必须转成 undefined。el-input-number 会把 `Number('')=0` 写回 model，
+  // 于是「必填的金额」永远通过校验、还会以 0 提交（生成配置里的 required 形同虚设）。
+  it('InputNumber 空串 → value 传 undefined', () => {
+    const item = { formtype: 'InputNumber', prop: 'amount' }
+    const renderer = formInputComponents(item as any)
+    const vnode = renderer(mockH as any, { amount: '' } as any, { row: item as any })
+    expect((vnode as any).data.props.value).toBeUndefined()
+  })
+
   it('未知 formtype → 返回空渲染（null）', () => {
     const item = { formtype: 'Unknown', prop: 'name' }
     const renderer = formInputComponents(item as any)
