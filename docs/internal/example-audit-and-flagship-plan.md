@@ -484,3 +484,95 @@ D10 把三处密度最高的内联 `style`（71 处）抽成了 scoped 样式块
 es-pc 的页面壳（如 `Advanced.vue` 的 `<h3 style="margin: 16px 0 8px">`）按同一规则计入，
 因为它们也是观众看到的文档。
 
+### 11.10 跨页多选：vxe / virtual 两条腿的真实差距；以及「表格没有单选」（2026-10-25）
+
+复核问题（用户口径）：**跨页多选是否已适配 vxe 引擎？es-table 是否支持单选？**
+
+先给结论：动代码前，三端四引擎的「跨页多选」只有 el-table / a-table 两条腿是齐的；
+vxe 与 virtual 各有独立缺陷，且**都表现为「同一份配置换个引擎行为就变」**。
+单选则从来没有过——组件不提供单选列，也不该假装有。
+
+#### 11.10.1 修复前的四引擎行为（浏览器 + 单测双向实测）
+
+| 行为 | el-table / a-table | virtual | vxe |
+| --- | --- | --- | --- |
+| 翻页后勾选保留 | ✅ rowkey + cachePageSelection | ✅（键留住了，但取不回，见下） | ⚠️ 只在 `options.multiSelect` 时开 `reserve`；显式 `type:'selection'` 列翻页即丢 |
+| `getSelectionRows()` 跨页全集 | ✅ | ❌ 只扫当前页：键还在，行对象在上一页 → 少报 | ❌ 用 `getCheckboxRecords(true)` 只盖**当前数据**，reserve 行全漏（实测选 3 回 1） |
+| `selection-change` 载荷 | 当前页 | 当前页（巧合：扫的是当前页） | 跨页并集 —— 与三站文档写的「当前页」相反 |
+| `cachePageSelection: false` | ✅ 翻页丢上一页 | ❌ 被无视 | ❌ 被无视 |
+| 表头「取消全选」 | 只清当前页 | ❌ 连其它页的键一起清 | ✅ reserve 按页操作 |
+| 宿主 `@selection-change`（antdv） | ✅ | —（antdv 无虚拟引擎） | ❌ 从未转出（见 11.10.1⑤） |
+
+第 5 条是真缺陷、但根因不在 vxe：ADV 的 `EsTable` 为了把 a-table 的
+`rowSelection.onChange` 变成同名事件，**声明**了 `selection-change`；而 Vue 3 对
+已声明事件的监听器**不放进 `$attrs`**（`isEmitListener` 过滤），于是
+`v-bind="$attrs"` 没把它带到 vxe-engine，引擎 emit 出来只有内部处理器收得到，
+宿主静默收不到。vue3 端没这个坑，恰恰因为它**没有**声明该事件（靠 attrs 直通）。
+实测：es-pc 勾选后行变勾、提示条停在 `0 行 · 0 行`。
+
+#### 11.10.2 修掉的东西（每条都能复现、修完有守卫）
+
+1. **reserve 判据单源**：core 新增 `wantsCrossPageSelection(options, columns)` ——
+   `cachePageSelection !== false && (multiSelect || 列里有 type:'selection')`。
+   三端 vxe 引擎共用；缺 `rowkey` 的 DEV 告警也改按同一判据。
+2. **跨页并集**：core 新增 `mergeSelectedRows(current, reserved, rowkey)`；
+   三端 `getSelectionRows()` 都取 `getCheckboxRecords()` + `getCheckboxReserveRecords()` 后去重。
+3. **事件载荷统一当前页**：三个 vxe 引擎的 `checkbox-change` / `checkbox-all`
+   直接 emit `records`，不再把 reserve 塞进事件 —— 事件语义与 el-table / a-table /
+   virtual 以及三站文档一致；跨页全集仍然只有 `getSelectionRows()` 一条出口。
+4. **virtual 引擎补齐**（`use-virtual-selection.ts`）：记 key → 行对象，
+   `getSelectedRows()` 回跨页全集，新增 `getPageSelectedRows()` 作为事件载荷；
+   表头取消全选只清当前页；`cachePageSelection: false` 翻页即丢上一页的键。
+5. **antdv vxe 分支显式转出** `selection-change`（见 11.10.1 ⑤），
+   并补组件级回归测试（引擎 emit 一次 → 宿主收到一次，载荷原样）。
+6. **`clearSelection` 语义统一为「清空全部」**：el-table / a-table 原来只清当前页，
+   跨页缓存里其它页的行还在，翻回上一页会被 `restoreSelectionForPage` **重新勾上**
+   —— 用户看到的是「清空没生效」。现在四引擎同义；`clearAllSelection` 保留为
+   同义别名（旧代码在用），三站文档与 `packages/vue3/README.md` 同步改口径。
+7. **vxe 的 reserve 清不干净**：`clearCheckboxRow()` 只遍历**当前表格数据**
+   （`tableFullData`），reserve 里其它页的行留在 `checkboxReserveRowMap` ——
+   而 vxe 自己的 JSDoc 写着「彻底清空」，实现与注释相反。浏览器实测：
+   第 1 页勾 1 行 → 翻到第 2 页 → 清空 → `getCheckboxReserveRecords()` 仍是 `[1]`，
+   翻回第 1 页该行**重新勾上**。三个 vxe 引擎的 `clearSelection` 现在
+   `clearCheckboxRow()` + `clearCheckboxReserve()` 两步都调。
+
+守卫：`packages/core/__tests__/table-selection.spec.ts`（23）、
+`packages/vue3/__tests__/use-virtual-selection.spec.ts`（37）、
+`packages/vue3/__tests__/vxe-engine.spec.ts`（22，含新增 1 条 reserve 清空断言）、
+`packages/adapter-antdv/__tests__/es-table.spec.ts`（65，含新增 2 条）、
+`packages/vue3/__tests__/es-table.spec.ts`（50，含新增 1 条）。
+三站浏览器回归（vxe 多选示例，同一动作三遍）：第 1 页勾 1 → 第 2 页勾 1，
+提示条稳定显示「跨页已选 2 · 上次载荷 1（当前页）」，点清空后 0/0、勾选图标全灭，
+再翻回第 1 页不复活；antdv 在修复前是 0/0（事件根本没到）。
+
+#### 11.10.3 单选：没有，而且这次不做
+
+es-table **没有单选列**。core 的 `LeadingColumnType = 'selection' | 'index' | 'expand'`，
+`selection` 在三个引擎里恒为复选框（el-table `type="selection"`、a-table `rowSelection`、
+vxe `type="checkbox"`）；没有 radio 列类型、没有 `radio-change` 事件，
+`getSelectionRows()` 也只认勾选。三站文档此前没有一处声称支持单选（不算幻影能力），
+但有被误以为「type 写 radio 就行」的空间。
+
+三条可用路径（前两条已实测）：
+
+1. `options.highlightCurrentRow`（默认 true）+ `@current-change`：el-table 与
+   vxe-grid 都会发（vxe-grid 转发 `tableEmits`）；**virtual 与 antdv 不发**
+   `current-change`，它们只有 `@row-click`。
+2. 列上 `render` 自绘 radio（三端通用，选中态自己管）。
+3. vxe 逃生舱 `vxeColumn: { type: 'radio' }`：能渲染，但组件不接 `radio-change`、
+   `getSelectionRows()` 也不含它 —— 状态同样自管。
+
+为什么不做跨引擎 radio 列类型：单选的需求几乎都能被 1/2 覆盖，而新增列类型要动
+core 类型、三端适配器、事件契约与生成器 schema；收益只是一个视觉形态。
+已把这条写进三站文档的列类型说明（`type: 'selection'` 恒为复选框、无单选形态），
+把「以为有」的空间堵上。
+
+#### 11.10.4 边界（写清「没有守卫」的部分）
+
+- 「翻页后勾选不丢」目前只有单测，没有 e2e；三站浏览器回归是人工实点。
+- vxe 的 `reserve` 行为、`getCheckboxReserveRecords()` 与
+  `clearCheckboxRow()` / `clearCheckboxReserve()` 的分工都按 vxe-table 4.20.8 实测，
+  升级 vxe 要重跑上面三条浏览器路径（`clearCheckboxReserve` 是可选调用，
+  老版本没有也不会炸，但「清空后不复活」就没保证）。
+- `clearSelection` 的语义改动对老代码是**变强**（清得更多），不会留下脏状态；
+  但「只想清当前页」的用户需要改用 `toggleRowSelection(row, false)` 逐行取消。
