@@ -52,6 +52,8 @@ const GROUP_BY_PREFIX = {
   dialog: 'use-dialog',
   advanced: 'linkage',
   'vxe-table': 'vxe-table',
+  'error-boundary': 'es-error-boundary',
+  'svg-icon': 'svg-icon',
 }
 
 /** 复刻 docs 的 resolveComponentPath：'<cat>/<NN>-<slug>' → '/src/components/examples/<cat>/<Pascal>.vue'。 */

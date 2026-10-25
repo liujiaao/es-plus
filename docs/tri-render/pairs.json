@@ -2,16 +2,16 @@
   "$comment": "由 scripts/gen-tri-render-pairs.mjs 从三端真实示例文件测得，禁止手改。数值是可核对的实测（同名示例之间的差异行数），不是宣称。",
   "metric": "delta = 单侧变更行数（LCS 逐行比对；一处替换记 1 行，不两侧重复计数）。medianDelta = 该渲染端全部同名示例 delta 的中位数。",
   "sourceLabel": "Vue 3 · Element Plus",
-  "totalPairs": 97,
+  "totalPairs": 99,
   "renderers": [
     {
       "key": "antdv",
       "label": "Vue 3 · Ant Design Vue",
       "pkg": "@es-plus/adapter-antdv",
-      "pairs": 68,
+      "pairs": 69,
       "medianDelta": 16,
-      "le10": 19,
-      "le20": 41,
+      "le10": 20,
+      "le20": 42,
       "ge100": 2,
       "best": "table/Basic.vue"
     },
@@ -19,12 +19,12 @@
       "key": "vue2",
       "label": "Vue 2 · Element UI",
       "pkg": "@es-plus/vue2",
-      "pairs": 29,
-      "medianDelta": 71,
+      "pairs": 30,
+      "medianDelta": 74,
       "le10": 0,
       "le20": 0,
-      "ge100": 9,
-      "best": "table/Basic.vue"
+      "ge100": 10,
+      "best": "form/DeclarativeLinkage.vue"
     }
   ],
   "proof": {

@@ -125,6 +125,18 @@ export const CAPABILITY_TOKENS = {
 
   // ── D 档：非 AI 生成目标 ─────────────────────────────────────────────────
   useDialogApi: { tier: 'D', reason: 'useDialog 命令式 composable（宿主调用），非 schema 面' },
+  errorBoundary: {
+    tier: 'D',
+    reason:
+      '错误边界 `<EsErrorBoundary>`（捕获子树 render / 生命周期 / 侦听器错误并降级）——' +
+      '这是**组件树结构**，宿主决定把哪块子树包进边界、降级 UI 长什么样，schema 里没有也不该有对应键',
+  },
+  svgIcon: {
+    tier: 'D',
+    reason:
+      '`<SvgIcon>` 图标出口（雪碧图 `<use>` / 外部 http(s) 图片、尺寸随字号、随 currentColor 着色）——' +
+      '图标集与雪碧图由宿主注入，属组件级资源编排，非 schema 面',
+  },
   hostOrchestration: { tier: 'D', reason: '宿主编排：ElSteps 分步 / 拖拽 / 异步组件 / ResizeObserver / 运行时增删与手工联动' },
   hostSkeleton: { tier: 'D', reason: '整页骨架 / 布局拼装（后台页等），非单配置可覆盖' },
   siteUncovered: {

@@ -177,6 +177,16 @@
       ]
     },
     {
+      "id": "form/20-declarative-linkage",
+      "group": "es-form",
+      "title": "报销单：零回调联动",
+      "tokens": [
+        "reactions",
+        "fieldVisibility",
+        "formtype"
+      ]
+    },
+    {
       "id": "table/01-basic",
       "group": "es-table",
       "title": "基础表格",
@@ -738,6 +748,15 @@
       ]
     },
     {
+      "id": "advanced/24-master-detail-flow",
+      "group": "linkage",
+      "title": "主表点选 → 从表重查",
+      "tokens": [
+        "configTableOut",
+        "hostOrchestration"
+      ]
+    },
+    {
       "id": "vxe-table/01-basic-switch",
       "group": "vxe-table",
       "title": "引擎切换",
@@ -866,14 +885,30 @@
         "spanMethodFn",
         "vxeFirstClass"
       ]
+    },
+    {
+      "id": "error-boundary/basic",
+      "group": "es-error-boundary",
+      "title": "故障注入台：一处坏掉，整页还在",
+      "tokens": [
+        "errorBoundary"
+      ]
+    },
+    {
+      "id": "svg-icon/basic",
+      "group": "svg-icon",
+      "title": "一个图标出口：尺寸 / 着色 / 类名 / 外部图片",
+      "tokens": [
+        "svgIcon"
+      ]
     }
   ],
   "sites": [
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 35,
-      "uncovered": 56,
+      "refs": 37,
+      "uncovered": 58,
       "cases": [
         {
           "id": "combination/BatchEdit",
@@ -973,6 +1008,15 @@
           ],
           "tier": "D",
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/MasterDetailFlow",
+          "demo": "advanced/24-master-detail-flow",
+          "tokens": [
+            "configTableOut",
+            "hostOrchestration"
+          ],
+          "tier": "D"
         },
         {
           "id": "combination/PermissionButtons",
@@ -1186,6 +1230,15 @@
           "tier": "D"
         },
         {
+          "id": "error-boundary/Basic",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
           "id": "form/ApiRequest",
           "demo": null,
           "tokens": [
@@ -1230,6 +1283,16 @@
             "renderFn"
           ],
           "tier": "C"
+        },
+        {
+          "id": "form/DeclarativeLinkage",
+          "demo": "form/20-declarative-linkage",
+          "tokens": [
+            "reactions",
+            "fieldVisibility",
+            "formtype"
+          ],
+          "tier": "A"
         },
         {
           "id": "form/DetailMode",
@@ -1318,6 +1381,15 @@
             "validatorFn"
           ],
           "tier": "C"
+        },
+        {
+          "id": "svg-icon/Basic",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
         },
         {
           "id": "table/ActionColumn",
@@ -1687,8 +1759,8 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 93,
-      "uncovered": 17,
+      "refs": 95,
+      "uncovered": 22,
       "cases": [
         {
           "id": "Advanced",
@@ -1735,6 +1807,15 @@
           "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
+          "id": "EsErrorBoundary",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
           "id": "EsForm",
           "demo": null,
           "tokens": [
@@ -1754,6 +1835,15 @@
         },
         {
           "id": "EsVxeTable",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "FlagshipApproval",
           "demo": null,
           "tokens": [
             "siteUncovered"
@@ -1790,6 +1880,15 @@
         },
         {
           "id": "QuickStart",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "SvgIcon",
           "demo": null,
           "tokens": [
             "siteUncovered"
@@ -1890,6 +1989,15 @@
           "demo": "advanced/05-form-table-dialog",
           "tokens": [
             "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-advanced/MasterDetailFlow",
+          "demo": "advanced/24-master-detail-flow",
+          "tokens": [
+            "configTableOut",
+            "hostOrchestration"
           ],
           "tier": "D"
         },
@@ -2191,6 +2299,15 @@
           "tier": "D"
         },
         {
+          "id": "es-error-boundary/Basic",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
           "id": "es-form/AdvancedButtons",
           "demo": "form/11-advanced-buttons",
           "tokens": [
@@ -2270,6 +2387,16 @@
           ],
           "tier": "D",
           "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "es-form/DeclarativeLinkage",
+          "demo": "form/20-declarative-linkage",
+          "tokens": [
+            "reactions",
+            "fieldVisibility",
+            "formtype"
+          ],
+          "tier": "A"
         },
         {
           "id": "es-form/Detail",
@@ -2659,6 +2786,15 @@
         },
         {
           "id": "es-vxe/VirtualScroll",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
+          "id": "svg-icon/Basic",
           "demo": null,
           "tokens": [
             "siteUncovered"

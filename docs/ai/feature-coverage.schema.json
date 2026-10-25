@@ -30,12 +30,12 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^(form|table|crud-page|dialog|advanced|vxe-table)/\\d{2}-[a-z0-9-]+$",
-            "description": "文档引用串本身（<category>/<NN>-<slug>），由 resolveComponentPath 规则映射到磁盘 .vue"
+            "pattern": "^(?:(?:form|table|crud-page|dialog|advanced|vxe-table)/\\d{2}-[a-z0-9-]+|(?:error-boundary|svg-icon)/[a-z0-9-]+)$",
+            "description": "文档引用串本身（<category>/<NN>-<slug>，独立组件页为 <category>/<slug>），由 resolveComponentPath 规则映射到磁盘 .vue"
           },
           "group": {
             "type": "string",
-            "enum": ["es-form", "es-table", "es-crud-page", "use-dialog", "linkage", "vxe-table"]
+            "enum": ["es-form", "es-table", "es-crud-page", "use-dialog", "linkage", "vxe-table", "es-error-boundary", "svg-icon"]
           },
           "title": { "type": "string", "minLength": 1 },
           "tokens": {
