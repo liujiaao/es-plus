@@ -156,8 +156,9 @@ const tableOptions: any = {
   configTableOut: { total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex' },
   // printConfig: true 展开为 {}（vxe 必需，否则 print() 报错"缺少必要的 print-config 参数"）
   printConfig: true as const,
-  // 列设置弹窗由 vxe 的 custom 模块提供：不装模块时 grid.openCustom 不存在
-  vxeConfig: { customConfig: true },
+  // 列设置弹窗由 vxe 的 custom 模块提供：装了这个模块 grid.openCustom 才存在，
+  // 与 customConfig 无关 —— 后者的类型是 Object（默认值在 vxe 的全局配置里），
+  // 写 `customConfig: true` 只会让 VxeGrid 报一条 prop 类型警告，功能一点不多。
   // configBtn 工具栏：通过 getVxeGrid()（es-table 注入的惰性求值函数）获取 vxe-grid 实例
   // 全屏按钮点击时手动切换 isZoomed 状态，驱动浮动退出按钮显隐
   configBtn: [
