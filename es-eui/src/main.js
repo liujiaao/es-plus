@@ -28,33 +28,41 @@ Vue.use(VxeTable)
 // Vue.use(VueCompositionAPI)
 import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'
+import { demoHttpRequest } from '@/utils/demo-http'
+
+// 站点自己的请求：axios 实例（保留拦截器、Token 注入等既有能力）。
+// 演示接口走本地 mock，其余地址照旧走这里 —— 两条路合起来就是「一个入口函数」。
+function siteHttpRequest({ url, headers, formParams, ...options }) {
+    const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options?.method || 'POST',
+        headers: {
+            ...(headers || {}),
+            // 'Access-Control-Allow-Origin': '*',
+
+        },
+        //   data: formParams
+        // ...options,
+    }
+    if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+    } else {
+        opt.data = formParams
+    }
+
+    return http(opt)
+}
+
+const isDemoUrl = (params) => String((params && params.url) || '').indexOf('/api/demo/') === 0
 
 Vue.use(EsPlus, {
+    // 全局请求：整个应用只配这一处。表格 / 表单只声明 apiParams，不再各自写 $httpRequest。
+    // 组件级 httpRequest 仍然优先（个别页面要签名 / 重试就在那一页覆盖）。
+    httpRequest: (params) => (isDemoUrl(params) ? demoHttpRequest(params) : siteHttpRequest(params)),
     EsTable: {
         methods: {
-            $httpRequest({ url, headers, formParams, ...options }) {
-
-                const opt = {
-                    baseURL: '',
-                    url,
-                    contentType: 'application/json',
-                    method: options?.method || 'POST',
-                    headers: {
-                        ...(headers || {}),
-                        // 'Access-Control-Allow-Origin': '*',
-
-                    },
-                    //   data: formParams
-                    // ...options,
-                }
-                if (opt.method.toUpperCase() === 'GET') {
-                    opt.params = formParams
-                } else {
-                    opt.data = formParams
-                }
-
-                return http(opt)
-            },
             paginationLayout: () => ({
                 layout: 'total, sizes, prev, pager, next, jumper',
                 pageSizes: [10, 20, 50, 100],
@@ -74,23 +82,6 @@ Vue.use(EsPlus, {
     },
     EsForm: {
         methods: {
-            $httpRequest({ url, headers, formParams, ...options }) {
-                const opt = {
-                    baseURL: '',
-                    url,
-                    contentType: 'application/json',
-                    method: options.method || 'POST',
-                    // data: formParams
-                    // ...options,
-
-                }
-                if (opt.method.toUpperCase() === 'GET') {
-                    opt.params = formParams
-                } else {
-                    opt.data = formParams
-                }
-                return http(opt)
-            },
             // 配置自动查询字段输出
             fieldFieldOutput() {
                 return {

@@ -77,6 +77,7 @@ import CombinationPermissionButtons from './combination/PermissionButtons.vue'
 import CombinationBatchEdit from './combination/BatchEdit.vue'
 import CombinationEditableGridSubmit from './combination/EditableGridSubmit.vue'
 import CombinationImportData from './combination/ImportData.vue'
+import CombinationGlobalRequest from './combination/GlobalRequest.vue'
 
 import CrudBasic from './crud/Basic.vue'
 import CrudMultiDialog from './crud/MultiDialog.vue'
@@ -176,6 +177,7 @@ const componentMap = {
   './combination/BatchEdit.vue': CombinationBatchEdit,
   './combination/EditableGridSubmit.vue': CombinationEditableGridSubmit,
   './combination/ImportData.vue': CombinationImportData,
+  './combination/GlobalRequest.vue': CombinationGlobalRequest,
   './crud/Basic.vue': CrudBasic,
   './crud/MultiDialog.vue': CrudMultiDialog,
   './vxe-table/BasicSwitch.vue': VxeTableBasicSwitch,
@@ -306,6 +308,7 @@ export const combinationExamples = [
   { key: 'BatchEdit', title: '多选批量编辑', description: '勾选多行 → 批量修改部门/状态（仅提交勾选字段）→ api.batchUpdate 一次提交 → refetch + 清空勾选。' },
   { key: 'EditableGridSubmit', title: '可编辑表格批量提交', description: '行内编辑/新增/删除，前端跟踪「新增/修改/删除」三类脏数据，一次性批量提交后端并回读。' },
   { key: 'ImportData', title: '可回滚的批量导入', description: 'CSV 前端校验（必填/枚举/数字/重复）→ 错误行用 EsForm 就地修正 → 每 3 条一批提交；服务端只裁决审批阈值，被拒行修正后只补交待导入行；结果表由 entryQuery 带入批次号重查，整批可回滚。' },
+  { key: 'GlobalRequest', title: '全局请求：页面零请求代码', description: 'httpRequest 在入口 Vue.use(EsPlus, { httpRequest }) 配一次，查询表单 + 表格 + 分页只声明 apiParams：整份 schema 可 JSON 序列化，页面里没有一行请求代码。' },
 ]
 
 export const vxeTableExamples = [
