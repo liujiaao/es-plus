@@ -26,16 +26,16 @@ export default {
     return {
       postsCache: null,
       columns: [
-        { key: 'id', label: '编号', width: 80 },
-        { key: 'title', label: '标题' },
+        { prop: 'id', label: '编号', width: 80 },
+        { prop: 'title', label: '标题' },
         {
-          key: 'userId',
+          prop: 'userId',
           label: '用户ID',
           width: 100,
           render: (h, { row }) => <el-tag size="mini">用户{row.userId}</el-tag>
         },
         {
-          key: 'body',
+          prop: 'body',
           label: '内容',
           render: (h, { row }) => <span>{String(row.body || '').slice(0, 50)}...</span>
         }

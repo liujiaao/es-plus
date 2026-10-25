@@ -95,12 +95,12 @@ export default {
         total: 0
       },
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'firstName', label: '名', width: 120 },
-        { key: 'lastName', label: '姓', width: 120 },
-        { key: 'email', label: '邮箱' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'firstName', label: '名', width: 120 },
+        { prop: 'lastName', label: '姓', width: 120 },
+        { prop: 'email', label: '邮箱' },
         {
-          key: 'image',
+          prop: 'image',
           label: '头像',
           width: 80,
           render: (h, { row }) => (

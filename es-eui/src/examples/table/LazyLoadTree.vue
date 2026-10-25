@@ -16,10 +16,10 @@ export default {
         { id: 3, name: '广州市分公司', leader: '郑十一', memberCount: 35, hasChildren: true }
       ],
       columns: [
-        { key: 'name', label: '组织名称' },
-        { key: 'leader', label: '负责人' },
+        { prop: 'name', label: '组织名称' },
+        { prop: 'leader', label: '负责人' },
         {
-          key: 'memberCount',
+          prop: 'memberCount',
           label: '成员数量',
           render: (h, { row }) => <el-tag size="mini">{row.memberCount}人</el-tag>
         }

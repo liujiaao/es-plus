@@ -199,10 +199,10 @@ export default {
         { id: 4, name: '赵六', status: '启用', createTime: '2024-04-05' }
       ],
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'status', label: '状态', width: 100 },
-        { key: 'createTime', label: '创建时间' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'status', label: '状态', width: 100 },
+        { prop: 'createTime', label: '创建时间' }
       ]
     }
   },
@@ -312,9 +312,9 @@ export default {
   methods: {
     initInlineEditColumns() {
       this.inlineEditColumns = [
-        { key: 'id', label: 'ID', width: 80 },
+        { prop: 'id', label: 'ID', width: 80 },
         {
-          key: 'name',
+          prop: 'name',
           label: '姓名',
           width: 150,
           render: (h, { row }) => row.editing ? (
@@ -322,21 +322,21 @@ export default {
           ) : <span>{row.name}</span>
         },
         {
-          key: 'age',
+          prop: 'age',
           label: '年龄',
           render: (h, { row }) => row.editing ? (
             <el-input-number v-model={row.age} size="small" min={1} max={150} />
           ) : <span>{row.age}</span>
         },
         {
-          key: 'email',
+          prop: 'email',
           label: '邮箱',
           render: (h, { row }) => row.editing ? (
             <el-input v-model={row.email} size="small" />
           ) : <span>{row.email}</span>
         },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 150,
           render: (h, { row }) => row.editing ? (
@@ -499,10 +499,10 @@ export default {
             ref="selectTable"
             data-source={tableData}
             columns={[
-              { key: 'id', label: 'ID', width: 80 },
-              { key: 'name', label: '姓名', width: 120 },
-              { key: 'department', label: '部门', width: 150 },
-              { key: 'position', label: '职位' }
+              { prop: 'id', label: 'ID', width: 80 },
+              { prop: 'name', label: '姓名', width: 120 },
+              { prop: 'department', label: '部门', width: 150 },
+              { prop: 'position', label: '职位' }
             ]}
             options={{
               border: true,
@@ -853,10 +853,10 @@ export default {
         { id: 4, name: '赵六', department: '运维部', position: '运维工程师' }
       ],
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'department', label: '部门', width: 150 },
-        { key: 'position', label: '职位' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'department', label: '部门', width: 150 },
+        { prop: 'position', label: '职位' }
       ],
       selection: []
     }
@@ -929,9 +929,9 @@ export default {
             <es-table
               data-source={this.formWithTableData.items}
               columns={[
-                { key: 'product', label: '产品', width: 200 },
+                { prop: 'product', label: '产品', width: 200 },
                 {
-                  key: 'quantity',
+                  prop: 'quantity',
                   label: '数量',
                   width: 150,
                   render: (h, { row: item }) => (
@@ -944,7 +944,7 @@ export default {
                   )
                 },
                 {
-                  key: 'price',
+                  prop: 'price',
                   label: '单价',
                   width: 150,
                   render: (h, { row: item }) => (
@@ -958,7 +958,7 @@ export default {
                   )
                 },
                 {
-                  key: 'subtotal',
+                  prop: 'subtotal',
                   label: '小计',
                   render: (h, { row: item }) => (
                     <span style="color: #f56c6c; font-weight: bold;">
@@ -967,7 +967,7 @@ export default {
                   )
                 },
                 {
-                  key: 'action',
+                  prop: 'action',
                   label: '操作',
                   width: 100,
                   render: (h, { index }) => (
@@ -1693,7 +1693,7 @@ export default {
                 data-source={detailList}
                 columns={[
                   {
-                    key: 'product',
+                    prop: 'product',
                     label: '产品',
                     width: 200,
                     render: (h, { row }) => (
@@ -1706,7 +1706,7 @@ export default {
                     )
                   },
                   {
-                    key: 'qty',
+                    prop: 'qty',
                     label: '数量',
                     width: 120,
                     render: (h, { row }) => (
@@ -1719,7 +1719,7 @@ export default {
                     )
                   },
                   {
-                    key: 'price',
+                    prop: 'price',
                     label: '单价',
                     render: (h, { row }) => (
                       <el-input-number
@@ -1732,7 +1732,7 @@ export default {
                     )
                   },
                   {
-                    key: 'subtotal',
+                    prop: 'subtotal',
                     label: '小计',
                     render: (h, { row }) => (
                       <span style="color: #f56c6c; font-weight: bold;">
@@ -1741,7 +1741,7 @@ export default {
                     )
                   },
                   {
-                    key: 'action',
+                    prop: 'action',
                     label: '操作',
                     width: 80,
                     render: (h, { index }) => (
@@ -2400,12 +2400,12 @@ export default {
         total: 0
       },
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'firstName', label: '名', width: 120 },
-        { key: 'lastName', label: '姓', width: 120 },
-        { key: 'email', label: '邮箱' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'firstName', label: '名', width: 120 },
+        { prop: 'lastName', label: '姓', width: 120 },
+        { prop: 'email', label: '邮箱' },
         {
-          key: 'image',
+          prop: 'image',
           label: '头像',
           width: 80,
           render: (h, { row }) => (
@@ -2754,10 +2754,10 @@ export default {
           label: '用户列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'firstName', label: '名', width: 120 },
-            { key: 'lastName', label: '姓', width: 120 },
-            { key: 'email', label: '邮箱' }
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'firstName', label: '名', width: 120 },
+            { prop: 'lastName', label: '姓', width: 120 },
+            { prop: 'email', label: '邮箱' }
           ],
           apiParams: {
             url: 'https://dummyjson.com/users',
@@ -2780,10 +2780,10 @@ export default {
           label: '文章列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'title', label: '标题', width: 300 },
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'title', label: '标题', width: 300 },
             {
-              key: 'body',
+              prop: 'body',
               label: '内容',
               render: (h, { row }) => row.body.substring(0, 60) + '...'
             }
@@ -2809,10 +2809,10 @@ export default {
           label: '产品列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'title', label: '产品名称', width: 200 },
-            { key: 'price', label: '价格', width: 100 },
-            { key: 'brand', label: '品牌', width: 150 }
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'title', label: '产品名称', width: 200 },
+            { prop: 'price', label: '价格', width: 100 },
+            { prop: 'brand', label: '品牌', width: 150 }
           ],
           apiParams: {
             url: 'https://dummyjson.com/products',
@@ -4350,10 +4350,10 @@ export default {
           <es-table
             data-source={this.tableData}
             columns={[
-              { key: 'id', label: 'ID', width: 80 },
-              { key: 'name', label: '姓名', width: 120 },
-              { key: 'age', label: '年龄', width: 80 },
-              { key: 'email', label: '邮箱' }
+              { prop: 'id', label: 'ID', width: 80 },
+              { prop: 'name', label: '姓名', width: 120 },
+              { prop: 'age', label: '年龄', width: 80 },
+              { prop: 'email', label: '邮箱' }
             ]}
             options={{ border: true, multiSelect: true }}
             on-selection-change={(selection) => {
@@ -6701,10 +6701,10 @@ export default {
         { id: 2, name: '政策B', status: '0' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '名称' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '名称' },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => (
@@ -6714,7 +6714,7 @@ export default {
           )
         },
         {
-          key: 'operate',
+          prop: 'operate',
           label: '操作',
           width: 200,
           btns: [
@@ -6770,12 +6770,12 @@ export default {
     return {
       data: [],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'firstName', label: '名', width: 120 },
-        { key: 'lastName', label: '姓', width: 120 },
-        { key: 'email', label: '邮箱' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'firstName', label: '名', width: 120 },
+        { prop: 'lastName', label: '姓', width: 120 },
+        { prop: 'email', label: '邮箱' },
         {
-          key: 'image',
+          prop: 'image',
           label: '头像',
           width: 80,
           render: (h, { row }) => (
@@ -6834,10 +6834,10 @@ export default {
         { id: 3, name: '王五', age: 28, email: 'wangwu@example.com' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'email', label: '邮箱' }
       ],
       options: { border: true }
     }
@@ -6924,12 +6924,12 @@ export default {
         { id: 7, region: '华南区', quarter: 'Q2', month: '4月', sales: 105000, target: 90000, achievement: '117%' }
       ],
       columns: [
-        { key: 'region', label: '区域' },
-        { key: 'quarter', label: '季度', width: 80 },
-        { key: 'month', label: '月份', width: 80 },
-        { key: 'sales', label: '销售额' },
-        { key: 'target', label: '目标', width: 100 },
-        { key: 'achievement', label: '完成率' }
+        { prop: 'region', label: '区域' },
+        { prop: 'quarter', label: '季度', width: 80 },
+        { prop: 'month', label: '月份', width: 80 },
+        { prop: 'sales', label: '销售额' },
+        { prop: 'target', label: '目标', width: 100 },
+        { prop: 'achievement', label: '完成率' }
       ],
       options: {
         border: true,
@@ -7048,10 +7048,10 @@ export default {
         { id: 3, name: '王五', age: 28, email: 'wangwu@example.com' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'email', label: '邮箱' }
       ],
       advancedOpen: false,
       keyword: '',
@@ -7459,12 +7459,12 @@ export default {
     return {
       data: [],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'title', label: '商品名称' },
-        { key: 'brand', label: '品牌', width: 120 },
-        { key: 'category', label: '分类', width: 120 },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'title', label: '商品名称' },
+        { prop: 'brand', label: '品牌', width: 120 },
+        { prop: 'category', label: '分类', width: 120 },
         {
-          key: 'price',
+          prop: 'price',
           label: '价格',
           width: 100,
           render: (h, { row }) => (
@@ -7472,7 +7472,7 @@ export default {
           )
         },
         {
-          key: 'stock',
+          prop: 'stock',
           label: '库存',
           width: 100,
           render: (h, { row }) => (
@@ -7863,7 +7863,7 @@ export default {
       ],
       columns: [
         {
-          key: 'id',
+          prop: 'id',
           label: 'ID',
           width: 60,
           type: 'expand',
@@ -7884,10 +7884,10 @@ export default {
             )
           }
         },
-        { key: 'name', label: '姓名', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'phone', label: '手机', width: 130 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'name', label: '姓名', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'phone', label: '手机', width: 130 },
+        { prop: 'email', label: '邮箱' }
       ],
       options: {
         border: true,
@@ -7991,11 +7991,11 @@ export default {
         { id: 8, name: '吴十', age: 31, email: 'wushi@example.com', address: '南京市鼓楼区中山路150号' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'email', label: '邮箱', width: 200 },
-        { key: 'address', label: '地址' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'email', label: '邮箱', width: 200 },
+        { prop: 'address', label: '地址' }
       ],
       options: {
         border: true,
@@ -8062,35 +8062,35 @@ export default {
           label: '基本信息',
           prop: 'baseInfo',
           groups: [
-            { key: 'id', label: 'ID', width: 60 },
-            { key: 'name', label: '姓名', width: 100 },
-            { key: 'age', label: '年龄', width: 80 }
+            { prop: 'id', label: 'ID', width: 60 },
+            { prop: 'name', label: '姓名', width: 100 },
+            { prop: 'age', label: '年龄', width: 80 }
           ]
         },
         {
           label: '联系方式',
           prop: 'contact',
           groups: [
-            { key: 'phone', label: '手机号', width: 130 },
-            { key: 'phone2', label: '备用电话', width: 130 },
-            { key: 'email', label: '邮箱', width: 180 },
+            { prop: 'phone', label: '手机号', width: 130 },
+            { prop: 'phone2', label: '备用电话', width: 130 },
+            { prop: 'email', label: '邮箱', width: 180 },
             {
-              key: 'qq',
+              prop: 'qq',
               label: 'QQ号',
               width: 120,
               render: (h, { row }) => <el-tag size="mini">{row.qq}</el-tag>
             },
-            { key: 'wechat', label: '微信', width: 120 }
+            { prop: 'wechat', label: '微信', width: 120 }
           ]
         },
         {
           label: '其他信息',
           prop: 'other',
           groups: [
-            { key: 'address', label: '地址', width: 160 },
-            { key: 'score.chinese', label: '语文', width: 80 },
-            { key: 'score.math', label: '数学', width: 80 },
-            { key: 'score.english', label: '英语', width: 80 }
+            { prop: 'address', label: '地址', width: 160 },
+            { prop: 'score.chinese', label: '语文', width: 80 },
+            { prop: 'score.math', label: '数学', width: 80 },
+            { prop: 'score.english', label: '英语', width: 80 }
           ]
         }
       ],
@@ -8118,10 +8118,10 @@ export default {
         { id: 3, name: '广州市分公司', leader: '郑十一', memberCount: 35, hasChildren: true }
       ],
       columns: [
-        { key: 'name', label: '组织名称' },
-        { key: 'leader', label: '负责人' },
+        { prop: 'name', label: '组织名称' },
+        { prop: 'leader', label: '负责人' },
         {
-          key: 'memberCount',
+          prop: 'memberCount',
           label: '成员数量',
           render: (h, { row }) => <el-tag size="mini">{row.memberCount}人</el-tag>
         }
@@ -8197,16 +8197,16 @@ export default {
     return {
       postsCache: null,
       columns: [
-        { key: 'id', label: '编号', width: 80 },
-        { key: 'title', label: '标题' },
+        { prop: 'id', label: '编号', width: 80 },
+        { prop: 'title', label: '标题' },
         {
-          key: 'userId',
+          prop: 'userId',
           label: '用户ID',
           width: 100,
           render: (h, { row }) => <el-tag size="mini">用户{row.userId}</el-tag>
         },
         {
-          key: 'body',
+          prop: 'body',
           label: '内容',
           render: (h, { row }) => <span>{String(row.body || '').slice(0, 50)}...</span>
         }
@@ -8326,10 +8326,10 @@ export default {
         { id: 6, category: '食品', product: '有机牛奶', sales: 5000, revenue: 250000 }
       ],
       columns: [
-        { key: 'category', label: '分类' },
-        { key: 'product', label: '产品名称' },
-        { key: 'sales', label: '销量' },
-        { key: 'revenue', label: '销售额' }
+        { prop: 'category', label: '分类' },
+        { prop: 'product', label: '产品名称' },
+        { prop: 'sales', label: '销量' },
+        { prop: 'revenue', label: '销售额' }
       ],
       options: {
         border: true,
@@ -8375,12 +8375,12 @@ export default {
       data: [],
       columns: [
         { type: 'selection', width: 55 },
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'firstName', label: '名', width: 100 },
-        { key: 'lastName', label: '姓', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'gender', label: '性别', width: 80 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'firstName', label: '名', width: 100 },
+        { prop: 'lastName', label: '姓', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'gender', label: '性别', width: 80 },
+        { prop: 'email', label: '邮箱' }
       ],
       // 分页读 current（不是 pageIndex）；pageIndex 是「请求参数名」，由组件内部按 current 生成
       pagination: { current: 1, pageSize: 5, total: 0 },
@@ -8596,11 +8596,11 @@ export default {
       // 弹窗表单的模型：结构与表格行一致，编辑时直接覆盖，新增时用空模板
       dialogModel: {},
       columns: [
-        { key: 'id', label: '政策编号', fixed: 'left', width: 100 },
-        { key: 'title', label: '政策标题', width: 150 },
-        { key: 'tags', label: '政策标签', width: 100 },
+        { prop: 'id', label: '政策编号', fixed: 'left', width: 100 },
+        { prop: 'title', label: '政策标题', width: 150 },
+        { prop: 'tags', label: '政策标签', width: 100 },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => (
@@ -8609,14 +8609,14 @@ export default {
             </el-tag>
           )
         },
-        { key: 'publishingMethodName', label: '发布方式', width: 100 },
-        { key: 'scheduledReleaseTime', label: '发布时间', width: 140 },
-        { key: 'validDateStart', label: '生效时间', width: 140 },
-        { key: 'validDateEnd', label: '失效时间', width: 140 },
-        { key: 'createTime', label: '创建时间', width: 140 },
-        { key: 'createBy', label: '创建人', width: 100 },
+        { prop: 'publishingMethodName', label: '发布方式', width: 100 },
+        { prop: 'scheduledReleaseTime', label: '发布时间', width: 140 },
+        { prop: 'validDateStart', label: '生效时间', width: 140 },
+        { prop: 'validDateEnd', label: '失效时间', width: 140 },
+        { prop: 'createTime', label: '创建时间', width: 140 },
+        { prop: 'createBy', label: '创建人', width: 100 },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 220,
           fixed: 'right',
@@ -9035,10 +9035,10 @@ export default {
         { id: 3, name: '王五', status: '2', score: 78 }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名' },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           render: (h, { row }) => {
             const statusMap = {
@@ -9051,7 +9051,7 @@ export default {
           }
         },
         {
-          key: 'score',
+          prop: 'score',
           label: '评分',
           render: (h, { row }) => {
             const color = row.score >= 90 ? '#67c23a' : row.score >= 80 ? '#e6a23c' : '#f56c6c'
@@ -9199,10 +9199,10 @@ export default {
         }
       ],
       columns: [
-        { key: 'name', label: '组织名称' },
-        { key: 'leader', label: '负责人' },
+        { prop: 'name', label: '组织名称' },
+        { prop: 'leader', label: '负责人' },
         {
-          key: 'memberCount',
+          prop: 'memberCount',
           label: '成员数量',
           render: (h, { row }) => {
             return (

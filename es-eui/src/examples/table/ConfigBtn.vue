@@ -39,10 +39,10 @@ export default {
         { id: 3, name: '王五', age: 28, email: 'wangwu@example.com' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'email', label: '邮箱' }
       ],
       advancedOpen: false,
       keyword: '',

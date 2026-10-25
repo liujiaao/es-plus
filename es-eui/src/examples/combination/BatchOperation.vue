@@ -34,10 +34,10 @@ export default {
         { id: 4, name: '赵六', status: '启用', createTime: '2024-04-05' }
       ],
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'status', label: '状态', width: 100 },
-        { key: 'createTime', label: '创建时间' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'status', label: '状态', width: 100 },
+        { prop: 'createTime', label: '创建时间' }
       ]
     }
   },

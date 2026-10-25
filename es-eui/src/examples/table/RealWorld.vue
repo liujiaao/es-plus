@@ -44,11 +44,11 @@ export default {
       // 弹窗表单的模型：结构与表格行一致，编辑时直接覆盖，新增时用空模板
       dialogModel: {},
       columns: [
-        { key: 'id', label: '政策编号', fixed: 'left', width: 100 },
-        { key: 'title', label: '政策标题', width: 150 },
-        { key: 'tags', label: '政策标签', width: 100 },
+        { prop: 'id', label: '政策编号', fixed: 'left', width: 100 },
+        { prop: 'title', label: '政策标题', width: 150 },
+        { prop: 'tags', label: '政策标签', width: 100 },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => (
@@ -57,14 +57,14 @@ export default {
             </el-tag>
           )
         },
-        { key: 'publishingMethodName', label: '发布方式', width: 100 },
-        { key: 'scheduledReleaseTime', label: '发布时间', width: 140 },
-        { key: 'validDateStart', label: '生效时间', width: 140 },
-        { key: 'validDateEnd', label: '失效时间', width: 140 },
-        { key: 'createTime', label: '创建时间', width: 140 },
-        { key: 'createBy', label: '创建人', width: 100 },
+        { prop: 'publishingMethodName', label: '发布方式', width: 100 },
+        { prop: 'scheduledReleaseTime', label: '发布时间', width: 140 },
+        { prop: 'validDateStart', label: '生效时间', width: 140 },
+        { prop: 'validDateEnd', label: '失效时间', width: 140 },
+        { prop: 'createTime', label: '创建时间', width: 140 },
+        { prop: 'createBy', label: '创建人', width: 100 },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 220,
           fixed: 'right',

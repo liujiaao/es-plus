@@ -23,11 +23,11 @@ export default {
         { id: 8, name: '吴十', age: 31, email: 'wushi@example.com', address: '南京市鼓楼区中山路150号' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'email', label: '邮箱', width: 200 },
-        { key: 'address', label: '地址' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'email', label: '邮箱', width: 200 },
+        { prop: 'address', label: '地址' }
       ],
       options: {
         border: true,

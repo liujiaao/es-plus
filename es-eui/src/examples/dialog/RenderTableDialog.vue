@@ -28,10 +28,10 @@ export default {
           <es-table
             data-source={this.tableData}
             columns={[
-              { key: 'id', label: 'ID', width: 80 },
-              { key: 'name', label: '姓名', width: 120 },
-              { key: 'age', label: '年龄', width: 80 },
-              { key: 'email', label: '邮箱' }
+              { prop: 'id', label: 'ID', width: 80 },
+              { prop: 'name', label: '姓名', width: 120 },
+              { prop: 'age', label: '年龄', width: 80 },
+              { prop: 'email', label: '邮箱' }
             ]}
             options={{ border: true, multiSelect: true }}
             on-selection-change={(selection) => {

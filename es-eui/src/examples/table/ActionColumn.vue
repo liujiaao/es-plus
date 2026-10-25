@@ -20,10 +20,10 @@ export default {
         { id: 2, name: '政策B', status: '0' }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '名称' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '名称' },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           width: 100,
           render: (h, { row }) => (
@@ -33,7 +33,7 @@ export default {
           )
         },
         {
-          key: 'operate',
+          prop: 'operate',
           label: '操作',
           width: 200,
           btns: [

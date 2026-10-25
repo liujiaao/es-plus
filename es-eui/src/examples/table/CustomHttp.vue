@@ -19,12 +19,12 @@ export default {
     return {
       data: [],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'title', label: '商品名称' },
-        { key: 'brand', label: '品牌', width: 120 },
-        { key: 'category', label: '分类', width: 120 },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'title', label: '商品名称' },
+        { prop: 'brand', label: '品牌', width: 120 },
+        { prop: 'category', label: '分类', width: 120 },
         {
-          key: 'price',
+          prop: 'price',
           label: '价格',
           width: 100,
           render: (h, { row }) => (
@@ -32,7 +32,7 @@ export default {
           )
         },
         {
-          key: 'stock',
+          prop: 'stock',
           label: '库存',
           width: 100,
           render: (h, { row }) => (

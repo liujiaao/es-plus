@@ -19,10 +19,10 @@ export default {
         { id: 6, category: '食品', product: '有机牛奶', sales: 5000, revenue: 250000 }
       ],
       columns: [
-        { key: 'category', label: '分类' },
-        { key: 'product', label: '产品名称' },
-        { key: 'sales', label: '销量' },
-        { key: 'revenue', label: '销售额' }
+        { prop: 'category', label: '分类' },
+        { prop: 'product', label: '产品名称' },
+        { prop: 'sales', label: '销量' },
+        { prop: 'revenue', label: '销售额' }
       ],
       options: {
         border: true,

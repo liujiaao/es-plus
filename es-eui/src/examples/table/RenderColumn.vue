@@ -16,10 +16,10 @@ export default {
         { id: 3, name: '王五', status: '2', score: 78 }
       ],
       columns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名' },
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名' },
         {
-          key: 'status',
+          prop: 'status',
           label: '状态',
           render: (h, { row }) => {
             const statusMap = {
@@ -32,7 +32,7 @@ export default {
           }
         },
         {
-          key: 'score',
+          prop: 'score',
           label: '评分',
           render: (h, { row }) => {
             const color = row.score >= 90 ? '#67c23a' : row.score >= 80 ? '#e6a23c' : '#f56c6c'

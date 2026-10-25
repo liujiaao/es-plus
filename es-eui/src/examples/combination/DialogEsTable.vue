@@ -37,10 +37,10 @@ export default {
             ref="selectTable"
             data-source={tableData}
             columns={[
-              { key: 'id', label: 'ID', width: 80 },
-              { key: 'name', label: '姓名', width: 120 },
-              { key: 'department', label: '部门', width: 150 },
-              { key: 'position', label: '职位' }
+              { prop: 'id', label: 'ID', width: 80 },
+              { prop: 'name', label: '姓名', width: 120 },
+              { prop: 'department', label: '部门', width: 150 },
+              { prop: 'position', label: '职位' }
             ]}
             options={{
               border: true,

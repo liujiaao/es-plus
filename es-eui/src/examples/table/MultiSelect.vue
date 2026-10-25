@@ -31,12 +31,12 @@ export default {
       data: [],
       columns: [
         { type: 'selection', width: 55 },
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'firstName', label: '名', width: 100 },
-        { key: 'lastName', label: '姓', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'gender', label: '性别', width: 80 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'firstName', label: '名', width: 100 },
+        { prop: 'lastName', label: '姓', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'gender', label: '性别', width: 80 },
+        { prop: 'email', label: '邮箱' }
       ],
       // 分页读 current（不是 pageIndex）；pageIndex 是「请求参数名」，由组件内部按 current 生成
       pagination: { current: 1, pageSize: 5, total: 0 },

@@ -38,7 +38,7 @@ export default {
       ],
       columns: [
         {
-          key: 'id',
+          prop: 'id',
           label: 'ID',
           width: 60,
           type: 'expand',
@@ -59,10 +59,10 @@ export default {
             )
           }
         },
-        { key: 'name', label: '姓名', width: 100 },
-        { key: 'age', label: '年龄', width: 80 },
-        { key: 'phone', label: '手机', width: 130 },
-        { key: 'email', label: '邮箱' }
+        { prop: 'name', label: '姓名', width: 100 },
+        { prop: 'age', label: '年龄', width: 80 },
+        { prop: 'phone', label: '手机', width: 130 },
+        { prop: 'email', label: '邮箱' }
       ],
       options: {
         border: true,

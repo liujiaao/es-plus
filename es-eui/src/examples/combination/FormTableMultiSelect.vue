@@ -51,10 +51,10 @@ export default {
         { id: 4, name: '赵六', department: '运维部', position: '运维工程师' }
       ],
       tableColumns: [
-        { key: 'id', label: 'ID', width: 80 },
-        { key: 'name', label: '姓名', width: 120 },
-        { key: 'department', label: '部门', width: 150 },
-        { key: 'position', label: '职位' }
+        { prop: 'id', label: 'ID', width: 80 },
+        { prop: 'name', label: '姓名', width: 120 },
+        { prop: 'department', label: '部门', width: 150 },
+        { prop: 'position', label: '职位' }
       ],
       selection: []
     }

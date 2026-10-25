@@ -45,9 +45,9 @@ export default {
             <es-table
               data-source={this.formWithTableData.items}
               columns={[
-                { key: 'product', label: '产品', width: 200 },
+                { prop: 'product', label: '产品', width: 200 },
                 {
-                  key: 'quantity',
+                  prop: 'quantity',
                   label: '数量',
                   width: 150,
                   render: (h, { row: item }) => (
@@ -60,7 +60,7 @@ export default {
                   )
                 },
                 {
-                  key: 'price',
+                  prop: 'price',
                   label: '单价',
                   width: 150,
                   render: (h, { row: item }) => (
@@ -74,7 +74,7 @@ export default {
                   )
                 },
                 {
-                  key: 'subtotal',
+                  prop: 'subtotal',
                   label: '小计',
                   render: (h, { row: item }) => (
                     <span style="color: #f56c6c; font-weight: bold;">
@@ -83,7 +83,7 @@ export default {
                   )
                 },
                 {
-                  key: 'action',
+                  prop: 'action',
                   label: '操作',
                   width: 100,
                   render: (h, { index }) => (

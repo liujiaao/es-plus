@@ -30,9 +30,9 @@ export default {
   methods: {
     initInlineEditColumns() {
       this.inlineEditColumns = [
-        { key: 'id', label: 'ID', width: 80 },
+        { prop: 'id', label: 'ID', width: 80 },
         {
-          key: 'name',
+          prop: 'name',
           label: '姓名',
           width: 150,
           render: (h, { row }) => row.editing ? (
@@ -40,21 +40,21 @@ export default {
           ) : <span>{row.name}</span>
         },
         {
-          key: 'age',
+          prop: 'age',
           label: '年龄',
           render: (h, { row }) => row.editing ? (
             <el-input-number v-model={row.age} size="small" min={1} max={150} />
           ) : <span>{row.age}</span>
         },
         {
-          key: 'email',
+          prop: 'email',
           label: '邮箱',
           render: (h, { row }) => row.editing ? (
             <el-input v-model={row.email} size="small" />
           ) : <span>{row.email}</span>
         },
         {
-          key: 'action',
+          prop: 'action',
           label: '操作',
           width: 150,
           render: (h, { row }) => row.editing ? (

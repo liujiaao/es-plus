@@ -49,10 +49,10 @@ export default {
         }
       ],
       columns: [
-        { key: 'name', label: '组织名称' },
-        { key: 'leader', label: '负责人' },
+        { prop: 'name', label: '组织名称' },
+        { prop: 'leader', label: '负责人' },
         {
-          key: 'memberCount',
+          prop: 'memberCount',
           label: '成员数量',
           render: (h, { row }) => {
             return (

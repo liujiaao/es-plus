@@ -92,7 +92,7 @@ export default {
                 data-source={detailList}
                 columns={[
                   {
-                    key: 'product',
+                    prop: 'product',
                     label: '产品',
                     width: 200,
                     render: (h, { row }) => (
@@ -105,7 +105,7 @@ export default {
                     )
                   },
                   {
-                    key: 'qty',
+                    prop: 'qty',
                     label: '数量',
                     width: 120,
                     render: (h, { row }) => (
@@ -118,7 +118,7 @@ export default {
                     )
                   },
                   {
-                    key: 'price',
+                    prop: 'price',
                     label: '单价',
                     render: (h, { row }) => (
                       <el-input-number
@@ -131,7 +131,7 @@ export default {
                     )
                   },
                   {
-                    key: 'subtotal',
+                    prop: 'subtotal',
                     label: '小计',
                     render: (h, { row }) => (
                       <span style="color: #f56c6c; font-weight: bold;">
@@ -140,7 +140,7 @@ export default {
                     )
                   },
                   {
-                    key: 'action',
+                    prop: 'action',
                     label: '操作',
                     width: 80,
                     render: (h, { index }) => (

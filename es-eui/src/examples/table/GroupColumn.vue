@@ -53,35 +53,35 @@ export default {
           label: '基本信息',
           prop: 'baseInfo',
           groups: [
-            { key: 'id', label: 'ID', width: 60 },
-            { key: 'name', label: '姓名', width: 100 },
-            { key: 'age', label: '年龄', width: 80 }
+            { prop: 'id', label: 'ID', width: 60 },
+            { prop: 'name', label: '姓名', width: 100 },
+            { prop: 'age', label: '年龄', width: 80 }
           ]
         },
         {
           label: '联系方式',
           prop: 'contact',
           groups: [
-            { key: 'phone', label: '手机号', width: 130 },
-            { key: 'phone2', label: '备用电话', width: 130 },
-            { key: 'email', label: '邮箱', width: 180 },
+            { prop: 'phone', label: '手机号', width: 130 },
+            { prop: 'phone2', label: '备用电话', width: 130 },
+            { prop: 'email', label: '邮箱', width: 180 },
             {
-              key: 'qq',
+              prop: 'qq',
               label: 'QQ号',
               width: 120,
               render: (h, { row }) => <el-tag size="mini">{row.qq}</el-tag>
             },
-            { key: 'wechat', label: '微信', width: 120 }
+            { prop: 'wechat', label: '微信', width: 120 }
           ]
         },
         {
           label: '其他信息',
           prop: 'other',
           groups: [
-            { key: 'address', label: '地址', width: 160 },
-            { key: 'score.chinese', label: '语文', width: 80 },
-            { key: 'score.math', label: '数学', width: 80 },
-            { key: 'score.english', label: '英语', width: 80 }
+            { prop: 'address', label: '地址', width: 160 },
+            { prop: 'score.chinese', label: '语文', width: 80 },
+            { prop: 'score.math', label: '数学', width: 80 },
+            { prop: 'score.english', label: '英语', width: 80 }
           ]
         }
       ],

@@ -39,10 +39,10 @@ export default {
           label: '用户列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'firstName', label: '名', width: 120 },
-            { key: 'lastName', label: '姓', width: 120 },
-            { key: 'email', label: '邮箱' }
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'firstName', label: '名', width: 120 },
+            { prop: 'lastName', label: '姓', width: 120 },
+            { prop: 'email', label: '邮箱' }
           ],
           apiParams: {
             url: 'https://dummyjson.com/users',
@@ -65,10 +65,10 @@ export default {
           label: '文章列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'title', label: '标题', width: 300 },
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'title', label: '标题', width: 300 },
             {
-              key: 'body',
+              prop: 'body',
               label: '内容',
               render: (h, { row }) => row.body.substring(0, 60) + '...'
             }
@@ -94,10 +94,10 @@ export default {
           label: '产品列表',
           dataSource: [],
           columns: [
-            { key: 'id', label: 'ID', width: 80 },
-            { key: 'title', label: '产品名称', width: 200 },
-            { key: 'price', label: '价格', width: 100 },
-            { key: 'brand', label: '品牌', width: 150 }
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'title', label: '产品名称', width: 200 },
+            { prop: 'price', label: '价格', width: 100 },
+            { prop: 'brand', label: '品牌', width: 150 }
           ],
           apiParams: {
             url: 'https://dummyjson.com/products',

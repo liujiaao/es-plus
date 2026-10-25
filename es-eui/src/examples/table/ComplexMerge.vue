@@ -20,12 +20,12 @@ export default {
         { id: 7, region: '华南区', quarter: 'Q2', month: '4月', sales: 105000, target: 90000, achievement: '117%' }
       ],
       columns: [
-        { key: 'region', label: '区域' },
-        { key: 'quarter', label: '季度', width: 80 },
-        { key: 'month', label: '月份', width: 80 },
-        { key: 'sales', label: '销售额' },
-        { key: 'target', label: '目标', width: 100 },
-        { key: 'achievement', label: '完成率' }
+        { prop: 'region', label: '区域' },
+        { prop: 'quarter', label: '季度', width: 80 },
+        { prop: 'month', label: '月份', width: 80 },
+        { prop: 'sales', label: '销售额' },
+        { prop: 'target', label: '目标', width: 100 },
+        { prop: 'achievement', label: '完成率' }
       ],
       options: {
         border: true,
