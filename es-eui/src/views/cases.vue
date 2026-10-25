@@ -38,6 +38,58 @@
         </router-link>
       </div>
 
+      <!-- 成本对照：下面每个案例的 pain/win 是文字，这一块给的是**实测**数字 ——
+           由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 算出来，
+           Cases 页只负责展示，不写死任何百分比（改示例即改数字）。 -->
+      <section class="compare">
+        <div class="compare-header">
+          <h2>原生 vs es-plus：实测成本</h2>
+          <span class="compare-note">
+            同一场景、两侧各一份完整实现（无省略号），数字来自
+            <code>scripts/gen-cases-metrics.mjs</code>：
+            非空行（含数据与 schema，不藏配置成本）/ 模板事件绑定 / 自写函数 / v-if 分支
+          </span>
+        </div>
+        <div class="compare-table-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>场景</th>
+                <th>非空行</th>
+                <th>事件绑定</th>
+                <th>自写函数</th>
+                <th>v-if 分支</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="s in metrics.scenarios"
+                :key="s.id"
+              >
+                <td class="compare-scene">{{ s.title }}</td>
+                <td
+                  v-for="m in compareKeys"
+                  :key="m"
+                >
+                  <span class="compare-native">{{ s.native[m] }}</span>
+                  <span class="compare-arrow">→</span>
+                  <strong>{{ s.es[m] }}</strong>
+                  <em
+                    class="compare-delta"
+                    :class="{ 'compare-plus': s.reduction[m] < 0 }"
+                  >{{ delta(s.reduction[m]) }}</em>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="compare-caveat">
+          <strong>读法：</strong>降幅 = (原生 − es-plus) / 原生；<span class="compare-plus">+x%</span>
+          表示该口径上 es-plus 反而更多 —— 像「码值列」这种小场景，声明本身的行数并不比三条
+          <code>v-if</code> 少，省掉的是分支与手写映射，以及换端 / 换引擎时这份声明不用重写。
+        </p>
+      </section>
+
       <section
         v-for="level in levels"
         :key="level.id"
@@ -87,6 +139,8 @@
 <script>
 // 案例目录单一真源：由 scripts/sync-cases.mjs 从 docs/cases/cases.json 分发，禁止手改本文件
 import cases from '@/cases/cases.json'
+// 实测数字：由 scripts/gen-cases-metrics.mjs 生成，sync-cases 分发，禁止手改
+import metrics from '@/cases/cases-metrics.json'
 // 跨端互链：与顶栏切换器共用同一份三站清单（受 check:site-nav 守护）
 import { SITES, SITE_KEY, siteOf, crossSiteUrl } from '@/utils/sites'
 
@@ -109,7 +163,10 @@ export default {
   },
   data() {
     return {
-      levels: cases.levels
+      levels: cases.levels,
+      // 对比表的数据与列顺序（与 cases-metrics.json 的键一致）
+      metrics,
+      compareKeys: ['lines', 'events', 'functions', 'vIf']
     }
   },
   methods: {
@@ -118,6 +175,10 @@ export default {
     crossSiteUrl,
     circled(n) {
       return '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n - 1]
+    },
+    // 0 表示两侧持平；负数表示 es-plus 侧更多（如实显示成 +x%）
+    delta(v) {
+      return v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`
     }
   }
 }
@@ -141,6 +202,94 @@ export default {
 .cases-subtitle {
   color: #606266;
   line-height: 1.8;
+}
+
+/* 成本对照：实测数字表 */
+.compare {
+  margin-bottom: 36px;
+  padding: 18px 20px 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.compare-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+
+  h2 {
+    font-size: 17px;
+    margin: 0 14px 8px 0;
+    color: #1a1a2e;
+  }
+}
+
+.compare-note {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.7;
+}
+
+.compare-table-wrap {
+  overflow-x: auto;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #ebeef5;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  th {
+    font-weight: 600;
+    color: #606266;
+    font-size: 12px;
+  }
+
+  .compare-scene {
+    text-align: left;
+    color: #1a1a2e;
+  }
+
+  .compare-native {
+    color: #909399;
+  }
+
+  .compare-arrow {
+    margin: 0 6px;
+    color: #c0c4cc;
+  }
+}
+
+.compare-delta {
+  margin-left: 8px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--es-brand-primary, #409eff);
+
+  &.compare-plus {
+    color: #e6a23c;
+  }
+}
+
+.compare-caveat {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #909399;
+
+  .compare-plus {
+    color: #e6a23c;
+  }
 }
 
 .level {

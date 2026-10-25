@@ -1,0 +1,60 @@
+{
+  "$comment": "由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字。",
+  "method": "同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。",
+  "scenarios": [
+    {
+      "id": "filter-table",
+      "title": "查询 + 表格 + 分页 + 行内查看",
+      "native": {
+        "file": "docs/examples/native/filter-table.vue",
+        "lines": 123,
+        "events": 7,
+        "functions": 6,
+        "vIf": 2
+      },
+      "es": {
+        "file": "docs/examples/es/filter-table.vue",
+        "lines": 77,
+        "events": 1,
+        "functions": 2,
+        "vIf": 0
+      },
+      "reduction": {
+        "lines": 37.4,
+        "events": 85.7,
+        "functions": 66.7,
+        "vIf": 100
+      }
+    },
+    {
+      "id": "status-column",
+      "title": "码值列：中文标签 + 空值占位",
+      "native": {
+        "file": "docs/examples/native/status-column.vue",
+        "lines": 36,
+        "events": 0,
+        "functions": 1,
+        "vIf": 3
+      },
+      "es": {
+        "file": "docs/examples/es/status-column.vue",
+        "lines": 43,
+        "events": 0,
+        "functions": 0,
+        "vIf": 0
+      },
+      "reduction": {
+        "lines": -19.4,
+        "events": 0,
+        "functions": 100,
+        "vIf": 100
+      }
+    }
+  ],
+  "totals": {
+    "files": 279,
+    "events": 8,
+    "functions": 9,
+    "vIf": 5
+  }
+}
