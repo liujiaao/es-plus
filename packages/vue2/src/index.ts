@@ -220,6 +220,7 @@ export type {
   LayoutFormProps,
   ListenToCallBack,
   TableColumn,
+  TableColumnDataOption,
   ConfigTableOut,
   TableOptions,
   PaginationConfig,

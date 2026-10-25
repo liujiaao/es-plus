@@ -1,4 +1,4 @@
-// Auto-generated from E:\wokerCode\es-plus\es-plus\packages\vue3\src\components\es-crud-page\src\types.ts
+// Auto-generated from vue3/src/components/es-crud-page/src/types.ts
 // Do not edit manually — run "npm run bundle-types" to update
 
 import type { VNode, RenderFunction } from 'vue'
@@ -123,6 +123,31 @@ export interface CrudDialogConfig {
   fullscreen?: boolean
   /** 隐藏底部 */
   isHiddenFooter?: boolean
+  // ─── 弹窗底座数据键（AI-27）─────────────────────────────────────────
+  // 全部转发给底层 es-dialog / el-dialog，`openDialog` 的白名单逐键透传
+  // （此前是硬编码 9 键，AI 契约放行的这些键在第二步被静默丢弃）。
+  /** 是否显示关闭入口（默认 true）。false 时自绘的与原生的一起隐藏 */
+  showClose?: boolean
+  /** 关闭时销毁内容（每次打开重置内部状态） */
+  destroyOnClose?: boolean
+  /** 是否需要遮罩层，默认 true */
+  modal?: boolean
+  /** 点击遮罩层是否关闭，默认 true */
+  closeOnClickModal?: boolean
+  /** 按下 ESC 是否关闭，默认 true */
+  closeOnPressEscape?: boolean
+  /** 隐藏全屏按钮 */
+  hiddenFullBtn?: boolean
+  /** 挂载点（CSS 选择器；DOM 元素无法经 JSON 传递） */
+  appendTo?: string | HTMLElement
+  /** 实例缓存键：同键跨多次调用复用同一弹窗实例（保留内部状态） */
+  cacheKey?: string
+  /**
+   * AI-only 注解键（AN-14）：弹窗体是函数，无法经 JSON 传输；生成器看到它会转成
+   * wrapper SFC 里的 `TODO(es-plus)` 占位并告警。**不是**弹窗 prop —— 运行时白名单
+   * `DIALOG_PASSTHROUGH_KEYS` 刻意不转发它（见 es-crud-page.vue 的注释）。
+   */
+  hasCustomRender?: boolean
   /** 弹窗打开时回调 */
   onOpen?: (row?: Record<string, unknown>) => void
   /** 确认回调（未提供 configBtn 时自动生成确认按钮调用此方法） */

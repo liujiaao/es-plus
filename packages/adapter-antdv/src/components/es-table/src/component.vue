@@ -187,7 +187,7 @@ const defaultOptions: TableOptions = {
 
 <script setup lang="ts">
 import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs, useSlots } from 'vue'
-import { Table as ATable, Pagination as APagination, Spin as ASpin, ConfigProvider as AConfigProvider, Button as AButton, Tooltip as ATooltip } from 'ant-design-vue'
+import { Table as ATable, Pagination as APagination, Spin as ASpin, ConfigProvider as AConfigProvider, Button as AButton, Tooltip as ATooltip, Tag as ATag } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import TableBtns from './table-btns.vue'
 import { getGlobalConfig } from '../../../config'
@@ -203,6 +203,7 @@ import {
   computeBoundaryRollback,
   buildColumnSpans,
   resolveMergeConfig,
+  resolveTableCellDisplay,
   toCssSize,
   synthesizeLeadingColumns,
 } from '@es-plus/core'
@@ -535,9 +536,52 @@ const {
 } = useTableSelection(() => props.options.rowkey, props.options.cachePageSelection)
 
 // ─── 过滤列 ─────────────────────────────────────────
+// 列上是否已有**用户显式**的单元格渲染（它们优先于声明式 dataOptions）。
+const hasCustomCell = (col: TableColumn): boolean =>
+  typeof col.render === 'function' ||
+  typeof col.formatter === 'function' ||
+  !!(col.scopedSlots as any)?.customRender
+
+/**
+ * 声明式 `dataOptions` → 单元格 render（含分组子列递归）。
+ *
+ * 与 vue3 / vue2 同规：解析（取值 / 空值兜底 / 码值匹配）全在 core 的
+ * `resolveTableCellDisplay`，本端只负责包成 `a-tag`。
+ *
+ * a-tag 用**状态色**（processing/success/warning/error/default）而不是预设色
+ * （blue/green/…）：预设色是深底白字的实心标签，与 Element 两端的浅底标签并排时
+ * 视觉重量完全不同；状态色才是 antd 里「状态」的标准表达。
+ */
+const ADV_TAG_STATUS: Record<string, string> = {
+  primary: 'processing',
+  success: 'success',
+  warning: 'warning',
+  danger: 'error',
+  info: 'default',
+}
+
+const withDataOptions = (col: TableColumn): TableColumn => {
+  if (Array.isArray(col.groups) && col.groups.length) {
+    // 分组表头：子列各自消费自己的 dataOptions（浅拷贝共享 groups 数组，必须重建）
+    return { ...col, groups: col.groups.map(withDataOptions) }
+  }
+  if (!Array.isArray(col.dataOptions) || !col.dataOptions.length || hasCustomCell(col)) return col
+  return {
+    ...col,
+    render: (hb: any, { row }: { row: Record<string, unknown> }) => {
+      const { text, tagType } = resolveTableCellDisplay(col, row)
+      if (!tagType) return text
+      return hb(ATag, { color: ADV_TAG_STATUS[tagType] || 'default' }, () => text)
+    },
+  }
+}
+
 const filteredColumns = computed(() => {
   // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
-  return columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
+  // 拷贝一层：`withDataOptions` 会写 render，绝不能落到父组件传入的列对象上。
+  return columnRowList.value
+    .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
+    .map((item) => withDataOptions({ ...item } as TableColumn))
 })
 
 // M-4: vxe 引擎专用列（注入 operate 列的 btns→render；普通列注入 emptyPlaceholder formatter，对齐 a-table 路径行为）
@@ -667,7 +711,9 @@ const adaptedColumns = computed(() => {
       advCol.customRender = ({ text, record }: { text: unknown; record: Record<string, unknown> }) => {
         return col.formatter?.(record) ?? (text == null || text === '' ? placeholder : String(text))
       }
-    } else if ((col.prop || col.key) && !advCol.customRender) {
+    // 有 render（含 dataOptions 注入的）时不再兜底 customRender：
+    // bodyCell 的 render 分支优先，customRender 永远轮不到，注入只会误导排错。
+    } else if ((col.prop || col.key) && !advCol.customRender && !col.render) {
       advCol.customRender = ({ text }: { text: unknown }) => {
         if (text == null || text === '') return placeholder
         return String(text)

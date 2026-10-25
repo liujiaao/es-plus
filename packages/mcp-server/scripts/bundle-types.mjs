@@ -27,8 +27,12 @@ mkdirSync(join(root, 'bundled'), { recursive: true })
 for (const { src, dest } of sources) {
   try {
     const content = readFileSync(src, 'utf-8')
-    writeFileSync(dest, `// Auto-generated from ${src.split('packages/')[1] ?? src}\n// Do not edit manually — run "npm run bundle-types" to update\n\n${content}`)
-    const relative = dest.includes('mcp-server') ? dest.split('mcp-server/')[1] : dest
+    // 路径先归一到 POSIX 分隔符再取相对段：Windows 下 join() 产出反斜杠，
+    // `split('packages/')` 会落空，生成的 header 里就会写死本机的 E:\ 绝对路径
+    // （提交物与机器绑定）并把日志打成 "✓ undefined"。
+    const relSrc = src.replace(/\\/g, '/').split('packages/')[1] ?? src
+    writeFileSync(dest, `// Auto-generated from ${relSrc}\n// Do not edit manually — run "npm run bundle-types" to update\n\n${content}`)
+    const relative = dest.includes('mcp-server') ? dest.replace(/\\/g, '/').split('mcp-server/')[1] : dest
     console.log(`✓ ${relative}`)
   } catch (err) {
     console.warn(`⚠ Could not read ${src}: ${err.message}`)

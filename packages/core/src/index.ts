@@ -164,6 +164,10 @@ export {
 } from './table-columns'
 export type { LeadingColumnSpec, LeadingColumnType } from './table-columns'
 
+// ─── 表格单元格「码值 → 展示」解析（TableColumn.dataOptions，三端 × 各引擎同规）──
+export { findTableDataOption, resolveTableCellDisplay } from './table-cell'
+export type { TableCellDisplay } from './table-cell'
+
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'
 

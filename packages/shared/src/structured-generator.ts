@@ -263,6 +263,35 @@ function attachFieldRenderSlots(
 }
 
 /**
+ * 显式 `columns` 里与字段同 prop 的数据列，若自身没写 `dataOptions`，继承字段级的那份。
+ *
+ * 为什么：`columns` 是**结构**覆盖（哪些列、什么顺序、怎么分组），而码值映射是**数据** ——
+ * 用户为了多级表头把表格改写成 `columns` 之后，原本在 `fields` 里配好的「状态 → 中文」
+ * 不该整列退回 `0/1/2`。列上显式声明的 `dataOptions` 优先（只做缺省继承，不覆盖用户意图）。
+ */
+function attachFieldDataOptions(
+  columns: Array<Record<string, unknown>>,
+  fields: FieldConfig[],
+): Array<Record<string, unknown>> {
+  const byProp = new Map<string, FieldConfig>()
+  for (const f of fields) {
+    if (f.inTable === false) continue
+    if (Array.isArray(f.dataOptions) && f.dataOptions.length > 0) byProp.set(f.prop, f)
+  }
+  if (byProp.size === 0) return columns
+  const walk = (cols: Array<Record<string, unknown>>): Array<Record<string, unknown>> =>
+    cols.map((c) => {
+      if (Array.isArray(c.groups)) return { ...c, groups: walk(c.groups as Array<Record<string, unknown>>) }
+      if (!c.type && typeof c.prop === 'string' && c.dataOptions === undefined) {
+        const f = byProp.get(c.prop)
+        if (f) return { ...c, dataOptions: f.dataOptions }
+      }
+      return c
+    })
+  return walk(columns)
+}
+
+/**
  * 显式 `columns` 是 **override 非 merge**：`fields` 里声明了 `render`、却没有对应数据列
  * 的字段，其扩展点插槽无处可挂（schema 模式过去会发射一个死插槽）。两种 mode 都要点名，
  * 否则用户只看到「render 没生效」。
@@ -688,7 +717,7 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
     config.columns && config.columns.length > 0
       ? applyExpandConfig(
           attachFieldRenderSlots(
-            sanitizeExplicitColumns(config.columns as Array<Record<string, unknown>>),
+            attachFieldDataOptions(sanitizeExplicitColumns(config.columns as Array<Record<string, unknown>>), config.fields || []),
             renderFields
           ),
           config,
@@ -1133,7 +1162,12 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
         .filter((f) => f.render || f.formatter)
         .map((f) => [f.prop, f] as const)
     )
-    for (const c of config.columns as Array<Record<string, unknown>>) {
+    // 显式列只覆盖**结构**：字段级 dataOptions 作为数据缺省继承下来（schema 模式同口径）。
+    const explicitColumns = attachFieldDataOptions(
+      config.columns as Array<Record<string, unknown>>,
+      tableFields
+    )
+    for (const c of explicitColumns) {
       const col = config.expandConfig && c.type === 'expand' ? { ...c, expandConfig: config.expandConfig } : c
       pushSfcColumn(col, lines, '  ', warnings, extensionFields)
     }
@@ -1904,6 +1938,9 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSort
   // 字段级权限编码：字符串，可直接进 schema 模式 JSON；运行时由 es-table 的 filteredColumns
   // 按全局 permission(code) 过滤（无权限则该列不渲染）。与静态 hidCol 同层。
   if (field.permissionValue) col.permissionValue = field.permissionValue
+  // 声明式码值映射：字段级 dataOptions（表单 Select 的同一份选项）直接带到派生列。
+  // 「表单是下拉、表格却显示 0/1/2」是最常见的割裂；用户不必为表格再写一遍同样的选项。
+  if (Array.isArray(field.dataOptions) && field.dataOptions.length > 0) col.dataOptions = field.dataOptions
   return col
 }
 
@@ -1997,6 +2034,15 @@ function pushSfcColumn(
       lines.push(`${inner}editRender: ${inlineJson(col.editRender)},`)
     }
   }
+  // dataOptions（单元格码值映射）同样是纯 JSON 数据 → 同 btns/expandConfig。
+  if (col.dataOptions !== undefined && col.dataOptions !== null) {
+    const nonJson = findNonJsonValues(col.dataOptions, 'dataOptions')
+    if (nonJson.length > 0) {
+      warnings.push(`列级 dataOptions 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      lines.push(`${inner}dataOptions: ${inlineJson(col.dataOptions)},`)
+    }
+  }
   lines.push(`${indent}},`)
 }
 
@@ -2030,6 +2076,10 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // filteredColumns 按全局 permission(code) 过滤（无权限则该列不渲染）。刻意不过 assertEmittableExpr：
   // 它是权限码不是 JS 源码。与静态 hidCol 同层。
   if (field.permissionValue) parts.push(`permissionValue: ${q(field.permissionValue)}`)
+  // 声明式码值映射（纯 JSON）：与 schema 模式 buildTableColumn 同口径，派生列直接带上。
+  if (Array.isArray(field.dataOptions) && field.dataOptions.length > 0) {
+    parts.push(`dataOptions: ${inlineJson(field.dataOptions)}`)
+  }
   parts.push(...sourceExtensionParts(field, warnings))
   return `{ ${parts.join(', ')} }`
 }

@@ -31,6 +31,12 @@ const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
     value: z.union([z.string(), z.number(), z.boolean()]),
     disabled: z.boolean().optional(),
     children: z.array(DataOptionSchema).optional(),
+    // 表格面的展示修饰（批 6）：字段级 dataOptions 会被复制到派生列上，故这里必须放行，
+    // 否则 Zod 剥键 + unknown-keys 告警会把它当成拼错的键，染色静默丢失。
+    tagType: z
+      .enum(['primary', 'success', 'warning', 'danger', 'info'])
+      .optional()
+      .describe('Render this option as a tag in the TABLE cell, in this semantic colour. Ignored by the form controls.'),
   })
 )
 
@@ -299,6 +305,25 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
     ellipsis: z.boolean().optional(),
     showOverflowTooltip: z.boolean().optional(),
     permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
+    dataOptions: z
+      .array(
+        z.object({
+          label: z.string().describe('Cell text shown when this option matches.'),
+          value: z
+            .union([z.string(), z.number(), z.boolean()])
+            .describe('Stored row value this option matches (number/string compare loosely: 1 matches "1").'),
+          tagType: z
+            .enum(['primary', 'success', 'warning', 'danger', 'info'])
+            .optional()
+            .describe(
+              "Render the matched label as a tag in this semantic colour (ElTag / el-tag / a-tag; primary = default/blue). Omit for plain text."
+            ),
+        })
+      )
+      .optional()
+      .describe(
+        'Declarative code→label mapping for the CELL (all three renderers, all engines; pure JSON — safe in schema mode). Unmatched values fall back to the raw value, null/empty to `emptyPlaceholder`. Explicit `render`/`scopedSlots`/`formatter` win. Derived columns get this automatically from `fields[].dataOptions`, so declare it on the COLUMN only when you want a display mapping that differs from (or is absent in) the field config, e.g. `{prop:"status", dataOptions:[{label:"已完成",value:2,tagType:"success"}]}`.'
+      ),
     groups: z.array(ColumnSchema).optional().describe(
       'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
     ),

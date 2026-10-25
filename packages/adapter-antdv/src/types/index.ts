@@ -9,6 +9,7 @@
 import type { VNode, RenderFunction } from 'vue'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  TableColumnDataOption,
   VxeEditRender,
   VxeTreeConfig,
   VxeProxyConfig,
@@ -253,6 +254,14 @@ export interface TableColumn {
   ellipsis?: boolean
   /** 空值占位文本，默认 '-'（null / undefined / '' 时显示） */
   emptyPlaceholder?: string
+  /**
+   * 声明式「码值 → 展示」映射（可选带上标签染色）。
+   *
+   * 命中 `value` 时显示 `label`；带 `tagType` 时以 a-tag 渲染（状态色）。未命中回退原始值。
+   * 纯 JSON，可直接进 schema 模式；生成器会把 `fields[].dataOptions` 复制到派生列。
+   * 用户显式 `render` / `scopedSlots.customRender` / `formatter` 优先级更高。
+   */
+  dataOptions?: TableColumnDataOption[]
   hidCol?: boolean
   /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
   permissionValue?: string
@@ -456,6 +465,7 @@ export interface EsPlusOptions {
 // Re-export core types for convenience
 export type {
   ListenToCallBack,
+  TableColumnDataOption,
   TableEngineExposed,
   VxeTreeConfig,
   VxeProxyConfig,

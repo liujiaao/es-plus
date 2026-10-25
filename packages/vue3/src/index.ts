@@ -79,6 +79,7 @@ export type {
   BtnConfig,
   LayoutFormProps,
   TableColumn,
+  TableColumnDataOption,
   TableOptions,
   PaginationConfig,
   DialogOptions,

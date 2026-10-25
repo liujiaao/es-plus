@@ -1,10 +1,11 @@
-// Auto-generated from E:\wokerCode\es-plus\es-plus\packages\vue3\src\types\index.ts
+// Auto-generated from vue3/src/types/index.ts
 // Do not edit manually — run "npm run bundle-types" to update
 
 import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
   VxeExportConfig,
@@ -22,6 +23,7 @@ import type {
 } from '@es-plus/core'
 
 export type {
+  TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
   VxeExportConfig,
@@ -275,6 +277,16 @@ export interface TableColumn {
    */
   expandConfig?: { title?: string; fields: Array<{ prop: string; label?: string; labelKey?: string }> }
   ellipsis?: boolean
+  /** 空值占位文本，默认 '-'（null / undefined / '' 时显示） */
+  emptyPlaceholder?: string
+  /**
+   * 声明式「码值 → 展示」映射（可选带上标签染色）。
+   *
+   * 命中 `value` 时显示 `label`；带 `tagType` 时以 ElTag 渲染。未命中回退原始值。
+   * 纯 JSON，可直接进 schema 模式；生成器会把 `fields[].dataOptions` 复制到派生列。
+   * 用户显式 `render` / `scopedSlots.customRender` / `formatter` 优先级更高。
+   */
+  dataOptions?: TableColumnDataOption[]
   hidCol?: boolean
   /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
   permissionValue?: string
@@ -495,6 +507,12 @@ export interface EsTableInstance {
   reload: (model?: Record<string, unknown>) => Promise<unknown> | void
   /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
   doLayout: () => void
+  /** 导出（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 打印（vxe4 的 grid 不代理该方法，组件内部已下沉到 <vxe-table>） */
+  print: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  /** 取打印用 HTML（保留完整多级表头，配合 patchHtmlRowSpans 修正合并单元格） */
+  getPrintHtml: (opts?: Record<string, unknown>) => Promise<{ html: string }>
 }
 
 export interface EsPlusOptions {

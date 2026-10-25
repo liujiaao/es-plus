@@ -144,8 +144,22 @@ export interface TableColumn {
   ellipsis?: boolean
   hidCol?: boolean
   formatter?: (row: Record<string, unknown>, column: TableColumn, cellValue: unknown, index: number) => string
+  /**
+   * Declarative code -> display mapping for this cell (a plain JSON array).
+   * The matched option's label replaces the raw value; tagType (when set) renders
+   * it as a native tag in that semantic colour (ElTag / el-tag / a-tag).
+   * Unmatched values still show raw. A column render / scopedSlots.customRender /
+   * formatter on the same column always wins over this key.
+   */
+  dataOptions?: TableColumnDataOption[]
   btns?: Array<{ name: string; type?: string; clickEvent?: (row: Record<string, unknown>) => void }>
   [key: string]: unknown
+}
+
+export interface TableColumnDataOption {
+  label: string
+  value: string | number | boolean
+  tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
 }
 
 export interface TableOptions {

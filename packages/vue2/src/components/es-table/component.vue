@@ -214,6 +214,7 @@ import {
   computeBoundaryRollback,
   buildRowSpanMethod,
   resolveMergeConfig,
+  resolveTableCellDisplay,
   toCssSize,
   buildLeadingColumns,
   type TableColumn,
@@ -742,16 +743,49 @@ export default defineComponent({
     // 解决方式：通过 .map() 对每列做浅拷贝 ({ ...el })，再在拷贝上设置 formatter/render
     // 和做 width→minWidth 转换，最后返回副本数组。computed 缓存让副本只在 columnRowList
     // 变化时重新生成。
+    // 列上是否已有**用户显式**的单元格渲染（它们优先于声明式 dataOptions）。
+    const hasCustomCell = (col: TableColumn): boolean =>
+      typeof col.render === 'function' ||
+      typeof col.formatter === 'function' ||
+      !!(col.scopedSlots && col.scopedSlots.customRender)
+
+    /**
+     * 声明式 `dataOptions` → 单元格 render（含分组子列递归）。
+     *
+     * 解析（取值 / 空值兜底 / 码值匹配）全在 core 的 `resolveTableCellDisplay`，
+     * 本端只负责把结果包成 Element UI 的 `el-tag` —— 与 vue3（ElTag）/ antdv（a-tag）
+     * 的差异只在标签组件本身。
+     *
+     * Element UI 的 tag type 没有 'primary'（缺省即主色），故 'primary' 映射为不传 type。
+     */
+    const withDataOptions = (col: TableColumn): TableColumn => {
+      if (Array.isArray(col.groups) && col.groups.length) {
+        // 分组表头：子列各自消费自己的 dataOptions（浅拷贝共享 groups 数组，必须重建）
+        return { ...col, groups: col.groups.map(withDataOptions) }
+      }
+      if (!Array.isArray(col.dataOptions) || !col.dataOptions.length || hasCustomCell(col)) return col
+      return {
+        ...col,
+        render: (hb: any, { row }: { row: Record<string, unknown> }) => {
+          const { text, tagType } = resolveTableCellDisplay(col, row)
+          if (!tagType) return text
+          return hb('el-tag', { props: { type: tagType === 'primary' ? '' : tagType } }, text)
+        },
+      }
+    }
+
     const filteredColumns = computed(() => {
       // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
       const originals = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
       const list = originals.map((el) => {
-        const col = { ...el } as TableColumn
+        const col = withDataOptions({ ...el } as TableColumn)
+        // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
+        // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。
         if (
           col.prop !== 'operate' &&
           col.key !== 'operate' &&
           (col.prop || col.key) &&
-          !col.formatter
+          !hasCustomCell(col)
         ) {
           col.formatter = (row: Record<string, unknown>) => {
             // 用 ?? 避免把 0/false 等假值塌缩成 '-'；用 getNestedValue 支持嵌套 prop（a.b.c）（对齐 vue3）

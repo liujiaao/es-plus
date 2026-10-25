@@ -520,6 +520,24 @@ export interface TableColumn {
    * 此前的类型漏声明了它，只能在索引签名下「碰巧」通过类型检查。
    */
   emptyPlaceholder?: string
+  /**
+   * 声明式「码值 → 展示」映射（可选带上标签染色）。
+   *
+   * 单元格值命中 `value` 时显示 `label`；命中项带 `tagType` 时以标签渲染
+   * （三端各自落到 ElTag / el-tag / a-tag 的语义色）。未命中则回退原始值。
+   *
+   * 纯 JSON 数据 —— 可直接内联进 schema 模式的 pageSchema，不需要 render/formatter
+   * 这类函数扩展点。生成器会把 `fields[].dataOptions` 复制到派生列上，因此
+   * 「表单是下拉、表格却显示 0/1/2」这种最常见的割裂不需要任何额外配置。
+   *
+   * 优先级：用户显式 `render` / `scopedSlots.customRender` / `formatter` 均高于本键。
+   *
+   * @example { prop: 'status', label: '状态', dataOptions: [
+   *   { label: '待处理', value: 0, tagType: 'info' },
+   *   { label: '已完成', value: 2, tagType: 'success' },
+   * ] }
+   */
+  dataOptions?: TableColumnDataOption[]
   /** 隐藏列（保留配置但不渲染） */
   hidCol?: boolean
   /**
@@ -559,6 +577,21 @@ export interface TableColumn {
   }) => string
   /** 允许任意扩展键 */
   [key: string]: unknown
+}
+
+/**
+ * 表格列的声明式码值选项：单元格值命中 `value` 时展示 `label`。
+ *
+ * 与表单 `FormItemOption.dataOptions` 同形（label/value），只多一个 `tagType`：
+ * 它是**表格专属**的展示修饰 —— 表单的下拉选项不需要颜色，而状态列需要。
+ */
+export interface TableColumnDataOption {
+  /** 单元格展示文本 */
+  label: string
+  /** 行数据里的存储值（数字/字符串按字符串宽松相等比较，见 `findTableDataOption`） */
+  value: string | number | boolean
+  /** 命中后以「标签」渲染，三端分别映射到 ElTag / el-tag / a-tag 的语义色 */
+  tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
 }
 
 /**

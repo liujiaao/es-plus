@@ -1,4 +1,4 @@
-// Auto-generated from E:\wokerCode\es-plus\es-plus\packages\vue2\src\types\index.ts
+// Auto-generated from vue2/src/types/index.ts
 // Do not edit manually — run "npm run bundle-types" to update
 
 /**
@@ -21,6 +21,7 @@ export type {
   BtnConfig,
   LayoutFormProps,
   TableColumn,
+  TableColumnDataOption,
   ConfigTableOut,
   TableOptions,
   PaginationConfig,

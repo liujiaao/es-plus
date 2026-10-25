@@ -150,6 +150,34 @@
       "default": "-",
       "description": "Placeholder text for empty cell values"
     },
+    "dataOptions": {
+      "type": "array",
+      "description": "Declarative code→label mapping for the CELL (all three renderers, all engines). When the row value matches an option's `value`, the cell shows its `label`; if the option also carries `tagType`, the cell is rendered as a native tag (ElTag / el-tag / a-tag) in that semantic colour. Unmatched values fall back to the raw value; null/empty falls back to `emptyPlaceholder`. Pure JSON — safe in schema mode. Explicit `render` / `scopedSlots.customRender` / `formatter` take precedence. The generator copies `fields[].dataOptions` onto derived columns, so a field already configured as a Select also displays its label in the table.",
+      "items": {
+        "type": "object",
+        "required": ["label", "value"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Cell text shown when this option matches"
+          },
+          "value": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" }
+            ],
+            "description": "Stored row value this option matches (number/string compare loosely, so 1 matches \"1\")"
+          },
+          "tagType": {
+            "type": "string",
+            "enum": ["primary", "success", "warning", "danger", "info"],
+            "description": "Render the matched label as a tag in this semantic colour (primary→default/blue). Omit for plain text."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "editRender": {
       "type": "object",
       "description": "Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine: 'vxe'. Marks THIS column editable and picks its editor; a column without `editRender` is not editable. Function-valued fields (events) and custom-registered renderers are out of scope.",

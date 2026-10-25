@@ -137,7 +137,7 @@ const defaultOptions: TableOptions = {
 <script setup lang="ts">
 // @ts-nocheck - 动态槽转发 #[cols.scopedSlots.customRender] 无法被 vue-tsc 类型推断（scope 与 :name 动态索引）；其余类型已修复，仅保留此一处的文件级豁免
 import { ref, computed, watch, inject, getCurrentInstance, provide, toRaw, unref, h, onMounted, useAttrs, nextTick } from 'vue'
-import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton } from 'element-plus'
+import { ElTable, ElConfigProvider, ElPagination, vLoading, ElButton, ElTag } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
@@ -157,6 +157,7 @@ import {
   computeBoundaryRollback,
   buildRowSpanMethod,
   resolveMergeConfig,
+  resolveTableCellDisplay,
   toCssSize,
   buildLeadingColumns,
 } from '@es-plus/core'
@@ -430,12 +431,53 @@ const syncLocalPagination = () => {
   emitPaginationUpdate()
 }
 
+// 列上是否已有**用户显式**的单元格渲染（它们优先于声明式 dataOptions）。
+const hasCustomCell = (col: TableColumn): boolean =>
+  typeof col.render === 'function' ||
+  typeof col.formatter === 'function' ||
+  !!col.scopedSlots?.customRender
+
+/**
+ * 声明式 `dataOptions` → 单元格 render（含分组子列递归）。
+ *
+ * 为什么在这里就落成 `render`：es-table 的四条列产出路径（默认 el-table、vxe、虚拟引擎、
+ * 分组子列）都只认列上的 render/formatter/slot 三件套，没有各自去读数据的通道。
+ * 在 `filteredColumns` 这一处统一注入，等于让所有引擎天然支持它，且不必改四份适配器。
+ *
+ * 解析（取值 / 空值兜底 / 码值匹配）全部在 core 的 `resolveTableCellDisplay`，本函数
+ * 只负责把结果包成本端的 Tag —— 这样 vue3 / vue2 / antdv 的差异只剩「用哪个标签组件」。
+ */
+const withDataOptions = (col: TableColumn): TableColumn => {
+  if (Array.isArray(col.groups) && col.groups.length) {
+    // 分组表头：子列各自消费自己的 dataOptions（浅拷贝共享 groups 数组，必须重建）
+    return { ...col, groups: col.groups.map(withDataOptions) }
+  }
+  if (!Array.isArray(col.dataOptions) || !col.dataOptions.length || hasCustomCell(col)) return col
+  return {
+    ...col,
+    render: (h: any, { row }: { row: Record<string, unknown> }) => {
+      const { text, tagType } = resolveTableCellDisplay(col, row)
+      if (!tagType) return text
+      return h(ElTag, { type: tagType, disableTransitions: true }, () => text)
+    }
+  }
+}
+
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
   // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
-  const list = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue)).map((item) => ({ ...item }))
+  const list = columnRowList.value
+    .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
+    .map((item) => withDataOptions({ ...item }))
   list.forEach((el) => {
-    if (el.prop !== 'operate' && el.key !== 'operate' && (el.prop || el.key) && !el.formatter) {
+    // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
+    // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。
+    if (
+      el.prop !== 'operate' &&
+      el.key !== 'operate' &&
+      (el.prop || el.key) &&
+      !hasCustomCell(el)
+    ) {
       el.formatter = (row: Record<string, unknown>) => {
         // 用 ?? 避免把 0/false 等假值塌缩成 '-'；用 getNestedValue 支持嵌套 prop（a.b.c）
         const value = getNestedValue(row, el.prop as string) ?? getNestedValue(row, el.key as string)

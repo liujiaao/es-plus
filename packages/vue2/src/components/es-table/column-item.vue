@@ -169,7 +169,9 @@ export default defineComponent({
       const options: Record<string, unknown> = {}
 
       for (const t in cols) {
-        if (t === 'groups' || t === 'scopedSlots' || t === 'render' || t === 'expandConfig') continue
+        // dataOptions 是**数据**（单元格码值映射），已被 filteredColumns 落成 render；
+        // 透传给 el-table-column 只会变成 `<td data-options="[object Object]">` 这类无意义 DOM 属性。
+        if (t === 'groups' || t === 'scopedSlots' || t === 'render' || t === 'expandConfig' || t === 'dataOptions') continue
 
         if (t.includes('-')) {
           const parts = t.split('-')

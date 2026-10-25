@@ -18,6 +18,7 @@ export type {
   BtnConfig,
   LayoutFormProps,
   TableColumn,
+  TableColumnDataOption,
   ConfigTableOut,
   TableOptions,
   PaginationConfig,
