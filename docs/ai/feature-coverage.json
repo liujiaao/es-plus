@@ -1776,7 +1776,7 @@
       "site": "es-pc",
       "root": "es-pc/src/views",
       "refs": 96,
-      "uncovered": 22,
+      "uncovered": 23,
       "cases": [
         {
           "id": "Advanced",
@@ -1785,6 +1785,15 @@
             "useDialogApi"
           ],
           "tier": "D"
+        },
+        {
+          "id": "AiGenerated",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
           "id": "AiTools",
