@@ -438,3 +438,21 @@ Vue 只打一条 `Failed to resolve component` 警告，按钮图标静默消失
 截至本轮，§5 表里除已删的幻影字段（R8 `clipboardConfig`）外，每一行都有可运行的案例或可跑的守卫；
 仍未被案例覆盖的只剩 §11.6 末尾那条 —— `import { httpRequest }` 自由函数。
 
+### 11.8 假交互的最后一处：`form/Layout`（2026-10-25）
+
+D3 修的 `AdvancedButtons` 不是孤例。按同一条判据（**按钮名字宣称的动作，代码必须真的做**）把三站示例里
+带「导出 / 下载 / 批量审核」字样的按钮全扫了一遍，还有一处漏网：
+
+| 位置 | 现象 | 修法 |
+| --- | --- | --- |
+| `form/Layout.vue`（docs 与 es-pc） | 按钮叫「导出」，`click` 里只有 `ElMessage.success('导出数据: ' + JSON.stringify(model))` —— 什么都没导出。es-pc 那份还有格式缺陷：`icon: 'DownloadOutlined',    click:` 两条语句挤在同一行 | 删掉假按钮，按钮区收敛成「重置（`direction: 'left'`）+ 查询（`direction: 'right'`）」，两个按钮都做真事；`查询` 的文案从「查询:」改成「查询参数:」——这个案例没有数据源，它能做的就是把回调收到的 model 显示出来，文案不该暗示更多 |
+| `form/Layout.vue`（es-eui） | 没有假按钮，但 `methods` 里 `submitForm` / `resetForm` 从来没被 `configBtn` 调用过（死代码），且两个按钮都没写 `direction`，左/右分栏这个布局能力在 eui 端根本没演示 | 删死方法；两个按钮补 `direction`，与另两站同一套语义 |
+
+同批确认**不用改**的（都把动作做实了，别再按「名字像假的」重扫一遍）：
+`table/Toolbar`（真 Blob 下载）、`form/FileUpload`（真 `<a download>`）、`table/RowActions`、
+`crud-page/{FullBusiness,MultiDialog,Permission,HiddenColumn}`、`advanced/CrudPage`（真 CSV）。
+
+验收边界：这类缺陷**没有守卫**——「按钮说的和做的是不是一回事」只有人（或浏览器）能判。
+三站本批的验证方式是浏览器实点：左栏只有「重置」、右栏「查询」+ 内置「展开」；输入值后点查询，
+toast 里是完整 model；点重置输入框清空。控制台 0 error / 0 warning，三站构建通过。
+
