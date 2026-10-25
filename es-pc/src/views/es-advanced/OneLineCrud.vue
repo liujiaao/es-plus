@@ -30,6 +30,7 @@
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
 import { message, Tag, Modal, Alert } from 'ant-design-vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
 import { EsTable, EsForm,  useDialog } from '@es-plus/adapter-antdv'
 import { fetchProducts } from '@/utils/mock-api'
 import { tagColor } from '@/utils/antdv-colors'
