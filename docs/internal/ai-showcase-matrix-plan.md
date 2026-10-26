@@ -203,6 +203,9 @@ S3 工作流页（1 页，W1–W3，覆盖 8 个零案例工具）
 
 ### 4.4 S2 组合画廊
 
+> **已落地（2026-10-26，见 §13）**。一处偏离：站点侧不现算，而是由生成器把同一批纯函数的
+> 结果落成确定性数据模块（es-eui 没有 TS loader、三站三个打包器）—— 单源未让步，理由见 §13.2。
+
 - **零新产物**：直接消费 `__tests__/golden/composition/*.json`（6 个逻辑案例 × 3 target）。
 - 页面交互：选形状（full / table+form / form+dialog）→ 选 target（vue3 / vue2 / antdv）→ 左右分栏展示「意图表 surfaces」与「生成后的 config 结构」；高亮 `membership`（同一个字段在几个面出现）与 target 差异（例如某键在 vue2 降级）。
 - claim：`measure + compile`（golden 已由 `check:composition` 与 `golden:e2e` 双重把关；页面不运行，但可点开每个 case 的源码）。
@@ -539,4 +542,72 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - **多列排序未建模**：`sorter` 是数组时只取第一列（三端一致地降级），按优先级的多列排序属 Wave C。
 - **参数只进请求、不改宿主数据**：后端没按参数排时，组件照原样显示（不本地兜底）—— 这是刻意选择，本地兜底会掩盖后端契约违约。
-- Wave C 其余项不变：S2 组合画廊（18 golden）、S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
+- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
+
+## 13. 落地记录（S2 组合画廊，2026-10-26）
+
+§4.4 的 S2 已落地：`/ai-gallery/composition` 一页承载 **18 例组合语料（6 个逻辑案例 × 3 端）**，
+claim 仍是 `measure + compile` —— 页面**不运行**生成的页面（「三端可交互」那句由 S1 案例自己的
+e2e 承担），只证明两件事：**度量对得上**（每个字段在几个面出现）、**产物编译得过**。
+
+### 13.1 落地了什么
+
+| 主题 | 位置 | 说明 |
+|---|---|---|
+| 生成器 + 守卫 | [gen-composition-gallery.mjs](../../scripts/gen-composition-gallery.mjs)（新） | 用**评测同一个函数**（`composeInputOf` → `composeCrudConfig` → `compositionFacts` → `generateFromConfig`，片段形状走真前门）算出 18 例的 facts / 逐项对照 / 产物，落成确定性数据模块；`--check` 重算并与仓库字节比对，同时验三站副本、页面/路由/入口接线、双页同源，以及 6 条非空证明 |
+| 单源数据 | [composition-gallery.js](../cases/generated/composition-gallery.js)（新，226,928 B） | `COMPOSITION_GALLERY = { version, shapes, targets, cases[18], bases[6] }`；三站副本由 `npm run cases:sync` 分发（`case-plan.mjs` 新增 `composition-gallery` 条目） |
+| 判据单源 | [composition-scorers.mjs](../../scripts/eval/composition-scorers.mjs) | 新增 `composeInputOf` / `compositionFactProblems` / `fragmentProblems`：评测与画廊共用同一份「怎么喂 compose」「怎么判 facts ↔ expect」，`composition-scorers.test.mjs` 里原来的本地副本删掉 |
+| 页面 | [AiComposition.vue](../../es-plus-docs/src/views/AiComposition.vue)、[es-pc 同名](../../es-pc/src/views/AiComposition.vue)、[ai-composition.vue](../../es-eui/src/views/ai-composition.vue) | 左「意图表 surfaces」右「组合事实（含成员关系矩阵）」+「三端对照」+「生成产物」；只用原生控件与本地 CSS 变量，**不引 UI 库组件** ⇒ 三站视图形状一致（前两站逐字节相同，es-eui 仅 script 换 Options API） |
+| 接线 | 三站 router + 三站 `AiGallery` 入口卡 | `/ai-gallery/composition` 排在 `/ai-gallery/:id` 之前；画廊页新增 `.ai-gallery-comp` 入口（`check:composition-gallery` 断言三处都在，删掉即红） |
+| e2e | [ai-gallery.spec.ts](../../__tests__/e2e-runtime/tests/ai-gallery.spec.ts) | 新增一条：列表点入口进页面 → 逐项对照全绿 + `data-faces="3"` 的字段存在 → 切 antdv 后 pageSchema **逐字节不变** → 切 form+dialog 出 `useAddDialog` 片段 → 片段跨端归一化后逐字节相同 |
+| npm | `composition:gallery` / `check:composition-gallery` | 后者已进 `check:consistency` |
+
+### 13.2 与 §4.4 原文的偏离（一处，有结构性理由）
+
+§4.4 写的是「**零新产物**：直接消费 `__tests__/golden/composition/*.json`」。实际落地是
+**生成一份确定性数据模块**，理由有两条，都是硬约束：
+
+1. **es-eui 的 webpack 链路没有 TS loader**，而组合计算的全部入口（`compose-crud-config.ts` /
+   `structured-generator.ts` / 前门）都是 TS。站点侧「现算」在 es-eui 上根本无法编译。
+2. 三个站点是三个不同的打包器（vite ×2 + vue-cli/webpack）。把 shared 源码拖进站点产物意味着
+   三种 bundler 各自的解析行为都要被验证一遍 —— 成本远高于「Node 里算一次、发一份 JS 数据」。
+
+**没有让步的是单源**：数据仍由 `composeCrudConfig` 与 `compositionFacts` 现算（不落 JSON 快照、
+不手抄数字），`--check` 每次重算并逐字节比对；页面**只渲染**，不在浏览器里重写判据 ——
+否则同一件事会有第三份实现，与评测漂移时页面仍会自信地显示「全绿」。
+
+### 13.3 实测数字
+
+- 语料：18 例 = 6 个逻辑案例 × 3 端；形状 3 × 6 例；6 个基案例的 `factsEqual` 全真（端间差异不会被当成能力差异）。
+- 端间差异**只有两类，且都是结构性的**：① 片段形状的产物只差渲染端包名（`codeEqual=false` 但
+  `generatedEqualIgnoringTargetImports=true`）；② 宿主装配块按端不同（Element Plus / Ant Design / Element UI），
+  这是宿主预检块，不是组合差异。有表形状是 **schema 模式下 pageSchema 与生成代码三端逐字节相同**。
+- 生成提示（页面如实展示）：`full` 6 / 12 条「自动归一」（弹窗表单项补键）、`form+dialog` 1 条
+  （antdv 片段是 `.tsx`，需 `@vite-jsx`）、`table+form` 0 条。
+- 守卫：`npm run check:composition-gallery` 绿（单源新鲜 + 三站副本一致 + 接线完整 + 6 条非空证明）；
+  `npm run check:composition` 仍绿（同一批 fact 判据）；`npm run check:consistency` 退出码 0。
+- e2e：`--project ai-gallery-docs` → **13 passed**（24.2 s，含新增那条）。
+- 构建：`es-plus-docs`（1m08s）/ `es-pc`（30.5s）/ `es-eui`（`npm run build -- --dest dist-verify`，54.7s，验后删除）。
+- 台账：`npm run sites:coverage:gen` 把 `AiComposition` 登记进 es-pc 的 `siteUncovered`（与 `AiGallery` 同级：
+  它是检视页，不是同名单源演示）。
+
+### 13.4 这一批新发现的三条结构约束
+
+1. **「不许信产物里的自述判据」**：第一版守卫只断言 `factsMatchExpect`（生成物里写死的标记），
+   于是「篡改组合事实」的非空证明当场失效 —— 判据读的是被篡改者自己。现在 `modelProblems` 用
+   `compositionFactProblems(c, c.facts)` 与 `canonJson(checksOf(c))` **重算**再比对；同一课适用于任何
+   「生成物自带判定结果」的守卫。
+2. **schema 模式下的产物是端无关的**：这点此前只是「观察到」，S2 把它变成了页面上的可读事实
+   （切渲染端后 pageSchema 逐字节相同）与 e2e 断言。⟹ 「三端差异」此后只有 **渲染端 import** 与
+   **宿主装配块** 两处可解释来源；出现第三种就是缺陷。
+3. **弹窗表单项的成员键是死键**：`dialogs[*].formItems[*]` 上的 `inQuery/inTable/inForm` 在三个渲染端
+   都不被读取（弹窗体只看 `prop/label/formtype/attrs/options`），但 schema 要求必填，于是 repair 每次
+   从顶层字段补齐并各发一条「自动归一」——这是**噪音**，不是错误。是否把该修复改成「只补 `inForm: true`、
+   其余置 false」属于 shared 契约变更（会动 eval 输出现场），**本批不动**，登记为开放项。
+
+### 13.5 仍未闭环
+
+- es-pc / es-eui 没有对应的 e2e project，S2 在两端的 claim 保持 `measure + compile`（与 §11.4 同一条纪律）。
+- §12.5 的 Wave C 余项不变：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）、`feature-coverage.json`
+  的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
+- 上面 13.4 第 3 条的「弹窗体成员键」是下一批的候选（改完能把这 6/12 条噪音去掉）。
