@@ -13,7 +13,10 @@ export const AI_WORKFLOWS = {
     "doctor_page",
     "ingest_schema",
     "list_form_types",
-    "get_component_api"
+    "get_component_api",
+    "generate_form",
+    "generate_table",
+    "generate_dialog"
   ],
   "zeroCaseTools": [
     "detect_project_target",
@@ -23,9 +26,12 @@ export const AI_WORKFLOWS = {
     "doctor_page",
     "ingest_schema",
     "list_form_types",
-    "get_component_api"
+    "get_component_api",
+    "generate_form",
+    "generate_table",
+    "generate_dialog"
   ],
-  "note": "S3 工具工作流：三条链、9 次真 handler 调用。入参冻结在生成器里，出参是逐字节的真实返回；`refine_config` 的 revised 是冻结输入（该工具不调模型）。check:ai-workflows 重算并逐字节比对。",
+  "note": "S3 工具工作流：四条链、12 次真 handler 调用。入参冻结在生成器里，出参是逐字节的真实返回；`refine_config` 的 revised 是冻结输入（该工具不调模型）。check:ai-workflows 重算并逐字节比对。",
   "workflows": [
     {
       "id": "w1",
@@ -801,6 +807,165 @@ export const AI_WORKFLOWS = {
           "result": "# EsCrudPage API (@es-plus/vue3)\n\nOne `schema` object → a full CRUD page (query form + table + dialogs). The renderer wires EsForm + EsTable + dialogs together, so you describe the page, not the wiring.\n\n## Props\n```typescript\ninterface CrudPageProps {\n  schema: CrudPageSchema                                // required\n  httpRequest?: (params) => Promise<unknown>            // data fetching fn\n  autoLoad?: boolean                                    // fetch on mount — default true\n}\n```\n\n## CrudPageSchema (the `schema` prop)\n```typescript\ninterface CrudPageSchema {\n  formItems?: FormItemOption[]          // query form fields\n  formLayout?: { labelWidth?, minFoldRows? }\n  toolbarBtns?: CrudBtnConfig[]         // rendered in the EsForm button area\n  tableBtns?: TableBtnConfig[]          // above the table, position: 'left' | 'right'\n  columns: TableColumn[]                // required — table columns\n  tableOptions?: Partial<TableOptions>\n  pagination?: PaginationConfig\n  operationColumn?: OperationColumnConfig | false   // false = no action column\n  dialogs?: Record<string, CrudDialogConfig>        // keyed popups; buttons bind via dialogKey\n}\n```\nA `CrudDialogConfig` is either `formItems` (auto-built form) or a custom `render`, plus `onConfirm`/`onClose`; a row button with `dialogKey` opens it with the row data.\n\n## Emits\n`query`, `add`, `edit`, `delete`, `view`, `export`, `row-click`, `btn-click`, `dialog-confirm`, `dialog-cancel`, `dialog-open`. Payloads: `edit/view/delete` → `(row)`; `query/export` → `(model)`; `btn-click` → `(key, payload?)`; `dialog-confirm` → `(dialogKey, data)`; `dialog-open` → `(dialogKey, row?)`.\n\n## Exposed instance methods (via ref) — same on all three renderers\n- `refresh()` — reload the table\n- `getSelectedRows()` — selected rows\n- `tableRef` / `formRef` — the inner EsTable / EsForm instances\n- `queryModel` — the reactive query model\n- `openDialog(key, row?)` / `closeDialog(key)` — drive the keyed dialogs imperatively\n\n## Import\n```typescript\nimport { EsCrudPage } from '@es-plus/vue3'\n```\n\n## Key Features\n- Whole page — search + table + add/edit/view dialogs — from one schema\n- `dialogs` + `dialogKey` replace hand-wired per-row dialog state\n- `operationColumn` / `tableBtns` drive row & toolbar actions\n",
           "truncated": false,
           "bytes": 2302
+        }
+      ]
+    },
+    {
+      "id": "w4",
+      "title": "片段拆装：表单、表格、弹窗各自独立",
+      "oneLiner": "三个片段工具共用 generate_crud 那张字段词表，产物却是可单独嵌进非 CRUD 页面的 SFC / composable —— 拆得开、也拼得回。",
+      "tools": [
+        "generate_form",
+        "generate_table",
+        "generate_dialog"
+      ],
+      "steps": [
+        {
+          "tool": "generate_form",
+          "note": "表单片段 = 自带 reactive model + formItemList 的独立 SFC；context:query 让 span 收窄，与 CRUD 查询区同一套尺寸语义。",
+          "expect": "ok",
+          "ok": true,
+          "args": {
+            "fields": [
+              {
+                "prop": "keyword",
+                "label": "关键词",
+                "formtype": "Input",
+                "querySpan": 8
+              },
+              {
+                "prop": "status",
+                "label": "状态",
+                "formtype": "Select",
+                "querySpan": 8,
+                "dataOptions": [
+                  {
+                    "label": "待发货",
+                    "value": 0,
+                    "tagType": "warning"
+                  },
+                  {
+                    "label": "已发货",
+                    "value": 1,
+                    "tagType": "success"
+                  }
+                ]
+              }
+            ],
+            "target": "vue3",
+            "context": "query",
+            "buttons": "query"
+          },
+          "result": "Generated standalone <es-form> block (target=vue3):\n- 2 field(s), span context=query, buttons=query\n- TypeScript enabled\n- Target: Vue 3 + Element Plus (@es-plus/vue3)\n- Self-contained component — drop next to native/third-party components.\n\n---\n\n```vue\n<template>\n  <es-form :model=\"model\" :form-item-list=\"formItems\" :config-btn=\"configBtn\" />\n</template>\n\n<script setup lang=\"ts\">\nimport { reactive } from 'vue'\n\ninterface FormModel {\n  keyword: string\n  status: string | number | ''\n}\n\nconst model = reactive<FormModel>({ keyword: '', status: '' })\nconst formItems = [\n  {\n    \"prop\": \"keyword\",\n    \"label\": \"关键词\",\n    \"formtype\": \"Input\",\n    \"span\": 8,\n    \"attrs\": {\n      \"clearable\": true\n    }\n  },\n  {\n    \"prop\": \"status\",\n    \"label\": \"状态\",\n    \"formtype\": \"Select\",\n    \"span\": 8,\n    \"attrs\": {\n      \"clearable\": true\n    },\n    \"dataOptions\": [\n      {\n        \"label\": \"待发货\",\n        \"value\": 0,\n        \"tagType\": \"warning\"\n      },\n      {\n        \"label\": \"已发货\",\n        \"value\": 1,\n        \"tagType\": \"success\"\n      }\n    ]\n  }\n]\n\nconst configBtn = [\n  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },\n  { name: '重置', key: 'rest', triggerEvent: true },\n]\n</script>\n```",
+          "truncated": false,
+          "bytes": 1242
+        },
+        {
+          "tool": "generate_table",
+          "note": "表格片段自带 columns/options/data-source/pagination；给 apiUrl 就走 es-table 的 apiParams 自动取数，操作列只发事件、不生成处理函数体（片段才可能独立编译）。",
+          "expect": "ok",
+          "ok": true,
+          "args": {
+            "fields": [
+              {
+                "prop": "orderNo",
+                "label": "订单号",
+                "formtype": "Input",
+                "width": 150
+              },
+              {
+                "prop": "customer",
+                "label": "客户",
+                "formtype": "Input",
+                "minWidth": 140
+              },
+              {
+                "prop": "amount",
+                "label": "金额",
+                "formtype": "InputNumber",
+                "align": "right"
+              },
+              {
+                "prop": "status",
+                "label": "状态",
+                "formtype": "Select",
+                "dataOptions": [
+                  {
+                    "label": "待发货",
+                    "value": 0,
+                    "tagType": "warning"
+                  },
+                  {
+                    "label": "已发货",
+                    "value": 1,
+                    "tagType": "success"
+                  }
+                ]
+              }
+            ],
+            "apiUrl": "/api/orders",
+            "target": "vue3",
+            "tableOptions": {
+              "border": true
+            },
+            "pagination": {
+              "pageSize": 10
+            },
+            "rowButtons": [
+              {
+                "name": "查看"
+              }
+            ]
+          },
+          "result": "Generated standalone <es-table> block (target=vue3):\n- 4 column(s), 1 row button(s)\n- Auto-fetch via apiParams: /api/orders\n- TypeScript enabled\n- Target: Vue 3 + Element Plus (@es-plus/vue3)\n- Self-contained component — drop next to native/third-party components.\n\n---\n\n```vue\n<template>\n  <es-table\n    ref=\"tableRef\"\n    :columns=\"columns\"\n    :options=\"options\"\n    v-model:data-source=\"tableData\"\n    v-model:pagination=\"pagination\"\n  />\n</template>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue'\n\nconst columns = [\n  { prop: 'orderNo', label: '订单号', width: 150 },\n  { prop: 'customer', label: '客户', minWidth: 140 },\n  { prop: 'amount', label: '金额', align: 'right' },\n  { prop: 'status', label: '状态', dataOptions: [{\"label\":\"待发货\",\"value\":0,\"tagType\":\"warning\"},{\"label\":\"已发货\",\"value\":1,\"tagType\":\"success\"}] },\n  {\n    prop: 'operate',\n    label: '操作',\n    width: 100,\n    fixed: 'right',\n    btns: [\n      { name: '查看', triggerEvent: true },\n    ]\n  },\n]\n\nconst options = {\n  border: true,\n  stripe: true,\n  highlightCurrentRow: true,\n  headerCellStyle: {\"background\":\"#f5f7fa\"},\n  apiParams: { url: '/api/orders' },\n  rowkey: 'id',\n}\n\nconst tableData = ref([])\nconst tableRef = ref(null)\nconst pagination = ref({ current: 1, pageSize: 10, total: 0 })\n</script>\n```",
+          "truncated": false,
+          "bytes": 1316
+        },
+        {
+          "tool": "generate_dialog",
+          "note": "弹窗片段 mode=component 走 <es-dialog> SFC（不需要 JSX 插件）；集成契约仍是 open(title, row?, onSuccess?) —— 提交成功后由宿主刷新自己的表格。",
+          "expect": "ok",
+          "ok": true,
+          "args": {
+            "fields": [
+              {
+                "prop": "customer",
+                "label": "客户",
+                "formtype": "Input",
+                "required": true
+              },
+              {
+                "prop": "amount",
+                "label": "金额",
+                "formtype": "InputNumber"
+              },
+              {
+                "prop": "status",
+                "label": "状态",
+                "formtype": "Select",
+                "dataOptions": [
+                  {
+                    "label": "待发货",
+                    "value": 0,
+                    "tagType": "warning"
+                  },
+                  {
+                    "label": "已发货",
+                    "value": 1,
+                    "tagType": "success"
+                  }
+                ]
+              }
+            ],
+            "apiUrl": "/api/orders",
+            "rowkey": "id",
+            "mode": "component",
+            "defaultTitle": "新增订单",
+            "target": "vue3"
+          },
+          "result": "Generated standalone <es-dialog> SFC (target=vue3):\n- 3 form field(s)\n- Default title: 新增订单 (used when open() is called without one)\n- Submit via httpRequest: /api/orders (POST on 新增, PUT otherwise)\n- Integration: open(title, row?, onSuccess?) (via defineExpose) — host refreshes its own table in onSuccess\n- No JSX plugin required (template + <es-dialog>)\n- TypeScript enabled\n- Target: Vue 3 + Element Plus (@es-plus/vue3)\n\n⚠️ Warnings (non-blocking — review and re-generate if any indicate a mapping mistake):\n  - mode=component：产物是自包含 <es-dialog> SFC（无需 JSX 插件）。前提是宿主已全局装配 es-plus（app.use(EsPlus)），否则模板里的 <es-dialog>/<es-form> 标签解析不到。\n\n---\n\n```vue\n<template>\n  <es-dialog\n    v-model:visible=\"visible\"\n    :title=\"title\"\n    width=\"560px\"\n    :config-btn=\"configBtn\"\n  >\n    <es-form\n      ref=\"formRef\"\n      :model=\"formData\"\n      :form-item-list=\"formItems\"\n      :layout-form-props=\"{ formLayProps: { labelWidth: '100px', isBtnHidden: true } }\"\n    />\n  </es-dialog>\n</template>\n\n<script setup lang=\"ts\">\nimport { computed, reactive, ref } from 'vue'\nimport { httpRequest } from '@es-plus/vue3'\n\ninterface DialogModel {\n  customer: string\n  amount: number | null\n  status: string | number | ''\n}\n\nconst DEFAULTS: DialogModel = { customer: '', amount: null, status: '' }\nconst formData = reactive<DialogModel>({ ...DEFAULTS })\nconst visible = ref(false)\nconst title = ref('')\nconst formRef = ref<{ validate: () => Promise<unknown> } | null>(null)\nlet onSuccess: ((data: DialogModel) => void) | undefined\n\nconst formItems = [\n  {\n    \"prop\": \"customer\",\n    \"label\": \"客户\",\n    \"formtype\": \"Input\",\n    \"span\": 24,\n    \"attrs\": {\n      \"clearable\": true\n    },\n    \"formItemOptions\": {\n      \"rules\": [\n        {\n          \"required\": true,\n          \"message\": \"请输入客户\",\n          \"trigger\": \"blur\"\n        }\n      ]\n    }\n  },\n  {\n    \"prop\": \"amount\",\n    \"label\": \"金额\",\n    \"formtype\": \"InputNumber\",\n    \"span\": 24,\n    \"attrs\": {\n      \"clearable\": true\n    }\n  },\n  {\n    \"prop\": \"status\",\n    \"label\": \"状态\",\n    \"formtype\": \"Select\",\n    \"span\": 24,\n    \"attrs\": {\n      \"clearable\": true\n    },\n    \"dataOptions\": [\n      {\n        \"label\": \"待发货\",\n        \"value\": 0,\n        \"tagType\": \"warning\"\n      },\n      {\n        \"label\": \"已发货\",\n        \"value\": 1,\n        \"tagType\": \"success\"\n      }\n    ]\n  }\n]\n\nfunction open(t: string = '新增订单', row: Partial<DialogModel> = {}, success?: (data: DialogModel) => void) {\n  title.value = t\n  Object.assign(formData, DEFAULTS, row)\n  onSuccess = success\n  visible.value = true\n}\n\nfunction close() {\n  visible.value = false\n}\n\nasync function handleConfirm() {\n  try {\n    await formRef.value?.validate()\n  } catch {\n    return // 校验未通过:静默中止,等用户修正\n  }\n  // TODO(es-plus): 宿主编排槽 —— 提交前后的额外业务逻辑写在这里\n  const method = title.value === '新增' ? 'POST' : 'PUT'\n  const url = title.value === '新增' ? '/api/orders' : `/api/orders/${formData.id}`\n  await httpRequest({ url, method, data: formData })\n  close()\n  onSuccess?.(formData)\n}\n\nconst isView = compute",
+          "truncated": true,
+          "bytes": 3521
         }
       ]
     }

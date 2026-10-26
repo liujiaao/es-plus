@@ -50,7 +50,7 @@
         <span class="ai-gallery-comp-tag">S3</span>
         <strong>工具工作流</strong>
         <span class="ai-gallery-comp-desc">
-          探测→出页→纠偏、脚手架→体检、接管既有表单：9 次真 handler 调用，8 个此前只有文档的工具全覆盖
+          探测→出页→纠偏、脚手架→体检、接管既有表单、片段拆装：12 次真 handler 调用，11 个此前只有文档的工具全覆盖
         </span>
         <em>打开 →</em>
       </router-link>

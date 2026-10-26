@@ -34,9 +34,17 @@ const TOOL_MODULES = [
   ['ingest_schema', 'ingest-schema.ts', 'registerIngestSchema'],
   ['list_form_types', 'list-form-types.ts', 'registerListFormTypes'],
   ['get_component_api', 'get-component-api.ts', 'registerGetComponentApi'],
+  // 片段三件套：与 generate_crud 同一份字段词表，产物是独立 SFC / composable。
+  ['generate_form', 'generate-form.ts', 'registerGenerateForm'],
+  ['generate_table', 'generate-table.ts', 'registerGenerateTable'],
+  ['generate_dialog', 'generate-dialog.ts', 'registerGenerateDialog'],
 ]
 
-/** 工作流页承诺覆盖的工具集（断言用；缺失/多余都该红）。 */
+/**
+ * 工作流页承诺覆盖的工具集 = **前门公开面全部 12 个**（断言用；缺失/多余都该红）。
+ * `generate_crud` 走 surfaces 路径，片段三件套来自各自独立工具 —— 这样「12 个工具全部
+ * 至少有一次真调用」是页面上看得见的事实，而不是台账里的断言。
+ */
 export const WORKFLOW_TOOLS = TOOL_MODULES.map(([name]) => name)
 
 function entrySource() {

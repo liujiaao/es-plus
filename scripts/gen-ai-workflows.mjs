@@ -4,16 +4,18 @@
  *
  * ## 它是什么
  *
- * 把「文档站说 AI 能做的事」从**散文**变成**可重放的调用记录**：三条工作流，共 9 次
+ * 把「文档站说 AI 能做的事」从**散文**变成**可重放的调用记录**：四条工作流，共 12 次
  * **真工具调用**，每次记录入参与出参。这些工具此前只有文案、没有页面：
  *
  *   · W1 `detect_project_target → generate_crud → validate_config → refine_config`
  *     （前门的 surfaces 路径 + 一次「校验抓错 → 精修出 diff」的纠偏）
  *   · W2 `scaffold_page → doctor_page`（脚手架 → 宿主入口体检 → 缺失项与修法）
  *   · W3 `ingest_schema → list_form_types → get_component_api`（接管既有表单的入口）
+ *   · W4 `generate_form → generate_table → generate_dialog`（片段拆装：三个独立 SFC/composable，
+ *     字段词表与 generate_crud 相同，可各自嵌进非 CRUD 页面）
  *
- * 8 个零案例工具（除 `generate_crud` 外）在这里全部至少出现一次；`generate_crud`
- * 走的是 **surfaces 路径**（现有 hero 页走 CLI 的 NL→config 路径，不是 MCP 路径）。
+ * **前门公开面 12 个工具全部至少出现一次**（W1–W4 合计）：`generate_crud` 走 surfaces 路径
+ * （现有 hero 页走 CLI 的 NL→config 路径，不是 MCP 路径），其余 11 个在此前没有任何页面演示。
  *
  * ## 为什么生成而不是页面里现场跑
  *
@@ -29,7 +31,7 @@
  *
  * 1. **新鲜度**：重算记录，与单源 + 三站副本逐字节比对（忽略行尾符差异，见 text-sync）。
  * 2. **确定性**：同一进程内连算两遍，两次 JSON 必须逐字节相同（防 Date/Set/路径泄漏）。
- * 3. **覆盖**：8 个零案例工具全部出现，`generate_crud` 出现；每步都有非空出参。
+ * 3. **覆盖**：前门公开面 12 个工具全部出现；每步都有非空出参。
  * 4. **预期失败**：恰好一步是「故意喂错配置」的 `validate_config`，且它确实报错 ——
  *    其余步骤必须成功。否则页面会把「工具坏了」展示成「工具在纠错」。
  * 5. **接线**：三站页面都 import 数据模块、路由都有 `/ai-gallery/workflows`、
@@ -59,6 +61,7 @@ const PREVIEW_LIMIT = 3000
  * 零页面演示工具：本页的存在理由（缺一个就是没覆盖到位）。
  * 口径是「**站点页面**里此前搜不到这些工具的调用」—— 不是一张已存在的台账：
  * 本仓此前没有工具覆盖账本，`ai-tools.json` / `AiCrud.vue` 只是文档与 NL→config 演示。
+ * `generate_crud` 除外：它在 S1 案例里已有页面，只是那批走 CLI 的 NL→config 路径。
  */
 const ZERO_CASE_TOOLS = WORKFLOW_TOOLS.filter((t) => t !== 'generate_crud')
 
@@ -181,6 +184,13 @@ const TS_INTERFACE = `interface Product {
   active: boolean
 }`
 
+/** 片段三件套的字段：与 generate_crud 的 surfaces 同一份词表（这是「片段能拼回页」的前提）。 */
+const FRAGMENT = {
+  formFields: SURFACES.query,
+  tableFields: SURFACES.table,
+  dialogFields: SURFACES.form,
+}
+
 /**
  * 工作流定义。`jsonArgs` 列出**必须以 JSON 字符串传**的参数（工具签名如此），
  * 记录里仍存可读对象；重放时由同一函数编码，页面与调用不会各说各话。
@@ -190,7 +200,7 @@ function workflowPlan() {
     tools: WORKFLOW_TOOLS,
     zeroCaseTools: ZERO_CASE_TOOLS,
     note:
-      'S3 工具工作流：三条链、9 次真 handler 调用。入参冻结在生成器里，出参是逐字节的真实返回；' +
+      'S3 工具工作流：四条链、12 次真 handler 调用。入参冻结在生成器里，出参是逐字节的真实返回；' +
       '`refine_config` 的 revised 是冻结输入（该工具不调模型）。check:ai-workflows 重算并逐字节比对。',
     workflows: [
       {
@@ -269,6 +279,44 @@ function workflowPlan() {
           },
         ],
       },
+      {
+        id: 'w4',
+        title: '片段拆装：表单、表格、弹窗各自独立',
+        oneLiner:
+          '三个片段工具共用 generate_crud 那张字段词表，产物却是可单独嵌进非 CRUD 页面的 SFC / composable —— 拆得开、也拼得回。',
+        tools: ['generate_form', 'generate_table', 'generate_dialog'],
+        steps: [
+          {
+            tool: 'generate_form',
+            note: '表单片段 = 自带 reactive model + formItemList 的独立 SFC；context:query 让 span 收窄，与 CRUD 查询区同一套尺寸语义。',
+            args: { fields: FRAGMENT.formFields, target: 'vue3', context: 'query', buttons: 'query' },
+          },
+          {
+            tool: 'generate_table',
+            note: '表格片段自带 columns/options/data-source/pagination；给 apiUrl 就走 es-table 的 apiParams 自动取数，操作列只发事件、不生成处理函数体（片段才可能独立编译）。',
+            args: {
+              fields: FRAGMENT.tableFields,
+              apiUrl: '/api/orders',
+              target: 'vue3',
+              tableOptions: { border: true },
+              pagination: { pageSize: 10 },
+              rowButtons: [{ name: '查看' }],
+            },
+          },
+          {
+            tool: 'generate_dialog',
+            note: '弹窗片段 mode=component 走 <es-dialog> SFC（不需要 JSX 插件）；集成契约仍是 open(title, row?, onSuccess?) —— 提交成功后由宿主刷新自己的表格。',
+            args: {
+              fields: FRAGMENT.dialogFields,
+              apiUrl: '/api/orders',
+              rowkey: 'id',
+              mode: 'component',
+              defaultTitle: '新增订单',
+              target: 'vue3',
+            },
+          },
+        ],
+      },
     ],
   }
 }
@@ -333,7 +381,7 @@ function render(record) {
 function assertRecord(record) {
   const steps = record.workflows.flatMap((w) => w.steps)
   const called = new Set(steps.map((s) => s.tool))
-  for (const t of ZERO_CASE_TOOLS) if (!called.has(t)) fail(`零案例工具 ${t} 未出现在任何工作流中`)
+  for (const t of ZERO_CASE_TOOLS) if (!called.has(t)) fail(`零页面演示工具 ${t} 未出现在任何工作流中`)
   if (!called.has('generate_crud')) fail('generate_crud（surfaces 路径）未出现')
   for (const t of called) if (!WORKFLOW_TOOLS.includes(t)) fail(`工作流调用了未登记的工具 ${t}`)
 
@@ -434,7 +482,7 @@ async function main() {
     const steps = record.workflows.flatMap((w) => w.steps)
     console.log(
       `✅ 工作流页一致（${record.workflows.length} 条工作流 / ${steps.length} 次工具调用；` +
-        `零案例工具 ${ZERO_CASE_TOOLS.length}/${ZERO_CASE_TOOLS.length} 覆盖；单源 + 三站副本逐字节一致；接线完整）`,
+        `零页面演示工具 ${ZERO_CASE_TOOLS.length}/${ZERO_CASE_TOOLS.length} 覆盖；单源 + 三站副本逐字节一致；接线完整）`,
     )
     process.exit(0)
   }

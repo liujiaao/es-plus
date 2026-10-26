@@ -2,7 +2,7 @@
   <div class="wf" data-testid="workflows-page">
     <header class="wf-hero">
       <span class="wf-badge">S3 工具工作流</span>
-      <h1>9 次真调用：从探测到出页，再到体检与接管</h1>
+      <h1>12 次真调用：从探测到出页，再到体检、接管与拆装</h1>
       <p>
         本页每一步的入参与出参都来自 <strong>真 handler</strong>（不是示例文案）：生成器把冻结入参按工具
         自己的 zod shape 解析后调用，记录逐字节落盘，<code>npm run check:ai-workflows</code> 重算并比对。
