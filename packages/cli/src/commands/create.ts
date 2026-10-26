@@ -85,8 +85,12 @@ export const createCommand = new Command("create")
   .option("--no-ai", "force the built-in (regex) generator even when ANTHROPIC_API_KEY is set")
   .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)")
   .option("-f, --force", "overwrite existing output files without prompting")
+  .option(
+    "--emit-config <path>",
+    "AI path only: also write the model-produced StructuredCrudConfig to <path> (the replay input — `generateFromConfig(config)` reproduces the emitted schema byte-for-byte)"
+  )
   .description("Generate a CRUD page from natural language description or structured config")
-  .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string; ai?: boolean; force?: boolean }) => {
+  .action(async (name: string | undefined, options: { output?: string; description?: string; mode?: string; fromConfig?: string; target?: string; ai?: boolean; force?: boolean; emitConfig?: string }) => {
     // 显式未知 target 直接报错退出，避免静默降级为 vue3（丢弃用户明确的不支持请求）。
     if (!isValidTarget(options.target)) {
       console.log(pc.red(`✗ 未知 target: ${options.target}（可选: ${CLI_TARGETS.join(", ")}）`));
@@ -256,6 +260,19 @@ export const createCommand = new Command("create")
       if (aiConfig) {
         // 日志必须报告**实际**目标/模式：模型可以按 NL 选它们，打印 CLI 默认值会撒谎。
         console.log(pc.dim(`   LLM 生成配置成功（${attempts} 次尝试，target=${aiConfig.target}, mode=${aiConfig.mode}）→ 走确定性生成器`));
+        // 证明链的第一块砖（docs/internal/ai-showcase-matrix-plan.md §3 G5）：
+        // 此前模型产出的配置生成完就被丢弃，站点的 JSON 无法机械证明「= 那次模型输出的
+        // 确定性编译结果」。`--emit-config` 把**生成器实际收到的**这份配置原样落盘，
+        // 于是「产物 = generateFromConfig(冻结配置)」可以对任意一份产物重放验证。
+        if (options.emitConfig) {
+          const configPath = resolve(process.cwd(), options.emitConfig);
+          if (!(await confirmOverwrite([configPath], !!options.force))) return;
+          writeGeneratedFiles(
+            [{ path: configPath, content: `${JSON.stringify(aiConfig, null, 2)}\n` }],
+            dirname(configPath)
+          );
+          console.log(pc.green(`✔ 已落盘模型配置（重放凭据）: ${configPath}`));
+        }
         try {
           await emitFromStructuredConfig(aiConfig, name, options.output, !!options.force);
         } catch (err: any) {
