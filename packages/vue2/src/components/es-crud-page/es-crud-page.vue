@@ -15,6 +15,7 @@
         :pagination.sync="paginationState"
         v-bind="$attrs"
         @row-click="onRowClick"
+        @cell-edit="onCellEdit"
       >
         <es-form
           v-if="schema.formItems && schema.formItems.length"
@@ -62,7 +63,7 @@ import type {
   CrudDialogConfig,
   DialogActionContext,
 } from './types'
-import type { BtnConfig, TableColumn } from '@es-plus/core'
+import type { BtnConfig, CellEditPayload, TableColumn } from '@es-plus/core'
 import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions } from '@es-plus/core'
 
 /**
@@ -126,6 +127,9 @@ export default defineComponent({
     'dialog-confirm',
     'dialog-cancel',
     'dialog-open',
+    // 行内编辑提交（仅 vxe 引擎）：与 es-table 同形。Vue 2 的 attrs 不含监听器
+    // （那些在 listeners 里），故这里必须显式接一次再转出。
+    'cell-edit',
   ],
   methods: {
     // 错误边界回调：子树（表格/表单/单元格 render）抛错被 EsErrorBoundary 拦截后在此记录，
@@ -414,6 +418,11 @@ export default defineComponent({
      */
     function onRowClick(row: Record<string, unknown>) {
       emit('row-click', row)
+    }
+
+    /** 行内编辑提交转发（仅 vxe 引擎）：载荷由 core 归一，这里只搬一次。 */
+    function onCellEdit(payload: CellEditPayload) {
+      emit('cell-edit', payload)
     }
 
     async function handleToolbarBtnClick(btn: CrudBtnConfig) {
@@ -746,6 +755,7 @@ export default defineComponent({
       mergedFormBtns,
       formLayoutProps,
       onRowClick,
+      onCellEdit,
       // exposed
       ...exposed,
     }

@@ -51,6 +51,7 @@
             :parent-slots="($slots as any)"
             @selection-change="handleVxeSelectionChange"
             @sort-change="handleVxeSortChange"
+            @cell-edit="(payload) => emit('cell-edit', payload)"
           />
 
           <!-- 表格主体 -->
@@ -214,7 +215,7 @@ import {
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
-import type { TableSortState } from '@es-plus/core'
+import type { CellEditPayload, TableSortState } from '@es-plus/core'
 import RenderDomTb from './render-dom-tb'
 import VxeEngine from './engines/vxe-engine.vue'
 
@@ -257,6 +258,8 @@ const emit = defineEmits<{
   // 自动加载（onMounted / visibleShow 显隐）失败时派发，携带原始错误。
   // 命令式的 refresh/reload 返回 Promise 由调用方自行 catch，不经此事件。（对齐 vue3）
   'request-error': [error: unknown]
+  // 行内编辑提交（仅 vxe 引擎）：未改值不发。三端同形，见 core 的 CellEditPayload。
+  'cell-edit': [payload: CellEditPayload]
 }>()
 
 const slots = useSlots() as any

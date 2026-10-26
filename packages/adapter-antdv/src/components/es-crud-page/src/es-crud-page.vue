@@ -19,6 +19,7 @@
         v-model:pagination="paginationState"
         v-bind="$attrs"
         @row-click="onRowClick"
+        @cell-edit="(payload) => emit('cell-edit', payload)"
       >
         <es-form
           v-if="schema.formItems && schema.formItems.length"
@@ -50,6 +51,7 @@ import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import { useDialog } from '../../es-dialog/src/use-dialog'
 import { getNestedValue, setNestedValue } from '../../../utils/shared'
 import { resolveCrudActions } from '@es-plus/core'
+import type { CellEditPayload } from '@es-plus/core'
 import type {
   CrudPageSchema,
   CrudBtnConfig,
@@ -122,6 +124,9 @@ const emit = defineEmits<{
   'dialog-confirm': [dialogKey: string, data: Record<string, unknown>]
   'dialog-cancel': [dialogKey: string]
   'dialog-open': [dialogKey: string, row?: Record<string, unknown>]
+  // 行内编辑提交（仅 vxe 引擎）：与 es-table 同形。声明了就必须显式转出 ——
+  // Vue 3 会把已声明事件从 attrs 里摘掉，直接 v-bind 到不了内层 es-table。
+  'cell-edit': [payload: CellEditPayload]
 }>()
 
 const tableRef = ref<any>(null)

@@ -636,5 +636,15 @@ describe('EsCrudPage', () => {
       await nextTick()
       expect(wrapper.emitted('row-click')).toEqual([[row]])
     })
+
+    // 行内编辑：vxe 引擎把 edit-actived / edit-closed 归一成 `cell-edit`（带旧值），
+    // 页面只做透传 —— 同一个坑：已声明事件不在 $attrs 里，不显式接就是死的。
+    it('内层 es-table 的 cell-edit → 转发为本组件的 cell-edit（载荷原样）', async () => {
+      const wrapper = mountCrudPage()
+      const payload = { row: { id: 1, name: '李四' }, prop: 'name', value: '李四', oldValue: '张三' }
+      wrapper.findComponent({ name: 'EsTable' }).vm.$emit('cell-edit', payload)
+      await nextTick()
+      expect(wrapper.emitted('cell-edit')).toEqual([[payload]])
+    })
   })
 })

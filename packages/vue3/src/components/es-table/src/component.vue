@@ -48,6 +48,7 @@
               :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
+              @cell-edit="(payload) => emit('cell-edit', payload)"
             />
             <el-table
               v-else
@@ -147,7 +148,7 @@ import { getGlobalConfig } from '../../../config'
 import { useTableResize } from '../../../composables/use-table-resize'
 import { useTableSelection } from '../../../composables/use-table-selection'
 import { isObject, findValueByKey } from '../../../utils/shared'
-import type { TableEngineExposed } from './engines/types'
+import type { CellEditPayload, TableEngineExposed } from './engines/types'
 import {
   getCallback,
   getNestedValue,
@@ -198,6 +199,8 @@ const emit = defineEmits<{
   // 自动加载（onMounted / visibleShow 显隐）失败时派发，携带原始错误。
   // 命令式的 refresh/reload 返回 Promise 由调用方自行 catch，不经此事件。
   'request-error': [error: unknown]
+  // 行内编辑提交（仅 vxe 引擎）：未改值不发。三端同形，见 core 的 CellEditPayload。
+  'cell-edit': [payload: CellEditPayload]
 }>()
 
 const slots = defineSlots<{

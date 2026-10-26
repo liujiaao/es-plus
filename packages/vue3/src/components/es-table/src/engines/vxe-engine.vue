@@ -22,6 +22,8 @@
     @cell-dblclick="handleCellDblclick"
     @row-contextmenu="handleRowContextmenu"
     @zoom="handleZoom"
+    @edit-actived="handleEditActived"
+    @edit-closed="handleEditClosed"
   >
     <!-- render 函数列：动态插槽分发 -->
     <template v-for="[slotName, col] in renderSlotMap" :key="slotName" #[slotName]="{ row, rowIndex }">
@@ -49,12 +51,21 @@
 <script setup lang="ts">
 import { computed, ref, inject, toRef, resolveComponent } from 'vue'
 import type { TableColumn, TableOptions } from '../../../../types'
-import type { TableEngineExposed } from './types'
+import type { CellEditPayload, TableEngineExposed } from './types'
 import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
 import { buildFirstClassGridOptions } from './use-vxe-grid-config'
-import { buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows, resolveSortParam } from '@es-plus/core'
+import {
+  buildRowSpanMethod,
+  resolveMergeConfig,
+  wantsCrossPageSelection,
+  mergeSelectedRows,
+  resolveSortParam,
+  resolveEditProp,
+  snapshotEditRow,
+  diffEditRow,
+} from '@es-plus/core'
 import {
   normalizeVxeOrder,
   applySpanShim,
@@ -77,6 +88,8 @@ const emit = defineEmits<{
   'row-click': [row: Record<string, unknown>, event: Event]
   'row-dblclick': [row: Record<string, unknown>, event: Event]
   'row-contextmenu': [row: Record<string, unknown>, event: Event]
+  /** 行内编辑提交（仅 vxe 引擎）：未改值不发。 */
+  'cell-edit': [payload: CellEditPayload]
 }>()
 
 const gridRef = ref<any>(null)
@@ -97,24 +110,12 @@ if (import.meta.env.DEV && crossPageSelection.value && !props.options.rowkey) {
   )
 }
 
-// 行内编辑（editConfig）在 keepSource 下修改内部副本，不会回写 v-model:dataSource。
-// 这里 DEV 提示用户改动需通过 getUpdateRecords() 或监听 edit-closed 手动持久化。
-// 仅当用户尚未接入持久化处理器时才提示：已通过 vxeOn 监听 edit-closed/edit-actived
-// 或显式关闭 keepSource（改动直接写入行对象）时视为已处理，避免误报刷屏。
-if (import.meta.env.DEV && (props.options as any)?.editConfig) {
-  const vxeOn = ((props.options as any)?.vxeOn ?? {}) as Record<string, unknown>
-  const hasPersistHandler =
-    typeof vxeOn['edit-closed'] === 'function' ||
-    typeof vxeOn['editClosed'] === 'function' ||
-    typeof vxeOn['onEditClosed'] === 'function' ||
-    (props.options as any)?.keepSource === false
-  if (!hasPersistHandler) {
-    console.warn(
-      '[es-plus] engine:"vxe" + editConfig 行内编辑修改的是内部副本（keepSource），' +
-      '不会自动回写 :data-source 或触发 update:dataSource —— 请调用 getUpdateRecords() 或监听 edit-closed 事件手动持久化改动'
-    )
-  }
-}
+// 行内编辑（editConfig）：这里**没有**「改动不回写」的警告 —— 那条旧警告是错的，已于
+// 2026-10-26 删除。vxe 的 loadTableData 对入参只做 `reactive(datas.slice(0))`（同一个行对象
+// 引用），编辑写的就是你传进 `:data-source` 的那一行；`keepSource` 只是另存一份快照供
+// `revertData()` 用。于是 es-table 的深监听会照常发 `update:dataSource`。
+// 宿主真正缺的是「改了哪一格、旧值是什么」，那由下面 edit-actived / edit-closed 归一后
+// 的 `cell-edit` 补上（仅 vxe 引擎，见 core/table-edit.ts）。
 
 // vxe-table 可用性检测（运行时判断，不强制 peerDep）
 const vxeAvailable = computed(() => {
@@ -344,6 +345,49 @@ function handleRowContextmenu({ row, $event }: any) {
 function handleZoom(params: any) {
   const handler = (props.options as any)?.vxeOn?.zoom
   if (handler) handler(params)
+}
+
+// ─── 行内编辑会话 → `cell-edit` ──────────────────────────────
+// vxe 的 edit-closed 只给 `{ row, column }`：没有旧值，字段名还埋在 column.property 里。
+// 于是「进会话拍快照、出会话比一遍」（判定在 core/table-edit.ts，三端同一份）：
+// 宿主拿到的永远是 { row, prop, value, oldValue }。
+//
+// vxe 同一时刻只有一个 actived 单元格/行（cell 模式一次一格，row 模式一次一行且
+// 行内换格不会再派发 edit-actived），所以一个会话槽就够。
+// 刻意用普通变量、不是 ref：这个会话只在两个事件处理器之间传递，不参与渲染；
+// 而 ref 会把它深转成 reactive，读 `editSession.value.row` 拿到的是 `reactive(row)`
+// 代理 —— 与 edit-closed 递进来的行对象**不是同一个引用**，身份校验会永远失败。
+// （vxe 自己的行本来就是代理，reactive(代理) 返回同一个代理，所以真实环境下看不出问题。）
+let editSession: {
+  row: Record<string, unknown>
+  mode: 'cell' | 'row'
+  prop?: string
+  snapshot: Record<string, unknown>
+} | null = null
+
+function handleEditActived({ row, column }: any) {
+  if (!row) {
+    editSession = null
+    return
+  }
+  // 以 gridConfig 为准：vxeConfig.editConfig 的深合并也走这里，读 props.options 会漏掉那一层
+  const mode = (gridConfig.value.editConfig as any)?.mode === 'row' ? 'row' : 'cell'
+  editSession = {
+    row,
+    mode,
+    prop: mode === 'cell' ? resolveEditProp(column) : undefined,
+    snapshot: snapshotEditRow(row),
+  }
+}
+
+function handleEditClosed({ row, column }: any) {
+  const session = editSession
+  editSession = null
+  // 会话与关闭对不上（数据被换掉 / 事件乱序）时不猜旧值 —— 宁可不发，也不发假载荷
+  if (!session || !row || session.row !== row) return
+  const prop = session.mode === 'cell' ? session.prop ?? resolveEditProp(column) : undefined
+  const changes = diffEditRow(session.snapshot, row, prop)
+  for (const change of changes) emit('cell-edit', { row, ...change })
 }
 
 // ─── 标准接口实现 ────────────────────────────────────────────

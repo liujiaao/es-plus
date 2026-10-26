@@ -716,3 +716,107 @@ describe('useVxeColumnAdapter（antdv）— 显式前导列尊重列配置', () 
     expect(c?.width).toBe(44)
   })
 })
+
+// ─── 行内编辑归一为 `cell-edit`（ADV 端接线）─────────────────────────────
+/**
+ * 判定在 core/table-edit.ts（见 packages/core/__tests__/table-edit.spec.ts），
+ * 这里只证明接线没断：vxe 的 edit-actived / edit-closed 被接住，发出去的是
+ * `{ row, prop, value, oldValue }` —— 原生事件缺的正是旧值与字段名。
+ * vxe-table 无法在 jsdom 挂载，用同名事件的桩代替（与本文件既有做法一致）。
+ */
+describe('行内编辑 → cell-edit（ADV 端接线）', () => {
+  async function mountEngine(options: any, dataSource: Record<string, unknown>[]) {
+    const { mount } = await import('@vue/test-utils')
+    const { defineComponent, h } = await import('vue')
+    const VxeEngine = (await import('../src/components/es-table/src/engines/vxe-engine.vue')).default
+
+    const fire: { actived?: (p: any) => void; closed?: (p: any) => void } = {}
+    // 不写 `type: Function`：vxeOn 也映射成 onEditClosed 时，Vue 3 的 mergeProps 会把
+    // 「v-bind 里的 onEditClosed」与模板 @edit-closed 合成**数组**（数组才是真实行为）。
+    const invoke = (fn: unknown, p: any) => {
+      if (Array.isArray(fn)) fn.forEach((f) => typeof f === 'function' && f(p))
+      else if (typeof fn === 'function') fn(p)
+    }
+    const VxeGridStub = defineComponent({
+      name: 'VxeGrid',
+      props: {
+        columns: { type: Array, default: () => [] },
+        data: { type: Array, default: () => [] },
+        onEditActived: { default: undefined },
+        onEditClosed: { default: undefined },
+      },
+      setup(props) {
+        fire.actived = (p: any) => invoke(props.onEditActived, p)
+        fire.closed = (p: any) => invoke(props.onEditClosed, p)
+        return () => h('div', { class: 'vxe-grid-stub' })
+      },
+    })
+    const wrapper = mount(VxeEngine, {
+      props: {
+        columns: [{ prop: 'amount', label: '金额' }],
+        dataSource,
+        tableHeight: 300,
+        options,
+      },
+      global: { components: { VxeGrid: VxeGridStub } },
+    })
+    return { wrapper, fire }
+  }
+
+  it('cell 模式：进会话拍快照 → 改值 → 发 { row, prop, value, oldValue }', async () => {
+    const row: Record<string, unknown> = { id: 1, amount: 1000.5 }
+    const { wrapper, fire } = await mountEngine(
+      { engine: 'vxe', rowkey: 'id', editConfig: { mode: 'cell' } },
+      [row],
+    )
+    fire.actived!({ row, column: { property: 'amount' } })
+    row.amount = '4321'
+    fire.closed!({ row, column: { property: 'amount' } })
+    const events = wrapper.emitted('cell-edit') as any[]
+    expect(events).toHaveLength(1)
+    expect(events[0][0]).toEqual({ row, prop: 'amount', value: '4321', oldValue: 1000.5 })
+  })
+
+  it('行模式：一次会话改多格 → 每格一条', async () => {
+    const row: Record<string, unknown> = { id: 1, amount: 1000.5, qty: 3 }
+    const { wrapper, fire } = await mountEngine(
+      { engine: 'vxe', rowkey: 'id', editConfig: { mode: 'row' } },
+      [row],
+    )
+    fire.actived!({ row, column: { property: 'amount' } })
+    row.amount = 999
+    row.qty = 5
+    fire.closed!({ row, column: { property: 'qty' } })
+    const events = wrapper.emitted('cell-edit') as any[]
+    expect(events.map((e) => e[0])).toEqual([
+      { row, prop: 'amount', value: 999, oldValue: 1000.5 },
+      { row, prop: 'qty', value: 5, oldValue: 3 },
+    ])
+  })
+
+  it('关闭的是另一行（会话对不上）→ 不发假载荷', async () => {
+    const rowA = { id: 1, amount: 1 }
+    const rowB = { id: 2, amount: 2 }
+    const { wrapper, fire } = await mountEngine(
+      { engine: 'vxe', rowkey: 'id', editConfig: {} },
+      [rowA, rowB],
+    )
+    fire.actived!({ row: rowA, column: { property: 'amount' } })
+    fire.closed!({ row: rowB, column: { property: 'amount' } })
+    expect(wrapper.emitted('cell-edit')).toBeUndefined()
+  })
+
+  it('逃生舱：vxeOn 的 edit-closed 与归一处理都收到，用户 handler 只跑一次', async () => {
+    const onUserClosed = vi.fn()
+    const row: Record<string, unknown> = { id: 1, amount: 1 }
+    const { wrapper, fire } = await mountEngine(
+      { engine: 'vxe', rowkey: 'id', editConfig: {}, vxeOn: { 'edit-closed': onUserClosed } },
+      [row],
+    )
+    fire.actived!({ row, column: { property: 'amount' } })
+    row.amount = 2
+    fire.closed!({ row, column: { property: 'amount' } })
+    expect(onUserClosed).toHaveBeenCalledTimes(1)
+    expect((wrapper.emitted('cell-edit') as any[])[0][0].value).toBe(2)
+  })
+})

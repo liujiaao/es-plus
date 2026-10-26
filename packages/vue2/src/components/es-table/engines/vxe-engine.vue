@@ -44,8 +44,8 @@
 <script lang="ts">
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
-import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
+import type { CellEditPayload, TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -76,7 +76,7 @@ export default defineComponent({
       default: () => ({}),
     },
   },
-  emits: ['sort-change', 'selection-change', 'row-click', 'row-dblclick', 'row-contextmenu'],
+  emits: ['sort-change', 'selection-change', 'row-click', 'row-dblclick', 'row-contextmenu', 'cell-edit'],
   setup(props, { emit, expose }) {
     const gridRef = ref(null)
 
@@ -169,16 +169,25 @@ export default defineComponent({
     }
 
     // ─── vxeOn 配置式事件注入（Vue 2：通过 v-on 对象传递，不是 onXxx props）
+    // 行内编辑的两个原生事件在这里**串起来**：用户 vxeOn 里的 handler 先跑（逃生舱语义：
+    // 原样载荷），随后的 handler 拍快照 / 比一遍并 emit 归一的 `cell-edit`。
+    // 不用模板 `@edit-*`：Vue 2 的 `v-on="obj"` 与具名监听同键时会互相覆盖，
+    // 而 Vue 3 的 mergeProps 会把同名 onXxx 合成数组（两端行为不同，见各端注释）。
     const vxeOnListeners = computed(() => {
       const opts = props.options as any
-      const vxeOn = opts.vxeOn as Record<string, Function> | undefined
-      if (!vxeOn) return {}
-      const result: Record<string, Function> = {}
-      for (const [evName, fn] of Object.entries(vxeOn)) {
-        // Vue 2 事件名：kebab-case 原样传递（v-on="obj" 中 key 即为事件名）
-        result[evName] = fn
+      const vxeOn = (opts.vxeOn || {}) as Record<string, Function>
+      const chain = (ours: (params: any) => void, theirs?: unknown) => (params: any) => {
+        try {
+          if (typeof theirs === 'function') (theirs as (p: any) => void)(params)
+        } finally {
+          ours(params)
+        }
       }
-      return result
+      return {
+        ...vxeOn,
+        'edit-actived': chain(handleEditActived, vxeOn['edit-actived']),
+        'edit-closed': chain(handleEditClosed, vxeOn['edit-closed']),
+      }
     })
 
     // ─── vxe-grid 配置映射（v3 API 与 v4 的差异见注释）────────────
@@ -318,6 +327,43 @@ export default defineComponent({
 
       return base
     })
+
+    // ─── 行内编辑会话 → `cell-edit` ──────────────────────────────
+    // vxe 的 edit-closed 只给 `{ row, column }`：没有旧值，字段名还埋在 column.property 里。
+    // 「进会话拍快照、出会话比一遍」的判定在 core/table-edit.ts（三端同一份）。
+    // vxe 同一时刻只有一个 actived 单元格/行，一个会话槽足够；不进模板，故不用 ref。
+    let editSession: {
+      row: Record<string, unknown>
+      mode: 'cell' | 'row'
+      prop?: string
+      snapshot: Record<string, unknown>
+    } | null = null
+
+    function handleEditActived({ row, column }: any) {
+      if (!row) {
+        editSession = null
+        return
+      }
+      // 以 gridConfig 为准：vxeConfig.editConfig 的深合并也走这里
+      const mode = (gridConfig.value.editConfig as any)?.mode === 'row' ? 'row' : 'cell'
+      editSession = {
+        row,
+        mode,
+        prop: mode === 'cell' ? resolveEditProp(column) : undefined,
+        snapshot: snapshotEditRow(row),
+      }
+    }
+
+    function handleEditClosed({ row, column }: any) {
+      const session = editSession
+      editSession = null
+      // 会话与关闭对不上（数据被换掉 / 事件乱序）时不猜旧值 —— 宁可不发，也不发假载荷
+      if (!session || !row || session.row !== row) return
+      const prop = session.mode === 'cell' ? session.prop ?? resolveEditProp(column) : undefined
+      for (const change of diffEditRow(session.snapshot, row, prop)) {
+        emit('cell-edit', { row, ...change })
+      }
+    }
 
     // ─── 事件处理 ───────────────────────────────────────────────
     // selection-change 只带当前页（与 el-table / a-table / 虚拟引擎、以及三站文档一致：

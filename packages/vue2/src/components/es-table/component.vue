@@ -379,6 +379,13 @@ export default defineComponent({
   // You may have an infinite update loop"。此处通过 emitPaginationUpdate() 的「值比较」
   // 守卫安全重新开启双向绑定：emit 前先更新 lastPaginationStr 快照，父组件写回 props 时
   // 入站 watcher 命中 str === lastPaginationStr 而 no-op，从值层面切断回环。
+  //
+  // cell-edit（行内编辑提交，仅 vxe 引擎）刻意**不进**下面这张表：vxe-engine 上的
+  // v-on 透传（listeners）已经把宿主的监听直连到引擎，引擎 emit 时宿主直接收到
+  // （与 selection-change 同一条投递方式）。列进 emits 会让 check:parity 的
+  // EMIT_CONTRACT 判成「声明了却没有 emit 调用点」，也容易误导后来者在这里补一次
+  // $emit（那会变成同一事件触发两遍）。投递链路登记在
+  // scripts/renderer-contract.mjs 的 forwarded.vue2 一节。
   emits: [
     'update:pagination',
     'pagination-current-change',

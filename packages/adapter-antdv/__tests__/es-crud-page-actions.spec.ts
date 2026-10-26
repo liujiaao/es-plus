@@ -167,4 +167,16 @@ describe('EsCrudPage (antdv) — AN-11⑥ query / row-click 接线', () => {
     w.findComponent({ name: 'EsTable' }).vm.$emit('row-click', row)
     expect(w.emitted('row-click')).toEqual([[row]])
   })
+
+  // 行内编辑：vxe 引擎把 edit-actived / edit-closed 归一成 `cell-edit`（带旧值），
+  // 页面只做透传。同样是「声明了就必须显式接」——Vue 3 的已声明事件不在 $attrs 里。
+  it('内层 es-table 的 cell-edit → 转发为本组件的 cell-edit（载荷原样）', () => {
+    const w = mount(EsCrudPage, {
+      props: { schema: { columns } as CrudPageSchema, autoLoad: false },
+      global: { stubs },
+    })
+    const payload = { row: { id: 1, name: '李四' }, prop: 'name', value: '李四', oldValue: '张三' }
+    w.findComponent({ name: 'EsTable' }).vm.$emit('cell-edit', payload)
+    expect(w.emitted('cell-edit')).toEqual([[payload]])
+  })
 })

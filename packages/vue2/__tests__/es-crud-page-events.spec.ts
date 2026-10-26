@@ -64,15 +64,16 @@ function mountPage(schema: CrudPageSchema) {
   const onQuery = vi.fn()
   const onRowClick = vi.fn()
   const onBtnClick = vi.fn()
+  const onCellEdit = vi.fn()
   const vm = new Vue({
     render: (h) =>
       h(EsCrudPage as any, {
         props: { schema, autoLoad: false },
-        on: { query: onQuery, 'row-click': onRowClick, 'btn-click': onBtnClick },
+        on: { query: onQuery, 'row-click': onRowClick, 'btn-click': onBtnClick, 'cell-edit': onCellEdit },
       }),
   }).$mount() as any
   const page = vm.$children[0]
-  return { vm, page, onQuery, onRowClick, onBtnClick }
+  return { vm, page, onQuery, onRowClick, onBtnClick, onCellEdit }
 }
 
 const columns: CrudPageSchema['columns'] = [{ prop: 'name', label: '姓名' }]
@@ -109,6 +110,23 @@ describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
     page.$refs.tableRef.$emit('row-click', row)
     expect(onRowClick).toHaveBeenCalledTimes(1)
     expect(onRowClick).toHaveBeenCalledWith(row)
+  })
+
+  // 行内编辑：引擎把 vxe 的 edit-actived / edit-closed 归一成 `cell-edit`（带旧值），
+  // es-table 再逐层转给页面。Vue 2 端 es-table 自己**不**重新 emit（`v-on="$listeners"` +
+  // 具名 @cell-edit 会各触发一次，变成一发两条），所以这里只断言页面这一跳。
+  it('内层 es-table 的 cell-edit → 转发为本组件的 cell-edit（载荷原样）', async () => {
+    const { page, onCellEdit } = mountPage({ columns })
+    await page.$nextTick()
+    const payload = {
+      row: { id: 1, name: '李四' },
+      prop: 'name',
+      value: '李四',
+      oldValue: '张三',
+    }
+    page.$refs.tableRef.$emit('cell-edit', payload)
+    expect(onCellEdit).toHaveBeenCalledTimes(1)
+    expect(onCellEdit).toHaveBeenCalledWith(payload)
   })
 
   // 回归：显式 operationColumn.btns 里除 name/type/permissionValue 之外的契约键

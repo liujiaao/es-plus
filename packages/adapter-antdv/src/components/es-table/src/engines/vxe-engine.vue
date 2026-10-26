@@ -15,6 +15,8 @@
     @cell-click="handleCellClick"
     @cell-dblclick="handleCellDblclick"
     @row-contextmenu="handleRowContextmenu"
+    @edit-actived="handleEditActived"
+    @edit-closed="handleEditClosed"
   >
     <template v-for="[slotName, col] in renderSlotMap" #[slotName]="{ row, rowIndex }">
       <RenderDomTb
@@ -39,11 +41,11 @@
 <script setup lang="ts">
 import { computed, ref, inject, toRef, resolveComponent } from 'vue'
 import type { TableColumn, TableOptions } from '../../../../types'
-import type { TableEngineExposed } from '@es-plus/core'
+import type { CellEditPayload, TableEngineExposed } from '@es-plus/core'
 import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
-import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
+import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
 
 defineOptions({ inheritAttrs: false })
 
@@ -61,6 +63,8 @@ const emit = defineEmits<{
   'row-click': [row: Record<string, unknown>, event: Event]
   'row-dblclick': [row: Record<string, unknown>, event: Event]
   'row-contextmenu': [row: Record<string, unknown>, event: Event]
+  /** 行内编辑提交（仅 vxe 引擎）：未改值不发。 */
+  'cell-edit': [payload: CellEditPayload]
 }>()
 
 const gridRef = ref<any>(null)
@@ -292,6 +296,43 @@ function handleCellDblclick({ row, $event }: any) {
 
 function handleRowContextmenu({ row, $event }: any) {
   emit('row-contextmenu', row, $event)
+}
+
+// ─── 行内编辑会话 → `cell-edit` ──────────────────────────────
+// vxe 的 edit-closed 只给 `{ row, column }`：没有旧值，字段名还埋在 column.property 里。
+// 「进会话拍快照、出会话比一遍」的判定在 core/table-edit.ts（三端同一份）。
+// vxe 同一时刻只有一个 actived 单元格/行，一个会话槽足够。
+let editSession: {
+  row: Record<string, unknown>
+  mode: 'cell' | 'row'
+  prop?: string
+  snapshot: Record<string, unknown>
+} | null = null
+
+function handleEditActived({ row, column }: any) {
+  if (!row) {
+    editSession = null
+    return
+  }
+  // 以 gridConfig 为准：vxeConfig.editConfig 的深合并也走这里
+  const mode = (gridConfig.value.editConfig as any)?.mode === 'row' ? 'row' : 'cell'
+  editSession = {
+    row,
+    mode,
+    prop: mode === 'cell' ? resolveEditProp(column) : undefined,
+    snapshot: snapshotEditRow(row),
+  }
+}
+
+function handleEditClosed({ row, column }: any) {
+  const session = editSession
+  editSession = null
+  // 会话与关闭对不上（数据被换掉 / 事件乱序）时不猜旧值 —— 宁可不发，也不发假载荷
+  if (!session || !row || session.row !== row) return
+  const prop = session.mode === 'cell' ? session.prop ?? resolveEditProp(column) : undefined
+  for (const change of diffEditRow(session.snapshot, row, prop)) {
+    emit('cell-edit', { row, ...change })
+  }
 }
 
 // grid 只代理 tableComponentMethodKeys 白名单中的方法，

@@ -400,3 +400,92 @@ describe('P3 fix: unrefOptions 辅助函数', () => {
     expect(unrefOptions(null as any)).toBeNull()
   })
 })
+
+// ─── 行内编辑 → `cell-edit`（内核判定在 core/table-edit.ts，这里断言接线）─────────
+/**
+ * Vue 2 端的接线与 Vue 3 不同：原生事件走 `v-on="vxeOnListeners"` 对象，而不是模板
+ * `@edit-*`。原因是 Vue 2 里 `v-on="obj"` 与同名具名监听会互相覆盖（Vue 3 的
+ * mergeProps 则是合成数组）—— 逃生舱 `options.vxeOn['edit-closed']` 会被静默吞掉。
+ * 故 compose 在 computed 里做：用户 handler 先跑（原样载荷），再拍快照/比一遍。
+ */
+import Vue from 'vue'
+import VxeEngine from '../src/components/es-table/engines/vxe-engine.vue'
+
+// 必须**全局**注册：Vue 2 的局部 components 只对声明它的那个组件的模板生效，
+// 不沿父链下传（引擎模板里的 `<vxe-grid>` 解析不到根实例上注册的 VxeGrid）。
+// 这也正是引擎 `vxeAvailable` 优先查 `constructor.options.components` 的原因。
+let stubVm: any = null
+const VxeGridStub = {
+  name: 'VxeGrid',
+  props: ['columns', 'data'],
+  created(this: any) { stubVm = this },
+  render(h: any) { return h('div', { class: 'vxe-grid-stub' }) },
+}
+Vue.component('VxeGrid', VxeGridStub as any)
+
+function mountEngine(options: any, dataSource: Record<string, unknown>[]) {
+  stubVm = null
+  const onCellEdit = vi.fn()
+  const vm = new Vue({
+    render: (h: any) => h(VxeEngine as any, {
+      props: {
+        columns: [{ prop: 'amount', label: '金额' }],
+        dataSource,
+        tableHeight: 300,
+        options,
+      },
+      on: { 'cell-edit': onCellEdit },
+    }),
+  }).$mount() as any
+  const fire = {
+    actived: (p: any) => stubVm.$listeners['edit-actived']?.(p),
+    closed: (p: any) => stubVm.$listeners['edit-closed']?.(p),
+    listeners: () => Object.keys(stubVm.$listeners),
+  }
+  return { vm, fire, onCellEdit }
+}
+
+describe('vxe-engine(vue2) — 行内编辑归一为 cell-edit', () => {
+  it('cell 模式：发 { row, prop, value, oldValue }', () => {
+    const row: Record<string, unknown> = { id: 1, amount: 1000.5 }
+    const { fire, onCellEdit } = mountEngine({ engine: 'vxe', rowkey: 'id', editConfig: { mode: 'cell' } }, [row])
+    fire.actived({ row, column: { property: 'amount' } })
+    row.amount = 7
+    fire.closed({ row, column: { property: 'amount' } })
+    expect(onCellEdit).toHaveBeenCalledTimes(1)
+    expect(onCellEdit.mock.calls[0][0]).toEqual({ row, prop: 'amount', value: 7, oldValue: 1000.5 })
+  })
+
+  it('行模式：一次会话改多格 → 每格一条，且互不串味', () => {
+    const row: Record<string, unknown> = { id: 1, amount: 1000.5, qty: 3 }
+    const { fire, onCellEdit } = mountEngine({ engine: 'vxe', rowkey: 'id', editConfig: { mode: 'row' } }, [row])
+    fire.actived({ row, column: { property: 'amount' } })
+    row.qty = 5
+    fire.closed({ row, column: { property: 'qty' } })
+    expect(onCellEdit.mock.calls.map((c: any[]) => c[0].prop)).toEqual(['qty'])
+  })
+
+  it('未改值 → 不发', () => {
+    const row: Record<string, unknown> = { id: 1, amount: 1 }
+    const { fire, onCellEdit } = mountEngine({ engine: 'vxe', rowkey: 'id', editConfig: {} }, [row])
+    fire.actived({ row, column: { property: 'amount' } })
+    fire.closed({ row, column: { property: 'amount' } })
+    expect(onCellEdit).not.toHaveBeenCalled()
+  })
+
+  it('逃生舱：vxeOn 的 edit-closed 与归一处理**都**收到，且用户 handler 只跑一次', () => {
+    const onUserClosed = vi.fn()
+    const row: Record<string, unknown> = { id: 1, amount: 1 }
+    const { fire, onCellEdit } = mountEngine(
+      { engine: 'vxe', rowkey: 'id', editConfig: {}, vxeOn: { 'edit-closed': onUserClosed } },
+      [row],
+    )
+    fire.actived({ row, column: { property: 'amount' } })
+    row.amount = 2
+    fire.closed({ row, column: { property: 'amount' } })
+    // 只挂一次：具名 @edit-closed + v-on 对象同键在 Vue 2 会互相覆盖，故必须走 compose
+    expect(onUserClosed).toHaveBeenCalledTimes(1)
+    expect(onCellEdit).toHaveBeenCalledTimes(1)
+    expect(onCellEdit.mock.calls[0][0].value).toBe(2)
+  })
+})

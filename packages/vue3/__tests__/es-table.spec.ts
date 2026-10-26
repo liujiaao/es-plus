@@ -1084,3 +1084,37 @@ describe('EsTable - 服务端排序（tableOptions.sortParam）', () => {
     expect(cols[0].sortable).toBe(true)
   })
 })
+
+/**
+ * `cell-edit` 从 vxe 引擎到宿主的接线。
+ *
+ * 与 `row-click` 那类「靠 $attrs 透传」不同：`cell-edit` 是 EsTable **已声明**的事件，
+ * Vue 3 会把它从 `$attrs` 里摘掉，所以必须像 selection-change / sort-change 一样
+ * 在内层引擎上显式监听再 emit 一次，否则宿主在 vxe 模式下静默收不到。
+ */
+describe('EsTable — vxe 引擎的 cell-edit 转给宿主', () => {
+  it('引擎 emit 一次 → 宿主收到一次同名事件（载荷原样，不加工）', async () => {
+    const onCellEdit = vi.fn()
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: sampleData,
+        columns: defaultColumns,
+        options: { engine: 'vxe', rowkey: 'id', editConfig: {} } as unknown as TableOptions,
+      },
+      attrs: { onCellEdit },
+      global: { components: globalComponents },
+    })
+    const engine = wrapper.findComponent({ name: 'VxeEngine' })
+    expect(engine.exists()).toBe(true)
+    const payload = {
+      row: { id: 1, name: '李四' },
+      prop: 'name',
+      value: '李四',
+      oldValue: '张三',
+    }
+    engine.vm.$emit('cell-edit', payload)
+    await nextTick()
+    expect(onCellEdit).toHaveBeenCalledTimes(1)
+    expect(onCellEdit.mock.calls[0][0]).toEqual(payload)
+  })
+})

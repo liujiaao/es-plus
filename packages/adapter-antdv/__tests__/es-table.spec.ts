@@ -1109,3 +1109,23 @@ describe('EsTable — 服务端排序（tableOptions.sortParam）', () => {
     expect(fnParams).not.toHaveProperty('sortOrder')
   })
 })
+
+describe('EsTable(ADV) — vxe 引擎的 cell-edit 转给宿主', () => {
+  const props = {
+    dataSource: [{ id: 1, name: '张三' }],
+    columns: [{ prop: 'name', label: '姓名' }],
+    options: { engine: 'vxe', rowkey: 'id', editConfig: {} } as any,
+    pagination: { total: 1, current: 1, pageSize: 10 },
+  }
+
+  it('引擎 emit 一次 → 宿主收到一次同名事件（载荷原样，不加工）', async () => {
+    const wrapper = mount(EsTable, { props })
+    const engine = wrapper.findComponent({ name: 'VxeEngine' })
+    expect(engine.exists()).toBe(true)
+    const payload = { row: { id: 1, name: '李四' }, prop: 'name', value: '李四', oldValue: '张三' }
+    engine.vm.$emit('cell-edit', payload)
+    await nextTick()
+    expect(wrapper.emitted('cell-edit')).toHaveLength(1)
+    expect(wrapper.emitted('cell-edit')![0][0]).toEqual(payload)
+  })
+})
