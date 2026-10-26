@@ -112,6 +112,14 @@ export function buildPlan(manifest) {
     }
   }
   plan.push({
+    // S2 组合画廊：数据由 `scripts/gen-composition-gallery.mjs` 算好（与评测同一函数），
+    // 三站只 import 数据 —— es-eui 没有 TS loader，站点侧不能现算。
+    source: 'docs/cases/generated/composition-gallery.js',
+    absSource: join(ROOT, 'docs', 'cases', 'generated', 'composition-gallery.js'),
+    targets: SITES.map((site) => join(site.dir, 'generated', 'composition-gallery.js')),
+    kind: 'composition-gallery',
+  })
+  plan.push({
     source: 'docs/cases/ai-cases.json（生成）',
     text: registryText(manifest),
     targets: SITES.map((site) => join(site.dir, 'generated', 'registry.js')),
