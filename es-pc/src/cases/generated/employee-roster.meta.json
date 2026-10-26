@@ -1,0 +1,19 @@
+{
+  "id": "employee-roster",
+  "title": "员工花名册",
+  "nl": "做一个员工花名册页面：查询区有姓名、部门和在职状态；列表展示工号、姓名、部门、在职状态和入职日期，部门列与在职状态列居中对齐。需要三个弹窗：add 新增员工弹窗、edit 编辑员工弹窗、view 查看员工详情弹窗，其中 view 弹窗全屏展示。姓名、工号、部门不能为空，提交前必须有必填校验。在职状态在表格里用彩色标签显示（在职为 success，离职为 danger），取值为 1 和 0；入职日期用日期选择器。",
+  "generator": "es-plus create --ai",
+  "command": "ESPLUS_AI_MODEL=deepseek-v4-flash node packages/cli/build/index.js create employee-roster -d \"<上方 nl>\" --ai -m schema -t vue3 --emit-config docs/cases/generated/employee-roster.config.json --force",
+  "model": "deepseek-v4-flash",
+  "endpoint": "Anthropic Messages 兼容中继（仓库不保存地址与密钥）",
+  "generatedAt": "2026-10-26",
+  "attempts": 1,
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/employee-roster.config.json（generateFromConfig 确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "promptTrials": {
+    "count": 4,
+    "note": "前 3 次提示词试跑分别出现：漏 required / 漏 tagType；只生成 1 个弹窗且按钮指向不存在的 dialogKey（生成器给了「点了不会有任何反应」告警）。第 4 次（并显式点出 add/edit/view 三个弹窗键）一次通过，本产物即第 4 次结果 —— 案例**只收录通过的那一次**，失败试跑不隐藏于此条 note 之外，也不当作产物。"
+  }
+}

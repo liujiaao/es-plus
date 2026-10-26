@@ -1,0 +1,255 @@
+{
+  "name": "EmployeeRosterManage",
+  "apiUrl": "/api/employees",
+  "fields": [
+    {
+      "prop": "employeeNo",
+      "label": "工号",
+      "formtype": "Input",
+      "inQuery": false,
+      "inTable": true,
+      "inForm": true,
+      "required": true
+    },
+    {
+      "prop": "name",
+      "label": "姓名",
+      "formtype": "Input",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": true,
+      "required": true
+    },
+    {
+      "prop": "dept",
+      "label": "部门",
+      "formtype": "Input",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": true,
+      "required": true,
+      "align": "center"
+    },
+    {
+      "prop": "status",
+      "label": "在职状态",
+      "formtype": "Select",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": true,
+      "dataOptions": [
+        {
+          "label": "在职",
+          "value": 1,
+          "tagType": "success"
+        },
+        {
+          "label": "离职",
+          "value": 0,
+          "tagType": "danger"
+        }
+      ],
+      "align": "center"
+    },
+    {
+      "prop": "hireDate",
+      "label": "入职日期",
+      "formtype": "DatePicker",
+      "inQuery": false,
+      "inTable": true,
+      "inForm": true
+    }
+  ],
+  "actions": [
+    "add",
+    "edit",
+    "view"
+  ],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "dialogs": {
+    "add": {
+      "title": "新增员工",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true,
+          "align": "center"
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ],
+          "align": "center"
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true
+        }
+      ]
+    },
+    "edit": {
+      "title": "编辑员工",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true,
+          "align": "center"
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ],
+          "align": "center"
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true
+        }
+      ]
+    },
+    "view": {
+      "title": "查看员工详情",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "required": true,
+          "align": "center"
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "inQuery": true,
+          "inTable": true,
+          "inForm": true,
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ],
+          "align": "center"
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true
+        }
+      ],
+      "fullscreen": true
+    }
+  }
+}
