@@ -627,3 +627,64 @@ test('A8 片段拼装：三个生成片段拼进非 CRUD 分析页，筛选/图�
   await expect(page.locator('[data-testid="fd-wiring"] tbody tr')).toHaveCount(fdArtifact.host.wiring.length)
   await expect(page.locator('[data-testid="fd-gaps"] li')).toHaveCount(fdArtifact.knownGaps.length)
 })
+
+/**
+ * A9 三栏对照（`/native-vs-ai`）—— 这一页的全部数字都必须能在度量单源里找到。
+ *
+ * 它验的不是「页面能打开」，而是**页面没有自己编数字**：
+ *   1. 三栏 × 四个口径共 12 个格子，逐格对照 `docs/cases/cases-metrics.json`（度量脚本的产出）；
+ *   2. 三栏源码逐块对照 `docs/cases/generated/native-vs-ai-sources.js`（同一次生成落盘的原文）；
+ *   3. AI 栏的「产物自述」对照 `scenarios[].ai.features`（从 JSON 本身数出来的能力条数）。
+ *
+ * 只要有人把某个百分比/行数手写进页面，或改了示例没重算，这条就会红。
+ * 主张是 measure + compile：页面不执行任何一栏（AI 栏的现场演示在 employee-roster 自己的 e2e 里）。
+ */
+const casesMetrics = JSON.parse(readFileSync(join(ROOT, 'docs/cases/cases-metrics.json'), 'utf8')) as {
+  scenarios: Array<{ id: string; native: Record<string, number>; es: Record<string, number>; ai: Record<string, any> }>
+}
+const nvsText = readFileSync(join(ROOT, 'docs/cases/generated/native-vs-ai-sources.js'), 'utf8')
+const NATIVE_VS_AI = JSON.parse(nvsText.slice(nvsText.indexOf('= {') + 2)) as Record<
+  string,
+  { columns: Record<'native' | 'es' | 'ai', { file: string; text: string }> }
+>
+
+test('A9 三栏对照：12 个数字与三份源码全部来自度量单源，页面不写死', async ({ page }) => {
+  const scenario = casesMetrics.scenarios.find((s) => s.id === 'filter-table')!
+  const nvs = NATIVE_VS_AI['filter-table']
+  expect(scenario).toBeTruthy()
+
+  // 入口：Cases 页 → 三栏对照 CTA（路由加了没人链 = 隐形页面）
+  await page.goto('/#/cases')
+  await page.locator('a.nva-cta').click()
+  await expect(page).toHaveURL(/\/native-vs-ai$/)
+  await expect(page.locator('[data-testid="native-vs-ai"]')).toBeVisible()
+
+  // ① 12 个格子：三栏 × (非空行 / 事件绑定 / 自写函数 / v-if 分支)
+  const DIMS = ['lines', 'events', 'functions', 'vIf'] as const
+  for (const col of ['native', 'es', 'ai'] as const) {
+    for (const dim of DIMS) {
+      await expect(page.locator(`[data-testid="nva-${col}-${dim}"]`)).toHaveText(String(scenario[col][dim]))
+    }
+  }
+
+  // ② AI 栏「产物自述」：条数来自产物 JSON 本身（用它支撑「第三栏是超集」这句话）
+  const f = scenario.ai.features
+  const features = page.locator('[data-testid="nva-ai-features"]')
+  await expect(features).toContainText(`查询项 ${f.formItems}`)
+  await expect(features).toContainText(`列 ${f.columns}`)
+  await expect(features).toContainText(`弹窗 ${f.dialogs}`)
+  await expect(features).toContainText(`行按钮 ${f.actions}`)
+
+  // ③ 三栏源码：逐块对照同一次生成落盘的原文（归一空白后逐字相同）
+  const normalize = (s: string) => s.replace(/\s+/g, ' ').trim()
+  for (const key of ['native', 'es', 'ai'] as const) {
+    await page.locator(`[data-testid="nva-tab-${key}"]`).click()
+    const shown = await page.locator(`[data-testid="nva-source-${key}"]`).textContent()
+    expect(normalize(shown ?? '')).toBe(normalize(nvs.columns[key].text))
+  }
+
+  // ④ 第三栏的偏差必须写在页面上（本仓没有为 filter-table 调过模型）
+  await expect(page.locator('[data-testid="nva-gaps"]')).toContainText('第三栏不是严格同场景产物')
+  // AI 栏现场演示的入口指向它自己的案例页（那里由 employee-roster 的 e2e 背书）
+  await expect(page.locator('[data-testid="native-vs-ai"] a[href*="employee-roster"]')).toBeVisible()
+})
