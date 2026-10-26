@@ -45,6 +45,7 @@ export async function captureFrontDoor() {
       [
         "import { registerGenerateCrud } from '../../packages/mcp-server/src/tools/generate-crud.ts'",
         "import { surfaceFieldSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
+        "import { z } from 'zod'",
         // AN-19: bundle the published extraction resource so the paid PRD leg uses
         // the SAME text a client reads (no second hand-written contract).
         "import { buildDesignExtractionContent } from '../../packages/mcp-server/src/resources/design-extraction.ts'",
@@ -54,6 +55,10 @@ export async function captureFrontDoor() {
         // the shared authoritative (zod 4) schema in ONE bundle, so each side is read
         // with its own Zod generation — no cross-version object reuse.
         "export { StructuredCrudConfigSchema } from '@es-plus/shared'",
+        // AN-09 三端能力矩阵：AI 展示案例的 claim 边界（capability-matrix 生成器与 check-ai-cases 共用）
+        "export { CAPABILITIES } from '@es-plus/shared'",
+        // 前门生成前的确定性校验（与 generate_crud / validate_config 同一条闸门）
+        "export { validateAndRepair } from '@es-plus/shared'",
         "export { z } from 'zod'",
         'export { buildDesignExtractionContent }',
         'export function capture() {',
@@ -61,6 +66,17 @@ export async function captureFrontDoor() {
         '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
         '  registerGenerateCrud(fake)',
         '  return { cap, surfaceFieldSchema }',
+        '}',
+        '/**',
+        ' * 用**真** handler 跑一遍前门（入参先用真 crudShape 解析，与客户端走同一条校验）。',
+        ' * `check-ai-cases` 的 surfaces 重放与「冻结入参仍被前门接受」都用它 —— 只读捕获的',
+        ' * `cap` 复制一份校验逻辑，会让守卫断言的输入语言与真实客户端漂移。',
+        ' */',
+        'export async function callFrontDoor(args) {',
+        '  let cap = null',
+        '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
+        '  registerGenerateCrud(fake)',
+        '  return cap.handler(z.object(cap.shape).parse(args))',
         '}',
       ].join('\n'),
       'utf8'
