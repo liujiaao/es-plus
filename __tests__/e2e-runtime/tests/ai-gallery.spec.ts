@@ -526,3 +526,104 @@ test('S3 工具工作流：12 次真调用与记录逐项一致，预期失败�
     allSteps.filter((s) => s.truncated).length,
   )
 })
+
+/**
+ * A8 片段拼装仪表盘（`/fragment-dashboard`）—— 这是**唯一一条跑在 ai-gallery 之外的
+ * spec**（入口是 Cases 页的 CTA，不是画廊），因为它演示的不是「清单里的配置」而是
+ * 「片段能不能拼回页面」：
+ *
+ *   · 页面上**没有 schema**：宿主自己写布局、自己调 `httpRequest`、图表是原生 SVG；
+ *   · 三个片段（filter / table / dialog）是工具产物，一行未改，靠 Vue 的属性透传接线
+ *     （`:model` / `:config-btn` / `:data-source` / `:pagination` / `ref.open`）；
+ *   · 片段自身不 emit、也不声明 props —— 这条用例断言的正是「宿主接管后功能真的成立」：
+ *     筛选 → 宿主重取数 → 行与图表同步变、点行开弹窗并回填。
+ *
+ * 期望值三处来源，没有一处是「随手写的数字」：
+ *   1. 结构类（claim 徽章 / 目标页签 / 接线行 / 边界条数）直接读产物
+ *      `docs/cases/generated/fragment-dashboard.json`（单一真源）；
+ *   2. 数据类（37 条 / 6 条 / ¥183,082 / ¥27,614）来自站点演示后端 `/api/demo/orders`
+ *      的确定性语料（`scripts/lib` 里同一份 37 单：关键词「恒佳」命中 6 单）；
+ *   3. 分页 8 行来自宿主页的 `pager.pageSize`（宿主是代码，不是产物 —— 这里如实标注）。
+ *
+ * 页面在 es-pc 上同样在跑，但本仓库没有 es-pc 的 e2e project，故该端 claim 停在
+ * `compile`（见产物 `sites`）：跑过的才叫 execute，人工验证不算。
+ */
+const fdArtifact = JSON.parse(
+  readFileSync(join(ROOT, 'docs/cases/generated/fragment-dashboard.json'), 'utf8'),
+) as {
+  sites: Record<string, string>
+  frozenArgs: { targets: string[] }
+  fragments: Record<string, { tool: string; label: string; file: string }>
+  host: { wiring: Array<{ fragment: string; point: string }> }
+  knownGaps: string[]
+}
+
+test('A8 片段拼装：三个生成片段拼进非 CRUD 分析页，筛选/图表/弹窗都靠宿主接线', async ({ page }) => {
+  // 入口：Cases 页 → 片段拼装 CTA（路由加了没人链 = 隐形页面，所以从点击开始）
+  await page.goto('/#/cases')
+  await page.locator('a.fragment-cta').click()
+  await expect(page).toHaveURL(/\/fragment-dashboard$/)
+  await expect(page.locator('[data-testid="fragment-dashboard"]')).toBeVisible()
+
+  // claim 徽章逐站来自产物：文案与 sites 一致（页面不许现编主张）
+  const claim = page.locator('.fd-claim')
+  for (const [site, level] of Object.entries(fdArtifact.sites)) {
+    await expect(claim.locator('.fd-chip').filter({ hasText: `${site}: ${level}` })).toHaveCount(1)
+  }
+
+  // ① 片段即组件：首屏 37 条命中（演示后端语料），表格只渲染宿主给的 8 行（pager.pageSize）
+  await expect(page.locator('[data-testid="fd-count"]')).toHaveText('37 条命中')
+  await expect(rows(page)).toHaveCount(8)
+  await expect(page.locator('[data-testid="fd-total"]')).toHaveText('合计 ¥183,082')
+
+  // ③ 原生图表：三条柱（待发货/已发货/已签收），高度由这一批行算出来
+  const bars = page.locator('[data-testid^="fd-bar-"]')
+  await expect(bars).toHaveCount(3)
+  const heightsBefore = await bars.evaluateAll((els) => els.map((e) => e.getAttribute('height')))
+
+  // ① 宿主接管查询：片段不 emit，`:config-btn` 的 click 是宿主函数 → 带条件重新取数
+  const filterPane = page.locator('.fd-pane--filter')
+  await filterPane.locator('.el-input__inner').first().fill('恒佳')
+  await filterPane.getByRole('button', { name: '查询' }).click()
+
+  await expect(page.locator('[data-testid="fd-count"]')).toHaveText('6 条命中')
+  await expect(rows(page)).toHaveCount(6)
+  await expect(page.locator('[data-testid="fd-total"]')).toHaveText('合计 ¥27,614')
+  // 条件只存在于宿主：页面上如实回显它实际发给后端的参数
+  await expect(filterPane.locator('.fd-note')).toContainText('keyword=恒佳')
+  await expect(rows(page).first()).toContainText('深圳恒佳电子')
+
+  // 图表读同一批行：筛选后柱高必须变（否则就是「图表另拉了一遍」或根本没重算）
+  await expect
+    .poll(async () => (await bars.evaluateAll((els) => els.map((e) => e.getAttribute('height')))).join(','))
+    .not.toBe(heightsBefore.join(','))
+
+  // ② 行点击冒泡到宿主 → 弹窗片段 open('查看', row)：只读模式下只剩「关闭」，且行值被回填
+  await rows(page).first().locator('td').nth(1).click()
+  const dlg = dialog(page)
+  await expect(dlg).toBeVisible()
+  await expect(dlg.locator('.el-dialog__header')).toContainText('查看')
+  await expect(dlg.getByRole('button', { name: '关闭' })).toHaveCount(1)
+  await expect(dlg.getByRole('button', { name: '确定' })).toHaveCount(0)
+  const items = dlg.locator('.el-form-item')
+  await expect(items.filter({ hasText: '客户' }).locator('input')).toHaveValue('深圳恒佳电子')
+  await expect(items.filter({ hasText: '金额' }).locator('input')).toHaveValue('2514')
+  await dlg.getByRole('button', { name: '关闭' }).click()
+  await expect(dlg).toBeHidden()
+
+  // 产物未经手改：三片段 × 三个目标页签都来自产物，源码区逐块非空
+  for (const target of fdArtifact.frozenArgs.targets) {
+    await expect(page.locator(`[data-testid="fd-target-${target}"]`)).toHaveCount(1)
+  }
+  await expect(page.locator('[data-testid^="fd-source-"]')).toHaveCount(Object.keys(fdArtifact.fragments).length)
+  for (const key of Object.keys(fdArtifact.fragments)) {
+    await expect(page.locator(`[data-testid="fd-source-${key}"] pre`)).toContainText('<template>')
+  }
+  // 切到 vue2 目标：同一份字段表编译出的产物从 vue 导入 2.7 语义（es-eui 因此只做语法验证）
+  await page.locator('[data-testid="fd-target-vue2"]').click()
+  await expect(page.locator('[data-testid="fd-source-filter"] pre')).toContainText('defineComponent')
+
+  // 接线表与边界清单同样由产物渲染：换一份产物，这两块跟着变，不需要改模板
+  await expect(page.locator('[data-testid="fd-wiring"] tbody tr')).toHaveCount(fdArtifact.host.wiring.length)
+  await expect(page.locator('[data-testid="fd-gaps"] li')).toHaveCount(fdArtifact.knownGaps.length)
+})
