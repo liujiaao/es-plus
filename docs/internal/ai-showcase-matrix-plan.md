@@ -415,3 +415,51 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - S2 组合画廊（18 golden，零模型调用）与 S3 工作流页未开工；
 - `docs/ai/feature-coverage.json` 的 demo 尚未加 `aiCase` 字段（§4.9 的接缝，需要另一个守卫 `check:feature-coverage` 配合）；
 - `packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 状态待同步。
+
+## 10. 落地记录（Wave B，2026-10-26）
+
+### 10.1 落地了什么
+
+| 主题 | 文件 | 说明 |
+|---|---|---|
+| 5 个新案例 | [docs/cases/generated/](../cases/generated/) `order-batch` / `org-tree-table` / `expand-row` / `grouped-report` / `legacy-erp-api` / `engine-lab` | 全部 `origin: "config"`：手写冻结配置 → `generateFromConfig`（0 次模型调用）。补齐 11 个未覆盖令牌 |
+| `origin` 语义 | [schema](../cases/ai-cases.schema.json) + [check-ai-cases.mjs](../../scripts/check-ai-cases.mjs) | `ai`（必须有 `provenance.model`）/ `config`（必须 `frozen-config` 可重放）/ `handcrafted`（不许声称可重放）。「模型生成」与「手写配置」从此不可混说 |
+| 覆盖门开启 | [package.json](../../package.json) | `check:ai-cases -- --strict-coverage` 进 `check:consistency`：前门可达 **21/21** |
+| 令牌证据修正 | [ai-token-map.mjs](../../scripts/lib/ai-token-map.mjs) | `expandConfig` 的产物路径补齐 `columns[].expandConfig`（声明式内容落在那列上，`tableOptions.expandConfig` 是 vxe 开关） |
+| 宿主：全局请求接管 | 三站 `AiCaseHost` | 字段级 `apiParams` 由 EsForm 自己去取数，读的是**全局** `httpRequest`，不是 `<es-crud-page>` 的 prop。宿主进页把全局请求换成案例 mock、离开恢复原函数 |
+| 宿主：勾选传递 | 三站 `AiCaseHost` | `getSelectedRows()` → `handleRowAction(key, row, { selection })`，批量按钮才可能作用在跨页勾选上 |
+| 宿主：eui 条件信封 | [ai-case-host.vue](../../es-eui/src/components/ai-case-host.vue) | 案例自己声明了 `configTableOut` 时不再套站点信封（否则 `{list, totalCount}` 会被改写成 `{rows, records}`，映射永远读不到） |
+| 画廊切换修复 | 三站 `AiGallery` | `:key="caseId"`：`/ai-gallery/a → /b` 复用同一路由组件，不重建宿主时 `<es-crud-page>` 会拿旧实例配新列 —— 实测表现是「表头换了、行还是上一个案例的、新列全渲染成 `-`」。三端一致（eui 本来就这么写） |
+
+### 10.2 实测数字
+
+- **覆盖**：前门可达 21 个令牌，被引用 21 个（未引用：无）。`check:ai-cases` 通过：9 个案例（7 个可机械重放）、三站副本逐字节一致、claim 未越 AN-09。
+- **案例分工**：`order-batch`（tableBtns / configTableOut / formLayout / defaultSort）、`org-tree-table`（treeConfig）、`expand-row`（expandConfig）、`grouped-report`（mergeConfig）、`legacy-erp-api`（apiParams / configTableOut）、`engine-lab`（virtualScroll / inlineEdit / vxeFirstClass）。
+- **构建**：`es-plus-docs` / `es-pc` / `es-eui` 三站 `npm run build` 全部通过（eui 因 `dist/` 有文件被系统句柄占用，改 `--dest dist-verify` 验证后删除）。
+
+### 10.3 与设计原文的偏离 + 三条新发现的结构约束
+
+1. **零模型调用的案例必须自报家门**：Wave B 的 5 页不是模型产出，硬说「AI 生成」就是 §6 B4 的反面。故 `origin: "config"` + `replay.kind: "frozen-config"`：能机械证明的是「这份配置编译出这份产物」，用的正是 AI 路径同一个生成器（`generateFromConfig`）。
+2. **Element Plus 的展开列与树表互斥**（本计划此前没写）：`table-body/render-helper.mjs` 的 `wrappedRowRender` 一旦发现 `type: 'expand'` 列就走展开行分支，树表分支（`treeData`）整棵走不到 —— 声明式 `expandConfig` 会**静默**吃掉 `treeConfig`。故拆成 `org-tree-table`（树）与 `expand-row`（展开行）两例，不是把两个令牌硬塞进一页。
+3. **`mergeConfig` 与 `defaultSort` 互斥**（同理但方向相反）：合并只认**相邻**同值，全局排序会把分组打散，于是合并单元格跨到不相干的行上（实测：`产品中心` 被合到 `前端组` 头上）。故 `defaultSort` 迁到不依赖行序的 `order-batch`。
+4. **antdv 的 `sortable` 是服务端语义**：`adaptColumn` 把 `sortable` 映射成 `sorter: true`，而 a-table 的 `sorter: true` **不排本地数据**，只切指示器并抛 `change`；es-plus 目前也不把排序参数透传给 `httpRequest`。结果：同一份 `defaultSort` 在 el-table 会真的倒序、在 a-table 只亮箭头。案例的解法是**后端按金额倒序返回**（三端首屏一致），并在 meta tip 里写明；根治（排序参数进请求）留作缺口。
+5. **字段级 `apiParams` 读全局请求**：只给 `<es-crud-page>` 配 `http-request` prop，远端下拉会静默落到站点自带的 demo 请求上。宿主因此接管全局并在卸载时恢复。
+
+### 10.4 验证记录（本次实际跑过的）
+
+- `npm run check:consistency` → 退出码 0（含 `check:ai-cases --strict-coverage`、`ai:matrix --check`、`cases:check`、`check:feature-coverage` 等全链）。
+- 浏览器实测（三站 dev server：docs `:4181` / pc `:4182` / eui `:4183`）：
+  - `order-batch`：8 行 + 共 26 条，`{list,count}` 被 `configTableOut` 读懂；未勾选就点「批量通过」→「请先勾选要处理的订单」；第 1 页勾 2 行 + 第 2 页勾 1 行 →「已通过 3 个订单」且行状态改到 `已发货`（跨页勾选真的传到了 mock）；三端金额均按降序。
+  - `org-tree-table`：三端 3 个根节点、展开后 6 行（子树按 `children` 自动缩进）。
+  - `expand-row`：三端 8 行 + 共 18 条，点行首箭头展开「合同条款」只读字段表。
+  - `grouped-report`：三端 `研发中心` 跨 4 行、`平台组/前端组` 各跨 2 行；第 2 页 `运营中心` 跨 2 行。
+  - `legacy-erp-api`：三端共 23 条（`totalCount` 生效）、供应商列显示名称；下拉选项来自 `/api/suppliers`（4 家），选「鹏程电子」查询后 6 行且全部为该供应商。
+  - `engine-lab`：三端切到 vxe，5000 条里只渲染 50 行；双击「数量」出现数值编辑器，改成 42 后点别处落值。
+- 站点构建：三站 `npm run build` 通过；docs/es-pc 浏览器回访无 `error` 级控制台消息（vxe 只有 es-plus 自己那条 `keepSource` 提示）。
+
+### 10.5 已知缺口（Wave C 入口）
+
+- **排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。
+- **新案例没有 e2e**：6 页 claim 均为 `compile`，按 §6 B2 这是允许的；要升到 `execute` 需要给 `ai-gallery.spec.ts` 补 spec（跨页勾选、树展开、合并跨页、远端下拉、vxe 行内编辑各一条）。
+- S2 组合画廊（18 golden）与 S3 工作流页仍未开工；`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做。
+- 展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。
