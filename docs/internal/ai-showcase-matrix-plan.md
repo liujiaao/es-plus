@@ -415,9 +415,9 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 ### 9.5 已知缺口（Wave B 入口）
 
 - 覆盖门 11 个令牌零案例（A2/A4/A5/A6/A7 各页对应到 §4.3）；
-- S2 组合画廊（18 golden，零模型调用）与 S3 工作流页未开工；
+- ~~S2 组合画廊（18 golden，零模型调用）与 S3 工作流页未开工~~ → **均已闭环（S2 见 §13 / S3 见 §17）**；
 - ~~`docs/ai/feature-coverage.json` 的 demo 尚未加 `aiCase` 字段（§4.9 的接缝，需要另一个守卫 `check:feature-coverage` 配合）~~ → **已落地（见 §16）**；
-- `packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 状态待同步。
+- ~~`packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 状态待同步~~ → **映射本身写错了（2026-10-26 更正，见 §17.3）**：该文件没有 S1–S3 条目，AI-28/29/30 是别的项。
 
 ## 10. 落地记录（Wave B，2026-10-26）
 
@@ -464,7 +464,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - ~~**排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。~~ → **已闭环（见 §12）**
 - ~~**新案例没有 e2e**~~ → **已闭环（见 §11）**：`ai-gallery.spec.ts` 从 5 条扩到 11 条，5 页升到 `execute`；`engine-lab` 因 inlineEdit 在 AN-09 是 partial 仍停 `compile`（e2e 已登记，主张不越界）。
-- S2 组合画廊（18 golden）与 S3 工作流页仍未开工（S2 见 §13）；~~`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做~~ → **已落地（见 §16）**。
+- ~~S2 组合画廊（18 golden）与 S3 工作流页仍未开工~~ → **均已闭环（S2 见 §13 / S3 见 §17）**；~~`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做~~ → **已落地（见 §16）**。
 - ~~展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。~~ → **前提错了（2026-10-26 更正）**：vxe 的 `loadTableData` 只做 `reactive(datas.slice(0))`，编辑写的就是 `:data-source` 里那一行；`keepSource` 只是给 `revertData()` 留快照。宿主缺的是「改了哪一格、旧值多少」，已由 `cell-edit` 补上，见 §14。
 
 ## 11. 落地记录（Wave B 补课：e2e 主张承担者，2026-10-26）
@@ -542,7 +542,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - **多列排序未建模**：`sorter` 是数组时只取第一列（三端一致地降级），按优先级的多列排序属 Wave C。
 - **参数只进请求、不改宿主数据**：后端没按参数排时，组件照原样显示（不本地兜底）—— 这是刻意选择，本地兜底会掩盖后端契约违约。
-- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、~~`feature-coverage.json` 的 `aiCase` 接缝~~ → **已闭环（见 §16）**、`engine-lab` 的 `edit-closed` 回写 → **`cell-edit` 已落地（见 §14）**，但 claim 仍停在 compile（结构性封顶，不是这个事件没做）。
+- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；~~S3 工作流页~~ → **已闭环（见 §17）**、~~`feature-coverage.json` 的 `aiCase` 接缝~~ → **已闭环（见 §16）**、`engine-lab` 的 `edit-closed` 回写 → **`cell-edit` 已落地（见 §14）**，但 claim 仍停在 compile（结构性封顶，不是这个事件没做）。
 
 ## 13. 落地记录（S2 组合画廊，2026-10-26）
 
@@ -609,7 +609,7 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 ### 13.5 仍未闭环
 
 - es-pc / es-eui 没有对应的 e2e project，S2 在两端的 claim 保持 `measure + compile`（与 §11.4 同一条纪律）。
-- §12.5 的 Wave C 余项：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）仍未开工；
+- ~~§12.5 的 Wave C 余项：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）仍未开工~~ → **已落地（见 §17）**；
   ~~`feature-coverage.json` 的 `aiCase` 接缝~~ → **已落地（见 §16）**（`engine-lab` 的 `cell-edit` 见 §14）。
 - 上面 13.4 第 3 条的「弹窗体成员键」**已在 §15 落地**（展开只投影表单面，噪音归零）。
 
@@ -784,5 +784,69 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 
 ### 16.5 仍未闭环
 
-S3 工作流页（W1–W3，8 个零案例 MCP 工具）是 Wave C 唯一未开工项。台账侧的**反向**索引（从案例跳到
+~~S3 工作流页（W1–W3，8 个零案例 MCP 工具）是 Wave C 唯一未开工项~~ → **已落地（见 §17）**。台账侧的**反向**索引（从案例跳到
 它覆盖的文档演示）不必再存一份——由 `aiCase` 现场反查即可。
+
+## 17. 落地记录（S3 工具工作流页，2026-10-26）
+
+### 17.1 落了什么
+
+- **生成器 + 原语**：`scripts/gen-ai-workflows.mjs`（工作流定义、记录、渲染、守卫）与
+  `scripts/lib/mcp-tools.mjs`（esbuild 现打包 `packages/mcp-server/src/tools/*.ts` → 假 server
+  捕获 9 个注册函数 → 入参先过工具**自己的** `z.object(shape).parse()`（与 MCP 客户端同一道校验）
+  → 真 handler → 出参逐字节）。
+- **单源 + 三站副本**：`docs/cases/generated/ai-workflows.js`（约 40 KB）分发到
+  `es-plus-docs` / `es-pc` / `es-eui` 的 `src/cases/generated/`，逐字节一致。
+- **三站页面**：`/ai-gallery/workflows`。`es-plus-docs/src/views/AiWorkflows.vue` 与
+  `es-pc/src/views/AiWorkflows.vue` 逐字节相同；`es-eui/src/views/ai-workflows.vue` 是 Vue2 移植。
+  路由都排在 `/ai-gallery/:id` 之前；画廊页各加一张 S3 入口卡（与 S2 卡同款）。
+- **守卫** `npm run check:ai-workflows`（已进 `check:consistency`）：新鲜度（重算逐字节比对，
+  忽略行尾）＋同进程两遍确定性＋覆盖（8 个零页面演示工具 + `generate_crud`）＋预期失败
+  （恰好一步、且**真的**失败）＋接线（三站页面/路由/入口 + docs↔pc 页面逐字节）。
+- **e2e**：`ai-gallery.spec.ts` 新增第 14 条——「渲染 ↔ 记录」逐项一致（工具数 / 每条工作流的
+  步数 / 工具名 / 成功与预期失败分布 / 截断条数全部读单源，不抄常量）。
+
+实测 9 次调用（字节）：`detect_project_target` 316 / `generate_crud` 8265（截断） /
+`validate_config` 545（**预期失败**） / `refine_config` 462 / `scaffold_page` 4119（截断） /
+`doctor_page` 1297 / `ingest_schema` 1159 / `list_form_types` 1573 / `get_component_api` 2302。
+
+### 17.2 偏离与取舍
+
+1. **不起 stdio MCP server**：客户端路径要求先 `build`，守卫就变成「测构建产物」，陈旧 build 会让它
+   静默失明（与 `scripts/lib/front-door.mjs` 头注同一条理由）。改为源码打包 + 假 server + 真 handler。
+2. **按 `front-door` 档注册**：默认档会把 legacy 三个工具也注册上，`detect_project_target` 的
+   「Next step」便指向它们；前门档下那些指针是 dead-end。故记录里显示
+   `generate_crud / generate_form / generate_table / generate_dialog / get_component_api`。
+3. **模型步是冻结输入**：`refine_config` 不调模型（见其头注），W1 的 revised 配置是字面量。
+   页面用 `claim: compile` 明示「模型那一步不在记录里」，不暗示可重现。
+4. **预览截断是诚实的**：出参预览 3000 字符，另存完整字节数并标「预览截断」——页面既不吞 8 KB
+   代码，也不假装那就是全文。
+5. **口径是「此前只有文档、没有页面演示」，不是「零案例」**：本仓此前没有工具覆盖台账；
+   `list_form_types` 已有 spec（AI-39）但没有任何页面演示，`ai-tools.json` / `AiCrud.vue` 是文档与
+   NL→config 演示。8 这个数字的判据是「站点页面里搜不到这些工具的调用」，已写进生成器注释。
+6. **守卫不锚前导 `/`**：`es-pc` 的路由表用相对段写法（`ai-gallery/workflows`），锚死会假红。
+7. **台账连带同步**：`es-pc` 的新视图是 `sites` 段第 123 例（D 档「站点骨架 / 未收录视图」），由
+   `npm run sites:coverage:gen` 重算；`es-eui` 不动（其台账扫的是 `src/examples`，不含 views）。
+8. **S2 的 e2e 选择器改 `filter({ hasText: '组合画廊' })`**：`.ai-gallery-comp` 现在有两张，
+   不收窄会触发 strict mode。
+
+### 17.3 仍未闭环（如实）
+
+- **前门 12 个工具只覆盖 9 个**：`generate_form` / `generate_table` / `generate_dialog` 仍无页面
+  演示。§4.5 说的「A8 覆盖这 3 个片段工具 → 12/12」**尚未成立**（A8 `fragment-dashboard` 未开工）。
+  本页文案只声称 9 次调用 / 8 个工具，不写 12。
+- **§4.9 的 ROADMAP 映射是错的**：`packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 分别是
+  `useDialog` 骨架 / `vxeFirstClass` 降档 / SFC-schema 对齐，**不是**案例矩阵 / 组合可见性 /
+  工具工作流；该文件里没有任何 S1–S3 条目，故「落地时同步 ROADMAP 状态」无同步对象。
+  展示矩阵以本文为唯一跟踪面。
+- 记录只覆盖**确定性**工具。任何形状依赖模型输出的步骤（真正的 NL→config 一次成功/一次失败）
+  只能冻结保存，不能靠本页的守卫机制证明；要看那部分，走 S1 案例与 `check:ai-cases`。
+
+### 17.4 验证
+
+- `npm run check:ai-workflows` → ✅（3 条工作流 / 9 次调用；8 个零页面演示工具全覆盖；单源 + 三站
+  副本逐字节一致；接线完整）。
+- `npm run check:consistency` → **退出码 0**（含 `check:ai-workflows`，以及重算后的 `sites` 台账）。
+- 三站构建：`es-plus-docs` ✅（vite）、`es-pc` ✅（31.13s）、`es-eui` ✅（`--dest dist-verify`
+  构建后删除，避开 dist 句柄锁）。
+- e2e `--project=ai-gallery-docs` → **14/14**（含新增第 14 条）。
