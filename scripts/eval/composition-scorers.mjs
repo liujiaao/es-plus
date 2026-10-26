@@ -141,6 +141,110 @@ function eq(a, b) {
   return JSON.stringify(canon(a)) === JSON.stringify(canon(b))
 }
 
+/** 前门把「罐头 dialog key」展开成 `{ title, formItems }` 的规则（`generate-crud.ts`）。 */
+const DIALOG_TITLES = { add: '新增', edit: '编辑', view: '查看' }
+function titleFor(key) {
+  return DIALOG_TITLES[key] ?? key
+}
+
+/**
+ * 语料 → `composeCrudConfig` 入参（与 `generate_crud.ts` 的有表支同构）。
+ *
+ * 单源理由：评测（`composition-scorers.test.mjs` 的 round-trip）与站点组合画廊
+ * （`scripts/gen-composition-gallery.mjs`）必须喂同一份入参 —— 各写一份「怎么把
+ * surfaces 装成 compose 入参」必然漂移，而漂移后的画廊会展示一份评测从未跑过的配置。
+ */
+export function composeInputOf(caseData) {
+  const s = caseData?.surfaces ?? {}
+  const form = s.form ?? []
+  const dialogBody = form.length ? form : (s.table ?? [])
+  const dialogs = s.dialog
+    ? Object.fromEntries(
+        s.dialog.map((d) => [String(d), { title: titleFor(String(d)), formItems: dialogBody }])
+      )
+    : undefined
+  return {
+    name: caseData.name,
+    apiUrl: caseData.apiUrl,
+    target: caseData.target,
+    mode: caseData.mode,
+    query: s.query ?? [],
+    table: s.table ?? [],
+    form,
+    ...(dialogs ? { dialogs } : {}),
+  }
+}
+
+/**
+ * 组合事实 ↔ 语料声明。空数组 = 一致。
+ *
+ * 与 `compositionProblems` 的分工：那份管「语料自己写没写对」（surfaces ↔ expect），
+ * 这份管「**真的跑出来的** config ↔ expect」。两者都必须成立 —— 只查前者，语料全对但
+ * 生成器坏了也绿。
+ */
+export function compositionFactProblems(caseData, facts) {
+  const problems = []
+  const c = caseData ?? {}
+  const id = c.id ?? '(no id)'
+  const say = (m) => problems.push(`${id}: ${m}`)
+  if (!facts) return [`${id}: 没有组合事实`]
+  const expect = c.expect ?? {}
+
+  if (facts.shape !== c.shape) say(`组合后形状 ${facts.shape} ≠ ${String(c.shape)}`)
+  if (!eq(facts.membership, expect.membership)) {
+    say(`成员关系与语料声明不符：${JSON.stringify(facts.membership)}`)
+  }
+  if (facts.duplicates.length) say(`同名字段归并失效，重复 prop：${facts.duplicates.join(',')}`)
+  if (!eq(facts.actions, [...(expect.actions ?? [])].sort())) {
+    say(`actions ${JSON.stringify(facts.actions)} ≠ ${JSON.stringify(expect.actions ?? [])}`)
+  }
+  if (!eq(facts.dialogKeys, [...(expect.dialogKeys ?? [])].sort())) {
+    say(`dialogKeys ${JSON.stringify(facts.dialogKeys)} ≠ ${JSON.stringify(expect.dialogKeys ?? [])}`)
+  }
+  if (facts.legacyDialogFormItems !== expect.legacyDialogFormItems) {
+    say(`legacy dialogFormItems 期望 ${String(expect.legacyDialogFormItems)}，实得 ${String(facts.legacyDialogFormItems)}`)
+  }
+  if (!eq(facts.operationColumn, expect.operationColumn)) {
+    say(`operationColumn ${JSON.stringify(facts.operationColumn)} ≠ ${JSON.stringify(expect.operationColumn)}`)
+  }
+  return problems
+}
+
+/** form+dialog 形状的产物事实：每个 dialog 一段 composable（名字由 key 派生）。 */
+export function fragmentFactsOf(text) {
+  const names = [...String(text ?? '').matchAll(/^## Dialog composable \((\w+)\)/gm)].map((m) => m[1])
+  return { names }
+}
+
+/**
+ * 片段事实 ↔ 语料声明。空数组 = 一致。
+ *
+ * `text` 是**前门产物原文**（no-table 分支不发 CRUD 页，只发 composable），
+ * 因此这里同时判「名字由 key 派生」与「弹窗体覆盖 form 面字段」。
+ */
+export function fragmentProblems(caseData, text) {
+  const problems = []
+  const c = caseData ?? {}
+  const id = c.id ?? '(no id)'
+  const say = (m) => problems.push(`${id}: ${m}`)
+  const keys = (c.surfaces?.dialog ?? []).map(String)
+  const { names } = fragmentFactsOf(text)
+  const expected = keys.map((k) => `use${k.charAt(0).toUpperCase()}${k.slice(1)}Dialog`)
+  if (names.length !== expected.length) {
+    say(`应发射 ${expected.length} 段 dialog composable，实得 ${names.length}（${names.join(',')}）`)
+  }
+  for (const name of expected) if (!names.includes(name)) say(`缺少 composable ${name}`)
+  const body = String(text ?? '')
+  for (const prop of (c.surfaces?.form ?? []).map((f) => f.prop)) {
+    if (!body.includes(prop)) say(`片段产物里缺少 form 面字段 "${prop}"`)
+  }
+  if (/## Schema \(schema\.ts\)|## Generated SFC/.test(body)) {
+    say('no-table 分支不应生成 CRUD 页面')
+  }
+  if (!/no table surface/.test(body)) say('form+dialog 应走 no-table 片段分支')
+  return problems
+}
+
 /**
  * 语料标注健康检查。返回问题数组（空 = 健康）。
  *

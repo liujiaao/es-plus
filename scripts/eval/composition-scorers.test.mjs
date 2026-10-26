@@ -30,9 +30,12 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import {
   COMPOSITION_SHAPES,
+  composeInputOf,
+  compositionFactProblems,
   compositionFacts,
   compositionProblems,
   compositionScoped,
+  fragmentProblems,
   shapeOfConfig,
   shapeOfSurfaces,
   scoreComposition,
@@ -72,33 +75,11 @@ function loadCases() {
     .map((f) => ({ file: f, ...JSON.parse(readFileSync(join(CASES_DIR, f), 'utf8')) }))
 }
 
-/** 前门把「罐头 dialog key」展开成 `{ title, formItems }` 的规则（generate-crud.ts）。 */
-const DIALOG_TITLES = { add: '新增', edit: '编辑', view: '查看' }
-function titleFor(key) {
-  return DIALOG_TITLES[key] ?? key
-}
-
-/** 与 `generate-crud.ts` 有表支完全同构的 compose 入参（含 dialog 装配）。 */
-function composeInput(c) {
-  const s = c.surfaces
-  const query = s.query ?? []
-  const table = s.table ?? []
-  const form = s.form ?? []
-  const dialogBody = form.length ? form : table
-  const dialogs = s.dialog
-    ? Object.fromEntries(s.dialog.map((d) => [String(d), { title: titleFor(String(d)), formItems: dialogBody }]))
-    : undefined
-  return {
-    name: c.name,
-    apiUrl: c.apiUrl,
-    target: c.target,
-    mode: c.mode,
-    query,
-    table,
-    form,
-    ...(dialogs ? { dialogs } : {}),
-  }
-}
+/**
+ * `composeInputOf` / `compositionFactProblems` / `fragmentProblems` 都在
+ * `composition-scorers.mjs`：站点组合画廊（`scripts/gen-composition-gallery.mjs`）
+ * 用**同一份**规则把语料喂进 compose 前门。这里不再本地保留副本。
+ */
 
 /** 与 `runtime-harness.ts` 同一条正则：从 schema 产物里取回 pageSchema 对象。 */
 function pageSchemaOf(code) {
@@ -178,38 +159,21 @@ async function main() {
 
       if (c.shape === 'form+dialog') {
         // no-table 分支：必须被真的走到，且每个 dialog entry 一段 composable。
-        check(/no table surface/.test(text), `${c.id} — form+dialog 应走 no-table 片段分支`)
-        const declared = c.surfaces.dialog.map(String)
-        const names = [...text.matchAll(/^## Dialog composable \((\w+)\)/gm)].map((m) => m[1])
-        check(names.length === declared.length, `${c.id} — 应发射 ${declared.length} 段 dialog composable，实得 ${names.length}`)
-        for (const key of declared) {
-          const expectedName = `use${key.charAt(0).toUpperCase()}${key.slice(1)}Dialog`
-          check(names.includes(expectedName), `${c.id} — 缺少 composable ${expectedName}（实得 ${names.join(',')}）`)
-        }
-        // 弹窗体 = form 面：每个产物里都应出现全部表单字段 prop。
-        for (const prop of c.surfaces.form.map((f) => f.prop)) {
-          check(text.includes(prop), `${c.id} — 片段产物里缺少 form 面字段 "${prop}"`)
-        }
-        // 没有表格块（no-table 分支的判据是产物类型，不只是提示语）。
-        check(!/## Schema \(schema\.ts\)|## Generated SFC/.test(text), `${c.id} — no-table 分支不应生成 CRUD 页面`)
+        // 判据与站点组合画廊共用 `fragmentProblems`（同一份产物事实）。
+        for (const p of fragmentProblems(c, text)) check(false, p)
         continue
       }
 
       // table-bearing：走 compose → generateFromConfig 的落地路径。
       check(!/no table surface/.test(text), `${c.id} — 有 table 面却走了 no-table 分支`)
-      const { config, warnings } = composeCrudConfig(composeInput(c))
+      const { config, warnings } = composeCrudConfig(composeInputOf(c))
       check(
         warningListOk(warnings),
         `${c.id} — 组合产生非预期告警：${warnings.join(' | ')}`
       )
       const facts = compositionFacts(config)
-      check(facts.shape === c.shape, `${c.id} — 组合后形状 ${facts.shape} ≠ ${c.shape}`)
-      check(jsonEq(facts.membership, c.expect.membership), `${c.id} — 成员布尔与语料声明不符：${JSON.stringify(facts.membership)}`)
-      check(facts.duplicates.length === 0, `${c.id} — 同名字段归并失效，重复 prop：${facts.duplicates.join(',')}`)
-      check(JSON.stringify(facts.actions) === JSON.stringify(sorted(c.expect.actions)), `${c.id} — actions ${JSON.stringify(facts.actions)} ≠ ${JSON.stringify(sorted(c.expect.actions))}`)
-      check(JSON.stringify(facts.dialogKeys) === JSON.stringify(sorted(c.expect.dialogKeys)), `${c.id} — dialogKeys ${JSON.stringify(facts.dialogKeys)} ≠ ${JSON.stringify(sorted(c.expect.dialogKeys))}`)
-      check(facts.legacyDialogFormItems === c.expect.legacyDialogFormItems, `${c.id} — legacy dialogFormItems 期望 ${c.expect.legacyDialogFormItems}，实得 ${facts.legacyDialogFormItems}`)
-      check(JSON.stringify(facts.operationColumn) === JSON.stringify(c.expect.operationColumn), `${c.id} — operationColumn 与语料声明不符`)
+      // 组合事实 ↔ 语料声明：与站点组合画廊共用同一个判据函数。
+      for (const p of compositionFactProblems(c, facts)) check(false, p)
 
       // 落到 pageSchema：成员关系必须真的进 columns / formItems / dialog 面。
       const product = generateFromConfig(config)
@@ -234,7 +198,7 @@ async function main() {
     // ── 6) 打分器：gold-vs-gold 全绿 + 逐事实扰动 ─────────────────────────
     const tableCases = cases.filter((c) => c.shape !== 'form+dialog')
     for (const c of tableCases) {
-      const { config } = composeCrudConfig(composeInput(c))
+      const { config } = composeCrudConfig(composeInputOf(c))
       const g = scoreComposition(config, config, { pinnedDims: [] })
       check(g.composition.applicable === true, `${c.id} — table-bearing 组合事实应适用`)
       check(g.composition.passed === true, `${c.id} — gold-vs-gold 组合事实应全绿`)
