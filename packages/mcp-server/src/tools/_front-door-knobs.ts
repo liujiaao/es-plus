@@ -70,6 +70,16 @@ export const tableOptionsSchema = z
     cachePageSelection: z.boolean().optional(),
     refetchKeepPage: z.boolean().optional(),
     localPagination: z.boolean().optional(),
+    // 与 shared 的 StructuredCrudConfigSchema 同形（zod3 vs zod4 不能共享对象）：
+    // union 而不是嵌套 .object()，两种形态都能过前门，不会把改键形态静默剥掉。
+    sortParam: z
+      .union([
+        z.boolean(),
+        z
+          .object({ field: z.string().optional(), order: z.string().optional() })
+          .strict(),
+      ])
+      .optional(),
     defaultSort: z
       .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
       .strict()

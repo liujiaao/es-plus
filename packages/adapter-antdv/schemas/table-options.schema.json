@@ -194,6 +194,19 @@
         "order": { "type": "string", "enum": ["ascending", "descending"], "description": "Sort direction" }
       }
     },
+    "sortParam": {
+      "description": "Server-side sorting contract. When set, header clicks stop sorting the current page locally and EVERY list request carries { sortField, sortOrder } (order = asc | desc); a header click refetches the SAME page. { field, order } renames the two request keys. Also seeds from defaultSort, so the first request is already sorted. Omit to keep client-side sorting of the current page.",
+      "anyOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "description": "Request key for the sorted field (default sortField)" },
+            "order": { "type": "string", "description": "Request key for the direction (default sortOrder)" }
+          }
+        }
+      ]
+    },
     "refetchKeepPage": {
       "type": "boolean",
       "default": false,

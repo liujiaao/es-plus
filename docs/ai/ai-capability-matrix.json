@@ -54,9 +54,9 @@
     "tableOptionsKeySet": "closed"
   },
   "stats": {
-    "tokens": 40,
-    "declarative": 23,
-    "frontDoorReachable": 21,
+    "tokens": 41,
+    "declarative": 24,
+    "frontDoorReachable": 22,
     "configOnly": 2
   },
   "capabilities": {
@@ -287,6 +287,22 @@
         "antdv": {
           "level": "full",
           "note": "同 vue3"
+        }
+      }
+    },
+    "tableOptions.sortParam": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "core table-sort 是唯一求值点：请求漏斗合并 { sortField, sortOrder }，defaultSort 播种首屏参数，表头变化保留当前页重取；el-table 列降为 sortable:'custom'、vxe 置 sortConfig.remote"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同 vue3（Element UI 的 sortable:'custom' + vxe 的 sortConfig.remote）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "a-table 的 sorter:true 本就是服务端语义（从不本地排），故只需漏斗 + change 重取；vxe 引擎置 sortConfig.remote"
         }
       }
     }
@@ -533,6 +549,16 @@
       "kind": "host",
       "reach": "not-declarative",
       "note": "SFC 插槽逃生舱（仅 mode: sfc）"
+    },
+    "sortParam": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.sortParam",
+      "artifactPaths": [
+        "tableOptions.sortParam"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "tableOptions.sortParam",
+      "note": "服务端排序契约：表头 → 请求参数（sortField/sortOrder），defaultSort 播种首屏、变化保留当前页重取"
     },
     "spanMethodFn": {
       "kind": "host",

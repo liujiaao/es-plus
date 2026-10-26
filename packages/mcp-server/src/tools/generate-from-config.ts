@@ -532,6 +532,9 @@ const configShape = {
       cachePageSelection: z.boolean().optional(),
       refetchKeepPage: z.boolean().optional(),
       localPagination: z.boolean().optional(),
+      // 服务端排序契约（与 shared 权威 Zod 逐键对齐；union 形态不提前截断契约键区）。
+      sortParam: z
+        .union([z.boolean(), z.object({ field: z.string().optional(), order: z.string().optional() })]).optional(),
       // defaultSort 是本块唯一带嵌套 .object().optional() 的键，须放末尾（见 shared 同处注释）。
       defaultSort: z
         .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })

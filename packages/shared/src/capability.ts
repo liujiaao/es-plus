@@ -193,6 +193,16 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       antdv: full('同 vue3'),
     },
   },
+  {
+    key: 'tableOptions.sortParam',
+    targets: {
+      vue3: full(
+        'core table-sort 是唯一求值点：请求漏斗合并 { sortField, sortOrder }，defaultSort 播种首屏参数，表头变化保留当前页重取；el-table 列降为 sortable:\'custom\'、vxe 置 sortConfig.remote'
+      ),
+      vue2: full("同 vue3（Element UI 的 sortable:'custom' + vxe 的 sortConfig.remote）"),
+      antdv: full("a-table 的 sorter:true 本就是服务端语义（从不本地排），故只需漏斗 + change 重取；vxe 引擎置 sortConfig.remote"),
+    },
+  },
 ]
 
 /** 取一格（key 不存在时返回 undefined —— 未列入 ≠ 不支持）。 */

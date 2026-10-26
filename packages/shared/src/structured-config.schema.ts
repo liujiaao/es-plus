@@ -650,6 +650,18 @@ export const StructuredCrudConfigSchema = z.object({
       .boolean()
       .optional()
       .describe('Paginate already-fetched data client-side instead of requesting each page from the API.'),
+    // 服务端排序契约（AI 契约，三端唯一求值点在 core 的 table-sort）。写成 union 而不是
+    // 嵌套 `.object().optional()`：本块捕获区非贪婪地停在首个 `}).optional()`（defaultSort），
+    // union 内的对象闭合后紧跟 `])`，不会提前截断契约键区。
+    sortParam: z
+      .union([
+        z.boolean(),
+        z.object({ field: z.string().optional(), order: z.string().optional() }),
+      ])
+      .optional()
+      .describe(
+        "Server-side sorting: when set, the table stops sorting the current page locally and every list request carries { sortField, sortOrder } (order = 'asc' | 'desc'); a header click refetches the SAME page. { field, order } renames the two request keys. Also seeds from defaultSort, so the first request is already sorted. Omit to keep client-side sorting of the current page."
+      ),
     // 注意：`defaultSort` 是本块唯一带嵌套 `.object({}).optional()` 的键，必须放**末尾** ——
     // check-schema-contract 的 tableOptions 块捕获非贪婪地停在首个 `}).optional()`，否则它
     // 之后的契约键会落在捕获区外、漏检。

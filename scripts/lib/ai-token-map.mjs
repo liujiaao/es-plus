@@ -217,6 +217,13 @@ export const TOKEN_MAP = [
     note: '默认排序（派生列自动补 sortable）',
   },
   {
+    token: 'sortParam',
+    kind: 'declarative',
+    structuredPath: 'tableOptions.sortParam',
+    artifactPaths: ['tableOptions.sortParam'],
+    note: '服务端排序契约：表头 → 请求参数（sortField/sortOrder），defaultSort 播种首屏、变化保留当前页重取',
+  },
+  {
     token: 'columnGroups',
     kind: 'declarative',
     structuredPath: 'columns[].groups',

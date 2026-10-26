@@ -311,6 +311,8 @@ const PROBE = {
     refetchKeepPage: true,
     localPagination: true,
     defaultSort: { prop: 'probe', order: 'ascending' },
+    // 服务端排序契约：探针取**改键形态**（boolean 形态测不到字段名是否原样透传）。
+    sortParam: { field: 'probeSort', order: 'probeDir' },
     editConfig: { trigger: 'click', mode: 'cell' },
     configTableOut: { total: 't', tableData: 'd', pageSize: 'p', current: 'c' },
     // AN-08：表域语义键。探针必须**设满** AI 契约声明的每一个键 —— 少设一个，轴①

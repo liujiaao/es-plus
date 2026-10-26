@@ -269,6 +269,8 @@ export interface TableBlockOptions {
   refetchKeepPage?: boolean
   localPagination?: boolean
   defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  /** 服务端排序契约（与权威 `tableOptions.sortParam` 同义，纯 JSON）。 */
+  sortParam?: boolean | { field?: string; order?: string }
   editConfig?: {
     trigger?: 'click' | 'dblclick' | 'manual'
     mode?: 'cell' | 'row'
@@ -336,6 +338,8 @@ export const TABLE_BLOCK_OPTION_ORDER = [
   'leftText',
   'cachePageSelection',
   'defaultSort',
+  // 服务端排序契约：纯 JSON（boolean 或 { field, order }）→ optionLiteral 走 inlineJson。
+  'sortParam',
   'refetchKeepPage',
   'localPagination',
   // AN-08：vxe 树表 / 行展开（纯 JSON → optionLiteral 走 inlineJson）。

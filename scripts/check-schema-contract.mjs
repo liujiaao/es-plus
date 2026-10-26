@@ -306,6 +306,9 @@ const STRUCTURED_TABLE_CONTRACT = [
   // 零声明（经 AI 入口传入被静默剥）。放在本块的**契约键区**（须排在 `editConfig` 之前，
   // 因块捕获非贪婪地停在首个 `}).optional()`；`defaultSort` 带嵌套对象，进一步排在末尾）。
   'size', 'showHeader', 'emptyText', 'snIndex', 'leftText', 'cachePageSelection', 'refetchKeepPage', 'localPagination', 'defaultSort',
+  // 服务端排序契约（三端窄子集）：声明必须落在 tableOptions 契约键捕获区内，否则经 AI
+  // 入口传入会被 Zod 静默 strip —— 表头点了没反应，且「后端排序」的承诺无从生效。
+  'sortParam',
 ]
 
 // FieldConfigSchema 里必须声明的「AI 契约」字段。与 STRUCTURED_TABLE_CONTRACT 同因：

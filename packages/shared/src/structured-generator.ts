@@ -100,6 +100,11 @@ interface TableOpts {
   leftText?: string
   cachePageSelection?: boolean
   defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  /**
+   * 服务端排序契约（三端窄子集）：`true` 或改键 `{ field, order }`。
+   * 声明后表头不再本地排序，改为请求层携带排序参数 + 保留当前页重取（core table-sort）。
+   */
+  sortParam?: boolean | { field?: string; order?: string }
   refetchKeepPage?: boolean
   localPagination?: boolean
   /**
@@ -764,6 +769,8 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
     ...(tOpts.leftText ? { leftText: tOpts.leftText } : {}),
     ...(tOpts.cachePageSelection !== undefined ? { cachePageSelection: tOpts.cachePageSelection } : {}),
     ...(tOpts.defaultSort ? { defaultSort: tOpts.defaultSort } : {}),
+    // 服务端排序契约：`false` 与省略等价，但显式 `false` 也是有效输入 → 判 `!== undefined`。
+    ...(tOpts.sortParam !== undefined ? { sortParam: tOpts.sortParam } : {}),
     ...(tOpts.refetchKeepPage !== undefined ? { refetchKeepPage: tOpts.refetchKeepPage } : {}),
     ...(tOpts.localPagination !== undefined ? { localPagination: tOpts.localPagination } : {}),
     // 顶层 treeConfig（AI-09 子项③）+ tableOptions.treeConfig（AN-08）→ 运行时唯一家
@@ -1254,6 +1261,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (tOpts.leftText) lines.push(`  leftText: ${q(tOpts.leftText)},`)
   if (tOpts.cachePageSelection !== undefined) lines.push(`  cachePageSelection: ${tOpts.cachePageSelection},`)
   if (tOpts.defaultSort) lines.push(`  defaultSort: ${inlineJson(tOpts.defaultSort)},`)
+  if (tOpts.sortParam !== undefined) lines.push(`  sortParam: ${inlineJson(tOpts.sortParam)},`)
   if (tOpts.refetchKeepPage !== undefined) lines.push(`  refetchKeepPage: ${tOpts.refetchKeepPage},`)
   if (tOpts.localPagination !== undefined) lines.push(`  localPagination: ${tOpts.localPagination},`)
   // 顶层 treeConfig（AI-09 子项③）+ tableOptions.treeConfig（AN-08）→ options.treeConfig。

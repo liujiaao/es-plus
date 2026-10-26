@@ -557,3 +557,34 @@ describe('AN-11⑤ — 片段表单的 render / formatter 不再静默丢', () =
     expect(warnings.join('\n')).not.toContain('片段表单不消费字段级')
   })
 })
+
+
+describe('generateTableBlock — 容器级 tableOptions.sortParam（服务端排序契约）', () => {
+  const columns = [{ prop: 'amount', label: '金额', formtype: 'InputNumber', sortable: true }]
+
+  it('boolean 形态逐字发射', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: { sortParam: true, defaultSort: { prop: 'amount', order: 'descending' } },
+    })
+    expect(code).toContain('  sortParam: true,')
+    // 冻结顺序：defaultSort 之后、refetchKeepPage 之前（产物对入参插入顺序不敏感）
+    const at = (k: string) => code.indexOf(`\n  ${k}:`)
+    expect(at('defaultSort')).toBeLessThan(at('sortParam'))
+  })
+
+  it('改键对象走 inlineJson（与 defaultSort 同路）', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: { sortParam: { field: 'orderBy', order: 'direction' } },
+    })
+    expect(code).toContain('  sortParam: {"field":"orderBy","order":"direction"},')
+  })
+
+  it('未给 → 不发射', () => {
+    const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders' })
+    expect(code).not.toContain('\n  sortParam:')
+  })
+})

@@ -2291,3 +2291,63 @@ describe('B9 — rewriteElementUsage 不改写用户 render/formatter 源码', (
     })
   }
 })
+
+/**
+ * 服务端排序契约（`tableOptions.sortParam`）。
+ *
+ * 三端运行时行为有单测（core table-sort 19 例）与 e2e 背书；这里钉的是**生成链**：
+ * AI 入口写下的声明不许被 Zod 静默剥、也不许在两种产物里凭空消失 ——
+ * 「后端排序」是声明式承诺，丢了声明就等于表头点了没反应。
+ */
+describe('tableOptions.sortParam — 服务端排序契约（schema / sfc 双模式不透丢）', () => {
+  const cfg = (tableOptions: Record<string, unknown>) => ({
+    name: 'OrderSortDemo',
+    apiUrl: '/api/orders',
+    fields: [
+      { prop: 'orderNo', label: '订单号', formtype: 'Input' as const, sortable: true },
+      { prop: 'amount', label: '金额', formtype: 'InputNumber' as const, sortable: true },
+    ],
+    actions: ['view' as const],
+    tableOptions,
+  })
+  const parseJson = (code: string) =>
+    JSON.parse(code.slice(code.search(/=\s*\{/) + 1).trim())
+
+  it('Zod 认 boolean 与改键对象两种形态（false 也是有效取值，不被剥）', () => {
+    for (const v of [true, false, { field: 'orderBy' }, { field: 'orderBy', order: 'direction' }]) {
+      const r: any = StructuredCrudConfigSchema.safeParse(cfg({ sortParam: v }))
+      expect(r.success, JSON.stringify(v)).toBe(true)
+      expect(r.data.tableOptions.sortParam, JSON.stringify(v)).toEqual(v)
+    }
+  })
+
+  it('schema 模式：原样发射 sortParam（boolean / 改键对象）', () => {
+    const out = parseJson(generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ sortParam: true })) as any).code)
+    expect(out.tableOptions.sortParam).toBe(true)
+    const out2 = parseJson(
+      generateFromConfig(
+        StructuredCrudConfigSchema.parse(cfg({ sortParam: { field: 'orderBy', order: 'direction' } })) as any,
+      ).code,
+    )
+    expect(out2.tableOptions.sortParam).toEqual({ field: 'orderBy', order: 'direction' })
+  })
+
+  it('sfc 模式：同样发射（手搓 options 块里逐字出现 JSON 字面量）', () => {
+    const { code } = generateFromConfig(
+      StructuredCrudConfigSchema.parse({
+        ...cfg({ sortParam: { field: 'orderBy', order: 'direction' } }),
+        mode: 'sfc',
+      }) as any,
+    )
+    expect(code).toContain('sortParam: {"field":"orderBy","order":"direction"}')
+  })
+
+  it('未声明时不制造默认值（产物里没有 sortParam 键）', () => {
+    const out = parseJson(generateFromConfig(StructuredCrudConfigSchema.parse(cfg({})) as any).code)
+    expect(out.tableOptions).not.toHaveProperty('sortParam')
+    const sfc = generateFromConfig(
+      StructuredCrudConfigSchema.parse({ ...cfg({}), mode: 'sfc' }) as any,
+    ).code
+    expect(sfc).not.toContain('sortParam')
+  })
+})

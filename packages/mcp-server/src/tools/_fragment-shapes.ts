@@ -329,6 +329,15 @@ export const tableBlockOptionsSchema = z.object({
     .boolean()
     .optional()
     .describe("Paginate already-fetched data client-side instead of requesting each page from the API."),
+  sortParam: z
+    .union([
+      z.boolean(),
+      z.object({ field: z.string().optional(), order: z.string().optional() }).passthrough(),
+    ])
+    .optional()
+    .describe(
+      "Server-side sorting: every list request then carries { sortField, sortOrder } (order = 'asc' | 'desc') and a header click refetches the SAME page. { field, order } renames the two request keys. Also seeds from defaultSort. Omit to keep client-side sorting of the current page."
+    ),
   defaultSort: z
     .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
     .passthrough()

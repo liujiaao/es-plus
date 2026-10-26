@@ -75,6 +75,8 @@ const SAMPLE = {
   'tableOptions.expandConfig': { accordion: true },
   'tableOptions.treeConfig': { childrenField: 'children' },
   'tableOptions.cachePageSelection': true,
+  // 服务端排序契约取**改键形态**：boolean 形态测不到字段名是否被 schema 认下。
+  'tableOptions.sortParam': { field: 'orderBy', order: 'direction' },
   expandConfig: { fields: [{ prop: 'name' }] },
   treeConfig: { childrenField: 'children' },
   mergeConfig: { rowsBy: ['dept'] },
