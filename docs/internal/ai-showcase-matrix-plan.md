@@ -334,7 +334,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - A3 `engine-lab`（宿主引擎开关，验证四引擎差异与 memory 中的跨页选择结论）；
 - ~~A8 `fragment-dashboard`（vue3 execute，另两端 compile）~~ → **已落地（见 §18）**，
   主张按站分开：`es-plus-docs` = `execute`（e2e 背书）、`es-pc` / `es-eui` = `compile`；
-- A9 `native-vs-ai`（扩 `gen-cases-metrics.mjs` 的 AI 列）；
+- ~~A9 `native-vs-ai`（扩 `gen-cases-metrics.mjs` 的 AI 列）~~ → **已落地（见 §19）**，claim 按「数字页没有可执行的产物」停在 `measure + compile`；
 - S3 工作流页 W1–W4（覆盖前门 12 个工具，其中 11 个此前零页面演示）；
 - 夜间漂移作业 + 文档（`docs/ai/ai-showcase.md` 面向用户的案例导览）。
 
@@ -933,6 +933,77 @@ docs（Element Plus）与 es-pc（Ant Design Vue）两端口径逐项一致。
   先给 es-pc 起一条 playwright project（dev server + baseURL），那是独立一件事。
 - **片段之间仍无编排契约**：宿主现在靠底层属性名接线；若要让片段真正可组合，需要给片段产物补
   `defineProps` / `defineEmits`（会改动三个工具的生成模板，影响全部片段 case 与 golden）。
-- **A9 `native-vs-ai`（三栏对照）未开工**：它要把 `gen-cases-metrics.mjs` 的实测数字扩三列
-  （原生 / 手写 es-plus / AI 生成），与 A8 无关，是 Wave C 的下一项。
+- ~~**A9 `native-vs-ai`（三栏对照）未开工**~~ → **已落地（见 §19）**：`gen-cases-metrics.mjs` 的实测数字扩成三栏（原生 / 手写 es-plus / AI 产物），claim 停在 `measure + compile`。
 - **夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落。
+
+## 19. 落地记录（A9 三栏对照 `native-vs-ai`，2026-10-26）
+
+### 19.1 落了什么
+
+- **度量扩列**：`scripts/gen-cases-metrics.mjs` 新增 AI 列 —— `AI_SCENES` 登记「哪个场景用哪份产物」
+  （`filter-table` → `employee-roster`），`measureAi()` 用**同一把尺子**（`blocks` / `countEvents` /
+  `countFunctions` / `countVIf`）去量纯 JSON，产出
+  `scenarios[].ai = { file, lines, bytes, events, functions, vIf, features }`。四个口径之外另附 `features`
+  （formItems / columns / dialogs / actions / dataOptions / permissionValue），全部由 JSON 本身数出来 ——
+  页面那句「第三栏是超集」有数据支撑，不是文案。
+- **源码单源**：新增 `docs/cases/generated/native-vs-ai-sources.js`（19 KB），三栏原文（原生 `.vue` /
+  手写 es-plus `.vue` / AI 产物 `.json` + meta）逐字节嵌入，另写三份站点副本；`cases:metrics:check`
+  一并对账（`sameText`）—— 示例或产物一改，模块过期即红。行尾统一 `toLF`，避免检出设置影响字节。
+- **页面**：`/native-vs-ai`。`es-plus-docs` 与 `es-pc` 共用**同一份** `NativeVsAi.vue`（逐字节，
+  `checkNvsWiring` 比对）；`es-eui` 是 Vue2 Options 投影页（同 testid、同数字）。
+  页面结构：三栏 → 四个维度 → 「读法」五条 → 三份源码页签 → 「这一页没有证明的事」四条。
+  页面**不含任何数字**：数字读 `cases-metrics.json`，源码读 `native-vs-ai-sources.js`。
+- **接线**：三站路由 + 三站 Cases 页入口卡（`a.nva-cta`，琥珀徽章，第四种来源色）；
+  `checkNvsWiring()` 校验「页面存在 + 引用源码模块 + testid + 路由 + Cases 入口 + 两端页面逐字节」。
+- **e2e**：`ai-gallery.spec.ts` 新增第 16 条 —— 从 Cases 页 CTA 进入，12 个数字单元格（3 栏 × 4 维度）
+  逐个断言等于 `cases-metrics.json`；`features` 行含四个计数；三栏源码切换后 `<pre>` 文本与模块里的
+  原文一致（空白归一后比对）；4 条 gaps 含「第三栏不是严格同场景产物」。
+
+实测（浏览器，三站一致）：原生 123 行 / 7 事件 / 6 函数 / 2 个 v-if；手写 es-plus 77 / 1 / 2 / 0；
+AI 产物 363 行 / 0 / 0 / 0（8.0 KB）。产物自述：查询项 3 · 列 5 · 弹窗 3 · 行按钮 3 · 码值表 5。
+
+### 19.2 偏离与取舍（五处）
+
+1. **claim = `measure + compile`，不是「execute + metric」**：本页没有「被执行的产物」—— 它展示源码
+   与数字。按 §11.4「跑过的才叫 execute」，把数字页说成交互演示就是越界。AI 栏**真正跑起来**的样子在
+   `/ai-gallery/employee-roster`，有它自己的 e2e（第 2–5 条）背书。页面徽章旁原样写明，不靠读者猜。
+2. **第三栏不是 `filter-table` 的严格同场景产物**（如实声明）：本仓没有为这个场景调过模型，硬造一份
+   就等于把「确定性工具产物」冒充成「模型产物」。选 `employee-roster` 是因为它是**超集**
+   （多一枚查询项、多一列、多三个弹窗、多三个行按钮），偏差方向**对 AI 不利**（多做功能、行数却没省），
+   所以三个「归零」维度不会被放宽。这句话同时进产物注释、页面 gaps 与 e2e 断言。
+3. **AI 栏的三个 0 是计数器的输出，不是手写**：JSON 里没有 `<template>` / `<script>`，`blocks()` 取到空串，
+   `countEvents` / `countFunctions` / `countVIf` 必然为 0；将来产物若带出脚本，这三项会自动变成非 0。
+   但「0 事件」是**形状**（纯 JSON 无胶水），不是「AI 写得更少」的因果。
+4. **行数一栏不设结论**：363 行是「逐标量一行」的序列化结果，换个写法数字就变；页面把这一栏明写成
+   「不当作优点」。与 #2 同源：宁可少一个卖点，也不留一个可被一句话推翻的比较。
+5. **es-eui 页的度量字段叫 `id` 不叫 `key`**：`check:eui-column-prop` 的保守判据是「同一行 `key:` +
+   `label:` → 判为列定义」，本页的 `metricsKeys` 恰好命中（它不是列定义）。判据放宽会放过真正的列定义，
+   所以让开的是页面字段名 —— 守卫未动，理由写在字段旁。
+
+### 19.3 页面「这一页没有证明的事」四条（`data-testid="nva-gaps"`，e2e 断言条数）
+
+1. 第三栏不是严格同场景产物（见 19.2 #2）；
+2. 模型那一步不可重放（可机械重放的只有「产物 → 渲染」，`check:ai-cases` 断言 4）；
+3. 渲染器的成本不在任何一栏里（声明式的行数优势来自「把复杂度搬进渲染器」）；
+4. 只对照了一个场景（`status-column` 这类小场景里声明式反而更长，Cases 页降幅显示成 +x%）。
+
+### 19.4 验证
+
+- `npm run cases:metrics:check` → ✅（2 个场景，其中 1 个有 AI 对照栏；源码模块与三份副本逐字节一致）。
+- `npm run check:consistency` → 首轮**红**：`check:eui-column-prop` 抓住新页的 4 处 `key:`（见 19.2 #5）；
+  改字段名后重跑受影响尾部（`check:eui-column-prop` / `check:example-inline-style` / `check:declarative-demo` /
+  `check:flagship-case` / `check:generated-case`）全绿，其余各项首轮已绿。
+- 三站构建：`es-plus-docs` ✅（1m 31s）、`es-pc` ✅（24.8s）、`es-eui` ✅（`--dest dist-verify` 后删除）。
+- e2e `--project=ai-gallery-docs` 全量 **16 条通过**（27.5 s），第 16 条即 A9；es-eui 页面另经浏览器复核
+  （12 个单元格与另两端逐个相同、4 条 gaps、控制台 0 error）。
+- `sites:coverage:gen` 后的台账：es-pc 125 / 合计 222（`check:feature-coverage` 绿）。
+
+### 19.5 仍未闭环
+
+- **只有 `filter-table` 有 AI 对照栏**：`status-column` 没有对应模型产物，故不设第三栏 —— 要扩场景就得
+  真调一次模型并登记 `AI_SCENES`，不能拿工具产物补位。
+- **es-pc / es-eui 没有 e2e project**（与 A8 同一根因）：本页 claim 是 `measure + compile`，不受影响；
+  任何想抬到 `execute` 的页面都卡在这里。
+- **「一份产物三端跑」只有字节证据**：三站副本逐字节一致由守卫保证；三站各自**跑起来**的那一段仍要靠
+  各案例自己的 e2e（`employee-roster` 在 docs 有，另两端没有）。
+- **夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落（Wave C 最后一项）。
