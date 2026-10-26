@@ -20,7 +20,7 @@
       "label": "Vue 2 · Element UI",
       "pkg": "@es-plus/vue2",
       "pairs": 31,
-      "medianDelta": 71,
+      "medianDelta": 73,
       "le10": 0,
       "le20": 0,
       "ge100": 10,
