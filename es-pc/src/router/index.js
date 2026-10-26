@@ -38,6 +38,15 @@ const routes = [
         component: () => import('@/views/AiGallery.vue'),
       },
       {
+        // S2 组合画廊：18 例组合语料（6 个逻辑案例 × 3 端）的检视页。
+        // 组合事实与产物由 `scripts/gen-composition-gallery.mjs` 用评测同一个函数算好，
+        // 浏览器里不重算。排在 `ai-gallery/:id` 之前，避免被详情路由吃掉。
+        path: 'ai-gallery/composition',
+        name: 'AiGalleryComposition',
+        meta: { title: 'S2 组合画廊' },
+        component: () => import('@/views/AiComposition.vue'),
+      },
+      {
         path: 'ai-gallery/:id',
         name: 'AiGalleryCase',
         meta: { title: 'AI 案例画廊 · 详情' },

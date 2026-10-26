@@ -370,3 +370,67 @@ test('引擎实验室：vxe 引擎 5000 行分页 50 行，双击原地编辑', 
   await expect(firstRow.locator('input')).toHaveCount(0)
   await expect(cell).toContainText('1234.5')
 })
+
+/**
+ * S2 组合画廊（`/ai-gallery/composition`）—— 18 例组合语料（6 个逻辑案例 × 3 端）。
+ *
+ * 这一页的主张是 `measure + compile`，**不是** execute：它不运行生成的页面（那是每个
+ * S1 案例自己的 e2e 在管），只证明两件事在浏览器里也成立 ——
+ *
+ *   1. **度量对得上**：逐项对照（语料声明 vs 实际组合事实）全绿，且成员关系高亮
+ *      （`data-faces`）是生成器算出来的，不是页面自己又推了一遍；
+ *   2. **三端一份配置**：切渲染端后 pageSchema 逐字节不变；片段形状只差渲染端包名。
+ *
+ * 数据单源在 `docs/cases/generated/composition-gallery.js`（`check:composition-gallery`
+ * 重算并逐字节比对），所以这里可以「切下拉 → 对比文本」来钉主张，
+ * 而不是把期望值抄一份进测试（抄的那份会先漂移、且仍然显示全绿）。
+ */
+test('S2 组合画廊：对照全绿、成员关系可读，切渲染端只差包名', async ({ page }) => {
+  // 入口：画廊列表 → 组合画廊。路由加上了但没人链 = 隐形页面，所以从点击开始。
+  await page.goto('/#/ai-gallery')
+  await page.locator('a.ai-gallery-comp').click()
+  await expect(page).toHaveURL(/\/ai-gallery\/composition$/)
+  await expect(page.locator('[data-testid="composition-page"]')).toBeVisible()
+  await expect(page.getByText('claim: measure + compile')).toBeVisible()
+
+  const verdict = page.locator('[data-testid="composition-verdict"]')
+  await expect(verdict).toHaveText('全部命中')
+
+  // 成员关系：full 形状里至少有一个字段同时出现在 query/table/form 三个面，
+  // 且「成员关系」那一行逐项对照是 ✓（两处都读生成器算好的值）。
+  await expect(page.locator('[data-testid^="composition-field-"][data-faces="3"]').first()).toBeVisible()
+  await expect(page.locator('[data-testid="composition-check-membership"]')).toContainText('✓')
+
+  // 「三端一份配置」：full 形状的 pageSchema 与渲染端无关 —— 切到 antdv 后逐字节相同。
+  const schema = page.locator('[data-testid="composition-page-schema"]')
+  const asVue3 = await schema.textContent()
+  expect(asVue3?.length ?? 0).toBeGreaterThan(0)
+  await page.locator('[data-testid="composition-target"]').selectOption('antdv')
+  await expect(page.locator('[data-testid="composition-target"]')).toHaveValue('antdv')
+  await expect(verdict).toHaveText('全部命中')
+  await expect(schema).toHaveText(asVue3!)
+
+  // 切到片段形状（form+dialog）：同一份意图表发的是 dialog composable，不是 CRUD 页。
+  await page.locator('[data-testid="composition-shape"]').selectOption('form+dialog')
+  await expect(page.getByRole('heading', { name: /dialog composable/ })).toBeVisible()
+  await expect(page.locator('h3', { hasText: 'useAddDialog' })).toBeVisible()
+  await expect(verdict).toHaveText('全部命中')
+  await expect(page.locator('[data-testid="composition-base"] option')).toHaveCount(2) // comp-form-dialog-01/02
+
+  // 三端对照：渲染端包名逐行如实显示（这一列是页面唯一的端间差异来源）。
+  const threeEnd = page.locator('section.cg-panel').filter({ hasText: '三端对照' })
+  await expect(threeEnd).toContainText('@es-plus/vue2')
+  await expect(threeEnd).toContainText('@es-plus/adapter-antdv')
+  await expect(page.locator('[data-testid="composition-target-note"]')).toContainText('渲染端')
+
+  // 片段产物跨端只差渲染端包名：归一化后逐字节相同（这是「一份配置」的准确说法）。
+  const fragOf = () => page.locator('h3:has-text("useAddDialog") + pre').textContent()
+  await page.locator('[data-testid="composition-target"]').selectOption('vue3')
+  const fragVue3 = (await fragOf()) ?? ''
+  await page.locator('[data-testid="composition-target"]').selectOption('vue2')
+  const fragVue2 = (await fragOf()) ?? ''
+  expect(fragVue3).toContain('@es-plus/vue3')
+  expect(fragVue2).toContain('@es-plus/vue2')
+  const normalize = (s: string) => s.replace(/@es-plus\/(vue3|vue2|adapter-antdv)/g, '@es-plus/RENDERER')
+  expect(normalize(fragVue3)).toBe(normalize(fragVue2))
+})

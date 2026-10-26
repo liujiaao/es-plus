@@ -1798,7 +1798,7 @@
       "site": "es-pc",
       "root": "es-pc/src/views",
       "refs": 97,
-      "uncovered": 24,
+      "uncovered": 25,
       "cases": [
         {
           "id": "Advanced",
@@ -1807,6 +1807,15 @@
             "useDialogApi"
           ],
           "tier": "D"
+        },
+        {
+          "id": "AiComposition",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
           "id": "AiGallery",

@@ -35,6 +35,17 @@
         </p>
       </header>
 
+      <!-- S2 组合画廊：组合（多面归并）不是一个案例页能表达的 —— 一页 18 例
+           （6 个逻辑案例 × 3 端），组合事实与产物由评测同一个函数算好。 -->
+      <router-link to="/ai-gallery/composition" class="ai-gallery-comp">
+        <span class="ai-gallery-comp-tag">S2</span>
+        <strong>组合画廊</strong>
+        <span class="ai-gallery-comp-desc">
+          同一份意图表如何归并成成员关系、派生动作与弹窗，三端产物逐字节对照（18 例）
+        </span>
+        <em>打开 →</em>
+      </router-link>
+
       <section v-for="group in groups" :key="group.key" class="ai-gallery-group">
         <h2>
           <span class="ai-gallery-cluster">{{ group.key }}</span>
@@ -152,6 +163,43 @@ function download(name, data) {
 .ai-gallery-legend {
   font-size: 13px;
   color: var(--text-color-secondary);
+}
+
+.ai-gallery-comp {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 8px;
+  background: var(--bg-color-page, #f9fafb);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    border-color: #6f42c1;
+  }
+
+  .ai-gallery-comp-tag {
+    padding: 1px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #fff;
+    background: linear-gradient(135deg, #6f42c1, #a855f7);
+  }
+
+  .ai-gallery-comp-desc {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+  }
+
+  em {
+    margin-left: auto;
+    font-style: normal;
+    color: #6f42c1;
+  }
 }
 
 .ai-gallery-chip {

@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AiGallery.vue')
   },
   {
+    // S2 组合画廊：18 例组合语料（6 个逻辑案例 × 3 端）的检视页。
+    // 组合事实与产物由 `scripts/gen-composition-gallery.mjs` 用**评测同一个函数**算好，
+    // 浏览器里不重算 —— 判据只有一份实现。必须排在 `/ai-gallery/:id` 之前（静态段优先，
+    // 但显式顺序让「为什么 composition 不是某个案例 id」一眼可见）。
+    path: '/ai-gallery/composition',
+    name: 'ai-gallery-composition',
+    component: () => import('@/views/AiComposition.vue')
+  },
+  {
     path: '/ai-gallery/:id',
     name: 'ai-gallery-case',
     component: () => import('@/views/AiGallery.vue')
