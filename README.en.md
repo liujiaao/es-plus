@@ -56,7 +56,7 @@ And it's a solid CRUD library first: enterprise back-office apps are 80% CRUD �
 - **Backend-agnostic** — `configTableOut` maps any API response structure
 - **Permission control** — `permissionValue` on buttons, no `v-if` needed
 - **i18n** — `labelKey` + custom translate function, works with any i18n library
-- **TypeScript** — Full type definitions + 35 cross-renderer contract types (CI-enforced parity across all three renderers, count verified by `check:readme`)
+- **TypeScript** — Full type definitions + 36 cross-renderer contract types (CI-enforced parity across all three renderers, count verified by `check:readme`)
 - **AI-native** — Official MCP Server and CLI for natural-language page generation
 
 ---

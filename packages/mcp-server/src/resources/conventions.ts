@@ -443,9 +443,13 @@ JSON. The contract is **mark, never drop**:
   editable (so \`editConfig\` alone is a no-op), and both are silently IGNORED unless the
   engine is vxe (the generator warns). Declare the editable columns via the top-level
   \`columns\` array — it REPLACES the derived columns, so every table-visible field must
-  appear inside it (the operation column is still auto-appended from \`actions\`). Editing
-  tracks changes on an internal copy at runtime (keepSource is auto-enabled) — read them via
-  the vxe edit-closed/update API, not by expecting an automatic write-back. Function-valued
+  appear inside it (the operation column is still auto-appended from \`actions\`). An edit
+  writes STRAIGHT into the row object of \`data-source\` (the table holds the same row
+  references, so the host also gets \`update:dataSource\`); \`keepSource\` is auto-enabled only
+  to keep a snapshot for \`revertData()\` — it is NOT a private copy. To learn WHICH cell
+  changed and its previous value, listen to the \`cell-edit\` event —
+  \`{ row, prop, value, oldValue }\` — emitted on blur / row switch, never for an unchanged
+  cell. Function-valued
   \`editRender.events\` and custom-registered renderers are OUT OF SCOPE. Use this for
   "表格行内编辑 / 双击单元格改数量 / 点单元格直接改".
 - **\`mergeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the

@@ -106,6 +106,9 @@ export const EMIT_CONTRACT = {
       'size-change',
       'change-table-sort',
       'request-error',
+      // 行内编辑提交（仅 vxe 引擎；未改值不发）。vxe 原生 edit-closed 只给 { row, column }，
+      // 归一后带 { row, prop, value, oldValue } —— 判定单源在 core/table-edit.ts。
+      'cell-edit',
     ],
     deviation: {
       vue2: {
@@ -160,6 +163,19 @@ export const EMIT_CONTRACT = {
               engine: 'el-table',
               anchor: '<el-table',
               anchorTokens: ['v-on="$listeners"', '@selection-change="handleTableSelectionChange"'],
+            },
+          ],
+        },
+        'cell-edit': {
+          reason:
+            '仅 vxe 引擎会发（el-table / a-table 没有行内编辑）。引擎 emit 后经 es-table 的' +
+            ' `v-on="$listeners"` 直达宿主 —— 与 selection-change 同一条投递方式，组件不 emit，' +
+            '否则同一事件会触发两遍（Vue 2 不会像 Vue 3 那样把两个同名监听合并成数组）。',
+          paths: [
+            {
+              engine: 'vxe-grid',
+              anchor: '<vxe-engine',
+              anchorTokens: ['v-on="$listeners"'],
             },
           ],
         },

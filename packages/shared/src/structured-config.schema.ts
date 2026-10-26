@@ -681,7 +681,7 @@ export const StructuredCrudConfigSchema = z.object({
       })
       .optional()
       .describe(
-        "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. `keepSource` is auto-enabled at runtime (edits are tracked on an internal copy; read them via getUpdateRecords()/edit-closed rather than expecting an auto write-back)."
+        "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. An edit writes STRAIGHT into the row object of `:data-source` (the table holds the same row references, so the host also gets `update:dataSource`); `keepSource` is auto-enabled only to keep a snapshot for `revertData()`, it is NOT a private copy. To learn WHICH cell changed and what the previous value was, listen to the `cell-edit` event — `{ row, prop, value, oldValue }`, emitted on blur / row switch in cell mode (one per changed cell in row mode), never for an unchanged cell."
       ),
     configTableOut: z
       .object({

@@ -219,7 +219,7 @@
     },
     "editConfig": {
       "type": "object",
-      "description": "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with `engine: 'vxe'`. This is the table-level switch; a cell is editable ONLY when its column also declares `editRender` (so `editConfig` alone is a no-op). `keepSource` is auto-enabled at runtime (edits are tracked on an internal copy — read them via the vxe edit-closed/update API rather than expecting an automatic write-back).",
+      "description": "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with `engine: 'vxe'`. This is the table-level switch; a cell is editable ONLY when its column also declares `editRender` (so `editConfig` alone is a no-op). An edit writes STRAIGHT into the row object of `data-source` (the table holds the same row references, so the host also gets `update:dataSource`); `keepSource` is auto-enabled only to keep a snapshot for `revertData()`, it is NOT a private copy. To learn which cell changed and its previous value, listen to the `cell-edit` event: `{ row, prop, value, oldValue }`, emitted on blur / row switch, never for an unchanged cell.",
       "properties": {
         "trigger": {
           "type": "string",

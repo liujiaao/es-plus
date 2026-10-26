@@ -248,6 +248,7 @@ const PAGES = [
         component: 'EsTable',
         allow: {
           'selection-change': 'el-table / vxe-grid 原生事件，经 v-on="$listeners" 透传，组件自身不 emit',
+          'cell-edit': 'vxe-engine 的归一事件，经 v-on="$listeners" 透传，组件自身不 emit',
         },
       },
     ],
@@ -341,6 +342,14 @@ const FORWARDED_EVENTS = {
     why: 'el-table / vxe-grid 原生事件，由 attrs 透传',
     files: [
       'packages/vue2/src/components/es-table/component.vue',
+      'packages/vue3/src/components/es-table/src/component.vue',
+    ],
+  },
+  'cell-edit': {
+    why: 'vxe-engine 归一后的事件（仅 vxe 引擎），vue2 端由 listeners 透传、组件自身不 emit',
+    files: [
+      'packages/vue2/src/components/es-table/component.vue',
+      'packages/vue2/src/components/es-table/engines/vxe-engine.vue',
       'packages/vue3/src/components/es-table/src/component.vue',
     ],
   },

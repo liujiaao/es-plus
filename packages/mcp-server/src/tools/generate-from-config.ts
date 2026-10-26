@@ -551,7 +551,7 @@ const configShape = {
         })
         .optional()
         .describe(
-          "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. `keepSource` is auto-enabled at runtime."
+          "Enable vxe inline editing (AI-09 子项④). vxe engine only — MUST be paired with tableOptions.engine:'vxe'. A cell is only editable when its column also declares `editRender`. An edit writes STRAIGHT into the row object of data-source (the host also gets update:dataSource); keepSource is auto-enabled only to keep a snapshot for revertData(). Listen to the cell-edit event ({ row, prop, value, oldValue }) to learn which cell changed and its previous value."
         ),
       configTableOut: z
         .object({
