@@ -1,0 +1,89 @@
+name: AI Case Drift (nightly, non-gating)
+
+# 漂移观测：用**当前模型**重跑 AI 案例的 NL→config，与冻结产物做结构距离
+# （membership / actions / dialogKeys / knobs，口径见 scripts/eval/ai-case-drift.mjs）。
+#
+# 三条硬纪律（plan §4.8.4 / B6 / B8）：
+#   1. **非门禁**：模型与中继都会抖，漂移变红只会教会大家忽略红色；本 workflow 独立于
+#      PR 与部署链，红不挡合并。
+#   2. **报告只进 artifact**：不上传站点、不提交仓库（`drift-report/` 已 gitignore）。
+#   3. **独立成本**：需要 ANTHROPIC_API_KEY，只在夜间与手动触发 —— 与 eval-llm 同一份密钥。
+#
+# 读报告的动作：模型升级 / 中继换服之后先看**这次**报告，再决定要不要重生成案例
+# （`npm run gen:ai-case -- …`），而不是凭「页面还绿着」判断。
+
+on:
+  schedule:
+    # 04:17 UTC 每天 —— 与 eval-llm（03:17）错开一小时，避免两批抢同一份中继配额。
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: '只观测前 N 个案例（探针用，留空 = 全部）'
+        required: false
+        default: ''
+
+concurrency:
+  group: eval-drift-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: AI 案例漂移观测（结构距离）
+    runs-on: ubuntu-latest
+    # 案例数是个位数，正常几分钟；上限只用来兜住挂死的中继。
+    timeout-minutes: 60
+    # 只读：报告走 artifact，不需要 contents: write（对比 eval-llm 的徽章回写）。
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      # `@es-plus/shared` 提供 StructuredCrudConfigSchema / repairConfig / system prompt ——
+      # 读的是 build/ 而非 src，缺了它脚本会在 import 阶段就炸。
+      - name: Build libs + component packages
+        run: npm run build:components
+      # 与 eval-llm 同一份锁定版本：不同夜装到不同 minor 会让「代码没动」时数字漂移。
+      - name: Install Anthropic SDK
+        run: npm install --no-save @anthropic-ai/sdk@0.137.0 --legacy-peer-deps
+      - name: Drift probe (structure distance)
+        id: drift
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ESPLUS_EVAL_MODEL: ${{ vars.ESPLUS_EVAL_MODEL }}
+        run: |
+          LIMIT="${{ github.event.inputs.limit }}"
+          if [ -n "$LIMIT" ]; then
+            npm run drift:ai-cases -- --require-key --limit "$LIMIT"
+          else
+            npm run drift:ai-cases -- --require-key
+          fi
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-case-drift
+          path: drift-report/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Summarize
+        if: always()
+        run: |
+          if [ -f drift-report/ai-case-drift.json ]; then
+            node -e '
+              const r = require("./drift-report/ai-case-drift.json");
+              console.log("model:", r.model, "· measured:", r.summary.measured, "/", r.summary.selected,
+                          "· exact:", r.summary.exact, "· notMeasured:", r.summary.notMeasured);
+              for (const row of r.rows) {
+                const d = row.distance;
+                console.log("-", row.id, row.outcome, d ? `props F1 ${d.props.f1}, exact ${d.exact}` : (row.errorKind ?? ""));
+              }
+            '
+          else
+            echo "没有漂移报告：脚本在拿到可观测案例之前就退出了（见上一步日志）。"
+          fi
