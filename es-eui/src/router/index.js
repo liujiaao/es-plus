@@ -150,6 +150,13 @@ const routes = [
     component: () => import('../views/fragment-dashboard.vue')
   },
 
+  // A9 三栏对照：原生 / 手写 es-plus / AI 产物，四个口径同尺量（数字与源码同源生成）
+  {
+    path: '/native-vs-ai',
+    name: 'NativeVsAi',
+    component: () => import('../views/native-vs-ai.vue')
+  },
+
   // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
   // 列表页 + 通用宿主详情页共用同一份组件
   {

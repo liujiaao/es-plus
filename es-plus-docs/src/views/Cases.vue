@@ -64,6 +64,20 @@
         </span>
         <span class="flagship-cta-arrow">→</span>
       </router-link>
+
+      <!-- 三栏对照：上面几页演示「能做什么」，这一页回答「省了什么」——
+           四个口径由度量脚本从三个真实文件实算，不写死百分比。 -->
+      <router-link to="/native-vs-ai" class="flagship-cta nva-cta">
+        <span class="flagship-cta-badge nva-cta-badge">三栏对照</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">同一件事三种写法：原生 / 手写 es-plus / AI 产物</span>
+          <span class="flagship-cta-desc">
+            非空行 · 事件绑定 · 自写函数 · v-if 分支，四个口径同一把尺子实测；三栏源码原样展示，
+            AI 栏现场跑在 <code>/ai-gallery/employee-roster</code>
+          </span>
+        </span>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
     </div>
 
     <!-- 成本对照：下面每个案例的 pain/win 是文字，这一块给的是**实测**数字 ——
@@ -336,6 +350,11 @@ const delta = (v: number) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.ab
 /* 片段拼装页：不是「一份 schema 驱动」，故换第三种徽章色（青）区分来源。 */
 .fragment-cta-badge {
   background: linear-gradient(135deg, #0e7490, #06b6d4);
+}
+
+/* 三栏对照页：主张是「实测数字」，与上面几页的「能力演示」不同，故换第四种徽章色（琥珀）。 */
+.nva-cta-badge {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
 }
 
 .flagship-cta-body {

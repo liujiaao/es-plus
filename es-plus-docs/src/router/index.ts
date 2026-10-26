@@ -62,6 +62,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/FragmentDashboard.vue')
   },
   {
+    // A9 三栏对照：原生 / 手写 es-plus / AI 产物，四个口径同尺量（数字与源码同源生成）。
+    path: '/native-vs-ai',
+    name: 'native-vs-ai',
+    component: () => import('@/views/NativeVsAi.vue')
+  },
+  {
     path: '/ai-gallery/:id',
     name: 'ai-gallery-case',
     component: () => import('@/views/AiGallery.vue')

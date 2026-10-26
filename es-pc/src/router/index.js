@@ -38,6 +38,13 @@ const routes = [
         component: () => import('@/views/FragmentDashboard.vue'),
       },
       {
+        // A9 三栏对照：原生 / 手写 es-plus / AI 产物，四个口径同尺量（数字与源码同源生成）。
+        path: 'native-vs-ai',
+        name: 'NativeVsAi',
+        meta: { title: '原生 vs 手写 vs AI 三栏对照' },
+        component: () => import('@/views/NativeVsAi.vue'),
+      },
+      {
         // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
         // 列表页 + 通用宿主详情页共用同一份组件
         path: 'ai-gallery',
