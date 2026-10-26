@@ -45,6 +45,16 @@
         <em>打开 →</em>
       </router-link>
 
+      <!-- S3 工具工作流：9 次真工具调用的入参与出参（此前只有文案、没有页面）。 -->
+      <router-link to="/ai-gallery/workflows" class="ai-gallery-comp">
+        <span class="ai-gallery-comp-tag">S3</span>
+        <strong>工具工作流</strong>
+        <span class="ai-gallery-comp-desc">
+          探测→出页→纠偏、脚手架→体检、接管既有表单：9 次真 handler 调用，8 个此前只有文档的工具全覆盖
+        </span>
+        <em>打开 →</em>
+      </router-link>
+
       <section v-for="group in groups" :key="group.key" class="ai-gallery-group">
         <h2>
           <span class="ai-gallery-cluster">{{ group.key }}</span>

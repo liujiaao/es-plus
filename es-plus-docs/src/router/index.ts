@@ -48,6 +48,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AiComposition.vue')
   },
   {
+    // S3 工具工作流：三条链、9 次真 handler 调用（入参冻结、出参逐字节）。
+    // 记录由 `scripts/gen-ai-workflows.mjs` 生成，浏览器里不重算。同样排详情路由之前。
+    path: '/ai-gallery/workflows',
+    name: 'ai-gallery-workflows',
+    component: () => import('@/views/AiWorkflows.vue')
+  },
+  {
     path: '/ai-gallery/:id',
     name: 'ai-gallery-case',
     component: () => import('@/views/AiGallery.vue')

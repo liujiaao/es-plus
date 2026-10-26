@@ -158,6 +158,13 @@ const routes = [
     component: () => import('../views/ai-composition.vue')
   },
   {
+    // S3 工具工作流：三条链、9 次真 handler 调用（入参冻结、出参逐字节）。
+    // 记录由 `scripts/gen-ai-workflows.mjs` 生成，浏览器里不重算。同样排详情路由之前。
+    path: '/ai-gallery/workflows',
+    name: 'AiGalleryWorkflows',
+    component: () => import('../views/ai-workflows.vue')
+  },
+  {
     path: '/ai-gallery/:id',
     name: 'AiGalleryCase',
     component: () => import('../views/ai-gallery.vue')
