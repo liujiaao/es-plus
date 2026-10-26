@@ -15,7 +15,7 @@
 5. **方案：manifest 单一真源 + 能力矩阵 + 通用宿主/画廊 + 覆盖门禁。**
    - **S1 展示页 10 例**（新增 9）：每例一个真实业务场景，覆盖 12 个能力簇；
    - **S2 组合画廊**：复用 18 例 composition golden，零新产物；
-   - **S3 工作流页**：把 `detect / validate / refine / scaffold / doctor / ingest / list_form_types / get_component_api` 这些零案例工具做成可重放的工作流记录；
+   - **S3 工作流页**：把 `detect / validate / refine / scaffold / doctor / ingest / list_form_types / get_component_api` 这些零案例工具，加上片段三件套 `generate_form / generate_table / generate_dialog`，做成可重放的工作流记录（前门 12 个工具全覆盖）；
    - **`check:ai-cases`**：manifest、产物、宿主、覆盖、可重放性、站点字节一致、e2e 登记七类断言；覆盖门保证「每个前门可达令牌至少一例」。
 6. **CI 零模型调用，accuracy 产物不入库。** 模型只在新增/重生成案例时调用（本文全部案例合计约 9 次）；夜间漂移观测只进 CI artifact，不做门禁、不发布。
 
@@ -124,6 +124,9 @@
 | `list_form_types` / `get_component_api` | 无 | 让宿主 LLM 自查询的支撑工具 |
 | `scaffold_page` / `doctor_page` | 无 | 工作流闭环（生成→诊断→修） |
 
+→ **部分闭环（2026-10-26，见 §17）**：12 个工具在 S3 工作流页各至少一次**真调用**（W4 补上片段三件套）。
+但「有页面演示」不等于「有案例」：A8 `fragment-dashboard` 仍未开工，片段拼装页与 `execute` 主张仍在 Wave C 余项里。
+
 ### G5 证明链不可重放
 
 1. **CLI 丢弃 config**：`packages/cli/src/commands/create.ts:245-260` 的 AI 分支拿到 `aiConfig` 后直接 `emitFromStructuredConfig`，不落盘 config JSON。展示用的 `purchase-approval.json` 因此无法机械证明「等于那次模型输出的编译输入」。
@@ -153,7 +156,7 @@ S1 展示层（≤10 页，三站可见，execute）
    ├─ A8 片段拼装页 · 表单/表格/弹窗嵌进非 CRUD 页面
    └─ A9 三栏对照 · 原生 / 手写 es-plus / AI 生成（带实测数字）
 S2 组合画廊（1 页，复用 18 golden，measure + compile）
-S3 工作流页（1 页，W1–W3，覆盖 8 个零案例工具）
+S3 工作流页（1 页，W1–W4，覆盖前门 12 个工具 / 其中 11 个此前零页面演示）
 ```
 
 约束：
@@ -176,7 +179,7 @@ S3 工作流页（1 页，W1–W3，覆盖 8 个零案例工具）
 | C9 后端适配 | configTableOut, apiParams | `tableOptions.configTableOut`, `fields[].apiParams`, `localPagination/refetchKeepPage` | A5 | execute |
 | C10 布局与 i18n | formLayout, validation | `formLayout`, `querySpan/formSpan`, `i18n` + `labelKey` | A1, A7 | execute |
 | C11 逃生舱 | renderFn, formatterFn, validatorFn, spanMethodFn, fieldEventFn, httpRequestFn, sfcSlot | `fields[].render/formatter`, `tableOptions.spanMethod` | A9（对照列） | compile |
-| C12 片段与宿主 | useDialogApi, crudPage, hostOrchestration, hostSkeleton | `generate_form/table/dialog`, `useDialog`, `scaffold_page` | A8, W1–W3 | execute / compile |
+| C12 片段与宿主 | useDialogApi, crudPage, hostOrchestration, hostSkeleton | `generate_form/table/dialog`, `useDialog`, `scaffold_page` | A8, W1–W4 | execute / compile |
 
 > **诚实边界：** C11 的函数值无法用纯 JSON 表达（`render`/`formatter` 是源码字符串，schema 模式降级为 TODO/告警）。A9 里只作为**对照组**出现，claim 必须写 `compile`，不得说成「AI 一步生成」。
 
@@ -218,8 +221,9 @@ S3 工作流页（1 页，W1–W3，覆盖 8 个零案例工具）
 | W1 一句话 → 页面 → 纠偏 | `detect_project_target` → `generate_crud` → `validate_config` → `refine_config` | 每步的入参/出参、最终产物、refine diff | 确定性步骤可重放；模型步冻结记录 |
 | W2 脚手架 → 诊断 → 修 | `scaffold_page` → `doctor_page` | 生成的文件树、doctor 的问题清单与修复建议 | 全确定性，快照断言 |
 | W3 接管既有表单 | `ingest_schema` → `list_form_types` → `get_component_api` | 从既有 schema 草拟的 config、字段类型建议 | 全确定性，快照断言 |
+| W4 片段拆装 | `generate_form` → `generate_table` → `generate_dialog` | 三份独立产物（表单 SFC / 表格 SFC / 弹窗 SFC）与各自的集成契约 | 全确定性，快照断言 |
 
-W1 覆盖 `generate_crud` 的 **surfaces 路径**（现有 hero 走的是 CLI NL→config 路径，不是 MCP 路径）；W2/W3 各覆盖 2 个零案例工具。加上 A8 覆盖 3 个片段工具，12 个公开工具全部至少一例。
+W1 覆盖 `generate_crud` 的 **surfaces 路径**（现有 hero 走的是 CLI NL→config 路径，不是 MCP 路径）；W2/W3 各覆盖 2 个零案例工具；**W4 覆盖三个片段工具**（表单 / 表格 / 弹窗各自独立产物）。因此前门 12 个公开工具在本页**全部至少一次真调用** → **已落地（见 §17）**。A8 是另一件事：把片段拼进非 CRUD 页面并把 claim 抬到 `execute`，与「工具有没有页面演示」是两条轴。
 
 ### 4.6 单一真源与宿主架构
 
@@ -300,7 +304,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - **复用 `capability.ts`**：claim 边界直接用 AN-09 矩阵，不另造一套三端支持表。
 - **复用 composition scorer**：S2 画廊的 membership 高亮与 `compositionFacts()` 同函数，保证「页面展示的事实 = 评测打分的事实」。
 - **feature-coverage 增列**：给 `docs/ai/feature-coverage.json` 的 demo 加 `aiCase` 字段（指向 manifest id），`check:feature-coverage` 校验引用存在；tier 仍按 demo 保留，能力级判断改由新矩阵承担。→ **已落地（见 §16）**；实现上 `aiCase` 是 **id 数组**（一页能力可由两个案例分别演示，见 §16.2）。
-- **ROADMAP 映射**：S1/S2/S3 分别对应 AI-28（案例矩阵）、AI-29（组合可见性）、AI-30（工具工作流），落地时同步 `packages/mcp-server/ROADMAP.md`。
+- ~~**ROADMAP 映射**：S1/S2/S3 分别对应 AI-28（案例矩阵）、AI-29（组合可见性）、AI-30（工具工作流），落地时同步 `packages/mcp-server/ROADMAP.md`~~ → **映射不成立（2026-10-26 更正）**：`packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 是 `useDialog` 骨架 / `vxeFirstClass` 降档 / SFC-schema 对齐，该文件**没有任何 S1–S3 条目**。展示矩阵以本文为唯一跟踪面，不另建第二份台账（两份必然漂移）。
 
 ## 5. 排期
 
@@ -329,10 +333,10 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - A3 `engine-lab`（宿主引擎开关，验证四引擎差异与 memory 中的跨页选择结论）；
 - A8 `fragment-dashboard`（vue3 execute，另两端 compile）；
 - A9 `native-vs-ai`（扩 `gen-cases-metrics.mjs` 的 AI 列）；
-- S3 工作流页 W1–W3（覆盖 8 个零案例工具）；
+- S3 工作流页 W1–W4（覆盖前门 12 个工具，其中 11 个此前零页面演示）；
 - 夜间漂移作业 + 文档（`docs/ai/ai-showcase.md` 面向用户的案例导览）。
 
-**验收：** 12/12 公开工具有案例；三端 compile 腿绿；漂移作业能跑通 `--limit 1`；站点上线 `ai-gallery` 与三条工作流。
+**验收：** 12/12 公开工具有页面演示（S3 工作流页，每条一次真调用）；三端 compile 腿绿；漂移作业能跑通 `--limit 1`；站点上线 `ai-gallery` 与四条工作流。
 
 ## 6. 风险与边界
 
@@ -801,14 +805,15 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
   `es-pc/src/views/AiWorkflows.vue` 逐字节相同；`es-eui/src/views/ai-workflows.vue` 是 Vue2 移植。
   路由都排在 `/ai-gallery/:id` 之前；画廊页各加一张 S3 入口卡（与 S2 卡同款）。
 - **守卫** `npm run check:ai-workflows`（已进 `check:consistency`）：新鲜度（重算逐字节比对，
-  忽略行尾）＋同进程两遍确定性＋覆盖（8 个零页面演示工具 + `generate_crud`）＋预期失败
+  忽略行尾）＋同进程两遍确定性＋覆盖（前门 12 个工具全部出现，其中 11 个此前零页面演示）＋预期失败
   （恰好一步、且**真的**失败）＋接线（三站页面/路由/入口 + docs↔pc 页面逐字节）。
 - **e2e**：`ai-gallery.spec.ts` 新增第 14 条——「渲染 ↔ 记录」逐项一致（工具数 / 每条工作流的
   步数 / 工具名 / 成功与预期失败分布 / 截断条数全部读单源，不抄常量）。
 
-实测 9 次调用（字节）：`detect_project_target` 316 / `generate_crud` 8265（截断） /
-`validate_config` 545（**预期失败**） / `refine_config` 462 / `scaffold_page` 4119（截断） /
-`doctor_page` 1297 / `ingest_schema` 1159 / `list_form_types` 1573 / `get_component_api` 2302。
+实测 12 次调用（字节）：W1 `detect_project_target` 316 / `generate_crud` 8265（截断） /
+`validate_config` 545（**预期失败**） / `refine_config` 462；W2 `scaffold_page` 4119（截断） /
+`doctor_page` 1297；W3 `ingest_schema` 1159 / `list_form_types` 1573 / `get_component_api` 2302；
+W4 `generate_form` 1242 / `generate_table` 1316 / `generate_dialog` 3521（截断）。
 
 ### 17.2 偏离与取舍
 
@@ -823,7 +828,7 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
    代码，也不假装那就是全文。
 5. **口径是「此前只有文档、没有页面演示」，不是「零案例」**：本仓此前没有工具覆盖台账；
    `list_form_types` 已有 spec（AI-39）但没有任何页面演示，`ai-tools.json` / `AiCrud.vue` 是文档与
-   NL→config 演示。8 这个数字的判据是「站点页面里搜不到这些工具的调用」，已写进生成器注释。
+   NL→config 演示。11（= 12 个前门工具减去已有页面的 `generate_crud`）这个数字的判据是「站点页面里搜不到这些工具的调用」，已写进生成器注释。
 6. **守卫不锚前导 `/`**：`es-pc` 的路由表用相对段写法（`ai-gallery/workflows`），锚死会假红。
 7. **台账连带同步**：`es-pc` 的新视图是 `sites` 段第 123 例（D 档「站点骨架 / 未收录视图」），由
    `npm run sites:coverage:gen` 重算；`es-eui` 不动（其台账扫的是 `src/examples`，不含 views）。
@@ -832,21 +837,21 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 
 ### 17.3 仍未闭环（如实）
 
-- **前门 12 个工具只覆盖 9 个**：`generate_form` / `generate_table` / `generate_dialog` 仍无页面
-  演示。§4.5 说的「A8 覆盖这 3 个片段工具 → 12/12」**尚未成立**（A8 `fragment-dashboard` 未开工）。
-  本页文案只声称 9 次调用 / 8 个工具，不写 12。
-- **§4.9 的 ROADMAP 映射是错的**：`packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 分别是
-  `useDialog` 骨架 / `vxeFirstClass` 降档 / SFC-schema 对齐，**不是**案例矩阵 / 组合可见性 /
-  工具工作流；该文件里没有任何 S1–S3 条目，故「落地时同步 ROADMAP 状态」无同步对象。
-  展示矩阵以本文为唯一跟踪面。
+- ~~前门 12 个工具只覆盖 9 个~~ → **已补齐（2026-10-26，W4）**：`generate_form` / `generate_table` /
+  `generate_dialog` 各有一份真调用记录与产物（校验器、生成器都真跑过），本页现在 12/12。
+  **A8 `fragment-dashboard` 仍未开工** —— 那是另一件事：把片段拼进非 CRUD 页面并把 claim 抬到
+  `execute`，与「工具有没有页面演示」是两条轴，别用一个数字盖住另一个缺口。
+- ~~§4.9 的 ROADMAP 映射是错的~~ → **已更正（见 §4.9）**：ROADMAP 的 AI-28/29/30 是
+  `useDialog` 骨架 / `vxeFirstClass` 降档 / SFC-schema 对齐，不是案例矩阵 / 组合可见性 / 工具工作流；
+  该文件里没有 S1–S3 条目，展示矩阵以本文为唯一跟踪面。
 - 记录只覆盖**确定性**工具。任何形状依赖模型输出的步骤（真正的 NL→config 一次成功/一次失败）
   只能冻结保存，不能靠本页的守卫机制证明；要看那部分，走 S1 案例与 `check:ai-cases`。
 
 ### 17.4 验证
 
-- `npm run check:ai-workflows` → ✅（3 条工作流 / 9 次调用；8 个零页面演示工具全覆盖；单源 + 三站
+- `npm run check:ai-workflows` → ✅（4 条工作流 / 12 次调用；零页面演示工具 11/11 覆盖；单源 + 三站
   副本逐字节一致；接线完整）。
 - `npm run check:consistency` → **退出码 0**（含 `check:ai-workflows`，以及重算后的 `sites` 台账）。
-- 三站构建：`es-plus-docs` ✅（vite）、`es-pc` ✅（31.13s）、`es-eui` ✅（`--dest dist-verify`
+- 三站构建：`es-plus-docs` ✅（1m 4s）、`es-pc` ✅（20.99s）、`es-eui` ✅（`--dest dist-verify`
   构建后删除，避开 dist 句柄锁）。
 - e2e `--project=ai-gallery-docs` → **14/14**（含新增第 14 条）。
