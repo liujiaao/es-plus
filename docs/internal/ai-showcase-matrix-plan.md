@@ -459,7 +459,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 ### 10.5 已知缺口（Wave C 入口）
 
-- **排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。
+- ~~**排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。~~ → **已闭环（见 §12）**
 - ~~**新案例没有 e2e**~~ → **已闭环（见 §11）**：`ai-gallery.spec.ts` 从 5 条扩到 11 条，5 页升到 `execute`；`engine-lab` 因 inlineEdit 在 AN-09 是 partial 仍停 `compile`（e2e 已登记，主张不越界）。
 - S2 组合画廊（18 golden）与 S3 工作流页仍未开工；`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做。
 - 展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。
@@ -494,3 +494,49 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - `es-pc` / `es-eui` 没有对应的 e2e project，5 页在那两端的 claim 保持 `compile`（诚实：跑过的才叫 execute）。
 - `engine-lab` 的 execute 需要 inlineEdit 在 AN-09 的 vue3 格子从 partial 变 full（即 vxe 侧把编辑结果回写 `data-source`，接 `edit-closed`），属 Wave C。
+
+## 12. 落地记录（服务端排序契约 `tableOptions.sortParam`，2026-10-26）
+
+§10.5 的第一条缺口（排序参数未进请求）已闭环。这一批补的是**一个契约**，不是一个开关：
+「表头点一下 → 后端按新顺序重取**当前页**」在 el-table / element-ui / a-table 三种事件形态下
+语义一致，且参数名可改（`{ field, order }`）。改前 antdv 侧点表头只有箭头动、数据不动
+（§10.3 第 4 条）；改后三端走同一个求值点与同一条请求漏斗。
+
+### 12.1 落地了什么
+
+| 主题 | 位置 | 说明 |
+|---|---|---|
+| 单求值点 | [table-sort.ts](../../packages/core/src/table-sort.ts)（新） | `resolveSortParam` / `normalizeSortOrder` / `toTableSortState` / `sameSortState` / `seedSortState` / `buildSortParams`；`DEFAULT_SORT_PARAM_NAMES = { field: 'sortField', order: 'sortOrder' }`。纯函数，三端只 import 不重写 |
+| 请求漏斗合并 | 三端 `es-table` 的 `component.vue` | `{ ...params, ...buildSortParams(options, sortState) }` 拼在**唯一**出口（首屏 / 翻页 / 边界回退 / 表头重取都走它）；`changeTableSort` 归一 → 去重（`sameSortState`）→ `httpRequestInstance(undefined, { keepPage: true })` |
+| 本地排序关闭 | 同上 + 三个 `vxe-engine.vue` | el-table / element-ui 的列降为 `sortable: 'custom'`；vxe 的 `sortConfig.remote` 在「有代理配置 / 列是 custom / 声明了 sortParam」时置真；a-table 的 `sorter: true` 本来就是服务端语义 |
+| vxe 事件归口 | vue2 / vue3 / antdv 的 `vxe-engine.vue` | `sort-change` 与 el-table 同形（`prop` / `order`），此前 vxe 分支**完全没有**排序处理器 —— 点表头不动数据；现在汇到同一个 `changeTableSort` |
+| AI 契约七层同步 | shared zod4 / mcp inline zod4 / fragment zod3 / 前门旋钮 zod3 / JSON schema ×4 / 生成器双模式 / 矩阵+令牌表 | 新增 `tableOptions` 键要七层同时表态。zod3 与 zod4 不能共享对象，前门用 union 形态镜像；`check:tool-shapes` 逐键比对，漏一层即红 |
+| 案例 | [order-batch](../cases/generated/order-batch.json) | `sortParam: true` + mock 真的按 `sortField/sortOrder` 排整份数据（参数没到就保持金额倒序），令牌覆盖仍 22/22 |
+| e2e | [ai-gallery.spec.ts](../../__tests__/e2e-runtime/tests/ai-gallery.spec.ts) | 新增「点金额表头按服务端排序重取，且保留当前页」：跨页不等式（第 2 页每一行都大于第 1 页每一行）证明后端排了整份数据，页码停在 2 证明保留当前页 |
+
+### 12.2 语义（三条不变量，都有单测）
+
+1. **声明才发参数**：未声明 `sortParam` 时请求逐字节不变（`buildSortParams` 返回 `{}`）。
+2. **无方向就不发**：清除排序时**省略**两个键，不发空串（严格后端会把空串当非法枚举）。
+3. **播种与去重同源**：`defaultSort` 同时播种首屏参数与表头指示器；引擎挂载回抛的同一状态不触发第二次请求；排序变化保留当前页（`keepPage: true`），只有「查询/翻页」才回第 1 页。
+
+### 12.3 实测数字
+
+- 单测：core + shared **1240**、vue3 **639**、vue2 **393**、antdv **684** 全绿（core 新增 `table-sort.spec.ts` 19 条，三端各补接线用例）。
+- e2e：`npx playwright test -c __tests__/e2e-runtime/playwright.config.ts --project=ai-gallery-docs` → **12 passed**（23.6 s）。
+- 守卫：`npm run check:consistency` 退出码 0；其中 `check:tool-shapes` 8 颗旋钮逐键一致、`check:threeway-consistency` 的探针把 tableOptions 改成 `{ probeSort, probeDir }`（证明改键形态不会被剥掉）、`check:capability-parity` 15 键 × 3 端全绿、`check:ai-cases --strict-coverage` 覆盖 22/22。
+- 矩阵：**41** 令牌 / **24** 声明式 / **22** 前门可达。
+- 构建：`es-plus-docs` / `es-pc` 的 `vite build` 通过；`es-eui` 走 `npm run build -- --dest dist-verify`（`dist/` 有文件被系统句柄占用），验证后删除。
+
+### 12.4 这一批新发现的四条结构约束
+
+1. **Element Plus 的点击循环是 ascending → descending → null**，不是回到 ascending。所以 `defaultSort` 播种 descending 的列，第一次点击是**清除**（`aria-sort` 变空、参数消失、数据回落到后端默认序），第二次点击才是升序。e2e 因此按 `aria-sort` 断言（`th` 上 `ariaSort: column.sortable ? column.order : undefined`，是可靠指示器），而不是数箭头图标。
+2. **vxe 的 `sort-change` 不接就等于没排序**：它的负载与 el-table 同形，但没有 el-table 那套内置状态机；vue2 / antdv 的 vxe 分支此前零处理，服务端排序下点表头只切箭头。三端都补了 `handleVxeSortChange` → 同一个处理器。
+3. **a-table 的清除是 legacy 形态**：第三击 `sorter` 只剩 `{ field, order: null }`（`column` 已空），`toTableSortState` 必须接受 `prop/field/key/column.prop` 四种来源才归一得掉。
+4. **`FieldConfig` 没有 `sortable`**（只有顶层 `ColumnSchema` 有）⟹ 由 `fields` 派生的列，只有在 `defaultSort` 点名时才可排；`columns[]` 轴仍可任意声明 `sortable`。本批**没有**为 AI 字段面扩这个键（那是另一条轴），案例因此用 `defaultSort` 点名的 `amount` 列做演示。
+
+### 12.5 仍未闭环
+
+- **多列排序未建模**：`sorter` 是数组时只取第一列（三端一致地降级），按优先级的多列排序属 Wave C。
+- **参数只进请求、不改宿主数据**：后端没按参数排时，组件照原样显示（不本地兜底）—— 这是刻意选择，本地兜底会掩盖后端契约违约。
+- Wave C 其余项不变：S2 组合画廊（18 golden）、S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
