@@ -299,7 +299,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - **不新增评测语料**：S2 直接用 `__tests__/golden/composition`；S1 案例的 config 可作为 `from_config` 的 smoke 输入，但不进 gold 语料（避免「既当选手又当裁判」）。
 - **复用 `capability.ts`**：claim 边界直接用 AN-09 矩阵，不另造一套三端支持表。
 - **复用 composition scorer**：S2 画廊的 membership 高亮与 `compositionFacts()` 同函数，保证「页面展示的事实 = 评测打分的事实」。
-- **feature-coverage 增列**：给 `docs/ai/feature-coverage.json` 的 demo 加 `aiCase` 字段（指向 manifest id），`check:feature-coverage` 校验引用存在；tier 仍按 demo 保留，能力级判断改由新矩阵承担。
+- **feature-coverage 增列**：给 `docs/ai/feature-coverage.json` 的 demo 加 `aiCase` 字段（指向 manifest id），`check:feature-coverage` 校验引用存在；tier 仍按 demo 保留，能力级判断改由新矩阵承担。→ **已落地（见 §16）**；实现上 `aiCase` 是 **id 数组**（一页能力可由两个案例分别演示，见 §16.2）。
 - **ROADMAP 映射**：S1/S2/S3 分别对应 AI-28（案例矩阵）、AI-29（组合可见性）、AI-30（工具工作流），落地时同步 `packages/mcp-server/ROADMAP.md`。
 
 ## 5. 排期
@@ -416,7 +416,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - 覆盖门 11 个令牌零案例（A2/A4/A5/A6/A7 各页对应到 §4.3）；
 - S2 组合画廊（18 golden，零模型调用）与 S3 工作流页未开工；
-- `docs/ai/feature-coverage.json` 的 demo 尚未加 `aiCase` 字段（§4.9 的接缝，需要另一个守卫 `check:feature-coverage` 配合）；
+- ~~`docs/ai/feature-coverage.json` 的 demo 尚未加 `aiCase` 字段（§4.9 的接缝，需要另一个守卫 `check:feature-coverage` 配合）~~ → **已落地（见 §16）**；
 - `packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 状态待同步。
 
 ## 10. 落地记录（Wave B，2026-10-26）
@@ -464,7 +464,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - ~~**排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。~~ → **已闭环（见 §12）**
 - ~~**新案例没有 e2e**~~ → **已闭环（见 §11）**：`ai-gallery.spec.ts` 从 5 条扩到 11 条，5 页升到 `execute`；`engine-lab` 因 inlineEdit 在 AN-09 是 partial 仍停 `compile`（e2e 已登记，主张不越界）。
-- S2 组合画廊（18 golden）与 S3 工作流页仍未开工；`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做。
+- S2 组合画廊（18 golden）与 S3 工作流页仍未开工（S2 见 §13）；~~`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做~~ → **已落地（见 §16）**。
 - ~~展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。~~ → **前提错了（2026-10-26 更正）**：vxe 的 `loadTableData` 只做 `reactive(datas.slice(0))`，编辑写的就是 `:data-source` 里那一行；`keepSource` 只是给 `revertData()` 留快照。宿主缺的是「改了哪一格、旧值多少」，已由 `cell-edit` 补上，见 §14。
 
 ## 11. 落地记录（Wave B 补课：e2e 主张承担者，2026-10-26）
@@ -542,7 +542,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - **多列排序未建模**：`sorter` 是数组时只取第一列（三端一致地降级），按优先级的多列排序属 Wave C。
 - **参数只进请求、不改宿主数据**：后端没按参数排时，组件照原样显示（不本地兜底）—— 这是刻意选择，本地兜底会掩盖后端契约违约。
-- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写 → **`cell-edit` 已落地（见 §14）**，但 claim 仍停在 compile（结构性封顶，不是这个事件没做）。
+- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、~~`feature-coverage.json` 的 `aiCase` 接缝~~ → **已闭环（见 §16）**、`engine-lab` 的 `edit-closed` 回写 → **`cell-edit` 已落地（见 §14）**，但 claim 仍停在 compile（结构性封顶，不是这个事件没做）。
 
 ## 13. 落地记录（S2 组合画廊，2026-10-26）
 
@@ -609,8 +609,8 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 ### 13.5 仍未闭环
 
 - es-pc / es-eui 没有对应的 e2e project，S2 在两端的 claim 保持 `measure + compile`（与 §11.4 同一条纪律）。
-- §12.5 的 Wave C 余项不变：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）、`feature-coverage.json`
-  的 `aiCase` 接缝（`engine-lab` 的 `cell-edit` 已在 §14 落地）。
+- §12.5 的 Wave C 余项：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）仍未开工；
+  ~~`feature-coverage.json` 的 `aiCase` 接缝~~ → **已落地（见 §16）**（`engine-lab` 的 `cell-edit` 见 §14）。
 - 上面 13.4 第 3 条的「弹窗体成员键」**已在 §15 落地**（展开只投影表单面，噪音归零）。
 
 ## 14. 落地记录（vxe 行内编辑归一为 `cell-edit`，2026-10-26）
@@ -737,3 +737,52 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 实体化成 `true`。它只活在**进程内解析结果**里：产物走 `buildFormItem` 投影、`refine_config` 的 diff 吃
 原始 JSON、生成工具只回代码与 warnings —— 没有任何用户可见出口。把它拆成专用 schema 会动 AI 契约与
 `check-schema-contract` 的键集，收益为零，登记不改。
+
+## 16. 落地记录（`aiCase` 接缝：文档演示 ↔ AI 案例，2026-10-26）
+
+§4.9 登记的接缝。缺口本身不是缺陷：台账能回答「这页 AI 可达吗（tier）」，但**指不出**「哪份 AI
+案例真的演示了它」——「有案例演示」这句话只能靠人去 `docs/cases/ai-cases.json` 里猜。
+
+### 16.1 落地
+
+| 位置 | 说明 |
+|---|---|
+| `docs/ai/feature-coverage.schema.json` | demo 增可选 `aiCase: string[]`（`minItems 1`、`uniqueItems`、kebab id）；`additionalProperties:false` 照旧咬住拼错的键 |
+| `docs/ai/feature-coverage.json` | **23/103** 例登记，9 个案例全部被指到（关联行的 tier 分布：A 12 / B 1 / C 8 / D 2） |
+| `scripts/check-feature-coverage.mjs` | 新增断言 ⑥（原摘要顺延为 ⑦）：每个 id 必须 ∈ `docs/cases/ai-cases.json` 的 `cases[].id`；顺带把头部注释里过期的「97 例 / 96 例」按实测更正为 **103** |
+| schema 发布副本 | `node scripts/sync-data-schemas.mjs` → `es-plus-docs/public/ai/feature-coverage.schema.json`；`check:data-schemas` 用 Ajv 对新数组形态做正负向校验 |
+
+### 16.2 与 §4.9 原文的偏离（一处）：`aiCase` 是数组
+
+原文写「指向 manifest id」（单数）。但台账里存在**一页两能力**的行：`table/11-expand` 的标题就是
+「展开行与树形」，而这两个能力分别由 `expand-row`（`expandConfig`）与 `org-tree-table`（`treeConfig`）
+演示。单值字段只能在两者里挑一个，剩下半个标题就成了无对照的断言。数组如实表达「这页的能力由这
+两份案例分别演示」，代价只是消费端渲染多个链接。
+
+### 16.3 登记规则（为什么是 23/103）
+
+只给**案例的冻结配置里真的出现该页招牌键**的行登记；未登记 ≠ 不支持，只表示「现有案例没有以它
+为主角」。据此刻意**不登记**的几类：
+
+- **每案都有的通用件**（`fields`/`formItems`/`dialogs`/`tableOptions`/`pagination`/`actions`）不足以
+  证明「这一页」——否则 103 行里 90 行都能指到 `employee-roster`，字段就退化成噪音；
+- **函数值令牌**（`httpRequestFn`/`renderFn`/`spanMethodFn`/`fieldEventFn`）：案例宿主的副作用走 mock
+  契约、配置里 0 个函数（这正是断言 3 要的），所以 `table/16-callback-pipeline`、
+  `crud-page/10-full-business` 一类没有案例可指；
+- **D 档行也可以有关联**：`aiCase` 回答的是「这个能力有没有 AI 案例演示」，与行的 tier（**这一页**
+  是否 AI 生成目标）是两根轴。`advanced/08-row-approval` 是 D（`useDialogApi` 是组件命令式 API），
+  但它的「通过 / 驳回 + 权限码」由 `purchase-approval` 的 `operationColumn` 演示。
+
+### 16.4 验证
+
+- 守卫**非空转**：把 `table/05-edit` 的 `aiCase` 改成 `no-such-case` → `check:feature-coverage`
+  退出码 **1** 并指名悬空 id；还原后复绿（`git diff --numstat` 回到 74/1）。
+- `npm run check:feature-coverage` → ✅（103 例；分档 A 28 / B 5 / C 39 / D 31；aiCase 关联 23 例）。
+- `npm run check:data-schemas` → 5 份声明全部「可解析且有效力」（含新 `aiCase` 数组的 Ajv 校验）。
+- `npm run check:consistency` → **退出码 0**。
+- `es-plus-docs` 站点构建 → ✅（59.60s）。
+
+### 16.5 仍未闭环
+
+S3 工作流页（W1–W3，8 个零案例 MCP 工具）是 Wave C 唯一未开工项。台账侧的**反向**索引（从案例跳到
+它覆盖的文档演示）不必再存一份——由 `aiCase` 现场反查即可。
