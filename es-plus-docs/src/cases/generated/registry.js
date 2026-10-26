@@ -64,7 +64,7 @@ export const AI_CASES = {
   "expand-row": {
     id: "expand-row",
     title: "展开行明细（纯 JSON 字段表）",
-    claim: "compile",
+    claim: "execute",
     replay: "frozen-config",
     clusters: ["C8"],
     tokens: ["expandConfig"],
@@ -86,7 +86,7 @@ export const AI_CASES = {
   "grouped-report": {
     id: "grouped-report",
     title: "分组报表（合并单元格）",
-    claim: "compile",
+    claim: "execute",
     replay: "frozen-config",
     clusters: ["C8"],
     tokens: ["mergeConfig"],
@@ -99,7 +99,7 @@ export const AI_CASES = {
   "legacy-erp-api": {
     id: "legacy-erp-api",
     title: "异构后端接管",
-    claim: "compile",
+    claim: "execute",
     replay: "frozen-config",
     clusters: ["C9"],
     tokens: ["apiParams","configTableOut"],
@@ -112,7 +112,7 @@ export const AI_CASES = {
   "order-batch": {
     id: "order-batch",
     title: "订单批量处理",
-    claim: "compile",
+    claim: "execute",
     replay: "frozen-config",
     clusters: ["C5","C7","C10"],
     tokens: ["tableBtns","configTableOut","formLayout","defaultSort"],
@@ -125,7 +125,7 @@ export const AI_CASES = {
   "org-tree-table": {
     id: "org-tree-table",
     title: "组织架构树表（零构树）",
-    claim: "compile",
+    claim: "execute",
     replay: "frozen-config",
     clusters: ["C8"],
     tokens: ["treeConfig"],

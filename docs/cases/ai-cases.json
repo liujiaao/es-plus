@@ -231,9 +231,9 @@
         "antdv"
       ],
       "mode": "schema",
-      "claim": "compile",
+      "claim": "execute",
       "sites": {
-        "es-plus-docs": "compile",
+        "es-plus-docs": "execute",
         "es-pc": "compile",
         "es-eui": "compile"
       },
@@ -254,7 +254,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/order-batch.config.json docs/cases/generated/order-batch.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
@@ -284,9 +286,9 @@
         "antdv"
       ],
       "mode": "schema",
-      "claim": "compile",
+      "claim": "execute",
       "sites": {
-        "es-plus-docs": "compile",
+        "es-plus-docs": "execute",
         "es-pc": "compile",
         "es-eui": "compile"
       },
@@ -307,7 +309,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/org-tree-table.config.json docs/cases/generated/org-tree-table.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
@@ -337,9 +341,9 @@
         "antdv"
       ],
       "mode": "schema",
-      "claim": "compile",
+      "claim": "execute",
       "sites": {
-        "es-plus-docs": "compile",
+        "es-plus-docs": "execute",
         "es-pc": "compile",
         "es-eui": "compile"
       },
@@ -360,7 +364,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/expand-row.config.json docs/cases/generated/expand-row.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
@@ -390,9 +396,9 @@
         "antdv"
       ],
       "mode": "schema",
-      "claim": "compile",
+      "claim": "execute",
       "sites": {
-        "es-plus-docs": "compile",
+        "es-plus-docs": "execute",
         "es-pc": "compile",
         "es-eui": "compile"
       },
@@ -413,7 +419,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/grouped-report.config.json docs/cases/generated/grouped-report.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
@@ -444,9 +452,9 @@
         "antdv"
       ],
       "mode": "schema",
-      "claim": "compile",
+      "claim": "execute",
       "sites": {
-        "es-plus-docs": "compile",
+        "es-plus-docs": "execute",
         "es-pc": "compile",
         "es-eui": "compile"
       },
@@ -467,7 +475,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/legacy-erp-api.config.json docs/cases/generated/legacy-erp-api.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
@@ -522,7 +532,9 @@
         "generatedAt": "2026-10-26",
         "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/engine-lab.config.json docs/cases/generated/engine-lab.json"
       },
-      "e2e": [],
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
       "guards": [
         "check:ai-cases"
       ]
