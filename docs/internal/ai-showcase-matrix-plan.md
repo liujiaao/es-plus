@@ -125,7 +125,8 @@
 | `scaffold_page` / `doctor_page` | 无 | 工作流闭环（生成→诊断→修） |
 
 → **部分闭环（2026-10-26，见 §17）**：12 个工具在 S3 工作流页各至少一次**真调用**（W4 补上片段三件套）。
-但「有页面演示」不等于「有案例」：A8 `fragment-dashboard` 仍未开工，片段拼装页与 `execute` 主张仍在 Wave C 余项里。
+但「有页面演示」不等于「有案例」：~~A8 `fragment-dashboard` 仍未开工~~ → **已落地（见 §18）**：
+片段拼进非 CRUD 分析页，es-plus-docs 的主张抬到 `execute`（e2e 背书），另两端停在 `compile`。
 
 ### G5 证明链不可重放
 
@@ -331,7 +332,8 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 ### Wave C — 代码生成与工作流（约 5 天，2 次模型调用）
 
 - A3 `engine-lab`（宿主引擎开关，验证四引擎差异与 memory 中的跨页选择结论）；
-- A8 `fragment-dashboard`（vue3 execute，另两端 compile）；
+- ~~A8 `fragment-dashboard`（vue3 execute，另两端 compile）~~ → **已落地（见 §18）**，
+  主张按站分开：`es-plus-docs` = `execute`（e2e 背书）、`es-pc` / `es-eui` = `compile`；
 - A9 `native-vs-ai`（扩 `gen-cases-metrics.mjs` 的 AI 列）；
 - S3 工作流页 W1–W4（覆盖前门 12 个工具，其中 11 个此前零页面演示）；
 - 夜间漂移作业 + 文档（`docs/ai/ai-showcase.md` 面向用户的案例导览）。
@@ -839,7 +841,7 @@ W4 `generate_form` 1242 / `generate_table` 1316 / `generate_dialog` 3521（截�
 
 - ~~前门 12 个工具只覆盖 9 个~~ → **已补齐（2026-10-26，W4）**：`generate_form` / `generate_table` /
   `generate_dialog` 各有一份真调用记录与产物（校验器、生成器都真跑过），本页现在 12/12。
-  **A8 `fragment-dashboard` 仍未开工** —— 那是另一件事：把片段拼进非 CRUD 页面并把 claim 抬到
+  ~~**A8 `fragment-dashboard` 仍未开工**~~ → **已落地（见 §18）** —— 那是另一件事：把片段拼进非 CRUD 页面并把 claim 抬到
   `execute`，与「工具有没有页面演示」是两条轴，别用一个数字盖住另一个缺口。
 - ~~§4.9 的 ROADMAP 映射是错的~~ → **已更正（见 §4.9）**：ROADMAP 的 AI-28/29/30 是
   `useDialog` 骨架 / `vxeFirstClass` 降档 / SFC-schema 对齐，不是案例矩阵 / 组合可见性 / 工具工作流；
@@ -855,3 +857,82 @@ W4 `generate_form` 1242 / `generate_table` 1316 / `generate_dialog` 3521（截�
 - 三站构建：`es-plus-docs` ✅（1m 4s）、`es-pc` ✅（20.99s）、`es-eui` ✅（`--dest dist-verify`
   构建后删除，避开 dist 句柄锁）。
 - e2e `--project=ai-gallery-docs` → **14/14**（含新增第 14 条）。
+
+
+## 18. 落地记录（A8 片段拼装仪表盘，2026-10-26）
+
+### 18.1 落了什么
+
+- **生成器 + 守卫**：`scripts/gen-fragment-dashboard.mjs`（`npm run fragment:dashboard` /
+  `npm run check:fragment-dashboard`，已进 `check:consistency`）。三个片段工具 × 三个 target
+  （`vue3` / `vue2` / `antdv`）各真调一次，共 9 份产物；`--check` 重算逐字节比对 + 同进程两遍确定性
+  + 9 份各过一次语法解析（`scripts/lib/compile-check.mjs`）+ 纯 JSON + 无绝对路径 + 接线 + manifest 对账。
+- **单源 + 站点副本**：产物 `docs/cases/generated/fragment-dashboard.json`（6.1 KB 纯 JSON：冻结入参、
+  每片段行数/字节、三端字节表、宿主接线、边界清单、逐站 claim）；源码模块
+  `docs/cases/generated/fragment-dashboard-sources.js`（17 KB，三端 × 三片段的原样 ```vue 产物）分发到三站。
+- **真跑的片段**：`es-plus-docs/src/cases/generated/fragments/{FilterBar,ResultTable,OrderDialog}.vue`
+  （target=vue3）与 `es-pc/src/cases/generated/fragments/…`（target=antdv）。vue3 与 antdv 的表单/表格
+  逐字节相同，弹窗只差 `httpRequest` 的 import 源 —— 这一点由产物里的字节表如实反映。
+- **宿主页**：`/fragment-dashboard`，docs 与 es-pc 共用**同一份文件**（逐字节，守卫比对）。
+  页面里没有任何 schema：布局是 CSS grid，数据是宿主自己 `httpRequest(/api/demo/orders)`，
+  图表是手写 `<svg>`；三个片段一行未改，靠 Vue 属性透传接线 ——
+  `:model` + `:config-btn`（筛选）、`:data-source` + `:pagination` + `@row-click`（表格）、
+  `ref.open(title, row)`（弹窗）。`es-eui` 是同容器的 Vue2 只读页（产物 + 编译结论 + 三端源码）。
+- **manifest**：`docs/cases/ai-cases.json` 新增 `fragment-dashboard`（`shape: fragment`、`mode: sfc`、
+  `origin: handcrafted`、`replay.kind: handcrafted` + 原因 + 守卫），三站 Cases 页各加一张入口卡。
+- **e2e**：`ai-gallery.spec.ts` 新增第 15 条 —— 从 Cases 页 CTA 点进 → 37 条命中 / 8 行 / ¥183,082
+  → 筛选 `恒佳` → 6 条 / ¥27,614 → 柱高变化 → 点行开「查看」弹窗（只剩关闭、客户与金额回填）
+  → 三端页签与三块源码 → 接线表与边界条数。结构类期望值全部读产物，数据类读演示后端语料。
+
+实测（浏览器）：首屏 37 单 / 8 行 / ¥183,082，柱高 92·31·22；关键词「恒佳」→ 6 单 / ¥27,614，
+柱高 92·82·28；点行 → 弹窗标题「查看」、页脚只剩「关闭」、客户 深圳恒佳电子 / 金额 2514。
+docs（Element Plus）与 es-pc（Ant Design Vue）两端口径逐项一致。
+
+### 18.2 偏离与取舍（五处，都有结构性理由）
+
+1. **`origin: handcrafted` 而不是 `ai`**：产物是「工具(冻结入参)」的确定性结果，没有模型参与；
+   写成 `ai` 会把「片段工具能拼页面」冒领成「模型写对了配置」。代价是它不进 `check:ai-cases`
+   的模型产物统计 —— 这正是想要的：两条轴别混。
+2. **`es-pc` 停在 `compile`（初稿写成 `execute`，已改回）**：那一端**确实在跑**（同一份宿主页 +
+   antdv 三片段，已人工验证），但本仓没有 es-pc 的 e2e project，`check:fragment-dashboard` 只证到
+   「解析 + 接线」。按 §11.4「跑过的才叫 execute」，无自动化证据的一端主张封顶 `compile` ——
+   与 `order-batch` 等在 es-pc 上的写法一致；页面徽章旁如实写明原因，不靠读者猜。
+3. **表格片段刻意不给 `apiUrl`**：给了就会出现「宿主筛完、片段又自己拉一遍」的第二真相。
+   代价是这份片段不声明 props，数据只能靠 Vue 属性透传覆盖根组件的内部绑定 —— 契约是隐式的，
+   已写进页面的「当前边界」而不是藏起来。
+4. **`es-eui` 只做编译验证**：vue2 目标从 `vue` 导入 `defineComponent` / `reactive`（Vue 2.7 语义），
+   而 es-eui 是 Vue 2.6 + `@vue/composition-api`，跑不了。该端页面展示三端源码 + 9/9 语法解析结论，
+   不假装可交互。
+5. **与 S1 通用案例的分工**：通用案例渲染 `CrudPageSchema`（`<es-crud-page :schema>`），页面形状由
+   schema 定；本页没有 schema —— 宿主自己写布局、取数、图表。两者的 claim 都是 `execute`，
+   但证据链不同（S1 = 产物编译 + e2e；A8 = 冻结片段重算逐字节 + e2e）。
+
+### 18.3 页面「当前边界」的四条（产物 `knownGaps`，页面原样展示）
+
+1. 表单片段不 emit：查询/重置走「祖先 es-table 注入」这条路，独立宿主只能用底层 `es-form` 的
+   `configBtn` 契约接管点击；
+2. 表格片段在不给 `apiUrl` 时不声明 props：数据靠同名属性覆盖根组件绑定（隐式契约）；
+3. 片段之间没有编排契约（无 props / emits / provide 约定）：拼装靠底层组件的既有属性名，换组件要重接线；
+4. vue2 产物面向 Vue 2.7，es-eui 停在编译验证。
+
+这四条是**当前产物的形状**，不是「以后再说」的注脚 —— 页面的接线方式就是它们的结果。
+
+### 18.4 验证
+
+- `npm run check:fragment-dashboard` → ✅（9/9 片段可解析；产物 6.1 KB 纯 JSON；单源 + 三站副本逐字节；
+  三站接线完整；manifest 逐站 claim 对账）。
+- `npm run check:ai-cases -- --strict-coverage` → ✅（10 个案例、7 个可机械重放；覆盖门绿）。
+- `npm run check:consistency` → **退出码 0**（含 `check:fragment-dashboard` 与重算后的 `sites` 台账：
+  es-eui 97 / es-pc 124 / 合计 221）。
+- 三站构建：`es-plus-docs` ✅（1m 41s）、`es-pc` ✅（27.4s）、`es-eui` ✅（`--dest dist-verify` 后删除）。
+- e2e `--project=ai-gallery-docs -g "A8 片段拼装"` → ✅；全量 15 条见提交记录。
+
+### 18.5 仍未闭环
+
+- **es-pc 没有 e2e project**：这是「另两端只能 `compile`」的唯一根因（不止本案例）。要抬主张就得
+  先给 es-pc 起一条 playwright project（dev server + baseURL），那是独立一件事。
+- **片段之间仍无编排契约**：宿主现在靠底层属性名接线；若要让片段真正可组合，需要给片段产物补
+  `defineProps` / `defineEmits`（会改动三个工具的生成模板，影响全部片段 case 与 golden）。
+- **A9 `native-vs-ai`（三栏对照）未开工**：它要把 `gen-cases-metrics.mjs` 的实测数字扩三列
+  （原生 / 手写 es-plus / AI 生成），与 A8 无关，是 Wave C 的下一项。
+- **夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落。
