@@ -1,0 +1,36 @@
+{
+  "name": "GroupedReport",
+  "apiUrl": "/api/reports/monthly",
+  "fields": [
+    { "prop": "dept", "label": "部门", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "team", "label": "小组", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false },
+    { "prop": "amount", "label": "本月金额（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "align": "right" },
+    { "prop": "target", "label": "目标（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "align": "right" },
+    { "prop": "period", "label": "账期", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false }
+  ],
+  "actions": ["view"],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "mergeConfig": { "rowsBy": ["dept", "team"] },
+  "dialogs": {
+    "view": {
+      "title": "明细",
+      "formItems": [
+        { "prop": "dept", "label": "部门", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "team", "label": "小组", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "amount", "label": "本月金额（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "target", "label": "目标（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    }
+  },
+  "tableOptions": {
+    "border": true,
+    "stripe": false,
+    "rowkey": "id"
+  },
+  "pagination": { "pageSize": 8 }
+}

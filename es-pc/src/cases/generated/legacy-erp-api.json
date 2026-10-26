@@ -1,0 +1,234 @@
+{
+  "formItems": [
+    {
+      "prop": "sku",
+      "label": "商品编码",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "name",
+      "label": "商品名称",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "supplierId",
+      "label": "供应商",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      },
+      "apiParams": {
+        "url": "/api/suppliers",
+        "method": "GET",
+        "labelField": "name",
+        "valueField": "id"
+      }
+    }
+  ],
+  "columns": [
+    {
+      "prop": "sku",
+      "label": "商品编码"
+    },
+    {
+      "prop": "name",
+      "label": "商品名称"
+    },
+    {
+      "prop": "supplierName",
+      "label": "供应商"
+    },
+    {
+      "prop": "price",
+      "label": "单价（元）",
+      "align": "right"
+    },
+    {
+      "prop": "stock",
+      "label": "库存",
+      "align": "center"
+    }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "highlightCurrentRow": true,
+    "headerCellStyle": {
+      "background": "#f5f7fa"
+    },
+    "apiParams": {
+      "url": "/api/goods"
+    },
+    "rowkey": "id",
+    "configTableOut": {
+      "tableData": "list",
+      "total": "totalCount"
+    }
+  },
+  "dialogs": {
+    "add": {
+      "title": "新增商品",
+      "formItems": [
+        {
+          "prop": "sku",
+          "label": "商品编码",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入商品编码",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "name",
+          "label": "商品名称",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入商品名称",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "supplierId",
+          "label": "供应商",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "apiParams": {
+            "url": "/api/suppliers",
+            "method": "GET",
+            "labelField": "name",
+            "valueField": "id"
+          }
+        },
+        {
+          "prop": "price",
+          "label": "单价（元）",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "stock",
+          "label": "库存",
+          "formtype": "InputNumber",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ]
+    },
+    "edit": {
+      "title": "编辑商品",
+      "formItems": [
+        {
+          "prop": "sku",
+          "label": "商品编码",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入商品编码",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "name",
+          "label": "商品名称",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入商品名称",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "supplierId",
+          "label": "供应商",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "apiParams": {
+            "url": "/api/suppliers",
+            "method": "GET",
+            "labelField": "name",
+            "valueField": "id"
+          }
+        },
+        {
+          "prop": "price",
+          "label": "单价（元）",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "stock",
+          "label": "库存",
+          "formtype": "InputNumber",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ]
+    }
+  },
+  "actions": [
+    "add",
+    "edit"
+  ],
+  "pagination": {
+    "pageSize": 10
+  }
+}

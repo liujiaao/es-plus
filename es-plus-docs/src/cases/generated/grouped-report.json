@@ -1,0 +1,126 @@
+{
+  "formItems": [
+    {
+      "prop": "dept",
+      "label": "部门",
+      "formtype": "Input",
+      "span": 8,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "team",
+      "label": "小组",
+      "formtype": "Input",
+      "span": 8,
+      "attrs": {
+        "clearable": true
+      }
+    }
+  ],
+  "columns": [
+    {
+      "prop": "dept",
+      "label": "部门"
+    },
+    {
+      "prop": "team",
+      "label": "小组"
+    },
+    {
+      "prop": "owner",
+      "label": "负责人"
+    },
+    {
+      "prop": "amount",
+      "label": "本月金额（万）",
+      "align": "right"
+    },
+    {
+      "prop": "target",
+      "label": "目标（万）",
+      "align": "right"
+    },
+    {
+      "prop": "period",
+      "label": "账期"
+    }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": false,
+    "highlightCurrentRow": true,
+    "headerCellStyle": {
+      "background": "#f5f7fa"
+    },
+    "apiParams": {
+      "url": "/api/reports/monthly"
+    },
+    "rowkey": "id",
+    "mergeConfig": {
+      "rowsBy": [
+        "dept",
+        "team"
+      ]
+    }
+  },
+  "dialogs": {
+    "view": {
+      "title": "明细",
+      "formItems": [
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "team",
+          "label": "小组",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "owner",
+          "label": "负责人",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "amount",
+          "label": "本月金额（万）",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        },
+        {
+          "prop": "target",
+          "label": "目标（万）",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ]
+    }
+  },
+  "actions": [
+    "view"
+  ],
+  "pagination": {
+    "pageSize": 8
+  }
+}

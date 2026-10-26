@@ -1,0 +1,41 @@
+{
+  "name": "OrgTreeTable",
+  "apiUrl": "/api/departments",
+  "fields": [
+    { "prop": "deptName", "label": "部门", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "leader", "label": "负责人", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "headcount", "label": "编制", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "align": "center" },
+    { "prop": "budget", "label": "年度预算（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "align": "right" },
+    { "prop": "note", "label": "备注", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "minWidth": 220 }
+  ],
+  "actions": ["add", "edit"],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "treeConfig": { "childrenField": "children", "expandAll": false },
+  "dialogs": {
+    "add": {
+      "title": "新增部门",
+      "formItems": [
+        { "prop": "deptName", "label": "部门", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        { "prop": "leader", "label": "负责人", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "headcount", "label": "编制", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    },
+    "edit": {
+      "title": "编辑部门",
+      "formItems": [
+        { "prop": "deptName", "label": "部门", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        { "prop": "leader", "label": "负责人", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "headcount", "label": "编制", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    }
+  },
+  "tableOptions": {
+    "border": true,
+    "stripe": false,
+    "rowkey": "id"
+  },
+  "pagination": { "pageSize": 20 }
+}

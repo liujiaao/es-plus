@@ -1,0 +1,71 @@
+{
+  "name": "LegacyErpGoods",
+  "apiUrl": "/api/goods",
+  "fields": [
+    { "prop": "sku", "label": "商品编码", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": true, "required": true, "querySpan": 6 },
+    { "prop": "name", "label": "商品名称", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": true, "required": true, "querySpan": 6 },
+    {
+      "prop": "supplierId",
+      "label": "供应商",
+      "formtype": "Select",
+      "inQuery": true,
+      "inTable": false,
+      "inForm": true,
+      "querySpan": 6,
+      "apiParams": { "url": "/api/suppliers", "method": "GET", "labelField": "name", "valueField": "id" }
+    },
+    { "prop": "supplierName", "label": "供应商", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false },
+    { "prop": "price", "label": "单价（元）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "align": "right" },
+    { "prop": "stock", "label": "库存", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true, "align": "center" }
+  ],
+  "actions": ["add", "edit"],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "dialogs": {
+    "add": {
+      "title": "新增商品",
+      "formItems": [
+        { "prop": "sku", "label": "商品编码", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        { "prop": "name", "label": "商品名称", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        {
+          "prop": "supplierId",
+          "label": "供应商",
+          "formtype": "Select",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "apiParams": { "url": "/api/suppliers", "method": "GET", "labelField": "name", "valueField": "id" }
+        },
+        { "prop": "price", "label": "单价（元）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "stock", "label": "库存", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    },
+    "edit": {
+      "title": "编辑商品",
+      "formItems": [
+        { "prop": "sku", "label": "商品编码", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        { "prop": "name", "label": "商品名称", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "required": true },
+        {
+          "prop": "supplierId",
+          "label": "供应商",
+          "formtype": "Select",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "apiParams": { "url": "/api/suppliers", "method": "GET", "labelField": "name", "valueField": "id" }
+        },
+        { "prop": "price", "label": "单价（元）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "stock", "label": "库存", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    }
+  },
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "rowkey": "id",
+    "configTableOut": { "tableData": "list", "total": "totalCount" }
+  },
+  "pagination": { "pageSize": 10 }
+}

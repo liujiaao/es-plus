@@ -1,0 +1,13 @@
+{
+  "id": "org-tree-table",
+  "title": "组织架构树表（零构树）",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/org-tree-table.config.json docs/cases/generated/org-tree-table.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/org-tree-table.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "层级是纯 JSON：treeConfig 只说了 childrenField（子数组即子节点），没有一行构树代码。配套的「展开行」不在本案例里 —— Element Plus 的 expand 列会让树表分支整棵失效，两者互斥，另见 expand-row。"
+}

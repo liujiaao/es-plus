@@ -1,0 +1,13 @@
+{
+  "id": "legacy-erp-api",
+  "title": "异构后端接管",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/legacy-erp-api.config.json docs/cases/generated/legacy-erp-api.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/legacy-erp-api.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "这个后端两处都不合本库默认口径：列表信封是 { list, totalCount }（configTableOut 声明映射），供应商下拉来自另一个接口（字段级 apiParams 声明取数 + label/value 映射）。页面里仍然没有一行请求代码。"
+}

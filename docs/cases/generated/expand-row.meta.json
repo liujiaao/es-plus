@@ -1,0 +1,13 @@
+{
+  "id": "expand-row",
+  "title": "展开行明细（纯 JSON 字段表）",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/expand-row.config.json docs/cases/generated/expand-row.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/expand-row.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "点行首箭头展开一条只读字段表：expandConfig 只给标题与字段清单，生成器把它变成一列 type:'expand'（内容仍是纯 JSON，不是渲染函数）。树表放不下它 —— el-table 有 expand 列时树分支整棵不渲染，故树表另立 org-tree-table。"
+}

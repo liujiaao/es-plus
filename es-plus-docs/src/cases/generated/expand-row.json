@@ -1,0 +1,154 @@
+{
+  "formItems": [
+    {
+      "prop": "contractNo",
+      "label": "合同号",
+      "formtype": "Input",
+      "span": 8,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "customer",
+      "label": "客户",
+      "formtype": "Input",
+      "span": 8,
+      "attrs": {
+        "clearable": true
+      }
+    }
+  ],
+  "columns": [
+    {
+      "type": "expand",
+      "expandConfig": {
+        "title": "合同条款",
+        "fields": [
+          {
+            "prop": "owner",
+            "label": "负责人"
+          },
+          {
+            "prop": "risk",
+            "label": "风险等级"
+          },
+          {
+            "prop": "clause",
+            "label": "条款摘要"
+          },
+          {
+            "prop": "lastReview",
+            "label": "最近复核"
+          }
+        ]
+      }
+    },
+    {
+      "prop": "contractNo",
+      "label": "合同号"
+    },
+    {
+      "prop": "customer",
+      "label": "客户"
+    },
+    {
+      "prop": "amount",
+      "label": "金额（万）",
+      "align": "right"
+    },
+    {
+      "prop": "signDate",
+      "label": "签署日期"
+    },
+    {
+      "prop": "phase",
+      "label": "阶段",
+      "align": "center",
+      "dataOptions": [
+        {
+          "label": "草拟",
+          "value": 0,
+          "tagType": "info"
+        },
+        {
+          "label": "履行中",
+          "value": 1,
+          "tagType": "success"
+        },
+        {
+          "label": "已归档",
+          "value": 2,
+          "tagType": "warning"
+        }
+      ]
+    }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "highlightCurrentRow": true,
+    "headerCellStyle": {
+      "background": "#f5f7fa"
+    },
+    "apiParams": {
+      "url": "/api/contracts"
+    },
+    "rowkey": "id"
+  },
+  "dialogs": {
+    "view": {
+      "title": "合同详情",
+      "formItems": [
+        {
+          "prop": "contractNo",
+          "label": "合同号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "disabled": true
+          }
+        },
+        {
+          "prop": "customer",
+          "label": "客户",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "disabled": true
+          }
+        },
+        {
+          "prop": "amount",
+          "label": "金额（万）",
+          "formtype": "InputNumber",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "disabled": true
+          }
+        },
+        {
+          "prop": "clause",
+          "label": "条款摘要",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true,
+            "type": "textarea",
+            "rows": 3,
+            "disabled": true
+          }
+        }
+      ]
+    }
+  },
+  "actions": [
+    "view"
+  ],
+  "pagination": {
+    "pageSize": 8
+  }
+}

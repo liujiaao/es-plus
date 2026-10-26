@@ -1,0 +1,50 @@
+{
+  "name": "ExpandRow",
+  "apiUrl": "/api/contracts",
+  "fields": [
+    { "prop": "contractNo", "label": "合同号", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "customer", "label": "客户", "formtype": "Input", "inQuery": true, "inTable": true, "inForm": false, "querySpan": 8 },
+    { "prop": "amount", "label": "金额（万）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": false, "align": "right" },
+    { "prop": "signDate", "label": "签署日期", "formtype": "DatePicker", "inQuery": false, "inTable": true, "inForm": false },
+    { "prop": "phase", "label": "阶段", "formtype": "Select", "inQuery": false, "inTable": true, "inForm": false, "align": "center", "dataOptions": [
+      { "label": "草拟", "value": 0, "tagType": "info" },
+      { "label": "履行中", "value": 1, "tagType": "success" },
+      { "label": "已归档", "value": 2, "tagType": "warning" }
+    ] },
+    { "prop": "owner", "label": "负责人", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false },
+    { "prop": "risk", "label": "风险等级", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false },
+    { "prop": "clause", "label": "条款摘要", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false },
+    { "prop": "lastReview", "label": "最近复核", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": false }
+  ],
+  "actions": ["view"],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "expandConfig": {
+    "title": "合同条款",
+    "fields": [
+      { "prop": "owner", "label": "负责人" },
+      { "prop": "risk", "label": "风险等级" },
+      { "prop": "clause", "label": "条款摘要" },
+      { "prop": "lastReview", "label": "最近复核" }
+    ]
+  },
+  "dialogs": {
+    "view": {
+      "title": "合同详情",
+      "formItems": [
+        { "prop": "contractNo", "label": "合同号", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "attrs": { "disabled": true } },
+        { "prop": "customer", "label": "客户", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true, "attrs": { "disabled": true } },
+        { "prop": "amount", "label": "金额（万）", "formtype": "InputNumber", "inQuery": false, "inTable": true, "inForm": true, "attrs": { "disabled": true } },
+        { "prop": "clause", "label": "条款摘要", "formtype": "Input", "inQuery": false, "inTable": false, "inForm": true, "attrs": { "type": "textarea", "rows": 3, "disabled": true } }
+      ]
+    }
+  },
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "rowkey": "id"
+  },
+  "pagination": { "pageSize": 8 }
+}

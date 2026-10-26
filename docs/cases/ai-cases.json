@@ -2,7 +2,10 @@
   "$schema": "https://liujiaao.github.io/es-plus/cases/ai-cases.schema.json",
   "version": 1,
   "note": "AI 展示案例矩阵的单一真源。站点副本（src/cases/**）与本文件里登记的产物由 scripts/sync-cases.mjs 分发；能力令牌的定义与可达性见 docs/ai/ai-capability-matrix.json（现场生成）。字段语义见 docs/cases/ai-cases.schema.json 与 docs/internal/ai-showcase-matrix-plan.md §4.6。",
-  "shared": ["cases.json", "cases-metrics.json"],
+  "shared": [
+    "cases.json",
+    "cases-metrics.json"
+  ],
   "clusters": {
     "C1": "字段三面扇出",
     "C2": "声明式联动",
@@ -23,13 +26,22 @@
       "title": "合同审批工作台",
       "origin": "handcrafted",
       "tier": "flagship",
-      "clusters": ["C2", "C4", "C5", "C6"],
+      "clusters": [
+        "C2",
+        "C4",
+        "C5",
+        "C6"
+      ],
       "tokens": [],
       "alwaysOn": [],
       "escapeHatch": [],
       "shape": "full",
       "scene": "crud",
-      "targets": ["vue3", "vue2", "antdv"],
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
       "mode": "schema",
       "claim": "execute",
       "sites": {
@@ -54,14 +66,21 @@
         "model": null
       },
       "e2e": [],
-      "guards": ["check:flagship-case"]
+      "guards": [
+        "check:flagship-case"
+      ]
     },
     {
       "id": "purchase-approval",
       "title": "采购申请审批页",
       "origin": "ai",
       "tier": "S1",
-      "clusters": ["C2", "C3", "C4", "C5"],
+      "clusters": [
+        "C2",
+        "C3",
+        "C4",
+        "C5"
+      ],
       "tokens": [
         "formtype",
         "validation",
@@ -73,11 +92,19 @@
         "toolbarBtns",
         "dialogs"
       ],
-      "alwaysOn": ["tableBase", "pagination", "columnsDecl"],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
       "escapeHatch": [],
       "shape": "full",
       "scene": "crud",
-      "targets": ["vue3", "vue2", "antdv"],
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
       "mode": "schema",
       "claim": "execute",
       "sites": {
@@ -105,20 +132,41 @@
         "attempts": 1
       },
       "e2e": [],
-      "guards": ["check:generated-case"]
+      "guards": [
+        "check:generated-case"
+      ]
     },
     {
       "id": "employee-roster",
       "title": "员工花名册",
       "origin": "ai",
       "tier": "S1",
-      "clusters": ["C1", "C3", "C6", "C10"],
-      "tokens": ["formtype", "validation", "cellDataOptions", "columnStyle", "dialogs"],
-      "alwaysOn": ["tableBase", "pagination", "columnsDecl"],
+      "clusters": [
+        "C1",
+        "C3",
+        "C6",
+        "C10"
+      ],
+      "tokens": [
+        "formtype",
+        "validation",
+        "cellDataOptions",
+        "columnStyle",
+        "dialogs"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
       "escapeHatch": [],
       "shape": "full",
       "scene": "crud",
-      "targets": ["vue3", "vue2", "antdv"],
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
       "mode": "schema",
       "claim": "execute",
       "sites": {
@@ -146,8 +194,338 @@
         "attempts": 1,
         "command": "ESPLUS_AI_MODEL=deepseek-v4-flash node packages/cli/build/index.js create employee-roster -d \"<nl>\" --ai -m schema -t vue3 --emit-config docs/cases/generated/employee-roster.config.json --force"
       },
-      "e2e": ["ai-gallery.spec.ts"],
-      "guards": ["check:ai-cases"]
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "order-batch",
+      "title": "订单批量处理",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C5",
+        "C7",
+        "C10"
+      ],
+      "tokens": [
+        "tableBtns",
+        "configTableOut",
+        "formLayout",
+        "defaultSort"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/order-batch.json",
+        "meta": "docs/cases/generated/order-batch.meta.json",
+        "mock": "docs/cases/generated/order-batch.mock.js",
+        "config": "docs/cases/generated/order-batch.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/order-batch.config.json docs/cases/generated/order-batch.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "org-tree-table",
+      "title": "组织架构树表（零构树）",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C8"
+      ],
+      "tokens": [
+        "treeConfig"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/org-tree-table.json",
+        "meta": "docs/cases/generated/org-tree-table.meta.json",
+        "mock": "docs/cases/generated/org-tree-table.mock.js",
+        "config": "docs/cases/generated/org-tree-table.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/org-tree-table.config.json docs/cases/generated/org-tree-table.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "expand-row",
+      "title": "展开行明细（纯 JSON 字段表）",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C8"
+      ],
+      "tokens": [
+        "expandConfig"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/expand-row.json",
+        "meta": "docs/cases/generated/expand-row.meta.json",
+        "mock": "docs/cases/generated/expand-row.mock.js",
+        "config": "docs/cases/generated/expand-row.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/expand-row.config.json docs/cases/generated/expand-row.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "grouped-report",
+      "title": "分组报表（合并单元格）",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C8"
+      ],
+      "tokens": [
+        "mergeConfig"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/grouped-report.json",
+        "meta": "docs/cases/generated/grouped-report.meta.json",
+        "mock": "docs/cases/generated/grouped-report.mock.js",
+        "config": "docs/cases/generated/grouped-report.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/grouped-report.config.json docs/cases/generated/grouped-report.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "legacy-erp-api",
+      "title": "异构后端接管",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C9"
+      ],
+      "tokens": [
+        "apiParams",
+        "configTableOut"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/legacy-erp-api.json",
+        "meta": "docs/cases/generated/legacy-erp-api.meta.json",
+        "mock": "docs/cases/generated/legacy-erp-api.mock.js",
+        "config": "docs/cases/generated/legacy-erp-api.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/legacy-erp-api.config.json docs/cases/generated/legacy-erp-api.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
+    },
+    {
+      "id": "engine-lab",
+      "title": "引擎实验室：5000 行虚拟滚动 + 行内编辑",
+      "origin": "config",
+      "tier": "S1",
+      "clusters": [
+        "C8"
+      ],
+      "tokens": [
+        "virtualScroll",
+        "inlineEdit",
+        "vxeFirstClass"
+      ],
+      "alwaysOn": [
+        "tableBase",
+        "pagination",
+        "columnsDecl"
+      ],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "schema",
+      "claim": "compile",
+      "sites": {
+        "es-plus-docs": "compile",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/engine-lab.json",
+        "meta": "docs/cases/generated/engine-lab.meta.json",
+        "mock": "docs/cases/generated/engine-lab.mock.js",
+        "config": "docs/cases/generated/engine-lab.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "generatedAt": "2026-10-26",
+        "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/engine-lab.config.json docs/cases/generated/engine-lab.json"
+      },
+      "e2e": [],
+      "guards": [
+        "check:ai-cases"
+      ]
     }
   ]
 }

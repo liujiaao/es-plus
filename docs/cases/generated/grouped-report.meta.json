@@ -1,0 +1,13 @@
+{
+  "id": "grouped-report",
+  "title": "分组报表（合并单元格）",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/grouped-report.config.json docs/cases/generated/grouped-report.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/grouped-report.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "部门 / 小组两列在相邻同值处合并单元格：mergeConfig 只声明「按哪些列分组」，没有 spanMethod 函数。注意它与全局排序天然互斥 —— 排序会把分组打散，默认排序演示放在 order-batch。"
+}

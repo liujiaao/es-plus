@@ -1,0 +1,13 @@
+{
+  "id": "engine-lab",
+  "title": "引擎实验室：5000 行虚拟滚动 + 行内编辑",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/engine-lab.config.json docs/cases/generated/engine-lab.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/engine-lab.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "换引擎只改一个枚举（tableOptions.engine: 'vxe'），顺手拿到虚拟滚动与行内编辑：双击金额 / 数量原地编辑。5000 行由 mock 生成，默认引擎在这份数据上会卡。注意行内编辑改的是表格内部副本（keepSource），不会回写 :data-source —— 要持久化得接 edit-closed / getUpdateRecords()。"
+}

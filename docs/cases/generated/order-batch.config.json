@@ -1,0 +1,138 @@
+{
+  "name": "OrderBatchManage",
+  "apiUrl": "/api/orders",
+  "fields": [
+    {
+      "prop": "orderNo",
+      "label": "订单号",
+      "formtype": "Input",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": false,
+      "querySpan": 6
+    },
+    {
+      "prop": "customer",
+      "label": "客户",
+      "formtype": "Input",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": false,
+      "querySpan": 6
+    },
+    {
+      "prop": "channel",
+      "label": "渠道",
+      "formtype": "Select",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": false,
+      "querySpan": 6,
+      "dataOptions": [
+        { "label": "线上", "value": "online" },
+        { "label": "门店", "value": "store" },
+        { "label": "分销", "value": "reseller" }
+      ]
+    },
+    {
+      "prop": "amount",
+      "label": "金额（元）",
+      "formtype": "Input",
+      "inQuery": false,
+      "inTable": true,
+      "inForm": false,
+      "align": "right"
+    },
+    {
+      "prop": "status",
+      "label": "状态",
+      "formtype": "Select",
+      "inQuery": true,
+      "inTable": true,
+      "inForm": false,
+      "querySpan": 6,
+      "dataOptions": [
+        { "label": "待发货", "value": 0, "tagType": "warning" },
+        { "label": "已发货", "value": 1, "tagType": "success" },
+        { "label": "已取消", "value": 2, "tagType": "info" }
+      ]
+    },
+    {
+      "prop": "createTime",
+      "label": "创建时间",
+      "formtype": "DatePicker",
+      "inQuery": false,
+      "inTable": true,
+      "inForm": false
+    }
+  ],
+  "actions": ["view"],
+  "mode": "schema",
+  "target": "vue3",
+  "typescript": true,
+  "i18n": false,
+  "formLayout": { "labelWidth": "84px", "minFoldRows": 1 },
+  "tableBtns": [
+    {
+      "name": "批量通过",
+      "key": "batch-approve",
+      "actionType": "batch-approve",
+      "position": "left",
+      "confirm": "确认通过选中的订单？"
+    },
+    {
+      "name": "导出已选",
+      "key": "export-selected",
+      "actionType": "export-selected",
+      "position": "left"
+    }
+  ],
+  "dialogs": {
+    "view": {
+      "title": "订单详情",
+      "destroyOnClose": true,
+      "formItems": [
+        { "prop": "orderNo", "label": "订单号", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        { "prop": "customer", "label": "客户", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        {
+          "prop": "channel",
+          "label": "渠道",
+          "formtype": "Select",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "dataOptions": [
+            { "label": "线上", "value": "online" },
+            { "label": "门店", "value": "store" },
+            { "label": "分销", "value": "reseller" }
+          ]
+        },
+        { "prop": "amount", "label": "金额（元）", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "inQuery": false,
+          "inTable": true,
+          "inForm": true,
+          "dataOptions": [
+            { "label": "待发货", "value": 0 },
+            { "label": "已发货", "value": 1 },
+            { "label": "已取消", "value": 2 }
+          ]
+        },
+        { "prop": "createTime", "label": "创建时间", "formtype": "Input", "inQuery": false, "inTable": true, "inForm": true }
+      ]
+    }
+  },
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "rowkey": "id",
+    "multiSelect": true,
+    "cachePageSelection": true,
+    "configTableOut": { "tableData": "list", "total": "count" },
+    "defaultSort": { "prop": "amount", "order": "descending" }
+  },
+  "pagination": { "pageSize": 8 }
+}

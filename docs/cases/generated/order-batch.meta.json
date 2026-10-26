@@ -1,0 +1,13 @@
+{
+  "id": "order-batch",
+  "title": "订单批量处理",
+  "origin": "config",
+  "generator": "手写冻结配置 → generateFromConfig（0 次模型调用）",
+  "command": "node scripts/gen-ai-case-artifact.mjs docs/cases/generated/order-batch.config.json docs/cases/generated/order-batch.json",
+  "generatedAt": "2026-10-26",
+  "target": "vue3",
+  "mode": "schema",
+  "warnings": [],
+  "artifactFrom": "docs/cases/generated/order-batch.config.json（确定性产出，见 scripts/gen-ai-case-artifact.mjs）",
+  "tip": "注意后端返回的是 { list, count }：表格能读出来，是因为 schema 里声明了 configTableOut，而不是宿主改了请求。勾选跨页保留，批量按钮作用在勾选行上；首屏按金额降序（defaultSort + 生成器给该列补的 sortable）。a-table 没有整表默认排序，antdv 侧它是列上的 sortable（服务端语义），故示例后端也按金额倒序返回 —— 三端首屏一致。"
+}
