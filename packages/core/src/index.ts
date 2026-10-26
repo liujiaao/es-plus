@@ -172,6 +172,20 @@ export type { LeadingColumnSpec, LeadingColumnType } from './table-columns'
 export { findTableDataOption, resolveTableCellDisplay } from './table-cell'
 export type { TableCellDisplay } from './table-cell'
 
+// ─── 服务端排序契约（`tableOptions.sortParam`，三端窄子集）──────────────
+// 排序状态机与参数拼装全在本模块，三端只做「存状态 → 请求时调 buildSortParams →
+// 表头变化时重取」，故三端等价由构造保证。
+export {
+  DEFAULT_SORT_PARAM_NAMES,
+  resolveSortParam,
+  normalizeSortOrder,
+  toTableSortState,
+  sameSortState,
+  seedSortState,
+  buildSortParams,
+} from './table-sort'
+export type { SortParamNames, SortParamOption, TableSortOrder, TableSortState } from './table-sort'
+
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'
 

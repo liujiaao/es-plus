@@ -863,6 +863,15 @@ export interface TableOptions {
   rowStyle?: Record<string, unknown> | ((params: { row: ModelData; rowIndex: number }) => Record<string, unknown>)
   /** 默认排序 { prop, order } */
   defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  /**
+   * 服务端排序契约：声明后「排序由后端算」——
+   *   ① 本端关掉本地排序（el/el-plus → `sortable: 'custom'`，vxe → `sortConfig.remote`，
+   *      a-table 的 `sorter: true` 本就是服务端语义，虚拟引擎本就不排）；
+   *   ② 每次请求带上 `{ sortField, sortOrder }`（字段名可改）；
+   *   ③ 点表头时保留当前页重新请求。
+   * 不声明 = 保持本地排序（历史行为）。求值见 `@es-plus/core` 的 `table-sort`。
+   */
+  sortParam?: boolean | { field?: string; order?: string }
   /** 合并单元格方法 */
   spanMethod?: (data: { row: ModelData; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
   /** 单元格类名 */
