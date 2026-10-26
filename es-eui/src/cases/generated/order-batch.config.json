@@ -132,7 +132,8 @@
     "multiSelect": true,
     "cachePageSelection": true,
     "configTableOut": { "tableData": "list", "total": "count" },
-    "defaultSort": { "prop": "amount", "order": "descending" }
+    "defaultSort": { "prop": "amount", "order": "descending" },
+    "sortParam": true
   },
   "pagination": { "pageSize": 8 }
 }

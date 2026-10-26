@@ -174,6 +174,75 @@ test('订单批量：跨页勾选后批量动作作用在全部选中行上', as
   // 3 = 第 1 页两行 + 第 2 页一行；跨页丢失时会变成 1
   await expect(page.getByText('已通过 3 个订单')).toBeVisible()
 })
+/**
+ * 服务端排序 —— `tableOptions.sortParam`（`defaultSort` 播种首屏，表头变化保留当前页重取）。
+ *
+ * 这条断言能成立的唯一原因是**参数真的到了后端**：mock 只在收到 `sortField` / `sortOrder`
+ * 时才按参数排（收不到就回落到金额降序）。因此「点表头后行序变了」等价于「请求带上了
+ * 排序参数」；首屏是降序同样来自参数（`defaultSort` 播种），不是本地排序凑出来的。
+ *
+ * 列序：multiSelect 前置选择列 → 订单号 / 客户 / 渠道 / **金额** / 状态 / 创建时间，
+ * 所以金额是第 5 个 `td`。断言只比大小关系（升序 / 降序），不写死具体数字。
+ */
+test('订单批量：点金额表头按服务端排序重取，且保留当前页', async ({ page }) => {
+  await page.goto('/#/ai-gallery/order-batch')
+  await expect(rows(page)).toHaveCount(8)
+
+  const amounts = async () =>
+    (
+      await page
+        .locator('.el-table__body-wrapper')
+        .first()
+        .locator('tbody tr.el-table__row td:nth-child(5)')
+        .allInnerTexts()
+    ).map((t) => Number(t.replace(/[^\d.]/g, '')))
+  const ascending = (xs: number[]) => xs.every((x, i) => i === 0 || xs[i - 1] <= x)
+  const descending = (xs: number[]) => xs.every((x, i) => i === 0 || xs[i - 1] >= x)
+
+  const header = page.locator('.el-table__header-wrapper th').filter({ hasText: '金额（元）' })
+  // 产物里 amount 列 sortable:true + tableOptions.sortParam 声明 → 组件把列降为 'custom'：
+  // 表头照常可点、指示器照常翻转，但数据由后端给（首屏已按 defaultSort 排好）。
+  await expect(header).toHaveAttribute('aria-sort', 'descending')
+  const page1Desc = await amounts()
+  expect(descending(page1Desc)).toBe(true)
+
+  // el-table 的点击循环是 descending → 清空 → ascending → descending（原生语义，不另造一套）：
+  // 首屏被 defaultSort 播种成 descending，所以第 1 击是**清空**排序。清空后请求不带排序参数，
+  // mock 回落到金额降序 —— 数据不变、指示器消失，正好证明「清空 ≠ 发空串参数」。
+  await header.click()
+  await expect(header).not.toHaveAttribute('aria-sort', 'descending')
+  expect(descending(await amounts())).toBe(true)
+
+  // 第 2 击 → 升序，按新排序重取（仍停在第 1 页）
+  await header.click()
+  await expect(header).toHaveAttribute('aria-sort', 'ascending')
+  await expect.poll(async () => ascending(await amounts())).toBe(true)
+  const page1Asc = await amounts()
+
+  // 翻到第 2 页：升序下「第 2 页的每一行都大于第 1 页的每一行」只有在后端排了整份数据时
+  // 才成立（本地排当前页的话，跨页之间根本不存在这种关系）。
+  // 判据用 expect.poll 包住整个跨页关系：页码先翻、数据后到（mock 有 120ms 延迟），
+  // 单读一次会把第 1 页的旧数据当成第 2 页（曾因此假通过又假失败）。
+  await page.locator('.el-pager li').filter({ hasText: /^2$/ }).click()
+  await expect(page.locator('.el-pager li.is-active')).toHaveText('2')
+  await expect
+    .poll(async () => {
+      const xs = await amounts()
+      return xs.length === 8 && ascending(xs) && Math.min(...xs) > Math.max(...page1Asc)
+    })
+    .toBe(true)
+
+  // 第 3 击 → 降序：排序变化**保留当前页**（仍停在 2），数据换成降序的第二段
+  await header.click()
+  await expect(header).toHaveAttribute('aria-sort', 'descending')
+  await expect(page.locator('.el-pager li.is-active')).toHaveText('2')
+  await expect
+    .poll(async () => {
+      const xs = await amounts()
+      return xs.length === 8 && descending(xs) && Math.max(...xs) < Math.min(...page1Desc)
+    })
+    .toBe(true)
+})
 
 /**
  * 树表 —— `treeConfig` 一个字段，层级来自**嵌套数据本身**（没有一行构树代码）。

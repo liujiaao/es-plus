@@ -215,7 +215,8 @@
         "tableBtns",
         "configTableOut",
         "formLayout",
-        "defaultSort"
+        "defaultSort",
+        "sortParam"
       ],
       "alwaysOn": [
         "tableBase",

@@ -8,6 +8,11 @@
  *     本 mock 返回 `{ list, count }`，schema 里写的是 `{ tableData:'list', total:'count' }`。
  *
  * 因此这里刻意**不**按 `{ rows, records }` 作答：那一层差异正是案例要展示的东西。
+ *
+ * 另一个簇 C7 的要点：`tableOptions.sortParam` —— 服务端排序契约。声明后表头不再本地排
+ * 当前页，而是每次请求都带 `sortField` / `sortOrder`（方向 asc | desc），点表头**保留当前页**
+ * 重取；`defaultSort` 同时播种首屏请求参数，所以首屏同样是后端排好的同一张表。
+ * 本 mock 真的按这两个参数排（后端不认它们，案例就只是把参数发出去而已）。
  * 站点宿主（es-eui）只在案例没有声明 configTableOut 时才套用站点全局口径。
  *
  * 契约见 `employee-roster.mock.js` 文件头；本文件多用了 `handleRowAction` 的第三个参数
@@ -52,11 +57,23 @@ export function createHttpRequest({ delay = 120 } = {}) {
       return true
     })
     const start = (pageNo - 1) * pageSize
-    // 后端信封：list / count（不是本库默认的 rows / records）
-    // 顺带按金额降序返回，与 schema 的 `defaultSort` 对齐：el-table 在本地排（同样的顺序），
-    // a-table 的 `sorter: true` 是**服务端语义**（只切指示器、不排本地数据）—— 后端排好，
-    // 三端首屏才是同一张表。
-    const sorted = [...rows].sort((a, b) => b.amount - a.amount)
+    // 服务端排序：sortField / sortOrder 由 <es-table> 的请求漏斗合并进来（tableOptions.sortParam）。
+    // 首屏也带着它们 —— defaultSort 播种了排序状态，所以「默认按金额降序」不是前端本地排出来的。
+    // 方向缺失 / 未知值 → 不按参数排（回落到金额降序）：后端不该猜客户端的意图。
+    const sortField = formParams.sortField || params.sortField
+    const sortOrder = formParams.sortOrder || params.sortOrder
+    const direction = sortOrder === 'asc' ? 1 : sortOrder === 'desc' ? -1 : 0
+    // 后端信封：list / count（不是本库默认的 rows / records）。
+    // 未带排序参数时仍按金额降序：三端首屏是同一张表（a-table 的 `sorter: true` 是服务端语义，
+    // 只切指示器、不排本地数据）。
+    const sorted = direction
+      ? [...rows].sort((a, b) => {
+          const x = a[sortField]
+          const y = b[sortField]
+          if (x === y) return 0
+          return (x > y ? 1 : -1) * direction
+        })
+      : [...rows].sort((a, b) => b.amount - a.amount)
     return { list: sorted.slice(start, start + pageSize).map((row) => ({ ...row })), count: rows.length }
   }
 }

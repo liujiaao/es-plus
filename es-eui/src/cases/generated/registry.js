@@ -115,7 +115,7 @@ export const AI_CASES = {
     claim: "execute",
     replay: "frozen-config",
     clusters: ["C5","C7","C10"],
-    tokens: ["tableBtns","configTableOut","formLayout","defaultSort"],
+    tokens: ["tableBtns","configTableOut","formLayout","defaultSort","sortParam"],
     host: {"kind":"generic","route":"/ai-gallery"},
     schema: orderBatch,
     meta: orderBatchMeta,

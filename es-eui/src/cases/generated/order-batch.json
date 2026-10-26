@@ -147,7 +147,8 @@
     "defaultSort": {
       "prop": "amount",
       "order": "descending"
-    }
+    },
+    "sortParam": true
   },
   "formLayout": {
     "labelWidth": "84px",
