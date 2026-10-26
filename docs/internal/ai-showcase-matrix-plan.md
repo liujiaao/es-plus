@@ -465,7 +465,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 - ~~**排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。~~ → **已闭环（见 §12）**
 - ~~**新案例没有 e2e**~~ → **已闭环（见 §11）**：`ai-gallery.spec.ts` 从 5 条扩到 11 条，5 页升到 `execute`；`engine-lab` 因 inlineEdit 在 AN-09 是 partial 仍停 `compile`（e2e 已登记，主张不越界）。
 - S2 组合画廊（18 golden）与 S3 工作流页仍未开工；`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做。
-- 展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。
+- ~~展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。~~ → **前提错了（2026-10-26 更正）**：vxe 的 `loadTableData` 只做 `reactive(datas.slice(0))`，编辑写的就是 `:data-source` 里那一行；`keepSource` 只是给 `revertData()` 留快照。宿主缺的是「改了哪一格、旧值多少」，已由 `cell-edit` 补上，见 §14。
 
 ## 11. 落地记录（Wave B 补课：e2e 主张承担者，2026-10-26）
 
@@ -496,7 +496,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 ### 11.4 仍未闭环
 
 - `es-pc` / `es-eui` 没有对应的 e2e project，5 页在那两端的 claim 保持 `compile`（诚实：跑过的才叫 execute）。
-- `engine-lab` 的 execute 需要 inlineEdit 在 AN-09 的 vue3 格子从 partial 变 full（即 vxe 侧把编辑结果回写 `data-source`，接 `edit-closed`），属 Wave C。
+- `engine-lab` 的 execute 需要 inlineEdit 在 AN-09 的 vue3 格子从 partial 变 full。**这条此前写错了原因**：`tableOptions.editConfig` 的 `partial` 是**引擎域**的事实（只有 vxe 引擎吃它），不是「编辑不回写」；回写本来就有，缺的是给宿主的 `cell-edit`，已于 §14 补上。claim 天花板是**结构性**的（`check-ai-cases` 断言 7：令牌非 full ⟹ 站点主张封顶 compile），改代码不会把它抬到 execute。
 
 ## 12. 落地记录（服务端排序契约 `tableOptions.sortParam`，2026-10-26）
 
@@ -542,7 +542,7 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 
 - **多列排序未建模**：`sorter` 是数组时只取第一列（三端一致地降级），按优先级的多列排序属 Wave C。
 - **参数只进请求、不改宿主数据**：后端没按参数排时，组件照原样显示（不本地兜底）—— 这是刻意选择，本地兜底会掩盖后端契约违约。
-- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
+- ~~Wave C 其余项不变：S2 组合画廊（18 golden）~~ → **已闭环（见 §13）**；其余不变：S3 工作流页、`feature-coverage.json` 的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写 → **`cell-edit` 已落地（见 §14）**，但 claim 仍停在 compile（结构性封顶，不是这个事件没做）。
 
 ## 13. 落地记录（S2 组合画廊，2026-10-26）
 
@@ -609,5 +609,82 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
 
 - es-pc / es-eui 没有对应的 e2e project，S2 在两端的 claim 保持 `measure + compile`（与 §11.4 同一条纪律）。
 - §12.5 的 Wave C 余项不变：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）、`feature-coverage.json`
-  的 `aiCase` 接缝、`engine-lab` 的 `edit-closed` 回写。
+  的 `aiCase` 接缝（`engine-lab` 的 `cell-edit` 已在 §14 落地）。
 - 上面 13.4 第 3 条的「弹窗体成员键」是下一批的候选（改完能把这 6/12 条噪音去掉）。
+
+## 14. 落地记录（vxe 行内编辑归一为 `cell-edit`，2026-10-26）
+
+起因是 §11.4 那条「`engine-lab` 的 execute 需要 vxe 侧把编辑结果回写 `data-source`」。
+按源码复核，**这条前提是错的**，三件事一起更正。
+
+### 14.1 调查结论（先证伪，再补缺）
+
+1. **编辑本来就回写**：vxe 的 `loadTableData` 对入参只做 `reactive(datas.slice(0))` —— 那是**同一批行对象**，
+   编辑写进去的就是宿主传进 `:data-source` 的那一行；es-table 的深监听照常发 `update:dataSource`。
+   `keepSource` 只是另存一份快照供 `revertData()` 用，不是「内部副本」。引擎里那条「改动不回写」的
+   DEV 警告因此是**错的**，已删除（三端同）。
+2. **claim 天花板是结构性的**：`tableOptions.editConfig` 在 AN-09 能力矩阵里是 `partial`（只有 vxe 引擎吃它，
+   这是**引擎域事实**、不是缺陷）。`check-ai-cases.mjs` 断言 7：任何非 `full` 的令牌把该站主张封顶在 `compile`。
+   ⟹ `engine-lab` 停在 `compile` 与「编辑回不回写」无关，改代码抬不上去。仍停 `compile`。
+3. **真正缺的那一块是事件**：vxe 原生 `edit-closed` 只给 `{ row, column }` —— 没有旧值，字段名还埋在
+   `column.property` / `field` / `prop` 里。宿主想知道「改了哪一格的什么值」只能自己拍快照。
+
+### 14.2 落地
+
+| 层 | 位置 | 说明 |
+|---|---|---|
+| 判定（单一实现点） | `packages/core/src/table-edit.ts`（新） | `resolveEditProp` / `snapshotEditRow` / `diffEditRow`；三端引擎都只调这三个，不再各写一遍 |
+| 载荷类型 | `packages/core/src/types.ts` `CellEditPayload` | `{ row, prop, value, oldValue }`。**刻意不带 `rowIndex`**：`dataSource.indexOf(row)` 在响应式代理下不可靠 |
+| 引擎（vxe） | 三端 `engines/vxe-engine.vue` | `edit-actived` 拍快照、`edit-closed` 比一遍 → 每处改动发一条 `cell-edit`；未改值不发；会话对不上（换行 / 数据被替换）时不猜旧值 |
+| 转发 | 三端 `es-table` → `es-crud-page` | Vue 3 端已声明事件不在 `$attrs` 里，必须显式接；Vue 2 端 es-table **不**重新 emit（`v-on="$listeners"` 与具名 `@cell-edit` 会各触发一次） |
+| 案例 | `docs/cases/generated/engine-lab.{mock.js,meta.json}` + 三站 `AiCaseHost` | mock 加 `handleCellEdit`；宿主**不**走 `notify()`（它顺手 `refresh()`，会把没落库的编辑当场打回原值），只弹提示 |
+| 案例配置 | `engine-lab.config.json` 的 `editRender` | 由 `$input` + `type: 'number'` 换成 `VxeNumberInput`：只有真进编辑态才会暴露的 deprecation 警告（es-pc 上实测，见 §14.5），两个 vxe 大版本都提供这个 renderer |
+| 文档 | 三站 es-table 事件表 / `structured-config.schema.ts` / `table-options.schema.json` / `ai-nl-to-config-prompt.ts` / `conventions.ts` | 事件表加 `cell-edit`；契约文本把「tracked on an internal copy」改成「直写行对象 + `cell-edit`」 |
+| e2e | `ai-gallery.spec.ts` 引擎实验室那条 | 失焦提交后断言宿主弹出的提示里带「哪一行 + 旧值 → 新值」，即事件真的到达宿主 |
+
+### 14.3 这一批的三条硬约束
+
+1. **会话槽不能用 `ref`**：`ref(obj)` 会深转成 `reactive`，读 `session.row` 拿到的是 `reactive(row)` 代理，
+   与 `edit-closed` 递进来的行对象不是同一引用 —— 身份校验永远失败、事件永远不发。真实环境看不出（vxe 的行
+   本来就是代理，`reactive(代理)` 返回同一个代理），只有单测用裸对象时才暴露。三端一律用普通变量。
+2. **两端的事件合并语义相反**：Vue 3 的 `mergeProps` 把 `v-bind` 里的 `onEditClosed` 与模板 `@edit-closed`
+   合成**数组**；Vue 2 的 `v-on="obj"` 与同名具名监听**互相覆盖**（逃生舱会被静默吞掉）。于是 Vue 3 走
+   模板监听（数组天然串起来），Vue 2 走 `computed` 里显式 compose。单测的桩必须容忍数组形态。
+3. **案例标题此前越界**：原题「5000 行虚拟滚动」不成立 —— `pagination.pageSize` 是 50，既没有 `virtual`
+   也没有 vxe `scrollY`，只渲染 50 行谈不上虚拟滚动（vxe 的差异化优势在**换引擎的成本**与虚拟化能力，
+   不在这一页的 50 行）。标题改为「一个枚举换引擎，5000 条里原地编辑」，e2e 注释同步更正。
+
+### 14.4 验证记录
+
+- 单测：core 430 / vue3 646 / vue2 398 / antdv 690 全绿（新增 `table-edit.spec.ts` 13 条 + 三端接线各 4–5 条）。
+- 守卫：`check:exports`（公开契约类型 36）/ `cases:check` / `schemas:check` / `check:ai-cases` 等见 §14.5。
+
+### 14.5 全量守卫与站点验证（实测）
+
+- **`npm run check:consistency` → 退出码 0**（全量 ~70 条守卫）。与本批相关的三条是重点：
+  - `check:parity`：`EMIT_CONTRACT['es-table'].expected` 收录 `cell-edit`；Vue 2 端登进 `forwarded.vue2`
+    并附**投递证明**（`<vxe-engine` 锚点 + `v-on="$listeners"` token），因此它**不能**再出现在 `emits` 里
+    （既声明又透传会被判「声明了却从不 emit」）。
+  - `check:site-api-drift`：三站 es-crud-page 事件表与 es-eui EsTable 事件表补上 `cell-edit`；Vue 2 的透传
+    走 `FORWARDED_EVENTS` 豁免（附链路文件清单）。顺带修掉了一个**假阳性源**：注释里带引号的 `$listeners` /
+    `$attrs` 会被 `typeLiteralKeys` / `topLevelKeys` 当成 emit 名，本批三处注释已改成不带引号的写法。
+  - `check:readme`：README / README.en.md 的契约类型计数 35 → **36**（新增 `CellEditPayload`）。
+- **单测**：core 430 / vue3 646 / vue2 398 / antdv 690 / shared 823，全绿。
+  （新增：`table-edit.spec.ts` 13 条；三端引擎各 4–5 条；es-table、es-crud-page 三端各 1 条转发断言。）
+- **三站构建**：es-plus-docs 59.69s、es-pc 20.33s、es-eui 退出码 0（产物落 `--dest dist-verify`，验完即删，
+  避开 `dist/` 的句柄占用）。三站均无新增告警。（构建跑在「案例配置改 `VxeNumberInput`」之前；那之后只动了
+  JSON 数据，由 e2e 与两个 dev 站点复验，不再重复构建三站。）
+- **e2e**（`__tests__/e2e-runtime`）：`--project=ai-gallery-docs` 单跑引擎实验室 → 1 passed（1.7s）；
+  整项目 → **13 passed（24.2s）**。新增断言用 `.el-message` 末条校验提示文案含 `SO-100000` 与
+  `1000.5 → 1234.5` —— 即「事件真的到达宿主、且带旧值」，而不只是「单元格显示变了」。
+- **浏览器实测**（dev，三站各一次真手改）：双击 `amount` 改值、失焦 ——
+  es-pc 与 es-eui 的单元格显示都变成新值，宿主各弹**一条**「SO-100000 · 金额：1000.5 → 1234.5
+  （已就地写入 :data-source…）」，表格不回滚（宿主没调 `notify()`）；es-pc 上另测 `qty`（`1 → 5`），确认
+  「未改值不发」之外的常规路径也只发一条（用只统计 `.ant-message-notice` 节点的 observer 复核，先前把
+  文本节点的重复 mutation 误读成了三条）。
+- **顺带修掉的两处噪声**（真进编辑态 / 真看页面才暴露，单测与构建都看不见）：
+  1. `editRender: $input + type: 'number'` 在 **vxe 3.16 / 4.20 两端都会**打 `不建议使用 <vxe-input type="number">`
+     警告（vxe-ui 的 `input` onMounted）。改成 `VxeNumberInput` renderer 后三站控制台 0 warning；
+     两个大版本的 `es/table/render/index.js` 都已内置这个 renderer，所以一份 schema 仍跨版本成立。
+  2. 案例 `tip` 由宿主以 `{{ meta.tip }}` **纯文本**渲染 —— 原先带的 `` ` `` / `**` 只会在三站页面上原样露出
+     反引号与星号。已改成无 Markdown 装饰的纯文本（`cases:sync` 分发到三站）。
