@@ -183,15 +183,82 @@ describe('normalizeConfig — dialogs.formItems 简写展开（AN-24）', () => 
     { prop: 'age', label: '年龄', formtype: 'Input' },
   ]
 
-  it('字符串引用顶层字段的 prop', () => {
+  it('字符串引用顶层字段的 prop（只投影表单面）', () => {
     const { config, renames } = normalizeConfig({
       name: 'Demo',
       fields,
       dialogs: { add: { formItems: ['name'] } },
     })
-    expect((config as any).dialogs.add.formItems).toEqual([fields[0]])
+    // 顶层字段的 inQuery 是**归属**键，弹窗表单项没有它的消费者 —— 不抄进来
+    expect((config as any).dialogs.add.formItems).toEqual([
+      { prop: 'name', label: '名称', formtype: 'Input' },
+    ])
     expect(renames).toHaveLength(1)
     expect(renames[0].note).toContain('字符串 "name"')
+  })
+
+  it('顶层字段只带表格/查询面键时零改写、零告警（不再制造「自动归一」噪音）', () => {
+    const { config, renames } = normalizeConfig({
+      name: 'Demo',
+      fields: [
+        {
+          prop: 'amount',
+          label: '金额',
+          formtype: 'Input',
+          inQuery: false,
+          inTable: true,
+          inForm: false,
+          querySpan: 8,
+          align: 'right',
+        },
+      ],
+      dialogs: { view: { formItems: [{ prop: 'amount', label: '金额', formtype: 'Input' }] } },
+    })
+    expect((config as any).dialogs.view.formItems).toEqual([
+      { prop: 'amount', label: '金额', formtype: 'Input' },
+    ])
+    expect(renames).toEqual([])
+  })
+
+  it('不继承顶层字段的 inForm:false —— 弹窗条目本身就是表单面', () => {
+    const { config } = normalizeConfig({
+      name: 'Demo',
+      fields: [{ prop: 'id', label: 'ID', formtype: 'Input', inTable: false, inForm: false }],
+      dialogs: { view: { formItems: ['id'] } },
+    })
+    const item = (config as any).dialogs.view.formItems[0]
+    expect(item).toEqual({ prop: 'id', label: 'ID', formtype: 'Input' })
+    expect('inForm' in item).toBe(false)
+  })
+
+  it('表单面键照样补全（attrs / dataOptions / required / rules / formSpan）', () => {
+    const { config } = normalizeConfig({
+      name: 'Demo',
+      fields: [
+        {
+          prop: 'status',
+          label: '状态',
+          formtype: 'Select',
+          dataOptions: [{ label: '启用', value: 1 }],
+          required: true,
+          rules: [{ required: true, message: '必选' }],
+          formSpan: 12,
+          attrs: { clearable: false },
+          querySpan: 8,
+        },
+      ],
+      dialogs: { edit: { formItems: ['status'] } },
+    })
+    expect((config as any).dialogs.edit.formItems[0]).toEqual({
+      prop: 'status',
+      label: '状态',
+      formtype: 'Select',
+      required: true,
+      rules: [{ required: true, message: '必选' }],
+      attrs: { clearable: false },
+      dataOptions: [{ label: '启用', value: 1 }],
+      formSpan: 12,
+    })
   })
 
   it('{ prop } 简写补全缺失键，条目自身给的键优先', () => {

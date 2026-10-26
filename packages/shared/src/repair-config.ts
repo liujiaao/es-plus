@@ -31,7 +31,7 @@
  *   - 不把无法解析的字符串"尽力猜"成对象（顶层找不到同 `prop` 就原样留给校验报错）。
  */
 import { StructuredCrudConfigSchema } from './structured-config.schema.js'
-import { normalizeConfig, type ConfigRename } from './normalize-config.js'
+import { normalizeConfig, projectDialogFormItem, type ConfigRename } from './normalize-config.js'
 import type { ZodIssueLike } from './validate-and-repair.js'
 
 /** 修复种类（给宿主看的机器可读分类）。 */
@@ -248,7 +248,7 @@ function candidatesFor(issue: IssueLike, config: unknown): Candidate[] {
     })
   }
 
-  // ⑤ 弹窗表单项的字符串简写：`formItems: ['name']` → 顶层同 prop 字段。
+  // ⑤ 弹窗表单项的字符串简写：`formItems: ['name']` → 顶层同 prop 字段（只投影表单面）。
   if (isFormItemPath(path) && isNonEmptyString(current)) {
     const field = fieldByProp(config, current)
     if (field) {
@@ -258,7 +258,7 @@ function candidatesFor(issue: IssueLike, config: unknown): Candidate[] {
           kind: 'expand-form-item',
           note: `弹窗表单项写成了字符串 "${current}"，已按顶层 fields 中同 prop 的字段定义展开。`,
         },
-        apply: (cfg) => setAt(cfg, path, cloneValue(field)),
+        apply: (cfg) => setAt(cfg, path, projectDialogFormItem(field)),
       })
     }
   }

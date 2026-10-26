@@ -33,6 +33,10 @@
  *    依据：顶层 `fields` 已经是字段的权威定义；弹窗里写 `['name']` 或 `[{ prop:'name' }]`
  *    显然是在引用同一字段。展开 = 用顶层同 `prop` 字段补全缺失键，**条目自身给的键优先**。
  *    `prop` 在顶层找不到时原样保留（不猜）。
+ *    展开**只投影表单面**（`DIALOG_FORM_ITEM_KEYS`）：`inQuery/inTable/inForm` 是生成器侧
+ *    的归属推导，`querySpan/align/width` 之类是表格/查询面的布局，弹窗里没有消费者 ——
+ *    抄进去既让每条简写都发一条「自动归一」把真问题淹掉，又可能把一个本该在弹窗里渲染的
+ *    条目标成 `inForm: false`（见 `projectDialogFormItem` 头注）。
  *
  * 刻意**不**做的：「猜意图」的改名（`rowKey`→`rowkey`、`type`→`formtype`…）。
  * 那些是拼写错误，应当由 `collectUnknownKeys` 报出来让宿主自己改 —— 静默改写在
@@ -189,8 +193,53 @@ function expandDialogs(raw: unknown, renames: ConfigRename[]): unknown {
 }
 
 /**
+ * 弹窗表单项（`dialogs[k].formItems[*]`）真正消费的键 —— 展开顶层字段时的**投影白名单**。
+ *
+ * 依据：三个渲染端把弹窗 `formItems` 原样交给 EsForm（`formItemList`），表单面只读
+ * `prop/label/labelKey/formtype/required/rules/attrs/dataOptions/apiParams/formSpan/
+ * permissionValue/isHidden/reactions`。三成员布尔 `inQuery/inTable/inForm` 是**生成器侧
+ * 的归属推导**（`structured-generator` 按 `field.inForm !== false` 收字段），表格/查询面
+ * 专有的 `querySpan`/`align`/`width`/`minWidth`/`fixed`/`ellipsis`/`formatter`/`render`
+ * 在弹窗里没有任何消费者。
+ *
+ * 不投影会制造两类**错**（都不只是噪音）：
+ *   ① 每条 `formItems` 简写都发一条「自动归一」，把真正的映射问题淹掉；
+ *   ② 顶层字段的 `inForm: false`（只查不录）被抄进弹窗表单项 —— 一个明明要在弹窗里渲染的
+ *      条目被标成「不进表单」，语义自相矛盾。（同理 `inQuery: true` 会让弹窗条目看起来像
+ *      查询字段。）这与 `repair-config` 头注「不补 `.default()`」是同一条纪律：
+ *      省略就保持省略，绝不替宿主编造归属。
+ */
+export const DIALOG_FORM_ITEM_KEYS = [
+  'prop',
+  'label',
+  'labelKey',
+  'formtype',
+  'required',
+  'rules',
+  'attrs',
+  'dataOptions',
+  'apiParams',
+  'formSpan',
+  'permissionValue',
+  'isHidden',
+  'reactions',
+] as const
+
+/** 把顶层字段投影成弹窗表单项（丢掉表格/查询面与归属键）。只带**有值**的键。 */
+export function projectDialogFormItem(field: Record<string, unknown>): Record<string, unknown> {
+  const item: Record<string, unknown> = {}
+  for (const key of DIALOG_FORM_ITEM_KEYS) {
+    if (field[key] !== undefined) item[key] = cloneValue(field[key])
+  }
+  return item
+}
+
+/**
  * `dialogs[k].formItems` 简写展开（AN-24）：`'name'` / `{ prop:'name' }` → 顶层同 prop 字段。
  *
+ * 展开**只补表单面**的键（见 `DIALOG_FORM_ITEM_KEYS`）：顶层字段的
+ * `inQuery/inTable/inForm`、`querySpan`、`align` 之类在弹窗里没有消费者，抄进去只会
+ * 制造「自动归一」噪音与自相矛盾的归属标记。
  * 条目自身给出的键优先；只补**条目没给**的键。顶层找不到同 prop 字段时原样保留。
  */
 function expandDialogFormItems(
@@ -215,14 +264,15 @@ function expandDialogFormItems(
         to: basePath,
         note: `弹窗表单项写成了字符串 "${item}"，已按顶层 fields 中同 prop 的字段定义展开（补全 label/formtype 等）。`,
       })
-      return cloneValue(field)
+      return projectDialogFormItem(field)
     }
 
-    // 形态②：{ prop } 简写 = 顶层字段 + 条目自身的覆盖
+    // 形态②：{ prop } 简写 = 顶层字段（表单面投影）+ 条目自身的覆盖
     if (isPlainObject(item) && isNonEmptyString(item.prop)) {
       const field = fieldsByProp.get(item.prop)
       if (!field) return item
-      const missing = Object.keys(field).filter((k) => !(k in item))
+      const projected = projectDialogFormItem(field)
+      const missing = Object.keys(projected).filter((k) => !(k in item))
       if (missing.length === 0) return item
       changed = true
       renames.push({
@@ -230,7 +280,7 @@ function expandDialogFormItems(
         to: basePath,
         note: `弹窗表单项只给了部分键，已用顶层 fields 中 prop="${item.prop}" 的字段补全缺失键（${missing.join(', ')}）；条目自身给的键优先。`,
       })
-      return { ...cloneValue(field), ...item }
+      return { ...projected, ...item }
     }
 
     return item

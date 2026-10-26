@@ -1200,14 +1200,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -1629,14 +1622,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -2058,14 +2044,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -2522,20 +2501,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -3067,20 +3033,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -3612,20 +3565,7 @@ export const COMPOSITION_GALLERY = {
           "got": null
         }
       ],
-      "warnings": [
-        "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-        "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-      ],
+      "warnings": [],
       "product": {
         "kind": "page",
         "pageSchema": {
@@ -5560,30 +5500,9 @@ export const COMPOSITION_GALLERY = {
         "antdv": 2963
       },
       "warningsByTarget": {
-        "vue3": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ],
-        "vue2": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ],
-        "antdv": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"name\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ]
+        "vue3": [],
+        "vue2": [],
+        "antdv": []
       },
       "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
     },
@@ -5608,48 +5527,9 @@ export const COMPOSITION_GALLERY = {
         "antdv": 4592
       },
       "warningsByTarget": {
-        "vue3": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ],
-        "vue2": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ],
-        "antdv": [
-          "自动归一：/dialogs/add/formItems/0 → /dialogs/add/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/1 → /dialogs/add/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/2 → /dialogs/add/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/add/formItems/3 → /dialogs/add/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/0 → /dialogs/edit/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/1 → /dialogs/edit/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/2 → /dialogs/edit/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/edit/formItems/3 → /dialogs/edit/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/0 → /dialogs/view/formItems/0（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"orderNo\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/1 → /dialogs/view/formItems/1（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"amount\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/2 → /dialogs/view/formItems/2（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"status\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）",
-          "自动归一：/dialogs/view/formItems/3 → /dialogs/view/formItems/3（弹窗表单项只给了部分键，已用顶层 fields 中 prop=\"remark\" 的字段补全缺失键（inQuery, inTable, inForm）；条目自身给的键优先。）"
-        ]
+        "vue3": [],
+        "vue2": [],
+        "antdv": []
       },
       "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
     },

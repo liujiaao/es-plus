@@ -131,6 +131,21 @@ describe('repairConfig — dialogs 简写（normalizeConfig 的修复面对外�
       { prop: 'age', label: '年龄', formtype: 'Input' },
     ])
   })
+
+  it('展开只投影表单面：不继承 inForm:false / inQuery / querySpan / align', () => {
+    const { config, renames } = repairConfig(
+      base({
+        fields: [
+          { ...FIELD, inQuery: false, inTable: true, inForm: false, querySpan: 8, align: 'right' },
+        ],
+        dialogs: { view: { formItems: ['name', { prop: 'name' }] } },
+      }),
+    )
+    // 顶层字段的归属键（inForm:false）与布局键（querySpan/align）在弹窗里没有消费者，
+    // 抄进去只会把一个要在弹窗渲染的条目标成「不进表单」。
+    expect((config as any).dialogs.view.formItems).toEqual([{ ...FIELD }, { ...FIELD }])
+    expect(renames.map((r) => r.note).join('\n')).not.toContain('querySpan')
+  })
 })
 
 describe('repairConfig — 边界与安全阀', () => {
