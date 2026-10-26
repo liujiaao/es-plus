@@ -254,6 +254,11 @@
               <td>弹窗取消 / 关闭</td>
               <td>(key)</td>
             </tr>
+            <tr>
+              <td>cell-edit</td>
+              <td>vxe 行内编辑提交（内层 EsTable 的同名事件转发）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）</td>
+              <td>({ row, prop, value, oldValue })</td>
+            </tr>
           </tbody>
         </table>
       </div>

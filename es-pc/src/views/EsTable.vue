@@ -334,6 +334,7 @@ const tableEvents = [
   { key: '5', event: 'change-table-sort', params: '(column)', desc: '排序变化' },
   { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行（default / vxe 同口径）；跨页全集用 getSelectionRows()' },
   { key: '7', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
+  { key: '8', event: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）' },
 ]
 
 const tableMethods = [

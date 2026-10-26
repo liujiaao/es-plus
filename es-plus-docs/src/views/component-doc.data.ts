@@ -285,6 +285,8 @@ export const docsData: Record<string, any> = {
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
         { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' },
         { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取' },
+        { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取' },
+        { name: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行时）：每改一格发一条，未改值不发。vxe 原生 edit-closed 只给 { row, column }，这里把字段名与旧值一并补上；行模式（editConfig.mode: "row"）一次会话改几格就发几条' },
         { name: 'request-error', params: '(error)', desc: '自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null' }
       ],
       methods: [
@@ -428,7 +430,8 @@ export const docsData: Record<string, any> = {
         { name: 'edit', params: '(row)', desc: '编辑按钮点击（向后兼容）' },
         { name: 'view', params: '(row)', desc: '查看按钮点击（向后兼容）' },
         { name: 'delete', params: '(row)', desc: '删除按钮点击（向后兼容）' },
-        { name: 'row-click', params: '(row)', desc: '表格行点击事件透传' }
+        { name: 'row-click', params: '(row)', desc: '表格行点击事件透传' },
+        { name: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（透传 es-table 的同名事件）：每改一格发一条，未改值不发' }
       ],
       methods: [
         { name: 'refresh', params: '-', desc: '刷新表格数据' },

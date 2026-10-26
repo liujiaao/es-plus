@@ -9,9 +9,22 @@
  * 5000 行是**生成**的，不写字面量：案例要证明的是「大数据量下仍然可点」，
  * 而不是让人读 5000 行 JSON。
  *
- * 契约见 `employee-roster.mock.js` 文件头。行内编辑产生的新值由 vxe 自己维持
- * （keepSource），本 mock 不做写回 —— 真实项目在这里接一个保存接口。
+ * 契约见 `employee-roster.mock.js` 文件头。
+ *
+ * 行内编辑的写回语义（此处曾写错，2026-10-26 更正）：vxe 的 `loadTableData` 只对入参做
+ * `reactive(datas.slice(0))` —— 那是**同一批行对象**，编辑写的就是 `:data-source` 里那一行，
+ * 宿主会照常收到 `update:dataSource`。`keepSource` 只是另存一份快照供 `revertData()` 回滚，
+ * 不是「表格内部副本」。真正需要宿主接的是 `cell-edit`：vxe 原生 `edit-closed` 只给
+ * `{ row, column }`（没有旧值、没有字段名），es-plus 在引擎里归一成
+ * `{ row, prop, value, oldValue }`，未改值不发。下方 `handleCellEdit` 就是它的消费点。
  */
+
+/** 行内编辑提交：提示「宿主真的看得见改了哪一格」，真实项目在这里调保存接口。 */
+export function handleCellEdit({ row, prop, value, oldValue }) {
+  const label = prop === 'amount' ? '金额' : prop === 'qty' ? '数量' : prop
+  const from = oldValue ?? '(空)'
+  return `${row.orderNo} · ${label}：${from} → ${value}（已就地写入 :data-source，持久化请接本事件或 getUpdateRecords()）`
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 

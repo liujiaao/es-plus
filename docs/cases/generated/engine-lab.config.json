@@ -21,14 +21,14 @@
       "label": "金额（元）",
       "width": 140,
       "align": "right",
-      "editRender": { "name": "$input", "props": { "type": "number", "min": 0 } }
+      "editRender": { "name": "VxeNumberInput", "props": { "min": 0 } }
     },
     {
       "prop": "qty",
       "label": "数量",
       "width": 110,
       "align": "center",
-      "editRender": { "name": "$input", "props": { "type": "number", "min": 1 } }
+      "editRender": { "name": "VxeNumberInput", "props": { "min": 1 } }
     },
     { "prop": "status", "label": "状态", "width": 100 }
   ],

@@ -338,17 +338,23 @@ test('异构后端：信封映射出总条数，远端下拉拿到宿主 mock �
 })
 
 /**
- * 引擎实验室 —— `tableOptions.engine: 'vxe'` 一个枚举换来三件事：
- * 5000 行翻页只渲染 50 行（虚拟滚动 / 大数据量）、双击单元格原地编辑（editConfig）、
- * 以及与原引擎一致的列声明（columns[].editRender）。
+ * 引擎实验室 —— `tableOptions.engine: 'vxe'` 一个枚举换掉整颗渲染引擎，顺带拿到三件事：
+ * 与 el-table 同形状的列声明 / 事件契约、5000 条按页取数（每页 50 行）、
+ * 以及双击单元格原地编辑（`editConfig` + `columns[].editRender`）。
  *
- * 注意两件事：
+ * 三件容易搞错的事：
  *   1. 提交时机是**失焦**（点别的单元格），不是回车 —— Enter/Esc 只在 `keyboardConfig`
  *      开启时才由 vxe 处理，本案例没有开，回车在输入框里什么也不做（实测）。
- *   2. 这条用例**不**能把 claim 抬到 execute —— inlineEdit 在 AN-09 的 vue3 格子里是
- *      partial（vxe 侧 keepSource 不回写 data-source），按 §6 B2 该案例三端都停在 compile。
+ *   2. 编辑**确实**写回 `:data-source` 里的行对象：vxe 的 loadTableData 只对入参做
+ *      `reactive(datas.slice(0))`（同一批引用），`keepSource` 另存的那份快照只供
+ *      `revertData()` 回滚。旧的说法「改的是内部副本、不回写」是错的（已于 2026-10-26 更正）。
+ *   3. 宿主要知道「改了哪一格、旧值多少」得靠 es-plus 归一的 `cell-edit`
+ *      （vxe 原生 edit-closed 只有 { row, column }）—— 本用例断言这条事件真的到达宿主。
+ *
+ * 这条用例**不**把 claim 抬到 execute：`tableOptions.editConfig` 在 AN-09 能力矩阵里是
+ * partial（只有部分引擎 / 子键生效），按 §6 B2 该案例三端都停在 compile。
  */
-test('引擎实验室：vxe 引擎 5000 行分页 50 行，双击原地编辑', async ({ page }) => {
+test('引擎实验室：一个枚举换 vxe，双击原地编辑并把改动回传宿主', async ({ page }) => {
   await page.goto('/#/ai-gallery/engine-lab')
 
   await expect(page.locator('.vxe-table')).toBeVisible()
@@ -365,10 +371,15 @@ test('引擎实验室：vxe 引擎 5000 行分页 50 行，双击原地编辑', 
   await expect(input).toBeVisible()
   await input.fill('1234.5')
 
-  // 点别的单元格 = 失焦提交（keepSource 只改表格内部副本，不回写 data-source）
+  // 点别的单元格 = 失焦提交
   await page.locator('.vxe-table .vxe-body--row').nth(1).locator('.vxe-body--column').nth(1).click()
   await expect(firstRow.locator('input')).toHaveCount(0)
   await expect(cell).toContainText('1234.5')
+
+  // 宿主收到 cell-edit({ row, prop, value, oldValue })，据此在提示里报出「哪一行、旧值 → 新值」
+  const toast = page.locator('.el-message').last()
+  await expect(toast).toContainText('SO-100000')
+  await expect(toast).toContainText('1000.5 → 1234.5')
 })
 
 /**

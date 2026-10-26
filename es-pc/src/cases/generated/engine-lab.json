@@ -36,9 +36,8 @@
       "width": 140,
       "align": "right",
       "editRender": {
-        "name": "$input",
+        "name": "VxeNumberInput",
         "props": {
-          "type": "number",
           "min": 0
         }
       }
@@ -49,9 +48,8 @@
       "width": 110,
       "align": "center",
       "editRender": {
-        "name": "$input",
+        "name": "VxeNumberInput",
         "props": {
-          "type": "number",
           "min": 1
         }
       }

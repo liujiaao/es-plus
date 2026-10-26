@@ -34,6 +34,7 @@
       :schema="entry.schema"
       :http-request="mockHttp"
       @btn-click="onBtnClick"
+      @cell-edit="onCellEdit"
       @dialog-open="onDialogOpen"
       @dialog-confirm="onDialogConfirm"
     />
@@ -53,7 +54,8 @@
  * 提供（`docs/cases/generated/<id>.mock.js` 的统一契约）：
  *   1. 请求：`createHttpRequest({delay})` → 组件 prop；
  *   2. 权限：`createPermission(controlsState)` → 全局配置；
- *   3. 副作用：`handleDialogConfirm(key, data, row)` / `handleRowAction(key, row)` → 提示文案。
+ *   3. 副作用：`handleDialogConfirm(key, data, row)` / `handleRowAction(key, row)` /
+ *      `handleCellEdit({ row, prop, value, oldValue })` → 提示文案。
  *
  * 于是新增一个案例只需要：manifest 加一条 + 产物落盘 + sync —— 不必再写宿主页。
  * 另两端（es-pc / es-eui）是同一份逻辑的框架投影，不是第二套逻辑。
@@ -130,6 +132,18 @@ function onDialogConfirm(key, data) {
 function onBtnClick(key, row) {
   const selection = crudRef.value?.getSelectedRows?.() ?? []
   notify(mock.value.handleRowAction?.(key, row ?? openedRow, { selection }))
+}
+
+/**
+ * 行内编辑（仅 vxe 引擎）：引擎把原生的 edit-actived / edit-closed 归一成
+ * `cell-edit`，载荷带旧值 —— 宿主因此知道「改了哪一格的什么值」。
+ *
+ * 这里刻意**不走** notify()：它顺手 refresh()，会把当前页重新取回来（mock 没落库），
+ * 刚编辑的那格当场被打回原值。案例只提示一句；真实项目在这里接保存接口。
+ */
+function onCellEdit(payload) {
+  const message = mock.value.handleCellEdit?.(payload)
+  if (message) ElMessage.success(message)
 }
 
 const CLAIM_LABEL = { execute: '三端可交互', compile: '产物可编译', measure: '仅被度量' }

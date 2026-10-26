@@ -50,7 +50,7 @@ export const AI_CASES = {
   },
   "engine-lab": {
     id: "engine-lab",
-    title: "引擎实验室：5000 行虚拟滚动 + 行内编辑",
+    title: "引擎实验室：一个枚举换引擎，5000 条里原地编辑",
     claim: "compile",
     replay: "frozen-config",
     clusters: ["C8"],

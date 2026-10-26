@@ -325,6 +325,7 @@ const crudEvents = [
   { key: '9', event: 'dialog-confirm', params: '(dialogKey, data)', desc: '弹窗确认' },
   { key: '10', event: 'dialog-cancel', params: '(dialogKey)', desc: '弹窗取消' },
   { key: '11', event: 'dialog-open', params: '(dialogKey, row?)', desc: '弹窗打开' },
+  { key: '12', event: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（透传 es-table）：每改一格发一条，未改值不发' },
 ]
 
 const crudMethods = [

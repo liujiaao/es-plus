@@ -32,6 +32,7 @@
       :schema="entry.schema"
       :http-request="mockHttp"
       @btn-click="onBtnClick"
+      @cell-edit="onCellEdit"
       @dialog-open="onDialogOpen"
       @dialog-confirm="onDialogConfirm"
     />
@@ -170,6 +171,14 @@ export default {
       const api = this.$refs.crudRef
       const selection = (api && api.getSelectedRows && api.getSelectedRows()) || []
       this.notify(handle ? handle(key, row || this.openedRow, { selection }) : null)
+    },
+    // 行内编辑（仅 vxe 引擎）：引擎把原生 edit-actived / edit-closed 归一成
+    // `cell-edit`（带旧值）。刻意**不走** notify() —— 它顺手 refresh()，会把当前页
+    // 重新取回来（mock 没落库），刚编辑的那格当场被打回原值。真实项目在这里接保存接口。
+    onCellEdit(payload) {
+      const handle = this.entry.mock && this.entry.mock.handleCellEdit
+      const text = handle ? handle(payload) : null
+      if (text) Message.success(text)
     },
   },
 }

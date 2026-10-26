@@ -629,6 +629,7 @@
         <tr><td>change-table-sort</td><td>排序变化（vxe 引擎下参数为 sortInfo 对象）</td><td>(column)</td></tr>
         <tr><td>selection-change</td><td>勾选变化（当前页选中行，default / vxe 同口径；跨页全集用 getSelectionRows() 取）</td><td>(rows)</td></tr>
         <tr><td>request-error</td><td>自动加载失败（错误同时可从 <code>requestError</code> 读到）</td><td>(error)</td></tr>
+        <tr><td>cell-edit</td><td>vxe 行内编辑提交（失焦 / 换行）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）</td><td>({ row, prop, value, oldValue })</td></tr>
       </tbody>
     </table>
 
