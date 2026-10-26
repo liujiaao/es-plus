@@ -11,7 +11,7 @@
  * | # | 断言 | 防止 |
  * |---|---|---|
  * | 1 | manifest 过 schema、id 唯一 | 手滑 / 半成品条目 |
- * | 2 | 产物存在；meta 与 manifest 的 id/title/model/date/attempts/mode/target 一致 | 页面说的和产物不符 |
+ * | 2 | 产物存在；meta 与 manifest 的 id/title/model/date/attempts/mode/target 一致；origin 与证据形态自洽（ai→有模型名、config→可重放、handcrafted→写清为何不可重放） | 页面说的和产物不符 / 出处互相冒充 |
  * | 3 | schema / config 是纯 JSON（无函数式键、无函数体字样） | 把宿主代码藏进配置 |
  * | 4 | **可重放**：`frozen-config` → 产物 == JSON(generateFromConfig(冻结配置))；`surfaces` → 产物结构事实 == 前门(冻结入参)；`unavailable`/`handcrafted` → 必带原因且必带承担它的守卫 | 「AI 生成」无法追溯 |
  * | 5 | **能力证据**：`tokens[]` 在能力矩阵里是 declarative，且产物里该路径非空；`alwaysOn[]` 必须是 auto 令牌；`escapeHatch[]` 必须是逃生舱令牌 | 只写卖点、没真用 |
@@ -251,6 +251,33 @@ await check('2. 产物存在，meta 与 manifest 出处一致', () => {
     }
     if (p.attempts !== undefined) {
       assert.equal(meta.attempts, p.attempts, `${c.artifacts.meta} 的 attempts 与 manifest 不符`)
+    }
+  }
+
+  // origin 是**出处声明**，不是标签：三种出处各有它必须成立的证据形态，否则可以互相冒充。
+  //   · ai —— 必须留下模型名（「模型写的」这句话的唯一凭据）；
+  //   · config —— 配置是手写的，那就必须能被重放（手写配置没有理由不可重放）；
+  //   · handcrafted —— 无生成输入，必须显式写清为什么不能重放。
+  // 这一条故意不写在 schema 里：JSON Schema 表达不了「origin 与另一个字段的联合约束」，
+  // 写在这里才能连同错误信息一起给出改法。
+  for (const c of manifest.cases) {
+    if (c.origin === 'ai') {
+      assert.ok(
+        (c.provenance ?? {}).model,
+        `${c.id} 声明 origin=ai，但 provenance.model 为空 —— 「模型生成」必须留下模型名`
+      )
+    } else if (c.origin === 'config') {
+      assert.equal(
+        c.replay.kind,
+        'frozen-config',
+        `${c.id} 声明 origin=config（手写配置 + 确定性生成），replay 必须是 frozen-config —— 手写配置没有理由不可重放`
+      )
+      assert.ok(c.artifacts.config, `${c.id} 声明 origin=config，必须登记 artifacts.config（否则无从重放）`)
+    } else {
+      assert.ok(
+        ['handcrafted', 'unavailable'].includes(c.replay.kind),
+        `${c.id} 声明 origin=handcrafted，replay.kind 却是 ${c.replay.kind} —— 手工页没有生成输入，不该声称可重放`
+      )
     }
   }
 })

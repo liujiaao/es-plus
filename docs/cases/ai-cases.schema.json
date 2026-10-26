@@ -57,7 +57,10 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
         "title": { "type": "string", "minLength": 2 },
-        "origin": { "enum": ["ai", "handcrafted"] },
+        "origin": {
+          "description": "ai = 模型产出的配置（provenance.model 必填）；config = 手写的冻结配置经确定性生成器产出（与 AI 路径同一个生成器，故必须可重放）；handcrafted = 手工页面（无生成输入）。",
+          "enum": ["ai", "config", "handcrafted"]
+        },
         "tier": { "enum": ["flagship", "S1", "S2", "S3"] },
         "clusters": {
           "description": "能力簇编号（C1–C12，见 docs/internal/ai-showcase-matrix-plan.md §4.2）。",

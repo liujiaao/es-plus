@@ -165,7 +165,13 @@ export const TOKEN_MAP = [
     token: 'expandConfig',
     kind: 'declarative',
     structuredPath: 'expandConfig',
-    artifactPaths: ['tableOptions.expandConfig'],
+    // 两个不同的家，别混：
+    //   · 声明式展开内容（跨端）落成**展开列** `columns[].expandConfig` —— schema 模式下
+    //     生成器把顶层 expandConfig 前置成 `{ type:'expand', expandConfig }`（structured-
+    //     generator 的 applyExpandConfig）。这是本令牌的运行时家。
+    //   · `tableOptions.expandConfig` 是 vxe 的行展开**开关**（accordion / lazy），
+    //     不是内容。此前只登记后者，于是任何真用声明式展开的产物都取不到证据。
+    artifactPaths: ['columns[].expandConfig', 'tableOptions.expandConfig'],
     note: '展开行',
   },
   {

@@ -394,6 +394,7 @@
       "kind": "declarative",
       "structuredPath": "expandConfig",
       "artifactPaths": [
+        "columns[].expandConfig",
         "tableOptions.expandConfig"
       ],
       "reach": "front-door:passthrough",
