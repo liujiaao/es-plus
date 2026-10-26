@@ -4,11 +4,11 @@
 >
 > 关联文档：[example-audit-and-flagship-plan.md](./example-audit-and-flagship-plan.md)（§6 旗舰设计 F1–F7、§11 四引擎复核）、[AI-SCENE-COVERAGE-PLAN.md](../../packages/mcp-server/AI-SCENE-COVERAGE-PLAN.md)（场景/语料度量）、[wave-2-production-trust-design.md](./wave-2-production-trust-design.md)（P1 编译不变量 / P2 收敛口径）、[docs/ai/ai-tools.md](../ai/ai-tools.md)（工具链文案单源）。
 >
-> **状态（2026-10-25）：🟡 设计待评审。** 本文只给诊断与方案，不含实现；落地按 §5 分三波。
+> **状态（2026-10-26）：🟢 Wave A 已落地。** §9 是落地记录（含实测数字与 5 处偏离设计原文的地方）；§0–§4 保留为落地前的诊断快照，凡与 §9 冲突的以 §9 为准。
 
 ## 0. 结论摘要
 
-1. **数量不是主要问题，口径才是。** 站点公开的 AI 案例只有 1 个（`purchase-approval`），它演示的能力令牌约 7/40；12 个公开 MCP 工具里只有 `generate_crud` 有公开产物（且走的是 CLI 路径，不是 MCP 的 `surfaces` 路径），9 个零案例；18 例组合语料**有度量、无展示**。
+1. **数量不是主要问题，口径才是。** 站点公开的 AI 案例只有 1 个（`purchase-approval`），它演示的能力令牌按**实测**是 9/40（落地后用词表 + 产物取证重算，见 §9.2；原文的「≈7/40」是概念计数，不是账本计数）；12 个公开 MCP 工具里只有 `generate_crud` 有公开产物（且走的是 CLI 路径，不是 MCP 的 `surfaces` 路径），9 个零案例；18 例组合语料**有度量、无展示**。
 2. **「少」有结构性原因，不是没人写。** ①产物形态决定成本：schema JSON 可三站同源运行，sfc/片段是分端源码，团队只做了最便宜的那种；②守卫是「一案例一脚本」的定制写法（330/391 行），新增一例边际成本高；③分层账本按 **demo 写法** 分档，把组合整体压到 D 类，丢掉「值得展示」的标签；④度量产物（golden）与站点之间没有消费通道。
 3. **账本已经与生成器能力脱节。** 至少 4 个令牌（`defaultSort` / `tableBtns` / `mergeConfig` / `vxeFirstClass`）在令牌级已是前门声明式，账本却因某个 demo 的实现写法落到 B/C。需要一张**能力级**矩阵，与现有的 demo 级 tier 分开。
 4. **证明链不可重放。** `create --ai` 生成完就把 config 丢掉了，站点的 JSON 无法机械证明「等于那次模型输出的确定性编译结果」；`sync-cases.mjs` 硬编码 3 份文件；没有任何「产物 ↔ 意图表」的冻结记录。
@@ -76,10 +76,10 @@
 
 ### 2.3 展示覆盖率
 
-| 指标 | 现状 | 说明 |
+| 指标 | 现状（落地前） | 说明 |
 |---|---|---|
-| 能力令牌被公开 AI 案例演示 | **≈7/40（18%）** | `purchase-approval` 用到 reactions / isHidden / permissionValue / operationColumn / dataOptions / apiParams / toolbarBtns |
-| 前门可达令牌被公开案例演示 | ≈7/19（37%） | 剩下 12 个只在 demo 里 |
+| 能力令牌被公开 AI 案例演示 | **≈7/40（18%）**（实测 9/40，见 §9.2） | `purchase-approval` 用到 reactions / isHidden / permissionValue / operationColumn / dataOptions / apiParams / toolbarBtns |
+| 前门可达令牌被公开案例演示 | ≈7/19（37%）→ 实测 9/21（43%） | 剩下 12 个只在 demo 里；分母 19 是落地前按 demo 口径数的，按源码现算的声明式前门可达令牌是 21 个（§9.1） |
 | 组合形状被公开案例演示 | **0/3** | full / table+form / form+dialog 全部只在 golden 里 |
 | 公开工具端到端覆盖 | **1/12** | `generate_crud`（CLI 路径）；`validate` / `refine` 只在文案里；9 个零案例 |
 | 三端 × 两模式的展示矩阵 | 生成侧 1 格（vue3 × schema），运行侧 3 格 | 其余 5 格为空 |
@@ -365,3 +365,53 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 7. `docs/cases/generated/employee-roster.*`（1 次模型调用）+ e2e spec。
 
 第一个 PR 完成后，矩阵的「骨架 + 1 个新案例 + 覆盖门」即可运行；Wave B/C 只是往 manifest 里加条目。
+
+## 9. 落地记录（Wave A，2026-10-26）
+
+### 9.1 落地了什么
+
+| 步骤 | 文件 | 说明 |
+|---|---|---|
+| 证明链第一块砖 | [packages/cli/src/commands/create.ts](../../packages/cli/src/commands/create.ts) | `--emit-config <path>`：AI 分支把**模型产出的** `StructuredCrudConfig` 落盘（走 `writeGeneratedFiles`，与其它产物同一条覆盖确认/落盘路径）。没有它，「可重放」只能是口号 |
+| manifest 单一真源 | [docs/cases/ai-cases.json](../cases/ai-cases.json) + [schema](../cases/ai-cases.schema.json) | 3 个案例（旗舰 / 采购审批 / 员工花名册）；含 `clusters` 名字表（画廊分组标题的唯一来源）、`replay` 口径、`e2e` 登记 |
+| 能力级矩阵 | [scripts/gen-ai-capability-matrix.mjs](../../scripts/gen-ai-capability-matrix.mjs) → [docs/ai/ai-capability-matrix.json](../ai/ai-capability-matrix.json) | 40 令牌 × 配置路径 × **现场推导**的前门可达性 × AN-09 三端支持表。`--check` 进 `check:consistency` |
+| 令牌词表 | [scripts/lib/ai-token-map.mjs](../../scripts/lib/ai-token-map.mjs) | 令牌 → `structuredPath`（可达性判据）+ `artifactPaths`（"真的用了"判据）。拼错的键会让矩阵生成器直接报错 |
+| 分发计划 | [scripts/lib/case-plan.mjs](../../scripts/lib/case-plan.mjs) | 「单源 → 三站副本 + registry」的**唯一**算法，`sync-cases` 与 `check-ai-cases` 共用（避免"同步写的位置"与"守卫校验的位置"各说各话） |
+| 同步器 | [scripts/sync-cases.mjs](../../scripts/sync-cases.mjs) | 删掉硬编码文件清单，改读 manifest；生成 `src/cases/generated/registry.js`（三端逐字节相同，静态 import 而非 glob —— 三站打包器不同） |
+| 守卫 | [scripts/check-ai-cases.mjs](../../scripts/check-ai-cases.mjs) → `npm run check:ai-cases` | 断言 1–5、7–11 为门禁；断言 6（覆盖门）默认只报告，`--strict-coverage` 才红。已进 `check:consistency` |
+| 确定性重放器 | [scripts/gen-ai-case-artifact.mjs](../../scripts/gen-ai-case-artifact.mjs) → `npm run ai:case:artifact` | `validateAndRepair` → `generateFromConfig` → 抽 `pageSchema` → 写产物。产物**只经此路生成**，手改会被重放断言抓住 |
+| 通用宿主 | 三站各一份 `AiCaseHost`（[docs](../../es-plus-docs/src/components/AiCaseHost.vue) / [pc](../../es-pc/src/components/AiCaseHost.vue) / [eui](../../es-eui/src/components/ai-case-host.vue)） | 不含业务规则：请求 / 权限 / 副作用全部来自案例 mock 的统一契约。Vue2 版多一层站点响应适配（本站 `configQueryfieldOutput` 是 data/total/pageIndex） |
+| 画廊 | 三站 `AiGallery` + `/ai-gallery`、`/ai-gallery/:id` 路由 + Cases 页入口 | 按能力簇分组、claim 徽章、可机械重放徽章、产物与冻结配置**浏览器内下载**（Blob，不发布文件） |
+| 新案例 A1 | [docs/cases/generated/employee-roster.*](../cases/generated/) | 模型 1 次调用（另有 3 次失败试跑，记录在 meta.promptTrials），产物由 `--emit-config` 的配置确定性编译；覆盖 C1/C3/C6/C10 |
+| e2e | [__tests__/e2e-runtime/tests/ai-gallery.spec.ts](../../__tests__/e2e-runtime/tests/ai-gallery.spec.ts) | 真实站点（es-plus-docs dev server）里的 5 条断言；Playwright 配置新增 `ai-gallery-docs` project + 第二个 webServer |
+
+### 9.2 实测数字（`npm run check:ai-cases` / `npm run ai:matrix` 的输出）
+
+- **令牌账本**：40 个令牌 = 声明式 **23**（其中前门一步可达 **21**、仅 `from_config` **2**：`columnGroups` / `columnSortable`）+ 无条件发射 4 + 逃生舱 13。
+  —— 比 §2.2 的 19 多两个，因为按源码现算把 `defaultSort` / `mergeConfig` / `tableBtns` / `vxeFirstClass` 归位，且 `formLayout` / `operationColumn` 等透传键也被算进"可达"。
+- **案例覆盖**：`purchase-approval` 取证 **9** 个令牌、`employee-roster` 取证 **5** 个，并集 **10/40**（前门可达 10/21 = 48%）。旗舰案例 `tokens: []` —— 它是手写的，不冒充"AI 生成的能力演示"。
+- **未覆盖的前门可达令牌（11）**：apiParams, configTableOut, defaultSort, expandConfig, formLayout, inlineEdit, mergeConfig, tableBtns, treeConfig, virtualScroll, vxeFirstClass —— 这就是 Wave B 的作业清单，`--strict-coverage` 会逐条点名。
+- **可机械重放**：3 个案例里 1 个 `frozen-config`（员工花名册，逐字节可重算）、1 个 `handcrafted`（旗舰，由 `check:flagship-case` 承担）、1 个 `unavailable`（采购审批，历史产物没有 config，见 §3 G5）。
+
+### 9.3 与设计原文的五处偏离（都是为了让主张**可验证**而去掉不可验证的部分）
+
+1. **重放等式换成「产物 = 编译(冻结配置)」，而不是「冻结输入 = 前门意图」**（§4.8.2）。站点加载的 `<id>.json` 是生成器的输出（CrudPageSchema），不是模型输出的 config；能机械重算的只有"这份配置编译出这份产物"。模型那一步（中继 / 温度 / 版本）不作承诺。
+2. **`surfaces` 重放冻结的是 `replay.args`（前门完整入参），且只断言结构事实**（membership / actions / dialogKeys），不做逐字节比较 —— 前门不表达 `columns` 等 B 级细节，逐字节比较会让「能表达」与「能再现」混为一谈。（当前没有案例用这条路径，代码已就位。）
+3. **"不可重放"必须点名承担者**：`replay.kind` 为 `unavailable` / `handcrafted` 时，`guards[]` 里必须有 `check:ai-cases` 之外的守卫；同理 `sites[site] = execute` 时必须有 `e2e[]` 或专属守卫（§6 B2 的机械化）。于是旗舰与采购审批能保留 `execute`，而只靠 manifest 校验的案例会被压回 `compile`。
+4. **"专属守卫"也可以是 e2e spec，不必新写一个 `.mjs`**（§4.3 的清单把"1 个 e2e spec"与"1 条 manifest"并列）。`employee-roster` 的 `guards` 只有 `check:ai-cases`，但它有 `e2e: ["ai-gallery.spec.ts"]` —— 按 §6 B2 的判据（execute 需 e2e 或专属守卫），二者满足其一即可；新增一页的边际成本因此是"manifest + 产物 + 一条 spec"，而不是"再写一个 330 行的脚本"。
+5. **覆盖门默认不是门禁**（§4.7 断言 6）。Wave A 只有 10/40，直接开门禁会让 `check:consistency` 常红；`--strict-coverage` 留作 Wave B 的准入开关。
+
+### 9.4 验证记录（本次实际跑过的）
+
+- 守卫：`check:ai-cases` / `ai:matrix --check` / `cases:check` / `data-schemas:check` / `check:data-schemas` / `check:generated-case` / `check:flagship-case` / `check:eol-hygiene` / `check:case-titles` / `check:cases-links` 全绿。
+- 负向验证：手改 `employee-roster.json` 的 `pagination.pageSize` → 断言 4（重放）与断言 9（副本一致）同时变红；还原后复绿。
+- 站点构建：`es-plus-docs` / `es-pc` / `es-eui` 三站 `npm run build` 全部通过。
+- e2e：`ai-gallery.spec.ts` 5/5 通过（清单渲染 / 10 行 + 彩色标签 / 必填校验 + 落库刷新 / fullscreen 弹窗 / 下载 schema）；vue2 项目 17/17 仍绿。
+- 浏览器抽查（`vite preview` / `serve`）：es-pc 10 行 + `ant-tag-success/error`；es-eui 14 条总数 + 10 行、`el-tag--success`、新增弹窗三条必填校验、确认后提示 + 首行落库（Vue2 版响应适配生效）。
+
+### 9.5 已知缺口（Wave B 入口）
+
+- 覆盖门 11 个令牌零案例（A2/A4/A5/A6/A7 各页对应到 §4.3）；
+- S2 组合画廊（18 golden，零模型调用）与 S3 工作流页未开工；
+- `docs/ai/feature-coverage.json` 的 demo 尚未加 `aiCase` 字段（§4.9 的接缝，需要另一个守卫 `check:feature-coverage` 配合）；
+- `packages/mcp-server/ROADMAP.md` 的 AI-28/29/30 状态待同步。
