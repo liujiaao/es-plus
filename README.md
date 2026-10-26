@@ -440,6 +440,8 @@ AI 自动调用 MCP Server 生成完整可运行的 .vue 文件。
 
 工具面遵循「一个前门 + 确定性支撑」：**`generate_crud` 是唯一前门**（你只填 `surfaces` 意图表，路由与编译是确定性代码）。`generate_crud_from_config` 标注 **ADVANCED**（已持有类型化配置时用），`generate_crud_page` / `generate_crud_schema` 标注 **LEGACY FALLBACK**（no-LLM 正则兜底）。`ESPLUS_MCP_PROFILE=front-door` 可隐藏高级与 legacy 工具，只留前门与单面片段。完整工具清单、选择决策树与分层依据见 [`packages/mcp-server/AI-NATIVE-ARCHITECTURE.md`](./packages/mcp-server/AI-NATIVE-ARCHITECTURE.md)。
 
+想先看效果再看原理：AI 案例导览 [`docs/ai/ai-showcase.md`](./docs/ai/ai-showcase.md) 逐个说明站点上每个 AI 页面证明了什么、证据在哪，以及 `claim`（`measure` / `compile` / `execute`）该怎么读 —— 跑过的才叫 `execute`。
+
 ### @es-plus/cli — 命令行工具
 
 终端直接生成 CRUD 页面：
