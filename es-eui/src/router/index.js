@@ -142,6 +142,14 @@ const routes = [
     component: () => import('../views/ai-generated.vue')
   },
 
+  // A8 片段拼装：三个片段工具 → 一个非 CRUD 分析页。es-eui 只做编译验证与源码展示
+  // （vue2 目标的片段面向 Vue 2.7 的 defineComponent，本站是 Vue 2.6 + composition-api）。
+  {
+    path: '/fragment-dashboard',
+    name: 'FragmentDashboard',
+    component: () => import('../views/fragment-dashboard.vue')
+  },
+
   // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
   // 列表页 + 通用宿主详情页共用同一份组件
   {

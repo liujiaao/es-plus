@@ -83,6 +83,15 @@ export const AI_CASES = {
     tokens: [],
     host: {"kind":"custom","route":"/flagship-approval"},
   },
+  "fragment-dashboard": {
+    id: "fragment-dashboard",
+    title: "片段拼装仪表盘",
+    claim: "execute",
+    replay: "handcrafted",
+    clusters: ["C12","C11"],
+    tokens: [],
+    host: {"kind":"custom","route":"/fragment-dashboard"},
+  },
   "grouped-report": {
     id: "grouped-report",
     title: "分组报表（合并单元格）",

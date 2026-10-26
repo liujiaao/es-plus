@@ -30,6 +30,14 @@ const routes = [
         component: () => import('@/views/AiGenerated.vue'),
       },
       {
+        // A8 片段拼装：三个片段工具 → 一个非 CRUD 分析页（宿主取数 + 原生图表 + 弹窗）。
+        // 片段由 `scripts/gen-fragment-dashboard.mjs` 生成，本页一行未改地使用它们。
+        path: 'fragment-dashboard',
+        name: 'FragmentDashboard',
+        meta: { title: '片段拼装仪表盘' },
+        component: () => import('@/views/FragmentDashboard.vue'),
+      },
+      {
         // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
         // 列表页 + 通用宿主详情页共用同一份组件
         path: 'ai-gallery',

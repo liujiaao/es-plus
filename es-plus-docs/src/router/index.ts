@@ -55,6 +55,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AiWorkflows.vue')
   },
   {
+    // A8 片段拼装：三个片段工具 → 一个非 CRUD 分析页（宿主取数 + 原生图表 + 弹窗）。
+    // 片段由 `scripts/gen-fragment-dashboard.mjs` 生成，本页一行未改地使用它们。
+    path: '/fragment-dashboard',
+    name: 'fragment-dashboard',
+    component: () => import('@/views/FragmentDashboard.vue')
+  },
+  {
     path: '/ai-gallery/:id',
     name: 'ai-gallery-case',
     component: () => import('@/views/AiGallery.vue')

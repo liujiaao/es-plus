@@ -539,6 +539,54 @@
       "guards": [
         "check:ai-cases"
       ]
+    },
+    {
+      "id": "fragment-dashboard",
+      "title": "片段拼装仪表盘",
+      "origin": "handcrafted",
+      "tier": "S1",
+      "clusters": [
+        "C12",
+        "C11"
+      ],
+      "tokens": [],
+      "alwaysOn": [],
+      "escapeHatch": [],
+      "shape": "fragment",
+      "scene": "fragment-dashboard",
+      "targets": [
+        "vue3",
+        "vue2",
+        "antdv"
+      ],
+      "mode": "sfc",
+      "claim": "execute",
+      "sites": {
+        "es-plus-docs": "execute",
+        "es-pc": "compile",
+        "es-eui": "compile"
+      },
+      "host": {
+        "kind": "custom",
+        "route": "/fragment-dashboard"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/fragment-dashboard.json"
+      },
+      "replay": {
+        "kind": "handcrafted",
+        "reason": "宿主页手写（布局、取数、原生 SVG 图表），三个片段由 generate_form / generate_table / generate_dialog 确定性生成；片段产物的重算与逐字节比对交给 check:fragment-dashboard。它不是模型产出的配置，故 origin 不写 ai。"
+      },
+      "provenance": {
+        "nl": "一个分析页：顶部用 es-form 做筛选，中间用 es-table 展示结果，右侧原生图表；点行打开一个 es-dialog 弹窗。",
+        "model": null
+      },
+      "e2e": [
+        "ai-gallery.spec.ts"
+      ],
+      "guards": [
+        "check:fragment-dashboard"
+      ]
     }
   ]
 }

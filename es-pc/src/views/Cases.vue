@@ -49,6 +49,20 @@
         </span>
         <span class="flagship-cta-arrow">→</span>
       </router-link>
+
+      <!-- 片段拼装：上面几页都是「一份 schema 驱动整页」，这一页反过来 ——
+           没有 schema，宿主自己搭布局，片段工具负责表单/表格/弹窗。 -->
+      <router-link to="/fragment-dashboard" class="flagship-cta fragment-cta">
+        <span class="flagship-cta-badge fragment-cta-badge">片段拼装</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">片段拼装仪表盘：非 CRUD 页面里嵌三个生成片段</span>
+          <span class="flagship-cta-desc">
+            筛选表单 · 结果表格 · 详情弹窗来自 <code>generate_form</code> / <code>generate_table</code> /
+            <code>generate_dialog</code> 的原样产物；取数、布局与原生 SVG 图表由宿主自己写
+          </span>
+        </span>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
     </div>
 
     <!-- 成本对照：下面每个案例的 pain/win 是文字，这一块给的是**实测**数字 ——
@@ -318,6 +332,11 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 
 .ai-cta-badge {
   background: linear-gradient(135deg, #6f42c1, #a855f7);
+}
+
+/* 片段拼装页：不是「一份 schema 驱动」，故换第三种徽章色（青）区分来源。 */
+.fragment-cta-badge {
+  background: linear-gradient(135deg, #0e7490, #06b6d4);
 }
 
 .flagship-cta-body {

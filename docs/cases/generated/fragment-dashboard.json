@@ -1,0 +1,222 @@
+{
+  "id": "fragment-dashboard",
+  "title": "片段拼装仪表盘",
+  "nl": "一个分析页：顶部用 es-form 做筛选，中间用 es-table 展示结果，右侧原生图表；点行打开一个 es-dialog 弹窗。",
+  "sites": {
+    "es-plus-docs": "execute",
+    "es-pc": "compile",
+    "es-eui": "compile"
+  },
+  "frozenArgs": {
+    "filter": {
+      "fields": [
+        {
+          "prop": "keyword",
+          "label": "关键词",
+          "formtype": "Input",
+          "querySpan": 8
+        },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "querySpan": 8,
+          "dataOptions": [
+            {
+              "label": "待发货",
+              "value": 0,
+              "tagType": "warning"
+            },
+            {
+              "label": "已发货",
+              "value": 1,
+              "tagType": "success"
+            },
+            {
+              "label": "已签收",
+              "value": 2,
+              "tagType": "info"
+            }
+          ]
+        }
+      ],
+      "context": "query",
+      "buttons": "query"
+    },
+    "table": {
+      "fields": [
+        {
+          "prop": "orderNo",
+          "label": "订单号",
+          "formtype": "Input",
+          "width": 150
+        },
+        {
+          "prop": "customer",
+          "label": "客户",
+          "formtype": "Input",
+          "minWidth": 140
+        },
+        {
+          "prop": "amount",
+          "label": "金额",
+          "formtype": "InputNumber",
+          "align": "right"
+        },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "dataOptions": [
+            {
+              "label": "待发货",
+              "value": 0,
+              "tagType": "warning"
+            },
+            {
+              "label": "已发货",
+              "value": 1,
+              "tagType": "success"
+            },
+            {
+              "label": "已签收",
+              "value": 2,
+              "tagType": "info"
+            }
+          ]
+        }
+      ],
+      "tableOptions": {
+        "border": true
+      },
+      "rowButtons": [
+        {
+          "name": "查看"
+        }
+      ]
+    },
+    "dialog": {
+      "fields": [
+        {
+          "prop": "customer",
+          "label": "客户",
+          "formtype": "Input",
+          "required": true
+        },
+        {
+          "prop": "amount",
+          "label": "金额",
+          "formtype": "InputNumber"
+        },
+        {
+          "prop": "status",
+          "label": "状态",
+          "formtype": "Select",
+          "dataOptions": [
+            {
+              "label": "待发货",
+              "value": 0,
+              "tagType": "warning"
+            },
+            {
+              "label": "已发货",
+              "value": 1,
+              "tagType": "success"
+            },
+            {
+              "label": "已签收",
+              "value": 2,
+              "tagType": "info"
+            }
+          ]
+        }
+      ],
+      "apiUrl": "/api/demo/orders",
+      "rowkey": "id",
+      "mode": "component",
+      "defaultTitle": "新增订单"
+    },
+    "targets": [
+      "vue3",
+      "vue2",
+      "antdv"
+    ]
+  },
+  "fragments": {
+    "filter": {
+      "tool": "generate_form",
+      "label": "筛选表单",
+      "file": "FilterBar.vue",
+      "lines": 56,
+      "bytes": 1076
+    },
+    "table": {
+      "tool": "generate_table",
+      "label": "结果表格",
+      "file": "ResultTable.vue",
+      "lines": 41,
+      "bytes": 1045
+    },
+    "dialog": {
+      "tool": "generate_dialog",
+      "label": "详情弹窗",
+      "file": "OrderDialog.vue",
+      "lines": 126,
+      "bytes": 2869
+    }
+  },
+  "targets": {
+    "vue3": {
+      "bytes": {
+        "filter": 1076,
+        "table": 1045,
+        "dialog": 2869
+      },
+      "note": "Vue 3 + Element Plus（@es-plus/vue3）—— 主文档站真跑"
+    },
+    "vue2": {
+      "bytes": {
+        "filter": 1183,
+        "table": 1165,
+        "dialog": 2991
+      },
+      "note": "Vue 2 + Element UI（@es-plus/vue2）—— 只做语法编译验证（见 knownGaps）"
+    },
+    "antdv": {
+      "bytes": {
+        "filter": 1076,
+        "table": 1045,
+        "dialog": 2878
+      },
+      "note": "Vue 3 + Ant Design Vue（@es-plus/adapter-antdv）—— es-pc 真跑"
+    }
+  },
+  "host": {
+    "route": "/fragment-dashboard",
+    "dataPath": "宿主自己调一次 httpRequest（/api/demo/orders，带筛选条件），把行数据注入表格片段；右侧图表读同一批行 —— 页面里只有一个数据源。",
+    "chart": "图表是原生 SVG（手写 <rect>/<text>，不经 es-plus），演示「片段与任何原生实现共存」。",
+    "wiring": [
+      {
+        "fragment": "filter",
+        "point": ":model + :config-btn",
+        "why": "片段的查询/重置按钮只认祖先 es-table 的注入上下文；独立宿主必须自己接管 model 与按钮点击。"
+      },
+      {
+        "fragment": "table",
+        "point": ":data-source + :pagination",
+        "why": "无 apiUrl 的表格片段不自取数，行与分页由宿主给；行点击事件冒泡到宿主开弹窗。"
+      },
+      {
+        "fragment": "dialog",
+        "point": "ref.open(title, row)",
+        "why": "弹窗片段的集成契约（defineExpose）：标题、回填行、提交成功回调都由宿主传。"
+      }
+    ]
+  },
+  "knownGaps": [
+    "表单片段不 emit 任何事件：查询/重置按钮走的是「祖先 es-table 注入」这条路，独立宿主只能用底层 es-form 的 configBtn 契约接管点击。",
+    "表格片段在不给 apiUrl 时不声明 props：数据只能由宿主用同名属性覆盖根组件的内部绑定（Vue 的属性透传），契约是隐式的而不是 defineProps。",
+    "片段之间没有编排契约（无 props / emits / provide 约定）：拼装靠底层 es-form / es-table / es-dialog 的既有属性名，换组件就得重接线。",
+    "vue2 目标的片段从 vue 导入 defineComponent / reactive（Vue 2.7 语义），而 es-eui 是 Vue 2.6 + composition-api 插件 —— 故该端只做语法编译验证，不在此运行。"
+  ]
+}
