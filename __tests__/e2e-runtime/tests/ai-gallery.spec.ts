@@ -399,7 +399,8 @@ test('引擎实验室：一个枚举换 vxe，双击原地编辑并把改动回�
 test('S2 组合画廊：对照全绿、成员关系可读，切渲染端只差包名', async ({ page }) => {
   // 入口：画廊列表 → 组合画廊。路由加上了但没人链 = 隐形页面，所以从点击开始。
   await page.goto('/#/ai-gallery')
-  await page.locator('a.ai-gallery-comp').click()
+  // `.ai-gallery-comp` 现在有两个（S2 组合画廊 / S3 工具工作流），按标题选中本卡片。
+  await page.locator('a.ai-gallery-comp').filter({ hasText: '组合画廊' }).click()
   await expect(page).toHaveURL(/\/ai-gallery\/composition$/)
   await expect(page.locator('[data-testid="composition-page"]')).toBeVisible()
   await expect(page.getByText('claim: measure + compile')).toBeVisible()
@@ -444,4 +445,80 @@ test('S2 组合画廊：对照全绿、成员关系可读，切渲染端只差�
   expect(fragVue2).toContain('@es-plus/vue2')
   const normalize = (s: string) => s.replace(/@es-plus\/(vue3|vue2|adapter-antdv)/g, '@es-plus/RENDERER')
   expect(normalize(fragVue3)).toBe(normalize(fragVue2))
+})
+
+/**
+ * S3 工具工作流（`/ai-gallery/workflows`）—— 9 次真 handler 调用的入参与出参。
+ *
+ * 这一页的主张是 `compile`（数据是真实调用结果），**不是** execute：页面不调工具，
+ * 它渲染的是生成器落盘的记录。所以这里验的是三件事：
+ *
+ *   1. **接线真的通了**：从画廊卡片点进来（路由加了没人链 = 隐形页面）；
+ *   2. **渲染与记录一致**：工具数、每条工作流的步数、工具名、成功/预期失败分布，
+ *      全部对照 `docs/cases/generated/ai-workflows.js`（单一真源），不是测试常量；
+ *   3. **「预期失败」没有被悄悄洗白**：恰好一步是红色 err 徽章，且那一步是
+ *      `validate_config`、出参里真有点名（`InputNumbr` / 未知键 `formFields`）——
+ *      若哪天校验器对所有输入都放行，这条会立刻红。
+ *
+ * 数据模块是 ESM（root package 是 CJS，直接 import 会走错分支），故读文本后取
+ * `export const AI_WORKFLOWS = {...}` 的对象部分 —— 与生成器写出的格式一一对应。
+ */
+const workflowsText = readFileSync(join(ROOT, 'docs/cases/generated/ai-workflows.js'), 'utf8')
+const AI_WORKFLOWS = JSON.parse(workflowsText.slice(workflowsText.indexOf('= {') + 2)) as {
+  tools: string[]
+  zeroCaseTools: string[]
+  workflows: Array<{
+    id: string
+    tools: string[]
+    steps: Array<{ tool: string; ok: boolean; bytes: number; truncated: boolean }>
+  }>
+}
+
+test('S3 工具工作流：9 次真调用与记录逐项一致，预期失败的那一步真的失败', async ({ page }) => {
+  // 入口：画廊列表 → 工具工作流（S3 卡片）。
+  await page.goto('/#/ai-gallery')
+  await page.locator('a.ai-gallery-comp').filter({ hasText: '工具工作流' }).click()
+  await expect(page).toHaveURL(/\/ai-gallery\/workflows$/)
+  await expect(page.locator('[data-testid="workflows-page"]')).toBeVisible()
+  // 主张写在页面上：能重放的是「调用记录」，模型那一步是冻结输入。
+  await expect(page.getByText('claim: compile')).toBeVisible()
+
+  // 工具覆盖：9 个 chip，其中 8 个是零案例工具（高亮）。
+  const chips = page.locator('[data-testid="workflows-tools"] li')
+  await expect(chips).toHaveCount(AI_WORKFLOWS.tools.length)
+  await expect(chips.filter({ has: page.locator('code') }).filter({ hasText: 'doctor_page' })).toHaveCount(1)
+  await expect(page.locator('[data-testid="workflows-tools"] li.zero')).toHaveCount(
+    AI_WORKFLOWS.zeroCaseTools.length,
+  )
+
+  // 三条工作流、9 步，逐条对照记录里的工具名与步数。
+  const allSteps = AI_WORKFLOWS.workflows.flatMap((w) => w.steps)
+  await expect(page.locator('article.wf-step')).toHaveCount(allSteps.length)
+  for (const wf of AI_WORKFLOWS.workflows) {
+    const section = page.locator(`section[data-testid="workflow-${wf.id}"]`)
+    await expect(section).toBeVisible()
+    await expect(section.locator('article.wf-step')).toHaveCount(wf.steps.length)
+    await expect(section.locator('.wf-step-tool')).toHaveText(wf.steps.map((s) => s.tool))
+  }
+
+  // 「预期失败」恰好一步：红色徽章 + validate_config，且出参真的点名了两处写错。
+  const errorSteps = allSteps.filter((s) => !s.ok)
+  expect(errorSteps).toHaveLength(1)
+  const errBadge = page.locator('.wf-step-state.err')
+  await expect(errBadge).toHaveCount(1)
+  await expect(errBadge).toHaveText('expected error')
+  const errStep = page.locator('article.wf-step.is-error')
+  await expect(errStep.locator('.wf-step-tool')).toHaveText(errorSteps[0].tool)
+  await expect(errStep.locator('.wf-step-out')).toContainText('/fields/2/formtype')
+  await expect(errStep.locator('.wf-step-out')).toContainText('未知键 "formFields"')
+  // 其余步骤全部 ok —— 否则页面会把「工具坏了」展示成「工具在纠错」。
+  await expect(page.locator('.wf-step-state.ok')).toHaveCount(allSteps.length - 1)
+
+  // 出参来自真 handler（不是示例文案）：W1 首步真做了目标探测，W3 末步真按 target 渲染了 API。
+  await expect(page.locator('[data-testid="workflow-w1-out-0"]')).toContainText('Detected target: vue3')
+  await expect(page.locator('[data-testid="workflow-w3-out-2"]')).toContainText('EsCrudPage API (@es-plus/vue3)')
+  // 截断是诚实的：长出参标了「预览截断」并给出完整字节数（阈值来自记录，不是测试常量）。
+  await expect(page.locator('.wf-step-bytes').filter({ hasText: '预览截断' })).toHaveCount(
+    allSteps.filter((s) => s.truncated).length,
+  )
 })
