@@ -1,0 +1,628 @@
+{
+  "note": "由 scripts/gen-ai-capability-matrix.mjs 从源码现场生成，禁止手改。reach 表示「前门一步可达」还是「需 generate_crud_from_config」；capabilities 是 AN-09 的三端支持表（claim 边界）。",
+  "generatedBy": "scripts/gen-ai-capability-matrix.mjs",
+  "sources": [
+    "packages/shared/src/structured-config.schema.ts",
+    "packages/shared/src/capability.ts",
+    "packages/mcp-server/src/tools/generate-crud.ts"
+  ],
+  "frontDoor": {
+    "topLevelKeys": [
+      "actions",
+      "apiUrl",
+      "expandConfig",
+      "formLayout",
+      "i18n",
+      "mergeConfig",
+      "mode",
+      "name",
+      "operationColumn",
+      "pagination",
+      "permissions",
+      "rowkey",
+      "surfaces",
+      "tableBtns",
+      "tableOptions",
+      "target",
+      "toolbarBtns",
+      "treeConfig",
+      "typescript"
+    ],
+    "surfaceFieldKeys": [
+      "align",
+      "apiParams",
+      "attrs",
+      "dataOptions",
+      "ellipsis",
+      "fixed",
+      "formSpan",
+      "formatter",
+      "formtype",
+      "isHidden",
+      "label",
+      "labelKey",
+      "minWidth",
+      "permissionValue",
+      "prop",
+      "querySpan",
+      "reactions",
+      "render",
+      "required",
+      "rules",
+      "width"
+    ],
+    "tableOptionsKeySet": "closed"
+  },
+  "stats": {
+    "tokens": 40,
+    "declarative": 23,
+    "frontDoorReachable": 21,
+    "configOnly": 2
+  },
+  "capabilities": {
+    "tableOptions.multiSelect": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "五个列产出路径统一走 core synthesizeLeadingColumns；默认 el-table 引擎修前完全无视该开关"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同上（packages/vue2 es-table filteredColumns 前置合成）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "ADV 走 rowSelection（hasSelection），vxe 引擎走 vxe 适配器"
+        }
+      }
+    },
+    "tableOptions.snIndex": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "默认引擎 / 虚拟引擎 / vxe 适配器三处同一判据"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "默认引擎 / vxe 适配器同一判据"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "a-table 通过 createSnAdvColumn 注入，vxe 引擎走 vxe 适配器"
+        }
+      }
+    },
+    "expandConfig": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "顶层 expandConfig：自动前置一条 expand 列，展开内容 = 只读字段明细（el-table expand 列）"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同 vue3（Element UI expand 列，column-item 消费列上 expandConfig）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "expandedRowRender 整行渲染（expandContent）"
+        }
+      }
+    },
+    "tableOptions.virtual": {
+      "equivalents": [
+        {
+          "key": "engine",
+          "value": "virtual"
+        }
+      ],
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "el-table-v2 引擎（engine: virtual 的等价写法）"
+        },
+        "vue2": {
+          "level": "none",
+          "note": "Element UI 没有 el-table-v2，运行时降级普通 el-table 并在控制台告警。大表请用 server 分页，或改 engine: 'vxe'（vue2 有完整 vxe 适配器）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "透传 <a-table :virtual>（Ant Design Vue 4 原生虚拟滚动）"
+        }
+      }
+    },
+    "tableOptions.rowHeight": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅虚拟引擎（el-table-v2）消费；默认 / vxe 引擎忽略"
+        },
+        "vue2": {
+          "level": "none",
+          "note": "属内部键，默认引擎与 vxe 引擎都不消费（Element UI 无行高统一控制）"
+        },
+        "antdv": {
+          "level": "none",
+          "note": "属内部键（TABLE_INTERNAL_KEYS），不会绑定到 <a-table>"
+        }
+      }
+    },
+    "tableOptions.estimatedRowHeight": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅虚拟引擎消费（动态行高估算）"
+        },
+        "vue2": {
+          "level": "none",
+          "note": "属内部键，无对应能力"
+        },
+        "antdv": {
+          "level": "none",
+          "note": "属内部键，不会绑定到 <a-table>"
+        }
+      }
+    },
+    "tableOptions.overscanCount": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅虚拟引擎消费（预渲染行数）"
+        },
+        "vue2": {
+          "level": "none",
+          "note": "属内部键，无对应能力"
+        },
+        "antdv": {
+          "level": "none",
+          "note": "属内部键，不会绑定到 <a-table>"
+        }
+      }
+    },
+    "tableOptions.engine": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "default / virtual / vxe 三引擎"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "default / vxe（无 virtual，见 tableOptions.virtual 一格）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "default / vxe（virtual 由 tableOptions.virtual 透传）"
+        }
+      }
+    },
+    "tableOptions.editConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine: 'vxe' 消费，其余引擎运行时忽略（生成器另发告警）"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.expandConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 vxe 引擎的展开行为开关（accordion）；展开**内容**在列上 expandConfig"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.treeConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "childrenField / expandAll 映射到 el-table；transform / rowField / parentField / mapChildren / lazy 仅 vxe 引擎"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同 vue3（映射到 Element UI el-table）"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "childrenField / expandAll 映射到 a-table；其余子键仅 vxe 引擎"
+        }
+      }
+    },
+    "treeConfig": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "顶层 treeConfig：childrenField / expandAll 映射到 el-table（嵌套 rows）"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同 vue3（Element UI el-table）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "childrenField → childrenColumnName，expandAll → defaultExpandAllRows"
+        }
+      }
+    },
+    "mergeConfig": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "AI-23：core resolveMergeConfig → el-table spanMethod"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同上（Element UI span-method）"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "同上（a-table 列级 customCell）"
+        }
+      }
+    },
+    "tableOptions.cachePageSelection": {
+      "targets": {
+        "vue3": {
+          "level": "full",
+          "note": "useTableSelection + core restoreSelectionForPage"
+        },
+        "vue2": {
+          "level": "full",
+          "note": "同 vue3"
+        },
+        "antdv": {
+          "level": "full",
+          "note": "同 vue3"
+        }
+      }
+    }
+  },
+  "tokens": {
+    "apiParams": {
+      "kind": "declarative",
+      "structuredPath": "fields[].apiParams",
+      "artifactPaths": [
+        "formItems[].apiParams"
+      ],
+      "reach": "front-door:surface",
+      "note": "字段级远程选项源（表级 tableOptions.apiParams 是自动发射的，不算证据）"
+    },
+    "cellDataOptions": {
+      "kind": "declarative",
+      "structuredPath": "fields[].dataOptions",
+      "artifactPaths": [
+        "columns[].dataOptions"
+      ],
+      "reach": "front-door:surface",
+      "note": "码值列（label/value/tagType 渲染成彩色标签）"
+    },
+    "columnGroups": {
+      "kind": "declarative",
+      "structuredPath": "columns[].groups",
+      "artifactPaths": [
+        "columns[].children"
+      ],
+      "reach": "config-only",
+      "note": "多级表头（B 级：前门不收 columns，需 from_config）"
+    },
+    "columnsDecl": {
+      "kind": "auto",
+      "structuredPath": "columns",
+      "artifactPaths": [
+        "columns[]"
+      ],
+      "reach": "not-declarative",
+      "note": "列声明本身 —— 任何产物都有，不算证据"
+    },
+    "columnSortable": {
+      "kind": "declarative",
+      "structuredPath": "columns[].sortable",
+      "artifactPaths": [
+        "columns[].sortable"
+      ],
+      "reach": "config-only",
+      "note": "显式列的排序开关（B 级：同上）"
+    },
+    "columnStyle": {
+      "kind": "declarative",
+      "structuredPath": "fields[].align",
+      "artifactPaths": [
+        "columns[].align",
+        "columns[].width",
+        "columns[].ellipsis",
+        "columns[].fixed"
+      ],
+      "reach": "front-door:surface",
+      "note": "列样式（宽/对齐/省略/固定）"
+    },
+    "configTableOut": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.configTableOut",
+      "artifactPaths": [
+        "tableOptions.configTableOut"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "异构后端字段映射（rows/records/pageNo 之外的后端形状）"
+    },
+    "crudPage": {
+      "kind": "auto",
+      "structuredPath": "name",
+      "artifactPaths": [
+        "columns[]"
+      ],
+      "reach": "not-declarative",
+      "note": "整页 CRUD 编排 —— 案例页本身即是证据，故不算令牌证据"
+    },
+    "defaultSort": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.defaultSort",
+      "artifactPaths": [
+        "tableOptions.defaultSort"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "默认排序（派生列自动补 sortable）"
+    },
+    "dialogs": {
+      "kind": "declarative",
+      "structuredPath": "dialogs",
+      "artifactPaths": [
+        "dialogs"
+      ],
+      "reach": "front-door:surface-dialog",
+      "note": "多弹窗体系（每弹窗标题/宽度/全屏/字段覆盖）"
+    },
+    "errorBoundary": {
+      "kind": "component",
+      "reach": "not-declarative",
+      "note": "独立组件 EsErrorBoundary（不属于 CRUD 配置面）"
+    },
+    "expandConfig": {
+      "kind": "declarative",
+      "structuredPath": "expandConfig",
+      "artifactPaths": [
+        "tableOptions.expandConfig"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "expandConfig",
+      "note": "展开行"
+    },
+    "fieldEventFn": {
+      "kind": "host",
+      "structuredPath": "fields[].attrs",
+      "reach": "not-declarative",
+      "note": "字段事件回调 —— 函数进不了 schema，只能由宿主在 wrapper 里补"
+    },
+    "fieldVisibility": {
+      "kind": "declarative",
+      "structuredPath": "fields[].isHidden",
+      "artifactPaths": [
+        "formItems[].isHidden",
+        "dialogs[].formItems[].isHidden"
+      ],
+      "reach": "front-door:surface",
+      "note": "声明式条件显隐（纯 JSON 条件，非函数）"
+    },
+    "formatterFn": {
+      "kind": "string-source",
+      "structuredPath": "fields[].formatter",
+      "reach": "not-declarative",
+      "note": "只读格式化函数源码字符串（进 pageSchema 时按列契约剥掉）"
+    },
+    "formLayout": {
+      "kind": "declarative",
+      "structuredPath": "formLayout",
+      "artifactPaths": [
+        "formLayout"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "查询区布局（折叠行数等）"
+    },
+    "formtype": {
+      "kind": "declarative",
+      "structuredPath": "fields[].formtype",
+      "artifactPaths": [
+        "formItems[].formtype"
+      ],
+      "reach": "front-door:surface",
+      "note": "字段的数据类型 → 控件类型（Input/Select/DatePicker…）"
+    },
+    "hostOrchestration": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "宿主编排（把片段与别的组件拼装）"
+    },
+    "hostSkeleton": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "宿主骨架（scaffold_page 生成的项目骨架）"
+    },
+    "httpRequestFn": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "请求函数由宿主注入（组件 prop / 全局配置）"
+    },
+    "inlineEdit": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.editConfig",
+      "artifactPaths": [
+        "tableOptions.editConfig"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "tableOptions.editConfig",
+      "note": "行内编辑（仅 vxe 引擎消费）"
+    },
+    "mergeConfig": {
+      "kind": "declarative",
+      "structuredPath": "mergeConfig",
+      "artifactPaths": [
+        "tableOptions.mergeConfig"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "mergeConfig",
+      "note": "单元格合并（三端同一语义）"
+    },
+    "operationColumn": {
+      "kind": "declarative",
+      "structuredPath": "operationColumn",
+      "artifactPaths": [
+        "operationColumn.btns[]"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "操作列按钮编排（dialogKey / permissionValue / 事件标识）"
+    },
+    "pagination": {
+      "kind": "auto",
+      "structuredPath": "pagination",
+      "artifactPaths": [
+        "pagination"
+      ],
+      "reach": "not-declarative",
+      "note": "分页 —— 生成器无条件发射"
+    },
+    "permissions": {
+      "kind": "declarative",
+      "structuredPath": "fields[].permissionValue",
+      "artifactPaths": [
+        "operationColumn.btns[].permissionValue",
+        "toolbarBtns[].permissionValue",
+        "tableBtns[].permissionValue",
+        "formItems[].permissionValue",
+        "columns[].permissionValue"
+      ],
+      "reach": "front-door:surface",
+      "note": "字段/按钮级权限码（权限判定由宿主注入）"
+    },
+    "reactions": {
+      "kind": "declarative",
+      "structuredPath": "fields[].reactions",
+      "artifactPaths": [
+        "formItems[].reactions",
+        "dialogs[].formItems[].reactions"
+      ],
+      "reach": "front-door:surface",
+      "note": "声明式字段联动（选项/必填/禁用/赋值随另一字段变化）"
+    },
+    "renderBtnFn": {
+      "kind": "string-source",
+      "structuredPath": "operationColumn",
+      "reach": "not-declarative",
+      "note": "按钮自定义渲染函数"
+    },
+    "renderFn": {
+      "kind": "string-source",
+      "structuredPath": "fields[].render",
+      "reach": "not-declarative",
+      "note": "自定义单元格渲染（源码字符串；schema 模式降级为插槽 / TODO 标记）—— 不是纯 JSON"
+    },
+    "sfcSlot": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "SFC 插槽逃生舱（仅 mode: sfc）"
+    },
+    "spanMethodFn": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "手写 spanMethod（声明式替身是 mergeConfig，已在 declarative 里）"
+    },
+    "svgIcon": {
+      "kind": "component",
+      "reach": "not-declarative",
+      "note": "独立组件 SvgIcon（不属于 CRUD 配置面）"
+    },
+    "tableBase": {
+      "kind": "auto",
+      "structuredPath": "tableOptions",
+      "artifactPaths": [
+        "tableOptions"
+      ],
+      "reach": "not-declarative",
+      "note": "表格基础选项 —— 生成器无条件发射 border/stripe/apiParams 等"
+    },
+    "tableBtns": {
+      "kind": "declarative",
+      "structuredPath": "tableBtns",
+      "artifactPaths": [
+        "tableBtns[]"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "表格自身的按钮（行选批量动作走 toolbarBtns）"
+    },
+    "toolbarBtns": {
+      "kind": "declarative",
+      "structuredPath": "toolbarBtns",
+      "artifactPaths": [
+        "toolbarBtns[]"
+      ],
+      "reach": "front-door:passthrough",
+      "note": "工具栏按钮（左/右区、批量动作）"
+    },
+    "treeConfig": {
+      "kind": "declarative",
+      "structuredPath": "treeConfig",
+      "artifactPaths": [
+        "tableOptions.treeConfig"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "treeConfig",
+      "note": "树形表格（childrenField / expandAll）"
+    },
+    "useDialogApi": {
+      "kind": "host",
+      "reach": "not-declarative",
+      "note": "useDialog 的编程式弹窗 API —— 宿主代码，不在配置里"
+    },
+    "validation": {
+      "kind": "declarative",
+      "structuredPath": "fields[].rules",
+      "artifactPaths": [
+        "formItems[].formItemOptions.rules",
+        "dialogs[].formItems[].formItemOptions.rules",
+        "formItems[].rules",
+        "formItems[].required"
+      ],
+      "reach": "front-door:surface",
+      "note": "字段级校验规则（required 只是其中一种写法）"
+    },
+    "validatorFn": {
+      "kind": "string-source",
+      "structuredPath": "fields[].rules",
+      "reach": "not-declarative",
+      "note": "自定义校验函数（rules 里的函数值无法进纯 JSON）"
+    },
+    "virtualScroll": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.virtual",
+      "artifactPaths": [
+        "tableOptions.virtual",
+        "tableOptions.engine"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "tableOptions.virtual",
+      "note": "虚拟滚动（vue2 无 el-table-v2，见 AN-09 能力矩阵）"
+    },
+    "vxeFirstClass": {
+      "kind": "declarative",
+      "structuredPath": "tableOptions.engine",
+      "artifactPaths": [
+        "tableOptions.engine"
+      ],
+      "reach": "front-door:passthrough",
+      "capabilityKey": "tableOptions.engine",
+      "note": "vxe 一等公民（引擎切换 + 其专属子键）"
+    }
+  }
+}

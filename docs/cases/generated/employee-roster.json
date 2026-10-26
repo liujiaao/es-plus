@@ -1,0 +1,363 @@
+{
+  "formItems": [
+    {
+      "prop": "name",
+      "label": "姓名",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "dept",
+      "label": "部门",
+      "formtype": "Input",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      }
+    },
+    {
+      "prop": "status",
+      "label": "在职状态",
+      "formtype": "Select",
+      "span": 6,
+      "attrs": {
+        "clearable": true
+      },
+      "dataOptions": [
+        {
+          "label": "在职",
+          "value": 1,
+          "tagType": "success"
+        },
+        {
+          "label": "离职",
+          "value": 0,
+          "tagType": "danger"
+        }
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "prop": "employeeNo",
+      "label": "工号"
+    },
+    {
+      "prop": "name",
+      "label": "姓名"
+    },
+    {
+      "prop": "dept",
+      "label": "部门",
+      "align": "center"
+    },
+    {
+      "prop": "status",
+      "label": "在职状态",
+      "align": "center",
+      "dataOptions": [
+        {
+          "label": "在职",
+          "value": 1,
+          "tagType": "success"
+        },
+        {
+          "label": "离职",
+          "value": 0,
+          "tagType": "danger"
+        }
+      ]
+    },
+    {
+      "prop": "hireDate",
+      "label": "入职日期"
+    }
+  ],
+  "tableOptions": {
+    "border": true,
+    "stripe": true,
+    "highlightCurrentRow": true,
+    "headerCellStyle": {
+      "background": "#f5f7fa"
+    },
+    "apiParams": {
+      "url": "/api/employees"
+    },
+    "rowkey": "id"
+  },
+  "dialogs": {
+    "add": {
+      "title": "新增员工",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入工号",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入姓名",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入部门",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ]
+    },
+    "edit": {
+      "title": "编辑员工",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入工号",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入姓名",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入部门",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ]
+    },
+    "view": {
+      "title": "查看员工详情",
+      "formItems": [
+        {
+          "prop": "employeeNo",
+          "label": "工号",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入工号",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "name",
+          "label": "姓名",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入姓名",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "dept",
+          "label": "部门",
+          "formtype": "Input",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "formItemOptions": {
+            "rules": [
+              {
+                "required": true,
+                "message": "请输入部门",
+                "trigger": "blur"
+              }
+            ]
+          }
+        },
+        {
+          "prop": "status",
+          "label": "在职状态",
+          "formtype": "Select",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          },
+          "dataOptions": [
+            {
+              "label": "在职",
+              "value": 1
+            },
+            {
+              "label": "离职",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "prop": "hireDate",
+          "label": "入职日期",
+          "formtype": "DatePicker",
+          "span": 24,
+          "attrs": {
+            "clearable": true
+          }
+        }
+      ],
+      "fullscreen": true
+    }
+  },
+  "actions": [
+    "add",
+    "edit",
+    "view"
+  ],
+  "pagination": {
+    "pageSize": 10
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://liujiaao.github.io/es-plus/cases/ai-cases.schema.json",
+  "title": "ES-Plus AI 展示案例矩阵（ai-cases.json）",
+  "description": "AI 生成 / 手工旗舰案例的单一真源。结构由本 schema 管；「产物 = 编译(冻结输入)」的可重放性、能力令牌取证、站点字节一致由 scripts/check-ai-cases.mjs 断言（结构合法 ≠ 主张成立）。",
+  "type": "object",
+  "required": ["version", "note", "shared", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "pattern": "^https?://" },
+    "version": { "const": 1 },
+    "note": { "type": "string", "minLength": 1 },
+    "shared": {
+      "description": "非案例专属的单源文件（按文件名分发到各站 src/cases/）。",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9.-]+\\.(json|js)$" }
+    },
+    "clusters": {
+      "description": "能力簇编号 → 中文名（画廊按簇分组时的标题来源；单一真源，避免三站各抄一份）。",
+      "type": "object",
+      "patternProperties": { "^C([1-9]|1[0-2])$": { "type": "string", "minLength": 2 } },
+      "additionalProperties": false
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/case" }
+    }
+  },
+  "definitions": {
+    "claim": {
+      "description": "execute = 站点真实渲染 + e2e/交互断言；compile = 产物可编译但不执行；measure = 只被语料度量。",
+      "enum": ["execute", "compile", "measure"]
+    },
+    "path": { "type": "string", "pattern": "^docs/cases/" },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "origin",
+        "tier",
+        "clusters",
+        "tokens",
+        "shape",
+        "scene",
+        "targets",
+        "mode",
+        "claim",
+        "sites",
+        "host",
+        "artifacts",
+        "replay",
+        "e2e"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 2 },
+        "origin": { "enum": ["ai", "handcrafted"] },
+        "tier": { "enum": ["flagship", "S1", "S2", "S3"] },
+        "clusters": {
+          "description": "能力簇编号（C1–C12，见 docs/internal/ai-showcase-matrix-plan.md §4.2）。",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^C([1-9]|1[0-2])$" },
+          "uniqueItems": true
+        },
+        "tokens": {
+          "description": "产物里**真的用到**的能力令牌（必须在 docs/ai/ai-capability-matrix.json 里 kind=declarative）。",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "alwaysOn": {
+          "description": "无条件发射的令牌（tableBase/pagination/columnsDecl）—— 只用于说明，不算覆盖证据。",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "escapeHatch": {
+          "description": "逃生舱令牌（函数值 / 宿主编排 / 独立组件）。出现时 claim 必须 ≤ compile。",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "shape": { "enum": ["full", "table+form", "form+dialog", "fragment"] },
+        "scene": { "type": "string", "minLength": 1 },
+        "targets": {
+          "type": "array",
+          "items": { "enum": ["vue3", "vue2", "antdv"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "mode": { "enum": ["schema", "sfc"] },
+        "claim": { "$ref": "#/definitions/claim" },
+        "sites": {
+          "description": "按站点声明的 claim —— 不得超过 AN-09 能力矩阵的格子。",
+          "type": "object",
+          "required": ["es-plus-docs", "es-pc", "es-eui"],
+          "additionalProperties": false,
+          "properties": {
+            "es-plus-docs": { "$ref": "#/definitions/claim" },
+            "es-pc": { "$ref": "#/definitions/claim" },
+            "es-eui": { "$ref": "#/definitions/claim" }
+          }
+        },
+        "host": {
+          "type": "object",
+          "required": ["kind", "route"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["generic", "custom"] },
+            "route": {
+              "description": "generic 案例填通用宿主的入口路由（画廊列表页，详情由画廊拼成 <route>/<id>）；custom 案例填自己的整页路由。",
+              "type": "string",
+              "pattern": "^/"
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "required": ["schema"],
+          "additionalProperties": false,
+          "properties": {
+            "schema": { "$ref": "#/definitions/path" },
+            "meta": { "$ref": "#/definitions/path" },
+            "mock": { "$ref": "#/definitions/path" },
+            "config": { "$ref": "#/definitions/path" }
+          }
+        },
+        "replay": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["frozen-config", "surfaces", "unavailable", "handcrafted"] },
+            "reason": { "type": "string", "minLength": 10 },
+            "args": {
+              "description": "kind=surfaces 时的冻结前门入参（generate_crud 的完整调用输入，其 surfaces 即意图表）。重放断言结构事实（membership / actions / dialogKeys），不做逐字节比较 —— 前门不表达 columns 等 B 级细节。",
+              "type": "object"
+            }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "kind": { "enum": ["unavailable", "handcrafted"] } } },
+              "then": { "required": ["reason"] }
+            },
+            {
+              "if": { "properties": { "kind": { "const": "surfaces" } } },
+              "then": { "required": ["args"] }
+            }
+          ]
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nl": { "type": ["string", "null"] },
+            "model": { "type": ["string", "null"] },
+            "generatedAt": { "type": "string" },
+            "attempts": { "type": "integer", "minimum": 1 },
+            "command": { "type": "string" }
+          }
+        },
+        "e2e": {
+          "description": "e2e spec 文件名（不含目录）；每个都必须在运行时执行的 testDir 下真实存在。",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+\\.spec\\.ts$" },
+          "uniqueItems": true
+        },
+        "guards": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

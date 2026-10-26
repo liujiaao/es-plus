@@ -29,6 +29,7 @@ const PUBLIC = join(ROOT, 'es-plus-docs', 'public')
 const SCHEMAS = [
   ['brand/slogan.schema.json', 'brand'],
   ['cases/cases.schema.json', 'cases'],
+  ['cases/ai-cases.schema.json', 'cases'],
   ['ai/ai-tools.schema.json', 'ai'],
   ['ai/feature-coverage.schema.json', 'ai'],
 ]

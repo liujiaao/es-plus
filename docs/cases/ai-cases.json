@@ -1,0 +1,153 @@
+{
+  "$schema": "https://liujiaao.github.io/es-plus/cases/ai-cases.schema.json",
+  "version": 1,
+  "note": "AI 展示案例矩阵的单一真源。站点副本（src/cases/**）与本文件里登记的产物由 scripts/sync-cases.mjs 分发；能力令牌的定义与可达性见 docs/ai/ai-capability-matrix.json（现场生成）。字段语义见 docs/cases/ai-cases.schema.json 与 docs/internal/ai-showcase-matrix-plan.md §4.6。",
+  "shared": ["cases.json", "cases-metrics.json"],
+  "clusters": {
+    "C1": "字段三面扇出",
+    "C2": "声明式联动",
+    "C3": "码值语义",
+    "C4": "权限端到端",
+    "C5": "动作编排",
+    "C6": "弹窗体系",
+    "C7": "跨页选择",
+    "C8": "引擎切换",
+    "C9": "后端适配",
+    "C10": "布局与 i18n",
+    "C11": "逃生舱",
+    "C12": "片段与宿主"
+  },
+  "cases": [
+    {
+      "id": "flagship-approval",
+      "title": "合同审批工作台",
+      "origin": "handcrafted",
+      "tier": "flagship",
+      "clusters": ["C2", "C4", "C5", "C6"],
+      "tokens": [],
+      "alwaysOn": [],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": ["vue3", "vue2", "antdv"],
+      "mode": "schema",
+      "claim": "execute",
+      "sites": {
+        "es-plus-docs": "execute",
+        "es-pc": "execute",
+        "es-eui": "execute"
+      },
+      "host": {
+        "kind": "custom",
+        "route": "/flagship-approval"
+      },
+      "artifacts": {
+        "schema": "docs/cases/flagship-approval.json",
+        "mock": "docs/cases/flagship-approval.mock.js"
+      },
+      "replay": {
+        "kind": "handcrafted",
+        "reason": "手工编写、无生成输入的整页案例；它的主张由 check:flagship-case 的逐条断言承担，不属于「AI 生成」这一类。"
+      },
+      "provenance": {
+        "nl": null,
+        "model": null
+      },
+      "e2e": [],
+      "guards": ["check:flagship-case"]
+    },
+    {
+      "id": "purchase-approval",
+      "title": "采购申请审批页",
+      "origin": "ai",
+      "tier": "S1",
+      "clusters": ["C2", "C3", "C4", "C5"],
+      "tokens": [
+        "formtype",
+        "validation",
+        "reactions",
+        "fieldVisibility",
+        "permissions",
+        "operationColumn",
+        "cellDataOptions",
+        "toolbarBtns",
+        "dialogs"
+      ],
+      "alwaysOn": ["tableBase", "pagination", "columnsDecl"],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": ["vue3", "vue2", "antdv"],
+      "mode": "schema",
+      "claim": "execute",
+      "sites": {
+        "es-plus-docs": "execute",
+        "es-pc": "execute",
+        "es-eui": "execute"
+      },
+      "host": {
+        "kind": "custom",
+        "route": "/ai-generated"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/purchase-approval.json",
+        "meta": "docs/cases/generated/purchase-approval.meta.json",
+        "mock": "docs/cases/generated/purchase-approval.mock.js"
+      },
+      "replay": {
+        "kind": "unavailable",
+        "reason": "历史产物：生成于 --emit-config 落地之前，模型输出的 StructuredCrudConfig 未被保存（docs/internal/ai-showcase-matrix-plan.md §3 G5），因此无法机械重放。补一次模型调用重新生成即可升级为 frozen-config；在此之前本案例的可信度由 check:generated-case 的逐条断言承担。"
+      },
+      "provenance": {
+        "nl": "做一个采购申请列表页：查询区有申请单号和状态（待审批/已通过/已驳回）。列表展示申请单号、申请人、金额、状态、申请时间；状态列用中文标签并带颜色；工具栏左侧有一个「新增」按钮，点击打开新增弹窗；操作列「查看」打开采购申请详情弹窗，「驳回」「通过」两个按钮需要审批权限 approval:audit。新增弹窗包含申请单号、申请人、金额、状态、驳回原因；申请单号、申请人、金额必填；驳回原因仅当状态选择「已驳回」时显示且必填。",
+        "model": "deepseek-v4-flash",
+        "generatedAt": "2026-10-25",
+        "attempts": 1
+      },
+      "e2e": [],
+      "guards": ["check:generated-case"]
+    },
+    {
+      "id": "employee-roster",
+      "title": "员工花名册",
+      "origin": "ai",
+      "tier": "S1",
+      "clusters": ["C1", "C3", "C6", "C10"],
+      "tokens": ["formtype", "validation", "cellDataOptions", "columnStyle", "dialogs"],
+      "alwaysOn": ["tableBase", "pagination", "columnsDecl"],
+      "escapeHatch": [],
+      "shape": "full",
+      "scene": "crud",
+      "targets": ["vue3", "vue2", "antdv"],
+      "mode": "schema",
+      "claim": "execute",
+      "sites": {
+        "es-plus-docs": "execute",
+        "es-pc": "execute",
+        "es-eui": "execute"
+      },
+      "host": {
+        "kind": "generic",
+        "route": "/ai-gallery"
+      },
+      "artifacts": {
+        "schema": "docs/cases/generated/employee-roster.json",
+        "meta": "docs/cases/generated/employee-roster.meta.json",
+        "mock": "docs/cases/generated/employee-roster.mock.js",
+        "config": "docs/cases/generated/employee-roster.config.json"
+      },
+      "replay": {
+        "kind": "frozen-config"
+      },
+      "provenance": {
+        "nl": "做一个员工花名册页面：查询区有姓名、部门和在职状态；列表展示工号、姓名、部门、在职状态和入职日期，部门列与在职状态列居中对齐。需要三个弹窗：add 新增员工弹窗、edit 编辑员工弹窗、view 查看员工详情弹窗，其中 view 弹窗全屏展示。姓名、工号、部门不能为空，提交前必须有必填校验。在职状态在表格里用彩色标签显示（在职为 success，离职为 danger），取值为 1 和 0；入职日期用日期选择器。",
+        "model": "deepseek-v4-flash",
+        "generatedAt": "2026-10-26",
+        "attempts": 1,
+        "command": "ESPLUS_AI_MODEL=deepseek-v4-flash node packages/cli/build/index.js create employee-roster -d \"<nl>\" --ai -m schema -t vue3 --emit-config docs/cases/generated/employee-roster.config.json --force"
+      },
+      "e2e": ["ai-gallery.spec.ts"],
+      "guards": ["check:ai-cases"]
+    }
+  ]
+}

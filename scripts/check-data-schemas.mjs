@@ -42,6 +42,7 @@ const SITE_ORIGIN = 'https://liujiaao.github.io/es-plus'
 const TARGETS = [
   { data: 'docs/brand/slogan.json', schema: 'docs/brand/slogan.schema.json' },
   { data: 'docs/cases/cases.json', schema: 'docs/cases/cases.schema.json' },
+  { data: 'docs/cases/ai-cases.json', schema: 'docs/cases/ai-cases.schema.json' },
   { data: 'docs/ai/ai-tools.json', schema: 'docs/ai/ai-tools.schema.json' },
   { data: 'docs/ai/feature-coverage.json', schema: 'docs/ai/feature-coverage.schema.json' },
 ]
