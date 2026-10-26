@@ -765,6 +765,17 @@
       ]
     },
     {
+      "id": "advanced/25-global-request",
+      "group": "linkage",
+      "title": "全局请求：整页零请求代码",
+      "tokens": [
+        "apiParams",
+        "configTableOut",
+        "pagination",
+        "httpRequestFn"
+      ]
+    },
+    {
       "id": "vxe-table/01-basic-switch",
       "group": "vxe-table",
       "title": "引擎切换",
@@ -915,7 +926,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 38,
+      "refs": 39,
       "uncovered": 58,
       "cases": [
         {
@@ -998,6 +1009,17 @@
           ],
           "tier": "D",
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "combination/GlobalRequest",
+          "demo": "advanced/25-global-request",
+          "tokens": [
+            "apiParams",
+            "configTableOut",
+            "pagination",
+            "httpRequestFn"
+          ],
+          "tier": "C"
         },
         {
           "id": "combination/ImportData",
@@ -1775,8 +1797,8 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 96,
-      "uncovered": 23,
+      "refs": 97,
+      "uncovered": 24,
       "cases": [
         {
           "id": "Advanced",
@@ -1785,6 +1807,15 @@
             "useDialogApi"
           ],
           "tier": "D"
+        },
+        {
+          "id": "AiGallery",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
           "id": "AiGenerated",
@@ -2016,6 +2047,17 @@
             "useDialogApi"
           ],
           "tier": "D"
+        },
+        {
+          "id": "es-advanced/GlobalRequest",
+          "demo": "advanced/25-global-request",
+          "tokens": [
+            "apiParams",
+            "configTableOut",
+            "pagination",
+            "httpRequestFn"
+          ],
+          "tier": "C"
         },
         {
           "id": "es-advanced/MasterDetailFlow",
