@@ -1,6 +1,6 @@
 import type { TableColumn, TableOptions } from '../../../../types'
 
-export type { TableEngineExposed } from '@es-plus/core'
+export type { CellEditPayload, TableEngineExposed } from '@es-plus/core'
 
 export interface TableEngineProps {
   columns: TableColumn[]

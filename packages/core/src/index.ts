@@ -186,6 +186,10 @@ export {
 } from './table-sort'
 export type { SortParamNames, SortParamOption, TableSortOrder, TableSortState } from './table-sort'
 
+// ─── 行内编辑提交归一（`cell-edit` 载荷，三端同一求值点）───────────────
+// 三份 vxe 引擎只做「进会话拍快照 / 出会话比一遍」，判定全在 table-edit。
+export { resolveEditProp, snapshotEditRow, diffEditRow } from './table-edit'
+
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
 export { patchHtmlRowSpans } from './vxe-print'
 

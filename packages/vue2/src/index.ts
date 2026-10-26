@@ -238,6 +238,7 @@ export type {
   VxeValidConfig,
   VxeFooterMethod,
   TableEngineExposed,
+  CellEditPayload,
   VxeTreeConfig,
   VxeProxyConfig,
   VxeExpandConfig,

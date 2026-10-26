@@ -57,6 +57,8 @@ export type {
   VxeSeqConfig,
   // ── 引擎接口（跨包共享） ───────────────────────
   TableEngineExposed,
+  // ── 行内编辑提交（`cell-edit` 载荷） ────────────
+  CellEditPayload,
 } from './types'
 
 /**
@@ -102,6 +104,7 @@ export const PUBLIC_CONTRACT_TYPES = [
   'VxeExpandConfig',
   'VxeSeqConfig',
   'TableEngineExposed',
+  'CellEditPayload',
 ] as const
 
 export type PublicContractTypeName = (typeof PUBLIC_CONTRACT_TYPES)[number]

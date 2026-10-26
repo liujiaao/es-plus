@@ -111,7 +111,8 @@ export type {
   VxeProxyConfig,
   VxeExpandConfig,
   VxeSeqConfig,
-  TableEngineExposed
+  TableEngineExposed,
+  CellEditPayload
 } from '@es-plus/core'
 
 // vxe-table 打印辅助（spanMethod + 动态合并场景）

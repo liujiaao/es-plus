@@ -976,7 +976,7 @@ export interface TableOptions {
    * （对比 vxeConfig / vxeOn 必须留在各端的 declare module 增强里 —— core 不允许有依赖）。
    *
    * @example
-   * editConfig: { mode: 'row' }, keepSource: false  // 取消自动开启，编辑直接写回行对象
+   * editConfig: { mode: 'row' }, keepSource: false  // 不留快照（revertData/getUpdateRecords 不可用）；编辑照样就地写进行对象
    */
   keepSource?: boolean
   /**
@@ -1291,4 +1291,28 @@ export interface TableEngineExposed {
    * 避免宿主写 `vxeInstance().getPrintHtml()` 在 vxe4 上是 undefined。
    */
   getPrintHtml?: (options?: Record<string, unknown>) => Promise<{ html: string }>
+}
+
+/**
+ * `cell-edit` 事件的载荷（三端同形，仅 vxe 引擎会发）。
+ *
+ * vxe 原生的 `edit-closed` 给的是 `{ row, rowIndex, column, $columnIndex }` —— 没有旧值，
+ * 字段名也埋在 `column.property` 里。宿主真要持久化时缺的正是这两样，于是引擎在
+ * 「进入编辑时拍快照 / 退出时比一遍」之后发这个归一载荷：
+ *
+ * ```vue
+ * <es-table :options="{ engine: 'vxe', editConfig: {} }" @cell-edit="onCellEdit" />
+ * ```
+ *
+ * 未改值的单元格（点一下再失焦）**不发**事件。行模式下一次会话改多格 → 每格一条。
+ */
+export interface CellEditPayload {
+  /** 被编辑的那一行（就是你在 `data-source` 里传进去的同一个对象引用）。 */
+  row: Record<string, unknown>
+  /** 字段名（vxe 的 `column.property` / vxe3 的 `field` / el-table 的 `prop` 归一后的值）。 */
+  prop: string
+  /** 编辑后的值。 */
+  value: unknown
+  /** 编辑前的值（进入编辑时快照里的值）。 */
+  oldValue: unknown
 }

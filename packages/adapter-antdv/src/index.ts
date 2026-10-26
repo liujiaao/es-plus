@@ -100,7 +100,7 @@ export type {
 // 框架无关契约类型三端一致，直接透传 @es-plus/core
 export type {
   ModelData, RenderFn, AnyVNode, EsButtonType, EsButtonSize, EsTableSize,
-  FormType, ConfigTableOut, ListenToCallBack, TableEngineExposed,
+  FormType, ConfigTableOut, ListenToCallBack, TableEngineExposed, CellEditPayload,
   VxeEditRender, VxeEditConfig, VxeExportConfig, VxeToolbarConfig, VxeColumnConfig,
   VxeKeyboardConfig, VxeMouseConfig, VxeValidConfig, VxeFooterMethod,
   VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig,
