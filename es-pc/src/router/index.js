@@ -29,6 +29,20 @@ const routes = [
         meta: { title: '一句话生成：采购申请审批页' },
         component: () => import('@/views/AiGenerated.vue'),
       },
+      {
+        // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
+        // 列表页 + 通用宿主详情页共用同一份组件
+        path: 'ai-gallery',
+        name: 'AiGallery',
+        meta: { title: 'AI 案例画廊' },
+        component: () => import('@/views/AiGallery.vue'),
+      },
+      {
+        path: 'ai-gallery/:id',
+        name: 'AiGalleryCase',
+        meta: { title: 'AI 案例画廊 · 详情' },
+        component: () => import('@/views/AiGallery.vue'),
+      },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
       {
         path: 'es-form',

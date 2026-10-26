@@ -142,6 +142,19 @@ const routes = [
     component: () => import('../views/ai-generated.vue')
   },
 
+  // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
+  // 列表页 + 通用宿主详情页共用同一份组件
+  {
+    path: '/ai-gallery',
+    name: 'AiGallery',
+    component: () => import('../views/ai-gallery.vue')
+  },
+  {
+    path: '/ai-gallery/:id',
+    name: 'AiGalleryCase',
+    component: () => import('../views/ai-gallery.vue')
+  },
+
   // 主题
   {
     path: '/theme',

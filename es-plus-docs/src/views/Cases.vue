@@ -36,6 +36,20 @@
         </span>
         <span class="flagship-cta-arrow">→</span>
       </router-link>
+
+      <!-- 画廊：上面两页各讲一个案例，这一页把 manifest 里的全部 AI 案例按能力簇列出来，
+           产物（schema / 冻结配置）可直接下载。 -->
+      <router-link to="/ai-gallery" class="flagship-cta ai-cta">
+        <span class="flagship-cta-badge ai-cta-badge">AI 画廊</span>
+        <span class="flagship-cta-body">
+          <span class="flagship-cta-title">全部 AI 案例：按能力簇分组，产物可下载、可重放</span>
+          <span class="flagship-cta-desc">
+            每个案例标注 claim 与「是否可机械重放」（产物 = 编译(冻结配置)）—— 清单来自
+            <code>docs/cases/ai-cases.json</code> 单一真源，新增案例不必改页面
+          </span>
+        </span>
+        <span class="flagship-cta-arrow">→</span>
+      </router-link>
     </div>
 
     <!-- 成本对照：下面每个案例的 pain/win 是文字，这一块给的是**实测**数字 ——

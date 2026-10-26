@@ -32,6 +32,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AiGenerated.vue')
   },
   {
+    // AI 案例画廊：清单来自 manifest 生成的 registry（docs/cases/ai-cases.json），
+    // 列表页 + 通用宿主详情页（`/ai-gallery/<id>`）共用同一份组件。
+    path: '/ai-gallery',
+    name: 'ai-gallery',
+    component: () => import('@/views/AiGallery.vue')
+  },
+  {
+    path: '/ai-gallery/:id',
+    name: 'ai-gallery-case',
+    component: () => import('@/views/AiGallery.vue')
+  },
+  {
     path: '/guide/:name',
     name: 'guide',
     component: () => import('@/views/Doc.vue')
