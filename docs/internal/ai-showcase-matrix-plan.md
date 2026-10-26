@@ -583,7 +583,7 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
   `generatedEqualIgnoringTargetImports=true`）；② 宿主装配块按端不同（Element Plus / Ant Design / Element UI），
   这是宿主预检块，不是组合差异。有表形状是 **schema 模式下 pageSchema 与生成代码三端逐字节相同**。
 - 生成提示（页面如实展示）：`full` 6 / 12 条「自动归一」（弹窗表单项补键）、`form+dialog` 1 条
-  （antdv 片段是 `.tsx`，需 `@vite-jsx`）、`table+form` 0 条。
+  （antdv 片段是 `.tsx`，需 `@vite-jsx`）、`table+form` 0 条。（这 12 条属噪音，§15 之后归零。）
 - 守卫：`npm run check:composition-gallery` 绿（单源新鲜 + 三站副本一致 + 接线完整 + 6 条非空证明）；
   `npm run check:composition` 仍绿（同一批 fact 判据）；`npm run check:consistency` 退出码 0。
 - e2e：`--project ai-gallery-docs` → **13 passed**（24.2 s，含新增那条）。
@@ -601,16 +601,17 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
    （切渲染端后 pageSchema 逐字节相同）与 e2e 断言。⟹ 「三端差异」此后只有 **渲染端 import** 与
    **宿主装配块** 两处可解释来源；出现第三种就是缺陷。
 3. **弹窗表单项的成员键是死键**：`dialogs[*].formItems[*]` 上的 `inQuery/inTable/inForm` 在三个渲染端
-   都不被读取（弹窗体只看 `prop/label/formtype/attrs/options`），但 schema 要求必填，于是 repair 每次
-   从顶层字段补齐并各发一条「自动归一」——这是**噪音**，不是错误。是否把该修复改成「只补 `inForm: true`、
-   其余置 false」属于 shared 契约变更（会动 eval 输出现场），**本批不动**，登记为开放项。
+   都不被读取（弹窗体只看 `prop/label/formtype/attrs/options`），schema 又给它们 `.default(true)`，
+   于是展开时从顶层字段整份抄进来并各发一条「自动归一」——这是**噪音**。（原文写「schema 要求必填」
+   不准确：省略并不报错，是 Zod 把默认值实体化；见 §15.1 的复核。）是否顺手改成「只补 `inForm: true`、
+   其余置 false」属于 shared 契约变更，当初登记为开放项 —— **已在 §15 按「不抄」落地**。
 
 ### 13.5 仍未闭环
 
 - es-pc / es-eui 没有对应的 e2e project，S2 在两端的 claim 保持 `measure + compile`（与 §11.4 同一条纪律）。
 - §12.5 的 Wave C 余项不变：S3 工作流页（W1–W3 覆盖 8 个零案例 MCP 工具）、`feature-coverage.json`
   的 `aiCase` 接缝（`engine-lab` 的 `cell-edit` 已在 §14 落地）。
-- 上面 13.4 第 3 条的「弹窗体成员键」是下一批的候选（改完能把这 6/12 条噪音去掉）。
+- 上面 13.4 第 3 条的「弹窗体成员键」**已在 §15 落地**（展开只投影表单面，噪音归零）。
 
 ## 14. 落地记录（vxe 行内编辑归一为 `cell-edit`，2026-10-26）
 
@@ -688,3 +689,51 @@ e2e 承担），只证明两件事：**度量对得上**（每个字段在几个
      两个大版本的 `es/table/render/index.js` 都已内置这个 renderer，所以一份 schema 仍跨版本成立。
   2. 案例 `tip` 由宿主以 `{{ meta.tip }}` **纯文本**渲染 —— 原先带的 `` ` `` / `**` 只会在三站页面上原样露出
      反引号与星号。已改成无 Markdown 装饰的纯文本（`cases:sync` 分发到三站）。
+
+## 15. 落地记录（弹窗表单项不再继承表格/查询面键，2026-10-26）
+
+§13.4③ 登记的开放项。先复核它的前提：「schema 要求必填」**不成立** ——
+`FieldConfigSchema` 的 `inQuery/inTable/inForm` 带 `.default(true)`，省略不报错，是 **Zod 把默认值
+实体化**成 `true`；三个渲染端也都不读它们（弹窗 `formItems` 原样交给 EsForm，三端组件里零处引用 `inForm`）。
+真实缺陷只有一条。
+
+### 15.1 缺陷：`normalizeConfig` 把顶层字段**整份**抄进弹窗表单项
+
+`expandDialogFormItems` 形态②按 `Object.keys(field)` 补「缺失键」，形态①（字符串简写）直接
+`cloneValue(field)`。两个后果：
+
+1. **噪音**：顶层字段通常带 `querySpan/align/inQuery/...`，于是**每一条**弹窗表单项都发一条「自动归一」。
+   S2 组合画廊实测：18 例里 6 例 `full` 各 12 条、`form+dialog` 1 条 —— 全是这一类。
+2. **错值**：顶层字段的 `inForm: false`（只查不录）被抄进弹窗条目 —— 一个明明要在弹窗里渲染的条目
+   被标成「不进表单」，语义自相矛盾；`inQuery: true` 同理，让弹窗条目看着像查询字段。
+
+### 15.2 落地
+
+| 位置 | 说明 |
+|---|---|
+| `shared/src/normalize-config.ts` | 新增 `DIALOG_FORM_ITEM_KEYS` + `projectDialogFormItem`：只投影**表单面**（`prop/label/labelKey/formtype/required/rules/attrs/dataOptions/apiParams/formSpan/permissionValue/isHidden/reactions`）。形态①②都改走投影 |
+| `shared/src/repair-config.ts` ⑤ | 同一投影（`repairConfig` 单独被调用的兜底路径） |
+| 单测 | normalize +3（零改写零告警 / 不继承 `inForm:false` / 表单面键照样补全），repair +1 |
+| 组合画廊 | `npm run composition:gallery` 重生成：**只有 `warnings` 变空**，`pageSchema` 与判据逐字节不变 |
+
+### 15.3 为什么不按 §13.4③ 的备选「只补 `inForm: true`、其余置 false」
+
+那仍然是在替宿主编造归属键；`repair-config` 头注的纪律是「**不补 `.default()`** ——省略就保持省略」。
+既然弹窗面没有消费者，正确做法是**不抄**，而不是抄成另一组值。
+
+### 15.4 验证
+
+- **产物不变**：重跑 `gen-ai-case-artifact` 生成 `engine-lab` → 4 条「自动归一」消失，`engine-lab.json`
+  **逐字节不变**（`git status` 无改动）。
+- **组合画廊**：重生成的 diff 只有 `warnings` 段（12 插入 / 132 删除），`pageSchema`/判据零变化 ——
+  这正是「只去掉噪音、不动语义」的证据。
+- 单测：shared **827**（+4）/ mcp-server 340 / cli 79 全绿。
+- `npm run check:consistency` → **退出码 0**（含 `check:composition-gallery` 的「单源新鲜 + 三站副本一致」）。
+- e2e：`--project=ai-gallery-docs -g "组合画廊|引擎实验室"` → **2 passed**。
+
+### 15.5 仍存在的（刻意不动）
+
+`StructuredCrudConfigSchema` 的弹窗表单项仍复用 `FieldConfigSchema`，`safeParse` 会把缺省的三成员布尔
+实体化成 `true`。它只活在**进程内解析结果**里：产物走 `buildFormItem` 投影、`refine_config` 的 diff 吃
+原始 JSON、生成工具只回代码与 warnings —— 没有任何用户可见出口。把它拆成专用 schema 会动 AI 契约与
+`check-schema-contract` 的键集，收益为零，登记不改。
