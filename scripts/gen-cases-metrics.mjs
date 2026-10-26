@@ -25,7 +25,7 @@
  *
  * 退出码：0 = 成功/一致；1 = 示例缺失/编译失败/产出过期。
  */
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc'
@@ -41,6 +41,38 @@ const TITLES = {
   'filter-table': '查询 + 表格 + 分页 + 行内查看',
   'status-column': '码值列：中文标签 + 空值占位',
 }
+
+/**
+ * A9 三栏对照（`/native-vs-ai`）的第三栏：**同一能力范围的 AI 产物**（0 次模型调用 —— 复用 A1）。
+ *
+ * 为什么第三栏不是「filter-table 的严格同场景产物」：本仓没有为这个场景调过模型，硬造一份
+ * 就等于把「确定性工具产物」冒充成「模型产物」。这里如实说明两侧功能**不是等量**的：
+ * A1 产物是 **superset**（多一枚查询项、多一列、多三个弹窗、按钮权限），却仍只有 0 个函数 /
+ * 0 个事件绑定 —— 这个方向的偏差**对 AI 不利**（多做功能，行数却没省），所以可以接受。
+ *
+ * 行数一栏刻意不设「AI 更短」的结论：纯 JSON 逐标量一行，物理行数不是复杂度信号。
+ * 第三栏真正可比的是**事件 / 函数 / v-if 三项归零**与「一份产物三端跑」。
+ */
+const AI_SCENES = {
+  'filter-table': {
+    caseId: 'employee-roster',
+    artifact: 'docs/cases/generated/employee-roster.json',
+    meta: 'docs/cases/generated/employee-roster.meta.json',
+    title: '员工花名册（模型生成，功能为 filter-table 的超集）',
+    note:
+      '多一枚查询项（在职状态）、多一列（入职日期）、多三个弹窗（新增/编辑/查看）；' +
+      '同一份产物三站共用（es-plus-docs / es-pc / es-eui 副本逐字节一致）。',
+  },
+}
+
+/** 三栏源码（原样、逐字节）供页面展示 —— 与 A8 的片段源码模块同一套做法。 */
+const NVS_SOURCES = 'docs/cases/generated/native-vs-ai-sources.js'
+const NVS_SITE_PAGES = [
+  { site: 'es-plus-docs', page: 'es-plus-docs/src/views/NativeVsAi.vue', router: 'es-plus-docs/src/router/index.ts', cases: 'es-plus-docs/src/views/Cases.vue' },
+  { site: 'es-pc', page: 'es-pc/src/views/NativeVsAi.vue', router: 'es-pc/src/router/index.js', cases: 'es-pc/src/views/Cases.vue' },
+  { site: 'es-eui', page: 'es-eui/src/views/native-vs-ai.vue', router: 'es-eui/src/router/index.js', cases: 'es-eui/src/views/cases.vue' },
+]
+const NVS_COPIES = NVS_SITE_PAGES.map((p) => `${p.site}/src/cases/generated/native-vs-ai-sources.js`)
 
 const toLF = (text) => text.replace(/\r\n?/g, '\n')
 const nonEmptyLines = (text) => toLF(text).split('\n').filter((l) => l.trim() !== '').length
@@ -110,6 +142,106 @@ function measure(file) {
 
 const reduce = (native, es) => (native === 0 ? 0 : Math.round(((native - es) / native) * 1000) / 10)
 
+/**
+ * 第三栏（AI 产物）的四个口径。
+ *
+ * 事件 / 函数 / v-if 用**同一把尺子**量：JSON 里没有 `<template>` / `<script>`，`blocks()`
+ * 取不到区就返回空串，于是三项必然为 0 —— 这是计数器的结果，不是写死的数字。
+ * 行数/字节如实记录，但页面明写「JSON 物理行 ≠ 复杂度」：逐标量一行，行数不是优劣信号。
+ */
+function measureAi(rel) {
+  const text = readText(join(ROOT, rel))
+  const parts = blocks(text)
+  const schema = JSON.parse(text)
+  const json = JSON.stringify(schema)
+  return {
+    file: rel,
+    lines: nonEmptyLines(text),
+    bytes: Buffer.byteLength(text),
+    events: countEvents(parts.template),
+    functions: countFunctions(parts.script),
+    vIf: countVIf(parts.template),
+    features: {
+      formItems: (schema.formItems ?? []).length,
+      columns: (schema.columns ?? []).length,
+      dialogs: Object.keys(schema.dialogs ?? {}).length,
+      actions: (schema.actions ?? []).length,
+      dataOptions: (json.match(/"dataOptions"/g) || []).length,
+      permissionValue: (json.match(/"permissionValue"/g) || []).length,
+    },
+  }
+}
+
+/** 三栏源码模块（单源，另写三份站点副本 —— 与 A8 的片段源码模块同一套做法）。 */
+function renderNvsSources(scenarios) {
+  const payload = {}
+  for (const s of scenarios) {
+    const ai = AI_SCENES[s.id]
+    if (!ai) continue
+    const meta = JSON.parse(readText(join(ROOT, ai.meta)))
+    payload[s.id] = {
+      title: ai.title,
+      note: ai.note,
+      scene: s.title,
+      columns: {
+        native: { file: s.native.file, text: toLF(readText(join(ROOT, s.native.file))) },
+        es: { file: s.es.file, text: toLF(readText(join(ROOT, s.es.file))) },
+        ai: {
+          file: ai.artifact,
+          text: toLF(readText(join(ROOT, ai.artifact))),
+          meta: {
+            caseId: ai.caseId,
+            model: meta.model ?? null,
+            generatedAt: meta.generatedAt ?? null,
+            attempts: meta.attempts ?? null,
+            mode: meta.mode ?? null,
+            nl: meta.nl ?? null,
+          },
+        },
+      },
+    }
+  }
+  return (
+    '/**\n' +
+    ' * 由 `scripts/gen-cases-metrics.mjs` 生成，勿手改。\n' +
+    ' * `/native-vs-ai` 三栏展示的**原样源码**（原生 .vue / 手写 es-plus .vue / AI 产物 JSON）。\n' +
+    ' * 行尾统一成 LF（仓库标准）：否则同一份示例在不同检出设置下会生成不同字节，守卫会假红。\n' +
+    ' * 数字在 `cases-metrics.json` 里，源码在这里 —— 同一份度量脚本产出，改示例即两边同时变。\n' +
+    ' */\n' +
+    `export const NATIVE_VS_AI = ${JSON.stringify(payload, null, 2)}\n`
+  )
+}
+
+/** 三站页面/路由/入口接线 —— 路由加了没人链 = 隐形页面。 */
+function checkNvsWiring() {
+  const problems = []
+  for (const w of NVS_SITE_PAGES) {
+    const pagePath = join(ROOT, w.page)
+    if (!existsSync(pagePath)) {
+      problems.push(`${w.site} 缺少对照页 ${w.page}`)
+      continue
+    }
+    const page = toLF(readFileSync(pagePath, 'utf8'))
+    if (!page.includes('native-vs-ai-sources')) problems.push(`${w.page} 没有引用三栏源码模块`)
+    if (!page.includes('data-testid="native-vs-ai"')) problems.push(`${w.page} 缺少 data-testid="native-vs-ai"`)
+    const routerPath = join(ROOT, w.router)
+    if (!existsSync(routerPath) || !toLF(readFileSync(routerPath, 'utf8')).includes('native-vs-ai')) {
+      problems.push(`${w.router} 未注册 /native-vs-ai 路由`)
+    }
+    const casesPath = join(ROOT, w.cases)
+    if (!existsSync(casesPath) || !toLF(readFileSync(casesPath, 'utf8')).includes('/native-vs-ai')) {
+      problems.push(`${w.cases} 没有指向 /native-vs-ai 的入口`)
+    }
+  }
+  // 两个 Vue3 站点共用同一份对照页：数字来自同一个单源模块，端差异不该在这里出现。
+  const docs = join(ROOT, 'es-plus-docs/src/views/NativeVsAi.vue')
+  const pc = join(ROOT, 'es-pc/src/views/NativeVsAi.vue')
+  if (existsSync(docs) && existsSync(pc) && !sameText(readFileSync(docs, 'utf8'), readFileSync(pc, 'utf8'))) {
+    problems.push('es-plus-docs 与 es-pc 的 NativeVsAi.vue 不一致（同一份对照页应逐字节相同）')
+  }
+  return problems
+}
+
 /** 三站 Cases 页必须展示这份实测值，而不是手写百分比。 */
 const SITE_CASES = [
   'es-plus-docs/src/views/Cases.vue',
@@ -144,11 +276,13 @@ function main() {
     if (!existsSync(join(ROOT, esFile))) throw new Error(`缺少对照实现 ${esFile}`)
     const native = measure(`docs/examples/native/${name}.vue`)
     const es = measure(esFile)
+    const ai = AI_SCENES[name] ? measureAi(AI_SCENES[name].artifact) : null
     return {
       id: name,
       title,
       native,
       es,
+      ...(ai ? { ai } : {}),
       reduction: {
         lines: reduce(native.lines, es.lines),
         events: reduce(native.events, es.events),
@@ -170,14 +304,20 @@ function main() {
 
   const out = {
     $comment:
-      '由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字。',
+      '由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 与 AI 产物实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字；scenarios[].ai 是 /native-vs-ai 的第三栏（同一把尺子量 AI 产物）。',
     method:
-      '同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。',
+      '同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。第三栏（ai）用同一把尺子量 AI 产出的纯 JSON：没有 <template>/<script>，故 events/functions/vIf 由计数器算得为 0；lines 是 JSON 物理行（不是复杂度信号，页面里明写）。',
     scenarios,
     totals: { native: sideTotals('native'), es: sideTotals('es') },
   }
 
   const text = `${JSON.stringify(out, null, 2)}\n`
+  const sourcesText = renderNvsSources(scenarios)
+  const wiring = checkNvsWiring()
+  if (wiring.length) {
+    for (const p of wiring) console.error(`❌ ${p}`)
+    process.exit(1)
+  }
   checkSites()
   if (CHECK) {
     if (!existsSync(TARGET)) {
@@ -188,12 +328,32 @@ function main() {
       console.error('[cases-metrics] 产出过期：示例改了而 cases-metrics.json 没更新（或反之）。运行 node scripts/gen-cases-metrics.mjs')
       process.exit(1)
     }
-    console.log(`[cases-metrics] 一致：${scenarios.length} 个场景`)
+    for (const rel of [NVS_SOURCES, ...NVS_COPIES]) {
+      const abs = join(ROOT, rel)
+      if (!existsSync(abs)) {
+        console.error(`[cases-metrics] 缺少三栏源码模块 ${rel} —— 运行 node scripts/gen-cases-metrics.mjs`)
+        process.exit(1)
+      }
+      if (!sameText(readFileSync(abs, 'utf8'), sourcesText)) {
+        console.error(`[cases-metrics] ${rel} 过期（示例/产物改了而源码模块没重算）`)
+        process.exit(1)
+      }
+    }
+    const withAi = scenarios.filter((s) => s.ai).length
+    console.log(`[cases-metrics] 一致：${scenarios.length} 个场景（其中 ${withAi} 个有 AI 对照栏）`)
     return
   }
 
   writeFileSync(TARGET, text)
-  console.log(`[cases-metrics] 已生成 ${scenarios.length} 个场景 → docs/cases/cases-metrics.json`)
+  for (const rel of [NVS_SOURCES, ...NVS_COPIES]) {
+    const abs = join(ROOT, rel)
+    mkdirSync(dirname(abs), { recursive: true })
+    writeFileSync(abs, sourcesText)
+  }
+  console.log(
+    `[cases-metrics] 已生成 ${scenarios.length} 个场景 → docs/cases/cases-metrics.json` +
+      `（三栏源码 ${NVS_SOURCES} + ${NVS_COPIES.length} 份站点副本）`
+  )
   for (const s of scenarios) {
     // 降幅可能为负（声明式配置在很小的场景里不一定更短）—— 负数如实显示成 +x%
     const pct = (v) => (v >= 0 ? `−${v}%` : `+${Math.abs(v)}%`)

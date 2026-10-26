@@ -1,6 +1,6 @@
 {
-  "$comment": "由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字。",
-  "method": "同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。",
+  "$comment": "由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 与 AI 产物实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字；scenarios[].ai 是 /native-vs-ai 的第三栏（同一把尺子量 AI 产物）。",
+  "method": "同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。第三栏（ai）用同一把尺子量 AI 产出的纯 JSON：没有 <template>/<script>，故 events/functions/vIf 由计数器算得为 0；lines 是 JSON 物理行（不是复杂度信号，页面里明写）。",
   "scenarios": [
     {
       "id": "filter-table",
@@ -18,6 +18,22 @@
         "events": 1,
         "functions": 2,
         "vIf": 0
+      },
+      "ai": {
+        "file": "docs/cases/generated/employee-roster.json",
+        "lines": 363,
+        "bytes": 7994,
+        "events": 0,
+        "functions": 0,
+        "vIf": 0,
+        "features": {
+          "formItems": 3,
+          "columns": 5,
+          "dialogs": 3,
+          "actions": 3,
+          "dataOptions": 5,
+          "permissionValue": 0
+        }
       },
       "reduction": {
         "lines": 37.4,
