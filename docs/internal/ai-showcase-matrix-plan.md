@@ -460,6 +460,37 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
 ### 10.5 已知缺口（Wave C 入口）
 
 - **排序参数未进请求**：三端 `sortable` 语义不同（el-table 本地排 / a-table 服务端），es-plus 没有 `sortField/sortOrder` 透传通道 —— 案例只能靠后端预排序对齐首屏，点击排序头在 antdv 侧仍无数据变化。
-- **新案例没有 e2e**：6 页 claim 均为 `compile`，按 §6 B2 这是允许的；要升到 `execute` 需要给 `ai-gallery.spec.ts` 补 spec（跨页勾选、树展开、合并跨页、远端下拉、vxe 行内编辑各一条）。
+- ~~**新案例没有 e2e**~~ → **已闭环（见 §11）**：`ai-gallery.spec.ts` 从 5 条扩到 11 条，5 页升到 `execute`；`engine-lab` 因 inlineEdit 在 AN-09 是 partial 仍停 `compile`（e2e 已登记，主张不越界）。
 - S2 组合画廊（18 golden）与 S3 工作流页仍未开工；`docs/ai/feature-coverage.json` 的 `aiCase` 接缝未做。
 - 展开行内容改动只存在 vxe 引擎的内部副本（`keepSource`），案例未接 `edit-closed` 持久化 —— `engine-lab` 的 meta 已写明这一点。
+
+## 11. 落地记录（Wave B 补课：e2e 主张承担者，2026-10-26）
+
+§10.5 的第一条缺口（新案例没有 e2e）已闭环。这一批只动 `__tests__/e2e-runtime/tests/ai-gallery.spec.ts` 与 manifest 的 `e2e` / `sites` / `claim`，不动任何组件源码。
+
+### 11.1 落地了什么
+
+| 主题 | 位置 | 说明 |
+|---|---|---|
+| 11 条 spec（原 5 条） | [ai-gallery.spec.ts](../../__tests__/e2e-runtime/tests/ai-gallery.spec.ts) | 新增 6 条：跨页勾选 + 批量动作、树展开、展开行、合并单元格、异构后端（信封 + 远端下拉）、vxe 大表 + 行内编辑 |
+| 画廊断言改为 manifest 驱动 | 同上 | 卡片数 / 标题 / 能力簇标题 / 「可机械重放」条数都从 `docs/cases/ai-cases.json` 现算 —— 加案例只改 manifest，spec 不会假红 |
+| claim 抬升（仅 docs） | [ai-cases.json](../cases/ai-cases.json) | `order-batch` / `org-tree-table` / `expand-row` / `grouped-report` / `legacy-erp-api` 的 `es-plus-docs` → `execute`，顶层 `claim` 随之 `execute`；`es-pc` / `es-eui` 仍是 `compile`（那两端没有 e2e，主张按站分开写） |
+| e2e 登记 | 同上 | 6 页 `e2e: ["ai-gallery.spec.ts"]`；`engine-lab` 也登记（测试真的跑），但 claim 停在 `compile` |
+
+### 11.2 实测数字
+
+- `npx playwright test -c __tests__/e2e-runtime/playwright.config.ts --project=ai-gallery-docs` → **11 passed**（约 21–40 s，含 vite dev server 起停）。
+- `npm run check:ai-cases` → 通过：9 个案例（7 个可机械重放）、三站副本一致、claim 未越 AN-09；覆盖报告仍 21/21（`--strict-coverage` 绿）。
+- `npm run cases:sync` 重新生成三站 registry（改 manifest 后必须跑，否则断言 8 红）。
+
+### 11.3 这一批新发现的四条结构约束（都写进 spec 注释里）
+
+1. **manifest 的 `replay` 是对象、registry 里是字符串**：`{kind: "frozen-config"}` 在 `cases:sync` 时压成 `"frozen-config"`。spec 直接读 manifest，所以要两种形态都认（`replayKind()`）。这也是「断言跟 manifest 走」的代价：单一真源有两种投影。
+2. **Element Plus 的折叠子树留在 DOM 里**：折叠态子行是 `display:none` 的 `tr.el-table__row`，所以数行必须 `:visible`；而 `el-table__row--level-N` 只加在**有子树**的行上 —— 叶子根节点（职能中心）没有 level 类，根节点数只能靠可见行数（3），不能靠 `--level-0`（只有 2）。
+3. **树表里不能用 `hasText` 认子节点**：备注列（`note`，inTable）就写着「下设平台组、前端组、测试组」，`hasText: "平台组"` 会命中父行。改成「层级类 + 第一列文本数组」（`toHaveText([...])` 逐行比对）。
+4. **vxe 的单元格编辑提交在失焦，不在回车**：`handleGlobalKeydownEvent` 的 Enter/Esc 分支都在 `keyboardConfig` 下，本案例没开 `keyboardConfig`，回车在输入框里什么也不做（实测：按 Enter 输入框仍在、单元格仍是空文本，因为 input 的 value 不算 `innerText`）。spec 因此点另一个单元格触发提交 —— 这也解释了为什么「Enter 保存」的直觉在这个案例上是错的。
+
+### 11.4 仍未闭环
+
+- `es-pc` / `es-eui` 没有对应的 e2e project，5 页在那两端的 claim 保持 `compile`（诚实：跑过的才叫 execute）。
+- `engine-lab` 的 execute 需要 inlineEdit 在 AN-09 的 vue3 格子从 partial 变 full（即 vxe 侧把编辑结果回写 `data-source`，接 `edit-closed`），属 Wave C。
