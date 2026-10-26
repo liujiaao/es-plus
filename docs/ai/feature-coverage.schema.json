@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AI 可达性台账（feature-coverage）",
-  "description": "文档站 96 例特性演示 × 分层可达性的单一真源。结构守卫：scripts/check-feature-coverage.mjs；Ajv 校验：scripts/check-data-schemas.mjs。",
+  "description": "文档站 103 例特性演示 × 分层可达性的单一真源。结构守卫：scripts/check-feature-coverage.mjs；Ajv 校验：scripts/check-data-schemas.mjs。",
   "type": "object",
   "additionalProperties": false,
   "required": ["note", "tiers", "demos", "sites"],
@@ -43,6 +43,16 @@
             "minItems": 1,
             "items": { "type": "string", "minLength": 1 },
             "description": "能力令牌（须 ∈ scripts/feature-coverage.data.mjs 的 CAPABILITY_TOKENS）"
+          },
+          "aiCase": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*$"
+            },
+            "description": "演示该能力的 AI 案例 id（docs/cases/ai-cases.json 的 cases[].id）。一页能力可能由两个案例分别演示（如 table/11 的展开行与树形），故为数组；只在案例的冻结配置真的含该能力的招牌键时登记，未登记 ≠ 不支持"
           },
           "note": { "type": "string" }
         }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://liujiaao.github.io/es-plus/ai/feature-coverage.schema.json",
-  "note": "AI 可达性台账：文档站 97 例特性演示 × 分层可达性。单一真源——由 scripts/check-feature-coverage.mjs 守卫，与磁盘 examples/**/*.vue、两个 *.data.ts 的 getComponent 引用三方 1:1 咬合。行档由 tokens 最弱档派生。",
+  "note": "AI 可达性台账：文档站 103 例特性演示 × 分层可达性。单一真源——由 scripts/check-feature-coverage.mjs 守卫，与磁盘 examples/**/*.vue、两个 *.data.ts 的 getComponent 引用三方 1:1 咬合。行档由 tokens 最弱档派生。",
   "tiers": {
     "A": "前门声明式一步可达（generate_crud）",
     "B": "声明式，但需 generate_crud_from_config（前门刻意不收）",
@@ -24,6 +24,9 @@
       "title": "布局与折叠",
       "tokens": [
         "formLayout"
+      ],
+      "aiCase": [
+        "flagship-approval"
       ]
     },
     {
@@ -60,6 +63,9 @@
         "apiParams",
         "reactions",
         "fieldEventFn"
+      ],
+      "aiCase": [
+        "legacy-erp-api"
       ]
     },
     {
@@ -184,6 +190,9 @@
         "reactions",
         "fieldVisibility",
         "formtype"
+      ],
+      "aiCase": [
+        "flagship-approval"
       ]
     },
     {
@@ -201,6 +210,9 @@
       "tokens": [
         "tableBtns",
         "sfcSlot"
+      ],
+      "aiCase": [
+        "order-batch"
       ]
     },
     {
@@ -220,6 +232,9 @@
       "tokens": [
         "tableBase",
         "pagination"
+      ],
+      "aiCase": [
+        "order-batch"
       ]
     },
     {
@@ -228,6 +243,9 @@
       "title": "点击单元格即编辑",
       "tokens": [
         "inlineEdit"
+      ],
+      "aiCase": [
+        "engine-lab"
       ]
     },
     {
@@ -237,6 +255,9 @@
       "tokens": [
         "columnSortable",
         "defaultSort"
+      ],
+      "aiCase": [
+        "order-batch"
       ],
       "note": "声明式默认排序 A 档；列级 sortable 仅在 columns 上，需 from_config"
     },
@@ -275,6 +296,9 @@
         "configTableOut",
         "pagination",
         "httpRequestFn"
+      ],
+      "aiCase": [
+        "legacy-erp-api"
       ]
     },
     {
@@ -284,6 +308,10 @@
       "tokens": [
         "expandConfig",
         "treeConfig"
+      ],
+      "aiCase": [
+        "expand-row",
+        "org-tree-table"
       ]
     },
     {
@@ -295,6 +323,9 @@
         "spanMethodFn",
         "tableBase"
       ],
+      "aiCase": [
+        "grouped-report"
+      ],
       "note": "声明式合并（mergeConfig）A 档；任意闭包 spanMethod 保真 C 档"
     },
     {
@@ -305,6 +336,9 @@
         "formLayout",
         "apiParams",
         "httpRequestFn"
+      ],
+      "aiCase": [
+        "legacy-erp-api"
       ]
     },
     {
@@ -314,6 +348,9 @@
       "tokens": [
         "operationColumn",
         "renderBtnFn"
+      ],
+      "aiCase": [
+        "purchase-approval"
       ]
     },
     {
@@ -359,6 +396,9 @@
       "title": "码值列：零 render 出标签",
       "tokens": [
         "cellDataOptions"
+      ],
+      "aiCase": [
+        "employee-roster"
       ]
     },
     {
@@ -367,6 +407,9 @@
       "title": "基础 CRUD：一行 actions 派生",
       "tokens": [
         "operationColumn"
+      ],
+      "aiCase": [
+        "employee-roster"
       ]
     },
     {
@@ -377,6 +420,10 @@
         "toolbarBtns",
         "operationColumn",
         "dialogs"
+      ],
+      "aiCase": [
+        "employee-roster",
+        "purchase-approval"
       ]
     },
     {
@@ -412,6 +459,10 @@
       "title": "权限控制按钮",
       "tokens": [
         "permissions"
+      ],
+      "aiCase": [
+        "purchase-approval",
+        "flagship-approval"
       ]
     },
     {
@@ -554,6 +605,9 @@
       "tokens": [
         "formLayout",
         "configTableOut"
+      ],
+      "aiCase": [
+        "flagship-approval"
       ]
     },
     {
@@ -572,6 +626,9 @@
       "title": "跨页选择持久化",
       "tokens": [
         "tableBase"
+      ],
+      "aiCase": [
+        "order-batch"
       ]
     },
     {
@@ -597,6 +654,9 @@
       "tokens": [
         "expandConfig",
         "hostOrchestration"
+      ],
+      "aiCase": [
+        "expand-row"
       ]
     },
     {
@@ -615,6 +675,10 @@
         "operationColumn",
         "renderBtnFn",
         "useDialogApi"
+      ],
+      "aiCase": [
+        "purchase-approval",
+        "flagship-approval"
       ]
     },
     {
@@ -633,6 +697,9 @@
         "configTableOut",
         "httpRequestFn",
         "fieldEventFn"
+      ],
+      "aiCase": [
+        "legacy-erp-api"
       ]
     },
     {
@@ -781,6 +848,9 @@
       "title": "引擎切换",
       "tokens": [
         "virtualScroll"
+      ],
+      "aiCase": [
+        "engine-lab"
       ]
     },
     {
@@ -824,6 +894,9 @@
       "tokens": [
         "inlineEdit",
         "vxeFirstClass"
+      ],
+      "aiCase": [
+        "engine-lab"
       ],
       "note": "editConfig A 档；editRender 等 vxe 原生键 AI Zod 零声明"
     },

@@ -5,9 +5,9 @@
  * 背景：用户问「支持功能案例达到了多少程度？全场景适配？」——此前只能人工盘点。
  * 本守卫把「**新特性落文档 → 它是否 AI 可达、属哪一档**」变成**可自动咬住**的轴。
  *
- * 单一真源：`docs/ai/feature-coverage.json`（97 行 = 文档站 97 例特性演示）。
+ * 单一真源：`docs/ai/feature-coverage.json`（103 行 = 文档站 103 例特性演示）。
  * 三集必须 1:1（守卫不可空转的根基——对照物是另两套**非本文件产生**的集合）：
- *   1. 磁盘：`es-plus-docs/src/components/examples/<cat>/<Pascal>.vue` × 96
+ *   1. 磁盘：`es-plus-docs/src/components/examples/<cat>/<Pascal>.vue` × 103
  *   2. 引用：`component-doc.data.ts` + `advanced-doc.data.ts` 的 `getComponent('<cat>/<NN>-<slug>')`
  *   3. 清单：本 JSON 的 `demos[].id`
  *
@@ -21,7 +21,8 @@
  *      仍够不到；(b) **第二腿（AI-29）**`keys ⊆（AI Zod 声明 ∩ 生成器实际发射）`—— 咬
  *      「声称 from_config 可达，实则两处 AI Zod 零声明 + 生成器零发射」（vxeFirstClass 的虚标）。
  *      `'AI-Zod-absent'` 档已退役（与第二腿语义互斥）。
- *   ⑥ 摘要：按档 / 按组计数 + 逐行 id → tier
+ *   ⑥ `aiCase` 引用存在（§4.9 接缝）：每个 id 必须在 `docs/cases/ai-cases.json` 的案例集中
+ *   ⑦ 摘要：按档 / 按组计数 + 逐行 id → tier
  *
  * 用法：node scripts/check-feature-coverage.mjs
  * 退出码：0 = 一致；1 = 发现漂移。
@@ -260,7 +261,29 @@ function main() {
     }
   }
 
-  // ── ⑥ 摘要 ──
+  // ── ⑥ aiCase 接缝（§4.9）：文档演示 ↔ AI 案例的唯一机械连接 ──
+  // 悬空引用会让「这个能力有案例演示」变成一句无对照的断言：页面点过去 404，台账却是绿的。
+  // 只判**引用存在**，不判「该案例是否真演示了它」—— 后者要人读冻结配置，且两份令牌词表
+  // 不同源（order-batch 的 multiSelect 多选就不在它的 `tokens[]` 里），交集为空不能当反证。
+  const caseManifestPath = 'docs/cases/ai-cases.json'
+  const caseManifest = JSON.parse(read(caseManifestPath))
+  const caseIds = new Set((caseManifest.cases ?? []).map((c) => c.id))
+  let linkedDemos = 0
+  for (const d of demos) {
+    if (d.aiCase === undefined) continue
+    linkedDemos++
+    if (!Array.isArray(d.aiCase) || d.aiCase.length === 0) {
+      ok = fail(`${d.id} 的 aiCase 必须是非空数组（一页能力可由多个案例分别演示）`)
+      continue
+    }
+    for (const id of d.aiCase) {
+      if (!caseIds.has(id)) {
+        ok = fail(`${d.id} 的 aiCase 指向 '${id}'，但 ${caseManifestPath} 里没有该案例（引用悬空）`)
+      }
+    }
+  }
+
+  // ── ⑦ 摘要 ──
   const tierCount = {}
   const groupCount = {}
   for (const d of demos) {
@@ -277,7 +300,7 @@ function main() {
     .join('；')
   console.log(
     `✅ AI 可达性台账一致（${demos.length} 例；分档 ${tierLine}；` +
-      `分组 ${groupLine}；引用↔磁盘↔台账三方 1:1）`
+      `分组 ${groupLine}；引用↔磁盘↔台账三方 1:1；aiCase 关联 ${linkedDemos} 例）`
   )
   console.log(
     '   —— 三站案例台账（AN-28）—— ' +
