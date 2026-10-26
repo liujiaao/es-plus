@@ -7,7 +7,9 @@
       <div class="ai-case-bar">
         <el-tag v-for="t in entry.tokens" :key="t" size="small" type="info">{{ t }}</el-tag>
         <span class="ai-case-provenance">
-          model {{ meta.model }} · {{ meta.generatedAt }} · {{ meta.attempts }} 次尝试 · {{ meta.mode }} 模式
+          <span v-if="meta.model">model {{ meta.model }} · </span>
+          {{ meta.generatedAt }}<span v-if="meta.attempts"> · {{ meta.attempts }} 次尝试</span> ·
+          {{ meta.mode }} 模式
         </span>
         <el-button size="small" @click="schemaVisible = !schemaVisible">
           {{ schemaVisible ? '收起 Schema' : '查看生成的 Schema' }}
@@ -56,6 +58,7 @@
  * 按统一契约提供（见该文件头注）。
  */
 import { EsCrudPage, configureEsPlus } from '@es-plus/vue2'
+import { getGlobalConfig } from '@es-plus/core'
 import { Message } from 'element-ui'
 import { AI_CASES } from '@/cases/generated/registry.js'
 
@@ -79,10 +82,16 @@ export default {
     const controlsState = {}
     for (const c of Array.isArray(mock.controls) ? mock.controls : []) controlsState[c.key] = c.default !== false
     const request = mock.createHttpRequest ? mock.createHttpRequest({ delay: 120 }) : undefined
+    // 只有**案例自己没声明** configTableOut 时才套本站口径：案例一旦显式声明了响应映射
+    // （如 legacy-erp-api 的 { tableData:'list', total:'totalCount' }），后端信封就是它说了算 ——
+    // 宿主再改一遍会把 list/count 换成 rows/records，配置里的映射就永远读不到。
+    const usesSiteEnvelope = !(entry.schema && entry.schema.tableOptions && entry.schema.tableOptions.configTableOut)
     return {
       entry,
       controlsState,
-      mockHttp: request ? (params) => request(params).then(toSiteResponse) : undefined,
+      mockHttp: request
+        ? (params) => request(params).then(usesSiteEnvelope ? toSiteResponse : (res) => res)
+        : undefined,
       schemaVisible: false,
       openedRow: undefined,
     }
@@ -110,18 +119,34 @@ export default {
     controlsState: {
       deep: true,
       handler() {
-        configureEsPlus({ permission: this.permission() })
+        this.applyGlobalConfig()
       },
     },
   },
   created() {
-    configureEsPlus({ permission: this.permission() })
+    // 站点在 main.js 里配过全局 httpRequest —— 先记下它，离开时必须还回去
+    this.prevHttpRequest = getGlobalConfig().httpRequest
+    this.applyGlobalConfig()
   },
   beforeDestroy() {
-    // 离开页面恢复「全部放行」，避免全局权限泄漏给其它示例
-    configureEsPlus({ permission: () => true })
+    // 离开页面恢复全局权限与请求，避免泄漏给其它示例
+    configureEsPlus({ permission: () => true, httpRequest: this.prevHttpRequest })
   },
   methods: {
+    /**
+     * 权限与请求都是**全局**配置。
+     *
+     * 全局请求这一处不能省：字段级 `apiParams`（远端下拉）由 EsForm 自己取数，
+     * 读的是全局 httpRequest，而不是本页传给 `<es-crud-page>` 的 prop —— 只配组件
+     * prop，案例里的远端下拉会落到站点自带的 demo 请求上（拿回无关数据）。
+     */
+    applyGlobalConfig() {
+      const mock = this.entry.mock || {}
+      configureEsPlus({
+        permission: this.permission(),
+        ...(mock.createHttpRequest && this.mockHttp ? { httpRequest: this.mockHttp } : {}),
+      })
+    },
     permission() {
       const create = this.entry.mock && this.entry.mock.createPermission
       return create ? create(this.controlsState) : () => true
@@ -141,7 +166,10 @@ export default {
     },
     onBtnClick(key, row) {
       const handle = this.entry.mock && this.entry.mock.handleRowAction
-      this.notify(handle ? handle(key, row || this.openedRow) : null)
+      // 第三个参数带上当前勾选（跨页保留）：批量按钮要作用在选中的行上。
+      const api = this.$refs.crudRef
+      const selection = (api && api.getSelectedRows && api.getSelectedRows()) || []
+      this.notify(handle ? handle(key, row || this.openedRow, { selection }) : null)
     },
   },
 }

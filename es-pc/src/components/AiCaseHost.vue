@@ -7,7 +7,9 @@
       <div class="ai-case-bar">
         <a-tag v-for="t in entry.tokens" :key="t">{{ t }}</a-tag>
         <span class="ai-case-provenance">
-          model {{ meta.model }} · {{ meta.generatedAt }} · {{ meta.attempts }} 次尝试 · {{ meta.mode }} 模式
+          <template v-if="meta.model">model {{ meta.model }} · </template>
+          {{ meta.generatedAt }}<template v-if="meta.attempts"> · {{ meta.attempts }} 次尝试</template> ·
+          {{ meta.mode }} 模式
         </span>
         <a-button size="small" @click="schemaVisible = !schemaVisible">
           {{ schemaVisible ? '收起 Schema' : '查看生成的 Schema' }}
@@ -55,6 +57,7 @@
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { EsCrudPage, configureEsPlus } from '@es-plus/adapter-antdv'
+import { getGlobalConfig } from '@es-plus/core'
 import { AI_CASES } from '@/cases/generated/registry.js'
 
 const props = defineProps({
@@ -78,10 +81,23 @@ const schemaVisible = ref(false)
 const schemaText = computed(() => JSON.stringify(entry.value.schema ?? {}, null, 2))
 const mockHttp = computed(() => mock.value.createHttpRequest?.({ delay: 120 }))
 
-/** 权限是全局配置：进页写一次、开关变化同步写、离开必须恢复全放行（否则会泄漏到别的页）。 */
-configureEsPlus({ permission: permission() })
-watch(controlsState, () => configureEsPlus({ permission: permission() }), { deep: true, flush: 'sync' })
-onUnmounted(() => configureEsPlus({ permission: () => true }))
+/**
+ * 权限与请求都是**全局**配置：进页写一次、开关变化同步写、离开必须恢复（否则会泄漏到别的页）。
+ *
+ * 全局请求这一处不能省：字段级 `apiParams`（远端下拉）由 EsForm 自己去取数，读的是
+ * 全局 httpRequest，而不是本页传给 `<es-crud-page>` 的 prop —— 只配组件 prop，
+ * legacy-erp-api 的供应商下拉会静默落到站点自带的 demo 请求上。
+ */
+const prevHttpRequest = getGlobalConfig().httpRequest
+function applyGlobalConfig() {
+  configureEsPlus({
+    permission: permission(),
+    ...(mock.value.createHttpRequest ? { httpRequest: (params) => mockHttp.value(params) } : {}),
+  })
+}
+applyGlobalConfig()
+watch(controlsState, applyGlobalConfig, { deep: true, flush: 'sync' })
+onUnmounted(() => configureEsPlus({ permission: () => true, httpRequest: prevHttpRequest }))
 
 /** 打开弹窗时记下那一行：编辑弹窗的 formItems 里没有 id，副作用要靠它定位。 */
 let openedRow
@@ -100,7 +116,9 @@ function onDialogConfirm(key, data) {
 }
 
 function onBtnClick(key, row) {
-  notify(mock.value.handleRowAction?.(key, row ?? openedRow))
+  // 第三个参数带上当前勾选：批量按钮要作用在选中的行上，而勾选只有表格实例知道。
+  const selection = crudRef.value?.getSelectedRows?.() ?? []
+  notify(mock.value.handleRowAction?.(key, row ?? openedRow, { selection }))
 }
 
 const CLAIM_LABEL = { execute: '三端可交互', compile: '产物可编译', measure: '仅被度量' }
