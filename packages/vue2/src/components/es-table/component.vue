@@ -105,7 +105,7 @@
             </template>
 
             <column-item
-              v-for="(cols, index) in filteredColumns"
+              v-for="(cols, index) in elTableColumns"
               :key="cols.prop || cols.key || cols.type || index"
               :cols="Object.assign({}, cols, { columnIndex: index })"
             >
@@ -217,7 +217,13 @@ import {
   resolveTableCellDisplay,
   toCssSize,
   buildLeadingColumns,
+  resolveSortParam,
+  seedSortState,
+  toTableSortState,
+  sameSortState,
+  buildSortParams,
   type TableColumn,
+  type TableSortState,
   type PaginationConfig,
   type TableOptions,
 } from '@es-plus/core'
@@ -293,6 +299,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
   // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
   'mergeConfig',
+  // 服务端排序声明：由请求层消费，el-table 没有这个 prop。
+  'sortParam',
 ])
 
 const firstWordUpperCase = (str: string): string => {
@@ -862,6 +870,25 @@ export default defineComponent({
       return [...leadingColumns, ...list]
     })
 
+    /**
+     * 服务端排序（tableOptions.sortParam）：声明才生效，求值全在 core 的 table-sort。
+     * 状态只需存一份 —— 请求参数由 queryTableListMethod 这个唯一漏斗合并。
+     * 初值来自 defaultSort：它既是首屏排序指示器，也是首次请求的排序参数。
+     */
+    const serverSort = computed(() => resolveSortParam(props.options))
+    const sortState = ref<TableSortState | null>(seedSortState(props.options && props.options.defaultSort))
+
+    /**
+     * el-table 分支使用的列：开了服务端排序时 sortable 改成 'custom'
+     * （表头照常可点、照常抛 sort-change，但不在本地排当前页）。vxe 分支不走这里。
+     */
+    const elTableColumns = computed(() => {
+      if (!serverSort.value) return filteredColumns.value
+      return filteredColumns.value.map((col) =>
+        col.sortable ? ({ ...col, sortable: 'custom' } as unknown as TableColumn) : col,
+      )
+    })
+
     const tableAttrs = computed(() => {
       const merged = columnBindAttr({ ...defaultOptions, ...props.options })
       const { align: _align, ...rest } = merged
@@ -1156,6 +1183,9 @@ export default defineComponent({
       options: QueryTableListCallbacks = {}
     ) => {
       const { success, fail } = options
+      // 服务端排序：请求漏斗这一处合并排序参数，首屏 / 翻页 / 边界回退 / 表头重取行为必然一致。
+      // 未声明时 buildSortParams 返回 {}，与历史行为逐字节相同。
+      const requestParams = { ...params, ...buildSortParams(props.options, sortState.value) }
       // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
       const ticket = ++requestTicket.value
       const apiParams = (props.options?.apiParams || {}) as Record<string, any>
@@ -1179,12 +1209,12 @@ export default defineComponent({
 
       const fnParams = getListenToCallBack('beforeRequest', {
         ...formData,
-        ...params,
+        ...requestParams,
         ...(apiParams.model || {}),
       })
       const finalParams = isObject(fnParams)
         ? fnParams
-        : { ...formData, ...(apiParams.model || {}), ...params }
+        : { ...formData, ...(apiParams.model || {}), ...requestParams }
       const requestOption = { ...(apiParams.options || {}) }
       if (apiParams?.method) {
         requestOption.method = apiParams?.method
@@ -1200,7 +1230,7 @@ export default defineComponent({
             formParams: finalParams,
             headers: apiParams.headers || {},
             ...requestOption,
-            ...params,
+            ...requestParams,
           })
           isCurrent = ticket === requestTicket.value
           const responseData = getListenToCallBack('afterResponse', res) || res
@@ -1402,12 +1432,30 @@ export default defineComponent({
       }
     }
 
-    const changeTableSort = (column: Record<string, unknown>) => {
-      emit('change-table-sort', column)
+    /**
+     * 表头排序变化（el-table 与 vxe 都汇到这里）。
+     *
+     * 服务端排序（tableOptions.sortParam）声明后：写入状态 → 保留当前页重取。
+     * 只有状态真的变了才重取 —— 三个引擎在挂载时都会为 defaultSort 回抛一次
+     * sort-change，那一次与初值等价，不能变成第二次请求。
+     */
+    const changeTableSort = (payload: Record<string, unknown>) => {
+      const next = toTableSortState(payload as { prop?: unknown; order?: unknown; column?: unknown })
+      if (serverSort.value && next) {
+        const changed = !sameSortState(sortState.value, next)
+        sortState.value = next
+        if (changed) {
+          // 排序是「同一批数据的另一种顺序」，不把用户踢回第 1 页（与 a-table 的 change 语义一致）
+          httpRequestInstance(undefined, { keepPage: true }).catch(() => {})
+        }
+      }
+      emit('change-table-sort', payload)
     }
 
+    // vxe 的 sort-change 与 el-table 的语义一致（prop / order），汇到同一处理器：
+    // 服务端排序时同样要「写状态 + 保留当前页重取」，否则 vxe 分支点表头不动数据。
     const handleVxeSortChange = (sortInfo: { column: Record<string, unknown>; prop: string; order: string | null }) => {
-      emit('change-table-sort', sortInfo)
+      changeTableSort(sortInfo as unknown as Record<string, unknown>)
     }
 
     // ─── 提供给子组件的实例 ────────────────────
@@ -1560,6 +1608,7 @@ export default defineComponent({
       vxeEngineRef,
       // computeds
       filteredColumns,
+      elTableColumns,
       tableBindAttrs,
       hasDefaultSlot,
       heightType,

@@ -45,7 +45,7 @@
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -211,7 +211,9 @@ export default defineComponent({
           ? { reserve: true, highlight: false }
           : undefined,
         sortConfig: {
-          remote: hasProxyConfig || (props.columns || []).some((c: any) => c.sortable === 'custom'),
+          // 排序必须由后端执行的三类情形：代理分页、列显式声明 sortable:'custom'、
+          // 或 tableOptions.sortParam 已声明（服务端排序契约）。任一命中即不本地排。
+          remote: hasProxyConfig || (props.columns || []).some((c: any) => c.sortable === 'custom') || !!resolveSortParam(opts),
           trigger: 'cell',
         },
         pagerConfig: hasProxyConfig ? (vxeExtra.pagerConfig || { enabled: true }) : { enabled: false },

@@ -204,11 +204,17 @@ import {
   buildColumnSpans,
   resolveMergeConfig,
   resolveTableCellDisplay,
+  resolveSortParam,
+  seedSortState,
+  toTableSortState,
+  sameSortState,
+  buildSortParams,
   toCssSize,
   synthesizeLeadingColumns,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
+import type { TableSortState } from '@es-plus/core'
 import RenderDomTb from './render-dom-tb'
 import VxeEngine from './engines/vxe-engine.vue'
 
@@ -796,6 +802,15 @@ const adaptedColumns = computed(() => {
   return cols
 })
 
+// ─── 服务端排序（`tableOptions.sortParam`）───────────
+// 求值全在 core 的 table-sort 模块：这里只留一份状态 + 一个漏斗合并点。
+// 初值来自 defaultSort —— a-table 侧它同时经上面 computedColumns 落成列上的
+// defaultSortOrder，故首屏指示器与首次请求参数来自同一个声明。
+// 注意：ADV 的 `sortable` 本来就映射成 `sorter: true`（a-table 从不本地排序），
+// 所以这里不需要像 el-table 那样把 sortable 改成 custom。
+const serverSort = computed(() => resolveSortParam(props.options))
+const sortState = ref<TableSortState | null>(seedSortState(props.options?.defaultSort))
+
 // ─── 表格 attrs 透传 ────────────────────────────────
 const TABLE_INTERNAL_KEYS = new Set([
   'multiSelect', 'expand', 'snIndex', 'loading', 'cachePageSelection',
@@ -808,6 +823,8 @@ const TABLE_INTERNAL_KEYS = new Set([
   // AI-23：声明式合并单元格在默认引擎里由组件侧翻译成**列级 customCell**（a-table 无
   // span-method prop），不是 a-table 的直接 attrs，故列入内部键。
   'mergeConfig',
+  // 服务端排序声明：由请求层消费，a-table 没有这个 prop。
+  'sortParam',
 ])
 
 const fallthroughAttrs = useAttrs()
@@ -901,8 +918,10 @@ const { tableHeight, resizeObservers } = useTableResize(
 )
 
 // ─── vxe sort 事件（格式已对齐 el-table/vue3 约定）──
+// vxe 的 sort-change 与 a-table 的 change 语义一致（field/order），汇到同一处理器：
+// 服务端排序时同样要「写状态 + 保留当前页重取」，否则 vxe 分支点表头不动数据。
 function handleVxeSortChange(sortInfo: { column: Record<string, unknown>; prop: string; order: string | null }) {
-  emit('change-table-sort', sortInfo)
+  handleAdvTableChange(undefined, undefined, sortInfo)
 }
 
 /**
@@ -926,12 +945,24 @@ function handleAdvTableChange(
   _filters: any,
   sorter: any
 ) {
-  // 对齐 vue3 changeTableSort：直接 emit { column, prop, order }，含排序清除（order: null）
+  // 对齐 vue3 changeTableSort：emit { column, prop, order }，含排序清除（order: null）。
   // 清除时 a-table 的 sorter 走「legacy」形态：column 变成 undefined、只留 field，
   // 所以判据用 field，而不是 column —— 否则第三击清除永远不发事件，外部数据停留在旧排序。
+  //
+  // 服务端排序（sortParam）声明后：写入状态并按新排序重取，且**保留当前页**
+  // （排序是同一批数据的另一种顺序，不该把用户踢回第 1 页）。只有状态真的变了才重取：
+  // 引擎在挂载时会为 defaultSort 回抛一次 change，那次与初值等价，不能变成第二次请求。
   if (sorter && (sorter as any).field) {
     const s = sorter as { column: Record<string, unknown>; order: string | null; field: string }
     const order = s.order === 'ascend' ? 'ascending' : s.order === 'descend' ? 'descending' : null
+    const next = toTableSortState({ column: s.column, prop: s.field, order })
+    if (serverSort.value && next) {
+      const changed = !sameSortState(sortState.value, next)
+      sortState.value = next
+      if (changed) {
+        httpRequestInstance(undefined, { keepPage: true }).catch(() => {})
+      }
+    }
     emit('change-table-sort', { column: s.column, prop: s.field, order })
   }
 }
@@ -1083,6 +1114,9 @@ function queryTableListMethod(
   options: QueryTableListCallbacks = {}
 ) {
   const { success, fail } = options
+  // 服务端排序：漏斗这一处合并排序参数，首屏 / 翻页 / 边界回退 / 表头重取行为必然一致。
+  // 未声明时 buildSortParams 返回 {}，与历史行为逐字节相同。
+  const sortParams = buildSortParams(props.options, sortState.value)
   // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
   const ticket = ++requestTicket.value
   const apiParams = (props.options?.apiParams || {}) as Record<string, any>
@@ -1099,8 +1133,9 @@ function queryTableListMethod(
   const formData = Object.keys(isFormInstance.value).length
     ? toRaw(unref((isFormInstance.value as any).props?.model))
     : getListEntry.value || {}
-  const fnParams = getListenToCallBack('beforeRequest', { ...formData, ...params, ...toRaw(unref(apiParams.model || {})) })
-  const finalParams = isObject(fnParams) ? fnParams : { ...formData, ...toRaw(unref(apiParams.model || {})), ...params }
+  const mergedParams = { ...params, ...sortParams }
+  const fnParams = getListenToCallBack('beforeRequest', { ...formData, ...mergedParams, ...toRaw(unref(apiParams.model || {})) })
+  const finalParams = isObject(fnParams) ? fnParams : { ...formData, ...toRaw(unref(apiParams.model || {})), ...mergedParams }
   const requestOption = { ...toRaw(unref(apiParams.options || {})) }
   if (apiParams?.method) requestOption.method = apiParams?.method
 
@@ -1111,7 +1146,7 @@ function queryTableListMethod(
     try {
       const res = await requestFn({
         url, formParams: finalParams, headers: apiParams.headers || {},
-        ...requestOption, ...params,
+        ...requestOption, ...mergedParams,
       })
       isCurrent = ticket === requestTicket.value
       const responseData = getListenToCallBack('afterResponse', res) || res

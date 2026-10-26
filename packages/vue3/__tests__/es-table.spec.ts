@@ -968,3 +968,119 @@ describe('EsTable — clearSelection 清空全部（含跨页缓存）', () => {
     expect(vm.getSelectionRows()).toHaveLength(0)
   })
 })
+
+/**
+ * 服务端排序契约（`tableOptions.sortParam`）—— 请求漏斗这一侧的行为。
+ *
+ * 纯函数（声明解析 / 方向归一 / 参数拼装）在 core `table-sort.spec.ts` 里钉死；
+ * 这里钉的是**接线**：初值来自 defaultSort、变化时重取、保留当前页、去重、清空不发空串。
+ * 三者（el-table / element-ui / a-table）各自的 change 事件形态不同，但都归一进同一对参数。
+ */
+describe('EsTable - 服务端排序（tableOptions.sortParam）', () => {
+  const sortColumns: TableColumn[] = [
+    { prop: 'amount', label: '金额', sortable: true },
+    { prop: 'name', label: '姓名' },
+  ]
+
+  const mountSort = (options: Record<string, unknown>, pagination?: Record<string, unknown>) => {
+    const httpRequest = vi.fn().mockResolvedValue({ records: 30, rows: [{ id: 1 }] })
+    const wrapper = mountTable({
+      dataSource: [],
+      columns: sortColumns,
+      options: { httpRequest, apiParams: { url: '/api/list' }, ...options } as TableOptions,
+      ...(pagination ? { pagination } : {}),
+    })
+    return { wrapper, httpRequest }
+  }
+  const lastCall = (httpRequest: any) => httpRequest.mock.calls[httpRequest.mock.calls.length - 1][0]
+  const emitSort = (wrapper: any, payload: Record<string, unknown>) =>
+    wrapper.findComponent(ElTable).vm.$emit('sort-change', payload)
+
+  it('未声明 sortParam → 请求不带排序参数（历史行为逐字节不变）', async () => {
+    const { httpRequest } = mountSort({ defaultSort: { prop: 'amount', order: 'descending' } })
+    await flushPromises()
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+    expect(fnParams).not.toHaveProperty('sortOrder')
+  })
+
+  it('defaultSort 播种首屏请求；自定义键名生效（formParams 与顶层同源）', async () => {
+    const { httpRequest } = mountSort({
+      defaultSort: { prop: 'amount', order: 'descending' },
+      sortParam: { field: 'orderBy', order: 'direction' },
+    })
+    await flushPromises()
+    const call = lastCall(httpRequest)
+    expect(call.formParams.orderBy).toBe('amount')
+    expect(call.formParams.direction).toBe('desc')
+    // 宿主拦截器常只读顶层参数，两侧必须一致
+    expect(call.orderBy).toBe('amount')
+  })
+
+  it('表头排序变化 → 带新方向重取，且保留当前页', async () => {
+    // 关掉挂载自动请求：它会按「查询」语义把页码拉回 1（keepPage=false），
+    // 那样就测不到「排序变化保留当前页」了。
+    const { wrapper, httpRequest } = mountSort(
+      {
+        isInitRun: false,
+        sortParam: true,
+        defaultSort: { prop: 'amount', order: 'descending' },
+      },
+      { current: 3, pageSize: 10, total: 100 }
+    )
+    await flushPromises()
+    expect(httpRequest).not.toHaveBeenCalled()
+
+    emitSort(wrapper, { column: { prop: 'amount' }, prop: 'amount', order: 'ascending' })
+    await flushPromises()
+
+    expect(httpRequest.mock.calls.length).toBe(1)
+    const call = lastCall(httpRequest)
+    expect(call.formParams.sortField).toBe('amount')
+    expect(call.formParams.sortOrder).toBe('asc')
+    // 排序是「同一批数据的另一种顺序」：不把用户踢回第 1 页
+    expect(call.formParams.pageIndex).toBe(3)
+    expect(wrapper.emitted('change-table-sort')).toHaveLength(1)
+  })
+
+  it('引擎挂载回抛的默认排序不触发第二次请求（去重）', async () => {
+    const { wrapper, httpRequest } = mountSort({
+      sortParam: true,
+      defaultSort: { prop: 'amount', order: 'descending' },
+    })
+    await flushPromises()
+    const before = httpRequest.mock.calls.length
+
+    emitSort(wrapper, { prop: 'amount', order: 'descending' })
+    await flushPromises()
+    expect(httpRequest.mock.calls.length).toBe(before)
+  })
+
+  it('清空排序 → 请求不带排序参数（不发空串，严格后端会把空串当非法枚举）', async () => {
+    const { wrapper, httpRequest } = mountSort({
+      sortParam: true,
+      defaultSort: { prop: 'amount', order: 'descending' },
+    })
+    await flushPromises()
+
+    emitSort(wrapper, { prop: 'amount', order: null })
+    await flushPromises()
+
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+    expect(fnParams).not.toHaveProperty('sortOrder')
+  })
+
+  it("服务端排序时列降为 sortable:'custom'（表头照常可点，但不在本地排当前页）", () => {
+    const { wrapper } = mountSort({ sortParam: true })
+    const cols = wrapper.findAllComponents(ColumnItem).map((c: any) => c.props('cols'))
+    expect(cols[0].sortable).toBe('custom')
+    expect(cols[1].sortable).toBeUndefined()
+  })
+
+  it('未声明 sortParam 时列保持原样（sortable 不被改写）', () => {
+    const { wrapper } = mountSort({})
+    const cols = wrapper.findAllComponents(ColumnItem).map((c: any) => c.props('cols'))
+    expect(cols[0].sortable).toBe(true)
+  })
+})

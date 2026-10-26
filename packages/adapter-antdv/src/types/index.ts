@@ -317,6 +317,12 @@ export interface TableOptions {
   rowClassName?: string | ((params: { row: Record<string, unknown>; rowIndex: number }) => string)
   rowStyle?: Record<string, unknown> | ((params: { row: Record<string, unknown>; rowIndex: number }) => Record<string, unknown>)
   defaultSort?: { prop: string; order: 'ascending' | 'descending' }
+  /**
+   * 服务端排序声明：存在即表示「排序由后端算」——本端关掉本地排序，
+   * 每次请求带 { sortField, sortOrder }（字段名可改），点表头时保留当前页重取。
+   * 缺省 = 本地排序（历史行为）。求值与参数拼装在 core 的 table-sort。
+   */
+  sortParam?: boolean | { field?: string; order?: string }
   spanMethod?: (data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
   cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
   cellStyle?: Record<string, unknown> | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => Record<string, unknown>)

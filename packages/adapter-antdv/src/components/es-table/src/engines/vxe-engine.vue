@@ -43,7 +43,7 @@ import type { TableEngineExposed } from '@es-plus/core'
 import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
-import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
+import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
 
 defineOptions({ inheritAttrs: false })
 
@@ -143,7 +143,9 @@ const gridConfig = computed(() => {
       ? { reserve: true, highlight: false }
       : undefined,
     sortConfig: {
-      remote: hasProxyConfig || (props.columns || []).some((c: any) => c.sortable === 'custom'),
+      // 排序必须由后端执行的三类情形：代理分页、列显式声明 sortable:'custom'、
+      // 或 tableOptions.sortParam 已声明（服务端排序契约）。任一命中即不本地排。
+      remote: hasProxyConfig || (props.columns || []).some((c: any) => c.sortable === 'custom') || !!resolveSortParam(opts),
       trigger: 'cell',
     },
     pagerConfig: hasProxyConfig ? (vxeExtra.pagerConfig || { enabled: true }) : { enabled: false },

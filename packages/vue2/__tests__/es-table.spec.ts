@@ -67,7 +67,7 @@ describe('EsTable(vue2) - 请求 settle', () => {
     // 完全看不见 core 的权威字段（顶层 httpRequest）。同一个配置下 EsForm 的
     // 远端下拉与自由的 httpRequest() 都能用，唯独独立 es-table 报
     // "no httpRequest configured"。修法：回落到 resolveHttpRequest(getGlobalConfig())。
-    const httpRequest = vi.fn().mockResolvedValue({ records: 0, rows: [] })
+    const httpRequest = vi.fn().mockResolvedValue({ records: 30, rows: [{ id: 1 }] })
     configureEsPlus({ httpRequest })
     try {
       const vm = mountTable({
@@ -482,5 +482,99 @@ describe('EsTable(vue2) — 请求模式空页', () => {
     await table.httpRequestInstance()
     await vm.$nextTick()
     expect(table.effectiveDataSource).toHaveLength(0)
+  })
+})
+
+
+/**
+ * 服务端排序（`tableOptions.sortParam`）—— Vue 2 侧接线。
+ *
+ * 事件形态与 Element UI 一致（`sort-change` 的 `{ prop, order }`），三端归一后是同一对
+ * 请求参数；`defaultSort` 同时播种首屏请求与表头指示器。
+ */
+describe('EsTable(vue2) - 服务端排序（tableOptions.sortParam）', () => {
+  const columns = [
+    { prop: 'amount', label: '金额', sortable: true },
+    { prop: 'name', label: '姓名' },
+  ]
+
+  const mountSort = (options: Record<string, unknown>, pagination?: Record<string, unknown>) => {
+    const httpRequest = vi.fn().mockResolvedValue({ records: 30, rows: [{ id: 1 }] })
+    const vm = mountTable({
+      columns,
+      options: { httpRequest, apiParams: { url: '/api/list' }, ...options },
+      ...(pagination ? { pagination } : {}),
+    })
+    return { vm, httpRequest }
+  }
+  const lastCall = (httpRequest: any) => httpRequest.mock.calls[httpRequest.mock.calls.length - 1][0]
+
+  it('未声明 sortParam → 请求不带排序参数', async () => {
+    const { vm, httpRequest } = mountSort({ defaultSort: { prop: 'amount', order: 'descending' } })
+    await vm.$nextTick()
+    await tableOf(vm).httpRequestInstance()
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+  })
+
+  it('defaultSort 播种首屏参数；表头变化保留当前页重取', async () => {
+    // 关掉挂载自动请求：它按「查询」语义把页码拉回 1，就测不到 keepPage。
+    const { vm, httpRequest } = mountSort(
+      {
+        isInitRun: false,
+        sortParam: true,
+        defaultSort: { prop: 'amount', order: 'descending' },
+      },
+      { current: 2, pageSize: 10, total: 50 }
+    )
+    await vm.$nextTick()
+    const table = tableOf(vm)
+    await table.httpRequestInstance()
+    expect(lastCall(httpRequest).formParams.sortField).toBe('amount')
+    expect(lastCall(httpRequest).formParams.sortOrder).toBe('desc')
+
+    table.changeTableSort({ prop: 'amount', order: 'ascending' })
+    await Promise.resolve()
+    await vm.$nextTick()
+
+    expect(lastCall(httpRequest).formParams.sortOrder).toBe('asc')
+  })
+
+  it('排序变化保留当前页（keepPage）', async () => {
+    const { vm, httpRequest } = mountSort(
+      {
+        isInitRun: false,
+        sortParam: true,
+        defaultSort: { prop: 'amount', order: 'descending' },
+      },
+      { current: 2, pageSize: 10, total: 50 }
+    )
+    await vm.$nextTick()
+    tableOf(vm).changeTableSort({ prop: 'amount', order: 'ascending' })
+    await Promise.resolve()
+    await vm.$nextTick()
+    expect(lastCall(httpRequest).formParams.pageIndex).toBe(2)
+  })
+
+  it('清空排序 → 不带排序参数；重复的默认排序不触发请求', async () => {
+    const { vm, httpRequest } = mountSort({
+      sortParam: true,
+      defaultSort: { prop: 'amount', order: 'descending' },
+    })
+    await vm.$nextTick()
+    const table = tableOf(vm)
+    await table.httpRequestInstance()
+
+    const before = httpRequest.mock.calls.length
+    table.changeTableSort({ prop: 'amount', order: 'descending' })
+    await Promise.resolve()
+    expect(httpRequest.mock.calls.length).toBe(before)
+
+    table.changeTableSort({ prop: 'amount', order: null })
+    await Promise.resolve()
+    await vm.$nextTick()
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+    expect(fnParams).not.toHaveProperty('sortOrder')
   })
 })

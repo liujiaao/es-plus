@@ -1009,3 +1009,103 @@ describe('EsTable(ADV) — clearSelection 清空全部（含跨页缓存）', ()
     expect(vm.getSelectionRows()).toHaveLength(0)
   })
 })
+
+/**
+ * 服务端排序（`tableOptions.sortParam`）—— ADV 侧接线。
+ *
+ * a-table 的 `sorter: true` 本来就是服务端语义（从不本地排），所以这里多出的只是
+ * 「请求带参数 → 变化时保留当前页重取」；清除时 sorter 走 legacy 形态（column 为空、只剩 field）。
+ */
+describe('EsTable — 服务端排序（tableOptions.sortParam）', () => {
+  const columns = [
+    { prop: 'amount', label: '金额', sortable: true },
+    { prop: 'name', label: '姓名' },
+  ]
+
+  const mountSort = (options: Record<string, unknown>, pagination: Record<string, unknown>) => {
+    // 一页给一行数据：空行 + 非首页会触发「分页边界回退」的第二次请求，干扰计数。
+    const httpRequest = vi.fn().mockResolvedValue({ records: 30, rows: [{ id: 1 }] })
+    const wrapper = mount(EsTable, {
+      props: {
+        dataSource: [],
+        columns,
+        options: { httpRequest, apiParams: { url: '/api/list' }, ...options } as any,
+        pagination,
+      },
+    })
+    return { wrapper, httpRequest }
+  }
+  const lastCall = (httpRequest: any) => httpRequest.mock.calls[httpRequest.mock.calls.length - 1][0]
+  const emitChange = (wrapper: any, sorter: Record<string, unknown>) =>
+    wrapper.findComponent({ name: 'ATable' }).vm.$emit('change', {}, {}, sorter)
+
+  it('未声明 sortParam → 请求不带排序参数', async () => {
+    const { wrapper, httpRequest } = mountSort(
+      { defaultSort: { prop: 'amount', order: 'descending' } },
+      { current: 1, pageSize: 10, total: 30 }
+    )
+    await flushPromises()
+    await (wrapper.vm as any).httpRequestInstance()
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+  })
+
+  it('defaultSort 播种首屏请求参数（与表头指示器同源）', async () => {
+    const { httpRequest } = mountSort(
+      {
+        sortParam: true,
+        defaultSort: { prop: 'amount', order: 'descending' },
+      },
+      { current: 1, pageSize: 10, total: 30 }
+    )
+    await flushPromises()
+    expect(lastCall(httpRequest).formParams.sortField).toBe('amount')
+    expect(lastCall(httpRequest).formParams.sortOrder).toBe('desc')
+  })
+
+  it('点表头重取并保留当前页（keepPage）', async () => {
+    // 关掉挂载自动请求：它按「查询」语义把页码拉回 1，就测不到 keepPage。
+    const { wrapper, httpRequest } = mountSort(
+      {
+        isInitRun: false,
+        sortParam: true,
+        defaultSort: { prop: 'amount', order: 'descending' },
+      },
+      { current: 2, pageSize: 10, total: 30 }
+    )
+    await flushPromises()
+    expect(httpRequest).not.toHaveBeenCalled()
+
+    emitChange(wrapper, { column: { dataIndex: 'amount' }, field: 'amount', order: 'ascend' })
+    await flushPromises()
+
+    expect(httpRequest.mock.calls.length).toBe(1)
+    expect(lastCall(httpRequest).formParams.sortOrder).toBe('asc')
+    expect(lastCall(httpRequest).formParams.pageIndex).toBe(2)
+    expect(wrapper.emitted('change-table-sort')).toBeTruthy()
+  })
+
+  it('第三击清除（column 已空、只剩 field）→ 不带排序参数；重复状态不请求', async () => {
+    const { wrapper, httpRequest } = mountSort(
+      { isInitRun: false, sortParam: true },
+      { current: 1, pageSize: 10, total: 30 }
+    )
+    await flushPromises()
+
+    emitChange(wrapper, { field: 'amount', order: 'ascend' })
+    await flushPromises()
+    const afterSort = httpRequest.mock.calls.length
+    expect(afterSort).toBe(1)
+
+    // 同一排序再抛一次（引擎重渲染 / 挂载回抛）—— 状态没变，不得再发请求
+    emitChange(wrapper, { field: 'amount', order: 'ascend' })
+    await flushPromises()
+    expect(httpRequest.mock.calls.length).toBe(afterSort)
+
+    emitChange(wrapper, { column: undefined, field: 'amount', order: null })
+    await flushPromises()
+    const fnParams = lastCall(httpRequest).formParams
+    expect(fnParams).not.toHaveProperty('sortField')
+    expect(fnParams).not.toHaveProperty('sortOrder')
+  })
+})

@@ -54,7 +54,7 @@ import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
 import { buildFirstClassGridOptions } from './use-vxe-grid-config'
-import { buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows } from '@es-plus/core'
+import { buildRowSpanMethod, resolveMergeConfig, wantsCrossPageSelection, mergeSelectedRows, resolveSortParam } from '@es-plus/core'
 import {
   normalizeVxeOrder,
   applySpanShim,
@@ -186,8 +186,9 @@ const gridConfig = computed(() => {
       ? { reserve: true, highlight: false }
       : undefined,
     sortConfig: {
-      // proxyConfig 模式 或 有 sortable:'custom' 列时启用服务端排序（不在前端本地排序）
-      remote: hasProxyConfig || props.columns.some((c: any) => c.sortable === 'custom'),
+      // 服务端排序的三种来源：proxyConfig 模式 / 列上写了 sortable:'custom' / 声明了 tableOptions.sortParam。
+      // 命中任一就不再本地排（vxe 的 remote 语义），排序事实由后端给。
+      remote: hasProxyConfig || props.columns.some((c: any) => c.sortable === 'custom') || !!resolveSortParam(props.options),
       trigger: 'cell',
     },
     // 当非 proxyConfig 模式时禁用内置分页（由 component.vue 统一管理 el-pagination）
