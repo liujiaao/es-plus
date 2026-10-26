@@ -8,7 +8,10 @@
           本页由 <code>src/cases/generated/registry.js</code>（manifest 生成）驱动，宿主代码不含业务规则
         </span>
       </div>
-      <ai-case-host v-if="entry" :case-id="caseId" />
+      <!-- :key 绑 caseId：/ai-gallery/a → /ai-gallery/b 复用同一路由组件，不重建宿主的话
+           <es-crud-page> 会拿旧的 schema 实例配新的 columns —— 表头变了、行还是上一个案例的
+           （实测表现：新列全渲染成「-」）。三端一致，语出 es-eui 的同名写法。 -->
+      <ai-case-host v-if="entry" :key="caseId" :case-id="caseId" />
       <el-empty v-else :description="`没有 id 为「${caseId}」的案例`">
         <router-link to="/ai-gallery"><el-button type="primary">返回画廊</el-button></router-link>
       </el-empty>
