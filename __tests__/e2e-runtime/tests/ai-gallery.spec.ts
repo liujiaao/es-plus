@@ -448,7 +448,7 @@ test('S2 组合画廊：对照全绿、成员关系可读，切渲染端只差�
 })
 
 /**
- * S3 工具工作流（`/ai-gallery/workflows`）—— 9 次真 handler 调用的入参与出参。
+ * S3 工具工作流（`/ai-gallery/workflows`）—— 12 次真 handler 调用的入参与出参。
  *
  * 这一页的主张是 `compile`（数据是真实调用结果），**不是** execute：页面不调工具，
  * 它渲染的是生成器落盘的记录。所以这里验的是三件事：
@@ -474,7 +474,7 @@ const AI_WORKFLOWS = JSON.parse(workflowsText.slice(workflowsText.indexOf('= {')
   }>
 }
 
-test('S3 工具工作流：9 次真调用与记录逐项一致，预期失败的那一步真的失败', async ({ page }) => {
+test('S3 工具工作流：12 次真调用与记录逐项一致，预期失败的那一步真的失败', async ({ page }) => {
   // 入口：画廊列表 → 工具工作流（S3 卡片）。
   await page.goto('/#/ai-gallery')
   await page.locator('a.ai-gallery-comp').filter({ hasText: '工具工作流' }).click()
@@ -483,7 +483,7 @@ test('S3 工具工作流：9 次真调用与记录逐项一致，预期失败的
   // 主张写在页面上：能重放的是「调用记录」，模型那一步是冻结输入。
   await expect(page.getByText('claim: compile')).toBeVisible()
 
-  // 工具覆盖：9 个 chip，其中 8 个是零案例工具（高亮）。
+  // 工具覆盖：12 个 chip，其中 11 个是此前只有文档的工具（高亮）。
   const chips = page.locator('[data-testid="workflows-tools"] li')
   await expect(chips).toHaveCount(AI_WORKFLOWS.tools.length)
   await expect(chips.filter({ has: page.locator('code') }).filter({ hasText: 'doctor_page' })).toHaveCount(1)
@@ -491,7 +491,7 @@ test('S3 工具工作流：9 次真调用与记录逐项一致，预期失败的
     AI_WORKFLOWS.zeroCaseTools.length,
   )
 
-  // 三条工作流、9 步，逐条对照记录里的工具名与步数。
+  // 四条工作流、12 步，逐条对照记录里的工具名与步数。
   const allSteps = AI_WORKFLOWS.workflows.flatMap((w) => w.steps)
   await expect(page.locator('article.wf-step')).toHaveCount(allSteps.length)
   for (const wf of AI_WORKFLOWS.workflows) {
@@ -517,6 +517,10 @@ test('S3 工具工作流：9 次真调用与记录逐项一致，预期失败的
   // 出参来自真 handler（不是示例文案）：W1 首步真做了目标探测，W3 末步真按 target 渲染了 API。
   await expect(page.locator('[data-testid="workflow-w1-out-0"]')).toContainText('Detected target: vue3')
   await expect(page.locator('[data-testid="workflow-w3-out-2"]')).toContainText('EsCrudPage API (@es-plus/vue3)')
+  // W4 片段三件套：各自吐出一份可独立编译的产物（表单 SFC / 自动取数的表格 / 不依赖 JSX 的弹窗 SFC）。
+  await expect(page.locator('[data-testid="workflow-w4-out-0"]')).toContainText('Generated standalone <es-form> block')
+  await expect(page.locator('[data-testid="workflow-w4-out-1"]')).toContainText('Auto-fetch via apiParams: /api/orders')
+  await expect(page.locator('[data-testid="workflow-w4-out-2"]')).toContainText('Generated standalone <es-dialog> SFC')
   // 截断是诚实的：长出参标了「预览截断」并给出完整字节数（阈值来自记录，不是测试常量）。
   await expect(page.locator('.wf-step-bytes').filter({ hasText: '预览截断' })).toHaveCount(
     allSteps.filter((s) => s.truncated).length,
