@@ -44,3 +44,6 @@ __tests__/e2e-runtime/vue2/src/fragments/
 
 # Playwright MCP 的临时产物（.yml 页面快照 / 截图），不进版本库
 .playwright-mcp/
+
+# 漂移观测报告（漂移作业只上传 CI artifact，不入库、不发布）
+drift-report/
