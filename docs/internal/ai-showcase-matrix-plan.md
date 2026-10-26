@@ -336,7 +336,8 @@ export function handleRowAction(key, row, payload) { /* 可选：行按钮副作
   主张按站分开：`es-plus-docs` = `execute`（e2e 背书）、`es-pc` / `es-eui` = `compile`；
 - ~~A9 `native-vs-ai`（扩 `gen-cases-metrics.mjs` 的 AI 列）~~ → **已落地（见 §19）**，claim 按「数字页没有可执行的产物」停在 `measure + compile`；
 - S3 工作流页 W1–W4（覆盖前门 12 个工具，其中 11 个此前零页面演示）；
-- 夜间漂移作业 + 文档（`docs/ai/ai-showcase.md` 面向用户的案例导览）。
+- ~~夜间漂移作业 + 文档（`docs/ai/ai-showcase.md` 面向用户的案例导览）~~ → **已落地（见 §20）**：
+  `scripts/eval/ai-case-drift.mjs` + 非门禁 workflow + 用户导览。
 
 **验收：** 12/12 公开工具有页面演示（S3 工作流页，每条一次真调用）；三端 compile 腿绿；漂移作业能跑通 `--limit 1`；站点上线 `ai-gallery` 与四条工作流。
 
@@ -934,7 +935,7 @@ docs（Element Plus）与 es-pc（Ant Design Vue）两端口径逐项一致。
 - **片段之间仍无编排契约**：宿主现在靠底层属性名接线；若要让片段真正可组合，需要给片段产物补
   `defineProps` / `defineEmits`（会改动三个工具的生成模板，影响全部片段 case 与 golden）。
 - ~~**A9 `native-vs-ai`（三栏对照）未开工**~~ → **已落地（见 §19）**：`gen-cases-metrics.mjs` 的实测数字扩成三栏（原生 / 手写 es-plus / AI 产物），claim 停在 `measure + compile`。
-- **夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落。
+- ~~**夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落~~ → **已落地（见 §20）**。
 
 ## 19. 落地记录（A9 三栏对照 `native-vs-ai`，2026-10-26）
 
@@ -1006,4 +1007,54 @@ AI 产物 363 行 / 0 / 0 / 0（8.0 KB）。产物自述：查询项 3 · 列 5 
   任何想抬到 `execute` 的页面都卡在这里。
 - **「一份产物三端跑」只有字节证据**：三站副本逐字节一致由守卫保证；三站各自**跑起来**的那一段仍要靠
   各案例自己的 e2e（`employee-roster` 在 docs 有，另两端没有）。
-- **夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落（Wave C 最后一项）。
+- ~~**夜间漂移作业 + `docs/ai/ai-showcase.md` 用户导览**仍未落（Wave C 最后一项）~~ → **已落地（见 §20）**。
+
+## 20. 落地记录（漂移观测作业 + 用户导览，2026-10-26）
+
+### 20.1 落了什么
+
+- **漂移观测脚本** `scripts/eval/ai-case-drift.mjs`（`npm run drift:ai-cases`）：
+  对每个「有 NL + 有冻结配置」的案例，用**当前模型**重跑 NL→config（复用 eval:llm 的 system prompt、
+  few-shot、自修复环与中继冷却），再与冻结配置算结构距离：字段集合 F1 / 动作集合 / 弹窗键集合 /
+  四项字段旋钮（formtype / inQuery / inTable / inForm）。报告写 `--out`（默认 `drift-report/ai-case-drift.json`）。
+- **口径自测** `scripts/eval/ai-case-drift.test.mjs`（`npm run check:ai-case-drift`，已进 `check:consistency`）：
+  报告不进仓库，算错时没有任何门会红，所以把四条口径钉死 —— 集合 F1（空 vs 空 = 1）、成员布尔缺省归一、
+  旋钮只对交集字段、选案规则（无冻结配置 / 无 NL 逐条记跳过原因）。
+- **夜间作业** `.github/workflows/eval-drift.yml`：每日 04:17 UTC（与 eval-llm 的 03:17 错开一小时，
+  避免抢同一份中继配额）+ 手动 `limit` 输入；只读权限、**无 commit-back**、报告走 artifact（30 天）。
+- **不发布**：`.gitignore` 增 `drift-report/`；报告与 accuracy 产物同一条纪律 —— 不入库、不上站点。
+- **用户导览** `docs/ai/ai-showcase.md`：页面地图（8 条 AI 页各自证明什么 + 守卫在哪）、三个 claim 词、
+  数字来源、漂移作业用法、新增案例四步、已知边界；README「AI 工具链」一节加了入口链接。
+
+### 20.2 偏离与取舍（六处）
+
+1. **只观测「有冻结配置」的案例**（当前 1 个：`employee-roster`）：`purchase-approval` 的历史产物没保存
+   模型配置（`replay.kind: unavailable`），拿它现存的 schema 硬比会把「产物没保存」混进「模型漂移」。
+   跳过项逐条写进报告（id + 原因），不静默。
+2. **缺省归一放两侧**：`inQuery` / `inTable` / `inForm` 的 schema 默认值是 `true`，只归一候选侧会把
+   「显式 true vs 省略」判成漂移 —— 这是 golden 语料 inQuery 陷阱的镜像，故冻结侧与候选侧用同一套归一。
+3. **旋钮只在交集字段上算一致率**：候选少一个字段已由 membership 记差异，若旋钮再按「冻结侧全集」算，
+   同一个缺失会被罚两遍（报告读起来像漂移更大）。交集为空时旋钮记 1，`exact` 仍为 false。
+4. **「模型答错」与「没测到」分开记**：前者（拿到过真产出但 schema 不过）是一次合法观测 —— 模型变了；
+   后者（空轮 / 截断 / 超时 / 中继挂）若混在一起，报告会把基础设施故障读成模型漂移。
+5. **workflow 用 `--require-key`**：缺密钥时显式失败，而不是 SKIP 后绿着假装测过（本仓反复踩过静默跳过）；
+   它仍不做门禁 —— 独立 workflow、只读权限、不参与 PR 与部署链。
+6. **本轮探针跑的是本机中继**：`newapi-devops.szlanyou.com` 只服务 deepseek 系，故探针用
+   `deepseek-v4-flash`（恰好也是冻结产物的模型）；生产夜间作业走京东云中继 + `claude-opus-4-6`。
+   探针证明的是**管线跑通**，不是生产口径的数字。
+
+### 20.3 验证
+
+- `npm run check:ai-case-drift` → ✅（四条口径全成立）。
+- 探针 `npm run drift:ai-cases -- --limit 1` → ✅ 端到端跑通（1 案例 / 跳过 9）：`employee-roster` 实测
+  props F1 **0.8** —— 模型把 `dept` 写成 `department`，其余维度（actions / dialogKeys / 四项旋钮）全一致，
+  `exact: false`。这正是漂移报告该给出的信号：一处命名漂移，而不是整页失配。
+- `check:docs-layout`（123 处链接）、`check:readme`、`check:eol-hygiene` → ✅。
+
+### 20.4 仍未闭环
+
+- **可漂移案例只有 1 个**：其余 9 例是手工 / 确定性工具产物，没有「模型重跑」这条轴。补法是真调一次模型
+  并保存冻结配置（`purchase-approval` 是最直接的候选），不是放宽观测口径。
+- **导览没进站点导航**：`docs/ai/` 是数据源目录，`ai-showcase.md` 目前只从 README 链接；要不要做成站点页
+  是产品决定（站点已有 8 条 AI 页，再建一条「讲这些页」的页需要先确定它不重复画廊）。
+- **漂移不做门禁是设计选择**（见 20.2 #5）：代价是「没人看报告」不会有人管 —— 目前靠模型升级时的人工动作。
