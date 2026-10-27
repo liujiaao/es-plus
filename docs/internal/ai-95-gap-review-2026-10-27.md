@@ -761,3 +761,60 @@ G  度量可靠性（健康门 / artifact / 棘轮 / version 指纹）
 
 > **一句话**：三件事把「编译 100%」从「这批中文用例碰巧过」变成「这类输入结构性过」，代价是零模型成本；
 > 而且守卫第一次运行就抓出两条产物缺陷 + 一条尺子缺陷。
+
+### 11.6 A4 片段腿可伪证 + C₀ 管道体检 + A3 门禁口径逐维 ✅（2026-10-27）
+
+**A4：§11.4 留的两条可伪证预测，都拿真实产出验了**
+
+预测①「片段 scoped 应 ≈ 新的 `propSet` 命中率；若仍停在 55%，说明还有别的阻断被掩码藏住」。
+
+实测（`--fragments` 探针 63 条，63/63 有产物、零未测到）：
+
+| 指标 | 值 |
+|---|---|
+| `propSet` | **63/63 = 100%** |
+| `scoped`（pinnedDims） | **60/63 = 95.2%** |
+| `core` / `stated` / `full` | 100% / 95.2% / 90.5% |
+| 编译 | 100%（63/63） |
+
+- 预测**在方向上成立**：旧口径的 55.6% 确实是被 `propSet` 撑破的；label 身份落地后 scoped 抬到 95.2%，
+  且两者已**解耦**（`propSet` 100% > `scoped` 95.2%）—— 这正是「尺子不再掩码」的形状。
+- 剩下 3 条 miss **全部是 `frag-form-06`**（vue3 / vue2 / antdv 各一条），唯一失败维 = `reactions`
+  （级联 `country → province → city`）。这不是尺子问题，是可教学的真实缺口 ⟹ D 阶段第一顺位。
+- 另有一处**未 pin** 的失败（`tableOptions.localPagination` 0/3，该 case 没有 pin 它）—— 不影响
+  门禁口径。它恰好演示了 A3 要分开的两件事：维度差 ≠ 维度差且对门禁有杠杆。
+
+预测②「en 腿数字必须不变」。CRUD-8 探针里 en 行 `propF1` = 0.29–0.80（同批 zh 行全 1.00）⟹
+`scoreOptsForLang` 生效、en 仍走 prop 身份；`compileByLang` = **zh 8/8 · en 8/8**。
+
+**C₀：管道体检（`--limit 8` + 离线复算）**
+
+- 默认模型 id `claude-opus-5` 在本机 PPIO 中继 **404**：16 行全「未测到」、`served` 为空，脚本按设计
+  **FAILED 且不写任何产物**。这条链本身就是 C₀ 要证明的（探针不许当成绩）。
+- 换 `ESPLUS_EVAL_MODEL=pa/claude-opus-4-8`（`served pa/venus-marble-4-8`）后全通：`--limit 8` 16 行
+  零失败、类型腿全量 8/8、前门 16/16、编译 16/16；`--fragments` 63 行零失败。
+- 离线复算：`rescore` 在探针 dump 上重建 8 例 / 63 例，与跑批聚合同源同值（95% 定义 4/4、
+  编译 16/16、片段 scoped 0.9524）。dump 的 meta/尺子版本/语料指纹三件齐全。
+- **未做**：`--expect` 逐字段比对需要一份完整跑批产物，而探针按定义不写产物 ⟹ 这一项仍等 C 阶段。
+
+**A3：`byCapabilityOnPinned`（门禁口径的逐维视图）**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/run-metrics.mjs` | 新口径：分母 = **钉了该维** 的 heldout 行（token 支持整维与 `维度:字段`），与 `byCapability` 同构、同精度 |
+| `scripts/eval-llm.mjs` | 行携带 `pinnedDims`（**成功与错误两条路径都要带** —— 否则答错的 pin 从分母里消失，等于免罚）；summary 两列并列打印；产物带 `byCapabilityOnPinned` |
+| `scripts/eval/rescore.mjs` | 同上同构（从 dump 的 `mask` 取）；`--expect` **只在产物带该块时**比对（旧产物没有 → 不误报成漂移） |
+| `scripts/eval/artifact.mjs` | 只查自洽：`pass ≤ applicable`；`applicable = 0` 时 `rate` 必须是 `null`（「没人 pin」不是「全错」） |
+| 测试 | `check:run-metrics` 增第 8 节（字段级 pin / 答错行进分母 / 无人 pin ⟹ null / 无 `pinnedDims` 的旧行不抛错 / 两口径必须能给出不同数字）；`check:artifact-self` 增 5 条判据 |
+
+实测（8 例探针，只示**口径会翻转排序**，不作成绩）：`formtype` all 2/4 vs pinned **0/2**；`propSet`
+all 2/4 vs pinned 2/2。只看 all 列会把 `propSet` 当短板，而门禁真正挂掉的是 `formtype`。
+
+**刻意不做的**
+
+- `byCapabilityOnPinned` **不进门禁、不进棘轮**：它是 D 阶段的排序依据，不是第三个成绩口径。
+- 探针不因 A3 而改写产物：`--limit` 的语义仍是「零副作用」。
+
+> **一句话**：A4 证明新尺子不再掩码（片段 55.6% → 95.2%，残余 3 条全指向同一个可教学维 `reactions`）；
+> C₀ 证明整条管道（探针 → dump → 复算）在工作，且默认模型 id 打不通时它**拒绝开跑**而不是产出假成绩；
+> A3 让「哪维差」变成「哪维差且门禁在乎」。
