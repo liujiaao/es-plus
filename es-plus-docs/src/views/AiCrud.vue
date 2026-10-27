@@ -547,7 +547,8 @@ usePageMeta('ai-crud')
 
 @media (max-width: 1024px) {
   .ai-crud-content {
-    grid-template-columns: 1fr;
+    /* 同 FragmentDashboard：1fr 的 min-content 下限会把整页顶宽 */
+    grid-template-columns: minmax(0, 1fr);
     height: auto;
   }
   .ai-crud-chat-pane {

@@ -333,11 +333,14 @@ onMounted(() => {
   }
 
   @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr) 而不是 1fr：表单的最小内容宽度约 506px，1fr 的 min-content
+       下限会把整页顶出横向滚动条。 */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .fd-pane {
+  min-width: 0;
   border: 1px solid var(--border-color-lighter, #ebeef5);
   border-radius: 8px;
   padding: 12px 14px;
@@ -410,6 +413,13 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  /* 三列文字（片段/接线点/为什么）在 320px 下的 min-content 约 309px，
+     比容器（296px）宽 —— 让表格自己横滑，页面宽度不变。 */
+  @media (max-width: 768px) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
 
   th,
   td {
@@ -456,7 +466,7 @@ onMounted(() => {
 
 .fd-sources {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 14px;
 
   article {
@@ -499,5 +509,15 @@ onMounted(() => {
   font-size: 13px;
   line-height: 1.9;
   color: var(--text-color-regular, #606266);
+}
+
+/* 表格片段自带的 a-pagination 在 320px 下会被表格容器裁掉页码按钮，
+   这里只让分页允许换行 —— 片段产物一行未改，宿主负责适配。 */
+@media (max-width: 768px) {
+  :deep(.ant-pagination) {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 8px;
+  }
 }
 </style>

@@ -230,7 +230,7 @@ export default {
 
 .fd-sources {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 14px;
 
   article {
@@ -271,6 +271,14 @@ export default {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+
+  /* 三列文字（片段/接线点/为什么）在 320px 下的 min-content 约 364px，
+     比容器（296px）宽 —— 让表格自己横滑，页面宽度不变。 */
+  @media (max-width: 768px) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
 
   th,
   td {

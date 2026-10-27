@@ -28,7 +28,7 @@
     <!-- 三个可验证承诺（文案单一真源 docs/brand/slogan.json） -->
     <div class="promises">
       <a-row :gutter="[24, 24]">
-        <a-col :span="8" v-for="p in brand.promises" :key="p.key">
+        <a-col :span="8" :xs="24" :sm="12" :md="8" v-for="p in brand.promises" :key="p.key">
           <a-card class="promise-card" hoverable>
             <h3 class="promise-title">{{ p.title }}</h3>
             <div class="promise-claim">{{ p.claim }}</div>
@@ -90,7 +90,7 @@
     <div class="features">
       <h2 class="section-title">✨ 核心特性</h2>
       <a-row :gutter="[24, 24]">
-        <a-col :span="8" v-for="item in features" :key="item.title">
+        <a-col :span="8" :xs="24" :sm="12" :md="8" v-for="item in features" :key="item.title">
           <a-card class="feature-card" hoverable>
             <div class="feature-icon">
               <component :is="item.icon" />
@@ -112,7 +112,7 @@
         表单、表格、弹窗和 CRUD 页面。<strong>同一份 Schema 跨 UI 框架复用</strong>（Element Plus / Ant Design Vue）。
       </p>
       <a-row :gutter="[16, 16]">
-        <a-col :span="6" v-for="comp in esPlusComps" :key="comp.name">
+        <a-col :span="6" :xs="12" :sm="8" :md="6" v-for="comp in esPlusComps" :key="comp.name">
           <a-card hoverable class="esplus-comp-card" @click="$router.push(comp.route)">
             <div class="esplus-comp-name">{{ comp.name }}</div>
             <div class="esplus-comp-desc">{{ comp.desc }}</div>
@@ -126,7 +126,7 @@
     <div class="tech-stack">
       <h2 class="section-title">🛠 技术栈</h2>
       <a-row :gutter="[16, 16]">
-        <a-col :span="6" v-for="tech in techs" :key="tech.name">
+        <a-col :span="6" :xs="12" :sm="8" :md="6" v-for="tech in techs" :key="tech.name">
           <a-card size="small" class="tech-card">
             <div class="tech-name">{{ tech.name }}</div>
             <div class="tech-ver">{{ tech.version }}</div>

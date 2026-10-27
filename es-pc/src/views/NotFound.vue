@@ -41,4 +41,28 @@
   font-size: 13px;
   color: #999;
 }
+
+/* a-result 的 404 插图是 250px 固定宽 + 左右内边距，320px 视口下顶出 16px。
+   窄屏把插图等比压到容器内，页面不再横向滚动。 */
+@media (max-width: 400px) {
+  .not-found {
+    padding: 40px 12px;
+  }
+
+  .not-found :deep(.ant-result) {
+    padding: 24px 0;
+  }
+
+  .not-found :deep(.ant-result-image) {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    margin: 0 auto 24px;
+  }
+
+  .not-found :deep(.ant-result-image svg) {
+    width: 100%;
+    height: auto;
+  }
+}
 </style>

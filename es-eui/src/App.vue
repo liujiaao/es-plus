@@ -12,7 +12,19 @@
             <span class="logo-text">ES-Plus</span>
           </router-link>
         </h1>
-        <nav class="nav">
+        <!-- 窄屏导航开关：桌面隐藏，<769px 时把 .nav 变成下拉面板 -->
+        <button
+          class="nav-toggle"
+          :aria-label="mobileNavOpen ? '关闭菜单' : '打开菜单'"
+          :aria-expanded="String(mobileNavOpen)"
+          @click="mobileNavOpen = !mobileNavOpen"
+        >
+          <i :class="mobileNavOpen ? 'el-icon-close' : 'el-icon-menu'"></i>
+        </button>
+        <nav
+          class="nav"
+          :class="{ 'mobile-open': mobileNavOpen }"
+        >
           <router-link
             to="/"
             :class="{ 'active': isHome }"
@@ -142,7 +154,14 @@ export default {
   data() {
     return {
       bannerClosed: false,
+      mobileNavOpen: false,
       SITES
+    }
+  },
+  watch: {
+    // 点任意导航项后收起下拉：否则它会盖住刚打开的页面
+    $route() {
+      this.mobileNavOpen = false
     }
   },
   computed: {
@@ -252,6 +271,28 @@ body {
       font-size: 20px;
       color: #303133;
       font-weight: 600;
+    }
+  }
+
+  /* 窄屏开关：桌面不显示（导航直接排在顶栏里） */
+  .nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #606266;
+    font-size: 20px;
+    cursor: pointer;
+
+    &:hover {
+      background: #f5f7fa;
+      color: var(--es-brand-primary);
     }
   }
 
@@ -1295,9 +1336,18 @@ $bg-light: #f7fafc;
 
 // Responsive
 @media (max-width: 768px) {
+  /* 横幅在窄屏会换行成两三层，高度不再固定 —— 继续 fixed 就会压住正文顶部
+     （组件页的目录第一组被盖住）。改成随文档流排布，main 的顶部避让也归零。 */
   .upgrade-banner {
+    position: static;
+    margin-top: 60px;
     height: auto;
     padding: 6px 0;
+  }
+
+  .main,
+  .main.banner-visible {
+    padding-top: 0;
   }
 
   .banner-inner {
@@ -1317,12 +1367,69 @@ $bg-light: #f7fafc;
     position: static;
   }
 
-  .main.banner-visible {
-    padding-top: 80px;
+  /* 顶栏导航在窄屏收成下拉面板：10 个入口横排会把页面撑出横向滚动条（390px 时 892px 宽） */
+  .header {
+    .nav-toggle {
+      display: inline-flex;
+    }
+
+    .nav {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      z-index: 101;
+      flex-direction: column;
+      align-items: stretch;
+      margin-left: 0;
+      padding: 6px 0;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+      background: #fff;
+      border-bottom: 1px solid #e6e6e6;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+
+      &.mobile-open {
+        display: flex;
+      }
+
+      a {
+        line-height: 44px;
+        padding: 0 20px;
+      }
+
+      .site-switcher {
+        margin-left: 0;
+
+        .site-switcher-link {
+          display: flex;
+          height: 44px;
+          padding: 0 20px;
+        }
+      }
+    }
+  }
+
+  /* 文档页：260px 固定侧栏在 390px 下会把正文压成一条缝（正文只剩 130px）。
+     窄屏把侧栏放回文档流、限高内部滚动，链接一个不少，正文占满整行。 */
+  .docs-page {
+    flex-direction: column;
   }
 
   .side-nav {
-    top: 80px !important;
+    position: static;
+    width: 100%;
+    max-height: 45vh;
+    padding: 8px 0;
+    border-right: 0;
+    border-bottom: 1px solid #e6e6e6;
+  }
+
+  .content {
+    margin-left: 0;
+    max-width: 100%;
+    padding: 20px 16px;
   }
 
   .modern-hero {

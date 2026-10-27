@@ -3,6 +3,15 @@
     <!-- 顶部导航 -->
     <a-layout-header class="doc-header">
       <div class="header-left">
+        <!-- 窄屏抽屉开关：与侧栏的 collapsed 同一个状态，两处指同一件事 -->
+        <a-button
+          class="nav-toggle"
+          type="text"
+          aria-label="菜单"
+          @click="siderCollapsed = !siderCollapsed"
+        >
+          <MenuOutlined />
+        </a-button>
         <a-space align="center" :size="12">
           <!-- 品牌标记：此前这里用的是 Ant Design Vue 的 BookOutlined 图标 ——
                拿第三方 UI 库的图标当自己的 logo，另两站用的是「ES」方块，
@@ -14,9 +23,9 @@
       <div class="header-right">
         <a-space :size="16">
           <a-dropdown :trigger="['click']">
-            <a-button type="link" class="site-switcher-btn">
+            <a-button type="link" class="site-switcher-btn" aria-label="切换站点">
               <template #icon><SwapOutlined /></template>
-              {{ currentSiteLabel }}
+              <span class="site-label-text">{{ currentSiteLabel }}</span>
             </a-button>
             <template #overlay>
               <a-menu :selectable="false" @click="switchSite">
@@ -26,17 +35,24 @@
               </a-menu>
             </template>
           </a-dropdown>
-          <a-button type="link" href="https://github.com/liujiaao/es-plus" target="_blank">
-            <GithubOutlined /> GitHub
+          <a-button type="link" class="github-btn" href="https://github.com/liujiaao/es-plus" target="_blank">
+            <GithubOutlined /><span class="github-text"> GitHub</span>
           </a-button>
-          <a-button type="primary" size="small">v{{ adapterVersion }}</a-button>
+          <a-button type="primary" size="small" class="version-btn">v{{ adapterVersion }}</a-button>
         </a-space>
       </div>
     </a-layout-header>
 
     <a-layout class="doc-body">
-      <!-- 侧边栏 -->
-      <a-layout-sider class="doc-sider" width="260">
+      <!-- 侧边栏：窄屏收成抽屉（collapsed-width=0），开关在顶栏左侧 -->
+      <a-layout-sider
+        v-model:collapsed="siderCollapsed"
+        class="doc-sider"
+        width="260"
+        :collapsed-width="0"
+        breakpoint="lg"
+        :trigger="null"
+      >
         <!-- 每个条目都用 <router-link> 承载：<a-menu-item> 渲染出来是 <li>，
              只靠 @click + router.push 的话，这里根本没有 <a href> —— 右键
              「在新标签页打开」、复制链接、搜索引擎抓取全都拿不到地址。 -->
@@ -141,11 +157,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   // 不再引入 BookOutlined：它此前被当作本站 logo，现已换成统一的「ES」品牌标记
   GithubOutlined,
+  MenuOutlined,
   HomeOutlined,
   RocketOutlined,
   ThunderboltOutlined,
@@ -194,6 +211,13 @@ const routeNameToMenuKey = (name) => {
 
 const selectedKeys = ref([routeNameToMenuKey(route.name)])
 const openKeys = ref(['components-group', 'advanced-group'])
+
+// 窄屏抽屉：宽屏下侧栏常驻（a-layout-sider 的 breakpoint="lg" 在 >=992px 会自动展开），
+// 点菜单跳转后收起，否则抽屉会遮住刚打开的页面。
+const siderCollapsed = ref(false)
+watch(() => route.fullPath, () => {
+  if (window.matchMedia('(max-width: 991px)').matches) siderCollapsed.value = true
+})
 </script>
 
 <style scoped>
@@ -301,5 +325,78 @@ const openKeys = ref(['components-group', 'advanced-group'])
   justify-content: space-between;
   color: #999;
   font-size: 13px;
+}
+
+/* 抽屉开关：宽屏常驻侧栏时不需要它 */
+.nav-toggle {
+  display: none;
+}
+
+/* 窄屏（<992px，与 a-layout-sider 的 breakpoint="lg" 对齐）：
+   侧栏改为浮层抽屉，正文占满；顶栏只留品牌、开关与切站图标。 */
+@media (max-width: 991px) {
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    font-size: 18px;
+  }
+
+  .doc-header {
+    padding: 0 12px;
+    height: 56px;
+    line-height: 56px;
+  }
+
+  .header-left .logo-text {
+    display: none;
+  }
+
+  /* 抽屉：脱离文档流，避免 260px 侧栏把正文压成一条缝 */
+  .doc-sider {
+    position: fixed;
+    left: 0;
+    top: 56px;
+    bottom: 0;
+    z-index: 90;
+    height: auto;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+  }
+
+  /* 收起时宽度为 0，阴影会变成一条压在正文左缘的暗线 */
+  .doc-sider.ant-layout-sider-collapsed {
+    box-shadow: none;
+  }
+
+  .doc-content {
+    padding: 12px;
+  }
+
+  .content-wrapper {
+    padding: 16px;
+  }
+
+  .doc-footer {
+    padding: 0 16px 16px;
+  }
+
+  .footer-info {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* 顶栏右键组在 390px 下原本超出视口 37px（页面因此横向滚动）：
+     切站只留图标（完整名称在下拉里），版本号让位。 */
+  .site-label-text,
+  .version-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .github-text {
+    display: none;
+  }
 }
 </style>

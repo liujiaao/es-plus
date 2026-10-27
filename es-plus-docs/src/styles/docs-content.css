@@ -360,6 +360,17 @@
   background: var(--es-doc-code-tint);
 }
 
+/* 窄屏：正文表格的表头/单元格有 min-content 宽度，390px 下会撑出页面横向滚动条
+   （/guide/mcp-server 的 schema 表实测 438px）。表格自身变成横向滚动容器，
+   页面宽度保持不变 —— 表格内容仍然一眼可扫，只是需要横滑。 */
+@media (max-width: 768px) {
+  .es-doc-content > table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
 /* ── 提示框（tip / warning / info / danger）── */
 .es-doc-content .tip,
 .es-doc-content .info,

@@ -176,7 +176,9 @@ watch(
 
   .preset-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* minmax(0,1fr)：预设卡标签是 nowrap + ellipsis，1fr 的 min-content 会把
+       整块撑到 494px（390px 视口下整页横向滚动） */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -184,6 +186,7 @@ watch(
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     padding: 10px 12px;
     background: var(--bg-color);
     border: 1px solid var(--border-color-lighter);
@@ -203,6 +206,7 @@ watch(
     .preset-label {
       font-size: 13px;
       flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;

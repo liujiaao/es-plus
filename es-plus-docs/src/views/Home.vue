@@ -931,6 +931,9 @@ const goToGithub = () => {
 }
 
 .component-info {
+  /* flex 子项默认 min-width:auto，窄屏下会被内容顶出卡片 */
+  min-width: 0;
+
   h3 {
     font-size: 18px;
     font-weight: 600;
@@ -939,6 +942,8 @@ const goToGithub = () => {
     display: flex;
     align-items: center;
     gap: 8px;
+    /* 组件名 + 标签在卡片变窄时允许换行，而不是把卡片撑宽 */
+    flex-wrap: wrap;
   }
   
   p {
@@ -1102,7 +1107,9 @@ const goToGithub = () => {
   }
 
   .hero-section {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr)：单列 1fr 的 min-content 下限由按钮/标题决定，390px 下会把
+       整页顶到 442px 宽（页面因此横向滚动）。列宽交给容器，内部再各自收缩。 */
+    grid-template-columns: minmax(0, 1fr);
     text-align: center;
   }
   
@@ -1123,7 +1130,9 @@ const goToGithub = () => {
   }
   
   .components-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr)：卡片里 h3 是 flex 行（组件名 + 标签，默认不换行），
+       min-content 约 314px，320px 视口下把整页顶出 14px 横向滚动。 */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1161,6 +1170,11 @@ const goToGithub = () => {
     .el-button {
       flex: 1 1 auto;
       min-width: 140px;
+      /* Element Plus 按钮默认 nowrap：英文长标签（"5-minute Quick Start"）会顶宽整列 */
+      white-space: normal;
+      height: auto;
+      padding: 12px 16px;
+      line-height: 1.4;
     }
   }
 
@@ -1184,11 +1198,12 @@ const goToGithub = () => {
     margin-bottom: 16px;
   }
 
+  /* 单列一律 minmax(0, 1fr)：1fr 的 min-content 下限会让长标题/长按钮顶宽整列 */
   .features-grid,
   .ai-grid,
   .cross-grid,
   .promises-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .features-section,
@@ -1200,6 +1215,17 @@ const goToGithub = () => {
   .promises-section,
   .l2-case-section {
     padding: 48px 20px;
+  }
+
+  /* 手机上卡片内边距与图标各收一档：320px 时留给正文的宽度从 112px 回到 176px */
+  .component-card {
+    padding: 20px;
+  }
+
+  .component-icon {
+    width: 56px;
+    height: 56px;
+    margin-right: 16px;
   }
 
   .section-title {

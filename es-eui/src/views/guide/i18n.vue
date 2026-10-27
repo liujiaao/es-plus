@@ -886,6 +886,8 @@ export default {
 
 .step-content {
   flex: 1;
+  /* flex 子项默认 min-width:auto，代码块的最小内容宽度会把整行撑出视口（390px 溢出 198px） */
+  min-width: 0;
 
   h4 {
     font-size: 16px;

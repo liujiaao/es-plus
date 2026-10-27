@@ -1884,8 +1884,14 @@ $bg-light: #f7fafc;
       }
     }
     
+    /* minmax(0, 1fr) + min-width:0：代码窗口里的 <pre> 有 min-content 宽度，
+       单列 1fr 会被它顶到 892px，整页因此出现横向滚动条。 */
     .code-compare-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .code-block-wrapper {
+      min-width: 0;
     }
     
     .advantage-summary {

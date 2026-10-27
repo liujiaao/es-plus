@@ -482,5 +482,15 @@ generate()
   .preview-form {
     grid-template-columns: 1fr;
   }
+
+  /* 英文按钮标签在 nowrap 下 min-content 就 388px（390px 视口整页横滚），
+     允许换行并让高度自适应 */
+  .ai-live-cta .el-button {
+    max-width: 100%;
+    white-space: normal;
+    height: auto;
+    padding: 12px 16px;
+    line-height: 1.4;
+  }
 }
 </style>

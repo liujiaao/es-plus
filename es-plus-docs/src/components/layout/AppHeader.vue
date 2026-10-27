@@ -368,5 +368,47 @@ onUnmounted(() => {
   .app-header {
     padding: 0 16px;
   }
+
+  // 手机宽度下右侧控件组原本会把「切站」和「仓库」推出视口（390px 时溢出 124px）。
+  // 仓库链接在页脚/Cases 页仍有；切站按钮保留但只留图标 —— 三端切换是这个产品的主线，
+  // 不能因为窄屏就消失，而「Vue 3 · Element Plus」这行字在下拉里仍然完整可见。
+  .header-right {
+    gap: 8px;
+  }
+
+  .github-link {
+    display: none;
+  }
+
+  .site-btn .site-label {
+    display: none;
+  }
+}
+
+// 360px 一类窄屏再收一档：语言只留地球图标（标题属性仍写明「语言 / Language」），
+// 同时压掉各处内边距 —— 320px 下右键组只差 20px，收边距比砍功能更划算。
+@media (max-width: 400px) {
+  .lang-btn .lang-label {
+    display: none;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .app-header {
+    padding: 0 12px;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .search-btn,
+  .lang-btn,
+  .site-btn,
+  .theme-btn {
+    padding: 0 6px;
+  }
 }
 </style>
