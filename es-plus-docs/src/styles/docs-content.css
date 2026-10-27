@@ -8,6 +8,34 @@
  * 品牌色来自 docs/tokens/design-tokens.css（--es-brand-primary 等）。
  * ========================================================================== */
 
+/* 内容语义色（不依赖底层 UI 库，三端一致）。
+ *
+ * 挂在根上而不是 .es-doc-content 里：代码块这类「内容块」会被放进自定义容器 ——
+ * 组件文档页的示例卡片就不在 .es-doc-content 内，变量一旦收在正文容器上，那一处的
+ * 代码块会退化成无头、无底色的裸文本。暗色见下方 .dark 覆盖。 */
+:root {
+  --es-doc-text: #384150;
+  --es-doc-heading: #1a1f2b;
+  --es-doc-text-secondary: #5b6472;
+  --es-doc-border: #e7ebf0;
+  --es-doc-code-bg: #f2f5f9;
+  --es-doc-code-tint: rgba(59, 130, 246, 0.09);
+  /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .dark 覆盖（与全局 hljs 主题一致） */
+  --es-doc-code-block-bg: #f6f8fa;
+  --es-doc-code-block-text: #24292e;
+}
+
+.dark {
+  --es-doc-text: #c9d1dc;
+  --es-doc-heading: #f0f3f8;
+  --es-doc-text-secondary: #9aa2ae;
+  --es-doc-border: #34383f;
+  --es-doc-code-bg: #26292e;
+  --es-doc-code-tint: rgba(96, 165, 250, 0.14);
+  --es-doc-code-block-bg: #1e1e1e;
+  --es-doc-code-block-text: #abb2bf;
+}
+
 .es-doc-content {
   /* ── 排版基础 ──
    * 字体栈也走 token：三站 body 各自的栈不同（Roboto / 系统默认 / Element），
@@ -18,17 +46,6 @@
   color: var(--es-doc-text);
   word-break: break-word;
   -webkit-font-smoothing: antialiased;
-
-  /* 内容语义色（不依赖底层 UI 库，三端一致） */
-  --es-doc-text: #384150;
-  --es-doc-heading: #1a1f2b;
-  --es-doc-text-secondary: #5b6472;
-  --es-doc-border: #e7ebf0;
-  --es-doc-code-bg: #f2f5f9;
-  --es-doc-code-tint: rgba(59, 130, 246, 0.09);
-  /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .dark 覆盖（与 CodePlayground / 全局 hljs 一致） */
-  --es-doc-code-block-bg: #f6f8fa;
-  --es-doc-code-block-text: #24292e;
 }
 
 .es-doc-content > *:first-child { margin-top: 0; }
@@ -188,8 +205,11 @@
   text-decoration-color: currentColor;
 }
 
-/* ── 行内代码（品牌色药丸）── */
-.es-doc-content code {
+/* ── 行内代码（品牌色药丸）──
+ * 必须排除 `pre > code`：代码块的正文由「代码块」段自己定色，而这条规则带着
+ * `.es-doc-content` 前缀，特异性高过 `.code-block-wrapper pre code`（0,2,1 > 0,1,2）
+ * —— 深色模式下 `.dark .es-doc-content code` 曾把整块代码刷成链接蓝。 */
+.es-doc-content :not(pre) > code {
   padding: 2px 7px;
   background: var(--es-doc-code-tint);
   border-radius: 6px;
@@ -218,8 +238,10 @@
   font-weight: 400;
 }
 
-/* 带语言标签 + 复制按钮的代码块容器（es-plus-docs 的 markdown 渲染结构） */
-.es-doc-content .code-block-wrapper {
+/* 带语言标签 + 复制按钮的代码块容器（由 utils/code-block.js 产出）。
+   选择器不挂在 .es-doc-content 下：示例卡片会把同样的结构放进自定义容器，
+   代码块必须是一块自包含的组件，而不是「只在正文里好看」的一段样式。 */
+.code-block-wrapper {
   position: relative;
   margin: 20px 0;
   border-radius: var(--es-radius-sm);
@@ -229,14 +251,39 @@
   box-shadow: var(--es-shadow-sm);
 }
 
-.es-doc-content .code-block-wrapper pre {
+/* 内层 pre 的排版在这里写全：不依赖 .es-doc-content pre（代码块可能不在正文容器里），
+   同时天然压过 es-eui 全局 `code { color: #c0392b }` 这类行内代码规则。 */
+.code-block-wrapper pre {
   margin: 0;
+  padding: 18px 20px;
+  max-height: 480px;
+  overflow: auto;
   border: none;
   border-radius: 0;
   background: transparent;
+  font-size: 13.5px;
+  line-height: 1.7;
 }
 
-.es-doc-content .code-block-header {
+.code-block-wrapper.is-expanded pre {
+  max-height: none;
+}
+
+.code-block-wrapper pre code {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--es-doc-code-block-text);
+  font-family: var(--es-font-mono);
+  font-size: inherit;
+  font-weight: 400;
+  /* 行与行之间是真实的 `\n` 文本节点（为了 code.textContent 仍是纯源码、复制不丢行），
+     视觉上由 block 级 .code-line 承担断行。这里必须是 normal：pre 会让那些换行
+     各占一个行盒，行距直接翻倍。缩进保留交给 .code-line 自己的 pre。 */
+  white-space: normal;
+}
+
+.code-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -246,7 +293,7 @@
   font-size: 12px;
 }
 
-.es-doc-content .code-block-lang {
+.code-block-lang {
   color: var(--es-doc-text-secondary);
   font-family: var(--es-font-mono);
   text-transform: lowercase;
@@ -254,7 +301,7 @@
 }
 
 /* 可选文件名 / 标题（```ts title="src/a.ts" 或 ```ts[src/a.ts]） */
-.es-doc-content .code-block-title {
+.code-block-title {
   flex: 1 1 auto;
   min-width: 0;
   margin-left: 10px;
@@ -266,7 +313,8 @@
   white-space: nowrap;
 }
 
-.es-doc-content .code-copy-btn {
+.code-copy-btn,
+.code-collapse-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -280,18 +328,42 @@
   transition: all 0.2s;
 }
 
-.es-doc-content .code-copy-btn:hover {
+.code-copy-btn:hover,
+.code-collapse-btn:hover {
   border-color: var(--es-doc-border);
   background: var(--es-bg);
   color: var(--es-brand-primary);
 }
 
-.es-doc-content .code-copy-btn.copied {
+.code-copy-btn.copied {
   color: var(--es-success);
   border-color: var(--es-success);
 }
 
-.es-doc-content .copy-icon {
+/* 头部右侧按钮组：语言标签与文件名占左侧，复制/折叠固定在右端 */
+.code-block-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 10px;
+}
+
+/* 折叠按钮的箭头（纯 CSS，不引图标库 —— 三站共用的样式不能依赖某一端的图标组件） */
+.collapse-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 0.2s;
+}
+
+.code-block-wrapper.is-expanded .collapse-caret {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.copy-icon {
   display: inline-block;
   width: 12px;
   height: 12px;
@@ -300,7 +372,7 @@
   position: relative;
 }
 
-.es-doc-content .copy-icon::before {
+.copy-icon::before {
   content: '';
   position: absolute;
   top: -3px;
@@ -310,6 +382,75 @@
   border: 1px solid currentColor;
   border-radius: 2px;
   background: var(--es-doc-code-block-bg);
+}
+
+/* ── 行号 / 行高亮 / 折叠 ──
+ * 结构由 docs/theme/code-block.js 产出（每行一个 .code-line），这里只管外观。
+ * 行号用 CSS 计数器而不是往 HTML 里写数字：复制时 code.textContent 必须是纯源码，
+ * 数字一旦成为文本节点就会被一起复制走。 */
+.code-block-wrapper pre code {
+  display: block;
+  counter-reset: code-line;
+  padding: 0;
+  background: none;
+}
+
+.code-line {
+  display: block;
+  position: relative;
+  min-height: 1.7em;
+  padding-left: 3.2em;
+  counter-increment: code-line;
+  /* 每行自己保留缩进（容器是 normal，见上） */
+  white-space: pre;
+}
+
+.code-line::before {
+  content: counter(code-line);
+  position: absolute;
+  left: 0;
+  width: 2.2em;
+  padding-right: 0.6em;
+  text-align: right;
+  color: var(--es-doc-text-secondary);
+  opacity: 0.45;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 行高亮：浅黄底 + 左侧 2px 主色（路线图 1.6 的口径） */
+.code-line.is-highlighted {
+  background: rgba(250, 204, 21, 0.16);
+  box-shadow: inset 2px 0 0 var(--es-brand-primary);
+}
+
+/* 折叠：超过 480px 先滚动，点「展开」解除上限（上限与解除见上方 .code-block-wrapper pre） */
+
+/* 折叠态底部渐隐：提示「下面还有」，不用另画一条硬边 */
+.code-block-wrapper.is-collapsible::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 56px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--es-doc-code-block-bg));
+}
+
+.code-block-wrapper.is-collapsible.is-expanded::after {
+  display: none;
+}
+
+/* 窄屏关行号：320px 下 3.2em 的沟槽会把每行代码挤掉四五个字符 */
+@media (max-width: 768px) {
+  .code-line {
+    padding-left: 0;
+  }
+
+  .code-line::before {
+    display: none;
+  }
 }
 
 /* ── 表格（组件 Props/Options 等）—— 圆角描边 + 表头着色 + 斑马纹 ──
@@ -464,22 +605,16 @@
 }
 
 /* ── 暗色主题（跟随 <html> 上的 .dark，与 Element Plus / vxe-table 的暗色约定一致）── */
-.dark .es-doc-content {
-  --es-doc-text: #c9d1dc;
-  --es-doc-heading: #f0f3f8;
-  --es-doc-text-secondary: #9aa2ae;
-  --es-doc-border: #34383f;
-  --es-doc-code-bg: #26292e;
-  --es-doc-code-tint: rgba(96, 165, 250, 0.14);
-  --es-doc-code-block-bg: #1e1e1e;
-  --es-doc-code-block-text: #abb2bf;
-}
-
-.dark .es-doc-content .code-block-header {
+.dark .code-block-header {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.dark .es-doc-content code {
+/* 行高亮在深色底上要压暗：同一块浅黄在 #1e1e1e 上会亮得像选中态 */
+.dark .code-line.is-highlighted {
+  background: rgba(250, 204, 21, 0.1);
+}
+
+.dark .es-doc-content :not(pre) > code {
   color: #79b8ff;
 }
 

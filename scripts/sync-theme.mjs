@@ -7,6 +7,7 @@
  *   - docs-layout.css：外壳契约（shell 宽度、三栏宽度、正文度量）。路线图 1.2。
  *   - docs-chrome.css：文档 chrome 契约（面包屑/目录/上下篇/编辑反馈）。路线图 1.4。
  *   - doc-chrome.js：chrome 行为（标题发号、目录滚动高亮），无框架依赖。路线图 1.4。
+ *   - code-block.js：代码块契约（语言/文件名/复制/折叠/行号/高亮行），无框架依赖。路线图 1.6。
  *
  * 用法：
  *   node scripts/sync-theme.mjs           # 同步：拷贝单源到各站点
@@ -59,6 +60,16 @@ const ASSETS = [
       join(ROOT, 'es-plus-docs', 'src', 'utils', 'doc-chrome.js'),
       join(ROOT, 'es-pc', 'src', 'utils', 'doc-chrome.js'),
       join(ROOT, 'es-eui', 'src', 'utils', 'doc-chrome.js'),
+    ],
+  },
+  {
+    // 代码块的结构与行为（路线图 1.6）。与 doc-chrome.js 同理：不是样式，
+    // 三站同名同路径，主站的 markdown 渲染器与两站的代码块组件都 import 这一份。
+    file: 'code-block.js',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'utils', 'code-block.js'),
+      join(ROOT, 'es-pc', 'src', 'utils', 'code-block.js'),
+      join(ROOT, 'es-eui', 'src', 'utils', 'code-block.js'),
     ],
   },
 ]

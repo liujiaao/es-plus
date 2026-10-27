@@ -45,7 +45,9 @@ const ok = (msg) => {
   console.log(`✅ ${msg}`)
 }
 
-const WRAPPER_OPEN = '<div class="code-block-wrapper"'
+/** wrapper 的 class 可能带状态类（is-collapsible / is-expanded），只锚固定前缀 */
+const WRAPPER_OPEN = /<div class="code-block-wrapper(?:\s[^"]*)?"/g
+const wrapperCount = (html) => (html.match(WRAPPER_OPEN) || []).length
 const CODE_RE = /<pre class="hljs"><code[^>]*>([\s\S]*?)<\/code><\/pre>/g
 const COPY_BTN = 'class="code-copy-btn"'
 
@@ -139,7 +141,7 @@ const FIXTURES = [
 function checkFixtures() {
   for (const fixture of FIXTURES) {
     const html = renderDocMarkdown(fixture.md)
-    const wrappers = count(html, WRAPPER_OPEN)
+    const wrappers = wrapperCount(html)
     if (wrappers !== fixture.wrappers) {
       fail(`[${fixture.name}] wrapper 数应为 ${fixture.wrappers}，实际 ${wrappers}\n${html}`)
       continue
@@ -202,7 +204,7 @@ function checkCorpus() {
       fail(`${file} 渲染后出现裸 <pre><code>（旧 bug 指纹）`)
       continue
     }
-    const wrappers = count(html, WRAPPER_OPEN)
+    const wrappers = wrapperCount(html)
     const buttons = count(html, COPY_BTN)
     if (wrappers !== buttons) {
       fail(`${file} wrapper ${wrappers} 个，复制按钮 ${buttons} 个 — 结构不完整`)

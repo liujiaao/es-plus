@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" class="code-playground">
+  <div class="code-playground">
     <!-- 演示区域 -->
     <div class="playground-preview">
       <div class="preview-header">
@@ -32,13 +32,13 @@
         </div>
       </div>
     </div>
-    
-    <!-- 代码区域 -->
+
+    <!-- 代码区域：结构与 es-pc / es-eui 的示例卡片一致，由 utils/code-block.js 产出 -->
     <el-collapse-transition>
       <div v-show="isExpanded" class="playground-code">
         <div class="code-tabs">
-          <div 
-            v-for="tab in codeTabs" 
+          <div
+            v-for="tab in codeTabs"
             :key="tab.name"
             class="code-tab"
             :class="{ active: activeTab === tab.name }"
@@ -47,11 +47,7 @@
             {{ tab.label }}
           </div>
         </div>
-        <div class="code-content">
-          <pre v-if="activeTab === 'template'" class="hljs"><code class="language-html">{{ displayCode.template }}</code></pre>
-          <pre v-if="activeTab === 'script'" class="hljs"><code class="language-javascript">{{ displayCode.script }}</code></pre>
-          <pre v-if="activeTab === 'style'" class="hljs"><code class="language-css">{{ displayCode.style }}</code></pre>
-        </div>
+        <div ref="codeHost" class="code-content" v-html="activeCodeHtml"></div>
       </div>
     </el-collapse-transition>
     
@@ -68,14 +64,21 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ArrowUp, ArrowDown, CopyDocument, Refresh, Promotion } from '@element-plus/icons-vue'
 import { openInCodeSandbox, prefetchSandboxVendor } from '@/utils/sandbox'
+import { enhanceCodeBlocks, renderCodeBlockHtml } from '@/utils/code-block.js'
 import hljs from 'highlight.js'
 
 const { t } = useI18n()
+
+const codeHost = ref<HTMLElement | null>(null)
+
+// 代码块的复制 / 折叠行为来自三站共用的 utils/code-block.js：v-html 每次换内容都要重标一遍
+const enhanceCode = () => nextTick(() => enhanceCodeBlocks(codeHost.value))
 
 // Warm the unpkg cache for `@es-plus/vue3` dist on mount so the user's click
 // on "在线试" does not need to await a fetch (which would risk popup blocking).
 onMounted(() => {
   prefetchSandboxVendor()
+  enhanceCode()
 })
 
 interface CodeTabs {
@@ -100,7 +103,6 @@ const props = defineProps<{
 const LEVEL_LABELS = ['', '入门', '基础', '进阶', '高级', '复杂'] as const
 const LEVEL_TYPES = ['', 'success', 'success', 'warning', 'danger', 'danger'] as const
 
-const rootRef = ref<HTMLElement | null>(null)
 const isExpanded = ref(false)
 const activeTab = ref('template')
 const refreshKey = ref(0)
@@ -124,8 +126,34 @@ const displayCode = computed<CodeContent>(() => {
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
-  if (isExpanded.value) nextTick(highlightCodeBlocks)
 }
+
+/** 三个 tab 的语言标签：模板片段就是 HTML，脚本是 JS，样式是 CSS。 */
+const TAB_LANG: Record<string, string> = { template: 'html', script: 'js', style: 'css' }
+
+/** 高亮只负责 `<code>` 内部的内容（外层结构由 code-block.js 产出）。 */
+const highlight = (code: string, lang: string): string => {
+  if (!code) return ''
+  try {
+    return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
+  } catch {
+    return ''
+  }
+}
+
+/** 当前 tab 的代码块：与 es-pc / es-eui 的示例卡片同一套结构（语言 / 复制 / 行号）。 */
+const activeCodeHtml = computed(() => {
+  const tab = activeTab.value
+  const lang = TAB_LANG[tab] ?? 'text'
+  const raw = (displayCode.value as unknown as Record<string, string>)[tab] || ''
+  return renderCodeBlockHtml({
+    raw,
+    highlighted: highlight(raw, lang),
+    lang,
+    // 外层「展开代码」是这一层的折叠入口，代码块不再叠第二层
+    collapsible: false,
+  })
+})
 
 // `navigator.clipboard` is only available in secure contexts (https / localhost).
 // On http://lan-ip dev servers it's undefined, so fall back to legacy execCommand.
@@ -190,19 +218,9 @@ const openInSandbox = async () => {
   }
 }
 
-// 高亮代码
-// 只扫本组件根节点：此前用的是 document.querySelectorAll('pre code')，
-// 会连带把同页文档正文里已经渲染好的代码块再高亮一遍 —— 那里结构是
-// <div class="code-block-wrapper"><pre><code>…，二次高亮会把 wrapper 当文本转义。
-const highlightCodeBlocks = () => {
-  rootRef.value?.querySelectorAll('pre code').forEach((block) => {
-    hljs.highlightElement(block as HTMLElement)
-  })
-}
-
-watch(() => props.code, () => {
-  if (isExpanded.value) setTimeout(highlightCodeBlocks, 100)
-}, { immediate: true })
+// 高亮在 computed（activeCodeHtml）里随 tab 一次完成；
+// 这里不再对 DOM 跑 hljs.highlightElement —— 那会把已渲染的代码块结构当文本转义。
+watch(activeCodeHtml, enhanceCode)
 </script>
 
 <style lang="scss" scoped>
@@ -273,15 +291,13 @@ watch(() => props.code, () => {
   }
 }
 
-.code-content {
-  pre {
-    margin: 0;
-    padding: 16px;
-    background-color: var(--es-code-bg, var(--es-code-bg));
-    overflow-x: auto;
-    font-size: 13px;
-    line-height: 1.6;
-  }
+/* 代码块的外观来自 docs-content.css（三站共用）；卡片已有圆角与边框，
+   代码块再画一圈就成双线 —— 这里只把重复的那一层去掉。 */
+.code-content :deep(.code-block-wrapper) {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .playground-description {

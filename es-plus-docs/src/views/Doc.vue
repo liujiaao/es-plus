@@ -15,7 +15,7 @@
       <!-- 文档内容 -->
       <article class="doc-content">
         <!-- <h1 class="doc-title">{{ currentDoc.title }}</h1> -->
-        <div class="markdown-content es-doc-content" v-html="renderedContent"></div>
+        <div ref="contentRef" class="markdown-content es-doc-content" v-html="renderedContent"></div>
       </article>
 
       <!-- 底部导航 -->
@@ -67,6 +67,8 @@ import DemoBlock from '@/components/doc/DemoBlock.vue'
 import DocMeta from '@/components/doc/DocMeta.vue'
 import { installAppPlugins } from '@/utils/install-app-plugins'
 import { renderDocMarkdown } from '@/utils/doc-markdown.mjs'
+// 代码块行为（复制 / 折叠）与三站共用同一份实现，结构由 doc-markdown 产出
+import { enhanceCodeBlocks } from '@/utils/code-block.js'
 // 目录行为（标题发号 + 滚动高亮）与三站共用同一份实现
 import { collectHeadings, createScrollSpy, scrollToHeading } from '@/utils/doc-chrome.js'
 import type { DocHeading } from '@/utils/doc-chrome.js'
@@ -125,6 +127,13 @@ const renderedContent = computed(() => renderDocMarkdown(currentDoc.value.conten
 const toc = ref<DocHeading[]>([])
 const activeHeading = ref('')
 const showBackTop = ref(false)
+const contentRef = ref<HTMLElement | null>(null)
+
+// 代码块的复制 / 折叠：事件委托绑在正文容器上（utils/code-block.js），
+// 每次 v-html 重渲染只需要重新标记一遍新的 wrapper。
+const enhanceRendered = () => {
+  if (contentRef.value) enhanceCodeBlocks(contentRef.value)
+}
 
 // 目录与高亮：标题发号 + 轨迹计算都在共用实现里（utils/doc-chrome.js）。
 // 每次正文重渲染都要重建 —— 旧的 spy 闭包攥着已经不在文档里的标题元素。
@@ -191,41 +200,6 @@ const updateNav = () => {
 watch(() => route.params.name, updateNav, { immediate: true })
 watch(locale, updateNav)
 
-const copyCode = async (btn: HTMLButtonElement) => {
-  // 原文直接从 DOM 的 <code> 取：高亮只加标签、不改字符，textContent 就是源码。
-  // 不再用 data-code 属性存一份副本 —— 属性转义/还原一旦不一致，复制的内容就会坏。
-  const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent ?? ''
-  try {
-    await navigator.clipboard.writeText(code)
-  } catch {
-    const ta = document.createElement('textarea')
-    ta.value = code
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-  }
-  const text = btn.querySelector('.copy-text')
-  if (text) {
-    const original = text.textContent
-    text.textContent = '已复制'
-    btn.classList.add('copied')
-    setTimeout(() => {
-      text.textContent = original
-      btn.classList.remove('copied')
-    }, 1500)
-  }
-}
-
-const handleContentClick = (e: MouseEvent) => {
-  const target = e.target as HTMLElement
-  const btn = target.closest('.code-copy-btn') as HTMLButtonElement | null
-  if (btn) {
-    e.preventDefault()
-    copyCode(btn)
-  }
-}
-
 // Track mounted demo apps so we can unmount them when the doc changes or component unmounts
 const mountedDemoApps: App[] = []
 
@@ -253,18 +227,22 @@ const mountDemos = () => {
 
 watch(renderedContent, () => {
   unmountDemos()
-  nextTick(() => mountDemos())
+  nextTick(() => {
+    mountDemos()
+    enhanceRendered()
+  })
 }, { flush: 'post' })
 
 onMounted(() => {
   // 高亮在 markdown 渲染时一次完成（见 utils/doc-markdown.mjs）。
   // 这里曾经再对 `pre code` 跑一遍 hljs.highlightElement —— 它会把已经注入的
   // 代码块 wrapper 当纯文本转义，正是线上代码块显示 "bash 复制 …" 的原因。
-  const content = document.querySelector('.markdown-content') as HTMLElement | null
-  content?.addEventListener('click', handleContentClick)
   window.addEventListener('scroll', updateBackTop, { passive: true })
   updateBackTop()
-  nextTick(() => mountDemos())
+  nextTick(() => {
+    mountDemos()
+    enhanceRendered()
+  })
 })
 
 onBeforeUnmount(() => {

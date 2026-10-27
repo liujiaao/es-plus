@@ -27,6 +27,7 @@ import hljs from 'highlight.js'
 // 「Could not find the language 'vue'」并降级成无高亮。SFC ≈ HTML 模板 +
 // 内嵌脚本/样式，用 xml 定义注册为 'vue'，至少保住标签着色。
 import xml from 'highlight.js/lib/languages/xml'
+import { parseFenceInfo, renderCodeBlockHtml } from './code-block.js'
 import { rewriteInternalDocLinks } from './doc-links.js'
 
 hljs.registerLanguage('vue', xml)
@@ -43,31 +44,6 @@ const CONTAINER_OPEN = /^:::[ \t]*(tip|warning|info|danger)[ \t]*(.*)$/
 const CONTAINER_CLOSE = /^:::[ \t]*$/
 const FENCE_OPEN = /^[ \t]{0,3}(`{3,}|~{3,})/
 
-/** 转义进 HTML 属性的最小集合（`"` 必须转，否则属性会提前闭合） */
-export function escapeHtmlAttr(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-/**
- * 解析 fence 的 info 串：
- *   ```ts                      → { lang: 'ts', title: '' }
- *   ```ts title="src/a.ts"     → { lang: 'ts', title: 'src/a.ts' }
- *   ```ts[src/a.ts]            → { lang: 'ts', title: 'src/a.ts' }   (VitePress 习惯)
- */
-export function parseFenceInfo(info) {
-  const raw = String(info || '').trim()
-  if (!raw) return { lang: '', title: '' }
-  const titleAttr = raw.match(/\btitle="([^"]*)"/)
-  const bracket = raw.match(/\[([^\]]+)\]\s*$/)
-  const title = (titleAttr && titleAttr[1]) || (bracket && bracket[1]) || ''
-  const lang = (raw.split(/\s+/)[0] || '').replace(/\[.*$/, '').toLowerCase()
-  return { lang, title }
-}
-
 /** 高亮一段代码，只返回 `<code>` 内部应有的 HTML */
 export function highlightCode(raw, lang) {
   if (lang && hljs.getLanguage(lang)) {
@@ -82,28 +58,23 @@ export function highlightCode(raw, lang) {
 
 /**
  * 生成一个代码块（wrapper + header + pre/code）。
+ *
+ * 结构与行为都在 `utils/code-block.js`（三站共用，`scripts/sync-theme.mjs` 分发）：
+ * 语言标签、文件名、复制、折叠、行号、高亮行只有一份实现。这里只负责接上
+ * highlight.js —— 三站里只有主站装了它。
+ *
  * 复制按钮不带 data-* 副本：点击时从 DOM 的 `<code>` 读 textContent 即可，
  * 既避免大段代码在属性里再存一份，也不会有转义/还原不一致的问题。
  */
 export function renderCodeBlock(md, raw, info) {
-  const { lang, title } = parseFenceInfo(info)
-  const highlighted = highlightCode(raw, lang)
-  const langLabel = lang || 'text'
-  const codeHtml = highlighted || md.utils.escapeHtml(raw)
-  const langClass = lang ? ` class="language-${escapeHtmlAttr(lang)}"` : ''
-  const titleHtml = title
-    ? `\n      <span class="code-block-title">${md.utils.escapeHtml(title)}</span>`
-    : ''
-  return `<div class="code-block-wrapper" data-lang="${escapeHtmlAttr(langLabel)}">
-    <div class="code-block-header">
-      <span class="code-block-lang">${escapeHtmlAttr(langLabel)}</span>${titleHtml}
-      <button class="code-copy-btn" type="button" aria-label="复制代码">
-        <span class="copy-icon" aria-hidden="true"></span>
-        <span class="copy-text">复制</span>
-      </button>
-    </div>
-    <pre class="hljs"><code${langClass}>${codeHtml}</code></pre>
-  </div>`
+  const { lang, title, highlightLines } = parseFenceInfo(info)
+  return renderCodeBlockHtml({
+    raw,
+    highlighted: highlightCode(raw, lang),
+    lang,
+    title,
+    highlightLines,
+  })
 }
 
 /**

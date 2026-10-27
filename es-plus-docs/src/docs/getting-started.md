@@ -43,8 +43,7 @@ app.mount('#app')
 
 如果项目使用 `unplugin-vue-components` 按需导入 Element Plus，需在 `vite.config.ts` 中添加 `EsPlusResolver`：
 
-```typescript
-// vite.config.ts
+```typescript title="vite.config.ts"
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { EsPlusResolver } from 'es-plus-ui/resolver'
@@ -66,7 +65,7 @@ export default defineConfig({
 
 用 JSON 配置替代逐行编写 `el-form-item`：
 
-```vue
+```vue {15-22}
 <template>
   <es-form
     :model="form"

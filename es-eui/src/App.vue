@@ -616,22 +616,6 @@ code {
   font-size: 13px;
 }
 
-/* 开发指南等页面手写了深色 .code-block（深色头部 + 深色容器 #1e1e1e）。
- * 这些页面被布局包在 .es-doc-content 内，而 docs-content.css（单一权威源）会给
- * .es-doc-content pre 施加“亮色 GitHub 风格”背景/文字/圆角/外边距，渗入深色 .code-block
- * 后造成“深色头部 + 亮色代码体”的割裂与低对比。此处把 .code-block 内的 pre 归还给深色容器：
- * 透明背景、去除多余圆角/外边距、浅色文字。选择器 (.es-doc-content .code-block pre = 0,2,1)
- * 稳定压过渗入规则 (.es-doc-content pre = 0,1,1)，与样式加载顺序无关。 */
-.es-doc-content .code-block pre {
-  margin: 0;
-  background: transparent;
-  border-radius: 0;
-}
-.es-doc-content .code-block pre code {
-  color: #d4d4d4;
-  background: transparent;
-  padding: 0;
-}
 
 /* 表格 */
 .table-props {
@@ -819,63 +803,6 @@ $bg-light: #f7fafc;
       margin: 0;
       font-size: 15px;
       color: $text-secondary;
-    }
-  }
-}
-
-// Code Block - 统一的代码块样式
-.modern-code-block {
-  background: #1e1e1e;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 20px;
-
-  .code-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: #2d2d2d;
-    border-bottom: 1px solid #3d3d3d;
-
-    .code-lang {
-      font-size: 12px;
-      color: #9cdcfe;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    .copy-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 12px;
-      font-size: 12px;
-      color: #ccc;
-      background: #3d3d3d;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s;
-
-      &:hover {
-        background: #4d4d4d;
-        color: white;
-      }
-    }
-  }
-
-  pre {
-    margin: 0;
-    padding: 16px;
-    overflow-x: auto;
-    font-size: 13px;
-    line-height: 1.6;
-    background: transparent;
-
-    code {
-      font-family: 'Fira Code', 'Consolas', monospace;
-      color: #d4d4d4;
     }
   }
 }
