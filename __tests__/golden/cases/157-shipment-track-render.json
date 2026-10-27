@@ -9,7 +9,7 @@
     "target": "antdv",
     "fields": [
       { "prop": "trackingNo", "label": "运单号", "formtype": "Input" },
-      { "prop": "carrier", "label": "承运商", "formtype": "Input", "inQuery": false },
+      { "prop": "carrier", "label": "承运商", "formtype": "Input" },
       {
         "prop": "trackStatus",
         "label": "轨迹状态",

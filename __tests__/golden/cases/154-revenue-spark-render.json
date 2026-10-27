@@ -12,7 +12,6 @@
         "prop": "channel",
         "label": "渠道",
         "formtype": "Select",
-        "inQuery": false,
         "dataOptions": [
           { "label": "线上", "value": "online" },
           { "label": "线下", "value": "offline" }

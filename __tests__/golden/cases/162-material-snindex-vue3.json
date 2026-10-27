@@ -1,6 +1,6 @@
 {
-  "nl": "物料台账：表格最左侧显示序号列，展示物料编码、物料名称、库存数量；支持新增、编辑、删除。",
-  "nlEn": "Material ledger: the table shows a leading row-index (serial number) column and lists material code, material name and stock quantity. Supports add, edit and delete.",
+  "nl": "物料台账：查询条件有物料编码、物料名称；表格最左侧显示序号列，展示物料编码、物料名称、库存数量；支持新增、编辑、删除。",
+  "nlEn": "Material ledger: the query bar has material code and material name; the table shows a leading row-index (serial number) column and lists material code, material name and stock quantity. Supports add, edit and delete.",
   "fixedFields": ["materialCode", "materialName", "stockQty"],
   "pinnedDims": ["propSet", "membership", "actions"],
   "config": {

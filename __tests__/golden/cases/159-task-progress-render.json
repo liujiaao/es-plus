@@ -9,7 +9,7 @@
     "target": "vue2",
     "fields": [
       { "prop": "task", "label": "任务名称", "formtype": "Input" },
-      { "prop": "assignee", "label": "负责人", "formtype": "Input", "inQuery": false },
+      { "prop": "assignee", "label": "负责人", "formtype": "Input" },
       {
         "prop": "progress",
         "label": "进度",

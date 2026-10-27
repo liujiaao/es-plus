@@ -12,7 +12,6 @@
         "prop": "level",
         "label": "等级",
         "formtype": "Select",
-        "inQuery": false,
         "dataOptions": [
           { "label": "战略级", "value": "strategic" },
           { "label": "普通级", "value": "normal" }

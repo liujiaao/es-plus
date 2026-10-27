@@ -55,7 +55,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { NL_TO_CONFIG_FEWSHOT } from '@es-plus/shared'
-import { extractSurfaceList, findTrapFields } from './lib/membership-trap.mjs'
+import { extractSurfaceList, findTrapFields, findReverseContradictions, statesSurface } from './lib/membership-trap.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(__dirname, '..', '__tests__', 'golden', 'cases')
@@ -97,9 +97,48 @@ const fail = (msg) => {
   if (got !== 'inQuery:createdAt') fail(`端到端夹具失败：得到 ${got}，期望 inQuery:createdAt`)
 }
 
+// ── 0c 新增两腿的自检夹具（反向矛盾 / pin 下界）────────────────────────────
+{
+  // 反向矛盾：NL 点名可查、gold 写 false → 必须抓
+  const rev = findReverseContradictions({
+    nl: '用户管理：查询条件有用户名、状态；表格展示用户名、状态。',
+    config: { fields: [{ prop: 'username', label: '用户名' }, { prop: 'status', label: '状态', inQuery: false }] },
+  })
+  const revGot = rev.map((x) => `${x.surface}:${x.prop}`).join(',')
+  if (revGot !== 'inQuery:status') fail(`反向夹具失败：得到 ${JSON.stringify(revGot)}，期望 inQuery:status`)
+
+  // 反向判定必须是**严格**匹配：列举项「姓名」不得牵连 label「家长姓名」（66 的假红形状）
+  const revStrict = findReverseContradictions({
+    nl: '学生管理：查询姓名、班级；表格展示姓名、班级、总分；每行可展开查看家长姓名。',
+    config: {
+      fields: [
+        { prop: 'studentName', label: '姓名' },
+        { prop: 'className', label: '班级' },
+        { prop: 'totalScore', label: '总分' },
+        { prop: 'parentName', label: '家长姓名', inTable: false, inQuery: false },
+      ],
+    },
+  })
+  if (revStrict.length) fail(`反向严格匹配失效：「家长姓名」被子串「姓名」牵连 → ${JSON.stringify(revStrict)}`)
+
+  // pin 下界：穷举列举 / 全否表述 都算「声明了查询面」；两样都没有 → 不算
+  const S = [
+    ['查询条件有用户名、状态；表格展示用户名。', true],
+    ['卡片式商品列表：不提供查询条件；不显示表头。', true],
+    ['卡片式商品列表：不显示表头，直接排列商品名与价格；只读。', false],
+    ['支持按商品名模糊查询，还可以按状态筛选。', false], // 非穷举 → 不作判定（不是依据）
+  ]
+  for (const [nl, want] of S) {
+    const got = statesSurface(nl, 'inQuery')
+    if (got !== want) fail(`statesSurface 夹具失败：「${nl}」→ ${got}，期望 ${want}`)
+  }
+}
+
 // ── 扫语料 ────────────────────────────────────────────────────────────────
 const files = readdirSync(CASES_DIR).filter((f) => f.endsWith('.json')).sort()
 const hits = []
+const reverseHits = []
+const unbakedPins = []
 let scanned = 0
 let exemptRefine = 0
 let exemptAdjudicated = 0
@@ -119,6 +158,18 @@ for (const f of files) {
   }
   const found = findTrapFields(raw)
   if (found.length) hits.push({ f, fields: found })
+
+  // 0c 反向腿（2026-10-27）：NL 穷举列举点了名、gold 却写显式 false —— 同一类自相矛盾的另一半。
+  const rev = findReverseContradictions(raw)
+  if (rev.length) reverseHits.push({ f, fields: rev })
+
+  // 0c pin 下界：`membership` 进了 pinnedDims ⟹ NL 必须**可判定地**声明了查询面
+  // （穷举列举，或「不提供查询」这种全否表述）。这是对自报 `nlStatedDims` 的机器替代：
+  // 自报字段证明不了自己诚实，这条可以。字段级 `inQuery:<prop>` 同规。
+  const pins = (raw.pinnedDims ?? []).map(String)
+  if (pins.some((t) => t === 'membership' || t.startsWith('inQuery:')) && !statesSurface(raw.nl, 'inQuery')) {
+    unbakedPins.push({ f, pins: pins.filter((t) => t === 'membership' || t.startsWith('inQuery:')) })
+  }
 }
 
 // few-shot 是**教学材料**，同样受此陷阱约束：示例里的漏写会直接教坏模型。
@@ -151,12 +202,34 @@ if (hits.length) {
   }
 }
 
+// 反向矛盾（NL 列了、gold 写 false）：与上面同一类错误，只是朝向相反。
+if (reverseHits.length) {
+  const lines = reverseHits.map(
+    (h) => `    ${h.f} → ${h.fields.map((x) => `${x.prop}(${x.label}) 被 NL 点名可查却写 ${x.surface}:false`).join('; ')}`
+  )
+  fail(
+    `${reverseHits.length} 条用例的 gold 与自身 NL 反向矛盾：\n${lines.join('\n')}\n`
+    + '    NL 明说「查询条件有它」，gold 却显式排除 ⟹ 模型照 NL 写必错。修法 = 删掉那处 false\n'
+    + '    （让 gold 忠实于 NL）；若那处排除是有意的，则应改 NL 而不是留着两套说法。'
+  )
+}
+
+// pin 无 NL 依据：`membership` / `inQuery:<prop>` 钉了，但 NL 里没有可判定的查询面陈述。
+if (unbakedPins.length) {
+  const lines = unbakedPins.map((h) => `    ${h.f} → ${h.pins.join(',')}（NL 无可判定的查询面陈述）`)
+  fail(
+    `${unbakedPins.length} 条用例把 membership 钉进门禁而其 NL 未声明查询面：\n${lines.join('\n')}\n`
+    + '    scoped 会因此惩罚「NL 没要求、也推不出」的意图（公平性不变量 pinnedDims ⊆ nlStatedDims\n'
+    + '    的机器下界）。修法 = 补一句穷举查询面（如「查询条件有 A、B」）或摘掉该 pin。'
+  )
+}
+
 if (failures) {
   console.error(`\ncheck:membership-trap FAILED: ${failures} 处`)
   process.exit(1)
 }
 console.log(
   `[membership-trap] 扫描 ${scanned} 条 crud 用例 + ${NL_TO_CONFIG_FEWSHOT.length} 条 few-shot；`
-  + `无「NL 穷举列举 vs gold 默认 true」矛盾 ✔`
+  + `无「NL 穷举列举 ⟷ gold 界面归属」双向矛盾、无无依据的 membership pin ✔`
   + `（豁免：refinements 非空 ${exemptRefine} 条，人工裁定 ${exemptAdjudicated} 条）`
 )

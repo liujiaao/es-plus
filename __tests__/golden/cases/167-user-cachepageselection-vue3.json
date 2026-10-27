@@ -1,6 +1,6 @@
 {
-  "nl": "用户批量管理：勾选需要跨页保留（翻页后仍记住已勾选）；展示用户名、邮箱、状态；支持删除。",
-  "nlEn": "Bulk user management: checkbox selection must persist across pages (remembered after paging); shows username, email and status. Supports delete.",
+  "nl": "用户批量管理：查询条件有用户名；勾选需要跨页保留（翻页后仍记住已勾选）；展示用户名、邮箱、状态；支持删除。",
+  "nlEn": "Bulk user management: the query bar has username; checkbox selection must persist across pages (remembered after paging); shows username, email and status. Supports delete.",
   "fixedFields": ["userName", "email", "status"],
   "pinnedDims": ["propSet", "membership", "actions"],
   "config": {

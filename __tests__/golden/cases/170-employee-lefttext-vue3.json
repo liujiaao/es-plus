@@ -1,6 +1,6 @@
 {
-  "nl": "员工花名册：表格工具栏左侧显示「按部门分组统计」提示文案；展示姓名、部门、职位；支持新增、编辑。",
-  "nlEn": "Employee roster: show the text 「按部门分组统计」 on the left of the table toolbar; lists name, department and position. Supports add and edit.",
+  "nl": "员工花名册：查询条件有姓名；表格工具栏左侧显示「按部门分组统计」提示文案；展示姓名、部门、职位；支持新增、编辑。",
+  "nlEn": "Employee roster: the query bar has name; show the text 「按部门分组统计」 on the left of the table toolbar; lists name, department and position. Supports add and edit.",
   "fixedFields": ["name", "department", "position"],
   "pinnedDims": ["propSet", "membership", "actions"],
   "config": {

@@ -1,6 +1,6 @@
 {
-  "nl": "待办任务：无数据时显示「暂无待办，休息一下」；展示任务名、负责人、截止时间；支持新增。",
-  "nlEn": "Todo tasks: when there is no data show the text 「暂无待办，休息一下」; lists task name, owner and due time. Supports add.",
+  "nl": "待办任务：查询条件有任务名；无数据时显示「暂无待办，休息一下」；展示任务名、负责人、截止时间；支持新增。",
+  "nlEn": "Todo tasks: the query bar has task name; when there is no data show the text 「暂无待办，休息一下」; lists task name, owner and due time. Supports add.",
   "fixedFields": ["taskName", "owner", "dueTime"],
   "pinnedDims": ["propSet", "membership", "actions"],
   "config": {

@@ -1,6 +1,6 @@
 {
-  "nl": "系统日志：表格用紧凑（small）尺寸展示，列有时间、级别、内容；只读列表。",
-  "nlEn": "System log: the table uses the compact (small) size and shows time, level and message columns. Read-only list.",
+  "nl": "系统日志：查询条件有时间；表格用紧凑（small）尺寸展示，列有时间、级别、内容；只读列表。",
+  "nlEn": "System log: the query bar has time; the table uses the compact (small) size and shows time, level and message columns. Read-only list.",
   "fixedFields": ["time", "level", "message"],
   "pinnedDims": ["propSet", "membership", "target"],
   "config": {

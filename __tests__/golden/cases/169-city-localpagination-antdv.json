@@ -1,6 +1,6 @@
 {
-  "nl": "城市档案：一次拉取全部数据、在前端分页；展示城市名、省份、人口；只读。",
-  "nlEn": "City atlas: fetch all data at once and paginate on the client; shows city name, province and population. Read-only.",
+  "nl": "城市档案：查询条件有城市名；一次拉取全部数据、在前端分页；展示城市名、省份、人口；只读。",
+  "nlEn": "City atlas: the query bar has city name; fetch all data at once and paginate on the client; shows city name, province and population. Read-only.",
   "fixedFields": ["cityName", "province", "population"],
   "pinnedDims": ["propSet", "membership", "target"],
   "config": {

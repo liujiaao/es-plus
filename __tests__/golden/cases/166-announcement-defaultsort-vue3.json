@@ -1,6 +1,6 @@
 {
-  "nl": "公告列表：默认按发布时间倒序排列；展示标题、发布时间；支持新增、编辑。",
-  "nlEn": "Announcement list: sorted by publish time descending by default; shows title and publish time. Supports add and edit.",
+  "nl": "公告列表：查询条件有标题；默认按发布时间倒序排列；展示标题、发布时间；支持新增、编辑。",
+  "nlEn": "Announcement list: the query bar has title; sorted by publish time descending by default; shows title and publish time. Supports add and edit.",
   "fixedFields": ["title", "publishTime"],
   "pinnedDims": ["propSet", "membership", "actions"],
   "config": {

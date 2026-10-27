@@ -1,6 +1,6 @@
 {
-  "nl": "运单列表：刷新时保留当前页码（不回到第一页）；展示运单号、状态；支持编辑。",
-  "nlEn": "Waybill list: keep the current page when refreshing (do not jump back to page 1); shows waybill number and status. Supports edit.",
+  "nl": "运单列表：查询条件有运单号；刷新时保留当前页码（不回到第一页）；展示运单号、状态；支持编辑。",
+  "nlEn": "Waybill list: the query bar has waybill number; keep the current page when refreshing (do not jump back to page 1); shows waybill number and status. Supports edit.",
   "fixedFields": ["waybillNo", "status"],
   "pinnedDims": ["propSet", "membership", "target", "actions"],
   "config": {

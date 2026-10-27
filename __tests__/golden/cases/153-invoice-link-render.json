@@ -15,7 +15,7 @@
         "render": "(_, { row }) => h(ElLink, { type: 'primary', href: `/invoices/${row.id}`, target: '_blank' }, () => row.invoiceNo)"
       },
       { "prop": "party", "label": "开票方", "formtype": "Input" },
-      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber" },
       { "prop": "issuedAt", "label": "开票日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
     ],
     "actions": ["add", "edit", "delete"]

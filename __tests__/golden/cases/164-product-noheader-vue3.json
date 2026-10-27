@@ -1,6 +1,6 @@
 {
-  "nl": "卡片式商品列表：不显示表头，直接排列商品名与价格；只读。",
-  "nlEn": "Card-style product list: hide the table header and just lay out product name and price. Read-only.",
+  "nl": "卡片式商品列表：不提供查询条件；不显示表头，直接排列商品名与价格；只读。",
+  "nlEn": "Card-style product list: no query bar; hide the table header and just lay out product name and price. Read-only.",
   "fixedFields": ["productName", "price"],
   "pinnedDims": ["propSet", "membership"],
   "config": {

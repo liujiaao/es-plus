@@ -1,6 +1,6 @@
 {
-  "nl": "用户国际化列表：字段标签走 labelKey（user.name.label、user.age.label）；展示姓名、年龄；支持新增、编辑。",
-  "nlEn": "Internationalized user list: field labels use labelKey (user.name.label, user.age.label); shows name and age. Supports add and edit.",
+  "nl": "用户国际化列表：查询条件有姓名；字段标签走 labelKey（user.name.label、user.age.label）；展示姓名、年龄；支持新增、编辑。",
+  "nlEn": "Internationalized user list: the query bar has name; field labels use labelKey (user.name.label, user.age.label); shows name and age. Supports add and edit.",
   "fixedFields": ["name", "age"],
   "pinnedDims": ["propSet", "membership", "actions", "i18n"],
   "config": {
