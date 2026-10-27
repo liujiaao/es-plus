@@ -47,7 +47,7 @@
 
 > 以上行数由 `npm run one-config:gen` 从 `docs/brand/one-config/{native,esplus}.vue` **实测**得出，
 > 由 `npm run check:site-claims` 守住；两个样例是同一页面、同一功能范围，无省略号、无 stub。
-> 口径：模板区行数 + `handle*`/`fetch*` 事件与取数函数行数。整页非空行口径为 136 → 81（−40.4%）。
+> 口径：模板区行数 + `handle*`/`fetch*` 事件与取数函数行数。整页口径（含空行）为 151 → 90（−40.4%）。
 
 ### 1.2 这些"死代码"的隐性成本
 

@@ -48,7 +48,7 @@ The bigger point: those **115 lines of markup and event glue** (61 + 54) are exa
 > Every figure above is measured by `npm run one-config:gen` from `docs/brand/one-config/{native,esplus}.vue`,
 > and locked by `npm run check:site-claims`. Both samples implement the same page with the same feature scope —
 > no ellipses, no stubs. Metric: template lines + `handle*`/`fetch*` event & fetch functions.
-> Whole-file non-empty lines: 136 → 81 (-40.4%).
+> Whole file incl. blank lines: 151 → 90 (-40.4%).
 
 ### 1.2 The Hidden Costs of That Dead Code
 

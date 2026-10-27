@@ -17,7 +17,13 @@
  *   - markup+glue：模板区行数 + 脚本区「事件处理与取数函数」行数。
  *     这是 es-plus 真正消除的部分（查询/重置/翻页/取数/loading 全自动）；
  *     字段与列的**声明**两侧都得写，不该计入降幅，所以单列一个口径。
- *   - wholeFile：整页非空行数。降幅明显更小，一并披露。
+ *   - wholeFile：整页行数（含空行）。降幅明显更小，一并披露。
+ *
+ * 口径收敛（2026-10-27）：此前 wholeFile 统计的是**非空行**（136 → 81），
+ * 而同页的整页徽章展示的是 breakdown.totalLines（151 → 90，含空行）——
+ * 同一张对比卡上出现两组「整页行数」，读者只能读成自相矛盾。
+ * 现在 wholeFile 就是整页行数（含空行），与徽章、理念文档的拆解表同源；
+ * 非空行口径不再对外展示（两个百分比恰好都是 −40.4%，披露含空行没有损失）。
  *
  * 用法：
  *   node scripts/gen-one-config-diff.mjs           # 生成
@@ -155,7 +161,7 @@ function build() {
       '「编辑」动作两侧一致为演示级（弹消息，不接真实接口），删除动作两侧都会真实发起请求',
     metric:
       'markupPlusGlue = 模板区行数 + 脚本区「事件处理与取数函数」（handle* / fetch* / open* / load* / on*）行数 —— ' +
-      '即 es-plus 真正消除的那部分；字段与列的声明两侧都必写，故不计入，另给 wholeFile 口径（整页非空行）。',
+      '即 es-plus 真正消除的那部分；字段与列的声明两侧都必写，故不计入，另给 wholeFile 口径（整页行数，含空行）。',
     metrics: {
       markupPlusGlue: {
         label: '模板 + 事件胶水代码',
@@ -164,10 +170,10 @@ function build() {
         reduction: pct(native.markupPlusGlue, esplus.markupPlusGlue),
       },
       wholeFile: {
-        label: '整页非空行',
-        native: native.nonEmpty,
-        esplus: esplus.nonEmpty,
-        reduction: pct(native.nonEmpty, esplus.nonEmpty),
+        label: '整页行数（含空行）',
+        native: native.total,
+        esplus: esplus.total,
+        reduction: pct(native.total, esplus.total),
       },
     },
     breakdown: {
@@ -200,7 +206,7 @@ function main() {
     const m = data.metrics
     console.log(
       `✅ 「一份配置」实测与产出一致：模板+胶水 ${m.markupPlusGlue.native} → ${m.markupPlusGlue.esplus} 行` +
-        `（−${m.markupPlusGlue.reduction}%）；整页 ${m.wholeFile.native} → ${m.wholeFile.esplus} 行（−${m.wholeFile.reduction}%）`,
+        `（−${m.markupPlusGlue.reduction}%）；整页（含空行） ${m.wholeFile.native} → ${m.wholeFile.esplus} 行（−${m.wholeFile.reduction}%）`,
     )
     return
   }
@@ -212,7 +218,7 @@ function main() {
   console.log(
     `✅ 已生成 docs/brand/one-config-diff.json：` +
       `模板+胶水 ${m.markupPlusGlue.native} → ${m.markupPlusGlue.esplus} 行（−${m.markupPlusGlue.reduction}%）；` +
-      `整页 ${m.wholeFile.native} → ${m.wholeFile.esplus} 行（−${m.wholeFile.reduction}%）`,
+      `整页（含空行） ${m.wholeFile.native} → ${m.wholeFile.esplus} 行（−${m.wholeFile.reduction}%）`,
   )
 }
 

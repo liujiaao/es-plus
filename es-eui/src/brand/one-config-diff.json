@@ -2,7 +2,7 @@
   "$comment": "由 scripts/gen-one-config-diff.mjs 从 docs/brand/one-config/{native,esplus}.vue 实测生成，禁止手改。站点展示的行数与降幅就是这里算出来的，改源码即改数字。",
   "title": "用户管理 · 同一页面的两种写法（查询 + 列表 + 分页 + 行内操作）",
   "scope": "两侧实现同一页面、同一功能范围（查询 + 列表 + 分页 + 行内操作），均为完整可运行代码（无省略号）；「编辑」动作两侧一致为演示级（弹消息，不接真实接口），删除动作两侧都会真实发起请求",
-  "metric": "markupPlusGlue = 模板区行数 + 脚本区「事件处理与取数函数」（handle* / fetch* / open* / load* / on*）行数 —— 即 es-plus 真正消除的那部分；字段与列的声明两侧都必写，故不计入，另给 wholeFile 口径（整页非空行）。",
+  "metric": "markupPlusGlue = 模板区行数 + 脚本区「事件处理与取数函数」（handle* / fetch* / open* / load* / on*）行数 —— 即 es-plus 真正消除的那部分；字段与列的声明两侧都必写，故不计入，另给 wholeFile 口径（整页行数，含空行）。",
   "metrics": {
     "markupPlusGlue": {
       "label": "模板 + 事件胶水代码",
@@ -11,9 +11,9 @@
       "reduction": 76.5
     },
     "wholeFile": {
-      "label": "整页非空行",
-      "native": 136,
-      "esplus": 81,
+      "label": "整页行数（含空行）",
+      "native": 151,
+      "esplus": 90,
       "reduction": 40.4
     }
   },
