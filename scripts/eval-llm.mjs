@@ -44,6 +44,7 @@ import {
   buildNlToConfigSystemPrompt,
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, meets95Definition, describeDimMiss } from './eval/scorers.mjs'
+import { scoreOptsForLang } from './eval/align.mjs'
 import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './eval/run-metrics.mjs'
 import { createDumpWriter, goldHashOf, RULER_VERSION } from './eval/dump.mjs'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
@@ -554,7 +555,10 @@ async function main() {
           }
         }
         const compiles = noThrow && compileError === null
-        const s = scoreAll(gold, pred, mask)
+        // Ruler v3 / R2：zh 腿按 label 身份打分（NL 写的是中文标签，猜不中 prop 不算理解失败）；
+        // en 腿维持 prop 身份 —— gold 标签是中文、pred 是英文，按 label 比结构性必错，且 en 只观测。
+        const scoreOpts = scoreOptsForLang(lang)
+        const s = scoreAll(gold, pred, mask, scoreOpts)
         // W1.3 前门腿：同一条模型产出再喂一次真 `generate_crud`（不额外调模型）。
         const fd = await driveFrontDoor(frontDoor, pred)
 
@@ -572,7 +576,7 @@ async function main() {
             pushUserCorrection(messages, String(ref.correction ?? ''))
             const rPred = await driveToValidConfig(client, system, messages)
             turnPreds.push(rPred)
-            scopedSeq.push(scoreAll(gold, rPred, mask).exactIntentScoped)
+            scopedSeq.push(scoreAll(gold, rPred, mask, scoreOpts).exactIntentScoped)
           }
           const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
           convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
@@ -622,7 +626,7 @@ async function main() {
           // 打印出的 want === got 当且仅当该维度 pass（scorers.test.mjs 有双向断言）；
           // 因此「日志说两侧相同却报 miss」只可能是打印器撒谎，不会再被误读成记分卡坏了。
           for (const dim of dimMisses) {
-            const d = describeDimMiss(dim, gold, pred)
+            const d = describeDimMiss(dim, gold, pred, scoreOpts)
             if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
           }
         }
@@ -949,6 +953,7 @@ async function main() {
     propF1,
     attrRows,
     attrAcc,
+    propNameMatch,
     actF1,
     convHeldout,
     convStats,
@@ -1374,6 +1379,10 @@ async function main() {
     console.log(`  exactIntentFull (HELDOUT, observed):   ${(exactFullHeldout * 100).toFixed(1)}%`)
   }
   console.log(`  prop-set F1 (avg):     ${(propF1 * 100).toFixed(1)}%`)
+  // Ruler v3：propF1 在 label 身份下恒为 1（改名不再算错），命名的可维护性靠这条观测。
+  console.log(
+    `  prop name match (avg, ${metrics.propNameRows.length}/${n} rows, observed): ${propNameMatch === null ? 'n/a' : `${(propNameMatch * 100).toFixed(1)}%`}`
+  )
   console.log(`  attribute acc (avg, ${attrRows.length}/${n} rows measured): ${attrAcc === null ? 'n/a' : `${(attrAcc * 100).toFixed(1)}%`}`)
   console.log(`  actions F1 (avg):      ${(actF1 * 100).toFixed(1)}%`)
   console.log(
@@ -1516,7 +1525,10 @@ async function main() {
     evaluateFloor({ coreRate, heldoutCases: heldout.length }),
     checkCorpusSize({ heldoutCases: heldout.length }),
     checkConvergenceSample(convStats.total),
-    compareToBaseline({ definition95: def95.rate, coreRate, byDimension: dimRates }, baseline),
+    // 跨尺子版本拒绝比较（Ruler v3）：基线的 rate 与本次的 rate 必须是同一把尺子量的。
+    compareToBaseline({ definition95: def95.rate, coreRate, byDimension: dimRates }, baseline, {
+      rulerVersion: RULER_VERSION,
+    }),
     guardAntiDelete(corpusCounts, baseline)
   )
   for (const w of guards.warnings) console.log(`  [guard] note: ${w}`)
@@ -1623,6 +1635,9 @@ async function main() {
         Number(fragmentSummary.scoped.toFixed(4)) >= fragmentStats.floor,
       stated: fragmentSummary.stated === null ? null : Number(fragmentSummary.stated.toFixed(4)),
       full: fragmentSummary.full === null ? null : Number(fragmentSummary.full.toFixed(4)),
+      // 命名能力（观测量，与 CRUD 的 propNameMatch 同源同算法）。
+      propNameMatch:
+        fragmentSummary.propNameMatch === null ? null : Number(fragmentSummary.propNameMatch.toFixed(4)),
       compileRate: fragmentSummary.compileRate === null ? null : Number(fragmentSummary.compileRate.toFixed(4)),
       compileMeasured: fragmentSummary.compileMeasured,
       compileCompiled: fragmentSummary.compileCompiled,
@@ -1677,6 +1692,10 @@ async function main() {
     exactIntentFull: Number((exactFullHeldout ?? exactFull).toFixed(4)),
     exactIntentFullAll: Number(exactFull.toFixed(4)),
     propSetF1: Number(propF1.toFixed(4)),
+    // Ruler v3 / R2：字段身份 = 归一化 label。`propF1` 因此不再度量命名能力（改名恒 pass），
+    // 「模型猜 prop 的准确率」单独作为观测量公布；`propNameMatchRows` 是它的可测行数。
+    propNameMatch: propNameMatch === null ? null : Number(propNameMatch.toFixed(4)),
+    propNameMatchRows: metrics.propNameRows.length,
     attributeAccuracy: attrAcc === null ? null : Number(attrAcc.toFixed(4)),
     // 属性可测行数：NULL attrAcc 的行（零共享字段）不参与均值，分母必须可见（AN-01）。
     attributeRows: attrRows.length,

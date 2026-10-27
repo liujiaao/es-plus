@@ -417,6 +417,95 @@ for (const c of cases) {
   check(s.exactIntentCore === true, `${c.file}: gold-vs-gold exactIntentCore 应为 true`)
 }
 
+// ── 2b) Ruler v3 / R2：字段身份 = label ──────────────────────────────────────
+// 定义级断言：**pred 把每个字段的 prop 全部改名、label 原样保留** ⟹ 全维度 pass。
+// 改名的实现刻意在测试里**独立重写一遍**（不 import align.mjs 的改写器）：否则是
+// 「用实现验证实现」，改写器少改一处白名单也照样全绿。
+console.log('meta-eval: fragment 字段身份按 label（R2）')
+{
+  const renameFieldRefs = (cfg, map) => {
+    const out = JSON.parse(JSON.stringify(cfg))
+    const rn = (s) => {
+      if (typeof s !== 'string') return s
+      if (map.has(s)) return map.get(s)
+      const i = s.indexOf('.')
+      if (i > 0 && map.has(s.slice(0, i))) return map.get(s.slice(0, i)) + s.slice(i)
+      return s
+    }
+    const walk = (n) => {
+      if (Array.isArray(n)) return n.map(walk)
+      if (n && typeof n === 'object') {
+        const o = {}
+        for (const [k, v] of Object.entries(n)) o[k] = walk(v)
+        if (typeof o.var === 'string') o.var = rn(o.var)
+        if (typeof o.field === 'string') o.field = rn(o.field)
+        return o
+      }
+      return n
+    }
+    for (const f of out.fields ?? []) {
+      if (f.isHidden !== undefined) f.isHidden = walk(f.isHidden)
+      for (const r of f.reactions ?? []) {
+        if (Array.isArray(r?.dependencies)) r.dependencies = r.dependencies.map(rn)
+        if (r?.when !== undefined) r.when = walk(r.when)
+        if (r?.fulfill !== undefined) r.fulfill = walk(r.fulfill)
+      }
+    }
+    if (out.tableOptions?.defaultSort?.prop) out.tableOptions.defaultSort.prop = rn(out.tableOptions.defaultSort.prop)
+    return out
+  }
+  let checked = 0
+  for (const c of cases) {
+    if (!(c.gold.fields ?? []).length) continue
+    const map = new Map()
+    for (const f of c.gold.fields) map.set(f.prop, `z_${f.prop}`)
+    const pred = renameFieldRefs(c.gold, map)
+    for (const f of pred.fields) f.prop = map.get(f.prop)
+    const s = scoreFragment(c.scene, c.gold, pred, { pinnedDims: c.pins, statedDims: c.stated })
+    for (const [dim, v] of Object.entries(s.byDim)) {
+      if (v.applicable) check(v.pass === true, `${c.file}: prop 全改名后维度 ${dim} 应 pass 却为 ${v.pass}`)
+    }
+    check(s.exactIntentFull === true, `${c.file}: prop 全改名后 exactIntentFull 应为 true`)
+    check(s.exactIntentScoped === true, `${c.file}: prop 全改名后 exactIntentScoped 应为 true（字段级 pin 走对齐）`)
+    check(s.exactIntentStated === true, `${c.file}: prop 全改名后 exactIntentStated 应为 true`)
+    if (c.gold.fields.every((f) => f.label)) {
+      check(s.propNameMatch === 0, `${c.file}: propNameMatch 应为 0（命名全不同、理解全对）`)
+    }
+    checked++
+  }
+  check(checked > 0, 'R2 断言跑空（没有一条片段用例带字段）')
+
+  // 反例：label 互换是**映射错**，不是字段集错 —— propSet（按身份看集合）仍 pass，
+  // 必须由字段级维度咬住。这条同时钉住「propSet 的语义 = identity 集合相等」。
+  const twoField = cases.find(
+    (c) =>
+      (c.gold.fields ?? []).length >= 2 &&
+      c.gold.fields[0].label &&
+      c.gold.fields[1].label &&
+      c.gold.fields[0].formtype !== c.gold.fields[1].formtype
+  )
+  check(!!twoField, '找不到可用于 label 互换反例的片段用例')
+  if (twoField) {
+    const pred = clone(twoField.gold)
+    const [a, b] = [pred.fields[0].label, pred.fields[1].label]
+    pred.fields[0].label = b
+    pred.fields[1].label = a
+    const s = scoreFragment(twoField.scene, twoField.gold, pred, {})
+    check(s.byDim.propSet.pass === true, `${twoField.file}: label 互换后 propSet 应仍 pass（集合没变）`)
+    check(s.exactIntentFull === false, `${twoField.file}: label 互换后 exactIntentFull 应判负（映射错必须被咬住）`)
+  }
+
+  // 反例：label 与 prop 一起改（对不上 gold 任何身份）⟹ propSet 判负
+  if (twoField) {
+    const pred = clone(twoField.gold)
+    pred.fields[0] = { ...pred.fields[0], prop: 'zzOther', label: '另起一列' }
+    check(
+      scoreFragment(twoField.scene, twoField.gold, pred, {}).byDim.propSet.pass === false,
+      `${twoField.file}: 字段既改 label 又改 prop 后 propSet 应判负（漏字段 + 多字段）`
+    )
+  }
+}
+
 // ── 3) 每个启用的维度都咬得住；4) 未钉的维度不参与 scoped ─────────────────────
 console.log('meta-eval: fragment perturbations bite / pinnedDims really scope')
 const exercised = new Set()

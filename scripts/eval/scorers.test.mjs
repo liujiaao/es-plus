@@ -37,7 +37,12 @@ const BASE_INPUT = {
   mode: 'sfc', //              → mode 维度 applicable
   i18n: true, //               → i18n 维度 applicable
   typescript: true,
-  tableOptions: { virtual: true, configTableOut: { tableData: 'rows', total: 'records' }, editConfig: { trigger: 'click', mode: 'cell' } }, // → virtualScroll + configTableOut + editConfig 维度 applicable
+  tableOptions: {
+    virtual: true,
+    configTableOut: { tableData: 'rows', total: 'records' },
+    editConfig: { trigger: 'click', mode: 'cell' },
+    defaultSort: { prop: 'createdAt', order: 'descending' }, // → defaultSort 维度（首屏默认排序契约）
+  }, // → virtualScroll + configTableOut + editConfig + defaultSort 维度 applicable
   formLayout: { labelWidth: '100px' }, //  → formLayout 维度 applicable（AI-31③：span 是幽灵键已删，只剩 labelWidth/minFoldRows）
   permissions: { add: 'meta:write', edit: 'meta:write' }, // → permissions 维度
   fields: [
@@ -126,6 +131,7 @@ const PERTURB = {
   treeConfig: (c) => { c.treeConfig.expandAll = false },
   mergeConfig: (c) => { c.mergeConfig.rowsBy = ['name'] },
   editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
+  defaultSort: (c) => { c.tableOptions.defaultSort.order = 'ascending' },
   extPoints: (c) => { delete c.fields[3].formatter },
   reactions: (c) => { c.fields[5].reactions[0].fulfill.dataOptions = [{ label: '别的', value: 'x' }] },
 }

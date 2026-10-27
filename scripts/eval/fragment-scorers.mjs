@@ -60,6 +60,9 @@
  * 「说了的漏做」的惩罚。`pinnedDims ⊆ nlStatedDims` 由 meta-eval 强制。
  */
 
+/** 字段身份（Ruler v3 / R2）：与 CRUD 同一把尺子 —— 按归一化 label 对齐，详见 `align.mjs`。 */
+import { normalizePredForCompare, propNameMatch } from './align.mjs'
+
 /** 稳定序列化（键排序）—— 与 `scorers.mjs` 同实现。 */
 function canon(v) {
   if (Array.isArray(v)) return v.map(canon)
@@ -789,15 +792,19 @@ function scoreDimension(scene, gold, pred, token) {
  *   - `exactIntentStated`：只 AND `mask.statedDims`（语料自证的「NL/宿主确实说了」）。
  *     这是公平口径 —— gold 驱动保证「说了的」都有维度，stated 保证「没说的」不罚。
  */
-export function scoreFragment(scene, gold, pred, mask) {
+export function scoreFragment(scene, gold, pred, mask, opts = {}) {
   if (!['table', 'form', 'dialog'].includes(scene)) {
     throw new Error(`scoreFragment: 未知片段场景 "${scene}"`)
   }
+  // Ruler v3 / R2：与 CRUD 同源 —— 先按 label 身份把 pred 的字段命名空间重写成 gold 的，
+  // 再走既有判定（`fieldMap`/`sharedFields`/`columns`/`defaultSort.prop` 全部经这一份 pred）。
+  // 片段语料没有 en 腿（无 `nlEn`），故默认 label 身份；`opts.identity` 留给离线复算。
+  const { pred: alignedPred } = normalizePredForCompare(gold, pred, opts)
   const specs = fragmentDimSpecs(scene, gold)
   const byDim = {}
   for (const s of specs) {
     byDim[s.key] = s.applicable
-      ? { applicable: true, pass: !!s.pass(gold, pred) }
+      ? { applicable: true, pass: !!s.pass(gold, alignedPred) }
       : { applicable: false, pass: null }
   }
 
@@ -809,22 +816,32 @@ export function scoreFragment(scene, gold, pred, mask) {
 
   const pinned = mask && Array.isArray(mask.pinnedDims) ? mask.pinnedDims : []
   const exactIntentScoped = pinned.length
-    ? pinned.every((t) => scoreDimension(scene, gold, pred, t))
+    ? pinned.every((t) => scoreDimension(scene, gold, alignedPred, t))
     : exactIntentCore
 
   const stated = mask && Array.isArray(mask.statedDims) ? mask.statedDims : []
   const exactIntentStated = stated.length
-    ? stated.every((t) => scoreDimension(scene, gold, pred, t))
+    ? stated.every((t) => scoreDimension(scene, gold, alignedPred, t))
     : exactIntentCore
 
-  return { byDim, exactIntentCore, exactIntentFull, exactIntentScoped, exactIntentStated }
+  return {
+    byDim,
+    exactIntentCore,
+    exactIntentFull,
+    exactIntentScoped,
+    exactIntentStated,
+    // 观测量（不进门禁）：命名能力与「懂不懂 NL」解耦 —— 与 CRUD scoreAll 同源。
+    propNameMatch: propNameMatch(gold, pred, opts),
+  }
 }
 
 /**
  * 供诊断输出：某个 dyn 维度「期望 vs 实得」。其余维度的差异已由 byDim.pass 表达。
  * 键名统一用 dot path（`tableOptions.height`），与 byDim 对齐。
  */
-export function describeFragmentDimMiss(dim, gold, pred) {
+export function describeFragmentDimMiss(dim, gold, pred, opts = {}) {
+  // 与 scoreFragment 同源：诊断必须看对齐后的 pred，否则判正了却打出两边不同的 prop。
+  pred = normalizePredForCompare(gold, pred, opts).pred
   const parts = dim.split('.')
   if (parts.length !== 2) return null
   const [scope, key] = parts

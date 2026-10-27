@@ -18,7 +18,12 @@
  * 门禁策略（见 docs/internal/wave-1-eval-trust-design.md 决策 B）：
  *   - `exactIntentCore` = 历史 4 维（prop/attr/actions/tableBtn-code），门禁继续落在它；
  *   - `exactIntentFull` = 该 case 所有 applicable 维度的 AND，**只观测不门禁**，待基线后 ratchet。
+ *
+ * 字段身份（Ruler v3 / R2，2026-10-23 拍板）：默认按**归一化 label** 对齐后再判等，
+ * 见 `scripts/eval/align.mjs`。`prop` 降为观测量（`propNameMatch`）。en 腿用
+ * `scoreAll(..., { identity: 'prop' })` —— 标签是「中文 gold vs 英文 pred」，不可比。
  */
+import { normalizePredForCompare, propNameMatch } from './align.mjs'
 
 /** 稳定序列化（键排序）——用于结构深等值比较。undefined 键在两侧都会被 JSON 丢弃，一致。 */
 function canon(v) {
@@ -329,7 +334,10 @@ function dialogsView(gold, cfg) {
  * 里有一整节双向断言钉住它 —— 这条不变量是诊断可信度的全部依据，破一次就有 60+ 条
  * 真实 miss 不可定位。
  */
-export function describeDimMiss(dim, gold, pred) {
+export function describeDimMiss(dim, gold, pred, opts = {}) {
+  // 与 scoreAll 同源：先按 label 身份把 pred 的命名空间改写成 gold 的，再投影。
+  // 否则 label 身份下 pass 了、日志却打出两边不同的 prop，不变量当场失效。
+  pred = normalizePredForCompare(gold, pred, opts).pred
   if (dim === 'tableBtns') {
     const show = (c) => tableBtnKeyParts(c).join(' · ') || '（无）'
     return { want: show(gold), got: show(pred) }
@@ -363,6 +371,12 @@ export function describeDimMiss(dim, gold, pred) {
   if (dim === 'expandConfig') {
     const proj = projectExpandConfig(gold.expandConfig, pred.expandConfig)
     return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
+  }
+  if (dim === 'defaultSort') {
+    return {
+      want: canonicalView(gold.tableOptions?.defaultSort),
+      got: canonicalView(pred.tableOptions?.defaultSort),
+    }
   }
   return null
 }
@@ -606,6 +620,19 @@ export const CAPABILITY_SCORERS = [
     applicable: (g) => !!g.mergeConfig,
     pass: (g, p) => eq(g.mergeConfig ?? null, p.mergeConfig ?? null),
   },
+  {
+    // 首屏默认排序（AI-10/AN-10）：`tableOptions.defaultSort` 整体深等值。
+    //
+    // 为什么必须单列一维：它是**服务端排序契约**的种子（core 的 table-sort 由它播种首屏，
+    // 并把 prop 译成请求参数 sortField/sortOrder），NL 里常被明说（「默认按发布时间倒序」，
+    // 见 166）。此前它**没有任何维度**覆盖 —— 166 的头号需求模型漏写也照判满分，属
+    // 「mark, never drop」缺口（本维在写 Ruler v3 测试矩阵时补上）。
+    // 装饰键豁免不适用：`sortable`（列级可点）是 UI 能力，而 defaultSort 是行为契约。
+    // 仅当 gold 声明时才 applicable（与 expandConfig/treeConfig/mergeConfig 同规）。
+    key: 'defaultSort',
+    applicable: (g) => !!g.tableOptions?.defaultSort,
+    pass: (g, p) => eq(g.tableOptions?.defaultSort ?? null, p.tableOptions?.defaultSort ?? null),
+  },
   { key: 'extPoints', applicable: (g) => g.fields.some(hasExtPoint), pass: extPointsEqual },
 ]
 
@@ -710,18 +737,23 @@ function scoreDimension(gold, pred, token) {
  * 清单。给了就只对这些 token 记 `exactIntentScoped`；没给则 scoped ≡ core（向后兼容）。
  * `fixedFields` 不在此参与打分（它只用于喂模型，见 eval-llm.mjs）。
  */
-export function scoreAll(gold, pred, mask) {
+export function scoreAll(gold, pred, mask, opts = {}) {
+  // Ruler v3 / R2：先按 label 身份把 pred 的字段命名空间改写成 gold 的，再走既有判定。
+  // 单一改造点 —— 所有维度（含 fieldMap/sharedFields/深等值）都经这一份 pred。
+  // `opts.identity === 'prop'` 供 en 腿（标签不可比）与历史复算使用。
+  const { pred: alignedPred, align } = normalizePredForCompare(gold, pred, opts)
+
   const byCapability = {}
   for (const s of CAPABILITY_SCORERS) {
     const applicable = !!s.applicable(gold)
     byCapability[s.key] = applicable
-      ? { applicable: true, pass: !!s.pass(gold, pred) }
+      ? { applicable: true, pass: !!s.pass(gold, alignedPred) }
       : { applicable: false, pass: null }
   }
 
   // ── 向后兼容的明细分（控制台与历史 record 字段沿用）────────────────────────
   const goldFields = fieldMap(gold)
-  const predFields = fieldMap(pred)
+  const predFields = fieldMap(alignedPred)
   const propF1 = f1(new Set(goldFields.keys()), new Set(predFields.keys()))
 
   const shared = [...goldFields.keys()].filter((p) => predFields.has(p))
@@ -743,11 +775,11 @@ export function scoreAll(gold, pred, mask) {
   // eval 聚合时只对 numeric 行取均值，并单独报出「属性可测行数」。
   const attrAcc = attrTotal === 0 ? null : attrHits / attrTotal
 
-  const actionsF1 = f1(new Set(gold.actions), new Set(pred.actions))
+  const actionsF1 = f1(new Set(gold.actions), new Set(alignedPred.actions))
 
   // 与 `tableBtns` 维度同源（name|归一化 code|actionType），不再只比 code。
   // 旧口径下「按钮文案/作用写错、code 写对」仍算 core 命中 —— 与维度判定自相矛盾。
-  const tableBtnsMatch = tableBtnsEqual(gold, pred)
+  const tableBtnsMatch = tableBtnsEqual(gold, alignedPred)
 
   // 历史门禁口径（prop + 4 属性 + actions + tableBtns）。attrTotal=0 时属性无可测项，
   // 不能算命中（否则「prop 全错」会被 attrAcc 的真空真放行）。
@@ -759,11 +791,18 @@ export function scoreAll(gold, pred, mask) {
 
   // scoped 口径（B2）：只 AND 掩码里 NL 真正锁定的 token。无掩码 → 退化为 core（向后兼容）。
   const pinned = mask && Array.isArray(mask.pinnedDims) ? mask.pinnedDims : []
-  const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, pred, t)) : exactIntentCore
+  const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, alignedPred, t)) : exactIntentCore
 
   return {
     byCapability,
     propF1,
+    // 观测量（不进门禁）：被对齐到的字段里，**prop 写法也相同**的占比。它把「猜命名」
+    // 与「懂不懂 NL」解耦 —— label 身份放宽后，命名能力靠这个数才看得见。
+    propNameMatch: propNameMatch(gold, pred, opts),
+    alignMode: align.mode,
+    alignUnmatchedGold: align.unmatchedGold,
+    alignUnmatchedPred: align.unmatchedPred,
+    alignAmbiguous: align.ambiguous,
     attrAcc,
     attrMisses,
     actionsF1,

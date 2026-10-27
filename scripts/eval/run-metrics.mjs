@@ -65,6 +65,13 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
   // 「无可测项」当成「全错」，取 1 又会真空抬高 —— 故只在可测行上取均值并公布分母。
   const attrRows = zhRows.filter((r) => typeof r.attrAcc === 'number')
   const attrAcc = attrRows.length ? attrRows.reduce((a, r) => a + r.attrAcc, 0) / attrRows.length : null
+  // 命名能力（观测量，不进门禁；Ruler v3 / R2）：被对齐到的字段里 **prop 写法也相同** 的占比。
+  // label 身份放宽后，`propF1` 恒为 1 不再说明任何事 —— 「模型会不会给字段起名」这个能力
+  // 只能靠这个数看见（它掉下去不影响分数，影响的是「人读产物时的可维护性」判断）。
+  const propNameRows = zhRows.filter((r) => typeof r.propNameMatch === 'number')
+  const propNameMatch = propNameRows.length
+    ? propNameRows.reduce((a, r) => a + r.propNameMatch, 0) / propNameRows.length
+    : null
   const actF1 = meanAll((r) => r.actionsF1?.f1 ?? 0)
 
   // B3 收敛（只观测、不门禁）：收敛语料 = 标了 refinements 的中文行；heldout 优先、空则退全量。
@@ -126,6 +133,8 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
     propF1,
     attrRows,
     attrAcc,
+    propNameMatch,
+    propNameRows,
     actF1,
     convZhRows,
     convHeldout,
@@ -164,6 +173,11 @@ export function computeFragmentMetrics(fragmentRows, isNotMeasured) {
     full: fragMean(fragMeasured, (s) => s.exactIntentFull),
     scoped: fragMean(fragMeasured, (s) => s.exactIntentScoped),
     stated: fragMean(fragMeasured, (s) => s.exactIntentStated),
+    // 命名能力（观测量，与 CRUD 同源）：片段语料没有 en 腿，故全部按 label 对齐。
+    propNameMatch: (() => {
+      const vals = fragMeasured.map((r) => r.score?.propNameMatch).filter((v) => typeof v === 'number')
+      return vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null
+    })(),
     compileRate: fragCompile.rate,
     compileMeasured: fragCompile.measured,
     compileCompiled: fragCompile.compiled,

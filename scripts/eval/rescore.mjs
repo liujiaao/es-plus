@@ -32,8 +32,9 @@
 import { readFileSync } from 'node:fs'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn } from './scorers.mjs'
+import { scoreOptsForLang } from './align.mjs'
 import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './run-metrics.mjs'
-import { readDump } from './dump.mjs'
+import { readDump, RULER_VERSION } from './dump.mjs'
 import { scoreFragment } from './fragment-scorers.mjs'
 import { isNotMeasured } from './repair-loop.mjs'
 
@@ -131,14 +132,17 @@ for (const e of entries) {
     console.error(`✗ ${err.message}`)
     process.exit(1)
   }
-  const s = scoreAll(gold, pred, mask)
+  // 与 eval-llm 同一个「语言 → 字段身份」单源（zh=label / en=prop）。复算必须与产物
+  // 用同一把尺子，否则「复算对不上」会被误读成打分器坏了。
+  const scoreOpts = scoreOptsForLang(e.lang)
+  const s = scoreAll(gold, pred, mask, scoreOpts)
 
   let convergence = null
   if (e.hasRefinements) {
     const scopedSeq = [s.exactIntentScoped]
     for (const raw of e.turns ?? []) {
       const rPred = reparse(raw, `${e.file} refinement`)
-      scopedSeq.push(scoreAll(gold, rPred, mask).exactIntentScoped)
+      scopedSeq.push(scoreAll(gold, rPred, mask, scoreOpts).exactIntentScoped)
     }
     const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
     convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy: e.convergesBy ?? null }
@@ -281,6 +285,23 @@ if (AS_JSON) {
 // ── 与当次产物比对（`check:rescore-parity` 的实现）─────────────────────────────
 if (EXPECT) {
   const exp = JSON.parse(readFileSync(EXPECT, 'utf8'))
+  // 跨尺子版本**拒绝比对**（Ruler v3）。注意比对的两端是「产物」（它由写产物那次跑的
+  // 尺子量出）与「本工具当前的尺子」，与 dump 里记的版本无关 —— dump 只记 preds，而
+  // preds 与尺子无关。版本不同时逐字段比对必然失败，但那是**两把尺子**的差异，不是
+  // 「dump 不完整 / 聚合漂移」；不先拦下就会把口径升级误报成回归。
+  if (typeof exp.rulerVersion === 'string' && exp.rulerVersion !== RULER_VERSION) {
+    console.error(
+      `\n✗ 尺子版本不同，拒绝比对：产物 ${exp.rulerVersion} vs 当前 ${RULER_VERSION}\n` +
+        '  逐字段不一致是两把尺子的差异，不是 dump 或聚合的问题。请在同一尺子下重跑一次再比对。'
+    )
+    process.exit(1)
+  }
+  if (typeof exp.rulerVersion !== 'string') {
+    console.warn(
+      `  ⚠ 产物无 rulerVersion（早于 Ruler v3）—— 无法证明与当前尺子 ${RULER_VERSION} 同一版本；` +
+        '若下方出现不一致，先怀疑尺子版本'
+    )
+  }
   /** 可复算字段 ↔ 产物字段。每项都是「聚合口径」而非「跑批环境」。 */
   const pairs = [
     ['definition95.rate', out.definition95?.rate, exp.definition95?.rate],
