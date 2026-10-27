@@ -1,7 +1,7 @@
 <template>
   <div class="cases-page">
     <div class="cases-hero">
-      <h1>🎯 核心案例</h1>
+      <h1>核心案例</h1>
       <p>
         按 <strong>L1–L5 学习梯度</strong>组织：从 30 秒上手，到零事件联动、复杂痛点、vxe/virtual 极限场景，
         再到 render 逃生舱。每个案例回答「<strong>原生怎么写 vs es-plus 怎么写</strong>」。

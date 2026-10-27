@@ -8,14 +8,14 @@
     <a-divider />
 
     <section id="engines">
-      <h2>🚀 两套渲染引擎</h2>
+      <h2>两套渲染引擎</h2>
       <a-table :dataSource="engines" :columns="engineColumns" :pagination="false" size="middle" bordered />
     </section>
 
     <a-divider />
 
     <section id="enable">
-      <h2>🔧 启用 vxe 引擎</h2>
+      <h2>启用 vxe 引擎</h2>
       <p>安装 vxe-table 并配置 <code>engine: 'vxe'</code>：</p>
       <a-card class="code-block">
         <pre v-pre><code>npm install vxe-table@^4.6 vxe-pc-ui@^4.16
@@ -32,7 +32,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
     <a-divider />
 
     <section id="examples">
-      <h2>📝 案例</h2>
+      <h2>案例</h2>
 
       <h3 id="engine-switch">引擎切换工作台：500 → 5 万行</h3>
       <p>同一份工单数据现场切换 <code>a-table</code> / <code>vxe-grid</code>：实测渲染耗时与表体 DOM 行数；勾选、排序、列宽写在配置里随引擎保留；5 万行只给 vxe —— <code>engine</code> 是可观测的能力上限，不是架构二选一。</p>
@@ -140,7 +140,7 @@ app.use(VxeUIAll).use(VxeTable)</code></pre>
     <a-divider />
 
     <section id="note">
-      <h2>📌 说明</h2>
+      <h2>说明</h2>
       <p>
         vxe-table 是可选 peer 依赖（<code>vxe-table >= 4.5.0 &lt; 5.0.0</code>），未安装时
         <code>engine: 'vxe'</code> 会自动降级为默认引擎并在开发环境告警。vxe 引擎的完整配置（导出、

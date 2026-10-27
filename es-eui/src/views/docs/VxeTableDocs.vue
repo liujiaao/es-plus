@@ -188,7 +188,7 @@
       </div>
 
       <div class="tips-box tips-box--info">
-        <h4>📋 开发规范</h4>
+        <h4>开发规范</h4>
         <ol>
           <li><strong>rowkey 必填</strong>：vxe 引擎下必须设置 rowkey，否则跨页多选无法保留选中行</li>
           <li><strong>CRUD 访问路径</strong>：通过 tableRef.value.vxeEngineRef.vxeInstance() 拿到 vxe-grid，直接调用 getUpdateRecords / insertAt / validate 等方法</li>

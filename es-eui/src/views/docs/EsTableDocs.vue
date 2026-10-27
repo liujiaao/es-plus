@@ -645,7 +645,7 @@
       </div>
 
       <div class="tips-box tips-box--info">
-      <h4>📋 开发规范</h4>
+      <h4>开发规范</h4>
       <ol>
         <li><strong>字段命名</strong>：后端返回字段与前端不一致时，使用 configTableOut 映射，不修改后端接口</li>
         <li><strong>请求封装</strong>：统一配置 httpRequest，集中处理 Token、错误提示、Loading</li>

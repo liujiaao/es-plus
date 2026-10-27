@@ -69,7 +69,7 @@
 
     <!-- L2 头号案例：零事件代码的 CRUD -->
     <div class="l2-case-section">
-      <h2 class="section-title">🎯 头号案例 · 零事件代码的 CRUD</h2>
+      <h2 class="section-title">头号案例 · 零事件代码的 CRUD</h2>
       <p class="section-subtitle">
         原生「查询 → 重置 → 翻页」要写 4 个事件函数，还容易踩「拿最新表单值」的坑。
         es-plus 用 <code>EsForm 嵌套 EsTable</code> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。

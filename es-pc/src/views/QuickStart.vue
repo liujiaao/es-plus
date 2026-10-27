@@ -1,7 +1,7 @@
 <template>
   <div class="quickstart-page">
     <div class="qs-hero">
-      <h1>⚡ 30 秒上手</h1>
+      <h1>30 秒上手</h1>
       <p>
         三个案例看懂 es-plus 的「配置驱动」——<strong>一行配置一个字段、列配置 + 操作列、函数式弹窗</strong>。
         每个案例读完约 30 秒，完整实现见下方链接。

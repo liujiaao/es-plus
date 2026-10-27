@@ -391,7 +391,7 @@
       <p class="section-desc">提升开发效率和代码质量的最佳实践</p>
 
       <div class="tips-box tips-box--info">
-        <h4>📋 表单开发规范</h4>
+        <h4>表单开发规范</h4>
         <ol>
           <li><strong>字段命名</strong>：使用驼峰命名，如 <code>policyTitle</code>、<code>effectiveTimeRange</code></li>
           <li><strong>日期范围</strong>：统一使用数组格式，如 <code>effectiveTimeRange: ['', '']</code></li>
@@ -403,7 +403,7 @@
       </div>
 
       <div class="tips-box tips-box--success">
-        <h4>🚀 开发效率技巧</h4>
+        <h4>开发效率技巧</h4>
         <ul>
           <li><strong>快速创建表单</strong>：复制已有配置，修改字段名即可</li>
           <li><strong>统一配置</strong>：将常用 attrs（如 clearable、size）提取为常量</li>

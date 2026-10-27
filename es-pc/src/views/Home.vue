@@ -43,7 +43,7 @@
 
     <!-- L2 头号案例：零事件代码的 CRUD -->
     <div class="l2-case">
-      <h2 class="section-title">🎯 头号案例 · 零事件代码的 CRUD</h2>
+      <h2 class="section-title">头号案例 · 零事件代码的 CRUD</h2>
       <p class="section-desc">
         原生「查询 → 重置 → 翻页」要写 4 个事件函数，还容易踩「拿最新表单值」的坑。
         es-plus 用 <code>EsForm 嵌套 EsTable</code> + <code>triggerEvent: true</code>，
@@ -70,7 +70,7 @@
 
     <!-- 三端通用：同一份 Schema 源码 + 三端渲染快照 -->
     <div class="tri-section">
-      <h2 class="section-title">🌐 三端通用</h2>
+      <h2 class="section-title">三端通用</h2>
       <p class="section-desc">
         同一份 JSON Schema 在 Vue 2 / Vue 3 / Ant Design Vue 三端渲染出一致界面，
         <strong>换一行 import 即切换</strong>。
@@ -82,7 +82,7 @@
     <div class="ai-entry">
       <a-card class="ai-entry-card" hoverable @click="openAiCrud">
         <div class="ai-entry-content">
-          <h3>🤖 AI 一句话生成 CRUD</h3>
+          <h3>AI 一句话生成 CRUD</h3>
           <p>在 Claude Code / Cursor 里说一句话，生成可编译的三端通用 CRUD 页面。在线体验见主站 AiCrud。</p>
         </div>
       </a-card>
@@ -91,7 +91,7 @@
     <a-divider />
 
     <div class="features">
-      <h2 class="section-title">✨ 核心特性</h2>
+      <h2 class="section-title">核心特性</h2>
       <a-row :gutter="[24, 24]">
         <a-col :span="8" :xs="24" :sm="12" :md="8" v-for="item in features" :key="item.title">
           <a-card class="feature-card" hoverable>
@@ -109,7 +109,7 @@
 
     <!-- ES-Plus 配置化组件 -->
     <div class="es-plus-intro">
-      <h2 class="section-title">⚡ ES-Plus 配置化组件</h2>
+      <h2 class="section-title">ES-Plus 配置化组件</h2>
       <p class="section-desc">
         基于 <code>@es-plus/adapter-antdv</code> 适配器，使用 <strong>JSON 配置</strong> 即可驱动 Ant Design Vue
         表单、表格、弹窗和 CRUD 页面。<strong>同一份 Schema 跨 UI 框架复用</strong>（Element Plus / Ant Design Vue）。
@@ -127,7 +127,7 @@
     <a-divider />
 
     <div class="tech-stack">
-      <h2 class="section-title">🛠 技术栈</h2>
+      <h2 class="section-title">技术栈</h2>
       <a-row :gutter="[16, 16]">
         <a-col :span="6" :xs="12" :sm="8" :md="6" v-for="tech in techs" :key="tech.name">
           <a-card size="small" class="tech-card">
@@ -141,7 +141,7 @@
     <a-divider />
 
     <div class="quick-start">
-      <h2 class="section-title">🚀 快速开始</h2>
+      <h2 class="section-title">快速开始</h2>
       <a-card class="code-card">
         <pre><code># 安装依赖
 npm install @es-plus/adapter-antdv @es-plus/core ant-design-vue @ant-design/icons-vue

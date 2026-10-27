@@ -7,7 +7,7 @@
 
     <!-- 环境准备 -->
     <section id="env">
-      <h2>📋 环境准备</h2>
+      <h2>环境准备</h2>
       <p>在开始之前，请确保你的开发环境满足以下要求：</p>
       <a-table
         :dataSource="envRequirements"
@@ -22,7 +22,7 @@
 
     <!-- 安装 -->
     <section id="install">
-      <h2>📦 安装</h2>
+      <h2>安装</h2>
       <p>在已有 Vue 3 + Vite 项目中安装 ES-Plus 适配器及相关依赖：</p>
       <a-card class="code-block">
         <pre v-pre><code>npm install @es-plus/adapter-antdv @es-plus/core
@@ -34,7 +34,7 @@ npm install ant-design-vue @ant-design/icons-vue vue-router</code></pre>
 
     <!-- 项目配置 -->
     <section id="config">
-      <h2>⚙️ 项目配置</h2>
+      <h2>项目配置</h2>
 
       <h3>入口文件 main.js</h3>
       <p>注册 Ant Design Vue 与 ES-Plus 适配器：</p>
@@ -76,7 +76,7 @@ export default defineConfig({
 
     <!-- 使用组件 -->
     <section id="usage">
-      <h2>🎨 使用组件</h2>
+      <h2>使用组件</h2>
       <p>安装完成后，即可通过 JSON 配置驱动表单、表格、弹窗和 CRUD 页面：</p>
 
       <a-card class="code-block">
@@ -114,7 +114,7 @@ const columns = [
 
     <!-- 与 Element Plus 版的差异 -->
     <section id="diff">
-      <h2>🔀 与 Element Plus 版的差异</h2>
+      <h2>与 Element Plus 版的差异</h2>
       <a-table
         :dataSource="diffData"
         :columns="diffColumns"
@@ -128,7 +128,7 @@ const columns = [
 
     <!-- 下一步 -->
     <section id="next">
-      <h2>📖 下一步</h2>
+      <h2>下一步</h2>
       <a-row :gutter="[16, 16]">
         <a-col :span="12">
           <a-card hoverable class="next-card" @click="$router.push('/es-form')">

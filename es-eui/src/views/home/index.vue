@@ -120,7 +120,7 @@
     <div class="l2-case">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">🎯 头号案例 · 零事件代码的 CRUD</h2>
+          <h2 class="section-title">头号案例 · 零事件代码的 CRUD</h2>
           <p class="section-desc">
             原生「查询 → 重置 → 翻页」要写 4 个事件函数，还容易踩「拿最新表单值」的坑。
             es-plus 用 <strong>EsForm 嵌套 EsTable</strong> + <code>triggerEvent: true</code>，把整条联动链路收敛为 <strong>0 行事件代码</strong>。
@@ -144,7 +144,7 @@
     <div class="tri-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">🌐 三端通用</h2>
+          <h2 class="section-title">三端通用</h2>
           <p class="section-desc">
             同一份 JSON Schema 在 Vue 2 / Vue 3 / Ant Design Vue 三端渲染出一致界面，
             <strong>换一行 import 即切换</strong>。
@@ -163,7 +163,7 @@
           rel="noopener"
           class="ai-entry-card"
         >
-          <h3>🤖 AI 一句话生成 CRUD</h3>
+          <h3>AI 一句话生成 CRUD</h3>
           <p>在 Claude Code / Cursor 里说一句话，生成可编译的三端通用 CRUD 页面。在线体验见主站 AiCrud。</p>
         </a>
       </div>
