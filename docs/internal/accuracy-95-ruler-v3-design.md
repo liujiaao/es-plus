@@ -438,3 +438,25 @@ node -e "…"   # 见本次会话；输出：40/1041 prop、1024/1041 label、0 
 # 失败集分层（需 .tmp-audit/eval-opus46-3.log）
 node -e "…"   # 输出：propF1=1 → 81 行/47 pass；propF1<1 → 129 行/0 pass；25 行下界
 ```
+
+---
+
+## 14. 落地记录（2026-10-27，P1 / R2 已实施）
+
+§7 的「先写测试再改实现」按 §8.4 矩阵执行，实施中有 **4 处偏离/补充**，均已在
+`ai-95-gap-review-2026-10-27.md` §11.4 记账：
+
+1. **`isHidden` 的条件树不只有三种形态**。§8.2 只写了 `{field}` + 表达式，实测语料里还有
+   **裸表达式** `{'>': [{var:'amount'}, 100]}`（`frag-form-05`）与「简写条件 + 裸表达式」
+   混排的数组形态。改写器因此改成 `renameCondition`（`field` / `expr|when` / 裸表达式 /
+   `and-or` 嵌套统一递归），否则改名后的**正确**配置会被判红。
+2. **`prop` 兜底是有意的放宽边界**：pred 的 `prop` 与 gold 相同、`label` 写错时仍判正
+   （与 R2 之前的尺子等价）。收紧成「label 必须相等」会改变全语料判负面，属另一个决策。
+3. **新增维度 `defaultSort`**（不在本设计范围内，是写 §8.4 矩阵时被咬出来的）：
+   `tableOptions.defaultSort` 在 CRUD 记分卡里**没有任何维度**，`166` 的头号 NL 需求漏写也满分。
+4. **`RULER_VERSION` 采用复合串** `label-identity-v1+deco-projection-v1`（§10.5 口径）；
+   产物身份、dump meta、基线三方同串，`compareToBaseline` 与 `rescore --expect` 都对
+   跨版本**硬失败**而不是静默相减。
+
+**证据**（全离线）：216/216 CRUD「prop 全改名、label 不变」⟹ 全维度 pass、`scoped`/`Full` 为真、
+`propNameMatch=0`；同一 pred 再弄错首字段 `formtype` ⟹ 216/216 判负；片段 63/63 同结论。

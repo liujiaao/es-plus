@@ -596,8 +596,10 @@ console.log(m.stats, e.length, e.filter(([,v])=>Object.values(v.targets).every(t
 0a 投影（scorer，装饰键）        ─┐
 0b 10 例补 NL + 15 例摘 pin      ├─ 零模型成本，同批重取证基线
 0c 双向守卫（先定 token→字段解析）┘
-A  label 尺子（两个 fieldMap）   ── 同批：RULER_VERSION → label-identity-v1+deco-projection-v1
+A  label 尺子（两个 fieldMap）   ── ✅ 已落地，见 §11.4。同批：RULER_VERSION → label-identity-v1+deco-projection-v1
                                     （A′ 装饰键投影、describeDimMiss 已随 0a 落地，见 §11.1）
+                                    附带补掉两个真缺陷：`defaultSort` 此前无维度覆盖（166 的头号需求）；
+                                    `isHidden` 裸表达式（`{'>':[{var}]}`）在改名时漏改写
 A5 en 进编译分母 / typecheck 全量 / 转义 fuzz   ── 与 A 并行
 A4 验收：片段 scoped ≈ 新 propSet 命中率（可证伪）
 C₀ 管道体检（--limit 8 + rescore --expect）
@@ -665,3 +667,58 @@ G  度量可靠性（健康门 / artifact / 棘轮 / version 指纹）
 
 每条腿都配内联夹具（guard 失配即红），并用 `git show HEAD:` 的**修前语料**验证过它们真的咬得住：
 6 条反向矛盾全部报出、`163/164` 的 pin 下界判定为「无依据」。守卫全绿（216 用例 + 25 few-shot）。
+
+### 11.4 A 尺子：字段身份改按 `label` ✅（2026-10-27）
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/align.mjs`（新） | `normalizeLabel`（NFKC → 去空白 → 去标点 → 小写，**不做语义归一**）、`alignFields`（① 归一 label 精确匹配 → ② prop 兜底；**单射**，重复 label 只认第一个、其余进 `unmatchedPred`）、`normalizePredForCompare`（白名单改写 8 类结构）、`propNameMatch`（观测量）、`scoreOptsForLang`（zh=label / en=prop 的**单源**） |
+| `scripts/eval/scorers.mjs` | `scoreAll` / `describeDimMiss` 入口先对齐一次，所有维度（含 `fieldMap`/`sharedFields`/深等值）经同一份 `alignedPred`；新增**观测量** `propNameMatch` / `alignMode` / `alignUnmatched*`（不返回 `alignedPred`，避免调用方又拿它去比 gold） |
+| `scripts/eval/fragment-scorers.mjs` | `scoreFragment` / `describeFragmentDimMiss` 同批对齐（设计 §8.3 的「两个 `fieldMap` 同批改」）；返回值增 `propNameMatch` |
+| `scripts/eval-llm.mjs` · `rescore.mjs` | `scoreAll(..., scoreOptsForLang(lang))`：**en 腿仍走 prop 身份**（D14）——gold 标签是中文、pred 是英文，按 label 比结构性必错，且 en 只观测不门禁；`propNameMatch` 进 `computeCrudMetrics` / 片段汇总 / 产物 |
+| `scripts/eval/dump.mjs` · `artifact.mjs` · `ratchet.mjs` | `RULER_VERSION = 'label-identity-v1+deco-projection-v1'`；产物身份增 `rulerVersion`（**缺了只警告不判红** —— 已提交的旧产物是旧代码写的，判红会恒红到下次夜间跑批）；`compareToBaseline` 版本不同则**硬失败并拒绝比较**；`rescore --expect` 同样拒绝跨版本比对（且报错必须说「尺子版本不同」，不能说成「聚合漂移」） |
+| `__tests__/golden/accuracy-baseline.json` | 增 `rulerVersion: null`（尚未在任何一把尺子下测过）+ 计数更新记录；新增维度 `defaultSort` 计数 1 / 地板 1 |
+| `package.json` | 新脚本 `check:align`，并入 `check:consistency` 链 |
+
+**实测（全离线，0 模型成本）**
+
+- **定义级断言，全语料**：把 216 条 CRUD gold 的**每个字段 prop 全部改名**（label 原样），用 216/216 条重新打分 ⟹
+  所有 applicable 维度 pass、`exactIntentScoped` **216/216**、`exactIntentFull` **216/216**、`propNameMatch = 0`。
+  语料里**没有一条**带无 label 字段 ⟹ 兜底分支在真实语料上不会被用来蒙混。
+- **尺子没被改瞎**：同一次改名之上再弄错首字段 `formtype` ⟹ `formtype` 维度 **216/216 判负**。
+- **片段腿**：63/63「prop 全改名、label 不变」⟹ `byDim` 全 pass 且 `scoped`/`stated` 为真（改名器在测试里
+  **独立重写一遍**，不 import `align.mjs` 的改写器，否则是「用实现验证实现」）。反例：label 互换是**映射错**
+  不是集合错 ⟹ `propSet` 仍 pass，由字段级维度咬住（这条同时钉住了 `propSet` 的语义 = identity 集合相等）。
+- `node scripts/eval/align.test.mjs`（6 节：归一化 / 单射与兜底 / 改名全绿 / 改错仍红 + 白名单 / prop 身份）；
+  `npm run check:consistency` EXIT=0。
+
+**顺带补掉的三个真缺陷**（都是写测试时被咬出来的，不是设计里写的）
+
+1. **`defaultSort` 此前没有任何维度覆盖**。`166-announcement-defaultsort-vue3` 的头号需求是「默认按发布时间倒序
+   排列」，gold 也声明了 `tableOptions.defaultSort` —— 但 CRUD 记分卡的 24 个维度里没有一个读它，模型**整个漏写**
+   也判满分。属 "mark, never drop" 缺口（同一批的 `nav`/`defaultSort` 在片段腿有 `tableOptions.defaultSort` 维，
+   CRUD 腿漏了）。已补维度 + 扰动用例 + `describeDimMiss` 分支；`applicableCounts.defaultSort = 1`、
+   `minApplicable = 1`（n=1 时 10% 余量会退化成 0，等于「删掉唯一难例也不红」）。**语料只有 1 例声明它** ⟹ 该维
+   当前只观测不门禁，补语料留到 D 阶段。
+2. **`isHidden` 的裸表达式形态漏改写**：`{'>': [{var:'amount'}, 100]}`（`frag-form-05`「金额大于 100」）既没有
+   `field` 也没有 `expr`/`when` 键，旧改写器直接返回原对象 ⟹ 改名后的**正确**配置被判红。改为 `renameCondition`
+   （field / expr / when / 裸表达式 / `and-or` 嵌套统一递归），并加夹具钉住。
+3. **`align.test.mjs` 的 `defaultSort` 断言写错**（挂到 `columns` 维上）——这不是代码缺陷，但它暴露了「维度清单
+   只在注册表里、没有可读的对照」；测试改为直接断言改名结果 + 维度判负。
+
+**刻意不做的**
+
+- **不做模糊匹配**（拼音/同义/编辑距离）。先只做归一化精确匹配，是否放宽由数据决定（设计 §8.5）。
+- **prop 兜底不放宽也不收紧**：pred 的 `prop` 与 gold 相同、`label` 写错时仍判正（与 R2 之前的尺子等价）。
+  要收紧成「label 必须相等」是另一个决策（会改全语料判负面），不在本次范围。
+- **`treeConfig.childrenField` 是行数据键，不改写**（测试钉住：设成字段 prop 仍判负）；`extPoints` 源码串同样不动。
+- **`nlStatedDims` 仍不进 CRUD 腿**（§11.2 的偏离保持）。
+
+**留给 C 阶段验证的两件事（可证伪）**
+
+- **A4**：片段腿今天 `core == scoped == stated == byDim.propSet`（55.6%）。label 身份落地后，片段 `scoped` 应
+  ≈ **新的 `propSet` 命中率**；若仍停在 55%，说明还有别的阻断被掩码藏住。
+- **en 腿数字必须不变**（`byLanguage.en`）：它走 prop 身份，本次改动对它是恒等变换。下次跑批若 en 腿数字动了，
+  说明 `scoreOptsForLang` 没生效。
