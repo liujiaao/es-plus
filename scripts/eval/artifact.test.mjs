@@ -68,6 +68,20 @@ const complete = (over = {}) => ({
 {
   check(clean(verifyArtifact(complete(), { badgeFiles: [] })), '完整测量（合格形状）必须判过')
 
+  // Ruler v3：`rulerVersion` 是身份字段，但**不是**必填 —— 已提交的产物是旧代码写的，
+  // 判红会让守卫恒红到下一次夜间全量跑批为止（恒红 = 红盲）。缺了必须可见地提示。
+  const noRuler = complete()
+  check(clean(verifyArtifact(noRuler, { badgeFiles: [] })), '无 rulerVersion 不得判红（旧产物合法）')
+  check(
+    verifyArtifact(noRuler, { badgeFiles: [] }).warnings.some((w) => w.includes('rulerVersion')),
+    '无 rulerVersion 必须给出提示（百分比不可与新版横向比较）'
+  )
+  check(
+    !verifyArtifact(complete({ rulerVersion: 'label-identity-v1+deco-projection-v1' }), { badgeFiles: [] })
+      .warnings.some((w) => w.includes('rulerVersion')),
+    '带 rulerVersion 时不得再提示'
+  )
+
   const noD95 = complete()
   delete noD95.definition95
   checkFails(verifyArtifact(noD95, { badgeFiles: [] }), '缺少 definition95 块', '完整测量缺 definition95')

@@ -44,7 +44,7 @@ import { createHash } from 'node:crypto'
  * 因为「同一份 pred 得不同分」的改动不止字段身份一种；少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
-export const RULER_VERSION = 'prop-identity-v1+deco-projection-v1'
+export const RULER_VERSION = 'label-identity-v1+deco-projection-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

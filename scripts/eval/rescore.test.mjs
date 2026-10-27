@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { isCrudCase } from './scenes.mjs'
+import { RULER_VERSION } from './dump.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..', '..')
@@ -105,6 +106,8 @@ try {
 
   // ── 2. --expect 一致 → 0 ───────────────────────────────────────────────────
   const artifact = {
+    // 产物必须带**当前尺子**的版本号，否则 `--expect` 会被判成跨版本比对（Ruler v3）。
+    rulerVersion: RULER_VERSION,
     definition95: { k: 3, rate: out?.definition95?.rate, pass: out?.definition95?.pass, total: out?.definition95?.total },
     inSchemaIntentZeroEdit: out?.definition95?.rate,
     coreRate: out?.coreRate,
@@ -134,6 +137,15 @@ try {
   const r3 = run(dumpPath, '--expect', badPath)
   eq(r3.status, 1, '产物不一致必须退出 1（否则 parity 守卫是装饰）')
   check(/不一致/.test(r3.stderr), '不一致时必须打印差异项')
+
+  // ── 4. 跨尺子版本 → 1，且报错必须说「尺子不同」而不是「口径漂移」 ────────────
+  // 数字在两边**完全一致**也要拒绝：比对本身无意义（两把尺子量的是不同的量）。
+  const stalePath = join(dir, 'stale.json')
+  writeFileSync(stalePath, JSON.stringify({ ...artifact, rulerVersion: 'prop-identity-v1+deco-projection-v1' }))
+  const r4 = run(dumpPath, '--expect', stalePath)
+  eq(r4.status, 1, '跨尺子版本必须退出 1')
+  check(/尺子版本不同/.test(r4.stderr), `跨版本必须明说尺子不同，实得：${r4.stderr}`)
+  check(!/不一致（/.test(r4.stderr), '跨版本不得退化成「逐字段不一致」的报错（会被误读成聚合漂移）')
 } finally {
   rmSync(dir, { recursive: true, force: true })
 }

@@ -20,6 +20,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 // 收敛腿样本地板：与 eval 的守卫共用同一个常量（写死第二份必然漂移）。
 import { CONVERGE_SAMPLE_FLOOR } from './ratchet.mjs'
+import { RULER_VERSION } from './dump.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
@@ -72,7 +73,7 @@ export function currentCommit() {
  * 产物身份块。挂在**成功与失败**两种记录上 —— 失败记录同样需要能被定位
  * （否则只能从 Actions 日志反推它属于哪次提交、哪份语料）。
  */
-export function artifactIdentity({ corpusHash, corpusFiles, fixedFieldsUsed }) {
+export function artifactIdentity({ corpusHash, corpusFiles, fixedFieldsUsed, rulerVersion = RULER_VERSION }) {
   return {
     commit: process.env.GITHUB_SHA || currentCommit(),
     runId: process.env.GITHUB_RUN_ID || null,
@@ -80,6 +81,9 @@ export function artifactIdentity({ corpusHash, corpusFiles, fixedFieldsUsed }) {
     corpusHash,
     corpusFiles,
     fixedFieldsUsed: Boolean(fixedFieldsUsed),
+    // 尺子版本（Ruler v3 起）：把「两个百分比是不是同一把尺子量出来的」写成产物里的事实。
+    // 与 dump 的 meta 同源同串 —— 复算、棘轮、产物三方比对的都是这一个值。
+    rulerVersion,
   }
 }
 
@@ -131,6 +135,11 @@ export function verifyArtifact(artifact, ctx = {}) {
   } else {
     for (const k of REQUIRED_IDENTITY_KEYS) {
       if (!(k in artifact) || artifact[k] === undefined) failures.push(`缺少身份字段 \`${k}\``)
+    }
+    // `rulerVersion` 刻意**不在** REQUIRED_IDENTITY_KEYS 里：已提交的产物是旧代码写的，
+    // 把它判红会让守卫一直红到下一次夜间全量跑批为止（恒红 = 红盲）。缺了只提示。
+    if (typeof artifact.rulerVersion !== 'string') {
+      warnings.push('产物无 `rulerVersion`（Ruler v3 之前写的）—— 下一次全量跑批会补齐；期间的百分比不可与新版横向比较')
     }
   }
   // 诊断口径绝不允许被发布：喂了 fixedFields 的数字不是生产口径。

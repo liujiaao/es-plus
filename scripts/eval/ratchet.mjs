@@ -132,13 +132,37 @@ export function checkConvergenceSample(total, { floor = CONVERGE_SAMPLE_FLOOR } 
  *
  * @param {{definition95:number|null, coreRate:number, byDimension?:Record<string,number>}} current
  * @param {null|{definition95?:number, coreRate?:number, byDimension?:Record<string,number>}} baseline
+ * @param {{tol?:number, rulerVersion?:string|null}} [opts] `rulerVersion` 给了才做跨尺子版本拦截
  */
-export function compareToBaseline(current, baseline, { tol = RATCHET_TOL } = {}) {
+export function compareToBaseline(current, baseline, { tol = RATCHET_TOL, rulerVersion = null } = {}) {
   const failures = []
   const warnings = []
   if (!baseline) {
     warnings.push('无基线文件（首次跑批）—— 跳过比率棘轮，仅门禁与地板生效')
     return { ok: true, failures, warnings }
+  }
+
+  // 跨尺子版本**拒绝比较**（Ruler v3）。
+  //
+  // 比率的含义依赖「同一份 pred 会得几分」的规则。规则一改（字段身份从 prop 换成 label、
+  // 装饰键豁免、新增维度），基线里的 rate 与本次的 rate 就是两个不同的量 —— 用棘轮比它们，
+  // 结果只会是两种坏情况之一：数字变松 ⟹ 假绿（看着守住了，其实没人守）；数字变紧 ⟹
+  // 追着一个「口径已变、并非退步」的差值喊回归。两者都会在几次 PR 内把守卫变成噪声。
+  // 故这里**硬失败**并要求重基线，而不是猜一个容差把差异糊过去。
+  // 基线没写 rulerVersion（Ruler v3 之前的文件）时无法判断 ⟹ 只警告（否则升级当天恒红）。
+  if (rulerVersion && typeof baseline.rulerVersion === 'string' && baseline.rulerVersion !== rulerVersion) {
+    failures.push(
+      `尺子版本不同，拒绝比较：基线 ${baseline.rulerVersion} vs 本次 ${rulerVersion} —— ` +
+        '同一份 pred 在两把尺子下会得不同分。请在当前尺子下跑一次全量，人工把 definition95 / ' +
+        'coreRate / byDimension 与 rulerVersion 一起写回 accuracy-baseline.json（见该文件头注）'
+    )
+    return { ok: false, failures, warnings }
+  }
+  if (rulerVersion && typeof baseline.rulerVersion !== 'string') {
+    warnings.push(
+      `基线无 rulerVersion（早于 Ruler v3 或未填）—— 无法证明基线与本次是同一把尺子；` +
+        '首次全量跑批后请与比率一起写回'
+    )
   }
 
   // 比率基线是**惰性**的：`null` 时 `cmp` 直接跳过，棘轮看起来绿，其实没在比。

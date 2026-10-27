@@ -26,11 +26,23 @@
     "definition95 是两个分母，不得互相稀释。它只经人工 PR 上调；夜间 workflow 不回写。",
     "当前值来自 2026-10-19 的 `--fragments` 全量探针（63/63 测到、0 答错、0 降级：core 95.2% /",
     "scoped 77.8% / compiles 100%）。首次带 key 的夜间全量跑批若因模型差异落在下方，应视为真实信号；",
-    "下调阈值必须在 PR 里写明原因。"
+    "下调阈值必须在 PR 里写明原因。",
+    "",
+    "rulerVersion（Ruler v3）：本文件的 definition95 / coreRate / byDimension 是**某一把尺子**量出来的。",
+    "尺子一改（字段身份 prop→label、装饰键豁免、新增维度），同一份 pred 会得不同分，跨版本比较无意义。",
+    "compareToBaseline 因此在 version 不匹配时**硬失败并要求重基线**。当前为 null = 尚未在任何一把尺子下",
+    "测过（三个比率字段也仍是 null）；首次 post-R2 全量跑批后，与比率一起写回",
+    "'label-identity-v1+deco-projection-v1'。",
+    "",
+    "计数更新记录（续）：",
+    "  · 2026-10-27（Ruler v3 / R2 + 0a/0b/0c）：新增维度 `defaultSort`（首屏默认排序契约，此前",
+    "    **没有任何维度覆盖** —— 166 的头号需求漏写也判满分）。语料计数 1（仅 166 声明），",
+    "    minApplicable 取 1 而非 floor(1×0.9)=0：n=1 时 10% 余量会退化成「删掉唯一难例也不红」。"
   ],
   "version": 3,
-  "updatedAt": "2026-10-21",
+  "updatedAt": "2026-10-27",
   "source": "manual: corpus-derived applicableCounts + derived minApplicable; fragment floor from 2026-10-19 probe; CRUD rates pending first post-AN-01 full eval",
+  "rulerVersion": null,
   "heldoutCases": 194,
   "applicableCounts": {
     "propSet": 216,
@@ -57,6 +69,7 @@
     "treeConfig": 15,
     "editConfig": 15,
     "mergeConfig": 15,
+    "defaultSort": 1,
     "extPoints": 26
   },
   "minApplicable": {
@@ -84,6 +97,7 @@
     "treeConfig": 13,
     "editConfig": 13,
     "mergeConfig": 13,
+    "defaultSort": 1,
     "extPoints": 23
   },
   "definition95": null,

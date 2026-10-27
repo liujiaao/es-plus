@@ -151,6 +151,28 @@ function checkFails(result, substr, label) {
     inert.warnings.some((w) => w.includes('byDimension 为空')),
     `棘轮：逐维基线为空时必须提示「不生效」，实际 = ${JSON.stringify(inert.warnings)}`
   )
+
+  // ── 跨尺子版本（Ruler v3）：必须**拒绝比较**，而不是猜个容差糊过去 ──
+  const cur = { definition95: 1.0, coreRate: 0.9, byDimension: { membership: 1, reactions: 1 } }
+  const sameRuler = { ...base, rulerVersion: 'label-identity-v1+deco-projection-v1' }
+  check(
+    compareToBaseline(cur, sameRuler, { rulerVersion: 'label-identity-v1+deco-projection-v1' }).ok,
+    '跨版本：同一把尺子应正常比'
+  )
+  checkFails(
+    compareToBaseline(cur, sameRuler, { rulerVersion: 'label-identity-v2' }),
+    '尺子版本不同，拒绝比较',
+    '跨版本：不同尺子版本必须硬失败（即使本次数字更高）'
+  )
+  // 基线是 Ruler v3 之前写的（无 rulerVersion）⟹ 只能警告，不能红（否则升级当天恒红）
+  const legacy = compareToBaseline(cur, base, { rulerVersion: 'label-identity-v1+deco-projection-v1' })
+  check(legacy.ok, '跨版本：基线无 rulerVersion 时不得误红（升级当天不能恒红）')
+  check(
+    legacy.warnings.some((w) => w.includes('基线无 rulerVersion')),
+    `跨版本：基线无 rulerVersion 必须提示，实际 = ${JSON.stringify(legacy.warnings)}`
+  )
+  // 未传 rulerVersion（旧调用点）⟹ 行为与改造前完全一致
+  check(compareToBaseline(cur, sameRuler).ok, '跨版本：未传 rulerVersion 时应保持旧行为')
 }
 
 // ─── ⑤ 防删难例（合成） ─────────────────────────────────────────────
