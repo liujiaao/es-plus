@@ -961,7 +961,8 @@ docs（Element Plus）与 es-pc（Ant Design Vue）两端口径逐项一致。
   原文一致（空白归一后比对）；4 条 gaps 含「第三栏不是严格同场景产物」。
 
 实测（浏览器，三站一致）：原生 123 行 / 7 事件 / 6 函数 / 2 个 v-if；手写 es-plus 77 / 1 / 2 / 0；
-AI 产物 363 行 / 0 / 0 / 0（8.0 KB）。产物自述：查询项 3 · 列 5 · 弹窗 3 · 行按钮 3 · 码值表 5。
+AI 产物 363 行 / 0 / 0 / 0（7.5 KB，按 LF 归一计 —— 见 §21.1）。产物自述：查询项 3 · 列 5 · 弹窗 3 ·
+行按钮 3 · 码值表 5 · 内嵌脚本串 0。
 
 ### 19.2 偏离与取舍（五处）
 
@@ -973,7 +974,9 @@ AI 产物 363 行 / 0 / 0 / 0（8.0 KB）。产物自述：查询项 3 · 列 5 
    （多一枚查询项、多一列、多三个弹窗、多三个行按钮），偏差方向**对 AI 不利**（多做功能、行数却没省），
    所以三个「归零」维度不会被放宽。这句话同时进产物注释、页面 gaps 与 e2e 断言。
 3. **AI 栏的三个 0 是计数器的输出，不是手写**：JSON 里没有 `<template>` / `<script>`，`blocks()` 取到空串，
-   `countEvents` / `countFunctions` / `countVIf` 必然为 0；将来产物若带出脚本，这三项会自动变成非 0。
+   `countEvents` / `countFunctions` / `countVIf` 必然为 0 —— 注意这三项**对 JSON 没有定义**，不是
+  「将来带脚本就会变非 0」（§21.3 更正）：schema 允许的 `formatter` / `render` 是 JSON 字符串，
+  `<script>` 派生计数器看不见，故另记 `features.scriptStrings` 把它们显性化。
    但「0 事件」是**形状**（纯 JSON 无胶水），不是「AI 写得更少」的因果。
 4. **行数一栏不设结论**：363 行是「逐标量一行」的序列化结果，换个写法数字就变；页面把这一栏明写成
    「不当作优点」。与 #2 同源：宁可少一个卖点，也不留一个可被一句话推翻的比较。
@@ -1058,3 +1061,54 @@ AI 产物 363 行 / 0 / 0 / 0（8.0 KB）。产物自述：查询项 3 · 列 5 
 - **导览没进站点导航**：`docs/ai/` 是数据源目录，`ai-showcase.md` 目前只从 README 链接；要不要做成站点页
   是产品决定（站点已有 8 条 AI 页，再建一条「讲这些页」的页需要先确定它不重复画廊）。
 - **漂移不做门禁是设计选择**（见 20.2 #5）：代价是「没人看报告」不会有人管 —— 目前靠模型升级时的人工动作。
+
+## 21. 复核修正（A9 + 漂移作业，2026-10-27）
+
+独立复查（另一位只读评审 + 本机复现）在 §19/§20 的落地物里找出 1 个会挡 CI 的缺陷与 5 个口径/守卫缺口，
+全部已修：
+
+### 21.1 HIGH — `cases:metrics:check` 只在 Linux CI 上红（EOL 敏感字节数）
+
+`measureAi` 的 `bytes` 用了**原始文本**：本仓无 `.gitattributes`、本地 `core.autocrlf=true`，同一份 JSON
+工作树是 CRLF（7994 B）而 git blob 是 LF（7631 B）。于是本地 `--check` 绿、`ubuntu-latest` 上红 ——
+而 `check:consistency` 在 Typecheck 里，Typecheck 红 ⟹ `deploy-docs` skipped：新页永远发不上去。
+修法：`bytes` 按 `toLF` 归一后的文本计（7631），并新增 `scripts/gen-cases-metrics.test.mjs`（同一份 JSON 的
+LF/CRLF 两版必须逐字段相同）进 `check:consistency` 的 `check:cases-metrics`。
+
+### 21.2 MEDIUM — 漂移把 `DatePicker` / `datePicker` 报成结构漂移
+
+`datePicker` / `timePicker` 是 schema 承认、三端运行时都过 `normalizeFormType` 的别名；冻配置里 `hireDate`
+正是 `DatePicker`，模型挑另一写法就会得到 `knobs.formtype: 0 / exact: false` —— 一份「噪声漂移」，
+正是让人学会忽略报告的那类信号。修法：`knobOf` 两侧都过 `normalizeFormType`，单测补别名用例。
+
+### 21.3 MEDIUM — 「三项归零」对 JSON 无定义，原写法把边界说反了
+
+§19.2 #3 原文说「将来产物若带出脚本，这三项会自动变成非 0」—— 不成立：`formatter` / `render` 是 JSON
+字符串，`<script>` 派生计数器永远看不见。修法：新增 `features.scriptStrings`（`"formatter"` / `"render"`
+键出现次数），页面在「产物自述」里显示它；单测断言「带脚本时 functions 仍 0、scriptStrings 为 2」，
+把这条边界钉成事实而不是措辞。当前 `employee-roster` 的 `scriptStrings` 为 0。
+
+### 21.4 MEDIUM/LOW — es-eui 的数字写死也没人管
+
+`checkNvsWiring` 原来只查「文件存在 + 含源码模块名 + testid」，es-eui 又没有 e2e —— 把 12 个数字写死
+到页面里依然全绿。修法：三站页面都必须出现 `cases-metrics.json` 且**按 id 从 `scenarios` 取值**
+（正则兜住 docs 的类型标注写法），否则 `cases:metrics:check`（`checkNvsWiring`）直接红。
+
+### 21.5 LOW — e2e 的断言有子串空洞
+
+`toContainText("列 5")` 会被「列 50」满足；「没有证明的事」只断言了 4 条里的一条。修法：
+改用 `(?!\d)` 负向前瞻，并断言 `nva-gaps li` 恰为 4 条且四条 caveat 文案都在。
+
+### 21.6 LOW — `--limit=1` 被静默当成「没传」+ 漂移作业超时 < 中继冷却预算
+
+`argValue` 只认空格写法，`npm run drift:ai-cases -- --limit=1` 会跑全量（案例变多后是真金白银）；
+workflow 的 60 min 上限小于 `createResilientTransport` 的 90 min 冷却预算，超时被硬杀时 artifact 不保。
+修法：两种写法都解析（空值报错），workflow 上限抬到 120 min。
+
+### 21.7 复核确认无问题的部分
+
+- `eval-drift.yml` 的 YAML / secrets / 步骤顺序 / artifact 路径与 `.gitignore` 对齐；
+- `outcome` 归因（`model-failure` / `no-answer` / `truncated`）与实际 `OUTCOME` 常量一致；
+- 两个生成/观测脚本都有 main-guard，import 不写文件；
+- docs 与 es-pc 的 `NativeVsAi.vue` 逐字节相同；三站路由与 Cases 入口齐全；
+- 没有 accuracy / eval 产物进仓库。
