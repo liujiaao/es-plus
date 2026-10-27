@@ -385,7 +385,7 @@ const goToGithub = () => {
   align-items: center;
   min-height: 600px;
   padding: 80px 48px;
-  // background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  // background: linear-gradient(135deg, var(--es-fill) 0%, #ffffff 100%);
 }
 
 .hero-content {
@@ -505,7 +505,7 @@ const goToGithub = () => {
 .code-title {
   margin-left: 12px;
   font-size: 13px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .code-content {
@@ -666,13 +666,13 @@ const goToGithub = () => {
   border-radius: 4px;
 
   &.bad {
-    background: #fef0f0;
-    color: #f56c6c;
+    background: var(--es-danger-tint);
+    color: var(--es-danger);
   }
 
   &.good {
-    background: #f0f9eb;
-    color: #67c23a;
+    background: var(--es-success-tint);
+    color: var(--es-success);
   }
 }
 
@@ -738,10 +738,10 @@ const goToGithub = () => {
 .l2-glue-figure {
   font-size: 32px;
   font-weight: 800;
-  color: #f56c6c;
+  color: var(--es-danger);
 
   &.good {
-    color: #67c23a;
+    color: var(--es-success);
   }
 }
 
@@ -828,7 +828,7 @@ const goToGithub = () => {
   display: inline-block;
   padding: 6px 16px;
   background: #1e1e1e;
-  color: #67c23a;
+  color: var(--es-success);
   border-radius: 6px;
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 14px;
@@ -888,9 +888,9 @@ const goToGithub = () => {
   color: white;
   
   &.blue { background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); }
-  &.green { background: linear-gradient(135deg, #67c23a, #95d475); }
+  &.green { background: linear-gradient(135deg, var(--es-success), #95d475); }
   &.purple { background: linear-gradient(135deg, #6f42c1, #a855f7); }
-  &.orange { background: linear-gradient(135deg, #e6a23c, #f4a460); }
+  &.orange { background: linear-gradient(135deg, var(--es-warning), #f4a460); }
 }
 
 .feature-title {
@@ -993,7 +993,7 @@ const goToGithub = () => {
 // AI Section
 .ai-section {
   padding: 100px 48px;
-  background: linear-gradient(135deg, #f0f9eb 0%, #ecf5ff 100%);
+  background: linear-gradient(135deg, var(--es-success-tint) 0%, var(--es-info-tint) 100%);
   text-align: center;
 }
 
@@ -1039,7 +1039,7 @@ const goToGithub = () => {
   height: 64px;
   margin: 0 auto 20px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #67c23a, #409eff);
+  background: linear-gradient(135deg, var(--es-success), var(--es-brand-primary));
   color: white;
 }
 

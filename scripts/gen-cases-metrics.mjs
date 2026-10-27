@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc'
-import { readText, sameText } from './lib/text-sync.mjs'
+import { readText, sameText, stripDocsOnlyMeta } from './lib/text-sync.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SRC_DIR = join(ROOT, 'docs', 'examples')
@@ -264,7 +264,8 @@ function checkNvsWiring() {
   // 两个 Vue3 站点共用同一份对照页：数字来自同一个单源模块，端差异不该在这里出现。
   const docs = join(ROOT, 'es-plus-docs/src/views/NativeVsAi.vue')
   const pc = join(ROOT, 'es-pc/src/views/NativeVsAi.vue')
-  if (existsSync(docs) && existsSync(pc) && !sameText(readFileSync(docs, 'utf8'), readFileSync(pc, 'utf8'))) {
+  // 唯一例外是主文档站独有的逐页 meta 接线（usePageMeta），见 stripDocsOnlyMeta。
+  if (existsSync(docs) && existsSync(pc) && !sameText(stripDocsOnlyMeta(readFileSync(docs, 'utf8')), stripDocsOnlyMeta(readFileSync(pc, 'utf8')))) {
     problems.push('es-plus-docs 与 es-pc 的 NativeVsAi.vue 不一致（同一份对照页应逐字节相同）')
   }
   return problems

@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-table-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">EsTable 虚拟滚动 — 10 万行数据</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">EsTable 虚拟滚动 — 10 万行数据</h4>
     <es-table
       ref="tableRef"
       :columns="columns"

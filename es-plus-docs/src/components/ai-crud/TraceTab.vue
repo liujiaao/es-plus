@@ -188,16 +188,16 @@ watch(
   }
 
   &.status-error {
-    border-left: 3px solid #f56c6c;
+    border-left: 3px solid var(--es-danger);
   }
   &.status-retry {
-    border-left: 3px solid #e6a23c;
+    border-left: 3px solid var(--es-warning);
   }
   &.status-cached {
     border-left: 3px solid var(--text-color-secondary);
   }
   &.status-success {
-    border-left: 3px solid #67c23a;
+    border-left: 3px solid var(--es-success);
   }
 }
 
@@ -270,9 +270,9 @@ watch(
     font-weight: 700;
     line-height: 1;
 
-    &.status-success { color: #67c23a; }
-    &.status-error { color: #f56c6c; }
-    &.status-retry { color: #e6a23c; }
+    &.status-success { color: var(--es-success); }
+    &.status-error { color: var(--es-danger); }
+    &.status-retry { color: var(--es-warning); }
     &.status-cached { color: var(--text-color-secondary); }
   }
 
@@ -326,9 +326,9 @@ watch(
 .trace-error {
   padding: 6px 10px;
   background: rgba(245, 108, 108, 0.08);
-  color: #f56c6c;
+  color: var(--es-danger);
   font-size: 12px;
   border-radius: 4px;
-  border-left: 2px solid #f56c6c;
+  border-left: 2px solid var(--es-danger);
 }
 </style>

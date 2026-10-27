@@ -195,7 +195,7 @@ usePageMeta(() => {
   padding: 10px 14px;
   border: 1px solid var(--border-color-lighter);
   border-radius: 8px;
-  background: var(--bg-color-page, #f9fafb);
+  background: var(--bg-color-page, var(--es-bg-subtle));
   color: inherit;
   text-decoration: none;
 
@@ -226,12 +226,12 @@ usePageMeta(() => {
 .ai-gallery-chip {
   padding: 0 6px;
   border-radius: 4px;
-  background: var(--bg-color-page, #f5f7fa);
+  background: var(--bg-color-page, var(--es-fill));
   font-size: 12px;
 
   &.ok {
-    color: #15803d;
-    background: #dcfce7;
+    color: var(--es-success-text);
+    background: var(--es-success-tint);
   }
 }
 
@@ -298,7 +298,7 @@ usePageMeta(() => {
   color: var(--text-color-secondary);
 
   &.ok {
-    color: #15803d;
+    color: var(--es-success-text);
   }
 }
 
@@ -314,7 +314,7 @@ usePageMeta(() => {
   margin-right: 6px;
   padding: 0 6px;
   border-radius: 4px;
-  background: var(--bg-color-page, #f5f7fa);
+  background: var(--bg-color-page, var(--es-fill));
   font-family: var(--code-font-family, monospace);
 }
 

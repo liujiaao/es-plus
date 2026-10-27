@@ -139,6 +139,6 @@ const layoutProps = {
   margin-bottom: 16px;
   gap: 8px;
   font-size: 14px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 </style>

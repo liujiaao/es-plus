@@ -172,7 +172,7 @@ usePageMeta('flagship-approval')
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #409eff, #6f9cff);
+  background: linear-gradient(135deg, var(--es-brand-primary), #6f9cff);
 }
 
 .flagship-intro {

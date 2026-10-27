@@ -109,6 +109,6 @@ const itemTableOptions = {
 }
 .expand-wrapper {
   padding: 12px 20px;
-  background: #fafafa;
+  background: var(--es-bg-subtle);
 }
 </style>

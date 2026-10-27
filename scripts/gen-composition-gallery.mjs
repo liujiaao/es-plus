@@ -48,6 +48,7 @@ import {
 } from './eval/composition-scorers.mjs'
 import { captureFrontDoor, frontDoorArgs, ROOT } from './lib/front-door.mjs'
 import { extractPageSchema } from './lib/ai-cases.mjs'
+import { stripDocsOnlyMeta } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CASES_DIR = join(ROOT, '__tests__', 'golden', 'composition')
@@ -561,12 +562,13 @@ function sameText(a, b) {
   return a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n')
 }
 
-/** 主文档站与 es-pc 的组合画廊页必须逐字节相同（同一份数据检视页，差异只在框架层之外）。 */
+/** 主文档站与 es-pc 的组合画廊页必须逐字节相同（同一份数据检视页，差异只在框架层之外）。
+ *  唯一的例外是主文档站独有的逐页 meta 接线，见 stripDocsOnlyMeta 的说明。 */
 function twinPageProblems() {
   const a = join(ROOT, 'es-plus-docs/src/views/AiComposition.vue')
   const b = join(ROOT, 'es-pc/src/views/AiComposition.vue')
   if (!existsSync(a) || !existsSync(b)) return ['两站组合画廊页缺失，无法比对']
-  return sameText(readFileSync(a, 'utf8'), readFileSync(b, 'utf8'))
+  return sameText(stripDocsOnlyMeta(readFileSync(a, 'utf8')), stripDocsOnlyMeta(readFileSync(b, 'utf8')))
     ? []
     : ['主文档站与 es-pc 的组合画廊页出现分叉 —— 这是同一份数据检视页，请保持逐字节相同']
 }

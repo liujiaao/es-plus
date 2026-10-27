@@ -4,9 +4,9 @@
       description="footerMethod 汇总行：vxe 原生支持多行 footer；配合动态数据可实时更新汇总值" />
     <div style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center;">
       <el-button size="small" type="primary" @click="addRandomRow">随机新增一行</el-button>
-      <span style="font-size:13px;color:#606266">
-        合计薪资：<strong style="color:#409eff">¥{{ totalSalary.toLocaleString() }}</strong>
-        &nbsp;平均：<strong style="color:#67c23a">¥{{ avgSalary.toLocaleString() }}</strong>
+      <span style="font-size:13px;color:var(--es-text-regular)">
+        合计薪资：<strong style="color:var(--es-brand-primary)">¥{{ totalSalary.toLocaleString() }}</strong>
+        &nbsp;平均：<strong style="color:var(--es-success)">¥{{ avgSalary.toLocaleString() }}</strong>
       </span>
     </div>
     <es-table

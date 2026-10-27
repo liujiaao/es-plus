@@ -277,7 +277,7 @@ watch(() => props.code, () => {
   pre {
     margin: 0;
     padding: 16px;
-    background-color: var(--es-code-bg, #f6f8fa);
+    background-color: var(--es-code-bg, var(--es-code-bg));
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.6;

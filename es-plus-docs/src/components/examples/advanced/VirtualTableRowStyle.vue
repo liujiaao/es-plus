@@ -1,7 +1,7 @@
 <template>
   <div class="virtual-row-style-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 行样式 + 高亮 + 行事件</h4>
-    <div style="margin-bottom: 12px; font-size: 13px; color: #909399;">
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">虚拟表格 — 行样式 + 高亮 + 行事件</h4>
+    <div style="margin-bottom: 12px; font-size: 13px; color: var(--es-text-secondary);">
       <span>单击行高亮、双击打开详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
     </div>
     <es-table
@@ -13,7 +13,7 @@
       @row-click="handleRowClick"
       @row-dblclick="handleRowDblclick"
     />
-    <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: #f5f7fa; border-radius: 4px; font-size: 13px;">
+    <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: var(--es-fill); border-radius: 4px; font-size: 13px;">
       <strong>当前选中行：</strong>{{ clickedRow.name }} — {{ clickedRow.taskName }} ({{ clickedRow.status }})
     </div>
   </div>

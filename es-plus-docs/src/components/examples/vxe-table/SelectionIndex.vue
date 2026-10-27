@@ -107,7 +107,7 @@ function clearAll() {
 }
 .demo-hint {
   font-size: 13px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .demo-json {
   max-height: 300px;

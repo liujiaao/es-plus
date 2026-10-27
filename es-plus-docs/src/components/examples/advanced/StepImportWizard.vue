@@ -465,7 +465,7 @@ const openWizard = () => {
   margin: 0 0 14px;
   font-size: 13px;
   line-height: 1.8;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 
 .import-wizard .wizard-actions {
@@ -476,7 +476,7 @@ const openWizard = () => {
 
 .import-wizard .batch-meta {
   font-size: 13px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .import-wizard .batch-bar {
@@ -485,12 +485,12 @@ const openWizard = () => {
   align-items: center;
   margin: 14px 0 8px;
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .import-wizard code,
 .el-dialog .csv-tip code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
@@ -501,28 +501,28 @@ const openWizard = () => {
 .el-dialog .csv-tip {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .el-dialog .wizard-summary {
   margin-bottom: 8px;
   font-size: 13px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 
 .el-dialog .fix-panel {
   margin-top: 12px;
   padding: 12px 12px 4px;
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--es-bg-subtle);
 }
 
 .el-dialog .fix-title {
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--es-text-primary);
 }
 
 .el-dialog .fix-actions {
@@ -537,6 +537,6 @@ const openWizard = () => {
   padding-left: 18px;
   font-size: 12px;
   line-height: 1.9;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 </style>

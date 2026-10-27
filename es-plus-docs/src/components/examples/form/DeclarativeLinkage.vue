@@ -58,7 +58,7 @@ const configBtn = [
 }
 .tip {
   margin: 0 0 16px;
-  color: #606266;
+  color: var(--es-text-regular);
   font-size: 13px;
 }
 .config-source {
@@ -67,13 +67,13 @@ const configBtn = [
 }
 .config-source summary {
   cursor: pointer;
-  color: #409eff;
+  color: var(--es-brand-primary);
 }
 .config-source pre {
   max-height: 260px;
   overflow: auto;
   padding: 12px;
-  background: #f6f8fa;
+  background: var(--es-code-bg);
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.5;

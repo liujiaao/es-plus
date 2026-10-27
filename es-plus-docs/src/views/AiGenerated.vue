@@ -156,7 +156,7 @@ usePageMeta('ai-generated')
   margin: 12px 0;
   padding: 10px 14px;
   border-left: 3px solid var(--primary-color);
-  background: var(--bg-color-page, #f5f7fa);
+  background: var(--bg-color-page, var(--es-fill));
   color: var(--text-color-primary);
   line-height: 1.8;
   font-size: 13px;

@@ -222,7 +222,7 @@ generate()
   gap: 6px;
   padding: 6px 14px;
   background: rgba(103, 194, 58, 0.12);
-  color: #67c23a;
+  color: var(--es-success);
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;

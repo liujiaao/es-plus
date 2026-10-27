@@ -138,7 +138,7 @@ const openEditDialog = (row) => {
 }
 .selected-section h4 {
   margin-bottom: 8px;
-  color: #606266;
+  color: var(--es-text-regular);
   font-size: 14px;
 }
 </style>

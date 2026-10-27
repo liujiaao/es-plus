@@ -22,11 +22,13 @@ export const useThemeStore = defineStore('theme', () => {
    * 而所有 el-* 组件（本页正文就是组件 demo）仍是亮色 —— 半残暗色。
    */
   const applyTheme = () => {
-    if (isDark.value) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    const root = document.documentElement
+    root.classList.toggle('dark', isDark.value)
+    // 与 index.html 的首屏内联脚本同一件事：让浏览器自带控件跟随主题，
+    // 否则深色页面里的滚动条/时间选择器仍是亮色
+    root.style.colorScheme = isDark.value ? 'dark' : 'light'
+    // vxe-table 的暗色变量挂在 [data-vxe-ui-theme="dark"] 上，不认 `dark` 类
+    root.setAttribute('data-vxe-ui-theme', isDark.value ? 'dark' : 'light')
   }
 
   const toggleTheme = () => {

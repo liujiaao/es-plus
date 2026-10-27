@@ -210,7 +210,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
 
 .nva-hero {
   padding: 16px 0;
-  border-bottom: 1px solid var(--border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--border-color-lighter, var(--es-border-lighter));
 
   h1 {
     font-size: 23px;
@@ -219,7 +219,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
   }
 
   p {
-    color: var(--text-color-regular, #606266);
+    color: var(--text-color-regular, var(--es-text-regular));
     line-height: 1.9;
     margin: 6px 0;
   }
@@ -236,7 +236,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
 
 .nva-nl {
   font-style: italic;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .nva-claim-tag {
@@ -245,8 +245,8 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 12px;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-grid {
@@ -257,7 +257,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
 }
 
 .nva-col {
-  border: 1px solid var(--border-color-lighter, #ebeef5);
+  border: 1px solid var(--border-color-lighter, var(--es-border-lighter));
   border-radius: 8px;
   padding: 12px 14px;
   background: var(--bg-color, #fff);
@@ -277,14 +277,14 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
   border-radius: 8px;
   font-size: 11px;
   font-weight: normal;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-file {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
   word-break: break-all;
 }
 
@@ -298,11 +298,11 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
 .nva-metric {
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--bg-color-page, #f9fafb);
+  background: var(--bg-color-page, var(--es-bg-subtle));
 
   dt {
     font-size: 12px;
-    color: var(--text-color-secondary, #909399);
+    color: var(--text-color-secondary, var(--es-text-secondary));
   }
 
   dd {
@@ -310,20 +310,20 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
     font-size: 22px;
     font-weight: 700;
     line-height: 1.2;
-    color: #1a1a2e;
+    color: var(--es-text-primary);
   }
 }
 
 .nva-delta {
   font-size: 11px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .nva-note {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .nva-features {
@@ -332,8 +332,8 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #92400e;
-  background: #fffbeb;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-verdict,
@@ -350,7 +350,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
     padding-left: 20px;
     font-size: 13px;
     line-height: 1.95;
-    color: var(--text-color-regular, #606266);
+    color: var(--text-color-regular, var(--es-text-regular));
   }
 }
 
@@ -370,7 +370,7 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
     border-radius: 6px;
     font-size: 12px;
     line-height: 1.6;
-    background: var(--bg-color-page, #f9fafb);
+    background: var(--bg-color-page, var(--es-bg-subtle));
   }
 }
 
@@ -381,9 +381,9 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
 
   button {
     padding: 6px 12px;
-    border: 1px solid var(--border-color, #dcdfe6);
+    border: 1px solid var(--es-border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--es-bg);
     cursor: pointer;
     font-size: 13px;
 
@@ -391,13 +391,13 @@ const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.v
       margin-left: 6px;
       font-style: normal;
       font-size: 11px;
-      color: #909399;
+      color: var(--es-text-secondary);
     }
 
     &.active {
-      border-color: #b45309;
-      color: #b45309;
-      background: #fffbeb;
+      border-color: var(--es-warning-text);
+      color: var(--es-warning-text);
+      background: var(--es-warning-tint);
     }
   }
 }

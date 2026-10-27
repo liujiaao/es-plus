@@ -70,13 +70,13 @@ defineProps({
 }
 
 .diff-badge.bad {
-  background: #fef0f0;
-  color: #f56c6c;
+  background: var(--es-danger-tint);
+  color: var(--es-danger);
 }
 
 .diff-badge.good {
-  background: #f0f9eb;
-  color: #67c23a;
+  background: var(--es-success-tint);
+  color: var(--es-success);
 }
 
 .diff-lines {

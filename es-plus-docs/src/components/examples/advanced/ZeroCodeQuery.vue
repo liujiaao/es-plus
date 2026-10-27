@@ -116,7 +116,7 @@ const tableOptions = {
 }
 .arrow {
   font-size: 20px;
-  color: #67c23a;
+  color: var(--es-success);
   font-weight: bold;
 }
 .code-hint {

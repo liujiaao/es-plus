@@ -38,7 +38,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createToolCaller, ROOT } from './lib/mcp-tools.mjs'
-import { normalizeEol } from './lib/text-sync.mjs'
+import { normalizeEol, stripDocsOnlyMeta } from './lib/text-sync.mjs'
 import { parseSfc } from './lib/compile-check.mjs'
 import { pureJsonProblems } from './lib/ai-cases.mjs'
 
@@ -359,7 +359,8 @@ function checkWiring() {
   const docsPage = join(ROOT, 'es-plus-docs/src/views/FragmentDashboard.vue')
   const pcPage = join(ROOT, 'es-pc/src/views/FragmentDashboard.vue')
   if (existsSync(docsPage) && existsSync(pcPage)) {
-    if (!sameText(readFileSync(docsPage, 'utf8'), readFileSync(pcPage, 'utf8'))) {
+    // 唯一例外是主文档站独有的逐页 meta 接线（usePageMeta），见 stripDocsOnlyMeta。
+    if (!sameText(stripDocsOnlyMeta(readFileSync(docsPage, 'utf8')), stripDocsOnlyMeta(readFileSync(pcPage, 'utf8')))) {
       fail('es-plus-docs 与 es-pc 的 FragmentDashboard.vue 不一致（同一份宿主页应逐字节相同）')
     }
   }

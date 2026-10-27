@@ -1553,7 +1553,9 @@ defineExpose({
   width: 100%;
   .headerBar {
     box-sizing: border-box;
-    background-color: #fff;
+    // 写死 #fff 会让深色站点上出现一块白条；--es-bg 是设计 token 的面板底色
+    // （接入方未定义时回落 #fff，行为不变）
+    background-color: var(--es-bg, #fff);
     border-radius: 6px;
   }
 }

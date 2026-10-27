@@ -276,7 +276,7 @@ usePageMeta('fragment-dashboard')
 
 .fd-hero {
   padding: 16px 0;
-  border-bottom: 1px solid var(--border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--border-color-lighter, var(--es-border-lighter));
 
   h1 {
     font-size: 24px;
@@ -284,7 +284,7 @@ usePageMeta('fragment-dashboard')
   }
 
   p {
-    color: var(--text-color-regular, #606266);
+    color: var(--text-color-regular, var(--es-text-regular));
     line-height: 1.9;
     margin: 6px 0;
   }
@@ -301,7 +301,7 @@ usePageMeta('fragment-dashboard')
 
 .fd-nl {
   font-style: italic;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .fd-claim {
@@ -316,13 +316,13 @@ usePageMeta('fragment-dashboard')
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 12px;
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--es-info-text);
+  background: var(--es-info-tint);
 }
 
 .fd-chip-label {
   font-size: 12px;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .fd-layout {
@@ -346,7 +346,7 @@ usePageMeta('fragment-dashboard')
 
 .fd-pane {
   min-width: 0;
-  border: 1px solid var(--border-color-lighter, #ebeef5);
+  border: 1px solid var(--border-color-lighter, var(--es-border-lighter));
   border-radius: 8px;
   padding: 12px 14px;
   background: var(--bg-color, #fff);
@@ -376,14 +376,14 @@ usePageMeta('fragment-dashboard')
   margin-left: auto;
   font-size: 12px;
   font-weight: normal;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .fd-note {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .fd-chart {
@@ -393,16 +393,16 @@ usePageMeta('fragment-dashboard')
 
 .fd-chart-label {
   font-size: 10px;
-  fill: #909399;
+  fill: var(--es-text-secondary);
 }
 
 .fd-chart-value {
   font-size: 10px;
-  fill: #606266;
+  fill: var(--es-text-regular);
 }
 
 .fd-chart-axis {
-  stroke: #ebeef5;
+  stroke: var(--es-border-lighter);
 }
 
 .fd-section {
@@ -428,7 +428,7 @@ usePageMeta('fragment-dashboard')
 
   th,
   td {
-    border: 1px solid var(--border-color-lighter, #ebeef5);
+    border: 1px solid var(--border-color-lighter, var(--es-border-lighter));
     padding: 8px 10px;
     text-align: left;
     vertical-align: top;
@@ -436,7 +436,7 @@ usePageMeta('fragment-dashboard')
   }
 
   th {
-    background: var(--bg-color-page, #f9fafb);
+    background: var(--bg-color-page, var(--es-bg-subtle));
     font-weight: 600;
   }
 }
@@ -448,9 +448,9 @@ usePageMeta('fragment-dashboard')
 
   button {
     padding: 6px 12px;
-    border: 1px solid var(--border-color, #dcdfe6);
+    border: 1px solid var(--es-border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--es-bg);
     cursor: pointer;
     font-size: 13px;
 
@@ -458,13 +458,13 @@ usePageMeta('fragment-dashboard')
       margin-left: 6px;
       font-style: normal;
       font-size: 11px;
-      color: #909399;
+      color: var(--es-text-secondary);
     }
 
     &.active {
       border-color: #6f42c1;
       color: #6f42c1;
-      background: #faf7ff;
+      background: var(--es-brand-tint);
     }
   }
 }
@@ -475,7 +475,7 @@ usePageMeta('fragment-dashboard')
   gap: 14px;
 
   article {
-    border: 1px solid var(--border-color-lighter, #ebeef5);
+    border: 1px solid var(--border-color-lighter, var(--es-border-lighter));
     border-radius: 8px;
     padding: 10px 12px;
     min-width: 0;
@@ -496,7 +496,7 @@ usePageMeta('fragment-dashboard')
     overflow: auto;
     font-size: 12px;
     line-height: 1.6;
-    background: var(--bg-color-page, #f9fafb);
+    background: var(--bg-color-page, var(--es-bg-subtle));
     padding: 10px;
     border-radius: 6px;
   }
@@ -505,7 +505,7 @@ usePageMeta('fragment-dashboard')
 .fd-src-meta {
   font-size: 11px;
   font-weight: normal;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .fd-gaps {
@@ -513,14 +513,16 @@ usePageMeta('fragment-dashboard')
   padding-left: 20px;
   font-size: 13px;
   line-height: 1.9;
-  color: var(--text-color-regular, #606266);
+  color: var(--text-color-regular, var(--es-text-regular));
 }
 
-/* 表格片段自带的 el-pagination 在 320px 下宽 520px，被 es-table 的
-   .table_component（overflow: hidden）裁掉，页码根本点不到。
-   这里只让分页允许换行 —— 片段产物一行未改，宿主负责适配。 */
+/* 表格片段自带的分页器（Vue3 端 el-pagination、antdv 端 a-pagination/.ant-pagination）
+   在 320px 下会被 es-table 的 .table_component（overflow: hidden）裁掉，页码根本点不到。
+   这里只让分页允许换行 —— 片段产物一行未改，宿主负责适配。
+   两站共用同一份宿主页，故两个选择器都写上：各自站点只命中其中一条，另一条无害。 */
 @media (max-width: 768px) {
-  :deep(.el-pagination) {
+  :deep(.el-pagination),
+  :deep(.ant-pagination) {
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 8px;

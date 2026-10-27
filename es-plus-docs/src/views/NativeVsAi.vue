@@ -215,7 +215,7 @@ usePageMeta('native-vs-ai')
 
 .nva-hero {
   padding: 16px 0;
-  border-bottom: 1px solid var(--border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--border-color-lighter, var(--es-border-lighter));
 
   h1 {
     font-size: 23px;
@@ -224,7 +224,7 @@ usePageMeta('native-vs-ai')
   }
 
   p {
-    color: var(--text-color-regular, #606266);
+    color: var(--text-color-regular, var(--es-text-regular));
     line-height: 1.9;
     margin: 6px 0;
   }
@@ -241,7 +241,7 @@ usePageMeta('native-vs-ai')
 
 .nva-nl {
   font-style: italic;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .nva-claim-tag {
@@ -250,8 +250,8 @@ usePageMeta('native-vs-ai')
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 12px;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-grid {
@@ -262,7 +262,7 @@ usePageMeta('native-vs-ai')
 }
 
 .nva-col {
-  border: 1px solid var(--border-color-lighter, #ebeef5);
+  border: 1px solid var(--border-color-lighter, var(--es-border-lighter));
   border-radius: 8px;
   padding: 12px 14px;
   background: var(--bg-color, #fff);
@@ -282,14 +282,14 @@ usePageMeta('native-vs-ai')
   border-radius: 8px;
   font-size: 11px;
   font-weight: normal;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-file {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
   word-break: break-all;
 }
 
@@ -303,11 +303,11 @@ usePageMeta('native-vs-ai')
 .nva-metric {
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--bg-color-page, #f9fafb);
+  background: var(--bg-color-page, var(--es-bg-subtle));
 
   dt {
     font-size: 12px;
-    color: var(--text-color-secondary, #909399);
+    color: var(--text-color-secondary, var(--es-text-secondary));
   }
 
   dd {
@@ -315,20 +315,20 @@ usePageMeta('native-vs-ai')
     font-size: 22px;
     font-weight: 700;
     line-height: 1.2;
-    color: #1a1a2e;
+    color: var(--es-text-primary);
   }
 }
 
 .nva-delta {
   font-size: 11px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .nva-note {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--text-color-secondary, #909399);
+  color: var(--text-color-secondary, var(--es-text-secondary));
 }
 
 .nva-features {
@@ -337,8 +337,8 @@ usePageMeta('native-vs-ai')
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #92400e;
-  background: #fffbeb;
+  color: var(--es-warning-text);
+  background: var(--es-warning-tint);
 }
 
 .nva-verdict,
@@ -355,7 +355,7 @@ usePageMeta('native-vs-ai')
     padding-left: 20px;
     font-size: 13px;
     line-height: 1.95;
-    color: var(--text-color-regular, #606266);
+    color: var(--text-color-regular, var(--es-text-regular));
   }
 }
 
@@ -375,7 +375,7 @@ usePageMeta('native-vs-ai')
     border-radius: 6px;
     font-size: 12px;
     line-height: 1.6;
-    background: var(--bg-color-page, #f9fafb);
+    background: var(--bg-color-page, var(--es-bg-subtle));
   }
 }
 
@@ -386,9 +386,9 @@ usePageMeta('native-vs-ai')
 
   button {
     padding: 6px 12px;
-    border: 1px solid var(--border-color, #dcdfe6);
+    border: 1px solid var(--es-border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--es-bg);
     cursor: pointer;
     font-size: 13px;
 
@@ -396,13 +396,13 @@ usePageMeta('native-vs-ai')
       margin-left: 6px;
       font-style: normal;
       font-size: 11px;
-      color: #909399;
+      color: var(--es-text-secondary);
     }
 
     &.active {
-      border-color: #b45309;
-      color: #b45309;
-      background: #fffbeb;
+      border-color: var(--es-warning-text);
+      color: var(--es-warning-text);
+      background: var(--es-warning-tint);
     }
   }
 }

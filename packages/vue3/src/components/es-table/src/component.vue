@@ -95,7 +95,10 @@
               bottom: '0px',
               left: '0px',
               zIndex: 5,
-              background: '#fff'
+              // 写死 #fff 会让深色站点上出现一条白色分页带（吸底时尤其显眼）。
+              // --es-bg 是三端设计 token 里的「卡片/面板底色」（浅色 #fff，
+              // 深色跟随主题）；接入方没定义时回落到原来的 #fff，行为不变。
+              background: 'var(--es-bg, #fff)'
             }"
           >
             <el-pagination
@@ -1352,7 +1355,8 @@ defineExpose({
 
   .headerBar {
     box-sizing: border-box;
-    background-color: #fff;
+    // 同分页带：走 token 才跟得上深色主题（接入方未定义时仍是 #fff）
+    background-color: var(--es-bg, #fff);
     border-radius: 6px;
 
     :deep(.el-form-item--small .el-form-item__label) {

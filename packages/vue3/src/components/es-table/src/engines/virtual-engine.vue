@@ -301,7 +301,8 @@ defineExpose<TableEngineExposed>({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  /* 空态是一整块盖在表格上的遮罩：写死 #fff 在深色站点上就是一块白板 */
+  background: var(--es-bg, #fff);
   z-index: 1;
 }
 .es-virtual-table__empty .es-empty-image {

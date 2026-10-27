@@ -130,7 +130,7 @@ const openProductPicker = () => {
   gap: 4px;
 }
 .selection-result .label {
-  color: #606266;
+  color: var(--es-text-regular);
   font-size: 14px;
 }
 </style>

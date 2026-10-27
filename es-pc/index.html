@@ -8,6 +8,15 @@
     <title>ES-Plus 开发文档 · Ant Design Vue 端</title>
 
     <!--
+      本站是 **light-only**：不提供深色开关。设计 token 里虽然有 `.dark` 块，但没有任何
+      代码给 <html> 挂这个类；在没有逐页做过深色验收之前，宁可不提供，也不给「半黑半白」。
+      这里显式声明 color-scheme: light —— 否则系统处于深色时，浏览器会把表单控件、
+      滚动条、原生日期选择器按深色渲染，嵌在浅色页面里反而更突兀。
+      （深色只在主文档站 es-plus-docs 提供，见 index.html 的首屏内联脚本。）
+    -->
+    <meta name="color-scheme" content="light" />
+
+    <!--
       静态 meta：主文档站把 title/description/og 放在 unhead 里由 JS 注入，
       不执行 JS 的抓取器与社交平台抓不到；本站此前 index.html 里一行 meta 都没有
       （连 description 和 og 都没有），分享出去是无描述、无卡片的裸链接。

@@ -312,7 +312,7 @@ onMounted(async () => {
 
 <style scoped>
 .engine-workbench {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 8px;
   padding: 12px;
 }
@@ -330,7 +330,7 @@ onMounted(async () => {
 }
 .wb-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .wb-metrics {
   display: flex;
@@ -346,11 +346,11 @@ onMounted(async () => {
 .wb-metric em {
   font-style: normal;
   font-size: 11px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .wb-metric b {
   font-size: 13px;
-  color: #303133;
+  color: var(--es-text-primary);
   font-variant-numeric: tabular-nums;
 }
 .wb-foot {
@@ -362,13 +362,13 @@ onMounted(async () => {
   font-size: 12px;
 }
 .wb-hint {
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .wb-chip {
   padding: 1px 8px;
   border-radius: 10px;
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--es-info-tint);
+  color: var(--es-brand-primary);
   font-family: 'Fira Code', monospace;
   font-size: 11px;
 }
@@ -376,10 +376,10 @@ onMounted(async () => {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .wb-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

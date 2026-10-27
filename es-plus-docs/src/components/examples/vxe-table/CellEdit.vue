@@ -3,7 +3,7 @@
     <div style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center;">
       <el-button size="small" type="primary" @click="saveChanges">保存修改</el-button>
       <el-button size="small" @click="revertAll">撤销全部</el-button>
-      <span v-if="updateCount > 0" style="font-size: 13px; color: #e6a23c;">
+      <span v-if="updateCount > 0" style="font-size: 13px; color: var(--es-warning);">
         {{ updateCount }} 条待保存
       </span>
     </div>

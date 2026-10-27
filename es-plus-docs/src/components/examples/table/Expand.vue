@@ -131,6 +131,6 @@ const treeColumns = [
 }
 .expand-content {
   padding: 20px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill);
 }
 </style>

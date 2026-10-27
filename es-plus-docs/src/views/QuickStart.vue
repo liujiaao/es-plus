@@ -176,12 +176,12 @@ usePageMeta('quickstart')
 }
 
 .case-pain strong {
-  color: #f56c6c;
+  color: var(--es-danger);
   flex-shrink: 0;
 }
 
 .case-win strong {
-  color: #67c23a;
+  color: var(--es-success);
   flex-shrink: 0;
 }
 

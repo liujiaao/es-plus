@@ -2,7 +2,7 @@
   <div>
     <el-alert type="info" :closable="false" style="margin-bottom:10px"
       description="vxeConfig 深度合并原生 vxe-grid 配置（逃生舱，不经过 es-plus 适配层）；vxeOn 事件注入（onCellClick → cell-click）" />
-    <div style="margin-bottom:8px;font-size:13px;color:#606266">
+    <div style="margin-bottom:8px;font-size:13px;color:var(--es-text-regular)">
       单击单元格：<el-tag v-if="clickInfo" size="small" type="info">{{ clickInfo }}</el-tag>
       <span style="margin-left:16px">排序事件：<el-tag v-if="sortInfo" size="small" type="primary">{{ sortInfo }}</el-tag></span>
     </div>

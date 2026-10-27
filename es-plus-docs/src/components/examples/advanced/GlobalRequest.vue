@@ -100,19 +100,19 @@ const pageSchema = {
   padding: 10px 12px;
   border: 1px dashed var(--el-color-success-light-5, #b3e19d);
   border-radius: 8px;
-  background: var(--el-color-success-light-9, #f0f9eb);
+  background: var(--el-color-success-light-9, var(--es-success-tint));
   font-size: 13px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .log-label {
   font-weight: 600;
-  color: #303133;
+  color: var(--es-text-primary);
 }
 .log-detail {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 12px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .log-detail code {
   font-family: 'Fira Code', monospace;

@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-render-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 自定义渲染 + Tooltip + 格式化</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">虚拟表格 — 自定义渲染 + Tooltip + 格式化</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -9,7 +9,7 @@
       v-model:pagination="pagination"
     >
       <template #address="{ row }">
-        <span style="color: #409eff;">{{ row.province }} - {{ row.city }}</span>
+        <span style="color: var(--es-brand-primary);">{{ row.province }} - {{ row.city }}</span>
       </template>
     </es-table>
   </div>

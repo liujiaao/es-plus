@@ -15,7 +15,7 @@
       <el-button size="small" @click="handlePrintAll">打印全部</el-button>
       <el-button size="small" @click="handlePrintDept('技术事业部')">打印技术事业部</el-button>
       <el-button size="small" @click="handlePrintDept('产品事业部')">打印产品事业部</el-button>
-      <span style="font-size:12px; color:#909399">分页打印时分组表头在每页自动重复（CSS: thead display:table-header-group）</span>
+      <span style="font-size:12px; color:var(--es-text-secondary)">分页打印时分组表头在每页自动重复（CSS: thead display:table-header-group）</span>
     </div>
 
     <es-table

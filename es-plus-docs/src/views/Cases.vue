@@ -219,7 +219,7 @@ usePageMeta('cases')
   padding: 18px 20px 16px;
   border: 1px solid var(--border-color-lighter);
   border-radius: 10px;
-  background: var(--bg-color-page, #fafafa);
+  background: var(--bg-color-page, var(--es-bg-subtle));
 }
 
 .compare-header {
@@ -280,7 +280,7 @@ usePageMeta('cases')
 
   .compare-arrow {
     margin: 0 6px;
-    color: var(--text-color-placeholder, #c0c4cc);
+    color: var(--es-text-disabled);
   }
 }
 
@@ -288,10 +288,10 @@ usePageMeta('cases')
   margin-left: 8px;
   font-style: normal;
   font-size: 12px;
-  color: var(--primary-color, #409eff);
+  color: var(--primary-color, var(--es-brand-primary));
 
   &.compare-plus {
-    color: var(--warning-color, #e6a23c);
+    color: var(--warning-color, var(--es-warning));
   }
 }
 
@@ -306,7 +306,7 @@ usePageMeta('cases')
   }
 
   .compare-plus {
-    color: var(--warning-color, #e6a23c);
+    color: var(--warning-color, var(--es-warning));
   }
 }
 
@@ -401,11 +401,11 @@ usePageMeta('cases')
   font-weight: 700;
   color: #fff;
 
-  &.l1 { background: linear-gradient(135deg, #67c23a, #95d475); }
-  &.l2 { background: linear-gradient(135deg, var(--brand-accent), #67c23a); }
-  &.l3 { background: linear-gradient(135deg, #e6a23c, #f4a460); }
+  &.l1 { background: linear-gradient(135deg, var(--es-success), #95d475); }
+  &.l2 { background: linear-gradient(135deg, var(--brand-accent), var(--es-success)); }
+  &.l3 { background: linear-gradient(135deg, var(--es-warning), #f4a460); }
   &.l4 { background: linear-gradient(135deg, #6f42c1, #a855f7); }
-  &.l5 { background: linear-gradient(135deg, #f56c6c, #e6a23c); }
+  &.l5 { background: linear-gradient(135deg, var(--es-danger), var(--es-warning)); }
 }
 
 .level-goal {
@@ -464,8 +464,8 @@ usePageMeta('cases')
 .case-pain { background: rgba(245, 108, 108, 0.06); }
 .case-win { background: rgba(103, 194, 58, 0.08); }
 
-.case-pain strong { color: #f56c6c; flex-shrink: 0; }
-.case-win strong { color: #67c23a; flex-shrink: 0; }
+.case-pain strong { color: var(--es-danger); flex-shrink: 0; }
+.case-win strong { color: var(--es-success); flex-shrink: 0; }
 
 .case-links {
   display: flex;

@@ -58,15 +58,15 @@ const formatList = (props: string[]): string => {
 
   &.added {
     background: rgba(103, 194, 58, 0.12);
-    color: #67c23a;
+    color: var(--es-success);
   }
   &.removed {
     background: rgba(245, 108, 108, 0.12);
-    color: #f56c6c;
+    color: var(--es-danger);
   }
   &.modified {
     background: rgba(230, 162, 60, 0.12);
-    color: #e6a23c;
+    color: var(--es-warning);
   }
   &.noop {
     background: var(--fill-color-light);

@@ -495,6 +495,23 @@
 .dark .es-doc-content .danger,
 .dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }
 
+/* Element Plus / vxe-table 的表头背景是**内联样式**：组件库默认下发
+   `headerCellStyle: { background: '#f5f7fa' }`（三端同款默认值，见各 packages 下
+   es-table 的 defaultOptions），Element Plus 的暗色变量管不到内联样式，
+   于是深色页面上只有表头是一块亮色。这里用 !important 压回主题色 ——
+   !important 是对「内联样式」的唯一手段。
+   作用域是 `.dark` 全局而非 `.es-doc-content` / `.es-doc-chrome`：表头亮块
+   在**非正文页**同样出现（片段看板等普通页面），按文档壳收窄会漏掉它们。
+   深色站里库默认的 #f5f7fa 表头在任何位置都是错的，没有需要保留的例外。
+   根治要改组件库默认值（改成 var(--el-table-header-bg-color, #f5f7fa)），
+   那会动 schema 默认值与生成器产物，留作库侧后续，不在这里顺手改。
+   注意：注释里不能出现「星号紧跟斜杠」——那会提前闭合本注释，紧跟其后的规则
+   会被 CSS 解析器当成非法 token 整条丢弃（这条规则曾因此在浏览器里完全不存在）。 */
+.dark .el-table th.el-table__cell,
+.dark .vxe-table--header th {
+  background-color: var(--es-fill) !important;
+}
+
 /* 窄屏：正文表格的表头/单元格有 min-content 宽度，390px 下会撑出页面横向滚动条
    （/guide/mcp-server 的 schema 表实测 438px）。表格自身变成横向滚动容器，
    页面宽度保持不变 —— 表格内容仍然一眼可扫，只是需要横滑。 */

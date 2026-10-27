@@ -52,3 +52,20 @@ export function sameText(a, b) {
   if (a === null || b === null) return a === b
   return normalizeEol(a) === normalizeEol(b)
 }
+
+/**
+ * 摘掉主文档站独有的「逐页 meta」接线（注释 + import + `usePageMeta(...)` 调用）。
+ *
+ * 背景：两张数据检视页（组合画廊 S2 / AI 工作流）要求 es-plus-docs 与 es-pc
+ * **逐字节相同**。但逐页 title/description 是主文档站独有的能力
+ * （`es-plus-docs/src/utils/page-meta.ts`，由 check:page-meta 守着），es-pc 没有这套接线。
+ * 主文档站一挂 meta，这条比对就红 —— 报的是一个「按设计就该不同」的差异，
+ * 而不是真正的分叉。故比对前先摘掉这几行，页面主体仍要求完全一致：
+ * 数据视图、样式、token 一个字节都不许差。
+ */
+export function stripDocsOnlyMeta(text) {
+  return normalizeEol(text).replace(
+    /^\/\/ 逐页 title \/ description：[\s\S]*?^usePageMeta\([^)]*\)[ \t]*\n?/m,
+    '',
+  )
+}

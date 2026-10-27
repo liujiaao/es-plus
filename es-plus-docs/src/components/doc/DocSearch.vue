@@ -419,7 +419,7 @@ watch(searchQuery, () => {
     &.cat-component,
     &.cat-advanced {
       background-color: rgba(103, 194, 58, 0.12);
-      color: var(--success-color, #67c23a);
+      color: var(--success-color, var(--es-success));
     }
 
     &.cat-case {

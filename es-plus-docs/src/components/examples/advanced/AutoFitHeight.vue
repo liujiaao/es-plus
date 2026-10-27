@@ -130,7 +130,7 @@ const tableOptions = computed(() => ({
 }
 .mode-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .hint {
   margin-top: 12px;

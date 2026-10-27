@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-sort-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 排序 + 固定列 + 序号</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">虚拟表格 — 排序 + 固定列 + 序号</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
@@ -9,7 +9,7 @@
       v-model:pagination="pagination"
       @change-table-sort="handleSort"
     />
-    <p style="margin-top: 8px; color: #909399; font-size: 12px;">
+    <p style="margin-top: 8px; color: var(--es-text-secondary); font-size: 12px;">
       当前排序：{{ sortInfo || '无' }}
     </p>
   </div>

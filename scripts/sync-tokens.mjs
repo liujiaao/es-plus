@@ -61,6 +61,7 @@ const REQUIRED_TOKENS = [
   '--es-brand-strong', '--es-brand-tint', '--es-link', '--es-link-hover',
   '--es-text-tertiary', '--es-text-disabled', '--es-border-strong', '--es-bg-subtle',
   '--es-success-text', '--es-warning-text', '--es-danger-text', '--es-info-text',
+  '--es-success-tint', '--es-warning-tint', '--es-danger-tint', '--es-info-tint',
   '--es-focus-ring',
 ]
 

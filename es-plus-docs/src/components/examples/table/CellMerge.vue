@@ -61,9 +61,9 @@ const tableRowClassName = ({ row }) => {
   padding: 0;
 }
 :deep(.row-completed) {
-  background-color: #f0f9eb !important;
+  background-color: var(--es-success-tint) !important;
 }
 :deep(.row-warning) {
-  background-color: #fdf6ec !important;
+  background-color: var(--es-warning-tint) !important;
 }
 </style>

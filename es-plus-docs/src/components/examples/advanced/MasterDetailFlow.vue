@@ -280,7 +280,7 @@ function openLineEditor() {
   margin: 0 0 12px;
   font-size: 13px;
   line-height: 1.8;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 
 .flow-body {
@@ -303,7 +303,7 @@ function openLineEditor() {
 .flow-pane h4 {
   margin: 0 0 8px;
   font-size: 14px;
-  color: #303133;
+  color: var(--es-text-primary);
 }
 
 .flow-detail-head {
@@ -326,7 +326,7 @@ function openLineEditor() {
   margin-left: 6px;
   font-size: 12px;
   font-weight: normal;
-  color: #909399;
+  color: var(--es-text-secondary);
   font-family: 'Fira Code', monospace;
 }
 
@@ -336,6 +336,6 @@ function openLineEditor() {
 
 .flow-sum {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 </style>

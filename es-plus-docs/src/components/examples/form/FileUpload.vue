@@ -290,7 +290,7 @@ const layoutProps = {
   max-height: 400px;
   overflow: auto;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill);
   border-radius: 4px;
   font-size: 13px;
   line-height: 1.6;
@@ -306,7 +306,7 @@ const layoutProps = {
   display: inline-flex;
   align-items: center;
   padding: 8px 16px;
-  border: 1px dashed #dcdfe6;
+  border: 1px dashed var(--es-border);
   border-radius: 6px;
   cursor: pointer;
   transition: border-color 0.2s;
@@ -314,7 +314,7 @@ const layoutProps = {
 }
 
 .example-form-file-upload .upload-trigger-area:hover {
-  border-color: #409eff;
+  border-color: var(--es-brand-primary);
 }
 
 .example-form-file-upload .upload-file-item {
@@ -339,14 +339,14 @@ const layoutProps = {
   height: 18px !important;
 }
 
-.example-form-file-upload .type-image { color: #67c23a; }
-.example-form-file-upload .type-pdf { color: #f56c6c; }
-.example-form-file-upload .type-xls { color: #409eff; }
-.example-form-file-upload .type-doc { color: #409eff; }
-.example-form-file-upload .type-ppt { color: #e6a23c; }
-.example-form-file-upload .type-txt { color: #909399; }
+.example-form-file-upload .type-image { color: var(--es-success); }
+.example-form-file-upload .type-pdf { color: var(--es-danger); }
+.example-form-file-upload .type-xls { color: var(--es-brand-primary); }
+.example-form-file-upload .type-doc { color: var(--es-brand-primary); }
+.example-form-file-upload .type-ppt { color: var(--es-warning); }
+.example-form-file-upload .type-txt { color: var(--es-text-secondary); }
 .example-form-file-upload .type-zip { color: #b88230; }
-.example-form-file-upload .type-other { color: #909399; }
+.example-form-file-upload .type-other { color: var(--es-text-secondary); }
 
 .example-form-file-upload .file-meta {
   flex: 1;
@@ -358,7 +358,7 @@ const layoutProps = {
 
 .example-form-file-upload .file-name {
   font-size: 13px;
-  color: #303133;
+  color: var(--es-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -366,12 +366,12 @@ const layoutProps = {
 
 .example-form-file-upload .file-size {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .example-form-file-upload .file-status {
   font-size: 12px;
-  color: #e6a23c;
+  color: var(--es-warning);
 }
 
 .example-form-file-upload .file-actions {
@@ -407,42 +407,42 @@ const layoutProps = {
 }
 
 .example-form-file-upload .preview-btn {
-  color: #409eff;
-  background: #ecf5ff;
+  color: var(--es-brand-primary);
+  background: var(--es-info-tint);
   border-color: #d9ecff;
 }
 
 .example-form-file-upload .preview-btn:hover {
   color: #fff;
-  background: #409eff;
+  background: var(--es-brand-primary);
 }
 
 .example-form-file-upload .preview-btn.disabled {
-  color: #c0c4cc;
-  background: #f5f7fa;
-  border-color: #e4e7ed;
+  color: var(--es-text-disabled);
+  background: var(--es-fill);
+  border-color: var(--es-border-light);
   cursor: not-allowed;
 }
 
 .example-form-file-upload .download-btn {
-  color: #67c23a;
-  background: #f0f9eb;
+  color: var(--es-success);
+  background: var(--es-success-tint);
   border-color: #e1f3d8;
 }
 
 .example-form-file-upload .download-btn:hover {
   color: #fff;
-  background: #67c23a;
+  background: var(--es-success);
 }
 
 .example-form-file-upload .delete-btn {
-  color: #f56c6c;
-  background: #fef0f0;
+  color: var(--es-danger);
+  background: var(--es-danger-tint);
   border-color: #fde2e2;
 }
 
 .example-form-file-upload .delete-btn:hover {
   color: #fff;
-  background: #f56c6c;
+  background: var(--es-danger);
 }
 </style>

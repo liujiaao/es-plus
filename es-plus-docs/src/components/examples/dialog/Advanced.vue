@@ -156,18 +156,18 @@ const openMaxHeight = () => {
 .dialog-advanced__input {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--es-border);
   border-radius: 4px;
   box-sizing: border-box;
 }
 
 .dialog-advanced__tip {
   margin-top: 10px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .dialog-advanced__muted {
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .dialog-advanced__line {
@@ -184,15 +184,15 @@ const openMaxHeight = () => {
 .dialog-advanced__header-title {
   font-size: 18px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--es-brand-primary);
 }
 
 .dialog-advanced__badge {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
-  color: #67c23a;
-  background: #f0f9eb;
+  color: var(--es-success);
+  background: var(--es-success-tint);
 }
 
 .dialog-advanced__footer {
@@ -205,7 +205,7 @@ const openMaxHeight = () => {
 
 .dialog-advanced__footer-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 
 .dialog-advanced__footer-actions {

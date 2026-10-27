@@ -187,7 +187,7 @@ const currentOptions = computed(() => ({
 }
 .switch-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--es-text-regular);
   white-space: nowrap;
 }
 .hint {

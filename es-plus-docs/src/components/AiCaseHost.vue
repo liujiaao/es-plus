@@ -176,7 +176,7 @@ const claimLabel = computed(() => CLAIM_LABEL[entry.value.claim] ?? entry.value.
   margin: 8px 0;
   padding: 8px 12px;
   border-left: 3px solid var(--primary-color);
-  background: var(--bg-color-page, #f5f7fa);
+  background: var(--bg-color-page, var(--es-fill));
   font-size: 13px;
   line-height: 1.8;
   color: var(--text-color-regular);

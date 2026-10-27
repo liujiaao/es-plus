@@ -130,7 +130,7 @@ const logError = (err: unknown, info: string) => {
 /* 案例内类名统一 eb- 前缀，避免污染全局；不用 scoped —— 故障组件的根节点由子组件渲染，
    scoped 属性不会落到它渲染出的元素上 */
 .eb-workbench {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 8px;
   padding: 12px;
 }
@@ -144,18 +144,18 @@ const logError = (err: unknown, info: string) => {
 .eb-isolation {
   margin-left: auto;
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .eb-widget {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 10px;
-  background: #fafcff;
+  background: var(--es-info-tint);
 }
 .eb-widget__title {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
   margin-bottom: 8px;
 }
 .eb-kpi {
@@ -165,12 +165,12 @@ const logError = (err: unknown, info: string) => {
 }
 .eb-kpi strong {
   font-size: 26px;
-  color: #303133;
+  color: var(--es-text-primary);
   font-variant-numeric: tabular-nums;
 }
 .eb-up {
   font-size: 13px;
-  color: #67c23a;
+  color: var(--es-success);
 }
 .eb-bars {
   display: flex;
@@ -181,11 +181,11 @@ const logError = (err: unknown, info: string) => {
 .eb-bars i {
   flex: 1;
   border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, #79bbff 0%, #409eff 100%);
+  background: linear-gradient(180deg, #79bbff 0%, var(--es-brand-primary) 100%);
 }
 .eb-fallback {
   border: 1px solid #fbc4c4;
-  background: #fef0f0;
+  background: var(--es-danger-tint);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 10px;
@@ -194,7 +194,7 @@ const logError = (err: unknown, info: string) => {
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 600;
-  color: #f56c6c;
+  color: var(--es-danger);
 }
 .eb-fallback__msg {
   margin: 0 0 10px;
@@ -204,27 +204,27 @@ const logError = (err: unknown, info: string) => {
 }
 .eb-log {
   margin-top: 10px;
-  border-top: 1px dashed #ebeef5;
+  border-top: 1px dashed var(--es-border-lighter);
   padding-top: 8px;
   font-size: 12px;
 }
 .eb-log__head {
-  color: #909399;
+  color: var(--es-text-secondary);
   margin-bottom: 4px;
 }
 .eb-log__empty {
   margin: 0;
-  color: #c0c4cc;
+  color: var(--es-text-disabled);
 }
 .eb-log__row {
   margin: 2px 0;
-  color: #606266;
+  color: var(--es-text-regular);
   display: flex;
   gap: 8px;
 }
 .eb-log__row code {
-  color: #409eff;
-  background: #ecf5ff;
+  color: var(--es-brand-primary);
+  background: var(--es-info-tint);
   border-radius: 3px;
   padding: 0 5px;
   font-family: 'Fira Code', monospace;
@@ -233,10 +233,10 @@ const logError = (err: unknown, info: string) => {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .eb-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

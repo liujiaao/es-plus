@@ -33,14 +33,14 @@ const formItems = [
 .value-preview {
   margin-top: 12px;
   padding: 10px 12px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill);
   border-radius: 4px;
   font-size: 12px;
-  color: #606266;
+  color: var(--es-text-regular);
   overflow-x: auto;
 }
 .value-preview .label {
   margin-right: 8px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 </style>

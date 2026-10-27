@@ -21,6 +21,11 @@
  *   4. es-pc：App.vue 把 --es-brand-primary 的计算值传给 ConfigProvider 的 colorPrimary；
  *   5. es-eui：main.js 引的是生成的 SCSS 主题（而非 element-ui 预编译 CSS），
  *      且生成物把 $--color-primary 设为单源品牌色、且**没有**重复 import icon.scss。
+ *   6. 三份单源 CSS 的注释完整性：注释正文里出现「星号 + 斜杠」（例如写
+ *      `packages/* /es-table` 时手滑成 `packages/<star>/`）会**提前闭合注释**，
+ *      紧随其后的规则被解析器当成非法 token 整条丢弃 —— 文件里有这条规则、
+ *      构建产物里也有，浏览器 CSSOM 里却根本不存在，任何「grep 源码」的检查
+ *      都发现不了。表头暗色覆盖曾因此整条失效。
  *
  * 用法：node scripts/check-theme-bridge.mjs
  * 退出码：0 = 全部接通；1 = 有站点未接通或有接线错误。
@@ -100,7 +105,8 @@ function checkDocsWiring() {
 
   const theme = read('es-plus-docs/src/stores/theme.ts')
   if (theme) {
-    if (!/classList\.add\('dark'\)/.test(theme)) {
+    // 只认「挂了 dark 类」这件事：add 与 toggle 都算（toggle 现在同时承担开关两态）
+    if (!/classList\.(?:add|toggle)\(\s*'dark'/.test(theme)) {
       fail(
         "es-plus-docs/src/stores/theme.ts 未挂 `dark` 类 —— Element Plus / vxe-table / antdv " +
           '的暗色主题都以根元素 `dark` 为约定键，自造类名（如 is-dark）不会被任何库识别。',
@@ -171,10 +177,51 @@ function checkEuiWiring() {
   }
 }
 
+// ── 6. 单源 CSS 的注释完整性 ─────────────────────────────
+const THEME_SOURCES = [
+  'docs/tokens/design-tokens.css',
+  'docs/theme/docs-content.css',
+  'docs/theme/docs-layout.css',
+]
+function checkCssCommentIntegrity() {
+  for (const rel of THEME_SOURCES) {
+    const src = read(rel)
+    if (!src) continue
+    let i = 0
+    let bad = 0
+    while (i < src.length) {
+      const open = src.indexOf('/*', i)
+      if (open < 0) break
+      const close = src.indexOf('*/', open + 2)
+      if (close < 0) {
+        fail(`${rel} 第 ${src.slice(0, open).split('\n').length} 行的注释没有闭合`)
+        bad++
+        break
+      }
+      // 注释结束后到下一个结构符号（{ } ; 或下一条注释）之间，正常只可能是
+      // 选择器或声明；出现中文说明文字即说明注释被提前闭合了。
+      const rest = src.slice(close + 2, close + 202)
+      const stop = rest.search(/[{;}*]|\/\*/)
+      const chunk = stop < 0 ? rest : rest.slice(0, stop)
+      if (/[一-鿿]/.test(chunk)) {
+        const line = src.slice(0, close).split('\n').length
+        fail(
+          `${rel}:${line} 的注释被提前闭合 —— 注释正文里有「星号紧跟斜杠」，` +
+            `紧随其后的规则会被浏览器整条丢弃（残留散文：${JSON.stringify(chunk.trim().slice(0, 24))}）`,
+        )
+        bad++
+      }
+      i = close + 2
+    }
+    if (!bad) console.log(`✅ ${rel} 注释完整（无提前闭合）`)
+  }
+}
+
 checkEpBridge()
 checkDocsWiring()
 checkPcWiring()
 checkEuiWiring()
+checkCssCommentIntegrity()
 
 if (failed) {
   console.error('\n主题桥接未接通 —— token 单源已同步但组件未消费，改 token 不会生效。')

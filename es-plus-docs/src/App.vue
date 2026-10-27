@@ -16,7 +16,8 @@ import AppContent from './components/layout/AppContent.vue'
 import { useThemeStore } from './stores/theme'
 
 const themeStore = useThemeStore()
-const isDark = ref(false)
+// 初值直接读 index.html 内联脚本已经挂上的类：否则挂载前有一帧 app-wrapper 仍是浅色
+const isDark = ref(document.documentElement.classList.contains('dark'))
 const mobileMenuOpen = ref(false)
 
 const toggleMobileMenu = (open) => {

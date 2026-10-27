@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-select-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 多选 + 跨页记忆 + 操作按钮</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">虚拟表格 — 多选 + 跨页记忆 + 操作按钮</h4>
     <div style="margin-bottom: 12px;">
       <el-button type="primary" size="small" @click="getSelection">获取选中行</el-button>
       <el-button size="small" @click="clearSelection">清空选择</el-button>

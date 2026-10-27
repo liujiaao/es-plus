@@ -46,7 +46,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createToolCaller, WORKFLOW_TOOLS, ROOT } from './lib/mcp-tools.mjs'
-import { normalizeEol } from './lib/text-sync.mjs'
+import { normalizeEol, stripDocsOnlyMeta } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CANONICAL = join(ROOT, 'docs', 'cases', 'generated', 'ai-workflows.js')
@@ -437,10 +437,13 @@ function assertWiring() {
     }
   }
   // 两个 Vue3 站点共用同一份数据检视页：渲染逻辑只有一份，改一处漏一处会立刻红。
+  // 唯一例外是主文档站独有的逐页 meta 接线（usePageMeta），见 stripDocsOnlyMeta。
   const docsPage = join(ROOT, 'es-plus-docs/src/views/AiWorkflows.vue')
   const pcPage = join(ROOT, 'es-pc/src/views/AiWorkflows.vue')
   if (existsSync(docsPage) && existsSync(pcPage)) {
-    if (normalizeEol(readFileSync(docsPage, 'utf8')) !== normalizeEol(readFileSync(pcPage, 'utf8'))) {
+    if (
+      stripDocsOnlyMeta(readFileSync(docsPage, 'utf8')) !== stripDocsOnlyMeta(readFileSync(pcPage, 'utf8'))
+    ) {
       fail('es-plus-docs 与 es-pc 的 AiWorkflows.vue 不一致（同一份数据检视页应逐字节相同）')
     }
   }

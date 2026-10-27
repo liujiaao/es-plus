@@ -1,13 +1,13 @@
 <template>
   <div class="example-crud-permission">
-    <div style="margin-bottom: 12px; padding: 8px 12px; background: #f5f7fa; border-radius: 4px;">
-      <span style="margin-right: 12px; font-size: 13px; color: #606266;">当前角色：</span>
+    <div style="margin-bottom: 12px; padding: 8px 12px; background: var(--es-fill); border-radius: 4px;">
+      <span style="margin-right: 12px; font-size: 13px; color: var(--es-text-regular);">当前角色：</span>
       <el-radio-group v-model="currentRole" size="small" @change="handleRoleChange">
         <el-radio-button value="admin">管理员</el-radio-button>
         <el-radio-button value="editor">编辑员</el-radio-button>
         <el-radio-button value="viewer">访客</el-radio-button>
       </el-radio-group>
-      <span style="margin-left: 12px; font-size: 12px; color: #909399;">
+      <span style="margin-left: 12px; font-size: 12px; color: var(--es-text-secondary);">
         权限: {{ rolePermissions[currentRole].join(', ') }}
       </span>
     </div>

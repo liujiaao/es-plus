@@ -709,7 +709,9 @@ export default defineComponent({
       left: '0px',
       // z-index 必须高于 element-loading 蒙层（默认 2000），否则请求加载过程中分页会被蒙层遮挡。
       zIndex: 2001,
-      background: '#fff',
+      // 写死 #fff 会让深色站点上出现一条白色分页带；--es-bg 是设计 token 的
+      // 面板底色（未定义时回落 #fff，行为不变）
+      background: 'var(--es-bg, #fff)',
     }))
 
     const loadStatus = computed(() => props.options.loading || loadingStatus.value)
@@ -1689,7 +1691,8 @@ export default defineComponent({
 
   .headerBar {
     box-sizing: border-box;
-    background-color: #fff;
+    // 同分页带：走 token 才跟得上深色主题（接入方未定义时仍是 #fff）
+    background-color: var(--es-bg, #fff);
     border-radius: 6px;
 
     ::v-deep(.el-form-item--small .el-form-item__label) {

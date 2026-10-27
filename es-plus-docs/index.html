@@ -8,6 +8,32 @@
     <title>ES-Plus 文档 · 中后台 CRUD 的配置层</title>
 
     <!--
+      深色首屏：主题类必须在**首帧之前**挂到 <html> 上。
+      此前只有 stores/theme.ts 的 initTheme() 在应用挂载后才加 .dark —— 用户开着深色
+      打开任何一页，都会先看到一帧白底再刷成深色（闪白）。这段内联脚本在解析 <head>
+      时就执行，与 store 的判定规则**必须一致**（localStorage 'theme' 优先，否则跟随
+      系统）；改规则时两处一起改，check:dark-mode 会断言规则一致。
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme')
+          var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+          var root = document.documentElement
+          root.classList.toggle('dark', dark)
+          // 让浏览器自带的控件（滚动条、表单、日期选择器）跟随，而不是一律亮色
+          root.style.colorScheme = dark ? 'dark' : 'light'
+          // vxe-table 4.x 不吃 `dark` 类：它的暗色变量整块挂在
+          // [data-vxe-ui-theme="dark"] 上（见 vxe-table/styles/theme/dark.scss）。
+          // 不设这个属性，深色页面里的 vxe 工具栏/表头/分页器仍是一整块白。
+          root.setAttribute('data-vxe-ui-theme', dark ? 'dark' : 'light')
+        } catch (e) {
+          /* 隐私模式下 localStorage 会抛错：退回浅色，不阻塞渲染 */
+        }
+      })()
+    </script>
+
+    <!--
       静态 meta：main.ts 里用 unhead 也会注入一份（标题随路由变化），但那是 JS 注入 ——
       不执行 JS 的抓取器与社交平台抓不到。这里写静态兜底，保证任何环境下都有
       描述与分享卡片。og:image 由 scripts/gen-og-image.mjs 从品牌单源生成。

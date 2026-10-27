@@ -165,16 +165,16 @@ const layoutProps = {
   gap: 8px;
   margin-bottom: 8px;
   font-size: 14px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .result-title em {
   font-style: normal;
   font-weight: 700;
-  color: #409eff;
+  color: var(--es-brand-primary);
 }
 .result-hint {
   margin-left: auto;
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 </style>

@@ -28,9 +28,9 @@
 
     <div class="si-row">
       <span class="si-label">颜色 = currentColor</span>
-      <svg-icon icon-class="es-heart" data-testid="icon-red" style="font-size: 28px; color: #f56c6c" />
-      <svg-icon icon-class="es-heart" data-testid="icon-green" style="font-size: 28px; color: #67c23a" />
-      <svg-icon icon-class="es-heart" data-testid="icon-blue" style="font-size: 28px; color: #409eff" />
+      <svg-icon icon-class="es-heart" data-testid="icon-red" style="font-size: 28px; color: var(--es-danger)" />
+      <svg-icon icon-class="es-heart" data-testid="icon-green" style="font-size: 28px; color: var(--es-success)" />
+      <svg-icon icon-class="es-heart" data-testid="icon-blue" style="font-size: 28px; color: var(--es-brand-primary)" />
       <el-button size="small" type="primary">
         <svg-icon icon-class="es-heart" style="margin-right: 4px" />放在按钮里
       </el-button>
@@ -45,7 +45,7 @@
 
     <div class="si-row">
       <span class="si-label">外部图片模式</span>
-      <svg-icon :icon-class="externalUrl" class-name="si-external" data-testid="icon-external" style="font-size: 32px; color: #409eff" />
+      <svg-icon :icon-class="externalUrl" class-name="si-external" data-testid="icon-external" style="font-size: 32px; color: var(--es-brand-primary)" />
       <code class="si-url">{{ externalUrl }}</code>
     </div>
 
@@ -68,7 +68,7 @@ const externalUrl = `${window.location.origin}${import.meta.env.BASE_URL}icons/s
 <style>
 /* 案例内类名统一 si- 前缀，避免污染全局 */
 .si-workbench {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 8px;
   padding: 12px;
 }
@@ -93,22 +93,22 @@ const externalUrl = `${window.location.origin}${import.meta.env.BASE_URL}icons/s
   width: 128px;
   flex: none;
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .si-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .si-badge {
   padding: 0.3em;
   border-radius: 50%;
-  color: #409eff;
-  background: #ecf5ff;
+  color: var(--es-brand-primary);
+  background: var(--es-info-tint);
   box-sizing: content-box;
 }
 .si-url {
   font-size: 11px;
-  color: #909399;
+  color: var(--es-text-secondary);
   font-family: 'Fira Code', monospace;
   word-break: break-all;
 }
@@ -116,10 +116,10 @@ const externalUrl = `${window.location.origin}${import.meta.env.BASE_URL}icons/s
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: #909399;
+  color: var(--es-text-secondary);
 }
 .si-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

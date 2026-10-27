@@ -10,6 +10,15 @@
          包名 @es-plus/vue2）都不一致，标签页上显示的是另一个产品。 -->
     <title>ES-Plus 文档 · Vue 2 + Element UI 端</title>
 
+    <!--
+      本站是 **light-only**：不提供深色开关。设计 token 里虽然有 `.dark` 块（与另两站
+      同一份单源），但本站没有给 <html> 挂这个类的代码；主题页讲的是「接入方在自己
+      项目里怎么做暗色」，不是本站支持暗色。
+      显式声明 color-scheme: light —— 否则系统处于深色时，浏览器会把 Element UI 的
+      原生控件（滚动条、日期选择器）按深色渲染，与浅色页面打架。
+    -->
+    <meta name="color-scheme" content="light" />
+
     <!-- 静态 meta：本站此前 index.html 里除标题外没有任何 meta，分享出去是无描述裸链接。 -->
     <meta
       name="description"

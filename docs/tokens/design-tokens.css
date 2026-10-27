@@ -269,6 +269,13 @@
   --es-danger-text: #b91c1c;    /* 6.47:1 */
   --es-info-text: #2563eb;
 
+  /* 状态浅底（徽章 / 提示条）。深色必须换深色 tint ——
+   * 直接把 #ecfdf5 之类的浅底留在深色页面上，会得到一块泛白的卡片。 */
+  --es-success-tint: #ecfdf5;
+  --es-warning-tint: #fffbeb;
+  --es-danger-tint: #fef2f2;
+  --es-info-tint: #eff6ff;
+
   /* ── 焦点 ── */
   --es-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
 }
@@ -288,6 +295,12 @@
   --es-warning-text: #fbbf24;
   --es-danger-text: #f87171;
   --es-info-text: #60a5fa;
+
+  /* 深色 tint：同色相压到接近底色的亮度，保持「浅底 + 彩字」的层级感 */
+  --es-success-tint: #052e1b;
+  --es-warning-tint: #2a1e05;
+  --es-danger-tint: #2a0f10;
+  --es-info-tint: #13233d;
   --es-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
   --es-focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.45);
 }

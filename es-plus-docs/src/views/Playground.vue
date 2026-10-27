@@ -537,7 +537,7 @@ usePageMeta('playground')
   min-height: 400px;
 
   &.code-preview {
-    background-color: #f6f8fa;
+    background-color: var(--es-code-bg);
     border-radius: 4px;
     padding: 16px;
   }
@@ -547,8 +547,8 @@ usePageMeta('playground')
   margin-bottom: 12px;
   padding: 8px 12px;
   font-size: 13px;
-  color: #b54708;
-  background-color: #fef0c7;
+  color: var(--es-warning-text);
+  background-color: var(--es-warning-tint);
   border: 1px solid #fec84b;
   border-radius: 4px;
   word-break: break-all;
@@ -585,18 +585,18 @@ usePageMeta('playground')
 .result-box {
   margin-top: 24px;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--es-bg-subtle);
   border-radius: 4px;
   
   h4 {
     margin-bottom: 12px;
-    color: #606266;
+    color: var(--es-text-regular);
   }
   
   pre {
     margin: 0;
     font-size: 13px;
-    color: #409eff;
+    color: var(--es-brand-strong);
   }
 }
 

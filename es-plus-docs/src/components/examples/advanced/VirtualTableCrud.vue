@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-crud-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">虚拟表格 — 完整 CRUD 场景（httpRequest + 分页 + useDialog）</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">虚拟表格 — 完整 CRUD 场景（httpRequest + 分页 + useDialog）</h4>
     <es-table
       ref="tableRef"
       :columns="columns"
