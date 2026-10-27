@@ -474,8 +474,9 @@ async function main() {
     })
     console.log(`[eval:llm] 预测落盘 → ${dump.path}（尺子 ${RULER_VERSION}）`)
   }
-  // Tier B 类型腿的候选（AN-14）：成功行留下**模型产出**的 config，跑完后按 target 抽样
-  // 走 `vue-tsc`。不存进 row（产物会变大且含非序列化值），只在内存里传到腿那一步。
+  // Tier B 类型腿的候选（AN-14）：成功行留下**模型产出**的 config，跑完后按 target 分组
+  // 走 `vue-tsc`（A5 起全量，见下方 TYPECHECK_FULL）。不存进 row（产物会变大且含非序列化值），
+  // 只在内存里传到腿那一步。
   const tcCandidates = []
   // 非-crud 语料 = 片段场景（table / form / dialog）。它们**有**自己的记分卡
   // （`eval/fragment-scorers.mjs`），但结论只观测：gate / 徽章 / exit code 仍只读 CRUD 行
@@ -1014,7 +1015,15 @@ async function main() {
   // 这类缺陷 Tier A 恒绿。只观测、不进 `passed` / 徽章 / exit code：当前样本是 TS 投影
   // （金标全是 JS，Volar 对 JS 产物不做模板类型检查，见该文件头注），且计划要求
   // 「先观测、看清失败分布再上闸」。
-  const TYPECHECK_SAMPLE = 10
+  // A5：类型腿改为**全量**（此前每端抽样 10 条）。
+  //
+  // 抽样的问题不是「跑得慢」而是**选择性**：10 条/端时，某类产物（例如带 expandConfig、
+  // 带自定义 render 的那些）大概率一条都没被抽到，于是「类型腿 100%」实际只覆盖了一个小样本，
+  // 而它印在产物里读起来像全量结论。全量的成本是**一个 vue-tsc 进程处理更多文件**
+  // （`runTypecheck` 按 target 各起一次，不是每例一次），增量远小于线性。
+  // 仍然是**只观测**：不进 passed / 徽章 / exit code（理由见 typecheck-leg.mjs 头注）。
+  const TYPECHECK_FULL = true
+  const TYPECHECK_SAMPLE = 10 // 仅在 TYPECHECK_FULL=false 时生效（留作降级开关）
   let typecheckReport = null
   if (tcCandidates.length === 0) {
     typecheckReport = { skipped: '没有 zh 行的模型产出（片段-only / 全部未测到）' }
@@ -1026,17 +1035,23 @@ async function main() {
       typecheckReport = { skipped: `组件包未构建：${missing.join(', ')}` }
       console.error(`[eval:llm] Tier B 类型腿未跑：${typecheckReport.skipped}（先 npm run build:components）`)
     } else {
-      const sample = sampleTypecheckCases(tcCandidates, { perTarget: TYPECHECK_SAMPLE })
+      const sample = TYPECHECK_FULL
+        ? tcCandidates
+        : sampleTypecheckCases(tcCandidates, { perTarget: TYPECHECK_SAMPLE })
       const cases = buildTypecheckCases(sample)
       try {
-        const tcRows = runTypecheck({ cwd: process.cwd(), cases })
+        // 全量时文件数约为抽样时的 7 倍（216 例 / 每端 ~72 vs 每端 10），
+        // 单进程编译时间随之上升 —— 超时给足，但**不能**给到「永远不超时」：
+        // 卡死与慢必须可区分（腿没跑起来会记 skipped+error，不会静默变绿）。
+        const tcRows = runTypecheck({ cwd: process.cwd(), cases, timeoutMs: TYPECHECK_FULL ? 900000 : 240000 })
         const rowByFile = new Map(zhRows.map((r) => [r.file, r]))
         const stats = summarizeTypecheck(tcRows, (r) => {
           const row = rowByFile.get(r.id)
           return row ? meets95Definition(row, CONVERGE_K) : true
         })
         typecheckReport = {
-          samplePerTarget: TYPECHECK_SAMPLE,
+          mode: TYPECHECK_FULL ? 'full' : 'sampled',
+          samplePerTarget: TYPECHECK_FULL ? null : TYPECHECK_SAMPLE,
           sampled: sample.length,
           measured: stats.measured,
           checked: stats.checked,
@@ -1079,13 +1094,14 @@ async function main() {
     // 探针对两者**都**失败（探针的意义就是在烧 4 小时前把问题问出来），但措辞必须指对方向。
     console.log(`[probe] 打不开的行：${probeErrored.length}（未测到 ${probeNotMeasured.length} / 答错 ${probeModelFail.length}）` +
       ` / 未编译过的行：${probeNoCompile.length} / 降级调用 ${DEGRADED_CALLS} 次`)
-    // Tier B 也要在探针里先问出来：类型腿只在**抽样**上跑，全量 4h 后才发现它红是浪费。
+    // Tier B 也要在探针里先问出来：腿没跑起来 / 一开跑就红，等全量 4h 后才发现是浪费。
     if (typecheckReport?.skipped) {
       console.log(`[probe] 类型腿：skipped — ${typecheckReport.skipped}`)
     } else if (typecheckReport) {
       const pctTc = (x) => (x === null ? 'n/a' : `${(x * 100).toFixed(1)}%`)
       console.log(
-        `[probe] 类型腿（观测）：${pctTc(typecheckReport.rate)}（${typecheckReport.ok}/${typecheckReport.checked}，抽样 ${typecheckReport.sampled}）` +
+        `[probe] 类型腿（观测）：${pctTc(typecheckReport.rate)}（${typecheckReport.ok}/${typecheckReport.checked}，` +
+          `${typecheckReport.mode === 'full' ? '全量' : `抽样每端≤${typecheckReport.samplePerTarget}`} ${typecheckReport.sampled} 例）` +
           ` · 类型错 ${typecheckReport.failure}（其中语义已 miss ${typecheckReport.modelFailureTypecheck}）`
       )
       for (const m of typecheckReport.failureSamples) console.error(`[probe]   ✗ 类型错：${m}`)
@@ -1268,6 +1284,7 @@ async function main() {
       compileMeasured: compileStats.measured,
       compileCompiled: compileStats.compiled,
       compileFailure: compileStats.failure,
+      compileByLang: compileStats.byLang,
       modelFailureCompile: compileStats.modelFailureCompile,
       // 类型腿与编译腿同理：确定性代码的性质，不受中继故障影响，失败记录里也要带上。
       typecheck: typecheckReport,
@@ -1385,9 +1402,13 @@ async function main() {
   )
   console.log(`  attribute acc (avg, ${attrRows.length}/${n} rows measured): ${attrAcc === null ? 'n/a' : `${(attrAcc * 100).toFixed(1)}%`}`)
   console.log(`  actions F1 (avg):      ${(actF1 * 100).toFixed(1)}%`)
+  // 分母含 en 腿（A5）：按语言拆开打印，读者才能分清「门禁整体的 100%」是不是靠 zh 撑起来的。
+  const byLangLine = Object.entries(compileStats.byLang ?? {})
+    .map(([lang, b]) => `${lang} ${b.compiled}/${b.measured}`)
+    .join(' · ')
   console.log(
     `  compiles (Tier A, GATED): ${compileRate === null ? 'n/a' : `${(compileRate * 100).toFixed(1)}%`}` +
-      `  (${compileStats.compiled}/${compileStats.measured} products)`
+      `  (${compileStats.compiled}/${compileStats.measured} products${byLangLine ? ` — ${byLangLine}` : ''})`
   )
   if (compileStats.modelFailureCompile) {
     console.log(
@@ -1402,7 +1423,8 @@ async function main() {
   } else if (typecheckReport) {
     console.log(
       `  typechecks (Tier B, observed): ${typecheckReport.rate === null ? 'n/a' : `${(typecheckReport.rate * 100).toFixed(1)}%`}` +
-        `  (${typecheckReport.ok}/${typecheckReport.checked} products, sampled ${typecheckReport.sampled})`
+        `  (${typecheckReport.ok}/${typecheckReport.checked} products, ` +
+        `${typecheckReport.mode === 'full' ? 'all' : 'sampled'} ${typecheckReport.sampled} cases)`
     )
     for (const m of typecheckReport.failureSamples) console.error(`    ✗ typecheck failure: ${m}`)
   }
@@ -1708,11 +1730,13 @@ async function main() {
     compileMeasured: compileStats.measured,
     compileCompiled: compileStats.compiled,
     compileFailure: compileStats.failure,
+    // 按语言拆开的诊断视图（A5：编译分母已含 en 腿；全局分子/分母仍是唯一口径）。
+    compileByLang: compileStats.byLang,
     modelFailureCompile: compileStats.modelFailureCompile,
     compileFailureSamples: compileStats.failureSamples,
-    // Tier B 类型腿（AN-14，只观测）：抽样每端 N=10，`rate` 的分母是**有产物且真被检查**的
-    // 抽样行；`skipped` 存在时表示腿未跑（缺组件 dist / 没有 zh 产物），不是「全绿」。
-    // 首次上闸前先看清真实失败分布（observe first, gate later）。
+    // Tier B 类型腿（AN-14，只观测）：A5 起 `mode: 'full'`（此前每端抽样 N=10），`rate` 的
+    // 分母是**有产物且真被检查**的例；`skipped` 存在时表示腿未跑（缺组件 dist / 没有 zh 产物），
+    // 不是「全绿」。首次上闸前先看清真实失败分布（observe first, gate later）。
     typecheck: typecheckReport,
     // W1.3 前门腿：**模型产出**经真 `generate_crud` 的落地情况（不动模型调用，纯确定性代码）。
     // `compileFailures` / `noTableExercised` 是门禁判据（见 setupFrontDoor 头注）；
@@ -1823,6 +1847,11 @@ async function main() {
       compileRate === 1
         ? ''
         : `\n  Tier-A compile leg (AN-13): ${compileStats.compiled}/${compileStats.measured} products compiled` +
+          (Object.keys(compileStats.byLang ?? {}).length
+            ? ` (${Object.entries(compileStats.byLang)
+                .map(([l, b]) => `${l} ${b.compiled}/${b.measured}`)
+                .join(' · ')})`
+            : '') +
           (compileStats.failureSamples.length
             ? `\n    ${compileStats.failureSamples.join('\n    ')}`
             : '') +

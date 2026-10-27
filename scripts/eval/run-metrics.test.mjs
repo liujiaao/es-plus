@@ -130,19 +130,26 @@ function capsAll(pass) {
   near(m.attrAcc, 0.75, 'attrAcc 均值不含 null 行，也不把 null 当 0')
 }
 
-// ── 5. Tier A 编译门分母 ──────────────────────────────────────────────────────
+// ── 5. Tier A 编译门分母（A5：含 en 腿） ─────────────────────────────────────
 {
   const rows = [
     row({ file: 'ok', compiles: true }),
     row({ file: 'bad', compiles: false }),
     row({ file: 'err', compiles: false, error: 'boom', errorKind: 'model-failure' }), // 没产物
-    row({ file: 'en', lang: 'en', compiles: true }), // en 不进 zh 编译门
+    row({ file: 'en', lang: 'en', compiles: true }),
+    row({ file: 'en-bad', lang: 'en', compiles: false }),
   ]
   const m = computeCrudMetrics(rows)
-  eq(m.compileStats.measured, 2, '编译分母 = zh 且有产物的行（error 行不计）')
-  eq(m.compileStats.compiled, 1, '编译通过数')
-  near(m.compileRate, 0.5, 'compileRate = 1/2')
-  eq(m.compileStats.failure, 1, '真编译失败单列')
+  eq(m.compileStats.measured, 4, '编译分母 = **两条腿**里有产物的行（error 行仍不计）')
+  eq(m.compileStats.compiled, 2, '编译通过数（zh 1 + en 1）')
+  near(m.compileRate, 0.5, 'compileRate = 2/4')
+  eq(m.compileStats.failure, 2, '真编译失败单列（zh 1 + en 1）')
+  eq(m.compileStats.byLang.zh.measured, 2, 'byLang.zh 只数 zh 的有产物行')
+  eq(m.compileStats.byLang.en.failure, 1, 'byLang.en 把 en 腿的编译失败计入（A5 的意义）')
+
+  // 反证：A5 之前 en 不进分母，一条 en 编译失败会被完全漏掉 —— 这条测试钉住那个缺口。
+  const enOnlyBad = [row({ file: 'ok', compiles: true }), row({ file: 'en-bad', lang: 'en', compiles: false })]
+  check(computeCrudMetrics(enOnlyBad).compileRate < 1, 'en 腿的编译失败必须拉低门槛（否则编译门被 zh 单腿撑绿）')
 }
 
 // ── 6. 逐维分母：留出集非空时不含 en ──────────────────────────────────────────

@@ -185,6 +185,32 @@ export function verifyArtifact(artifact, ctx = {}) {
     if (artifact.passed === true && compileRate !== 1) {
       failures.push(`passed=true 但 compileRate=${compileRate} ≠ 1（AN-13：编译门已进入 passed）`)
     }
+    // 按语言拆开的诊断视图（A5：分母已含 en 腿）。**不**参与门禁，故只查两条：
+    // 每个桶自身自洽；各桶之和与全局分母一致（不一致 ⟹ 拆分与总数来自两次不同的聚合，
+    // 读者会拿一个去解释另一个）。旧产物没有这个键 → 跳过。
+    const byLang = artifact.compileByLang
+    if (byLang && typeof byLang === 'object') {
+      let sum = 0
+      let intact = true
+      for (const [lang, b] of Object.entries(byLang)) {
+        if (!b || !Number.isInteger(b.measured) || !Number.isInteger(b.compiled) || !Number.isInteger(b.failure)) {
+          failures.push(`compileByLang.${lang} 字段非法：${JSON.stringify(b)}`)
+          intact = false
+          continue
+        }
+        if (b.compiled + b.failure !== b.measured) {
+          failures.push(`compileByLang.${lang} 不自洽：${b.compiled} 通过 + ${b.failure} 失败 ≠ ${b.measured}`)
+          intact = false
+        }
+        sum += b.measured
+      }
+      if (intact && sum !== compileMeasured) {
+        warnings.push(
+          `compileByLang 各语言分母之和 ${sum} ≠ compileMeasured ${compileMeasured} ` +
+            `（拆分是诊断视图；比率仍以全局一对为准）`
+        )
+      }
+    }
   }
   // ── AN-18：片段腿进入 `passed`，产物必须自洽 ───────────────────────────────
   // 旧产物没有 `fragments` 块（或块里没有 `compileMeasured`）→ 按旧口径放行，理由同 AN-13

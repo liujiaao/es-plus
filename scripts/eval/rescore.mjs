@@ -226,6 +226,8 @@ const out = {
   compileRate: r4(m.compileRate),
   compileMeasured: m.compileStats.measured,
   compileCompiled: m.compileStats.compiled,
+  // 分母含 en 腿（A5）：与产物里的 compileByLang 同源，用于核对「哪条腿拉低了比率」。
+  compileByLang: m.compileStats.byLang,
   convergence: m.convStats.total
     ? {
         rateAtK: r4(m.convStats.rateAtK),

@@ -84,6 +84,42 @@ const complete = (over = {}) => ({
 
   const noD95 = complete()
   delete noD95.definition95
+  // A5：编译分母含 en 腿，产物带一份按语言的诊断拆分。
+  // 拆分**不是**第二个门禁口径（全局那一对才是），故：桶自身必须自洽（红），
+  // 桶之和与全局不一致只提示（警告）—— 否则一次「只跑了一半的观测腿」会把门禁判红。
+  const langSplit = {
+    compileMeasured: 4,
+    compileCompiled: 3,
+    compileFailure: 1,
+    compileRate: 0.75,
+    compileByLang: { zh: { measured: 2, compiled: 2, failure: 0 }, en: { measured: 2, compiled: 1, failure: 1 } },
+  }
+  check(clean(verifyArtifact(complete(langSplit), { badgeFiles: [] })), '自洽的 compileByLang 应判过')
+  checkFails(
+    verifyArtifact(
+      complete({ ...langSplit, compileByLang: { zh: { measured: 2, compiled: 2, failure: 1 } } }),
+      { badgeFiles: [] }
+    ),
+    'compileByLang.zh 不自洽',
+    'compileByLang 桶内 compiled+failure≠measured 必须判红'
+  )
+  checkFails(
+    verifyArtifact(complete({ ...langSplit, compileByLang: { zh: { measured: '2', compiled: 2, failure: 0 } } }), {
+      badgeFiles: [],
+    }),
+    'compileByLang.zh 字段非法',
+    'compileByLang 桶字段非整数必须判红'
+  )
+  const partial = verifyArtifact(
+    complete({ ...langSplit, compileByLang: { zh: { measured: 2, compiled: 2, failure: 0 } } }),
+    { badgeFiles: [] }
+  )
+  check(clean(partial), 'compileByLang 之和与全局不一致不得判红（观测腿可能只跑了一半）')
+  check(
+    partial.warnings.some((w) => w.includes('compileByLang')),
+    'compileByLang 之和与全局不一致必须给出提示（否则读者会拿一个去解释另一个）'
+  )
+
   checkFails(verifyArtifact(noD95, { badgeFiles: [] }), '缺少 definition95 块', '完整测量缺 definition95')
 
   const noConv = complete()

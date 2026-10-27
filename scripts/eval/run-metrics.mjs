@@ -89,7 +89,14 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
   const def95 = summarize95(def95Rows, convergeK)
 
   // Tier A 编译门（AN-13）：分母 = **真有产物的行**（`error` 为空）。
-  const compileStats = summarizeCompile(zhRows, (r) => meets95Definition(r, convergeK))
+  //
+  // 分母**含 en 腿**（A5）：编译门问的是「发射器能不能把合法配置变成能编译的产物」，
+  // 这与「模型答得对不对」无关，也**不**受观测腿样本偏置影响 —— 每条产物都是独立的
+  // 一次发射，少几条只是少几条证据，不会像准确率那样把「没测到」算成「得 0 分」。
+  // 而 en 行喂的是**英文 NL → 另一批配置**，正是「这类输入结构性过」里此前没被覆盖的那半边：
+  // 只数 zh 时，`compileRate === 1` 的真实含义是「这批中文用例碰巧过」。
+  // 门禁强度不因此改变口径：失败仍然是失败的**产物**，不是模型的语义 miss。
+  const compileStats = summarizeCompile(rows, (r) => meets95Definition(r, convergeK))
 
   // 按维度在留出集上聚合：applicable=被多少 case 用到，pass=命中数，rate=命中率。
   // 注意 capRows 用的是 `rows`（含 en），与留出集口径**刻意不同**——沿用既有行为，

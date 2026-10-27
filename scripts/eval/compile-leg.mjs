@@ -235,6 +235,14 @@ export function compileFences(text, label = 'fences') {
  * 未测到（`no-answer` / `truncated`）同理没有产物；它们仍由健康门对**门禁腿**零容忍判红
  * （`eval/ratchet.mjs` 的 `evaluateHealth`），不靠这里兜底。
  *
+ * ## 分母为什么**含 en 腿**（A5）
+ *
+ * 编译门问的是「发射器能不能把合法配置变成能编译的产物」，与模型答得对不对、与观测腿
+ * 有没有样本偏置都无关：每条产物都是独立的一次发射，少几条只是少几条证据（不像准确率
+ * 那样把「没测到」按 0 计入分母）。而 en 行喂的是**英文 NL → 另一批配置**——正是
+ * 「这类输入结构性过」里此前没被覆盖的那一半。只数 zh 时，`compileRate === 1` 的真实
+ * 含义只是「这批中文用例碰巧过」。`byLang` 只做诊断拆分，**不是**第二个分母。
+ *
  * ## 两个失败口径分开（AN-13③）
  *
  *   - `failure` = 有产物但编译不过 ⟹ **真编译失败**（发射器/产物缺陷，必须为 0）；
@@ -249,11 +257,23 @@ export function summarizeCompile(rows, passes95 = () => true) {
   const measuredRows = all.filter((r) => !r.error)
   const compiledRows = measuredRows.filter((r) => r.compiles)
   const failureRows = measuredRows.filter((r) => !r.compiles)
+  // 按语言拆开（只对带 `lang` 的行；片段腿的行没有 lang，byLang 为空对象）。
+  // 拆开是**诊断**需要，不是第二个分母：编译门的分子分母仍是全局那一对 —— 否则
+  // 「en 腿只跑了一半」会让一个不变的口径看起来变好（分母变小、比率不变）。
+  const byLang = {}
+  for (const r of measuredRows) {
+    if (typeof r.lang !== 'string') continue
+    const b = (byLang[r.lang] ??= { measured: 0, compiled: 0, failure: 0 })
+    b.measured += 1
+    if (r.compiles) b.compiled += 1
+    else b.failure += 1
+  }
   return {
     measured: measuredRows.length,
     compiled: compiledRows.length,
     rate: measuredRows.length ? compiledRows.length / measuredRows.length : null,
     failure: failureRows.length,
+    byLang,
     modelFailureCompile: compiledRows.filter((r) => !passes95(r)).length,
     failureSamples: failureRows
       .slice(0, 5)
