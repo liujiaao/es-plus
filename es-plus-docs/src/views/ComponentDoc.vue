@@ -16,6 +16,31 @@
       <div class="component-header">
         <h1 class="component-title">{{ currentDoc.title }}</h1>
         <p class="component-desc">{{ currentDoc.description }}</p>
+        <!-- 状态徽章 + since（路线图 2.4 · T3 Reference）。
+             徽章**不手填**：由三端的 since 反推 —— 三端都有首发版本 = Stable，任何一端没有 =
+             Beta，显式标了 legacy 才是 Legacy。手填的状态会随发版过期，反推的不会。 -->
+        <div class="component-meta" v-if="currentDoc.since">
+          <span class="component-badge" :class="'is-' + status.kind">
+            {{ t('componentDoc.status.' + status.kind) }}
+          </span>
+          <span class="component-since">
+            {{ t('componentDoc.since', { version: currentDoc.since.vue3 }) }}
+          </span>
+          <span class="component-targets">
+            <span
+              v-for="tg in TARGETS"
+              :key="tg.key"
+              class="component-target"
+              :class="{ 'is-missing': !currentDoc.since[tg.key] }"
+            >
+              {{ tg.label }} ·
+              {{ currentDoc.since[tg.key] ? 'v' + currentDoc.since[tg.key] : t('componentDoc.notPublished') }}
+            </span>
+          </span>
+          <span class="component-reviewed" v-if="currentDoc.reviewed">
+            {{ t('componentDoc.reviewed', { date: currentDoc.reviewed }) }}
+          </span>
+        </div>
       </div>
 
       <!-- 文档内容 -->
@@ -75,9 +100,21 @@
         <!-- API 文档 -->
         <section class="doc-section" v-if="currentDoc.api">
           <h2 class="section-title" id="api">{{ t('componentDoc.api') }}</h2>
+          <!-- 表里的 Since 列以 vue3 为基准：三端各自的版本在标题下方已经逐端写明，
+               这里再重复一遍会让人以为某个 prop 是三端分叉的 -->
+          <p class="api-note" v-if="currentDoc.since">
+            {{
+              t('componentDoc.apiSinceNote', {
+                // 包名当插值传进来，不写进文案：vue-i18n 的 @ 是「链接消息」语法，
+                // 文案里直接写 @es-plus/vue3 会抛 Invalid linked format，整页变空白
+                pkg: '@es-plus/vue3',
+                version: currentDoc.since.vue3,
+                date: currentDoc.reviewed,
+              })
+            }}
+          </p>
 
           <template v-for="(items, key) in currentDoc.api" :key="key">
-            <!-- 空表（如 EsForm 的 events: []）整块省略，避免出现只有表头的「Events」 -->
             <div class="api-block" v-if="Array.isArray(items) && items.length">
               <h3 class="api-subtitle">{{ apiTitleMap[key as string] || key }}</h3>
               <el-table :data="items" border>
@@ -86,9 +123,58 @@
                 <el-table-column v-if="(items as any[]).some((it: any) => it.default !== undefined)" prop="default" label="默认值" width="120" />
                 <el-table-column v-if="(items as any[]).some((it: any) => it.params !== undefined)" prop="params" label="参数" width="200" />
                 <el-table-column prop="desc" label="说明" />
+                <el-table-column v-if="currentDoc.since" label="Since" width="96">
+                  <template #default="scope">v{{ scope.row.since || currentDoc.since.vue3 }}</template>
+                </el-table-column>
               </el-table>
             </div>
           </template>
+
+          <!-- 缺的表也要有落点：T3 要求 Props / Events / Slots / Expose 四张表都能找到，
+               「没有」本身是要交代的结论（如 EsForm 不派发事件），不允许整节静默消失。 -->
+          <div class="api-block" v-for="key in missingApiKeys" :key="'missing-' + key">
+            <h3 class="api-subtitle">{{ apiTitleMap[key] || key }}</h3>
+            <p class="api-empty">{{ (currentDoc.notes && currentDoc.notes[key]) || t('componentDoc.noApiEntry') }}</p>
+          </div>
+        </section>
+
+        <!-- 主题变量（路线图 2.4）：只列组件源码真的消费了的变量，没有就老实说没有 -->
+        <section class="doc-section" v-if="currentDoc.theme">
+          <h2 class="section-title" id="theme">{{ t('componentDoc.theme') }}</h2>
+          <p class="api-note">{{ currentDoc.theme.note }}</p>
+          <el-table v-if="currentDoc.theme.vars && currentDoc.theme.vars.length" :data="currentDoc.theme.vars" border>
+            <el-table-column prop="name" label="CSS 变量" width="280" />
+            <el-table-column prop="fallback" :label="t('componentDoc.themeFallback')" width="220" />
+            <el-table-column prop="desc" :label="t('componentDoc.themeDesc')" />
+          </el-table>
+        </section>
+
+        <!-- 可访问性（路线图 2.4）：每条结论都带证据文件，页面上可核对 -->
+        <section class="doc-section" v-if="currentDoc.a11y && currentDoc.a11y.length">
+          <h2 class="section-title" id="a11y">{{ t('componentDoc.a11y') }}</h2>
+          <ul class="a11y-list">
+            <li v-for="(item, i) in currentDoc.a11y" :key="i" class="a11y-item">
+              <p class="a11y-text">{{ item.text }}</p>
+              <code class="a11y-evidence">
+                {{ t('componentDoc.a11yEvidence') }}：{{ item.evidence.file }} →
+                <span class="a11y-token">{{ item.evidence.contains }}</span>
+                <template v-if="item.absent">（且无 {{ item.absent.contains }}）</template>
+              </code>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 相关组件（路线图 2.4）：只说「为什么相关」，不复述对方是干什么的 -->
+        <section class="doc-section" v-if="currentDoc.related && currentDoc.related.length">
+          <h2 class="section-title" id="related">{{ t('componentDoc.related') }}</h2>
+          <ul class="related-list">
+            <li v-for="item in currentDoc.related" :key="item.key" class="related-item">
+              <router-link class="related-link" :to="'/components/' + item.key">
+                {{ docsData[item.key]?.title || item.key }}
+              </router-link>
+              <span class="related-why">{{ item.why }}</span>
+            </li>
+          </ul>
         </section>
       </article>
 
@@ -151,6 +237,33 @@ const currentDoc = computed(() => {
   return docsData[name] || { title: '未找到', description: '', examples: [], api: {} }
 })
 
+/**
+ * 三端清单：since 徽章与「三端各自首发版本」都按这个顺序排。
+ * 顺序固定，读者在三页之间横跳时位置不会变。
+ */
+const TARGETS = [
+  { key: 'vue3', label: 'Vue 3' },
+  { key: 'vue2', label: 'Vue 2' },
+  { key: 'antdv', label: 'AntDV' }
+]
+
+/**
+ * 状态徽章由 since 反推，不手填（见 component-doc.data.ts 的字段说明）：
+ * 少一端发布就是 Beta —— 那正是读者要提前知道的事。
+ */
+const status = computed(() => {
+  const doc = currentDoc.value
+  if (doc.legacy) return { kind: 'legacy' }
+  const missing = TARGETS.filter((tg) => !(doc.since && doc.since[tg.key]))
+  return { kind: missing.length ? 'beta' : 'stable' }
+})
+
+/** T3 的四张表：Props / Events / Slots / Expose。缺的要写清楚为什么缺，而不是不渲染 */
+const API_TABLES = ['props', 'events', 'slots', 'methods']
+const missingApiKeys = computed(() =>
+  API_TABLES.filter((key) => !(currentDoc.value.api && currentDoc.value.api[key]?.length))
+)
+
 // 案例难度梯度：按案例在分类中的位置推断（案例已按 01→N 从简单到复杂排序）
 const levelOf = (index: number, total: number): number => {
   if (total <= 2) return index === 0 ? 1 : 3
@@ -202,7 +315,8 @@ const onTocClick = (id: string) => {
 const apiTitleMap: Record<string, string> = {
   props: 'Props',
   events: 'Events',
-  methods: 'Methods',
+  // methods 表记录的是 defineExpose 出去的实例方法，按 T3 的称呼叫 Expose 更准确
+  methods: 'Expose（模板 ref 可调用）',
   slots: 'Slots',
   FormItemOption: 'FormItemOption 配置',
   LayoutFormProps: 'LayoutFormProps 布局配置',
@@ -400,6 +514,154 @@ onBeforeUnmount(() => {
   font-weight: 600;
   margin-bottom: 16px;
   color: var(--text-color-primary);
+}
+
+/* ---- 状态徽章 + since（路线图 2.4） ----
+   一行读完三件事：稳不稳（Stable/Beta/Legacy）、从哪个版本起、三端齐不齐。
+   颜色只落在文字与描边上（底色沿用 --fill-color-light），深色站点不必另配一套。 */
+.component-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+.component-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  background-color: var(--fill-color-light);
+
+  &.is-stable {
+    color: var(--success-color);
+  }
+
+  &.is-beta {
+    color: var(--warning-color);
+  }
+
+  &.is-legacy {
+    color: var(--text-color-secondary);
+  }
+}
+
+.component-since,
+.component-reviewed,
+.component-target {
+  font-variant-numeric: tabular-nums;
+}
+
+.component-targets {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.component-target {
+  padding: 1px 8px;
+  border-radius: var(--es-radius-sm);
+  background-color: var(--fill-color-light);
+  font-size: 12px;
+
+  /* 该端没有发布：划掉并转成警示色 —— 「有但没写」和「确实没有」必须一眼分得开 */
+  &.is-missing {
+    color: var(--danger-color);
+    text-decoration: line-through;
+  }
+}
+
+/* 核对日期贴右：它是元信息，不该挤在 since 和版本号中间抢注意力 */
+.component-reviewed {
+  margin-left: auto;
+}
+
+.api-note {
+  margin: -8px 0 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color-secondary);
+}
+
+/* 「这张表没有」也要有视觉重量：整节静默消失会让读者以为文档漏了 */
+.api-empty {
+  padding: 12px 16px;
+  border-left: 3px solid var(--border-color-lighter);
+  border-radius: 0 var(--es-radius-sm) var(--es-radius-sm) 0;
+  background-color: var(--fill-color-light);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-color-regular);
+}
+
+.a11y-list,
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.a11y-item {
+  padding-left: 16px;
+  border-left: 3px solid var(--primary-color-light);
+}
+
+.a11y-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-color-regular);
+}
+
+/* 证据路径用等宽字体且可断行：它是给人核对源码用的，折行比溢出强 */
+.a11y-evidence {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--es-font-mono);
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  word-break: break-all;
+}
+
+/* 证据里的代码片段：与路径区分开，读者能直接照着 grep */
+.a11y-token {
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: var(--fill-color-light);
+  color: var(--text-color-primary);
+}
+
+.related-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.related-link {
+  font-weight: 600;
+  color: var(--primary-color);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.related-why {
+  color: var(--text-color-regular);
 }
 
 .selected-info {

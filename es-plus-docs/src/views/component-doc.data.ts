@@ -53,6 +53,26 @@ function getComponent(examplePath: string): any {
 
 // --- Documentation data ---
 
+/**
+ * 组件页元数据（路线图 2.4 · T3 Reference）
+ *
+ * T3 要求一页组件文档长出六样东西：状态徽章 + since、实时示例、Props/Events/Slots/Expose、
+ * 主题变量、可访问性、相关组件。这六样里最容易被写成「看着专业」的空话，所以每个字段都
+ * 绑了一个能被机器复核的证据：
+ *
+ *   · `since`   —— 三端各自**首个包含该组件的已发布版本**。证据不是回忆，是 npm 上已发布的
+ *                  tarball：2026-10-28 用 `npm pack @es-plus/{vue3,vue2,adapter-antdv}@<v>`
+ *                  逐版解包，看 `dist/src/components/` 下有没有这个目录。状态徽章（Stable /
+ *                  Beta / Legacy）由它反推，不手填 —— 手填的状态会过期，反推的不会。
+ *   · `theme`   —— `vars` 里只许写组件源码真的消费了的 CSS 变量，`check:component-api`
+ *                  逐个回到 `packages/vue3/src/components/<key>/**` 里 grep。没有自有变量的
+ *                  组件必须声明原因：`inherit`（继承自谁）或 `fixedColors: true`（颜色写死，
+ *                  要宿主自己覆盖）。
+ *   · `a11y`    —— 每条都要带 `evidence`（文件 + 该文件里必须出现的片段）。没有证据的可访问性
+ *                  说明就是文案，守卫会红。
+ *   · `notes`   —— Props / Events / Slots / Expose 四张表里「没有」的那几张要写清楚为什么没有，
+ *                  不允许整节静默消失（EsForm 不派发事件这件事本身就是要交代的结论）。
+ */
 export const docsData: Record<string, any> = {
   'es-form': {
     title: 'EsForm 高级表单',
@@ -152,6 +172,35 @@ export const docsData: Record<string, any> = {
         { name: 'formItmeRequestInstance', params: '(propsList)', desc: '手动触发指定字段的 API 数据加载' },
         { name: 'getFormRef', params: '-', desc: '获取底层 ElForm 实例' }
       ]
+    },
+    since: { vue3: '1.4.0', vue2: '0.9.0', antdv: '1.0.0' },
+    reviewed: '2026-10-28',
+    theme: {
+      inherit: 'Element Plus',
+      note: 'EsForm 不定义自己的 CSS 变量：标签、控件、错误文案全部由 Element Plus 渲染，换肤就是覆盖 --el-* ——改 --el-color-primary 会同时改主按钮与聚焦边框；深色站点必须覆盖 --el-fill-color-blank，否则输入框是白底白字。',
+      vars: []
+    },
+    a11y: [
+      {
+        text: '字段标签由 el-form-item 渲染成 label[for] 与控件 id 关联：读屏能念出「字段名 + 控件类型」，鼠标点标签也能聚焦到控件',
+        evidence: { file: 'packages/vue3/src/components/es-form/src/es-form.vue', contains: 'el-form-item' }
+      },
+      {
+        text: '按钮区（configBtn / renderBtn）渲染成 el-button —— 原生 <button>，Tab 可达、Enter / Space 触发，禁用态落到 disabled 属性上而不只是改颜色',
+        evidence: { file: 'packages/vue3/src/components/es-form/src/es-form.vue', contains: 'el-button' }
+      },
+      {
+        text: '边界：字段级自定义 render 输出的节点，可访问性由宿主负责 —— 组件只保证外层 form-item 的标签关联，不会替你给 render 出来的任意控件补 label',
+        evidence: { file: 'packages/vue3/src/components/es-form/src/es-form.vue', contains: 'render' }
+      }
+    ],
+    related: [
+      { key: 'es-table', why: '查询区就是 es-form 嵌进 es-table：按钮 key=query/rest + triggerEvent 自动联动，整页没有 handleSearch' },
+      { key: 'es-crud-page', why: '整页 CRUD 时不必手写这两者：一份 schema 同时派生出查询表单、表格与弹窗表单' }
+    ],
+    notes: {
+      events: 'EsForm 不派发事件：查询与重置由按钮的 triggerEvent 在组件内部完成，宿主拿到的是 v-model 的 model 与 configBtn[].click 回调。',
+      slots: 'EsForm 不提供插槽：按钮区用 configBtn / renderBtn，单个字段的自定义用 formItemList[].render。'
     }
   },
   'es-table': {
@@ -316,7 +365,73 @@ export const docsData: Record<string, any> = {
         { name: 'default', params: '-', desc: '表格上方自定义区域（headerBar）。最常用的是把 <es-form> 嵌进来做查询区——配合按钮 triggerEvent 即可自动联动' },
         { name: '<你的插槽名>', params: '{ row, column, $index }', desc: '列作用域插槽：列配置写 scopedSlots: { customRender: "你的插槽名" } 即可接到它；也可改用列上的 render 函数' }
       ]
-    }
+    },
+    since: { vue3: '1.4.0', vue2: '0.9.0', antdv: '1.0.0' },
+    reviewed: '2026-10-28',
+    theme: {
+      inherit: 'Element Plus',
+      note: '非虚拟滚动的表格由 Element Plus 的 el-table 渲染，换肤走 --el-*；下面这些是组件自己样式里直接消费的变量 —— 虚拟滚动引擎（el-table-v2）不自带灰底与分隔线，所以表头底色、单元格边框、斑马纹、高亮行都得自己接变量，否则深色站点上是一片白。',
+      vars: [
+        {
+          name: '--es-bg',
+          fallback: '#fff',
+          desc: '空态遮罩底色（ES-Plus 自己的 token，三端同源）：深色站点覆盖这一个变量，空态就不再是白板 —— 这是组件「不写死颜色」的那一处'
+        },
+        {
+          name: '--el-table-header-bg-color',
+          fallback: 'var(--el-fill-color-light, #f5f7fa)',
+          desc: '虚拟滚动表头底色：el-table-v2 不像 el-table 自带灰底，缺省两级回退'
+        },
+        {
+          name: '--el-border-color-lighter',
+          fallback: '跟随 Element Plus',
+          desc: '虚拟表格的单元格分隔线与 ::after 叠出来的外边框'
+        },
+        {
+          name: '--el-fill-color-lighter',
+          fallback: '跟随 Element Plus',
+          desc: '斑马纹偶数行底色（es-virtual-table--stripe）'
+        },
+        {
+          name: '--el-fill-color-light',
+          fallback: '跟随 Element Plus',
+          desc: 'hover 行底色'
+        },
+        {
+          name: '--el-color-primary-light-9',
+          fallback: '跟随 Element Plus',
+          desc: '当前行（current-row）高亮底色'
+        },
+        {
+          name: '--el-text-color-secondary',
+          fallback: '跟随 Element Plus',
+          desc: '展开图标默认色'
+        },
+        {
+          name: '--el-color-primary',
+          fallback: '跟随 Element Plus',
+          desc: '展开图标 hover 色'
+        }
+      ]
+    },
+    a11y: [
+      {
+        text: '排序方向通过表头 aria-sort 暴露：排序状态机由组件自己推进（同列 asc→desc→取消、换列从 asc 起），顺带修好了 sortBy.order 恒为 undefined 导致 aria-sort 永久缺失的问题',
+        evidence: { file: 'packages/vue3/src/components/es-table/src/engines/use-virtual-sort.ts', contains: 'aria-sort' }
+      },
+      {
+        text: '工具栏与行操作按钮都是 el-button（原生 <button>），键盘可达；按钮的 hidden 是条件求值后不渲染，而不是 display:none 留在 Tab 序列里',
+        evidence: { file: 'packages/vue3/src/components/es-table/src/table-btns.vue', contains: 'el-button' }
+      },
+      {
+        text: '边界：表格行本身不可聚焦、也不能用方向键遍历（Element Plus 的 el-table 不是 grid role）—— 要键盘多选请开 multiSelect 的勾选框，那是原生 checkbox',
+        evidence: { file: 'packages/vue3/src/components/es-table/src/component.vue', contains: 'multiSelect' }
+      }
+    ],
+    related: [
+      { key: 'es-form', why: '查询表单与表格是同一套配置：es-form 的按钮 triggerEvent 直接驱动本组件重新请求' },
+      { key: 'es-crud-page', why: '整页 CRUD 时这份 columns 配置会连同工具栏、操作列、弹窗一起由 schema 派生' }
+    ]
   },
   'es-crud-page': {
     title: 'EsCrudPage：schema 驱动整页',
@@ -442,6 +557,31 @@ export const docsData: Record<string, any> = {
         { name: 'tableRef', params: '-', desc: '内部 EsTable 组件实例' },
         { name: 'formRef', params: '-', desc: '内部 EsForm 组件实例' }
       ]
+    },
+    since: { vue3: '1.4.0', vue2: '0.9.0', antdv: '1.0.0' },
+    reviewed: '2026-10-28',
+    theme: {
+      inherit: 'Element Plus',
+      note: 'EsCrudPage 不写自己的样式：查询表单、表格、弹窗分别是 EsForm / EsTable / EsDialog，主题变量跟着那三个组件与 Element Plus 走（表格那几条见 EsTable 页的主题变量表）。',
+      vars: []
+    },
+    a11y: [
+      {
+        text: '查询区与表单、表格全部由 EsForm / EsTable 组合：字段标签关联、按钮键盘可达、表头 aria-sort 与那两个组件完全一致，不是另写一套',
+        evidence: { file: 'packages/vue3/src/components/es-crud-page/src/es-crud-page.vue', contains: 'EsForm' }
+      },
+      {
+        text: '弹窗走 es-dialog（el-dialog 底座）：打开后焦点进入弹窗、Esc 关闭、关闭后焦点回到触发按钮 —— 沿用 Element Plus 的默认行为，本组件没有关掉它',
+        evidence: { file: 'packages/vue3/src/components/es-dialog/src/component.vue', contains: '<el-dialog' }
+      }
+    ],
+    related: [
+      { key: 'es-form', why: '弹窗里的表单、查询区的字段都按同一份 schema 生成' },
+      { key: 'es-table', why: '表格列、工具栏按钮、操作列由 schema 派生，能力上限就是 EsTable 的能力上限' },
+      { key: 'es-error-boundary', why: '自定义 dialogs[].render 是业务代码，出错时用错误边界围住弹窗，别让它拖垮整页' }
+    ],
+    notes: {
+      slots: 'EsCrudPage 不提供插槽：工具栏用 schema.toolbarBtns、操作列用 operationColumn、弹窗内容用 dialogs[].render —— 扩展点全是配置，不是插槽。'
     }
   },
   'es-error-boundary': {
@@ -482,7 +622,32 @@ export const docsData: Record<string, any> = {
       methods: [
         { name: 'reset', params: '-', desc: '清除错误态并重新挂载子树；若导致错误的数据没修好，会立刻再次降级' }
       ]
-    }
+    },
+    since: { vue3: '1.5.0', vue2: '1.2.0', antdv: '1.1.0' },
+    reviewed: '2026-10-28',
+    theme: {
+      fixedColors: true,
+      note: '这个组件是唯一没有接主题变量的一个：降级块的颜色写死成 #cf1322 / #fff2f0 / #ffccc7（antd 的红），深色站点需要自己覆盖 .es-error-boundary 的三条背景与文字色。写在这里而不是藏着，是因为「没做」也是 API 的一部分。',
+      vars: []
+    },
+    a11y: [
+      {
+        text: '降级块根节点是 role="alert"：出错瞬间读屏立即播报，不需要用户移动到它上面才发现内容变了',
+        evidence: { file: 'packages/vue3/src/components/es-error-boundary/src/es-error-boundary.vue', contains: 'role="alert"' }
+      },
+      {
+        text: 'reset() 通过 defineExpose 暴露：宿主从模板 ref 调用即可原地恢复，不用整页刷新（刷新会丢掉用户已填的表单）',
+        evidence: { file: 'packages/vue3/src/components/es-error-boundary/src/es-error-boundary.vue', contains: 'defineExpose' }
+      },
+      {
+        text: '捕获本身用 onErrorCaptured 并返回 false：错误被真正围栏在本边界内，不会再冒泡到 app.config.errorHandler',
+        evidence: { file: 'packages/vue3/src/components/es-error-boundary/src/es-error-boundary.vue', contains: 'onErrorCaptured' }
+      }
+    ],
+    related: [
+      { key: 'es-crud-page', why: '自定义 dialogs[].render 里的业务代码出错时，用边界围住弹窗内容，页面其余部分照常可用' },
+      { key: 'es-table', why: 'EsTable 的单元格 render 自带 try/catch（只兜单格），本边界兜子树的生命周期 / 渲染错误 —— 两者互补，不是重复' }
+    ]
   },
   'svg-icon': {
     title: 'SvgIcon 图标',
@@ -514,6 +679,36 @@ export const docsData: Record<string, any> = {
         },
         { name: 'className', type: 'string', default: "''", desc: '追加到根节点的类名，装饰性样式不必改组件' }
       ]
+    },
+    since: { vue3: '1.4.0', vue2: '1.2.0', antdv: '1.0.0' },
+    reviewed: '2026-10-28',
+    theme: {
+      inherit: 'currentColor（外层元素的 color）',
+      note: '没有 CSS 变量的必要：图标 fill / background-color 都是 currentColor，颜色由外层的 color 决定 —— 放进主按钮就是主色、放进禁用按钮自动变灰，宿主不需要为图标单独配一套颜色变量。',
+      vars: []
+    },
+    a11y: [
+      {
+        text: '装饰性图标默认 aria-hidden="true"：读屏会跳过它，不会在朗读按钮文案前后多念一句「图形」',
+        evidence: { file: 'packages/vue3/src/components/svg-icon/src/svg-icon.vue', contains: 'aria-hidden' }
+      },
+      {
+        text: '颜色跟随 currentColor：禁用 / hover 等状态的灰阶由父元素的 color 传递，图标不必自己感知状态，也就不会出现「按钮灰了图标还亮着」',
+        evidence: { file: 'packages/vue3/src/components/svg-icon/src/svg-icon.vue', contains: 'currentColor' }
+      },
+      {
+        text: '边界：组件没有 name / title 属性，也不渲染 aria-label —— 图标本身不带可访问名称。承载语义时请把可访问名称写在承载它的 <button>/<a> 上，并把图标留作装饰',
+        evidence: { file: 'packages/vue3/src/components/svg-icon/src/svg-icon.vue', contains: 'aria-hidden' },
+        absent: { file: 'packages/vue3/src/components/svg-icon/src/svg-icon.vue', contains: 'aria-label' }
+      }
+    ],
+    related: [
+      { key: 'es-table', why: '工具栏与行操作按钮里的图标：放进去自动跟随按钮颜色，不必传尺寸' }
+    ],
+    notes: {
+      events: 'SvgIcon 不派发事件：它只输出一个 <svg><use>（或一层 mask），点击交给外层元素，避免图标自己变成隐藏的交互热点。',
+      slots: 'SvgIcon 不提供插槽：图形来自雪碧图符号（#icon-xxx）或外部图片地址，往里塞节点会破坏 1em 尺寸。',
+      methods: 'SvgIcon 不暴露方法：无内部状态，改 iconClass / className 即重新渲染。'
     }
   }
 }

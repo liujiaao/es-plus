@@ -98,7 +98,23 @@
     "api": "API",
     "toc": "On this page",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "status": {
+      "stable": "Stable",
+      "beta": "Beta",
+      "legacy": "Legacy"
+    },
+    "since": "Since v{version}",
+    "notPublished": "Not published",
+    "reviewed": "API verified {date}",
+    "apiSinceNote": "The Since column follows {pkg} at v{version} (per-target versions are listed under the title); API tables verified {date}.",
+    "theme": "Theme variables",
+    "themeFallback": "Default",
+    "themeDesc": "What it controls",
+    "a11y": "Accessibility",
+    "a11yEvidence": "Evidence",
+    "related": "Related components",
+    "noApiEntry": "This component has no API of this kind."
   },
   "advancedDoc": {
     "features": "Core Features",
