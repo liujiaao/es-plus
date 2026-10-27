@@ -355,12 +355,17 @@ const goToAiCrud = () => {
 // Hero Section
 .hero-section {
   display: grid;
-  /* 右侧证据区比文字宽一点：三端差异行要读得下（路线图 2.1/2.3） */
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  /* 右侧证据区明显宽于文字：三端差异行（行号 + 高亮 + import）才读得下，
+     左侧文案到 409px 仍有富余（最长一行副标题约 370px）—— 路线图 2.1/2.3 */
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
   gap: 56px;
   align-items: center;
   min-height: 600px;
   padding: 72px 48px;
+  /* 首屏去侧栏（T1）后宽度全归自己，与下面几个区块同一条 1200px 中线对齐 ——
+     否则 hero 比正文宽出 80px，滚动时左边线会「跳」一下。 */
+  max-width: 1200px;
+  margin: 0 auto;
   // background: linear-gradient(135deg, var(--es-fill) 0%, #ffffff 100%);
 }
 

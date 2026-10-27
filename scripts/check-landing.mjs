@@ -188,6 +188,80 @@ for (const name of ['Vue 3 · Element Plus', 'Vue 2 · Element UI', 'Vue 3 · An
 }
 
 /* ------------------------------------------------------------------ *
+ * E. Landing 不挂文档侧栏（T1 规则）
+ *
+ * 这条规则最容易「修一半」：把侧栏藏了，却没放掉正文/页脚的左边距，首页左边留
+ * 一条 260px 空白带；或者反过来藏得太狠，把窄屏下唯一的导航入口（抽屉）一起藏了。
+ * 所以既查「有没有藏」，也查「藏的条件是不是只包在桌面断点里」。
+ * ------------------------------------------------------------------ */
+function mediaBlock(source, header) {
+  const at = source.indexOf(header)
+  if (at < 0) return ''
+  const open = source.indexOf('{', at)
+  let depth = 0
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) return source.slice(open, i + 1)
+    }
+  }
+  return ''
+}
+
+const LANDINGS = [
+  {
+    app: 'es-plus-docs/src/App.vue',
+    header: '@media (min-width: 1201px)',
+    hides: ['.app-wrapper.is-landing .app-sidebar'],
+    // 侧栏收起时这三条必须一起改，否则首页左边留白
+    also: ['.app-wrapper.is-landing .app-content', '.app-wrapper.is-landing .es-footer'],
+    navbar: 'es-plus-docs/src/components/layout/AppHeader.vue',
+    drawerBreakpoint: 'bp.$nav-collapse',
+  },
+  {
+    app: 'es-pc/src/layouts/DocLayout.vue',
+    header: '@media (min-width: 992px)',
+    hides: ['.doc-layout.is-landing .doc-sider'],
+    also: ['.doc-layout.is-landing .content-wrapper'],
+    navbar: 'es-pc/src/layouts/DocLayout.vue',
+    drawerBreakpoint: '@media (max-width: 991px)',
+  },
+]
+
+for (const site of LANDINGS) {
+  const source = read(site.app)
+  const nav = read(site.navbar)
+  if (!source) continue
+
+  if (!/is-landing/.test(source)) {
+    fail(`${site.app}：Landing 未标记 is-landing —— 侧栏去不掉（T1：Landing 不用文档侧栏）`)
+    continue
+  }
+
+  const block = mediaBlock(source, site.header)
+  if (!block) {
+    fail(`${site.app}：缺少 ${site.header} 断点块 —— 侧栏必须在桌面宽度才藏，窄屏它是抽屉、是唯一的导航入口`)
+  } else {
+    for (const sel of [...site.hides, ...site.also]) {
+      if (!block.includes(sel)) fail(`${site.app}：${site.header} 里缺少 ${sel}`)
+    }
+  }
+
+  // 反向：不允许在断点外无条件藏侧栏（那会连手机导航一起藏掉）
+  const outside = source.replace(block, '')
+  for (const sel of site.hides) {
+    if (new RegExp(`${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{[^}]*display:\\s*none`).test(outside)) {
+      fail(`${site.app}：${sel} 在断点外就被隐藏了 —— 窄屏下侧栏是抽屉，也是首页唯一的导航入口`)
+    }
+  }
+
+  if (!nav.includes(site.drawerBreakpoint)) {
+    fail(`${site.navbar}：窄屏抽屉断点 ${site.drawerBreakpoint} 不见了 —— 桌面藏侧栏的前提是窄屏另有入口`)
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * 汇总
  * ------------------------------------------------------------------ */
 if (failures.length) {

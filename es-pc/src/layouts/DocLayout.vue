@@ -1,5 +1,5 @@
 <template>
-  <a-layout class="doc-layout">
+  <a-layout class="doc-layout" :class="{ 'is-landing': isLanding }">
     <!-- 键盘用户的第一站：Tab 一下跳过顶部导航 + 侧栏，直达正文（路线图 1.7）。
          a-layout-content 渲染出的就是 <main>，落点 id 挂在它身上。 -->
     <a class="es-skip-link" href="#es-main">跳到主内容</a>
@@ -234,6 +234,13 @@ onMounted(() => bindSkipLink(document))
 const adapterVersion = ADAPTER_ANTDV_VERSION
 const route = useRoute()
 
+/**
+ * Landing 不挂文档侧栏（路线图 T1 规则，与主站同一条）。
+ * 首页是产品页：左边一条文档目录会把它拉回「文档站」的观感，还白吃掉 260px。
+ * 只在桌面宽度生效 —— 窄屏下侧栏就是抽屉，是唯一的导航入口。
+ */
+const isLanding = computed(() => route.path === '/')
+
 const currentSite = SITE_KEY
 const currentSiteLabel = SITES.find((s) => s.key === currentSite)?.label || '站点'
 const switchSite = ({ key }) => {
@@ -339,6 +346,24 @@ const onTocClick = (id) => {
    .doc-body 抢走剩余高度，短页面的页脚才落在视口底部而不是屏幕外一屏。 */
 .doc-layout {
   min-height: 100vh;
+}
+
+/* Landing 去侧栏（路线图 T1）：断点与 ant 的 breakpoint="lg" 对齐 ——
+   992px 以下侧栏本来就是抽屉（首页唯一的导航入口），不能藏。
+   侧栏是 sticky 的流内元素，display:none 之后正文自然铺满，不需要补偿左边距。 */
+@media (min-width: 992px) {
+  .doc-layout.is-landing .doc-sider {
+    display: none;
+  }
+
+  /* 正文上限原本是「外壳宽度 − 260px 侧栏」，侧栏不在时这条减法会把首页的
+     白卡片缩在左半边、右边空出 240px。Landing 换成 1200 并居中 ——
+     与本站其它页的正文宽度（1400 − 260 = 1140）和主站首屏（1200）都挨得着，
+     切页时不会有一次宽度跳变。 */
+  .doc-layout.is-landing .content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 }
 
 .doc-header {
