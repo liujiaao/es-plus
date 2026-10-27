@@ -275,7 +275,7 @@ generate()
   font-size: 13px;
   color: var(--text-color-regular);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     border-color: var(--primary-color);
@@ -361,7 +361,7 @@ generate()
   font-size: 13px;
   color: var(--text-color-regular);
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     color: var(--primary-color);

@@ -106,7 +106,7 @@
   line-height: 1.4;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.18s, border-color 0.18s, color 0.18s;
+  transition: opacity var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease);
 }
 
 .es-nf .es-nf-btn--primary {
@@ -187,7 +187,7 @@
   color: var(--es-text-primary);
   font-size: var(--es-text-base);
   text-decoration: none;
-  transition: border-color 0.18s, color 0.18s, transform 0.18s;
+  transition: border-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease);
 }
 
 .es-nf .es-nf-link:hover {

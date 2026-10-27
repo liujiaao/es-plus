@@ -86,7 +86,7 @@
 .es-footer-list a {
   color: var(--es-text-secondary);
   text-decoration: none;
-  transition: color 0.18s;
+  transition: color var(--es-duration-base) var(--es-ease);
 }
 
 .es-footer-list a:hover {

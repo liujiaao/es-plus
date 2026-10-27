@@ -192,7 +192,7 @@ watch(
     border: 1px solid var(--border-color-lighter);
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: color var(--es-duration-fast) var(--es-ease), background-color var(--es-duration-fast) var(--es-ease), border-color var(--es-duration-fast) var(--es-ease), box-shadow var(--es-duration-fast) var(--es-ease), transform var(--es-duration-fast) var(--es-ease), opacity var(--es-duration-fast) var(--es-ease);
     color: var(--text-color-primary);
     font-family: inherit;
     text-align: left;
@@ -271,6 +271,8 @@ watch(
       height: 6px;
       border-radius: 50%;
       background: var(--text-color-secondary);
+      /* 「正在输入」的三个点是**加载指示器**，节奏就该慢一些：1.2s 是呼吸周期，
+         不是状态切换时长，所以不走 --es-duration-*（2.8 只禁止装饰性的无限动画） */
       animation: dot-bounce 1.2s infinite ease-in-out;
 
       &:nth-child(2) { animation-delay: 0.2s; }
@@ -330,7 +332,7 @@ watch(
   color: var(--text-color-primary);
   background: var(--bg-color);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--es-duration-fast) var(--es-ease);
 
   &:focus {
     border-color: var(--primary-color);

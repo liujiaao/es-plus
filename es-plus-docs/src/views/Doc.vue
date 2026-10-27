@@ -295,7 +295,7 @@ onBeforeUnmount(() => {
   color: var(--text-color-regular);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     color: var(--primary-color);
@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
 
 .back-top-fade-enter-active,
 .back-top-fade-leave-active {
-  transition: opacity 0.25s ease;
+  transition: opacity var(--es-duration-slow) var(--es-ease);
 }
 
 .back-top-fade-enter-from,

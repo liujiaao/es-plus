@@ -18,7 +18,7 @@
       <div class="code-block">
         <pre><code>{{ c.code }}</code></pre>
       </div>
-      <router-link :to="c.route" class="case-link">查看完整案例 →</router-link>
+      <router-link :to="c.route" class="case-link">查看完整案例<span class="arrow" aria-hidden="true">→</span></router-link>
     </div>
   </div>
 </template>
@@ -119,7 +119,7 @@ usePageMeta('quickstart')
   border: 1px solid var(--border-color-lighter);
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+  transition: box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     border-color: var(--primary-color);
@@ -228,11 +228,22 @@ usePageMeta('quickstart')
   color: var(--primary-color);
   font-weight: 500;
   text-decoration: none;
-  transition: gap 0.2s ease;
+  /* 2.8：原来用 gap 4px→8px 做悬停反馈，gap 变一次整行就要重排一次。
+     改成箭头自己 translateX —— 合成器处理，其余字号/位置都不动。 */
+  transition: color var(--es-duration-base) var(--es-ease);
+
+  .arrow {
+    display: inline-block;
+    margin-left: 4px;
+    transition: transform var(--es-duration-base) var(--es-ease);
+  }
 
   &:hover {
-    gap: 8px;
     text-decoration: underline;
+
+    .arrow {
+      transform: translateX(4px);
+    }
   }
 }
 </style>

@@ -330,7 +330,7 @@ usePageMeta('cases')
   border-radius: 12px;
   background: linear-gradient(135deg, var(--primary-color-light), transparent 60%);
   text-decoration: none;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-2px);
@@ -424,7 +424,7 @@ usePageMeta('cases')
   background: var(--bg-color);
   border: 1px solid var(--border-color-lighter);
   border-radius: 12px;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-3px);

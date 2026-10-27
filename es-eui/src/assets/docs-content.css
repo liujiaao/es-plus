@@ -213,7 +213,7 @@
   font-weight: 500;
   text-underline-offset: 3px;
   text-decoration-color: transparent;
-  transition: text-decoration-color 0.2s, color 0.2s;
+  transition: text-decoration-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease);
 }
 
 .es-doc-content a:hover {
@@ -342,7 +342,7 @@
   color: var(--es-doc-text-secondary);
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 }
 
 .code-copy-btn:hover,
@@ -373,7 +373,7 @@
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg) translateY(-1px);
-  transition: transform 0.2s;
+  transition: transform var(--es-duration-base) var(--es-ease);
 }
 
 .code-block-wrapper.is-expanded .collapse-caret {

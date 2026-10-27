@@ -388,7 +388,7 @@ watch(searchQuery, () => {
   padding: 12px 16px;
   cursor: pointer;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: background-color var(--es-duration-base) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -490,7 +490,7 @@ watch(searchQuery, () => {
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
-  transition: background-color 0.15s;
+  transition: background-color var(--es-duration-fast) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -512,7 +512,7 @@ watch(searchQuery, () => {
   color: var(--text-color-regular);
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--es-duration-fast) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -542,7 +542,7 @@ watch(searchQuery, () => {
   cursor: pointer;
   font-size: 14px;
   color: var(--text-color-regular);
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -563,7 +563,7 @@ watch(searchQuery, () => {
   color: var(--primary-color);
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     border-style: solid;

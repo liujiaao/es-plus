@@ -129,7 +129,7 @@ const sections = [
   border-right: 1px solid var(--border-color-lighter);
   overflow-y: auto;
   z-index: 100;
-  transition: transform 0.3s ease;
+  transition: transform var(--es-duration-slow) var(--es-ease);
 }
 
 .sidebar-overlay {
@@ -144,7 +144,7 @@ const sections = [
 
 .sidebar-overlay-enter-active,
 .sidebar-overlay-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--es-duration-slow) var(--es-ease);
 }
 
 .sidebar-overlay-enter-from,
@@ -186,7 +186,7 @@ const sections = [
   color: var(--text-color-regular);
   text-decoration: none;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   border-left: 3px solid transparent;
 
   &:hover {

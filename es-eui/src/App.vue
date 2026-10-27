@@ -317,7 +317,7 @@ body {
       color: #606266;
       text-decoration: none;
       font-size: 15px;
-      transition: color 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease);
       line-height: 60px;
 
       &:hover,
@@ -347,7 +347,7 @@ body {
         color: #606266;
         font-size: 15px;
         cursor: pointer;
-        transition: color 0.3s;
+        transition: color var(--es-duration-slow) var(--es-ease);
 
         &:hover {
           color: var(--es-brand-primary);
@@ -371,7 +371,8 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   padding-top: 60px;
-  transition: padding-top 0.3s;
+  /* 不对外边距做过渡（路线图 2.8：只动 opacity / transform / 颜色类）：
+     padding-top 每帧都要重排整页，横幅出现时省下这一下反而更稳 */
 
   &.banner-visible {
     padding-top: 92px;
@@ -440,7 +441,7 @@ body {
   border-radius: 4px;
   text-decoration: none;
   white-space: nowrap;
-  transition: all 0.25s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
   flex-shrink: 0;
 
   &:hover {
@@ -466,7 +467,7 @@ body {
   color: #64748b;
   cursor: pointer;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   padding: 0;
 
   &:hover {
@@ -519,7 +520,7 @@ body {
       color: #606266;
       text-decoration: none;
       font-size: 14px;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
       border-right: 3px solid transparent;
 
       &:hover {
@@ -864,7 +865,7 @@ $bg-light: #f7fafc;
     background: white;
     border-radius: 12px;
     border: 1px solid $border-color;
-    transition: all 0.3s ease;
+    transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
     &:hover {
       transform: translateY(-2px);
@@ -917,7 +918,7 @@ $bg-light: #f7fafc;
     border-radius: 12px;
     border: 1px solid $border-color;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
     &:hover {
       transform: translateX(4px);
@@ -969,7 +970,7 @@ $bg-light: #f7fafc;
     .el-icon-arrow-right {
       font-size: 18px;
       color: $text-tertiary;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
     }
   }
 }
@@ -1044,7 +1045,7 @@ $bg-light: #f7fafc;
     border-radius: 12px;
     padding: 24px;
     border: 1px solid $border-color;
-    transition: all 0.3s ease;
+    transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
     &:hover {
       transform: translateY(-3px);
@@ -1130,7 +1131,7 @@ $bg-light: #f7fafc;
       padding: 12px 20px;
       background: $bg-light;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
      background: #fff !important;
 
       &:hover {
@@ -1253,7 +1254,7 @@ $bg-light: #f7fafc;
       font-weight: 500;
       border-radius: 8px;
       text-decoration: none;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
       &:hover {
         transform: translateY(-2px);

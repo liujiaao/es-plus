@@ -822,7 +822,7 @@ $bg-light: #f7fafc;
   border: 1px solid $border-color;
   padding: 24px;
   margin-bottom: 20px;
-  transition: all 0.3s ease;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
@@ -901,7 +901,7 @@ $bg-light: #f7fafc;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
       &:hover {
         background: #4d4d4d;
@@ -1063,7 +1063,7 @@ $bg-light: #f7fafc;
     border-radius: 12px;
     border: 1px solid $border-color;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
     &:hover {
       transform: translateX(4px);
@@ -1114,7 +1114,7 @@ $bg-light: #f7fafc;
     .el-icon-arrow-right {
       font-size: 18px;
       color: $text-tertiary;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
     }
   }
 }

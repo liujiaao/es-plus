@@ -309,7 +309,7 @@ const layoutProps = {
   border: 1px dashed var(--es-border);
   border-radius: 6px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color var(--es-duration-base) var(--es-ease);
   flex-direction: column;
 }
 
@@ -389,7 +389,7 @@ const layoutProps = {
   border-radius: 4px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   user-select: none;
 }
 

@@ -158,7 +158,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--text-color-regular);
   border-radius: 6px;
-  transition: background-color 0.2s;
+  transition: background-color var(--es-duration-base) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -209,7 +209,7 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 500;
   padding: 4px 2px;
-  transition: color 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease);
 
   &:hover {
     color: var(--text-color-primary);
@@ -226,7 +226,7 @@ onUnmounted(() => {
     border-radius: 2px;
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.25s ease;
+    transition: transform var(--es-duration-slow) var(--es-ease);
   }
 
   &.router-link-active {
@@ -256,7 +256,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--text-color-secondary);
   font-size: 13px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     border-color: var(--primary-color);
@@ -280,7 +280,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--text-color-regular);
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
 
   &:hover {
     background-color: var(--fill-color-light);
@@ -299,7 +299,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--text-color-regular);
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   font-size: 13px;
   font-weight: 500;
 
@@ -324,7 +324,7 @@ onUnmounted(() => {
   cursor: pointer;
   color: var(--text-color-regular);
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   font-size: 13px;
   font-weight: 500;
 
@@ -341,7 +341,7 @@ onUnmounted(() => {
 
 .github-link {
   color: var(--text-color-regular);
-  transition: color 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease);
   display: flex;
   align-items: center;
 

@@ -441,7 +441,7 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   border: 1px solid var(--border-color-lighter);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease);
 }
 
 .feature-item:hover {

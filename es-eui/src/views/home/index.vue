@@ -183,12 +183,13 @@
         </div>
         
         <div class="feature-list">
+          <!-- 卡片不再逐个延迟入场（原来 index*0.1s，第 12 张要等 1.1s 才出现）：
+               一次 240ms 的入场就够，延迟堆叠只会让页面显得慢 -->
           <div
             v-for="(feature, index) in features"
             :key="index"
             class="feature-item"
             :class="{ 'fade-in': true }"
-            :style="{ animationDelay: index * 0.1 + 's' }"
           >
             <div
               class="feature-icon"
@@ -754,30 +755,30 @@ $bg-light: #f7fafc;
     overflow: hidden;
   }
   
+  /* 光斑原来是 20s 无限漂移的背景动效（路线图 2.8：动效只用于状态变化，
+     不做无限循环的装饰）。留着形状与模糊，去掉动画 —— 画面照样有层次，
+     但不再吃 GPU、也不再和「克制」这条对打。 */
   .gradient-orb {
     position: absolute;
     border-radius: 50%;
     filter: blur(80px);
     opacity: 0.5;
-    animation: float 20s infinite ease-in-out;
   }
-  
+
   .orb-1 {
     width: 500px;
     height: 500px;
     background: var(--es-brand-accent);
     top: -10%;
     left: -10%;
-    animation-delay: 0s;
   }
-  
+
   .orb-2 {
     width: 400px;
     height: 400px;
     background: var(--es-brand-accent);
     bottom: -10%;
     right: -10%;
-    animation-delay: -5s;
   }
   
   .orb-3 {
@@ -787,30 +788,28 @@ $bg-light: #f7fafc;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    animation-delay: -10s;
   }
-  
+
   .particles {
     position: absolute;
     width: 100%;
     height: 100%;
   }
-  
+
+  /* 20 颗上浮粒子（15s 无限）同理：改成静态星点。位置仍随机撒开，
+     但不再逐帧重绘 20 个 transform —— 它们本来也看不出来在往哪飞。 */
   .particle {
     position: absolute;
     width: 4px;
     height: 4px;
     background: rgba(255,255,255,0.3);
     border-radius: 50%;
-    animation: particle-float 15s infinite;
   }
-  
+
   @for $i from 1 through 20 {
     .particle:nth-child(#{$i}) {
       left: random(100) * 1%;
       top: random(100) * 1%;
-      animation-delay: random(15) * -1s;
-      animation-duration: 10s + random(10);
     }
   }
   
@@ -835,7 +834,6 @@ $bg-light: #f7fafc;
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(255,255,255,0.3);
-      animation: pulse 2s infinite;
       
       .logo-text {
         font-size: 32px;
@@ -857,8 +855,6 @@ $bg-light: #f7fafc;
       background: linear-gradient(135deg, #fff 0%, var(--es-brand-primary-light) 50%, var(--es-brand-primary-light) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: shimmer 3s infinite linear;
-      background-size: 200% auto;
     }
 
     /* 定位语：.gradient-text 是渐变裁切，兄弟节点不继承也能正常显示；
@@ -880,8 +876,8 @@ $bg-light: #f7fafc;
     opacity: 0.95;
     
     .typing-text {
-      border-right: 3px solid rgba(255,255,255,0.7);
-      animation: blink 0.8s infinite;
+      /* 原来是个假打字机光标（0.8s 闪烁）：文案是静态的，闪的只是装饰 */
+      color: rgba(255,255,255,0.92);
     }
   }
   
@@ -935,7 +931,11 @@ $bg-light: #f7fafc;
       text-decoration: none;
       font-size: 16px;
       font-weight: 500;
-      transition: all 0.3s ease;
+      transition: color var(--es-duration-base) var(--es-ease),
+        background-color var(--es-duration-base) var(--es-ease),
+        border-color var(--es-duration-base) var(--es-ease),
+        box-shadow var(--es-duration-slow) var(--es-ease),
+        transform var(--es-duration-slow) var(--es-ease);
       
       &.btn-primary {
         background: #fff;
@@ -952,7 +952,7 @@ $bg-light: #f7fafc;
         }
         
         i {
-          transition: transform 0.3s;
+          transition: transform var(--es-duration-slow) var(--es-ease);
         }
       }
       
@@ -981,7 +981,7 @@ $bg-light: #f7fafc;
     align-items: center;
     gap: 10px;
     opacity: 0.7;
-    animation: bounce 2s infinite;
+    /* 滚动提示不再上下弹（2s 无限）：它是个静态提示，不是状态 */
     
     .mouse {
       width: 26px;
@@ -999,7 +999,6 @@ $bg-light: #f7fafc;
         top: 8px;
         left: 50%;
         transform: translateX(-50%);
-        animation: scroll 1.5s infinite;
       }
     }
     
@@ -1025,7 +1024,11 @@ $bg-light: #f7fafc;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: color var(--es-duration-base) var(--es-ease),
+      background-color var(--es-duration-base) var(--es-ease),
+      border-color var(--es-duration-base) var(--es-ease),
+      box-shadow var(--es-duration-slow) var(--es-ease),
+      transform var(--es-duration-slow) var(--es-ease);
 
     &:hover {
       transform: translateY(-4px);
@@ -1135,7 +1138,11 @@ $bg-light: #f7fafc;
   border-radius: 16px;
   text-align: center;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: color var(--es-duration-base) var(--es-ease),
+    background-color var(--es-duration-base) var(--es-ease),
+    border-color var(--es-duration-base) var(--es-ease),
+    box-shadow var(--es-duration-slow) var(--es-ease),
+    transform var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-3px);
@@ -1203,9 +1210,14 @@ $bg-light: #f7fafc;
     border-radius: 20px;
     background: #fff;
     border: 1px solid #e2e8f0;
-    transition: all 0.4s ease;
+    transition: color var(--es-duration-base) var(--es-ease),
+      background-color var(--es-duration-base) var(--es-ease),
+      border-color var(--es-duration-base) var(--es-ease),
+      box-shadow var(--es-duration-slow) var(--es-ease),
+      transform var(--es-duration-slow) var(--es-ease);
     overflow: hidden;
-    animation: fadeInUp 0.8s ease forwards;
+    /* 入场 240ms 一次性：卡片滚进视口时不该再无限动 */
+    animation: fadeInUp var(--es-duration-slow) var(--es-ease) forwards;
     opacity: 0;
     
     &:hover {
@@ -1230,7 +1242,7 @@ $bg-light: #f7fafc;
       bottom: 0;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity var(--es-duration-base) var(--es-ease);
       pointer-events: none;
     }
     
@@ -1242,7 +1254,7 @@ $bg-light: #f7fafc;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.3s;
+      transition: transform var(--es-duration-slow) var(--es-ease);
       
       &.blue {
         background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
@@ -1353,7 +1365,11 @@ $bg-light: #f7fafc;
       padding: 20px;
       border-radius: 12px;
       margin-bottom: 16px;
-      transition: all 0.3s ease;
+      transition: color var(--es-duration-base) var(--es-ease),
+        background-color var(--es-duration-base) var(--es-ease),
+        border-color var(--es-duration-base) var(--es-ease),
+        box-shadow var(--es-duration-slow) var(--es-ease),
+        transform var(--es-duration-slow) var(--es-ease);
       
       &:hover {
         transform: translateX(5px);
@@ -1447,7 +1463,6 @@ $bg-light: #f7fafc;
       justify-content: center;
       margin-bottom: 12px;
       box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-      animation: pulse 2s infinite;
       
       i {
         font-size: 28px;
@@ -1681,7 +1696,7 @@ $bg-light: #f7fafc;
         justify-content: center;
         font-size: 16px;
         font-weight: 600;
-        transition: all 0.3s;
+        transition: background-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease);
       }
       
       .step-line {
@@ -1698,7 +1713,7 @@ $bg-light: #f7fafc;
           font-size: 18px;
           margin-bottom: 12px;
           color: rgba(255,255,255,0.7);
-          transition: color 0.3s;
+          transition: color var(--es-duration-base) var(--es-ease);
         }
         
         .step-detail {
@@ -1766,7 +1781,11 @@ $bg-light: #f7fafc;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: color var(--es-duration-base) var(--es-ease),
+    background-color var(--es-duration-base) var(--es-ease),
+    border-color var(--es-duration-base) var(--es-ease),
+    box-shadow var(--es-duration-slow) var(--es-ease),
+    transform var(--es-duration-slow) var(--es-ease);
   cursor: pointer;
   border: none;
   
@@ -1805,52 +1824,8 @@ $bg-light: #f7fafc;
   padding: 0 20px;
 }
 
-// 动画定义
-@keyframes float {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(50px, -50px); }
-  50% { transform: translate(0, -100px); }
-  75% { transform: translate(-50px, -50px); }
-}
-
-@keyframes particle-float {
-  0%, 100% { 
-    transform: translateY(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { 
-    transform: translateY(-100vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes shimmer {
-  0% { background-position: 0% center; }
-  100% { background-position: 200% center; }
-}
-
-@keyframes blink {
-  0%, 100% { border-color: transparent; }
-  50% { border-color: rgba(255,255,255,0.7); }
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
-  40% { transform: translateX(-50%) translateY(-10px); }
-  60% { transform: translateX(-50%) translateY(-5px); }
-}
-
-@keyframes scroll {
-  0% { opacity: 1; top: 8px; }
-  100% { opacity: 0; top: 20px; }
-}
+// 动画定义：只剩入场（一次性）。原先的 float / particle-float / pulse / shimmer /
+// blink / bounce / scroll 七个无限循环已按路线图 2.8 移除 —— 动效只描述状态变化。
 
 @keyframes fadeInUp {
   from {
@@ -1967,10 +1942,11 @@ $bg-light: #f7fafc;
   }
 }
 
-// 过渡动画
+// 过渡动画：只动 opacity / transform（路线图 2.8：不对 all 做动画）
 .slide-enter-active,
 .slide-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity var(--es-duration-base) var(--es-ease),
+    transform var(--es-duration-base) var(--es-ease);
 }
 
 .slide-enter,

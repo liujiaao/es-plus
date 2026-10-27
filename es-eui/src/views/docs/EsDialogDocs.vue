@@ -539,7 +539,7 @@ export default {
         background: #e4e7ed;
         cursor: pointer;
         user-select: none;
-        transition: background 0.2s;
+        transition: background var(--es-duration-base) var(--es-ease);
         border-bottom: 1px solid #dcdfe6;
 
         &:hover {
@@ -566,7 +566,7 @@ export default {
           border: 1px solid var(--es-brand-primary);
           border-radius: 4px;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
           display: flex;
           align-items: center;
           gap: 4px;

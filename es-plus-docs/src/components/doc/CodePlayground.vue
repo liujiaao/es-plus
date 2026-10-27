@@ -316,7 +316,7 @@ watch(activeCodeHtml, enhanceCode)
   cursor: pointer;
   font-size: 13px;
   color: var(--text-color-regular);
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
   
   &:hover {
     color: var(--primary-color);

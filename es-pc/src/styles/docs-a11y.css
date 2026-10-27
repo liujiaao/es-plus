@@ -41,7 +41,7 @@
   text-decoration: none;
   box-shadow: var(--es-shadow-md);
   transform: translateY(-200%);
-  transition: transform 0.18s ease;
+  transition: transform var(--es-duration-base) var(--es-ease);
 }
 
 .es-skip-link:focus,

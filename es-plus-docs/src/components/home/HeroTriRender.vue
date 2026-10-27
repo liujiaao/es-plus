@@ -326,7 +326,7 @@ const targets = computed(() => {
   font-family: inherit;
   font-size: var(--es-text-xs);
   cursor: pointer;
-  transition: border-color 0.18s, color 0.18s;
+  transition: border-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease);
 
   &:hover:not(:disabled) {
     border-color: var(--es-brand-primary);

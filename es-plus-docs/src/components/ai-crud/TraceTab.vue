@@ -180,7 +180,7 @@ watch(
   background: var(--bg-color);
   border: 1px solid var(--border-color-lighter);
   overflow: hidden;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition: box-shadow var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease);
 
   &.highlighted {
     border-color: var(--primary-color);

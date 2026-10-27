@@ -587,7 +587,7 @@ export default {
   border-radius: var(--es-radius-lg);
   border: 1px solid var(--es-border-light);
   background: var(--es-bg);
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     box-shadow: var(--es-shadow-md);
@@ -741,7 +741,7 @@ export default {
       color: #ccc;
       font-size: 12px;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
       &:hover {
         border-color: var(--es-brand-primary);

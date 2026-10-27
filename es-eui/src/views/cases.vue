@@ -356,7 +356,7 @@ export default {
   border-radius: 12px;
   background: linear-gradient(135deg, #f0f7ff, #ffffff 60%);
   text-decoration: none;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 }
 
 .ai-cta {
@@ -456,7 +456,7 @@ export default {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 }
 
 .case-card:hover {

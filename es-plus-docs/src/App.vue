@@ -82,7 +82,7 @@ body {
   min-height: 100vh;
   background-color: var(--bg-color-page);
   color: var(--text-color-primary);
-  transition: background-color 0.3s, color 0.3s;
+  transition: background-color var(--es-duration-slow) var(--es-ease), color var(--es-duration-slow) var(--es-ease);
 }
 
 /* Landing 去侧栏（路线图 T1）：只在桌面宽度生效。

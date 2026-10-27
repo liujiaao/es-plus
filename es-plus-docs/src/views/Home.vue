@@ -472,7 +472,7 @@ const goToAiCrud = () => {
   color: var(--es-text-secondary);
   font-size: 14px;
   text-decoration: none;
-  transition: color 0.18s;
+  transition: color var(--es-duration-base) var(--es-ease);
 
   &:hover {
     color: var(--es-link);
@@ -500,7 +500,7 @@ const goToAiCrud = () => {
   border: 1px solid var(--border-color-lighter);
   border-radius: 16px;
   text-align: center;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-4px);
@@ -589,7 +589,7 @@ const goToAiCrud = () => {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color-lighter);
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-4px);
@@ -752,7 +752,7 @@ const goToAiCrud = () => {
   border: 1px solid var(--border-color-lighter);
   border-radius: 16px;
   text-align: center;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-4px);
@@ -824,7 +824,7 @@ const goToAiCrud = () => {
   border: 1px solid var(--border-color-lighter);
   border-radius: 16px;
   text-align: center;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
   
   &:hover {
     transform: translateY(-8px);
@@ -882,7 +882,7 @@ const goToAiCrud = () => {
   border: 1px solid var(--border-color-lighter);
   border-radius: 16px;
   text-decoration: none;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
   
   &:hover {
     transform: translateY(-4px);
@@ -965,7 +965,7 @@ const goToAiCrud = () => {
   background: var(--bg-color);
   border-radius: 16px;
   border: 1px solid var(--border-color-lighter);
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 
   &:hover {
     transform: translateY(-4px);

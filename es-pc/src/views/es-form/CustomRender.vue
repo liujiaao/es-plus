@@ -132,7 +132,7 @@ const configBtn = [
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
   width: 100px;
   height: 100px;
   display: flex;

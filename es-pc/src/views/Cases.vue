@@ -322,7 +322,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
   border-radius: 12px;
   background: linear-gradient(135deg, #f0f7ff, #ffffff 60%);
   text-decoration: none;
-  transition: all 0.3s;
+  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 }
 
 .flagship-cta:hover {
