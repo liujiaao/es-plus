@@ -44,7 +44,7 @@
             组件
           </router-link>
           <router-link
-            to="/theme"
+            to="/guide/theme"
             :class="{ 'active': isTheme }"
           >
             主题
@@ -162,7 +162,8 @@ export default {
       return this.$route.path.startsWith('/component')
     },
     isTheme() {
-      return this.$route.path.startsWith('/theme')
+      // 顶栏「主题」指向 /guide/theme；/theme 是旧地址（重定向），两者都算选中
+      return this.$route.path.startsWith('/guide/theme') || this.$route.path.startsWith('/theme')
     },
     isAiTools() {
       return this.$route.path.startsWith('/ai-tools')

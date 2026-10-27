@@ -185,11 +185,12 @@ const routes = [
     component: () => import('../views/ai-gallery.vue')
   },
 
-  // 主题
+  // 主题：早期是独立的 views/theme/index.vue（自带一份 side-nav），与 /guide/theme
+  // 讲同一件事却两处漂移 —— 一份说「ES-Plus 提供可定制 CSS 变量」，而组件库根本没有
+  // 这层 API。现在只保留指南里那一页，旧地址走重定向，避免外链 404。
   {
     path: '/theme',
-    name: 'Theme',
-    component: () => import('../views/theme/index.vue')
+    redirect: '/guide/theme'
   },
 
   // AI 工具链（跨渲染器：MCP/CLI 能生成 vue2/vue3/antdv 三种 target）
