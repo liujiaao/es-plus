@@ -3,6 +3,9 @@
     id="app"
     :class="{ 'is-component': isComponent }"
   >
+    <!-- 键盘用户的第一站：Tab 一下跳过导航直达正文（路线图 1.7） -->
+    <a class="es-skip-link" href="#es-main">跳到主内容</a>
+
     <!-- 顶部导航栏 -->
     <header class="header">
       <div class="container">
@@ -125,13 +128,15 @@
       </div>
     </div>
 
-    <!-- 主体内容 -->
-    <div
+    <!-- 主体内容：<main> 是三站统一的地标，也是 skip link 的落点（路线图 1.7） -->
+    <main
+      id="es-main"
+      tabindex="-1"
       class="main"
       :class="{ 'banner-visible': !bannerClosed }"
     >
       <router-view />
-    </div>
+    </main>
 
     <!-- 页脚 -->
     <footer
@@ -150,6 +155,7 @@
 <script>
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
+import { bindSkipLink } from '@/utils/doc-chrome'
 // 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发
 import brand from '@/brand/slogan.json'
 
@@ -163,6 +169,10 @@ export default {
       brand,
       year: new Date().getFullYear()
     }
+  },
+  mounted() {
+    // 跳转链接必须拦默认行为：hash 路由会把 #es-main 当成一条不存在的路径
+    bindSkipLink(document)
   },
   watch: {
     // 点任意导航项后收起下拉：否则它会盖住刚打开的页面

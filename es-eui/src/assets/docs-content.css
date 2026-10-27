@@ -23,6 +23,13 @@
   /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .dark 覆盖（与全局 hljs 主题一致） */
   --es-doc-code-block-bg: #f6f8fa;
   --es-doc-code-block-text: #24292e;
+  /* 提示框标题文字：比状态色（--es-success/warning/danger）深一档。
+     状态色做边框、圆点是够的（非文本 UI 门槛 3:1），但同一块颜色当 13.5px 粗体
+     标题压在各自的浅底上只有 3.05 / 2.97 / 4.35，达不到正文 AA 的 4.5（路线图 1.7）。 */
+  --es-doc-tip-text: #15803d;
+  --es-doc-warning-text: #b45309;
+  --es-doc-info-text: var(--es-link);
+  --es-doc-danger-text: #b91c1c;
 }
 
 .dark {
@@ -34,6 +41,12 @@
   --es-doc-code-tint: rgba(96, 165, 250, 0.14);
   --es-doc-code-block-bg: #1e1e1e;
   --es-doc-code-block-text: #abb2bf;
+  /* 深色下状态色本身已经是浅色（#34d399 / #fbbf24 / #f87171），压在 12% 的同色
+     暗底上都在 6:1 以上，不需要再加深那一档。 */
+  --es-doc-tip-text: var(--es-success);
+  --es-doc-warning-text: var(--es-warning);
+  --es-doc-info-text: var(--es-link);
+  --es-doc-danger-text: var(--es-danger);
 }
 
 .es-doc-content {
@@ -190,9 +203,12 @@
   font-weight: 600;
 }
 
-/* ── 链接 ── */
+/* ── 链接 ──
+ * 用 --es-link（#2563eb / 深色 #60a5fa）而不是品牌主色 #3b82f6：
+ * 品牌蓝压在白底上只有 3.68:1，正文链接的 AA 门槛是 4.5（路线图 1.7）。
+ * 主色仍用于按钮、渐变、标记——那些是非文本 UI，3:1 即可。 */
 .es-doc-content a {
-  color: var(--es-brand-primary);
+  color: var(--es-link);
   text-decoration: none;
   font-weight: 500;
   text-underline-offset: 3px;
@@ -216,7 +232,8 @@
   font-family: var(--es-font-mono);
   font-size: 0.86em;
   font-weight: 500;
-  color: var(--es-brand-primary);
+  /* 同链接：品牌蓝在浅蓝药丸底上只有 3.36，不够 4.5；--es-link 为 4.73 */
+  color: var(--es-link);
 }
 
 /* ── 代码块 ── */
@@ -500,7 +517,7 @@
 
 .es-doc-content > table td code {
   font-size: 12.5px;
-  color: var(--es-brand-primary);
+  color: var(--es-link);
   background: var(--es-doc-code-tint);
 }
 
@@ -581,13 +598,13 @@
 }
 
 .es-doc-content .custom-block.tip { border-left-color: var(--es-success); background: #f0f9eb; }
-.es-doc-content .custom-block.tip .custom-block-title { color: var(--es-success); }
+.es-doc-content .custom-block.tip .custom-block-title { color: var(--es-doc-tip-text); }
 .es-doc-content .custom-block.warning { border-left-color: var(--es-warning); background: #fdf6ec; }
-.es-doc-content .custom-block.warning .custom-block-title { color: var(--es-warning); }
+.es-doc-content .custom-block.warning .custom-block-title { color: var(--es-doc-warning-text); }
 .es-doc-content .custom-block.info { border-left-color: var(--es-brand-primary); background: #ecf5ff; }
-.es-doc-content .custom-block.info .custom-block-title { color: var(--es-brand-primary); }
+.es-doc-content .custom-block.info .custom-block-title { color: var(--es-doc-info-text); }
 .es-doc-content .custom-block.danger { border-left-color: var(--es-danger); background: #fef0f0; }
-.es-doc-content .custom-block.danger .custom-block-title { color: var(--es-danger); }
+.es-doc-content .custom-block.danger .custom-block-title { color: var(--es-doc-danger-text); }
 
 /* ── 图片 / 分割线 ── */
 .es-doc-content img {

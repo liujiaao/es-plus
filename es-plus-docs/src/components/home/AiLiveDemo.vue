@@ -303,6 +303,7 @@ generate()
 .prompt-input {
   width: 100%;
   border: none;
+  /* 鼠标点击不留环（容器已有底），键盘焦点必须看得见 —— 见下方 :focus-visible */
   outline: none;
   resize: vertical;
   font-size: 14px;
@@ -311,6 +312,11 @@ generate()
   color: var(--text-color-primary);
   background: transparent;
   min-height: 80px;
+}
+
+.prompt-input:focus-visible {
+  outline: 2px solid var(--es-link);
+  outline-offset: 2px;
 }
 
 .prompt-actions {

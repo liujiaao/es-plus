@@ -19,6 +19,9 @@ import './styles/docs-content.css'
 import './styles/docs-layout.css'
 import './styles/docs-chrome.css'
 import './styles/global.css'
+// 可访问性基线（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）。
+// 放在最后一个全局样式之后：`:focus-visible` 要盖住前面所有 outline 约定。
+import './styles/docs-a11y.css'
 
 const app = createApp(App)
 app.use(Antd)

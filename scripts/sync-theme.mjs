@@ -8,6 +8,7 @@
  *   - docs-chrome.css：文档 chrome 契约（面包屑/目录/上下篇/编辑反馈）。路线图 1.4。
  *   - doc-chrome.js：chrome 行为（标题发号、目录滚动高亮），无框架依赖。路线图 1.4。
  *   - code-block.js：代码块契约（语言/文件名/复制/折叠/行号/高亮行），无框架依赖。路线图 1.6。
+ *   - docs-a11y.css：可访问性基线（skip link / focus-visible / reduced-motion / 读屏工具类）。路线图 1.7。
  *
  * 用法：
  *   node scripts/sync-theme.mjs           # 同步：拷贝单源到各站点
@@ -50,6 +51,16 @@ const ASSETS = [
       join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-chrome.css'),
       join(ROOT, 'es-pc', 'src', 'styles', 'docs-chrome.css'),
       join(ROOT, 'es-eui', 'src', 'assets', 'docs-chrome.css'),
+    ],
+  },
+  {
+    // 可访问性基线（路线图 1.7）：skip link / focus-visible / reduced-motion。
+    // 放在布局之后分发，但**必须最后 import**——它要压过站点自己的 `outline: none`。
+    file: 'docs-a11y.css',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-a11y.css'),
+      join(ROOT, 'es-pc', 'src', 'styles', 'docs-a11y.css'),
+      join(ROOT, 'es-eui', 'src', 'assets', 'docs-a11y.css'),
     ],
   },
   {

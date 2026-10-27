@@ -1,7 +1,13 @@
 <template>
   <header class="app-header">
     <div class="header-left">
-      <button class="hamburger-btn" @click="toggleMobileMenu" aria-label="菜单">
+      <button
+        class="hamburger-btn"
+        :aria-label="mobileMenuOpen ? '关闭菜单' : '打开菜单'"
+        :aria-expanded="String(mobileMenuOpen)"
+        aria-controls="es-sidebar"
+        @click="toggleMobileMenu"
+      >
         <el-icon :size="20"><component :is="mobileMenuOpen ? 'Close' : 'Expand'" /></el-icon>
       </button>
       <router-link to="/" class="logo">

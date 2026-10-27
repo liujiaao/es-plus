@@ -36,18 +36,31 @@
     <!-- 代码区域：结构与 es-pc / es-eui 的示例卡片一致，由 utils/code-block.js 产出 -->
     <el-collapse-transition>
       <div v-show="isExpanded" class="playground-code">
-        <div class="code-tabs">
-          <div
+        <!-- 标签页是键盘可达的：<button> + role="tab" + 左右方向键切换（路线图 1.7）。
+             此前是三个带 @click 的 <div> —— 鼠标能点，键盘永远切不到 Script / Style。 -->
+        <div ref="tabList" class="code-tabs" role="tablist" aria-label="代码视图" @keydown="onTabKeydown">
+          <button
             v-for="tab in codeTabs"
+            :id="`code-tab-${tab.name}`"
             :key="tab.name"
+            type="button"
+            role="tab"
             class="code-tab"
             :class="{ active: activeTab === tab.name }"
+            :aria-selected="String(activeTab === tab.name)"
+            :tabindex="activeTab === tab.name ? 0 : -1"
             @click="activeTab = tab.name"
           >
             {{ tab.label }}
-          </div>
+          </button>
         </div>
-        <div ref="codeHost" class="code-content" v-html="activeCodeHtml"></div>
+        <div
+          ref="codeHost"
+          class="code-content"
+          role="tabpanel"
+          :aria-labelledby="`code-tab-${activeTab}`"
+          v-html="activeCodeHtml"
+        ></div>
       </div>
     </el-collapse-transition>
     
@@ -106,6 +119,7 @@ const LEVEL_TYPES = ['', 'success', 'success', 'warning', 'danger', 'danger'] as
 const isExpanded = ref(false)
 const activeTab = ref('template')
 const refreshKey = ref(0)
+const tabList = ref<HTMLElement | null>(null)
 
 const codeTabs = computed<CodeTabs[]>(() => {
   const tabs: CodeTabs[] = []
@@ -126,6 +140,26 @@ const displayCode = computed<CodeContent>(() => {
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
+}
+
+/**
+ * 标签页的方向键导航（WAI-ARIA tabs 的标准键盘约定）：
+ * 左右切换、Home/End 到首尾，焦点跟着走。Tab 键只在当前标签上停一次。
+ */
+const onTabKeydown = (event: KeyboardEvent) => {
+  const names = codeTabs.value.map((t) => t.name)
+  const index = names.indexOf(activeTab.value)
+  let next: number | null = null
+  if (event.key === 'ArrowRight') next = (index + 1) % names.length
+  else if (event.key === 'ArrowLeft') next = (index - 1 + names.length) % names.length
+  else if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = names.length - 1
+  if (next === null) return
+  event.preventDefault()
+  activeTab.value = names[next]
+  nextTick(() => {
+    tabList.value?.querySelectorAll<HTMLButtonElement>('.code-tab')[next as number]?.focus()
+  })
 }
 
 /** 三个 tab 的语言标签：模板片段就是 HTML，脚本是 JS，样式是 CSS。 */
@@ -274,6 +308,10 @@ watch(activeCodeHtml, enhanceCode)
 }
 
 .code-tab {
+  /* 元素从 <div> 换成 <button> 后要清掉浏览器的默认外观，视觉保持原样 */
+  border: 0;
+  background: transparent;
+  font-family: inherit;
   padding: 10px 20px;
   cursor: pointer;
   font-size: 13px;

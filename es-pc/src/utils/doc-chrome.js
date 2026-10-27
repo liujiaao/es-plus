@@ -280,3 +280,39 @@ export function lastUpdatedFor(key) {
   const meta = typeof __ES_DOC_META__ === 'undefined' ? null : __ES_DOC_META__
   return (meta && meta[key]) || ''
 }
+
+/**
+ * 「跳到主内容」的行为（路线图 1.7）。
+ *
+ * 为什么不能只写 `<a href="#es-main">`：三站都是 **hash 路由**，地址栏里的 `#`
+ * 就是路由本身。用户按回车后浏览器把地址改成 `#/es-main`，路由把它当成一条
+ * 不存在的路径，页面直接落到 404 —— 一个纯粹的键盘便利功能变成了错误页。
+ * 所以必须拦下默认行为，手工把焦点交给正文地标（`tabindex="-1"` 由模板给出，
+ * 这里兜底补上，避免哪天模板漏写就整条链路失效）。
+ *
+ * 幂等：给元素打 `data-skip-bound`，重复调用不会叠加监听器（三站都可能
+ * 在布局挂载时调一次）。
+ *
+ * @returns {number} 本次绑定的链接数
+ */
+export function bindSkipLink(root, { selector = '.es-skip-link', targetId = 'es-main' } = {}) {
+  const scope = root && typeof root.querySelectorAll === 'function' ? root : typeof document === 'undefined' ? null : document
+  if (!scope) return 0
+
+  const links = Array.from(scope.querySelectorAll(selector))
+  for (const link of links) {
+    if (link.dataset.skipBound === 'true') continue
+    link.dataset.skipBound = 'true'
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+      const target = document.getElementById(targetId)
+      if (!target) return
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1')
+      target.scrollIntoView({ block: 'start' })
+      // preventScroll：上面已经定好滚动位置，这里只接管焦点，
+      // 否则浏览器会为了「让焦点可见」再滚一次，落点会跳。
+      target.focus({ preventScroll: true })
+    })
+  }
+  return links.length
+}

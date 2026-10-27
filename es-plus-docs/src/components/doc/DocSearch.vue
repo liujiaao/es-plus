@@ -349,6 +349,12 @@ watch(searchQuery, () => {
     &::placeholder {
       color: var(--text-color-secondary);
     }
+
+    /* 输入框本身去掉了 outline（描边在外层搜索框上），键盘焦点得在这里补回来 */
+    &:focus-visible {
+      outline: 2px solid var(--es-link);
+      outline-offset: 2px;
+    }
   }
 
   .search-shortcut {

@@ -2,7 +2,7 @@
   <transition name="sidebar-overlay">
     <div v-if="mobileOpen" class="sidebar-overlay" @click="$emit('close')" />
   </transition>
-  <aside class="app-sidebar" :class="{ 'mobile-open': mobileOpen }">
+  <aside id="es-sidebar" class="app-sidebar" :class="{ 'mobile-open': mobileOpen }" aria-label="文档目录">
     <div class="sidebar-content">
       <div v-for="section in sections" :key="section.titleKey" class="nav-section">
         <div class="nav-title">{{ t(section.titleKey) }}</div>

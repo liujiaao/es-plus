@@ -1,0 +1,108 @@
+/* ==========================================================================
+ * 可访问性基线 —— 三站共用（路线图 1.7）
+ *
+ * 审计 §7：三站此前**没有任何一项**可访问性基线 —— 没有跳转链接、没有焦点环
+ * 约定（键盘 Tab 到哪全靠浏览器默认，遇到 `outline: none` 的地方直接看不见）、
+ * 没有 reduced-motion 适配。三站又都是「一堆链接 + 一堆按钮」的文档站，
+ * 键盘用户首屏要先 Tab 过整个导航才能到正文。
+ *
+ * 本文件只做「三站必须一致、且与框架无关」的四件事：
+ *   1. 跳到主内容（skip link）—— 结构由各站外壳插入 `<a class="es-skip-link">`，
+ *      落点是 `#es-main`（各站正文地标，带 tabindex="-1" 才能接住程序化焦点）；
+ *   2. `:focus-visible` 焦点环 —— 全站统一用 `--es-link`，鼠标点击不出环、
+ *      键盘操作必出环；
+ *   3. `prefers-reduced-motion` —— 关掉过渡与动画（含平滑滚动）；
+ *   4. `.es-visually-hidden` —— 只给读屏的文本。
+ *
+ * 依赖：docs/tokens/design-tokens.css（--es-link / --es-brand-primary）。
+ * 分发：scripts/sync-theme.mjs（禁止手改各站点副本）。
+ * ========================================================================== */
+
+/* ── 1. 跳到主内容 ──
+ * 默认移出视口（translateY(-200%)）而不是 display:none / visibility:hidden：
+ * 后两者会把链接从 Tab 序列里摘掉，键盘用户反而永远拿不到它。
+ *
+ * 底色用 #1d4ed8 而不是品牌主色 #3b82f6：白字压在品牌蓝上只有 3.68:1，
+ * 达不到正文 AA（4.5:1）；#1d4ed8 是 6.70:1，深色站底下同样是这一块实心色。
+ */
+.es-skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 2147483000; /* 高于三站所有浮层（Element/AntD 弹层止于 2000 量级） */
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font-family: var(--es-font-sans);
+  font-size: var(--es-text-base);
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  box-shadow: var(--es-shadow-md);
+  transform: translateY(-200%);
+  transition: transform 0.18s ease;
+}
+
+.es-skip-link:focus,
+.es-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ── 2. 焦点环 ──
+ * 用 `:focus-visible` 而不是 `:focus`：鼠标点按钮不该留一圈环，
+ * 键盘 Tab 到任何可交互元素都必须看得见。`outline` 而非 `box-shadow`：
+ * 环不会被 `overflow: hidden` 的祖先裁掉（三站的卡片、表格容器大量用它）。
+ *
+ * 颜色走 `--es-link`（浅色 #2563eb / 深色 #60a5fa）：非文本 UI 的对比门槛是
+ * 3:1，品牌主色 #3b82f6 在浅色底上只有 3.68、压到提示框的浅底上不足 3 —— 会
+ * 「有环但看不见」。
+ */
+:focus-visible {
+  outline: 2px solid var(--es-link);
+  outline-offset: 2px;
+}
+
+/* 跳过链接的落点是整块正文：给它画环等于给半屏内容描边，故只接受焦点、不描边。
+ * 取消描边的前提是「用户刚刚明确要求跳到正文」，方向感由 skip link 自身承担。 */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+/* ── 3. 减少动效 ──
+ * 三站的过渡动效不少（侧栏抽屉、主题切换、代码块展开、卡片 hover）。
+ * 系统开启「减少动态效果」时一律压到 0.01ms 而不是 0：
+ * transitionend / animationend 仍会触发，依赖它们的状态机不会卡死。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .es-skip-link {
+    transition: none;
+  }
+}
+
+/* ── 4. 只给读屏的文本 ──
+ * 不用 `display: none` / `visibility: hidden`（读屏也读不到），也不用
+ * `left: -9999px`（会把页面撑出横向滚动条）。 */
+.es-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

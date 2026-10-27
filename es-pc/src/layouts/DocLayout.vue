@@ -1,5 +1,8 @@
 <template>
   <a-layout class="doc-layout">
+    <!-- 键盘用户的第一站：Tab 一下跳过顶部导航 + 侧栏，直达正文（路线图 1.7）。
+         a-layout-content 渲染出的就是 <main>，落点 id 挂在它身上。 -->
+    <a class="es-skip-link" href="#es-main">跳到主内容</a>
     <!-- 顶部导航 -->
     <a-layout-header class="doc-header">
       <div class="header-left">
@@ -7,7 +10,8 @@
         <a-button
           class="nav-toggle"
           type="text"
-          aria-label="菜单"
+          :aria-label="siderCollapsed ? '打开菜单' : '关闭菜单'"
+          :aria-expanded="String(!siderCollapsed)"
           @click="siderCollapsed = !siderCollapsed"
         >
           <MenuOutlined />
@@ -139,7 +143,7 @@
       </a-layout-sider>
 
       <!-- 内容区域 -->
-      <a-layout-content class="doc-content">
+      <a-layout-content id="es-main" tabindex="-1" class="doc-content">
         <!-- 文档页走「正文 + 右栏目录」两栏（.es-doc-with-toc 由 docs-chrome.css 定义），
              首页/案例/画廊这类非文档页不登记在 DOC_NAV 里，左侧单独占满、不渲染 chrome。 -->
         <div class="content-wrapper es-doc-content es-doc-with-toc">
@@ -205,7 +209,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   // 不再引入 BookOutlined：它此前被当作本站 logo，现已换成统一的「ES」品牌标记
@@ -226,8 +230,11 @@ import brand from '@/brand/slogan.json'
 import { SITES, SITE_KEY } from '@/utils/sites'
 import DocMeta from '@/components/doc/DocMeta.vue'
 // 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
-import { collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
+import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
 import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
+
+// 跳转链接必须拦默认行为：hash 路由会把 #es-main 当成一条不存在的路径
+onMounted(() => bindSkipLink(document))
 
 const year = new Date().getFullYear()
 

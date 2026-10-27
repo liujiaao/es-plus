@@ -19,6 +19,9 @@ import '@/styles/docs-content.css'
 import '@/styles/docs-layout.css'
 // 文档 chrome 契约单一真源（docs/theme/docs-chrome.css → scripts/sync-theme.mjs 分发）
 import '@/styles/docs-chrome.css'
+// 可访问性基线单一真源（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）
+// 必须最后 import：它要压过站点/site 组件里自己的 outline 规则
+import '@/styles/docs-a11y.css'
 import '@/styles/index.scss'
 
 // dist 模式：别名指向打包产物；源码模式：别名指向空文件（样式由 Vite SCSS 管道处理）。

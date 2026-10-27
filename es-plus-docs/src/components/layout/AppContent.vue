@@ -1,5 +1,7 @@
 <template>
-  <main class="app-content">
+  <!-- id + tabindex 是 skip link 的落点：没有 tabindex，浏览器只会滚到这里，
+       焦点仍留在链接上，再按 Tab 又回到导航。 -->
+  <main id="es-main" tabindex="-1" class="app-content">
     <div class="content-wrapper">
       <slot />
     </div>

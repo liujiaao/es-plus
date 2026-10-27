@@ -336,6 +336,13 @@ watch(
     border-color: var(--primary-color);
   }
 
+  /* 上面那条 outline: none 是给鼠标的（边框变色已有反馈）。键盘焦点必须看得见 ——
+     这条比全局 `:focus-visible` 特异性高，组件样式后注入也不会把它盖掉。 */
+  &:focus-visible {
+    outline: 2px solid var(--es-link);
+    outline-offset: 2px;
+  }
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;

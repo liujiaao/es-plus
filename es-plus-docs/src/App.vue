@@ -1,5 +1,8 @@
 <template>
   <div class="app-wrapper" :class="{ dark: isDark }">
+    <!-- 键盘用户的第一站：Tab 一下就能跳过整个导航直达正文（路线图 1.7）。
+         落点 #es-main 在 AppContent 的 <main> 上，带 tabindex="-1" 才接得住焦点。 -->
+    <a class="es-skip-link" href="#es-main">跳到主内容</a>
     <AppHeader @toggle-mobile-menu="toggleMobileMenu" />
     <AppSidebar :mobile-open="mobileMenuOpen" @close="mobileMenuOpen = false" />
     <AppContent>
@@ -13,6 +16,7 @@ import { ref, onMounted } from 'vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppContent from './components/layout/AppContent.vue'
+import { bindSkipLink } from '@/utils/doc-chrome.js'
 import { useThemeStore } from './stores/theme'
 
 const themeStore = useThemeStore()
@@ -25,6 +29,8 @@ const toggleMobileMenu = (open) => {
 }
 
 onMounted(() => {
+  // 跳转链接必须拦默认行为：hash 路由会把 #es-main 当成一条不存在的路径
+  bindSkipLink(document)
   themeStore.initTheme()
   isDark.value = themeStore.isDark
 
