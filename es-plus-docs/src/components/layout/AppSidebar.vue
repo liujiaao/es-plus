@@ -90,6 +90,19 @@ const sections = [
     ],
   },
   {
+    // AI 证据页：此前这五页一条导航都没有，只有知道 URL 的人才进得来。
+    // 「我们做得怎么样」是读者最想看的部分之一，藏起来等于没做。
+    // 与上一组（工具：MCP / CLI / 生成器）刻意分开：那组是能用的东西，这组是证据。
+    titleKey: 'sidebar.section.aiEvidence',
+    items: [
+      { path: '/ai-gallery', labelKey: 'sidebar.aiGallery', icon: markRaw(Picture) },
+      { path: '/ai-gallery/composition', labelKey: 'sidebar.composition', icon: markRaw(Grid) },
+      { path: '/ai-gallery/workflows', labelKey: 'sidebar.workflows', icon: markRaw(Connection) },
+      { path: '/fragment-dashboard', labelKey: 'sidebar.fragmentDashboard', icon: markRaw(Odometer) },
+      { path: '/native-vs-ai', labelKey: 'sidebar.nativeVsAi', icon: markRaw(Switch) },
+    ],
+  },
+  {
     titleKey: 'sidebar.section.ecosystem',
     items: [
       { path: '/guide/vue2', labelKey: 'sidebar.vue2', icon: markRaw(SetUp) },
@@ -104,6 +117,8 @@ const sections = [
 </script>
 
 <style lang="scss" scoped>
+@use '../../styles/breakpoints' as bp;
+
 .app-sidebar {
   width: 260px;
   height: calc(100vh - var(--header-height));
@@ -194,7 +209,7 @@ const sections = [
   color: inherit;
 }
 
-@media (max-width: 768px) {
+@media (max-width: bp.$nav-collapse) {
   .app-sidebar {
     transform: translateX(-100%);
     z-index: 200;

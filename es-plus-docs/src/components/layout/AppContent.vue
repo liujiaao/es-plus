@@ -7,6 +7,8 @@
 </template>
 
 <style lang="scss" scoped>
+@use '../../styles/breakpoints' as bp;
+
 .app-content {
   margin-left: 260px;
   padding-top: var(--header-height);
@@ -22,7 +24,8 @@
   padding: 0;
 }
 
-@media (max-width: 768px) {
+// 与 AppHeader / AppSidebar 同一切换点：侧栏收起为抽屉时，正文立刻放掉左缩进
+@media (max-width: bp.$nav-collapse) {
   .app-content {
     margin-left: 0;
   }

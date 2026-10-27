@@ -44,8 +44,12 @@ const fail = (msg) => {
   process.exit(1)
 }
 
-/** 从 `export const X: ... = {` 开始的字面量对象里取顶层 key（2 空格缩进） */
-function objectKeys(src, exportName) {
+/**
+ * 从 `export const X: ... = {` 开始的字面量对象里取顶层 key（2 空格缩进）。
+ * 导出给 check-nav-coverage.mjs 复用：导航的 slug 校验与 sitemap 的条目生成
+ * 必须读同一份解析规则，否则一边认得了的 slug、另一边认不得。
+ */
+export function objectKeys(src, exportName) {
   const start = src.indexOf(`export const ${exportName}`)
   if (start === -1) return []
   const rest = src.slice(start)

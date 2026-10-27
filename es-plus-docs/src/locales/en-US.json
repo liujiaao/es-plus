@@ -8,7 +8,9 @@
     "playground": "Playground",
     "github": "GitHub",
     "search": "Search docs...",
-    "searchShortcut": "Ctrl+K"
+    "searchShortcut": "Ctrl+K",
+    "cases": "Cases",
+    "ai": "AI"
   },
   "sidebar": {
     "section": {
@@ -17,7 +19,8 @@
       "components": "Component API",
       "engine": "Engine",
       "ai": "AI Toolchain",
-      "ecosystem": "Ecosystem"
+      "ecosystem": "Ecosystem",
+      "aiEvidence": "AI Evidence"
     },
     "whyEsPlus": "Why ES-Plus",
     "quickstart": "30-Second Start",
@@ -44,7 +47,12 @@
     "schemaSetup": "IDE Schema Setup",
     "changelog": "Changelog",
     "aiCrud": "AI CRUD Generator",
-    "playground": "Playground"
+    "playground": "Playground",
+    "aiGallery": "AI Case Gallery",
+    "composition": "Composition Gallery",
+    "workflows": "MCP Workflows",
+    "fragmentDashboard": "Fragment Dashboard",
+    "nativeVsAi": "Native vs Hand-Written vs AI"
   },
   "search": {
     "placeholder": "Search docs...",

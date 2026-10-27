@@ -8,7 +8,9 @@
     "playground": "Playground",
     "github": "GitHub",
     "search": "搜索文档...",
-    "searchShortcut": "Ctrl+K"
+    "searchShortcut": "Ctrl+K",
+    "cases": "案例",
+    "ai": "AI"
   },
   "sidebar": {
     "section": {
@@ -17,7 +19,8 @@
       "components": "组件 API",
       "engine": "引擎",
       "ai": "AI 工具链",
-      "ecosystem": "生态"
+      "ecosystem": "生态",
+      "aiEvidence": "AI 证据"
     },
     "whyEsPlus": "为什么是 ES-Plus",
     "quickstart": "30 秒上手",
@@ -44,7 +47,12 @@
     "schemaSetup": "IDE 自动补全",
     "changelog": "更新日志",
     "aiCrud": "AI CRUD 生成器",
-    "playground": "Playground"
+    "playground": "Playground",
+    "aiGallery": "AI 案例画廊",
+    "composition": "组合画廊（三端）",
+    "workflows": "MCP 工具工作流",
+    "fragmentDashboard": "片段拼装看板",
+    "nativeVsAi": "原生 · 手写 · AI 对照"
   },
   "search": {
     "placeholder": "搜索文档...",

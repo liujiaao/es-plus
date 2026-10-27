@@ -13,6 +13,8 @@
         <router-link to="/guide/getting-started" class="nav-item">{{ t('header.guide') }}</router-link>
         <router-link to="/components/es-form" class="nav-item">{{ t('header.components') }}</router-link>
         <router-link to="/advanced/use-dialog" class="nav-item">{{ t('header.advanced') }}</router-link>
+        <router-link to="/cases" class="nav-item">{{ t('header.cases') }}</router-link>
+        <router-link to="/ai-crud" class="nav-item">{{ t('header.ai') }}</router-link>
         <router-link to="/playground" class="nav-item">{{ t('header.playground') }}</router-link>
       </nav>
     </div>
@@ -116,6 +118,8 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@use '../../styles/breakpoints' as bp;
+
 .app-header {
   height: var(--header-height);
   position: fixed;
@@ -340,7 +344,9 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 768px) {
+// 顶栏在平板宽度就要让位：7 个入口 + 右侧语言/主题/切站/仓库图标，
+// 英文标签下 900px 左右即溢出（侧栏已经给出全部入口，顶栏只是快捷方式）。
+@media (max-width: bp.$nav-collapse) {
   .hamburger-btn {
     display: flex;
   }
@@ -348,7 +354,9 @@ onUnmounted(() => {
   .header-nav {
     display: none;
   }
+}
 
+@media (max-width: bp.$mobile) {
   .search-shortcut-text {
     display: none;
   }
