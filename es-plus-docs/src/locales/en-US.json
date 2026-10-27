@@ -178,7 +178,24 @@
     "compStatGlue": "markup + event glue code",
     "comparisonNote": "Every figure above is measured by a build script from the two files shown in this section — not an estimate: template lines + handle*/fetch* event & fetch functions 115 → 27 (-76.5%); whole file 151 → 90 lines incl. blank (-40.4%). Field and column declarations are written on both sides, so they are excluded. Source: docs/brand/one-config/.",
     "linesSuffix": " lines",
-    "footerRenderer": "Vue 3 + Element Plus renderer"
+    "footerRenderer": "Vue 3 + Element Plus renderer",
+    "triRender": {
+      "tag": "Try it here",
+      "hint": "Edit these three fields — one config, three renderers update at once",
+      "reset": "Reset",
+      "apiUrl": "API URL",
+      "queryLabel": "Query field label",
+      "columnLabel": "Column label",
+      "defaultApiUrl": "/api/users",
+      "defaultQueryLabel": "User name",
+      "defaultColumnLabel": "Status",
+      "configTitle": "One config",
+      "targetsTitle": "Three outputs",
+      "lines": "lines",
+      "onlyHere": "Unique here:",
+      "foot": "All four lines are computed live in the browser by the real generator (same implementation as the CLI / MCP server): the top three are byte-identical across renderers, only the → import line differs.",
+      "error": "Generation failed"
+    }
   },
   "aiLive": {
     "tag": "Generate a CRUD page from one sentence",

@@ -13,24 +13,30 @@
         <p class="hero-description">
           <span class="hero-subtitle">{{ t('home.tagline2') }}</span>
         </p>
+        <!-- Landing 最多两个主 CTA（主色 + 次色），其余降级为文字链接（路线图 2.1） -->
         <div class="hero-actions">
           <el-button type="primary" size="large" @click="goToGuide">
             <el-icon class="btn-icon"><Document /></el-icon>
             {{ t('home.ctaQuickStart') }}
           </el-button>
-          <el-button size="large" type="success" @click="goToAiCrud">
+          <el-button size="large" class="cta-secondary" @click="goToAiCrud">
             <el-icon class="btn-icon"><MagicStick /></el-icon>
             {{ t('home.ctaAiCrud') }}
           </el-button>
-          <el-button size="large" @click="goToPlayground">
-            <el-icon class="btn-icon"><Monitor /></el-icon>
-            {{ t('home.ctaPlayground') }}
-          </el-button>
-          <el-button size="large" @click="goToGithub">
-            <el-icon class="btn-icon"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg></el-icon>
-            {{ t('home.ctaGithub') }}
-          </el-button>
         </div>
+        <p class="hero-links">
+          <a class="hero-link" href="#/playground" @click.prevent="goToPlayground">
+            <el-icon class="btn-icon"><Monitor /></el-icon>{{ t('home.ctaPlayground') }}
+          </a>
+          <a
+            class="hero-link"
+            href="https://github.com/liujiaao/es-plus"
+            target="_blank"
+            rel="noopener"
+          >
+            <el-icon class="btn-icon"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg></el-icon>{{ t('home.ctaGithub') }}
+          </a>
+        </p>
         <div class="hero-stats">
           <div class="stat-item">
             <span class="stat-value">{{ t('home.stat1Value') }}</span>
@@ -46,31 +52,8 @@
           </div>
         </div>
       </div>
-      <div class="hero-code">
-        <div class="code-window">
-          <div class="code-header">
-            <span class="dot red"></span>
-            <span class="dot yellow"></span>
-            <span class="dot green"></span>
-            <span class="code-title">{{ t('home.codeTitle') }}</span>
-          </div>
-          <pre class="code-content"><code>&lt;es-form
-  :model="formModel"
-  :form-item-list="formItems"
-  @confirm="handleSubmit"
-/&gt;
-
-&lt;es-table
-  :data-source="tableData"
-  :columns="columns"
-&gt;
-  &lt;es-form /&gt;
-&lt;/es-table&gt;
-
-const dialog = useDialog()
-dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
-        </div>
-      </div>
+      <!-- 首屏证据：不是截图文案，是真的跑一遍生成器（路线图 2.3） -->
+      <HeroTriRender class="hero-demo" />
     </div>
 
     <!-- 三个可验证承诺（文案单一真源 docs/brand/slogan.json） -->
@@ -286,6 +269,8 @@ import brand from '@/brand/slogan.json'
 import oneConfigDiff from '@/brand/one-config-diff.json'
 import CodeDiff from '@/components/doc/CodeDiff.vue'
 import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
+// 首屏「改配置 → 三端变」小部件：真跑生成器，不是截图（路线图 2.3）
+import HeroTriRender from '@/components/home/HeroTriRender.vue'
 
 const { t, locale } = useI18n()
 
@@ -360,10 +345,6 @@ const goToPlayground = () => {
 const goToAiCrud = () => {
   router.push('/ai-crud')
 }
-
-const goToGithub = () => {
-  window.open('https://github.com/liujiaao/es-plus', '_blank')
-}
 </script>
 
 <style lang="scss" scoped>
@@ -374,11 +355,12 @@ const goToGithub = () => {
 // Hero Section
 .hero-section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  /* 右侧证据区比文字宽一点：三端差异行要读得下（路线图 2.1/2.3） */
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 56px;
   align-items: center;
   min-height: 600px;
-  padding: 80px 48px;
+  padding: 72px 48px;
   // background: linear-gradient(135deg, var(--es-fill) 0%, #ffffff 100%);
 }
 
@@ -435,7 +417,8 @@ const goToGithub = () => {
 .hero-actions {
   display: flex;
   gap: 16px;
-  margin-bottom: 48px;
+  /* 只留一点点：下面紧跟一行次级文字链接，两者是同一组入口 */
+  margin-bottom: 12px;
 }
 
 .btn-icon {
@@ -463,60 +446,33 @@ const goToGithub = () => {
   color: var(--text-color-secondary);
 }
 
-// Hero Code
-.hero-code {
-  display: flex;
-  justify-content: center;
-}
-
-.code-window {
+// Hero 右侧证据区（路线图 2.3）：此前是一个 11px 的静态代码窗口，
+// 既读不清也不证明任何事 —— 现在是可交互的三端生成器。
+.hero-demo {
   width: 100%;
-  max-width: 500px;
-  background: #1e1e1e;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  align-self: center;
 }
 
-.code-header {
+/* 两个主 CTA 之下的次级入口：文字链接（路线图 2.1） */
+.hero-links {
   display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 0 0 40px;
+}
+
+.hero-link {
+  display: inline-flex;
   align-items: center;
-  padding: 12px 16px;
-  background: #2d2d2d;
-}
-
-.dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-right: 8px;
-  
-  &.red { background: #ff5f56; }
-  &.yellow { background: #ffbd2e; }
-  &.green { background: #27ca40; }
-}
-
-.code-title {
-  margin-left: 12px;
-  font-size: 13px;
   color: var(--es-text-secondary);
-}
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.18s;
 
-.code-content {
-  padding: 20px;
-  margin: 0;
-  // 全局 `pre { background/color }` 规则会漏进这里，显式覆盖以保持深色代码窗
-  background: transparent;
-  border-radius: 0;
-  font-family: 'SFMono-Regular', Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.8;
-  color: #abb2bf;
-  overflow-x: auto;
-
-  code {
-    background: transparent;
-    color: inherit;
+  &:hover {
+    color: var(--es-link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 }
 
@@ -1162,10 +1118,15 @@ const goToGithub = () => {
     margin-top: 4px;
   }
 
+  .hero-links {
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+
   .hero-actions {
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 32px;
+    margin-bottom: 10px;
     justify-content: center;
 
     .el-button {

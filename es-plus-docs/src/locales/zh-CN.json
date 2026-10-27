@@ -178,7 +178,24 @@
     "compStatGlue": "模板 + 事件胶水代码",
     "comparisonNote": "以上数字由构建脚本从本节展示的两段源码实测得出，不是估值：模板区行数 + handle*/fetch* 事件与取数函数行数 115 → 27 行（−76.5%）；整页 151 → 90 行（含空行，−40.4%）。字段与列的声明两侧都要写，故不计入降幅。源码见仓库 docs/brand/one-config/。",
     "linesSuffix": " 行",
-    "footerRenderer": "Vue 3 + Element Plus 渲染端"
+    "footerRenderer": "Vue 3 + Element Plus 渲染端",
+    "triRender": {
+      "tag": "首屏可交互",
+      "hint": "改这三个字段 —— 同一份配置，三个渲染端的产物同时变",
+      "reset": "重置",
+      "apiUrl": "接口地址",
+      "queryLabel": "查询字段名",
+      "columnLabel": "表格列名",
+      "defaultApiUrl": "/api/users",
+      "defaultQueryLabel": "用户名",
+      "defaultColumnLabel": "状态",
+      "configTitle": "同一份配置",
+      "targetsTitle": "三端产物",
+      "lines": "行",
+      "onlyHere": "仅此端",
+      "foot": "四行都由生成器在浏览器里现算（与 CLI / MCP 同一份实现）：上三行三端逐字节相同，只有 → 那一行 import 不同。",
+      "error": "生成失败"
+    }
   },
   "aiLive": {
     "tag": "AI 一句话生成 CRUD 页面",
