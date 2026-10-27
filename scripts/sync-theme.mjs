@@ -9,6 +9,10 @@
  *   - doc-chrome.js：chrome 行为（标题发号、目录滚动高亮），无框架依赖。路线图 1.4。
  *   - code-block.js：代码块契约（语言/文件名/复制/折叠/行号/高亮行），无框架依赖。路线图 1.6。
  *   - docs-a11y.css：可访问性基线（skip link / focus-visible / reduced-motion / 读屏工具类）。路线图 1.7。
+ *   - docs-footer.css：三站四列页脚外观。路线图 1.8。
+ *   - site-footer.js：页脚数据（栏位 / 链接 / 站内路径映射），纯函数。路线图 1.8。
+ *   - docs-notfound.css：三站统一 404 外观。路线图 1.8。
+ *   - site-not-found.js：404 数据（文案 / 固定入口 / 另两站），纯函数。路线图 1.8。
  *
  * 用法：
  *   node scripts/sync-theme.mjs           # 同步：拷贝单源到各站点
@@ -61,6 +65,42 @@ const ASSETS = [
       join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-a11y.css'),
       join(ROOT, 'es-pc', 'src', 'styles', 'docs-a11y.css'),
       join(ROOT, 'es-eui', 'src', 'assets', 'docs-a11y.css'),
+    ],
+  },
+  {
+    // 三站四列页脚的外观（路线图 1.8）。
+    file: 'docs-footer.css',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-footer.css'),
+      join(ROOT, 'es-pc', 'src', 'styles', 'docs-footer.css'),
+      join(ROOT, 'es-eui', 'src', 'assets', 'docs-footer.css'),
+    ],
+  },
+  {
+    // 页脚数据：栏位、链接、站内路径映射（路线图 1.8）。纯函数，三站同一份。
+    file: 'site-footer.js',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'utils', 'site-footer.js'),
+      join(ROOT, 'es-pc', 'src', 'utils', 'site-footer.js'),
+      join(ROOT, 'es-eui', 'src', 'utils', 'site-footer.js'),
+    ],
+  },
+  {
+    // 三站统一 404 的外观（路线图 1.8）。
+    file: 'docs-notfound.css',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-notfound.css'),
+      join(ROOT, 'es-pc', 'src', 'styles', 'docs-notfound.css'),
+      join(ROOT, 'es-eui', 'src', 'assets', 'docs-notfound.css'),
+    ],
+  },
+  {
+    // 404 的数据：文案、四个固定入口、另两个渲染端站点（路线图 1.8）。
+    file: 'site-not-found.js',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'utils', 'site-not-found.js'),
+      join(ROOT, 'es-pc', 'src', 'utils', 'site-not-found.js'),
+      join(ROOT, 'es-eui', 'src', 'utils', 'site-not-found.js'),
     ],
   },
   {

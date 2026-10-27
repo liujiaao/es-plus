@@ -1,68 +1,79 @@
 <template>
-  <div class="not-found">
-    <a-result status="404" title="404" sub-title="这个地址在本站没有对应页面。">
-      <template #extra>
-        <a-space>
-          <a-button type="primary" @click="$router.push('/')">回到首页</a-button>
-          <a-button @click="$router.push('/es-form')">浏览组件</a-button>
-        </a-space>
-      </template>
-    </a-result>
-    <p class="hint">
-      完整文档（含指南、三端通用对比与 AI 工具链）在主文档站：
-      <a href="https://liujiaao.github.io/es-plus/" target="_blank" rel="noopener">
-        liujiaao.github.io/es-plus
-      </a>
+  <div class="es-nf">
+    <p class="es-nf-code" aria-hidden="true">404</p>
+    <h1 class="es-nf-title">{{ copy.title }}</h1>
+    <p class="es-nf-desc">{{ copy.desc }}</p>
+
+    <p class="es-nf-path">
+      <span class="es-nf-path-label">{{ copy.pathLabel }}</span>{{ attemptedPath }}
     </p>
+
+    <div class="es-nf-actions">
+      <router-link to="/" class="es-nf-btn es-nf-btn--primary">{{ copy.home }}</router-link>
+      <a
+        href="https://liujiaao.github.io/es-plus/"
+        target="_blank"
+        rel="noopener"
+        class="es-nf-btn es-nf-btn--ghost"
+      >{{ copy.search }}</a>
+    </div>
+
+    <section class="es-nf-section">
+      <h2 class="es-nf-section-title">{{ copy.linksTitle }}</h2>
+      <div class="es-nf-links">
+        <router-link v-for="link in links" :key="link.href" :to="link.href" class="es-nf-link">
+          <span>{{ link.text }}</span>
+          <span class="es-nf-link-arrow" aria-hidden="true">→</span>
+        </router-link>
+      </div>
+    </section>
+
+    <section class="es-nf-section">
+      <h2 class="es-nf-section-title">{{ copy.sitesTitle }}</h2>
+      <p class="es-nf-section-note">{{ copy.sitesNote }}</p>
+      <div class="es-nf-links">
+        <a
+          v-for="site in sites"
+          :key="site.href"
+          :href="site.href"
+          target="_blank"
+          rel="noopener"
+          class="es-nf-link"
+        >
+          <span>{{ site.text }}</span>
+          <span class="es-nf-link-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
 /**
- * 404 兜底页。
+ * 统一 404（路线图 1.8）。
  *
- * 此前本站**没有** pathMatch 兜底路由 —— vue-router 匹配不到就什么都不渲染，
- * 表现是整页空白（连「找不到页面」都看不到）。案例目录这类跨站链接一旦写错
- * （例如 L2 头号案例的 antdv 链接曾写成 "/" 或指向别站路径），用户看到的就是白屏。
- * 有了这一页，写错的链接至少能被看出来。
+ * 此前本站借的是 antdv `a-result` 的库存插图 —— 与另两站完全不同的第三张 404。
+ * 现在三站共用同一份文案与入口数据（utils/site-not-found.js）与同一套外观
+ * （docs-notfound.css）。
+ *
+ * 本站没有站内搜索（全站索引只在主文档站），所以「搜索文档」是一个指向主站的真实
+ * 链接，而不是一个点了没反应的输入框。
+ *
+ * 历史（保留）：此前本站**没有** pathMatch 兜底路由 —— vue-router 匹配不到就什么都
+ * 不渲染，表现是整页空白。案例目录这类跨站链接一旦写错，用户看到的就是白屏。
  */
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  notFoundCopy,
+  buildNotFoundLinks,
+  buildNotFoundSites,
+  formatNotFoundPath,
+} from '@/utils/site-not-found.js'
+
+const route = useRoute()
+const copy = notFoundCopy('zh')
+const links = buildNotFoundLinks({ siteKey: 'es-pc', locale: 'zh' })
+const sites = buildNotFoundSites({ siteKey: 'es-pc', locale: 'zh' })
+const attemptedPath = computed(() => formatNotFoundPath(route.fullPath))
 </script>
-
-<style scoped>
-.not-found {
-  padding: 60px 24px;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.hint {
-  margin-top: 16px;
-  text-align: center;
-  font-size: 13px;
-  color: #999;
-}
-
-/* a-result 的 404 插图是 250px 固定宽 + 左右内边距，320px 视口下顶出 16px。
-   窄屏把插图等比压到容器内，页面不再横向滚动。 */
-@media (max-width: 400px) {
-  .not-found {
-    padding: 40px 12px;
-  }
-
-  .not-found :deep(.ant-result) {
-    padding: 24px 0;
-  }
-
-  .not-found :deep(.ant-result-image) {
-    width: 100%;
-    max-width: 200px;
-    height: auto;
-    margin: 0 auto 24px;
-  }
-
-  .not-found :deep(.ant-result-image svg) {
-    width: 100%;
-    height: auto;
-  }
-}
-</style>

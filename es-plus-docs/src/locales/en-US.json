@@ -180,10 +180,6 @@
     "linesSuffix": " lines",
     "footerRenderer": "Vue 3 + Element Plus renderer"
   },
-  "notFound": {
-    "message": "Page not found",
-    "backHome": "Back home"
-  },
   "aiLive": {
     "tag": "Generate a CRUD page from one sentence",
     "title": "Write a sentence, see a config, render a page",

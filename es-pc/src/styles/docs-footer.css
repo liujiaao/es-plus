@@ -1,0 +1,148 @@
+/* ==========================================================================
+ * 三站统一页脚（路线图 1.8）
+ *
+ * 审计 §7：三站此前是三份页脚 —— 主站只有首页有、es-pc 每页一条带分割线的
+ * 「ES-Plus · 定位 ／ © 年份」，es-eui 只有首页两行居中文本。同一个产品在三个
+ * 地址上给出三种收尾，读者永远不知道「这个站还有没有别的东西」。
+ *
+ * 结构（四列）：品牌 ｜ 产品 ｜ 渲染端 ｜ 资源。
+ * 数据来自 docs/theme/site-footer.js（三站同一份），这里只管外观。
+ *
+ * 依赖：docs/tokens/design-tokens.css。
+ * 分发：scripts/sync-theme.mjs（禁止手改各站点副本）。
+ * ========================================================================== */
+
+.es-footer {
+  border-top: 1px solid var(--es-border);
+  background: var(--es-bg);
+  color: var(--es-text-secondary);
+  font-family: var(--es-font-sans);
+  font-size: var(--es-text-sm);
+}
+
+.es-footer-inner {
+  max-width: var(--es-layout-max);
+  margin-inline: auto;
+  padding: 44px 24px 20px;
+}
+
+/* 四列：品牌列略宽（要放 logo 与一句定位），三个链接列等宽 */
+.es-footer-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.25fr) repeat(3, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.es-footer-brand {
+  min-width: 0;
+}
+
+.es-footer-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--es-brand-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.es-footer-tagline {
+  margin: 12px 0 6px;
+  color: var(--es-text-primary);
+  font-size: var(--es-text-base);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.es-footer-note {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.es-footer-col-title {
+  margin: 0 0 12px;
+  color: var(--es-text-primary);
+  font-size: var(--es-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.es-footer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.es-footer-list li {
+  margin: 0 0 9px;
+  line-height: 1.5;
+}
+
+.es-footer-list a {
+  color: var(--es-text-secondary);
+  text-decoration: none;
+  transition: color 0.18s;
+}
+
+.es-footer-list a:hover {
+  color: var(--es-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 当前所在的渲染端：读者在 Vue 2 站上应该一眼看出「我在这里」，
+   同时它不再是可点击的跳转（跳到自己没有意义） */
+.es-footer-list a[aria-current='page'] {
+  color: var(--es-text-primary);
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 底部版权行：与上面四列用一条细线隔开 */
+.es-footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--es-border-light);
+  font-size: var(--es-text-xs);
+}
+
+.es-footer-meta span {
+  white-space: nowrap;
+}
+
+.es-footer-meta-sep {
+  color: var(--es-border);
+}
+
+/* 中屏：品牌列占满第一行，三个链接列平分第二行 */
+@media (max-width: 900px) {
+  .es-footer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .es-footer-brand {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+  }
+}
+
+/* 窄屏：单列堆叠，链接按栏分组仍然清晰 */
+@media (max-width: 560px) {
+  .es-footer-inner {
+    padding: 32px 16px 16px;
+  }
+
+  .es-footer-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+}

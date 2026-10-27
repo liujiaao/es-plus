@@ -18,6 +18,10 @@ import './styles/design-tokens.css'
 import './styles/docs-content.css'
 import './styles/docs-layout.css'
 import './styles/docs-chrome.css'
+// 三站统一页脚外观（docs/theme/docs-footer.css → scripts/sync-theme.mjs 分发）
+import './styles/docs-footer.css'
+// 三站统一 404 外观（docs/theme/docs-notfound.css → scripts/sync-theme.mjs 分发）
+import './styles/docs-notfound.css'
 import './styles/global.css'
 // 可访问性基线（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）。
 // 放在最后一个全局样式之后：`:focus-visible` 要盖住前面所有 outline 约定。

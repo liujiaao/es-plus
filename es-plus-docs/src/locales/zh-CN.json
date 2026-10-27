@@ -180,10 +180,6 @@
     "linesSuffix": " 行",
     "footerRenderer": "Vue 3 + Element Plus 渲染端"
   },
-  "notFound": {
-    "message": "页面不存在",
-    "backHome": "返回首页"
-  },
   "aiLive": {
     "tag": "AI 一句话生成 CRUD 页面",
     "title": "写一句话，看一份配置，渲染一个页面",

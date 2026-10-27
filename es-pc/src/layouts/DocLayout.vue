@@ -195,16 +195,12 @@
           </aside>
         </div>
 
-        <a-layout-footer class="doc-footer">
-          <a-divider />
-          <div class="footer-info">
-            <!-- 三站页脚同一结构：品牌 · 定位 ／ © 年份 · 本站渲染端 -->
-            <span class="footer-brand">ES-Plus · {{ brand.positioning }}</span>
-            <span class="footer-meta">© {{ year }} · Ant Design Vue 渲染端</span>
-          </div>
-        </a-layout-footer>
       </a-layout-content>
     </a-layout>
+
+    <!-- 三站统一页脚（路线图 1.8）：此前这里是「正文卡片里一条分割线 + 一行字」，
+         只有本站有这种收尾。同一个四列页脚现在三站共用一份数据与外观。 -->
+    <DocFooter />
   </a-layout>
 </template>
 
@@ -224,19 +220,16 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons-vue'
 import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
-// 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发
-import brand from '@/brand/slogan.json'
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
 import DocMeta from '@/components/doc/DocMeta.vue'
+import DocFooter from '@/components/doc/DocFooter.vue'
 // 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
 import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
 import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
 
 // 跳转链接必须拦默认行为：hash 路由会把 #es-main 当成一条不存在的路径
 onMounted(() => bindSkipLink(document))
-
-const year = new Date().getFullYear()
 
 const adapterVersion = ADAPTER_ANTDV_VERSION
 const route = useRoute()
@@ -342,6 +335,8 @@ const onTocClick = (id) => {
 </script>
 
 <style scoped>
+/* a-layout 默认就是纵向 flex：顶栏 / 正文 / 页脚三段。
+   .doc-body 抢走剩余高度，短页面的页脚才落在视口底部而不是屏幕外一屏。 */
 .doc-layout {
   min-height: 100vh;
 }
@@ -397,8 +392,13 @@ const onTocClick = (id) => {
   color: #1677ff;
 }
 
+/* 正文段吃满剩余高度：页脚贴底的前提。
+   min-height: 0 是必需的 —— a-layout 默认 min-height: auto，子元素撑高后
+   flex 收缩失效，页脚又会被顶出视口。 */
 .doc-body {
   margin-top: 0;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .doc-sider {
@@ -421,9 +421,10 @@ const onTocClick = (id) => {
   }
 }
 
+/* 高度交给 flex 分配：此前写死的 min-height: calc(100vh - 64px) 会把页脚
+   推到视口下方整一屏（路线图 1.8）。 */
 .doc-content {
   padding: 24px;
-  min-height: calc(100vh - 64px);
   background: #f5f5f5;
 }
 
@@ -432,20 +433,6 @@ const onTocClick = (id) => {
   background: #fff;
   border-radius: 8px;
   padding: 32px;
-  min-height: calc(100vh - 200px);
-}
-
-.doc-footer {
-  max-width: calc(var(--es-layout-max) - var(--es-sidebar-width));
-  padding: 0 32px 24px;
-  background: transparent;
-}
-
-.footer-info {
-  display: flex;
-  justify-content: space-between;
-  color: #999;
-  font-size: 13px;
 }
 
 /* 抽屉开关：宽屏常驻侧栏时不需要它 */
@@ -496,15 +483,6 @@ const onTocClick = (id) => {
 
   .content-wrapper {
     padding: 16px;
-  }
-
-  .doc-footer {
-    padding: 0 16px 16px;
-  }
-
-  .footer-info {
-    flex-direction: column;
-    gap: 4px;
   }
 
   /* 顶栏右键组在 390px 下原本超出视口 37px（页面因此横向滚动）：

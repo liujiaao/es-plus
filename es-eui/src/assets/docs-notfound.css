@@ -1,0 +1,228 @@
+/* ==========================================================================
+ * 三站统一 404（路线图 1.8）
+ *
+ * 审计 §7：三站此前是三张互不相干的 404 —— 主站一张裸的「404 + 一句文案」，
+ * es-pc 借 antdv 的库存插图，es-eui 自己画了 72px 蓝字。同一个产品、同一种错误，
+ * 三种收尾，而且三张都只给「回首页」一条出路。
+ *
+ * 这一张给的是下一步：走错的地址回显 + 本站四个固定入口 + 另两个渲染端站点。
+ * 数据来自 docs/theme/site-not-found.js（三站同一份），这里只管外观。
+ *
+ * ## 为什么每条选择器都带 `.es-nf` 前缀
+ *
+ * es-pc 把 router-view 包在 `.es-doc-content` 里（正文排版层），于是 404 也在里面：
+ * `.es-doc-content h1` / `p` / `a`（特异性 0,1,1）会压过页内的单类选择器（0,1,0）——
+ * 实测表现是「404 数字变成深灰」（`.es-doc-content p` 的 color 盖掉了
+ * `color: transparent` + 渐变裁字），二级标题底下多出一条渐变短线。抬到 `.es-nf .x`
+ * （0,2,0）稳定胜出，且与导入顺序无关。
+ *
+ * 依赖：docs/tokens/design-tokens.css（含 .dark 覆盖）。
+ * 分发：scripts/sync-theme.mjs（禁止手改各站点副本）。
+ * ========================================================================== */
+
+.es-nf {
+  box-sizing: border-box;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 72px 24px 64px;
+  font-family: var(--es-font-sans);
+  color: var(--es-text-primary);
+  text-align: center;
+}
+
+.es-nf *,
+.es-nf *::before,
+.es-nf *::after {
+  box-sizing: inherit;
+}
+
+/* 大号 404：品牌渐变裁进字里，不用图片 —— 三站都不必再各自造一张插图 */
+.es-nf .es-nf-code {
+  margin: 0;
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -3px;
+  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.es-nf .es-nf-title {
+  margin: 16px 0 0;
+  font-size: var(--es-text-2xl);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--es-text-primary);
+}
+
+.es-nf .es-nf-desc {
+  margin: 10px 0 0;
+  font-size: var(--es-text-base);
+  line-height: 1.7;
+  color: var(--es-text-secondary);
+}
+
+/* 回显走错的地址：只读等宽，长路径可断行，不撑破窄屏 */
+.es-nf .es-nf-path {
+  display: inline-block;
+  max-width: 100%;
+  margin: 14px 0 0;
+  padding: 4px 12px;
+  border: 1px solid var(--es-border);
+  border-radius: var(--es-radius-sm);
+  background: var(--es-bg-subtle);
+  color: var(--es-text-primary);
+  font-family: var(--es-font-mono);
+  font-size: var(--es-text-sm);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.es-nf .es-nf-path-label {
+  margin-right: 6px;
+  color: var(--es-text-secondary);
+}
+
+.es-nf .es-nf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+/* 两个按钮都是真按钮/真链接：键盘可聚焦，:focus-visible 由 docs-a11y.css 统一给环 */
+.es-nf .es-nf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--es-radius-sm);
+  font-family: inherit;
+  font-size: var(--es-text-base);
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.es-nf .es-nf-btn--primary {
+  background: var(--es-brand-primary);
+  color: #fff;
+}
+
+.es-nf .es-nf-btn--primary:hover {
+  opacity: 0.88;
+  color: #fff;
+}
+
+.es-nf .es-nf-btn--ghost {
+  background: var(--es-bg);
+  border-color: var(--es-border);
+  color: var(--es-text-primary);
+}
+
+.es-nf .es-nf-btn--ghost:hover {
+  border-color: var(--es-brand-primary);
+  color: var(--es-brand-primary);
+}
+
+.es-nf .es-nf-kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-family: var(--es-font-mono);
+  font-size: var(--es-text-xs);
+}
+
+/* 分区标题左对齐：下面是卡片列表，居中标题会把视觉重心撕开。
+   `.es-doc-content h2` 会补下边框 + 渐变短线（es-pc 的包裹层），这里一并撤掉。 */
+.es-nf .es-nf-section {
+  margin-top: 44px;
+  text-align: left;
+}
+
+.es-nf .es-nf-section-title {
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  font-size: var(--es-text-sm);
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: normal;
+  color: var(--es-text-primary);
+}
+
+.es-nf .es-nf-section-title::after {
+  content: none;
+  display: none;
+}
+
+.es-nf .es-nf-section-note {
+  margin: 0 0 14px;
+  font-size: var(--es-text-sm);
+  line-height: 1.6;
+  color: var(--es-text-secondary);
+}
+
+.es-nf .es-nf-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.es-nf .es-nf-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--es-border);
+  border-radius: var(--es-radius-sm);
+  background: var(--es-bg);
+  color: var(--es-text-primary);
+  font-size: var(--es-text-base);
+  text-decoration: none;
+  transition: border-color 0.18s, color 0.18s, transform 0.18s;
+}
+
+.es-nf .es-nf-link:hover {
+  border-color: var(--es-brand-primary);
+  color: var(--es-brand-primary);
+  text-decoration: none;
+  transform: translateX(2px);
+}
+
+.es-nf .es-nf-link-arrow {
+  margin-left: auto;
+  color: var(--es-text-secondary);
+}
+
+.es-nf .es-nf-link:hover .es-nf-link-arrow {
+  color: var(--es-brand-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .es-nf .es-nf-link:hover {
+    transform: none;
+  }
+}
+
+/* 窄屏：404 数字收一档，入口卡片单列，避免 320/390 下左右挤压 */
+@media (max-width: 560px) {
+  .es-nf {
+    padding: 48px 16px 40px;
+  }
+
+  .es-nf .es-nf-code {
+    font-size: 72px;
+  }
+
+  .es-nf .es-nf-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

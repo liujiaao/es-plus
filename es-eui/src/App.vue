@@ -138,17 +138,9 @@
       <router-view />
     </main>
 
-    <!-- 页脚 -->
-    <footer
-      v-if="isHome"
-      class="footer"
-    >
-      <div class="container">
-        <!-- 三站页脚同一结构：品牌 · 定位 ／ © 年份 · 本站渲染端 -->
-        <p class="footer-brand">ES-Plus · {{ brand.positioning }}</p>
-        <p class="footer-meta">© {{ year }} · Vue 2 + Element UI 渲染端</p>
-      </div>
-    </footer>
+    <!-- 三站统一页脚（路线图 1.8）：此前只有首页有两行居中文本，
+         其它页面走到末尾什么都没有。现在每一页都是同一个四列页脚。 -->
+    <DocFooter />
   </div>
 </template>
 
@@ -156,18 +148,16 @@
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
 import { bindSkipLink } from '@/utils/doc-chrome'
-// 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发
-import brand from '@/brand/slogan.json'
+import DocFooter from '@/components/doc/DocFooter.vue'
 
 export default {
   name: 'App',
+  components: { DocFooter },
   data() {
     return {
       bannerClosed: false,
       mobileNavOpen: false,
-      SITES,
-      brand,
-      year: new Date().getFullYear()
+      SITES
     }
   },
   mounted() {
@@ -234,7 +224,11 @@ body {
   background-color: #fff;
 }
 
+/* 纵向 flex：正文吃满剩余高度，页脚永远落在视口底部（路线图 1.8）。
+   此前这里只是 min-height，正文自己又写死 100vh - 60px，页脚被推到屏幕外一屏。 */
 #app {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
@@ -374,8 +368,9 @@ body {
 
 /* 主体内容 */
 .main {
+  flex: 1 1 auto;
+  min-height: 0;
   padding-top: 60px;
-  min-height: calc(100vh - 60px);
   transition: padding-top 0.3s;
 
   &.banner-visible {
@@ -480,31 +475,7 @@ body {
   }
 }
 
-/* 页脚 */
-.footer {
-  background: #f5f7fa;
-  padding: 40px 0;
-  text-align: center;
-  color: #909399;
-  font-size: 14px;
-  border-top: 1px solid #e6e6e6;
-
-  .container {
-    max-width: var(--es-layout-max);
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-
-  .footer-brand {
-    color: #606266;
-    font-weight: 500;
-    margin-bottom: 6px;
-  }
-
-  .footer-meta {
-    font-size: 13px;
-  }
-}
+/* 页脚外观与数据都不在这里：docs/theme/docs-footer.css + utils/site-footer.js（路线图 1.8） */
 
 /* 容器 */
 .container {
@@ -514,9 +485,10 @@ body {
 }
 
 /* 通用文档样式 */
+/* 高度不再写死：正文段吃剩余高度（.main 的 flex: 1），
+   这里再要 100vh - 60px 会把页脚顶到视口外（路线图 1.8）。 */
 .docs-page {
   display: flex;
-  min-height: calc(100vh - 60px);
 }
 
 /* 侧边栏 */

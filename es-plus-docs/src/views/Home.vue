@@ -270,12 +270,6 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
       </div>
     </div>
 
-    <!-- Footer —— 三站同一结构：品牌 · 定位 ／ © 年份 · 本站是哪个渲染端。
-         写清渲染端，读者才知道这里 100+ 个组件页只是同一份配置的一种落地方式。 -->
-    <footer class="home-footer">
-      <p class="footer-brand">ES-Plus · {{ t('home.footerTagline') }}</p>
-      <p class="footer-meta">© {{ new Date().getFullYear() }} · {{ t('home.footerRenderer') }}</p>
-    </footer>
   </div>
 </template>
 
@@ -1103,28 +1097,6 @@ const goToGithub = () => {
   }
 }
 
-// Footer
-.home-footer {
-  padding: 48px;
-  text-align: center;
-  border-top: 1px solid var(--border-color-lighter);
-  
-  p {
-    font-size: 14px;
-    color: var(--text-color-secondary);
-  }
-
-  .footer-brand {
-    font-weight: 500;
-    color: var(--text-color-regular);
-    margin-bottom: 6px;
-  }
-
-  .footer-meta {
-    font-size: 13px;
-  }
-}
-
 // Responsive
 @media (max-width: 1200px) {
   .comparison-grid {
@@ -1259,10 +1231,6 @@ const goToGithub = () => {
 
   .section-title {
     font-size: 24px !important;
-  }
-
-  .home-footer {
-    padding: 32px 20px;
   }
 }
 

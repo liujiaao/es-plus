@@ -8,6 +8,8 @@
     <AppContent>
       <router-view />
     </AppContent>
+    <!-- 页脚在三站的每一页都有（此前只有首页有）：路线图 1.8 -->
+    <AppFooter />
   </div>
 </template>
 
@@ -16,6 +18,7 @@ import { ref, onMounted } from 'vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppContent from './components/layout/AppContent.vue'
+import AppFooter from './components/layout/AppFooter.vue'
 import { bindSkipLink } from '@/utils/doc-chrome.js'
 import { useThemeStore } from './stores/theme'
 
@@ -59,7 +62,11 @@ body {
   background-color: var(--bg-color-page);
 }
 
+/* 纵向 flex：正文吃掉剩余高度，页脚永远贴在视口底部（短页面不再把页脚顶到
+   屏幕外一屏的位置）。侧栏是 fixed、顶栏是 fixed，都不参与这条流。 */
 .app-wrapper {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: var(--bg-color-page);
   color: var(--text-color-primary);

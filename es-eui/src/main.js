@@ -13,6 +13,10 @@ import './assets/design-tokens.css'
 import './assets/docs-content.css'
 import './assets/docs-layout.css'
 import './assets/docs-chrome.css'
+// 三站统一页脚外观（docs/theme/docs-footer.css → scripts/sync-theme.mjs 分发）
+import './assets/docs-footer.css'
+// 三站统一 404 外观（docs/theme/docs-notfound.css → scripts/sync-theme.mjs 分发）
+import './assets/docs-notfound.css'
 // 可访问性基线（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）
 import './assets/docs-a11y.css'
 Vue.use(ElementUI, { size: 'mini' })

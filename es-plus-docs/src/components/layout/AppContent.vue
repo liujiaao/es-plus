@@ -11,10 +11,12 @@
 <style lang="scss" scoped>
 @use '../../styles/breakpoints' as bp;
 
+/* flex: 1 让正文吃掉剩余高度，页脚贴底；min-height 交给外层 .app-wrapper，
+   这里再写一次 100vh 会把页脚又推出视口一屏（路线图 1.8）。 */
 .app-content {
+  flex: 1 1 auto;
   margin-left: var(--es-sidebar-width);
   padding-top: var(--header-height);
-  min-height: 100vh;
   background-color: var(--bg-color-page);
 }
 
