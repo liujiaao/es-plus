@@ -1,208 +1,140 @@
 # 更新日志
 
-记录 ES-Plus 各版本的变更内容。完整发布记录请查看 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
+> 本页由 `npm run changelog:gen` 从各包的 `CHANGELOG.md` 生成，**请勿手改**；完整历史见 [GitHub Releases](https://github.com/liujiaao/es-plus/releases)。
+
+## 当前版本
+
+| 包 | 版本 | 说明 |
+|---|---:|---|
+| `@es-plus/core` | 1.3.0 | 框架无关核心（类型 / 布局 / 校验） |
+| `@es-plus/vue3` | 1.7.0 | Vue 3 + Element Plus 渲染端 |
+| `@es-plus/vue2` | 1.4.0 | Vue 2 + Element UI 渲染端 |
+| `@es-plus/adapter-antdv` | 1.3.0 | Vue 3 + Ant Design Vue 适配器 |
+| `@es-plus/shared` | 1.4.1 | 配置 schema / 生成器 / 修复环 |
+| `@es-plus/cli` | 1.4.0 | 命令行工具 |
+| `@es-plus/mcp-server` | 1.4.1 | MCP Server（AI 工具面） |
 
-## @es-plus/vue2 v1.1.1
+## 升级前请先读
 
-> 2026-06-05 发布
+- **Minor Changes**（@es-plus/core、@es-plus/vue3、@es-plus/vue2、@es-plus/adapter-antdv、@es-plus/shared、@es-plus/mcp-server）：移除 `DialogOptions.onSubmit` —— 该选项从未生效，请改用 `configBtn[].click`。
 
-**Bug 修复 — Vue 2.7 项目无法 bundle 本包**
+> 完整迁移代码见下方对应条目。
 
-- 1.1.0 中 `dist/es-plus-vue2.js` 包含一条静态 `import * as ... from '@vue/composition-api'`（polyfill 被 rollup `external` 标记）。Vue 2.7 用户按 README 跳过安装 polyfill 时，vite/rollup 报 `UNRESOLVED_IMPORT`，违背 1.1.0 "Vue 2.7+ 用户无需安装"的承诺
-- **现已将 polyfill 内联进 dist**（`@vue/composition-api` 不再 external）。Vue 2.7 用户只装 `vue` + `element-ui` 即可成功 bundle；运行时 `vue-compat` 仍走原生分支，内联的 polyfill 代码作为 dead code 不会执行
-- `peerDependenciesMeta.@vue/composition-api.optional = true`，npm / pnpm 不再对 Vue 2.7 用户报"missing peer"
+## 最近一次发布
 
-**包体变化**：
+> 每个包只取 CHANGELOG 的最新一段；同一个 changeset 打在多个包上时合并为一条。
 
-| 文件 | 1.1.0 | 1.1.1 |
-|---|---|---|
-| `dist/es-plus-vue2.js` (gzip) | 22.80 KB | 33.61 KB (+47%) |
-| `dist/es-plus-vue2.umd.cjs` (gzip) | 18.15 KB | 27.53 KB (+52%) |
+### Minor Changes
 
-**验证**：`(vue2, schema)` / `(vue2, sfc)` e2e 通过（1.1.0 双双失败）；vue3 矩阵无回归；vue2 单测 20/20。
+- 移除 `DialogOptions.onSubmit` —— 该选项从未生效，请改用 `configBtn[].click`。
 
----
+  **这不是「删功能」，是承认该 API 不存在。** 三端没有任何一个 dialog 组件 emit `submit`：
+  vue3 声明了事件并写了一个**零引用**的 `handleConfirm`（唯一会 emit `submit` 的地方）；vue2 把
+  `'submit'` 列进了 `emits` 却从不 emit；antdv 连声明都没有。而三端 `useDialog` 合计 17 处在包装
+  `onSubmit`、4 个类型文件声明了它 —— 除最后一步外整条链都接好了，唯独没有触发点。
 
-## @es-plus/vue2 v1.1.0
+  因此升级后：
 
-> 2026-06-04 发布
+  - **运行时行为完全不变** —— 传 `onSubmit` 的代码本来就不会被调用（弹窗底部按钮只在 `configBtn`
+    非空时渲染，写了 `onSubmit` 的调用其实一个按钮都没有）；
+  - **类型上会看到错误** —— `DialogOptions` 不再有该字段，这是本次唯一的破坏性变更，故记 minor。
 
-**新能力 — Vue 2.6 / 2.7 自动适配 + 分页文字 prop**
+  迁移方式（把确认逻辑挂到按钮自己的 `click` 上）：
 
-- **运行时 Vue 版本检测**：`vue-compat` 在模块加载时读取 `Vue.version`，把 Composition API 调用路由到 Vue 2.7 的原生导出或 `@vue/composition-api` polyfill。修复 Vue 2.7 项目里 polyfill 与原生 setup 双跑的 `setup binding ... already declared` 与 `inject() outside setup` 警告
-- **`install()` 自动管理 polyfill**：Vue 2.6 自动 `Vue.use(VueCompositionAPI)`；Vue 2.7+ 检测到用户已自行安装 polyfill 时打 `console.warn` 提示删除（无法在运行时卸载）
-- **EsTable `paginationLayout.prevText` / `nextText`**：透传给 `<el-pagination>`。设为空字符串保留默认 `‹` / `›` 箭头
-- `peerDependencies.vue` 扩到 `^2.6.14 || ^2.7.0`
-- README "Setup" 章节重写：用户不再需要手动 `Vue.use(VueCompositionAPI)`
+  ```ts
+  dialog({
+    render: (h) =>
+      h(EsForm, {
+        /* … */
+      }),
+    configBtn: [
+      { name: "取消", click: (_, { close }) => close() },
+      {
+        name: "确定",
+        type: "primary",
+        click: (_, { close, getRefs }) => {
+          getRefs("form")
+            ?.validate()
+            .then(() => close());
+        },
+      },
+    ],
+  });
+  ```
 
-**迁移**：从 1.0.x 升级时，请删除 `main.js` 中的 `Vue.use(VueCompositionAPI)`（旧 Vue 2.7 用户会触发警告直到删除）。`@vue/composition-api` 仍然必须在 `package.json` 中保留为依赖（dist 里有静态 import；1.1.1 已修，本条仅适用于 1.1.0）。
+  一并删除：三端 `useDialog` 里的 17 处包装、vue3 的 `submit` 事件声明与死代码 `handleConfirm`、
+  vue2 `emits` 里的 `'submit'`、`dialog-options.schema.json` 里的 `onSubmit`（已同步三份副本）、
+  `get_component_api` 中「exposed by the type but the runtime never wires it up」那条说明。
 
----
+  文档站的 4 处示例与 API 表已迁移到上述写法（迁移前这些「点击确定」的示例其实点不动，因为压根
+  没有按钮）。
 
-## v1.4.0
+  <sub>影响：@es-plus/core / @es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv / @es-plus/shared / @es-plus/mcp-server</sub>
 
-> 2026-05-28 发布
+### Patch Changes
 
-**npm 包重命名 + Vue 2 渲染层**
+- 修复源码审计（`docs/source-audit-report.md`）中的 5 条「立即」级缺陷。
 
-- 原 `es-plus-ui` 重命名为 **`@es-plus/vue3`**（Vue 3 + Element Plus）— 公共 API 100% 不变，仅包名调整
-- 新增 **`@es-plus/vue2`@0.9.0**（Vue 2 + Element UI）— 与 Vue 3 版共用同一份 `columns` / `formItemList` / `options` 配置 schema
-- 新增 **`@es-plus/core`@1.0.0** — 框架无关共享核心（类型定义、表单布局算法、按钮解析、配置校验）
-- `es-plus-ui@1.4.0` 仍可用，但已变为 stub 包：`import ESPlus from 'es-plus-ui'` 内部 re-export `@es-plus/vue3`，并打印一次性 deprecation 警告
-- 所有历史 `es-plus-ui@*` 版本通过 `npm deprecate` 打上迁移提示
-- 新增环境变量 `ES_PLUS_SILENCE_DEPRECATION=1` 抑制 stub 警告
+  **C1 请求 Promise 永久挂起（core + 三端）**
 
-**Vue 2 渲染层能力**
+  - `queryTableListMethod` 此前仅在响应为非空对象/数组时调用 `success`，而非对象响应（204 空响应、
+    拦截器 `return undefined`、原始值）既不触发 `success` 也不触发 `fail`，导致
+    `httpRequestFormInstance` 的 Promise 永不 settle，`getEveryFormQueryField` 的 `Promise.all`
+    整体挂起（远端下拉选项加载不出来且无报错）。现非对象响应归一为 `{}` 后仍调用 `success`。
+  - **同类缺陷同时存在于三端表格组件的本地请求函数**：`isObject(res) && Object.keys(res).length`
+    守卫会跳过空响应与数组响应，而 `httpRequestInstance` 的 Promise 只在 success/fail 中 settle
+    → 表格加载永久挂起。三端一并修复。
+    **行为变化**：空 / 非对象响应（如 204、拦截器 `return undefined`）现在会 settle 并被视为空列表
+    （清空行、`total` 归 0），此前是 Promise 挂起；数组响应也会 settle，但表格本地映射不含数组直传分支，
+    会渲染为空表（如需支持裸数组列表响应，是独立的后续需求）。
 
-- 完整支持 EsForm / EsTable / EsDialog / EsCrudPage 四大组件，内部使用 `@vue/composition-api`（Vue 2.6）或原生 Composition API（Vue 2.7+）
-- `useDialog` 编程式弹窗 API 与 Vue 3 版完全一致
-- 兼容旧 `es-eui` options 形状（`EsTable.methods.$httpRequest` / `configQueryfieldOutput` 自动归一化），从 `es-eui` 切换 `Vue.use()` 一行即可
-- 不支持的功能：虚拟滚动（Element UI 无 `el-table-v2`）、`ElConfigProvider`、`@element-plus/icons-vue`（改用 Element UI 的 `el-icon-xxx` class 字符串）
+  **C2 antdv 代码生成不可编译（shared）**
 
-**MCP & CLI 同步**
+  - `schema-generator` 的 Vue3/antdv 共用 `<script setup>` 分支此前漏调 `rewriteElementUsage`：
+    import 已被映射为 `Modal` / `message`，代码体却仍引用 `ElMessageBox` / `ElMessage`。
+    现该分支的删除确认块复用 `buildDeleteConfirmBlock`（antdv 走 `Modal.confirm` 对象式），
+    并在返回前统一改写 UI 库命名；`summary` 的 target 文案同步修正（antdv 不再误标 Element Plus）。
 
-- `@es-plus/cli` 与 `@es-plus/mcp-server` 新增 `--target vue2` / `--target vue3` 选项，生成代码自动切换 import 路径
-- 同一份 schema 配置可生成两套 Vue 代码
+  **C3 顶层快捷字段静默丢弃（core + 三端）**
 
-**类型共享**
+  - `FormItemOption.placeholder` / `clearable` / `disabled` 文档承诺自动注入 `attrs`，但
+    `normalizeFormItem` 除 core 自身外零调用，三端全部静默丢弃。现三端 `es-form` 的
+    `formItemListFilter` 统一接入 `normalizeFormItem`。
+  - `normalizeFormItem` / `normalizeFormItemList` 改为泛型，只约束真正使用的字段
+    （新增 `FormItemShortcutSource`）—— 三端各自特化的 `render` / `isHidden` 签名与 core 的
+    `FormItemOption` 不兼容，直接收完整类型会导致 antdv / vue2 编译失败。
 
-- 在 monorepo 中可通过 `import type { EsTableColumn } from '@es-plus/core/types'` 共享配置类型，避免在 Vue 2 / Vue 3 两端重复定义
+  **C4 跨页选择列不渲染（shared）**
 
-详见 [迁移指南](/guide/migration) 与 [Vue 2 指南](/guide/vue2)。
+  - `crud-engine` 自然语言解析误写 `options.selection`（非法键），三端只识别 `options.multiSelect`。
+    现改为 `multiSelect`，提示文案同步。
 
----
+  **C8 CLI 路径穿越（cli + shared）**
 
-## v1.3.5
+  - `name` 此前只约束 `min(1)`，`toPascalCase` 不剥离分隔符，`--from-config` 载入不可信配置时
+    可通过 `name: "../../evil"` 把产物写出输出目录。现：契约层对 `StructuredCrudConfigSchema.name`
+    增加 refine 拒绝路径分隔符 / `.` / `..` / 盘符；CLI 侧新增 `isSafePathSegment` / `isPathInside`
+    守卫（`create` 的 `[name]`、`--from-config` 两条路径，以及 `scaffold` 的 `[name]`），
+    并在拼出文件路径后做输出目录越界兜底。
 
-> 2026-05-27 发布
+  **测试**
 
-**EsTable 虚拟滚动（el-table-v2）**
+  - 全部修复均补回归测试，并逐条反向验证（临时拆掉修复后测试确实变红）：
+    C1（core）、C2、C3（三端）、C4、C8（含 create / scaffold 接线级测试）、三端表格 settle。
+  - 新增 `packages/vue2/__tests__/es-table.spec.ts`（此前 vue2 无表格挂载测试）。
+  - 全量：core 244 / shared 277 / cli 42 / vue3 450 / vue2 285 / adapter-antdv 499 / mcp-server 59；
+    7 包 typecheck 全过；lint 0 error；`check:consistency` 全绿。
 
-- 新增 `virtual: true` 一键启用虚拟滚动引擎，支持 10 万行数据流畅渲染
-- 基于 Strategy Pattern + 条件渲染架构，现有 EsTable 用法零改动
-- 完整兼容：`type: 'selection'`、`type: 'index'`、`type: 'expand'`、`render`、`scopedSlots`、`ellipsis`、`formatter`、`btns`、`fixed`、`sortable` 全部适配
-- O(1) 选择性能：基于 Set 跟踪，勾选/全选无 O(n) 遍历
-- 新增 TableOptions 字段：`virtual`、`engine`、`rowHeight`、`estimatedRowHeight`、`overscanCount`、`rowClassName`
-- 新增 expose 方法：`scrollToRow(index)` — 虚拟模式按行索引滚动
-- 支持 `highlightCurrentRow`、`stripe`、`border` 样式与普通表格一致
+  <sub>影响：@es-plus/cli</sub>
 
-**文档**
+## 更早的版本
 
-- 新增 6 个虚拟表格高级场景示例：
-  - 10 万行基础虚拟滚动
-  - 排序 + 固定列 + 序号列 + 斑马纹
-  - 多选 + 高亮 + 操作按钮
-  - render / scopedSlots / ellipsis / formatter 自定义渲染
-  - rowClassName + highlightCurrentRow + 行事件
-  - httpRequest + 分页 + useDialog 完整 CRUD
-- EsTable API 文档更新：补充虚拟滚动配置说明
+按包查看完整历史：
 
-**MCP Server & CLI 同步**
-
-- `@es-plus/mcp-server@1.1.2`：`get_component_api` 补充虚拟滚动文档，`generate_crud_from_config` 支持 virtual 配置
-- `@es-plus/cli@1.1.2`：`validate` 命令自动识别虚拟表格配置并校验
-- `@es-plus/shared@1.0.2`：`table-options.schema.json` 新增虚拟滚动字段，`StructuredCrudConfigSchema` 支持 virtual 选项，代码生成器输出虚拟模式配置
-- `esplus://conventions` 资源文档新增 Virtual Scrolling 章节
-
----
-
-## v1.3.4
-
-> 2026-05-26 发布
-
-**EsCrudPage 增强**
-
-- 新增 `tableBtns` schema 属性，支持表格工具栏按钮分区（`code: 1` 左侧 / `code: 2` 右侧）
-- 新增 `formLayout.minFoldRows` 支持查询表单自动展开/收起
-- Dialog `render` 支持 JSX 语法，可嵌套 EsCrudPage 实现复杂弹窗
-- 新增 `operationColumn` 配置行操作按钮（支持 `dialogKey` 绑定弹窗、`confirm` 删除确认）
-- 新增事件：`@dialog-confirm`、`@dialog-cancel`、`@dialog-open`、`@btn-click`
-- 新增 expose：`openDialog(key, row)`、`closeDialog(key)`
-
-**尺寸统一**
-
-- EsForm 按钮默认 `size: 'small'`
-- EsForm 表单项通过 `el-form size` prop 级联统一为 `small`
-- 文档示例全局设置 `app.use(ElementPlus, { size: 'small' })`
-
-**MCP Server & CLI 同步**
-
-- `@es-plus/mcp-server@1.1.1`：Zod schema 适配 `tableBtns`、`formLayout.minFoldRows`、`operationColumn`、`dialogs`
-- `@es-plus/cli@1.1.1`：通过 `@es-plus/shared` 自动继承新配置能力
-- `@es-plus/shared@1.0.1`：`StructuredCrudConfigSchema` 新增多弹窗模式完整支持
-- `esplus://conventions` 资源文档更新，新增 tableBtns / formLayout / operationColumn 使用说明
-
-**文档**
-
-- CrudPage 示例重写：订单管理 CRUD（11 个查询字段、表单折叠、工具栏按钮分离、嵌套弹窗）
-- 文档项目启用 Vue JSX（`@vitejs/plugin-vue-jsx`）
-
----
-
-## v1.3.3
-
-> 2026-05-25 发布
-
-**TypeScript & 类型安全**
-
-- 修复全部 35 个 TypeScript 编译错误，`vue-tsc --noEmit` 零错误通过
-- 新增 `tsconfig.build.json`，分离生产构建和测试的类型检查范围
-- `useDialog` 添加函数重载，精确区分 `DialogCallableWithDestroy`（默认模式）和 `DialogCallable`（onlyInstance 模式）类型
-- `TableOptions` 类型补全：显式声明 `configBtn`、`leftText`、`height` 属性
-- `heightType` 新增 `'maxHeight'` 选项支持
-
-**测试覆盖**
-
-- 单元测试从 82 增至 254 个用例（11 个测试文件）
-- 新增测试文件：
-  - `use-form-inputs.spec.ts` — 41 个用例覆盖所有 13 种 formtype 和嵌套路径
-  - `use-form-request.spec.ts` — 38 个用例覆盖请求编排和响应映射
-  - `use-table-resize.spec.ts` — 25 个用例覆盖 ResizeObserver 和高度计算
-  - `svg-icon.spec.ts` — 13 个用例覆盖内部/外部图标渲染
-  - `es-crud-page.spec.ts` — 37 个用例覆盖一键 CRUD 组件
-
-**工程化**
-
-- `vue-tsc` 升级至 v3.3.1（兼容 TypeScript 5.9）
-- `prepublishOnly` 脚本增加 `typecheck` 步骤，确保发布前零类型错误
-- `vite-plugin-dts` 配置 `tsconfigPath` 指向 build 专用配置
-
----
-
-## v1.3.2
-
-> 2026-05-24 发布
-
-- 新增 JSON Schema 文件（`schemas/` 目录），支持 AI 工具链集成
-- 配置 changesets 自动版本管理，monorepo 多包协同发布
-- 发布 `@es-plus/shared@1.0.0`、`@es-plus/mcp-server@1.1.0`、`@es-plus/cli@1.1.0`
-
----
-
-## v1.2.0
-
-> 2026-03-15 发布
-
-- 导出全部 TypeScript 类型定义（FormItemOption、TableColumn 等 11 个核心接口）
-- 新增 EsCrudPage 一键 CRUD 页面组件
-- 新增权限控制（`permissionValue` 声明式按钮权限）
-- 新增国际化支持（`labelKey` + 自定义翻译函数）
-- 新增 `@es-plus/mcp-server` AI 编码工具集成
-- 新增 `@es-plus/cli` 命令行工具
-- 修复 EsForm 按钮模板嵌套问题
-- 修复 EsDialog v-if/v-for 优先级问题
-
----
-
-## v1.0.0
-
-> 2026-02-11 发布
-
-- 初始发布
-- EsForm 配置化表单组件（支持 13 种 formtype）
-- EsTable 配置化表格组件（支持远程数据、跨页选择、自适应高度）
-- EsDialog 增强弹窗组件
-- useDialog 编程式弹窗 Hook
-- SvgIcon 图标组件
-- 全局配置系统（`app.use(EsPlus, options)`）
-- Form + Table + Dialog 联动模式
+- `@es-plus/core`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/core/CHANGELOG.md)
+- `@es-plus/vue3`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/vue3/CHANGELOG.md)
+- `@es-plus/vue2`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/vue2/CHANGELOG.md)
+- `@es-plus/adapter-antdv`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/adapter-antdv/CHANGELOG.md)
+- `@es-plus/shared`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/shared/CHANGELOG.md)
+- `@es-plus/cli`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/cli/CHANGELOG.md)
+- `@es-plus/mcp-server`：[CHANGELOG](https://github.com/liujiaao/es-plus/blob/master/packages/mcp-server/CHANGELOG.md)
