@@ -147,15 +147,31 @@ const reduce = (native, es) => (native === 0 ? 0 : Math.round(((native - es) / n
  *
  * 事件 / 函数 / v-if 用**同一把尺子**量：JSON 里没有 `<template>` / `<script>`，`blocks()`
  * 取不到区就返回空串，于是三项必然为 0 —— 这是计数器的结果，不是写死的数字。
+ *
+ * **但这三项对 JSON 是没有定义的**：schema 允许 `formatter` / `render` 这类脚本字符串
+ * （`structured-config.schema.ts`），它们住在 JSON 字符串里，`<script>` 派生计数器看不见。
+ * 所以另记 `features.scriptStrings`（键名 `formatter` / `render` 的出现次数）：脚本藏进来的
+ * 那一天，这三项仍是 0，而 `scriptStrings` 会立刻变成非 0 —— 页面与报告读的是后者。
+ *
  * 行数/字节如实记录，但页面明写「JSON 物理行 ≠ 复杂度」：逐标量一行，行数不是优劣信号。
  */
 function measureAi(rel) {
-  const text = readText(join(ROOT, rel))
+  return { file: rel, ...aiMetricsOf(readText(join(ROOT, rel))) }
+}
+
+/**
+ * 纯函数部分（单测用）：同一份 JSON 文本无论 CRLF 还是 LF，产出必须**逐字段相同**。
+ *
+ * `bytes` 按 `toLF` 归一后的文本计 —— 否则本地 Windows（autocrlf=true，工作树 CRLF）
+ * 算出 7994、Linux CI（检出 LF）算出 7631，`cases:metrics:check` 只在 CI 上红，
+ * 而它挡的是 deploy-docs。2026-10-27 就是这么红过一次。
+ */
+export function aiMetricsOf(rawText) {
+  const text = toLF(rawText)
   const parts = blocks(text)
   const schema = JSON.parse(text)
   const json = JSON.stringify(schema)
   return {
-    file: rel,
     lines: nonEmptyLines(text),
     bytes: Buffer.byteLength(text),
     events: countEvents(parts.template),
@@ -168,6 +184,7 @@ function measureAi(rel) {
       actions: (schema.actions ?? []).length,
       dataOptions: (json.match(/"dataOptions"/g) || []).length,
       permissionValue: (json.match(/"permissionValue"/g) || []).length,
+      scriptStrings: (json.match(/"(?:formatter|render)"/g) || []).length,
     },
   }
 }
@@ -224,6 +241,17 @@ function checkNvsWiring() {
     const page = toLF(readFileSync(pagePath, 'utf8'))
     if (!page.includes('native-vs-ai-sources')) problems.push(`${w.page} 没有引用三栏源码模块`)
     if (!page.includes('data-testid="native-vs-ai"')) problems.push(`${w.page} 缺少 data-testid="native-vs-ai"`)
+    // 数字必须来自度量单源：只查「文件存在」证不到这一点 —— 写死 123/7/6/2 的页面
+    // 照样能 import 一份用不上的 JSON。es-eui 没有 e2e project，这条静态检查是它唯一的
+    // 「不写死」证据（docs 端另有 e2e 兜底，但同样先从单源取值）。
+    // 必须匹配**import 语句**而不是文件名：页头注释里就写着 cases-metrics.json，
+    // 只查子串会让「删掉 import、写死数字」的页面照样绿（负向测试踩到过）。
+    if (!/from\s+'@\/cases\/cases-metrics\.json'/.test(page)) {
+      problems.push(`${w.page} 没有 import '@/cases/cases-metrics.json'（注释里提到不算读取单源）`)
+    }
+    if (!/scenarios[\s\S]{0,120}\.find\(/.test(page)) {
+      problems.push(`${w.page} 没有按 id 从 cases-metrics.json 取场景（数字可能是写死的）`)
+    }
     const routerPath = join(ROOT, w.router)
     if (!existsSync(routerPath) || !toLF(readFileSync(routerPath, 'utf8')).includes('native-vs-ai')) {
       problems.push(`${w.router} 未注册 /native-vs-ai 路由`)

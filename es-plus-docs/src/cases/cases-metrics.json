@@ -22,7 +22,7 @@
       "ai": {
         "file": "docs/cases/generated/employee-roster.json",
         "lines": 363,
-        "bytes": 7994,
+        "bytes": 7631,
         "events": 0,
         "functions": 0,
         "vIf": 0,
@@ -32,7 +32,8 @@
           "dialogs": 3,
           "actions": 3,
           "dataOptions": 5,
-          "permissionValue": 0
+          "permissionValue": 0,
+          "scriptStrings": 0
         }
       },
       "reduction": {
