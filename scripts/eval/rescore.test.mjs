@@ -108,6 +108,9 @@ try {
   const artifact = {
     // 产物必须带**当前尺子**的版本号，否则 `--expect` 会被判成跨版本比对（Ruler v3）。
     rulerVersion: RULER_VERSION,
+    // `check:rescore-parity` 只在「产物自称完整测量」时才比对（见该脚本头注）：不全不成，
+    // 探针/失败产物按定义没有可核对的分数。
+    measurement: 'complete-gated-leg-only',
     definition95: { k: 3, rate: out?.definition95?.rate, pass: out?.definition95?.pass, total: out?.definition95?.total },
     inSchemaIntentZeroEdit: out?.definition95?.rate,
     coreRate: out?.coreRate,
@@ -146,6 +149,28 @@ try {
   eq(r4.status, 1, '跨尺子版本必须退出 1')
   check(/尺子版本不同/.test(r4.stderr), `跨版本必须明说尺子不同，实得：${r4.stderr}`)
   check(!/不一致（/.test(r4.stderr), '跨版本不得退化成「逐字段不一致」的报错（会被误读成聚合漂移）')
+
+  // ── 5. check:rescore-parity 的**跳过规则**（守卫最容易在这里变成红盲）─────────
+  // 恒跳过 = 永远绿；恒比对 = 每次探针/失败跑批都红。四条分支逐条钉住。
+  const PARITY = join(ROOT, 'scripts', 'check-rescore-parity.mjs')
+  const parity = (args) => spawnSync(process.execPath, [PARITY, ...args], { cwd: ROOT, encoding: 'utf8' })
+
+  const p1 = parity([dumpPath, '--expect', goodPath])
+  check(p1.status === 0, `一致的产物必须让 parity 通过（实得 ${p1.status}）：${p1.stderr}`)
+  check(/逐字段一致/.test(p1.stdout), 'parity 通过必须打印「逐字段一致」（否则是静默跳过）')
+
+  const failedArtifact = join(dir, 'failed.json')
+  writeFileSync(failedArtifact, JSON.stringify({ measurement: 'failed', failures: ['x'] }))
+  const p2 = parity([dumpPath, '--expect', failedArtifact])
+  check(p2.status === 0 && /跳过/.test(p2.stdout), 'measurement=failed 必须显式跳过（不是失败，也不是通过）')
+
+  const p3 = parity([join(dir, 'missing.jsonl'), '--expect', goodPath])
+  check(p3.status === 1, '产物自称完整测量却没有 dump ⟹ 必须红（否则「能不能复算」永远没人验证）')
+
+  const fragOnly = join(dir, 'frag.jsonl')
+  writeFileSync(fragOnly, JSON.stringify({ kind: 'meta', schemaVersion: 1, rulerVersion: RULER_VERSION }) + '\n')
+  const p4 = parity([fragOnly, '--expect', goodPath])
+  check(p4.status === 0 && /没有 CRUD 行/.test(p4.stdout), 'CRUD 零行的 dump 必须显式跳过（片段探针不写产物）')
 } finally {
   rmSync(dir, { recursive: true, force: true })
 }

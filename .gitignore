@@ -36,6 +36,11 @@ coverage/
 packages/*/__tests__/.tmp-fragments/
 .tmp-inspect/
 
+# 评测预测落盘（`--dump-pred`）与会话期一次性排查脚本：本地/CI 临时产物，不进版本库。
+# 夜间跑批的 dump 经 Actions artifact 上传，仓库里只留 last-accuracy.json 与徽章。
+.tmp-eval/
+.tmp-audit/
+
 # Tier 2 片段 fixture：gen-fragments.mjs 从 golden 语料生成的片段产物（AI-44）
 __tests__/e2e-runtime/vue2/src/fragments/
 

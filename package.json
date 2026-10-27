@@ -48,6 +48,7 @@
     "check:dump": "node scripts/eval/dump.test.mjs",
     "check:ai-case-drift": "node scripts/eval/ai-case-drift.test.mjs",
     "check:rescore": "node scripts/eval/rescore.test.mjs",
+    "check:rescore-parity": "node scripts/check-rescore-parity.mjs",
     "check:ratchet": "node scripts/eval/ratchet.test.mjs",
     "check:artifact-self": "node scripts/eval/artifact.test.mjs",
     "check:artifact-freshness": "node scripts/check-artifact-freshness.mjs",

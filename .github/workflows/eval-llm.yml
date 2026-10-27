@@ -65,7 +65,23 @@ jobs:
           # (default below is a real Anthropic id; a relay likely needs its own).
           ESPLUS_EVAL_MODEL: ${{ vars.ESPLUS_EVAL_MODEL }}
           ESPLUS_EVAL_TARGET: ${{ github.event.inputs.target || '0.95' }}
-        run: npm run eval:llm -- --require-key
+        # `--dump-pred` **无条件**开启：模型产出必须落盘，否则「产物里的数字算得对不对」永远
+        # 无法验证（D8）。dump 只进 Actions artifact，不进仓库（见 .gitignore）。
+        run: npm run eval:llm -- --require-key --dump-pred .tmp-eval/pred.jsonl
+      # 复算自洽（`check:rescore-parity`）：用刚落盘的 dump 重算一遍，逐字段比对当次产物。
+      # 跳过规则（失败产物 / 探针 / 无 CRUD 行）写在脚本头注；「产物自称完整测量却没有 dump」是红。
+      - name: Rescore parity (artifact vs dump)
+        if: always()
+        run: node scripts/check-rescore-parity.mjs .tmp-eval/pred.jsonl
+      # 逐行模型产出留档：D 阶段要的「剩下哪些行差在哪」只能从这份 dump 读（本地不留）。
+      - name: Upload prediction dump
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-dump
+          path: .tmp-eval/pred.jsonl
+          if-no-files-found: ignore
+          retention-days: 14
       # Commit the refreshed accuracy record + shields badge so the README badge
       # tracks reality — even on a RED run (always()), so a regression turns the
       # badge yellow/red instead of silently freezing on an old green number.
