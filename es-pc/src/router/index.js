@@ -58,7 +58,7 @@ const routes = [
         // 浏览器里不重算。排在 `ai-gallery/:id` 之前，避免被详情路由吃掉。
         path: 'ai-gallery/composition',
         name: 'AiGalleryComposition',
-        meta: { title: 'S2 组合画廊' },
+        meta: { title: '组合画廊 · 三端对照' },
         component: () => import('@/views/AiComposition.vue'),
       },
       {
@@ -66,7 +66,7 @@ const routes = [
         // 记录由 `scripts/gen-ai-workflows.mjs` 生成，浏览器里不重算。同样排详情路由之前。
         path: 'ai-gallery/workflows',
         name: 'AiGalleryWorkflows',
-        meta: { title: 'S3 工具工作流' },
+        meta: { title: 'MCP 工具工作流' },
         component: () => import('@/views/AiWorkflows.vue'),
       },
       {
@@ -153,6 +153,20 @@ const router = createRouter({
     if (to.hash) return { el: to.hash, top: 88, behavior: 'smooth' }
     return { top: 0 }
   },
+})
+
+// 逐页 title：路由上一直写着 meta.title，却没有任何地方消费它 —— 22 个页面共用
+// index.html 的那一句，分享十六条链接长得一模一样，浏览器历史也分不清。
+// meta.title 是单一来源（scripts/check-subpage-title.mjs 断言每条具名路由都有）。
+const SITE_SUFFIX = 'ES-Plus · Ant Design Vue'
+const SITE_DEFAULT_TITLE = 'ES-Plus 开发文档 · Ant Design Vue 端'
+
+router.afterEach((to) => {
+  const title = to.matched
+    .map((record) => record.meta && record.meta.title)
+    .filter(Boolean)
+    .pop()
+  document.title = title ? `${title} · ${SITE_SUFFIX}` : SITE_DEFAULT_TITLE
 })
 
 export default router

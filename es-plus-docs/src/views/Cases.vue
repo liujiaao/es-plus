@@ -178,6 +178,11 @@ const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n
 const COMPARE_KEYS = ['lines', 'events', 'functions', 'vIf'] as const
 /** 0 表示两侧持平；负数表示 es-plus 侧更多（如实显示成 +x%） */
 const delta = (v: number) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
+// 逐页 title / description：单一来源在 utils/page-meta.ts（check:page-meta 静态核对）。
+// 放在脚本末尾不影响求值 —— ESM 的 import 声明会被提升，这样文件级注释与 import 分组都不被打断。
+import { usePageMeta } from '@/utils/page-meta'
+
+usePageMeta('cases')
 </script>
 
 <style lang="scss" scoped>

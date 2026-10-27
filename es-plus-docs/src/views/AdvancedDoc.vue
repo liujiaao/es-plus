@@ -180,6 +180,13 @@ watch(
 )
 onMounted(() => { stopRealign = realignToHash(String(route.hash || '')) })
 onBeforeUnmount(() => stopRealign())
+// 高级指南的标题跟着当前文档走（registry 里每篇都有自己的 title / description）。
+import { usePageMeta } from '@/utils/page-meta'
+
+usePageMeta(() => ({
+  title: currentDoc.value.title,
+  description: currentDoc.value.description || `${currentDoc.value.title} - ES-Plus 高级用法`,
+}))
 </script>
 
 <style lang="scss" scoped>

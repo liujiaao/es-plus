@@ -8,6 +8,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
+    meta: { title: '首页' },
     component: () => import('../views/home/index.vue')
   },
   
@@ -19,36 +20,43 @@ const routes = [
       {
         path: '',
         name: 'GuideIntroduction',
+        meta: { title: '介绍' },
         component: () => import('../views/guide/introduction.vue')
       },
       {
         path: 'installation',
         name: 'GuideInstallation',
+        meta: { title: '安装' },
         component: () => import('../views/guide/installation.vue')
       },
       {
         path: 'quickstart',
         name: 'GuideQuickstart',
+        meta: { title: '快速开始' },
         component: () => import('../views/guide/quickstart.vue')
       },
       {
         path: 'configuration',
         name: 'GuideConfiguration',
+        meta: { title: '全局配置' },
         component: () => import('../views/guide/configuration.vue')
       },
       {
         path: 'theme',
         name: 'GuideTheme',
+        meta: { title: '主题定制' },
         component: () => import('../views/guide/theme.vue')
       },
       {
         path: 'i18n',
         name: 'GuideI18n',
+        meta: { title: '国际化' },
         component: () => import('../views/guide/i18n.vue')
       },
       {
         path: 'developer-guide',
         name: 'DeveloperGuide',
+        meta: { title: '开发者指南' },
         component: () => import('../views/docs/EsEuiDeveloperGuide.vue')
       }
     ]
@@ -62,51 +70,61 @@ const routes = [
       {
         path: 'installation',
         name: 'ComponentInstallation',
+        meta: { title: '组件安装' },
         component: () => import('../views/component/installation.vue')
       },
       {
         path: 'quickstart',
         name: 'ComponentQuickstart',
+        meta: { title: '组件快速开始' },
         component: () => import('../views/guide/quickstart.vue')
       },
       {
         path: 'estable',
         name: 'EsTableDocs',
+        meta: { title: 'EsTable 表格' },
         component: () => import('../views/docs/EsTableDocs.vue')
       },
       {
         path: 'vxetable',
         name: 'VxeTableDocs',
+        meta: { title: 'vxe-table 高性能表格' },
         component: () => import('../views/docs/VxeTableDocs.vue')
       },
       {
         path: 'esform',
         name: 'EsFormDocs',
+        meta: { title: 'EsForm 表单' },
         component: () => import('../views/docs/EsFormDocs.vue')
       },
       {
         path: 'esdialog',
         name: 'EsDialogDocs',
+        meta: { title: 'EsDialog 弹窗' },
         component: () => import('../views/docs/EsDialogDocs.vue')
       },
       {
         path: 'escrudpage',
         name: 'EsCrudPageDocs',
+        meta: { title: 'EsCrudPage 增删改查页' },
         component: () => import('../views/docs/EsCrudPageDocs.vue')
       },
       {
         path: 'eserrorboundary',
         name: 'EsErrorBoundaryDocs',
+        meta: { title: 'EsErrorBoundary 错误边界' },
         component: () => import('../views/docs/EsErrorBoundaryDocs.vue')
       },
       {
         path: 'svgicon',
         name: 'SvgIconDocs',
+        meta: { title: 'SvgIcon 图标' },
         component: () => import('../views/docs/SvgIconDocs.vue')
       },
       {
         path: 'combination',
         name: 'CombinationDocs',
+        meta: { title: '高级联动组合' },
         component: () => import('../views/docs/CombinationDocs.vue')
       }
     ]
@@ -116,6 +134,7 @@ const routes = [
   {
     path: '/quickstart',
     name: 'QuickStart',
+    meta: { title: '30 秒上手' },
     component: () => import('../views/quickstart.vue')
   },
 
@@ -123,6 +142,7 @@ const routes = [
   {
     path: '/cases',
     name: 'Cases',
+    meta: { title: '核心案例' },
     component: () => import('../views/cases.vue')
   },
 
@@ -131,6 +151,7 @@ const routes = [
   {
     path: '/flagship-approval',
     name: 'FlagshipApproval',
+    meta: { title: '旗舰案例 · 合同审批工作台' },
     component: () => import('../views/flagship-approval.vue')
   },
 
@@ -139,6 +160,7 @@ const routes = [
   {
     path: '/ai-generated',
     name: 'AiGenerated',
+    meta: { title: 'AI 生成 · 一句话成页' },
     component: () => import('../views/ai-generated.vue')
   },
 
@@ -147,6 +169,7 @@ const routes = [
   {
     path: '/fragment-dashboard',
     name: 'FragmentDashboard',
+    meta: { title: '片段拼装仪表盘' },
     component: () => import('../views/fragment-dashboard.vue')
   },
 
@@ -154,6 +177,7 @@ const routes = [
   {
     path: '/native-vs-ai',
     name: 'NativeVsAi',
+    meta: { title: '原生 · 手写 · AI 三栏对照' },
     component: () => import('../views/native-vs-ai.vue')
   },
 
@@ -162,6 +186,7 @@ const routes = [
   {
     path: '/ai-gallery',
     name: 'AiGallery',
+    meta: { title: 'AI 案例画廊' },
     component: () => import('../views/ai-gallery.vue')
   },
   {
@@ -170,6 +195,7 @@ const routes = [
     // 浏览器里不重算。排在 `/ai-gallery/:id` 之前，避免被详情路由吃掉。
     path: '/ai-gallery/composition',
     name: 'AiGalleryComposition',
+    meta: { title: '组合画廊 · 三端对照' },
     component: () => import('../views/ai-composition.vue')
   },
   {
@@ -177,11 +203,13 @@ const routes = [
     // 记录由 `scripts/gen-ai-workflows.mjs` 生成，浏览器里不重算。同样排详情路由之前。
     path: '/ai-gallery/workflows',
     name: 'AiGalleryWorkflows',
+    meta: { title: 'MCP 工具工作流' },
     component: () => import('../views/ai-workflows.vue')
   },
   {
     path: '/ai-gallery/:id',
     name: 'AiGalleryCase',
+    meta: { title: 'AI 案例详情' },
     component: () => import('../views/ai-gallery.vue')
   },
 
@@ -197,6 +225,7 @@ const routes = [
   {
     path: '/ai-tools',
     name: 'AiTools',
+    meta: { title: 'AI 工具链' },
     component: () => import('../views/ai-tools.vue')
   },
 
@@ -205,6 +234,7 @@ const routes = [
   {
     path: '*',
     name: 'NotFound',
+    meta: { title: '页面不存在' },
     component: () => import('../views/NotFound.vue')
   }
 ]
@@ -225,6 +255,19 @@ const router = new VueRouter({
     if (to.hash) return { selector: to.hash, offset: { x: 0, y: 88 } }
     return { x: 0, y: 0 }
   }
+})
+
+// 逐页 title：此前 30 条路由共用 public/index.html 的那一句，分享出去分不清是哪一篇。
+// meta.title 是单一来源（scripts/check-subpage-title.mjs 断言每条具名路由都有）。
+const SITE_SUFFIX = 'ES-Plus · Vue 2 + Element UI'
+const SITE_DEFAULT_TITLE = 'ES-Plus 文档 · Vue 2 + Element UI 端'
+
+router.afterEach((to) => {
+  const title = to.matched
+    .map((record) => record.meta && record.meta.title)
+    .filter(Boolean)
+    .pop()
+  document.title = title ? `${title} · ${SITE_SUFFIX}` : SITE_DEFAULT_TITLE
 })
 
 export default router

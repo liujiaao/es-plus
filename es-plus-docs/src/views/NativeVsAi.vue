@@ -198,6 +198,11 @@ const columns = computed(() => [
 
 const picked = ref<string>('native')
 const pickedColumn = computed(() => columns.value.find((c) => c.key === picked.value) ?? columns.value[0])
+// 逐页 title / description：单一来源在 utils/page-meta.ts（check:page-meta 静态核对）。
+// 放在脚本末尾不影响求值 —— ESM 的 import 声明会被提升，这样文件级注释与 import 分组都不被打断。
+import { usePageMeta } from '@/utils/page-meta'
+
+usePageMeta('native-vs-ai')
 </script>
 
 <style lang="scss" scoped>

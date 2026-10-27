@@ -135,6 +135,17 @@ function download(name, data) {
   a.click()
   URL.revokeObjectURL(url)
 }
+// 详情页（/ai-gallery/:id）的标题跟着案例走；列表页回落到表里的默认项。
+import { PAGE_META, usePageMeta } from '@/utils/page-meta'
+
+usePageMeta(() => {
+  const item = entry.value
+  if (!item) return PAGE_META['ai-gallery']
+  return {
+    title: item.title,
+    description: `AI 案例画廊：${item.title} —— 附配置、产物与复现步骤。`,
+  }
+})
 </script>
 
 <style lang="scss" scoped>

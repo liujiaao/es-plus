@@ -11,6 +11,11 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
+// 逐页 title / description：单一来源在 utils/page-meta.ts（check:page-meta 静态核对）。
+// 放在脚本末尾不影响求值 —— ESM 的 import 声明会被提升，这样文件级注释与 import 分组都不被打断。
+import { usePageMeta } from '@/utils/page-meta'
+
+usePageMeta('not-found')
 </script>
 
 <style scoped>
