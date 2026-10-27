@@ -164,3 +164,130 @@
   --el-color-primary-light-9: #181f2b;
   --el-color-primary-dark-2: #629bf8;
 }
+
+/* ==========================================================================
+ * v2 扩展（路线图 1.1）—— 排版 / 布局 / 间距 / 圆角 / 阴影 / 动效 / 层级 / 焦点
+ *
+ * 只**新增**名字，不动上面任何既有 token 的值：1.1 的验收是「新 token 全量存在，
+ * 老别名不破坏」。真正把页面切到新阶梯是 1.3 的事，一页一页改、可回滚。
+ *
+ * 因此下面有三处**有意不采用**审计规范里的同名值，避免顺手把三站整体换色：
+ *   1. `--es-text-secondary` 保持 #8a919f（规范建议 #5b6472）。需要更高对比的
+ *      正文/链接请直接用 `--es-text-regular` / `--es-link`。
+ *   2. `--es-bg-page` 不动（主站是 #f7f8fa，规范建议 #ffffff）。
+ *   3. `--es-border` 不动；更强的边框另起 `--es-border-strong`。
+ * ========================================================================== */
+
+:root {
+  /* ── 字体栈（不引入 Web Font：中文子集成本高、首屏收益低）── */
+  --es-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --es-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* ── 字号阶梯（8 级 + 2 个展示级）── */
+  --es-text-xs: 12px;      /* 标签、脚注、代码行号 */
+  --es-text-sm: 13px;      /* 辅助说明、表格 */
+  --es-text-base: 14px;    /* 密集 UI */
+  --es-text-md: 16px;      /* 正文 */
+  --es-text-lg: 18px;      /* Lead、H4 */
+  --es-text-xl: 20px;      /* H3 */
+  --es-text-2xl: 24px;     /* H2 */
+  --es-text-3xl: 30px;     /* H1（文档） */
+  --es-text-4xl: 36px;     /* 页面大标题 */
+  --es-display: 56px;      /* Landing H1 桌面 */
+  --es-display-sm: 40px;   /* Landing H1 移动 */
+
+  /* ── 行高 ── */
+  --es-leading-tight: 1.25;    /* 标题 */
+  --es-leading-snug: 1.4;      /* 小标题 */
+  --es-leading-normal: 1.6;    /* UI */
+  --es-leading-relaxed: 1.75;  /* 正文 */
+
+  /* ── 间距（4px 基准；上面的 --es-spacing-* 是旧名，保留）── */
+  --es-space-1: 4px;
+  --es-space-2: 8px;
+  --es-space-3: 12px;
+  --es-space-4: 16px;
+  --es-space-5: 24px;
+  --es-space-6: 32px;
+  --es-space-7: 48px;
+  --es-space-8: 64px;
+  --es-space-9: 96px;
+
+  /* ── 圆角补充（xs / md / full）── */
+  --es-radius-xs: 4px;     /* 徽章、标签 */
+  --es-radius-md: 12px;    /* 卡片 */
+  --es-radius-full: 999px; /* 胶囊 */
+
+  /* ── 阴影补充（第 3 级：浮层 / 弹窗）── */
+  --es-shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+
+  /* ── 动效 ── */
+  --es-duration-fast: 120ms;
+  --es-duration-base: 180ms;
+  --es-duration-slow: 240ms;
+  --es-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ── 层级 ── */
+  --es-z-sticky: 10;
+  --es-z-header: 100;
+  --es-z-overlay: 1000;
+  --es-z-modal: 1100;
+  --es-z-toast: 1200;
+
+  /* ── 布局宽度（shell = 260 + minmax(0, 760) + 220，整体居中，最大 1440）── */
+  --es-layout-max: 1440px;
+  --es-header-height: 64px;
+  --es-sidebar-width: 260px;
+  --es-content-width: 760px;
+  --es-content-wide: 960px;   /* 表格 / API 表可突破到这里 */
+  --es-toc-width: 220px;
+  --es-gutter: 32px;
+
+  /* ── 断点 ──
+   * CSS 变量不能用在 @media 的媒体特性里；这四个名字是给文档、脚本与各站
+   * 对齐「同一个数字」用的，样式里仍写数值，改这里时请一起改。 */
+  --es-bp-sm: 640px;
+  --es-bp-md: 768px;
+  --es-bp-lg: 1024px;
+  --es-bp-xl: 1280px;
+  --es-bp-2xl: 1440px;
+
+  /* ── 语义色补充（新增名字，不改同名旧 token）── */
+  --es-brand-strong: #2563eb;   /* 链接 / 按钮文字，AA 5.17:1（#3b82f6 只用于填充与大字号）*/
+  --es-brand-tint: #eff6ff;
+  --es-link: #2563eb;
+  --es-link-hover: #1d4ed8;
+  --es-text-tertiary: #6b7280;  /* 4.83:1 */
+  --es-text-disabled: #9ca3af;  /* 仅禁用态，不用于正文 */
+  --es-border-strong: #d1d5db;
+  --es-bg-subtle: #f7f8fa;
+  --es-bg-code: var(--es-code-bg);
+  --es-success-text: #15803d;   /* 5.02:1 */
+  --es-warning-text: #b45309;   /* 5.02:1 */
+  --es-danger-text: #b91c1c;    /* 6.47:1 */
+  --es-info-text: #2563eb;
+
+  /* ── 焦点 ── */
+  --es-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+/* ── 暗色：v2 新增 token 的同构值 ──
+ * 深色不是反色滤镜：链接与强调色整体提亮，禁用态保持可辨识。 */
+.dark {
+  --es-brand-strong: #60a5fa;
+  --es-brand-tint: #13233d;
+  --es-link: #60a5fa;
+  --es-link-hover: #93c5fd;
+  --es-text-tertiary: #9ca3af;
+  --es-text-disabled: #6b7280;
+  --es-border-strong: #1f2937;
+  --es-bg-subtle: #111827;
+  --es-success-text: #4ade80;
+  --es-warning-text: #fbbf24;
+  --es-danger-text: #f87171;
+  --es-info-text: #60a5fa;
+  --es-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --es-focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.45);
+}

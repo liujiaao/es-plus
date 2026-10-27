@@ -491,3 +491,14 @@
 .dark .es-doc-content .custom-block.info { background: rgba(59, 130, 246, 0.12); }
 .dark .es-doc-content .danger,
 .dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }
+
+/* 窄屏：正文表格的表头/单元格有 min-content 宽度，390px 下会撑出页面横向滚动条
+   （/guide/mcp-server 的 schema 表实测 438px）。表格自身变成横向滚动容器，
+   页面宽度保持不变 —— 表格内容仍然一眼可扫，只是需要横滑。 */
+@media (max-width: 768px) {
+  .es-doc-content > table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
