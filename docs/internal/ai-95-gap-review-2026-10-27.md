@@ -722,3 +722,42 @@ G  度量可靠性（健康门 / artifact / 棘轮 / version 指纹）
   ≈ **新的 `propSet` 命中率**；若仍停在 55%，说明还有别的阻断被掩码藏住。
 - **en 腿数字必须不变**（`byLanguage.en`）：它走 prop 身份，本次改动对它是恒等变换。下次跑批若 en 腿数字动了，
   说明 `scoreOptsForLang` 没生效。
+
+### 11.5 A5 编译分母含 en 腿 + 类型腿全量 + 属性式 fuzz 守卫 ✅（2026-10-27）
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/lib/generator-loader.mjs`（新） | 生成器的 esbuild 打包**单源**（从 `packages/shared/src` 直接打包，不依赖 `dist`）+ `crippleEscaperSource`（恒等转义器，保留 `assertEmittableExpr` 与 `findNonJsonValues` 真实）。escaping 守卫原有的私有副本删除 |
+| `scripts/check-generator-fuzz.mjs`（新） | **属性式**守卫：19 个载荷 × 3 target × 2 mode × 2 个槽族 = 228 份配置，判据 = Tier A 编译器能否编译产物；自由槽额外断言哨兵出现在产物里（防「值被静默丢弃」的假绿）；身份槽判据为析取（Zod 拒绝 ∨ 能编译），并断言「至少一条被拒绝」（否则析取退化）；非空证明 = 恒等转义器下同一份语料必须变红 |
+| `packages/shared/src/codegen-escape.ts` | `q()` 的换行归一化 `/\r?\n/` → 逐字符（`\r`→`\r`、`\n`→`\n`） |
+| `packages/shared/src/structured-generator.ts` | 导出 handler 的 `as any` 跟着 `typescript` 走（`queryForm${ts ? ' as any' : ''}`） |
+| `scripts/eval/compile-leg.mjs` | `summarizeCompile` 增 `byLang`（诊断拆分，**不是**第二个分母）；SFC 判定改为「以 `<template>`/`<script>` 起头」+ `compileProduct` 按产物结构分派（有 `wrapperCode` ⟹ `code` 是模块） |
+| `scripts/eval/run-metrics.mjs` | 编译门分母 `zhRows` → `rows`（**含 en 腿**） |
+| `scripts/eval-llm.mjs` · `artifact.mjs` · `rescore.mjs` | 产物/日志带 `compileByLang`；`verifyArtifact` 只查「桶自身自洽」（红），桶之和 ≠ 全局分母只**警告**（观测腿跑一半是正常状态）；类型腿 `TYPECHECK_FULL = true`（`mode: 'full'`，超时 15 min，抽样保留为降级开关） |
+| `package.json` | 新脚本 `check:generator-fuzz`，并入 `check:consistency` 链（紧跟 `check:generator-escaping`） |
+
+**实测（全离线，0 模型成本）**
+
+- `check:generator-fuzz`：**228 份配置 → 198 份产出可编译产物，30 份被 schema fail-closed 拒绝**；恒等转义器下 **108 条变红** ⟹ 判据有约束力。自由槽 100% 到达发射器（覆盖性断言）。
+- `check:generator-escaping`：9 份产物 / 四种上下文全绿；非空证明 18 条变红（改用共享 loader 后行为不变）。
+- `npm run check:consistency` **EXIT=0**（含新守卫）。
+
+**首版即咬出的三处真实缺陷**（都不是读代码发现的，且当时全部守卫为绿）
+
+1. **`sfc` 模式 + `actions` 含 `export` + `typescript:false`** ⟹ `new URLSearchParams(queryForm as any)` 里的类型断言
+   在 JS/JSX 产物里是语法错。语料里恰好没有「sfc + 导出」的组合，Tier A 因此长期是 100%。
+2. **孤立 `\r`**：`/\r?\n/` 抓不到单独的 CR，而裸 CR 在单引号字面量里就是行终止符 ⟹ `Unterminated string constant`。
+3. **编译腿把模块误判成 SFC**：内联 JSON 只转义 `</script`、开标签原样保留 ⟹ 带 `<script>` 的 label 触发
+   `Element is missing end tag` 的**假编译失败**。这是**尺子**缺陷，不是产物缺陷。
+
+**刻意不做的**
+
+- **编译门判据不变**（仍是 `compileRate === 1`），只换分母：en 腿进分母是因为编译失败是**产物**属性（每条产物一次
+  独立发射），不像准确率那样要把「没测到」按 0 计；若把 en 的**语义** miss 也算进编译门，就变成第二道准确率门。
+- **`byLang` 不参与门禁**：桶之和 ≠ 全局分母只警告 —— 观测腿跑一半时判红会让门禁在正常状态下恒红（红盲）。
+- **类型腿仍是观测**：不进 `passed` / 徽章 / exit code，全量只让它**更容易**红（样本多了、形态全了）。
+
+> **一句话**：三件事把「编译 100%」从「这批中文用例碰巧过」变成「这类输入结构性过」，代价是零模型成本；
+> 而且守卫第一次运行就抓出两条产物缺陷 + 一条尺子缺陷。
