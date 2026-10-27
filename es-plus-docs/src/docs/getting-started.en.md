@@ -1,6 +1,6 @@
 # Getting Started
 
-ES-Plus is an enterprise-grade component library that cuts markup and event glue code on CRUD pages by 76.5% through configuration-driven rendering. Three render targets share the same JSON schema:
+ES-Plus is the configuration layer for admin CRUD: one JSON config describes the query form, table, form and dialogs, and a renderer produces the page — which cuts markup and event glue code on CRUD pages by 76.5%. Three render targets share the same JSON schema:
 
 - **`@es-plus/vue3`** — Vue 3 + Element Plus (active development)
 - **`@es-plus/vue2`** — Vue 2 + Element UI (compatibility build)

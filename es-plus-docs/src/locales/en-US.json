@@ -68,7 +68,14 @@
     "quickAiCrud": "AI generator",
     "quickPlayground": "Playground",
     "trySearch": "Try searching for",
-    "suggestions": ["linkage", "permission", "pagination", "virtual scroll", "dialog", "MCP"],
+    "suggestions": [
+      "linkage",
+      "permission",
+      "pagination",
+      "virtual scroll",
+      "dialog",
+      "MCP"
+    ],
     "cat": {
       "guide": "Guide",
       "component": "Component",
@@ -121,7 +128,7 @@
     "configInvalid": "Config failed validation — not applied"
   },
   "home": {
-    "badge": "🚀 The config layer for admin CRUD · Vue 2 / Vue 3 / Ant Design Vue",
+    "badge": "🚀 Vue 2 / Vue 3 / Ant Design Vue · Three renderers",
     "title": "ES-Plus",
     "tagline1": "The config layer for admin CRUD",
     "tagline2": "One config · three renderers · compiles on generation",
@@ -167,10 +174,11 @@
     "step1Title": "Install",
     "step2Title": "Import",
     "step3Title": "Use",
-    "footerTagline": "Enterprise-grade configurable frontend component library",
+    "footerTagline": "The config layer for admin CRUD",
     "compStatGlue": "markup + event glue code",
     "comparisonNote": "Every figure above is measured by a build script from the two files shown in this section — not an estimate: template lines + handle*/fetch* event & fetch functions 115 → 27 (-76.5%); whole file 151 → 90 lines incl. blank (-40.4%). Field and column declarations are written on both sides, so they are excluded. Source: docs/brand/one-config/.",
-    "linesSuffix": " lines"
+    "linesSuffix": " lines",
+    "footerRenderer": "Vue 3 + Element Plus renderer"
   },
   "notFound": {
     "message": "Page not found",
@@ -209,7 +217,7 @@
   },
   "aiCrud": {
     "title": "AI CRUD Generator",
-    "description": "Natural-language prompt → full CRUD page config. Try out a config-driven component library in the AI era.",
+    "description": "Natural-language prompt → full CRUD page config. Try the configuration layer in the AI era.",
     "presetExamples": "Preset examples",
     "engineAi": "AI engine",
     "engineRule": "Rule engine",

@@ -10,8 +10,8 @@
         安装指南
       </h1>
       <p class="hero-desc">
-        本节将介绍如何在项目中安装和配置 ES-Plus 组件库，
-        只需几步即可开始使用。
+        本节介绍如何在本项目中安装并注册 <code>@es-plus/vue2</code> 渲染端
+        （Vue 2 + Element UI），只需几步即可开始使用。
       </p>
     </section>
 

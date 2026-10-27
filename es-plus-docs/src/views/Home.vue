@@ -4,9 +4,13 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-badge">{{ t('home.badge') }}</div>
-        <h1 class="hero-title">{{ t('home.title') }}</h1>
+        <!-- H1 = 品牌 + 定位语（与 AntDV / Vue2 站同一结构）。
+             此前定位语在 <p> 里，H1 只有一个词，三站各写各的。 -->
+        <h1 class="hero-title">
+          {{ t('home.title') }}
+          <span class="hero-title-sub">{{ t('home.tagline1') }}</span>
+        </h1>
         <p class="hero-description">
-          {{ t('home.tagline1') }}<br>
           <span class="hero-subtitle">{{ t('home.tagline2') }}</span>
         </p>
         <div class="hero-actions">
@@ -266,9 +270,11 @@ dialog({ title: '提示', render: () => h('div', '内容') })</code></pre>
       </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Footer —— 三站同一结构：品牌 · 定位 ／ © 年份 · 本站是哪个渲染端。
+         写清渲染端，读者才知道这里 100+ 个组件页只是同一份配置的一种落地方式。 -->
     <footer class="home-footer">
-      <p>ES-Plus © {{ new Date().getFullYear() }} · {{ t('home.footerTagline') }}</p>
+      <p class="footer-brand">ES-Plus · {{ t('home.footerTagline') }}</p>
+      <p class="footer-meta">© {{ new Date().getFullYear() }} · {{ t('home.footerRenderer') }}</p>
     </footer>
   </div>
 </template>
@@ -405,6 +411,19 @@ const goToGithub = () => {
   -webkit-text-fill-color: transparent;
   margin-bottom: 16px;
   letter-spacing: -2px;
+}
+
+/* H1 内的定位语：h1 本身是渐变裁切（text-fill transparent），
+   子元素必须显式恢复填充色，否则整行只剩渐变块而没有字。 */
+.hero-title-sub {
+  display: block;
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text-color-regular);
 }
 
 .hero-description {
@@ -1093,6 +1112,16 @@ const goToGithub = () => {
   p {
     font-size: 14px;
     color: var(--text-color-secondary);
+  }
+
+  .footer-brand {
+    font-weight: 500;
+    color: var(--text-color-regular);
+    margin-bottom: 6px;
+  }
+
+  .footer-meta {
+    font-size: 13px;
   }
 }
 

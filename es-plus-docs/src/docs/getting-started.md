@@ -1,6 +1,6 @@
 # 快速开始
 
-ES-Plus 是企业级中后台组件库，通过配置化方式将常见 CRUD 页面的模板与事件胶水代码减少 76.5%。提供三个渲染端：
+ES-Plus 是中后台 CRUD 的配置层：一份 JSON 配置描述查询、表格、表单与弹窗，由渲染器生成页面，常见 CRUD 页面的模板与事件胶水代码因此减少 76.5%。提供三个渲染端：
 
 - **`@es-plus/vue3`** — Vue 3 + Element Plus（活跃开发）
 - **`@es-plus/vue2`** — Vue 2 + Element UI（同 schema 兼容版本）

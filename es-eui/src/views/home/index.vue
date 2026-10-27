@@ -25,14 +25,15 @@
             </div>
           </div>
           
-          <!-- 主标题 -->
+          <!-- 主标题：品牌 + 定位语，与主文档站 / AntDV 站同构 -->
           <h1 class="hero-title">
-            <span class="gradient-text">ES-Plus</span>
+            <span class="gradient-text">{{ brand.name }}</span>
+            <span class="hero-title-sub">{{ brand.positioning }}</span>
           </h1>
-          
-          <!-- 副标题 -->
+
+          <!-- 副标题写本站身份：三站 H1 一致，差异在渲染端 -->
           <p class="hero-desc">
-            <span class="typing-text">中后台 CRUD 的配置层 · Vue 2 + Element UI</span>
+            <span class="typing-text">Vue 2 + Element UI 渲染端</span>
           </p>
 
           <!-- 描述 -->
@@ -858,6 +859,17 @@ $bg-light: #f7fafc;
       -webkit-text-fill-color: transparent;
       animation: shimmer 3s infinite linear;
       background-size: 200% auto;
+    }
+
+    /* 定位语：.gradient-text 是渐变裁切，兄弟节点不继承也能正常显示；
+       这里显式给字号/字重，避免跟着 72px 的主标题一起放大。 */
+    .hero-title-sub {
+      display: block;
+      margin-top: 12px;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0;
+      color: rgba(255, 255, 255, 0.92);
     }
   }
   
@@ -1856,6 +1868,10 @@ $bg-light: #f7fafc;
   .hero {
     .hero-title {
       font-size: 52px;
+
+      .hero-title-sub {
+        font-size: 19px;
+      }
     }
     
     .hero-stats {
@@ -1904,6 +1920,10 @@ $bg-light: #f7fafc;
   .hero {
     .hero-title {
       font-size: 40px;
+
+      .hero-title-sub {
+        font-size: 17px;
+      }
     }
     
     .hero-desc {

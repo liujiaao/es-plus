@@ -139,7 +139,9 @@
       class="footer"
     >
       <div class="container">
-        <p>ES-Plus © {{ new Date().getFullYear() }} 基于 Vue 2.0 和 Element UI 的组件库</p>
+        <!-- 三站页脚同一结构：品牌 · 定位 ／ © 年份 · 本站渲染端 -->
+        <p class="footer-brand">ES-Plus · {{ brand.positioning }}</p>
+        <p class="footer-meta">© {{ year }} · Vue 2 + Element UI 渲染端</p>
       </div>
     </footer>
   </div>
@@ -148,6 +150,8 @@
 <script>
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
+// 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发
+import brand from '@/brand/slogan.json'
 
 export default {
   name: 'App',
@@ -155,7 +159,9 @@ export default {
     return {
       bannerClosed: false,
       mobileNavOpen: false,
-      SITES
+      SITES,
+      brand,
+      year: new Date().getFullYear()
     }
   },
   watch: {
@@ -477,6 +483,16 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+  }
+
+  .footer-brand {
+    color: #606266;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .footer-meta {
+    font-size: 13px;
   }
 }
 

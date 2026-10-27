@@ -147,8 +147,9 @@
         <a-layout-footer class="doc-footer">
           <a-divider />
           <div class="footer-info">
-            <span>ES-Plus ©2026 Created by 刘加傲</span>
-            <span>Powered by Vue 3 + Vite + Ant Design Vue</span>
+            <!-- 三站页脚同一结构：品牌 · 定位 ／ © 年份 · 本站渲染端 -->
+            <span class="footer-brand">ES-Plus · {{ brand.positioning }}</span>
+            <span class="footer-meta">© {{ year }} · Ant Design Vue 渲染端</span>
           </div>
         </a-layout-footer>
       </a-layout-content>
@@ -172,8 +173,12 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons-vue'
 import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
+// 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发
+import brand from '@/brand/slogan.json'
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
+
+const year = new Date().getFullYear()
 
 const adapterVersion = ADAPTER_ANTDV_VERSION
 const route = useRoute()

@@ -51,7 +51,7 @@
       <div class="philosophy-content">
         <div class="philosophy-intro">
           <p class="intro-text">
-            ES-Plus 是一款基于 <strong>Vue 2 + Element UI</strong> 的<strong>企业级中后台业务组件库</strong>，专注于解决 CRUD 场景下的开发效率问题。通过“配置化驱动”的设计理念，将繁琐的模板代码转化为简洁的 JSON 配置，让开发者从繁重的重复劳动中解放出来。
+            ES-Plus 是<strong>中后台 CRUD 的配置层</strong>：用一份 JSON 配置描述查询、表格、表单与弹窗，由渲染器生成页面。本站是其中<strong>Vue 2 + Element UI</strong> 的渲染端（<code>@es-plus/vue2</code>），同一份配置在 Vue 3 与 Ant Design Vue 上渲染出同样的页面 —— 它不是一套独立的组件，而是同一套配置的三种落地方式之一。
           </p>
         </div>
 
@@ -168,7 +168,7 @@
                 04
               </div>
               <h4>让技术沉淀可持续复用</h4>
-              <p>ES-Plus 不仅仅是一个组件库，更是一个可复用的"中后台开发方法论"。当团队积累了一套成熟的配置规范后，可以在不同的项目间复用。</p>
+              <p>ES-Plus 不是一个新的 UI 组件库，而是架在 UI 库之上的配置层 —— 它沉淀的是一套可复用的"中后台开发方法论"。当团队积累了一套成熟的配置规范后，可以在不同的项目间复用。</p>
             </div>
           </div>
         </div>
@@ -381,7 +381,8 @@
           <div class="timeline-content">
             <div class="version-header">
               <span class="version-tag">{{ ver.version }}</span>
-              <span class="version-date">{{ ver.date }}</span>
+              <!-- 日期只在有权威出处时显示（CHANGELOG 不记日期，宁缺勿编） -->
+              <span v-if="ver.date" class="version-date">{{ ver.date }}</span>
             </div>
             <p class="version-desc">
               {{ ver.content }}
@@ -495,11 +496,23 @@ export default {
           ]
         }
       ],
+      // 版本记录与 packages/vue2/CHANGELOG.md 对齐（此前停在 v1.0.2）
       versions: [
         {
-          version: 'v1.0.2',
-          date: '2026-03',
-          content: '初始版本，包含 EsTable、EsForm、useDialog 核心组件，提供完整的配置化开发能力'
+          version: 'v1.4.0',
+          content: '移除从未生效的 DialogOptions.onSubmit —— 确认逻辑改挂到 configBtn[].click，运行时行为不变。'
+        },
+        {
+          version: 'v1.3.0',
+          content: '修复三端同构中的「静默失效」类缺陷：不报错、只是行为悄悄不对的那一类。'
+        },
+        {
+          version: 'v1.2.0',
+          content: '三端一致性修复：校验字段输入被清空、validate 失败不 reject、请求失败统一暴露。'
+        },
+        {
+          version: 'v1.1.5',
+          content: '移除 .sync 自动 emit —— Vue 2.6 下无限更新循环的根因（破坏性变更）。'
         }
       ]
     }

@@ -1,16 +1,19 @@
 <template>
   <div class="home-page">
     <div class="hero">
-      <h1 class="hero-title">{{ brand.positioning }}</h1>
-      <p class="hero-slogan-en">{{ brand.slogan.en }}</p>
+      <!-- H1 = 品牌 + 定位语，与主文档站 / Vue2 站同构。
+           此前 H1 只有定位语，英文口号另起一行 —— 中文页面混排英文主张。 -->
+      <h1 class="hero-title">
+        {{ brand.name }}
+        <span class="hero-title-sub">{{ brand.positioning }}</span>
+      </h1>
       <p class="hero-desc">
         {{ brand.slogan.subtitle }}
         <br />
         <!-- 此前写「跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用」—— 把
              两个 UI 库与两个 Vue 版本并列成四件事，容易被读成「四个框架」。实际是
              三个渲染端：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue。 -->
-        同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue
-        三端复用，AI 生成即编译。
+        同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue 三端复用。
       </p>
       <div class="hero-renderer">
         <span class="renderer-badge">本站渲染器：Ant Design Vue</span>
@@ -234,12 +237,17 @@ const techs = [
   background-clip: text;
 }
 
-.hero-slogan-en {
+/* H1 内的定位语：.hero-title 是渐变裁切（text-fill transparent），
+   子元素必须显式恢复填充色，否则整行只剩渐变块而没有字。 */
+.hero-title-sub {
+  display: block;
+  margin-top: 12px;
   font-size: 20px;
   font-weight: 600;
+  letter-spacing: 0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
   color: var(--es-brand-primary);
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
 }
 
 .hero-renderer {
