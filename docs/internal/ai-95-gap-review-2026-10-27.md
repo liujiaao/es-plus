@@ -818,3 +818,27 @@ all 2/4 vs pinned 2/2。只看 all 列会把 `propSet` 当短板，而门禁真�
 > **一句话**：A4 证明新尺子不再掩码（片段 55.6% → 95.2%，残余 3 条全指向同一个可教学维 `reactions`）；
 > C₀ 证明整条管道（探针 → dump → 复算）在工作，且默认模型 id 打不通时它**拒绝开跑**而不是产出假成绩；
 > A3 让「哪维差」变成「哪维差且门禁在乎」。
+
+### 11.7 §10.4③ 复算自洽常态化 + dump 无条件落 artifact ✅（2026-10-27）
+
+**问题（D8）**：`rescore --expect` 早就写好了，但**没有任何东西调用它** —— 每次改 scorer 都只能靠
+单测证明「新口径自洽」，没有任何一次真跑批证明「产物里的数字 = 从 dump 复算出来的数字」。
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/check-rescore-parity.mjs`（新） | 守卫入口：只在**产物自称完整测量**时比对；四条跳过规则各自显式打印（失败产物 / 无 `measurement` 的旧产物 / 无 CRUD 行的片段探针 dump），而「自称完整测量却拿不出 dump」是**红**（那正是「无法复算却发布」的形状） |
+| `.github/workflows/eval-llm.yml` | 夜间跑批**无条件** `--dump-pred .tmp-eval/pred.jsonl`；新增 `Rescore parity` 步（`always()`）；dump 经 Actions artifact 留 14 天 |
+| `.gitignore` | `.tmp-eval/`、`.tmp-audit/` 不进版本库（dump 只走 artifact，仓库仍只留产物与徽章） |
+| `package.json` | 新脚本 `check:rescore-parity`（需 dump 参数，故不进 `check:consistency` 链） |
+| `scripts/eval/rescore.test.mjs` | 第 5 节把四条跳过规则逐条钉住（含「一致 → 打印逐字段一致」「缺 dump → 红」）；产物夹具补 `measurement` |
+
+**自守机制**：若有人删掉 `--dump-pred`，那份 dump 就不存在 ⟹ parity 步在「产物自称完整测量」时
+直接红 —— 不需要再加一条「守卫 YAML 文本」的脆守卫。
+
+**实测**：构造一份与 dump 完全一致的产物 → `125 项逐字段一致`、退出 0；把 `propSetF1` 改 0.5 →
+退出 1；`measurement=failed` → 显式跳过、退出 0；片段-only dump → 显式跳过。
+
+> **一句话**：这条链到此闭环 —— 夜间跑批从此自己证明「产物 = 复算」，且 dump 留档把 C/D 阶段的
+> 「逐行差在哪」变成可离线回答的问题。
