@@ -120,6 +120,31 @@ const complete = (over = {}) => ({
     'compileByLang 之和与全局不一致必须给出提示（否则读者会拿一个去解释另一个）'
   )
 
+  // A3：门禁口径逐维视图的自洽性（观测口径，但 pass>applicable 是矛盾数字）。
+  check(
+    clean(
+      verifyArtifact(
+        complete({ byCapabilityOnPinned: { propSet: { applicable: 2, pass: 2, rate: 1 } , formtype: { applicable: 0, pass: 0, rate: null } } }),
+        { badgeFiles: [] }
+      )
+    ),
+    '自洽的 byCapabilityOnPinned 应判过（含 applicable=0 / rate=null）'
+  )
+  checkFails(
+    verifyArtifact(complete({ byCapabilityOnPinned: { propSet: { applicable: 2, pass: 3, rate: 1.5 } } }), {
+      badgeFiles: [],
+    }),
+    'byCapabilityOnPinned.propSet 非法',
+    'byCapabilityOnPinned 的 pass > applicable 必须判红'
+  )
+  checkFails(
+    verifyArtifact(complete({ byCapabilityOnPinned: { propSet: { applicable: 0, pass: 0, rate: 0 } } }), {
+      badgeFiles: [],
+    }),
+    'rate 必须是 null',
+    'applicable=0 却写 rate=0 必须判红（「没人 pin」不是「全错」）'
+  )
+
   checkFails(verifyArtifact(noD95, { badgeFiles: [] }), '缺少 definition95 块', '完整测量缺 definition95')
 
   const noConv = complete()

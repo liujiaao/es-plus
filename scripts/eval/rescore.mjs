@@ -113,6 +113,9 @@ for (const e of entries) {
       exactIntentFull: false,
       exactIntentScoped: false,
       byCapability: errCaps,
+      // A3 的分母来源：钉了哪些维。错误行也要带（与 eval-llm 同构，否则复算的
+      // `byCapabilityOnPinned` 会比产物少算「答错的 pin」）。
+      pinnedDims: mask.pinnedDims,
       attrAcc: null,
       compiles: false,
       noThrow: true,
@@ -158,6 +161,7 @@ for (const e of entries) {
     error: null,
     errorKind: null,
     fewshotDerived: !!e.fewshotDerived,
+    pinnedDims: mask.pinnedDims,
     convergence,
     gold,
   })
@@ -240,6 +244,9 @@ const out = {
       }
     : null,
   byCapability: m.byCapability,
+  // 门禁口径的逐维视图（A3）：分母只数 pin 了该维的行。旧 dump 没有 pinnedDims（缺省 []）
+  // ⟹ 各维分母为 0、rate 为 null —— 不是「全错」，是「这份 dump 记不下来」。
+  byCapabilityOnPinned: m.byCapabilityOnPinned,
   fragments: {
     cases: fragmentSummary.cases,
     measured: fragmentSummary.measured,
@@ -331,6 +338,22 @@ if (EXPECT) {
   for (const { key } of CAPABILITY_SCORERS) {
     pairs.push([`byCapability.${key}.rate`, out.byCapability[key]?.rate, exp.byCapability?.[key]?.rate])
     pairs.push([`byCapability.${key}.applicable`, out.byCapability[key]?.applicable, exp.byCapability?.[key]?.applicable])
+  }
+  // A3 的视图同样比对 —— 但只在**产物带了这个块**时：已提交的旧产物没有它，
+  // 无条件比对会把「产物写得早」误报成「复算漂移」（与 rulerVersion 同一处置）。
+  if (exp.byCapabilityOnPinned && out.byCapabilityOnPinned) {
+    for (const { key } of CAPABILITY_SCORERS) {
+      pairs.push([
+        `byCapabilityOnPinned.${key}.rate`,
+        out.byCapabilityOnPinned[key]?.rate,
+        exp.byCapabilityOnPinned[key]?.rate,
+      ])
+      pairs.push([
+        `byCapabilityOnPinned.${key}.applicable`,
+        out.byCapabilityOnPinned[key]?.applicable,
+        exp.byCapabilityOnPinned[key]?.applicable,
+      ])
+    }
   }
 
   const diffs = pairs.filter(([, a, b]) => a !== b)

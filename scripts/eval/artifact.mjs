@@ -212,6 +212,21 @@ export function verifyArtifact(artifact, ctx = {}) {
       }
     }
   }
+  // ── A3：门禁口径的逐维视图（`byCapabilityOnPinned`）── 只查算术自洽 ──────────
+  // 它是**观测**口径（不进门禁），但「pass > applicable」是自相矛盾的数字，与观测无关。
+  // 旧产物没有这个块 → 跳过（与 AN-13/AN-18 同一处置：恒红 = 红盲）。
+  const pinnedCaps = artifact.byCapabilityOnPinned
+  if (pinnedCaps && typeof pinnedCaps === 'object') {
+    for (const [key, c] of Object.entries(pinnedCaps)) {
+      if (!c || !Number.isInteger(c.applicable) || !Number.isInteger(c.pass) || c.pass < 0 || c.pass > c.applicable) {
+        failures.push(`byCapabilityOnPinned.${key} 非法：pass=${c?.pass} applicable=${c?.applicable}`)
+        continue
+      }
+      if (c.applicable === 0 && c.rate !== null) {
+        failures.push(`byCapabilityOnPinned.${key}：applicable=0 时 rate 必须是 null（不能把「没人 pin」写成 0）`)
+      }
+    }
+  }
   // ── AN-18：片段腿进入 `passed`，产物必须自洽 ───────────────────────────────
   // 旧产物没有 `fragments` 块（或块里没有 `compileMeasured`）→ 按旧口径放行，理由同 AN-13
   // （长期恒红 = 红盲）。新产物的口径：编译分母 = 真有产物的行，失败必须为 0；scoped 必须

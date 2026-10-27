@@ -583,7 +583,7 @@ async function main() {
           convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
         }
 
-        rows.push({ file, lang, ...s, compiles, noThrow, compileError, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd })
+        rows.push({ file, lang, ...s, compiles, noThrow, compileError, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd, pinnedDims: mask.pinnedDims })
         // 落盘：gold + mask + 逐轮 pred 足以离线重算全部 CRUD 指标（含收敛腿）。
         // `compiles` 是确定性代码的产物，跟着落盘只为复算时能重出 Tier A 数字。
         dump.write({
@@ -662,6 +662,9 @@ async function main() {
           error: err.message,
           errorKind,
           fewshotDerived: FEWSHOT_DERIVED.has(file),
+          // 钉了哪些维（A3 的 `byCapabilityOnPinned` 分母来源）：错误行同样要带上 ——
+          // 否则「模型答错的那些 pin」会从门禁口径的分母里消失，等于免罚。
+          pinnedDims: mask.pinnedDims,
           frontDoor: null,
           gold,
         })
@@ -962,6 +965,7 @@ async function main() {
     compileStats,
     compileRate,
     byCapability,
+    byCapabilityOnPinned,
     coreRate,
     gateRate,
   } = metrics
@@ -1513,14 +1517,17 @@ async function main() {
     )
   }
 
+  // 两列并列：`all` 的分母是全部 heldout 行，`pinned` 的分母只数**门禁真的钉了该维**的行。
+  // 只读前者会把预算投到对门禁没有杠杆的维度上（`dataOptions` 低，但语料只 pin 了少数行）。
   console.log(`\n  by capability (${heldout.length ? 'heldout' : 'all'} cases; n/a = no case exercises it)`)
   console.log('  ------------------------------------------')
+  console.log('    dimension           all          pinned (gate)')
   for (const { key } of CAPABILITY_SCORERS) {
     const c = byCapability[key]
-    const label = c.applicable
-      ? `${(c.rate * 100).toFixed(0).padStart(3)}%  (${c.pass}/${c.applicable})`
-      : ' n/a'
-    console.log(`    ${key.padEnd(16)} ${label}`)
+    const p = byCapabilityOnPinned[key]
+    const fmt = (x) =>
+      x.applicable ? `${(x.rate * 100).toFixed(0).padStart(3)}%  (${x.pass}/${x.applicable})`.padEnd(14) : ' n/a          '
+    console.log(`    ${key.padEnd(16)} ${fmt(c)} ${fmt(p)}`)
   }
 
   // ── 回归防线（AI-33 ④⑤⑦）────────────────────────────────────────────────
@@ -1777,6 +1784,9 @@ async function main() {
           total: def95.total,
         },
     byCapability,
+    // 门禁口径的逐维视图（A3）：分母只数 pin 了该维的 heldout 行。与 `byCapability` 并列，
+    // 让「这个维度差」和「这个维度差且对门禁有杠杆」分得开（D 阶段据此排序）。
+    byCapabilityOnPinned,
     byLanguage,
     passed:
       gateRate >= TARGET_ACCURACY &&

@@ -120,6 +120,35 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
     }
   }
 
+  // 同一批维度的**门禁口径**视图（A3）：分母只数「金标真的钉了该维」的行。
+  //
+  // 为什么需要第二个分母：`byCapability` 的分母是全部 heldout 行，而门禁（`definition95`）
+  // 只吃每行自己的 `pinnedDims`。于是「`dataOptions` 42.3%」看起来最急，实际只被 pin 了
+  // 5 行 —— 按它排序会把预算投到一个对门禁几乎没有杠杆的维度上。两个口径并列公布，
+  // 才分得清「这个维度差」与「这个维度差且重要」。
+  // 计数口径刻意与 `byCapability` 同构（否则两列不可比）：只为**可判**的行进分母，
+  // 一个 pin 了却不可判的 token（该维对这个 gold 不适用）从分母里消失，与 elsewhere 一致。
+  const byCapabilityOnPinned = {}
+  for (const { key } of CAPABILITY_SCORERS) {
+    let applicable = 0
+    let pass = 0
+    for (const r of capRows) {
+      // token 可以是整维（`dataOptions`）或字段级（`formtype:amount`）；两者都算「钉了这维」。
+      const pinned = (r.pinnedDims ?? []).some((t) => t === key || t.startsWith(`${key}:`))
+      if (!pinned) continue
+      const c = r.byCapability?.[key]
+      if (c && c.applicable) {
+        applicable++
+        if (c.pass) pass++
+      }
+    }
+    byCapabilityOnPinned[key] = {
+      applicable,
+      pass,
+      rate: applicable ? Number((pass / applicable).toFixed(4)) : null,
+    }
+  }
+
   // 门禁数字 = 用户拍板的「95% 定义」；core（四维 exactIntentCore）降为并列诊断。
   const coreRate = exactHeldout ?? exact
   const gateRate = def95.rate ?? 0
@@ -150,6 +179,7 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
     compileStats,
     compileRate: compileStats.rate,
     byCapability,
+    byCapabilityOnPinned,
     coreRate,
     gateRate,
   }

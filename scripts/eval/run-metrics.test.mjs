@@ -185,8 +185,34 @@ function capsAll(pass) {
   eq(fragNotMeasuredRows.length, 1, '未测到行进单独列表（供告警）')
 }
 
+// ── 8. 门禁口径逐维视图（A3）：分母只数 pin 了该维的行 ─────────────────────────
+{
+  const k = CAPABILITY_SCORERS[0].key
+  const rows = [
+    row({ file: 'pinned-pass', pinnedDims: [k], byCapability: { [k]: { applicable: true, pass: true } } }),
+    row({ file: 'pinned-field', pinnedDims: [`${k}:someField`], byCapability: { [k]: { applicable: true, pass: false } } }),
+    row({ file: 'unpinned-fail', pinnedDims: [], byCapability: { [k]: { applicable: true, pass: false } } }),
+    row({ file: 'pinned-err', pinnedDims: [k], byCapability: { [k]: { applicable: true, pass: false } }, error: 'boom' }),
+  ]
+  const m = computeCrudMetrics(rows)
+  eq(m.byCapability[k].applicable, 4, 'all 口径分母 = 全部 heldout 行（含没 pin 的）')
+  eq(m.byCapabilityOnPinned[k].applicable, 3, 'pinned 分母 = 钉了该维的行（字段级 pin 也算，答错行也要算）')
+  eq(m.byCapabilityOnPinned[k].pass, 1, 'pinned 分子只数命中')
+  // 逐维 rate 与 `byCapability` 同精度（4 位小数），断言用同一个精度，避免尾数假红。
+  eq(m.byCapabilityOnPinned[k].rate, 0.3333, 'pinned rate = 1/3（4 位小数）')
+  eq(m.byCapabilityOnPinned[CAPABILITY_SCORERS[1].key].rate, null, '没有任何行 pin 的维度 rate 必须是 null（不是 0）')
+  // 反证：若两列恒等，A3 就没有信息量（这正是加它的理由 —— all 口径把未 pin 的失败也稀释进来）。
+  check(
+    m.byCapability[k].rate !== m.byCapabilityOnPinned[k].rate,
+    'all 与 pinned 两个口径必须能给出不同数字（否则排序依据没变）'
+  )
+  // 旧 dump 重建出来的行没有 pinnedDims：不得抛错，也不得把缺省当「pin 了」。
+  const legacy = computeCrudMetrics([row({ byCapability: { [k]: { applicable: true, pass: true } } })])
+  eq(legacy.byCapabilityOnPinned[k].applicable, 0, '无 pinnedDims 的行不进 pinned 分母')
+}
+
 if (failures > 0) {
   console.error(`\nrun-metrics 自测失败：${failures} 条`)
   process.exit(1)
 }
-console.log('✅ 跑批指标聚合自测通过（95% 定义 OR / K 边界 / heldout / 属性分母 / 编译门 / 逐维 / 片段腿）')
+console.log('✅ 跑批指标聚合自测通过（95% 定义 OR / K 边界 / heldout / 属性分母 / 编译门 / 逐维 / 片段腿 / 门禁口径逐维）')
