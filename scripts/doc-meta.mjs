@@ -71,6 +71,8 @@ export const DOC_SOURCES = {
     '/guide/i18n': 'es-eui/src/views/guide/i18n.vue',
     '/guide/developer-guide': 'es-eui/src/views/docs/EsEuiDeveloperGuide.vue',
     '/component/installation': 'es-eui/src/views/component/installation.vue',
+    // 组件站的「快速开始」复用指南页的组件（路由就是这么接的），日期也就同源
+    '/component/quickstart': 'es-eui/src/views/guide/quickstart.vue',
     '/component/estable': 'es-eui/src/views/docs/EsTableDocs.vue',
     '/component/vxetable': 'es-eui/src/views/docs/VxeTableDocs.vue',
     '/component/esform': 'es-eui/src/views/docs/EsFormDocs.vue',
@@ -135,11 +137,30 @@ export function docMeta(site) {
   return meta
 }
 
-// `node scripts/doc-meta.mjs` 打印三站映射，便于核对键名是否与路由一致
+// ---------------------------------------------------------------------------
+// CLI
+//
+// `node scripts/doc-meta.mjs`            打印三站映射，便于核对键名是否与路由一致
+// `node scripts/doc-meta.mjs --json <站>` 输出单站的 JSON，供 **CJS** 构建配置取数
+//
+// 为什么要留一个 JSON 出口：es-eui 是 vue-cli（webpack）工程，构建配置必须是 CJS，
+// 而本模块是 ESM（es-plus-docs / es-pc 的 vite 配置直接 import 它）。Node 20 的
+// require() 读不了 ESM，与其把映射表抄成第二份 .cjs，不如开一个子进程按需取。
+// ---------------------------------------------------------------------------
 if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('scripts/doc-meta.mjs')) {
-  for (const site of Object.keys(DOC_SOURCES)) {
-    console.log(`\n== ${site}`)
-    const meta = docMeta(site)
-    for (const [key, date] of Object.entries(meta)) console.log(`  ${date}  ${key}`)
+  const jsonFlag = process.argv.indexOf('--json')
+  if (jsonFlag !== -1) {
+    const site = process.argv[jsonFlag + 1]
+    if (!DOC_SOURCES[site]) {
+      console.error(`doc-meta: --json 需要站点名，可选：${Object.keys(DOC_SOURCES).join(' / ')}`)
+      process.exit(1)
+    }
+    process.stdout.write(JSON.stringify(docMeta(site)))
+  } else {
+    for (const site of Object.keys(DOC_SOURCES)) {
+      console.log(`\n== ${site}`)
+      const meta = docMeta(site)
+      for (const [key, date] of Object.entries(meta)) console.log(`  ${date}  ${key}`)
+    }
   }
 }

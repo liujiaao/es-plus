@@ -1,5 +1,28 @@
 const path = require('path')
+const { execFileSync } = require('child_process')
 const { defineConfig } = require('@vue/cli-service')
+
+/**
+ * 「最后更新」的数据源：与主站 / es-pc 同一份 scripts/doc-meta.mjs。
+ *
+ * 这里要多走一趟子进程：本配置是 CJS，而 doc-meta.mjs 是 ESM（另两站的 vite 配置
+ * 直接 import 它），Node 20 的 require() 读不了 ESM。与其把页面→源文件映射抄成
+ * 第二份 .cjs（那正是要根除的漂移），不如让脚本输出 JSON。
+ * 取不到数据时返回空对象：页面只是不显示「最后更新」，不影响构建。
+ */
+function docMetaFor(site) {
+    try {
+        const out = execFileSync(
+            process.execPath,
+            [path.resolve(__dirname, '../scripts/doc-meta.mjs'), '--json', site],
+            { encoding: 'utf8' }
+        )
+        return JSON.parse(out)
+    } catch (err) {
+        console.warn(`[doc-meta] 取不到 ${site} 的页面日期，构建继续：${err.message}`)
+        return {}
+    }
+}
 
 module.exports = defineConfig({
     publicPath: process.env.PUBLIC_PATH || '/',
@@ -54,7 +77,15 @@ module.exports = defineConfig({
                 return args
             })
         }
-        
+
+        // 与 es-plus-docs / es-pc 同一份注入：页面底部「最后更新：YYYY-MM-DD」。
+        // 走 define 而不是 fs 落一个 JSON 产物：日期随源码变更而变，落盘文件
+        // 既会进 git 也会在两次构建之间过期。
+        config.plugin('define').tap(args => {
+            args[0].__ES_DOC_META__ = JSON.stringify(docMetaFor('es-eui'))
+            return args
+        })
+
         // 优化 babel-loader，减少内存使用
         config.module
             .rule('js')
