@@ -1,39 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
-import Sitemap from 'vite-plugin-sitemap'
 import { resolve } from 'path'
-import { mkdirSync } from 'fs'
 
+// 站点规范域名：三站切换器（scripts/check-site-nav.mjs）与 sitemap 生成
+// （scripts/gen-sitemap.mjs）都以它为「本站地址」的单一来源 —— 换域名只改这一处。
 const SITE_HOSTNAME = 'https://liujiaao.github.io/es-plus'
-
-// All static (non-param) routes + curated dynamic doc paths.
-// Hash routing means crawlers won't auto-discover, so we list explicitly.
-// 注意：根路由 '/' 由 vite-plugin-sitemap 自动产出，这里不要再列，否则 dist/sitemap.xml
-// 会出现重复的 <loc>。
-const sitemapRoutes = [
-  '/playground',
-  '/ai-crud',
-  // guide pages
-  '/guide/getting-started',
-  '/guide/installation',
-  '/guide/usage',
-  '/guide/vue2',
-  '/guide/mcp-server',
-  '/guide/cli',
-  '/guide/permission-i18n',
-  '/guide/schema-setup',
-  '/guide/migration',
-  '/guide/changelog',
-  // component pages
-  '/components/es-form',
-  '/components/es-table',
-  '/components/es-crud-page',
-  // advanced pages
-  '/advanced/use-dialog',
-  '/advanced/linkage',
-  '/advanced/vxe-table',
-]
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
@@ -54,26 +26,11 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.VITE_BASE_URL || '/',
     plugins: [
-      // vite-plugin-sitemap 在 closeBundle 里直接 writeFileSync 到 outDir(dist)，不会自己
-      // mkdir。腾讯云 edgeone 的 Linux/Node22 环境下 closeBundle 触发时 dist 尚未被 vite
-      // 创建，导致 ENOENT(dist/robots.txt)。这里在 buildStart 先建好 dist 目录兜底。
-      {
-        name: 'ensure-dist-dir',
-        buildStart() {
-          mkdirSync(resolve(__dirname, 'dist'), { recursive: true })
-        },
-      },
       vue(),
       vueJsx(),
-      Sitemap({
-        hostname: SITE_HOSTNAME,
-        // hostname 含路径时，vite-plugin-sitemap 用 `new URL(routePath, hostname)` 解析，
-        // 根绝对 routePath 会丢掉 /es-plus 前缀；显式 basePath 才能产出
-        // https://liujiaao.github.io/es-plus/...（robots.txt 不受影响）。
-        basePath: '/es-plus',
-        dynamicRoutes: sitemapRoutes,
-        outDir: 'dist',
-      }),
+      // sitemap 由 `npm run sitemap:gen` 从路由表与各注册表生成到 public/sitemap.xml
+      // （Vite 会把 public/ 原样拷到 dist）。此前的 vite-plugin-sitemap 只能产出路径式
+      // URL，而本站是 hash 路由 —— 19 条 URL 在 GitHub Pages 上全是 404。
     ],
     resolve: {
       // 强制 vxe-table / vxe-pc-ui 共享同一份 @vxe-ui/core 单例（避免双副本导致组件注册表分裂）

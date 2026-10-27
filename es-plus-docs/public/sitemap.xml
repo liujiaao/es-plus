@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 由 scripts/gen-sitemap.mjs 生成，请勿手改：条目来自路由表与各注册表 -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://liujiaao.github.io/es-plus/</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-crud</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/composition</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/workflows</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-generated</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/cases</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/flagship-approval</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/fragment-dashboard</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/native-vs-ai</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/playground</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/quickstart</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/adapter-antdv</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/changelog</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/cli</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/getting-started</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/installation</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/mcp-server</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/migration</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/permission-i18n</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/schema-setup</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/usage</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/vue2</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/guide/why-es-plus</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/components/es-crud-page</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/components/es-error-boundary</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/components/es-form</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/components/es-table</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/components/svg-icon</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/advanced/linkage</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/advanced/use-dialog</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/advanced/vxe-table</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/employee-roster</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/engine-lab</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/expand-row</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/flagship-approval</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/fragment-dashboard</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/grouped-report</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/legacy-erp-api</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/order-batch</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/org-tree-table</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/#/ai-gallery/purchase-approval</loc></url>
+</urlset>
