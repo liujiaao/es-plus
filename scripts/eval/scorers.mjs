@@ -34,6 +34,113 @@ function eq(a, b) {
   return JSON.stringify(canon(a)) === JSON.stringify(canon(b))
 }
 
+function cloneDeep(v) {
+  if (Array.isArray(v)) return v.map(cloneDeep)
+  if (v && typeof v === 'object') {
+    const out = {}
+    for (const k of Object.keys(v)) out[k] = cloneDeep(v[k])
+    return out
+  }
+  return v
+}
+
+// ── 装饰键投影（A2 / D15）─────────────────────────────────────────────────────
+//
+// 问题：`columns` / `expandConfig` 是**整体深等值**判定，而这两处承载了大量
+// 「NL 没写、作者自选」的常量（列宽 100/120/180、`fixed`、`align`、展开区标题串）。
+// 模型再完美也推不出 `width: 120` ⟹ 这些行在现有尺子下恒不可过（heldout 32 行，
+// 把门禁上限定死在 83.5%，实证见 docs/internal/ai-95-gap-review-2026-10-27.md §9 D15）。
+//
+// 规则（`gold 有而 pred 无 ⟹ 不判负；两边都有 ⟹ 比值`，并**对称**到 `pred 有而 gold 无`）：
+// 同一位置的装饰键，只要**任一侧没写**，两侧都不参与比较；两侧都写了就照常深比较
+// （写错仍然判负）。这样「猜不到」不再等于「做错」，而「写错」照样扣分。
+//
+// 分类判据：**只影响布局呈现、NL 极少陈述**的键算装饰。`permissionValue`（无权限不出列）、
+// `dataOptions`（码值→文案映射）、`btns`（行内按钮）、`editRender.name/type/options/props/
+// defaultValue`（编辑器语义）都是行为契约，**不投影**。
+// `ellipsis` / `showOverflowTooltip` 今天在语料里 0 处，暂列结构键（保守：宁可暂严，不可误绿），
+// 将来若出现「超出省略」类语料再议；`scorers.test.mjs` 的列键白名单会强制为新键做分类。
+/**
+ * 键分类表 —— 投影规则与 meta-eval 白名单的**同一个源**。
+ * 语料里出现表外的键 ⟹ `scorers.test.mjs` 直接红，逼开发者先做分类（结构/装饰），
+ * 防止「新装饰键悄悄把一个维度钉成不可过」（D15 的成因正是没有人给 `width` 分类）。
+ */
+export const COLUMN_KEY_CLASS = Object.freeze({
+  prop: 'structural',
+  label: 'structural',
+  labelKey: 'structural',
+  type: 'structural',
+  permissionValue: 'structural',
+  dataOptions: 'structural',
+  groups: 'structural',
+  btns: 'structural',
+  editRender: 'structural',
+  expandConfig: 'structural',
+  ellipsis: 'structural',
+  showOverflowTooltip: 'structural',
+  width: 'decoration',
+  minWidth: 'decoration',
+  align: 'decoration',
+  fixed: 'decoration',
+  sortable: 'decoration',
+})
+export const EDIT_RENDER_KEY_CLASS = Object.freeze({
+  name: 'structural',
+  type: 'structural',
+  options: 'structural',
+  props: 'structural',
+  defaultValue: 'structural',
+  autofocus: 'decoration',
+})
+export const EXPAND_KEY_CLASS = Object.freeze({ fields: 'structural', title: 'decoration' })
+
+const keysOf = (m, cls) => Object.keys(m).filter((k) => m[k] === cls)
+const COLUMN_DECORATION_KEYS = keysOf(COLUMN_KEY_CLASS, 'decoration')
+const EDIT_RENDER_DECORATION_KEYS = keysOf(EDIT_RENDER_KEY_CLASS, 'decoration')
+const EXPAND_DECORATION_KEYS = keysOf(EXPAND_KEY_CLASS, 'decoration')
+
+const dropIfEitherSideMissing = (a, b, keys) => {
+  for (const k of keys) {
+    if (!(k in a) || !(k in b)) {
+      delete a[k]
+      delete b[k]
+    }
+  }
+}
+
+const projectExpandNode = (g, p) => {
+  if (g && p && typeof g === 'object' && typeof p === 'object') dropIfEitherSideMissing(g, p, EXPAND_DECORATION_KEYS)
+}
+
+const projectColumnNode = (g, p) => {
+  if (!g || !p || typeof g !== 'object' || typeof p !== 'object') return
+  dropIfEitherSideMissing(g, p, COLUMN_DECORATION_KEYS)
+  if (g.editRender && p.editRender) dropIfEitherSideMissing(g.editRender, p.editRender, EDIT_RENDER_DECORATION_KEYS)
+  if (g.expandConfig && p.expandConfig) projectExpandNode(g.expandConfig, p.expandConfig)
+  // groups 递归：只有两侧元素个数一致时才逐位投影；个数不同是结构差异，原样交给深等值判负。
+  if (Array.isArray(g.groups) && Array.isArray(p.groups) && g.groups.length === p.groups.length) {
+    for (let i = 0; i < g.groups.length; i++) projectColumnNode(g.groups[i], p.groups[i])
+  }
+}
+
+/** columns 数组的投影副本（不改入参）。长度不一致时原样返回，交由深等值判负。 */
+export function projectColumns(gold, pred) {
+  if (!Array.isArray(gold) || !Array.isArray(pred) || gold.length !== pred.length) return { gold, pred }
+  const g = cloneDeep(gold)
+  const p = cloneDeep(pred)
+  for (let i = 0; i < g.length; i++) projectColumnNode(g[i], p[i])
+  return { gold: g, pred: p }
+}
+
+/** expandConfig 的投影副本（不改入参）。只有一侧声明时原样返回，交由深等值判负。 */
+export function projectExpandConfig(gold, pred) {
+  if (!gold || !pred || typeof gold !== 'object' || typeof pred !== 'object') return { gold, pred }
+  const g = cloneDeep(gold)
+  const p = cloneDeep(pred)
+  projectExpandNode(g, p)
+  return { gold: g, pred: p }
+}
+
 export function f1(goldSet, predSet) {
   const tp = [...goldSet].filter((x) => predSet.has(x)).length
   const fp = predSet.size - tp
@@ -214,8 +321,8 @@ function dialogsView(gold, cfg) {
 }
 
 /**
- * 结构化维度（tableBtns / operationColumn / dialogs / treeConfig / editConfig / columns）的
- * 「期望 vs 实得」键 —— 供 eval 诊断输出。
+ * 结构化维度（tableBtns / operationColumn / dialogs / treeConfig / editConfig / columns /
+ * expandConfig）的「期望 vs 实得」键 —— 供 eval 诊断输出。
  *
  * **不变量：`want === got` 当且仅当该维度 pass。** 每个分支都必须与对应 pass() 同源
  * （复用同一套键函数，或直接印 `canon()` 的深等值投影）；`scripts/eval/scorers.test.mjs`
@@ -249,7 +356,13 @@ export function describeDimMiss(dim, gold, pred) {
     }
   }
   if (dim === 'columns') {
-    return { want: canonicalView(gold.columns), got: canonicalView(pred.columns) }
+    // 与 columnsEqual 同源：投影后的副本才是判定依据，否则装饰键豁免会让描述与结果打架。
+    const proj = projectColumns(gold.columns, pred.columns)
+    return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
+  }
+  if (dim === 'expandConfig') {
+    const proj = projectExpandConfig(gold.expandConfig, pred.expandConfig)
+    return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
   return null
 }
@@ -449,18 +562,26 @@ export const CAPABILITY_SCORERS = [
     pass: reactionsEqual,
   },
   {
-    // 显式列逃生数组（AI-09 子项①）：整数组深等值。列序/多级表头/非字段列都是行为契约，
-    // 「给了 columns 但顺序或层级不对」不算命中。仅当 gold 声明非空 columns 时 applicable。
+    // 显式列逃生数组（AI-09 子项①）：投影后的整数组深等值。列序/多级表头/非字段列/
+    // 权限码/单元格码值映射都是行为契约；纯布局常量（宽/对齐/固定/排序）按装饰键投影
+    // ——**任一侧没写就不比较**，两侧都写才比值（见 projectColumns 的注释与 D15）。
+    // 仅当 gold 声明非空 columns 时 applicable。
     key: 'columns',
     applicable: (g) => !!(g.columns && g.columns.length),
-    pass: (g, p) => eq(g.columns ?? null, p.columns ?? null),
+    pass: (g, p) => {
+      const proj = projectColumns(g.columns ?? null, p.columns ?? null)
+      return eq(proj.gold, proj.pred)
+    },
   },
   {
-    // 声明式行展开内容（AI-09 子项②）：整体深等值。字段顺序/标题/标签都是渲染契约，
-    // 「给了 expandConfig 但字段序或标题不对」不算命中。仅当 gold 声明时才 applicable。
+    // 声明式行展开内容（AI-09 子项②）：投影后的整体深等值。字段序/字段标签是渲染契约；
+    // 标题串属装饰键（与 columns 同规）。仅当 gold 声明时才 applicable。
     key: 'expandConfig',
     applicable: (g) => !!g.expandConfig,
-    pass: (g, p) => eq(g.expandConfig ?? null, p.expandConfig ?? null),
+    pass: (g, p) => {
+      const proj = projectExpandConfig(g.expandConfig ?? null, p.expandConfig ?? null)
+      return eq(proj.gold, proj.pred)
+    },
   },
   {
     // 声明式树表（AI-09 子项③）：整体深等值。childrenField / expandAll 都是行为契约，

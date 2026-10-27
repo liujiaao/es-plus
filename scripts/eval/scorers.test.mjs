@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll, describeDimMiss, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95 } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, describeDimMiss, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95, COLUMN_KEY_CLASS, EDIT_RENDER_KEY_CLASS, EXPAND_KEY_CLASS } from './scorers.mjs'
 import { isCrudCase } from './scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -355,13 +355,60 @@ console.log('meta-eval: columns (explicit column array)')
   const predMissing = { fields: gold.fields, actions: gold.actions }
   check(scoreAll(gold, predMissing).byCapability.columns.pass === false, 'columns: pred 漏发整段 columns 应判负')
 
+  // 装饰键投影（A2 / D15）：只影响布局呈现的键，**任一侧没写就不比较**，两侧都写才比值。
+  // 语义：NL 没说的列宽/对齐/固定/排序，模型写了别的值不算做错；但两边都写了还写错，照样扣。
+  const widthOnGold = clone(gold)
+  widthOnGold.columns[1].width = 120
+  check(scoreAll(widthOnGold, gold).byCapability.columns.pass === true, 'columns: gold 写 width、pred 未写应判正（猜不到≠做错）')
+  check(scoreAll(gold, widthOnGold).byCapability.columns.pass === true, 'columns: pred 写 width、gold 未写应判正（对称豁免）')
+  const widthBothWrong = clone(widthOnGold)
+  widthBothWrong.columns[1].width = 180
+  check(scoreAll(widthOnGold, widthBothWrong).byCapability.columns.pass === false, 'columns: 两侧都写 width 且不同应判负（写错仍扣）')
+  const widthBothRight = clone(widthOnGold)
+  check(scoreAll(widthOnGold, widthBothRight).byCapability.columns.pass === true, 'columns: 两侧都写 width 且相同应判正')
+
+  const layoutOnly = clone(gold)
+  Object.assign(layoutOnly.columns[1], { fixed: 'left', align: 'center', sortable: true, minWidth: 90 })
+  check(scoreAll(layoutOnly, gold).byCapability.columns.pass === true, 'columns: fixed/align/sortable/minWidth 单侧声明应豁免')
+
+  // 非字段列（index/selection）的惯用宽度同规；groups 递归里同样生效
+  const selWidth = clone(gold)
+  selWidth.columns[0].width = 50
+  check(scoreAll(selWidth, gold).byCapability.columns.pass === true, 'columns: 非字段列（selection）width 单侧声明应豁免')
+  const groupWidth = clone(gold)
+  groupWidth.columns[2].groups[0].width = 100
+  check(scoreAll(groupWidth, gold).byCapability.columns.pass === true, 'columns: groups 内层 width 单侧声明应豁免（递归投影）')
+  const groupWidthBoth = clone(groupWidth)
+  groupWidthBoth.columns[2].groups[0].width = 160
+  check(scoreAll(groupWidth, groupWidthBoth).byCapability.columns.pass === false, 'columns: groups 内层两侧都写 width 且不同应判负')
+
+  // editRender：autofocus 是装饰键；name/type/options/props/defaultValue 是编辑器契约，不豁免
+  const erGold = clone(gold)
+  erGold.columns[1].editRender = { name: '$input', autofocus: true }
+  const erNoFocus = clone(gold)
+  erNoFocus.columns[1].editRender = { name: '$input' }
+  check(scoreAll(erGold, erNoFocus).byCapability.columns.pass === true, 'columns: editRender.autofocus 单侧声明应豁免')
+  const erWrongName = clone(gold)
+  erWrongName.columns[1].editRender = { name: '$select' }
+  check(scoreAll(erGold, erWrongName).byCapability.columns.pass === false, 'columns: editRender.name 不同应判负（编辑器语义是契约）')
+  const erMissingEditor = { fields: gold.fields, actions: gold.actions }
+  check(scoreAll(erGold, erMissingEditor).byCapability.columns.pass === false, 'columns: pred 漏发整个 editRender 应判负（不是装饰）')
+
+  // 行为键不豁免：permissionValue（无权限不出列）/ dataOptions（码值→文案）仍是契约
+  const permChanged = clone(gold)
+  permChanged.columns[1].permissionValue = 'meta:view'
+  check(scoreAll(gold, permChanged).byCapability.columns.pass === false, 'columns: 单侧声明 permissionValue 应判负（行为契约不投影）')
+  const cellOptions = clone(gold)
+  cellOptions.columns[1].dataOptions = [{ label: '启用', value: 1 }]
+  check(scoreAll(gold, cellOptions).byCapability.columns.pass === false, 'columns: 单侧声明 dataOptions 应判负（行为契约不投影）')
+
   // gold 无 columns → 维度不 applicable（派生路径，不参与记分）
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(plain, plain).byCapability.columns.applicable === false, 'columns: gold 未声明时维度不 applicable')
 }
 
-// 2e) expandConfig（声明式行展开内容，AI-09 子项②）维度的语义：整体深等值
-//（标题 / 字段序 / 标签都是渲染契约）
+// 2e) expandConfig（声明式行展开内容，AI-09 子项②）维度的语义：投影后的整体深等值
+//（字段序 / 字段标签是渲染契约；标题串是装饰键 —— 单侧声明豁免，两侧都写才比值）
 console.log('meta-eval: expandConfig (declarative row-expand content)')
 {
   const ec = { title: '详情', fields: [{ prop: 'remark', label: '备注' }, { prop: 'createdAt', label: '创建时间' }] }
@@ -374,7 +421,18 @@ console.log('meta-eval: expandConfig (declarative row-expand content)')
 
   const titleChanged = clone(gold)
   titleChanged.expandConfig.title = '别的标题'
-  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === false, 'expandConfig: 标题变化应判负')
+  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === false, 'expandConfig: 两侧都写标题且不同应判负（写错仍扣）')
+
+  // 装饰键投影：标题串单侧声明不判负（NL 极少陈述「展开区标题叫详情」）
+  const titleOmitted = clone(gold)
+  delete titleOmitted.expandConfig.title
+  check(scoreAll(gold, titleOmitted).byCapability.expandConfig.pass === true, 'expandConfig: gold 写 title、pred 未写应判正')
+  check(scoreAll(titleOmitted, gold).byCapability.expandConfig.pass === true, 'expandConfig: pred 写 title、gold 未写应判正（对称豁免）')
+
+  // 字段标签不是装饰（标签是语义身份，阶段 A 的 label 身份要靠它）
+  const labelChanged = clone(gold)
+  labelChanged.expandConfig.fields[0].label = '别的标签'
+  check(scoreAll(gold, labelChanged).byCapability.expandConfig.pass === false, 'expandConfig: 字段 label 变化应判负（标签是渲染契约）')
 
   const predMissing = { fields: gold.fields, actions: gold.actions }
   check(scoreAll(gold, predMissing).byCapability.expandConfig.pass === false, 'expandConfig: pred 漏发整段应判负')
@@ -540,6 +598,58 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
     }
     for (const prop of raw.fixedFields ?? []) {
       check(props.has(prop), `${f}: fixedFields 的 "${prop}" 不在 config.fields 中（喂给模型的字段必须真实存在）`)
+    }
+
+    // 列键分类白名单（A2 / D15）：columns 里出现未分类的键就红 —— 逼新键先落分类。
+    // 这不是洁癖：D15 的成因正是没人在意 `width` 属于哪一类，于是它把 11 个 heldout 行
+    // 钉成不可过。新键（尤其来自 schema 扩充）必须在这里被显式判为结构键或装饰键。
+    const walkCols = (arr, cb) => {
+      for (const col of arr ?? []) {
+        cb(col)
+        walkCols(col.groups, cb)
+      }
+    }
+    walkCols(g.columns, (col) => {
+      for (const k of Object.keys(col)) {
+        check(
+          COLUMN_KEY_CLASS[k] !== undefined,
+          `${f}: columns 出现未分类的键 "${k}"（请在 scorers.mjs 的 COLUMN_KEY_CLASS 里定为 structural/decoration）`
+        )
+      }
+      if (col.editRender) {
+        for (const k of Object.keys(col.editRender)) {
+          check(
+            EDIT_RENDER_KEY_CLASS[k] !== undefined,
+            `${f}: columns[].editRender 出现未分类的键 "${k}"（请在 EDIT_RENDER_KEY_CLASS 里分类）`
+          )
+        }
+      }
+      if (col.expandConfig) {
+        for (const k of Object.keys(col.expandConfig)) {
+          check(EXPAND_KEY_CLASS[k] !== undefined, `${f}: columns[].expandConfig 出现未分类的键 "${k}"（请在 EXPAND_KEY_CLASS 里分类）`)
+        }
+      }
+    })
+    for (const k of Object.keys(g.expandConfig ?? {})) {
+      check(EXPAND_KEY_CLASS[k] !== undefined, `${f}: expandConfig 出现未分类的键 "${k}"（请在 EXPAND_KEY_CLASS 里分类）`)
+    }
+
+    // 投影生效自检（A2 验收的镜像）：把 gold 的装饰键**全部删掉**，维度必须仍判正。
+    // 等价于「只改/删 gold 的 width/title、NL 不动 ⟹ 仍 pass」；红了就是投影有漏（某个装饰键没进分类表）。
+    const noDeco = clone(g)
+    walkCols(noDeco.columns, (col) => {
+      for (const k of Object.keys(col)) if (COLUMN_KEY_CLASS[k] === 'decoration') delete col[k]
+      if (col.editRender) for (const k of Object.keys(col.editRender)) if (EDIT_RENDER_KEY_CLASS[k] === 'decoration') delete col.editRender[k]
+      if (col.expandConfig) for (const k of Object.keys(col.expandConfig)) if (EXPAND_KEY_CLASS[k] === 'decoration') delete col.expandConfig[k]
+    })
+    for (const k of Object.keys(noDeco.expandConfig ?? {})) if (EXPAND_KEY_CLASS[k] === 'decoration') delete noDeco.expandConfig[k]
+    const stripped = StructuredCrudConfigSchema.parse(noDeco)
+    const projScore = scoreAll(g, stripped)
+    if (g.columns && g.columns.length) {
+      check(projScore.byCapability.columns.pass === true, `${f}: 删掉装饰键后 columns 维度未判正（投影有漏）`)
+    }
+    if (g.expandConfig) {
+      check(projScore.byCapability.expandConfig.pass === true, `${f}: 删掉装饰键后 expandConfig 维度未判正（投影有漏）`)
     }
   }
   const uncovered = Object.entries(applicableCount).filter(([, n]) => n === 0).map(([k]) => k)
@@ -764,6 +874,7 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
  * 打印器是诊断的**唯一**出口：它说谎时，一次跑批里 60+ 条真实 miss 全部不可定位，
  * 而 `dialogs` 的底座键/声明式底栏、`treeConfig`、`columns` 三个维度**根本没有打印器**
  * （返回 null），对应 miss 在日志里就是一行无声的维度名。
+ * （2026-10-27 A2/D15：这三个都已补齐；`expandConfig` 一并补上。）
  *
  * 判据取双向：相等必须 pass，pass 必须相等。反方向也要钉，否则「永远打印随机串」
  * 也能让 want≠got 恒成立 —— 那是把日志变成一个更吵的骗局。
@@ -862,6 +973,23 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     const p2 = clone(g)
     p2.columns[1].label = '名字'
     expectMiss('columns', g, p2, '列 label 被改')
+
+    // A2/D15：装饰键被豁免时，投影必须**两侧相同**（否则 pass 了日志却说不一样）
+    const w = clone(g)
+    w.columns[1].width = 120
+    expectHit('columns', w, g, 'width 单侧声明（装饰键豁免）')
+  }
+
+  // expandConfig：与 columns 同构的整体深等值（A2/D15 起补上打印器 + 标题装饰键投影）
+  {
+    const g = { ...clone(base), expandConfig: { title: '详情', fields: [{ prop: 'remark', label: '备注' }] } }
+    expectHit('expandConfig', g, clone(g), 'gold-vs-gold')
+    const p = clone(g)
+    p.expandConfig.fields = []
+    expectMiss('expandConfig', g, p, '漏掉展开字段')
+    const noTitle = clone(g)
+    delete noTitle.expandConfig.title
+    expectHit('expandConfig', g, noTitle, '标题单侧声明（装饰键豁免）')
   }
 }
 

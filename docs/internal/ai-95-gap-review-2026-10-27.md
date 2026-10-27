@@ -13,7 +13,7 @@
 | 硬指标 | 现状 | 判定 |
 |---|---|---|
 | **编译率 100%** | `216/216`（zh CRUD）· `63/63`（片段）· `22/22`（PRD），Tier A 真编译且**进门禁** | ✅ **已达**。缺口在**覆盖面**（en 腿不进分母、typecheck 只抽样 30），不在数字 |
-| **准确率 ≥95%** | `definition95 = 22.7%（44/194）`；zero-edit 腿 `19.6%（38/194）` | ❌ 未达，且**当前这个 22.7% 里有一大半不是模型能力问题**；更要紧的是**语料 + 尺子自己把上限压到 83.5%**（32 个 heldout 行钉了 NL 没说也推不出的值，§9 D15） |
+| **准确率 ≥95%** | `definition95 = 22.7%（44/194）`；zero-edit 腿 `19.6%（38/194）` | ❌ 未达，且**当前这个 22.7% 里有一大半不是模型能力问题**；更要紧的是**语料 + 尺子自己把上限压到 83.5%**（32 个 heldout 行钉了 NL 没说也推不出的值，§9 D15）。**0a 已落地**（装饰键投影，§11.1）：尺子侧上限抬回 **94.8%**，只剩 10 行 `membership` 不可推断（由 0b 修） |
 | **全场景** | 四场景语料+编译齐了，但**准确率只有 CRUD 腿进门禁**；片段腿 55.6%，其中 **28 行失败全部由 `propSet` 决定**（`core == scoped == stated == propSet == 35/63`） | ⚠️ 可测 ≠ 测对了：片段腿不是"模型不会"，是**同一把尺子的同一个缺陷**（D6） |
 
 **根因排序（今日复算 + 既有日志，可复现）**
@@ -558,6 +558,11 @@ console.log(m.stats, e.length, e.filter(([,v])=>Object.values(v.targets).every(t
 `gold 有而 pred 无 ⟹ 不判负`；`两边都有 ⟹ 比值`（写错仍判负）。这样「猜不到」不再等于「做错」，但「写错」仍然扣。
 验收 = §9 附录命令 5 的镜像：**只改 gold 的 `width`/`title`、NL 不动 ⟹ 仍 pass**。
 
+> **落地记录（0a，2026-10-27）**：已按此实施，并折入两处细化——①**对称化**：`pred 有而 gold 无` 同样豁免
+> （模型给 gold 没声明的列写了个宽度，与「gold 写了 pred 没写」是同一类「猜」，罚一边放一边会教出
+> 「永不写装饰」的偏置）；②`ellipsis`/`showOverflowTooltip` 今天语料 0 处，**暂列结构键**（宁可暂严，
+> 不可误绿），`scorers.test.mjs` 的列键白名单会在它们（或任何新键）进语料时强制做分类。
+
 **A3 · 新度量 `byCapabilityOnPinned`（只在被 pin 的行上统计）**
 
 `byCapability` 的分母是全部 194 行，而门禁只吃 pin ⟹ `dataOptions 42.3%` 看起来最急，实际只 pin 了 5 行。
@@ -591,7 +596,8 @@ console.log(m.stats, e.length, e.filter(([,v])=>Object.values(v.targets).every(t
 0a 投影（scorer，装饰键）        ─┐
 0b 10 例补 NL + 15 例摘 pin      ├─ 零模型成本，同批重取证基线
 0c 双向守卫（先定 token→字段解析）┘
-A  label 尺子（两个 fieldMap）   ── 同批：A′ 装饰键投影、describeDimMiss、RULER_VERSION
+A  label 尺子（两个 fieldMap）   ── 同批：RULER_VERSION → label-identity-v1+deco-projection-v1
+                                    （A′ 装饰键投影、describeDimMiss 已随 0a 落地，见 §11.1）
 A5 en 进编译分母 / typecheck 全量 / 转义 fuzz   ── 与 A 并行
 A4 验收：片段 scoped ≈ 新 propSet 命中率（可证伪）
 C₀ 管道体检（--limit 8 + rescore --expect）
@@ -603,3 +609,28 @@ G  度量可靠性（健康门 / artifact / 棘轮 / version 指纹）
 ```
 
 > **一句话**：这套方案能把 95% 从「数学上做不到」变成「数学上做得到、工程上极难」，现实落点 **60–75%**；要跨过 95%，靠的不是再加阶段，而是**先有一次逐行 dump 说清「剩下 141 行到底差在哪」**。
+
+---
+
+## 11. 执行记录（按 §10.5 逐项落地）
+
+### 11.1 0a 装饰键投影 ✅（2026-10-27）
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/scorers.mjs` | 新增 `COLUMN_KEY_CLASS` / `EDIT_RENDER_KEY_CLASS` / `EXPAND_KEY_CLASS`（键分类**单一源**）+ `projectColumns` / `projectExpandConfig`（深拷贝后按位投影，不改入参）；`columns` / `expandConfig` 两个维度改判投影后的值；`describeDimMiss` 补 `expandConfig` 分支、`columns` 分支改用投影（保住「`want === got` 当且仅当 pass」） |
+| `scripts/eval/scorers.test.mjs` | 2d/2e 增投影变异用例（单侧 width 通过 / 两侧同写不同值判负 / `groups` 递归 / `editRender.autofocus` 豁免但 `name` 不豁免 / `permissionValue`、`dataOptions` 不豁免 / 标题单侧豁免）；第 4 节增**列键白名单**（语料出现未分类键即红）+ **语料投影自检**（把 216 个 CRUD gold 的装饰键全删掉，`columns`/`expandConfig` 必须仍判正）；`describeDimMiss` 不变量节补 `expandConfig` 与「豁免时两侧投影相同」 |
+| `scripts/eval/dump.mjs` | `RULER_VERSION = 'prop-identity-v1+deco-projection-v1'`（复合串：字段身份 + 装饰策略两轴；只改装饰策略也要换串，否则两把尺子共用一个版本号） |
+
+**实测（今日复算）**
+
+- 「结构全对、装饰全没猜」的完美模型：heldout CRUD **194/194** 通过 ⟹ 尺子侧上限 **100%**（0a 前：32 行钉死、上限 83.5%）。
+- 语料里含装饰键的 CRUD 例 **27** 个：`47-61`（列宽/固定/对齐/自动聚焦）、`62-76`（展开区标题）、`87`、`103`、`186`。
+- 0a 直接解锁 **22** 行（`columns` 11 + `expandConfig.title` 11）；剩下 **10** 行 `membership`（`162-171`，gold `inQuery:false` 而 NL 无查询措辞）**投影治不了** ⟹ 当前上限 **184/194 = 94.8%**，由 0b 修。
+- 复现：`node scripts/eval/scorers.test.mjs`（含语料投影自检）、`npm run check:consistency`（EXIT=0）。
+
+**刻意不动**：`permissionValue`（无权限不出列）、`dataOptions`（码值→文案）、`editRender.name/type/options/props/defaultValue`（编辑器语义）、`btns`、`groups` 结构、列序与列数 —— 这些是行为契约，单侧缺失/写错照旧判负。
+
+> **一句话**：0a 把「尺子自己把上限压在 83.5%」改成「只剩 10 行语料缺口」，且**没有放宽任何行为契约**；下一步 0b 是纯语料工作（10 例补 NL + 15 例摘 pin），完成后上限回到 100%。
