@@ -29,10 +29,12 @@ const toLf = (s) => s.replace(/\r\n/g, '\n')
 const SOURCE_SCHEMA = 'docs/cases/flagship-approval.json'
 const SOURCE_MOCK = 'docs/cases/flagship-approval.mock.js'
 
+const SOURCE_STORY = 'docs/cases/flagship-approval.story.json'
+
 const SITE_COPIES = [
-  { site: 'es-plus-docs', schema: 'es-plus-docs/src/cases/flagship-approval.json', mock: 'es-plus-docs/src/cases/flagship-approval.mock.js' },
-  { site: 'es-pc', schema: 'es-pc/src/cases/flagship-approval.json', mock: 'es-pc/src/cases/flagship-approval.mock.js' },
-  { site: 'es-eui', schema: 'es-eui/src/cases/flagship-approval.json', mock: 'es-eui/src/cases/flagship-approval.mock.js' },
+  { site: 'es-plus-docs', schema: 'es-plus-docs/src/cases/flagship-approval.json', mock: 'es-plus-docs/src/cases/flagship-approval.mock.js', story: 'es-plus-docs/src/cases/flagship-approval.story.json' },
+  { site: 'es-pc', schema: 'es-pc/src/cases/flagship-approval.json', mock: 'es-pc/src/cases/flagship-approval.mock.js', story: 'es-pc/src/cases/flagship-approval.story.json' },
+  { site: 'es-eui', schema: 'es-eui/src/cases/flagship-approval.json', mock: 'es-eui/src/cases/flagship-approval.mock.js', story: 'es-eui/src/cases/flagship-approval.story.json' },
 ]
 
 const HOSTS = [
@@ -253,11 +255,14 @@ await check('导出 CSV 带 BOM（Excel 打开不乱码）', () => {
 
 // ── 8. 三站副本逐字节一致（单源三副本） ──
 await check('三站副本与单源逐字节一致', () => {
+  const storyText = toLf(read(SOURCE_STORY))
   for (const copy of SITE_COPIES) {
     assert.ok(existsSync(join(ROOT, copy.schema)), `${copy.schema} 不存在（先跑 npm run cases:sync）`)
     assert.ok(existsSync(join(ROOT, copy.mock)), `${copy.mock} 不存在（先跑 npm run cases:sync）`)
+    assert.ok(existsSync(join(ROOT, copy.story)), `${copy.story} 不存在（先跑 npm run cases:sync）`)
     assert.equal(toLf(read(copy.schema)), schemaText, `${copy.schema} 与单源不一致 —— 运行 npm run cases:sync，不要手改站点副本`)
     assert.equal(toLf(read(copy.mock)), mockText, `${copy.mock} 与单源不一致 —— 运行 npm run cases:sync，不要手改站点副本`)
+    assert.equal(toLf(read(copy.story)), storyText, `${copy.story} 与单源不一致 —— 运行 npm run cases:sync，不要手改站点副本`)
   }
 })
 
@@ -309,6 +314,112 @@ await check('三站路由与案例页入口已接线', () => {
   for (const host of HOSTS) {
     assert.match(toLf(read(host.router)), host.routeRe, `${host.router} 缺少 flagship-approval 路由`)
     assert.match(toLf(read(host.cases)), /flagship-approval/, `${host.cases} 没有指向旗舰案例的入口`)
+  }
+})
+
+/* ------------------------------------------------------------------ *
+ * T4 案例模板（路线图 2.5）：背景 → 截图/实时 demo → 问题 → 配置 → 结果
+ * → 成本 → 边界。文案单源 story.json，三站渲染同一份；数字全部重算比对。
+ * ------------------------------------------------------------------ */
+const storyText = toLf(read(SOURCE_STORY))
+const story = JSON.parse(storyText)
+const squash = (s) => s.replace(/\s+/g, ' ').trim()
+const schemaSquashed = squash(schemaText)
+const countFunctions = (node) => {
+  if (typeof node === 'function') return 1
+  if (!node || typeof node !== 'object') return 0
+  return Object.values(node).reduce((n, v) => n + countFunctions(v), 0)
+}
+const nonEmptyLines = (rel) => read(rel).split('\n').filter((l) => l.trim()).length
+
+await check('T4 叙事结构齐全（背景 / 问题 / 结果 / 成本 / 边界）', () => {
+  assert.ok(story.id === 'flagship-approval', `story.id 应为 flagship-approval，实际 ${story.id}`)
+  assert.ok(story.background.length >= 40, 'story.background 太短（一句话业务背景要能独立看懂）')
+  assert.ok(story.problem?.lead?.length >= 40, 'story.problem.lead 太短')
+  assert.ok(story.problem.points.length >= 4, `问题清单至少要 4 条（当前 ${story.problem.points.length}）`)
+  for (const [i, p] of story.problem.points.entries()) {
+    for (const key of ['pain', 'config', 'note']) {
+      assert.ok(p[key] && p[key].trim(), `problem.points[${i}].${key} 为空`)
+    }
+  }
+  assert.ok(story.result?.metrics?.length >= 3, '结果指标至少 3 条')
+  for (const [i, m] of story.result.metrics.entries()) {
+    assert.ok(m.label && m.label.trim(), `result.metrics[${i}].label 为空`)
+    if (m.file) {
+      assert.ok(m.note && m.note.trim(), `result.metrics[${i}] 有 file 但没有 note（读者要知道这个数字意味着什么）`)
+    } else {
+      assert.ok(m.value && m.value.trim(), `result.metrics[${i}] 既没有 file 也没有 value`)
+      assert.ok(m.basis && m.basis.trim(), `result.metrics[${i}] 是手写值，必须带 basis（口径）—— 没有口径的数字等于没有数字`)
+    }
+  }
+  assert.ok(story.cost?.basis?.length >= 40, 'cost.basis 太短（成本必须写清口径：算的是什么、不算什么）')
+  assert.ok(story.cost.rows.length >= 2, '成本表至少两行')
+  assert.ok(story.boundaries.length >= 3, `边界至少 3 条（当前 ${story.boundaries.length}）`)
+  for (const [i, b] of story.boundaries.entries()) {
+    assert.ok(b.title && b.title.trim(), `boundaries[${i}].title 为空`)
+    assert.ok(b.text && b.text.length >= 40, `boundaries[${i}].text 太短 —— 「没解决什么」要具体到能被反驳`)
+  }
+})
+
+await check('T4 故事里的每个数字都能从源码重算出来', () => {
+  for (const [i, m] of story.result.metrics.entries()) {
+    if (!m.file) continue
+    assert.ok(existsSync(join(ROOT, m.file)), `result.metrics[${i}].file 不存在：${m.file}`)
+    const actualBytes = Buffer.byteLength(read(m.file), 'utf8')
+    assert.equal(m.bytes, actualBytes, `result.metrics[${i}].bytes 写成 ${m.bytes}，实际 ${actualBytes}（改 schema 后要同步改 story）`)
+    assert.equal(m.lines, nonEmptyLines(m.file), `result.metrics[${i}].lines 写成 ${m.lines}，实际 ${nonEmptyLines(m.file)}`)
+    assert.equal(m.functions, countFunctions(JSON.parse(read(m.file))), `result.metrics[${i}].functions 与文件里的函数数不符`)
+
+    if (m.counts) {
+      // 计数也重算：「4 个查询项 / 9 列表格 / 2 个弹窗 / 5 个按钮 / 4 条联动」不是文案，是断言
+      const actual = {
+        formItems: (schema.formItems || []).length,
+        columns: (schema.columns || []).length,
+        dialogs: Object.keys(schema.dialogs || {}).length,
+        buttons: (schema.tableBtns || []).length + (schema.operationColumn?.btns || []).length,
+        reactions: (schema.formItems || []).reduce((n, f) => n + (f.reactions || []).length, 0),
+      }
+      for (const [key, value] of Object.entries(m.counts)) {
+        assert.equal(value, actual[key], `result.metrics[${i}].counts.${key} 写成 ${value}，schema 里实际 ${actual[key]}`)
+      }
+    }
+  }
+
+  for (const [i, row] of story.cost.rows.entries()) {
+    assert.ok(existsSync(join(ROOT, row.file)), `cost.rows[${i}].file 不存在：${row.file}`)
+    assert.equal(row.lines, nonEmptyLines(row.file), `cost.rows[${i}].lines 写成 ${row.lines}，实际 ${nonEmptyLines(row.file)}`)
+  }
+})
+
+await check('T4「问题」里的配置写法都能在 schema 里原样搜到', () => {
+  for (const [i, p] of story.problem.points.entries()) {
+    assert.ok(
+      schemaSquashed.includes(squash(p.config)),
+      `problem.points[${i}].config（${p.config}）在 schema 里找不到 —— 案例不能只描述卖点，要指得出是哪一行`,
+    )
+  }
+})
+
+await check('三站宿主都渲染 T4 各段，并接上复制 / 下载', () => {
+  const SECTIONS = ['问题', '配置', '结果', '成本', '边界']
+  for (const host of HOSTS) {
+    const src = toLf(read(host.file))
+    assert.match(src, /@\/cases\/flagship-approval\.story\.json/, `${host.file} 没有加载 @/cases/flagship-approval.story.json`)
+    for (const heading of SECTIONS) {
+      assert.ok(
+        new RegExp(`<h2>${heading}</h2>`).test(src),
+        `${host.file} 缺少「${heading}」段（T4 模板六段缺一段，案例页就退回成了「卖点清单」）`,
+      )
+    }
+    assert.match(src, /copySchema/, `${host.file} 没有「复制 JSON」`)
+    assert.match(src, /downloadSchema/, `${host.file} 没有「下载 JSON」`)
+    for (const field of ['story', 'primaryMetric', 'copied']) {
+      const declared =
+        new RegExp(`import\\s+${field}\\s+from`).test(src) || // story：单源数据是 import 进来的
+        new RegExp(`const\\s+${field}\\s*=`).test(src) || // Vue3 <script setup>
+        new RegExp(`\\b${field}\\s*:`).test(src) // Vue2 data()
+      assert.ok(declared, `${host.file} 模板用了 ${field}，脚本里却没声明`)
+    }
   }
 })
 

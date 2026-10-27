@@ -1,0 +1,102 @@
+{
+  "id": "flagship-approval",
+  "title": "合同审批工作台",
+  "background": "采购与法务团队每月要过几百份合同：查得到（按类型、状态、条款模板筛），看得住（金额与审批人），批得动（单条与批量），管得住（谁能看金额、谁能批）。这套需求在大多数团队里会落成一张查询表、三个弹窗和一套角色权限 —— 也就是一个典型的 CRUD 工作台。",
+  "problem": {
+    "lead": "同一件事用原生写法做，难点不在页面结构，而在五处「跨组件的状态」：每一处都要自己维护一份副本，并且和后端的协议对齐。下面每一条的配置写法都能在驱动本页的 JSON 里原样搜到。",
+    "points": [
+      {
+        "pain": "跨页勾选要自己记账：selectedIds 手动 merge，全选要排除已审批的行，清空还得区分「本页」和「全部」。",
+        "config": "\"cachePageSelection\": true",
+        "note": "勾一次就跨页保留，翻页回来还在；批量操作读的是同一份选择。"
+      },
+      {
+        "pain": "条款模板的选项依赖合同类型：选项要跟着换，类型变了之后已经选中的旧模板还得作废 —— 手写就是 watch 加三份 options 再加一次重置。",
+        "config": "\"dependencies\": [\"contractType\"]",
+        "note": "四条 reactions 声明「依赖谁、什么条件下补什么」；非法组合的已选值由 if/in 表达式算回空串。"
+      },
+      {
+        "pain": "金额是敏感列：常见写法是给每个单元格套 v-if，或者在后端拼列 —— 两种都会在「加一列」时漏掉。",
+        "config": "\"permissionValue\": \"contract:amount\"",
+        "note": "权限码写在列上（详情弹窗里的金额字段同样写），过滤发生在渲染前，不是渲染后隐藏。"
+      },
+      {
+        "pain": "按钮权限要判三次：顶部批量、行内通过、行内驳回，各自一个判断函数，漏一个就是一个越权入口。",
+        "config": "\"permissionValue\": \"contract:approve\"",
+        "note": "同一个权限码在 tableBtns、operationColumn.btns、以及导出按钮上复用；角色换成「访客」时三处同时消失。"
+      },
+      {
+        "pain": "后端分页协议和表格默认值对不上：返回 { data, total, pageIndex, pageSize }，表格认的是 records / total。",
+        "config": "\"configTableOut\"",
+        "note": "字段映射写在 schema 里，换一个后端只改这四个键，不动组件。"
+      }
+    ]
+  },
+  "result": {
+    "metrics": [
+      {
+        "label": "驱动整页的配置",
+        "file": "docs/cases/flagship-approval.json",
+        "bytes": 7799,
+        "lines": 196,
+        "functions": 0,
+        "note": "整页只有一个文件、零个函数，所以它可以存库、可以下发、可以由 AI 生成 —— 下面这些数字都是它自己数出来的。",
+        "counts": {
+          "formItems": 4,
+          "columns": 9,
+          "dialogs": 2,
+          "buttons": 5,
+          "reactions": 4
+        }
+      },
+      {
+        "label": "三端同一份字节",
+        "value": "3 / 3 站点",
+        "basis": "scripts/sync-cases.mjs 从 docs/cases/ 分发到三站 src/cases/；npm run cases:check 逐字节比对，漂移即红。"
+      },
+      {
+        "label": "角色与权限",
+        "value": "3 个角色 · 5 个权限码",
+        "basis": "mock 的 ROLE_PERMISSIONS 是唯一权限表；schema 里出现的每个 permissionValue 都必须在其中登记（check:flagship-case 断言），权限码拼错不是静默少一个按钮，而是门禁变红。"
+      },
+      {
+        "label": "宿主接线",
+        "value": "一次 configureEsPlus",
+        "basis": "切换角色只改全局权限判定函数再重挂载子树；页面 JSON 一个字节都不动，所以同一份页面定义可以同时喂给三个角色。"
+      }
+    ]
+  },
+  "cost": {
+    "basis": "口径：整文件非空行，含全部数据与配置，不含注释；函数数按 JSON 中出现的函数值计（本案例为 0）。宿主 .vue 里的叙事区块、样式与交互提示不计入 —— 它们不是业务定义，三站各写一遍是刻意的（三端框架不同，叙事得用各自的组件写）。宿主的业务接线见「边界」第一条。",
+    "rows": [
+      {
+        "file": "docs/cases/flagship-approval.json",
+        "label": "整页业务定义（三端逐字节共用）",
+        "lines": 196
+      },
+      {
+        "file": "docs/cases/flagship-approval.mock.js",
+        "label": "mock 后端：数据、请求、权限表、导出",
+        "lines": 102
+      }
+    ]
+  },
+  "boundaries": [
+    {
+      "title": "请求与权限由宿主注入",
+      "text": "schema 里只有 apiParams.url 和 permissionValue 字符串；httpRequest 与 permission 判定函数是宿主通过 props / configureEsPlus 注入的。换后端协议细节、换鉴权模型，要改宿主，不改 JSON。"
+    },
+    {
+      "title": "mock 是内存数据",
+      "text": "刷新即重置；没有真实的分页游标、并发冲突与事务。「批量通过跳过已审批」是本示例的业务规则，不是组件的规范行为，接真后端时按你的规则改写。"
+    },
+    {
+      "title": "行点击阈值不在 schema 里",
+      "text": "「金额 ≥ 100 万打开审批详情」是宿主的一行判断（DETAIL_THRESHOLD），不是可配置能力。需要按字段值触发交互时，得自己加字段或加约定，本页没有把它包装成通用特性。"
+    },
+    {
+      "title": "没有覆盖的表格能力",
+      "text": "列拖拽、列显隐、虚拟滚动属于 vxe-table 与 tableOptions 的另一组配置，本页没有开启；跨页勾选只保证同一次会话内的选择状态，不保证刷新后保留。"
+    }
+  ]
+}

@@ -99,7 +99,9 @@ export function buildPlan(manifest) {
     })
   }
   for (const c of manifest.cases) {
-    for (const key of ['schema', 'meta', 'mock', 'config']) {
+    // story：案例叙事页（背景 / 问题 / 结果 / 成本 / 边界）的单源数据。
+    // 定制宿主也不会把它写进模板里 —— 三站渲染的是同一个文件，文案只改一处。
+    for (const key of ['schema', 'meta', 'mock', 'config', 'story']) {
       const rel = c.artifacts?.[key]
       if (!rel) continue
       const sub = rel.startsWith('docs/cases/generated/') ? 'generated' : ''

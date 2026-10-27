@@ -128,7 +128,8 @@
             "schema": { "$ref": "#/definitions/path" },
             "meta": { "$ref": "#/definitions/path" },
             "mock": { "$ref": "#/definitions/path" },
-            "config": { "$ref": "#/definitions/path" }
+            "config": { "$ref": "#/definitions/path" },
+            "story": { "$ref": "#/definitions/path" }
           }
         },
         "replay": {

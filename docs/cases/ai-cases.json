@@ -55,7 +55,8 @@
       },
       "artifacts": {
         "schema": "docs/cases/flagship-approval.json",
-        "mock": "docs/cases/flagship-approval.mock.js"
+        "mock": "docs/cases/flagship-approval.mock.js",
+        "story": "docs/cases/flagship-approval.story.json"
       },
       "replay": {
         "kind": "handcrafted",
