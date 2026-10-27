@@ -1306,7 +1306,13 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (config.actions.includes('export')) {
     lines.push(``)
     lines.push(`function handleExport() {`)
-    lines.push(`  window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(queryForm as any).toString()}\`)`)
+    // `as any` 必须跟着 `typescript` 走：JS 产物（`lang=""` / `lang="jsx"`）里的类型断言是**语法错**，
+    // 且它是无条件发射的 —— 于是「`mode=sfc` + `actions` 含 export + typescript:false」这一类配置
+    // 会静默产出编译不过的组件。由 `check:generator-fuzz`（属性式守卫）实测咬出：
+    // 语料里恰好没有同时带 export 与 sfc 的用例，Tier A 编译腿因此一直是 100%。
+    lines.push(
+      `  window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(queryForm${ts ? ' as any' : ''}).toString()}\`)`,
+    )
     lines.push(`}`)
   }
   if (config.actions.includes('import')) {

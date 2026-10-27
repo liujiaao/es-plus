@@ -37,8 +37,17 @@ import { parse as parseSfcDescriptor, compileScript, compileTemplate } from '@vu
 import { transformSync } from 'esbuild'
 import { fencedBlocks } from '../lib/compile-check.mjs'
 
-/** 产物是 SFC 而不是纯模块的判据：出现 `<template>` 或 `<script>` 标签。 */
-const SFC_RE = /<\s*(?:template|script)\b/i
+/**
+ * 产物是 SFC 而不是纯模块的判据：**以** `<template>` / `<script>` 起头（允许前导空白与注释）。
+ *
+ * ⚠️ 这里**不能**用「全文出现过 `<template>`/`<script>`」：
+ *   - 内联 JSON 会把字符串里的 `</script` 转义成 `<\/script`，但**开标签 `<script>` 原样保留**
+ *     —— 于是一个 `label` 含 `<script>x</script>` 的 schema 产物（`code` 是 TS 模块）
+ *     会被「包含」判据误判成 SFC，报出 `Element is missing end tag` 的**假编译失败**。
+ *   - TSX 产物里出现 `<template>` 同理。
+ * 由 `check:generator-fuzz` 的载荷 07 实测咬出（真实生成物、真实误判）。
+ */
+const SFC_RE = /^(?:\s|<!--[\s\S]*?-->)*<\s*(?:template|script)\b/i
 
 /** 编译失败的统一形状：位置信息缺失时给 `null`，绝不猜。 */
 function fail(file, e, fallbackMessage) {
@@ -151,8 +160,12 @@ function withExt(filename, ext) {
 export function compileProduct(result, { filename = 'generated.ts' } = {}) {
   if (!result) return { ok: false, error: { message: '生成器没有返回产物', file: filename, line: null, column: null } }
 
+  // 形态由**产物结构**决定，而非靠内容猜：schema 模式是「code（pageSchema 模块）+ wrapperCode
+  // （SFC）」两段，sfc 模式只有一份 SFC。有 wrapper 时 `code` 一定是模块 —— 即使它的字符串
+  // 值里带着 `<script>`（内联 JSON 只转义 `</`，开标签会原样留下）。
+  const hasWrapper = typeof result.wrapperCode === 'string' && result.wrapperCode.trim()
   if (typeof result.code === 'string' && result.code.trim()) {
-    const isSfc = SFC_RE.test(result.code)
+    const isSfc = hasWrapper ? false : SFC_RE.test(result.code)
     const r = compileSource(result.code, { filename: isSfc ? withExt(filename, '.vue') : filename })
     if (!r.ok) return r
   }

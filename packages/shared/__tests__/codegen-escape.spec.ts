@@ -8,7 +8,36 @@
  * 会闭合宿主脚本块。
  */
 import { describe, it, expect } from 'vitest'
-import { sanitizeForComment, isStaticSlotNameSafe, qAttr, qExprAttr } from '../src/codegen-escape.js'
+import { sanitizeForComment, isStaticSlotNameSafe, qAttr, qExprAttr, q } from '../src/codegen-escape.js'
+
+/**
+ * `q()` 的换行处理是 `check:generator-fuzz` 的载荷 01 咬出来的真实缺陷：
+ * 旧实现用 `/\r?\n/` 归一化，**单独的 `\r` 匹配不上**（老 Mac 换行、或从 Windows 剪贴板
+ * 带来的半个换行），于是裸 CR 落进单引号字面量 —— 而 CR 在 JS 里就是行终止符，
+ * 整份产物变成「未闭合字符串」。这类输入在语料里没有，靠 Tier A 编译腿永远看不见。
+ */
+describe('q — JS 单引号字面量', () => {
+  it('三种换行都必须落成转义序列（裸 CR 就是行终止符）', () => {
+    expect(q('a\rb')).toBe(String.raw`'a\rb'`)
+    expect(q('a\nb')).toBe(String.raw`'a\nb'`)
+    expect(q('a\r\nb')).toBe(String.raw`'a\r\nb'`)
+  })
+
+  it('反斜杠先于引号转义（顺序反了会多出一个裸反斜杠，把字面量撑破）', () => {
+    // 期望值用 `BS.repeat(3)` 拼：三等号和六反斜杠在源码里读不出「到底几个」，
+    // 而这条判据的**全部**内容就是反斜杠的个数。
+    const BS = '\\'
+    expect(q("a\\'b")).toBe(`'a${BS.repeat(3)}'b'`)
+  })
+
+  it('`</` 打断：字符串里的结束标签会闭合宿主 <script> 块', () => {
+    expect(q('A</script>')).toBe(String.raw`'A<\/script>'`)
+  })
+
+  it('普通文本逐字节不变（正常路径零漂移）', () => {
+    expect(q('状态-正常')).toBe(String.raw`'状态-正常'`)
+  })
+})
 
 describe('sanitizeForComment', () => {
   it('转义 `</`：注释里不会残留任何能闭合宿主 <script> 的序列', () => {

@@ -114,6 +114,23 @@ checkFail(
 )
 checkFail(compileProduct(null), 'compileProduct(null)', { needLine: false })
 
+// 形态由**产物结构**决定，不能被内容里的 `<script>` 骗到（fuzz 载荷 07 咬出的真实误判）：
+// 同一个含 `<script>` 字符串的 TS 模块，带 wrapper（schema 模式）时必须按**模块**编译。
+const scriptInString = 'export const pageSchema = { label: "A<\\/script><script>alert(1)</script>" }\n'
+check(
+  compileProduct({ code: scriptInString, wrapperCode: goodSfc }, { filename: 'demo.ts' }).ok,
+  'schema 产物的 code 被内容里的 `<script>` 误判成 SFC（会报 Element is missing end tag 的假红）'
+)
+check(
+  compileSource(scriptInString, { filename: 'demo.ts' }).ok,
+  '模块内容里出现 `<script>` 不应影响分派（判据只看**起头**是不是 SFC 标签）'
+)
+// 反证：真 SFC 仍必须被认出来（否则上面的放宽会把 SFC 当模块放行）。
+check(
+  compileSource('<!-- 注释 -->\n<template><div /></template>\n', { filename: 'ok.vue' }).ok === true,
+  '以注释开头的真 SFC 仍应按 SFC 编译'
+)
+
 // ── 7) compileFragment 按 fence 分派 ──────────────────
 check(
   compileFragment({ code: goodSfc, fence: 'vue' }, { filename: 'f-form' }).ok,

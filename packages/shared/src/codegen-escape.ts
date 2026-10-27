@@ -37,7 +37,13 @@ export function q(value: unknown): string {
   return `'${String(value)
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
-    .replace(/\r?\n/g, '\\n')
+    // 换行必须**逐个**转义，不能写成 `/\r?\n/`：那个正则只认 CRLF 与 LF，**单独的 `\r`
+    // 会原样落进单引号字面量**（老 Mac 换行、或从 Windows 剪贴板里带过来的半个换行）。
+    // 裸 CR 在 JS 里就是行终止符 ⟹ `'a<CR>b'` 是未闭合字符串，整份产物编译不过。
+    // 由 `check:generator-fuzz` 的载荷 01 实测咬出（数据里任何字符串槽都能带上它）。
+    // 分开写同时保住语义：CRLF → `\r\n`（而不是此前被折叠成 `\n`），LF → `\n`。
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
     .replace(/<\//g, '<\\/')}'`
 }
 
