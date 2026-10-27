@@ -951,7 +951,7 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 28px;
+  font-size: var(--es-text-2xl);
   font-weight: 600;
   margin: 0 0 32px;
   color: $text-primary;

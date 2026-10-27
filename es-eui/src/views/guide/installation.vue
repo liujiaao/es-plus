@@ -615,7 +615,7 @@ $bg-light: #f7fafc;
   }
 
   .section-title {
-    font-size: 24px;
+    font-size: var(--es-text-2xl);
     font-weight: 600;
     margin: 0;
   }
@@ -650,7 +650,7 @@ $bg-light: #f7fafc;
 
   .step-info {
     .section-title {
-      font-size: 24px;
+      font-size: var(--es-text-2xl);
       font-weight: 600;
       margin: 0 0 6px;
     }

@@ -218,7 +218,7 @@ export default {
 }
 
 body {
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  font-family: var(--es-font-sans);
   font-size: 14px;
   color: #303133;
   background-color: #fff;
@@ -568,7 +568,7 @@ body {
 
 /* 文档标题 */
 .content-title {
-  font-size: 28px;
+  font-size: var(--es-text-3xl);
   font-weight: 400;
   color: #1f2f3d;
   margin-bottom: 20px;

@@ -9,9 +9,12 @@
  * ========================================================================== */
 
 .es-doc-content {
-  /* ── 排版基础 ── */
-  font-size: 15.5px;
-  line-height: 1.8;
+  /* ── 排版基础 ──
+   * 字体栈也走 token：三站 body 各自的栈不同（Roboto / 系统默认 / Element），
+   * 但正文必须同一种字体，否则同一个「文档站」读起来是三种观感。 */
+  font-family: var(--es-font-sans);
+  font-size: var(--es-text-md);
+  line-height: var(--es-leading-relaxed);
   color: var(--es-doc-text);
   word-break: break-word;
   -webkit-font-smoothing: antialiased;
@@ -43,15 +46,15 @@
 }
 
 .es-doc-content h1 {
-  font-size: 34px;
-  line-height: 1.25;
+  font-size: var(--es-text-4xl);
+  line-height: var(--es-leading-tight);
   margin: 0 0 20px;
   letter-spacing: -0.6px;
 }
 
 .es-doc-content h2 {
-  font-size: 25px;
-  line-height: 1.35;
+  font-size: var(--es-text-2xl);
+  line-height: var(--es-leading-snug);
   margin: 52px 0 20px;
   padding-bottom: 10px;
   letter-spacing: -0.3px;
@@ -72,16 +75,16 @@
 }
 
 .es-doc-content h3 {
-  font-size: 19px;
-  line-height: 1.45;
+  font-size: var(--es-text-xl);
+  line-height: var(--es-leading-snug);
   margin: 36px 0 14px;
   letter-spacing: -0.2px;
 }
 
 .es-doc-content h4 {
-  font-size: 16px;
+  font-size: var(--es-text-md);
   font-weight: 600;
-  line-height: 1.5;
+  line-height: var(--es-leading-snug);
   margin: 26px 0 10px;
 }
 
@@ -97,8 +100,8 @@
 
 /* 引导段：紧跟标题的首段稍大、稍淡，营造导语层次 */
 .es-doc-content h1 + p {
-  font-size: 17px;
-  line-height: 1.75;
+  font-size: var(--es-text-lg);
+  line-height: var(--es-leading-relaxed);
   color: var(--es-doc-text-secondary);
   margin-bottom: 26px;
 }
@@ -190,7 +193,7 @@
   padding: 2px 7px;
   background: var(--es-doc-code-tint);
   border-radius: 6px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--es-font-mono);
   font-size: 0.86em;
   font-weight: 500;
   color: var(--es-brand-primary);
@@ -245,7 +248,7 @@
 
 .es-doc-content .code-block-lang {
   color: var(--es-doc-text-secondary);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--es-font-mono);
   text-transform: lowercase;
   letter-spacing: 0.3px;
 }
@@ -256,7 +259,7 @@
   min-width: 0;
   margin-left: 10px;
   color: var(--es-doc-text-secondary);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--es-font-mono);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;

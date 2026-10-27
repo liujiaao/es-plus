@@ -560,7 +560,7 @@ export default {
   }
 
   .section-title {
-    font-size: 24px;
+    font-size: var(--es-text-2xl);
     font-weight: 600;
     color: var(--es-text-primary);
     margin: 0;

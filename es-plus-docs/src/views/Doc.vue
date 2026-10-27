@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
 
 .doc-title {
   padding: 0 0 24px;
-  font-size: 32px;
+  font-size: var(--es-text-3xl);
   font-weight: 600;
   color: var(--text-color-primary);
 }

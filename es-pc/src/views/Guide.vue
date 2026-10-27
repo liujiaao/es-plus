@@ -216,7 +216,7 @@ const diffData = [
 
 <style scoped>
 h1 {
-  font-size: 30px;
+  font-size: var(--es-text-3xl);
   font-weight: 700;
   color: #1a1a2e;
   margin-bottom: 8px;
@@ -228,7 +228,7 @@ h1 {
 }
 
 h2 {
-  font-size: 22px;
+  font-size: var(--es-text-2xl);
   font-weight: 600;
   margin: 24px 0 16px;
   color: #1a1a2e;

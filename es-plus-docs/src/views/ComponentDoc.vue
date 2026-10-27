@@ -273,7 +273,7 @@ onBeforeUnmount(() => stopRealign())
 }
 
 .component-title {
-  font-size: 32px;
+  font-size: var(--es-text-3xl);
   font-weight: 700;
   color: var(--text-color-primary);
   margin-bottom: 12px;
@@ -291,7 +291,7 @@ onBeforeUnmount(() => stopRealign())
 }
 
 .section-title {
-  font-size: 24px;
+  font-size: var(--es-text-2xl);
   font-weight: 600;
   color: var(--text-color-primary);
   margin-bottom: 20px;

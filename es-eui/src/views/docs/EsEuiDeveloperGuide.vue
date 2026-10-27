@@ -1365,7 +1365,7 @@ $bg-light: #f7fafc;
     &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
     &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
   }
-  .section-title { font-size: 24px; font-weight: 600; margin: 0; }
+  .section-title { font-size: var(--es-text-2xl); font-weight: 600; margin: 0; }
 }
 .section-desc { font-size: 15px; color: $text-secondary; margin: 0 0 24px; }
 
