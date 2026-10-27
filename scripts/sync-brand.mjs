@@ -19,7 +19,7 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { readText, sameText } from './lib/text-sync.mjs'
+import { readText, sameText, readBinary, sameBinary } from './lib/text-sync.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -48,7 +48,11 @@ const PUBLIC_ASSETS = [
   {
     // 分享卡片：三站的 og:url / og:image 都指向主文档站（同一产品的三个渲染端共用一张卡片），
     // 因此只有主站需要托管这份 PNG。
+    //
+    // binary: true 是关键 —— PNG 不能按 UTF-8 读写。此前这里走 readText/writeFileSync，
+    // 非法字节被替换成 U+FFFD，线上的 OG 图头是 `EF BF BD 50 4E 47`，社交平台解析不出尺寸。
     file: 'og-image.png',
+    binary: true,
     targets: ['es-plus-docs/public/og-image.png'],
   },
 ]
@@ -100,7 +104,9 @@ function main() {
 
   // public/ 资产（favicon 等）：目标路径写全，不做目录扫描
   for (const asset of PUBLIC_ASSETS) {
-    const srcContent = readText(join(ROOT, 'docs', 'brand', asset.file))
+    const read = asset.binary ? readBinary : readText
+    const same = asset.binary ? sameBinary : sameText
+    const srcContent = read(join(ROOT, 'docs', 'brand', asset.file))
     for (const relTarget of asset.targets) {
       const target = join(ROOT, relTarget)
       if (CHECK) {
@@ -109,13 +115,14 @@ function main() {
           drift = true
           continue
         }
-        if (!sameText(readText(target), srcContent)) {
+        if (!same(read(target), srcContent)) {
           console.error(`❌ 品牌资产漂移：${rel(relTarget)} 与单源不一致`)
           drift = true
         }
       } else {
         const dir = dirname(target)
         if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+        // Buffer 原样写入；不传 encoding，避免再做一次文本编解码
         writeFileSync(target, srcContent)
         synced++
       }

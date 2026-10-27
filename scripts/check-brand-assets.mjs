@@ -24,6 +24,9 @@
  *      （与 check-site-nav 同一套规范域名来源）；
  *   D. 三站标题都带「ES-Plus」（不再出现旧产品名 ES-EUI 或命名不一致）；
  *   E. es-pc 顶栏不再用第三方库图标当 logo。
+ *   F. 分享卡片是**合法 PNG** 且发布的副本与单源逐字节一致：
+ *      只查「文件存在 + 文本哈希」抓不到 UTF-8 读写造成二进制损坏
+ *      （源 `89 50 4E 47` → 副本 `EF BF BD 50 4E 47`）。
  *
  * 用法：node scripts/check-brand-assets.mjs
  * 退出码：0 = 全部通过；1 = 有漂移。
@@ -78,19 +81,60 @@ function checkFavicon() {
   }
 }
 
-// ── B. og-image 是否过期 / 是否已发布 ────────────────────
+// ── B. og-image 是否过期 / 是否已发布 / 二进制是否完好 ────────────────────
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const readBuf = (p) => {
+  const abs = join(ROOT, p)
+  return existsSync(abs) ? readFileSync(abs) : null
+}
+
+/** PNG 的 IHDR 宽高（大端 4 字节，紧跟 8 字节魔数 + 4 字节长度 + 'IHDR'） */
+function pngSize(buf) {
+  if (!buf || buf.length < 24 || !buf.subarray(0, 8).equals(PNG_MAGIC)) return null
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+}
+
 function checkOgImage() {
   const meta = read('docs/brand/og-image.meta.json')
   if (!meta) return
-  if (!existsSync(join(ROOT, 'docs/brand/og-image.png'))) {
+
+  const source = readBuf('docs/brand/og-image.png')
+  if (!source) {
     fail('缺少 docs/brand/og-image.png（运行 `npm run og:gen` 生成）')
     return
   }
-  if (!existsSync(join(ROOT, 'es-plus-docs/public/og-image.png'))) {
+  const size = pngSize(source)
+  if (!size) {
+    fail('docs/brand/og-image.png 不是合法 PNG（魔数不是 89 50 4E 47）—— 生成环节已损坏')
+    return
+  }
+  if (size.width !== 1200 || size.height !== 630) {
+    fail(`docs/brand/og-image.png 尺寸是 ${size.width}×${size.height}，分享卡片应为 1200×630`)
+  }
+
+  // 发布的副本必须逐字节等于单源。
+  // 此前 sync-brand 对 PNG 走 UTF-8 读写，非法字节被替换成 U+FFFD：
+  // 源 `89 50 4E 47` → 副本 `EF BF BD 50 4E 47`，社交平台拿不到尺寸。
+  // 只比「存在 + 文本哈希」是抓不到的 —— 必须比 Buffer 且校验魔数。
+  const published = readBuf('es-plus-docs/public/og-image.png')
+  if (!published) {
     fail('分享卡片未发布到 es-plus-docs/public/og-image.png（运行 `npm run brand:sync`）')
     return
   }
+  if (!pngSize(published)) {
+    fail(
+      'es-plus-docs/public/og-image.png 已损坏（PNG 魔数丢失，常见于按 UTF-8 同步二进制）。' +
+        '运行 `npm run brand:sync` 重新拷贝；不要再手改这一份。',
+    )
+    return
+  }
+  if (!published.equals(source)) {
+    fail('es-plus-docs/public/og-image.png 与单源不一致（运行 `npm run brand:sync`）')
+    return
+  }
+
   // 新鲜度由生成脚本自己判定（它算得出输入哈希，这里不重复实现）
+  console.log(`✅ 分享卡片二进制完好（${size.width}×${size.height}，与单源逐字节一致）`)
   console.log('ℹ️  分享卡片过期检查由 `npm run og:check` 负责（已并入 check:consistency）')
 }
 

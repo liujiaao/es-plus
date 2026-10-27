@@ -16,6 +16,24 @@
  */
 import { readFileSync } from 'node:fs'
 
+/**
+ * 二进制资产（PNG / JPEG / ICO …）必须按字节搬运。
+ *
+ * 背景：sync-brand 曾经对 `og-image.png` 走 `readText` + `writeFileSync(..., string)`，
+ * UTF-8 解码会把非法字节替换成 U+FFFD（EF BF BD），再编码回去就永久损坏：
+ * 源文件 PNG 头是 `89 50 4E 47`，站点副本变成 `EF BF BD 50 4E 47`。
+ * `sameText` 对损坏后的字节做「文本比较」还可能判为一致 —— 门禁因此全程是绿的。
+ */
+export function readBinary(path) {
+  return readFileSync(path)
+}
+
+/** 比较两段 Buffer 是否逐字节一致；`null` 表示文件不存在 */
+export function sameBinary(a, b) {
+  if (a === null || b === null) return a === b
+  return a.equals(b)
+}
+
 /** 将 CRLF 与孤立 CR 统一为 LF（仅用于比较） */
 export function normalizeEol(text) {
   return text.replace(/\r\n?/g, '\n')
