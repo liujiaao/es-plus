@@ -39,7 +39,8 @@
         <p class="nva-note">{{ col.note }}</p>
         <p v-if="col.key === 'ai'" class="nva-features" :data-testid="`nva-${col.key}-features`">
           产物自述：查询项 {{ features.formItems }} · 列 {{ features.columns }} · 弹窗 {{ features.dialogs }} ·
-          行按钮 {{ features.actions }} · 码值表 {{ features.dataOptions }}（数自 JSON 本身，不是文案）
+          行按钮 {{ features.actions }} · 码值表 {{ features.dataOptions }} ·
+          内嵌脚本串 {{ features.scriptStrings }}（数自 JSON 本身，不是文案）
         </p>
       </article>
     </section>

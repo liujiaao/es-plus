@@ -670,10 +670,14 @@ test('A9 三栏对照：12 个数字与三份源码全部来自度量单源，�
   // ② AI 栏「产物自述」：条数来自产物 JSON 本身（用它支撑「第三栏是超集」这句话）
   const f = scenario.ai.features
   const features = page.locator('[data-testid="nva-ai-features"]')
-  await expect(features).toContainText(`查询项 ${f.formItems}`)
-  await expect(features).toContainText(`列 ${f.columns}`)
-  await expect(features).toContainText(`弹窗 ${f.dialogs}`)
-  await expect(features).toContainText(`行按钮 ${f.actions}`)
+  // 子串断言会被「列 50」满足 —— 每个数字后缀负向前瞻，页面写死一个更大的数也会被抓到。
+  const count = (label: string, n: number) => new RegExp(`${label} ${n}(?!\\d)`)
+  await expect(features).toContainText(count('查询项', f.formItems))
+  await expect(features).toContainText(count('列', f.columns))
+  await expect(features).toContainText(count('弹窗', f.dialogs))
+  await expect(features).toContainText(count('行按钮', f.actions))
+  // 内嵌脚本串：JSON 里的 formatter/render 不计入「自写函数」，必须单独可见（plan §21.3）
+  await expect(features).toContainText(count('内嵌脚本串', f.scriptStrings))
 
   // ③ 三栏源码：逐块对照同一次生成落盘的原文（归一空白后逐字相同）
   const normalize = (s: string) => s.replace(/\s+/g, ' ').trim()
@@ -684,7 +688,16 @@ test('A9 三栏对照：12 个数字与三份源码全部来自度量单源，�
   }
 
   // ④ 第三栏的偏差必须写在页面上（本仓没有为 filter-table 调过模型）
-  await expect(page.locator('[data-testid="nva-gaps"]')).toContainText('第三栏不是严格同场景产物')
+  const gaps = page.locator('[data-testid="nva-gaps"]')
+  await expect(gaps.locator('li')).toHaveCount(4)
+  for (const caveat of [
+    '第三栏不是严格同场景产物',
+    '模型那一步不可重放',
+    '渲染器的成本不在任何一栏里',
+    '只对照了一个场景',
+  ]) {
+    await expect(gaps).toContainText(caveat)
+  }
   // AI 栏现场演示的入口指向它自己的案例页（那里由 employee-roster 的 e2e 背书）
   await expect(page.locator('[data-testid="native-vs-ai"] a[href*="employee-roster"]')).toBeVisible()
 })
