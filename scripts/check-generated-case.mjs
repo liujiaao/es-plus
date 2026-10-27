@@ -12,7 +12,10 @@
  *   「权限是宿主注入的」        → schema 的权限码都能被 mock 放行/拒绝，且开关能真的关掉；
  *   「三端跑同一份字节」        → 3 份产物 × 3 站副本与单源逐字节一致；
  *   「按钮名就是事件标识」      → 生成的行按钮没有 key，三端渲染器都实现了 key||name 兜底，
- *                                宿主按「通过」「驳回」分派。
+ *                                宿主按「通过」「驳回」分派；
+ *   「这一页可复现」            → T5 证据模板（方法/产物/实测数据/边界/术语折叠）齐全，
+ *                                产物体积、行数、函数数、计数全部对着文件重算，
+ *                                复现命令与 meta.command 逐字一致，内部代号只出现在折叠块里。
  *
  * 用法：node scripts/check-generated-case.mjs
  * 退出码：0 = 通过；1 = 违反任一断言。
@@ -30,6 +33,7 @@ const SOURCES = {
   schema: 'docs/cases/generated/purchase-approval.json',
   meta: 'docs/cases/generated/purchase-approval.meta.json',
   mock: 'docs/cases/generated/purchase-approval.mock.js',
+  story: 'docs/cases/generated/purchase-approval.story.json',
 }
 
 const SITES = ['es-plus-docs', 'es-pc', 'es-eui']
@@ -274,12 +278,13 @@ await check('通过/驳回只能作用于待审批单，且写入驳回原因', 
 })
 
 // ── 7. 三站副本逐字节一致 ──
-await check('三站副本与单源逐字节一致（3 份产物 × 3 站）', () => {
+await check('三站副本与单源逐字节一致（4 份产物 × 3 站）', () => {
   for (const site of SITES) {
     for (const [kind, name] of Object.entries({
       schema: 'purchase-approval.json',
       meta: 'purchase-approval.meta.json',
       mock: 'purchase-approval.mock.js',
+      story: 'purchase-approval.story.json',
     })) {
       const copy = `${site}/src/cases/generated/${name}`
       assert.ok(existsSync(join(ROOT, copy)), `${copy} 不存在（先跑 npm run cases:sync）`)
@@ -377,6 +382,159 @@ await check('三站路由与案例页入口已接线', () => {
   for (const host of HOSTS) {
     assert.match(toLf(read(host.router)), host.routeRe, `${host.router} 缺少 ai-generated 路由`)
     assert.match(toLf(read(host.cases)), /ai-generated/, `${host.cases} 没有指向生成产物页的入口`)
+  }
+})
+
+/* ------------------------------------------------------------------ *
+ * T5 AI 证据模板（路线图 2.6）：用户任务标题 → 一句话结论 → 30 秒演示
+ * → 方法 / 产物 / 实测数据 / 边界 → 术语折叠。文案单源 story.json，
+ * 三站渲染同一份；能在产物里重算的数字一律重算比对。
+ * ------------------------------------------------------------------ */
+const storyText = toLf(read(SOURCES.story))
+const story = JSON.parse(storyText)
+const nonEmptyLines = (rel) => read(rel).split('\n').filter((l) => l.trim()).length
+const countFunctions = (node) => {
+  if (typeof node === 'function') return 1
+  if (!node || typeof node !== 'object') return 0
+  return Object.values(node).reduce((n, v) => n + countFunctions(v), 0)
+}
+/** 查询区与各弹窗的 formItems 全收进来 —— 本页的条件必填在两个弹窗里，只看顶层会数成 0。 */
+function allFormItems(node, acc = []) {
+  walk(node, 'schema', (key, value) => {
+    if (key === 'formItems' && Array.isArray(value)) acc.push(...value)
+  })
+  return acc
+}
+/** 内部代号清单：出现在 H1/H2 就等于把实现细节卖给了读者。 */
+const JARGON = [/\bclaim\b/i, /\bexecute\b/i, /\bcompile\b/i, /\bS2\b/, /\bS3\b/, /\bA8\b/, /\bA9\b/, /StructuredCrudConfig/, /CrudPageSchema/]
+
+await check('T5 证据结构齐全（结论 / 方法 / 产物 / 实测数据 / 边界 / 术语）', () => {
+  assert.equal(story.id, 'purchase-approval', `story.id 应为 purchase-approval，实际 ${story.id}`)
+  assert.ok(story.conclusion && story.conclusion.length >= 40, 'story.conclusion 太短（一句话结论要能独立看懂）')
+  assert.ok(
+    Array.isArray(story.method) && story.method.length >= 2 && story.method.length <= 3,
+    `method 应为 2~3 步（T5 要求三步内讲清），当前 ${story.method?.length}`,
+  )
+  for (const [i, step] of story.method.entries()) {
+    assert.ok(step.title && step.title.trim(), `method[${i}].title 为空`)
+    assert.ok(step.text && step.text.length >= 40, `method[${i}].text 太短`)
+  }
+
+  for (const key of ['label', 'file', 'note']) {
+    assert.ok(story.product?.[key] && String(story.product[key]).trim(), `product.${key} 为空`)
+  }
+  assert.ok(story.product.counts && Object.keys(story.product.counts).length >= 3, 'product.counts 至少要三项')
+
+  assert.ok(story.repro?.command?.trim(), 'repro.command 为空 —— 没有复现命令，数据就只是自述')
+  assert.ok(story.repro.note && story.repro.note.trim(), 'repro.note 为空（命令从哪来、参数怎么填都要说清）')
+
+  assert.match(story.evidence?.measuredAt || '', /^\d{4}-\d{2}-\d{2}$/, 'evidence.measuredAt 必须是 ISO 日期（数据要有测量日）')
+  assert.ok(story.evidence.metrics.length >= 3, '实测数据至少 3 条')
+  for (const [i, m] of story.evidence.metrics.entries()) {
+    assert.ok(m.label && m.label.trim(), `evidence.metrics[${i}].label 为空`)
+    assert.ok(m.value && m.value.trim(), `evidence.metrics[${i}].value 为空`)
+    assert.ok(
+      m.basis && m.basis.length >= 20,
+      `evidence.metrics[${i}].basis 太短 —— 没有口径的数字等于没有数字`,
+    )
+  }
+
+  assert.ok(story.boundaries.length >= 3, `边界至少 3 条（当前 ${story.boundaries.length}）`)
+  for (const [i, b] of story.boundaries.entries()) {
+    assert.ok(b.title && b.title.trim(), `boundaries[${i}].title 为空`)
+    assert.ok(b.text && b.text.length >= 40, `boundaries[${i}].text 太短 —— 「不承诺什么」要具体到能被反驳`)
+  }
+
+  assert.ok(story.terms.length >= 3, '术语表至少 3 条（内部代号要在这里解释，而不是塞进标题）')
+  for (const [i, t] of story.terms.entries()) {
+    assert.ok(t.term && t.term.trim(), `terms[${i}].term 为空`)
+    assert.ok(t.meaning && t.meaning.length >= 20, `terms[${i}].meaning 太短`)
+  }
+})
+
+await check('T5 产物数字都能从文件重算出来，复现命令与 meta 逐字一致', () => {
+  const file = story.product.file
+  assert.ok(existsSync(join(ROOT, file)), `product.file 不存在：${file}`)
+  const actualBytes = Buffer.byteLength(read(file), 'utf8')
+  assert.equal(story.product.bytes, actualBytes, `product.bytes 写成 ${story.product.bytes}，实际 ${actualBytes}（改产物后要同步改 story）`)
+  assert.equal(story.product.lines, nonEmptyLines(file), `product.lines 写成 ${story.product.lines}，实际 ${nonEmptyLines(file)}`)
+  assert.equal(
+    story.product.functions,
+    countFunctions(JSON.parse(read(file))),
+    'product.functions 与产物里的函数数不符 —— 「零函数」是本页最大的主张，不能只写在文案里',
+  )
+
+  // 计数口径写在这里：查询区 2 项、列 5、弹窗 2、按钮 = 工具栏 + 表格级 + 操作列、联动 = 所有弹窗与查询区之和
+  const actualCounts = {
+    formItems: (schema.formItems || []).length,
+    columns: (schema.columns || []).length,
+    dialogs: Object.keys(schema.dialogs || {}).length,
+    buttons:
+      (schema.toolbarBtns || []).length + (schema.tableBtns || []).length + (schema.operationColumn?.btns || []).length,
+    reactions: allFormItems(schema).reduce((n, f) => n + (f.reactions || []).length, 0),
+  }
+  for (const [key, value] of Object.entries(story.product.counts)) {
+    assert.equal(value, actualCounts[key], `product.counts.${key} 写成 ${value}，产物里实际 ${actualCounts[key]}`)
+  }
+
+  // 复现命令只能有一份：meta 里记录的那条。另写一条就等于允许两边各说各话。
+  assert.equal(
+    story.repro.command,
+    meta.command,
+    'repro.command 与 meta.command 不一致 —— 复现命令必须来自产物自带的出处记录',
+  )
+  assert.match(story.repro.command, /create\s+purchase-approval/, 'repro.command 没有指向本案例的 create 调用')
+  assert.match(story.repro.command, /--ai/, 'repro.command 缺少 --ai（否则不是这一页的生成方式）')
+  assert.match(story.repro.command, /-m\s+schema/, 'repro.command 缺少 -m schema（另两站渲染的是纯 JSON 产物）')
+})
+
+await check('T5 内部代号不出现在标题里（结论 / 方法标题 / 指标标题 / 边界标题）', () => {
+  const headings = [
+    ...story.method.map((s) => s.title),
+    ...story.evidence.metrics.map((m) => m.label),
+    ...story.boundaries.map((b) => b.title),
+    story.conclusion,
+  ]
+  for (const text of headings) {
+    for (const re of JARGON) {
+      // 术语表里可以解释这些词，但标题与结论是给「想做这个页面的人」看的
+      assert.doesNotMatch(text, re, `「${text.slice(0, 24)}」里出现了内部代号（${re.source}）—— 它只该活在折叠的术语块里`)
+    }
+  }
+})
+
+await check('三站宿主都渲染 T5 各段，并接上复制命令 / 下载 JSON / 术语折叠', () => {
+  const SECTIONS = ['方法', '产物', '实测数据', '边界与不承诺']
+  for (const host of HOSTS) {
+    const src = toLf(read(host.file))
+    assert.match(src, /@\/cases\/generated\/purchase-approval\.story\.json/, `${host.file} 没有加载 purchase-approval.story.json`)
+    assert.match(src, /<h2 class="ai-section-title">30 秒演示<\/h2>/, `${host.file} 缺少「30 秒演示」标题`)
+    for (const heading of SECTIONS) {
+      assert.ok(
+        new RegExp(`<h2>${heading}</h2>`).test(src),
+        `${host.file} 缺少「${heading}」段（T5 模板五段缺一段，这一页就退回成了「AI 很好用」）`,
+      )
+    }
+    // 标题只能讲用户任务：hero 的 h1 / h2 里出现内部代号即失败
+    const headings = [...src.matchAll(/<h([12])[^>]*>([\s\S]*?)<\/h\1>/g)].map((m) => m[2].replace(/\{\{[\s\S]*?\}\}/g, ''))
+    for (const heading of headings) {
+      for (const re of JARGON) {
+        assert.doesNotMatch(heading, re, `${host.file} 的标题「${heading.trim().slice(0, 24)}」出现了内部代号（${re.source}）`)
+      }
+    }
+    assert.match(src, /copyCommand/, `${host.file} 没有「复制复现命令」`)
+    assert.match(src, /downloadSchema/, `${host.file} 没有「下载 JSON」`)
+    // 术语必须在折叠块里：<details class="evidence-terms"> 内部才是 dl
+    const termsBlock = src.match(/<details class="evidence-terms">([\s\S]*?)<\/details>/)
+    assert.ok(termsBlock, `${host.file} 没有折叠的术语块（内部代号要有地方解释）`)
+    assert.match(termsBlock[1], /story\.terms/, `${host.file} 的术语块没有渲染 story.terms`)
+    for (const field of ['story', 'productKb', 'countLabel', 'commandCopied']) {
+      const declared =
+        new RegExp(`import\\s+${field}\\s+from`).test(src) || // story：单源数据是 import 进来的
+        new RegExp(`const\\s+${field}\\s*=`).test(src) || // Vue3 <script setup>
+        new RegExp(`\\b${field}\\s*:`).test(src) // Vue2 data()
+      assert.ok(declared, `${host.file} 模板用了 ${field}，脚本里却没声明`)
+    }
   }
 })
 

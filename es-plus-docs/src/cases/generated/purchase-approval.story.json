@@ -1,0 +1,102 @@
+{
+  "id": "purchase-approval",
+  "conclusion": "一句话需求 → 一份能直接渲染的纯 JSON。模型只负责把中文翻成结构化配置，代码由确定性生成器写出，所以产物里没有函数，也不需要信任模型写的代码。",
+  "method": [
+    {
+      "title": "一句话需求",
+      "text": "页面上那句需求原文就是全部输入：查询区两个字段、五列表格、新增与查看两个弹窗、驳回原因的显示条件与必填、两个按钮的权限码。没有再补提示词，也没有给字段清单之外的东西。"
+    },
+    {
+      "title": "模型只翻成配置",
+      "text": "es-plus create --ai 让模型输出结构化配置（StructuredCrudConfig），再由确定性生成器写出 CrudPageSchema 与包装 SFC。模型不写模板、不写事件处理 —— 这是产物里 0 个函数的原因，也是它敢直接跑在三个渲染端上的原因。"
+    },
+    {
+      "title": "宿主只做接线",
+      "text": "数据请求与权限判定由宿主注入（http-request / configureEsPlus），schema 里只有 apiParams.url 与 permissionValue 两个字符串。同一份字节被三站加载，各自用本端的组件渲染。"
+    }
+  ],
+  "product": {
+    "label": "驱动上面整页的配置",
+    "file": "docs/cases/generated/purchase-approval.json",
+    "bytes": 7994,
+    "lines": 368,
+    "functions": 0,
+    "note": "下载的就是驱动上表的文件本身，没有裁剪；命令里的 <上方 nl> 就是页面上那句需求。",
+    "counts": {
+      "formItems": 2,
+      "columns": 5,
+      "dialogs": 2,
+      "buttons": 4,
+      "reactions": 2
+    }
+  },
+  "repro": {
+    "command": "ESPLUS_AI_MODEL=deepseek-v4-flash node packages/cli/build/index.js create purchase-approval -d \"<上方 nl>\" --ai -m schema",
+    "note": "命令来自产物自带的 meta（docs/cases/generated/purchase-approval.meta.json），不是页面上另写的一份。模型与日期也印在上面。"
+  },
+  "evidence": {
+    "measuredAt": "2026-10-28",
+    "metrics": [
+      {
+        "label": "产物里的函数 / 事件绑定",
+        "value": "0 个",
+        "basis": "对 schema 做深度函数计数（check:generated-case 每次跑都重算）—— 生成器只写数据，请求与权限永远是宿主注入的。"
+      },
+      {
+        "label": "条件必填",
+        "value": "2 处 reactions",
+        "basis": "新增与查看两个弹窗的「驳回原因」都同时带 isHidden 与 required：状态选「已驳回」才显示，显示即必填。少任何一个，浏览器里这条规则就不成立。"
+      },
+      {
+        "label": "权限码",
+        "value": "1 个 · approval:audit",
+        "basis": "「通过」「驳回」两个行按钮共用同一个码；宿主把开关一关，两个按钮同时消失 —— 不需要在模板里逐处判断。"
+      },
+      {
+        "label": "三端同一份字节",
+        "value": "3 / 3 站点",
+        "basis": "scripts/sync-cases.mjs 分发；npm run cases:check 逐字节比对三站副本，漂移即红。"
+      }
+    ]
+  },
+  "boundaries": [
+    {
+      "title": "只翻配置，不写代码",
+      "text": "生成器不产出业务逻辑。需要自定义渲染、特殊交互或第三方控件时，这条路到头了 —— 要么回到手写宿主，要么等对应能力被做成配置项。"
+    },
+    {
+      "title": "一次成功不等于稳定",
+      "text": "本页产物是一次尝试就通过的（meta 里 attempts 与提示词试跑记录都写着）。同一个需求换模型或改措辞可能需要多轮修复，仓库不承诺成功率；能承诺的是「不合法就报错，而不是静默产出跑不起来的页面」。"
+    },
+    {
+      "title": "mock 是内存数据",
+      "text": "刷新即重置，响应字段是本示例的口径（三站各有适配层）。接真实后端时按 configTableOut 改字段映射，不改 schema 的结构。"
+    },
+    {
+      "title": "覆盖范围只到单页 CRUD",
+      "text": "查询、表格、弹窗、按钮权限、条件必填 —— 这条链之外的能力（跨页勾选、树形、行内编辑、列拖拽）不在本页，也不在这一次生成里。"
+    }
+  ],
+  "terms": [
+    {
+      "term": "CrudPageSchema",
+      "meaning": "一份 JSON 描述整页：查询项、列、工具栏与行内按钮、弹窗、分页与响应映射。组件按它渲染，宿主按它取数。"
+    },
+    {
+      "term": "StructuredCrudConfig",
+      "meaning": "模型输出的结构化配置（不是代码）。确定性生成器把它翻成 CrudPageSchema 与包装 SFC，所以同一份配置每次生成的字节都相同。"
+    },
+    {
+      "term": "reactions",
+      "meaning": "字段联动规则：声明依赖谁、什么条件下补什么（选项、值、必填、禁用）。本页用它表达「驳回原因随状态显隐且必填」。"
+    },
+    {
+      "term": "permissionValue",
+      "meaning": "权限码字符串。组件按它过滤列与按钮，判定函数由宿主通过 configureEsPlus 注入 —— schema 里不出现任何判断代码。"
+    },
+    {
+      "term": "生成前门 / 修复轮",
+      "meaning": "生成结果先过确定性校验：不合法就带着结构化错误让模型改，而不是把坏配置交给渲染器。本页的产物是校验通过的那一版。"
+    }
+  ]
+}

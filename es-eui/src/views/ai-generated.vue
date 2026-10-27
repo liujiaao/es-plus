@@ -3,9 +3,10 @@
     <header class="ai-hero">
       <span class="ai-badge">AI 生成 · 未经手工修改</span>
       <h1>一句话 → 采购申请审批页</h1>
+      <p class="ai-intro">{{ story.conclusion }}</p>
       <p class="ai-intro">
         下面整页来自一句中文需求，由 <code>es-plus create --ai</code> 生成一份
-        <strong>纯 JSON</strong> 的 CrudPageSchema（{{ schemaSize }} KB、0 个函数）。
+        <strong>纯 JSON</strong> 的 CrudPageSchema（{{ productKb }} KB、{{ story.product.functions }} 个函数）。
         模型只负责把 NL 翻成配置，宿主只注入数据请求与权限 —— 配置本身可存库、可下发、
         也能在另两端渲染同一份字节。
       </p>
@@ -28,6 +29,7 @@
       </p>
     </header>
 
+    <h2 class="ai-section-title">30 秒演示</h2>
     <es-crud-page
       :key="String(withAudit)"
       ref="crudRef"
@@ -41,6 +43,68 @@
       <summary>AI 生成的 CrudPageSchema（纯 JSON；含 reactions / permissionValue / operationColumn / dataOptions）</summary>
       <pre>{{ schemaText }}</pre>
     </details>
+
+    <!-- T5 AI 证据模板：用户任务标题（hero）→ 一句话结论 → 30 秒演示（上面）→ 方法 → 产物 →
+         实测数据 → 边界与不承诺 → 术语折叠。文案单源
+         docs/cases/generated/purchase-approval.story.json（cases:check 校验三站一致），
+         里面的数字与复现命令都由 check:generated-case 对着产物重算比对。 -->
+    <section class="ai-evidence">
+      <h2>方法</h2>
+      <ol class="evidence-steps">
+        <li v-for="(step, index) in story.method" :key="step.title">
+          <span class="step-index">{{ index + 1 }}</span>
+          <div>
+            <strong>{{ step.title }}</strong>
+            <p>{{ step.text }}</p>
+          </div>
+        </li>
+      </ol>
+
+      <h2>产物</h2>
+      <div class="evidence-actions">
+        <el-button size="small" type="primary" plain @click="downloadSchema">下载 JSON</el-button>
+        <el-button size="small" @click="copyCommand">{{ commandCopied ? '已复制命令' : '复制复现命令' }}</el-button>
+        <span class="evidence-hint">
+          {{ story.product.lines }} 行 · {{ productKb }} KB · {{ story.product.functions }} 个函数
+        </span>
+      </div>
+      <p class="evidence-note">{{ story.product.note }}</p>
+      <div class="evidence-counts">
+        <span v-for="(count, key) in story.product.counts" :key="key">{{ count }} {{ countLabel[key] }}</span>
+      </div>
+      <pre class="evidence-command"><code>{{ story.repro.command }}</code></pre>
+      <p class="evidence-note">{{ story.repro.note }}</p>
+
+      <h2>实测数据</h2>
+      <p class="evidence-note">
+        核对日期 {{ story.evidence.measuredAt }}。下面每一条都写清了口径；能在产物里重算的数字，
+        守卫每次跑都会重算一遍。
+      </p>
+      <div class="evidence-metrics">
+        <div v-for="metric in story.evidence.metrics" :key="metric.label" class="evidence-metric">
+          <div class="evidence-metric-value">{{ metric.value }}</div>
+          <div class="evidence-metric-label">{{ metric.label }}</div>
+          <p class="evidence-metric-basis">{{ metric.basis }}</p>
+        </div>
+      </div>
+
+      <h2>边界与不承诺</h2>
+      <ul class="evidence-boundaries">
+        <li v-for="item in story.boundaries" :key="item.title">
+          <strong>{{ item.title }}</strong>{{ item.text }}
+        </li>
+      </ul>
+
+      <details class="evidence-terms">
+        <summary>术语（内部代号不放进标题）</summary>
+        <dl>
+          <template v-for="item in story.terms">
+            <dt :key="`${item.term}-t`">{{ item.term }}</dt>
+            <dd :key="`${item.term}-d`">{{ item.meaning }}</dd>
+          </template>
+        </dl>
+      </details>
+    </section>
   </div>
 </template>
 
@@ -61,6 +125,8 @@ import { Message, MessageBox } from 'element-ui'
 // 单源：由 scripts/sync-cases.mjs 从 docs/cases/generated/ 分发，禁止手改
 import schema from '@/cases/generated/purchase-approval.json'
 import meta from '@/cases/generated/purchase-approval.meta.json'
+// 证据叙事（方法/产物/实测数据/边界/术语）：单源分发，三站同一份字节
+import story from '@/cases/generated/purchase-approval.story.json'
 import {
   approveRequest,
   createHttpRequest,
@@ -96,9 +162,14 @@ export default {
       withAudit: true,
       schema,
       meta,
+      story,
       schemaVisible: false,
       schemaText,
-      schemaSize: (new Blob([schemaText]).size / 1024).toFixed(1),
+      // 产物体积印 story 里的数字（对着文件重算过），不现算 stringify 后的长度 ——
+      // 两者会打架：文件 7.8 KB，重新排版后 11 KB（旗舰页同样的坑）
+      productKb: (story.product.bytes / 1024).toFixed(1),
+      countLabel: { formItems: '个查询项', columns: '列', dialogs: '个弹窗', buttons: '个按钮', reactions: '条联动' },
+      commandCopied: false,
       // 函数不进 schema：请求能力走组件 prop（真实项目可改为全局 httpRequest 配置）
       mockHttp: createSiteHttp(),
     }
@@ -119,6 +190,33 @@ export default {
     configureEsPlus({ permission: () => true })
   },
   methods: {
+    async copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text)
+      } catch {
+        // 非安全上下文（http 直连 IP / 老浏览器）没有 clipboard：退回 execCommand
+        const area = document.createElement('textarea')
+        area.value = text
+        document.body.appendChild(area)
+        area.select()
+        document.execCommand('copy')
+        area.remove()
+      }
+    },
+    async copyCommand() {
+      await this.copyText(this.story.repro.command)
+      this.commandCopied = true
+      setTimeout(() => { this.commandCopied = false }, 2000)
+    },
+    downloadSchema() {
+      const blob = new Blob([this.schemaText], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'purchase-approval.json'
+      link.click()
+      URL.revokeObjectURL(url)
+    },
     refresh(text) {
       this.$refs.crudRef?.refresh?.()
       Message.success(text)
@@ -238,6 +336,212 @@ export default {
     overflow: auto;
     font-size: 12px;
     line-height: 1.6;
+  }
+}
+
+/* T5 证据段：方法 → 产物 → 实测数据 → 边界 → 术语（折叠）。
+   与旗舰案例（T4）同名同构，只换这套站的色板。 */
+.ai-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 8px 0 12px;
+}
+
+.ai-evidence {
+  margin-top: 40px;
+  padding-top: 8px;
+  border-top: 1px solid #ebeef5;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 36px 0 12px;
+  }
+
+  h2:first-child { margin-top: 24px; }
+}
+
+.evidence-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+
+  li {
+    display: flex;
+    gap: 12px;
+    border: 1px solid #ebeef5;
+    border-radius: 6px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+
+  strong {
+    display: block;
+    font-size: 14px;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #606266;
+  }
+}
+
+.step-index {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--es-brand-primary, #409eff);
+  color: #fff;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.evidence-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.evidence-hint,
+.evidence-note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #909399;
+}
+
+.evidence-note {
+  max-width: 78ch;
+  margin: 8px 0 12px;
+}
+
+.evidence-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-bottom: 12px;
+
+  span {
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: #f5f7fa;
+    color: #909399;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.evidence-command {
+  margin: 0 0 4px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f6f8fa;
+  color: #606266;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-x: auto;
+
+  code {
+    // 本站全局给 code 定了浅色前景（给深色代码块用的），这里必须显式压回来，
+    // 否则复现命令在浅底上几乎看不见
+    color: #606266;
+    background: transparent;
+    font-family: monospace;
+    white-space: pre;
+  }
+}
+
+.evidence-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.evidence-metric {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.evidence-metric-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  font-variant-numeric: tabular-nums;
+}
+
+.evidence-metric-label {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.evidence-metric-basis {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #909399;
+}
+
+.evidence-boundaries {
+  margin: 0;
+  padding-left: 20px;
+  max-width: 88ch;
+
+  li {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #606266;
+    margin-bottom: 8px;
+  }
+
+  strong {
+    display: inline-block;
+    margin-right: 6px;
+    color: #1a1a2e;
+
+    &::after { content: '：'; }
+  }
+}
+
+.evidence-terms {
+  margin-top: 24px;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 12px 16px;
+
+  summary {
+    cursor: pointer;
+    font-size: 14px;
+    color: #1a1a2e;
+  }
+
+  dl { margin: 12px 0 0; }
+
+  dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    font-family: monospace;
+  }
+
+  dd {
+    margin: 2px 0 10px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #606266;
   }
 }
 </style>

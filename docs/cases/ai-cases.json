@@ -120,7 +120,8 @@
       "artifacts": {
         "schema": "docs/cases/generated/purchase-approval.json",
         "meta": "docs/cases/generated/purchase-approval.meta.json",
-        "mock": "docs/cases/generated/purchase-approval.mock.js"
+        "mock": "docs/cases/generated/purchase-approval.mock.js",
+        "story": "docs/cases/generated/purchase-approval.story.json"
       },
       "replay": {
         "kind": "unavailable",
