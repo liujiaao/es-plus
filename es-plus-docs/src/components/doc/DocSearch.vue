@@ -24,7 +24,19 @@
 
       <div class="search-results" v-if="searchQuery">
         <div v-if="results.length === 0" class="no-results">
-          {{ t('search.noResults') }}
+          <p>{{ t('search.noResults') }}</p>
+          <!-- 空结果也给出下一步：空态的建议词在这里同样可点，不让用户对着「没找到」发呆 -->
+          <div class="quick-links suggest-links">
+            <button
+              v-for="s in suggestions"
+              :key="s"
+              type="button"
+              class="suggestion-chip"
+              @click="searchQuery = s"
+            >
+              {{ s }}
+            </button>
+          </div>
         </div>
         <div v-else class="results-list" ref="resultsListRef">
           <div
@@ -36,7 +48,7 @@
             @mouseenter="selectedIndex = index"
           >
             <div class="result-row">
-              <span class="result-category" :class="`cat-${result.category}`">{{ result.category }}</span>
+              <span class="result-category" :class="`cat-${result.category}`">{{ categoryLabel(result.category) }}</span>
               <span class="result-title" v-html="highlight(result.title)" />
             </div>
             <div v-if="result.content" class="result-snippet" v-html="highlight(result.content)" />
@@ -81,6 +93,30 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>{{ t('search.quickUseDialog') }}</span>
           </div>
+          <div class="quick-link" @click="navigateTo('/cases')">
+            <el-icon><Files /></el-icon>
+            <span>{{ t('search.quickCases') }}</span>
+          </div>
+          <div class="quick-link" @click="navigateTo('/ai-crud')">
+            <el-icon><MagicStick /></el-icon>
+            <span>{{ t('search.quickAiCrud') }}</span>
+          </div>
+          <div class="quick-link" @click="navigateTo('/playground')">
+            <el-icon><Cpu /></el-icon>
+            <span>{{ t('search.quickPlayground') }}</span>
+          </div>
+        </div>
+        <div class="tips-title">{{ t('search.trySearch') }}</div>
+        <div class="quick-links suggest-links">
+          <button
+            v-for="s in suggestions"
+            :key="s"
+            type="button"
+            class="suggestion-chip"
+            @click="searchQuery = s"
+          >
+            {{ s }}
+          </button>
         </div>
       </div>
     </div>
@@ -92,9 +128,16 @@ import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Fuse from 'fuse.js'
-import { docsData } from '@/docs/doc-registry'
+import {
+  buildCaseEntries,
+  buildExampleEntries,
+  buildFixedEntries,
+  buildGuideEntries,
+  type SearchCategory,
+  type SearchEntry,
+} from '@/utils/search-index'
 
-const { t, locale } = useI18n()
+const { t, tm, locale } = useI18n()
 
 const RECENT_KEY = 'es-plus-doc-recent-search'
 const RECENT_MAX = 5
@@ -153,79 +196,63 @@ const highlight = (text: string) => {
   return escapeHtml(text).replace(pattern, '<mark>$1</mark>')
 }
 
-interface SearchEntry {
-  title: string
-  path: string
-  category: string
-  content: string
-  level: number
-}
+// 索引口径见 utils/search-index.ts。这里只做三件事：装载、按需补组件/高级页、交互。
+// 组件 / 高级页的 `.data.ts` 把 103 个示例 SFC 原文（约 680KB）eager 打进模块，
+// 不能进首屏包 —— 用户第一次打开搜索时再 import，之后走浏览器缓存。
+const baseEntries = ref<SearchEntry[]>([])
+const exampleEntries = ref<SearchEntry[]>([])
+let exampleLoading: Promise<void> | null = null
 
-// Match Doc.vue's heading-id slugify logic exactly
-const slugify = (text: string) =>
-  text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
-
-// 搜索索引**只**来自指南注册表：与 Doc.vue 渲染的路由同源。
-// 此前按 @/docs/*.md 全量 glob 建索引，于是 *.en.md、migrate-v1.4.md、crud-page.md
-// 这些没有路由的文件也会出现在结果里，点进去是「页面未找到」。
-const buildIndex = (): SearchEntry[] => {
-  const entries: SearchEntry[] = []
+const rebuildBase = () => {
   const isEn = locale.value === 'en-US'
-  for (const slug of Object.keys(docsData)) {
-    const doc = docsData[slug]
-    const raw = isEn && doc.contentEn ? doc.contentEn : doc.content
-    const pageTitle = (isEn && doc.titleEn) || doc.title
-    const category = '指南'
-    const routePath = `/guide/${slug}`
+  baseEntries.value = [
+    ...buildGuideEntries(isEn),
+    ...buildFixedEntries(),
+    // 案例目录只有中文正文：英文站不索引，免得搜出「摘要与查询语言无关」的噪音
+    ...(isEn ? [] : buildCaseEntries()),
+  ]
+}
+rebuildBase()
+// 语言切换后重建索引，否则英文站搜到的仍是中文正文
+watch(locale, rebuildBase)
 
-    // Strip code blocks before scanning headings, so `## ` inside fences doesn't trigger
-    const stripped = raw.replace(/```[\s\S]*?```/g, '')
-    const lines = stripped.split('\n')
-
-    let pageHeading = ''
-    const headings: { level: number; text: string; lineIdx: number }[] = []
-    lines.forEach((line, idx) => {
-      const m = /^(#{1,3})\s+(.+?)\s*$/.exec(line)
-      if (m) {
-        const level = m[1].length
-        const text = m[2].replace(/[*_`]/g, '').trim()
-        if (level === 1 && !pageHeading) pageHeading = text
-        headings.push({ level, text, lineIdx: idx })
-      }
-    })
-
-    headings.forEach((h, i) => {
-      const next = headings[i + 1]
-      const bodyLines = lines.slice(h.lineIdx + 1, next ? next.lineIdx : h.lineIdx + 20)
-      const content = bodyLines
-        .join(' ')
-        .replace(/[#>*_`|\-]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 200)
-
-      const path = h.level === 1 ? routePath : `${routePath}#${slugify(h.text)}`
-      entries.push({
-        title: h.level === 1 ? h.text : `${pageHeading || pageTitle} › ${h.text}`,
-        path,
-        category,
-        content,
-        level: h.level,
-      })
-    })
-  }
-  return entries
+const ensureExampleIndex = () => {
+  if (exampleEntries.value.length || exampleLoading) return
+  exampleLoading = (async () => {
+    try {
+      const [{ docsData: componentDocs }, { docsData: advancedDocs }] = await Promise.all([
+        import('@/views/component-doc.data'),
+        import('@/views/advanced-doc.data'),
+      ])
+      exampleEntries.value = [
+        ...buildExampleEntries(componentDocs, '/components', 'component'),
+        ...buildExampleEntries(advancedDocs, '/advanced', 'advanced'),
+      ]
+    } catch (e) {
+      // 索引加载失败不该让搜索不可用：指南/案例/固定页仍在
+      console.warn('[DocSearch] 组件索引加载失败', e)
+    }
+  })()
 }
 
-const searchData = ref<SearchEntry[]>(buildIndex())
-// 语言切换后重建索引，否则英文站搜到的仍是中文正文
-watch(locale, () => { searchData.value = buildIndex() })
+const searchData = computed(() => [...baseEntries.value, ...exampleEntries.value])
+
+/** 空态建议词：中英各一份，写在 locale 里，改文案不用改组件 */
+const suggestions = computed<string[]>(() => {
+  const list = tm('search.suggestions')
+  return Array.isArray(list) ? (list as string[]) : []
+})
+
+const categoryLabel = (category: SearchCategory) => t(`search.cat.${category}`)
 
 const fuse = computed(() => new Fuse(searchData.value, {
   keys: [
     { name: 'title', weight: 0.6 },
     { name: 'content', weight: 0.3 },
-    { name: 'category', weight: 0.1 },
+    // 路径参与检索：「mcp」「es-form」这类词直接落在 URL 里；
+    // 分类用本地化文案而不是内部 key（搜「组件」要命中，搜 component 也要命中）
+    { name: 'path', weight: 0.05 },
+    { name: 'category', weight: 0.05, getFn: (item: SearchEntry) => categoryLabel(item.category) },
   ],
   threshold: 0.4,
   ignoreLocation: true,
@@ -237,6 +264,12 @@ const results = computed(() => {
   return fuse.value.search(searchQuery.value).slice(0, 30).map(r => r.item)
 })
 
+// 一边打字一边把组件索引补上：首次打开时 lazy chunk 还没回来，
+// 用户往往直接输入关键词，不能等他关掉重开才搜得到组件。
+watch(searchQuery, (q) => {
+  if (q) ensureExampleIndex()
+})
+
 const dialogVisible = computed({
   get: () => props.visible,
   set: (val) => emit('update:visible', val)
@@ -246,6 +279,8 @@ const handleOpen = () => {
   searchQuery.value = ''
   selectedIndex.value = 0
   recentQueries.value = loadRecent()
+  // 打开即预取组件/高级索引（用户此时还没打字，数据在路上，输入时基本已就绪）
+  ensureExampleIndex()
   setTimeout(() => {
     searchInputRef.value?.focus()
   }, 100)
@@ -380,12 +415,24 @@ watch(searchQuery, () => {
     color: var(--primary-color);
     flex-shrink: 0;
 
-    &.cat-组件 {
+    // 分类色按「内容层级」分组：文档类用中性色，组件/高级用品牌绿，案例/AI 用紫色系
+    &.cat-component,
+    &.cat-advanced {
       background-color: rgba(103, 194, 58, 0.12);
       color: var(--success-color, #67c23a);
     }
 
-    &.cat-文档 {
+    &.cat-case {
+      background-color: rgba(230, 162, 60, 0.14);
+      color: #b88230;
+    }
+
+    &.cat-ai {
+      background-color: rgba(111, 66, 193, 0.12);
+      color: #6f42c1;
+    }
+
+    &.cat-tool {
       background-color: rgba(144, 147, 153, 0.16);
       color: var(--text-color-secondary);
     }
@@ -497,11 +544,41 @@ watch(searchQuery, () => {
   }
 }
 
+/* 建议词：点一下就把词填进输入框，比「自己再想一个关键词」省一步 */
+.suggest-links {
+  margin-top: 8px;
+}
+
+.suggestion-chip {
+  padding: 6px 12px;
+  border: 1px dashed var(--border-color-lighter);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-style: solid;
+    border-color: var(--primary-color);
+    background-color: var(--fill-color-light);
+  }
+}
+
 :deep(.el-dialog__header) {
   display: none;
 }
 
 :deep(.el-dialog__body) {
   padding: 0;
+}
+</style>
+
+<!-- 全局：el-dialog teleport 到 body，scoped 选择器够不到。600px 固定宽在 390px
+     视口下左侧被裁掉（搜索框图标与首字看不见），按视口收窄。 -->
+<style>
+.doc-search-dialog {
+  max-width: calc(100vw - 24px);
 }
 </style>

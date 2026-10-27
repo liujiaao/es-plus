@@ -63,7 +63,20 @@
     "quickGettingStarted": "快速开始",
     "quickEsForm": "EsForm 表单",
     "quickEsTable": "EsTable 表格",
-    "quickUseDialog": "useDialog 弹窗"
+    "quickUseDialog": "useDialog 弹窗",
+    "quickCases": "核心案例",
+    "quickAiCrud": "AI 生成器",
+    "quickPlayground": "Playground",
+    "trySearch": "试试搜这些",
+    "suggestions": ["表单联动", "权限", "分页", "虚拟滚动", "弹窗", "MCP"],
+    "cat": {
+      "guide": "指南",
+      "component": "组件",
+      "advanced": "高级",
+      "case": "案例",
+      "ai": "AI",
+      "tool": "工具"
+    }
   },
   "breadcrumb": {
     "home": "首页",

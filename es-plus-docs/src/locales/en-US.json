@@ -63,7 +63,20 @@
     "quickGettingStarted": "Quick Start",
     "quickEsForm": "EsForm",
     "quickEsTable": "EsTable",
-    "quickUseDialog": "useDialog"
+    "quickUseDialog": "useDialog",
+    "quickCases": "Core cases",
+    "quickAiCrud": "AI generator",
+    "quickPlayground": "Playground",
+    "trySearch": "Try searching for",
+    "suggestions": ["linkage", "permission", "pagination", "virtual scroll", "dialog", "MCP"],
+    "cat": {
+      "guide": "Guide",
+      "component": "Component",
+      "advanced": "Advanced",
+      "case": "Case",
+      "ai": "AI",
+      "tool": "Tool"
+    }
   },
   "breadcrumb": {
     "home": "Home",
