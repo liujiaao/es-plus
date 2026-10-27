@@ -13,12 +13,12 @@
 | 硬指标 | 现状 | 判定 |
 |---|---|---|
 | **编译率 100%** | `216/216`（zh CRUD）· `63/63`（片段）· `22/22`（PRD），Tier A 真编译且**进门禁** | ✅ **已达**。缺口在**覆盖面**（en 腿不进分母、typecheck 只抽样 30），不在数字 |
-| **准确率 ≥95%** | `definition95 = 22.7%（44/194）`；zero-edit 腿 `19.6%（38/194）` | ❌ 未达，且**当前这个 22.7% 里有一大半不是模型能力问题** |
+| **准确率 ≥95%** | `definition95 = 22.7%（44/194）`；zero-edit 腿 `19.6%（38/194）` | ❌ 未达，且**当前这个 22.7% 里有一大半不是模型能力问题**；更要紧的是**语料 + 尺子自己把上限压到 83.5%**（32 个 heldout 行钉了 NL 没说也推不出的值，§9 D15） |
 | **全场景** | 四场景语料+编译齐了，但**准确率只有 CRUD 腿进门禁**；片段腿 55.6%，其中 **28 行失败全部由 `propSet` 决定**（`core == scoped == stated == propSet == 35/63`） | ⚠️ 可测 ≠ 测对了：片段腿不是"模型不会"，是**同一把尺子的同一个缺陷**（D6） |
 
 **根因排序（今日复算 + 既有日志，可复现）**
 
-1. **尺子**：字段身份按 `prop` 精确判等，而 `prop` 在 NL 里**只出现 3.8%**（40/1041），`label` 出现 **98.4%**（1024/1041）⟹ 零编辑腿被**结构性封顶**。**片段腿用的是同一把尺子**（`fragment-scorers.mjs:93` 同样以 `prop` 建索引），而片段腿的 28 行失败**全部**由 `propSet` 决定（`scoped == stated == core == byDim.propSet == 35/63`，见 D6）——两条腿是**同一个根因**，不是两个缺陷。
+1. **尺子**：字段身份按 `prop` 精确判等，而 `prop` 在 NL 里**只出现 2.1%**（22/1041 严格匹配；忽略大小写才 40/1041 = 3.8%），`label` 出现 **98.4%**（1024/1041）⟹ 零编辑腿被**结构性封顶**。**片段腿用的是同一把尺子**（`fragment-scorers.mjs:93` 同样以 `prop` 建索引），而片段腿的 28 行失败**全部**由 `propSet` 决定（`scoped == stated == core == byDim.propSet == 35/63`，见 D6）——两条腿是**同一个根因**，不是两个缺陷。
 2. **掩码**：`25` 个用例把 `membership` 钉进 `pinnedDims`，而这 **25 条的 NL 里没有一处查询措辞**；`pinnedDims ⊆ nlStatedDims` 这条不变量片段腿/弹窗腿都有（`fragment-scorers.test.mjs:390`、`dialog-scorers.test.mjs:96`），**CRUD 腿没有** ⟹ 钉了一个模型推不出来的意图（见 D2）。同源的更广谱现象是 gold 全语料写了 **468** 个 `inQuery:false`，其中 **215** 个落在**没有穷举查询列举**的用例里。
 3. **教学**：`tableBtns`（自定义文案/位置）与 `dialogs` 这两类**NL 明说、gold 也声明**的内容，模型整组不写（3/13、3/15）。
 
@@ -73,7 +73,7 @@
 
 ### D1 · 【尺子·HIGH】字段身份按 `prop` 判等，而 `prop` 不可推断
 
-- **证据（今日复算）**：全语料 1041 个字段，`prop` 字面出现在 NL 的 **40（3.8%）**，`label` **1024（98.4%）**；同一 case 内 `label` **0 重复**（可单射）。
+- **证据（今日复算）**：全语料 1041 个字段，`prop` 字面出现在 NL 的 **22（2.1%）**——忽略大小写才是 **40（3.8%）**，附录命令 №1 复现的是 22（见 §9 C14）；`label` **1024（98.4%）**；同一 case 内 `label` **0 重复**（可单射）。
 - **证据（既有日志）**：`accuracy-95-ruler-v3-design.md:107-125` —— `propF1 < 1` 的 **129/210 行 scoped 通过率 0.0%**，其中 **125 行 gold label 全在 NL 里**；这 129 行被 `columns/isHidden/expandConfig/dialogs/tableBtns/extPoints/editConfig/reactions` 挡住，而这些维度**全部以 prop 为键**。
 - **性质**：尺子缺陷（R2 已裁决：`label` 作身份 + `prop` 降为观测量），**不是放水**——仓库里 PRD 腿、AN-19、AI-46 早已这么判，只有 CRUD 主腿没对齐。
 - **影响**：零编辑腿封顶；`propSet` 36.1%；连带 8 个 prop-keyed 维度大面积假负。
@@ -191,6 +191,9 @@
 | CRUD 掩码补 `nlStatedDims`（照片段腿的字段名与语义）+ `scorers.test.mjs` 加 `pinnedDims ⊆ nlStatedDims` | 造一条「pinnedDims 含 NL 未说的 token」的临时语料 ⟹ meta-eval 红；恢复 ⟹ 绿 |
 | D11 的 6 例正面矛盾逐例人工裁决（改 gold 的 `inQuery`，不改 NL）；`54` 补字段或改 NL | `check:membership-trap` **扩成双向**：穷举列举里的 token 被标 `false` → 红；穷举列举的 token 在 gold 无字段 → 红。修前 6 例红，修后绿 |
 | `153` 的「金额区间」改成「金额」（表达力缺口另见 D12） | 该例 NL 不再要求 schema 表达不了的形态 |
+| **深等值维度的「作者自选值」**（§9 D15）：`columns` 的 `width/fixed/align/autofocus`（11 个 heldout 例）、`expandConfig.title`（11 个）——NL 一个字没说 | 逐例裁决（scorer 做**投影**：未在 NL 声明的键不参与深等值）或移出 pin；变异测试：只改 gold 的 `width`、NL 不动 ⟹ 仍 pass |
+| **迁移面先说清**（§9 C17）：216/216 例都有 `pinnedDims`（857 token），**0** 例有 `nlStatedDims` ⟹ 不变量若**无条件**加会全红 | 临时语料「有 pin 无 stated」⟹ 红；补上 stated ⟹ 绿。且需「凡有 pin 必须带 stated」的完整性规则，否则自报字段形同虚设 |
+| **更细的修法可选**（§9 C18）：语料已有 19 处**字段级** pin 惯用法（`inQuery:createdAt`/`inTable:remark`/`inForm:code`）；`membership` 全维度 pin 是异类 | 把 `162`–`171` 的 `membership` 换成「NL 真说了的那一面/那个字段」，AND 集合仍非空且只含 NL 依据项 |
 
 **预期**：门禁上界 **+9.3pp**（18 个 heldout 行不再被 membership 一票否决；这 25 例同时钉了 `propSet`/`actions`/`mergeConfig`，**实际增幅取决于这些维度**，不是 9.3pp 全收）。`membership` 维度分本身**不变**（仍是 63.4% 量级）—— 阶段 0 只改「能不能一票否决」，不改「模型做得对不对」。这一点必须写进 PR，否则又是一次"分数涨了但不知道涨的是什么"。
 
@@ -202,7 +205,7 @@
 | **`scorers.mjs` 与 `fragment-scorers.mjs` 同批改**走对齐结果（两处 `fieldMap` 都以 prop 建索引：`scorers.mjs:47`、`fragment-scorers.mjs:93`） | 片段腿：gold-vs-gold 仍 63/63；只改名不改 label 的 pred 由红转绿（当前必红） |
 | **`describeDimMiss` 同批改**（`scorers.mjs` / `fragment-scorers.mjs` 的诊断打印器） | 不变量「`want===got` ⟺ 该维 pass」用测试钉住（先例：commit ec0cf50 的同类修复）；否则日志会与新分数自相矛盾 |
 | `pinnedDims` 的**字段级 token**（`formtype:actionType`、`isHidden:supplier`…）经对齐表**解析**，**不改写**语料 | gold 侧 token 被扰动到同 label 异 prop 的字段 ⟹ 仍 pass（证明是"解析"不是"照抄"）；token 引用的 prop 在 gold 里**不存在**时仍红（不许借对齐放行笔误） |
-| `RULER_VERSION → 'label-identity-v2'`；`accuracy-baseline.json` 增 `rulerVersion`，`compareToBaseline` 版本不同则**拒绝比较** | 旧版本基线 + 新尺子 ⟹ 显式报错而非静默相减（D13）；`check:artifact-freshness` 不因版本变化误红 |
+| `RULER_VERSION → 'label-identity-v1'`（`dump.mjs:41` 头注已登记这个串；原稿写 `-v2`，见 §9 C15）；`accuracy-baseline.json` 增 `rulerVersion`，`compareToBaseline` 版本不同则**拒绝比较** | 旧版本基线 + 新尺子 ⟹ 显式报错而非静默相减（D13）；`check:artifact-freshness` 不因版本变化误红 |
 | **`alignFields(lang)`：`en` 腿保持 `prop` 身份**，产物标注 `identity:'prop'`（D14） | en 行：改名不改 label 的 pred **仍红**（如果 label 身份误用到 en，这条会假绿） |
 | `--fixed-fields` 仍为诊断开关 | 同原稿 |
 
@@ -256,6 +259,7 @@ node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/go
 | 阶段完成后 | 预期 `definition95` | 依据 |
 |---|---|---|
 | 今天 | **22.7%** | 产物 |
+| **今天（语料 + 尺子都不动）** | **硬上限 83.5%** | 32 个 heldout 行钉了 NL 没说、也推不出的值（§9 D15）；0 行有 `refinements`，收敛腿兜不住。**这个上限与模型无关** |
 | **0（掩码）** | 22.7% → **≤32.0%** | 上界 +9.3pp（18 个 heldout 行不再被 membership 一票否决）；**真正能收多少取决于这 18 行的 `propSet`/`actions`/`mergeConfig`**，多半收不满 |
 | A（尺子） | 32–45% | 可证下界 +25 行（ruler 文档 §9.1 的 210 行口径）；按 194 行换算约 →35%，不精确 |
 | +D（教学） | 45–70% | tableBtns/dialogs/columns 从 3/13、3/15、4/32 抬到 60%+ |
@@ -285,6 +289,7 @@ node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/go
 - ❌ **不改 gold 去迎合模型**——**唯一例外是 D11 那 6 例**：那是 gold 与自己的 NL 正面矛盾，改的是 gold 且逐例人工裁决。
 - ❌ **不为了「让 membership 好看」改收敛语料的 NL**（它们是收敛腿的铰链，见 §8 C8）。
 - ❌ **不混用历史数字**（55.5% / 22.7% / 93.7% 三个数各自的口径在 §1 已写明）。
+- ❌ **不把深等值维度的作者自选值当能力缺口去调 prompt**：`columns.width/fixed/align`、`expandConfig.title` 先做「未声明键不参与比较」的投影（§9 D15），再谈教学。
 
 ---
 
@@ -299,6 +304,7 @@ node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/go
 | 夜间一直是断的 | 无徽章回写 | 阶段 G 的健康门 + 无条件上传 pred artifact；判定依据是 Actions 日志不是提交时间 |
 | 换尺子后基线失真 | `rulerVersion` 不一致仍相减 | D13：`compareToBaseline` 拒绝跨版本比较 |
 | 95% 长期不可达 | 阶段 D 后 <70% | 决策点：评审语料代表性，或承认 95% 是 ∨ + 收敛口径下的目标 |
+| 深等值维度被当成能力缺口 | `columns` / `expandConfig` 长期低位 | 先投影再谈教学：11 + 11 行的 gold 值 NL 没说、模型推不出（D15）；`columns` 真实上限 = 21/32 |
 
 ---
 
@@ -374,3 +380,106 @@ node -e "const a=require('./__tests__/golden/last-accuracy.json');console.log(a.
 - `accuracy-baseline.json` 的百分比字段**刻意留 null**、只由人工 PR 写 ⟹ 棘轮改值不能由脚本回写。
 - 25 个 membership pin 的用例**全部没有 `refinements`** ⟹ 它们拿不到收敛腿的兜底，membership 一错就是整行丢。
 - 严格保留：**本报告不改任何语料、不动任何 scorer、不跑模型**——以上全部只靠读语料与读产物得出。
+
+---
+
+## 9. 三轮复核（源码 + 能力面 + 报告自校，2026-10-27 晚）
+
+> 这一轮的三个动作：① 把 §0–§8 的每个数字从语料现场重算；② 读**打分器与保护守卫的实现**（不只是产物）；③ 把「AI 原生支持能力」当被测面，问一句「语料+尺子**能不能**让这一行变绿」。
+> 结论先放前面：**第三问给出了一个与模型无关的硬上限 83.5%** —— 这是本轮最重要的发现（D15），它把「95% 很难」改写成「95% 现在不可能」。
+
+### ❌ 更正（§0–§8 里写错的）
+
+| # | 原文 | 更正 | 影响 |
+|---|---|---|---|
+| **C14** | D1：「`prop` 在 NL 里只出现 **40（3.8%）**」 | 附录命令 №1 复现的是 **22（2.1%）**。40 是**忽略大小写**的计数（`nl.toLowerCase().includes(prop.toLowerCase())`）。结论方向不变（label 98.4%），但数字必须写成两档 | D1 证据 + 根因 1 已改 |
+| **C15** | 阶段 A：`RULER_VERSION → 'label-identity-v2'` | `dump.mjs:41` 的版本台账里登记的是 **`label-identity-v1`**。写 v2 会让实施者以为有两个版本 | 阶段 A 已改 |
+| **C16** | D2：「25 个 membership pin ⟹ 18 heldout ⟹ 上限 +9.3pp」 | 25 例要拆成两类：**10 例（`162`–`171`）gold 显式收窄**（16 个 `inQuery:false`）——这是**真的不可推断**；**15 例（`172`–`186`）gold 等同于 schema 默认**（一个 false 都没有）⟹ `membership` 与 `propSet` **冗余**（pred 字段集对齐后不写 `inQuery` 就默认 true，必然命中），它们失败只可能是模型自己收窄了查询 | 摘 pin 的**理由**要分开写：10 例是公平性，15 例是冗余；收益上界仍是 9.3pp，但能被摘出来的确定收益 ≤**5.2pp**（10 行） |
+
+### ➕ 补漏（本轮新发现）
+
+#### D15 · 【掩码·HIGH（本轮最重要）】深等值维度把**作者自选的展示值**钉进门禁 ⟹ `definition95` 的硬上限 = **83.5%**
+
+- **机制**：`columns` / `expandConfig` / `treeConfig` / `mergeConfig` / `editConfig` 的判定是**整体深等值**（`eq(g.x, p.x)`，`scorers.mjs:24-35` 的 `canon` 只按键排序列化，不清洗值）。而 `ColumnSchema` 与 `expandConfig` 把 `width/align/fixed/sortable/autofocus/title` 都声明成了**一等键**（`structured-config.schema.ts:300-307,355`）⟹ 这些值既不会被 zod 剥掉，也不会被生成器填成 gold 的值。
+- **证据（今日复算，全部 heldout）**：
+
+| 桶 | 行数 | gold 里的值 | NL 依据 |
+|---|---|---|---|
+| A `membership` + gold `inQuery:false` | **10**（`162`–`171`，16 个字段） | 哪个字段不在查询栏 | **0/10** 有查询措辞 |
+| B `columns` 深等值 | **11**（`48/50/52/54/55/57/58/60/61/87/103`） | 数据列 `width`（100/80/120/180…）、`fixed`、`align`、`autofocus` | **0/11** 提到宽度/固定/对齐 |
+| C `expandConfig.title` | **11**（`62/64/65/66/68/69/70/72/73/75/76`） | 标题串（联系方式/出版信息/车主与保险…） | **0/11** 的 NL 里出现该串 |
+
+- **算术**：三桶并集 **32 行 / 194 = 16.5pp** ⟹ **`definition95 ≤ 83.5%`**，且这 32 行**全部没有 `refinements`** ⟹ 收敛腿兜不住。若把 few-shot 里**已经教过**的 `index:60 / selection:50` 也计入（宽口径），是 **36 行 ⟹ ≤81.4%**。
+- **为什么这比 D2 更严重**：① 面更大（32 vs 25 行）；② 阶段 A（label 身份）**完全治不了**它——对齐只解决「这个字段是谁」，解决不了「作者为什么给课时列 `width:100`」；③ 它让 `columns` 的真实上限 = **21/32**（32 个 pin 里 11 个不可能过），所以 §5 的「+D 把 columns 从 12.5% 抬到 60%+」**结构上做不到**。
+- **可辩解的边界**（别把它当成放水）：`48` 这类 **NL 穷举了两级表头**的例，`columns` 的内容是**可推断**的——不可推断的只有 `width:100` 这一项。所以修法**不是**「不考 columns」，而是「考 NL 说了的部分」。
+- **修法**：`columns`/`expandConfig` 改**投影比较**——只比 NL 可推断的键（prop/label/groups 结构/`editRender.name`+`props.type`/`type`），`width/fixed/align/sortable/autofocus`/`title` 默认**不参与**；如某例确实要考（NL 明写「标签宽 90px」式的），走 `ADJUDICATED` 逐例登记。这条与守卫既有的「宁可漏，不可误红」同一条原则。
+
+#### D16 · 【守卫·MED】双向 membership 守卫按现抽取器会**误红 3 例** ⟹ 阶段 0 的验收写错了
+
+- **证据（今日复算，用仓库自己的 `extractSurfaceList`）**：反向扫描得到 **5 个 `false` 命中 + 6 个「gold 无此字段」**，但其中 3 例是**抽取器假阳**：
+
+| 用例 | 抽取到的 token | 真因 |
+|---|---|---|
+| `09-audit-readonly` | 操作时间**范围** | 字段是 `操作时间`——「查询有…**范围**」的区间后缀 |
+| `18-notice-custom-dialog` | **公告**标题、发布时间**范围** | 字段是 `标题`（实体前缀）、`发布时间`（区间后缀） |
+| `39-swap-hidden-eq` | **条件**员工姓名 | NL 写「查询**有条件**员工姓名」，`LEADS` 把「查询有条件」当成了「查询有」 |
+
+- ⟹ 阶段 0 的验收「修前 6 例红、修后绿」**按现状不可达**（会先看到 9–10 例红）。守卫必须先定**token→字段解析规则**：去 `范围/区间` 后缀、允许包含匹配（`公告标题` ⊃ `标题`）、`LEADS` 覆盖「查询有条件」。真缺陷仍是 6 例（`59/153/154/155/157/159`）+ `54` 的「会议室」缺字段。
+
+#### 其余补漏
+
+| # | 新发现 | 落在哪 |
+|---|---|---|
+| **C17** | **阶段 0 的迁移面被低估**：216/216 个 CRUD 例都有 `pinnedDims`（共 857 个 token），**0** 例有 `nlStatedDims`。不变量若照片段腿**无条件**加，第一天就 216 例全红。而且 `nlStatedDims` 是**自报字段**（照抄 pin 就能过）⟹ 它只是纪律检查，不是公平性证明；要真锁，得加机检下界（穷举列举 ∨ `ADJUDICATED`） | 阶段 0 增两行 |
+| **C18** | **更细的修法已经存在于语料里**：19 处**字段级** pin（`inQuery:createdAt`×10、`inTable:remark`×5、`inForm:code`×4，全在收敛/精修例上）。`membership` 这种**全维度** pin 是异类 ⟹ 可以把 `162`–`171` 换成「只钉 NL 说了的那一面」 | 阶段 0 增一行 |
+| **C19** | **产物里两个字段名互相误导**：`inSchemaIntentZeroEdit` = **∨ 门禁**（heldout），`inSchemaIntentZeroEditAll` = **core ∧**（all 216）。名字读起来像「同一判据的 heldout / 全集」，实际是**两个不同判据**（`eval-llm.mjs:1670-1676`）。基线/看板若把两者相减，会得到无意义的数 | 建议在 D13 同批加 `metricId` 或改名 |
+| **C20** | `run-metrics.mjs` 的注释与代码不符：注释说 `capRows` 用 `rows`（含 en），实际是 `heldout`（zh 非 few-shot）。`byCapability` 产物（`applicable: 194`）证明代码是后者 | 低优先，但会让复算者怀疑口径 |
+
+### ✅ 复核确认（本轮独立验过，§0–§8 写法正确）
+
+- **D9 的能力矩阵数字**全部对：`41 令牌 / 24 声明式 / 22 前门可达 / 2 仅配置`；15 个三端能力里 **8 个三端 full**；`tableOptions.virtual` = `full/none/full`（vue2 none）；`rowHeight/estimatedRowHeight/overscanCount` = `partial/none/none`。`node scripts/gen-ai-capability-matrix.mjs --check` 通过。
+- **D12 的源码引用对**：生成器里唯一读 `range` 的地方就是 `inferTsType`/`getDefaultValue` 的 `DatePicker/TimePicker` 分支（`structured-generator.ts:2154,2172`）——只有**日期区间**，没有数值区间查询。
+- **CRUD 掩码确实只带 `pinnedDims`**（`eval-llm.mjs:509`），片段腿带 `pinnedDims + statedDims`（`:711-716`）⟹ 不变量缺失这一结构性判断成立。
+- **`check:membership-trap` 确实只咬一个方向**，且它的「宁可漏，不可误红」与 `inForm` 豁免是**刻意**的（头注写明）⟹ §8 里撤掉「每个 false 都要有 NL 依据」那条扩法是对的。
+- **`accuracy-baseline.json` 无 `rulerVersion`**；百分比字段 `null`、只由人工 PR 写 ⟹ D13/棘轮写法的前提成立。
+- **`passed` 组成**（`eval-llm.mjs:1735-1741`）、`exactIntentScoped` 的空掩码退化（`scorers.mjs:640-641`）与 §8 写的一致。
+- **§1 的算术自洽**：`194 = 164 + 30`；`44 = 38 scoped + 6 scripted`；`28/164 = 17.1%`；`185 = 155 + 30`。逐项可对上产物。
+- **25 个 membership pin**：`162`–`186` 连续 25 例；7 例 fewshot-derived（`172/173/176/177/179/181/185`）；前 10 例共 16 个 false；25/25 钉 `propSet`；**0/25** 有 `refinements`。
+- **语料面数字**：`468` 个 `inQuery:false`、其中 `459` 的 label 在 NL、`215` 落在无穷举列举的例；CRUD `103` 穷举 / `113` 不穷举；`144` 有查询措辞 / `72` 无。
+- **归一化 0 冲突**：NFKC+去标点+小写后，1041 个字段在**同一 case 内** 0 碰撞、原始 label 也 0 重复 ⟹ 精确匹配 + 单射可实现，不需要模糊匹配。
+- **片段腿四个数相等**：`core == scoped == stated == byDim.propSet == 0.5556`，`formtype 42/42`，`compileRate 1` ⟹ D6「100% 卡在 propSet」成立。
+- **`frontDoor.noTableExercised = 406/407` 不是缺陷**：它是**正向覆盖计数**（eval 主动清空 table 面去覆盖该分支，只有 == 0 才判红，`eval-llm.mjs:1144`）。下一轮别再把它读成「前门空转」。
+- **en 腿的 prop 可用性**（D14 的量化背书）：191 个带 `nlEn` 的用例里，728 个字段有 **349 个（47.9%）** 的 `prop` 字面出现在 `nlEn`；而 `label` 是中文、在 `nlEn` 里 0 命中 ⟹ 阶段 A 若把 label 身份用到 en 腿，是把一条**能用的**尺子换成一条 **0 命中**的尺子。
+
+### 附：本轮新增的复算命令
+
+```bash
+# 5) 硬上限：钉了「NL 没说也推不出」的值的 heldout 行（今日复算：A=10 / B=11 / C=11，并集 32 ⟹ ≤83.5%）
+node --input-type=module -e "
+import fs from 'node:fs'
+import {pathToFileURL} from 'node:url'
+const u=(p)=>pathToFileURL(process.cwd()+'/'+p).href
+const {FEWSHOT_DERIVED}=await import(u('scripts/eval/fewshot-derived.mjs'))
+const D='__tests__/golden/cases'
+const held=fs.readdirSync(D).filter(f=>f.endsWith('.json')&&!f.startsWith('frag-')&&!f.startsWith('dlg-')&&!FEWSHOT_DERIVED.has(f))
+const bad=new Set()
+for(const f of held){const c=JSON.parse(fs.readFileSync(D+'/'+f,'utf8'));const p=(c.pinnedDims??[]).map(String);const nl=String(c.nl??'')
+  if(p.some(t=>t.startsWith('membership'))&&(c.config.fields??[]).some(x=>x.inQuery===false))bad.add(f)
+  if(p.some(t=>t.startsWith('columns'))){const s=JSON.stringify(c.config.columns??[])
+    const w=(s.match(/\"width\":\\d+/)||[]).length&&!/宽|像素|px/.test(nl)
+    if(w||(/\"(fixed|align|autofocus)\"/.test(s)&&!/固定|对齐/.test(nl)))bad.add(f)}
+  const t=c.config.expandConfig?.title
+  if(p.includes('expandConfig')&&t&&!nl.includes(t))bad.add(f)}
+console.log('hard-capped',bad.size,'/',held.length,'⟹ 上限',(100-bad.size/held.length*100).toFixed(1)+'%')"
+
+# 6) 双向守卫的假阳面（今日复算：09/18/39 是抽取器假阳，54 是真缺陷）
+#    见 §9 D16 —— 用 extractSurfaceList(nl,'inQuery') 的 token 去 gold 里找字段并看 inQuery
+
+# 7) 深等值维度的 heldout 门控面（今日复算：77/194 行至少被一个深等值维度一票否决）
+#    columns 32 / expandConfig 14 / treeConfig 14 / editConfig 14 / mergeConfig 8 / virtualScroll 9 / configTableOut 7
+
+# 8) 能力矩阵（今日复算：41 令牌 / 15 三端能力 / 8 全 full / virtual vue2=none）
+node scripts/gen-ai-capability-matrix.mjs --check
+node -e "const m=require('./docs/ai/ai-capability-matrix.json');const e=Object.entries(m.capabilities);
+console.log(m.stats, e.length, e.filter(([,v])=>Object.values(v.targets).every(t=>t.level==='full')).length)"
+```
