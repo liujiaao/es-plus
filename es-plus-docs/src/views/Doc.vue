@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
 }
 
 .doc-breadcrumb {
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 0 0 16px;
 }
 
@@ -289,14 +289,14 @@ onBeforeUnmount(() => {
 }
 
 .doc-content {
-  max-width: 860px;
+  max-width: var(--es-content-width);
   min-height: 400px;
 }
 
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);

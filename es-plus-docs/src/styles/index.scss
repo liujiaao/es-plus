@@ -1,9 +1,11 @@
 // ES-Plus 文档站点样式
 
 // 布局变量（设计 token 见 design-tokens.css 单一真源）
+// 这里只做**别名**：站点在自己样式里读的是短名字，数值全部来自 token，
+// 三站因此共用同一组栏宽与头高（docs/theme/docs-layout.css 的契约）。
 :root {
-  --header-height: 60px;
-  --sidebar-width: 260px;
+  --header-height: var(--es-header-height);
+  --sidebar-width: var(--es-sidebar-width);
 }
 
 // 基础样式
@@ -18,7 +20,7 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--es-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text-color-primary);

@@ -11,6 +11,7 @@ import http from '@/utils/server/request.js'
 import './styles/element-theme.generated.scss'
 import './assets/design-tokens.css'
 import './assets/docs-content.css'
+import './assets/docs-layout.css'
 Vue.use(ElementUI, { size: 'mini' })
 // vxe-table 3.x —— es-table 的 engine:'vxe' 高性能引擎依赖此库（须先于 EsPlus 注册）
 // vxe-table 3.22.x 采用拆分架构：表格/表头/工具栏来自 vxe-table，而分页器 VxePager、

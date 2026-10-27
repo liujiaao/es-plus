@@ -312,7 +312,7 @@ watch(() => route.fullPath, () => {
 }
 
 .content-wrapper {
-  max-width: 1200px;
+  max-width: calc(var(--es-layout-max) - var(--es-sidebar-width));
   background: #fff;
   border-radius: 8px;
   padding: 32px;
@@ -320,7 +320,7 @@ watch(() => route.fullPath, () => {
 }
 
 .doc-footer {
-  max-width: 1200px;
+  max-width: calc(var(--es-layout-max) - var(--es-sidebar-width));
   padding: 0 32px 24px;
   background: transparent;
 }

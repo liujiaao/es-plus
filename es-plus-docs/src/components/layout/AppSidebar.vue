@@ -120,7 +120,7 @@ const sections = [
 @use '../../styles/breakpoints' as bp;
 
 .app-sidebar {
-  width: 260px;
+  width: var(--es-sidebar-width);
   height: calc(100vh - var(--header-height));
   position: fixed;
   left: 0;

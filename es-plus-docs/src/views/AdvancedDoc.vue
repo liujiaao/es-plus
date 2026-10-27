@@ -193,7 +193,7 @@ usePageMeta(() => ({
 .advanced-doc-page {
   display: flex;
   padding: 24px clamp(16px, 4vw, 48px);
-  max-width: 1200px;
+  max-width: calc(var(--es-layout-max) - var(--es-sidebar-width));
   margin: 0 auto;
 }
 .doc-main {
@@ -202,11 +202,11 @@ usePageMeta(() => ({
   padding-right: 32px;
 }
 .doc-breadcrumb {
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 0 0 16px;
 }
 .doc-header {
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 0 0 24px;
   border-bottom: 1px solid var(--border-color-lighter);
   margin-bottom: 24px;
@@ -222,7 +222,7 @@ usePageMeta(() => ({
   color: var(--text-color-secondary);
 }
 .doc-section {
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 0 0 32px;
 }
 .section-title {
@@ -291,7 +291,7 @@ usePageMeta(() => ({
 .doc-footer-nav {
   display: flex;
   justify-content: space-between;
-  max-width: 860px;
+  max-width: var(--es-content-width);
   padding: 24px 0;
   margin-top: 48px;
   border-top: 1px solid var(--border-color-lighter);

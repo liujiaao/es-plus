@@ -15,6 +15,8 @@ import App from './App.vue'
 import '@/styles/design-tokens.css'
 // 文档内容设计规范单一真源（docs/theme/docs-content.css → scripts/sync-theme.mjs 分发）
 import '@/styles/docs-content.css'
+// 外壳契约单一真源（docs/theme/docs-layout.css → scripts/sync-theme.mjs 分发）
+import '@/styles/docs-layout.css'
 import '@/styles/index.scss'
 
 // dist 模式：别名指向打包产物；源码模式：别名指向空文件（样式由 Vite SCSS 管道处理）。

@@ -1,0 +1,76 @@
+/* ==========================================================================
+ * 文档站外壳（shell）契约 —— 三站共用
+ *
+ * 路线图 1.2。审计 §6.4：三站此前是三套外壳、三种阅读宽度 ——
+ *   主站 260 侧栏 + 1400 内容、AntDV 站 260 侧栏 + 1200 内容、Vue2 站 1200 无侧栏。
+ * 同一个「文档站」，正文宽度差一倍，切换站点像换了一个产品。
+ *
+ * 本文件只做两件事：
+ *   1. 把宽度、正文度量、栅格间距**收敛到 token**（不新增魔法数字）；
+ *   2. 给壳层与正文容器提供一组可复用的类，三站按同一套类名接线。
+ *
+ * 它**不**接管站点既有行为（侧栏何时变抽屉、TOC 何时隐藏、头部何时吸顶）——
+ * 那些由各站自己的媒体查询控制，避免一份样式表跟三套外壳互相打架。
+ * 本文件只保证：同一屏宽下，三站的栏宽、正文度量与留白是同一组数。
+ *
+ * 依赖：docs/tokens/design-tokens.css（--es-layout-max / --es-content-width …）。
+ * 分发：scripts/sync-theme.mjs（禁止手改各站点副本）。
+ * ========================================================================== */
+
+/* ── 1. 外壳 ──
+ * shell = 260（左栏） + minmax(0, 760)（正文） + 220（右栏），整体居中，最大 1440。
+ * 用 max-width + margin-inline:auto 而不是 grid：三站的左右栏一个是 fixed、一个是
+ * a-layout-sider、一个根本没有，只有「外壳本身怎么居中」是共同的。
+ */
+.es-shell {
+  width: 100%;
+  max-width: var(--es-layout-max);
+  margin-inline: auto;
+}
+
+/* ── 2. 三栏 ──
+ * min-width: 0 是给 flex 子项的：正文里的 <pre> / 宽表有 min-content 宽度，
+ * 不写这一条，1fr 会被内容顶宽，整页出现横向滚动条（三站都踩过）。
+ */
+.es-shell-sidebar {
+  flex: 0 0 var(--es-sidebar-width);
+  width: var(--es-sidebar-width);
+}
+
+.es-shell-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.es-shell-toc {
+  flex: 0 0 var(--es-toc-width);
+  width: var(--es-toc-width);
+}
+
+/* ── 3. 正文度量 ──
+ * 中文正文 35–45 字/行 ≈ 760px；宽表、API 表、代码块可以突破到 960，
+ * 但突破的是「元素」，不是「页面」——页面永远不出现横向滚动。
+ */
+.es-doc-measure {
+  max-width: var(--es-content-width);
+}
+
+.es-doc-wide {
+  max-width: var(--es-content-wide);
+}
+
+/* ── 4. 栏间距 ── */
+.es-shell-gutter {
+  gap: var(--es-gutter);
+}
+
+/* ── 5. 窄屏 ──
+ * 单列时宽度交给百分比：760/960 的上限只对「有富余空间」的屏有意义，
+ * 在 320px 上沿用会把内容挤成一条窄柱。
+ */
+@media (max-width: 768px) {
+  .es-doc-measure,
+  .es-doc-wide {
+    max-width: 100%;
+  }
+}

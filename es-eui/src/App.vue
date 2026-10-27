@@ -393,7 +393,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  max-width: 1200px;
+  max-width: var(--es-layout-max);
   padding: 0 20px;
   width: 100%;
 }
@@ -480,7 +480,7 @@ body {
   border-top: 1px solid #e6e6e6;
 
   .container {
-    max-width: 1200px;
+    max-width: var(--es-layout-max);
     margin: 0 auto;
     padding: 0 20px;
   }
@@ -498,7 +498,7 @@ body {
 
 /* 容器 */
 .container {
-  max-width: 1200px;
+  max-width: var(--es-layout-max);
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -511,7 +511,7 @@ body {
 
 /* 侧边栏 */
 .side-nav {
-  width: 260px;
+  width: var(--es-sidebar-width);
   padding: 30px 0;
   border-right: 1px solid #e6e6e6;
   background: #fff;
@@ -557,10 +557,14 @@ body {
 /* 内容区 */
 .content {
   flex: 1;
-  margin-left: 260px;
+  margin-left: var(--es-sidebar-width);
   padding: 30px 40px;
-  max-width: calc(100% - 260px);
+  max-width: calc(100% - var(--es-sidebar-width));
 }
+
+/* 正文度量不在壳层做：各页根节点都带自己的 max-width（1200/1400 不等），
+   壳层的通用规则会被页面级选择器压掉。统一到 760/960 属于路线图 1.3
+   （逐模板改页面根节点），见 docs/theme/docs-layout.css 的 .es-doc-measure / .es-doc-wide。 */
 
 /* 文档标题 */
 .content-title {
