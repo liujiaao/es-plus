@@ -35,16 +35,8 @@
  * 用法：node scripts/check-generator-escaping.mjs
  * 退出码：0 = 全部上下文均已正确转义且守卫自证有效；1 = 发现未转义 / 守卫失效。
  */
-import { mkdtempSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { build, transform } from 'esbuild'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const ROOT = join(__dirname, '..')
-const SHARED_SRC = join(ROOT, 'packages/shared/src')
-const ESCAPE_MODULE = join(SHARED_SRC, 'codegen-escape.ts')
+import { transform } from 'esbuild'
+import { loadGenerator, crippleEscaperSource } from './lib/generator-loader.mjs'
 
 let failed = false
 const fail = (msg) => {
@@ -132,40 +124,7 @@ function buildConfig(target, mode) {
 }
 
 // ── 载入生成器（从 TS 源码直接打包，不依赖 dist） ──────
-/**
- * @param {false | ((source: string, path: string) => string | null)} cripple
- *   传函数时，该函数返回的字符串会**替换**对应源文件内容（用于非空证明：把转义器打成恒等）。
- */
-async function loadGenerator(cripple = false) {
-  const tmp = mkdtempSync(join(tmpdir(), 'es-esc-'))
-  const outfile = join(tmp, 'gen.mjs')
-  const plugin = {
-    name: 'cripple-escaper',
-    setup(b) {
-      if (!cripple) return
-      b.onLoad({ filter: /codegen-escape\.ts$/ }, (args) => {
-        const src = cripple(null, args.path)
-        return src == null ? null : { contents: src, loader: 'ts' }
-      })
-    },
-  }
-  await build({
-    entryPoints: [join(SHARED_SRC, 'structured-generator.ts')],
-    bundle: true,
-    format: 'esm',
-    outfile,
-    platform: 'node',
-    logLevel: 'silent',
-    plugins: plugin ? [plugin] : [],
-    // 同 check-generator-targets：shared/src 传递性引入 CJS 的 esbuild，其 require('fs')
-    // 被改写成 __require shim，而 shim 在 ESM 下没有 ambient require 可用 → 抛
-    // 「Dynamic require of "fs" is not supported」。造一个真 require 让它走首选分支。
-    banner: {
-      js: "import { createRequire as __createRequire } from 'node:module';const require = __createRequire(import.meta.url);",
-    },
-  })
-  return import(pathToFileURL(outfile).href)
-}
+// 单源在 `lib/generator-loader.mjs`（另一个守卫 `check:generator-fuzz` 共用同一份打包）。
 
 // ── 产物切块 ────────────────────────────────────────────
 /** 取出产物里所有 `<script …>…</script>` 块（含其 lang，决定 esbuild 的 loader） */
@@ -509,70 +468,6 @@ async function main() {
     console.error('\n生成器转义守卫失败 —— 产物里存在可被配置撑破的插值点，或守卫自身失效。')
     process.exit(1)
   }
-}
-
-/**
- * 把 `codegen-escape.ts` 的转义器整体替换成恒等实现（只用于非空证明）。
- * 保留 `BARE_IDENTIFIER` 与 `qMember` 的类型形状，否则生成器自身会先崩掉、掩盖真问题。
- *
- * `assertEmittableExpr` **刻意保留真实现**：它不是转义器，而是「发射前语法闸」。
- * 若连它一起恒等（恒返回 true），非空证明后的「守卫变红」就可能只源于它放行了垃圾串，
- * 而转义器该有的约束力一点没被证明 —— 证明会变得空洞。故这里原样复刻真实现
- * （见 codegen-escape.ts:186），只换转义器。
- */
-function crippleEscaperSource(path) {
-  return `// ⚠️ 由 check-generator-escaping.mjs 的非空证明临时注入：全部转义器 = 恒等函数
-import { transformSync } from 'esbuild'
-export const BARE_IDENTIFIER = /^[A-Za-z_$][\\w$]*$/
-const id = (v) => String(v)
-export function q(value) { return "'" + id(value) + "'" }
-export function qBt(value) { return "\`" + id(value) + "\`" }
-export function qAttr(value) { return '"' + id(value) + '"' }
-// 双引号属性里的表达式只实体化双引号字符（其余保持原样给 Volar/TS 解析，见真实现头注）；
-// 恒等化即「不挡双引号」—— 非空证明要证明的正是这一类失效。
-export function qExprAttr(value) { return id(value) }
-// 插槽名可表达性判定 = emission 安全层的一部分：恒等化为「永远可表达」，让引号/空白 prop
-// 重新走进静态插槽名 —— 非空证明要证明的正是这一层不在了守卫就会红。
-export function isStaticSlotNameSafe() { return true }
-export function qKey(prop) { return BARE_IDENTIFIER.test(prop) ? prop : "'" + prop + "'" }
-export function qMember(prop) { return BARE_IDENTIFIER.test(prop) ? "." + prop : "['" + prop + "']" }
-export function qMustache(value) { return "'" + id(value) + "'" }
-export function numOrStr(v) { return typeof v === 'number' ? String(v) : "'" + v + "'" }
-export function sanitizeForComment(src) { return String(src) }
-export function inlineJson(value, space) { return JSON.stringify(value, null, space) }
-export function findNonJsonValues(value, path = '') {
-  // 与 assertEmittableExpr 同理：它**不是**转义器，而是「无法 JSON 化的成员」探测器，
-  // 必须保留真实现 —— 换掉它会让 btns/expandConfig/editRender 的告警路径在非空证明里失真。
-  const at = (key) => /^[A-Za-z_$][\\w$]*$/.test(key) ? (path ? path + '.' + key : key) : path + '[' + JSON.stringify(key) + ']'
-  if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') return [path || '(root)']
-  if (value === null || typeof value !== 'object') return []
-  if (Array.isArray(value)) {
-    const out = []
-    value.forEach((v, i) => {
-      if (!(i in value) || v === undefined) out.push(path + '[' + i + ']')
-      else out.push(...findNonJsonValues(v, path + '[' + i + ']'))
-    })
-    return out
-  }
-  const out = []
-  for (const [k, v] of Object.entries(value)) {
-    if (v === undefined) continue
-    out.push(...findNonJsonValues(v, at(k)))
-  }
-  return out
-}
-export function assertEmittableExpr(src) {
-  for (const loader of ['tsx', 'ts']) {
-    try {
-      transformSync('const __esplus_probe = (' + src + ');', { loader: loader })
-      return true
-    } catch (e) {
-      // 换下一个 loader 再试
-    }
-  }
-  return false
-}
-`
 }
 
 main().catch((e) => {
