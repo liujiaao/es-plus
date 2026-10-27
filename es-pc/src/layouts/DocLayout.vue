@@ -140,8 +140,55 @@
 
       <!-- 内容区域 -->
       <a-layout-content class="doc-content">
-        <div class="content-wrapper es-doc-content">
-          <router-view />
+        <!-- 文档页走「正文 + 右栏目录」两栏（.es-doc-with-toc 由 docs-chrome.css 定义），
+             首页/案例/画廊这类非文档页不登记在 DOC_NAV 里，左侧单独占满、不渲染 chrome。 -->
+        <div class="content-wrapper es-doc-content es-doc-with-toc">
+          <div class="es-doc-body">
+            <!-- 面包屑：分组来自 DOC_NAV，是非文档页时整块不渲染 -->
+            <nav v-if="docEntry" class="es-doc-crumbs" aria-label="面包屑">
+              <router-link to="/">首页</router-link>
+              <span class="es-doc-crumbs-sep">/</span>
+              <span>{{ docEntry.group }}</span>
+              <span class="es-doc-crumbs-sep">/</span>
+              <span class="is-current">{{ docEntry.title }}</span>
+            </nav>
+
+            <router-view />
+
+            <!-- 上下篇：顺序即 DOC_NAV 的阅读顺序（指南 → 组件 → 高级 → AI 工具链） -->
+            <nav v-if="prevDoc || nextDoc" class="es-doc-pager" aria-label="上下篇">
+              <router-link v-if="prevDoc" :to="`/${prevDoc.key}`" class="es-doc-pager-link">
+                <span class="es-doc-pager-label">← 上一篇</span>
+                <span class="es-doc-pager-title">{{ prevDoc.title }}</span>
+              </router-link>
+              <router-link v-if="nextDoc" :to="`/${nextDoc.key}`" class="es-doc-pager-link is-next">
+                <span class="es-doc-pager-label">下一篇 →</span>
+                <span class="es-doc-pager-title">{{ nextDoc.title }}</span>
+              </router-link>
+            </nav>
+
+            <DocMeta
+              v-if="docEntry"
+              :source-path="docEntry.source"
+              :title="docEntry.title"
+              :updated="updated"
+            />
+          </div>
+
+          <!-- 右栏目录：<1280px 由 docs-chrome.css 收起 -->
+          <aside v-if="docEntry && toc.length" class="es-doc-toc">
+            <div class="es-doc-toc-title">本页目录</div>
+            <router-link
+              v-for="heading in toc"
+              :key="heading.id"
+              :to="{ hash: `#${heading.id}` }"
+              class="es-doc-toc-link"
+              :class="{ 'is-active': activeHeading === heading.id, 'is-sub': heading.level >= 3 }"
+              @click="onTocClick(heading.id)"
+            >
+              {{ heading.text }}
+            </router-link>
+          </aside>
         </div>
 
         <a-layout-footer class="doc-footer">
@@ -158,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   // 不再引入 BookOutlined：它此前被当作本站 logo，现已换成统一的「ES」品牌标记
@@ -177,6 +224,10 @@ import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
 import brand from '@/brand/slogan.json'
 // 三端站点清单：与案例卡跨端互链共用一份（见 utils/sites.js 的说明）
 import { SITES, SITE_KEY } from '@/utils/sites'
+import DocMeta from '@/components/doc/DocMeta.vue'
+// 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
+import { collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
+import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
 
 const year = new Date().getFullYear()
 
@@ -223,6 +274,64 @@ const siderCollapsed = ref(false)
 watch(() => route.fullPath, () => {
   if (window.matchMedia('(max-width: 991px)').matches) siderCollapsed.value = true
 })
+
+/* ------------------------------------------------------------------ *
+ * 文档 chrome：面包屑 / 右栏目录 / 上下篇 / 编辑此页 / 最后更新
+ * 只在 DOC_NAV 登记的文档页上渲染（非文档页 docEntry 为 undefined）。
+ * ------------------------------------------------------------------ */
+
+const docEntry = computed(() => docEntryForRouteName(route.name))
+const prevDoc = computed(() => docNeighbors(docEntry.value).prev)
+const nextDoc = computed(() => docNeighbors(docEntry.value).next)
+const updated = computed(() => (docEntry.value ? lastUpdatedFor(docEntry.value.key) : ''))
+
+const toc = ref([])
+const activeHeading = ref('')
+let scrollSpy = null
+// 路由视图是异步组件：route 变了 DOM 还没到，收集不到标题就再等一帧
+let tocRetry = 0
+
+const collectToc = () => {
+  scrollSpy?.stop()
+  scrollSpy = null
+  const root = document.querySelector('.es-doc-body')
+  const headings = root ? collectHeadings(root) : []
+  toc.value = headings
+  if (!headings.length) {
+    activeHeading.value = ''
+    // 最多再试 20 次（≈2s）：页面内容长出来之前目录是空的，直接放弃会让
+    // 「进页面时目录空白、滚一下才出现」这种观感问题重新出现。
+    if (tocRetry < 20) {
+      tocRetry += 1
+      setTimeout(collectToc, 100)
+    }
+    return
+  }
+  tocRetry = 0
+  scrollSpy = createScrollSpy(headings, {
+    onChange: (id) => { activeHeading.value = id },
+  })
+}
+
+const refreshToc = () => {
+  tocRetry = 0
+  nextTick(collectToc)
+}
+
+// 只认 path，不认 fullPath：点目录项只会改 hash，正文没换，重建 spy 会把
+// 「钉住被点小节」的状态一起丢掉 —— 表现就是平滑滚动途中高亮又一路跳过去。
+watch(() => route.path, refreshToc, { immediate: true })
+onBeforeUnmount(() => {
+  scrollSpy?.stop()
+  scrollSpy = null
+})
+
+// 与另两站同一个约定：链接本身负责跳转（右键复制/新标签都能用），
+// 这里只做两件事 —— 先把高亮交给被点的那一节，以及 hash 没变时补一次原地滚动。
+const onTocClick = (id) => {
+  scrollSpy?.focus(id)
+  if (route.hash === `#${id}`) scrollToHeadingImpl(id)
+}
 </script>
 
 <style scoped>

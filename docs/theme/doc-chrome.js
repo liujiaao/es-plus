@@ -244,3 +244,39 @@ export function scrollToHeading(id, { offset = 88 } = {}) {
   if (!el) return
   window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' })
 }
+
+/* ------------------------------------------------------------------ *
+ * 收尾条：编辑此页 / 报告问题 / 最后更新
+ *
+ * 仓库地址只写这一处：三站各写一遍的话，「报告问题」的 issue 标题格式、
+ * 编辑链接指向的源文件路径迟早会分叉成三套。
+ * ------------------------------------------------------------------ */
+
+export const REPO_URL = 'https://github.com/liujiaao/es-plus'
+export const REPO_BRANCH = 'master'
+
+/** 编辑此页：指向该页正文所在的**源文件**（不是渲染后的 URL） */
+export function editUrlFor(pathInRepo) {
+  if (!pathInRepo) return ''
+  return `${REPO_URL}/blob/${REPO_BRANCH}/${pathInRepo}`
+}
+
+/** 报告问题：把页面标题与当前地址预填进 issue 正文，省得读者自己抄 */
+export function issueUrlFor(title) {
+  const href = typeof window === 'undefined' ? '' : window.location.href
+  const query = new URLSearchParams({
+    title: `[文档] ${title || ''}`,
+    body: `页面：${href}\n\n问题描述：\n`,
+  })
+  return `${REPO_URL}/issues/new?${query.toString()}`
+}
+
+/**
+ * 页面键 → 最后更新日期（YYYY-MM-DD）。
+ * 数据来自构建期注入的 __ES_DOC_META__（scripts/doc-meta.mjs）；没有数据时返回空串 ——
+ * 宁可页面上不显示这一行，也不编一个假日期。
+ */
+export function lastUpdatedFor(key) {
+  const meta = typeof __ES_DOC_META__ === 'undefined' ? null : __ES_DOC_META__
+  return (meta && meta[key]) || ''
+}

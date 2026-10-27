@@ -19,3 +19,10 @@ export function createScrollSpy(
 ): { stop: () => void; focus: (id: string) => void }
 
 export function scrollToHeading(id: string | HTMLElement, options?: { offset?: number }): void
+
+/** 收尾条取数口：编辑此页 / 报告问题 / 最后更新 */
+export const REPO_URL: string
+export const REPO_BRANCH: string
+export function editUrlFor(pathInRepo: string): string
+export function issueUrlFor(title: string): string
+export function lastUpdatedFor(key: string): string

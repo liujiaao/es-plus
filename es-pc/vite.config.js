@@ -2,6 +2,8 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import { resolve } from 'path'
+// 「最后更新」的数据源：一次 git log 扫全历史，构建期注入常量（磁盘上不落生成文件）
+import { docMeta } from '../scripts/doc-meta.mjs'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
@@ -21,6 +23,8 @@ export default defineConfig(({ mode }) => {
     // 部署到 GitHub Pages 子路径（如 /es-plus/es-pc/）时经 VITE_BASE_URL 注入
     base: env.VITE_BASE_URL || '/',
     plugins: [vue(), vueJsx()],
+    // 与 es-plus-docs 同一份注入：页面底部「最后更新：YYYY-MM-DD」
+    define: { __ES_DOC_META__: JSON.stringify(docMeta('es-pc')) },
     resolve: {
       // monorepo 源码（packages/adapter-antdv/src）里 import 的裸依赖位于本站之外，
       // 强制走本站 node_modules，避免多副本（尤其 vue 必须单例）。
