@@ -68,6 +68,21 @@ const same = (a, b, msg) => eq(JSON.stringify(a), JSON.stringify(b), msg)
   eq(d.knobs.inQuery, 1, 'inQuery 一致率 = 1')
 }
 
+// ── 2b) formtype 别名 ─────────────────────────────────────────────────────────
+{
+  same(
+    knobOf({ prop: 'x', formtype: 'datePicker' }),
+    { formtype: 'DatePicker', inQuery: true, inTable: true, inForm: true },
+    '别名归一：datePicker → DatePicker（schema 承认的写法，不该报成漂移）',
+  )
+  const d = structuralDistance(
+    { fields: [{ prop: 'hiredAt', formtype: 'DatePicker' }], actions: [], dialogs: {} },
+    { fields: [{ prop: 'hiredAt', formtype: 'datePicker' }], actions: [], dialogs: {} },
+  )
+  eq(d.knobs.formtype, 1, '只在别名上不同的 formtype 视为一致')
+  eq(d.exact, true, '别名不制造漂移（否则模型挑个词就被报成结构变化）')
+}
+
 // ── 3) 旋钮只对交集字段 ────────────────────────────────────────────────────────
 {
   const frozen = {
@@ -143,4 +158,4 @@ if (failures) {
   console.error(`\n❌ 漂移口径自测：${failures} 条失效`)
   process.exit(1)
 }
-console.log('✅ 漂移口径自测：集合 F1 / 缺省归一 / 交集旋钮 / 选案 全部成立')
+console.log('✅ 漂移口径自测：集合 F1 / 缺省归一 / 别名归一 / 交集旋钮 / 选案 全部成立')

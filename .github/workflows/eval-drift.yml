@@ -31,8 +31,10 @@ jobs:
   drift:
     name: AI 案例漂移观测（结构距离）
     runs-on: ubuntu-latest
-    # 案例数是个位数，正常几分钟；上限只用来兜住挂死的中继。
-    timeout-minutes: 60
+    # 案例数是个位数，正常几分钟。上限必须 **> 中继冷却预算**（createResilientTransport 的
+    # totalOutageBudgetMs = 90 min）：否则一次整段抖动会把 job 拖到超时被硬杀，
+    # `if: always()` 的上传步不保证执行 —— 报告（以及这次花的钱）一起丢。
+    timeout-minutes: 120
     # 只读：报告走 artifact，不需要 contents: write（对比 eval-llm 的徽章回写）。
     permissions:
       contents: read

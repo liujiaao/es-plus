@@ -32,7 +32,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
-import { StructuredCrudConfigSchema, repairConfig, buildNlToConfigSystemPrompt } from '@es-plus/shared'
+import { StructuredCrudConfigSchema, repairConfig, buildNlToConfigSystemPrompt, normalizeFormType } from '@es-plus/shared'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './prompt.mjs'
 import { driveToValidConfig, createResilientTransport } from './repair-loop.mjs'
 
@@ -50,7 +50,9 @@ const KNOBS = ['formtype', ...Object.keys(MEMBER_DEFAULTS)]
 /** 字段旋钮（缺省按 schema 默认值补齐；否则「省略 = true」会被误算成「false ≠ true」）。 */
 export function knobOf(field) {
   return {
-    formtype: field?.formtype ?? null,
+    // formtype 先过别名归一：`datePicker` / `timePicker` 是 schema 承认、三端运行时都认的写法
+    // （shared 的 `normalizeFormType`），原样比较会把一次**词形选择**报成结构漂移。
+    formtype: field?.formtype ? normalizeFormType(field.formtype) : null,
     inQuery: field?.inQuery ?? MEMBER_DEFAULTS.inQuery,
     inTable: field?.inTable ?? MEMBER_DEFAULTS.inTable,
     inForm: field?.inForm ?? MEMBER_DEFAULTS.inForm,
@@ -149,6 +151,17 @@ export function selectDriftCases(manifest, { limit = null, only = null } = {}) {
 }
 
 function argValue(flag) {
+  // 两种写法都认：`--limit 1` 与 `--limit=1`。只认空格写法会让 `--limit=1` 被静默当成
+  // 「没传」—— 一次本该只花 1 次模型调用的探针会跑全量（案例变多后就是真金白银）。
+  const inline = process.argv.find((a) => a.startsWith(`${flag}=`))
+  if (inline != null) {
+    const v = inline.slice(flag.length + 1)
+    if (!v) {
+      console.error(`✗ ${flag}= 需要一个值`)
+      process.exit(2)
+    }
+    return v
+  }
   const i = process.argv.indexOf(flag)
   if (i === -1) return null
   const v = process.argv[i + 1]
