@@ -285,7 +285,10 @@
     "editOnGitHub": "Edit"
   },
   "doc": {
-    "untranslatedNotice": "⚠️ This page hasn't been translated yet — showing the Chinese version. Contributions welcome on GitHub."
+    "untranslatedNotice": "⚠️ This page hasn't been translated yet — showing the Chinese version. Contributions welcome on GitHub.",
+    "editPage": "Edit this page",
+    "reportIssue": "Report an issue",
+    "lastUpdated": "Last updated"
   },
   "theme": {
     "light": "Light Mode",

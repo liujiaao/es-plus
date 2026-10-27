@@ -1,26 +1,29 @@
 <template>
-  <div class="component-doc-page">
+  <!-- es-doc-chrome + docs-chrome.css：面包屑 / 右栏目录 / 上下篇 / 收尾条
+       的类名与外观由 docs/theme/docs-chrome.css 统一规定，三站同源。 -->
+  <div class="component-doc-page es-doc-chrome">
     <div class="doc-main">
       <!-- 面包屑 -->
-      <div class="doc-breadcrumb">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ t('breadcrumb.componentDoc') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
-        </el-breadcrumb>
-      </div>
-      
+      <nav class="es-doc-crumbs" aria-label="面包屑">
+        <router-link to="/">{{ t('breadcrumb.home') }}</router-link>
+        <span class="es-doc-crumbs-sep">/</span>
+        <span>{{ t('breadcrumb.componentDoc') }}</span>
+        <span class="es-doc-crumbs-sep">/</span>
+        <span class="is-current">{{ currentDoc.title }}</span>
+      </nav>
+
       <!-- 组件标题 -->
       <div class="component-header">
         <h1 class="component-title">{{ currentDoc.title }}</h1>
         <p class="component-desc">{{ currentDoc.description }}</p>
       </div>
-      
+
       <!-- 文档内容 -->
       <article class="doc-content">
         <!-- 组件特性介绍 -->
-        <section class="doc-section" v-if="currentDoc.features" id="features">
-          <h2 class="section-title">{{ t('componentDoc.features') }}</h2>
+        <section class="doc-section" v-if="currentDoc.features">
+          <!-- id 挂在标题上：目录项与 #features 锚点都落到这一行，滚动偏移才对得准 -->
+          <h2 class="section-title" id="features">{{ t('componentDoc.features') }}</h2>
           <div class="features-grid">
             <div 
               v-for="feature in currentDoc.features" 
@@ -37,10 +40,10 @@
             </div>
           </div>
         </section>
-        
+
         <!-- 使用案例 -->
-        <section class="doc-section" id="examples">
-          <h2 class="section-title">{{ t('componentDoc.examples') }}</h2>
+        <section class="doc-section">
+          <h2 class="section-title" id="examples">{{ t('componentDoc.examples') }}</h2>
           <p class="examples-note">
             {{ t('advancedDoc.crossNote') }}
           </p>
@@ -68,10 +71,10 @@
             </CodePlayground>
           </div>
         </section>
-        
+
         <!-- API 文档 -->
-        <section class="doc-section" v-if="currentDoc.api" id="api">
-          <h2 class="section-title">{{ t('componentDoc.api') }}</h2>
+        <section class="doc-section" v-if="currentDoc.api">
+          <h2 class="section-title" id="api">{{ t('componentDoc.api') }}</h2>
 
           <template v-for="(items, key) in currentDoc.api" :key="key">
             <!-- 空表（如 EsForm 的 events: []）整块省略，避免出现只有表头的「Events」 -->
@@ -88,56 +91,51 @@
           </template>
         </section>
       </article>
-      
-      <!-- 底部导航 -->
-      <div class="doc-footer-nav">
-        <router-link
-          v-if="prevDoc"
-          :to="prevDoc.path"
-          class="footer-nav prev"
-        >
-          <span class="nav-label">{{ t('componentDoc.previous') }}</span>
-          <span class="nav-title">{{ prevDoc.title }}</span>
-        </router-link>
-        <div v-else></div>
 
-        <router-link
-          v-if="nextDoc"
-          :to="nextDoc.path"
-          class="footer-nav next"
-        >
-          <span class="nav-label">{{ t('componentDoc.next') }}</span>
-          <span class="nav-title">{{ nextDoc.title }}</span>
+      <!-- 底部导航 -->
+      <nav v-if="prevDoc || nextDoc" class="es-doc-pager" aria-label="上下篇">
+        <router-link v-if="prevDoc" :to="prevDoc.path" class="es-doc-pager-link">
+          <span class="es-doc-pager-label">← {{ t('componentDoc.previous') }}</span>
+          <span class="es-doc-pager-title">{{ prevDoc.title }}</span>
         </router-link>
-      </div>
+        <router-link v-if="nextDoc" :to="nextDoc.path" class="es-doc-pager-link is-next">
+          <span class="es-doc-pager-label">{{ t('componentDoc.next') }} →</span>
+          <span class="es-doc-pager-title">{{ nextDoc.title }}</span>
+        </router-link>
+      </nav>
+
+      <!-- 编辑此页 · 报告问题 · 最后更新 -->
+      <DocMeta source-path="es-plus-docs/src/views/component-doc.data.ts" :title="currentDoc.title" :updated="updated" />
     </div>
-    
-    <!-- 右侧目录 -->
-    <aside class="doc-aside">
-      <div class="aside-title">{{ t('componentDoc.toc') }}</div>
-      <div class="aside-toc">
-        <a
-          v-for="heading in toc"
-          :key="heading.id"
-          :href="`#${heading.id}`"
-          class="toc-link"
-          :class="{ active: activeHeading === heading.id }"
-          :style="{ paddingLeft: `${(heading.level - 1) * 12 + 12}px` }"
-          @click.prevent="scrollToHeading(heading.id)"
-        >
-          {{ heading.text }}
-        </a>
-      </div>
+
+    <!-- 右侧目录：<1280px 由 docs-chrome.css 收起 -->
+    <aside class="es-doc-toc">
+      <div class="es-doc-toc-title">{{ t('componentDoc.toc') }}</div>
+      <router-link
+        v-for="heading in toc"
+        :key="heading.id"
+        :to="{ hash: `#${heading.id}` }"
+        class="es-doc-toc-link"
+        :class="{ 'is-active': activeHeading === heading.id, 'is-sub': heading.level >= 3 }"
+        @click="onTocClick(heading.id)"
+      >
+        {{ heading.text }}
+      </router-link>
     </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
+import DocMeta from '@/components/doc/DocMeta.vue'
+// 目录行为（标题发号 + 滚动高亮）与三站共用同一份实现
+import { collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl } from '@/utils/doc-chrome.js'
+import type { DocHeading } from '@/utils/doc-chrome.js'
+import { lastUpdatedFor } from '@/utils/doc-source'
 import { realignToHash } from '@/utils/hash-anchor'
 import { docsData as rawDocsData } from './component-doc.data'
 
@@ -173,11 +171,33 @@ useHead({
   ],
 })
 
-const toc = computed(() => [
-  { id: 'features', text: t('componentDoc.features'), level: 2 },
-  { id: 'examples', text: t('componentDoc.examples'), level: 2 },
-  { id: 'api', text: t('componentDoc.api'), level: 2 }
-])
+// 目录改为从渲染后的 DOM 收集（含 API 表里的 H3）：三个大节标题的 id 已在模板里写死
+// （features / examples / api），H3 由共用实现按文本发号 —— 页面之间不会撞车。
+const toc = ref<DocHeading[]>([])
+let scrollSpy: { stop: () => void; focus: (id: string) => void } | null = null
+
+const refreshToc = () => {
+  nextTick(() => {
+    scrollSpy?.stop()
+    scrollSpy = null
+    toc.value = collectHeadings(document.querySelector('.doc-content'))
+    if (!toc.value.length) {
+      activeHeading.value = ''
+      return
+    }
+    scrollSpy = createScrollSpy(toc.value, {
+      onChange: (id) => { activeHeading.value = id }
+    })
+  })
+}
+
+const updated = computed(() => lastUpdatedFor('components'))
+
+const onTocClick = (id: string) => {
+  // 先亮起被点的那一节：路由的平滑滚动一路上还会经过好几节，不该由它们抢高亮
+  scrollSpy?.focus(id)
+  if (route.hash === `#${id}`) scrollToHeadingImpl(id)
+}
 
 const apiTitleMap: Record<string, string> = {
   props: 'Props',
@@ -202,12 +222,6 @@ const activeHeading = ref('')
 const prevDoc = ref<{ path: string; title: string } | null>(null)
 const nextDoc = ref<{ path: string; title: string } | null>(null)
 
-const scrollToHeading = (id: string) => {
-  const el = document.getElementById(id)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth' })
-  }
-}
 
 // 更新导航
 const updateNav = () => {
@@ -231,6 +245,8 @@ const updateNav = () => {
 }
 
 watch(() => route.params.name, updateNav, { immediate: true })
+// 换组件页 = 整块正文重渲染：目录要跟着重建，否则高亮还盯着上一页的标题元素
+watch(() => route.params.name, refreshToc, { immediate: true })
 
 // 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
 // 这里盯到内容长完为止（用户一动手就让位）
@@ -243,7 +259,10 @@ watch(
   },
 )
 onMounted(() => { stopRealign = realignToHash(String(route.hash || '')) })
-onBeforeUnmount(() => stopRealign())
+onBeforeUnmount(() => {
+  stopRealign()
+  scrollSpy?.stop()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -257,12 +276,6 @@ onBeforeUnmount(() => stopRealign())
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 32px;
-}
-
-.doc-breadcrumb {
-  max-width: var(--es-content-width);
-  padding: 0 0 16px;
 }
 
 .component-header {
@@ -389,95 +402,10 @@ onBeforeUnmount(() => stopRealign())
   color: var(--text-color-primary);
 }
 
-.doc-footer-nav {
-  display: flex;
-  justify-content: space-between;
-  max-width: var(--es-content-width);
-  padding: 24px 0;
-  margin-top: 48px;
-  border-top: 1px solid var(--border-color-lighter);
-}
-
-.footer-nav {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  padding: 12px 16px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--fill-color-light);
-  }
-  
-  .nav-label {
-    font-size: 12px;
-    color: var(--text-color-secondary);
-    margin-bottom: 4px;
-  }
-  
-  .nav-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--primary-color);
-  }
-  
-  &.next {
-    text-align: right;
-  }
-}
-
-.doc-aside {
-  width: 240px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 84px;
-  height: fit-content;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-}
-
-.aside-title {
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-color-secondary);
-  text-transform: uppercase;
-}
-
-.aside-toc {
-  padding: 8px 0;
-}
-
-.toc-link {
-  display: block;
-  padding: 6px 12px;
-  font-size: 13px;
-  color: var(--text-color-regular);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  transition: all 0.2s;
-  
-  &:hover {
-    color: var(--primary-color);
-  }
-  
-  &.active {
-    color: var(--primary-color);
-    border-left-color: var(--primary-color);
-  }
-}
-
 .selected-info {
   margin-top: 16px;
   padding: 12px 16px;
   background-color: var(--fill-color-light);
   border-radius: 4px;
-}
-
-@media (max-width: 1200px) {
-  .doc-aside {
-    display: none;
-  }
 }
 </style>

@@ -17,6 +17,8 @@ import '@/styles/design-tokens.css'
 import '@/styles/docs-content.css'
 // 外壳契约单一真源（docs/theme/docs-layout.css → scripts/sync-theme.mjs 分发）
 import '@/styles/docs-layout.css'
+// 文档 chrome 契约单一真源（docs/theme/docs-chrome.css → scripts/sync-theme.mjs 分发）
+import '@/styles/docs-chrome.css'
 import '@/styles/index.scss'
 
 // dist 模式：别名指向打包产物；源码模式：别名指向空文件（样式由 Vite SCSS 管道处理）。

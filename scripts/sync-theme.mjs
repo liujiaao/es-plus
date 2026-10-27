@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * 文档主题单源同步：docs/theme/*.css 为权威源，分发到三个文档站点。
+ * 文档主题单源同步：docs/theme/* 为权威源，分发到三个文档站点。
  *
  *   - docs-content.css：正文排版/代码块/表格/提示框。各站给内容容器加
  *     `.es-doc-content` 类即可获得统一正文排版（docs/internal/改造三端站点.md §2.3/§5.1）。
  *   - docs-layout.css：外壳契约（shell 宽度、三栏宽度、正文度量）。路线图 1.2。
+ *   - docs-chrome.css：文档 chrome 契约（面包屑/目录/上下篇/编辑反馈）。路线图 1.4。
+ *   - doc-chrome.js：chrome 行为（标题发号、目录滚动高亮），无框架依赖。路线图 1.4。
  *
  * 用法：
  *   node scripts/sync-theme.mjs           # 同步：拷贝单源到各站点
@@ -41,6 +43,24 @@ const ASSETS = [
       join(ROOT, 'es-eui', 'src', 'assets', 'docs-layout.css'),
     ],
   },
+  {
+    file: 'docs-chrome.css',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'styles', 'docs-chrome.css'),
+      join(ROOT, 'es-pc', 'src', 'styles', 'docs-chrome.css'),
+      join(ROOT, 'es-eui', 'src', 'assets', 'docs-chrome.css'),
+    ],
+  },
+  {
+    // CSS 之外的唯一一份共享资源：chrome 的 DOM 行为。放 utils/ 而不是 styles/，
+    // 因为它不是样式；三站同名同路径，便于「单源 ↔ 副本」一眼对照。
+    file: 'doc-chrome.js',
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'utils', 'doc-chrome.js'),
+      join(ROOT, 'es-pc', 'src', 'utils', 'doc-chrome.js'),
+      join(ROOT, 'es-eui', 'src', 'utils', 'doc-chrome.js'),
+    ],
+  },
 ]
 
 const CHECK = process.argv.includes('--check')
@@ -73,7 +93,7 @@ function main() {
         }
         const dstContent = readText(target)
         if (!sameText(dstContent, srcContent)) {
-          console.error(`❌ 文档主题漂移：${rel(target)} 与 docs/theme/${file} 不一致`)
+          console.error(`❌ 文档主题资源漂移：${rel(target)} 与 docs/theme/${file} 不一致`)
           drift = true
         }
       } else {
@@ -90,9 +110,9 @@ function main() {
       console.error('\n文档主题与单源不同步。运行 `npm run theme:sync` 重新生成，不要手改各站点副本。')
       process.exit(1)
     }
-    console.log(`✅ 全部 ${ASSETS.length} 份文档主题与单源逐字节一致`)
+    console.log(`✅ 全部 ${ASSETS.length} 份文档主题资源与单源逐字节一致`)
   } else {
-    console.log(`✅ 已从单源同步 ${ASSETS.length} 份文档主题到各站点（共 ${synced} 个文件）`)
+    console.log(`✅ 已从单源同步 ${ASSETS.length} 份文档主题资源到各站点（共 ${synced} 个文件）`)
   }
 }
 

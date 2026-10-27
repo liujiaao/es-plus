@@ -285,7 +285,10 @@
     "editOnGitHub": "编辑"
   },
   "doc": {
-    "untranslatedNotice": "⚠️ 该页暂未翻译，显示中文版。"
+    "untranslatedNotice": "⚠️ 该页暂未翻译，显示中文版。",
+    "editPage": "编辑此页",
+    "reportIssue": "报告问题",
+    "lastUpdated": "最后更新"
   },
   "theme": {
     "light": "浅色模式",

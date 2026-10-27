@@ -17,6 +17,7 @@ import { demoHttpRequest } from './utils/demo-http'
 import './styles/design-tokens.css'
 import './styles/docs-content.css'
 import './styles/docs-layout.css'
+import './styles/docs-chrome.css'
 import './styles/global.css'
 
 const app = createApp(App)

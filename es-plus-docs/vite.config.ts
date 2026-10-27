@@ -2,6 +2,8 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import { resolve } from 'path'
+// 文档「最后更新」：从 git 取每个文档页源文件的最后提交日期，构建期注入成编译常量
+import { docMeta } from '../scripts/doc-meta.mjs'
 
 // 站点规范域名：三站切换器（scripts/check-site-nav.mjs）与 sitemap 生成
 // （scripts/gen-sitemap.mjs）都以它为「本站地址」的单一来源 —— 换域名只改这一处。
@@ -25,6 +27,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: env.VITE_BASE_URL || '/',
+    // 磁盘上不落生成文件：define 直接替换成字面量，dev/build 都拿同一份数据。
+    // 没有 git（源码包分发）时 docMeta 退回文件 mtime，构建不会因此失败。
+    define: { __ES_DOC_META__: JSON.stringify(docMeta('es-plus-docs')) },
     plugins: [
       vue(),
       vueJsx(),

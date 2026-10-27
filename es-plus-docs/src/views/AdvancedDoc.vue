@@ -1,26 +1,29 @@
 <template>
-  <div class="advanced-doc-page">
+  <!-- es-doc-chrome + docs-chrome.css：面包屑 / 右栏目录 / 上下篇 / 收尾条
+       的类名与外观由 docs/theme/docs-chrome.css 统一规定，三站同源。 -->
+  <div class="advanced-doc-page es-doc-chrome">
     <div class="doc-main">
       <!-- 面包屑 -->
-      <div class="doc-breadcrumb">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item :to="{ path: '/' }">{{ t('breadcrumb.home') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ t('breadcrumb.advanced') }}</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ currentDoc.title }}</el-breadcrumb-item>
-        </el-breadcrumb>
-      </div>
-      
+      <nav class="es-doc-crumbs" aria-label="面包屑">
+        <router-link to="/">{{ t('breadcrumb.home') }}</router-link>
+        <span class="es-doc-crumbs-sep">/</span>
+        <span>{{ t('breadcrumb.advanced') }}</span>
+        <span class="es-doc-crumbs-sep">/</span>
+        <span class="is-current">{{ currentDoc.title }}</span>
+      </nav>
+
       <!-- 标题 -->
       <div class="doc-header">
         <h1 class="doc-title">{{ currentDoc.title }}</h1>
         <p class="doc-desc">{{ currentDoc.description }}</p>
       </div>
-      
+
       <!-- 内容 -->
       <article class="doc-content">
         <!-- 特性介绍 -->
-        <section class="doc-section" v-if="currentDoc.features" id="features">
-          <h2 class="section-title">{{ t('advancedDoc.features') }}</h2>
+        <section class="doc-section" v-if="currentDoc.features">
+          <!-- id 挂在标题上：目录项与 #features 锚点都落到这一行，滚动偏移才对得准 -->
+          <h2 class="section-title" id="features">{{ t('advancedDoc.features') }}</h2>
           <div class="features-grid">
             <div v-for="feature in currentDoc.features" :key="feature.name" class="feature-card">
               <el-icon :size="32" class="feature-icon">
@@ -31,10 +34,10 @@
             </div>
           </div>
         </section>
-        
+
         <!-- 案例列表 -->
-        <section class="doc-section" id="examples">
-          <h2 class="section-title">{{ t('advancedDoc.examples') }}</h2>
+        <section class="doc-section">
+          <h2 class="section-title" id="examples">{{ t('advancedDoc.examples') }}</h2>
           <p class="examples-note">
             {{ t('advancedDoc.crossNote') }}
           </p>
@@ -62,10 +65,10 @@
             </CodePlayground>
           </div>
         </section>
-        
+
         <!-- API -->
-        <section class="doc-section" v-if="currentDoc.api" id="api">
-          <h2 class="section-title">{{ t('advancedDoc.api') }}</h2>
+        <section class="doc-section" v-if="currentDoc.api">
+          <h2 class="section-title" id="api">{{ t('advancedDoc.api') }}</h2>
           <div v-for="(items, key) in currentDoc.api" :key="key" class="api-block">
             <h3 class="api-subtitle">{{ apiTitleMap[key] || key }}</h3>
             <el-table :data="items" border>
@@ -76,45 +79,50 @@
           </div>
         </section>
       </article>
-      
+
       <!-- 底部导航 -->
-      <div class="doc-footer-nav">
-        <router-link v-if="prevDoc" :to="prevDoc.path" class="footer-nav prev">
-          <span class="nav-label">{{ t('componentDoc.previous') }}</span>
-          <span class="nav-title">{{ prevDoc.title }}</span>
+      <nav v-if="prevDoc || nextDoc" class="es-doc-pager" aria-label="上下篇">
+        <router-link v-if="prevDoc" :to="prevDoc.path" class="es-doc-pager-link">
+          <span class="es-doc-pager-label">← {{ t('componentDoc.previous') }}</span>
+          <span class="es-doc-pager-title">{{ prevDoc.title }}</span>
         </router-link>
-        <div v-else></div>
-        <router-link v-if="nextDoc" :to="nextDoc.path" class="footer-nav next">
-          <span class="nav-label">{{ t('componentDoc.next') }}</span>
-          <span class="nav-title">{{ nextDoc.title }}</span>
+        <router-link v-if="nextDoc" :to="nextDoc.path" class="es-doc-pager-link is-next">
+          <span class="es-doc-pager-label">{{ t('componentDoc.next') }} →</span>
+          <span class="es-doc-pager-title">{{ nextDoc.title }}</span>
         </router-link>
-      </div>
+      </nav>
+
+      <!-- 编辑此页 · 报告问题 · 最后更新 -->
+      <DocMeta source-path="es-plus-docs/src/views/advanced-doc.data.ts" :title="currentDoc.title" :updated="updated" />
     </div>
 
-    <!-- 右侧目录 -->
-    <aside class="doc-aside">
-      <div class="aside-title">{{ t('componentDoc.toc') }}</div>
-      <div class="aside-toc">
-        <a
-          v-for="heading in toc"
-          :key="heading.id"
-          :href="`#${heading.id}`"
-          class="toc-link"
-          @click.prevent="scrollToHeading(heading.id)"
-        >
-          {{ heading.text }}
-        </a>
-      </div>
+    <!-- 右侧目录：<1280px 由 docs-chrome.css 收起 -->
+    <aside class="es-doc-toc">
+      <div class="es-doc-toc-title">{{ t('componentDoc.toc') }}</div>
+      <router-link
+        v-for="heading in toc"
+        :key="heading.id"
+        :to="{ hash: `#${heading.id}` }"
+        class="es-doc-toc-link"
+        :class="{ 'is-active': activeHeading === heading.id, 'is-sub': heading.level >= 3 }"
+        @click="onTocClick(heading.id)"
+      >
+        {{ heading.text }}
+      </router-link>
     </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
 import { realignToHash } from '@/utils/hash-anchor'
+import DocMeta from '@/components/doc/DocMeta.vue'
+// 目录行为（标题发号 + 滚动高亮）与三站共用同一份实现
+import { collectHeadings, createScrollSpy, scrollToHeading } from '@/utils/doc-chrome.js'
+import { lastUpdatedFor } from '@/utils/doc-source'
 
 const { t } = useI18n()
 import { docsData as rawDocsData } from './advanced-doc.data'
@@ -147,15 +155,32 @@ const levelOf = (index: number, total: number): number => {
   return 5
 }
 
-const toc = computed(() => [
-  { id: 'features', text: t('advancedDoc.features') },
-  { id: 'examples', text: t('advancedDoc.examples') },
-  { id: 'api', text: t('advancedDoc.api') }
-])
+// 目录从渲染后的 DOM 收集（含 API 表里的 H3）：三个大节标题的 id 已在模板里写死
+// （features / examples / api），H3 由共用实现按文本发号 —— 页面之间不会撞车。
+const toc = ref([])
+const activeHeading = ref('')
+let scrollSpy: { stop: () => void; focus: (id: string) => void } | null = null
 
-const scrollToHeading = (id) => {
-  const el = document.getElementById(id)
-  if (el) el.scrollIntoView({ behavior: 'smooth' })
+const refreshToc = () => {
+  nextTick(() => {
+    if (scrollSpy) { scrollSpy.stop(); scrollSpy = null }
+    toc.value = collectHeadings(document.querySelector('.doc-content'))
+    if (!toc.value.length) {
+      activeHeading.value = ''
+      return
+    }
+    scrollSpy = createScrollSpy(toc.value, {
+      onChange: (id) => { activeHeading.value = id }
+    })
+  })
+}
+
+const updated = computed(() => lastUpdatedFor('advanced'))
+
+const onTocClick = (id) => {
+  // 先亮起被点的那一节：路由的平滑滚动一路上还会经过好几节，不该由它们抢高亮
+  scrollSpy?.focus(id)
+  if (route.hash === `#${id}`) scrollToHeading(id)
 }
 
 const prevDoc = ref(null)
@@ -168,6 +193,9 @@ watch(() => route.params.name, (name) => {
   nextDoc.value = idx < keys.length - 1 ? { path: `/advanced/${keys[idx+1]}`, title: docsData[keys[idx+1]].title } : null
 }, { immediate: true })
 
+// 换页 = 整块正文重渲染：目录跟着重建，否则高亮还盯着上一页的标题元素
+watch(() => route.params.name, refreshToc, { immediate: true })
+
 // 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
 // 这里盯到内容长完为止（用户一动手就让位）
 let stopRealign = () => {}
@@ -179,7 +207,10 @@ watch(
   },
 )
 onMounted(() => { stopRealign = realignToHash(String(route.hash || '')) })
-onBeforeUnmount(() => stopRealign())
+onBeforeUnmount(() => {
+  stopRealign()
+  if (scrollSpy) scrollSpy.stop()
+})
 // 高级指南的标题跟着当前文档走（registry 里每篇都有自己的 title / description）。
 import { usePageMeta } from '@/utils/page-meta'
 
@@ -199,11 +230,6 @@ usePageMeta(() => ({
 .doc-main {
   flex: 1;
   min-width: 0;
-  padding-right: 32px;
-}
-.doc-breadcrumb {
-  max-width: var(--es-content-width);
-  padding: 0 0 16px;
 }
 .doc-header {
   max-width: var(--es-content-width);
@@ -287,70 +313,5 @@ usePageMeta(() => ({
   font-weight: 600;
   margin-bottom: 16px;
   color: var(--text-color-primary);
-}
-.doc-footer-nav {
-  display: flex;
-  justify-content: space-between;
-  max-width: var(--es-content-width);
-  padding: 24px 0;
-  margin-top: 48px;
-  border-top: 1px solid var(--border-color-lighter);
-}
-.footer-nav {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  padding: 12px 16px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  &:hover {
-    background-color: var(--fill-color-light);
-  }
-  .nav-label {
-    font-size: 12px;
-    color: var(--text-color-secondary);
-    margin-bottom: 4px;
-  }
-  .nav-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--primary-color);
-  }
-  &.next {
-    text-align: right;
-  }
-}
-.doc-aside {
-  width: 240px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 84px;
-  height: fit-content;
-}
-.aside-title {
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-color-secondary);
-}
-.aside-toc {
-  padding: 8px 0;
-}
-.toc-link {
-  display: block;
-  padding: 6px 12px;
-  font-size: 13px;
-  color: var(--text-color-regular);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  &:hover, &.active {
-    color: var(--primary-color);
-    border-left-color: var(--primary-color);
-  }
-}
-@media (max-width: 1200px) {
-  .doc-aside {
-    display: none;
-  }
 }
 </style>

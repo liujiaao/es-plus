@@ -1,0 +1,198 @@
+/* ==========================================================================
+ * ES-Plus 文档 chrome 设计规范（单一权威源）
+ *
+ * 面包屑 / 右栏目录 / 上下篇 / 编辑此页·最后更新·反馈 —— 三站同一套外观与度量。
+ * 由 scripts/sync-theme.mjs 分发到三站，禁止手改各站点副本。
+ *
+ * 用法：给文档页根节点加 `.es-doc-chrome`，页面内部使用下列类名即可；
+ * 需要「正文 + 右栏目录」并排时，把两者放进 `.es-doc-with-toc`（正文侧 `.es-doc-body`）。
+ *
+ * 颜色一律走全局 token（design-tokens.css）：chrome 常常位于正文容器之外
+ * （右栏 TOC 是 .es-doc-content 的兄弟节点），docs-content.css 里那套 --es-doc-*
+ * 局部变量在那些位置并不存在。
+ * ========================================================================== */
+
+/* ── 面包屑 ── */
+.es-doc-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--es-text-secondary);
+}
+
+.es-doc-crumbs a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--es-duration-fast) var(--es-ease);
+}
+
+.es-doc-crumbs a:hover { color: var(--es-brand-primary); }
+
+.es-doc-crumbs .es-doc-crumbs-sep {
+  color: var(--es-text-disabled);
+}
+
+.es-doc-crumbs .is-current {
+  color: var(--es-text-primary);
+  font-weight: 500;
+}
+
+/* ── 三栏骨架（正文 + 右栏目录）── */
+.es-doc-with-toc {
+  display: flex;
+  align-items: flex-start;
+}
+
+.es-doc-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── 右栏目录 ──
+ * 只收 H2/H3（chrome 的 JS 侧 collectHeadings 的默认选择器）。
+ * 宽度/间距走 layout token：与外壳契约（260 侧栏 / 正文 / 220 TOC）同源。 */
+.es-doc-toc {
+  position: sticky;
+  top: 88px;
+  flex: 0 0 var(--es-toc-width);
+  width: var(--es-toc-width);
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-left: var(--es-gutter);
+}
+
+.es-doc-toc-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--es-text-secondary);
+}
+
+.es-doc-toc-link {
+  display: block;
+  padding: 5px 0 5px 12px;
+  border-left: 2px solid transparent;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--es-text-secondary);
+  text-decoration: none;
+  transition: color var(--es-duration-fast) var(--es-ease),
+    border-color var(--es-duration-fast) var(--es-ease);
+}
+
+.es-doc-toc-link.is-sub {
+  padding-left: 24px;
+  font-size: 12.5px;
+}
+
+.es-doc-toc-link:hover { color: var(--es-brand-primary); }
+
+.es-doc-toc-link.is-active {
+  color: var(--es-brand-primary);
+  border-left-color: var(--es-brand-primary);
+  font-weight: 600;
+}
+
+/* ── 上下篇 ── */
+.es-doc-pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 40px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--es-border);
+}
+
+.es-doc-pager-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--es-border);
+  border-radius: var(--es-radius-md);
+  text-decoration: none;
+  transition: border-color var(--es-duration-fast) var(--es-ease),
+    background-color var(--es-duration-fast) var(--es-ease);
+}
+
+.es-doc-pager-link:hover {
+  border-color: var(--es-brand-primary);
+  background: var(--es-brand-tint);
+}
+
+/* 只有「下一篇」时也停在右列：读者对「左=上、右=下」的位置有预期 */
+.es-doc-pager-link.is-next {
+  grid-column: 2;
+  text-align: right;
+}
+
+.es-doc-pager-label {
+  font-size: 12px;
+  color: var(--es-text-secondary);
+}
+
+.es-doc-pager-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--es-brand-primary);
+}
+
+/* ── 编辑此页 / 最后更新 / 反馈 ──
+ * 顺序固定：动作在前，时间在右（窄屏落到下一行左对齐）。
+ * 时间用等宽数字，避免每次更新页面时日期宽度跳动。 */
+.es-doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 24px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--es-border);
+  font-size: 13px;
+  color: var(--es-text-secondary);
+}
+
+.es-doc-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 3px;
+  transition: color var(--es-duration-fast) var(--es-ease);
+}
+
+.es-doc-meta a:hover {
+  color: var(--es-brand-primary);
+  text-decoration: underline;
+}
+
+.es-doc-meta-date {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 响应式 ──
+ * <1280px 收掉右栏 TOC（外壳契约 §6.4）；<768px 上下篇改单列、时间回到左列。 */
+@media (max-width: 1279.98px) {
+  .es-doc-toc { display: none; }
+}
+
+@media (max-width: 768px) {
+  .es-doc-pager { grid-template-columns: minmax(0, 1fr); }
+
+  .es-doc-pager-link.is-next {
+    grid-column: 1;
+    text-align: left;
+  }
+
+  .es-doc-meta-date { margin-left: 0; }
+}
