@@ -61,58 +61,15 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, createApp, 
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Top } from '@element-plus/icons-vue'
-import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
-// highlight.js 的 common bundle 不含 Vue SFC 语言：文档里 ```vue 代码块会触发
-// 「Could not find the language 'vue'」并降级成无高亮。SFC ≈ HTML 模板 + 内嵌脚本/样式，
-// 用 xml 定义注册为 'vue'（xml 支持内嵌 <script>/<style>），至少保住标签着色。
-import xml from 'highlight.js/lib/languages/xml'
 import DemoBlock from '@/components/doc/DemoBlock.vue'
 import { installAppPlugins } from '@/utils/install-app-plugins'
-import { rewriteInternalDocLinks } from '@/utils/doc-links'
+import { renderDocMarkdown } from '@/utils/doc-markdown.mjs'
 
 // 指南注册表（Doc.vue 与搜索索引共用的单一来源）
 import { docsData } from '@/docs/doc-registry'
 import { useHead } from '@unhead/vue'
 
 const route = useRoute()
-
-hljs.configure({ ignoreUnescapedHTML: true })
-hljs.registerLanguage('vue', xml)
-
-const escapeAttr = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-const wrapCode = (highlighted: string, lang: string, raw: string) => {
-  const langLabel = lang || 'text'
-  const rawAttr = escapeAttr(raw)
-  return `<div class="code-block-wrapper">
-    <div class="code-block-header">
-      <span class="code-block-lang">${langLabel}</span>
-      <button class="code-copy-btn" type="button" data-code="${rawAttr}" aria-label="复制代码">
-        <span class="copy-icon"></span>
-        <span class="copy-text">复制</span>
-      </button>
-    </div>
-    <pre class="hljs"><code>${highlighted}</code></pre>
-  </div>`
-}
-
-// 初始化 markdown-it
-const md: MarkdownIt = new MarkdownIt({
-  html: true,
-  linkify: false,
-  typographer: true,
-  highlight: (str: string, lang: string): string => {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        const out = hljs.highlight(str, { language: lang }).value
-        return wrapCode(out, lang, str)
-      } catch {}
-    }
-    return wrapCode(md.utils.escapeHtml(str), lang, str)
-  }
-})
 
 const { t, locale } = useI18n()
 
@@ -150,49 +107,9 @@ const currentCategory = computed(() => {
   return ''
 })
 
-// 渲染 :::tip / :::warning 等 VitePress 风格容器（markdown-it 原生不支持，需手动展开）。
-// 容器内部仍是 markdown，先单独用 md.render 渲染，再包进 HTML 块。
-const CONTAINER_LABELS: Record<string, string> = {
-  tip: '提示',
-  warning: '警告',
-  info: '信息',
-  danger: '危险',
-}
-const renderContainers = (markdown: string): string =>
-  markdown.replace(
-    /:::[ \t]*(tip|warning|info|danger)[ \t]*([^\n]*)\n([\s\S]*?)\n:::[ \t]*/g,
-    (_m: string, type: string, title: string, content: string) => {
-      const heading = title.trim() || CONTAINER_LABELS[type] || type.toUpperCase()
-      const inner = md.render(content.trim())
-      return `<div class="custom-block ${type}">\n<p class="custom-block-title">${heading}</p>\n${inner}</div>`
-    }
-  )
-
-const renderedContent = computed(() => {
-  // Pre-process: convert <demo name="..." /> (and </demo> form) to placeholder divs
-  // so markdown-it passes them through cleanly and we can mount components on them later.
-  const preprocessed = currentDoc.value.content
-    .replace(/<demo\s+name="([^"]+)"\s*\/>/g, '\n<div class="demo-block-placeholder" data-demo-name="$1"></div>\n')
-    .replace(/<demo\s+name="([^"]+)"\s*>\s*<\/demo>/g, '\n<div class="demo-block-placeholder" data-demo-name="$1"></div>\n')
-
-  // 先展开 ::: 容器（内部 markdown 已渲染为 HTML），再渲染整体
-  const withContainers = renderContainers(preprocessed)
-  const html = md.render(withContainers)
-  // Add IDs to headings for TOC linking.
-  // 同名小节（例如两处「基本用法」）会得到同一个 id → 目录项 key 重复、锚点互相抢跳。
-  // 用出现次数做后缀（第二次起 -2、-3…），与常见的锚点约定一致。
-  const seenIds = new Map<string, number>()
-  const withHeadingIds = html.replace(/<h([23])>(.*?)<\/h[23]>/g, (_match, level, content) => {
-    const text = content.replace(/<[^>]+>/g, '').trim()
-    const base = text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '') || 'section'
-    const n = (seenIds.get(base) || 0) + 1
-    seenIds.set(base, n)
-    const id = n === 1 ? base : `${base}-${n}`
-    return `<h${level} id="${id}">${content}</h${level}>`
-  })
-  // hash 路由：把 .md 里的站内绝对链接 /guide/xxx 改写为 #/guide/xxx
-  return rewriteInternalDocLinks(withHeadingIds)
-})
+// 渲染流水线（容器 / fence / 标题 id / 站内链接）全部在 utils/doc-markdown.mjs：
+// 守卫脚本与站点必须跑同一份实现，否则「渲染后」的缺陷仍然只能靠肉眼发现。
+const renderedContent = computed(() => renderDocMarkdown(currentDoc.value.content))
 
 const toc = ref<{ id: string; text: string }[]>([])
 const activeHeading = ref('')
@@ -231,7 +148,7 @@ type DocNav = { path: string; title: string } | null
 const prevDoc = ref<DocNav>(null)
 const nextDoc = ref<DocNav>(null)
 
-const scrollToHeading = (id) => {
+const scrollToHeading = (id: string) => {
   const el = document.getElementById(id)
   if (el) el.scrollIntoView({ behavior: 'smooth' })
 }
@@ -265,17 +182,14 @@ watch(() => route.params.name, updateNav, { immediate: true })
 watch(locale, updateNav)
 
 const copyCode = async (btn: HTMLButtonElement) => {
-  const code = btn.getAttribute('data-code') || ''
-  const decoded = code
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
+  // 原文直接从 DOM 的 <code> 取：高亮只加标签、不改字符，textContent 就是源码。
+  // 不再用 data-code 属性存一份副本 —— 属性转义/还原一旦不一致，复制的内容就会坏。
+  const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent ?? ''
   try {
-    await navigator.clipboard.writeText(decoded)
+    await navigator.clipboard.writeText(code)
   } catch {
     const ta = document.createElement('textarea')
-    ta.value = decoded
+    ta.value = code
     document.body.appendChild(ta)
     ta.select()
     document.execCommand('copy')
@@ -333,11 +247,9 @@ watch(renderedContent, () => {
 }, { flush: 'post' })
 
 onMounted(() => {
-  setTimeout(() => {
-    document.querySelectorAll('pre code').forEach((block) => {
-      hljs.highlightElement(block as HTMLElement)
-    })
-  }, 100)
+  // 高亮在 markdown 渲染时一次完成（见 utils/doc-markdown.mjs）。
+  // 这里曾经再对 `pre code` 跑一遍 hljs.highlightElement —— 它会把已经注入的
+  // 代码块 wrapper 当纯文本转义，正是线上代码块显示 "bash 复制 …" 的原因。
   const content = document.querySelector('.markdown-content') as HTMLElement | null
   content?.addEventListener('click', handleContentClick)
   window.addEventListener('scroll', updateActiveHeading, { passive: true })

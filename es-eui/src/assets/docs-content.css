@@ -250,6 +250,19 @@
   letter-spacing: 0.3px;
 }
 
+/* 可选文件名 / 标题（```ts title="src/a.ts" 或 ```ts[src/a.ts]） */
+.es-doc-content .code-block-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 10px;
+  color: var(--es-doc-text-secondary);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .es-doc-content .code-copy-btn {
   display: inline-flex;
   align-items: center;

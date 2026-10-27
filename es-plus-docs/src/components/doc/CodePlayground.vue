@@ -1,5 +1,5 @@
 <template>
-  <div class="code-playground">
+  <div ref="rootRef" class="code-playground">
     <!-- 演示区域 -->
     <div class="playground-preview">
       <div class="preview-header">
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ArrowUp, ArrowDown, CopyDocument, Refresh, Promotion } from '@element-plus/icons-vue'
@@ -100,6 +100,7 @@ const props = defineProps<{
 const LEVEL_LABELS = ['', '入门', '基础', '进阶', '高级', '复杂'] as const
 const LEVEL_TYPES = ['', 'success', 'success', 'warning', 'danger', 'danger'] as const
 
+const rootRef = ref<HTMLElement | null>(null)
 const isExpanded = ref(false)
 const activeTab = ref('template')
 const refreshKey = ref(0)
@@ -123,6 +124,7 @@ const displayCode = computed<CodeContent>(() => {
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
+  if (isExpanded.value) nextTick(highlightCodeBlocks)
 }
 
 // `navigator.clipboard` is only available in secure contexts (https / localhost).
@@ -189,14 +191,17 @@ const openInSandbox = async () => {
 }
 
 // 高亮代码
+// 只扫本组件根节点：此前用的是 document.querySelectorAll('pre code')，
+// 会连带把同页文档正文里已经渲染好的代码块再高亮一遍 —— 那里结构是
+// <div class="code-block-wrapper"><pre><code>…，二次高亮会把 wrapper 当文本转义。
+const highlightCodeBlocks = () => {
+  rootRef.value?.querySelectorAll('pre code').forEach((block) => {
+    hljs.highlightElement(block as HTMLElement)
+  })
+}
+
 watch(() => props.code, () => {
-  if (isExpanded.value) {
-    setTimeout(() => {
-      document.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block as HTMLElement)
-      })
-    }, 100)
-  }
+  if (isExpanded.value) setTimeout(highlightCodeBlocks, 100)
 }, { immediate: true })
 </script>
 
