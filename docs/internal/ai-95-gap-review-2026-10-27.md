@@ -14,12 +14,12 @@
 |---|---|---|
 | **编译率 100%** | `216/216`（zh CRUD）· `63/63`（片段）· `22/22`（PRD），Tier A 真编译且**进门禁** | ✅ **已达**。缺口在**覆盖面**（en 腿不进分母、typecheck 只抽样 30），不在数字 |
 | **准确率 ≥95%** | `definition95 = 22.7%（44/194）`；zero-edit 腿 `19.6%（38/194）` | ❌ 未达，且**当前这个 22.7% 里有一大半不是模型能力问题** |
-| **全场景** | 四场景语料+编译齐了，但**准确率只有 CRUD 腿进门禁**；片段腿 55.6% 与同语料探针 93.7% 差 38pp | ⚠️ 可测 ≠ 测对了 |
+| **全场景** | 四场景语料+编译齐了，但**准确率只有 CRUD 腿进门禁**；片段腿 55.6%，其中 **28 行失败全部由 `propSet` 决定**（`core == scoped == stated == propSet == 35/63`） | ⚠️ 可测 ≠ 测对了：片段腿不是"模型不会"，是**同一把尺子的同一个缺陷**（D6） |
 
 **根因排序（今日复算 + 既有日志，可复现）**
 
-1. **尺子**：字段身份按 `prop` 精确判等，而 `prop` 在 NL 里**只出现 3.8%**（40/1041），`label` 出现 **98.4%**（1024/1041）⟹ 零编辑腿被**结构性封顶**。
-2. **语料**：`53/216` 个用例在 gold 里写了 **120 个** `inQuery:false`，而 NL **没有任何查询措辞** —— 模型只能猜；这与日志里观测到的 **111 次 want-false-got-true** 几乎一一对应。
+1. **尺子**：字段身份按 `prop` 精确判等，而 `prop` 在 NL 里**只出现 3.8%**（40/1041），`label` 出现 **98.4%**（1024/1041）⟹ 零编辑腿被**结构性封顶**。**片段腿用的是同一把尺子**（`fragment-scorers.mjs:93` 同样以 `prop` 建索引），而片段腿的 28 行失败**全部**由 `propSet` 决定（`scoped == stated == core == byDim.propSet == 35/63`，见 D6）——两条腿是**同一个根因**，不是两个缺陷。
+2. **掩码**：`25` 个用例把 `membership` 钉进 `pinnedDims`，而这 **25 条的 NL 里没有一处查询措辞**；`pinnedDims ⊆ nlStatedDims` 这条不变量片段腿/弹窗腿都有（`fragment-scorers.test.mjs:390`、`dialog-scorers.test.mjs:96`），**CRUD 腿没有** ⟹ 钉了一个模型推不出来的意图（见 D2）。同源的更广谱现象是 gold 全语料写了 **468** 个 `inQuery:false`，其中 **215** 个落在**没有穷举查询列举**的用例里。
 3. **教学**：`tableBtns`（自定义文案/位置）与 `dialogs` 这两类**NL 明说、gold 也声明**的内容，模型整组不写（3/13、3/15）。
 
 ---
@@ -56,7 +56,7 @@
 | `formtype` | 88.7% | 接近达标 |
 | `permissions` / `i18n` / `target` / `mode` / `virtualScroll` / `operationColumn` | 100% | 达标 |
 | `treeConfig` / `mergeConfig` | 92.9% / 87.5% | 接近 |
-| **`membership`** | **63.4%** | 大半是**语料不可推断**（见 D2） |
+| **`membership`** | **63.4%** | 混合：一部分是**掩码不可推断**（25 个 pin；D2）、一部分是**gold 与 NL 正面矛盾**（6 例；D11） |
 | `extPoints` / `apiParams` | 69.6% / 75% | 待归因 |
 | **`dataOptions`** | **42.3%**（47/111） | 被 `prop` 键查找放大（D1） |
 | **`propSet`** | **36.1%**（70/194） | **尺子**（D1） |
@@ -77,17 +77,20 @@
 - **证据（既有日志）**：`accuracy-95-ruler-v3-design.md:107-125` —— `propF1 < 1` 的 **129/210 行 scoped 通过率 0.0%**，其中 **125 行 gold label 全在 NL 里**；这 129 行被 `columns/isHidden/expandConfig/dialogs/tableBtns/extPoints/editConfig/reactions` 挡住，而这些维度**全部以 prop 为键**。
 - **性质**：尺子缺陷（R2 已裁决：`label` 作身份 + `prop` 降为观测量），**不是放水**——仓库里 PRD 腿、AN-19、AI-46 早已这么判，只有 CRUD 主腿没对齐。
 - **影响**：零编辑腿封顶；`propSet` 36.1%；连带 8 个 prop-keyed 维度大面积假负。
-- **修法**：`scripts/eval/align.mjs`（`alignFields` 单射 + `normalizePredForCompare` 白名单重写）+ `scorers.mjs` 全部维度改走对齐结果 + 新增观测量 `propNameMatch`。测试矩阵见 ruler 文档 §8.4（12 条）。**不喂 gold、不动 AN-01、不改语料。**
+- **修法**：`scripts/eval/align.mjs`（`alignFields` 单射 + `normalizePredForCompare` 白名单重写）+ **`scorers.mjs` 与 `fragment-scorers.mjs` 两条腿**全部维度改走对齐结果 + 新增观测量 `propNameMatch`。测试矩阵见 ruler 文档 §8.4（12 条）。**不喂 gold、不动 AN-01、不改语料。**
+- **三条边界（复核补，见 D14/§8）**：① **`en` 腿保持 prop 身份**（gold label 是中文，label 身份在 en 上结构性 0 命中）；② 归一化实测**同 case 内 0 冲突**（1041 字段），不需要模糊匹配；③ `pinnedDims` 的字段级 token 经对齐表**解析而不改写**。
 
-### D2 · 【语料·HIGH】53 个用例的 membership 在 NL 里没有依据
+### D2 · 【掩码·HIGH】25 个 membership pin 在 NL 里没有任何依据 —— 且 CRUD 腿缺「pin ⊆ NL 说过」这条不变量
 
-- **证据（今日复算）**：`216` 个 CRUD 用例中，**144** 个有查询措辞（查询/筛选/搜索/检索/过滤/条件）；**53** 个**完全没有**查询措辞，但 gold 里写了 **120 个** `inQuery:false`（占这 53 例 169 个字段的 71%）。样例：`03-order-tablebtns`（NL 只说「表格列有…」，gold 把 `金额` 设 false）、`10-category-cascader`（`层级/排序` false）、`100-stock-adjust-edit`（`调整数` false）。
-- **证据（既有日志）**：`membership` 24 行失败、field 级 **140 次 miss，其中 111 次 want-false-got-true**（ruler 文档 §3）——与 **120** 这个数几乎一一对应。
-- **性质**：语料不可推断（违反本仓自己的标注原则「只钉 NL 表层无歧义锁定的那一点」，ruler 文档 §2.2 引 wave-2）。
-- **影响**：`membership` 63.4%；且因为它 **`applicable: () => true`**（`scorers.mjs:408`），**每个用例都在判它**，即使 `pinnedDims` 没写。
-- **修法（推荐）**：给这 53 例的 NL **补一句查询条件**（如「查询条件：订单号、下单时间」），**gold 一个字节不改** —— 这是「让 NL 说清它本来就想要的东西」，不是放松判据。
-  - **不推荐**：删 gold 的 `inQuery:false`（会让这 53 例不再考查询面推断，能力静默丢失）。
-  - **不做**：让 scorer 忽略未 pin 的 membership（会削弱「每个 CRUD 页都有查询栏」这一基础能力）。
+- **证据（今日复算）**：`216` 个 CRUD 用例中，**103** 个在 NL 里**穷举**了查询条件（`extractSurfaceList(nl,'inQuery')` 命中，形如「查询有 A、B」），**113** 个没有穷举列举。把 `membership` 钉进 `pinnedDims` 的共 **25** 例（`162`–`186`），**其中带查询措辞的：0 例**。这 25 例里 **10** 例写了 `inQuery:false`（16 个字段：如 `167` 的 `邮箱/状态`、`170` 的 `部门/职位`），**15** 例一个 false 都不写（gold 按 schema 默认全 true，模型若「合理地」收窄查询栏反被判错）。
+- **证据（结构）**：片段腿与弹窗腿都强制 **`pinnedDims ⊆ nlStatedDims`**（`fragment-scorers.test.mjs:390`、`dialog-scorers.test.mjs:96`）；**CRUD 腿没有这条不变量** —— `scripts/eval/scorers.test.mjs:535-542` 只校验「token 可记分」「`维度:字段` 引用的字段真实存在」，**不校验 NL 说没说**。全语料 279 例中仅 **63** 例带 `nlStatedDims`（全部是片段）⟹ 「scoped 不得惩罚 NL 未声明的意图」这条锁，恰好只在**门槛最高的那条腿**上缺。
+- **证据（既有日志）**：`membership` 24 行失败、field 级 **140 次 miss，其中 111 次 want-false-got-true**（ruler 文档 §3）——与全语料 **215** 个「无穷举查询列举却写了 `inQuery:false`」的字段同源。（原稿的 `53 例 / 120 字段` 是其更窄的切片：**完全**无查询措辞的 72 例里，53 例写了共 120 个 false；数字本身没错，但「无查询措辞」不是判别式 —— 见 §8 C1。）
+- **性质**：**掩码不可推断**，违反本仓自己的标注原则「只钉 NL 表层无歧义锁定的那一点」（ruler 文档 §2.2）。与 D1 不同：D1 是尺子把对的判错，这里是**语料要求了一个 NL 没说的东西**。
+- **影响**：`membership` 63.4%。门禁侧它只在**被 pin 的行**上扣分，但这 25 例**同时钉了 `propSet`**（25/25）、`actions`（22）、`mergeConfig`（15）⟹ 上限不是「直接拿下 25 行」，而是「这 25 行不再被 membership 一票否决」；其中 **7 例是 `FEWSHOT_DERIVED`**（172/173/176/177/179/181/185）**不进 heldout** ⟹ 影响门禁的是 **18 行 = 9.3pp（上界）**。且这 25 例**全部没有 `refinements`** ⟹ **无法经收敛腿兜回**，漏一个就整行丢。
+- **修法（推荐，零模型成本）**：**把 `membership` 从这 25 例的 `pinnedDims` 里摘掉** —— `byCapability.membership` 照旧观测（`applicable: () => true`，`scorers.mjs:408`），能力不丢、难度不降，只是不再一票否决。**不要**为了追 gold 去改这 25 例的 NL：会动 `corpusHash`、可能触发 `check:fewshot-registration`（NL ≥0.35 下界）与 `check:case-titles`，且 113 例里有收敛语料（见 §8 C8）。
+  - **必须同批补锁**：CRUD 掩码加 `nlStatedDims` + meta-eval 的 `pinnedDims ⊆ nlStatedDims`（照片段腿的写法），否则摘完下次又会长回来。
+  - **不推荐**：删 gold 的 `inQuery:false`（这些用例就不再考查询面推断，能力静默丢失）。
+  - **不做**：让 scorer 忽略**所有**未 pin 的 membership（会削弱「每个 CRUD 页都有查询栏」这一基础能力）。
 
 ### D3 · 【教学·MED】`tableBtns` 自定义文案/位置、`dialogs` 底座键：NL 说了、模型不写
 
@@ -106,13 +109,14 @@
 - **性质**：能力 + 口径（scripted refinements 只认确定性纠正）。
 - **修法**：在 D1/D2/D3 之后做——给收敛语料补「第一轮最常见的错」的纠正话术；目标 ≥80%（值 ~+4pp）。**不能把它提前当主力**（最多 10pp）。
 
-### D6 · 【全场景·HIGH】片段腿 55.6% vs 同语料探针 93.7%：38pp 未解释
+### D6 · 【全场景·HIGH】片段腿 55.6% 与探针 93.7% 的 38pp **不是"模型不会片段"**：它 100% 卡在 `propSet`
 
-- **证据**：`last-accuracy.json.fragments`（2026-10-22，`claude-opus-4-6`）scoped **55.6%**、byScene table 42.9% / form 57.1% / dialog 66.7%；而 `--fragments` 全量探针（`deepseek-v4-pro`，63/63 实测）迭代到最后一次是 **core 95.2% / scoped 93.7% / full 88.9% / compiles 100%**（`ROADMAP.md:528`，2026-10-20，AI-52 基线；更早的 2026-10-19 探针是 scoped 77.8%，`ROADMAP.md:436`）。
-- **性质**：**待判**——三种可能：① 模型差异（opus-4-6 在这套片段契约上确实更差）；② 中继降级（`servedModel` 报的是别名）；③ 口径漂移（探针与门禁跑批之间改了 prompt/判据）。
-- **影响**：这是「全场景 ≥95%」目前**唯一有数字的场景级证据**，38pp 的差必须先解释，否则任何结论都不可信。
-- **修法**：用**同一模型 + 同一 commit** 跑一次 `--fragments`（不写产物），与 10-22 的片段块对照；再跑一次 `--limit 3` 确认中继是否真在服务该模型（看 `servedModel`、`degradedCalls`、每行耗时）。**先诊断，再谈门禁。**
-
+- **证据（产物算术，今日复算）**：`last-accuracy.json.fragments` 里 `core == scoped == stated == 0.5556`，且 `byDim.propSet = 35/63 = 0.5556` —— **四个数完全相等**，因为 63 个片段**行行都钉了 `propSet`**。而 `byDim.formtype 42/42 = 100%`、`dataOptions 32/33`、`target/apiUrl/mode/defaultTitle/options.*/context/buttons/extPoints` 全 100% ⟹ **28 行失败全部由"字段名/字段集"决定**，没有一丝"片段契约理解不了"的成分。
+- **同源到 D1**：`fragment-scorers.mjs:93` 的 `fieldMap` 同样以 `prop` 建索引 ⟹ 片段腿与 CRUD 腿是**同一把尺子**的同一个缺陷。**阶段 A 必须同时改两个 scorer**（原稿只写了 `scorers.mjs`）。
+- **剩下真的不是 propSet 的部分**（都是小簇，dump 一次就能定位到具体 NL）：`fieldLayout 9/18`、`labelKey 3/9`、`fieldSpan 3/6`、`fieldAttrs 15/18`、`fieldRequired 17/21`、以及 `tableOptions.rowHeight/estimatedRowHeight/overscanCount/rowClassName/localPagination` 各 `3/6`–`0/3`。后者与「vue2 `virtual`/`rowHeight` 仅部分支持」（D9）方向一致，但**现在还不能断定是端能力缺口**——这些行同样先被 `propSet` 判死了。
+- **探针 93.7% 的读法（更正）**：`ROADMAP.md:528`（2026-10-20，`deepseek-v4-pro`，core 95.2/scoped 93.7）与 `ROADMAP.md:436`（2026-10-19，scoped 77.8%）是**两次不同时间的探针**，且与 10-22 的门禁跑批（`claude-opus-4-6`）**模型不同**。所以 38pp 里至少有三块：模型差异、尺子（同源 D1）、时间差上的 prompt/契约变更。**在阶段 A 落地前，这 38pp 不具有"模型能力"含义。**
+- **影响**：`fragmentStats.ok` 是 `passed` 的**组成项**（`eval-llm.mjs:1735-1741`），片段地板 77.8% 现在按 `propSet` 口径是**不可能**的 —— 所以"编译 100% + 全场景"这条口径下，**片段腿在阶段 A 之前不可能绿**。这与我原稿把它排到阶段 F 的顺序矛盾（见 §8 C12）。
+- **修法**：① 阶段 A 同批改 `fragment-scorers.mjs`（label 身份 + `propNameMatch` 观测）；② 阶段 C 的 dump **已包含片段行**（`--dump-pred` 落 `kind:'fragment'`），零额外成本即可把上面每个小簇定位到具体 NL；③ 地板**重新取证**（不下调），取证后写进 `accuracy-baseline.json`；④ 同模型同 commit 跑一次 `--fragments` 只用于**解释探针差**，不再作为门禁依据。
 ### D7 · 【编译覆盖面·LOW/MED】100% 是真的，但分母有边界
 
 - **证据**：`computeCrudMetrics` 只对 `lang === 'zh'` 聚合编译（`scripts/eval/run-metrics.mjs:46,85`）；en 腿 191 行有打分但**不进编译门**；Tier B 类型腿每端抽 10 例（`typecheck.samplePerTarget: 10`）。
@@ -121,9 +125,10 @@
 
 ### D8 · 【度量可靠性·HIGH（过程）】P0 已落地但从未真实跑过；夜间疑似断供
 
-- **证据**：`RULER_VERSION = 'prop-identity-v1'`（`scripts/eval/dump.mjs:42`）说明尺子还没换；ruler 文档 §13.4 的下一步（`--dump-pred` + `rescore --expect`）**尚未执行**——即 dump 路径只有单测，没有一次真实全量产物验证过。`last-accuracy.json` 最后一次完整测量是 **2026-10-22**，10-23 由本地跑批替换过「measurement failed」的夜间产物；**此后 4 天无徽章回写提交**（本机无外网，无法拉 Actions 日志确认是「跑挂了」还是「没跑」）。
+- **证据**：`RULER_VERSION = 'prop-identity-v1'`（`scripts/eval/dump.mjs:42`）说明尺子还没换；ruler 文档 §13.4 的下一步（`--dump-pred` + `rescore --expect`）**尚未执行**——即 dump 路径只有单测，没有一次真实全量产物验证过。`last-accuracy.json` 最后一次完整测量是 **2026-10-22**，10-23 由本地跑批替换过「measurement failed」的夜间产物；**此后工作区里再无徽章回写**。
+- **证据的边界（更正）**：`last-accuracy.json` 的最后提交日期 **不能**区分「跑挂了 / 没跑 / 跑了但产物逐字节相同所以没提交」（nightly 只在产物变化时提交）。所以只能写「**无回写**」，不能写「断供」。要判定必须看 Actions 日志（本机无外网）或 workflow 的 `if: always()` 落 artifact。
 - **性质**：测量管道可靠性。若不先修，D1/D2 的效果**无法在付钱之前预测**，只能一次次付费跑。
-- **修法**：① 先跑一次 `--dump-pred` 全量（这本来就是 P1 的前置），并用 `rescore --expect` 复现 22.7%——**复现不了就先修管道**；② 夜间加健康门：产物 `measurement !== 'complete'` 时徽章回灰 + 显式报「未测到」，而不是停在旧数字（F6 同类）。
+- **修法**：① 先跑一次 `--dump-pred` 全量（这本来就是 P1 的前置），并用 `rescore --expect` 复现 22.7%——**复现不了就先修管道**；② 夜间加健康门：产物 `measurement !== 'complete'` 时徽章回灰 + 显式报「未测到」，而不是停在旧数字（F6 同类）；③ workflow 每轮**无条件**上传 pred dump 为 artifact（哪怕失败/未变更），让「断供」与「无变化」在事后可区分。
 
 ### D9 · 【组件/契约面·MED】「全场景」的宣称边界
 
@@ -137,86 +142,133 @@
 - **性质**：治理缺陷（不是数字缺陷）。
 - **修法**：在 95% 达成前，门禁改为「**不劣化 + 阶段棘轮**」：`definition95 ≥ 基线` ∧ `core ≥ CORE_FLOOR` ∧ 逐维 rate ≥ 基线 ∧ 零未测到；绝对 95% 继续**公布**但不作 exit code 的唯一条款。阶段棘轮按 §4 的预期逐段上调（人工 PR 写入，不由脚本回写 —— 沿用 `accuracy-baseline.json` 的既有规则）。
 
+### D11 · 【语料·MED】6 例 NL 的穷举查询列举与 gold **正面矛盾**；而现有守卫只查一个方向
+
+- **证据（今日复算，用仓库自己的抽取器）**：`check:membership-trap` 只查「NL 穷举了 A、B，gold 漏写 `false`」这一个方向。反过来的「NL 穷举了 A、B，gold 却把 A 标成 `inQuery:false`」**没有任何检查**。实际命中 **6 例**：
+
+  | 用例 | NL 的穷举查询列举 | gold 把哪个标成 false |
+  |---|---|---|
+  | `59-drug-index-group` | 药品名称、**规格** | `spec` |
+  | `153-invoice-link-render` | 开票方、**金额区间** | `amount` |
+  | `154-revenue-spark-render` | 月份、**渠道** | `channel` |
+  | `155-score-gauge-render` | 对象名称、**等级** | `level` |
+  | `157-shipment-track-render` | 运单号、**承运商** | `carrier` |
+  | `159-task-progress-render` | 任务名称、**负责人** | `owner` |
+
+  ⟹ 模型照 NL 把该字段放进查询栏，反被判错。这是**语料自相矛盾**，不是模型错。
+- **另有一类同族但方向相反的缺陷**：NL 穷举了 gold **根本没有**的字段 —— `54-meeting-selection-sfc`（NL「查询有会议主题、**会议室**」，gold 四个字段里没有会议室）。该例钉了 `propSet`，模型按 NL 补上会议室就丢 `propSet`。另一处 `21-audit-readonly-sfc` 的 `inTable` 是抽取器把「全部只读展示」当成字段名，属误报。
+- **修法**：① 守卫扩成**双向**（穷举列举里的 token 若被 gold 标 `false` → 红；穷举列举里的 token 若在 gold 里**无对应字段** → 红）；② 这 6 例按 NL 修 gold（把该字段的 `inQuery` 删掉/改 true），`54` 补字段或改 NL —— **逐例人工裁决，写进 PR 说明**，不做批量脚本。
+
+### D12 · 【能力·MED】NL 要「区间查询」，schema 里没有区间概念
+
+- **证据**：`153-invoice-link-render` 的 NL 写「查询有开票方、金额区间」。schema 里没有「range」字段级声明；生成器只在日期选择器上**顺便**读过 `attrs.type` 含 `range`（`packages/shared/src/structured-generator.ts:2154,2172`），**没有任何 golden 用例用声明式表达过区间查询**。
+- **性质**：① 「全场景」的表达力缺口（真实业务最常见的查询形态之一）；② 与 P2 `mark-never-drop` 冲突——NL 明显想要、配置面无处安放时，现在**静默丢弃**（没有告警）。
+- **修法（先轻后重）**：① 生成器对「NL 里的区间/范围措辞」发**非静默告警**（mark-never-drop 的最低要求），并入 `check:generator-escaping` 同族的守卫；② 真要补表达，走 schema 评审（`inQuery` 侧的 range 语义 vs 两个字段的下界/上界），**不要**为了一例语料临时加键；③ 语料侧把 `153` 的「金额区间」改成 `金额`，先把矛盾消掉，表达力缺口单独登记。
+
+### D13 · 【度量·MED】棘轮基线没有 `rulerVersion` 指纹 ⟹ 换尺子后旧基线会长期掩盖回归
+
+- **证据**：`accuracy-baseline.json` 只存百分比与 `applicableCounts`，**不记录尺子版本**；而 `RULER_VERSION` 在阶段 A 会从 `prop-identity-v1` 变成 `label-identity-v2`。基线是「不劣化」判据 ⟹ 新旧两把尺子的数字被直接相减，`compareToBaseline` 会把**尺子造成的跳变**读成能力跳变（两个方向都会错）。
+- **修法**：`accuracy-baseline.json` 增 `rulerVersion` 字段；`compareToBaseline` 在版本不同时**拒绝比较并报错**（要求同批 PR 重新取证基线 + 写 `_comment`）。阶段 A 的 PR 必须同时重新取证，不允许"先改尺子分数大涨、基线慢慢再说"。
+
+### D14 · 【全场景约束·HIGH】en 腿**不能**用 label 身份 —— 阶段 A 必须是 zh-only
+
+- **证据**：`nlEn` 腿的输入是英文（如 `shows username, email and status`），而 gold 的 `label` 是中文（`用户名/邮箱/状态`）⟹ label 归一化匹配在 en 腿上**结构性 0 命中**。现行 `prop` 身份在 en 腿上恰好是可用的（`prop` 是模型唯一能从 NL 侧猜对的锚点，`userName/email/status`）。
+- **性质**：这不是"要不要一起改"，而是**改了就是错的**。原稿 §4 阶段 A 没写这条，实施时极易顺手统一。
+- **修法**：`alignFields` 收 `lang` 参数；`zh` 走 label 身份（`prop` 作观测量），`en` **保持 prop 身份**并在产物里显式标注 `identity: 'prop'`。en 腿的公平性另议（它是观测腿，`compileRate` 分母也已排除它，见 D7），**不作为 95% 的门禁依据**。
+
 ---
 
 ## 4. 可行方案（阶段、验收、成本）
 
-> 原则：**先修尺子 → 再修语料 → 再谈教学 → 最后才动模型侧**。每一步都必须能被「同一份 dump 复算」验证，否则又回到「改一次 prompt 付一次钱、还分不清是尺子还是能力」。
+> 原则：**先修掩码 → 再修尺子 → 再探管道 → 一次付费取 dump → 才谈教学**。每一步都必须能被「同一份 dump 复算」验证，否则又回到「改一次 prompt 付一次钱、还分不清是尺子还是能力」。
+> 顺序与原稿的差别（见 §8）：**阶段 0（掩码）提到最前**——它零成本、可算上界、且不依赖 dump；**片段 scorer 与 CRUD scorer 在阶段 A 同批改**（同一个缺陷两条腿）；**片段地板在阶段 A 之后就不可能是绿的**（D6），所以它在关键路径上，不属"最后收口"。
 
-### 阶段 A · 尺子（0 模型成本，1–2 天）—— 对应 D1
+### 阶段 0 · 掩码与语料矛盾（0 模型成本，半天）—— 对应 D2 / D11 / D12③
+
+| 动作 | 验收（变异 → 红） |
+|---|---|
+| 25 例（`162`–`186`）的 `pinnedDims` **摘掉 `membership`**；`byCapability.membership` 照旧观测 | 复算：`membership` 仍出现在 `byCapability`（分母不变）；被摘的 25 行 `exactIntentScoped` 的 AND 集合少一项（用 gold-vs-gold + 一个「只错 membership」的 pred 双向断言） |
+| CRUD 掩码补 `nlStatedDims`（照片段腿的字段名与语义）+ `scorers.test.mjs` 加 `pinnedDims ⊆ nlStatedDims` | 造一条「pinnedDims 含 NL 未说的 token」的临时语料 ⟹ meta-eval 红；恢复 ⟹ 绿 |
+| D11 的 6 例正面矛盾逐例人工裁决（改 gold 的 `inQuery`，不改 NL）；`54` 补字段或改 NL | `check:membership-trap` **扩成双向**：穷举列举里的 token 被标 `false` → 红；穷举列举的 token 在 gold 无字段 → 红。修前 6 例红，修后绿 |
+| `153` 的「金额区间」改成「金额」（表达力缺口另见 D12） | 该例 NL 不再要求 schema 表达不了的形态 |
+
+**预期**：门禁上界 **+9.3pp**（18 个 heldout 行不再被 membership 一票否决；这 25 例同时钉了 `propSet`/`actions`/`mergeConfig`，**实际增幅取决于这些维度**，不是 9.3pp 全收）。`membership` 维度分本身**不变**（仍是 63.4% 量级）—— 阶段 0 只改「能不能一票否决」，不改「模型做得对不对」。这一点必须写进 PR，否则又是一次"分数涨了但不知道涨的是什么"。
+
+### 阶段 A · 尺子（0 模型成本，1–2 天）—— 对应 D1 / D13 / D14
 
 | 动作 | 验收（变异 → 红） |
 |---|---|
 | `scripts/eval/align.mjs`：`alignFields`（label 归一化精确匹配 + 单射 + 兜底 prop）+ `normalizePredForCompare`（白名单，8 类结构） | 12 条测试矩阵（ruler 文档 §8.4）先写先红：改名不改 label ⟹ 全维 pass；`treeConfig.childrenField` 不被误改；`extPoints.render` 内容变了仍 pass |
-| `scorers.mjs` 全部维度改走对齐结果；新增 `propNameMatch` 观测量 | 旧断言（同 label 同 prop）逐字节不变；`byDimension` 键集不变（不新增维度） |
-| `RULER_VERSION → 'label-identity-v2'`；`--fixed-fields` 仍为诊断开关 | 产物写版本号；`check:artifact-freshness` 不因版本变化误红 |
+| **`scorers.mjs` 与 `fragment-scorers.mjs` 同批改**走对齐结果（两处 `fieldMap` 都以 prop 建索引：`scorers.mjs:47`、`fragment-scorers.mjs:93`） | 片段腿：gold-vs-gold 仍 63/63；只改名不改 label 的 pred 由红转绿（当前必红） |
+| **`describeDimMiss` 同批改**（`scorers.mjs` / `fragment-scorers.mjs` 的诊断打印器） | 不变量「`want===got` ⟺ 该维 pass」用测试钉住（先例：commit ec0cf50 的同类修复）；否则日志会与新分数自相矛盾 |
+| `pinnedDims` 的**字段级 token**（`formtype:actionType`、`isHidden:supplier`…）经对齐表**解析**，**不改写**语料 | gold 侧 token 被扰动到同 label 异 prop 的字段 ⟹ 仍 pass（证明是"解析"不是"照抄"）；token 引用的 prop 在 gold 里**不存在**时仍红（不许借对齐放行笔误） |
+| `RULER_VERSION → 'label-identity-v2'`；`accuracy-baseline.json` 增 `rulerVersion`，`compareToBaseline` 版本不同则**拒绝比较** | 旧版本基线 + 新尺子 ⟹ 显式报错而非静默相减（D13）；`check:artifact-freshness` 不因版本变化误红 |
+| **`alignFields(lang)`：`en` 腿保持 `prop` 身份**，产物标注 `identity:'prop'`（D14） | en 行：改名不改 label 的 pred **仍红**（如果 label 身份误用到 en，这条会假绿） |
+| `--fixed-fields` 仍为诊断开关 | 同原稿 |
 
-**预期**：可证下界 **+25 行（→34.3%）**（ruler 文档 §9.1），上限不可预设（§9.2）。**这一步不需要跑模型**——但要等阶段 C 的 dump 才能得到点估计。
+**预期**：可证下界 **+25 行**（ruler 文档 §9.1，按当时 210 行口径推导）；换算到今天的 194 行 heldout 约 **→35%**，**不是精确值**，阶段 C 的 dump 到位后按真集合重算。上限不可预设（§9.2）。**这一步不需要跑模型。**
 
-### 阶段 B · 语料确定性（0 模型成本，半天）—— 对应 D2
+### 阶段 C₀ · 管道体检（极小付费，~10 min）—— 对应 D8
 
-| 动作 | 验收 |
-|---|---|
-| 53 个用例的 NL 补「查询条件：…」（gold 不动） | 复算脚本：**0 个**用例「无查询措辞却有 `inQuery:false`」；`check:membership-trap` 扩一条「gold 的每个 false 都能在 NL 里找到依据（关键词窗口内）」 |
-| 复核 4 个 `fixedFields` 真子集例（`04/13/30/58`） | 不动（它们是「给定字段」语义的合法子集） |
+`node scripts/eval-llm.mjs --limit 8 --dump-pred .tmp-audit/probe.jsonl` 然后 `rescore --expect` 复现这 8 行的数字。
+**验收**：dump 与 rescore 逐字段自洽（含 `hasRefinements` 的收敛行）。**管道不通就不要跑全量**——全量 3.5 h 的失败比 10 min 的失败贵 20 倍。
 
-**预期**：`membership` 从 63% → 85–90%（依据：111/140 次 miss 落在这 53 例上）。
-
-### 阶段 C · 一次全量 + 双尺子复算（1 次付费，~3.5 h）—— 对应 D8
+### 阶段 C · 一次全量 + 双尺子复算（1 次付费，~3.5 h）
 
 ```bash
 npm run build:libs
 ESPLUS_EVAL_KEY… node scripts/eval-llm.mjs --dump-pred .tmp-audit/pred-<date>.jsonl
-node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/golden/last-accuracy.json  # 必须逐字段复现旧口径
-# 换 v2 尺子复算同一份 dump → 得到精确 delta（不额外付费）
+node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/golden/last-accuracy.json  # 旧尺子必须复现
+# 同一份 dump 用 v2 尺子复算 → 精确 delta（不额外付费）
 ```
 
-**验收**：① 旧尺子复现当次产物（不一致 ⟹ 先修 dump）；② 新尺子给出 `definition95`、`propNameMatch`、近失分布；③ 把「D4 的真内容缺口」按维度列出来（此时失败集才准）。
+**验收**：① 旧尺子复现当次产物（不一致 ⟹ 先修 dump）；② 新尺子给出 `definition95`、`propNameMatch`、近失分布；③ 把「D4 的真内容缺口」按维度列出来；④ **片段行同样来自这份 dump**，把 D6 里 `fieldLayout/labelKey/rowHeight` 那些小簇定位到具体 NL。
 
 **这是整条路线唯一的必经付费点**——在此之前不要改 prompt。
 
 ### 阶段 D · 教学补齐（1 次付费验证）—— 对应 D3/D4
 
-按阶段 C 的真失败集逐类消：`tableBtns` 文案/位置 → `dialogs` 底座键 → `columns.groups` → `reactions` → `expandConfig`。
+按阶段 C 的真失败集逐类消：`tableBtns` 文案/位置 → `dialogs` 底座键 → `columns.groups` → `reactions` → `expandConfig` → 片段腿的 `fieldLayout/labelKey` 簇。
 每条 few-shot **必须同时**登记 `FEWSHOT_DERIVED`（否则 heldout 被污染，`check:fewshot-registration` 会红）。
 
 ### 阶段 E · 收敛腿（1 次付费验证）—— 对应 D5
 
-目标 ≥80%（+4pp 左右）。**排在 D 之后**，因为收敛用的纠正话术依赖真失败集。
+目标 ≥80%（+4pp 左右，上限 +10pp）。**排在 D 之后**，因为收敛用的纠正话术依赖真失败集。
 
-### 阶段 F · 全场景收口（0 模型成本 + 1 次探针）—— 对应 D6/D7
+### 阶段 F · 全场景收口（0 模型成本）—— 对应 D6/D7
 
 | 动作 | 验收 |
 |---|---|
-| 片段腿诊断：同模型同 commit 跑 `--fragments`，与 10-22 片段块对照 | 38pp 差有书面归因（模型 / 中继 / 口径） |
-| 片段地板重新取证（**不下调**）：按当前契约跑一次，写进 `accuracy-baseline.json` | 人工 PR 写入 + `_comment` 记录来源 |
-| 片段进门禁（结论未定时**先不门禁**，但要有「不劣化」棘轮） | 片段 scoped ≥ 新基线 |
+| 片段地板重新取证（**不下调**）：阶段 C 后按新尺子跑一次全量，把值写进 `accuracy-baseline.json` | 人工 PR 写入 + `_comment` 记录来源；取证前片段腿处于"已知红"状态并在徽章上写清 |
+| 片段进「不劣化」棘轮 | 片段 scoped ≥ 新基线 |
+| 「38pp 探针差」书面归因（模型 / 尺子 / 时间差），**不追平探针** | 只要求写进文档；探针是 `deepseek-v4-pro`、门禁是 `claude-opus-4-6`，两者不可同口径比较 |
 | en 腿进编译分母 + typecheck 全量 + 转义 fuzz 语料 | 编译率仍 100%，且分母从 216 → 407+ |
 
-### 阶段 G · 度量可靠性（持续）—— 对应 D8/D10
+### 阶段 G · 度量可靠性（持续）—— 对应 D8/D10/D13
 
 - 夜间健康门：`measurement !== 'complete'` ⟹ 徽章回灰 + 明确「未测到」，**不许停在旧数字**；
-- 门禁改「不劣化 + 阶段棘轮」，95% 继续公布；
-- `accuracy-baseline.json` 的棘轮值按阶段人工上调：`0.35 → 0.55 → 0.75 → 0.90 → 0.95`。
-
----
+- 每轮无条件上传 pred dump artifact（失败也传），让「断供」与「无变化」事后可区分；
+- 门禁改「不劣化 + 阶段棘轮」，95% 继续公布；棘轮值随阶段人工上调：`0.35 → 0.55 → 0.75 → 0.90 → 0.95`；
+- 每次换尺子/换语料 ⟹ 同批重新取证基线并更新 `rulerVersion` / `corpusHash`。
 
 ## 5. 95% 的可达性判断（诚实版）
 
 | 阶段完成后 | 预期 `definition95` | 依据 |
 |---|---|---|
 | 今天 | **22.7%** | 产物 |
-| A（尺子） | 34–45% | 可证下界 34.3%；上限不可预设 |
-| A+B（+语料确定性） | 45–60% | membership 63%→85%+ 的折算 |
-| +D（教学） | 60–75% | tableBtns/dialogs/columns 从 3/13、3/15、4/32 抬到 60%+ |
-| +E（收敛） | 70–85% | 收敛腿最多 +10pp，且只在普通用例 ≥85% 时才有意义 |
+| **0（掩码）** | 22.7% → **≤32.0%** | 上界 +9.3pp（18 个 heldout 行不再被 membership 一票否决）；**真正能收多少取决于这 18 行的 `propSet`/`actions`/`mergeConfig`**，多半收不满 |
+| A（尺子） | 32–45% | 可证下界 +25 行（ruler 文档 §9.1 的 210 行口径）；按 194 行换算约 →35%，不精确 |
+| +D（教学） | 45–70% | tableBtns/dialogs/columns 从 3/13、3/15、4/32 抬到 60%+ |
+| +E（收敛） | 55–80% | 收敛腿最多 +10pp，且只在普通用例 ≥85% 时才有意义 |
 | **95%** | **需要 D4 的每个维度都接近满分** | 算术：普通用例 ≥155/164 |
+
+> **与原稿的顺序更正**：原稿是「A 尺子 → B 语料 → D 教学」。复核后 **掩码（阶段 0）必须最先**：它零成本、上界可算、且不依赖 dump；而「补 NL」那条路被证明**不必走**（摘 pin 即可，见 D2）。**片段腿在阶段 A 之前不可能绿**（D6/§8 C12），所以它不属"最后收口"。
 
 **结论**：95% 在「四场景 + 216 例语料」的口径下是**可达但极难**——它要求零编辑腿在**每一个 pinned 维度**上都接近满分，而当前最难的四个维度（columns/reactions/expandConfig/isHidden）都还是 12–19%。**不要承诺 95%**；用上面的阶段棘轮把「进展」变成可验收的东西，同时保留「若 D 阶段后普通用例 <70%，则重新评审语料代表性（是否把过多高级特性塞进 heldout）」的决策点。
 
 **三条出路（按推荐序）**
 
-1. **把 NL 说清（阶段 B）+ 把尺子修对（A）+ 把教学补齐（D）** → 真实能力达标；
+1. **把掩码说清（0）+ 把尺子修对（A）+ 把教学补齐（D）** → 真实能力达标；
 2. **收敛定义下达标**：`≤K` 收敛是产品实际使用路径（TypeChat 同构），门禁是 ∨，不是 one-shot；
 3. **达不到就改口径**——**必须走评审**，且不得因此删难例（`check:ratchet` 已有防洗分，需扩到「删语料」）。
 
@@ -224,12 +276,14 @@ node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/go
 
 ## 6. 不做清单（避免走错方向）
 
-- ❌ **不恢复 `--fixed-fields` 进正式批**（AN-01 的核心决定；那会让 `propSet` 变成抄写保真度）。
-- ❌ **不做 label 模糊匹配**（拼音/编辑距离）——只做归一化精确匹配 + 近失集公布。
+- ❌ **不恢复 `--fixed-fields` 进正式批**（AN-01 的核心决定；那会让 `propSet` 变成抄写保真度）。这 25 例虽带 `fixedFields`，也不能因此当"给定字段"处理。
+- ❌ **不做 label 模糊匹配**（拼音/编辑距离）——只做归一化精确匹配 + 近失集公布。归一化后同 case 内 **0 冲突**（今日复算，1041 字段），所以不需要模糊匹配。
+- ❌ **不把 label 身份用到 en 腿**（gold label 是中文、`nlEn` 是英文，必然 0 命中；见 D14）。
 - ❌ **不为变绿下调片段地板**（77.8% 口径过期，要**重新取证**，不是下调）。
-- ❌ **不把片段混进 CRUD 的 95% 分母**（两套能力的回归信号会互相钝化）。
+- ❌ **不把片段混进 CRUD 的 95% 分母**（两套能力的回归信号会互相钝化）；但**两把尺子必须同批修**。
 - ❌ **不先改 prompt 再改尺子**（会把命名噪声当能力信号调）。
-- ❌ **不改 gold 去迎合模型**（阶段 B 补的是 NL，不是 gold）。
+- ❌ **不改 gold 去迎合模型**——**唯一例外是 D11 那 6 例**：那是 gold 与自己的 NL 正面矛盾，改的是 gold 且逐例人工裁决。
+- ❌ **不为了「让 membership 好看」改收敛语料的 NL**（它们是收敛腿的铰链，见 §8 C8）。
 - ❌ **不混用历史数字**（55.5% / 22.7% / 93.7% 三个数各自的口径在 §1 已写明）。
 
 ---
@@ -239,22 +293,84 @@ node scripts/eval/rescore.mjs .tmp-audit/pred-<date>.jsonl --expect __tests__/go
 | 风险 | 触发条件 | 缓解 |
 |---|---|---|
 | 修尺子被看成「放水」 | 数字一次性大涨 | 同时公布 `propNameMatch`、近失集；12 条反向测试钉住「改名以外仍判负」 |
-| 阶段 B 被看成「改语料洗分」 | 补 NL 后分数上升 | 补的是 NL 不是 gold；`check:membership-trap` 扩「每个 false 有 NL 依据」；语料 hash 进产物 |
-| 片段 38pp 是模型问题 | 同模型复跑仍 55% | 那就如实写「片段腿在该模型上不达标」，并把它作为**选型依据**（模型也是系统的一部分） |
-| 夜间一直是断的 | 无徽章回写 | 阶段 G 的健康门；必要时改为「提交失败也落 artifact」 |
+| 阶段 0 被看成「摘 pin 洗分」 | 摘 membership 后分数上升 | 摘的是**不可推断的掩码**，不是难度：`membership` 维度分不变、`propSet`/`actions`/`mergeConfig` 照旧钉；同批补上 `pinnedDims ⊆ nlStatedDims` 这条**更严**的不变量 |
+| 阶段 0 摘错（本该钉的也摘了） | 某例 NL 其实说了查询 | 25 例逐个过一遍 NL（今日已全量导出，0 例有查询措辞）；守卫改造后由机器保证 |
+| 片段 38pp 是模型问题 | 同模型复跑仍 55% | 已更正：55.6% 完全由 `propSet` 决定（D6），**不是模型问题**；模型差异只在探针 vs 门禁的口径讨论里出现 |
+| 夜间一直是断的 | 无徽章回写 | 阶段 G 的健康门 + 无条件上传 pred artifact；判定依据是 Actions 日志不是提交时间 |
+| 换尺子后基线失真 | `rulerVersion` 不一致仍相减 | D13：`compareToBaseline` 拒绝跨版本比较 |
 | 95% 长期不可达 | 阶段 D 后 <70% | 决策点：评审语料代表性，或承认 95% 是 ∨ + 收敛口径下的目标 |
 
 ---
 
-## 附：本报告用到的复算命令（可重跑）
+## 附：本报告用到的复算命令（可重跑，全部读 `__tests__/golden/cases/*.json`）
 
 ```bash
-# 字段身份可推断性（今日复算：40/1041 prop、1024/1041 label、0 重复 label）
-node -e "…"   # 见本次会话脚本；读 __tests__/golden/cases/*.json
+# 1) 字段身份可推断性（今日复算：40/1041 prop、1024/1041 label、归一化后同 case 内 0 冲突）
+node --input-type=module -e "
+import fs from 'node:fs'
+const D='__tests__/golden/cases'
+let n=0,p=0,l=0
+for(const f of fs.readdirSync(D)){const c=JSON.parse(fs.readFileSync(D+'/'+f,'utf8'))
+  for(const x of c.config?.fields??[]){n++;const nl=String(c.nl??'')
+    if(x.prop&&nl.includes(x.prop))p++; if(x.label&&nl.includes(x.label))l++}}
+console.log(n,p,l)"
 
-# membership 不可推断面（今日复算：144 有查询措辞 / 53 无措辞但有 false / 120 个 false 字段）
-node -e "…"
+# 2) 掩码面（今日复算：216 例 = 144 有查询措辞 + 72 无；103 穷举列举 / 113 无；25 个 membership pin 全部无查询措辞）
+node --input-type=module -e "
+import fs from 'node:fs'
+import {pathToFileURL} from 'node:url'
+const u=(p)=>pathToFileURL(process.cwd()+'/'+p).href
+const {isCrudCase}=await import(u('scripts/eval/scenes.mjs'))
+const {extractSurfaceList}=await import(u('scripts/lib/membership-trap.mjs'))
+const D='__tests__/golden/cases';const Q=/查询|筛选|搜索|检索|过滤/
+for(const f of fs.readdirSync(D)){const c=JSON.parse(fs.readFileSync(D+'/'+f,'utf8'))
+  if(!isCrudCase(c))continue
+  if((c.pinnedDims??[]).some(t=>String(t).startsWith('membership')))
+    console.log(f,'hasQ=',Q.test(c.nl),'enum=',!!extractSurfaceList(c.nl,'inQuery'))}"
 
-# 当前分布
+# 3) 片段腿为何 55.6%：scoped ≡ propSet（四个数相等即证明失败全由 propSet 决定）
+node -e "const a=require('./__tests__/golden/last-accuracy.json');const f=a.fragments;
+console.log({core:f.core,scoped:f.scoped,stated:f.stated,propSet:f.byDim.propSet})"
+
+# 4) 当前分布
 node -e "const a=require('./__tests__/golden/last-accuracy.json');console.log(a.byCapability)"
 ```
+
+---
+
+## 8. 二次复核记录（对本报告自身的更正与补漏）
+
+> 本节是**同日对本报告 §0–§7 的复核结果**：逐条重跑证据、逐条问「这个结论反过来能不能成立」。
+> 标 **❌ 更正** = 原文写错了（已在正文改掉，此处保留错在哪，便于追溯）；**➕ 补漏** = 原文没看到；
+> **✅ 复核确认** = 原文对、且这次独立验过。所有数字都可按附录命令重跑。
+
+### ❌ 更正（原文错的）
+
+| # | 原文 | 更正 | 影响 |
+|---|---|---|---|
+| **C1** | D2 用「53 例无查询措辞 / 120 个 false」作判别式，推荐「给这 53 例补 NL」，并提出守卫扩「gold 的每个 false 都要在 NL 里找到依据」 | 53/120 只是「**完全**无查询措辞」的窄切片（216 例里 72 例无措辞、其中 53 例写了 120 个 false）；**真判别式是「被 pin 的维度在 NL 里没说过」**。全语料 468 个 `inQuery:false` 里 **459 个的 label 出现在 NL**（98%）⟹ 「label 不在 NL」区分不了任何东西，那条守卫扩法**会把本该判错的判绿**，与既有守卫刻意排除 `inForm` 的理由同构 | D2 整段重写：改「摘 25 个 pin」而非「补 53 例 NL」 |
+| **C4** | D6 定性为「片段腿 55.6% vs 探针 93.7%，38pp 未解释（模型/中继/口径三选一）」 | `core == scoped == stated == byDim.propSet == 35/63` 四个数**完全相等** ⟹ 28 行失败**全部**由 `propSet` 决定，与"模型会不会写片段"无关；`formtype` 42/42=100%。这是 D1 的同一个缺陷在第二条腿上的表现 | D6 重写；阶段 A 从「改 `scorers.mjs`」扩成「两条腿同批改」 |
+| **C9** | D8「此后 4 天无徽章回写 ⟹ 夜间疑似断供」 | nightly 只在产物变化时提交 ⟹ 提交时间**无法**区分「跑挂了 / 没跑 / 跑了但逐字节相同」。只能写「无回写」 | D8 改口径 + 加「无条件上传 artifact」 |
+| **C12** | 阶段 F（最后）才处理片段腿 | `fragmentStats.ok` 是 `passed` 的**组成项**（`eval-llm.mjs:1735-1741`）⟹ 片段地板在阶段 A 之前不可能绿，它在**关键路径**上 | §4 重排顺序与 §5 表格 |
+| **C13** | 「25 个 membership pin，值 ~+12.9pp」 | 其中 **7 例是 `FEWSHOT_DERIVED`**（172/173/176/177/179/181/185）不进 heldout ⟹ 影响门禁的是 **18 行 = 9.3pp（上界）**；且这 25 例**同时钉 `propSet`**，实际收不满 | §5 表格 + D2 |
+
+### ➕ 补漏（原文没看到）
+
+| # | 新发现 | 落在哪 |
+|---|---|---|
+| **C2** | **`check:membership-trap` 只查一个方向**。反方向「NL 穷举了 A、B，gold 却把 A 标 false」有 **6 例**（59/153/154/155/157/159）；另有 `54-meeting-selection-sfc` 的 NL 要求「会议室」而 gold **没有这个字段**，该例又钉了 `propSet` ⟹ 模型照 NL 写反而扣分 | 新增 **D11** |
+| **C3** | NL 要「**金额区间**」这类**区间查询**，schema 里没有该概念（只有日期选择器上顺带读 `attrs.type` 含 `range`）⟹ 真实业务最常见的查询形态之一在配置面**无处安放**，且**静默丢弃**（违反 P2 mark-never-drop） | 新增 **D12** |
+| **C5** | **en 腿不能用 label 身份**：gold `label` 是中文、`nlEn` 是英文 ⟹ 归一化匹配结构性 0 命中。阶段 A 若顺手统一，en 腿会全线假负 | 新增 **D14**，并写进阶段 A 验收与 §6 不做清单 |
+| **C6** | 诊断打印器 `describeDimMiss` / `describeFragmentDimMiss` 必须**同批**跟着改，否则「want===got 却判负」的日志与分数自相矛盾（先例：commit ec0cf50 的同类修复） | 阶段 A 增一行验收 |
+| **C7** | `accuracy-baseline.json` **没有 `rulerVersion` 指纹** ⟹ 换尺子后 `compareToBaseline` 会把尺子跳变读成能力跳变，且旧基线会长期掩盖回归 | 新增 **D13** |
+| **C8** | 「补 NL」这条路**不能走**：30 个收敛语料里 **28** 个没有穷举查询列举、且**全部**含 `inQuery:false`；改它们的 NL 就是在动「欠定 NL 是收敛铰链」这一设计（见记忆 `convergence-second-leg-structural-miss`）。且改 NL 会动 `corpusHash`、可能触发 `check:fewshot-registration`（NL ≥0.35）与 `check:case-titles` | D2 修法改为「摘 pin」，并在 §6 明列 |
+| **C10** | **归一化不会撞车**：NFKC → 去空白 → 去标点 → 小写后，**同 case 内 0 冲突**（1041 字段），跨 case 只有 1 组拼写变体（`SKU 名称` vs `SKU名称`，不影响 case 内单射）⟹ 精确匹配 + 单射是可实现的，不需要模糊匹配 | D1 修法可行性背书 |
+| **C11** | `pinnedDims` 的**字段级 token**（如 `formtype:actionType`、`isHidden:supplier`）里的字段名仍是 **gold prop 空间**，必须经对齐表**解析**而**不能改写**（改写等于改语料）；语义从「同 prop」放宽为「同 label 的字段」 | 阶段 A 增一行验收 |
+
+### ✅ 复核确认（原文对，且这次独立验过）
+
+- `passed` 的组成项：`gateRate >= TARGET_ACCURACY && guards.ok && frontDoorStats.ok && compileRate === 1 && fragmentStats.ok`（`eval-llm.mjs:1735-1741`）。
+- `compileRate` 的分母**排除 en 行**（`run-metrics.mjs:85` 只取 `lang === 'zh'`）⟹ 100% 是真的，覆盖面是 D7 说的那个边界。
+- `accuracy-baseline.json` 的百分比字段**刻意留 null**、只由人工 PR 写 ⟹ 棘轮改值不能由脚本回写。
+- 25 个 membership pin 的用例**全部没有 `refinements`** ⟹ 它们拿不到收敛腿的兜底，membership 一错就是整行丢。
+- 严格保留：**本报告不改任何语料、不动任何 scorer、不跑模型**——以上全部只靠读语料与读产物得出。
