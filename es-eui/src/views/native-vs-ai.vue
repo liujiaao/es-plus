@@ -235,7 +235,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #b45309, #f59e0b);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .nva-nl {
@@ -249,8 +249,8 @@ export default {
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 12px;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
 }
 
 .nva-grid {
@@ -281,8 +281,8 @@ export default {
   border-radius: 8px;
   font-size: 11px;
   font-weight: normal;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
 }
 
 .nva-file {
@@ -336,8 +336,8 @@ export default {
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #92400e;
-  background: #fffbeb;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
 }
 
 .nva-verdict,
@@ -403,8 +403,8 @@ export default {
 }
 
 .nva-tabs button.active {
-  border-color: #b45309;
-  color: #b45309;
-  background: #fffbeb;
+  border-color: var(--es-brand-primary);
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
 }
 </style>

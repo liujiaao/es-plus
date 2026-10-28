@@ -352,30 +352,25 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 18px 22px;
-  border: 1px solid #d6e4ff;
+  border: 1px solid var(--es-brand-primary-light);
   border-radius: 12px;
-  background: linear-gradient(135deg, #f0f7ff, #ffffff 60%);
+  background: linear-gradient(135deg, var(--es-brand-tint), #ffffff 60%);
   text-decoration: none;
   transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
 }
 
+/* 卡片底色也归到品牌浅蓝：紫色浅底同样是「多出来的第二种强调色」 */
 .ai-cta {
-  border-color: #efdbff;
-  background: linear-gradient(135deg, #f9f0ff, #ffffff 60%);
+  border-color: var(--es-brand-primary-light);
+  background: linear-gradient(135deg, var(--es-brand-tint), #ffffff 60%);
 }
 
-.ai-cta-badge {
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
-}
-
-/* 片段拼装页：不是「一份 schema 驱动」，故换第三种徽章色（青）区分来源。 */
-.fragment-cta-badge {
-  background: linear-gradient(135deg, #0e7490, #06b6d4);
-}
-
-/* 三栏对照页：主张是「实测数字」，与上面几页的「能力演示」不同，故换第四种徽章色（琥珀）。 */
+/* 五个入口同一个强调色，靠徽章上的字区分来源。此前每种来源各配一种渐变（紫 / 青 /
+   琥珀），一屏四种强调色只会显得「每张卡都想不一样」—— 审计 §6.6：一个页面一个强调色。 */
+.ai-cta-badge,
+.fragment-cta-badge,
 .nva-cta-badge {
-  background: linear-gradient(135deg, #b45309, #f59e0b);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .flagship-cta:hover {
@@ -423,20 +418,18 @@ export default {
   margin-bottom: 16px;
 }
 
+/* L1–L5 是同一种东西的五个刻度，不是五种状态：一个品牌浅底 + 品牌字，
+   级别靠「L1…L5 + 目标文案」读，不靠彩虹。 */
 .level-badge {
   display: inline-block;
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-brand-primary-light);
 }
-
-.level-badge.l1 { background: linear-gradient(135deg, #67c23a, #95d475); }
-.level-badge.l2 { background: linear-gradient(135deg, #06b6d4, #67c23a); }
-.level-badge.l3 { background: linear-gradient(135deg, #e6a23c, #f4a460); }
-.level-badge.l4 { background: linear-gradient(135deg, #6f42c1, #a855f7); }
-.level-badge.l5 { background: linear-gradient(135deg, #f56c6c, #e6a23c); }
 
 .level-goal {
   font-size: 13px;

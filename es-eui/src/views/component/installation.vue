@@ -535,10 +535,10 @@ $bg-light: #f7fafc;
     font-size: 18px;
     color: white;
 
-    &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-    &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-    &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-    &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+    &.blue,
+    &.purple,
+    &.green,
+    &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
   }
 
   .section-title {
@@ -619,9 +619,9 @@ $bg-light: #f7fafc;
       font-size: 20px;
       color: white;
 
-      &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
+      &.vue,
+      &.element,
+      &.browser { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .req-info {

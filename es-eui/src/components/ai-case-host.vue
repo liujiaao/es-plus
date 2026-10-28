@@ -203,7 +203,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .ai-case-nl {

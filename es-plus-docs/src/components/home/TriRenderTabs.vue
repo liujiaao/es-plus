@@ -65,7 +65,7 @@
       <el-tab-pane v-for="r in renderers" :key="r.key" :name="r.key">
         <template #label>
           <span class="tab-label">
-            <span class="tab-dot" :style="{ background: r.color }"></span>{{ r.name }}
+            <span class="tab-dot"></span>{{ r.name }}
           </span>
         </template>
         <div class="tri-shot">
@@ -92,9 +92,9 @@ import pairsJson from '@/tri-render/pairs.json'
 const active = ref('vue3')
 
 const renderers = [
-  { key: 'vue3', name: 'Vue 3 · Element Plus', color: '#409eff', pkg: '@es-plus/vue3', install: 'npm i @es-plus/vue3 element-plus' },
-  { key: 'vue2', name: 'Vue 2 · Element UI', color: '#3b82f6', pkg: '@es-plus/vue2', install: 'npm i @es-plus/vue2 element-ui' },
-  { key: 'antdv', name: 'Vue 3 · Ant Design Vue', color: '#1677ff', pkg: '@es-plus/adapter-antdv', install: 'npm i @es-plus/adapter-antdv ant-design-vue' },
+  { key: 'vue3', name: 'Vue 3 · Element Plus', pkg: '@es-plus/vue3', install: 'npm i @es-plus/vue3 element-plus' },
+  { key: 'vue2', name: 'Vue 2 · Element UI', pkg: '@es-plus/vue2', install: 'npm i @es-plus/vue2 element-ui' },
+  { key: 'antdv', name: 'Vue 3 · Ant Design Vue', pkg: '@es-plus/adapter-antdv', install: 'npm i @es-plus/adapter-antdv ant-design-vue' },
 ]
 
 const schemaCode = computed(() => JSON.stringify(schema, null, 2))
@@ -347,6 +347,10 @@ const proofSides = computed(() => {
 
 .tab-dot {
   display: inline-block;
+  /* 三端是同一个库的三个渲染端，不是一个库的三种状态：圆点不承担区分职责，
+     名称与导入包名承担。三枚近似蓝（#409eff / #3b82f6 / #1677ff）在 8px 上
+     本来也分不出来，只会让页面多出三个强调色（审计 §6.6）。 */
+  background: var(--es-brand-primary);
   width: 8px;
   height: 8px;
   border-radius: 50%;

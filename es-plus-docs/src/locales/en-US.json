@@ -144,7 +144,7 @@
     "configInvalid": "Config failed validation — not applied"
   },
   "home": {
-    "badge": "🚀 Vue 2 / Vue 3 / Ant Design Vue · Three renderers",
+    "badge": "Vue 2 / Vue 3 / Ant Design Vue · Three renderers",
     "title": "ES-Plus",
     "tagline1": "The config layer for admin CRUD",
     "tagline2": "One config · three renderers · compiles on generation",

@@ -42,7 +42,7 @@
     <!-- API 文档 -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-document" />
         </div>
         <h2 class="section-title">API 文档</h2>
@@ -383,8 +383,8 @@
     <!-- 开发规范与技巧 -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-          <i class="el-icon-s-check" style="color: #606266;" />
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
+          <i class="el-icon-s-check" style="color: #fff;" />
         </div>
         <h2 class="section-title">开发规范与技巧</h2>
       </div>
@@ -416,7 +416,7 @@
     <!-- 下一步 -->
     <section class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-right" />
         </div>
         <h2 class="section-title">下一步</h2>
@@ -436,7 +436,7 @@
         </router-link>
 
         <router-link to="/component/esdialog" class="next-step-card">
-          <div class="next-step-icon" style="background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%);">
+          <div class="next-step-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
             <i class="el-icon-s-promotion" />
           </div>
           <div class="next-step-content">
@@ -447,7 +447,7 @@
         </router-link>
 
         <router-link to="/component/combination" class="next-step-card">
-          <div class="next-step-icon" style="background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%);">
+          <div class="next-step-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
             <i class="el-icon-s-operation" />
           </div>
           <div class="next-step-content">

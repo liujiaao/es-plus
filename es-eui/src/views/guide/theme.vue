@@ -603,15 +603,9 @@ export default {
     justify-content: center;
     margin-bottom: 16px;
 
-    &.brand {
-      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-    }
-    &.scss {
-      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    }
-    &.runtime {
-      background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%);
-    }
+    &.brand,
+    &.scss,
+    &.runtime { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
 
     i {
       font-size: 24px;

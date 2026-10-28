@@ -922,10 +922,13 @@ const goToAiCrud = () => {
   border-radius: 16px;
   color: white;
   
-  &.blue { background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); }
-  &.green { background: linear-gradient(135deg, var(--es-success), #95d475); }
-  &.purple { background: linear-gradient(135deg, #6f42c1, #a855f7); }
-  &.orange { background: linear-gradient(135deg, var(--es-warning), #f4a460); }
+  /* 四张特性卡原来各配一种渐变（蓝 / 绿 / 紫 / 琥珀）。它们是同一类东西的四个
+     实例，不是四种状态 —— 收成一个品牌色，靠图标形状与标题区分
+     （审计 §6.6：一个页面最多一个强调色）。 */
+  &.blue,
+  &.green,
+  &.purple,
+  &.orange { background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); }
 }
 
 .feature-title {

@@ -770,17 +770,12 @@ export default {
     align-items: center;
     justify-content: center;
 
-    &.blue {
+    &.blue,
+    &.purple,
+    &.green,
+    &.orange
+    {
       background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-    }
-    &.purple {
-      background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
-    }
-    &.green {
-      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
-    &.orange {
-      background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
     }
 
     i {

@@ -608,10 +608,10 @@ $bg-light: #f7fafc;
     font-size: 18px;
     color: white;
 
-    &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-    &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-    &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-    &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+    &.blue,
+    &.purple,
+    &.green,
+    &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
   }
 
   .section-title {
@@ -815,20 +815,23 @@ $bg-light: #f7fafc;
     }
 
     &.optional {
-      background: #f6ffed;
+      background: var(--es-success-tint);
       color: #52c41a;
     }
   }
 }
 
-// Tip Card
+// Tip Card —— 提示卡片。原来这里是琥珀渐变底 + 琥珀左边框，和警告长得一样；
+// 它与 .modern-tip-* 的语义色（success / warning / info）不是一类东西，
+// 只是「一条备注」，所以归到品牌色（审计 §6.6：一个页面最多一个强调色）。
+// 与 EsEuiDeveloperGuide.vue 的同名卡片同源地统一。
 .tip-card {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+  background: var(--es-brand-tint);
   border-radius: 10px;
-  border-left: 4px solid #faad14;
+  border-left: 3px solid var(--es-brand-primary);
   margin-top: 20px;
 
   .tip-icon {
@@ -837,7 +840,7 @@ $bg-light: #f7fafc;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #faad14;
+    color: var(--es-brand-strong);
     font-size: 18px;
     flex-shrink: 0;
   }
@@ -848,7 +851,7 @@ $bg-light: #f7fafc;
     line-height: 1.6;
 
     strong {
-      color: #d48806;
+      color: var(--es-brand-strong);
       margin-right: 8px;
     }
   }
@@ -893,10 +896,10 @@ $bg-light: #f7fafc;
       color: white;
       flex-shrink: 0;
 
-      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+      &.blue,
+      &.purple,
+      &.green,
+      &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .next-info {

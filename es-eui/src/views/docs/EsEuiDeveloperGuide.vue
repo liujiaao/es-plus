@@ -1360,10 +1360,10 @@ $bg-light: #f7fafc;
     width: 40px; height: 40px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; color: white;
-    &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-    &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-    &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-    &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+    &.blue,
+    &.purple,
+    &.green,
+    &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
   }
   .section-title { font-size: var(--es-text-2xl); font-weight: 600; margin: 0; }
 }
@@ -1396,7 +1396,7 @@ $bg-light: #f7fafc;
     }
     .layer-detail { font-size: 13px; color: $text-secondary; line-height: 1.6; white-space: pre-line; margin-top: 8px; }
     &.config-layer {
-      background: #f0f7ff;
+      background: var(--es-info-tint);
       .layer-label { color: $primary; }
       .layer-item { background: #d6e4ff; color: #1e40af; }
     }
@@ -1406,9 +1406,9 @@ $bg-light: #f7fafc;
       .layer-item { background: #fce7f3; color: #9d174d; }
     }
     &.ui-layer {
-      background: #f0fdf4;
-      .layer-label { color: #16a34a; }
-      .layer-item { background: #dcfce7; color: #15803d; }
+      background: var(--es-success-tint);
+      .layer-label { color: var(--es-success); }
+      .layer-item { background: var(--es-success-tint); color: var(--es-success-text); }
     }
   }
   .arch-arrow {
@@ -1475,7 +1475,7 @@ $bg-light: #f7fafc;
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
   &.required { background: #fff1f0; color: #ff4d4f; }
-  &.optional { background: #f6ffed; color: #52c41a; }
+  &.optional { background: var(--es-success-tint); color: #52c41a; }
   &.conditional { background: #fff7e6; color: #fa8c16; }
 }
 
@@ -1486,13 +1486,13 @@ $bg-light: #f7fafc;
   ul, ol { margin: 0; padding-left: 20px; font-size: 13px; color: $text-secondary; line-height: 1.8; }
   code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
 }
-.tips-box--info { background: #f0f7ff; border-left: 4px solid $primary; }
-.tips-box--success { background: #f6ffed; border-left: 4px solid $success; }
-.tips-box--warning { background: #fffbe6; border-left: 4px solid $warning; }
+.tips-box--info { background: var(--es-info-tint); border-left: 4px solid var(--es-info); }
+.tips-box--success { background: var(--es-success-tint); border-left: 4px solid var(--es-success); }
+.tips-box--warning { background: var(--es-warning-tint); border-left: 4px solid var(--es-warning); }
 .tip-card {
   display: flex; gap: 12px; padding: 16px 20px; border-radius: 10px; margin-top: 16px;
-  &--info { background: #f0f7ff; border-left: 4px solid $primary; }
-  .tip-icon { flex-shrink: 0; color: $primary; font-size: 18px; }
+  &--info { background: var(--es-brand-tint); border-left: 4px solid var(--es-brand-primary); }
+  .tip-icon { flex-shrink: 0; color: var(--es-brand-strong); font-size: 18px; }
   .tip-content { font-size: 14px; color: $text-secondary; line-height: 1.6; strong { color: $text-primary; margin-right: 8px; } }
 }
 

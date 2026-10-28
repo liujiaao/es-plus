@@ -146,7 +146,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .fd-nl {
@@ -166,8 +166,8 @@ export default {
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 12px;
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
 }
 
 .fd-chip-label {
@@ -175,11 +175,13 @@ export default {
   color: #909399;
 }
 
-.fd-compile {
+/* 特异性：.fd-hero p（0,1,1）压过 .fd-compile（0,1,0）—— 加上 .fd-hero 前缀，
+   品牌字才真的落地（此前这行跟目标色一起被吃掉，卡片是琥珀底 + 灰字）。 */
+.fd-hero .fd-compile {
   font-size: 13px;
-  color: #78350f;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-brand-primary-light);
   border-radius: 8px;
   padding: 10px 12px;
 }
@@ -215,8 +217,8 @@ export default {
     }
 
     &.active {
-      border-color: #6f42c1;
-      color: #6f42c1;
+      border-color: var(--es-brand-primary);
+      color: var(--es-brand-strong);
       background: #faf7ff;
     }
   }

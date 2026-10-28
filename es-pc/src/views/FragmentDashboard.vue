@@ -212,9 +212,11 @@ const conditionText = computed(() => {
 const pageRows = computed(() => rows.value.slice((pager.current - 1) * pager.pageSize, pager.current * pager.pageSize))
 
 const STATUS_BARS = [
-  { value: 0, label: '待发货', color: '#f59e0b' },
-  { value: 1, label: '已发货', color: '#10b981' },
-  { value: 2, label: '已签收', color: '#6366f1' },
+  // 三个状态是同一条流程上的三段，不是三类东西 —— 用品牌蓝的三级色阶
+  // 而不是琥珀/绿/靛（审计 §6.6：一个页面最多一个强调色）。
+  { value: 0, label: '待发货', color: '#93c5fd' },
+  { value: 1, label: '已发货', color: '#3b82f6' },
+  { value: 2, label: '已签收', color: '#1d4ed8' },
 ]
 
 const chartBars = computed(() => {
@@ -291,7 +293,7 @@ onMounted(() => {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .fd-nl {
@@ -364,7 +366,7 @@ onMounted(() => {
   border-radius: 50%;
   font-size: 12px;
   color: #fff;
-  background: #6f42c1;
+  background: var(--es-brand-primary);
 }
 
 .fd-count {
@@ -457,8 +459,8 @@ onMounted(() => {
     }
 
     &.active {
-      border-color: #6f42c1;
-      color: #6f42c1;
+      border-color: var(--es-brand-primary);
+      color: var(--es-brand-strong);
       background: var(--es-brand-tint);
     }
   }

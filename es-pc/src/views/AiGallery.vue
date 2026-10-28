@@ -166,7 +166,7 @@ function download(name, data) {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .ai-gallery-legend {
@@ -188,7 +188,7 @@ function download(name, data) {
   text-decoration: none;
 
   &:hover {
-    border-color: #6f42c1;
+    border-color: var(--es-brand-primary);
   }
 
   .ai-gallery-comp-tag {
@@ -196,7 +196,7 @@ function download(name, data) {
     border-radius: 8px;
     font-size: 12px;
     color: #fff;
-    background: linear-gradient(135deg, #6f42c1, #a855f7);
+    background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
   }
 
   .ai-gallery-comp-desc {
@@ -207,7 +207,7 @@ function download(name, data) {
   em {
     margin-left: auto;
     font-style: normal;
-    color: #6f42c1;
+    color: var(--es-brand-strong);
   }
 }
 
@@ -218,8 +218,8 @@ function download(name, data) {
   font-size: 12px;
 
   &.ok {
-    color: #15803d;
-    background: #dcfce7;
+    color: var(--es-success-text);
+    background: var(--es-success-tint);
   }
 }
 
@@ -271,14 +271,14 @@ function download(name, data) {
   padding: 1px 8px;
   border-radius: 8px;
   color: #fff;
-  background: #6f42c1;
+  background: var(--es-brand-primary);
 
   &.claim-compile {
-    background: #0369a1;
+    background: var(--es-success);
   }
 
   &.claim-measure {
-    background: #6b7280;
+    background: var(--es-text-secondary);
   }
 }
 
@@ -286,7 +286,7 @@ function download(name, data) {
   color: #8c8c8c;
 
   &.ok {
-    color: #15803d;
+    color: var(--es-success-text);
   }
 }
 

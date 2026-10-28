@@ -434,8 +434,8 @@ watch(searchQuery, () => {
     }
 
     &.cat-ai {
-      background-color: rgba(111, 66, 193, 0.12);
-      color: #6f42c1;
+      background-color: var(--es-brand-tint);
+      color: var(--es-brand-strong);
     }
 
     &.cat-tool {

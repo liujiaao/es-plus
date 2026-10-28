@@ -178,7 +178,7 @@ usePageMeta(() => {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .ai-gallery-legend {
@@ -200,7 +200,7 @@ usePageMeta(() => {
   text-decoration: none;
 
   &:hover {
-    border-color: #6f42c1;
+    border-color: var(--es-brand-primary);
   }
 
   .ai-gallery-comp-tag {
@@ -208,7 +208,7 @@ usePageMeta(() => {
     border-radius: 8px;
     font-size: 12px;
     color: #fff;
-    background: linear-gradient(135deg, #6f42c1, #a855f7);
+    background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
   }
 
   .ai-gallery-comp-desc {
@@ -219,7 +219,7 @@ usePageMeta(() => {
   em {
     margin-left: auto;
     font-style: normal;
-    color: #6f42c1;
+    color: var(--es-brand-strong);
   }
 }
 
@@ -283,14 +283,14 @@ usePageMeta(() => {
   padding: 1px 8px;
   border-radius: 8px;
   color: #fff;
-  background: #6f42c1;
+  background: var(--es-brand-primary);
 
   &.claim-compile {
-    background: #0369a1;
+    background: var(--es-success);
   }
 
   &.claim-measure {
-    background: #6b7280;
+    background: var(--es-text-secondary);
   }
 }
 

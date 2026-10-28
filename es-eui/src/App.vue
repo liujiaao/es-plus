@@ -411,7 +411,7 @@ body {
 .banner-tag {
   display: inline-block;
   padding: 1px 8px;
-  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -438,7 +438,7 @@ body {
   align-items: center;
   gap: 4px;
   padding: 3px 14px;
-  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
   color: #fff;
   font-size: 12px;
   font-weight: 500;
@@ -733,12 +733,14 @@ $bg-light: #f7fafc;
       font-size: 18px;
       color: white;
 
-      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
-      &.cyan { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-      &.pink { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+      /* 分区图标原来四种颜色各配一种渐变，外加两枚彩虹 —— 同一类东西被颜色
+         分成了六种。收成一个品牌色（审计 §6.6：一个页面最多一个强调色）。 */
+      &.blue,
+      &.purple,
+      &.green,
+      &.orange,
+      &.cyan,
+      &.pink { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .section-title {
@@ -794,67 +796,9 @@ $bg-light: #f7fafc;
   }
 }
 
-// Tip Card - 统一的提示卡片样式
-.modern-tip-card {
-  display: flex;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
-  border-radius: 10px;
-  border-left: 4px solid #faad14;
-  margin: 20px 0;
-
-  .tip-icon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #faad14;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-
-  .tip-content {
-    font-size: 14px;
-    color: $text-secondary;
-    line-height: 1.6;
-
-    strong {
-      color: #d48806;
-      margin-right: 8px;
-    }
-  }
-}
-
-// Success Tip
-.modern-tip-success {
-  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
-  border-left-color: #52c41a;
-
-  .tip-icon {
-    color: #52c41a;
-  }
-
-  .tip-content strong {
-    color: #389e0d;
-  }
-}
-
-// Info Tip
-.modern-tip-info {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border-left-color: #1890ff;
-
-  .tip-icon {
-    color: #1890ff;
-  }
-
-  .tip-content strong {
-    color: #096dd9;
-  }
-}
-
+// 这里原有 .modern-tip-card / -success / -info 三组样式（61 行，硬编码琥珀 / 绿 / 蓝渐变）。
+// 全仓 0 处模板使用 —— 它们只是「看着像统一卡片」的死样式，真正的提示卡片是各页的 .tip-card。
+// 视觉系统（路线图 2.7「统一卡片」）只留一套，删掉，免得有人以为它才是标准。
 // Requirement Cards
 .req-cards {
   display: flex;
@@ -886,9 +830,9 @@ $bg-light: #f7fafc;
       font-size: 20px;
       color: white;
 
-      &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
+      &.vue,
+      &.element,
+      &.browser { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .req-info {
@@ -946,11 +890,11 @@ $bg-light: #f7fafc;
       color: white;
       flex-shrink: 0;
 
-      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
-      &.cyan { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+      &.blue,
+      &.purple,
+      &.green,
+      &.orange,
+      &.cyan { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .next-info {
@@ -1032,7 +976,7 @@ $bg-light: #f7fafc;
     }
 
     &.optional {
-      background: #f6ffed;
+      background: var(--es-success-tint);
       color: #52c41a;
     }
   }
@@ -1067,10 +1011,10 @@ $bg-light: #f7fafc;
       color: white;
       margin-bottom: 16px;
 
-      &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-      &.purple { background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%); }
-      &.green { background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%); }
-      &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+      &.blue,
+      &.purple,
+      &.green,
+      &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .feature-title {
@@ -1192,29 +1136,29 @@ $bg-light: #f7fafc;
   }
 
   &--success {
-    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
-    border-left: 4px solid #52c41a;
+    background: var(--es-success-tint);
+    border-left: 4px solid var(--es-success);
 
     h4 {
-      color: #389e0d;
+      color: var(--es-success-text);
     }
   }
 
   &--info {
-    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-    border-left: 4px solid #1890ff;
+    background: var(--es-info-tint);
+    border-left: 4px solid var(--es-info);
 
     h4 {
-      color: #096dd9;
+      color: var(--es-info-text);
     }
   }
 
   &--warning {
-    background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
-    border-left: 4px solid #faad14;
+    background: var(--es-warning-tint);
+    border-left: 4px solid var(--es-warning);
 
     h4 {
-      color: #d48806;
+      color: var(--es-warning-text);
     }
   }
 }

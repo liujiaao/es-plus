@@ -144,7 +144,7 @@
     "configInvalid": "配置未通过校验，未应用"
   },
   "home": {
-    "badge": "🚀 Vue 2 / Vue 3 / Ant Design Vue · 三个渲染器",
+    "badge": "Vue 2 / Vue 3 / Ant Design Vue · 三个渲染器",
     "title": "ES-Plus",
     "tagline1": "中后台 CRUD 的配置层",
     "tagline2": "一份配置 · 三个渲染器 · 生成即编译",

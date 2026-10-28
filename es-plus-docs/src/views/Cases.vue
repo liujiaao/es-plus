@@ -385,19 +385,15 @@ usePageMeta('cases')
   background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
 }
 
-/* AI 产物页与旗舰页视觉同构，只换徽章色：一眼能看出「同一件事的两种来源」。 */
-.ai-cta-badge {
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
-}
-
-/* 片段拼装页：不是「一份 schema 驱动」，故换第三种徽章色（青）区分来源。 */
-.fragment-cta-badge {
-  background: linear-gradient(135deg, #0e7490, #06b6d4);
-}
-
-/* 三栏对照页：主张是「实测数字」，与上面几页的「能力演示」不同，故换第四种徽章色（琥珀）。 */
+/* 五个入口用同一个强调色，靠**徽章上的字**区分来源（旗舰案例 / AI 生成 / AI 画廊 /
+   片段拼装 / 三栏对照）。此前每种来源各配一种渐变 —— 紫、青、琥珀 —— 一屏之内
+   出现四种强调色，读者只会觉得「这里想让每张卡都不一样」。
+   设计口径见 docs/internal 审计 §6.6：一个页面最多一个强调色，AI 相关内容不再
+   新增紫 / 琥珀 / 彩虹。 */
+.ai-cta-badge,
+.fragment-cta-badge,
 .nva-cta-badge {
-  background: linear-gradient(135deg, #b45309, #f59e0b);
+  background: linear-gradient(135deg, var(--primary-color), var(--brand-accent));
 }
 
 .flagship-cta-body {
@@ -431,19 +427,17 @@ usePageMeta('cases')
   margin-bottom: 16px;
 }
 
+/* 梯度徽章（L1–L5）不是状态，是同一种东西的五个刻度：用一个品牌浅底 + 品牌字，
+   级别靠「L1…L5 + 目标文案」读，不靠五种渐变。五项彩虹会让人以为难度是**颜色**编码的。 */
 .level-badge {
   display: inline-block;
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
-
-  &.l1 { background: linear-gradient(135deg, var(--es-success), #95d475); }
-  &.l2 { background: linear-gradient(135deg, var(--brand-accent), var(--es-success)); }
-  &.l3 { background: linear-gradient(135deg, var(--es-warning), #f4a460); }
-  &.l4 { background: linear-gradient(135deg, #6f42c1, #a855f7); }
-  &.l5 { background: linear-gradient(135deg, var(--es-danger), var(--es-warning)); }
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-brand-primary-light);
 }
 
 .level-goal {

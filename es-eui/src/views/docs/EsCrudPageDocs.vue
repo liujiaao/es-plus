@@ -582,7 +582,7 @@
     <!-- Dialogs 配置 -->
     <section id="crud-dialogs" class="modern-section">
       <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="section-icon" style="background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);">
           <i class="el-icon-chat-dot-square" />
         </div>
         <h2 class="section-title">Dialogs 配置</h2>

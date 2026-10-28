@@ -178,7 +178,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .ai-gallery-legend {
@@ -199,7 +199,7 @@ export default {
   text-decoration: none;
 
   &:hover {
-    border-color: #6f42c1;
+    border-color: var(--es-brand-primary);
   }
 
   .ai-gallery-comp-tag {
@@ -208,7 +208,7 @@ export default {
     border-radius: 8px;
     font-size: 12px;
     color: #fff;
-    background: linear-gradient(135deg, #6f42c1, #a855f7);
+    background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
   }
 
   strong {
@@ -223,7 +223,7 @@ export default {
   em {
     margin-left: auto;
     font-style: normal;
-    color: #6f42c1;
+    color: var(--es-brand-strong);
   }
 }
 
@@ -234,8 +234,8 @@ export default {
   font-size: 12px;
 
   &.ok {
-    color: #15803d;
-    background: #dcfce7;
+    color: var(--es-success-text);
+    background: var(--es-success-tint);
   }
 }
 
@@ -287,14 +287,14 @@ export default {
   padding: 1px 8px;
   border-radius: 8px;
   color: #fff;
-  background: #6f42c1;
+  background: var(--es-brand-primary);
 
   &.claim-compile {
-    background: #0369a1;
+    background: var(--es-success);
   }
 
   &.claim-measure {
-    background: #6b7280;
+    background: var(--es-text-secondary);
   }
 }
 
@@ -302,7 +302,7 @@ export default {
   color: #909399;
 
   &.ok {
-    color: #15803d;
+    color: var(--es-success-text);
   }
 }
 

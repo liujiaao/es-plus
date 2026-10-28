@@ -289,7 +289,7 @@ export default {
   --cg-panel: #f9fafb;
   --cg-text: #1f2937;
   --cg-muted: #6b7280;
-  --cg-purple: #6f42c1;
+  --cg-accent: var(--es-brand-primary);
   max-width: 1240px;
   margin: 0 auto;
   padding: 8px clamp(12px, 3vw, 32px) 48px;
@@ -315,7 +315,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 .cg-claim {
   font-size: 13px;
@@ -327,7 +327,7 @@ export default {
   border-radius: 8px;
   font-size: 12px;
   color: #fff;
-  background: #0369a1;
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .cg-controls {
@@ -434,7 +434,7 @@ export default {
 .cg-panel h3 em {
   font-style: normal;
   font-size: 11px;
-  color: #0369a1;
+  color: var(--es-info-text);
 }
 .cg-faces {
   margin-left: auto;
@@ -445,12 +445,12 @@ export default {
   background: var(--cg-panel);
 }
 .cg-faces.faces-2 {
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--es-info-text);
+  background: var(--es-info-tint);
 }
 .cg-faces.faces-3 {
-  color: #15803d;
-  background: #dcfce7;
+  color: var(--es-success-text);
+  background: var(--es-success-tint);
 }
 
 .cg-table {
@@ -474,7 +474,7 @@ export default {
   word-break: break-all;
 }
 .ok {
-  color: #15803d;
+  color: var(--es-success-text);
 }
 .bad {
   color: #b91c1c;
@@ -490,7 +490,7 @@ export default {
   background: #6b7280;
 }
 .cg-verdict.ok {
-  background: #15803d;
+  background: var(--es-success);
 }
 .cg-verdict.bad {
   background: #b91c1c;
@@ -498,7 +498,7 @@ export default {
 .cg-warnings {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #b45309;
+  color: var(--es-warning-text);
 }
 .cg-warnings summary {
   cursor: pointer;
@@ -521,8 +521,8 @@ export default {
   cursor: pointer;
 }
 .cg-actions button:hover {
-  border-color: var(--cg-purple);
-  color: var(--cg-purple);
+  border-color: var(--cg-accent);
+  color: var(--cg-accent);
 }
 pre {
   max-height: 420px;

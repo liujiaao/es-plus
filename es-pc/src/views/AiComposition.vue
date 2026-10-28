@@ -263,7 +263,7 @@ function downloadProduct() {
   --cg-panel: var(--es-bg-subtle);
   --cg-text: var(--es-text-primary);
   --cg-muted: var(--es-text-tertiary);
-  --cg-purple: #6f42c1;
+  --cg-accent: var(--es-brand-primary);
   max-width: 1240px;
   margin: 0 auto;
   padding: 8px clamp(12px, 3vw, 32px) 48px;
@@ -289,7 +289,7 @@ function downloadProduct() {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #6f42c1, #a855f7);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 .cg-claim {
   font-size: 13px;
@@ -301,7 +301,7 @@ function downloadProduct() {
   border-radius: 8px;
   font-size: 12px;
   color: #fff;
-  background: #0369a1;
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .cg-controls {
@@ -464,7 +464,7 @@ function downloadProduct() {
   background: #6b7280;
 }
 .cg-verdict.ok {
-  background: #15803d;
+  background: var(--es-success);
 }
 .cg-verdict.bad {
   background: #b91c1c;
@@ -495,8 +495,8 @@ function downloadProduct() {
   cursor: pointer;
 }
 .cg-actions button:hover {
-  border-color: var(--cg-purple);
-  color: var(--cg-purple);
+  border-color: var(--cg-accent);
+  color: var(--cg-accent);
 }
 pre {
   max-height: 420px;

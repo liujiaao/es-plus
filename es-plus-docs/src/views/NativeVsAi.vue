@@ -236,7 +236,7 @@ usePageMeta('native-vs-ai')
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, #b45309, #f59e0b);
+  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
 }
 
 .nva-nl {

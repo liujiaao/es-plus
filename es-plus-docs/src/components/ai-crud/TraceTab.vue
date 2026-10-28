@@ -17,7 +17,7 @@
         ]"
       >
         <div class="trace-head" @click="toggle(entry.id)">
-          <span class="trace-icon">{{ kindIcon(entry.kind) }}</span>
+          <span class="trace-icon"><el-icon><component :is="kindIcon(entry.kind)" /></el-icon></span>
           <div class="trace-meta">
             <div class="trace-title-row">
               <span class="trace-title">{{ traceTitle(entry) }}</span>
@@ -57,9 +57,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Connection } from '@element-plus/icons-vue'
+import {
+  Connection,
+  ChatDotRound,
+  Document,
+  Cpu,
+  Tools,
+  CircleCheck,
+  Refresh,
+  Monitor,
+  MoreFilled,
+} from '@element-plus/icons-vue'
 import DiffBadge from './DiffBadge.vue'
 import type { TraceEntry, TraceKind, TraceStatus } from '@/utils/mcp-flow'
 
@@ -77,19 +87,20 @@ const toggle = (id: string) => {
   else expanded.value.add(id)
 }
 
-const kindIcon = (kind: TraceKind): string => {
-  switch (kind) {
-    case 'user_message': return '💬'
-    case 'mcp_resource_fetch': return '📚'
-    case 'ai_request': return '🤖'
-    case 'ai_response': return '🤖'
-    case 'mcp_tool_call': return '🛠'
-    case 'mcp_validation': return '✅'
-    case 'config_diff': return '🔄'
-    case 'render': return '✨'
-    default: return '·'
-  }
+/** 追踪条目左侧的图标：与页面其余部分同一套（Element Plus 图标）。
+ *  原来这里是 8 个 emoji —— emoji 在不同系统上是不同的字形与配色，
+ *  既不受主题色控制，也不属于「一套图标」（审计 §6.6）。 */
+const KIND_ICON: Record<string, Component> = {
+  user_message: ChatDotRound,
+  mcp_resource_fetch: Document,
+  ai_request: Cpu,
+  ai_response: Cpu,
+  mcp_tool_call: Tools,
+  mcp_validation: CircleCheck,
+  config_diff: Refresh,
+  render: Monitor,
 }
+const kindIcon = (kind: TraceKind) => KIND_ICON[kind] ?? MoreFilled
 
 const statusBadge = (status: TraceStatus): string => {
   switch (status) {

@@ -15,12 +15,15 @@
  *      ✅ / ❌ 是终端内容，不是标题）；
  *   C. md frontmatter 的 title / sidebarTitle / description 不含 emoji（它们会进
  *      页面 <title> 与侧栏）；
- *   D. 扫描本身没空转：每个站点至少扫到若干文件，否则「0 处问题」是假绿。
+ *   D. 扫描本身没空转：每个站点至少扫到若干文件，否则「0 处问题」是假绿；
+ *   E. **数据里的标题**（JSON 的 title / badge / heading 字段）：页面常常不写
+ *      <h2>，而是把标题放在 JSON 里渲染。🔌 MCP Server / 🚀 三个渲染器 两处就是
+ *      这么漏过去的 —— A–C 只扫 .vue 与 .md，看不见 JSON。
  *
  * 用法：node scripts/check-heading-emoji.mjs
  * 退出码：0 = 通过；1 = 有标题含 emoji。
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, relative } from 'node:path'
 
@@ -39,12 +42,12 @@ const SITES = [
 const failures = []
 const fail = (msg) => failures.push(msg)
 
-function walk(dir, out) {
+function walk(dir, out, exts = /\.(vue|md)$/) {
   for (const entry of readdirSync(dir)) {
     const abs = join(dir, entry)
     if (statSync(abs).isDirectory()) {
-      if (!/node_modules|[\\/]dist$/.test(abs)) walk(abs, out)
-    } else if (/\.(vue|md)$/.test(entry)) {
+      if (!/node_modules|[\\/]dist$/.test(abs)) walk(abs, out, exts)
+    } else if (exts.test(entry)) {
       out.push(abs)
     }
   }
@@ -106,6 +109,33 @@ for (const site of SITES) {
   }
 }
 
+// E. 数据里的标题：单源 docs/**/*.json + 各站 locales（页面直接拿这些字段当标题）
+let jsonScanned = 0
+// 目前只有主文档站做了 i18n，另两站没有 locales —— 存在才算，缺了不算错（但下面有总量下限）
+for (const dir of ['docs', ...SITES.map((s) => `${s.dir}/locales`).filter((d) => existsSync(join(ROOT, d)))]) {
+  const files = []
+  try {
+    walk(join(ROOT, dir), files, /\.json$/)
+  } catch {
+    fail(`${dir}：目录不存在`)
+    continue
+  }
+  for (const abs of files) {
+    jsonScanned++
+    const rel = relative(ROOT, abs).split('\\').join('/')
+    readFileSync(abs, 'utf8')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .forEach((line, i) => {
+        const m = /"(title|badge|heading)"\s*:\s*"([^"]*)"/i.exec(line)
+        if (m && EMOJI.test(m[2])) {
+          fail(`${rel}:${i + 1}：数据里的标题含 emoji ——「${m[1]}: ${m[2].slice(0, 40)}」`)
+        }
+      })
+  }
+}
+if (jsonScanned < 40) fail(`JSON 标题只扫到 ${jsonScanned} 个文件（预期 ≥ 40）—— 扫描面缩小会让这条守卫假绿`)
+
 if (failures.length) {
   console.error('❌ 标题里仍有 emoji：\n')
   for (const f of failures) console.error(`   - ${f}`)
@@ -113,4 +143,6 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('✅ 三站标题无 emoji（<h1>–<h6>、md 标题、frontmatter 三处都扫过，代码围栏已跳过）')
+console.log(
+  `✅ 三站标题无 emoji（<h1>–<h6>、md 标题、frontmatter、${jsonScanned} 个 JSON 的 title/badge 四处都扫过，代码围栏已跳过）`,
+)

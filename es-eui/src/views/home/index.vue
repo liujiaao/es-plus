@@ -7,13 +7,6 @@
         <div class="gradient-orb orb-1"></div>
         <div class="gradient-orb orb-2"></div>
         <div class="gradient-orb orb-3"></div>
-        <div class="particles">
-          <span
-            v-for="i in 20"
-            :key="i"
-            class="particle"
-          ></span>
-        </div>
       </div>
       
       <div class="container">
@@ -803,34 +796,12 @@ $bg-light: #f7fafc;
   .orb-3 {
     width: 300px;
     height: 300px;
-    background: #43e97b;
+    background: var(--es-brand-primary-light);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
   }
 
-  .particles {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* 20 颗上浮粒子（15s 无限）同理：改成静态星点。位置仍随机撒开，
-     但不再逐帧重绘 20 个 transform —— 它们本来也看不出来在往哪飞。 */
-  .particle {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: rgba(255,255,255,0.3);
-    border-radius: 50%;
-  }
-
-  @for $i from 1 through 20 {
-    .particle:nth-child(#{$i}) {
-      left: random(100) * 1%;
-      top: random(100) * 1%;
-    }
-  }
   
   .hero-content {
     position: relative;
@@ -1139,8 +1110,8 @@ $bg-light: #f7fafc;
     margin-bottom: 14px;
     font-size: 13px;
     font-weight: 600;
-    color: #0e7490;
-    background: rgba(6, 182, 212, 0.08);
+    color: var(--es-brand-strong);
+    background: var(--es-brand-tint);
     border-radius: 20px;
   }
 

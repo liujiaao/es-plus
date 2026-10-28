@@ -532,13 +532,9 @@ $text-tertiary: #718096;
 $border-color: #e2e8f0;
 $bg-light: #f7fafc;
 
-// Gradient colors —— 全部由品牌 token 派生，保持四张卡视觉可区分但同族
-$gradient-blue: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-$gradient-purple: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
-$gradient-green: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%);
-$gradient-orange: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
-$gradient-cyan: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%);
-$gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-primary) 100%);
+// 图标底色：六张卡是同一类东西的六个实例，不是六种状态 —— 一枚品牌渐变，
+// 靠图标与标题区分（审计 §6.6：一个页面最多一个强调色）。
+$gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
 
 .intro-page {
   max-width: 1200px;
@@ -630,7 +626,7 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
       .stat-num {
         font-size: 36px;
         font-weight: 700;
-        background: $gradient-blue;
+        background: $gradient-brand;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -717,10 +713,10 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
           color: white;
           font-size: 20px;
 
-          &.blue { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
-          &.purple { background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%); }
-          &.green { background: linear-gradient(135deg, var(--es-brand-accent) 0%, var(--es-brand-primary) 100%); }
-          &.orange { background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%); }
+          &.blue,
+          &.purple,
+          &.green,
+          &.orange { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
         }
 
         .component-info {
@@ -874,7 +870,7 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+          background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -999,12 +995,12 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
       color: white;
       margin-bottom: 20px;
 
-      &.blue { background: $gradient-blue; }
-      &.purple { background: $gradient-purple; }
-      &.green { background: $gradient-green; }
-      &.orange { background: $gradient-orange; }
-      &.cyan { background: $gradient-cyan; }
-      &.pink { background: $gradient-pink; }
+      &.blue,
+      &.purple,
+      &.green,
+      &.orange,
+      &.cyan,
+      &.pink { background: $gradient-brand; }
     }
 
     .feature-title {
@@ -1053,9 +1049,9 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
       font-size: 20px;
       color: white;
 
-      &.blue { background: $gradient-blue; }
-      &.purple { background: $gradient-purple; }
-      &.green { background: $gradient-green; }
+      &.blue,
+      &.purple,
+      &.green { background: $gradient-brand; }
     }
 
     .comp-info {
@@ -1141,9 +1137,9 @@ $gradient-pink: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--
       font-size: 20px;
       color: white;
 
-      &.vue { background: linear-gradient(135deg, #41b883 0%, #34495e 100%); }
-      &.element { background: linear-gradient(135deg, var(--es-brand-primary) 0%, #67c23a 100%); }
-      &.browser { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
+      &.vue,
+      &.element,
+      &.browser { background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%); }
     }
 
     .compat-info {
