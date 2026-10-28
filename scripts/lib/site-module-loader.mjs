@@ -108,8 +108,19 @@ export async function loadSiteModule(entry, { site, stubComponents = false, stub
     logLevel: 'warning',
     // Vite 的 glob 导入 → 空对象。`define` 只能换标识符，所以 banner 里补一个同名桩，
     // 让 `import.meta.glob(...)` 变成 `__globStub__(...)`。
+    //
+    // `require` 同理：markdown-it 这类 CJS 依赖在包里会 `require('punycode')`，
+    // esbuild 打包进 ESM 后变成 `__require(...)`，而它只在 `typeof require !== 'undefined'`
+    // 时才转交真实 require —— 否则抛「Dynamic require is not supported」。
+    // 预渲染要跑站点同一个 markdown 渲染器，所以这里给它一个真的 require。
     define: { 'import.meta.glob': '__globStub' },
-    banner: { js: 'function __globStub() { return {} }' },
+    banner: {
+      js: [
+        "import { createRequire as __esCreateRequire } from 'node:module'",
+        'const require = __esCreateRequire(import.meta.url)',
+        'function __globStub() { return {} }',
+      ].join('\n'),
+    },
     plugins: [
       {
         name: 'es-plus-site-module',

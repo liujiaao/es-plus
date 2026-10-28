@@ -1,7 +1,7 @@
 ---
 title: 'EsForm 高级表单'
 route: '/components/es-form'
-canonical: 'https://liujiaao.github.io/es-plus/#/components/es-form'
+canonical: 'https://liujiaao.github.io/es-plus/components/es-form/'
 source: 'es-plus-docs/src/views/component-doc.data.ts'
 type: 'component'
 ---

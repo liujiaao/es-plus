@@ -1,7 +1,7 @@
 ---
 title: '权限与国际化'
 route: '/guide/permission-i18n'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/permission-i18n'
+canonical: 'https://liujiaao.github.io/es-plus/guide/permission-i18n/'
 source: 'es-plus-docs/src/docs/permission-i18n.md'
 type: 'guide'
 ---

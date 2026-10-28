@@ -1,7 +1,7 @@
 ---
 title: 'EsCrudPage：schema 驱动整页'
 route: '/components/es-crud-page'
-canonical: 'https://liujiaao.github.io/es-plus/#/components/es-crud-page'
+canonical: 'https://liujiaao.github.io/es-plus/components/es-crud-page/'
 source: 'es-plus-docs/src/views/component-doc.data.ts'
 type: 'component'
 ---

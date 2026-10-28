@@ -1,7 +1,7 @@
 ---
 title: '高级联动组合'
 route: '/advanced/linkage'
-canonical: 'https://liujiaao.github.io/es-plus/#/advanced/linkage'
+canonical: 'https://liujiaao.github.io/es-plus/advanced/linkage/'
 source: 'es-plus-docs/src/views/advanced-doc.data.ts'
 type: 'advanced'
 ---

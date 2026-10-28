@@ -1,7 +1,7 @@
 ---
 title: 'IDE 配置自动补全'
 route: '/guide/schema-setup'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/schema-setup'
+canonical: 'https://liujiaao.github.io/es-plus/guide/schema-setup/'
 source: 'es-plus-docs/src/docs/schema-setup.md'
 type: 'guide'
 ---

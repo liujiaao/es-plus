@@ -1,7 +1,7 @@
 ---
 title: 'EsErrorBoundary 错误边界'
 route: '/components/es-error-boundary'
-canonical: 'https://liujiaao.github.io/es-plus/#/components/es-error-boundary'
+canonical: 'https://liujiaao.github.io/es-plus/components/es-error-boundary/'
 source: 'es-plus-docs/src/views/component-doc.data.ts'
 type: 'component'
 ---

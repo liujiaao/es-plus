@@ -12,7 +12,8 @@
  *
  * 校验项：
  *   1. public/sitemap.xml 与 gen-sitemap.mjs 的产出逐字一致（等价于 --check）；
- *   2. 每条 <loc> 都在站点基准之下，且除首页外都带 `#/`（hash 路由的可打开形式）；
+ *   2. 每条 <loc> 都在站点基准之下，且只有两种合法形式：文章页的路径式地址
+ *      （`guide/…` 等有预渲染 HTML 的前缀，必须以 / 结尾），其余页面的 `#/…`；
  *   3. 404.html 存在、BASE 与 SITE_HOSTNAME 的路径一致、子站前缀与 sites.ts 一致、
  *      且**用假 location 真跑一遍改写逻辑**：主站深链回到主站 hash，子站深链回到
  *      子站自己的 hash（这张 404 页是整个 Pages 站点共用的，此前一律按主站改写，
@@ -33,6 +34,13 @@ const SITEMAP = join(SITE, 'public', 'sitemap.xml')
 const NOT_FOUND = join(SITE, 'public', '404.html')
 const VITE_CONFIG = join(SITE, 'vite.config.ts')
 const SITES_MODULE = join(SITE, 'src', 'utils', 'sites.ts')
+
+/**
+ * 有预渲染产物的内容页前缀（`<dist>/<prefix>/<slug>/index.html`）。
+ * 与 site-seo.js 的 ARTICLE_PREFIXES、json-ld.ts 的同名常量必须一致：
+ * 这里放宽了 sitemap 的地址形式，写错前缀等于给一条打不开的地址开绿灯。
+ */
+const ARTICLE_PATHS = ['guide/', 'components/', 'advanced/']
 let failed = false
 const fail = (msg) => {
   failed = true
@@ -75,15 +83,21 @@ if (!hostMatch) {
         continue
       }
       const rest = loc.slice(base.length)
-      // 首页之外必须是 hash 形式，否则在 GitHub Pages 上仍然是 404
-      if (rest && !rest.startsWith('#')) {
-        fail(`sitemap 条目是路径式地址，在 hash 路由下打不开：${loc}`)
-      }
-      if (rest.startsWith('#') && !rest.startsWith('#/')) {
+      // 首页的规范地址就是站点根本身（`…/es-plus/`），不参与下面两种形式的判定
+      if (!rest) continue
+      // 两种合法形式：文章页的路径式地址（有静态 HTML），其余页面的 hash 形式。
+      // 路径式只允许出现在有预渲染产物的前缀下 —— 否则那条地址在 Pages 上是 404。
+      if (!rest.startsWith('#')) {
+        if (!ARTICLE_PATHS.some((prefix) => rest.startsWith(prefix))) {
+          fail(`sitemap 条目既不是 hash 形式，也不在预渲染的内容页前缀下：${loc}`)
+        } else if (!rest.endsWith('/')) {
+          fail(`sitemap 的路径式条目没有以 / 结尾（Pages 会先 301 再给页，规范地址应带斜杠）：${loc}`)
+        }
+      } else if (!rest.startsWith('#/')) {
         fail(`sitemap 条目的 hash 不是以 #/ 开头：${loc}`)
       }
     }
-    if (locs.length && !failed) console.log(`   sitemap: ${locs.length} 条，全部为可打开的 hash 地址`)
+    if (locs.length && !failed) console.log(`   sitemap: ${locs.length} 条（文章页路径式 + 其余 hash 式），全部为可打开地址`)
   }
 
   // 3. 404 兜底：BASE 一致 + 子站前缀一致 + 改写逻辑真跑一遍

@@ -1,7 +1,7 @@
 ---
 title: '高性能 vxe-table 表格'
 route: '/advanced/vxe-table'
-canonical: 'https://liujiaao.github.io/es-plus/#/advanced/vxe-table'
+canonical: 'https://liujiaao.github.io/es-plus/advanced/vxe-table/'
 source: 'es-plus-docs/src/views/advanced-doc.data.ts'
 type: 'advanced'
 ---

@@ -1,7 +1,7 @@
 ---
 title: '使用'
 route: '/guide/usage'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/usage'
+canonical: 'https://liujiaao.github.io/es-plus/guide/usage/'
 source: 'es-plus-docs/src/docs/usage.md'
 type: 'guide'
 ---

@@ -1,7 +1,7 @@
 ---
 title: '迁移指南'
 route: '/guide/migration'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/migration'
+canonical: 'https://liujiaao.github.io/es-plus/guide/migration/'
 source: 'es-plus-docs/src/docs/migration.md'
 type: 'guide'
 ---

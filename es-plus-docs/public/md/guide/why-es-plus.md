@@ -1,7 +1,7 @@
 ---
 title: '为什么是 ES-Plus'
 route: '/guide/why-es-plus'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/why-es-plus'
+canonical: 'https://liujiaao.github.io/es-plus/guide/why-es-plus/'
 source: 'es-plus-docs/src/docs/why-es-plus.md'
 type: 'guide'
 ---

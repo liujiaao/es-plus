@@ -34,8 +34,21 @@ export interface JsonLd {
   [key: string]: unknown
 }
 
-/** 页内路径 → 绝对地址（根路径不带 hash，与 canonical 一致） */
-const urlOf = (path: string) => (path === '/' ? BASE : `${BASE}#${path}`)
+/** 文章类路径（与 site-seo.js 的 ARTICLE_PREFIXES 同口径）：它们有静态 HTML */
+const ARTICLE_PREFIXES = ['/guide/', '/components/', '/advanced/']
+
+/**
+ * 页内路径 → 绝对地址。
+ *
+ * 文章类路径用**路径式**（`…/es-plus/guide/x/`）：构建期会给每篇生成一份静态 HTML
+ * （scripts/gen-prerender.mjs），那份 HTML 才是这一页的规范地址，structured data
+ * 里的 url 必须和它一致 —— 写成 hash 形式会让两个地址指向同一内容。
+ * 其余路由只有 hash 形式可打开，保持 `#/…`。
+ */
+const urlOf = (path: string) => {
+  if (ARTICLE_PREFIXES.some((prefix) => path.startsWith(prefix))) return `${BASE}${path.slice(1)}/`
+  return path === '/' ? BASE : `${BASE}#${path}`
+}
 
 /** 站名：三站清单里主站那一项的名字不在这里另起一份，直接拼产品名 */
 const SITE_NAME = 'ES-Plus'

@@ -83,6 +83,11 @@ export async function buildAll() {
   const siteRoot = `${origin}${base}`
   /** 页面地址：hash 路由的可打开形式，与 gen-sitemap.mjs 的口径一致 */
   const pageUrl = (route) => `${siteRoot}/#${route}`
+  /**
+   * 文章页的规范地址：构建期有静态 HTML（scripts/gen-prerender.mjs），
+   * 所以是路径式且带结尾斜杠 —— 与 canonical、JSON-LD、sitemap 同一口径。
+   */
+  const articleUrl = (route) => `${siteRoot}${route}/`
   /** 镜像地址 */
   const mirrorUrl = (rel) => `${siteRoot}/${rel}`
 
@@ -105,7 +110,7 @@ export async function buildAll() {
       renderGuide({
         title: entry.title,
         route,
-        canonical: pageUrl(route),
+        canonical: articleUrl(route),
         source,
         body: entry.content,
       }),
@@ -121,7 +126,7 @@ export async function buildAll() {
         renderGuide({
           title: entry.titleEn,
           route,
-          canonical: pageUrl(route),
+          canonical: articleUrl(route),
           source: enSource,
           body: entry.contentEn,
         }),
@@ -139,7 +144,7 @@ export async function buildAll() {
   for (const [slug, data] of Object.entries(components.docsData)) {
     const route = `/components/${slug}`
     const rel = `md/components/${slug}.md`
-    files.set(rel, renderApiPage({ kind: 'component', route, canonical: pageUrl(route), data }))
+    files.set(rel, renderApiPage({ kind: 'component', route, canonical: articleUrl(route), data }))
     componentItems.push({ title: data.title, url: mirrorUrl(rel), desc: data.description })
   }
 
@@ -147,7 +152,7 @@ export async function buildAll() {
   for (const [slug, data] of Object.entries(advanced.docsData)) {
     const route = `/advanced/${slug}`
     const rel = `md/advanced/${slug}.md`
-    files.set(rel, renderApiPage({ kind: 'advanced', route, canonical: pageUrl(route), data }))
+    files.set(rel, renderApiPage({ kind: 'advanced', route, canonical: articleUrl(route), data }))
     advancedItems.push({ title: data.title, url: mirrorUrl(rel), desc: data.description })
   }
 

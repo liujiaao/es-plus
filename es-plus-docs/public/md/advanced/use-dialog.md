@@ -1,7 +1,7 @@
 ---
 title: 'useDialog 高级弹窗'
 route: '/advanced/use-dialog'
-canonical: 'https://liujiaao.github.io/es-plus/#/advanced/use-dialog'
+canonical: 'https://liujiaao.github.io/es-plus/advanced/use-dialog/'
 source: 'es-plus-docs/src/views/advanced-doc.data.ts'
 type: 'advanced'
 ---

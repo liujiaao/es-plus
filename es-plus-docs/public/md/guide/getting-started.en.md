@@ -1,7 +1,7 @@
 ---
 title: 'Getting Started'
 route: '/guide/getting-started'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/getting-started'
+canonical: 'https://liujiaao.github.io/es-plus/guide/getting-started/'
 source: 'es-plus-docs/src/docs/getting-started.en.md'
 type: 'guide'
 ---

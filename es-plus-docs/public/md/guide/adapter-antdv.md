@@ -1,7 +1,7 @@
 ---
 title: 'Ant Design Vue 适配器'
 route: '/guide/adapter-antdv'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/adapter-antdv'
+canonical: 'https://liujiaao.github.io/es-plus/guide/adapter-antdv/'
 source: 'es-plus-docs/src/docs/adapter-antdv.md'
 type: 'guide'
 ---

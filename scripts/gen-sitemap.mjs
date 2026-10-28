@@ -8,14 +8,15 @@
  * 搜索引擎会先拿到 404，再降低整个站的抓取配额。
  *
  * 现在的口径：
- *   1. 只输出**真能打开**的地址 —— hash 路由的规范形式是 `…/es-plus/#/guide/x`，
- *      文档本身（`…/es-plus/`）200，前端再按 hash 渲染正确页面；
- *   2. 条目从**真实注册表**推导，不再手抄：路由表给出静态页，doc-registry /
+ *   1. **文章类页面输出路径式地址**（`…/es-plus/guide/x/`）：构建期给每篇生成了
+ *      静态 HTML（scripts/gen-prerender.mjs），那份 HTML 就是这一页的规范地址，
+ *      与 canonical / JSON-LD 同口径；
+ *   2. 其余页面（营销页、工具页、案例详情）仍输出 hash 形式（`…/es-plus/#/quickstart`），
+ *      因为它们只有前端渲染这一种打开方式；
+ *   3. 条目从**真实注册表**推导，不再手抄：路由表给出静态页，doc-registry /
  *      component-doc / advanced-doc / AI 案例 registry 给出参数页的每个 slug；
- *   3. 不写 lastmod —— 每次构建都把当天日期写进去等于让 sitemap 每天变一次，
+ *   4. 不写 lastmod —— 每次构建都把当天日期写进去等于让 sitemap 每天变一次，
  *      对「哪页真的更新过」是噪音。
- *
- * 等 Wave 3 换成 history 路由 + 预渲染后，这里改成输出路径式 URL 即可，调用方不用动。
  *
  * 用法：
  *   node scripts/gen-sitemap.mjs           # 生成 es-plus-docs/public/sitemap.xml
@@ -105,12 +106,16 @@ export function build() {
 
   const urls = []
   const add = (hashPath) => urls.push(`${origin}${base}/${hashPath ? `#${hashPath}` : ''}`)
+  // 文章类页面在构建期有一份真 HTML（scripts/gen-prerender.mjs），规范地址是路径式。
+  // 与 site-seo.js / json-ld.ts 的 ARTICLE_PREFIXES 同口径，三处不一致时
+  // sitemap、canonical、结构化数据会各说各的地址。
+  const addPage = (pagePath) => urls.push(`${origin}${base}${pagePath}/`)
 
   add('')
   for (const p of staticRoutes(router).sort()) add(p)
-  for (const slug of guides.sort()) add(`/guide/${slug}`)
-  for (const slug of components.sort()) add(`/components/${slug}`)
-  for (const slug of advanced.sort()) add(`/advanced/${slug}`)
+  for (const slug of guides.sort()) addPage(`/guide/${slug}`)
+  for (const slug of components.sort()) addPage(`/components/${slug}`)
+  for (const slug of advanced.sort()) addPage(`/advanced/${slug}`)
   for (const id of cases.sort()) add(`/ai-gallery/${id}`)
 
   const unique = [...new Set(urls)]
@@ -134,7 +139,7 @@ function main() {
       fail('sitemap.xml 与路由表/注册表不一致 —— 运行 npm run sitemap:gen（不要手改）')
     }
     const count = (content.match(/<loc>/g) || []).length
-    console.log(`✅ sitemap 与注册表一致（${count} 条，全部为可打开的 hash 地址）`)
+    console.log(`✅ sitemap 与注册表一致（${count} 条：文章页路径式，其余 hash 式）`)
     return
   }
   writeFileSync(TARGET, content)

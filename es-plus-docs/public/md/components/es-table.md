@@ -1,7 +1,7 @@
 ---
 title: 'EsTable 高级表格'
 route: '/components/es-table'
-canonical: 'https://liujiaao.github.io/es-plus/#/components/es-table'
+canonical: 'https://liujiaao.github.io/es-plus/components/es-table/'
 source: 'es-plus-docs/src/views/component-doc.data.ts'
 type: 'component'
 ---

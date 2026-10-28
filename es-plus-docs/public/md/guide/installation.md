@@ -1,7 +1,7 @@
 ---
 title: '安装'
 route: '/guide/installation'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/installation'
+canonical: 'https://liujiaao.github.io/es-plus/guide/installation/'
 source: 'es-plus-docs/src/docs/installation.md'
 type: 'guide'
 ---

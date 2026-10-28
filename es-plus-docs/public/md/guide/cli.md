@@ -1,7 +1,7 @@
 ---
 title: 'CLI 工具'
 route: '/guide/cli'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/cli'
+canonical: 'https://liujiaao.github.io/es-plus/guide/cli/'
 source: 'es-plus-docs/src/docs/cli.md'
 type: 'guide'
 ---

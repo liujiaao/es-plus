@@ -76,6 +76,11 @@ jobs:
       - name: Check bundle budget
         run: node scripts/check-bundle-budget.mjs
 
+      # 内容页静态 HTML（路线图 3.1）：build 里已经生成，这里核对产物与数据源
+      # 逐字节一致（构建产物被别的东西改过、或某个 slug 没有生成，都要在这里红）
+      - name: Check prerendered content pages
+        run: node scripts/gen-prerender.mjs --check
+
       # 单一 Pages 站点：es-plus-docs 在根，es-pc 在 /es-pc/、es-eui 在 /es-eui/ 子路径
       - name: Combine sites into Pages artifact
         run: |

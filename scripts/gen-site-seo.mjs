@@ -61,10 +61,10 @@ const TARGETS = [
     // （gen-sitemap.mjs，条目含全部文档 slug），这里只核对运行时接线
     subsite: false,
     expectations: [
-      { label: '本站页面 /playground', path: '/playground', canonical: '/#/playground', robots: 'index,follow' },
-      { label: '参数页 /guide/getting-started', path: '/guide/getting-started', canonical: '/#/guide/getting-started', robots: 'index,follow' },
-      { label: '首页', path: '/', canonical: '/', robots: 'index,follow' },
-      { label: '404', path: '/no-such-page', name: 'not-found', canonical: '/#/no-such-page', robots: 'noindex,follow' },
+      { label: '本站页面 /playground', path: '/playground', canonical: '#/playground', robots: 'index,follow' },
+      { label: '文章页 /guide/getting-started', path: '/guide/getting-started', canonical: 'guide/getting-started/', robots: 'index,follow' },
+      { label: '首页', path: '/', canonical: '', robots: 'index,follow' },
+      { label: '404', path: '/no-such-page', name: 'not-found', canonical: '#/no-such-page', robots: 'noindex,follow' },
     ],
   },
   {
@@ -73,10 +73,10 @@ const TARGETS = [
     router: 'es-pc/src/router/index.js',
     subsite: true,
     expectations: [
-      { label: '本站专属页 /es-form', path: '/es-form', canonical: '/#/es-form', robots: 'index,follow' },
-      { label: '重复页 /quickstart', path: '/quickstart', canonical: '/#/quickstart', robots: 'index,follow', duplicate: true },
-      { label: '首页', path: '/', canonical: '/', robots: 'index,follow' },
-      { label: '404', path: '/no-such-page', name: 'NotFound', canonical: '/#/no-such-page', robots: 'noindex,follow' },
+      { label: '本站专属页 /es-form', path: '/es-form', canonical: '#/es-form', robots: 'index,follow' },
+      { label: '重复页 /quickstart', path: '/quickstart', canonical: '#/quickstart', robots: 'index,follow', duplicate: true },
+      { label: '首页', path: '/', canonical: '', robots: 'index,follow' },
+      { label: '404', path: '/no-such-page', name: 'NotFound', canonical: '#/no-such-page', robots: 'noindex,follow' },
     ],
   },
   {
@@ -85,10 +85,10 @@ const TARGETS = [
     router: 'es-eui/src/router/index.js',
     subsite: true,
     expectations: [
-      { label: '本站专属页 /component/esform', path: '/component/esform', canonical: '/#/component/esform', robots: 'index,follow' },
-      { label: '重复页 /quickstart', path: '/quickstart', canonical: '/#/quickstart', robots: 'index,follow', duplicate: true },
-      { label: '首页', path: '/', canonical: '/', robots: 'index,follow' },
-      { label: '404', path: '/no-such-page', name: 'NotFound', canonical: '/#/no-such-page', robots: 'noindex,follow' },
+      { label: '本站专属页 /component/esform', path: '/component/esform', canonical: '#/component/esform', robots: 'index,follow' },
+      { label: '重复页 /quickstart', path: '/quickstart', canonical: '#/quickstart', robots: 'index,follow', duplicate: true },
+      { label: '首页', path: '/', canonical: '', robots: 'index,follow' },
+      { label: '404', path: '/no-such-page', name: 'NotFound', canonical: '#/no-such-page', robots: 'noindex,follow' },
     ],
   },
 ]
@@ -227,8 +227,9 @@ async function checkRuntime(target, router, siteUrl, mainSiteUrl) {
 
   for (const item of target.expectations) {
     // 期望值是站点基准 + 页内地址的**字面拼接**，不复用 site-seo.js 的拼法 ——
-    // 两边共用同一个函数就成了自己给自己判卷。基准以 `/` 结尾，故剥掉页内地址的前导 `/`
-    const expected = `${item.duplicate ? mainSiteUrl : siteUrl}${item.canonical.slice(1)}`
+    // 两边共用同一个函数就成了自己给自己判卷。`canonical` 是站点基准之后的那一段：
+    // hash 形式写成 `#/x`，文章页的路径式写成 `guide/x/`（末尾带斜杠）
+    const expected = `${item.duplicate ? mainSiteUrl : siteUrl}${item.canonical}`
     const meta = item.duplicate ? { duplicate: true } : {}
     const to = { path: item.path, meta, matched: [{ name: item.name, meta }] }
 
@@ -296,7 +297,8 @@ async function checkJsonLd(mainSiteUrl) {
     if (data['@context'] !== 'https://schema.org') runtimeFail(`JSON-LD 的 @context 是 ${data['@context']}，应为 https://schema.org`)
     if (data['@type'] !== 'TechArticle') runtimeFail(`指南页的 @type 是 ${data['@type']}，应为 TechArticle`)
     if (data.headline !== '快速上手') runtimeFail('指南页 JSON-LD 的 headline 与页面标题不一致')
-    const expected = `${mainSiteUrl}#/guide/getting-started`
+    // 文章页的规范地址是构建期静态 HTML 的路径（不是 hash），与 sitemap 同口径
+    const expected = `${mainSiteUrl}guide/getting-started/`
     if (data.url !== expected) runtimeFail(`指南页 JSON-LD 的 url 是 ${data.url}，应与 canonical 一致（${expected}）`)
   }
 

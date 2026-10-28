@@ -51,6 +51,14 @@ const { files } = await buildAll()
 const { origin, base } = readSiteBase()
 const siteRoot = `${origin}${base}`
 
+/**
+ * 文章页的规范地址：构建期有静态 HTML（scripts/gen-prerender.mjs），
+ * 所以是路径式且带结尾斜杠 —— 与 canonical、JSON-LD、sitemap 同一口径。
+ * 镜像的 front matter 必须写这个地址，否则 AI 工具会拿到一个和页面 canonical
+ * 不一致的来源地址。
+ */
+const articleUrl = (route) => `${siteRoot}${route}/`
+
 // ── 1. 产物最新、无孤儿 ────────────────────────────────────────────────────
 for (const problem of compareWithDisk(files)) fail(problem)
 
@@ -149,7 +157,7 @@ for (const slug of guides.GUIDE_SLUGS ?? Object.keys(guides.docsData)) {
   if (parsed) {
     const route = `/guide/${slug}`
     if (parsed.fields.route !== route) fail(`${rel} 的 front matter route 是 ${parsed.fields.route}，应为 ${route}`)
-    if (parsed.fields.canonical !== `${siteRoot}/#${route}`) {
+    if (parsed.fields.canonical !== articleUrl(route)) {
       fail(`${rel} 的 canonical 与站点基准不符：${parsed.fields.canonical}`)
     }
     // 镜像正文必须与源一致：只允许行尾差异与结尾空白
@@ -178,7 +186,7 @@ for (const [kind, data] of [
     if (!parsed) continue
     const route = `/${dir}/${slug}`
     if (parsed.fields.route !== route) fail(`${rel} 的 route 是 ${parsed.fields.route}，应为 ${route}`)
-    if (parsed.fields.canonical !== `${siteRoot}/#${route}`) {
+    if (parsed.fields.canonical !== articleUrl(route)) {
       fail(`${rel} 的 canonical 与站点基准不符：${parsed.fields.canonical}`)
     }
     // API 表的每一节都要在镜像里出现（少一节 = 读者以为这个组件没有这个 API）

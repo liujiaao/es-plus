@@ -1,7 +1,7 @@
 ---
 title: '更新日志'
 route: '/guide/changelog'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/changelog'
+canonical: 'https://liujiaao.github.io/es-plus/guide/changelog/'
 source: 'es-plus-docs/src/docs/changelog.md'
 type: 'guide'
 ---

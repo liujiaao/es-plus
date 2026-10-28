@@ -1,7 +1,7 @@
 ---
 title: 'SvgIcon 图标'
 route: '/components/svg-icon'
-canonical: 'https://liujiaao.github.io/es-plus/#/components/svg-icon'
+canonical: 'https://liujiaao.github.io/es-plus/components/svg-icon/'
 source: 'es-plus-docs/src/views/component-doc.data.ts'
 type: 'component'
 ---

@@ -1,7 +1,7 @@
 ---
 title: 'MCP Server'
 route: '/guide/mcp-server'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/mcp-server'
+canonical: 'https://liujiaao.github.io/es-plus/guide/mcp-server/'
 source: 'es-plus-docs/src/docs/mcp-server.md'
 type: 'guide'
 ---

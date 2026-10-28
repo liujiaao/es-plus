@@ -37,18 +37,37 @@ const MAIN_SITE_KEY = 'vue3'
 /** 404 路由的 name。三站的写法是 `NotFound` / `not-found`，只认这一个共同点 */
 const NOT_FOUND_NAME = /not-?found/i
 
+/**
+ * 文章类路径前缀。构建期会为这些路径生成静态 HTML（`scripts/gen-prerender.mjs`），
+ * 于是它们的规范地址是路径式而不是 hash 式。改这里必须同步改
+ * `es-plus-docs/src/utils/json-ld.ts` 的同名常量与 `scripts/gen-sitemap.mjs` 的条目形式
+ * —— 三处不一致时，sitemap、canonical、结构化数据会各说各的地址。
+ */
+const ARTICLE_PREFIXES = ['/guide/', '/components/', '/advanced/']
+
 /** 本站基准地址（含结尾斜杠）；站点未登记时退回三站清单第一项，避免读 undefined */
 const SELF = siteOf(SITE_KEY) || SITES[0]
 
 /**
  * 站内路径 → 本站的绝对地址。
  *
- * 三站都是 hash 路由，规范形式是 `…/es-pc/#/es-form`；根路径不带 hash
- * —— `…/es-pc/` 本身就是那一个页面。
+ * 文章类路径（`/guide/`、`/components/`、`/advanced/`）在构建期会生成一份静态 HTML
+ * （`scripts/gen-prerender.mjs`），地址是 `…/es-plus/guide/x/` —— 那才是这一页的规范
+ * 地址。其余路由只有 hash 形式可打开（`…/es-plus/#/quickstart`），静止页不存在。
  */
 function selfUrl(path) {
   if (!path || path === '/') return SELF.url
-  return `${SELF.url}#${path.charAt(0) === '/' ? path : '/' + path}`
+  const normalized = path.charAt(0) === '/' ? path : '/' + path
+  if (ARTICLE_PREFIXES.some((prefix) => normalized.startsWith(prefix))) return `${SELF.url}${normalized.slice(1)}/`
+  return `${SELF.url}#${normalized}`
+}
+
+/** 同样的口径用在「重复页指回主站」那一路 */
+function mainSiteUrl(path) {
+  const main = siteOf(MAIN_SITE_KEY) || SITES[0]
+  const normalized = path.charAt(0) === '/' ? path : '/' + path
+  if (ARTICLE_PREFIXES.some((prefix) => normalized.startsWith(prefix))) return `${main.url}${normalized.slice(1)}/`
+  return crossSiteUrl(MAIN_SITE_KEY, normalized)
 }
 
 /** 取 head 里已有的标签（没有就建一个），并把属性写全 */
@@ -67,12 +86,12 @@ function upsert(selector, tagName, attrs) {
  *
  * 三种情形：
  *   1. `meta.duplicate` —— 这一页是主站某一页的副本：canonical 与 og:url 都指回主站
- *      的**同一路径**（`crossSiteUrl('vue3', path)`）。爬虫会忽略地址里的 hash 段，
- *      所以此刻这句等价于「这一页属于主站」；等 Wave 3.1 换成 history 路由，
- *      同一行代码自动产出一个真路径，不用改这里。
+ *      的**同一路径**（`crossSiteUrl('vue3', path)`；文章类路径用路径式，因为主站
+ *      那边真有静态 HTML）。爬虫会忽略地址里的 hash 段，所以对非文章页这句等价于
+ *      「这一页属于主站」。
  *   2. 404 —— `robots: noindex,follow`，canonical 指向自己（写成别人的地址会让
  *      404 页和被指向的页在索引里混成一件事）。
- *   3. 其余（渲染器专属页）—— canonical 指向自己。
+ *   3. 其余 —— canonical 指向自己（文章页是路径式，其余是 hash 式）。
  *
  * 刻意不管 title / description：子站的 title 由 router 的 `meta.title` 负责
  * （afterEach 里已经写了 `document.title`），主站的逐页 meta 走 unhead
@@ -84,7 +103,7 @@ export function applyPageSeo(to) {
   const meta = (to && to.meta) || (last && last.meta) || {}
   const path = (to && to.path) || '/'
   const isNotFound = NOT_FOUND_NAME.test(String((last && last.name) || ''))
-  const canonical = meta.duplicate && !isNotFound ? crossSiteUrl(MAIN_SITE_KEY, path) : selfUrl(path)
+  const canonical = meta.duplicate && !isNotFound ? mainSiteUrl(path) : selfUrl(path)
 
   upsert('link[rel="canonical"]', 'link', { rel: 'canonical', href: canonical })
   upsert('meta[property="og:url"]', 'meta', { property: 'og:url', content: canonical })

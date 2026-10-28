@@ -1,7 +1,7 @@
 ---
 title: 'Vue 2 指南'
 route: '/guide/vue2'
-canonical: 'https://liujiaao.github.io/es-plus/#/guide/vue2'
+canonical: 'https://liujiaao.github.io/es-plus/guide/vue2/'
 source: 'es-plus-docs/src/docs/vue2.md'
 type: 'guide'
 ---
