@@ -72,6 +72,35 @@ export function techArticle(input: {
   }
 }
 
+/**
+ * FAQ 页：一批「问题 → 答案」。类型是 `FAQPage` 而不是 `TechArticle` —— 两者互斥
+ * （一个页面只能主张一种主类型），而 FAQ 页的价值全在 `mainEntity` 那一串问答上。
+ *
+ * 答案必须是纯文本：`scripts/gen-site-seo.mjs` 会真跑一遍解析器，断言每条答案非空、
+ * 且不带 markdown 标记（`]()`、`**`、反引号）—— 那些字符会让结构化数据被判为格式错误。
+ */
+export function faqPage(input: {
+  title: string
+  description: string
+  path: string
+  questions: { question: string; answer: string }[]
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    name: input.title,
+    description: input.description,
+    url: urlOf(input.path),
+    inLanguage: 'zh-CN',
+    isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: BASE },
+    mainEntity: input.questions.map((entry) => ({
+      '@type': 'Question',
+      name: entry.question,
+      acceptedAnswer: { '@type': 'Answer', text: entry.answer },
+    })),
+  }
+}
+
 /** 普通内容页：营销页、案例页、工具页 */
 export function webPage(input: { title: string; description: string; path: string }): JsonLd {
   return {

@@ -78,6 +78,7 @@ async function readArticles() {
       if (!data || !data.title) fail(`${article.kind} '${slug}' 没有标题`)
       pages.push({
         kind: article.kind,
+        slug,
         path: `${article.prefix}${slug}`,
         title: data.title,
         // 指南没有 description 字段：摘要取正文第一段，与 llms.txt 同一口径
@@ -160,6 +161,30 @@ function renderPage({ page, articleHtml, canonical, jsonLd, template, siteRoot }
 `
 }
 
+/**
+ * 一页的结构化数据。FAQ 页给 `FAQPage`，其余给 `TechArticle` —— 分派规则与 Doc.vue
+ * 逐字对应（同一个 `isFaqSlug`、同一个 `parseFaq`），静态页与交互页因此不会各说一套。
+ */
+function renderJsonLd(page, faqModule, jsonLdModule) {
+  const questions = page.kind === 'guide' && faqModule.isFaqSlug(page.slug)
+    ? faqModule.parseFaq(page.content)
+    : []
+  if (questions.length) {
+    return jsonLdModule.faqPage({
+      title: page.title,
+      description: page.description,
+      path: page.path,
+      questions,
+    })
+  }
+  return jsonLdModule.techArticle({
+    title: page.title,
+    description: page.description,
+    path: page.path,
+    section: page.kind === 'component' ? 'components' : page.kind,
+  })
+}
+
 export async function build() {
   if (!existsSync(join(DIST, 'index.html'))) {
     fail(`${relative(ROOT, DIST)}/index.html 不存在 —— 先 vite build，再跑预渲染`)
@@ -175,6 +200,9 @@ export async function build() {
 
   // 结构化数据同样复用站点的 builder（json-ld.ts），不在这里另写一份
   const jsonLdModule = await loadSiteModule(`${SITE}/src/utils/json-ld.ts`, { site: SITE })
+  // FAQ 页的解析同理：与 Doc.vue 共用 es-plus-docs/src/utils/faq.mjs —— 静态页与
+  // 交互页给出同一串问答，而不是「页面上看到的和抓到的不是一套」
+  const faqModule = await loadSiteModule(`${SITE}/src/utils/faq.mjs`, { site: SITE })
 
   const pages = await readArticles()
   const files = new Map()
@@ -192,12 +220,7 @@ export async function build() {
     if (!articleHtml || articleHtml.length < 200) {
       fail(`${page.path} 渲染出的正文只有 ${articleHtml ? articleHtml.length : 0} 字符 —— 静态页会是一张空壳`)
     }
-    const jsonLd = jsonLdModule.techArticle({
-      title: page.title,
-      description: page.description,
-      path: page.path,
-      section: page.kind === 'component' ? 'components' : page.kind,
-    })
+    const jsonLd = renderJsonLd(page, faqModule, jsonLdModule)
     files.set(`${page.path.replace(/^\//, '')}/index.html`, renderPage({
       page,
       articleHtml,

@@ -77,7 +77,10 @@ import { lastUpdatedFor } from '@/utils/doc-source'
 // 指南注册表（Doc.vue 与搜索索引共用的单一来源）
 import { docsData } from '@/docs/doc-registry'
 import { useHead } from '@unhead/vue'
-import { techArticle, useJsonLd } from '@/utils/json-ld'
+import { techArticle, faqPage, useJsonLd } from '@/utils/json-ld'
+// FAQ 页 → FAQPage：解析器与构建期预渲染（scripts/gen-prerender.mjs）共用同一份实现，
+// 两处答案不会分叉。哪些 slug 算 FAQ 由 FAQ_SLUGS 决定，不在这里另立一份。
+import { isFaqSlug, parseFaq } from '@/utils/faq.mjs'
 
 const route = useRoute()
 
@@ -113,14 +116,26 @@ useHead({
   ],
 })
 
-// 结构化数据：指南是一篇文章，类型与 og:* 同源取当前文档
+// 结构化数据：指南是一篇文章，类型与 og:* 同源取当前文档。
+// FAQ 页例外：它主张 FAQPage（一个页面只能有一个主类型），价值全在那串问答上。
+const faqEntries = computed(() =>
+  isFaqSlug(route.params.name as string) ? parseFaq(currentDoc.value.content) : [],
+)
+
 useJsonLd(() =>
-  techArticle({
-    title: currentDoc.value.title,
-    description: `${currentDoc.value.title} - ES-Plus 文档`,
-    path: route.path,
-    section: 'guide',
-  }),
+  faqEntries.value.length
+    ? faqPage({
+        title: currentDoc.value.title,
+        description: `${currentDoc.value.title} - ES-Plus 文档`,
+        path: route.path,
+        questions: faqEntries.value,
+      })
+    : techArticle({
+        title: currentDoc.value.title,
+        description: `${currentDoc.value.title} - ES-Plus 文档`,
+        path: route.path,
+        section: 'guide',
+      }),
 )
 
 const currentCategory = computed(() => {

@@ -255,8 +255,9 @@ const DOCS_JSON_LD = `${DOCS_SITE}/src/utils/json-ld.ts`
  * 结构化数据与 canonical 必须指向同一个地址：两处打架时搜索引擎两个都不信。
  *
  * 因此这里不校验 `json-ld.ts` 的源码写法，而是把它真加载进来，用假 document 跑一遍
- * 「写入 → 换页替换 → 首页类型 → 移除」。失败模式都很安静：@type 写错、url 用了另一套
- * 基准、换页变成追加（一条页面上留两条互相矛盾的文章）—— 页面看起来完全正常。
+ * 「写入 → 换页替换 → 首页类型 → FAQ 页类型 → 移除」。失败模式都很安静：@type 写错、
+ * url 用了另一套基准、换页变成追加（一条页面上留两条互相矛盾的文章）、FAQ 的问答只在
+ * 交互页有而静态页没有 —— 页面看起来完全正常。
  */
 async function checkJsonLd(mainSiteUrl) {
   const dom = makeDom()
@@ -327,6 +328,105 @@ async function checkJsonLd(mainSiteUrl) {
   // ④ 传 null 要移除（离开文章页时不该留着上一页的类型）
   jsonLd.setJsonLd(null)
   if (scripts().length) runtimeFail('setJsonLd(null) 没有移除 JSON-LD 脚本')
+
+  // ⑤ FAQ 页：FAQPage + mainEntity（路线图 3.2 的最后一块）。
+  //    三层判据，任何一层消失都会让「FAQ 有结构化数据」变成只在嘴上成立的一句：
+  //    a. 解析器确实能从真实 faq.md 里取出问答，且取出来的是纯文本；
+  //    b. builder 产出的 @type 与 mainEntity 结构正确；
+  //    c. **两个写入点**（浏览器 Doc.vue 与构建期 gen-prerender）都调了 faqPage ——
+  //       只接一处时，交互页有问答而抓到的静态页没有（或反过来），没人会发现。
+  let faq
+  try {
+    faq = await loadSiteModule(`${DOCS_SITE}/src/utils/faq.mjs`, { site: DOCS_SITE })
+  } catch (error) {
+    runtimeFail(`加载 ${DOCS_SITE}/src/utils/faq.mjs 失败：${error.message}`)
+    return
+  }
+  if (!Array.isArray(faq.FAQ_SLUGS) || !faq.FAQ_SLUGS.length) {
+    runtimeFail('faq.mjs 的 FAQ_SLUGS 是空的 —— FAQPage 没有任何页面会用到，这条类型等于没做')
+  }
+  for (const slug of faq.FAQ_SLUGS || []) {
+    const mdPath = join(ROOT, DOCS_SITE, 'src', 'docs', `${slug}.md`)
+    if (!existsSync(mdPath)) {
+      runtimeFail(`FAQ_SLUGS 里的 '${slug}' 没有对应文档：${DOCS_SITE}/src/docs/${slug}.md`)
+      continue
+    }
+    const markdown = normalizeEol(readFileSync(mdPath, 'utf8'))
+    const entries = faq.parseFaq(markdown)
+    if (entries.length < 10) {
+      runtimeFail(`${slug}.md 只解析出 ${entries.length} 条问答 —— 少于 10 条的 FAQPage 不值得标类型`)
+    }
+    // 解析器会丢掉「没有答案的问题」（空的 acceptedAnswer 会让整页不合格），
+    // 所以这里再数一遍 `###` 标题：写作时漏了答案，FAQ 只会**少一条**而不报错。
+    let fenced = false
+    const questions = markdown.split('\n').filter((line) => {
+      if (/^[ \t]{0,3}(`{3,}|~{3,})/.test(line)) {
+        fenced = !fenced
+        return false
+      }
+      return !fenced && /^###[ \t]+\S/.test(line)
+    })
+    if (questions.length !== entries.length) {
+      const parsed = new Set(entries.map((entry) => entry.question))
+      const missing = questions
+        .map((line) => line.replace(/^###[ \t]+/, '').replace(/[ \t]*#*[ \t]*$/, '').replace(/`/g, ''))
+        .filter((title) => !parsed.has(title))
+      runtimeFail(
+        `${slug}.md 有 ${questions.length} 个 \`###\` 问题，只解析出 ${entries.length} 条带答案的问答`
+          + (missing.length ? `（缺答案：${missing.join('；')}）` : ''),
+      )
+    }
+    for (const entry of entries) {
+      const at = `${slug}.md「${entry.question || '(无问题)'}」`
+      if (!entry.answer) runtimeFail(`${at} 没有答案 —— 空的 acceptedAnswer 会让整页被判不合格`)
+      if (/\]\(|\*\*|`/.test(entry.question + entry.answer)) {
+        runtimeFail(`${at} 里还留着 markdown 标记（链接 / 粗体 / 反引号）—— 结构化数据只要纯文本`)
+      }
+      if (!/[？?]$/.test(entry.question)) runtimeFail(`${at} 不像一个问题：标题应以问号结尾`)
+      if (entry.answer.length > 600) runtimeFail(`${at} 的答案有 ${entry.answer.length} 字 —— 结构化数据里的答案要能被一眼读完`)
+    }
+
+    jsonLd.setJsonLd(
+      jsonLd.faqPage({ title: '常见问题', description: '按主题分组的实际提问。', path: `/guide/${slug}`, questions: entries }),
+    )
+    ;({ count, data } = readOne())
+    if (count !== 1 || !data) runtimeFail('faqPage 没有在 head 里写出一条可解析的 JSON-LD')
+    else {
+      if (data['@type'] !== 'FAQPage') runtimeFail(`FAQ 页的 @type 是 ${data['@type']}，应为 FAQPage`)
+      const expected = `${mainSiteUrl}guide/${slug}/`
+      if (data.url !== expected) runtimeFail(`FAQ 页 JSON-LD 的 url 是 ${data.url}，应与 canonical 一致（${expected}）`)
+      const list = Array.isArray(data.mainEntity) ? data.mainEntity : []
+      if (list.length !== entries.length) {
+        runtimeFail(`FAQ 页的 mainEntity 有 ${list.length} 条，解析出的问答是 ${entries.length} 条`)
+      }
+      for (const item of list) {
+        if (item['@type'] !== 'Question' || !item.name) runtimeFail('mainEntity 里有一条不是 Question（缺 name）')
+        const answer = item.acceptedAnswer
+        if (!answer || answer['@type'] !== 'Answer' || !answer.text) {
+          runtimeFail(`问题「${item.name}」的 acceptedAnswer 不完整`)
+        }
+      }
+    }
+  }
+  jsonLd.setJsonLd(null)
+
+  // 两个写入点：少一处，静态页与交互页的问答就会各说一套（或一方完全没有）
+  const WRITERS = [
+    [`${DOCS_SITE}/src/views/Doc.vue`, '交互页 Doc.vue'],
+    ['scripts/gen-prerender.mjs', '构建期 gen-prerender.mjs'],
+  ]
+  for (const [rel, label] of WRITERS) {
+    const abs = join(ROOT, rel)
+    if (!existsSync(abs)) {
+      runtimeFail(`${label}（${rel}）不存在 —— 这里的断言已经失去意义`)
+      continue
+    }
+    const calls = normalizeEol(readFileSync(abs, 'utf8'))
+      .split('\n')
+      // 只认真正的调用语句：注释里提到 faqPage 不算接线
+      .filter((line) => /faqPage\(/.test(line) && !/^\s*(\/\/|\*)/.test(line))
+    if (!calls.length) runtimeFail(`${label} 没有调用 faqPage —— FAQ 页的结构化数据只在另一个写入点存在`)
+  }
 
   delete globalThis.document
 }
@@ -440,7 +540,7 @@ async function main() {
       .filter((file) => file.path.endsWith('sitemap.xml'))
       .map((file) => (file.content.match(/<loc>/g) || []).length)
     console.log(
-      `✅ 子站 sitemap/robots 与路由表一致（${counts.join(' + ')} 条可打开地址）；重复页声明与主站双向一致；canonical/robots 运行时行为已核对；JSON-LD 类型与地址基准已核对`,
+      `✅ 子站 sitemap/robots 与路由表一致（${counts.join(' + ')} 条可打开地址）；重复页声明与主站双向一致；canonical/robots 运行时行为已核对；JSON-LD 类型与地址基准已核对（含 FAQ 页的 FAQPage 与两个写入点）`,
     )
     return
   }
