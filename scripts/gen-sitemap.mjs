@@ -77,7 +77,12 @@ function staticRoutes(src) {
   return [...paths]
 }
 
-function readSiteBase() {
+/**
+ * 站点基准地址（origin + 部署路径）—— 从 `SITE_HOSTNAME` 解析而来。
+ * 导出给 gen-llms.mjs 复用：`llms.txt` 里的绝对地址必须与 sitemap 同一套基准，
+ * 否则两边各解析一遍站点域名，换域名时会漏改一处。
+ */
+export function readSiteBase() {
   const m = read(VITE_CONFIG).match(/SITE_HOSTNAME\s*=\s*'([^']+)'/)
   if (!m) fail(`未能在 ${VITE_CONFIG} 定位 SITE_HOSTNAME`)
   const url = new URL(m[1])

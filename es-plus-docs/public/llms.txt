@@ -1,0 +1,62 @@
+# ES-Plus
+
+> 中后台 CRUD 的配置层：一份 JSON 配置 · 三个渲染器 · 生成即编译。
+
+本站每篇文档都有 Markdown 镜像（下面各节直接指向镜像原文），首页与交互页仍是浏览器页面。
+镜像与站点由同一份源生成：指南是原文，组件页是从文档数据渲染出的 API 表 —— 不会出现「索引里一段、页面里另一段」。
+
+## 指南
+
+- [为什么是 ES-Plus](https://liujiaao.github.io/es-plus/md/guide/why-es-plus.md): 一句话总结：ES-Plus 把"表单—表格—弹窗"这条中后台最高频的链路抽象成一份 JSON Schema，把同一页面里 115 行模板与事件胶水代码压到 27 行配置（−76.5%），让 AI 写出的代码第一次就能在 CI 里通过 vite build，让同一份配置在 Vue 3 + Element Plus、Vu…
+- [Why ES-Plus (English)](https://liujiaao.github.io/es-plus/md/guide/why-es-plus.en.md): One-liner: ES-Plus abstracts the most repetitive admin-panel chain — form, table, dialog — into a single JSON Schema. 115 lines of markup and event glue collap…
+- [快速开始](https://liujiaao.github.io/es-plus/md/guide/getting-started.md): ES-Plus 是中后台 CRUD 的配置层：一份 JSON 配置描述查询、表格、表单与弹窗，由渲染器生成页面，常见 CRUD 页面的模板与事件胶水代码因此减少 76.5%。提供三个渲染端：@es-plus/vue3 — Vue 3 + Element Plus（活跃开发）；@es-plus/vue2 — Vue 2…
+- [Getting Started (English)](https://liujiaao.github.io/es-plus/md/guide/getting-started.en.md): ES-Plus is the configuration layer for admin CRUD: one JSON config describes the query form, table, form and dialogs, and a renderer produces the page — which …
+- [安装](https://liujiaao.github.io/es-plus/md/guide/installation.md): ES-Plus 在 npm 上以多包形式发布。根据使用的 Vue 版本选择对应渲染层：
+- [使用](https://liujiaao.github.io/es-plus/md/guide/usage.md): ES-Plus 提供两种全局配置方式，都能注入 $httpRequest、configQueryFieldOutput、permission、t 等运行时配置：
+- [Vue 2 指南](https://liujiaao.github.io/es-plus/md/guide/vue2.md): @es-plus/vue2 是 ES-Plus 的 Vue 2 + Element UI 渲染层，与 Vue 3 版（@es-plus/vue3）共用同一份 JSON 配置 schema。本文聚焦 Vue 2 特有的安装、用法、差异与限制。
+- [Vue 2 Guide (English)](https://liujiaao.github.io/es-plus/md/guide/vue2.en.md): ES-Plus ships a Vue 2 + Element UI render target that consumes the same JSON config as the Vue 3 build. Migrate your stack at your own pace — your columns, for…
+- [Ant Design Vue 适配器](https://liujiaao.github.io/es-plus/md/guide/adapter-antdv.md): @es-plus/adapter-antdv 是 ES-Plus 的 Ant Design Vue 4.x 渲染适配器。它与 @es-plus/vue3（Element Plus 版）共享完全相同的 JSON 配置 Schema，将同一份配置映射为 Ant Design Vue 组件。
+- [MCP Server](https://liujiaao.github.io/es-plus/md/guide/mcp-server.md): @es-plus/mcp-server 是 ES-Plus 官方的 MCP (Model Context Protocol) Server，让 AI 编码工具一行配置即可获得 @es-plus/vue3 的 CRUD 页面生成能力。
+- [MCP Server (English)](https://liujiaao.github.io/es-plus/md/guide/mcp-server.en.md): @es-plus/mcp-server is the official ES-Plus MCP (Model Context Protocol) server. Drop one config block into your AI coding tool and it gains accurate, schema-d…
+- [CLI 工具](https://liujiaao.github.io/es-plus/md/guide/cli.md): @es-plus/cli 是 ES-Plus 官方命令行工具，支持从自然语言生成 CRUD 页面、校验 JSON 配置、快速生成页面脚手架。
+- [权限与国际化](https://liujiaao.github.io/es-plus/md/guide/permission-i18n.md): @es-plus/vue3 内置了按钮级权限控制和 i18n 国际化支持，通过插件安装时注入配置即可全局生效。
+- [IDE 配置自动补全](https://liujiaao.github.io/es-plus/md/guide/schema-setup.md): ES-Plus 公开了 formItemList 与 columns 的 JSON Schema，配置到 IDE 后，写表单/表格的 JSON 配置时可以获得：✨ 字段名/类型补全；⚠️ 错误属性即时高亮
+- [迁移指南](https://liujiaao.github.io/es-plus/md/guide/migration.md): 本文涵盖两类迁移：v1.4.0 包名重命名 — 从 es-plus-ui 迁移到 @es-plus/vue3；从原生 Element Plus 迁移 — 把现有 el-form / el-table 重写为 es-form / es-table
+- [Migration Guide (English)](https://liujiaao.github.io/es-plus/md/guide/migration.en.md): Starting with v1.4.0, the npm package es-plus-ui has been renamed to @es-plus/vue3 to align with the new sibling package @es-plus/vue2 (Vue 2 + Element UI) and…
+- [更新日志](https://liujiaao.github.io/es-plus/md/guide/changelog.md): 本页由 npm run changelog:gen 从各包的 CHANGELOG.md 生成，请勿手改；完整历史见 GitHub Releases。
+
+## 组件
+
+- [EsForm 高级表单](https://liujiaao.github.io/es-plus/md/components/es-form.md): 基于 Element Plus 的增强型表单组件，支持配置化、联动化、抽象化设计，让表单开发更高效。
+- [EsTable 高级表格](https://liujiaao.github.io/es-plus/md/components/es-table.md): 基于 Element Plus 的增强型表格组件，支持配置化列定义、自动分页、数据联动等高级功能。
+- [EsCrudPage：schema 驱动整页](https://liujiaao.github.io/es-plus/md/components/es-crud-page.md): Schema 驱动的一站式 CRUD 页面组件，支持多弹窗架构、按钮-弹窗声明绑定、自定义渲染、权限控制。
+- [EsErrorBoundary 错误边界](https://liujiaao.github.io/es-plus/md/components/es-error-boundary.md): 组件级错误围栏：子树在渲染 / 生命周期 / 侦听器里出错时只降级这一块，通过 error 事件上报、reset() 原地恢复 —— 一个坏组件不会拖垮整页。
+- [SvgIcon 图标](https://liujiaao.github.io/es-plus/md/components/svg-icon.md): 统一的图标出口：雪碧图符号按 currentColor 着色、尺寸随字号，也能直接吃 http(s) 外部图片 —— 业务里不必再各写一套 <svg><use>。
+
+## 高级用法
+
+- [useDialog 高级弹窗](https://liujiaao.github.io/es-plus/md/advanced/use-dialog.md): 基于 Vue 3 的编程式弹窗 Hook，支持 JSX 渲染、表单集成、嵌套弹窗等高级功能。
+- [高级联动组合](https://liujiaao.github.io/es-plus/md/advanced/linkage.md): EsForm、EsTable、useDialog 组合使用，实现复杂的业务场景。
+- [高性能 vxe-table 表格](https://liujiaao.github.io/es-plus/md/advanced/vxe-table.md): 通过 options.engine: "vxe" 一行切换至 vxe-table 高性能引擎，获得虚拟滚动、行内编辑、树形数据、导出、工具栏、服务端分页等企业级能力，同时保持 es-plus 配置化与联动范式不变。引擎可以运行期切换：同一份 columns / data 在两个渲染层之间现场迁移，勾选、排序、列宽随配置保留。
+
+## 站点页面（需要浏览器）
+
+- [30 秒上手](https://liujiaao.github.io/es-plus/#/quickstart): 从安装依赖到第一个可跑页面的最短路径：三段代码、一份 JSON 配置，查询表单与表格自动联动。
+- [核心案例总览](https://liujiaao.github.io/es-plus/#/cases): 真实业务场景的完整配置：查询、表格、弹窗、联动与权限，每张卡都能落到可直接复制的页面。
+- [旗舰案例 · 合同审批工作台](https://liujiaao.github.io/es-plus/#/flagship-approval): 一次审批工作台的完整拆解：整页由一份 JSON 驱动，查询表单、明细表格与审批弹窗如何拼在一起。
+- [AI 生成 · 一句话成页](https://liujiaao.github.io/es-plus/#/ai-generated): 一句话描述需求，AI 产出一份可编译的 CRUD 配置，再用同一份配置渲染出三个渲染端的页面。
+- [AI 案例画廊](https://liujiaao.github.io/es-plus/#/ai-gallery): 自然语言生成的中后台案例集：每个案例都附配置、产物与复现步骤，而不是只有一张截图。
+- [组合画廊 · 三端对照](https://liujiaao.github.io/es-plus/#/ai-gallery/composition): 组合能力的三端对照：同一份配置在 Vue 3、Vue 2 与 Ant Design Vue 上的一致性证据。
+- [MCP 工具工作流](https://liujiaao.github.io/es-plus/#/ai-gallery/workflows): MCP 工具的真实调用链：输入、输出、校验结果与耗时逐条留档，与 IDE 里看到的一致。
+- [片段拼装 · 分析看板](https://liujiaao.github.io/es-plus/#/fragment-dashboard): 用片段工具拼出一个非 CRUD 的分析页：宿主取数、原生图表与弹窗如何各归其位。
+- [原生 · 手写 · AI 三栏对照](https://liujiaao.github.io/es-plus/#/native-vs-ai): 同一功能的三种写法并列：原生模板、手写 ES-Plus 配置、AI 产物，用同一把尺子量成本。
+- [Playground 在线试](https://liujiaao.github.io/es-plus/#/playground): 在线改 JSON 配置，实时看表单、表格与弹窗的渲染结果，不用装任何依赖。
+- [AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud): 自然语言转完整 CRUD 页面配置：支持 OpenAI 兼容接口，也可以不填 Key 用本地规则引擎。
+
+## 机器可读资源
+
+- [ES-Plus EsForm formItemList](https://liujiaao.github.io/es-plus/schemas/es-form.schema.json): Schema for the formItemList prop passed to <es-form />
+- [ES-Plus EsTable columns](https://liujiaao.github.io/es-plus/schemas/es-table-columns.schema.json): Schema for the columns prop passed to <es-table />
+- [ES-Plus EsTable dataSource](https://liujiaao.github.io/es-plus/schemas/es-table-data.schema.json): Schema for the dataSource array — table rows, freeform but should be an array of plain objects
+- [ES-Plus AI 工具链文案（ai-tools.json）](https://liujiaao.github.io/es-plus/ai/ai-tools.schema.json): 三站 AI 工具链页的单一真源。sections 按顺序渲染；每个 section 可带代码块与链接，codeBlocks 与 links 至少有一个。
+- [AI 可达性台账（feature-coverage）](https://liujiaao.github.io/es-plus/ai/feature-coverage.schema.json): 文档站 103 例特性演示 × 分层可达性的单一真源。结构守卫：scripts/check-feature-coverage.mjs；Ajv 校验：scripts/check-data-schemas.mjs。

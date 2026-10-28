@@ -25,6 +25,8 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+// 路由表与 PAGE_META 的解析规则与 gen-llms.mjs 共用一份实现（各写一份会认不同的页面）
+import { parseRoutes, parsePageMeta } from './lib/page-meta-parse.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -49,31 +51,6 @@ const read = (p) => {
     return ''
   }
   return toLF(readFileSync(abs, 'utf8'))
-}
-
-/** 路由表：从 router/index.ts 里抠出 { path, name, view } */
-function parseRoutes(src) {
-  const routes = []
-  const blocks = src.split(/\n {2}\{\n/)
-  for (const block of blocks) {
-    const name = block.match(/name: '([^']+)'/)
-    const path = block.match(/path: '([^']*)'/)
-    const view = block.match(/component: \(\) => import\('@\/views\/([^']+)'\)/)
-    if (!name || !path) continue
-    routes.push({ path: path[1], name: name[1], view: view ? view[1] : null })
-  }
-  return routes
-}
-
-/** PAGE_META 表项：key → { title, description } */
-function parsePageMeta(src) {
-  const entries = new Map()
-  const re = /^ {2}'?([A-Za-z0-9-]+)'?: \{\n {4}title: '([^']*)',\n {4}description: '([^']*)',/gm
-  let m
-  while ((m = re.exec(src))) {
-    entries.set(m[1], { title: m[2], description: m[3] })
-  }
-  return entries
 }
 
 const routes = parseRoutes(read(ROUTER))
