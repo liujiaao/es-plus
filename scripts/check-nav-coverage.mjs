@@ -120,7 +120,7 @@ function main() {
 
   // 注册表：参数路由的 slug 从这些数据文件来，不手抄
   const registries = {
-    '/guide': objectKeys(read(`${SITE}/src/docs/doc-registry.ts`), 'docsData'),
+    '/guide': objectKeys(read(`${SITE}/src/docs/doc-meta.ts`), 'DOC_META'),
     '/components': objectKeys(read(`${SITE}/src/views/component-doc.data.ts`), 'docsData'),
     '/advanced': objectKeys(read(`${SITE}/src/views/advanced-doc.data.ts`), 'docsData'),
     '/ai-gallery': objectKeys(read(`${SITE}/src/cases/generated/registry.js`), 'AI_CASES'),

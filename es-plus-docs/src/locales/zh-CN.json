@@ -322,6 +322,7 @@
   },
   "doc": {
     "untranslatedNotice": "⚠️ 该页暂未翻译，显示中文版。",
+    "loading": "正在加载正文…",
     "editPage": "编辑此页",
     "reportIssue": "报告问题",
     "lastUpdated": "最后更新"

@@ -124,18 +124,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import Fuse from 'fuse.js'
-import {
-  buildCaseEntries,
-  buildExampleEntries,
-  buildFixedEntries,
-  buildGuideEntries,
-  type SearchCategory,
-  type SearchEntry,
-} from '@/utils/search-index'
+// 类型可以静态引入（编译后消失），实现必须按需 —— 见下面 ensureEngine()
+import type { SearchCategory, SearchEntry } from '@/utils/search-index'
 
 const { t, tm, locale } = useI18n()
 
@@ -196,78 +189,53 @@ const highlight = (text: string) => {
   return escapeHtml(text).replace(pattern, '<mark>$1</mark>')
 }
 
-// 索引口径见 utils/search-index.ts。这里只做三件事：装载、按需补组件/高级页、交互。
-// 组件 / 高级页的 `.data.ts` 把 103 个示例 SFC 原文（约 680KB）eager 打进模块，
-// 不能进首屏包 —— 用户第一次打开搜索时再 import，之后走浏览器缓存。
-const baseEntries = ref<SearchEntry[]>([])
-const exampleEntries = ref<SearchEntry[]>([])
-let exampleLoading: Promise<void> | null = null
+// 搜索索引**不在首屏**：它装着全部指南正文（343 KB 原文）。实现放在
+// utils/search-engine.ts，第一次打开搜索时才 await import；之后走浏览器缓存。
+// 这里只做三件事：装载、把查询交给引擎、交互。
+let engine: typeof import('@/utils/search-engine') | null = null
+let unsubscribe: (() => void) | null = null
+const results = ref<SearchEntry[]>([])
 
-const rebuildBase = () => {
-  const isEn = locale.value === 'en-US'
-  baseEntries.value = [
-    ...buildGuideEntries(isEn),
-    ...buildFixedEntries(),
-    // 案例目录只有中文正文：英文站不索引，免得搜出「摘要与查询语言无关」的噪音
-    ...(isEn ? [] : buildCaseEntries()),
-  ]
-}
-rebuildBase()
-// 语言切换后重建索引，否则英文站搜到的仍是中文正文
-watch(locale, rebuildBase)
+const categoryLabel = (category: SearchCategory) => t(`search.cat.${category}`)
 
-const ensureExampleIndex = () => {
-  if (exampleEntries.value.length || exampleLoading) return
-  exampleLoading = (async () => {
-    try {
-      const [{ docsData: componentDocs }, { docsData: advancedDocs }] = await Promise.all([
-        import('@/views/component-doc.data'),
-        import('@/views/advanced-doc.data'),
-      ])
-      exampleEntries.value = [
-        ...buildExampleEntries(componentDocs, '/components', 'component'),
-        ...buildExampleEntries(advancedDocs, '/advanced', 'advanced'),
-      ]
-    } catch (e) {
-      // 索引加载失败不该让搜索不可用：指南/案例/固定页仍在
-      console.warn('[DocSearch] 组件索引加载失败', e)
-    }
-  })()
+const runQuery = () => {
+  results.value = engine && searchQuery.value ? engine.search(searchQuery.value) : []
 }
 
-const searchData = computed(() => [...baseEntries.value, ...exampleEntries.value])
+const ensureEngine = async () => {
+  if (!engine) {
+    const mod = await import('@/utils/search-engine')
+    engine = mod
+    // 示例索引（680 KB 示例源码）在后台补：回来之后把当前查询重跑一遍
+    unsubscribe = mod.onIndexUpdate(runQuery)
+  }
+  await engine.ensureIndex(locale.value, categoryLabel)
+  runQuery()
+}
 
-/** 空态建议词：中英各一份，写在 locale 里，改文案不用改组件 */
+// 空态建议词：中英各一份，写在 locale 里，改文案不用改组件
 const suggestions = computed<string[]>(() => {
   const list = tm('search.suggestions')
   return Array.isArray(list) ? (list as string[]) : []
 })
 
-const categoryLabel = (category: SearchCategory) => t(`search.cat.${category}`)
-
-const fuse = computed(() => new Fuse(searchData.value, {
-  keys: [
-    { name: 'title', weight: 0.6 },
-    { name: 'content', weight: 0.3 },
-    // 路径参与检索：「mcp」「es-form」这类词直接落在 URL 里；
-    // 分类用本地化文案而不是内部 key（搜「组件」要命中，搜 component 也要命中）
-    { name: 'path', weight: 0.05 },
-    { name: 'category', weight: 0.05, getFn: (item: SearchEntry) => categoryLabel(item.category) },
-  ],
-  threshold: 0.4,
-  ignoreLocation: true,
-  minMatchCharLength: 2,
-}))
-
-const results = computed(() => {
-  if (!searchQuery.value) return []
-  return fuse.value.search(searchQuery.value).slice(0, 30).map(r => r.item)
+// 一边打字一边装载：首次打开时 lazy chunk 还在路上，不能等用户关掉重开才可搜
+watch(searchQuery, (q) => {
+  if (!q) {
+    results.value = []
+    return
+  }
+  ensureEngine()
 })
 
-// 一边打字一边把组件索引补上：首次打开时 lazy chunk 还没回来，
-// 用户往往直接输入关键词，不能等他关掉重开才搜得到组件。
-watch(searchQuery, (q) => {
-  if (q) ensureExampleIndex()
+// 语言切换后重建索引，否则英文站搜到的仍是中文正文
+watch(locale, () => {
+  if (engine) ensureEngine()
+})
+
+onBeforeUnmount(() => {
+  unsubscribe?.()
+  unsubscribe = null
 })
 
 const dialogVisible = computed({
@@ -279,8 +247,8 @@ const handleOpen = () => {
   searchQuery.value = ''
   selectedIndex.value = 0
   recentQueries.value = loadRecent()
-  // 打开即预取组件/高级索引（用户此时还没打字，数据在路上，输入时基本已就绪）
-  ensureExampleIndex()
+  // 打开即装载索引（用户此时还没打字，数据在路上，输入时基本已就绪）
+  ensureEngine()
   setTimeout(() => {
     searchInputRef.value?.focus()
   }, 100)

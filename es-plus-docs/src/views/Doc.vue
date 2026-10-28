@@ -12,10 +12,11 @@
         <span class="is-current">{{ currentTitle }}</span>
       </nav>
 
-      <!-- 文档内容 -->
-      <article class="doc-content">
+      <!-- 文档内容：正文是一次一篇的惰性 chunk，慢网下先占位再填，避免「空白页」观感 -->
+      <article class="doc-content" :aria-busy="isLoading">
         <!-- <h1 class="doc-title">{{ currentDoc.title }}</h1> -->
-        <div ref="contentRef" class="markdown-content es-doc-content" v-html="renderedContent"></div>
+        <p v-if="isLoading" class="doc-loading" role="status">{{ t('doc.loading') }}</p>
+        <div v-else ref="contentRef" class="markdown-content es-doc-content" v-html="renderedContent"></div>
       </article>
 
       <!-- 底部导航 -->
@@ -75,8 +76,11 @@ import { collectHeadings, createScrollSpy, scrollToHeading } from '@/utils/doc-c
 import type { DocHeading } from '@/utils/doc-chrome.js'
 import { lastUpdatedFor } from '@/utils/doc-source'
 
-// 指南注册表（Doc.vue 与搜索索引共用的单一来源）
-import { docsData } from '@/docs/doc-registry'
+// 指南的元数据（标题 / slug）与正文分开取：标题必须立刻有（og:title、面包屑、
+// 上下篇都靠它），正文是一次一篇的惰性 chunk —— 全部正文留在首屏曾经是 index 那
+// 219 KB 里的大头，见 docs/doc-content.ts 的注释。
+import { DOC_META } from '@/docs/doc-meta'
+import { loadGuide, type GuideContent } from '@/docs/doc-content'
 import { useHead } from '@unhead/vue'
 import { techArticle, faqPage, useJsonLd } from '@/utils/json-ld'
 // FAQ 页 → FAQPage：解析器与构建期预渲染（scripts/gen-prerender.mjs）共用同一份实现，
@@ -87,19 +91,43 @@ const route = useRoute()
 
 const { t, locale } = useI18n()
 
-const currentDoc = computed(() => {
-  const name = route.params.name as string
-  const entry = docsData[name]
-  if (!entry) return { title: '未找到', content: '# 页面未找到', isFallback: false }
-  if (locale.value === 'en-US') {
-    if (entry.contentEn) {
-      return { title: entry.titleEn || entry.title, content: entry.contentEn, isFallback: false }
-    }
-    // Fallback to Chinese with banner
-    const banner = `> ${t('doc.untranslatedNotice')} [GitHub](https://github.com/liujiaao/es-plus)\n\n`
-    return { title: entry.title, content: banner + entry.content, isFallback: true }
+const docName = computed(() => route.params.name as string)
+
+// 正文是一次一篇的惰性 chunk：路由一变就去取那一篇。`token` 防止快速连点时的竞态
+// （先发后到的旧请求不能盖掉新页面）。标题来自 DOC_META，所以加载期间界面不缺信息。
+// 语言切换也要重取：英文站要的是 contentEn，中文站不该为它多下载 48 KB。
+const isEn = computed(() => locale.value === 'en-US')
+const loaded = ref<({ slug: string } & GuideContent) | null>(null)
+const isLoading = ref(true)
+let loadToken = 0
+
+watch([docName, isEn], async ([name, wantEn]) => {
+  const token = ++loadToken
+  isLoading.value = true
+  let data: GuideContent | null = null
+  try {
+    data = await loadGuide(name, { wantEn })
+  } catch (err) {
+    // 注册表与磁盘漂移（guard 会红）时的兜底：至少别把整页打崩
+    console.error(`[Doc] 指南正文加载失败：${name}`, err)
   }
-  return { title: entry.title, content: entry.content, isFallback: false }
+  if (token !== loadToken) return
+  loaded.value = { slug: name, ...(data ?? { content: '' }) }
+  isLoading.value = false
+}, { immediate: true })
+
+const currentDoc = computed(() => {
+  const meta = DOC_META[docName.value]
+  if (!meta) return { title: '未找到', content: '# 页面未找到', isFallback: false }
+  const entry = loaded.value && loaded.value.slug === docName.value ? loaded.value : null
+  // 英文站：有 contentEn 用译文，没有就退回中文并在正文上方挂一条未翻译提示
+  if (locale.value === 'en-US') {
+    const title = meta.titleEn || meta.title
+    if (entry?.contentEn) return { title, content: entry.contentEn, isFallback: false }
+    const banner = `> ${t('doc.untranslatedNotice')} [GitHub](https://github.com/liujiaao/es-plus)\n\n`
+    return { title: meta.title, content: entry ? banner + entry.content : banner, isFallback: true }
+  }
+  return { title: meta.title, content: entry?.content ?? '', isFallback: false }
 })
 
 const currentTitle = computed(() => currentDoc.value.title)
@@ -212,9 +240,9 @@ const NAV_ORDER = [
 ]
 
 const navTitleFor = (key: string): string => {
-  const entry = docsData[key]
-  if (!entry) return ''
-  return locale.value === 'en-US' ? (entry.titleEn || entry.title) : entry.title
+  const meta = DOC_META[key]
+  if (!meta) return ''
+  return locale.value === 'en-US' ? (meta.titleEn || meta.title) : meta.title
 }
 
 const updateNav = () => {
@@ -308,6 +336,13 @@ onBeforeUnmount(() => {
 .doc-content {
   max-width: var(--es-content-width);
   min-height: 400px;
+}
+
+/* 正文惰性加载时的占位：用弱化文字而不是骨架块 —— 它通常只出现几十毫秒，
+   骨架反而更像「加载失败的重试状态」。 */
+.doc-loading {
+  color: var(--text-color-secondary);
+  font-size: var(--es-text-sm);
 }
 
 /* 回到顶部 */

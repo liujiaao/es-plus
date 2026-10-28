@@ -29,8 +29,16 @@
  *      `/ai-gallery/<id>` 用得到。判据是「入口不许值导入」+「清单与数据一致」两层，
  *      细节见下面第 3 节的注释。
  *
+ *   4. **Element Plus 只注册站点用到的标签。** `app.use(ElementPlus)` 是 356.2KB gz 的
+ *      全量注册，而站点模板只用三十来个标签。判据是「模板标签 ⊆ 显式清单」+「没有
+ *      回退到全量插件」，细节见下面第 4 节的注释。
+ *
+ *   5. **指南正文与搜索索引都不在首屏。** 全部指南正文（343KB 原文）曾经跟着入口走：
+ *      注册表被搜索索引静态引用，而搜索索引又被顶栏的搜索框静态引用。判据是
+ *      「谁不许静态 import 语料」+「三处 slug 清单必须在同一份上」，见第 5 节。
+ *
  * 用法：node scripts/check-bundle-sources.mjs
- * 退出码：0 = 三条判据都成立；1 = 有缺口（逐条列出文件与行号）。
+ * 退出码：0 = 五条判据都成立；1 = 有缺口（逐条列出文件与行号）。
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
@@ -466,16 +474,181 @@ function checkElementPlusOnDemand() {
   )
 }
 
+// ── 5. 指南正文与搜索索引的按需加载 ───────────────────────────────────────
+
+/**
+ * 全部指南正文（343 KB 原文 / 120 KB gz）曾经**跟着每一页的入口走**：
+ *
+ *   AppHeader（入口）→ DocSearch.vue → utils/search-index.ts → docs/doc-registry.ts
+ *                                                             → 18 篇 .md + 5 篇英文
+ *
+ * 没有任何一行「导入指南」，链路却让首页先读完整站正文。首屏 index 块 219.8 KB 里
+ * 的大头就是它。现在分成两条按需路径：
+ *
+ *   · **正文**：`docs/doc-meta.ts`（几百字节的标题表）常驻；正文由
+ *     `docs/doc-content.ts` 的惰性 glob 一次取一篇。
+ *   · **搜索**：`utils/search-engine.ts` 装着 fuse + 全部正文，只在第一次打开搜索时
+ *     被 `await import()` 取一次。
+ *
+ * 判据分三层，缺一层都能悄悄退化：
+ *   a. **谁不许静态 import 语料**：`docs/doc-registry`（正文全集）、`utils/search-index`
+ *      （案例目录 + 逐页 meta）、`fuse.js` 只允许出现在 `utils/search-engine.ts` 里，
+ *      且 `Doc.vue` 不许再引用注册表。有第二个引用者，语料就跟着那个引用者进包。
+ *   b. **搜索必须是动态 import**：`DocSearch.vue` 里要出现 `await import('@/utils/search-engine')`，
+ *      并且不许静态引用上面那三个模块（写成 `import ... from` 就白改）。
+ *   c. **三处 slug 清单必须同源**：`doc-meta.ts` 的 DOC_META、`doc-registry.ts` 的
+ *      CONTENT（中文正文）、磁盘上的 `<slug>.md`，三者集合必须相等；每个 `enFile`
+ *      必须在 CONTENT_EN 里有正文、磁盘上有文件。少一处就是「侧栏有、页面空」。
+ */
+const DOC_CORPUS_IMPORTS = [
+  { spec: '@/docs/doc-registry', why: '它把全部指南正文静态打进包（343 KB 原文）' },
+  { spec: '@/utils/search-index', why: '它带案例目录与逐页 meta，只有搜索用得到' },
+  { spec: 'fuse.js', why: '搜索引擎本体，只有打开搜索时才需要' },
+]
+/** 唯一允许静态引用语料的模块：它自己只被 DocSearch 动态 import */
+const CORPUS_OWNER = 'utils/search-engine.ts'
+
+/** 从 `const X[: T] = {` 到配平的右花括号，返回顶层的 `'key':` 集合（`export` 可有可无） */
+function objectLiteralKeys(text, name) {
+  const decl = new RegExp(`(?:export\\s+)?const\\s+${name}\\b`).exec(text)
+  if (!decl) return []
+  const open = text.indexOf('{', decl.index)
+  if (open === -1) return []
+  let depth = 0
+  let end = open
+  for (; end < text.length; end++) {
+    if (text[end] === '{') depth++
+    else if (text[end] === '}') {
+      depth--
+      if (depth === 0) break
+    }
+  }
+  const body = text.slice(open + 1, end)
+  const keys = new Set()
+  const re = /^\s{2}['"]?([A-Za-z0-9-]+)['"]?\s*:/gm
+  let m
+  while ((m = re.exec(body))) keys.add(m[1])
+  return [...keys]
+}
+
+/**
+ * 已知的孤儿正文（磁盘上有、注册表里没有）。**这是一份待办清单，不是允许清单**：
+ * 每一项都会被打印出来，新增的孤儿一律判红。
+ *
+ * `crud-page.md`：626 行的「整页 CRUD」长文，从来没有接进任何注册表 —— 它既不在
+ * /guide（没有路由），也不在 /components（那里的 es-crud-page 是另一份 API 页）。
+ * 要么接成一篇指南（要同时进侧栏与 NAV_ORDER），要么删掉；性能批次不该顺手决定
+ * 信息架构，所以先在这里挂个显式的名字。
+ */
+const KNOWN_ORPHAN_DOCS = ['crud-page']
+
+function checkDocContentOnDemand() {
+  const before = problems.length
+  const sources = walk(SRC).filter((f) => /\.(ts|vue|mjs|js)$/.test(f))
+  const relSrc = (file) => relative(SRC, file).replace(/\\/g, '/')
+
+  // a. 谁在静态 import 语料（`import type` 编译后消失，不算）
+  for (const file of sources) {
+    const isOwner = relSrc(file) === CORPUS_OWNER
+    for (const { text, no } of codeLines(read(file))) {
+      for (const { spec, why } of DOC_CORPUS_IMPORTS) {
+        // 只认静态 import / export from：动态 `import('x')` 正是我们要的形状
+        const staticImport = new RegExp(
+          `^\\s*(?:import\\s+(?!type\\b)[^'"\\n]*from\\s+|export\\s+(?!type\\b)[^'"\\n]*from\\s+)['"]${spec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`,
+        )
+        if (!staticImport.test(text)) continue
+        if (isOwner) continue
+        fail(
+          `${rel(file)}:${no} 静态引用了 ${spec} —— ${why}。`
+            + ` 只能由 ${SITE}/src/${CORPUS_OWNER} 引用，且它必须只被动态 import（否则首屏又背上整站正文）`,
+        )
+      }
+    }
+  }
+  if (!existsSync(join(SRC, 'utils/search-engine.ts'))) {
+    fail(`${SITE}/src/utils/search-engine.ts 不存在 —— 搜索的按需落点没了，改路径就把这里一起改`)
+    return
+  }
+
+  // b. 搜索必须动态 import，且 Doc.vue 不许再碰注册表
+  const searchVue = read(join(SRC, 'components/doc/DocSearch.vue'))
+  if (!/await import\(\s*['"]@\/utils\/search-engine['"]\s*\)/.test(searchVue)) {
+    fail('DocSearch.vue 没有动态 import @/utils/search-engine —— 搜索索引会跟着顶栏进入口')
+  }
+  const docVue = read(join(SRC, 'views/Doc.vue'))
+  if (/'@\/docs\/doc-registry'/.test(docVue)) {
+    fail('Doc.vue 又引用了 docs/doc-registry —— 指南路由会重新下载全部正文；正文请走 docs/doc-content')
+  }
+  if (!/'@\/docs\/doc-content'/.test(docVue)) {
+    fail('Doc.vue 没有用 docs/doc-content 的 loadGuide —— 正文加载方式变了就把这里一起改')
+  }
+
+  // c. 三处 slug 清单同源
+  const metaKeys = objectLiteralKeys(read(join(SRC, 'docs/doc-meta.ts')), 'DOC_META')
+  const registry = read(join(SRC, 'docs/doc-registry.ts'))
+  const zhKeys = objectLiteralKeys(registry, 'CONTENT')
+  const enKeys = objectLiteralKeys(registry, 'CONTENT_EN')
+  if (!metaKeys.length || !zhKeys.length) {
+    fail('doc-meta.ts / doc-registry.ts 里解析不到 slug 清单 —— 扫描规则与源码结构脱节')
+    return
+  }
+  const diskFiles = readdirSync(join(SRC, 'docs')).filter((f) => f.endsWith('.md'))
+  const EN_FILE = /\.en\.md$/
+  // 英文别名的历史例外：文件名不等于 <slug>.en.md 的，由 doc-meta 的 enFile 显式声明
+  const aliasFiles = new Set(
+    [...registry.matchAll(/from '@\/docs\/([^']+)\.md\?raw'/g)].map((m) => m[1]).filter((n) => /\.en$|^migrate-v1\.4$/.test(n)),
+  )
+  const diskZh = diskFiles
+    .map((f) => f.replace(/\.md$/, ''))
+    .filter((n) => !EN_FILE.test(`${n}.md`) && n !== 'migrate-v1.4')
+
+  const diff = (a, b) => a.filter((x) => !b.includes(x))
+  for (const slug of diff(metaKeys, zhKeys)) fail(`doc-meta.ts 声明了 '${slug}'，但 doc-registry.ts 的 CONTENT 里没有它的正文`)
+  for (const slug of diff(zhKeys, metaKeys)) fail(`doc-registry.ts 有 '${slug}' 的正文，但 doc-meta.ts 没声明 —— 这个页面打不开`)
+  for (const slug of diff(metaKeys, diskZh)) {
+    fail(`doc-meta.ts 声明了 '${slug}'，但 src/docs/${slug}.md 不存在 —— 页面会渲染成空`)
+  }
+  for (const slug of diff(diskZh, metaKeys)) {
+    if (KNOWN_ORPHAN_DOCS.includes(slug)) {
+      console.log(`⚠️  已知孤儿正文：src/docs/${slug}.md 没有注册（待定：接成指南或删除）`)
+      continue
+    }
+    fail(`src/docs/${slug}.md 存在，但 doc-meta.ts 没声明 —— 这篇正文永远不会被渲染（写漏了？）`)
+  }
+  for (const slug of diff(enKeys, metaKeys)) fail(`doc-registry.ts 有 '${slug}' 的英文正文，但 doc-meta.ts 没这个 slug`)
+
+  // 带译文的 slug：声明、正文、磁盘文件三处都要有
+  const declaredEn = [...read(join(SRC, 'docs/doc-meta.ts')).matchAll(/enFile:\s*'([^']+)'/g)].map((m) => m[1])
+  for (const file of declaredEn) {
+    if (!diskFiles.includes(`${file}.md`)) fail(`doc-meta.ts 的 enFile '${file}' 在 src/docs/ 下没有对应文件`)
+    if (!aliasFiles.has(file)) fail(`doc-meta.ts 的 enFile '${file}' 没有在 doc-registry.ts 的 CONTENT_EN 里搬进来`)
+  }
+  for (const file of diskFiles.map((f) => f.replace(/\.md$/, '')).filter((n) => EN_FILE.test(`${n}.md`))) {
+    if (!declaredEn.includes(file)) {
+      fail(`src/docs/${file}.md 是一篇英文正文，但没有 slug 通过 doc-meta 的 enFile 指向它 —— 它会变成孤儿页`)
+    }
+  }
+
+  if (problems.length > before) return
+  console.log(
+    `✅ 指南正文 / 搜索索引按需：${zhKeys.length} 篇中文正文（一次一篇）`
+      + ` + ${enKeys.length} 篇英文；语料只被 ${CORPUS_OWNER} 引用，搜索走动态 import；`
+      + ' doc-meta / doc-registry / 磁盘三处 slug 一致',
+  )
+}
+
 // ── 主流程 ─────────────────────────────────────────────────────────────────
+
 
 checkEagerGlobs()
 checkVxeOnDemand()
 checkElementPlusOnDemand()
+checkDocContentOnDemand()
 await checkHighlight()
 
 
 if (problems.length) {
   for (const problem of problems) console.error(`❌ ${problem}`)
-  console.error('\n提示：这三条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
+  console.error('\n提示：这五条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
   process.exit(1)
 }

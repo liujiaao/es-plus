@@ -13,7 +13,7 @@ type: 'guide'
 
 1. **可验证优先。** 一个功能合入时如果没有任何脚本能判它「坏了」，那它下一次坏掉时也没人知道。仓库现在的守卫清单比功能清单长，这是刻意的。
 2. **数字必须带口径。** 对外说的每个数字都要有来源文件、测量方法与日期。站点的数字由 `npm run check:site-claims` 与源码对账，不一致就红。
-3. **没做完的部分要写出来。** 「首屏 572 KB，目标 300 KB，最大的一块是指南正文全在首屏」比「性能优异」有用。
+3. **没做完的部分要写出来。** 「首屏 449 KB，目标 300 KB，最大的一块是渲染端组件本身」比「性能优异」有用。
 
 ## 已经落地的事（可逐项验证）
 
@@ -22,7 +22,8 @@ type: 'guide'
 | 每个内容页一份静态 HTML | `npm run check:prerender` | 构建期生成 `/guide/x/`、`/components/x/`、`/advanced/x/`，深链 200，正文来自站点同一渲染器 |
 | 每页 canonical + 结构化数据 | `npm run check:site-seo`、`npm run check:page-meta` | 文章类路径式地址与 sitemap / llms / JSON-LD 四处同口径 |
 | AI 可读的文档 | `npm run check:llms` | 根目录 `llms.txt` 索引 + 每页 markdown 镜像，取自同一份源 |
-| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对构建产物称重（含「`/guide/*` 闭包里不许出现 `vxe-*.js`」），后者在源码层挡「换一行 import 就多 300 KB」、vxe 被引回入口、以及「模板用了某个 Element Plus 标签却没在清单里注册」 |
+| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对构建产物称重（含「`/guide/*` 闭包里不许出现 `vxe-*.js`」），后者在源码层挡「换一行 import 就多 300 KB」、vxe 被引回入口、「模板用了某个 Element Plus 标签却没在清单里注册」、以及「指南正文/搜索索引被静态 import 回入口」 |
+| 指南正文与搜索索引按需 | `npm run check:bundle-sources` | 正文按 slug 惰性取（`docs/doc-content.ts`），搜索索引（fuse + 全部正文）第一次打开搜索才下载；三处 slug 清单必须一致 |
 | 三站一致的动效语言 | `npm run check:motion` | 120 / 180 / 240ms 三个 token，禁 `transition: all`、禁对布局属性做过渡 |
 | 三站一致的页脚与导航 | `npm run check:site-nav`、`npm run check:nav-coverage` | 导航里的每一条都得落到真实路由，每个路由都得有入口 |
 | 生态内容（本页所在的一组） | `npm run check:nav-coverage`、`npm run check:sitemap` | FAQ、对比、基准、路线图、Vue 2 周期、贡献指南 |
@@ -31,24 +32,21 @@ type: 'guide'
 
 ## 正在做的事
 
-### 1. 指南正文改成按 slug 惰性加载
+### 1. 首屏按需引入（vxe、Element Plus、指南正文都已落地）
 
-全站搜索索引以 `doc-registry` 为数据源，而注册表是静态导入 —— 结果是**每一篇指南的正文都在每一个 `/guide/*` 的首屏里**。本轮新增六篇内容让这一块从 198.2 KB 涨到 216.0 KB（+17.8）。修法是把正文改成按 slug 惰性加载（示例注册表已经是这个形状），搜索索引改在第一次打开搜索时才建；因为它会改变文档页的渲染时机与搜索的首次可用时间，需要浏览器逐页核对，所以没有被顺手塞进内容批次。
-
-### 2. 首屏按需引入（vxe 与 Element Plus 都已落地）
-
-现状约 572 KB gz（这批文档让它在 571–573 KB 之间浮动），目标 300 KB。两笔已经拿走：
+现状约 449 KB gz，目标 300 KB。三笔已经拿走：
 
 - **vxe-table 344.2 KB**：只有在 `/advanced/vxe-table` 与 `/ai-gallery/<id>` 才会注册，改的是「路由门前动态 import + 一份要和数据对得上的路由清单」。
 - **Element Plus 80.8 KB**：`app.use(ElementPlus)` 换成显式的三十来个标签清单（`utils/install-app-plugins.ts`），它的失败模式是**页面看起来正常、某个组件突然不渲染**，所以落地时逐页在浏览器里核对过，并且由守卫扫模板标签对账。
+- **指南正文与搜索索引 125.9 KB**：正文按 slug 惰性取（一次一篇），fuse + 全部正文收进「第一次打开搜索才下载」的 chunk。副作用是本页写多长都不再影响首屏 —— 数字从「约」变回一个数。
 
-两笔都由 `npm run check:bundle-sources`（源码层）与 `npm run check:bundle-budget`（产物层）守着。口径见 [性能与准确率基准](/guide/benchmark)。剩下的最大一块是指南正文（见上一项），es-pc 的 antd 与 es-eui 的 Element UI 仍是全量注册，做法可以照抄。
+三笔都由 `npm run check:bundle-sources`（源码层）与 `npm run check:bundle-budget`（产物层）守着。口径见 [性能与准确率基准](/guide/benchmark)。剩下的大头是 element-plus 275.4 KB —— 那是 `@es-plus/*` 内部直接 import 的组件，站点侧已经改不动；es-pc 的 antd 与 es-eui 的 Element UI 仍是全量注册，做法可以照抄。
 
-### 3. 渲染性能的测量装置
+### 2. 渲染性能的测量装置
 
 现在没有。要落到「基准」两个字上，先要有固定设备、固定浏览器、固定数据规模的装置（首帧耗时、千行表格滚动帧率）。在装置存在之前，这一项不会有数字。
 
-### 4. 生成准确率的语料与尺子
+### 3. 生成准确率的语料与尺子
 
 准确率不是模型单方面的成绩，语料与判定口径决定一半。正在做的是让每条判据都能被复读：golden 的每个「没写」与「写了 false」都要有依据，尺子本身的缺陷要有回归测试。实时数字见 [片段拼装看板](/fragment-dashboard)。
 

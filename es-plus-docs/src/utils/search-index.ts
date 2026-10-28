@@ -6,19 +6,22 @@
  * 可搜、搜到的标题/摘要从哪来」收敛到一处，DocSearch 只负责交互。
  *
  * 数据来源与取舍：
- *   - 指南：`docs/doc-registry`（与 Doc.vue 渲染同源），按标题切段落；
+ *   - 指南：正文由调用方（`utils/search-engine.ts`）从 `docs/doc-registry` 传入 ——
+ *     本模块**不许自己 import 语料**，否则语料又会跟着任何引用者进入口；
  *   - 固定页：`utils/page-meta`（逐页 title/description 的单一真源，check:page-meta 守）；
  *   - 案例：`cases/cases.json`（21 组案例目录，链接自带 `#demo-*` 锚点）；
  *   - 组件/高级：两个 `.data.ts` **按需**加载 —— 它们 `import.meta.glob(..., { eager: true })`
- *     把 103 个示例 SFC 原文（约 680KB）打进模块，不能进首屏包。见 DocSearch 的
- *     ensureExampleIndex()。
+ *     把 103 个示例 SFC 原文（约 680KB）打进模块，不能进首屏包。见 search-engine 的
+ *     loadExampleIndex()。
  *
  * 语言：正文只有中文单源（英文站除 4 篇指南外无译文）。英文站搜英文关键词只能命中
  * 有 contentEn 的指南 —— 这是翻译批次的事，索引层不造假：不给中文正文编英文关键词。
  */
-import { docsData as guideDocs } from '@/docs/doc-registry'
 import casesCatalog from '@/cases/cases.json'
 import { PAGE_META } from '@/utils/page-meta'
+
+/** 指南正文的形状：与 `docs/doc-registry` 的 DocEntry 兼容，但本模块只认它需要的字段 */
+export type GuideDoc = { title: string; titleEn?: string; content: string; contentEn?: string }
 
 export type SearchCategory = 'guide' | 'component' | 'advanced' | 'case' | 'ai' | 'tool'
 
@@ -54,7 +57,7 @@ const slugify = (text: string) =>
   text.toLowerCase().replace(/[^\w一-龥]+/g, '-').replace(/^-|-$/g, '')
 
 /** 指南：按 h1–h3 切段（代码块先剔除，避免 fence 里的 `## ` 被当成标题）。 */
-export function buildGuideEntries(isEn: boolean): SearchEntry[] {
+export function buildGuideEntries(isEn: boolean, guideDocs: Record<string, GuideDoc>): SearchEntry[] {
   const entries: SearchEntry[] = []
   for (const slug of Object.keys(guideDocs)) {
     const doc = guideDocs[slug]

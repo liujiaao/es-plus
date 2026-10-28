@@ -93,7 +93,7 @@ export function readSiteBase() {
 export function build() {
   const { origin, base } = readSiteBase()
   const router = read(`${SITE}/src/router/index.ts`)
-  const guides = objectKeys(read(`${SITE}/src/docs/doc-registry.ts`), 'docsData')
+  const guides = objectKeys(read(`${SITE}/src/docs/doc-meta.ts`), 'DOC_META')
   const components = objectKeys(read(`${SITE}/src/views/component-doc.data.ts`), 'docsData')
   const advanced = objectKeys(read(`${SITE}/src/views/advanced-doc.data.ts`), 'docsData')
   const cases = objectKeys(read(`${SITE}/src/cases/generated/registry.js`), 'AI_CASES')
