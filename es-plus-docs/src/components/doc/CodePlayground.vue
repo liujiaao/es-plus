@@ -78,7 +78,8 @@ import { ElMessage } from 'element-plus'
 import { ArrowUp, ArrowDown, CopyDocument, Refresh, Promotion } from '@element-plus/icons-vue'
 import { openInCodeSandbox, prefetchSandboxVendor } from '@/utils/sandbox'
 import { enhanceCodeBlocks, renderCodeBlockHtml } from '@/utils/code-block.js'
-import hljs from 'highlight.js'
+// 与文档正文同一个高亮器（只注册用到的语言）—— 不要在这里 import 'highlight.js' 全集
+import hljs from '@/utils/highlight.mjs'
 
 const { t } = useI18n()
 

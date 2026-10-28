@@ -22,15 +22,11 @@
  */
 
 import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
-// highlight.js 的 common bundle 不含 Vue SFC 语言：```vue 会触发
-// 「Could not find the language 'vue'」并降级成无高亮。SFC ≈ HTML 模板 +
-// 内嵌脚本/样式，用 xml 定义注册为 'vue'，至少保住标签着色。
-import xml from 'highlight.js/lib/languages/xml'
+// 高亮器只注册文档用到的语言（含 ```vue → xml）—— 见 utils/highlight.mjs 的说明：
+// 直接 import 全集入口会让这一块从 ~55KB gz 涨到 311KB gz，而文档只用得上 11 种语言。
+import hljs from './highlight.mjs'
 import { parseFenceInfo, renderCodeBlockHtml } from './code-block.js'
 import { rewriteInternalDocLinks } from './doc-links.js'
-
-hljs.registerLanguage('vue', xml)
 
 /** VitePress 风格容器（markdown-it 原生不支持） */
 const CONTAINER_LABELS = {

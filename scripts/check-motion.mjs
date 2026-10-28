@@ -41,6 +41,9 @@ const SITES = [
  */
 const ALLOW = {
   'es-plus-docs/src/components/ai-crud/ChatComposer.vue': ['dot-bounce 1.2s infinite'],
+  // 示例加载占位（指南里的 <demo> 现在是惰性加载的）：呼吸灯是周期，不是状态切换，
+  // 换成语义时长（120/180/240ms）会变成频闪 —— 与上面那个输入框呼吸灯同一档节奏
+  'es-plus-docs/src/components/doc/DemoBlock.vue': ['demo-loading-pulse 1.2s ease-in-out infinite'],
 }
 
 // 会触发重排的属性：过渡它们等于每帧让浏览器重算布局。

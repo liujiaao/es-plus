@@ -17,6 +17,11 @@
  * 为什么阈值写在脚本里而不是产物里：上限是人对「这一版可以接受多重」的决定，
  * 不是构建算得出来的东西。改上限必须改这里，并在同一行写清为什么。
  *
+ * 与 `check-bundle-sources.mjs` 的分工：那边在**源码层**挡「换个 import 就多 300KB」
+ * 的两件事（高亮器换成全集、示例 glob 改回 eager），不需要构建；这边在**产物层**
+ * 称总重量，是回归的最终判据。两条都要 —— 只称产物，是事后才发现；只看源码，
+ * 量不出「到底是哪一块变重了」。
+ *
  * 用法：
  *   node scripts/check-bundle-budget.mjs                 # 三个站都称（需先构建）
  *   node scripts/check-bundle-budget.mjs --site=es-pc    # 只称一个
@@ -43,9 +48,19 @@ const BUDGETS = {
     // 文档路由（/guide/:name）的首屏：入口预加载 + 该路由 chunk 的静态闭包
     route: '/guide/getting-started',
     routeChunkPrefix: 'Doc-',
-    // 2026-10-28 实测 1535.6 KB（入口 898.4）：element-plus 356 + vxe 344 +
-    // 共享 chunk（hljs 与 demo 组件）311 + index 197（内含 es-plus 库本体）。
-    ceiling: 1600,
+    // 2026-10-28 实测 974.9 KB（入口 899.1）：element-plus 356.2 + vxe 344.2 +
+    // index 198.2（es-plus 库本体、vue-i18n/router、fuse 搜索索引）+ Doc 51.6 +
+    // 共享 chunk（高亮器）24.2。
+    //
+    // 同一天从 1535.6 降到 974.9，两笔都来自「源码层就错了」，不是调参：
+    //   · 高亮器引入的是 highlight.js 全集（190 种语言，含 mathematica/isbl/sqf），
+    //     文档只用得上 11 种 —— 共享 chunk 311.4 → 24.2（utils/highlight.mjs）；
+    //   · 指南的示例注册表两个 glob 都是 eager: true，于是 103 个示例组件（~145KB）
+    //     与它们的源码文本（115KB）跟着每一篇指南下载，哪怕正文里一个 <demo> 都没有
+    //     （components/doc/example-registry.ts 改成惰性）。
+    // 剩下的 700KB 是 element-plus 356 + vxe 344：两者都在入口里全量注册，
+    // 要再往下走必须换成按需引入（有视觉回归风险，需要浏览器逐页核对）。
+    ceiling: 1000,
     target: 300,
   },
   'es-pc': {
@@ -243,7 +258,8 @@ function main() {
       // 目标未达成不是回归，但必须被看见 —— 一行「✅」会把 4 倍的差距藏起来
       console.log(
         `\n⚠️  首屏预算目标未达成：${gaps.map((r) => `${r.site} ${r.routeGz || r.entryGz} KB（目标 ${r.budget.target} KB）`).join('；')}`
-          + '\n   这不是回归（回归线未破），是已知的未完成项：需要把入口里的 element-plus / vxe / es-plus 拆成按需加载。',
+          + '\n   这不是回归（回归线未破），是已知的未完成项。主站剩下的吨位就是 element-plus 与 vxe'
+          + '\n   两笔全量注册（各 350 KB 上下），要拆成按需引入；es-pc / es-eui 同理（antd / Element UI 全量）。',
       )
     }
   }
