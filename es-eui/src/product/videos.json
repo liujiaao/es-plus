@@ -1,0 +1,48 @@
+{
+  "viewport": {
+    "width": 960,
+    "height": 600
+  },
+  "maxDurationMs": 30000,
+  "videos": [
+    {
+      "id": "one-sentence",
+      "site": "es-plus-docs",
+      "route": "/ai-crud",
+      "title": "一句话 → 可运行的 CRUD 页面",
+      "caption": "选一个预设需求，trace 逐条列出解析、校验、生成；切到「实时预览」就是刚生成的那张表。",
+      "file": "docs/product/video/one-sentence.webm",
+      "poster": "docs/product/video/one-sentence.png",
+      "width": 960,
+      "height": 600,
+      "durationMs": 6160,
+      "bytes": 185468
+    },
+    {
+      "id": "config-live",
+      "site": "es-plus-docs",
+      "route": "/playground",
+      "title": "改配置 → 预览立刻重渲染",
+      "caption": "把 JSON 配置换成一份订单表单，点「应用配置」，预览按新配置重建 —— 换的是配置，不是截图。",
+      "file": "docs/product/video/config-live.webm",
+      "poster": "docs/product/video/config-live.png",
+      "width": 960,
+      "height": 600,
+      "durationMs": 6240,
+      "bytes": 133920
+    },
+    {
+      "id": "three-targets",
+      "site": "es-plus-docs",
+      "route": "/fragment-dashboard",
+      "title": "一份说明书 → Vue 3 / Vue 2 / AntDV 三份源码",
+      "caption": "切片工具按同一份字段表产出三个目标的 SFC，逐个切换可以直接对比，而不是听人转述。",
+      "file": "docs/product/video/three-targets.webm",
+      "poster": "docs/product/video/three-targets.png",
+      "width": 960,
+      "height": 600,
+      "durationMs": 9720,
+      "bytes": 531211
+    }
+  ]
+}

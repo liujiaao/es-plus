@@ -176,6 +176,41 @@
       </figure>
     </section>
 
+    <!-- 录屏（路线图 2.2 的另一半）：三段 ≤30 秒的真实操作，由
+         scripts/gen-product-videos.mjs 对着跑起来的页面录，清单是
+         docs/product/videos.json（三站同一份字节）。
+         封面就是每段「结果」那一帧 —— 不点播放也先看到成品，而不是一个正在打字的输入框。 -->
+    <section class="videos-section">
+      <h2 class="section-title">30 秒，看它怎么工作</h2>
+      <p class="section-subtitle">
+        三段都由无头浏览器对着真实页面录下来（只裁掉加载等待），无配音、无补帧。封面是每段结束时的画面 ——
+        先看到结果，再点播放看过程。
+      </p>
+      <div class="videos-grid">
+        <figure v-for="video in demoVideos" :key="video.id" class="video-card">
+          <video
+            :src="videoUrl(video.file)"
+            :poster="videoUrl(video.poster)"
+            :width="video.width"
+            :height="video.height"
+            preload="none"
+            muted
+            loop
+            playsinline
+            controls
+            :aria-label="`${video.title}：${video.caption}`"
+          ></video>
+          <figcaption>
+            <strong>{{ video.title }}</strong>
+            <span class="video-caption">{{ video.caption }}</span>
+            <span class="video-meta">
+              {{ Math.round(video.durationMs / 1000) }} 秒 · {{ video.width }}×{{ video.height }} · WebM
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
     <!-- Features Section -->
     <div class="features-section">
       <h2 class="section-title">{{ t('home.featuresTitle') }}</h2>
@@ -326,6 +361,8 @@ import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
 import HeroTriRender from '@/components/home/HeroTriRender.vue'
 // 产品实拍清单：由 scripts/sync-product.mjs 从 docs/product/shots.json 分发，禁止手改
 import shotsManifest from '@/product/shots.json'
+// 录屏清单（单源 docs/product/videos.json，由 scripts/sync-product.mjs 分发）
+import videosManifest from '@/product/videos.json'
 
 const { t, locale } = useI18n()
 
@@ -353,6 +390,11 @@ const currentShot = computed(() => {
 const currentShotSrc = computed(() => `/${(currentShot.value.file || `docs/product/${currentShot.value.id}.png`).replace(/^docs\//, '')}`)
 // 每张图可以有自己的视口（宽表页更宽）：写死全局视口会让旗舰页那张图的占位比例不对
 const currentViewport = computed(() => currentShot.value.viewport || shotsViewport)
+
+// 录屏清单与截图同一套分发规则：单源 docs/product/videos.json，站点里读 src 的副本
+const demoVideos = videosManifest.videos
+/** docs/product/x → 站点 public 下的 /product/x */
+const videoUrl = (p) => `/${p.replace(/^docs\//, '')}`
 
 // 三站对齐的三个可验证承诺，按当前语言取文案
 const promises = computed(() => {
@@ -1399,6 +1441,72 @@ const goToAiCrud = () => {
 
   .shots-theme {
     margin-left: 0;
+  }
+}
+
+/* ── 录屏 ─────────────────────────────────────────────────────────────
+   三段并排而不是做成一个大播放器：它们回答的是三个不同的问题（怎么生成、怎么改、
+   怎么三端复用），并排才能一次看完「这是同一套东西的三个面」。窄屏一列。 */
+.videos-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 16px;
+}
+
+.videos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.video-card {
+  margin: 0;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.video-card video {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 封面与正片都是浅色界面：深色主题下给一块中性底，避免播放器默认的黑边 */
+  background: var(--bg-color-page);
+}
+
+.video-card figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border-color-lighter);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color-secondary);
+}
+
+.video-card figcaption strong {
+  color: var(--text-color-primary);
+  font-size: 14px;
+}
+
+.video-meta {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .videos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .videos-section {
+    padding: 32px 16px 8px;
   }
 }
 </style>

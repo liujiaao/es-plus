@@ -109,6 +109,71 @@ for (const target of TARGETS) {
   }
 }
 
+// ── 录屏（路线图 2.2 的另一半）──────────────────────────────────────────────
+// 录屏与海报放在 public/product/video/ 子目录：与截图同一套分发规则，但不与
+// 顶层那批 .png 混在一起 —— 顶层的孤儿清扫会把海报当成「清单外的截图」删掉。
+const VIDEO_MANIFEST = join(ROOT, 'docs/product/videos.json')
+const videoManifest = JSON.parse(readFileSync(VIDEO_MANIFEST, 'utf8'))
+const videoFiles = videoManifest.videos.flatMap((v) => [v.file, v.poster])
+
+for (const pub of TARGETS.map((t) => t.pub)) {
+  const rel = pub.slice(ROOT.length + 1).replace(/\\/g, '/')
+  const dir = join(pub, 'video')
+  if (!check) mkdirSync(dir, { recursive: true })
+
+  for (const file of videoFiles) {
+    const source = join(ROOT, file)
+    const dest = join(dir, basename(file))
+    const expected = existsSync(source) ? readBinary(source) : null
+    const actual = existsSync(dest) ? readBinary(dest) : null
+
+    if (expected === null) {
+      console.error(`  ❌ 单源缺失：${file}（先跑 node scripts/gen-product-videos.mjs）`)
+      failures++
+      continue
+    }
+    if (sameBinary(expected, actual)) continue
+
+    if (check) {
+      console.error(`  ❌ ${rel}/video/${basename(file)} 与单源不一致 —— 运行 npm run product:sync，不要手改站点副本`)
+      failures++
+    } else {
+      writeFileSync(dest, expected)
+      written++
+    }
+  }
+
+  if (existsSync(dir)) {
+    const known = new Set(videoFiles.map((f) => basename(f)))
+    for (const name of readdirSync(dir)) {
+      if (known.has(name)) continue
+      if (check) {
+        console.error(`  ❌ ${rel}/video/${name} 不在清单里 —— 删除它，或把它登记进 docs/product/videos.json`)
+        failures++
+      } else {
+        unlinkSync(join(dir, name))
+        console.log(`  🗑  删除孤儿 ${rel}/video/${name}`)
+      }
+    }
+  }
+}
+
+const videoManifestBuffer = readBinary(VIDEO_MANIFEST)
+for (const target of TARGETS) {
+  const dest = join(target.src, 'videos.json')
+  const rel = dest.slice(ROOT.length + 1).replace(/\\/g, '/')
+  const actual = existsSync(dest) ? readBinary(dest) : null
+  if (sameBinary(videoManifestBuffer, actual)) continue
+  if (check) {
+    console.error(`  ❌ ${rel} 与单源不一致 —— 运行 npm run product:sync`)
+    failures++
+  } else {
+    mkdirSync(target.src, { recursive: true })
+    writeFileSync(dest, videoManifestBuffer)
+    written++
+  }
+}
+
 if (failures > 0) {
   console.error(`\n[product:sync] 失败 ${failures} 项`)
   process.exit(1)
@@ -116,6 +181,6 @@ if (failures > 0) {
 
 console.log(
   check
-    ? `[product:sync] 一致：${files.length} 张截图 × ${TARGETS.length} 个站点`
-    : `[product:sync] 完成：${files.length} 张 × ${TARGETS.length} 站（写入 ${written} 个文件）`,
+    ? `[product:sync] 一致：${files.length} 张截图 + ${videoFiles.length} 个录屏文件 × ${TARGETS.length} 个站点`
+    : `[product:sync] 完成：${files.length} 张 + ${videoFiles.length} 个录屏文件 × ${TARGETS.length} 站（写入 ${written} 个文件）`,
 )
