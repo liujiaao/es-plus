@@ -40,6 +40,7 @@ export const ref = (value) => ({ value })
 export const reactive = (value) => value
 export const h = (...args) => args
 export const use = () => {}
+export const watchEffect = (fn) => { fn() }
 export default { use: () => {} }
 `
 

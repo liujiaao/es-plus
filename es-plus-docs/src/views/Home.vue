@@ -349,6 +349,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
+import { softwareApplication, useJsonLd } from '@/utils/json-ld'
 import { Document, Monitor, Edit, Connection, SetUp, Grid, DocumentChecked, List, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
 import AiLiveDemo from '@/components/home/AiLiveDemo.vue'
 // 品牌文案单一真源：由 scripts/sync-brand.mjs 从 docs/brand/slogan.json 分发，禁止手改本文件
@@ -453,6 +454,15 @@ useHead({
     { property: 'og:description', content: '中后台 CRUD 的配置层：一份配置 · 三个渲染器 · 生成即编译。' },
   ],
 })
+
+// 结构化数据：首页要回答的是「这是什么软件」，不是「这是什么文章」
+useJsonLd(() =>
+  softwareApplication({
+    title: '中后台 CRUD 的配置层',
+    description: 'ES-Plus — 中后台 CRUD 的配置层：一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译。',
+    path: '/',
+  }),
+)
 
 const router = useRouter()
 

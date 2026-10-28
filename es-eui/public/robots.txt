@@ -1,4 +1,4 @@
-# 由 scripts/gen-subsite-seo.mjs 生成，请勿手改。
+# 由 scripts/gen-site-seo.mjs 生成，请勿手改。
 # 本站部署在站点域名的子路径下，爬虫只读域名根部的 /robots.txt —— 这份文件对
 # 抓取指令实际不起作用；它声明的是本站 sitemap 的位置（换到自有域名后即生效）。
 User-agent: *

@@ -17,7 +17,11 @@
  *   2. 静态页的 key 与路由 name 逐字一致（否则 usePageMeta 查不到表项，静默回落默认文案）；
  *   3. PAGE_META 里没有无人使用的键（删除页面后忘了删条目）；
  *   4. 标题唯一、≤ 30 字、不含数字与百分号（数字必须来自单源，见 check:site-claims）；
- *      描述 20–120 字（太短等于没写，太长会被搜索截断）。
+ *      描述 20–120 字（太短等于没写，太长会被搜索截断）；
+ *   5. 每个视图都写上了结构化数据：走 usePageMeta 的由 page-meta.ts 统一挂，
+ *      自己写 useHead 的（Home / Doc / ComponentDoc）必须显式调 useJsonLd ——
+ *      否则「100% 路由有 JSON-LD」这条只在嘴里成立；反过来 page-meta.ts 里的
+ *      useJsonLd 被删掉也不该静默：那时 13 个页面会一起丢掉结构化数据。
  *
  * 用法：node scripts/check-page-meta.mjs
  * 退出码：0 = 全覆盖；1 = 有缺口。
@@ -59,6 +63,10 @@ const pageMeta = parsePageMeta(metaSrc)
 
 if (!routes.length) fail('没有从 router/index.ts 解析到任何具名路由（解析规则可能已失效）')
 if (!pageMeta.size) fail('没有从 page-meta.ts 解析到任何 PAGE_META 表项（解析规则可能已失效）')
+// 表格化的页面靠这里一次性挂上结构化数据；删掉这行，13 个视图会一起失去 JSON-LD
+if (!/useJsonLd\s*\(/.test(metaSrc)) {
+  fail('page-meta.ts 没有调用 useJsonLd —— 走 usePageMeta 的页面会全部没有结构化数据')
+}
 
 const usedKeys = new Set()
 const titles = new Map()
@@ -74,6 +82,11 @@ for (const route of routes) {
   if (!/usePageMeta\s*\(|useHead\s*\(/.test(src)) {
     fail(`${route.path}（${route.name}）→ ${route.view} 没有调用 usePageMeta / useHead，标题会退回站点默认值`)
     continue
+  }
+  // 结构化数据的两个入口：走表（usePageMeta 里统一挂）或自己挂（useJsonLd）。
+  // 只认「调了」，不认「导入了」—— 导入了不调用正是这次差点漏掉的形态。
+  if (!/usePageMeta\s*\(/.test(src) && !/useJsonLd\s*\(/.test(src)) {
+    fail(`${route.path}（${route.name}）→ ${route.view} 没有 JSON-LD：不经 usePageMeta 的视图必须自己调 useJsonLd`)
   }
 
   const entry = pageMeta.get(route.name)
@@ -118,5 +131,5 @@ if (failed) {
 }
 
 console.log(
-  `✅ 逐页 meta 全覆盖：${routes.length} 条路由，PAGE_META ${pageMeta.size} 条（标题唯一、无死条目）`,
+  `✅ 逐页 meta 全覆盖：${routes.length} 条路由，PAGE_META ${pageMeta.size} 条（标题唯一、无死条目、每页都有结构化数据）`,
 )

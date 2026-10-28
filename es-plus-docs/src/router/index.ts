@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { applyPageSeo } from '@/utils/site-seo.js'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -115,6 +116,17 @@ const router = createRouter({
     if (to.hash) return { el: to.hash, top: 88, behavior: 'smooth' }
     return { top: 0 }
   }
+})
+
+// 逐页 canonical / og:url / robots（路线图 3.2）。
+//
+// 此前这三样都只在 index.html 里出现一次、都指向站点根 —— 十七个页面共用一个地址，
+// 等于告诉索引「这些页不存在」（审计 P0-2）。标题与描述走 unhead（page-meta.ts），
+// 但 canonical 与「这一页归谁」是**路由属性**，不随视图变，所以放在这里一次做完：
+// 主站每页指向自己的页内地址，404 拿 noindex,follow。判据与实现见 utils/site-seo.js
+// （三站同一份单源）。
+router.afterEach((to) => {
+  applyPageSeo(to)
 })
 
 export default router

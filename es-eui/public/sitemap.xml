@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 由 scripts/gen-subsite-seo.mjs 生成，请勿手改：条目来自本站真实路由表 -->
+<!-- 由 scripts/gen-site-seo.mjs 生成，请勿手改：条目来自本站真实路由表 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://liujiaao.github.io/es-plus/es-eui/</loc></url>
   <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/ai-tools</loc></url>

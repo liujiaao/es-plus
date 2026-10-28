@@ -18,6 +18,8 @@
  */
 import { computed } from 'vue'
 import { useHead } from '@unhead/vue'
+import { useRoute } from 'vue-router'
+import { techArticle, useJsonLd, webPage } from './json-ld'
 
 export const SITE_TAGLINE = '中后台 CRUD 的配置层'
 
@@ -90,14 +92,20 @@ function resolveSource(source: PageMetaSource): () => PageMeta | null {
 }
 
 /**
- * 挂上本页的 title / description / OG。
+ * 挂上本页的 title / description / OG / JSON-LD。
  *
  * `titleTemplate` 在 main.ts 里统一加 ` · ES-Plus`，这里只管裸标题 ——
  * 两处都拼会得到「X · ES-Plus · ES-Plus」。
+ *
+ * 结构化数据的类型按**路由名**分：指南 / 组件 / 高级用法是有正文的文章（TechArticle），
+ * 其余是普通内容页（WebPage）。首页与另三个自己调 useHead 的视图不经过这里，
+ * 各自显式给类型（见 Home.vue 的 SoftwareApplication）。
  */
 export function usePageMeta(source: PageMetaSource) {
   const get = resolveSource(source)
   const meta = computed<PageMeta>(() => get() ?? { title: SITE_TAGLINE, description: DEFAULT_DESCRIPTION })
+  const route = useRoute()
+  const isArticle = ['guide', 'component', 'advanced'].includes(String(route.name ?? ''))
 
   useHead({
     title: () => meta.value.title,
@@ -106,5 +114,10 @@ export function usePageMeta(source: PageMetaSource) {
       { property: 'og:title', content: () => `${meta.value.title} · ES-Plus` },
       { property: 'og:description', content: () => meta.value.description },
     ],
+  })
+
+  useJsonLd(() => {
+    const input = { title: meta.value.title, description: meta.value.description, path: route.path }
+    return isArticle ? techArticle({ ...input, section: route.path.split('/')[1] }) : webPage(input)
   })
 }

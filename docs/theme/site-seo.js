@@ -1,8 +1,8 @@
 /**
- * 逐页 canonical / robots（路线图 3.3）—— 两个子站共享的运行时口径。
+ * 逐页 canonical / robots（路线图 3.2 / 3.3）—— 三站共享的运行时口径。
  *
- * 单一权威源：`docs/theme/site-seo.js` → `scripts/sync-theme.mjs` 分发到
- * es-pc / es-eui 的 `src/utils/site-seo.js`，禁止手改各站副本。
+ * 单一权威源：`docs/theme/site-seo.js` → `scripts/sync-theme.mjs` 分发到三站的
+ * `src/utils/site-seo.js`，禁止手改各站副本。
  *
  * ## 为什么需要它
  *
@@ -11,14 +11,16 @@
  * `/ai-gallery` 这些页在三个站上是同一份内容的三个副本，索引里出现三份重复，
  * 真正的 canonical（主站）反而被稀释。规划里那句「三端同构，不是三站同抄」
  * 落到机器上就是这一条：**同一内容只有一个 canonical**，子站与主站重复的页面
- * canonical 指回主站，渲染器专属页面才独立索引。
+ * canonical 指回主站，渲染器专属页面才独立索引。主站自己每页都指向页内地址，
+ * 不再是「十七个页面共用一个根地址」。
  *
  * ## 「哪些页是重复页」不在这里算
  *
- * 判据要拿主站路由表比对，子站拿不到（三站是两个独立工程，只共享这一个小模块）。
+ * 判据要拿主站路由表比对，子站拿不到（三站是三个独立工程，只共享这一个小模块）。
  * 所以各站 router 在路由上声明 `meta.duplicate: true`，再由
- * `scripts/gen-subsite-seo.mjs --check` 与主站路由表**双向**核对：声明了但主站没有
+ * `scripts/gen-site-seo.mjs --check` 与主站路由表**双向**核对：声明了但主站没有
  * 这条路径、或者主站有这条路径却没声明，都会变红。本文件只负责**用**这个声明。
+ * 主站的路由永远不带这个标记，于是它每一页都指向自己。
  *
  * ## 为什么不顺手加 noindex
  *
@@ -27,7 +29,7 @@
  * `noindex,follow` 只留给 404：它不该进索引，但它的出链（「你可能想去的是这几个
  * 地方」）应该继续被跟随。
  */
-import { SITES, SITE_KEY, siteOf, crossSiteUrl } from './sites.js'
+import { SITES, SITE_KEY, siteOf, crossSiteUrl } from './sites'
 
 /** 主站 key：canonical 的终点。三站清单里部署在站点根的那个文档站就是它 */
 const MAIN_SITE_KEY = 'vue3'

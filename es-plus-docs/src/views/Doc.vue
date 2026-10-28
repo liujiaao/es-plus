@@ -77,6 +77,7 @@ import { lastUpdatedFor } from '@/utils/doc-source'
 // 指南注册表（Doc.vue 与搜索索引共用的单一来源）
 import { docsData } from '@/docs/doc-registry'
 import { useHead } from '@unhead/vue'
+import { techArticle, useJsonLd } from '@/utils/json-ld'
 
 const route = useRoute()
 
@@ -111,6 +112,16 @@ useHead({
     { property: 'og:description', content: () => `${currentDoc.value.title} - ES-Plus 中后台 CRUD 的配置层（Vue 3 + Element Plus）` },
   ],
 })
+
+// 结构化数据：指南是一篇文章，类型与 og:* 同源取当前文档
+useJsonLd(() =>
+  techArticle({
+    title: currentDoc.value.title,
+    description: `${currentDoc.value.title} - ES-Plus 文档`,
+    path: route.path,
+    section: 'guide',
+  }),
+)
 
 const currentCategory = computed(() => {
   const path = route.path

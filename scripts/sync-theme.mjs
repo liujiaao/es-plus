@@ -13,10 +13,7 @@
  *   - site-footer.js：页脚数据（栏位 / 链接 / 站内路径映射），纯函数。路线图 1.8。
  *   - docs-notfound.css：三站统一 404 外观。路线图 1.8。
  *   - site-not-found.js：404 数据（文案 / 固定入口 / 另两站），纯函数。路线图 1.8。
- *   - site-seo.js：逐页 canonical / robots，纯函数。路线图 3.3。
- *
- * 注意 site-seo.js 只分发到**两个子站**：主站是 canonical 的终点，没有「我是不是
- * 某站副本」这个问题；而且它的 `./sites` 是 sites.ts，`.js` 副本在主站解析不了。
+ *   - site-seo.js：逐页 canonical / robots，纯函数。路线图 3.2 / 3.3。
  *
  * 用法：
  *   node scripts/sync-theme.mjs           # 同步：拷贝单源到各站点
@@ -128,11 +125,15 @@ const ASSETS = [
     ],
   },
   {
-    // 逐页 canonical / robots（路线图 3.3）：子站与主站重复的页面指回主站。
-    // **只发两个子站** —— 主站是 canonical 的终点，没有「我是不是副本」这个问题；
-    // 而且它 import 的 `./sites` 在主站是 `sites.ts`，`.js` 副本在主站解析不了。
+    // 逐页 canonical / robots（路线图 3.2 / 3.3）：主站每页指向页内地址，子站与主站
+    // 重复的页面指回主站。三站同一份 —— 判据（meta.duplicate）在各自的 router 上。
+    // import 写成不带扩展名的 `./sites`：主站是 sites.ts、子站是 sites.js，两边都能解析。
     file: 'site-seo.js',
-    targets: [join(ROOT, 'es-pc', 'src', 'utils', 'site-seo.js'), join(ROOT, 'es-eui', 'src', 'utils', 'site-seo.js')],
+    targets: [
+      join(ROOT, 'es-plus-docs', 'src', 'utils', 'site-seo.js'),
+      join(ROOT, 'es-pc', 'src', 'utils', 'site-seo.js'),
+      join(ROOT, 'es-eui', 'src', 'utils', 'site-seo.js'),
+    ],
   },
 ]
 

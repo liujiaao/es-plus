@@ -216,6 +216,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
+import { techArticle, useJsonLd } from '@/utils/json-ld'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
 import DocMeta from '@/components/doc/DocMeta.vue'
 // 目录行为（标题发号 + 滚动高亮）与三站共用同一份实现
@@ -283,6 +284,16 @@ useHead({
     { property: 'og:description', content: () => currentDoc.value.description || '' },
   ],
 })
+
+// 结构化数据：组件文档也是文章（正文 + 示例 + API 表），描述与 og:description 同源
+useJsonLd(() =>
+  techArticle({
+    title: currentDoc.value.title,
+    description: currentDoc.value.description || `${currentDoc.value.title} - ES-Plus 组件 API 与示例`,
+    path: route.path,
+    section: 'components',
+  }),
+)
 
 // 目录改为从渲染后的 DOM 收集（含 API 表里的 H3）：三个大节标题的 id 已在模板里写死
 // （features / examples / api），H3 由共用实现按文本发号 —— 页面之间不会撞车。
