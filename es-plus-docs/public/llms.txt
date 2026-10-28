@@ -50,11 +50,11 @@
 - [30 秒上手](https://liujiaao.github.io/es-plus/#/quickstart): 从安装依赖到第一个可跑页面的最短路径：三段代码、一份 JSON 配置，查询表单与表格自动联动。
 - [核心案例总览](https://liujiaao.github.io/es-plus/#/cases): 真实业务场景的完整配置：查询、表格、弹窗、联动与权限，每张卡都能落到可直接复制的页面。
 - [旗舰案例 · 合同审批工作台](https://liujiaao.github.io/es-plus/#/flagship-approval): 一次审批工作台的完整拆解：整页由一份 JSON 驱动，查询表单、明细表格与审批弹窗如何拼在一起。
-- [AI 生成 · 一句话成页](https://liujiaao.github.io/es-plus/#/ai-generated): 一句话描述需求，AI 产出一份可编译的 CRUD 配置，再用同一份配置渲染出三个渲染端的页面。
+- [AI 生成 · 一句话成页](https://liujiaao.github.io/es-plus/#/ai-generated): 一句话描述需求，AI 产出一份可编译的 CRUD 配置，再用同一份配置渲染出三个渲染端的页面。本页案例是采购申请审批页。
 - [AI 案例画廊](https://liujiaao.github.io/es-plus/#/ai-gallery): 自然语言生成的中后台案例集：每个案例都附配置、产物与复现步骤，而不是只有一张截图。
 - [组合画廊 · 三端对照](https://liujiaao.github.io/es-plus/#/ai-gallery/composition): 组合能力的三端对照：同一份配置在 Vue 3、Vue 2 与 Ant Design Vue 上的一致性证据。
 - [MCP 工具工作流](https://liujiaao.github.io/es-plus/#/ai-gallery/workflows): MCP 工具的真实调用链：输入、输出、校验结果与耗时逐条留档，与 IDE 里看到的一致。
-- [片段拼装 · 分析看板](https://liujiaao.github.io/es-plus/#/fragment-dashboard): 用片段工具拼出一个非 CRUD 的分析页：宿主取数、原生图表与弹窗如何各归其位。
+- [片段拼装 · 分析看板](https://liujiaao.github.io/es-plus/#/fragment-dashboard): 用片段工具拼出一个非 CRUD 的分析页（片段拼装仪表盘）：宿主取数、原生图表与弹窗如何各归其位。
 - [原生 · 手写 · AI 三栏对照](https://liujiaao.github.io/es-plus/#/native-vs-ai): 同一功能的三种写法并列：原生模板、手写 ES-Plus 配置、AI 产物，用同一把尺子量成本。
 - [Playground 在线试](https://liujiaao.github.io/es-plus/#/playground): 在线改 JSON 配置，实时看表单、表格与弹窗的渲染结果，不用装任何依赖。
 - [AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud): 自然语言转完整 CRUD 页面配置：支持 OpenAI 兼容接口，也可以不填 Key 用本地规则引擎。

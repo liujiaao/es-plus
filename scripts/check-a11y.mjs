@@ -325,6 +325,27 @@ function checkKeyboard() {
   if (!failed) ok('键盘可达：代码标签页为 tablist + 方向键；三站菜单开关均报 aria-expanded')
 }
 
+// ── G. `<html lang>` 跟随语言 ─────────────────────────────────────────────
+function checkHtmlLang() {
+  // 主站是双语的：静态 `lang="zh-CN"` 在英文站上是错的声明，屏幕阅读器会用中文音库
+  // 念整页英文。判据在语言引导处 —— 它必须把 locale 写到 document.documentElement.lang。
+  const boot = readText(join(ROOT, 'es-plus-docs/src/locales/index.ts'))
+  if (!boot) return fail('语言声明：读不到主站的 locales/index.ts')
+  if (!/documentElement\.lang/.test(boot)) {
+    fail('语言声明：主站切到英文时 <html lang> 仍是 zh-CN —— 同步 documentElement.lang')
+  }
+  if (!/watch\(\s*i18n\.global\.locale/.test(boot)) {
+    fail('语言声明：<html lang> 只在启动时写一次 —— 切语言之后要跟着变（watch i18n.global.locale）')
+  }
+  // 两个子站是中文单站，静态 zh-CN 就是正确声明；少了它任何声明都没有
+  for (const file of ['es-plus-docs/index.html', 'es-pc/index.html', 'es-eui/public/index.html']) {
+    const html = readText(join(ROOT, file))
+    if (!/<html[^>]+lang="zh-CN"/.test(html)) fail(`${file}：<html> 没有 lang 声明`)
+  }
+
+  if (!failed) ok('语言声明：主站 <html lang> 跟随 locale（英文站不再声明 zh-CN），三站静态声明齐全')
+}
+
 console.log('检查可访问性基线（路线图 1.7）…\n')
 checkSingleSource()
 checkSkipLink()
@@ -332,6 +353,7 @@ checkStyleContract()
 checkContrast()
 checkOutlineEscape()
 checkKeyboard()
+checkHtmlLang()
 
 if (failed) {
   console.error('\n可访问性基线守卫失败')

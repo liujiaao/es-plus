@@ -27,6 +27,8 @@ type: 'guide'
 | vxe 三站按需 | `npm run check:bundle-sources`、`npm run check:bundle-budget` | 主站与两个子站各有 `utils/vxe-loader`；清单从「哪些示例/案例写了 `engine: 'vxe'`」反查，少一条就红；产物层再挡住「样式表把它拽回首屏」 |
 | 三站一致的动效语言 | `npm run check:motion` | 120 / 180 / 240ms 三个 token，禁 `transition: all`、禁对布局属性做过渡 |
 | 三站一致的页脚与导航 | `npm run check:site-nav`、`npm run check:nav-coverage` | 导航里的每一条都得落到真实路由，每个路由都得有入口 |
+| 全站搜索覆盖 | `npm run check:search-index` | 路由 ↔ 索引**双向**闭包：每个内容页都要可搜，每条搜索结果都要是真页面；组件/高级/案例/AI 案例逐条可搜，标题锚点算法与正文渲染器逐字一致 |
+| 可访问性基线 | `npm run check:a11y` | skip link、焦点环、减少动效、25 组配色的 WCAG 对比度、`<html lang>` 跟随语言（英文站不再声明 zh-CN） |
 | 生态内容（本页所在的一组） | `npm run check:nav-coverage`、`npm run check:sitemap` | FAQ、对比、基准、路线图、Vue 2 周期、贡献指南 |
 
 完整的守卫清单在仓库 `package.json` 的 `check:*` 脚本里 —— 九十余条，每一条的文件头都写了它守的是哪个已发生的缺陷。
