@@ -24,6 +24,12 @@
 - [迁移指南](https://liujiaao.github.io/es-plus/md/guide/migration.md): 本文涵盖两类迁移：v1.4.0 包名重命名 — 从 es-plus-ui 迁移到 @es-plus/vue3；从原生 Element Plus 迁移 — 把现有 el-form / el-table 重写为 es-form / es-table
 - [Migration Guide (English)](https://liujiaao.github.io/es-plus/md/guide/migration.en.md): Starting with v1.4.0, the npm package es-plus-ui has been renamed to @es-plus/vue3 to align with the new sibling package @es-plus/vue2 (Vue 2 + Element UI) and…
 - [更新日志](https://liujiaao.github.io/es-plus/md/guide/changelog.md): 本页由 npm run changelog:gen 从各包的 CHANGELOG.md 生成，请勿手改；完整历史见 GitHub Releases。
+- [常见问题](https://liujiaao.github.io/es-plus/md/guide/faq.md): 按主题分组的实际提问，答案都指向仓库里可验证的地方：出问题的源码、跑得起来的命令、写死在代码里的边界。每一条都写明「为什么会这样」，而不是只给一个能糊过去的办法。
+- [与其它方案对比](https://liujiaao.github.io/es-plus/md/guide/comparison.md): 选型问题从来不是「谁更强」，而是「谁的边界落在你的工程里」。这一页只对比结构差异与可验证的数字，不裁断谁更好；每个对比对象都写清「它在哪比我们强」，因为不写那一段的对比文章不值得读。
+- [性能与准确率基准](https://liujiaao.github.io/es-plus/md/guide/benchmark.md): 这一页只放能被复现的数字：每个数字后面都写口径、写命令、写日期。没有测过的项目单独列出来说「没测」——把「没测」写成「很快」是这个行业最常见的假话。
+- [路线图与版本策略](https://liujiaao.github.io/es-plus/md/guide/roadmap.md): 这一页回答两个问题：「接下来做什么」和「版本号怎么走」。原则只有一条 —— 写在这里的事要么有守卫脚本，要么有明确的验收口径；没有验收口径的想法不进路线图，因为它无法被完成，只能被遗忘。
+- [Vue 2 支持周期](https://liujiaao.github.io/es-plus/md/guide/vue2-eol.md): Vue 2 已于 2023-12-31 停止官方维护。这是一个既定事实，它决定的是「新项目该不该从 Vue 2 起步」，不决定「存量项目能不能继续用 ES-Plus 的 Vue 2 渲染端」。这一页把两件事分开说清：仓库现在实际支持什么（可验证），以及为什么仍然这么做（代价也写出来）。
+- [贡献指南](https://liujiaao.github.io/es-plus/md/guide/contributing.md): 这份页面是 CONTRIBUTING.md 的站点版：本地开发、提交前必须跑什么、加一篇文档要改哪几处。仓库根目录那份是权威版本，两者冲突时以它为准。
 
 ## 组件
 

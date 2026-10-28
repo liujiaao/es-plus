@@ -48,19 +48,27 @@ const BUDGETS = {
     // 文档路由（/guide/:name）的首屏：入口预加载 + 该路由 chunk 的静态闭包
     route: '/guide/getting-started',
     routeChunkPrefix: 'Doc-',
-    // 2026-10-28 实测 974.9 KB（入口 899.1）：element-plus 356.2 + vxe 344.2 +
-    // index 198.2（es-plus 库本体、vue-i18n/router、fuse 搜索索引）+ Doc 51.6 +
-    // 共享 chunk（高亮器）24.2。
+    // 2026-10-28 实测 993.7 KB（入口 917.8）：element-plus 356.2 + vxe 344.2 +
+    // index 216.8（es-plus 库本体、vue-i18n/router、fuse + 全部指南正文）+ Doc 51.7 +
+    // 共享 chunk（高亮器）24.2。这个数会随文档字数浮动 —— 正文就装在 index 那个块里。
     //
-    // 同一天从 1535.6 降到 974.9，两笔都来自「源码层就错了」，不是调参：
+    // 同一天先降到 975.0，两笔都来自「源码层就错了」，不是调参：
     //   · 高亮器引入的是 highlight.js 全集（190 种语言，含 mathematica/isbl/sqf），
     //     文档只用得上 11 种 —— 共享 chunk 311.4 → 24.2（utils/highlight.mjs）；
     //   · 指南的示例注册表两个 glob 都是 eager: true，于是 103 个示例组件（~145KB）
     //     与它们的源码文本（115KB）跟着每一篇指南下载，哪怕正文里一个 <demo> 都没有
     //     （components/doc/example-registry.ts 改成惰性）。
+    // 随后加入六篇生态内容（FAQ/对比/基准/路线图/Vue 2 周期/贡献），index 从 198.2
+    // 涨到 216.0（+17.8）：**指南正文是搜索索引的数据源**（utils/search-index.ts
+    // 静态 import doc-registry），所以每多一篇指南，所有 /guide/* 的首屏都长一截。
+    // 这笔是结构性的，不是这六篇写得太长：真正的修法是把正文改成按 slug 惰性加载
+    // （示例注册表已经是这个形状），搜索索引随第一次开搜索再建。那件事会改变
+    // 文档页的渲染时机与搜索的首次可用时间，需要浏览器逐页核对，因此先记账、不混进
+    // 内容批次。ceiling 按「实测 + 约 5%（再容六到七篇指南）」取 1040。
+    //
     // 剩下的 700KB 是 element-plus 356 + vxe 344：两者都在入口里全量注册，
     // 要再往下走必须换成按需引入（有视觉回归风险，需要浏览器逐页核对）。
-    ceiling: 1000,
+    ceiling: 1040,
     target: 300,
   },
   'es-pc': {

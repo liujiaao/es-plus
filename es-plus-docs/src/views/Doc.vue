@@ -192,6 +192,7 @@ const NAV_ORDER = [
   'getting-started', 'installation', 'usage', 'why-es-plus',
   'mcp-server', 'cli',
   'vue2', 'adapter-antdv', 'migration', 'permission-i18n', 'schema-setup', 'changelog',
+  'faq', 'comparison', 'benchmark', 'roadmap', 'vue2-eol', 'contributing',
 ]
 
 const navTitleFor = (key: string): string => {

@@ -21,6 +21,14 @@ import migrationEnMd from '@/docs/migrate-v1.4.md?raw'
 import changelogMd from '@/docs/changelog.md?raw'
 import schemaSetupMd from '@/docs/schema-setup.md?raw'
 import whyEsPlusMd from '@/docs/why-es-plus.md?raw'
+// 生态与关于（路线图 3.7）：FAQ / 对比 / 基准 / 路线图 / Vue 2 周期 / 贡献。
+// 这六篇是「要不要采用」的决策材料，与组件 API 同等重要 —— 此前三站都没有。
+import faqMd from '@/docs/faq.md?raw'
+import comparisonMd from '@/docs/comparison.md?raw'
+import benchmarkMd from '@/docs/benchmark.md?raw'
+import roadmapMd from '@/docs/roadmap.md?raw'
+import vue2EolMd from '@/docs/vue2-eol.md?raw'
+import contributingMd from '@/docs/contributing.md?raw'
 
 import gettingStartedEnMd from '@/docs/getting-started.en.md?raw'
 import mcpServerEnMd from '@/docs/mcp-server.en.md?raw'
@@ -41,7 +49,14 @@ export const docsData: Record<string, DocEntry> = {
   'permission-i18n': { title: '权限与国际化', content: permissionI18nMd },
   'schema-setup': { title: 'IDE 配置自动补全', content: schemaSetupMd },
   'migration': { title: '迁移指南', content: migrationMd, titleEn: 'Migration Guide', contentEn: migrationEnMd },
-  'changelog': { title: '更新日志', content: changelogMd }
+  'changelog': { title: '更新日志', content: changelogMd },
+  // 生态与关于（顺序与侧栏一致：先决策材料，再路线图，最后参与方式）
+  'faq': { title: '常见问题', content: faqMd },
+  'comparison': { title: '与其它方案对比', content: comparisonMd },
+  'benchmark': { title: '性能与准确率基准', content: benchmarkMd },
+  'roadmap': { title: '路线图与版本策略', content: roadmapMd },
+  'vue2-eol': { title: 'Vue 2 支持周期', content: vue2EolMd },
+  'contributing': { title: '贡献指南', content: contributingMd }
 }
 
 /** 可访问的 /guide/:name 集合（Doc.vue 渲染与搜索索引共用） */

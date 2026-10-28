@@ -20,6 +20,7 @@
       "engine": "Engine",
       "ai": "AI Toolchain",
       "ecosystem": "Ecosystem",
+      "about": "About",
       "aiEvidence": "AI Evidence"
     },
     "whyEsPlus": "Why ES-Plus",
@@ -52,7 +53,13 @@
     "composition": "Composition Gallery",
     "workflows": "MCP Workflows",
     "fragmentDashboard": "Fragment Dashboard",
-    "nativeVsAi": "Native vs Hand-Written vs AI"
+    "nativeVsAi": "Native vs Hand-Written vs AI",
+    "faq": "FAQ",
+    "comparison": "Comparison",
+    "benchmark": "Performance & Accuracy",
+    "roadmap": "Roadmap & Versioning",
+    "vue2Eol": "Vue 2 Support Window",
+    "contributing": "Contributing"
   },
   "search": {
     "placeholder": "Search docs...",

@@ -20,6 +20,7 @@
       "engine": "引擎",
       "ai": "AI 工具链",
       "ecosystem": "生态",
+      "about": "关于",
       "aiEvidence": "AI 证据"
     },
     "whyEsPlus": "为什么是 ES-Plus",
@@ -52,7 +53,13 @@
     "composition": "组合画廊（三端）",
     "workflows": "MCP 工具工作流",
     "fragmentDashboard": "片段拼装看板",
-    "nativeVsAi": "原生 · 手写 · AI 对照"
+    "nativeVsAi": "原生 · 手写 · AI 对照",
+    "faq": "常见问题",
+    "comparison": "与其它方案对比",
+    "benchmark": "性能与准确率基准",
+    "roadmap": "路线图与版本策略",
+    "vue2Eol": "Vue 2 支持周期",
+    "contributing": "贡献指南"
   },
   "search": {
     "placeholder": "搜索文档...",

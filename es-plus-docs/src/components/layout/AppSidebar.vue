@@ -113,6 +113,21 @@ const sections = [
       { path: '/guide/changelog', labelKey: 'sidebar.changelog', icon: markRaw(Document) },
     ],
   },
+  {
+    // 关于（路线图 3.7）：这些页面回答「要不要采用、会不会烂尾、怎么参与」，
+    // 与上一组（生态：怎么用某个渲染端）不是同一类问题，因此单独成组。
+    // 组内顺序即阅读顺序：先疑问（FAQ / 对比），再证据（基准），再承诺（路线图），
+    // 最后期限（Vue 2 周期）与参与方式（贡献）。
+    titleKey: 'sidebar.section.about',
+    items: [
+      { path: '/guide/faq', labelKey: 'sidebar.faq', icon: markRaw(ChatDotRound) },
+      { path: '/guide/comparison', labelKey: 'sidebar.comparison', icon: markRaw(Switch) },
+      { path: '/guide/benchmark', labelKey: 'sidebar.benchmark', icon: markRaw(Odometer) },
+      { path: '/guide/roadmap', labelKey: 'sidebar.roadmap', icon: markRaw(Promotion) },
+      { path: '/guide/vue2-eol', labelKey: 'sidebar.vue2Eol', icon: markRaw(SetUp) },
+      { path: '/guide/contributing', labelKey: 'sidebar.contributing', icon: markRaw(Reading) },
+    ],
+  },
 ]
 </script>
 
