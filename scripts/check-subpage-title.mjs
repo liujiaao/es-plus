@@ -48,7 +48,9 @@ for (const site of SITES) {
 
   const nameCount = (src.match(/\bname: '/g) || []).length
   const routes = []
-  const re = /name: '([^']+)',\s*(?:meta: \{ title: '([^']*)' \})?/g
+  // meta 里除 title 还可能有别的键（`duplicate: true`，路线图 3.3），所以 title 两边
+  // 都允许有内容；`[^}]` 越不过这个对象的右花括号，不会把下一条路由的 title 吞进来。
+  const re = /name: '([^']+)',\s*(?:meta: \{[^}]*title: '([^']*)'[^}]*\})?/g
   let m
   while ((m = re.exec(src))) routes.push({ name: m[1], title: m[2] || null })
 

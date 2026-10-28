@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 由 scripts/gen-subsite-seo.mjs 生成，请勿手改：条目来自本站真实路由表 -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/ai-tools</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/combination</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/escrudpage</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/esdialog</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/eserrorboundary</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/esform</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/estable</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/installation</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/quickstart</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/svgicon</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/component/vxetable</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/configuration</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/developer-guide</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/i18n</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/installation</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/quickstart</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-eui/#/guide/theme</loc></url>
+</urlset>

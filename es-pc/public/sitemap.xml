@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 由 scripts/gen-subsite-seo.mjs 生成，请勿手改：条目来自本站真实路由表 -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/advanced</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/ai-tools</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-crud-page</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-dialog</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-error-boundary</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-form</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-table</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/es-vxe-table</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/guide</loc></url>
+  <url><loc>https://liujiaao.github.io/es-plus/es-pc/#/svg-icon</loc></url>
+</urlset>

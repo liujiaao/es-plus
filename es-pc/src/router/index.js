@@ -1,24 +1,34 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { applyPageSeo } from '@/utils/site-seo.js'
 import DocLayout from '@/layouts/DocLayout.vue'
 import Home from '@/views/Home.vue'
 import Guide from '@/views/Guide.vue'
 import QuickStart from '@/views/QuickStart.vue'
 import Cases from '@/views/Cases.vue'
 
+// `meta.duplicate: true` = 「这一页在主站有同一路径的同一内容」。
+//
+// 本站是渲染器门户，像 /quickstart、/cases、/ai-gallery 这些页是把主站的页换成本站
+// 的 UI 库再写一遍 —— 三站各有其实例，同一份内容出现三份，索引被稀释。带这个标记的
+// 路由在 afterEach 里把 canonical 与 og:url 指回主站（见 utils/site-seo.js），
+// 站点因此只对**本渲染器专属的页**（/es-form、/svg-icon、/guide…）声明所有权。
+//
+// 标记不是拍脑袋加的：scripts/gen-subsite-seo.mjs --check 把这份声明与主站路由表
+// **双向**核对 —— 主站有这条路径就必须标，标了主站就必须有。
 const routes = [
   {
     path: '/',
     component: DocLayout,
     children: [
       { path: '', name: 'Home', meta: { title: '首页' }, component: Home },
-      { path: 'quickstart', name: 'QuickStart', meta: { title: '30 秒上手' }, component: QuickStart },
-      { path: 'cases', name: 'Cases', meta: { title: '核心案例' }, component: Cases },
+      { path: 'quickstart', name: 'QuickStart', meta: { title: '30 秒上手', duplicate: true }, component: QuickStart },
+      { path: 'cases', name: 'Cases', meta: { title: '核心案例', duplicate: true }, component: Cases },
       {
         // 旗舰案例「合同审批工作台」：整页由 docs/cases/flagship-approval.json 驱动，
         // 三站加载同一份字节（scripts/sync-cases.mjs 分发）
         path: 'flagship-approval',
         name: 'FlagshipApproval',
-        meta: { title: '旗舰案例：合同审批工作台' },
+        meta: { title: '旗舰案例：合同审批工作台', duplicate: true },
         component: () => import('@/views/FlagshipApproval.vue'),
       },
       {
@@ -26,7 +36,7 @@ const routes = [
         // AI 生成、未经手工修改的纯 JSON，三站加载同一份字节
         path: 'ai-generated',
         name: 'AiGenerated',
-        meta: { title: '一句话生成：采购申请审批页' },
+        meta: { title: '一句话生成：采购申请审批页', duplicate: true },
         component: () => import('@/views/AiGenerated.vue'),
       },
       {
@@ -34,14 +44,14 @@ const routes = [
         // 片段由 `scripts/gen-fragment-dashboard.mjs` 生成，本页一行未改地使用它们。
         path: 'fragment-dashboard',
         name: 'FragmentDashboard',
-        meta: { title: '片段拼装仪表盘' },
+        meta: { title: '片段拼装仪表盘', duplicate: true },
         component: () => import('@/views/FragmentDashboard.vue'),
       },
       {
         // A9 三栏对照：原生 / 手写 es-plus / AI 产物，四个口径同尺量（数字与源码同源生成）。
         path: 'native-vs-ai',
         name: 'NativeVsAi',
-        meta: { title: '原生 vs 手写 vs AI 三栏对照' },
+        meta: { title: '原生 vs 手写 vs AI 三栏对照', duplicate: true },
         component: () => import('@/views/NativeVsAi.vue'),
       },
       {
@@ -49,7 +59,7 @@ const routes = [
         // 列表页 + 通用宿主详情页共用同一份组件
         path: 'ai-gallery',
         name: 'AiGallery',
-        meta: { title: 'AI 案例画廊' },
+        meta: { title: 'AI 案例画廊', duplicate: true },
         component: () => import('@/views/AiGallery.vue'),
       },
       {
@@ -58,7 +68,7 @@ const routes = [
         // 浏览器里不重算。排在 `ai-gallery/:id` 之前，避免被详情路由吃掉。
         path: 'ai-gallery/composition',
         name: 'AiGalleryComposition',
-        meta: { title: '组合画廊 · 三端对照' },
+        meta: { title: '组合画廊 · 三端对照', duplicate: true },
         component: () => import('@/views/AiComposition.vue'),
       },
       {
@@ -66,13 +76,13 @@ const routes = [
         // 记录由 `scripts/gen-ai-workflows.mjs` 生成，浏览器里不重算。同样排详情路由之前。
         path: 'ai-gallery/workflows',
         name: 'AiGalleryWorkflows',
-        meta: { title: 'MCP 工具工作流' },
+        meta: { title: 'MCP 工具工作流', duplicate: true },
         component: () => import('@/views/AiWorkflows.vue'),
       },
       {
         path: 'ai-gallery/:id',
         name: 'AiGalleryCase',
-        meta: { title: 'AI 案例画廊 · 详情' },
+        meta: { title: 'AI 案例画廊 · 详情', duplicate: true },
         component: () => import('@/views/AiGallery.vue'),
       },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
@@ -167,6 +177,8 @@ router.afterEach((to) => {
     .filter(Boolean)
     .pop()
   document.title = title ? `${title} · ${SITE_SUFFIX}` : SITE_DEFAULT_TITLE
+  // canonical / og:url / robots：重复页指回主站，404 拿 noindex（utils/site-seo.js）
+  applyPageSeo(to)
 })
 
 export default router

@@ -39,17 +39,60 @@ export const computed = (fn) => ({ value: fn })
 export const ref = (value) => ({ value })
 export const reactive = (value) => value
 export const h = (...args) => args
+export const use = () => {}
+export default { use: () => {} }
 `
 
 /**
+ * vue-router 桩：只保留「调用方拿得到路由表」这一件事。
+ *
+ * 子站的 `router/index.js` 在模块顶层就 `createRouter({ history: createWebHashHistory() })`
+ * —— 真模块在 Node 里会去摸 `window`。桩让这一步变成纯对象构造，`options.routes` 于是
+ * 可以被读到：**路由表是真实求值出来的**，不是从源码里正则抠的（嵌套 children 的相对
+ * 路径要靠父级拼接，正则抠出来的路径少一层前缀，而少一层前缀的 URL 照样「看起来对」）。
+ *
+ * 桩还会**留下**注册进来的 `afterEach` 回调（`router._afterEach`），这样门禁可以拿一个假
+ * 路由对象调用它，验证「router → afterEach → document.head」整条链真的接上了 ——
+ * 只测 `applyPageSeo` 本身测不出「router 忘了调它」这种接线缺失。
+ */
+const VUE_ROUTER_SHIM = `export const createRouter = (options) => ({
+  options,
+  _afterEach: null,
+  afterEach(fn) { this._afterEach = fn },
+  beforeEach() {},
+})
+export const createWebHashHistory = () => ({})
+export const createWebHistory = () => ({})
+export default function VueRouter(options) {
+  this.options = options
+  this._afterEach = null
+  this.afterEach = (fn) => { this._afterEach = fn }
+  this.beforeEach = () => {}
+}
+`
+
+/** `.vue` 单文件组件在数据加载里只需要一个占位导出 */
+const COMPONENT_SHIM = 'export default {}'
+
+/**
  * @param {string} entry 相对仓库根的入口，例如 `es-plus-docs/src/views/component-doc.data.ts`
- * @param {{ site: string }} options `site` 是站点目录名，用于推导 `@/` 别名
+ * @param {{ site: string, stubComponents?: boolean, stubs?: Record<string, string> }} options
+ *   `site` 是站点目录名，用于推导 `@/` 别名；`stubs` 是「裸模块名 → 桩源码」；
+ *   `stubComponents` 把所有 `.vue` 导入换成空组件（读路由表时用）。
  * @returns {Promise<Record<string, unknown>>} 模块命名空间
  */
-export async function loadSiteModule(entry, { site }) {
+export async function loadSiteModule(entry, { site, stubComponents = false, stubs = {} }) {
   mkdirSync(CACHE, { recursive: true })
   const shimPath = join(CACHE, 'vue-shim.mjs')
   writeFileSync(shimPath, VUE_SHIM)
+
+  // 虚拟模块：一次 build 内共享，key 即 esbuild 的 resolve 结果
+  const virtual = new Map()
+  const stubPath = (name, source) => {
+    const id = `es-stub:${name}`
+    virtual.set(id, source)
+    return { path: id, namespace: 'es-stub' }
+  }
 
   const srcDir = join(ROOT, site, 'src')
   const outName = `${site}-${entry.split('/').pop().replace(/\W+/g, '-')}-${seq++}.mjs`
@@ -71,10 +114,26 @@ export async function loadSiteModule(entry, { site }) {
         name: 'es-plus-site-module',
         setup(pluginBuild) {
           // `@/docs/x.md?raw`：剥掉 `?raw`，剩下的交给下面的文本 loader
-          pluginBuild.onResolve({ filter: /^@\// }, (args) => ({
-            path: join(srcDir, args.path.slice(2).replace(/\?raw$/, '')),
-          }))
+          pluginBuild.onResolve({ filter: /^@\// }, (args) => {
+            const path = join(srcDir, args.path.slice(2).replace(/\?raw$/, ''))
+            // 别名解析会「吃掉」后面针对 `.vue` 的桩规则（onResolve 先返回者生效），
+            // 所以在同一处直接换掉
+            if (stubComponents && path.endsWith('.vue')) return stubPath(`component:${path}`, COMPONENT_SHIM)
+            return { path }
+          })
           pluginBuild.onResolve({ filter: /^vue$/ }, () => ({ path: shimPath }))
+          for (const [name, source] of Object.entries(stubs)) {
+            pluginBuild.onResolve({ filter: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }, () =>
+              stubPath(name, source),
+            )
+          }
+          if (stubComponents) {
+            pluginBuild.onResolve({ filter: /\.vue$/ }, (args) => stubPath(`component:${args.path}`, COMPONENT_SHIM))
+          }
+          pluginBuild.onLoad({ filter: /.*/, namespace: 'es-stub' }, (args) => ({
+            contents: virtual.get(args.path),
+            loader: 'js',
+          }))
           pluginBuild.onLoad({ filter: /\.md$/ }, (args) => ({
             contents: readFileSync(args.path, 'utf-8'),
             loader: 'text',
@@ -91,4 +150,5 @@ export async function loadSiteModule(entry, { site }) {
 }
 
 export { ROOT }
+export { VUE_ROUTER_SHIM }
 export const resolveSite = (...parts) => resolve(ROOT, ...parts)
