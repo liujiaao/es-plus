@@ -10,6 +10,8 @@
  *     本模块**不许自己 import 语料**，否则语料又会跟着任何引用者进入口；
  *   - 固定页：`utils/page-meta`（逐页 title/description 的单一真源，check:page-meta 守）；
  *   - 案例：`cases/cases.json`（21 组案例目录，链接自带 `#demo-*` 锚点）；
+ *   - AI 画廊：`cases/generated/registry.js` 的逐条案例（`meta.nl` 当摘要）——
+ *     与组件/高级页一样**按需**加载，它带着每个案例的 schema/mock/config；
  *   - 组件/高级：两个 `.data.ts` **按需**加载 —— 它们 `import.meta.glob(..., { eager: true })`
  *     把 103 个示例 SFC 原文（约 680KB）打进模块，不能进首屏包。见 search-engine 的
  *     loadExampleIndex()。
@@ -137,12 +139,52 @@ export function buildCaseEntries(): SearchEntry[] {
   return entries
 }
 
+/** AI 画廊条目需要的字段：与 `cases/generated/registry.js` 的 AI_CASES 项兼容 */
+export type AiCaseLike = {
+  id: string
+  title: string
+  host?: { kind?: string; route?: string }
+  tokens?: string[]
+  meta?: { nl?: string; description?: string }
+}
+
 type DocLike = {
   title: string
   description?: string
   features?: { name: string; desc: string }[]
   examples?: { key: string; title: string; description?: string }[]
   api?: { props?: { name: string; desc?: string }[] }
+}
+
+/**
+ * AI 画廊：**逐条案例**进索引，不只索引画廊列表页。
+ *
+ * 此前搜「员工花名册」只命中 CLI 指南里的一张预设表 —— 真正的
+ * `/ai-gallery/employee-roster` 搜不到，因为画廊的清单是 registry 在页面里现读的，
+ * 索引层根本没见过它。17 个案例页只从画廊点得进去，等于「做了没人找得到」的另一种形态。
+ *
+ * 只收**通用宿主**（`host.kind === 'generic'`，页面就是 `/ai-gallery/<id>`）：
+ * 定制宿主（合同审批 / 采购审批 / 片段看板）各有自己的路径，那三页已经在 FIXED_PAGES
+ * 里，再收一条就是同一页两条搜索结果。
+ *
+ * 摘要用 `meta.nl`（每个案例的真实自然语言需求）+ 能力 token —— 开发者搜
+ * `virtualScroll`、`expandConfig` 这类 schema 字段名也能落到案例页。
+ */
+export function buildAiCaseEntries(cases: Record<string, AiCaseLike>): SearchEntry[] {
+  const entries: SearchEntry[] = []
+  for (const c of Object.values(cases)) {
+    if (!c || typeof c.title !== 'string' || c.host?.kind !== 'generic') continue
+    entries.push({
+      title: c.title,
+      path: `/ai-gallery/${c.id}`,
+      category: 'ai',
+      content: [c.meta?.nl ?? c.meta?.description ?? '', (c.tokens ?? []).join(' ')]
+        .join(' ')
+        .slice(0, 600),
+      level: 1,
+    })
+  }
+  return entries
 }
 
 /**

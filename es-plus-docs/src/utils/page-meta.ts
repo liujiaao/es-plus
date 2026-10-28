@@ -45,9 +45,12 @@ export const PAGE_META: Record<string, PageMeta> = {
     title: '旗舰案例 · 合同审批工作台',
     description: '一次审批工作台的完整拆解：整页由一份 JSON 驱动，查询表单、明细表格与审批弹窗如何拼在一起。',
   },
+  // 描述同时是这一页的**搜索摘要**（search-index 的 buildFixedEntries 拿它当 content）。
+  // 案例名「采购申请审批页」必须出现在这里：它是定制宿主，画廊的逐条索引不收它，
+  // 搜案例名只能落到这一页 —— 少了这几个字，搜「采购审批」是零结果。
   'ai-generated': {
     title: 'AI 生成 · 一句话成页',
-    description: '一句话描述需求，AI 产出一份可编译的 CRUD 配置，再用同一份配置渲染出三个渲染端的页面。',
+    description: '一句话描述需求，AI 产出一份可编译的 CRUD 配置，再用同一份配置渲染出三个渲染端的页面。本页案例是采购申请审批页。',
   },
   'ai-gallery': {
     title: 'AI 案例画廊',
@@ -61,9 +64,10 @@ export const PAGE_META: Record<string, PageMeta> = {
     title: 'MCP 工具工作流',
     description: 'MCP 工具的真实调用链：输入、输出、校验结果与耗时逐条留档，与 IDE 里看到的一致。',
   },
+  // 同 'ai-generated'：定制宿主的案例名只在这一页的描述里，它同时是搜索摘要
   'fragment-dashboard': {
     title: '片段拼装 · 分析看板',
-    description: '用片段工具拼出一个非 CRUD 的分析页：宿主取数、原生图表与弹窗如何各归其位。',
+    description: '用片段工具拼出一个非 CRUD 的分析页（片段拼装仪表盘）：宿主取数、原生图表与弹窗如何各归其位。',
   },
   'native-vs-ai': {
     title: '原生 · 手写 · AI 三栏对照',

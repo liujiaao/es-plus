@@ -9,13 +9,14 @@
  * 两段式装载，别合并：
  *   · 第一段（`ensureIndex`）等**指南 / 固定页 / 案例**就绪就返回 —— 用户在输入框里
  *     打完第一个词时索引已经能用；
- *   · 第二段（示例索引）会拖进两个 `.data.ts`（103 个示例 SFC 原文，约 680 KB），
- *     放后台跑；回来之后 `onIndexUpdate` 通知调用方把当前查询重跑一遍。
- *   合并会让首屏搜索体验多等 680 KB。
+ *   · 第二段（示例索引）会拖进两个 `.data.ts`（103 个示例 SFC 原文，约 680 KB）
+ *     与画廊 registry（每个 AI 案例的 schema/mock/config），放后台跑；回来之后
+ *     `onIndexUpdate` 通知调用方把当前查询重跑一遍。合并会让首屏搜索体验多等一截。
  */
 import Fuse from 'fuse.js'
 import { docsData } from '@/docs/doc-registry'
 import {
+  buildAiCaseEntries,
   buildCaseEntries,
   buildExampleEntries,
   buildFixedEntries,
@@ -69,13 +70,19 @@ function loadExampleIndex(): Promise<void> {
   if (examplePromise) return examplePromise
   examplePromise = (async () => {
     try {
-      const [{ docsData: componentDocs }, { docsData: advancedDocs }] = await Promise.all([
+      const [{ docsData: componentDocs }, { docsData: advancedDocs }, { AI_CASES }] = await Promise.all([
         import('@/views/component-doc.data'),
         import('@/views/advanced-doc.data'),
+        // 画廊 registry 带着全部案例的 schema / mock / 冻结配置，只能按需取 ——
+        // 索引里真正要用的只有 id / title / meta.nl / tokens 四个字段
+        import('@/cases/generated/registry.js'),
       ])
       exampleEntries = [
         ...buildExampleEntries(componentDocs, '/components', 'component'),
         ...buildExampleEntries(advancedDocs, '/advanced', 'advanced'),
+        // 与 `buildCaseEntries` 同一条取舍：AI 案例只有中文单源，英文站不收 ——
+        // 否则搜英文词会冒出一堆标题与正文都是中文的「无关」结果
+        ...(builtLang === 'en-US' ? [] : buildAiCaseEntries(AI_CASES)),
       ]
       if (fuse) buildFuse()
       notify()
