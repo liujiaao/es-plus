@@ -132,6 +132,11 @@ export default defineConfig(({ mode }) => {
             // 4.2MB 且从未打开过编辑器**（实测 network：monaco-*.js 4205KB + CSS 143KB）。
             // 单独拆出来后，入口只静态依赖 preload chunk，monaco 回到 Playground 的懒加载里。
             if (id.includes('vite/preload-helper')) return 'preload'
+            // vxe 的**样式表**不能跟着 vxe 的 JS 走。CSS 模块被分到哪个 chunk，
+            // 浏览器就得先加载那个 chunk 才能应用它 —— 于是入口里出现
+            // `import "./vxe-8a867a8a.js"`，344KB 的 vxe JS 又回到首屏（实测 993.7 →
+            // 994.6，按需加载一点没省下）。样式留在入口（index CSS），JS 才能按需。
+            if (/\.css$/.test(id) && id.includes('vxe')) return
             if (!id.includes('node_modules')) return
             // 按**目录**匹配而不是子串：`@guolao/vue-monaco-editor` 的 id 里也含
             // "monaco-editor"，按子串判会把它一起塞进 monaco chunk。

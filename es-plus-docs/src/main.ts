@@ -7,8 +7,10 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'vxe-pc-ui/lib/style.css'
 import 'vxe-table/dist/style.css'
-import VxeUI from 'vxe-pc-ui'
-import VxeTable from 'vxe-table'
+// vxe 的**插件**不在这里静态引入：全量注册是 344.2 KB gz，只有 /advanced/vxe-table 与
+// /ai-gallery/<id> 真的会渲染 engine:'vxe'。按需加载见 utils/vxe-loader.ts（下面的 router 门）。
+// 样式保留在首屏：它是 CSS，不进 JS 预算；挪进懒加载块会让注入顺序排到站点覆盖规则之后，
+// 收益与风险不对等。
 import router from './router'
 import App from './App.vue'
 // 设计 token 单一真源（docs/tokens/design-tokens.css → scripts/sync-tokens.mjs 分发）
@@ -33,6 +35,7 @@ import '@/styles/index.scss'
 import '@es-plus/style.css'
 
 import { installAppPlugins } from '@/utils/install-app-plugins'
+import { ensureVxe, needsVxe } from '@/utils/vxe-loader'
 
 const app = createApp(App)
 
@@ -57,8 +60,19 @@ app.use(head)
 
 app.use(createPinia())
 app.use(router)
-app.use(VxeUI)
-app.use(VxeTable)
+
+// vxe 引擎按需加载（路线图 3.6）：导航到真的要渲染 engine:'vxe' 的页面前再拉那 344 KB。
+// 守在 beforeEach 而不是组件里，是因为 app.use 必须在子组件创建**之前**完成——晚一步
+// EsTable 会拿着未注册的引擎渲染「未安装 vxe」的提示。
+router.beforeEach(async (to) => {
+  if (!needsVxe(to)) return
+  try {
+    await ensureVxe(app)
+  } catch (err) {
+    // 产物缺块 / 离线：照常进页面，让 EsTable 的既有提示去说这件事，别白屏
+    console.error('[vxe] 按需加载失败，engine:"vxe" 的表格将显示未安装提示', err)
+  }
+})
 
 // Element Plus + icons + ES-Plus + i18n — shared with in-doc demo sub-apps.
 // i18n 由 installAppPlugins 统一安装，main.ts 不再重复 app.use(i18n)（否则 "Plugin has already been applied"）

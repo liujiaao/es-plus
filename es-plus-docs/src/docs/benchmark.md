@@ -18,23 +18,24 @@
 
 | 站点 | 首屏 JS（gzip） | 目标 | 回归线 |
 |---|---|---|---|
-| es-plus-docs（路由 `/guide/getting-started`） | **≈993 KB** | ≤ 300 KB | 1040 KB |
+| es-plus-docs（路由 `/guide/getting-started`） | **≈651 KB** | ≤ 300 KB | 690 KB |
 | es-pc（入口） | **1027.9 KB** | ≤ 400 KB | 1100 KB |
 | es-eui（入口） | **667.6 KB** | ≤ 400 KB | 720 KB |
 
-主站的数字写成「约」，是因为**这一页的正文自己也在首屏里**（见下节）：每改一次文档，它就动零点几 KB —— 这个差别小到本页每一句话的长度都能影响它。写这段话时实测在 993–995 KB 之间。
+主站的数字写成「约」，是因为**这一页的正文自己也在首屏里**（见下节）：每改一次文档，它就动零点几 KB —— 这个差别小到本页每一句话的长度都能影响它。写这段话时实测在 650–652 KB 之间。
 
 三站都还没达到目标。主站的构成（同一份产物里最大的几块）：
 
 | 块 | gzip | 是什么 |
 |---|---|---|
 | `element-plus-*.js` | 356.2 KB | Element Plus 全量注册 |
-| `vxe-*.js` | 344.2 KB | vxe-table 全量注册 |
-| `index-*.js` | 216.0 KB | 库本体、vue-i18n / router、fuse 搜索索引，以及**全部指南正文**（见下） |
-| `Doc-*.js` | 51.7 KB | 指南路由 chunk |
-| 其余（高亮器共享 chunk 等） | 24.7 KB | 已按语言裁剪 |
+| `index-*.js` | 217.2 KB | 库本体、vue-i18n / router、fuse 搜索索引，以及**全部指南正文**（见下） |
+| `Doc-*.js` | 51.9 KB | 指南路由 chunk |
+| 其余（高亮器共享 chunk 等） | 24.2 KB | 已按语言裁剪 |
 
-es-pc 的构成：antd 397.2 + vxe 344.2 + antd-icons 181.5 + index 64.4 + vue 40.6。es-eui 是 webpack 单 vendor：`chunk-vendors` 623.3 + `app` 44.4。
+vxe-table（344.2 KB）已经从首屏里拿掉了 —— 它现在只在 `/advanced/vxe-table` 与 `/ai-gallery/<id>` 两处加载，做法见下面「按需加载踩到的那个坑」。
+
+es-pc 的构成：antd 397.2 + vxe 344.2 + antd-icons 181.5 + index 64.4 + vue 40.6。es-eui 是 webpack 单 vendor：`chunk-vendors` 623.3 + `app` 44.4。这两站的 vxe / antd 仍是全量注册，属于同一个未完成项。
 
 ### 那 216 KB 里为什么有全部指南正文
 
@@ -42,16 +43,26 @@ es-pc 的构成：antd 397.2 + vxe 344.2 + antd-icons 181.5 + index 64.4 + vue 4
 
 这是结构问题，不是这六篇写得太长。真正的修法是把正文改成按 slug 惰性加载（示例注册表已经是这个形状），搜索索引改在第一次打开搜索时才建；那会改变文档页的渲染时机与搜索的首次可用时间，需要浏览器逐页核对，因此没有混进内容批次。它列在 [路线图](/guide/roadmap) 的「正在做的事」里。
 
-### 这个数字是怎么降下来的（两笔都是源码级的错）
+### 这些数字是怎么降下来的（三笔都是源码级的错，没有一处调参）
 
-2026-10-28 同一天从 **1535.6 KB 降到 975.0 KB（−36.5%）**，没有一处调参：
+2026-10-28 同一天：**1535.6 → 975.0 → 992.9 → 650.1 KB**。
 
 1. **高亮器引的是 highlight.js 全集**（190 种语言，含 mathematica / isbl / sqf），而全部文档加起来只用 11 种。改成 `highlight.js/lib/core` + 逐个 `registerLanguage` 后，共享 chunk 从 311.4 KB 降到 24.2 KB。
-2. **指南的示例注册表两个 glob 都是 `eager: true`**，于是每篇指南 —— 哪怕正文里一个 `<demo>` 都没有 —— 都下载 103 个示例组件（约 145 KB）与它们全部源码文本（115 KB）。改成惰性 `import.meta.glob` 后这笔消失。
+2. **指南的示例注册表两个 glob 都是 `eager: true`**，于是每篇指南 —— 哪怕正文里一个 `<demo>` 都没有 —— 都下载 103 个示例组件（约 145 KB）与它们全部源码文本（115 KB）。改成惰性 `import.meta.glob` 后这笔消失。前两步合起来是 975.0。
+3. **vxe-table 与 vxe-pc-ui 在 `main.ts` 顶层全量注册**（344.2 KB），而真正渲染 `engine: 'vxe'` 的只有 `/advanced/vxe-table` 与 `/ai-gallery/<id>`。改成「路由门前动态注册」（`utils/vxe-loader.ts`）后是 650.1。
 
 随后追加的六篇指南把总数带回 992.9 KB。**同一份产物在同一天有 975.0 与 992.9 两个数**，差的就是内容本身 —— 这也是为什么本页每个数字都要带日期与口径：没有日期的体积数字，第二天就会误导人。
 
-这两条现在由**源码层守卫**（`npm run check:bundle-sources`）在合入前挡：断言注册语言数 ≤ 40、每一条 fence 语言都点得亮、注册表里不出现 `eager: true`。产物层由 `npm run check:bundle-budget` 称重。只称产物是事后才发现，只看源码量不出「哪一块变重了」，两条都要。
+### 按需加载踩到的那个坑：CSS 会把它拽回首屏
+
+第一版的「vxe 按需」改完，产物一称——**994.6 KB，只少了 0.4 KB**，几乎等于没改。原因是 `main.ts` 里还留着两行 `import 'vxe-table/dist/style.css'`，而 `vite.config.ts` 的 `manualChunks` 按 id 里的 `vxe` 把**样式表也分进了 vxe 那个 chunk**。CSS 在哪个 chunk，浏览器就得先把那个 chunk 的 JS 拉下来才能应用它 —— 于是入口里出现了 `import "./vxe-*.js"`，344 KB 原样回到首屏。
+
+修法是把 CSS 留在入口块（`manualChunks` 里对 vxe 的 `.css` 单独放行），JS 才真的按需。这个坑**在源码层完全看不出来**：源码里没有任何一行「导入 vxe 的 JS」，浏览器照样下载它。
+
+所以判据分两层，缺一层都拦不住：
+
+- **源码层**（`npm run check:bundle-sources`）：`main.ts` 不许值导入 vxe；除 `utils/vxe-install.ts` 外没有别的文件值导入；`vxe-loader.ts` 里的路由清单要和数据对得上（哪个示例目录写了 `engine: 'vxe'`、哪个案例 JSON 用了 vxe 引擎，就必须各自有入口）。
+- **产物层**（`npm run check:bundle-budget`）：`/guide/*` 的首屏闭包里**不允许出现 `vxe-*.js`**。这条才是抓住上面那个坑的那一条 —— 我曾把它关掉重跑一遍确认它会红。
 
 ### 复现
 
@@ -67,7 +78,9 @@ node scripts/check-bundle-budget.mjs --verbose
 
 ### 还没做完的部分
 
-剩下 700 KB 是 Element Plus 与 vxe-table 各一笔全量注册。要再往下走必须改成按需引入，而它的失败模式是**页面看起来正常、某个组件突然不渲染**，必须逐页在浏览器里核对。这一项被刻意留在队列里，没有为了数字好看先合进去。
+剩下 356 KB 是 Element Plus 的全量注册（`app.use(ElementPlus)` + 全部图标）。要再往下走必须改成按需引入，而它的失败模式是**页面看起来正常、某个组件突然不渲染**，必须逐页在浏览器里核对。这一项被刻意留在队列里，没有为了数字好看先合进去。
+
+vxe 那一笔已经拿走，代价是「哪些路由需要 vxe」变成一份要维护的清单 —— 由上面的两层守卫钉住，加一个 vxe 示例却忘了改清单会直接红。
 
 ## 生成准确率
 

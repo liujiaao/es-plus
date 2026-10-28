@@ -6,7 +6,7 @@
 
 1. **可验证优先。** 一个功能合入时如果没有任何脚本能判它「坏了」，那它下一次坏掉时也没人知道。仓库现在的守卫清单比功能清单长，这是刻意的。
 2. **数字必须带口径。** 对外说的每个数字都要有来源文件、测量方法与日期。站点的数字由 `npm run check:site-claims` 与源码对账，不一致就红。
-3. **没做完的部分要写出来。** 「首屏 975 KB，目标 300 KB，还差的就是 Element Plus 与 vxe 两笔全量注册」比「性能优异」有用。
+3. **没做完的部分要写出来。** 「首屏 650 KB，目标 300 KB，还差的就是 Element Plus 一笔全量注册」比「性能优异」有用。
 
 ## 已经落地的事（可逐项验证）
 
@@ -15,7 +15,7 @@
 | 每个内容页一份静态 HTML | `npm run check:prerender` | 构建期生成 `/guide/x/`、`/components/x/`、`/advanced/x/`，深链 200，正文来自站点同一渲染器 |
 | 每页 canonical + 结构化数据 | `npm run check:site-seo`、`npm run check:page-meta` | 文章类路径式地址与 sitemap / llms / JSON-LD 四处同口径 |
 | AI 可读的文档 | `npm run check:llms` | 根目录 `llms.txt` 索引 + 每页 markdown 镜像，取自同一份源 |
-| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对构建产物称重，后者在源码层挡「换一行 import 就多 300 KB」 |
+| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对构建产物称重（含「`/guide/*` 闭包里不许出现 `vxe-*.js`」），后者在源码层挡「换一行 import 就多 300 KB」与「vxe 被引回入口」 |
 | 三站一致的动效语言 | `npm run check:motion` | 120 / 180 / 240ms 三个 token，禁 `transition: all`、禁对布局属性做过渡 |
 | 三站一致的页脚与导航 | `npm run check:site-nav`、`npm run check:nav-coverage` | 导航里的每一条都得落到真实路由，每个路由都得有入口 |
 | 生态内容（本页所在的一组） | `npm run check:nav-coverage`、`npm run check:sitemap` | FAQ、对比、基准、路线图、Vue 2 周期、贡献指南 |
@@ -28,9 +28,9 @@
 
 全站搜索索引以 `doc-registry` 为数据源，而注册表是静态导入 —— 结果是**每一篇指南的正文都在每一个 `/guide/*` 的首屏里**。本轮新增六篇内容让这一块从 198.2 KB 涨到 216.0 KB（+17.8）。修法是把正文改成按 slug 惰性加载（示例注册表已经是这个形状），搜索索引改在第一次打开搜索时才建；因为它会改变文档页的渲染时机与搜索的首次可用时间，需要浏览器逐页核对，所以没有被顺手塞进内容批次。
 
-### 2. 首屏按需引入（未完成，风险已写明）
+### 2. 首屏按需引入（vxe 已落地，Element Plus 未完成）
 
-现状约 993 KB gz（这批文档让它在 993–995 KB 之间浮动），目标 300 KB。剩下的吨位是 Element Plus（356.2 KB）与 vxe-table（344.2 KB）各一笔全量注册。改成按需引入的失败模式是**页面看起来正常、某个组件突然不渲染**，必须逐页在浏览器里核对 —— 所以它没有为了数字好看先合进去。口径见 [性能与准确率基准](/guide/benchmark)。
+现状约 650 KB gz（这批文档让它在 650–652 KB 之间浮动），目标 300 KB。vxe-table 那 344.2 KB 已经从首屏拿走：只有在 `/advanced/vxe-table` 与 `/ai-gallery/<id>` 才会注册，改的是「路由门前动态 import + 一份要和数据对得上的路由清单」。剩下的是 Element Plus（356.2 KB）全量注册，它的失败模式是**页面看起来正常、某个组件突然不渲染**，必须逐页在浏览器里核对 —— 所以它还没有为了数字好看先合进去。两笔都由 `npm run check:bundle-sources`（源码层）与 `npm run check:bundle-budget`（产物层）守着。口径见 [性能与准确率基准](/guide/benchmark)。
 
 ### 3. 渲染性能的测量装置
 

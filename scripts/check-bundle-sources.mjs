@@ -25,8 +25,12 @@
  *        · /components、/advanced 的注册表：组件 glob 不许 eager（它们渲染时同步需要
  *          源码文本，raw glob 允许 eager —— 这是已知的、待处理的另一笔账）。
  *
+ *   3. **vxe 引擎只按需注册。** 全量注册 344.2KB gz，只有 `/advanced/vxe-table` 与
+ *      `/ai-gallery/<id>` 用得到。判据是「入口不许值导入」+「清单与数据一致」两层，
+ *      细节见下面第 3 节的注释。
+ *
  * 用法：node scripts/check-bundle-sources.mjs
- * 退出码：0 = 两条判据都成立；1 = 有缺口（逐条列出文件与行号）。
+ * 退出码：0 = 三条判据都成立；1 = 有缺口（逐条列出文件与行号）。
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
@@ -236,13 +240,160 @@ function checkEagerGlobs() {
   console.log(`✅ 示例加载策略：${checked} 个 glob 已核对（指南注册表全惰性，API 页只允许 raw 文本 eager）`)
 }
 
+// ── 3. vxe 引擎的按需加载 ─────────────────────────────────────────────────
+
+/**
+ * vxe-table + vxe-pc-ui 全量注册是 344.2 KB gz。它曾经静态写在 `main.ts` 顶层，
+ * 于是**每一页**（含首页与全部指南）都先付这笔钱，而真正渲染 `engine: 'vxe'` 的只有
+ * `/advanced/vxe-table` 与 `/ai-gallery/<id>`（engine-lab 案例）。
+ *
+ * 这个块的判据分两层，缺一层就拦不住：
+ *   a. **不许退回入口**：`main.ts` 不能值导入 vxe；除 `utils/vxe-install.ts` 外没有别的
+ *      源文件值导入它（那个文件只被 `utils/vxe-loader.ts` 动态 import）。
+ *   b. **清单要与数据一致**：`vxe-loader.ts` 里的路由清单是从数据反查的 ——
+ *      `components/examples/<dir>/*.vue` 里写了 `engine: 'vxe'` 的目录、`cases/**` 里
+ *      `engine: "vxe"` 的案例，都必须对应到清单里的路由。新增一个 vxe 示例却忘了改清单，
+ *      页面会渲染出「未安装 vxe」的提示框（不是白屏，但也够难看），这里提前红。
+ *
+ * 为什么还要产物层那条（check-bundle-budget）：样式表被分到 vxe chunk 时，浏览器为了
+ * 应用 CSS 会在入口静态 import 那个 JS 块 —— 源码层一条都看不出来，实测白改（993.7 →
+ * 994.6）。两层各守一半。
+ */
+const VXE_PKGS = ['vxe-table', 'vxe-pc-ui']
+const VXE_VALUE_IMPORT = new RegExp(`^\\s*import\\s+(?!type\\b)[^'"]*from\\s+['"](${VXE_PKGS.join('|')})['"]`)
+
+/** 逐行去掉注释行：注释里写 `import VxeTable from 'vxe-table'` 是文档，不是引入 */
+function codeLines(text) {
+  return text
+    .split('\n')
+    .map((line, i) => ({ text: line, no: i + 1 }))
+    .filter(({ text }) => {
+      const t = text.trim()
+      return t && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*') && !t.startsWith('<!--')
+    })
+}
+
+function walk(dir) {
+  const out = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...walk(abs))
+    else out.push(abs)
+  }
+  return out
+}
+
+const hasVxeEngine = (node) => {
+  if (!node || typeof node !== 'object') return false
+  if (node.engine === 'vxe') return true
+  return Object.values(node).some(hasVxeEngine)
+}
+
+function checkVxeOnDemand() {
+  const before = problems.length
+  const loaderPath = join(SRC, 'utils/vxe-loader.ts')
+  const installPath = join(SRC, 'utils/vxe-install.ts')
+  const mainPath = join(SRC, 'main.ts')
+
+  // a. 谁在值导入 vxe
+  const sourceFiles = walk(SRC).filter((f) => /\.(ts|vue|mjs|js)$/.test(f))
+  for (const file of sourceFiles) {
+    for (const { text, no } of codeLines(read(file))) {
+      if (!VXE_VALUE_IMPORT.test(text)) continue
+      if (file === installPath) continue
+      fail(
+        `${rel(file)}:${no} 值导入了 vxe —— 344.2KB 会跟着它所在的路由/入口一起下载。`
+          + ' 需要注册就调 utils/vxe-loader.ts 的 ensureVxe(app)',
+      )
+    }
+  }
+  if (codeLines(read(mainPath)).some(({ text }) => VXE_VALUE_IMPORT.test(text))) {
+    fail(`${rel(mainPath)} 又把 vxe 引回入口了 —— 首屏会重新多出 344.2KB`)
+  }
+  if (!existsSync(loaderPath) || !existsSync(installPath)) {
+    fail('utils/vxe-loader.ts 与 utils/vxe-install.ts 必须同时存在（动态加载的落点）')
+    return
+  }
+
+  // b. 清单 ← 数据
+  const loader = read(loaderPath)
+  const slug = (loader.match(/advancedVxeTable:\s*'([^']+)'/) || [])[1]
+  const galleryName = (loader.match(/galleryCase:\s*'([^']+)'/) || [])[1]
+  if (!slug || !galleryName) {
+    fail(`${rel(loaderPath)} 里读不到 advancedVxeTable / galleryCase —— 清单结构变了就把这里一起改`)
+    return
+  }
+  const routerSrc = read(join(SRC, 'router/index.ts'))
+  if (!routerSrc.includes(`name: 'advanced'`)) fail('router/index.ts 里没有 name: \'advanced\' —— 清单里的 advanced 分支对不上')
+  if (!routerSrc.includes(`name: '${galleryName}'`)) {
+    fail(`router/index.ts 里没有 name: '${galleryName}' —— vxe-loader 的清单指向了一条不存在的路由`)
+  }
+
+  // 示例：哪些示例目录真的用了 vxe 引擎
+  const examplesDir = join(SRC, 'components/examples')
+  const vxeDirs = new Set()
+  for (const file of walk(examplesDir)) {
+    if (!file.endsWith('.vue')) continue
+    if (!/engine:\s*['"]vxe['"]/.test(read(file))) continue
+    vxeDirs.add(relative(examplesDir, file).split(/[\\/]/)[0])
+  }
+  if (vxeDirs.size === 0) {
+    fail('一个 engine:"vxe" 的示例都没扫到 —— 扫描规则大概率已失效（或 vxe 示例被整体删了，那就把清单一起删）')
+  }
+  const advancedData = read(join(SRC, 'views/advanced-doc.data.ts'))
+  for (const dir of vxeDirs) {
+    if (!advancedData.includes(`getComponent('${dir}/`)) {
+      fail(`components/examples/${dir} 用了 vxe，却没被 advanced-doc.data.ts 引用 —— 扫描规则可能已失效`)
+    }
+    if (dir !== slug) {
+      fail(
+        `components/examples/${dir} 用了 vxe，但 vxe-loader 只为 /advanced/${slug} 加载 vxe`
+          + ` —— /advanced/${dir} 会渲染出「未安装 vxe」的提示`,
+      )
+    }
+  }
+
+  // 案例：哪些 JSON 配置用了 vxe 引擎
+  const casesDir = join(SRC, 'cases')
+  const registryPath = join(casesDir, 'generated/registry.js')
+  const registry = existsSync(registryPath) ? read(registryPath) : ''
+  const vxeCases = []
+  for (const file of walk(casesDir)) {
+    if (!file.endsWith('.json') || /\.(story|meta)\.json$/.test(file)) continue
+    let json
+    try {
+      json = JSON.parse(read(file))
+    } catch {
+      continue
+    }
+    if (!hasVxeEngine(json)) continue
+    const id = relative(casesDir, file).split('.')[0].replace(/\\/g, '/').split('/').pop()
+    // `engine-lab.json`（渲染用）与 `engine-lab.config.json`（生成器输入）是同一条案例
+    if (vxeCases.includes(id)) continue
+    vxeCases.push(id)
+    if (!registry.includes(id)) {
+      fail(`${rel(file)} 用了 vxe 引擎，但它不在 ai-gallery 的 registry 里 —— 宿主若不渲染，清单里的 ${galleryName} 就是多余的`)
+    }
+  }
+  if (!vxeCases.length) fail('一个 engine:"vxe" 的案例 JSON 都没扫到 —— 扫描规则大概率已失效')
+  if (!loader.includes(galleryName)) fail(`${rel(loaderPath)} 里没有 ${galleryName} —— 案例宿主拿不到 vxe`)
+
+  if (problems.length > before) return
+  console.log(
+    `✅ vxe 按需加载：入口无值导入；清单 = ${vxeDirs.size} 个示例目录（/advanced/${slug}）`
+      + ` + ${vxeCases.length} 个案例（${vxeCases.join('/')} → ${galleryName}）`,
+  )
+}
+
 // ── 主流程 ─────────────────────────────────────────────────────────────────
 
 checkEagerGlobs()
+checkVxeOnDemand()
 await checkHighlight()
+
 
 if (problems.length) {
   for (const problem of problems) console.error(`❌ ${problem}`)
-  console.error('\n提示：这两条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
+  console.error('\n提示：这三条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
   process.exit(1)
 }

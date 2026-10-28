@@ -48,28 +48,34 @@ const BUDGETS = {
     // 文档路由（/guide/:name）的首屏：入口预加载 + 该路由 chunk 的静态闭包
     route: '/guide/getting-started',
     routeChunkPrefix: 'Doc-',
-    // 2026-10-28 实测 993.7 KB（入口 917.8）：element-plus 356.2 + vxe 344.2 +
-    // index 216.8（es-plus 库本体、vue-i18n/router、fuse + 全部指南正文）+ Doc 51.7 +
-    // 共享 chunk（高亮器）24.2。这个数会随文档字数浮动 —— 正文就装在 index 那个块里。
+    // 2026-10-28 实测 650.1 KB（入口 573.9）：element-plus 356.2 + index 217.2
+    // （es-plus 库本体、vue-i18n/router、fuse + 全部指南正文）+ Doc 51.9 + 共享 chunk 24.2。
+    // 这个数会随文档字数浮动 —— 正文就装在 index 那个块里。
     //
-    // 同一天先降到 975.0，两笔都来自「源码层就错了」，不是调参：
+    // 同一天的前两步，三笔都来自「源码层就错了」，不是调参：
     //   · 高亮器引入的是 highlight.js 全集（190 种语言，含 mathematica/isbl/sqf），
     //     文档只用得上 11 种 —— 共享 chunk 311.4 → 24.2（utils/highlight.mjs）；
     //   · 指南的示例注册表两个 glob 都是 eager: true，于是 103 个示例组件（~145KB）
     //     与它们的源码文本（115KB）跟着每一篇指南下载，哪怕正文里一个 <demo> 都没有
-    //     （components/doc/example-registry.ts 改成惰性）。
+    //     （components/doc/example-registry.ts 改成惰性）：1535.6 → 975.0；
+    //   · vxe-table + vxe-pc-ui 全量注册（344.2）改成按需（utils/vxe-loader.ts）：
+    //     994.6 → 650.1。这里有个只有称产物才抓得到的坑 —— **样式表不能跟着 vxe 的
+    //     JS 分到同一个 chunk**：CSS 在哪个 chunk，浏览器就得先加载那个 JS 块，
+    //     入口于是出现 `import "./vxe-*.js"`，改了半天一点没省（994.6 就是这么来的）。
+    //     vite.config.ts 的 manualChunks 因此单独放行 vxe 的 CSS。
     // 随后加入六篇生态内容（FAQ/对比/基准/路线图/Vue 2 周期/贡献），index 从 198.2
     // 涨到 216.0（+17.8）：**指南正文是搜索索引的数据源**（utils/search-index.ts
     // 静态 import doc-registry），所以每多一篇指南，所有 /guide/* 的首屏都长一截。
-    // 这笔是结构性的，不是这六篇写得太长：真正的修法是把正文改成按 slug 惰性加载
-    // （示例注册表已经是这个形状），搜索索引随第一次开搜索再建。那件事会改变
-    // 文档页的渲染时机与搜索的首次可用时间，需要浏览器逐页核对，因此先记账、不混进
-    // 内容批次。ceiling 按「实测 + 约 5%（再容六到七篇指南）」取 1040。
+    // 这笔是结构性的：修法是把正文改成按 slug 惰性加载，搜索索引随第一次开搜索再建。
     //
-    // 剩下的 700KB 是 element-plus 356 + vxe 344：两者都在入口里全量注册，
-    // 要再往下走必须换成按需引入（有视觉回归风险，需要浏览器逐页核对）。
-    ceiling: 1040,
+    // 收紧到 690 = 实测 650.1 + 约 6%（再容六到七篇指南）：抬线要写理由，压线要靠真做小。
+    // 剩下的大头是 element-plus 356.2 的全量注册（四个渲染端组件 + 全部图标）。
+    ceiling: 690,
     target: 300,
+    // 首屏闭包里不该出现的块：vxe 引擎只在 /advanced/vxe-table 与 /ai-gallery/<id> 注册
+    // （344.2KB）。源码层守卫（check-bundle-sources）看得出「谁 import 了它」，看不出
+    // 「谁为了加载 CSS 顺手把它拉进来」—— 那一条只有称产物才抓得到。
+    forbidFirstLoad: /(^|\/)vxe-[\w]+\.js$/,
   },
   'es-pc': {
     route: '/quickstart',
@@ -165,6 +171,23 @@ function measure(site, budget) {
   const entryGz = entryFiles.reduce((sum, file) => sum + gzSize(file), 0)
   const preloaded = entries.map((href) => href.split('/').pop())
   const forbidden = preloaded.filter((name) => FORBIDDEN_PRELOAD.test(name))
+  // 站点自带的「首屏不该有」清单（如 es-plus-docs 的 vxe）：查的是整个首屏闭包，
+  // 不只是 index.html 里显式 preload 的那几个 —— 被 CSS 拖进来的块不会出现在 preload 里
+  const firstLoadFiles = (() => {
+    if (!budget.routeChunkPrefix) return entryFiles
+    const assets = join(siteDir, DIST, 'assets')
+    const seeds = readdirSync(assets)
+      .filter((name) => name.startsWith(budget.routeChunkPrefix) && name.endsWith('.js'))
+      .map((name) => `/assets/${name}`)
+    const merged = new Set(entryFiles)
+    for (const file of staticClosure(siteDir, seeds)) merged.add(file)
+    return [...merged]
+  })()
+  const forbiddenFirstLoad = budget.forbidFirstLoad
+    ? firstLoadFiles
+        .map((file) => relative(join(siteDir, DIST), file).replace(/\\/g, '/'))
+        .filter((name) => budget.forbidFirstLoad.test(name))
+    : []
 
   // 路由 chunk：按文件名前缀找（产物名形如 `Doc-d58f4f87.js`）
   let routeFiles = []
@@ -196,6 +219,7 @@ function measure(site, budget) {
       .slice(0, 8),
     preloaded,
     forbidden,
+    forbiddenFirstLoad,
     budget,
   }
 }
@@ -226,6 +250,14 @@ function report(result) {
   let failed = false
   if (result.forbidden.length) {
     console.error(`❌ ${site}: monaco / worker 出现在首屏预加载里（${result.forbidden.join(', ')}）—— 它必须留懒加载`)
+    failed = true
+  }
+  if (result.forbiddenFirstLoad.length) {
+    console.error(
+      `❌ ${site}: 首屏闭包里出现了不该有的块（${result.forbiddenFirstLoad.join(', ')}）`
+        + ' —— vxe 引擎只该在 /advanced/vxe-table 与 /ai-gallery/<id> 加载；'
+        + ' 若是样式表把它拖进来的，改 vite.config.ts 的 manualChunks（CSS 别分给 vxe chunk）',
+    )
     failed = true
   }
   if (firstLoad > budget.ceiling) {
@@ -266,8 +298,8 @@ function main() {
       // 目标未达成不是回归，但必须被看见 —— 一行「✅」会把 4 倍的差距藏起来
       console.log(
         `\n⚠️  首屏预算目标未达成：${gaps.map((r) => `${r.site} ${r.routeGz || r.entryGz} KB（目标 ${r.budget.target} KB）`).join('；')}`
-          + '\n   这不是回归（回归线未破），是已知的未完成项。主站剩下的吨位就是 element-plus 与 vxe'
-          + '\n   两笔全量注册（各 350 KB 上下），要拆成按需引入；es-pc / es-eui 同理（antd / Element UI 全量）。',
+          + '\n   这不是回归（回归线未破），是已知的未完成项：es-plus-docs 的大头是 element-plus'
+          + '\n   全量注册（356.2），es-pc / es-eui 同理（antd / Element UI 全量）。vxe 已按需。',
       )
     }
   }
