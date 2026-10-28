@@ -42,7 +42,7 @@
 
 ## 明确不做的事
 
-- **不做低代码平台**。没有可视化搭建器，没有服务端渲染引擎。JSON 描述 CRUD 页面，渲染在你自己的 Vue 工程里。
+- **不做低代码平台**。没有可视化搭建器，没有服务端渲染引擎。JSON 描述 CRUD 页面，渲染在你自己的 Vue 工程里。与 amis 这类「整页 DSL + 平台」的边界见 [与其它方案对比](/guide/comparison)。
 - **不引入第二套组件体系**。渲染端就是 Element Plus / Element UI / Ant Design Vue —— 这是「同一份配置三端可用」成立的前提，换掉它等于换掉产品。
 - **不承诺未实测的性能数字**。文档里的每个性能说法都要能指向一条命令。
 - **不接任意布局编排**。仪表盘、大屏不在 schema 的表达范围里，也不打算扩进去。
@@ -60,6 +60,8 @@
 | 冻结 | `es-plus-ui`（`packages/es-plus-legacy`） | 已被 changesets 的 `ignore` 冻结：不再升版、不再发布 |
 
 **三端渲染器的版本号不同不是 bug**：`@es-plus/vue3` 与 `@es-plus/vue2` 的活跃度本就不同，强行同步版本号只会让「这个版本号意味着什么」变得不可读。跨端契约的兼容性由 `packages/shared/src/contract.ts` 与 `npm run check:schema` 守，不由版本号暗示。
+
+Vue 2 端的支持期限、代价与迁移时机单独成页：[Vue 2 支持周期](/guide/vue2-eol)。
 
 ### 版本号怎么定
 
