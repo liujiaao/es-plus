@@ -463,17 +463,22 @@ onBeforeUnmount(() => {
 }
 
 .feature-info {
+  /* 卡片宽度由 auto-fit 决定，可能窄到 240px；说明里常有 toolbarBtns/operationColumn
+     这种没有空格的长标识符，不设 min-width:0 + anywhere 就会顶破卡片右边界。 */
+  min-width: 0;
+
   h4 {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 6px;
     color: var(--text-color-primary);
   }
-  
+
   p {
     font-size: 14px;
     color: var(--text-color-secondary);
     line-height: 1.5;
+    overflow-wrap: anywhere;
   }
 }
 

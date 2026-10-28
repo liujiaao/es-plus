@@ -20,6 +20,14 @@
             schema（0 个函数），请求与权限由宿主注入
           </span>
         </span>
+        <img
+          class="flagship-cta-shot"
+          src="/product/docs-flagship-approval-light.png"
+          alt="合同审批工作台实拍：查询区、跨页勾选的表格与行内审批按钮"
+          width="1600"
+          height="1000"
+          loading="lazy"
+        />
         <span class="flagship-cta-arrow">→</span>
       </router-link>
 
@@ -34,6 +42,14 @@
             —— 模型只写 schema，宿主只注入请求与权限
           </span>
         </span>
+        <img
+          class="flagship-cta-shot"
+          src="/product/docs-ai-generated-light.png"
+          alt="AI 生成页实拍：没有手写代码的采购申请审批表格与查询区"
+          width="1440"
+          height="900"
+          loading="lazy"
+        />
         <span class="flagship-cta-arrow">→</span>
       </router-link>
 
@@ -335,6 +351,28 @@ usePageMeta('cases')
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* 案例卡缩略图：真实截图（docs/product/），裁掉下半屏只留能看到界面结构的上半部分。
+   照片式裁切比「示意图」诚实 —— 它没法为了好看而虚构一个不存在的界面。 */
+.flagship-cta-shot {
+  flex: none;
+  width: 168px;
+  /* height 必须显式 auto：<img width height> 会变成 CSS 的等价声明，
+     不写 auto 时高度就锁在上面的 900px（缩略图被拉成一竖条） */
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top left;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 8px;
+  background: var(--bg-color);
+}
+
+@media (max-width: 768px) {
+  .flagship-cta-shot {
+    display: none;
   }
 }
 

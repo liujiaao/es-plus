@@ -9,12 +9,16 @@
     <!-- 顶部导航栏 -->
     <header class="header">
       <div class="container">
-        <h1 class="logo">
+        <!-- 站点标志不是标题：此前这里是 <h1>，于是每一页的 H1 都是「ESES-Plus」
+             （标志 + 品牌名），真正的页面标题退成二级。读屏用户从大纲里看到的
+             是一串「ESES-Plus」，SEO 的标题权重也落在品牌名上。改为 div，
+             页面自己的 <h1> 才是大纲的第一个标题（T5「H1 = 用户任务」的前提）。 -->
+        <div class="logo">
           <router-link to="/">
             <span class="logo-img">ES</span>
             <span class="logo-text">ES-Plus</span>
           </router-link>
-        </h1>
+        </div>
         <!-- 窄屏导航开关：桌面隐藏，<769px 时把 .nav 变成下拉面板 -->
         <button
           class="nav-toggle"

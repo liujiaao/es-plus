@@ -1,0 +1,156 @@
+{
+  "$comment": "产品实拍单源（路线图 2.2）。这里的每一条都是一张真实界面截图：由 scripts/gen-product-shots.mjs 用无头浏览器打开三站页面现拍，不是设计稿、不是示意画。图片与清单一起由 scripts/sync-product.mjs 分发到三站 public/product/，check:product-assets 校验尺寸、字节一致与引用完整。改页面后重拍：node scripts/gen-product-shots.mjs && npm run product:sync。单条可用 viewport 覆盖全局视口（宽表页同理保持 16:10）。",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "shots": [
+    {
+      "id": "docs-home-light",
+      "site": "es-plus-docs",
+      "route": "/",
+      "theme": "light",
+      "title": "首页首屏",
+      "caption": "价值主张 + 两个主 CTA + 右侧「改三个字段，三端同时变」的实时预览"
+    },
+    {
+      "id": "docs-home-dark",
+      "site": "es-plus-docs",
+      "route": "/",
+      "theme": "dark",
+      "title": "首页首屏（深色）",
+      "caption": "同一页的深色模式：正文、代码块、组件演示一起跟随，不是只换外壳"
+    },
+    {
+      "id": "docs-cases-light",
+      "site": "es-plus-docs",
+      "route": "/cases",
+      "theme": "light",
+      "title": "核心案例总览",
+      "caption": "按 L1–L5 梯度组织的案例入口：旗舰案例、AI 生成、片段拼装、三栏对照"
+    },
+    {
+      "id": "docs-cases-dark",
+      "site": "es-plus-docs",
+      "route": "/cases",
+      "theme": "dark",
+      "title": "核心案例总览（深色）",
+      "caption": "案例页同样有深色覆盖 —— 营销页也不能只在浅色下成立"
+    },
+    {
+      "id": "docs-flagship-approval-light",
+      "site": "es-plus-docs",
+      "route": "/flagship-approval",
+      "theme": "light",
+      "viewport": { "width": 1600, "height": 1000 },
+      "title": "旗舰案例 · 合同审批工作台",
+      "caption": "一份 196 行纯 JSON 驱动的整页：查询联动、跨页勾选、行级权限、审批弹窗"
+    },
+    {
+      "id": "docs-flagship-approval-dark",
+      "site": "es-plus-docs",
+      "route": "/flagship-approval",
+      "theme": "dark",
+      "title": "旗舰案例（深色）",
+      "caption": "深色下的同一份 schema：表格、弹窗、标签色都走 token，没有硬编码白底"
+    },
+    {
+      "id": "docs-ai-generated-light",
+      "site": "es-plus-docs",
+      "route": "/ai-generated",
+      "theme": "light",
+      "title": "AI 生成 · 一句话成页",
+      "caption": "模型只写 JSON（0 个函数），请求与权限由宿主注入；下方是方法与实测数据"
+    },
+    {
+      "id": "docs-ai-generated-dark",
+      "site": "es-plus-docs",
+      "route": "/ai-generated",
+      "theme": "dark",
+      "title": "AI 生成（深色）",
+      "caption": "同一页深色：条件必填、码值标签、行按钮权限都还在"
+    },
+    {
+      "id": "docs-es-form-light",
+      "site": "es-plus-docs",
+      "route": "/components/es-form",
+      "theme": "light",
+      "title": "EsForm 高级表单",
+      "caption": "字段联动、条件必填、校验规则都由配置描述；示例可实时编辑"
+    },
+    {
+      "id": "docs-es-form-dark",
+      "site": "es-plus-docs",
+      "route": "/components/es-form",
+      "theme": "dark",
+      "title": "EsForm（深色）",
+      "caption": "组件演示跟随站点主题，不需要为深色另写一套示例"
+    },
+    {
+      "id": "docs-es-table-light",
+      "site": "es-plus-docs",
+      "route": "/components/es-table",
+      "theme": "light",
+      "title": "EsTable 高级表格",
+      "caption": "列配置、操作列、勾选与分页契约；表格与服务端协议解耦"
+    },
+    {
+      "id": "docs-es-table-dark",
+      "site": "es-plus-docs",
+      "route": "/components/es-table",
+      "theme": "dark",
+      "title": "EsTable（深色）",
+      "caption": "vxe 的暗色变量挂在根元素上，表格与站点一起切换"
+    },
+    {
+      "id": "docs-es-crud-page-light",
+      "site": "es-plus-docs",
+      "route": "/components/es-crud-page",
+      "theme": "light",
+      "title": "EsCrudPage：schema 驱动整页",
+      "caption": "查询区、工具栏、表格、弹窗、分页全部来自一份 CrudPageSchema"
+    },
+    {
+      "id": "docs-es-crud-page-dark",
+      "site": "es-plus-docs",
+      "route": "/components/es-crud-page",
+      "theme": "dark",
+      "title": "EsCrudPage（深色）",
+      "caption": "同一份 schema 在深色下的渲染结果"
+    },
+    {
+      "id": "docs-playground-light",
+      "site": "es-plus-docs",
+      "route": "/playground",
+      "theme": "light",
+      "title": "Playground",
+      "caption": "改 schema 立刻看渲染，产物可复制回项目"
+    },
+    {
+      "id": "docs-playground-dark",
+      "site": "es-plus-docs",
+      "route": "/playground",
+      "theme": "dark",
+      "title": "Playground（深色）",
+      "caption": "编辑器与预览一起切到深色"
+    },
+    {
+      "id": "pc-flagship-approval-light",
+      "site": "es-pc",
+      "route": "/flagship-approval",
+      "theme": "light",
+      "viewport": { "width": 1800, "height": 1125 },
+      "title": "旗舰案例 · Ant Design Vue 端",
+      "caption": "同一份 schema 换整套组件库渲染：表格、弹窗、按钮都来自 antdv"
+    },
+    {
+      "id": "eui-flagship-approval-light",
+      "site": "es-eui",
+      "route": "/flagship-approval",
+      "theme": "light",
+      "viewport": { "width": 1600, "height": 1000 },
+      "title": "旗舰案例 · Vue 2 + Element UI 端",
+      "caption": "同一份 schema 在 Vue 2.6 / Element UI 下的渲染结果"
+    }
+  ]
+}

@@ -123,6 +123,59 @@
     <!-- AI Live Demo (moved up — let users feel the value first) -->
     <AiLiveDemo />
 
+    <!-- 产品实拍（路线图 2.2）：8 个核心页面各一张浅色 + 一张深色。
+         图不是设计稿、也不是示意画 —— 由 scripts/gen-product-shots.mjs 对着
+         跑起来的页面现拍，清单是 docs/product/shots.json（三站同一份字节）。
+         深色不是另画的一套：同一页切主题再拍。 -->
+    <section class="shots-section">
+      <h2 class="section-title">产品实拍 · 核心页面</h2>
+      <p class="section-subtitle">
+        下面的图都由无头浏览器对着真实页面拍摄（16:10 视口，无修饰）。切到深色看同一页的深色覆盖 ——
+        正文、代码块、组件演示一起跟随，不是只换外壳。
+      </p>
+
+      <!-- 主题开关跟标题走、不跟标签走：8 个页签在 1150px 下会折行，
+           开关留在标签行末尾就会被甩到第二行最右边，看着像另一组东西。 -->
+      <button
+        class="shots-theme"
+        type="button"
+        :aria-pressed="shotDark"
+        @click="shotDark = !shotDark"
+      >
+        {{ shotDark ? '看浅色' : '看深色' }}
+      </button>
+
+      <!-- 用「一组切换按钮」而不是 tablist：真正的 tab 语义要求方向键换页 + aria-controls
+           指向各自的 tabpanel，这里只有一张图、没有面板，套上 role=tab 就是半成品模式。 -->
+      <div class="shots-tabs" role="group" aria-label="核心页面">
+        <button
+          v-for="page in shotPages"
+          :key="page.route"
+          class="shots-tab"
+          type="button"
+          :aria-pressed="shotPage === page.route"
+          :class="{ active: shotPage === page.route }"
+          @click="shotPage = page.route"
+        >
+          {{ page.title }}
+        </button>
+      </div>
+
+      <figure class="shots-figure">
+        <img
+          :src="currentShotSrc"
+          :alt="`${currentShot.title}：${currentShot.caption}`"
+          :width="currentViewport.width"
+          :height="currentViewport.height"
+          loading="lazy"
+        />
+        <figcaption>
+          <strong>{{ currentShot.title }}</strong>
+          <span>{{ currentShot.caption }}</span>
+        </figcaption>
+      </figure>
+    </section>
+
     <!-- Features Section -->
     <div class="features-section">
       <h2 class="section-title">{{ t('home.featuresTitle') }}</h2>
@@ -257,7 +310,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useHead } from '@unhead/vue'
@@ -271,8 +324,35 @@ import CodeDiff from '@/components/doc/CodeDiff.vue'
 import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
 // 首屏「改配置 → 三端变」小部件：真跑生成器，不是截图（路线图 2.3）
 import HeroTriRender from '@/components/home/HeroTriRender.vue'
+// 产品实拍清单：由 scripts/sync-product.mjs 从 docs/product/shots.json 分发，禁止手改
+import shotsManifest from '@/product/shots.json'
 
 const { t, locale } = useI18n()
+
+// ── 产品实拍：清单里只取本站（es-plus-docs）的核心页面，按路由分组，浅/深各一张 ──
+const shotsViewport = shotsManifest.viewport
+const docsShots = computed(() => shotsManifest.shots.filter((s) => s.site === 'es-plus-docs'))
+// 路由顺序由清单决定（首页 → 案例 → 旗舰 → AI → 组件 …），不在这里另排一遍
+const shotPages = computed(() => {
+  const seen = new Map()
+  for (const s of docsShots.value) {
+    if (!seen.has(s.route)) seen.set(s.route, { route: s.route, title: s.title.replace('（深色）', '') })
+  }
+  return [...seen.values()]
+})
+const shotPage = ref(shotPages.value[0]?.route || '/')
+const shotDark = ref(false)
+const currentShot = computed(() => {
+  const theme = shotDark.value ? 'dark' : 'light'
+  const inPage = docsShots.value.filter((s) => s.route === shotPage.value)
+  // 清单缺一张时退回浅色，不让页面出现破图
+  return inPage.find((s) => s.theme === theme) || inPage[0]
+})
+// 清单里的 file 是可选的（默认 docs/product/<id>.png），页面不能假设它存在；
+// 分发到站点后路径前缀换成 public 的 /product/
+const currentShotSrc = computed(() => `/${(currentShot.value.file || `docs/product/${currentShot.value.id}.png`).replace(/^docs\//, '')}`)
+// 每张图可以有自己的视口（宽表页更宽）：写死全局视口会让旗舰页那张图的占位比例不对
+const currentViewport = computed(() => currentShot.value.viewport || shotsViewport)
 
 // 三站对齐的三个可验证承诺，按当前语言取文案
 const promises = computed(() => {
@@ -1216,6 +1296,106 @@ const goToAiCrud = () => {
 
   .hero-stats {
     gap: 16px 24px;
+  }
+}
+
+/* 产品实拍（路线图 2.2）：页签选页面，右侧切浅/深。图不加花哨边框 ——
+   实拍图本身就是证据，装饰只会让人怀疑它是不是画的。 */
+.shots-section {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 24px 16px;
+}
+
+.shots-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 16px;
+}
+
+.shots-tab,
+.shots-theme {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color-lighter);
+  background: var(--bg-color);
+  color: var(--text-color-regular);
+  font-size: 14px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition:
+    color var(--es-duration-fast) var(--es-ease),
+    border-color var(--es-duration-fast) var(--es-ease),
+    background-color var(--es-duration-fast) var(--es-ease);
+}
+
+.shots-tab:hover,
+.shots-theme:hover {
+  border-color: var(--es-brand-primary);
+  color: var(--es-brand-primary);
+}
+
+.shots-tab.active {
+  background: var(--es-brand-primary);
+  border-color: var(--es-brand-primary);
+  color: #fff;
+}
+
+/* 与居中的标题同一行，贴右：标题居中的版式里，按钮放右边缘才不会挤在正文里 */
+.shots-theme {
+  position: absolute;
+  top: 68px;
+  right: 24px;
+}
+
+/* 窄屏标题会换行、副标题占满整行，这时改成流内元素（DOM 里在页签之前） */
+@media (max-width: 768px) {
+  .shots-theme {
+    position: static;
+    margin-bottom: 12px;
+  }
+}
+
+.shots-figure {
+  margin: 0;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-color);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.shots-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.shots-figure figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color-lighter);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color-secondary);
+}
+
+.shots-figure figcaption strong {
+  color: var(--text-color-primary);
+}
+
+@media (max-width: 768px) {
+  .shots-section {
+    padding: 40px 16px 8px;
+  }
+
+  .shots-theme {
+    margin-left: 0;
   }
 }
 </style>

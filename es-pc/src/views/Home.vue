@@ -1,31 +1,51 @@
 <template>
   <div class="home-page">
     <div class="hero">
-      <!-- H1 = 品牌 + 定位语，与主文档站 / Vue2 站同构。
-           此前 H1 只有定位语，英文口号另起一行 —— 中文页面混排英文主张。 -->
-      <h1 class="hero-title">
-        {{ brand.name }}
-        <span class="hero-title-sub">{{ brand.positioning }}</span>
-      </h1>
-      <p class="hero-desc">
-        {{ brand.slogan.subtitle }}
-        <br />
-        <!-- 此前写「跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用」—— 把
-             两个 UI 库与两个 Vue 版本并列成四件事，容易被读成「四个框架」。实际是
-             三个渲染端：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue。 -->
-        同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue 三端复用。
-      </p>
-      <div class="hero-renderer">
-        <span class="renderer-badge">本站渲染器：Ant Design Vue</span>
+      <div class="hero-copy">
+        <!-- H1 = 品牌 + 定位语，与主文档站 / Vue2 站同构。
+             此前 H1 只有定位语，英文口号另起一行 —— 中文页面混排英文主张。 -->
+        <h1 class="hero-title">
+          {{ brand.name }}
+          <span class="hero-title-sub">{{ brand.positioning }}</span>
+        </h1>
+        <p class="hero-desc">
+          {{ brand.slogan.subtitle }}
+          <br />
+          <!-- 此前写「跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用」—— 把
+               两个 UI 库与两个 Vue 版本并列成四件事，容易被读成「四个框架」。实际是
+               三个渲染端：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue。 -->
+          同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue 三端复用。
+        </p>
+        <div class="hero-renderer">
+          <span class="renderer-badge">本站渲染器：Ant Design Vue</span>
+        </div>
+        <a-space :size="16">
+          <a-button type="primary" size="large" @click="$router.push('/guide')">
+            <RocketOutlined /> 快速上手
+          </a-button>
+          <a-button size="large" @click="$router.push('/es-form')">
+            <ThunderboltOutlined /> 浏览组件
+          </a-button>
+        </a-space>
       </div>
-      <a-space :size="16">
-        <a-button type="primary" size="large" @click="$router.push('/guide')">
-          <RocketOutlined /> 快速上手
-        </a-button>
-        <a-button size="large" @click="$router.push('/es-form')">
-          <ThunderboltOutlined /> 浏览组件
-        </a-button>
-      </a-space>
+
+      <!-- 产品实拍（路线图 2.1 / 2.2）：首屏右侧是本站**真实渲染**的旗舰案例，
+           不是插画、不是另一端的截图。图由 scripts/gen-product-shots.mjs 现拍，
+           三站同一份字节（npm run product:sync），check:product-assets 守住尺寸与引用。 -->
+      <figure class="hero-shot">
+        <img
+          src="/product/pc-flagship-approval-light.png"
+          alt="Ant Design Vue 渲染端实拍：合同审批工作台的查询区、数据表格与行内审批按钮"
+          width="1800"
+          height="1125"
+          loading="eager"
+        />
+        <figcaption>
+          本站渲染端实拍 ·
+          <router-link to="/flagship-approval">合同审批工作台</router-link>
+          —— 一份纯 JSON，0 个函数
+        </figcaption>
+      </figure>
     </div>
 
     <!-- 三个可验证承诺（文案单一真源 docs/brand/slogan.json） -->
@@ -221,9 +241,63 @@ const techs = [
 </script>
 
 <style scoped>
+/* 首屏两列：左「价值 + 主 CTA」，右「产品实拍」（路线图 2.1 的 T1 结构）。
+   窄屏回落成单列、居中 —— 图仍在首屏内，只是排到文案下面。 */
 .hero {
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: 48px;
+  text-align: left;
   padding: 48px 0 32px;
+}
+
+.hero-copy {
+  min-width: 0;
+}
+
+.hero-shot {
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+}
+
+.hero-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hero-shot figcaption {
+  padding: 10px 14px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #666;
+}
+
+.hero-shot figcaption a {
+  color: var(--es-brand-primary);
+  text-decoration: none;
+}
+
+.hero-shot figcaption a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1023px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    text-align: center;
+  }
+
+  .hero-desc {
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .hero-title {
@@ -270,8 +344,6 @@ const techs = [
   color: #666;
   margin-bottom: 32px;
   max-width: 640px;
-  margin-left: auto;
-  margin-right: auto;
   line-height: 1.8;
 }
 

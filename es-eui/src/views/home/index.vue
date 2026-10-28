@@ -18,83 +18,102 @@
       
       <div class="container">
         <div class="hero-content">
-          <!-- Logo 动画 -->
-          <div class="hero-logo">
-            <div class="logo-icon">
-              <span class="logo-text">ES</span>
+          <div class="hero-copy">
+            <!-- Logo 动画 -->
+            <div class="hero-logo">
+              <div class="logo-icon">
+                <span class="logo-text">ES</span>
+              </div>
             </div>
-          </div>
-          
-          <!-- 主标题：品牌 + 定位语，与主文档站 / AntDV 站同构 -->
-          <h1 class="hero-title">
-            <span class="gradient-text">{{ brand.name }}</span>
-            <span class="hero-title-sub">{{ brand.positioning }}</span>
-          </h1>
 
-          <!-- 副标题写本站身份：三站 H1 一致，差异在渲染端 -->
-          <p class="hero-desc">
-            <span class="typing-text">Vue 2 + Element UI 渲染端</span>
-          </p>
+            <!-- 主标题：品牌 + 定位语，与主文档站 / AntDV 站同构 -->
+            <h1 class="hero-title">
+              <span class="gradient-text">{{ brand.name }}</span>
+              <span class="hero-title-sub">{{ brand.positioning }}</span>
+            </h1>
 
-          <!-- 描述 -->
-          <p class="hero-subdesc">
-            一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译
-          </p>
-          
-          <!-- 统计信息 —— 三个数字都是可核对的事实：
-               渲染端数取自三站切换器的 SITES 数组；表单控件数取自 core 的 VALID_FORM_TYPES；
-               代码降幅取自品牌单源 docs/brand/one-config-diff.json 的实测值。
-               由 scripts/check-site-claims.mjs 守住（此前这里写的是 5 / 20 / 80%，
-               其中控件数与降幅都与源码不符，且本站介绍页自己写的是 14）。 -->
-          <div class="hero-stats">
-            <div class="stat-item">
-              <span
-                class="stat-number"
-                data-count="3"
-              >0</span> 端
-              <span class="stat-label">共用同一份配置</span>
+            <!-- 副标题写本站身份：三站 H1 一致，差异在渲染端 -->
+            <p class="hero-desc">
+              <span class="typing-text">Vue 2 + Element UI 渲染端</span>
+            </p>
+
+            <!-- 描述 -->
+            <p class="hero-subdesc">
+              一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译
+            </p>
+
+            <!-- 统计信息 —— 三个数字都是可核对的事实：
+                 渲染端数取自三站切换器的 SITES 数组；表单控件数取自 core 的 VALID_FORM_TYPES；
+                 代码降幅取自品牌单源 docs/brand/one-config-diff.json 的实测值。
+                 由 scripts/check-site-claims.mjs 守住（此前这里写的是 5 / 20 / 80%，
+                 其中控件数与降幅都与源码不符，且本站介绍页自己写的是 14）。 -->
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span
+                  class="stat-number"
+                  data-count="3"
+                >0</span> 端
+                <span class="stat-label">共用同一份配置</span>
+              </div>
+              <div class="stat-item">
+                <span
+                  class="stat-number"
+                  data-count="14"
+                >0</span> 种
+                <span class="stat-label">表单控件</span>
+              </div>
+              <div class="stat-item">
+                <span
+                  class="stat-number"
+                  data-count="77"
+                >0</span>%
+                <span class="stat-label">模板与事件胶水代码减少</span>
+              </div>
             </div>
-            <div class="stat-item">
-              <span
-                class="stat-number"
-                data-count="14"
-              >0</span> 种
-              <span class="stat-label">表单控件</span>
-            </div>
-            <div class="stat-item">
-              <span
-                class="stat-number"
-                data-count="77"
-              >0</span>%
-              <span class="stat-label">模板与事件胶水代码减少</span>
+
+            <!-- 操作按钮 -->
+            <div class="hero-actions">
+              <router-link
+                to="/guide"
+                class="btn btn-primary"
+              >
+                <span>开始使用</span>
+                <i class="el-icon-right"></i>
+              </router-link>
+              <router-link
+                to="/component/installation"
+                class="btn btn-default"
+              >
+                <span>查看组件</span>
+                <i class="el-icon-arrow-right"></i>
+              </router-link>
             </div>
           </div>
-          
-          <!-- 操作按钮 -->
-          <div class="hero-actions">
-            <router-link
-              to="/guide"
-              class="btn btn-primary"
-            >
-              <span>开始使用</span>
-              <i class="el-icon-right"></i>
-            </router-link>
-            <router-link
-              to="/component/installation"
-              class="btn btn-default"
-            >
-              <span>查看组件</span>
-              <i class="el-icon-arrow-right"></i>
-            </router-link>
+
+          <!-- 产品实拍（路线图 2.1 / 2.2）：首屏右侧是本站**真实渲染**的旗舰案例。
+               此前的首屏是一整屏渐变 + 粒子，用户看完不知道「配置出来的 CRUD 长什么样」。
+               图由 scripts/gen-product-shots.mjs 现拍，三站同一份字节，check:product-assets 守卫。 -->
+          <figure class="hero-shot">
+            <img
+              src="/product/eui-flagship-approval-light.png"
+              alt="Vue 2 + Element UI 渲染端实拍：合同审批工作台的查询区、数据表格与行内审批按钮"
+              width="1600"
+              height="1000"
+            />
+            <figcaption>
+              本站渲染端实拍 ·
+              <router-link to="/flagship-approval">合同审批工作台</router-link>
+              —— 一份纯 JSON，0 个函数
+            </figcaption>
+          </figure>
+        </div>
+
+        <!-- 滚动提示 -->
+        <div class="scroll-hint">
+          <div class="mouse">
+            <div class="wheel"></div>
           </div>
-          
-          <!-- 滚动提示 -->
-          <div class="scroll-hint">
-            <div class="mouse">
-              <div class="wheel"></div>
-            </div>
-            <span>向下滚动</span>
-          </div>
+          <span>向下滚动</span>
         </div>
       </div>
     </div>
@@ -816,17 +835,74 @@ $bg-light: #f7fafc;
   .hero-content {
     position: relative;
     z-index: 1;
-    text-align: center;
-    padding: 40px 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 48px;
+    padding: 72px 20px 40px;
+
+    /* 窄屏：一列，文案居中，图仍然留在首屏内（路线图 2.1 要求 1 屏内出现证据） */
+    @media (max-width: 1023px) {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      text-align: center;
+      padding: 40px 20px;
+    }
   }
-  
+
+  .hero-copy {
+    min-width: 0;
+    text-align: left;
+    color: #fff;
+
+    @media (max-width: 1023px) {
+      text-align: center;
+    }
+  }
+
+  /* 产品实拍：白底卡片 + 圆角 + 阴影，让浏览器截图读起来像「产品窗口」而不是一张图。 */
+  .hero-shot {
+    margin: 0;
+    min-width: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    figcaption {
+      padding: 10px 14px;
+      border-top: 1px solid #ebeef5;
+      font-size: 13px;
+      color: #606266;
+      text-align: left;
+
+      a {
+        color: var(--es-brand-primary);
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+      }
+    }
+  }
+
   .hero-logo {
     margin-bottom: 30px;
-    
+
     .logo-icon {
       width: 80px;
       height: 80px;
-      margin: 0 auto;
+      margin: 0;
+
+      @media (max-width: 1023px) {
+        margin: 0 auto;
+      }
       background: rgba(255,255,255,0.2);
       backdrop-filter: blur(10px);
       border-radius: 20px;
@@ -846,10 +922,11 @@ $bg-light: #f7fafc;
   }
   
   .hero-title {
-    font-size: 72px;
+    /* 56px = 设计 token 的 --es-display（Landing H1）；72px 是阶梯外的自造字号 */
+    font-size: 56px;
     font-weight: 700;
-    margin-bottom: 20px;
-    letter-spacing: -2px;
+    margin-bottom: 16px;
+    letter-spacing: -1.5px;
     
     .gradient-text {
       background: linear-gradient(135deg, #fff 0%, var(--es-brand-primary-light) 50%, var(--es-brand-primary-light) 100%);
@@ -893,10 +970,17 @@ $bg-light: #f7fafc;
   
   .hero-stats {
     display: flex;
-    justify-content: center;
-    gap: 60px;
-    margin-bottom: 40px;
-    
+    justify-content: flex-start;
+    gap: 48px;
+    margin-bottom: 36px;
+
+    /* 窄屏仍是居中单列（两列的左对齐会把统计挤到左边与文案错位） */
+    @media (max-width: 1023px) {
+      justify-content: center;
+      gap: 60px;
+      margin-bottom: 40px;
+    }
+
     .stat-item {
       text-align: center;
       
@@ -918,10 +1002,15 @@ $bg-light: #f7fafc;
   
   .hero-actions {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 20px;
-    margin-bottom: 60px;
-    
+    margin-bottom: 0;
+
+    @media (max-width: 1023px) {
+      justify-content: center;
+      margin-bottom: 60px;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -1817,9 +1906,10 @@ $bg-light: #f7fafc;
   }
 }
 
-// 容器
+// 容器：首屏要放下「文案 + 产品实拍」两列，960 太窄（两列各不到 400px，
+// 实拍缩成缩略图就看不出是什么）。其余段落跟着一起放宽，避免首屏与下方错位。
 .container {
-  max-width: 960px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -1905,14 +1995,39 @@ $bg-light: #f7fafc;
       font-size: 18px;
     }
     
+    /* 三个统计竖着排会吃掉 200+ px，把产品实拍推到第二屏之外 —— T1 要求首屏就能
+       看到产品。改成一行三项、数字缩一号：读得清，也不挡住下面的实拍。 */
     .hero-stats {
-      flex-direction: column;
-      gap: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+
+      .stat-item {
+        min-width: 0;
+
+        .stat-number {
+          font-size: 30px;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          line-height: 1.35;
+        }
+      }
     }
     
+    /* 两个 CTA 竖排会多占 70px，产品实拍就被推到第二屏；这两个按钮的文案都不长，
+       390 宽度下一行放得下 */
     .hero-actions {
-      flex-direction: column;
-      align-items: center;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+
+      .btn {
+        padding: 12px 24px;
+        font-size: 15px;
+      }
     }
   }
   
