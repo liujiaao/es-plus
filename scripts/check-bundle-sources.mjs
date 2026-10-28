@@ -385,10 +385,92 @@ function checkVxeOnDemand() {
   )
 }
 
+// ── 4. Element Plus 的按需注册 ─────────────────────────────────────────────
+
+/**
+ * `app.use(ElementPlus)` 是**全量**注册：356.2 KB gz 的组件库跟着每一页下载，而站点自己的
+ * 模板只用到三十来个标签（`@es-plus/*` 内部是直接 import 组件的，从不依赖全局注册）。
+ *
+ * 换成显式清单之后的失败模式是「页面看起来正常、某个组件突然不渲染」——它只会在
+ * 恰好走到那个页面时暴露，而且常常是一个空格/一条分割线没了，肉眼很难归因。
+ * 所以清单不能靠人维护：这个块扫**全部 .vue 模板里的 `<el-xxx>` 标签**，逐个映射成
+ * PascalCase 去和 `install-app-plugins.ts` 的 ELEMENT_PLUS_COMPONENTS 对账。
+ *
+ * 也要挡住另一条退路：把 `app.use(ElementPlus)` 写回来（那会让 356 KB 悄悄回到首屏，
+ * 而页面**看起来完全正常**，只有称产物才发现）。
+ *
+ * 图标不在此列：`@es-plus/vue3` 自己 `import * as` 了整个图标包，站点注册不注册都一样重。
+ */
+function checkElementPlusOnDemand() {
+  const before = problems.length
+  const pluginsPath = join(SRC, 'utils/install-app-plugins.ts')
+  if (!existsSync(pluginsPath)) {
+    fail('utils/install-app-plugins.ts 不存在 —— 改名了就把这里一起改')
+    return
+  }
+  const plugins = read(pluginsPath)
+  for (const { text, no } of codeLines(plugins)) {
+    if (/^\s*import\s+\w+\s+from\s+['"]element-plus['"]/.test(text) || /app\.use\(\s*ElementPlus\b/.test(text)) {
+      fail(
+        `${rel(pluginsPath)}:${no} 又用回了 ElementPlus 全量插件 —— 首屏会多出 356.2KB`
+          + '（页面看起来完全正常，只有构建产物称重才发现）。把标签加进 ELEMENT_PLUS_COMPONENTS',
+      )
+    }
+  }
+
+  const registryBlock = plugins.match(/ELEMENT_PLUS_COMPONENTS[^{]*\{([\s\S]*?)\n\}/)
+  if (!registryBlock) {
+    fail(`${rel(pluginsPath)} 里读不到 ELEMENT_PLUS_COMPONENTS 清单 —— 结构变了就把这里一起改`)
+    return
+  }
+  const registered = new Set(
+    registryBlock[1]
+      .split('\n')
+      .map((line) => (line.match(/^\s{2}(El\w+)/) || [])[1])
+      .filter(Boolean),
+  )
+  if (registered.size < 10) {
+    fail(`${rel(pluginsPath)} 的组件清单只解析到 ${registered.size} 个 —— 扫描规则大概率已失效`)
+    return
+  }
+
+  // 模板标签 → 组件名：el-table-column → ElTableColumn
+  const pascal = (tag) => 'El' + tag.slice(3).split('-').map((part) => part[0].toUpperCase() + part.slice(1)).join('')
+
+  const vueFiles = walk(SRC).filter((file) => file.endsWith('.vue'))
+  const missing = new Map()
+  for (const file of vueFiles) {
+    for (const { text, no } of codeLines(read(file))) {
+      for (const m of text.matchAll(/<(el-[a-z0-9-]+)[\s/>]/g)) {
+        const name = pascal(m[1])
+        if (!registered.has(name)) {
+          const key = `${name}`
+          if (!missing.has(key)) missing.set(key, [])
+          missing.get(key).push(`${rel(file)}:${no}`)
+        }
+      }
+    }
+  }
+  for (const [name, places] of missing) {
+    fail(
+      `模板里用了 <${name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}>（${places.slice(0, 3).join('、')}`
+        + `${places.length > 3 ? ` 等 ${places.length} 处` : ''}），但 ELEMENT_PLUS_COMPONENTS 里没有 ${name}`
+        + ' —— 那个组件会整块不渲染（页面其余部分看起来正常）',
+    )
+  }
+
+  if (problems.length > before) return
+  console.log(
+    `✅ Element Plus 按需注册：模板用了 ${vueFiles.length} 个 .vue 里的全部 <el-*> 标签`
+      + ` 都能在清单（${registered.size} 个组件）里找到；没有回退到全量插件`,
+  )
+}
+
 // ── 主流程 ─────────────────────────────────────────────────────────────────
 
 checkEagerGlobs()
 checkVxeOnDemand()
+checkElementPlusOnDemand()
 await checkHighlight()
 
 

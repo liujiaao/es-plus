@@ -59,9 +59,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, createApp, type App } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, createApp, h, type App } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { ElConfigProvider } from 'element-plus'
 import { Top } from '@element-plus/icons-vue'
 import DemoBlock from '@/components/doc/DemoBlock.vue'
 import DocMeta from '@/components/doc/DocMeta.vue'
@@ -245,7 +246,11 @@ const mountDemos = () => {
     // Avoid double-mounting the same placeholder
     if (el.dataset.demoMounted === '1') return
     el.dataset.demoMounted = '1'
-    const app = createApp(DemoBlock, { name })
+    // 示例子应用自成一条 provide 链：主应用根上的 <el-config-provider size="small"> 到不了
+    // 这里，少了它示例里的按钮/输入框会从 small 变回默认尺寸（与正文的观感对不上）。
+    const app = createApp({
+      render: () => h(ElConfigProvider, { size: 'small' }, () => h(DemoBlock, { name })),
+    })
     installAppPlugins(app)
     app.mount(el)
     mountedDemoApps.push(app)

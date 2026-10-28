@@ -48,8 +48,8 @@ const BUDGETS = {
     // 文档路由（/guide/:name）的首屏：入口预加载 + 该路由 chunk 的静态闭包
     route: '/guide/getting-started',
     routeChunkPrefix: 'Doc-',
-    // 2026-10-28 实测 650.1 KB（入口 573.9）：element-plus 356.2 + index 217.2
-    // （es-plus 库本体、vue-i18n/router、fuse + 全部指南正文）+ Doc 51.9 + 共享 chunk 24.2。
+    // 2026-10-28 实测 571.9 KB（入口 495.7）：element-plus 275.4 + index 219.8
+    // （es-plus 库本体、vue-i18n/router、fuse + 全部指南正文）+ Doc 52.0 + 共享 chunk 24.2。
     // 这个数会随文档字数浮动 —— 正文就装在 index 那个块里。
     //
     // 同一天的前两步，三笔都来自「源码层就错了」，不是调参：
@@ -67,10 +67,14 @@ const BUDGETS = {
     // 涨到 216.0（+17.8）：**指南正文是搜索索引的数据源**（utils/search-index.ts
     // 静态 import doc-registry），所以每多一篇指南，所有 /guide/* 的首屏都长一截。
     // 这笔是结构性的：修法是把正文改成按 slug 惰性加载，搜索索引随第一次开搜索再建。
+    //   · `app.use(ElementPlus)` 换成显式注册 30 个组件（utils/install-app-plugins.ts
+    //     的 ELEMENT_PLUS_COMPONENTS）后，这一块 356.2 → 275.4：650.1 → 571.9。
+    //     省下的只有**站点模板自己用到、而 @es-plus/* 内部没用到的**那些组件 ——
+    //     库的组件是直接 import 的，所以剩下 275.4 里有相当一部分还必须留在首屏。
     //
-    // 收紧到 690 = 实测 650.1 + 约 6%（再容六到七篇指南）：抬线要写理由，压线要靠真做小。
-    // 剩下的大头是 element-plus 356.2 的全量注册（四个渲染端组件 + 全部图标）。
-    ceiling: 690,
+    // 收紧到 610 = 实测 571.9 + 约 6.7%（再容六到七篇指南）：抬线要写理由，压线要靠真做小。
+    // 剩下的大头是 index 219.8 —— 全部指南正文仍在首屏（见上面那笔结构性开销）。
+    ceiling: 610,
     target: 300,
     // 首屏闭包里不该出现的块：vxe 引擎只在 /advanced/vxe-table 与 /ai-gallery/<id> 注册
     // （344.2KB）。源码层守卫（check-bundle-sources）看得出「谁 import 了它」，看不出
@@ -298,8 +302,9 @@ function main() {
       // 目标未达成不是回归，但必须被看见 —— 一行「✅」会把 4 倍的差距藏起来
       console.log(
         `\n⚠️  首屏预算目标未达成：${gaps.map((r) => `${r.site} ${r.routeGz || r.entryGz} KB（目标 ${r.budget.target} KB）`).join('；')}`
-          + '\n   这不是回归（回归线未破），是已知的未完成项：es-plus-docs 的大头是 element-plus'
-          + '\n   全量注册（356.2），es-pc / es-eui 同理（antd / Element UI 全量）。vxe 已按需。',
+          + '\n   这不是回归（回归线未破），是已知的未完成项：es-plus-docs 的大头是 index ——'
+          + '\n   全部指南正文都装在首屏（搜索索引静态 import 了 doc-registry）；es-pc / es-eui'
+          + '\n   同理（antd / Element UI 全量）。vxe 与 Element Plus 的站点侧注册均已按需。',
       )
     }
   }
