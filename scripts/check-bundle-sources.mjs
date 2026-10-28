@@ -37,8 +37,11 @@
  *      注册表被搜索索引静态引用，而搜索索引又被顶栏的搜索框静态引用。判据是
  *      「谁不许静态 import 语料」+「三处 slug 清单必须在同一份上」，见第 5 节。
  *
+ *   6. **两个子站（es-pc / es-eui）与主站同构的若干件事**：Ant Design Vue 只有显式清单
+ *      （`app.use(Antd)` 是全量，仅 es-pc），vxe 只在用到它的两条路由注册。判据见第 6 节。
+ *
  * 用法：node scripts/check-bundle-sources.mjs
- * 退出码：0 = 五条判据都成立；1 = 有缺口（逐条列出文件与行号）。
+ * 退出码：0 = 六条判据都成立；1 = 有缺口（逐条列出文件与行号）。
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
@@ -637,6 +640,296 @@ function checkDocContentOnDemand() {
   )
 }
 
+// ── 6. 子站（es-pc / es-eui）的按需注册 / 按需加载 ──────────────────────────
+
+/**
+ * 上面第 3、4 块是主站 es-plus-docs 的。两个子站有同样两个坑，而且它们占首屏的比例
+ * 更大（2026-10-28 实测入口：es-pc 1027.9 KB gz，es-eui 667.6 KB）：
+ *
+ *   a. **Ant Design Vue 只有显式清单**（仅 es-pc）。`app.use(Antd)` 是全量注册；站点模板
+ *      只用到 26 组标签。ADV 的每个组件带 `install()`，会把子组件一起注册，所以这里
+ *      对账的是**组名**（`Menu` 管 `a-menu-item` / `a-sub-menu`），与主站 Element Plus 的
+ *      「一个标签一个组件」不同。失败模式一样：页面看起来正常，某个组件整块不渲染。
+ *   b. **vxe 只在两条路由注册**（两站同构）。es-pc 是 `/es-vxe-table`（17 个示例）与
+ *      `/ai-gallery/<id>`；es-eui 是 `/component/vxetable` 与 `/ai-gallery/<id>`。
+ *      注册落在各自的 `utils/vxe-install.js`，只被 `utils/vxe-loader.js` 动态 import。
+ *
+ * 这里不复用主站的实现：三个站的目录结构、数据来源（`views/es-vxe/*` vs
+ * `components/examples/*`）、插件 API（`app.use` vs `Vue.use`）都不同，硬套一份查询码
+ * 只会让两边的判据互相将就。
+ */
+const PC_SRC = join(ROOT, 'es-pc/src')
+const EUI_SRC = join(ROOT, 'es-eui/src')
+
+/** `<a-tag>` → 注册它的组名。不在表里的标签一律判红（新标签要先把组名加进 install-antd.js） */
+const ANTD_TAG_GROUPS = {
+  alert: 'Alert',
+  avatar: 'Avatar',
+  button: 'Button',
+  card: 'Card',
+  checkbox: 'Checkbox',
+  'checkbox-group': 'Checkbox',
+  col: 'Col',
+  'config-provider': 'ConfigProvider',
+  descriptions: 'Descriptions',
+  'descriptions-item': 'Descriptions',
+  divider: 'Divider',
+  dropdown: 'Dropdown',
+  empty: 'Empty',
+  form: 'Form',
+  'form-item': 'Form',
+  input: 'Input',
+  layout: 'Layout',
+  'layout-header': 'Layout',
+  'layout-sider': 'Layout',
+  'layout-content': 'Layout',
+  'layout-footer': 'Layout',
+  menu: 'Menu',
+  'menu-item': 'Menu',
+  'menu-divider': 'Menu',
+  'sub-menu': 'Menu',
+  modal: 'Modal',
+  progress: 'Progress',
+  radio: 'Radio',
+  'radio-group': 'Radio',
+  'radio-button': 'Radio',
+  row: 'Row',
+  select: 'Select',
+  'select-option': 'Select',
+  space: 'Space',
+  step: 'Steps',
+  steps: 'Steps',
+  switch: 'Switch',
+  'tab-pane': 'Tabs',
+  table: 'Table',
+  'table-column': 'Table',
+  tabs: 'Tabs',
+  tag: 'Tag',
+}
+
+/** 这一行是不是**值导入**某个包（`import type` 编译后消失，不算） */
+const valueImportOf = (pkgs) =>
+  new RegExp(`^\\s*import\\s+(?!type\\b)[^'"]*from\\s+['"](${pkgs.join('|')})['"]`)
+
+/**
+ * `.vue` 只扫 `<script>` 块，独立 `.js/.mjs` 整文件。
+ *
+ * 模板里的 `<pre v-pre>` 代码样例长着**一模一样**的 import 行（es-pc 的
+ * `views/EsVxeTable.vue` 第 24/26 行就是「怎么装 vxe」的教程文字）。2026-10-28 装这个
+ * 守卫时它先骗了守卫一次 —— 判据要盯的是「哪一行会真的执行」，不是「哪一行长得像」。
+ */
+function importScope(file) {
+  const text = read(file)
+  if (!file.endsWith('.vue')) return codeLines(text)
+  const start = text.indexOf('<script')
+  if (start === -1) return []
+  const end = text.indexOf('</script>', start)
+  return codeLines(text.slice(start, end === -1 ? text.length : end))
+}
+
+/**
+ * 子站共用的 vxe 判据（es-pc 与 es-eui 结构不同，判据相同）。
+ *
+ *   a. **不许退回入口**：除 `utils/vxe-install.js` 外没有源文件值导入 vxe。
+ *   b. **清单要指得到路由**：`vxe-loader.js` 的 `VXE_ROUTE_NAMES` 里每个名字都必须
+ *      在 `router/index.js` 里存在 —— 清单写错一个字，页面就渲染「未安装 vxe」。
+ *   c. **示例组件只被那一条路由用**（可选，只有 es-pc 是这种结构）：`views/es-vxe/*.vue`
+ *      多一个引用者，就多一条需要 vxe 的路由。
+ *   d. **案例 JSON**：engine 为 vxe 的案例必须由清单里的画廊详情路由渲染。
+ */
+function checkSubSiteVxe(cfg) {
+  const before = problems.length
+  const VXE_IMPORT = valueImportOf(['vxe-table', 'vxe-pc-ui'])
+  const installRel = relative(ROOT, cfg.installPath).replace(/\\/g, '/')
+  const loaderRel = relative(ROOT, cfg.loaderPath).replace(/\\/g, '/')
+
+  // a. 谁在值导入 vxe
+  if (existsSync(cfg.mainPath)) {
+    for (const { text, no } of codeLines(read(cfg.mainPath))) {
+      if (!VXE_IMPORT.test(text)) continue
+      fail(`${relative(ROOT, cfg.mainPath).replace(/\\/g, '/')}:${no} 又把 vxe 引回入口了 —— 首屏会重新背上几百 KB`)
+    }
+  }
+  for (const file of walk(cfg.src).filter((f) => /\.(vue|js|mjs)$/.test(f))) {
+    if (file === cfg.installPath) continue
+    for (const { text } of importScope(file)) {
+      if (!VXE_IMPORT.test(text)) continue
+      fail(
+        `${rel(file)} 值导入了 vxe —— 整棵依赖会跟着它所在的路由/入口一起下载。`
+          + ` 需要注册就调 ${loaderRel} 的 ensureVxe`,
+      )
+    }
+  }
+  if (!existsSync(cfg.loaderPath) || !existsSync(cfg.installPath)) {
+    fail(`${loaderRel} 与 ${installRel} 必须同时存在（动态加载的落点）`)
+    return
+  }
+
+  // b. 清单 → 路由
+  const routeNames = [
+    ...((read(cfg.loaderPath).match(/VXE_ROUTE_NAMES\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '')
+      .matchAll(/:\s*'([A-Za-z]+)'/g),
+  ].map((m) => m[1])
+  if (routeNames.length < 2) {
+    fail(`${loaderRel} 里读不到路由清单 —— 清单结构变了就把这里一起改`)
+    return
+  }
+  const routerSrc = read(cfg.routerPath)
+  for (const name of routeNames) {
+    if (!routerSrc.includes(`name: '${name}'`)) {
+      fail(`${relative(ROOT, cfg.routerPath).replace(/\\/g, '/')} 里没有 name: '${name}' —— vxe-loader 的清单指向了一条不存在的路由`)
+    }
+  }
+
+  // c. 示例组件只被那一条路由引用
+  let exampleCount = 0
+  if (cfg.example) {
+    const { dir, specPrefix, ownerFile } = cfg.example
+    const specs = existsSync(dir) ? readdirSync(dir).map((f) => `${specPrefix}${f}`) : []
+    exampleCount = specs.length
+    if (!specs.length) fail(`${relative(ROOT, dir).replace(/\\/g, '/')} 下一个示例都没有 —— 扫描规则大概率已失效`)
+    for (const file of walk(cfg.src).filter((f) => /\.(vue|js)$/.test(f))) {
+      if (file === ownerFile) continue
+      for (const { text, no } of codeLines(read(file))) {
+        for (const spec of specs) {
+          if (!text.includes(`'${spec}'`)) continue
+          fail(
+            `${rel(file)}:${no} 引用了 ${spec}（vxe 示例），但 ${loaderRel} 的清单里没有这条路由`
+              + ' —— 它会渲染出「未安装 vxe」的提示；把它的路由名加进清单',
+          )
+        }
+      }
+    }
+  }
+
+  // d. 案例
+  const vxeCases = []
+  const casesDir = join(cfg.src, 'cases')
+  for (const file of existsSync(casesDir) ? walk(casesDir) : []) {
+    if (!file.endsWith('.json') || /\.(story|meta)\.json$/.test(file)) continue
+    let json
+    try {
+      json = JSON.parse(read(file))
+    } catch {
+      continue
+    }
+    if (!hasVxeEngine(json)) continue
+    const id = relative(casesDir, file).split('.')[0].replace(/\\/g, '/').split('/').pop()
+    if (!vxeCases.includes(id)) vxeCases.push(id)
+  }
+  if (!vxeCases.length) fail('一个 engine:"vxe" 的案例 JSON 都没扫到 —— 扫描规则大概率已失效')
+
+  if (problems.length > before) return
+  console.log(
+    `✅ ${cfg.label} 的 vxe 按需：入口无值导入；清单 = ${routeNames.join(' / ')}`
+      + (exampleCount ? `（${exampleCount} 个示例）` : '')
+      + ` + ${vxeCases.length} 个案例（${vxeCases.join('/')}）`,
+  )
+}
+
+function checkAntdvSiteOnDemand() {
+  const before = problems.length
+  const mainPath = join(PC_SRC, 'main.js')
+  const installPath = join(PC_SRC, 'utils/install-antd.js')
+
+  // a1. 不许退回全量插件
+  for (const { text, no } of codeLines(read(mainPath))) {
+    if (/^\s*import\s+Antd\s+from\s+['"]ant-design-vue['"]/.test(text) || /app\.use\(\s*Antd\b/.test(text)) {
+      fail(
+        `es-pc/src/main.js:${no} 又用回了 Ant Design Vue 全量插件 —— 首屏会多出 71 KB`
+          + '（页面看起来完全正常，只有称产物才发现）。把标签的组名加进 utils/install-antd.js',
+      )
+    }
+  }
+  if (!existsSync(installPath)) {
+    fail('es-pc/src/utils/install-antd.js 不存在 —— 改名了就把这里一起改')
+    return
+  }
+  const install = read(installPath)
+  // 清单是**简写属性**（`Alert,` 而不是 `Alert: Alert,`），所以不能用 objectLiteralKeys
+  // ——那个助手只认 `key:`。这里按行取标识符，`//` 注释行跳过。
+  const registryBlock = install.match(/ANT_DESIGN_VUE_COMPONENTS\s*=\s*\{([\s\S]*?)\n\}/)
+  const registry = registryBlock
+    ? registryBlock[1]
+        .split('\n')
+        .map((line) => (line.trim().match(/^([A-Za-z][A-Za-z0-9]*),?$/) || [])[1])
+        .filter(Boolean)
+    : []
+  const imported = new Set(
+    [...install.matchAll(/import\s*\{([\s\S]*?)\}\s*from\s*['"]ant-design-vue['"]/g)]
+      .flatMap((m) => m[1].split(',').map((s) => s.trim()).filter(Boolean)),
+  )
+  if (registry.length < 10 || !imported.size) {
+    fail('utils/install-antd.js 里解析不到组件清单 —— 扫描规则与源码结构脱节')
+    return
+  }
+  for (const name of registry) {
+    if (!imported.has(name)) fail(`install-antd.js 的清单里有 ${name}，但它没有从 ant-design-vue 导入 —— 运行时会注册 undefined`)
+  }
+
+  // a2. 模板标签 ⊆ 清单
+  let tags = 0
+  const unknownTags = new Map()
+  const missingGroups = new Map()
+  for (const file of walk(PC_SRC).filter((f) => f.endsWith('.vue'))) {
+    for (const { text, no } of codeLines(read(file))) {
+      for (const m of text.matchAll(/<(a-[a-z0-9-]+)[\s/>]/g)) {
+        tags++
+        const group = ANTD_TAG_GROUPS[m[1].slice(2)]
+        if (!group) {
+          if (!unknownTags.has(m[1])) unknownTags.set(m[1], `${rel(file)}:${no}`)
+          continue
+        }
+        if (!registry.includes(group)) {
+          if (!missingGroups.has(group)) missingGroups.set(group, [])
+          missingGroups.get(group).push(`${rel(file)}:${no}`)
+        }
+      }
+    }
+  }
+  for (const [tag, place] of unknownTags) {
+    fail(`模板里用了 <${tag}>（${place}），但 ANTD_TAG_GROUPS 里没有它的组名 —— 先在 install-antd.js 里注册组名，再把映射写进本脚本`)
+  }
+  for (const [group, places] of missingGroups) {
+    fail(
+      `模板里用了需要 ${group} 的标签（${places.slice(0, 3).join('、')}`
+        + `${places.length > 3 ? ` 等 ${places.length} 处` : ''}），但 ANT_DESIGN_VUE_COMPONENTS 里没有 ${group}`
+        + ' —— 那个组件会整块不渲染（页面其余部分看起来正常）',
+    )
+  }
+
+  if (problems.length > before) return
+  console.log(
+    `✅ es-pc 的 Ant Design Vue 按需注册：模板 ${tags} 个 <a-*> 标签全部落在 ${registry.length} 组清单里`,
+  )
+}
+
+/** 两个子站的 vxe 配置：结构不同（views/es-vxe vs examples 中央注册表），判据相同 */
+const PC_VXE = {
+  label: 'es-pc',
+  src: PC_SRC,
+  mainPath: join(PC_SRC, 'main.js'),
+  installPath: join(PC_SRC, 'utils/vxe-install.js'),
+  loaderPath: join(PC_SRC, 'utils/vxe-loader.js'),
+  routerPath: join(PC_SRC, 'router/index.js'),
+  example: {
+    dir: join(PC_SRC, 'views/es-vxe'),
+    specPrefix: './es-vxe/',
+    ownerFile: join(PC_SRC, 'views/EsVxeTable.vue'),
+  },
+}
+
+const EUI_VXE = {
+  label: 'es-eui',
+  src: EUI_SRC,
+  mainPath: join(EUI_SRC, 'main.js'),
+  installPath: join(EUI_SRC, 'utils/vxe-install.js'),
+  loaderPath: join(EUI_SRC, 'utils/vxe-loader.js'),
+  routerPath: join(EUI_SRC, 'router/index.js'),
+  // es-eui 的示例走 `src/examples/index.js` 中央注册表（全部页面共享一个模块），
+  // 「某个示例只被某条路由引用」在这里不成立，所以不做那一层检查。
+}
+
 // ── 主流程 ─────────────────────────────────────────────────────────────────
 
 
@@ -644,11 +937,14 @@ checkEagerGlobs()
 checkVxeOnDemand()
 checkElementPlusOnDemand()
 checkDocContentOnDemand()
+checkAntdvSiteOnDemand()
+checkSubSiteVxe(PC_VXE)
+checkSubSiteVxe(EUI_VXE)
 await checkHighlight()
 
 
 if (problems.length) {
   for (const problem of problems) console.error(`❌ ${problem}`)
-  console.error('\n提示：这五条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
+  console.error('\n提示：这六条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
   process.exit(1)
 }

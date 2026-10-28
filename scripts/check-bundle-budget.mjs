@@ -92,16 +92,37 @@ const BUDGETS = {
     route: '/quickstart',
     // es-pc 的路由不切分（只有一个入口 chunk + vendor），没有可单独称的路由 chunk
     routeChunkPrefix: null,
-    // 2026-10-28 实测 1027.8 KB：antd 397 + vxe 344 + antd-icons 181 + index 64
-    ceiling: 1100,
+    // 2026-10-28 实测 604.9 KB：vendor-antd 318 + antd-icons 181.4 + index 64.9 + vue 40.6。
+    // 这一天拿掉两笔，都是与主站同构的「源码层就错了」：
+    //   · vxe-table + vxe-pc-ui 全量注册（344.2）改成 utils/vxe-loader.js 的路由门：
+    //     1027.9 → 683.9。样式表仍留在入口（CSS 不进 JS 预算；挪进懒加载块会让注入
+    //     顺序排到站点覆盖规则之后）。
+    //   · `app.use(Antd)`（397.2 → 326.1）改成 utils/install-antd.js 的 26 组显式清单：
+    //     683.9 → 604.9。省下的比主站 Element Plus 那笔小得多：adapter-antdv 自己就
+    //     直接 import 了 Table / Pagination / Spin / ConfigProvider / Button / Tooltip /
+    //     Tag / Modal / Space —— 实测把 app.use(Antd) 整个删掉，vendor-antd 仍有 310.1，
+    //     那才是库侧的底。
+    // 底在哪里：图标 181.4 来自 adapter-antdv 的 `import * as Icons`（它按名字解析任意
+    // 图标，删了就变成空白图标），antd 底约 310 —— 两者都是库侧架构，站点改不动。
+    // 所以 ≤400 这个目标在三个站点里只有主站还有一线（且要靠库改），这里只能守住不退化。
+    ceiling: 630,
     target: 400,
+    // 首屏闭包里不该出现的块：vxe 只在 /es-vxe-table 与 /ai-gallery/<id> 注册
+    forbidFirstLoad: /(^|\/)vendor-vxe-[\w-]+\.js$/,
   },
   'es-eui': {
     route: '/quickstart',
     routeChunkPrefix: null,
-    // 2026-10-28 实测 667.6 KB：chunk-vendors 623（webpack 不打散 vendor）+ app 44
-    ceiling: 720,
+    // 2026-10-28 实测 325.4 KB：chunk-vendors 280.8（webpack 不打散 vendor）+ app 44.6。
+    // 这天之前是 667.6 —— 差的那一半几乎全是 vxe-table / vxe-pc-ui：它们原本
+    // `Vue.use` 在 main.js 顶层，于是被 splitChunks 收进 `chunk-vendors`，每一页都下载。
+    // 改成 utils/vxe-loader.js 的路由门（只在 /component/vxetable 与 /ai-gallery/<id>
+    // 注册）后，**这一站因此落到了 ≤400 的目标线内**，是三站里第一个达标的。
+    ceiling: 345,
     target: 400,
+    // 首屏闭包里不该出现的块：webpack 的异步 vxe 块名是数字（`js/47.*.js`），
+    // 认不出前缀，所以这里用「体积指纹」不合适 —— 改由 check-bundle-sources 的
+    // 值导入判据守源码侧，产物侧只守住总重量这一条。
   },
 }
 
@@ -266,8 +287,9 @@ function report(result) {
   if (result.forbiddenFirstLoad.length) {
     console.error(
       `❌ ${site}: 首屏闭包里出现了不该有的块（${result.forbiddenFirstLoad.join(', ')}）`
-        + ' —— vxe 引擎只该在 /advanced/vxe-table 与 /ai-gallery/<id> 加载；'
-        + ' 若是样式表把它拖进来的，改 vite.config.ts 的 manualChunks（CSS 别分给 vxe chunk）',
+        + ' —— vxe 引擎只该在用到它的路由加载（主站 /advanced/vxe-table 与 /ai-gallery/<id>，'
+        + ' es-pc 的 /es-vxe-table 与 /ai-gallery/<id>）；'
+        + ' 若是样式表把它拖进来的，改对应站点 vite.config 的 manualChunks（CSS 别分给 vxe chunk）',
     )
     failed = true
   }
@@ -309,10 +331,11 @@ function main() {
       // 目标未达成不是回归，但必须被看见 —— 一行「✅」会把 4 倍的差距藏起来
       console.log(
         `\n⚠️  首屏预算目标未达成：${gaps.map((r) => `${r.site} ${r.routeGz || r.entryGz} KB（目标 ${r.budget.target} KB）`).join('；')}`
-          + '\n   这不是回归（回归线未破），是已知的未完成项：es-plus-docs 的大头是 element-plus'
-          + '\n   275.4（`@es-plus/*` 内部直接 import 的组件，站点注册方式已改不动）；'
-          + '\n   es-pc / es-eui 同理（antd / Element UI 全量）。vxe、Element Plus 站点侧注册、'
-          + '\n   指南正文与搜索索引都已按需。',
+          + '\n   这不是回归（回归线未破），是已知的未完成项。剩下的底都是**库侧**的：'
+          + '\n   es-plus-docs 的大头是 element-plus 275.4（`@es-plus/*` 内部直接 import 的组件）；'
+          + '\n   es-pc 是 antd 318（adapter-antdv 自己 import 的）+ 图标 181.4（它 `import * as`）。'
+          + '\n   es-eui 已经达标（325.4 ≤ 400），但它的 Element UI 仍是全量注册 —— 再往下走'
+          + '\n   要先扫组件页模板、再抄一遍显式清单。vxe 三站都已按需。',
       )
     }
   }

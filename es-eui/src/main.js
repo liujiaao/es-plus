@@ -20,23 +20,20 @@ import './assets/docs-notfound.css'
 // 可访问性基线（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）
 import './assets/docs-a11y.css'
 Vue.use(ElementUI, { size: 'mini' })
-// vxe-table 3.x —— es-table 的 engine:'vxe' 高性能引擎依赖此库（须先于 EsPlus 注册）
-// vxe-table 3.22.x 采用拆分架构：表格/表头/工具栏来自 vxe-table，而分页器 VxePager、
-// 编辑输入 VxeInput/VxeSelect、按钮 VxeButton、弹窗 VxeModal 等 PC 组件来自 vxe-pc-ui，
-// 由 @vxe-ui/core 的 VxeUI 注册表统一管理。必须先 Vue.use(VxeUIAll) 再 Vue.use(VxeTable)，
-// 否则 grid 内部 VxeUI.getComponent('VxePager') 取不到组件 → 分页器/编辑框/导出按钮不渲染。
-import VxeUIAll from 'vxe-pc-ui'
+// vxe-table 3.x —— es-table 的 engine:'vxe' 高性能引擎依赖此库。
+// **插件**不在这里静态引入：全量注册会让 vxe 进 `chunk-vendors`，每一页都先付这笔钱，
+// 而真正渲染 engine:'vxe' 的只有 /component/vxetable 与 /ai-gallery/<id>。
+// 按需加载见 utils/vxe-loader.js（下面的 router 门；注册顺序的坑写在 vxe-install.js 里）。
+// 样式保留在首屏：它是 CSS，不进 JS 预算；挪进懒加载块会让注入顺序排到站点覆盖规则之后。
 import 'vxe-pc-ui/lib/style.css'
-import VxeTable from 'vxe-table'
 import 'vxe-table/lib/style.css'
-Vue.use(VxeUIAll)
-Vue.use(VxeTable)
 // es-eui 使用 Vue 2.6.x，原生不支持 Composition API —— 需要手动注册 polyfill。
 // @es-plus/vue2 1.1.0+ 的 install() 内置了 alreadyInstalled 检测，不会重复注册。
 // Vue.use(VueCompositionAPI)
 import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'
 import { demoHttpRequest } from '@/utils/demo-http'
+import { ensureVxe, needsVxe } from '@/utils/vxe-loader'
 
 // 站点自己的请求：axios 实例（保留拦截器、Token 注入等既有能力）。
 // 演示接口走本地 mock，其余地址照旧走这里 —— 两条路合起来就是「一个入口函数」。
@@ -103,6 +100,20 @@ Vue.use(EsPlus, {
     }
 })
 Vue.config.productionTip = false
+
+// vxe 引擎按需加载：导航到真的要渲染 engine:'vxe' 的页面前再拉那几百 KB。
+// 守在 beforeEach 而不是组件里，是因为 Vue.use 必须在子组件创建**之前**完成 ——
+// 晚一步 EsTable 会拿着未注册的引擎渲染「未安装 vxe」的提示。
+router.beforeEach((to, from, next) => {
+    if (!needsVxe(to)) return next()
+    ensureVxe(Vue)
+        .then(() => next())
+        .catch((err) => {
+            // 产物缺块 / 离线：照常进页面，让 EsTable 的既有提示去说这件事，别白屏
+            console.error('[vxe] 按需加载失败，engine:"vxe" 的表格将显示未安装提示', err)
+            next()
+        })
+})
 
 // 全局错误处理
 Vue.config.errorHandler = function (err, vm, info) {
