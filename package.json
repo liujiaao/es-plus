@@ -134,6 +134,7 @@
     "check:component-api": "node scripts/check-component-api.mjs",
     "check:motion": "node scripts/check-motion.mjs",
     "check:page-meta": "node scripts/check-page-meta.mjs",
+    "check:bundle-budget": "node scripts/check-bundle-budget.mjs",
     "sitemap:gen": "node scripts/gen-sitemap.mjs",
     "check:sitemap": "node scripts/check-sitemap.mjs",
     "site-seo:gen": "node scripts/gen-site-seo.mjs",

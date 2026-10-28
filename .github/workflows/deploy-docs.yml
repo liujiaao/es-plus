@@ -70,6 +70,12 @@ jobs:
         env:
           PUBLIC_PATH: /es-plus/es-eui/
 
+      # 首屏 JS 预算（路线图 3.6）：对刚构建出来的三个 dist 称重。
+      # 只在这里跑 —— 它需要真产物，而 check:consistency 不构建站点。
+      # 判红的是**回归**（monaco 回到预加载、首屏变大），目标线只打印不判红。
+      - name: Check bundle budget
+        run: node scripts/check-bundle-budget.mjs
+
       # 单一 Pages 站点：es-plus-docs 在根，es-pc 在 /es-pc/、es-eui 在 /es-eui/ 子路径
       - name: Combine sites into Pages artifact
         run: |
