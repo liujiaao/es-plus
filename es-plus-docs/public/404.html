@@ -89,13 +89,30 @@
        * GitHub Pages 上没有对应文件，会落到这个页面 —— 此处把路径改写成 hash 再跳一次，
        * 让「看起来指对了」的链接真的落到内容上，而不是停在 404。
        *
-       * BASE 必须与 vite.config.ts 的 SITE_HOSTNAME 路径一致（scripts/check-sitemap.mjs 校验）；
-       * 改部署路径时两处一起改，否则跳转会把用户送去别的站点根。
+       * 这张 404 页是**整个 Pages 站点共用的**（GitHub Pages 只认发布根的那一份），
+       * 所以 `/es-plus/es-pc/…`、`/es-plus/es-eui/…` 的深链也会落到这里。子站必须跳回
+       * 子站自己的 hash —— 此前一律按主站改写，`/es-plus/es-pc/guide/x` 会被送去
+       * `/es-plus/#/es-pc/guide/x`（主站的一条不存在的路由），等于把用户送错站点。
+       *
+       * BASE 与 SITES 必须与 vite.config.ts 的 SITE_HOSTNAME、src/utils/sites.ts 的
+       * 三站清单一致：scripts/check-sitemap.mjs 会校验，并**用假 location 真跑一遍**
+       * 这里的改写逻辑（这个文件只在线上 404 时才执行，本地开发永远看不见）。
        */
       var BASE = '/es-plus/'
+      // 子站前缀：从 sites.ts 的三站清单抄来（json 之外的唯一副本），按长度降序即天然正确
+      var SITES = ['/es-plus/es-pc/', '/es-plus/es-eui/']
       var path = location.pathname || '/'
       var target = null
-      if (path.indexOf(BASE) === 0 && path.length > BASE.length) {
+
+      for (var i = 0; i < SITES.length; i++) {
+        var sub = SITES[i]
+        if (path.indexOf(sub) === 0) {
+          var subRest = path.slice(sub.length - 1) // 保留前导 /
+          target = sub.slice(0, -1) + '/#' + subRest + location.search + location.hash
+          break
+        }
+      }
+      if (!target && path.indexOf(BASE) === 0 && path.length > BASE.length) {
         var rest = path.slice(BASE.length - 1) // 保留前导 /
         target = BASE.slice(0, -1) + '/#' + rest + location.search + location.hash
       }
