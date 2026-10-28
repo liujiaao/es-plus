@@ -121,8 +121,21 @@ export default defineConfig(({ mode }) => {
           // 并让浏览器可长期缓存。Element Plus / 全部图标仍全量引入（见
           // src/utils/install-app-plugins.ts），按需引入风险大，暂不改造。
           manualChunks(id: string) {
+            // Vite 注入的 `__vitePreload` helper 必须单独成 chunk，**且要排在
+            // node_modules 判断之前**：它是虚拟模块（id 形如 `\0vite/preload-helper`），
+            // 路径里没有 node_modules，先判 node_modules 会把它漏掉。
+            //
+            // 它只有几 KB，却被所有执行动态 import 的 chunk 引用。Rollup 默认把它并进
+            // 某个 manual chunk —— 此前并进了 monaco：于是入口与两个 doc-data chunk 为了
+            // 这几 KB 静态 import 了 monaco chunk，构建产物 index.html 里直接出现
+            // `<link rel="modulepreload" href="/assets/monaco-*.js">`，**首页白下载
+            // 4.2MB 且从未打开过编辑器**（实测 network：monaco-*.js 4205KB + CSS 143KB）。
+            // 单独拆出来后，入口只静态依赖 preload chunk，monaco 回到 Playground 的懒加载里。
+            if (id.includes('vite/preload-helper')) return 'preload'
             if (!id.includes('node_modules')) return
-            if (id.includes('monaco-editor')) return 'monaco'
+            // 按**目录**匹配而不是子串：`@guolao/vue-monaco-editor` 的 id 里也含
+            // "monaco-editor"，按子串判会把它一起塞进 monaco chunk。
+            if (/[\\/]node_modules[\\/]monaco-editor[\\/]/.test(id)) return 'monaco'
             if (
               id.includes('element-plus') ||
               id.includes('@element-plus') ||
