@@ -1512,3 +1512,29 @@ dataOptions），装饰键照样带出（投影阶段本来就单侧豁免）。
 **仍存在的跨腿不对称（未做，记为待办）**：片段腿没有 `truthy`/`falsy` ≡ `== true`/`== false` 的归一
 （§11.23 第 2 条只落在 CRUD 腿）。目前片段语料 63 例**没有**任何一个条件的布尔写法落到这条上
 （grep `truthy`/`falsy` 只命中散文），故无实测影响；将来片段语料引入布尔条件时应同批补上。
+
+### 11.26 跑批交接（2026-10-29，离线部分到此为止）
+
+**决定**：整批只在 **Claude 中继**上跑（与 C 阶段 `pa/claude-opus-4-8` 同口径）；本机中继
+`newapi-devops.szlanyou.com` 只服务 `deepseek-*`，`claude-opus-5` 直接 **503**，
+故本机只能跑探针（`deepseek-v4-pro`），**不跑整批**——换模型跑出来的不是这条口径下的成绩。
+
+前置（已做，换机器要重做）：`npm run build:libs`（eval 读 `packages/shared/build/`，不是 `src/`）。
+
+```bash
+# 1) 探针 / 浸泡（也是换中继的必跑项；不写产物、不参与门禁）
+ESPLUS_EVAL_MODEL=claude-opus-4-8 node scripts/eval-llm.mjs --limit 6
+# 2) 整批（写 last-accuracy.json / 徽章 —— 按约定不随本地批次提交）
+ESPLUS_EVAL_MODEL=claude-opus-4-8 node scripts/eval-llm.mjs
+# 3) 离线复算（口径以它为准，产物里的数字不必再信）
+node scripts/eval/rescore.mjs <这次写出的 dump.jsonl>
+```
+
+探针实测（2026-10-29，deepseek-v4-pro，6 例）：管道健康（zh 2 EXACT / 4 diff，attr 0.92–1.00，
+全部 compiles）；**唯一风险是中继整段抖动**——跑到第 4 例时连续 30s/60s 冷却，
+与既有观察一致（`createResilientTransport` 的 45/90 分钟预算就是为此留的）。
+故用 Claude 中继跑整批时，同样要留出「冷却而非快速失败」的时间，别把冷却期间的空白读成断供。
+
+**这次跑批要回答的两件事**：①`tableBtns` 那 11 行（prompt 分工规则已落，§11.7 之后未验证过）；
+②按 §11.23 的口径，heldout 是否已站上 88% 附近（离线 regold 复算是 **88.1%，171/194**，
+基线文件里的 `definition95` 仍是 null，等这次跑批后由人工填，并注明 runId / commit）。
