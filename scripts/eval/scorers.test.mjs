@@ -336,6 +336,23 @@ console.log('meta-eval: reactions (field linkage)')
   wrongOpts.fields[0].reactions[0].fulfill.dataOptions = [{ label: '南京', value: 'nj' }]
   check(scoreAll(gold, wrongOpts).byCapability.reactions.pass === false, 'reactions: dataOptions 内容不符应判负')
 
+  // dataOptions 的 **value** 是后端约定、NL 从不给 ⟹ 只比标签树/数量/唯一性（与 dataOptionsEqual 同规）。
+  // 证据来自 C 阶段 dump 125 行：gold loginFail / pred login_fail，语义相同却被深等值判负。
+  {
+    const sameLabels = clone(gold)
+    sameLabels.fields[0].reactions[0].fulfill.dataOptions = [{ label: '杭州', value: 'hangzhou' }]
+    check(scoreAll(gold, sameLabels).byCapability.reactions.pass === true, 'reactions: 标签同、value 不同应判正（value 不可推断）')
+    const labelChanged = clone(gold)
+    labelChanged.fields[0].reactions[0].fulfill.dataOptions = [{ label: '杭州市', value: 'hz' }]
+    check(scoreAll(gold, labelChanged).byCapability.reactions.pass === false, 'reactions: 标签变化应判负（标签是渲染契约）')
+    const dupValues = clone(gold)
+    dupValues.fields[0].reactions[0].fulfill.dataOptions = [{ label: '杭州', value: 'hz' }, { label: '杭州2', value: 'hz' }]
+    check(scoreAll(gold, dupValues).byCapability.reactions.pass === false, 'reactions: 重复 value 应判负（与 dataOptionsEqual 同规）')
+    const missingItem = clone(gold)
+    missingItem.fields[0].reactions[0].fulfill.dataOptions = []
+    check(scoreAll(gold, missingItem).byCapability.reactions.pass === false, 'reactions: 选项数量不符应判负')
+  }
+
   // dependencies 序敏感
   const two = { dependencies: ['province', 'city'], fulfill: { required: { truthy: [{ var: 'a' }] } } }
   const goldDeps = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', reactions: [two] }], actions: ['add'] }

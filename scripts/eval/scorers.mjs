@@ -636,19 +636,47 @@ function isHiddenEqual(gold, pred) {
 }
 
 /**
- * 字段联动（AI-07）：gold 每个带 `reactions` 的 field，pred 同名 field 必须存在**且整数组深等值**。
+ * 字段联动（AI-07）：gold 每个带 `reactions` 的 field，pred 同名 field 必须存在**且联动规则等值**。
  *
- * 深等值而非 presence：这是「行为契约」——`value`↔`dataOptions` 互换、`dependencies` 顺序错、
- * `when` 谓词写错都算未命中（与 `isHidden`/`columns`/`expandConfig` 同规）。
+ * 「等值」= 把 `fulfill.dataOptions` 换成与 `dataOptionsEqual` **同一条判据**再深比较：
+ * 标签树（含层级与顺序）必须一致，value 只校验数量与唯一性。
+ *
+ * 为什么：`reactions` 里的 dataOptions 与字段级 dataOptions 是**同一种东西**（选项数组），
+ * NL 只给标签（「登录失败/密码重置」），value 是后端数据模型的约定。125 行 gold 写
+ * `loginFail`/`resetPwd`、模型写 `login_fail`/`password_reset`，语义一模一样，却被
+ * 整数组深等值判负 —— 与字段级 dataOptions 曾经的问题完全同构（AN-01 已修，这一处漏了）。
+ * `dependencies` / `when` / `required` / `disabled` / `value` 仍是行为契约：写错照旧判负
+ * （`value`↔`dataOptions` 互换、`dependencies` 顺序错、`when` 谓词错都算未命中）。
  */
 function reactionsEqual(gold, pred) {
   const pm = fieldMap(pred)
   for (const f of gold.fields) {
     if (!f.reactions) continue
     const pf = pm.get(f.prop)
-    if (!pf || !pf.reactions || !eq(f.reactions, pf.reactions)) return false
+    if (!pf || !pf.reactions) return false
+    if (!eq(reactionsView(f.reactions), reactionsView(pf.reactions))) return false
   }
   return true
+}
+
+/**
+ * reactions 的比较视图：`fulfill.dataOptions` → { 标签树, 选项数, 值是否互异 }，其余键原样。
+ * 判据与 `dataOptionsEqual` 逐字一致（含「重复 value 判负」）。
+ */
+function reactionsView(reactions) {
+  return (reactions ?? []).map((r) => {
+    const out = cloneDeep(r)
+    const opts = out.fulfill?.dataOptions
+    if (Array.isArray(opts)) {
+      const vals = optionValues(opts)
+      out.fulfill.dataOptions = {
+        labels: optionLabelTree(opts),
+        count: vals.length,
+        unique: new Set(vals.map(String)).size === vals.length,
+      }
+    }
+    return out
+  })
 }
 
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
@@ -863,7 +891,9 @@ const FIELD_SCORERS = {
     const g = fieldMap(gold).get(prop)
     const p = fieldMap(pred).get(prop)
     if (!g || !g.reactions) return true // 该字段本就不要求联动 → 空钉即过
-    return !!p && !!p.reactions && eq(g.reactions, p.reactions)
+    if (!p || !p.reactions) return false
+    // 与 reactionsEqual 同源：dataOptions 按「标签树 + 数量 + 唯一性」比，其余深等值
+    return eq(reactionsView(g.reactions), reactionsView(p.reactions))
   },
 }
 

@@ -46,13 +46,15 @@ import { createHash } from 'node:crypto'
  *                                   `nin[a,b]` ≡ 两条 `!=`）
  *   +edit-config-defaults-v1      : `editConfig` 的省略 ≡ 默认值（trigger:click / mode:cell /
  *                                   enabled:true），show 系列 / autoClear 按装饰键豁免
+ *   +reaction-options-v1          : reactions 的 `fulfill.dataOptions` 改按「标签树 + 数量 +
+ *                                   唯一性」比（value 是后端约定、NL 从不给）
  *
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {
