@@ -122,7 +122,9 @@ const crudShape = {
   toolbarBtns: z
     .array(ToolbarBtnSchema)
     .optional()
-    .describe("Toolbar buttons rendered in the EsForm button area (position:left|right; defaults right). Unknown keys are rejected."),
+    .describe(
+      "Buttons rendered in the QUERY-FORM button area, appended after 查询/重置. No left/right placement here — when the description names a side, use `tableBtns` instead. Unknown keys are rejected."
+    ),
   expandConfig: expandConfigSchema
     .optional()
     .describe(

@@ -759,8 +759,8 @@ export const StructuredCrudConfigSchema = z.object({
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Query form collapses when rows exceed this number'),
   }).optional().describe('Query form layout config'),
-  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Toolbar buttons rendered in EsForm button area (position:left|right; defaults to right)'),
-  tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons (position:left|right, recommended; legacy code:1=left/2=right) rendered above EsTable'),
+  toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Buttons rendered in the QUERY-FORM button area, appended after 查询/重置. This area has NO left/right placement — when the description names a side ("左侧…右侧…", "on the left/right of the table"), use `tableBtns` instead, or the placement requirement is silently lost.'),
+  tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons rendered ABOVE EsTable — the only button surface that honours `position: "left" | "right"` (legacy alias code:1=left/2=right, auto-normalized). Default to this one for toolbar buttons the NL positions.'),
   operationColumn: OperationColumnSchema.optional().describe('Operation column config (false = hidden)'),
   dialogs: z.record(z.string(), DialogConfigSchema).optional().describe(
     'Per-dialog configs keyed by dialog ID (add/edit/view/…). Declaring `dialogs` gives a dialog its own base keys (appearance/close behaviour, `configBtn`, `formItems`) and does NOT suppress button derivation — the toolbar and row-action buttons are still derived from `actions` unless `toolbarBtns`/`operationColumn` are declared explicitly (those two, never `dialogs`, hand the button surface over).'
