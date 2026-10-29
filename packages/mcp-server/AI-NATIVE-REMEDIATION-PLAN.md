@@ -705,6 +705,7 @@ npm run check:scorers
    - 计划把 `operationColumn` 列为评分维度；本语料 18 例的期望都是「未声明（null）」，因为组合页的按钮面本应由 `actions` 在运行时派生。**显式 operationColumn 的保留路径**由既有 CRUD 语料 + `scoreAll` 的 `operationColumn` 维覆盖；组合透镜补的是「派生时不得凭空多出 / 声明时必须原样保留」的可扰动事实。
    - 「三端语法」不另设维度：三端同源语料 + `scoreAll` 的 `target` 维（vue2/antdv 适用）+ 每例**真前门产物过 Tier A 编译**，三条合起来就是三端语法证据。
    - 组合记分卡**尚未**接入付费 eval 腿：当前 eval 的 CRUD 行由模型直接产 `config`，没有「模型产 surfaces → 前门组合」的驱动力（`driveFrontDoor` 只回放已得的 config）。这条观测腿留给 AN-18 的片段腿门禁化之后再接；本批先把合约、语料、编译与运行时证据落地。
+     - **2026-10-29 复核**：前置条件已满足 —— 片段腿已进门禁（`eval-llm.mjs` 的 `passed` 含 `fragmentStats.ok`），但接这条腿**不是接线工作**：语料是 `__tests__/golden/composition/` 的 `surfaces`（结构化输入，**没有 NL**），要量模型的组合能力必须先立一条「NL → surfaces」的模型驱动与配套提示词/语料 —— 那是新能力，不是把现有 scorer 挂到已付费的行上。另：生成配置里的组合事实（同名字段跨面归并）已由 `scoreAll` 的 `membership`/`actions`/`dialogs` 三维在付费腿里量着，**不重复造一份**。
 8. **回归**：`check:composition` 18 例绿（full=6 / table+form=6 / form+dialog=6）；`check:front-door` / `check:front-door-leg` / `check:dialog-scorers` 保持绿；vue3 596 例、adapter-antdv 655 例全绿；vue2 运行时 E2E **17** 例全绿（新增组合 1 例）；`test:golden` 216/216。
 
 ---
