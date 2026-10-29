@@ -158,6 +158,7 @@ import { useFormRequest } from '../../composables/use-form-request'
 import { mapSize } from '../../utils/size'
 import {
   getGlobalConfig,
+  resolveComponentConfig,
   filterBtnProps,
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
@@ -282,7 +283,8 @@ export default defineComponent({
       }
       return props.model
     })
-    const $esPlusForm = (inject('$esPlusForm', null) as Record<string, unknown> | null) ?? getGlobalConfig().EsForm ?? {}
+    // 回落到单例时必须展平 `methods`（configureEsPlus 路径），否则 fieldFieldOutput 恒 undefined
+    const $esPlusForm = (inject('$esPlusForm', null) as Record<string, unknown> | null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
     const esPlus = (inject('$EsPlus', null) as Record<string, unknown> | null) ?? getGlobalConfig() ?? {}
 
     // ─── 权限 / i18n ──

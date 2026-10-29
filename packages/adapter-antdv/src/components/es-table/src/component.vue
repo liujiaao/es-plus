@@ -201,6 +201,7 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
   resolveHttpRequest,
+  resolveComponentConfig,
   computeBoundaryRollback,
   buildColumnSpans,
   resolveMergeConfig,
@@ -269,7 +270,7 @@ const antLocale = ref(zhCN)
 
 // ─── 注入 ───────────────────────────────────────────
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsTable')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 function getVxeGridInstance() {

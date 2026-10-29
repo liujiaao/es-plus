@@ -185,6 +185,7 @@ import {
   normalizeFormItem,
   resolveButtonSide,
   resolveHttpRequest,
+  resolveComponentConfig,
   resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
@@ -216,7 +217,9 @@ const props = withDefaults(
 )
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+// 同 es-table：回落到单例时必须展平 `methods`，否则 configureEsPlus 路径下
+// `fieldFieldOutput` 恒为 undefined（docs/usage.md 模式二配了等于没配）。
+const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 const checkPermission = (pvalue?: string): boolean => {

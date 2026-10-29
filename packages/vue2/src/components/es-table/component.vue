@@ -205,6 +205,7 @@ import {
 import {
   getGlobalConfig,
   resolveHttpRequest,
+  resolveComponentConfig,
   getCallback,
   getNestedValue,
   TABLE_CONTEXT_INJECT_KEY,
@@ -408,13 +409,14 @@ export default defineComponent({
     const instance = markRaw(
       getCurrentInstance() as unknown as Record<string, unknown>
     )
+    // 回落到单例时必须经 resolveComponentConfig 展平 `methods`：configureEsPlus 写进
+    // 单例的是原样的 `{ methods: {...} }`，而下面的读取点全是平键。
     const $esPlusTable =
       inject<Record<string, unknown>>(
         '$esPlusTable',
         null as unknown as Record<string, unknown>
       ) ??
-      ((getGlobalConfig() as Record<string, unknown>).EsTable as Record<string, unknown>) ??
-      {}
+      resolveComponentConfig(getGlobalConfig(), 'EsTable')
     const esPlus =
       inject<Record<string, unknown>>('$EsPlus', null as unknown as Record<string, unknown>) ??
       (getGlobalConfig() as Record<string, unknown>) ??

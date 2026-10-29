@@ -158,6 +158,7 @@ import {
   TABLE_CONTEXT_INJECT_KEY,
   resolveKeepPage,
   resolveHttpRequest,
+  resolveComponentConfig,
   computeBoundaryRollback,
   buildRowSpanMethod,
   resolveMergeConfig,
@@ -217,7 +218,11 @@ if (injectedLocale) {
 }
 
 const instance = getCurrentInstance() as any
-const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? getGlobalConfig().EsTable ?? {}
+// 注入值优先（app.use 路径下 Plugin 已经把 methods provide 成平键）；没有注入时回落到
+// 模块单例，**必须经 resolveComponentConfig 展平 methods** —— configureEsPlus 写进单例的
+// 是原样的 `{ methods: {...} }`，直接读会让 configQueryFieldOutput / paginationLayout
+// 恒为 undefined（见 @es-plus/core 的同名函数注释）。
+const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsTable')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）

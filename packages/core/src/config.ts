@@ -122,6 +122,39 @@ export function createGlobalConfigView(extras: Record<string, unknown> = {}): Re
 export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
 
 /**
+ * 取某个组件档（`EsTable` / `EsForm` / `EsDialog`）的全局配置，并把 `methods` 展平。
+ *
+ * 为什么需要这个函数：两条安装路径写进单例/注入的形状**不一样**。
+ *
+ *   · `app.use(EsPlus, { EsTable: { methods } })` —— `install()` 里
+ *     `app.use(EsTable.Plugin, options.EsTable)`，Plugin 只把 `options.methods`
+ *     `provide` 出来，于是组件 `inject('$esPlusTable')` 拿到的是**平的**
+ *     `{ $httpRequest, configQueryFieldOutput, paginationLayout }`。
+ *   · `configureEsPlus({ EsTable: { methods } })` —— 没有插件、没有 provide，组件回落到
+ *     单例，读到的是**原样**的 `{ methods: {...} }`。
+ *
+ * 组件内部的读取点一律是平键（`$esPlusTable.configQueryFieldOutput` /
+ * `$esPlusTable.paginationLayout` / `$esPlusForm.fieldFieldOutput`），于是第二条路径下
+ * 这几个键全是 undefined —— docs/usage.md 的「模式二：configureEsPlus」整段示例
+ * （字段映射、分页布局）配了等于没配。`$httpRequest` 因为另有 `resolveHttpRequest`
+ * 兜底所以看不出问题，缺陷因此被掩盖。
+ *
+ * 展平时 `methods` 里的键**覆盖**同级平键（与 `resolveHttpRequest` 的 nested 优先
+ * 一致）；`methods` 本身保留在结果里，旧代码读 `cfg.methods.x` 也不受影响。
+ */
+export function resolveComponentConfig(
+  cfg: EsPlusGlobalConfig | null | undefined,
+  key: 'EsTable' | 'EsForm' | 'EsDialog'
+): Record<string, unknown> {
+  const sub = cfg?.[key]
+  if (!sub || typeof sub !== 'object') return {}
+  const flat = sub as Record<string, unknown>
+  const methods = flat.methods
+  if (!methods || typeof methods !== 'object') return flat
+  return { ...flat, ...(methods as Record<string, unknown>) }
+}
+
+/**
  * 从全局配置中解析出用户配置的 HTTP 请求函数。
  *
  * 兼容三端 install 写入单例后的三种键位约定：

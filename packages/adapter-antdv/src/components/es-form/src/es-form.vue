@@ -204,6 +204,7 @@ import { useFormLayout } from '../../../composables/use-form-layout'
 import { useFormRequest } from '../../../composables/use-form-request'
 import {
   resolveFormLayProps,
+  resolveComponentConfig,
   filterBtnProps,
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
@@ -251,7 +252,7 @@ const props = withDefaults(
 )
 
 const instance = getCurrentInstance()
-const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? getGlobalConfig().EsForm ?? {}
+const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // ─── 权限 ───────────────────────────────────────────
