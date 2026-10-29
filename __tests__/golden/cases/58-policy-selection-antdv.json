@@ -1,7 +1,7 @@
 {
   "nl": "保险保单管理：查询有保单号、投保人；表格首列勾选，后面展示保单号、投保人、保费、生效日期；支持新增、编辑、删除。",
   "nlEn": "Insurance policy management: query by policy no. and policyholder; the table starts with a checkbox column, then shows policy no., policyholder, premium, and effective date; supports add, edit, and delete.",
-  "fixedFields": ["policyNo", "holder", "premium"],
+  "fixedFields": ["policyNo", "holder", "premium", "effectDate"],
   "pinnedDims": ["propSet", "actions", "columns", "target"],
   "config": {
     "name": "PolicyManage",
@@ -11,15 +11,16 @@
       { "prop": "policyNo", "label": "保单号", "formtype": "Input" },
       { "prop": "holder", "label": "投保人", "formtype": "Input" },
       { "prop": "premium", "label": "保费", "formtype": "InputNumber", "inQuery": false },
-      { "prop": "effectDate", "label": "生效日期", "formtype": "DatePicker", "inQuery": false, "inTable": false }
+      { "prop": "effectDate", "label": "生效日期", "formtype": "DatePicker", "inQuery": false }
     ],
     "columns": [
       { "type": "selection", "width": 50 },
       { "prop": "policyNo", "label": "保单号" },
       { "prop": "holder", "label": "投保人" },
-      { "prop": "premium", "label": "保费", "align": "right", "width": 120 }
+      { "prop": "premium", "label": "保费", "align": "right", "width": 120 },
+      { "prop": "effectDate", "label": "生效日期" }
     ],
     "actions": ["add", "edit", "delete"]
   },
-  "notes": "AI-09 子项①: selection + align:right；effectDate 设 inTable:false（不在列表，故不出现在 columns 也不算漏）（antdv/schema）"
+  "notes": "AI-09 子项①: selection + align:right（antdv/schema）。2026-10-29 修 gold 自相矛盾：原文把 effectDate 设成 inTable:false 并据此不写进 columns，可 NL/nlEn 都明写「表格…展示保单号、投保人、保费、生效日期」⟹ 生效日期就是表格列。照 NL 写的模型多出一列反被判负（且 4 列 vs 5 列让装饰键豁免也不生效）"
 }

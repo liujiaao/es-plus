@@ -1348,3 +1348,92 @@ gold 与 pred 都写了 `true`，改了也不影响任何分数 —— 记在这
 
 
 
+
+> ⚠ 上面两张表（§11.18）的数字在 §11.19~§11.21 之后已过期；本页最后给出**唯一有效**的合并口径。
+
+### 11.19 D 阶段（离线部分）：`columns` 省略即派生 + 展开列位置不测量 ✅（2026-10-29）
+
+C 阶段 dump 里 `columns` 维度的 11 条失败，逐行读下来有 **4 条不是模型错**，都写在 schema / prompt 里：
+
+| 现象 | schema / prompt 的原文 | 结论 |
+|---|---|---|
+| 61：gold 写了 `columns`，pred 一个都没写 | `columns` 的 describe：*Omit to keep the derived one-field-one-column behavior.* | 省略**就是**派生 |
+| 64 / 74：gold 把 `{type:'expand'}` 放在**末列**，pred 没写这一列 | expandConfig 的 describe 与 prompt：*otherwise the generator prepends a leading expand column — you do NOT need to add the expander column yourself* | 展开列**在不在**是契约，**排第几**不是 |
+| 106：`$select` 的选项 `value` 写成 `mid`（gold `medium`）、`defaultValue` 跟着写 `mid` | NL 只给「高/中/低」三个**标签**；`value` 是后端约定 | 与字段级 `dataOptions` 同规（AN-01） |
+
+**落地**：`resolveColumns(config)` 复刻生成器的列解析（声明了非空 `columns` 就用它，否则按
+`inTable !== false` 派生，再按 `LEADING_COLUMN_ORDER` 前置 `multiSelect`/`snIndex`/`expand`
+合成的非数据列，最后由顶层 `expandConfig` 补一个展开列）；`projectColumnSet()` 把展开列
+**从位置里摘出来单独比内容**，其余列照旧按位置深等值。`editRender.options` 改按标签树 +
+数量 + 唯一性比，`defaultValue` 先解析回**标签**再比。
+
+派生只复刻 `buildTableColumn` 的**结构键**（label/labelKey、ellipsis、permissionValue、
+dataOptions），装饰键照样带出（投影阶段本来就单侧豁免）。
+
+### 11.20 D 阶段（离线部分）：`treeConfig` 省略即默认值 + `dialogs` 的 key 身份 ✅（2026-10-29）
+
+- **`treeConfig`（1 行，89）**：schema 明写 `childrenField` 默认 `'children'`、`expandAll`
+  默认 `false`，运行时还把弃用别名 `children` 归一到 `childrenField`。NL 就是「子文档放在
+  **默认的** children 字段里」，模型写 `{}` 反而被判负。改：`projectTreeConfig()` 填默认值 + 别名归一。
+- **`dialogs`（2 行，187 / 191）**：两个不同的错，同一个根因 —— **dialog key 是作者自选的标识符**，
+  不是 NL 推断得出来的东西。
+  - 191：gold 的「详情」按钮指向 `dialogs.detail`，pred 的同一个「详情」按钮指向 `dialogs.view`。
+    ⟹ key 按**打开它的按钮名**对齐（`dialogKeyByButtonName`），只在双向都不冲突时重映射。
+  - 187：gold 声明了 `dialogs.edit`（title + formItems，全是派生弹窗本来就会有的东西），
+    pred 干脆不声明。⟹ gold 声明的 `add/edit/view` 而 pred 省略 = **派生弹窗**（`省略即默认值`）。
+  - 顺带删掉「key 集合必须双向相等」那段检查：它和本函数自己的注释（`gold 没锁的键 pred
+    多写/少写不追责`）自相矛盾，正是把上面两条判成 miss 的直接原因。
+
+`RULER_VERSION` 因此追加四段：`+edit-render-options-v1`、`+columns-derived-v1`、
+`+tree-config-defaults-v1`、`+dialog-key-align-v1`。
+
+### 11.21 语料：五例 gold 与自己的 NL 不一致 + 两例 NL 欠定 ✅（2026-10-29）
+
+**gold 漏项 / 自相矛盾（照 NL 写的模型反被判负）**：
+
+| 用例 | gold 原来 | NL 原话 | 改法 |
+|---|---|---|---|
+| 54 | `fields` 里**没有**「会议室」 | 「查询有会议主题、**会议室**」 | 补 `room`（`inTable:false`，表格列不含它） |
+| 58 | `effectDate` 设 `inTable:false`、`columns` 也不含它 | 「表格…展示保单号、投保人、保费、**生效日期**」 | 恢复 `inTable`（默认 true）并补进 `columns` |
+| 104 | `editRender.props` 只有 `placeholder` | 「金额录入框带**必填提示**」 | 补 `props.required`：单元格级「必填」在本仓只有这一条 JSON 通道（`VxeEditRender` 无 `rules` 键，`props` 原样转发给渲染器） |
+| 105 | 「活动名称」列**没有** `editRender` | 「表格行内编辑，**单击单元格**修改」；prompt：`editRender` 要 **on EVERY editable column**（否则该格永不可编辑） | 补 `editRender` |
+| 180 | 第 4 列叫「金额」(`amount`) | 「后面是分类、SKU、**数量**」(quantity) | 改回 NL 原词 |
+
+**NL 欠定（gold 没说不该说的）**：
+
+| 用例 | 欠定点 | 处理 |
+|---|---|---|
+| 12 | gold 同时写 `querySpan:12` 与 `formSpan:12`，NL 只说「**表单**分 2 列」 | 补 NL：「查询表单分 2 列，弹窗里的表单也分 2 列」——删 gold 会丢 `querySpan` 这条测量 |
+| 49 | 列序（勾选/发货单号/物流分组/收货人）NL 没定死，gold 自己的「随后按物流分组」还与它不符 | 补 NL 明写列序 —— 列序是 `columns` 维度的判定项，要么说清、要么不该判负 |
+
+两例都选了**补 NL** 而不是改 gold：它们的 config 一字未动，所以不会 `regold` 出假翻绿，
+模型这一轮仍然按「手里没有这条信息」被判负（12 缺 `querySpan`、49 列序不同）—— 这是
+**给下一轮**留的可过条件，不是这一轮的分数。
+
+### 11.22 合并口径（唯一有效版，取代 §11.18 的表）
+
+| 基底 | 尺子 | 结果 | 失败行 |
+|---|---|---|---|
+| 原 dump（10-27 的 gold，pred/gold 一字不动） | `label-identity-v1+deco-projection-v1` | 69.1%（134/194） | 60 |
+| 同上 | `+unmeasured-expand-title-v1`（§11.12） | 73.7%（143/194） | 51 |
+| 同上 | `+cond-dsl-canonical-v1`（§11.13） | 74.7%（145/194） | 49 |
+| 同上 | `+edit-config-defaults-v1`（§11.14） | 75.8%（147/194） | 47 |
+| 同上 | `+reaction-options-v1`（§11.16） | 76.3%（148/194） | 46 |
+| 同上 | 本批四段（§11.19 + §11.20 一次落地） | **79.4%（154/194）** | 40 |
+| regold 副本（当前语料） | 最终尺子（十段） | **83.5%（162/194）· 32 行** | 32 |
+
+- 左半张表全在**同一份原始 dump** 上：只换尺子，逐行可复现。`+dialog-key-align-v1` 在原 dump
+  上**没翻绿**（`191` 还撞着 `tableBtns`，见下），它翻的是 187。
+- 右端 162 = 151（§11.18 的 regold 值）+ 11：**6 行来自尺子**（61/64/74/106/89/187）、
+  **5 行来自语料**（54/58/104/105/180）。12 与 49 的 config 未动 ⟹ 不贡献分数。
+- **一次口径修正**：`.tmp-audit/regold.mjs` 此前把**原始** case JSON 写回 dump，而 dump 里
+  的 gold 是 `StructuredCrudConfigSchema` **解析后**的（`mode`/`target`/`i18n` 有默认值、
+  `inQuery/inTable/inForm` 缺省即 true）。`rescore.mjs` 自己会 reparse 两侧，所以合计数
+  一直是对的；但任何**直接**拿 regold 里的 gold 打分的地方（含调试脚本）会系统性偏低。
+  已改成 parse 后再写回（"gold 与当前语料不同的行"因此从 216 变成有意义的 10）。
+
+**尚未解决的 32 行（全部是模型侧，本批未动）**：`tableBtns` 11（含 189/190/191，prompt 分工
+规则已落、待下一次跑批验证）、`isHidden` 8（7 行漏写整条需求 + 枚举码值猜错，1 行是收敛用例）、
+`reactions` 5（3 行漏写、2 行码值没照抄语料里明写的 dataOptions）、`columns` 4（93/97 漏
+`editRender`、96 漏 `precision:2`、49 列序照 NL 不同）、`propSet`/`extPoints`/`actions`/`inForm`
+各 2（conv-15/16 的「工号表单里不用填」、13 的列名、161 没写 `render`）、`fieldSpan` 1（12 缺 `querySpan`）。

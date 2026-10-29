@@ -15,9 +15,9 @@
     "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "cell" } },
     "columns": [
       { "prop": "contractNo", "label": "合同编号", "editRender": { "name": "$input" } },
-      { "prop": "amount", "label": "金额", "editRender": { "name": "$input", "props": { "type": "number", "placeholder": "请输入金额" } } }
+      { "prop": "amount", "label": "金额", "editRender": { "name": "$input", "props": { "type": "number", "required": true, "placeholder": "请输入金额" } } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig dblclick + editRender props placeholder，antdv/sfc）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig dblclick + editRender props placeholder，antdv/sfc）。2026-10-29 补 props.required：NL 明写「金额录入框带必填提示」，而 gold 只有一个 placeholder —— 把 NL 说出口的需求丢了。单元格级「必填」在本仓只有一条 JSON 通道：`editRender.props` 原样转发给渲染器（VxeEditRender 无 rules 键，见 packages/core/src/types.ts:641），antd Input 再透传到原生 input；故 required 落在 props 里，模型按 NL 写出的正是这一形态"
 }

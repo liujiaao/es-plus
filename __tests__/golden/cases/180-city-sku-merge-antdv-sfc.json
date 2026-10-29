@@ -5,7 +5,7 @@
     "city",
     "cls",
     "sku",
-    "amount"
+    "quantity"
   ],
   "pinnedDims": [
     "propSet",
@@ -34,8 +34,8 @@
         "formtype": "Input"
       },
       {
-        "prop": "amount",
-        "label": "金额",
+        "prop": "quantity",
+        "label": "数量",
         "formtype": "InputNumber"
       }
     ],
@@ -49,5 +49,5 @@
       "edit"
     ]
   },
-  "notes": "AI-23: antdv + SFC 模式"
+  "notes": "AI-23: antdv + SFC 模式。2026-10-29 第 4 列改回 NL 原词「数量」(quantity)：原文写「金额」(amount)，而 NL 与 nlEn 都只写「数量 / quantity」⟹ gold 要求了一个 NL 没说的字段名（与 123 的缩写→全称同形），照 NL 写的模型在 label 身份对齐下反而 miss"
 }

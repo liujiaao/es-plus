@@ -14,7 +14,7 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
     "columns": [
-      { "prop": "campaignName", "label": "活动名称" },
+      { "prop": "campaignName", "label": "活动名称", "editRender": { "name": "$input" } },
       {
         "label": "投放信息",
         "groups": [
@@ -25,5 +25,5 @@
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑 + 列分组共存（列组子列带 editRender，vue3/schema）；分组键用运行时契约 groups（TableColumn.groups），AN-08 前误写成 children —— 那是树表子节点的键，不是表头分组"
+  "notes": "AI-09 子项④: vxe 行内编辑 + 列分组共存（列组子列带 editRender，vue3/schema）；分组键用运行时契约 groups（TableColumn.groups），AN-08 前误写成 children —— 那是树表子节点的键，不是表头分组。2026-10-29 给「活动名称」补上 editRender：NL 说「单击单元格修改」，而 vxe 的契约是**每列都要 editRender 才可编辑**（prompt 原文 on EVERY editable column）⟹ 原文 gold 自己漏了一列，反倒把给全三列的模型判负"
 }

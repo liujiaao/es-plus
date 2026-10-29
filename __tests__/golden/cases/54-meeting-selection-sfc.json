@@ -9,6 +9,7 @@
     "mode": "sfc",
     "fields": [
       { "prop": "subject", "label": "会议主题", "formtype": "Input" },
+      { "prop": "room", "label": "会议室", "formtype": "Input", "inTable": false },
       { "prop": "host", "label": "主持人", "formtype": "Input", "inQuery": false },
       { "prop": "startTime", "label": "开始时间", "formtype": "DatePicker", "inQuery": false }
     ],
@@ -20,5 +21,5 @@
     ],
     "actions": ["add", "edit", "delete"]
   },
-  "notes": "AI-09 子项①: selection 非字段列（vue3/sfc）"
+  "notes": "AI-09 子项①: selection 非字段列（vue3/sfc）。2026-10-29 补回「会议室」查询字段：NL 明写「查询有会议主题、会议室」，原文 gold 里根本没有这个字段 ⟹ 照 NL 写的模型多出一字段，反被 propSet 判负（gold 漏项，不是模型错）。inTable:false 因为表格列里只有主题/主持人/开始时间"
 }

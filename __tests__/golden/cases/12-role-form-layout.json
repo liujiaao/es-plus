@@ -1,6 +1,6 @@
 {
-  "nl": "角色管理：新增编辑弹窗宽度 720px，表单分 2 列；表格展示角色名、角色编码、数据权限范围、创建时间；支持新增、编辑、删除、查看。",
-  "nlEn": "Role management: the add/edit dialog is 720px wide with a 2-column form; the table shows role name, role code, data permission scope, and creation time; supports add, edit, delete, and view.",
+  "nl": "角色管理：查询表单分 2 列，新增编辑弹窗宽度 720px，弹窗里的表单也分 2 列；表格展示角色名、角色编码、数据权限范围、创建时间；支持新增、编辑、删除、查看。",
+  "nlEn": "Role management: the query form is 2 columns; the add/edit dialog is 720px wide and its form is also 2 columns; the table shows role name, role code, data permission scope, and creation time; supports add, edit, delete, and view.",
   "fixedFields": ["roleName", "roleCode", "dataScope", "createdAt"],
   "pinnedDims": ["propSet", "actions", "fieldSpan"],
   "config": {
@@ -70,5 +70,5 @@
       }
     }
   },
-  "notes": "dialog width + 2-column add/edit form（列宽由字段级 formSpan 决定）"
+  "notes": "dialog width + 2-column add/edit form（列宽由字段级 formSpan 决定）。2026-10-29 把「查询表单分 2 列」写进 NL：gold 的三个可查询字段同时带 querySpan:12 与 formSpan:12，可原文只说「表单分 2 列」—— 模型只给 formSpan 是照 NL 的正确读法，却被 querySpan 判负。补 NL 而不是删 gold，是为了保住 querySpan 这条测量"
 }
