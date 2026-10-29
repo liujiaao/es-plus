@@ -324,6 +324,11 @@ export interface TableOptions {
    */
   sortParam?: boolean | { field?: string; order?: string }
   spanMethod?: (data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
+  /**
+   * 声明式合并单元格（跨端窄子集）：`{ rowsBy: ['列 prop', ...] }`，按「相邻行该列取值相等」合并。
+   * a-table 没有 span-method prop，本端只能走这条；函数式 spanMethod 在本端不生效。
+   */
+  mergeConfig?: { rowsBy: string[] }
   cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
   cellStyle?: Record<string, unknown> | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => Record<string, unknown>)
   headerCellClassName?: string | ((data: { column: unknown; rowIndex: number }) => string)

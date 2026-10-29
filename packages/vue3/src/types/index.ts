@@ -377,6 +377,8 @@ export interface TableOptions {
   sortParam?: boolean | { field?: string; order?: string }
   /** Span method for merging cells */
   spanMethod?: (data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
+  /** 声明式合并单元格（跨端窄子集）：`{ rowsBy: ['列 prop', ...] }`，按「相邻行该列取值相等」合并 */
+  mergeConfig?: { rowsBy: string[] }
   /** Cell class name */
   cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
   /** Cell style */

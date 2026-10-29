@@ -874,6 +874,12 @@ export interface TableOptions {
   sortParam?: boolean | { field?: string; order?: string }
   /** 合并单元格方法 */
   spanMethod?: (data: { row: ModelData; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
+  /**
+   * 声明式合并单元格（跨端窄子集）：`{ rowsBy: ['列 prop', ...] }`，按「相邻行该列取值相等」合并。
+   * 三端同一语义；antdv 默认引擎（a-table 无 span-method prop）只能走这条，
+   * 函数式 `spanMethod` 在 antdv 上不生效。求值见 `@es-plus/core` 的 `merge-span`。
+   */
+  mergeConfig?: { rowsBy: string[] }
   /** 单元格类名 */
   cellClassName?: string | ((data: { row: ModelData; column: unknown; rowIndex: number; columnIndex: number }) => string)
   /** 单元格样式 */
