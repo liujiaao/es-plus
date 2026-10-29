@@ -1,6 +1,6 @@
 {
-  "nl": "两级联动地址管理（单文件组件）：查询有主体名称；表格展示主体名称、省份、所属大区、城市；支持新增、编辑、删除。表单里「所属大区」自动等于所选省份；「城市」的下拉选项随所属大区变化——华东出上海/南京，华南出广州/深圳。",
-  "nlEn": "Two-level cascading address management (single-file component): query by entity name; the table shows entity name, province, region and city; supports add, edit and delete. In the form the \"region\" is set automatically to the chosen province, and the \"city\" options follow the region — East China gives Shanghai/Nanjing, South China gives Guangzhou/Shenzhen.",
+  "nl": "两级联动地址管理（单文件组件）：查询有主体名称；表格展示主体名称、省份、所属大区、城市；支持新增、编辑、删除。省份下拉为浙江、广东；表单里「所属大区」自动等于所选省份（取同一套取值，浙江→zj、广东→gd）；「城市」的下拉选项随所属大区变化——浙江出上海/南京，广东出广州/深圳。",
+  "nlEn": "Two-level cascading address management (single-file component): query by entity name; the table shows entity name, province, region and city; supports add, edit and delete. The province select offers Zhejiang and Guangdong; in the form the \"region\" is set automatically to the chosen province (same value set: Zhejiang→zj, Guangdong→gd), and the \"city\" options follow the region — Zhejiang gives Shanghai/Nanjing, Guangdong gives Guangzhou/Shenzhen.",
   "fixedFields": [
     "entityName",
     "province",
@@ -124,5 +124,5 @@
       "delete"
     ]
   },
-  "notes": "AI-07: 级联（region 回写自 province，再由 region 驱动 city 选项）—— 同一遍内 city 读到旧 region，需第二次 watcher 触发才收敛（vue3/SFC）"
+  "notes": "AI-07: 级联（region 回写自 province，再由 region 驱动 city 选项）—— 同一遍内 city 读到旧 region，需第二次 watcher 触发才收敛（vue3/SFC）。2026-10-29 修 NL：原文写「华东出上海/南京，华南出广州/深圳」，但 gold 里 region 是纯 Input（值 = province 的取值，zj/gd），**没有任何字段承载 华东/华南**，省份选项也没在 NL 里出现 —— 模型只能自己发明省份（实测写了 华东=east/华南=south），级联随之整条接不上。改 NL 明写省份与取值，并让 city 分支按省份取值陈述：gold 一字未动，这是「NL 必须能推出 gold」的门槛，不是把尺子调歪。"
 }
