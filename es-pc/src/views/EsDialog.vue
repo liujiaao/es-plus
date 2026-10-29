@@ -226,7 +226,7 @@ const methodColumns = [
 ]
 
 const dialogProps = [
-  { key: '1', prop: 'title', type: 'string | function', default: "'弹窗'", desc: '弹窗标题，支持函数动态标题' },
+  { key: '1', prop: 'title', type: 'string', default: "'弹窗'", desc: '弹窗标题（只接字符串，传函数会被当成非法值；按行生成标题请用 EsCrudPage 的 dialogs，或走 renderHeader）' },
   { key: '2', prop: 'width', type: 'string | number', default: "'600px'", desc: '弹窗宽度' },
   { key: '3', prop: 'visible', type: 'boolean', default: 'false', desc: '是否显示（配合 v-model:visible）' },
   { key: '4', prop: 'render', type: 'function', default: '-', desc: '自定义渲染内容 (h, instance, components) => VNode' },

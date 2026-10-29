@@ -52,16 +52,18 @@ const items = [
     pain: '列 + 操作列 + 分页要写 60 行。',
     win: '列配置 + btns 操作列，分页内置自动处理。',
     route: '/es-table',
-    code: `// 列配置 + btns 操作列，分页内置
+    code: `// 列配置（操作列的 btns 就是行内按钮）+ 分页内置
 const columns = [
   { prop: 'name', label: '用户名' },
   { prop: 'email', label: '邮箱' },
   { prop: 'status', label: '状态' },
-]
-const btns = [
-  { name: '新增', key: 'add' },
-  { name: '编辑', key: 'edit' },
-  { name: '删除', key: 'del' },
+  {
+    prop: 'operate', label: '操作', width: 180,
+    btns: [
+      { name: '编辑', clickEvent: (row) => handleEdit(row) },
+      { name: '删除', type: 'danger', clickEvent: (row) => handleDelete(row) },
+    ],
+  },
 ]
 const options = { apiParams: { url: '/api/users' } }`,
   },

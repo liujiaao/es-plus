@@ -189,7 +189,7 @@ const diffData = [
     key: '3',
     scene: '日期选择',
     ep: 'formtype: "DatePicker"',
-    adv: 'formtype: "DatePicker" 或 "DatePicker"，范围 type: "daterange"',
+    adv: 'formtype: "DatePicker"，范围写 attrs: { type: "daterange" }（自动转 RangePicker）',
   },
   {
     key: '4',

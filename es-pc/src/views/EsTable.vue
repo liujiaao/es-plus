@@ -154,7 +154,7 @@
     <!-- 单元格合并 -->
     <section id="cell-merge">
       <h2>单元格合并与行样式</h2>
-      <p><code>spanMethod</code> 合并单元格 + <code>rowClassName</code> 条件行样式。</p>
+      <p><code>mergeConfig</code> 声明式合并单元格（相邻行取值相等的列自动合并）+ <code>rowClassName</code> 条件行样式。a-table 没有 <code>span-method</code> prop，函数式 <code>spanMethod</code> 只在 el-table / vxe 引擎可用。</p>
             <CodeDemo :source="rawSFCs['./es-table/CellMerge.vue']">
         <EsTableCellMerge />
       </CodeDemo>
@@ -331,7 +331,7 @@ const tableEvents = [
   { key: '2', event: 'update:pagination', params: '(pagination)', desc: '分页变化（配合 v-model:pagination）' },
   { key: '3', event: 'pagination-current-change', params: '(pagination)', desc: '翻页' },
   { key: '4', event: 'size-change', params: '(pagination, size)', desc: '每页条数变化' },
-  { key: '5', event: 'change-table-sort', params: '(column)', desc: '排序变化' },
+  { key: '5', event: 'change-table-sort', params: '({ column, prop, order })', desc: '排序变化：column 为列配置，prop 为字段名，order 为 ascending / descending / null' },
   { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行（default / vxe 同口径）；跨页全集用 getSelectionRows()' },
   { key: '7', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
   { key: '8', event: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）' },
@@ -393,11 +393,11 @@ const tableOptions = [
   { key: '1', prop: 'border', type: 'boolean', default: 'false', desc: '是否显示边框' },
   { key: '2', prop: 'stripe', type: 'boolean', default: 'false', desc: '斑马纹（Ant Design Vue 无原生 stripe，按行样式实现）' },
   { key: '3', prop: 'size', type: 'string', default: 'small', desc: '表格尺寸：large / middle / small' },
-  { key: '4', prop: 'headerCellStyle', type: 'object', default: '-', desc: '表头单元格样式' },
+  { key: '4', prop: 'headerCellStyle', type: 'object', default: "{ background: '#f5f7fa' }", desc: '表头单元格样式' },
   { key: '5', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '表头单元格类名' },
   { key: '6', prop: 'highlightCurrentRow', type: 'boolean', default: 'true', desc: '高亮当前行（单选即用它 + 行事件）' },
   { key: '7', prop: 'showHeader', type: 'boolean', default: 'true', desc: '是否显示表头' },
-  { key: '8', prop: 'emptyText', type: 'string', default: '-', desc: '空数据时的占位文本' },
+  { key: '8', prop: 'emptyText', type: 'string', default: "'暂无数据'", desc: '空数据时的占位文本' },
   { key: '9', prop: 'multiSelect', type: 'boolean', default: 'false', desc: '启用多选列（与列上的 type: "selection" 等价）' },
   { key: '10', prop: 'expand', type: 'boolean', default: 'false', desc: '启用展开行' },
   { key: '11', prop: 'snIndex', type: 'boolean', default: 'false', desc: '显示序号列' },
@@ -410,7 +410,7 @@ const tableOptions = [
   { key: '18', prop: 'rowClassName', type: 'string | Function', default: '-', desc: '行类名，支持 ({ row, rowIndex }) => string' },
   { key: '19', prop: 'rowStyle', type: 'object | Function', default: '-', desc: '行内样式，支持 ({ row, rowIndex }) => object' },
   { key: '20', prop: 'defaultSort', type: 'Object', default: '-', desc: '默认排序 { prop, order: "ascending" | "descending" }' },
-  { key: '21', prop: 'spanMethod', type: 'Function', default: '-', desc: '合并单元格 ({ row, column, rowIndex, columnIndex }) => [rowspan, colspan]' },
+  { key: '21', prop: 'mergeConfig', type: 'Object', default: '-', desc: '声明式合并单元格 { rowsBy: ["列 prop", ...] }：这些列在相邻行取值相等处自动合并（a-table 引擎；函数式 spanMethod 仅 el-table / vxe 可用）' },
   { key: '22', prop: 'cellClassName', type: 'string | Function', default: '-', desc: '单元格类名' },
   { key: '23', prop: 'cellStyle', type: 'object | Function', default: '-', desc: '单元格样式' },
   { key: '24', prop: 'isInitRun', type: 'boolean', default: 'false', desc: '初始化时自动请求数据' },

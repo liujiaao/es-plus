@@ -164,7 +164,7 @@
 
     <section id="computed-fields">
       <h2>联动计算：选商品自动算总价</h2>
-      <p><code>on.change</code> + <code>on.input</code> 实现商品选择 → 自动填充单价 → 数量折扣 → 实时计算总价。</p>
+      <p>字段级 <code>on.change</code> 监听下拉选择，其余联动用 <code>watch</code> 跟随 model（antdv 各控件事件名不统一：a-input 用 input、a-slider 只有 update:value / change），实现商品选择 → 自动填充单价 → 数量折扣 → 实时计算总价。</p>
             <CodeDemo :source="rawSFCs['./es-form/ComputedFields.vue']">
         <EsFormComputedFields />
       </CodeDemo>

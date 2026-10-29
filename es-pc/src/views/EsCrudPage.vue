@@ -265,12 +265,12 @@ const crudSchema = [
 const crudBtnConfigs = [
   { key: '1', prop: 'name', type: 'string', default: '必填', desc: '按钮文本' },
   { key: '2', prop: 'key', type: 'string', default: '-', desc: '按钮标识；query / add / export 有内建语义，其余经 btn-click 派发' },
-  { key: '3', prop: 'type', type: 'string', default: '-', desc: '按钮风格：primary / success / warning / danger（映射到 a-button）' },
+  { key: '3', prop: 'type', type: 'string', default: '-', desc: '按钮风格：primary / default / dashed / text / link / danger（映射到 a-button）；success / warning 在 ant-design-vue 无对应色板，降级为 default' },
   { key: '4', prop: 'size', type: 'string', default: '-', desc: '按钮尺寸；tableBtns 缺省 small' },
   { key: '5', prop: 'icon', type: 'string', default: '-', desc: '图标名称' },
   { key: '6', prop: 'position', type: 'string', default: 'left', desc: '左右位置：left / right（tableBtns 用它分组；toolbarBtns 由 EsForm 按钮区布局决定）' },
   { key: '7', prop: 'code', type: '1 | 2', default: '-', desc: '位置旧写法：2 视为 right，其余视为 left（position 优先）' },
-  { key: '8', prop: 'direction', type: 'string', default: '-', desc: '按钮排列方向：left / right（弹窗与表格的按钮底座读取；toolbarBtns 不读取）' },
+  { key: '8', prop: 'direction', type: 'string', default: '-', desc: '表单按钮的左右方向：left / right（取值链 direction → position → code → right，direction 优先级最高）；表格 / 弹窗按钮不读它，按 position / code 分组' },
   { key: '9', prop: 'loading', type: 'boolean', default: 'false', desc: '加载态（禁用点击并显示 loading）' },
   { key: '10', prop: 'disabled', type: 'boolean | Function', default: 'false', desc: '禁用状态，支持函数动态判断' },
   { key: '11', prop: 'permissionValue', type: 'string', default: '-', desc: '按钮级权限编码，无权限时不渲染' },
@@ -304,7 +304,7 @@ const crudDialogs = [
   { key: '1', prop: 'title', type: 'string | Function', default: '-', desc: '弹窗标题，可传 (row) => string 按行生成' },
   { key: '2', prop: 'width', type: 'string | number', default: '-', desc: '弹窗宽度' },
   { key: '3', prop: 'formItems / formLayout', type: 'FormItemOption[] / object', default: '-', desc: '弹窗内表单的字段与布局，与 EsForm 的配置同源' },
-  { key: '4', prop: 'render', type: 'Function', default: '-', desc: '完全自定义内容：(h, { row, model, close, refresh }) => VNode' },
+  { key: '4', prop: 'render', type: 'Function', default: '-', desc: '完全自定义内容：(h, { row, model, registerRef, close, refresh }) => VNode（registerRef 注册的引用可被 footer 按钮经 getRefs 取到）' },
   { key: '5', prop: 'configBtn', type: 'DialogBtnConfig[]', default: '-', desc: '底部按钮配置，action 可取 confirm / cancel / custom' },
   { key: '6', prop: 'isHiddenFooter', type: 'boolean', default: 'false', desc: '隐藏默认底部按钮（自绘导航时用）' },
   { key: '7', prop: 'maxHeight / fullscreen / isDraggable', type: 'string | number / boolean', default: '-', desc: '弹窗样式与交互' },
@@ -335,7 +335,7 @@ const crudMethods = [
   { key: '4', prop: 'formRef', params: '-', desc: '底层 EsForm 实例' },
   { key: '5', prop: 'queryModel', params: '-', desc: '查询表单的 model 对象' },
   { key: '6', prop: 'openDialog', params: '(dialogKey, row?)', desc: '打开指定弹窗' },
-  { key: '7', prop: 'closeDialog', params: '(dialogKey?)', desc: '关闭弹窗（不传则关当前）' },
+  { key: '7', prop: 'closeDialog', params: '(dialogKey)', desc: '关闭指定弹窗（必传 key，没有「关当前」的省略写法）' },
 ]
 </script>
 
