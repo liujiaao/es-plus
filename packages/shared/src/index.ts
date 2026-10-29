@@ -74,6 +74,13 @@ export {
   type IngestResult,
   type TypeDescriptor,
 } from './schema-ingest.js'
+// 摄取 → 草稿：MCP `ingest_schema` 与 CLI `es-plus ingest` 共用同一份实现（占位符/告警文案不得漂）
+export {
+  buildIngestDraft,
+  INGEST_KINDS,
+  type BuildIngestDraftInput,
+  type BuildIngestDraftResult,
+} from './ingest-draft.js'
 // 精修层(B3):两份 StructuredCrudConfig 的结构化差异 —— refine_config 工具 + eval 收敛判定旁证
 export {
   diffConfig,

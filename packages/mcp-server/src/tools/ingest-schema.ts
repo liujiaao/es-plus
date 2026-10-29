@@ -1,11 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import {
-  ingestSchema,
-  composeCrudConfig,
-  type SchemaKind,
-  type StructuredCrudConfigInput,
-} from "@es-plus/shared";
+import { INGEST_KINDS, buildIngestDraft } from "@es-plus/shared";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 // 摄取层对 MCP 的暴露:把一份结构化 schema(OpenAPI / JSON Schema / 样例 JSON /
@@ -14,66 +9,16 @@ import { resolveToolProfile, type ToolProfile } from "../profile.js";
 // 档该工具不注册,改为按三面填 `generate_crud` 的 `surfaces`)。
 // 刻意不直接出代码——摄取只能定「类型→formtype」这条轴,查询面取舍、按钮、弹窗等仍由
 // LLM 按原始需求补全。保持工具可组合:ingest(预填) → 人改 → generate(落地)。
+//
+// 2026-10-29:`buildIngestDraft` / `INGEST_KINDS` 已下沉到 `@es-plus/shared`
+// (`src/ingest-draft.ts`),因为 CLI 的 `es-plus ingest` 消费同一条草稿路径 —— 两份实现
+// 会让占位符与告警文案漂成两种口径。此处转出以保持既有 import 不变。
 
-const INGEST_KINDS = [
-  "openapi",
-  "jsonSchema",
-  "sample-json",
-  "ts-interface",
-  "sql-ddl",
-] as const satisfies readonly SchemaKind[];
-
-export interface BuildIngestDraftInput {
-  text: string;
-  kind: SchemaKind;
-  name?: string;
-  apiUrl?: string;
-}
-
-export interface BuildIngestDraftResult {
-  /** 草拟配置;字段数为 0 时(解析失败 / 不支持的 kind)不产出,仅回告警。 */
-  config?: StructuredCrudConfigInput;
-  /** 摄取 + 组合两段的告警合并。 */
-  warnings: string[];
-}
-
-/**
- * 纯函数:摄取 → 组合草拟配置。独立导出以便直接单测(与 generate-from-config 的
- * buildSemanticWarnings 同一范式——测试打工具的逻辑,不起 MCP 传输层)。
- */
-export function buildIngestDraft(input: BuildIngestDraftInput): BuildIngestDraftResult {
-  const ingested = ingestSchema(input.text, input.kind);
-  const warnings = [...ingested.warnings];
-
-  if (ingested.fields.length === 0) {
-    // 不点名具体工具：这条告警在两种 profile 下都会出现，而 `generate_crud_from_config`
-    // 在 `front-door` 档不注册（见 `src/profile.ts`）。指向「手工写一份字段表」本身。
-    warnings.push("未能从该 schema 抽取任何字段 —— 请检查输入,或手工填写一份 StructuredCrudConfig 字段表。");
-    return { warnings };
-  }
-
-  const name = input.name ?? ingested.name;
-  const resolvedName = name ?? "IngestedPage";
-  if (!name) {
-    warnings.push('未提供 name 且无法从 schema 推断 —— 已占位 "IngestedPage",请改成真实页面名(PascalCase)。');
-  }
-  const apiUrl = input.apiUrl ?? "/api/REPLACE_ME";
-  if (!input.apiUrl) {
-    warnings.push('未提供 apiUrl —— 已占位 "/api/REPLACE_ME",请改成真实 REST 端点。');
-  }
-
-  // 摄取只给扁平字段表:默认每个属性既是列、也是表单项(inTable/inForm),查询面留空
-  // 由调用方按需收窄——composeCrudConfig 据此推导三成员布尔。
-  const { config, warnings: composeWarnings } = composeCrudConfig({
-    name: resolvedName,
-    apiUrl,
-    table: ingested.fields,
-    form: ingested.fields,
-  });
-  warnings.push(...composeWarnings);
-
-  return { config, warnings };
-}
+export {
+  buildIngestDraft,
+  type BuildIngestDraftInput,
+  type BuildIngestDraftResult,
+} from "@es-plus/shared";
 
 export function registerIngestSchema(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   // AN-26：描述与产物里的「下一步」都点名落地工具。`front-door` 档下高级路径不在工具表里，

@@ -1,6 +1,6 @@
 # @es-plus/cli
 
-[`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方命令行工具 —— 用自然语言生成 CRUD 页面，校验 JSON 配置，快速搭建页面脚手架。同一份配置可生成 Vue 3 或 Vue 2 版本代码。
+[`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方命令行工具 —— 用自然语言生成 CRUD 页面，从既有 schema 草拟配置，校验 JSON 配置，快速搭建页面脚手架。同一份配置可生成 Vue 3 或 Vue 2 版本代码。
 
 ## 安装
 
@@ -28,6 +28,7 @@ npm install -D @es-plus/cli
 | `es-plus create <name>` | 自然语言 → 完整 CRUD 页面 | `es-plus create user-management` |
 | `es-plus validate <file>` | 校验 JSON 配置文件 | `es-plus validate ./config.json` |
 | `es-plus scaffold <name>` | 生成最小页面脚手架 | `es-plus scaffold dashboard` |
+| `es-plus ingest <file>` | 从既有 schema 草拟一份配置（确定性，无 LLM） | `es-plus ingest ./openapi.json` |
 
 ---
 
@@ -337,6 +338,46 @@ const options = {
 }
 </script>
 ```
+
+---
+
+## ingest — 从既有 schema 草拟配置
+
+手上已经有一份 schema（OpenAPI / JSON Schema / 一份样例 JSON / TypeScript 接口 / SQL DDL），
+不想从零手写字段表？`ingest` 用**确定性规则**（不调模型）把类型映射成 formtype，产出一份
+**草稿**配置：`integer → InputNumber`、`boolean → Switch`、`string + date → DatePicker`、
+`string + enum → Select`、`array + enum → Checkbox`，其余 `Input`。
+
+```bash
+# 形态自动推断：.sql / .ts 看扩展名，JSON 看顶层特征（openapi / $schema / type:"object" + properties）
+es-plus ingest ./openapi.json > ./src/configs/ticket.json
+
+# 写盘（产物与重定向字节完全相同）
+es-plus ingest ./user.sql -o ./src/configs/user.json --name UserList --api-url /api/users
+
+# 推断不准时显式指定
+es-plus ingest ./api.yaml --kind openapi
+```
+
+### 参数说明
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `<file>` | schema 源文件 | **必填** |
+| `-k, --kind <kind>` | `openapi` / `jsonSchema` / `sample-json` / `ts-interface` / `sql-ddl` | 按扩展名 + 内容推断 |
+| `-n, --name <name>` | 页面名（PascalCase） | schema 标题，推不出则占位 `IngestedPage` |
+| `-a, --api-url <url>` | REST 基地址 | 占位 `/api/REPLACE_ME` |
+| `-o, --output <path>` | 写盘路径 | 无（草稿 JSON 打到 stdout） |
+| `--force` | 覆盖已存在的输出文件，不询问 | 无 |
+
+**这是草稿，不是成品。** 摄取只能定「数据类型 → 表单控件」这条确定性的轴；哪些字段
+用于查询、要哪些按钮、要不要弹窗和权限 —— 这些 schema 里没有的信息，仍需人补。
+占位值（`IngestedPage` / `/api/REPLACE_ME`）会在 stderr 逐条告警。改完再交给
+`generateFromConfig`（或 MCP 的 `generate_crud_from_config`）落地成页面。
+
+> **stdout 只有 JSON**，所有说明与告警走 stderr —— 所以 `es-plus ingest x.json > config.json`
+> 不会把「✔ 已生成」写进配置文件。本版**不解析 YAML**（OpenAPI 的 `.yaml` 会给出
+> 「请先转成 JSON」的告警）。
 
 ---
 
