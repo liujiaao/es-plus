@@ -11,7 +11,7 @@ import { collectUnknownKeys, formatUnknownKey } from "@es-plus/shared";
  * 无声消失 —— handler 无从发现，生成器照常产出（例如只读页），宿主看到的是成功。
  * 这与 `collectUnknownKeys` 要解决的是同一类失败，只是发生得更早。
  *
- * SDK 1.29 的 `getZodSchemaObject` 允许传入**完整 ZodObject 实例**（不走 raw-shape
+ * SDK 的 `getZodSchemaObject` 允许传入**完整 ZodObject 实例**（不走 raw-shape
  * 分支），且 `validateToolInput` 用的是它自己的 `safeParse` —— 于是两条路都可行：
  *
  *   · `.passthrough()`：未知键活到 handler，由本模块判红并回结构化错误。选它而不是
@@ -43,10 +43,7 @@ export function withArgGuard(server: McpServer): McpServer {
     handler: (args: any, extra?: any) => unknown,
   ) {
     const schema = z.object(shape);
-    // `server.tool` 的 6 个 overload 只把 3 参形态声明为 ZodRawShapeCompat；传完整
-    // ZodObject 是 SDK 1.29 **支持但未写进 overload** 的形态（见 `getZodSchemaObject`），
-    // 故这里按 any 调用 —— 运行时分支由 SDK 自己判定，类型层没有对应签名。
-    return (server.tool as any)(name, description, schema.passthrough(), async (args: any, extra?: any) => {
+    const wrapped = async (args: any, extra?: any) => {
       const unknown = collectUnknownKeys(schema, args);
       if (unknown.length > 0) {
         const lines = [
@@ -60,7 +57,38 @@ export function withArgGuard(server: McpServer): McpServer {
         return { content: [{ type: "text", text: lines.join("\n") }], isError: true };
       }
       return handler(args, extra);
-    });
+    };
+
+    // 走 `registerTool(name, config, cb)`，**不要**走旧式 `tool(name, desc, schema, cb)`。
+    //
+    // 旧式重载没有类型层可用的判据，SDK 只能靠「第二个参数里的值是不是对象」猜它是
+    // ToolAnnotations 还是 Zod schema（见 sdk/dist/esm/server/mcp.js 的 `tool()`）：
+    //
+    //     else if (typeof firstArg === 'object' && firstArg !== null) {
+    //       if (Object.values(firstArg).some(v => typeof v === 'object' && v !== null))
+    //         throw new Error(`Tool ${name} expected a Zod schema or ToolAnnotations, ...`)
+    //     }
+    //
+    // ZodObject 的 `_def` 恰好是**可枚举的**对象属性 ⟹ 传完整 ZodObject 必然命中这条
+    // 分支并抛错。抛点在**注册阶段**（index.ts 顶层 `registerTools`），于是整个进程
+    // 启动即崩：`mcp-server-es-plus` 一个工具都注册不上，宿主看到的是连接超时。
+    // 340 条测试全绿也拦不住 —— 它们对着自己写的假 server（只实现旧签名），
+    // 唯一会红的判定在 `__tests__/real-sdk-registration.spec.ts`（真 McpServer）。
+    //
+    // `registerTool` 把入参放进 `config.inputSchema`，直接交给 `getZodSchemaObject`，
+    // 完整 ZodObject 是它明确接受的形态。`registerTool` 是 SDK 后期版本才有的 API，
+    // 老版本（package.json 允许 ^1.0.0）退回旧签名 —— 那里只能传 raw shape（旧 SDK
+    // 内部再 `z.object(shape)`），闸门因此退化成「只看得见声明过的键」，是有意的降级。
+    const modern = (server as unknown as { registerTool?: unknown }).registerTool;
+    if (typeof modern === "function") {
+      return (modern as Function).call(
+        server,
+        name,
+        { description, inputSchema: schema.passthrough() },
+        wrapped,
+      );
+    }
+    return (server.tool as any)(name, description, shape, wrapped);
   };
 
   return guarded;

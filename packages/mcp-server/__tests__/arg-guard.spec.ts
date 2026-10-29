@@ -18,9 +18,15 @@ type Captured = { schema: any; handler: (args: any, extra?: any) => any };
 
 function captureAll(): Record<string, Captured> {
   const tools: Record<string, Captured> = {};
+  // 假 server 必须按**真实 SDK** 的现代签名建模（`registerTool(name, config, cb)`）：
+  // 闸门现在走这条，`config.inputSchema` 才是真正交给 SDK 的形状。手写假 server 只实现
+  // 旧式 `tool()` 时，闸门会静默退到降级分支 —— 那样这里的断言测的就不是生产路径了。
   const fake = {
-    tool(name: string, _desc: string, schema: any, handler: (args: any, extra?: any) => any) {
-      tools[name] = { schema, handler };
+    tool() {
+      throw new Error("arg-guard 应走 registerTool（旧式 tool() 会把 ZodObject 误判成 annotations）");
+    },
+    registerTool(name: string, config: { inputSchema: any }, handler: (args: any, extra?: any) => any) {
+      tools[name] = { schema: config.inputSchema, handler };
     },
   };
   registerTools(fake as any, "full");

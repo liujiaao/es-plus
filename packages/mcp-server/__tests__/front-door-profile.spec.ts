@@ -164,7 +164,7 @@ function captureToolDescriptions(profile: "full" | "front-door"): Record<string,
 
 /** 某个入参的 `.describe()` 文本（`validate_config` 的指路写在这里，不在工具描述里）。 */
 function paramDesc(tool: { shape: any }, key: string): string {
-  return (tool.shape?.shape?.[key]?._def?.description as string) ?? "";
+  return (tool.shape?.[key]?._def?.description as string) ?? "";
 }
 
 describe("server instructions", () => {
