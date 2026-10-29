@@ -66,7 +66,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         expandRowKeys: [1]
       }
     }

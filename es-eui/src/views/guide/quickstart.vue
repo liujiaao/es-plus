@@ -434,7 +434,7 @@ export default {
       tableOptions: {
         border: true,
         stripe: true,
-        showHeaderBar: true,
+        // 注意：showHeaderBar 是 EsTable 的顶层 prop（默认 true），写在 tableOptions 里不生效
         apiParams: { url: '/api/user/list', method: 'POST' }
       }
     }
@@ -589,16 +589,18 @@ export default {
           {
             name: '保存',
             type: 'primary',
-            click: (instance, { close, getRefs }) => {
-              getRefs('addForm').validate((valid) => {
-                if (valid) {
-                  this.saveData(instance.model).then(() => {
-                    this.$message.success('保存成功')
-                    close()
-                    this.$refs.userTable.httpRequestInstance()
-                  })
-                }
-              })
+            click: async (instance, { close, getRefs }) => {
+              // EsForm 的 validate() 是 Promise：通过 resolve、不通过 reject，**没有回调参数**。
+              // 写成 validate((valid) => {...}) 时整个保存流程永远不执行。
+              try {
+                await getRefs('addForm').validate()
+              } catch {
+                return // 校验未通过：保持弹窗打开，让用户改
+              }
+              await this.saveData(instance.model)
+              this.$message.success('保存成功')
+              close()
+              this.$refs.userTable.httpRequestInstance()
             }
           },
           {
@@ -849,7 +851,7 @@ export default {
       tableOptions: {
         border: true,
         stripe: true,
-        showHeaderBar: true,
+        // 注意：showHeaderBar 是 EsTable 的顶层 prop（默认 true），写在 tableOptions 里不生效
         apiParams: { url: '/api/user/list', method: 'POST' }
       }
     }
@@ -875,16 +877,18 @@ export default {
           {
             name: '保存',
             type: 'primary',
-            click: (instance, { close, getRefs }) => {
-              getRefs('addForm').validate((valid) => {
-                if (valid) {
-                  this.saveData(instance.model).then(() => {
-                    this.$message.success('保存成功')
-                    close()
-                    this.$refs.userTable.httpRequestInstance()
-                  })
-                }
-              })
+            click: async (instance, { close, getRefs }) => {
+              // EsForm 的 validate() 是 Promise：通过 resolve、不通过 reject，**没有回调参数**。
+              // 写成 validate((valid) => {...}) 时整个保存流程永远不执行。
+              try {
+                await getRefs('addForm').validate()
+              } catch {
+                return // 校验未通过：保持弹窗打开，让用户改
+              }
+              await this.saveData(instance.model)
+              this.$message.success('保存成功')
+              close()
+              this.$refs.userTable.httpRequestInstance()
             }
           },
           { name: '取消', click: (instance, { close }) => close() }

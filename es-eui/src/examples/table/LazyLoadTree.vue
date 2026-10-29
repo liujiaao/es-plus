@@ -26,7 +26,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         lazy: true,
         treeProps: {
           children: 'children',

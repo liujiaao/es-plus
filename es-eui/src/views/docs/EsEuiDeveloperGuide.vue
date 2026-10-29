@@ -87,7 +87,7 @@
       <!-- 1.2 Plugin 配置注入机制 -->
       <div class="content-card">
         <h3>1.2 Plugin 配置注入机制</h3>
-        <p>EsForm 和 EsTable 通过 Vue Plugin 系统实现全局配置的依赖注入。注册时配置的方法会被合并到组件实例的方法中。</p>
+        <p>EsForm 和 EsTable 的全局配置靠三层接起来：<strong>模块级单例</strong>（<code>configureEsPlus</code>）、<strong>全局组件注册</strong>（<code>Vue.component</code>）、<strong>全局 provide</strong>（<code>Vue.mixin</code>，Vue 2 没有 <code>app.provide</code>）。组件读取配置时先 <code>inject</code>，拿不到再回落到单例。</p>
         <div class="arch-diagram small">
           <div class="arch-layer config-layer">
             <div class="layer-label">
@@ -95,41 +95,60 @@
             </div>
           </div>
           <div class="arch-arrow">
-            &#8595; importFnComponents() 遍历组件列表
+            &#8595; install(Vue, options)（Vue 2 签名：第一个参数是构造函数，不是 app）
           </div>
           <div class="arch-layer engine-layer">
             <div class="layer-label">
-              检测 el.isPlugin === true
+              normalizeLegacyOptions(options)
+            </div>
+            <div class="layer-detail">
+              { EsTable: { methods: {...} } } 展平为 { EsTable: {...} }；
+              configQueryfieldOutput（小写 f）改名为 configQueryFieldOutput
             </div>
           </div>
           <div class="arch-arrow">
-            &#8595; Vue.use(el.Plugin, options[el.name])
+            &#8595; configureEsPlus(normalized)
           </div>
           <div class="arch-layer engine-layer">
             <div class="layer-label">
-              Plugin.install(app, options)
+              Vue.component(name, component)
             </div>
             <div class="layer-detail">
-              1. app.provide('$tableInstance', options.methods)
-              2. app.component(name, { ...Component, methods: { ...Component.methods, ...options.methods } })
+              全局注册 EsForm / EsTable / EsDialog / EsCrudPage / EsErrorBoundary / SvgIcon；
+              skipComponentRegistration: true 时跳过
+            </div>
+          </div>
+          <div class="arch-arrow">
+            &#8595; Vue.mixin({ provide: { $EsPlus } })
+          </div>
+          <div class="arch-layer engine-layer">
+            <div class="layer-label">
+              组件内 inject('$EsPlus') / inject('$esPlusTable')
+            </div>
+            <div class="layer-detail">
+              provide 是 install 时的快照，值经 createGlobalConfigView 读时回落到单例
             </div>
           </div>
         </div>
         <div class="code-block">
           <div class="code-header">
-            <span class="code-lang">源码: esTable/index.js</span>
+            <span class="code-lang">源码: @es-plus/vue2 index.ts install()</span>
           </div>
-          <pre v-pre><code>EsTable.isPlugin = true
-EsTable.Plugin = {
-  install(app, options) {
-    // 1. 依赖注入：后代组件通过 inject 获取
-    app.provide('$tableInstance', { ...(options.methods || {}) })
-    // 2. 方法合并：组件自身可直接调用 this.$httpRequest()
-    app.component(EsTable.name, {
-      ...EsTable,
-      methods: { ...EsTable.methods, ...(options.methods || {}) }
-    })
+          <pre v-pre><code>const install = (Vue, options = {}) =&gt; {
+  const normalized = normalizeLegacyOptions(options)
+  configureEsPlus(normalized)                    // 1. 写入模块级单例
+
+  if (!normalized.skipComponentRegistration) {
+    components.forEach((c) =&gt; Vue.component(c.name, c))   // 2. 全局注册
   }
+  if (normalized.globalProperties !== false) {
+    Vue.prototype.$useDialog = useDialog         // 3. this.$useDialog() 可用
+  }
+  Vue.mixin({                                    // 4. Vue 2 没有 app.provide
+    provide: {
+      $EsPlus: createGlobalConfigView({ useDialog, ...normalized })
+    }
+  })
 }</code></pre>
         </div>
       </div>
@@ -255,7 +274,7 @@ Vue.use(EsPlus, {
     &lt;!-- 数据表格 --&gt;
     &lt;es-table
       :columns="columns"
-      :data-source.sync="dataSource"
+      :data-source="dataSource"
       :pagination="pagination"
       :options="tableOpts"
     /&gt;
@@ -642,7 +661,7 @@ export default {
           </div>
           <pre v-pre><code>{
   prop: 'tags', label: '标签', span: 12,
-  render: (h, model, row) => {
+  render: (h, model, { row, index }) => {
     return h('div', { class: 'tag-editor' }, [
       ...model.tags.map(tag =>
         h('el-tag', { props: { closable: true, type: 'primary' },
@@ -680,7 +699,7 @@ export default {
             <thead><tr><th>Prop</th><th>类型</th><th>默认值</th><th>说明</th></tr></thead>
             <tbody>
               <tr><td><code>columns</code></td><td>Array</td><td>[]</td><td>列配置数组，每个元素描述一列</td></tr>
-              <tr><td><code>dataSource</code></td><td>Array</td><td>[]</td><td>表格数据源（支持 <code>.sync</code> 修饰符）</td></tr>
+              <tr><td><code>dataSource</code></td><td>Array</td><td>[]</td><td>表格数据源（单向传入）：组件<strong>不回写</strong> <code>update:dataSource</code>，写 <code>.sync</code> 不报错但也不会同步（httpRequest 模式下数据在组件内部，父级那份始终不变）。分页是唯一会回写的，用 <code>:pagination.sync</code>（<code>.sync</code> 由组件 <code>emit('update:pagination')</code> 驱动）</td></tr>
               <tr><td><code>options</code></td><td>Object</td><td>{}</td><td>表格选项配置（核心配置入口）</td></tr>
               <tr><td><code>pagination</code></td><td>Object</td><td>{}</td><td>分页配置：<code>{ current, pageSize, total }</code></td></tr>
               <tr><td><code>showHeaderBar</code></td><td>Boolean</td><td>true</td><td>是否显示表格顶部插槽区域</td></tr>
@@ -710,7 +729,7 @@ export default {
               <tr><td><code>type</code></td><td>String</td><td>特殊列类型：<code>selection</code>(多选)、<code>expand</code>(展开行)、<code>index</code>(序号)</td></tr>
               <tr><td><code>width</code></td><td>Number | String</td><td>列宽，如 <code>120</code> 或 <code>'20%'</code></td></tr>
               <tr><td><code>fixed</code></td><td>String</td><td>固定列：<code>left</code> 或 <code>right</code></td></tr>
-              <tr><td><code>render</code></td><td>Function</td><td>自定义单元格渲染：<code>(h, { row, index, columnIndex, instance }) => VNode</code></td></tr>
+              <tr><td><code>render</code></td><td>Function</td><td>自定义单元格渲染：<code>(h, { value, row, index }) => VNode</code></td></tr>
               <tr><td><code>scopedSlots</code></td><td>Object</td><td>作用域插槽：<code>{ customRender: 'slotName' }</code>，需在父组件提供同名 slot</td></tr>
               <tr><td><code>groups</code></td><td>Array</td><td>多级表头子列，递归结构，子列格式同 columns</td></tr>
               <tr><td><code>hidCol</code></td><td>Boolean</td><td>隐藏此列（不渲染 DOM）</td></tr>
@@ -748,7 +767,7 @@ export default {
               <tr><td><code>loading</code></td><td>Boolean</td><td>false</td><td>表格加载动画</td></tr>
               <tr><td><code>headerCellStyle</code></td><td>Object</td><td>{ background: '#f5f7fa' }</td><td>表头单元格样式</td></tr>
               <tr><td><code>highlightCurrentRow</code></td><td>Boolean</td><td>true</td><td>高亮当前行</td></tr>
-              <tr><td><code>rowKey</code></td><td>String</td><td>—</td><td>行唯一键值（多选缓存和树形结构必备）</td></tr>
+              <tr><td><code>rowkey</code></td><td>String</td><td>—</td><td>行唯一键值（全小写；多选缓存和树形结构必备）。组件内部再转成 el-table 的 <code>row-key</code></td></tr>
 
               <tr class="api-section">
                 <td colspan="4">
@@ -756,16 +775,16 @@ export default {
                 </td>
               </tr>
               <tr><td><code>multiSelect</code></td><td>Boolean</td><td>false</td><td>启用多选功能（会自动添加 selection 列）</td></tr>
-              <tr><td><code>cachePageSelection</code></td><td>Boolean</td><td>true</td><td>跨页保持选择状态（需设置 <code>rowKey</code>）</td></tr>
+              <tr><td><code>cachePageSelection</code></td><td>Boolean</td><td>true</td><td>跨页保持选择状态（需设置 <code>rowkey</code>）</td></tr>
 
               <tr class="api-section">
                 <td colspan="4">
                   <strong>展开行</strong>
                 </td>
               </tr>
-              <tr><td><code>expand</code></td><td>Boolean</td><td>false</td><td>启用展开行功能</td></tr>
-              <tr><td><code>expandRowKeys</code></td><td>Array</td><td>[]</td><td>默认展开的行 key 列表</td></tr>
-              <tr><td><code>expandRender</code></td><td>Function</td><td>—</td><td>展开行内容渲染：<code>(h, { row, index, column }) => VNode</code></td></tr>
+              <tr><td><code>expand</code></td><td>Boolean</td><td>false</td><td>启用展开行功能（需同时有一个列配 <code>type: 'expand'</code>）</td></tr>
+              <tr><td><code>treeConfig.expandAll</code></td><td>Boolean</td><td>false</td><td>树形数据默认展开全部（映射到 el-table 的 <code>default-expand-all</code>，对树节点生效，不是展开行）</td></tr>
+              <tr><td colspan="4"><em>展开行内容不是表格级 render：写在<strong>列</strong>上 —— <code>{ type: 'expand', expandConfig: { title, fields } }</code>，按字段声明式渲染明细。函数式的 <code>expandRender</code> 不存在。</em></td></tr>
 
               <tr class="api-section">
                 <td colspan="4">
@@ -797,7 +816,7 @@ export default {
                 </td>
               </tr>
               <tr><td><code>tabHeight</code></td><td>Number | String</td><td>—</td><td>表格高度（px 数值 或 <code>'100%'</code> 继承父容器）</td></tr>
-              <tr><td><code>heightType</code></td><td>String</td><td>'auto'</td><td>高度模式：<code>auto</code> / <code>height</code> / <code>max-height</code></td></tr>
+              <tr><td><code>heightType</code></td><td>String</td><td>'auto'</td><td>高度模式：<code>auto</code> / <code>height</code> / <code>maxHeight</code>（驼峰，不是 <code>max-height</code>；非法的值按 <code>auto</code> 处理）</td></tr>
 
               <tr class="api-section">
                 <td colspan="4">
@@ -878,7 +897,7 @@ export default {
             <tbody>
               <tr><td><code>permissionValue</code></td><td>String</td><td>权限值，用于按钮级别的权限控制</td></tr>
               <tr><td><code>isHide</code></td><td>Function | Boolean</td><td>隐藏按钮：<code>() => !hasPermission('delete')</code></td></tr>
-              <tr><td><code>direction</code></td><td>String</td><td>按钮位置：<code>left</code>(左侧) 或 <code>right</code>(右侧，默认)</td></tr>
+              <tr><td><code>position</code></td><td>String</td><td>按钮分组：<code>left</code>(左侧，默认) 或 <code>right</code>(右侧)。表格按钮的取值链是 <code>position → code → left</code>，<strong>不读 <code>direction</code></strong>（<code>direction</code> 只对 EsForm 的按钮生效）</td></tr>
               <tr><td><code>click</code></td><td>Function</td><td>点击回调：<code>(table) => void</code>，入参是 EsTable 实例（可调 <code>table.httpRequestInstance()</code> 刷新）。只认 <code>click</code></td></tr>
             </tbody>
           </table>
@@ -946,7 +965,7 @@ export default {
           <pre v-pre><code>tableOpts: {
   multiSelect: true,
   cachePageSelection: true,
-  rowKey: 'id'  // 必须设置，用于跨页去重
+  rowkey: 'id'  // 必须设置（全小写），用于跨页去重
 }</code></pre>
         </div>
 
@@ -1129,7 +1148,7 @@ export default {
   :columns="columns"
   :options="tableOpts"
   :pagination="pagination"
-  :data-source.sync="dataSource"
+  :data-source="dataSource"
 &gt;
   &lt;!-- 插槽中的 EsForm 会自动被 EsTable 检测到 --&gt;
   &lt;es-form
@@ -1145,9 +1164,9 @@ export default {
         <div class="tips-box tips-box--info">
           <h4>&#128161; 联动原理</h4>
           <ol>
-            <li>EsTable 通过 <code>findForm(child.$children)</code> 递归查找子组件树中 <code>$options.name === 'EsForm'</code> 的组件</li>
-            <li>EsForm 按钮设置 <code>triggerEvent: true</code> + <code>key: 'query'</code> 时，调用 <code>$parent.httpRequestInstance(model)</code></li>
-            <li>EsTable 自动将表单的 <code>model</code> 数据合并到 <code>apiParams</code> 请求参数中</li>
+            <li>EsTable 通过 <code>provide('getTableInstance')</code> 把自己的上下文（<code>httpRequestInstance</code> / <code>toggleSelection</code> / <code>clearAllSelection</code> 等）提供给后代组件</li>
+            <li>EsForm 在 <code>setup</code> 里 <code>inject('getTableInstance')</code>；按钮配 <code>triggerEvent: true</code> + <code>key: 'query'</code> / <code>'rest'</code> 时，自己调用 <code>httpRequestInstance(model, { keepPage: false })</code>（<code>rest</code> 先 <code>resetFields()</code>）；拿不到表格上下文就只做表单自身的重置</li>
+            <li>EsTable 在请求漏斗里把表单的 <code>model</code> 合并进 <code>apiParams</code> 请求参数</li>
           </ol>
         </div>
       </div>

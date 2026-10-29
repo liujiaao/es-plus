@@ -4,7 +4,7 @@
       ref="tableRef"
       :columns="columns"
       :options="options"
-      :data-source.sync="tableData"
+      :data-source="tableData"
       :pagination.sync="pagination"
       :class="['dong-table']"
     >

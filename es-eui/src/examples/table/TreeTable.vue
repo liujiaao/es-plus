@@ -65,7 +65,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         defaultExpandAll: true,
         treeProps: {
           children: 'children',

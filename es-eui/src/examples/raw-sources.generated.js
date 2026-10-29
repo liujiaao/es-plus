@@ -8103,7 +8103,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         expandRowKeys: [1]
       }
     }
@@ -8340,7 +8340,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         lazy: true,
         treeProps: {
           children: 'children',
@@ -9428,7 +9428,7 @@ export default {
       ],
       options: {
         border: true,
-        rowKey: 'id',
+        rowkey: 'id',
         defaultExpandAll: true,
         treeProps: {
           children: 'children',
@@ -9690,7 +9690,7 @@ export const RAW_vue2_compat_RechargeRecord = `<template>
       ref="tableRef"
       :columns="columns"
       :options="options"
-      :data-source.sync="tableData"
+      :data-source="tableData"
       :pagination.sync="pagination"
       :class="['dong-table']"
     >
