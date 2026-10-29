@@ -9,9 +9,13 @@ Make AI-generated CRUD pages **safe to merge**: the LLM writes a single JSON con
 [![npm version](https://img.shields.io/npm/v/%40es-plus%2Fadapter-antdv.svg?label=%40es-plus%2Fadapter-antdv)](https://www.npmjs.com/package/@es-plus/adapter-antdv)
 [![license](https://img.shields.io/npm/l/%40es-plus%2Fvue3.svg)](https://www.npmjs.com/package/@es-plus/vue3)
 [![GitHub stars](https://img.shields.io/github/stars/liujiaao/es-plus?style=social)](https://github.com/liujiaao/es-plus)
-[![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-1-eval-trust-design.md)
+[![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-2-production-trust-design.md)
+[![heldout zero-edit](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge-scoped.json)](./docs/internal/wave-2-production-trust-design.md)
 
-<sub>The accuracy badge = the nightly Layer-2 eval's measured in-schema-intent "zero-edit" hit rate on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — the exact number the gate enforces, **not a marketing figure**. The corpus is 216 cases today (194 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
+<sub>Both badges come from the nightly Layer-2 eval's measurement on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — **not marketing figures**.<br>
+The first is the **gate definition**: the in-schema-intent hit rate is "zero-edit **OR** converged within 3 turns" — a config that can be merged as-is on turn 0, **or** that reaches the same config within at most 3 natural-language corrections, both count ([definition](./docs/internal/wave-2-production-trust-design.md)).<br>
+The second is the stricter half: **zero-edit on turn 0 only**, with no correction budget, so you can tell "right first time" apart from "right after a few rounds".<br>
+The corpus is 216 cases today (194 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
 
 **[Documentation](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD Generator](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
 
