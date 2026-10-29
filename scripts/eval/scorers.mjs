@@ -49,6 +49,94 @@ function cloneDeep(v) {
   return v
 }
 
+// ── 条件 DSL 规范化（`isHidden` 的两套合法写法 → 一个范式）─────────────────────
+//
+// schema 对 `isHidden` 明确接受两套写法（`structured-config.schema.ts` 的 field.isHidden 说明）：
+//   (1) 旧条件 `{ field, op, value }`，op ∈ eq|ne|in|nIn|empty|notEmpty|truthy|falsy；
+//   (2) JSONLogic 形态表达式节点 `{ '==': [{ var:'x' }, 1] }`；
+//   外加「条件数组 = AND，可与两种写法混用」。
+// 换句话说，**同一个需求有多个都对的写法**。按原文深比较等于把「选了另一种合法写法」
+// 算成理解失败 —— C 阶段 dump 里 115（`nin[a,b]` vs `!=a 且 !=b`）、121（数组 AND vs `{and}`）
+// 两行就是这么被判负的，而两条 NL 都是被正确理解的。
+//
+// 范式（只做**等价变形**，不放宽任何语义）：
+//   · 旧条件 → 表达式节点（`eq`→`==`、`ne`→`!=`、`nIn`→`nin`…）；单目算子只取操作数；
+//   · 数组 → `{and:[…]}`；单元素 AND/OR 折回元素本身；嵌套 and/or 展平；
+//   · `in`/`nin` 的字面量数组展开为 `or`/`and` 的 `==`/`!=`（`nin[x,[a,b]]` ≡ `!=a 且 !=b`）。
+// 刻意**不**做：操作数排序（AND 虽可交换，但接受任意顺序会把「顺序写反」也放掉，
+// 而现在没有任何证据表明模型会这么做——不放宽没有证据支持的东西）。
+const LEGACY_OP_TO_EXPR = Object.freeze({
+  eq: '==',
+  ne: '!=',
+  in: 'in',
+  nIn: 'nin',
+  empty: 'empty',
+  notEmpty: 'notEmpty',
+  truthy: 'truthy',
+  falsy: 'falsy',
+})
+const UNARY_COND_OPS = new Set(['var', 'empty', 'notEmpty', 'truthy', 'falsy'])
+const CONJUNCTION_OPS = new Set(['and', 'or'])
+
+/** 旧条件形态：含字符串 `field`，其余键 ⊆ {field, op, value}。 */
+const isLegacyCondition = (n) =>
+  n &&
+  typeof n === 'object' &&
+  !Array.isArray(n) &&
+  typeof n.field === 'string' &&
+  Object.keys(n).every((k) => k === 'field' || k === 'op' || k === 'value')
+
+const legacyToExpr = (n) => {
+  const op = LEGACY_OP_TO_EXPR[n.op ?? 'eq']
+  if (!op) return n // 未知算子：原样交给判负（不在尺子里发明语义）
+  return UNARY_COND_OPS.has(op) ? { [op]: [{ var: n.field }] } : { [op]: [{ var: n.field }, n.value] }
+}
+
+/** 合取/析取的规范形：展平同类嵌套；单元素折回元素本身。 */
+const combineFlat = (op, list) => {
+  const flat = []
+  for (const n of list) {
+    const isSameOp = n && typeof n === 'object' && !Array.isArray(n) && Object.keys(n).length === 1 && n[op]
+    if (isSameOp) flat.push(...n[op])
+    else flat.push(n)
+  }
+  return flat.length === 1 ? flat[0] : { [op]: flat }
+}
+
+/** `canonCondition` 的纯表达式分支（数组在这里是**字面量数组**，不是 AND）。 */
+function canonExpr(node) {
+  if (Array.isArray(node)) return node.map(canonExpr)
+  if (!node || typeof node !== 'object') return node
+  if (isLegacyCondition(node)) return canonExpr(legacyToExpr(node))
+  const keys = Object.keys(node)
+  if (keys.length !== 1) {
+    const out = {}
+    for (const k of keys) out[k] = canonExpr(node[k])
+    return out
+  }
+  const op = keys[0]
+  if (op === 'var') return { var: node.var } // `{var}` 的取值是字符串（可含 `a.b` 路径），不是操作数数组
+  const operands = Array.isArray(node[op]) ? node[op] : [node[op]]
+  if (CONJUNCTION_OPS.has(op)) return combineFlat(op, operands.map(canonCondition))
+  const args = operands.map(canonExpr)
+  // `in`/`nin` 的右操作数字面量数组 → 展开成 ==/!= 的 or/and（等价，且是与「手写两条 !=」对齐的唯一办法）
+  if ((op === 'in' || op === 'nin') && args.length === 2 && Array.isArray(args[1])) {
+    const [subject, list] = args
+    return combineFlat(op === 'in' ? 'or' : 'and', list.map((v) => ({ [op === 'in' ? '==' : '!=']: [subject, v] })))
+  }
+  return { [op]: args }
+}
+
+/**
+ * 条件位置的规范化（根 / 条件数组元素 / and·or 的操作数）。
+ * 这里数组语义是 **AND**（schema：条件数组全部成立才隐藏）。
+ */
+export function canonCondition(node) {
+  if (Array.isArray(node)) return combineFlat('and', node.map(canonCondition))
+  if (isLegacyCondition(node)) return canonCondition(legacyToExpr(node))
+  return canonExpr(node)
+}
+
 // ── 装饰键投影（A2 / D15）─────────────────────────────────────────────────────
 //
 // 问题：`columns` / `expandConfig` 是**整体深等值**判定，而这两处承载了大量
@@ -393,6 +481,16 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     const proj = projectExpandConfig(gold.expandConfig, pred.expandConfig)
     return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
+  if (dim === 'isHidden') {
+    // 与 isHiddenEqual 同源：显示**规范化后**的条件，否则「两套等价写法」会让判正的行
+    // 打出不同的 want/got（不变量当场失效）。
+    const view = (c) => {
+      const out = {}
+      for (const f of c.fields) if (f.isHidden !== undefined) out[f.prop] = canonCondition(f.isHidden)
+      return canonicalView(out)
+    }
+    return { want: view(gold), got: view(pred) }
+  }
   if (dim === 'defaultSort') {
     return {
       want: canonicalView(gold.tableOptions?.defaultSort),
@@ -477,19 +575,24 @@ function configTableOutEqual(gold, pred) {
 }
 
 /**
- * 声明式条件显隐：gold 每个带 `isHidden` 的 field，pred 同名 field 必须存在**且整对象等值**。
+ * 声明式条件显隐：gold 每个带 `isHidden` 的 field，pred 同名 field 必须存在**且条件等值**。
  *
- * 深度等值（`eq`）而非 presence：条件的算子写错（`eq` 写成 `ne`）、`value` 的类型或数组
- * 顺序不符都算未命中 —— 条件显隐是「行为契约」不是「扩展点兜底」，照着比内容才有意义
- * （与 `configTableOut` 同为整对象等值；`extPoints` 那种只比 presence 的是因为其内容
- * 是不可静态校验的 JS 源码串）。
+ * 「等值」= 先规范化到同一个范式（`canonCondition`，见其头注），再深比较。
+ * 为什么不能直接深比较原始对象：schema 明确接受**两套等价写法** ——
+ *   · 单条件 `{field,op,value}` 与表达式节点 `{op:[{var},value]}`；
+ *   · 条件数组（语义 = AND）与 `{and:[…]}`。
+ * 同一份需求，模型写哪一套都对；直接比原文会把「选了另一种合法写法」判成理解失败
+ * （C 阶段 dump 里 115、121 两行正是如此）。
+ *
+ * 规范化**不**放宽行为契约：算子、取值、先后次序都照旧比 —— `eq` 写成 `ne`、
+ * `value` 类型/顺序不符仍然判负（`scorers.test.mjs` 2c 的扰动逐条钉住这一点）。
  */
 function isHiddenEqual(gold, pred) {
   const pm = fieldMap(pred)
   for (const f of gold.fields) {
     if (!f.isHidden) continue
     const pf = pm.get(f.prop)
-    if (!pf || !pf.isHidden || !eq(f.isHidden, pf.isHidden)) return false
+    if (!pf || !pf.isHidden || !eq(canonCondition(f.isHidden), canonCondition(pf.isHidden))) return false
   }
   return true
 }
@@ -710,7 +813,8 @@ const FIELD_SCORERS = {
     const g = fieldMap(gold).get(prop)
     const p = fieldMap(pred).get(prop)
     if (!g || !g.isHidden) return true // 该字段本就不要求条件显隐 → 空钉即过
-    return !!p && !!p.isHidden && eq(g.isHidden, p.isHidden)
+    // 与 isHiddenEqual 同源判据：规范化到同一范式再比（两套合法写法等价）
+    return !!p && !!p.isHidden && eq(canonCondition(g.isHidden), canonCondition(p.isHidden))
   },
   reactions: (gold, pred, prop) => {
     const g = fieldMap(gold).get(prop)

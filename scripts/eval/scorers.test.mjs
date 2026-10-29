@@ -239,8 +239,9 @@ console.log('meta-eval: operationColumn 库默认派生等价')
     'operationColumn: 自定义行按钮(处理/关闭)不可由 actions 派生 → 省略应判负')
 }
 
-// 2c) isHidden 维度的语义（整对象等值 / 数组形态 / 字段级细化）
-//     条件显隐是行为契约而非扩展点兜底，故比**内容**（算子、value、数组顺序都算数），
+// 2c) isHidden 维度的语义（规范化后等值 / 数组形态 / 字段级细化）
+//     条件显隐是行为契约而非扩展点兜底，故比**内容**（算子、value、操作数顺序都算数），
+//     只是先把 schema 允许的两套等价写法规范化到同一范式（`canonCondition`）；
 //     与 configTableOut 同策略；extPoints 那种只比 presence 的是因为它比的是不可静态校验的源码串。
 console.log('meta-eval: isHidden (declarative condition)')
 {
@@ -255,6 +256,35 @@ console.log('meta-eval: isHidden (declarative condition)')
   const goldArr = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: [{ field: 'b', op: 'empty' }, { field: 'c', op: 'truthy' }] }], actions: ['add'] }
   check(scoreAll(goldArr, clone(goldArr)).byCapability.isHidden.pass === true, 'isHidden: 数组形态一致应判正')
   check(scoreAll(goldArr, gold).byCapability.isHidden.pass === false, 'isHidden: 数组→单条件应判负')
+
+  // 两套**合法写法**等价（schema 明说二者都接受）：规范化后应判正。
+  // 证据来自 C 阶段 dump：115（`nin[a,b]` vs 两条 `!=`）、121（数组 AND vs `{and}`）
+  // 两行 NL 都被正确理解，只是选了另一种写法，却被原文深比较判负。
+  {
+    const withCond = (cond) => ({ fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: cond }], actions: ['add'] })
+    const pairs = [
+      ['单条件 → 表达式节点', { field: 'b', op: 'eq', value: 'x' }, { '==': [{ var: 'b' }, 'x'] }],
+      ['ne → !=', { field: 'b', op: 'ne', value: 'x' }, { '!=': [{ var: 'b' }, 'x'] }],
+      ['数组 AND → {and}', [{ field: 'b', op: 'eq', value: 'x' }, { field: 'c', op: 'truthy' }], { and: [{ '==': [{ var: 'b' }, 'x'] }, { truthy: [{ var: 'c' }] }] }],
+      ['nin 字面量数组 → 两条 !=', { and: [{ nin: [{ var: 'c' }, ['x', 'y']] }, { '>': [{ var: 'q' }, 0] }] }, { and: [{ '!=': [{ var: 'c' }, 'x'] }, { '!=': [{ var: 'c' }, 'y'] }, { '>': [{ var: 'q' }, 0] }] }],
+      ['单元素数组 → 该元素', [{ field: 'a', op: 'truthy' }], { truthy: [{ var: 'a' }] }],
+      ['混用形态的 and', { and: [{ field: 'b', op: 'eq', value: 'x' }, { or: [{ field: 'c', op: 'falsy' }] }] }, { and: [{ '==': [{ var: 'b' }, 'x'] }, { or: [{ falsy: [{ var: 'c' }] }] }] }],
+    ]
+    for (const [label, g, p] of pairs) {
+      check(scoreAll(withCond(g), withCond(p)).byCapability.isHidden.pass === true, `isHidden: ${label} 应判正（等价写法）`)
+      check(scoreAll(withCond(p), withCond(g)).byCapability.isHidden.pass === true, `isHidden: ${label} 应对称`)
+    }
+    // 但规范化**不**放宽语义：算子、取值、操作数顺序照旧判负
+    const negs = [
+      ['算子不同', { field: 'b', op: 'eq', value: 'x' }, { field: 'b', op: 'ne', value: 'x' }],
+      ['取值不同', { field: 'b', op: 'eq', value: 'x' }, { '==': [{ var: 'b' }, 'y'] }],
+      ['引用字段不同', { field: 'b', op: 'eq', value: 'x' }, { '==': [{ var: 'c' }, 'x'] }],
+      ['and 顺序不同', { and: [{ '!=': [{ var: 'c' }, 'x'] }, { '>': [{ var: 'q' }, 0] }] }, { and: [{ '>': [{ var: 'q' }, 0] }, { '!=': [{ var: 'c' }, 'x'] }] }],
+    ]
+    for (const [label, g, p] of negs) {
+      check(scoreAll(withCond(g), withCond(p)).byCapability.isHidden.pass === false, `isHidden: ${label} 应判负（规范化不放宽语义）`)
+    }
+  }
 
   // gold 没有任何 isHidden → 维度不 applicable（不参与记分）
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
@@ -971,6 +1001,19 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     const p = clone(base)
     p.dialogs.add.configBtn[0].action = 'cancel'
     expectMiss('dialogs', base, p, '底栏按钮 action 被改（旧打印器根本不看 configBtn）')
+  }
+
+  // isHidden：判据是**规范化后**的条件等值 —— 打印器必须同源，否则「等价写法」
+  // 会让判正的行打出不同的 want/got（不变量当场失效，日志成了骗局）。
+  expectHit('isHidden', base, clone(base), 'gold-vs-gold')
+  {
+    const g = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', isHidden: { field: 'b', op: 'eq', value: 'x' } }], actions: ['add'] }
+    const p = clone(g)
+    p.fields[0].isHidden = { '==': [{ var: 'b' }, 'x'] } // 等价写法 → 判正，且投影必须相同
+    expectHit('isHidden', g, p, '旧条件 vs 表达式节点（等价写法）')
+    const q = clone(g)
+    q.fields[0].isHidden = { '==': [{ var: 'b' }, 'y'] }
+    expectMiss('isHidden', g, q, 'value 被改')
   }
 
   // treeConfig：判据是整对象深等值。

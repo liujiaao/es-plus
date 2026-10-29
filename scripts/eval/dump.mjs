@@ -41,12 +41,15 @@ import { createHash } from 'node:crypto'
  *   label-identity-v1             : Ruler v3 / R2，字段按归一化 `label` 建立单射后再比
  *   +unmeasured-expand-title-v1   : `expandConfig.title` 无条件不参与比较（NL 从不陈述它，
  *                                   而两侧总会各写一个 ⟹ 装饰键的「单侧缺失豁免」永不触发）
+ *   +cond-dsl-canonical-v1        : `isHidden` 先规范化再比（schema 允许两套等价写法：旧条件
+ *                                   `{field,op,value}` / 表达式节点；条件数组 = AND / `{and:[…]}`；
+ *                                   `nin[a,b]` ≡ 两条 `!=`）
  *
- * 串是**复合**的：`<字段身份>[+deco-projection-v1][+unmeasured-expand-title-v1]`。
+ * 串是**复合**的：`<字段身份>[+deco-projection-v1][+unmeasured-expand-title-v1][+cond-dsl-canonical-v1]`。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
-export const RULER_VERSION = 'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1'
+export const RULER_VERSION = 'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

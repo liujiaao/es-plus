@@ -1145,3 +1145,71 @@ npm run check:scorers|check:rescore|check:ratchet|check:artifact-self|check:dump
 > **一句话**：装饰键的豁免条件是「有一侧没说」，而**两侧都会说的散文**需要的不是豁免而是
 > **不参与比较**——分类表里必须留出这一类，否则「模型猜不到」会一直伪装成「模型写错了」。
 
+### 11.13 D 阶段（离线部分）：`isHidden` 条件 DSL 规范化 ✅（2026-10-29）
+
+**怎么发现的**：§11.12 之后剩下的 10 条 `isHidden` 失败里，有两条**不是模型错**：
+
+```
+115-quotation-remark-hidden-and-antdv
+  gold: {and:[{nin:[{var:category},["other","custom"]]}, {">":[{var:qty},0]}]}
+  pred: {and:[{"!=":[{var:category},"other"]}, {"!=":[{var:category},"custom"]}, {">":[{var:qty},0]}]}
+
+121-contract-legalreview-hidden-mixed-antdv
+  gold: [{field:"contractType",op:"eq",value:"fixed"}, {or:[...]}]      ← 数组 AND + 旧条件
+  pred: {and:[{"==":[{var:contractType},"fixed"]}, {or:[...]}]}          ← 表达式节点
+```
+
+两条 NL 都被正确理解，差别只在**写法**。而 `structured-config.schema.ts` 的 `field.isHidden`
+说明里写得很清楚：旧条件 `{field,op,value}` 与 JSONLogic 表达式节点**都接受**，
+「条件数组 = AND，可与两种写法混用」，`nin` 也在算子闭集里。
+⟹ 同一需求有多个都对的写法，而 `isHiddenEqual` 是**原文深比较**，谁选了另一种合法写法谁被判负。
+
+> 顺带确认了一处**不是**问题的东西：`var` 里的字段名早就被 `align.mjs` 的 `renameIsHidden`
+> 改写成 gold 命名空间（115 的 `quantity` → `qty` 已对齐）。缺的是**形态**等价，不是命名。
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/scorers.mjs` | 新增 `canonCondition`（导出）：旧条件 → 表达式节点（`eq`→`==`、`nIn`→`nin`…，单目算子只取操作数）；条件数组 → `{and:[…]}`；单元素 and/or 折回元素；嵌套 and/or 展平；`in`/`nin` 的**字面量数组**展开成 `==`/`!=` 的 or/and。`isHiddenEqual` 与 `FIELD_SCORERS.isHidden` 改为比规范形；`describeDimMiss` 补 `isHidden` 分支（打印规范形，保住「`want===got` 当且仅当 pass」） |
+| `scripts/eval/scorers.test.mjs` | 2c 增 6 条**等价写法应判正**（对称）+ 4 条**不变量**（算子不同 / 取值不同 / 引用字段不同 / **and 操作数顺序不同**照旧判负）；`describeDimMiss` 不变量节补 `expectHit`（旧条件 vs 表达式节点）与 `expectMiss` |
+| `scripts/eval/dump.mjs` | `RULER_VERSION` 再追加 `+cond-dsl-canonical-v1` |
+
+**刻意不做**：**不排序** and/or 的操作数。AND 可交换是定理，但接受任意顺序就等于把「顺序写反」也放掉，
+而语料里没有任何证据表明模型会这么做 —— 不放宽没有证据支持的东西（同 §11.12 的边界哲学）。
+
+**实测（同一份 C 阶段 dump）**
+
+| 指标 | §11.12 之后 | 本次 | Δ |
+|---|---|---|---|
+| 95% 定义（门禁 ∨） | 73.7%（143/194） | **74.7%（145/194）** | **+2 行 / +1.0 pp** |
+| scoped HELDOUT | 68.6% | 69.6% | +1.0 pp |
+| 逐维失败行总数 | 51 | **49** | −2 |
+| `isHidden` 维度失败 | 10 | **8** | −2（恰好 115、121） |
+
+逐维分布比对后**其余计数一字不差**（columns 11 / tableBtns 11 / editConfig 8 / reactions 7 / propSet 4 …）
+⟹ 这 2 行是**净增**，没有一行因此变红，也没有别的维度被顺带「弄绿」。
+
+**剩余 8 条 `isHidden` 失败的真因（都不是尺子问题）**
+
+| 形状 | 行 | 说明 |
+|---|---|---|
+| pred **完全没写** `isHidden` | 112、116、117、39、46 | 模型漏掉整条需求 |
+| 枚举**码值**猜错（车险 → gold `auto` / pred `car`） | 134、42 | NL 只给中文标签，码值不可推断 ⟹ 语料/`fixedFields` 侧问题 |
+| conv-23 | conv-23 | 收敛用例，turn-0 漏写是**故意**的，靠 `refinements` 补（见 §11.11） |
+
+> **一句话**：判等要看**语义**，而语义的载体不一定只有一种写法。schema 接受两套 DSL 形态时，
+> 记分卡就必须先把它们规范化——否则它测的是「模型是否与我选了同一套写法」，不是「模型是否理解」。
+
+### 11.14 本批两处尺子修正的合并口径（供下次跑批对照）
+
+| 阶段 | 门禁 ∨ | 逐维失败行 | 备注 |
+|---|---|---|---|
+| §11.8 C 阶段（`label-identity-v1+deco-projection-v1`） | 69.1%（134/194） | 60 | 基线 |
+| + §11.12 `unmeasured-expand-title-v1` | 73.7%（143/194） | 51 | +9 |
+| + §11.13 `cond-dsl-canonical-v1` | **74.7%（145/194）** | **49** | +2（当前） |
+
+两处都只改**尺子**、不动语料，且都是「模型选了另一种合法表达被判负」这一个母题的两种形态。
+它们**不是**能力提升：下一次真跑批的数字要在这把新尺子下重新建立，
+`accuracy-baseline.json` 的比率字段仍为 `null`，等首跑后人工写回（版本串见该文件头注）。
+
