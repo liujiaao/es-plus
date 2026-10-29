@@ -20,8 +20,10 @@ import Vue from 'vue'
 // 断言仍打在原始 spy 上（bound 包装调用时照样记录）。
 const mocks = vi.hoisted(() => ({ httpRequestInstance: vi.fn() }))
 
-vi.mock('element-ui', () => ({
-  MessageBox: { confirm: vi.fn(() => Promise.resolve()) },
+// 源码走按需子路径 `element-ui/lib/message-box`（主入口是 CJS 全量包），
+// 而 vi.mock 按 import 说明符匹配 —— mock 入口拦不住子路径。
+vi.mock('element-ui/lib/message-box', () => ({
+  default: { confirm: vi.fn(() => Promise.resolve()) },
 }))
 vi.mock('../src/components/es-dialog/use-dialog', () => ({
   default: vi.fn(() => vi.fn()),

@@ -21,8 +21,13 @@ import { fileURLToPath } from 'node:url'
 // a default export. The real Element UI integration is exercised in the e2e
 // harness; this unit test only asserts the public API shape of the built dist,
 // so we stub the single symbol the dist imports from element-ui.
-vi.mock('element-ui', () => ({
-  MessageBox: {
+//
+// ⚠️ 必须 mock **子路径** `element-ui/lib/message-box`，不是入口 `element-ui`：
+// 源码刻意走按需子路径（主入口是 CJS 全量包，一句 `import { MessageBox }` 就整包装进），
+// 而 vi.mock 按 import 说明符匹配 —— mock 入口拦不住子路径，真实 message-box 会被加载，
+// 经 popup-manager.js `require('vue')` 解析到根部 vue@3 后整文件崩在导入阶段。
+vi.mock('element-ui/lib/message-box', () => ({
+  default: {
     confirm: vi.fn().mockResolvedValue('confirm'),
   },
 }))
