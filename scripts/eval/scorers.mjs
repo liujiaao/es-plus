@@ -65,6 +65,10 @@ function cloneDeep(v) {
 // defaultValue`（编辑器语义）都是行为契约，**不投影**。
 // `ellipsis` / `showOverflowTooltip` 今天在语料里 0 处，暂列结构键（保守：宁可暂严，不可误绿），
 // 将来若出现「超出省略」类语料再议；`scorers.test.mjs` 的列键白名单会强制为新键做分类。
+//
+// 第三种分类 `unmeasured`：**两侧都会写、但 NL 从不陈述**的键（当前只有 expandConfig.title）。
+// 装饰键的豁免条件是「任一侧没写」，对这类键不成立 —— 两侧都写，于是永远被比值。
+// 它们无条件不参与比较，理由见 projectExpandNode 上方注释。
 /**
  * 键分类表 —— 投影规则与 meta-eval 白名单的**同一个源**。
  * 语料里出现表外的键 ⟹ `scorers.test.mjs` 直接红，逼开发者先做分类（结构/装饰），
@@ -97,12 +101,16 @@ export const EDIT_RENDER_KEY_CLASS = Object.freeze({
   defaultValue: 'structural',
   autofocus: 'decoration',
 })
-export const EXPAND_KEY_CLASS = Object.freeze({ fields: 'structural', title: 'decoration' })
+// `title` 是**不可测量键**（第三种分类，见下方 projectExpandNode 的说明）：
+// 它是散文标题，NL 从不陈述，而两侧又总会各自写一个 —— 投影规则「任一侧没写才豁免」
+// 对它永不触发。实测 2026-10-27 全量 dump 里 expandConfig 维度 9 条失败**全部**只差 title。
+export const EXPAND_KEY_CLASS = Object.freeze({ fields: 'structural', title: 'unmeasured' })
 
 const keysOf = (m, cls) => Object.keys(m).filter((k) => m[k] === cls)
 const COLUMN_DECORATION_KEYS = keysOf(COLUMN_KEY_CLASS, 'decoration')
 const EDIT_RENDER_DECORATION_KEYS = keysOf(EDIT_RENDER_KEY_CLASS, 'decoration')
 const EXPAND_DECORATION_KEYS = keysOf(EXPAND_KEY_CLASS, 'decoration')
+const EXPAND_UNMEASURED_KEYS = keysOf(EXPAND_KEY_CLASS, 'unmeasured')
 
 const dropIfEitherSideMissing = (a, b, keys) => {
   for (const k of keys) {
@@ -113,8 +121,21 @@ const dropIfEitherSideMissing = (a, b, keys) => {
   }
 }
 
+// 展开区节点。两类键两种处理：
+//   - `fields` 结构键，照常深等值（顺序、label 都是渲染契约）；
+//   - `title` **不可测量**：它是散文标题，NL 从不陈述（全语料 1 条含「标题」二字的用例
+//     指的是表格列「工单标题」，不是展开区标题）。装饰键的「任一侧没写才豁免」对它无效——
+//     两侧总会各写一个标题，于是每次都被比值，把 9 行钉成不可过。
+//     所以这里**无条件**从两侧删除：模型不可能「写错」一个 NL 没说的串。
+//     代价是这行不再测量标题；若将来真有语料陈述标题（如「展开区标题写处理信息」），
+//     `scorers.test.mjs` 的语料扫描会红，那时再把它升回 structural 并走正式口径。
 const projectExpandNode = (g, p) => {
-  if (g && p && typeof g === 'object' && typeof p === 'object') dropIfEitherSideMissing(g, p, EXPAND_DECORATION_KEYS)
+  if (!g || !p || typeof g !== 'object' || typeof p !== 'object') return
+  for (const k of EXPAND_UNMEASURED_KEYS) {
+    delete g[k]
+    delete p[k]
+  }
+  dropIfEitherSideMissing(g, p, EXPAND_DECORATION_KEYS)
 }
 
 const projectColumnNode = (g, p) => {

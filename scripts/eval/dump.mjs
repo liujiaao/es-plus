@@ -39,12 +39,14 @@ import { createHash } from 'node:crypto'
  *   prop-identity-v1              : 字段按 `prop` 精确判等（含 AN-01 不喂 fixedFields）
  *   +deco-projection-v1           : `columns` / `expandConfig` 的装饰键单侧声明豁免（A2/D15）
  *   label-identity-v1             : Ruler v3 / R2，字段按归一化 `label` 建立单射后再比
+ *   +unmeasured-expand-title-v1   : `expandConfig.title` 无条件不参与比较（NL 从不陈述它，
+ *                                   而两侧总会各写一个 ⟹ 装饰键的「单侧缺失豁免」永不触发）
  *
- * 串是**复合**的：`<字段身份>[+deco-projection-v1]`。装饰键策略单独也占一段，
- * 因为「同一份 pred 得不同分」的改动不止字段身份一种；少写一段就等于让两把不同的尺子
+ * 串是**复合**的：`<字段身份>[+deco-projection-v1][+unmeasured-expand-title-v1]`。
+ * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
-export const RULER_VERSION = 'label-identity-v1+deco-projection-v1'
+export const RULER_VERSION = 'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

@@ -631,6 +631,8 @@ G  度量可靠性（健康门 / artifact / 棘轮 / version 指纹）
 - 「结构全对、装饰全没猜」的完美模型：heldout CRUD **194/194** 通过 ⟹ 尺子侧上限 **100%**（0a 前：32 行钉死、上限 83.5%）。
 - 语料里含装饰键的 CRUD 例 **27** 个：`47-61`（列宽/固定/对齐/自动聚焦）、`62-76`（展开区标题）、`87`、`103`、`186`。
 - 0a 直接解锁 **22** 行（`columns` 11 + `expandConfig.title` 11）；剩下 **10** 行 `membership`（`162-171`，gold `inQuery:false` 而 NL 无查询措辞）**投影治不了** ⟹ 当前上限 **184/194 = 94.8%**，由 0b 修。
+  - ⚠ **更正（2026-10-29）**：`expandConfig.title` 的 11 行是**纸面推断**——豁免规则要求「任一侧没写」，
+    而真实 pred 与 gold **两侧都会写** title，豁免从不触发，实测解锁 **0** 行。见 §11.12。
 - 复现：`node scripts/eval/scorers.test.mjs`（含语料投影自检）、`npm run check:consistency`（EXIT=0）。
 
 **刻意不动**：`permissionValue`（无权限不出列）、`dataOptions`（码值→文案）、`editRender.name/type/options/props/defaultValue`（编辑器语义）、`btns`、`groups` 结构、列序与列数 —— 这些是行为契约，单侧缺失/写错照旧判负。
@@ -1078,3 +1080,68 @@ npx eslint <改动的 9 个文件>          0 error
 
 > **一句话**：重放不改变「什么是成绩」，只改变「一次抖动会让几条成绩消失」；
 > 而它必须付出的代价是**分母不变式要能被产物自己核对**，否则它就是分数自增器。
+
+### 11.12 D 阶段（离线部分）：`expandConfig.title` 是不可测量键 ✅（2026-10-29）
+
+**怎么发现的**：拿 §11.8 的 C 阶段 dump 做逐维失败诊断（`.tmp-audit/dim-rows.mjs`，读 dump 不调模型）。
+`expandConfig` 维度 9 条失败，**每一条都只差 `title`**：
+
+```
+62-supplier-expand-index.json   gold title="联系方式"   pred title="供应商详情"
+75-invoice-expand-title.json    gold title="开票信息"   pred title="发票信息"
+```
+
+（10 行标题不同：`62 65 66 69 70 72 73 75 76`，另加 186。）
+
+**根因**：§11.1 的装饰键投影规则是「同一位置的装饰键，只要**任一侧没写**，两侧都不比」。
+`title` 是散文标题，模型与 gold **总会各写一个** ⟹ 豁免条件恒不成立 ⟹ 这个键每次都被比值。
+而 NL 从不陈述它：全语料 216 例里没有一例在 NL 里点名展开区标题
+（186 的 title「明细」被 NL 的「备注明细」包含，但那句说的是*展开后能看到什么*，不是*标题叫什么*）。
+于是这 9 条在尺子上**结构不可过**，模型无从推断。
+
+**§11.1 的一处错判（本次更正）**：那里写「0a 直接解锁 22 行（`columns` 11 + `expandConfig.title` 11）」。
+前半句实测成立，后半句是**纸面推断**——当时的验收用的是一个「结构全对、装饰全没猜」的合成完美模型
+（两侧都缺装饰键，豁免恰好触发），真实 pred 两侧都写 title，豁免从不触发。
+「合成样本通过」不等于「真实产出通过」，这条教训写在这里而不是改在 §11.1 里：原文的推理链要看得到错在哪。
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/scorers.mjs` | 新增第三种分类 **`unmeasured`**（`EXPAND_KEY_CLASS.title`），`projectExpandNode` 对这类键**无条件**从两侧删除；头注写明它与 `decoration` 的区别（豁免条件「单侧缺失」对两侧都写的键永不成立） |
+| `scripts/eval/scorers.test.mjs` | 2e 把「两侧标题不同应判负」翻成**应判正**（并加对称断言 + 「只改字段仍判负」证明维度没睡）；语料投影自检把 `unmeasured` 一并删（删完 gold 少 title、pred 仍有 ⟹ 必须仍判正）；扰动表 `expandConfig` 改用**结构键**（`fields[0].label`），否则得到一条永远咬不住的假红 |
+| `scripts/eval/dump.mjs` | `RULER_VERSION` 追加一段：`label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1`（同一份 pred 得不同分 ⟹ 必须换串） |
+| `__tests__/golden/accuracy-baseline.json` | 头注里「首跑后写回」的版本串同步（该字段仍为 `null`，只改注释） |
+
+**边界守卫**：`unmeasured` 的前提是「NL 从不陈述它」。语料体检新增一条 —— 若某例的 NL 在**引号内**
+点名了展开区标题（「展开区标题写处理信息」），直接红，逼作者二选一：删掉这个期待，
+或把它升回 `structural` 走正式口径。只认引号内文本：裸串匹配会误伤 186（title「明细」被「备注明细」包含）。
+
+**实测（同一份 C 阶段 dump，只有尺子不同）**
+
+| 指标 | 改动前 | 改动后 | Δ |
+|---|---|---|---|
+| 95% 定义（门禁 ∨） | 69.1%（134/194） | **73.7%（143/194）** | **+9 行 / +4.6 pp** |
+| scoped HELDOUT | 63.9% | 68.6% | +4.7 pp |
+| 逐维失败行总数 | 60 | **51** | −9 |
+| `expandConfig` 维度失败 | 9 | **0** | −9 |
+
+**+9 与「10 行标题不同」的差额有名字**：186-dept-merge-with-expand-vue3 的 gold/pred 标题也不同
+（明细 → 备注明细），但它的 `pinnedDims` 是 `["propSet","actions","mergeConfig"]` —— **不 pin
+`expandConfig`**，这处差异本来就没进门禁。其余 9 行都 pin 了 `expandConfig`，逐行核对后全部翻转，
+没有一行因为这次放宽而在别处变红（`check:scorers` 的 gold-vs-gold 与 26 个维度扰动全绿）。
+**先对账再宣布**：+9 这个数字是从上面的口径解释出来的，不是数出来的期望值。
+
+**复现**
+
+```bash
+node scripts/eval/rescore.mjs .tmp-audit/full-c-merged.jsonl   # 73.7%（143/194）
+git stash push -- scripts/eval/scorers.mjs && \
+  node scripts/eval/rescore.mjs .tmp-audit/full-c-merged.jsonl && git stash pop   # 旧尺子 69.1%
+node scripts/eval/scorers.test.mjs                             # ✅ 含 title 两条新语义
+npm run check:scorers|check:rescore|check:ratchet|check:artifact-self|check:dump|check:replay   # 全绿
+```
+
+> **一句话**：装饰键的豁免条件是「有一侧没说」，而**两侧都会说的散文**需要的不是豁免而是
+> **不参与比较**——分类表里必须留出这一类，否则「模型猜不到」会一直伪装成「模型写错了」。
+

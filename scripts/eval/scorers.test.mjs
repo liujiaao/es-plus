@@ -127,7 +127,9 @@ const PERTURB = {
   configTableOut: (c) => { c.tableOptions.configTableOut.tableData = 'changed' },
   isHidden: (c) => { c.fields[0].isHidden.op = 'ne' },
   columns: (c) => { c.columns[0].type = 'index' },
-  expandConfig: (c) => { c.expandConfig.title = '别的' },
+  // 扰动必须落在**结构键**上：expandConfig.title 是不可测量键（两侧不同也判正，见 2e），
+  // 拿它做扰动会得到一条永远「咬不住」的假红。
+  expandConfig: (c) => { c.expandConfig.fields[0].label = '别的' },
   treeConfig: (c) => { c.treeConfig.expandAll = false },
   mergeConfig: (c) => { c.mergeConfig.rowsBy = ['name'] },
   editConfig: (c) => { c.tableOptions.editConfig.trigger = 'dblclick' },
@@ -414,7 +416,7 @@ console.log('meta-eval: columns (explicit column array)')
 }
 
 // 2e) expandConfig（声明式行展开内容，AI-09 子项②）维度的语义：投影后的整体深等值
-//（字段序 / 字段标签是渲染契约；标题串是装饰键 —— 单侧声明豁免，两侧都写才比值）
+//（字段序 / 字段标签是渲染契约；标题串是不可测量键 —— 无条件不参与比较）
 console.log('meta-eval: expandConfig (declarative row-expand content)')
 {
   const ec = { title: '详情', fields: [{ prop: 'remark', label: '备注' }, { prop: 'createdAt', label: '创建时间' }] }
@@ -425,9 +427,19 @@ console.log('meta-eval: expandConfig (declarative row-expand content)')
   fieldOrder.expandConfig.fields.reverse()
   check(scoreAll(gold, fieldOrder).byCapability.expandConfig.pass === false, 'expandConfig: 字段序变化应判负（顺序是契约）')
 
+  // 标题串两侧都写且不同 —— **仍判正**（unmeasured）。
+  // 依据：NL 全语料从不陈述展开区标题（唯一含「标题」的 64-ticket-expand-title.json 说的是
+  // 表格列「工单标题」），模型写「供应商详情」vs gold「联系方式」不是错误，是无从推断。
+  // 2026-10-27 全量 dump 里 9 条 expandConfig 失败**全部**只差这一处。
   const titleChanged = clone(gold)
   titleChanged.expandConfig.title = '别的标题'
-  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === false, 'expandConfig: 两侧都写标题且不同应判负（写错仍扣）')
+  check(scoreAll(gold, titleChanged).byCapability.expandConfig.pass === true, 'expandConfig: 两侧标题不同应判正（标题不可测量）')
+  check(scoreAll(titleChanged, gold).byCapability.expandConfig.pass === true, 'expandConfig: 标题不可测量应对称（pred 的标题也不比）')
+
+  // 但 fields 仍咬得住：标题一致、字段不同 ⟹ 判负（证明上面不是整维度睡着）
+  const fieldsChanged = clone(gold)
+  fieldsChanged.expandConfig.fields[0].prop = 'otherProp'
+  check(scoreAll(gold, fieldsChanged).byCapability.expandConfig.pass === false, 'expandConfig: 只改字段应判负（title 投影没把维度弄睡）')
 
   // 装饰键投影：标题串单侧声明不判负（NL 极少陈述「展开区标题叫详情」）
   const titleOmitted = clone(gold)
@@ -640,15 +652,32 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
       check(EXPAND_KEY_CLASS[k] !== undefined, `${f}: expandConfig 出现未分类的键 "${k}"（请在 EXPAND_KEY_CLASS 里分类）`)
     }
 
+    // 不可测量键的边界守卫（expandConfig.title）：它在记分时被无条件丢弃，前提是
+    // **NL 从不陈述它**。若哪天语料在引号里点名了展开区标题（「展开区标题写处理信息」），
+    // 那条用例就是真的要求这个串 —— 本行必须红，逼作者二选一：要么删掉 title 的期待，
+    // 要么把它升回 structural 并走正式口径（不能一边要求、一边不测量）。
+    // 只看**引号内**文本：裸串匹配会误伤（186 的 title「明细」被 NL 的「备注明细」包含，
+    // 而那一句说的是展开后能看到什么，不是标题叫什么）。
+    const quoted = [...(raw.nl ?? '').matchAll(/「([^」]*)」|“([^”]*)”|`([^`]*)`|"([^"]*)"/g)].map((m) => m[1] ?? m[2] ?? m[3] ?? m[4] ?? '')
+    const expandTitles = [g.expandConfig?.title, ...(g.columns ?? []).map((c) => c.expandConfig?.title)].filter(Boolean)
+    for (const t of expandTitles) {
+      check(
+        !quoted.some((q) => q.includes(t)),
+        `${f}: NL 在引号里点名了展开区标题「${t}」—— 但它当前是不可测量键（记分时被丢弃），要么删掉这个期待，要么升回 structural`
+      )
+    }
+
     // 投影生效自检（A2 验收的镜像）：把 gold 的装饰键**全部删掉**，维度必须仍判正。
-    // 等价于「只改/删 gold 的 width/title、NL 不动 ⟹ 仍 pass」；红了就是投影有漏（某个装饰键没进分类表）。
+    // 等价于「只改/删 gold 的 width/title、NL 不动 ⟹ 仍 pass」；红了就是投影有漏。
+    // 不可测量键（unmeasured）一并删：删完 gold 少了 title 而 pred 仍有 ⟹ 也必须判正。
+    const dropUnmeasured = (cls) => cls === 'decoration' || cls === 'unmeasured'
     const noDeco = clone(g)
     walkCols(noDeco.columns, (col) => {
-      for (const k of Object.keys(col)) if (COLUMN_KEY_CLASS[k] === 'decoration') delete col[k]
-      if (col.editRender) for (const k of Object.keys(col.editRender)) if (EDIT_RENDER_KEY_CLASS[k] === 'decoration') delete col.editRender[k]
-      if (col.expandConfig) for (const k of Object.keys(col.expandConfig)) if (EXPAND_KEY_CLASS[k] === 'decoration') delete col.expandConfig[k]
+      for (const k of Object.keys(col)) if (dropUnmeasured(COLUMN_KEY_CLASS[k])) delete col[k]
+      if (col.editRender) for (const k of Object.keys(col.editRender)) if (dropUnmeasured(EDIT_RENDER_KEY_CLASS[k])) delete col.editRender[k]
+      if (col.expandConfig) for (const k of Object.keys(col.expandConfig)) if (dropUnmeasured(EXPAND_KEY_CLASS[k])) delete col.expandConfig[k]
     })
-    for (const k of Object.keys(noDeco.expandConfig ?? {})) if (EXPAND_KEY_CLASS[k] === 'decoration') delete noDeco.expandConfig[k]
+    for (const k of Object.keys(noDeco.expandConfig ?? {})) if (dropUnmeasured(EXPAND_KEY_CLASS[k])) delete noDeco.expandConfig[k]
     const stripped = StructuredCrudConfigSchema.parse(noDeco)
     const projScore = scoreAll(g, stripped)
     if (g.columns && g.columns.length) {
