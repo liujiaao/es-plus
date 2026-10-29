@@ -19,7 +19,7 @@
  */
 import { defineComponent, ref } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const resultLabel = { approve: '通过', reject: '驳回', return: '退回修改' }
 

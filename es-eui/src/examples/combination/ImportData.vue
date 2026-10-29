@@ -36,7 +36,7 @@
  *    回滚时后端整批删除，同一批次号重查即为空。
  */
 import { defineComponent, ref, reactive, computed, nextTick, getCurrentInstance } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { useDialog } from '@es-plus/vue2'
 
 const DEPARTMENTS = ['技术部', '产品部', '市场部', '财务部']

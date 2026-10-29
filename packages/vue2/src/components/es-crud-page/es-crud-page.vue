@@ -43,13 +43,19 @@
  *   3. ElMessageBox 替换为：
  *      a) Element UI 的 MessageBox.confirm（兼容 Vue.use(ElementUI) 全局注册）
  *      b) 或通过 Vue.prototype.$confirm（同样由 Element UI 全局注册）
- *      此处直接 import 'element-ui' 的 MessageBox 以避免依赖原型方法
+ *      此处直接取 MessageBox 服务以避免依赖原型方法
+ *
+ *      **必须走 `element-ui/lib/message-box` 子路径，不能 `import { MessageBox } from 'element-ui'`**：
+ *      Element UI 2.x 的主入口是 `lib/element-ui.common.js`（CommonJS，216 KB gz，
+ *      全站 80 个组件），一行具名导入就会把这整包塞进使用方的首屏 —— 而且它
+ *      tree-shake 不掉（CJS 没有可摇的静态结构）。子路径是同一个服务对象，
+ *      支持按需引入后消费方才能真正只付自己用得到的那几个组件。
  *   4. useDialog 来自 Vue 2 版本（Vue.extend + $mount）
  *
  * 业务逻辑（schema 归一化、按钮处理、弹窗管理）100% 与 Vue 3 版本一致。
  */
 import { defineComponent, ref, reactive, computed, watch, set } from '../../vue-compat'
-import { MessageBox } from 'element-ui'
+import MessageBox from 'element-ui/lib/message-box'
 import EsForm from '../es-form/es-form.vue'
 import EsTable from '../es-table/component.vue'
 import EsErrorBoundary from '../es-error-boundary/es-error-boundary.vue'

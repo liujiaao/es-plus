@@ -54,7 +54,7 @@
  *   3. 详情与列表数据解耦：即便列表行是旧快照，抽屉里也是最新详情。
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({

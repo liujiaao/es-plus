@@ -46,7 +46,8 @@
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
 
 const departments = ['技术部', '产品部', '市场部', '设计部']
 const positions = ['工程师', '高级工程师', '架构师', '经理']

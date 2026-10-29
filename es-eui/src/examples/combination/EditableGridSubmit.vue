@@ -35,7 +35,7 @@
  *      清空临时状态。任一失败提示并保留现场。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS } from '../_mock/crud-service'
 
 export default defineComponent({

@@ -35,7 +35,7 @@ export const RAW_combination_BatchEdit = `<template>
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({
@@ -675,7 +675,7 @@ export const RAW_combination_EditableGridSubmit = `<template>
  *      清空临时状态。任一失败提示并保留现场。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS } from '../_mock/crud-service'
 
 export default defineComponent({
@@ -1177,7 +1177,7 @@ export const RAW_combination_ImportData = `<template>
  *    回滚时后端整批删除，同一批次号重查即为空。
  */
 import { defineComponent, ref, reactive, computed, nextTick, getCurrentInstance } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { useDialog } from '@es-plus/vue2'
 
 const DEPARTMENTS = ['技术部', '产品部', '市场部', '财务部']
@@ -2021,7 +2021,7 @@ export const RAW_combination_MasterDetailFlow = `<template>
  * 主子通信走的是这里的状态 + reload，二者不要混用。
  */
 import { defineComponent, ref, reactive, computed, watch } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'CombinationMasterDetailFlow',
@@ -2380,7 +2380,7 @@ export const RAW_combination_PermissionButtons = `<template>
  *   3. permission 函数在按钮渲染期间读取 role（响应式），role 变化触发重渲染重新过滤
  */
 import { defineComponent, reactive, ref, computed, inject, onUnmounted } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const rolePerms = {
   admin: ['user:add', 'user:edit', 'user:delete', 'user:export'],
@@ -2631,7 +2631,7 @@ export const RAW_combination_RowApproval = `<template>
  */
 import { defineComponent, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const statusTag = { 待审批: 'warning', 已通过: 'success', 已驳回: 'danger' }
 
@@ -2765,7 +2765,7 @@ export const RAW_combination_StepForm = `<template>
  *   3. v-show 保留表单实例，切换步骤不清空已填数据；末步用 v-if 渲染核对信息
  */
 import { defineComponent, reactive, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const industryOptions = [
   { label: '互联网', value: 'internet' },
@@ -3450,7 +3450,9 @@ export const RAW_dialog_Confirm = `<template>
  */
 import { defineComponent } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox, Icon } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
+import Icon from 'element-ui/lib/icon'
 
 export default defineComponent({
   name: 'DialogConfirm',
@@ -3700,7 +3702,7 @@ export const RAW_dialog_DynamicBtn = `<template>
  */
 import { defineComponent, ref } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const resultLabel = { approve: '通过', reject: '驳回', return: '退回修改' }
 
@@ -4582,7 +4584,7 @@ export const RAW_dialog_StepDialog = `<template>
  */
 import { defineComponent, reactive, ref } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const stepTitles = ['基本信息', '联系方式', '确认提交']
 
@@ -5530,7 +5532,7 @@ export const RAW_form_DetailMode = `<template>
  *   3. attrs.disabled 也支持函数形式 (model, item, props) => boolean，此处用 computed 更直观
  */
 import { defineComponent, reactive, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'FormDetailMode',
@@ -7403,7 +7405,7 @@ export const RAW_table_CrudEdgeCases = `<template>
  * 全部由组件内部消费；写操作仍经过假后端校验/落库。
  */
 import { defineComponent, ref, reactive, onBeforeUnmount } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 const PAGE_SIZE = 5
@@ -7831,7 +7833,7 @@ export const RAW_table_DetailDrawer = `<template>
  *   3. 详情与列表数据解耦：即便列表行是旧快照，抽屉里也是最新详情。
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({
@@ -8703,7 +8705,7 @@ export const RAW_table_OptimisticToggle = `<template>
  *   本地 rows 作为展示数据源，服务端仅负责「持久化 + 成功/失败信号」。
  */
 import { defineComponent, ref } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({
@@ -9062,7 +9064,8 @@ export const RAW_table_RemoteCrud = `<template>
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
 import {
   createEmployeeService,
   DEPARTMENT_OPTIONS,
@@ -10620,7 +10623,7 @@ export const RAW_vxe_table_CellEdit = `<template>
  *   keepSource:true 让 vxe 保存原始快照，getUpdateRecords() 才能识别已改行。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableCellEdit',
@@ -10825,7 +10828,8 @@ export const RAW_vxe_table_CrudWithDialog = `<template>
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
 
 const departments = ['技术部', '产品部', '市场部', '设计部']
 const positions = ['工程师', '高级工程师', '架构师', '经理']
@@ -11866,7 +11870,7 @@ export const RAW_vxe_table_RowEdit = `<template>
  *   取 grid = tableRef.value.vxeEngineRef.vxeInstance() 即可调用。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableRowEdit',
@@ -12012,7 +12016,7 @@ export const RAW_vxe_table_SelectionIndex = `<template>
  *   · clearSelection() 连 vxe 的 reserve 一起清（内部 clearCheckboxRow 会清保留记录）。
  */
 import { defineComponent, ref, computed, nextTick } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableSelectionIndex',

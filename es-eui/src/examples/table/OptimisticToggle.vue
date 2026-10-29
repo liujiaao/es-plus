@@ -29,7 +29,7 @@
  *   本地 rows 作为展示数据源，服务端仅负责「持久化 + 成功/失败信号」。
  */
 import { defineComponent, ref } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({

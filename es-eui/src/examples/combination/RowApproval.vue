@@ -23,7 +23,7 @@
  */
 import { defineComponent, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const statusTag = { 待审批: 'warning', 已通过: 'success', 已驳回: 'danger' }
 

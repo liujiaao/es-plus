@@ -19,7 +19,7 @@
  */
 import { defineComponent, reactive, ref } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const stepTitles = ['基本信息', '联系方式', '确认提交']
 

@@ -38,7 +38,7 @@
  *   3. permission 函数在按钮渲染期间读取 role（响应式），role 变化触发重渲染重新过滤
  */
 import { defineComponent, reactive, ref, computed, inject, onUnmounted } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const rolePerms = {
   admin: ['user:add', 'user:edit', 'user:delete', 'user:export'],

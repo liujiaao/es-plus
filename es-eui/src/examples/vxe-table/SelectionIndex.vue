@@ -37,7 +37,7 @@
  *   · clearSelection() 连 vxe 的 reserve 一起清（内部 clearCheckboxRow 会清保留记录）。
  */
 import { defineComponent, ref, computed, nextTick } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableSelectionIndex',

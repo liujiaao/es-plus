@@ -36,7 +36,8 @@
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
 import {
   createEmployeeService,
   DEPARTMENT_OPTIONS,

@@ -22,7 +22,9 @@
  */
 import { defineComponent } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message, MessageBox, Icon } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
+import Icon from 'element-ui/lib/icon'
 
 export default defineComponent({
   name: 'DialogConfirm',

@@ -2,7 +2,6 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import store from './store'
-import ElementUI from 'element-ui'
 import http from '@/utils/server/request.js'
 // Element UI 主题：由单源 token 生成（$--color-primary 取自 --es-brand-primary），
 // 取代原先直接引 element-ui 预编译 CSS 的做法 —— 预编译产物里主色是写死的 #409EFF，
@@ -19,7 +18,12 @@ import './assets/docs-footer.css'
 import './assets/docs-notfound.css'
 // 可访问性基线（docs/theme/docs-a11y.css → scripts/sync-theme.mjs 分发）
 import './assets/docs-a11y.css'
-Vue.use(ElementUI, { size: 'mini' })
+// Element UI 按需注册：站点模板 + @es-plus/vue2 模板/渲染函数用到的 44 个组件与四个服务
+// （清单与守卫都在 utils/install-element.js）。
+// **不要**换回 `Vue.use(ElementUI)`：那是 216 KB gz 的主入口（含 Calendar / Carousel /
+// Timeline 等一张页面都没用过的组件），Element UI 的主入口是 CommonJS，tree-shake 不掉。
+import installElement from '@/utils/install-element'
+installElement(Vue)
 // vxe-table 3.x —— es-table 的 engine:'vxe' 高性能引擎依赖此库。
 // **插件**不在这里静态引入：全量注册会让 vxe 进 `chunk-vendors`，每一页都先付这笔钱，
 // 而真正渲染 engine:'vxe' 的只有 /component/vxetable 与 /ai-gallery/<id>。

@@ -40,8 +40,12 @@
  *   6. **两个子站（es-pc / es-eui）与主站同构的若干件事**：Ant Design Vue 只有显式清单
  *      （`app.use(Antd)` 是全量，仅 es-pc），vxe 只在用到它的两条路由注册。判据见第 6 节。
  *
+ *   7. **Element UI（es-eui）按需**：`Vue.use(ElementUI)` 与 `import { Message } from 'element-ui'`
+ *      是同一笔账的两半 —— 主入口是 CommonJS 全量包，具名导入 tree-shake 不掉。
+ *      判据是「两处目录里都不许有根入口 import」+「三处标签并集 ⊆ 显式清单」，见第 4b 节。
+ *
  * 用法：node scripts/check-bundle-sources.mjs
- * 退出码：0 = 六条判据都成立；1 = 有缺口（逐条列出文件与行号）。
+ * 退出码：0 = 七条判据都成立；1 = 有缺口（逐条列出文件与行号）。
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
@@ -904,9 +908,235 @@ function checkAntdvSiteOnDemand() {
   )
 }
 
+// ── 4b. Element UI 的按需注册（es-eui）──────────────────────────────────────
+
+/**
+ * Element UI 2.x 与 Element Plus 的那笔账**长得不一样**，照抄第 4 节会漏掉一半。
+ *
+ * `Vue.use(ElementUI, { size: 'mini' })` 是全量注册（80 个组件 + 三个服务），但它不是
+ * 唯一把整包拽进来的入口：Element UI 的主入口是 `lib/element-ui.common.js`
+ * （**CommonJS**，216 KB gz），所以任何一行 `import { Message } from 'element-ui'`
+ * 都会把这整包塞进首屏，而且 tree-shake 不掉（CJS 没有可摇的静态结构）。
+ * 2026-10-29 之前，站点的 20 个示例 + 组件宿主 + utils/server/request.js 全是这种写法，
+ * 连 `@es-plus/vue2` 自己取 MessageBox 也是 —— **只改 `Vue.use` 等于没改**（实测：
+ * 单改注册那一步，chunk-vendors 从 280.8 只掉到 279 KB 量级，掉的都是注册期副作用）。
+ *
+ * 所以这里的判据是三条，缺一条都能悄悄退化：
+ *   a. **不许再有根入口 import**：`es-eui/src` 与 `packages/vue2/src` 里出现
+ *      `from 'element-ui'` 就红（生成物 `*.generated.js` / `cases/generated/**` 除外 ——
+ *      它们是**展示用源码字符串**，不是本模块的依赖）。
+ *   b. **不许退回全量插件**：`main.js` 里的 `Vue.use(ElementUI)`。
+ *   c. **用到的标签 ⊆ 显式清单**：扫三处并集，逐个映射成 PascalCase 对账 ——
+ *      ① es-eui 的 `.vue` 模板与 `<script>` 里的 JSX；② `@es-plus/vue2` 的模板
+ *      （它靠全局注册才拿得到 `<el-form>` / `<el-table>`）；③ `@es-plus/vue2` 用
+ *      `h('el-xxx')` 按名字取的控件（Cascader / ColorPicker / Slider / Transfer /
+ *      TimePicker / Upload 只走这条路，站点模板里一个都搜不到）。
+ *
+ * 扫描本身有两个已知的假阳性源，两个都得剥掉：`<pre v-pre>` 里的文档示例，
+ * 以及 script 里的字符串/模板字面量（安装指南整页都是 `import ElementUI from 'element-ui'`，
+ * 那是教用户怎么装，不是本站的依赖）。`h('el-x')` 的首参是字符串却是真用法，
+ * 所以先抓 h()、再剥字符串、最后扫 JSX。
+ */
+const ELEMENT_UI_ROOT = /from\s+['"]element-ui['"]/
+const ELEMENT_UI_SUBPATH_IMPORT = /^\s*import\s+(\w+)\s+from\s+['"]element-ui\/lib\/([\w-]+)['"]/
+/** 四个**服务**模块：它们不是组件，注册口是 Vue.prototype / 指令，不进组件清单 */
+const ELEMENT_UI_SERVICES = new Set(['message', 'message-box', 'notification', 'loading'])
+
+/** 展示用的源码字符串（生成物）：里面的 import 是**被展示的内容** */
+const isDisplayGenerated = (file) => /(^|[\\/])(generated[\\/]|[\w.-]+\.generated\.js$)/.test(file)
+
+/** 去掉 `<pre v-pre>` 代码块与 HTML 注释：那是文档正文里的示例，不是模板结构 */
+const stripPreBlocks = (text) => text
+  .replace(/<pre\b[^>]*v-pre[^>]*>[\s\S]*?<\/pre>/g, '')
+  .replace(/<!--[\s\S]*?-->/g, '')
+
+/**
+ * 去掉注释与字符串字面量，只留下**结构**。
+ *
+ * 剥 `//` 时要避开 `https://`（判据同上一条注释里的教训：裸扫 `//` 会把网址切碎），
+ * 模板字面量整段丢弃 —— 文档代码块、`el-icon-${kebab}` 这类拼接都在里面。
+ */
+function stripStringsForTags(text) {
+  // 模板字面量里的换行要保留：下面报错要带行号，整段抹掉会让行号整体前移
+  const blankKeepLines = (s) => s.replace(/[^\n]/g, ' ')
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, blankKeepLines)
+    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1')
+    .replace(/`(?:\\[\s\S]|[^\\`])*`/g, blankKeepLines)
+    .replace(/'(?:\\[\s\S]|[^\\'\n])*'/g, "''")
+    .replace(/"(?:\\[\s\S]|[^\\"\n])*"/g, '""')
+}
+
+/** 去掉注释与模板字面量，**保留单/双引号串** —— 根入口 import 的模块名本身就在引号里 */
+function stripCommentsAndTemplates(text) {
+  const blankKeepLines = (s) => s.replace(/[^\n]/g, ' ')
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, blankKeepLines)
+    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1')
+    .replace(/`(?:\\[\s\S]|[^\\`])*`/g, blankKeepLines)
+}
+
+/** 从一段源码里收集 `<el-*>` 标签（模板 + JSX）与 `h('el-*')` 调用 */
+function collectElementUiTags(raw, { isVue }) {
+  const tags = new Set()
+  let template = ''
+  let script = raw
+  if (isVue) {
+    const m = raw.match(/<template[\s\S]*?>\n?([\s\S]*)\n<\/template>/)
+    template = stripPreBlocks(m ? m[1] : '')
+    script = [...raw.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map((s) => s[1]).join('\n')
+  }
+  for (const m of template.matchAll(/<(el-[a-z0-9-]+)[\s/>]/g)) tags.add(m[1])
+  // h('el-x') 的首参是字符串，但它是真用法 —— 必须在剥字符串之前抓。
+  // 前缀 `(?<![\w$.])` 不能省：`startsWith('el-icon-')` 里就含 `h(`，
+  // 裸匹配 `h\(` 会把字符串前缀当成渲染函数（曾扫出 `el-icon-` 这个不存在的标签）。
+  for (const m of script.matchAll(/(?<![\w$.])h\(\s*(['"])(el-[a-z0-9-]+)\1/g)) tags.add(m[2])
+  const code = stripStringsForTags(script)
+  for (const m of code.matchAll(/<(el-[a-z0-9-]+)[\s/>]/g)) tags.add(m[1])
+  // `el-icon-` 是**拼接前缀**（`'el-icon-' + name` → class 字符串），不是组件
+  for (const tag of [...tags]) if (tag.endsWith('-')) tags.delete(tag)
+  return tags
+}
+
+const pascalEl = (tag) => 'El' + tag.slice(3).split('-').map((p) => p[0].toUpperCase() + p.slice(1)).join('')
+
+function checkElementUiOnDemand() {
+  const before = problems.length
+  const installPath = join(EUI_SRC, 'utils/install-element.js')
+  const mainPath = join(EUI_SRC, 'main.js')
+  const LIB_SRC = join(ROOT, 'packages/vue2/src')
+
+  // a. 根入口 import：一条都不许留（两个目录一起扫）
+  //    .vue 只看 `<script>` —— 模板里的 `<pre v-pre>` 是**文档示例**
+  //    （安装指南整页都在教用户 `import ElementUI from 'element-ui'`），那不是本模块的依赖。
+  for (const dir of [EUI_SRC, LIB_SRC]) {
+    for (const file of walk(dir).filter((f) => /\.(vue|js|ts)$/.test(f))) {
+      if (isDisplayGenerated(file)) continue
+      const text = read(file)
+      // 逐块处理并带上行号偏移：报错要指到文件里的真实行，不是 script 段的相对行
+      const segments = file.endsWith('.vue')
+        ? [...text.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map((m) => ({
+            body: m[1],
+            offset: text.slice(0, m.index).split('\n').length - 1,
+          }))
+        : [{ body: text, offset: 0 }]
+      for (const { body, offset } of segments) {
+        // 字符串里的 `import ElementUI from 'element-ui'` 是**被展示的示例**（安装指南整页都是），
+        // 真依赖只出现在代码里 —— 模板字面量整段抹掉再找（单/双引号串要留着：模块名在引号里）
+        for (const { text: line, no } of codeLines(stripCommentsAndTemplates(body))) {
+          if (!ELEMENT_UI_ROOT.test(line)) continue
+          fail(
+            `${rel(file)}:${no + offset} 从 Element UI 根入口 import —— 主入口是 CommonJS 全量包`
+              + '（216 KB gz，tree-shake 不掉），一行具名导入就把 80 个组件塞回首屏。'
+              + ' 改走子路径：Message → element-ui/lib/message、MessageBox → element-ui/lib/message-box',
+          )
+        }
+      }
+    }
+  }
+
+  // b. 不许退回全量插件
+  for (const { text, no } of codeLines(read(mainPath))) {
+    if (/Vue\.use\(\s*ElementUI\b/.test(text) || /^\s*import\s+ElementUI\s+from/.test(text)) {
+      fail(
+        `es-eui/src/main.js:${no} 又用回了 Vue.use(ElementUI) 全量注册 —— 首屏会多出约 50 KB`
+          + '（页面看起来完全正常，只有称产物才发现）。把标签加进 utils/install-element.js',
+      )
+    }
+  }
+
+  if (!existsSync(installPath)) {
+    fail('es-eui/src/utils/install-element.js 不存在 —— 改名了就把这里一起改')
+    return
+  }
+  const install = read(installPath)
+
+  // c1. 清单：每个 import 都必须走子路径，且都出现在 ELEMENT_UI_COMPONENTS 里
+  const imported = new Map()
+  for (const { text } of codeLines(install)) {
+    const m = text.match(ELEMENT_UI_SUBPATH_IMPORT)
+    if (m) imported.set(m[1], m[2])
+  }
+  const listBlock = install.match(/ELEMENT_UI_COMPONENTS\s*=\s*\[([\s\S]*?)\n\]/)
+  const listed = listBlock
+    ? listBlock[1].split('\n').map((line) => (line.trim().match(/^(\w+),?$/) || [])[1]).filter(Boolean)
+    : []
+  if (imported.size < 20 || listed.length < 20) {
+    fail(
+      `utils/install-element.js 里解析到 ${imported.size} 个子路径 import、${listed.length} 个清单项`
+        + ' —— 扫描规则与源码结构脱节（清单应是简写标识符，一行一个）',
+    )
+    return
+  }
+  for (const name of listed) {
+    if (!imported.has(name)) {
+      fail(`install-element.js 的清单里有 ${name}，但它没有从 element-ui/lib/* 导入 —— 运行时会注册 undefined`)
+    }
+  }
+  // 四个是**服务**不是组件：它们挂在原型上（$message / $confirm / v-loading），进不了组件清单
+  for (const [name, sub] of imported) {
+    if (ELEMENT_UI_SERVICES.has(sub)) continue
+    if (!listed.includes(name)) fail(`install-element.js 导入了组件 ${name} 却没列进 ELEMENT_UI_COMPONENTS —— 它不会被注册`)
+  }
+
+  // c2. 三处标签并集 ⊆ 清单
+  const used = new Map()
+  const addUsed = (tag, place) => {
+    if (!used.has(tag)) used.set(tag, [])
+    used.get(tag).push(place)
+  }
+  for (const file of walk(EUI_SRC).filter((f) => f.endsWith('.vue'))) {
+    if (isDisplayGenerated(file)) continue
+    for (const tag of collectElementUiTags(read(file), { isVue: true })) addUsed(tag, rel(file))
+  }
+  for (const file of walk(LIB_SRC).filter((f) => /\.(vue|ts)$/.test(f))) {
+    for (const tag of collectElementUiTags(read(file), { isVue: file.endsWith('.vue') })) {
+      addUsed(tag, `${rel(file)}（@es-plus/vue2）`)
+    }
+  }
+  if (used.size < 10) {
+    fail(`只扫到 ${used.size} 个 <el-*> 标签 —— 扫描规则大概率已失效（站点模板/库模板都没有 Element UI 标签是不可能的）`)
+    return
+  }
+  const registered = new Set([...imported.keys()])
+  for (const [tag, places] of used) {
+    const name = pascalEl(tag)
+    if (registered.has(name)) continue
+    fail(
+      `用到了 <${tag}>（${places.slice(0, 3).join('、')}${places.length > 3 ? ` 等 ${places.length} 处` : ''}），`
+        + `但 utils/install-element.js 里没有 ${name} —— 那个组件会整块不渲染（页面其余部分看起来正常）`,
+    )
+  }
+
+  // c3. 三个全局开关（尺寸 / $ELEMENT / 服务）缺一个都是「页面能开、行为不对」
+  if (!/Vue\.prototype\.\$ELEMENT\s*=\s*\{[^}]*size:\s*'mini'/.test(install)) {
+    fail('install-element.js 没有设置 Vue.prototype.$ELEMENT = { size: \'mini\', … } —— 全站控件会回落成默认尺寸')
+  }
+  for (const name of ['$message', '$confirm', '$alert', '$msgbox', '$prompt']) {
+    if (!install.includes(`Vue.prototype.${name}`)) {
+      fail(`install-element.js 没有注入 ${name} —— 站点里 this.${name}(…) 会直接报 not a function`)
+    }
+  }
+  // $loading 与 v-loading 是同一个模块的两个出口，`Vue.use(Loading)` 一次给全
+  if (!/Vue\.use\(\s*Loading\s*\)/.test(install)) {
+    fail('install-element.js 没有 Vue.use(Loading) —— 缺了它 v-loading 指令与 this.$loading 都不存在')
+  }
+  // 服务模块被 import 了就必须真的挂上去（否则只是多打了一个模块，功能仍然缺）
+  for (const [name, sub] of imported) {
+    if (!ELEMENT_UI_SERVICES.has(sub)) continue
+    const used = sub === 'loading' ? /Vue\.use\(\s*Loading\s*\)/ : new RegExp(`Vue\\.prototype\\.\\$\\w+\\s*=\\s*${name}\\b`)
+    if (!used.test(install)) fail(`install-element.js 导入了 ${name}（element-ui/lib/${sub}）却没有挂到 Vue 上`)
+  }
+
+  if (problems.length > before) return
+  console.log(
+    `✅ Element UI 按需注册（es-eui）：${imported.size} 个子路径模块；站点模板 + @es-plus/vue2 模板/h() 的`
+      + ` ${used.size} 个 <el-*> 标签全部在清单里；无根入口 import、无 Vue.use(ElementUI)`,
+  )
+}
+
 /** 两个子站的 vxe 配置：结构不同（views/es-vxe vs examples 中央注册表），判据相同 */
-const PC_VXE = {
-  label: 'es-pc',
+const PC_VXE = {  label: 'es-pc',
   src: PC_SRC,
   mainPath: join(PC_SRC, 'main.js'),
   installPath: join(PC_SRC, 'utils/vxe-install.js'),
@@ -938,6 +1168,7 @@ checkVxeOnDemand()
 checkElementPlusOnDemand()
 checkDocContentOnDemand()
 checkAntdvSiteOnDemand()
+checkElementUiOnDemand()
 checkSubSiteVxe(PC_VXE)
 checkSubSiteVxe(EUI_VXE)
 await checkHighlight()
@@ -945,6 +1176,6 @@ await checkHighlight()
 
 if (problems.length) {
   for (const problem of problems) console.error(`❌ ${problem}`)
-  console.error('\n提示：这六条是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
+  console.error('\n提示：这些是 check:bundle-budget 的源码层前门 —— 产物称重只能事后发现，这里在合入前就挡住')
   process.exit(1)
 }

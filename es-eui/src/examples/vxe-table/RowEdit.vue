@@ -35,7 +35,7 @@
  *   取 grid = tableRef.value.vxeEngineRef.vxeInstance() 即可调用。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableRowEdit',

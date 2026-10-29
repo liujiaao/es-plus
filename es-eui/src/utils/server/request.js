@@ -1,8 +1,9 @@
 import axios from 'axios'
-import { Message, Notification } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import Notification from 'element-ui/lib/notification'
 import store from '@/store'
 import routes from '@/router'
-import { Loading } from 'element-ui';
+import Loading from 'element-ui/lib/loading'
 
 // create an axios instance
 // 环境变量统一使用 VUE_APP_BASE_API（.env.development / .env.production 均已定义）

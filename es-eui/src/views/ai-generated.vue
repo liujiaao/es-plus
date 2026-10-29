@@ -121,7 +121,8 @@
  * docs/cases/generated/ 分发，与另两端逐字节相同），本文件不含任何业务规则。
  */
 import { EsCrudPage, configureEsPlus } from '@es-plus/vue2'
-import { Message, MessageBox } from 'element-ui'
+import Message from 'element-ui/lib/message'
+import MessageBox from 'element-ui/lib/message-box'
 // 单源：由 scripts/sync-cases.mjs 从 docs/cases/generated/ 分发，禁止手改
 import schema from '@/cases/generated/purchase-approval.json'
 import meta from '@/cases/generated/purchase-approval.meta.json'

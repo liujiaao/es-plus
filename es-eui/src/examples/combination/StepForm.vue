@@ -40,7 +40,7 @@
  *   3. v-show 保留表单实例，切换步骤不清空已填数据；末步用 v-if 渲染核对信息
  */
 import { defineComponent, reactive, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 const industryOptions = [
   { label: '互联网', value: 'internet' },

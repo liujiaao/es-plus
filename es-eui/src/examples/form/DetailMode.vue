@@ -27,7 +27,7 @@
  *   3. attrs.disabled 也支持函数形式 (model, item, props) => boolean，此处用 computed 更直观
  */
 import { defineComponent, reactive, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'FormDetailMode',

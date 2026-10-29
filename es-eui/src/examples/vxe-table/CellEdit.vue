@@ -36,7 +36,7 @@
  *   keepSource:true 让 vxe 保存原始快照，getUpdateRecords() 才能识别已改行。
  */
 import { defineComponent, ref, computed } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'VxeTableCellEdit',

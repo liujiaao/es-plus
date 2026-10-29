@@ -113,12 +113,18 @@ const BUDGETS = {
   'es-eui': {
     route: '/quickstart',
     routeChunkPrefix: null,
-    // 2026-10-28 实测 325.4 KB：chunk-vendors 280.8（webpack 不打散 vendor）+ app 44.6。
-    // 这天之前是 667.6 —— 差的那一半几乎全是 vxe-table / vxe-pc-ui：它们原本
-    // `Vue.use` 在 main.js 顶层，于是被 splitChunks 收进 `chunk-vendors`，每一页都下载。
-    // 改成 utils/vxe-loader.js 的路由门（只在 /component/vxetable 与 /ai-gallery/<id>
-    // 注册）后，**这一站因此落到了 ≤400 的目标线内**，是三站里第一个达标的。
-    ceiling: 345,
+    // 2026-10-29 实测 273.8 KB：chunk-vendors 228.6（webpack 不打散 vendor）+ app 45.2。
+    // 这一天拿到的是 Element UI 那一笔（325.4 → 273.9，-51.5），它与主站 Element Plus 那笔
+    // **不同构**：es-eui 这边不只是 `Vue.use(ElementUI)`，站点 24 个文件（示例 / AI 宿主 /
+    // request.js）与 `@es-plus/vue2` 自己都在 `import { Message } from 'element-ui'` ——
+    // 而 Element UI 的主入口是 CommonJS 全量包（216 KB gz），具名导入 tree-shake 不掉。
+    // 两半一起改才有效：显式清单 utils/install-element.js（44 个组件 + 四个服务）+
+    // 全部改走 element-ui/lib/* 子路径（库侧 MessageBox 也改了，这是发布物行为的一部分）。
+    // 校验方式不是「看渲染」，是扫 DOM 里有没有未注册的 <el-*> 元素 + 逐个服务调用一遍 ——
+    // 生产构建的 Vue 对未知组件是**静默**降级的，控制台一条警告都不会有。
+    //
+    // 收紧到 288 = 实测 273.8 + 约 5%。再往下就是 vxe 与 es-plus 库本体，站点侧改不动。
+    ceiling: 288,
     target: 400,
     // 首屏闭包里不该出现的块：webpack 的异步 vxe 块名是数字（`js/47.*.js`），
     // 认不出前缀，所以这里用「体积指纹」不合适 —— 改由 check-bundle-sources 的
@@ -334,8 +340,8 @@ function main() {
           + '\n   这不是回归（回归线未破），是已知的未完成项。剩下的底都是**库侧**的：'
           + '\n   es-plus-docs 的大头是 element-plus 275.4（`@es-plus/*` 内部直接 import 的组件）；'
           + '\n   es-pc 是 antd 318（adapter-antdv 自己 import 的）+ 图标 181.4（它 `import * as`）。'
-          + '\n   es-eui 已经达标（325.4 ≤ 400），但它的 Element UI 仍是全量注册 —— 再往下走'
-          + '\n   要先扫组件页模板、再抄一遍显式清单。vxe 三站都已按需。',
+          + '\n   es-eui 已经达标（273.8 ≤ 400）：Element UI 已改按需（utils/install-element.js），'
+          + '\n   它现在的大头是 Element UI 的按需部分 + `@es-plus/vue2` 本体（vxe 跟路由懒加载）。',
       )
     }
   }

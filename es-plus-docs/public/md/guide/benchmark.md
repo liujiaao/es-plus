@@ -27,11 +27,11 @@ type: 'guide'
 |---|---|---|---|
 | es-plus-docs（路由 `/guide/getting-started`） | **448.6 KB** | ≤ 300 KB | 470 KB |
 | es-pc（入口） | **604.9 KB** | ≤ 400 KB | 630 KB |
-| es-eui（入口） | **325.4 KB** | ≤ 400 KB | 345 KB |
+| es-eui（入口） | **273.8 KB** | ≤ 400 KB | 288 KB |
 
 主站这一格以前写「约」，因为**这一页的正文自己就在首屏里**：每改一次文档它就动零点几 KB。指南正文改成按 slug 惰性加载之后，这个依赖消失了 —— 基准页写多长都不再影响首屏，所以这里是一个数。
 
-es-eui 是三站里**第一个进线**的（325.4 ≤ 400）。它原本是 667.6 —— 差的那一半几乎全是 vxe：`Vue.use` 写在入口顶层，webpack 的 splitChunks 顺手把它们收进了 `chunk-vendors`，于是每一页都下载。挪成路由门之后（见「子站」一节）就掉下来了。主站与 AntDV 站还没进线，两者的底都在库侧。
+es-eui 是三站里**第一个进线**的（273.8 ≤ 400）。它原本是 667.6 —— 差的那一半几乎全是 vxe：`Vue.use` 写在入口顶层，webpack 的 splitChunks 顺手把它们收进了 `chunk-vendors`，于是每一页都下载。挪成路由门之后（见「子站」一节）就掉到 325.4；再把 Element UI 从全量注册改成按需，落到 273.8。主站与 AntDV 站还没进线，两者的底都在库侧。
 
 三站的构成（同一份产物里的几块大头）：
 
@@ -47,7 +47,7 @@ es-eui 是三站里**第一个进线**的（325.4 ≤ 400）。它原本是 667.
 
 vxe-table（344.2 KB）、Element Plus 的全量注册（80.8 KB）、指南正文与搜索索引（125.9 KB）都已经从首屏里拿掉了 —— 各自的加载时机见下面几节。
 
-es-pc：antd 318 + antd-icons 181.4 + index 64.9 + vue 40.6 = 604.9（vxe 344.2 已按需，antd 已改成 26 组显式清单）。es-eui 是 webpack 单 vendor：`chunk-vendors` 280.8 + `app` 44.6 = 325.4（vxe 已按需）。剩下的两块大头 —— es-pc 的 icons 与 antd、es-eui 的 Element UI —— 都不是站点侧一行 import 能改的事，见「还没做完的部分」。
+es-pc：antd 318 + antd-icons 181.4 + index 64.9 + vue 40.6 = 604.9（vxe 344.2 已按需，antd 已改成 26 组显式清单）。es-eui 是 webpack 单 vendor：`chunk-vendors` 228.6 + `app` 45.2 = 273.8（vxe 已按需，Element UI 已改成 44 个组件的显式清单）。剩下的大头 —— es-pc 的 icons 与 antd、es-eui 的 Element UI 按需部分与库本体 —— 都不是站点侧一行 import 能改的事，见「还没做完的部分」。
 
 ### 指南正文为什么曾经在首屏里
 
@@ -110,6 +110,15 @@ es-pc 还多一笔：`app.use(Antd)` 换成 26 组显式清单（`utils/install-
 
 省下的只有 71 KB，而且能省的**上限当场就量出来了**：把 `app.use(Antd)` 整个删掉再构建，`vendor-antd` 仍有 310.1 KB —— 那是 `@es-plus/adapter-antdv` 自己直接 import 的组件（Table / Pagination / Spin / ConfigProvider / Button / Tooltip / Tag / Modal / Space）撑起来的，站点注册方式改变不了。图标那 181.4 KB 同理：`adapter-antdv/src/utils/icon.ts` 里是 `import * as Icons`，它要按**任意名字**解析图标（schema 里写 `icon: 'XxxOutlined'`），删掉就变成一排空白图标。
 
+### 按需注册 Element UI：两半必须一起改
+
+es-eui 的 Element UI 那笔（325.4 → 273.8）看着与 Ant Design Vue 同构，实际**不同构**，差别在库的形态：
+
+- **主入口是 CommonJS 全量包**。`element-ui` 的 `main` 是 `lib/element-ui.common.js`（216 KB gz，约 80 个组件），没有 `module` 字段，tree-shake 拿它没办法。所以 `import { Message } from 'element-ui'` 这句**本身**就把整包装进来 —— 哪怕站点已经改成显式清单注册。站点里有 24 个文件这么写，`@es-plus/vue2` 自己（`es-crud-page` 的确认框）也是。
+- 于是这一笔有两半，改一半等于没改：注册换成 `utils/install-element.js` 的 44 个组件 + 4 个服务（各自 `element-ui/lib/<kebab>` 的默认导出，自带 `install(Vue)`），import 全部改走同一类子路径（`element-ui/lib/message` 等）。库侧那半也一起改了 —— 它属于发布物行为，`packages/vue2` 的 UMD 全局映射里因此多一个 `ELEMENT.MessageBox`。
+- **全量注册里还有三样不是组件**，漏掉都是运行时报错而不是「少一个控件」：`$ELEMENT.size`（漏了整站控件回落到 medium）、`v-loading` 指令与 `$loading`（同一个模块的两个出口，`Vue.use(Loading)` 一次给全）、原型上的 `$message`/`$notify`/`$msgbox`/`$alert`/`$confirm`/`$prompt`。
+- **核对方式**：生产构建的 Vue 对未知组件是**静默**降级（渲染成一个同名 DOM 标签、控制台零警告），所以逐页「看着正常」不算证据。判据是在浏览器里扫 28 条路由的 DOM，找残留的 `el-*` 元素名，再把四个服务各调一遍。守卫对账三处标签来源：站点模板与 JSX、`@es-plus/vue2` 的模板（它是靠全局注册的）、以及 `h('el-xxx')` 按名字取的控件。
+
 ### 复现
 
 ```bash
@@ -128,9 +137,9 @@ node scripts/check-bundle-budget.mjs --verbose
 
 es-pc 的 604.9 KB 里有两块**量出来的**库侧底：`adapter-antdv` 直接 import 的 antd 组件（删掉全量插件后 `vendor-antd` 仍有 310.1）与 `import * as Icons` 的图标包（181.4）。它离 400 差的 205 KB 几乎全在这两块里，所以「站点侧再挤一挤」这条路到头了 —— 要么 adapter 的图标解析改成异步按名加载（会改变「任意图标名」的契约），要么接受这个数。
 
-es-eui 还有一笔没做：Element UI 仍是 `Vue.use(ElementUI)`（在 280.8 的 `chunk-vendors` 里）。它已经进了 400 的线，所以这笔属于「还能再小」而不是「达标所需」。做法与 Ant Design Vue 完全一样（扫 `<el-xxx>` 模板标签 → 显式清单），只是 Element UI 对子组件的处理与 ADV 不同，得逐项核对。
+es-eui 的 273.8 KB 现在是 Vue 2 + Element UI 的按需部分（228.6 的 `chunk-vendors` 里，vxe 跟路由懒加载、不在首屏）+ `app` 45.2，三块都是库本体，站点侧没有下一个可拿的整块了。
 
-按需加载的代价是「哪些路由/哪一步需要什么」变成要维护的清单。现在有六份：主站 `vxe-loader.ts` 的路由清单、`ELEMENT_PLUS_COMPONENTS` 的组件清单、示例 glob 的 eager 策略、`doc-meta.ts` 的 slug 清单，以及两个子站各自的 `vxe-loader.js` 路由清单与 es-pc 的 `ANT_DESIGN_VUE_COMPONENTS`。全部由前门守卫钉住，加一个示例却忘了改清单会直接红 —— 这是让「按需」不退化回「全量」的唯一办法。
+按需加载的代价是「哪些路由/哪一步需要什么」变成要维护的清单。现在有七份：主站 `vxe-loader.ts` 的路由清单、`ELEMENT_PLUS_COMPONENTS` 的组件清单、示例 glob 的 eager 策略、`doc-meta.ts` 的 slug 清单，以及两个子站各自的 `vxe-loader.js` 路由清单、es-pc 的 `ANT_DESIGN_VUE_COMPONENTS` 与 es-eui 的 `ELEMENT_UI_COMPONENTS`。全部由前门守卫钉住，加一个示例却忘了改清单会直接红 —— 这是让「按需」不退化回「全量」的唯一办法。
 
 ## 生成准确率
 

@@ -66,6 +66,9 @@ export default defineConfig({
       external: [
         'vue',
         'element-ui',
+        // 只为 MessageBox 服务：主入口是 CJS 全量包（216 KB gz），具名导入 tree-shake 不掉。
+        // 消费方按需引入 Element UI 时，这一条决定了它们能不能真的只付用到的组件。
+        'element-ui/lib/message-box',
         '@es-plus/core',
         '@vue/composition-api',
       ],
@@ -74,6 +77,9 @@ export default defineConfig({
         globals: {
           vue: 'Vue',
           'element-ui': 'ELEMENT',
+          // UMD 消费者通过 script 标签加载的是 `window.ELEMENT`（element-ui UMD 全局），
+          // 其上的 MessageBox 与子路径模块是同一个服务对象（同一次 install 的实例）。
+          'element-ui/lib/message-box': 'ELEMENT.MessageBox',
           '@es-plus/core': 'EsPlusCore',
           '@vue/composition-api': 'VueCompositionAPI',
         },

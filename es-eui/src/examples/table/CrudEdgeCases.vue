@@ -64,7 +64,7 @@
  * 全部由组件内部消费；写操作仍经过假后端校验/落库。
  */
 import { defineComponent, ref, reactive, onBeforeUnmount } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 const PAGE_SIZE = 5

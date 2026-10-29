@@ -32,7 +32,7 @@
  */
 import { defineComponent, ref, reactive } from '@vue/composition-api'
 import { useDialog } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { createEmployeeService, DEPARTMENT_OPTIONS, STATUS_OPTIONS, STATUS_MAP } from '../_mock/crud-service'
 
 export default defineComponent({

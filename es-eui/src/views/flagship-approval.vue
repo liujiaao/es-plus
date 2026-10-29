@@ -123,7 +123,7 @@
  * 与另两端逐字节相同），本文件不含任何业务规则。
  */
 import { EsCrudPage, configureEsPlus } from '@es-plus/vue2'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 // 单源：由 scripts/sync-cases.mjs 从 docs/cases/ 分发，禁止手改
 import schema from '@/cases/flagship-approval.json'
 // 叙事数据（背景/问题/结果/成本/边界）：同样是单源分发，三站渲染同一份字节

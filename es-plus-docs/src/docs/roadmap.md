@@ -15,7 +15,7 @@
 | 每个内容页一份静态 HTML | `npm run check:prerender` | 构建期生成 `/guide/x/`、`/components/x/`、`/advanced/x/`，深链 200，正文来自站点同一渲染器 |
 | 每页 canonical + 结构化数据 | `npm run check:site-seo`、`npm run check:page-meta` | 文章类路径式地址与 sitemap / llms / JSON-LD 四处同口径 |
 | AI 可读的文档 | `npm run check:llms` | 根目录 `llms.txt` 索引 + 每页 markdown 镜像，取自同一份源 |
-| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对三站构建产物称重（含「首屏闭包里不许出现 vxe 的块」），后者在源码层挡「换一行 import 就多 300 KB」、vxe 被引回入口、「模板用了某个 Element Plus / Ant Design Vue 标签却没在清单里注册」、以及「指南正文/搜索索引被静态 import 回入口」 |
+| 首屏预算 | `npm run check:bundle-budget`、`npm run check:bundle-sources` | 前者对三站构建产物称重（含「首屏闭包里不许出现 vxe 的块」），后者在源码层挡「换一行 import 就多 300 KB」、vxe 被引回入口、「模板用了某个 Element Plus / Element UI / Ant Design Vue 标签却没在清单里注册」、以及「指南正文/搜索索引被静态 import 回入口」 |
 | 指南正文与搜索索引按需 | `npm run check:bundle-sources` | 正文按 slug 惰性取（`docs/doc-content.ts`），搜索索引（fuse + 全部正文）第一次打开搜索才下载；三处 slug 清单必须一致 |
 | vxe 三站按需 | `npm run check:bundle-sources`、`npm run check:bundle-budget` | 主站与两个子站各有 `utils/vxe-loader`；清单从「哪些示例/案例写了 `engine: 'vxe'`」反查，少一条就红；产物层再挡住「样式表把它拽回首屏」 |
 | 三站一致的动效语言 | `npm run check:motion` | 120 / 180 / 240ms 三个 token，禁 `transition: all`、禁对布局属性做过渡 |
@@ -30,15 +30,16 @@
 
 ### 1. 首屏按需引入（vxe 三站、Element Plus、指南正文都已落地）
 
-现状：主站约 449 KB gz（目标 300）、es-pc 604.9（目标 400）、es-eui 325.4（**已达标**）。已经拿走的几笔：
+现状：主站约 449 KB gz（目标 300）、es-pc 604.9（目标 400）、es-eui 273.8（**已达标**）。已经拿走的几笔：
 
 - **vxe-table 344.2 KB（主站）**：只有在 `/advanced/vxe-table` 与 `/ai-gallery/<id>` 才会注册，改的是「路由门前动态 import + 一份要和数据对得上的路由清单」。
 - **vxe（两个子站）**：同一笔，es-pc 1027.9 → 683.9、es-eui 667.6 → 325.4。Vue 2 那边是 `Vue.use` 而不是 `app.use`，注册顺序（先 `vxe-pc-ui` 再 `vxe-table`）写进了 `vxe-install.js`。
 - **Element Plus 80.8 KB**：`app.use(ElementPlus)` 换成显式的三十来个标签清单（`utils/install-app-plugins.ts`），它的失败模式是**页面看起来正常、某个组件突然不渲染**，所以落地时逐页在浏览器里核对过，并且由守卫扫模板标签对账。
 - **Ant Design Vue 71 KB（es-pc）**：`app.use(Antd)` 换成 26 组显式清单（`utils/install-antd.js`）。ADV 的组件带 `install()`，会连子组件一起注册，所以清单与守卫都按**组名**对账。
+- **Element UI 51.6 KB（es-eui）**：`Vue.use(ElementUI)` 换成 44 个组件 + 四个服务的显式清单（`utils/install-element.js`），325.4 → 273.8。这一笔与 ADV 那笔**不同构**：Element UI 的主入口是 CommonJS 全量包（216 KB gz，tree-shake 不掉），站点 24 个文件与 `@es-plus/vue2` 自己的 `import { Message } from 'element-ui'` 就算不注册也会被整个装进包 —— 两半（注册方式与 import 方式）一起改走 `element-ui/lib/*` 子路径才生效。
 - **指南正文与搜索索引 125.9 KB（主站）**：正文按 slug 惰性取（一次一篇），fuse + 全部正文收进「第一次打开搜索才下载」的 chunk。副作用是本页写多长都不再影响首屏 —— 数字从「约」变回一个数。
 
-全部由 `npm run check:bundle-sources`（源码层）与 `npm run check:bundle-budget`（产物层）守着。口径见 [性能与准确率基准](/guide/benchmark)。剩下的都是**库侧**的底：主站的 element-plus 275.4（`@es-plus/*` 内部直接 import）、es-pc 的 antd 310（adapter-antdv 直接 import）与图标 181.4（`import * as Icons`）—— 站点侧已经改不动，只能靠库改。es-eui 的 Element UI 仍是全量注册，属于「还能再小」。
+全部由 `npm run check:bundle-sources`（源码层）与 `npm run check:bundle-budget`（产物层）守着。口径见 [性能与准确率基准](/guide/benchmark)。剩下的都是**库侧**的底：主站的 element-plus 275.4（`@es-plus/*` 内部直接 import）、es-pc 的 antd 310（adapter-antdv 直接 import）与图标 181.4（`import * as Icons`）—— 站点侧已经改不动，只能靠库改。es-eui 剩下的 273.8 是 Vue 2 + Element UI 的按需部分 + `@es-plus/vue2` 本体（vxe 跟着路由懒加载，不在首屏）。
 
 ### 2. 渲染性能的测量装置
 

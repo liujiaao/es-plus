@@ -78,7 +78,7 @@
  * 主子通信走的是这里的状态 + reload，二者不要混用。
  */
 import { defineComponent, ref, reactive, computed, watch } from '@vue/composition-api'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 
 export default defineComponent({
   name: 'CombinationMasterDetailFlow',

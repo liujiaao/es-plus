@@ -60,7 +60,7 @@
  */
 import { EsCrudPage, configureEsPlus } from '@es-plus/vue2'
 import { getGlobalConfig } from '@es-plus/core'
-import { Message } from 'element-ui'
+import Message from 'element-ui/lib/message'
 import { AI_CASES } from '@/cases/generated/registry.js'
 
 const EMPTY = { schema: {}, meta: {}, mock: {}, tokens: [], claim: '' }
