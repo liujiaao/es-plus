@@ -991,7 +991,9 @@ function isHiddenEqual(gold, pred) {
  * `loginFail`/`resetPwd`、模型写 `login_fail`/`password_reset`，语义一模一样，却被
  * 整数组深等值判负 —— 与字段级 dataOptions 曾经的问题完全同构（AN-01 已修，这一处漏了）。
  * `dependencies` / `when` / `required` / `disabled` / `value` 仍是行为契约：写错照旧判负
- * （`value`↔`dataOptions` 互换、`dependencies` 顺序错、`when` 谓词错都算未命中）。
+ * （`value`↔`dataOptions` 互换、`when` 谓词错、`dependencies` 缺项都算未命中）。
+ * `dependencies` 的**顺序**不计（schema：「retrigger 的路径」是集合，片段腿一直按集合比，
+ * 2026-10-29 对齐）；`when` 可省略的等价形态见 `reactionsView` 的 AI-51 归一。
  */
 function reactionsEqual(gold, pred) {
   const pm = fieldMap(pred)
@@ -1026,10 +1028,22 @@ function reactionsView(reactions, ctx, shared) {
         unique: new Set(vals.map(String)).size === vals.length,
       }
     }
+    // `dependencies` 只表示「哪些路径触发重算」，顺序无语义（schema 原话）。
+    if (Array.isArray(out.dependencies)) out.dependencies = [...out.dependencies].sort()
     // 表达式节点（与 isHidden 同一条视图）：规范化 + 字面量按标签身份。
     for (const k of REACTION_EXPR_KEYS) {
       if (out[k] !== undefined) out[k] = conditionView(out[k], ctx, shared)
       if (out.fulfill?.[k] !== undefined) out.fulfill[k] = conditionView(out.fulfill[k], ctx, shared)
+    }
+    // AI-51 同规（与片段腿 canonReactionRule 逐字同源）：无 `when` + fulfill 只含布尔键
+    // 且这些表达式彼此相同 ⟹ 运行时等价于 `{when: E, …}`。依据是 core `resolveReactionOverlay`
+    // 的行为：无 `when` 的规则直接生效（ruleActive 缺省 true），再把布尔键当表达式求值；
+    // 有 `when` 时 E 为假则不生效、静态值缺省即 false —— 两条路殊途同归。
+    // CRUD 腿此前没跟这条，模型省 `when` 会被罚（片段腿早就不罚）。
+    const f = out.fulfill ?? {}
+    if (out.when === undefined && Object.keys(f).length > 0 && Object.keys(f).every((k) => REACTION_BOOL_KEYS.includes(k))) {
+      const nodes = REACTION_BOOL_KEYS.filter((k) => f[k] !== undefined).map((k) => JSON.stringify(f[k]))
+      if (nodes.length && nodes.every((n) => n === nodes[0])) out.when = JSON.parse(nodes[0])
     }
     return out
   })
@@ -1037,6 +1051,8 @@ function reactionsView(reactions, ctx, shared) {
 
 /** reactions 里的表达式节点键：`when` 在外层，其余三个在 `fulfill` 里。 */
 const REACTION_EXPR_KEYS = ['when', 'required', 'disabled', 'value']
+/** `fulfill` 里求值为布尔的键（AI-51 的「等价格控」只涉及这两个）。 */
+const REACTION_BOOL_KEYS = ['required', 'disabled']
 
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 

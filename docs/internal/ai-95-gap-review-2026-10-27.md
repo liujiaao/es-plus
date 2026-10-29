@@ -1494,3 +1494,21 @@ dataOptions），装饰键照样带出（投影阶段本来就单侧豁免）。
 城市随所属大区变化——浙江出上海/南京，广东出广州/深圳」。这与 §11.21 同一条门槛：
 **NL 必须能推出 gold**，否则这一行测的是「猜作者的心思」。config 未动 ⟹ 不贡献本轮分数，
 留给下一轮。
+
+### 11.25 `+reaction-encoding-parity-v1`：CRUD 腿补上片段腿已有的两条等价（2026-10-29）
+
+紧接 §11.23 顺手对齐的两处**跨腿不一致**（片段腿 `fragment-scorers.mjs` 早已如此判，CRUD 腿没有）：
+
+| 归一 | 依据 | 对分数的影响 |
+|---|---|---|
+| `dependencies` **顺序不计**（按集合比） | schema：「the model paths that retrigger it」是集合；片段腿 `canonReactionRule` 一直排序 | 全量 dump **0 行**受影响 |
+| 无 `when` + fulfill 只含布尔键且表达式相同 ≡ `{when: E, …}` | core `resolveReactionOverlay`：无 `when` 规则直接生效（`ruleActive` 缺省 true），有 `when` 时 E 为假则不生效、静态值缺省 false —— 殊途同归（片段腿 AI-51 已核实并落地） | 全量 dump **0 行**受影响 |
+
+两条都**不放宽触发条件**：集合缺项、`fulfill` 里还有 `value`/`dataOptions` 时不归一（
+`scorers.test.mjs` 各钉一条）。放在这一批是因为它们与 §11.23 是同一类「模型选了另一种合法写法」，
+而不是因为翻了分 —— 实测分数不变（88.1%/171 行）。**旧的「`dependencies` 顺序错应判负」断言已改**：
+那是 CRUD 单腿的严格口径，与片段腿冲突。
+
+**仍存在的跨腿不对称（未做，记为待办）**：片段腿没有 `truthy`/`falsy` ≡ `== true`/`== false` 的归一
+（§11.23 第 2 条只落在 CRUD 腿）。目前片段语料 63 例**没有**任何一个条件的布尔写法落到这条上
+（grep `truthy`/`falsy` 只命中散文），故无实测影响；将来片段语料引入布尔条件时应同批补上。

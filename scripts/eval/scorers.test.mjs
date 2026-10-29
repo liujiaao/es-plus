@@ -323,8 +323,8 @@ console.log('meta-eval: isHidden (declarative condition)')
   check(scoreAll(goldExpr, exprWrongVal, { pinnedDims: ['isHidden:a'] }).exactIntentScoped === false, 'scoped: 扰动表达式 isHidden:a 应翻红')
 }
 
-// 2c-bis) reactions 维度的语义（AI-07 字段联动）：整数组深等值 —— value↔dataOptions 互换、
-//         dependencies 顺序、when 谓词错都算负；字段级细化只钉该字段。
+// 2c-bis) reactions 维度的语义（AI-07 字段联动）：value↔dataOptions 互换、when 谓词错都算负；
+//         `dependencies` 顺序无语义（2026-10-29 与片段腿对齐）；字段级细化只钉该字段。
 console.log('meta-eval: reactions (field linkage)')
 {
   const rule = { dependencies: ['province'], when: { '==': [{ var: 'province' }, 'zj'] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }] } }
@@ -353,12 +353,17 @@ console.log('meta-eval: reactions (field linkage)')
     check(scoreAll(gold, missingItem).byCapability.reactions.pass === false, 'reactions: 选项数量不符应判负')
   }
 
-  // dependencies 序敏感
+  // dependencies：**顺序无语义**（schema：「the model paths that retrigger it」），片段腿
+  // `canonReactionRule` 一直按集合比，CRUD 腿此前顺序敏感 —— 2026-10-29 对齐。
+  // 集合本身不同仍判负（顺序豁免不等于放宽触发条件）。
   const two = { dependencies: ['province', 'city'], fulfill: { required: { truthy: [{ var: 'a' }] } } }
   const goldDeps = { fields: [{ prop: 'a', label: 'A', formtype: 'Input', reactions: [two] }], actions: ['add'] }
   const depsSwapped = clone(goldDeps)
   depsSwapped.fields[0].reactions[0].dependencies = ['city', 'province']
-  check(scoreAll(goldDeps, depsSwapped).byCapability.reactions.pass === false, 'reactions: dependencies 顺序不符应判负')
+  check(scoreAll(goldDeps, depsSwapped).byCapability.reactions.pass === true, 'reactions: dependencies 顺序不同应判正（顺序无语义）')
+  const depsMissing = clone(goldDeps)
+  depsMissing.fields[0].reactions[0].dependencies = ['province']
+  check(scoreAll(goldDeps, depsMissing).byCapability.reactions.pass === false, 'reactions: dependencies 缺项应判负')
 
   // fulfill 键互换（value ↔ dataOptions）应判负
   const goldVal = { fields: [{ prop: 'mirror', label: '镜像', formtype: 'Input', reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }] }], actions: ['add'] }
@@ -1150,6 +1155,26 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
       const q = clone(g)
       q.fields[1].reactions[0].when = { '==': [{ var: 'insuranceType' }, 'home'] }
       expectMiss('reactions', g, q, 'reactions.when 标签不同')
+      // AI-51：无 when + fulfill 只含布尔键且表达式相同 ⟹ 等价（片段腿早已如此判）。
+      // 注意等价的是 `{when: E, required: E}` ⟷ `{required: E}`——两侧的 fulfill 必须一致。
+      const g2 = mkR({ '==': [{ var: 'insuranceType' }, 'auto'] })
+      g2.fields[1].reactions[0].fulfill = { required: { '==': [{ var: 'insuranceType' }, 'auto'] } }
+      const p2 = clone(g2)
+      delete p2.fields[1].reactions[0].when
+      expectHit('reactions', g2, p2, '省掉 when、把同一表达式放进 required（AI-51 等价）')
+      // 不满足 AI-51 的形状（fulfill 里还有 value）⟹ 无 when 仍是真 miss（128 行）
+      const p2b = clone(p2)
+      p2b.fields[1].reactions[0].fulfill.value = { var: 'insuranceType' }
+      p2b.fields[1].reactions[0].dependencies = ['insuranceType']
+      const g2b = clone(g2)
+      g2b.fields[1].reactions[0].fulfill.value = { var: 'insuranceType' }
+      expectMiss('reactions', g2b, p2b, 'fulfill 含 value 时省 when 不归一')
+      // `dependencies` 顺序无语义
+      const g3 = mkR({ '==': [{ var: 'insuranceType' }, 'auto'] })
+      g3.fields[1].reactions[0].dependencies = ['insuranceType', 'plateNo']
+      const p3 = clone(g3)
+      p3.fields[1].reactions[0].dependencies = ['plateNo', 'insuranceType']
+      expectHit('reactions', g3, p3, 'dependencies 顺序不同')
     }
   }
 
