@@ -239,12 +239,14 @@ Use [nvm](https://github.com/nvm-sh/nvm) to switch to Node 20 LTS.
 
 **Fix**: include "my package.json contents are: ..." in the prompt, or have the AI read project files before calling the tool.
 
-### Self-check commands (v1.2.2+)
+### Self-check commands
 
 ```bash
 mcp-server-es-plus --version
 mcp-server-es-plus --help
 ```
+
+> If either command **produces no output and just hangs**, you are on 1.4.1 or earlier — those versions have no CLI argument handling and swallow the flags as ordinary startup args. Upgrade, then re-run the self-check.
 
 ## What You Get
 

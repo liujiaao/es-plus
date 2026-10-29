@@ -247,6 +247,15 @@ app.mount('#app')
 
 例如：`options.configTableOut` > `configQueryFieldOutput()` > 内置默认 `{ total: 'records', tableData: 'rows' }`
 
+:::warning 分页布局是这条规则的反例
+`paginationLayout()` 与 `:pagination` 的优先级是**全局方法在前**，不是 props 在前：
+
+- `layout` / `pageSizes` / `isSmall`：先读全局 `paginationLayout()` 的返回值，没有再回落到 `:pagination`；
+- `background`：只认全局 `paginationLayout()`（`PaginationConfig` 里没有这个键），未配置时默认 `true`。
+
+也就是说，一旦配了全局 `paginationLayout`，页面上的 `:pagination="{ layout }"` 不会生效。
+:::
+
 ---
 
 ## 实际项目示例（MyBatis-Plus 后端）
@@ -321,7 +330,6 @@ const formItems = [
     :model="form"
     :form-item-list="formItems"
     :config-btn="btns"
-    @confirm="handleConfirm"
   />
 </template>
 
@@ -333,18 +341,35 @@ const formItems = [
   { prop: 'name', label: '姓名', formtype: 'Input', span: 6 }
 ]
 
+// key 为 'query' / 'rest' 且 triggerEvent: true 时，点击由 EsForm 自己接管，
+// 联动外层 <es-table>：query 用当前 model 回第 1 页请求，rest 先 resetFields() 再回第 1 页请求。
 const btns = [
   { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
   { name: '重置', key: 'rest', triggerEvent: true }
 ]
-
-const handleConfirm = ({ key, model }) => {
-  if (key === 'query') {
-    console.log('查询参数:', model)
-  }
-}
 </script>
 ```
+
+:::tip 没有外层表格时怎么接管点击
+`<es-form>` **不向外派发 `confirm` / `reset` 事件**，`@confirm` 这类监听永远不会触发。
+自己处理点击有两条路：
+
+- 普通按钮：写 `click(model, formRef, httpRequestInstance)`，由按钮自己回调；
+- 需要联动表格：`key: 'query' | 'rest'` + `triggerEvent: true`（此时 `click` 不再执行）。
+
+```js
+const btns = [
+  {
+    name: '查询',
+    type: 'primary',
+    click: (model, formRef) => {
+      // 没有外层表格：自己发请求；要校验就先 await formRef.validate()（不通过时 reject）
+      loadList(model)
+    }
+  }
+]
+```
+:::
 
 ### 字段联动 / 计算（`reactions`）
 
@@ -503,6 +528,9 @@ dialog({
 
 ```typescript
 import { reactive } from 'vue'
+import { EsForm, useDialog } from '@es-plus/vue3'
+
+const dialog = useDialog()
 
 function openEditDialog(row) {
   const formData = reactive({ ...row })
@@ -510,6 +538,7 @@ function openEditDialog(row) {
   dialog({
     title: '编辑',
     width: '600px',
+    // render 的第二个参数是实例上下文：registerRef 注册的引用可在 footer 按钮里经 getRefs 取回
     render: (h, { registerRef }) => h(EsForm, {
       ref: (el) => { if (el) registerRef('formRef', el) },
       model: formData,
@@ -518,8 +547,10 @@ function openEditDialog(row) {
       ]
     }),
     configBtn: [
+      // 按钮 click 签名：(当前实例, { close, getRefs, dialogInstance })，横线位不传 model
       { name: '取消', click: (_, { close }) => close() },
       { name: '确定', type: 'primary', click: (_, { close, getRefs }) => {
+        // EsForm.validate() 是 Promise：通过 resolve、不通过 reject（没有回调参数）
         getRefs('formRef')?.validate().then(() => {
           // 提交逻辑
           close()
@@ -535,7 +566,7 @@ function openEditDialog(row) {
 ```typescript
 dialog({
   title: '确认删除',
-  render: () => h('p', '此操作不可撤销，是否继续？'),
+  render: (h) => h('p', '此操作不可撤销，是否继续？'),
   configBtn: [
     { name: '取消', click: (_, { close }) => close() },
     { name: '确定', type: 'danger', click: (_, { close }) => {

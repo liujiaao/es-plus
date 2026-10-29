@@ -100,7 +100,7 @@ type: 'component'
 | 名称 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | name | string | - | 按钮文本 |
-| key | string | - | 按钮唯一标识（query/reset 触发联动） |
+| key | string | - | 按钮唯一标识；"query" / "rest"（不是 reset）配合 triggerEvent: true 时触发表格联动 |
 | type | string | - | 按钮类型：primary/success/warning/danger/info |
 | icon | string | - | 图标名称（Element Plus Icons） |
 | direction | string | - | 位置：left / right |

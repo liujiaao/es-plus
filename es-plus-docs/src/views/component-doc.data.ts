@@ -152,7 +152,7 @@ export const docsData: Record<string, any> = {
       ],
       'BtnConfig': [
         { name: 'name', type: 'string', default: '-', desc: '按钮文本' },
-        { name: 'key', type: 'string', default: '-', desc: '按钮唯一标识（query/reset 触发联动）' },
+        { name: 'key', type: 'string', default: '-', desc: '按钮唯一标识；"query" / "rest"（不是 reset）配合 triggerEvent: true 时触发表格联动' },
         { name: 'type', type: 'string', default: '-', desc: '按钮类型：primary/success/warning/danger/info' },
         { name: 'icon', type: 'string', default: '-', desc: '图标名称（Element Plus Icons）' },
         { name: 'direction', type: 'string', default: '-', desc: '位置：left / right' },
@@ -332,8 +332,7 @@ export const docsData: Record<string, any> = {
         { name: 'update:pagination', params: '(pagination)', desc: '分页更新（v-model:pagination 自动触发）' },
         { name: 'pagination-current-change', params: '(pagination)', desc: '页码变化时触发' },
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
-        { name: 'change-table-sort', params: '(column)', desc: '排序变化时触发' },
-        { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取' },
+        { name: 'change-table-sort', params: '({ column, prop, order })', desc: '排序变化时触发：column 为列配置，prop 为字段名，order 为 ascending / descending / null（三引擎同一形状）' },
         { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取' },
         { name: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行时）：每改一格发一条，未改值不发。vxe 原生 edit-closed 只给 { row, column }，这里把字段名与旧值一并补上；行模式（editConfig.mode: "row"）一次会话改几格就发几条' },
         { name: 'request-error', params: '(error)', desc: '自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null' }

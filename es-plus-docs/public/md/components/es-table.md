@@ -151,8 +151,7 @@ type: 'component'
 | update:pagination | (pagination) | 分页更新（v-model:pagination 自动触发） |
 | pagination-current-change | (pagination) | 页码变化时触发 |
 | size-change | (pagination, size) | 每页条数变化时触发 |
-| change-table-sort | (column) | 排序变化时触发 |
-| selection-change | (rows) | 勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取 |
+| change-table-sort | ({ column, prop, order }) | 排序变化时触发：column 为列配置，prop 为字段名，order 为 ascending / descending / null（三引擎同一形状） |
 | selection-change | (rows) | 勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取 |
 | cell-edit | ({ row, prop, value, oldValue }) | vxe 行内编辑提交（失焦 / 换行时）：每改一格发一条，未改值不发。vxe 原生 edit-closed 只给 { row, column }，这里把字段名与旧值一并补上；行模式（editConfig.mode: "row"）一次会话改几格就发几条 |
 | request-error | (error) | 自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null |
