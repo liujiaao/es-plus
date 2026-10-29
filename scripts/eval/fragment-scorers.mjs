@@ -259,6 +259,39 @@ const cmpKey = (a, b) => {
   return x < y ? -1 : x > y ? 1 : 0
 }
 
+/**
+ * 该字段是不是**布尔字段**（`Switch`，或 `dataOptions` 全是布尔值）。
+ *
+ * 只有布尔字段上 `truthy`/`falsy` 才与 `== true`/`== false` 等价：非布尔字段的
+ * `falsy` 把 `0` / `''` / `null` 也算作假，折成 `== false` 是**放宽判据**（会把
+ * 真实写错判成对）。判定口径与 CRUD 腿 `scorers.mjs` 的 `conditionContext` 一致。
+ */
+function booleanField(cfg, field) {
+  const f = fieldMap(cfg).get(field)
+  if (!f) return false
+  if (f.formtype === 'Switch') return true
+  const opts = Array.isArray(f.dataOptions) ? f.dataOptions : []
+  const vals = []
+  for (const o of opts) if (o && typeof o === 'object' && 'value' in o) vals.push(o.value)
+  return vals.length > 0 && vals.every((v) => v === true || v === false)
+}
+
+/**
+ * 布尔字段上的 `truthy`/`falsy` 折成 `eq true`/`eq false`（与 CRUD 腿
+ * `+condition-value-identity-v1` 的第二条规则同一口径）。
+ *
+ * 为什么必须有：schema 允许两套等价写法 —— 旧条件 `{field, op:'truthy'}` 与表达式
+ * `{'==': [{var:field}, true]}`。不折的话两者归一成不同的 (`op`, value)，语法正确、
+ * 语义相同的产物被判负。此前两条腿不对称：CRUD 腿已折，片段腿没折，同一份模型输出
+ * 在两个场景里得不同结论 —— 尺子内部不一致比尺子严格更糟。
+ */
+function foldBoolCondition(cfg, field, op, value) {
+  if (!booleanField(cfg, field)) return [op, value]
+  if (op === 'truthy') return ['eq', true]
+  if (op === 'falsy') return ['eq', false]
+  return [op, value]
+}
+
 /** 表达式节点归一：键排序 + `and`/`or` 操作数排序（交换律）。 */
 function canonExprNode(node) {
   if (Array.isArray(node)) return node.map(canonExprNode)
@@ -293,7 +326,13 @@ function canonHidden(node, cfg) {
   if (node && typeof node === 'object' && typeof node.field === 'string') {
     const op = node.op ?? 'eq'
     if (!LEGACY_HIDDEN_OPS.has(op)) return { invalidLegacy: canon(node) }
-    return { cond: [node.field, op, resolveOptionValue(cfg, node.field, node.value)] }
+    const [foldedOp, foldedValue] = foldBoolCondition(
+      cfg,
+      node.field,
+      op,
+      resolveOptionValue(cfg, node.field, node.value),
+    )
+    return { cond: [node.field, foldedOp, foldedValue] }
   }
   if (node && typeof node === 'object') {
     const keys = Object.keys(node)
@@ -305,7 +344,13 @@ function canonHidden(node, cfg) {
       const op = keys[0]
       const args = Array.isArray(node[op]) ? node[op] : [node[op]]
       if (args.length === 2 && args[0] && typeof args[0] === 'object' && typeof args[0].var === 'string') {
-        return { cond: [args[0].var, EXPR_TO_LEGACY_OP[op], resolveOptionValue(cfg, args[0].var, args[1])] }
+        const [foldedOp, foldedValue] = foldBoolCondition(
+          cfg,
+          args[0].var,
+          EXPR_TO_LEGACY_OP[op],
+          resolveOptionValue(cfg, args[0].var, args[1]),
+        )
+        return { cond: [args[0].var, foldedOp, foldedValue] }
       }
     }
     return { expr: canonExprNode(node) }

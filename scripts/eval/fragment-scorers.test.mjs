@@ -945,7 +945,57 @@ console.log('meta-eval: equivalent implementations are accepted')
     check(s.byDim.isHidden.pass === true, '条件取值经各自 options 映射后相同应判等（slug vs label）')
   }
 
-  // reactions：`when`/`required` 只接受表达式节点；旧条件形态在运行时非法，必须判红。
+  // isHidden：布尔字段上 `truthy`/`falsy` ≡ `== true`/`== false`（与 CRUD 腿同一条规则）。
+  //
+  // 这一段的存在理由不是「多覆盖一点」：两条腿曾经不对称 —— CRUD 腿把布尔字段的
+  // truthy/falsy 折成 ==，片段腿没折，于是**同一份模型输出**在两种场景里得不同结论。
+  // 尺子内部不一致比尺子严格更糟（前者会让人怀疑全部跨场景比较）。
+  {
+    const mk = (isHidden) => ({
+      fields: [
+        { prop: 'vip', label: '会员', formtype: 'Switch' },
+        { prop: 'note', label: '备注', formtype: 'Input', isHidden },
+      ],
+    })
+    const cases = [
+      ['旧条件 truthy', { field: 'vip', op: 'truthy' }, { '==': [{ var: 'vip' }, true] }, true],
+      ['旧条件 falsy', { field: 'vip', op: 'falsy' }, { '==': [{ var: 'vip' }, false] }, true],
+      ['反向：gold 表达式', { '==': [{ var: 'vip' }, true] }, { field: 'vip', op: 'truthy' }, true],
+      ['取反写错', { field: 'vip', op: 'truthy' }, { '==': [{ var: 'vip' }, false] }, false],
+    ]
+    for (const [name, goldHidden, predHidden, wantPass] of cases) {
+      const s = scoreFragment('form', mk(goldHidden), mk(predHidden), null)
+      check(
+        s.byDim.isHidden.pass === wantPass,
+        `isHidden 布尔字段 ${name}：应判${wantPass ? '等' : '负'}`,
+      )
+    }
+
+    // 非布尔字段**不折**：`falsy` 把 0 / '' / null 也算假，折成 `== false` 会把真实写错判成对。
+    const textGold = {
+      fields: [
+        { prop: 'level', label: '等级', formtype: 'Input' },
+        { prop: 'note', label: '备注', formtype: 'Input', isHidden: { field: 'level', op: 'truthy' } },
+      ],
+    }
+    const textPred = {
+      fields: [
+        { prop: 'level', label: '等级', formtype: 'Input' },
+        {
+          prop: 'note',
+          label: '备注',
+          formtype: 'Input',
+          isHidden: { '==': [{ var: 'level' }, true] },
+        },
+      ],
+    }
+    check(
+      scoreFragment('form', textGold, textPred, null).byDim.isHidden.pass === false,
+      'isHidden 非布尔字段的 truthy 不得折成 == true（会凭空放宽判据）',
+    )
+  }
+
+
   {
     const c = find('frag-form-06-vue3')
     const good = clone(c.gold)

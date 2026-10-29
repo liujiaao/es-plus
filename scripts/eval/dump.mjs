@@ -62,13 +62,17 @@ import { createHash } from 'node:crypto'
  *                                   布尔字段上 `truthy`/`falsy` ≡ `== true`/`== false`
  *   +reaction-encoding-parity-v1  : reactions 与片段腿对齐 —— `dependencies` 顺序不计（集合），
  *                                   无 `when` + fulfill 只含布尔键且表达式相同（AI-51 等价格控）
+ *   +fragment-bool-literal-v1     : 片段腿的 `isHidden` 与 CRUD 腿对齐 —— 布尔字段（Switch /
+ *                                   全布尔 dataOptions）上 `truthy`/`falsy` ≡ `== true`/`== false`。
+ *                                   此前两条腿不对称：同一份模型输出在两个场景里得不同结论。
+ *                                   当前片段语料零影响（无布尔 truthy 条件），但尺子已变。
  *
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {
