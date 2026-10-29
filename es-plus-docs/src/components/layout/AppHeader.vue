@@ -3,12 +3,12 @@
     <div class="header-left">
       <button
         class="hamburger-btn"
-        :aria-label="mobileMenuOpen ? '关闭菜单' : '打开菜单'"
-        :aria-expanded="String(mobileMenuOpen)"
+        :aria-label="mobileOpen ? '关闭菜单' : '打开菜单'"
+        :aria-expanded="String(mobileOpen)"
         aria-controls="es-sidebar"
         @click="toggleMobileMenu"
       >
-        <el-icon :size="20"><component :is="mobileMenuOpen ? 'Close' : 'Expand'" /></el-icon>
+        <el-icon :size="20"><component :is="mobileOpen ? 'Close' : 'Expand'" /></el-icon>
       </button>
       <router-link to="/" class="logo">
         <span class="logo-icon">ES</span>
@@ -65,7 +65,7 @@
   <DocSearch v-model:visible="searchVisible" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Search, Close, Expand, Sunny, Moon } from '@element-plus/icons-vue'
@@ -76,8 +76,22 @@ import { SITES, SITE_KEY } from '@/utils/sites'
 
 const themeStore = useThemeStore()
 const isDark = ref(themeStore.isDark)
-const mobileMenuOpen = ref(false)
 const searchVisible = ref(false)
+
+/**
+ * 抽屉开合状态**只有一个真源**，在 `App.vue`。
+ *
+ * 这里曾经自己存了一份 `mobileMenuOpen = ref(false)`，与父组件的 `mobileMenuOpen`
+ * 各记各的：侧栏的「点遮罩关闭」和「点导航项自动收起」都只改父组件那份，于是抽屉关上了、
+ * 开关的 `aria-expanded` 还是 true、图标还画着 ×。读屏软件报「菜单已展开」而视觉上
+ * 根本没有菜单；下一次点击又只翻转本地那份（父组件收到 false，无变化），要再点一次
+ * 才真的打开 —— 开关从「一次点击」退化成「两次点击」，而这个退化只在窄屏出现。
+ * 由 `mobile-open` 单选父状态、点击只发意图（`!props.mobileOpen`）就没有第二份状态可漂。
+ * 回归断言见 `__tests__/e2e-runtime/tests/mobile.spec.ts`（点遮罩/点导航项后 aria-expanded 归 false）。
+ */
+const props = defineProps<{
+  mobileOpen?: boolean
+}>()
 
 const { t, locale } = useI18n()
 const currentLocale = computed(() => locale.value)
@@ -97,9 +111,9 @@ const switchSite = (site) => {
 
 const emit = defineEmits(['toggle-mobile-menu'])
 
+// 只发「想要的下一态」，不自持状态（真源在 App.vue，见上方长注释）
 const toggleMobileMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value
-  emit('toggle-mobile-menu', mobileMenuOpen.value)
+  emit('toggle-mobile-menu', !props.mobileOpen)
 }
 
 const toggleTheme = () => {

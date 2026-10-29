@@ -7,7 +7,7 @@
       <!-- 键盘用户的第一站：Tab 一下就能跳过整个导航直达正文（路线图 1.7）。
            落点 #es-main 在 AppContent 的 <main> 上，带 tabindex="-1" 才接得住焦点。 -->
       <a class="es-skip-link" href="#es-main">跳到主内容</a>
-      <AppHeader @toggle-mobile-menu="toggleMobileMenu" />
+      <AppHeader :mobile-open="mobileMenuOpen" @toggle-mobile-menu="toggleMobileMenu" />
       <AppSidebar :mobile-open="mobileMenuOpen" @close="mobileMenuOpen = false" />
       <AppContent>
         <router-view />
