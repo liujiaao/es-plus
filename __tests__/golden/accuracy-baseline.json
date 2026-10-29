@@ -32,7 +32,7 @@
     "尺子一改（字段身份 prop→label、装饰键豁免、不可测量键、条件 DSL 规范化、省略即默认值、选项 value 不判、新增维度），同一份 pred 会得不同分，跨版本比较无意义。",
     "compareToBaseline 因此在 version 不匹配时**硬失败并要求重基线**。当前为 null = 尚未在任何一把尺子下",
     "测过（三个比率字段也仍是 null）；首次 post-R2 全量跑批后，与比率一起写回",
-    "'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1'。",
+    "'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1'。",
     "",
     "计数更新记录（续）：",
     "  · 2026-10-27（Ruler v3 / R2 + 0a/0b/0c）：新增维度 `defaultSort`（首屏默认排序契约，此前",

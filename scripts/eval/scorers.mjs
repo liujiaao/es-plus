@@ -137,6 +137,121 @@ export function canonCondition(node) {
   return canonExpr(node)
 }
 
+// ── 条件字面量的身份（2026-10-29）─────────────────────────────────────────────
+//
+// 问题的形态与 AN-01（dataOptions）、`editRender.options/defaultValue`（2026-10-29）**完全同构**：
+// 条件的右操作数是**某个字段的选项值**（`{ field: 'contractType', op: 'ne', value: 'framework' }`），
+// 而 value 是后端数据模型的约定，NL 只给标签（「框架/普通」）。那三处早已改成按标签比，
+// 条件 DSL 却还把码值字面比较 —— 模型写 `frame`、gold 写 `framework`（两边标签都是「框架」）
+// 被判成「不理解需求」。2026-10-29 的 dump 里 112 / 39 / 46 / 134 / 42 五行全是这一种。
+//
+// 判据（与 dataOptions 同一条）：字面量先按**本侧自己的** dataOptions 解析成标签再比；
+// 解析不到就保持原样（不是选项的裸值照常严格比较，`scorers.test.mjs` 钉住）。
+//
+// 布尔字段的 `truthy`/`falsy` 与 `== true`/`== false` 归一到 `==`：值的全集只有 true/false，
+// 语义完全相同（116 gold=truthy/pred==true、117 反之）。**非布尔字段不归一** —— 那里
+// `falsy` 还含 0/''/null，把 `== false` 当成等值是真正的误绿。
+
+/** 某个 config 的条件比较上下文：字段 prop → (value→标签) / 标签集 / 是否布尔字段。 */
+function conditionContext(config) {
+  const labels = new Map()
+  const labelSet = new Map()
+  const bools = new Set()
+  for (const f of config?.fields ?? []) {
+    const opts = f.dataOptions ?? []
+    if (opts.length) {
+      const byValue = new Map()
+      const set = new Set()
+      for (const o of flatOptions(opts)) {
+        if (o.label === undefined) continue
+        byValue.set(String(o.value), o.label)
+        set.add(String(o.label))
+      }
+      if (byValue.size) {
+        labels.set(f.prop, byValue)
+        labelSet.set(f.prop, set)
+      }
+      const vals = optionValues(opts)
+      if (vals.length && vals.every((v) => v === true || v === false)) bools.add(f.prop)
+    }
+    if (f.formtype === 'Switch') bools.add(f.prop)
+  }
+  return { labels, labelSet, bools }
+}
+
+/** 字面量 → 标签身份；不是该字段的选项值/标签则返回 null（保持原样参与比较）。 */
+function labelLiteral(lit, ctx, field) {
+  if (typeof lit !== 'string' && typeof lit !== 'number') return null
+  const byValue = ctx.labels.get(field)
+  if (!byValue) return null
+  const key = String(lit)
+  if (byValue.has(key)) return { label: byValue.get(key) }
+  // 模型直接写了标签（`value: '框架'`）：同样是「指向这个选项」，一并归一。
+  if (ctx.labelSet.get(field)?.has(key)) return { label: key }
+  return null
+}
+
+/**
+ * 两侧**都**声明了 dataOptions 的字段。只有这些字段的字面量才归一成标签身份 ——
+ * 与装饰键「任一侧没写就不比较」同一条纪律：若只有一侧有选项表，另一侧的字面量就是
+ * 裸码（模型无从知道该字段承载选项），此时把一侧映射成标签、另一侧保持裸值，
+ * 比较就变成**必然不等**，等于凭空判负。两侧都没有/只有一侧有时，照旧字面比较。
+ *
+ * 136 就是这个形状：gold 的 `region` 是纯 Input（值来自 province 的 `zj`/`gd`），
+ * 模型给 region 声明了 华东/华南 选项并在条件里写码值 —— 两侧的码值域根本不同，
+ * 该判的是「级联设计错了」，不是「码值写法不同」。
+ */
+function sharedOptionFields(gc, pc) {
+  const out = new Set()
+  for (const prop of gc.labels.keys()) if (pc.labels.has(prop)) out.add(prop)
+  return out
+}
+
+/** 一次算出两侧上下文 + 可归一的共享字段集（所有比较点共用，避免各自算错）。 */
+function conditionPair(gold, pred) {
+  const g = conditionContext(gold)
+  const p = conditionContext(pred)
+  return { g, p, shared: sharedOptionFields(g, p) }
+}
+
+/** 已规范化的条件树再走一遍：布尔字段 truthy/falsy → `==`，右字面量 → 标签身份。 */
+function conditionRewrite(node, ctx, shared) {
+  if (Array.isArray(node)) return node.map((n) => conditionRewrite(n, ctx, shared))
+  if (!node || typeof node !== 'object') return node
+  const keys = Object.keys(node)
+  if (keys.length !== 1) {
+    const out = {}
+    for (const k of keys) out[k] = conditionRewrite(node[k], ctx, shared)
+    return out
+  }
+  const op = keys[0]
+  if (op === 'var') return { var: node.var }
+  const args = Array.isArray(node[op]) ? node[op] : [node[op]]
+  const subject = args[0]
+  const field =
+    subject && typeof subject === 'object' && !Array.isArray(subject) && typeof subject.var === 'string'
+      ? subject.var
+      : null
+  if (field !== null && (op === 'truthy' || op === 'falsy') && args.length === 1 && ctx.bools.has(field)) {
+    return { '==': [{ var: field }, op === 'truthy'] }
+  }
+  return {
+    [op]: args.map((a, i) => {
+      if (i === 0 || field === null || !shared.has(field)) return conditionRewrite(a, ctx, shared)
+      return labelLiteral(a, ctx, field) ?? conditionRewrite(a, ctx, shared)
+    }),
+  }
+}
+
+/**
+ * 条件比较的**唯一**视图：规范化（`canonCondition`）+ 字面量身份（本函数）。
+ * 四类判据（isHiddenEqual / FIELD_SCORERS.isHidden / reactionsView / describeDimMiss）共用它。
+ * `shared` 为两侧都有选项表的字段集（默认空 ⟹ 只做规范化，不做身份归一）。
+ */
+export function conditionView(node, ctx, shared = new Set()) {
+  return conditionRewrite(canonCondition(node), ctx, shared)
+}
+
 // ── 装饰键投影（A2 / D15）─────────────────────────────────────────────────────
 //
 // 问题：`columns` / `expandConfig` 是**整体深等值**判定，而这两处承载了大量
@@ -726,15 +841,27 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     const proj = projectExpandConfig(gold.expandConfig, pred.expandConfig)
     return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
-  if (dim === 'isHidden') {
-    // 与 isHiddenEqual 同源：显示**规范化后**的条件，否则「两套等价写法」会让判正的行
-    // 打出不同的 want/got（不变量当场失效）。
-    const view = (c) => {
-      const out = {}
-      for (const f of c.fields) if (f.isHidden !== undefined) out[f.prop] = canonCondition(f.isHidden)
-      return canonicalView(out)
+  if (dim === 'isHidden' || dim === 'reactions') {
+    // 与 isHiddenEqual / reactionsEqual 同源：显示**规范化后 + 字面量身份归一后**的条件，
+    // 否则「两套等价写法」或「两种码值指向同一选项」会让判正的行打出不同的 want/got。
+    // 必须 gold 驱动（维度判据只对 gold 声明过的字段负责）——否则 pred 多挂一个 isHidden
+    // 就会让判正的行 want≠got，不变量当场失效。
+    const pm = fieldMap(pred)
+    const { g: gc, p: pc, shared } = conditionPair(gold, pred)
+    const want = {}
+    const got = {}
+    for (const f of gold.fields) {
+      if (f[dim] === undefined) continue
+      const pf = pm.get(f.prop)
+      want[f.prop] = dim === 'isHidden' ? conditionView(f[dim], gc, shared) : reactionsView(f[dim], gc, shared)
+      got[f.prop] =
+        pf && pf[dim] !== undefined
+          ? dim === 'isHidden'
+            ? conditionView(pf[dim], pc, shared)
+            : reactionsView(pf[dim], pc, shared)
+          : '（无）'
     }
-    return { want: view(gold), got: view(pred) }
+    return { want: canonicalView(want), got: canonicalView(got) }
   }
   if (dim === 'defaultSort') {
     return {
@@ -844,10 +971,11 @@ function configTableOutEqual(gold, pred) {
  */
 function isHiddenEqual(gold, pred) {
   const pm = fieldMap(pred)
+  const { g: gc, p: pc, shared } = conditionPair(gold, pred)
   for (const f of gold.fields) {
     if (!f.isHidden) continue
     const pf = pm.get(f.prop)
-    if (!pf || !pf.isHidden || !eq(canonCondition(f.isHidden), canonCondition(pf.isHidden))) return false
+    if (!pf || !pf.isHidden || !eq(conditionView(f.isHidden, gc, shared), conditionView(pf.isHidden, pc, shared))) return false
   }
   return true
 }
@@ -867,11 +995,12 @@ function isHiddenEqual(gold, pred) {
  */
 function reactionsEqual(gold, pred) {
   const pm = fieldMap(pred)
+  const { g: gc, p: pc, shared } = conditionPair(gold, pred)
   for (const f of gold.fields) {
     if (!f.reactions) continue
     const pf = pm.get(f.prop)
     if (!pf || !pf.reactions) return false
-    if (!eq(reactionsView(f.reactions), reactionsView(pf.reactions))) return false
+    if (!eq(reactionsView(f.reactions, gc, shared), reactionsView(pf.reactions, pc, shared))) return false
   }
   return true
 }
@@ -879,8 +1008,13 @@ function reactionsEqual(gold, pred) {
 /**
  * reactions 的比较视图：`fulfill.dataOptions` → { 标签树, 选项数, 值是否互异 }，其余键原样。
  * 判据与 `dataOptionsEqual` 逐字一致（含「重复 value 判负」）。
+ *
+ * 2026-10-29：`when` / `fulfill.required` / `fulfill.disabled` / `fulfill.value` 四个表达式节点
+ * 走 `conditionView`（与 isHidden 同一条视图）—— 它们的右操作数同样指向选项值，
+ * 也同样是「options 与 dataOptions 是同一件事」的落点。134 行 gold `{== insuranceType "auto"}`、
+ * 模型 `"car"`（两边标签都是「车险」）就是在这里被判负的。
  */
-function reactionsView(reactions) {
+function reactionsView(reactions, ctx, shared) {
   return (reactions ?? []).map((r) => {
     const out = cloneDeep(r)
     const opts = out.fulfill?.dataOptions
@@ -892,9 +1026,17 @@ function reactionsView(reactions) {
         unique: new Set(vals.map(String)).size === vals.length,
       }
     }
+    // 表达式节点（与 isHidden 同一条视图）：规范化 + 字面量按标签身份。
+    for (const k of REACTION_EXPR_KEYS) {
+      if (out[k] !== undefined) out[k] = conditionView(out[k], ctx, shared)
+      if (out.fulfill?.[k] !== undefined) out.fulfill[k] = conditionView(out.fulfill[k], ctx, shared)
+    }
     return out
   })
 }
+
+/** reactions 里的表达式节点键：`when` 在外层，其余三个在 `fulfill` 里。 */
+const REACTION_EXPR_KEYS = ['when', 'required', 'disabled', 'value']
 
 const hasExtPoint = (f) => !!(f.render || f.formatter || f.permissionValue)
 
@@ -1101,16 +1243,19 @@ const FIELD_SCORERS = {
     const g = fieldMap(gold).get(prop)
     const p = fieldMap(pred).get(prop)
     if (!g || !g.isHidden) return true // 该字段本就不要求条件显隐 → 空钉即过
-    // 与 isHiddenEqual 同源判据：规范化到同一范式再比（两套合法写法等价）
-    return !!p && !!p.isHidden && eq(canonCondition(g.isHidden), canonCondition(p.isHidden))
+    if (!p || !p.isHidden) return false
+    // 与 isHiddenEqual 同源判据：规范化 + 字面量身份（两套合法写法 / 两种码值等价）
+    const { g: gc, p: pc, shared } = conditionPair(gold, pred)
+    return eq(conditionView(g.isHidden, gc, shared), conditionView(p.isHidden, pc, shared))
   },
   reactions: (gold, pred, prop) => {
     const g = fieldMap(gold).get(prop)
     const p = fieldMap(pred).get(prop)
     if (!g || !g.reactions) return true // 该字段本就不要求联动 → 空钉即过
     if (!p || !p.reactions) return false
-    // 与 reactionsEqual 同源：dataOptions 按「标签树 + 数量 + 唯一性」比，其余深等值
-    return eq(reactionsView(g.reactions), reactionsView(p.reactions))
+    // 与 reactionsEqual 同源：dataOptions 按「标签树 + 数量 + 唯一性」比，表达式节点走 conditionView
+    const { g: gc, p: pc, shared } = conditionPair(gold, pred)
+    return eq(reactionsView(g.reactions, gc, shared), reactionsView(p.reactions, pc, shared))
   },
 }
 

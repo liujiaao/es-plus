@@ -1075,6 +1075,84 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     expectMiss('isHidden', g, q, 'value 被改')
   }
 
+  // 条件字面量的身份（2026-10-29）：条件右操作数指向的是**选项**，码值是后端约定、
+  // NL 只给标签 —— 与 dataOptions / editRender.options 同一条判据。布尔字段上
+  // truthy/falsy ≡ == true/false（值域只有两值）；**非布尔字段不归一**。
+  {
+    const opts = [{ label: '框架', value: 'framework' }, { label: '普通', value: 'normal' }]
+    const mk = (cond, extra = {}) => ({
+      fields: [{ prop: 'contractType', label: '合同类型', formtype: 'Select', dataOptions: opts }, { prop: 'discount', label: '折扣率', formtype: 'InputNumber', isHidden: cond }],
+      actions: ['add'],
+      ...extra,
+    })
+    const conds = (c) => c.fields[1]
+    // 同一标签、不同码值 ⟹ 等价（gold 写 framework，模型写 frame）
+    {
+      const g = mk({ field: 'contractType', op: 'eq', value: 'framework' })
+      const p = clone(mk({ field: 'contractType', op: 'eq', value: 'frame' }))
+      conds(p).isHidden = { '==': [{ var: 'contractType' }, 'frame'] }
+      p.fields[0].dataOptions = [{ label: '框架', value: 'frame' }, { label: '普通', value: 'ordinary' }]
+      expectHit('isHidden', g, p, '两种码值指向同一标签')
+      // 标签不同（普通 vs 框架）仍然判负：归一不放大行为契约
+      const q = clone(p)
+      conds(q).isHidden = { '==': [{ var: 'contractType' }, 'ordinary'] }
+      expectMiss('isHidden', g, q, '标签不同（框架 vs 普通）')
+      // 不是该字段选项的裸值 ⟹ 照旧字面比较
+      const r = clone(g)
+      conds(r).isHidden = { field: 'contractType', op: 'eq', value: 'literalX' }
+      expectMiss('isHidden', g, r, '非选项字面量照旧严格比较')
+      // 模型直接写标签（value: '框架'）也算指向同一选项
+      const s = clone(g)
+      conds(s).isHidden = { field: 'contractType', op: 'eq', value: '框架' }
+      expectHit('isHidden', g, s, 'pred 用标签代替码值')
+      // 只有**一侧**声明了选项表 ⟹ 两侧都不归一（否则一侧映射成标签、另一侧保持裸码，
+      // 比较必然不等，等于凭空判负）。136 就是这个形状：gold 的 region 是纯 Input。
+      {
+        const g = mk({ field: 'contractType', op: 'eq', value: 'framework' })
+        const p = clone(mk({ field: 'contractType', op: 'eq', value: 'frame' }))
+        p.fields[0].dataOptions = undefined // pred 未声明选项 ⟹ 无从判断 'frame' 是否指「框架」
+        expectMiss('isHidden', g, p, '仅一侧有选项表 → 不归一，字面比较')
+      }
+    }
+    // 布尔字段：truthy ≡ == true，falsy ≡ == false（双向）
+    {
+      const b = (cond) => ({ fields: [{ prop: 'furnished', label: '是否配家具', formtype: 'Switch' }, { prop: 'note', label: '备注', formtype: 'Input', isHidden: cond }], actions: ['add'] })
+      const g1 = b({ truthy: [{ var: 'furnished' }] })
+      const p1 = b({ '==': [{ var: 'furnished' }, true] })
+      expectHit('isHidden', g1, p1, '布尔字段 truthy ≡ == true')
+      const g2 = b({ falsy: [{ var: 'furnished' }] })
+      const p2 = b({ '==': [{ var: 'furnished' }, false] })
+      expectHit('isHidden', g2, p2, '布尔字段 falsy ≡ == false')
+      const q2 = b({ '==': [{ var: 'furnished' }, true] })
+      expectMiss('isHidden', g2, q2, '布尔字段 falsy ≠ == true')
+    }
+    // 非布尔字段：falsy 含 0/''/null，不得与 == false 视作等价（真误绿风险）
+    {
+      const g = { fields: [{ prop: 'qty', label: '数量', formtype: 'InputNumber' }, { prop: 'note', label: '备注', formtype: 'Input', isHidden: { falsy: [{ var: 'qty' }] } }], actions: ['add'] }
+      const p = clone(g)
+      p.fields[1].isHidden = { '==': [{ var: 'qty' }, false] }
+      expectMiss('isHidden', g, p, '非布尔字段 falsy ≠ == false（不做归一）')
+    }
+    // reactions：表达式节点走同一条视图（134 的 `required` / `isHidden` 码值）
+    {
+      const mkR = (when) => ({
+        fields: [
+          { prop: 'insuranceType', label: '险种', formtype: 'Select', dataOptions: [{ label: '车险', value: 'auto' }, { label: '家财险', value: 'home' }] },
+          { prop: 'plateNo', label: '车牌号', formtype: 'Input', reactions: [{ dependencies: ['insuranceType'], when, fulfill: { required: true } }] },
+        ],
+        actions: ['add'],
+      })
+      const g = mkR({ '==': [{ var: 'insuranceType' }, 'auto'] })
+      const p = clone(mkR({ '==': [{ var: 'insuranceType' }, 'car'] }))
+      p.fields[0].dataOptions = [{ label: '车险', value: 'car' }, { label: '家财险', value: 'home' }]
+      expectHit('reactions', g, p, 'reactions.when 两种码值指向同一标签')
+      expectHit('reactions', g, clone(g), 'gold-vs-gold')
+      const q = clone(g)
+      q.fields[1].reactions[0].when = { '==': [{ var: 'insuranceType' }, 'home'] }
+      expectMiss('reactions', g, q, 'reactions.when 标签不同')
+    }
+  }
+
   // treeConfig：判据是整对象深等值。
   {
     const g = { ...clone(base), treeConfig: { childrenField: 'children', expandAll: true } }

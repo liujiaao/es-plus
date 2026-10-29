@@ -56,13 +56,17 @@ import { createHash } from 'node:crypto'
  *                                   expandAll false），弃用别名 `children` 归一
  *   +dialog-key-align-v1          : `dialogs` 的 key 按「打开它的按钮名」对齐；gold 声明的
  *                                   add/edit/view 而 pred 省略 ≡ 派生弹窗；不再要求 key 集合双向相等
+ *   +condition-value-identity-v1  : 条件（`isHidden` / reactions 的 `when`·`required`·`disabled`·
+ *                                   `value`）右操作数字面量先按**本侧** dataOptions 解析成选项
+ *                                   标签再比（码值是后端约定，NL 只给标签，与 dataOptions 同规）；
+ *                                   布尔字段上 `truthy`/`falsy` ≡ `== true`/`== false`
  *
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {
