@@ -1278,24 +1278,73 @@ gold 与 pred 都写了 `true`，改了也不影响任何分数 —— 记在这
 +2 而非 +3：`97` 的 `columns` 也是真 miss（`remark` 的 `$textarea` 对了，但列集/编辑渲染仍有差），
 `editConfig` 修好仍过不了门禁。
 
-### 11.16 本批五处修正的合并口径（供下次跑批对照）
+### 11.16 D 阶段（离线部分）：`reactions` 的选项值与字段级 `dataOptions` 同规 ✅（2026-10-29）
 
-| 阶段 | 门禁 ∨ | 逐维失败行 | 性质 |
+**怎么发现的**：`reactions` 维度 7 条失败里，125 行**只有 value 不同**：
+
+```
+125-ticket-subcategory-select-vue3-sfc
+  gold: fulfill.dataOptions = [{label:"登录失败",value:"loginFail"}, {label:"密码重置",value:"resetPwd"}, …]
+  pred: fulfill.dataOptions = [{label:"登录失败",value:"login_fail"}, {label:"密码重置",value:"password_reset"}, …]
+```
+
+标签一字不差，差的是**后端约定的 value** —— 而 `optionLabelTree` 的头注早就写明这类键
+「NL 从不给、让模型猜中等于读心」，字段级 `dataOptions`（AN-01）也因此只比标签树 + 数量 + 唯一性。
+`reactions.fulfill.dataOptions` 是**同一种东西**，当时漏了：整数组深等值 ⟹ 又把语义正确的产物判负。
+
+**改了什么**：`reactionsEqual` 与字段级 `FIELD_SCORERS.reactions` 改为比较 `reactionsView`——
+把 `fulfill.dataOptions` 折叠成 `{labels, count, unique}`（判据与 `dataOptionsEqual` **逐字一致**），
+`dependencies` / `when` / `required` / `disabled` / `value` 原样深等值。
+
+**实测**：95% 定义 75.8% → **76.3%（148/194）**，`reactions` 7 → 6 行（只有 125 翻转；
+其余是漏写整条规则，或 `when` 里的枚举码值猜错 —— 见下条）。
+
+### 11.17 语料：两例 gold 与自己的 NL 不一致（`reactions`）✅（2026-10-29）
+
+| 用例 | NL | 修前 gold | 修后 gold | 效果 |
+|---|---|---|---|---|
+| `133-region-mirror-value-disabled-vue3` | 「在所选省份**非空**时不可手改」 | `disabled: {truthy: [var province]}` | `{notEmpty: [var province]}` | **该行翻绿**（模型写的就是 `notEmpty`） |
+| `123-bank-branch-select-antdv` | 「国有银行给**工行/建行**」 | `label: 中国工商银行 / 中国建设银行` | `label: 工行 / 建行` | **不翻绿**（模型写「工商银行/建设银行」） |
+
+两处都是「gold 超出了 NL 说的话」：
+
+- 133：`truthy` 与 `notEmpty` 对 `0`/`false`/`''` **并不等价**，不是两种写法；NL 明说「非空」，
+  故按 NL 改算子。这不是迁就模型，是把 gold 对齐到规格。
+- 123：缩写 → 全称的**展开不可推断**（与 §11.12 的 `expandConfig.title` 同一形状：
+  gold 要求了一个 NL 没说的串）。改成 NL 原词后这一行**仍然失败**——模型写的是「工商银行」，
+  既不是 NL 的「工行」也不是全称。把它改对不是为了让 pred 通过，而是为了让这一行**可过**：
+  照 NL 逐字写的模型应当通过。**记在这里**：本批它的分数没变。
+
+**注意**：`134`（车险 → `auto` vs `car`）与 `136`（大区码值）**不是**语料缺陷 —— 这两个字段的
+`dataOptions` 在语料里**明写了码值**（`{车险,auto}`、`{浙江,zj}`），信息是给全的，模型没照用，
+是真实 miss。
+
+### 11.18 本批修正的合并口径（供下次跑批对照）
+
+**两个分母基底必须分开写**，否则数字看起来是「一步步相加」，其实中途换了判分基准：
+
+| 步骤 | 尺子段 | 原 dump（10-27 的 gold） | regold 副本（当前语料） |
 |---|---|---|---|
-| §11.8 C 阶段（`label-identity-v1+deco-projection-v1`） | 69.1%（134/194） | 60 | 基线 |
-| + §11.12 `unmeasured-expand-title-v1` | 73.7%（143/194） | 51 | 尺子 |
-| + §11.13 `cond-dsl-canonical-v1` | 74.7%（145/194） | 49 | 尺子 |
-| + §11.14 `edit-config-defaults-v1` | 75.8%（147/194） | 47 | 尺子 |
-| + §11.15 三例 gold 修正 | **76.8%（149/194）**（在 regold 副本上） | **45** | 语料 |
+| 起点 §11.8 | `label-identity-v1+deco-projection-v1` | 69.1%（134/194）· 60 行 | — |
+| §11.12 | `+unmeasured-expand-title-v1` | 73.7%（143/194）· 51 行 | — |
+| §11.13 | `+cond-dsl-canonical-v1` | 74.7%（145/194）· 49 行 | — |
+| §11.14 | `+edit-config-defaults-v1` | 75.8%（147/194）· 47 行 | — |
+| §11.16 | `+reaction-options-v1` | **76.3%（148/194）· 46 行** | — |
+| §11.15 + §11.17（语料 gold） | 同上（尺子不再变） | — | **77.8%（151/194）· 43 行** |
 
-前四行都只改**尺子**、不动语料，母题是同一个：**模型选了另一种合法表达（或把默认值写了出来）被判负**。
-第五行是语料与自己的 NL 打架。**它们都不是能力提升**：下一次真跑批要在
-`label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1`
-这把尺子下重新建立数字，`accuracy-baseline.json` 的比率字段仍为 `null`，等首跑后人工写回。
+- **左列**全在同一份原始 dump 上跑 —— 只换尺子，pred 与 gold 一字不动，所以是**逐行可复现**的。
+- **右列**把 gold 换成**当前语料**（原 dump 是证据，不就地改；副本由 `.tmp-audit/regold.mjs` 生成）。
+  差额 **3 行 = 95、100（editConfig）+ 133（reactions）**；123 的 gold 也改了但**不翻绿**（见 §11.17）。
+- 左列五次改动只动**尺子**，母题是同一个：**模型选了另一种合法表达（或把默认值写了出来）被判负**。
+  右列两次是语料与自己的 NL 打架。**它们都不是能力提升**：下一次真跑批要在
+  `label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1`
+  这把尺子下重新建立数字，`accuracy-baseline.json` 的比率字段仍为 `null`，等首跑后人工写回。
 
-**尚未解决的 45 行（都是模型/语料侧，不是尺子侧）**：`columns` 11（行内编辑列、分组列、
+**尚未解决的 43 行（都是模型/语料侧，不是尺子侧）**：`columns` 11（行内编辑列、分组列、
 数值精度等真实漏写）、`tableBtns` 11（prompt 分工规则已落，待下一次跑批验证）、
-`isHidden` 8（7 行漏写整条需求 + 枚举码值猜错，1 行是收敛用例）、`reactions` 7、
-`propSet` 4、`extPoints`/`dialogs`/`actions`/`inForm` 各 2、`fieldSpan`/`treeConfig` 各 1。
+`isHidden` 8（7 行漏写整条需求 + 枚举码值猜错，1 行是收敛用例）、`reactions` 5（3 行漏写、
+2 行码值没照抄语料里明写的 dataOptions）、`propSet` 4、`extPoints`/`dialogs`/`actions`/`inForm`
+各 2、`fieldSpan`/`treeConfig` 各 1。
+
 
 

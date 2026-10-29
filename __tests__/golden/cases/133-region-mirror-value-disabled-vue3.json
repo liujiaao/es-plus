@@ -52,7 +52,7 @@
                 "var": "province"
               },
               "disabled": {
-                "truthy": [
+                "notEmpty": [
                   {
                     "var": "province"
                   }
@@ -69,5 +69,5 @@
       "delete"
     ]
   },
-  "notes": "AI-07: 同一条规则同时给出 value（回写）与 disabled（只读）—— 自动同步且不可手改（vue3/schema）"
+  "notes": "AI-07: 同一条规则同时给出 value（回写）与 disabled（只读）—— 自动同步且不可手改（vue3/schema）。2026-10-29 修正 disabled 的算子：NL 说「在所选省份非空时不可手改」，原文写 truthy（对 0/false/'' 与 notEmpty 不等价），按 NL 改用 notEmpty"
 }

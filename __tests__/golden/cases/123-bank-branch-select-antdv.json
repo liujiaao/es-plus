@@ -60,11 +60,11 @@
             "fulfill": {
               "dataOptions": [
                 {
-                  "label": "中国工商银行",
+                  "label": "工行",
                   "value": "icbc"
                 },
                 {
-                  "label": "中国建设银行",
+                  "label": "建行",
                   "value": "ccb"
                 }
               ]
@@ -110,5 +110,5 @@
       "delete"
     ]
   },
-  "notes": "AI-07: 分支式 dataOptions 联动（antdv/schema）"
+  "notes": "AI-07: 分支式 dataOptions 联动（antdv/schema）。2026-10-29 标签改回 NL 原词（工行/建行）：原文写全称「中国工商银行/中国建设银行」，而 NL 只给简称 ⟹ 缩写→全称的展开不可推断，等于把这一行钉成不可过"
 }
