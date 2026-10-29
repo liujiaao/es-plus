@@ -1201,15 +1201,101 @@ npm run check:scorers|check:rescore|check:ratchet|check:artifact-self|check:dump
 > **一句话**：判等要看**语义**，而语义的载体不一定只有一种写法。schema 接受两套 DSL 形态时，
 > 记分卡就必须先把它们规范化——否则它测的是「模型是否与我选了同一套写法」，不是「模型是否理解」。
 
-### 11.14 本批两处尺子修正的合并口径（供下次跑批对照）
+### 11.14 D 阶段（离线部分）：`editConfig` 省略即默认值 ✅（2026-10-29）
 
-| 阶段 | 门禁 ∨ | 逐维失败行 | 备注 |
+**怎么发现的**：`editConfig` 维度 8 条失败里有 5 条是**两侧都合法、只是写法不同**：
+
+```
+105/106   NL「单击单元格修改」 gold {mode:"cell"}        pred {trigger:"click", mode:"cell"}
+96        NL「单击单元格」     gold {mode:"cell",enabled:true}  pred {trigger:"click",mode:"cell"}
+101       NL「单击单元格」     gold {trigger:"click"}      pred {mode:"cell"}
+102       NL「单击单元格」     gold {mode:"cell",showStatus:true}  pred {mode:"cell"}
+```
+
+**根因有两层，都不是模型错**：
+
+1. **省略 ≡ 默认值**。`structured-config.schema.ts` 的 `editConfig.trigger` 说明写着
+   “default 'click'”，系统 prompt 也写明 `trigger` 缺省 `click`、`mode` 缺省 `cell`；
+   `enabled` 的默认值有**运行时证据**——`node_modules/vxe-table/es/ui/src/utils.js` 的
+   `isEnableConf(conf)` 就是 `conf && conf.enabled !== false`，即缺省为真。
+   于是 gold `{mode:"cell"}` 与 pred `{trigger:"click",mode:"cell"}` 是**同一份配置**。
+   这与 `inQuery` 默认 `true` 的陷阱（§11.2）**同构**：省略与显式默认值被当成不同东西。
+2. **展示开关不该被测量**。`showStatus / showUpdateStatus / showInsertStatus / autoClear`
+   只控制 vxe 的状态标记与重编辑清值，NL 从不陈述（102 的 gold 写了 `showStatus:true`，
+   NL 一个字没提）⟹ 按装饰键处理：任一侧没写就不比。
+
+**改了什么**
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/eval/scorers.mjs` | 新增 `EDIT_CONFIG_KEY_CLASS`（判据**单一源**：trigger/mode/enabled 结构键、show 系列/autoClear 装饰键）+ `EDIT_CONFIG_DEFAULTS` + 导出 `projectEditConfig`（两侧填默认值 → 装饰键豁免）；维度 `pass`、`describeDimMiss` 分支同源 |
+| `scripts/eval/scorers.test.mjs` | 2g 补 4 组「省略 ≡ 默认」（含 gold 空对象）与 4 条**不放宽**的反例（`enabled:false` vs 省略、`dblclick` vs 省略、两侧都写 showStatus 且不同）；`describeDimMiss` 不变量节把一条**旧语义翻案**（见下）；语料键白名单 + 投影自检覆盖 `editConfig` |
+| `scripts/eval/dump.mjs` | `RULER_VERSION` 追加 `+edit-config-defaults-v1` |
+
+**翻案的一条旧测试**：`describeDimMiss` 那节原有一条 `expectMiss('editConfig', …, '模型多写了一个未锁定的键')`
+（pred 多写 `showStatus:true`）。按今天的判据它**应当判正**——那不是「多写了一个键」，
+而是「补了一个 NL 没要求的展示开关」。旧测试钉住的是错语义，改成正向用例，
+并另加「改 mode ⟹ 判负」保证维度仍咬得住。
+
+**实测（同一份 C 阶段 dump）**
+
+| 指标 | §11.13 之后 | 本次 | Δ |
+|---|---|---|---|
+| 95% 定义（门禁 ∨） | 74.7%（145/194） | **75.8%（147/194）** | +2 行 |
+| `editConfig` 维度失败 | 8 | **3** | −5 |
+
+只 +2 而不是 +5：105/106/96 三行**同时**在 `columns` 维度失败（是真实模型 miss），
+维度修好也过不了门禁 —— 这正是「逐维失败行」与「门禁行」必须分开看的原因。
+
+### 11.15 语料：三例行内编辑 gold 与自己的 NL 相反 ✅（2026-10-29）
+
+`editConfig` 剩下的 3 行失败，是**gold 写错**，不是尺子也不是模型：
+
+| 用例 | NL / nlEn | 修前 gold | 修后 gold |
+|---|---|---|---|
+| `95-goods-cost-edit-vue2` | 双击整行 / double-click a row | `{trigger:"click", mode:"row"}` | `{trigger:"dblclick", mode:"row"}` |
+| `97-order-remark-edit-vue2-sfc` | 双击整行 | `{mode:"row", autoClear:true}`（缺 trigger ⟹ 默认 click） | `{trigger:"dblclick", mode:"row", autoClear:true}` |
+| `100-stock-adjust-edit-antdv-sfc` | 双击整行 | `{mode:"row"}`（缺 trigger ⟹ 默认 click） | `{trigger:"dblclick", mode:"row"}` |
+
+**归因依据（不是「照着 pred 改 gold」）**：同族用例的既定约定是「NL 说双击 ⟹ 写
+`trigger:"dblclick"`」—— `93`、`104`、`frag-table-06`（三端）都这么写。这 3 行是**离群点**，
+而且中文 NL 与英文 nlEn **同时**说 double-click，gold 却是 click 或缺省。
+按 §11.2 立下的口径（NL 是规格、gold 要忠实于它）修 gold，**不是**迁就模型。
+
+**97 的 `autoClear` 没有动**：NL 说的「点击其他区域自动关闭编辑」是 vxe 的默认行为，
+并不是 `autoClear` 的语义（那是重进编辑时清值）。但 `autoClear` 现在是**装饰键、不测量**，
+gold 与 pred 都写了 `true`，改了也不影响任何分数 —— 记在这里，等真有语料陈述它时再定口径。
+
+**实测**：原 dump 的 pred 不能改，故用**当前语料**的 gold 重写一份 dump 副本再复算
+（`.tmp-audit/regold.mjs` → `.tmp-audit/full-c-regold.jsonl`，原 dump 不动）：
+
+| 指标 | 修前 | 修后 |
+|---|---|---|
+| 95% 定义（门禁 ∨） | 75.8%（147/194） | **76.8%（149/194）** |
+| 逐维失败行 | 47 | **45** |
+| 逐维分布 | columns 11 / tableBtns 11 / isHidden 8 / reactions 7 / editConfig 3 / propSet 4 / … | 除 `editConfig` 归零外**一字不差** |
+
++2 而非 +3：`97` 的 `columns` 也是真 miss（`remark` 的 `$textarea` 对了，但列集/编辑渲染仍有差），
+`editConfig` 修好仍过不了门禁。
+
+### 11.16 本批五处修正的合并口径（供下次跑批对照）
+
+| 阶段 | 门禁 ∨ | 逐维失败行 | 性质 |
 |---|---|---|---|
 | §11.8 C 阶段（`label-identity-v1+deco-projection-v1`） | 69.1%（134/194） | 60 | 基线 |
-| + §11.12 `unmeasured-expand-title-v1` | 73.7%（143/194） | 51 | +9 |
-| + §11.13 `cond-dsl-canonical-v1` | **74.7%（145/194）** | **49** | +2（当前） |
+| + §11.12 `unmeasured-expand-title-v1` | 73.7%（143/194） | 51 | 尺子 |
+| + §11.13 `cond-dsl-canonical-v1` | 74.7%（145/194） | 49 | 尺子 |
+| + §11.14 `edit-config-defaults-v1` | 75.8%（147/194） | 47 | 尺子 |
+| + §11.15 三例 gold 修正 | **76.8%（149/194）**（在 regold 副本上） | **45** | 语料 |
 
-两处都只改**尺子**、不动语料，且都是「模型选了另一种合法表达被判负」这一个母题的两种形态。
-它们**不是**能力提升：下一次真跑批的数字要在这把新尺子下重新建立，
-`accuracy-baseline.json` 的比率字段仍为 `null`，等首跑后人工写回（版本串见该文件头注）。
+前四行都只改**尺子**、不动语料，母题是同一个：**模型选了另一种合法表达（或把默认值写了出来）被判负**。
+第五行是语料与自己的 NL 打架。**它们都不是能力提升**：下一次真跑批要在
+`label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1`
+这把尺子下重新建立数字，`accuracy-baseline.json` 的比率字段仍为 `null`，等首跑后人工写回。
+
+**尚未解决的 45 行（都是模型/语料侧，不是尺子侧）**：`columns` 11（行内编辑列、分组列、
+数值精度等真实漏写）、`tableBtns` 11（prompt 分工规则已落，待下一次跑批验证）、
+`isHidden` 8（7 行漏写整条需求 + 枚举码值猜错，1 行是收敛用例）、`reactions` 7、
+`propSet` 4、`extPoints`/`dialogs`/`actions`/`inForm` 各 2、`fieldSpan`/`treeConfig` 各 1。
+
 

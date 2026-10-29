@@ -11,12 +11,12 @@
       { "prop": "goodsName", "label": "商品名称", "formtype": "Input" },
       { "prop": "costPrice", "label": "进价", "formtype": "InputNumber", "inQuery": false }
     ],
-    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click", "mode": "row" } },
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "row" } },
     "columns": [
       { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
       { "prop": "costPrice", "label": "进价", "editRender": { "name": "$input", "props": { "type": "number" } } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig click/row + editRender，vue2/schema）"
+  "notes": "AI-09 子项④: vxe 行内编辑（NL「双击整行」⟹ editConfig dblclick/row + editRender，vue2/schema）。2026-10-29 修正：原文写 trigger:\"click\" 与自己的 NL/nlEn 相反（同批 97/100 也漏写 trigger）"
 }

@@ -12,12 +12,12 @@
       { "prop": "goodsName", "label": "商品名称", "formtype": "Input" },
       { "prop": "adjustQty", "label": "调整数", "formtype": "InputNumber", "inQuery": false }
     ],
-    "tableOptions": { "engine": "vxe", "editConfig": { "mode": "row" } },
+    "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "row" } },
     "columns": [
       { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
       { "prop": "adjustQty", "label": "调整数", "editRender": { "name": "$input", "props": { "type": "number" } } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=row + editRender，antdv/sfc）"
+  "notes": "AI-09 子项④: vxe 行内编辑（NL「双击整行」⟹ editConfig dblclick/row + editRender，antdv/sfc）。2026-10-29 补 trigger:dblclick（原稿漏写 ⟹ 默认 click 与 NL 相反）"
 }
