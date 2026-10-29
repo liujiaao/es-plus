@@ -265,6 +265,65 @@ const complete = (over = {}) => ({
   )
 }
 
+// ─── 行级重放：产物必须自证「补跑没改分母」 ────────────────────────────────
+// 重放是唯一会让同一条语料被答两次的路径。分母若因此变大/变小，分数会「看起来好一点」
+// 而没有任何其它信号 —— 故对账恒等式写进产物自证。
+{
+  // 正常形状：重放过的行都补回来了，且 attempted = recovered + stillUnmeasured。
+  check(
+    clean(
+      verifyArtifact(
+        complete({ replay: { crud: { attempted: 3, recovered: 3, stillUnmeasured: 0, skippedModelFailure: 2, skippedOverCap: 0, aborted: false }, fragments: null } }),
+        { badgeFiles: [] }
+      )
+    ),
+    '重放对账成立且仍没测到为 0 时不得判红（正常批次）'
+  )
+  check(
+    clean(verifyArtifact(complete({ replay: { crud: null, fragments: null } }), { badgeFiles: [] })),
+    '两腿都为 null（本次无需重放）是正常情况，不得判红'
+  )
+  // 反例 1：对账不成立（写入方把「出现几次算几行」的旧语义漏回来）。
+  checkFails(
+    verifyArtifact(
+      complete({ replay: { crud: { attempted: 3, recovered: 2, stillUnmeasured: 0, skippedModelFailure: 0, skippedOverCap: 0, aborted: false }, fragments: null } }),
+      { badgeFiles: [] }
+    ),
+    '对账不成立',
+    'recovered + stillUnmeasured ≠ attempted'
+  )
+  // 反例 2：recovered > attempted —— 「补回的比尝试的还多」是自相矛盾。
+  checkFails(
+    verifyArtifact(
+      complete({ replay: { crud: { attempted: 1, recovered: 2, stillUnmeasured: 0, skippedModelFailure: 0, skippedOverCap: 0, aborted: false }, fragments: null } }),
+      { badgeFiles: [] }
+    ),
+    '对账不成立',
+    'recovered 超过 attempted'
+  )
+  // 反例 3：字段非法（缺 aborted / 负数）。
+  checkFails(
+    verifyArtifact(
+      complete({ replay: { crud: { attempted: 2, recovered: -1, stillUnmeasured: 3, skippedModelFailure: 0, skippedOverCap: 0 }, fragments: null } }),
+      { badgeFiles: [] }
+    ),
+    '字段非法',
+    '负数 / 缺 aborted'
+  )
+  // 反例 4：passed=true 却仍有行没补回来 —— 与 AN-18 的「未测到不得发布为通过」同一条纪律。
+  checkFails(
+    verifyArtifact(
+      complete({
+        passed: true,
+        replay: { crud: { attempted: 2, recovered: 1, stillUnmeasured: 1, skippedModelFailure: 0, skippedOverCap: 0, aborted: true }, fragments: null },
+      }),
+      { badgeFiles: [] }
+    ),
+    'stillUnmeasured',
+    'passed=true 但有行没测到'
+  )
+}
+
 rmSync(tmp, { recursive: true, force: true })
 
 if (failures.length) {

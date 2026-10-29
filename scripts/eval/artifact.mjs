@@ -303,6 +303,47 @@ export function verifyArtifact(artifact, ctx = {}) {
       }
     }
   }
+  // ── 行级重放（2026-10-29）：产物必须自证「补跑没有偷偷改变分母」 ──────────────
+  // 重放是唯一会让同一条语料被模型答两次的路径。它**不**改变分母（dump 后写覆盖先写、
+  // 内存按 key upsert），于是产物里的对账恒等式必须成立：attempted = recovered +
+  // stillUnmeasured。若写入方把「出现几次算几行」的旧语义漏回来，这条会立刻红 ——
+  // 而分数本身不会露馅（重放成功只会让分数变好，看起来像模型变强）。
+  // 旧产物没有 `replay` 键 → 跳过（与 AN-13/AN-18/AN-19 同一处置：恒红 = 红盲）。
+  const replay = artifact.replay
+  if (replay && typeof replay === 'object') {
+    for (const leg of ['crud', 'fragments']) {
+      const r = replay[leg]
+      if (!r || typeof r !== 'object') continue
+      const ints = ['attempted', 'recovered', 'stillUnmeasured', 'skippedModelFailure', 'skippedOverCap']
+      const bad = ints.filter((k) => !Number.isInteger(r[k]) || r[k] < 0)
+      if (bad.length) {
+        failures.push(`replay.${leg} 字段非法（需非负整数）：${bad.map((k) => `${k}=${r[k]}`).join(', ')}`)
+        continue
+      }
+      if (r.recovered + r.stillUnmeasured !== r.attempted) {
+        failures.push(
+          `replay.${leg} 对账不成立：recovered ${r.recovered} + stillUnmeasured ${r.stillUnmeasured}` +
+            ` ≠ attempted ${r.attempted}（重放不得让分母变大或变小）`
+        )
+      }
+      if (typeof r.aborted !== 'boolean') {
+        failures.push(`replay.${leg}.aborted 必须是布尔（记录「是否因中继持续不通而提前停止」）`)
+      }
+    }
+    // 「完整测量」与「还有行没补回来」不能同时成立：passed 的产物里两腿的
+    // stillUnmeasured 必须都是 0。与上面 AN-18 的 `frag.notMeasured > 0` 同一条纪律，
+    // 只是换成重放自己的账本 —— 它俩若不一致，说明重放账本与实测账本来自两次聚合。
+    if (artifact.passed === true) {
+      for (const leg of ['crud', 'fragments']) {
+        const r = replay[leg]
+        if (r && typeof r === 'object' && Number.isInteger(r.stillUnmeasured) && r.stillUnmeasured > 0) {
+          failures.push(
+            `passed=true 但 replay.${leg}.stillUnmeasured=${r.stillUnmeasured}（补跑后仍有行没测到，不是一次完整测量）`
+          )
+        }
+      }
+    }
+  }
   if (measurement === 'complete' || measurement === 'complete-gated-leg-only') {
     // 「完整测量」是一句**强声明**：它说门禁腿一条不缺。于是门禁数字本身必须存在 ——
     // 否则产物自称完整、却拿不出可核对的分母/分子（手改、字段被删、写入方漏字段都长这样）。

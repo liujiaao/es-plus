@@ -77,10 +77,15 @@ function reparse(config, what) {
   return r.data
 }
 
-const { meta, rows: entries, skipped } = readDump(DUMP)
+const { meta, rows: entries, skipped, superseded } = readDump(DUMP)
 if (!meta) {
   console.error(`✗ ${DUMP} 缺少 meta 首行 —— 不是本工具能复算的 dump`)
   process.exit(2)
+}
+// 重放过的行在 dump 里出现两次（先失败、后补测），readDump 已经按 key 取后写的那一版。
+// 这里只提示，不改任何数字 —— 复算的分母必须与跑批时内存里的 `rows` 逐行一致。
+if (superseded > 0) {
+  console.log(`[rescore] ${superseded} 行被行级重放覆盖（读回时取最后一次，分母不含重复行）`)
 }
 
 const convergeK = Number.isInteger(meta.convergeK) ? meta.convergeK : CONVERGE_K

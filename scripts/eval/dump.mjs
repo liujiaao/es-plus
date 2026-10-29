@@ -93,17 +93,26 @@ export function createDumpWriter(path) {
 }
 
 /**
- * 读回 dump。返回 meta（首行，缺失为 null）与全部行。
+ * 读回 dump。返回 meta（首行，缺失为 null）、全部行、损坏行数与被覆盖行数。
  * 损坏行（半行 JSON）跳过并计数 —— 进程被杀时最后一行可能不完整。
  *
+ * **同一个 `(kind, file, lang)` 出现多次时，后写的覆盖先写的**（`superseded` 计数）。
+ * 这不是宽容，而是唯一的正确语义：dump 是**逐行 append** 的（进程被杀仍保住已跑完的行），
+ * 而「行级重放」（`eval/replay.mjs`）会把没测到的行再跑一遍 —— 那一行必然被写第二次。
+ * 若按「出现几次算几行」读回，重放过的那一行会在分母里被算两次：一次没测到（0 分）、
+ * 一次测到了，等于把一个基础设施抖动记成半次模型失败。后写覆盖先写让 dump 的语义与
+ * 内存里的 `rows`（同样按 key 覆盖）保持一致，复算与产物才不会漂移。
+ *
  * @param {string} path
- * @returns {{meta: object|null, rows: object[], skipped: number}}
+ * @returns {{meta: object|null, rows: object[], skipped: number, superseded: number}}
  */
 export function readDump(path) {
   const text = readFileSync(path, 'utf8')
-  const rows = []
+  // 用 Map 保序：删除后重新插入 ⟹ 「最后一次出现」落在它实际的位置上。
+  const byKey = new Map()
   let meta = null
   let skipped = 0
+  let superseded = 0
   for (const line of text.split('\n')) {
     if (!line.trim()) continue
     let obj
@@ -113,8 +122,16 @@ export function readDump(path) {
       skipped++
       continue
     }
-    if (obj.kind === 'meta') meta = obj
-    else rows.push(obj)
+    if (obj.kind === 'meta') {
+      meta = obj
+      continue
+    }
+    const key = `${obj.kind}|${obj.file ?? ''}|${obj.lang ?? ''}`
+    if (byKey.has(key)) {
+      superseded++
+      byKey.delete(key)
+    }
+    byKey.set(key, obj)
   }
-  return { meta, rows, skipped }
+  return { meta, rows: [...byKey.values()], skipped, superseded }
 }

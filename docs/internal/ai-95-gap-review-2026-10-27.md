@@ -950,7 +950,7 @@ overscanCount|rowClassName|cachePageSelection|refetchKeepPage|localPagination|co
 > **一句话**：门禁数 69.1% 落在 §10.5 预判的 60–75% 区间内；其中 36.6 pp 是尺子（单调、只摘命名彩票），
 > 剩下 60 行差在哪已逐行有名字，D 阶段的排序按实测行数做了两处修订。
 
-### 11.9 C 阶段咬出的度量缺口：熔断阈值让「抖动的前 N 行」必然作废（待决策）
+### 11.9 C 阶段咬出的度量缺口：熔断阈值让「抖动的前 N 行」必然作废（→ 已按 ① 落地，见 §11.11）
 
 **现象**：跑批中途中继抖动约 2.5 分钟，`frag-dialog-06-vue2` / `06-vue3` / `07-antdv` 三行各自
 耗尽 4 次传输重试后落成 `ERROR(unknown) — Connection error.`；紧接着 `frag-dialog-07-vue2` 开始
@@ -972,16 +972,21 @@ overscanCount|rowClassName|cachePageSelection|refetchKeepPage|localPagination|co
 
 **待决策的两个修法（治本，改的是花钱跑批的行为，故未擅自落地）**：
 
+> **裁决（2026-10-29，用户拍板）**：选 ①**行级重放**。理由是它不改变任何打分语义 ——
+> 重放成功的行是**真实测量**，与 `frag-dialog-07-vue2` 那次碰巧落在熔断之后被救回的重试同质，
+> 只是把「碰巧」变成「一定会发生」。实现与证据见 **§11.11**；②`tripAfter = 1` 不采用
+> （单行持续性故障会反复冷却，烧等待预算）。
+
 | 方案 | 做法 | 代价 | 风险 |
 |---|---|---|---|
-| ① 行级重放（推荐） | 主循环跑完后，对 `isNotMeasured` 行**再跑一遍**（预算内、只一遍） | 与首次尝试同价（本次 3 行 ≈ 45 s） | 无：重放成功的行是**真实测量**，产物照旧记 `transportRetries` |
+| ① 行级重放（**已落地**） | 主循环跑完后，对 `isNotMeasured` 行**再跑一遍**（预算内、只一遍） | 与首次尝试同价（本次 3 行 ≈ 45 s） | 无：重放成功的行是**真实测量**，产物照旧记 `transportRetries` |
 | ② `tripAfter = 1` | 第一个整行耗尽的调用就进冷却 | 每次散点抖动多等 30 s | 单行**持续性**故障（如某 case 永远超时）会反复冷却，烧等待预算 |
 
 我倾向 ①：它把「少丢几行」变成「不丢行」，且不改变任何打分语义 —— 与 `frag-dialog-07-vue2`
 那次救回来的重试是同一种东西，只是把它从「碰巧发生在熔断之后」变成「一定会发生」。
 
 > **一句话**：这次跑批证明测量链本身还有一个「按分钟计的中继抖动 ⟹ 整批判红」的口子；
-> 补跑只是治标，治本要动 `tripAfter` 或加行级重放，属于 §10.5 的 G 阶段（度量可靠性）。
+> 补跑只是治标，治本已按 ① 落地（行级重放，2026-10-29，§11.11）。
 
 ### 11.10 顺带查明的另一件事：夜间跑批**结构性断供**（不是代码问题）
 
@@ -1013,3 +1018,63 @@ overscanCount|rowClassName|cachePageSelection|refetchKeepPage|localPagination|co
 
 > **一句话**：本地 69.1% 证明的是「口径与语料现在是对的」，**不是**「门禁线上是绿的」——
 > 夜间线卡在京东云的配额上，本地线卡在 PPIO 的预算上，两条都不在代码里。
+
+### 11.11 §11.9 ① 落地：行级重放（2026-10-29）
+
+把「抖动的前 N 行必然陪葬」从**缺陷**降级成**代价**：主循环跑完后，把**没测到**的行补跑一遍，
+补回来的行是真实测量。落地刻意收得很窄 —— 这不是重试策略的调参，而是唯一一处
+「同一条语料被模型答两次」的路径，所以规则要逐条写死、逐条守。
+
+#### 四条纪律（`scripts/eval/replay.mjs`，纯函数 + 自测）
+
+| 纪律 | 做法 | 不这么做会怎样 |
+|---|---|---|
+| 只补「没测到」 | 判据只有一份：`isNotMeasured(kind)`（`repair-loop.mjs`），由调用方**注入**，缺参即抛 | 把 `model-failure` 也重放 ⟹ 每条答错的语料多一次抽样机会，分数会在没人改语料/尺子时自己往上爬 |
+| 只补一遍 | 单一 pass，重放失败不再进第二轮 | 多轮 = 变相 best-of-N，且成本随轮数失控 |
+| 死中继即停 | 连续 `REPLAY_ABORT_AFTER = 3` 行仍没测到 ⟹ `aborted`，停止 | 中继整段死掉时会白烧一整轮的等待预算 |
+| 有上限 | `REPLAY_MAX_DEFAULT = 32`，超出的计数 `skippedOverCap` | 抖动规模远超上限时等于把整轮重跑一遍 |
+
+#### 分母不变是硬不变式（两条腿各有一份证据）
+
+重放写第二行，若按「出现几次算几行」读回，那一行会在分母里被算**两次**（一次未测到 0 分、
+一次测到）⟹ 一次基础设施抖动被记成半次模型失败，复算与产物必然对不上。所以：
+
+- **落盘点**：`runCrudEntry` / `runFragmentEntry` 改成**返回**结果、由 `commitCrud` /
+  `commitFragment` 唯一落账（`rows` 按 key upsert，`dump` 同刻 append，重放行带 `replay: true`）。
+- **读盘点**：`readDump` 改成「同一 `(kind, file, lang)` 后写覆盖先写」并计数 `superseded` ——
+  dump 是 append-only（进程被杀仍保住已跑完的行），后写覆盖先写是唯一与内存 `rows` 同构的语义。
+- **产物自证**：`artifact.replay = { crud, fragments }`，每腿
+  `attempted = recovered + stillUnmeasured`；`passed === true` 时两腿的 `stillUnmeasured` 必须为 0
+  （`verifyArtifact` 判红）。恒等式写进产物，是因为**分数不会露馅** —— 重放成功只会让分数变好，
+  看起来像「模型变强了」。
+- **离线复算**：`rescore.mjs` 读到 `superseded > 0` 时打印一行提示，数字一律取后写那一版。
+
+#### 探针不重放
+
+`PROBE`（`--limit` / `--fragments` / `ESPLUS_FRAG_ONLY` / `--fixed-fields` / `--prd`）下**跳过**重放：
+探针的价值恰恰是如实暴露抖动，重放会把它抹平。重放只在会写产物的全量跑批里生效。
+
+#### 一个被这次改动顺带咬出来的测试缺陷
+
+`rescore.test.mjs` 原来把**三条**记录（完美 / 缺字段 / 没测到）写成同一个 `(kind, file, lang)`，
+靠「出现几次算几行」凑出 `cases = 3`。那正是要去掉的语义 —— 它是**复用同一把钥匙**，
+不是三条用例。改成三条不同 `file`（`gold` / `worse` / `error` 后缀）后，断言（分母含错误行、
+编译分母只数有产物的行）逐条不变，语义仍成立。
+
+#### 验证
+
+```
+node scripts/eval/replay.test.mjs     ✅ 只放没测到 / 只一遍 / 死中继即停 / 上限 / 计数对账 / 判据单源
+node scripts/eval/dump.test.mjs       ✅ + 第 6 节：同一行写两次 ⟹ 只算一行、后写覆盖先写、键含 lang
+node scripts/eval/rescore.test.mjs    ✅ 分母完整 / 95% 定义 / 编译门 / --expect 双向
+node scripts/eval/artifact.test.mjs   ✅ 55 条判据（+ 4 条 replay 对账反例）
+npx eslint <改动的 9 个文件>          0 error
+```
+
+`check:replay` 已进 `check:consistency`（紧跟 `check:dump`）。**运行时证据待下一次能跑模型的批次**
+（本地 PPIO 预算与京东云配额都还没恢复，见 §11.10）—— 这次落地的是**策略与不变式**，
+它们全部有离线自测；驱动侧（`runCrudEntry` / `runFragmentEntry` → `commit*`）走的是与旧循环
+逐行同构的路径，`eslint` 无 `no-undef` 报错、`node --check` 通过。
+
+> **一句话**：重放不改变「什么是成绩」，只改变「一次抖动会让几条成绩消失」；
+> 而它必须付出的代价是**分母不变式要能被产物自己核对**，否则它就是分数自增器。

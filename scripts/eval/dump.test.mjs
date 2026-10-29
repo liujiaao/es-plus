@@ -87,6 +87,26 @@ try {
   const r2 = readDump(p)
   eq(r2.rows.length, 1, '截断后只剩本次跑批的行')
   eq(r2.meta?.rulerVersion, 'label-identity-v1', 'meta 跟随本次跑批')
+
+  // ── 6. 同一行写两次（行级重放）⟹ 后写的覆盖先写的，且**只算一行** ─────────────
+  // 若按「出现几次算几行」，重放过的行会在分母里被算两次：一次没测到（0 分）+ 一次测到了，
+  // 于是一次基础设施抖动被记成半次模型失败 —— 复算与产物必然对不上。
+  const p3 = join(dir, 'replay.jsonl')
+  const w3 = createDumpWriter(p3)
+  w3.write({ kind: 'meta', schemaVersion: 1, rulerVersion: 'label-identity-v1' })
+  w3.write({ kind: 'crud', file: 'd', lang: 'zh', turn0: null, error: 'Connection error.', errorKind: null })
+  w3.write({ kind: 'crud', file: 'e', lang: 'zh', turn0: { fields: [] }, error: null })
+  // 重放：没测到的 d 又跑了一遍并成功
+  w3.write({ kind: 'crud', file: 'd', lang: 'zh', turn0: { fields: [{ prop: 'x' }] }, error: null, replay: true })
+  const r3 = readDump(p3)
+  eq(r3.rows.length, 2, '重放的行不得使分母变大（同一 (kind,file,lang) 只算一行）')
+  eq(r3.superseded, 1, '被覆盖的行要计数（产物/日志能说明「这一行重放过」）')
+  const d = r3.rows.find((x) => x.file === 'd')
+  eq(d.error, null, '后写覆盖先写：读到的必须是重放成功的那一版')
+  eq(r3.rows[1].file, 'd', '覆盖后仍保持它实际出现的位置（保序）')
+  // 不同语言是不同行（zh / en 各一份，不能互相覆盖）
+  w3.write({ kind: 'crud', file: 'd', lang: 'en', turn0: { fields: [] }, error: null })
+  eq(readDump(p3).rows.length, 3, '同一语料的 zh / en 是两行，键必须含 lang')
 } finally {
   rmSync(dir, { recursive: true, force: true })
 }

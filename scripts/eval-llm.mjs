@@ -56,6 +56,7 @@ import {
 } from './eval/repair-loop.mjs'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
+import { planReplay, shouldAbortReplay, summarizeReplay, REPLAY_ABORT_AFTER } from './eval/replay.mjs'
 import { setupFrontDoor, driveFrontDoor, summarizeFrontDoor } from './eval/front-door-leg.mjs'
 import { buildFragmentSystemPrompt, buildFragmentInitialMessages } from './eval/fragment-prompt.mjs'
 import { scoreFragment, describeFragmentDimMiss } from './eval/fragment-scorers.mjs'
@@ -524,173 +525,255 @@ async function main() {
   }
   // 门禁语言 zh 排在前（排序稳定，故语言内部仍保持语料顺序 —— 报告可读、可与历史对齐）。
   const planOrdered = orderPlanGatedFirst(plan)
-  {
-    for (const { file, gold, mask, fixedFields, refinements, convergesBy, lang, nl } of planOrdered) {
-      process.stdout.write(`[eval:llm] ${file} [${lang}] … `)
+  /**
+   * 跑一条 CRUD 计划项，**返回**结果而不直接落账。
+   *
+   * 为什么是「返回」而不是「push 进 rows / 写 dump」：行级重放（`eval/replay.mjs`）要把
+   * 「没测到」的行再跑一遍，而同一个 `(file, lang)` 只能算一行 —— 重放成功必须**顶掉**
+   * 那次没测到，否则一次中继抖动会在分母里留下半次模型失败。于是调用点统一做 upsert。
+   */
+  async function runCrudEntry(entry, { replay = false } = {}) {
+    const { file, gold, mask, fixedFields, refinements, convergesBy, lang, nl } = entry
+    process.stdout.write(`[eval:llm] ${file} [${lang}] … ${replay ? '(replay) ' : ''}`)
+    const out = { row: null, dumpEntry: null }
+    try {
+      // turn 0：初稿。头条分（zero-edit/scoped/propF1/…）恒为此轮，精修轮不回写 s。
+      // F9：target/mode 是宿主输入（生产里由 detect_project_target + 宿主选 mode 决定，
+      // 见 prompt.mjs 头注），故与 fixedFields 一样作「给定」喂入，不再让模型猜。
+      // 取自 gold（Zod 已应用默认值，恒有值）——即「按契约应得的宿主上下文」。
+      const messages = buildInitialMessages(nl, fixedFields, { target: gold.target, mode: gold.mode })
+      const pred = await driveToValidConfig(client, system, messages)
+      // AN-12：`compiles` = **产物真的编译过**（SFC 脚本 + 模板 / TS·TSX 模块），
+      // 不再只是「generateFromConfig 没抛错」—— 后者只证明配置过了 Zod，产物里的
+      // 模板从未被 Vue 编译器看过。`noThrow` 单独保留：生成器抛错与编译失败是两类
+      // 故障（前者生成器 bug、后者坏产物），报告必须能分开读。
+      let noThrow = true
+      let compileError = null
       try {
-        // turn 0：初稿。头条分（zero-edit/scoped/propF1/…）恒为此轮，精修轮不回写 s。
-        // F9：target/mode 是宿主输入（生产里由 detect_project_target + 宿主选 mode 决定，
-        // 见 prompt.mjs 头注），故与 fixedFields 一样作「给定」喂入，不再让模型猜。
-        // 取自 gold（Zod 已应用默认值，恒有值）——即「按契约应得的宿主上下文」。
-        const messages = buildInitialMessages(nl, fixedFields, { target: gold.target, mode: gold.mode })
-        const pred = await driveToValidConfig(client, system, messages)
-        // AN-12：`compiles` = **产物真的编译过**（SFC 脚本 + 模板 / TS·TSX 模块），
-        // 不再只是「generateFromConfig 没抛错」—— 后者只证明配置过了 Zod，产物里的
-        // 模板从未被 Vue 编译器看过。`noThrow` 单独保留：生成器抛错与编译失败是两类
-        // 故障（前者生成器 bug、后者坏产物），报告必须能分开读。
-        let noThrow = true
-        let compileError = null
-        try {
-          const product = generateFromConfig(pred)
-          const leg = compileProduct(product, {
-            filename: `${String(gold.name || 'generated').replace(/[^\w.-]/g, '_')}.ts`,
-          })
-          if (!leg.ok) compileError = leg.error
-        } catch (err) {
-          noThrow = false
-          compileError = {
-            message: err instanceof Error ? err.message : String(err),
-            file: null,
-            line: null,
-            column: null,
-          }
-        }
-        const compiles = noThrow && compileError === null
-        // Ruler v3 / R2：zh 腿按 label 身份打分（NL 写的是中文标签，猜不中 prop 不算理解失败）；
-        // en 腿维持 prop 身份 —— gold 标签是中文、pred 是英文，按 label 比结构性必错，且 en 只观测。
-        const scoreOpts = scoreOptsForLang(lang)
-        const s = scoreAll(gold, pred, mask, scoreOpts)
-        // W1.3 前门腿：同一条模型产出再喂一次真 `generate_crud`（不额外调模型）。
-        const fd = await driveFrontDoor(frontDoor, pred)
-
-        // B3：中文语言 + 标了 refinements 时，延续同一段对话逐条喂纠正，记录每轮 scoped 命中，
-        // 直到收敛或喂完。初稿已 scoped 命中则 0 次纠正即收敛（zero-edit），不再调用模型。
-        let convergence
-        // 每一轮精修的模型产出都要落盘：否则离线复算只能算 turn-0，收敛腿（95% 的第二条腿）
-        // 就永远无法在新尺子下重算。
-        const turnPreds = []
-        if (lang === 'zh' && refinements) {
-          const scopedSeq = [s.exactIntentScoped]
-          for (const ref of refinements) {
-            if (scopedSeq[scopedSeq.length - 1]) break
-            // 精修纠正也走同一守卫：空纠正同样会让下一次请求带着空 text block 被严格网关拒。
-            pushUserCorrection(messages, String(ref.correction ?? ''))
-            const rPred = await driveToValidConfig(client, system, messages)
-            turnPreds.push(rPred)
-            scopedSeq.push(scoreAll(gold, rPred, mask, scoreOpts).exactIntentScoped)
-          }
-          const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
-          convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
-        }
-
-        rows.push({ file, lang, ...s, compiles, noThrow, compileError, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd, pinnedDims: mask.pinnedDims })
-        // 落盘：gold + mask + 逐轮 pred 足以离线重算全部 CRUD 指标（含收敛腿）。
-        // `compiles` 是确定性代码的产物，跟着落盘只为复算时能重出 Tier A 数字。
-        dump.write({
-          kind: 'crud',
-          file,
-          lang,
-          gold,
-          mask,
-          fewshotDerived: FEWSHOT_DERIVED.has(file),
-          convergesBy,
-          // 有精修语料 ⟹ 该行**必须**重建 convergence（即使 turn-0 已命中、turns 为空，
-          // firstTurn 也是 0 而不是「无收敛腿」）。只看 turns.length 会把它误判成普通行。
-          hasRefinements: Boolean(refinements),
-          turn0: pred,
-          turns: turnPreds,
-          compiles,
-          noThrow,
-          compileError,
-          error: null,
-          errorKind: null,
+        const product = generateFromConfig(pred)
+        const leg = compileProduct(product, {
+          filename: `${String(gold.name || 'generated').replace(/[^\w.-]/g, '_')}.ts`,
         })
-        // 类型腿只吃门禁语言（zh）的模型产出：en 腿与 zh 共用同一份 pred 语义但语料不同，
-        // 且 en 不参与门禁；把它混进抽样会稀释每端的真实样本。
-        if (lang === 'zh') tcCandidates.push({ id: file, target: gold.target, config: pred })
-        console.log(
-          `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc === null ? 'n/a' : s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
-        )
-        if (convergence) {
-          const ft = convergence.firstTurn
-          const label = ft === null ? '未收敛' : ft === 0 ? 'zero-edit' : `第 ${ft} 轮收敛`
-          console.log(`           convergence: ${label}（${convergence.attempts} 次纠正尝试${convergesBy ? `，自称 ≤${convergesBy}` : ''}）`)
-        }
-        if (s.attrMisses.length) console.log(`           attr misses: ${s.attrMisses.join('; ')}`)
-        const dimMisses = Object.entries(s.byCapability)
-          .filter(([, v]) => v.applicable && !v.pass)
-          .map(([k]) => k)
-        if (dimMisses.length) {
-          console.log(`           dim misses: ${dimMisses.join(', ')}`)
-          // 结构化维度逐例展开「期望 vs 实得」——由 describeDimMiss 决定覆盖哪些维度
-          // （tableBtns/operationColumn/dialogs/treeConfig/editConfig/columns）。**不变量**：
-          // 打印出的 want === got 当且仅当该维度 pass（scorers.test.mjs 有双向断言）；
-          // 因此「日志说两侧相同却报 miss」只可能是打印器撒谎，不会再被误读成记分卡坏了。
-          for (const dim of dimMisses) {
-            const d = describeDimMiss(dim, gold, pred, scoreOpts)
-            if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
-          }
-        }
+        if (!leg.ok) compileError = leg.error
       } catch (err) {
-        // `errorKind` 是这一行最终归因的全部依据（见 eval/repair-loop.mjs 头注）：
-        // `model-failure` = 模型答错了 ⟹ 一次**合法测量**，记 0 分才诚实；
-        // 其余（空轮 / 截断 / 未知）⟹ 这一行**没测到**，按 0 分计入成绩会低估且可能被发布。
-        // 未知归因（例如 SDK 直接抛的传输异常）走白名单外的默认值 —— 保守方向是「没测到」。
-        const errorKind = err?.kind ?? null
-        // 模型答错的行**仍在成绩里**（各分母按 0）：维度适用性由 gold 决定，命中一律 false。
-        // 旧写法给 `byCapability: {}`，于是这类行从每个维度的分母里消失，把「模型没答对」
-        // 洗成「该维不适用」—— 与 core / definition95 按 0 计入的纪律相矛盾（AN-01）。
-        const errCaps = {}
-        for (const s of CAPABILITY_SCORERS) {
-          errCaps[s.key] = s.applicable(gold)
-            ? { applicable: true, pass: false }
-            : { applicable: false, pass: null }
+        noThrow = false
+        compileError = {
+          message: err instanceof Error ? err.message : String(err),
+          file: null,
+          line: null,
+          column: null,
         }
-        rows.push({
-          file,
-          lang,
-          exactIntentCore: false,
-          exactIntentFull: false,
-          exactIntentScoped: false,
-          byCapability: errCaps,
-          attrAcc: null,
-          compiles: false,
-          // 这类行没有产物可编译：`noThrow`/`compileError` 置中性值与成功行同形，
-          // 下游读 `compileError` 时不需要再判 `error`。
-          noThrow: true,
-          compileError: null,
-          error: err.message,
-          errorKind,
-          fewshotDerived: FEWSHOT_DERIVED.has(file),
-          // 钉了哪些维（A3 的 `byCapabilityOnPinned` 分母来源）：错误行同样要带上 ——
-          // 否则「模型答错的那些 pin」会从门禁口径的分母里消失，等于免罚。
-          pinnedDims: mask.pinnedDims,
-          frontDoor: null,
-          gold,
-        })
-        // 错误行也落盘：复算必须能重建**分母**。只落成功行会让「未测到」从分母里消失，
-        // 把一次中继故障洗成高准确率（本仓 2026-10-15 的 47.0% 事故就是这一类）。
-        dump.write({
-          kind: 'crud',
-          file,
-          lang,
-          gold,
-          mask,
-          fewshotDerived: FEWSHOT_DERIVED.has(file),
-          convergesBy,
-          hasRefinements: Boolean(refinements),
-          turn0: null,
-          turns: [],
-          compiles: false,
-          noThrow: true,
-          compileError: null,
-          error: err.message,
-          errorKind,
-        })
-        console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
+      }
+      const compiles = noThrow && compileError === null
+      // Ruler v3 / R2：zh 腿按 label 身份打分（NL 写的是中文标签，猜不中 prop 不算理解失败）；
+      // en 腿维持 prop 身份 —— gold 标签是中文、pred 是英文，按 label 比结构性必错，且 en 只观测。
+      const scoreOpts = scoreOptsForLang(lang)
+      const s = scoreAll(gold, pred, mask, scoreOpts)
+      // W1.3 前门腿：同一条模型产出再喂一次真 `generate_crud`（不额外调模型）。
+      const fd = await driveFrontDoor(frontDoor, pred)
+
+      // B3：中文语言 + 标了 refinements 时，延续同一段对话逐条喂纠正，记录每轮 scoped 命中，
+      // 直到收敛或喂完。初稿已 scoped 命中则 0 次纠正即收敛（zero-edit），不再调用模型。
+      let convergence
+      // 每一轮精修的模型产出都要落盘：否则离线复算只能算 turn-0，收敛腿（95% 的第二条腿）
+      // 就永远无法在新尺子下重算。
+      const turnPreds = []
+      if (lang === 'zh' && refinements) {
+        const scopedSeq = [s.exactIntentScoped]
+        for (const ref of refinements) {
+          if (scopedSeq[scopedSeq.length - 1]) break
+          // 精修纠正也走同一守卫：空纠正同样会让下一次请求带着空 text block 被严格网关拒。
+          pushUserCorrection(messages, String(ref.correction ?? ''))
+          const rPred = await driveToValidConfig(client, system, messages)
+          turnPreds.push(rPred)
+          scopedSeq.push(scoreAll(gold, rPred, mask, scoreOpts).exactIntentScoped)
+        }
+        const firstTurn = firstConvergedTurn(scopedSeq.map((v) => ({ exactIntentScoped: v })))
+        convergence = { firstTurn, attempts: scopedSeq.length - 1, convergesBy }
+      }
+
+      out.row = { file, lang, ...s, compiles, noThrow, compileError, error: null, fewshotDerived: FEWSHOT_DERIVED.has(file), convergence, gold, frontDoor: fd, pinnedDims: mask.pinnedDims }
+      // 落盘：gold + mask + 逐轮 pred 足以离线重算全部 CRUD 指标（含收敛腿）。
+      // `compiles` 是确定性代码的产物，跟着落盘只为复算时能重出 Tier A 数字。
+      out.dumpEntry = {
+        kind: 'crud',
+        file,
+        lang,
+        gold,
+        mask,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+        convergesBy,
+        // 有精修语料 ⟹ 该行**必须**重建 convergence（即使 turn-0 已命中、turns 为空，
+        // firstTurn 也是 0 而不是「无收敛腿」）。只看 turns.length 会把它误判成普通行。
+        hasRefinements: Boolean(refinements),
+        turn0: pred,
+        turns: turnPreds,
+        compiles,
+        noThrow,
+        compileError,
+        error: null,
+        errorKind: null,
+      }
+      // 类型腿只吃门禁语言（zh）的模型产出：en 腿与 zh 共用同一份 pred 语义但语料不同，
+      // 且 en 不参与门禁；把它混进抽样会稀释每端的真实样本。
+      if (lang === 'zh') tcCandidates.push({ id: file, target: gold.target, config: pred })
+      console.log(
+        `intent=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}${s.exactIntentFull ? '' : s.exactIntentCore ? ' (full:diff)' : ''} propF1=${s.propF1.f1.toFixed(2)} attr=${s.attrAcc === null ? 'n/a' : s.attrAcc.toFixed(2)} actF1=${s.actionsF1.f1.toFixed(2)} btns=${s.tableBtnsMatch ? 'ok' : 'X'} compiles=${compiles ? 'yes' : 'NO'}`
+      )
+      if (convergence) {
+        const ft = convergence.firstTurn
+        const label = ft === null ? '未收敛' : ft === 0 ? 'zero-edit' : `第 ${ft} 轮收敛`
+        console.log(`           convergence: ${label}（${convergence.attempts} 次纠正尝试${convergesBy ? `，自称 ≤${convergesBy}` : ''}）`)
+      }
+      if (s.attrMisses.length) console.log(`           attr misses: ${s.attrMisses.join('; ')}`)
+      const dimMisses = Object.entries(s.byCapability)
+        .filter(([, v]) => v.applicable && !v.pass)
+        .map(([k]) => k)
+      if (dimMisses.length) {
+        console.log(`           dim misses: ${dimMisses.join(', ')}`)
+        // 结构化维度逐例展开「期望 vs 实得」——由 describeDimMiss 决定覆盖哪些维度
+        // （tableBtns/operationColumn/dialogs/treeConfig/editConfig/columns）。**不变量**：
+        // 打印出的 want === got 当且仅当该维度 pass（scorers.test.mjs 有双向断言）；
+        // 因此「日志说两侧相同却报 miss」只可能是打印器撒谎，不会再被误读成记分卡坏了。
+        for (const dim of dimMisses) {
+          const d = describeDimMiss(dim, gold, pred, scoreOpts)
+          if (d) console.log(`             ${dim}: want ${d.want} | got ${d.got}`)
+        }
+      }
+    } catch (err) {
+      // `errorKind` 是这一行最终归因的全部依据（见 eval/repair-loop.mjs 头注）：
+      // `model-failure` = 模型答错了 ⟹ 一次**合法测量**，记 0 分才诚实；
+      // 其余（空轮 / 截断 / 未知）⟹ 这一行**没测到**，按 0 分计入成绩会低估且可能被发布。
+      // 未知归因（例如 SDK 直接抛的传输异常）走白名单外的默认值 —— 保守方向是「没测到」。
+      const errorKind = err?.kind ?? null
+      // 模型答错的行**仍在成绩里**（各分母按 0）：维度适用性由 gold 决定，命中一律 false。
+      // 旧写法给 `byCapability: {}`，于是这类行从每个维度的分母里消失，把「模型没答对」
+      // 洗成「该维不适用」—— 与 core / definition95 按 0 计入的纪律相矛盾（AN-01）。
+      const errCaps = {}
+      for (const s of CAPABILITY_SCORERS) {
+        errCaps[s.key] = s.applicable(gold)
+          ? { applicable: true, pass: false }
+          : { applicable: false, pass: null }
+      }
+      out.row = {
+        file,
+        lang,
+        exactIntentCore: false,
+        exactIntentFull: false,
+        exactIntentScoped: false,
+        byCapability: errCaps,
+        attrAcc: null,
+        compiles: false,
+        // 这类行没有产物可编译：`noThrow`/`compileError` 置中性值与成功行同形，
+        // 下游读 `compileError` 时不需要再判 `error`。
+        noThrow: true,
+        compileError: null,
+        error: err.message,
+        errorKind,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+        // 钉了哪些维（A3 的 `byCapabilityOnPinned` 分母来源）：错误行同样要带上 ——
+        // 否则「模型答错的那些 pin」会从门禁口径的分母里消失，等于免罚。
+        pinnedDims: mask.pinnedDims,
+        frontDoor: null,
+        gold,
+      }
+      // 错误行也落盘：复算必须能重建**分母**。只落成功行会让「未测到」从分母里消失，
+      // 把一次中继故障洗成高准确率（本仓 2026-10-15 的 47.0% 事故就是这一类）。
+      out.dumpEntry = {
+        kind: 'crud',
+        file,
+        lang,
+        gold,
+        mask,
+        fewshotDerived: FEWSHOT_DERIVED.has(file),
+        convergesBy,
+        hasRefinements: Boolean(refinements),
+        turn0: null,
+        turns: [],
+        compiles: false,
+        noThrow: true,
+        compileError: null,
+        error: err.message,
+        errorKind,
+      }
+      console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
+    }
+    return out
+  }
+
+  // ── 执行 CRUD 计划 + 行级重放 ────────────────────────────────────────────────
+  // 主循环按计划顺序跑一遍；`commitCrud` 是**唯一**的落账点（rows 与 dump 同步 upsert），
+  // 保证「同一 (file, lang) 只有一行」这条不变式在重放路径上同样成立。
+  const crudEntryByKey = new Map(planOrdered.map((e) => [`${e.file}|${e.lang}`, e]))
+  const crudRowIndex = new Map()
+  const crudAttempts = []
+  function commitCrud(entry, out) {
+    const key = `${entry.file}|${entry.lang}`
+    if (crudRowIndex.has(key)) rows[crudRowIndex.get(key)] = out.row
+    else {
+      crudRowIndex.set(key, rows.length)
+      rows.push(out.row)
+    }
+    dump.write(out.dumpEntry)
+  }
+  for (const entry of planOrdered) {
+    const out = await runCrudEntry(entry)
+    commitCrud(entry, out)
+    crudAttempts.push({ key: `${entry.file}|${entry.lang}`, error: out.row.error, errorKind: out.row.errorKind ?? null })
+  }
+  // 重放（`eval/replay.mjs` 定义策略）：只补「没测到」的行、只补一遍、死中继即停。
+  // 探针不重放 —— 探针的价值恰恰是**如实暴露**抖动，重放会把它抹平。
+  const replayStats = { crud: null, fragments: null }
+  if (!PROBE && crudAttempts.length) {
+    const plan = planReplay(crudAttempts, { isNotMeasured })
+    if (plan.targets.length) {
+      console.log(
+        `[eval:llm] 行级重放：${plan.targets.length} 行没测到，补跑一遍` +
+          `（模型答错的 ${plan.skippedModelFailure} 行是成绩，不重放` +
+          `${plan.skippedOverCap ? `；超上限 ${plan.skippedOverCap} 行` : ''}）`
+      )
+      let recovered = 0
+      let consecutive = 0
+      let aborted = false
+      for (const key of plan.targets) {
+        const entry = crudEntryByKey.get(key)
+        const out = await runCrudEntry(entry, { replay: true })
+        // 重放行落盘时带 `replay: true`：读回时同一 (kind,file,lang) 后写覆盖先写
+        // （见 eval/dump.mjs readDump），故分母不会因重放变大。
+        out.dumpEntry.replay = true
+        commitCrud(entry, out)
+        if (out.row.error) {
+          consecutive++
+          if (shouldAbortReplay(consecutive)) {
+            aborted = true
+            console.warn(`[eval:llm] 重放连续 ${consecutive} 行仍未测到 —— 中继不是抖动，停止重放`)
+            break
+          }
+        } else {
+          recovered++
+          consecutive = 0
+        }
+      }
+      replayStats.crud = summarizeReplay({
+        attempted: plan.targets.length,
+        recovered,
+        aborted,
+        skippedModelFailure: plan.skippedModelFailure,
+        skippedOverCap: plan.skippedOverCap,
+      })
+      console.log(
+        `[eval:llm] 重放结果：${recovered}/${plan.targets.length} 行补测成功` +
+          `（仍没测到 ${plan.targets.length - recovered}；阈值 ${REPLAY_ABORT_AFTER}）` +
+          `${aborted ? ' —— 已因中继持续不通提前停止' : ''}`
+      )
+      // 重放成功的行也要进类型腿候选；`id` 去重（后写覆盖先写，与 rows 同构）。
+      if (recovered) {
+        const uniq = new Map(tcCandidates.map((c) => [c.id, c]))
+        tcCandidates.splice(0, tcCandidates.length, ...uniq.values())
       }
     }
   }
+
 
   // ── 片段场景（table / form / dialog）：**观测**准确率 ─────────────────────────
   // 每条用例一次「NL → 工具入参」：系统 prompt 按场景取捕获的真实工具描述，
@@ -713,8 +796,12 @@ async function main() {
     }
   }
   const fragmentRows = []
-  for (const { file, scene, raw } of fragmentCases) {
-    process.stdout.write(`[eval:llm] ${file} [frag:${scene}] … `)
+  /**
+   * 跑一条片段用例，**返回**结果而不直接落账（理由同 `runCrudEntry`：重放要按 key 覆盖）。
+   */
+  async function runFragmentEntry({ file, scene, raw }, { replay = false } = {}) {
+    const out = { row: null, dumpEntry: null }
+    process.stdout.write(`[eval:llm] ${file} [frag:${scene}] … ${replay ? '(replay) ' : ''}`)
     const gold = fragmentInput({ raw })
     const mask = {
       pinnedDims: Array.isArray(raw.pinnedDims) ? raw.pinnedDims : [],
@@ -755,7 +842,7 @@ async function main() {
       const dimMisses = Object.entries(s.byDim)
         .filter(([, v]) => v.applicable && !v.pass)
         .map(([k]) => k)
-      fragmentRows.push({
+      out.row = {
         file,
         scene,
         compiles,
@@ -768,9 +855,9 @@ async function main() {
         score: s,
         dimMisses,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
-      })
+      }
       // 片段 likewise：gold + mask + pred 足以离线重算片段 scoped / 维度。
-      dump.write({
+      out.dumpEntry = {
         kind: 'fragment',
         file,
         scene,
@@ -783,7 +870,7 @@ async function main() {
         error: null,
         errorKind: null,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
-      })
+      }
       console.log(
         `core=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}` +
           ` stated=${s.exactIntentStated ? 'ok' : 'X'}` +
@@ -802,7 +889,7 @@ async function main() {
       }
     } catch (err) {
       const errorKind = err?.kind ?? null
-      fragmentRows.push({
+      out.row = {
         file,
         scene,
         compiles: false,
@@ -815,8 +902,8 @@ async function main() {
         score: null,
         dimMisses: [],
         fewshotDerived: FEWSHOT_DERIVED.has(file),
-      })
-      dump.write({
+      }
+      out.dumpEntry = {
         kind: 'fragment',
         file,
         scene,
@@ -829,8 +916,71 @@ async function main() {
         error: err.message,
         errorKind,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
-      })
+      }
       console.log(`ERROR(${errorKind ?? 'unknown'}) — ${err.message.split('\n')[0]}`)
+    }
+    return out
+  }
+
+  // ── 执行片段计划 + 行级重放 ──────────────────────────────────────────────────
+  // 与 CRUD 腿同构：`commitFragment` 是唯一落账点（`fragmentRows` 与 dump 同步 upsert），
+  // 重放走同一条路径，故「同一用例只有一行」在两条腿上都是不变式。
+  const fragmentEntryByKey = new Map(fragmentCases.map((c) => [c.file, c]))
+  const fragmentRowIndex = new Map()
+  const fragmentAttempts = []
+  function commitFragment(entry, out) {
+    if (fragmentRowIndex.has(entry.file)) fragmentRows[fragmentRowIndex.get(entry.file)] = out.row
+    else {
+      fragmentRowIndex.set(entry.file, fragmentRows.length)
+      fragmentRows.push(out.row)
+    }
+    dump.write(out.dumpEntry)
+  }
+  for (const entry of fragmentCases) {
+    const out = await runFragmentEntry(entry)
+    commitFragment(entry, out)
+    fragmentAttempts.push({ key: entry.file, error: out.row.error, errorKind: out.row.errorKind ?? null })
+  }
+  if (!PROBE && fragmentAttempts.length) {
+    const plan = planReplay(fragmentAttempts, { isNotMeasured })
+    if (plan.targets.length) {
+      console.log(
+        `[eval:llm] 片段腿行级重放：${plan.targets.length} 行没测到，补跑一遍` +
+          `（模型答错的 ${plan.skippedModelFailure} 行是成绩，不重放` +
+          `${plan.skippedOverCap ? `；超上限 ${plan.skippedOverCap} 行` : ''}）`
+      )
+      let recovered = 0
+      let consecutive = 0
+      let aborted = false
+      for (const key of plan.targets) {
+        const entry = fragmentEntryByKey.get(key)
+        const out = await runFragmentEntry(entry, { replay: true })
+        out.dumpEntry.replay = true
+        commitFragment(entry, out)
+        if (out.row.error) {
+          consecutive++
+          if (shouldAbortReplay(consecutive)) {
+            aborted = true
+            console.warn(`[eval:llm] 片段腿重放连续 ${consecutive} 行仍未测到 —— 中继不是抖动，停止重放`)
+            break
+          }
+        } else {
+          recovered++
+          consecutive = 0
+        }
+      }
+      replayStats.fragments = summarizeReplay({
+        attempted: plan.targets.length,
+        recovered,
+        aborted,
+        skippedModelFailure: plan.skippedModelFailure,
+        skippedOverCap: plan.skippedOverCap,
+      })
+      console.log(
+        `[eval:llm] 片段腿重放结果：${recovered}/${plan.targets.length} 行补测成功` +
+          `（仍没测到 ${plan.targets.length - recovered}）` +
+          `${aborted ? ' —— 已因中继持续不通提前停止' : ''}`
+      )
     }
   }
 
@@ -1467,6 +1617,20 @@ async function main() {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
   }
 
+  // 行级重放只在这条腿**真有**没测到的行时才打印 —— 正常批次不添噪声（null ⟹ 无需重放）。
+  for (const [leg, label] of [
+    ['crud', 'CRUD'],
+    ['fragments', '片段腿'],
+  ]) {
+    const r = replayStats[leg]
+    if (!r) continue
+    console.log(
+      `  行级重放（${label}）：attempted ${r.attempted} · recovered ${r.recovered}` +
+        ` · still unmeasured ${r.stillUnmeasured} · skipped model-failure ${r.skippedModelFailure}` +
+        `${r.aborted ? ' · ABORTED（中继持续不通）' : ''}`
+    )
+  }
+
   // 片段场景（AI-SCENE-COVERAGE §1.2）。**准确率仍分腿报告**：95% 定义是用户对 CRUD
   // 语料拍的板，片段塞进 CRUD 分母会把两个回归信号都稀释。但 AN-18 起**片段自己的**
   // 编译门与 scoped 地板进 `passed` / exit code —— 片段腿红了，夜间就红。
@@ -1631,6 +1795,13 @@ async function main() {
     // 恢复后测到的，跑批总时长里包含这段等待 —— 不属于模型的耗时，读「每行几秒」时必须剔除。
     outageWaits: OUTAGE_WAITS,
     outageWaitMs: OUTAGE_WAIT_MS,
+    // 行级重放（2026-10-29）：主循环跑完后把**没测到**的行补跑一遍（只一遍、上限
+    // REPLAY_MAX_DEFAULT、连续 REPLAY_ABORT_AFTER 行仍失败即停）。与 `transportRetries` /
+    // `outageWaits` 互补：那两个记「抖动被重试救回」，这个记「抖完之后仍丢掉的整行被补回来」。
+    // 它不改变分母 —— 重放行在 dump 里后写覆盖先写（`eval/dump.mjs` readDump），在内存里按 key
+    // upsert（`commitCrud` / `commitFragment`）。某一腿为 null ⟹ 该腿本次无需重放（正常情况，
+    // 不是「重放坏了」）；两者皆 null 时本字段本身仍是对象，老产物则没有这个键。
+    replay: { crud: replayStats.crud, fragments: replayStats.fragments },
     gatedRows: { lang: 'zh', rows: zhRows.length, errored: notMeasuredIn(zhRows) },
     observedRows: { lang: 'en', rows: enRows.length, errored: notMeasuredIn(enRows) },
     target: TARGET_ACCURACY,

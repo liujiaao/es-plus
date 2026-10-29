@@ -62,6 +62,11 @@ const worse = { ...raw.config, fields: raw.config.fields.slice(1) }
 const dir = mkdtempSync(join(tmpdir(), 'esplus-rescore-'))
 try {
   const dumpPath = join(dir, 'pred.jsonl')
+  // 三条**不同**用例（同一份 gold，三种产出：完美 / 缺字段 / 没测到）。
+  // 它们必须有不同的 `file`：dump 的读回语义是「同一 (kind, file, lang) 后写覆盖先写」
+  // （行级重放要按 key 覆盖，见 eval/dump.mjs 的 readDump）。用同一个 file 写三行会被正确
+  // 地去重成一行 —— 那是复用同一把钥匙，不是复算的本意。
+  const fileOf = (tag) => picked.file.replace(/\.json$/, `.${tag}.json`)
   const lines = [
     {
       kind: 'meta',
@@ -73,9 +78,9 @@ try {
       fixedFieldsUsed: false,
       convergeK: 3,
     },
-    { kind: 'crud', file: picked.file, lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: gold, turns: [], compiles: true, noThrow: true, compileError: null, error: null, errorKind: null },
-    { kind: 'crud', file: picked.file, lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: worse, turns: [], compiles: true, noThrow: true, compileError: null, error: null, errorKind: null },
-    { kind: 'crud', file: picked.file, lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: null, turns: [], compiles: false, noThrow: true, compileError: null, error: 'boom', errorKind: 'model-failure' },
+    { kind: 'crud', file: fileOf('gold'), lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: gold, turns: [], compiles: true, noThrow: true, compileError: null, error: null, errorKind: null },
+    { kind: 'crud', file: fileOf('worse'), lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: worse, turns: [], compiles: true, noThrow: true, compileError: null, error: null, errorKind: null },
+    { kind: 'crud', file: fileOf('error'), lang: 'zh', gold, mask, fewshotDerived: false, convergesBy: null, hasRefinements: false, turn0: null, turns: [], compiles: false, noThrow: true, compileError: null, error: 'boom', errorKind: 'model-failure' },
   ]
   writeFileSync(dumpPath, lines.map((l) => JSON.stringify(l)).join('\n') + '\n')
 
