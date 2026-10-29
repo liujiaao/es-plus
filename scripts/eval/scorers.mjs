@@ -255,6 +255,45 @@ export function projectExpandConfig(gold, pred) {
   return { gold: g, pred: p }
 }
 
+// ── editConfig：省略即默认值 + 展示开关不测量（A2 的同族问题）────────────────
+//
+// 两层公平问题，都是「模型与 gold 都对，写法不同」：
+//   1. **省略即默认**。schema 与系统 prompt 都写明 `trigger` 缺省 `click`、`mode` 缺省 `cell`，
+//      vxe 的 `isEnableConf(conf)` 是 `conf && conf.enabled !== false` ⟹ `enabled` 缺省为真。
+//      于是 gold `{mode:'cell'}` 与 pred `{trigger:'click',mode:'cell'}` 是**同一份配置**，
+//      原文深比较却判负（不是模型写错，是它把默认值写了出来）。
+//      这与 `inQuery` 默认 `true` 的陷阱同构 —— 都是「省略」与「显式默认值」被当成不同东西。
+//   2. **展示开关不该被测量**。`showStatus/showUpdateStatus/showInsertStatus/autoClear` 只控制
+//      vxe 的状态标记与重编辑时清值，NL 从不陈述（C 阶段 102 行 gold 写了 `showStatus:true`，
+//      NL 一个字没提）⟹ 按装饰键处理：任一侧没写就不比。
+//
+// 判据表与投影单一源；`scorers.test.mjs` 的键白名单会强制为新键做分类。
+export const EDIT_CONFIG_KEY_CLASS = Object.freeze({
+  trigger: 'structural',
+  mode: 'structural',
+  enabled: 'structural',
+  showStatus: 'decoration',
+  showUpdateStatus: 'decoration',
+  showInsertStatus: 'decoration',
+  autoClear: 'decoration',
+})
+const EDIT_CONFIG_DEFAULTS = Object.freeze({ trigger: 'click', mode: 'cell', enabled: true })
+const EDIT_CONFIG_DECORATION_KEYS = keysOf(EDIT_CONFIG_KEY_CLASS, 'decoration')
+
+/** editConfig 的投影副本（不改入参）：两侧都填默认值，再按装饰键规则豁免。 */
+export function projectEditConfig(gold, pred) {
+  const fill = (c) => {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return c ?? null
+    const out = { ...c }
+    for (const [k, v] of Object.entries(EDIT_CONFIG_DEFAULTS)) if (out[k] === undefined) out[k] = v
+    return out
+  }
+  const g = fill(gold)
+  const p = fill(pred)
+  if (g && p) dropIfEitherSideMissing(g, p, EDIT_CONFIG_DECORATION_KEYS)
+  return { gold: g, pred: p }
+}
+
 export function f1(goldSet, predSet) {
   const tp = [...goldSet].filter((x) => predSet.has(x)).length
   const fp = predSet.size - tp
@@ -467,10 +506,9 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     return { want: canonicalView(gold.treeConfig), got: canonicalView(pred.treeConfig) }
   }
   if (dim === 'editConfig') {
-    return {
-      want: canonicalView(gold.tableOptions?.editConfig),
-      got: canonicalView(pred.tableOptions?.editConfig),
-    }
+    // 与 editConfig 维度同源：填默认值 + 装饰键豁免后的副本才是判定依据。
+    const proj = projectEditConfig(gold.tableOptions?.editConfig, pred.tableOptions?.editConfig)
+    return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
   if (dim === 'columns') {
     // 与 columnsEqual 同源：投影后的副本才是判定依据，否则装饰键豁免会让描述与结果打架。
@@ -729,12 +767,17 @@ export const CAPABILITY_SCORERS = [
     pass: (g, p) => eq(g.treeConfig ?? null, p.treeConfig ?? null),
   },
   {
-    // vxe 行内编辑开关（AI-09 子项④）：tableOptions.editConfig 整体深等值。trigger/mode/
-    // showStatus 等都是行为契约，「给了 editConfig 但进入方式或模式不对」不算命中。
+    // vxe 行内编辑开关（AI-09 子项④）：tableOptions.editConfig 按**投影**后等值。
+    // trigger/mode/enabled 的**省略**等价于默认值（schema 与 prompt 都写明 click / cell；
+    // vxe 的 isEnableConf 是 `enabled !== false`），show*/autoClear 是 NL 从不陈述的展示开关。
+    // 其余键、以及 trigger/mode 的**取值**仍是行为契约：写错照旧判负。
     // （列级 editRender 已由 columns 维度整体深等覆盖。）仅当 gold 声明时才 applicable。
     key: 'editConfig',
     applicable: (g) => g.tableOptions?.editConfig != null,
-    pass: (g, p) => eq(g.tableOptions?.editConfig ?? null, p.tableOptions?.editConfig ?? null),
+    pass: (g, p) => {
+      const proj = projectEditConfig(g.tableOptions?.editConfig, p.tableOptions?.editConfig)
+      return eq(proj.gold ?? null, proj.pred ?? null)
+    },
   },
   {
     // 声明式合并单元格（AI-23）：顶层 mergeConfig 整体深等值。rowsBy 的**列集合与顺序**都是

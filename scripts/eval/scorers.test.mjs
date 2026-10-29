@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
-import { CAPABILITY_SCORERS, scoreAll, describeDimMiss, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95, COLUMN_KEY_CLASS, EDIT_RENDER_KEY_CLASS, EXPAND_KEY_CLASS } from './scorers.mjs'
+import { CAPABILITY_SCORERS, scoreAll, describeDimMiss, isValidPinnedDim, parsePinnedDim, firstConvergedTurn, summarizeConvergence, meets95Definition, summarize95, COLUMN_KEY_CLASS, EDIT_RENDER_KEY_CLASS, EXPAND_KEY_CLASS, EDIT_CONFIG_KEY_CLASS } from './scorers.mjs'
 import { isCrudCase } from './scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -531,6 +531,31 @@ console.log('meta-eval: editConfig (vxe inline editing)')
   const predMissing = { fields: gold.fields, actions: gold.actions }
   check(scoreAll(gold, predMissing).byCapability.editConfig.pass === false, 'editConfig: pred 漏发整段应判负')
 
+  // 省略 ≡ 默认值（schema/prompt 写明 trigger 缺省 click、mode 缺省 cell；vxe 的
+  // isEnableConf 是 `enabled !== false` ⟹ 缺省为真）。C 阶段 101/105/106/96 四行就是
+  // 「模型把默认值写了出来」被判负 —— 那是尺子错，不是模型错。
+  {
+    const withEc = (e) => ({ fields: [{ prop: 'name', label: '名称', formtype: 'Input' }], actions: ['add'], tableOptions: { editConfig: e } })
+    const pairs = [
+      ['gold 省略 trigger', { mode: 'cell' }, { trigger: 'click', mode: 'cell' }],
+      ['gold 省略 mode', { trigger: 'click' }, { trigger: 'click', mode: 'cell' }],
+      ['gold 省略 enabled', { mode: 'row' }, { mode: 'row', enabled: true }],
+      ['gold 空对象', {}, { trigger: 'click', mode: 'cell', enabled: true }],
+    ]
+    for (const [label, g, p] of pairs) {
+      check(scoreAll(withEc(g), withEc(p)).byCapability.editConfig.pass === true, `editConfig: ${label} ⟹ 省略等价于默认值（应判正）`)
+      check(scoreAll(withEc(p), withEc(g)).byCapability.editConfig.pass === true, `editConfig: ${label} 应对称`)
+    }
+    // 默认值只在**省略**时补：显式写成非默认值仍是契约差异
+    check(scoreAll(withEc({ mode: 'row' }), withEc({ mode: 'row', enabled: false })).byCapability.editConfig.pass === false, 'editConfig: enabled:false vs 省略应判负（关掉编辑是行为差异）')
+    check(scoreAll(withEc({ trigger: 'dblclick' }), withEc({})).byCapability.editConfig.pass === false, 'editConfig: 双击 vs 省略(默认单击) 应判负')
+
+    // 展示开关（show*/autoClear）是装饰键：任一侧没写就不比，两侧都写才比值
+    check(scoreAll(withEc({ mode: 'cell', showStatus: true }), withEc({ mode: 'cell' })).byCapability.editConfig.pass === true, 'editConfig: gold 写 showStatus、pred 未写应判正（NL 从不陈述它）')
+    check(scoreAll(withEc({ mode: 'cell' }), withEc({ mode: 'cell', showStatus: true })).byCapability.editConfig.pass === true, 'editConfig: pred 写 showStatus、gold 未写应判正（对称）')
+    check(scoreAll(withEc({ mode: 'cell', showStatus: true }), withEc({ mode: 'cell', showStatus: false })).byCapability.editConfig.pass === false, 'editConfig: 两侧都写 showStatus 且不同应判负（写错仍扣）')
+  }
+
   // gold 无 editConfig → 维度不 applicable（无行内编辑，不参与记分）
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(plain, plain).byCapability.editConfig.applicable === false, 'editConfig: gold 未声明时维度不 applicable')
@@ -682,6 +707,15 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
       check(EXPAND_KEY_CLASS[k] !== undefined, `${f}: expandConfig 出现未分类的键 "${k}"（请在 EXPAND_KEY_CLASS 里分类）`)
     }
 
+    // editConfig 键分类白名单（与 columns 同规）：出现未分类的键就红 ——
+    // 新键（尤其来自 vxe 类型扩充）必须显式判为结构键或装饰键，否则它会悄悄把行钉成不可过。
+    for (const k of Object.keys(g.tableOptions?.editConfig ?? {})) {
+      check(
+        EDIT_CONFIG_KEY_CLASS[k] !== undefined,
+        `${f}: tableOptions.editConfig 出现未分类的键 "${k}"（请在 scorers.mjs 的 EDIT_CONFIG_KEY_CLASS 里分类）`
+      )
+    }
+
     // 不可测量键的边界守卫（expandConfig.title）：它在记分时被无条件丢弃，前提是
     // **NL 从不陈述它**。若哪天语料在引号里点名了展开区标题（「展开区标题写处理信息」），
     // 那条用例就是真的要求这个串 —— 本行必须红，逼作者二选一：要么删掉 title 的期待，
@@ -708,6 +742,11 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
       if (col.expandConfig) for (const k of Object.keys(col.expandConfig)) if (dropUnmeasured(EXPAND_KEY_CLASS[k])) delete col.expandConfig[k]
     })
     for (const k of Object.keys(noDeco.expandConfig ?? {})) if (dropUnmeasured(EXPAND_KEY_CLASS[k])) delete noDeco.expandConfig[k]
+    if (noDeco.tableOptions?.editConfig) {
+      for (const k of Object.keys(noDeco.tableOptions.editConfig)) {
+        if (dropUnmeasured(EDIT_CONFIG_KEY_CLASS[k])) delete noDeco.tableOptions.editConfig[k]
+      }
+    }
     const stripped = StructuredCrudConfigSchema.parse(noDeco)
     const projScore = scoreAll(g, stripped)
     if (g.columns && g.columns.length) {
@@ -715,6 +754,9 @@ console.log('meta-eval: golden-corpus capability coverage + mask legality')
     }
     if (g.expandConfig) {
       check(projScore.byCapability.expandConfig.pass === true, `${f}: 删掉装饰键后 expandConfig 维度未判正（投影有漏）`)
+    }
+    if (g.tableOptions?.editConfig) {
+      check(projScore.byCapability.editConfig.pass === true, `${f}: 删掉展示开关后 editConfig 维度未判正（投影有漏）`)
     }
   }
   const uncovered = Object.entries(applicableCount).filter(([, n]) => n === 0).map(([k]) => k)
@@ -1025,13 +1067,26 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     expectMiss('treeConfig', g, p, 'expandAll 被改')
   }
 
-  // editConfig：判据是整对象深等值 —— 这正是生产日志里「want === got 却 miss」的形状：
-  // 打印器只印 trigger/mode，而模型多写了一个键（或少写了），深等值因此不成立。
+  // editConfig：判据是**投影后**的等值（填默认值 + 展示开关豁免）—— 打印器必须同源。
+  // 这条测试原本钉的是「模型多写一个未锁定的键 = miss」，2026-10-29 判定那条语义是错的：
+  // `showStatus` 是 NL 从不陈述的展示开关（C 阶段 102 行 gold 写了它、NL 一个字没提），
+  // 拿它罚模型等于罚「猜不到作者偏好」。改成：多写展示开关判正，改 mode 判负。
   expectHit('editConfig', base, clone(base), 'gold-vs-gold')
   {
     const p = clone(base)
     p.tableOptions.editConfig.showStatus = true
-    expectMiss('editConfig', base, p, '模型多写了一个未锁定的键（日志曾对此打出两侧相同）')
+    expectHit('editConfig', base, p, 'pred 多写展示开关 showStatus（应豁免）')
+  }
+  {
+    const p = clone(base)
+    p.tableOptions.editConfig.mode = 'row'
+    expectMiss('editConfig', base, p, 'mode 被改（cell→row 是行为差异）')
+  }
+  {
+    // 省略 vs 默认值：判正，且打印器的投影必须两边都是填过默认值的形态
+    const g = clone(base)
+    delete g.tableOptions.editConfig.trigger
+    expectHit('editConfig', g, clone(base), 'gold 省略 trigger（默认 click）')
   }
 
   // columns：62 条 miss 在日志里**完全无声**（没有投影，也没有 prop 级差异输出）。
