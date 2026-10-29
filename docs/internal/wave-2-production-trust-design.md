@@ -5,6 +5,8 @@
 > **（P2）95% 准确率——先把口径改良定义，再在 schema-grounded 语料上诚实逼近。**
 > 本文是技术实施方案，不是公开文案。具体 AI-xx roadmap 映射在落地时同步进 [ROADMAP.md](../../packages/mcp-server/ROADMAP.md)。
 >
+> **补记（2026-10-29）：** A2' 的第三处宿主已交付 —— `es-plus ingest <file>` 子命令（原「CLI 延后」条目），并把 `buildIngestDraft` 下沉到 shared 与 MCP 共用，详见 §4.2。
+>
 > **状态（2026-10-12）：🚧 实施中。PR-C1 已落地并自测通过**（见 §2 末）；**PR-A1' 已收尾**（scoped 指标 + 掩码摄取 + eval 并列报告 + membership 拆成 inQuery/inTable/inForm；全量语料掩码 **25/25 标注完成**，`check:scorers` + `test:golden` 双绿，见 §3.5）；**PR-A2' 已落地**（引擎 + MCP 工具两步，CLI 延后；`schema-ingest.ts` + `defaultFormtypeForType` + `ingest_schema` 工具，shared 422 测试 / mcp 112 测试 + 覆盖率 branches 85.9≥77 全绿，golden 25/25、fragment 78/78 无回归，见 §4 末）；**PR-A3' 已落地**（B3 精修回环 + B4 pin；`diffConfig` + `refine_config`「确定性 validate+diff」工具 + eval K 轮收敛驱动 + `firstConvergedTurn`/`summarizeConvergence` + convergence@K 指标；两处偏离 §5 字面已评审拍板：工具不喂模型、只认 scripted refinements；shared 430 测试 / mcp-server 116 测试 + `check:scorers` + `test:golden` 26/26 全绿，见 §5 末）；C2 待做。A3' 带 key 付费复测已跑（`pa/claude-opus-4-8`）；**PR-B3'→B3'' 已把空载的精修环填实**——统一 ∨ 指标 + 结构性 miss 铰链语料（27/28/29）令精修环首次被真实模型走到：turn-0 scoped=X → 第 1 轮收敛，convergence@3 heldout 100%、mean turns **0.00→0.75**、95%-def heldout **73.9%（17/23）**，见 §5.3；**PR-C2（A3）已落地**（确定性前门校验：shared `validateAndRepair` + 两个生成前门生成前过闸、非法回结构化 per-issue 错误；三处偏离 §6 字面已评审拍板：前门不含模型回灌循环、不按默认改写 config、assertValidConfig 早已被 catch；shared 443 测试 / mcp-server 118 测试 + typecheck/lint/golden/fragment/scorers 全绿，见 §6 末）；A4 沙箱 build-repair 独立后续 PR。
 >
 > **复核纠正（落地时发现，已改）：** 原 §2.2 写「esbuild 已在仓库依赖链里，不新增运行时依赖」——**错**。实测 esbuild 只在**根仓库**（golden/smoke 脚本），三个发布包（shared/cli/mcp-server）都没有它。经确认采 **A 方案：给 `@es-plus/shared` 加 esbuild 依赖**，做真不变量（发射前校验与 CI 发射后校验同款解析器、零漂移）。另：`generate_crud` 的 `mode` 默认**本就是 `schema`**，A1 实际只剩「选 sfc 加保真度警告」。
@@ -161,7 +163,7 @@ P2 准确率轨：                            ▼                    ▼
 
 **✅ 已定夺（membership 粒度，用户决策）：** 字段级 membership 拆成 `inQuery:X` / `inTable:X` / `inForm:X` 三个独立 token（原捆绑式 `membership:X` 仍保留为"三者同时相等"的整字段判定）。拆分评分器已落地 + 自测（翻 `amount.inQuery` 翻红、翻同字段 `amount.inTable` 免责）。**但**因上述"无默认归一化"的评分器事实，本批 22 条标注**实际未使用** inQuery/inTable/inForm 分量（见上一节第 3 条）——拆分是把能力备好，钉不钉由"评分器能否忠实捕捉"这条更硬的线决定。此偏差已据实记录，非回避。
 
-## 4. PR-A2' · B1 schema 摄取层（锚定 propSet）  ✅ 已落地（引擎 + MCP 工具）
+## 4. PR-A2' · B1 schema 摄取层（锚定 propSet）  ✅ 已落地（引擎 + MCP 工具 + CLI）
 
 > 目标：补「四大缺口」里最大的一块——让字段来自**机器可读契约**而非散文推断。这是让 scoped 口径在**真实生产**中立得住的前提（B2 让它在语料里立得住）。
 
@@ -178,7 +180,7 @@ P2 准确率轨：                            ▼                    ▼
 - **新增** `packages/shared/src/schema-ingest.ts`：`ingestSchema(text, kind)` + `defaultFormtypeForType(type)`。无运行时新依赖（OpenAPI/JSON Schema 为 `JSON.parse` + 遍历；sample-json 同理；ts-interface/sql-ddl 可后置到用 esbuild/轻量正则，先 stub；**两类已于 AN-20 用轻量扫描器落地**）。
 - **~~改~~（落地修正：不改）** [ai-nl-to-config-prompt.ts](../../packages/shared/src/ai-nl-to-config-prompt.ts) 的 formtype 规则段。**源码核实后发现这是两条不同的轴**：prompt / 字段 `.describe` 教的是**按字段含义**推断（status→Select、头像→Upload），而 `defaultFormtypeForType` 是**按数据类型**推断（integer→InputNumber）。强行让语义 prompt「引用」数据类型表是错配。改为：`defaultFormtypeForType` 作为**数据类型轴**的单一事实源（供摄取层用），语义 prompt 保持不动；真正可守护的一致性 = `defaultFormtypeForType` **对输入域全覆盖且输出恒 ∈ `VALID_FORM_TYPES`**（无 undefined 落空），这正面堵住 Wave-1「fall-through 教错」坑。该不变量以 **vitest 全覆盖断言**实现（见 §4.3），而非 `check:*.mjs`——它本质是代码执行属性（既有 check 脚本都是文本巡检，验不了全覆盖），且 repo 刚修过的 shared-build 排序 CI 坑让「跑脚本前须先 build」的新门禁得不偿失。
 - **新增** MCP 工具 `ingest_schema`（[`packages/mcp-server/src/tools/ingest-schema.ts`](../../packages/mcp-server/src/tools/ingest-schema.ts)，薄封装）：入参 `{ text, kind, name?, apiUrl? }`，内部 `ingestSchema → composeCrudConfig(table/form=摄取字段)`，出参一份**草拟好的 `StructuredCrudConfig` JSON + 合并告警**（供宿主 LLM 审阅修订后再调 `generate_crud_from_config`，占位 name/apiUrl 显式告警）。注册进 [tools/index.ts](../../packages/mcp-server/src/tools/index.ts)。
-- **延后** CLI 子命令 `es-plus ingest <file>`（本 PR 决策：引擎 + MCP 工具先行，CLI 另开小步——它只是薄壳）。
+- **~~延后~~ 已交付（2026-10-29）** CLI 子命令 `es-plus ingest <file>`。当时判断「它只是薄壳」成立，但薄壳里的三件事必须做对，否则壳比核更危险：①**stdout 只放草稿 JSON**（推断说明/告警/下一步全走 stderr，`> config.json` 与 `-o` 产出同字节）；②**形态推断**（`.sql`/`.ts`/`.yaml` 看扩展名，JSON 看顶层 `openapi`/`swagger`/`$schema`/`type:"object"+properties`，`-k` 可覆盖、拼错即报错不回落）；③**失败即非零**（文件不存在 / kind 非法 / 抽不到字段）。随之把 `buildIngestDraft` 从 mcp-server **下沉到 shared**（`src/ingest-draft.ts`），MCP 改为转出同一实现 —— 两个宿主的占位符与告警文案从此不可能漂。守卫：shared 6 例 + CLI 20 例（含 stdout 纯度负测）。
 - **（可选、更强）** `detect_project_target` 的对偶：日后把「离线文档解析」升级为「活 introspection」（直连运行中的后端 `/openapi.json` 或 DB），作为 B1 的 v2，不在本 PR。
 
 ### 4.3 新增/强化测试

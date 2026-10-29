@@ -111,6 +111,7 @@ virtualScroll / target / mode；且仓库里**没有** committed 的 `last-accur
 
 ROADMAP backlog 此前未追踪，补记。这批工具不改模型、专治「敢不敢说生产可用」，并占回「Wave 2」号位（消除与下方 schema 表达力的撞号）：
 - `ingest_schema`（openapi / jsonSchema / sample-json / ts-interface / sql-ddl → 草稿 config）
+  - **2026-10-29 补记**：CLI 侧的同一能力已交付 `es-plus ingest <file>`；草稿逻辑下沉到 shared（`src/ingest-draft.ts`），MCP 转出同一实现，两处占位符/告警文案不再分叉。
 - `generate_crud_from_config` 前门 + `validateAndRepair`（shared，Zod 阻断式校验，只判不改、无模型回灌）
 - `refine_config`（确定性 validate + diff，不喂模型，多轮精修）
 - `validate_config`（structured-crud → Zod；其余 → Ajv）
