@@ -740,7 +740,9 @@ function handleBtnClick(key, payload) {
 - `dialogFormItems` → 自动生成 `dialogs: { add: {...}, edit: {...} }`
 :::
 
-更多 EsCrudPage 详细 API 请参阅 [EsCrudPage 完整文档](/components/es-crud-page)。
+更多 EsCrudPage 详细 API 请参阅 [EsCrudPage 完整文档](/components/es-crud-page)；
+想看「按什么顺序把整页配出来」（按钮-弹窗绑定、动态标题、程序化控制、权限、完整 schema 类型），
+见 [整页 CRUD 指南](/guide/crud-page)。
 
 ---
 
@@ -749,5 +751,6 @@ function handleBtnClick(key, payload) {
 - [EsForm 完整 API](/components/es-form) — 所有属性、事件、方法
 - [EsTable 完整 API](/components/es-table) — 所有属性、事件、方法
 - [EsCrudPage 完整 API](/components/es-crud-page) — Schema 驱动 CRUD 页面
+- [整页 CRUD 指南](/guide/crud-page) — 一份 schema 拼出整页：按钮-弹窗绑定、动态标题、程序化控制
 - [useDialog 高级用法](/advanced/use-dialog) — 嵌套弹窗、JSX 渲染
 - [迁移指南](/guide/migration) — 从 Element Plus 迁移到 ES-Plus

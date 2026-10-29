@@ -233,7 +233,7 @@ const scrollToTop = () => {
 
 // 上/下篇顺序与侧边栏（AppSidebar）分组阅读顺序一致，而非 docsData 对象键序
 const NAV_ORDER = [
-  'getting-started', 'installation', 'usage', 'why-es-plus',
+  'getting-started', 'installation', 'usage', 'crud-page', 'why-es-plus',
   'mcp-server', 'cli',
   'vue2', 'adapter-antdv', 'migration', 'permission-i18n', 'schema-setup', 'changelog',
   'faq', 'comparison', 'benchmark', 'roadmap', 'vue2-eol', 'contributing',

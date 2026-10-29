@@ -370,6 +370,7 @@ dialogs: {
 | `delete` | `(row: Record<string, unknown>)` | 删除按钮点击（向后兼容） |
 | `view` | `(row: Record<string, unknown>)` | 查看按钮点击（向后兼容） |
 | `export` | `(model: Record<string, unknown>)` | 导出按钮点击（向后兼容） |
+| `cell-edit` | `({ row, prop, value, oldValue })` | vxe 行内编辑提交（失焦 / 换行时）：每改一格发一条，未改值不发 |
 
 ---
 

@@ -49,6 +49,10 @@ const sections = [
       { path: '/guide/getting-started', labelKey: 'sidebar.gettingStarted', icon: markRaw(Promotion) },
       { path: '/guide/installation', labelKey: 'sidebar.installation', icon: markRaw(Box) },
       { path: '/guide/usage', labelKey: 'sidebar.usage', icon: markRaw(Reading) },
+      // 整页 CRUD 的完整指南紧跟在「使用」之后：usage 讲的是三个组件各怎么用，
+      // 这一篇讲怎么用一份 schema 把三者拼成整页 —— 顺序即阅读顺序，也与
+      // Doc.vue 的 NAV_ORDER 一致（上一页/下一页按钮按同一顺序走）。
+      { path: '/guide/crud-page', labelKey: 'sidebar.crudPage', icon: markRaw(Document) },
       { path: '/guide/why-es-plus', labelKey: 'sidebar.whyEsPlus', icon: markRaw(StarFilled) },
     ],
   },

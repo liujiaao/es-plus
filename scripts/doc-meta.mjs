@@ -39,6 +39,7 @@ export const DOC_SOURCES = {
     'guide/getting-started': 'es-plus-docs/src/docs/getting-started.md',
     'guide/installation': 'es-plus-docs/src/docs/installation.md',
     'guide/usage': 'es-plus-docs/src/docs/usage.md',
+    'guide/crud-page': 'es-plus-docs/src/docs/crud-page.md',
     'guide/vue2': 'es-plus-docs/src/docs/vue2.md',
     'guide/adapter-antdv': 'es-plus-docs/src/docs/adapter-antdv.md',
     'guide/mcp-server': 'es-plus-docs/src/docs/mcp-server.md',

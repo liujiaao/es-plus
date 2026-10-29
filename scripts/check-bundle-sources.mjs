@@ -542,12 +542,12 @@ function objectLiteralKeys(text, name) {
  * 已知的孤儿正文（磁盘上有、注册表里没有）。**这是一份待办清单，不是允许清单**：
  * 每一项都会被打印出来，新增的孤儿一律判红。
  *
- * `crud-page.md`：626 行的「整页 CRUD」长文，从来没有接进任何注册表 —— 它既不在
- * /guide（没有路由），也不在 /components（那里的 es-crud-page 是另一份 API 页）。
- * 要么接成一篇指南（要同时进侧栏与 NAV_ORDER），要么删掉；性能批次不该顺手决定
- * 信息架构，所以先在这里挂个显式的名字。
+ * 历史记录：`crud-page.md` 曾在这里挂了很久（626 行的「整页 CRUD」长文，从没接进任何
+ * 注册表 —— 既不在 /guide，也不在 /components，那里的 es-crud-page 是另一份 API 页）。
+ * **2026-10-29 已接成指南** `/guide/crud-page`：doc-meta + doc-registry + 侧栏 +
+ * NAV_ORDER + 两种语言的 label 同时补齐。清单恢复为空 —— 空是常态，有名字才是待办。
  */
-const KNOWN_ORPHAN_DOCS = ['crud-page']
+const KNOWN_ORPHAN_DOCS = []
 
 function checkDocContentOnDemand() {
   const before = problems.length

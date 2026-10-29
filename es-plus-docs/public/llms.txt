@@ -13,6 +13,7 @@
 - [Getting Started (English)](https://liujiaao.github.io/es-plus/md/guide/getting-started.en.md): ES-Plus is the configuration layer for admin CRUD: one JSON config describes the query form, table, form and dialogs, and a renderer produces the page — which …
 - [安装](https://liujiaao.github.io/es-plus/md/guide/installation.md): ES-Plus 在 npm 上以多包形式发布。根据使用的 Vue 版本选择对应渲染层：
 - [使用](https://liujiaao.github.io/es-plus/md/guide/usage.md): ES-Plus 提供两种全局配置方式，都能注入 $httpRequest、configQueryFieldOutput、permission、t 等运行时配置：
+- [整页 CRUD（EsCrudPage）](https://liujiaao.github.io/es-plus/md/guide/crud-page.md): EsCrudPage 是基于 EsTable + EsForm + useDialog 封装的高级组件，通过一份 JSON Schema 即可生成完整的查询表单 + 数据表格 + 多弹窗交互页面。
 - [Vue 2 指南](https://liujiaao.github.io/es-plus/md/guide/vue2.md): @es-plus/vue2 是 ES-Plus 的 Vue 2 + Element UI 渲染层，与 Vue 3 版（@es-plus/vue3）共用同一份 JSON 配置 schema。本文聚焦 Vue 2 特有的安装、用法、差异与限制。
 - [Vue 2 Guide (English)](https://liujiaao.github.io/es-plus/md/guide/vue2.en.md): ES-Plus ships a Vue 2 + Element UI render target that consumes the same JSON config as the Vue 3 build. Migrate your stack at your own pace — your columns, for…
 - [Ant Design Vue 适配器](https://liujiaao.github.io/es-plus/md/guide/adapter-antdv.md): @es-plus/adapter-antdv 是 ES-Plus 的 Ant Design Vue 4.x 渲染适配器。它与 @es-plus/vue3（Element Plus 版）共享完全相同的 JSON 配置 Schema，将同一份配置映射为 Ant Design Vue 组件。

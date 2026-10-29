@@ -16,6 +16,7 @@ import { DOC_META } from './doc-meta'
 import gettingStartedMd from '@/docs/getting-started.md?raw'
 import installationMd from '@/docs/installation.md?raw'
 import usageMd from '@/docs/usage.md?raw'
+import crudPageMd from '@/docs/crud-page.md?raw'
 import vue2Md from '@/docs/vue2.md?raw'
 import adapterAntdvMd from '@/docs/adapter-antdv.md?raw'
 import mcpServerMd from '@/docs/mcp-server.md?raw'
@@ -49,6 +50,7 @@ const CONTENT: Record<string, string> = {
   'getting-started': gettingStartedMd,
   'installation': installationMd,
   'usage': usageMd,
+  'crud-page': crudPageMd,
   'vue2': vue2Md,
   'adapter-antdv': adapterAntdvMd,
   'mcp-server': mcpServerMd,

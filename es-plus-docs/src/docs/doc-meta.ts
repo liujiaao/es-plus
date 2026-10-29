@@ -25,6 +25,9 @@ export const DOC_META: Record<string, DocMeta> = {
   'getting-started': { title: '快速开始', titleEn: 'Getting Started', enFile: 'getting-started.en' },
   'installation': { title: '安装' },
   'usage': { title: '使用' },
+  // 整页 CRUD 的完整指南：与 /components/es-crud-page（API 页）分工不同 ——
+  // 那页是「有哪些键」，这页是「按什么顺序把整页配出来」。
+  'crud-page': { title: '整页 CRUD（EsCrudPage）' },
   'vue2': { title: 'Vue 2 指南', titleEn: 'Vue 2 Guide', enFile: 'vue2.en' },
   'adapter-antdv': { title: 'Ant Design Vue 适配器', titleEn: 'Ant Design Vue Adapter' },
   'mcp-server': { title: 'MCP Server', titleEn: 'MCP Server', enFile: 'mcp-server.en' },
