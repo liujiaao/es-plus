@@ -226,10 +226,47 @@ const projectExpandNode = (g, p) => {
   dropIfEitherSideMissing(g, p, EXPAND_DECORATION_KEYS)
 }
 
+/**
+ * 编辑器选项的投影：`options` 按**标签树 + 数量 + 唯一性**比（value 是后端约定，
+ * NL 只给标签），`defaultValue` 先按各自的 options 解析回标签再比。
+ *
+ * 为什么必须同规：`$select` 的 `options` 与字段级 `dataOptions` 是同一件事的两种落点
+ * （一个给单元格编辑器、一个给表单下拉），`value` 的猜中率完全一样。原文对 `dataOptions`
+ * 早已改按标签树比（AN-01），却把 `editRender.options` 留在整数组深等值 ——
+ * 2026-10-27 的 dump 里 106 就是这么被判负的：模型写 `mid`，gold 写 `medium`，
+ * 两边的标签都是「中」。`defaultValue` 同理，它指向的是**选项**，不是 value 字面量。
+ */
+const editRenderOptionView = (opts) => {
+  const vals = optionValues(opts)
+  return {
+    labels: optionLabelTree(opts),
+    count: vals.length,
+    unique: new Set(vals.map(String)).size === vals.length,
+  }
+}
+const editRenderDefaultView = (er) => {
+  if (er.defaultValue === undefined || !Array.isArray(er.options)) return er.defaultValue
+  const hit = flatOptions(er.options).find((o) => String(o.value) === String(er.defaultValue))
+  // 命中选项 ⟹ 用标签代表（value 不可推断）；否则保持原值（可能本就是字面量默认值）。
+  return hit ? { label: hit.label } : er.defaultValue
+}
+const projectEditRender = (g, p) => {
+  // 先解析 defaultValue（依赖原始 options），再替换 options 视图。
+  const gd = editRenderDefaultView(g)
+  const pd = editRenderDefaultView(p)
+  if (Array.isArray(g.options)) g.options = editRenderOptionView(g.options)
+  if (Array.isArray(p.options)) p.options = editRenderOptionView(p.options)
+  if (gd !== undefined) g.defaultValue = gd
+  if (pd !== undefined) p.defaultValue = pd
+}
+
 const projectColumnNode = (g, p) => {
   if (!g || !p || typeof g !== 'object' || typeof p !== 'object') return
   dropIfEitherSideMissing(g, p, COLUMN_DECORATION_KEYS)
-  if (g.editRender && p.editRender) dropIfEitherSideMissing(g.editRender, p.editRender, EDIT_RENDER_DECORATION_KEYS)
+  if (g.editRender && p.editRender) {
+    dropIfEitherSideMissing(g.editRender, p.editRender, EDIT_RENDER_DECORATION_KEYS)
+    projectEditRender(g.editRender, p.editRender)
+  }
   if (g.expandConfig && p.expandConfig) projectExpandNode(g.expandConfig, p.expandConfig)
   // groups 递归：只有两侧元素个数一致时才逐位投影；个数不同是结构差异，原样交给深等值判负。
   if (Array.isArray(g.groups) && Array.isArray(p.groups) && g.groups.length === p.groups.length) {
@@ -244,6 +281,113 @@ export function projectColumns(gold, pred) {
   const p = cloneDeep(pred)
   for (let i = 0; i < g.length; i++) projectColumnNode(g[i], p[i])
   return { gold: g, pred: p }
+}
+
+// ── columns：省略即派生 + 展开列位置不测量 ────────────────────────────────────
+//
+// 两处「模型选了另一种合法写法」被原文判负，都写在 schema / prompt 里，不是模型错：
+//
+// 1. **省略 columns 就是派生列**。schema 原文：`Omit to keep the derived
+//    one-field-one-column behavior.` 生成器 `buildTableColumn` 把 `inTable !== false`
+//    的字段逐个变成列（label/labelKey、width/align/fixed、ellipsis、permissionValue、
+//    dataOptions）。于是「gold 写 columns、pred 省略」与「两侧都写」是同一张表 ——
+//    原文按「数组 vs null」判负，把 61 钉成不可过。
+//
+// 2. **展开列的位置不是契约**。schema 与 prompt 都写明：有顶层 `expandConfig` 而没有
+//    `{type:'expand'}` 列时，生成器会**前置**注入一列（`you do NOT need to add the
+//    expander column yourself`）；显式声明时位置由作者自选（64/74 的 gold 就放在末列）。
+//    ⟹ 展开列**在不在**是契约，**排第几**不是（非数据的前置列本身还受引擎
+//    `LEADING_COLUMN_ORDER` = 选择→序号→展开 约束，作者并不能任意摆）。
+//
+// 派生只复刻 `buildTableColumn` 的**结构键**；装饰键（width/minWidth/align/fixed）照样
+// 带出但投影阶段本来就单侧豁免，带出来只为「两侧都写」时仍比值。
+const LEADING_FLAGS = [
+  ['selection', 'multiSelect'],
+  ['index', 'snIndex'],
+  ['expand', 'expand'],
+]
+
+function derivedColumnOf(field, i18n) {
+  const col = { prop: field.prop }
+  if (field.labelKey) col.labelKey = field.labelKey
+  else if (i18n) col.labelKey = `field.${field.prop}`
+  else col.label = field.label
+  for (const k of ['width', 'minWidth', 'align', 'fixed']) if (field[k] !== undefined) col[k] = field[k]
+  // AN-10：契约键是 `ellipsis`；`showOverflowTooltip` 只是存量写法，派生路径不发。
+  if (field.ellipsis) col.ellipsis = true
+  if (field.permissionValue) col.permissionValue = field.permissionValue
+  if (Array.isArray(field.dataOptions) && field.dataOptions.length) col.dataOptions = field.dataOptions
+  return col
+}
+
+/**
+ * 某一侧的**有效列数组**（与生成器同源）：
+ *   - 声明了非空 `columns` ⟹ 它就是整表列（override 非 merge）；
+ *   - 省略 ⟹ 按 `inTable !== false` 派生，再按 `LEADING_COLUMN_ORDER` 前置缺的非数据列。
+ * 顶层 `expandConfig` 存在而列里没有展开列时，生成器无论走哪条路都会补一列。
+ */
+export function resolveColumns(config) {
+  const cfg = config ?? {}
+  const cols = Array.isArray(cfg.columns) && cfg.columns.length
+    ? cloneDeep(cfg.columns)
+    : (cfg.fields ?? []).filter((f) => f.inTable !== false).map((f) => derivedColumnOf(f, cfg.i18n === true))
+  const declared = new Set(cols.filter((c) => c && LEADING_FLAGS.some(([t]) => t === c.type)).map((c) => c.type))
+  const opts = cfg.tableOptions ?? {}
+  const leading = []
+  for (const [type, flag] of LEADING_FLAGS) {
+    if (opts[flag] !== true || declared.has(type)) continue
+    leading.push({ type })
+  }
+  const out = [...leading, ...cols]
+  if (cfg.expandConfig && !out.some((c) => c && c.type === 'expand')) out.unshift({ type: 'expand' })
+  return out
+}
+
+/**
+ * 顶层 `treeConfig`（跨端窄子集）的投影：**省略即默认值** + 别名归一。
+ *
+ * schema 明写 `childrenField` 默认 `'children'`、`expandAll` 默认 `false`，运行时还把
+ * 弃用别名 `children` 归一成 `childrenField`。于是 `{}`、`{childrenField:'children'}` 与
+ * `{children:'children'}` 是**同一份配置**，原文深比较把它们判成不同写法
+ * （2026-10-27 的 89：NL 就是「子文档放在默认的 children 字段里」，模型写 `{}` 被判负）。
+ * 其余键（vxe 那张宽表里的 transform/rowField/…）原样保留、照常深比较。
+ */
+export function projectTreeConfig(conf) {
+  if (!conf || typeof conf !== 'object') return conf ?? null
+  const out = { ...conf }
+  const childrenField = out.childrenField ?? out.children ?? 'children'
+  delete out.children
+  out.childrenField = childrenField
+  if (out.expandAll === undefined) out.expandAll = false
+  return out
+}
+
+const splitExpandColumn = (cols) => {
+  const rest = []
+  let expand = null
+  for (const c of cols ?? []) {
+    if (c && c.type === 'expand') {
+      if (!expand) expand = c
+      continue // 重复的展开列没有信息量：一处声明即可
+    }
+    rest.push(c)
+  }
+  return { rest, expand }
+}
+
+/**
+ * `columns` 维度的**唯一判定视图**：`{columns: 投影后的数据列, expand: 投影后的展开列|null}`。
+ * pass 与 `describeDimMiss` 都取它 —— `want === got` 当且仅当该维度 pass。
+ */
+export function projectColumnSet(gold, pred) {
+  const gs = splitExpandColumn(resolveColumns(gold))
+  const ps = splitExpandColumn(resolveColumns(pred))
+  const arrow = projectColumns(gs.rest, ps.rest)
+  if (gs.expand && ps.expand) projectColumnNode(gs.expand, ps.expand)
+  return {
+    gold: { columns: arrow.gold, expand: gs.expand ?? null },
+    pred: { columns: arrow.pred, expand: ps.expand ?? null },
+  }
 }
 
 /** expandConfig 的投影副本（不改入参）。只有一侧声明时原样返回，交由深等值判负。 */
@@ -368,7 +512,67 @@ function normDialogBtns(btns) {
 }
 
 /**
- * dialog key 集合相等 ∧ 每个 dialog 的 formItems prop 集合相等 ∧ **AI-27 的底座数据键/声明式底栏**相等。
+ * dialog key 是**作者自选的标识符**，不是 NL 能推断的内容 —— 与字段 `prop` 同理，
+ * 身份应该由「谁打开它」决定：同一个按钮（按 `name`）在 gold 指向 `detail`、在 pred 指向
+ * `view`，是**同一个弹窗**（191 就是这么被判负的）。这里把这层身份对齐补上。
+ *
+ * 三个来源的按钮都算：
+ *   - `toolbarBtns` / `tableBtns` / `operationColumn.btns` 的 `{name, dialogKey}`；
+ *   - 从 `actions` **派生**的内置行/表头按钮（add/edit/view）—— 它们的 dialogKey 就是动作键。
+ *
+ * 只在「双向都不冲突」时重映射：pred 的键若在 gold 里已被占用、或 gold 的键在 pred 里已存在，
+ * 说明不是同一件事，宁可不动（把猜测失败留给判定去判负）。
+ */
+function dialogKeyByButtonName(config) {
+  const m = new Map()
+  const btns = [
+    ...(config?.toolbarBtns ?? []),
+    ...(config?.tableBtns ?? []),
+    ...(config?.operationColumn?.btns ?? []),
+  ]
+  for (const b of btns) {
+    if (!b || typeof b.name !== 'string') continue
+    const key = typeof b.dialogKey === 'string' ? b.dialogKey : b.name
+    if (!m.has(b.name)) m.set(b.name, key)
+  }
+  return m
+}
+
+const DERIVED_DIALOG_KEYS = new Set(['add', 'edit', 'view'])
+
+/**
+ * pred 的 dialogs 在 gold 命名空间下的**有效视图**：
+ *   1. 按按钮名重映射 pred 自选的 dialog key（见上）；
+ *   2. gold 声明了 add/edit/view 而 pred 没声明 ⟹ 视为**派生弹窗**（省略即默认值：
+ *      `dialogs` 只提供「这个弹窗自己的底座/表单项」，不声明就等于用派生出来的那份）。
+ *      派生弹窗的表单项 = pred 的 `inForm !== false` 字段，无底座键、无声明式底栏。
+ */
+function predDialogsView(gold, pred) {
+  const gd = gold.dialogs ?? {}
+  const gKeys = new Set(Object.keys(gd))
+  const pRaw = pred.dialogs ?? {}
+  const pKeys = new Set(Object.keys(pRaw))
+  const remap = new Map()
+  const gNames = dialogKeyByButtonName(gold)
+  const pNames = dialogKeyByButtonName(pred)
+  for (const [name, gKey] of gNames) {
+    const pKey = pNames.get(name)
+    if (pKey === undefined || pKey === gKey) continue
+    if (gKeys.has(pKey) || pKeys.has(gKey)) continue
+    remap.set(pKey, gKey)
+  }
+  const out = {}
+  for (const [k, v] of Object.entries(pRaw)) out[remap.get(k) ?? k] = v
+  for (const k of gKeys) {
+    if (out[k] !== undefined) continue
+    if (!DERIVED_DIALOG_KEYS.has(k)) continue
+    out[k] = { formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })) }
+  }
+  return out
+}
+
+/**
+ * 每个 gold 声明的 dialog：formItems prop 集合相等 ∧ **AI-27 的底座数据键/声明式底栏**相等。
  *
  * 为什么把底座键并进本维度而不是新开一个维度：新维度会改 applicable 分母与 `byDimension`
  * 基线键（须等一次夜间跑批才能重定基线，本地无法验证），而 AI-27 收的这批键**语义上就是
@@ -376,21 +580,23 @@ function normDialogBtns(btns) {
  * 分母不变、既有基线键不变、既有语料（无一例声明这批键）判据不变。
  *
  * 比法（gold 驱动，与 isHidden/reactions/fieldSpan 同规）：gold 声明了哪个键就比哪个，
- * gold 没锁的键 pred 多写/少写不追责。`width` 等**前 AI-27 时代**的键**刻意不在此列** ——
- * 它们本就由硬编码转发（不属本次收缩范围），收进来会顺手改掉 `12-role-form-layout` 的判定
- * 并动到既有维度基线，把两件事混成一件。这条边界是**故意的**，不是遗漏。
+ * gold 没锁的键 pred 多写/少写不追责。**key 集合不再要求双向相等**（2026-10-27 修正）：
+ * 那段相等检查与本函数自己的注释（「pred 多写不追责」）自相矛盾，且把「key 名自选」
+ * （191 的 detail vs view）与「派生弹窗」（187 省略 dialogs.edit）两件都不是模型错的事
+ * 判成 miss。`width` 等**前 AI-27 时代**的键**刻意不在此列** —— 它们本就由硬编码转发
+ * （不属本次收缩范围），收进来会顺手改掉 `12-role-form-layout` 的判定并动到既有维度基线，
+ * 把两件事混成一件。这条边界是**故意的**，不是遗漏。
  */
 function dialogsEqual(gold, pred) {
-  const gk = Object.keys(gold.dialogs ?? {}).sort()
-  const pk = Object.keys(pred.dialogs ?? {}).sort()
-  if (gk.join(',') !== pk.join(',')) return false
-  for (const k of gk) {
-    const gi = (gold.dialogs[k].formItems ?? []).map((f) => f.prop).sort()
-    const pi = (pred.dialogs[k]?.formItems ?? []).map((f) => f.prop).sort()
+  const gd = gold.dialogs ?? {}
+  const pd = predDialogsView(gold, pred)
+  for (const k of Object.keys(gd)) {
+    const g = gd[k] ?? {}
+    const p = pd[k]
+    if (p === undefined) return false
+    const gi = (g.formItems ?? []).map((f) => f.prop).sort()
+    const pi = (p.formItems ?? []).map((f) => f.prop).sort()
     if (gi.join(',') !== pi.join(',')) return false
-
-    const g = gold.dialogs[k]
-    const p = pred.dialogs[k] ?? {}
     for (const key of DIALOG_BASE_KEYS) {
       if (g[key] === undefined) continue
       if (!eq(g[key], p[key])) return false
@@ -456,7 +662,8 @@ const canonicalView = (v) => (v === undefined || v === null ? '（未配置）' 
  */
 function dialogsView(gold, cfg) {
   const gd = gold.dialogs ?? {}
-  const cd = cfg.dialogs ?? {}
+  // 与 dialogsEqual 同源：key 对齐 + 派生弹窗回填后的视图才是判定依据。
+  const cd = predDialogsView(gold, cfg)
   const keys = [...new Set([...Object.keys(gd), ...Object.keys(cd)])].sort()
   if (!keys.length) return '（未配置）'
   const one = (d, k) => {
@@ -503,7 +710,7 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     return { want: dialogsView(gold, gold), got: dialogsView(gold, pred) }
   }
   if (dim === 'treeConfig') {
-    return { want: canonicalView(gold.treeConfig), got: canonicalView(pred.treeConfig) }
+    return { want: canonicalView(projectTreeConfig(gold.treeConfig)), got: canonicalView(projectTreeConfig(pred.treeConfig)) }
   }
   if (dim === 'editConfig') {
     // 与 editConfig 维度同源：填默认值 + 装饰键豁免后的副本才是判定依据。
@@ -511,8 +718,8 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
   if (dim === 'columns') {
-    // 与 columnsEqual 同源：投影后的副本才是判定依据，否则装饰键豁免会让描述与结果打架。
-    const proj = projectColumns(gold.columns, pred.columns)
+    // 与 columns 维度同源：省略即派生、展开列位置不测量、装饰键豁免后的视图才是判定依据。
+    const proj = projectColumnSet(gold, pred)
     return { want: canonicalView(proj.gold), got: canonicalView(proj.pred) }
   }
   if (dim === 'expandConfig') {
@@ -577,6 +784,16 @@ function optionValues(opts) {
   for (const o of opts ?? []) {
     out.push(o.value)
     if ((o.children ?? []).length) out.push(...optionValues(o.children))
+  }
+  return out
+}
+
+/** 展平后的选项对象（含 children），用于「value → 标签」的回查。 */
+function flatOptions(opts) {
+  const out = []
+  for (const o of opts ?? []) {
+    out.push(o)
+    if ((o.children ?? []).length) out.push(...flatOptions(o.children))
   }
   return out
 }
@@ -773,7 +990,7 @@ export const CAPABILITY_SCORERS = [
     key: 'columns',
     applicable: (g) => !!(g.columns && g.columns.length),
     pass: (g, p) => {
-      const proj = projectColumns(g.columns ?? null, p.columns ?? null)
+      const proj = projectColumnSet(g, p)
       return eq(proj.gold, proj.pred)
     },
   },
@@ -792,7 +1009,7 @@ export const CAPABILITY_SCORERS = [
     // 「给了 treeConfig 但子键名或默认展开状态不对」不算命中。仅当 gold 声明时才 applicable。
     key: 'treeConfig',
     applicable: (g) => !!g.treeConfig,
-    pass: (g, p) => eq(g.treeConfig ?? null, p.treeConfig ?? null),
+    pass: (g, p) => eq(projectTreeConfig(g.treeConfig), projectTreeConfig(p.treeConfig)),
   },
   {
     // vxe 行内编辑开关（AI-09 子项④）：tableOptions.editConfig 按**投影**后等值。

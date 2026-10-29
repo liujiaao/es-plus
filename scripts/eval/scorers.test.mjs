@@ -1141,6 +1141,131 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     delete noTitle.expandConfig.title
     expectHit('expandConfig', g, noTitle, '标题单侧声明（装饰键豁免）')
   }
+
+  // columns：**省略 ≡ 派生**（schema 原文 Omit to keep the derived one-field-one-column
+  // behavior）与**展开列位置不测量**（有 expandConfig 而没写 {type:'expand'} 列时，生成器会
+  // 前置注入；显式声明时位置由作者选）。两条都是「模型选了另一种合法写法」。
+  {
+    const fields = [
+      { prop: 'name', label: '名称', formtype: 'Input' },
+      { prop: 'status', label: '状态', formtype: 'Select', dataOptions: [{ label: '启用', value: 1 }] },
+    ]
+    const g = {
+      fields,
+      actions: ['add'],
+      columns: [
+        { prop: 'name', label: '名称' },
+        { prop: 'status', label: '状态', dataOptions: [{ label: '启用', value: 1 }] },
+      ],
+    }
+    const omitted = clone(g)
+    delete omitted.columns
+    expectHit('columns', g, omitted, 'pred 省略 columns（一字段一列的派生形态）')
+    const renamed = clone(omitted)
+    renamed.fields[1].label = '状态X'
+    expectMiss('columns', g, renamed, '派生列对不上（label 被改）')
+    const fewer = clone(omitted)
+    fewer.fields.pop()
+    expectMiss('columns', g, fewer, '派生出来少一列')
+  }
+  {
+    const g = {
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add'],
+      expandConfig: { fields: [{ prop: 'detail', label: '明细' }] },
+      columns: [
+        { prop: 'name', label: '名称' },
+        { type: 'expand' },
+      ],
+    }
+    const leading = clone(g)
+    delete leading.columns // 省略 ⟹ 派生 + 前置展开列；gold 把展开列放末位
+    expectHit('columns', g, leading, '展开列改由派生前置（位置不测量）')
+    const dropped = clone(g)
+    dropped.columns = [{ prop: 'name', label: '名称' }]
+    expectHit('columns', g, dropped, 'pred 省略展开列但保留 expandConfig（生成器会补一列）')
+    const noContent = clone(dropped)
+    delete noContent.expandConfig
+    expectMiss('columns', g, noContent, '展开列与 expandConfig 都缺（展开能力真丢了）')
+  }
+
+  // columns 里的 editRender.options / defaultValue：与字段级 dataOptions 同规 ——
+  // value 是后端约定（标签才是可推断的），defaultValue 指向**选项**而非 value 字面量。
+  {
+    const g = {
+      fields: [{ prop: 'priority', label: '优先级', formtype: 'Select' }],
+      actions: ['add'],
+      columns: [
+        {
+          prop: 'priority',
+          label: '优先级',
+          editRender: {
+            name: '$select',
+            options: [{ label: '高', value: 'high' }, { label: '中', value: 'medium' }],
+            defaultValue: 'medium',
+          },
+        },
+      ],
+    }
+    expectHit('columns', g, clone(g), 'gold-vs-gold')
+    const revalue = clone(g)
+    revalue.columns[0].editRender.options[1].value = 'mid'
+    revalue.columns[0].editRender.defaultValue = 'mid'
+    expectHit('columns', g, revalue, '选项 value 与 defaultValue 换码、标签一致（应免责）')
+    const relabel = clone(g)
+    relabel.columns[0].editRender.options[1].label = '中等'
+    expectMiss('columns', g, relabel, '选项标签被改')
+    const noDefault = clone(g)
+    delete noDefault.columns[0].editRender.defaultValue
+    expectMiss('columns', g, noDefault, 'defaultValue 漏写（默认「中」是 NL 明说的）')
+  }
+
+  // treeConfig：省略即默认值（childrenField 'children' / expandAll false）+ 别名归一。
+  {
+    const g = { ...clone(base), treeConfig: { childrenField: 'children' } }
+    expectHit('treeConfig', g, { ...clone(base), treeConfig: {} }, '省略 childrenField（默认 children）')
+    const alias = { ...clone(base), treeConfig: { children: 'children' } }
+    expectHit('treeConfig', g, alias, '弃用别名 children 归一成 childrenField')
+    const other = { ...clone(base), treeConfig: { childrenField: 'kids' } }
+    expectMiss('treeConfig', g, other, 'childrenField 被改成别的键名')
+  }
+
+  // dialogs：key 是**作者自选的标识符**（身份由「哪个按钮打开它」决定），且 gold 声明的
+  // 派生弹窗（add/edit/view）被 pred 省略 ≡ 用派生出来的那份。
+  {
+    const g = {
+      fields: [{ prop: 'name', label: '名称', formtype: 'Input' }],
+      actions: ['add', 'view'],
+      operationColumn: { label: '操作', btns: [{ name: '详情', dialogKey: 'detail' }] },
+      dialogs: { detail: { formItems: [{ prop: 'name' }] } },
+    }
+    expectHit('dialogs', g, clone(g), 'gold-vs-gold')
+    const renamed = clone(g)
+    renamed.operationColumn.btns[0].dialogKey = 'view'
+    renamed.dialogs = { view: { formItems: [{ prop: 'name' }] } }
+    expectHit('dialogs', g, renamed, '同一个「详情」按钮换了个 dialogKey（应免责）')
+    const wrongItem = clone(renamed)
+    wrongItem.dialogs.view.formItems = []
+    expectMiss('dialogs', g, wrongItem, '弹窗表单项被清空')
+
+    // 派生弹窗：gold 声明 dialogs.add 只为了锁底座键，pred 干脆不写 dialogs.add。
+    const withAdd = {
+      fields: [
+        { prop: 'name', label: '名称', formtype: 'Input' },
+        { prop: 'note', label: '备注', formtype: 'Input' },
+      ],
+      actions: ['add'],
+      dialogs: { add: { closeOnClickModal: false, formItems: [{ prop: 'name' }, { prop: 'note' }] } },
+    }
+    const omitAdd = clone(withAdd)
+    omitAdd.dialogs = {}
+    expectMiss('dialogs', withAdd, omitAdd, 'gold 锁了 closeOnClickModal，pred 省略（派生弹窗没有底座键）')
+    const onlyDerived = clone(withAdd)
+    delete onlyDerived.dialogs.add.closeOnClickModal
+    const omitOnlyDerived = clone(onlyDerived)
+    omitOnlyDerived.dialogs = {}
+    expectHit('dialogs', onlyDerived, omitOnlyDerived, 'gold 只是重述派生弹窗（省略 ≡ 派生）')
+  }
 }
 
 if (failures) {
