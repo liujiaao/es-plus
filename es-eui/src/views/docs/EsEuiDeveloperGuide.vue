@@ -99,15 +99,15 @@
           </div>
           <div class="arch-layer engine-layer">
             <div class="layer-label">
-              normalizeLegacyOptions(options)
+              configureEsPlus(options)
             </div>
             <div class="layer-detail">
-              { EsTable: { methods: {...} } } 展平为 { EsTable: {...} }；
-              configQueryfieldOutput（小写 f）改名为 configQueryFieldOutput
+              写入时归一（core 的 normalizeSectionConfig）：{ EsTable: { methods: {...} } } 展平为 { EsTable: {...} }；
+              剥掉 $httpRequest 的 $ 前缀；configQueryfieldOutput（小写 f）改名为 configQueryFieldOutput
             </div>
           </div>
           <div class="arch-arrow">
-            &#8595; configureEsPlus(normalized)
+            &#8595; 全局注册组件
           </div>
           <div class="arch-layer engine-layer">
             <div class="layer-label">
@@ -135,18 +135,17 @@
             <span class="code-lang">源码: @es-plus/vue2 index.ts install()</span>
           </div>
           <pre v-pre><code>const install = (Vue, options = {}) =&gt; {
-  const normalized = normalizeLegacyOptions(options)
-  configureEsPlus(normalized)                    // 1. 写入模块级单例
+  configureEsPlus(options)                       // 1. 写入模块级单例（内部按 section 归一）
 
-  if (!normalized.skipComponentRegistration) {
+  if (!options.skipComponentRegistration) {
     components.forEach((c) =&gt; Vue.component(c.name, c))   // 2. 全局注册
   }
-  if (normalized.globalProperties !== false) {
+  if (options.globalProperties !== false) {
     Vue.prototype.$useDialog = useDialog         // 3. this.$useDialog() 可用
   }
   Vue.mixin({                                    // 4. Vue 2 没有 app.provide
     provide: {
-      $EsPlus: createGlobalConfigView({ useDialog, ...normalized })
+      $EsPlus: createGlobalConfigView({ useDialog })
     }
   })
 }</code></pre>
@@ -236,20 +235,16 @@ import axios from 'axios'
 Vue.use(ElementUI, { size: 'mini' })
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, formParams, headers, ...options }) {
-        const config = { url, method: options.method || 'POST' }
-        if (config.method === 'GET') config.params = formParams
-        else config.data = formParams
-        return axios(config)
-      }
+    httpRequest({ url, formParams, headers, ...options }) {
+      const config = { url, method: options.method || 'POST' }
+      if (config.method === 'GET') config.params = formParams
+      else config.data = formParams
+      return axios(config)
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return axios.post(url, formParams)
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return axios.post(url, formParams)
     }
   }
 })</code></pre>
@@ -826,7 +821,7 @@ export default {
               <tr><td><code>isInitRun</code></td><td>Boolean</td><td>false</td><td>组件挂载时是否自动发起首次数据请求</td></tr>
               <tr><td><code>apiParams</code></td><td>Object</td><td>—</td><td>数据请求配置：<code>{ url, method, model, headers, options }</code></td></tr>
               <tr><td><code>actionUrl</code></td><td>String</td><td>—</td><td>数据请求 URL（旧版 API，推荐使用 apiParams.url）</td></tr>
-              <tr><td><code>httpRequest</code></td><td>Function</td><td>—</td><td>自定义请求函数（优先级高于全局 <code>$httpRequest</code>）</td></tr>
+              <tr><td><code>httpRequest</code></td><td>Function</td><td>—</td><td>自定义请求函数（优先级高于全局 <code>EsTable.httpRequest</code>）</td></tr>
               <tr><td><code>configTableOut</code></td><td>Object</td><td>—</td><td>响应字段映射：<code>{ total, pageSize, current, tableData }</code></td></tr>
               <tr><td><code>listenToCallBack</code></td><td>Object</td><td>—</td><td>请求生命周期：<code>{ brcb(params), qrcb(response) }</code></td></tr>
               <tr><td><code>entryQuery</code></td><td>Object</td><td>{}</td><td>附加查询参数（合并到每次请求）</td></tr>
@@ -881,7 +876,7 @@ export default {
           <h4>&#128161; 字段映射的优先级</h4>
           <ol>
             <li><code>options.configTableOut</code>（组件级配置，优先级最高）</li>
-            <li>全局 <code>configQueryfieldOutput()</code>（Plugin 注册时配置）</li>
+            <li>全局 <code>EsTable.configQueryFieldOutput</code>（Plugin 注册时配置，字面量或函数均可）</li>
             <li>内置默认值 <code>{ total: 'records', pageSize: 'pageSize', current: 'pageNo', tableData: 'rows' }</code></li>
           </ol>
         </div>
@@ -1257,11 +1252,12 @@ export default {
           <table class="api-table">
             <thead><tr><th>配置项</th><th>组件</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
             <tbody>
-              <tr><td><code>$httpRequest</code></td><td>EsTable</td><td>Function</td><td>&#10003;</td><td>表格数据请求方法</td></tr>
-              <tr><td><code>$httpRequest</code></td><td>EsForm</td><td>Function</td><td>&#10003;</td><td>表单远程数据请求方法</td></tr>
-              <tr><td><code>paginationLayout</code></td><td>EsTable</td><td>Function</td><td></td><td>分页布局：返回 <code>{ layout, pageSizes, isSmall, background }</code></td></tr>
-              <tr><td><code>configQueryfieldOutput</code></td><td>EsTable</td><td>Function</td><td></td><td>表格响应字段映射：返回 <code>{ total, pageSize, current, tableData }</code></td></tr>
-              <tr><td><code>fieldFieldOutput</code></td><td>EsForm</td><td>Function</td><td></td><td>表单响应字段映射：返回 <code>{ total, pageSize, current, listData }</code></td></tr>
+              <tr><td><code>httpRequest</code></td><td>EsTable</td><td>Function</td><td>&#10003;</td><td>表格数据请求方法</td></tr>
+              <tr><td><code>httpRequest</code></td><td>EsForm</td><td>Function</td><td>&#10003;</td><td>表单远程数据请求方法</td></tr>
+              <tr><td><code>paginationLayout</code></td><td>EsTable</td><td>Object | Function</td><td></td><td>分页布局：<code>{ layout, pageSizes, isSmall, background }</code></td></tr>
+              <tr><td><code>configQueryFieldOutput</code></td><td>EsTable</td><td>Object | Function</td><td></td><td>表格响应字段映射：<code>{ total, pageSize, current, tableData }</code></td></tr>
+              <tr><td><code>fieldFieldOutput</code></td><td>EsForm</td><td>Object | Function</td><td></td><td>表单响应字段映射：<code>{ total, pageSize, current, listData }</code></td></tr>
+              <tr><td><code>defaults</code></td><td>EsTable / EsForm</td><td>Object</td><td></td><td>表格 <code>options</code> / 表单 <code>layoutFormProps</code> 的默认值（实例优先）</td></tr>
             </tbody>
           </table>
         </div>
@@ -1298,7 +1294,7 @@ export default {
     return {
       pipeSteps: [
         { name: 'brcb(params)', desc: '请求前参数转换。接收合并后的请求参数，返回最终参数' },
-        { name: 'httpRequestInstance()', desc: '调用 $httpRequest 或 options.httpRequest 发起 HTTP 请求' },
+        { name: 'httpRequestInstance()', desc: '调用 EsTable.httpRequest 或 options.httpRequest 发起 HTTP 请求' },
         { name: 'formatConfigout(res)', desc: '按 configTableOut / configFormOut 映射响应字段' },
         { name: 'qrcb(res)', desc: '响应后数据回调。可在渲染前修改数据结构' },
         { name: '更新 dataSource', desc: '表格数据 + 分页信息更新到组件状态，触发重新渲染' }

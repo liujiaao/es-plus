@@ -169,51 +169,45 @@ Vue.use(ElementUI)
 // 注册 ES-Plus 并配置全局方法
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      // 配置表格数据请求方法（必填）
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          url,
-          method: options?.method || 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers
-          }
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      // 配置分页布局（可选）
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true
-      }),
-      // 配置响应数据字段映射（可选）
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
+    // 配置表格数据请求方法（必填）
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        url,
+        method: options?.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
         }
       }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    // 配置分页布局（可选）
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true
+    },
+    // 配置响应数据字段映射（可选）
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
     }
   },
   EsForm: {
-    methods: {
-      // 配置表单数据请求方法（必填）
-      $httpRequest({ url, formParams, ...options }) {
-        return http({
-          url,
-          method: options.method || 'POST',
-          data: formParams
-        })
-      }
+    // 配置表单数据请求方法（必填）
+    httpRequest({ url, formParams, ...options }) {
+      return http({
+        url,
+        method: options.method || 'POST',
+        data: formParams
+      })
     }
   }
 })
@@ -249,25 +243,21 @@ Vue.use(ElementUI)
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return http({
-          url,
-          method: options?.method || 'POST',
-          data: formParams
-        })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return http({
+        url,
+        method: options?.method || 'POST',
+        data: formParams
+      })
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return http({
-          url,
-          method: options.method || 'POST',
-          data: formParams
-        })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return http({
+        url,
+        method: options.method || 'POST',
+        data: formParams
+      })
     }
   }
 })
@@ -282,7 +272,7 @@ new Vue({ render: h => h(App) }).$mount('#app')</code></pre>
         </div>
         <div class="tip-content">
           <strong>提示</strong>
-          <span>$httpRequest 是必填配置，用于组件内部发起数据请求。如果没有配置，表格和表单将无法自动获取数据。</span>
+          <span>httpRequest 是必填配置，用于组件内部发起数据请求。如果没有配置，表格和表单将无法自动获取数据。</span>
         </div>
       </div>
     </section>
@@ -730,40 +720,34 @@ Vue.use(ElementUI)
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          url,
-          method: options?.method || 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers }
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true
-      }),
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
-        }
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        url,
+        method: options?.method || 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers }
       }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return http({ url, method: options.method || 'POST', data: formParams })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return http({ url, method: options.method || 'POST', data: formParams })
     }
   }
 })`,
@@ -778,17 +762,13 @@ Vue.use(ElementUI)
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return http({ url, method: options?.method || 'POST', data: formParams })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return http({ url, method: options?.method || 'POST', data: formParams })
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return http({ url, method: options.method || 'POST', data: formParams })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return http({ url, method: options.method || 'POST', data: formParams })
     }
   }
 })`,

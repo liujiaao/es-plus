@@ -29,11 +29,11 @@
         EsTable 支持以下全局配置项：
       </p>
 
-      <!-- $httpRequest -->
+      <!-- httpRequest -->
       <div class="config-item">
         <div class="config-header">
           <h3 class="config-name">
-            $httpRequest
+            httpRequest
           </h3>
           <span class="config-badge required">必填</span>
         </div>
@@ -53,16 +53,14 @@
           </div>
           <pre v-pre><code>Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        // 返回 Promise
-        return axios({
-          url,
-          method: options.method || 'POST',
-          data: formParams,
-          headers
-        })
-      }
+    httpRequest({ url, headers, formParams, ...options }) {
+      // 返回 Promise
+      return axios({
+        url,
+        method: options.method || 'POST',
+        data: formParams,
+        headers
+      })
     }
   }
 })</code></pre>
@@ -93,13 +91,11 @@
           </div>
           <pre v-pre><code>Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      })
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
     }
   }
 })</code></pre>
@@ -144,11 +140,11 @@
         </div>
       </div>
 
-      <!-- configQueryfieldOutput -->
+      <!-- configQueryFieldOutput -->
       <div class="config-item">
         <div class="config-header">
           <h3 class="config-name">
-            configQueryfieldOutput
+            configQueryFieldOutput
           </h3>
           <span class="config-badge optional">可选</span>
         </div>
@@ -168,18 +164,42 @@
           </div>
           <pre v-pre><code>Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      configQueryfieldOutput() {
-        return {
-          total: 'total',           // 总记录数字段
-          pageSize: 'pageSize',     // 每页条数字段
-          current: 'pageIndex',     // 当前页字段
-          tableData: 'data'         // 列表数据字段
-        }
-      }
+    configQueryFieldOutput: {
+      total: 'total',         // 总记录数字段
+      pageSize: 'pageSize',   // 每页条数字段
+      current: 'pageIndex',   // 当前页字段
+      tableData: 'data'       // 列表数据字段
     }
   }
 })</code></pre>
+        </div>
+      </div>
+
+      <!-- defaults -->
+      <div class="config-item">
+        <div class="config-header">
+          <h3 class="config-name">
+            defaults
+          </h3>
+          <span class="config-badge optional">可选</span>
+        </div>
+        <p class="config-desc">
+          给每张表的 <code>options</code> 提供默认值。实例上传的 <code>:options</code> 优先于它，
+          它又优先于组件内置默认值；合并顺序为 <strong>实例 options &gt; 全局 defaults &gt; 内置默认</strong>。
+        </p>
+        <div class="code-block">
+          <pre v-pre><code>Vue.use(EsPlus, {
+  EsTable: {
+    defaults: {
+      size: 'small',
+      border: true,
+      stripe: true
+    }
+  }
+})
+
+// 某个页面想单独改掉其中一项：
+// &lt;es-table :options="{ border: false }"&gt;   → border 为 false，size/stripe 仍走默认</code></pre>
         </div>
       </div>
     </section>
@@ -198,11 +218,11 @@
         EsForm 支持以下全局配置项：
       </p>
 
-      <!-- $httpRequest -->
+      <!-- httpRequest -->
       <div class="config-item">
         <div class="config-header">
           <h3 class="config-name">
-            $httpRequest
+            httpRequest
           </h3>
           <span class="config-badge required">必填</span>
         </div>
@@ -222,14 +242,12 @@
           </div>
           <pre v-pre><code>Vue.use(EsPlus, {
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return axios({
-          url,
-          method: options.method || 'POST',
-          data: formParams
-        })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return axios({
+        url,
+        method: options.method || 'POST',
+        data: formParams
+      })
     }
   }
 })</code></pre>
@@ -260,14 +278,37 @@
           </div>
           <pre v-pre><code>Vue.use(EsPlus, {
   EsForm: {
-    methods: {
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    }
+  }
+})</code></pre>
+        </div>
+      </div>
+
+      <!-- defaults -->
+      <div class="config-item">
+        <div class="config-header">
+          <h3 class="config-name">
+            defaults
+          </h3>
+          <span class="config-badge optional">可选</span>
+        </div>
+        <p class="config-desc">
+          给每个表单的 <code>layoutFormProps</code> 提供默认值。实例 prop 优先，
+          且 <code>formLayProps</code> 会再往下合并一层 —— 实例只写
+          <code>labelPosition</code> 时，全局的 <code>labelWidth</code> 仍然生效。
+        </p>
+        <div class="code-block">
+          <pre v-pre><code>Vue.use(EsPlus, {
+  EsForm: {
+    defaults: {
+      formLayProps: {
+        labelWidth: '96px',
+        labelPosition: 'right'
       }
     }
   }
@@ -307,53 +348,47 @@ import axios from 'axios'
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          url,
-          method: options?.method || 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers
-          }
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return axios(opt)
-      },
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      }),
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        url,
+        method: options?.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
         }
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return axios(opt)
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
+    },
+    defaults: { size: 'small', border: true }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return axios.post(url, formParams)
-      },
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
-      }
-    }
+    httpRequest({ url, formParams, ...options }) {
+      return axios.post(url, formParams)
+    },
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    },
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })</code></pre>
       </div>
@@ -365,6 +400,35 @@ Vue.use(EsPlus, {
         <div class="tip-content">
           <strong>提示</strong>
           <span>全局配置中的方法会被组件内部调用，如果返回的 Promise 被 reject，组件会自动处理错误提示。</span>
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-icon">
+          <i class="el-icon-refresh" />
+        </div>
+        <div class="tip-content">
+          <strong>字面量或函数，两种写法等价</strong>
+          <span>
+            <code>paginationLayout</code> / <code>configQueryFieldOutput</code> / <code>fieldFieldOutput</code>
+            既可以直接写字面量，也可以写成返回该字面量的函数，组件都会处理。写对象形式时，
+            映射会<strong>叠加</strong>在内置默认映射之上，而不是整体替换。
+          </span>
+        </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-icon">
+          <i class="el-icon-check" />
+        </div>
+        <div class="tip-content">
+          <strong>旧写法仍然有效</strong>
+          <span>
+            早期文档里的 <code>EsTable: { methods: { $httpRequest, configQueryfieldOutput } }</code>
+            嵌套写法无需修改：配置写入时会被自动展平（<code>methods</code> 内的同名键优先）、
+            剥掉 <code>$</code> 前缀并保留原名、把 <code>configQueryfieldOutput</code> 改名为
+            <code>configQueryFieldOutput</code>。
+          </span>
         </div>
       </div>
     </section>
@@ -462,7 +526,7 @@ Vue.use(EsPlus, {
           </thead>
           <tbody>
             <tr>
-              <td><code>$httpRequest</code></td>
+              <td><code>httpRequest</code></td>
               <td>EsTable / EsForm</td>
               <td>数据请求方法</td>
               <td><span class="badge required">是</span></td>
@@ -470,19 +534,25 @@ Vue.use(EsPlus, {
             <tr>
               <td><code>paginationLayout</code></td>
               <td>EsTable</td>
-              <td>分页布局配置</td>
+              <td>分页布局配置（字面量或函数）</td>
               <td><span class="badge optional">否</span></td>
             </tr>
             <tr>
-              <td><code>configQueryfieldOutput</code></td>
+              <td><code>configQueryFieldOutput</code></td>
               <td>EsTable</td>
-              <td>表格响应字段映射</td>
+              <td>表格响应字段映射（字面量或函数）</td>
               <td><span class="badge optional">否</span></td>
             </tr>
             <tr>
               <td><code>fieldFieldOutput</code></td>
               <td>EsForm</td>
-              <td>表单响应字段映射</td>
+              <td>表单响应字段映射（字面量或函数）</td>
+              <td><span class="badge optional">否</span></td>
+            </tr>
+            <tr>
+              <td><code>defaults</code></td>
+              <td>EsTable / EsForm</td>
+              <td>表格 options / 表单 layoutFormProps 的默认值</td>
               <td><span class="badge optional">否</span></td>
             </tr>
           </tbody>
@@ -559,68 +629,54 @@ export default {
       const codes = {
         tableHttp: `Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        return axios({
-          url,
-          method: options.method || 'POST',
-          data: formParams,
-          headers
-        })
-      }
+    httpRequest({ url, headers, formParams, ...options }) {
+      return axios({
+        url,
+        method: options.method || 'POST',
+        data: formParams,
+        headers
+      })
     }
   }
 })`,
         pagination: `Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      })
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
     }
   }
 })`,
         fieldOutput: `Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
-        }
-      }
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
     }
   }
 })`,
         formHttp: `Vue.use(EsPlus, {
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return axios({
-          url,
-          method: options.method || 'POST',
-          data: formParams
-        })
-      }
+    httpRequest({ url, formParams, ...options }) {
+      return axios({
+        url,
+        method: options.method || 'POST',
+        data: formParams
+      })
     }
   }
 })`,
         formFieldOutput: `Vue.use(EsPlus, {
   EsForm: {
-    methods: {
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
-      }
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
     }
   }
 })`,
@@ -630,53 +686,47 @@ import axios from 'axios'
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          url,
-          method: options?.method || 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers
-          }
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return axios(opt)
-      },
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      }),
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        url,
+        method: options?.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
         }
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return axios(opt)
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
+    },
+    defaults: { size: 'small', border: true }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams, ...options }) {
-        return axios.post(url, formParams)
-      },
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
-      }
-    }
+    httpRequest({ url, formParams, ...options }) {
+      return axios.post(url, formParams)
+    },
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    },
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })`
       }

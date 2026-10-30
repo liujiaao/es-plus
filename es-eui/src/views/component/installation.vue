@@ -161,17 +161,13 @@ Vue.use(ElementUI)
 // 注册 ES-Plus
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, formParams }) {
-        return axios.post(url, formParams)
-      }
+    httpRequest({ url, formParams }) {
+      return axios.post(url, formParams)
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams }) {
-        return axios.post(url, formParams)
-      }
+    httpRequest({ url, formParams }) {
+      return axios.post(url, formParams)
     }
   }
 })
@@ -318,7 +314,7 @@ Vue.prototype.$useDialog = useDialog</code></pre>
           </div>
           <div class="tip-content">
             <strong>配置说明</strong>
-            <span>$httpRequest 是必填配置，用于组件内部发起数据请求。</span>
+            <span>httpRequest 是必填配置，用于组件内部发起数据请求。</span>
           </div>
         </div>
 
@@ -378,17 +374,13 @@ Vue.use(ElementUI)
 // 注册 ES-Plus
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, formParams }) {
-        return axios.post(url, formParams)
-      }
+    httpRequest({ url, formParams }) {
+      return axios.post(url, formParams)
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, formParams }) {
-        return axios.post(url, formParams)
-      }
+    httpRequest({ url, formParams }) {
+      return axios.post(url, formParams)
     }
   }
 })

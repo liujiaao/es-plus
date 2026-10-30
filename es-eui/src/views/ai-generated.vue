@@ -138,7 +138,7 @@ import {
 
 /**
  * 本站 main.js 注册了历史项目沿用的全局映射
- * `EsTable.methods.configQueryfieldOutput`（data / total / pageIndex），它对本站每张表
+ * `EsTable.configQueryFieldOutput`（data / total / pageIndex），它对本站每张表
  * 都生效、优先级高于默认契约。所以宿主在这里把 mock 的标准响应
  * （rows / records / pageNo）转成本站后端约定的形状 —— 这正是「schema 描述页面、
  * 宿主适配后端」的边界：生成产物不用改一个字。

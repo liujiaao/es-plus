@@ -107,67 +107,63 @@ Vue.use(ElementUI)
 // 注册 ES-Plus 并配置全局方法
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      // 配置表格数据请求方法
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options?.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      // 配置分页布局
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      }),
-      // 配置响应数据字段映射
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
-        }
+    // 配置表格数据请求方法
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options?.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    // 配置分页布局（字面量或函数均可）
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
+    },
+    // 配置响应数据字段映射
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
+    },
+    // 每张表 options 的默认值（实例 :options 优先）
+    defaults: { size: 'small', border: true }
   },
   EsForm: {
-    methods: {
-      // 配置表单数据请求方法
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      // 配置响应数据字段映射
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
+    // 配置表单数据请求方法
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    // 配置响应数据字段映射
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    },
+    // 每个表单 layoutFormProps 的默认值（实例 prop 优先）
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })
 
@@ -198,7 +194,7 @@ new Vue({
             </thead>
             <tbody>
               <tr>
-                <td><code>$httpRequest</code></td>
+                <td><code>httpRequest</code></td>
                 <td>数据请求方法，用于组件内部发起 API 请求</td>
                 <td>Function</td>
                 <td><span class="badge required">是</span></td>
@@ -206,19 +202,25 @@ new Vue({
               <tr>
                 <td><code>paginationLayout</code></td>
                 <td>分页组件布局配置</td>
-                <td>Function</td>
+                <td>Object | Function</td>
                 <td><span class="badge optional">否</span></td>
               </tr>
               <tr>
-                <td><code>configQueryfieldOutput</code></td>
+                <td><code>configQueryFieldOutput</code></td>
                 <td>表格响应数据字段映射</td>
-                <td>Function</td>
+                <td>Object | Function</td>
                 <td><span class="badge optional">否</span></td>
               </tr>
               <tr>
                 <td><code>fieldFieldOutput</code></td>
                 <td>表单响应数据字段映射</td>
-                <td>Function</td>
+                <td>Object | Function</td>
+                <td><span class="badge optional">否</span></td>
+              </tr>
+              <tr>
+                <td><code>defaults</code></td>
+                <td>表格 options / 表单 layoutFormProps 的默认值</td>
+                <td>Object</td>
                 <td><span class="badge optional">否</span></td>
               </tr>
             </tbody>
@@ -415,62 +417,56 @@ Vue.use(ElementUI)
 
 Vue.use(EsPlus, {
   EsTable: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options?.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      }),
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
-        }
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options?.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
+    },
+    defaults: { size: 'small', border: true }
   },
   EsForm: {
-    methods: {
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    },
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })`,
         babelPlugin: 'npm install babel-plugin-component -D',

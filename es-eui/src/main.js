@@ -71,35 +71,27 @@ Vue.use(EsPlus, {
     // 组件级 httpRequest 仍然优先（个别页面要签名 / 重试就在那一页覆盖）。
     httpRequest: (params) => (isDemoUrl(params) ? demoHttpRequest(params) : siteHttpRequest(params)),
     EsTable: {
-        methods: {
-            paginationLayout: () => ({
-                layout: 'total, sizes, prev, pager, next, jumper',
-                pageSizes: [10, 20, 50, 100],
-                isSmall: true,
-                background: false
-            }),
-            // 配置自动查询字段输出
-            configQueryfieldOutput() {
-                return {
-                    total: 'total',
-                    pageSize: 'pageSize',
-                    current: 'pageIndex',
-                    tableData: 'data'
-                }
-            }
+        paginationLayout: {
+            layout: 'total, sizes, prev, pager, next, jumper',
+            pageSizes: [10, 20, 50, 100],
+            isSmall: true,
+            background: false
+        },
+        // 配置自动查询字段输出
+        configQueryFieldOutput: {
+            total: 'total',
+            pageSize: 'pageSize',
+            current: 'pageIndex',
+            tableData: 'data'
         }
     },
     EsForm: {
-        methods: {
-            // 配置自动查询字段输出
-            fieldFieldOutput() {
-                return {
-                    total: 'total',
-                    pageSize: 'pageSize',
-                    current: 'pageIndex',
-                    listData: 'data'
-                }
-            }
+        // 配置自动查询字段输出
+        fieldFieldOutput: {
+            total: 'total',
+            pageSize: 'pageSize',
+            current: 'pageIndex',
+            listData: 'data'
         }
     }
 })
