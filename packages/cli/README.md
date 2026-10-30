@@ -2,6 +2,8 @@
 
 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方命令行工具 —— 用自然语言生成 CRUD 页面，从既有 schema 草拟配置，校验 JSON 配置，快速搭建页面脚手架。同一份配置可生成 Vue 3 或 Vue 2 版本代码。
 
+**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
+
 ## 安装
 
 ```bash

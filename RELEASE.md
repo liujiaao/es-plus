@@ -87,6 +87,30 @@ git add -A && git commit -m "chore: version packages"
 `changesets` 生成的是 **per-package tag**（如 `@es-plus/shared@1.0.1`），不是 `v1.0.1`。
 `changeset publish` 只在本地 `git tag`、**从不自动推送**；推送由工作流里的 `git push origin --tags` 完成。
 
+### 4. 发布后的外部登记
+
+npm 包页展示的就是仓库里的 README，所以 `@es-plus/mcp-server` 的版本一升，
+**`packages/mcp-server/server.json` 也要一起改**（官方 MCP registry 的条目把版本号手抄了一份）。
+忘了同步不会让任何构建变红，只会让注册表一直引导人装旧版本 —— `npm run check:distribution`
+把它钉回 `package.json`（同一条守卫还检查仓库与每个已发布包的 README 是否都链到三站，
+以及 `package.json` 的 `mcpName` 与 `server.json` 的 `name` 是否逐字相同 —— registry 读
+**已发布 tarball** 里的那一行做 npm 归属校验，错了只会在 publish 那一刻报错）。
+
+```bash
+# 官方 mcp-publisher（不是 npm 包：装 GitHub releases 的二进制或 brew install mcp-publisher）
+mcp-publisher login github                  # 一次性 OAuth；namespace io.github.liujiaao 必须由本人登录
+mcp-publisher validate packages/mcp-server/server.json   # 离线校验，不联网发布
+mcp-publisher publish  packages/mcp-server/server.json   # 位置参数是 server.json 路径
+```
+
+还有两项**只能人做**、代码管不了：GitHub 仓库 Settings → Social preview 上传
+`docs/brand/social-preview.png`（由 `npm run og:gen` 按品牌单源画出，1280×640 ——
+GitHub 会把非 2:1 的图裁掉一截）；以及 GitHub Discussions 的开与关。
+
+还有两项**只能人做**、代码管不了：GitHub 仓库 Settings → Social preview 上传
+`docs/brand/social-preview.png`（由 `npm run og:gen` 按品牌单源画出，1280×640 ——
+GitHub 会把非 2:1 的图裁掉一截）；以及 GitHub Discussions 的开与关。
+
 ## 版本号规则
 
 | 场景 | 级别 | 示例 |

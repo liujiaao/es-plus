@@ -4,6 +4,8 @@
 
 This package is now a thin re-export of `@es-plus/vue3`, kept on npm so existing installs continue to work. **All future development happens on `@es-plus/vue3`** — please migrate.
 
+**Live demos, one config, three renderers**: [Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) — [Docs](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
+
 ## Why the rename?
 
 `es-plus` now ships a sibling Vue 2 + Element UI renderer ([`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2)) sharing the same JSON schema-driven config. Putting both renderers in the same npm scope makes the family obvious:

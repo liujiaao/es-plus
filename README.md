@@ -20,6 +20,8 @@
 
 **[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 
+**同一份配置的三个渲染端，各自一个线上站**：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— 三个站都跑在线上，示例由各自站点的构建与守卫覆盖。
+
 > **v1.4.0 起重命名**：`es-plus-ui` 已重命名为 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3)，同时新增 Vue 2 渲染器 [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 与框架无关的 [`@es-plus/core`](https://www.npmjs.com/package/@es-plus/core)。原 `es-plus-ui` 包继续作为 stub 包工作，详见 [迁移指南](./docs/migrate-v1.4.md)。
 
 ---

@@ -11,12 +11,15 @@
  *   - 配色取自 docs/tokens/design-tokens.css 的 --es-brand-primary / --es-brand-accent。
  * 因此改品牌文案或品牌色 → 重跑本脚本即得到新卡片，不会出现「卡上写的还是旧口号」。
  *
- * 产出 docs/brand/og-image.png（单一真源），由 sync-brand 分发到三站的 public/。
+ * 产出两份 PNG，同一份品牌单源、同一套配色：
+ *   · docs/brand/og-image.png（1200×630）—— 站点 og:image，由 sync-brand 分发到三站 public/；
+ *   · docs/brand/social-preview.png（1280×640）—— GitHub 仓库 Social preview，
+ *     只用于 GitHub（上传是仓库设置里的手工步骤），**不分发**。
  * 新鲜度由 scripts/check-brand-assets.mjs 校验：它把本脚本的两个输入做哈希存进
- * docs/brand/og-image.meta.json，输入变了但图没重生成就会失败。
+ * docs/brand/og-image.meta.json，输入变了但图没重生成就会失败（两张图共用一份哈希）。
  *
  * 用法：
- *   node scripts/gen-og-image.mjs           # 生成（需要 Playwright + chromium）
+ *   node scripts/gen-og-image.mjs           # 生成两张（需要 Playwright + chromium）
  *   node scripts/gen-og-image.mjs --check   # 只校验输入哈希是否与已生成的图一致
  *
  * 退出码：0 = 成功/一致；1 = 依赖缺失或输入已过期。
@@ -33,6 +36,15 @@ const SLOGAN = join(ROOT, 'docs', 'brand', 'slogan.json')
 const TOKENS = join(ROOT, 'docs', 'tokens', 'design-tokens.css')
 const OUT_PNG = join(ROOT, 'docs', 'brand', 'og-image.png')
 const OUT_META = join(ROOT, 'docs', 'brand', 'og-image.meta.json')
+/**
+ * GitHub 仓库的 Social preview（Settings → Social preview）—— **1280×640**，与
+ * og:image 的 1200×630 是两个尺寸，不能共用一张：GitHub 的卡片按 2:1 裁切，
+ * 1200×630 贴上去上下会被切掉，标题正好落在被切的那条线上。
+ *
+ * 这张图只用于 GitHub（站点 og:image 仍用 1200×630），所以它**不**分发到三个站的
+ * public/ —— 上传是仓库设置里的手工步骤，脚本能做的只有「把图按品牌单源画出来」。
+ */
+const OUT_SOCIAL = join(ROOT, 'docs', 'brand', 'social-preview.png')
 
 const CHECK = process.argv.includes('--check')
 
@@ -116,12 +128,71 @@ function cardHtml({ brand, accent }) {
 </body></html>`
 }
 
+/**
+ * GitHub social preview 的画布（1280×640）。
+ *
+ * 与 og:image 共用同一份品牌文案与配色，但**版式另写**：GitHub 在仓库卡片和链接
+ * 预览里会把它缩到 500px 上下，og:image 那三张 promise 卡在这个尺寸下只剩糊字。
+ * 这里只留三层 —— 主张、一句副标题、三个渲染器 —— 保证缩到一半仍读得出来。
+ */
+function socialHtml({ brand, accent }) {
+  const s = JSON.parse(readText(SLOGAN))
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const renders = ['Vue 3 + Element Plus', 'Vue 2 + Element UI', 'Vue 3 + Ant Design Vue']
+  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:1280px; height:640px; overflow:hidden;
+    font-family:"Microsoft YaHei","PingFang SC","Helvetica Neue",Arial,sans-serif;
+    background:#0f172a; color:#e5eaf3; position:relative;
+  }
+  .glow { position:absolute; border-radius:50%; filter:blur(110px); opacity:.5; }
+  /* 两团光都放右半边：标题在左侧，压在亮色光斑上会掉对比度（缩到 GitHub 卡片尺寸
+     后尤其明显）。左边保持深色，右边才是品牌色。 */
+  .g1 { width:720px; height:720px; right:-260px; top:-320px; background:${brand}; }
+  .g2 { width:600px; height:600px; right:-140px; bottom:-320px; background:${accent}; }
+  .wrap { position:relative; padding:76px 88px; height:100%; display:flex; flex-direction:column; }
+  .brand { display:flex; align-items:center; gap:20px; }
+  .mark {
+    width:70px; height:70px; border-radius:18px;
+    background:linear-gradient(135deg,${brand},${accent});
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:800; color:#fff; letter-spacing:.5px;
+  }
+  .name { font-size:38px; font-weight:800; letter-spacing:.5px; }
+  .url { margin-left:auto; font-size:24px; color:#8f9aab; white-space:nowrap; }
+  h1 { font-size:86px; line-height:1.12; font-weight:800; margin-top:auto; color:#f5f8ff; }
+  .sub { font-size:34px; color:#a9b4c4; margin-top:22px; }
+  .foot { display:flex; align-items:center; gap:14px; margin-top:auto; }
+  .chip {
+    font-size:24px; color:#d7dee9; padding:10px 20px; border-radius:999px;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
+    white-space:nowrap;
+  }
+</style></head><body>
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <div class="wrap">
+    <div class="brand">
+      <div class="mark">ES</div><div class="name">${esc(s.name)}</div>
+      <span class="url">liujiaao.github.io/es-plus</span>
+    </div>
+    <h1>${esc(s.positioning)}</h1>
+    <div class="sub">${esc(s.slogan.subtitle)}</div>
+    <div class="foot">
+      ${renders.map((r) => `<span class="chip">${esc(r)}</span>`).join('')}
+    </div>
+  </div>
+</body></html>`
+}
+
 async function main() {
   const input = inputHash()
 
   if (CHECK) {
-    if (!existsSync(OUT_PNG) || !existsSync(OUT_META)) {
-      console.error('❌ 分享卡片未生成（docs/brand/og-image.png）—— 运行 `npm run og:gen`')
+    if (!existsSync(OUT_PNG) || !existsSync(OUT_META) || !existsSync(OUT_SOCIAL)) {
+      console.error(
+        '❌ 分享卡片未生成（docs/brand/og-image.png / social-preview.png）—— 运行 `npm run og:gen`',
+      )
       process.exit(1)
     }
     const meta = JSON.parse(readText(OUT_META))
@@ -146,14 +217,22 @@ async function main() {
   }
 
   const browser = await chromium.launch(CHANNEL ? { channel: CHANNEL } : {})
-  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 })
-  await page.setContent(cardHtml(input), { waitUntil: 'load' })
-  await page.waitForTimeout(300)
-  const buf = await page.screenshot({ type: 'png' })
+  /** 同一个浏览器按各自视口渲染：图上的尺寸就是 CSS 里写的尺寸（deviceScaleFactor 1） */
+  const render = async (html, width, height) => {
+    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 })
+    await page.setContent(html, { waitUntil: 'load' })
+    await page.waitForTimeout(300)
+    const buf = await page.screenshot({ type: 'png' })
+    await page.close()
+    return buf
+  }
+  const buf = await render(cardHtml(input), 1200, 630)
+  const social = await render(socialHtml(input), 1280, 640)
   await browser.close()
 
   if (!existsSync(dirname(OUT_PNG))) mkdirSync(dirname(OUT_PNG), { recursive: true })
   writeFileSync(OUT_PNG, buf)
+  writeFileSync(OUT_SOCIAL, social)
   writeFileSync(
     OUT_META,
     JSON.stringify(
@@ -164,12 +243,14 @@ async function main() {
         brandPrimary: input.brand,
         brandAccent: input.accent,
         size: '1200x630',
+        socialPreview: 'social-preview.png (1280x640，GitHub Settings → Social preview)',
       },
       null,
       2,
     ) + '\n',
   )
   console.log(`✅ 已生成 docs/brand/og-image.png（1200×630，输入哈希 ${input.hash}）`)
+  console.log('✅ 已生成 docs/brand/social-preview.png（1280×640，上传到 GitHub 仓库设置）')
 }
 
 main()

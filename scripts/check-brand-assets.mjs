@@ -136,6 +136,26 @@ function checkOgImage() {
   // 新鲜度由生成脚本自己判定（它算得出输入哈希，这里不重复实现）
   console.log(`✅ 分享卡片二进制完好（${size.width}×${size.height}，与单源逐字节一致）`)
   console.log('ℹ️  分享卡片过期检查由 `npm run og:check` 负责（已并入 check:consistency）')
+
+  // GitHub Social preview：同一份品牌单源的另一个尺寸（1280×640）。它**不分发**到站点，
+  // 所以只校验「存在 + 合法 PNG + 尺寸」—— 上传是仓库设置里的手工步骤，CI 碰不到。
+  // 尺寸写死在这里是因为 GitHub 对非 2:1 的图会裁切：写成 1200×630 时标题正好被切掉。
+  const social = readBuf('docs/brand/social-preview.png')
+  if (!social) {
+    fail('缺少 docs/brand/social-preview.png —— 运行 `npm run og:gen` 生成（GitHub 仓库设置里上传）')
+    return
+  }
+  const socialSize = pngSize(social)
+  if (!socialSize) {
+    fail('docs/brand/social-preview.png 不是合法 PNG（魔数不是 89 50 4E 47）')
+  } else if (socialSize.width !== 1280 || socialSize.height !== 640) {
+    fail(
+      `docs/brand/social-preview.png 尺寸是 ${socialSize.width}×${socialSize.height}，` +
+        'GitHub Social preview 应为 1280×640（非 2:1 会被裁切）',
+    )
+  } else {
+    console.log(`✅ GitHub social preview 完好（${socialSize.width}×${socialSize.height}）`)
+  }
 }
 
 // ── C/D/E. 三站 index.html 与顶栏标记 ───────────────────

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.liujiaao/es-plus",
+  "description": "Generate runnable Vue 3 / Vue 2 CRUD pages from one JSON config or a natural-language request.",
+  "version": "1.4.1",
+  "repository": {
+    "url": "https://github.com/liujiaao/es-plus",
+    "source": "github"
+  },
+  "websiteUrl": "https://liujiaao.github.io/es-plus/",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@es-plus/mcp-server",
+      "version": "1.4.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ESPLUS_MCP_PROFILE",
+          "description": "Tool surface to expose: `full` (default, all tools) or `front-door` (only generate_crud plus single-surface fragments; the advanced and legacy tools are not registered).",
+          "format": "string",
+          "isRequired": false,
+          "default": "full",
+          "choices": ["full", "front-door"]
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,8 @@
 
 **[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[GitHub](https://github.com/liujiaao/es-plus)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[Vue 2 版本](https://www.npmjs.com/package/@es-plus/vue2)**
 
+**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/)
+
 > **v1.4.0 起重命名**：原包 [`es-plus-ui`](https://www.npmjs.com/package/es-plus-ui) 已重命名为 `@es-plus/vue3`，与 Vue 2 版本 [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 在同一 scope 下统一管理。`es-plus-ui@1.4.0+` 现在是仅做 re-export 的 stub 包并已 `npm deprecate` —— 现有项目仍能继续使用，但建议升级到 `@es-plus/vue3`。详见 [迁移指南](https://github.com/liujiaao/es-plus/blob/master/docs/migrate-v1.4.md)。
 
 ## 核心特性
