@@ -67,7 +67,7 @@ function siteHttpRequest({ url, headers, formParams, ...options }) {
 const isDemoUrl = (params) => String((params && params.url) || '').indexOf('/api/demo/') === 0
 
 Vue.use(EsPlus, {
-    // 全局请求：整个应用只配这一处。表格 / 表单只声明 apiParams，不再各自写 $httpRequest。
+    // 全局请求：整个应用只配这一处。表格 / 表单只声明 apiParams，不再各自写 options.httpRequest。
     // 组件级 httpRequest 仍然优先（个别页面要签名 / 重试就在那一页覆盖）。
     httpRequest: (params) => (isDemoUrl(params) ? demoHttpRequest(params) : siteHttpRequest(params)),
     EsTable: {
