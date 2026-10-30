@@ -25,11 +25,11 @@
       >
         <div class="table_inner_containers">
           <table-btns
-            v-if="((options.configBtn && options.configBtn.length) || options.leftText) && !hasVxeToolbar"
+            v-if="((tableOptions.configBtn && tableOptions.configBtn.length) || tableOptions.leftText) && !hasVxeToolbar"
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance }"
-            :btn-config="options.configBtn"
-            :left-text="options.leftText"
+            :btn-config="tableOptions.configBtn"
+            :left-text="tableOptions.leftText"
           />
 
           <!-- vxe-table 引擎（options.engine === 'vxe' 时启用） -->
@@ -100,7 +100,7 @@
                     </g>
                   </svg>
                 </div>
-                <div class="es-empty-description">{{ options.emptyText || '暂无数据' }}</div>
+                <div class="es-empty-description">{{ tableOptions.emptyText || '暂无数据' }}</div>
               </div>
             </template>
 
@@ -206,6 +206,7 @@ import {
   getGlobalConfig,
   resolveHttpRequest,
   resolveComponentConfig,
+  resolveFieldOutputProvider,
   getCallback,
   getNestedValue,
   TABLE_CONTEXT_INJECT_KEY,
@@ -227,6 +228,7 @@ import {
   type TableSortState,
   type PaginationConfig,
   type TableOptions,
+  type FieldOutputProvider,
 } from '@es-plus/core'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
@@ -367,8 +369,10 @@ export default defineComponent({
       default: () => [],
     },
     options: {
+      // 默认值刻意是空对象：原来给的是 `{ ...defaultOptions }`，等于「每个键都被显式给出」，
+      // 全局 EsTable.defaults 永远被压掉（配了等于没配）。内置默认值改在 tableOptions 里合并。
       type: Object as () => TableOptions,
-      default: () => ({ ...defaultOptions }),
+      default: () => ({}),
     },
     pagination: {
       type: Object as () => PaginationConfig,
@@ -422,6 +426,17 @@ export default defineComponent({
       (getGlobalConfig() as Record<string, unknown>) ??
       {}
 
+    // 实际生效的表格配置：defaultOptions 打底 → 全局 EsTable.defaults → 实例 :options。
+    // prop 默认值是空对象，否则「每个键都被显式给出」，全局 defaults 永远被压掉。
+    const tableOptions = computed(
+      () =>
+        ({
+          ...defaultOptions,
+          ...(($esPlusTable?.defaults as Record<string, unknown> | undefined) || {}),
+          ...props.options,
+        }) as TableOptions
+    )
+
     const checkPermission = (pvalue?: string): boolean => {
       if (!pvalue) return true
       const fn = esPlus.permission
@@ -429,7 +444,7 @@ export default defineComponent({
     }
 
     // ─── 虚拟滚动降级 ─────────────────────────
-    if (props.options.virtual === true || props.options.engine === 'virtual') {
+    if (tableOptions.value.virtual === true || tableOptions.value.engine === 'virtual') {
       // eslint-disable-next-line no-console
       console.warn(
         '[@es-plus/vue2] 虚拟滚动 (virtual: true) 在 Vue 2 + Element UI 下不可用，已降级为普通 el-table 渲染。如需虚拟滚动请使用 Vue 3 + Element Plus 版本（@es-plus/vue3）。'
@@ -437,23 +452,23 @@ export default defineComponent({
     }
 
     // ─── Engine dispatch ──────────────────────
-    const isVxeEngine = computed(() => props.options.engine === 'vxe')
+    const isVxeEngine = computed(() => tableOptions.value.engine === 'vxe')
     // vxeConfig.toolbarConfig 非 TableOptions 契约字段，需局部断言取值；且模板不能
     // 写 TS 断言（会破坏 vite build），故在此 script 内收敛为布尔供模板绑定。
     const hasVxeToolbar = computed(
       () =>
         isVxeEngine.value &&
         Boolean(
-          props.options.toolbarConfig ||
-            (props.options.vxeConfig as Record<string, unknown> | undefined)?.toolbarConfig,
+          tableOptions.value.toolbarConfig ||
+            (tableOptions.value.vxeConfig as Record<string, unknown> | undefined)?.toolbarConfig,
         ),
     )
     const isVxeProxyMode = computed(() => {
       if (!isVxeEngine.value) return false
-      const opts = props.options as any
+      const opts = tableOptions.value as any
       return !!(opts.proxyConfig || (opts.vxeConfig as any)?.proxyConfig)
     })
-    const mergedOptions = computed(() => ({ ...defaultOptions, ...props.options }))
+    const mergedOptions = computed(() => ({ ...defaultOptions, ...tableOptions.value }))
 
     // ─── Refs ─────────────────────────────────
     const tableRef = ref<any>(null)
@@ -550,7 +565,7 @@ export default defineComponent({
 
     // ─── 计算属性 ──────────────────────────────
     const getListEntry = computed(() => {
-      const eq = props.options.entryQuery
+      const eq = tableOptions.value.entryQuery
       if (eq && isObject(eq) && Object.keys(eq).length) {
         return eq
       }
@@ -559,19 +574,21 @@ export default defineComponent({
 
     const configTableField = computed(() => {
       if (
-        props.options.configTableOut &&
-        isObject(props.options.configTableOut) &&
-        Object.keys(props.options.configTableOut).length &&
-        checkQueryFields(props.options.configTableOut)
+        tableOptions.value.configTableOut &&
+        isObject(tableOptions.value.configTableOut) &&
+        Object.keys(tableOptions.value.configTableOut).length &&
+        checkQueryFields(tableOptions.value.configTableOut)
       ) {
-        return props.options.configTableOut
+        return tableOptions.value.configTableOut
       }
 
-      if (
-        $esPlusTable?.configQueryFieldOutput &&
-        typeof $esPlusTable.configQueryFieldOutput === 'function'
-      ) {
-        const configFields = ($esPlusTable.configQueryFieldOutput as Function)({
+      // 全局字段映射：字面量形态叠加在默认映射之上，函数形态按默认映射求值。
+      // 此前只认函数，字面量被静默忽略（配了等于没配）。
+      const fieldOutput = resolveFieldOutputProvider(
+        $esPlusTable?.configQueryFieldOutput as FieldOutputProvider | undefined
+      )
+      if (fieldOutput) {
+        const configFields = fieldOutput({
           total: 'records',
           pageSize: 'pageSize',
           current: 'pageNo',
@@ -623,15 +640,15 @@ export default defineComponent({
     })
 
     const heightType = computed(
-      () => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight'
+      () => (tableOptions.value.heightType || 'auto') as 'auto' | 'height' | 'maxHeight'
     )
 
     const tabHeight = computed(() => {
       // `height` / `tabHeight` 的契约是 `number | string`（core types 与 MCP zod 同口径）。
       // 旧实现只认 number，字符串（`'420'` / `'420px'`）被静默忽略并回落 `100%` —— 声明与运行时漂移。
-      const own = toCssSize(props.options.tabHeight)
+      const own = toCssSize(tableOptions.value.tabHeight)
       if (own !== undefined) return own
-      if (heightType.value === 'height') return toCssSize(props.options.height) ?? '100%'
+      if (heightType.value === 'height') return toCssSize(tableOptions.value.height) ?? '100%'
       return '100%'
     })
 
@@ -716,21 +733,21 @@ export default defineComponent({
       background: 'var(--es-bg, #fff)',
     }))
 
-    const loadStatus = computed(() => props.options.loading || loadingStatus.value)
+    const loadStatus = computed(() => tableOptions.value.loading || loadingStatus.value)
     const isRequestConf = computed(
       () =>
-        !!props.options.actionUrl ||
-        (props.options.apiParams &&
-          isObject(props.options.apiParams) &&
-          Object.keys(props.options.apiParams).length > 0) ||
-        !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
+        !!tableOptions.value.actionUrl ||
+        (tableOptions.value.apiParams &&
+          isObject(tableOptions.value.apiParams) &&
+          Object.keys(tableOptions.value.apiParams).length > 0) ||
+        !!(tableOptions.value?.httpRequest && typeof tableOptions.value.httpRequest === 'function')
     )
 
     // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
     // 仅在非请求模式且非 vxe proxy 时生效。
     const isLocalPagination = computed(
       () =>
-        props.options?.localPagination === true &&
+        tableOptions.value?.localPagination === true &&
         !isRequestConf.value &&
         !isVxeProxyMode.value
     )
@@ -886,8 +903,8 @@ export default defineComponent({
      * 状态只需存一份 —— 请求参数由 queryTableListMethod 这个唯一漏斗合并。
      * 初值来自 defaultSort：它既是首屏排序指示器，也是首次请求的排序参数。
      */
-    const serverSort = computed(() => resolveSortParam(props.options))
-    const sortState = ref<TableSortState | null>(seedSortState(props.options && props.options.defaultSort))
+    const serverSort = computed(() => resolveSortParam(tableOptions.value))
+    const sortState = ref<TableSortState | null>(seedSortState(tableOptions.value && tableOptions.value.defaultSort))
 
     /**
      * el-table 分支使用的列：开了服务端排序时 sortable 改成 'custom'
@@ -901,7 +918,7 @@ export default defineComponent({
     })
 
     const tableAttrs = computed(() => {
-      const merged = columnBindAttr({ ...defaultOptions, ...props.options })
+      const merged = columnBindAttr({ ...defaultOptions, ...tableOptions.value })
       const { align: _align, ...rest } = merged
       const result: Record<string, unknown> = {}
       for (const key in rest) {
@@ -921,8 +938,8 @@ export default defineComponent({
       // Element UI 的 el-table 懒加载回调 prop 叫 load，但我们的公开 API 用 lazyLoad
       // 与 Vue 3 版本保持一致（el-table-v2 中也是 load）。映射后 el-table 的懒加载行为
       //（loadOrToggle → loadData → 用户提供的 lazyLoad 回调）才能正常工作。
-      if (typeof props.options.lazyLoad === 'function') {
-        result.load = props.options.lazyLoad
+      if (typeof tableOptions.value.lazyLoad === 'function') {
+        result.load = tableOptions.value.lazyLoad
       }
       return result
     })
@@ -930,7 +947,7 @@ export default defineComponent({
     // ─── ResizeObserver 自适应高度 ─────────────
     // heightType / tabHeight 以 computed 传入，运行期修改 options 时能即时生效（此前是原始值快照）。
     const resizeTabHeight = computed(() =>
-      props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined)
+      tableOptions.value.tabHeight ?? (heightType.value === 'height' ? tableOptions.value.height : undefined)
     )
     const { tableHeight, resizeObservers } = useTableResize(
       tableContainerRef,
@@ -974,18 +991,18 @@ export default defineComponent({
     // 合并 options + fallthrough attrs，供 el-table 使用
     const tableBindAttrs = computed(() => {
       const result: Record<string, unknown> = { ...tableAttrs.value, ...(attrs as any) }
-      if (props.options.rowkey) {
-        result.rowKey = props.options.rowkey
+      if (tableOptions.value.rowkey) {
+        result.rowKey = tableOptions.value.rowkey
       }
       // 默认排序（AN-10）：options.defaultSort → Element UI 的 `default-sort`，与 vue3 同口径。
       // 目标列的 sortable 由生成器补（见 shared/structured-generator 的 AN-10 分支）：
       // el-table 对**不可排序列**的 default-sort 一律静默忽略。
-      if (props.options.defaultSort) {
-        result.defaultSort = props.options.defaultSort
+      if (tableOptions.value.defaultSort) {
+        result.defaultSort = tableOptions.value.defaultSort
       }
       // 树表（AI-09 子项③）：options.treeConfig → el-table（Element UI）原生 prop，
       // 与 vue3 同款映射 —— tree-props 仅在自定义子键名时发，expandAll → default-expand-all。
-      const treeCfg = props.options.treeConfig
+      const treeCfg = tableOptions.value.treeConfig
       if (treeCfg) {
         if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
           result.treeProps = { children: treeCfg.childrenField }
@@ -1001,7 +1018,7 @@ export default defineComponent({
       }
       // 合并单元格（AI-23）：声明式 mergeConfig → el-table 的 spanMethod。
       // 显式 spanMethod 是 Tier-3 逃生舱、优先级更高（两者并存时告警，不静默覆盖）。
-      const mergeCfg = resolveMergeConfig(props.options)
+      const mergeCfg = resolveMergeConfig(tableOptions.value)
       if (mergeCfg) {
         if (typeof result.spanMethod === 'function') {
           console.warn('[es-plus] 同时设置了 tableOptions.spanMethod 与 mergeConfig —— 显式 spanMethod 生效，mergeConfig 被忽略。')
@@ -1021,7 +1038,7 @@ export default defineComponent({
       handleSelectionChange,
       initSelection,
       clearAllSelection: clearAllSelectionInternal,
-    } = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
+    } = useTableSelection(tableOptions.value.rowkey, tableOptions.value.cachePageSelection)
 
     const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
       handleSelectionChange(val, paginationConfig.value.current || 1)
@@ -1043,7 +1060,7 @@ export default defineComponent({
     // ─── Watchers ─────────────────────────────
     watch(visibleShow, async (val, oldVal) => {
       if (val && val !== oldVal) {
-        if (props.options.actionUrl && !isVxeProxyMode.value) {
+        if (tableOptions.value.actionUrl && !isVxeProxyMode.value) {
           // fail 回调已经 surfaceRequestError，这里只需吞掉 rejection 防 unhandled
           await httpRequestInstance().catch(() => {})
         }
@@ -1111,7 +1128,7 @@ export default defineComponent({
     onMounted(() => {
       // 立即同步一次 vm.$refs 到 setup 中的 ref 变量
       syncDomRefs()
-      if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
+      if (isRequestConf.value && tableOptions.value.isInitRun !== false && !isVxeProxyMode.value) {
         httpRequestInstance().catch(() => {})
       }
       // 等待所有子元素（含 pagination / EsForm）挂载完成后再同步并重算高度。
@@ -1132,7 +1149,7 @@ export default defineComponent({
 
     // ─── 请求逻辑 ──────────────────────────────
     const getListenToCallBack = (eventName: string, params: unknown) => {
-      const cb = props.options.listenToCallBack
+      const cb = tableOptions.value.listenToCallBack
       if (!cb) return undefined
       const fn = getCallback(cb as any, eventName)
       if (typeof fn === 'function') return fn(params)
@@ -1196,14 +1213,14 @@ export default defineComponent({
       const { success, fail } = options
       // 服务端排序：请求漏斗这一处合并排序参数，首屏 / 翻页 / 边界回退 / 表头重取行为必然一致。
       // 未声明时 buildSortParams 返回 {}，与历史行为逐字节相同。
-      const requestParams = { ...params, ...buildSortParams(props.options, sortState.value) }
+      const requestParams = { ...params, ...buildSortParams(tableOptions.value, sortState.value) }
       // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
       const ticket = ++requestTicket.value
-      const apiParams = (props.options?.apiParams || {}) as Record<string, any>
-      const url = props.options?.actionUrl || apiParams.url || ''
+      const apiParams = (tableOptions.value?.apiParams || {}) as Record<string, any>
+      const url = tableOptions.value?.actionUrl || apiParams.url || ''
 
       // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求；否则 fail 让 Promise settle
-      if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+      if ((!url || !Object.keys(apiParams).length) && !tableOptions.value.httpRequest) {
         // 同步配置错误不是“被淘汰请求”，必须按当前请求暴露（isCurrent=true）。
         // 本调用已抢占最新序号：此前若有在途请求，其 finally 会因序号过期而跳过收起 loading，这里补收。
         if (ticket === requestTicket.value) loadingStatus.value = false
@@ -1267,8 +1284,8 @@ export default defineComponent({
         }
       }
 
-      if (props.options.httpRequest) {
-        requestHandler(props.options.httpRequest as Function)
+      if (tableOptions.value.httpRequest) {
+        requestHandler(tableOptions.value.httpRequest as Function)
       } else {
         // 回落顺序：注入的 $esPlusTable.$httpRequest（更具体）→ core 的全局解析。
         // 后者必须走 resolveHttpRequest：它同时认顶层 `httpRequest`（core 权威字段，
@@ -1277,6 +1294,7 @@ export default defineComponent({
         // "no httpRequest configured" —— 与同配置下 EsForm 的远端下拉、自由的
         // httpRequest() 三端不一致。
         const resolved =
+          ($esPlusTable.httpRequest as Function | undefined) ||
           ($esPlusTable.$httpRequest as Function | undefined) ||
           (resolveHttpRequest(getGlobalConfig()) as Function | null) ||
           undefined
@@ -1297,7 +1315,7 @@ export default defineComponent({
       // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
       // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
       // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
-      const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
+      const keepPage = resolveKeepPage(reqOptions?.keepPage, tableOptions.value?.refetchKeepPage)
       // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器。
       // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页——须按 keepPage 派发，
       // 否则查询/重置（keepPage:false）在 vxe 模式下会停留在当前页（对齐 vue3/antdv）。
@@ -1618,6 +1636,7 @@ export default defineComponent({
       mergedOptions,
       vxeEngineRef,
       // computeds
+      tableOptions,
       filteredColumns,
       elTableColumns,
       tableBindAttrs,

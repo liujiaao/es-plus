@@ -159,6 +159,8 @@ import { mapSize } from '../../utils/size'
 import {
   getGlobalConfig,
   resolveComponentConfig,
+  resolveFieldOutputProvider,
+  mergeLayoutFormProps,
   filterBtnProps,
   TABLE_CONTEXT_INJECT_KEY,
   resolveItemValidateProps,
@@ -174,7 +176,7 @@ import {
   resolveReactionValues,
   collectReactionDependencies,
 } from '@es-plus/core'
-import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData } from '@es-plus/core'
+import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
 
 // 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
 const warnedIsHiden = new Set<string>()
@@ -243,7 +245,7 @@ export default defineComponent({
     /** 校验规则 */
     rules: { type: Object as PropType<Record<string, unknown>>, default: () => ({}) },
     /** 字段映射注入函数 */
-    fieldFieldOutput: { type: Function as PropType<(defaults: Record<string, string>) => Record<string, string>>, default: undefined },
+    fieldFieldOutput: { type: [Function, Object] as PropType<FieldOutputProvider>, default: undefined },
   },
   setup(props, ctx) {
     const instance = getCurrentInstance()
@@ -286,6 +288,16 @@ export default defineComponent({
     // 回落到单例时必须展平 `methods`（configureEsPlus 路径），否则 fieldFieldOutput 恒 undefined
     const $esPlusForm = (inject('$esPlusForm', null) as Record<string, unknown> | null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
     const esPlus = (inject('$EsPlus', null) as Record<string, unknown> | null) ?? getGlobalConfig() ?? {}
+
+    // 实际生效的表单布局配置：全局 EsForm.defaults 打底，实例 layoutFormProps 覆盖。
+    // 没配 defaults 时原样返回实例对象引用；useFormLayout 与 resolveFormLayProps 都只读这里。
+    const effectiveLayoutFormProps = computed(
+      () =>
+        mergeLayoutFormProps(
+          $esPlusForm?.defaults as Record<string, unknown> | undefined,
+          props.layoutFormProps as Record<string, unknown> | undefined
+        ) as unknown as LayoutFormProps
+    )
 
     // ─── 权限 / i18n ──
     const checkPermission = (pvalue?: string): boolean => {
@@ -362,9 +374,9 @@ export default defineComponent({
         | ((p: Record<string, unknown>) => Promise<unknown>)
         | null) ||
       undefined
-    const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as
-      | ((defaults: any) => any)
-      | undefined
+    const fieldFieldOutputGlobal = resolveFieldOutputProvider(
+      (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as FieldOutputProvider | undefined
+    ) as ((defaults: ConfigFormFieldOut) => ConfigFormFieldOut) | undefined
     const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
     // ─── formProps （供 el-form 使用） ──
@@ -372,7 +384,7 @@ export default defineComponent({
     // 旧拼写 `fromLayProps` 仅作 fallback。此前这里只读旧拼写，导致任何按推荐写法
     // 传入的 `layoutFormProps.formLayProps`（labelWidth / minFoldRows …）在 vue2 上被**静默丢弃**。
     const formLayoutRef = ref<Record<string, unknown>>(
-      resolveFormLayProps(props.layoutFormProps as Parameters<typeof resolveFormLayProps>[0])
+      resolveFormLayProps(effectiveLayoutFormProps.value as Parameters<typeof resolveFormLayProps>[0])
     )
     /**
      * Element UI v2 的 el-form 在 `labelWidth` 缺省时会让 label 浮动在自然位置，
@@ -608,7 +620,9 @@ export default defineComponent({
     })
 
     const layoutResult = useFormLayout({
-      layoutFormProps: props.layoutFormProps,
+      get layoutFormProps() {
+        return effectiveLayoutFormProps.value
+      },
       get formItemList() {
         return formItemListFilter.value
       },

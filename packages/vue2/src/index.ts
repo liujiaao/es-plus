@@ -38,6 +38,7 @@
 import { configureEsPlus } from '@es-plus/core'
 // 全局 HTTP 请求自由函数：供 AI 生成的 CRUD 包装代码 import 后直接调用
 import { httpRequest, createGlobalConfigView } from '@es-plus/core'
+import type { EsTableGlobalConfig, EsFormGlobalConfig } from '@es-plus/core'
 import type { Vue2Constructor } from './vue-compat'
 import { isVue27Plus, VueCompositionAPIPlugin } from './vue-compat'
 
@@ -56,6 +57,10 @@ interface InstallOptions extends Record<string, unknown> {
   skipComponentRegistration?: boolean
   /** 是否跳过 Vue.prototype 上的全局属性注入（默认 true 注入） */
   globalProperties?: boolean
+  /** 各组件级默认配置（形状见 core 的 EsTableGlobalConfig / EsFormGlobalConfig） */
+  EsTable?: EsTableGlobalConfig
+  EsForm?: EsFormGlobalConfig
+  EsDialog?: Record<string, unknown>
 }
 
 /**
@@ -67,49 +72,6 @@ interface InstallOptions extends Record<string, unknown> {
  *   - 注入全局属性（Vue.prototype.$useDialog）
  *   - 通过 Vue.mixin 实现 provide('$EsPlus') 全局可注入
  */
-/**
- * 兼容垫片：把旧 es-eui 的 options 形状归一化为 @es-plus/vue2 期望的扁平形状
- *
- * 旧 es-eui 形状：
- *   { EsTable: { methods: { $httpRequest, paginationLayout, configQueryfieldOutput } },
- *     EsForm:  { methods: { $httpRequest, fieldFieldOutput } } }
- *
- * @es-plus/vue2 形状：
- *   { EsTable: { $httpRequest, paginationLayout, configQueryFieldOutput },
- *     EsForm:  { $httpRequest, fieldFieldOutput } }
- *
- * 差异处理：
- *   1. 把 .methods 子对象展平到上一层
- *   2. 把 configQueryfieldOutput（小写 f）改名为 configQueryFieldOutput（大写 F）
- *
- * 这样原 es-eui 的 main.js 中 `Vue.use(esEui, { EsTable: { methods: { ... } } })`
- * 配置可以一字不改地切换到 `Vue.use(EsPlus, { ... })`。
- */
-const normalizeLegacyOptions = (options: InstallOptions): InstallOptions => {
-  const out: Record<string, unknown> = { ...options }
-  for (const key of ['EsTable', 'EsForm', 'EsDialog']) {
-    const sub = out[key] as Record<string, unknown> | undefined
-    if (!sub || typeof sub !== 'object') continue
-    const methods = (sub as Record<string, unknown>).methods as
-      | Record<string, unknown>
-      | undefined
-    if (methods && typeof methods === 'object') {
-      // 展平 methods 到 sub 上（不覆盖已有同名键）
-      const { methods: _drop, ...rest } = sub as Record<string, unknown>
-      out[key] = { ...methods, ...rest }
-    }
-    // 重命名 configQueryfieldOutput → configQueryFieldOutput
-    const flat = out[key] as Record<string, unknown>
-    if (
-      typeof flat.configQueryfieldOutput === 'function' &&
-      typeof flat.configQueryFieldOutput !== 'function'
-    ) {
-      flat.configQueryFieldOutput = flat.configQueryfieldOutput
-    }
-  }
-  return out as InstallOptions
-}
-
 const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
   // 自动管理 @vue/composition-api 安装：
   //   - Vue 2.6.x：必须装 polyfill，否则库内 setup / inject / ref 等无法工作
@@ -132,14 +94,14 @@ const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
     )
   }
 
-  // 兼容旧 es-eui options 形状（methods 嵌套 + 字段名差异）
-  const normalized = normalizeLegacyOptions(options)
-
-  // 写入全局配置单例（permission / 默认 size 等）
-  configureEsPlus(normalized as any)
+  // 写入全局配置单例（permission / 默认 size 等）。
+  // 旧形状（`EsTable.methods.*` 嵌套、`configQueryfieldOutput` 小写 f、`$httpRequest`
+  // 带前缀）全部由 core 的 configureEsPlus **写入时**归一 —— 此前这里有一份本地
+  // normalizeLegacyOptions 做同样的三件事，任一处漏改就是一类「配了等于没配」。
+  configureEsPlus(options as any)
 
   // 全局注册所有组件
-  if (!normalized.skipComponentRegistration) {
+  if (!options.skipComponentRegistration) {
     components.forEach((component) => {
       const compName = (component as unknown as { name?: string }).name
       if (compName) {
@@ -148,7 +110,7 @@ const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
     })
   }
 
-  if (normalized.globalProperties !== false) {
+  if (options.globalProperties !== false) {
     // 编程式弹窗挂到 Vue.prototype 上，方便 Options API 通过 this.$useDialog() 调用
     ;(Vue as unknown as { prototype: Record<string, unknown> }).prototype.$useDialog = useDialog
   }
@@ -163,11 +125,8 @@ const install = (Vue: Vue2Constructor, options: InstallOptions = {}) => {
   Vue.mixin({
     provide: {
       // 读时回落到模块级单例：Vue.mixin 的 provide 是 install 时的静态快照，
-      // 不加这层的话 install 之后调用 configureEsPlus() 改不动任何组件行为。
-      $EsPlus: createGlobalConfigView({
-        useDialog,
-        ...normalized,
-      }),
+      // 不做这层回落的话，install 之后调用 configureEsPlus() 改不动任何组件行为。
+      $EsPlus: createGlobalConfigView({ useDialog }),
     },
   })
 }
