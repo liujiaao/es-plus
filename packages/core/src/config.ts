@@ -384,23 +384,19 @@ export function mergeLayoutFormProps(
 /**
  * 取某个组件档（`EsTable` / `EsForm` / `EsDialog`）的全局配置，并把 `methods` 展平。
  *
- * 为什么需要这个函数：两条安装路径写进单例/注入的形状**不一样**。
+ * **读侧兜底，不是主路径。** 归一只在写入时做一次（`normalizeEsPlusOptions`，
+ * `configureEsPlus` 与三端 `install` 都经过它），所以单例里、以及
+ * `createComponentConfigView()` provide 出去的视图里都已经是扁平形状 ——
+ * 对本函数而言输入已展平、调用是幂等的。
  *
- *   · `app.use(EsPlus, { EsTable: { methods } })` —— `install()` 里
- *     `app.use(EsTable.Plugin, options.EsTable)`，Plugin 只把 `options.methods`
- *     `provide` 出来，于是组件 `inject('$esPlusTable')` 拿到的是**平的**
- *     `{ $httpRequest, configQueryFieldOutput, paginationLayout }`。
- *   · `configureEsPlus({ EsTable: { methods } })` —— 没有插件、没有 provide，组件回落到
- *     单例，读到的是**原样**的 `{ methods: {...} }`。
+ * 保留它的两个理由：
+ *   1. 宿主可能不经 `configureEsPlus` 直接 `app.provide('$esPlusTable', {...})`，
+ *      组件回落到单例之外时仍要能读到 `methods` 里的键；
+ *   2. 新旧版本混装（宿主升级了 vue3 但另一个包还是旧版）时写入未归一，
+ *      读侧还有一次机会。
  *
- * 组件内部的读取点一律是平键（`$esPlusTable.configQueryFieldOutput` /
- * `$esPlusTable.paginationLayout` / `$esPlusForm.fieldFieldOutput`），于是第二条路径下
- * 这几个键全是 undefined —— docs/usage.md 的「模式二：configureEsPlus」整段示例
- * （字段映射、分页布局）配了等于没配。`$httpRequest` 因为另有 `resolveHttpRequest`
- * 兜底所以看不出问题，缺陷因此被掩盖。
- *
- * 展平时 `methods` 里的键**覆盖**同级平键（与 `resolveHttpRequest` 的 nested 优先
- * 一致）；`methods` 本身保留在结果里，旧代码读 `cfg.methods.x` 也不受影响。
+ * 展平时 `methods` 里的键**覆盖**同级平键；`methods` 本身保留在结果里，
+ * 旧代码读 `cfg.methods.x` 也不受影响。
  */
 export function resolveComponentConfig(
   cfg: EsPlusGlobalConfig | null | undefined,
@@ -417,16 +413,17 @@ export function resolveComponentConfig(
 /**
  * 从全局配置中解析出用户配置的 HTTP 请求函数。
  *
- * 兼容三端 install 写入单例后的三种键位约定：
- *   1. 顶层 `httpRequest` —— core 权威字段（app.use(EsPlus, { httpRequest })）
- *   2. `EsTable/EsForm.methods.$httpRequest` —— vue3 / adapter-antdv 原样透传的 options.methods
- *   3. `EsTable/EsForm.$httpRequest` —— vue2 normalizeLegacyOptions 展平 methods 之后
+ * 权威键是**顶层** `httpRequest`（`app.use(EsPlus, { httpRequest })` /
+ * `configureEsPlus({ httpRequest })`）。写入归一已经把 `EsTable` / `EsForm` 档下的
+ * `$httpRequest`、`methods.$httpRequest` 一并补出规范名 `httpRequest`，故下面这层
+ * 三路兜底对已归一的配置是幂等的 —— 它存在只为两种边缘输入：宿主手写 provide、
+ * 或新旧版本混装导致单例里还是未归一的形状。
  *
- * 导出给渲染层复用：EsForm 的字段级远端取数此前只读 `$esPlusForm.$httpRequest`
- * （等价于第 2/3 条），完全看不到顶层 `httpRequest` —— 而顶层才是 core 的权威字段，
- * 也是未配置时错误提示里推荐给用户的写法。于是「按文档配了顶层 httpRequest」的应用里，
- * EsForm 的远端下拉取不到请求函数（表现为挂起），EsTable 却一切正常。
- * 渲染层统一回落到这里，三种键位约定只需维护这一份。
+ * 导出给渲染层复用：EsForm 的字段级远端取数此前只读 `$esPlusForm.$httpRequest`，
+ * 完全看不到顶层 `httpRequest` —— 而顶层才是 core 的权威字段，也是未配置时错误提示里
+ * 推荐给用户的写法。于是「按文档配了顶层 httpRequest」的应用里，EsForm 的远端下拉
+ * 取不到请求函数（表现为挂起），EsTable 却一切正常。渲染层统一回落到这里，
+ * 键位约定只需维护这一份。
  */
 export function resolveHttpRequest(cfg: EsPlusGlobalConfig): HttpRequestFn | null {
   if (typeof cfg.httpRequest === 'function') return cfg.httpRequest as HttpRequestFn
