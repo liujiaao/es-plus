@@ -72,7 +72,9 @@ const install = (app: App, options: EsPlusOptions = {}) => {
   }
 
   // provide 全局注入（读时回落到模块级单例，install 之后的 configureEsPlus 依然生效）
-  app.provide('$EsPlus', createGlobalConfigView({ useDialog: useDialogOrig, ...options }))
+  // 读时回落到模块级单例：写死的快照会让 install 之后的 configureEsPlus 无效。
+  // 也刻意**不再**展开 `...options` —— 选项已经 configureEsPlus 写进单例。
+  app.provide('$EsPlus', createGlobalConfigView({ useDialog: useDialogOrig }))
 }
 
 // ─── 命名导出 ───────────────────────────────────────

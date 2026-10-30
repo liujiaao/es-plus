@@ -13,7 +13,7 @@
 -->
 <template>
   <a-config-provider :locale="antLocale">
-    <div :ref="setTableContainer" class="table_component" :class="{ 'table-striped': options.stripe }" :style="{ [heightType]: tabHeight }">
+    <div :ref="setTableContainer" class="table_component" :class="{ 'table-striped': tableOptions.stripe }" :style="{ [heightType]: tabHeight }">
       <a-spin :spinning="loadStatus" tip="努力加载中...">
         <div class="table_containers">
           <!-- 插槽区域 -->
@@ -33,9 +33,9 @@
           <table-btns
             ref="tbBtnRef"
             :instance="{ tableRef: instance, formInstance: formInstance, getVxeGrid: getVxeGridInstance }"
-            v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && ((options as any).toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
-            :btn-config="(options.configBtn as any[])"
-            :left-text="(options.leftText as string)"
+            v-if="((tableOptions.configBtn && (tableOptions.configBtn as any[]).length) || tableOptions.leftText) && !(isVxeEngine && ((tableOptions as any).toolbarConfig || (tableOptions as any).vxeConfig?.toolbarConfig))"
+            :btn-config="(tableOptions.configBtn as any[])"
+            :left-text="(tableOptions.leftText as string)"
           />
 
           <!-- vxe engine -->
@@ -47,7 +47,7 @@
             :columns="vxeFilteredColumns"
             :data-source="displayDataSource"
             :table-height="tableHeight"
-            :options="({ ...defaultOptions, ...options } as any)"
+            :options="tableOptions as any"
             :parent-slots="($slots as any)"
             @selection-change="handleVxeSelectionChange"
             @sort-change="handleVxeSortChange"
@@ -65,17 +65,17 @@
             :rowKey="rowKeyValue"
             :pagination="false"
             :loading="false"
-            :bordered="options.border"
+            :bordered="tableOptions.border"
             :size="tableSize"
-            :showHeader="options.showHeader !== false"
+            :showHeader="tableOptions.showHeader !== false"
             :rowSelection="hasSelection ? resolvedRowSelection : undefined"
             :rowClassName="resolvedRowClassName"
             :customRow="resolvedCustomRow"
             :customHeaderRow="resolvedCustomHeaderRow"
             :scroll="tableScroll"
-            :locale="{ emptyText: options.emptyText || '暂无数据' }"
-            :defaultExpandAllRows="options.treeConfig?.expandAll === true"
-            :childrenColumnName="options.treeConfig?.childrenField || 'children'"
+            :locale="{ emptyText: tableOptions.emptyText || '暂无数据' }"
+            :defaultExpandAllRows="tableOptions.treeConfig?.expandAll === true"
+            :childrenColumnName="tableOptions.treeConfig?.childrenField || 'children'"
             @change="handleAdvTableChange"
             v-bind="tableBindAttrs"
           >
@@ -202,6 +202,7 @@ import {
   resolveKeepPage,
   resolveHttpRequest,
   resolveComponentConfig,
+  resolveFieldOutputProvider,
   computeBoundaryRollback,
   buildColumnSpans,
   resolveMergeConfig,
@@ -216,7 +217,7 @@ import {
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
-import type { CellEditPayload, TableSortState } from '@es-plus/core'
+import type { CellEditPayload, TableSortState, FieldOutputProvider } from '@es-plus/core'
 import RenderDomTb from './render-dom-tb'
 import VxeEngine from './engines/vxe-engine.vue'
 
@@ -240,7 +241,7 @@ const props = withDefaults(
     showHeaderBar: true,
     dataSource: () => [],
     columns: () => [],
-    options: () => ({ ...defaultOptions }),
+    options: () => ({}),
     pagination: () => ({}),
   }
 )
@@ -272,6 +273,17 @@ const antLocale = ref(zhCN)
 const instance = getCurrentInstance() as any
 const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsTable')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+
+// 实际生效的表格配置：defaultOptions 打底 → 全局 EsTable.defaults → 实例 :options。
+// prop 默认值是空对象，否则「每个键都被显式给出」，全局 defaults 永远被压掉（配了等于没配）。
+const tableOptions = computed(
+  () =>
+    ({
+      ...defaultOptions,
+      ...(($esPlusTable?.defaults as Record<string, unknown> | undefined) || {}),
+      ...props.options,
+    }) as TableOptions
+)
 
 function getVxeGridInstance() {
   if (!isVxeEngine.value) return null
@@ -330,8 +342,8 @@ const isFormInstance = computed(() => {
 
 // entryQuery 兜底（对齐 vue3 getListEntry）
 const getListEntry = computed(() => {
-  if (props.options.entryQuery && isObject(props.options.entryQuery) && Object.keys(props.options.entryQuery).length) {
-    return props.options.entryQuery
+  if (tableOptions.value.entryQuery && isObject(tableOptions.value.entryQuery) && Object.keys(tableOptions.value.entryQuery).length) {
+    return tableOptions.value.entryQuery
   }
   return {}
 })
@@ -372,14 +384,14 @@ const emitPaginationUpdate = () => {
 }
 
 // ─── 表格尺寸 ───────────────────────────────────────
-const tableSize = computed(() => mapSize(props.options.size, 'middle') as 'large' | 'middle' | 'small')
+const tableSize = computed(() => mapSize(tableOptions.value.size, 'middle') as 'large' | 'middle' | 'small')
 
 // ─── 虚拟滚动（本端不支持，显式告警）─────────────────
 // `virtual` / `engine: 'virtual'` 是 Element Plus（el-table-v2）的概念；
 // ant-design-vue 4.x 的 a-table 从未实现虚拟滚动，绑定 `:virtual` 只会变成一个
 // 落不到任何逻辑上的 DOM 属性 —— 与其静默失效，不如告警并指明替代方案。
 const virtualRequested = computed(() =>
-  props.options.virtual === true || props.options.engine === 'virtual'
+  tableOptions.value.virtual === true || tableOptions.value.engine === 'virtual'
 )
 watch(virtualRequested, (requested) => {
   if (!requested) return
@@ -389,17 +401,17 @@ watch(virtualRequested, (requested) => {
 }, { immediate: true })
 
 // ─── vxe engine ─────────────────────────────────
-const isVxeEngine = computed(() => props.options.engine === 'vxe')
+const isVxeEngine = computed(() => tableOptions.value.engine === 'vxe')
 const isVxeProxyMode = computed(() => {
   if (!isVxeEngine.value) return false
-  const opts = props.options as any
+  const opts = tableOptions.value as any
   return !!(opts.proxyConfig || (opts.vxeConfig as any)?.proxyConfig)
 })
 const vxeEngineRef = ref<any>(null)
 
 // ─── rowKey ─────────────────────────────────────────
 const rowKeyValue = computed(() => {
-  if (props.options.rowkey) return props.options.rowkey
+  if (tableOptions.value.rowkey) return tableOptions.value.rowkey
   return 'id'
 })
 
@@ -420,16 +432,16 @@ const tableScroll = computed(() => {
 })
 
 // ─── 数据 ───────────────────────────────────────────
-const loadStatus = computed(() => props.options.loading || loadingStatus.value)
+const loadStatus = computed(() => tableOptions.value.loading || loadingStatus.value)
 const isRequestConf = computed(() =>
-  !!props.options.actionUrl ||
-  (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0) ||
-  !!(props.options?.httpRequest && typeof props.options.httpRequest === 'function')
+  !!tableOptions.value.actionUrl ||
+  (tableOptions.value.apiParams && isObject(tableOptions.value.apiParams) && Object.keys(tableOptions.value.apiParams).length > 0) ||
+  !!(tableOptions.value?.httpRequest && typeof tableOptions.value.httpRequest === 'function')
 )
 // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
 // 仅在非请求模式且非 vxe proxy 时生效（对齐 vue3/vue2）。
 const isLocalPagination = computed(
-  () => props.options?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
+  () => tableOptions.value?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
 )
 // 分页栏显示：外部显式传入 total 时按外部值显示；请求模式（actionUrl/apiParams）必然带分页，始终显示；本地分页始终显示
 const showPagination = computed(() => {
@@ -470,7 +482,7 @@ const hasExpandConfig = computed(() => !!expandContent.value)
 // 展开启用条件放宽：宿主 expand 插槽**或**声明式 expandConfig 二者其一即可
 // （此前只认插槽 → 纯 JSON 的 schema 模式无法触发展开）。
 const expandEnabled = computed(
-  () => (!!props.options.expand || hasExpandColumn.value) && (hasExpandSlot.value || hasExpandConfig.value)
+  () => (!!tableOptions.value.expand || hasExpandColumn.value) && (hasExpandSlot.value || hasExpandConfig.value)
 )
 
 /**
@@ -486,7 +498,7 @@ const cellValue = (row: Record<string, unknown> | undefined, prop: string): unkn
   const v = row ? row[prop] : undefined
   return v == null || v === '' ? '-' : v
 }
-const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
+const heightType = computed(() => (tableOptions.value.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 
 const slotStyles = computed(() => {
   const raw = props.headBarClass
@@ -516,9 +528,9 @@ const headerBarClassList = computed(() => {
 const tabHeight = computed(() => {
   // `height` / `tabHeight` 的契约是 `number | string`（core types 与 MCP zod 同口径）。
   // 旧实现只认 number，字符串（`'420'` / `'420px'`）被静默忽略并回落 `100%` —— 声明与运行时漂移。
-  const own = toCssSize(props.options.tabHeight)
+  const own = toCssSize(tableOptions.value.tabHeight)
   if (own !== undefined) return own
-  if (heightType.value === 'height') return toCssSize(props.options.height) ?? '100%'
+  if (heightType.value === 'height') return toCssSize(tableOptions.value.height) ?? '100%'
   return '100%'
 })
 
@@ -543,7 +555,7 @@ const {
   clearSelection,
   toggleRowSelection,
   setCurrentPage,
-} = useTableSelection(() => props.options.rowkey, props.options.cachePageSelection)
+} = useTableSelection(() => tableOptions.value.rowkey, tableOptions.value.cachePageSelection)
 
 // ─── 过滤列 ─────────────────────────────────────────
 // 列上是否已有**用户显式**的单元格渲染（它们优先于声明式 dataOptions）。
@@ -643,7 +655,7 @@ const vxeFilteredColumns = computed(() => {
 // ADV 通过 rowSelection 自动渲染复选框列，故选择列不进 adaptedColumns；
 // 此处仅检测其存在，并把 width/align/fixed 合并进 rowSelection。
 const selectionCol = computed(() => filteredColumns.value.find((c) => c.type === 'selection'))
-const hasSelection = computed(() => props.options.multiSelect || !!selectionCol.value)
+const hasSelection = computed(() => tableOptions.value.multiSelect || !!selectionCol.value)
 const resolvedRowSelection = computed(() => {
   const rs = rowSelection.value
   const col = selectionCol.value
@@ -675,7 +687,7 @@ const adaptedColumns = computed(() => {
   // 「columns 原始列（未做权限/隐藏过滤）」。喂过滤后的列会让被 `hidCol` / 列级权限筛掉的
   // `type:'index'` 列不再「算作已声明」，于是又合成一条默认序号列 —— 用户的隐藏/拒绝被
   // 合成列直接推翻（权限列甚至会因此可见）。vue3/vue2 传的都是原始列，三端同规。
-  for (const spec of synthesizeLeadingColumns(props.options, columnRowList.value)) {
+  for (const spec of synthesizeLeadingColumns(tableOptions.value, columnRowList.value)) {
     if (spec.type === 'index') cols.push(createSnAdvColumn())
   }
 
@@ -738,7 +750,7 @@ const adaptedColumns = computed(() => {
   // 默认排序状态只能落在列上。门槛与 el-table 一致：只有可排序列才认 —— antd 在无
   // `sorter` 时同样静默忽略 `defaultSortOrder`，这里不硬塞 `sorter`（那会让不可排序
   // 的列凭空可点，反而与 vue3/vue2 不一致）。
-  const ds = props.options.defaultSort
+  const ds = tableOptions.value.defaultSort
   if (ds && ds.prop) {
     const target = cols.find((c) => columnBoundPath(c) === ds.prop)
     if (target && target.sorter) {
@@ -766,7 +778,7 @@ const adaptedColumns = computed(() => {
   // 注意：es-plus 的 `TableColumn` **不声明** customCell（adaptColumn 也不转发它），故此刻
   // 该列不可能已带 customCell —— `typeof` 守卫是**防御性**的（防未来 adaptColumn 转发后
   // 被静默覆盖），不是今天可达的逃生舱。
-  const mergeCfg = resolveMergeConfig(props.options)
+  const mergeCfg = resolveMergeConfig(tableOptions.value)
   if (mergeCfg) {
     const rows = displayDataSource.value as Record<string, unknown>[]
     for (const c of cols) {
@@ -812,8 +824,8 @@ const adaptedColumns = computed(() => {
 // defaultSortOrder，故首屏指示器与首次请求参数来自同一个声明。
 // 注意：ADV 的 `sortable` 本来就映射成 `sorter: true`（a-table 从不本地排序），
 // 所以这里不需要像 el-table 那样把 sortable 改成 custom。
-const serverSort = computed(() => resolveSortParam(props.options))
-const sortState = ref<TableSortState | null>(seedSortState(props.options?.defaultSort))
+const serverSort = computed(() => resolveSortParam(tableOptions.value))
+const sortState = ref<TableSortState | null>(seedSortState(tableOptions.value?.defaultSort))
 
 // ─── 表格 attrs 透传 ────────────────────────────────
 const TABLE_INTERNAL_KEYS = new Set([
@@ -834,7 +846,7 @@ const TABLE_INTERNAL_KEYS = new Set([
 const fallthroughAttrs = useAttrs()
 const tableBindAttrs = computed(() => {
   const result: Record<string, unknown> = {}
-  if (props.options.rowkey) result.rowKey = props.options.rowkey
+  if (tableOptions.value.rowkey) result.rowKey = tableOptions.value.rowkey
   for (const [k, v] of Object.entries(fallthroughAttrs)) {
     // AN-11⑥：`onRowClick` 由 `resolvedCustomRow` 翻译成 a-table 的行点击回调，
     // 不能再原样落到 a-table 上（a-table 没有 row-click 事件，会变成一枚挂在根节点、
@@ -852,8 +864,8 @@ const tableBindAttrs = computed(() => {
 const currentRowKey = ref<unknown>(null)
 
 const resolvedRowClassName = computed(() => {
-  const rc = props.options.rowClassName
-  const highlighted = props.options.highlightCurrentRow
+  const rc = tableOptions.value.rowClassName
+  const highlighted = tableOptions.value.highlightCurrentRow
   const rk = rowKeyValue.value
   return (record: Record<string, unknown>, index: number): string => {
     const classes: string[] = []
@@ -882,8 +894,8 @@ const resolvedRowClassName = computed(() => {
  * 声明事件，`useAttrs()` 响应式，父级换监听器无需重挂），并与高亮共用同一个 onClick。
  */
 const resolvedCustomRow = computed((): any => {
-  const rowStyle = props.options.rowStyle
-  const highlighted = props.options.highlightCurrentRow
+  const rowStyle = tableOptions.value.rowStyle
+  const highlighted = tableOptions.value.highlightCurrentRow
   const rk = rowKeyValue.value
   const onRowClick = fallthroughAttrs.onRowClick as
     | ((record: Record<string, unknown>, index: number, event: Event) => void)
@@ -903,7 +915,7 @@ const resolvedCustomRow = computed((): any => {
 
 // 表头样式（对齐 vue3 headerCellStyle → ADV customHeaderRow）
 const resolvedCustomHeaderRow = computed((): any => {
-  const hs = props.options.headerCellStyle
+  const hs = tableOptions.value.headerCellStyle
   if (!hs) return undefined
   return () => ({ style: hs })
 })
@@ -911,7 +923,7 @@ const resolvedCustomHeaderRow = computed((): any => {
 // ─── 高度自适应 ─────────────────────────────────────
 // heightType / tabHeight 以 computed 传入，运行期修改 options 时能即时生效（此前是原始值快照）。
 const resizeTabHeight = computed(() =>
-  props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined)
+  tableOptions.value.tabHeight ?? (heightType.value === 'height' ? tableOptions.value.height : undefined)
 )
 const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef, headBarRef, tbBtnRef, paginationRef,
@@ -1047,15 +1059,20 @@ function getOperateBtns(column: any, row: Record<string, unknown>): any[] {
 // ─── 配置化请求 ─────────────────────────────────────
 const configTableField = computed(() => {
   if (
-    props.options.configTableOut &&
-    isObject(props.options.configTableOut) &&
-    Object.keys(props.options.configTableOut).length &&
-    checkQueryFields(props.options.configTableOut)
+    tableOptions.value.configTableOut &&
+    isObject(tableOptions.value.configTableOut) &&
+    Object.keys(tableOptions.value.configTableOut).length &&
+    checkQueryFields(tableOptions.value.configTableOut)
   ) {
-    return props.options.configTableOut
+    return tableOptions.value.configTableOut
   }
-  if ($esPlusTable?.configQueryFieldOutput && typeof $esPlusTable.configQueryFieldOutput === 'function') {
-    const configFields = ($esPlusTable.configQueryFieldOutput as Function)({
+  // 全局字段映射：字面量形态叠加在默认映射之上，函数形态按默认映射求值。
+  // 此前只认函数，字面量被静默忽略（配了等于没配）。
+  const fieldOutput = resolveFieldOutputProvider(
+    $esPlusTable?.configQueryFieldOutput as FieldOutputProvider | undefined
+  )
+  if (fieldOutput) {
+    const configFields = fieldOutput({
       total: 'records', pageSize: 'pageSize', current: 'pageNo', tableData: 'rows',
     })
     if (checkQueryFields(configFields)) return configFields
@@ -1072,7 +1089,7 @@ function checkQueryFields(obj: Record<string, unknown>): boolean {
 }
 
 function getListenToCallBack(eventName: string, params: unknown) {
-  const cb = props.options.listenToCallBack
+  const cb = tableOptions.value.listenToCallBack
   if (!cb) return undefined
   const fn = getCallback(cb as any, eventName)
   if (typeof fn === 'function') return fn(params)
@@ -1120,13 +1137,13 @@ function queryTableListMethod(
   const { success, fail } = options
   // 服务端排序：漏斗这一处合并排序参数，首屏 / 翻页 / 边界回退 / 表头重取行为必然一致。
   // 未声明时 buildSortParams 返回 {}，与历史行为逐字节相同。
-  const sortParams = buildSortParams(props.options, sortState.value)
+  const sortParams = buildSortParams(tableOptions.value, sortState.value)
   // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
   const ticket = ++requestTicket.value
-  const apiParams = (props.options?.apiParams || {}) as Record<string, any>
-  const url = props.options?.actionUrl || apiParams.url || ''
+  const apiParams = (tableOptions.value?.apiParams || {}) as Record<string, any>
+  const url = tableOptions.value?.actionUrl || apiParams.url || ''
   // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求；否则 fail 让 Promise settle
-  if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+  if ((!url || !Object.keys(apiParams).length) && !tableOptions.value.httpRequest) {
     // 同步配置错误不是“被淘汰请求”，必须按当前请求暴露（isCurrent=true）。
     // 本调用已抢占最新序号：此前若有在途请求，其 finally 会因序号过期而跳过收起 loading，这里补收。
     if (ticket === requestTicket.value) loadingStatus.value = false
@@ -1176,8 +1193,8 @@ function queryTableListMethod(
     }
   }
 
-  if (props.options.httpRequest) {
-    requestHandler(props.options.httpRequest)
+  if (tableOptions.value.httpRequest) {
+    requestHandler(tableOptions.value.httpRequest)
   } else {
     // 回落顺序：注入的 $esPlusTable.$httpRequest（更具体）→ core 的全局解析。
     // 后者必须走 resolveHttpRequest：它同时认顶层 `httpRequest`（core 权威字段，
@@ -1186,6 +1203,7 @@ function queryTableListMethod(
     // "no httpRequest configured" —— 与同配置下 EsForm 的远端下拉、自由的
     // httpRequest() 三端不一致。
     const resolved =
+      ($esPlusTable.httpRequest as Function | undefined) ||
       ($esPlusTable.$httpRequest as Function | undefined) ||
       (resolveHttpRequest(getGlobalConfig()) as Function | null) ||
       undefined
@@ -1203,7 +1221,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
   // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
   // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮显式传 keepPage:false，
   // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。（对齐 vue3）
-  const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
+  const keepPage = resolveKeepPage(reqOptions?.keepPage, tableOptions.value?.refetchKeepPage)
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
     // 'reload' 回到第 1 页（搜索语义），'query' 保留当前页
@@ -1329,14 +1347,14 @@ const surfaceRequestError = (err: unknown) => {
   emit('request-error', err)
 }
 onMounted(() => {
-  if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
+  if (isRequestConf.value && tableOptions.value.isInitRun !== false && !isVxeProxyMode.value) {
     httpRequestInstance().catch(() => {})
   }
 })
 
 watch(visibleShow, async (val, oldVal) => {
   if (val && val !== oldVal) {
-    if (props.options.actionUrl && !isVxeProxyMode.value) {
+    if (tableOptions.value.actionUrl && !isVxeProxyMode.value) {
       // fail 回调已 surfaceRequestError，这里只需吞掉 rejection 防 unhandled
       await httpRequestInstance().catch(() => {})
     }

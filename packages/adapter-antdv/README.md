@@ -42,38 +42,38 @@ app.use(ESPlus, {
   permission: (value) => userStore.permissions.includes(value),
   // 全局 i18n 翻译（labelKey → text）
   t: (key) => i18n.global.t(key),
-  // EsTable 全局方法
+  // EsTable 全局配置
   EsTable: {
-    methods: {
-      // 全局请求方法（未传 options.httpRequest 时使用）
-      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
-        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
-        return data
-      },
-      // API 响应字段映射
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'data',
-        pageSize: 'pageSize',
-        current: 'pageIndex',
-      }),
-      // 分页布局配置
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        background: true,
-      }),
+    // 全局请求方法（未传 options.httpRequest 时使用）
+    httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+      const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+      return data
     },
+    // API 响应字段映射（字面量或函数均可）
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'data',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+    },
+    // 分页布局配置
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      background: true,
+    },
+    // 每张表的 options 默认值（实例 :options 优先）
+    defaults: { size: 'small', border: true },
   },
-  // EsForm 全局方法
+  // EsForm 全局配置
   EsForm: {
-    methods: {
-      // 远程选项加载
-      $httpRequest: async ({ url, formParams }) => {
-        const { data } = await axios.post(url, { ...formParams })
-        return data
-      },
+    // 远程选项加载
+    httpRequest: async ({ url, formParams }) => {
+      const { data } = await axios.post(url, { ...formParams })
+      return data
     },
+    // 每个表单的 layoutFormProps 默认值（实例 prop 优先）
+    defaults: { formLayProps: { labelCol: { span: 6 } } },
   },
 })
 app.mount('#app')

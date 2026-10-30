@@ -16,6 +16,8 @@ import type {
   VxeExpandConfig,
   VxeSeqConfig,
   TableEngineExposed,
+  EsTableGlobalConfig,
+  EsFormGlobalConfig,
 } from '@es-plus/core'
 
 // ============================================================================
@@ -465,9 +467,9 @@ export interface EsPlusOptions {
   skipComponentRegistration?: boolean
   /** 全局 httpRequest（core 的权威字段，见 core/config.ts 的 resolveHttpRequest） */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  /** 各组件级默认配置：install 时按组件名下发 */
-  EsTable?: Record<string, unknown>
-  EsForm?: Record<string, unknown>
+  /** 各组件级默认配置：install 时按组件名下发（形状见 core 的 EsTableGlobalConfig / EsFormGlobalConfig） */
+  EsTable?: EsTableGlobalConfig
+  EsForm?: EsFormGlobalConfig
   EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }

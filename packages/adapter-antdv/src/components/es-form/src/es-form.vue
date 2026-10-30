@@ -214,6 +214,8 @@ import {
   applyAutoSpan,
   resolveButtonSide,
   resolveHttpRequest,
+  resolveFieldOutputProvider,
+  mergeLayoutFormProps,
   resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
@@ -227,6 +229,7 @@ import { getAdvIconComponent } from '../../../utils/icon'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
+import type { FieldOutputProvider } from '@es-plus/core'
 
 // ─── Props（对齐 vue3，无 formProps prop）─────────────
 const props = withDefaults(
@@ -238,7 +241,7 @@ const props = withDefaults(
     renderBtn?: Function | boolean
     btnColSpanRow?: boolean
     rules?: Record<string, unknown>
-    fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>
+    fieldFieldOutput?: FieldOutputProvider
   }>(),
   {
     model: () => ({}),
@@ -253,6 +256,16 @@ const props = withDefaults(
 
 const instance = getCurrentInstance()
 const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
+
+// 实际生效的表单布局配置：全局 EsForm.defaults 打底，实例 layoutFormProps 覆盖。
+// 没配 defaults 时原样返回实例对象引用；useFormLayout 与 resolveFormLayProps 都只读这里。
+const effectiveLayoutFormProps = computed(
+  () =>
+    mergeLayoutFormProps(
+      $esPlusForm?.defaults as Record<string, unknown> | undefined,
+      props.layoutFormProps as Record<string, unknown> | undefined
+    ) as unknown as LayoutFormProps
+)
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // ─── 权限 ───────────────────────────────────────────
@@ -398,9 +411,9 @@ const httpRequestGlobal =
   ($esPlusForm?.$httpRequest as ((params: Record<string, unknown>) => Promise<unknown>) | undefined) ||
   resolveHttpRequest(getGlobalConfig()) ||
   undefined
-const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as
-  | ((defaults: Record<string, string>) => Record<string, string>)
-  | undefined
+const fieldFieldOutputGlobal = resolveFieldOutputProvider(
+  (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as FieldOutputProvider | undefined
+)
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 function formInputRenderer(item: FormItemOption) {
@@ -408,7 +421,7 @@ function formInputRenderer(item: FormItemOption) {
 }
 
 // ─── 表单 Props（对齐 vue3：内联 model/rules）────────
-const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
+const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(effectiveLayoutFormProps.value) as Record<string, unknown>)
 
 const formProps = computed<Record<string, any>>(() => ({
   size: 'small' as const,
@@ -577,7 +590,9 @@ const {
   formItem,
   changeFolded,
 } = useFormLayout({
-  layoutFormProps: props.layoutFormProps,
+  get layoutFormProps() {
+    return effectiveLayoutFormProps.value
+  },
   get formItemList() {
     return formItemListFilter.value
   },
