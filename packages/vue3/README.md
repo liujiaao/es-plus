@@ -80,43 +80,43 @@ const app = createApp(App)
 
 app.use(EsPlus, {
   EsTable: {
-    methods: {
-      // 全局 HTTP 请求方法，所有 EsTable 共用
-      $httpRequest: async ({ url, formParams, headers, ...rest }) => {
-        const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
-        return res.data
-      },
-      // 分页布局配置
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: true
-      }),
-      // API 响应字段映射（后端返回字段 → 组件内部字段）
-      configQueryFieldOutput: () => ({
-        total: 'total',        // 后端总数字段名
-        pageSize: 'pageSize',  // 后端每页条数字段名
-        current: 'pageIndex',  // 后端当前页码字段名
-        tableData: 'data'      // 后端数据列表字段名
-      })
-    }
+    // 全局 HTTP 请求方法，所有 EsTable 共用
+    httpRequest: async ({ url, formParams, headers, ...rest }) => {
+      const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
+      return res.data
+    },
+    // 分页布局配置（字面量或工厂函数均可）
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: true
+    },
+    // API 响应字段映射（后端返回字段 → 组件内部字段）
+    configQueryFieldOutput: {
+      total: 'total',        // 后端总数字段名
+      pageSize: 'pageSize',  // 后端每页条数字段名
+      current: 'pageIndex',  // 后端当前页码字段名
+      tableData: 'data'      // 后端数据列表字段名
+    },
+    // 每张表的 options 默认值（实例 :options 优先）
+    defaults: { size: 'small', border: true }
   },
   EsForm: {
-    methods: {
-      // 全局 HTTP 请求方法，所有 EsForm 共用
-      $httpRequest: async ({ url, formParams, headers, ...rest }) => {
-        const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
-        return res.data
-      },
-      // API 响应字段映射（后端返回字段 → 组件内部字段）
-      fieldFieldOutput: () => ({
-        total: 'total',        // 后端总数字段名
-        pageSize: 'pageSize',  // 后端每页条数字段名
-        current: 'pageIndex',  // 后端当前页码字段名
-        listData: 'data'       // 后端选项列表字段名
-      })
-    }
+    // 全局 HTTP 请求方法，所有 EsForm 共用
+    httpRequest: async ({ url, formParams, headers, ...rest }) => {
+      const res = await axios({ url, method: rest.method || 'GET', headers, params: formParams, ...rest })
+      return res.data
+    },
+    // API 响应字段映射（后端返回字段 → 组件内部字段）
+    fieldFieldOutput: {
+      total: 'total',        // 后端总数字段名
+      pageSize: 'pageSize',  // 后端每页条数字段名
+      current: 'pageIndex',  // 后端当前页码字段名
+      listData: 'data'       // 后端选项列表字段名
+    },
+    // 每个表单的 layoutFormProps 默认值（实例 prop 优先）
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })
 ```
@@ -125,28 +125,33 @@ app.use(EsPlus, {
 
 | 组件 | 配置键 | 类型 | 说明 |
 |------|--------|------|------|
-| EsTable | `$httpRequest` | `(params) => Promise` | 全局请求方法，未传 `options.httpRequest` 时使用 |
-| EsTable | `paginationLayout` | `() => PaginationLayoutConfig` | 分页布局配置（layout/pageSizes/isSmall/background） |
-| EsTable | `configQueryFieldOutput` | `() => FieldMap` | API 响应字段映射，未传 `options.configTableOut` 时使用 |
-| EsForm | `$httpRequest` | `(params) => Promise` | 全局请求方法，未传 `formItem.httpRequest` 时使用 |
-| EsForm | `fieldFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射，未传 `formItem.configFormOut` 时使用 |
+| EsTable | `httpRequest` | `(params) => Promise` | 全局请求方法，未传 `options.httpRequest` 时使用 |
+| EsTable | `paginationLayout` | `PaginationLayoutConfig \| () => PaginationLayoutConfig` | 分页布局配置（layout/pageSizes/isSmall/background） |
+| EsTable | `configQueryFieldOutput` | `FieldMap \| (defaults) => FieldMap` | API 响应字段映射，未传 `options.configTableOut` 时使用 |
+| EsTable | `defaults` | `TableOptions` | 每张表的 `options` 默认值 |
+| EsForm | `httpRequest` | `(params) => Promise` | 全局请求方法，未传 `formItem.httpRequest` 时使用 |
+| EsForm | `fieldFieldOutput` | `FieldMap \| (defaults) => FieldMap` | API 响应字段映射，未传 `formItem.configFormOut` 时使用 |
+| EsForm | `rules` | `Record<string, unknown>` | form 级校验规则兜底 |
+| EsForm | `defaults` | `LayoutFormProps` | 每个表单的 `layoutFormProps` 默认值 |
 
-> **优先级**：组件 props / 选项 > 全局配置 > 组件默认值。例如 `options.configTableOut` 优先于 `configQueryFieldOutput`。
+> **优先级**：组件 props / 选项 > 全局配置（组件档 / `defaults`） > 组件默认值。例如 `options.configTableOut` 优先于 `configQueryFieldOutput`。
+>
+> **旧写法兼容**：`EsTable: { methods: { $httpRequest, configQueryfieldOutput } }` 会被自动展平与改名，无需改代码。
 
 #### paginationLayout 配置
 
 ```typescript
-paginationLayout: () => ({
+paginationLayout: {
   layout: 'total, sizes, prev, pager, next, jumper',  // Element Plus 分页布局字符串
   pageSizes: [10, 20, 50, 100],                        // 每页条数选项
   isSmall: true,                                        // 是否使用小型分页器
   background: true                                      // 是否显示背景色
-})
+}
 ```
 
 #### fieldFieldOutput / configQueryFieldOutput 配置
 
-函数接收默认字段映射作为参数，返回自定义映射：
+函数接收默认字段映射作为参数，返回自定义映射；也可以直接写字面量（会叠加在内置默认映射之上）：
 
 ```typescript
 // 默认映射（不配置时的值）
@@ -1174,10 +1179,12 @@ import { configureEsPlus } from '@es-plus/vue3'
 
 configureEsPlus({
   permission: (value) => userStore.permissions.includes(value),
-  EsTable: { methods: { $httpRequest: (p) => axios(p).then(r => r.data) } },
-  EsForm: { $httpRequest: (p) => axios(p).then(r => r.data) }
+  EsTable: { httpRequest: (p) => axios(p).then(r => r.data) },
+  EsForm: { httpRequest: (p) => axios(p).then(r => r.data) }
 })
 ```
+
+> `configureEsPlus` 与 `app.use(EsPlus, options)` 写入的是同一个模块级单例，两者可混用、无先后顺序要求。
 
 ### TypeScript 类型
 

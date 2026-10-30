@@ -1,5 +1,6 @@
 import EsForm from './src/es-form.vue'
 import useDialog from '../es-dialog/src/use-dialog'
+import { createComponentConfigView } from '@es-plus/core'
 
 EsForm.install = function (app: any) {
   app.component(EsForm.name, EsForm)
@@ -8,11 +9,13 @@ EsForm.install = function (app: any) {
 EsForm.isPlugin = true
 EsForm.Plugin = {
   install(app: any, options: any = {}) {
-    app.provide('$esPlusForm', {
-      ...options.methods,
-      useDialog: () => useDialog()
+    // 读时透传单例里的 EsForm 档（install() 里已 configureEsPlus 写入并归一）；
+    // 旧快照写法让 install 之后的 configureEsPlus({ EsForm }) 完全无效。
+    app.provide('$esPlusForm', createComponentConfigView('EsForm', { useDialog: () => useDialog() }))
+    app.component(EsForm.name, {
+      ...EsForm,
+      methods: { ...EsForm.methods, ...(options.methods || {}), useDialog: () => useDialog() }
     })
-    app.component(EsForm.name, { ...EsForm, methods: { ...EsForm.methods, ...(options.methods || {}), useDialog: () => useDialog() } })
   }
 }
 

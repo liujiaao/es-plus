@@ -16,6 +16,8 @@ import type {
   VxeProxyConfig,
   VxeExpandConfig,
   VxeSeqConfig,
+  EsTableGlobalConfig,
+  EsFormGlobalConfig,
 } from '@es-plus/core'
 
 export type {
@@ -528,8 +530,8 @@ export interface EsPlusOptions {
    */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   /** 各组件级默认配置：install 时按组件名下发（index.ts 的 `options[component.name]`） */
-  EsTable?: Record<string, unknown>
-  EsForm?: Record<string, unknown>
+  EsTable?: EsTableGlobalConfig
+  EsForm?: EsFormGlobalConfig
   EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }

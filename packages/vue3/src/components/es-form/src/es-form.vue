@@ -175,6 +175,7 @@ import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
 import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
+import type { FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
 import {
   resolveFormLayProps,
   calculateAutoSpan,
@@ -186,6 +187,8 @@ import {
   resolveButtonSide,
   resolveHttpRequest,
   resolveComponentConfig,
+  resolveFieldOutputProvider,
+  mergeLayoutFormProps,
   resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
@@ -203,7 +206,7 @@ const props = withDefaults(
     renderBtn?: Function | boolean
     btnColSpanRow?: boolean
     rules?: Record<string, unknown>
-    fieldFieldOutput?: (defaults: Record<string, string>) => Record<string, string>
+    fieldFieldOutput?: FieldOutputProvider
   }>(),
   {
     model: () => ({}),
@@ -221,6 +224,20 @@ const instance = getCurrentInstance()
 // `fieldFieldOutput` 恒为 undefined（docs/usage.md 模式二配了等于没配）。
 const $esPlusForm = inject<Record<string, unknown> | null>('$esPlusForm', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsForm')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
+
+/**
+ * 实际生效的表单布局配置：全局 `EsForm.defaults` 打底，实例 `layoutFormProps` 覆盖。
+ *
+ * 没有配置 `defaults` 时原样返回实例对象的引用。`useFormLayout` 与 `resolveFormLayProps`
+ * 都只认这一个出口 —— 此前「全局默认 props」在类型注释里承诺了，实现却一处都没有。
+ */
+const effectiveLayoutFormProps = computed(
+  () =>
+    mergeLayoutFormProps(
+      $esPlusForm?.defaults as Record<string, unknown> | undefined,
+      props.layoutFormProps as Record<string, unknown> | undefined
+    ) as LayoutFormProps
+)
 
 const checkPermission = (pvalue?: string): boolean => {
   if (!pvalue) return true
@@ -280,11 +297,13 @@ const httpRequestGlobal =
   ($esPlusForm?.$httpRequest as ((params: Record<string, unknown>) => Promise<unknown>) | undefined) ||
   resolveHttpRequest(getGlobalConfig()) ||
   undefined
-const fieldFieldOutputGlobal = (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as any
+const fieldFieldOutputGlobal = resolveFieldOutputProvider(
+  (props.fieldFieldOutput || $esPlusForm?.fieldFieldOutput) as FieldOutputProvider | undefined
+) as ((defaults: ConfigFormFieldOut) => ConfigFormFieldOut) | undefined
 const { getEveryFormQueryField } = useFormRequest(httpRequestGlobal)
 
 // Break circular dependency: formLayoutRef is populated after useFormLayout
-const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(props.layoutFormProps) as Record<string, unknown>)
+const formLayoutRef = ref<Record<string, unknown>>(resolveFormLayProps(effectiveLayoutFormProps.value) as Record<string, unknown>)
 const formProps = computed(() => ({
   size: 'small' as const,
   ...formLayoutRef.value,
@@ -438,7 +457,7 @@ const {
   formItem,
   changeFolded
 } = useFormLayout({
-  layoutFormProps: props.layoutFormProps,
+  get layoutFormProps() { return effectiveLayoutFormProps.value },
   get formItemList() { return formItemListFilter.value }
 })
 

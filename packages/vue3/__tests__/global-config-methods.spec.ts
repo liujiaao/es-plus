@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ElTable, ElTableColumn, ElPagination, ElButton, ElConfigProvider } from 'element-plus'
+import { ElTable, ElTableColumn, ElPagination, ElButton, ElConfigProvider, ElForm } from 'element-plus'
 
 // 与 es-form.spec.ts 同一组 mock：EsForm 与 use-dialog / es-table 之间有循环依赖，
 // 在测试环境里裸 import 会在 `EsForm.install = ...` 处拿到 undefined。
@@ -120,5 +120,43 @@ describe('configureEsPlus 的 EsForm.methods 必须生效', () => {
     // Radio 的选项是内联渲染的（Select 的选项挂在 teleport 的 popper 里，未展开时不在 DOM，
     // 拿它断言会得到「配置生效了但查不到」的假红）。
     expect(wrapper.text()).toContain('选项A')
+  })
+})
+
+/**
+ * `EsForm.defaults`（全局默认布局）：兑现类型注释里承诺的「全局默认 props」。
+ *
+ * 关注的不是 formLayProps 里能塞什么，而是**合并语义**：实例只改一个键时，
+ * 全局默认的其余键不能被整块挤掉（一层浅合并就会这样）。
+ */
+describe('EsForm.defaults', () => {
+  afterEach(() => resetGlobalConfig())
+
+  it('defaults.formLayProps 落到 el-form 的 label-width', async () => {
+    configureEsPlus({ EsForm: { defaults: { formLayProps: { labelWidth: '96px' } } } })
+    const wrapper = mount(EsForm, {
+      props: { model: {}, formItemList: [] },
+      global: { components: { ElConfigProvider } }
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(ElForm).props('labelWidth')).toBe('96px')
+  })
+
+  it('实例只给另一个键时，全局默认的 labelWidth 仍然保留', async () => {
+    configureEsPlus({ EsForm: { defaults: { formLayProps: { labelWidth: '96px' } } } })
+    const wrapper = mount(EsForm, {
+      props: {
+        model: {},
+        formItemList: [],
+        layoutFormProps: { formLayProps: { labelPosition: 'top' } }
+      },
+      global: { components: { ElConfigProvider } }
+    })
+    await wrapper.vm.$nextTick()
+
+    const form = wrapper.findComponent(ElForm)
+    expect(form.props('labelWidth')).toBe('96px')
+    expect(form.props('labelPosition')).toBe('top')
   })
 })

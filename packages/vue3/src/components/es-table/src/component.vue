@@ -18,9 +18,9 @@
             <table-btns
               ref="tbBtnRef"
               :instance="{ tableRef: instance, formInstance: formInstance, getVxeGrid: getVxeGridInstance }"
-              v-if="((options.configBtn && (options.configBtn as any[]).length) || options.leftText) && !(isVxeEngine && (options.toolbarConfig || (options as any).vxeConfig?.toolbarConfig))"
-              :btn-config="(options.configBtn as any[])"
-              :left-text="(options.leftText as string)"
+              v-if="((tableOptions.configBtn && (tableOptions.configBtn as any[]).length) || tableOptions.leftText) && !(isVxeEngine && (tableOptions.toolbarConfig || (tableOptions as any).vxeConfig?.toolbarConfig))"
+              :btn-config="(tableOptions.configBtn as any[])"
+              :left-text="(tableOptions.leftText as string)"
             />
             <virtual-engine
               v-if="isVirtual"
@@ -28,7 +28,7 @@
               :columns="filteredColumns"
               :data-source="displayDataSource"
               :table-height="tableHeight"
-              :options="props.options"
+              :options="tableOptions"
               :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualEngineSelectionChange"
@@ -44,7 +44,7 @@
               :columns="filteredColumns"
               :data-source="displayDataSource"
               :table-height="tableHeight"
-              :options="props.options"
+              :options="tableOptions"
               :parent-slots="($slots as any)"
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
@@ -75,7 +75,7 @@
                       </g>
                     </svg>
                   </div>
-                  <div class="es-empty-description">{{ options.emptyText || '暂无数据' }}</div>
+                  <div class="es-empty-description">{{ tableOptions.emptyText || '暂无数据' }}</div>
                 </div>
               </template>
               <column-item v-for="(cols, index) in elTableColumns" :key="cols.prop || cols.key || cols.type || index" :cols="{ ...cols, columnIndex: index }">
@@ -159,6 +159,7 @@ import {
   resolveKeepPage,
   resolveHttpRequest,
   resolveComponentConfig,
+  resolveFieldOutputProvider,
   computeBoundaryRollback,
   buildRowSpanMethod,
   resolveMergeConfig,
@@ -171,7 +172,7 @@ import {
   sameSortState,
   buildSortParams,
 } from '@es-plus/core'
-import type { TableSortState } from '@es-plus/core'
+import type { TableSortState, FieldOutputProvider } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
 
 const props = withDefaults(
@@ -189,7 +190,7 @@ const props = withDefaults(
     showHeaderBar: true,
     dataSource: () => [],
     columns: () => [],
-    options: () => ({ ...defaultOptions }),
+    options: () => ({}),
     pagination: () => ({})
   }
 )
@@ -225,6 +226,19 @@ const instance = getCurrentInstance() as any
 const $esPlusTable = inject<Record<string, unknown> | null>('$esPlusTable', null) ?? resolveComponentConfig(getGlobalConfig(), 'EsTable')
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
+/**
+ * 实际生效的表格配置：`defaultOptions` 打底 → 全局 `EsTable.defaults` → 实例 `:options`。
+ *
+ * 为什么 prop 默认值改成 `{}`：原来 `options: () => ({ ...defaultOptions })` 让**每个键都被
+ * 显式给出**，全局 `defaults` 永远被压掉（写了等于没写）。把内置默认值挪到这一层合并，
+ * 「哪些是用户给的」才重新可辨：实例 > 全局 defaults > 内置默认。
+ */
+const tableOptions = computed<TableOptions>(() => ({
+  ...defaultOptions,
+  ...(($esPlusTable?.defaults as Record<string, unknown> | undefined) || {}),
+  ...props.options
+}) as TableOptions)
+
 // configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）
 function getVxeGridInstance() {
   if (!isVxeEngine.value) return null
@@ -239,17 +253,17 @@ const checkPermission = (pvalue?: string): boolean => {
 
 // 虚拟滚动引擎切换
 const isVirtual = computed(() =>
-  props.options.virtual === true || props.options.engine === 'virtual'
+  tableOptions.value.virtual === true || tableOptions.value.engine === 'virtual'
 )
 const virtualEngineRef = ref<InstanceType<typeof VirtualEngine> | null>(null)
 
 // vxe 高性能引擎切换
-const isVxeEngine = computed(() => (props.options.engine as string | undefined) === 'vxe')
+const isVxeEngine = computed(() => (tableOptions.value.engine as string | undefined) === 'vxe')
 const vxeEngineRef = ref<InstanceType<typeof VxeEngine> | null>(null)
 // 当 vxeConfig.proxyConfig 或一等公民 proxyConfig 存在时，由 vxe 接管请求层和分页，ES-Plus 原有机制退场
 const isVxeProxyMode = computed(() => {
-  const vxeExtraProxy = (props.options.vxeConfig as Record<string, unknown> | undefined)?.proxyConfig
-  return isVxeEngine.value && !!(vxeExtraProxy || props.options.proxyConfig)
+  const vxeExtraProxy = (tableOptions.value.vxeConfig as Record<string, unknown> | undefined)?.proxyConfig
+  return isVxeEngine.value && !!(vxeExtraProxy || tableOptions.value.proxyConfig)
 })
 // Refs
 const tableRef = ref<any>(null)
@@ -281,8 +295,8 @@ watch(
  * 初值来自 `defaultSort`：开了服务端排序时，它既是首屏的排序指示器，
  * 也是**首次请求**的排序参数（否则首屏数据与指示器不一致）。
  */
-const serverSort = computed(() => resolveSortParam(props.options))
-const sortState = ref<TableSortState | null>(seedSortState(props.options?.defaultSort))
+const serverSort = computed(() => resolveSortParam(tableOptions.value))
+const sortState = ref<TableSortState | null>(seedSortState(tableOptions.value?.defaultSort))
 
 const loadingStatus = ref(false)
 // 请求序号（递增 ticket）：每次 queryTableListMethod 调用自增，只有最新序号的结果被采纳。
@@ -329,24 +343,29 @@ const formInstance = ref<unknown>(null)
 
 // 计算属性
 const getListEntry = computed(() => {
-  if (props.options.entryQuery && isObject(props.options.entryQuery) && Object.keys(props.options.entryQuery).length) {
-    return props.options.entryQuery
+  if (tableOptions.value.entryQuery && isObject(tableOptions.value.entryQuery) && Object.keys(tableOptions.value.entryQuery).length) {
+    return tableOptions.value.entryQuery
   }
   return {}
 })
 
 const configTableField = computed(() => {
   if (
-    props.options.configTableOut &&
-    isObject(props.options.configTableOut) &&
-    Object.keys(props.options.configTableOut).length &&
-    checkQueryFields(props.options.configTableOut)
+    tableOptions.value.configTableOut &&
+    isObject(tableOptions.value.configTableOut) &&
+    Object.keys(tableOptions.value.configTableOut).length &&
+    checkQueryFields(tableOptions.value.configTableOut)
   ) {
-    return props.options.configTableOut
+    return tableOptions.value.configTableOut
   }
 
-  if ($esPlusTable?.configQueryFieldOutput && typeof $esPlusTable.configQueryFieldOutput === 'function') {
-    const configFields = ($esPlusTable.configQueryFieldOutput as Function)({
+  // 全局字段映射：字面量形态叠加在默认映射之上，函数形态按默认映射求值。
+  // 此前只认函数，字面量被静默忽略（配了等于没配）。
+  const fieldOutput = resolveFieldOutputProvider(
+    $esPlusTable?.configQueryFieldOutput as FieldOutputProvider | undefined
+  )
+  if (fieldOutput) {
+    const configFields = fieldOutput({
       total: 'records',
       pageSize: 'pageSize',
       current: 'pageNo',
@@ -378,13 +397,13 @@ const isFormInstance = computed(() => {
 })
 
 const hasDefaultSlot = computed(() => !!slots.default?.())
-const heightType = computed(() => (props.options.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
+const heightType = computed(() => (tableOptions.value.heightType || 'auto') as 'auto' | 'height' | 'maxHeight')
 const tabHeight = computed(() => {
   // `height` / `tabHeight` 的契约是 `number | string`（core types 与 MCP zod 同口径）。
   // 旧实现只认 number，字符串（`'420'` / `'420px'`）被静默忽略并回落 `100%` —— 声明与运行时漂移。
-  const own = toCssSize(props.options.tabHeight)
+  const own = toCssSize(tableOptions.value.tabHeight)
   if (own !== undefined) return own
-  if (heightType.value === 'height') return toCssSize(props.options.height) ?? '100%'
+  if (heightType.value === 'height') return toCssSize(tableOptions.value.height) ?? '100%'
   return '100%'
 })
 
@@ -424,14 +443,14 @@ const paginationPageSizes = computed(() => {
 })
 const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
 const paginationBackground = computed(() => paginationLayoutConfig.value?.background ?? true)
-const loadStatus = computed(() => props.options.loading || loadingStatus.value)
-const isRequestConf = computed(() => !!props.options.actionUrl || (props.options.apiParams && isObject(props.options.apiParams) && Object.keys(props.options.apiParams).length > 0) || isHttpRequest.value)
-const isHttpRequest = computed(() => !!props.options?.httpRequest && typeof props.options.httpRequest === 'function')
+const loadStatus = computed(() => tableOptions.value.loading || loadingStatus.value)
+const isRequestConf = computed(() => !!tableOptions.value.actionUrl || (tableOptions.value.apiParams && isObject(tableOptions.value.apiParams) && Object.keys(tableOptions.value.apiParams).length > 0) || isHttpRequest.value)
+const isHttpRequest = computed(() => !!tableOptions.value?.httpRequest && typeof tableOptions.value.httpRequest === 'function')
 
 // 内建客户端分页：全量 dataSource 由组件内部切片、自管 current/pageSize/total。
 // 仅在非请求模式且非 vxe proxy 时生效。
 const isLocalPagination = computed(
-  () => props.options?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
+  () => tableOptions.value?.localPagination === true && !isRequestConf.value && !isVxeProxyMode.value
 )
 // 模板渲染用的数据源：本地分页时切当前页，否则优先内部请求数据、再回退 props.dataSource。
 //
@@ -562,7 +581,7 @@ const filteredColumns = computed(() => {
   // AN-09：前置非数据列（选择 → 序号 → 展开）由 core 单源合成，顺序/宽度与 vxe / 虚拟引擎一致。
   // 已显式声明同类型列（含 hidCol 隐藏列）时不重复注入；合成列没有 prop/key，
   // 因此不参与上面的 formatter 注入，也不参与 width→minWidth 转换（放在最后一步）。
-  const leadingColumns = buildLeadingColumns(props.options, columnRowList.value) as unknown as TableColumn[]
+  const leadingColumns = buildLeadingColumns(tableOptions.value, columnRowList.value) as unknown as TableColumn[]
   return [...leadingColumns, ...list]
 })
 
@@ -600,7 +619,7 @@ const TABLE_INTERNAL_KEYS = new Set([
 ])
 
 const tableAttrs = computed(() => {
-  const merged = columnBindAttr({ ...defaultOptions, ...props.options })
+  const merged = columnBindAttr({ ...defaultOptions, ...tableOptions.value })
   const { align, ...rest } = merged
   const result: Record<string, unknown> = {}
   for (const key in rest) {
@@ -663,20 +682,20 @@ const tableBindAttrs = computed(() => {
     if (k !== 'class' && k !== 'style') filteredFallthrough[k] = v
   }
   const result: Record<string, unknown> = { ...tableAttrs.value, ...filteredFallthrough }
-  if (props.options.rowkey) {
-    result.rowKey = props.options.rowkey
+  if (tableOptions.value.rowkey) {
+    result.rowKey = tableOptions.value.rowkey
   }
   // 默认排序（AN-10）：options.defaultSort → el-table 的 `default-sort`（camelCase 绑定同义）。
   // 显式映射而不是靠 TABLE_INTERNAL_KEYS 之外的键「碰巧流过去」：①三端契约要可断言；
   // ②el-table 只有在**目标列 sortable** 时才展示默认排序状态 —— 派生列的 sortable 由生成器
   // 补（见 shared/structured-generator 的 AN-10 分支），这里只负责把值送到。
-  if (props.options.defaultSort) {
-    result.defaultSort = props.options.defaultSort
+  if (tableOptions.value.defaultSort) {
+    result.defaultSort = tableOptions.value.defaultSort
   }
   // 树表（AI-09 子项③）：运行时家 options.treeConfig → el-table 原生 prop。
   // el-table 渲染树靠「row-key + 行数据里的嵌套子数组」，tree-props 只用于自定义子键名，
   // 故 childrenField 缺省 'children' 时不发（避免无谓的 prop）。expandAll → default-expand-all。
-  const treeCfg = props.options.treeConfig
+  const treeCfg = tableOptions.value.treeConfig
   if (treeCfg) {
     if (treeCfg.childrenField && treeCfg.childrenField !== 'children') {
       result.treeProps = { children: treeCfg.childrenField }
@@ -692,7 +711,7 @@ const tableBindAttrs = computed(() => {
   }
   // 合并单元格（AI-23）：声明式 mergeConfig → el-table 的 spanMethod。
   // 显式 spanMethod 是 Tier-3 逃生舱、优先级更高（两者并存时告警，不静默覆盖）。
-  const mergeCfg = resolveMergeConfig(props.options)
+  const mergeCfg = resolveMergeConfig(tableOptions.value)
   if (mergeCfg) {
     if (typeof result.spanMethod === 'function') {
       console.warn('[es-plus] 同时设置了 tableOptions.spanMethod 与 mergeConfig —— 显式 spanMethod 生效，mergeConfig 被忽略。')
@@ -706,7 +725,7 @@ const tableBindAttrs = computed(() => {
 // 使用原生 ResizeObserver
 // heightType / tabHeight 以 computed 传入，运行期修改 options 时能即时生效（此前是原始值快照）。
 const resizeTabHeight = computed(() =>
-  props.options.tabHeight ?? (heightType.value === 'height' ? props.options.height : undefined)
+  tableOptions.value.tabHeight ?? (heightType.value === 'height' ? tableOptions.value.height : undefined)
 )
 const { tableHeight, resizeObservers } = useTableResize(
   tableContainerRef,
@@ -747,7 +766,7 @@ watch(
   visibleShow,
   async (val, oldVal) => {
     if (val && val !== oldVal) {
-      if (props.options.actionUrl && !isVxeProxyMode.value) {
+      if (tableOptions.value.actionUrl && !isVxeProxyMode.value) {
         // 失败已由 httpRequestInstance 内部 surfaceRequestError 暴露，这里仅吞掉 rejection
         await httpRequestInstance().catch(() => {})
       }
@@ -819,14 +838,14 @@ const surfaceRequestError = (err: unknown) => {
   emit('request-error', err)
 }
 onMounted(() => {
-  if (isRequestConf.value && props.options.isInitRun !== false && !isVxeProxyMode.value) {
+  if (isRequestConf.value && tableOptions.value.isInitRun !== false && !isVxeProxyMode.value) {
     // 失败已由 httpRequestInstance 内部 surfaceRequestError 暴露，这里仅吞掉 rejection
     httpRequestInstance().catch(() => {})
   }
 })
 
 // 表格选择逻辑
-const { multipleSelection, handleSelectionChange, initSelection, clearAllSelection } = useTableSelection(props.options.rowkey, props.options.cachePageSelection)
+const { multipleSelection, handleSelectionChange, initSelection, clearAllSelection } = useTableSelection(tableOptions.value.rowkey, tableOptions.value.cachePageSelection)
 
 const handleTableSelectionChange = (val: Record<string, unknown>[]) => {
   handleSelectionChange(val, paginationConfig.value.current || 1)
@@ -863,7 +882,7 @@ const checkQueryFields = (obj: Record<string, unknown>): boolean => {
 }
 
 const getListenToCallBack = (eventName: string, params: unknown) => {
-  const cb = props.options.listenToCallBack
+  const cb = tableOptions.value.listenToCallBack
   if (!cb) return undefined
   const fn = getCallback(cb as any, eventName)
   if (typeof fn === 'function') {
@@ -919,15 +938,15 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
   // 服务端排序（`tableOptions.sortParam`）：请求漏斗这一处合并排序参数，
   // 于是首屏 / 翻页 / 边界回退 / 表头重取四个构造点行为必然一致（core 保证三端同规）。
   // 未声明时 `buildSortParams` 返回 {}，与历史行为逐字节相同。
-  const requestParams = { ...params, ...buildSortParams(props.options, sortState.value) }
+  const requestParams = { ...params, ...buildSortParams(tableOptions.value, sortState.value) }
   // 抢占序号：同步自增，保证并发调用按发起顺序确定“最新”。
   const ticket = ++requestTicket.value
-  const apiParams = (props.options?.apiParams || {}) as Record<string, any>
-  const url = props.options?.actionUrl || apiParams.url || ''
+  const apiParams = (tableOptions.value?.apiParams || {}) as Record<string, any>
+  const url = tableOptions.value?.actionUrl || apiParams.url || ''
 
   // 无 url/apiParams 但配置了直接 httpRequest 时仍可发请求（由调用方自处理 url）。
   // 否则调用 fail 让外层 Promise settle，避免 refresh() 永久挂起。
-  if ((!url || !Object.keys(apiParams).length) && !props.options.httpRequest) {
+  if ((!url || !Object.keys(apiParams).length) && !tableOptions.value.httpRequest) {
     // 同步配置错误不是“被淘汰请求”，必须按当前请求暴露（isCurrent=true）。
     // 本调用已抢占最新序号：此前若有在途请求，其 finally 会因序号过期而跳过收起 loading，这里补收。
     if (ticket === requestTicket.value) loadingStatus.value = false
@@ -983,8 +1002,8 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
     }
   }
 
-  if (props.options.httpRequest) {
-    requestHandler(props.options.httpRequest)
+  if (tableOptions.value.httpRequest) {
+    requestHandler(tableOptions.value.httpRequest)
   } else {
     // 回落顺序：注入的 $esPlusTable.$httpRequest（更具体）→ core 的全局解析。
     // 后者必须走 resolveHttpRequest：它同时认顶层 `httpRequest`（core 权威字段，
@@ -993,6 +1012,7 @@ const queryTableListMethod = (params: Record<string, unknown>, options: QueryTab
     // "no httpRequest configured" —— 而同一个配置下 EsForm 的远端下拉与自由的
     // httpRequest() 都能用（与 docs/config.ts 的承诺三端不一致）。
     const resolved =
+      ($esPlusTable.httpRequest as Function | undefined) ||
       ($esPlusTable.$httpRequest as Function | undefined) ||
       (resolveHttpRequest(getGlobalConfig()) as Function | null) ||
       undefined
@@ -1010,7 +1030,7 @@ const httpRequestInstance = (model?: Record<string, unknown>, reqOptions?: { kee
   // 是否保留当前页码：本次调用显式传入的 keepPage 优先，其次回退到表级
   // refetchKeepPage（默认 false，向后兼容）。查询/重置按钮会显式传 keepPage:false，
   // 使「查询」始终回到第 1 页（搜索语义），不受 refetchKeepPage 影响。
-  const keepPage = resolveKeepPage(reqOptions?.keepPage, props.options?.refetchKeepPage)
+  const keepPage = resolveKeepPage(reqOptions?.keepPage, tableOptions.value?.refetchKeepPage)
   // vxe proxy mode：vxe 的 proxyConfig 接管请求层，ES-Plus 直接委托给 vxe 的内置查询触发器
   if (isVxeProxyMode.value) {
     // 'reload' 会回到第 1 页（搜索语义），'query' 保留当前页

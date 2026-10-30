@@ -41,7 +41,10 @@ const install = (app: any, options: Record<string, unknown> = {}) => {
     })
   }
 
-  app.provide('$EsPlus', createGlobalConfigView({ useDialog, ...options }))
+  // 读时回落到模块级单例：写死的快照会让 install 之后的 configureEsPlus 无效。
+  // 也刻意**不再**展开 `...options` —— 选项已经 configureEsPlus 写进单例，
+  // 快照一份只会让「哪一份生效」变得取决于安装顺序。
+  app.provide('$EsPlus', createGlobalConfigView({ useDialog }))
 }
 
 // 按需导出
