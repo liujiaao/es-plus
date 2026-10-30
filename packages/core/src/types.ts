@@ -17,6 +17,9 @@
 // 通用基础类型
 // ============================================================================
 
+// 组件档的配置形状由 config.ts 定义（归一化规则也在那边），这里只引用类型
+import type { EsTableGlobalConfig, EsFormGlobalConfig } from './config'
+
 /**
  * 通用 model 数据形状（表单/表格行数据）
  * 使用宽松约束，允许任意 JSON 兼容值
@@ -1242,9 +1245,9 @@ export interface EsPlusOptions {
   skipComponentRegistration?: boolean
   /** 全局 httpRequest 函数 */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
-  /** 各组件级默认配置 */
-  EsTable?: Record<string, unknown>
-  EsForm?: Record<string, unknown>
+  /** 各组件级默认配置（形状见 config.ts 的 `EsTableGlobalConfig` / `EsFormGlobalConfig`） */
+  EsTable?: EsTableGlobalConfig
+  EsForm?: EsFormGlobalConfig
   EsDialog?: Record<string, unknown>
   /** 允许任意扩展键 */
   [key: string]: unknown

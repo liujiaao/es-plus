@@ -180,7 +180,7 @@ describe('wantsCrossPageSelection', () => {
   })
 
   it('没有多选列 → 不保留', () => {
-    expect(wantsCrossPageSelection({}, [{ prop: 'name' }])).toBe(false)
+    expect(wantsCrossPageSelection({}, [{ type: 'data' }])).toBe(false)
     expect(wantsCrossPageSelection({}, undefined)).toBe(false)
   })
 

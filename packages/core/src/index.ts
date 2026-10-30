@@ -43,8 +43,25 @@ export {
   resolveHttpRequest,
   resolveComponentConfig,
   createGlobalConfigView,
+  createComponentConfigView,
+  resolveComponentDefaults,
+  mergeComponentDefaults,
+  mergeLayoutFormProps,
+  resolveConfigProvider,
+  resolveFieldOutputProvider,
+  normalizeSectionConfig,
+  normalizeEsPlusOptions,
 } from './config'
-export type { EsPlusGlobalConfig, HttpRequestFn } from './config'
+export type {
+  EsPlusGlobalConfig,
+  HttpRequestFn,
+  EsTableGlobalConfig,
+  EsFormGlobalConfig,
+  EsTablePaginationLayout,
+  ConfigProvider,
+  FieldOutputMap,
+  FieldOutputProvider,
+} from './config'
 
 // ─── 常量 ─────────────────────────────────────────────────────
 export {
