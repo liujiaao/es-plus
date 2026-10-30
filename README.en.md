@@ -472,16 +472,16 @@ app.use(EsPlus, {
   t: (key) => i18n.global.t(key),
   // Table global defaults
   EsTable: {
-    methods: {
-      $httpRequest: async (params) => axios(params).then(r => r.data),
-      configQueryFieldOutput: () => ({
-        total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex'
-      }),
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100]
-      })
-    }
+    httpRequest: async (params) => axios(params).then(r => r.data),
+    configQueryFieldOutput: {
+      total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex'
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100]
+    },
+    // Defaults for every table's `options` (instance :options wins)
+    defaults: { size: 'small', border: true }
   }
 })
 ```

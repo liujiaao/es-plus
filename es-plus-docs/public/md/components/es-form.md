@@ -53,7 +53,7 @@ type: 'component'
 | renderBtn | Function \| boolean | false | 自定义按钮渲染函数，返回 VNode |
 | btnColSpanRow | boolean | true | 按钮区域是否独占一行（左右分栏布局） |
 | rules | Object | {} | 验证规则（Element Plus 格式） |
-| fieldFieldOutput | Function | - | API 响应字段映射函数，(defaults) => FieldMap |
+| fieldFieldOutput | FieldMap \| Function | - | API 响应字段映射：字面量对象（叠加在内置默认映射上）或 (defaults) => FieldMap；全局 EsForm.fieldFieldOutput 可作兜底 |
 
 ### FormItemOption
 

@@ -51,68 +51,64 @@ import '@es-plus/vue2/dist/style.css'
 Vue.use(ESEUI, {
   // EsTable 组件配置
   EsTable: {
-    methods: {
-      // 配置 HTTP 请求方法（必填）
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options?.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      // 配置分页布局（可选）
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        isSmall: true,
-        background: false
-      }),
-      // 配置表格响应字段映射（可选）
-      configQueryfieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          tableData: 'data'
-        }
+    // 配置 HTTP 请求方法（必填）
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options?.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    // 配置分页布局（可选）
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      isSmall: true,
+      background: false
+    },
+    // 配置表格响应字段映射（可选，字面量或函数均可）
+    configQueryFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      tableData: 'data'
+    },
+    // 每张表的 options 默认值（可选，实例 :options 优先）
+    defaults: { size: 'small', border: true }
   },
   // EsForm 组件配置
   EsForm: {
-    methods: {
-      // 配置 HTTP 请求方法（必填）
-      $httpRequest({ url, headers, formParams, ...options }) {
-        const opt = {
-          baseURL: '',
-          url,
-          contentType: 'application/json',
-          method: options.method || 'POST',
-        }
-        if (opt.method.toUpperCase() === 'GET') {
-          opt.params = formParams
-        } else {
-          opt.data = formParams
-        }
-        return http(opt)
-      },
-      // 配置表单值列表响应字段映射（可选）
-      fieldFieldOutput() {
-        return {
-          total: 'total',
-          pageSize: 'pageSize',
-          current: 'pageIndex',
-          listData: 'data'
-        }
+    // 配置 HTTP 请求方法（必填）
+    httpRequest({ url, headers, formParams, ...options }) {
+      const opt = {
+        baseURL: '',
+        url,
+        contentType: 'application/json',
+        method: options.method || 'POST',
       }
-    }
+      if (opt.method.toUpperCase() === 'GET') {
+        opt.params = formParams
+      } else {
+        opt.data = formParams
+      }
+      return http(opt)
+    },
+    // 配置表单值列表响应字段映射（可选）
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
+    },
+    // 每个表单的 layoutFormProps 默认值（可选，实例 prop 优先）
+    defaults: { formLayProps: { labelWidth: '96px' } }
   }
 })
 ```
@@ -153,11 +149,16 @@ export default {
 
 | 配置项 | 说明 | 必填 |
 |--------|------|------|
-| `EsTable.methods.$httpRequest` | 表格数据请求方法 | 是 |
-| `EsTable.methods.paginationLayout` | 分页布局配置 | 否 |
-| `EsTable.methods.configQueryfieldOutput` | 表格响应字段映射 | 否 |
-| `EsForm.methods.$httpRequest` | 表单数据请求方法 | 是 |
-| `EsForm.methods.fieldFieldOutput` | 表单值列表响应字段映射 | 否 |
+| `EsTable.httpRequest` | 表格数据请求方法 | 是 |
+| `EsTable.paginationLayout` | 分页布局配置（字面量或函数） | 否 |
+| `EsTable.configQueryFieldOutput` | 表格响应字段映射（字面量或函数） | 否 |
+| `EsTable.defaults` | 每张表 `options` 的默认值 | 否 |
+| `EsForm.httpRequest` | 表单数据请求方法 | 是 |
+| `EsForm.fieldFieldOutput` | 表单值列表响应字段映射（字面量或函数） | 否 |
+| `EsForm.defaults` | 每个表单 `layoutFormProps` 的默认值 | 否 |
+
+> 优先级：组件实例 props / 选项 > 全局 `defaults` > 全局组件档 > 组件内置默认值。
+> 旧写法（`EsTable.methods.$httpRequest`、`methods.configQueryfieldOutput`）仍可用，会在写入时自动展平与改名。
 
 ---
 
@@ -666,12 +667,9 @@ this.$refs.formRef.resetFields()
 // 清空验证
 this.$refs.formRef.clearValidate()
 
-// 使用 $httpRequest 发送请求（需在 Vue 原型上注册）
-this.$refs.formRef.$httpRequest({
-  url: '/api/data',
-  method: 'post',
-  formParams: {}
-})
+// 重新加载指定字段的远端选项
+// （走全局 httpRequest 取数，并用 EsForm.fieldFieldOutput 映射响应字段）
+this.$refs.formRef.formItmeRequestInstance(['category'])
 ```
 
 ---

@@ -477,16 +477,16 @@ app.use(ESPlus, {
   t: (key) => i18n.global.t(key),
   // 表格全局默认配置
   EsTable: {
-    methods: {
-      $httpRequest: async (params) => axios(params).then(r => r.data),
-      configQueryFieldOutput: () => ({
-        total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex'
-      }),
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100]
-      })
-    }
+    httpRequest: async (params) => axios(params).then(r => r.data),
+    configQueryFieldOutput: {
+      total: 'total', tableData: 'data', pageSize: 'pageSize', current: 'pageIndex'
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100]
+    },
+    // 每张表的 options 默认值（实例 :options 优先）
+    defaults: { size: 'small', border: true }
   }
 })
 ```

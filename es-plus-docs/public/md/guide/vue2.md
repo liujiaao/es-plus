@@ -95,45 +95,45 @@ Vue.use(EsPlus, {
 
   // EsTable 全局配置
   EsTable: {
-    methods: {
-      // 全局 HTTP 请求函数
-      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
-        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
-        return data
-      },
-      // 分页配置（自 1.1.0 起新增 prevText / nextText 透传）
-      paginationLayout: () => ({
-        layout: 'prev, pager, next, jumper, sizes, total',
-        pageSizes: [10, 20, 50, 100],
-        pageSize: 20,
-        background: true,
-        prevText: '上一页',  // 1.1.0+ 透传给 <el-pagination> 的 prev-text；省略则显示默认箭头
-        nextText: '下一页',
-      }),
-      // 响应字段映射
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'data',
-        pageSize: 'pageSize',
-        current: 'pageIndex',
-      }),
+    // 全局 HTTP 请求函数
+    httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+      const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+      return data
     },
+    // 分页配置（自 1.1.0 起新增 prevText / nextText 透传）
+    paginationLayout: {
+      layout: 'prev, pager, next, jumper, sizes, total',
+      pageSizes: [10, 20, 50, 100],
+      pageSize: 20,
+      background: true,
+      prevText: '上一页',  // 1.1.0+ 透传给 <el-pagination> 的 prev-text；省略则显示默认箭头
+      nextText: '下一页',
+    },
+    // 响应字段映射（字面量或函数均可）
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'data',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+    },
+    // 每张表 options 的默认值（实例 :options 优先）
+    defaults: { size: 'small', border: true },
   },
 
   // EsForm 全局配置
   EsForm: {
-    methods: {
-      $httpRequest: async ({ url, formParams }) => {
-        const { data } = await axios.post(url, formParams)
-        return data
-      },
-      fieldFieldOutput: () => ({
-        total: 'total',
-        pageSize: 'pageSize',
-        current: 'pageIndex',
-        listData: 'data',
-      }),
+    httpRequest: async ({ url, formParams }) => {
+      const { data } = await axios.post(url, formParams)
+      return data
     },
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data',
+    },
+    // 每个表单 layoutFormProps 的默认值（实例 prop 优先）
+    defaults: { formLayProps: { labelWidth: '96px' } },
   },
 
   // 是否跳过组件全局注册（按需导入场景置 true）
@@ -319,7 +319,7 @@ export default {
 | 跨页选择 | `getSelectionRows()` 行为一致 |
 | 工具栏按钮 | `tableBtns` 分区、权限过滤、code 分组完全一致 |
 | 表单折叠 | `formLayout.minFoldRows` 算法一致 |
-| 全局配置 | `permission` / `t` / `componentSize` / `$httpRequest` 注入方式一致 |
+| 全局配置 | `permission` / `t` / `componentSize` / 组件档配置（`httpRequest` 等）写法与优先级一致 |
 
 ### 不支持（Element UI 没有对应能力）
 
@@ -374,7 +374,18 @@ export default {
   })
 ```
 
-`@es-plus/vue2` 内部包含兼容垫片 `normalizeLegacyOptions`，自动展平 `EsTable.methods` 嵌套结构、并把旧的 `configQueryfieldOutput` 字段映射到新的 `configQueryFieldOutput`。**用户配置无需调整即可切换。**
+旧的嵌套写法**无需修改**即可运行。若想顺手现代化，可以展平成下面这样（与 Vue 3 / antdv 文档写法一致）：
+
+```javascript
+Vue.use(EsPlus, {
+  EsTable: {
+    httpRequest: ...,
+    configQueryFieldOutput: ...,   // 小写 f 的旧拼写也接受，写入时自动改名
+  },
+})
+```
+
+归一化发生在**写入时**，且实现只有一份：`@es-plus/core` 的 `configureEsPlus()` 会调用 `normalizeSectionConfig()`，展平 `EsTable/EsForm/EsDialog` 下的 `methods` 嵌套（同名键以 `methods` 内为准）、剥掉 `$httpRequest` 的 `$` 前缀但保留原名、并把 `configQueryfieldOutput` 改名为 `configQueryFieldOutput`。`@es-plus/vue2` 不再保有自己的兼容垫片 —— 三端（vue3 / vue2 / antdv）共用同一段归一逻辑，避免「一端改了、另一端忘」的静默失效。
 
 ---
 

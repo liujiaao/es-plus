@@ -2,15 +2,16 @@
 
 ## 全局配置（Options）
 
-ES-Plus 提供两种全局配置方式，都能注入 `$httpRequest`、`configQueryFieldOutput`、`permission`、`t` 等运行时配置：
+ES-Plus 提供两种写法，**它们写的是同一份配置**：
 
-| 方式 | 适用场景 | 原理 |
+| 写法 | 适用场景 | 原理 |
 |------|----------|------|
-| `app.use(ESPlus, options)` | 传统 Vue 插件模式 | `provide/inject` |
-| `configureEsPlus(options)` | 自动导入 / 无 `app` 实例场景 | 模块级单例 |
+| `app.use(ESPlus, options)` | 传统 Vue 插件模式 | `install()` 内部调用 `configureEsPlus(options)` |
+| `configureEsPlus(options)` | 自动导入 / 无 `app` 实例场景 | 直接写模块级单例 |
 
-:::tip 核心原理
-ES-Plus 组件内部通过 `inject('$esPlusTable')` / `inject('$EsPlus')` 获取全局配置，并以 `configureEsPlus()` 写入的模块级单例作为 fallback。无论使用哪种方式，配置都能正确注入到所有组件中。
+:::tip 两种写法等价，且没有顺序要求
+组件读取的是**模块级单例的读时视图**，不是某个时刻的快照。因此
+`app.use(ESPlus, {...})` 之后再 `configureEsPlus({ EsTable: {...} })` 同样生效（反之亦然）。
 :::
 
 ---
@@ -40,37 +41,33 @@ app.use(ESPlus, {
   t: (key) => i18n.global.t(key),
   // EsTable 全局配置
   EsTable: {
-    methods: {
-      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
-        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
-        return data
-      },
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        background: true
-      }),
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'data',
-        pageSize: 'pageSize',
-        current: 'pageIndex'
-      })
+    httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+      const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+      return data
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      background: true
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'data',
+      pageSize: 'pageSize',
+      current: 'pageIndex'
     }
   },
   // EsForm 全局配置
   EsForm: {
-    methods: {
-      $httpRequest: async ({ url, formParams }) => {
-        const { data } = await axios.post(url, { ...formParams })
-        return data
-      },
-      fieldFieldOutput: () => ({
-        total: 'total',
-        pageSize: 'pageSize',
-        current: 'pageIndex',
-        listData: 'data'
-      })
+    httpRequest: async ({ url, formParams }) => {
+      const { data } = await axios.post(url, { ...formParams })
+      return data
+    },
+    fieldFieldOutput: {
+      total: 'total',
+      pageSize: 'pageSize',
+      current: 'pageIndex',
+      listData: 'data'
     }
   }
 })
@@ -121,30 +118,26 @@ configureEsPlus({
   permission: (value) => userStore.permissions.includes(value),
   t: (key) => i18n.global.t(key),
   EsTable: {
-    methods: {
-      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
-        const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
-        return data
-      },
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'records',
-        pageSize: 'size',
-        current: 'current'
-      }),
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        background: true
-      })
+    httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+      const { data } = await axios.post(url, { ...formParams, pageIndex, pageSize })
+      return data
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'records',
+      pageSize: 'size',
+      current: 'current'
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      background: true
     }
   },
   EsForm: {
-    methods: {
-      $httpRequest: async ({ url, formParams }) => {
-        const { data } = await axios.post(url, { ...formParams })
-        return data
-      }
+    httpRequest: async ({ url, formParams }) => {
+      const { data } = await axios.post(url, { ...formParams })
+      return data
     }
   }
 })
@@ -185,17 +178,15 @@ app.component('EsTable', EsTable)
 app.use(ESPlus, {
   skipComponentRegistration: true,
   EsTable: {
-    methods: {
-      $httpRequest: async (params) => {
-        const { data } = await axios(params)
-        return data
-      },
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'list',
-        pageSize: 'pageSize',
-        current: 'page'
-      })
+    httpRequest: async (params) => {
+      const { data } = await axios(params)
+      return data
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'list',
+      pageSize: 'pageSize',
+      current: 'page'
     }
   }
 })
@@ -212,42 +203,88 @@ app.mount('#app')
 | 配置 | 类型 | 说明 |
 |------|------|------|
 | `skipComponentRegistration` | `boolean` | 跳过全局组件注册（自动导入时使用） |
+| `globalProperties` | `boolean` | `false` 时不注入 `$useDialog` 等全局属性 |
 | `permission` | `(value: string) => boolean` | 权限校验函数，控制按钮显隐 |
 | `t` | `(key: string) => string` | 翻译函数，配合 labelKey 使用 |
-| `EsTable` | `{ methods: {...} }` | EsTable 全局方法配置 |
-| `EsForm` | `{ methods: {...} }` | EsForm 全局方法配置 |
+| `httpRequest` | `(params) => Promise<any>` | 全局请求函数（组件档未配置时使用） |
+| `EsTable` | `EsTableGlobalConfig` | 表格组件档，见下 |
+| `EsForm` | `EsFormGlobalConfig` | 表单组件档，见下 |
 
-### EsTable.methods
+### EsTable 组件档
 
-| 方法 | 类型 | 说明 |
-|------|------|------|
-| `$httpRequest` | `(params) => Promise<any>` | 全局请求方法，未传 `options.httpRequest` 时使用 |
-| `paginationLayout` | `() => PaginationConfig` | 分页布局（layout/pageSizes/isSmall/background） |
-| `configQueryFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射 |
+| 键 | 类型 | 说明 |
+|----|------|------|
+| `httpRequest` | `(params) => Promise<any>` | 表格请求函数，未传 `options.httpRequest` 时使用 |
+| `paginationLayout` | `PaginationConfig \| () => PaginationConfig` | 分页器外观（layout / pageSizes / isSmall / background） |
+| `configQueryFieldOutput` | `FieldMap \| (defaults) => FieldMap` | API 响应字段映射 |
+| `defaults` | `TableOptions` | 每张表的 `options` 默认值（实例 `:options` 优先） |
 
-### EsForm.methods
+### EsForm 组件档
 
-| 方法 | 类型 | 说明 |
-|------|------|------|
-| `$httpRequest` | `(params) => Promise<any>` | 全局请求方法，用于远程加载选项数据 |
-| `fieldFieldOutput` | `(defaults) => FieldMap` | API 响应字段映射 |
+| 键 | 类型 | 说明 |
+|----|------|------|
+| `httpRequest` | `(params) => Promise<any>` | 请求函数，用于远程加载选项数据 |
+| `fieldFieldOutput` | `FieldMap \| (defaults) => FieldMap` | API 响应字段映射 |
+| `rules` | `Record<string, unknown>` | form 级校验规则兜底（组件 `:rules` 按字段名优先） |
+| `defaults` | `LayoutFormProps` | 每个表单的 `layoutFormProps` 默认值（实例 prop 优先） |
+
+:::tip 字面量或函数，两种写法等价
+`paginationLayout` / `configQueryFieldOutput` / `fieldFieldOutput` 都接受**字面量**或**工厂函数**：
+
+```typescript
+EsTable: {
+  paginationLayout: { layout: 'total, prev, pager, next' },        // 字面量
+  configQueryFieldOutput: { tableData: 'rows' },                   // 字面量：只换这一个键
+}
+// 等价于
+EsTable: {
+  paginationLayout: () => ({ layout: 'total, prev, pager, next' }),
+  configQueryFieldOutput: () => ({ ...DEFAULT_CONFIG_TABLE_OUT, tableData: 'rows' }),
+}
+```
+
+字面量形态的字段映射会**叠加在内置默认映射之上**（写到的键覆盖，没写到的沿用默认）。
+:::
+
+:::tip 旧写法仍然有效
+早期文档里的 `EsTable: { methods: { $httpRequest, configQueryfieldOutput } }` 嵌套写法、
+带 `$` 前缀的键名、以及 `configQueryfieldOutput`（小写 f）都会被自动归一，无需改代码。
+新代码建议直接写扁平的规范键名。
+:::
+
+### 全局默认值（`defaults`）
+
+`EsTable.defaults` 与 `EsForm.defaults` 是「全局默认 props」：省去每处重复写相同的 `options`。
+
+```typescript
+configureEsPlus({
+  EsTable: {
+    defaults: { size: 'small', border: true, headerCellStyle: { background: '#f5f7fa' } }
+  },
+  EsForm: {
+    defaults: { formLayProps: { labelWidth: '96px', minFoldRows: 2 } }
+  }
+})
+```
+
+合并优先级：**组件实例显式传的键 > 全局 `defaults` > 组件内置默认值**。
+
+:::warning 分页布局是这条规则的反例
+`paginationLayout` 与 `:pagination` 的优先级是**全局配置在前**，不是 props 在前：
+
+- `layout` / `pageSizes` / `isSmall`：先读全局 `paginationLayout` 的返回值，没有再回落到 `:pagination`；
+- `background`：只认全局 `paginationLayout`（`PaginationConfig` 里没有这个键），未配置时默认 `true`。
+
+也就是说，一旦配了全局 `paginationLayout`，页面上的 `:pagination="{ layout }"` 不会生效。
+:::
 
 ### 优先级规则
 
 ```
-组件 props/options > 全局配置（app.use 注入） > 组件默认值
+组件 props/options > 全局配置（defaults / 组件档） > 组件默认值
 ```
 
-例如：`options.configTableOut` > `configQueryFieldOutput()` > 内置默认 `{ total: 'records', tableData: 'rows' }`
-
-:::warning 分页布局是这条规则的反例
-`paginationLayout()` 与 `:pagination` 的优先级是**全局方法在前**，不是 props 在前：
-
-- `layout` / `pageSizes` / `isSmall`：先读全局 `paginationLayout()` 的返回值，没有再回落到 `:pagination`；
-- `background`：只认全局 `paginationLayout()`（`PaginationConfig` 里没有这个键），未配置时默认 `true`。
-
-也就是说，一旦配了全局 `paginationLayout`，页面上的 `:pagination="{ layout }"` 不会生效。
-:::
+例如：`options.configTableOut` > `configQueryFieldOutput` > 内置默认 `{ total: 'records', tableData: 'rows' }`
 
 ---
 
@@ -256,22 +293,20 @@ app.mount('#app')
 ```typescript
 app.use(ESPlus, {
   EsTable: {
-    methods: {
-      $httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
-        const { data } = await axios.post(url, { ...formParams, pageNo: pageIndex, pageSize })
-        return data
-      },
-      configQueryFieldOutput: () => ({
-        total: 'total',
-        tableData: 'records',  // MyBatis-Plus IPage.records
-        pageSize: 'size',
-        current: 'current'
-      }),
-      paginationLayout: () => ({
-        layout: 'total, sizes, prev, pager, next, jumper',
-        pageSizes: [10, 20, 50, 100],
-        background: true
-      })
+    httpRequest: async ({ url, formParams, pageIndex, pageSize }) => {
+      const { data } = await axios.post(url, { ...formParams, pageNo: pageIndex, pageSize })
+      return data
+    },
+    configQueryFieldOutput: {
+      total: 'total',
+      tableData: 'records',  // MyBatis-Plus IPage.records
+      pageSize: 'size',
+      current: 'current'
+    },
+    paginationLayout: {
+      layout: 'total, sizes, prev, pager, next, jumper',
+      pageSizes: [10, 20, 50, 100],
+      background: true
     }
   }
 })

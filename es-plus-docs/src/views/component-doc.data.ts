@@ -114,7 +114,7 @@ export const docsData: Record<string, any> = {
         { name: 'renderBtn', type: 'Function | boolean', default: 'false', desc: '自定义按钮渲染函数，返回 VNode' },
         { name: 'btnColSpanRow', type: 'boolean', default: 'true', desc: '按钮区域是否独占一行（左右分栏布局）' },
         { name: 'rules', type: 'Object', default: '{}', desc: '验证规则（Element Plus 格式）' },
-        { name: 'fieldFieldOutput', type: 'Function', default: '-', desc: 'API 响应字段映射函数，(defaults) => FieldMap' }
+        { name: 'fieldFieldOutput', type: 'FieldMap | Function', default: '-', desc: 'API 响应字段映射：字面量对象（叠加在内置默认映射上）或 (defaults) => FieldMap；全局 EsForm.fieldFieldOutput 可作兜底' }
       ],
       'FormItemOption': [
         { name: 'prop', type: 'string', default: '-', desc: '字段名（必填）' },
