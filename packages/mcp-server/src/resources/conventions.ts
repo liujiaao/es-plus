@@ -153,7 +153,7 @@ import ESPlus from '@es-plus/adapter-antdv'
 
 const app = createApp(App)
 app.use(Antd)
-app.use(ESPlus, { /* EsTable.methods.$httpRequest, etc. */ })
+app.use(ESPlus, { /* EsTable: { httpRequest, configQueryFieldOutput }, etc. */ })
 \`\`\`
 
 ## Confirm-Dialog Shape (IMPORTANT)
@@ -309,10 +309,8 @@ app.use(ESPlus, {
   t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
   httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
-    methods: {
-      $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
-    }
+    httpRequest: ${robustHttpRequest()},
+    configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
   }
 })
 \`\`\``
@@ -326,18 +324,16 @@ Vue.use(ESPlus, {
   t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
   httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
-    methods: {
-      $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
-    }
+    httpRequest: ${robustHttpRequest()},
+    configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
   }
 })
 \`\`\``}
 With global config, use \`apiParams: { url: '/api/xxx' }\` instead of inline httpRequest.
 \`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` are INERT until the
 entry assembles \`permission\` / \`t\` here — otherwise the gate silently passes and labels
-fall back to \`label\`. \`EsTable.methods.$httpRequest\` above is the legacy-compatible key;
-the core-authoritative field is the top-level \`httpRequest\`.
+fall back to \`label\`. The canonical key is the flat \`EsTable.httpRequest\` / \`EsTable.configQueryFieldOutput\`;
+the legacy nested \`EsTable.methods.$httpRequest\` shape is still accepted (normalized at write time).
 
 ## EsCrudPage btn-click Event Keys
 - Add confirm: "${CRUD_PAGE_BTN_CLICK_KEYS.ADD_CONFIRM}"
@@ -685,10 +681,8 @@ app.use(ESPlus, {
   t: (key) => i18n.global.t(key),                             // labelKey (i18n) prerequisite
   httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
-    methods: {
-      $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
-    }
+    httpRequest: ${robustHttpRequest()},
+    configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
   }
 })`
     : `// main.js — configure once for the entire application
@@ -701,10 +695,8 @@ Vue.use(ESPlus, {
   t: (key) => i18n.t(key),                                    // labelKey (i18n) prerequisite
   httpRequest: (params) => axios(params),                     // remote apiParams prerequisite (core top-level field)
   EsTable: {
-    methods: {
-      $httpRequest: ${robustHttpRequest()},
-      configQueryFieldOutput: () => (${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)})
-    }
+    httpRequest: ${robustHttpRequest()},
+    configQueryFieldOutput: ${JSON.stringify(DEFAULT_CONFIG_TABLE_OUT)}
   }
 })`}
 \`\`\`
@@ -712,8 +704,8 @@ Vue.use(ESPlus, {
 With global config in place, pages only need \`apiParams: { url: '/api/xxx' }\` — no inline httpRequest.
 \`permissionValue\` (field/column/button RBAC) and i18n \`labelKey\` take effect ONLY after this
 entry assembles \`permission\` / \`t\`; without it the permission gate silently passes and labels
-fall back to \`label\`. The top-level \`httpRequest\` is the core-authoritative field —
-\`EsTable.methods.$httpRequest\` is the legacy-compatible key.
+fall back to \`label\`. Both \`httpRequest\` and \`configQueryFieldOutput\` are read at component level
+as well as top level; the legacy nested \`EsTable.methods.$httpRequest\` shape is still accepted.
 ${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus — `import Antd from 'ant-design-vue'; import 'ant-design-vue/dist/reset.css'; app.use(Antd); app.use(ESPlus, {...})`.\n" : ""}
 
 ## configureEsPlus() — Module-Level Config (Auto-Import Mode)
@@ -721,8 +713,8 @@ ${isAntdv ? "\nNOTE (antdv): also register Ant Design Vue itself before ESPlus �
 import { configureEsPlus } from '${v.esPlusPkg}'
 
 configureEsPlus({
-  EsTable: { methods: { $httpRequest: ${robustHttpRequest()} } },
-  EsForm: { $httpRequest: ${robustHttpRequest()} },
+  EsTable: { httpRequest: ${robustHttpRequest()} },
+  EsForm: { httpRequest: ${robustHttpRequest()} },
   permission: (code) => userStore.permissions.includes(code),
   t: (key) => i18n.t(key),
   httpRequest: (params) => axios(params)

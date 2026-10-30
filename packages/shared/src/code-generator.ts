@@ -59,8 +59,8 @@ export function generateCrudPage(
     target === 'vue2'
       ? `Note: 需要在 main.js 中执行 Vue.use(ElementUI) + Vue.use(EsPlus)，并通过 esPlus 配置全局 httpRequest`
       : target === 'antdv'
-        ? `Note: 需要在 main.ts 中 app.use(Antd) + app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`
-        : `Note: 需要在 main.ts 中配置全局 app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`,
+        ? `Note: 需要在 main.ts 中 app.use(Antd) + app.use(ESPlus, { EsTable: { httpRequest, configQueryFieldOutput } })`
+        : `Note: 需要在 main.ts 中配置全局 app.use(ESPlus, { EsTable: { httpRequest, configQueryFieldOutput } })`,
     `详见: https://es-plus.liujiaao.top/docs/usage`,
   ]
     .filter(Boolean)
@@ -255,7 +255,8 @@ function transformScriptSetupBlock(source: string): string {
  * 把本样板随附在 SFC 之后（CLI 单文件写入不用它，故 `generateScaffold` 只加注释指向）。
  *
  * 选项形状为 **core 权威字段**（`packages/core/src/config.ts` 的 `EsPlusGlobalConfig`）：
- * 顶层 `permission` / `t` / `httpRequest`——而非兼容键位 `EsTable.methods.$httpRequest`。
+ * 顶层 `permission` / `t` / `httpRequest`，组件档用扁平键（`EsTable.httpRequest`）——
+ * 兼容键位 `EsTable.methods.$httpRequest` 在写入时被归一，无需生成兼容写法。
  */
 export function generateAppEntry(target: TargetFramework = DEFAULT_TARGET): string {
   const pkg = getEsPlusPackageName(target);
@@ -398,7 +399,7 @@ export function generateScaffold(
       lines.push(`    const pagination = ref({ current: 1, pageSize: 10, total: 0 })`);
       lines.push(`    const columns = []`);
       lines.push(`    // httpRequest 和 configTableOut 由全局配置注入，无需在此声明`);
-      lines.push(`    // 全局配置: Vue.use(EsPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`);
+      lines.push(`    // 全局配置: Vue.use(EsPlus, { EsTable: { httpRequest, configQueryFieldOutput } })`);
       lines.push(`    const options = {`);
       lines.push(`      border: true,`);
       lines.push(`      stripe: true,`);
@@ -452,7 +453,7 @@ export function generateScaffold(
     lines.push(`const pagination = ref({ current: 1, pageSize: 10, total: 0 })`);
     lines.push(`const columns = []`);
     lines.push(`// httpRequest 和 configTableOut 由全局配置注入，无需在此声明`);
-    lines.push(`// 全局配置: app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })`);
+    lines.push(`// 全局配置: app.use(ESPlus, { EsTable: { httpRequest, configQueryFieldOutput } })`);
     lines.push(`const options = {`);
     lines.push(`  border: true,`);
     lines.push(`  stripe: true,`);

@@ -697,7 +697,7 @@ export function generateCode(config: GeneratedConfig): string {
   lines.push(``)
 
   // table options — httpRequest 和 configTableOut 由全局配置注入，无需在此重复声明
-  // 全局配置示例见 main.ts: app.use(ESPlus, { EsTable: { methods: { $httpRequest, configQueryFieldOutput } } })
+  // 全局配置示例见 main.ts: app.use(ESPlus, { EsTable: { httpRequest, configQueryFieldOutput } })
   lines.push(`const options = ${inlineJson(config.tableOptions, 2)}`)
 
   // delete handler
