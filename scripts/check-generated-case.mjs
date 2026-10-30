@@ -360,7 +360,7 @@ await check(
         const main = toLf(read('es-eui/src/main.js'))
         assert.match(
           main,
-          /configQueryfieldOutput[\s\S]*?tableData:\s*'data'/,
+          /configQueryFieldOutput[\s\S]*?tableData:\s*'data'/,
           'es-eui/src/main.js 的全局响应映射变了，宿主适配层的前提不成立',
         )
         assert.match(src, /data:\s*res\.rows/, `${host.file} 没有把 rows 适配成本站的 data`)

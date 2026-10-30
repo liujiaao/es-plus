@@ -166,7 +166,7 @@ export const CONSUMED_NOT_DECLARED = {
       '首次运行标志（`false` 时跳过「挂载即请求」，用于需要宿主先注入参数的页面）。表级与字段级两级都存在（core `TableOptions.isInitRun` / `FormItemOption.isInitRun`），AI 契约两级都零声明 → 经 AI 入口传入被 Zod 静默 strip。属**宿主编排**语义（什么时候算「首次」由宿主决定），故不补声明，登记为不可达。',
     consumedAt: [
       { file: 'packages/core/src/types.ts', pattern: /^ {2}isInitRun\?:\s*boolean/m },
-      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /props\.options\.isInitRun !== false/ },
+      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /tableOptions\.value\.isInitRun !== false/ },
       { file: 'packages/vue3/src/components/es-form/src/es-form.vue', pattern: /it\.isInitRun !== false/ },
     ],
   },
@@ -176,7 +176,7 @@ export const CONSUMED_NOT_DECLARED = {
       '进入页面时的初始查询参数（`Record<string, unknown>`）：由宿主在编排时注入（例如从路由 query 带上）——语义上是**宿主上下文**而非可从自然语言推导的字段声明，故不补声明。注意它只在 **tableOptions 级**（core `TableOptions.entryQuery`），字段级无此键。',
     consumedAt: [
       { file: 'packages/core/src/types.ts', pattern: /^ {2}entryQuery\?:\s*Record/m },
-      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /props\.options\.entryQuery/ },
+      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /tableOptions\.value\.entryQuery/ },
     ],
   },
   'tableOptions.httpRequest': {
@@ -194,7 +194,7 @@ export const CONSUMED_NOT_DECLARED = {
       '外部重载回调注册（函数值）：宿主订阅「别的组件触发了本表刷新」。同为宿主编排的函数值通道，AI 契约不收 —— 需要刷新时宿主调 `tableRef.value.httpRequestInstance()`，那是命令式 API（Tier-3）。表级与字段级两级都存在。',
     consumedAt: [
       { file: 'packages/core/src/types.ts', pattern: /^ {2}listenToCallBack\?:\s*ListenToCallBack/m },
-      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /props\.options\.listenToCallBack/ },
+      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /tableOptions\.value\.listenToCallBack/ },
     ],
   },
   'fields.on': {

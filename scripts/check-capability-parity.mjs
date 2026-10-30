@@ -337,7 +337,7 @@ async function main() {
       override: () => {
         const src = readFileSync(vue3Abs, 'utf-8')
         const next = src.replace(
-          /buildLeadingColumns\(props\.options, columnRowList\.value\)/,
+          /buildLeadingColumns\(tableOptions\.value, columnRowList\.value\)/,
           '[]',
         )
         if (next === src) throw new Error('P1 注入锚点未命中（vue3 filteredColumns 结构已变）')
