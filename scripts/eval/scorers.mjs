@@ -677,7 +677,23 @@ function predDialogsView(gold, pred) {
     remap.set(pKey, gKey)
   }
   const out = {}
-  for (const [k, v] of Object.entries(pRaw)) out[remap.get(k) ?? k] = v
+  // 声明了弹窗但省略 formItems ⟹ 与**整键省略**同义：formItems 按 `inForm !== false` 字段派生。
+  // 渲染期 es-plus 对 add/edit/view 弹窗正是这样回填的——宿主只为设底座键（showClose /
+  // appendTo / configBtn 等）而声明 `dialogs.add`、把表单项留给派生，是合法且常见的写法。
+  // 此前尺子只在整键省略时派生，于是「声明底座 + 省略 formItems」被当成空集 formItems 误罚
+  // （与 operationColumn「省略即派生、尺子当空集」同构的建模缺陷）。只对派生型键回填，
+  // 且仅当 formItems 真的未声明（`undefined`）——显式 `formItems: []` 是「刻意空表单」，不改。
+  for (const [k, v] of Object.entries(pRaw)) {
+    const key = remap.get(k) ?? k
+    if (DERIVED_DIALOG_KEYS.has(key) && v && typeof v === 'object' && v.formItems === undefined) {
+      out[key] = {
+        ...v,
+        formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })),
+      }
+    } else {
+      out[key] = v
+    }
+  }
   for (const k of gKeys) {
     if (out[k] !== undefined) continue
     if (!DERIVED_DIALOG_KEYS.has(k)) continue

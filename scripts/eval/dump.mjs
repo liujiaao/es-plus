@@ -67,13 +67,18 @@ import { createHash } from 'node:crypto'
  *                                   全布尔 dataOptions）上 `truthy`/`falsy` ≡ `== true`/`== false`。
  *                                   此前两条腿不对称：同一份模型输出在两个场景里得不同结论。
  *                                   当前片段语料零影响（无布尔 truthy 条件），但尺子已变。
+ *   +dialog-formitems-derive-v1   : 派生型弹窗（add/edit/view）**声明底座键但省略 formItems** ⟹
+ *                                   formItems 按 `inForm !== false` 字段派生，与整键省略同义
+ *                                   （渲染期回填规则）。此前只在整键省略时派生，「为设
+ *                                   showClose/configBtn 而声明 dialogs.add、表单项留给派生」被
+ *                                   当空集误罚（operationColumn 同构缺陷）。显式 `[]` 不派生。
  *
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

@@ -171,6 +171,20 @@ console.log('meta-eval: dialogs 底座数据键 + configBtn (AI-27)')
   const dialogsPass = (pred) => scoreAll(dlgGold, pred).byCapability.dialogs.pass
   check(dialogsPass(clone(dlgGold)) === true, 'dialogs(AI-27): gold-vs-gold 应判正')
 
+  // 派生型弹窗（add/edit/view）**声明底座键但省略 formItems** ⟹ formItems 按 `inForm !== false`
+  // 字段派生，与整键省略同义（渲染期 es-plus 的回填规则）。此前尺子只在整键省略时派生，
+  // 于是「为设 showClose/configBtn 而声明 dialogs.add、把表单项留给派生」被当成空集 formItems
+  // 误罚（operationColumn「省略即派生、尺子当空集」同构缺陷，dialog-formitems-derive-v1）。
+  const deriveOmitFormItems = clone(dlgGold)
+  delete deriveOmitFormItems.dialogs.add.formItems // 保留 showClose/appendTo/configBtn，只省 formItems
+  check(dialogsPass(deriveOmitFormItems) === true,
+    'dialogs: 声明底座键但省略 formItems 应按 inForm 字段派生（与整键省略同义）')
+  // 显式空数组是「刻意空表单」，不派生 —— gold 有一个 inForm 字段，空表单必然 ≠ 派生出的一项。
+  const explicitEmpty = clone(dlgGold)
+  explicitEmpty.dialogs.add.formItems = []
+  check(dialogsPass(explicitEmpty) === false,
+    'dialogs: 显式 formItems:[] 是刻意空表单，不派生（与省略区分）')
+
   // 底座键：漏写 / 写反 / 值不同 都算未命中（gold 锁了就必须一模一样）
   const dropShowClose = clone(dlgGold)
   delete dropShowClose.dialogs.add.showClose
