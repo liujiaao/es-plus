@@ -1,11 +1,12 @@
 {
-  "commit": "1403dcbb49beecec2948ff39e83fccf00254c267",
-  "runId": "40477086547",
+  "commit": "e2245f2012f6f984c63fadd82abbda50c14d0b80",
+  "runId": "41370407080",
   "artifactSource": "ci",
-  "corpusHash": "8670f0554c3048c8",
+  "corpusHash": "0bff1e580924ecdb",
   "corpusFiles": 279,
   "fixedFieldsUsed": false,
-  "measuredAt": "2026-10-27T09:08:12.167Z",
+  "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1",
+  "measuredAt": "2026-11-02T01:16:25.955Z",
   "model": "claude-sonnet-4-6",
   "servedModel": "claude-sonnet-4-6",
   "maxTokens": 8000,
@@ -28,6 +29,7 @@
   "compileMeasured": 0,
   "compileCompiled": 0,
   "compileFailure": 0,
+  "compileByLang": {},
   "modelFailureCompile": 0,
   "typecheck": {
     "skipped": "没有 zh 行的模型产出（片段-only / 全部未测到）"
@@ -43,6 +45,7 @@
     "full": null,
     "scoped": null,
     "stated": null,
+    "propNameMatch": null,
     "compileRate": null,
     "compileMeasured": 0,
     "compileCompiled": 0,
