@@ -294,13 +294,13 @@
     "copyFailed": "Copy failed — please select and copy manually.",
     "settingsSavedAi": "Saved. AI engine will be used.",
     "settingsSavedRule": "No API key — falling back to the local rule engine.",
-    "banner": "Demonstrates how the MCP server's tools turn natural language into a runnable es-plus config. The same logic runs when Claude Code calls the MCP server in your IDE.",
+    "banner": "Shows how the MCP server's tools turn natural language into a runnable es-plus config: a full CRUD page, or a standalone table / form / dialog when a model is configured. Without a model it falls back to the local rule engine (the CLI's implementation — full CRUD pages only). The same logic runs when Claude Code calls the MCP server in your IDE.",
     "tabTrace": "Trace",
     "preset": {
       "title": "Presets"
     },
     "chat": {
-      "placeholder": "Describe a CRUD page. Press Enter to send (Shift+Enter for newline).",
+      "placeholder": "Describe a CRUD page or a fragment (table / form / dialog). Press Enter to send (Shift+Enter for newline).",
       "send": "Send",
       "reset": "Reset",
       "abort": "Stop",

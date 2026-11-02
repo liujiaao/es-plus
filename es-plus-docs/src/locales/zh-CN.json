@@ -294,13 +294,13 @@
     "copyFailed": "复制失败，请手动选择复制",
     "settingsSavedAi": "AI 设置已保存，将使用 AI 引擎生成",
     "settingsSavedRule": "未填写 API Key，将使用本地规则引擎",
-    "banner": "演示了 MCP server 的 tool 如何把自然语言变成可运行的 es-plus 配置。IDE 里 Claude Code 调 MCP server 跑的就是这套逻辑。",
+    "banner": "演示了 MCP server 的 tool 如何把自然语言变成可运行的 es-plus 配置：整页 CRUD，或单独的表格 / 表单 / 弹窗（配置模型时）。未配置模型则走本地规则引擎（与 CLI 同一实现，只产 CRUD 整页）。IDE 里 Claude Code 调 MCP server 跑的就是这套逻辑。",
     "tabTrace": "Trace",
     "preset": {
       "title": "预设示例"
     },
     "chat": {
-      "placeholder": "描述一个 CRUD 页面，回车发送（Shift+回车换行）",
+      "placeholder": "描述一个 CRUD 页面或片段（表格 / 表单 / 弹窗），回车发送（Shift+回车换行）",
       "send": "发送",
       "reset": "重置",
       "abort": "中断",
