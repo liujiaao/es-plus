@@ -29,7 +29,8 @@
  *   - 不含任何凭据（只有模型产出与语料）。
  */
 
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { createHash } from 'node:crypto'
 
 /**
@@ -100,6 +101,11 @@ export function createDumpWriter(path) {
   if (!path) {
     return { enabled: false, write() {}, close() {}, path: null }
   }
+  // 建目录：`.tmp-eval/` 是 gitignore 的，git 不跟踪空目录 ⟹ CI checkout 里没有它，
+  // 直接截断就是 ENOENT。2026-10-28 起夜间跑批连续 5 天 1–2 分钟失败就是这个形状：
+  // 报错发生在**第一行请求之前**，看起来像快速失败，实则一行都没测（也还没花钱）。
+  // 放在 try 外面是对的 —— 建不出目录属于环境错，此时抛出的代价是零。
+  mkdirSync(dirname(path), { recursive: true })
   // 截断旧文件：一次跑批一份 dump，避免两次跑批的行混在一起被复算。
   writeFileSync(path, '')
   let failed = false

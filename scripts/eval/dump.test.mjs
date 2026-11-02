@@ -61,6 +61,15 @@ try {
   noop.write({ kind: 'meta' })
   noop.close()
 
+  // 父目录不存在时必须自建：CI checkout 里 `.tmp-eval/` 不存在（git 不跟踪空目录），
+  // 曾经的实现直接 writeFileSync 截断 ⟹ ENOENT 抛在跑批入口，一行都没测。
+  const nested = join(dir, 'nested', 'deeper', 'pred.jsonl')
+  const wNested = createDumpWriter(nested)
+  eq(wNested.enabled, true, '父目录不存在：仍应启用写入')
+  wNested.write({ kind: 'meta', schemaVersion: 1 })
+  const rNested = readDump(nested)
+  eq(rNested.meta?.schemaVersion, 1, '父目录被自建，且内容写得进去')
+
   const p = join(dir, 'pred.jsonl')
   const w1 = createDumpWriter(p)
   eq(w1.enabled, true, '有路径：enabled = true')
