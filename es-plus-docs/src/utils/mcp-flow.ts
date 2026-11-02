@@ -7,23 +7,41 @@
 //
 // Two paths, both backed by @es-plus/shared:
 //
-//  - **Offline (no AI key)** — calls `generateCrudConfig` (NL → GeneratedConfig)
-//    + `generateCode` (GeneratedConfig → SFC string). Pure deterministic
-//    rule-based logic; no validation step needed.
+//  - **Offline (no AI key / AI unavailable)** — calls `generateCrudSchema`
+//    (NL → CrudPageSchema + wrapper SFC). This is the SAME function the CLI's
+//    built-in generator and the MCP `generate_crud_schema` tool call, so the
+//    fallback is literally "what you get without a model".
 //
 //  - **AI (with API key)** — asks the LLM to produce a `StructuredCrudConfig`
 //    (validated against the zod schema MCP server uses), then calls
 //    `generateFromConfig` for the final SFC. Validation failure triggers one
 //    retry with errors fed back to the AI; second failure falls through to the
-//    offline path so the user still sees output.
+//    offline path so the user still sees output — but the UI is told, so it
+//    never presents rule-engine output as AI output.
+//
+//  - **AI, single scene** — the model may instead answer with a tool envelope
+//    (`{"tool":"generate_table"|"generate_form"|"generate_dialog","args":{…}}`).
+//    That routes to the SAME fragment generators the MCP server exposes
+//    (`generateTableBlock` / `generateFormBlock` / `generateDialogBlock`), so a
+//    request like「只做一个筛选表单」no longer gets squeezed through the CRUD
+//    page adapter. Envelope handling exists **only here** (site prompt); the
+//    eval prompt in shared stays untouched. Offline has no fragment fallback —
+//    the rule engine is CRUD-only, and the UI says so instead of pretending.
 
 import {
   generateCrudSchema,
   generateFromConfig,
+  generateTableBlock,
+  generateFormBlock,
+  generateDialogBlock,
+  describeUnrenderedFeatures,
   StructuredCrudConfigSchema,
   FORM_TYPES,
+  VALID_FORM_TYPES,
+  FORM_TYPE_ALIASES,
   buildNlToConfigSystemPrompt,
   type CrudSchemaResult,
+  type FragmentResult,
   type StructuredCrudConfig,
   type TargetFramework,
 } from '@es-plus/shared'
@@ -66,6 +84,12 @@ export interface ChatMessage {
   content: string
   /** Set when AI mode produced a StructuredCrudConfig — used to seed next turn */
   configSnapshot?: StructuredCrudConfig
+  /**
+   * 片段轮次的上下文快照。回灌给模型时用的就是**协议原本的形状**
+   * （`{"tool":…,"args":…}`），因此「再加一列」这类追问看到的是上一轮信封，
+   * 而不是一段自然语言摘要。
+   */
+  fragmentSnapshot?: { tool: string; args: Record<string, unknown> }
   traceIds?: string[]
   fieldsCount?: number
   columnsCount?: number
@@ -118,8 +142,41 @@ export interface FlowResult {
    * generator silently dropped the feature.
    */
   featureHints: string[]
+  /**
+   * 生成过程中被降级/剥离的诉求（例如 schema 无法内联的 render）。
+   * 与 featureHints 的区别：featureHints 是「识别到了但预览画不出来」，
+   * warnings 是「这条路径表达不了，产物里已经不存在」。
+   */
+  warnings: string[]
+  /**
+   * 实时预览要渲染的 **CrudPageSchema 对象** —— 与「生成代码」里 `pageSchema`
+   * 同一份数据，交给真正的 `<es-crud-page>` 渲染。
+   *
+   * 存在的理由：此前预览在浏览器里另写了一套字段白名单（只取 prop/label/…），
+   * 于是弹窗、操作按钮、批量选择、树表、行内编辑这些**产物里有的东西**在预览里
+   * 全部消失。预览必须渲染生成物，而不是生成物的一个子集。
+   */
+  previewSchema?: Record<string, unknown>
+  /** 本次实际走通的引擎 —— UI 的标签必须跟随事实，不能只看「有没有填 key」 */
+  engine: 'ai' | 'rule' | 'rule-fallback'
+  /** engine === 'rule-fallback' 时说明为什么（OpenAI 报错 / 两次校验失败 / 中断） */
+  fallbackReason?: string
   /** 本次生成实际使用的渲染端（供 UI 显示，避免用户以为切了没生效） */
   target: TargetFramework
+  /**
+   * 产物形态：`crud` = 整页（两条路径都能出）；`fragment` = 单场景片段
+   * （仅 AI 路径 —— 离线规则引擎没有片段入口，见 shared `generateTableBlock` 等）。
+   * 预览按 `kind` 分支渲染，而不是把片段硬塞进 `<es-crud-page>`。
+   */
+  kind: 'crud' | 'fragment'
+  /** kind === 'fragment' 时的载荷（归一化后的工具入参 + 产物源码） */
+  fragment?: {
+    kind: 'table' | 'form' | 'dialog'
+    /** 已归一化的工具 args，可直接交给预览渲染器 */
+    config: Record<string, unknown>
+    code: string
+    summary: string
+  }
 }
 
 // ─── internals ────────────────────────────────────────────────────────────
@@ -181,6 +238,16 @@ function buildSystemPrompt(
     '# Available MCP tools (the server runs these on your behalf)',
     '- generate_crud_from_config(config) → produces the SFC + page schema',
     '- validate_config(config) → zod-validates against StructuredCrudConfigSchema',
+    '- generate_table(args) / generate_form(args) / generate_dialog(args) → single-scene fragments',
+    '',
+    '# When to answer with a tool envelope instead of a config',
+    'If the request is ONE surface only (just a filter form, just a data table, just a dialog), do NOT emit a whole CRUD page — emit exactly one tool envelope:',
+    '{"tool":"generate_form","args":{"fields":[{"prop":"keyword","label":"关键词","formtype":"Input"}]}}',
+    'Allowed envelopes: generate_table | generate_form | generate_dialog. `args.fields` uses the SAME field vocabulary as the config above (prop/label/formtype/width/align/dataOptions/required/attrs…).',
+    '- generate_table also accepts: apiUrl, tableOptions, pagination, rowButtons ([{name,type,key}])',
+    '- generate_form also accepts: buttons ("none"|"query"|"submit"), context ("query"|"form"), formLayout {labelWidth,minFoldRows}',
+    '- generate_dialog also accepts: defaultTitle, mode ("composable"|"component"), options {width,…}, apiUrl, rowkey',
+    'If the request spans query + table + create/edit/delete (a full page), ignore the envelopes and emit a StructuredCrudConfig as usual.',
   ].join('\n')
 
   return [buildNlToConfigSystemPrompt(), '', tools, '', targetLine, '', ctx].join('\n')
@@ -320,82 +387,189 @@ function withPreviewPolish(items: any[]): any[] {
   return out
 }
 
-function structuredToPreview(config: StructuredCrudConfig): {
-  formItems: unknown[]
-  columns: unknown[]
-  toolbarBtns: unknown[]
-} {
-  const rawFormItems = config.fields
-    .filter((f) => f.inQuery !== false)
-    .map((f) => ({
-      prop: f.prop,
-      label: f.label,
-      formtype: f.formtype,
-      attrs: f.attrs,
-      dataOptions: f.dataOptions,
-    }))
-  const formItems = withPreviewPolish(rawFormItems)
-  const columns = config.fields
-    .filter((f) => f.inTable !== false)
-    .map((f) => ({
-      prop: f.prop,
-      label: f.label,
-      width: f.width,
-      align: f.align,
-    }))
-  const toolbarBtns =
-    config.toolbarBtns?.length
-      ? config.toolbarBtns
-      : [
-          { name: 'Search', type: 'primary', key: 'query', triggerEvent: true },
-          { name: 'Reset', key: 'rest', triggerEvent: true },
-        ]
-  return { formItems, columns, toolbarBtns }
-}
-
 /**
- * 预览用的默认查询按钮。
+ * 预览映射：只从 **CrudPageSchema 本身**取值，交给 `<es-crud-page>` 渲染。
  *
- * 两条路径共用一份：此前 AI 路径的兜底是英文 'Search' / 'Reset'，而页面正文与
- * 预设全是中文，预览里冒出两个英文按钮。这里统一为中文，两条路径不再各写一份。
- * （真正的国际化应走 i18n，但本文件是纯逻辑 util，不持有 locale；这属于遗留小项。）
- */
-const DEFAULT_QUERY_BTNS = [
-  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'rest', triggerEvent: true },
-]
-
-/**
- * 离线路径的预览映射：输入是 generateCrudSchema 产出的 CrudPageSchema JSON
- * （`{ formItems, columns, tableOptions, actions }`）。
+ * 此前这里有两套手写白名单（AI 路径一套、离线路径一套），都只挑
+ * `prop/label/formtype/width/align` —— 于是配置里的 `dialogs`、`toolbarBtns`、
+ * `tableOptions.multiSelect/virtual`、`editRender`、`expandConfig` 在预览里
+ * 全部消失，而「生成代码」里明明有。预览与产物必须是同一份 schema 的两种视图。
  *
- * 注意 generateCrudSchema 的 columns 已经剔除了 `operate`（操作列由 EsTable 的
- * tableBtns 提供），所以这里按 actions 补回一个操作列 —— 否则预览里看不到
- * 「编辑/删除」按钮，用户会以为生成器漏了增删改。
+ * 操作列不在这里补：`es-crud-page` 按 `actions`/`operationColumn` 在运行时追加
+ * （core `resolveCrudActions` 是唯一判据）。
  */
-function schemaToPreview(schema: {
+function previewFromSchema(schema: {
   formItems?: unknown[]
   columns?: unknown[]
-  actions?: string[]
 }): {
   formItems: unknown[]
   columns: unknown[]
-  toolbarBtns: unknown[]
 } {
-  const actions = schema.actions ?? []
-  const cols: unknown[] = [...(schema.columns ?? [])]
-  if (actions.some((a) => ['edit', 'delete', 'view'].includes(a))) {
-    cols.push({ prop: 'operate', label: '操作', width: 150, fixed: 'right' })
-  }
   return {
-    formItems: withPreviewPolish(schema.formItems ?? []),
-    columns: cols,
-    toolbarBtns: schema.formItems?.length ? DEFAULT_QUERY_BTNS : [],
+    formItems: withPreviewPolish((schema.formItems ?? []) as any[]),
+    columns: schema.columns ?? [],
   }
 }
 
-// ─── main flow ────────────────────────────────────────────────────────────
+// ─── single-scene fragments ───────────────────────────────────────────────
 
+type FragmentKind = 'table' | 'form' | 'dialog'
+
+const FRAGMENT_TOOLS: Record<string, FragmentKind> = {
+  generate_table: 'table',
+  generate_form: 'form',
+  generate_dialog: 'dialog',
+}
+
+const VALID_FORM_TYPE_SET: ReadonlySet<string> = new Set(VALID_FORM_TYPES)
+
+interface FragmentRun {
+  kind: FragmentKind
+  /** 归一化后的工具入参 —— 预览直接按它渲染 */
+  config: Record<string, unknown>
+  result: FragmentResult
+}
+
+/**
+ * 片段工具入参的归一化。
+ *
+ * 模型给的是 JSON，而 `SurfaceField` 要求 `prop` / `label` 非空、`formtype` 属于
+ * 协议枚举（规范写法 ∪ 旧别名）。这里只做**确定性修补**：缺 label 用 prop 顶上、
+ * 缺/错 formtype 落 Input，并把每一处修补写进 warnings —— 与站点其它路径同一条
+ * 规矩：能修就修，修了必须说。
+ */
+function normalizeFragmentFields(
+  raw: unknown,
+): { fields: Record<string, unknown>[]; warnings: string[] } | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  const fields: Record<string, unknown>[] = []
+  const warnings: string[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const src = item as Record<string, unknown>
+    const prop = typeof src.prop === 'string' ? src.prop.trim() : ''
+    if (!prop) continue
+    let label = typeof src.label === 'string' ? src.label.trim() : ''
+    if (!label) {
+      label = prop
+      warnings.push(`字段 ${prop} 缺少 label，已用 prop 顶替`)
+    }
+    const rawType = typeof src.formtype === 'string' ? src.formtype : ''
+    const formtype = FORM_TYPE_ALIASES[rawType] ?? (rawType || 'Input')
+    if (!VALID_FORM_TYPE_SET.has(formtype)) {
+      warnings.push(
+        `字段 ${prop} 的 formtype "${rawType || '(缺失)'}" 不在协议枚举内，已按 Input 处理`,
+      )
+      fields.push({ ...src, prop, label, formtype: 'Input' })
+      continue
+    }
+    fields.push({ ...src, prop, label, formtype })
+  }
+  if (fields.length === 0) return null
+  return { fields, warnings }
+}
+
+function asObject(v: unknown): Record<string, unknown> | undefined {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined
+}
+
+function asArray(v: unknown): unknown[] | undefined {
+  return Array.isArray(v) && v.length > 0 ? v : undefined
+}
+
+/**
+ * 识别 `{"tool":…,"args":…}` 工具信封并跑**上线那条片段生成器**。
+ *
+ * 返回 `null` = 这不是信封（交给 StructuredCrudConfigSchema 照常校验）；
+ * 返回 `{ error }` = 是信封但入参不可用（走一次修复重试，而不是静默当配置校验，
+ * 那会给模型一堆 prop/label 缺失的无关报错）。
+ */
+function routeFragmentEnvelope(
+  raw: unknown,
+  target: TargetFramework,
+): FragmentRun | { error: string } | null {
+  const envelope = asObject(raw)
+  if (!envelope || typeof envelope.tool !== 'string') return null
+  const kind = FRAGMENT_TOOLS[envelope.tool]
+  if (!kind) return null
+
+  const args = asObject(envelope.args)
+  if (!args) return { error: `工具 ${envelope.tool} 缺少 args 对象` }
+  const normalized = normalizeFragmentFields(args.fields)
+  if (!normalized) {
+    return {
+      error: `工具 ${envelope.tool} 的 args.fields 必须是至少一个 {prop,label} 字段的数组`,
+    }
+  }
+  const { fields, warnings } = normalized
+
+  if (kind === 'table') {
+    const tableOptions = asObject(args.tableOptions)
+    const pagination = asObject(args.pagination)
+    const rowButtons = asArray(args.rowButtons)
+    const apiUrl = typeof args.apiUrl === 'string' ? args.apiUrl : undefined
+    const result = generateTableBlock({
+      fields: fields as never,
+      apiUrl,
+      tableOptions: tableOptions as never,
+      pagination: pagination as never,
+      rowButtons: rowButtons as never,
+      target,
+    })
+    return {
+      kind,
+      config: { fields, apiUrl, tableOptions, pagination, rowButtons },
+      result: { ...result, warnings: [...warnings, ...result.warnings] },
+    }
+  }
+
+  if (kind === 'form') {
+    const formLayout = asObject(args.formLayout)
+    const buttons = args.buttons === 'query' || args.buttons === 'submit' ? args.buttons : 'none'
+    const context = args.context === 'query' ? 'query' : 'form'
+    const result = generateFormBlock({
+      fields: fields as never,
+      buttons,
+      context,
+      formLayout: formLayout as never,
+      target,
+    })
+    return {
+      kind,
+      config: { fields, buttons, context, formLayout },
+      result: { ...result, warnings: [...warnings, ...result.warnings] },
+    }
+  }
+
+  const mode = args.mode === 'component' ? 'component' : 'composable'
+  const options = asObject(args.options)
+  const defaultTitle = typeof args.defaultTitle === 'string' ? args.defaultTitle : undefined
+  const rowkey = typeof args.rowkey === 'string' ? args.rowkey : undefined
+  const apiUrl = typeof args.apiUrl === 'string' ? args.apiUrl : undefined
+  const result = generateDialogBlock({
+    fields: fields as never,
+    mode,
+    options: options as never,
+    defaultTitle,
+    rowkey,
+    apiUrl,
+    target,
+  })
+  return {
+    kind,
+    // dialog 的产物是 composable（.tsx）或 SFC，预览侧只需要 fields + 标题/宽度。
+    config: { fields, mode, options, defaultTitle, rowkey, apiUrl },
+    result: { ...result, warnings: [...warnings, ...result.warnings] },
+  }
+}
+
+/** 信封里声明的工具名（仅用于 trace 标题；非信封时回落通用校验器名） */
+function envelopeToolName(raw: unknown): string {
+  const env = asObject(raw)
+  return typeof env?.tool === 'string' ? env.tool : 'validate_config'
+}
+
+// ─── main flow ────────────────────────────────────────────────────────────
 export async function mcpFlow(
   prompt: string,
   history: ChatMessage[],
@@ -415,6 +589,17 @@ export async function mcpFlow(
   })
 
   let validatedConfig: StructuredCrudConfig | undefined
+  /**
+   * 单场景片段的产物（AI 路径特有）。与 validatedConfig 互斥：
+   * 同一次回答要么是整页配置，要么是一个片段工具信封。
+   */
+  let fragmentRun: FragmentRun | undefined
+  /**
+   * 为什么最后没用上 AI 产物。非空且走到离线分支时，UI 必须显示
+   * 「规则引擎（AI 失败回退）」—— 否则「填了 key 就显示 AI 引擎」会让
+   * 一次失败的调用看起来像一次成功的 AI 生成。
+   */
+  let aiFailure: string | undefined
 
   // ── AI path ────────────────────────────────────────────────────────────
   if (opts.ai?.apiKey) {
@@ -436,6 +621,8 @@ export async function mcpFlow(
       if (m.role === 'user') messages.push({ role: 'user', content: m.content })
       else if (m.configSnapshot) {
         messages.push({ role: 'assistant', content: JSON.stringify(m.configSnapshot) })
+      } else if (m.fragmentSnapshot) {
+        messages.push({ role: 'assistant', content: JSON.stringify(m.fragmentSnapshot) })
       }
     }
     messages.push({ role: 'user', content: prompt })
@@ -458,6 +645,7 @@ export async function mcpFlow(
         lastRaw = await callOpenAI(opts.ai, messages, opts.signal)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
+        aiFailure = `OpenAI 调用失败：${msg}`
         pushTrace(opts, traceIds, {
           startedAt: reqStart,
           kind: 'ai_response',
@@ -485,12 +673,41 @@ export async function mcpFlow(
       } catch {
         parsedJson = null
       }
-      const outcome = validateConfig(parsedJson)
+
+      // 单场景片段：模型按站点 prompt 的信封协议回答时，走片段生成器，而不是
+      // 把「只做一个筛选表单」硬掰成一整页 CRUD。
+      const routed = routeFragmentEnvelope(parsedJson, opts.target ?? 'vue3')
+      if (routed && !('error' in routed)) {        fragmentRun = routed
+        pushTrace(opts, traceIds, {
+          startedAt: valStart,
+          kind: 'mcp_tool_call',
+          toolName: `generate_${routed.kind}`,
+          title: `generate_${routed.kind}`,
+          summary: routed.result.summary,
+          input: { fields: (routed.config.fields as unknown[]).length },
+          output: {
+            warnings: routed.result.warnings,
+            codePreview: routed.result.code.slice(0, 400),
+          },
+          status: 'success',
+        })
+        break
+      }
+
+      const outcome: ValidationOutcome =
+        routed && 'error' in routed
+          ? { ok: false, errors: [routed.error] }
+          : validateConfig(parsedJson)
+      // 片段信封失败时的回退原因必须说「片段入参不可用」，而不是
+      // 「未通过 StructuredCrudConfigSchema 校验」—— 它压根没走那个 schema。
+      if (routed && 'error' in routed) {
+        aiFailure = `片段工具入参不可用：${routed.error}`
+      }
       pushTrace(opts, traceIds, {
         startedAt: valStart,
         kind: 'mcp_validation',
-        toolName: 'validate_config',
-        title: 'validate_config',
+        toolName: routed ? envelopeToolName(parsedJson) : 'validate_config',
+        title: routed ? envelopeToolName(parsedJson) : 'validate_config',
         summary: outcome.ok
           ? 'StructuredCrudConfigSchema ✓'
           : `${outcome.errors.length} validation errors`,
@@ -513,6 +730,50 @@ export async function mcpFlow(
           content: `Your last response failed validation:\n${outcome.errors.map((e) => `- ${e}`).join('\n')}\n\nPlease respond with the full corrected JSON.`,
         })
       }
+    }
+    if (!validatedConfig && !fragmentRun) {
+      aiFailure ??= '模型两次输出都未通过 StructuredCrudConfigSchema 校验'
+    }
+  }
+
+  // ── AI path: single-scene fragment ────────────────────────────────────
+  if (fragmentRun) {
+    const { kind, config, result } = fragmentRun
+    const target = opts.target ?? 'vue3'
+    pushTrace(opts, traceIds, {
+      startedAt: Date.now(),
+      kind: 'render',
+      title: 'render: preview / code / json',
+      summary: `tabs updated (fragment=${kind}, target=${target})`,
+      status: 'success',
+    })
+    const fields = config.fields as { prop: string; label: string }[]
+    return {
+      message: {
+        id: newId(),
+        ts: Date.now(),
+        role: 'assistant',
+        content: result.summary,
+        fragmentSnapshot: { tool: `generate_${kind}`, args: config },
+        traceIds,
+        fieldsCount: fields.length,
+        // 片段没有「列数」概念 —— 表格片段的列就是字段，其余场景为 0。
+        columnsCount: kind === 'table' ? fields.length : 0,
+      },
+      formItems: [],
+      columns: [],
+      toolbarBtns: [],
+      code: result.code,
+      jsonView: config,
+      structuredConfig: undefined,
+      previewSchema: undefined,
+      traceIds,
+      featureHints: [],
+      warnings: result.warnings,
+      engine: 'ai',
+      target,
+      kind: 'fragment',
+      fragment: { kind, config, code: result.code, summary: result.summary },
     }
   }
 
@@ -577,7 +838,14 @@ export async function mcpFlow(
       status: 'success',
     })
 
-    const preview = structuredToPreview(validatedConfig)
+    // 预览渲染的是**生成物本身**：schema 模式直接复用 generated.schema；sfc 模式
+    // 没有 schema 视图，就用同一份配置再生成一次 schema 视图（只是视图，不改产物）。
+    // 此前预览另写一套字段白名单，弹窗/操作按钮/批量选择/行内编辑在预览里全部消失。
+    const previewSchema =
+      generated.schema ??
+      generateFromConfig({ ...validatedConfig, mode: 'schema' }).schema ??
+      {}
+    const preview = previewFromSchema(previewSchema)
     return {
       message: {
         id: newId(),
@@ -591,16 +859,19 @@ export async function mcpFlow(
       },
       formItems: preview.formItems,
       columns: preview.columns,
-      toolbarBtns: preview.toolbarBtns,
+      toolbarBtns: [],
       code: generated.code,
       jsonView: validatedConfig,
       structuredConfig: validatedConfig,
+      previewSchema,
       traceIds,
       target,
-      // AI path doesn't currently surface feature hints (the LLM is expected
-      // to handle nuance directly in the config); keep empty so UI just hides
-      // the alert.
-      featureHints: [],
+      // 这里只报「配置里有、预览画不出来」的事实（见 shared/preview-hints）；
+      // 不再硬编码空数组 —— 那会让 UI 的提示条永远不出现。
+      featureHints: describeUnrenderedFeatures(validatedConfig),
+      warnings: generated.warnings,
+      engine: 'ai',
+      kind: 'crud',
     }
   }
 
@@ -644,7 +915,7 @@ export async function mcpFlow(
           wrapperCode: legacy.wrapperCode.slice(0, 400),
         }
       : undefined,
-    status: legacy ? (opts.ai?.apiKey ? 'cached' : 'success') : 'error',
+    status: legacy ? 'success' : 'error',
     error: legacyErr?.message,
   })
   if (!legacy) throw legacyErr ?? new Error('Failed to generate CRUD schema')
@@ -657,9 +928,11 @@ export async function mcpFlow(
     status: 'success',
   })
 
-  const preview = schemaToPreview(legacySchema ?? {})
+  const preview = previewFromSchema(legacy.schema as { formItems?: unknown[]; columns?: unknown[] })
   const summary = `Generated CRUD page: ${preview.formItems.length} query fields, ${preview.columns.length} columns${
-    legacySchema?.actions?.length ? `, actions: ${legacySchema.actions.join('/')}` : ''
+    (legacy.schema.actions as string[] | undefined)?.length
+      ? `, actions: ${(legacy.schema.actions as string[]).join('/')}`
+      : ''
   } · target=${legacy.target}.`
 
   return {
@@ -674,12 +947,23 @@ export async function mcpFlow(
     },
     formItems: preview.formItems,
     columns: preview.columns,
-    toolbarBtns: preview.toolbarBtns,
+    toolbarBtns: [],
     code: legacy.wrapperCode,
     jsonView: legacy.schema,
     structuredConfig: undefined, // offline path doesn't produce a StructuredCrudConfig
+    previewSchema: legacy.schema,
     traceIds,
-    featureHints: [],
+    // 规则引擎的识别结果（多 tab 弹窗 / 多步表单 / 虚拟滚动 …）必须原样展示：
+    // 它们不是「已生成」，而是「已识别、需要手工实现」—— 用户有权知道。
+    featureHints: legacy.featureHints ?? [],
+    warnings: legacy.warnings ?? [],
+    engine: opts.ai?.apiKey ? 'rule-fallback' : 'rule',
+    fallbackReason: opts.ai?.apiKey
+      ? (aiFailure ?? 'AI 路径未产出可用配置，已回退到规则引擎')
+      : undefined,
     target: legacy.target,
+    // 离线兜底 = CLI 那条规则引擎：它只产 CRUD 整页，没有片段入口。
+    // 这一点必须在 UI 里说出来，而不是让「只做一个表单」的诉求悄悄变形成一整页。
+    kind: 'crud',
   }
 }

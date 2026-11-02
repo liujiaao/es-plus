@@ -38,6 +38,34 @@ export {
   type StructuredGenerateResult,
 } from '../../../packages/shared/src/structured-generator'
 
+// 片段预览的「字段 → 组件 props」映射。**同一份**映射被 SFC/schema 两条产物路径使用，
+// 预览不得另写一套（否则预览与产物再次分叉）。
+export {
+  buildFormItem,
+  buildTableColumn,
+  getDefaultValue,
+} from '../../../packages/shared/src/structured-generator'
+
+// 独立片段（AI 原生全场景）：`generate_table` / `generate_form` / `generate_dialog`
+// 的目标产物。站点演示用同一实现，不另写一套「差不多」的生成器。
+export {
+  generateFormBlock,
+  generateTableBlock,
+  generateDialogBlock,
+  type FragmentResult,
+} from '../../../packages/shared/src/fragment-generator'
+
+// formtype 的合法取值（规范 ∪ 旧别名）—— 与 zod 校验、运行时 normalize 同源。
+export {
+  VALID_FORM_TYPES,
+  FORM_TYPE_ALIASES,
+} from '../../../packages/shared/src/contract'
+
+// 预览边界（配置里有、预览画不出来）的**唯一**判据，与 MCP 工具摘要共用。
+export {
+  describeUnrenderedFeatures,
+} from '../../../packages/shared/src/preview-hints'
+
 export {
   StructuredCrudConfigSchema,
 } from '../../../packages/shared/src/structured-config.schema'

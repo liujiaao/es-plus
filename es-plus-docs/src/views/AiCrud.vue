@@ -19,9 +19,11 @@
         <template #title>{{ t('aiCrud.proxyNotice') }}</template>
       </el-alert>
       <div class="ai-crud-toolbar">
-        <el-tag :type="useAI ? 'success' : 'info'" class="engine-tag">
-          {{ useAI ? t('aiCrud.engineAi') : t('aiCrud.engineRule') }}
-        </el-tag>
+        <!-- 引擎标签跟随**实际**走通的路径，而不是「有没有填 key」：
+             填了 key 但 OpenAI 报错时会回退到规则引擎，此时标「AI 引擎」就是假话。 -->
+        <el-tooltip :disabled="!fallbackReason" :content="fallbackReason || ''" placement="bottom">
+          <el-tag :type="engineTag.type" class="engine-tag">{{ engineTag.label }}</el-tag>
+        </el-tooltip>
         <!-- 渲染端选择：es-plus 的头号卖点是「同一份配置 → 三端」，不带这个开关的
              生成器演示只能说明「自然语言 → 一个 Vue 3 页面」。选择会同时作用于
              离线（generateCrudSchema 的 target 参数）与 AI（覆盖 config.target）两条路径。 -->
@@ -45,7 +47,7 @@
         <ChatComposer
           :messages="messages"
           :loading="loading"
-          :presets="PRESETS"
+          :presets="visiblePresets"
           @send="handleSend"
           @select-preset="handlePreset"
           @reset="handleReset"
@@ -62,36 +64,65 @@
           </el-tab-pane>
 
           <el-tab-pane :label="t('aiCrud.tabPreview')" name="preview">
-            <div class="preview-area" v-if="formItems.length > 0">
-              <!-- Surface features the prompt asked for that preview can't render
-                   (multi-tab dialog, multi-step form, etc.). Without this the
-                   user sees a plain table and thinks the generator dropped
-                   the feature on the floor. -->
+            <div class="preview-area" v-if="fragmentResult || previewSchema">
+              <!-- 离线兜底的边界：规则引擎与 CLI `es-plus create` 同源，只产 CRUD 整页。
+                   不说这句话，用户会以为「只做一个表单」被生成错了。 -->
               <el-alert
-                v-if="featureHints.length > 0"
+                v-if="showOfflineScope"
+                type="info"
+                :closable="false"
+                show-icon
+                class="feature-hints"
+                :title="t('aiCrud.offlineScopeNote')"
+              />
+              <!-- 已知边界（配置里有、预览画不出来）：来自 shared 的
+                   describeUnrenderedFeatures，与 MCP 工具摘要同一份判据。
+                   与「生成器丢了需求」严格区分 —— 后者是 bug，前者是事实。 -->
+              <el-alert
+                v-if="previewHints.length > 0"
                 type="warning"
                 :closable="false"
                 show-icon
                 class="feature-hints"
               >
                 <template #title>
-                  <strong>已识别的高级特性（preview 仅渲染基础表单/表格部分，完整代码在「生成代码」tab）</strong>
+                  <strong>{{ t('aiCrud.hintsTitle') }}</strong>
                 </template>
                 <ul class="feature-hints-list">
-                  <li v-for="(h, idx) in featureHints" :key="idx">{{ h }}</li>
+                  <li v-for="(h, idx) in previewHints" :key="idx">{{ h }}</li>
                 </ul>
               </el-alert>
-              <es-table
-                :columns="previewColumns"
-                :options="previewOptions"
-                :data-source="mockData"
+              <!-- 生成路径**表达不了**的诉求（如 schema 无法内联的 render）：
+                   产物里已经不存在，必须与上面的「预览边界」分开说。 -->
+              <el-alert
+                v-if="previewWarnings.length > 0"
+                type="info"
+                :closable="false"
+                show-icon
+                class="feature-hints"
               >
-                <es-form
-                  :model="previewModel"
-                  :form-item-list="formItems"
-                  :config-btn="previewBtns"
-                />
-              </es-table>
+                <template #title>
+                  <strong>{{ t('aiCrud.warningsTitle') }}</strong>
+                </template>
+                <ul class="feature-hints-list">
+                  <li v-for="(w, idx) in previewWarnings" :key="idx">{{ w }}</li>
+                </ul>
+              </el-alert>
+              <!-- 预览渲染的是**生成物本身**：整页交给真正的 es-crud-page；单场景
+                   片段交给片段预览（同一份 fields 经 buildFormItem/buildTableColumn）。 -->
+              <FragmentPreview
+                v-if="fragmentResult"
+                :key="`frag-${previewKey}`"
+                :kind="fragmentResult.kind"
+                :config="fragmentResult.config"
+              />
+              <es-crud-page
+                v-else
+                :key="`crud-${previewKey}`"
+                :schema="previewSchema"
+                :http-request="mockHttpRequest"
+                auto-load
+              />
             </div>
             <div v-else class="empty-state">
               <el-empty :description="t('aiCrud.emptyPreview')" />
@@ -162,13 +193,14 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { EsForm, EsTable } from 'es-plus'
+import { EsCrudPage } from 'es-plus'
 import { mcpFlow, type ChatMessage, type TraceEntry } from '@/utils/mcp-flow'
 // 渲染端选项与称呼来自三站清单（与顶栏切换器、案例卡互链同一份）
 import { SITES } from '@/utils/sites'
 import type { StructuredCrudConfig, TargetFramework } from '@es-plus/shared'
 import { PRESETS, type Preset } from '@/utils/preset-examples'
 import ChatComposer from '@/components/ai-crud/ChatComposer.vue'
+import FragmentPreview from '@/components/ai-crud/FragmentPreview.vue'
 import TraceTab from '@/components/ai-crud/TraceTab.vue'
 
 const { t, locale } = useI18n()
@@ -188,33 +220,117 @@ const currentStructuredConfig = ref<StructuredCrudConfig | null>(null)
 let abortController: AbortController | null = null
 
 // ─── derived display state (drives the 3 right-side tabs) ─────────────────
-const formItems = ref<any[]>([])
-const previewColumns = ref<any[]>([])
-const previewBtns = ref<any[]>([])
 const generatedCode = ref('')
 const generatedConfig = ref<unknown>(null)
-const previewModel = reactive<Record<string, any>>({})
+/**
+ * 实时预览的数据源：**生成物本身的 CrudPageSchema**，交给 `<es-crud-page>` 渲染。
+ * 不在浏览器里另做字段映射 —— 预览与「生成代码」必须是同一份 schema 的两种视图。
+ */
+const previewSchema = ref<any>(null)
+/**
+ * 单场景片段的产物（表格 / 表单 / 弹窗）。与 previewSchema 互斥：整页走
+ * `<es-crud-page>`，片段走 `<FragmentPreview>`。此前所有诉求都被塞进整页预览，
+ * 「只做一个筛选表单」的用户会看到一整套 CRUD 外壳并以为生成错了。
+ */
+const fragmentResult = ref<{
+  kind: 'table' | 'form' | 'dialog'
+  config: Record<string, any>
+  code: string
+  summary: string
+} | null>(null)
+/** 强制重挂载：同一份 schema 再次生成时也要重建组件内部状态（分页/弹窗） */
+const previewKey = ref(0)
 const mockData = ref<any[]>([])
-// Features the prompt requested but preview can't fully render — shown as
-// an inline alert above the table so users know they exist.
-const featureHints = ref<string[]>([])
+/**
+ * 配置里有、但实时预览画不出来 / 需宿主补一步的事实（shared 的
+ * describeUnrenderedFeatures 是唯一判据）。与「生成器丢了需求」严格区分。
+ */
+const previewHints = ref<string[]>([])
+/** 本次生成被降级/剥离的诉求（如 schema 无法内联的 render） */
+const previewWarnings = ref<string[]>([])
+/**
+ * 本次**实际**走通的引擎。标签不能只看「有没有填 key」：
+ * 填了 key 但 OpenAI 报错时走的是规则引擎，标成「AI 引擎」就是假话。
+ */
+const engine = ref<'ai' | 'rule' | 'rule-fallback' | null>(null)
+const fallbackReason = ref<string | undefined>(undefined)
 
-const previewOptions = computed(() => ({
-  border: true,
-  size: 'small' as const,
-  headerCellStyle: { background: '#f5f7fa' },
-}))
+/**
+ * 是否展示「离线只产 CRUD 整页」的边界说明。
+ * 已生成时只信事实（engine），未生成时按是否填了 key 预告 —— 与引擎标签同一条口径。
+ */
+const showOfflineScope = computed(() =>
+  engine.value ? engine.value !== 'ai' : !useAI.value,
+)
+
+/**
+ * 引擎标签：`null`（还没生成）时按「是否填了 key」预告，一旦有结果就**只信事实**。
+ */
+const engineTag = computed<{ label: string; type: 'success' | 'info' | 'warning' }>(() => {
+  if (engine.value === 'ai') return { label: t('aiCrud.engineAi'), type: 'success' }
+  if (engine.value === 'rule') return { label: t('aiCrud.engineRule'), type: 'info' }
+  if (engine.value === 'rule-fallback') {
+    return { label: t('aiCrud.engineRuleFallback'), type: 'warning' }
+  }
+  return useAI.value
+    ? { label: t('aiCrud.engineAi'), type: 'success' }
+    : { label: t('aiCrud.engineRule'), type: 'info' }
+})
+
+/**
+ * 预览用的假接口。
+ *
+ * 响应形状必须匹配 es-table 的**默认**字段映射（core 的
+ * `DEFAULT_CONFIG_FORM_FIELD_OUT`：列表 `rows`、总数 `records`），
+ * 不是 `{data,total}` —— 后者会被 formatConfigOut 判成空列表，
+ * 于是「预览有表头没数据」。真实项目里在 apiParams.configFormOut 里覆盖。
+ */
+const mockHttpRequest = () =>
+  Promise.resolve({ rows: mockData.value, records: mockData.value.length })
 
 // ─── AI config ──────────────────────────────────────────────────────────
+/**
+ * Base URL 的默认值必须区分「本地」与「线上」：
+ *
+ *  - 本地 `npm run dev` 有 vite 同源代理（/openai → api.openai.com），可以直接用；
+ *  - 线上是纯静态托管（GitHub Pages），**没有代理** —— 默认给 `/openai/v1`
+ *    等于给每个访客一个必然 404 的默认值。
+ *
+ * 所以线上默认留空（强制用户填自己的 CORS 网关），并允许用 `VITE_AI_BASE_URL`
+ * 预置。Key 永不落盘（只在内存），base/model 落 localStorage 以免每次重填。
+ */
+const DEFAULT_AI_BASE =
+  (import.meta.env.VITE_AI_BASE_URL as string | undefined) ??
+  (import.meta.env.DEV ? '/openai/v1' : '')
+const DEFAULT_AI_MODEL =
+  (import.meta.env.VITE_AI_MODEL as string | undefined) ?? 'gpt-4o-mini'
+const AI_CONFIG_STORAGE_KEY = 'es-plus:ai-endpoint'
+
+function loadSavedEndpoint(): { baseUrl?: string; model?: string } {
+  try {
+    const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as { baseUrl?: string; model?: string }) : {}
+  } catch {
+    return {}
+  }
+}
+const savedEndpoint = loadSavedEndpoint()
+
 const aiConfig = reactive({
   apiKey: '',
-  // 默认走 vite dev server 的同源代理（见 vite.config.ts server.proxy）：
-  // /openai/v1 → https://api.openai.com/v1。浏览器直连 OpenAI 会被 CORS 拦截。
-  // 用户可在设置里改成任意自建 endpoint（如自建网关 / 兼容 OpenAI 的国内服务）。
-  baseUrl: '/openai/v1',
-  model: 'gpt-4o-mini',
+  baseUrl: savedEndpoint.baseUrl ?? DEFAULT_AI_BASE,
+  model: savedEndpoint.model ?? DEFAULT_AI_MODEL,
 })
 const useAI = computed(() => !!aiConfig.apiKey)
+
+/**
+ * 可见的预设。`requiresAi` 的预设（单场景片段）只在配置了模型时出现：
+ * 片段路由由模型按信封协议选择，离线规则引擎**只产 CRUD 整页**，给出这些
+ * 预设只会得到和标题不符的产物。
+ */
+const visiblePresets = computed(() =>
+  useAI.value ? PRESETS : PRESETS.filter((p) => !p.requiresAi),
+)
 
 /**
  * 目标渲染端。三端是 es-plus 的头号卖点，所以它是**用户可选**的，而不是让模型猜。
@@ -245,6 +361,13 @@ const showSettings = ref(false)
 // ─── handlers ──────────────────────────────────────────────────────────
 const handleSend = async (text: string) => {
   if (loading.value) return
+  // 填了 key 却没填 Base URL：给一个可执行的错误，而不是让 fetch 打到
+  // 相对路径（线上会 404，本地会命中静态服务器）后只在 trace 里留一行。
+  if (aiConfig.apiKey && !aiConfig.baseUrl.trim()) {
+    ElMessage.error(t('aiCrud.baseUrlRequired'))
+    showSettings.value = true
+    return
+  }
 
   // push user message + clear stale highlights
   const userMsg: ChatMessage = {
@@ -269,20 +392,40 @@ const handleSend = async (text: string) => {
 
     // Commit assistant message + uniform preview state from FlowResult.
     messages.value.push(result.message)
-    if (result.structuredConfig) currentStructuredConfig.value = result.structuredConfig
+    // 片段与整页配置是两种上下文：片段轮次没有 StructuredCrudConfig 快照，
+    // 留着上一轮的配置会让「再加一列」被误当成整页 refin（模型看到的是旧 CRUD 配置）。
+    if (result.fragment) currentStructuredConfig.value = null
+    else if (result.structuredConfig) currentStructuredConfig.value = result.structuredConfig
     generatedTarget.value = result.target
     generatedCode.value = result.code
     generatedConfig.value = result.jsonView
-    formItems.value = result.formItems as any[]
-    previewColumns.value = result.columns as any[]
-    previewBtns.value = (result.toolbarBtns as any[]).map((b) => ({ ...b, triggerEvent: false }))
-    featureHints.value = result.featureHints ?? []
-    // Reset preview model + regenerate mock data on every turn.
-    for (const k of Object.keys(previewModel)) delete previewModel[k]
-    formItems.value.forEach((it: any) => {
-      previewModel[it.prop] = ''
-    })
-    mockData.value = generateMockData(previewColumns.value)
+    // 预览 = 生成物本身（同一份 CrudPageSchema），不再二次映射。
+    // 单场景片段不是 CrudPageSchema —— 交给 FragmentPreview，二者互斥。
+    fragmentResult.value = result.fragment
+      ? {
+          kind: result.fragment.kind,
+          config: result.fragment.config,
+          code: result.fragment.code,
+          summary: result.fragment.summary,
+        }
+      : null
+    previewSchema.value = result.fragment
+      ? null
+      : ((result.previewSchema ?? null) as Record<string, any> | null)
+    previewKey.value += 1
+    previewHints.value = result.featureHints ?? []
+    previewWarnings.value = result.warnings ?? []
+    engine.value = result.engine
+    fallbackReason.value = result.fallbackReason
+    mockData.value = result.fragment
+      ? []
+      : generateMockData(
+          ((result.previewSchema?.columns as any[]) ?? result.columns ?? []) as any[]
+        )
+    if (result.engine === 'rule-fallback') {
+      // 静默回退是最坏的情况：用户填了 key，以为看到的是 AI 产物。
+      ElMessage.warning(fallbackReason.value ?? t('aiCrud.fallbackNotice'))
+    }
   } catch (err) {
     const isAbort = err instanceof Error && (err.name === 'AbortError' || err.message === 'aborted')
     if (!isAbort) {
@@ -306,12 +449,13 @@ const handleReset = () => {
   currentStructuredConfig.value = null
   generatedCode.value = ''
   generatedConfig.value = null
-  formItems.value = []
-  previewColumns.value = []
-  previewBtns.value = []
+  previewSchema.value = null
+  fragmentResult.value = null
+  previewHints.value = []
+  previewWarnings.value = []
+  engine.value = null
+  fallbackReason.value = undefined
   mockData.value = []
-  featureHints.value = []
-  for (const k of Object.keys(previewModel)) delete previewModel[k]
 }
 
 const handleAbort = () => {
@@ -325,7 +469,20 @@ const handleHighlight = (ids: string[]) => {
 }
 
 const saveSettings = () => {
+  if (aiConfig.apiKey && !aiConfig.baseUrl.trim()) {
+    ElMessage.error(t('aiCrud.baseUrlRequired'))
+    return
+  }
   showSettings.value = false
+  // 只持久化 endpoint，不持久化 key —— 页面加载时 key 必须重新输入。
+  try {
+    localStorage.setItem(
+      AI_CONFIG_STORAGE_KEY,
+      JSON.stringify({ baseUrl: aiConfig.baseUrl, model: aiConfig.model })
+    )
+  } catch {
+    // 隐私模式 / 配额满：持久化失败不影响本次使用
+  }
   ElMessage.success(useAI.value ? t('aiCrud.settingsSavedAi') : t('aiCrud.settingsSavedRule'))
 }
 
