@@ -365,6 +365,34 @@ const editRenderDefaultView = (er) => {
   // 命中选项 ⟹ 用标签代表（value 不可推断）；否则保持原值（可能本就是字面量默认值）。
   return hit ? { label: hit.label } : er.defaultValue
 }
+/**
+ * `editRender.props` 的投影：这是**第三方编辑器组件的 props 透传袋**（`{...props}` 直接落到
+ * 编辑器组件上），不是本仓的声明式契约。两个键因此不能按字面比：
+ *
+ *   - `placeholder`：NL 只说「带必填提示」，**从不给字面串**（104 原文：「金额录入框带必填提示」）。
+ *     两侧总会各写一个 —— 与 `expandConfig.title` 同形，不投影就永远比值。但「有没有提示」
+ *     是 NL 真说了的，所以不能整键丢弃：投影成**布尔**（只比存在性）。
+ *     这也覆盖了 104 的另一种写法：模型写 `placeholder:'必填'`（与仓内 RowEdit 示例同款），
+ *     gold 写 `'请输入金额'`，两边都在表达同一条 NL 需求。
+ *   - `required`：vxe 的 `$input` **没有这个 prop**（单元格校验走 `column.rules` /
+ *     `vxeColumn.rules`，见 packages/core/src/types.ts 的 `validConfig` 注释）。
+ *     落在 props 里会作为 DOM 属性挂到编辑器根节点上，**运行时无任何效果** ⟹ 不参与比较。
+ *     （104 的 gold 原本两者都写，把一条 NL 需求落到了唯一无效的通道上。）
+ *
+ * 其余键（`type` / `min` / `max` / `digits` …）是真实的编辑器语义，照常深比较。
+ */
+const EDITOR_PROPS_INERT_KEYS = ['required']
+const projectEditorProps = (g = {}, p = {}) => {
+  for (const k of EDITOR_PROPS_INERT_KEYS) {
+    delete g[k]
+    delete p[k]
+  }
+  if ('placeholder' in g || 'placeholder' in p) {
+    g.placeholder = Boolean(g.placeholder)
+    p.placeholder = Boolean(p.placeholder)
+  }
+  // 投影后两侧都空 ⟹ 交给上面的调用点删除 `props`（`{}` 与「未声明」语义相同）。
+}
 const projectEditRender = (g, p) => {
   // 先解析 defaultValue（依赖原始 options），再替换 options 视图。
   const gd = editRenderDefaultView(g)
@@ -373,6 +401,16 @@ const projectEditRender = (g, p) => {
   if (Array.isArray(p.options)) p.options = editRenderOptionView(p.options)
   if (gd !== undefined) g.defaultValue = gd
   if (pd !== undefined) p.defaultValue = pd
+  if (g.props || p.props) {
+    const gp = (g.props ??= {})
+    const pp = (p.props ??= {})
+    projectEditorProps(gp, pp)
+    // 两侧都空 ⟹ 删除 props（`{}` 与「未声明」是同一件事）。
+    if (!Object.keys(gp).length && !Object.keys(pp).length) {
+      delete g.props
+      delete p.props
+    }
+  }
 }
 
 const projectColumnNode = (g, p) => {

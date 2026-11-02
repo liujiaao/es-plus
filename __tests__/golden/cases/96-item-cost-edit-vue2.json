@@ -1,6 +1,6 @@
 {
-  "nl": "物料成本维护：单击单元格进入行内编辑；展示物料名称、成本，成本数字输入保留两位小数；支持新增、编辑、删除。",
-  "nlEn": "Material cost maintenance: click a cell to edit inline. Shows material name and cost, where cost is a number input with two decimal places. Supports add, edit and delete.",
+  "nl": "物料成本维护：单击成本单元格进入行内编辑；展示物料名称、成本，成本数字输入保留两位小数；支持新增、编辑、删除。",
+  "nlEn": "Material cost maintenance: click the cost cell to edit inline. Shows material name and cost, where cost is a number input with two decimal places. Supports add, edit and delete.",
   "fixedFields": ["itemName", "cost"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
   "config": {
@@ -13,10 +13,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell", "enabled": true } },
     "columns": [
-      { "prop": "itemName", "label": "物料名称", "editRender": { "name": "$input" } },
-      { "prop": "cost", "label": "成本", "editRender": { "name": "$input", "props": { "type": "number", "precision": 2 } } }
+      { "prop": "itemName", "label": "物料名称" },
+      { "prop": "cost", "label": "成本", "editRender": { "name": "$input", "props": { "type": "float", "digits": 2 } } }
     ],
     "actions": ["add", "edit", "delete"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell/enabled + editRender props，vue2/schema）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell/enabled + editRender props，vue2/schema）。2026-11-02 三处：①NL 补「成本」限定可编辑单元格（原文「单击单元格进入行内编辑」没说改哪个，gold 的「只有成本列可编辑」并非 NL 唯一解）；②去掉标识列 itemName 的 editRender；③props 改为 `{type:'float',digits:2}` —— vxe `$input` 只有 `type==='float'` 时才按 `digits` 格式化小数（dist/all.esm.js 的 numberInput 渲染分支），`precision` 不是 VxeInput 的 prop，原稿「保留两位小数」实际不生效"
 }

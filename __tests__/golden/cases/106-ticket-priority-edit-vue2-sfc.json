@@ -14,10 +14,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
     "columns": [
-      { "prop": "title", "label": "工单标题", "editRender": { "name": "$input" } },
+      { "prop": "title", "label": "工单标题" },
       { "prop": "priority", "label": "优先级", "editRender": { "name": "$select", "options": [{ "label": "高", "value": "high" }, { "label": "中", "value": "medium" }, { "label": "低", "value": "low" }], "defaultValue": "medium" } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig + editRender $select options/defaultValue，vue2/sfc）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig + editRender $select options/defaultValue，vue2/sfc）。2026-11-02 去掉标识列 title 的 editRender：NL 的编辑目标是优先级（下拉 + 默认中），标题只展示"
 }

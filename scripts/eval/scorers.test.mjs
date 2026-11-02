@@ -468,6 +468,45 @@ console.log('meta-eval: columns (explicit column array)')
   const erMissingEditor = { fields: gold.fields, actions: gold.actions }
   check(scoreAll(erGold, erMissingEditor).byCapability.columns.pass === false, 'columns: pred 漏发整个 editRender 应判负（不是装饰）')
 
+  // editRender.props 里两个「透传袋」键：编辑器组件的 props 不是本仓的声明式契约。
+  //   placeholder —— NL 从不说字面串（104「金额录入框带必填提示」），两侧各写一个 ⟹ 只比**有没有**；
+  //   required    —— vxe `$input` 没有这个 prop（校验走 column.rules），落在这里运行时无效果 ⟹ 不比。
+  // 其余键（type/digits/min…）是真实编辑器语义，照常深比较。
+  const propsGold = clone(gold)
+  propsGold.columns[1].editRender = { name: '$input', props: { type: 'number', placeholder: '请输入金额' } }
+  const propsOther = clone(propsGold)
+  propsOther.columns[1].editRender.props.placeholder = '必填'
+  check(
+    scoreAll(propsGold, propsOther).byCapability.columns.pass === true,
+    'columns: editRender.props.placeholder 只比有无，字面串不同应判正（NL 从不给串）'
+  )
+  const propsNoHint = clone(propsGold)
+  delete propsNoHint.columns[1].editRender.props.placeholder
+  check(
+    scoreAll(propsGold, propsNoHint).byCapability.columns.pass === false,
+    'columns: pred 漏掉 placeholder 应判负（「带必填提示」是 NL 说了的需求）'
+  )
+  const propsInert = clone(propsGold)
+  propsInert.columns[1].editRender.props.required = true
+  check(
+    scoreAll(propsInert, propsGold).byCapability.columns.pass === true,
+    'columns: editRender.props.required 单侧声明应豁免（$input 无此 prop，运行时无效果）'
+  )
+  const propsTypeWrong = clone(propsGold)
+  propsTypeWrong.columns[1].editRender.props.type = 'text'
+  check(
+    scoreAll(propsGold, propsTypeWrong).byCapability.columns.pass === false,
+    'columns: editRender.props.type 不同应判负（编辑器语义是契约）'
+  )
+  const propsOnlyInert = clone(propsGold)
+  propsOnlyInert.columns[1].editRender.props = { type: 'number' }
+  const propsEmpty = clone(propsOnlyInert)
+  delete propsEmpty.columns[1].editRender.props
+  check(
+    scoreAll(propsOnlyInert, propsEmpty).byCapability.columns.pass === false,
+    'columns: 一侧 props 有真键、另一侧整段缺失仍应判负（空袋≠无键）'
+  )
+
   // 行为键不豁免：permissionValue（无权限不出列）/ dataOptions（码值→文案）仍是契约
   const permChanged = clone(gold)
   permChanged.columns[1].permissionValue = 'meta:view'

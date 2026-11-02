@@ -12,10 +12,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "row", "showStatus": true } },
     "columns": [
-      { "prop": "goodsName", "label": "商品名称", "editRender": { "name": "$input" } },
+      { "prop": "goodsName", "label": "商品名称" },
       { "prop": "qty", "label": "库存数", "editRender": { "name": "$input", "props": { "type": "number" } } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=dblclick/mode=row/showStatus + editRender，vue3/schema）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=dblclick/mode=row/showStatus + editRender，vue3/schema）。2026-11-02 去掉标识列 goodsName 的 editRender：NL 的维护对象只有库存数，「双击整行」说的是 trigger/mode（row），不是「每列都可编辑」；标识列可编辑是作者自选的过规定，模型按 NL 只给编辑目标列反而被判负"
 }

@@ -14,10 +14,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "dblclick", "mode": "row", "autoClear": true } },
     "columns": [
-      { "prop": "orderNo", "label": "订单号", "editRender": { "name": "$input" } },
+      { "prop": "orderNo", "label": "订单号" },
       { "prop": "remark", "label": "备注", "editRender": { "name": "$textarea" } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（NL「双击整行」⟹ editConfig dblclick/row + editRender $textarea，vue2/sfc）。2026-10-29 补 trigger:dblclick（原稿漏写 ⟹ 默认 click 与 NL 相反）；autoClear 是展示/UX 开关、NL 不陈述，记分时按装饰键豁免"
+  "notes": "AI-09 子项④: vxe 行内编辑（NL「双击整行」⟹ editConfig dblclick/row + editRender $textarea，vue2/sfc）。2026-10-29 补 trigger:dblclick（原稿漏写 ⟹ 默认 click 与 NL 相反）；autoClear 是展示/UX 开关、NL 不陈述，记分时按装饰键豁免。2026-11-02 去掉标识列 orderNo 的 editRender：页面维护对象是备注，「整行」指 trigger/mode"
 }

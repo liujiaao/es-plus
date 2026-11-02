@@ -13,10 +13,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "mode": "cell" } },
     "columns": [
-      { "prop": "tierName", "label": "档位名称", "editRender": { "name": "$input" } },
+      { "prop": "tierName", "label": "档位名称" },
       { "prop": "discount", "label": "折扣", "editRender": { "name": "$select", "options": [{ "label": "九折", "value": 0.9 }, { "label": "八折", "value": 0.8 }] } }
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell + editRender $select+options 数值，antdv/schema）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig mode=cell + editRender $select+options 数值，antdv/schema）。2026-11-02 去掉标识列 tierName 的 editRender：NL 明写「单击单元格修改折扣」"
 }
