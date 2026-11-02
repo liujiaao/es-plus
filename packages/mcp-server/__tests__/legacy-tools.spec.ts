@@ -111,6 +111,31 @@ describe("generate_crud_page", () => {
     expect(out).toContain(":data-source=");
     expect(out).not.toContain(":data-source.sync");
   });
+
+  // 这两组「非产物事实」以前只存在于 generateCrudSchema 的返回值里，站点读了、
+  // MCP 工具丢了 —— 同一份生成器，两个消费者看到的事实不一样。
+  it("schema 模式把 featureHints（多 tab / 多步）与 warnings（render 剥离）写进输出", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrudPage(server);
+    const multiTab =
+      "订单列表，查询订单号、客户姓名、订单状态。每行有\"详情\"按钮，点击打开弹窗，弹窗内三个 tab：订单信息、收货地址、商品列表。";
+    const out = textOf(await tools.generate_crud_page.handler({ description: multiTab, mode: "schema", target: "vue3" }));
+    expect(out).toContain("## Notes (recognized, but NOT rendered by schema mode");
+    expect(out).toContain("多 Tab");
+    // render 剥离告警必须点名被剥离的列
+    expect(out).toContain("⚠️ Warnings");
+    expect(out).toMatch(/columns\[\]\.render 内联进 JSON schema（orderStatus）/);
+  });
+
+  it("sfc 模式同样透出 featureHints（宿主否则只看到一张平表）", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrudPage(server);
+    const multiTab =
+      "订单列表，查询订单号、客户姓名、订单状态。每行有\"详情\"按钮，点击打开弹窗，弹窗内三个 tab：订单信息、收货地址、商品列表。";
+    const out = textOf(await tools.generate_crud_page.handler({ description: multiTab, mode: "sfc", target: "vue3" }));
+    expect(out).toContain("## Notes (recognized, but NOT rendered by schema mode");
+    expect(out).toContain("多 Tab");
+  });
 });
 
 describe("generate_crud_schema", () => {
@@ -130,5 +155,25 @@ describe("generate_crud_schema", () => {
     const adv = textOf(await tools.generate_crud_schema.handler({ description: NL, target: "antdv" }));
     expect(adv).toContain("from '@es-plus/adapter-antdv'");
     expect(schemaJsonFrom(adv)).toEqual(schemaJsonFrom(v3));
+  });
+
+  it("基础 CRUD 有 render 剥离告警、但没有 Notes 段（不吹牛）", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrudSchema(server);
+    const out = textOf(await tools.generate_crud_schema.handler({ description: NL, target: "vue3" }));
+    expect(out).toContain("⚠️ Warnings");
+    expect(out).toMatch(/columns\[\]\.render 内联进 JSON schema（status）/);
+    // featureHints 为空时不得凭空出现 Notes 段 —— 「识别到但没实现」必须是事实
+    expect(out).not.toContain("## Notes (recognized");
+  });
+
+  it("多 tab 需求：Notes 段点名该能力", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateCrudSchema(server);
+    const multiTab =
+      "订单列表，查询订单号、客户姓名、订单状态。每行有\"详情\"按钮，点击打开弹窗，弹窗内三个 tab：订单信息、收货地址、商品列表。";
+    const out = textOf(await tools.generate_crud_schema.handler({ description: multiTab, target: "vue3" }));
+    expect(out).toContain("## Notes (recognized");
+    expect(out).toContain("多 Tab");
   });
 });

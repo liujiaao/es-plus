@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateCrudPage, generateCrudSchema } from "@es-plus/shared";
+import { generationNotes } from "./_notes.js";
 
 export function registerGenerateCrudPage(server: McpServer) {
   server.tool(
@@ -36,7 +37,16 @@ export function registerGenerateCrudPage(server: McpServer) {
             content: [
               {
                 type: "text",
-                text: `${result.summary}\n\n---\n\n${result.code}`,
+                text: [
+                  result.summary,
+                  // sfc 路径没有 schema 剥离告警，但「多 tab / 多步 / 跨页」这类
+                  // 识别结果同样必须交给宿主，否则它只看到一张平表。
+                  ...generationNotes({ featureHints: result.config.featureHints }),
+                  "",
+                  "---",
+                  "",
+                  result.code,
+                ].join("\n"),
               },
             ],
           };
@@ -51,6 +61,7 @@ export function registerGenerateCrudPage(server: McpServer) {
               type: "text",
               text: [
                 result.summary,
+                ...generationNotes(result),
                 "",
                 "---",
                 "",

@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateCrudSchema } from "@es-plus/shared";
+import { generationNotes } from "./_notes.js";
 
 export function registerGenerateCrudSchema(server: McpServer) {
   server.tool(
@@ -33,6 +34,9 @@ export function registerGenerateCrudSchema(server: McpServer) {
               type: "text",
               text: [
                 result.summary,
+                // 识别到但未实现的能力 / 本次被剥离的诉求 —— 与站点提示条同源。
+                // 少了这段，宿主 LLM 会把「已识别、待手写」当成「已完成」。
+                ...generationNotes(result),
                 "",
                 "---",
                 "",
