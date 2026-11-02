@@ -225,9 +225,9 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
     },
   },
   {
-    nl: '菜单管理（整个界面要国际化）：查询有菜单名称、菜单类型（目录/菜单/按钮）；表格展示菜单名称、类型、路由路径、排序、状态；新增/编辑表单两列排布、标签宽 100px；支持新增、编辑、删除。',
+    nl: '菜单管理（整个界面要国际化）：查询有菜单名称、菜单类型（目录/菜单/按钮），查询表单标签宽 100px；表格展示菜单名称、类型、路由路径、排序、状态；新增/编辑表单两列排布；支持新增、编辑、删除。',
     reasoning:
-      '"界面要国际化" → i18n:true（标签走 labelKey）；"新增/编辑表单两列排布" → **每字段 formSpan:12**（栅格由字段级 span 决定，formLayout 只管 labelWidth/minFoldRows、没有 span 键）；"标签宽 100px" → 顶层 formLayout {labelWidth:"100px"}；菜单类型是有限枚举 → Select；排序是数值 → InputNumber。（跨文件前提：labelKey 只有宿主入口 app.use(ESPlus,{t}) 装配 i18n 的 t(key) 后才生效，否则回落 label）',
+      '"界面要国际化" → i18n:true（标签走 labelKey）；"新增/编辑表单两列排布" → **每字段 formSpan:12**（栅格由字段级 span 决定，formLayout 只管 labelWidth/minFoldRows、没有 span 键）；"查询表单标签宽 100px" → **顶层** formLayout {labelWidth:"100px"}（标签宽度是 NL 明说的要求，必须发射、不能丢；若换成「新增/编辑表单标签宽 Npx」，同一个键要落在 dialogs.add / dialogs.edit 各自的 formLayout 上）；菜单类型是有限枚举 → Select；排序是数值 → InputNumber。（跨文件前提：labelKey 只有宿主入口 app.use(ESPlus,{t}) 装配 i18n 的 t(key) 后才生效，否则回落 label）',
     config: {
       name: 'MenuManage',
       apiUrl: '/api/menus',
@@ -283,16 +283,16 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '监控指标明细：数据量很大，表格要开虚拟滚动；查询有指标名、级别（正常/警告/严重）；表格展示时间、指标名、指标值、主机、级别；只读。',
     reasoning:
-      '"数据量很大、开虚拟滚动" → tableOptions.virtual:true（三端引擎不同：vue3 el-table-v2、antdv 透传、vue2 退化并告警，设置本身安全）；只读 → actions 仅 ["view"]；指标值/主机是明细 (inQuery:false, inForm:false)。',
+      '"数据量很大、开虚拟滚动" → tableOptions.virtual:true（三端引擎不同：vue3 el-table-v2、antdv 透传、vue2 退化并告警，设置本身安全）；只读 → actions 仅 ["view"]。**「只读」不等于「字段不进表单」**：查看弹窗的表单项正是由 `inForm !== false` 的字段派生的，把所有字段都标 inForm:false 会让派生的「查看」按钮无弹窗可开（静默死按钮）。这里时间/指标值/主机只是不在**查询区** → `inQuery:false`，`inForm` 保持默认；只有 NL 明说「不在新增/编辑表单里填」的字段才写 inForm:false。',
     config: {
       name: 'MetricLog',
       apiUrl: '/api/metrics',
       tableOptions: { virtual: true },
       fields: [
-        { prop: 'ts', label: '时间', formtype: 'DatePicker', inQuery: false, inForm: false },
+        { prop: 'ts', label: '时间', formtype: 'DatePicker', inQuery: false },
         { prop: 'metric', label: '指标名', formtype: 'Input' },
-        { prop: 'value', label: '指标值', formtype: 'InputNumber', inQuery: false, inForm: false },
-        { prop: 'host', label: '主机', formtype: 'Input', inQuery: false, inForm: false },
+        { prop: 'value', label: '指标值', formtype: 'InputNumber', inQuery: false },
+        { prop: 'host', label: '主机', formtype: 'Input', inQuery: false },
         {
           prop: 'level',
           label: '级别',
@@ -634,7 +634,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '商品价格维护：查询条件有商品名称；表格支持行内编辑，单击单元格修改价格；表格展示商品名称、价格、库存；支持编辑。',
     reasoning:
-      'NL 说「表格支持行内编辑，单击单元格修改」→ 行内编辑三件套必须同给：(1) `tableOptions.engine: "vxe"`；(2) 表级开关 `tableOptions.editConfig`（单击进入 → trigger 缺省即 "click"，单格编辑 → mode 缺省即 "cell"，显式写 `{ mode: "cell" }` 更清楚）；(3) 每个可编辑列的 `columns[].editRender`（没有它该列永不可编辑，editConfig 就是空转）。价格/库存都是数值 → 编辑器用 `$input` + `props.type:"number"`。`columns` 是**覆盖**派生的整表列数组，故表里要展示的列都要写进来；操作列仍由 `actions` 自动追加，不写。',
+      'NL 说「表格支持行内编辑，单击单元格修改价格」→ 行内编辑三件套必须同给：(1) `tableOptions.engine: "vxe"`；(2) 表级开关 `tableOptions.editConfig`（单击进入 → trigger 缺省即 "click"，单格编辑 → mode 缺省即 "cell"，显式写 `{ mode: "cell" }` 更清楚）；(3) 可编辑列的 `columns[].editRender`（没有它该列永不可编辑，editConfig 就是空转）。**只有 NL 点名要改的那一列写 `editRender`**：这里是「修改价格」→ 只有价格列给编辑器；商品名称/库存只是展示列，不写 editRender（给标识列挂 editRender 等于允许用户改主键/名称，NL 从未要求）。价格是数值 → 编辑器用 `$input` + `props.type:"number"`。`columns` 是**覆盖**派生的整表列数组，故表里要展示的列都要写进来（不写 editRender 也要写进列数组）；操作列仍由 `actions` 自动追加，不写。',
     config: {
       name: 'SkuPriceEditManage',
       apiUrl: '/api/sku',
@@ -645,9 +645,9 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       ],
       tableOptions: { engine: 'vxe', editConfig: { mode: 'cell' } },
       columns: [
-        { prop: 'skuName', label: '商品名称', editRender: { name: '$input' } },
+        { prop: 'skuName', label: '商品名称' },
         { prop: 'price', label: '价格', editRender: { name: '$input', props: { type: 'number' } } },
-        { prop: 'stock', label: '库存', editRender: { name: '$input', props: { type: 'number' } } },
+        { prop: 'stock', label: '库存' },
       ],
       actions: ['edit'],
     },
@@ -772,6 +772,49 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'view'],
     },
   },
+  {
+    nl: '客户档案：查询有客户全称，查询表单标签宽 100px；表格展示客户全称、客户简称、所属行业、联系人；支持新增、编辑、删除。表单里「客户简称」自动同步所选客户全称（未选客户时留空）；客户全称的选项是北辰商贸/南湾物流，所属行业是零售/餐饮/物流。',
+    reasoning:
+      '"查询表单标签宽 100px" → **顶层** formLayout {labelWidth:"100px"}（NL 明说的宽度必须发射；若说的是「新增/编辑表单标签宽」，则落到 dialogs.add/edit 各自的 formLayout）；"客户简称自动同步所选客户全称、未选时留空" → reactions[{dependencies:["customerName"], fulfill:{value:{var:"customerName"}}}] —— **只写 value**：不加 `disabled`（自动填充说的是值从哪来，不等于只读），也不加 `when` 门控（未选时 value 表达式本身就给出空值；加 when 会在清空后把上一次的名字留在字段里）；「北辰商贸/南湾物流」「零售/餐饮/物流」→ dataOptions 的 label 逐字照抄（不扩写成"北辰商贸有限公司"、不翻译），value 自选；fields 只取 NL 点名的四个字段。',
+    config: {
+      name: 'CustomerProfileManage',
+      apiUrl: '/api/customer-profiles',
+      formLayout: { labelWidth: '100px' },
+      fields: [
+        {
+          prop: 'customerName',
+          label: '客户全称',
+          formtype: 'Select',
+          dataOptions: [
+            { label: '北辰商贸', value: 'beichen' },
+            { label: '南湾物流', value: 'nanwan' },
+          ],
+        },
+        {
+          prop: 'customerShortName',
+          label: '客户简称',
+          formtype: 'Input',
+          inQuery: false,
+          reactions: [
+            { dependencies: ['customerName'], fulfill: { value: { var: 'customerName' } } },
+          ],
+        },
+        {
+          prop: 'industry',
+          label: '所属行业',
+          formtype: 'Select',
+          inQuery: false,
+          dataOptions: [
+            { label: '零售', value: 'retail' },
+            { label: '餐饮', value: 'catering' },
+            { label: '物流', value: 'logistics' },
+          ],
+        },
+        { prop: 'contact', label: '联系人', formtype: 'Input', inQuery: false },
+      ],
+      actions: ['add', 'edit', 'delete'],
+    },
+  },
 ]
 
 /**
@@ -799,9 +842,12 @@ export function buildNlToConfigSystemPrompt(): string {
     '- inQuery: is it a filter above the table? (detail-only fields → inQuery:false)',
     '- inTable: is it a visible column?',
     '- inForm: is it entered in the add/edit form? (system-generated fields like createdAt → inForm:false)',
-    'Exclude ONLY where the description says so, and write that exclusion explicitly: emit `false` when the description EXCLUDES the field from an area — it enumerates that area ("查询条件有用户名、状态", "表格展示 A、B、C") and this field is not among them, or it says the field belongs elsewhere ("只在表格里看"). Do NOT invent an exclusion when the description simply never mentions that area — silence means included (the schema default is `true`, and an omitted key is treated as included everywhere downstream). Only an explicit `false` excludes.',
+    'Exclude ONLY where the description says so, and write that exclusion explicitly: emit `false` when the description EXCLUDES the field from an area — it enumerates that area ("查询条件有用户名、状态", "表格展示 A、B、C") and this field is not among them, or it says the field belongs elsewhere ("只在表格里看"). Do NOT invent an exclusion when the description simply never mentions that area — silence means included (the schema default is `true`, and an omitted key is treated as included everywhere downstream). Only an explicit `false` excludes. One trap before you emit `inForm:false`: a READ-ONLY page ("只读", `actions: ["view"]`) still derives its 查看 dialog from the fields with `inForm !== false` — marking EVERY field `inForm:false` leaves that dialog with no form items, so the 查看 button opens nothing (a silent dead button). Keep `inForm` default on the fields the detail view should show; only exclude fields the description says are not filled in a form.',
     '',
-    'Query-form and add/edit-form column width come from the FIELD, never the layout: to make the query form N columns set `querySpan` on each query field, and to make the add/edit form N columns set `formSpan` on each form field (values 1–24, so 2 columns = 12 each, 3 columns = 8 each). `formLayout` (top-level or per-dialog) carries ONLY `labelWidth` and `minFoldRows` — it has NO `span` key, so never express a column count there.',
+    'Query-form and add/edit-form column width come from the FIELD, never the layout: to make the query form N columns set `querySpan` on each query field, and to make the add/edit form N columns set `formSpan` on each form field (values 1–24, so 2 columns = 12 each, 3 columns = 8 each). `formLayout` (top-level or per-dialog) carries ONLY `labelWidth` and `minFoldRows` — it has NO `span` key, so never express a column count there. When the description STATES a label width, you MUST emit it, in the slot that matches the form it describes: "查询表单标签宽度 90px" → top-level `formLayout: { labelWidth: "90px" }` (the top-level slot is the QUERY form); "新增/编辑表单标签宽 100px" → `dialogs.add.formLayout.labelWidth` AND `dialogs.edit.formLayout.labelWidth` (each dialog form carries its own). A stated label width is a requirement — dropping it, or putting it on a field, is a failure.',
+    'Copy option labels from the description CHARACTER FOR CHARACTER: "国有银行给工行/建行" → `dataOptions: [{ label: "工行", value: "icbc" }, { label: "建行", value: "ccb" }]`. Never expand an abbreviation (工行 → 工商银行), translate it, or add options the description does not list. `value` is yours to choose; `label` is the user\'s wording.',
+    '"不需要手填" / "自动为 X" / "自动等于所选…" → `reactions[].fulfill.value` (with `dependencies`) ALONE. Do NOT also set `fulfill.disabled`: "auto-filled" says where the value comes from, not that the field is read-only — add `disabled` only when the description says the field cannot be edited at all. Likewise do NOT gate a "blank while Y is empty" requirement with `when`: put the blank in the `value` expression (e.g. `{ if: [ …empty check…, "", { var: "y" } ] }`), because a `when` gate SKIPS the write and leaves a stale value behind when Y is cleared.',
+    'Every entry in `fields` must come from the description — a named table column, query condition, or form input. NEVER invent a helper field (e.g. a "与收货地址相同" switch), a derived duplicate, or a range pair (`amountMin`/`amountMax`) to model a requirement: express the condition with `isHidden`/`reactions` over the fields that already exist. If the description names a column list ("展示 A、B、C"), that list IS the field set.',
     'Dialog appearance and close behaviour ("不要关闭按钮/X", "点遮罩不要关", "按 ESC 不要关", "每次打开都重置表单", "弹窗挂到 #app-dialogs 下", "弹窗要能拖拽 / 要全屏 / 隐藏底部 / 限制高度") → the matching data key on the dialog: `showClose` (hide the X, default true), `closeOnClickModal`, `closeOnPressEscape`, `destroyOnClose` (reset state on each open), `appendTo` (a CSS SELECTOR string — never a DOM node), `isDraggable`, `fullscreen`, `isHiddenFooter`, `maxHeight`, `modal` (the mask), `hiddenFullBtn`. These are plain booleans/strings, usually defaulting to true, so write `false` to turn one off; all three renderers forward them verbatim to the underlying dialog. Put them on `dialogs[k]` — do NOT drop the requirement, and do NOT express it as a comment.',
     'Custom dialog footer buttons ("弹窗底部要有一个…按钮", "只要一个关闭按钮") → `dialogs[k].configBtn`, a JSON ARRAY of `{ name, type?, action?: "confirm" | "cancel" | "custom", permissionValue? }`. The runtime attaches the click handler from `action` ("confirm" validates the dialog form then runs the submit path, "cancel" just closes), so NEVER emit a `click` function here. Omitting `configBtn` keeps the generated cancel+confirm pair. A fully custom dialog BODY is a function and cannot travel in JSON: declare `hasCustomRender: true` on that dialog and the wrapper gets a TODO(es-plus) placeholder to fill in.',
     'Two DIFFERENT button surfaces — pick by WHERE the description puts the buttons, never by habit. `tableBtns` renders ABOVE THE TABLE (the table toolbar: "表格上方左侧…右侧…", "表格工具栏加一个…", "列表顶部"); `toolbarBtns` renders in the QUERY-FORM button area, appended after 查询/重置 ("查询区旁边加一个…", "表单按钮区"). They are NOT aliases and NOT interchangeable: writing the wrong one puts working buttons in the wrong slot and silently drops the placement. **Only `tableBtns` honours `position: "left" | "right"`** — the query-form button area appends everything after 查询/重置 with no left/right side. So whenever the description names a side (「左侧…右侧…」, "on the left/right of the table"), you MUST use `tableBtns`; a `toolbarBtns` entry carrying `position` loses that requirement at runtime. Both bind behaviour the same way (`dialogKey` for dialog buttons, `actionType` for export/import, `confirm` for row delete), and both replace the `actions`-derived toolbar when declared.',
@@ -816,7 +862,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Row-expand content ("每行可展开查看…", "点击行展开显示…") → the top-level `expandConfig`: `{ title?, fields: [ { prop, label? } ] }` (fields non-empty). Its presence makes the table render ONE row-expander whose content is a read-only `label: value` list read from `row[prop]`. The listed props are typically detail-only fields (mark them `inTable:false` so they are not also a column). If `columns` already declares a `{ type: "expand" }` column the content attaches to it (position kept); otherwise the generator prepends one expander column — you do NOT need to add the expander column yourself. This is DISTINCT from `tableOptions.expandConfig` (the vxe `{ accordion }` switch) — never use that for row-expand content.',
     'Tree / hierarchical data ("树形", "部门树", "分类树", "父子层级", "子节点嵌套在父节点下") → the top-level `treeConfig`: `{ childrenField?, expandAll? }` — STATIC trees only. It renders parent/child levels from the nested child array in each row; `row-key` is emitted automatically (the default `rowkey` already covers it), so do NOT add anything for it. Set `childrenField` ONLY when the API nests children under a key other than `children` (e.g. `subItems`); set `expandAll: true` when the NL asks for all nodes expanded by default. Do NOT model lazy/async loading here (out of scope). SAME NAME but DIFFERENT LAYER from `tableOptions.treeConfig` (the vxe-only VxeTreeConfig) — always use the TOP-LEVEL key.',
     'Row merge / grouped rows ("合并单元格", "同一个部门只显示一次", "分组表", "同一类只显示一次") → the top-level `mergeConfig`: `{ rowsBy: [...] }` (a non-empty STRING ARRAY). Each named column is grouped by ADJACENT-EQUAL values: the first row of each run keeps the cell with `rowspan` = run length, the rest are merged away. The `rowsBy` ORDER IS the grouping axis — name the columns in the order the NL lists them. It is cross-renderer declarative DATA: the renderers translate it (el-table `span-method` / a-table column `customCell` / vxe `mergeMethod`), so NEVER hand-write a span function. DISTINCT from the FUNCTIONAL `tableOptions.spanMethod` (an arbitrary JS closure — Tier-3 and NOT cross-renderer): if both are set the explicit `spanMethod` wins and the generator warns. NOTE this is GROUPING, not a tree: rows stay FLAT (adjacent horizontal merge) — for parent/child nesting use the top-level `treeConfig` instead.',
-    'Inline row editing ("表格行内编辑", "双击单元格改数量", "点单元格直接改") → THREE parts MUST be given together, all under the vxe engine: (1) `tableOptions.engine: "vxe"`; (2) the table-level switch `tableOptions.editConfig` — `{ trigger?: "click" | "dblclick" | "manual", mode?: "cell" | "row", showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }` (defaults are trigger:"click", mode:"cell"); (3) a per-column `columns[].editRender` on EVERY editable column — `{ name: "$input" | "$select" | "$textarea" | "$date", type? : "default" | "visible", options?: [{label,value}], props?, autofocus?, defaultValue? }` ("$select" wants `options`). A column WITHOUT `editRender` is NOT editable, so `editConfig` alone is a no-op; and BOTH are silently ignored at runtime unless the engine is vxe (the generator warns otherwise). Use the top-level `columns` array to declare those editable columns (it REPLACES the derived table columns, so every table-visible field must appear inside it; the operation column is still auto-appended from `actions`). Editing writes straight into the row objects of `:data-source` at runtime (the table holds the same row references, so the host also gets `update:dataSource`; `keepSource` is auto-enabled only to keep a snapshot for `revertData()` — it is NOT a private copy). The host learns WHICH cell changed, and its previous value, from the `cell-edit` event: `{ row, prop, value, oldValue }` (emitted on blur / row switch; one event per changed cell in row mode; never for an unchanged cell). Function-valued `editRender.events` and custom-registered renderers are OUT OF SCOPE.',
+    'Inline row editing ("表格行内编辑", "双击单元格改数量", "点单元格直接改") → THREE parts MUST be given together, all under the vxe engine: (1) `tableOptions.engine: "vxe"`; (2) the table-level switch `tableOptions.editConfig` — `{ trigger?: "click" | "dblclick" | "manual", mode?: "cell" | "row", showStatus?, showUpdateStatus?, showInsertStatus?, autoClear?, enabled? }` (defaults are trigger:"click", mode:"cell"); (3) a per-column `columns[].editRender` on EVERY column the description makes editable — `{ name: "$input" | "$select" | "$textarea" | "$date", type? : "default" | "visible", options?: [{label,value}], props?, autofocus?, defaultValue? }` ("$select" wants `options`). Mark ONLY the columns the description names as editable ("单击单元格修改价格" → just that column): a column carrying `editRender` IS editable, so over-marking an identifier/display column silently lets users rewrite it, and "整行/整表编辑" describes the TRIGGER or MODE, not a licence to mark every column. A column WITHOUT `editRender` is NOT editable, so `editConfig` alone is a no-op; and BOTH are silently ignored at runtime unless the engine is vxe (the generator warns otherwise). Use the top-level `columns` array to declare those editable columns (it REPLACES the derived table columns, so every table-visible field must appear inside it; the operation column is still auto-appended from `actions`). Editing writes straight into the row objects of `:data-source` at runtime (the table holds the same row references, so the host also gets `update:dataSource`; `keepSource` is auto-enabled only to keep a snapshot for `revertData()` — it is NOT a private copy). The host learns WHICH cell changed, and its previous value, from the `cell-edit` event: `{ row, prop, value, oldValue }` (emitted on blur / row switch; one event per changed cell in row mode; never for an unchanged cell). Function-valued `editRender.events` and custom-registered renderers are OUT OF SCOPE.',
     'Enum / status cells that show a code as a label ("状态列显示成中文", "按状态用不同颜色的标签展示") → put the mapping on the FIELD as `dataOptions` (`{ label, value, tagType? }`): the generator copies it onto the derived table column and all three renderers display the label natively, with `tagType` (primary/success/warning/danger/info) as a TAG COLOUR — no render function, so the config stays pure JSON and still compiles in schema mode. Add `tagType` only where the description asks for colour in the table (a plain label mapping gets no tagType). Two cases stay on `render`: (a) the description explicitly asks for custom rendering ("需要自定义渲染" / "自定义单元格"), or (b) the cell needs more than a value→label map (icons, several fields, links).',
     '',
     'Business logic the declarative schema cannot express must be PRESERVED as a typed extension point, never dropped:',
