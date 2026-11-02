@@ -4,10 +4,11 @@ import { defineConfig, devices } from '@playwright/test'
 //
 //   1. `vue2`  —— vue2 的片段/CRUD（真实 Element UI + 真实 @es-plus/vue2 dist）。
 //      vue3/antdv 的同类断言已由 Tier 1 vitest 覆盖，这里只补 vue2 不可行的部分。
-//   2. `es-plus-docs` —— AI 案例画廊（`/ai-gallery`）：真实 vite + 真实 Element Plus，
-//      验证「manifest 生成的清单 → 通用宿主 → 真实 CRUD 页面」这条链在浏览器里真的成立
-//      （断言见 tests/ai-gallery.spec.ts；manifest 的 `e2e[]` 会被 scripts/check-ai-cases.mjs
-//      按本文件的 testDir/testMatch 校验，写进 manifest 却跑不起来的 spec 会当场变红）。
+//   2. `es-plus-docs` —— AI 案例画廊（`/ai-gallery`）与 AI CRUD 工作台（`/ai-crud`）：
+//      真实 vite + 真实 Element Plus。前者验证「manifest 生成的清单 → 通用宿主 → 真实 CRUD
+//      页面」这条链（tests/ai-gallery.spec.ts；manifest 的 `e2e[]` 会被
+//      scripts/check-ai-cases.mjs 按本文件的 testDir/testMatch 校验），后者验证离线规则引擎
+//      兜底与 AI 路径（整页 / 片段 / 故障回退）在浏览器里的真实产物（tests/ai-crud.spec.ts）。
 //   3. `mobile-docs` —— 同一站点、真 390×844：窄屏的可达性与无横向溢出
 //      （断言见 tests/mobile.spec.ts；源码侧的对应守卫是 scripts/check-mobile.mjs）。
 //      与 2 共用 webServer，不增加启动成本。
@@ -29,12 +30,12 @@ export default defineConfig({
       name: 'vue2',
       // 窄屏腿（mobile.spec.ts）打的是主站，不属于 vue2 fixture —— 两个都要排除，
       // 否则 vue2 那条 dev server 会去跑一个它根本不服务的站点。
-      testIgnore: /(ai-gallery|mobile)\.spec\.ts/,
+      testIgnore: /(ai-gallery|ai-crud|mobile)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT}` },
     },
     {
       name: 'ai-gallery-docs',
-      testMatch: /ai-gallery\.spec\.ts/,
+      testMatch: /(ai-gallery|ai-crud)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${DOCS_PORT}` },
     },
     {

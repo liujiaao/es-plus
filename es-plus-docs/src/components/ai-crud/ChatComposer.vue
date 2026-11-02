@@ -8,6 +8,7 @@
           v-for="preset in presets"
           :key="preset.id"
           class="preset-card"
+          :data-testid="`preset-${preset.id}`"
           :title="preset.showcases.join(' · ')"
           @click="$emit('selectPreset', preset)"
         >
