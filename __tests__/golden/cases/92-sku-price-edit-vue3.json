@@ -1,6 +1,6 @@
 {
-  "nl": "SKU 定价管理：表格支持行内编辑，单击单元格进入编辑；展示 SKU 名称、单价，单价用数字输入框；支持新增、编辑。",
-  "nlEn": "SKU pricing management: the table supports inline editing — click a cell to edit. Shows SKU name and unit price; unit price uses a number input. Supports add and edit.",
+  "nl": "SKU 定价管理：表格支持行内编辑，单击单价单元格进入编辑；展示 SKU 名称、单价，单价用数字输入框；支持新增、编辑。",
+  "nlEn": "SKU pricing management: the table supports inline editing — click the unit-price cell to edit it. Shows SKU name and unit price; unit price uses a number input. Supports add and edit.",
   "fixedFields": ["skuName", "price"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
@@ -12,10 +12,10 @@
     ],
     "tableOptions": { "engine": "vxe", "editConfig": { "trigger": "click", "mode": "cell" } },
     "columns": [
-      { "prop": "skuName", "label": "SKU名称", "editRender": { "name": "$input" } },
+      { "prop": "skuName", "label": "SKU名称" },
       { "prop": "price", "label": "单价", "editRender": { "name": "$input", "props": { "type": "number" } } }
     ],
     "actions": ["add", "edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=click/mode=cell + columns[].editRender $input，vue3/schema）"
+  "notes": "AI-09 子项④: vxe 行内编辑（editConfig trigger=click/mode=cell + columns[].editRender $input，vue3/schema）。2026-11-02 与 few-shot #22 同批对齐：只有 NL 点名的可编辑列（单价）带 editRender，SKU名称是标识/展示列"
 }

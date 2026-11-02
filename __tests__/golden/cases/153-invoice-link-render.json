@@ -1,6 +1,6 @@
 {
-  "nl": "发票台账：查询有开票方、金额区间；表格展示发票号、开票方、金额、开票日期，其中「发票号」列需要自定义渲染（渲染成可点击的链接）；支持新增、编辑、删除。",
-  "nlEn": "Invoice book: query by issuer and amount range; the table shows invoice no., issuer, amount, and issue date, where the \"invoice no.\" column needs custom rendering (rendered as a clickable link); supports add, edit, and delete.",
+  "nl": "发票台账：查询有开票方、金额；表格展示发票号、开票方、金额、开票日期，其中「发票号」列需要自定义渲染（渲染成可点击的链接）；支持新增、编辑、删除。",
+  "nlEn": "Invoice book: query by issuer and amount; the table shows invoice no., issuer, amount, and issue date, where the \"invoice no.\" column needs custom rendering (rendered as a clickable link); supports add, edit, and delete.",
   "fixedFields": ["invoiceNo", "party", "amount", "issuedAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:invoiceNo"],
   "config": {
@@ -20,5 +20,5 @@
     ],
     "actions": ["add", "edit", "delete"]
   },
-  "notes": "L5：自定义 render（el-link 可点）。render 列设 inQuery:false 保持「纯展示列」语义（invariant 无强制，但语义更清晰）。"
+  "notes": "L5：自定义 render（el-link 可点）。render 列设 inQuery:false 保持「纯展示列」语义（invariant 无强制，但语义更清晰）。2026-11-02 按 D12 ③ 把 NL 的「金额区间」改成「金额」：schema 里没有区间概念（Min/Max 成对键），原措辞逼模型发明 amountMin/amountMax 两个 NL 从未枚举的字段；不为单条语料加区间键，表达能力缺口单列在 ai-95-gap-review-2026-10-27.md D12"
 }
