@@ -103,13 +103,17 @@ mcp-publisher validate packages/mcp-server/server.json   # 离线校验，不联
 mcp-publisher publish  packages/mcp-server/server.json   # 位置参数是 server.json 路径
 ```
 
-还有两项**只能人做**、代码管不了：GitHub 仓库 Settings → Social preview 上传
-`docs/brand/social-preview.png`（由 `npm run og:gen` 按品牌单源画出，1280×640 ——
-GitHub 会把非 2:1 的图裁掉一截）；以及 GitHub Discussions 的开与关。
+还有三项**只能人做**、代码管不了：
 
-还有两项**只能人做**、代码管不了：GitHub 仓库 Settings → Social preview 上传
-`docs/brand/social-preview.png`（由 `npm run og:gen` 按品牌单源画出，1280×640 ——
-GitHub 会把非 2:1 的图裁掉一截）；以及 GitHub Discussions 的开与关。
+- **GitHub Social preview**：仓库 Settings → Social preview 上传 `docs/brand/social-preview.png`
+  （由 `npm run og:gen` 按品牌单源画出，1280×640 —— GitHub 会把非 2:1 的图裁掉一截）。
+- **GitHub Discussions**：在仓库设置里开启；页脚/README 的入口已就位。
+- **分析统计站点 code**（审计 3.5）：三站已接好 GoatCounter（无 Cookie、无同意横幅），端点在
+  `docs/analytics/analytics.json`，默认 `es-plus.goatcounter.com`。到 https://www.goatcounter.com
+  免费注册这个 code（1 分钟）数据才会真正进后台；换一个 code 只改那份 JSON 的 `endpoint`，
+  `npm run check:analytics` 会把三站的 index.html 与运行时拉齐。注册前站点照常运行 ——
+  count.js 拉不到只是不计数，`gc()?.count?.()` 是可选链、不抛错。
+
 
 ## 版本号规则
 

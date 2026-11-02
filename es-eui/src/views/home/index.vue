@@ -69,6 +69,7 @@
               <router-link
                 to="/guide"
                 class="btn btn-primary"
+                data-track="cta-start"
               >
                 <span>开始使用</span>
                 <i class="el-icon-right"></i>

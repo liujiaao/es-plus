@@ -62,8 +62,8 @@
 
       <h2>产物</h2>
       <div class="evidence-actions">
-        <el-button size="small" type="primary" plain @click="downloadSchema">下载 JSON</el-button>
-        <el-button size="small" @click="copyCommand">{{ commandCopied ? '已复制命令' : '复制复现命令' }}</el-button>
+        <el-button size="small" type="primary" plain data-track="download-schema" @click="downloadSchema">下载 JSON</el-button>
+        <el-button size="small" data-track="copy-command" @click="copyCommand">{{ commandCopied ? '已复制命令' : '复制复现命令' }}</el-button>
         <span class="evidence-hint">
           {{ story.product.lines }} 行 · {{ productKb }} KB · {{ story.product.functions }} 个函数
         </span>

@@ -37,6 +37,7 @@ import 'vxe-table/lib/style.css'
 import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'
 import { demoHttpRequest } from '@/utils/demo-http'
+import { initAnalytics } from '@/utils/analytics.js'
 import { ensureVxe, needsVxe } from '@/utils/vxe-loader'
 
 // 站点自己的请求：axios 实例（保留拦截器、Token 注入等既有能力）。
@@ -136,3 +137,6 @@ new Vue({
     store,
     render: h => h(App)
 }).$mount('#app')
+
+// 分析统计：装一次全局 data-track 委托（pageview 在 router afterEach 里，见 utils/analytics）
+initAnalytics()

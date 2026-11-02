@@ -1,0 +1,17 @@
+{
+  "$comment": "分析统计单一真源（审计 3.5）。provider = GoatCounter：无 Cookie、无需同意横幅、非商业免费。三站的 index.html 脚本端点、三份 utils/analytics 运行时、以及所有 data-track 事件名都对着这份文件由 scripts/check-analytics.mjs 校验。改端点/改事件名只改这里。",
+  "provider": "goatcounter",
+  "endpoint": "https://es-plus.goatcounter.com/count",
+  "script": "//gc.zgo.at/count.js",
+  "registerNote": "端点里的 `es-plus` 是 GoatCounter 的站点 code，需在 https://www.goatcounter.com 免费注册该 code（1 分钟）。若该 code 被占用，换一个并只改本文件的 endpoint —— 守卫会把三站拉齐。",
+  "events": [
+    { "name": "search-open", "desc": "打开站内搜索" },
+    { "name": "search-hit", "desc": "点击一条搜索结果" },
+    { "name": "copy-command", "desc": "复制 AI 证据页的复现命令" },
+    { "name": "download-schema", "desc": "下载 AI 生成的 JSON schema" },
+    { "name": "ai-gallery-open", "desc": "打开一个 AI 画廊案例" },
+    { "name": "example-copy", "desc": "复制一段示例代码" },
+    { "name": "example-lang", "desc": "切换示例的渲染器(vue3/vue2/antdv)" },
+    { "name": "cta-start", "desc": "点击首页主 CTA（快速开始）" }
+  ]
+}

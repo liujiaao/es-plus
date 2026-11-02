@@ -25,7 +25,7 @@
       </nav>
     </div>
     <div class="header-right">
-      <button class="search-btn" @click="searchVisible = true" title="搜索 (Ctrl+K)">
+      <button class="search-btn" data-track="search-open" @click="searchVisible = true" title="搜索 (Ctrl+K)">
         <el-icon :size="18"><Search /></el-icon>
         <span class="search-shortcut-text">Ctrl K</span>
       </button>

@@ -17,6 +17,7 @@ import App from './App.vue'
 import router from './router'
 import { demoHttpRequest } from './utils/demo-http'
 import { installAntd } from './utils/install-antd'
+import { initAnalytics } from './utils/analytics.js'
 import { ensureVxe, needsVxe } from './utils/vxe-loader'
 import './styles/design-tokens.css'
 import './styles/docs-content.css'
@@ -55,3 +56,6 @@ router.beforeEach(async (to) => {
 })
 
 app.mount('#app')
+
+// 分析统计：装一次全局 data-track 委托（pageview 在 router afterEach 里，见 utils/analytics）
+initAnalytics()

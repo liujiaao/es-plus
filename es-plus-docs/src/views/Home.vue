@@ -15,7 +15,7 @@
         </p>
         <!-- Landing 最多两个主 CTA（主色 + 次色），其余降级为文字链接（路线图 2.1） -->
         <div class="hero-actions">
-          <el-button type="primary" size="large" @click="goToGuide">
+          <el-button type="primary" size="large" data-track="cta-start" @click="goToGuide">
             <el-icon class="btn-icon"><Document /></el-icon>
             {{ t('home.ctaQuickStart') }}
           </el-button>

@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { applyPageSeo } from '@/utils/site-seo.js'
+import { trackPageview } from '@/utils/analytics'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -127,6 +128,7 @@ const router = createRouter({
 // （三站同一份单源）。
 router.afterEach((to) => {
   applyPageSeo(to)
+  trackPageview(to.fullPath)
 })
 
 export default router

@@ -35,6 +35,7 @@ import '@/styles/index.scss'
 import '@es-plus/style.css'
 
 import { installAppPlugins } from '@/utils/install-app-plugins'
+import { initAnalytics } from '@/utils/analytics'
 import { ensureVxe, needsVxe } from '@/utils/vxe-loader'
 
 const app = createApp(App)
@@ -79,3 +80,6 @@ router.beforeEach(async (to) => {
 installAppPlugins(app)
 
 app.mount('#app')
+
+// 分析统计：装一次全局 data-track 委托（pageview 在 router afterEach 里，见 utils/analytics）
+initAnalytics()

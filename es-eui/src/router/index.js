@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import { applyPageSeo } from '../utils/site-seo.js'
+import { trackPageview } from '../utils/analytics.js'
 
 Vue.use(VueRouter)
 
@@ -280,6 +281,7 @@ router.afterEach((to) => {
   document.title = title ? `${title} · ${SITE_SUFFIX}` : SITE_DEFAULT_TITLE
   // canonical / og:url / robots：重复页指回主站，404 拿 noindex（utils/site-seo.js）
   applyPageSeo(to)
+  trackPageview(to.fullPath)
 })
 
 export default router

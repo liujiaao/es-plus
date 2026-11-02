@@ -64,6 +64,11 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- 分析统计（审计 3.5）：GoatCounter，无 Cookie、无需同意横幅。no_onload = 不在硬加载时
+         自动计数，全部计数由 router afterEach 显式触发（hash 路由每条路由各计一次）。
+         端点是单一真源 docs/analytics/analytics.json，由 check:analytics 核对三站一致。 -->
+    <script>window.goatcounter = { no_onload: true }</script>
+    <script data-goatcounter="https://es-plus.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

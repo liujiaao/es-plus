@@ -20,7 +20,7 @@
           <span class="renderer-badge">本站渲染器：Ant Design Vue</span>
         </div>
         <a-space :size="16">
-          <a-button type="primary" size="large" @click="$router.push('/guide')">
+          <a-button type="primary" size="large" data-track="cta-start" @click="$router.push('/guide')">
             <RocketOutlined /> 快速上手
           </a-button>
           <a-button size="large" @click="$router.push('/es-form')">
