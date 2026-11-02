@@ -52,6 +52,37 @@ describe('generateCrudSchema — schema structure', () => {
   }
 })
 
+describe('generateCrudSchema — capability fidelity', () => {
+  // 适配器此前把 `tableOptions` 硬编码成 6 个键，规则引擎已经识别并写好的
+  // virtual / cachePageSelection / multiSelect 在产物里**不存在**；featureHints
+  // 也被丢弃 —— 站点的预设于是「描述了一个引擎支持、产物却看不到」的能力。
+  it('虚拟滚动 / 跨页批量选择透传到 tableOptions，识别结果透出 featureHints', () => {
+    const result = generateCrudSchema(
+      '商品列表，10 万行数据，启用虚拟滚动。查询条件：商品名（模糊）、分类、价格区间。列：商品名、分类、价格、库存、上架状态。支持批量上下架。'
+    )
+    expect(result.schema.tableOptions).toMatchObject({
+      virtual: true,
+      cachePageSelection: true,
+      multiSelect: true,
+    })
+    expect(result.featureHints?.join(' ')).toMatch(/虚拟滚动/)
+    expect(result.featureHints?.join(' ')).toMatch(/跨页批量选择/)
+  })
+
+  it('多 tab 弹窗的识别结果不再被丢弃', () => {
+    const result = generateCrudSchema(
+      '订单列表，查询订单号、客户姓名、订单状态、下单日期范围。列表显示订单号、客户、金额、状态、下单时间。每行有"详情"按钮，点击打开弹窗，弹窗内三个 tab：订单信息、收货地址、商品列表。'
+    )
+    expect(result.featureHints?.join(' ')).toMatch(/多 Tab/i)
+  })
+
+  it('schema 无法承载的 render 必须发警告，而不是静默剥离', () => {
+    const result = generateCrudSchema('用户管理页面，查询条件有姓名，表格显示姓名、状态，支持新增编辑删除')
+    expect(result.warnings?.join(' ')).toMatch(/render/)
+    expect((result.schema.columns as any[]).some((c) => 'render' in c)).toBe(false)
+  })
+})
+
 describe('generateCrudSchema — wrapper SFC', () => {
   it('has valid SFC structure', () => {
     const result = generateCrudSchema(PRESET_EXAMPLES[0].prompt)

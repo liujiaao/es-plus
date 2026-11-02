@@ -16,6 +16,20 @@ export interface CrudSchemaResult {
   summary: string
   /** 实际使用的目标框架（缺省时为 'vue3'） */
   target: TargetFramework
+  /**
+   * 规则引擎**识别到**、但产物无法结构化表达的特性（多 tab 弹窗 / 多步表单 /
+   * 跨页选择栏 …，措辞见 crud-engine 的 featureHints）。
+   *
+   * 这个字段此前在适配器里被丢弃 —— 调用方（站点 / MCP / CLI）于是只能看到一张
+   * 平表，连「这个需求需要手工实现」都无从得知。透传是**事实**，不是提示。
+   */
+  featureHints?: string[]
+  /**
+   * 生成过程中被降级/丢弃的诉求（例如 schema 无法内联的 `columns[].render`）。
+   * 与 featureHints 的区别：featureHints 是「识别到了但没实现」，warnings 是
+   * 「本可以表达、但这条路径表达不了」。
+   */
+  warnings?: string[]
 }
 
 /**
@@ -32,27 +46,47 @@ export function generateCrudSchema(
   target: TargetFramework = DEFAULT_TARGET
 ): CrudSchemaResult {
   const config = generateCrudConfig(description)
-  const schema = buildCrudPageSchema(config)
+  const { schema, warnings } = buildCrudPageSchema(config)
   const wrapperCode = buildWrapperSFC(config, target)
   const summary = buildSummary(config, target)
-  return { schema, wrapperCode, summary, target }
+  return {
+    schema,
+    wrapperCode,
+    summary,
+    target,
+    // 规则引擎的识别结果必须原样透出：这既是站点提示条的输入，也是 MCP/CLI
+    // 唯一能告诉调用方「哪些诉求没有落地」的渠道。
+    featureHints: config.featureHints ?? [],
+    warnings,
+  }
 }
 
-function buildCrudPageSchema(config: GeneratedConfig): Record<string, unknown> {
+function buildCrudPageSchema(config: GeneratedConfig): {
+  schema: Record<string, unknown>
+  warnings: string[]
+} {
   const schema: Record<string, unknown> = {}
+  const warnings: string[] = []
 
   if (config.formItems.length > 0) {
     schema.formItems = config.formItems
   }
 
+  const renderProps: string[] = []
   const columns = config.columns
     .filter(col => col.prop !== 'operate')
     .map(col => {
       const { render, ...rest } = col
+      if (render) renderProps.push(String(col.prop))
       return rest
     })
   schema.columns = columns
 
+  // AN-08/AI-22 的同一条契约：`tableOptions` 是容器级配置的唯一家。
+  // 这里此前把整块**硬编码**成 6 个键，于是规则引擎已经识别并写好的
+  // `virtual` / `cachePageSelection` / `multiSelect`（虚拟滚动、跨页批量选择）
+  // 在适配器里被静默扔掉 —— 产物与「引擎实际产出的配置」不一致。
+  // 保留默认项垫底，再用引擎输出覆盖：默认值只补缺省，不覆盖事实。
   schema.tableOptions = {
     border: true,
     stripe: true,
@@ -60,17 +94,51 @@ function buildCrudPageSchema(config: GeneratedConfig): Record<string, unknown> {
     headerCellStyle: { background: '#f5f7fa' },
     apiParams: { url: '/api/xxx' },
     rowkey: 'id',
+    ...(config.tableOptions ?? {}),
   }
 
   if (config.dialogFormItems && config.dialogFormItems.length > 0) {
     schema.dialogFormItems = config.dialogFormItems
   }
 
+  // 工具栏按钮：规则引擎已经按动作词算好了「新增 / 导出 / 批准 / 拒绝 / 批量上架…」
+  // （`config.queryBtns`），但适配器此前**整块丢弃** —— 于是「支持批量上下架」
+  // 的预设产物里既没有选择列（现已透传 multiSelect）也没有按钮。
+  //
+  // 只透传查询表单之外的按钮：`查询 / 重置` 由 es-crud-page 自己合成（它总是先
+  // 放一对基础按钮），原样带上会出现两组。声明 `toolbarBtns` 会**接管**派生按钮面
+  // （core 的显式优先规则），因此这里必须包含引擎认为该有的全部非查询按钮，
+  // 而不是只挑几个。
+  const toolbarBtns = (config.queryBtns ?? [])
+    .filter((btn: { key?: string }) => btn.key !== 'query' && btn.key !== 'rest')
+    .map((btn: { key?: string; [k: string]: unknown }) => {
+      // 派生按钮靠 `dialogKey` 打开弹窗（es-crud-page 的旧模式会从
+      // dialogFormItems + actions 合成 add/edit/view 三个弹窗）。这里透传的按钮
+      // 若不带上，点击只会 emit 一个没人监听的事件 —— 看起来能点、实际没反应。
+      if (btn.key === 'add') return { ...btn, dialogKey: 'add' }
+      if (btn.key === 'export') return { ...btn, actionType: 'export' }
+      if (btn.key === 'import') return { ...btn, actionType: 'import' }
+      return btn
+    })
+  if (toolbarBtns.length > 0) {
+    schema.toolbarBtns = toolbarBtns
+  }
+
   schema.actions = config.actions
 
   schema.pagination = { pageSize: 10 }
 
-  return schema
+  if (renderProps.length > 0) {
+    // schema 是 JSON，函数无法序列化；但「丢掉了」和「明确告诉你丢掉了」是
+    // 两种完全不同的产品行为。structured-generator 在同样场景会发 TODO 槽位
+    // 告警，规则引擎这条路径不能更沉默。
+    warnings.push(
+      `规则引擎无法把 columns[].render 内联进 JSON schema（${renderProps.join(', ')}）；` +
+        `已从 schema 剥离，请在包装 SFC 中补实现`
+    )
+  }
+
+  return { schema, warnings }
 }
 
 /**

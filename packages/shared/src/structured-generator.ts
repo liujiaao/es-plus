@@ -136,6 +136,15 @@ export interface StructuredGenerateResult {
   summary: string
   warnings: string[]
   /**
+   * schema 模式下产出的 `CrudPageSchema` 对象（与 `code` 里的 `pageSchema` 同一份）。
+   *
+   * 存在的理由：浏览器端的「实时预览」必须渲染**生成物本身**，而不是另写一套
+   * 字段白名单再把配置映射一遍 —— 后者正是「配置里有、预览里没有」的来源。
+   * sfc 模式不提供该字段（SFC 的模板不是数据）；需要预览时调用方用
+   * `mode:'schema'` 再生成一次同一份配置即可（见 docs 的预览适配）。
+   */
+  schema?: Record<string, unknown>
+  /**
    * AN-15：宿主入口的前置清单（httpRequest / permission / t / JSX / UI 库）。
    * 只有 `generateFromConfig` 会挂上它 —— 内部两个 `generateXxx` 是无配置事实的纯发射器。
    */
@@ -919,7 +928,7 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
         : '- Target: Vue 3 + Element Plus (@es-plus/vue3)',
   ].filter(Boolean).join('\n')
 
-  return { code, wrapperCode, summary, warnings }
+  return { code, wrapperCode, summary, warnings, schema }
 }
 
 function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): StructuredGenerateResult {

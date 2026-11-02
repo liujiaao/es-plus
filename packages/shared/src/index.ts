@@ -4,6 +4,9 @@ export { generateCrudSchema, type CrudSchemaResult } from './schema-generator.js
 export { FORM_TYPES, PRESET_EXAMPLES, COMPONENT_LIST, type ComponentName } from './constants.js'
 export { createSchemaValidator, validateConfig, listAvailableSchemas, type ValidationResult } from './schema-validator.js'
 export { generateFromConfig, type StructuredCrudConfig, type StructuredGenerateResult } from './structured-generator.js'
+// 预览边界（事实声明）：配置里声明了、但实时预览画不出来 / 需宿主补一步的特性。
+// 站点预览与 MCP 工具摘要共用这一份判据 —— 不能在各自的 UI 里另写一遍白名单。
+export { describeUnrenderedFeatures } from './preview-hints.js'
 // AN-22:顶层键 × mode 的发射账本（生成器消费；check:render-plan 对账）
 export {
   buildRenderPlan,

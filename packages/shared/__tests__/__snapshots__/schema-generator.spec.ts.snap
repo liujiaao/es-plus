@@ -238,6 +238,15 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+  ],
 }
 `;
 
@@ -482,6 +491,15 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+  ],
 }
 `;
 
@@ -709,6 +727,15 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+  ],
 }
 `;
 
@@ -1155,6 +1182,15 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+  ],
 }
 `;
 
@@ -1362,6 +1398,21 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+    {
+      "actionType": "export",
+      "icon": "Download",
+      "key": "export",
+      "name": "导出",
+    },
+  ],
 }
 `;
 
@@ -1530,6 +1581,15 @@ exports[`generateCrudSchema — snapshot tests > generates stable schema for: �
     "rowkey": "id",
     "stripe": true,
   },
+  "toolbarBtns": [
+    {
+      "dialogKey": "add",
+      "icon": "Plus",
+      "key": "add",
+      "name": "新增",
+      "type": "primary",
+    },
+  ],
 }
 `;
 

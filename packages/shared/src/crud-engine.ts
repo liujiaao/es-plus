@@ -420,12 +420,12 @@ function detectFeatures(input: string): {
 
   // Multi-tab detail dialog
   if (/多\s*tab|多个?tab|三个?tab|tabs?\s*：|tab[：:].*tab/i.test(input)) {
-    hints.push('详情弹窗多 Tab — preview 仅显示主表，多 tab 弹窗需通过 `useDialog` + el-tabs 自行实现')
+    hints.push('详情弹窗多 Tab — 已按字段派生一个单表查看弹窗；多 tab 结构需通过 `useDialog` + el-tabs 自行实现')
   }
 
   // Multi-step form
   if (/多步表单|多步骤|分步|第[一二三四五六七八九十1-9]步|step\s*\d+|多步/i.test(input)) {
-    hints.push('多步表单 — preview 仅显示扁平表单，分步流程需用 `el-steps` 拆分')
+    hints.push('多步表单 — 已生成一张扁平表单；分步流程需用 `el-steps` 拆分')
   }
 
   // Cascading filter
