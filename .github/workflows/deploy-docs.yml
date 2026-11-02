@@ -59,6 +59,15 @@ jobs:
         run: cd es-plus-docs && npm run build
         env:
           VITE_BASE_URL: /es-plus/
+          # 线上 AI：静态站没有后端，浏览器直连任何网关都会撞 CORS 且会泄露密钥。
+          # 部署 infra/ai-relay 后，在仓库 Variables 里配这三项（Settings → Variables）：
+          #   VITE_AI_BASE_URL = https://<relay>/v1
+          #   VITE_AI_RELAY    = true
+          #   VITE_AI_MODEL    = gpt-4o-mini
+          # 不配也不会构建失败：页面回到「访客自备 CORS 网关 + key」的默认形态。
+          VITE_AI_BASE_URL: ${{ vars.VITE_AI_BASE_URL }}
+          VITE_AI_RELAY: ${{ vars.VITE_AI_RELAY }}
+          VITE_AI_MODEL: ${{ vars.VITE_AI_MODEL }}
 
       - name: Build docs site (es-pc)
         run: cd es-pc && npm run build

@@ -1,0 +1,12 @@
+{
+  "name": "@es-plus/ai-relay",
+  "private": true,
+  "version": "0.0.0",
+  "description": "静态站的 AI 中继：CORS 白名单 + 上游密钥托管 + 模型/配额上限（Cloudflare Workers，也可跑在 Node/Deno）",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy"
+  }
+}

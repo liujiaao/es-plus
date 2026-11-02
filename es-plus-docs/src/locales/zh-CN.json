@@ -282,6 +282,7 @@
     "emptyPreview": "生成配置后可在此预览效果",
     "emptyJson": "生成配置后可查看 JSON 数据结构",
     "settingsAlert": "填写 API Key 后将使用真实 AI 生成，支持 OpenAI 兼容格式（如 DeepSeek、通义千问、月之暗面等）。配置模型后还可以按原话只要一张表格 / 一个筛选表单 / 一个编辑弹窗（片段工具 generate_table / generate_form / generate_dialog）。不填则使用本地规则引擎（即 CLI 的离线生成器，与 MCP `generate_crud_schema` 同一实现，只产 CRUD 整页）。线上静态站点没有内置代理：Base URL 需填写你自己的、允许浏览器跨域的网关地址。",
+    "relayNotice": "本站已部署 AI 中继：无需填写 API Key 即可直接使用 AI 生成。密钥由本站中继托管，浏览器侧不可见；中继对模型、单次输出长度与调用频率都有上限，仅用于演示。",
     "proxyNotice": "当前 Base URL 走本地开发代理（/openai），仅在 npm run dev 下可用，用于规避浏览器 CORS。生产环境需自备 CORS 代理/网关，并在设置中改为其地址。",
     "cancel": "取消",
     "save": "保存",

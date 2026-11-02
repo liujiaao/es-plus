@@ -22,7 +22,7 @@
         <!-- 引擎标签跟随**实际**走通的路径，而不是「有没有填 key」：
              填了 key 但 OpenAI 报错时会回退到规则引擎，此时标「AI 引擎」就是假话。 -->
         <el-tooltip :disabled="!fallbackReason" :content="fallbackReason || ''" placement="bottom">
-          <el-tag :type="engineTag.type" class="engine-tag">{{ engineTag.label }}</el-tag>
+          <el-tag :type="engineTag.type" class="engine-tag" data-testid="engine-tag">{{ engineTag.label }}</el-tag>
         </el-tooltip>
         <!-- 渲染端选择：es-plus 的头号卖点是「同一份配置 → 三端」，不带这个开关的
              生成器演示只能说明「自然语言 → 一个 Vue 3 页面」。选择会同时作用于
@@ -64,7 +64,7 @@
           </el-tab-pane>
 
           <el-tab-pane :label="t('aiCrud.tabPreview')" name="preview">
-            <div class="preview-area" v-if="fragmentResult || previewSchema">
+            <div class="preview-area" data-testid="preview-area" v-if="fragmentResult || previewSchema">
               <!-- 离线兜底的边界：规则引擎与 CLI `es-plus create` 同源，只产 CRUD 整页。
                    不说这句话，用户会以为「只做一个表单」被生成错了。 -->
               <el-alert
@@ -162,7 +162,20 @@
     <!-- AI Settings Dialog (unchanged) -->
     <el-dialog v-model="showSettings" :title="t('aiCrud.settings')" width="500px">
       <el-form label-position="top">
+        <!-- 中继模式下「请自备 CORS 网关」这句话是错的：本站代理已经就位。
+             两种宿主给两种说明，而不是一句永远正确、实际无用的免责声明。 -->
         <el-alert
+          v-if="RELAY_MODE"
+          type="success"
+          :closable="false"
+          show-icon
+          class="relay-notice"
+          style="margin-bottom: 16px"
+        >
+          {{ t('aiCrud.relayNotice') }}
+        </el-alert>
+        <el-alert
+          v-else
           type="info"
           :closable="false"
           show-icon
@@ -195,6 +208,8 @@ import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { EsCrudPage } from 'es-plus'
 import { mcpFlow, type ChatMessage, type TraceEntry } from '@/utils/mcp-flow'
+// 「免 key（中继）」/「本地代理」/「自带网关」三种宿主的唯一判断处
+import { resolveAiEndpoint } from '@/utils/ai-endpoint'
 // 渲染端选项与称呼来自三站清单（与顶栏切换器、案例卡互链同一份）
 import { SITES } from '@/utils/sites'
 import type { StructuredCrudConfig, TargetFramework } from '@es-plus/shared'
@@ -296,14 +311,20 @@ const mockHttpRequest = () =>
  *  - 线上是纯静态托管（GitHub Pages），**没有代理** —— 默认给 `/openai/v1`
  *    等于给每个访客一个必然 404 的默认值。
  *
- * 所以线上默认留空（强制用户填自己的 CORS 网关），并允许用 `VITE_AI_BASE_URL`
- * 预置。Key 永不落盘（只在内存），base/model 落 localStorage 以免每次重填。
+ * 所以线上默认留空（强制用户填自己的 CORS 网关），或用构建时注入的
+ * `VITE_AI_BASE_URL`（部署了 infra/ai-relay 时配 `VITE_AI_RELAY=true`，
+ * 访客就**不需要**自备 key）。判断集中在 `resolveAiEndpoint`，本站只有这一处。
+ * Key 永不落盘（只在内存），base/model 落 localStorage 以免每次重填。
  */
-const DEFAULT_AI_BASE =
-  (import.meta.env.VITE_AI_BASE_URL as string | undefined) ??
-  (import.meta.env.DEV ? '/openai/v1' : '')
-const DEFAULT_AI_MODEL =
-  (import.meta.env.VITE_AI_MODEL as string | undefined) ?? 'gpt-4o-mini'
+const AI_ENDPOINT = resolveAiEndpoint({
+  VITE_AI_BASE_URL: import.meta.env.VITE_AI_BASE_URL as string | undefined,
+  VITE_AI_MODEL: import.meta.env.VITE_AI_MODEL as string | undefined,
+  VITE_AI_RELAY: import.meta.env.VITE_AI_RELAY as string | undefined,
+  DEV: import.meta.env.DEV,
+})
+const RELAY_MODE = AI_ENDPOINT.relay
+const DEFAULT_AI_BASE = AI_ENDPOINT.baseUrl
+const DEFAULT_AI_MODEL = AI_ENDPOINT.model
 const AI_CONFIG_STORAGE_KEY = 'es-plus:ai-endpoint'
 
 function loadSavedEndpoint(): { baseUrl?: string; model?: string } {
@@ -321,7 +342,9 @@ const aiConfig = reactive({
   baseUrl: savedEndpoint.baseUrl ?? DEFAULT_AI_BASE,
   model: savedEndpoint.model ?? DEFAULT_AI_MODEL,
 })
-const useAI = computed(() => !!aiConfig.apiKey)
+// 中继模式免 key：密钥在中继侧，浏览器发的是「无 Authorization」的同源请求。
+// 其余情况（本地代理 / 访客自带网关）仍然必须自己填 key。
+const useAI = computed(() => RELAY_MODE || !!aiConfig.apiKey)
 
 /**
  * 可见的预设。`requiresAi` 的预设（单场景片段）只在配置了模型时出现：
@@ -383,7 +406,8 @@ const handleSend = async (text: string) => {
 
   try {
     const result = await mcpFlow(text, messages.value.slice(0, -1), {
-      ai: aiConfig.apiKey ? { ...aiConfig } : undefined,
+      // 免 key 的中继模式下 apiKey 是空串：请求仍要发，Authorization 由中继补上
+      ai: useAI.value ? { ...aiConfig } : undefined,
       onTrace: (entry) => traces.value.push(entry),
       signal: abortController.signal,
       currentConfig: currentStructuredConfig.value ?? undefined,

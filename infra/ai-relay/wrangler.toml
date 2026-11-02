@@ -1,0 +1,33 @@
+name = "es-plus-ai-relay"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# ── 公开变量（可随时改，改完 `npx wrangler deploy` 生效）──────────────────
+[vars]
+# 只回显这些 origin。上线时把本站换进去；本地调试可加 http://localhost:5173
+ALLOWED_ORIGINS = "https://liujiaao.github.io"
+# 模型白名单 —— 公开演示的核心止损线：别让人用你的 key 跑最贵的模型
+ALLOWED_MODELS = "gpt-4o-mini,deepseek-chat"
+# 单次请求的输出上限（也是成本上限）
+MAX_TOKENS = "2048"
+# 每个 IP 每窗口的请求数（含 Cloudflare 原生限流绑定时，两者同时生效）
+RATE_LIMIT = "20"
+RATE_WINDOW_SEC = "60"
+# 一键熔断：设成 "true" 并重新部署，中继立刻只回 503
+DISABLED = "false"
+
+# 上游网关只在这里出现（不是密钥，但也没必要公开 —— 用 secret 更整齐）
+# UPSTREAM_BASE_URL = "https://api.openai.com/v1"
+
+# ── 密钥（不要写进这个文件）──────────────────────────────────────────────
+#   npx wrangler secret put UPSTREAM_API_KEY
+#   npx wrangler secret put UPSTREAM_BASE_URL
+
+# ── Cloudflare 原生限流绑定（可选，但强烈建议）────────────────────────────
+# 没有它时 relay.js 会退回进程内滑窗，单节点有效、跨节点不共享。
+# 若你的账号/套餐没有 `[[ratelimits]]` 支持，把这段注释掉即可（守卫会用到限流返回 429 的行为，
+# 两条路径都测）。
+# [[ratelimits]]
+# name = "RATE_LIMITER"
+# namespace_id = "1001"
+# simple = { limit = 20, period = 60 }

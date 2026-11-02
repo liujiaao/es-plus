@@ -263,7 +263,9 @@ async function callOpenAI(
     signal,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${ai.apiKey}`,
+      // 中继模式没有访客 key：不发空 Bearer（有些网关会把它当成无效凭据直接 401）。
+      // 上游 key 由中继自己注入，浏览器这一侧永远看不到。
+      ...(ai.apiKey ? { Authorization: `Bearer ${ai.apiKey}` } : {}),
     },
     body: JSON.stringify({
       model: ai.model,

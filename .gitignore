@@ -40,6 +40,7 @@ packages/*/__tests__/.tmp-fragments/
 # 夜间跑批的 dump 经 Actions artifact 上传，仓库里只留 last-accuracy.json 与徽章。
 .tmp-eval/
 .tmp-audit/
+.tmp-guard/
 
 # Tier 2 片段 fixture：gen-fragments.mjs 从 golden 语料生成的片段产物（AI-44）
 __tests__/e2e-runtime/vue2/src/fragments/

@@ -282,6 +282,7 @@
     "emptyPreview": "Generate first to see the live preview.",
     "emptyJson": "Generate first to see the JSON.",
     "settingsAlert": "With an API key, real AI will generate the config (OpenAI-compatible — DeepSeek / Qwen / Moonshot etc.). With a model configured you can also ask for just a table / a filter form / an edit dialog (the fragment tools generate_table / generate_form / generate_dialog). Without a key, the local rule engine is used — the CLI's built-in generator, the same implementation as MCP `generate_crud_schema`, which only produces full CRUD pages. The deployed site is static and has no built-in proxy: Base URL must be a gateway that allows browser CORS.",
+    "relayNotice": "This site ships an AI relay: no API key needed. The upstream key lives in the relay, never in the browser. The relay caps the model, the output length and the request rate — it is a demo, not a general-purpose gateway.",
     "proxyNotice": "This Base URL uses the local dev proxy (/openai), which only works under npm run dev to bypass browser CORS. In production you must provide your own CORS proxy/gateway and set its URL in Settings.",
     "cancel": "Cancel",
     "save": "Save",
