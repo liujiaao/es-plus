@@ -57,7 +57,7 @@ import {
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
 import { planReplay, shouldAbortReplay, summarizeReplay, REPLAY_ABORT_AFTER } from './eval/replay.mjs'
-import { setupFrontDoor, driveFrontDoor, summarizeFrontDoor } from './eval/front-door-leg.mjs'
+import { setupFrontDoor, driveFrontDoor, driveSceneFragment, summarizeFrontDoor } from './eval/front-door-leg.mjs'
 import { buildFragmentSystemPrompt, buildFragmentInitialMessages } from './eval/fragment-prompt.mjs'
 import { scoreFragment, describeFragmentDimMiss } from './eval/fragment-scorers.mjs'
 import { compileProduct, compileFragment, fmtError } from './eval/compile-leg.mjs'
@@ -817,27 +817,43 @@ async function main() {
         USE_FIXED_FIELDS ? raw.fixedFields : undefined
       )
       const pred = await driveFragmentConfig(client, fragmentSystems[scene], messages, fragmentSchemas[scene])
-      // AN-12：片段腿同一把尺子 —— 按产物自报的 fence 编译（vue → SFC 模板+脚本；
-      // tsx → 模块）。`compiles` 不再只是「生成器没抛错」。
+      // P3：gated witness 走**场景路由器**（宿主生产里实际调用的入口），不是直接调
+      // `FRAGMENT_GENERATORS[scene]`。直接生成仍跑一遍作为诊断（`directCompiles`）：
+      // 两者若分叉，说明路由器的 intent 投影或分派有 bug，而不是模型答错。
       let noThrow = true
-      let compileError = null
+      let directCompileError = null
+      let directCompiles = false
       try {
         const out = FRAGMENT_GENERATORS[scene](pred)
         const leg = compileFragment(out, {
           typescript: pred.typescript !== false,
           filename: `${scene}-fragment`,
         })
-        if (!leg.ok) compileError = leg.error
+        if (!leg.ok) directCompileError = leg.error
+        directCompiles = leg.ok
       } catch (err) {
         noThrow = false
-        compileError = {
+        directCompileError = {
           message: err instanceof Error ? err.message : String(err),
           file: null,
           line: null,
           column: null,
         }
       }
-      const compiles = noThrow && compileError === null
+      const sceneObs = await driveSceneFragment(frontDoor, scene, pred)
+      const witnessOk = sceneObs.landing === 'fragment' && sceneObs.witness.length === 0
+      const compiles = witnessOk
+      const compileError = witnessOk
+        ? null
+        : {
+            message:
+              sceneObs.rejected ??
+              sceneObs.witness[0] ??
+              `generate_scene 没有为场景 ${scene} 产出任何围栏代码块`,
+            file: null,
+            line: null,
+            column: null,
+          }
       const s = scoreFragment(scene, gold, pred, mask)
       const dimMisses = Object.entries(s.byDim)
         .filter(([, v]) => v.applicable && !v.pass)
@@ -855,6 +871,11 @@ async function main() {
         score: s,
         dimMisses,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
+        // P3 四段证据：route(scene) → intent(模型 pred) → landing(路由器接受) → witness(编译)。
+        sceneLeg: sceneObs,
+        // 诊断：直接生成器与路由器应给出同一份见证；分叉时这里是第一现场。
+        directCompiles,
+        directCompileError,
       }
       // 片段 likewise：gold + mask + pred 足以离线重算片段 scoped / 维度。
       out.dumpEntry = {
@@ -870,6 +891,9 @@ async function main() {
         error: null,
         errorKind: null,
         fewshotDerived: FEWSHOT_DERIVED.has(file),
+        sceneLeg: sceneObs,
+        directCompiles,
+        directCompileError,
       }
       console.log(
         `core=${s.exactIntentCore ? 'EXACT' : 'diff'} scoped=${s.exactIntentScoped ? 'ok' : 'X'}` +
@@ -1844,6 +1868,8 @@ async function main() {
       compileFailure: fragmentSummary.compileFailure,
       gateOk: fragmentStats.ok,
       gateFailures: fragmentStats.failures,
+      // P3 四段证据：route → intent → landing → witness（只观测，不新增门禁）。
+      sceneLeg: fragmentSummary.sceneLeg,
       byScene: Object.fromEntries(
         Object.entries(fragmentSummary.byScene).map(([scene, s]) => [
           scene,
@@ -1923,7 +1949,10 @@ async function main() {
       rows: frontDoorStats.rows,
       routed: frontDoorStats.routed,
       rejected: frontDoorStats.rejected,
+      intentRejected: frontDoorStats.intentRejected,
+      landing: frontDoorStats.landing,
       compileFailures: frontDoorStats.compileFailures.length,
+      witnessFailures: frontDoorStats.witnessFailures,
       noTableExercised: frontDoorStats.noTableExercised,
       ok: frontDoorStats.ok,
     },
@@ -2019,9 +2048,10 @@ async function main() {
   ) {
     const fdWhy = frontDoorStats.ok
       ? ''
-      : `\n  Front-door leg failed (W1.3): compile failures ${frontDoorStats.compileFailures.length}, ` +
-        `no-table exercised ${frontDoorStats.noTableExercised}, routed ${frontDoorStats.routed}/${frontDoorStats.rows}.` +
-        `\n  This is a defect in the claimed main path, NOT a model-accuracy result.`
+      : `\n  Scene-router leg failed (P3): compile failures ${frontDoorStats.compileFailures.length}, ` +
+        `no-table exercised ${frontDoorStats.noTableExercised}, routed ${frontDoorStats.routed}/${frontDoorStats.rows}, ` +
+        `intent rejected ${frontDoorStats.intentRejected}, landing ${JSON.stringify(frontDoorStats.landing)}.` +
+        `\n  This is a defect in the claimed main path (generate_scene), NOT a model-accuracy result.`
     // Tier A 编译门（AN-13）：把「产物编译不过」单列，且**带 file:line:col**。
     // 它不是模型准确率结果 —— 读者不该从一句「gate 56%」里猜发射器是否坏了。
     const compileWhy =

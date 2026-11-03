@@ -33,7 +33,7 @@
 | **P0** | 守卫分组全量报告 runner；旧链保留回退 | 组内第 2 个失败仍打印第 3–N 组结果 | ✅ 2026-11-03 |
 | **P1** | 场景注册表单一真源 + `check:scene-registry` | 删 scene / 改生成器映射 / 缺语料 → 红；279 条语料零变化 | ✅ 2026-11-03 |
 | **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
-| **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ⬜ |
+| **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ⬜ |
 | **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ⬜ |
 
@@ -172,7 +172,7 @@ export interface ArtifactEnvelope {
 
 **验证（2026-11-03）**
 
-- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致 ✅
+- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致（P3 新增 `check:scene-eval` 后为 122 步）✅
 - `node scripts/check-consistency.mjs --group=scene-front-door` → 8/8 通过（8.3s）✅
 - 变异自检：把旧链与分组第 1 步同时改成不存在的 `check:__fail__` → runner 先红该步，仍继续跑完第 2–4 步，汇总 `3/4`、退出码 1（已还原）✅
 
@@ -180,3 +180,25 @@ export interface ArtifactEnvelope {
 
 - 组清单与旧链是「双写」而非从旧链自动推导：自动推导只能得到平铺顺序，得不到有语义的组名/边界；双写由 runner 的启动校验兜底，漂移会直接拒绝运行。
 - 未做并行执行：守卫之间存在产物依赖，且并行会放大内存/句柄压力（参见 vite preview 端口/句柄残留的教训）。
+
+### P3 · eval 场景腿（route → intent → landing → witness）
+
+- `scripts/lib/front-door.mjs` 的 esbuild 入口新增 `registerGenerateScene`，导出 `captureScene()` / `callScene()`；旧 `capture()` / `callFrontDoor()` 保留（PRD 观测腿与 `check-front-door` 仍用）。
+- `scripts/eval/front-door-leg.mjs` 的 gated 路径改为 `sceneCap.handler`：CRUD 行把 `pred` 投影成 `{scene:'crud', intent}` 后调用真 `generate_scene`；片段行新增 `driveSceneFragment()`，把模型 intent 喂给同一个路由器。每行产出四段观测：`route` / `intent` / `landing`（table/fragment/empty/rejected）/ `witness`（编译失败）。
+- 片段腿的 gated `compiles` 改为「路由器 landing 成功 ∧ witness 为空」；直接调 `FRAGMENT_GENERATORS[scene]` 仍跑一遍作为诊断（`directCompiles` / `directCompileError`），分叉时能直接看到。
+- `summarizeFrontDoor` 新增 `intentRejected` / `landing` / `witnessFailures`；`computeFragmentMetrics` 新增 `sceneLeg`（按场景计数），随产物落盘，只观测、不新增门禁。
+- 新增 `scripts/check-scene-eval.mjs`：静态断言 gated 路径调用 `sceneCap.handler`、片段腿使用 `driveSceneFragment`、`deriveSurfaces` 不进评分器、注册表 canonical 仍是 `generate_scene`；接入 `check:consistency`（紧跟 `check:front-door-leg`）。
+- `front-door-leg.test.mjs` 的假接口改为 `{ sceneShape, sceneCap }`，并新增「片段 intent 走同一路由器」用例。
+
+**验证（2026-11-03）**
+
+- `node scripts/check-scene-eval.mjs` ✅；`node scripts/eval/front-door-leg.test.mjs` ✅
+- `npm run check:run-metrics` / `check:rescore` / `check:dump` / `check:replay` / `check:fragment-leg` ✅
+- `node scripts/check-front-door.mjs`（216/216）/ `check-scene-parity`（279/279）/ `check-scene-coverage` ✅
+- 变异自检：把 gated 调用从 `fd.sceneCap.handler` 改回 `fd.cap.handler` → `check:scene-eval` 红（已还原）✅
+
+**据实偏离**
+
+- `route` 目前是**语料/宿主声明**（CRUD 固定 `crud`，片段取用例的 `scene`），不是模型自己分类的分数。给模型加「先选场景」的调用会显著增加成本，且当前语料没有「路由 gold」；因此本批把 route 作为**可观测字段**落盘，等语料补上路由标签后再上闸。
+- CRUD 主 `compiles`（Tier A）仍来自直接 `generateFromConfig` 的产物；场景腿的编译见证在 `frontDoor.compileFailures` 门禁，二者使用同一把编译尺子。这样不改变既有 Tier A 分母，同时让 gated 路径真实经过 `generate_scene`。
+- PRD 观测腿仍驱动旧 `generate_crud`：它不参与门禁（P3 验收只针对 gated 路径），且其输出是 surfaces 而非场景选择；留待 P4/P5 统一。
