@@ -129,6 +129,28 @@ const fail = (m) => failures.push(m)
     DISABLED: 'true',
   })
   if (off.status !== 503) fail(`熔断时应 503，实际 ${off.status}`)
+
+  // 同源部署（EdgeOne / 自托管）：origin === 中继自身域名即可放行，不要求写进白名单。
+  // 这条一旦写错，EdgeOne 上的站点会 403，而且报错发生在浏览器里、构建期完全看不见。
+  const sameOrigin = await handle(
+    req(
+      { model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }] },
+      { origin: 'https://relay.example' },
+    ),
+    { ...ENV, ALLOWED_ORIGINS: '' },
+  )
+  if (sameOrigin.status !== 200) fail(`同源 origin 应放行，实际 ${sameOrigin.status}`)
+
+  // 平台给的 clientIp 必须优先于可伪造的 x-forwarded-for，否则所有人共用一个限流桶。
+  {
+    const limited = createRelay({
+      fetch: async () => new Response('{"choices":[]}', { status: 200 }),
+    })
+    const limitedEnv = { ...ENV, RATE_LIMIT: '1' }
+    const one = await limited(req({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }] }, { 'x-forwarded-for': '1.1.1.1' }), limitedEnv, { clientIp: '2.2.2.2' })
+    const two = await limited(req({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }] }, { 'x-forwarded-for': '1.1.1.1' }), limitedEnv, { clientIp: '3.3.3.3' })
+    if (one.status !== 200 || two.status !== 200) fail('不同 clientIp 的访客不该互相耗尽限流额度')
+  }
 }
 
 // ── C. 接线：部署侧与站点侧不能各说各话 ────────────────────────────────
@@ -148,6 +170,41 @@ const fail = (m) => failures.push(m)
   const bareAuth = /^\s*Authorization:\s*`Bearer/m.test(flow)
   if (bareAuth || !conditionalAuth) {
     fail('mcp-flow.ts 无条件发 Authorization —— 中继模式会带着空 Bearer，部分网关直接 401')
+  }
+
+  // ── EdgeOne 同源中继：目录即路由，写错一层目录就是线上 404 ──────────────
+  // 站点部署在 EdgeOne Makers（项目根目录 = es-plus-docs），中继就挂在同一个域名下，
+  // 因此这里钉三件容易「构建绿、线上炸」的事：
+  //   1. 入口文件存在，且相对 import 真的解析得到 relay.js（目录层级算错时 Node 只在运行时报错）；
+  //   2. 入口把 context.env 与 context.clientIp 都交给中继（少了前者 500，少了后者全员共用一个限流桶）；
+  //   3. cloudFunctions.maxDuration 覆盖模型补全常见的 10–60 s（默认 30 s 会截断）。
+  const fnFiles = [
+    ['es-plus-docs/cloud-functions/v1/chat/completions.js', '/v1/chat/completions'],
+    ['es-plus-docs/cloud-functions/healthz.js', '/healthz'],
+  ]
+  for (const [rel, route] of fnFiles) {
+    const abs = path.join(ROOT, rel)
+    if (!fs.existsSync(abs)) {
+      fail(`缺 EdgeOne 函数入口 ${rel}（线上 ${route} 会落到静态站，返回 index.html）`)
+      continue
+    }
+    const src = fs.readFileSync(abs, 'utf8')
+    const imported = /from\s+['"]([^'"]*relay\.js)['"]/.exec(src)?.[1]
+    if (!imported) fail(`${rel} 没有 import relay.js`)
+    else if (!fs.existsSync(path.resolve(path.dirname(abs), imported))) {
+      fail(`${rel} 的 relay.js 相对路径解析不到：${imported}`)
+    }
+    if (!/context\.env/.test(src)) fail(`${rel} 没把 context.env 传给中继 —— 上游 key/白名单读不到`)
+    if (!/clientIp/.test(src)) fail(`${rel} 没把 context.clientIp 传给中继 —— 限流键会退化成可伪造的 x-forwarded-for`)
+  }
+
+  const edgeoneCfg = path.join(ROOT, 'es-plus-docs/edgeone.json')
+  if (!fs.existsSync(edgeoneCfg)) {
+    fail('缺 es-plus-docs/edgeone.json —— Cloud Functions 默认 30 s，长补全会超时')
+  } else {
+    const cfg = JSON.parse(fs.readFileSync(edgeoneCfg, 'utf8'))
+    const max = cfg?.cloudFunctions?.nodejs?.maxDuration
+    if (!(Number(max) >= 60)) fail(`edgeone.json 的 cloudFunctions.nodejs.maxDuration=${max}，应 ≥ 60 秒`)
   }
 }
 

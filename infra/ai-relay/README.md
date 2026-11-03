@@ -50,6 +50,78 @@ npx wrangler deploy
 > （判据见 `es-plus-docs/src/utils/ai-endpoint.ts`）。只给地址不给标志时，页面仍会要求
 > 访客填 key —— 那不是 bug，是防止把「普通网关」误当成「会替你补密钥的中继」。
 
+## 部署（腾讯云 EdgeOne Makers，同源）
+
+仓库里的 `es-plus-docs` 已经由 EdgeOne Makers 部署（项目名见控制台，如 `es-plus-vue3`）。
+中继可以直接挂进**同一个项目**，于是站点与中继同源：
+
+```
+https://<项目域名>/v1/chat/completions   ← 浏览器同源请求，不必配 CORS
+        └─ es-plus-docs/cloud-functions/v1/chat/completions.js
+             └─ createRelay(context.request, context.env, { clientIp: context.clientIp })
+```
+
+仓库里已经放好入口，**不需要新建项目**：
+
+| 文件 | 路由 | 作用 |
+| --- | --- | --- |
+| `es-plus-docs/cloud-functions/v1/chat/completions.js` | `/v1/chat/completions` | 中继主入口 |
+| `es-plus-docs/cloud-functions/healthz.js` | `/healthz` | 存活探针 |
+| `es-plus-docs/edgeone.json` | — | `cloudFunctions.nodejs.maxDuration = 120` |
+
+> 前提：EdgeOne 项目的**根目录是 `es-plus-docs`**（现有部署就是这样：`vite.config.ts`
+> 里写着「edgeone 只装 es-plus-docs」）。若根目录被改成仓库根，把 `cloud-functions/`
+> 与 `edgeone.json` 一起挪到新的根目录即可，路由不变。
+
+### 1. 配环境变量
+
+EdgeOne Makers 控制台 → 项目 → **项目设置 → 构建部署配置 → 环境变量**（改完必须
+**重新部署**，旧部署不会热更新）。变量同时供构建期（`VITE_*` 被 Vite 内联）与函数运行时
+（`context.env`）使用：
+
+| 变量 | 值 | 说明 |
+| --- | --- | --- |
+| `VITE_AI_BASE_URL` | `/v1` | **相对路径**：同源，换域名不用改 |
+| `VITE_AI_RELAY` | `true` | 缺了它站点仍会要求访客填 key |
+| `VITE_AI_MODEL` | 例 `gpt-4o-mini` | 必须在 `ALLOWED_MODELS` 里 |
+| `UPSTREAM_BASE_URL` | 例 `https://api.openai.com/v1` | 上游 OpenAI 兼容网关，**不要**带 `/chat/completions` |
+| `UPSTREAM_API_KEY` | `sk-...` | 建议存成 **Secret** 类型；只在这里出现 |
+| `ALLOWED_MODELS` | 例 `gpt-4o-mini,deepseek-chat` | 公开演示的止损线 |
+| `MAX_TOKENS` | `2048` | 压住单次成本 |
+| `RATE_LIMIT` / `RATE_WINDOW_SEC` | `20` / `60` | 每 IP 每窗口次数 |
+| `DISABLED` | `false` | 出事时改 `true` 一键熔断 |
+
+同源部署**不需要** `ALLOWED_ORIGINS`：中继会认出 `origin === 自身域名` 并放行。
+如果同一个中继还要服务 GitHub Pages（跨源），再加 `ALLOWED_ORIGINS=https://liujiaao.github.io`。
+
+### 2. 部署并验证
+
+推送/重新部署后（`cloud-functions/` 会被自动识别，目录即路由）：
+
+```bash
+BASE=https://<项目域名>          # 控制台里的生产域名或自定义域名
+curl -s $BASE/healthz            # {"ok":true,"disabled":false}
+curl -s -X POST $BASE/v1/chat/completions \
+  -H 'origin: '$BASE -H 'content-type: application/json' \
+  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"ping"}]}'
+```
+
+浏览器侧不需要填 API Key：AI 设置里只要页面显示「由本站中继提供」即可。
+`npm run check:ai-relay` 会同时核对入口文件、相对 import、`context.env`/`clientIp`
+与 `maxDuration`，避免「构建绿、线上 404/403/超时」。
+
+### 为什么是 Cloud Functions 而不是 Edge Functions
+
+Edge Functions 的免费配额只承诺 200 ms **CPU** 时间，也没有文档化的单次挂起上限；模型
+补全的墙钟时间常见 10–60 s。Cloud Functions（Node.js）默认 30 s、可在 `edgeone.json`
+配到 120 s，且本中继不依赖 Workers 专有 API，原样可用。
+
+### 区域限制
+
+控制台显示「全球可用区（不含中国大陆）」：**中继与站点同区**，所以不会出现「站点能开、
+中继被墙」的割裂；但中国大陆访客仍走境外节点，延迟与可达性与现有站点一致。要覆盖
+中国大陆需要另行开通 EdgeOne 中国内地节点并完成备案。
+
 ## 本地调试
 
 ```bash
@@ -65,13 +137,18 @@ npx wrangler dev            # 默认 http://localhost:8787
 ## 不用 Cloudflare 也行
 
 `src/relay.js` 不依赖 Workers 专有 API（除可选的 `RATE_LIMITER` 绑定），`createRelay()`
-返回的是一个标准 `(request, env) => Response` 函数，Node 18+/Deno/Bun 可直接挂：
+返回的是一个标准 `(request, env, hints?) => Response` 函数，Node 18+/Deno/Bun 可直接挂：
 
 ```js
 import { createRelay } from './infra/ai-relay/src/relay.js'
 const handle = createRelay()
-// 把 Node 的 req 适配成 fetch Request 后：const res = await handle(request, process.env)
+// 把 Node 的 req 适配成 fetch Request 后：
+const res = await handle(request, process.env, { clientIp })
 ```
+
+第三个参数是**平台判定的真实 IP**（EdgeOne 的 `context.clientIp`、Node 的 socket
+remoteAddress 等）。不传就会退回 `cf-connecting-ip` / `x-forwarded-for` —— 后者可伪造，
+公开站点不要把它当限流键。
 
 此时没有 `RATE_LIMITER` 绑定，限流退回**进程内**滑窗（单进程有效）。
 

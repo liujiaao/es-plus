@@ -29,7 +29,7 @@ function makeRelay(env = ENV, upstream) {
       return (upstream ?? (() => new Response('{"choices":[]}', { status: 200 })))(url, init)
     },
   })
-  return { handle: (req, e) => relay(req, { ...env, ...e }), calls }
+  return { handle: (req, e, h) => relay(req, { ...env, ...e }, h), calls }
 }
 
 const post = (body, headers = {}) =>
@@ -82,6 +82,35 @@ describe('CORS 白名单', () => {
     )
     assert.equal(res.status, 403)
     assert.equal(calls.length, 0) // 连上游都没碰
+  })
+
+  test('同源部署：origin === 中继自身域名时放行，不必写进 ALLOWED_ORIGINS', async () => {
+    // EdgeOne / 自托管把站点与中继放在同一域名下，站点 origin 不可能预先列全
+    // （预览域名、自定义域名会变）。同源请求本来不需要 CORS 授权，放行它不扩大攻击面：
+    // 跨站请求带的是攻击者自己的 origin，仍然要过白名单。
+    const { handle, calls } = makeRelay({ ...ENV, ALLOWED_ORIGINS: '' })
+    const res = await handle(
+      new Request('https://relay.example/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://relay.example' },
+        body: JSON.stringify(validBody),
+      }),
+    )
+    assert.equal(res.status, 200)
+    assert.equal(res.headers.get('access-control-allow-origin'), 'https://relay.example')
+    assert.equal(calls.length, 1)
+  })
+
+  test('同源判定不能放过「主机相同、端口不同」的 origin', async () => {
+    const { handle } = makeRelay({ ...ENV, ALLOWED_ORIGINS: '' })
+    const res = await handle(
+      new Request('https://relay.example/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://relay.example:8443' },
+        body: JSON.stringify(validBody),
+      }),
+    )
+    assert.equal(res.status, 403)
   })
 })
 
@@ -159,6 +188,15 @@ describe('止损开关', () => {
     const { handle } = makeRelay({ ...ENV, RATE_LIMITER })
     assert.equal((await handle(post(validBody))).status, 429)
     assert.equal(calls, 1)
+  })
+
+  test('平台给出的 clientIp 优先于可伪造的 x-forwarded-for', async () => {
+    const { handle } = makeRelay({ ...ENV, RATE_LIMIT: '1' })
+    // 两个访客共用同一个伪造头，但平台交来的是不同 IP —— 不该互相耗尽额度
+    assert.equal((await handle(post(validBody, { 'x-forwarded-for': '1.1.1.1' }), null, { clientIp: '2.2.2.2' })).status, 200)
+    assert.equal((await handle(post(validBody, { 'x-forwarded-for': '1.1.1.1' }), null, { clientIp: '3.3.3.3' })).status, 200)
+    // 同一个平台 IP 的第二次请求才该被限
+    assert.equal((await handle(post(validBody, { 'x-forwarded-for': '4.4.4.4' }), null, { clientIp: '2.2.2.2' })).status, 429)
   })
 
   test('上游故障原样回传状态码（便于访客自查），仍带 CORS', async () => {
