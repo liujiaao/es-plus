@@ -17,7 +17,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { Modal as AModal } from 'ant-design-vue'
 import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -325,5 +325,199 @@ describe('片段运行时（adapter-antdv）', () => {
     await nextTick()
     expect(backend.requests).toHaveLength(1)
     expect(isDialogClosed(document.body)).toBe(true)
+  })
+})
+
+/**
+ * P4 · 产物运行时契约见证（refresh / validate / success）。
+ *
+ * 与 vue3 同名 describe 同构：三条通道都是「挂上页面之后能做什么」，不是配置字段。
+ * vue3 侧因 happy-dom 下 Element Plus 的失败态不冒泡而改写底层 exposed.validate
+ * 来见证委托契约（见该 spec 注释）；ADV 的校验失败态在本环境可正常冒泡，故这里
+ * 直接跑真实校验。
+ */
+describe('P4 运行时契约（adapter-antdv）', () => {
+  it('table：expose 的 refresh() 真的重新取数', async () => {
+    const backend = createInMemoryBackend([{ id: 1, name: '张三', status: '启用', amount: 12, createdAt: '2026-01-01' }])
+    const mod = await importGenerated('./.tmp-fragments/table-01.vue')
+    const wrapper = mount(mod.default, { attachTo: document.body, global: mountPlugin(backend) })
+    await flushPromises()
+    await nextTick()
+
+    const before = backend.calls.list
+    await (wrapper.vm as any).refresh()
+    await flushPromises()
+    await nextTick()
+    expect(backend.calls.list).toBe(before + 1)
+    expect(typeof (wrapper.vm as any).reload).toBe('function')
+  })
+
+  it('form：expose 的 validate() 空必填 reject、填好后 resolve；resetFields 真的复位', async () => {
+    const mod = await importGenerated('./.tmp-fragments/form-01.vue')
+    const wrapper = mount(mod.default, { attachTo: document.body, global: mountPlugin(createInMemoryBackend([])) })
+    await nextTick()
+    await flushPromises()
+
+    await expect((wrapper.vm as any).validate()).rejects.toBeDefined()
+    await wrapper.find('input').setValue('王五')
+    await nextTick()
+    // ADV 的 validate 通过时 resolve 的是表单值（不是 vue3/Element Plus 的 `true`），
+    // 片段包装层不替宿主改写返回值 —— 只要求「不 reject 且给回结果」。
+    await expect((wrapper.vm as any).validate()).resolves.toBeDefined()
+    expect((wrapper.vm as any).model.name).toBe('王五')
+
+    ;(wrapper.vm as any).resetFields()
+    await nextTick()
+    expect((wrapper.vm as any).model.name).toBe('')
+  })
+
+  it('dialog：open(title, row, onSuccess) 提交成功后回调真的带数据触发', async () => {
+    const host = document.createElement('div')
+    host.id = 'app'
+    document.body.appendChild(host)
+
+    const backend = createRecordingBackend()
+    const mod = await importGenerated('./.tmp-fragments/dialog-component.vue')
+    const wrapper = mount(mod.default, {
+      attachTo: document.body,
+      global: { plugins: [[EsPlus, { httpRequest: backend.httpRequest }]] as any },
+    })
+    await nextTick()
+
+    const received: any[] = []
+    ;(wrapper.vm as any).open('编辑', { id: 1, name: '张三', status: 1 }, (data: any) => received.push(data))
+    await nextTick()
+    await flushPromises()
+    findButtonByText(host, '确定')!.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(backend.requests).toHaveLength(1)
+    expect(received).toHaveLength(1)
+    expect(received[0].name).toBe('张三')
+  })
+})
+
+/**
+ * P4 · 组合四类接线（adapter-antdv），与 vue3 完全同构。
+ */
+describe('P4 组合四类接线（adapter-antdv）', () => {
+  async function mountWiring() {
+    let host = document.getElementById('app')
+    if (!host) {
+      host = document.createElement('div')
+      host.id = 'app'
+      document.body.appendChild(host)
+    }
+
+    const Table = (await importGenerated('./.tmp-fragments/table-01.vue')).default
+    const QueryForm = (await importGenerated('./.tmp-fragments/form-02.vue')).default
+    const EditForm = (await importGenerated('./.tmp-fragments/form-01.vue')).default
+    const DialogFrag = (await importGenerated('./.tmp-fragments/dialog-component.vue')).default
+
+    const requests: any[] = []
+    const rows = [{ id: 1, name: '张三', status: 1, amount: 12, createdAt: '2026-01-01' }]
+    const httpRequest = async (req: any) => {
+      requests.push(req)
+      if (String(req.method ?? 'GET') === 'GET') return { records: rows.length, rows }
+      return { code: 0 }
+    }
+    const listCount = () => requests.filter((r) => String(r.method ?? 'GET') === 'GET').length
+
+    const submitted: any[] = []
+    const queries: any[] = []
+    const Host = defineComponent({
+      setup() {
+        const table = ref<any>(null)
+        const dialog = ref<any>(null)
+        const onRowAction = ({ key, row }: any) => {
+          if (key === 'edit') dialog.value?.open('编辑', row, () => table.value?.refresh())
+        }
+        const onQuery = (model: any) => {
+          queries.push(model)
+          return table.value?.refresh(model)
+        }
+        const onSubmit = (model: any) => {
+          submitted.push(model)
+        }
+        return () =>
+          h('div', [
+            h(Table, { ref: (el: any) => (table.value = el), onRowAction }),
+            h(QueryForm, { ref: () => undefined, onQuery }),
+            h(EditForm, { ref: () => undefined, onSubmit }),
+            h(DialogFrag, { ref: (el: any) => (dialog.value = el) }),
+          ])
+      },
+    })
+    const wrapper = mount(Host, { attachTo: host, global: mountPlugin({ httpRequest } as any) })
+    await flushPromises()
+    await nextTick()
+    return { wrapper, requests, listCount, submitted, queries }
+  }
+
+  it('① table row-action → dialog.open(title, row)', async () => {
+    const { wrapper } = await mountWiring()
+    expect(findButtonByText(wrapper.element, '编辑')).toBeTruthy()
+    findButtonByText(wrapper.element, '编辑')!.click()
+    await nextTick()
+    await flushPromises()
+
+    const inputs = Array.from(document.querySelectorAll('input')) as HTMLInputElement[]
+    expect(inputs.some((i) => i.value === '张三')).toBe(true)
+  })
+
+  it('② dialog onSuccess → table.refresh()', async () => {
+    const { wrapper, requests, listCount } = await mountWiring()
+    const before = listCount()
+    findButtonByText(wrapper.element, '编辑')!.click()
+    await nextTick()
+    await flushPromises()
+
+    findButtonByText(document.body, '确定')!.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(requests.some((r) => String(r.method) === 'PUT')).toBe(true)
+    expect(listCount()).toBeGreaterThan(before)
+  })
+
+  it('③ form query → table.refresh(model)', async () => {
+    const { wrapper, listCount, queries } = await mountWiring()
+    const btn = findButtonByText(wrapper.element, '查询')!
+    const formEl = btn.closest('form')!
+    const input = formEl.querySelector('input') as HTMLInputElement
+    input.value = 'abc'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+
+    const before = listCount()
+    btn.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(queries).toHaveLength(1)
+    expect(queries[0].keyword).toBe('abc')
+    expect(listCount()).toBeGreaterThan(before)
+  })
+
+  it('④ form submit：校验失败不派发，校验通过才把 model 快照派发给宿主', async () => {
+    const { wrapper, submitted } = await mountWiring()
+    const save = findButtonByText(wrapper.element, '保存')!
+    const formEl = save.closest('form')!
+    const input = formEl.querySelector('input') as HTMLInputElement
+
+    save.click()
+    await flushPromises()
+    await nextTick()
+    expect(submitted).toHaveLength(0)
+
+    input.value = '王五'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+    save.click()
+    await flushPromises()
+    await nextTick()
+    expect(submitted).toHaveLength(1)
+    expect(submitted[0].name).toBe('王五')
   })
 })
