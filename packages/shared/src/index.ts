@@ -148,3 +148,6 @@ export {
   capabilityWarnings,
 } from './capability.js'
 export * from './contract.js'
+// 场景注册表（AI 全场景单一真源）：场景 → 产物 → 入口 → 评测腿 → 运行时见证。
+// 单独子路径 `@es-plus/shared/scene` 亦可用；barrel 导出方便 MCP / CLI / eval 直接消费。
+export * from './scene/index.js'

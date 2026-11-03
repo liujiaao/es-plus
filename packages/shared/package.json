@@ -12,6 +12,10 @@
     "./contract": {
       "types": "./build/contract.d.ts",
       "import": "./build/contract.js"
+    },
+    "./scene": {
+      "types": "./build/scene/index.d.ts",
+      "import": "./build/scene/index.js"
     }
   },
   "files": [

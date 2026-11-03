@@ -33,14 +33,35 @@ import {
   generateTableBlock,
   generateDialogBlock,
 } from '@es-plus/shared'
-import { DEFAULT_SCENE, sceneOf } from '../eval/scenes.mjs'
+import { DEFAULT_SCENE, SCENES, sceneOf, artifactFamilyOf } from '../eval/scenes.mjs'
+
+/**
+ * artifact family → 片段生成器。
+ *
+ * 场景 → family 由 `@es-plus/shared/scene` 注册表给出，本文件不再手写 `table/form/dialog`
+ * 三个键；增删场景时只改注册表，`check-scene-registry` 会断言这里没有漏派生。
+ */
+const GENERATOR_BY_FAMILY = Object.freeze({
+  table: generateTableBlock,
+  form: generateFormBlock,
+  dialog: generateDialogBlock,
+})
 
 /** 场景 → 生成器（与 `check-scene-coverage` 共用，避免两处各写一份映射）。 */
-export const FRAGMENT_GENERATORS = Object.freeze({
-  table: (input) => generateTableBlock(input),
-  form: (input) => generateFormBlock(input),
-  dialog: (input) => generateDialogBlock(input),
-})
+export const FRAGMENT_GENERATORS = Object.freeze(
+  Object.fromEntries(
+    SCENES.filter((scene) => scene !== DEFAULT_SCENE).map((scene) => {
+      const family = artifactFamilyOf(scene)
+      const gen = GENERATOR_BY_FAMILY[family]
+      if (!gen) {
+        throw new Error(
+          `场景 ${scene} 的 artifactFamily=${family} 没有片段生成器（合法 family：${Object.keys(GENERATOR_BY_FAMILY).join('/')}）`
+        )
+      }
+      return [scene, gen]
+    })
+  )
+)
 
 /**
  * 读语料目录，返回 `{ crud, fragments, errors }`。
