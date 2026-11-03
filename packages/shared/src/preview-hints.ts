@@ -14,8 +14,9 @@ import type { StructuredCrudConfig } from './structured-config.schema.js'
  *
  * 这里只负责后者，且判据必须来自配置本身（不猜 NL、不看关键词）：
  * 每一条 hint 都能在 `config` 里找到对应的键。反过来，这里**不报**已经能被
- * 预览渲染的东西（dialogs / actions / 分页 / tree / 行内编辑），否则提示条会
- * 变成噪音，用户很快学会无视它。
+ * 预览渲染的东西（dialogs 底座 / actions / 分页 / tree / 行内编辑）—— 但「弹窗体」
+ * 与 `action:'custom'` 的按钮是函数，schema 模式渲染不出来，属于前者，必须报。
+ * 否则提示条会变成噪音，用户很快学会无视它。
  *
  * 调用方：站点预览（`es-plus-docs`）与 MCP 工具的 summary 共用这一份文案来源。
  */
@@ -69,6 +70,36 @@ export function describeUnrenderedFeatures(config: StructuredCrudConfig): string
     out.push(
       "mode:'sfc' 产物含 schema 无法承载的函数/插槽；实时预览按同一份配置的 schema 视图渲染，" +
         '最终外观以「生成代码」为准',
+    )
+  }
+
+  // 弹窗**底座**能渲染（开合、宽度、按钮排布），但「弹窗体」和「自定义按钮」是函数，
+  // schema 模式既传不进去也调不起来 —— 预览里分别是空壳与死按钮，必须点名。
+  const dialogs = (config.dialogs ?? {}) as Record<
+    string,
+    { hasCustomRender?: boolean; configBtn?: Array<{ name?: string; action?: string }> }
+  >
+
+  const customBodies = Object.entries(dialogs)
+    .filter(([, d]) => d?.hasCustomRender === true)
+    .map(([key]) => key)
+  if (customBodies.length > 0) {
+    out.push(
+      `弹窗自定义体（${customBodies.join(', ')}）不在预览中：弹窗体是函数，schema 模式只留 ` +
+        `TODO(es-plus) 槽位，预览里打开的是没有表单内容的空壳`,
+    )
+  }
+
+  // `action: 'custom'`（或省略 action）的底部按钮在 schema 模式的纯模板包装里没有处理函数。
+  const deadBtns = Object.entries(dialogs).flatMap(([key, d]) =>
+    (d?.configBtn ?? [])
+      .filter((b) => !b.action || b.action === 'custom')
+      .map((b) => `${key}/${b.name ?? '(未命名按钮)'}`),
+  )
+  if (deadBtns.length > 0) {
+    out.push(
+      `弹窗自定义按钮（${deadBtns.join(', ')}）是死按钮：schema 模式的包装是纯模板，` +
+        `action:'custom' 没有处理函数（点不动），需 mode:'sfc' 自行接线或删掉`,
     )
   }
 

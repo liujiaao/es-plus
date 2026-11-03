@@ -95,6 +95,67 @@ describe('describeUnrenderedFeatures', () => {
     expect(hints[0]).toContain('schema 视图')
   })
 
+  it('弹窗自定义体（hasCustomRender）：点名弹窗，说明预览里是空壳', () => {
+    const hints = describeUnrenderedFeatures(
+      base({
+        dialogs: { add: { hasCustomRender: true } },
+      } as Partial<StructuredCrudConfig>),
+    )
+    expect(hints).toHaveLength(1)
+    expect(hints[0]).toContain('add')
+    expect(hints[0]).toContain('空壳')
+  })
+
+  it("弹窗 action:'custom' 的按钮：点名按钮，不误报 confirm / cancel", () => {
+    const hints = describeUnrenderedFeatures(
+      base({
+        dialogs: {
+          add: {
+            formItems: [],
+            configBtn: [
+              { name: '导出明细', action: 'custom' },
+              { name: '确定', action: 'confirm' },
+              { name: '取消', action: 'cancel' },
+            ],
+          },
+        },
+      } as Partial<StructuredCrudConfig>),
+    )
+    expect(hints).toHaveLength(1)
+    expect(hints[0]).toContain('add/导出明细')
+    expect(hints[0]).not.toContain('确定')
+    expect(hints[0]).not.toContain('取消')
+  })
+
+  it('省略 action 的弹窗按钮同样没有处理函数（schema 模式）', () => {
+    const hints = describeUnrenderedFeatures(
+      base({
+        dialogs: { view: { formItems: [], configBtn: [{ name: '更多' }] } },
+      } as Partial<StructuredCrudConfig>),
+    )
+    expect(hints).toHaveLength(1)
+    expect(hints[0]).toContain('view/更多')
+  })
+
+  it('弹窗只有底座键（开合 / 宽度 / formItems）时不产生 hint', () => {
+    const hints = describeUnrenderedFeatures(
+      base({
+        dialogs: {
+          add: {
+            title: '新增',
+            width: 600,
+            formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }],
+            configBtn: [
+              { name: '确定', action: 'confirm' },
+              { name: '取消', action: 'cancel' },
+            ],
+          },
+        },
+      } as Partial<StructuredCrudConfig>),
+    )
+    expect(hints).toEqual([])
+  })
+
   it('每条 hint 都能在 config 里找到对应键（hint ↔ key 一一对应）', () => {
     // 组合配置：四个信号各一条，数量必须与「有键」数量一致
     const hints = describeUnrenderedFeatures(
