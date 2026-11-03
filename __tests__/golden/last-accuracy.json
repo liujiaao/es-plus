@@ -1,12 +1,12 @@
 {
-  "commit": "2b68f2a2e5f5c7feda6e8135ecf72f8e623b4075",
-  "runId": "41433100677",
+  "commit": "62df9767ee3661f1028788e12eb5c9b6b6cb58cf",
+  "runId": "41622341039",
   "artifactSource": "ci",
-  "corpusHash": "0bff1e580924ecdb",
+  "corpusHash": "f5d7525fbe9bb8af",
   "corpusFiles": 279,
   "fixedFieldsUsed": false,
-  "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1",
-  "measuredAt": "2026-11-02T11:21:36.116Z",
+  "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1",
+  "measuredAt": "2026-11-03T11:15:35.082Z",
   "model": "pa/claude-opus-4-6",
   "servedModel": "pa/claude-opus-4-6",
   "maxTokens": 8000,
@@ -35,7 +35,7 @@
     "skipped": "没有 zh 行的模型产出（片段-only / 全部未测到）"
   },
   "sampleErrors": [
-    "403 access deny"
+    "401 failed to authenticate API key"
   ],
   "fragments": {
     "cases": 63,
