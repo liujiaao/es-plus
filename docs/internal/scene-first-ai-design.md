@@ -24,13 +24,13 @@
 3. **片段运行时不具备编排契约**：`es-form` 无 emits（`packages/vue3/src/components/es-form/src/es-form.vue:153-156`）；片段 table 不发 refresh/row-action；片段 dialog 未接 success/error。组合场景必须后置。
 4. **eval 测错路径**：门禁是 NL→完整 `StructuredCrudConfig`（`scripts/eval-llm.mjs:326-333`），再 `deriveSurfaces` 反向调用前门（`scripts/eval/front-door-leg.mjs:57`）。路由与 surfaces 首程未计分。
 5. **单一真源已分裂**：场景/工具映射 5 份；token 表 2 份；shared Zod 4 vs mcp Zod 3；dialog 类型 3 份。
-6. **守卫链会互相遮蔽**：`check:consistency` 是 119 段 `&&`；`check-feature-coverage.mjs:164-165` 会 `process.exit(1)` 终止后续检查。
+6. **守卫链会互相遮蔽**：`check:consistency` 是 121 段 `&&`；`check-feature-coverage.mjs:164-165` 会 `process.exit(1)` 终止后续检查。
 
 ## 3. 实施批次（依赖驱动）
 
 | 批次 | 内容 | 验收 | 状态 |
 |---|---|---|---|
-| **P0** | 守卫分组全量报告 runner；旧链保留回退 | 组内第 2 个失败仍打印第 3–N 组结果 | ⬜ |
+| **P0** | 守卫分组全量报告 runner；旧链保留回退 | 组内第 2 个失败仍打印第 3–N 组结果 | ✅ 2026-11-03 |
 | **P1** | 场景注册表单一真源 + `check:scene-registry` | 删 scene / 改生成器映射 / 缺语料 → 红；279 条语料零变化 | ✅ 2026-11-03 |
 | **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ⬜ |
@@ -162,3 +162,21 @@ export interface ArtifactEnvelope {
 - `generate_crud` 从「直接调生成器」改为「调 `emitScene`」：这是共享实现，不是跨工具调用，满足约束 3；代价是 `generate-crud.ts` 不再持有生成逻辑，读代码需跳到 shared。
 - `SCENE_INTENT_SCHEMAS` 的 crud 项用 `z.object(crudShape).passthrough()`（Zod 3，mcp-server 侧），与旧工具的 SDK 校验同形；`scene/emit.ts` 内不再二次 `parse`，因此 `TableBtnSchema.transform` 只跑一次。
 - 场景路由器不吞掉旧工具的错误文本：成功/失败文本都由同一个 `emitScene` 产出，`isError` 语义与旧工具一致。
+
+### P0 · 分组全量报告 runner
+
+- 新增 `scripts/lib/guard-groups.mjs`：14 组顺序清单，只存 `npm run` 之后的脚本名（含参数），不复制命令全文。
+- 新增 `scripts/check-consistency.mjs`：启动时读取 `package.json` 的 `check:consistency:legacy`，逐项校验「组串接 == 旧链」且无重复；不一致直接退出码 2，绝不静默跑子集。运行期逐组、逐步执行，**失败不中断**，最后按组汇总并列出失败步骤；任一步失败退出码仍为 1。
+- `package.json`：旧链原样保留为 `check:consistency:legacy`；`check:consistency` 指向 runner；新增 `check:consistency:list` 查看分组。支持 `--group=<id>[,<id>]` 只跑指定组（仍先做全量校验）。
+- 顺序保持不变：有些守卫依赖前一步产物（如 `check:scene-*` 依赖 shared build）；分组只改变「失败后是否继续」，不改变执行次序。
+
+**验证（2026-11-03）**
+
+- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致 ✅
+- `node scripts/check-consistency.mjs --group=scene-front-door` → 8/8 通过（8.3s）✅
+- 变异自检：把旧链与分组第 1 步同时改成不存在的 `check:__fail__` → runner 先红该步，仍继续跑完第 2–4 步，汇总 `3/4`、退出码 1（已还原）✅
+
+**据实偏离**
+
+- 组清单与旧链是「双写」而非从旧链自动推导：自动推导只能得到平铺顺序，得不到有语义的组名/边界；双写由 runner 的启动校验兜底，漂移会直接拒绝运行。
+- 未做并行执行：守卫之间存在产物依赖，且并行会放大内存/句柄压力（参见 vite preview 端口/句柄残留的教训）。
