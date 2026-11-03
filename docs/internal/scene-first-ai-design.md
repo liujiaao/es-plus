@@ -34,7 +34,7 @@
 | **P1** | 场景注册表单一真源 + `check:scene-registry` | 删 scene / 改生成器映射 / 缺语料 → 红；279 条语料零变化 | ✅ 2026-11-03 |
 | **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
-| **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ⬜ |
+| **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ✅ 2026-11-03 |
 | **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ⬜ |
 
 ## 4. 核心接口
@@ -172,7 +172,7 @@ export interface ArtifactEnvelope {
 
 **验证（2026-11-03）**
 
-- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致（P3 新增 `check:scene-eval` 后为 122 步）✅
+- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致（P3 新增 `check:scene-eval`、P4 新增 `check:artifact-runtime` 后为 123 步）✅
 - `node scripts/check-consistency.mjs --group=scene-front-door` → 8/8 通过（8.3s）✅
 - 变异自检：把旧链与分组第 1 步同时改成不存在的 `check:__fail__` → runner 先红该步，仍继续跑完第 2–4 步，汇总 `3/4`、退出码 1（已还原）✅
 
@@ -202,3 +202,47 @@ export interface ArtifactEnvelope {
 - `route` 目前是**语料/宿主声明**（CRUD 固定 `crud`，片段取用例的 `scene`），不是模型自己分类的分数。给模型加「先选场景」的调用会显著增加成本，且当前语料没有「路由 gold」；因此本批把 route 作为**可观测字段**落盘，等语料补上路由标签后再上闸。
 - CRUD 主 `compiles`（Tier A）仍来自直接 `generateFromConfig` 的产物；场景腿的编译见证在 `frontDoor.compileFailures` 门禁，二者使用同一把编译尺子。这样不改变既有 Tier A 分母，同时让 gated 路径真实经过 `generate_scene`。
 - PRD 观测腿仍驱动旧 `generate_crud`：它不参与门禁（P3 验收只针对 gated 路径），且其输出是 surfaces 而非场景选择；留待 P4/P5 统一。
+
+### P4 · 产物运行时契约与组合接线
+
+**问题**（源码核对的第 3 条）：片段是**自包含 SFC**，挂进页面后宿主没有任何抓手 —— 表格不会刷新、行按钮点了没反应、表单提交没有门禁也没有通知、弹窗提交成功后宿主无从得知。这四件事都不在 `StructuredCrudConfig` 里，也不是记分卡能覆盖的维度（记分卡看的是「配置里写了什么」，这里是「跑起来之后发生了什么」）。组合场景（表 + 弹窗 + 查询表单）因此根本接不起来。
+
+- 新增 `packages/shared/src/scene/runtime.ts`：`ARTIFACT_RUNTIME` 冻结表，五种 artifact 各一行 `{ expose, emits, success }`；`runtimeOf(kind)` 对未知形态响亮抛错。**刻意与 registry 分开**：`scene/index.ts` 因此仍只导出元数据、不加载生成器实现。
+  - `table`：`expose: ['refresh','reload']`、`emits: ['row-action']`、`success: none`。
+  - `form`：`expose: ['model','validate','resetFields']`、`emits: ['submit','query','reset']`、`success: event('submit')`。
+  - `dialog-composable`：`expose: ['open']`、`success: callback('onSuccess')`；`dialog-component` 另加 `close`。
+  - `crud-page`：**空契约**（整页能力由 `CrudPageSchema` 声明）。空不是遗漏，是显式表达。
+- `fragment-generator.ts` 的包装层按表发射（三端同一套名字）：
+  - table 行按钮从死掉的 `triggerEvent: true` 改为库内真正消费的 `clickEvent`，包装层翻译成 `emit('row-action', { action, row })`。
+  - form 的保存/查询/重置分别改为 `emit('submit', model)`（**内部 validate 通过后才发**）/ `emit('query', model)` / `emit('reset')`；`defineExpose` 透出 `model`、`validate`、`resetFields`。
+  - dialog 的 `open(title, row, onSuccess)` 增加第三参回调；成功通道统一叫 `onSuccess`（component 形态内部存 `successHandler`）。
+- 四类组合接线以 `runtime.ts` 头注释为准（也是 eval / 文档 / 宿主的共同口径）：
+  1. table `row-action` → 宿主 `dialog.open(title, row)`
+  2. form `submit`（校验通过才发）→ 宿主保存
+  3. form `query` → 宿主 `table.refresh(model)`
+  4. dialog `onSuccess` → 宿主 `table.refresh()`
+- 新增 `scripts/check-artifact-runtime.mjs`（`check:artifact-runtime`，接在 `check:fragment` 之后）：
+  - (a) 表自身：`ARTIFACT_RUNTIME` 键集 ≡ `ARTIFACT_KINDS`；`runtimeOf` 恒等且对未知形态抛错。
+  - (b) 每种形态至少有一条 golden 语料产出（`crud-page` 例外，但断言其契约必须为空）。
+  - (c) 逐条产物：契约里每个 `expose` 出现在 `defineExpose({...})` / vue2 `return {...}`；每个 `emits` 出现在 `defineEmits([...])` / `emits: [...]`（table 只在真的带行按钮时要求）；`success=event` → 产物里真的 `emit('<name>'`；`success=callback` → `open()` 签名带该形参且体内真的 `?.(formData)` 调用一次。
+- `scripts/lib/guard-groups.mjs` 的 `contract-foundation` 同步插入，顺序与旧链逐项一致。
+
+**验证（2026-11-03）**
+
+- `npm test -w @es-plus/shared` → 859/859（含对话组件弹窗形参改名的断言更新）✅
+- `npm test -w @es-plus/vue3` → 661/661；`npm test -w @es-plus/adapter-antdv` → 697/697 ✅
+- Tier-1 新增见证：
+  - vue3：table `refresh()` 真的重新取数；form 委托契约（`model` 回写、`validate` 结果原样透出、`resetFields` 复位）与 ④ 提交门禁。
+  - antdv：**真实校验** —— 空必填 `validate()` reject、填好后 resolve；`resetFields` 真的清空；`open(title,row,onSuccess)` 成功后带数据回调；四类接线各一条。
+- Tier-2（vue2 真实 Chromium，`vue2-fragments.spec.ts` 15/15）：`refresh()` 重新取数、行按钮派发 `row-action` 且宿主收到 `edit:张三`、`validate()` 空必填 `invalid` → 填好 `ok`、`resetFields` 复位输入框、空必填点保存宿主收不到 submit 而填好后收到一次、查询派发 `query` 载荷、弹窗 `onSuccess` 计数 0→1。
+- 守卫：`check:artifact-runtime` / `check:fragment` / `check:scene-registry` / `check:generator` / `check:generator-targets` / `check:scene-parity`（279/279）/ `check:scene-coverage`（63/63）/ `fragment:smoke` / `check:fragment-scorers` / `check:dialog-scorers` / `check:composition` 全绿 ✅
+- `check:consistency:list` → 14 组 / **123 步**，顺序与旧链一致 ✅
+- 变异自检（均在本地实跑后还原）✅：①给 `ARTIFACT_RUNTIME.table.expose` 加一个产物没有的 `'noSuchMethod'` → `check:artifact-runtime` 红（21 处，每条 table 产物一处）；②把 form 的 `success.name` 改成 `'save'` → 红（「没有任何产物真的 emit 它」）；③把对话组件弹窗形参改回 `success` → 红（12 处，`open()` 签名与契约不一致）。
+
+**据实偏离**
+
+- 行按钮的可用通道是**库内 `clickEvent`**，不是给 `es-table` 新增事件：包装层已经拥有行按钮配置，改库会同时牵动三端组件契约与 `COLUMN_CONTRACT`。包装层翻译的代价是「产物多一层映射」，收益是零跨端风险。
+- `form` 的 `submit` 是**门禁事件**而非「提交成功事件」：片段不负责请求（`apiUrl` 由宿主配置），包装层只能在本地做完 validate 后把模型快照交给宿主。因此 `success.kind === 'event'` 的语义是「本地流程成功」，与 dialog 的「请求成功后回调」不同层；命名上不强行统一，语义差异写进 `runtime.ts`。
+- vue3 的**校验失败态在 happy-dom 下不可见**：Element Plus 2.14.2 的 form-item 在 happy-dom 环境丢失 `fields`，form 级 `validate()` 对被清空的必填返回 `true`（async-validator 本身正常 reject）。Tier-1 因此改为「stub 底层 `es-form` 的 exposed `validate`」来见证包装层的**委托与门禁逻辑**，真实拒绝态由 ADV Tier-1 与 vue2 Tier-2 见证。该限制与 `vue2-crud.spec.ts` 头部记录的同类限制同源，不是本轮引入。
+- `crud-page` 不纳入片段语料见证：它由 `generate_crud` 产出，不在 `__tests__/golden/cases` 的片段目录里；门禁改为断言「它的契约必须为空」，杜绝「声明了没人见证的通道」。
+- 未做：`ScenePlan` 多节点组合。四类接线证明了**通道存在且可用**，但把它们自动拼成一张组合页面仍属 P5 的 `composition` 落地范围。
