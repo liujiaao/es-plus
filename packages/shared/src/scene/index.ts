@@ -26,3 +26,13 @@ export {
   type ArtifactKind,
   type SceneContract,
 } from './registry.js'
+
+// P4：产物运行时契约（片段包装层向宿主暴露什么）。从子路径导出，避免场景元数据
+// 反过来依赖生成器实现 —— 本文件仍是「只读常量」。
+export {
+  ARTIFACT_RUNTIME,
+  runtimeOf,
+  type ArtifactRuntimeContract,
+  type ArtifactSuccessContract,
+  type SuccessKind,
+} from './runtime.js'

@@ -126,7 +126,8 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     : buttons === 'none'
       ? ' :layout-form-props="{ formLayProps: { isBtnHidden: true } }"'
       : ''
-  lines.push(`  <es-form :model="model" :form-item-list="formItems"${btnAttr}${hideBtn} />`)
+  // `ref` 是运行时契约的一部分：宿主经片段 ref 调用 validate/resetFields（P4）。
+  lines.push(`  <es-form ref="formRef" :model="model" :form-item-list="formItems"${btnAttr}${hideBtn} />`)
   lines.push('</template>')
   lines.push('')
 
@@ -138,13 +139,19 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : '<script setup>')
   }
 
-  const vueImports = isVue2 ? ['defineComponent', 'reactive'] : ['reactive']
+  const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref']
   lines.push(`import { ${vueImports.join(', ')} } from 'vue'`)
   lines.push('')
 
   if (isVue2) {
     lines.push('export default defineComponent({')
-    lines.push('  setup() {')
+    // 片段自派发的三个语义事件。底层 es-form 不会替我们发 —— 查询/重置的
+    // `triggerEvent` 只在表单嵌在 es-table 内时联动表格；独立残片由包装层负责。
+    lines.push("  emits: ['submit', 'query', 'reset'],")
+    lines.push('  setup(props, ctx) {')
+    lines.push('    const emit = ctx.emit')
+  } else {
+    lines.push("const emit = defineEmits(['submit', 'query', 'reset'])")
   }
 
   // TS 接口(复用 inferTsType,与完整页一致)
@@ -160,6 +167,13 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   // 响应式 model(复用 getDefaultValue)
   const modelInit = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
   lines.push(ts ? `const model = reactive<FormModel>({ ${modelInit} })` : `const model = reactive({ ${modelInit} })`)
+
+  // 内部 es-form 的模板 ref —— validate / resetFields 的委托对象（P4）。
+  lines.push(
+    ts
+      ? 'const formRef = ref<{ validate: () => Promise<unknown>; resetFields: () => void } | null>(null)'
+      : 'const formRef = ref(null)',
+  )
 
   // formItems(复用 buildFormItem，内联 JSON)
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, context, i18n)), 2)
@@ -177,28 +191,42 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   }
 
   // 可选按钮
+  //
+  // P4 之前这里发的是 `triggerEvent: true`：只有表单**嵌在 es-table 里**时才有消费者
+  // （内部 queryTableRequest 联动父表格）。独立片段没有父表格 ⟹ 保存/查询/重置全是死按钮。
+  // 现在改成显式 click 闭包：保存先 validate、通过后才派发 submit；查询/重置派发同名事件。
   if (buttons !== 'none') {
     lines.push('')
     lines.push('const configBtn = [')
     if (buttons === 'query') {
-      lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', triggerEvent: true },`)
-      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
+      lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', click: (model) => emit('query', { ...model }) },`)
+      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', click: () => emit('reset') },`)
     } else {
-      lines.push(`  { name: '保存', type: 'primary', key: 'save', triggerEvent: true },`)
-      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
+      lines.push(
+        `  { name: '保存', type: 'primary', key: 'save', click: async (model) => { try { await formRef.value?.validate() } catch { return } emit('submit', { ...model }) } },`,
+      )
+      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', click: () => emit('reset') },`)
     }
     lines.push(']')
   }
 
+  // 运行时契约：宿主经片段 ref 调用 validate / resetFields（P4）。三端同名。
+  lines.push('')
+  lines.push('const validate = () => formRef.value?.validate()')
+  lines.push('const resetFields = () => formRef.value?.resetFields()')
+
   // vue2:闭合 setup() 并 return
   if (isVue2) {
-    const exposed = ['model', 'formItems']
+    const exposed = ['model', 'formItems', 'formRef', 'validate', 'resetFields']
     if (buttons !== 'none') exposed.push('configBtn')
     if (hasLayout) exposed.push('layoutFormProps')
     lines.push('')
     lines.push(`    return { ${exposed.join(', ')} }`)
     lines.push('  }')
     lines.push('})')
+  } else {
+    lines.push('')
+    lines.push('defineExpose({ model, validate, resetFields })')
   }
 
   lines.push('</script>')
@@ -211,6 +239,7 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
       ? `- Form layout: ${FORM_LAYOUT_KEYS.filter((k) => layout[k] !== undefined).map((k) => `${k}=${String(layout[k])}`).join(', ') || '(isBtnHidden only)'}`
       : '',
     ts ? '- TypeScript enabled' : '',
+    '- Runtime: emits submit/query/reset; exposes validate/resetFields/model.',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
       : target === 'antdv'
@@ -452,9 +481,20 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(`import { ${isVue2 ? 'defineComponent, ref' : 'ref'} } from 'vue'`)
   lines.push('')
 
+  const hasRowButtons = !!(input.rowButtons && input.rowButtons.length)
+
   if (isVue2) {
     lines.push('export default defineComponent({')
-    lines.push('  setup() {')
+    if (hasRowButtons) {
+      // 行操作按钮的语义事件由包装层派发（底层 es-table 只认 clickEvent(row)）。
+      lines.push("  emits: ['row-action'],")
+      lines.push('  setup(props, ctx) {')
+      lines.push('    const emit = ctx.emit')
+    } else {
+      lines.push('  setup() {')
+    }
+  } else if (hasRowButtons) {
+    lines.push("const emit = defineEmits(['row-action'])")
   }
 
   // columns —— 复用 buildTableColumnSFC（只读 config.i18n 与 tableOptions.defaultSort）
@@ -480,7 +520,10 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
       const parts = [`name: ${q(b.name)}`]
       if (b.type) parts.push(`type: ${q(b.type)}`)
       if (b.key) parts.push(`key: ${q(b.key)}`)
-      parts.push('triggerEvent: true')
+      // P4：`triggerEvent` 在 es-table 里没有任何消费者（行按钮走 `clickEvent(row)`），
+      // 旧产物因此是死按钮。这里直接内联 clickEvent，把动作翻译成语义事件。
+      const actionKey = b.key ?? b.name
+      parts.push(`clickEvent: (row) => emit('row-action', { key: ${q(actionKey)}, row })`)
       lines.push(`      { ${parts.join(', ')} },`)
     }
     lines.push('    ]')
@@ -512,7 +555,8 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push('')
 
   lines.push('const tableData = ref([])')
-  lines.push('const tableRef = ref(null)')
+  // 包装层把 es-table 的命令式刷新面透出（P4 运行时契约：expose refresh/reload）。
+  lines.push(`const tableRef = ref${ts ? '<any>' : ''}(null)`)
   const pag = input.pagination ?? {}
   const pagParts: string[] = ['current: 1']
   // 权威 schema 的 `pagination.pageSize` 缺省 10 —— 片段此前把 `pageSize: 10` 写死，
@@ -525,11 +569,18 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   pagParts.push('total: 0')
   lines.push(`const pagination = ref({ ${pagParts.join(', ')} })`)
 
+  lines.push('')
+  lines.push('const refresh = (model) => tableRef.value?.refresh?.(model)')
+  lines.push('const reload = (model) => tableRef.value?.reload?.(model)')
+
   if (isVue2) {
     lines.push('')
-    lines.push('    return { columns, options, tableData, tableRef, pagination }')
+    lines.push('    return { columns, options, tableData, tableRef, pagination, refresh, reload }')
     lines.push('  }')
     lines.push('})')
+  } else {
+    lines.push('')
+    lines.push('defineExpose({ refresh, reload })')
   }
 
   lines.push('</script>')
@@ -540,6 +591,7 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     `- ${fields.length} column(s)${input.rowButtons?.length ? `, ${input.rowButtons.length} row button(s)` : ''}`,
     input.apiUrl ? `- Auto-fetch via apiParams: ${input.apiUrl}` : '- No apiUrl — wire tableData manually',
     ts ? '- TypeScript enabled' : '',
+    '- Runtime: exposes refresh/reload; row buttons emit row-action.',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
       : target === 'antdv'
@@ -930,7 +982,7 @@ function generateDialogComponent(p: {
   lines.push('const visible = ref(false)')
   lines.push(`const title = ref('')`)
   lines.push(`const formRef = ref${ts ? '<{ validate: () => Promise<unknown> } | null>' : ''}(null)`)
-  lines.push(ts ? `let onSuccess: ((data: DialogModel) => void) | undefined` : 'let onSuccess')
+  lines.push(ts ? `let successHandler: ((data: DialogModel) => void) | undefined` : 'let successHandler')
   lines.push('')
 
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, 'form', i18n)), 2)
@@ -940,12 +992,12 @@ function generateDialogComponent(p: {
   // 集成契约 —— 与 composable 支同形（含「每次 open 重置为默认值再叠 row」）
   const titleDefault = defaultTitle !== undefined ? ` = ${q(defaultTitle)}` : ''
   const openSig = ts
-    ? `function open(t: string${titleDefault}, row: Partial<DialogModel> = {}, success?: (data: DialogModel) => void) {`
-    : `function open(t${titleDefault}, row = {}, success) {`
+    ? `function open(t: string${titleDefault}, row: Partial<DialogModel> = {}, onSuccess?: (data: DialogModel) => void) {`
+    : `function open(t${titleDefault}, row = {}, onSuccess) {`
   lines.push(openSig)
   lines.push('  title.value = t')
   lines.push('  Object.assign(formData, DEFAULTS, row)')
-  lines.push('  onSuccess = success')
+  lines.push('  successHandler = onSuccess')
   lines.push('  visible.value = true')
   lines.push('}')
   lines.push('')
@@ -966,7 +1018,7 @@ function generateDialogComponent(p: {
     lines.push(`  await httpRequest({ url, method, data: formData })`)
   }
   lines.push('  close()')
-  lines.push('  onSuccess?.(formData)')
+  lines.push('  successHandler?.(formData)')
   lines.push('}')
   lines.push('')
   lines.push(`const isView = computed(() => title.value === '查看')`)
@@ -986,7 +1038,7 @@ function generateDialogComponent(p: {
     lines.push('})')
   } else {
     lines.push('')
-    lines.push('defineExpose({ open })')
+    lines.push('defineExpose({ open, close })')
   }
 
   lines.push('</script>')

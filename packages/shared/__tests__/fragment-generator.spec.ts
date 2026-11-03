@@ -11,9 +11,9 @@ describe('generateFormBlock — vue3 默认', () => {
 
   it('产出自包含 <script setup> SFC', () => {
     expect(code).toContain('<template>')
-    expect(code).toContain('<es-form :model="model" :form-item-list="formItems"')
+    expect(code).toContain('<es-form ref="formRef" :model="model" :form-item-list="formItems"')
     expect(code).toContain('<script setup lang="ts">')
-    expect(code).toContain("import { reactive } from 'vue'")
+    expect(code).toContain("import { reactive, ref } from 'vue'")
   })
 
   it('model 与 formItems 来自原子构造器', () => {
@@ -31,30 +31,47 @@ describe('generateFormBlock — vue3 默认', () => {
 })
 
 describe('generateFormBlock — 按钮变体', () => {
-  it('buttons=query 发查询/重置(triggerEvent)', () => {
+  it('buttons=query 发查询/重置（显式 click → query/reset 事件）', () => {
     const { code } = generateFormBlock({ fields, buttons: 'query' })
     expect(code).toContain(':config-btn="configBtn"')
     expect(code).toContain("key: 'query'")
     expect(code).toContain("key: 'rest'")
-    expect(code).toContain('triggerEvent: true')
+    expect(code).toContain("click: (model) => emit('query', { ...model })")
+    expect(code).toContain("click: () => emit('reset')")
+    // P4：triggerEvent 在独立片段里没有消费者（只有嵌套 es-table 才联动），已改 click 闭包。
+    expect(code).not.toContain('triggerEvent: true')
   })
 
-  it('buttons=submit 发保存/重置', () => {
+  it('buttons=submit 发保存/重置（保存先 validate，通过才 emit submit）', () => {
     const { code } = generateFormBlock({ fields, buttons: 'submit' })
     expect(code).toContain("name: '保存'")
     expect(code).toContain("key: 'rest'")
+    expect(code).toContain("await formRef.value?.validate()")
+    expect(code).toContain("emit('submit', { ...model })")
+  })
+
+  it('运行时契约：validate/resetFields 委托给内部 es-form，vue3/antdv 经 defineExpose', () => {
+    const { code } = generateFormBlock({ fields, buttons: 'submit' })
+    expect(code).toContain('const formRef = ref<{ validate: () => Promise<unknown>; resetFields: () => void } | null>(null)')
+    expect(code).toContain('const validate = () => formRef.value?.validate()')
+    expect(code).toContain('const resetFields = () => formRef.value?.resetFields()')
+    expect(code).toContain('defineExpose({ model, validate, resetFields })')
+    expect(code).toContain("const emit = defineEmits(['submit', 'query', 'reset'])")
   })
 })
 
 describe('generateFormBlock — vue2', () => {
   const { code } = generateFormBlock({ fields, target: 'vue2' })
 
-  it('用 defineComponent + setup() 包装并 return', () => {
+  it('用 defineComponent + setup(props, ctx) 包装，并声明 emits', () => {
     expect(code).toContain('<script lang="ts">')
-    expect(code).toContain("import { defineComponent, reactive } from 'vue'")
+    expect(code).toContain("import { defineComponent, reactive, ref } from 'vue'")
     expect(code).toContain('export default defineComponent({')
-    expect(code).toContain('  setup() {')
-    expect(code).toContain('return { model, formItems }')
+    expect(code).toContain("  emits: ['submit', 'query', 'reset'],")
+    expect(code).toContain('  setup(props, ctx) {')
+    expect(code).toContain('    const emit = ctx.emit')
+    // setup return 是 vue2 的 expose 通道 —— 契约里的方法必须真的在返回对象里。
+    expect(code).toContain('return { model, formItems, formRef, validate, resetFields }')
   })
 })
 
@@ -113,7 +130,7 @@ describe('generateFormBlock — formLayout（Wave 4）', () => {
       buttons: 'query',
       formLayout: { minFoldRows: 2 },
     })
-    expect(code).toContain('return { model, formItems, configBtn, layoutFormProps }')
+    expect(code).toContain('return { model, formItems, formRef, validate, resetFields, configBtn, layoutFormProps }')
   })
 })
 
@@ -129,7 +146,7 @@ describe('generateTableBlock — vue3 默认', () => {
     expect(code).toContain('<es-table')
     expect(code).toContain('v-model:data-source="tableData"')
     expect(code).toContain('v-model:pagination="pagination"')
-    expect(code).toContain('const tableRef = ref(null)')
+    expect(code).toContain('const tableRef = ref<any>(null)')
   })
 
   it('列复用 buildTableColumnSFC —— formatter 作为源码扩展点原样内联', () => {
@@ -151,7 +168,7 @@ describe('generateTableBlock — 边界', () => {
     expect(warnings.some((w) => w.includes('apiUrl'))).toBe(true)
   })
 
-  it('rowButtons 只发 triggerEvent(不内联悬空处理体)', () => {
+  it('rowButtons 发 clickEvent → row-action 语义事件（不再发无消费者的 triggerEvent）', () => {
     const { code } = generateTableBlock({
       fields: columns,
       apiUrl: '/api/orders',
@@ -159,7 +176,10 @@ describe('generateTableBlock — 边界', () => {
     })
     expect(code).toContain("prop: 'operate'")
     expect(code).toContain("name: '查看'")
-    expect(code).toContain('triggerEvent: true')
+    expect(code).toContain("clickEvent: (row) => emit('row-action', { key: 'view', row })")
+    expect(code).toContain("const emit = defineEmits(['row-action'])")
+    expect(code).not.toContain('triggerEvent: true')
+    // 不内联宿主业务体：片段只翻译事件，保存/删除由宿主决定。
     expect(code).not.toContain('openForm')
     expect(code).not.toContain('handleDelete')
   })
@@ -188,7 +208,7 @@ describe('generateTableBlock — 边界', () => {
     // pagination 是例外：vue2 仍 emit update:pagination，`.sync` 成立。
     expect(code).toContain(':pagination.sync="pagination"')
     expect(code).toContain('export default defineComponent({')
-    expect(code).toContain('return { columns, options, tableData, tableRef, pagination }')
+    expect(code).toContain('return { columns, options, tableData, tableRef, pagination, refresh, reload }')
   })
 })
 
@@ -338,7 +358,7 @@ describe('generateDialogBlock — mode=component', () => {
   it('vue3 用 v-model:visible + defineExpose；vue2 用 :visible.sync + setup 返回', () => {
     const v3 = generateDialogBlock(base).code
     expect(v3).toContain('v-model:visible="visible"')
-    expect(v3).toContain('defineExpose({ open })')
+    expect(v3).toContain('defineExpose({ open, close })')
 
     const v2 = generateDialogBlock({ ...base, target: 'vue2' }).code
     expect(v2).toContain(':visible.sync="visible"')
@@ -349,7 +369,10 @@ describe('generateDialogBlock — mode=component', () => {
   it('集成契约与 composable 支同形：open(title,row,onSuccess) + 每次 open 重置默认值', () => {
     const { code, summary } = generateDialogBlock({ ...base, target: 'vue2' })
     expect(code).toContain('Object.assign(formData, DEFAULTS, row)')
-    expect(code).toContain('onSuccess?.(formData)')
+    // 公开形参统一叫 onSuccess；组件形态把它存进 internal successHandler 再调用。
+    expect(code).toMatch(/function open\(t[^)]*onSuccess/)
+    expect(code).toContain('successHandler = onSuccess')
+    expect(code).toContain('successHandler?.(formData)')
     expect(summary).toContain('open(title, row?, onSuccess?)')
   })
 
