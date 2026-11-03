@@ -38,6 +38,7 @@ export const COMPOSE_SRC = 'packages/shared/src/compose-crud-config.ts'
 export const GENERATOR_SRC = 'packages/shared/src/structured-generator.ts'
 export const CORE_TYPES_SRC = 'packages/core/src/types.ts'
 export const FRAGMENT_SHAPES_SRC = 'packages/mcp-server/src/tools/_fragment-shapes.ts'
+export const SCENE_REGISTRY_SRC = 'packages/shared/src/scene/registry.ts'
 
 /**
  * 三个独立场景工具（Wave 4）的 Zod 入参形状 —— `readReachability` 的泛化对象。
@@ -455,6 +456,47 @@ export function readReachability() {
     fragmentTableOptionsKeys: topLevelKeys(fragmentTableOptionsBlock),
     fragmentFormLayoutKeys: topLevelKeys(fragmentFormLayoutBlock),
     fragmentPaginationKeys: topLevelKeys(fragmentPaginationBlock),
+  }
+}
+
+/**
+ * 场景 id 清单（P5）—— 从注册表**源码**切出，不 import build（矩阵生成器要求
+ * 「打包不许拉到 build」，同一纪律）。
+ */
+export function readSceneIds() {
+  const src = stripComments(read(SCENE_REGISTRY_SRC))
+  const m = /export const SCENE_IDS = \[([^\]]*)\]/.exec(src)
+  if (!m) {
+    fail(`未能在 ${SCENE_REGISTRY_SRC} 定位 SCENE_IDS = [ … ]（选择器失效，请检查脚本）`)
+    return null
+  }
+  return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
+}
+
+/**
+ * 场景 × 能力矩阵的**入参表面**（P5）：每个场景「能接收哪些键」—— 从源码切出，
+ * 不手抄。词表 `CAPABILITY_TOKENS[*].scenes` 的声明由本函数核对（多声明即红）。
+ *
+ * 只收**裸键**（不展开 `tableOptions.*` / `formLayout.*` 等嵌套块）：令牌的 `keys`
+ * 本身就是裸名，容器键（`tableOptions`）在表面里出现即代表该容器可用；把嵌套键也
+ * 混进来会让 `expandConfig`（顶层，crud 独有）与 `tableOptions.expandConfig`
+ * （片段可用）在裸键上撞名 —— 正是 CAPABILITIES 表刻意分层的那两个不同能力。
+ *
+ *   - crud  ：前门 crudShape ∪ 权威 schema 顶层 ∪ SurfaceField ∪ FieldConfig
+ *             （B 档经由 from_config 的字段词汇也算 crud 场景可用）
+ *   - table ：`tableShape` 顶层 ∪ SurfaceField
+ *   - form  ：`formShape` 顶层 ∪ SurfaceField
+ *   - dialog：`dialogShape` 顶层 ∪ SurfaceField
+ */
+export function readSceneSurfaces(reach) {
+  const r = reach ?? readReachability()
+  if (r === null) return null
+  const uniq = (list) => [...new Set(list)].sort()
+  return {
+    crud: uniq([...r.frontKeys, ...r.schemaKeys, ...r.sfKeys, ...r.fcKeys]),
+    table: uniq([...r.fragmentShapes.table, ...r.sfKeys]),
+    form: uniq([...r.fragmentShapes.form, ...r.sfKeys]),
+    dialog: uniq([...r.fragmentShapes.dialog, ...r.sfKeys]),
   }
 }
 

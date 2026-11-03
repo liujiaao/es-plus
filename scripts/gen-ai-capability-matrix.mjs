@@ -31,6 +31,8 @@ import { writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { captureFrontDoor, ROOT } from './lib/front-door.mjs'
 import { TOKEN_MAP } from './lib/ai-token-map.mjs'
+import { CAPABILITY_TOKENS, TOKEN_SET_DIFF } from './feature-coverage.data.mjs'
+import { readSceneIds, readSceneSurfaces } from './lib/entry-keys.mjs'
 import { sameText, readText } from './lib/text-sync.mjs'
 
 const OUT_PATH = join(ROOT, 'docs', 'ai', 'ai-capability-matrix.json')
@@ -178,15 +180,96 @@ async function main() {
     const frontDoor = declarative.filter(([, v]) => v.reach.startsWith('front-door'))
     const configOnly = declarative.filter(([, v]) => v.reach === 'config-only')
 
+    // ── 场景 × 能力矩阵（P5）────────────────────────────────────────────────
+    // 人工输入只有 `CAPABILITY_TOKENS[*].scenes`；场景 id 与每个场景的入参表面都从
+    // 源码切出（`readSceneIds` / `readSceneSurfaces`），所以声明不能撒谎。
+    const sceneIds = readSceneIds()
+    const surfaces = readSceneSurfaces()
+    if (sceneIds === null || surfaces === null) return
+    const surfaceScenes = Object.keys(surfaces).sort()
+    if (surfaceScenes.join(',') !== [...sceneIds].sort().join(',')) {
+      return fail(`readSceneSurfaces 的场景集 [${surfaceScenes}] ≠ 注册表 SCENE_IDS [${sceneIds}]`)
+    }
+
+    const sceneCapability = {}
+    const ledgerEntries = Object.entries(CAPABILITY_TOKENS).sort(([a], [b]) => a.localeCompare(b))
+    for (const [token, def] of ledgerEntries) {
+      const scenes = def.scenes
+      if (!Array.isArray(scenes)) {
+        fail(`令牌 '${token}' 未声明 scenes —— 场景×能力矩阵要求每个令牌明确它属于哪些场景`)
+        continue
+      }
+      if (def.tier !== 'D' && scenes.length === 0) {
+        fail(`令牌 '${token}'（${def.tier} 档）的 scenes 为空 —— 只有 D 档（与场景无关）允许留空`)
+      }
+      if ((def.tier === 'A' || def.tier === 'B') && !scenes.includes('crud')) {
+        fail(`令牌 '${token}'（${def.tier} 档）没有声明 'crud' —— 该档的定义就是「crud 页能生成」，漏了必是分类错误`)
+      }
+      for (const s of scenes) {
+        if (!sceneIds.includes(s)) {
+          fail(`令牌 '${token}' 声明了未知场景 '${s}'（SCENE_IDS = [${sceneIds}]）`)
+          continue
+        }
+        const keys = def.keys ?? []
+        if (keys.length > 0 && !keys.some((k) => surfaces[s].includes(k))) {
+          fail(
+            `令牌 '${token}' 声明可用于 '${s}'，但它的键 [${keys}] 一个都不在 '${s}' 的入参表面里` +
+              `（表面 = 源码切出的 ${s} 场景顶层键 ∪ SurfaceField）—— 该场景根本收不到这个能力`
+          )
+        }
+      }
+      const keys = def.keys ?? []
+      sceneCapability[token] = {
+        tier: def.tier,
+        scenes: [...scenes],
+        ...(keys.length > 0 ? { keys: [...keys] } : {}),
+        /** 每个场景里该令牌的键命中情况（人工声明的证据）。 */
+        reachable: Object.fromEntries(sceneIds.map((s) => [s, keys.filter((k) => surfaces[s].includes(k))])),
+      }
+    }
+    for (const s of sceneIds) {
+      if (!Object.values(sceneCapability).some((c) => c.scenes.includes(s))) {
+        fail(`场景 '${s}' 在矩阵里一行令牌都没有 —— 要么漏了能力登记，要么该场景还不该存在`)
+      }
+    }
+
+    // ── 两份令牌表的对称差（P5 单一真源收尾）──────────────────────────────
+    const matrixOnly = Object.keys(tokens)
+      .filter((t) => !(t in CAPABILITY_TOKENS))
+      .sort()
+    const ledgerOnly = Object.keys(CAPABILITY_TOKENS)
+      .filter((t) => !(t in tokens))
+      .sort()
+    for (const [side, actual] of [
+      ['matrixOnly', matrixOnly],
+      ['ledgerOnly', ledgerOnly],
+    ]) {
+      const allowed = Object.keys(TOKEN_SET_DIFF[side]).sort()
+      if (actual.join(',') !== allowed.join(',')) {
+        fail(
+          `令牌表对称差与 TOKEN_SET_DIFF.${side} 不一致：实际 [${actual.join(', ')}]，登记 [${allowed.join(', ')}]。` +
+            '新增令牌请同时改 feature-coverage.data.mjs 与 ai-token-map.mjs；确属单侧的，写明原因后登记进 TOKEN_SET_DIFF。'
+        )
+      }
+      for (const [k, why] of Object.entries(TOKEN_SET_DIFF[side])) {
+        if (!why || !why.trim()) fail(`TOKEN_SET_DIFF.${side}.${k} 没有写明原因`)
+      }
+    }
+
     const matrix = {
       note:
         '由 scripts/gen-ai-capability-matrix.mjs 从源码现场生成，禁止手改。' +
-        'reach 表示「前门一步可达」还是「需 generate_crud_from_config」；capabilities 是 AN-09 的三端支持表（claim 边界）。',
+        'reach 表示「前门一步可达」还是「需 generate_crud_from_config」；capabilities 是 AN-09 的三端支持表（claim 边界）；' +
+        'sceneCapability 是 P5 的场景×能力矩阵（scenes 人工声明，reachable/surfaces 源码切出）。',
       generatedBy: 'scripts/gen-ai-capability-matrix.mjs',
       sources: [
         'packages/shared/src/structured-config.schema.ts',
         'packages/shared/src/capability.ts',
         'packages/mcp-server/src/tools/generate-crud.ts',
+        'packages/mcp-server/src/tools/generate-{table,form,dialog}.ts',
+        'packages/shared/src/compose-crud-config.ts',
+        'packages/shared/src/scene/registry.ts',
+        'scripts/feature-coverage.data.mjs',
       ],
       frontDoor: {
         topLevelKeys: [...crudKeys].sort(),
@@ -198,10 +281,23 @@ async function main() {
         declarative: declarative.length,
         frontDoorReachable: frontDoor.length,
         configOnly: configOnly.length,
+        scenes: sceneIds.length,
       },
       capabilities,
+      sceneCapability: {
+        note:
+          'scenes = 人工语义声明；reachable = 该令牌的键在场景入参表面里实际命中（源码切出）；' +
+          'surfaces = 场景能接收的裸键集（容器键即代表其嵌套块可用）。声明了某场景却一个键都不命中 → 生成器红。',
+        scenes: [...sceneIds],
+        surfaces: Object.fromEntries(sceneIds.map((s) => [s, surfaces[s]])),
+        tokens: sceneCapability,
+      },
       tokens,
     }
+
+    // 场景/令牌表的校验任一红都不落盘、也不打印「一致」—— 否则会出现「❌ 之后又 ✅」
+    // 的双重结论（exit code 仍是 1，但人会读错）。
+    if (process.exitCode) return
 
     const text = `${JSON.stringify(matrix, null, 2)}\n`
     if (CHECK) {
@@ -215,7 +311,8 @@ async function main() {
       }
       console.log(
         `✅ 能力矩阵与源码一致：${matrix.stats.tokens} 令牌（声明式 ${matrix.stats.declarative}，` +
-          `前门可达 ${matrix.stats.frontDoorReachable}，仅配置 ${matrix.stats.configOnly}）`
+          `前门可达 ${matrix.stats.frontDoorReachable}，仅配置 ${matrix.stats.configOnly}；` +
+          `${matrix.stats.scenes} 场景 × ${Object.keys(sceneCapability).length} 能力令牌）`
       )
       return
     }
@@ -223,7 +320,8 @@ async function main() {
     writeFileSync(OUT_PATH, text)
     console.log(
       `✅ 已生成 docs/ai/ai-capability-matrix.json：${matrix.stats.tokens} 令牌（声明式 ${matrix.stats.declarative}，` +
-        `前门可达 ${matrix.stats.frontDoorReachable}，仅配置 ${matrix.stats.configOnly}）`
+        `前门可达 ${matrix.stats.frontDoorReachable}，仅配置 ${matrix.stats.configOnly}；` +
+        `${matrix.stats.scenes} 场景 × ${Object.keys(sceneCapability).length} 能力令牌）`
     )
   } finally {
     cleanup()
