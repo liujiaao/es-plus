@@ -38,6 +38,9 @@ describe('scene registry — 单一真源不变量', () => {
     for (const scene of SCENES) {
       const contract = SCENE_REGISTRY.find((s) => s.id === scene)!
       expect(SCENE_TOOL[scene]).toBe(contract.entry.tool)
+      // P2：canonical 入口统一为场景路由器；旧工具降为 adapter。
+      expect(contract.entry.tool).toBe('generate_scene')
+      expect(contract.entry.adapters.length).toBeGreaterThan(0)
     }
   })
 

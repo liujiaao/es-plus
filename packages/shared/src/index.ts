@@ -99,6 +99,8 @@ export {
   zodIssuesToResult,
   type ZodIssueLike,
 } from './validate-and-repair.js'
+// 生成前/后的确定性反馈文案（语义告警 + 校验失败正文）—— 前门与场景路由器共用
+export { buildSemanticWarnings, formatValidationError } from './config-feedback.js'
 // 片段发射层:独立 es-form / es-table / useDialog（不含表格的子集 + 与原生/第三方混排）
 export {
   generateFormBlock,
@@ -151,3 +153,6 @@ export * from './contract.js'
 // 场景注册表（AI 全场景单一真源）：场景 → 产物 → 入口 → 评测腿 → 运行时见证。
 // 单独子路径 `@es-plus/shared/scene` 亦可用；barrel 导出方便 MCP / CLI / eval 直接消费。
 export * from './scene/index.js'
+// 场景发射层（P2）：ScenePlan → 既有发射器的确定性落地。只从 barrel 导出，
+// **不**进 `@es-plus/shared/scene` —— 场景元数据的消费者（eval/守卫）不该被拉进生成器。
+export * from './scene/emit.js'

@@ -366,7 +366,7 @@ Most component libraries' "AI friendliness" is just talk — "our API names are 
 
 > **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
 
-1. **The MCP server** exposes 15 tools, 8 resource families and 3 prompts (3 legacy/advanced tools are hidden under `ESPLUS_MCP_PROFILE=front-door`); the AI reads them over the protocol
+1. **The MCP server** exposes 16 tools, 8 resource families and 3 prompts (3 legacy/advanced tools are hidden under `ESPLUS_MCP_PROFILE=front-door`); the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
 
@@ -623,13 +623,14 @@ The classic large-company arc: hand-write everything early, hit the pain wall, t
 
 This section is what sets ES-Plus apart from **every other** admin component library.
 
-### 7.1 The 15 MCP Server Tools
+### 7.1 The 16 MCP Server Tools
 
 See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts):
 
 | Tool | What it does | Pain it solves |
 |------|------|----------|
 | `detect_project_target` | Reads package.json, infers vue2/vue3 | AI no longer guesses which Vue version you're on |
+| `generate_scene` | **Scene router**: `scene` + that scene's intent table → byte-identical output to the legacy tool | Pick by *what is being built* instead of remembering a tool name; routing is still deterministic code |
 | `generate_crud` | **Front door**: fill the `surfaces` intent table (any subset of query / table / form / dialog) → composed and compiled | **Main path**: semantic mapping is done by the **host LLM**; routing and compilation are deterministic code |
 | `generate_form` / `generate_table` / `generate_dialog` | Single-surface fragments: standalone es-form / es-table / useDialog | When you want exactly one component, or a fragment beside non-es-plus components |
 | `generate_crud_from_config` | **ADVANCED**: full `StructuredCrudConfig` → runnable code (use when you already hold a typed config) | The codegen step in a Schema-first flow; natural-language requests go through the front door |

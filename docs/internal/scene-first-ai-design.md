@@ -15,7 +15,7 @@
 | **Scene** | 用户要建什么 | `SCENES = ['crud','table','form','dialog']` 只在 `scripts/eval/scenes.mjs` | 迁入 `packages/shared/src/scene/registry.ts`，成为单一真源 |
 | **Artifact** | 产出什么文件形态 | `crud-page` / `table` / `form` / `dialog-composable` / `dialog-component` 分散在生成器与 eval | 写进 `SceneContract.artifacts` + `artifactFamily` |
 | **Capability** | 哪些声明式键可达 | `CAPABILITIES`（key×target）、`feature-coverage.json`（A/B/C/D） | 给 token 加 `scenes[]`，派生 scene×capability 矩阵；不新建第三份 token 表 |
-| **Entry** | 由哪个工具承载 | 15 个 MCP 工具 + CLI | `generate_scene` 为 canonical；旧工具为 adapter；CLI 后续接入 |
+| **Entry** | 由哪个工具承载 | 16 个 MCP 工具 + CLI | `generate_scene` 为 canonical；旧工具为 adapter；CLI 后续接入 |
 
 ## 2. 源码核对结论（决定顺序）
 
@@ -32,7 +32,7 @@
 |---|---|---|---|
 | **P0** | 守卫分组全量报告 runner；旧链保留回退 | 组内第 2 个失败仍打印第 3–N 组结果 | ⬜ |
 | **P1** | 场景注册表单一真源 + `check:scene-registry` | 删 scene / 改生成器映射 / 缺语料 → 红；279 条语料零变化 | ✅ 2026-11-03 |
-| **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ⬜ |
+| **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ⬜ |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ⬜ |
 | **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ⬜ |
@@ -49,7 +49,7 @@ export interface SceneContract {
   modes: readonly (SceneMode | null)[]
   targets: readonly TargetFramework[]
   intent: { kind: SceneIntentKind; required: readonly string[] }
-  entry: { tool: string; future?: string; adapters: readonly string[] }
+  entry: { tool: string; adapters: readonly string[] }
   eval: {
     corpus: string
     casePrefix?: string
@@ -134,3 +134,31 @@ export interface ArtifactEnvelope {
 
 - 注册表用 TypeScript 常量而非 JSON：shared `tsc` 的 JSON import 在 Node 20 需要 import attributes，json 方案会在 build 产物里引入平台差异；TS 常量 + `@es-plus/shared/scene` 子路径更稳。代价是 eval/guards 依赖 shared build，这与仓库既有 eval 约定一致。
 - P1 不新增 `generate_scene`；`entry.future` 先登记为 `generate_scene`，P2 落地后再把 `entry.tool` 切过去。
+
+### P2 · 场景路由器（加法式前门）
+
+- 新增 `packages/shared/src/scene/emit.ts`：`ScenePlan`（crud/table/form/dialog 单节点）+ `emitScene()`。CRUD 分支是旧 `generate_crud` handler 的**整体搬迁**（对话框标题推导、rowkey、composable 名、schema/sfc 分支、preflight、warnings、格式化一字未改），片段分支复用 `formatFragmentText`。`emitScene` 只捕获异常并统一成 `Error generating …`，不改变成功路径的任何字节。
+- 新增 `packages/shared/src/config-feedback.ts`：`buildSemanticWarnings` / `formatValidationError` 从 mcp-server 移入 shared，`generate-from-config.ts` 改为 re-export，旧导入路径不破。
+- 新增 `packages/mcp-server/src/tools/generate-scene.ts`：`scene` 枚举从 `SCENE_IDS` 派生、缺省 `DEFAULT_SCENE`；按场景选 `SCENE_INTENT_SCHEMAS[scene]` 先做未知键检查 → zod 校验 → 再调 `emitScene`。非法意图**零产物**，错误点名场景。
+- `generate-crud.ts` 重写为薄适配器（导出 `crudShape`，handler 调 `emitScene`）；注册表 `entry.tool` 切到 `generate_scene`，四个旧工具保留为 `adapters`，`entry.future` 字段移除。
+- `tools/index.ts` 两个 profile 都注册 `generate_scene`（16 工具 / 前门 13）。
+- 新增 `scripts/check-scene-parity.mjs`：esbuild 打包源码、捕获 5 个工具的真实 handler，对 279 条语料逐字节比较（两侧都只做一次 `.passthrough()` 解析，避免 `TableBtnSchema.transform` 二次执行扰动键序）。接入 `check:consistency`，紧随 `check:scene-registry`。
+- 新增 `scripts/lib/tool-files.mjs`：工具名→文件名的唯一映射（含 `generate_crud_from_config → generate-from-config.ts` 覆盖），两个场景守卫共用。
+- 文档计数 15→16（前门 12→13）：根 `docs/why-es-plus*.md`、站点 `src/docs/*`、`packages/mcp-server/README.md`、`docs/promo/*`；`npm run llms:gen` 重生成 `public/md/**` 镜像。
+
+**验证（2026-11-03）**
+
+- `npm run build -w @es-plus/shared` ✅
+- `npm test -w @es-plus/shared` → 858/858 ✅
+- `npm test -w @es-plus/mcp-server` → 353/353（含新增 `generate-scene.spec.ts` 7/7）✅
+- `node scripts/check-scene-parity.mjs` → 279/279 字节等价（crud 216 / 片段 63）✅
+- `check-tool-surface` → 16 full / 13 front-door ✅；`check:scene-registry` / `check:scene-coverage` / `check:front-door`（216/216）/ `check:tool-shapes` / `check:fragment-contract` / `check:entry-contract` / `check:readme-claims` / `check:site-claims` / `check:fewshot-registration` ✅
+- `npm run docs:sync` + `npm run check:llms` ✅
+- 变异自检：①`generate_scene` handler 在返回文本后追加一个空格 → `check:scene-parity` 红（279/279 全不等）；②`scripts/lib/tool-files.mjs` 把 `generate_table` 映射到 `generate-form.ts` → `check:scene-registry` 红（均已还原）✅
+- 边界说明：parity 两侧都走同一个 `emitScene`，因此**单独改 shared 发射器不会**让 parity 变红（两侧同步变化）；发射器行为本身由 `check:front-door`（216 条）、shared 858 测试与 golden:e2e 覆盖。parity 守的是「两个入口的接线与入参投影不一致」这类回归。
+
+**据实偏离**
+
+- `generate_crud` 从「直接调生成器」改为「调 `emitScene`」：这是共享实现，不是跨工具调用，满足约束 3；代价是 `generate-crud.ts` 不再持有生成逻辑，读代码需跳到 shared。
+- `SCENE_INTENT_SCHEMAS` 的 crud 项用 `z.object(crudShape).passthrough()`（Zod 3，mcp-server 侧），与旧工具的 SDK 校验同形；`scene/emit.ts` 内不再二次 `parse`，因此 `TableBtnSchema.transform` 只跑一次。
+- 场景路由器不吞掉旧工具的错误文本：成功/失败文本都由同一个 `emitScene` 产出，`isError` 语义与旧工具一致。

@@ -10,6 +10,7 @@ import { registerTools, resolveToolProfile, type ToolProfile } from "../src/tool
 
 const FULL_TOOLS = [
   "detect_project_target",
+  "generate_scene",
   "generate_crud",
   "generate_form",
   "generate_table",
@@ -41,7 +42,7 @@ describe("registerTools — full profile", () => {
   const tools = capture("full");
   const names = tools.map((t) => t.name);
 
-  it("注册全部 15 个工具且无重复", () => {
+  it("注册全部 16 个工具且无重复", () => {
     expect(names).toEqual(FULL_TOOLS);
     expect(new Set(names).size).toBe(names.length);
   });

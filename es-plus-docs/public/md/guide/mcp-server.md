@@ -257,10 +257,11 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **15 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **16 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、前门、单面片段与支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
+| `generate_scene` | **场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
 | `generate_crud` | **唯一前门**：自然语言 → 三端可编译的 CRUD 页面 | ✅ |
 | `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
 | `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
@@ -278,6 +279,12 @@ mcp-server-es-plus --help        # 用法说明
 | `generate_crud_schema` | **LEGACY FALLBACK**：正则 → CrudPageSchema + 包装 SFC | ⛔ |
 
 > profile 是**工具面**的开关，不是能力差异：被隐藏的三个工具与 `generate_crud` 共用同一套确定性生成器，隐藏它们只是为了让宿主在前门与 legacy 路径之间没有选择歧义。提示词、resources 与工具描述会按同一份 profile 同步调整。
+
+### generate_scene（场景路由器 / SCENE ROUTER）
+
+**功能**：按「用户要建什么」而不是「记得哪个工具名」来生成。入参是 `{ scene, intent }`：`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表 —— `scene: 'crud'` 时与 `generate_crud` 的入参完全相同（`name` / `apiUrl` / `surfaces` / 可选旋钮），片段场景则与 `generate_table` / `generate_form` / `generate_dialog` 的入参相同。路由与发射由确定性代码完成，产物与对应旧工具**逐字节相同**，因此可以在两者之间无感切换。
+
+**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时；只知道「这是一个复合页面」时仍可用 `generate_crud`（唯一 FRONT DOOR 标签保持不变）。
 
 ### generate_crud（唯一前门 / FRONT DOOR）
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VALID_FORM_TYPES, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { VALID_FORM_TYPES, FORM_TYPE_ALIASES, formatFragmentText } from "@es-plus/shared";
 
 /**
  * zod3 shapes shared by the fragment tools (generate_form / generate_table /
@@ -226,23 +226,16 @@ export const tableFieldSchema = surfaceFieldSchema.extend({
   formtype: surfaceFieldSchema.shape.formtype.optional(),
 });
 
-/** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。 */
+/** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。
+ *
+ * 文本格式本身在 shared `formatFragmentText`（P2）：`generate_scene` 也走同一个
+ * 格式化器，字节等价才不依赖两份手写模板。这里只做 MCP `content` 适配。
+ */
 export function renderFragmentOutput(
   result: { code: string; summary: string; warnings: string[]; fence?: "vue" | "tsx" },
   fence: "vue" | "tsx",
 ): { content: Array<{ type: "text"; text: string }> } {
-  const effective = result.fence ?? fence;
-  const out: string[] = [result.summary];
-  if (result.warnings.length > 0) {
-    out.push("");
-    out.push("⚠️ Warnings (non-blocking — review and re-generate if any indicate a mapping mistake):");
-    for (const w of result.warnings) out.push(`  - ${w}`);
-  }
-  out.push("", "---", "");
-  out.push("```" + effective);
-  out.push(result.code);
-  out.push("```");
-  return { content: [{ type: "text", text: out.join("\n") }] };
+  return { content: [{ type: "text", text: formatFragmentText(result, fence) }] };
 }
 
 /**

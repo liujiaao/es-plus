@@ -38,6 +38,7 @@ const fail = (msg) => {
 /** `full` 必须注册的完整名单（新增/删除工具时**显式**改这里，避免面悄悄漂移）。 */
 const FULL_TOOLS = [
   'detect_project_target',
+  'generate_scene',
   'generate_crud',
   'generate_form',
   'generate_table',

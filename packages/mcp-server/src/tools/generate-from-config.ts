@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateFromConfig, formatPreflight, validateAndRepair, normalizeTableBtn, repairConfig, type ValidationResult, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { generateFromConfig, formatPreflight, validateAndRepair, normalizeTableBtn, repairConfig, buildSemanticWarnings, formatValidationError, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+
+// 这两个纯反馈函数已下沉到 shared（`config-feedback.ts`）：场景路由器
+// `generate_scene` 与 `generate_crud` 必须对同一份 config 输出逐字节相同的文案。
+// 这里 re-export 保持既有导入路径（测试/`generate-crud.ts`）不变。
+export { buildSemanticWarnings, formatValidationError };
 
 const FieldRuleSchema = z.object({
   required: z.boolean().optional(),
@@ -744,85 +749,6 @@ const configShape = {
       "Declarative row-merge (AI-23). `rowsBy: ['dept','team']` merges those columns across consecutive rows with equal values (the standard 'grouped rows' table). Cross-renderer narrow subset: el-table (span-method), a-table (per-column customCell) and vxe (mergeMethod) all honor it. The FUNCTIONAL escape hatch `tableOptions.spanMethod` remains Tier-3 and is NOT cross-renderer (a-table has no span-method channel) — if both are set, the explicit `spanMethod` wins."
     ),
 } as const;
-
-/**
- * Cheap post-parse semantic invariants. These never block generation (the
- * config is already schema-valid); they surface as non-blocking warnings so
- * the host LLM can self-correct on the next turn if the mapping looks off.
- */
-export function buildSemanticWarnings(config: any): string[] {
-  const warnings: string[] = [];
-  const fields: any[] = Array.isArray(config.fields) ? config.fields : [];
-  const topProps = new Set(fields.map((f) => f.prop));
-
-  // Add/edit requested but no field is form-visible → the form would be empty.
-  const mutating = (config.actions ?? []).some((a: string) => a === "add" || a === "edit");
-  if (mutating && fields.length > 0 && fields.every((f) => f.inForm === false)) {
-    warnings.push(
-      "actions include add/edit but every field has inForm:false — the add/edit form will be empty. Set inForm:true on the fields users should fill."
-    );
-  }
-
-  // dialogs.formItems referencing props absent from the top-level field set.
-  const dialogs = config.dialogs ?? {};
-  for (const [dialogId, dlg] of Object.entries<any>(dialogs)) {
-    // An add/edit dialog with no form items renders an empty modal body — the
-    // generator silently emits a dialog with nothing to fill (see the
-    // `if (dlg.formItems)` guard in structured-generator). Surface it so the
-    // host LLM either supplies formItems or drops the dialog. Skip when
-    // hasCustomRender:true — the modal body is a bespoke render, not an empty
-    // form, so "no formItems" is expected and the warning would be noise.
-    const isMutatingDialog = dialogId === "add" || dialogId === "edit";
-    const formItems = Array.isArray(dlg?.formItems) ? dlg.formItems : [];
-    if (isMutatingDialog && formItems.length === 0 && !dlg?.hasCustomRender) {
-      warnings.push(
-        `dialog "${dialogId}" is an add/edit dialog but has no formItems — the modal body will be empty. Add formItems (usually the mutable subset of fields) so users have inputs to fill.`
-      );
-    }
-    for (const fi of formItems) {
-      if (fi?.prop && !topProps.has(fi.prop)) {
-        warnings.push(
-          `dialog "${dialogId}" form item "${fi.prop}" is not in the top-level fields — confirm this is intentional (it won't map to a table column).`
-        );
-      }
-    }
-  }
-
-  // Select/Cascader with neither static nor remote options.
-  for (const f of fields) {
-    const needsOptions = f.formtype === "Select" || f.formtype === "Cascader";
-    const hasOptions =
-      (Array.isArray(f.dataOptions) && f.dataOptions.length > 0) || !!f.apiParams;
-    if (needsOptions && !hasOptions) {
-      warnings.push(
-        `field "${f.prop}" is a ${f.formtype} but has no dataOptions or apiParams — it will render an empty dropdown. Provide dataOptions (fixed enum) or apiParams (remote source).`
-      );
-    }
-  }
-
-  return warnings;
-}
-
-/**
- * 把一次校验失败渲染成前门的结构化错误正文（C2·A3）。
- *
- * 与 `validate_config` 工具的错误块同形（`  - {error}` + `Suggestions:` + `  → {s}`），
- * 让宿主 LLM 两条路径看到的失败格式一致。关键点：**什么都没生成** —— 非法 config 到不了
- * 用户面前，而不是像过去那样被 `assertValidConfig` 抛成一句泛化 `Error generating code: …`。
- */
-export function formatValidationError(result: ValidationResult): string {
-  return [
-    "✗ Config failed structured-config validation — nothing was generated:\n",
-    ...result.errors.map((e) => `  - ${e}`),
-    "",
-    result.suggestions.length > 0 ? "Suggestions:" : "",
-    ...result.suggestions.map((s) => `  → ${s}`),
-    "",
-    "Fix these and call again.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
 
 export function registerGenerateFromConfig(server: McpServer) {
   server.tool(

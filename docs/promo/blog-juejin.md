@@ -285,7 +285,7 @@ app.use(ESPlus, { permission: (v) => userPermissions.includes(v) })
 
 这一节是 ES-Plus 区别于所有其他中后台组件库的关键。
 
-### 5.1 MCP Server 暴露 15 个 tools
+### 5.1 MCP Server 暴露 16 个 tools（含场景路由器）
 
 ```bash
 # 一行接入 Claude Code

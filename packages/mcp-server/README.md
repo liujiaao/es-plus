@@ -5,7 +5,7 @@
 **三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 > **维护基线（先读这两份）**
-> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、15 个工具的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
+> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、16 个工具的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
 > - [AI-NATIVE-REMEDIATION-PLAN.md](./AI-NATIVE-REMEDIATION-PLAN.md) —— 面向「真实编译 100% + 准确率 95%」的 `AN-01..AN-29` 可执行计划、阶段门禁与验收口径。
 
 ## 客户端兼容矩阵
@@ -269,11 +269,15 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **15 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **16 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_crud` 是**唯一前门**（自然语言请求走它 —— 你把需求填成 `surfaces`，路由由确定性代码完成）。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+> **生成路径优先级**：`generate_scene` 是**场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_crud` 是**唯一前门**（自然语言复合页面走它 —— 你把需求填成 `surfaces`，路由由确定性代码完成）。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留前门、单面片段与确定性支撑工具（共 12 个）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、前门、单面片段与确定性支撑工具（共 13 个）。
+
+### generate_scene（场景路由器 / SCENE ROUTER）
+
+按「用户要建什么」而不是「记得哪个工具名」来生成：`{ scene, intent }`，`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表（crud 与 `generate_crud` 同形，片段与对应单面工具同形）。路由与发射是确定性代码，产物与旧工具逐字节相同 —— 两个入口可无感切换。
 
 ### generate_crud（唯一前门 / FRONT DOOR）
 

@@ -34,6 +34,7 @@ import {
 } from '@es-plus/shared/scene'
 import { generateFormBlock, generateTableBlock, generateDialogBlock } from '@es-plus/shared'
 import { FRAGMENT_GENERATORS } from './lib/fragment-cases.mjs'
+import { toolFileFor } from './lib/tool-files.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -124,31 +125,48 @@ const indexSrc = readFileSync(join(TOOLS_DIR, 'index.ts'), 'utf8')
 if (Object.keys(SCENE_TOOL).length !== SCENES.length) {
   fail(`SCENE_TOOL 键数 ${Object.keys(SCENE_TOOL).length} != 场景数 ${SCENES.length}`)
 }
-for (const scene of SCENES) {
-  const contract = SCENE_REGISTRY.find((s) => s.id === scene)
-  const tool = contract.entry.tool
-  if (SCENE_TOOL[scene] !== tool) {
-    fail(`场景 ${scene}: SCENE_TOOL=${SCENE_TOOL[scene]} 与 entry.tool=${tool} 不一致`)
-  }
-  const toolFile = `${tool.replace(/^generate_/, 'generate-').replace(/_/g, '-')}.ts`
+
+/** 工具文件必须存在、文件内必须注册该工具名、`tools/index.ts` 必须真的调用对应 register。 */
+function checkTool(tool, label) {
+  const toolFile = toolFileFor(tool)
   let src
   try {
     src = readFileSync(join(TOOLS_DIR, toolFile), 'utf8')
   } catch {
-    fail(`场景 ${scene}: 工具文件 ${toolFile} 不存在（entry.tool 指向了已删除/改名的工具）`)
-    continue
+    fail(`${label}: 工具文件 ${toolFile} 不存在（entry 指向了已删除/改名的工具）`)
+    return
   }
   if (!new RegExp(`["'\`]${tool}["'\`]`).test(src)) {
-    fail(`场景 ${scene}: ${toolFile} 里没有注册工具名 "${tool}"`)
+    fail(`${label}: ${toolFile} 里没有注册工具名 "${tool}"`)
   }
   const registrar = toolFile
     .replace(/\.ts$/, '')
     .replace(/-([a-z])/g, (_, c) => c.toUpperCase())
     .replace(/^generate/, 'registerGenerate')
   if (!indexSrc.includes(registrar)) {
-    fail(`场景 ${scene}: index.ts 未调用 ${registrar}（工具存在但没挂上）`)
+    fail(`${label}: index.ts 未调用 ${registrar}（工具存在但没挂上）`)
   }
 }
+
+const checkedTools = new Set()
+for (const scene of SCENES) {
+  const contract = SCENE_REGISTRY.find((s) => s.id === scene)
+  const tool = contract.entry.tool
+  if (SCENE_TOOL[scene] !== tool) {
+    fail(`场景 ${scene}: SCENE_TOOL=${SCENE_TOOL[scene]} 与 entry.tool=${tool} 不一致`)
+  }
+  for (const [kind, name] of [
+    ['canonical', tool],
+    ...contract.entry.adapters.map((a) => ['adapter', a]),
+  ]) {
+    if (checkedTools.has(name)) continue
+    checkedTools.add(name)
+    checkTool(name, `场景 ${scene} 的 ${kind} 入口 ${name}`)
+  }
+}
+// canonical 入口必须真的覆盖每个场景：`generate_scene` 的 scene 枚举从注册表派生，
+// 这里同时断言它出现在源码里（防止「注册表说 canonical，产品里其实没这个工具」）。
+if (!SCENE_TOOL[SCENES[0]]) fail('SCENE_TOOL 为空 —— canonical 入口没有派生出来')
 
 // ── (d) 片段生成器 ──────────────────────────────────────
 const fragmentScenes = SCENES.filter((s) => s !== DEFAULT_SCENE).sort()

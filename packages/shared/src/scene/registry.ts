@@ -61,10 +61,8 @@ export interface SceneContract {
     required: readonly string[]
   }
   entry: {
-    /** 当前已注册、承载该场景的工具。 */
+    /** canonical 入口：场景语义的主承载工具（P2 起为 `generate_scene`）。 */
     tool: string
-    /** 计划中的 canonical 入口（P2 落地后切换）。 */
-    future?: string
     /** 兼容/高级入口；它们仍可生成该场景，但不是场景语义的主入口。 */
     adapters: readonly string[]
   }
@@ -109,8 +107,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       required: ['name', 'apiUrl', 'surfaces'],
     },
     entry: {
-      tool: 'generate_crud',
-      future: 'generate_scene',
+      tool: 'generate_scene',
       adapters: ['generate_crud', 'generate_crud_from_config'],
     },
     eval: {
@@ -139,8 +136,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       required: ['fields'],
     },
     entry: {
-      tool: 'generate_table',
-      future: 'generate_scene',
+      tool: 'generate_scene',
       adapters: ['generate_table'],
     },
     eval: {
@@ -170,8 +166,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       required: ['fields'],
     },
     entry: {
-      tool: 'generate_form',
-      future: 'generate_scene',
+      tool: 'generate_scene',
       adapters: ['generate_form'],
     },
     eval: {
@@ -201,8 +196,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       required: ['fields'],
     },
     entry: {
-      tool: 'generate_dialog',
-      future: 'generate_scene',
+      tool: 'generate_scene',
       adapters: ['generate_dialog'],
     },
     eval: {
@@ -228,7 +222,7 @@ export const DEFAULT_SCENE: SceneId = 'crud'
 /** 场景 id 列表（从注册表派生，顺序稳定）。 */
 export const SCENES: readonly SceneId[] = SCENE_REGISTRY.map((s) => s.id)
 
-/** 场景 → 当前已注册工具（供 eval 覆盖门禁与文档派生）。 */
+/** 场景 → canonical 入口工具（P2 起统一为 `generate_scene`；旧工具见 `entry.adapters`）。 */
 export const SCENE_TOOL: Readonly<Record<SceneId, string>> = Object.freeze(
   Object.fromEntries(SCENE_REGISTRY.map((s) => [s.id, s.entry.tool])) as Record<SceneId, string>
 )

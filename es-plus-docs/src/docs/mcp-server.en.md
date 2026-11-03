@@ -260,10 +260,11 @@ The AI calls the MCP server's `generate_crud` front door (or a standalone fragme
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes **15 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the front door, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **16 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the front door, the single-surface fragments, and the deterministic support tools remain.
 
 | Tool | Purpose | front-door |
 |------|---------|:----------:|
+| `generate_scene` | **SCENE ROUTER** — pick what is being built (`crud` / `table` / `form` / `dialog`) and pass that scene's intent table; output is byte-identical to the matching legacy tool. | ✅ |
 | `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. | ✅ |
 | `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`) | ✅ |
 | `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination) | ✅ |
