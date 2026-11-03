@@ -218,6 +218,43 @@ test('AI 故障：标签变成「规则引擎（AI 回退）」，不冒充 AI �
 })
 
 /**
+ * vxe 引擎（AI 产物里真实存在的一条能力）—— 预览必须按产物渲染。
+ *
+ * `/ai-crud` 刻意不在 vxe 首屏门里（`utils/vxe-loader`：vxe 全量注册是 344 KB gz），
+ * 于是 AI 恰好生成 `tableOptions.engine:'vxe'` 时，必须在挂预览前按需加载；
+ * 否则 EsTable 会按「未安装 vxe」降级，用户看到的是「生成器丢了引擎」。
+ */
+test('AI vxe：engine:vxe 的产物在预览里真的用 vxe 渲染', async ({ page }) => {
+  await stubModel(page, {
+    name: 'deviceLog',
+    apiUrl: '/api/device-log',
+    fields: [
+      { prop: 'code', label: '编码', formtype: 'Input' },
+      { prop: 'status', label: '状态', formtype: 'Select' },
+    ],
+    actions: ['add', 'edit'],
+    tableOptions: { engine: 'vxe' },
+  })
+
+  await gotoCrud(page)
+  await configureAi(page)
+  await page.locator('[data-testid="preset-user-mgmt"]').click()
+
+  await expect(page.locator('[data-testid="engine-tag"]')).toHaveText('AI 引擎')
+
+  const area = page.locator('[data-testid="preview-area"]')
+  // 首条结果落定时会把标签强制切回 Trace（runFlow 提交后的 watcher），而 vxe 的按需加载
+  // 让这次落定比打桩响应慢；用「点一次 + 看一眼」的重试避开这次竞争，而不是睡固定时长。
+  await expect(async () => {
+    await previewTab(page).click()
+    await expect(area.locator('.vxe-table')).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 20_000 })
+
+  // vxe 真的注册并接手渲染了 —— 不是 EsTable 的「未安装 vxe」降级（那会退回 el-table）
+  await expect(area.locator('.el-table')).toHaveCount(0)
+})
+
+/**
  * 回放（B6）—— 零 key、零成本的「AI 路径」演示。
  *
  * 线上零 key 的访客原本只能看到规则引擎（只产 CRUD 整页）：片段、多 tab 弹窗、

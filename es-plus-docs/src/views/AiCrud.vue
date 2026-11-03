@@ -235,7 +235,7 @@
 </template>
 
 <script setup lang="tsx">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Setting, VideoPlay } from '@element-plus/icons-vue'
@@ -250,8 +250,13 @@ import { PRESETS, type Preset } from '@/utils/preset-examples'
 import ChatComposer from '@/components/ai-crud/ChatComposer.vue'
 import FragmentPreview from '@/components/ai-crud/FragmentPreview.vue'
 import TraceTab from '@/components/ai-crud/TraceTab.vue'
+// vxe 引擎按需加载（344 KB gz 不在 /ai-crud 的首屏预算里；只有产物真的用 vxe 时才拉）
+import { ensureVxe } from '@/utils/vxe-loader'
 
 const { t, locale } = useI18n()
+
+// 产物要 vxe 时用它按需注册。setup 期取一次 —— 之后事件回调里 getCurrentInstance() 为 null。
+const appInstance = getCurrentInstance()?.appContext.app
 
 // ─── chat / trace state ──────────────────────────────────────────────────
 const messages = ref<ChatMessage[]>([])
@@ -481,6 +486,19 @@ const handleReplay = async () => {
   activeTab.value = 'preview'
 }
 
+/**
+ * 产物是否真的走 vxe 引擎（整页 schema 或片段 args 里任一声明 engine:'vxe'）。
+ * 预览必须按产物渲染 —— 所以要在挂载 EsCrudPage / es-table **之前**把 vxe 装上。
+ */
+const previewNeedsVxe = (result: {
+  previewSchema?: Record<string, unknown> | null
+  fragment?: { config?: Record<string, unknown> | null } | null
+}): boolean => {
+  const engineOf = (s?: Record<string, unknown> | null) =>
+    (s?.tableOptions as { engine?: string } | undefined)?.engine === 'vxe'
+  return engineOf(result.previewSchema) || engineOf(result.fragment?.config)
+}
+
 // ─── handlers ──────────────────────────────────────────────────────────
 /**
  * 一次生成的公共壳：实时 AI、录制回放、离线规则引擎走的是同一个 mcpFlow，
@@ -516,6 +534,20 @@ const runFlow = async (
       target: target.value,
     })
 
+    // 产物要 vxe 就先把引擎装上，再挂预览：/ai-crud 不在 vxe 首屏门里（utils/vxe-loader），
+    // 不装的话 EsTable 会按「未安装 vxe」降级，用户会以为生成器把引擎弄丢了。
+    // 加载失败不阻塞预览 —— 把原因塞进告警条，画面降到 el-table 但提示条说得清。
+    let vxeWarning: string | undefined
+    if (previewNeedsVxe(result) && appInstance) {
+      try {
+        await ensureVxe(appInstance)
+      } catch (err) {
+        vxeWarning = `引擎 vxe 加载失败，预览已降级为默认表格：${
+          err instanceof Error ? err.message : String(err)
+        }`
+      }
+    }
+
     // Commit assistant message + uniform preview state from FlowResult.
     messages.value.push(result.message)
     // 片段与整页配置是两种上下文：片段轮次没有 StructuredCrudConfig 快照，
@@ -540,7 +572,7 @@ const runFlow = async (
       : ((result.previewSchema ?? null) as Record<string, any> | null)
     previewKey.value += 1
     previewHints.value = result.featureHints ?? []
-    previewWarnings.value = result.warnings ?? []
+    previewWarnings.value = [...(result.warnings ?? []), ...(vxeWarning ? [vxeWarning] : [])]
     engine.value = result.engine
     fallbackReason.value = result.fallbackReason
     mockData.value = result.fragment
