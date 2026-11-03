@@ -21,7 +21,9 @@ export const EVENT_NAMES = [
   'cta-start',
 ]
 
-const gc = () => window.goatcounter
+// 路由会被 Node 里的门禁真求值（gen-site-seo --check 模拟 afterEach）：没有 window 时
+// 分析统计缺席是正常状态，静默跳过，别让守卫链在这里崩掉。
+const gc = () => (typeof window === "undefined" ? undefined : window.goatcounter)
 
 export function trackPageview(path) {
   gc()?.count?.({ path })

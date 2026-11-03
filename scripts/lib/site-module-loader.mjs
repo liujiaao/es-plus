@@ -20,7 +20,7 @@
  * 重新编译，避免拿着上一次的旧对象。
  */
 import { build } from 'esbuild'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -76,6 +76,25 @@ export default function VueRouter(options) {
 const COMPONENT_SHIM = 'export default {}'
 
 /**
+ * 插件 onResolve 返回的路径是**原样使用**的：esbuild 不会替它补扩展名。
+ *
+ * Vite 解析 `@/utils/analytics` 时会依次试 `.ts` / `.js` / `index.ts` …，站点里几乎
+ * 所有互引都是这种无扩展写法 —— 只做 `join(srcDir, rest)` 的话，任何不含扩展名的
+ * 站点 import 都会让门禁以「Could not read from file」崩掉（不是守卫变红，是脚本挂掉）。
+ */
+const RESOLVE_EXTS = ['.ts', '.tsx', '.mts', '.js', '.mjs', '.jsx', '.json', '.vue']
+
+function resolveAlias(base) {
+  if (existsSync(base) && statSync(base).isFile()) return base
+  for (const ext of RESOLVE_EXTS) if (existsSync(base + ext)) return base + ext
+  for (const ext of RESOLVE_EXTS) {
+    const index = join(base, `index${ext}`)
+    if (existsSync(index)) return index
+  }
+  return base // 交给 esbuild 报原始错误，别把「真的写错了」也吞掉
+}
+
+/**
  * @param {string} entry 相对仓库根的入口，例如 `es-plus-docs/src/views/component-doc.data.ts`
  * @param {{ site: string, stubComponents?: boolean, stubs?: Record<string, string> }} options
  *   `site` 是站点目录名，用于推导 `@/` 别名；`stubs` 是「裸模块名 → 桩源码」；
@@ -125,9 +144,10 @@ export async function loadSiteModule(entry, { site, stubComponents = false, stub
       {
         name: 'es-plus-site-module',
         setup(pluginBuild) {
-          // `@/docs/x.md?raw`：剥掉 `?raw`，剩下的交给下面的文本 loader
+          // `@/docs/x.md?raw`：剥掉 `?raw`，剩下的交给下面的文本 loader。
+          // 解析结果要自己补扩展名（见 resolveAlias 的注释）。
           pluginBuild.onResolve({ filter: /^@\// }, (args) => {
-            const path = join(srcDir, args.path.slice(2).replace(/\?raw$/, ''))
+            const path = resolveAlias(join(srcDir, args.path.slice(2).replace(/\?raw$/, '')))
             // 别名解析会「吃掉」后面针对 `.vue` 的桩规则（onResolve 先返回者生效），
             // 所以在同一处直接换掉
             if (stubComponents && path.endsWith('.vue')) return stubPath(`component:${path}`, COMPONENT_SHIM)

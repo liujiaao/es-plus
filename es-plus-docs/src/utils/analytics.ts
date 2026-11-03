@@ -32,7 +32,15 @@ export const EVENT_NAMES = [
 ] as const
 
 type GoatCounter = { count?: (opts: { path: string; title?: string; event?: boolean }) => void }
-const gc = (): GoatCounter | undefined => (window as unknown as { goatcounter?: GoatCounter }).goatcounter
+/**
+ * 计数器的取用必须在**没有浏览器环境**时也不炸：路由表会被 Node 里的门禁真求值
+ * （`gen-site-seo --check` 模拟 `afterEach` 验证 canonical 接线），那时 `window`
+ * 不存在 —— 分析统计缺席是正常状态，不该让整条守卫链在这里崩掉。
+ */
+const gc = (): GoatCounter | undefined =>
+  typeof window === 'undefined'
+    ? undefined
+    : (window as unknown as { goatcounter?: GoatCounter }).goatcounter
 
 /** 一次 pageview：path 用路由全路径（含 hash 段），不同路由各计一次 */
 export function trackPageview(path: string): void {
