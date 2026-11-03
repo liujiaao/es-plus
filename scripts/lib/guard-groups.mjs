@@ -21,7 +21,7 @@ export const GUARD_GROUPS = Object.freeze([
   {
     id: 'contract-foundation',
     title: '导出 / Schema / 片段 / 入口契约',
-    steps: ['check:exports', 'check:schema', 'check:fragment', 'check:entry'],
+    steps: ['check:exports', 'check:schema', 'check:fragment', 'check:artifact-runtime', 'check:entry'],
   },
   {
     id: 'scoring-eval',
