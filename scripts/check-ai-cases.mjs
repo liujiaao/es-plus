@@ -451,6 +451,20 @@ await check('8. 宿主接线：路由 → 组件 → 案例产物；通用宿主
       assert.ok(sameText(readText(target), entry.text), `${rel} 与 manifest 生成的内容不一致（运行 npm run cases:sync，不要手改）`)
     }
   }
+
+  // 回放入口（AI 工作台）与画廊必须是**同一份清单**：它读 registry、按 manifest 的
+  // replay.kind 过滤，而不是另写一份案例 id 列表 —— 否则新增一个冻结案例后，画廊有、
+  // 回放没有（或反过来），页面上却都不报错。
+  const workbenchRel = 'es-plus-docs/src/views/AiCrud.vue'
+  const workbench = read(workbenchRel)
+  assert.ok(
+    workbench.includes("import('@/cases/generated/registry.js')"),
+    `${workbenchRel} 没有从 registry 取回放清单 —— 回放必须与画廊共用 manifest，不能另写一份`
+  )
+  assert.ok(
+    /replay\s*===\s*'frozen-config'/.test(workbench),
+    `${workbenchRel} 的回放清单没有按 replay.kind === 'frozen-config' 过滤 —— 可能与 manifest 的可重放声明脱节`
+  )
 })
 
 await check('9. 站点副本与单源逐字节一致', () => {

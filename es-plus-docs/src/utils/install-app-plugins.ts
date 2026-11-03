@@ -18,6 +18,7 @@ import {
   ElFormItem,
   ElIcon,
   ElInput,
+  ElOption,
   ElProgress,
   ElRadioButton,
   ElRadioGroup,
@@ -30,6 +31,7 @@ import {
   ElTabPane,
   ElTabs,
   ElTag,
+  ElTooltip,
 } from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
@@ -71,6 +73,7 @@ export const ELEMENT_PLUS_COMPONENTS: Record<string, unknown> = {
   ElFormItem,
   ElIcon,
   ElInput,
+  ElOption,
   ElProgress,
   ElRadioButton,
   ElRadioGroup,
@@ -83,6 +86,7 @@ export const ELEMENT_PLUS_COMPONENTS: Record<string, unknown> = {
   ElTabPane,
   ElTabs,
   ElTag,
+  ElTooltip,
 }
 
 // Install the same plugins as main.ts — Element Plus components, all icons, ES-Plus, i18n.

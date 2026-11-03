@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 
 /**
@@ -27,6 +29,18 @@ const CORS = {
   'access-control-allow-headers': '*',
   'access-control-allow-methods': '*',
 }
+
+/**
+ * 可重放案例数直接从 manifest 读（单一真源）：「回放」能选到的条目必须正好是
+ * `replay.kind === 'frozen-config'` 且有冻结配置的那些 —— 与画廊的「可机械重放」
+ * 徽章同一批。写死数字的话，manifest 一更新这里就假红或假绿。
+ */
+const MANIFEST = JSON.parse(
+  readFileSync(join(__dirname, '../../..', 'docs/cases/ai-cases.json'), 'utf8'),
+) as { cases: Array<{ replay: { kind: string }; artifacts?: { config?: string } }> }
+const REPLAYABLE = MANIFEST.cases.filter(
+  (c) => c.replay.kind === 'frozen-config' && c.artifacts?.config,
+).length
 
 // 主站是源码模式（VITE_USE_PROD_PACKAGE=false）下的 vite dev：首屏要现编译
 // element-plus / vxe 等重依赖，冷启动一次常超过默认 30s。等待交给断言（会自动重试），
@@ -193,6 +207,10 @@ test('AI 故障：标签变成「规则引擎（AI 回退）」，不冒充 AI �
   await expect(page.locator('[data-testid="engine-tag"]')).toHaveText('规则引擎（AI 回退）')
   // 回退不是静默的：页面必须说明「这一次不是 AI 生成的」
   await expect(page.locator('.el-message').last()).toBeVisible()
+  // 原因挂在引擎标签的 tooltip 上。这条同时守住 ElTooltip 的按需注册 ——
+  // 站点是逐组件注册 Element Plus 的，漏一个 `<el-tooltip>` 会静默变成不渲染的未知标签。
+  await page.locator('[data-testid="engine-tag"]').hover()
+  await expect(page.locator('.el-popper:visible').filter({ hasText: 'OpenAI 500' })).toBeVisible()
 
   await previewTab(page).click()
   // 回退产物仍是可用的整页（离线兜底的意义就在这里）
@@ -225,11 +243,18 @@ test('回放：零 key 重放已录制的模型输出，标签如实标注', asy
   await expect(dlg).toBeVisible()
   await expect(dlg).toContainText('不需要 API Key')
   // 条目来自 manifest 生成的 registry（7 个 frozen-config），不是页面里另写的清单
-  await expect(dlg.locator('[data-testid="replay-select"]')).toBeVisible()
+  const select = dlg.locator('[data-testid="replay-select"]')
+  await expect(select).toBeVisible()
   // 录制元数据必须显示（录制日期 / 模型），否则「回放」和「实时」在界面上分不开。
   // 不钉具体模型名：清单顺序或某个案例换模型时，这条不该假红。
+  // 它同时证明动态 import 的 registry 已经加载完 —— 等它再数选项，才不会数到空列表。
   await expect(dlg.locator('[data-testid="replay-meta"]')).toContainText('录制于')
   await expect(dlg.locator('[data-testid="replay-meta"]')).toContainText('模型')
+
+  // 与画廊同一批：可选项数 === manifest 里可机械重放的案例数
+  await select.click()
+  await expect(page.locator('.el-select-dropdown__item')).toHaveCount(REPLAYABLE)
+  await page.keyboard.press('Enter')
 
   await dlg.locator('[data-testid="replay-run"]').click()
 
