@@ -101,8 +101,27 @@ export interface AiCredentials {
   model: string
 }
 
+/**
+ * 录制回放：把一段**已经录下来的模型输出**重新走一遍完整链路。
+ *
+ * 为什么要有它：线上零 key 的访客只能看到规则引擎（只产 CRUD 整页），片段与
+ * 复杂配置根本演示不了；而有 key 的现场调用又不可复现（同一句话两次结果不同）。
+ * 回放把「模型那一步」替换成录制产物，**解析 / 校验 / 信封路由 / 生成器 / 预览 /
+ * trace 全部照旧** —— 观众看到的仍是真实管线的输出，只是模型那一步是录像。
+ *
+ * 回放**不允许重试**：再问一次模型没有意义，失败就如实报校验错误。
+ */
+export interface ReplaySource {
+  /** 录制下来的模型回答：StructuredCrudConfig 或 `{tool,args}` 信封 */
+  content: unknown
+  /** 录制元数据，写进 trace，避免把回放当成实时调用 */
+  meta?: { model?: string; generatedAt?: string; caseId?: string }
+}
+
 export interface FlowOptions {
   ai?: AiCredentials
+  /** 录制回放（零 key / 零成本 / 可复现）；给了它就完全不发网络请求 */
+  replay?: ReplaySource
   onTrace: (entry: TraceEntry) => void
   signal?: AbortSignal
   /** Last AI-produced config (only meaningful in AI mode for multi-turn) */
@@ -158,7 +177,7 @@ export interface FlowResult {
    */
   previewSchema?: Record<string, unknown>
   /** 本次实际走通的引擎 —— UI 的标签必须跟随事实，不能只看「有没有填 key」 */
-  engine: 'ai' | 'rule' | 'rule-fallback'
+  engine: 'ai' | 'rule' | 'rule-fallback' | 'replay'
   /** engine === 'rule-fallback' 时说明为什么（OpenAI 报错 / 两次校验失败 / 中断） */
   fallbackReason?: string
   /** 本次生成实际使用的渲染端（供 UI 显示，避免用户以为切了没生效） */
@@ -604,7 +623,9 @@ export async function mcpFlow(
   let aiFailure: string | undefined
 
   // ── AI path ────────────────────────────────────────────────────────────
-  if (opts.ai?.apiKey) {
+  // 回放与真实 AI 共用同一条链路：区别只有「模型那一步」—— 一个发网络请求，
+  // 一个读录制产物。校验、信封路由、生成器、预览都不允许分叉。
+  if (opts.ai?.apiKey || opts.replay) {
     const tStart = Date.now()
     pushTrace(opts, traceIds, {
       startedAt: tStart,
@@ -631,20 +652,32 @@ export async function mcpFlow(
 
     let attempt = 0
     let lastRaw = ''
-    while (attempt <= 1 && !validatedConfig) {
+    // 回放不重试：模型那一步是录像，「再问一次」无从谈起。
+    const maxAttempts = opts.replay ? 0 : 1
+    while (attempt <= maxAttempts && !validatedConfig) {
       checkAborted(opts.signal)
       const reqStart = Date.now()
       pushTrace(opts, traceIds, {
         startedAt: reqStart,
         kind: 'ai_request',
-        title: attempt === 0 ? 'OpenAI chat/completions' : 'OpenAI chat/completions (retry)',
-        summary: `${messages.length} messages · model=${opts.ai.model}`,
-        input: { model: opts.ai.model, messageCount: messages.length },
+        title: opts.replay
+          ? `replay（录制产物${opts.replay.meta?.caseId ? `: ${opts.replay.meta.caseId}` : ''}）`
+          : attempt === 0
+            ? 'OpenAI chat/completions'
+            : 'OpenAI chat/completions (retry)',
+        summary: opts.replay
+          ? `${opts.replay.meta?.model ?? '(未知模型)'} · 录制于 ${opts.replay.meta?.generatedAt ?? '(未记录)'}`
+          : `${messages.length} messages · model=${opts.ai!.model}`,
+        input: opts.replay
+          ? { caseId: opts.replay.meta?.caseId, model: opts.replay.meta?.model }
+          : { model: opts.ai!.model, messageCount: messages.length },
         status: attempt === 0 ? 'success' : 'retry',
       })
 
       try {
-        lastRaw = await callOpenAI(opts.ai, messages, opts.signal)
+        lastRaw = opts.replay
+          ? JSON.stringify(opts.replay.content)
+          : await callOpenAI(opts.ai!, messages, opts.signal)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         aiFailure = `OpenAI 调用失败：${msg}`
@@ -662,7 +695,7 @@ export async function mcpFlow(
       pushTrace(opts, traceIds, {
         startedAt: reqStart,
         kind: 'ai_response',
-        title: 'OpenAI response',
+        title: opts.replay ? 'replay content' : 'OpenAI response',
         summary: `${lastRaw.length} chars`,
         output: lastRaw.slice(0, 800),
         status: 'success',
@@ -725,7 +758,7 @@ export async function mcpFlow(
       }
 
       attempt += 1
-      if (attempt <= 1) {
+      if (attempt <= maxAttempts) {
         messages.push({ role: 'assistant', content: lastRaw })
         messages.push({
           role: 'user',
@@ -734,7 +767,10 @@ export async function mcpFlow(
       }
     }
     if (!validatedConfig && !fragmentRun) {
-      aiFailure ??= '模型两次输出都未通过 StructuredCrudConfigSchema 校验'
+      // 回放失败的原因与模型无关：说清楚「这段录像本身没过校验」，别让用户以为是网络问题。
+      aiFailure ??= opts.replay
+        ? '录制产物未通过 StructuredCrudConfigSchema 校验'
+        : '模型两次输出都未通过 StructuredCrudConfigSchema 校验'
     }
   }
 
@@ -772,7 +808,7 @@ export async function mcpFlow(
       traceIds,
       featureHints: [],
       warnings: result.warnings,
-      engine: 'ai',
+      engine: opts.replay ? 'replay' : 'ai',
       target,
       kind: 'fragment',
       fragment: { kind, config, code: result.code, summary: result.summary },
@@ -872,7 +908,7 @@ export async function mcpFlow(
       // 不再硬编码空数组 —— 那会让 UI 的提示条永远不出现。
       featureHints: describeUnrenderedFeatures(validatedConfig),
       warnings: generated.warnings,
-      engine: 'ai',
+      engine: opts.replay ? 'replay' : 'ai',
       kind: 'crud',
     }
   }
@@ -959,10 +995,12 @@ export async function mcpFlow(
     // 它们不是「已生成」，而是「已识别、需要手工实现」—— 用户有权知道。
     featureHints: legacy.featureHints ?? [],
     warnings: legacy.warnings ?? [],
-    engine: opts.ai?.apiKey ? 'rule-fallback' : 'rule',
-    fallbackReason: opts.ai?.apiKey
-      ? (aiFailure ?? 'AI 路径未产出可用配置，已回退到规则引擎')
-      : undefined,
+    engine: opts.ai?.apiKey || opts.replay ? 'rule-fallback' : 'rule',
+    // 回放失败的原因与「模型答错」不同，用户要能分辨是录像坏了还是模型不可用。
+    fallbackReason:
+      opts.ai?.apiKey || opts.replay
+        ? (aiFailure ?? 'AI 路径未产出可用配置，已回退到规则引擎')
+        : undefined,
     target: legacy.target,
     // 离线兜底 = CLI 那条规则引擎：它只产 CRUD 整页，没有片段入口。
     // 这一点必须在 UI 里说出来，而不是让「只做一个表单」的诉求悄悄变形成一整页。

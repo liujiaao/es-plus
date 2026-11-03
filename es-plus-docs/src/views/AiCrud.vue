@@ -37,6 +37,7 @@
             >{{ opt.label }}</el-radio-button>
           </el-radio-group>
         </div>
+        <el-button data-testid="replay-open" @click="openReplay" :icon="VideoPlay">{{ t('aiCrud.replayOpen') }}</el-button>
         <el-button @click="showSettings = true" :icon="Setting">{{ t('aiCrud.settings') }}</el-button>
       </div>
     </div>
@@ -159,6 +160,38 @@
       </div>
     </div>
 
+    <!-- 录制回放：零 key、零成本的「AI 路径」演示。
+         它重放的是之前录下来的模型回答，仍走同一条校验/生成/预览链路 ——
+         所以页面上必须写清「这是录像」，不能让人以为刚刚调用了模型。 -->
+    <el-dialog v-model="showReplay" :title="t('aiCrud.replayTitle')" width="560px">
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom: 16px">
+        {{ t('aiCrud.replayDialogNotice') }}
+      </el-alert>
+      <el-select
+        v-model="replayId"
+        :loading="replayLoading"
+        :placeholder="t('aiCrud.replayPick')"
+        style="width: 100%"
+        data-testid="replay-select"
+      >
+        <el-option v-for="e in replayEntries" :key="e.id" :label="e.title" :value="e.id" />
+      </el-select>
+      <p v-if="selectedReplay" class="replay-meta" data-testid="replay-meta">
+        {{ t('aiCrud.replayMeta', { model: selectedReplay.model || '—', date: selectedReplay.generatedAt || '—' }) }}
+      </p>
+      <template #footer>
+        <el-button @click="showReplay = false">{{ t('aiCrud.cancel') }}</el-button>
+        <el-button
+          type="primary"
+          :disabled="!replayId || loading"
+          data-testid="replay-run"
+          @click="handleReplay"
+        >
+          {{ t('aiCrud.replayRun') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- AI Settings Dialog (unchanged) -->
     <el-dialog v-model="showSettings" :title="t('aiCrud.settings')" width="500px">
       <el-form label-position="top">
@@ -205,9 +238,9 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
+import { Setting, VideoPlay } from '@element-plus/icons-vue'
 import { EsCrudPage } from 'es-plus'
-import { mcpFlow, type ChatMessage, type TraceEntry } from '@/utils/mcp-flow'
+import { mcpFlow, type ChatMessage, type ReplaySource, type TraceEntry } from '@/utils/mcp-flow'
 // 「免 key（中继）」/「本地代理」/「自带网关」三种宿主的唯一判断处
 import { resolveAiEndpoint } from '@/utils/ai-endpoint'
 // 渲染端选项与称呼来自三站清单（与顶栏切换器、案例卡互链同一份）
@@ -267,22 +300,24 @@ const previewWarnings = ref<string[]>([])
  * 本次**实际**走通的引擎。标签不能只看「有没有填 key」：
  * 填了 key 但 OpenAI 报错时走的是规则引擎，标成「AI 引擎」就是假话。
  */
-const engine = ref<'ai' | 'rule' | 'rule-fallback' | null>(null)
+const engine = ref<'ai' | 'rule' | 'rule-fallback' | 'replay' | null>(null)
 const fallbackReason = ref<string | undefined>(undefined)
 
 /**
  * 是否展示「离线只产 CRUD 整页」的边界说明。
- * 已生成时只信事实（engine），未生成时按是否填了 key 预告 —— 与引擎标签同一条口径。
+ * 回放走的是 AI 链路（能出片段与复杂配置），所以它与 ai 一样不算离线。
  */
 const showOfflineScope = computed(() =>
-  engine.value ? engine.value !== 'ai' : !useAI.value,
+  engine.value ? engine.value !== 'ai' && engine.value !== 'replay' : !useAI.value,
 )
 
 /**
  * 引擎标签：`null`（还没生成）时按「是否填了 key」预告，一旦有结果就**只信事实**。
+ * 回放必须单独成一种标签 —— 它展示的是真管线的输出，但不是这一次的模型回答。
  */
-const engineTag = computed<{ label: string; type: 'success' | 'info' | 'warning' }>(() => {
+const engineTag = computed<{ label: string; type: 'success' | 'info' | 'warning' | 'primary' }>(() => {
   if (engine.value === 'ai') return { label: t('aiCrud.engineAi'), type: 'success' }
+  if (engine.value === 'replay') return { label: t('aiCrud.engineReplay'), type: 'primary' }
   if (engine.value === 'rule') return { label: t('aiCrud.engineRule'), type: 'info' }
   if (engine.value === 'rule-fallback') {
     return { label: t('aiCrud.engineRuleFallback'), type: 'warning' }
@@ -381,16 +416,82 @@ const generatedPkg = computed(() => PACKAGE_OF[generatedTarget.value])
 const isDevProxyBase = computed(() => aiConfig.baseUrl.startsWith('/openai'))
 const showSettings = ref(false)
 
-// ─── handlers ──────────────────────────────────────────────────────────
-const handleSend = async (text: string) => {
-  if (loading.value) return
-  // 填了 key 却没填 Base URL：给一个可执行的错误，而不是让 fetch 打到
-  // 相对路径（线上会 404，本地会命中静态服务器）后只在 trace 里留一行。
-  if (aiConfig.apiKey && !aiConfig.baseUrl.trim()) {
-    ElMessage.error(t('aiCrud.baseUrlRequired'))
-    showSettings.value = true
-    return
+// ─── 录制回放（B6）──────────────────────────────────────────────────────
+/**
+ * 回放条目直接来自案例清单（`src/cases/generated/registry.js`，由 manifest 生成）：
+ * 画廊页与工作台看的是同一批「冻结配置」，不存在第二份清单 —— 这也是 B8「把静态
+ * 冻结页统一成回放入口」的做法：不是再建一个列表，而是让两者都读同一份。
+ *
+ * 用动态 import：清单会连带 7 份 schema/config，静态引入会把整套案例塞进
+ * /ai-crud 的路由 chunk，而只有点了「回放」的人才需要它们。
+ */
+interface ReplayEntry {
+  id: string
+  title: string
+  nl: string
+  model?: string
+  generatedAt?: string
+  config: Record<string, unknown>
+}
+const showReplay = ref(false)
+const replayLoading = ref(false)
+const replayEntries = ref<ReplayEntry[]>([])
+const replayId = ref('')
+const selectedReplay = computed(() => replayEntries.value.find((e) => e.id === replayId.value))
+
+const openReplay = async () => {
+  showReplay.value = true
+  if (replayEntries.value.length > 0) return
+  replayLoading.value = true
+  try {
+    const { AI_CASES } = await import('@/cases/generated/registry.js')
+    replayEntries.value = Object.values(AI_CASES as Record<string, any>)
+      .filter((c) => c.replay === 'frozen-config' && c.config)
+      .map((c) => ({
+        id: c.id,
+        title: c.title,
+        nl: c.meta?.nl ?? '',
+        model: c.meta?.model,
+        generatedAt: c.meta?.generatedAt,
+        config: c.config,
+      }))
+    replayId.value = replayEntries.value[0]?.id ?? ''
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    replayLoading.value = false
   }
+}
+
+/**
+ * 重放：把录制产物喂给**与实时 AI 完全相同**的 mcpFlow（校验 → 信封路由 →
+ * generateFromConfig → 预览）。模型那一步是录像，其余都是真管线。
+ */
+const handleReplay = async () => {
+  const entry = selectedReplay.value
+  if (!entry || loading.value) return
+  showReplay.value = false
+  await runFlow(entry.nl || entry.title, {
+    replay: {
+      content: entry.config,
+      meta: { caseId: entry.id, model: entry.model, generatedAt: entry.generatedAt },
+    },
+  })
+  // 回放的目的就是「看产物」：直接落到预览标签，而不是让访客再去点。
+  activeTab.value = 'preview'
+}
+
+// ─── handlers ──────────────────────────────────────────────────────────
+/**
+ * 一次生成的公共壳：实时 AI、录制回放、离线规则引擎走的是同一个 mcpFlow，
+ * 区别只在 `ai` / `replay` 这个传输层选项。把提交结果的部分放在这里，
+ * 是为了让「回放」不可能悄悄长成第二条展示链路 —— 它必须与实时调用同一条。
+ */
+const runFlow = async (
+  text: string,
+  transport: { ai?: typeof aiConfig; replay?: ReplaySource },
+) => {
+  if (loading.value) return
 
   // push user message + clear stale highlights
   const userMsg: ChatMessage = {
@@ -407,7 +508,8 @@ const handleSend = async (text: string) => {
   try {
     const result = await mcpFlow(text, messages.value.slice(0, -1), {
       // 免 key 的中继模式下 apiKey 是空串：请求仍要发，Authorization 由中继补上
-      ai: useAI.value ? { ...aiConfig } : undefined,
+      ai: transport.ai,
+      replay: transport.replay,
       onTrace: (entry) => traces.value.push(entry),
       signal: abortController.signal,
       currentConfig: currentStructuredConfig.value ?? undefined,
@@ -464,6 +566,17 @@ const handleSend = async (text: string) => {
 const handlePreset = (preset: Preset) => {
   const text = locale.value === 'en-US' ? preset.prompt.en : preset.prompt.zh
   handleSend(text)
+}
+
+const handleSend = async (text: string) => {
+  // 填了 key 却没填 Base URL：给一个可执行的错误，而不是让 fetch 打到
+  // 相对路径（线上会 404，本地会命中静态服务器）后只在 trace 里留一行。
+  if (aiConfig.apiKey && !aiConfig.baseUrl.trim()) {
+    ElMessage.error(t('aiCrud.baseUrlRequired'))
+    showSettings.value = true
+    return
+  }
+  await runFlow(text, { ai: useAI.value ? { ...aiConfig } : undefined })
 }
 
 const handleReset = () => {

@@ -198,3 +198,49 @@ test('AI 故障：标签变成「规则引擎（AI 回退）」，不冒充 AI �
   // 回退产物仍是可用的整页（离线兜底的意义就在这里）
   await expect(page.locator('[data-testid="preview-area"] .el-table')).toBeVisible()
 })
+
+/**
+ * 回放（B6）—— 零 key、零成本的「AI 路径」演示。
+ *
+ * 线上零 key 的访客原本只能看到规则引擎（只产 CRUD 整页）：片段、多 tab 弹窗、
+ * 树表这些「AI 才做得到」的东西根本无法演示。回放把**录制下来的模型回答**喂进
+ * 同一条 mcpFlow（校验 → 信封路由 → 生成 → 预览），于是：
+ *
+ *   · 标签必须写「回放（录制产物）」，不能冒充「AI 引擎」——它不是这一次的模型回答；
+ *   · 产物必须过完整管线：预览里能看到录制配置里的弹窗/多选等能力，而不是一张平表；
+ *   · 全程不发任何模型请求（这一条由「不填 key 也能跑通」本身证明）。
+ */
+test('回放：零 key 重放已录制的模型输出，标签如实标注', async ({ page }) => {
+  // 任何模型请求都会让这条测试失败：回放不该碰网络
+  let modelCalls = 0
+  await page.route('**/chat/completions', async (route) => {
+    modelCalls += 1
+    return route.abort()
+  })
+
+  await gotoCrud(page)
+  await page.locator('[data-testid="replay-open"]').click()
+
+  const dlg = page.locator('.el-dialog:visible')
+  await expect(dlg).toBeVisible()
+  await expect(dlg).toContainText('不需要 API Key')
+  // 条目来自 manifest 生成的 registry（7 个 frozen-config），不是页面里另写的清单
+  await expect(dlg.locator('[data-testid="replay-select"]')).toBeVisible()
+  // 录制元数据必须显示（录制日期 / 模型），否则「回放」和「实时」在界面上分不开。
+  // 不钉具体模型名：清单顺序或某个案例换模型时，这条不该假红。
+  await expect(dlg.locator('[data-testid="replay-meta"]')).toContainText('录制于')
+  await expect(dlg.locator('[data-testid="replay-meta"]')).toContainText('模型')
+
+  await dlg.locator('[data-testid="replay-run"]').click()
+
+  await expect(page.locator('[data-testid="engine-tag"]')).toHaveText('回放（录制产物）')
+  // 重放后直接落到预览标签
+  await expect(page.locator('[data-testid="preview-area"]')).toBeVisible()
+
+  const area = page.locator('[data-testid="preview-area"]')
+  await expect(area.locator('.el-table')).toBeVisible()
+  // 录制配置（employee-roster）里有 add/edit/view 三个弹窗 → 按钮必须真的出现
+  await expect(area.getByRole('button', { name: '新增', exact: true })).toBeVisible()
+
+  expect(modelCalls).toBe(0)
+})

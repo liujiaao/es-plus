@@ -152,7 +152,41 @@ async function runAi(canned) {
   if (res.engine !== 'ai') fail(`片段路径 engine=${res.engine}，应为 ai`)
 }
 
-// ── 4. 静态规则：禁止把「字段白名单」加回来 ─────────────────────────────
+// ── 4. 回放路径：与实时 AI 逐值一致（模型那一步是录像，其余不许分叉）──────
+{
+  const cfg = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'docs/cases/generated/employee-roster.config.json'), 'utf8')
+  )
+  const live = await runAi(cfg)
+  const replay = await site.mcpFlow('回放', [], {
+    replay: { content: cfg, meta: { caseId: 'employee-roster', model: 'x', generatedAt: '2026-10-26' } },
+    onTrace: noop,
+    target: 'vue3',
+  })
+
+  if (replay.engine !== 'replay') fail(`回放路径 engine=${replay.engine}，应为 replay（不能冒充实时 AI）`)
+  if (live.engine !== 'ai') fail(`实时路径 engine=${live.engine}，应为 ai`)
+  if (JSON.stringify(replay.previewSchema) !== JSON.stringify(live.previewSchema)) {
+    fail('回放与实时 AI 的 previewSchema 不一致 —— 回放长出了第二条链路')
+  }
+  if (replay.code !== live.code) fail('回放与实时 AI 的生成代码不一致')
+  if (JSON.stringify(replay.featureHints) !== JSON.stringify(live.featureHints)) {
+    fail('回放与实时 AI 的 featureHints 不一致')
+  }
+
+  // 录制坏了不许「重试」：回放没有第二次机会，必须如实失败并落回规则引擎。
+  const broken = await site.mcpFlow('坏录像', [], {
+    replay: { content: { nope: true } },
+    onTrace: noop,
+    target: 'vue3',
+  })
+  if (broken.engine !== 'rule-fallback') fail(`坏录像应回退规则引擎，实际 ${broken.engine}`)
+  if (!broken.fallbackReason?.includes('录制产物')) {
+    fail(`坏录像的回退原因没说「录制产物」，实际：${broken.fallbackReason}`)
+  }
+}
+
+// ── 5. 静态规则：禁止把「字段白名单」加回来 ─────────────────────────────
 const mcpFlowSrc = fs.readFileSync(path.join(ROOT, 'es-plus-docs/src/utils/mcp-flow.ts'), 'utf8')
 if (/\[\s*['"]prop['"]\s*,\s*['"]label['"]/.test(mcpFlowSrc)) {
   fail("mcp-flow.ts 出现 ['prop','label',…] 式字段白名单 —— 预览必须渲染生成物，不能挑字段")
@@ -185,4 +219,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ check:preview-parity — 预览 payload 与生成物逐值一致（离线 / AI / 片段三路）')
+console.log('✓ check:preview-parity — 预览 payload 与生成物逐值一致（离线 / AI / 片段 / 回放四路）')
