@@ -10,6 +10,7 @@ import { registerGenerateFromConfig } from "./generate-from-config.js";
 import { registerDetectProjectTarget } from "./detect-project-target.js";
 import { registerGenerateCrud } from "./generate-crud.js";
 import { registerGenerateScene } from "./generate-scene.js";
+import { registerGenerateComposition } from "./generate-composition.js";
 import { registerGenerateForm } from "./generate-form.js";
 import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
@@ -25,9 +26,9 @@ import { withArgGuard } from "./_arg-guard.js";
  * profile 适配，故不能让它们反向依赖这 16 个工具的注册模块。这里 re-export，
  * 既有 `import { resolveToolProfile } from "./tools/index.js"` 不受影响。
  *
- * `front-door`：只留「场景路由器 + 前门 + 确定性支撑 + 单面片段」。
- *   · 保留 `generate_scene`（场景第一入口）、`generate_crud`（兼容前门）、
- *     `generate_form/table/dialog`（单组件显式诉求，
+ * `front-door`：只留「场景路由器 + 组合页 + 前门 + 确定性支撑 + 单面片段」。
+ *   · 保留 `generate_scene`（场景第一入口）、`generate_composition`（片段装页）、
+ *     `generate_crud`（兼容前门）、`generate_form/table/dialog`（单组件显式诉求，
  *     前门描述里明确让宿主在这种场景改用它们）、`validate_config`、`ingest_schema`、
  *     `refine_config`、`list_form_types`、`get_component_api`、`scaffold_page`、
  *     `doctor_page`、`detect_project_target`；
@@ -45,6 +46,8 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
   registerDetectProjectTarget(server, profile);
   // Scene router — the scene-first entry (P2). Same emitters as the tools below.
   registerGenerateScene(server);
+  // Page composer — assembles standalone fragments into one page (P6b).
+  registerGenerateComposition(server);
   // Front door — the preferred entry for any composite / CRUD request.
   registerGenerateCrud(server);
   // Standalone single-surface tools (explicit single-component asks, or embedding

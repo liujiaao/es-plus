@@ -113,8 +113,8 @@ describe("工具入参闸门 — 未知键不再静默消失", () => {
     expect(res.content[0].text).toContain("Form (FormBlock.vue)");
   });
 
-  it("闸门覆盖全部工具（16 个注册项全部走同一入口）", () => {
-    expect(Object.keys(tools)).toHaveLength(16);
+  it("闸门覆盖全部工具（17 个注册项全部走同一入口）", () => {
+    expect(Object.keys(tools)).toHaveLength(17);
     for (const [, tool] of Object.entries(tools)) {
       expect(tool.schema._def.unknownKeys).toBe("passthrough");
     }

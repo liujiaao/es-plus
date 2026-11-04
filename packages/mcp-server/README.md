@@ -5,7 +5,7 @@
 **三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 > **维护基线（先读这两份）**
-> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、16 个工具的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
+> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、工具面的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
 > - [AI-NATIVE-REMEDIATION-PLAN.md](./AI-NATIVE-REMEDIATION-PLAN.md) —— 面向「真实编译 100% + 准确率 95%」的 `AN-01..AN-29` 可执行计划、阶段门禁与验收口径。
 
 ## 客户端兼容矩阵
@@ -269,19 +269,23 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **16 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **17 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_scene` 是**场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_crud` 是**唯一前门**（自然语言复合页面走它 —— 你把需求填成 `surfaces`，路由由确定性代码完成）。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把 1–3 个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、前门、单面片段与确定性支撑工具（共 13 个）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 14 个）。
 
-### generate_scene（场景路由器 / SCENE ROUTER）
+### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
 按「用户要建什么」而不是「记得哪个工具名」来生成：`{ scene, intent }`，`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表（crud 与 `generate_crud` 同形，片段与对应单面工具同形）。路由与发射是确定性代码，产物与旧工具逐字节相同 —— 两个入口可无感切换。
 
-### generate_crud（唯一前门 / FRONT DOOR）
+### generate_composition（组合页 / PAGE COMPOSER）
 
-自然语言请求的统一入口。入参是 `surfaces` 意图表：query / table / form / dialog 各放哪些字段、要哪些弹窗。**有表格**的请求走 golden 覆盖的单一生成器（一次成码）；**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+把 1–3 个独立片段装配成一张页面：`{ name?, target?, nodes: [{ id, scene, intent }] }` → `Page.vue` + 每个节点一个文件。接线由 `ARTIFACT_RUNTIME` 派生：行按钮 key 命中弹窗节点 id 就开窗（标题取弹窗 `intent.defaultTitle`），否则升级为页面事件 `row-action`；查询/重置 → 表格 `reload`（新搜索回第 1 页）；提交 → 页面事件 `save`；弹窗成功 → 表格 `refresh`。页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`（未命中返回 `false`）。每个场景最多一个节点；vue2 弹窗只能是 `mode:'component'`。
+
+### generate_crud（兼容入口 / COMPAT adapter）
+
+与 `generate_scene` 的 `scene='crud'` 调用同一条 `emitScene` 路径（产物逐字节相同），保留旧工具名。入参是 `surfaces` 意图表：query / table / form / dialog 各放哪些字段、要哪些弹窗。**有表格**的请求走 golden 覆盖的单一生成器（一次成码）；**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，原样转交合成器。
 
 ### generate_form / generate_table / generate_dialog（单面片段）
 

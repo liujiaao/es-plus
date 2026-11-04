@@ -10,11 +10,12 @@
  *   · 对既有调用方，**删工具就是破坏**（MCP client 里写死的工具名会直接报错）。
  *
  * 于是本项只做三件事，并逐条钉住：
- *   1. **唯一前门**：只有 `generate_crud` 的描述带 `FRONT DOOR` 标签；
+ *   1. **唯一前门**：只有 `generate_scene` 的描述带 `FRONT DOOR` 标签
+ *      （registry 的 canonical entry 是真源；`generate_crud` 是兼容 adapter）；
  *   2. **层级标签**：`generate_crud_from_config` = ADVANCED，
  *      `generate_crud_page` / `generate_crud_schema` = LEGACY FALLBACK；
  *   3. **profile 开关**：`ESPLUS_MCP_PROFILE=front-door` 隐藏 1 个高级 + 2 个 legacy，
- *      其余工具（含单面片段与前门给宿主指的支撑工具）一个不少；未设置/未知值 = full。
+ *      其余工具（含场景路由器、组合页、单面片段与支撑工具）一个不少；未设置/未知值 = full。
  *   4. **引导面同源**：front-door 下没有任何已注册工具的描述（或 initialize 的
  *      instructions）还教宿主「去调」被隐藏的工具 —— 工具表少三个、文案却不改，
  *      宿主只会拿到 tool not found，且链路上没有任何运行时错误提示这是契约分叉。
@@ -39,6 +40,7 @@ const fail = (msg) => {
 const FULL_TOOLS = [
   'detect_project_target',
   'generate_scene',
+  'generate_composition',
   'generate_crud',
   'generate_form',
   'generate_table',
@@ -135,8 +137,8 @@ try {
       `含 \`FRONT DOOR\` 字样的工具应有且只有 1 个，实际 ${frontDoorLabel.length} 个` +
         (frontDoorLabel.length ? `（${frontDoorLabel.map((t) => t.name).join(', ')}）` : ''),
     )
-  } else if (frontDoorLabel[0].name !== 'generate_crud') {
-    fail(`\`FRONT DOOR\` 标签落在 ${frontDoorLabel[0].name} 上，应为 generate_crud`)
+  } else if (frontDoorLabel[0].name !== 'generate_scene') {
+    fail(`\`FRONT DOOR\` 标签落在 ${frontDoorLabel[0].name} 上，应为 generate_scene（registry 的 canonical entry）`)
   }
 
   // 4. 层级标签。
@@ -303,7 +305,7 @@ try {
 
   if (!failures.length) {
     console.log(
-      `✅ 工具面收敛：唯一 FRONT DOOR（generate_crud）；ADVANCED 1 / LEGACY 2；` +
+      `✅ 工具面收敛：唯一 FRONT DOOR（generate_scene）；ADVANCED 1 / LEGACY 2；` +
         `full ${fullNames.length} 个工具，front-door ${fdNames.length} 个（隐藏 ${FRONT_DOOR_HIDDEN.length} 个）`,
     )
   }

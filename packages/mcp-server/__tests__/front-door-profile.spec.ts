@@ -189,8 +189,8 @@ describe("工具描述（tools/list 的第一句）", () => {
   const full = captureToolDescriptions("full");
   const frontDoor = captureToolDescriptions("front-door");
 
-  it("front-door：13 个已注册工具的描述都不把宿主指向被隐藏的工具", () => {
-    expect(Object.keys(frontDoor)).toHaveLength(13);
+  it("front-door：14 个已注册工具的描述都不把宿主指向被隐藏的工具", () => {
+    expect(Object.keys(frontDoor)).toHaveLength(14);
     for (const [name, { desc }] of Object.entries(frontDoor)) {
       for (const hidden of HIDDEN) {
         expect(desc, `${name} 的描述里出现了未注册的 ${hidden}`).not.toContain(hidden);

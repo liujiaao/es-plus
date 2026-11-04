@@ -331,7 +331,7 @@ function buildContent(): string {
   const intro = [
     "# Natural-language → `generate_crud` surfaces — few-shot examples",
     "",
-    "`generate_crud` is the FRONT DOOR. Your only real decision is filling `surfaces`:",
+    "`generate_scene` (scene='crud') is the FRONT DOOR; `generate_crud` is the same route under a compatibility name and produces identical bytes. Your only real decision is filling `surfaces`:",
     "which of **query / table / form / dialog** the request implies, and the fields in each.",
     "Routing is then deterministic — you never pick a tool or orchestrate several:",
     "",

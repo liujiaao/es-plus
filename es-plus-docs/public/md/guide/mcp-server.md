@@ -257,12 +257,13 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **16 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **17 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、组合页、前门、单面片段与支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
-| `generate_scene` | **场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
-| `generate_crud` | **唯一前门**：自然语言 → 三端可编译的 CRUD 页面 | ✅ |
+| `generate_scene` | **前门 / 场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
+| `generate_composition` | **组合页**：把 1–3 个独立片段（table / form / dialog）装成一张能跑的 `Page.vue`，接线由运行时契约确定 | ✅ |
+| `generate_crud` | **兼容入口（adapter）**：与 `generate_scene` 的 `scene='crud'` 逐字节相同，保留旧工具名 | ✅ |
 | `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
 | `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
 | `generate_dialog` | 单面片段：独立 `useXxxDialog()` composable 或 `<es-dialog>` SFC | ✅ |
@@ -280,15 +281,25 @@ mcp-server-es-plus --help        # 用法说明
 
 > profile 是**工具面**的开关，不是能力差异：被隐藏的三个工具与 `generate_crud` 共用同一套确定性生成器，隐藏它们只是为了让宿主在前门与 legacy 路径之间没有选择歧义。提示词、resources 与工具描述会按同一份 profile 同步调整。
 
-### generate_scene（场景路由器 / SCENE ROUTER）
+### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
 **功能**：按「用户要建什么」而不是「记得哪个工具名」来生成。入参是 `{ scene, intent }`：`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表 —— `scene: 'crud'` 时与 `generate_crud` 的入参完全相同（`name` / `apiUrl` / `surfaces` / 可选旋钮），片段场景则与 `generate_table` / `generate_form` / `generate_dialog` 的入参相同。路由与发射由确定性代码完成，产物与对应旧工具**逐字节相同**，因此可以在两者之间无感切换。
 
-**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时；只知道「这是一个复合页面」时仍可用 `generate_crud`（唯一 FRONT DOOR 标签保持不变）。
+**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时。多个片段要装进**同一张页面**时用 `generate_composition`；普通列表/表格页面用 `scene: 'crud'`（`generate_crud` 是同一条路径的兼容别名）。
 
-### generate_crud（唯一前门 / FRONT DOOR）
+### generate_composition（组合页 / PAGE COMPOSER）
 
-**功能**：自然语言请求的统一入口。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+**功能**：把 1–3 个独立片段装配成一张页面 —— 产物是一份 `Page.vue` 加每个节点一个文件。入参 `{ name?, target?, nodes: [{ id, scene, intent }] }`，每个节点只放该场景的独立工具入参。接线由 `ARTIFACT_RUNTIME` 确定性派生：
+
+- 行按钮 key 与某个弹窗节点 id 相同 → 打开该弹窗（标题取弹窗 `intent.defaultTitle`，缺省用注册表标题），否则升级为页面事件 `row-action`；
+- 查询 → 表格 `reload(model)`（新搜索回第 1 页）；重置 → `reload()`（片段先清空字段）；
+- 表单提交 → 页面事件 `save`；弹窗提交成功 → 表格 `refresh()`（停留在当前页）。
+
+页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`，未命中 id 返回 `false`。每个场景最多一个节点（多弹窗请用 `scene: 'crud'` 的 `surfaces.dialog`）；vue2 页面的弹窗只能是 `mode: 'component'`。
+
+### generate_crud（兼容入口 / COMPAT adapter）
+
+**功能**：自然语言请求的兼容入口，与 `generate_scene` 的 `scene='crud'` 调用**同一条** `emitScene` 路径，产物逐字节相同，保留旧工具名以免破坏既有宿主。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，原样转交合成器。
 
 ### generate_form / generate_table / generate_dialog（单面片段）
 

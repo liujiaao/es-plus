@@ -263,16 +263,17 @@ Once configured, ask the AI things like:
 - *"Add a status filter (enum: active/archived) to the search form."*
 - *"Make the price column right-aligned and format as currency."*
 
-The AI calls the MCP server's `generate_crud` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
+The AI calls the MCP server's `generate_scene` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes **16 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the front door, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **17 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the page composer, the front door, the single-surface fragments, and the deterministic support tools remain.
 
 | Tool | Purpose | front-door |
 |------|---------|:----------:|
-| `generate_scene` | **SCENE ROUTER** — pick what is being built (`crud` / `table` / `form` / `dialog`) and pass that scene's intent table; output is byte-identical to the matching legacy tool. | ✅ |
-| `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. | ✅ |
+| `generate_scene` | **FRONT DOOR / SCENE ROUTER** — pick what is being built (`crud` / `table` / `form` / `dialog`) and pass that scene's intent table; output is byte-identical to the matching legacy tool. | ✅ |
+| `generate_composition` | **PAGE COMPOSER** — assemble 1–3 standalone fragments (`table` / `form` / `dialog`) into one working `Page.vue`; wiring is derived from the artifact runtime contract (row action → dialog, query/reset → table reload, submit → `save` event, dialog success → table refresh). | ✅ |
+| `generate_crud` | **COMPAT ENTRY (adapter)** — same bytes as `generate_scene` with `scene: 'crud'`; fill the `surfaces` intent table. Kept for hosts that already call this name. | ✅ |
 | `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`) | ✅ |
 | `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination) | ✅ |
 | `generate_dialog` | **Fragment** — a reusable `useXxxDialog()` composable (default) or a self-contained `<es-dialog>` SFC | ✅ |

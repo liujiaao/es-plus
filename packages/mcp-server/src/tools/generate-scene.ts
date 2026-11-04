@@ -16,16 +16,17 @@ import { formShape } from "./generate-form.js";
 import { dialogShape } from "./generate-dialog.js";
 
 /**
- * SCENE ROUTER —— 按「场景」而不是按「入口」定义的第一入口。
+ * SCENE ROUTER —— 按「场景」而不是按「入口」定义的第一入口（FRONT DOOR）。
  *
- * 与 `generate_crud` 的分工（P2 期间并存）：
+ * 与 `generate_crud` 的分工（P2 起并存，标签口径在 P7 收敛）：
  *   - `generate_scene` 收 `{ scene, intent }`：`scene` 是用户要建什么，
  *     `intent` 是该场景的意图表。路由是**确定性**的（见 shared `emitScene`）。
- *   - `generate_crud` 仍是 `FRONT DOOR` 标签（216 条 CRUD 语料与多个守卫以它为准），
- *     其参数形状就是 `scene:'crud'` 的意图表；两者调用**同一个** `emitScene`，
- *     故产物逐字节相同。
+ *   - `generate_crud` 是**兼容入口（adapter）**：参数形状就是 `scene:'crud'` 的
+ *     意图表；两者调用**同一个** `emitScene`，故产物逐字节相同。它不再是标签
+ *     意义上的前门 —— registry 的 canonical entry 才是唯一真源。
  *   - 片段场景复用 `generate_table` / `generate_form` / `generate_dialog` 的形状，
  *     同样落到同一发射器；不是第二份生成逻辑。
+ *   - 多个片段要装进**同一张页面**时用 `generate_composition`（P6b），不是本工具。
  *
  * 为什么需要外层 `intent` 而不是把所有键平铺：四个场景的 `mode` / `tableOptions`
  * 语义不同（CRUD 的 mode = schema/sfc；dialog 的 mode = composable/component），
@@ -83,7 +84,7 @@ function invalidIntentError(scene: SceneId, issues: z.ZodIssue[]): string {
 export function registerGenerateScene(server: McpServer) {
   server.tool(
     "generate_scene",
-    "SCENE ROUTER — the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is exactly the generate_crud argument object (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for the fragment scenes it is exactly the generate_table / generate_form / generate_dialog argument object. Routing and emission are deterministic, and the output is byte-identical to the corresponding legacy tool. Use this when you want to name the artifact class explicitly; use generate_crud when you only know 'this is a composite page'.",
+    "FRONT DOOR — SCENE ROUTER: the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is exactly the generate_crud argument object (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for the fragment scenes it is exactly the generate_table / generate_form / generate_dialog argument object. Routing and emission are deterministic, and the output is byte-identical to the corresponding legacy tool. Use generate_composition when several of these pieces must live TOGETHER in one page; `generate_crud` remains available as the compatibility entry for a plain list/table page and produces the same bytes as scene='crud'.",
     sceneShape,
     async (args: any) => {
       const scene: SceneId = isScene(args.scene) ? args.scene : DEFAULT_SCENE;
