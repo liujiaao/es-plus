@@ -1,16 +1,18 @@
 <template>
-  <es-form :model="model" :form-item-list="formItems" :config-btn="configBtn" />
+  <es-form ref="formRef" :model="model" :form-item-list="formItems" :config-btn="configBtn" />
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
+const emit = defineEmits(['submit', 'query', 'reset'])
 interface FormModel {
   keyword: string
   status: string | number | ''
 }
 
 const model = reactive<FormModel>({ keyword: '', status: '' })
+const formRef = ref<{ validate: () => Promise<unknown>; resetFields: () => void } | null>(null)
 const formItems = [
   {
     "prop": "keyword",
@@ -50,7 +52,12 @@ const formItems = [
 ]
 
 const configBtn = [
-  { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
-  { name: '重置', key: 'rest', triggerEvent: true },
+  { name: '查询', type: 'primary', key: 'query', click: (model) => emit('query', { ...model }) },
+  { name: '重置', key: 'rest', click: () => emit('reset') },
 ]
+
+const validate = () => formRef.value?.validate()
+const resetFields = () => formRef.value?.resetFields()
+
+defineExpose({ model, validate, resetFields })
 </script>

@@ -11,6 +11,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const emit = defineEmits(['row-action'])
 const columns = [
   { prop: 'orderNo', label: '订单号', width: 150 },
   { prop: 'customer', label: '客户', minWidth: 140 },
@@ -22,7 +23,7 @@ const columns = [
     width: 100,
     fixed: 'right',
     btns: [
-      { name: '查看', triggerEvent: true },
+      { name: '查看', clickEvent: (row) => emit('row-action', { key: '查看', row }) },
     ]
   },
 ]
@@ -36,6 +37,11 @@ const options = {
 }
 
 const tableData = ref([])
-const tableRef = ref(null)
+const tableRef = ref<any>(null)
 const pagination = ref({ current: 1, pageSize: 10, total: 0 })
+
+const refresh = (model) => tableRef.value?.refresh?.(model)
+const reload = (model) => tableRef.value?.reload?.(model)
+
+defineExpose({ refresh, reload })
 </script>

@@ -29,7 +29,7 @@ const formData = reactive<DialogModel>({ ...DEFAULTS })
 const visible = ref(false)
 const title = ref('')
 const formRef = ref<{ validate: () => Promise<unknown> } | null>(null)
-let onSuccess: ((data: DialogModel) => void) | undefined
+let successHandler: ((data: DialogModel) => void) | undefined
 
 const formItems = [
   {
@@ -87,10 +87,10 @@ const formItems = [
   }
 ]
 
-function open(t: string = '新增订单', row: Partial<DialogModel> = {}, success?: (data: DialogModel) => void) {
+function open(t: string = '新增订单', row: Partial<DialogModel> = {}, onSuccess?: (data: DialogModel) => void) {
   title.value = t
   Object.assign(formData, DEFAULTS, row)
-  onSuccess = success
+  successHandler = onSuccess
   visible.value = true
 }
 
@@ -109,7 +109,7 @@ async function handleConfirm() {
   const url = title.value === '新增' ? '/api/demo/orders' : `/api/demo/orders/${formData.id}`
   await httpRequest({ url, method, data: formData })
   close()
-  onSuccess?.(formData)
+  successHandler?.(formData)
 }
 
 const isView = computed(() => title.value === '查看')
@@ -122,5 +122,5 @@ const configBtn = computed(() => isView.value
     { name: '确定', type: 'primary', click: () => handleConfirm() }
   ])
 
-defineExpose({ open })
+defineExpose({ open, close })
 </script>
