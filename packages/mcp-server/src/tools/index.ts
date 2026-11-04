@@ -25,7 +25,7 @@ import { withArgGuard } from "./_arg-guard.js";
  * AN-26 —— 工具面 profile。
  *
  * 定义与解析已下沉到 `src/profile.ts`（见那里的说明）：提示词/资源也要按**同一份**
- * profile 适配，故不能让它们反向依赖这 16 个工具的注册模块。这里 re-export，
+ * profile 适配，故不能让它们反向依赖这一层的工具注册模块。这里 re-export，
  * 既有 `import { resolveToolProfile } from "./tools/index.js"` 不受影响。
  *
  * `front-door`：只留「场景路由器 + 组合页 + 前门 + 确定性支撑 + 单面片段」。

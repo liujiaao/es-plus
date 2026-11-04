@@ -246,6 +246,9 @@ const FieldConfigSchema = z.object({
       labelField: z.string().optional(),
       valueField: z.string().optional(),
     })
+    // 嵌套对象必须 passthrough（`_arg-guard.ts` 的前提）：否则 `labelFeild` 在 SDK
+    // 解析阶段就被剥掉，handler 与闸门都看不到这个拼写错误。
+    .passthrough()
     .optional()
     .describe("Remote options source for Select/Cascader — use instead of dataOptions when options come from an API."),
   width: z.union([z.number(), z.string()]).optional(),
@@ -362,6 +365,11 @@ export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
         "Row-expand content declared ON the `type:'expand'` column (AI-09 子项②). Same shape/semantics as the top-level `expandConfig`; use it when the expander is not the leading column or when `columns` is the source of truth. If BOTH are set, the top-level one wins on the expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
       ),
   })
+    // 列契约的两条描述（`x-*` 保留、未知名丢弃并告警）只有在键能活到生成器时才成立：
+    // 裸 `z.object` 会在 SDK 解析阶段把 `x-note` 和拼错的 `widht` 一起剥掉，
+    // 生成器的 `strippedColumnKeys` 扫描永远看不到它们。passthrough 后由
+    // `_arg-guard` 对非 `x-` 键给 did-you-mean，`x-*` 原样进入产物。
+    .passthrough()
 );
 
 /**

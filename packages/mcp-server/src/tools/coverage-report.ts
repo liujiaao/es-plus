@@ -33,10 +33,15 @@ interface ToolResult {
   structuredContent?: Record<string, unknown>;
 }
 
-const partShape = z.object({
-  scene: z.enum([...SCENE_IDS] as [SceneId, ...SceneId[]]).describe("crud / table / form / dialog"),
-  intent: z.record(z.string(), z.any()).describe("That scene's intent table (same shape validate_intent checks)."),
-});
+// 嵌套形状必须 passthrough（`_arg-guard.ts` 的前提）：否则清单里的未知键在 SDK 解析
+// 阶段就被洗掉，分类器拿到的是「干净」输入 —— 拼错的 `extensionPoint` 会让一个
+// 需要宿主写代码的页面被判成 L1，且 isError:false，是假绿结论。
+const partShape = z
+  .object({
+    scene: z.enum([...SCENE_IDS] as [SceneId, ...SceneId[]]).describe("crud / table / form / dialog"),
+    intent: z.record(z.string(), z.any()).describe("That scene's intent table (same shape validate_intent checks)."),
+  })
+  .passthrough();
 
 const pageShape = z
   .object({
@@ -65,6 +70,7 @@ const pageShape = z
         "Host-code items the declarative path cannot emit (charts, bespoke business widgets, custom routing…). Any entry makes the page L3.",
       ),
   })
+  .passthrough()
   .describe("One page of the structured inventory.");
 
 function shapeProblems(scene: SceneId, intent: unknown): readonly string[] {

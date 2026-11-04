@@ -31,14 +31,20 @@ export const tableShape = {
     .describe("Pagination seed ({pageSize, pageSizes}); current/total are managed by the component."),
   rowButtons: z
     .array(
-      z.object({
-        name: z.string().min(1),
-        type: z.string().optional(),
-        key: z.string().optional(),
-      })
+      z
+        .object({
+          name: z.string().min(1),
+          type: z.string().optional(),
+          key: z.string().optional(),
+        })
+        // 嵌套形状必须 passthrough（见 `_arg-guard.ts`）：否则 `typee` 这类拼写在
+        // SDK 解析阶段消失，行按钮静默失去样式，而闸门看不到任何未知键。
+        .passthrough()
     )
     .optional()
-    .describe("Optional operation-column buttons. Emitted with triggerEvent:true (events only) — the host listens and handles them; no inline handler bodies are generated."),
+    .describe(
+      "Optional operation-column buttons. Each button emits a `row-action` event (`{ key, row }`) from an inlined clickEvent and the wrapper declares `emits: ['row-action']` — the host listens on the wrapper. This is NOT the CRUD page's `triggerEvent` (that only links query/reset toolbar buttons to table refresh)."
+    ),
   columns: z
     .array(ColumnSchema)
     .optional()
@@ -69,7 +75,7 @@ export const tableShape = {
 export function registerGenerateTable(server: McpServer) {
   server.tool(
     "generate_table",
-    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead. Operation-column buttons are emitted as triggerEvent events (no inline handlers) so the fragment always compiles in isolation. This entry accepts the same table vocabulary as the CRUD front door: explicit `columns` (multi-level group headers / index-selection-expand columns), top-level `treeConfig` (cross-renderer nested tree), top-level `expandConfig` (declarative expanded content), `mergeConfig` (adjacent-row merge) and `rowkey` — all emitted with the same contract as the CRUD page. `tableOptions.treeConfig` / `tableOptions.expandConfig` remain the vxe-only rich variants. The only table-surface key NOT accepted here is `tableBtns` (toolbar buttons with code:1/2 positioning live in the CRUD page schema) — use generate_scene with scene='crud' for it.",
+    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead. Operation-column buttons emit a `row-action` event (`{ key, row }`) from an inlined clickEvent, so the fragment always compiles in isolation — this is not the CRUD page's `triggerEvent` (query/reset toolbar linking). This entry accepts the same table vocabulary as the CRUD front door: explicit `columns` (multi-level group headers / index-selection-expand columns), top-level `treeConfig` (cross-renderer nested tree), top-level `expandConfig` (declarative expanded content), `mergeConfig` (adjacent-row merge) and `rowkey` — all emitted with the same contract as the CRUD page. `tableOptions.treeConfig` / `tableOptions.expandConfig` remain the vxe-only rich variants. The only table-surface key NOT accepted here is `tableBtns` (toolbar buttons with code:1/2 positioning live in the CRUD page schema) — use generate_scene with scene='crud' for it.",
     tableShape,
     async (args: any) => {
       try {

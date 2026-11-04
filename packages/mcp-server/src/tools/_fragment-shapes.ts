@@ -165,6 +165,9 @@ export const surfaceFieldSchema = z.object({
       labelField: z.string().optional(),
       valueField: z.string().optional(),
     })
+    // 见文件头：嵌套形状也必须 passthrough，否则 `labelFeild` 这类拼写错误在 SDK
+    // 解析阶段就被剥掉，闸门的 did-you-mean 永远看不到它。
+    .passthrough()
     .optional()
     .describe("Remote options source for Select/Cascader — use instead of dataOptions when options come from an API."),
   width: z.union([z.number(), z.string()]).optional(),

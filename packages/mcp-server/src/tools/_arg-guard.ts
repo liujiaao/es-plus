@@ -15,7 +15,9 @@ import { collectUnknownKeys, formatUnknownKey } from "@es-plus/shared";
  * 分支），且 `validateToolInput` 用的是它自己的 `safeParse` —— 于是两条路都可行：
  *
  *   · `.passthrough()`：未知键活到 handler，由本模块判红并回结构化错误。选它而不是
- *     `.strict()`：strict 会让 SDK 抛协议级 `InvalidParams`，错误串是 zod 的
+ *     `.strict()`：strict 的失败发生在 SDK 的 `validateToolInput` 里（抛
+ *     `McpError(InvalidParams)`），随后被 SDK 统一包成工具错误结果 —— 正文是
+ *     `Input validation error: Invalid arguments for tool X: <zod 原文>`，即 zod 的
  *     `unrecognized_keys` 原文，既没有 did-you-mean，也不会把「本次**没有**生成任何
  *     东西」讲清楚；回到工具结果里报，则与 `validate_config` 的 `isError` 同一种
  *     语义 —— 宿主/模型都能读到可修的正文。
@@ -91,7 +93,6 @@ export function withArgGuard(server: McpServer): McpServer {
           description,
           inputSchema: schema.passthrough(),
           ...(options?.outputSchema ? { outputSchema: options.outputSchema } : {}),
-          
         },
         wrapped,
       );
