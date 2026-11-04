@@ -690,12 +690,50 @@ describe('composition@3 复核 — 主从参数映射与 behavior 改名', () =>
     const r = emitComposition(plan([table('orders'), table('items')]))
     expect(r.isError).toBeFalsy()
     expect(r.envelope!.warnings.join('\n')).toMatch(/没有声明 role: 'master'/)
-    expect(r.envelope!.warnings.join('\n')).toMatch(/<id>Refresh \/ <id>Reload/)
+    // 告警必须点名**页面真的暴露的方法**：节点 id 是 kebab-case，暴露面是 camelCase。
+    // 写 `<id>Refresh` 会让宿主拼出 `order-listRefresh` 这种不存在的方法。
+    const kebab = emitComposition(plan([table('order-list'), table('order-items')]))
+    const warning = kebab.envelope!.warnings.join('\n')
+    expect(warning).toContain('orderListRefresh / orderListReload')
+    expect(warning).toContain('orderItemsRefresh / orderItemsReload')
+    expect(warning).not.toContain('<id>')
+    for (const name of ['orderListRefresh', 'orderListReload', 'orderItemsRefresh', 'orderItemsReload']) {
+      expect(kebab.envelope!.faces.expose).toContain(name)
+    }
     // 声明 master 后告警消失（数据接线有唯一默认表）。
     const withMaster = emitComposition(plan([{ ...table('orders'), role: 'master' }, table('items')]))
     expect(withMaster.envelope!.warnings.join('\n')).not.toMatch(/没有声明 role: 'master'/)
     // ui-only 本来就把数据通道全部交给宿主，不重复告警。
     const uiOnly = emitComposition(plan([table('orders'), table('items')], { behavior: 'ui-only' }))
     expect(uiOnly.envelope!.warnings.join('\n')).not.toMatch(/没有声明 role: 'master'/)
+  })
+
+  it('表单按钮不可达的接线必须告警（buttons 决定片段真的会发哪些事件）', () => {
+    // 缺省 buttons:'none'：片段不渲染任何按钮，query/submit/reset 都不会发生，
+    // 派生出来的三根线全是死分支。
+    const none = emitComposition(plan([table(), form('filter', { buttons: undefined })]))
+    expect(none.isError).toBeFalsy()
+    const wNone = none.envelope!.warnings.join('\n')
+    expect(wNone).toMatch(/buttons:'none'（缺省）/)
+    expect(wNone).toContain('不渲染任何按钮')
+    for (const channel of ['query', 'submit', 'reset']) expect(wNone).toContain(channel)
+    // 告警必须给出**可执行的**恢复办法（而不是只说「接不上」）。
+    expect(wNone).toContain("buttons:'query'")
+    expect(wNone).toContain("buttons:'submit'")
+
+    // buttons:'query' 只发 query/reset：派生的 submit→save 是死分支。
+    const query = emitComposition(plan([table(), form()]))
+    const wQuery = query.envelope!.warnings.join('\n')
+    expect(wQuery).toMatch(/buttons:'query'/)
+    expect(wQuery).toContain('submit 的接线永远不会被触发')
+    expect(wQuery).not.toContain('query 的接线永远不会被触发')
+    expect(wQuery).not.toContain('reset 的接线永远不会被触发')
+
+    // buttons:'submit' 只发 submit/reset：查询走不通；提交/重置不告警。
+    const submit = emitComposition(plan([table(), form('filter', { buttons: 'submit' })]))
+    const wSubmit = submit.envelope!.warnings.join('\n')
+    expect(wSubmit).toContain('query 的接线永远不会被触发')
+    expect(wSubmit).not.toContain('submit 的接线永远不会被触发')
+    expect(wSubmit).not.toContain('reset 的接线永远不会被触发')
   })
 })

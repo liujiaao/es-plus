@@ -122,6 +122,21 @@ export const COMPOSITION_CONTRACT_VERSION = 'es-plus.composition@3' as const
 export type ComposableScene = 'table' | 'form' | 'dialog'
 
 /**
+ * 片段表单**真的会发**的事件，由 `buttons` 决定（`generateFormBlock` 只在按钮的
+ * click 里 `emit`；`buttons:'none'` 时片段整块按钮区都不渲染，绑定在页面上的
+ * `@query/@submit/@reset` 永远等不到）。
+ *
+ * 与 `ARTIFACT_RUNTIME` 的 `emits` 不是一回事：契约表声明的是**组件 API**（宿主可以
+ * 自己接），这里回答的是「这份**具体产物**在 UI 上能否触发」—— 组合页正是按后者
+ * 接线，所以两者都要，但不可互相替代。
+ */
+const FORM_CHANNELS_BY_BUTTONS: Record<string, readonly string[]> = {
+  none: [],
+  query: ['query', 'reset'],
+  submit: ['submit', 'reset'],
+}
+
+/**
  * 页面行为档位。
  *
  * - `data-wiring`（缺省）：派生数据接线 —— 查询/重置让默认表格回第 1 页取数，
@@ -1205,11 +1220,47 @@ export function emitComposition(plan: CompositionPlan): CompositionResult {
       tableNodes.length > 1 &&
       !tableNodes.some((n) => analysis.roles[n.id] === 'master')
     ) {
+      // 名字必须是**页面真的暴露的方法**：节点 id 是小写 kebab-case（`order-list`），
+      // 暴露面却是 camelCase（`orderListRefresh`）。写 `<id>Refresh` 会让宿主照着拼出
+      // `order-listRefresh` —— 一个不存在的方法（与 @row-action 悬空监听同一类缺陷：
+      // 告知面承诺了一个调不到的东西）。
+      const refreshNames = tableNodes
+        .map((n) => `${camelOf(n.componentName)}Refresh / ${camelOf(n.componentName)}Reload`)
+        .join('、')
       warnings.push(
         `多表页面没有声明 role: 'master'（${tableNodes.map((n) => n.id).join(', ')}）：没有唯一默认表，` +
-          `查询/重置/弹窗成功的派生接线已升级为页面事件。刷新请调用页面暴露的 <id>Refresh / <id>Reload，` +
+          `查询/重置/弹窗成功的派生接线已升级为页面事件。刷新请调用页面暴露的 ${refreshNames}，` +
           `或给主表节点声明 role: 'master' 以恢复派生接线。`,
       )
+    }
+    // 表单片段能不能发出 query/submit/reset，由它的 `buttons` 决定（见
+    // FORM_CHANNELS_BY_BUTTONS）：`buttons:'none'`（缺省）时按钮区整块隐藏，三个事件
+    // 都不会发生 —— 而组合页照契约接线，于是这些接线成了**永远不触发的死分支**：页面
+    // 看起来「查询/保存都接好了」，界面上却根本没有按钮。组合不代改节点意图（否则节点
+    // 产物就与单独 generate_form 不一致），只把这件事写成告警并给出恢复办法。
+    const formNode = analysis.nodes.find((n) => n.scene === 'form')
+    if (formNode) {
+      const source = plan.nodes.find((n) => n.id === formNode.id)
+      const rawButtons = (source?.plan.intent as { buttons?: unknown } | undefined)?.buttons
+      const buttons = typeof rawButtons === 'string' ? rawButtons : 'none'
+      const reachable = FORM_CHANNELS_BY_BUTTONS[buttons] ?? []
+      const dead = [
+        ...new Set(
+          analysis.wires
+            .filter((w) => w.from.node === formNode.id && !reachable.includes(String(w.from.channel)))
+            .map((w) => String(w.from.channel)),
+        ),
+      ]
+      if (dead.length) {
+        const modeText = buttons === 'none' ? "buttons:'none'（缺省）" : `buttons:'${buttons}'`
+        warnings.push(
+          `表单节点 "${formNode.id}" 是 ${modeText}：片段${
+            reachable.length ? `只渲染 ${reachable.join('/')} 按钮` : '不渲染任何按钮'
+          }，因此 ${dead.join(' / ')} 的接线永远不会被触发（页面会照常声明事件/调用，只是等不到）。` +
+            `要让它生效，给该节点 intent 设 buttons:'query'（查询表单：query + reset）或 buttons:'submit'（保存表单：submit + reset）` +
+            `—— 组合不代改节点意图，否则节点产物就与单独 generate_form 不一致。`,
+        )
+      }
     }
     const page: ArtifactFile = {
       path: 'Page.vue',

@@ -36,27 +36,32 @@ import { SCENE_INTENT_SCHEMAS } from "./generate-scene.js";
  */
 const COMPOSABLE_SCENES = ["table", "form", "dialog"] as const;
 
-const nodeShape = z.object({
-  id: z
-    .string()
-    .describe(
-      "Node id in kebab-case (e.g. 'users', 'query-form', 'edit'). It is the output file name (<id>.vue), the template ref source, and — for a dialog node — the row-button key that opens it ('edit' binds the 编辑 button).",
-    ),
-  role: z
-    .string()
-    .optional()
-    .describe(
-      "Optional role label (kebab-case, unique per scene). `master` marks the table that form query/reset and dialog success default to in a multi-table page. Which row button loads a detail table is a product decision — express it in `wires`, not as a role.",
-    ),
-  scene: z
-    .enum(COMPOSABLE_SCENES as unknown as [string, ...string[]])
-    .describe("Which standalone fragment this node is. 'crud' is not composable (it is already a full page)."),
-  intent: z
-    .record(z.string(), z.any())
-    .describe(
-      "The node's intent table: exactly the generate_table / generate_form / generate_dialog argument object for this scene. For a dialog, `defaultTitle` is the title used by the composed page's open().",
-    ),
-});
+const nodeShape = z
+  .object({
+    id: z
+      .string()
+      .describe(
+        "Node id in kebab-case (e.g. 'users', 'query-form', 'edit'). It is the output file name (<id>.vue), the template ref source, and — for a dialog node — the row-button key that opens it ('edit' binds the 编辑 button).",
+      ),
+    role: z
+      .string()
+      .optional()
+      .describe(
+        "Optional role label (kebab-case, unique per scene). `master` marks the table that form query/reset and dialog success default to in a multi-table page. Which row button loads a detail table is a product decision — express it in `wires`, not as a role.",
+      ),
+    scene: z
+      .enum(COMPOSABLE_SCENES as unknown as [string, ...string[]])
+      .describe("Which standalone fragment this node is. 'crud' is not composable (it is already a full page)."),
+    intent: z
+      .record(z.string(), z.any())
+      .describe(
+        "The node's intent table: exactly the generate_table / generate_form / generate_dialog argument object for this scene. For a dialog, `defaultTitle` is the title used by the composed page's open().",
+      ),
+  })
+  // 节点层的未知键（`roles` 拼成 `role` 的反面、把 `intent` 的键写到节点层）必须活到
+  // 闸门：handler 只对 `intent` 做 collectUnknownKeys，裸 `z.object` 会让这些键在 SDK
+  // 解析阶段消失，于是「以为声明了 master、实际退化为无主表」还会被当成成功产物返回。
+  .passthrough();
 
 /**
  * 接线形状。子对象一律 `.passthrough()`：未知键 / `{node, page}` 混用必须**原样到达**
@@ -145,7 +150,7 @@ export function registerGenerateComposition(server: McpServer) {
   registerArtifactTool(
     server,
     "generate_composition",
-    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing (and the artifact/envelope warnings name the upgrade and both remedies: `<id>Refresh`/`<id>Reload`, or declare role 'master'). Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model; use to.model to pass only chosen row fields); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests; the default `data-wiring` only derives table reload/refresh (no HTTP requests — use scene 'crud' for built-in add/edit/delete). Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
+    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The form fragment only emits the events its `buttons` render — `buttons` defaults to 'none' (no buttons at all: query/submit/reset never fire), 'query' emits query+reset, 'submit' emits submit+reset. Composition does NOT rewrite a node's intent, so wires from a channel that form cannot emit are reported in `warnings` (they would never fire — e.g. page 'save' with no save button). The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing (and the artifact/envelope warnings name the upgrade and both remedies: the page's per-node `<nodeCamel>Refresh`/`<nodeCamel>Reload` methods — node `order-list` exposes `orderListRefresh`/`orderListReload` — or declare role 'master'). Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model; use to.model to pass only chosen row fields); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests; the default `data-wiring` only derives table reload/refresh (no HTTP requests — use scene 'crud' for built-in add/edit/delete). Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
     compositionShape,
     async (args: any) => {
       const nodes = Array.isArray(args.nodes) ? args.nodes : [];
