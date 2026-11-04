@@ -22,7 +22,7 @@ export const tableShape = {
   tableOptions: tableBlockOptionsSchema
     .optional()
     .describe(
-      "Container options — the SAME declarative subset as generate_crud's tableOptions (core TableOptions minus function values): appearance (border/stripe/size/showHeader/emptyText/leftText), height (heightType/tabHeight/height), columns (multiSelect/snIndex), state (cachePageSelection), row (rowkey/rowClassName/defaultSort), request (refetchKeepPage/localPagination/configTableOut), engine (virtual/engine/rowHeight/estimatedRowHeight/overscanCount), inline edit (editConfig — requires engine:'vxe').",
+      "Container options — the SAME declarative subset as generate_crud's tableOptions (core TableOptions minus function values): appearance (border/stripe/size/showHeader/emptyText/leftText), height (heightType/tabHeight/height), columns (multiSelect/snIndex), state (cachePageSelection), row (rowkey/rowClassName/defaultSort), request (refetchKeepPage/localPagination/configTableOut), engine (virtual/engine/rowHeight/estimatedRowHeight/overscanCount), tree (treeConfig — vxe rich tree), row expand (expandConfig — vxe switch), inline edit (editConfig — requires engine:'vxe').",
     ),
   pagination: tablePaginationSchema
     .optional()
@@ -42,7 +42,7 @@ export const tableShape = {
 export function registerGenerateTable(server: McpServer) {
   server.tool(
     "generate_table",
-    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead. Operation-column buttons are emitted as triggerEvent events (no inline handlers) so the fragment always compiles in isolation.",
+    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead. Operation-column buttons are emitted as triggerEvent events (no inline handlers) so the fragment always compiles in isolation. NOT accepted at this entry (use generate_scene with scene='crud' for them): explicit `columns` (multi-level group headers / index-selection-expand columns), top-level `treeConfig` (cross-renderer nested tree), top-level `expandConfig` (declarative expanded content), `mergeConfig` (adjacent-row merge) and `tableBtns`. `tableOptions.treeConfig` / `tableOptions.expandConfig` here are the vxe-only rich variants.",
     tableShape,
     async (args: any) => {
       try {

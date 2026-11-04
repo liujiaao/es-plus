@@ -44,13 +44,17 @@ MCP server **不调用模型、不写文件、不持有会话**。所有“理�
 
 ### 1.2 五条不变量
 
-| # | 不变量 | 现状（2026-10-20） | 目标态 |
+> 下表是 **2026-10-20 的审计基线**，不是当前状态。当前状态由 `check:render-plan`、
+> `check:unknown-keys`、`check:tool-surface`、`check:artifact-envelope` 等守卫持续对账；
+> 读能力请以守卫输出与工具描述为准，不要引用本表当作现状。
+
+| # | 不变量 | 基线（2026-10-20） | 目标态 |
 |---|---|---|---|
 | I1 | **单一真源**：一份 IR 驱动三端，生成器不得有只对某端成立的语义 | ⚠️ 部分成立：`multiSelect`/`snIndex`/`ellipsis`/`defaultSort` 存在三端差异 | AN-09 / AN-10 |
-| I2 | **无静默降级**：每个键要么三端生效，要么显式报错/告警 | ❌ 多处静默丢弃：未知键、`render`/`formatter`、`permissions`、`pageSizes` | AN-08 / AN-11 |
+| I2 | **无静默降级**：每个键要么三端生效，要么显式报错/告警 | ⚠️ 部分成立：未知键已在边界报错；片段表单 `render`/`formatter` 显式告警；`permissions`/sfc 旋钮按 `render-plan` 降级告警（剩余差异见账本） | AN-08 / AN-11 / AN-22 |
 | I3 | **编译是发射器的性质**：金标 + 模型输出都跑真实编译，编译率参与门禁 | ❌ `compileRate` = “生成器没抛异常”，且不参与门禁 | AN-13 / AN-14 |
 | I4 | **准确率可审计**：受约束输入、无提示泄漏、分母完整 | ❌ `fixedFields` 全量注入、多个维度真空通过、片段不门禁 | AN-01 / AN-19 |
-| I5 | **前门唯一**：默认只暴露一条生成路径 | ❌ 三个工具都自称“主路径/推荐” | AN-27 |
+| I5 | **前门唯一**：默认只暴露一条生成路径 | ✅ 成立：唯一 `FRONT DOOR` = `generate_scene`；`generate_crud` = 兼容 adapter | AN-27 |
 
 > **任何 PR 不得在未更新对应 AN 条目的情况下削弱以上不变量。**
 
@@ -157,9 +161,9 @@ surfaces
 | 输入 | 实际链路 | 被工程化保障的程度 |
 |---|---|---|
 | 自然语言 | 宿主 → surfaces / config → 前门 | ✅ 有语料、有指标、有前门校验 |
-| PRD / 规格说明（文本） | 宿主自行抽取字段/动作 → surfaces | ⚠️ 无专用工具、无语料；`ingest_schema` 仅覆盖 OpenAPI/JSON Schema/样例 JSON |
+| PRD / 规格说明（文本） | 宿主自行抽取字段/动作 → surfaces | ⚠️ 有 **22 例**离线语料与付费观测腿（`scripts/eval/prd-leg.mjs`，只观测不门禁）；无确定性抽取工具 |
 | 原型 / 截图 / 设计稿 | 宿主（若有视觉）自行理解为字段 → surfaces | ❌ server 无图像入参；无语料、无指标 |
-| OpenAPI / JSON Schema / 样例 JSON | `ingest_schema` → 草稿 config | ✅ 确定性，但只到“类型→formtype” |
+| OpenAPI JSON / JSON Schema / 样例 JSON / TypeScript interface / SQL DDL | `ingest_schema` → 草稿 config | ✅ 确定性，但只到“类型→formtype”；OpenAPI YAML 需先转 JSON |
 | 已有页面 schema | `ingest_schema`（部分）/ 手工 config | ⚠️ |
 
 > **禁止在任何对外文案中声称 server 能直接读设计稿。** 视觉理解是宿主能力，server 只提供
@@ -167,7 +171,7 @@ surfaces
 
 ---
 
-## 4. 工具手册（15 个）
+## 4. 工具手册（full 17 / front-door 14）
 
 ### 4.0 工具面 profile（AN-26）
 
@@ -175,8 +179,8 @@ surfaces
 
 | profile | 注册数 | 隐藏 |
 |---|---|---|
-| `full`（**默认**） | 15 | — |
-| `front-door` | 12 | `generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
+| `full`（**默认**） | 17 | — |
+| `front-door` | 14 | `generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
 
 - 默认 `full` 是**刻意**的：§9.4 的废弃流程要求开关「默认关闭」，且存量宿主与本站文档仍在
   调 `generate_crud_from_config`；改默认会让它们在同一个小版本里静默失败。待 AN-25 收敛完成
@@ -191,20 +195,43 @@ surfaces
 | # | 工具 | 层 | 确定性 | 主要输出 | 是否调用模型 | 状态 |
 |---|---|---|---|---|---|---|
 | 1 | `detect_project_target` | 环境 | ✅ | `{ target }` | 否 | 稳定 |
-| 2 | `generate_crud` | **前门（FRONT DOOR）** | ✅ | 代码 + warnings | 否 | **推荐入口** |
-| 3 | `generate_form` | 片段 | ✅ | `<es-form>` SFC | 否 | 稳定 |
-| 4 | `generate_table` | 片段 | ✅ | `<es-table>` SFC | 否 | 稳定 |
-| 5 | `generate_dialog` | 片段 | ✅ | composable / `<es-dialog>` SFC | 否 | 稳定 |
-| 6 | `generate_crud_from_config` | 生成 | ✅ | 代码 + warnings | 否 | **ADVANCED**（已持有类型化配置） |
-| 7 | `generate_crud_schema` | legacy | ✅ | schema + wrapper | 否 | **LEGACY FALLBACK** |
-| 8 | `generate_crud_page` | legacy | ✅ | schema/SFC | 否 | **LEGACY FALLBACK** |
-| 9 | `validate_config` | 校验 | ✅ | errors / suggestions | 否 | 稳定 |
-| 10 | `refine_config` | 精修 | ✅ | diff / errors | 否 | 稳定 |
-| 11 | `ingest_schema` | 摄取 | ✅ | 草稿 config | 否 | 稳定 |
-| 12 | `get_component_api` | 参考 | ✅ | API 文档 | 否 | 稳定 |
-| 13 | `list_form_types` | 参考 | ✅ | formtype 列表 | 否 | 稳定 |
-| 14 | `scaffold_page` | 工程 | ✅ | 页面骨架 + 入口装配 | 否 | 稳定 |
-| 15 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
+| 2 | `generate_scene` | **前门（FRONT DOOR）** | ✅ | 代码 + warnings + 信封 | 否 | **推荐入口**（四场景路由） |
+| 3 | `generate_composition` | 组合 | ✅ | `Page.vue` + 逐节点片段 + 信封 | 否 | 稳定（1–3 个片段） |
+| 4 | `generate_crud` | 兼容前门（COMPAT ENTRY） | ✅ | 同 `scene='crud'`，字节一致 | 否 | 兼容入口 |
+| 5 | `generate_form` | 片段 | ✅ | `<es-form>` SFC | 否 | 稳定 |
+| 6 | `generate_table` | 片段 | ✅ | `<es-table>` SFC | 否 | 稳定 |
+| 7 | `generate_dialog` | 片段 | ✅ | composable / `<es-dialog>` SFC | 否 | 稳定 |
+| 8 | `generate_crud_from_config` | 生成 | ✅ | 代码 + warnings | 否 | **ADVANCED**（已持有类型化配置） |
+| 9 | `generate_crud_schema` | legacy | ✅ | schema + wrapper | 否 | **LEGACY FALLBACK** |
+| 10 | `generate_crud_page` | legacy | ✅ | schema/SFC | 否 | **LEGACY FALLBACK** |
+| 11 | `validate_config` | 校验 | ✅ | errors / suggestions | 否 | 稳定 |
+| 12 | `refine_config` | 精修 | ✅ | diff / errors | 否 | 稳定 |
+| 13 | `ingest_schema` | 摄取 | ✅ | 草稿 config | 否 | 稳定 |
+| 14 | `get_component_api` | 参考 | ✅ | API 文档 | 否 | 稳定 |
+| 15 | `list_form_types` | 参考 | ✅ | formtype 列表 | 否 | 稳定 |
+| 16 | `scaffold_page` | 工程 | ✅ | 页面骨架 + 入口装配 | 否 | 稳定 |
+| 17 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
+
+> 生成类工具（2–10）在客户端支持 MCP 结构化输出时，会把产物信封挂到
+> `structuredContent`：`contract` / `scene` / `artifact` / `target` / `mode` /
+> `files[]` / `config` / `warnings[]` / `fingerprint`；组合页另有 `nodes[]` /
+> `wires[]` / `faces` / `page`。`content.text` 仍是逐字节不变的旧文本。
+
+### 4.1b 场景路由器与组合页（P2 / P6b）
+
+#### `generate_scene`（前门）
+
+- **定位**：按「场景」而不是按「工具名」定义的第一入口。`scene` ∈ `crud` / `table` / `form` / `dialog`；`intent` 是该场景**对应旧工具的同一份**参数形状（不另写第二份）。
+- **内部**：`emitScene` → 四场景各落到既有发射器；`scene='crud'` 与 `generate_crud` 共享同一条路径，产物逐字节相同（`check:scene-parity`）。
+- **输出**：文本 + `structuredContent` 信封（见 §4.1 注）。
+- **边界**：`scene='table'` 的意图表就是 `generate_table` 的形状，因此**没有**顶层 `columns` / `treeConfig` / `expandConfig` / `mergeConfig` / `tableBtns`；需要这些能力时用 `scene='crud'`（哪怕只要一张表）。这一条是当前真实的能力不对称，不是措辞差异。
+
+#### `generate_composition`（组合页）
+
+- **定位**：把 1–3 份独立片段装成一张 `Page.vue`；节点只能是 `table` / `form` / `dialog`，每场景至多一个，`crud` 节点被拒绝（它已是整页）。
+- **接线**：由 `ARTIFACT_RUNTIME` 推导（行按钮 key 命中弹窗 id → `open`；查询 → 表格 `reload`；重置 → `reload`；提交 → 页面事件 `save`；弹窗成功 → 表格 `refresh`），不接受模型手写 wiring。
+- **输出**：文本 + `structuredContent`（组合信封：`nodes` / `wires` / `faces` / `page`）。
+- **边界**：组合页只装配 **UI 行为**，不内建 add/edit/delete 请求；`save` / 未命中的 `row-action` 上抛给宿主。需要内建请求语义时用 `scene='crud'`。
 
 ### 4.2 逐个说明
 
@@ -217,9 +244,9 @@ surfaces
 - **何时用**：**每次生成前**。
 - **维护注意**：新增 target 或 UI 库时，同步 [detect-project-target.ts](./src/tools/detect-project-target.ts) 与三端 README。
 
-#### 2) `generate_crud`（前门）
+#### 2) `generate_crud`（兼容前门 / COMPAT ENTRY）
 
-- **定位**：复合请求的唯一推荐入口。宿主只填 `surfaces`，路由由代码决定。
+- **定位**：`generate_scene` 在 `scene='crud'` 下的兼容别名；产物逐字节相同。新的接入方应使用 `generate_scene`（唯一 FRONT DOOR）。宿主只填 `surfaces`，路由由代码决定。
 - **输入**：
   - `name`、`apiUrl`（必填）
   - `surfaces{query?,table?,form?,dialog?}`（至少一个非空）
@@ -231,9 +258,9 @@ surfaces
 - **何时用**：任何包含列表/表格/CRUD/多组件组合的请求。
 - **何时不用**：明确只要一个独立 form/table/dialog（用片段工具）。
 - **已知边界（现状）**：
-  - `rowkey` 在 compose 调用中未透传（AN-06 邻项）。
   - 每个键 × mode 的发射/降级已收进 `render-plan.ts` 账本（AN-22），
     守卫 `check:render-plan` 对账；本节不再逐条罗列模式差异。
+  - `rowkey` 已并入 `tableOptions.rowkey` 并透传到弹窗（AN-06），冲突时取顶层并告警。
 - **旋钮形状**：8 颗可选旋钮（`tableOptions`/`formLayout`/`operationColumn`/`tableBtns`/
   `toolbarBtns`/`expandConfig`/`treeConfig`/`mergeConfig`）是**显式 zod 3 形状 + `.strict()`**
   （AN-21，`_front-door-knobs.ts`），未知键在工具层直接报错；与 shared 权威 Zod 的逐键
@@ -247,7 +274,7 @@ surfaces
 - **输入**：`fields`、`target`、`typescript`、`i18n`、`context`、`buttons`、`formLayout`。
 - **内部**：`generateFormBlock`；自包含 reactive model + formItemList。
 - **输出**：`.vue` SFC。
-- **已知边界**：字段级 `render`/`formatter` 在片段表单中被静默丢弃（AN-11）。
+- **已知边界**：字段级 `render`/`formatter` 不被片段表单消费——产物会**显式告警**并点名字段（AN-11⑤）；自定义控件请手写 item 并去掉 `formtype`，或走 CRUD schema 路径。
 - **维护注意**：片段工具与 CRUD 共用 `buildFormItem`；改一处必须回归两处。
 
 #### 4) `generate_table`
@@ -256,7 +283,7 @@ surfaces
 - **输入**：`fields`、`apiUrl`、`target`、`typescript`、`i18n`、`tableOptions`、`pagination`、`rowButtons`。
 - **内部**：`generateTableBlock`；行按钮以 `triggerEvent` 发出，不内联 handler。
 - **已知边界**：
-  - 入参无 `columns`/`treeConfig`/`expandConfig`/`mergeConfig`/`tableBtns`（AN-22）；
+  - `tableOptions` 已收 vxe 富树/展开（`treeConfig` / `expandConfig`）；**不收**顶层跨端 `treeConfig`、顶层声明式 `expandConfig`、`columns`、`mergeConfig`、`tableBtns` —— 需要这些能力时用 `generate_scene`（`scene='crud'`）；
   - `editConfig` 可用但无 `editRender` 表达通道，`engine:'vxe'` 时为静默 no-op（AN-11）。
 - **维护注意**：`tableShape` 同时是 `validate_config({type:'es-table-config'})` 的判据。
 
@@ -304,7 +331,7 @@ surfaces
   - `es-table-config` / `es-form-config` / `es-dialog-config` → 复用片段工具的 Zod 形状；
   - 其余 → Ajv JSON Schema（`esplus://schemas/*`）。
 - **输出**：`errors[]` + `suggestions[]`。
-- **已知边界**：未知键被静默剥离（AN-08）。
+- **已知边界**：未知键在 Zod strip 之前由 `collectUnknownKeys` 报告（含 did-you-mean），`x-*` 放行。
 - **维护注意**：三类片段配置的判据必须与工具入参同源；不得新增第三份字段清单。
 
 #### 10) `refine_config`
@@ -563,7 +590,7 @@ __tests__/golden/cases/
 4. **禁止静默丢弃**：任何无法表达的键必须告警或报错，并保留扩展点标记。
 5. **禁止第二份字段清单**：schema、tool shape、validator 必须同源或由守卫对账。
 6. **legacy 工具不删但降级**：`generate_crud_schema`/`generate_crud_page` 仅作 fallback。
-7. **未知键策略**：现状是静默剥离（缺陷）；目标态见 AN-08（严格 IR + `x-*` 逃生口）。
+7. **未知键策略**：`validate_config` / 前门在 Zod strip **之前**用 `collectUnknownKeys` 报告未知键（含 did-you-mean），`x-*` 放行；生成器内部的别名归一化只做有据可查的搬迁（`normalize-config.ts`）。
 
 ---
 

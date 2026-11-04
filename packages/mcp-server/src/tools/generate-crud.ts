@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { emitScene, type CrudIntent } from "@es-plus/shared";
+import { emitSceneArtifact, type CrudIntent } from "@es-plus/shared";
+import { withEnvelope } from "./_artifact-content.js";
 import { surfaceFieldSchema } from "./_fragment-shapes.js";
 import { TableBtnSchema, ToolbarBtnSchema } from "./generate-from-config.js";
 import {
@@ -150,13 +151,11 @@ export const crudShape = {
 export function registerGenerateCrud(server: McpServer) {
   server.tool(
     "generate_crud",
-    "COMPAT ENTRY (adapter) — same product as generate_scene with scene='crud' (byte-identical), kept for hosts that already call this name. Use it for ANY request that involves a list/table, CRUD, search + results, or multiple es-plus pieces working together. Your ONE job is to fill `surfaces`: set query/table/form field lists and the dialog list to match what the request implies (any subset is valid — table-only, query+table, table+add/edit, full CRUD, etc.). A `surfaces.dialog` entry is either a canned key ('add'/'edit'/'view') or a full object `{ key, title?, width?, fullscreen?, formItems? }` when the request names a custom dialog id/title/width or a per-dialog field list. Routing is then deterministic: table-bearing requests compile through the golden-covered single generator; no-table subsets emit self-contained fragments. Do NOT manually orchestrate generate_form/generate_table/generate_dialog for a composite page — fill surfaces here and let the routing compose them. When the user wants several standalone pieces assembled into one page (not a CRUD page), call generate_composition instead. Use the standalone tools only for an explicit single-component ask or to embed a fragment next to non-es-plus components. Optional config knobs — tableOptions / formLayout / operationColumn / tableBtns / toolbarBtns / expandConfig / treeConfig / mergeConfig — may be set alongside `surfaces`; each is forwarded verbatim into the composed config, so fill them only when the request names those specifics. A no-table request whose only surface is `dialog` emits one JSX composable PER dialog entry (named use<Key>Dialog): each entry's `formItems` overrides the shared form/query body, its `title` becomes open()'s default title, and its `width`/`fullscreen` are applied. Because the dialog body is a JSX render, that path needs a JSX plugin; if the host wants a self-contained dialog with NO JSX dependency, call generate_dialog with mode:'component' instead.",
+    "COMPAT ENTRY (adapter) — same product as generate_scene with scene='crud' (byte-identical), kept for hosts that already call this name. Use it for ANY request that involves a list/table, CRUD, search + results, or multiple es-plus pieces working together. Your ONE job is to fill `surfaces`: set query/table/form field lists and the dialog list to match what the request implies (any subset is valid — table-only, query+table, table+add/edit, full CRUD, etc.). A `surfaces.dialog` entry is either a canned key ('add'/'edit'/'view') or a full object `{ key, title?, width?, fullscreen?, formItems? }` when the request names a custom dialog id/title/width or a per-dialog field list. Routing is then deterministic: table-bearing requests compile through the golden-covered single generator; no-table subsets emit self-contained fragments. Do NOT manually orchestrate generate_form/generate_table/generate_dialog for a composite page — fill surfaces here and let the routing compose them. When the user wants several standalone pieces assembled into one page (not a CRUD page), call generate_composition instead. Use the standalone tools only for an explicit single-component ask or to embed a fragment next to non-es-plus components. Optional config knobs — tableOptions / formLayout / operationColumn / tableBtns / toolbarBtns / expandConfig / treeConfig / mergeConfig — may be set alongside `surfaces`; each is forwarded verbatim into the composed config, so fill them only when the request names those specifics. A no-table request whose only surface is `dialog` emits one JSX composable PER dialog entry (named use<Key>Dialog): each entry's `formItems` overrides the shared form/query body, its `title` becomes open()'s default title, and its `width`/`fullscreen` are applied. Because the dialog body is a JSX render, that path needs a JSX plugin; if the host wants a self-contained dialog with NO JSX dependency, call generate_dialog with mode:'component' instead. When the client supports MCP structured output, the artifact envelope is also returned as `structuredContent`; the text content is unchanged.",
     crudShape,
     async (args: any) => {
-      const result = emitScene({ scene: "crud", intent: args as CrudIntent });
-      return result.isError
-        ? { content: [{ type: "text", text: result.text }], isError: true }
-        : { content: [{ type: "text", text: result.text }] };
+      const result = emitSceneArtifact({ scene: "crud", intent: args as CrudIntent });
+      return withEnvelope(result.text, result.envelope, result.isError);
     }
   );
 }

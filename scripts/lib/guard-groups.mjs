@@ -99,6 +99,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:contract',
       'check:tool-shapes',
       'check:tool-surface',
+      'check:doc-drift',
       'check:render-plan',
       'check:threeway',
       'check:crud-actions',

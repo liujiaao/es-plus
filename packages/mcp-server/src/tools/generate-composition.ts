@@ -6,6 +6,7 @@ import {
   formatUnknownKey,
   type CompositionPlan,
 } from "@es-plus/shared";
+import { withEnvelope } from "./_artifact-content.js";
 import { SCENE_INTENT_SCHEMAS } from "./generate-scene.js";
 
 /**
@@ -22,8 +23,8 @@ import { SCENE_INTENT_SCHEMAS } from "./generate-scene.js";
  *
  * 本工具只做三件事：①每个节点的 intent 用它所属场景的**同一份** Zod 形状校验
  * （不另写一份，漂移会让两个入口对同一 JSON 解析出不同值）；②调 `emitComposition`；
- * ③原样返回产物文本。接线（行动作 → 开窗、查询/重置 → 重载、成功 → 刷新表格）
- * 由 shared 从 `ARTIFACT_RUNTIME` 派生，本层不猜、不改写。
+ * ③返回产物文本，并把组合信封挂到 `structuredContent`（节点信封 / 接线 / 对外两面 /
+ * 指纹），文本本身不二次加工。
  *
  * 组合节点只能是 table / form / dialog（crud 是整页，不能被二次装配）；每个场景
  * 最多一个节点；vue2 页面的弹窗只能是 `mode:'component'`。这些约束都由
@@ -68,7 +69,7 @@ function nodeError(id: string, lines: string[]): string {
 export function registerGenerateComposition(server: McpServer) {
   server.tool(
     "generate_composition",
-    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1–3 nodes, each `{ id, scene, intent }` where scene is 'table' / 'form' / 'dialog' and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the table from page 1; the reset button reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the table. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no table).",
+    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1–3 nodes, each `{ id, scene, intent }` where scene is 'table' / 'form' / 'dialog' and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the table from page 1; the reset button reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the table. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no table). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
     compositionShape,
     async (args: any) => {
       const nodes = Array.isArray(args.nodes) ? args.nodes : [];
@@ -143,9 +144,7 @@ export function registerGenerateComposition(server: McpServer) {
         nodes: parsedNodes,
       } as CompositionPlan;
       const result = emitComposition(plan);
-      return result.isError
-        ? { content: [{ type: "text", text: result.text }], isError: true }
-        : { content: [{ type: "text", text: result.text }] };
+      return withEnvelope(result.text, result.envelope, result.isError);
     }
   );
 }
