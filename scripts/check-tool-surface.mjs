@@ -260,6 +260,24 @@ try {
         re: new RegExp(`\\*\\*${fullNames.length}\\s*个工具\\*\\*`),
         want: `${fullNames.length} 个工具`,
       },
+      // 参考文档里的**第二组数字**：资源类别数与 profile 计数。此前这两处是手写的
+      // （「共 9 类」/「full 15 / front-door 12」），前者会随资源新增漂移，后者已经
+      // 与实际工具面相反（19/16）却没有任何门禁 —— 数字写在文档里没有守卫就一定会漂。
+      {
+        file: 'es-plus-docs/src/docs/mcp-server.md',
+        re: new RegExp(`共\\s*\\*\\*${resourceFamilies}\\s*类\\*\\*`),
+        want: `共 ${resourceFamilies} 类资源`,
+      },
+      {
+        file: 'es-plus-docs/src/docs/mcp-server.en.md',
+        re: new RegExp(`\\*\\*${resourceFamilies}\\*\\*\\s*resource families`),
+        want: `${resourceFamilies} resource families`,
+      },
+      {
+        file: 'es-plus-docs/src/docs/mcp-server.md',
+        re: new RegExp(`\`full\`\\s*${fullNames.length}\\s*/\\s*\`front-door\`\\s*${fdNames.length}`),
+        want: `源码断言（full ${fullNames.length} / front-door ${fdNames.length}）`,
+      },
     ]
     for (const { file, re, want } of claims) {
       const text = docText(file)
