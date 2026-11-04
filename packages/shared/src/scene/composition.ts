@@ -841,6 +841,11 @@ function pageCode(
 
   /** 行按钮处理器名字：单表沿用 `onRowAction`，多表按节点派生避免串台。 */
   const rowHandler = (table: EmittedNode): string => (multiTable ? `onRowAction${table.componentName}` : 'onRowAction')
+  /**
+   * 该表是否真有行按钮接线。模板只在处理器确实被发射时才绑定 `@row-action` ——
+   * 否则会生成一个指向未定义方法的监听（Vue 运行期告警、点击即 TypeError）。
+   */
+  const hasRowHandler = (table: EmittedNode): boolean => rowsOf(table.id).length > 0
 
   /** 页面事件调用表达式（vue2 / vue3 两套语法）。 */
   const emitExpr = (event: string, arg?: string): string =>
@@ -924,7 +929,7 @@ function pageCode(
     for (const n of componentNodes) {
       const attrs =
         n.scene === 'table'
-          ? ` ref="${refVar(n)}" @row-action="${rowHandler(n)}"`
+          ? ` ref="${refVar(n)}"${hasRowHandler(n) ? ` @row-action="${rowHandler(n)}"` : ''}`
           : n.scene === 'form'
             ? ` ref="${refVar(n)}" @query="onQuery" @submit="onSubmit" @reset="onReset"`
             : ` ref="${refVar(n)}"`
@@ -1121,7 +1126,12 @@ function pageCode(
   lines.push('<template>')
   lines.push('  <div class="es-composed-page">')
   for (const n of componentNodes) {
-    if (n.scene === 'table') lines.push(`    <${n.componentName} ref="${refVar(n)}" @row-action="${rowHandler(n)}" />`)
+    if (n.scene === 'table')
+      lines.push(
+        hasRowHandler(n)
+          ? `    <${n.componentName} ref="${refVar(n)}" @row-action="${rowHandler(n)}" />`
+          : `    <${n.componentName} ref="${refVar(n)}" />`,
+      )
     else if (n.scene === 'form')
       lines.push(`    <${n.componentName} ref="${refVar(n)}" @query="onQuery" @submit="onSubmit" @reset="onReset" />`)
     else lines.push(`    <${n.componentName} ref="${refVar(n)}" />`)
@@ -1185,6 +1195,21 @@ export function emitComposition(plan: CompositionPlan): CompositionResult {
     const warnings: string[] = []
     for (const n of nodes) {
       for (const w of n.envelope.warnings) warnings.push(`[${n.id}] ${w}`)
+    }
+    // 多表且没有 master：数据接线**静默**升级为页面事件（不猜哪张是主表）。宿主若
+    // 以为 data-wiring 仍在接表，页面看起来「连上了」却只发事件。这条告警把升级写成
+    // 交付面的事实，并给出恢复派生接线的两种做法。
+    const tableNodes = analysis.nodes.filter((n) => n.scene === 'table')
+    if (
+      analysis.behavior === 'data-wiring' &&
+      tableNodes.length > 1 &&
+      !tableNodes.some((n) => analysis.roles[n.id] === 'master')
+    ) {
+      warnings.push(
+        `多表页面没有声明 role: 'master'（${tableNodes.map((n) => n.id).join(', ')}）：没有唯一默认表，` +
+          `查询/重置/弹窗成功的派生接线已升级为页面事件。刷新请调用页面暴露的 <id>Refresh / <id>Reload，` +
+          `或给主表节点声明 role: 'master' 以恢复派生接线。`,
+      )
     }
     const page: ArtifactFile = {
       path: 'Page.vue',

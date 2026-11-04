@@ -237,4 +237,46 @@ describe('组合页运行时（adapter-antdv · 表格 + 查询表单 + 弹窗�
     const inputs = Array.from(host.querySelectorAll('input')) as HTMLInputElement[]
     expect(inputs.some((i) => i.value === '李四')).toBe(true)
   })
+
+  it('主从 to.model：明细表只收到声明的外键，不是整行（P11 复核）', async () => {
+    const plan: CompositionPlan = {
+      target: 'antdv',
+      nodes: [
+        { id: 'users', role: 'master', plan: { scene: 'table', intent: fragmentIntent('frag-table-01-antdv.json') } },
+        { id: 'orders', plan: { scene: 'table', intent: fragmentIntent('frag-table-02-antdv.json') } },
+      ],
+      wires: [
+        {
+          from: { node: 'users', channel: 'row-action' },
+          to: { node: 'orders', channel: 'reload', model: { userId: '$row.id' } },
+          when: { rowAction: 'view' },
+        },
+      ],
+    } as CompositionPlan
+
+    const calls: Array<{ url: string; params: Record<string, unknown> }> = []
+    const httpRequest = async (req: Record<string, any>) => {
+      calls.push({ url: String(req.url), params: { ...(req.formParams ?? {}) } })
+      return { records: SEED.length, rows: SEED }
+    }
+    const Page = (await importPage(writeComposition(plan, 'master-detail'))).default
+    const wrapper = mount(Page, {
+      attachTo: document.body,
+      global: { plugins: [[EsPlus, { httpRequest }]] as any },
+    })
+    await flushPromises()
+    await nextTick()
+
+    const detailCalls = () => calls.filter((c) => c.url === '/api/orders')
+    const before = detailCalls().length
+    findButtonByText(wrapper.element, '查看')!.click()
+    await flushPromises()
+    await nextTick()
+
+    expect(detailCalls().length).toBe(before + 1)
+    const params = detailCalls()[detailCalls().length - 1].params
+    expect(params.userId).toBe(1)
+    expect(params.name).toBeUndefined()
+    expect(params.status).toBeUndefined()
+  })
 })

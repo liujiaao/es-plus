@@ -278,4 +278,49 @@ describe('组合页运行时（vue3 · 表格 + 查询表单 + 弹窗）', () =>
     expect(save).toBeTruthy()
     expect(save![0][0]).toMatchObject({ name: '王五' })
   })
+
+  it('主从 to.model：明细表只收到声明的外键，不是整行（P11 复核）', async () => {
+    // 两张表：users 是 master（有 查看 行按钮），orders 是明细（无行按钮）。
+    // 显式接线把主表 查看 映射到明细表 reload，且只映射 { userId: '$row.id' }。
+    const plan: CompositionPlan = {
+      target: 'vue3',
+      nodes: [
+        { id: 'users', role: 'master', plan: { scene: 'table', intent: fragmentIntent('frag-table-01-vue3.json') } },
+        { id: 'orders', plan: { scene: 'table', intent: fragmentIntent('frag-table-02-vue3.json') } },
+      ],
+      wires: [
+        {
+          from: { node: 'users', channel: 'row-action' },
+          to: { node: 'orders', channel: 'reload', model: { userId: '$row.id' } },
+          when: { rowAction: 'view' },
+        },
+      ],
+    } as CompositionPlan
+
+    const calls: Array<{ url: string; params: Record<string, unknown> }> = []
+    const httpRequest = async (req: Record<string, any>) => {
+      calls.push({ url: String(req.url), params: { ...(req.formParams ?? {}) } })
+      return { records: SEED.length, rows: SEED }
+    }
+    const Page = (await importPage(writeComposition(plan, 'master-detail'))).default
+    const wrapper = mount(Page, {
+      attachTo: document.body,
+      global: { plugins: [ElementPlus, [EsPlus, { httpRequest }]] as any },
+    })
+    await flushPromises()
+    await nextTick()
+
+    const detailCalls = () => calls.filter((c) => c.url === '/api/orders')
+    const before = detailCalls().length
+    findButtonByText(wrapper.element, '查看')!.click()
+    await flushPromises()
+    await nextTick()
+
+    // 明细表真的重新取数，且参数只有声明的外键 —— 整行字段（name/status）没被倒进去。
+    expect(detailCalls().length).toBe(before + 1)
+    const params = detailCalls()[detailCalls().length - 1].params
+    expect(params.userId).toBe(1)
+    expect(params.name).toBeUndefined()
+    expect(params.status).toBeUndefined()
+  })
 })

@@ -674,4 +674,28 @@ describe('composition@3 复核 — 主从参数映射与 behavior 改名', () =>
       /只支持 data-wiring \/ ui-only/,
     )
   })
+
+  it('没有行按钮接线的表不绑定 @row-action（不生成指向未定义方法的监听）', () => {
+    const r = emitComposition(plan([table('orders'), table('items', { rowButtons: [] })]))
+    expect(r.isError).toBeFalsy()
+    const code = r.page!.code
+    // 主表有行按钮 → 处理器存在且模板绑定。
+    expect(code).toContain('@row-action="onRowActionOrders"')
+    // 明细表没有任何行按钮接线 → 既不绑定监听，也不发射处理器（否则 Vue 运行期告警）。
+    expect(code).not.toContain('@row-action="onRowActionItems"')
+    expect(code).not.toContain('onRowActionItems')
+  })
+
+  it('多表且无 master 时明确告警：派生数据接线已升级为页面事件', () => {
+    const r = emitComposition(plan([table('orders'), table('items')]))
+    expect(r.isError).toBeFalsy()
+    expect(r.envelope!.warnings.join('\n')).toMatch(/没有声明 role: 'master'/)
+    expect(r.envelope!.warnings.join('\n')).toMatch(/<id>Refresh \/ <id>Reload/)
+    // 声明 master 后告警消失（数据接线有唯一默认表）。
+    const withMaster = emitComposition(plan([{ ...table('orders'), role: 'master' }, table('items')]))
+    expect(withMaster.envelope!.warnings.join('\n')).not.toMatch(/没有声明 role: 'master'/)
+    // ui-only 本来就把数据通道全部交给宿主，不重复告警。
+    const uiOnly = emitComposition(plan([table('orders'), table('items')], { behavior: 'ui-only' }))
+    expect(uiOnly.envelope!.warnings.join('\n')).not.toMatch(/没有声明 role: 'master'/)
+  })
 })

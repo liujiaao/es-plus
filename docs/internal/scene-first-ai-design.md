@@ -544,8 +544,21 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
    的事。内建请求语义留在 `scene='crud'`；`@3` 尚未对外发布，改名不留兼容别名。
    这是**对计划字面的偏离**：交付的是「名字与行为一致」，不是「组合页内建 CRUD 请求」。
 
-**验证**：shared 977/977（组合 48）；MCP 390/390；`check:composition-contract`
-44 组 / 拒绝 18 例（三端）；`to.model` 变异（关掉映射分支）→ 三端点名缺映射。
+3. **多表无 master 的静默升级 → 显式告警**：派生数据接线在没有唯一默认表时升级为页面
+   事件，产出面只字不提。宿主会以为 `data-wiring` 仍在接表。现在在产物正文与信封
+   `warnings` 里点名，并给出两条出路（`<id>Refresh` / `<id>Reload`，或声明
+   `role: 'master'`）。`ui-only` 本就把数据通道全部交给宿主，不重复告警。
+4. **悬空 `@row-action` 监听**：模板对每张表都绑定 `@row-action`，但处理器只为「有行按钮
+   接线」的表发射。明细表（无 `rowButtons`）因此得到一个指向未定义方法的监听 —— vue3
+   运行时实测有 `Property "onRowActionXxx" was accessed during render` 告警，点击即
+   TypeError。现在两边同源：没有处理器就不绑定。此缺陷由新增的主从运行时见证发现。
+5. **主从运行时见证**：`vue3` / `adapter-antdv` 的 `composition-page-runtime.spec.ts`
+   新增「主表 查看 → 明细表 reload，只带 `{ userId: row.id }`」用例，从真实片段语料
+   装配页面、点按钮、断言明细请求参数（整行的 `name/status` 不出现）。此前只有编译见证。
+
+**验证**：shared 979/979（组合 50）；MCP 391/391；`check:composition-contract`
+44 组 / 拒绝 18 例（三端）；vue3 组合运行时 6/6、antdv 5/5；`to.model` 变异
+（关掉映射分支）→ 三端点名缺映射；悬空监听由 vue3 运行时的 Vue warn 实证。
 文档尾巴（P8 复核）与本批同批修复：ASCII 图 / 文件地图计数改为从源码数出来，
 信封适用范围从 `withEnvelope` 的真实调用点反推，并给三个信封工具声明 `outputSchema`。
 
