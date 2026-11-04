@@ -695,6 +695,23 @@ console.log('meta-eval: table scene ignores form-only field dims')
     'form: formtype 仍应适用（控制组）')
   check(isValidFragmentPinnedDim('form', fc.gold, 'formtype:email') === true,
     'form: formtype:email 仍应是合法 pin')
+
+  // 零共享字段（模型把每个 prop 都猜错）不得让 formtype 真空通过 —— `[].every` 恒真
+  // 会把维度准确率抬高，而模型其实一个字段都没对上（CRUD 侧同一条断言在 AN-01）。
+  const noShared = clone(fc.gold)
+  for (const f of noShared.fields) {
+    // prop 与 label 一起改：zh 口径按 label 对齐字段身份，只改 prop 会被重新对齐回 gold。
+    f.prop = `${f.prop}__wrong`
+    f.label = `${f.label}（错）`
+  }
+  const vac = scoreFragment('form', fc.gold, noShared, {})
+  check(vac.byDim.formtype.applicable === true,
+    'formtype: gold 用了它 → 零共享时仍 applicable（不能靠置不适用逃出分母）')
+  check(vac.byDim.formtype.pass === false, 'formtype: 零共享字段 → 必须判负（真空真已修）')
+  const emptyPred = clone(fc.gold)
+  emptyPred.fields = []
+  check(scoreFragment('form', fc.gold, emptyPred, {}).byDim.formtype.pass === false,
+    'formtype: pred.fields 为空 → 必须判负')
 }
 
 // ── 语义维：两种「点遮罩不关」的正确落地都必须判对，且不得被重复计数 ─────────

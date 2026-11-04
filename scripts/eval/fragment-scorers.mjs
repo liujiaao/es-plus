@@ -540,7 +540,12 @@ const FIELD_TOKEN_REQUIRES = {
 
 const propSetEqual = (g, p) =>
   f1(new Set((g?.fields ?? []).map((f) => f.prop)), new Set((p?.fields ?? []).map((f) => f.prop))).f1 === 1
-const formtypeEqual = (g, p) => sharedFields(g, p).every(({ g: gf, p: pf }) => fieldFormtypeEqual(gf, pf))
+// 零共享字段必须判负：`[].every` 恒真，模型把每个 prop 都猜错时本维度仍会「通过」，
+// 维度准确率被真空真抬高（CRUD 侧 `formtypeEqual` 已同样修正，AN-01 有断言）。
+const formtypeEqual = (g, p) => {
+  const shared = sharedFields(g, p)
+  return shared.length > 0 && shared.every(({ g: gf, p: pf }) => fieldFormtypeEqual(gf, pf))
+}
 const fieldRequiredAllEqual = (g, p) => {
   const pm = fieldMap(p)
   for (const f of g?.fields ?? []) {
