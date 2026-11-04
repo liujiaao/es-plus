@@ -140,7 +140,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       witnesses: [
         'packages/vue3/__tests__/crud-runtime.spec.ts',
         'packages/adapter-antdv/__tests__/crud-runtime.spec.ts',
-        '__tests__/e2e/vue2-crud',
+        '__tests__/e2e-runtime/tests/vue2-crud.spec.ts',
       ],
     },
   },
@@ -170,7 +170,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       witnesses: [
         'packages/vue3/__tests__/fragment-runtime.spec.ts',
         'packages/adapter-antdv/__tests__/fragment-runtime.spec.ts',
-        '__tests__/e2e/vue2-fragments',
+        '__tests__/e2e-runtime/tests/vue2-fragments.spec.ts',
       ],
     },
   },
@@ -200,7 +200,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       witnesses: [
         'packages/vue3/__tests__/fragment-runtime.spec.ts',
         'packages/adapter-antdv/__tests__/fragment-runtime.spec.ts',
-        '__tests__/e2e/vue2-fragments',
+        '__tests__/e2e-runtime/tests/vue2-fragments.spec.ts',
       ],
     },
   },
@@ -230,7 +230,7 @@ export const SCENE_REGISTRY: readonly SceneContract[] = [
       witnesses: [
         'packages/vue3/__tests__/fragment-runtime.spec.ts',
         'packages/adapter-antdv/__tests__/fragment-runtime.spec.ts',
-        '__tests__/e2e/vue2-fragments',
+        '__tests__/e2e-runtime/tests/vue2-fragments.spec.ts',
       ],
     },
   },

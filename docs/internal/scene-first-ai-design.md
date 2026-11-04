@@ -36,6 +36,7 @@
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ✅ 2026-11-03 |
 | **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ✅ 2026-11-04 |
+| **P6** | composition 契约（多节点装配）+ 见证锚点收尾 | 四类接线由契约派生；每个接线/缺口都有运行时见证 | 🚧 |
 
 ## 4. 核心接口
 
@@ -303,3 +304,28 @@ P5 拆成四个主题批次（各自独立提交），逐项对应第 3 节里�
 - **两枚单边 token 是显式决定**：`sortParam` 只有矩阵侧（demo 的排序是客户端事件，没有服务端 `sortParam` 用例），`siteUncovered` 只有令牌表侧（站点未覆盖项不是能力）。两者在 `TOKEN_SET_DIFF` 里带原因，任何新增单边 token 都必须先登记。
 - **生成器模板里的标题字面量刻意不 import**：改成引用常量会改变产物字节与宿主运行时依赖；P5d 选择「常量单源 + 守卫反向比对模板」而不是重写生成器。
 - **多节点 composition 仍未实现**（见 P4 末条更正）：P5 的验收行不包含它，四类接线已经证明通道可用；自动装配需要新的 `composition` 契约与运行时见证，另开批次。
+
+### P6 · composition 契约与见证锚点
+
+P6 拆为两个主题批次：P6a 先堵住「声明了但没人跑」，P6b 再做多节点装配本体。
+
+#### P6a · 见证锚点与标题单源收尾
+
+**问题**（源码核对）：`SceneContract.runtime.witnesses` 登记了 4 条**不存在的路径** —— crud 指向 `__tests__/e2e/vue2-crud`，table/form/dialog 指向 `__tests__/e2e/vue2-fragments`；真实文件在 `__tests__/e2e-runtime/tests/` 下。P4 写这条字段时立的规矩是「只登记已存在的，避免声明了但没人跑」，但没有任何守卫在验它，于是四处死链静默存活。同一类问题：`DIALOG_TITLES` 在 P5d 之后仍有 **3 份测试内手抄**（vue3 / antdv 的 `composition-runtime.spec.ts`、mcp-server 的 `surfaces-examples.spec.ts`）。
+
+- `registry.ts` 四条 witness 路径改到真实文件（`__tests__/e2e-runtime/tests/vue2-crud.spec.ts` / `vue2-fragments.spec.ts`）。
+- `check-scene-registry` 新增第 (f) 段：每条 `runtime.witnesses` 必须 `existsSync`，否则红。
+- 第 (e) 段扩展到测试：递归扫 `packages/**/__tests__/**/*.spec.*`，任何 `const DIALOG_TITLES = …` 都判红（测试同样是消费者，手抄一份会在常量改名时静默错位）。
+- 三处测试改为从单一真源导入：vue3/antdv 走 `../../shared/src/scene/registry`（与它们既有的 `compose-crud-config` 相对导入同口径），mcp-server 走 `@es-plus/shared`（与该文件既有导入同口径）。
+
+**验证（2026-11-04）**
+
+- `check:scene-registry` → 4 场景 / 279 条语料 / 3 个片段生成器 ✅
+- `npm test -w @es-plus/shared` → 868/868；vue3 / antdv `composition-runtime.spec` → 3/3；mcp `surfaces-examples.spec` → 46/46 ✅
+- typecheck：mcp-server / vue3 / adapter-antdv ✅
+- 变异自检（实跑后还原）✅：①把 crud 的一条 witness 改成不存在的路径 → `check:scene-registry` 红（点名场景与路径）；②在 vue3 的 `composition-runtime.spec` 里加一行 `const DIALOG_TITLES = …` → 红（点名文件）。
+
+**据实偏离**
+
+- 只做**存在性**断言，不代替真的跑测试：守卫能证明「路径没断」，不能证明「那条用例仍覆盖该场景」——后者由 vitest / e2e 自己负责。这条边界写进守卫注释，避免被当成「见证已跑过」的证据。
+- 测试导入路径按各自包的既有惯例：vue3/antdv 读 `shared/src`（不依赖 `build:libs`），mcp-server 读包入口（该文件本来就读 build）。不一致是历史事实，不为统一而改。

@@ -5,6 +5,7 @@ import {
   generateFromConfig,
   generateFormBlock,
   generateDialogBlock,
+  DIALOG_TITLES,
   type SurfaceField,
 } from "@es-plus/shared";
 import {
@@ -23,7 +24,7 @@ import {
 //
 // This mirror must stay in lockstep with the routing in
 // packages/mcp-server/src/tools/generate-crud.ts.
-const DIALOG_TITLES: Record<DialogKey, string> = { add: "新增", edit: "编辑", view: "查看" };
+// 罐头标题表的唯一真源是 shared 注册表（P5d/P6a）—— 测试不许再手抄一份。
 
 /**
  * 面字段上声明的**字段级扩展键**（AI-21③ 提进入口词汇的 isHidden / reactions，及 AI-22 的 labelKey）。

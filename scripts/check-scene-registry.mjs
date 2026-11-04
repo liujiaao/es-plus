@@ -14,13 +14,17 @@
  *       `tools/index.ts` 必须真的调用对应 register（防止「注册表说有，产品里没有」）。
  *   (d) 生成器：`scripts/lib/fragment-cases.mjs` 的 `FRAGMENT_GENERATORS` 键集
  *       必须精确等于「非 crud 场景」，不能多也不能少。
+ *   (e) 罐头弹窗标题：emit / 评测打分器不得自带一份，生成器模板里的字面量必须与
+ *       注册表常量一致（模板不能 import，只能反向比对）。
+ *   (f) 运行时见证：`runtime.witnesses` 登记的每一条路径必须**真的存在** ——
+ *       声明了却没人跑的门禁等于没有门禁（P6a 补；此前 4 条 vue2 路径全是死链）。
  *
  * 明确不做：不评准确率、不跑生成、不替代 `check-scene-coverage` 的编译/e2e 断言。
  *
  * 用法：node scripts/check-scene-registry.mjs
  * 退出码：0 = 四方一致；1 = 有任何漂移。
  */
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -237,6 +241,35 @@ for (const [file, addLiteral, viewLiteral] of titleHeuristics) {
 
 if (dialogTitleFor('add') !== DIALOG_TITLES.add || dialogTitleFor('custom-key') !== 'custom-key') {
   fail('dialogTitleFor 语义漂移：罐头 key 取标题、未知 key 原样返回')
+}
+
+// 测试也是消费者：断言文件里手抄一份标题表，同样会在常量改名时静默错位
+// （P6a：三份为 vue3/antdv 的 composition-runtime.spec 与 mcp 的 surfaces-examples.spec）。
+function collectSpecFiles(dir) {
+  const out = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'build' || entry.name === 'dist') continue
+    const p = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...collectSpecFiles(p))
+    else if (/\.(spec|test)\.(ts|js|mjs)$/.test(entry.name)) out.push(p)
+  }
+  return out
+}
+for (const file of collectSpecFiles(join(ROOT, 'packages'))) {
+  const src = readFileSync(file, 'utf8')
+  if (/\bconst\s+DIALOG_TITLES\s*[:=]/.test(src)) {
+    fail(`${file.slice(ROOT.length + 1)} 自己定义了 DIALOG_TITLES —— 测试也必须从 shared 导入`)
+  }
+}
+
+// ── (f) 运行时见证路径 ──────────────────────────────────
+// 「声明了但没人跑」的见证与没有见证等价：这里只做存在性断言，不代替真的跑测试。
+for (const scene of SCENE_REGISTRY) {
+  for (const witness of scene.runtime.witnesses) {
+    if (!existsSync(join(ROOT, witness))) {
+      fail(`场景 ${scene.id}: 运行时见证 ${witness} 不存在（路径死链，等于没有见证）`)
+    }
+  }
 }
 
 // ── 输出 ────────────────────────────────────────────────
