@@ -337,8 +337,85 @@ function stripIdent(s: string): string {
 // ── TypeScript interface / type 字面量 ──────────────────────
 
 /**
+ * 成员形状：`[readonly] name[?]: type`。切分与解析共用这一份（逗号切分要靠它判定
+ * 「这一段是不是一个成员」）。
+ */
+const TS_MEMBER_RE =
+  /^(?:readonly\s+|public\s+|private\s+|protected\s+)?([A-Za-z_$][\w$]*|"[^"]+"|'[^']+')\s*(\?)?\s*:\s*([\s\S]+)$/
+
+/**
+ * 单行成员列表（`{ id: number, name: string }`）是合法 TS —— 成员分隔符可以是逗号。
+ *
+ * 但不能见逗号就切：`Map<string, number>` / `Record<K, V>` 的逗号在泛型参数里
+ * （`<` 计深度，本就不会切）；再加一道「**切完每一段都还得是成员**」的兜底 ——
+ * 只要有一段不像 `name: type`，整块按单个成员解析（与切分前行为一致）。
+ *
+ * 这里必须**保留**注释：段首的 JSDoc 是下一个成员的 label，而 `splitTopLevel`
+ * 会把它整段丢掉（它面向 SQL，注释没有语义）。
+ */
+function splitCommaMembers(chunk: string): string[] {
+  const parts = splitTopLevelKeepComments(chunk, ',')
+  if (parts.length <= 1) return [chunk]
+  const stripDocs = (s: string) => s.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '')
+  return parts.every((p) => TS_MEMBER_RE.test(stripDocs(p))) ? parts : [chunk]
+}
+
+/** 顶层切分并**保留**注释文本；深度/引号规则与 `splitTopLevel` 相同。 */
+function splitTopLevelKeepComments(text: string, sepChars: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let depth = 0
+  let quote: string | null = null
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quote) {
+      cur += ch
+      if (ch === '\\') cur += text[++i] ?? ''
+      else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      const nl = text.indexOf('\n', i)
+      cur += text.slice(i, nl === -1 ? text.length : nl)
+      i = nl === -1 ? text.length : nl - 1
+      continue
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2)
+      const stop = end === -1 ? text.length : end + 2
+      cur += text.slice(i, stop)
+      i = stop - 1
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch
+      cur += ch
+      continue
+    }
+    if ('([{<'.includes(ch)) {
+      depth++
+      cur += ch
+      continue
+    }
+    if (')]}>'.includes(ch)) {
+      depth = Math.max(0, depth - 1)
+      cur += ch
+      continue
+    }
+    if (depth === 0 && sepChars.includes(ch)) {
+      out.push(cur)
+      cur = ''
+      continue
+    }
+    cur += ch
+  }
+  out.push(cur)
+  return out.map((s) => s.trim()).filter(Boolean)
+}
+
+/**
  * 切出 TS 类型体的成员；紧邻成员的 JSDoc 保留为 label。
- * 只按顶层换行/分号切（内联对象、泛型参数里的分隔符不切）。
+ * 只按顶层换行/分号/逗号切（内联对象、泛型参数里的分隔符不切）。
  */
 function splitTsMembers(body: string): Array<{ raw: string; doc?: string }> {
   const chunks: string[] = []
@@ -380,6 +457,12 @@ function splitTsMembers(body: string): Array<{ raw: string; doc?: string }> {
   }
   chunks.push(cur)
 
+  // 单行成员列表（逗号分隔）在这里展开；JSDoc 仍由下面的循环按「紧随其后的成员」挂。
+  const members = chunks.flatMap((chunk) => {
+    const trimmed = chunk.trim()
+    return trimmed ? splitCommaMembers(trimmed) : []
+  })
+
   const out: Array<{ raw: string; doc?: string }> = []
   let pendingDoc: string | undefined
   const normalizeDoc = (s: string) =>
@@ -389,7 +472,7 @@ function splitTsMembers(body: string): Array<{ raw: string; doc?: string }> {
       .filter(Boolean)
       .join(' ')
 
-  for (const chunk of chunks) {
+  for (const chunk of members) {
     const trimmed = chunk.trim()
     if (!trimmed) continue
     // 纯 JSDoc 块（注释独占一行/被换行切开）→ 挂到下一个成员。
@@ -490,9 +573,7 @@ function ingestTsInterface(
 
   const fields: SurfaceField[] = []
   for (const member of splitTsMembers(body)) {
-    const m = /^(?:readonly\s+|public\s+|private\s+|protected\s+)?([A-Za-z_$][\w$]*|"[^"]+"|'[^']+')\s*(\?)?\s*:\s*([\s\S]+)$/.exec(
-      member.raw,
-    )
+    const m = TS_MEMBER_RE.exec(member.raw)
     if (!m) {
       warnings.push(`成员 "${member.raw.slice(0, 40)}" 不是 "prop: type" 形态 —— 已忽略。`)
       continue
