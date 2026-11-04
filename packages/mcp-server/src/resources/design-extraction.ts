@@ -239,6 +239,39 @@ body differs from the shared form. Multi-line text is Input + \`attrs.type: "tex
 * It does not accept images. The host's vision model is the only image reader.
 * It does not write code. It only produces the intent table; \`generate_scene\`
   performs the deterministic routing and emission.
+
+## 8. Multi-page specs: the coverage inventory (L1 / L2 / L3)
+
+\`spec-to-surfaces\` is one page. When the spec enumerates **several pages**, the
+host turns them into a structured inventory and calls \`coverage_report\` — the
+server never re-reads prose, so the same inventory always yields the same levels.
+
+\`\`\`json
+{
+  "pages": [
+    { "name": "UserManage", "scene": "crud", "intent": { "name": "UserManage", "apiUrl": "/api/users", "surfaces": { "...": [] } } },
+    { "name": "OrderDetail", "parts": [
+        { "scene": "table", "intent": { "fields": [] } },
+        { "scene": "form",  "intent": { "fields": [] } }
+      ],
+      "extensionPoints": [{ "kind": "slot", "where": "toolbar" }]
+    },
+    { "name": "Dashboard", "scene": "crud", "intent": { "...": {} }, "hostCode": [{ "kind": "chart" }] }
+  ]
+}
+\`\`\`
+
+Levels (derived from the \`es-plus.capabilities@1\` ledger, not from prose):
+
+| Level | Meaning | Deterministic trigger |
+|---|---|---|
+| **L1** | direct emit — no post-edit | every part's keys are \`accepted\`; one part; no extension points |
+| **L2** | direct emit + extension points | a key is \`degraded\` (emitted but not faithfully), the page has several parts (compose with \`generate_composition\`), or the host declares \`extensionPoints\` |
+| **L3** | host code required | a part has an \`unsupported\` key or a missing required key, an unknown scene, or the host declares \`hostCode\` |
+
+Run \`validate_intent\` on each page's \`{ scene, intent }\` first: \`coverage_report\`
+classifies capability, while \`validate_intent\` catches structural and membership
+mistakes (missing \`formtype\`, duplicate \`prop\`, labels absent from the spec).
 `;
 
 export function buildDesignExtractionContent(): string {

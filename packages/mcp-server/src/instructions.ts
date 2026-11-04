@@ -34,8 +34,8 @@ fallback for hosts that can't reason.)`;
 
   // ③ 第四步的调用指代（注意结尾不带 `**`：模板里统一收口，否则会出现 `****`）。
   const step4Call = fd
-    ? "4. **Call** `generate_scene` (scene='crud'), then **read the\n   returned warnings"
-    : "4. **Call** `generate_scene` (scene='crud') or its compatibility alias\n   `generate_crud`/`generate_crud_from_config`, then **read the\n   returned warnings";
+    ? "5. **Call** `generate_scene` (scene='crud'), then **read the\n   returned warnings"
+    : "5. **Call** `generate_scene` (scene='crud') or its compatibility alias\n   `generate_crud`/`generate_crud_from_config`, then **read the\n   returned warnings";
 
   // ④ 档位说明：只在 front-door 追加（回答「为什么工具表里少三个」）。
   const profileNote = fd
@@ -152,9 +152,16 @@ Two passes, every time:
    - Business logic the schema can't express (permission gates, conditional
      display, computed values) → emit a typed extension point
      (\`permissionValue\` / \`formatter\` / \`render\`). **Mark it, never drop it.**
+4. **Validate before generating** — call \`validate_intent\` with the same
+   \`{ scene, intent }\` (plus the spec text when you have it). It returns the
+   capability report and per-field issues (surface membership, duplicate props,
+   missing formtype, labels absent from the spec, system fields in a form).
+   Fix every error and re-run; it only judges and never generates. For a
+   multi-page spec, \`coverage_report\` classifies each page from the same ledger:
+   L1 direct emit / L2 direct emit + extension points / L3 host code.
 ${step4Call}** — each one flags a likely mapping mistake; fix and
    regenerate.
-5. **Read the \`preflight\` section** at the end of the result. It lists the HOST
+6. **Read the \`preflight\` section** at the end of the result. It lists the HOST
    prerequisites (\`app.use(ESPlus, { httpRequest, permission, t })\`, the UI
    library, and — for mode=sfc dialogs — the JSX plugin) with a copy-once entry
    boilerplate. These do not break compilation; the matching capability silently

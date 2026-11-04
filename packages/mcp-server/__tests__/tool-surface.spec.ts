@@ -23,6 +23,8 @@ const FULL_TOOLS = [
   "list_form_types",
   "ingest_schema",
   "refine_config",
+  "validate_intent",
+  "coverage_report",
   "get_component_api",
   "scaffold_page",
   "doctor_page",
@@ -43,7 +45,7 @@ describe("registerTools — full profile", () => {
   const tools = capture("full");
   const names = tools.map((t) => t.name);
 
-  it("注册全部 17 个工具且无重复", () => {
+  it("注册全部 19 个工具且无重复", () => {
     expect(names).toEqual(FULL_TOOLS);
     expect(new Set(names).size).toBe(names.length);
   });

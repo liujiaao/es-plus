@@ -267,7 +267,7 @@ The AI calls the MCP server's `generate_scene` front door (or a standalone fragm
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes **17 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the page composer, the front door, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the page composer, the front door, the single-surface fragments, and the deterministic support tools remain.
 
 | Tool | Purpose | front-door |
 |------|---------|:----------:|
@@ -281,6 +281,8 @@ The default `full` profile exposes **17 tools**. With `ESPLUS_MCP_PROFILE=front-
 | `validate_config` | Validate a config against the live schema (judge-only; it does not rewrite) | ✅ |
 | `ingest_schema` | Draft a config from OpenAPI / JSON Schema / sample JSON / TS interface / SQL DDL (deterministic, a head start you then edit) | ✅ |
 | `refine_config` | One round of refinement on a pinned config: validate `revised` + return a structured diff | ✅ |
+| `validate_intent` | **Pre-flight judge** — capability report (accepted / degraded / unsupported / missing) plus per-field issues (surface membership, duplicate props, missing formtype, labels absent from the spec) | ✅ |
+| `coverage_report` | **Coverage classification** — per page of a structured inventory: L1 direct emit / L2 direct emit + extension points / L3 host code, derived from the P9 capability ledger | ✅ |
 | `list_form_types` | List the 14 shared `formtype` values and their renderers | ✅ |
 | `get_component_api` | Component API and type docs | ✅ |
 | `scaffold_page` | Minimal page scaffold | ✅ |

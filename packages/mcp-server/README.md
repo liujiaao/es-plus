@@ -269,11 +269,11 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **17 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
 > **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 14 个）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 16 个）。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
@@ -396,6 +396,24 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 |------|------|------|
 | `previous` | string? | 上一版已 pin 配置的 JSON（首轮省略） |
 | `revised` | string | 本轮修订后的配置 JSON |
+
+### validate_intent
+
+从 PRD / 原型抽出的意图表在**生成之前**先过一遍（P13）：返回 P9 能力报告（`es-plus.capabilities@1` 的 accepted / degraded / unsupported / missing 逐键判定）以及确定性逐字段问题 —— 未知面名、同一面内重复 `prop`、`query`/`form` 缺 `formtype`、把 `inQuery`/`inTable`/`inForm` 抄进意图、自定义弹窗用字符串 key、`label` 不在提供的规格原文里、系统生成字段进了可编辑表单。结构级判据复用 `generate_scene` 的同一份 Zod 形状。**只判不改、不生成代码**：宿主按 issue 修完再调生成工具。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `scene` | enum | `crud`（默认）/ `table` / `form` / `dialog` |
+| `intent` | object | 该场景的意图表（与 `generate_scene` 的 `intent` 同形） |
+| `spec` | string? | 规格原文；提供时每个字段 `label` 必须能在其中逐字找到 |
+
+### coverage_report
+
+把一份**结构化页面清单**（每页给出 `scene` + `intent`，或多部分页面的 `parts[]`）逐页分级：**L1** 直出（所有键 accepted，零编辑）；**L2** 直出 + 扩展点（有降级键 / 一页多个片段需 `generate_composition` 接线 / 宿主声明扩展点）；**L3** 需宿主代码（unsupported 键、缺必填键、宿主声明自有代码）。判据直接来自 P9 能力台账，同一份清单重跑必得同一结果；L3 是合法结论，不设工具错误。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `pages` | array | 页面清单；每页 `{ name?, scene, intent }` 或 `{ name?, parts: [{ scene, intent }], extensionPoints?, hostCode? }` |
 
 ### list_form_types
 

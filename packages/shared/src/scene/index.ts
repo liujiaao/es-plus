@@ -69,3 +69,28 @@ export {
   type CapabilityLedger,
   type IntentCapability,
 } from './capability.js'
+
+// P13：宿主抽取契约 —— 生成前校验（只判不改）+ 逐页覆盖分级（L1/L2/L3）。
+// 与台账同属「只读元数据 + 纯函数」：不依赖生成器，故可以从场景子路径导出。
+export {
+  INTENT_VALIDATION_CONTRACT_VERSION,
+  SURFACE_NAMES,
+  MEMBERSHIP_FLAGS,
+  validateIntentPlan,
+  type SurfaceName,
+  type IntentIssue,
+  type IntentSurfaceStats,
+  type IntentValidationReport,
+  type ValidateIntentInput,
+} from './intent-validation.js'
+
+export {
+  COVERAGE_CONTRACT_VERSION,
+  COVERAGE_LEVELS,
+  COVERAGE_LEVEL_MEANING,
+  classifyCoverage,
+  type CoverageLevel,
+  type CoveragePartResult,
+  type CoveragePageResult,
+  type CoverageReport,
+} from './coverage.js'

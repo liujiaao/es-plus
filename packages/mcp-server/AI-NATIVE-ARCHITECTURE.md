@@ -171,7 +171,7 @@ surfaces
 
 ---
 
-## 4. 工具手册（full 17 / front-door 14）
+## 4. 工具手册（full 19 / front-door 16）
 
 ### 4.0 工具面 profile（AN-26）
 
@@ -179,8 +179,8 @@ surfaces
 
 | profile | 注册数 | 隐藏 |
 |---|---|---|
-| `full`（**默认**） | 17 | — |
-| `front-door` | 14 | `generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
+| `full`（**默认**） | 19 | — |
+| `front-door` | 16 | `generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
 
 - 默认 `full` 是**刻意**的：§9.4 的废弃流程要求开关「默认关闭」，且存量宿主与本站文档仍在
   调 `generate_crud_from_config`；改默认会让它们在同一个小版本里静默失败。待 AN-25 收敛完成
@@ -211,6 +211,8 @@ surfaces
 | 15 | `list_form_types` | 参考 | ✅ | formtype 列表 | 否 | 稳定 |
 | 16 | `scaffold_page` | 工程 | ✅ | 页面骨架 + 入口装配 | 否 | 稳定 |
 | 17 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
+| 18 | `validate_intent` | 抽取校验 | ✅ | 能力报告 + 逐字段 issue | 否 | 稳定（P13） |
+| 19 | `coverage_report` | 覆盖率分级 | ✅ | 逐页 L1/L2/L3 | 否 | 稳定（P13） |
 
 > 生成类工具（2–10）在客户端支持 MCP 结构化输出时，会把产物信封挂到
 > `structuredContent`：`contract` / `scene` / `artifact` / `target` / `mode` /

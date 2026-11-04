@@ -30,7 +30,13 @@ host's vision model) must first transcribe it into the text inventory described
 in §1 of the resource. The es-plus server does not accept images and performs no
 OCR. Pass the transcription, not the image.
 
-STEP 2 — call \`generate_scene\` with \`scene: "crud"\` and this object as \`intent\`
+STEP 2 — before generating, call \`validate_intent\` with the SAME
+\`{ scene: "crud", intent }\` plus this specification as \`spec\`. Fix every error
+it reports (unknown keys, duplicate props, missing formtype, membership flags,
+labels the spec does not contain) and re-run until it is clean. It only judges;
+it never generates.
+
+STEP 3 — call \`generate_scene\` with \`scene: "crud"\` and this object as \`intent\`
 (or emit the object as one JSON object) with:
 
 {

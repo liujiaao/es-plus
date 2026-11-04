@@ -257,7 +257,7 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **17 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、组合页、前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、组合页、前门、单面片段与支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
@@ -271,6 +271,8 @@ mcp-server-es-plus --help        # 用法说明
 | `validate_config` | 确定性校验配置（只判不改） | ✅ |
 | `ingest_schema` | OpenAPI / JSON Schema / 示例 JSON / TS 接口 / SQL DDL → 草拟配置 | ✅ |
 | `refine_config` | 对已 pin 的配置做一轮精修：校验 + 结构化 diff | ✅ |
+| `validate_intent` | **生成前校验**：能力报告（accepted/degraded/unsupported/missing）+ 逐字段问题（面归属、重复 prop、缺 formtype、label 不在规格里） | ✅ |
+| `coverage_report` | **覆盖分级**：按 P9 能力台账给规格清单逐页判定 L1 直出 / L2 直出+扩展点 / L3 需宿主代码 | ✅ |
 | `list_form_types` | 列出全部 `formtype` 及其渲染器 | ✅ |
 | `get_component_api` | 组件 API / 类型文档 | ✅ |
 | `scaffold_page` | 最小页面脚手架 | ✅ |

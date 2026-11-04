@@ -52,6 +52,8 @@ const FULL_TOOLS = [
   'list_form_types',
   'ingest_schema',
   'refine_config',
+  'validate_intent',
+  'coverage_report',
   'get_component_api',
   'scaffold_page',
   'doctor_page',

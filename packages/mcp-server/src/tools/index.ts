@@ -16,6 +16,8 @@ import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
 import { registerIngestSchema } from "./ingest-schema.js";
 import { registerRefineConfig } from "./refine-config.js";
+import { registerValidateIntent } from "./validate-intent.js";
+import { registerCoverageReport } from "./coverage-report.js";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 import { withArgGuard } from "./_arg-guard.js";
 
@@ -70,6 +72,9 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
   registerIngestSchema(server, profile);
   // 精修层:对已 pin 的配置做一轮 NL 纠正后,确定性校验新配置并回显本轮 diff。
   registerRefineConfig(server, profile);
+  // 宿主抽取契约（P13）：意图生成前校验 + 逐页覆盖分级。都只判不改、不生成代码。
+  registerValidateIntent(server);
+  registerCoverageReport(server);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
   registerDoctorPage(server);
