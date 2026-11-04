@@ -8,6 +8,8 @@ import {
   MODES,
   DIALOG_MODES,
   MODELESS,
+  DIALOG_TITLES,
+  dialogTitleFor,
   modesOf,
   artifactFamilyOf,
   isScene,
@@ -67,5 +69,14 @@ describe('scene registry — 单一真源不变量', () => {
       expect(scene.eval.gate).toBe('fragment-global')
       expect(scene.eval.minCasesFor95).toBeGreaterThanOrEqual(60)
     }
+  })
+
+  // P5：标题既是文案又是提交方法 / 只读语义的判据，必须单源。
+  it('罐头弹窗标题单源：add/edit/view 各有默认标题，未知 key 原样返回', () => {
+    expect(DIALOG_TITLES).toEqual({ add: '新增', edit: '编辑', view: '查看' })
+    expect(dialogTitleFor('add')).toBe('新增')
+    expect(dialogTitleFor('view')).toBe('查看')
+    expect(dialogTitleFor('order-detail')).toBe('order-detail')
+    expect(Object.isFrozen(DIALOG_TITLES)).toBe(true)
   })
 })

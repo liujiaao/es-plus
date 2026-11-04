@@ -8,6 +8,7 @@
 export {
   SCENE_IDS,
   ARTIFACT_KINDS,
+  DIALOG_TITLES,
   SCENE_REGISTRY,
   DEFAULT_SCENE,
   SCENES,
@@ -18,6 +19,7 @@ export {
   sceneContract,
   modesOf,
   artifactFamilyOf,
+  dialogTitleFor,
   isScene,
   sceneOf,
   type SceneId,

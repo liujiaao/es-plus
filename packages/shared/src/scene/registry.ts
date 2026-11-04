@@ -34,6 +34,26 @@ export const ARTIFACT_KINDS = [
 ] as const
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number]
 
+/**
+ * 罐头弹窗 key → 默认标题。**唯一真源**（P5）：
+ *
+ * 标题不只是文案 —— 生成器把它当作提交方法 / 只读语义的判据
+ * （`'新增'` → POST、其余 PUT；`'查看'` → 只出「关闭」按钮），评测的组合打分器
+ * 与站点组合画廊也用它展开 `surfaces.dialog: ['add']`。此前 emit 与
+ * `eval/composition-scorers.mjs` 各抄一份：改名时只要一侧没跟上，就会出现
+ * 「评测按 A 判分、产物按 B 生成」的静默错位。
+ */
+export const DIALOG_TITLES: Readonly<Record<'add' | 'edit' | 'view', string>> = Object.freeze({
+  add: '新增',
+  edit: '编辑',
+  view: '查看',
+})
+
+/** 罐头 key 取默认标题；未知 key 原样返回（与生成器的历史行为一致）。 */
+export function dialogTitleFor(key: string): string {
+  return (DIALOG_TITLES as Record<string, string>)[key] ?? key
+}
+
 /** 场景内的模式轴；`null` 表示该场景没有这条轴（区别于「这一格缺语料」）。 */
 export type SceneMode = 'schema' | 'sfc' | 'composable' | 'component'
 

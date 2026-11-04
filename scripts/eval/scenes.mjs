@@ -30,8 +30,10 @@ import {
   MODES,
   DIALOG_MODES,
   MODELESS,
+  DIALOG_TITLES,
   modesOf,
   artifactFamilyOf,
+  dialogTitleFor,
   isScene,
   sceneOf,
 } from '@es-plus/shared/scene'
@@ -43,8 +45,10 @@ export {
   MODES,
   DIALOG_MODES,
   MODELESS,
+  DIALOG_TITLES,
   modesOf,
   artifactFamilyOf,
+  dialogTitleFor,
   isScene,
   sceneOf,
 }

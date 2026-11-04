@@ -35,6 +35,7 @@
  */
 
 import { scoreAll } from './scorers.mjs'
+import { dialogTitleFor } from './scenes.mjs'
 
 /** 组合形状全集。顺序即报告顺序。 */
 export const COMPOSITION_SHAPES = Object.freeze(['full', 'table+form', 'form+dialog'])
@@ -141,11 +142,12 @@ function eq(a, b) {
   return JSON.stringify(canon(a)) === JSON.stringify(canon(b))
 }
 
-/** 前门把「罐头 dialog key」展开成 `{ title, formItems }` 的规则（`generate-crud.ts`）。 */
-const DIALOG_TITLES = { add: '新增', edit: '编辑', view: '查看' }
-function titleFor(key) {
-  return DIALOG_TITLES[key] ?? key
-}
+/**
+ * 前门把「罐头 dialog key」展开成 `{ title, formItems }` 的规则。
+ *
+ * 标题来自 shared 注册表的**唯一真源**（`DIALOG_TITLES`）：它同时是生成器的
+ * 提交方法 / 只读语义判据，打分器自抄一份会让「按 A 判分、按 B 生成」静默错位。
+ */
 
 /**
  * 语料 → `composeCrudConfig` 入参（与 `generate_crud.ts` 的有表支同构）。
@@ -160,7 +162,7 @@ export function composeInputOf(caseData) {
   const dialogBody = form.length ? form : (s.table ?? [])
   const dialogs = s.dialog
     ? Object.fromEntries(
-        s.dialog.map((d) => [String(d), { title: titleFor(String(d)), formItems: dialogBody }])
+        s.dialog.map((d) => [String(d), { title: dialogTitleFor(String(d)), formItems: dialogBody }])
       )
     : undefined
   return {

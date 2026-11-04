@@ -29,6 +29,8 @@ import {
   SCENE_REGISTRY,
   DEFAULT_SCENE,
   SCENE_IDS,
+  DIALOG_TITLES,
+  dialogTitleFor,
   sceneOf,
   artifactFamilyOf,
 } from '@es-plus/shared/scene'
@@ -194,6 +196,47 @@ for (const scene of fragmentScenes) {
   if (FRAGMENT_GENERATORS[scene] !== expected) {
     fail(`场景 ${scene}: FRAGMENT_GENERATORS 接错了生成器（family=${family}）`)
   }
+}
+
+// ── (e) 罐头弹窗标题单一真源 ────────────────────────────
+// 标题既是文案，又是提交方法 / 只读语义的判据（'新增'→POST、'查看'→只读）。
+// 注册表是唯一真源；emit 层与评测组合打分器必须 import 它，生成器模板里的字面量
+// 无法 import（会改变产物字节），因此由守卫**反向比对**常量与模板。
+const readSrc = (relPath) => readFileSync(join(ROOT, relPath), 'utf8')
+
+const emitSrc = readSrc('packages/shared/src/scene/emit.ts')
+if (/const\s+DIALOG_TITLES\s*=/.test(emitSrc)) {
+  fail('emit.ts 自己定义了 DIALOG_TITLES —— 必须从 registry 导入')
+}
+if (!/import\s*\{[^}]*DIALOG_TITLES[^}]*\}\s*from\s*'\.\/registry\.js'/.test(emitSrc)) {
+  fail('emit.ts 没有从 registry 导入 DIALOG_TITLES')
+}
+
+const scorerSrc = readSrc('scripts/eval/composition-scorers.mjs')
+if (/const\s+DIALOG_TITLES\s*=/.test(scorerSrc)) {
+  fail('composition-scorers.mjs 自己定义了 DIALOG_TITLES —— 必须从 scenes.mjs 导入 dialogTitleFor')
+}
+if (!/import\s*\{[^}]*dialogTitleFor[^}]*\}\s*from\s*'\.\/scenes\.mjs'/.test(scorerSrc)) {
+  fail('composition-scorers.mjs 没有从 scenes.mjs 导入 dialogTitleFor')
+}
+
+const titleHeuristics = [
+  ['packages/shared/src/structured-generator.ts', `=== '${DIALOG_TITLES.add}'`, `=== '${DIALOG_TITLES.view}'`],
+  ['packages/shared/src/fragment-generator.ts', `=== '${DIALOG_TITLES.add}'`, `=== '${DIALOG_TITLES.view}'`],
+  ['packages/shared/src/crud-engine.ts', `openForm('${DIALOG_TITLES.add}')`, `=== '${DIALOG_TITLES.view}'`],
+]
+for (const [file, addLiteral, viewLiteral] of titleHeuristics) {
+  const src = readSrc(file)
+  if (!src.includes(addLiteral)) {
+    fail(`${file}: 缺少标题启发式 ${addLiteral}（DIALOG_TITLES.add 改了但生成器模板没跟）`)
+  }
+  if (!src.includes(viewLiteral)) {
+    fail(`${file}: 缺少标题启发式 ${viewLiteral}（DIALOG_TITLES.view 改了但生成器模板没跟）`)
+  }
+}
+
+if (dialogTitleFor('add') !== DIALOG_TITLES.add || dialogTitleFor('custom-key') !== 'custom-key') {
+  fail('dialogTitleFor 语义漂移：罐头 key 取标题、未知 key 原样返回')
 }
 
 // ── 输出 ────────────────────────────────────────────────

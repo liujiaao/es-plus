@@ -15,6 +15,7 @@ import {
   type TableBlockInput,
 } from '../fragment-generator.js'
 import type { ArtifactKind, SceneId } from './registry.js'
+import { DIALOG_TITLES, dialogTitleFor } from './registry.js'
 import { DEFAULT_TARGET } from '../target.js'
 import {
   buildArtifactEnvelope,
@@ -42,8 +43,6 @@ import {
  * - 输出是**文本**而非 MCP `content` 结构；MCP 适配留在 `packages/mcp-server`，
  *   CLI / eval 也能直接消费同一份文本。
  */
-
-const DIALOG_TITLES: Record<string, string> = { add: '新增', edit: '编辑', view: '查看' }
 
 /** 场景意图表里的一条弹窗：罐头键（add/edit/view）或全参对象。 */
 export type CrudDialogEntry =
@@ -94,10 +93,6 @@ export interface SceneEmitResult {
  */
 export interface SceneArtifactResult extends SceneEmitResult {
   envelope?: ArtifactEnvelope
-}
-
-function titleFor(key: string): string {
-  return DIALOG_TITLES[key] ?? key
 }
 
 /**
@@ -217,14 +212,14 @@ export function emitCrudScene(intent: CrudIntent): SceneArtifactResult {
             seen.add(key)
             // 罐头键：字符串 → 默认标题 + 共用弹窗体。
             if (typeof d === 'string') {
-              entries.push([key, { title: titleFor(key), formItems: dialogBody }])
+              entries.push([key, { title: dialogTitleFor(key), formItems: dialogBody }])
               continue
             }
             // 全参对象：自定义 id/标题/宽度/全屏/逐弹窗字段表（AI-21④）。
             entries.push([
               key,
               {
-                title: d.title !== undefined ? d.title : titleFor(key),
+                title: d.title !== undefined ? d.title : dialogTitleFor(key),
                 ...(d.width !== undefined ? { width: d.width } : {}),
                 ...(d.fullscreen !== undefined ? { fullscreen: d.fullscreen } : {}),
                 formItems: d.formItems !== undefined ? d.formItems : dialogBody,
@@ -342,7 +337,7 @@ export function emitCrudScene(intent: CrudIntent): SceneArtifactResult {
     for (const d of dialogEntries) {
       const canned = typeof d === 'string'
       const key = String(canned ? d : d.key)
-      const title = canned ? titleFor(key) : d.title !== undefined ? String(d.title) : titleFor(key)
+      const title = canned ? dialogTitleFor(key) : d.title !== undefined ? String(d.title) : dialogTitleFor(key)
       const fields = canned ? dialogBody : d.formItems !== undefined ? d.formItems : dialogBody
 
       const options: Record<string, unknown> = {}
