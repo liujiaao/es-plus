@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 产物信封门禁（P5c）—— `es-plus.artifact@1`。
+ * 产物信封门禁（P5c）—— `es-plus.artifact@2`。
  *
  * ## 判据
  *
@@ -196,6 +196,9 @@ function checkStructuralGuards(mod) {
 
   // 指纹非空证明：对象键序不同 → 同指纹；改一个字节 → 指纹变。
   const a = buildArtifactEnvelope(draft)
+  if ('capability' in a) {
+    fail('结构守卫：直接 buildArtifactEnvelope 的草稿不应带 capability（没有意图可评估）')
+  }
   const reordered = buildArtifactEnvelope({ ...draft, config: { b: 2, a: 1 } })
   if (a.fingerprint !== reordered.fingerprint) fail('指纹必须与对象键序无关')
   const changed = buildArtifactEnvelope({
@@ -254,6 +257,35 @@ async function main() {
       }
       withEnvelope++
       checkEnvelope(file, plan, rich.envelope, rich.text, mod)
+
+      // @2：`emitSceneArtifact` 的成功信封必须带能力台账（宿主无需探测）。
+      const capability = rich.envelope.capability
+      if (!capability) {
+        fail(`${file}: @2 信封缺少 capability（派生视图）`)
+      } else {
+        if (capability.contract !== 'es-plus.capabilities@1') {
+          fail(`${file}: capability.contract=${JSON.stringify(capability.contract)}`)
+        }
+        if (capability.scene !== plan.scene) {
+          fail(`${file}: capability.scene=${JSON.stringify(capability.scene)}，计划场景=${plan.scene}`)
+        }
+        // 降级/不支持/缺失三个列表必须与 declared 的逐条判定同源。
+        const fromDeclared = (verdict) =>
+          capability.declared.filter((d) => d.verdict === verdict).map((d) => d.key)
+        for (const verdict of ['degraded', 'unsupported']) {
+          const expected = JSON.stringify(fromDeclared(verdict))
+          if (JSON.stringify(capability[verdict]) !== expected) {
+            fail(`${file}: capability.${verdict}=${JSON.stringify(capability[verdict])} ≠ declared 投影 ${expected}`)
+          }
+        }
+        // 替代路径只能指向「另一个模式下确实不是 downgrade」的模式 —— 台账自身
+        // 的逻辑，这里只证它没有把 unsupported 键也塞进 alternatives。
+        for (const entry of capability.declared) {
+          if (entry.verdict !== 'degraded' && entry.alternatives?.length) {
+            fail(`${file}: ${entry.key} 不是 degraded 却带 alternatives`)
+          }
+        }
+      }
 
       // 同输入两次必同指纹
       const again = mod.emitSceneArtifact(plan)

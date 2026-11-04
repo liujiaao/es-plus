@@ -26,10 +26,12 @@
  *
  * ## 边界
  *
- * 判定是**附加视图**：不改文本、不阻断生成（`unsupported` 也不抛错 —— Zod 形状在
- * 工具层负责拒绝），只把「声明了却不会生效」的键显式化。`degraded` 仍能产出可用
- * 产物（例如 sfc 模式的 `dialogs` 会退化成由 actions 派生的通用弹窗），只是保真度
- * 低于 schema 模式。
+ * 判定是**附加视图**：不改文本、不阻断生成（`unsupported` 也不抛错 —— MCP 前门
+ * 在调用发射器之前就用同一份 Zod 形状 + `collectUnknownKeys` 拒绝了它们；shared 的
+ * 直接调用者绕过前门，此时台账把「声明了却不会生效」显式化）。`degraded` 仍能产出
+ * 可用产物（例如 sfc 模式的 `dialogs` 会退化成由 actions 派生的通用弹窗），只是
+ * 保真度低于 schema 模式；能靠换模式保真的那些键带 `alternatives`
+ * （见 `CapabilityAlternative`），没有的就必须宿主接线。
  */
 import type { TargetFramework } from '../target.js'
 import { DEFAULT_TARGET } from '../target.js'
@@ -177,11 +179,30 @@ const INTENT_TO_RENDER_KEY = {
   'surfaces.dialog': 'dialogs',
 } as const satisfies Record<string, RenderPlanKey>
 
+/**
+ * `degraded` 键的**声明式补偿路径**。
+ *
+ * 只登记源码能证明的替代：换一个发射模式后该键的 disposition 不再是 `downgrade`。
+ * 不写散文式的「你可以……」建议 —— 那会变成第二份指南，和 `RENDER_PLAN_CONTRACT`
+ * 的 reason 分叉（约束 4：不做 guidance fork）。
+ */
+export interface CapabilityAlternative {
+  /** 目前只有一种：换发射模式。 */
+  kind: 'mode'
+  value: SceneMode
+}
+
 export interface CapabilityKeyVerdict {
   key: string
   verdict: CapabilityVerdict
   /** `degraded` / `unsupported` 的宿主可见原因。 */
   reason?: string
+  /**
+   * `degraded` 键的补偿路径。缺省 = 没有声明式替代（该键在当前场景/模式下没有
+   * 载体，只能宿主接线或改页面结构）；`unsupported` 的替代由前门的 did-you-mean
+   * 负责（能力台账拿不到 Zod 形状，不复制一份）。
+   */
+  alternatives?: readonly CapabilityAlternative[]
 }
 
 /** 单次意图评估（信封里挂的就是这份）。 */
@@ -285,13 +306,24 @@ function noTableAccepted(intent: Record<string, unknown>): Set<string> {
   return accepted
 }
 
-/** 单键的降级原因；`undefined` = 该键在所选模式下保真。 */
+interface DegradeVerdict {
+  reason: string
+  alternatives?: readonly CapabilityAlternative[]
+}
+
+/**
+ * 单键的降级判定；`undefined` = 该键在所选模式下保真。
+ *
+ * `alternatives` 只从 `RENDER_PLAN_CONTRACT` 推导：本次降级如果是**模式相关**的
+ * （另一模式下 disposition 不是 `downgrade`），换模式就是一条可验证的补偿路径。
+ * 无表分支与元数据键没有这种替代 —— 它们缺的是载体，不是模式。
+ */
 function degradeReason(
   scene: SceneId,
   key: string,
   intent: Record<string, unknown>,
   mode: SceneMode | null,
-): string | undefined {
+): DegradeVerdict | undefined {
   if (scene !== 'crud') return undefined
 
   const hasTable = surfaceHas(intent, 'table')
@@ -299,12 +331,18 @@ function degradeReason(
   if (!hasTable) {
     if (noTableAccepted(intent).has(key)) return undefined
     if (key === 'mode') {
-      return 'no table surface: fragments are always emitted as sfc; `mode` is ignored (and a declared schema mode does not produce a schema.ts + wrapper pair).'
+      return {
+        reason:
+          'no table surface: fragments are always emitted as sfc; `mode` is ignored (and a declared schema mode does not produce a schema.ts + wrapper pair).',
+      }
     }
     if (key === 'name') {
-      return 'no table surface: the page name has no carrier in standalone fragments (component/file names come from the surface and dialog keys).'
+      return {
+        reason:
+          'no table surface: the page name has no carrier in standalone fragments (component/file names come from the surface and dialog keys).',
+      }
     }
-    return NO_TABLE_REASON
+    return { reason: NO_TABLE_REASON }
   }
 
   // 有表：直接读 render-plan 的降级行（reason 也来自同一处，不复制文案）。
@@ -325,10 +363,15 @@ function degradeReason(
   if (renderKey === 'operationColumn' && effective === 'sfc' && intent.operationColumn === false) {
     return undefined
   }
-  if (rule[effective] === 'downgrade') {
-    return rule.reason ?? `${renderKey} is not fully emitted in ${effective} mode.`
+  if (rule[effective] !== 'downgrade') return undefined
+
+  const other: 'schema' | 'sfc' = effective === 'schema' ? 'sfc' : 'schema'
+  return {
+    reason: rule.reason ?? `${renderKey} is not fully emitted in ${effective} mode.`,
+    ...(rule[other] !== 'downgrade'
+      ? { alternatives: Object.freeze([{ kind: 'mode' as const, value: other }]) }
+      : {}),
   }
-  return undefined
 }
 
 function unsupportedReason(scene: SceneId, key: string, accepted: readonly string[]): string {
@@ -359,8 +402,19 @@ export function assessIntent(input: CapabilityAssessmentInput): IntentCapability
       declared.push({ key, verdict: 'unsupported', reason: unsupportedReason(scene, key, accepted) })
       continue
     }
-    const reason = degradeReason(scene, key, raw, mode)
-    declared.push(reason ? { key, verdict: 'degraded', reason } : { key, verdict: 'accepted' })
+    const downgrade = degradeReason(scene, key, raw, mode)
+    declared.push(
+      downgrade
+        ? {
+            key,
+            verdict: 'degraded',
+            reason: downgrade.reason,
+            ...(downgrade.alternatives
+              ? { alternatives: Object.freeze(downgrade.alternatives.map((a) => Object.freeze({ ...a }))) }
+              : {}),
+          }
+        : { key, verdict: 'accepted' },
+    )
   }
 
   const missing = contract.intent.required.filter((k) => raw[k] === undefined)

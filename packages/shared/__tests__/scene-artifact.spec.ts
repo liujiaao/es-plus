@@ -1,4 +1,4 @@
-// P5：产物信封 `es-plus.artifact@1`。
+// P5：产物信封 `es-plus.artifact@2`。
 //
 // 这里钉的是信封的**身份语义**：版本字面量、指纹的确定性与敏感性、结构不变量
 // （非空 files / 唯一路径 / 未知 artifact 拒绝），以及「信封是附加视图 —— 不改变
@@ -27,8 +27,8 @@ const draft = (over: Partial<ArtifactDraft> = {}): ArtifactDraft => ({
 describe('buildArtifactEnvelope — 盖章与结构不变量', () => {
   it('contract 是版本字面量，fingerprint 是 16 位十六进制', () => {
     const e = buildArtifactEnvelope(draft())
-    expect(e.contract).toBe('es-plus.artifact@1')
-    expect(ARTIFACT_CONTRACT_VERSION).toBe('es-plus.artifact@1')
+    expect(e.contract).toBe('es-plus.artifact@2')
+    expect(ARTIFACT_CONTRACT_VERSION).toBe('es-plus.artifact@2')
     expect(e.fingerprint).toMatch(/^[0-9a-f]{16}$/)
   })
 
@@ -108,6 +108,12 @@ describe('emitSceneArtifact — 信封是附加视图', () => {
     // 信封里的代码真的出现在文本里（不是另编的一份）
     expect(rich.text).toContain(e.files[0].code)
     expect(ARTIFACT_KINDS).toContain(e.artifact)
+
+    // @2：发射路径的信封必带能力台账；直接盖章的草稿不带（没有意图可评估）。
+    expect(e.capability?.contract).toBe('es-plus.capabilities@1')
+    expect(e.capability?.scene).toBe('form')
+    expect(e.capability?.unsupported).toEqual([])
+    expect('capability' in buildArtifactEnvelope(draft())).toBe(false)
   })
 
   it('失败分支没有信封', () => {

@@ -92,6 +92,14 @@ describe("validate_intent — 工具层", () => {
     expect(atFormtype[0].message.toLowerCase()).toContain("received number");
   });
 
+  it("降级键的替代路径写进文本（来自台账，不是工具另写的建议）", async () => {
+    const intent = validIntent() as any;
+    intent.permissions = { add: "user:add" };
+    const res = await call(tool, { scene: "crud", intent });
+    expect(res.content[0].text).toContain("degraded: permissions");
+    expect(res.content[0].text).toContain("alternative: mode=sfc");
+  });
+
   it("语义错误（重复 prop）来自 shared 判据", async () => {
     const intent = validIntent();
     intent.surfaces.table.push(field("userName", "用户名"));

@@ -1,5 +1,15 @@
 /**
- * 产物信封 —— `es-plus.artifact@1`（P5）。
+ * 产物信封 —— `es-plus.artifact@2`。
+ *
+ * 版本史：@1（P5）只有身份 + 文件 + 配置 + 告警；@2（P9 补记）把派生视图
+ * `capability` 写进协议。字段本身是加法（@1 的消费者仍能解析），但**语义**变了：
+ * @1 的文档承诺「指纹覆盖全部字段」，而 `capability` 刻意不参与指纹（产物身份 =
+ * 字节，不是解释）。宿主需要在拿到信封时**无需探测**就知道「能力判定一定在」——
+ * 因此升版本，而不是让 @1 悄悄多出一个可选字段。
+ *
+ * 注意 @2 说的是「`emitSceneArtifact` 产出的信封必带 `capability`」；直接调用
+ * `buildArtifactEnvelope` 的草稿没有意图可评估，仍然不带。两者都由
+ * `check:artifact-envelope` 断言。
  *
  * ## 为什么需要信封
  *
@@ -35,7 +45,7 @@ import { ARTIFACT_KINDS, type ArtifactKind, type SceneId, type SceneMode } from 
 import type { IntentCapability } from './capability.js'
 
 /** 协议版本。任何破坏兼容的字段改动都必须换版本号。 */
-export const ARTIFACT_CONTRACT_VERSION = 'es-plus.artifact@1' as const
+export const ARTIFACT_CONTRACT_VERSION = 'es-plus.artifact@2' as const
 
 /** 信封里的一个产物文件。`language` 与 `path` 的扩展名必须自洽（守卫断言）。 */
 export interface ArtifactFile {
@@ -68,6 +78,9 @@ export interface ArtifactEnvelope extends ArtifactDraft {
    * P9：意图逐键能力判定（`es-plus.capabilities@1`）。**派生字段** —— 由
    * `emitSceneArtifact` 在盖章后附加，不参与 `fingerprint`（同一份产物的身份不因
    * 多加一份解释视图而改变；组合信封的 `nodeFingerprints` 也不受影响）。
+   *
+   * 自 @2 起，`emitSceneArtifact` 的成功分支**必有**此字段；直接
+   * `buildArtifactEnvelope` 的草稿没有意图可评估，故仍是可选。
    */
   capability?: IntentCapability
 }

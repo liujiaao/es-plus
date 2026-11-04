@@ -77,7 +77,17 @@ function renderReport(
     lines.push(
       ...report.capability.declared
         .filter((d) => d.verdict === "degraded")
-        .map((d) => `  - degraded: ${d.key} — ${d.reason ?? ""}`),
+        .map((d) => {
+          // 替代路径来自台账（`RENDER_PLAN_CONTRACT` 的 disposition），不是这里另写的建议：
+          // 能换模式保真的键点名「换成哪个模式」，没有声明式替代的保持沉默。
+          const alternatives = (d.alternatives ?? [])
+            .filter((a) => a.kind === "mode")
+            .map((a) => `mode=${a.value}`);
+          return (
+            `  - degraded: ${d.key} — ${d.reason ?? ""}` +
+            (alternatives.length ? ` (alternative: ${alternatives.join(" / ")})` : "")
+          );
+        }),
     );
   }
   if (errors.length) {

@@ -49,6 +49,52 @@ describe("assessIntent —— 场景意图逐键判定", () => {
     expect(cap.degraded).toEqual(["permissions"]);
   });
 
+  it("降级键带可验证的替代路径：换模式保真 / 无载体则没有替代", () => {
+    const schemaPerms = assessIntent({
+      scene: "crud",
+      intent: {
+        name: "U",
+        apiUrl: "/api/u",
+        surfaces: { table: [field] },
+        permissions: { add: "user:add" },
+      },
+    });
+    expect(find(schemaPerms, "permissions")?.alternatives).toEqual([{ kind: "mode", value: "sfc" }]);
+
+    const sfcBtns = assessIntent({
+      scene: "crud",
+      intent: {
+        name: "U",
+        apiUrl: "/api/u",
+        mode: "sfc",
+        surfaces: { table: [field] },
+        tableBtns: [{ name: "导出" }],
+      },
+    });
+    expect(find(sfcBtns, "tableBtns")?.alternatives).toEqual([{ kind: "mode", value: "schema" }]);
+
+    // 无表分支缺的是载体，不是模式 —— 不得凭空给替代。
+    const noTable = assessIntent({
+      scene: "crud",
+      intent: { name: "S", apiUrl: "/api/s", surfaces: { query: [field] }, tableOptions: {} },
+    });
+    expect(find(noTable, "tableOptions")?.verdict).toBe("degraded");
+    expect(find(noTable, "tableOptions")?.alternatives).toBeUndefined();
+
+    // 替代必须真保真：换模式后同一键 accepted。
+    const flipped = assessIntent({
+      scene: "crud",
+      intent: {
+        name: "U",
+        apiUrl: "/api/u",
+        mode: "sfc",
+        surfaces: { table: [field] },
+        permissions: { add: "user:add" },
+      },
+    });
+    expect(find(flipped, "permissions")?.verdict).toBe("accepted");
+  });
+
   it("crud + 表格 + sfc：dialogs / tableBtns 降级，permissions 保真", () => {
     const cap = assessIntent({
       scene: "crud",

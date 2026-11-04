@@ -170,6 +170,69 @@ try {
   if (mod.SCENE_INTENT_KEYS.table.includes('tableBtns')) {
     fail('片段表格不应接受 tableBtns（工具栏按钮只在 CRUD 页 schema 的按钮面）')
   }
+
+  // ── 7. 降级替代路径 ↔ RENDER_PLAN_CONTRACT（P9 补记）────────────────────
+  //
+  // `alternatives` 是「换模式能否保真」的机器可读答案。它必须与契约逐条对齐：
+  // 契约说 A 模式 downgrade、B 模式 emit 的键，判定必须带 `mode=B`；反过来，
+  // 无表分支缺的是载体而不是模式，不能凭空给模式替代。
+  const tableIntent = {
+    name: 'X',
+    apiUrl: '/x',
+    surfaces: { table: [{ prop: 'a', label: 'A', formtype: 'Input' }] },
+  }
+  const assessWith = (mode, extra) =>
+    mod.assessIntent({ scene: 'crud', intent: { ...tableIntent, mode, ...extra } })
+  const entryOf = (cap, key) => cap.declared.find((d) => d.key === key)
+  const modeAltOf = (cap, key) =>
+    (entryOf(cap, key)?.alternatives ?? []).filter((a) => a.kind === 'mode').map((a) => a.value)
+
+  const MODE_DEGRADED = [
+    // [mode, intent key, extra intent, 期望替代]
+    ['schema', 'permissions', { permissions: { add: 'p:add' } }, 'sfc'],
+    ['sfc', 'toolbarBtns', { toolbarBtns: [] }, 'schema'],
+    ['sfc', 'tableBtns', { tableBtns: [] }, 'schema'],
+    ['sfc', 'operationColumn', { operationColumn: { label: '操作' } }, 'schema'],
+    ['sfc', 'surfaces', { surfaces: { ...tableIntent.surfaces, dialog: ['add'] } }, 'schema'],
+  ]
+  for (const [mode, key, extra, target] of MODE_DEGRADED) {
+    const cap = assessWith(mode, extra)
+    const entry = entryOf(cap, key)
+    if (!entry || entry.verdict !== 'degraded') {
+      fail(`${key} 在 ${mode} 下应为 degraded，实际 ${entry?.verdict ?? '未声明'}`)
+      continue
+    }
+    if (!modeAltOf(cap, key).includes(target)) {
+      fail(`${key} 在 ${mode} 下降级，但 alternatives=${JSON.stringify(entry.alternatives)}，缺 mode=${target}`)
+      continue
+    }
+    // 替代必须真的保真：换到目标模式后该键应是 accepted。
+    const flipped = entryOf(assessWith(target, extra), key)
+    if (!flipped || flipped.verdict !== 'accepted') {
+      fail(`${key} 的替代 mode=${target} 不保真（实际 ${flipped?.verdict ?? '未声明'}）`)
+    }
+  }
+
+  // 反向：没有降级的键不得带替代；非 degraded 的判定也不得带。
+  for (const [mode, extra] of [['schema', {}], ['sfc', {}]]) {
+    for (const entry of assessWith(mode, extra).declared) {
+      if (entry.verdict !== 'degraded' && entry.alternatives?.length) {
+        fail(`${entry.key}（${mode}）不是 degraded 却带 alternatives`)
+      }
+    }
+  }
+
+  // 无表分支：缺的是载体，不是模式 —— 不得给模式替代。
+  const noTableAlt = entryOf(noTable, 'tableOptions')
+  if (noTableAlt?.alternatives?.length) {
+    fail('无表分支的 tableOptions 不应带模式替代（该键缺的是载体）')
+  }
+
+  // 不支持的键不得带替代（替代由前门的 did-you-mean 负责，台账不复制一份）。
+  const unsupportedEntry = entryOf(unknown, 'nope')
+  if (unsupportedEntry?.alternatives?.length) {
+    fail('unsupported 判定不应带 alternatives')
+  }
 } finally {
   rmSync(tmp, { recursive: true, force: true })
 }

@@ -57,13 +57,16 @@ describe("structuredContent — 产物信封", () => {
     expect(res.isError, res.content[0].text).toBeFalsy();
 
     const env = res.structuredContent;
-    expect(env.contract).toBe("es-plus.artifact@1");
+    expect(env.contract).toBe("es-plus.artifact@2");
     expect(env.scene).toBe("crud");
     expect(env.artifact).toBe("crud-page");
     expect(env.target).toBe("vue3");
     expect(env.mode).toBe("schema");
     expect(env.files.map((f: any) => f.path)).toContain("Page.vue");
     expect(env.fingerprint).toMatch(/^[0-9a-f]{16}$/);
+    // @2：宿主无需探测就知道能力判定在（scene='crud' 的意图当然可评估）。
+    expect(env.capability.contract).toBe("es-plus.capabilities@1");
+    expect(env.capability.scene).toBe("crud");
 
     // 文本仍是 shared 的同一条路径产出的字节
     const direct = emitScene({
@@ -80,7 +83,7 @@ describe("structuredContent — 产物信封", () => {
     const res = await scene.handler({ scene: "table", intent: tableIntent });
     expect(res.isError, res.content[0].text).toBeFalsy();
     const env = res.structuredContent;
-    expect(env.contract).toBe("es-plus.artifact@1");
+    expect(env.contract).toBe("es-plus.artifact@2");
     expect(env.scene).toBe("table");
     expect(env.artifact).toBe("table");
     expect(env.files).toHaveLength(1);
@@ -92,7 +95,7 @@ describe("structuredContent — 产物信封", () => {
     const res = await crud.handler(crudIntent);
     expect(res.isError, res.content[0].text).toBeFalsy();
     const env = res.structuredContent;
-    expect(env.contract).toBe("es-plus.artifact@1");
+    expect(env.contract).toBe("es-plus.artifact@2");
     expect(env.scene).toBe("crud");
     expect(env.artifact).toBe("crud-page");
     expect(env.fingerprint).toMatch(/^[0-9a-f]{16}$/);

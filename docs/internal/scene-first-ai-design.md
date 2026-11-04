@@ -35,7 +35,7 @@
 | **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ✅ 2026-11-03 |
-| **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ✅ 2026-11-04 |
+| **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1（P9 升 @2） | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ✅ 2026-11-04 |
 | **P6** | composition 契约（多节点装配）+ 见证锚点收尾 | 四类接线由契约派生；每个接线/缺口都有运行时见证 | ✅ 2026-11-04 |
 
 ## 4. 核心接口
@@ -72,11 +72,11 @@ export type SceneNode =
   | { id: string; kind: 'dialog'; intent: DialogBlockInput }
 ```
 
-产物信封（P5）：
+产物信封（P5，P9 升到 @2）：
 
 ```ts
 export interface ArtifactEnvelope {
-  contract: 'es-plus.artifact@1'
+  contract: 'es-plus.artifact@2'
   scene: SceneId
   artifact: ArtifactKind
   target: TargetFramework
@@ -85,6 +85,8 @@ export interface ArtifactEnvelope {
   config: unknown
   warnings: readonly string[]
   fingerprint: string
+  // P9：`emitSceneArtifact` 成功分支必带；指纹不覆盖它（身份 = 字节，不是解释）。
+  capability?: IntentCapability
 }
 ```
 
@@ -302,6 +304,7 @@ P5 拆成四个主题批次（各自独立提交），逐项对应第 3 节里�
 - `emit.ts` 新增 `emitSceneArtifact`：在**同一条文本路径**上附加 `envelope`；`emitScene` 改为委托并只返回 `text/isError`。CRUD 有表 = `crud-page`（schema 模式两文件）；CRUD 无表 = 片段包；table/form/dialog 各一种形态，dialog 按 `mode` 区分 composable/component。
 - 新增 `check-artifact-envelope`（第 4 组 `scene-front-door`）：279 条语料逐条断言 ① `emitScene` 与 `emitSceneArtifact` 文本逐字节相等 ② 成功必有信封、失败必无 ③ 身份四元组与场景/artifact 轴自洽、`runtimeOf` 认识 ④ `files` 非空 / 路径唯一 / `language` 与扩展名自洽 / 每份 `code` 都在返回文本里 ⑤ 指纹 16 位、两次相同、279 个互不相同；另有结构守卫（空 files / 重复路径 / 未知 artifact 抛错）与指纹敏感性非空证明。
 - 链路 123 → **124 步**。
+- **P9 补记**：信封追加派生视图 `capability`（逐键 accepted/degraded/unsupported + 降级替代路径），协议升到 `es-plus.artifact@2`。加法字段本身兼容，但 @1 的「指纹覆盖全部字段」承诺不再成立（capability 刻意不参与身份），且宿主需要按版本判断「能力判定必在」而不必探测。`emitSceneArtifact` 成功分支由 `check:artifact-envelope` 断言必带 `capability`；直接 `buildArtifactEnvelope` 的草稿仍不带（没有意图可评估）。
 
 #### P5d · 罐头弹窗标题单源（`55705e8`）
 

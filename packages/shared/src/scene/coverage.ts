@@ -185,7 +185,11 @@ function classifyPage(
 
     if (capability.unsupported.length) {
       const detail = `unsupported key(s): ${capability.unsupported.join(', ')}`
-      l3.push(`part ${partIndex} (${scene}): ${detail} — the generator would silently ignore them.`)
+      // 前门（generate_scene）在发射前就拒绝未知键；只有绕过前门的 shared 直接调用
+      // 才会被生成器静默忽略。两种事实都写清楚，避免把「会报错」说成「会忽略」。
+      l3.push(
+        `part ${partIndex} (${scene}): ${detail} — the front door rejects them; direct shared callers would have them silently ignored.`,
+      )
       reasons.push(detail)
     }
     if (capability.missing.length) {
@@ -203,6 +207,17 @@ function classifyPage(
     const metadataDegraded = capability.degraded.filter((k) => METADATA_DEGRADED_KEYS.has(k))
     if (metadataDegraded.length) {
       reasons.push(`metadata key(s) without a carrier: ${metadataDegraded.join(', ')} — no host edit needed.`)
+    }
+    // 补偿路径来自台账（`RENDER_PLAN_CONTRACT` 的 disposition），这里只转述，不另写建议。
+    const withAlternatives = capability.declared.filter(
+      (d) => d.verdict === 'degraded' && (d.alternatives?.length ?? 0) > 0,
+    )
+    if (withAlternatives.length) {
+      reasons.push(
+        `declarative alternative(s): ${withAlternatives
+          .map((d) => `${d.key} → ${(d.alternatives ?? []).map((a) => `${a.kind}=${a.value}`).join('/')}`)
+          .join('; ')} — switching keeps those keys faithful.`,
+      )
     }
     parts.push(
       frozenPart(
