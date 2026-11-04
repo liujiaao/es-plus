@@ -421,6 +421,14 @@ P6 之后做了一轮「未完成 / 遗留 / 隐患 / 设计缺陷」审计，�
 - 唯一 `FRONT DOOR` = `generate_scene`（场景路由器）；`generate_crud` = `COMPAT ENTRY (adapter)`，两条路径共用 `emitScene`、字节相同。
 - 工具总数 16 → **17**；`front-door` profile 13 → **14**；`check-tool-surface` / `tool-surface.spec` / `arg-guard.spec` / `front-door-profile.spec` / 五处文档与 `llms.txt`、`public/md/**` 同批更新。
 
+**③b 引导面同批对齐（instructions / prompts / resources）**
+
+改标签时只有 tools/list 变了，宿主实际还会读 initialize 的 `instructions`、三个 prompt、五个 resource —— 它们仍写「入口是 generate_crud」，与工具面互相打脸（与 AN-26 同一类契约分叉）：
+
+- `instructions`：清单补 `generate_scene` / `generate_composition`；入口段改指场景路由器；front-door 档「唯一代码生成入口」的假话改为事实。
+- `crud-page` / `spec-to-surfaces` prompt、`design-extraction` / `surfaces-examples` / `conventions` / `nl-to-config` resource、`ingest_schema` / `refine_config` / `detect_project_target` / `generate_crud_from_config` 的下一步指引：统一到 `generate_scene`（scene='crud'），`generate_crud` 保留为兼容名。
+- `front-door-profile.spec` 断言改为钉住新口径；`ai-workflows` 产物随文档内容重新生成（4 份站点副本）。
+
 **④ eval 被测路径**
 
 - PRD 腿（`scripts/eval/prd-leg.mjs`、`scripts/check-prd.mjs`）改走 `sceneCap.handler({ scene: 'crud', intent })`；prompt 明写「宿主会把你的对象包成 `{scene:'crud', intent}`」，工具名/描述取场景路由器。模型产物仍是**意图表**，落盘与 rescore 口径不变。
