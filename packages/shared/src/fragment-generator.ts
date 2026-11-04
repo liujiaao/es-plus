@@ -1,11 +1,14 @@
 import {
   buildFormItem,
   buildTableColumnSFC,
+  expandConfigEngineWarning,
   getDefaultValue,
   inferTsType,
+  inlineEditWarnings,
   pushSfcColumn,
   resolveTreeOptions,
   sanitizeExplicitColumns,
+  strippedColumnKeys,
 } from './structured-generator.js'
 import type {
   FieldConfig,
@@ -471,6 +474,16 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   const explicitColumns = Array.isArray(input.columns)
     ? sanitizeExplicitColumns(input.columns as Array<Record<string, unknown>>)
     : []
+  // 片段入口没有 `generateFromConfig` 那份 `collectUnknownKeys`（Zod 形状在 mcp 包），
+  // 但列契约来自 shared 的同一份 schema —— 拼错的列键必须同样可见，不能静默剥掉。
+  const stripped = Array.isArray(input.columns)
+    ? strippedColumnKeys(input.columns as Array<Record<string, unknown>>)
+    : []
+  if (stripped.length) {
+    warnings.push(
+      `以下显式列键不在列契约里，生成时会被忽略（产物中不存在这些键）：${stripped.join('、')}。拼写错误请改正；确属自定义元数据请使用 \`x-\` 前缀。`,
+    )
+  }
   const hasExplicitExpandColumn = explicitColumns.some((c) => c.type === 'expand')
   if (input.rowkey !== undefined && t.rowkey !== undefined && input.rowkey !== t.rowkey) {
     warnings.push(
@@ -483,12 +496,19 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     warnings.push('未提供 apiUrl —— 生成的表格不会自动取数,请为 tableData 手动接入数据源(或改用 compose/CRUD 页)。')
   }
 
-  // 与 schema 模式同一条核对（AI-09 子项④）：editConfig 只在 vxe 引擎下生效。
-  // 片段路径此前连这个键都收不到，自然不会告警；现在收得进就必须同样非静默。
-  if (t.editConfig && t.engine !== 'vxe') {
-    warnings.push(
-      `tableOptions.editConfig requires engine: 'vxe' — the current engine is '${t.engine ?? 'default'}', so inline editing will be silently ignored at runtime.`,
-    )
+  // 与 schema / SFC 两条整页路径同一条核对（AI-09 子项④ / AN-11④）：editConfig 只在
+  // vxe 引擎生效，且 vxe 只让带 `editRender` 的列可编辑。片段路径此前只复制了前半句，
+  // 「vxe 引擎 + 没有 editRender 列」在片段里仍是静默死路。文案由单源 helper 提供。
+  warnings.push(
+    ...inlineEditWarnings({
+      tableOptions: t,
+      columns: input.columns,
+    } as unknown as StructuredCrudConfig),
+  )
+  // 声明式展开内容在 vxe / 虚拟引擎上不会渲染（与整页 `applyExpandConfig` 同一判据）。
+  if (input.expandConfig) {
+    const expandWarning = expandConfigEngineWarning(t.engine, t.virtual, target)
+    if (expandWarning) warnings.push(expandWarning)
   }
 
   const lines: string[] = []

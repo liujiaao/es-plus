@@ -41,9 +41,10 @@
  *
  * ## 明确不做
  *
- * 不评片段准确率（无 scorer，硬造会产出恒真伪信号）。片段本轮的口径是**覆盖 + 语法
- * 编译 + 真 vite build**（后者由 golden:e2e 执行，本条只保证「它没被跳过」）；
- * 准确率要等片段 scorer 落地后再进 `definition95` 分母。
+ * 本条不评片段准确率：准确率由**片段打分腿**（`scripts/eval/fragment-scorers.mjs`
+ * + `check:fragment-leg`）在模型跑批时度量，本守卫只负责「覆盖 + 语法编译 + 真 vite
+ * build」—— 后者由 golden:e2e 执行，本条只保证「它没被跳过」。硬在静态守卫里造一个
+ * 准确率会得到恒真伪信号。
  *
  * 用法：node scripts/check-scene-coverage.mjs
  * 退出码：0 = 覆盖无空格且片段语料全部可解析；1 = 有空缺格或产物解析失败。

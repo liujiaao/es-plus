@@ -3,7 +3,8 @@
  * 片段记分卡自测（meta-eval，无需 API key，进 CI 的 `check:fragment-scorers`）。
  *
  * 记分卡自己也会错。这里钉五件事：
- *   1) **语料标注合法**：每条片段用例（2026-10-19 起 63 条，每场景 ≥20）都必须带
+ *   1) **语料标注合法**：每条片段用例（2026-11-04 起 69 条：table 27 / form 21 / dialog 21，
+ *      每场景 ≥20）都必须带
  *      `pinnedDims`、`nlStatedDims`、`fixedFields`，
  *      且每个 token 都是该 `(scene, gold)` 下真实启用、gold 真声明了的维度。标错/标到不存在的键 → 红。
  *      `pinnedDims ⊆ nlStatedDims`（scoped 不得惩罚 NL 未声明的意图）；`fixedFields` 必须与
@@ -249,6 +250,47 @@ function perturbWhole(scene, dim, gold, pred, pins = []) {
     cfg.tableOptions.virtual = !on
     if (on) delete cfg.tableOptions.engine
     else cfg.tableOptions.engine = 'virtual'
+    return true
+  }
+  // ── P10：片段表格的顶层词汇扰动 ───────────────────────────────────────────
+  if (dim === 'columns') {
+    const cols = cfg.columns
+    if (!Array.isArray(cols) || !cols.length) return false
+    // label 是**结构键**（COLUMN_KEY_CLASS），扰它必然改变判定视图；groups 递归找。
+    const walk = (list) => {
+      for (const c of list ?? []) {
+        if (!c || typeof c !== 'object') continue
+        if (typeof c.label === 'string') {
+          c.label += '-x'
+          return true
+        }
+        if (Array.isArray(c.groups) && walk(c.groups)) return true
+      }
+      return false
+    }
+    if (walk(cols)) return true
+    // 无 label 的列集（纯 index/selection）：删一列制造结构差异。
+    cols.pop()
+    return true
+  }
+  if (dim === 'expandConfig') {
+    const f = (cfg.expandConfig?.fields ?? [])[0]
+    if (!f) return false
+    // `title` 是不可测量键（EXPAND_KEY_CLASS: unmeasured）—— 扰它咬不住。
+    if (typeof f.label === 'string') f.label += '-x'
+    else f.prop = f.prop + '-x'
+    return true
+  }
+  if (dim === 'treeConfig') {
+    if (!cfg.treeConfig) return false
+    // childrenField 默认 'children'；把它改成非默认值必然改变投影视图。
+    cfg.treeConfig.childrenField = (cfg.treeConfig.childrenField ?? 'children') + '-x'
+    return true
+  }
+  if (dim === 'mergeConfig') {
+    const rowsBy = cfg.mergeConfig?.rowsBy
+    if (!Array.isArray(rowsBy) || !rowsBy.length) return false
+    cfg.mergeConfig.rowsBy = [rowsBy[0] + '-x', ...rowsBy.slice(1)]
     return true
   }
   const dot = dim.indexOf('.')
@@ -584,7 +626,8 @@ const ALL_KNOWN = new Set([
   'isHidden', 'reactions', 'fieldSpan', 'fieldRules', 'apiParams', 'labelKey', 'i18n',
   'apiUrl', 'noApiUrl', 'rowButtons', 'rowButtonNames', 'pagination.pageSize', 'pagination.pageSizes',
   'context', 'buttons', 'formLayout.labelWidth', 'formLayout.minFoldRows', 'tableVirtualMode',
-  'rowkey', 'mode', 'composableName', 'defaultTitle', 'dialogMaskNonClosing',
+  'rowkey', 'columns', 'expandConfig', 'treeConfig', 'mergeConfig',
+  'mode', 'composableName', 'defaultTitle', 'dialogMaskNonClosing',
 ])
 const never = [...ALL_KNOWN].filter((d) => !exercised.has(d))
 if (never.length) console.log(`  note: 以下维度未被任何片段语料触发（补语料信号）：${never.join(', ')}`)

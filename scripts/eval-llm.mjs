@@ -164,7 +164,7 @@ const LIMIT = (() => {
   return Number.isInteger(n) && n > 0 ? n : null
 })()
 /**
- * `--fragments` = **片段探针**：只跑片段语料（table / form / dialog；2026-10-19 起 63 条），CRUD 一条不跑。
+ * `--fragments` = **片段探针**：只跑片段语料（table / form / dialog；2026-11-04 起 69 条），CRUD 一条不跑。
  *
  * 语义与 `--limit` 相同 —— 它是探针，不是成绩：不写 `last-accuracy.json` / 徽章、
  * 不参与任何门禁。存在理由：片段测的是另一套工具契约与另一套记分卡，想单独看

@@ -275,12 +275,21 @@ describe('generateTableBlock — 容器级词汇（Wave 4）', () => {
       tableOptions: { editConfig: { trigger: 'click' } },
     })
     expect(warnings.some((w) => w.includes('editConfig') && w.includes('vxe'))).toBe(true)
-    const ok = generateTableBlock({
+    // P10：第二条死路与整页同口径 —— vxe 引擎下没有列声明 `editRender` 时同样无事发生。
+    // 旧断言「engine:'vxe' 就不告警」只覆盖了死路①，会把配了却不可编辑的表格静默放行。
+    const noEditRender = generateTableBlock({
       fields: columns,
       apiUrl: '/api/orders',
       tableOptions: { engine: 'vxe', editConfig: { trigger: 'click' } },
     })
-    expect(ok.warnings.some((w) => w.includes('editConfig'))).toBe(false)
+    expect(noEditRender.warnings.some((w) => w.includes('no column declares `editRender`'))).toBe(true)
+    const editable = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      columns: [{ prop: columns[0].prop, label: columns[0].label, editRender: { name: '$input' } }],
+      tableOptions: { engine: 'vxe', editConfig: { trigger: 'click' } },
+    })
+    expect(editable.warnings.some((w) => w.includes('editConfig'))).toBe(false)
   })
 })
 

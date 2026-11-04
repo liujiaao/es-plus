@@ -1,0 +1,59 @@
+{
+  "scene": "table",
+  "target": "vue3",
+  "pinnedDims": [
+    "propSet",
+    "apiUrl",
+    "treeConfig",
+    "expandConfig",
+    "rowkey"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "nodeName",
+        "label": "节点名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "manager",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "staffCount",
+        "label": "人数",
+        "formtype": "Input"
+      }
+    ],
+    "apiUrl": "/api/org",
+    "treeConfig": {
+      "childrenField": "nodes",
+      "expandAll": true
+    },
+    "expandConfig": {
+      "fields": [
+        {
+          "prop": "manager",
+          "label": "负责人"
+        }
+      ]
+    },
+    "rowkey": "nodeId",
+    "typescript": true
+  },
+  "nl": "做一个组织架构树表：接口 /api/org，行主键 nodeId。子节点放在 nodes 字段里，默认全部展开；表格列是节点名称、负责人、人数。每行可以展开查看负责人。",
+  "notes": "P10：片段表格的树表词汇（顶层 treeConfig 跨端窄子集 + 顶层 rowkey + 顶层 expandConfig）。与 08 分开的原因：树表与相邻行合并在语义上互斥（合并组轴 vs 父子层级），塞进同一条会让 NL 自相矛盾，模型无论怎么答都不该判满分。 target=vue3（同场景三条用例 config 逐字节相同，只差 target）。",
+  "fixedFields": [
+    "nodeName",
+    "manager",
+    "staffCount"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "apiUrl",
+    "treeConfig",
+    "expandConfig",
+    "rowkey"
+  ]
+}

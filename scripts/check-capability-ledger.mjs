@@ -148,24 +148,39 @@ try {
   // ── 6. 片段表格词汇 ↔ 发射证据（P10）────────────────────────────────────
   //
   // accepted 只证明「形状收了这个键」；这一类缺陷的真形态是「收了却永不注入产物」。
-  // 每个 P10 新增键都必须有一份能落到代码里的证据。
+  // 词表覆盖**全部** `TABLE_INTENT_KEYS`（不是只点名 P10 新增的 5 个）：每个键都要有
+  // 一份能落到产物里的证据 token；新增键若忘了登记，下面第 7 段的集合比对会红。
   const baseFields = [{ prop: 'a', label: 'A', formtype: 'Input' }]
   const TABLE_VOCABULARY = [
+    ['fields', {}, "prop: 'a'"],
+    ['apiUrl', { apiUrl: '/api/x' }, "apiParams: { url: '/api/x' }"],
+    ['target', { target: 'vue2' }, 'export default defineComponent'],
+    ['typescript', { typescript: false }, '<script setup>'],
+    ['i18n', { i18n: true }, "labelKey: 'field.a'"],
+    ['tableOptions', { tableOptions: { border: false } }, 'border: false'],
+    ['pagination', { pagination: { pageSize: 25 } }, 'pageSize: 25'],
+    ['rowButtons', { rowButtons: [{ name: '查看', key: 'view' }] }, 'row-action'],
     ['columns', { columns: [{ label: 'G', groups: [{ prop: 'b', label: 'B' }] }] }, 'groups: ['],
     ['treeConfig', { treeConfig: { childrenField: 'nodes' } }, 'childrenField'],
     ['expandConfig', { expandConfig: { fields: [{ prop: 'a' }] } }, "type: 'expand'"],
     ['mergeConfig', { mergeConfig: { rowsBy: ['dept'] } }, 'mergeConfig'],
     ['rowkey', { rowkey: 'code' }, "rowkey: 'code'"],
   ]
+  const covered = new Set()
   for (const [key, extra, token] of TABLE_VOCABULARY) {
+    covered.add(key)
     if (!mod.SCENE_INTENT_KEYS.table.includes(key)) {
-      fail(`片段表格词汇缺少 ${key}（P10）`)
+      fail(`片段表格词汇缺少 ${key}`)
       continue
     }
     const out = mod.generateTableBlock({ fields: baseFields, ...extra })
     if (!out.code.includes(token)) {
       fail(`片段表格接受 ${key} 但产物里没有证据 token「${token}」—— 接受入参却永不注入`)
     }
+  }
+  const uncovered = mod.SCENE_INTENT_KEYS.table.filter((k) => !covered.has(k))
+  if (uncovered.length) {
+    fail(`片段表格词汇没有发射证据覆盖：${uncovered.join(', ')}（新增键必须登记 token）`)
   }
   if (mod.SCENE_INTENT_KEYS.table.includes('tableBtns')) {
     fail('片段表格不应接受 tableBtns（工具栏按钮只在 CRUD 页 schema 的按钮面）')

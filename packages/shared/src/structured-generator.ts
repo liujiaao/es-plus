@@ -218,6 +218,29 @@ function columnContractKeys(): Set<string> {
   return columnContractKeysCache
 }
 
+/**
+ * 递归列出显式列里**会被剥掉**的键（不在列契约、也不是 `x-*`）。
+ *
+ * `sanitizeExplicitColumns` 只负责剥；调用方需要决定怎么告警。CRUD 入口由
+ * `collectUnknownKeys` 覆盖了同一条信息，片段入口没有那份 Zod 形状 —— 这里给
+ * 片段路径一份与列契约同源的判据，避免 `columns[].widht` 这类拼写错误静默消失。
+ */
+export function strippedColumnKeys(columns: Array<Record<string, unknown>>): string[] {
+  const keys = columnContractKeys()
+  const out: string[] = []
+  const walk = (cols: Array<Record<string, unknown>>, prefix: string): void => {
+    cols.forEach((col, index) => {
+      if (!col || typeof col !== 'object') return
+      for (const k of Object.keys(col)) {
+        if (!keys.has(k) && !isExtensionKey(k)) out.push(`${prefix}[${index}].${k}`)
+      }
+      if (Array.isArray(col.groups)) walk(col.groups as Array<Record<string, unknown>>, `${prefix}[${index}].groups`)
+    })
+  }
+  walk(columns, 'columns')
+  return out
+}
+
 /** 递归剥掉显式列里**不属于列契约**的键（保留 `x-*`）。`groups` 自指递归。 */
 export function sanitizeExplicitColumns(
   columns: Array<Record<string, unknown>>,
@@ -637,7 +660,7 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
  *   ②即便引擎是 vxe，**只有列上声明了 `editRender` 的单元格才可编辑**（vxe 自身的契约）。
  * 两种情况运行时都是静默 no-op：页面看起来正常、双击没反应、控制台也不报错。
  */
-function inlineEditWarnings(config: StructuredCrudConfig): string[] {
+export function inlineEditWarnings(config: StructuredCrudConfig): string[] {
   const tOpts = (config.tableOptions || {}) as Record<string, unknown>
   if (tOpts.editConfig === undefined) return []
   if (tOpts.engine !== 'vxe') {
@@ -1909,6 +1932,31 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
 }
 
 /**
+ * 声明式 `expandConfig` 在两个「不消费 detail row」的引擎上的降级告警。
+ *
+ * 抽出来是因为**片段表格也发同一个键**：同一条事实若只有整页路径告警，片段用户
+ * 会得到「产物看起来正常、展开行永远空白」的静默失败。返回 `undefined` = 无告警。
+ *
+ * 边界：vue2 + Element UI 没有虚拟引擎（运行时降级为普通 el-table，展开列照常渲染），
+ * 对它发「不会被渲染」是假告警 —— 与 `applyExpandConfig` 原判据一致。
+ */
+export function expandConfigEngineWarning(
+  engine: unknown,
+  virtual: unknown,
+  target: TargetFramework | undefined,
+): string | undefined {
+  if (engine === 'vxe') {
+    return 'expandConfig 的声明式展开内容不会被 vxe 引擎渲染（vxe 展开内容走插槽）——数据已保留，但需宿主提供 expand 插槽或改用默认引擎。'
+  }
+  if (engine === 'virtual' || virtual) {
+    if ((target ?? DEFAULT_TARGET) !== 'vue2') {
+      return 'expandConfig 的声明式展开内容不会被虚拟滚动引擎渲染（el-table-v2 无 detail row）——数据已保留，但需改用默认引擎。'
+    }
+  }
+  return undefined
+}
+
+/**
  * AI-09 子项②：把顶层声明式 `expandConfig` 落到展开列上（schema 模式）。
  *
  * 语义：`expandConfig` 一旦给出，表格就必须**恰好有一个**行展开器。
@@ -1926,16 +1974,9 @@ function applyExpandConfig(
 ): Array<Record<string, unknown>> {
   const ec = config.expandConfig
   if (!ec) return columns
-  const engine = (config.tableOptions as Record<string, unknown> | undefined)?.engine
-  if (engine === 'vxe') {
-    warnings.push('expandConfig 的声明式展开内容不会被 vxe 引擎渲染（vxe 展开内容走插槽）——数据已保留，但需宿主提供 expand 插槽或改用默认引擎。')
-  } else if (engine === 'virtual' || (config.tableOptions as Record<string, unknown> | undefined)?.virtual) {
-    // vue2 + Element UI 没有虚拟引擎：运行时**降级为普通 el-table**（并自己 warn），
-    // 普通 el-table 的展开列照常渲染 —— 对 vue2 发「不会被渲染」是假告警。
-    if ((config.target ?? DEFAULT_TARGET) !== 'vue2') {
-      warnings.push('expandConfig 的声明式展开内容不会被虚拟滚动引擎渲染（el-table-v2 无 detail row）——数据已保留，但需改用默认引擎。')
-    }
-  }
+  const tOpts = (config.tableOptions ?? {}) as Record<string, unknown>
+  const engineWarning = expandConfigEngineWarning(tOpts.engine, tOpts.virtual, config.target)
+  if (engineWarning) warnings.push(engineWarning)
   const out = columns.map((c) => ({ ...c }))
   const idx = out.findIndex((c) => c.type === 'expand')
   if (idx >= 0) out[idx] = { ...out[idx], expandConfig: ec }
@@ -2082,6 +2123,18 @@ export function pushSfcColumn(
       warnings.push(`列级 dataOptions 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
     } else {
       lines.push(`${inner}dataOptions: ${inlineJson(col.dataOptions)},`)
+    }
+  }
+  // `x-*` 是有意的扩展元数据（`sanitizeExplicitColumns` 明确保留）。SFC/片段路径
+  // 此前只发白名单键，于是同一份列在 schema 模式里保留、在 SFC 里静默消失 ——
+  // 这里按 JSON 数据发射，三种模式回到同一口径。
+  for (const key of Object.keys(col)) {
+    if (!isExtensionKey(key) || col[key] === undefined) continue
+    const nonJson = findNonJsonValues(col[key], key)
+    if (nonJson.length > 0) {
+      warnings.push(`显式 columns 里的 ${key} 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      lines.push(`${inner}${q(key)}: ${inlineJson(col[key])},`)
     }
   }
   lines.push(`${indent}},`)

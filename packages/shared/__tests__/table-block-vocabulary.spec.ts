@@ -30,6 +30,9 @@ describe("片段表格（P10 词汇对齐）", () => {
     expect(r.code).toContain("groups: [");
     expect(r.code).toContain("type: 'selection'");
     expect(r.code).not.toContain("bogusKey");
+    // 剥键必须可见：片段入口没有 generateFromConfig 的 collectUnknownKeys。
+    expect(r.warnings.join("\n")).toContain("columns[2].bogusKey");
+    expect(r.warnings.join("\n")).toContain("x-");
     // 派生列不再出现（override 非 merge）：只有显式列里的两个 name label
     expect(r.code.match(/prop: 'name'/g)?.length).toBe(1);
   });
@@ -88,5 +91,61 @@ describe("片段表格（P10 词汇对齐）", () => {
     });
     expect(r.code).toContain("clickEvent: (row) => emit('row-action'");
     expect(r.code.indexOf("clickEvent")).toBeGreaterThan(r.code.indexOf("prop: 'name'"));
+  });
+
+  it("x-* 扩展键在片段产物里保留（与 schema 路径同口径，不再静默消失）", () => {
+    const r = generateTableBlock({
+      fields,
+      columns: [{ prop: "name", label: "姓名", "x-owner": "team-a" }],
+    });
+    expect(r.code).toContain('\'x-owner\': "team-a"');
+    expect(r.warnings.some((w) => w.includes("不在列契约里"))).toBe(false);
+  });
+
+  it("editConfig 的两条死路与整页同一份文案：非 vxe / vxe 但无 editRender", () => {
+    const notVxe = generateTableBlock({
+      fields,
+      tableOptions: { editConfig: { trigger: "click" }, engine: "default" },
+    });
+    expect(notVxe.warnings.join("\n")).toContain("requires engine: 'vxe'");
+
+    const noEditRender = generateTableBlock({
+      fields,
+      tableOptions: { editConfig: { trigger: "click" }, engine: "vxe" },
+    });
+    expect(noEditRender.warnings.join("\n")).toContain("no column declares `editRender`");
+
+    const editable = generateTableBlock({
+      fields,
+      columns: [{ prop: "name", label: "姓名", editRender: { name: "$input" } }],
+      tableOptions: { editConfig: { trigger: "click" }, engine: "vxe" },
+    });
+    expect(editable.warnings.join("\n")).not.toContain("no column declares `editRender`");
+  });
+
+  it("expandConfig + vxe / 虚拟引擎：发与整页同一条降级告警", () => {
+    const vxe = generateTableBlock({
+      fields,
+      expandConfig: { fields: [{ prop: "dept", label: "部门" }] },
+      tableOptions: { engine: "vxe" },
+    });
+    expect(vxe.warnings.join("\n")).toContain("不会被 vxe 引擎渲染");
+
+    const virtual = generateTableBlock({
+      fields,
+      target: "vue3",
+      expandConfig: { fields: [{ prop: "dept", label: "部门" }] },
+      tableOptions: { virtual: true },
+    });
+    expect(virtual.warnings.join("\n")).toContain("不会被虚拟滚动引擎渲染");
+
+    // vue2 没有虚拟引擎：运行时降级为普通 el-table，展开列照常渲染 —— 不发假告警。
+    const vue2 = generateTableBlock({
+      fields,
+      target: "vue2",
+      expandConfig: { fields: [{ prop: "dept", label: "部门" }] },
+      tableOptions: { virtual: true },
+    });
+    expect(vue2.warnings.join("\n")).not.toContain("不会被虚拟滚动引擎渲染");
   });
 });

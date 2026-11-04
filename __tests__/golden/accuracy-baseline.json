@@ -103,6 +103,6 @@
   "definition95": null,
   "coreRate": null,
   "fragmentScopedMin": 0.7778,
-  "fragmentScopedSource": "probe 2026-10-19 (deepseek-v4-pro, --fragments, 63/63 measured): core 95.2% · scoped 77.8% · compiles 100%",
+  "fragmentScopedSource": "probe 2026-10-19 (deepseek-v4-pro, --fragments, 63/63 measured): core 95.2% · scoped 77.8% · compiles 100%. 2026-11-04 (P10) 片段语料扩到 69 条（+6：columns / treeConfig / expandConfig / mergeConfig / rowkey 组合），地板值仍按旧分母记录，待下一次全量片段探针后经人工 PR 重derive（不得由夜间回写）",
   "byDimension": {}
 }

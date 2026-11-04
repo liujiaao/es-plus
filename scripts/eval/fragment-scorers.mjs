@@ -62,6 +62,16 @@
 
 /** 字段身份（Ruler v3 / R2）：与 CRUD 同一把尺子 —— 按归一化 label 对齐，详见 `align.mjs`。 */
 import { normalizePredForCompare, propNameMatch } from './align.mjs'
+/**
+ * P10：片段表格的顶层词汇（`columns` / `expandConfig` / `treeConfig`）判定**复用 CRUD
+ * 记分卡的投影**，不另写一把尺子。
+ *
+ * 原因：这三处的判定视图都编码了运行时事实（省略 `columns` == 派生列、展开列位置不是
+ * 契约、装饰键单侧豁免、`treeConfig` 的默认值/弃用别名归一）。片段腿若自己写一份，两腿
+ * 会各自漂移，同一份意图在「整页」与「独立表格」两个入口得到不同分数 —— 正是 P10
+ * 要消灭的入口分叉。`mergeConfig` / 顶层 `rowkey` 是纯深等值，不需要投影。
+ */
+import { projectColumnSet, projectExpandConfig, projectTreeConfig } from './scorers.mjs'
 
 /** 稳定序列化（键排序）—— 与 `scorers.mjs` 同实现。 */
 function canon(v) {
@@ -171,6 +181,14 @@ const effectiveTableHeight = (cfg) => {
 }
 /** dialog 的 rowkey：生成器 `input.rowkey || 'id'` —— 省略与显式 `'id'` 等价。 */
 const normDialogRowkey = (cfg) => cfg?.rowkey || 'id'
+/**
+ * 表格的有效 rowkey：顶层 `rowkey` 优先、其次 `tableOptions.rowkey`、最后库默认 `'id'`
+ * （生成器 `rowkey = input.rowkey ?? t.rowkey ?? 'id'`，两者冲突时取顶层并告警）。
+ *
+ * 两个「家」是**同一个运行时旋钮**，故判定按有效值比；模型把主键写在 `tableOptions`
+ * 里不算错（prompt 明写「same as tableOptions.rowkey」）。
+ */
+const normTableRowkey = (cfg) => cfg?.rowkey ?? cfg?.tableOptions?.rowkey ?? 'id'
 function normTarget(cfg) {
   return cfg?.target ?? 'vue3'
 }
@@ -716,6 +734,28 @@ function fragmentDimSpecs(scene, gold) {
         return eq(gv ?? null, pv ?? null)
       })
     }
+
+    // ── P10：与 CRUD 页同一套表格词汇 ────────────────────────────────────
+    //
+    // 判定与整页记分卡**同源**（投影函数直接从 scorers.mjs 引入），否则「同一份意图在
+    // 两个入口得到不同分数」。适用性沿用 CRUD 的规矩：gold 没声明就不进分母。
+    // 省略 `columns` 仍可过：resolveColumns 会按 `fields` 派生 —— 这是 schema 写明的
+    // 等价写法（"Omit to keep the derived one-field-one-column behavior"）。
+    add('columns', !!(gold?.columns && gold.columns.length), (g, p) => {
+      const proj = projectColumnSet(g, p)
+      return eq(proj.gold, proj.pred)
+    })
+    add('expandConfig', !!gold?.expandConfig, (g, p) => {
+      const proj = projectExpandConfig(g.expandConfig ?? null, p.expandConfig ?? null)
+      return eq(proj.gold, proj.pred)
+    })
+    add('treeConfig', !!gold?.treeConfig, (g, p) => eq(projectTreeConfig(g?.treeConfig), projectTreeConfig(p?.treeConfig)))
+    // rowsBy 的列集合**与顺序**都是渲染契约（谁合并、谁是分组主轴），纯深等值。
+    add('mergeConfig', !!gold?.mergeConfig, (g, p) => eq(g?.mergeConfig ?? null, p?.mergeConfig ?? null))
+    // 顶层 rowkey 只在 gold 用这种写法时启用：`tableOptions.rowkey` 已由动态维
+    // `tableOptions.rowkey` 覆盖，同时启用会把一个意图数两遍（gold 写顶层、模型写
+    // nested 时两条维度会给出相反结论 —— 故比较**有效值**，覆盖两个家）。
+    add('rowkey', gold?.rowkey !== undefined, (g, p) => eq(normTableRowkey(g), normTableRowkey(p)))
   }
 
   if (scene === 'form') {
