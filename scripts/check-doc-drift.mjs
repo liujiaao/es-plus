@@ -48,6 +48,8 @@ try {
     entry,
     [
       "import { registerTools } from '../../packages/mcp-server/src/tools/index.ts'",
+      "import { INGEST_KINDS } from '@es-plus/shared'",
+      'export { INGEST_KINDS }',
       'export function capture(profile) {',
       '  const seen = []',
       '  const fake = { tool: (name, description) => seen.push({ name, description }) }',
@@ -166,10 +168,24 @@ try {
     }
   }
 
+  // ── 3b+. ingest 的输入形态从源码派生 ───────────────────────────────────
+  // 此前只钉住 TS / SQL 两个词 —— 新增一种输入而不改文档时守卫不会红。现在按
+  // `INGEST_KINDS`（与 `z.enum` 同一常量）逐项要求文档出现对应词条。
+  const INGEST_DOC_TOKEN = {
+    openapi: 'OpenAPI',
+    jsonSchema: 'JSON Schema',
+    'sample-json': '样例 JSON',
+    'ts-interface': 'TypeScript interface',
+    'sql-ddl': 'SQL DDL',
+  }
+  for (const kind of mod.INGEST_KINDS) {
+    const token = INGEST_DOC_TOKEN[kind]
+    if (!token) fail(`ingest 输入形态 ${kind} 没有对应的文档词条（守卫需登记）`)
+    else if (!doc.includes(token)) fail(`文档未声明 ingest 支持的输入形态 ${kind}（「${token}」）`)
+  }
+
   const REQUIRED = [
     ['PRD 语料规模', '22 例'],
-    ['ingest 的 TS 输入', 'TypeScript interface'],
-    ['ingest 的 SQL 输入', 'SQL DDL'],
     ['信封透出', 'structuredContent'],
     ['信封形状声明（P8 复核）', 'outputSchema'],
     ['唯一前门', 'generate_scene'],
