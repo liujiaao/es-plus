@@ -164,9 +164,20 @@ export interface StructuredGenerateResult {
  * 必须赢 —— 否则同一份配置在 vxe 与 el-table 上会长出两棵不同的树。
  * 两者都没声明时返回 undefined（不凭空发 `treeConfig`，否则默认引擎会误入树模式）。
  */
-function resolveTreeOptions(
-  tOpts: TableOpts,
-  config: StructuredCrudConfig
+/**
+ * 树表配置的来源形状（只约束本函数真正读到的两个键，便于片段层复用同一合并点）。
+ */
+interface TreeOptionSource {
+  treeConfig?: {
+    childrenField?: string
+    expandAll?: boolean
+    [key: string]: unknown
+  }
+}
+
+export function resolveTreeOptions(
+  tOpts: TreeOptionSource,
+  config: TreeOptionSource
 ): Record<string, unknown> | undefined {
   const rich = tOpts.treeConfig
   const narrow = config.treeConfig
@@ -208,7 +219,7 @@ function columnContractKeys(): Set<string> {
 }
 
 /** 递归剥掉显式列里**不属于列契约**的键（保留 `x-*`）。`groups` 自指递归。 */
-function sanitizeExplicitColumns(
+export function sanitizeExplicitColumns(
   columns: Array<Record<string, unknown>>,
 ): Array<Record<string, unknown>> {
   const keys = columnContractKeys()
@@ -1980,7 +1991,14 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSort
  * 直接读 `type`（原生透传）与 `ellipsis`）。AN-10 之后派生路径与显式列路径**同一个词形**
  * （`ellipsis`）；`showOverflowTooltip` 只是用户显式写下的存量写法，原样保留给三端兼容层。
  */
-function pushSfcColumn(
+/**
+ * 单列 → SFC 列字面量（`groups` 多级表头自指；`btns` / `expandConfig` /
+ * `editRender` / `dataOptions` 走 `inlineJson`）。
+ *
+ * 导出供片段表格复用：显式 `columns` / 顶层 `expandConfig` 必须与整页走同一发射器，
+ * 否则同一份列配置在两条路径上会长出不同的键集。
+ */
+export function pushSfcColumn(
   col: Record<string, unknown>,
   lines: string[],
   indent: string,

@@ -13,7 +13,8 @@
  *   3. CRUD 降级表 == `RENDER_PLAN_CONTRACT` 的逐键投影（不复制文案）。
  *
  * 再加两条行为断言：未知键必须判 `unsupported`；无表 CRUD 的 accepted / degraded
- * 必须互斥且并集等于 CRUD 词汇。
+ * 必须互斥且并集等于 CRUD 词汇。P10 追加第三组：片段表格的每个新增词汇键都要在
+ * 产物里有证据 token（「接受入参却永不注入」是本仓反复出现的失败形态）。
  *
  * 退出码：0 = 台账与源码一致；1 = 有漂移。
  */
@@ -41,7 +42,8 @@ try {
       "import { SCENE_REGISTRY } from '../../packages/shared/src/scene/registry.ts'",
       "import { RENDER_PLAN_CONTRACT } from '../../packages/shared/src/render-plan.ts'",
       "import { SCENE_INTENT_SCHEMAS } from '../../packages/mcp-server/src/tools/generate-scene.ts'",
-      'export { capabilityLedger, assessIntent, CRUD_INTENT_KEYS, SCENE_INTENT_KEYS, SCENE_REGISTRY, RENDER_PLAN_CONTRACT, SCENE_INTENT_SCHEMAS }',
+      "import { generateTableBlock } from '../../packages/shared/src/fragment-generator.ts'",
+      'export { capabilityLedger, assessIntent, CRUD_INTENT_KEYS, SCENE_INTENT_KEYS, SCENE_REGISTRY, RENDER_PLAN_CONTRACT, SCENE_INTENT_SCHEMAS, generateTableBlock }',
     ].join('\n'),
     'utf8',
   )
@@ -142,6 +144,32 @@ try {
   if (dialogMode.mode !== 'composable') {
     fail(`dialog 的默认 mode 应为 composable，实际 ${dialogMode.mode}`)
   }
+
+  // ── 6. 片段表格词汇 ↔ 发射证据（P10）────────────────────────────────────
+  //
+  // accepted 只证明「形状收了这个键」；这一类缺陷的真形态是「收了却永不注入产物」。
+  // 每个 P10 新增键都必须有一份能落到代码里的证据。
+  const baseFields = [{ prop: 'a', label: 'A', formtype: 'Input' }]
+  const TABLE_VOCABULARY = [
+    ['columns', { columns: [{ label: 'G', groups: [{ prop: 'b', label: 'B' }] }] }, 'groups: ['],
+    ['treeConfig', { treeConfig: { childrenField: 'nodes' } }, 'childrenField'],
+    ['expandConfig', { expandConfig: { fields: [{ prop: 'a' }] } }, "type: 'expand'"],
+    ['mergeConfig', { mergeConfig: { rowsBy: ['dept'] } }, 'mergeConfig'],
+    ['rowkey', { rowkey: 'code' }, "rowkey: 'code'"],
+  ]
+  for (const [key, extra, token] of TABLE_VOCABULARY) {
+    if (!mod.SCENE_INTENT_KEYS.table.includes(key)) {
+      fail(`片段表格词汇缺少 ${key}（P10）`)
+      continue
+    }
+    const out = mod.generateTableBlock({ fields: baseFields, ...extra })
+    if (!out.code.includes(token)) {
+      fail(`片段表格接受 ${key} 但产物里没有证据 token「${token}」—— 接受入参却永不注入`)
+    }
+  }
+  if (mod.SCENE_INTENT_KEYS.table.includes('tableBtns')) {
+    fail('片段表格不应接受 tableBtns（工具栏按钮只在 CRUD 页 schema 的按钮面）')
+  }
 } finally {
   rmSync(tmp, { recursive: true, force: true })
 }
@@ -150,4 +178,4 @@ if (failures.length) {
   console.error(`\n✗ check:capability-ledger —— ${failures.length} 处台账与源码不一致`)
   process.exit(1)
 }
-console.log('✅ check:capability-ledger：场景词汇 / 降级表 / 无表分支与源码一致。')
+console.log('✅ check:capability-ledger：场景词汇 / 降级表 / 无表分支 / 片段词汇发射证据与源码一致。')

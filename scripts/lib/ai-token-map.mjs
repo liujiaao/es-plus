@@ -228,14 +228,14 @@ export const TOKEN_MAP = [
     kind: 'declarative',
     structuredPath: 'columns[].groups',
     artifactPaths: ['columns[].children'],
-    note: '多级表头（B 级：前门不收 columns，需 from_config）',
+    note: '多级表头（CRUD 前门不收 columns，需 from_config；片段 generate_table 自 P10 起直收）',
   },
   {
     token: 'columnSortable',
     kind: 'declarative',
     structuredPath: 'columns[].sortable',
     artifactPaths: ['columns[].sortable'],
-    note: '显式列的排序开关（B 级：同上）',
+    note: '显式列的排序开关（CRUD 前门同上；片段 generate_table 自 P10 起直收 columns.sortable）',
   },
 
   // ── 无条件发射：不得当证据用 ────────────────────────────────────────

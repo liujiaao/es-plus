@@ -226,7 +226,8 @@ surfaces
 - **定位**：按「场景」而不是按「工具名」定义的第一入口。`scene` ∈ `crud` / `table` / `form` / `dialog`；`intent` 是该场景**对应旧工具的同一份**参数形状（不另写第二份）。
 - **内部**：`emitScene` → 四场景各落到既有发射器；`scene='crud'` 与 `generate_crud` 共享同一条路径，产物逐字节相同（`check:scene-parity`）。
 - **输出**：文本 + `structuredContent` 信封（见 §4.1 注）。
-- **边界**：`scene='table'` 的意图表就是 `generate_table` 的形状，因此**没有**顶层 `columns` / `treeConfig` / `expandConfig` / `mergeConfig` / `tableBtns`；需要这些能力时用 `scene='crud'`（哪怕只要一张表）。这一条是当前真实的能力不对称，不是措辞差异。
+- **表格词汇**：`scene='table'` 的意图表就是 `generate_table` 的形状，P10 起与 `scene='crud'` 的表词汇对齐 —— `columns` / 顶层 `treeConfig` / 顶层 `expandConfig` / `mergeConfig` / `rowkey` 都收，且走**同一套发射器**（`sanitizeExplicitColumns` / `resolveTreeOptions` / `pushSfcColumn`），不是片段侧的第二份实现。
+- **边界**：只剩 `tableBtns` 需要 `scene='crud'`（工具栏按钮只存在于 CRUD 页 schema 的按钮面，片段没有对应渲染通道）。这条不对称由 `es-plus.capabilities@1` 台账逐键显式报出，不靠文档口径。
 
 #### `generate_composition`（组合页）
 
@@ -294,10 +295,10 @@ surfaces
 #### 4) `generate_table`
 
 - **定位**：独立 `<es-table>` SFC（列表嵌入第三方布局）。
-- **输入**：`fields`、`apiUrl`、`target`、`typescript`、`i18n`、`tableOptions`、`pagination`、`rowButtons`。
-- **内部**：`generateTableBlock`；行按钮以 `triggerEvent` 发出，不内联 handler。
+- **输入**：`fields`、`apiUrl`、`target`、`typescript`、`i18n`、`tableOptions`、`pagination`、`rowButtons`、`columns`、`treeConfig`、`expandConfig`、`mergeConfig`、`rowkey`。
+- **内部**：`generateTableBlock`；行按钮以 `triggerEvent` 发出，不内联 handler。`tableOptions` 仍收 vxe 富树/展开（`treeConfig` / `expandConfig`）；P10 起顶层键与 CRUD 页共用同一套表格词汇与发射器：显式 `columns` 走 `sanitizeExplicitColumns` + `pushSfcColumn`（契约键白名单、`groups` 递归），顶层 `treeConfig` 走 `resolveTreeOptions`（与 `tableOptions.treeConfig` 合并、顶层覆盖），顶层 `expandConfig` 前置/复用展开列，`mergeConfig` → `options.mergeConfig`，`rowkey` 与 `tableOptions.rowkey` 冲突时取顶层并告警。
 - **已知边界**：
-  - `tableOptions` 已收 vxe 富树/展开（`treeConfig` / `expandConfig`）；**不收**顶层跨端 `treeConfig`、顶层声明式 `expandConfig`、`columns`、`mergeConfig`、`tableBtns` —— 需要这些能力时用 `generate_scene`（`scene='crud'`）；
+  - `tableBtns` **仍不收**：工具栏按钮（`code:1/2` 定位）只在 CRUD 页 schema 的按钮面存在，片段没有对应的渲染通道 —— 需要它时用 `generate_scene`（`scene='crud'`）；
   - `editConfig` 可用但无 `editRender` 表达通道，`engine:'vxe'` 时为静默 no-op（AN-11）。
 - **维护注意**：`tableShape` 同时是 `validate_config({type:'es-table-config'})` 的判据。
 

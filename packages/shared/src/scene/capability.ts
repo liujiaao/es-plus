@@ -98,6 +98,12 @@ export const TABLE_INTENT_KEYS = [
   'tableOptions',
   'pagination',
   'rowButtons',
+  // P10：与 CRUD 同一套表格词汇（片段表格此前只能换入口才能用）。
+  'columns',
+  'treeConfig',
+  'expandConfig',
+  'mergeConfig',
+  'rowkey',
 ] as const satisfies readonly (keyof TableBlockInput)[]
 
 /** form 场景的意图键（= `generate_form` 的入参形状）。 */

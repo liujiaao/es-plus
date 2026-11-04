@@ -122,12 +122,12 @@ describe("assessIntent —— 场景意图逐键判定", () => {
   it("片段场景：认不出的键判 unsupported 并列出合法词汇（直接消费者不再静默）", () => {
     const cap = assessIntent({
       scene: "table",
-      intent: { fields: [field], columns: [{ prop: "x", label: "X" }] },
+      intent: { fields: [field], tableBtns: [{ name: "导出" }] },
     });
     expect(find(cap, "fields")?.verdict).toBe("accepted");
-    expect(find(cap, "columns")?.verdict).toBe("unsupported");
-    expect(find(cap, "columns")?.reason).toContain("accepted keys");
-    expect(find(cap, "columns")?.reason).toContain(TABLE_INTENT_KEYS.join(", "));
+    expect(find(cap, "tableBtns")?.verdict).toBe("unsupported");
+    expect(find(cap, "tableBtns")?.reason).toContain("accepted keys");
+    expect(find(cap, "tableBtns")?.reason).toContain(TABLE_INTENT_KEYS.join(", "));
     expect(cap.ok).toBe(false);
   });
 

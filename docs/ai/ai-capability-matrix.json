@@ -374,8 +374,10 @@
         "apiParams",
         "apiUrl",
         "attrs",
+        "columns",
         "dataOptions",
         "ellipsis",
+        "expandConfig",
         "fields",
         "fixed",
         "formSpan",
@@ -385,6 +387,7 @@
         "isHidden",
         "label",
         "labelKey",
+        "mergeConfig",
         "minWidth",
         "pagination",
         "permissionValue",
@@ -394,9 +397,11 @@
         "render",
         "required",
         "rowButtons",
+        "rowkey",
         "rules",
         "tableOptions",
         "target",
+        "treeConfig",
         "typescript",
         "width"
       ],
@@ -529,7 +534,9 @@
           "crud": [
             "columns"
           ],
-          "table": [],
+          "table": [
+            "columns"
+          ],
           "form": [],
           "dialog": []
         }
@@ -546,7 +553,9 @@
           "crud": [
             "columns"
           ],
-          "table": [],
+          "table": [
+            "columns"
+          ],
           "form": [],
           "dialog": []
         }
@@ -563,7 +572,9 @@
           "crud": [
             "columns"
           ],
-          "table": [],
+          "table": [
+            "columns"
+          ],
           "form": [],
           "dialog": []
         }
@@ -710,7 +721,9 @@
           "crud": [
             "expandConfig"
           ],
-          "table": [],
+          "table": [
+            "expandConfig"
+          ],
           "form": [],
           "dialog": []
         }
@@ -892,7 +905,9 @@
           "crud": [
             "mergeConfig"
           ],
-          "table": [],
+          "table": [
+            "mergeConfig"
+          ],
           "form": [],
           "dialog": []
         }
@@ -1127,7 +1142,9 @@
           "crud": [
             "treeConfig"
           ],
-          "table": [],
+          "table": [
+            "treeConfig"
+          ],
           "form": [],
           "dialog": []
         }
@@ -1255,7 +1272,7 @@
         "columns[].children"
       ],
       "reach": "config-only",
-      "note": "多级表头（B 级：前门不收 columns，需 from_config）"
+      "note": "多级表头（CRUD 前门不收 columns，需 from_config；片段 generate_table 自 P10 起直收）"
     },
     "columnsDecl": {
       "kind": "auto",
@@ -1273,7 +1290,7 @@
         "columns[].sortable"
       ],
       "reach": "config-only",
-      "note": "显式列的排序开关（B 级：同上）"
+      "note": "显式列的排序开关（CRUD 前门同上；片段 generate_table 自 P10 起直收 columns.sortable）"
     },
     "columnStyle": {
       "kind": "declarative",

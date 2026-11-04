@@ -102,6 +102,7 @@ try {
     '多处静默丢弃',
     '`rowkey` 在 compose 调用中未透传',
     '入参无 `columns`/`treeConfig`/`expandConfig`/`mergeConfig`/`tableBtns`',
+    '**没有**顶层 `columns`',
     '未知键被静默剥离',
     '字段级 `render`/`formatter` 在片段表单中被静默丢弃',
   ]
@@ -117,6 +118,7 @@ try {
     ['组合页', 'generate_composition'],
     ['兼容入口标签', 'COMPAT ENTRY'],
     ['片段表格的真实边界', 'vxe 富树'],
+    ['片段表格词汇对齐（P10）', 'sanitizeExplicitColumns'],
     ['能力台账协议', 'es-plus.capabilities@1'],
     ['能力台账资源', 'esplus://capabilities'],
   ]
@@ -128,8 +130,8 @@ try {
   const tableDesc = byName.generate_table ?? ''
   if (!/treeConfig/.test(tableDesc)) fail('generate_table 描述没有列出已支持的 tableOptions.treeConfig')
   if (!/expandConfig/.test(tableDesc)) fail('generate_table 描述没有列出已支持的 tableOptions.expandConfig')
-  if (!/columns/.test(tableDesc) || !/generate_scene/.test(tableDesc)) {
-    fail('generate_table 描述没有说明 columns 不支持并指向 generate_scene(scene=\'crud\')')
+  if (!/tableBtns/.test(tableDesc) || !/generate_scene/.test(tableDesc)) {
+    fail("generate_table 描述没有说明 tableBtns 是唯一不支持的表键并指向 generate_scene(scene='crud')")
   }
   const formDesc = byName.generate_form ?? ''
   if (!/render/.test(formDesc) || !/NOT consumed/.test(formDesc)) {

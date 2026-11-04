@@ -1,5 +1,17 @@
-import { buildFormItem, buildTableColumnSFC, getDefaultValue, inferTsType } from './structured-generator.js'
-import type { FieldConfig, StructuredCrudConfig } from './structured-config.schema.js'
+import {
+  buildFormItem,
+  buildTableColumnSFC,
+  getDefaultValue,
+  inferTsType,
+  pushSfcColumn,
+  resolveTreeOptions,
+  sanitizeExplicitColumns,
+} from './structured-generator.js'
+import type {
+  FieldConfig,
+  StructuredCrudConfig,
+  StructuredCrudConfigInput,
+} from './structured-config.schema.js'
 import type { SurfaceField } from './compose-crud-config.js'
 import { getEsPlusPackageName, type TargetFramework, DEFAULT_TARGET } from './target.js'
 import { q, qBt, qKey, qMember, inlineJson, qAttr } from './codegen-escape.js'
@@ -406,6 +418,22 @@ export interface TableBlockInput {
    * 宿主监听 es-table 的事件自行处理。
    */
   rowButtons?: TableRowButton[]
+  /**
+   * P10 —— 与 CRUD 同一套表格词汇（此前这些键只存在于 `generate_scene(scene='crud')`，
+   * 宿主为了多级表头/树表/展开/合并必须整套换入口）。
+   *
+   * - `columns`：显式列（override 非 merge，`groups` 多级表头自指）；风险键经
+   *   `sanitizeExplicitColumns` 剥除，与整页 schema 路径同一实现。
+   * - `treeConfig` / `expandConfig`：**顶层窄子集**（跨端），与 `tableOptions.*`
+   *   的 vxe 富子集是不同层；树表按 `resolveTreeOptions` 合并（顶层覆盖）。
+   * - `mergeConfig`：相邻行合并（`rowsBy`）。
+   * - `rowkey`：顶层主键（与 `tableOptions.rowkey` 冲突时取顶层并告警，同 CRUD）。
+   */
+  columns?: StructuredCrudConfigInput['columns']
+  treeConfig?: StructuredCrudConfigInput['treeConfig']
+  expandConfig?: StructuredCrudConfigInput['expandConfig']
+  mergeConfig?: StructuredCrudConfigInput['mergeConfig']
+  rowkey?: string
 }
 
 /**
@@ -438,6 +466,18 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   const fields = input.fields
   const t: TableBlockOptions = input.tableOptions ?? {}
   const warnings: string[] = []
+
+  // P10：与 CRUD 同一套显式列 / 树表 / 展开 / 合并词汇。
+  const explicitColumns = Array.isArray(input.columns)
+    ? sanitizeExplicitColumns(input.columns as Array<Record<string, unknown>>)
+    : []
+  const hasExplicitExpandColumn = explicitColumns.some((c) => c.type === 'expand')
+  if (input.rowkey !== undefined && t.rowkey !== undefined && input.rowkey !== t.rowkey) {
+    warnings.push(
+      `rowkey 冲突：tableOptions.rowkey="${t.rowkey}" vs 顶层 rowkey="${input.rowkey}" —— 取顶层（与 CRUD 页同一口径）。`,
+    )
+  }
+  const rowkey = input.rowkey ?? t.rowkey ?? 'id'
 
   if (!input.apiUrl) {
     warnings.push('未提供 apiUrl —— 生成的表格不会自动取数,请为 tableData 手动接入数据源(或改用 compose/CRUD 页)。')
@@ -505,8 +545,21 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     tableOptions: { defaultSort: t.defaultSort },
   } as unknown as StructuredCrudConfig
   lines.push('const columns = [')
-  for (const f of fields) {
-    lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
+  // AI-09 子项②（P10 对齐）：顶层 `expandConfig` 落到展开列。显式列里已有
+  // `type:'expand'` 时不重复前置（与整页 SFC 路径同一判据）。
+  if (input.expandConfig && !hasExplicitExpandColumn) {
+    pushSfcColumn({ type: 'expand', expandConfig: input.expandConfig }, lines, '  ', warnings)
+  }
+  if (explicitColumns.length > 0) {
+    // 显式列 override 非 merge：数据列的顺序/构成完全由 columns 决定（与 schema 路径一致）。
+    for (const c of explicitColumns) {
+      const col = input.expandConfig && c.type === 'expand' ? { ...c, expandConfig: input.expandConfig } : c
+      pushSfcColumn(col, lines, '  ', warnings)
+    }
+  } else {
+    for (const f of fields) {
+      lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
+    }
   }
   if (input.rowButtons && input.rowButtons.length) {
     const w = input.rowButtons.length * 80 + 20
@@ -543,13 +596,20 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   // 现在尊重 `tableOptions.headerCellStyle`，缺省仍回落到原来的默认背景。
   lines.push(`  headerCellStyle: ${inlineJson(t.headerCellStyle || { background: '#f5f7fa' })},`)
   if (input.apiUrl) lines.push(`  apiParams: { url: ${q(input.apiUrl)} },`)
-  lines.push(`  rowkey: ${q(t.rowkey || 'id')},`)
+  lines.push(`  rowkey: ${q(rowkey)},`)
+  // P10：顶层 treeConfig（跨端窄子集）与 tableOptions.treeConfig（vxe 富子集）
+  // 合并到同一个家 —— 直接复用整页的 `resolveTreeOptions`，顶层覆盖同名字键。
+  const treeOptions = input.treeConfig ? resolveTreeOptions(t, { treeConfig: input.treeConfig }) : t.treeConfig
   for (const k of TABLE_BLOCK_OPTION_ORDER) {
-    const v = t[k]
+    const v = k === 'treeConfig' ? treeOptions : t[k]
     // `false` 是这些键的有效取值（showHeader:false / cachePageSelection:false …），
     // 故判据是 `!== undefined` 而不是真值 —— 与 schema 模式的 AI-22 注释同口径。
     if (v === undefined) continue
     lines.push(`  ${k}: ${optionLiteral(v)},`)
+  }
+  // 顶层 mergeConfig（AI-23）→ 运行时唯一家 options.mergeConfig（与整页 schema 路径同形）。
+  if (input.mergeConfig && Array.isArray(input.mergeConfig.rowsBy) && input.mergeConfig.rowsBy.length > 0) {
+    lines.push(`  mergeConfig: ${inlineJson({ rowsBy: [...input.mergeConfig.rowsBy] })},`)
   }
   lines.push('}')
   lines.push('')

@@ -153,12 +153,13 @@ describe("structuredContent — 产物信封", () => {
 
     // 前门对未知键是结构化拒绝（collectUnknownKeys，先于 capability 判定）——
     // 台账是同一判据的第二道网，服务直接调 emitScene* 的消费者（CLI/eval/自有接线）。
+    // `tableBtns` 是片段表格**刻意不支持**的唯一表钮键（工具栏按钮只在 CRUD 页 schema）。
     const wrong = await scene.handler({
       scene: "table",
-      intent: { ...tableIntent, columns: [{ prop: "x", label: "X" }] },
+      intent: { ...tableIntent, tableBtns: [{ name: "导出" }] },
     });
     expect(wrong.isError).toBe(true);
     expect(wrong.structuredContent).toBeUndefined();
-    expect(wrong.content[0].text).toContain("columns");
+    expect(wrong.content[0].text).toContain("tableBtns");
   });
 });

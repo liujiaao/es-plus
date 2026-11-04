@@ -291,7 +291,7 @@ const FieldConfigSchema = z.object({
  * Deliberately does NOT accept `render`/`formatter` source strings: those are
  * field-level extension points; this is the structured column path.
  */
-const ColumnSchema: z.ZodType<any> = z.lazy(() =>
+export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
   z.object({
     prop: z
       .string()
