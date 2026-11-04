@@ -52,9 +52,9 @@ export const AI_WORKFLOWS = {
           "args": {
             "packageJson": "{\"dependencies\":{\"vue\":\"^3.4.0\",\"element-plus\":\"^2.4.0\",\"@es-plus/vue3\":\"^1.0.0\"}}"
           },
-          "result": "Detected target: vue3 (confidence: high)\nReasoning: Project already depends on @es-plus/vue3.\nSignals found in dependencies:\n  - @es-plus/vue3: ^1.0.0\n  - vue: ^3.4.0\n  - element-plus: ^2.4.0\nNext step: pass target='vue3' to generate_crud / generate_form / generate_table / generate_dialog / get_component_api / etc.",
+          "result": "Detected target: vue3 (confidence: high)\nReasoning: Project already depends on @es-plus/vue3.\nSignals found in dependencies:\n  - @es-plus/vue3: ^1.0.0\n  - vue: ^3.4.0\n  - element-plus: ^2.4.0\nNext step: pass target='vue3' to generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog / get_component_api / etc.",
           "truncated": false,
-          "bytes": 316
+          "bytes": 356
         },
         {
           "tool": "generate_crud",
@@ -781,9 +781,9 @@ export const AI_WORKFLOWS = {
             "name": "ProductManage",
             "apiUrl": "/api/products"
           },
-          "result": "已从 ts-interface 摄取 4 个字段,草拟如下配置(请审阅并修订,然后 use the draft as the reference when filling `generate_crud`'s `surfaces` (map each field into query / table / form), and pass it to `validate_config` with type 'structured-crud-config' to check your edits):\n\n```json\n{\n  \"name\": \"ProductManage\",\n  \"apiUrl\": \"/api/products\",\n  \"fields\": [\n    {\n      \"prop\": \"sku\",\n      \"label\": \"商品编码\",\n      \"formtype\": \"Input\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"name\",\n      \"label\": \"商品名称\",\n      \"formtype\": \"Input\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"price\",\n      \"label\": \"单价\",\n      \"formtype\": \"InputNumber\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"active\",\n      \"label\": \"上架\",\n      \"formtype\": \"Switch\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ]\n}\n```",
+          "result": "已从 ts-interface 摄取 4 个字段,草拟如下配置(请审阅并修订,然后 use the draft as the reference when filling `generate_scene`'s (scene='crud') `surfaces` (map each field into query / table / form), and pass it to `validate_config` with type 'structured-crud-config' to check your edits):\n\n```json\n{\n  \"name\": \"ProductManage\",\n  \"apiUrl\": \"/api/products\",\n  \"fields\": [\n    {\n      \"prop\": \"sku\",\n      \"label\": \"商品编码\",\n      \"formtype\": \"Input\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"name\",\n      \"label\": \"商品名称\",\n      \"formtype\": \"Input\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"price\",\n      \"label\": \"单价\",\n      \"formtype\": \"InputNumber\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    },\n    {\n      \"prop\": \"active\",\n      \"label\": \"上架\",\n      \"formtype\": \"Switch\",\n      \"required\": true,\n      \"inQuery\": false,\n      \"inTable\": true,\n      \"inForm\": true\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ]\n}\n```",
           "truncated": false,
-          "bytes": 1159
+          "bytes": 1175
         },
         {
           "tool": "list_form_types",

@@ -92,7 +92,7 @@ describe("conventions 资源", () => {
       const text = await resourceText("front-door", uri);
       expect(text, uri).not.toContain("# Structured Config Tool (generate_crud_from_config)");
       expect(text, uri).not.toContain("Use `generate_crud_from_config` instead of");
-      expect(text, uri).toContain("# Structured Config (the model generate_crud fills for you)");
+      expect(text, uri).toContain("# Structured Config (the model generate_scene fills for you)");
       expect(text, uri).toContain("NOT registered");
       // 配置形状本身仍是权威参考：校验/精修工具在 front-door 下保留
       expect(text, uri).toContain("validate_config({ type: 'structured-crud-config' })");
@@ -125,11 +125,11 @@ describe("nl-to-config 资源", () => {
     const entry = resources["esplus://examples/nl-to-config"];
     const text = await resourceText("front-door", "esplus://examples/nl-to-config");
     expect(text).not.toContain("Use these when constructing the `generate_crud_from_config` input");
-    expect(text).toContain("generate_crud");
+    expect(text).toContain("generate_scene");
     expect(text).toContain("surfaces");
     // 描述（host 在 list 时看到的第一句）同样不得引导到隐藏工具
     expect(entry.meta.description).not.toContain("before calling generate_crud_from_config");
-    expect(entry.meta.description).toContain("generate_crud");
+    expect(entry.meta.description).toContain("generate_scene");
   });
 });
 
@@ -177,11 +177,15 @@ describe("server instructions", () => {
   it("front-door：不再宣称未注册的工具可用（正文与追加段不得互相打脸）", () => {
     const text = buildInstructions("front-door");
     expect(text).not.toContain("remains available");
-    expect(text).toContain("is the only code-generation entry in this profile");
+    expect(text).toContain("is the front door in this profile");
+    expect(text).toContain("`generate_scene`");
+    expect(text).toContain("`generate_composition`");
     expect(text).toContain("Tool profile (front-door)");
     expect(text).toContain("are NOT registered");
     // 工具清单只列已注册的生成入口
     expect(text).not.toContain("generate_crud_from_config /");
+    // 兼容入口不得再被描述成唯一入口
+    expect(text).not.toContain("is the only code-generation entry in this profile");
   });
 });
 
@@ -221,7 +225,7 @@ describe("工具描述（tools/list 的第一句）", () => {
   });
 
   it("ingest_schema / detect_project_target：front-door 下改指前门与单面工具", () => {
-    expect(frontDoor.ingest_schema.desc).toContain("`generate_crud`'s `surfaces`");
-    expect(frontDoor.detect_project_target.desc).toContain("generate_crud / generate_form");
+    expect(frontDoor.ingest_schema.desc).toContain("`generate_scene`'s (scene='crud') `surfaces`");
+    expect(frontDoor.detect_project_target.desc).toContain("generate_scene / generate_composition");
   });
 });

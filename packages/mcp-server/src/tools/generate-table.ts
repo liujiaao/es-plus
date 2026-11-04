@@ -42,7 +42,7 @@ export const tableShape = {
 export function registerGenerateTable(server: McpServer) {
   server.tool(
     "generate_table",
-    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_crud instead. Operation-column buttons are emitted as triggerEvent events (no inline handlers) so the fragment always compiles in isolation.",
+    "Generate a STANDALONE <es-table> component — a self-contained .vue SFC (columns + options + data-source/pagination refs) that drops next to native/third-party components. Give apiUrl for auto-fetch via es-table's apiParams. Use this ONLY when the user explicitly wants a single table on its own. For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead. Operation-column buttons are emitted as triggerEvent events (no inline handlers) so the fragment always compiles in isolation.",
     tableShape,
     async (args: any) => {
       try {

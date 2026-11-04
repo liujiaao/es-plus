@@ -44,7 +44,7 @@ export const dialogShape = {
 export function registerGenerateDialog(server: McpServer) {
   server.tool(
     "generate_dialog",
-    "Generate a STANDALONE dialog with the integration contract open(title, row?, onSuccess?) — after a successful submit it calls onSuccess, where the host refreshes its OWN table (the same contract in both output shapes). mode='composable' (default) emits a reusable useXxxDialog() composable (a .tsx/.jsx module, dialog body is a JSX render — needs the JSX plugin). mode='component' emits a self-contained <es-dialog> SFC instead (no JSX plugin needed; the host must have registered es-plus globally). Use this ONLY when the user explicitly wants a reusable add/edit dialog on its own, or to pair with a separately-generated table / native component. For a full CRUD page use generate_crud instead (its dialogs are declarative and need no JSX either).",
+    "Generate a STANDALONE dialog with the integration contract open(title, row?, onSuccess?) — after a successful submit it calls onSuccess, where the host refreshes its OWN table (the same contract in both output shapes). mode='composable' (default) emits a reusable useXxxDialog() composable (a .tsx/.jsx module, dialog body is a JSX render — needs the JSX plugin). mode='component' emits a self-contained <es-dialog> SFC instead (no JSX plugin needed; the host must have registered es-plus globally). Use this ONLY when the user explicitly wants a reusable add/edit dialog on its own, or to pair with a separately-generated table / native component. For a full CRUD page use generate_scene (scene='crud') instead (its dialogs are declarative and need no JSX either).",
     dialogShape,
     async (args: any) => {
       try {

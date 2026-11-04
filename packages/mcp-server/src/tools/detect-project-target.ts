@@ -178,7 +178,7 @@ export function registerDetectProjectTarget(server: McpServer, profile: ToolProf
   // 第一步之后就断了（宿主拿到 tool not found，或干脆跳过探目标去默认 vue3）。
   const generators =
     profile === "front-door"
-      ? "generate_crud / generate_form / generate_table / generate_dialog / get_component_api"
+      ? "generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog / get_component_api"
       : "generate_crud_page / generate_crud_schema / get_component_api";
   server.tool(
     "detect_project_target",

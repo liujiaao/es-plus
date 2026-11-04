@@ -33,7 +33,7 @@ export const formShape = {
 export function registerGenerateForm(server: McpServer) {
   server.tool(
     "generate_form",
-    "Generate a STANDALONE <es-form> component — a self-contained .vue SFC (own reactive model + formItemList) that drops next to native/third-party components with zero scope collision. Use this ONLY when the user explicitly wants a single form on its own (a search filter, a settings form, a form embedded in a custom layout). For a full CRUD page (query + table + add/edit/delete) use generate_crud instead — do NOT hand-assemble a CRUD page from separate fragment tools. The field vocabulary is identical to generate_crud; map meaning → formtype the same way.",
+    "Generate a STANDALONE <es-form> component — a self-contained .vue SFC (own reactive model + formItemList) that drops next to native/third-party components with zero scope collision. Use this ONLY when the user explicitly wants a single form on its own (a search filter, a settings form, a form embedded in a custom layout). For a full CRUD page (query + table + add/edit/delete) use generate_scene (scene='crud') instead — do NOT hand-assemble a CRUD page from separate fragment tools. The field vocabulary is identical to that scene's intent table; map meaning → formtype the same way.",
     formShape,
     async (args: any) => {
       try {

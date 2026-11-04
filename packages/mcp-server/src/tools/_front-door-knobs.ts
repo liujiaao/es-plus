@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * 前门（`generate_crud`）的「旋钮」显式形状 —— AN-21。
+ * 前门（`generate_scene` scene='crud'，兼容入口 `generate_crud`）的「旋钮」显式形状 —— AN-21。
  *
  * 为什么不能直接用 shared 的 Zod 对象：shared 是 zod 4，mcp-server 是 zod 3，
  * 两代 ZodObject 不能跨版本复用。这里是 shared 权威 schema 的 **zod 3 镜像**：

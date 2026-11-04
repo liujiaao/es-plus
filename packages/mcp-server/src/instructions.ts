@@ -14,24 +14,28 @@ export function buildInstructions(profile: ToolProfile = "full"): string {
 
   // ① 工具清单：只列**已注册**的生成入口。
   const codeGenTools = fd
-    ? "generate_crud / generate_form / generate_table / generate_dialog /\nscaffold_page / get_component_api"
-    : "generate_crud / generate_crud_from_config /\ngenerate_form / generate_table / generate_dialog / generate_crud_page /\ngenerate_crud_schema / scaffold_page / get_component_api";
+    ? "generate_scene / generate_composition / generate_crud /\ngenerate_form / generate_table / generate_dialog /\nscaffold_page / get_component_api"
+    : "generate_scene / generate_composition / generate_crud /\ngenerate_crud_from_config / generate_form / generate_table /\ngenerate_dialog / generate_crud_page / generate_crud_schema /\nscaffold_page / get_component_api";
 
   // ② 「高级路径仍可用」那一段：front-door 档下必须换成事实陈述。
   const advancedNote = fd
-    ? `(\`generate_crud\` is the only code-generation entry in this profile: it takes the
-\`surfaces\` intent table, composes a typed \`StructuredCrudConfig\`, then runs the
-same deterministic generator. \`validate_config\` and \`refine_config\` still
-accept a config you hand-author — they just don't emit code.)`
+    ? `(\`generate_scene\` is the front door in this profile: pick \`scene\` ('crud' /
+'table' / 'form' / 'dialog') and fill that scene's \`intent\`. For a plain page
+\`scene: 'crud'\` composes a typed \`StructuredCrudConfig\` and runs the same
+deterministic generator; \`generate_crud\` takes that same intent table under a
+compatibility name and produces identical bytes. \`generate_composition\` puts
+1–3 standalone fragments on one page. \`validate_config\` and \`refine_config\`
+still accept a config you hand-author — they just don't emit code.)`
     : `(\`generate_crud_from_config\` remains available if you want to hand-author a full
-typed \`StructuredCrudConfig\` directly — \`generate_crud\` is a thinner intent
-layer over the same deterministic generator. \`generate_crud_page\` uses a regex
-NL parser and is only a no-LLM fallback for hosts that can't reason.)`;
+typed \`StructuredCrudConfig\` directly — \`generate_scene\` (scene='crud') and
+\`generate_crud\` are thinner intent layers over the same deterministic
+generator. \`generate_crud_page\` uses a regex NL parser and is only a no-LLM
+fallback for hosts that can't reason.)`;
 
   // ③ 第四步的调用指代（注意结尾不带 `**`：模板里统一收口，否则会出现 `****`）。
   const step4Call = fd
-    ? "4. **Call** `generate_crud`, then **read the\n   returned warnings"
-    : "4. **Call** `generate_crud` (or `generate_crud_from_config`), then **read the\n   returned warnings";
+    ? "4. **Call** `generate_scene` (scene='crud'), then **read the\n   returned warnings"
+    : "4. **Call** `generate_scene` (scene='crud') or its compatibility alias\n   `generate_crud`/`generate_crud_from_config`, then **read the\n   returned warnings";
 
   // ④ 档位说明：只在 front-door 追加（回答「为什么工具表里少三个」）。
   const profileNote = fd
@@ -40,9 +44,11 @@ NL parser and is only a no-LLM fallback for hosts that can't reason.)`;
 
 This server runs with \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`
 (advanced, hand-authored config) and \`generate_crud_page\` / \`generate_crud_schema\`
-(legacy regex fallbacks) are NOT registered. Use \`generate_crud\` for every
-request; for an explicit single-component ask use \`generate_form\`,
-\`generate_table\` or \`generate_dialog\`. Restart the server without
+(legacy regex fallbacks) are NOT registered. Use \`generate_scene\` for every
+request — \`scene: 'crud'\` for list/table pages, \`table\` / \`form\` / \`dialog\` for
+an explicit single component; \`generate_composition\` assembles several of those
+fragments into one page; \`generate_crud\` is the same route under a compatibility
+name (identical bytes). Restart the server without
 \`ESPLUS_MCP_PROFILE\` (or set it to \`full\`) to expose the advanced/legacy tools.
 `
     : "";
@@ -77,10 +83,10 @@ symbols differ — \`message\` / \`Modal\` / \`Tag\` from ant-design-vue, and
 ## Tool selection — ONE front door, then fill the intent table
 
 Do NOT shop around the tool list. For almost every request, the entry point is
-**\`generate_crud\`**, and your only real decision is filling its \`surfaces\`
-intent table — which of **query / table / form / dialog** the request implies,
-and the fields in each. Routing after that is deterministic code, not your
-choice:
+**\`generate_scene\`**, and your only real decision is \`scene\` plus filling that
+scene's intent table — for a page, \`scene: 'crud'\` and which of **query / table /
+form / dialog** the request implies, and the fields in each. Routing after that
+is deterministic code, not your choice:
 
   - any **table** present → composed and compiled through the single
     golden-covered generator (one-shot compile guaranteed);
@@ -89,7 +95,9 @@ choice:
 
 So "which tool / how many tools" collapses to "set the surfaces that match the
 request". Table-only, query+table, table+add/edit, full CRUD, dialog-only — all
-are just different \`surfaces\` subsets of the SAME call.
+are just different \`surfaces\` subsets of the SAME \`{ scene: 'crud', intent }\`
+call. **\`generate_crud\` is the same route under a compatibility name** (identical
+bytes) — use it only if a host prompt already names it.
 
 Use a standalone tool ONLY for an explicit single-component ask, or to produce a
 fragment you'll drop next to native / third-party components:
@@ -97,6 +105,10 @@ fragment you'll drop next to native / third-party components:
   - \`generate_form\`  — one \`<es-form>\` SFC (filter / settings / embedded form)
   - \`generate_table\` — one \`<es-table>\` SFC (list that sits beside other UI)
   - \`generate_dialog\`— one \`useXxxDialog()\` composable (reusable add/edit modal)
+
+When several of those pieces must live TOGETHER in one page (but the request is
+not a CRUD page), use **\`generate_composition\`** — it wires row actions to
+dialogs, query/reset to the table, and dialog success to a table refresh.
 
 Never hand-assemble a CRUD page by calling several standalone tools — that
 re-introduces the orchestration mistakes the front door exists to prevent. Fill
@@ -112,8 +124,8 @@ keyword matching.
 
 Two passes, every time:
 
-1. **Read first**: \`esplus://examples/surfaces\` (few-shot NL→\`generate_crud\`
-   surfaces across every subset — the front-door decision) and/or
+1. **Read first**: \`esplus://examples/surfaces\` (few-shot NL→\`generate_scene\`
+   (scene='crud') surfaces across every subset — the front-door decision) and/or
    \`esplus://examples/nl-to-config\` (few-shot NL→full config with reasoning),
    plus \`esplus://conventions\` + \`esplus://types\` for the target.
 2. **Draft** the surfaces: map each requested field by MEANING, not keywords —
@@ -153,7 +165,7 @@ ${step4Call}** — each one flags a likely mapping mistake; fix and
 
 Steering few-shots (target-independent — read before generating):
 
-  - \`esplus://examples/surfaces\` — NL → \`generate_crud\` surfaces, every subset (the front-door decision)
+  - \`esplus://examples/surfaces\` — NL → \`generate_scene\` (scene='crud') surfaces, every subset (the front-door decision)
   - \`esplus://examples/nl-to-config\` — NL → full StructuredCrudConfig, with reasoning
 
 The remaining resource URIs use a target suffix:

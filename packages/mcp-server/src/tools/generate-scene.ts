@@ -43,7 +43,7 @@ const sceneShape = {
   intent: z
     .record(z.string(), z.any())
     .describe(
-      "The scene's intent table. scene='crud': the same keys as generate_crud (name/apiUrl/surfaces/…). scene='table'|'form'|'dialog': the same keys as generate_table/generate_form/generate_dialog (fields/…). Fill only the keys for the chosen scene; unknown keys are rejected with a did-you-mean.",
+      "The scene's intent table. scene='crud': the same keys as the generate_crud compat entry (name/apiUrl/surfaces/…). scene='table'|'form'|'dialog': the same keys as generate_table/generate_form/generate_dialog (fields/…). Fill only the keys for the chosen scene; unknown keys are rejected with a did-you-mean.",
     ),
 } as const;
 

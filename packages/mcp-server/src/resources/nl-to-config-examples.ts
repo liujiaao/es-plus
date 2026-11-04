@@ -468,7 +468,7 @@ function buildContent(profile: ToolProfile = "full"): string {
   // 让宿主「把它当成交给某个工具的输入」去调那个不存在的工具。
   const useLine =
     profile === "front-door"
-      ? "Use these to learn the semantic mapping rules the front door embodies: `generate_crud` builds this same config for you from its `surfaces` table. Read them before filling `surfaces`, and as the authoritative reference when you hand-author a config for `validate_config({ type: 'structured-crud-config' })` / `refine_config`. They show how to REASON from a request to a config — map fields by MEANING, not keywords:"
+      ? "Use these to learn the semantic mapping rules the front door embodies: `generate_scene` (scene='crud') builds this same config for you from its `surfaces` table. Read them before filling `surfaces`, and as the authoritative reference when you hand-author a config for `validate_config({ type: 'structured-crud-config' })` / `refine_config`. They show how to REASON from a request to a config — map fields by MEANING, not keywords:"
       : "Use these when constructing the `generate_crud_from_config` input. They show how to REASON from a request to a config — map fields by MEANING, not keywords:";
   const intro = [
     "# Natural-language → StructuredCrudConfig — few-shot examples",
@@ -527,7 +527,7 @@ export function registerNlToConfigExamplesResource(server: McpServer, profile: T
     {
       description:
         profile === "front-door"
-          ? "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read before filling generate_crud's surfaces — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points; also the reference shape for validate_config / refine_config."
+          ? "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read before filling generate_scene's (scene='crud') surfaces — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points; also the reference shape for validate_config / refine_config."
           : "Few-shot natural-language → StructuredCrudConfig examples with reasoning. Read this before calling generate_crud_from_config — it teaches semantic field mapping (not keyword matching) and how to handle business logic via extension points.",
       mimeType: "text/markdown",
     },

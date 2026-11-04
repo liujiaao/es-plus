@@ -13,9 +13,9 @@ const PKG: Record<Target, string> = {
 
 function buildInstruction(spec: string, target: Target, mode: "schema" | "sfc"): string {
   return `You are the host LLM for the es-plus MCP server. Your job is the FIRST MILE:
-turn the specification below into the intent table that the \`generate_crud\`
-front door consumes. Do NOT write Vue code yourself — the server routes and emits
-deterministically from your \`surfaces\`.
+turn the specification below into the intent table that the \`generate_scene\`
+front door consumes (\`scene: 'crud'\`). Do NOT write Vue code yourself — the
+server routes and emits deterministically from your \`surfaces\`.
 
 STEP 0 — get the contract. Read the MCP resource \`${DESIGN_EXTRACTION_URI}\`
 (surface decision table, output shape, positive/negative examples, checklist).
@@ -30,7 +30,8 @@ host's vision model) must first transcribe it into the text inventory described
 in §1 of the resource. The es-plus server does not accept images and performs no
 OCR. Pass the transcription, not the image.
 
-STEP 2 — call \`generate_crud\` (or emit its arguments as one JSON object) with:
+STEP 2 — call \`generate_scene\` with \`scene: "crud"\` and this object as \`intent\`
+(or emit the object as one JSON object) with:
 
 {
   "name": "<PascalCase page name>",
@@ -66,7 +67,7 @@ ${spec}`;
 export function registerSpecToSurfacesPrompt(server: McpServer) {
   server.prompt(
     "spec-to-surfaces",
-    "Turn a PRD / wireframe transcription into es-plus generate_crud surfaces (the first mile)",
+    "Turn a PRD / wireframe transcription into es-plus generate_scene (scene='crud') surfaces (the first mile)",
     {
       spec: z
         .string()
@@ -80,7 +81,7 @@ export function registerSpecToSurfacesPrompt(server: McpServer) {
       mode: z
         .enum(["schema", "sfc"])
         .default("schema")
-        .describe("Output mode forwarded to generate_crud."),
+        .describe("Output mode forwarded to generate_scene (scene='crud')."),
     },
     async ({ spec, target, mode }) => {
       const t = (target ?? "vue3") as Target;

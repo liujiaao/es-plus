@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 /**
  * `esplus://design-extraction` — the "first mile" contract: turn a PRD / wireframe
- * description into the `generate_crud` intent table (`surfaces`).
+ * description into the `generate_scene` (`scene: 'crud'`) intent table (`surfaces`).
  *
  * Why a resource instead of prose in a tool description: the host reads tool
  * descriptions on EVERY turn (they are part of the constrained-decoding schema),
@@ -16,7 +16,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
  * tool input, and no OCR/vision step server-side. When the user attaches a
  * screenshot or a Figma export, the host's vision model must first turn it into
  * a TEXT inventory (regions → fields/labels/controls/buttons), then call
- * `generate_crud` with that inventory. This file spells out what that inventory
+ * `generate_scene` with `scene: 'crud'` and that inventory as `intent`. This file
+ * spells out what that inventory
  * must contain so the extraction is reproducible across hosts.
  */
 
@@ -25,7 +26,7 @@ export const DESIGN_EXTRACTION_URI = "esplus://design-extraction";
 export const DESIGN_EXTRACTION_CONTENT = `# From a PRD / wireframe to es-plus surfaces
 
 This resource is the contract behind the \`spec-to-surfaces\` prompt and the
-\`generate_crud\` front door. It answers ONE question: **which of the four
+\`generate_scene\` front door (\`scene: 'crud'\`). It answers ONE question: **which of the four
 surfaces (query / table / form / dialog) does this specification imply, and
 which fields belong to each?**
 
@@ -63,7 +64,7 @@ stays absent — the host supplies those separately.
 
 ## 2. Output contract
 
-Call \`generate_crud\` with:
+Call \`generate_scene\` with \`scene: "crud"\` and this object as \`intent\`:
 
 \`\`\`json
 {
@@ -236,7 +237,7 @@ body differs from the shared form. Multi-line text is Input + \`attrs.type: "tex
 * It does not decide API URLs, permissions, validation rules or i18n keys unless
   the spec states them.
 * It does not accept images. The host's vision model is the only image reader.
-* It does not write code. It only produces the intent table; \`generate_crud\`
+* It does not write code. It only produces the intent table; \`generate_scene\`
   performs the deterministic routing and emission.
 `;
 
@@ -250,7 +251,7 @@ export function registerDesignExtractionResource(server: McpServer) {
     DESIGN_EXTRACTION_URI,
     {
       description:
-        "Contract for turning a text PRD / host-transcribed wireframe into es-plus `generate_crud` surfaces: input boundary (text only; images are read by the host), output shape, surface decision table, positive/negative examples, and a pre-call checklist.",
+        "Contract for turning a text PRD / host-transcribed wireframe into es-plus `generate_scene` (`scene:'crud'`) surfaces: input boundary (text only; images are read by the host), output shape, surface decision table, positive/negative examples, and a pre-call checklist.",
       mimeType: "text/markdown",
     },
     async () => ({

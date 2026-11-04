@@ -54,7 +54,7 @@ export function registerRefineConfig(server: McpServer, profile: ToolProfile = r
   // 指代：full 仍指向高级路径；front-door 指向唯一前门，并说明本工具的定位（校验/差异）。
   const nextStep =
     profile === "front-door"
-      ? "When you're happy, use `revised` as the reference for filling `generate_crud`'s `surfaces` — the front door composes the config and the code for you. This tool stays the validator/differ for a config you hand-author."
+      ? "When you're happy, use `revised` as the reference for filling `generate_scene`'s (scene='crud') `surfaces` — the front door composes the config and the code for you. This tool stays the validator/differ for a config you hand-author."
       : "Pass `revised` to generate_crud_from_config once you're happy.";
   server.tool(
     "refine_config",

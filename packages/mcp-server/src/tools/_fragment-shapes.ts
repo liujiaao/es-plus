@@ -3,7 +3,8 @@ import { VALID_FORM_TYPES, FORM_TYPE_ALIASES, formatFragmentText } from "@es-plu
 
 /**
  * zod3 shapes shared by the fragment tools (generate_form / generate_table /
- * generate_dialog) and the front door (generate_crud).
+ * generate_dialog) and the front door (generate_scene, scene='crud' — the
+ * `generate_crud` adapter reuses the same shapes).
  *
  * This is a hand-maintained zod3 mirror of the shared (zod4) authoritative
  * vocabulary (FieldConfig minus the inQuery/inTable/inForm membership flags —

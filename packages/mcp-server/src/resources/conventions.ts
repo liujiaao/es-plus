@@ -211,13 +211,15 @@ function buildConventionsContent(target: Target, profile: ToolProfile = "full"):
   // 注册的那个前门，否则宿主照着文档调用会拿到 tool not found。
   const structuredConfigIntro =
     profile === "front-door"
-      ? `# Structured Config (the model generate_crud fills for you)
+      ? `# Structured Config (the model generate_scene fills for you)
 
 ## When to Use
 This server runs \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`,
 \`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.
-- \`generate_crud\`: fill its \`surfaces\` intent table (query / table / form / dialog) —
-  the routing builds this StructuredCrudConfig for you, deterministically.
+- \`generate_scene\` (scene='crud'): fill its \`surfaces\` intent table
+  (query / table / form / dialog) — the routing builds this StructuredCrudConfig
+  for you, deterministically. \`generate_crud\` is the same route under a
+  compatibility name.
 - Read this section to understand that emitted config, and to check a
   hand-authored one with \`validate_config({ type: 'structured-crud-config' })\`
   or \`refine_config\` (both stay available in this profile).`
