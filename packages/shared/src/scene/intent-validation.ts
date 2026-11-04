@@ -164,7 +164,9 @@ function checkFieldList(list: unknown, opts: FieldListOptions): FieldListResult 
             joinPath(here, 'prop'),
             'duplicate-prop',
             `duplicate prop "${prop}" in the same surface (first at ${joinPath(path, first)}) — ` +
-              'the generator would render two columns/controls bound to the same key.',
+              'declare it once: the CRUD front door merges same-prop entries into one field ' +
+              '(identity keys keep the first, other keys follow a fixed per-surface precedence), ' +
+              'while fragment scenes would render two columns/controls bound to the same key.',
           ),
         )
       } else {
