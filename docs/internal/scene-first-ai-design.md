@@ -548,3 +548,33 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 44 组 / 拒绝 18 例（三端）；`to.model` 变异（关掉映射分支）→ 三端点名缺映射。
 文档尾巴（P8 复核）与本批同批修复：ASCII 图 / 文件地图计数改为从源码数出来，
 信封适用范围从 `withEnvelope` 的真实调用点反推，并给三个信封工具声明 `outputSchema`。
+
+### P12 复核 · gold 自评分（尺子的自证）
+
+计划第 1 条的「CRUD 腿」此前缺位：PRD 腿已逐例自评，CRUD 216 例与片段 69 例
+只有合成样例单测。补上守卫后**当场抓到一条真实尺子缺陷**：
+
+- **`dialogs` 的 `formItems` 派生只回填 pred 侧**：gold 写
+  `dialogs.add: { showClose, appendTo, configBtn }` 而省略 `formItems`（渲染期由
+  `inForm !== false` 字段回填）时，gold 侧仍按空集比 ⟹ **gold-vs-gold 判负**。
+  受害用例：`12-role-form-layout` / `18-notice-custom-dialog`。同构于
+  `operationColumn`「省略即派生、尺子当空集」的建模缺陷：一个把派生结果**显式写全**的
+  正确模型也会被误罚。修法：抽出 `effectiveDialogEntry`，gold 与 pred 用**同一套**
+  回填规则（显式 `[]` 仍不派生）；`dialogsView` 同步改为两侧有效视图，保持
+  「want === got ⟺ pass」不变量。
+- 新增 `scripts/check-gold-self-score.mjs`（`check:gold-self`，进 `scoring-eval` 组与
+  旧链）：CRUD 用 `scoreAll(gold, gold, mask)`，片段用 `scoreFragment(scene, gold, gold, mask)`，
+  要求 `core / full / scoped / stated` 全真且每个 applicable 维度 pass。纯离线、不调模型、
+  不读写 accuracy 产物。
+- `scorers.test.mjs` 补两条对称性断言（gold 省略 formItems 时自评必正、pred 显式写出
+  派生结果也必正），把修复钉在尺子旁边。
+
+**验证**：`check:gold-self` → CRUD 216 + 片段 69 全绿；`check:scorers` /
+`check:rescore` / `check:ratchet` 绿；变异（把 `dialogsEqual` 的 gold 侧换回裸
+`gold.dialogs`）→ 守卫点名两条用例、`exactIntentFull` 红，恢复后绿。
+
+**仍未完成（运营项，代码侧已就绪）**：计划第 6 条「重跑一次完整评测」受中继与额度
+约束，当前分支产物仍是 `measurement: failed`（407 行未测到），因此**不得引用任何
+当前准确率数字**；2026-10-22 的 22.7% 只能作历史基线。该动作不产生代码提交，
+不属于本批。
+

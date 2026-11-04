@@ -29,6 +29,7 @@ export const GUARD_GROUPS = Object.freeze([
     steps: [
       'check:feature-coverage',
       'check:scorers',
+      'check:gold-self',
       'check:align',
       'check:run-metrics',
       'check:dump',

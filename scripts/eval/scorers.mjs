@@ -694,6 +694,31 @@ function dialogKeyByButtonName(config) {
 const DERIVED_DIALOG_KEYS = new Set(['add', 'edit', 'view'])
 
 /**
+ * 单个 dialog 条目的**有效视图**：派生型键（add/edit/view）省略 `formItems` ⟹ 按本侧
+ * `inForm !== false` 字段回填。显式 `[]` 不派生（刻意空表单）。
+ *
+ * **两侧同规**：gold 与 pred 都用它。此前只回填 pred 侧，gold 写 `dialogs.add: { showClose }`
+ * 而省略 formItems 时，gold 侧按空集比 → gold-vs-gold 自评都会判负（`12-role-form-layout` /
+ * `18-notice-custom-dialog`）。省略 ≡ 派生是渲染期事实，不是模型猜测，必须对称。
+ */
+function effectiveDialogEntry(cfg, key, v) {
+  if (DERIVED_DIALOG_KEYS.has(key) && v && typeof v === 'object' && v.formItems === undefined) {
+    return {
+      ...v,
+      formItems: (cfg.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })),
+    }
+  }
+  return v
+}
+
+/** gold 自己的有效视图（与 `predDialogsView` 同一套回填规则）。 */
+function goldDialogsView(gold) {
+  const out = {}
+  for (const [k, v] of Object.entries(gold.dialogs ?? {})) out[k] = effectiveDialogEntry(gold, k, v)
+  return out
+}
+
+/**
  * pred 的 dialogs 在 gold 命名空间下的**有效视图**：
  *   1. 按按钮名重映射 pred 自选的 dialog key（见上）；
  *   2. gold 声明了 add/edit/view 而 pred 没声明 ⟹ 视为**派生弹窗**（省略即默认值：
@@ -723,19 +748,12 @@ function predDialogsView(gold, pred) {
   // 且仅当 formItems 真的未声明（`undefined`）——显式 `formItems: []` 是「刻意空表单」，不改。
   for (const [k, v] of Object.entries(pRaw)) {
     const key = remap.get(k) ?? k
-    if (DERIVED_DIALOG_KEYS.has(key) && v && typeof v === 'object' && v.formItems === undefined) {
-      out[key] = {
-        ...v,
-        formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })),
-      }
-    } else {
-      out[key] = v
-    }
+    out[key] = effectiveDialogEntry(pred, key, v)
   }
   for (const k of gKeys) {
     if (out[k] !== undefined) continue
     if (!DERIVED_DIALOG_KEYS.has(k)) continue
-    out[k] = { formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })) }
+    out[k] = effectiveDialogEntry(pred, k, {})
   }
   return out
 }
@@ -757,7 +775,7 @@ function predDialogsView(gold, pred) {
  * 把两件事混成一件。这条边界是**故意的**，不是遗漏。
  */
 function dialogsEqual(gold, pred) {
-  const gd = gold.dialogs ?? {}
+  const gd = goldDialogsView(gold)
   const pd = predDialogsView(gold, pred)
   for (const k of Object.keys(gd)) {
     const g = gd[k] ?? {}
@@ -830,7 +848,7 @@ const canonicalView = (v) => (v === undefined || v === null ? '（未配置）' 
  * confirm 写成 cancel」这类真实 miss 从「一行无声的维度名」变成可读证据。
  */
 function dialogsView(gold, cfg) {
-  const gd = gold.dialogs ?? {}
+  const gd = goldDialogsView(gold)
   // 与 dialogsEqual 同源：key 对齐 + 派生弹窗回填后的视图才是判定依据。
   const cd = predDialogsView(gold, cfg)
   const keys = [...new Set([...Object.keys(gd), ...Object.keys(cd)])].sort()

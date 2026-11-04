@@ -171,6 +171,17 @@ console.log('meta-eval: dialogs 底座数据键 + configBtn (AI-27)')
   const dialogsPass = (pred) => scoreAll(dlgGold, pred).byCapability.dialogs.pass
   check(dialogsPass(clone(dlgGold)) === true, 'dialogs(AI-27): gold-vs-gold 应判正')
 
+  // 派生回填必须**两侧同规**：gold 自己省略 formItems 时，gold-vs-gold 必须判正。
+  // 此前只回填 pred 侧，gold 侧按空集比 ⟹ 12-role-form-layout / 18-notice-custom-dialog
+  // 两条 gold 自评必红（P12 gold 自评分守卫捕获）。
+  const goldOmitsFormItems = clone(dlgGold)
+  delete goldOmitsFormItems.dialogs.add.formItems
+  check(scoreAll(goldOmitsFormItems, clone(goldOmitsFormItems)).byCapability.dialogs.pass === true,
+    'dialogs: gold 省略 formItems 时 gold-vs-gold 应判正（派生回填两侧对称）')
+  // 省略与显式写出派生结果等价：pred 把 formItems 写全了也应判正。
+  check(scoreAll(goldOmitsFormItems, clone(dlgGold)).byCapability.dialogs.pass === true,
+    'dialogs: gold 省略、pred 显式写出派生 formItems 应判正')
+
   // 派生型弹窗（add/edit/view）**声明底座键但省略 formItems** ⟹ formItems 按 `inForm !== false`
   // 字段派生，与整键省略同义（渲染期 es-plus 的回填规则）。此前尺子只在整键省略时派生，
   // 于是「为设 showClose/configBtn 而声明 dialogs.add、把表单项留给派生」被当成空集 formItems
