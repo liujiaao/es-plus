@@ -357,7 +357,8 @@ export interface FormItemOption {
    *
    * 与按钮级 `permissionValue` 同一机制、不同粒度：无权限时**整个表单项不渲染**
    * （在 `formItemListFilter` 里与 `isHidden` 同层过滤）。与 `isHidden` 的区别是
-   * 前者按权限编码、后者按数据动态判定。未配置全局 `permission` 时一律放行。
+   * 前者按权限编码、后者按数据动态判定。未配置全局 `permission` 时按 fail-closed
+   * **拒绝**（P5）：声明了权限码就必须有判定函数，否则不渲染；没有权限码的元素不受影响。
    */
   permissionValue?: string
   /** 允许任意扩展键 */
@@ -548,7 +549,7 @@ export interface TableColumn {
    *
    * 与 `hidCol` 的区别：`hidCol` 是**静态**隐藏，本字段是**按权限**隐藏
    * （在 `filteredColumns` 里与 `hidCol` 同层过滤）。与操作列 `btns[].permissionValue`
-   * 同一机制、不同粒度。未配置全局 `permission` 时一律放行。
+   * 同一机制、不同粒度。未配置全局 `permission` 时按 fail-closed **拒绝**（P5）。
    */
   permissionValue?: string
   /** 操作按钮列 */

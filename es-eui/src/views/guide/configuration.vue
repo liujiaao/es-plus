@@ -456,14 +456,15 @@ Vue.use(EsPlus, {
           <span class="config-badge optional">可选</span>
         </div>
         <p class="config-desc">
-          权限校验函数 <code>(value: string) =&gt; boolean</code>。<strong>不配置则视为全部放行</strong>，
-          所以没有权限体系的项目无需关心它。配置后，组件会拿字段、列、按钮上的
+          权限校验函数 <code>(value: string) =&gt; boolean</code>。配置后，组件会拿字段、列、按钮上的
           <code>permissionValue</code> 逐项调用它，返回 <code>false</code> 的直接不渲染
-          （不是禁用 —— DOM 里根本不会出现）。
+          （不是禁用 —— DOM 里根本不会出现）。<strong>没声明任何 <code>permissionValue</code> 时无需配置</strong>；
+          一旦产物里声明了门（<code>permissionValue</code> / <code>permissions</code>）而宿主没配本函数，
+          这些元素按 <strong>fail-closed 拒绝</strong>（隐藏 + 控制台告警一次），不会「门看起来配了、实际谁都能看」。
         </p>
         <div class="code-block">
           <pre v-pre><code>Vue.use(EsPlus, {
-  // 未配置时所有 permissionValue 一律放行
+  // 声明了 permissionValue 却没有本函数时，这些元素会被拒绝（fail-closed）
   permission: (value) =&gt; userPermissions.includes(value)
 })</code></pre>
         </div>

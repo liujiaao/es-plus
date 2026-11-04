@@ -253,7 +253,7 @@
           </tr>
           <tr>
             <td>permissionValue</td>
-            <td>字段级权限编码：无权限时整个表单项不渲染（未配置全局 permission 时放行）</td>
+            <td>字段级权限编码：无权限时整个表单项不渲染（声明了门但宿主没配全局 permission 时按 fail-closed 拒绝）</td>
             <td>String</td>
           </tr>
         </tbody>

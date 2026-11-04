@@ -175,6 +175,7 @@ import {
   resolveReactionItem,
   resolveReactionValues,
   collectReactionDependencies,
+  checkPermissionValue,
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
 
@@ -300,11 +301,8 @@ export default defineComponent({
     )
 
     // ─── 权限 / i18n ──
-    const checkPermission = (pvalue?: string): boolean => {
-      if (!pvalue) return true
-      const fn = esPlus.permission as ((v: string) => boolean) | undefined
-      return typeof fn === 'function' ? fn(pvalue) : true
-    }
+    const checkPermission = (pvalue?: string): boolean =>
+      checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
     const translateLabel = (item: FormItemOption): string => {
       if (item.labelKey && typeof esPlus.t === 'function') {
         return (esPlus.t as (k: string) => string)(item.labelKey)
@@ -512,7 +510,7 @@ export default defineComponent({
         })
         .filter((it): it is FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> } => {
           if (!it) return false
-          // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+          // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
           if (!checkPermission(it.permissionValue)) return false
           // 字段名兼容：原 es-eui 用 `isHiden`（少一个 d，原始拼写错误），
           // 后续规范化为 `isHidden`。两者都接受，原始拼写优先（保持旧文档案例可直接运行）。

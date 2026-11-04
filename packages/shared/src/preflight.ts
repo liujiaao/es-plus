@@ -8,8 +8,9 @@
  *
  *   - 没 `app.use(ESPlus, …)`：模板里的 `<es-table>` / `<es-form>` / `<es-crud-page>` 解析不到；
  *   - 没全局 `httpRequest`：表一挂载就抛「全局 httpRequest 未配置」，页面空白；
- *   - 没 `permission`：`permissionValue` 的**失败方向是放行**（core 默认 allow-all）——
- *     权限门看起来「配了」，实际谁都能看见；
+ *   - 没 `permission`：声明了 `permissionValue` 的元素按 **fail-closed** 拒绝（P5）——
+ *     按钮隐藏 / 字段与列不渲染。门不会「看起来配了、实际谁都能看见」，但用户会看到
+ *     门后内容整块消失，仍属需要前置告知的入口缺项；
  *   - 没 `t`：`labelKey` 回落到 `label`（不崩，但翻译不生效）；
  *   - 没 JSX 转换：`mode=sfc` 的弹窗 render 是 `<script setup lang="tsx">`，构建直接失败；
  *   - 没 UI 库：`el-*` / `a-*` 解析成未知元素，表格/表单空白。
@@ -20,8 +21,8 @@
  *
  * ## 不是「一律要求」
  *
- * 每一项都按**本配置**判定 required：没有 `permissionValue` 就不需要 `permission`（默认放行
- * 正是想要的语义），没有 `labelKey` 就不需要 `t`。`formatPreflight` 会把不需要的项也列出来，
+ * 每一项都按**本配置**判定 required：没有 `permissionValue` 就不需要 `permission`（没声明门
+ * 就没有门可拒），没有 `labelKey` 就不需要 `t`。`formatPreflight` 会把不需要的项也列出来，
  * 并写明「不需要」的依据 —— 否则读者无法区分「忘了配」与「本来就不用配」。
  */
 import { generateAppEntry } from './code-generator.js'
@@ -117,7 +118,7 @@ function carriersOf(input: PreflightInput): PreflightCarrier[] {
    * 表格列是**递归**结构（`groups` 多级表头）：每一层列自身可带 `permissionValue`，
    * 且 `btns`（行内操作按钮）同样按权限码过滤。只扫顶层会把「分组子列按权限隐藏」
    * 与「列内按钮按权限隐藏」这两类门漏掉 —— preflight 于是宣称「本配置没有权限门」，
-   * 而产物里明明有 permissionValue，缺 `permission()` 时**失败方向是放行**。
+   * 而产物里明明有 permissionValue，缺 `permission()` 时这些元素会被 fail-closed 拒绝。
    */
   const pushColumns = (list: readonly PreflightCarrier[] | undefined) => {
     if (!Array.isArray(list)) return
@@ -149,8 +150,8 @@ function carriersOf(input: PreflightInput): PreflightCarrier[] {
  * 为什么需要：`buildPreflight` 靠载体（字段/列/按钮）上的 `permissionValue` / `labelKey`
  * 判定「本页面是否需要 `permission()` / `t()`」。形状错的时候（`fields: "a,b"`、
  * `formFields: […]`、按钮写成字符串）载体被静默跳过，于是清单说「不需要权限」——
- * 而 `permission` 缺失时**失败方向是放行**（core 默认 allow-all）。也就是说，
- * 一份畸形配置换来的不是报错，而是「全 ok」的假绿。
+ * 而 `permission` 缺失时声明了门的内容会被**拒绝**（P5 fail-closed，core 统一走
+ * `checkPermissionValue`）。也就是说，一份畸形配置换来的不是报错，而是「全 ok」的假绿。
  *
  * 这里刻意只校验 `PreflightInput` 真正读到的键，且**放行未知键**：调用方交给
  * `doctor_page` 的往往是整份 `StructuredCrudConfig`（`name`/`apiUrl`/`tableOptions`…），
@@ -381,8 +382,8 @@ export function buildPreflight(
       required: needsPermission,
       reason: needsPermission
         ? `${gateCount} permission gate(s) are declared (${permissionGates} permissionValue + ${actionPermissions} action permission code(s)). ` +
-          `Without permission() the runtime FAILS OPEN: core treats a missing permission function as allow-all, so every gated field/column/button is visible to everyone — the gate looks configured but is inert.`
-        : 'No permissionValue / permissions in this config — the runtime default (allow-all) is exactly the intended semantics.',
+          `Without permission() the runtime FAILS CLOSED: every gated field/column/button is denied (hidden / not rendered), because core treats a declared gate without a resolver as denied. The page still renders, but the gated parts disappear — configure permission() to decide them.`
+        : 'No permissionValue / permissions in this config — no gate is declared, so a missing permission() affects nothing.',
       action: 'permission: (code) => userStore.permissions.includes(code) — inside the plugin options (entry below).',
     },
     {
@@ -444,7 +445,8 @@ export function formatPreflight(report: PreflightReport): string {
     '## Preflight — host prerequisites (not generated code)',
     '',
     'These live in the host app entry / build config. A missing item does **not** break compilation;',
-    'the matching capability silently turns inert (permission even fails *open*). Check every line marked required.',
+    'the matching capability silently turns inert — except `permission`, which fails **closed** (a declared',
+    '`permissionValue` is denied when no `permission()` is configured). Check every line marked required.',
     '',
   ]
   for (const item of report.items) {

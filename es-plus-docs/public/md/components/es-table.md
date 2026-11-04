@@ -73,7 +73,7 @@ type: 'component'
 | groups | TableColumn[] | - | 多级表头子列（虚拟模式扁平化渲染） |
 | expandConfig | Object | - | 展开行内容 { title?, fields }，仅 type: "expand" 列消费 |
 | hidCol | boolean | - | 是否隐藏该列 |
-| permissionValue | string | - | 列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行） |
+| permissionValue | string | - | 列级权限编码：无权限时该列不渲染（声明了门但宿主没配全局 permission 时按 fail-closed 拒绝） |
 | btns | Array | - | 行操作按钮 [{ name, type?, clickEvent? }] |
 | type | string | - | 特殊列类型：selection（复选框多选，组件不提供单选列）/expand/index |
 | emptyPlaceholder | string | - | 空值占位文本，默认 "-" |

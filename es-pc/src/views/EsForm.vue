@@ -346,7 +346,7 @@ const formItemOptions = [
   { key: '22', prop: 'rules', type: 'Array', default: '-', desc: '字段校验规则，与表单级 rules 叠加（formItemOptions.rules 优先）' },
   { key: '23', prop: 'formItemOptions', type: 'object', default: '-', desc: '直接透传给 a-form-item 的低层逃生舱，其中 required / rules 优先于上面的快捷字段' },
   { key: '24', prop: 'width', type: 'number | string', default: '-', desc: '字段宽度（表格场景下列宽）' },
-  { key: '25', prop: 'permissionValue', type: 'string', default: '-', desc: '字段级权限编码：无权限时整个表单项不渲染（未配置全局 permission 时放行）' },
+  { key: '25', prop: 'permissionValue', type: 'string', default: '-', desc: '字段级权限编码：无权限时整个表单项不渲染（声明了门但宿主没配全局 permission 时按 fail-closed 拒绝）' },
 ]
 
 const layoutFormProps = [

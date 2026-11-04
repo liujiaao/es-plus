@@ -417,7 +417,9 @@ describe('EsForm - 字段级 permissionValue 门控', () => {
     }
   })
 
-  it('未配置全局 permission 时一律放行', async () => {
+  it('未配置全局 permission 时声明了 permissionValue 的字段被拒绝（fail-closed）', async () => {
+    const { resetGlobalConfig } = await import('@es-plus/core')
+    resetGlobalConfig()
     const wrapper = mountForm({
       model: { name: '', salary: '' },
       formItemList: [
@@ -426,7 +428,8 @@ describe('EsForm - 字段级 permissionValue 门控', () => {
       ]
     })
     await nextTick()
-    expect(wrapper.text()).toContain('工资')
+    expect(wrapper.text()).toContain('姓名')
+    expect(wrapper.text()).not.toContain('工资')
   })
 })
 

@@ -195,6 +195,7 @@ import {
   getNestedValue,
   setNestedValue,
   looseEqual,
+  checkPermissionValue,
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -239,11 +240,8 @@ const effectiveLayoutFormProps = computed(
     ) as LayoutFormProps
 )
 
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 const translateLabel = (item: FormItemOption): string => {
   if (item.labelKey && typeof esPlus.t === 'function') {
@@ -400,7 +398,7 @@ const formItemListFilter = computed(() => {
     })
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
-      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
       if (!checkPermission(it.permissionValue)) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value as any)

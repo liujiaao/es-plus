@@ -221,6 +221,7 @@ import {
   collectReactionDependencies,
   setNestedValue,
   looseEqual,
+  checkPermissionValue,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -269,11 +270,8 @@ const effectiveLayoutFormProps = computed(
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
 // ─── 权限 ───────────────────────────────────────────
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 // ─── 国际化 ─────────────────────────────────────────
 const translateLabel = (item: FormItemOption): string => {
@@ -530,7 +528,7 @@ const formItemListFilter = computed(() => {
     })
     .filter((it): it is (FormItemOption & { dataOptions: Array<{ label: string; value: unknown }> }) => {
       if (!it) return false
-      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（未配全局 permission 时放行）。
+      // 字段级 permissionValue 与 isHidden 同层过滤：无权限的字段整体不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
       if (!checkPermission(it.permissionValue)) return false
       if (it.isHidden && typeof it.isHidden === 'function') {
         return !it.isHidden(props.model, it, formProps.value)

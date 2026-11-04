@@ -117,7 +117,7 @@ import {
   onMounted,
 } from '../../vue-compat'
 import type { PropType } from '../../vue-compat'
-import { getGlobalConfig, type BtnConfig } from '@es-plus/core'
+import { getGlobalConfig, checkPermissionValue, type BtnConfig } from '@es-plus/core'
 import RenderJsx from './render-jsx.vue'
 import { getCompIcon } from '../../utils/icon'
 
@@ -334,11 +334,8 @@ export default defineComponent({
       (getGlobalConfig() as Record<string, unknown>) ??
       {}
 
-    const checkPermission = (pvalue?: string): boolean => {
-      if (!pvalue) return true
-      const fn = esPlus.permission
-      return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-    }
+    const checkPermission = (pvalue?: string): boolean =>
+      checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
     const filterOptions = (it: BtnConfig) => {
       const {

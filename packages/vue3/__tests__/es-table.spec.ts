@@ -691,10 +691,14 @@ describe('EsTable - 列级 permissionValue 门控', () => {
     }
   })
 
-  it('未配置全局 permission 时一律放行', async () => {
+  it('未配置全局 permission 时声明了 permissionValue 的列被拒绝（fail-closed）', async () => {
+    const { resetGlobalConfig } = await import('@es-plus/core')
+    resetGlobalConfig()
     const wrapper = mountTable({ dataSource: sampleData, columns: gateColumns })
     await nextTick()
-    expect(wrapper.findAllComponents(ColumnItem)).toHaveLength(2)
+    const items = wrapper.findAllComponents(ColumnItem)
+    expect(items).toHaveLength(1)
+    expect(items[0].props('cols').prop).toBe('name')
   })
 })
 

@@ -9,6 +9,7 @@ import {
   resolveButtonSide,
   filterButtonsByPermission,
   normalizeButtonsHideState,
+  checkPermissionValue,
   resolveButtonDisabled,
   applyConfigTableOut,
   resolveItemValidateProps,
@@ -265,9 +266,39 @@ describe('field-resolver > 按钮分组', () => {
 })
 
 describe('field-resolver > 权限与隐藏', () => {
-  it('filterButtonsByPermission 不传 permission 全放行', () => {
-    const list = [btn({ permissionValue: 'x' })]
-    expect(filterButtonsByPermission(list)).toHaveLength(1)
+  it('checkPermissionValue：无 permissionValue → 放行（与是否配置 permission 无关）', () => {
+    expect(checkPermissionValue(undefined)).toBe(true)
+    expect(checkPermissionValue('')).toBe(true)
+    expect(checkPermissionValue(null)).toBe(true)
+    expect(checkPermissionValue(undefined, () => false)).toBe(true)
+  })
+
+  it('checkPermissionValue：声明了门 + 配置了 permission → 以函数结果为准', () => {
+    expect(checkPermissionValue('x', (v) => v === 'x')).toBe(true)
+    expect(checkPermissionValue('x', () => false)).toBe(false)
+  })
+
+  // P5：声明式门 + 宿主漏配判定函数 ⇒ 拒绝（fail-closed），而不是「门看起来配了、实际谁都能看」。
+  it('checkPermissionValue：声明了门但没有 permission → 拒绝', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      expect(checkPermissionValue('p5:fail-closed')).toBe(false)
+      // 同一个权限码只告警一次：重复渲染不该刷屏
+      expect(checkPermissionValue('p5:fail-closed')).toBe(false)
+      expect(warn).toHaveBeenCalledTimes(1)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('filterButtonsByPermission 不传 permission 时：无门按钮保留、有门按钮拒绝', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const list = [btn({ name: 'a', permissionValue: 'filter:no-perm' }), btn({ name: 'b' })]
+      expect(filterButtonsByPermission(list).map((x) => x.name)).toEqual(['b'])
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('filterButtonsByPermission permission 返回 false 时过滤', () => {
@@ -285,6 +316,16 @@ describe('field-resolver > 权限与隐藏', () => {
       () => false
     )
     expect(r[0].isHide).toBe(true)
+  })
+
+  it('normalizeButtonsHideState: 声明了门但没配 permission → isHide=true（fail-closed）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const r = normalizeButtonsHideState([btn({ name: 'a', permissionValue: 'normalize:no-perm' })])
+      expect(r[0].isHide).toBe(true)
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('normalizeButtonsHideState: 函数式 isHide', () => {

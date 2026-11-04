@@ -214,6 +214,7 @@ import {
   buildSortParams,
   toCssSize,
   synthesizeLeadingColumns,
+  checkPermissionValue,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -290,11 +291,8 @@ function getVxeGridInstance() {
   return (vxeEngineRef.value as any)?.vxeInstance?.()
 }
 
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 // ─── Refs ───────────────────────────────────────────
 const tableRef = ref<any>(null)
@@ -599,7 +597,7 @@ const withDataOptions = (col: TableColumn): TableColumn => {
 }
 
 const filteredColumns = computed(() => {
-  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
   // 拷贝一层：`withDataOptions` 会写 render，绝不能落到父组件传入的列对象上。
   return columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))

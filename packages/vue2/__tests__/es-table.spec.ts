@@ -329,10 +329,12 @@ describe('EsTable(vue2) - 列级 permissionValue 门控', () => {
     }
   })
 
-  it('未配置全局 permission 时一律放行', async () => {
+  it('未配置全局 permission 时声明了 permissionValue 的列被拒绝（fail-closed）', async () => {
+    const { resetGlobalConfig } = await import('@es-plus/core')
+    resetGlobalConfig()
     const vm = mountTable({ columns: gateColumns() })
     await vm.$nextTick()
-    expect(tableOf(vm).filteredColumns).toHaveLength(2)
+    expect(tableOf(vm).filteredColumns.map((c: any) => c.prop)).toEqual(['id'])
   })
 })
 
