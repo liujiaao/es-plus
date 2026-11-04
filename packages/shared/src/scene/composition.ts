@@ -37,15 +37,23 @@
  *
  * ## @3 新增的三件事
  *
- * 1. **显式接线**（`wires`）：宿主可以说「主表 key=view → 明细表 reload(row)」，实现
- *    master-detail；行的整行数据以 `reload(row)` 传给明细表（es-table 的 `reload(model?)`
- *    签名本身就吃 model）。
+ * 1. **显式接线**（`wires`）：宿主可以说「主表 key=view → 明细表 reload」，实现
+ *    master-detail。默认把整行作为 model 传给目标（es-table 的 `reload(model?)` 签名
+ *    本身就吃 model）；主从接口只接受外键时用 `to.model` 显式映射
+ *    （`{ departmentId: '$row.departmentId' }` → `reload({ departmentId: row.departmentId })`），
+ *    不把 id/name/status 整行倒进查询参数。
  * 2. **多弹窗**：一个页面可以有多个 dialog 节点；行按钮仍按 key === 节点 id 分派，
  *    页面 `open(id, …)` 逐个匹配。@2 的单弹窗限制是能力缺口，不是安全约束。
- * 3. **`behavior`**：`'crud-requests'`（默认）派生数据接线（query/reset → 表格取数、
+ * 3. **`behavior`**：`'data-wiring'`（默认）派生数据接线（query/reset → 表格取数、
  *    onSuccess → 表格刷新）；`'ui-only'` 只装配 UI 接线（row-action → open），数据类
  *    通道全部升级为页面事件（`query` / `reset` / `success`），由宿主自己发请求。
  *    显式接线在两档下都生效 —— 宿主写下的接线永远不因档位被忽略。
+ *
+ * **为什么不叫 `crud-requests`**（P11 复核改名）：组合层的节点意图里没有 `apiUrl` /
+ * `actions`，它只生成表格取数与刷新；叫 crud-requests 会让人以为内建了
+ * POST/PUT/DELETE/GET。要生成这些请求就得把片段意图升级成 StructuredCrudConfig，
+ * 等于在组合层复制一份 CRUD 动作语义 —— 与「不另写第二份」的反目标冲突。内建请求
+ * 的职责留在 `scene='crud'`；组合层如实叫 `data-wiring`。
  *
  * 组合页因此有两个朝向外的面：**exposes**（表格 refresh/reload、按 id 开弹窗）与
  * **emits**（保存 / 未匹配的行动作 / 无默认表格时的查询、重置与成功）。任何通道要么被
@@ -116,12 +124,13 @@ export type ComposableScene = 'table' | 'form' | 'dialog'
 /**
  * 页面行为档位。
  *
- * - `crud-requests`（缺省）：派生数据接线 —— 查询/重置让默认表格回第 1 页取数，
- *   弹窗成功刷新默认表格。与 @2 的派生结果一致。
+ * - `data-wiring`（缺省）：派生数据接线 —— 查询/重置让默认表格回第 1 页取数，
+ *   弹窗成功刷新默认表格。与 @2 的派生结果一致。**不生成 HTTP 请求**：片段意图里
+ *   没有地址与动作，这里只调表格的 `reload` / `refresh`。
  * - `ui-only`：只装配 UI 接线（行按钮 → 打开弹窗）；查询/重置/成功全部升级为页面
  *   事件，由宿主自己发请求。显式接线在两档下都生效。
  */
-export const COMPOSITION_BEHAVIORS = ['crud-requests', 'ui-only'] as const
+export const COMPOSITION_BEHAVIORS = ['data-wiring', 'ui-only'] as const
 export type CompositionBehavior = (typeof COMPOSITION_BEHAVIORS)[number]
 
 /** 组合计划里的一个节点。 */
@@ -151,13 +160,14 @@ export interface CompositionPlan {
   name?: string
   /** 页面目标端。缺省取第一个节点显式声明的 target，再缺省 `vue3`。 */
   target?: TargetFramework
-  /** 页面行为档位，缺省 `crud-requests`。 */
+  /** 页面行为档位，缺省 `data-wiring`。 */
   behavior?: CompositionBehavior
   nodes: readonly CompositionNode[]
   /**
    * 显式接线。与派生接线同源校验（两端必须是 `ARTIFACT_RUNTIME` 通道）；同一
    * `from`（含 `when.rowAction`）上显式覆盖派生。行的整行数据以参数传给目标通道
-   * （`table.reload(row)`）—— master-detail 的接线方式。
+   * （`table.reload(row)`）—— master-detail 的接线方式；需要只要外键时用
+   * `to.model`（见 `CompositionWire`）。
    */
   wires?: readonly CompositionWire[]
 }
@@ -165,7 +175,19 @@ export interface CompositionPlan {
 /** 一条接线。`to.page` 表示升级为页面事件（向上交给宿主）。 */
 export interface CompositionWire {
   from: { node: string; channel: string }
-  to: { node: string; channel: string } | { page: 'emit'; event: string }
+  to:
+    | {
+        node: string
+        channel: string
+        /**
+         * 行 → 目标参数的显式映射（仅 `from.channel === 'row-action'` 且目标通道为
+         * `reload` 时允许）。键是目标 `reload(model)` 的查询参数名，值是行字段路径，
+         * 必须写成 `$row.<field>`（单层，如 `{ departmentId: '$row.departmentId' }`）。
+         * 省略时保持整行透传（`reload(row)`），与 @3 早期行为一致。
+         */
+        model?: Readonly<Record<string, string>>
+      }
+    | { page: 'emit'; event: string }
   /** 仅行动作：只有该 key 走这条线。 */
   when?: { rowAction: string }
 }
@@ -261,10 +283,10 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
     throw new Error('组合计划至少需要一个节点（table / form / dialog）。')
   }
 
-  const behavior = plan.behavior ?? 'crud-requests'
+  const behavior = plan.behavior ?? 'data-wiring'
   if (!(COMPOSITION_BEHAVIORS as readonly string[]).includes(behavior)) {
     throw new Error(
-      `组合 behavior=${JSON.stringify(behavior)} 非法：只支持 ${COMPOSITION_BEHAVIORS.join(' / ')}（crud-requests = 派生数据接线；ui-only = 数据通道全部升级为页面事件）。`,
+      `组合 behavior=${JSON.stringify(behavior)} 非法：只支持 ${COMPOSITION_BEHAVIORS.join(' / ')}（data-wiring = 派生数据接线；ui-only = 数据通道全部升级为页面事件）。`,
     )
   }
 
@@ -364,7 +386,7 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
 
   // 默认数据目标：master 角色 → 唯一表。都没有就不猜（数据接线升级为页面事件）。
   const defaultTable = tables.find((t) => roles[t.id] === 'master') ?? (tables.length === 1 ? tables[0] : undefined)
-  const dataWiring = behavior === 'crud-requests' && !!defaultTable
+  const dataWiring = behavior === 'data-wiring' && !!defaultTable
 
   const wires: CompositionWire[] = []
 
@@ -454,8 +476,8 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
       }
     } else {
       for (const k of Object.keys(to)) {
-        if (k !== 'node' && k !== 'channel') {
-          throw new Error(`组合接线 ${label} 的 to 含未知键 "${k}" —— 节点目标只接受 node / channel。`)
+        if (k !== 'node' && k !== 'channel' && k !== 'model') {
+          throw new Error(`组合接线 ${label} 的 to 含未知键 "${k}" —— 节点目标只接受 node / channel / model。`)
         }
       }
       const target = infoById.get(String(to.node))
@@ -486,6 +508,38 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
           `组合接线 ${label} 指向 open，但 open 需要标题与行数据 —— 只有 row-action 源携带行；` +
             `请升级为页面事件，由宿主调用页面暴露的 open(id, options)。`,
         )
+      }
+      // 行 → 目标参数映射：只有 row-action 携带行，且只有 reload(model) 吃这份参数
+      // （refresh / validate / resetFields 没有「查询参数」语义）。
+      if (Object.prototype.hasOwnProperty.call(to, 'model')) {
+        if (wire.from.channel !== 'row-action') {
+          throw new Error(
+            `组合接线 ${label} 的 to.model 只能用于 row-action 源 —— 其它通道没有「当前行」可映射。`,
+          );
+        }
+        if (to.channel !== 'reload') {
+          throw new Error(
+            `组合接线 ${label} 的 to.model 只适用于 reload 通道（实际 ${String(to.channel)}）—— ` +
+              `refresh / validate / resetFields 不接受查询参数，映射会生成一个被忽略的参数。`,
+          );
+        }
+        const model = to.model;
+        if (typeof model !== 'object' || model === null || Array.isArray(model)) {
+          throw new Error(`组合接线 ${label} 的 to.model 必须是对象（{ 参数名: '$row.字段' }）。`);
+        }
+        const entries = Object.entries(model);
+        if (entries.length === 0) {
+          throw new Error(`组合接线 ${label} 的 to.model 不能为空对象 —— 省略 model 即整行透传。`);
+        }
+        for (const [param, value] of entries) {
+          if (!param) throw new Error(`组合接线 ${label} 的 to.model 含空参数名。`);
+          if (typeof value !== 'string' || !/^\$row\.[A-Za-z_$][\w$]*$/.test(value)) {
+            throw new Error(
+              `组合接线 ${label} 的 to.model.${param}=${JSON.stringify(value)} 非法：` +
+                `值必须是 '$row.<字段>'（单层行字段，如 '$row.id'）；不支持常量与多级路径。`,
+            );
+          }
+        }
       }
     }
     const key = wireKey(wire)
@@ -826,10 +880,21 @@ function pageCode(
             )
           }
         } else {
+          // 主从默认整行透传（es-table 的 reload(model) 吃整份查询参数）；声明了
+          // to.model 就只映射声明的字段，避免把 id/name/status 全倒进明细接口。
+          let arg = 'payload.row'
+          if (wire.to.model) {
+            const rowExpr = vue2 ? '(payload.row || {})' : 'payload.row'
+            const pairs = Object.entries(wire.to.model).map(([param, path]) => {
+              const field = path.slice('$row.'.length)
+              return `${q(param)}: ${vue2 ? `${rowExpr}.${field}` : `${rowExpr}?.${field}`}`
+            })
+            arg = `{ ${pairs.join(', ')} }`
+          }
           out.push(
             vue2
-              ? `${indent}  this.$refs.${refVar(target)}.${wire.to.channel}(payload.row)`
-              : `${indent}  ${refVar(target)}.value?.${wire.to.channel}?.(payload.row)`,
+              ? `${indent}  this.$refs.${refVar(target)}.${wire.to.channel}(${arg})`
+              : `${indent}  ${refVar(target)}.value?.${wire.to.channel}?.(${arg})`,
           )
         }
       }
@@ -1082,7 +1147,7 @@ function composeText(
     const role = analysis.roles[n.id] ? ` [role=${analysis.roles[n.id]}]` : ''
     out.push(`- ${kind} "${n.id}"${role} → ${n.renamed.path}`)
   }
-  out.push('', `Behavior: ${analysis.behavior}（${analysis.behavior === 'ui-only' ? '数据通道升级为页面事件' : '派生 CRUD 数据接线'}）`)
+  out.push('', `Behavior: ${analysis.behavior}（${analysis.behavior === 'ui-only' ? '数据通道升级为页面事件' : '派生表格取数/刷新接线（不生成 HTTP 请求）'}）`)
   out.push('', 'Wiring (derived from ARTIFACT_RUNTIME — not guessed; explicit wires included):')
   for (const w of wires) {
     const when = w.when ? ` (key=${w.when.rowAction})` : ''

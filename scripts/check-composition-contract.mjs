@@ -263,10 +263,26 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
   // ①c role=master 是数据接线的默认目标（不是「第一个表」）。
   const masterNode = plan.nodes.find((n) => n.role === 'master' && n.plan.scene === 'table')
   const formNode = plan.nodes.find((n) => n.plan.scene === 'form')
-  if (masterNode && formNode && (plan.behavior ?? 'crud-requests') === 'crud-requests') {
+  if (masterNode && formNode && (plan.behavior ?? 'data-wiring') === 'data-wiring') {
     const query = wires.find((w) => w.from.node === formNode.id && w.from.channel === 'query')
     if (!query || !('node' in query.to) || query.to.node !== masterNode.id) {
       fail(`${file}: role=master 的 ${masterNode.id} 没有成为查询默认目标（实际 ${JSON.stringify(query)}）`)
+    }
+  }
+
+  // ①d 主从参数映射：声明了 to.model 就只映射声明的行字段，不得回退整行透传。
+  for (const wire of wires) {
+    if ('node' in wire.to && wire.to.model) {
+      for (const [param, path] of Object.entries(wire.to.model)) {
+        const field = path.replace(/^\$row\./, '')
+        const expected =
+          envelope.target === 'vue2'
+            ? `'${param}': (payload.row || {}).${field}`
+            : `'${param}': payload.row?.${field}`
+        if (!page.code.includes(expected)) {
+          fail(`${file}: to.model 没有按声明生成 ${expected}`)
+        }
+      }
     }
   }
 
@@ -386,7 +402,7 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
   if (JSON.stringify(envelope.wires) !== JSON.stringify(wires)) fail(`${file}: 信封 wires 与结果不一致`)
   if (JSON.stringify(envelope.faces) !== JSON.stringify(faces)) fail(`${file}: 信封 faces 与结果不一致`)
   if (envelope.nodes.length !== plan.nodes.length) fail(`${file}: 信封节点数不符`)
-  const expectedBehavior = plan.behavior ?? 'crud-requests'
+  const expectedBehavior = plan.behavior ?? 'data-wiring'
   if (envelope.behavior !== expectedBehavior) {
     fail(`${file}: 信封 behavior=${envelope.behavior}，期望 ${expectedBehavior}`)
   }
@@ -519,6 +535,34 @@ function checkStructuralRejects(mod) {
       /rowButtons 只有 \[view\]/,
     ],
     [
+      'to.model 只能用于 reload 通道',
+      {
+        nodes: [tableNode('a', { rowButtons: [{ key: 'view', name: '查看' }] }), tableNode('b')],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { node: 'b', channel: 'refresh', model: { userId: '$row.id' } },
+            when: { rowAction: 'view' },
+          },
+        ],
+      },
+      /只适用于 reload 通道/,
+    ],
+    [
+      'to.model 的值必须是单层 $row.<字段>',
+      {
+        nodes: [tableNode('a', { rowButtons: [{ key: 'view', name: '查看' }] }), tableNode('b')],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { node: 'b', channel: 'reload', model: { userId: 'id' } },
+            when: { rowAction: 'view' },
+          },
+        ],
+      },
+      /必须是 '\$row\.<字段>'/,
+    ],
+    [
       '接线目标不是可调用通道（form.model 是数据）',
       {
         nodes: [
@@ -633,6 +677,21 @@ async function main() {
               {
                 from: { node: 'users-table', channel: 'row-action' },
                 to: { node: 'items', channel: 'reload' },
+                when: { rowAction: 'view' },
+              },
+            ],
+          },
+          ['table', 'table', 'form'],
+        ],
+        // P11 复核：主从参数映射 —— 只把声明的行字段交给明细表 reload(model)。
+        [
+          'table+table(master-detail model)',
+          {
+            nodes: [{ ...table(), role: 'master' }, secondTable(), form()],
+            wires: [
+              {
+                from: { node: 'users-table', channel: 'row-action' },
+                to: { node: 'items', channel: 'reload', model: { userId: '$row.id' } },
                 when: { rowAction: 'view' },
               },
             ],

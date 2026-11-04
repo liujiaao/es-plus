@@ -384,10 +384,10 @@ describe('composition@3 — 多弹窗 / 多表 / 显式接线 / behavior', () =>
   })
 
   it('信封带 behavior / roles，且指纹对它们敏感', () => {
-    const p = plan([{ ...table(), role: 'master' }, form()], { behavior: 'crud-requests' })
+    const p = plan([{ ...table(), role: 'master' }, form()], { behavior: 'data-wiring' })
     const env = emitComposition(p).envelope!
     expect(env.contract).toBe('es-plus.composition@3')
-    expect(env.behavior).toBe('crud-requests')
+    expect(env.behavior).toBe('data-wiring')
     expect(env.roles).toEqual({ users: 'master' })
     const changed = emitComposition(plan([{ ...table(), role: 'master' }, form()], { behavior: 'ui-only' })).envelope!
     expect(changed.fingerprint).not.toBe(env.fingerprint)
@@ -616,4 +616,62 @@ describe('composition@3 复核 — 可调用性 / 幽灵事件 / 死分支', () 
       expect(run).toThrow(re)
     })
   }
+})
+
+describe('composition@3 复核 — 主从参数映射与 behavior 改名', () => {
+  const masterDetail = (wires: any[]) =>
+    plan([table('orders', { rowButtons: [{ key: 'view', name: '查看' }] }), table('items')], {
+      behavior: 'ui-only',
+      wires,
+    })
+
+  it('to.model 只把声明的行字段映射进 reload(model)，不再整行倒进查询参数', () => {
+    const p = masterDetail([
+      {
+        from: { node: 'orders', channel: 'row-action' },
+        to: { node: 'items', channel: 'reload', model: { orderId: '$row.id' } },
+        when: { rowAction: 'view' },
+      },
+    ])
+    const page = emitComposition(p).page!
+    expect(page.code).toContain("itemsRef.value?.reload?.({ 'orderId': payload.row?.id })")
+    expect(page.code).not.toContain('reload(payload.row)')
+    // 信封里保留映射声明（宿主可据此重建请求）
+    expect(emitComposition(p).envelope!.wires[0].to).toEqual({
+      node: 'items',
+      channel: 'reload',
+      model: { orderId: '$row.id' },
+    })
+  })
+
+  it('省略 to.model 时保持整行透传（@3 早期行为不变）', () => {
+    const p = masterDetail([
+      {
+        from: { node: 'orders', channel: 'row-action' },
+        to: { node: 'items', channel: 'reload' },
+        when: { rowAction: 'view' },
+      },
+    ])
+    expect(emitComposition(p).page!.code).toContain('itemsRef.value?.reload?.(payload.row)')
+  })
+
+  it('to.model 只接受 row-action 源 + reload 目标 + 单层 $row.<字段>', () => {
+    const wire = (to: any) =>
+      masterDetail([{ from: { node: 'orders', channel: 'row-action' }, to, when: { rowAction: 'view' } }])
+    expect(() =>
+      planComposition(wire({ node: 'items', channel: 'refresh', model: { orderId: '$row.id' } })),
+    ).toThrow(/只适用于 reload 通道/)
+    expect(() => planComposition(wire({ node: 'items', channel: 'reload', model: { orderId: 'id' } }))).toThrow(
+      /必须是 '\$row\.<字段>'/,
+    )
+    expect(() => planComposition(wire({ node: 'items', channel: 'reload', model: {} }))).toThrow(/不能为空对象/)
+  })
+
+  it('behavior 的默认值是 data-wiring，旧名 crud-requests 被拒绝', () => {
+    const env = emitComposition(plan([table('users'), form()])).envelope!
+    expect(env.behavior).toBe('data-wiring')
+    expect(() => planComposition(plan([table('users')], { behavior: 'crud-requests' as any }))).toThrow(
+      /只支持 data-wiring \/ ui-only/,
+    )
+  })
 })

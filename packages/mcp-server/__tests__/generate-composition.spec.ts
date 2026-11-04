@@ -135,7 +135,7 @@ describe("generate_composition — 组合页入口", () => {
     expect(result.isError, result.content[0].text).toBeFalsy();
     const text = result.content[0].text;
     expect(text).toContain('[role=master]');
-    expect(text).toContain("Behavior: crud-requests");
+    expect(text).toContain("Behavior: data-wiring");
     expect(text).toContain('users.row-action (key=view) → items.reload');
     // 多表暴露面按节点派生，master 另有一对缺省别名。
     expect(text).toContain("exposes refresh/reload/usersRefresh/usersReload/itemsRefresh/itemsReload");
@@ -160,6 +160,33 @@ describe("generate_composition — 组合页入口", () => {
     });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/必须声明 when\.rowAction/);
+  });
+
+  it("P11 复核：to.model / behavior=data-wiring 原样透传，主从只映射声明字段", async () => {
+    const result = await call(tool, {
+      behavior: "ui-only",
+      nodes: [
+        { id: "users", role: "master", scene: "table", intent: tableIntent },
+        { id: "items", scene: "table", intent: { ...tableIntent, rowButtons: [] } },
+      ],
+      wires: [
+        {
+          from: { node: "users", channel: "row-action" },
+          to: { node: "items", channel: "reload", model: { userId: "$row.id" } },
+          when: { rowAction: "view" },
+        },
+      ],
+    });
+    expect(result.isError, result.content[0].text).toBeFalsy();
+    expect(result.content[0].text).toContain("itemsRef.value?.reload?.({ 'userId': payload.row?.id })");
+    // 默认档位名与 HTTP 请求边界都要如实出现在正文里（不再叫 crud-requests）。
+    const plain = await call(tool, {
+      nodes: [
+        { id: "users", scene: "table", intent: tableIntent },
+        { id: "filter", scene: "form", intent: formIntent },
+      ],
+    });
+    expect(plain.content[0].text).toContain("Behavior: data-wiring");
   });
 
   it("P11 复核：接线目标的『可调用 + 按钮真的存在』由 planComposition 拒绝并原样透出", async () => {

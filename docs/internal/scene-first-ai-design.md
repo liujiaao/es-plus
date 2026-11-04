@@ -96,14 +96,16 @@ export interface ArtifactEnvelope {
 export interface CompositionPlan {
   name?: string
   target?: TargetFramework          // 缺省取第一个节点显式 target，再缺省 vue3
-  behavior?: 'crud-requests' | 'ui-only'   // P11：ui-only = 数据通道升级为页面事件
+  behavior?: 'data-wiring' | 'ui-only'   // P11：data-wiring = 派生表格取数/刷新（不发 HTTP）；ui-only = 数据通道升级为页面事件
   nodes: readonly { id: string; role?: string; plan: ScenePlan }[]  // form ≤1；table/dialog 可多个
   wires?: readonly CompositionWire[]        // P11：显式接线（同 from 覆盖派生）
 }
 
 export interface CompositionWire {
   from: { node: string; channel: string }             // 通道名必须 ∈ ARTIFACT_RUNTIME
-  to: { node: string; channel: string } | { page: 'emit'; event: string }
+  to:
+    | { node: string; channel: string; model?: Record<string, string> }  // P11 复核：模型 '$row.字段' 映射
+    | { page: 'emit'; event: string }
   when?: { rowAction: string }                        // row-action 源必填，且必须是已声明的按钮 key
 }
 
@@ -111,7 +113,7 @@ export interface CompositionEnvelope {
   contract: 'es-plus.composition@3'
   name: string
   target: TargetFramework
-  behavior: 'crud-requests' | 'ui-only'
+  behavior: 'data-wiring' | 'ui-only'
   nodes: readonly ArtifactEnvelope[]
   roles: Readonly<Record<string, string>>
   wires: readonly CompositionWire[]
@@ -504,14 +506,15 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 
 **验证（2026-11-04）**
 
-- `npm test -w @es-plus/shared` 组合 spec 44/44（新增 3 条产物用例 + 7 条结构化拒绝）✅
-- `check:composition-contract` → **41 组组合**（新增 `table+form+dialog(explicit wires)`，三端各跑）
-  / **结构化拒绝 16 例**（新增 5 例）/ 编译腿 ✅
+- `npm test -w @es-plus/shared` 组合 spec 48/48（新增 3 条产物用例 + 7 条结构化拒绝 + 4 条主从映射/改名用例）✅
+- `check:composition-contract` → **44 组组合**（新增 `table+table(master-detail model)` 与
+  `table+form+dialog(explicit wires)`，三端各跑）/ **结构化拒绝 18 例** / 编译腿 ✅
 - `check:artifact-runtime` → `invokable ⊆ expose` 断言 ✅
 - `npm test -w @es-plus/mcp-server` → 新增可调用性/按钮 key 的透出用例 ✅
 - 变异自检（实跑后还原）✅：①删掉表单模板 ref → 守卫点名 `queryFormRef`（2 处）；
   ②把派生的 `save` 事件强行塞回 `faces.emit` → 守卫在每端都红（30 处）；
-  ③关掉 `invokable` 校验 → 拒绝用例「form.model 是数据」失效即红。
+  ③关掉 `invokable` 校验 → 拒绝用例「form.model 是数据」失效即红；
+  ④关掉 `to.model` 分支 → 主从映射组合在三端点名缺失 `userId` 映射。
 
 **据实偏离**
 
@@ -522,3 +525,26 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 - **composable 弹窗不支持被 `onSuccess`/`submit` 直接打开**：`open(title, row)` 需要
   行与标题上下文，放弃这条路径而不是生成一个不带数据的调用；需要这种编排时改用
   `mode: 'component'` 或页面事件。
+
+#### P11 复核（第二批）· 主从参数映射与 `behavior` 正名
+
+计划原文第 3、5 条在第一批里只落了一半，逐条回源码后补齐/裁决：
+
+1. **主从参数映射**（计划：`reload({ [param]: row[rowkey] })`，要求显式 rowkey 映射）。
+   旧行为把**整行**塞进 `reload(model)`；`es-table` 会把 model 合并进请求参数，主从接口
+   因此收到 `id/name/status/...` 一整套无关参数。新增 `to.model`：
+   `{ departmentId: '$row.departmentId' }` → `reload({ departmentId: row.departmentId })`。
+   校验只允许 `row-action` 源 + `reload` 目标（其它通道没有查询参数语义）、值必须是单层
+   `$row.<字段>`（不猜常量/多级路径）；空对象拒绝（省略即整行透传，保持兼容）。
+2. **`behavior` 改名 `crud-requests` → `data-wiring`**（计划要求生成 add/edit/delete
+   请求，或「改名/降级并如实描述」——取后者并论证）。组合节点的意图表里没有
+   `apiUrl` / `actions`，生成 POST/PUT/DELETE/GET 只能先把片段意图升级成
+   `StructuredCrudConfig`，等于在组合层复制一份 CRUD 动作语义，直接违反反目标 5
+   （「不另写第二份」）。组合层实际只调表格 `reload` / `refresh`，旧名字承诺了它做不到
+   的事。内建请求语义留在 `scene='crud'`；`@3` 尚未对外发布，改名不留兼容别名。
+   这是**对计划字面的偏离**：交付的是「名字与行为一致」，不是「组合页内建 CRUD 请求」。
+
+**验证**：shared 977/977（组合 48）；MCP 390/390；`check:composition-contract`
+44 组 / 拒绝 18 例（三端）；`to.model` 变异（关掉映射分支）→ 三端点名缺映射。
+文档尾巴（P8 复核）与本批同批修复：ASCII 图 / 文件地图计数改为从源码数出来，
+信封适用范围从 `withEnvelope` 的真实调用点反推，并给三个信封工具声明 `outputSchema`。

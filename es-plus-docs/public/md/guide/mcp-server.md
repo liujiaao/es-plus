@@ -297,7 +297,7 @@ mcp-server-es-plus --help        # 用法说明
 - 查询 → **默认表** `reload(model)`（新搜索回第 1 页）；重置 → `reload()`（片段先清空字段）。默认表 = `role: 'master'` 的 table，否则页面里唯一的 table；多表且两者都没有时不猜，升级为页面事件 `query` / `reset`；
 - 表单提交 → 页面事件 `save`；弹窗提交成功 → 默认表 `refresh()`（停留在当前页；无默认表时升级为 `success` 事件）。
 
-`wires` 可**显式声明**接线（如 master-detail：主表 `row-action` key=view → 明细表 `reload(row)`，整行数据作为参数传入），与派生接线同源校验；同一 `from` 上显式覆盖派生。接线目标必须是页面**真的调得动**的通道（`ARTIFACT_RUNTIME.invokable`：表格 `refresh` / `reload`、表单 `validate` / `resetFields`、component 弹窗 `open` / `close`；`form.model` 是响应式数据，不是方法）；`open` 需要行数据，只接受 `row-action` 源；composable 弹窗没有模板 ref，只能由行按钮分派打开；`when.rowAction` 必须是该表 `rowButtons` 里声明过的 key，否则生成的分支永远不会触发。这些在计划阶段就结构化拒绝，错误正文带节点名。页面的 `emit` 面由**最终接线**投影 —— 被显式接线接管的事件不会出现在 `emits` 里。`behavior: 'ui-only'` 只装配 UI 接线（行按钮 → 弹窗），查询/重置/成功全部升级为页面事件，由宿主自己发请求。
+`wires` 可**显式声明**接线（如 master-detail：主表 `row-action` key=view → 明细表 `reload(row)`，整行数据作为参数传入），与派生接线同源校验；同一 `from` 上显式覆盖派生。默认整行透传；明细接口只接受外键时用 `to.model` 只映射声明的行字段（`{ departmentId: '$row.departmentId' }` → `reload({ departmentId: row.departmentId })`）。接线目标必须是页面**真的调得动**的通道（`ARTIFACT_RUNTIME.invokable`：表格 `refresh` / `reload`、表单 `validate` / `resetFields`、component 弹窗 `open` / `close`；`form.model` 是响应式数据，不是方法）；`open` 需要行数据，只接受 `row-action` 源；composable 弹窗没有模板 ref，只能由行按钮分派打开；`when.rowAction` 必须是该表 `rowButtons` 里声明过的 key，否则生成的分支永远不会触发。这些在计划阶段就结构化拒绝，错误正文带节点名。页面的 `emit` 面由**最终接线**投影 —— 被显式接线接管的事件不会出现在 `emits` 里。缺省档 `data-wiring` 只派生表格取数/刷新，**不生成** POST/PUT/DELETE/GET（内建请求语义请用 `scene: 'crud'`）；`behavior: 'ui-only'` 只装配 UI 接线（行按钮 → 弹窗），查询/重置/成功全部升级为页面事件，由宿主自己发请求。
 
 页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`，未命中 id 返回 `false`；多表页面另给每个节点一对 `<id>Refresh` / `<id>Reload`。vue2 页面的弹窗只能是 `mode: 'component'`。
 

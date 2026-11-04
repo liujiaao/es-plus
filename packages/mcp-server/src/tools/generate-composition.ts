@@ -82,6 +82,12 @@ const wireShape = z.object({
           .describe(
             "Target channel the composed page can CALL (ARTIFACT_RUNTIME.invokable): table refresh/reload, form validate/resetFields, component-dialog open/close. `model` is data, not a method. A composable dialog (mode 'composable') has no template ref — only a row-action may open it. `open` requires a row, so it is only accepted from a row-action source.",
           ),
+        model: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe(
+            "Row → reload params mapping, only for a row-action source targeting `reload`. Values are single-level row fields written as '$row.<field>' (e.g. { departmentId: '$row.departmentId' } → reload({ departmentId: row.departmentId })). Omit to pass the whole row (reload(row)).",
+          ),
       })
       .passthrough(),
     z
@@ -110,10 +116,10 @@ const compositionShape = {
     .optional()
     .describe("Page target. Defaults to the first node's explicit target, then vue3. All nodes must share one target."),
   behavior: z
-    .enum(["crud-requests", "ui-only"])
+    .enum(["data-wiring", "ui-only"])
     .optional()
     .describe(
-      "Data-wiring mode (default 'crud-requests'). 'crud-requests' derives query/reset → default table reload and dialog onSuccess → default table refresh. 'ui-only' wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs requests itself. Explicit wires apply in both modes.",
+      "Data-wiring mode (default 'data-wiring'). 'data-wiring' derives query/reset → default table reload and dialog onSuccess → default table refresh; it does NOT generate HTTP requests (fragment intents carry no apiUrl/actions) — use scene 'crud' for built-in add/edit/delete requests. 'ui-only' wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs requests itself. Explicit wires apply in both modes.",
     ),
   nodes: z
     .array(nodeShape)
@@ -125,7 +131,7 @@ const compositionShape = {
     .array(wireShape)
     .optional()
     .describe(
-      "Explicit wiring, validated against the same runtime contract as derived wiring. An explicit wire overrides the derived wire for the same source (node + channel + rowAction key). Row-action targets receive the clicked row (e.g. master row → detail table reload(row)).",
+      "Explicit wiring, validated against the same runtime contract as derived wiring. An explicit wire overrides the derived wire for the same source (node + channel + rowAction key). Row-action targets receive the clicked row by default (e.g. master row → detail table reload(row)); set `to.model` to pass only chosen fields (e.g. { departmentId: '$row.departmentId' }) instead of the whole row.",
     ),
 } as const;
 
@@ -139,7 +145,7 @@ export function registerGenerateComposition(server: McpServer) {
   registerArtifactTool(
     server,
     "generate_composition",
-    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing. Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
+    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing. Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model; use to.model to pass only chosen row fields); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests; the default `data-wiring` only derives table reload/refresh (no HTTP requests — use scene 'crud' for built-in add/edit/delete). Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
     compositionShape,
     async (args: any) => {
       const nodes = Array.isArray(args.nodes) ? args.nodes : [];
