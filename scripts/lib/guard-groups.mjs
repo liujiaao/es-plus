@@ -65,6 +65,7 @@ export const GUARD_GROUPS = Object.freeze([
     steps: [
       'check:scene-registry',
       'check:scene-parity',
+      'check:artifact-envelope',
       'check:scene-coverage',
       'check:front-door',
       'check:front-door-leg',

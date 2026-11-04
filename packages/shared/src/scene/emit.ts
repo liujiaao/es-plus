@@ -14,7 +14,13 @@ import {
   type FragmentResult,
   type TableBlockInput,
 } from '../fragment-generator.js'
-import type { SceneId } from './registry.js'
+import type { ArtifactKind, SceneId } from './registry.js'
+import { DEFAULT_TARGET } from '../target.js'
+import {
+  buildArtifactEnvelope,
+  type ArtifactEnvelope,
+  type ArtifactFile,
+} from './artifact.js'
 
 /**
  * 场景发射层 —— **唯一**把意图表落到既有发射器的确定性代码。
@@ -78,6 +84,16 @@ export type ScenePlan =
 export interface SceneEmitResult {
   text: string
   isError?: true
+}
+
+/**
+ * 发射结果 + 产物信封（P5）。
+ *
+ * `text` 与 `emitScene` **逐字节相同**；`envelope` 是同一份产物的结构化视图。
+ * 失败分支没有信封（`isError` 时什么都没生成，不该有一份自称产物的东西）。
+ */
+export interface SceneArtifactResult extends SceneEmitResult {
+  envelope?: ArtifactEnvelope
 }
 
 function titleFor(key: string): string {
@@ -168,7 +184,7 @@ function formatGeneratedCrud(result: StructuredGenerateResult, allWarnings: stri
 }
 
 /** `scene: 'crud'` —— 有表走组合+整页生成器；无表发独立片段。 */
-export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
+export function emitCrudScene(intent: CrudIntent): SceneArtifactResult {
   const s = intent.surfaces ?? {}
   const query: any[] = Array.isArray(s.query) ? s.query : []
   const table: any[] = Array.isArray(s.table) ? s.table : []
@@ -264,12 +280,35 @@ export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
       )
     }
 
-    return { text: formatGeneratedCrud(result, allWarnings) }
+    return {
+      text: formatGeneratedCrud(result, allWarnings),
+      envelope: buildArtifactEnvelope({
+        scene: 'crud',
+        artifact: 'crud-page',
+        target: intent.target ?? DEFAULT_TARGET,
+        mode: intent.mode ?? 'schema',
+        // schema 模式是「schema 文件 + 包装 SFC」两件套；sfc 模式只有一份 SFC。
+        files: result.wrapperCode
+          ? [
+              {
+                path: `schema.${config.typescript === false ? 'js' : 'ts'}`,
+                code: result.code,
+                language: config.typescript === false ? 'javascript' : 'typescript',
+              },
+              { path: 'Page.vue', code: result.wrapperCode, language: 'vue' },
+            ]
+          : [{ path: 'Page.vue', code: result.code, language: 'vue' }],
+        config,
+        warnings: allWarnings,
+      }),
+    }
   }
 
   // ── No table: emit standalone fragment(s) for the present surfaces ──
   const sections: string[] = []
   const allWarnings: string[] = []
+  // 信封用的逐文件视图（与下面拼接的文本同源：同一份 r.code）。
+  const files: ArtifactFile[] = []
 
   if (hasQuery) {
     const r = generateFormBlock({
@@ -285,6 +324,7 @@ export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
     })
     allWarnings.push(...r.warnings)
     sections.push(['## Query form (QueryForm.vue)', '', r.summary, '', '```vue', r.code, '```'].join('\n'))
+    files.push({ path: 'QueryForm.vue', code: r.code, language: 'vue' })
   }
 
   if (hasDialog) {
@@ -356,6 +396,9 @@ export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
           '```',
         ].join('\n'),
       )
+      const dialogLang: ArtifactFile['language'] =
+        (r.fence ?? 'tsx') === 'vue' ? 'vue' : intent.typescript === false ? 'jsx' : 'tsx'
+      files.push({ path: `${composableName}.${dialogLang}`, code: r.code, language: dialogLang })
     }
 
     // AI-28：这条支恒发 composable（弹窗体是 JSX render ⇒ 需 JSX 插件）。另一种形态
@@ -380,6 +423,7 @@ export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
     })
     allWarnings.push(...r.warnings)
     sections.push(['## Form (FormBlock.vue)', '', r.summary, '', '```vue', r.code, '```'].join('\n'))
+    files.push({ path: 'FormBlock.vue', code: r.code, language: 'vue' })
   }
 
   // 多弹窗时同一条提示（如 JSX 插件前提）会按弹窗重复 —— 去重保持告警可读。
@@ -429,11 +473,96 @@ export function emitCrudScene(intent: CrudIntent): SceneEmitResult {
   )
   header.push('', formatPreflight(fragmentPreflight))
   header.push('', '---', '')
-  return { text: header.join('\n') + '\n' + sections.join('\n\n---\n\n') }
+  // 无表支是**片段包**（查询表单 / 提交表单 / 每个弹窗各一份文件），不同于整页
+  // `crud-page`。信封的 `artifact` 取主产物：有弹窗取 dialog-composable，否则取 form
+  // （查询表单与提交表单都是 form 族片段）；全部文件在 `files[]` 里逐条列出。
+  const bundleArtifact: ArtifactKind = hasDialog ? 'dialog-composable' : 'form'
+  return {
+    text: header.join('\n') + '\n' + sections.join('\n\n---\n\n'),
+    envelope: buildArtifactEnvelope({
+      scene: 'crud',
+      artifact: bundleArtifact,
+      target: intent.target ?? DEFAULT_TARGET,
+      mode: 'sfc',
+      files,
+      config: intent,
+      warnings: uniqueWarnings,
+    }),
+  }
 }
 
 function sceneErrorNoun(scene: SceneId): string {
   return scene === 'crud' ? 'CRUD' : scene
+}
+
+/**
+ * 场景计划 → 产物文本 + 信封（P5）。
+ *
+ * 文本由 `emitScene` 同一条路径产生：本函数只**附加** `envelope`，不改任何字节。
+ * `check-artifact-envelope` 对全部语料断言两者 `text` 相等；`check:scene-parity`
+ * 继续守 `generate_scene` 与旧工具的字节等价。
+ */
+export function emitSceneArtifact(plan: ScenePlan): SceneArtifactResult {
+  try {
+    switch (plan.scene) {
+      case 'crud':
+        return emitCrudScene(plan.intent)
+      case 'table': {
+        const r = generateTableBlock(plan.intent)
+        return {
+          text: formatFragmentText(r, 'vue'),
+          envelope: buildArtifactEnvelope({
+            scene: 'table',
+            artifact: 'table',
+            target: plan.intent.target ?? DEFAULT_TARGET,
+            mode: null,
+            files: [{ path: 'TableBlock.vue', code: r.code, language: 'vue' }],
+            config: plan.intent,
+            warnings: r.warnings,
+          }),
+        }
+      }
+      case 'form': {
+        const r = generateFormBlock(plan.intent)
+        return {
+          text: formatFragmentText(r, 'vue'),
+          envelope: buildArtifactEnvelope({
+            scene: 'form',
+            artifact: 'form',
+            target: plan.intent.target ?? DEFAULT_TARGET,
+            mode: null,
+            files: [{ path: 'FormBlock.vue', code: r.code, language: 'vue' }],
+            config: plan.intent,
+            warnings: r.warnings,
+          }),
+        }
+      }
+      case 'dialog': {
+        const r = generateDialogBlock(plan.intent)
+        const component = plan.intent.mode === 'component'
+        const language: ArtifactFile['language'] = component
+          ? 'vue'
+          : plan.intent.typescript === false
+            ? 'jsx'
+            : 'tsx'
+        const name = plan.intent.composableName || 'useFormDialog'
+        return {
+          text: formatFragmentText(r, 'tsx'),
+          envelope: buildArtifactEnvelope({
+            scene: 'dialog',
+            artifact: component ? 'dialog-component' : 'dialog-composable',
+            target: plan.intent.target ?? DEFAULT_TARGET,
+            mode: plan.intent.mode ?? 'composable',
+            files: [{ path: `${name}.${language}`, code: r.code, language }],
+            config: plan.intent,
+            warnings: r.warnings,
+          }),
+        }
+      }
+    }
+  } catch (error: any) {
+    return { text: `Error generating ${sceneErrorNoun(plan.scene)}: ${error.message}`, isError: true }
+  }
 }
 
 /**
@@ -443,18 +572,6 @@ function sceneErrorNoun(scene: SceneId): string {
  * 调用方不需要各自再包一层 try/catch。
  */
 export function emitScene(plan: ScenePlan): SceneEmitResult {
-  try {
-    switch (plan.scene) {
-      case 'crud':
-        return emitCrudScene(plan.intent)
-      case 'table':
-        return { text: formatFragmentText(generateTableBlock(plan.intent), 'vue') }
-      case 'form':
-        return { text: formatFragmentText(generateFormBlock(plan.intent), 'vue') }
-      case 'dialog':
-        return { text: formatFragmentText(generateDialogBlock(plan.intent), 'tsx') }
-    }
-  } catch (error: any) {
-    return { text: `Error generating ${sceneErrorNoun(plan.scene)}: ${error.message}`, isError: true }
-  }
+  const { text, isError } = emitSceneArtifact(plan)
+  return isError ? { text, isError } : { text }
 }

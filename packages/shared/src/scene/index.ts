@@ -36,3 +36,14 @@ export {
   type ArtifactSuccessContract,
   type SuccessKind,
 } from './runtime.js'
+
+// P5：产物信封（`es-plus.artifact@1`）。与运行时契约一样是只读元数据 + 纯函数，
+// 不依赖生成器实现，因此可以从子路径导出。
+export {
+  ARTIFACT_CONTRACT_VERSION,
+  buildArtifactEnvelope,
+  fingerprintArtifact,
+  type ArtifactDraft,
+  type ArtifactEnvelope,
+  type ArtifactFile,
+} from './artifact.js'

@@ -172,7 +172,7 @@ export interface ArtifactEnvelope {
 
 **验证（2026-11-03）**
 
-- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致（P3 新增 `check:scene-eval`、P4 新增 `check:artifact-runtime` 后为 123 步）✅
+- `npm run check:consistency:list` → 14 组 / 121 步，顺序与旧链一致（P3 新增 `check:scene-eval`、P4 新增 `check:artifact-runtime`、P5 新增 `check:artifact-envelope` 后为 124 步）✅
 - `node scripts/check-consistency.mjs --group=scene-front-door` → 8/8 通过（8.3s）✅
 - 变异自检：把旧链与分组第 1 步同时改成不存在的 `check:__fail__` → runner 先红该步，仍继续跑完第 2–4 步，汇总 `3/4`、退出码 1（已还原）✅
 
