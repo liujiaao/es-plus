@@ -559,6 +559,20 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 **验证**：shared 979/979（组合 50）；MCP 391/391；`check:composition-contract`
 44 组 / 拒绝 18 例（三端）；vue3 组合运行时 6/6、antdv 5/5；`to.model` 变异
 （关掉映射分支）→ 三端点名缺映射；悬空监听由 vue3 运行时的 Vue warn 实证。
+
+**据实偏离（计划 P11 字面）**
+
+- **`dialogs[] + trigger` 不落独立字段**：节点 id 本身就是触发器（行按钮 key 命中
+  dialog 节点 id 即开窗），任意映射用 `wires` 表达。再加一个 `dialogs[]` 数组会让
+  「哪些弹窗存在」有两份真源，与反目标 5（不另写第二份）冲突；能力上等价。
+- **「@2 的 26 组旧组合逐字节不变」不再作为验收**：`@3` 有意改变页面代码
+  （移除 `onTableSuccess`、`open` 改选项对象、ref 按节点派生）。冻结旧页面字节
+  等于禁止这些修复。现在守护的是**真正要求稳定的那一半**：节点片段与单独发射逐字节
+  相同（复用同一生成器），页面代码由 `check:composition-contract` 逐通道断言
+  （通道可达、faces 与接线同源、三端编译）。
+- **无 `role` 时允许出现多张 table**：@2 的「每种场景至多一个」在 `table` 上被
+  `@3` 显式放宽（主从本来就需要多表）。没有 master 也没有唯一表时不再静默：数据
+  接线升级为页面事件并在 `warnings` 点名（见上）。
 文档尾巴（P8 复核）与本批同批修复：ASCII 图 / 文件地图计数改为从源码数出来，
 信封适用范围从 `withEnvelope` 的真实调用点反推，并给三个信封工具声明 `outputSchema`。
 
@@ -590,4 +604,20 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 约束，当前分支产物仍是 `measurement: failed`（407 行未测到），因此**不得引用任何
 当前准确率数字**；2026-10-22 的 22.7% 只能作历史基线。该动作不产生代码提交，
 不属于本批。
+
+### P9 / P10 复核 · 据实裁决（补记）
+
+- **`tableBtns` 刻意不进片段词汇**：片段表格没有工具栏渲染通道（`tableBtns` 是
+  CRUD 页的工具栏按钮，不是列词汇）。P8 要求文档如实写「不支持」、P10 要求片段
+  接受同一组键，两条只在字面上冲突；裁决是「按渲染通道分域」，`check:capability-ledger`
+  反向断言它不得出现在片段 accepted 键集里。这是故意边界，不是遗漏。
+- **片段词汇 golden 拆成两条而不是一条**：`treeConfig`（树表）与 `mergeConfig`
+  （相邻行合并）在同一张表上语义互斥，硬塞进一例会得到自相矛盾的 NL。`frag-table-08`
+  覆盖 groups + index + expand + merge + 顶层 rowkey，`frag-table-09` 覆盖
+  treeConfig + expand + rowkey；两例都三端跑，`check:vocabulary-parity` 断言同一份
+  `columns` 在片段与 CRUD SFC 两路径的列字面量逐字节相同。
+- **`unsupported` 在生成边界不可达是形状拒绝的必然结果**：`accepted == Zod shape keys`
+  由守卫钉死，未知键在进入 `assessIntent` 前就被 `collectUnknownKeys` 拒掉。因此
+  `unsupported` 的价值在 `validate_intent` / `coverage_report`（先判后改）与资源文档，
+  而不是「生成时再报一次」。这一点写进 capability 头注，而不是制造第二份形状校验。
 
