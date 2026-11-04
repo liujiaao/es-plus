@@ -36,7 +36,7 @@
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ✅ 2026-11-03 |
 | **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ✅ 2026-11-04 |
-| **P6** | composition 契约（多节点装配）+ 见证锚点收尾 | 四类接线由契约派生；每个接线/缺口都有运行时见证 | 🚧 |
+| **P6** | composition 契约（多节点装配）+ 见证锚点收尾 | 四类接线由契约派生；每个接线/缺口都有运行时见证 | ✅ 2026-11-04 |
 
 ## 4. 核心接口
 
@@ -62,7 +62,7 @@ export interface SceneContract {
 }
 ```
 
-`ScenePlan` 只允许单节点落地到现有输入；多节点 composition 在 P4 之后才开放。
+`ScenePlan` 只允许单节点落地到现有输入；多节点装配走 P6b 的 `emitComposition`（见下）。
 
 ```ts
 export type SceneNode =
@@ -83,6 +83,34 @@ export interface ArtifactEnvelope {
   mode: string | null
   files: readonly { path: string; code: string; language: string }[]
   config: unknown
+  warnings: readonly string[]
+  fingerprint: string
+}
+```
+
+组合信封（P6b）—— 多节点装配：节点保持各自信封身份，组合只在外面再加一层
+
+```ts
+export interface CompositionPlan {
+  name?: string
+  target?: TargetFramework          // 缺省取第一个节点显式 target，再缺省 vue3
+  nodes: readonly { id: string; plan: ScenePlan }[]   // 每场景最多一个；crud 拒绝
+}
+
+export interface CompositionWire {
+  from: { node: string; channel: string }             // 通道名必须 ∈ ARTIFACT_RUNTIME
+  to: { node: string; channel: string } | { page: 'emit'; event: string }
+  when?: { rowAction: string }
+}
+
+export interface CompositionEnvelope {
+  contract: 'es-plus.composition@1'
+  name: string
+  target: TargetFramework
+  nodes: readonly ArtifactEnvelope[]
+  wires: readonly CompositionWire[]
+  faces: { expose: readonly string[]; emit: readonly string[] }
+  page: { path: 'Page.vue'; code: string; language: 'vue' }
   warnings: readonly string[]
   fingerprint: string
 }
@@ -303,7 +331,7 @@ P5 拆成四个主题批次（各自独立提交），逐项对应第 3 节里�
 - **`scenes` 声明允许少声明**：结构可达面只拒绝「多声明」。字段级 token（如 `columnStyle`）在表单/弹窗里虽然键可达、语义不成立，强行要求声明会把矩阵变成噪音。
 - **两枚单边 token 是显式决定**：`sortParam` 只有矩阵侧（demo 的排序是客户端事件，没有服务端 `sortParam` 用例），`siteUncovered` 只有令牌表侧（站点未覆盖项不是能力）。两者在 `TOKEN_SET_DIFF` 里带原因，任何新增单边 token 都必须先登记。
 - **生成器模板里的标题字面量刻意不 import**：改成引用常量会改变产物字节与宿主运行时依赖；P5d 选择「常量单源 + 守卫反向比对模板」而不是重写生成器。
-- **多节点 composition 仍未实现**（见 P4 末条更正）：P5 的验收行不包含它，四类接线已经证明通道可用；自动装配需要新的 `composition` 契约与运行时见证，另开批次。
+- **多节点 composition 仍未实现**（见 P4 末条更正）：P5 的验收行不包含它，四类接线已经证明通道可用；自动装配需要新的 `composition` 契约与运行时见证，另开批次（P6b 已实现，见下）。
 
 ### P6 · composition 契约与见证锚点
 
@@ -329,3 +357,36 @@ P6 拆为两个主题批次：P6a 先堵住「声明了但没人跑」，P6b 再
 
 - 只做**存在性**断言，不代替真的跑测试：守卫能证明「路径没断」，不能证明「那条用例仍覆盖该场景」——后者由 vitest / e2e 自己负责。这条边界写进守卫注释，避免被当成「见证已跑过」的证据。
 - 测试导入路径按各自包的既有惯例：vue3/antdv 读 `shared/src`（不依赖 `build:libs`），mcp-server 读包入口（该文件本来就读 build）。不一致是历史事实，不为统一而改。
+
+#### P6b · composition 契约 `es-plus.composition@1`
+
+**问题**（回到 P4 的最后一公里）：P4 把四类接线写进了 `ARTIFACT_RUNTIME` 的注释，但「宿主」此前只有人 —— 一张同时要表格 + 查询表单 + 弹窗的页面必须自己写胶水，写错一处（漏 `onSuccess`、按 `name` 而不是 `key` 分派行动作）产物照样编译、页面照样能打开，只是行为悄悄不对。而且没有任何东西能回答「每个声明过的通道是不是都有人消费」：契约里写着 `form.reset` / `dialog.onSuccess`，无人接线也没人发现。
+
+- `packages/shared/src/scene/composition.ts`（新）：
+  - `planComposition(plan)` —— 纯分析，不生成代码。接线**只**从 `ARTIFACT_RUNTIME` 派生：行动作 key 命中同名 dialog 节点 → `dialog.open`（标题取 `dialogTitleFor(id)`），否则升级为页面事件 `row-action`；`form.query` 有表格 → `table.refresh(model)`，否则 → 页面事件 `query`；`form.submit` → 页面事件 `save`；`dialog.onSuccess` 有表格 → `table.refresh()`，否则 → 页面事件 `success`。派生完再自检一遍两端通道都在契约表里。
+  - `emitComposition(plan)` —— 节点一律经 `emitSceneArtifact` 原样产出（**不改片段字节**，只重命名为 `${id}.${ext}`），再生成 `Page.vue`：vue3/antdv 是 `<script setup>`，vue2 是 Options API + `$refs`；`defineEmits`/`defineExpose` 与 `faces` 同源。
+  - 结构化拒绝：空计划、`crud` 节点、每场景第二个节点、混装 target、vue2 + composable 弹窗、id 非 kebab-case / 保留字 `page` / 组件名碰撞（如 `a1` 与 `a-1` 都推导出 `A1`）。失败分支只有错误正文，无文件、无信封。
+  - 信封 `es-plus.composition@1`：节点各自信封身份不变，外面加 `wires` / `faces` / `page` / `fingerprint`。
+- `artifact.ts`：把指纹算法抽成 `fingerprintPayload(contract, payload)`，`fingerprintArtifact` 改为委托 —— 两种信封共用同一算法，避免各写一份 FNV。
+- 导出面：只从 barrel（`@es-plus/shared`）导出，**不**进 `@es-plus/shared/scene` —— 与 `emit.ts` 同一条理由，常量消费者不该被拉进生成器。
+- `scripts/check-composition-contract.mjs`（新，第 125 步，落在 `scene-front-door` 组）：esbuild 现打包源码（命中 `shared/build` 即红），用 golden 片段语料组 14 组组合（4 形态 × 3 端 + 2 组 composable 弹窗）+ 5 例结构化拒绝，逐组断言六件事：接线通道 ∈ 契约、无静默丢弃、页面与 `faces` 自洽（含标题字面量与 `onTableSuccess` 的有无）、片段字节与单独发射相等、信封自洽与指纹稳定/敏感、拒绝例无产物。
+- `packages/vue3/__tests__/composition-page-runtime.spec.ts`（新，Tier-1）：把 `emitComposition` 产物写到 `__tests__/.tmp-composition/`，**变量**动态 import `Page.vue` 真挂载，断言四条只有胶水接对才会发生的事：查询 model 进到表格请求参数；行按钮 `edit` 以注册表标题开窗且带该行数据；弹窗提交成功 → 表格重新取数；无 dialog 的 `view` 升级为页面事件 `row-action`；另有一例见证提交表单 → `save` 事件带 model。
+
+**验证（2026-11-04）**
+
+- `npm test -w @es-plus/shared` → 886/886（新增 18 条组合契约用例）✅
+- `check:composition-contract` → 14 组组合 / 接线全部来自 `ARTIFACT_RUNTIME` / 拒绝 5 例 ✅
+- `check:consistency:list` → 14 组 / **125 步**（124 → 125）✅
+- `check:scene-registry` / `check:artifact-envelope` 仍绿（279/279）✅
+- typecheck：shared / vue3（含测试，`typecheck:all`）✅
+- vue3 `composition-page-runtime.spec` → 4/4 ✅
+- 变异自检（实跑后还原）✅：①删掉 `dialog.onSuccess → table.refresh` 的派生 → 守卫红 **16 处**（每个相关组合各点名「静默丢弃」与「没有成功接线却生成了 onTableSuccess」）；②把页面 `onQuery` 里的 `refresh(model)` 改成 `refresh()` → 守卫**仍绿**（静态上通道名没变），Tier-1 见证红（`lastListParams.keyword` 为 undefined）—— 这正是两层见证各管一段的实证。
+
+**据实偏离**
+
+- **`form.reset` 不接线**：它是片段内部通道（清空自己的 model），组合页替它刷表格会凭空多一次请求。守卫里显式登记 `INTERNAL_CHANNELS` 并写明理由 —— 「确认过不是遗漏」，不是静默放过。
+- **成功回调的兜底不是原设计**：初版在「有弹窗、无表格」时把 `onSuccess` 直接丢掉了。守卫第一条实跑就点出来了（14 处漂移里的 9 处），改成升级为页面事件 `success` 并携带 `{ id, data }`。同类被守卫当场抓住的还有两处：有表格但无弹窗时仍生成 `onTableSuccess`、vue2 页面从不派发自己声明过的 `success`。
+- **节点 id 是承重墙**：它同时是文件名、行动作绑定键和标题键。因此强制 kebab-case、保留字 `page` 拒绝、组件名碰撞拒绝 —— 三个限制都是为了不让「两个节点悄悄覆盖同一个符号」。
+- **每场景一个节点**：两张表无法按 ref 区分，多弹窗没有分派依据。需要多弹窗时回到 crud 场景的 `surfaces.dialog`，而不是在这里放宽。
+- **本批不新增 MCP 工具 / 入口**：P6 的范围是「契约 + 守卫 + 运行时见证」；把 `emitComposition` 接到工具面会改动工具清单（`check:tool-surface` 等）与 prompt 语料，属于另一个主题批次。
+- **指纹不是安全哈希**：与 `artifact@1` 共用 FNV-1a 双种子，只回答「同一份输入是否仍产出同一份页面」。

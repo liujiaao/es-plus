@@ -45,6 +45,7 @@ export {
   ARTIFACT_CONTRACT_VERSION,
   buildArtifactEnvelope,
   fingerprintArtifact,
+  fingerprintPayload,
   type ArtifactDraft,
   type ArtifactEnvelope,
   type ArtifactFile,

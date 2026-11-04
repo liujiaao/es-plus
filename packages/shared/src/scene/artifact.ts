@@ -104,24 +104,30 @@ function fnv1a(text: string, seed: number): number {
   return hash >>> 0
 }
 
-/** 内容指纹（16 位十六进制）。见文件头：不是安全哈希。 */
-export function fingerprintArtifact(draft: ArtifactDraft): string {
-  const payload = canonical(
-    {
-      contract: ARTIFACT_CONTRACT_VERSION,
-      scene: draft.scene,
-      artifact: draft.artifact,
-      target: draft.target,
-      mode: draft.mode,
-      files: draft.files.map((f) => ({ path: f.path, code: f.code, language: f.language })),
-      config: draft.config,
-      warnings: draft.warnings,
-    },
-    new Set(),
-  )
-  const a = fnv1a(payload, 0x811c9dc5)
-  const b = fnv1a(payload, 0x9e3779b9)
+/**
+ * 内容指纹（16 位十六进制）。见文件头：不是安全哈希。
+ *
+ * `contract` 是协议名 + 版本；其余字段由调用方给（产物信封 / 组合信封各一套）。
+ * 键排序后序列化，因此对象键序不影响结果。
+ */
+export function fingerprintPayload(contract: string, payload: Readonly<Record<string, unknown>>): string {
+  const text = canonical({ contract, ...payload }, new Set())
+  const a = fnv1a(text, 0x811c9dc5)
+  const b = fnv1a(text, 0x9e3779b9)
   return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0')
+}
+
+/** 产物信封的指纹 —— 与 `fingerprintPayload` 同一实现，只是固定了字段集。 */
+export function fingerprintArtifact(draft: ArtifactDraft): string {
+  return fingerprintPayload(ARTIFACT_CONTRACT_VERSION, {
+    scene: draft.scene,
+    artifact: draft.artifact,
+    target: draft.target,
+    mode: draft.mode,
+    files: draft.files.map((f) => ({ path: f.path, code: f.code, language: f.language })),
+    config: draft.config,
+    warnings: draft.warnings,
+  })
 }
 
 function assertDraft(draft: ArtifactDraft): void {

@@ -34,6 +34,8 @@ coverage/
 
 # 片段运行时见证（AI-43）在测试运行时写盘的生成物
 packages/*/__tests__/.tmp-fragments/
+# 组合页运行时见证（P6b）在测试运行时写盘的生成物
+packages/*/__tests__/.tmp-composition/
 .tmp-inspect/
 
 # 评测预测落盘（`--dump-pred`）与会话期一次性排查脚本：本地/CI 临时产物，不进版本库。
