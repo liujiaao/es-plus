@@ -35,7 +35,7 @@
 | **P2** | `ScenePlan` + `generateScene` + `generate_scene` 加法式前门 | 279/279 与旧工具字节相等；工具数 16；文档计数同步 | ✅ 2026-11-03 |
 | **P3** | eval 场景腿：route → intent → landing → witness | gated 路径真实调用 `generate_scene`；`deriveSurfaces` 仅诊断 | ✅ 2026-11-03 |
 | **P4** | artifact contract + 运行时事件/expose + composition | 三端 refresh/validate/success 见证；组合四类接线 | ✅ 2026-11-03 |
-| **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ⬜ |
+| **P5** | 单一真源收尾、scene×capability、permission 安全、artifact@1 | 变异 → 红；`pvalue` 且无函数 → 拒绝 | ✅ 2026-11-04 |
 
 ## 4. 核心接口
 
@@ -245,4 +245,61 @@ export interface ArtifactEnvelope {
 - `form` 的 `submit` 是**门禁事件**而非「提交成功事件」：片段不负责请求（`apiUrl` 由宿主配置），包装层只能在本地做完 validate 后把模型快照交给宿主。因此 `success.kind === 'event'` 的语义是「本地流程成功」，与 dialog 的「请求成功后回调」不同层；命名上不强行统一，语义差异写进 `runtime.ts`。
 - vue3 的**校验失败态在 happy-dom 下不可见**：Element Plus 2.14.2 的 form-item 在 happy-dom 环境丢失 `fields`，form 级 `validate()` 对被清空的必填返回 `true`（async-validator 本身正常 reject）。Tier-1 因此改为「stub 底层 `es-form` 的 exposed `validate`」来见证包装层的**委托与门禁逻辑**，真实拒绝态由 ADV Tier-1 与 vue2 Tier-2 见证。该限制与 `vue2-crud.spec.ts` 头部记录的同类限制同源，不是本轮引入。
 - `crud-page` 不纳入片段语料见证：它由 `generate_crud` 产出，不在 `__tests__/golden/cases` 的片段目录里；门禁改为断言「它的契约必须为空」，杜绝「声明了没人见证的通道」。
-- 未做：`ScenePlan` 多节点组合。四类接线证明了**通道存在且可用**，但把它们自动拼成一张组合页面仍属 P5 的 `composition` 落地范围。
+- 未做：`ScenePlan` 多节点组合。四类接线证明了**通道存在且可用**，但把它们自动拼成一张组合页面需要自己的设计（节点间 props/事件装配 + 运行时见证），不在 P5 的验收行内；留待后续批次，届时另开 `composition` 契约。
+
+### P5 · 单一真源收尾
+
+P5 拆成四个主题批次（各自独立提交），逐项对应第 3 节里「单一真源已分裂」的四条：
+
+#### P5a · 场景 × 能力矩阵（`e32bb65`）
+
+- `scripts/lib/entry-keys.mjs` 新增 `readSceneIds()` / `readSceneSurfaces(reach)`：从**源码切片**读出四场景与前门可达的键面（`frontKeys` / `schemaKeys` / `sfKeys` / `fcKeys` + 片段形状），不另写清单。
+- `scripts/feature-coverage.data.mjs` 的 41 个 token 全部声明 `scenes`；新增 `TOKEN_SET_DIFF` 登记**允许的单边 token**：`sortParam`（只在对账表里）与 `siteUncovered`（只在令牌表里），两者都写明原因。
+- `scripts/gen-ai-capability-matrix.mjs` 校验两件事：① token 的 `scenes` 不得超出该场景的**结构可达面**（多声明 → 红）；② 两张令牌表的对称差必须逐项登记。任一红都不落盘、也不打印「一致」。
+- 语义：`scenes` 是人工声明（字段级 token 在表单里语义不成立，故允许**少声明**），但**多声明**会被结构可达性拒绝 —— 这就是「声明可审计」与「声明可撒谎」的分界。
+- 产物 `docs/ai/ai-capability-matrix.json` 增加 `sceneCapability` 块（场景 → 面 → token）与 `stats.scenes`，41 token / 24 声明式 / 22 前门可达 / 2 仅配置。
+
+#### P5b · permission 门 fail-closed（`41b17a7`）
+
+- core 新增 `checkPermissionValue(value, permission)`：无 `permissionValue` → 放行；有门且有函数 → 以函数为准；**有门但没有函数 → 拒绝**，并按权限码告警一次。`filterButtonsByPermission` / `normalizeButtonsHideState` 改为委托它。
+- vue3 / vue2 / adapter-antdv 共 **12 处**本地 `checkPermission` / `hasPermission` 实现全部替换为 core 单一真源，删除各自的「没配就放行」回退。
+- 作用域刻意收窄：**只翻转「声明了门」的元素**，不全局改变默认值 —— 没有 `permissionValue` 的产物行为不变。
+- `preflight.ts`：permission 项的 reason / `formatPreflight` 头改为 fail-closed 口径（漏配时门后内容消失，而不是「看起来配了、谁都看得见」）；配置形状错时不再宣称「不需要权限」。
+- 三站组件说明与 es-eui 配置指南同步语义；`renderer-contract.mjs` 的列级权限证据文案同步。
+
+#### P5c · 产物信封 `es-plus.artifact@1`（`89dd95b`）
+
+- 新增 `packages/shared/src/scene/artifact.ts`：`ARTIFACT_CONTRACT_VERSION`、`ArtifactDraft` / `ArtifactEnvelope` / `ArtifactFile`、`buildArtifactEnvelope`（唯一盖章点）与 `fingerprintArtifact`。指纹是 FNV-1a 双种子 16 位十六进制，规范化序列化（键排序、函数固定标记）⟹ 键序无关；不引 `node:crypto`（shared 可在浏览器侧 import）。
+- `emit.ts` 新增 `emitSceneArtifact`：在**同一条文本路径**上附加 `envelope`；`emitScene` 改为委托并只返回 `text/isError`。CRUD 有表 = `crud-page`（schema 模式两文件）；CRUD 无表 = 片段包；table/form/dialog 各一种形态，dialog 按 `mode` 区分 composable/component。
+- 新增 `check-artifact-envelope`（第 4 组 `scene-front-door`）：279 条语料逐条断言 ① `emitScene` 与 `emitSceneArtifact` 文本逐字节相等 ② 成功必有信封、失败必无 ③ 身份四元组与场景/artifact 轴自洽、`runtimeOf` 认识 ④ `files` 非空 / 路径唯一 / `language` 与扩展名自洽 / 每份 `code` 都在返回文本里 ⑤ 指纹 16 位、两次相同、279 个互不相同；另有结构守卫（空 files / 重复路径 / 未知 artifact 抛错）与指纹敏感性非空证明。
+- 链路 123 → **124 步**。
+
+#### P5d · 罐头弹窗标题单源（`55705e8`）
+
+- 标题不只是文案：生成器把它当作提交方法 / 只读语义的判据（`'新增'` → POST、`'查看'` → 只读），评测组合打分器与组合画廊也用它展开 `surfaces.dialog`。此前 `emit.ts` 与 `eval/composition-scorers.mjs` 各抄一份。
+- `registry.ts` 新增 `DIALOG_TITLES` + `dialogTitleFor`，`@es-plus/shared/scene` 导出；emit 层与打分器改为 import，`scenes.mjs` 继续 re-export。
+- `check-scene-registry` 新增第 (e) 段：emit / 打分器不得自带 `DIALOG_TITLES`；三份生成器模板（`structured-generator` / `fragment-generator` / `crud-engine`）里的标题字面量必须与常量一致 —— 模板无法 import（会改变产物字节），只能由守卫反向比对。
+
+**验证（2026-11-04）**
+
+- `npm test -w @es-plus/shared` → 867/867（含 P5 新增 9 例）✅
+- `npm test -w @es-plus/mcp-server` → 360/360 ✅
+- `npm test -w @es-plus/core` → 451/451 ✅
+- `npm test -w @es-plus/vue3` → 661/661；`npm test -w @es-plus/vue2` → 398/398；`npm test -w @es-plus/adapter-antdv` → 697/697 ✅
+- `check:artifact-envelope` → 279/279 带信封、279 个唯一指纹 ✅
+- `check:scene-parity` → 279/279 字节等价（信封与标题重构均未改变入口字节）✅
+- `check:scene-registry` / `check:artifact-runtime` / `check:composition`（18 例）/ `check:composition-gallery`（6 条非空证明）✅
+- `check:exports` / `check:api` / `check:contract` / `check:threeway` / `check:capability-parity` / `check:parity` / `check:feature-coverage` / `ai:matrix --check` / `check:data-schemas` ✅
+- `check:consistency:list` → 14 组 / **124 步**，顺序与旧链一致 ✅
+- typecheck：core / shared / vue3 / vue2 / adapter-antdv / mcp-server / cli ✅
+- 变异自检（均实跑后还原）✅：①把 `checkPermissionValue` 改回 fail-open → core 3 条用例红；②指纹恒为 0 → `check-artifact-envelope` 279 条红 + 非空证明红；③表格分支文本追加一个空格 → `check:scene-parity` 红；④`DIALOG_TITLES.add` 改成 `'创建'` → `check:scene-registry` 三处红。
+
+**据实偏离**
+
+- **CRUD 无表支是片段包**，不是单一 artifact：信封的 `artifact` 取主产物（有弹窗 → `dialog-composable`，否则 `form`），全部文件进 `files[]`；`mode` 固定 `sfc`。这一支在 P2 被刻意保持字节不变，信封只能在旁边描述它，不能替它重新分类。
+- **指纹不是安全哈希**：FNV-1a 只回答「同一份内容是否变化」，不承担防篡改职责；文件头与 `artifact.ts` 都写明这一点。
+- **信封是附加视图**：`generate_scene` 的 MCP 输出字节一个都没变（`check:scene-parity` 279/279）；宿主若需要信封，应调用 shared 的 `emitSceneArtifact`，而不是期待工具文本里多一段 JSON。
+- **`scenes` 声明允许少声明**：结构可达面只拒绝「多声明」。字段级 token（如 `columnStyle`）在表单/弹窗里虽然键可达、语义不成立，强行要求声明会把矩阵变成噪音。
+- **两枚单边 token 是显式决定**：`sortParam` 只有矩阵侧（demo 的排序是客户端事件，没有服务端 `sortParam` 用例），`siteUncovered` 只有令牌表侧（站点未覆盖项不是能力）。两者在 `TOKEN_SET_DIFF` 里带原因，任何新增单边 token 都必须先登记。
+- **生成器模板里的标题字面量刻意不 import**：改成引用常量会改变产物字节与宿主运行时依赖；P5d 选择「常量单源 + 守卫反向比对模板」而不是重写生成器。
+- **多节点 composition 仍未实现**（见 P4 末条更正）：P5 的验收行不包含它，四类接线已经证明通道可用；自动装配需要新的 `composition` 契约与运行时见证，另开批次。
