@@ -19,7 +19,7 @@
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { verifyArtifact } from './artifact.mjs'
+import { failedRecordTarget, verifyArtifact } from './artifact.mjs'
 
 let checks = 0
 const failures = []
@@ -204,6 +204,117 @@ const complete = (over = {}) => ({
     '缺少 `failures[]`',
     'measurement=failed 但缺 failures[] 必须判红'
   )
+
+  // P12：失败记录不得发布准确率数字（「没测到」≠「测到 0 分」）。
+  checkFails(
+    verifyArtifact({ ...complete(), measurement: 'failed', failures: ['health gate'] }, { badgeFiles: [] }),
+    '发布了准确率字段',
+    'measurement=failed 却带 definition95 必须判红（失败记录不得发布准确率）'
+  )
+  checkFails(
+    verifyArtifact(
+      {
+        ...complete({ definition95: undefined, attributeAccuracy: undefined }),
+        measurement: 'failed',
+        failures: ['x'],
+        inSchemaIntentScoped: 0.82,
+      },
+      { badgeFiles: [] }
+    ),
+    'inSchemaIntentScoped',
+    'measurement=failed 却带 scoped 数字同样必须判红'
+  )
+  // 确定性腿的数字**可以**带：编译 / 类型 / 片段 / PRD 是代码或独立语料的性质，
+  // 不受这次 CRUD 中继故障影响，失败记录**应该**保留它们（见 artifact.mjs 头注）。
+  check(
+    clean(
+      verifyArtifact(
+        {
+          ...complete({ definition95: undefined, attributeAccuracy: undefined, attributeRows: undefined }),
+          measurement: 'failed',
+          failures: ['x'],
+          compileMeasured: 4,
+          compileCompiled: 4,
+          compileFailure: 0,
+          compileRate: 1,
+          fragments: {
+            compileMeasured: 2,
+            compileCompiled: 2,
+            compileFailure: 0,
+            compileRate: 1,
+            notMeasured: 0,
+            gateOk: true,
+            scopedMin: 0.7,
+            scoped: 0.9,
+          },
+        },
+        { badgeFiles: [] }
+      )
+    ),
+    '失败记录带确定性腿的数字不得判红（它们是诊断证据，不是发布的成绩）'
+  )
+}
+
+// ─── P12：PRD 提取腿的自有门禁（passed 必须与之同向） ──────────────────────
+{
+  const goodPrd = {
+    cases: 22,
+    measured: 22,
+    notMeasured: 0,
+    membershipRate: 0.9526,
+    membershipCorrect: 181,
+    membershipTotal: 190,
+    compileMeasured: 22,
+    compileCompiled: 22,
+    compileFailure: 0,
+    compileRate: 1,
+    membershipFloor: 0.9,
+    gateOk: true,
+    gateFailures: [],
+  }
+  check(clean(verifyArtifact(complete({ prd: goodPrd }), { badgeFiles: [] })), 'PRD gateOk=true 且数字自洽应判过')
+  checkFails(
+    verifyArtifact(complete({ passed: true, prd: { ...goodPrd, gateOk: false, gateFailures: ['membership 0.5 < 地板 0.9'] } }), {
+      badgeFiles: [],
+    }),
+    'PRD 提取腿 gateOk=false',
+    'passed=true 但 PRD gateOk=false 必须判红（P12：PRD 门禁已进入 passed）'
+  )
+  checkFails(
+    verifyArtifact(complete({ prd: { ...goodPrd, membershipRate: 0.8 } }), { badgeFiles: [] }),
+    '门禁判定与数字矛盾',
+    'PRD gateOk=true 但 membership 低于地板，必须判红（产物自相矛盾）'
+  )
+  checkFails(
+    verifyArtifact(complete({ prd: { ...goodPrd, measured: 20 } }), { badgeFiles: [] }),
+    '不完整不能算过',
+    'PRD gateOk=true 但有行未测到，必须判红'
+  )
+  checkFails(
+    verifyArtifact(
+      complete({ prd: { ...goodPrd, compileCompiled: 21, compileFailure: 1, compileRate: Number((21 / 22).toFixed(4)) } }),
+      { badgeFiles: [] }
+    ),
+    '门禁判定与数字矛盾',
+    'PRD gateOk=true 但编译有失败，必须判红'
+  )
+  // 老产物没有 gateOk：不得因此判红（恒红 = 红盲）。
+  check(
+    clean(verifyArtifact(complete({ prd: { cases: 22, measured: 22, notMeasured: 0, membershipCorrect: 181, membershipTotal: 190, membershipRate: 0.9526 } }), { badgeFiles: [] })),
+    '无 gateOk 的旧 PRD 块不得判红'
+  )
+}
+
+// ─── P12：失败记录不得撤回已发布的完整测量 ─────────────────────────────────
+{
+  check(failedRecordTarget(null) === 'primary', '没有旧产物 ⟹ 失败记录写主文件（失败必须可诊断）')
+  check(failedRecordTarget({ measurement: 'failed' }) === 'primary', '上次也是失败 ⟹ 仍写主文件（没有可撤回的数字）')
+  check(failedRecordTarget({}) === 'primary', 'pre-AN-03 旧产物 ⟹ 写主文件')
+  check(failedRecordTarget(complete()) === 'sidecar', '已有完整测量 ⟹ 失败记录写旁路，主产物/徽章不动')
+  check(
+    failedRecordTarget(complete({ measurement: 'complete-gated-leg-only' })) === 'sidecar',
+    'complete-gated-leg-only 同样是可撤回的已发布测量'
+  )
 }
 
 // ─── 徽章与产物双向对齐（公开发布面） ─────────────────────────────────────
@@ -235,7 +346,7 @@ const complete = (over = {}) => ({
   check(
     clean(
       verifyArtifact(
-        { ...complete(), measurement: 'failed', failures: ['x'], definition95: undefined },
+        { ...complete(), measurement: 'failed', failures: ['x'], definition95: undefined, attributeAccuracy: undefined },
         { badgeFiles: [badgeFile({ message: 'measurement failed' })] }
       )
     ),

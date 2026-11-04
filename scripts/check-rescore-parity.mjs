@@ -17,9 +17,11 @@
  *   · `measurement: failed`（中继全灭 / 健康门拒绝发布）—— 产物里**没有分数**，逐字段比对
  *     必然「全不一致」，报出来只会教人忽略这条守卫；
  *   · 探针运行（`--limit` / `--fragments`）—— 按定义不写产物；
- *   · dump 里没有 CRUD 行（片段-only 探针）。
+ *   · dump 里没有 CRUD 行（片段-only 探针）；
+ *   · 本次跑批失败（旁路失败记录的 `runId` == 本 run，或产物与 dump 的 commit/corpusHash
+ *     不同）—— P12 起失败夜不再覆盖主产物，主产物是上一次完整测量，本来就不可比。
  *
- * 这三种都**显式打印跳过原因**并退出 0。反过来，`measurement: complete*` 却拿不出 dump，
+ * 这些情形都**显式打印跳过原因**并退出 0。反过来，`measurement: complete*` 却拿不出 dump，
  * 是**红**：那说明「产物说它是完整测量，但没法复算」，正是本守卫要防的形状。
  *
  * 用法：
@@ -30,7 +32,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ACCURACY_FILE } from './eval/artifact.mjs'
+import { ACCURACY_FILE, FAILED_ACCURACY_FILE } from './eval/artifact.mjs'
 import { readDump } from './eval/dump.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -92,6 +94,27 @@ if (!measurement) {
   process.exit(0)
 }
 
+// P12：本次跑批失败 ⟹ 产物**故意**保留上一次完整测量（失败记录写旁路）。此时当前产物
+// 与本次 dump 不可比，且 dump 可能根本没来得及创建（`--require-key` 之类的前置失败）。
+// 以 `runId` 判定「失败记录是不是本 run 写的」，是最精确的判据；拿不到 runId（本地跑批）
+// 时退回下面的 commit/corpusHash 身份比较。
+let sidecar = null
+if (existsSync(FAILED_ACCURACY_FILE)) {
+  try {
+    sidecar = JSON.parse(readFileSync(FAILED_ACCURACY_FILE, 'utf8'))
+  } catch {
+    sidecar = null
+  }
+}
+const runId = process.env.GITHUB_RUN_ID
+if (sidecar && runId && String(sidecar.runId) === runId) {
+  console.log(
+    `⏭  跳过复算比对：本次跑批（run ${runId}）测量失败，失败记录已写旁路；` +
+      `主产物保留 ${artifact.measuredAt ?? '上一次'} 的完整测量。`
+  )
+  process.exit(0)
+}
+
 if (!existsSync(dumpPath)) {
   console.error(
     `✗ 产物自称 ${measurement}，但 dump 不存在：${dumpPath}\n` +
@@ -101,15 +124,36 @@ if (!existsSync(dumpPath)) {
 }
 
 // dump 里没有 CRUD 行 ⟹ 只跑了片段/PRD 探针，与 CRUD 产物不可比（合法跳过）。
+// P12：失败夜不再覆盖主产物（见 eval/artifact.mjs 的 FAILED_ACCURACY_FILE）。此时
+// 主产物是**上一次**完整测量，而 dump 属于本次失败的跑批 —— 拿两者比对必然「全不一致」，
+// 报出来只会教人忽略这条守卫。身份（commit/corpusHash）由产物与 dump meta 同源写入，
+// 成功夜恒等；不等 ⟹ 两者不是同一次运行，没有可比的东西。
+let dumpInfo
 try {
-  const { rows } = readDump(dumpPath)
-  if (!rows.some((r) => r.kind === 'crud')) {
-    console.log('⏭  跳过复算比对：dump 里没有 CRUD 行（片段/PRD-only 探针，不写产物）。')
-    process.exit(0)
-  }
+  dumpInfo = readDump(dumpPath)
 } catch (err) {
   console.error(`✗ dump 读不出来：${err.message}`)
   process.exit(1)
+}
+const { meta, rows } = dumpInfo
+const short = (v) => String(v ?? '(missing)').slice(0, 8)
+const identityMismatch =
+  meta &&
+  ((artifact.commit && meta.commit && artifact.commit !== meta.commit) ||
+    (artifact.corpusHash && meta.corpusHash && artifact.corpusHash !== meta.corpusHash))
+if (identityMismatch) {
+  console.log(
+    `⏭  跳过复算比对：产物与 dump 不是同一次运行（产物 commit ${short(artifact.commit)} / ` +
+      `dump commit ${short(meta.commit)}；产物语料 ${short(artifact.corpusHash)} / dump 语料 ${short(meta.corpusHash)}）。` +
+      (existsSync(FAILED_ACCURACY_FILE)
+        ? `本次失败记录在 ${FAILED_ACCURACY_FILE}；主产物保留的是上一次完整测量。`
+        : '这不是通过，也不是失败 —— 是「没有可比的东西」。')
+  )
+  process.exit(0)
+}
+if (!rows.some((r) => r.kind === 'crud')) {
+  console.log('⏭  跳过复算比对：dump 里没有 CRUD 行（片段/PRD-only 探针，不写产物）。')
+  process.exit(0)
 }
 
 const r = spawnSync(process.execPath, [join(ROOT, 'scripts/eval/rescore.mjs'), dumpPath, '--expect', expectPath], {

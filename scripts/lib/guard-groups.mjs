@@ -37,6 +37,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:rescore',
       'check:ratchet',
       'check:artifact-self',
+      'check:eval-freshness-leg',
       'check:eval-prompt',
     ],
   },
@@ -163,6 +164,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:case-titles',
       'ai:check',
       'check:artifact-freshness',
+      'check:eval-freshness',
     ],
   },
   {

@@ -460,3 +460,48 @@ node -e "…"   # 输出：propF1=1 → 81 行/47 pass；propF1<1 → 129 行/0 
 
 **证据**（全离线）：216/216 CRUD「prop 全改名、label 不变」⟹ 全维度 pass、`scoped`/`Full` 为真、
 `propNameMatch=0`；同一 pred 再弄错首字段 `formtype` ⟹ 216/216 判负；片段 63/63 同结论。
+
+---
+
+## 15. 四类指标与发布面完整性（P12，2026-11-04）
+
+### 15.1 四类指标不可通约
+
+产物里出现的每个数字都属于下面**四类之一**。把它们混在一张表里读，是历次误判的根源
+（「编译率 100%」被当成「模型很准」；「95% 定义 88%」被当成「编译坏了」）。
+
+| 类 | 回答的问题 | 产物字段 / 守卫 | 判据 |
+|---|---|---|---|
+| **emitDeterminism** 发射确定性 | 同一份 intent 是否逐字节产出同一页面、产物是否落在运行时契约上？ | `check:artifact-envelope` / `check:composition-contract` / `check:scene-parity` / `check:fragment`（**不进**产物，CI 每 PR 跑） | 必须 100%，无分母 |
+| **intentAccuracy** 意图准确率 | NL → intent 是否一次到位或 ≤K 轮收敛？ | `definition95`（门禁）、`inSchemaIntentScoped`、`coreRate`、`byCapability*` | 唯一 95% 门禁；分母 = heldout zh 行 |
+| **compileRate** 编译率 | 模型产出的配置能否被真实生成器编译？ | `compileRate`、`fragments.compile*`、`prd.compile*`、`frontDoor.compileFailures` | 必须 1；分母 = 真有产物的行 |
+| **runtimeWitness** 运行时见证 | 页面跑起来后，暴露面/接线/成功回调真的生效吗？ | `frontDoor.witnessFailures`、组合页 runtime spec | 必须 0；确定性，与模型无关 |
+
+因此 `measurement: 'failed'` 的记录**只允许**带第 3/4 类（以及片段 / PRD 这两条独立语料的
+结果），**不得**带任何第 2 类数字。这条从 P12 起由 `verifyArtifact` 在**任何分支**上判红
+（`PUBLISHED_ACCURACY_KEYS`），不再依赖读者自己分辨「0% 是答错还是没测到」。
+
+### 15.2 投影尺子与被遮住的常量
+
+`deco-projection-v1` / `columns-derived-v1` / `unmeasured-expand-title-v1` 把**不可从 NL
+推断**的常量（列定义由组件派生、expandConfig.title 的默认文案、装饰性 key）从判负里遮掉。
+2026-10-22 口径下 32 条「硬上限」行（membership 10 / columns 11 / expandConfig.title 11）
+正是这三组；它们不是模型的缺口，也不是尺子的遗漏，而是**不在被测量范围内的常量**。
+因此「95% 的硬上限」这类结论必须连同尺子版本一起读 —— `rulerVersion` 一变，历史百分比
+不可横向比较，产物/dump/基线三方对跨版本**硬失败**而不是静默相减。
+
+### 15.3 发布面的三条纪律
+
+1. **失败不撤回成功**（`eval-llm.mjs` 失败分支）：已有一份完整测量时，失败记录写到
+   `last-accuracy.failed.json`，主产物与徽章不动。此前一次中继故障把 88.14% 的完整测量
+   覆盖成 407 行「未测到」，发布面反而比前一天更差。
+2. **分支语义**（`scripts/check-eval-freshness.mjs`）：master 上必须是**完整**测量、
+   `corpusHash` 与当前语料一致、`measuredAt` 不超过 7 天；其它分支同一判据只警告
+   （本地/PR 的旧快照是常态，判红会让守卫变成噪声）。`commit` 漂移**永远**只警告 ——
+   nightly 先测量后提交，master 上产物的 commit 天然是父提交。
+3. **PRD 腿自有门禁**（`eval/prd-leg.mjs`）：完整测量 ∧ 编译零失败 ∧
+   `membershipRate ≥ 0.90`（地板来自 2026-11-02 实测 181/190 = 95.26%，约 5.3pp 余量）。
+   进入 `passed` / exit code，但**不**混进 CRUD 的 95% 定义与徽章 —— 两种输入、两套分母。
+
+master 上的新鲜度红会连带挡住 Deploy Docs（Typecheck → workflow_run），这是刻意的：
+过期数字不应继续冒充当前成绩；急修路径是补跑一次成功测量。

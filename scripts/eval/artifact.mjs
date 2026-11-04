@@ -26,8 +26,57 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
 export const CASES_DIR = join(ROOT, '__tests__', 'golden', 'cases')
 export const ACCURACY_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy.json')
+/**
+ * 失败记录的**旁路**文件（P12）：`last-accuracy.json` 只放「已发布的一次完整测量」。
+ *
+ * 为什么需要它：一次中继整段不可用会让 407 行全部未测到，而失败分支此前**直接覆盖**
+ * `last-accuracy.json` 与两枚徽章 —— 于是一份真实的 88.14% 完整测量被一份「没测到」
+ * 抹掉，仓库的发布面反而比昨晚更差。这不是模型退步，是记录被破坏。
+ *
+ * 现在的纪律：
+ *   · 已有一份完整测量 ⟹ 失败记录写到本文件，`last-accuracy.json` 与徽章**一个字节都不动**；
+ *   · 还没有完整测量（全新仓库）⟹ 失败记录仍写主文件（否则失败不可诊断），旁路文件清掉；
+ *   · 下一次成功 ⟹ 删除旁路文件（失败已被一次完整测量取代）。
+ */
+export const FAILED_ACCURACY_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy.failed.json')
 export const BADGE_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy-badge.json')
 export const BADGE_SCOPED_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy-badge-scoped.json')
+
+/**
+ * 「已发布的准确率」字段。`measurement: 'failed'` 的记录**不得**带这些数字 ——
+ * 失败的意思是「这次没有测量」，而不是「测出来是 0 分」；把两者混在一起，读者就再也
+ * 分不清「模型不会」与「没测到」（2026-10-13/14 两夜的产物正是这个形状）。
+ *
+ * 刻意**不**包含 `compileRate` / `typecheck` / `fragments` / `prd`：它们是确定性代码或
+ * 独立语料的性质，不受 CRUD 中继故障影响，失败记录**应该**带上（见 eval-llm 失败分支注释）。
+ */
+export const PUBLISHED_ACCURACY_KEYS = Object.freeze([
+  'definition95',
+  'inSchemaIntentZeroEdit',
+  'inSchemaIntentScoped',
+  'inSchemaIntentZeroEditAll',
+  'inSchemaIntentScopedAll',
+  'coreRate',
+  'exactIntentFull',
+  'exactIntentFullAll',
+  'propSetF1',
+  'propNameMatch',
+  'attributeAccuracy',
+  'actionsF1',
+])
+
+/**
+ * 失败记录写到哪里（P12）—— 一个**纯函数**，因为这是「撤回已发布数字」的唯一决策点，
+ * 且它只在失败夜执行；混在 `eval-llm.mjs` 里就只能靠一次真故障来验证。
+ *
+ *   · `'sidecar'`：已有一份完整测量 ⟹ 失败的跑批只留诊断，主产物与徽章不动；
+ *   · `'primary'`：还没有可撤回的东西（全新仓库 / pre-AN-03 旧产物 / 上一次也是失败）
+ *     ⟹ 失败记录就是主产物，公开面必须显示灰度（否则读者会把旧数字当成绩）。
+ */
+export function failedRecordTarget(existing) {
+  const m = existing?.measurement
+  return m === 'complete' || m === 'complete-gated-leg-only' ? 'sidecar' : 'primary'
+}
 
 const sha = (parts) => {
   const h = createHash('sha256')
@@ -153,6 +202,17 @@ export function verifyArtifact(artifact, ctx = {}) {
   }
   if (measurement === 'failed' && !Array.isArray(artifact.failures)) {
     failures.push('失败产物缺少 `failures[]`（无法诊断为什么没测到）')
+  }
+  // 失败记录**不得**发布准确率数字（P12）。`measurement: 'failed'` 说的是「没测到」，
+  // 不是「测出来 0 分」；两者一旦混在一起，公开面就无法区分模型退步与中继故障。
+  // 这条判据与分支无关：任何 ref 上出现都是红。
+  if (measurement === 'failed') {
+    const published = PUBLISHED_ACCURACY_KEYS.filter((k) => artifact[k] !== undefined && artifact[k] !== null)
+    if (published.length) {
+      failures.push(
+        `measurement=failed 却发布了准确率字段：${published.join(', ')}（失败记录只放诊断，不得发布数字）`
+      )
+    }
   }
 
   // ── 2. 算术自洽（当前所有数字都从同一个 scorer 出来，写错即矛盾） ──
@@ -300,6 +360,31 @@ export function verifyArtifact(artifact, ctx = {}) {
         )
       } else if (compileMeasured > 0 && Math.abs(compileCompiled / compileMeasured - compileRate) > 0.001) {
         failures.push(`PRD compileRate=${compileRate} 与 ${compileCompiled}/${compileMeasured} 不符`)
+      }
+    }
+    // ── P12：PRD membership 地板已进入 `passed`，产物必须自洽 ──────────────────
+    // 只做**单向**矛盾检查（不重新推导整条门禁规则，规则真源在 `eval/prd-leg.mjs`）：
+    // 门禁说「过」时，它自己列出的数字不能反过来证伪它。
+    if (typeof prd.gateOk === 'boolean') {
+      if (prd.gateOk === true) {
+        if (
+          typeof prd.membershipFloor === 'number' &&
+          typeof prd.membershipRate === 'number' &&
+          prd.membershipRate < prd.membershipFloor
+        ) {
+          failures.push(
+            `PRD gateOk=true 但 membership ${prd.membershipRate} < 地板 ${prd.membershipFloor} —— 门禁判定与数字矛盾`
+          )
+        }
+        if (Number.isInteger(prd.cases) && prd.measured !== prd.cases) {
+          failures.push(`PRD gateOk=true 但只测到 ${prd.measured}/${prd.cases} 条 —— 不完整不能算过`)
+        }
+        if (Number.isInteger(prd.compileFailure) && prd.compileFailure > 0) {
+          failures.push(`PRD gateOk=true 但编译失败 ${prd.compileFailure} 条 —— 门禁判定与数字矛盾`)
+        }
+      }
+      if (artifact.passed === true && prd.gateOk === false) {
+        failures.push('passed=true 但 PRD 提取腿 gateOk=false（P12：PRD membership 地板已进入 passed）')
       }
     }
   }

@@ -396,8 +396,8 @@ function checkFails(result, substr, label) {
   check(!/const gateRate =/.test(src), 'eval-llm.mjs 不得自行再算 gateRate —— 必须来自 computeCrudMetrics（否则双真源）')
   check(/const gateMetric = 'definition95'/.test(src), '产物必须记下门禁指标名 gateMetric')
   check(
-    /passed:\s*gateRate >= TARGET_ACCURACY &&\s*guards\.ok &&\s*frontDoorStats\.ok &&\s*compileRate === 1 &&\s*fragmentStats\.ok,/.test(src),
-    'passed 必须 = 门禁 ∧ 回归防线（另允许布尔守卫：前门腿 / AN-13 编译门 / AN-18 片段腿；准确率数字只能来自 gateRate）'
+    /passed:\s*gateRate >= TARGET_ACCURACY &&\s*guards\.ok &&\s*frontDoorStats\.ok &&\s*compileRate === 1 &&\s*fragmentStats\.ok &&\s*prdSummary\.gateOk,/.test(src),
+    'passed 必须 = 门禁 ∧ 回归防线（另允许布尔守卫：前门腿 / AN-13 编译门 / AN-18 片段腿 / P12 PRD 门禁；准确率数字只能来自 gateRate）'
   )
   // AN-13：编译门是**确定性缺陷**守卫（产物编译不过 ≠ 准确率口径），必须真的进 passed，
   // 否则「compileRate 100%」又退回成一句没人执行的宣称。
@@ -408,16 +408,26 @@ function checkFails(result, substr, label) {
   // AN-18：片段腿（独立分母）同样必须是**布尔守卫**进 passed，且 exit code 与 passed 同源 ——
   // 否则「片段门禁化」只落在报告里，夜间照样绿。
   check(
-    /passed:[\s\S]{0,220}?fragmentStats\.ok,/.test(src),
+    /passed:[\s\S]{0,220}?fragmentStats\.ok &&\s*prdSummary\.gateOk,/.test(src),
     'AN-18：片段腿（fragmentStats.ok）必须进入 passed'
   )
   check(
-    /if \(\s*gateRate < TARGET_ACCURACY[\s\S]{0,220}?!fragmentStats\.ok\s*\)/.test(src),
+    /if \(\s*gateRate < TARGET_ACCURACY[\s\S]{0,220}?!fragmentStats\.ok\s*\|\|\s*!prdSummary\.gateOk\s*\)/.test(src),
     'AN-18：片段腿红时必须让 exit code 红（与 passed 同源）'
   )
   check(
     /import \{ summarizeFragmentLeg \} from '\.\/eval\/fragment-leg\.mjs'/.test(src),
     'AN-18：片段腿判据必须来自纯函数模块 eval/fragment-leg.mjs（可离线单测）'
+  )
+  // P12：PRD 腿有自己的门禁（完整 ∧ 编译零失败 ∧ membership ≥ 地板），同样必须真的
+  // 进 passed 与 exit code —— 否则「第一英里已上闸」只是一句报告里的宣称。
+  check(
+    /passed:[\s\S]{0,280}?prdSummary\.gateOk,/.test(src),
+    'P12：PRD 门禁（prdSummary.gateOk）必须进入 passed'
+  )
+  check(
+    /if \(\s*gateRate < TARGET_ACCURACY[\s\S]{0,280}?!prdSummary\.gateOk\s*\)/.test(src),
+    'P12：PRD 门禁红时必须让 exit code 红（与 passed 同源）'
   )
   check(/const pct = gateRate \* 100/.test(src), '徽章数字必须与门禁同源（gateRate）')
   // 准确率门禁只有 gateRate 一个数字来源；其余 disjunct 允许**布尔守卫**（回归防线 / 前门腿），

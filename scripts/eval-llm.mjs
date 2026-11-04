@@ -33,7 +33,7 @@
  * Runs as a NO-OP (exit 0) when @anthropic-ai/sdk is not installed or no API key is
  * present, so it can sit in a nightly workflow without breaking key-less CI.
  */
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
@@ -88,10 +88,12 @@ import {
 import {
   CASES_DIR,
   ACCURACY_FILE,
+  FAILED_ACCURACY_FILE,
   BADGE_FILE,
   BADGE_SCOPED_FILE,
   artifactIdentity as artifactIdentityOf,
   corpusFingerprint,
+  failedRecordTarget,
 } from './eval/artifact.mjs'
 
 /** 身份块 + 本次跑批的 fixedFields 口径（诊断开关只在探针里，故正常恒为 false）。 */
@@ -1329,7 +1331,8 @@ async function main() {
         `[probe] PRD 面提取（观测）：presence ${pct(prdSummary.presenceRate)}` +
           ` · membership ${pct(prdSummary.membershipRate)}（${prdSummary.membershipCorrect}/${prdSummary.membershipTotal}）` +
           ` · dialogs ${pct(prdSummary.dialogRate)} · exact ${pct(prdSummary.exactRate)}` +
-          ` · compiles ${pct(prdSummary.compileRate)}（分母 measured=${prdSummary.measured}）`
+          ` · compiles ${pct(prdSummary.compileRate)}（分母 measured=${prdSummary.measured}）` +
+          ` · gate ${prdSummary.gateOk ? 'PASS' : 'RED'}（floor ${prdSummary.membershipFloor}）`
       )
       for (const r of probePrdErrored.slice(0, 3)) {
         console.error(`[probe]   ✗ ${r.file} [prd] (${r.errorKind ?? 'unknown'}) — ${String(r.error).split('\n')[0]}`)
@@ -1483,11 +1486,37 @@ async function main() {
       passed: false,
     }
     const grey = (label) => ({ schemaVersion: 1, label, message: 'measurement failed', color: 'lightgrey' })
+    // ── P12：失败记录不得抹掉上一份**完整测量** ──────────────────────────────────
+    // 2026-11-02 的 88.14% 完整记录被次夜一次中继故障（407 行全部未测到）覆盖成
+    // 「measurement failed」，发布面反而比前一天更差。失败记录的价值是**诊断**，
+    // 不是**撤回**一个真实测量。故：已有一份完整测量时，失败记录写到旁路文件，
+    // 主产物与两枚徽章一个字节都不动；只有还没有完整测量时才走老路径（主文件即失败记录）。
+    let published = null
     try {
-      writeFileSync(ACCURACY_FILE, JSON.stringify(failedRecord, null, 2) + '\n')
-      writeFileSync(BADGE_FILE, JSON.stringify(grey('heldout 95%-definition'), null, 2) + '\n')
-      writeFileSync(BADGE_SCOPED_FILE, JSON.stringify(grey('scoped accuracy'), null, 2) + '\n')
-      console.error('  (已写入失败记录 + 灰度徽章；数值留待下一次真正测量)')
+      published = JSON.parse(readFileSync(ACCURACY_FILE, 'utf8'))
+    } catch {
+      // 没有旧产物（全新检出 / 上次是 pre-AN-03 格式）—— 走老路径。
+    }
+    const keepPublished = failedRecordTarget(published) === 'sidecar'
+    try {
+      if (keepPublished) {
+        writeFileSync(FAILED_ACCURACY_FILE, JSON.stringify(failedRecord, null, 2) + '\n')
+        console.error(
+          `  (失败记录 → ${FAILED_ACCURACY_FILE}；保留 ${published.measuredAt ?? '(未知时间)'} 的完整测量与徽章 —— ` +
+            '一次失败的跑批不得撤回已发布的数字)'
+        )
+      } else {
+        writeFileSync(ACCURACY_FILE, JSON.stringify(failedRecord, null, 2) + '\n')
+        writeFileSync(BADGE_FILE, JSON.stringify(grey('heldout 95%-definition'), null, 2) + '\n')
+        writeFileSync(BADGE_SCOPED_FILE, JSON.stringify(grey('scoped accuracy'), null, 2) + '\n')
+        // 主文件现在就是最新失败记录，旁路副本若还在就是过期的第二份真源。
+        try {
+          unlinkSync(FAILED_ACCURACY_FILE)
+        } catch {
+          // 不存在即正确状态。
+        }
+        console.error('  (已写入失败记录 + 灰度徽章；数值留待下一次真正测量)')
+      }
     } catch (err) {
       console.warn(`  (could not write failure record: ${err.message})`)
     }
@@ -1688,13 +1717,13 @@ async function main() {
     }
   }
 
-  // PRD / 设计稿提取（AN-19）。**只观测**：第一英里的输入（文本规格）与输出（surfaces）都
-  // 不同于 CRUD 的 NL→config，且用户拍板的 95% 定义只针对 CRUD 语料。分数不参与 gate/徽章/
-  // exit code；`membership` 是面-字段决策的微平均（漏字段与多造字段都算错）。
-  // 截图/线框由宿主视觉理解后转写成文本：server 不接收图片，故语料全部是文本。
+  // PRD / 设计稿提取（AN-19）。输入（文本规格）与输出（surfaces）都不同于 CRUD 的
+  // NL→config，故**不**混进 95% 定义 / 徽章；P12 起有自己的门禁（完整 ∧ 编译零失败 ∧
+  // membership ≥ 地板），进入 exit code。`membership` 是面-字段决策的微平均（漏字段与
+  // 多造字段都算错）。截图/线框由宿主视觉转写成文本：server 不接收图片，故语料全是文本。
   if (prdSummary.cases) {
     const pp = (x) => (x === null || x === undefined ? 'n/a' : `${(x * 100).toFixed(1)}%`)
-    console.log(`\n  PRD extraction (AN-19; observed — first mile, NOT the 95% gate):`)
+    console.log(`\n  PRD extraction (AN-19; first mile — own gate, NOT the 95% definition):`)
     console.log(
       `    cases ${prdSummary.cases} · measured ${prdSummary.measured} · not measured ${prdSummary.notMeasured}`
     )
@@ -1702,6 +1731,10 @@ async function main() {
       `    presence ${pp(prdSummary.presenceRate)} · membership ${pp(prdSummary.membershipRate)}` +
         ` (${prdSummary.membershipCorrect}/${prdSummary.membershipTotal}) · dialogs ${pp(prdSummary.dialogRate)}` +
         ` · exact ${pp(prdSummary.exactRate)} · compiles ${pp(prdSummary.compileRate)}`
+    )
+    console.log(
+      `    gate (P12): ${prdSummary.gateOk ? 'PASS' : 'RED'} — floor ${pp(prdSummary.membershipFloor)}` +
+        (prdSummary.gateFailures.length ? ` · ${prdSummary.gateFailures.join(' / ')}` : '')
     )
   }
 
@@ -1887,10 +1920,11 @@ async function main() {
       ),
       byDim: fragmentSummary.byDim,
     },
-    // PRD / 设计稿提取（AN-19，只观测）。第一英里：文本规格 → `generate_crud` surfaces。
+    // PRD / 设计稿提取（AN-19）。第一英里：文本规格 → `generate_scene`(scene=crud) surfaces。
     // `membership` 是面-字段决策的微平均（漏字段/多造字段/放错面都算错）；`exact` 要求
     // presence ∧ membership ∧ dialog 键全对。截图与线框由宿主视觉转写，server 不接收图片。
-    // 数字**不进** gate / 徽章 / exit code —— 95% 定义只针对 CRUD 语料（用户拍板）。
+    // P12 起它有自己的门禁（`gateOk`：完整测量 ∧ 编译零失败 ∧ membership ≥ 地板），
+    // 进入 exit code，但**不**混进 CRUD 的 95% 定义 / 徽章 —— 两套语料两种输入，分母不可通约。
     prd: {
       cases: prdSummary.cases,
       measured: prdSummary.measured,
@@ -1905,6 +1939,12 @@ async function main() {
       compileMeasured: prdSummary.compileMeasured,
       compileCompiled: prdSummary.compileCompiled,
       compileFailure: prdSummary.compileFailure,
+      // P12：PRD 腿有自己的门禁（完整测量 ∧ 编译零失败 ∧ membership ≥ 地板）。
+      // 地板与判据真源在 `eval/prd-leg.mjs`；这里只把判定与失败原因原样落盘，
+      // 让一次红夜能指出是哪条判据，而不是只留一个百分比。
+      membershipFloor: prdSummary.membershipFloor,
+      gateOk: prdSummary.gateOk,
+      gateFailures: prdSummary.gateFailures,
     },
     // 门禁数字（AI-33②）：= 95% 定义 ∨ = scoped zero-edit ∨ ≤K 轮收敛，与徽章同源。
     gateMetric,
@@ -1993,10 +2033,17 @@ async function main() {
       guards.ok &&
       frontDoorStats.ok &&
       compileRate === 1 &&
-      fragmentStats.ok,
+      fragmentStats.ok &&
+      prdSummary.gateOk,
   }
   try {
     writeFileSync(ACCURACY_FILE, JSON.stringify(record, null, 2) + '\n')
+    // P12：一次成功测量取代了此前所有失败 —— 旁路里的失败记录若还在就是过期诊断。
+    try {
+      unlinkSync(FAILED_ACCURACY_FILE)
+    } catch {
+      // 不存在即正确状态。
+    }
     console.log(`  (persisted to ${ACCURACY_FILE})`)
   } catch (err) {
     console.warn(`  (could not persist accuracy: ${err.message})`)
@@ -2044,7 +2091,8 @@ async function main() {
     !guards.ok ||
     !frontDoorStats.ok ||
     compileRate !== 1 ||
-    !fragmentStats.ok
+    !fragmentStats.ok ||
+    !prdSummary.gateOk
   ) {
     const fdWhy = frontDoorStats.ok
       ? ''
@@ -2071,13 +2119,17 @@ async function main() {
     const fragmentWhy = fragmentStats.ok
       ? ''
       : `\n  Fragment leg failed (AN-18): ${fragmentStats.failures.join('\n    ')}`
+    // PRD 腿（P12）：自有门禁，失败原因逐条带出（未测到 / 编译失败 / 低于地板 / 零分母）。
+    const prdWhy = prdSummary.gateOk
+      ? ''
+      : `\n  PRD extraction leg failed (P12): ${prdSummary.gateFailures.join('\n    ')}`
     const gateWhy =
       gateRate < TARGET_ACCURACY
         ? `\n[eval:llm] gate (${gateMetric}) ${(gateRate * 100).toFixed(1)}% is below target ${(TARGET_ACCURACY * 100).toFixed(0)}%` +
           ` (diagnostic core ${(coreRate * 100).toFixed(1)}%)`
         : `\n[eval:llm] an independent gate failed while accuracy gate ${gateMetric} is ${(gateRate * 100).toFixed(1)}%`
     console.error(
-      `${gateWhy}${guards.ok ? '' : ' — regression guards also failed'}.${fdWhy}${compileWhy}${fragmentWhy}\n` +
+      `${gateWhy}${guards.ok ? '' : ' — regression guards also failed'}.${fdWhy}${compileWhy}${fragmentWhy}${prdWhy}\n` +
         `  The accuracy gate is the user-ratified 95% definition: scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge.`
     )
     process.exit(1)
