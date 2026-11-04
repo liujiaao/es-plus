@@ -132,6 +132,8 @@ try {
     compileCompiled: out?.compileCompiled,
     convergence: null,
     byCapability: out?.byCapability,
+    // AN-18 门禁腿：片段块同样在比对清单里（此前只复算不比对）。
+    fragments: out?.fragments,
   }
   const goodPath = join(dir, 'good.json')
   writeFileSync(goodPath, JSON.stringify(artifact))
@@ -145,6 +147,17 @@ try {
   const r3 = run(dumpPath, '--expect', badPath)
   eq(r3.status, 1, '产物不一致必须退出 1（否则 parity 守卫是装饰）')
   check(/不一致/.test(r3.stderr), '不一致时必须打印差异项')
+
+  // 片段块被改一位 → 1：片段腿是门禁腿，它的数字漂移必须被复算咬住
+  // （此前 `--expect` 根本不比 `fragments`，片段 scorer 改了也全绿）。
+  const badFragPath = join(dir, 'bad-frag.json')
+  writeFileSync(
+    badFragPath,
+    JSON.stringify({ ...artifact, fragments: { ...artifact.fragments, scoped: 0.5 } })
+  )
+  const r3b = run(dumpPath, '--expect', badFragPath)
+  eq(r3b.status, 1, '片段块不一致必须退出 1')
+  check(/fragments\.scoped/.test(r3b.stderr), `差异项必须点名 fragments.scoped，实得：${r3b.stderr}`)
 
   // ── 4. 跨尺子版本 → 1，且报错必须说「尺子不同」而不是「口径漂移」 ────────────
   // 数字在两边**完全一致**也要拒绝：比对本身无意义（两把尺子量的是不同的量）。

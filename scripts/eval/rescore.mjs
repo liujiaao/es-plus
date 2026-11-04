@@ -258,8 +258,11 @@ const out = {
     notMeasured: fragmentSummary.notMeasured,
     core: r4(fragmentSummary.core),
     scoped: r4(fragmentSummary.scoped),
+    stated: r4(fragmentSummary.stated),
     full: r4(fragmentSummary.full),
     compileRate: r4(fragmentSummary.compileRate),
+    compileMeasured: fragmentSummary.compileMeasured,
+    compileCompiled: fragmentSummary.compileCompiled,
   },
   notRescored: {
     typecheck: 'checks are deterministic; dump carries no typecheck verdict — rerun without API cost',
@@ -343,6 +346,27 @@ if (EXPECT) {
   for (const { key } of CAPABILITY_SCORERS) {
     pairs.push([`byCapability.${key}.rate`, out.byCapability[key]?.rate, exp.byCapability?.[key]?.rate])
     pairs.push([`byCapability.${key}.applicable`, out.byCapability[key]?.applicable, exp.byCapability?.[key]?.applicable])
+  }
+  // 片段腿（AN-18 起是门禁腿）也必须逐字段比对：此前只复算、不比对，片段 scorer 或
+  // dump 重建路径漂移在 parity 守卫里完全不可见。产物带 `fragments` 块（AN-18 之后）就比；
+  // 早于 AN-18 的产物没有这个块 ⟹ 显式说明跳过，而不是静默当作「一致」。
+  if (exp.fragments) {
+    for (const key of [
+      'cases',
+      'measured',
+      'notMeasured',
+      'core',
+      'scoped',
+      'stated',
+      'full',
+      'compileRate',
+      'compileMeasured',
+      'compileCompiled',
+    ]) {
+      pairs.push([`fragments.${key}`, out.fragments[key], exp.fragments[key]])
+    }
+  } else {
+    console.warn('  ⚠ 产物没有 fragments 块（早于 AN-18）—— 片段腿无法与复算比对')
   }
   // A3 的视图同样比对 —— 但只在**产物带了这个块**时：已提交的旧产物没有它，
   // 无条件比对会把「产物写得早」误报成「复算漂移」（与 rulerVersion 同一处置）。
