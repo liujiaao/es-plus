@@ -466,6 +466,7 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 | `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot |
 | `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot |
 | `esplus://design-extraction` | PRD / 线框 → surfaces 的提取契约（检查清单、正反例；图片由宿主视觉转写，server 不接收图片） |
+| `esplus://capabilities` | 场景能力台账 `es-plus.capabilities@1`：四场景词汇（accepted / required）、CRUD 逐键降级表（schema/sfc）、无表分支与片段边界 |
 
 ---
 

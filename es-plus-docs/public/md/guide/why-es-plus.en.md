@@ -366,7 +366,7 @@ Most component libraries' "AI friendliness" is just talk — "our API names are 
 
 > **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
 
-1. **The MCP server** exposes 17 tools, 8 resource families and 3 prompts (3 legacy/advanced tools are hidden under `ESPLUS_MCP_PROFILE=front-door`); the AI reads them over the protocol
+1. **The MCP server** exposes 17 tools, 9 resource families and 3 prompts (3 legacy/advanced tools are hidden under `ESPLUS_MCP_PROFILE=front-door`); the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
 

@@ -668,7 +668,7 @@ AI：[调用 scaffold_page { name: "order-list", features: ["query", "table", "d
 
 ## MCP Resources（可读取资源）
 
-AI 工具可以主动读取以下资源来获取上下文信息（共 **8 类**）：
+AI 工具可以主动读取以下资源来获取上下文信息（共 **9 类**）：
 
 | URI | 内容说明 |
 |-----|----------|
@@ -685,6 +685,7 @@ AI 工具可以主动读取以下资源来获取上下文信息（共 **8 类**�
 | `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot 对（前门入参的写法参照） |
 | `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot（query/table/form/dialog 各面怎么写） |
 | `esplus://design-extraction` | 设计稿/截图转写规范（图片须由宿主先转成文字，服务端不收图） |
+| `esplus://capabilities` | 场景能力台账 `es-plus.capabilities@1`：四场景的意图词汇（accepted / required）、CRUD 的逐键降级表（schema/sfc）、无表分支与片段边界。生成**之前**判断某个意图键会不会落地 |
 
 **作用**：当 AI 工具需要精确了解某个配置项的类型定义时，会自动读取对应的 Schema 资源，确保生成的代码类型正确。
 
@@ -776,7 +777,7 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 │              @es-plus/mcp-server                    │
 │                                                    │
 │  ┌─────────────────┐  ┌──────────────┐  ┌──────────┐  │
-│  │  Tools (15)     │  │Resources (8 类)│  │Prompts(3)│  │
+│  │  Tools (17)     │  │Resources (9 类)│  │Prompts(3)│  │
 │  │ 前门 + 单面片段  │  │ JSON Schema  │  │ 系统提示 │  │
 │  │ + 确定性支撑     │  │ TS 类型定义  │  │ 最佳实践 │  │
 │  │                 │  │ 预设示例     │  │          │  │

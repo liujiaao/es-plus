@@ -293,7 +293,7 @@ The profile only changes which tools are *listed* — the hidden three share the
 
 ## Resources Exposed by the Server
 
-Eight resource families (target-specific variants for `vue3` / `vue2` / `antdv` where noted):
+Nine resource families (target-specific variants for `vue3` / `vue2` / `antdv` where noted):
 
 - `esplus://conventions` — generation rules (formtype, button keys, multi-dialog mode, `configureEsPlus`); `/vue3`, `/vue2`, `/antdv`
 - `esplus://crud-page-schema` — `EsCrudPage` schema and usage examples; `/vue3`, `/vue2`, `/antdv`
@@ -303,6 +303,7 @@ Eight resource families (target-specific variants for `vue3` / `vue2` / `antdv` 
 - `esplus://examples/nl-to-config` — few-shot pairs for natural language → `StructuredCrudConfig`
 - `esplus://examples/surfaces` — few-shot for the `surfaces` intent table
 - `esplus://design-extraction` — how to transcribe a mockup (images must be transcribed by the host first)
+- `esplus://capabilities` — scene capability ledger (`es-plus.capabilities@1`): intent vocabulary per scene (accepted / required), the CRUD per-key downgrade table (schema/sfc), the no-table branch and the fragment boundary — read it *before* generating to know which intent keys will actually land
 
 ## Prompts Exposed by the Server
 
