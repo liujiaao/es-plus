@@ -220,13 +220,19 @@ export function summarizePrd(rows) {
 }
 
 /**
- * Feed a model-produced `generate_crud` argument object through the REAL front
- * door handler and compile every fenced block. Host-given fields (`name`,
- * `apiUrl`, `target`, `mode`) are injected from the case when absent — they are
- * not part of what this leg measures.
+ * Feed a model-produced intent object through the REAL **scene router**
+ * (`generate_scene`, scene='crud') and compile every fenced block. Host-given
+ * fields (`name`, `apiUrl`, `target`, `mode`) are injected from the case when
+ * absent — they are not part of what this leg measures.
  *
- * `fd` is the object returned by `setupFrontDoor()` (shape + cap.handler). The
- * function never throws: a bad row is recorded, not allowed to abort the run.
+ * The model's answer is the *intent table*; P7 routes it the way the published
+ * front door does (`{ scene: 'crud', intent }`). Driving the old adapter here
+ * would measure an entry point users are no longer told to call, i.e. the very
+ * split this leg exists to prevent (see `check:scene-eval`).
+ *
+ * `fd` is the object returned by `setupFrontDoor()` (`shape` for early
+ * rejection + `sceneCap.handler`). The function never throws: a bad row is
+ * recorded, not allowed to abort the run.
  */
 export async function drivePrdSurfaces(fd, pred, goldConfig, compileBlocks, fencedBlocks) {
   const out = { branch: null, rejected: null, compileFailures: [], produced: false }
@@ -248,7 +254,7 @@ export async function drivePrdSurfaces(fd, pred, goldConfig, compileBlocks, fenc
         .join('; ')}`
       return out
     }
-    const r = await fd.cap.handler(parsed.data)
+    const r = await fd.sceneCap.handler({ scene: 'crud', intent: parsed.data })
     const text = r.content?.[0]?.text ?? ''
     if (r.isError) {
       out.rejected = text.split('\n')[0]

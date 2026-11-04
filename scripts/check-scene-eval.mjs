@@ -12,7 +12,8 @@
  *   (c) 片段腿把模型 intent 喂给同一个 `driveSceneFragment`，且 gated `compiles`
  *       来自它的 witness；
  *   (d) `deriveSurfaces` 只作为「完整 config → 路由器 intent」的投影，不出现在评分器里；
- *   (e) 注册表的 canonical 入口仍是 `generate_scene`。
+ *   (e) 注册表的 canonical 入口仍是 `generate_scene`；
+ *   (f) PRD 腿（eval 与离线守卫）也只驱动场景路由器，不直连旧 adapter。
  *
  * 明确不做：不跑模型、不评准确率、不替代 `check:scene-parity` 的字节等价断言。
  *
@@ -90,9 +91,28 @@ if (!/tool:\s*['"]generate_scene['"]/.test(registrySrc)) {
   fail('场景注册表的 canonical entry.tool 不是 generate_scene')
 }
 
+// ── (f) PRD 腿同样只走场景路由器 ───────────────────────
+// 模型产出的是**意图表**，落地必须和生产前门一样包成 `{ scene:'crud', intent }`。
+// 直连 adapter 会让这条腿继续量一个用户不再被引导去调的入口。
+for (const rel of ['scripts/eval/prd-leg.mjs', 'scripts/check-prd.mjs']) {
+  let src
+  try {
+    src = read(rel)
+  } catch {
+    fail(`${rel} 不存在 —— PRD 腿路径变了，守卫需要同步`)
+    continue
+  }
+  if (!/sceneCap\.handler\s*\(/.test(src)) {
+    fail(`${rel} 没有调用 sceneCap.handler —— PRD 腿仍在直连旧 adapter`)
+  }
+  if (/\bcap\.handler\s*\(/.test(src)) {
+    fail(`${rel} 仍出现 cap.handler —— 必须改成 sceneCap.handler`)
+  }
+}
+
 if (failures.length) {
   console.error(`\n✖ check:scene-eval FAILED（${failures.length} 处）：`)
   for (const m of failures) console.error(`   - ${m}`)
   process.exit(1)
 }
-console.log('✅ check:scene-eval：eval 的门禁路径真实驱动 generate_scene，deriveSurfaces 仅作诊断投影。')
+console.log('✅ check:scene-eval：eval 的门禁路径真实驱动 generate_scene（含 PRD 腿），deriveSurfaces 仅作诊断投影。')

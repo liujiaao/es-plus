@@ -228,14 +228,18 @@ const f = (label, prop = label) => ({ prop, label, formtype: 'Input' });
   const queryArr = { _def: { typeName: 'ZodArray', type: fieldObj } }
   const surfacesObj = { _def: { typeName: 'ZodObject', shape: { query: queryArr } } }
   const tool = {
-    name: 'generate_crud',
-    description: 'FRONT DOOR — fill surfaces.',
+    name: 'generate_scene',
+    description: 'FRONT DOOR — fill the crud intent.',
     shape: { name: zodString, surfaces: surfacesObj },
   }
   const prompt = buildPrdSystemPrompt(tool, 'CONTRACT-MARKER: read esplus://design-extraction')
   check(prompt.includes('CONTRACT-MARKER'), 'system prompt 必须注入资源正文（与发布契约同源）')
-  check(prompt.includes('Tool: generate_crud'), 'system prompt 必须包含真实工具名')
+  check(prompt.includes('Tool: generate_scene'), 'system prompt 必须包含真实工具名（前门）')
   check(prompt.includes('FRONT DOOR'), 'system prompt 必须包含真实工具描述')
+  check(
+    prompt.includes('`{"scene": "crud", "intent": <your object>}`'),
+    'system prompt 必须写明模型产出会被宿主包成 scene/intent（与落地的场景路由器一致）'
+  )
   check(prompt.includes('surfaces.query'), 'shape 自省必须展开 surfaces 键')
   check(prompt.includes('NEVER emit `inQuery`'), 'system prompt 必须重申禁止 membership 旗标')
   const messages = buildPrdInitialMessages('用户管理 PRD', {

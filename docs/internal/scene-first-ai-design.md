@@ -104,7 +104,7 @@ export interface CompositionWire {
 }
 
 export interface CompositionEnvelope {
-  contract: 'es-plus.composition@1'
+  contract: 'es-plus.composition@2'
   name: string
   target: TargetFramework
   nodes: readonly ArtifactEnvelope[]
@@ -390,3 +390,60 @@ P6 拆为两个主题批次：P6a 先堵住「声明了但没人跑」，P6b 再
 - **每场景一个节点**：两张表无法按 ref 区分，多弹窗没有分派依据。需要多弹窗时回到 crud 场景的 `surfaces.dialog`，而不是在这里放宽。
 - **本批不新增 MCP 工具 / 入口**：P6 的范围是「契约 + 守卫 + 运行时见证」；把 `emitComposition` 接到工具面会改动工具清单（`check:tool-surface` 等）与 prompt 语料，属于另一个主题批次。
 - **指纹不是安全哈希**：与 `artifact@1` 共用 FNV-1a 双种子，只回答「同一份输入是否仍产出同一份页面」。
+
+#### P6b 补记 · 契约升到 `es-plus.composition@2`（P7 内完成）
+
+`@1` 有三处「编译得过、行为悄悄错」的缺陷，由 P7 审计逐条核对源码后修掉并升版（详见 P7）：
+
+- `id: 'table'` 的弹窗节点与表格节点撞出同一个 `const tableRef` → 生成不可编译页面。`@2` 起 ref 变量按**节点**派生（`usersRef` / `tableRef` 各自的 camelCase 组件名），弹窗不再复用表格的 ref 名。
+- 弹窗 `intent.defaultTitle` 被组合静默覆盖：片段两个模式（composable / component）都认 `defaultTitle`，组合页却只按 id 派生标题。`@2` 起页面 `open()` 的兜底标题取 `intent.defaultTitle ?? dialogTitleFor(id)`，宿主传入的 `options.title` 仍优先。
+- `open()` 从 `(title, row?, onSuccess?)` 改为 `open(id, options = { title?, row?, onSuccess? }): boolean`：组合页里 id 才是分派键，title 降为可选项；未命中返回 `false`，宿主能区分「没这个弹窗」和「弹窗没打开」。
+
+### P7 · 审计问题逐条修复（入口与接线收敛）
+
+P6 之后做了一轮「未完成 / 遗留 / 隐患 / 设计缺陷」审计，逐条回源码核对后按主题修复。总原则仍是 P2 的那句：**入口是被测的、也是被宣称的那一个**。
+
+**① 组合页接线（shared，契约 `@2`）**
+
+- ref 变量按节点派生（`refVar(node)`），表格与弹窗共用一个规则；`table+dialog(id:'table')` 成为守卫里的回归组合。
+- `open(id, options)` + `title = options.title || (intent.defaultTitle ?? dialogTitleFor(id))`；`options.onSuccess` 与内部 `onTableSuccess` 并列调用。
+- 查询 → `table.reload(model)`（新搜索回第 1 页）、重置 → `table.reload()`（es-form 的 `rest` 按钮**先** `resetFields()` 再回调，故这里拿到的是已清空的 model）；无表格时两者升级为页面事件 `query` / `reset`。`form.submit` → 页面事件 `save`（此前只接 `form.query`，提交面永远静默）。
+- `scripts/check-composition-contract.mjs`：组合 14 → **26** 组（补单节点 table / form / dialog 与 `table+dialog(id:'table')`），并新增**真实编译**腿 —— vue2 用 `packages/vue2` 内的 `vue/compiler-sfc`（2.x），vue3/antdv 用根 `@vue/compiler-sfc` 的 `compileScript` + `compileTemplate`；编译器不可用即判红（不允许静默跳过）。
+- 新增 antdv 运行时见证 `packages/adapter-antdv/__tests__/composition-page-runtime.spec.ts`：查询参数、重置重载、`intent.defaultTitle`（golden `frag-dialog-02-component-antdv.json` 的「用户编辑」）、PUT + 列表刷新、`open` 布尔面。
+
+**② 组合页入口（MCP）**
+
+- 新增 `generate_composition`（`{ name?, target?, nodes: [{ id, scene, intent }] }`）：每个节点按所属场景的**同一份** `SCENE_INTENT_SCHEMAS` 校验，未知键带节点 id 点名；产物文本与直接调 `emitComposition` 逐字节一致。
+- `crud` 节点在 handler 里先被可组合场景名单拒绝 —— `SCENE_INTENT_SCHEMAS` 含 `crud`，直接查表会让它落进整页意图校验、报「缺 apiUrl/surfaces」，把「不能二次装配」说成「字段没填」。单测钉住这条防御分支。
+
+**③ 工具面标签收敛**
+
+- 唯一 `FRONT DOOR` = `generate_scene`（场景路由器）；`generate_crud` = `COMPAT ENTRY (adapter)`，两条路径共用 `emitScene`、字节相同。
+- 工具总数 16 → **17**；`front-door` profile 13 → **14**；`check-tool-surface` / `tool-surface.spec` / `arg-guard.spec` / `front-door-profile.spec` / 五处文档与 `llms.txt`、`public/md/**` 同批更新。
+
+**④ eval 被测路径**
+
+- PRD 腿（`scripts/eval/prd-leg.mjs`、`scripts/check-prd.mjs`）改走 `sceneCap.handler({ scene: 'crud', intent })`；prompt 明写「宿主会把你的对象包成 `{scene:'crud', intent}`」，工具名/描述取场景路由器。模型产物仍是**意图表**，落盘与 rescore 口径不变。
+- `check:scene-eval` 新增 (f) 段：两条 PRD 路径必须调用 `sceneCap.handler`、不得出现 `cap.handler`。
+
+**⑤ 语料规模与宣称挂钩**
+
+- `check-scene-registry`：声明 `definition95` 的场景，语料条数必须 ≥ `minCasesFor95`（此前只校验常量存在）。变异自检把 `minCasesFor95` 改成 300 即红。
+
+**验证（2026-11-04）**
+
+- `npm test -w @es-plus/shared` → 889/889（组合用例 21 条）✅
+- `npm test -w @es-plus/mcp-server` → 365/365（22 文件，新增 `generate-composition.spec` 5 条）✅
+- `check:tool-surface` → 唯一 FRONT DOOR（`generate_scene`）；full 17 / front-door 14 ✅
+- `check:composition-contract` → 26 组组合 + 5 例拒绝 + 编译腿 ✅
+- `check:scene-registry` / `check:scene-eval` / `check:prd`（22 条可表达·可路由·可编译）✅
+- vue3 `composition-page-runtime.spec` 5/5；antdv 4/4 ✅
+- 变异自检（实跑后还原）✅：①`refVar` 固定返回 `tableRef` → 编译腿红（`Identifier 'tableRef' has already been declared`）；②`minCasesFor95` 改 300 → registry 守卫红；③PRD 腿改回 `fd.cap.handler` → scene-eval 守卫红（点名两处）。
+
+**据实偏离**
+
+- **两套编译器不同源**：vue2 只能读 `packages/vue2` 的 2.x compiler，vue3/antdv 读根 3.x —— 编译腿证明的是「各自宿主编译器能过」，不是「同一编译器下字节相同」。
+- **标题兜底取 `dialogTitleFor(id)` 而非片段的 `'新增'`**：组合页常有两个弹窗，统一兜底会让标题失去区分度；片段里 `open(title, …)` 的标题参数语义不变。
+- **PRD 腿不要求模型输出 `{scene,intent}` 外壳**：外壳是宿主职责（生产里同样由宿主组装）；让模型多包一层只会把「格式记忆」混进第一英里分数。
+- **CLI 不改**：`packages/cli` 从不以 MCP 工具名对外（`create` 是正则/结构化配置入口，`--config` 走 `generateFromConfig`），不存在「宣称入口 vs 调用入口」的分叉，故不新增 `--scene` 旋钮。
+- **守卫仍是 Tier A**：编译腿不跑类型检查，模板里的 prop 拼错这类问题仍由 `typecheck` / e2e 见证兜底。

@@ -1010,13 +1010,13 @@ async function main() {
 
   // ── PRD / 设计稿提取（AN-19）：**观测**第一英里 ───────────────────────────────
   // 输入是文本 PRD（截图/线框由宿主视觉理解后转写成文本，server 不接收图片）；
-  // 输出是 `generate_crud` 的 surfaces 意图表。评分只看「哪些面存在、每个面有哪些标签字段」，
+  // 输出是 `generate_scene`（scene='crud'）的 surfaces 意图表。评分只看「哪些面存在、每个面有哪些标签字段」，
   // prop / formtype / 校验 / 接口细节由 CRUD 与片段腿另行测量（见 eval/prd-leg.mjs 头注）。
   // 全量跑时跟着跑（22 条，成本可忽略），`--prd` 探针时单独跑；其余探针不跑。
   const prdRows = []
   if (RUN_PRD) {
     const prdSystem = buildPrdSystemPrompt(
-      { name: frontDoor.cap.name, description: frontDoor.cap.desc, shape: frontDoor.cap.shape },
+      { name: frontDoor.sceneCap.name, description: frontDoor.sceneCap.desc, shape: frontDoor.cap.shape },
       frontDoor.extractionContract
     )
     // `--limit` 同时约束 PRD（`--prd --limit N` 是「先用 N 条探中继/契约」的用法）。
