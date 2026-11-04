@@ -169,6 +169,15 @@ describe('组合页运行时（vue3 · 表格 + 查询表单 + 弹窗）', () =>
 
     expect(backend.listCalls).toBe(before + 1)
     expect(backend.lastListParams?.keyword).toBe('ZZZ')
+
+    // 「重置」= 片段先 resetFields() 再发 reset；组合页接上 table.reload()，
+    // 列表会用清空后的条件重新取数（不是停在旧过滤结果上）。
+    const afterQuery = backend.listCalls
+    findButtonByText(wrapper.element, '重置')!.click()
+    await flushPromises()
+    await nextTick()
+    expect(backend.listCalls).toBe(afterQuery + 1)
+    expect(backend.lastListParams?.keyword).toBeUndefined()
   })
 
   it('行按钮 edit → 以注册表标题打开弹窗、带该行数据；提交成功 → 表格重新取数', async () => {
@@ -223,6 +232,26 @@ describe('组合页运行时（vue3 · 表格 + 查询表单 + 弹窗）', () =>
     // 有表格时页面仍暴露 refresh / reload（faces.expose 与产物一致）。
     expect(typeof (wrapper.vm as any).refresh).toBe('function')
     expect(typeof (wrapper.vm as any).reload).toBe('function')
+  })
+
+  it('页面 open(id, options) 吃选项对象：命中返回 true 并带行数据，未知 id 返回 false', async () => {
+    const host = document.getElementById('app') as HTMLElement
+    const backend = createBackend(SEED)
+    const Page = (await importPage(writeComposition(fullPlan(), 'open-api'))).default
+    const wrapper = mountPage(Page, backend)
+    await flushPromises()
+    await nextTick()
+
+    const vm = wrapper.vm as any
+    expect(vm.open('nope')).toBe(false)
+    expect(vm.open('edit', { row: SEED[1] })).toBe(true)
+    await nextTick()
+    await flushPromises()
+
+    expect(host.querySelector('.el-dialog')).not.toBeNull()
+    expect(host.textContent).toContain('编辑')
+    const inputs = Array.from(host.querySelectorAll('input')) as HTMLInputElement[]
+    expect(inputs.some((i) => i.value === '李四')).toBe(true)
   })
 
   it('提交表单 → 页面事件 save 携带 model（片段不替宿主决定保存到哪）', async () => {

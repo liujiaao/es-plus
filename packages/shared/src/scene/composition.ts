@@ -7,7 +7,7 @@
  *
  *   1. table `row-action` → 宿主 `dialog.open(title, row)`
  *   2. form `submit`（校验通过才发）→ 宿主保存
- *   3. form `query` → 宿主 `table.refresh(model)`
+ *   3. form `query` → 宿主 `table.reload(model)`（新搜索回第 1 页）
  *   4. dialog `onSuccess` → 宿主 `table.refresh()`
  *
  * 但「宿主」此前只有人。片段是自包含 SFC，一张同时要表格 + 查询表单 + 弹窗的页面
@@ -17,17 +17,34 @@
  *
  * ## 接线的来源不是猜测
  *
- * `planComposition` 只读 `ARTIFACT_RUNTIME` 声明的通道名，按四条规则派生：
+ * `planComposition` 只读 `ARTIFACT_RUNTIME` 声明的通道名，按五条规则派生：
  *
  *   - 表格的每个行按钮 key：若存在 id 相同的 dialog 节点 → 接 `dialog.open` 并用
- *     `dialogTitleFor(key)` 作标题；否则升级为页面事件 `row-action`（不是丢弃）；
- *   - form `query`：有表格 → `table.refresh(model)`；无表格 → 页面事件 `query`；
+ *     `intent.defaultTitle ?? dialogTitleFor(key)` 作标题；否则升级为页面事件
+ *     `row-action`（不是丢弃）；
+ *   - form `query`：有表格 → `table.reload(model)`（与库内查询按钮同语义：新搜索
+ *     回第 1 页，[`component.vue:1027`] `keepPage: false`）；无表格 → 页面事件 `query`；
+ *   - form `reset`：片段点「重置」先 `resetFields()` 再发 `reset`；有表格 →
+ *     `table.reload()`；无表格 → 页面事件 `reset`；
  *   - form `submit`：永远是页面事件 `save`（片段不负责请求，「保存到哪」只有宿主知道）；
  *   - dialog `onSuccess`：有表格 → `table.refresh()`；无表格 → 页面事件 `success`。
  *
  * 组合页因此有两个朝向外的面：**exposes**（表格 refresh/reload、按 id 开弹窗）与
- * **emits**（保存 / 未匹配的行动作 / 无表格时的查询与成功）。任何通道要么被接上，
- * 要么升级为页面事件，**没有静默丢弃**（`check-composition-contract` 逐通道断言）。
+ * **emits**（保存 / 未匹配的行动作 / 无表格时的查询、重置与成功）。任何通道要么被
+ * 接上，要么升级为页面事件，**没有静默丢弃**（`check-composition-contract` 逐通道断言）。
+ *
+ * ## 对外 API（`es-plus.composition@2`）
+ *
+ * - `open(id, options?)`：`options = { title?, row?, onSuccess? }`，返回是否命中。
+ *   片段自己的契约是 `open(title, row?, onSuccess?)`；组合页在**第一位**插入 id，
+ *   因此第二个参数必须是与位置无关的对象 —— 否则 `open('edit', row)` 会把整行
+ *   当成标题（@1 的真实缺陷）。未知 id 返回 `false`，不再静默吞掉。
+ * - 标题真源是节点 intent 的 `defaultTitle`（与单独发射同一字段），缺省才回落
+ *   `dialogTitleFor(id)`。@1 无视 `defaultTitle`，把声明式标题静默换成了 id。
+ * - 有表格时 `onSuccess` 仍由页面刷新表格，但宿主回调会**在其后**执行（@1 没有
+ *   宿主回调通道，宿主无法在保存成功后做自己的事）。
+ * - 表格的模板 ref 名由节点 id 派生（`${camel(id)}Ref`）。@1 写死 `tableRef`，
+ *   与 id 为 `table` 的弹窗节点生成的 `tableRef` 撞成重复声明。
  *
  * ## 边界
  *
@@ -47,16 +64,23 @@ import { dialogTitleFor } from './registry.js'
 import { ARTIFACT_RUNTIME } from './runtime.js'
 import type { ArtifactKind } from './registry.js'
 
-/** 协议版本。任何破坏兼容的字段改动都必须换版本号。 */
-export const COMPOSITION_CONTRACT_VERSION = 'es-plus.composition@1' as const
+/** 协议版本。任何破坏兼容的字段改动都必须换版本号（@2：open 选项对象 / reset 接线 / 派生 ref 名）。 */
+export const COMPOSITION_CONTRACT_VERSION = 'es-plus.composition@2' as const
 
 /** 可组合的场景。`crud` 不在其中：它已经是整页产物。 */
 export type ComposableScene = 'table' | 'form' | 'dialog'
 
 /** 组合计划里的一个节点。 */
 export interface CompositionNode {
-  /** 节点 id：决定产物文件名（`${id}.vue`）与行动作绑定（dialog 节点按 id 匹配 key）。 */
+  /**
+   * 节点 id：决定产物文件名（`${id}.${ext}`）、模板 ref 名与行动作绑定
+   * （dialog 节点按 id 匹配 key）。
+   */
   id: string
+  /**
+   * 节点的场景计划。弹窗标题真源是 `intent.defaultTitle`（缺省回落
+   * `dialogTitleFor(id)`）—— 与单独发射同一个字段，不另开覆盖通道。
+   */
   plan: Extract<ScenePlan, { scene: ComposableScene }>
 }
 
@@ -258,16 +282,26 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
     }
   }
 
-  // ②③ 查询 / 提交。
+  // ②③ 查询 / 提交 / 重置。
   if (form) {
     if (table) {
-      wires.push({ from: { node: form.id, channel: 'query' }, to: { node: table.id, channel: 'refresh' } })
+      // 新搜索必须回第 1 页：`refresh` 会保留当前页码（keepPage: true），在第 2 页
+      // 上缩小过滤条件会得到空列表。库内查询按钮同样用 keepPage: false。
+      wires.push({ from: { node: form.id, channel: 'query' }, to: { node: table.id, channel: 'reload' } })
     } else {
       wires.push({ from: { node: form.id, channel: 'query' }, to: { page: 'emit', event: 'query' } })
       pushEmit('query')
     }
     wires.push({ from: { node: form.id, channel: 'submit' }, to: { page: 'emit', event: 'save' } })
     pushEmit('save')
+    // 片段点「重置」时先 `formRef.resetFields()`（es-form 的 'rest' 分支）再发
+    // `reset`；组合页接上它，表格才会用清空后的条件重新取数。
+    if (table) {
+      wires.push({ from: { node: form.id, channel: 'reset' }, to: { node: table.id, channel: 'reload' } })
+    } else {
+      wires.push({ from: { node: form.id, channel: 'reset' }, to: { page: 'emit', event: 'reset' } })
+      pushEmit('reset')
+    }
   }
 
   // ④ 成功回调。
@@ -322,6 +356,11 @@ interface EmittedNode {
   envelope: ArtifactEnvelope
   /** dialog composable 形态才有。 */
   composableName?: string
+  /**
+   * 弹窗的声明式标题（`intent.defaultTitle`）。页面 `open()` 的缺省值取它，
+   * 与片段自己 `open()` 的默认参数同一个真源；未声明时才回落 `dialogTitleFor(id)`。
+   */
+  titleDefault?: string
 }
 
 function emitNodes(analysis: CompositionAnalysis, plan: CompositionPlan): EmittedNode[] {
@@ -343,6 +382,7 @@ function emitNodes(analysis: CompositionAnalysis, plan: CompositionPlan): Emitte
       )
     }
     const file = result.envelope.files[0]
+    const defaultTitle = (intent as { defaultTitle?: unknown }).defaultTitle
     out.push({
       id: info.id,
       scene: info.scene,
@@ -355,13 +395,21 @@ function emitNodes(analysis: CompositionAnalysis, plan: CompositionPlan): Emitte
         info.artifact === 'dialog-composable'
           ? String((intent as { composableName?: string }).composableName || 'useFormDialog')
           : undefined,
+      titleDefault: info.scene === 'dialog' && typeof defaultTitle === 'string' ? defaultTitle : undefined,
     })
   }
   return out
 }
 
-/** vue3 页面里组件 dialog 的 ref 变量名。 */
-function dialogRefVar(node: EmittedNode): string {
+/**
+ * 页面模板 ref 的变量名。
+ *
+ * 由**节点 id 派生**（不是写死 `tableRef` / `editRef`）：表格与弹窗共用分配规则，
+ * 由 `planComposition` 的「组件名唯一」检查保证不会撞名（camel∘pascal 冲突必然是
+ * pascal 冲突）。@1 写死表格 ref 为 `tableRef`，弹窗节点 id 叫 `table` 时会生成
+ * 两条 `const tableRef`，产物直接编不过。
+ */
+function refVar(node: EmittedNode): string {
   return `${node.componentName.charAt(0).toLowerCase()}${node.componentName.slice(1)}Ref`
 }
 
@@ -374,13 +422,25 @@ function composableOpenVar(node: EmittedNode): string {
  * 打开一句弹窗调用。三处调用点（行动作 / open 派发 / 页面暴露）共用，
  * 避免三份模板各写一遍标题回落与成功回调的接法。
  *
- * 标题：调用方传了 `titleExpr` 就以它为准，缺省回落 `dialogTitleFor(id)`。
+ * 标题：`intent.defaultTitle` 优先（与片段自身 `open()` 的默认参数同源），
+ * 缺省回落 `dialogTitleFor(id)`；调用方（页面 `open()`）传了 `titleExpr` 时
+ * 以调用方为准，再回落同一个默认值。
+ *
  * 成功回调：有表格 → `onTableSuccess`（刷新表格）；无表格 → 升级为页面事件
  * `success`（携带 `{ id, data }`）；两者都不成立时省略。
+ * `hostCallback` 只用于页面 `open()`：在页面自己的动作之后**再**调用宿主传入的
+ * `options.onSuccess`（没有表格时宿主唯一能观察成功的地方）。
  */
 function openCall(
   node: EmittedNode,
-  opts: { vue2: boolean; rowExpr: string; titleExpr?: string; table: boolean; emitSuccess: boolean },
+  opts: {
+    vue2: boolean
+    rowExpr: string
+    titleExpr?: string
+    table: boolean
+    emitSuccess: boolean
+    hostCallback?: boolean
+  },
 ): string {
   let callee: string
   if (opts.vue2) {
@@ -388,21 +448,34 @@ function openCall(
     // 组件方法经 setup 的 return 暴露在实例上。
     callee = node.composableName
       ? `this.${composableOpenVar(node)}`
-      : `this.$refs.${dialogRefVar(node)}.open`
+      : `this.$refs.${refVar(node)}.open`
   } else if (node.composableName) {
     callee = composableOpenVar(node)
   } else {
-    callee = `${dialogRefVar(node)}.value?.open`
+    callee = `${refVar(node)}.value?.open`
   }
-  const titleArg = opts.titleExpr
-    ? `${opts.titleExpr} || ${q(dialogTitleFor(node.id))}`
-    : q(dialogTitleFor(node.id))
+  const fallback = q(node.titleDefault ?? dialogTitleFor(node.id))
+  const titleArg = opts.titleExpr ? `${opts.titleExpr} || ${fallback}` : fallback
   let success = ''
-  if (opts.table) success = opts.vue2 ? 'this.onTableSuccess' : 'onTableSuccess'
-  else if (opts.emitSuccess) {
-    success = opts.vue2
-      ? `(data) => this.$emit('success', { id: ${q(node.id)}, data })`
-      : `(data) => emit('success', { id: ${q(node.id)}, data })`
+  if (opts.table) {
+    if (opts.hostCallback) {
+      success = opts.vue2
+        ? '(data) => { this.onTableSuccess(); if (options.onSuccess) options.onSuccess(data) }'
+        : '(data) => { onTableSuccess(); options.onSuccess?.(data) }'
+    } else {
+      success = opts.vue2 ? 'this.onTableSuccess' : 'onTableSuccess'
+    }
+  } else if (opts.emitSuccess) {
+    const emitCall = opts.vue2
+      ? `this.$emit('success', { id: ${q(node.id)}, data })`
+      : `emit('success', { id: ${q(node.id)}, data })`
+    if (opts.hostCallback) {
+      success = opts.vue2
+        ? `(data) => { ${emitCall}; if (options.onSuccess) options.onSuccess(data) }`
+        : `(data) => { ${emitCall}; options.onSuccess?.(data) }`
+    } else {
+      success = `(data) => ${emitCall}`
+    }
   }
   return `${callee}(${titleArg}, ${opts.rowExpr}${success ? `, ${success}` : ''})`
 }
@@ -426,15 +499,16 @@ function pageCode(
 
   if (vue2) {
     const lines: string[] = []
+    const tableRef = table ? `this.$refs.${refVar(table)}` : ''
     lines.push('<template>')
     lines.push('  <div class="es-composed-page">')
     for (const n of componentNodes) {
       const attrs =
         n.scene === 'table'
-          ? ' ref="table" @row-action="onRowAction"'
+          ? ` ref="${refVar(n)}" @row-action="onRowAction"`
           : n.scene === 'form'
-            ? ' @query="onQuery" @submit="onSubmit"'
-            : ` ref="${dialogRefVar(n)}"`
+            ? ' @query="onQuery" @submit="onSubmit" @reset="onReset"'
+            : ` ref="${refVar(n)}"`
       lines.push(`    <${kebabOf(n.componentName)}${attrs} />`)
     }
     lines.push('  </div>')
@@ -450,11 +524,11 @@ function pageCode(
     lines.push(`  components: { ${componentNodes.map((n) => n.componentName).join(', ')} },`)
     lines.push('  methods: {')
     if (table) {
-      lines.push('    refresh(model) { return this.$refs.table.refresh(model) },')
-      lines.push('    reload(model) { return this.$refs.table.reload(model) },')
+      lines.push(`    refresh(model) { return ${tableRef}.refresh(model) },`)
+      lines.push(`    reload(model) { return ${tableRef}.reload(model) },`)
     }
     if (needsSuccess) {
-      lines.push('    onTableSuccess() { return this.$refs.table.refresh() },')
+      lines.push(`    onTableSuccess() { return ${tableRef}.refresh() },`)
     }
     if (hasRowAction) {
       lines.push('    onRowAction(payload) {')
@@ -475,22 +549,28 @@ function pageCode(
     }
     if (form) {
       lines.push('    onQuery(model) {')
-      lines.push(table ? '      return this.$refs.table.refresh(model)' : "      this.$emit('query', model)")
+      // 新搜索回第 1 页（与库内查询按钮同语义）。
+      lines.push(table ? `      return ${tableRef}.reload(model)` : "      this.$emit('query', model)")
       lines.push('    },')
       lines.push('    onSubmit(model) {')
       lines.push("      this.$emit('save', model)")
       lines.push('    },')
+      lines.push('    onReset() {')
+      // 片段已在按钮里 resetFields()；这里让表格用空条件重新取数。
+      lines.push(table ? `      return ${tableRef}.reload()` : "      this.$emit('reset')")
+      lines.push('    },')
     }
     if (dialogs.length > 0) {
-      lines.push('    open(id, title, row = {}) {')
+      lines.push('    open(id, options = {}) {')
       for (const dialog of dialogs) {
         lines.push(`      if (id === ${q(dialog.id)}) {`)
         lines.push(
-          `        ${openCall(dialog, { vue2, rowExpr: 'row', titleExpr: 'title', table: !!table, emitSuccess })}`,
+          `        ${openCall(dialog, { vue2, rowExpr: 'options.row || {}', titleExpr: 'options.title', table: !!table, emitSuccess, hostCallback: true })}`,
         )
-        lines.push('        return')
+        lines.push('        return true')
         lines.push('      }')
       }
+      lines.push('      return false')
       lines.push('    },')
     }
     lines.push('  },')
@@ -512,15 +592,16 @@ function pageCode(
     lines.push(`const emit = defineEmits([${analysis.faces.emit.map((e) => q(e)).join(', ')}])`)
     lines.push('')
   }
-  if (table) lines.push('const tableRef = ref(null)')
+  const tableRef = table ? refVar(table) : ''
+  if (table) lines.push(`const ${tableRef} = ref(null)`)
   for (const dialog of dialogs) {
     if (dialog.composableName) lines.push(`const { open: ${composableOpenVar(dialog)} } = ${dialog.composableName}()`)
-    else lines.push(`const ${dialogRefVar(dialog)} = ref(null)`)
+    else lines.push(`const ${refVar(dialog)} = ref(null)`)
   }
   if (needsSuccess) {
     lines.push('')
     lines.push('function onTableSuccess() {')
-    lines.push('  tableRef.value?.refresh?.()')
+    lines.push(`  ${tableRef}.value?.refresh?.()`)
     lines.push('}')
   }
   if (hasRowAction) {
@@ -544,32 +625,45 @@ function pageCode(
     lines.push(
       ts ? 'function onQuery(model: Record<string, unknown>) {' : 'function onQuery(model) {',
     )
-    lines.push(table ? '  tableRef.value?.refresh?.(model)' : "  emit('query', model)")
+    // 新搜索回第 1 页（与库内查询按钮同语义：keepPage: false）。
+    lines.push(table ? `  ${tableRef}.value?.reload?.(model)` : "  emit('query', model)")
     lines.push('}')
     lines.push('')
     lines.push(ts ? 'function onSubmit(model: Record<string, unknown>) {' : 'function onSubmit(model) {')
     lines.push("  emit('save', model)")
     lines.push('}')
+    lines.push('')
+    // 片段点「重置」时已 resetFields()；表格用空条件重新取数，否则列表还是旧过滤结果。
+    lines.push('function onReset() {')
+    lines.push(table ? `  ${tableRef}.value?.reload?.()` : "  emit('reset')")
+    lines.push('}')
   }
   if (table) {
     lines.push('')
     lines.push(ts ? 'function refresh(model?: Record<string, unknown>) {' : 'function refresh(model) {')
-    lines.push('  return tableRef.value?.refresh?.(model)')
+    lines.push(`  return ${tableRef}.value?.refresh?.(model)`)
     lines.push('}')
     lines.push('')
     lines.push(ts ? 'function reload(model?: Record<string, unknown>) {' : 'function reload(model) {')
-    lines.push('  return tableRef.value?.reload?.(model)')
+    lines.push(`  return ${tableRef}.value?.reload?.(model)`)
     lines.push('}')
   }
   if (dialogs.length > 0) {
     lines.push('')
-    lines.push(ts ? 'function open(id: string, title?: string, row: any = {}) {' : 'function open(id, title, row = {}) {')
+    lines.push(
+      ts
+        ? 'function open(id: string, options: { title?: string; row?: any; onSuccess?: (data: any) => void } = {}): boolean {'
+        : 'function open(id, options = {}) {',
+    )
     for (const dialog of dialogs) {
       lines.push(`  if (id === ${q(dialog.id)}) {`)
-      lines.push(`    ${openCall(dialog, { vue2, rowExpr: 'row', titleExpr: 'title', table: !!table, emitSuccess })}`)
-      lines.push('    return')
+      lines.push(
+        `    ${openCall(dialog, { vue2, rowExpr: 'options.row ?? {}', titleExpr: 'options.title', table: !!table, emitSuccess, hostCallback: true })}`,
+      )
+      lines.push('    return true')
       lines.push('  }')
     }
+    lines.push('  return false')
     lines.push('}')
   }
   if (analysis.faces.expose.length > 0) {
@@ -581,9 +675,9 @@ function pageCode(
   lines.push('<template>')
   lines.push('  <div class="es-composed-page">')
   for (const n of componentNodes) {
-    if (n.scene === 'table') lines.push(`    <${n.componentName} ref="tableRef" @row-action="onRowAction" />`)
-    else if (n.scene === 'form') lines.push(`    <${n.componentName} @query="onQuery" @submit="onSubmit" />`)
-    else lines.push(`    <${n.componentName} ref="${dialogRefVar(n)}" />`)
+    if (n.scene === 'table') lines.push(`    <${n.componentName} ref="${refVar(n)}" @row-action="onRowAction" />`)
+    else if (n.scene === 'form') lines.push(`    <${n.componentName} @query="onQuery" @submit="onSubmit" @reset="onReset" />`)
+    else lines.push(`    <${n.componentName} ref="${refVar(n)}" />`)
   }
   lines.push('  </div>')
   lines.push('</template>')

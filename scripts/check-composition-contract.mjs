@@ -8,18 +8,23 @@
  *
  *   ① **接线只来自契约**：每条 wire 的 from 通道 ∈ `ARTIFACT_RUNTIME[artifact].emits`
  *      或 `success.name`；to 节点的通道 ∈ 该 artifact 的 `expose`；
- *   ② **没有静默丢弃**：每个在场 artifact 的每个可触发通道（form submit/query、
+ *   ② **没有静默丢弃**：每个在场 artifact 的每个可触发通道（form submit/query/reset、
  *      dialog success、带行按钮的 table row-action）都出现在某条 wire 的 from；
  *      每条 `to.page` 的 event 都在 `faces.emit` 里，反之亦然；
  *   ③ **页面与会话自洽**：`Page.vue` 的 `defineEmits` / `defineExpose` 与 `faces`
  *      完全一致；每个节点文件都以相对导入出现；每个 dialog 节点的标题字面量等于
- *      `dialogTitleFor(id)`；有成功接线时页面必须有 `onTableSuccess`；
+ *      `intent.defaultTitle ?? dialogTitleFor(id)`（与单独发射同源）；有成功接线时
+ *      页面必须有 `onTableSuccess`；
  *   ④ **片段字节不变**：节点文件代码与单独 `emitSceneArtifact` 逐字节相等；
  *      `files` 路径唯一、每份 `code` 都在返回文本里；
  *   ⑤ **信封**：contract/target/wires/faces/nodes 自洽，指纹 16 位、两次相同、
  *      改一个字段（label）必变；
  *   ⑥ **结构化拒绝**：crud 节点、同场景两个节点、混装 target、vue2 + composable、
- *      空节点 —— 都必须是 `isError` 且没有文件 / 信封。
+ *      空节点 —— 都必须是 `isError` 且没有文件 / 信封；
+ *   ⑦ **页面真的能编译**：每个组合的 `Page.vue` 都过对应框架的 SFC 编译器
+ *      （vue3/antdv：`@vue/compiler-sfc` 的 parse + compileScript + compileTemplate；
+ *      vue2：`vue@2.7/compiler-sfc` 的 parse + compileTemplate）。只跑生成器不编译
+ *      会漏掉「重复 `const` 声明」这类只差一个 id 就触发的产物错误。
  *
  * ## 驱动方式
  *
@@ -30,6 +35,7 @@
  * 用法：`node scripts/check-composition-contract.mjs`
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
@@ -47,11 +53,62 @@ function fail(message) {
 }
 
 /**
- * 片段里**只影响自身**的通道：不跨节点、也不需要宿主消费。
- * `form.reset` 只清空表单自己的 model；是否随后重查由用户点「查询」决定，
- * 组合页替它刷新表格会凭空多出一次请求。登记在此 = 「确认过，不是遗漏」。
+ * 页面模板的编译见证。
+ *
+ * vue3 / antdv 走根部的 `@vue/compiler-sfc`：`compileScript` 会像真实构建一样
+ * 解析 `<script setup>`（重复 `const`、非法标识符都在这一步红）；`compileTemplate`
+ * 兜住模板编译期错误。vue2 走 `packages/vue2` 自带 vue@2.7 的 compiler-sfc：
+ * Options API 页面只编译模板，脚本由 Node 语法层保证（生成器只写对象字面量）。
+ *
+ * 编译器不可用时**判红**而不是跳过 —— 「没跑」和「通过」在门禁里不能是同一件事。
  */
-const INTERNAL_CHANNELS = new Map([['form', new Set(['reset'])]])
+let vue3Compiler
+let vue2Compiler
+async function compilePage(target, code, label) {
+  try {
+    if (target === 'vue2') {
+      if (!vue2Compiler) {
+        vue2Compiler = createRequire(join(ROOT, 'packages', 'vue2', 'package.json'))('vue/compiler-sfc')
+      }
+      const descriptor = vue2Compiler.parse({ source: code, filename: 'Page.vue' })
+      if (descriptor.template) {
+        const compiled = vue2Compiler.compileTemplate({
+          source: descriptor.template.content,
+          filename: 'Page.vue',
+        })
+        if (compiled.errors.length > 0) {
+          fail(`${label}: vue2 模板编译失败 — ${compiled.errors.map(String).join('; ')}`)
+        }
+      }
+      return
+    }
+    if (!vue3Compiler) vue3Compiler = await import('@vue/compiler-sfc')
+    const { descriptor, errors } = vue3Compiler.parse(code, { filename: 'Page.vue' })
+    if (errors.length > 0) {
+      fail(`${label}: SFC 解析失败 — ${errors.map(String).join('; ')}`)
+      return
+    }
+    if (descriptor.scriptSetup || descriptor.script) {
+      try {
+        vue3Compiler.compileScript(descriptor, { id: 'composed-page' })
+      } catch (err) {
+        fail(`${label}: <script setup> 编译失败 — ${err.message}`)
+      }
+    }
+    if (descriptor.template) {
+      const compiled = vue3Compiler.compileTemplate({
+        source: descriptor.template.content,
+        filename: 'Page.vue',
+        id: 'composed-page',
+      })
+      if (compiled.errors.length > 0) {
+        fail(`${label}: 模板编译失败 — ${compiled.errors.map(String).join('; ')}`)
+      }
+    }
+  } catch (err) {
+    fail(`${label}: 编译见证无法运行 — ${err.message}`)
+  }
+}
 
 async function loadShared() {
   const tmp = mkdtempSync(join(ROOT, 'node_modules', 'es-composition-'))
@@ -108,7 +165,7 @@ function quotedList(code, head) {
   return [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1])
 }
 
-function checkPlan(file, plan, mod, expectArtifacts) {
+async function checkPlan(file, plan, mod, expectArtifacts) {
   const { emitComposition, emitSceneArtifact, ARTIFACT_RUNTIME, COMPOSITION_CONTRACT_VERSION } = mod
   const result = emitComposition(plan)
   if (result.isError) {
@@ -170,7 +227,6 @@ function checkPlan(file, plan, mod, expectArtifacts) {
     }
     if (runtime.success.name) required.add(runtime.success.name)
     for (const channel of required) {
-      if (INTERNAL_CHANNELS.get(node.plan.scene)?.has(channel)) continue
       if (!fromChannels.has(`${id}.${channel}`)) {
         fail(`${file}: ${id}.${channel} 没有接线，也没有升级为页面事件（静默丢弃）`)
       }
@@ -215,8 +271,10 @@ function checkPlan(file, plan, mod, expectArtifacts) {
   }
   for (const node of plan.nodes) {
     if (node.plan.scene !== 'dialog') continue
-    if (!page.code.includes(`'${dialogTitleFor(node.id)}'`)) {
-      fail(`${file}: Page.vue 缺少弹窗标题字面量 '${dialogTitleFor(node.id)}'（应与 DIALOG_TITLES 同源）`)
+    const declared = node.plan.intent.defaultTitle
+    const title = typeof declared === 'string' ? declared : dialogTitleFor(node.id)
+    if (!page.code.includes(`'${title}'`)) {
+      fail(`${file}: Page.vue 缺少弹窗标题字面量 '${title}'（应与 intent.defaultTitle / DIALOG_TITLES 同源）`)
     }
   }
   const hasSuccessWire = wires.some((w) => w.from.channel === 'onSuccess' && 'node' in w.to && w.to.channel === 'refresh')
@@ -226,6 +284,8 @@ function checkPlan(file, plan, mod, expectArtifacts) {
   if (!hasSuccessWire && page.code.includes('onTableSuccess')) {
     fail(`${file}: 没有成功接线，页面却生成了 onTableSuccess`)
   }
+  // ⑦ 编译见证
+  await compilePage(envelope.target, page.code, file)
 
   // ⑤ 信封
   if (envelope.contract !== COMPOSITION_CONTRACT_VERSION) {
@@ -316,13 +376,24 @@ async function main() {
         fragmentNode('edit', 'dialog', `frag-dialog-02-component-${target}.json`)
 
       const combos = [
+        // 单节点：组合页也必须是一张能编译的页面（ref 名、faces 都按同一套规则）。
+        ['table', [table()], ['table']],
+        ['form', [form()], ['form']],
+        ['dialog', [dialog()], ['dialog-component']],
         ['table+form', [table(), form()], ['table', 'form']],
         ['form+dialog', [form(), dialog()], ['form', 'dialog-component']],
         ['table+dialog', [table(), dialog()], ['table', 'dialog-component']],
+        // 弹窗节点 id 与表格的旧写死 ref 名撞车（@1 会生成两条 `const tableRef`）。
+        // 这条用例存在的唯一目的就是让派生 ref 名的回归在编译腿里变红。
+        [
+          'table+dialog(id=table)',
+          [table(), fragmentNode('table', 'dialog', `frag-dialog-02-component-${target}.json`)],
+          ['table', 'dialog-component'],
+        ],
         ['table+form+dialog', [table(), form(), dialog()], ['table', 'form', 'dialog-component']],
       ]
       for (const [label, nodes, artifacts] of combos) {
-        checkPlan(`${target} / ${label}`, { target, nodes }, mod, artifacts)
+        await checkPlan(`${target} / ${label}`, { target, nodes }, mod, artifacts)
         plans++
       }
     }
@@ -333,7 +404,7 @@ async function main() {
         fragmentNode('users-table', 'table', `frag-table-01-${target}.json`),
         fragmentNode('edit', 'dialog', `frag-dialog-01-${target}.json`),
       ]
-      checkPlan(`${target} / table+dialog(composable)`, { target, nodes }, mod, ['table', 'dialog-composable'])
+      await checkPlan(`${target} / table+dialog(composable)`, { target, nodes }, mod, ['table', 'dialog-composable'])
       plans++
     }
 

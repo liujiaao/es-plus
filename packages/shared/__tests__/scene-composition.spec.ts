@@ -50,22 +50,24 @@ describe('composition — 接线派生', () => {
     expect(a.wires).toEqual([
       { from: { node: 'users', channel: 'row-action' }, to: { node: 'edit', channel: 'open' }, when: { rowAction: 'edit' } },
       { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'row-action' }, when: { rowAction: 'remove' } },
-      { from: { node: 'filter', channel: 'query' }, to: { node: 'users', channel: 'refresh' } },
+      { from: { node: 'filter', channel: 'query' }, to: { node: 'users', channel: 'reload' } },
       { from: { node: 'filter', channel: 'submit' }, to: { page: 'emit', event: 'save' } },
+      { from: { node: 'filter', channel: 'reset' }, to: { node: 'users', channel: 'reload' } },
       { from: { node: 'edit', channel: 'onSuccess' }, to: { node: 'users', channel: 'refresh' } },
     ])
     expect(a.faces.expose).toEqual(['refresh', 'reload', 'open'])
     expect(a.faces.emit).toEqual(['row-action', 'save'])
   })
 
-  it('没有表格：查询 / 成功都升级为页面事件，不静默丢弃', () => {
+  it('没有表格：查询 / 重置 / 成功都升级为页面事件，不静默丢弃', () => {
     const a = planComposition(plan([form(), dialog()]))
     expect(a.wires).toEqual([
       { from: { node: 'filter', channel: 'query' }, to: { page: 'emit', event: 'query' } },
       { from: { node: 'filter', channel: 'submit' }, to: { page: 'emit', event: 'save' } },
+      { from: { node: 'filter', channel: 'reset' }, to: { page: 'emit', event: 'reset' } },
       { from: { node: 'edit', channel: 'onSuccess' }, to: { page: 'emit', event: 'success' } },
     ])
-    expect(a.faces.emit).toEqual(['query', 'save', 'success'])
+    expect(a.faces.emit).toEqual(['query', 'save', 'reset', 'success'])
     expect(a.faces.expose).toEqual(['open'])
   })
 
@@ -140,11 +142,46 @@ describe('composition — 产物', () => {
     expect(page.code).toContain("editRef.value?.open('编辑', payload.row, onTableSuccess)")
     // 未匹配的行动作升级为页面事件
     expect(page.code).toContain("emit('row-action', payload)")
-    // 查询 → 表格刷新；提交 → 页面 save
-    expect(page.code).toContain('tableRef.value?.refresh?.(model)')
+    // 查询 → 表格重载（新搜索回第 1 页）；提交 → 页面 save；重置 → 表格重载
+    expect(page.code).toContain('usersRef.value?.reload?.(model)')
     expect(page.code).toContain("emit('save', model)")
+    expect(page.code).toContain('function onReset() {')
+    expect(page.code).toContain('usersRef.value?.reload?.()')
+    expect(page.code).toContain('@reset="onReset"')
     expect(page.code).toContain('defineExpose({ refresh, reload, open })')
     expect(page.code).toContain('onTableSuccess')
+  })
+
+  it('弹窗节点 id 与表格撞名时不会产生重复声明（id=table 回归）', () => {
+    const result = emitComposition(plan([table('users'), dialog('table')]))
+    expect(result.isError).toBeUndefined()
+    const page = result.page!
+    const decls = [...page.code.matchAll(/const\s+([A-Za-z_$][\w$]*)\s*=/g)].map((m) => m[1])
+    expect(decls.filter((x, i) => decls.indexOf(x) !== i)).toEqual([])
+    // 表格 ref 由节点 id 派生，弹窗用表格的旧名字也不会撞。
+    expect(page.code).toContain('const usersRef = ref(null)')
+    expect(page.code).toContain('const tableRef = ref(null)')
+    expect(page.code).toContain("tableRef.value?.open(options.title || 'table', options.row ?? {}")
+  })
+
+  it('弹窗标题优先取节点 intent.defaultTitle（与单独发射同一真源）', () => {
+    const result = emitComposition(
+      plan([table('users', { rowButtons: [{ key: 'edit', name: '编辑' }] }), dialog('edit', { defaultTitle: '编辑用户' })]),
+    )
+    const page = result.page!
+    expect(page.code).toContain("'编辑用户'")
+    expect(page.code).not.toContain("'编辑'")
+  })
+
+  it('页面 open() 吃选项对象、返回是否命中，并在表格刷新后调用宿主 onSuccess', () => {
+    const page = emitComposition(plan([table(), dialog()])).page!
+    expect(page.code).toContain(
+      'function open(id: string, options: { title?: string; row?: any; onSuccess?: (data: any) => void } = {}): boolean {',
+    )
+    expect(page.code).toContain("options.row ?? {}")
+    expect(page.code).toContain('options.onSuccess?.(data)')
+    expect(page.code).toContain('return true')
+    expect(page.code).toContain('return false')
   })
 
   it('composable 弹窗：按返回值解构 open，带标题回落，无表格时成功升级为页面事件', () => {
@@ -155,7 +192,7 @@ describe('composition — 产物', () => {
     expect(page.code).toContain("import { useAddDialog } from './add.tsx'")
     expect(page.code).toContain('const { open: openAdd } = useAddDialog()')
     expect(page.code).toContain(
-      "openAdd(title || '新增', row, (data) => emit('success', { id: 'add', data }))",
+      "openAdd(options.title || '新增', options.row ?? {}, (data) => { emit('success', { id: 'add', data }); options.onSuccess?.(data) })",
     )
     expect(page.code).toContain("defineEmits(['success'])")
     expect(page.code).toContain('defineExpose({ open })')
@@ -171,8 +208,12 @@ describe('composition — 产物', () => {
     expect(page.code).not.toContain('script setup')
     expect(page.code).toContain('export default {')
     expect(page.code).toContain("this.$refs.editRef.open('编辑', payload.row, this.onTableSuccess)")
-    expect(page.code).toContain('onTableSuccess() { return this.$refs.table.refresh() }')
-    expect(page.code).toContain('<users ref="table" @row-action="onRowAction" />')
+    expect(page.code).toContain('onTableSuccess() { return this.$refs.usersRef.refresh() }')
+    expect(page.code).toContain('<users ref="usersRef" @row-action="onRowAction" />')
+    expect(page.code).toContain('open(id, options = {}) {')
+    expect(page.code).toContain('return false')
+    expect(page.code).toContain('return this.$refs.usersRef.reload(model)')
+    expect(page.code).toContain('return this.$refs.usersRef.reload()')
   })
 
   it('文本与信封同源：每份代码都出现在文本里，信封身份自洽', () => {
