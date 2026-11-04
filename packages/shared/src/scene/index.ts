@@ -50,3 +50,22 @@ export {
   type ArtifactEnvelope,
   type ArtifactFile,
 } from './artifact.js'
+
+// P9：场景能力台账（`es-plus.capabilities@1`）。与信封一样是只读元数据 + 纯函数：
+// 场景词汇来自接口（编译期对账），CRUD 降级直接投影 `RENDER_PLAN_CONTRACT`。
+export {
+  CAPABILITY_CONTRACT_VERSION,
+  CAPABILITY_VERDICTS,
+  SCENE_INTENT_KEYS,
+  CRUD_INTENT_KEYS,
+  TABLE_INTENT_KEYS,
+  FORM_INTENT_KEYS,
+  DIALOG_INTENT_KEYS,
+  assessIntent,
+  capabilityLedger,
+  type CapabilityVerdict,
+  type CapabilityKeyVerdict,
+  type CapabilityAssessmentInput,
+  type CapabilityLedger,
+  type IntentCapability,
+} from './capability.js'

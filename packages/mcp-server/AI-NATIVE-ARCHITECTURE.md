@@ -216,6 +216,8 @@ surfaces
 > `structuredContent`：`contract` / `scene` / `artifact` / `target` / `mode` /
 > `files[]` / `config` / `warnings[]` / `fingerprint`；组合页另有 `nodes[]` /
 > `wires[]` / `faces` / `page`。`content.text` 仍是逐字节不变的旧文本。
+> 每个节点信封还带 `capability`（`es-plus.capabilities@1`）：意图逐键判定
+> `accepted` / `degraded` / `unsupported` + `missing`（见 §4.1c）。
 
 ### 4.1b 场景路由器与组合页（P2 / P6b）
 
@@ -232,6 +234,18 @@ surfaces
 - **接线**：由 `ARTIFACT_RUNTIME` 推导（行按钮 key 命中弹窗 id → `open`；查询 → 表格 `reload`；重置 → `reload`；提交 → 页面事件 `save`；弹窗成功 → 表格 `refresh`），不接受模型手写 wiring。
 - **输出**：文本 + `structuredContent`（组合信封：`nodes` / `wires` / `faces` / `page`）。
 - **边界**：组合页只装配 **UI 行为**，不内建 add/edit/delete 请求；`save` / 未命中的 `row-action` 上抛给宿主。需要内建请求语义时用 `scene='crud'`。
+
+### 4.1c 能力台账（P9，`es-plus.capabilities@1`）
+
+宿主在**生成之前**就能知道「我填的键会不会落地」，不必靠试错：
+
+- **资源** `esplus://capabilities`（JSON）：
+  - 四场景各自的 `required` / `accepted` 意图键（与四个工具的 Zod 形状同源，`check:capability-ledger` 守卫）；
+  - `crudKeys`：CRUD 顶层配置键在 `schema` / `sfc` 下的落位（`emit` / `derive` / `meta` / `downgrade` + reason）—— 直接投影 `RENDER_PLAN_CONTRACT`；
+  - `crudWithoutTable`：无表格面时片段分支**有载体**的键与**没有载体**的键；
+  - `targetMatrix`：AN-09 的 target × 键能力矩阵。
+- **信封**：每个节点信封带 `capability`（`assessIntent` 的结果）：`declared[]`（逐键 `accepted` / `degraded` / `unsupported` + reason）、`missing[]`、`degraded[]`、`unsupported[]`、`ok`。它是派生视图，**不参与指纹**、不改正文；评估自身失败时省略。
+- **口径**：MCP 前门对未知意图键是**结构化拒绝**（`collectUnknownKeys`）；`unsupported` 主要服务直接调 `emitScene*` 的消费者（CLI / eval / 自有接线）。`degraded` 不阻断生成（例如 sfc 模式的 `dialogs` 退化为 actions 派生的通用弹窗），但宿主可以据此选择 schema 模式或改走整页入口。
 
 ### 4.2 逐个说明
 

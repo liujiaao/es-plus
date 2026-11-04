@@ -167,6 +167,7 @@ Steering few-shots (target-independent — read before generating):
 
   - \`esplus://examples/surfaces\` — NL → \`generate_scene\` (scene='crud') surfaces, every subset (the front-door decision)
   - \`esplus://examples/nl-to-config\` — NL → full StructuredCrudConfig, with reasoning
+  - \`esplus://capabilities\` — scene capability ledger (\`es-plus.capabilities@1\`): accepted/required intent keys per scene, CRUD key dispositions per mode (downgrade + reason), target × key matrix. Read it before composing an intent to know which keys actually land in the artifact.
 
 The remaining resource URIs use a target suffix:
 

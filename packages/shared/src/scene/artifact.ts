@@ -32,6 +32,7 @@
 
 import type { TargetFramework } from '../target.js'
 import { ARTIFACT_KINDS, type ArtifactKind, type SceneId, type SceneMode } from './registry.js'
+import type { IntentCapability } from './capability.js'
 
 /** 协议版本。任何破坏兼容的字段改动都必须换版本号。 */
 export const ARTIFACT_CONTRACT_VERSION = 'es-plus.artifact@1' as const
@@ -63,6 +64,12 @@ export interface ArtifactDraft {
 export interface ArtifactEnvelope extends ArtifactDraft {
   contract: typeof ARTIFACT_CONTRACT_VERSION
   fingerprint: string
+  /**
+   * P9：意图逐键能力判定（`es-plus.capabilities@1`）。**派生字段** —— 由
+   * `emitSceneArtifact` 在盖章后附加，不参与 `fingerprint`（同一份产物的身份不因
+   * 多加一份解释视图而改变；组合信封的 `nodeFingerprints` 也不受影响）。
+   */
+  capability?: IntentCapability
 }
 
 /**

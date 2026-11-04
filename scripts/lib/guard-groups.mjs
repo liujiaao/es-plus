@@ -64,6 +64,7 @@ export const GUARD_GROUPS = Object.freeze([
     title: '场景注册表 / 路由器 / 前门',
     steps: [
       'check:scene-registry',
+      'check:capability-ledger',
       'check:scene-parity',
       'check:artifact-envelope',
       'check:composition-contract',

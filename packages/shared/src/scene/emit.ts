@@ -22,6 +22,7 @@ import {
   type ArtifactEnvelope,
   type ArtifactFile,
 } from './artifact.js'
+import { assessIntent } from './capability.js'
 
 /**
  * 场景发射层 —— **唯一**把意图表落到既有发射器的确定性代码。
@@ -496,67 +497,84 @@ function sceneErrorNoun(scene: SceneId): string {
  * 文本由 `emitScene` 同一条路径产生：本函数只**附加** `envelope`，不改任何字节。
  * `check-artifact-envelope` 对全部语料断言两者 `text` 相等；`check:scene-parity`
  * 继续守 `generate_scene` 与旧工具的字节等价。
+ *
+ * P9：信封盖章后附加 `capability`（`assessIntent` 的逐键判定）。这是纯派生视图 ——
+ * 不参与指纹、不进正文；评估自身抛错时降级为「没有 capability」，绝不让解释层
+ * 破坏生成。
  */
 export function emitSceneArtifact(plan: ScenePlan): SceneArtifactResult {
   try {
-    switch (plan.scene) {
-      case 'crud':
-        return emitCrudScene(plan.intent)
-      case 'table': {
-        const r = generateTableBlock(plan.intent)
-        return {
-          text: formatFragmentText(r, 'vue'),
-          envelope: buildArtifactEnvelope({
-            scene: 'table',
-            artifact: 'table',
-            target: plan.intent.target ?? DEFAULT_TARGET,
-            mode: null,
-            files: [{ path: 'TableBlock.vue', code: r.code, language: 'vue' }],
-            config: plan.intent,
-            warnings: r.warnings,
-          }),
-        }
+    const result = emitSceneArtifactCore(plan)
+    if (!result.envelope) return result
+    try {
+      return {
+        ...result,
+        envelope: Object.freeze({ ...result.envelope, capability: assessIntent(plan) }),
       }
-      case 'form': {
-        const r = generateFormBlock(plan.intent)
-        return {
-          text: formatFragmentText(r, 'vue'),
-          envelope: buildArtifactEnvelope({
-            scene: 'form',
-            artifact: 'form',
-            target: plan.intent.target ?? DEFAULT_TARGET,
-            mode: null,
-            files: [{ path: 'FormBlock.vue', code: r.code, language: 'vue' }],
-            config: plan.intent,
-            warnings: r.warnings,
-          }),
-        }
-      }
-      case 'dialog': {
-        const r = generateDialogBlock(plan.intent)
-        const component = plan.intent.mode === 'component'
-        const language: ArtifactFile['language'] = component
-          ? 'vue'
-          : plan.intent.typescript === false
-            ? 'jsx'
-            : 'tsx'
-        const name = plan.intent.composableName || 'useFormDialog'
-        return {
-          text: formatFragmentText(r, 'tsx'),
-          envelope: buildArtifactEnvelope({
-            scene: 'dialog',
-            artifact: component ? 'dialog-component' : 'dialog-composable',
-            target: plan.intent.target ?? DEFAULT_TARGET,
-            mode: plan.intent.mode ?? 'composable',
-            files: [{ path: `${name}.${language}`, code: r.code, language }],
-            config: plan.intent,
-            warnings: r.warnings,
-          }),
-        }
-      }
+    } catch {
+      return result
     }
   } catch (error: any) {
     return { text: `Error generating ${sceneErrorNoun(plan.scene)}: ${error.message}`, isError: true }
+  }
+}
+
+function emitSceneArtifactCore(plan: ScenePlan): SceneArtifactResult {
+  switch (plan.scene) {
+    case 'crud':
+      return emitCrudScene(plan.intent)
+    case 'table': {
+      const r = generateTableBlock(plan.intent)
+      return {
+        text: formatFragmentText(r, 'vue'),
+        envelope: buildArtifactEnvelope({
+          scene: 'table',
+          artifact: 'table',
+          target: plan.intent.target ?? DEFAULT_TARGET,
+          mode: null,
+          files: [{ path: 'TableBlock.vue', code: r.code, language: 'vue' }],
+          config: plan.intent,
+          warnings: r.warnings,
+        }),
+      }
+    }
+    case 'form': {
+      const r = generateFormBlock(plan.intent)
+      return {
+        text: formatFragmentText(r, 'vue'),
+        envelope: buildArtifactEnvelope({
+          scene: 'form',
+          artifact: 'form',
+          target: plan.intent.target ?? DEFAULT_TARGET,
+          mode: null,
+          files: [{ path: 'FormBlock.vue', code: r.code, language: 'vue' }],
+          config: plan.intent,
+          warnings: r.warnings,
+        }),
+      }
+    }
+    case 'dialog': {
+      const r = generateDialogBlock(plan.intent)
+      const component = plan.intent.mode === 'component'
+      const language: ArtifactFile['language'] = component
+        ? 'vue'
+        : plan.intent.typescript === false
+          ? 'jsx'
+          : 'tsx'
+      const name = plan.intent.composableName || 'useFormDialog'
+      return {
+        text: formatFragmentText(r, 'tsx'),
+        envelope: buildArtifactEnvelope({
+          scene: 'dialog',
+          artifact: component ? 'dialog-component' : 'dialog-composable',
+          target: plan.intent.target ?? DEFAULT_TARGET,
+          mode: plan.intent.mode ?? 'composable',
+          files: [{ path: `${name}.${language}`, code: r.code, language }],
+          config: plan.intent,
+          warnings: r.warnings,
+        }),
+      }
+    }
   }
 }
 

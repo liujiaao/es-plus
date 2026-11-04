@@ -117,6 +117,8 @@ try {
     ['组合页', 'generate_composition'],
     ['兼容入口标签', 'COMPAT ENTRY'],
     ['片段表格的真实边界', 'vxe 富树'],
+    ['能力台账协议', 'es-plus.capabilities@1'],
+    ['能力台账资源', 'esplus://capabilities'],
   ]
   for (const [label, needle] of REQUIRED) {
     if (!doc.includes(needle)) fail(`文档缺少已落地事实（${label}）：「${needle}」`)
