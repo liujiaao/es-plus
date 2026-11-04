@@ -1,5 +1,5 @@
 /**
- * 组合契约 —— `es-plus.composition@1`（P6b）。
+ * 组合契约 —— `es-plus.composition@2`（P6b 落地，P7 升版）。
  *
  * ## 为什么需要它
  *
