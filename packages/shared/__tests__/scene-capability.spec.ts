@@ -214,10 +214,39 @@ describe("capabilityLedger —— 台账与源码同源", () => {
     }
   });
 
-  it("无表分支：accepted / degraded 互斥且并集 == CRUD 词汇", () => {
-    const { accepted, degraded } = ledger.crudWithoutTable;
+  it("无表分支：accepted 是载体表的投影（条件键不是一律有载体）", () => {
+    const { accepted, degraded, carriers } = ledger.crudWithoutTable;
+    // 台账自证：accepted 的每一条都有载体条件，顺序一致。
+    expect(carriers.map((c) => c.key)).toEqual([...accepted]);
+    // 无表也有载体的只有容器/元数据键；formLayout / apiUrl / rowkey 由面决定。
+    expect(carriers.filter((c) => c.when === "always").map((c) => c.key)).toEqual([
+      "surfaces",
+      "target",
+      "typescript",
+      "i18n",
+    ]);
     expect(accepted.filter((k) => degraded.includes(k))).toEqual([]);
     expect([...accepted, ...degraded].sort()).toEqual([...CRUD_INTENT_KEYS].sort());
+  });
+
+  it("无表分支：assessIntent 与载体表行为一致（查询面不给 rowkey / apiUrl 载体）", () => {
+    const intent: Record<string, unknown> = {
+      name: "X",
+      apiUrl: "/x",
+      surfaces: { query: [field] },
+    };
+    for (const k of CRUD_INTENT_KEYS) if (intent[k] === undefined) intent[k] = true;
+    const cap = assessIntent({ scene: "crud", intent });
+    expect(cap.degraded).not.toContain("formLayout");
+    expect(cap.degraded).toContain("rowkey");
+    expect(cap.degraded).toContain("apiUrl");
+    // 弹窗面一给，两者都有载体（apiUrl 非空）。
+    const withDialog = assessIntent({
+      scene: "crud",
+      intent: { ...intent, surfaces: { query: [field], dialog: ["add"] } },
+    });
+    expect(withDialog.degraded).not.toContain("rowkey");
+    expect(withDialog.degraded).not.toContain("apiUrl");
   });
 });
 

@@ -117,12 +117,53 @@ try {
     if (row.reason !== rule.reason) fail(`crudKeys.${row.key}.reason 与契约不一致`)
   }
 
-  // ── 4. 无表分支：互斥 + 并集 == CRUD 词汇 ──────────────────────────────
-  const { accepted, degraded } = ledger.crudWithoutTable
-  const overlap = accepted.filter((k) => degraded.includes(k))
-  if (overlap.length) fail(`crudWithoutTable 的 accepted/degraded 重叠：${overlap.join(',')}`)
-  if (JSON.stringify(sorted([...accepted, ...degraded])) !== JSON.stringify(sorted(mod.CRUD_INTENT_KEYS))) {
+  // ── 4. 无表分支：台账 ↔ 判定（不是「互斥 + 并集」这种恒真式）────────────
+  //
+  // 此前这一节只断言 accepted ∩ degraded = ∅ 且并集 = CRUD 词汇 —— 而 degraded 本来就
+  // 由「CRUD 词汇减去 accepted」算出，这两条对**任何** accepted 清单都成立：台账把
+  // rowkey 写成「无表一律有载体」也照样全绿。真判据是行为：把全部 CRUD 键都声明一遍，
+  // 看无表分支到底判谁 accepted。
+  const { accepted: ntAccepted, degraded: ntDegraded, carriers } = ledger.crudWithoutTable
+  if (JSON.stringify(carriers.map((c) => c.key)) !== JSON.stringify(ntAccepted)) {
+    fail(
+      `crudWithoutTable.carriers=${JSON.stringify(carriers.map((c) => c.key))} 与 accepted=${JSON.stringify(ntAccepted)} 不一致`,
+    )
+  }
+  const ntOverlap = ntAccepted.filter((k) => ntDegraded.includes(k))
+  if (ntOverlap.length) fail(`crudWithoutTable 的 accepted/degraded 重叠：${ntOverlap.join(',')}`)
+  if (JSON.stringify(sorted([...ntAccepted, ...ntDegraded])) !== JSON.stringify(sorted(mod.CRUD_INTENT_KEYS))) {
     fail('crudWithoutTable 的 accepted+degraded 并集 ≠ CRUD_INTENT_KEYS')
+  }
+
+  // 声明全部 CRUD 键（台账没登记条件的键补占位值），逐键判定即为该形态的载体集。
+  const acceptedInNoTable = (surfaces) => {
+    const intent = { name: 'X', apiUrl: '/x', surfaces }
+    for (const k of mod.CRUD_INTENT_KEYS) if (intent[k] === undefined) intent[k] = true
+    const cap = mod.assessIntent({ scene: 'crud', intent })
+    return mod.CRUD_INTENT_KEYS.filter((k) => !cap.degraded.includes(k))
+  }
+  const ntField = { prop: 'a', label: 'A', formtype: 'Input' }
+  const ALWAYS_CARRIED = ['surfaces', 'target', 'typescript', 'i18n']
+  const noTableShapes = [
+    ['无面', {}, ALWAYS_CARRIED],
+    ['仅查询面', { query: [ntField] }, [...ALWAYS_CARRIED, 'formLayout']],
+    ['仅表单面', { form: [ntField] }, [...ALWAYS_CARRIED, 'formLayout']],
+    ['仅弹窗面', { dialog: ['add'] }, [...ALWAYS_CARRIED, 'apiUrl', 'rowkey']],
+    ['查询+表单+弹窗', { query: [ntField], form: [ntField], dialog: ['add'] }, ntAccepted],
+  ]
+  for (const [label, surfaces, expected] of noTableShapes) {
+    const got = acceptedInNoTable(surfaces)
+    if (JSON.stringify(sorted(got)) !== JSON.stringify(sorted(expected))) {
+      fail(
+        `无表分支「${label}」：判定 accepted=${sorted(got).join(',')} ≠ 期望 ${sorted(expected).join(',')}` +
+          '（载体条件与台账不一致；改载体请同时改 NO_TABLE_CARRIERS 与本节期望）',
+      )
+    }
+  }
+  // 载体条件必须真的按面生效：查询面不该让 rowkey / apiUrl 变成有载体。
+  const queryOnly = acceptedInNoTable({ query: [ntField] })
+  for (const key of ['rowkey', 'apiUrl']) {
+    if (queryOnly.includes(key)) fail(`无表分支「仅查询面」不该让 ${key} 有载体（它跟弹窗面）`)
   }
 
   // ── 5. 行为断言 ────────────────────────────────────────────────────────

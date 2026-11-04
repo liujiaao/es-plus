@@ -21,8 +21,10 @@
  * - **场景词汇**：四场景的意图键集，编译期与 `CrudIntent` / `TableBlockInput` /
  *   `FormBlockInput` / `DialogBlockInput` 对账（多一个/少一个都过不了 tsc）；
  * - **CRUD 降级**：直接读 `RENDER_PLAN_CONTRACT` 的 `downgrade` 行，不复制 reasons；
- * - **无表 CRUD 支**：`emitCrudScene` 的片段分支只消费 surfaces / target / typescript /
- *   i18n / formLayout / rowkey / apiUrl —— 其余键在该分支没有载体，判 `degraded`。
+ * - **无表 CRUD 支**：`emitCrudScene` 的片段分支消费 surfaces / target / typescript /
+ *   i18n，以及**有对应面才生效的** formLayout（query 或 form 面）/ apiUrl（dialog 面）/
+ *   rowkey（dialog 面 + 非空 apiUrl）—— 其余键在该分支没有载体，判 `degraded`。
+ *   载体条件声明在 `NO_TABLE_CARRIERS` 一处，判定与台账都是它的投影。
  *
  * ## 边界
  *
@@ -229,6 +231,15 @@ export interface CapabilityAssessmentInput {
   intent: unknown
 }
 
+/**
+ * 无表分支里一个键**何时**才有载体。
+ *
+ * `always` 是容器/元数据键（无表也有载体）；其余三个是条件键 —— 无表分支只发片段，
+ * 片段各自带自己的面，所以 formLayout 要 query/form 面、apiUrl 要 dialog 面、
+ * rowkey 还要一个非空 apiUrl。
+ */
+export type NoTableCarrierWhen = 'always' | 'form-surface' | 'dialog-surface' | 'dialog-with-apiUrl'
+
 /** 台账文档（MCP 资源 `esplus://capabilities` 与守卫共用的形状）。 */
 export interface CapabilityLedger {
   contract: typeof CAPABILITY_CONTRACT_VERSION
@@ -249,8 +260,11 @@ export interface CapabilityLedger {
   }>
   /** 无表格面时的 CRUD 片段分支：有载体的键 / 没有载体的键。 */
   crudWithoutTable: {
+    /** 可能落进产物的键（**全集**；条件键见 `carriers`，无条件生效的只有 `when:'always'`）。 */
     accepted: readonly string[]
     degraded: readonly string[]
+    /** `accepted` 逐条的载体条件 —— 台账不再暗示「这 7 个键一律生效」。 */
+    carriers: ReadonlyArray<{ key: string; when: NoTableCarrierWhen }>
   }
   /** 目标端 × 键能力矩阵（AN-09 的 `CAPABILITIES`，同一份数据）。 */
   targetMatrix: readonly CapabilityEntry[]
@@ -296,14 +310,53 @@ function surfaceHas(intent: Record<string, unknown>, name: 'query' | 'table' | '
 const NO_TABLE_REASON =
   'no table surface: the CRUD page generator is bypassed; standalone fragments consume only surfaces / target / typescript / i18n / formLayout / rowkey / apiUrl, so this key has no carrier in the emitted fragments.'
 
-function noTableAccepted(intent: Record<string, unknown>): Set<string> {
-  const accepted = new Set(['surfaces', 'target', 'typescript', 'i18n'])
-  if (surfaceHas(intent, 'query') || surfaceHas(intent, 'form')) accepted.add('formLayout')
-  if (surfaceHas(intent, 'dialog')) {
-    accepted.add('apiUrl')
-    if (typeof intent.apiUrl === 'string' && intent.apiUrl.length > 0) accepted.add('rowkey')
+/**
+ * 无表分支的键载体表 —— **判定与台账的唯一真源**。
+ *
+ * 此前这里只有一份 `noTableAccepted()` 里的 if，台账另抄一份「七个键全都有载体」的
+ * 静态清单：宿主读台账会以为 `rowkey` 在「只有查询面」的无表页里也会生效，而判定
+ * 当场把它标 degraded；两份清单还会各自漂移。`when` 同时是给宿主看的条件与判定的
+ * 输入，台账因此只能是判定语义的投影。
+ */
+const NO_TABLE_CARRIERS = [
+  { key: 'surfaces', when: 'always' },
+  { key: 'target', when: 'always' },
+  { key: 'typescript', when: 'always' },
+  { key: 'i18n', when: 'always' },
+  { key: 'formLayout', when: 'form-surface' },
+  { key: 'rowkey', when: 'dialog-with-apiUrl' },
+  { key: 'apiUrl', when: 'dialog-surface' },
+] as const satisfies readonly { key: string; when: NoTableCarrierWhen }[]
+
+interface NoTableCarrierContext {
+  /** query 面或 form 面（两者各发独立片段，都是 formLayout 的载体）。 */
+  formSurface: boolean
+  dialogSurface: boolean
+  hasApiUrl: boolean
+}
+
+function noTableCarrierReachable(when: NoTableCarrierWhen, ctx: NoTableCarrierContext): boolean {
+  switch (when) {
+    case 'always':
+      return true
+    case 'form-surface':
+      return ctx.formSurface
+    case 'dialog-surface':
+      return ctx.dialogSurface
+    case 'dialog-with-apiUrl':
+      return ctx.dialogSurface && ctx.hasApiUrl
   }
-  return accepted
+}
+
+function noTableAccepted(intent: Record<string, unknown>): Set<string> {
+  const ctx: NoTableCarrierContext = {
+    formSurface: surfaceHas(intent, 'query') || surfaceHas(intent, 'form'),
+    dialogSurface: surfaceHas(intent, 'dialog'),
+    hasApiUrl: typeof intent.apiUrl === 'string' && intent.apiUrl.length > 0,
+  }
+  return new Set(
+    NO_TABLE_CARRIERS.filter((c) => noTableCarrierReachable(c.when, ctx)).map((c) => c.key),
+  )
 }
 
 interface DegradeVerdict {
@@ -436,15 +489,6 @@ export function assessIntent(input: CapabilityAssessmentInput): IntentCapability
 
 /** 台账文档 —— 宿主可一次性读到「四场景各自认什么、CRUD 哪些键会降级」。 */
 export function capabilityLedger(): CapabilityLedger {
-  const noTableAcceptedKeys = [
-    'surfaces',
-    'target',
-    'typescript',
-    'i18n',
-    'formLayout',
-    'rowkey',
-    'apiUrl',
-  ]
   return Object.freeze({
     contract: CAPABILITY_CONTRACT_VERSION,
     scenes: Object.freeze(
@@ -471,9 +515,12 @@ export function capabilityLedger(): CapabilityLedger {
       }),
     ),
     crudWithoutTable: Object.freeze({
-      accepted: Object.freeze([...noTableAcceptedKeys]),
+      accepted: Object.freeze(NO_TABLE_CARRIERS.map((c) => c.key as string)),
       degraded: Object.freeze(
-        CRUD_INTENT_KEYS.filter((k) => !noTableAcceptedKeys.includes(k)),
+        CRUD_INTENT_KEYS.filter((k) => !NO_TABLE_CARRIERS.some((c) => c.key === k)),
+      ),
+      carriers: Object.freeze(
+        NO_TABLE_CARRIERS.map((c) => Object.freeze({ key: c.key as string, when: c.when })),
       ),
     }),
     targetMatrix: CAPABILITIES,
