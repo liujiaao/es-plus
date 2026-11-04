@@ -126,6 +126,21 @@ for (const scene of SCENES) {
   console.log(`  ${scene.padEnd(6)} ${String(list.length).padStart(3)} 条语料`)
 }
 
+// 门禁口径必须与**真实语料量**挂钩：声明 definition95 的场景，语料数不得低于
+// 它自己写的 minCasesFor95。只比常数（(a) 段）挡不住「语料缩水但门禁口径没改」——
+// 21 条上 1 例 = 4.8pp，那时谈 95% 是噪声而不是成绩。
+for (const scene of SCENES) {
+  const contract = SCENE_REGISTRY.find((s) => s.id === scene)
+  if (contract.eval.gate !== 'definition95') continue
+  const count = byScene.get(scene).length
+  if (count < contract.eval.minCasesFor95) {
+    fail(
+      `场景 ${scene}: 声称 definition95 门禁，但语料只有 ${count} 条（minCasesFor95=${contract.eval.minCasesFor95}）` +
+        `—— 样本不足以支撑 95% 口径，请扩语料或降级门禁口径`,
+    )
+  }
+}
+
 // ── (c) 工具注册 ────────────────────────────────────────
 const indexSrc = readFileSync(join(TOOLS_DIR, 'index.ts'), 'utf8')
 if (Object.keys(SCENE_TOOL).length !== SCENES.length) {
