@@ -70,6 +70,37 @@ describe("coverage_report — 工具层", () => {
     expect(res.content[0].text).toContain("generate_composition");
   });
 
+  it("形状不合法（surfaces.table 不是数组）→ L3，而不是误报成 L2 直出", async () => {
+    const res = await call(tool, {
+      pages: [
+        {
+          name: "Broken",
+          scene: "crud",
+          intent: { name: "Broken", apiUrl: "/api/x", surfaces: { table: "oops" } },
+        },
+      ],
+    });
+    expect(res.isError).toBeFalsy();
+    expect(res.structuredContent.pages[0].level).toBe("L3");
+    expect(res.content[0].text).toContain("invalid intent shape");
+  });
+
+  it("无表元数据降级（name/apiUrl/mode）仍是 L1，part 里保留降级键", async () => {
+    const res = await call(tool, {
+      pages: [
+        {
+          name: "Search",
+          scene: "crud",
+          intent: { name: "Search", apiUrl: "/api/x", surfaces: { query: [field("a", "A")] } },
+        },
+      ],
+    });
+    expect(res.structuredContent.pages[0].level).toBe("L1");
+    expect(res.structuredContent.pages[0].parts[0].degraded).toEqual(
+      expect.arrayContaining(["name", "apiUrl"]),
+    );
+  });
+
   it("清单畸形（pages 不是数组）→ isError 且列出 inventoryErrors", async () => {
     // 绕过 Zod：判的是 handler 对畸形清单的兜底，而不是形状校验本身。
     const res = await tool.handler({ pages: "nope" });

@@ -48,6 +48,25 @@ describe("validateIntentPlan — 能力报告（P9 台账）", () => {
     expect(report.stats.fields).toBe(4);
   });
 
+  it("自定义弹窗的 formItems 计入 stats.fields（不是只数弹窗个数）", () => {
+    const report = validateIntentPlan({
+      scene: "crud",
+      intent: {
+        name: "Feedback",
+        apiUrl: "/api/feedback",
+        surfaces: {
+          table: [field("content", "反馈内容", "Input")],
+          dialog: [
+            { key: "feedback", title: "意见反馈", formItems: [field("content", "反馈内容", "Input"), field("phone", "手机号", "Input")] },
+          ],
+        },
+      },
+    });
+    expect(report.stats.surfaces).toEqual({ query: 0, table: 1, form: 0, dialog: 1 });
+    // table 1 + dialog formItems 2
+    expect(report.stats.fields).toBe(3);
+  });
+
   it("未知顶层键 → unsupported-key（会被生成器静默忽略）", () => {
     const report = validateIntentPlan({
       scene: "crud",

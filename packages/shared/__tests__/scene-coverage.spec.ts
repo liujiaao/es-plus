@@ -142,11 +142,13 @@ describe("classifyCoverage — 人工标注样本（P13 验收）", () => {
    * 验收口径：拿一份「人读触发条件表先标级、再看代码怎么判」的样本比对一致性。
    * 标注**不**从实现抄来 —— 每条的期望级别写在这里，判错时断言会点名页名。
    *
-   * 注意两条反直觉但按台账成立的标注：
+   * 注意三条反直觉但按台账成立的标注：
    *  - 无表格页仍必须声明 `name` / `apiUrl`（场景 required），而片段分支里
    *    `name` 没有载体 → `name` 降级；`apiUrl` 只有页面含弹窗时才有载体。
-   *    所以「查询表单单独成页」是 L2，不是 L1。
+   *    但这类**元数据降级**不改变页面渲染，也不需要宿主接线 ⟹ 仍是 L1。
    *  - 宿主声明 `hostCode` 时即使意图本身可直出，也是 L3：那部分必须由宿主写。
+   *  - 形状不合法（`surfaces.table` 不是数组）不是「降级直出」：调用方传入
+   *    `validatePart` 时必须判 L3。
    */
   const samples: ReadonlyArray<{
     name: string
@@ -184,8 +186,8 @@ describe("classifyCoverage — 人工标注样本（P13 验收）", () => {
     },
     {
       name: "EmployeeSearch",
-      expected: "L2",
-      why: "无表格 → 片段分支，name/apiUrl 无载体（降级）",
+      expected: "L1",
+      why: "无表格 → 片段分支，name/apiUrl/mode 只是无载体元数据，页面直接可发",
       page: {
         name: "EmployeeSearch",
         scene: "crud",
@@ -194,8 +196,8 @@ describe("classifyCoverage — 人工标注样本（P13 验收）", () => {
     },
     {
       name: "FeedbackDialog",
-      expected: "L2",
-      why: "无表格弹窗页：apiUrl 有载体，但 name 仍降级",
+      expected: "L1",
+      why: "无表格弹窗页：apiUrl 有载体，name 无载体但不需要宿主编辑",
       page: {
         name: "FeedbackDialog",
         scene: "crud",
@@ -281,7 +283,38 @@ describe("classifyCoverage — 人工标注样本（P13 验收）", () => {
       .map((s, i) => (observed[i] === s.expected ? null : `${s.name}: 标注 ${s.expected}，实判 ${observed[i]}（${s.why}）`))
       .filter((m): m is string => m !== null);
     expect(mismatches).toEqual([]);
-    expect(report.summary).toEqual({ L1: 2, L2: 5, L3: 5 });
+    expect(report.summary).toEqual({ L1: 4, L2: 3, L3: 5 });
+  });
+
+  it("传入 validatePart 时，形状不合法判 L3（不再误报为 L2）", () => {
+    const report = classifyCoverage(
+      { pages: [{ name: "Bad", scene: "crud", intent: { name: "Bad", apiUrl: "/x", surfaces: { table: "oops" } } }] },
+      {
+        validatePart: (scene, intent) =>
+          scene === "crud" && !Array.isArray((intent as any)?.surfaces?.table)
+            ? ["surfaces.table: Expected array, received string"]
+            : [],
+      },
+    );
+    expect(report.pages[0].level).toBe("L3");
+    expect(report.pages[0].reasons.join("\n")).toContain("invalid intent shape");
+    expect(report.pages[0].parts[0].ok).toBe(false);
+  });
+
+  it("元数据降级的无表页：part.degraded 保留，但等级是 L1", () => {
+    const report = classifyCoverage({
+      pages: [
+        {
+          name: "Search",
+          scene: "crud",
+          intent: { name: "Search", apiUrl: "/api/x", surfaces: { query: [field("a", "A")] } },
+        },
+      ],
+    });
+    expect(report.pages[0].level).toBe("L1");
+    expect(report.pages[0].parts[0].degraded).toEqual(expect.arrayContaining(["name", "apiUrl"]));
+    expect(report.pages[0].reasons).toEqual([]);
+    expect(report.pages[0].parts[0].reasons.join("\n")).toContain("no host edit needed");
   });
 });
 

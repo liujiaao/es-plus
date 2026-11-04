@@ -19,8 +19,10 @@
  *
  * ## 边界
  *
- * 分类只回答「按这份意图，生成器能不能直出」。**结构是否合法**由 `validate_intent`
- * 负责（它能看到同一份 Zod schema）；本模块不做字段级校验，也不生成代码。
+ * 分类只回答「按这份意图，生成器能不能直出」。**结构是否合法**由调用方决定：
+ * 传入 `validatePart` 时，不合法部分直接判 L3（例如 `surfaces.table` 不是数组，
+ * `assessIntent` 只会当成「没有表」而误判成可直出）；不传则保持纯台账分类，
+ * 由 `validate_intent` 另行负责形状。本模块不做字段级校验，也不生成代码。
  */
 import { assessIntent } from './capability.js'
 import { isScene, type SceneId } from './registry.js'
@@ -31,9 +33,9 @@ export const COVERAGE_LEVELS = ['L1', 'L2', 'L3'] as const
 export type CoverageLevel = (typeof COVERAGE_LEVELS)[number]
 
 export const COVERAGE_LEVEL_MEANING: Readonly<Record<CoverageLevel, string>> = Object.freeze({
-  L1: 'direct emit — every declared key is accepted; generate_scene produces the page with no post-edit',
-  L2: 'direct emit + extension points — the page still generates, but a key is degraded, the page composes several fragments, or the host declares an extension point',
-  L3: 'host code required — an intent key is unsupported / a required key is missing / the host declares code of its own',
+  L1: 'direct emit — every key that affects the rendered page lands; metadata-only keys (name / apiUrl / mode) may be absent when the fragment has no carrier, and need no host edit',
+  L2: 'direct emit + extension points — the page still generates, but a behavior-bearing key is degraded, the page composes several fragments, or the host declares an extension point',
+  L3: 'host code required — an intent key is unsupported / a required key is missing / the intent shape is invalid / the host declares code of its own',
 })
 
 export interface CoveragePartResult {
@@ -63,6 +65,22 @@ export interface CoverageReport {
   inventoryErrors: readonly string[]
 }
 
+export interface CoverageOptions {
+  /**
+   * 可选的场景形状校验器。返回非空问题列表时，该部分判 **L3**（生成器会拒绝它，
+   * 而不是「降级直出」）。MCP 侧传入 `SCENE_INTENT_SCHEMAS[scene].safeParse` 的投影。
+   */
+  validatePart?: (scene: SceneId, intent: unknown) => readonly string[]
+}
+
+/**
+ * 「元数据键」：它们缺失不改变页面渲染/交互，只是没有载体（片段没有页面名、
+ * 查询表单不发请求、片段总是 sfc）。因此它们的 degraded 不等于宿主需要接线。
+ *
+ * 其余 degraded 键（tableOptions / columns / dialogs …）会改变页面行为，仍判 L2。
+ */
+const METADATA_DEGRADED_KEYS: ReadonlySet<string> = new Set(['name', 'apiUrl', 'mode'])
+
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v)
 
@@ -83,7 +101,7 @@ function partsOf(page: Record<string, unknown>): readonly unknown[] {
 /**
  * 分类一份宿主清单。纯函数、不抛错；清单畸形变成 `inventoryErrors` + 该页 L3。
  */
-export function classifyCoverage(inventory: unknown): CoverageReport {
+export function classifyCoverage(inventory: unknown, options: CoverageOptions = {}): CoverageReport {
   const inventoryErrors: string[] = []
   const pages: CoveragePageResult[] = []
   const summary: Record<CoverageLevel, number> = { L1: 0, L2: 0, L3: 0 }
@@ -94,7 +112,7 @@ export function classifyCoverage(inventory: unknown): CoverageReport {
     inventoryErrors.push('inventory.pages must be an array of page entries.')
   } else {
     inventory.pages.forEach((raw, index) => {
-      const page = classifyPage(raw, index, inventoryErrors)
+      const page = classifyPage(raw, index, inventoryErrors, options)
       pages.push(page)
       summary[page.level]++
     })
@@ -110,7 +128,12 @@ export function classifyCoverage(inventory: unknown): CoverageReport {
   })
 }
 
-function classifyPage(raw: unknown, index: number, inventoryErrors: string[]): CoveragePageResult {
+function classifyPage(
+  raw: unknown,
+  index: number,
+  inventoryErrors: string[],
+  options: CoverageOptions,
+): CoveragePageResult {
   const fallbackName = `page-${index + 1}`
   if (!isRecord(raw)) {
     inventoryErrors.push(`pages[${index}] is not an object.`)
@@ -148,6 +171,18 @@ function classifyPage(raw: unknown, index: number, inventoryErrors: string[]): C
 
     const capability = assessIntent({ scene, intent: partRaw.intent })
     const reasons: string[] = []
+
+    // 形状不合法 = 生成器会拒绝，不能算「降级直出」。分类器不复制 Zod schema，
+    // 由调用方（MCP coverage_report）注入同一份前门形状的 safeParse 投影。
+    const shapeProblems = options.validatePart?.(scene, partRaw.intent) ?? []
+    if (shapeProblems.length) {
+      const detail = `invalid intent shape: ${shapeProblems.join('; ')}`
+      l3.push(`part ${partIndex} (${scene}): ${detail} — generate_scene would reject it.`)
+      reasons.push(detail)
+      parts.push(frozenPart(scene, false, capability.degraded, capability.unsupported, capability.missing, reasons))
+      return
+    }
+
     if (capability.unsupported.length) {
       const detail = `unsupported key(s): ${capability.unsupported.join(', ')}`
       l3.push(`part ${partIndex} (${scene}): ${detail} — the generator would silently ignore them.`)
@@ -158,15 +193,21 @@ function classifyPage(raw: unknown, index: number, inventoryErrors: string[]): C
       l3.push(`part ${partIndex} (${scene}): ${detail} — the intent cannot be emitted as declared.`)
       reasons.push(detail)
     }
-    if (capability.degraded.length) {
-      const detail = `degraded key(s): ${capability.degraded.join(', ')}`
+    const behaviorDegraded = capability.degraded.filter((k) => !METADATA_DEGRADED_KEYS.has(k))
+    if (behaviorDegraded.length) {
+      const detail = `degraded key(s): ${behaviorDegraded.join(', ')}`
       l2.push(`part ${partIndex} (${scene}): ${detail} — emitted, but not faithfully; the host must wire the gap.`)
       reasons.push(detail)
+    }
+    // 元数据键没有载体不算「需要接线」，但仍记进 `degraded`，让宿主看得见。
+    const metadataDegraded = capability.degraded.filter((k) => METADATA_DEGRADED_KEYS.has(k))
+    if (metadataDegraded.length) {
+      reasons.push(`metadata key(s) without a carrier: ${metadataDegraded.join(', ')} — no host edit needed.`)
     }
     parts.push(
       frozenPart(
         scene,
-        capability.ok && capability.degraded.length === 0,
+        capability.ok && behaviorDegraded.length === 0,
         capability.degraded,
         capability.unsupported,
         capability.missing,

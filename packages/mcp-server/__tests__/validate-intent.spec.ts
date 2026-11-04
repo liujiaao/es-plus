@@ -7,7 +7,8 @@ import { registerValidateIntent } from "../src/tools/validate-intent.js";
  *
  * shared 的 `validateIntentPlan` 已有逐条断言；这里只钉**合并后的形状**：
  *   ① 结构级判据确实复用了 generate_scene 的那份 Zod 形状（未知键 / safeParse）；
- *   ② 同一 path 只报一次（shared 语义判据优先，Zod 不重复）；
+ *   ② 同一 path 只报一次（shared 语义判据优先，Zod 不重复），但 Zod 的类型细节
+ *      会附到已有消息上，不静默丢失；
  *   ③ 报告通过 structuredContent 返回，错误时 isError；
  *   ④ spec 的 label 检查只是警告，不影响 ok。
  */
@@ -77,6 +78,18 @@ describe("validate_intent — 工具层", () => {
     const atName = res.structuredContent.errors.filter((e: any) => e.path === "/name");
     expect(atName).toHaveLength(1);
     expect(atName[0].code).toBe("missing-required");
+  });
+
+  it("同 path 的 Zod 类型细节不丢：formtype 传 number 时消息带 schema 说明", async () => {
+    const intent = validIntent() as any;
+    intent.surfaces.form[0].formtype = 123;
+    const res = await call(tool, { scene: "crud", intent });
+    const atFormtype = res.structuredContent.errors.filter(
+      (e: any) => e.path === "/surfaces/form/0/formtype",
+    );
+    expect(atFormtype).toHaveLength(1);
+    expect(atFormtype[0].message).toContain("(schema:");
+    expect(atFormtype[0].message.toLowerCase()).toContain("received number");
   });
 
   it("语义错误（重复 prop）来自 shared 判据", async () => {

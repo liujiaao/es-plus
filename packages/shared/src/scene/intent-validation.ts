@@ -99,7 +99,10 @@ function issue(path: string, code: string, message: string): IntentIssue {
 interface FieldListResult {
   errors: IntentIssue[]
   warnings: IntentIssue[]
+  /** 列表条目数（弹窗里 = 弹窗个数，不是字段数）。 */
   count: number
+  /** 字段条目数；弹窗列表用它单独累计 `formItems`。 */
+  fields: number
   props: string[]
 }
 
@@ -125,7 +128,7 @@ function checkFieldList(list: unknown, opts: FieldListOptions): FieldListResult 
 
   if (!Array.isArray(list)) {
     errors.push(issue(path || '/', 'field-list-not-array', 'must be an array of field entries.'))
-    return { errors, warnings, count: 0, props: [] }
+    return { errors, warnings, count: 0, fields: 0, props: [] }
   }
 
   const firstIndexByProp = new Map<string, number>()
@@ -234,7 +237,7 @@ function checkFieldList(list: unknown, opts: FieldListOptions): FieldListResult 
     }
   })
 
-  return { errors, warnings, count: list.length, props }
+  return { errors, warnings, count: list.length, fields: list.length, props }
 }
 
 /** 弹窗条目：罐头 key（add/edit/view）或全参对象；自定义 key 必须用对象形态。 */
@@ -245,7 +248,7 @@ function checkDialogs(list: unknown, path: string, spec?: string): FieldListResu
 
   if (!Array.isArray(list)) {
     errors.push(issue(path || '/', 'dialog-list-not-array', 'surfaces.dialog must be an array.'))
-    return { errors, warnings, count: 0, props: [] }
+    return { errors, warnings, count: 0, fields: 0, props: [] }
   }
 
   const seenKeys = new Map<string, number>()
@@ -308,7 +311,7 @@ function checkDialogs(list: unknown, path: string, spec?: string): FieldListResu
     }
   })
 
-  return { errors, warnings, count: list.length, props: [] }
+  return { errors, warnings, count: list.length, fields: fieldCount, props: [] }
 }
 
 /**
@@ -362,6 +365,8 @@ export function validateIntentPlan(input: ValidateIntentInput): IntentValidation
           errors.push(...dialog.errors)
           warnings.push(...dialog.warnings)
           stats.dialog = dialog.count
+          // 弹窗字段也是字段：`stats.fields` 的口径是「所有会渲染成控件的条目」。
+          fields += dialog.fields
           continue
         }
 

@@ -115,10 +115,12 @@ export function registerValidateIntent(server: McpServer) {
       const report = validateIntentPlan({ scene, intent, spec });
       const schema = SCENE_INTENT_SCHEMAS[scene];
 
-      // 结构级判据与生成入口同源：未知键 + 同一份 Zod shape。shared 的语义判据先入，
-      // 同 path 的 Zod issue 不再重复（例如两处都发现的 missing formtype）。
-      const errors: IntentIssue[] = [...report.errors];
+      // 结构级判据与生成入口同源：未知键 + 同一份 Zod shape。shared 的语义判据先入；
+      // 同 path 的 Zod issue 不再新增一条，但**不能丢信息**：把 schema 的类型细节附到
+      // 已有消息上（例如 shared 只说 missing formtype，Zod 能说明收到的是 number）。
+      const errors: IntentIssue[] = report.errors.map((e) => ({ ...e }));
       const seen = new Set(errors.map((e) => e.path));
+      const byPath = new Map(errors.map((e) => [e.path, e]));
 
       for (const finding of collectUnknownKeys(schema, intent)) {
         const path = `/${[...finding.path.map(String), finding.key].join("/")}`;
@@ -137,9 +139,17 @@ export function registerValidateIntent(server: McpServer) {
       if (!parsed.success) {
         for (const item of parsed.error.issues) {
           const path = item.path.length ? `/${item.path.map(String).join("/")}` : "/";
-          if (seen.has(path)) continue;
+          const existing = byPath.get(path);
+          if (existing) {
+            if (!existing.message.includes(item.message)) {
+              existing.message = `${existing.message} (schema: ${item.message})`;
+            }
+            continue;
+          }
           seen.add(path);
-          errors.push({ path, code: "schema", message: item.message });
+          const entry: IntentIssue = { path, code: "schema", message: item.message };
+          errors.push(entry);
+          byPath.set(path, entry);
         }
       }
 
