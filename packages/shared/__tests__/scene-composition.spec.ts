@@ -430,7 +430,7 @@ describe('composition@3 — 显式接线与角色校验', () => {
       '重复显式接线',
       () =>
         planComposition(
-          plan([table('users', { rowButtons: [] })], {
+          plan([table('users', { rowButtons: [{ key: 'x', name: 'X' }] })], {
             wires: [
               { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'a' }, when: { rowAction: 'x' } },
               { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'b' }, when: { rowAction: 'x' } },
@@ -453,6 +453,165 @@ describe('composition@3 — 显式接线与角色校验', () => {
     ['非法 behavior', () => planComposition(plan([table()], { behavior: 'auto' as any })), /behavior="auto" 非法/],
   ]
   for (const [name, run, re] of cases) {
+    it(name, () => {
+      expect(run).toThrow(re)
+    })
+  }
+})
+
+/**
+ * P11 复核 —— 显式接线只承诺页面真的调得动的东西。
+ *
+ * 这组用例挡的是三类「编译得过、行为悄悄错」：幽灵页面事件、指向无 ref 节点的
+ * 接线（form / composable 弹窗）、以及指向未声明行按钮的死分支。每一条都源自
+ * 对 `emitComposition` 产物逐行核对的结果，不是假设。
+ */
+describe('composition@3 复核 — 可调用性 / 幽灵事件 / 死分支', () => {
+  it('显式接线覆盖派生页面事件后，faces.emit 不再留下幽灵事件', () => {
+    const p = plan([table('users', { rowButtons: [] }), form()], {
+      wires: [{ from: { node: 'filter', channel: 'submit' }, to: { page: 'emit', event: 'saved' } }],
+    })
+    const a = planComposition(p)
+    expect(a.faces.emit).toEqual(['saved'])
+    const page = emitComposition(p).page!
+    expect(page.code).toContain("defineEmits(['saved'])")
+    expect(page.code).toContain("emit('saved', model)")
+    expect(page.code).not.toContain("emit('save',")
+  })
+
+  it('表单节点生成模板 ref：onSuccess → resetFields 真的可调用', () => {
+    const p = plan([form(), dialog('edit')], {
+      wires: [{ from: { node: 'edit', channel: 'onSuccess' }, to: { node: 'filter', channel: 'resetFields' } }],
+    })
+    const page = emitComposition(p).page!
+    expect(page.code).toContain('const filterRef = ref(null)')
+    expect(page.code).toContain('ref="filterRef"')
+    expect(page.code).toContain('filterRef.value?.resetFields?.()')
+
+    const vue2 = emitComposition(
+      plan([form(), dialog('edit')], {
+        target: 'vue2',
+        wires: [{ from: { node: 'edit', channel: 'onSuccess' }, to: { node: 'filter', channel: 'resetFields' } }],
+      }),
+    ).page!
+    expect(vue2.code).toContain('ref="filterRef"')
+    expect(vue2.code).toContain('this.$refs.filterRef.resetFields()')
+  })
+
+  it('行按钮接线按目标通道发射：close 不再是 open 的复制品', () => {
+    const p = plan([table('users', { rowButtons: [{ key: 'dismiss', name: '关闭' }] }), dialog('edit')], {
+      wires: [
+        {
+          from: { node: 'users', channel: 'row-action' },
+          to: { node: 'edit', channel: 'close' },
+          when: { rowAction: 'dismiss' },
+        },
+      ],
+    })
+    const page = emitComposition(p).page!
+    expect(page.code).toContain("if (payload.key === 'dismiss') {")
+    expect(page.code).toContain('editRef.value?.close?.()')
+    expect(page.code).not.toContain("editRef.value?.open('编辑', payload.row")
+  })
+
+  const rejects: Array<[string, () => unknown, RegExp]> = [
+    [
+      '行按钮接线指向未声明的 key（死分支）',
+      () =>
+        planComposition(
+          plan([table('users')], {
+            wires: [
+              {
+                from: { node: 'users', channel: 'row-action' },
+                to: { page: 'emit', event: 'x' },
+                when: { rowAction: 'ghost' },
+              },
+            ],
+          }),
+        ),
+      /rowButtons 只有 \[edit\/remove\]/,
+    ],
+    [
+      '接线目标不是可调用通道（form.model 是数据）',
+      () =>
+        planComposition(
+          plan([table('users'), form()], {
+            wires: [
+              {
+                from: { node: 'users', channel: 'row-action' },
+                to: { node: 'filter', channel: 'model' },
+                when: { rowAction: 'edit' },
+              },
+            ],
+          }),
+        ),
+      /不是可调用通道/,
+    ],
+    [
+      'composable 弹窗没有模板 ref，不能被接线调用',
+      () =>
+        planComposition(
+          plan(
+            [
+              dialog('edit', { mode: 'composable', composableName: 'useEdit' }),
+              dialog('view', { mode: 'composable', composableName: 'useView' }),
+            ],
+            {
+              wires: [{ from: { node: 'edit', channel: 'onSuccess' }, to: { node: 'view', channel: 'open' } }],
+            },
+          ),
+        ),
+      /composable 弹窗/,
+    ],
+    [
+      'open 只接受 row-action 源（需要标题与行数据）',
+      () =>
+        planComposition(
+          plan([form(), dialog('edit')], {
+            wires: [{ from: { node: 'filter', channel: 'submit' }, to: { node: 'edit', channel: 'open' } }],
+          }),
+        ),
+      /open 需要标题与行数据/,
+    ],
+    [
+      'to 不能同时给 node 与 page',
+      () =>
+        planComposition(
+          plan([dialog('edit')], {
+            wires: [
+              {
+                from: { node: 'edit', channel: 'onSuccess' },
+                to: { node: 'edit', channel: 'close', page: 'emit', event: 'x' } as any,
+              },
+            ],
+          }),
+        ),
+      /不能同时给 node 与 page/,
+    ],
+    [
+      'to.page 必须是字面量 emit',
+      () =>
+        planComposition(
+          plan([dialog('edit')], {
+            wires: [{ from: { node: 'edit', channel: 'onSuccess' }, to: { page: 'send', event: 'x' } as any }],
+          }),
+        ),
+      /必须是字面量 'emit'/,
+    ],
+    [
+      'wire 的未知键不静默忽略',
+      () =>
+        planComposition(
+          plan([dialog('edit')], {
+            wires: [
+              { from: { node: 'edit', channel: 'onSuccess' }, to: { page: 'emit', event: 'x' }, label: '保存后' } as any,
+            ],
+          }),
+        ),
+      /含未知键 "label"/,
+    ],
+  ]
+  for (const [name, run, re] of rejects) {
     it(name, () => {
       expect(run).toThrow(re)
     })

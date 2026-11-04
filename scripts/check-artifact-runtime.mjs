@@ -69,6 +69,20 @@ try {
   /* 预期 */
 }
 
+// `invokable` 是 `expose` 的可调用子集（P11 复核）：组合页的显式接线只允许调用
+// 这一行。若它含有 `expose` 里没有的名字，等于承诺一个连宿主都拿不到的通道。
+for (const kind of ARTIFACT_KINDS) {
+  const c = ARTIFACT_RUNTIME[kind]
+  if (!Array.isArray(c.invokable)) {
+    fail(`ARTIFACT_RUNTIME.${kind} 缺少 invokable 数组（expose 里哪些可当方法调用）`)
+    continue
+  }
+  const extra = c.invokable.filter((n) => !c.expose.includes(n))
+  if (extra.length) {
+    fail(`ARTIFACT_RUNTIME.${kind}.invokable 含 expose 之外的名字：${extra.join(', ')}`)
+  }
+}
+
 // ── 契约块提取 ──────────────────────────────────────────
 /** `defineExpose({ ... })`（vue3/antdv）或 setup 的 `return { ... }`（vue2）。 */
 function exposedBlock(code) {

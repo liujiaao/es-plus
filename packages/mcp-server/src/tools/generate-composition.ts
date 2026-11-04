@@ -58,30 +58,47 @@ const nodeShape = z.object({
     ),
 });
 
+/**
+ * 接线形状。子对象一律 `.passthrough()`：未知键 / `{node, page}` 混用必须**原样到达**
+ * `planComposition`，由那唯一一处规则给出带节点名的结构化错误。若这里用 zod 默认的
+ * strip，`to: { node, channel, page: 'emit', event }` 会在入口被悄悄削成节点目标 ——
+ * 工具面与直接 API 对同一份计划给出不同结果（P11 复核）。
+ */
 const wireShape = z.object({
-  from: z.object({
-    node: z.string().describe("Source node id."),
-    channel: z
-      .string()
-      .describe("Source channel declared by ARTIFACT_RUNTIME: row-action / submit / query / reset / onSuccess."),
-  }),
-  to: z.union([
-    z.object({
-      node: z.string().describe("Target node id."),
+  from: z
+    .object({
+      node: z.string().describe("Source node id."),
       channel: z
         .string()
-        .describe("Target expose channel: table refresh/reload, dialog open/close, form validate/resetFields."),
-    }),
-    z.object({
-      page: z.literal("emit"),
-      event: z.string().describe("Page event name to emit (becomes part of the page's emits face)."),
-    }),
+        .describe("Source channel declared by ARTIFACT_RUNTIME: row-action / submit / query / reset / onSuccess."),
+    })
+    .passthrough(),
+  to: z.union([
+    z
+      .object({
+        node: z.string().describe("Target node id."),
+        channel: z
+          .string()
+          .describe(
+            "Target channel the composed page can CALL (ARTIFACT_RUNTIME.invokable): table refresh/reload, form validate/resetFields, component-dialog open/close. `model` is data, not a method. A composable dialog (mode 'composable') has no template ref — only a row-action may open it. `open` requires a row, so it is only accepted from a row-action source.",
+          ),
+      })
+      .passthrough(),
+    z
+      .object({
+        page: z.literal("emit"),
+        event: z.string().describe("Page event name to emit (becomes part of the page's emits face)."),
+      })
+      .passthrough(),
   ]),
   when: z
     .object({ rowAction: z.string() })
+    .passthrough()
     .optional()
-    .describe("Required for row-action sources: the button key this wire applies to."),
-});
+    .describe(
+      "Required for row-action sources: the button key this wire applies to. It must match a rowButtons key declared in the source table's intent — an undeclared key would generate a branch that never fires.",
+    ),
+}).passthrough();
 
 const compositionShape = {
   name: z
@@ -121,7 +138,7 @@ function nodeError(id: string, lines: string[]): string {
 export function registerGenerateComposition(server: McpServer) {
   server.tool(
     "generate_composition",
-    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing. Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model); an explicit wire overrides the derived one for the same source. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
+    "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing. Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
     compositionShape,
     async (args: any) => {
       const nodes = Array.isArray(args.nodes) ? args.nodes : [];

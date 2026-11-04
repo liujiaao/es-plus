@@ -90,26 +90,30 @@ export interface ArtifactEnvelope {
 }
 ```
 
-组合信封（P6b）—— 多节点装配：节点保持各自信封身份，组合只在外面再加一层
+组合信封（P6b @1 → P7 @2 → P11 @3）—— 多节点装配：节点保持各自信封身份，组合只在外面再加一层
 
 ```ts
 export interface CompositionPlan {
   name?: string
   target?: TargetFramework          // 缺省取第一个节点显式 target，再缺省 vue3
-  nodes: readonly { id: string; plan: ScenePlan }[]   // 每场景最多一个；crud 拒绝
+  behavior?: 'crud-requests' | 'ui-only'   // P11：ui-only = 数据通道升级为页面事件
+  nodes: readonly { id: string; role?: string; plan: ScenePlan }[]  // form ≤1；table/dialog 可多个
+  wires?: readonly CompositionWire[]        // P11：显式接线（同 from 覆盖派生）
 }
 
 export interface CompositionWire {
   from: { node: string; channel: string }             // 通道名必须 ∈ ARTIFACT_RUNTIME
   to: { node: string; channel: string } | { page: 'emit'; event: string }
-  when?: { rowAction: string }
+  when?: { rowAction: string }                        // row-action 源必填，且必须是已声明的按钮 key
 }
 
 export interface CompositionEnvelope {
-  contract: 'es-plus.composition@2'
+  contract: 'es-plus.composition@3'
   name: string
   target: TargetFramework
+  behavior: 'crud-requests' | 'ui-only'
   nodes: readonly ArtifactEnvelope[]
+  roles: Readonly<Record<string, string>>
   wires: readonly CompositionWire[]
   faces: { expose: readonly string[]; emit: readonly string[] }
   page: { path: 'Page.vue'; code: string; language: 'vue' }
@@ -238,9 +242,10 @@ export interface CompositionEnvelope {
 
 **问题**（源码核对的第 3 条）：片段是**自包含 SFC**，挂进页面后宿主没有任何抓手 —— 表格不会刷新、行按钮点了没反应、表单提交没有门禁也没有通知、弹窗提交成功后宿主无从得知。这四件事都不在 `StructuredCrudConfig` 里，也不是记分卡能覆盖的维度（记分卡看的是「配置里写了什么」，这里是「跑起来之后发生了什么」）。组合场景（表 + 弹窗 + 查询表单）因此根本接不起来。
 
-- 新增 `packages/shared/src/scene/runtime.ts`：`ARTIFACT_RUNTIME` 冻结表，五种 artifact 各一行 `{ expose, emits, success }`；`runtimeOf(kind)` 对未知形态响亮抛错。**刻意与 registry 分开**：`scene/index.ts` 因此仍只导出元数据、不加载生成器实现。
-  - `table`：`expose: ['refresh','reload']`、`emits: ['row-action']`、`success: none`。
-  - `form`：`expose: ['model','validate','resetFields']`、`emits: ['submit','query','reset']`、`success: event('submit')`。
+- 新增 `packages/shared/src/scene/runtime.ts`：`ARTIFACT_RUNTIME` 冻结表，五种 artifact 各一行 `{ expose, invokable, emits, success }`；`runtimeOf(kind)` 对未知形态响亮抛错。**刻意与 registry 分开**：`scene/index.ts` 因此仍只导出元数据、不加载生成器实现。
+  - `expose` = 宿主能拿到的一切（含数据），`invokable` = 其中可当方法调用的子集（P11 复核新增；`invokable ⊆ expose` 由 `check:artifact-runtime` 断言，组合接线只认它）。
+  - `table`：`expose: ['refresh','reload']`、`invokable: ['refresh','reload']`、`emits: ['row-action']`、`success: none`。
+  - `form`：`expose: ['model','validate','resetFields']`、`invokable: ['validate','resetFields']`（`model` 是 reactive 数据）、`emits: ['submit','query','reset']`、`success: event('submit')`。
   - `dialog-composable`：`expose: ['open']`、`success: callback('onSuccess')`；`dialog-component` 另加 `close`。
   - `crud-page`：**空契约**（整页能力由 `CrudPageSchema` 声明）。空不是遗漏，是显式表达。
 - `fragment-generator.ts` 的包装层按表发射（三端同一套名字）：
@@ -458,3 +463,62 @@ P6 之后做了一轮「未完成 / 遗留 / 隐患 / 设计缺陷」审计，�
 - **PRD 腿不要求模型输出 `{scene,intent}` 外壳**：外壳是宿主职责（生产里同样由宿主组装）；让模型多包一层只会把「格式记忆」混进第一英里分数。
 - **CLI 不改**：`packages/cli` 从不以 MCP 工具名对外（`create` 是正则/结构化配置入口，`--config` 走 `generateFromConfig`），不存在「宣称入口 vs 调用入口」的分叉，故不新增 `--scene` 旋钮。
 - **守卫仍是 Tier A**：编译腿不跑类型检查，模板里的 prop 拼错这类问题仍由 `typecheck` / e2e 见证兜底。
+
+### P11 · 组合契约 `@3` 与接线可达性复核
+
+P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表、多弹窗、显式 `wires` 与
+`behavior` 档位（契约升到 `es-plus.composition@3`；实现见 `d0300f7`）。随后的复核逐条
+回源码核对生成产物，修掉三类「编译得过、行为悄悄错」的接线缺口 —— **不升协议版本**：
+字段形状不变，变的是校验与页面发射。
+
+**① 幽灵页面事件**
+
+`faces.emit` 此前是「派生时顺手 push」。显式接线覆盖派生后（如
+`form.submit → page "saved"`），派生的 `"save"` 仍留在 `defineEmits` 里 —— 页面声明了
+一个永远没人派发的事件。修法：`faces.emit` **只从最终 wires 投影**（显式在前），
+声明与派发同源。
+
+**② 接线目标必须真的可调用**
+
+派生接线只碰表格 ref，显式接线却能指向任意 `expose`。产物核对发现三处断头路：
+
+- **表单节点没有模板 ref**：`form.validate` / `resetFields` 写在契约里，页面却从未声明
+  `filterRef`，接线会生成一个指向不存在符号的调用。修法：表单节点也生成模板 ref
+  （vue2 `ref="…"`、vue3/antdv `const … = ref(null)` 且模板带 `ref`）。
+- **`expose` 里混着数据**：`form.model` 是 reactive 对象，接线按 `expose` 校验会生成
+  `filterRef.value?.model?.()`（编译过、运行即 TypeError）。修法：运行时契约新增
+  `invokable`（可调用子集，`invokable ⊆ expose` 由 `check:artifact-runtime` 断言），
+  组合接线只认它。
+- **composable 弹窗没有 ref**：页面只经行按钮分派（`openCall` 用解构出的 `open`，带
+  标题/行）调用它。其它来源的显式接线一律拒绝；`open` 也只接受 `row-action` 源（需要
+  行数据），宿主入口是页面暴露的 `open(id, options)`。
+
+**③ 死分支与形状含混**
+
+- `when.rowAction` 原来只校验非空字符串：指向该表没声明的按钮 key 会生成永远不触发的
+  `if`。现在按源表 `rowButtons`（`key ?? name`）校验成员资格。
+- `to` 的两种形状改为严格互斥（同时给 `node` 与 `page` 拒绝），`page` 必须是字面量
+  `'emit'`；wire / from / when 的未知键不再静默忽略。
+- 行按钮接向弹窗 `close` 通道时，旧实现无条件生成 `open(...)`（静默改写目标通道）；
+  现在按 `wire.to.channel` 分派。
+
+**验证（2026-11-04）**
+
+- `npm test -w @es-plus/shared` 组合 spec 44/44（新增 3 条产物用例 + 7 条结构化拒绝）✅
+- `check:composition-contract` → **41 组组合**（新增 `table+form+dialog(explicit wires)`，三端各跑）
+  / **结构化拒绝 16 例**（新增 5 例）/ 编译腿 ✅
+- `check:artifact-runtime` → `invokable ⊆ expose` 断言 ✅
+- `npm test -w @es-plus/mcp-server` → 新增可调用性/按钮 key 的透出用例 ✅
+- 变异自检（实跑后还原）✅：①删掉表单模板 ref → 守卫点名 `queryFormRef`（2 处）；
+  ②把派生的 `save` 事件强行塞回 `faces.emit` → 守卫在每端都红（30 处）；
+  ③关掉 `invokable` 校验 → 拒绝用例「form.model 是数据」失效即红。
+
+**据实偏离**
+
+- **不升 `composition@4`**：宿主可见的字段形状没变，`wires` 的合法性只会从「接受」
+  变「拒绝」，旧计划里本来合法的接线仍合法。
+- **表单 ref 是新增的页面内部符号**，不进 `faces.expose`：页面仍只暴露表格命令面与
+  `open(id, options)`；表单 ref 只服务显式接线。
+- **composable 弹窗不支持被 `onSuccess`/`submit` 直接打开**：`open(title, row)` 需要
+  行与标题上下文，放弃这条路径而不是生成一个不带数据的调用；需要这种编排时改用
+  `mode: 'component'` 或页面事件。

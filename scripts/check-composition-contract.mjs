@@ -7,13 +7,20 @@
  * 对 golden 片段语料（table / form / dialog，三端）组装出多类组合，逐组断言：
  *
  *   ① **接线只来自契约**：每条 wire 的 from 通道 ∈ `ARTIFACT_RUNTIME[artifact].emits`
- *      或 `success.name`；to 节点的通道 ∈ 该 artifact 的 `expose`；
+ *      或 `success.name`；to 节点的通道 ∈ 该 artifact 的 `invokable`（可调用子集 ——
+ *      `form.model` 是数据不是方法，接线调不到）；`open` 只接受 row-action 源，
+ *      composable 弹窗只能由 row-action 分派 `open`（没有模板 ref）；行按钮接线的
+ *      `when.rowAction` 必须是源表**声明过的** rowButtons key（否则是死分支）；
  *   ② **没有静默丢弃**：每个在场 artifact 的每个可触发通道（form submit/query/reset、
  *      dialog success、带行按钮的 table row-action）都出现在某条 wire 的 from；
  *      每条 `to.page` 的 event 都在 `faces.emit` 里，反之亦然（`ui-only` 档位下数据通道
- *      全部是页面事件，这条同时证明「降档不等于丢通道」）；
+ *      全部是页面事件，这条同时证明「降档不等于丢通道」）；`faces.emit` 只从最终
+ *      wires 投影 —— 显式接线覆盖派生后，被覆盖的事件不得留在声明里（幽灵事件）；
  *   ③ **页面与会话自洽**：`Page.vue` 的 `defineEmits` / `defineExpose` 与 `faces`
- *      完全一致；每个节点文件都以相对导入出现；每个 dialog 节点的标题字面量等于
+ *      完全一致；每个节点文件都以相对导入出现；**每条节点目标的接线都真的有模板 ref**
+ *      （vue2/3 模板 `ref="…"`，vue3/antdv 另有 `const … = ref(null)`）—— 否则
+ *      `filterRef.value?.resetFields?.()` 这类调用在页面里指向不存在的符号；
+ *      每个 dialog 节点的标题字面量等于
  *      `intent.defaultTitle ?? dialogTitleFor(id)`（与单独发射同源）；每条成功接线都
  *      真的落到页面代码里 —— invoke 形态是目标表 ref 的 `refresh()`/`reload()` 内联
  *      回调（@3 取代 @2 的 `onTableSuccess`，多表页面因此能分清刷哪张），页面事件
@@ -229,6 +236,12 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
       if (!toRuntime.expose.includes(wire.to.channel)) {
         fail(`${file}: 接线目标 ${wire.to.node}.${wire.to.channel} 不在 ${toArtifact}.expose 里（${toRuntime.expose.join('/') || '(空)'}）`)
       }
+      if (!toRuntime.invokable.includes(wire.to.channel)) {
+        fail(
+          `${file}: 接线目标 ${wire.to.node}.${wire.to.channel} 不是 ${toArtifact} 的可调用通道` +
+            `（invokable=[${toRuntime.invokable.join('/') || '(空)'}]；expose 里其余是数据）`,
+        )
+      }
     } else if (!faces.emit.includes(wire.to.event)) {
       fail(`${file}: 接线目标是页面事件 "${wire.to.event}"，但 faces.emit 里没有它`)
     }
@@ -304,6 +317,30 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
     )
     if (JSON.stringify([...exposedNames].sort()) !== JSON.stringify([...faces.expose].sort())) {
       fail(`${file}: defineExpose ${JSON.stringify(exposedNames)} ≠ faces.expose ${JSON.stringify(faces.expose)}`)
+    }
+  }
+  // ③b 接线目标必须真有模板 ref：契约里的 expose/invokable 只证明「名字存在」，
+  // 不证明生成的页面声明了它（form 曾经就是这样：通道在契约里、页面没有 ref）。
+  // composable 弹窗是唯一没有 ref 的形态 —— 它只能经行按钮分派（openCall 用解构
+  // 出来的 open），出现为其它来源的目标即判红。
+  for (const wire of wires) {
+    if (!('node' in wire.to)) continue
+    const toArtifact = artifactOfNode.get(wire.to.node)
+    if (toArtifact === 'dialog-composable') {
+      if (wire.from.channel !== 'row-action' || wire.to.channel !== 'open') {
+        fail(
+          `${file}: composable 弹窗 ${wire.to.node} 只能由 row-action 的 open 调用` +
+            `（实际 ${wire.from.node}.${wire.from.channel} → ${wire.to.node}.${wire.to.channel}）`,
+        )
+      }
+      continue
+    }
+    const rv = refOf(wire.to.node)
+    if (!page.code.includes(`ref="${rv}"`)) {
+      fail(`${file}: 接线目标 ${wire.to.node}.${wire.to.channel} 在页面模板里没有 ref="${rv}" —— 调用指向不存在的符号`)
+    }
+    if (!isVue2 && !page.code.includes(`const ${rv} = ref(null)`)) {
+      fail(`${file}: 接线目标 ${wire.to.node}.${wire.to.channel} 缺少 const ${rv} = ref(null)`)
     }
   }
   for (const f of nodeFiles) {
@@ -459,13 +496,79 @@ function checkStructuralRejects(mod) {
     [
       '重复的显式接线',
       {
-        nodes: [tableNode('a')],
+        nodes: [tableNode('a', { rowButtons: [{ key: 'view', name: '查看' }] })],
         wires: [
           { from: { node: 'a', channel: 'row-action' }, to: { page: 'emit', event: 'a' }, when: { rowAction: 'view' } },
           { from: { node: 'a', channel: 'row-action' }, to: { page: 'emit', event: 'b' }, when: { rowAction: 'view' } },
         ],
       },
       /重复声明/,
+    ],
+    [
+      '行动作接线指向未声明的行按钮（死分支）',
+      {
+        nodes: [tableNode('a', { rowButtons: [{ key: 'view', name: '查看' }] })],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { page: 'emit', event: 'x' },
+            when: { rowAction: 'ghost' },
+          },
+        ],
+      },
+      /rowButtons 只有 \[view\]/,
+    ],
+    [
+      '接线目标不是可调用通道（form.model 是数据）',
+      {
+        nodes: [
+          tableNode('a', { rowButtons: [{ key: 'view', name: '查看' }] }),
+          { id: 'f', plan: { scene: 'form', intent: { ...field, context: 'query' } } },
+        ],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { node: 'f', channel: 'model' },
+            when: { rowAction: 'view' },
+          },
+        ],
+      },
+      /不是可调用通道/,
+    ],
+    [
+      'composable 弹窗不能被显式接线调用（无模板 ref）',
+      {
+        nodes: [
+          { id: 'a', plan: { scene: 'dialog', intent: { ...field, mode: 'composable' } } },
+          { id: 'b', plan: { scene: 'dialog', intent: { ...field, mode: 'composable' } } },
+        ],
+        wires: [{ from: { node: 'a', channel: 'onSuccess' }, to: { node: 'b', channel: 'open' } }],
+      },
+      /composable 弹窗/,
+    ],
+    [
+      '接线目标同时给 node 与 page',
+      {
+        nodes: [tableNode('a')],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { node: 'a', channel: 'reload', page: 'emit', event: 'x' },
+            when: { rowAction: 'view' },
+          },
+        ],
+      },
+      /不能同时给 node 与 page/,
+    ],
+    [
+      'to.page 必须是字面量 emit',
+      {
+        nodes: [tableNode('a')],
+        wires: [
+          { from: { node: 'a', channel: 'row-action' }, to: { page: 'send', event: 'x' }, when: { rowAction: 'view' } },
+        ],
+      },
+      /必须是字面量 'emit'/,
     ],
   ]
   for (const [name, plan, re] of cases) {
@@ -546,6 +649,30 @@ async function main() {
         [
           'table+form+dialog(ui-only)',
           { nodes: [table(), form(), dialog()], behavior: 'ui-only' },
+          ['table', 'form', 'dialog-component'],
+        ],
+        // P11 复核：显式接线覆盖派生页面事件后，faces.emit 不得留下幽灵事件；
+        // 成功回调指向表单时页面必须真的生成表单模板 ref。
+        [
+          'table+form+dialog(explicit wires)',
+          {
+            nodes: [table(), form(), dialog()],
+            wires: [
+              {
+                from: { node: 'users-table', channel: 'row-action' },
+                to: { page: 'emit', event: 'removed' },
+                when: { rowAction: 'delete' },
+              },
+              {
+                from: { node: 'query-form', channel: 'submit' },
+                to: { page: 'emit', event: 'saved' },
+              },
+              {
+                from: { node: 'edit', channel: 'onSuccess' },
+                to: { node: 'query-form', channel: 'resetFields' },
+              },
+            ],
+          },
           ['table', 'form', 'dialog-component'],
         ],
       ]

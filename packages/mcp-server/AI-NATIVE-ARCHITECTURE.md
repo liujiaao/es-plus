@@ -199,7 +199,7 @@ surfaces
 | 3 | `generate_composition` | 组合 | ✅ | `Page.vue` + 逐节点片段 + 信封 | 否 | 稳定（table/dialog 可多、form 至多一个；`@3`） |
 | 4 | `generate_crud` | 兼容前门（COMPAT ENTRY） | ✅ | 同 `scene='crud'`，字节一致 | 否 | 兼容入口 |
 | 5 | `generate_form` | 片段 | ✅ | `<es-form>` SFC | 否 | 稳定 |
-| 6 | `generate_table` | 片段 | ✅ | `<es-table>` SFC | 否 | 稳定 |
+| 6 | `generate_table` | 片段 | ✅ | `<es-table>` SFC | 否 |  稳定 |
 | 7 | `generate_dialog` | 片段 | ✅ | composable / `<es-dialog>` SFC | 否 | 稳定 |
 | 8 | `generate_crud_from_config` | 生成 | ✅ | 代码 + warnings | 否 | **ADVANCED**（已持有类型化配置） |
 | 9 | `generate_crud_schema` | legacy | ✅ | schema + wrapper | 否 | **LEGACY FALLBACK** |
@@ -235,6 +235,7 @@ surfaces
 
 - **定位**：把独立片段装成一张 `Page.vue`；节点只能是 `table` / `form` / `dialog`。`form` 至多一个（多表单的 `submit` 语义无法确定性区分），`table` / `dialog` 可以多个（master-detail、多弹窗）；`crud` 节点被拒绝（它已是整页）。
 - **接线**：派生部分由 `ARTIFACT_RUNTIME` 推导（行按钮 key 命中弹窗 id → `open`；查询 → 默认表 `reload(model)`；重置 → `reload()`；提交 → 页面事件 `save`；弹窗成功 → 默认表 `refresh`）。**默认表** = `role: 'master'` 的 table，否则页面里唯一的 table；多表且两者都没有时不猜，数据通道升级为页面事件。`@3` 起宿主可声明 `wires` 显式接线（master-detail：主表 `row-action` → 明细表 `reload(row)`），显式与派生同源校验，同一 `from` 上显式**覆盖**派生；`behavior: 'ui-only'` 只装配 UI 接线，数据通道全部升级为页面事件，由宿主自己发请求。
+- **显式接线的可达性**（P11 复核）：目标必须是生成页面**真的调得动**的通道 —— `ARTIFACT_RUNTIME.invokable`（表格 `refresh`/`reload`、表单 `validate`/`resetFields`、component 弹窗 `open`/`close`；`form.model` 是数据，不能当方法）。`open` 只接受 `row-action` 源（它携带行），composable 弹窗没有模板 ref、只能由行按钮分派 `open`；`when.rowAction` 必须是源表 `rowButtons` 声明过的 key（否则是死分支）。`faces.emit` 只从最终 wires 投影 —— 被显式接线覆盖的派生页面事件不会留在 `defineEmits` 里。
 - **输出**：文本 + `structuredContent`（组合信封：`nodes` / `wires` / `faces` / `page` / `behavior` / `roles`）。
 - **边界**：组合页只装配 **UI 行为**（含 `crud-requests` 档位下的表格取数/刷新），不内建 add/edit/delete 请求；`save` / 未命中的 `row-action` / 升级为事件的通道上抛给宿主。需要内建请求语义时用 `scene='crud'`。
 

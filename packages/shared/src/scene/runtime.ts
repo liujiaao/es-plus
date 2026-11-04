@@ -38,8 +38,21 @@ export interface ArtifactSuccessContract {
 }
 
 export interface ArtifactRuntimeContract {
-  /** 宿主通过模板 ref（vue3/antdv `defineExpose`、vue2 setup return）可调用的方法。 */
+  /**
+   * 宿主通过模板 ref（vue3/antdv `defineExpose`、vue2 setup return）可拿到的一切：
+   * 方法**和数据**。`form.model` 是 reactive 数据，不是可调用方法。
+   */
   expose: readonly string[]
+  /**
+   * `expose` 里**可被当方法调用**的子集（P11 复核）。
+   *
+   * 为什么要单独一行：组合页的显式接线会把它拼成 `ref.value?.<channel>()`。若只按
+   * `expose` 校验，`to: { node: 'filter', channel: 'model' }` 会生成
+   * `filterRef.value?.model?.()` —— 编译得过、运行即 TypeError（调用一个对象）。
+   * `expose` 回答「宿主能拿到什么」，`invokable` 回答「接线能调用什么」，两者不可
+   * 互相替代。不变式（`check-artifact-runtime` 断言）：`invokable ⊆ expose`。
+   */
+  invokable: readonly string[]
   /** 片段组件向宿主派发的事件（三端同一套名字）。 */
   emits: readonly string[]
   /** 提交成功通道。 */
@@ -56,12 +69,14 @@ export interface ArtifactRuntimeContract {
 export const ARTIFACT_RUNTIME: Readonly<Record<ArtifactKind, ArtifactRuntimeContract>> = Object.freeze({
   'crud-page': Object.freeze({
     expose: Object.freeze([]),
+    invokable: Object.freeze([]),
     emits: Object.freeze([]),
     success: Object.freeze({ kind: 'none' }),
   }),
   table: Object.freeze({
     // es-table 已有的命令式刷新面（vue3/antdv defineExpose、vue2 setup return）。
     expose: Object.freeze(['refresh', 'reload']),
+    invokable: Object.freeze(['refresh', 'reload']),
     // 行操作按钮的唯一可用通道：库内是 `clickEvent(row)`，片段把它翻译成语义事件。
     // 旧产物的 `triggerEvent: true` 没有任何消费者（死按钮），P4 起删除。
     emits: Object.freeze(['row-action']),
@@ -69,18 +84,22 @@ export const ARTIFACT_RUNTIME: Readonly<Record<ArtifactKind, ArtifactRuntimeCont
   }),
   form: Object.freeze({
     // 包装层把内部 es-form 的 validate/resetFields 透出，并暴露 reactive model。
+    // `model` 是数据（`invokable` 里刻意没有它）。
     expose: Object.freeze(['model', 'validate', 'resetFields']),
+    invokable: Object.freeze(['validate', 'resetFields']),
     // save → submit（校验通过后才发）；query → query；rest → reset。
     emits: Object.freeze(['submit', 'query', 'reset']),
     success: Object.freeze({ kind: 'event', name: 'submit' }),
   }),
   'dialog-composable': Object.freeze({
     expose: Object.freeze(['open']),
+    invokable: Object.freeze(['open']),
     emits: Object.freeze([]),
     success: Object.freeze({ kind: 'callback', name: 'onSuccess' }),
   }),
   'dialog-component': Object.freeze({
     expose: Object.freeze(['open', 'close']),
+    invokable: Object.freeze(['open', 'close']),
     emits: Object.freeze([]),
     success: Object.freeze({ kind: 'callback', name: 'onSuccess' }),
   }),

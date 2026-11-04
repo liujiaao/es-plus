@@ -162,6 +162,52 @@ describe("generate_composition — 组合页入口", () => {
     expect(result.content[0].text).toMatch(/必须声明 when\.rowAction/);
   });
 
+  it("P11 复核：接线目标的『可调用 + 按钮真的存在』由 planComposition 拒绝并原样透出", async () => {
+    const base = () => [
+      { id: "users", scene: "table", intent: tableIntent },
+      { id: "filter", scene: "form", intent: formIntent },
+    ];
+    const ghost = await call(tool, {
+      nodes: base(),
+      wires: [
+        {
+          from: { node: "users", channel: "row-action" },
+          to: { node: "filter", channel: "resetFields" },
+          when: { rowAction: "nope" },
+        },
+      ],
+    });
+    expect(ghost.isError).toBe(true);
+    expect(ghost.content[0].text).toMatch(/rowButtons 只有 \[edit\/view\]/);
+
+    const model = await call(tool, {
+      nodes: base(),
+      wires: [
+        {
+          from: { node: "users", channel: "row-action" },
+          to: { node: "filter", channel: "model" },
+          when: { rowAction: "view" },
+        },
+      ],
+    });
+    expect(model.isError).toBe(true);
+    expect(model.content[0].text).toMatch(/不是可调用通道/);
+
+    // zod 默认 strip 会把 `page` 悄悄削掉；passthrough 让混用形状抵达唯一规则处。
+    const mixed = await call(tool, {
+      nodes: base(),
+      wires: [
+        {
+          from: { node: "users", channel: "row-action" },
+          to: { node: "users", channel: "reload", page: "emit", event: "x" },
+          when: { rowAction: "view" },
+        },
+      ],
+    });
+    expect(mixed.isError).toBe(true);
+    expect(mixed.content[0].text).toMatch(/不能同时给 node 与 page/);
+  });
+
   it("空节点在入口形状就拒绝，handler 另有一层兜底", async () => {
     expect(() => z.object(tool.shape).passthrough().parse({ nodes: [] })).toThrow();
 

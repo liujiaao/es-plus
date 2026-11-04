@@ -51,6 +51,31 @@
  * **emits**（保存 / 未匹配的行动作 / 无默认表格时的查询、重置与成功）。任何通道要么被
  * 接上，要么升级为页面事件，**没有静默丢弃**（`check-composition-contract` 逐通道断言）。
  *
+ * ## P11 复核：显式接线只承诺页面真的调得动的东西
+ *
+ * @3 的显式接线把「接线目标」从派生规则里解放出来，但也带来三类「编译得过、行为悄悄
+ * 错」的缺口，逐条回源码核对后修掉（不升协议版本：字段形状不变，变的是校验与发射）：
+ *
+ * 1. **幽灵页面事件**：`faces.emit` 原来是「派生时顺手 push」，显式接线覆盖派生后
+ *    （如 `form.submit → page "saved"`）仍会把派生的 `"save"` 留在声明里 —— 页面
+ *    `defineEmits` 声明了一个永远没人派发的事件。现在 `faces.emit` **只从最终
+ *    wires 投影**（显式在前），声明与派发同源。
+ * 2. **目标必须真的可调用**：派生接线只会碰表格 ref，显式接线却可以指向任意
+ *    `expose`。核对生成产物后修三处：①表单节点现在也生成模板 ref（vue2
+ *    `ref="…"`、vue3 `const … = ref(null)`），`validate` / `resetFields` 才真的
+ *    调得到；②`expose` 里的 `model` 是数据不是方法，接线只认
+ *    `ARTIFACT_RUNTIME.invokable`（否则生成 `filterRef.value?.model?.()`）；
+ *    ③composable 弹窗没有模板 ref，页面只经行按钮分派（带标题/行）调用它的
+ *    `open`，其它来源显式接线一律拒绝；`open` 同理只接受 row-action 源（页面
+ *    `open(id, options)` 才是宿主入口）。
+ * 3. **死分支**：`when.rowAction` 原来只校验「非空字符串」，指向该表没声明的按钮
+ *    key 会生成一个永远不触发的 `if`。现在按源表 `rowButtons`（`key ?? name`）校验
+ *    成员资格。`to` 的两种形状也改为严格互斥（同时给 `node` 与 `page` 拒绝），
+ *    `page` 必须是字面量 `'emit'`。
+ *
+ * 顺带修正：行按钮接向弹窗的 `close` 通道时，旧实现无条件生成 `open(...)`（静默
+ * 改写目标通道）；现在按 `wire.to.channel` 分派。
+ *
  * ## 对外 API（`es-plus.composition@3`）
  *
  * - `open(id, options?)`：`options = { title?, row?, onSuccess? }`，返回是否命中。
@@ -244,7 +269,7 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
   }
 
   const declaredTarget = nodes
-    .map((n) => (n.plan.intent as { target?: TargetFramework }).target)
+    .map((n) => (n?.plan?.intent as { target?: TargetFramework } | undefined)?.target)
     .find((t): t is TargetFramework => !!t)
   const target = plan.target ?? declaredTarget ?? DEFAULT_TARGET
 
@@ -266,7 +291,13 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
     if (seenIds.has(id)) throw new Error(`组合节点 id "${id}" 重复。`)
     seenIds.add(id)
 
-    const scene = node.plan?.scene
+    if (!node || typeof node.plan !== 'object' || node.plan === null) {
+      throw new Error(`组合节点 "${id}" 缺少 plan（{ scene, intent }）—— 节点必须是场景计划而不是裸意图。`)
+    }
+    if (typeof node.plan.intent !== 'object' || node.plan.intent === null) {
+      throw new Error(`组合节点 "${id}" 缺少 intent 对象（该场景的意图表）。`)
+    }
+    const scene = node.plan.scene
     if ((scene as string) === 'crud') {
       throw new Error(
         'crud 节点不能参与组合：它是整页产物（含自己的表格/表单/弹窗与运行时），不能当片段二次装配。',
@@ -336,10 +367,6 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
   const dataWiring = behavior === 'crud-requests' && !!defaultTable
 
   const wires: CompositionWire[] = []
-  const pageEmits: string[] = []
-  const pushEmit = (event: string): void => {
-    if (!pageEmits.includes(event)) pageEmits.push(event)
-  }
 
   // ── 显式接线：先校验，再作为派生接线的覆盖层 ────────────────────────────
   const explicit = plan.wires ?? []
@@ -349,9 +376,39 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
     const runtime = ARTIFACT_RUNTIME[artifact]
     return [...runtime.emits, ...(runtime.success.name ? [runtime.success.name] : [])]
   }
+  /** 源表声明的行按钮 key（与派生接线同一口径：`key ?? name`）。 */
+  const rowActionsOf = (nodeId: string): string[] => {
+    const source = nodes.find((n) => n.id === nodeId)
+    const buttons =
+      (source?.plan?.intent as { rowButtons?: { key?: string; name?: string }[] } | undefined)?.rowButtons ?? []
+    return buttons.map((b) => String(b.key ?? b.name))
+  }
   for (const wire of explicit) {
-    if (!wire || !wire.from || !wire.to) {
-      throw new Error('组合 wires 的每一条都必须有 from / to。')
+    if (!wire || typeof wire !== 'object' || !wire.from || typeof wire.from !== 'object' || !wire.to || typeof wire.to !== 'object') {
+      throw new Error('组合 wires 的每一条都必须有 from / to（对象）。')
+    }
+    const label = `${String(wire.from.node)}.${String(wire.from.channel)}${
+      wire.when?.rowAction ? `#${wire.when.rowAction}` : ''
+    }`
+    for (const k of Object.keys(wire)) {
+      if (k !== 'from' && k !== 'to' && k !== 'when') {
+        throw new Error(`组合接线 ${label} 含未知键 "${k}" —— 只接受 from / to / when（未知键不静默忽略）。`)
+      }
+    }
+    for (const k of Object.keys(wire.from)) {
+      if (k !== 'node' && k !== 'channel') {
+        throw new Error(`组合接线 ${label} 的 from 含未知键 "${k}" —— 只接受 node / channel。`)
+      }
+    }
+    if (wire.when !== undefined) {
+      if (typeof wire.when !== 'object' || wire.when === null) {
+        throw new Error('组合接线的 when 必须是对象（{ rowAction }）。')
+      }
+      for (const k of Object.keys(wire.when)) {
+        if (k !== 'rowAction') {
+          throw new Error(`组合接线 ${label} 的 when 含未知键 "${k}" —— 只接受 rowAction。`)
+        }
+      }
     }
     const from = infoById.get(wire.from.node)
     if (!from) throw new Error(`组合接线引用未知节点 "${wire.from.node}"。`)
@@ -374,18 +431,61 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
         `组合接线 ${wire.from.node}.row-action 必须声明 when.rowAction（按 key 分派；通配会把所有行按钮接向同一目标）。`,
       )
     }
-    if ('node' in wire.to) {
-      const to = infoById.get(wire.to.node)
-      if (!to) throw new Error(`组合接线引用未知节点 "${wire.to.node}"。`)
-      if (!ARTIFACT_RUNTIME[to.artifact].expose.includes(wire.to.channel)) {
-        throw new Error(
-          `组合接线引用了不存在的暴露面 ${to.artifact}.${wire.to.channel}（契约声明：${ARTIFACT_RUNTIME[to.artifact].expose.join('/') || '(空)'}）。`,
-        )
+    const to = wire.to as unknown as Record<string, unknown>
+    const hasNode = Object.prototype.hasOwnProperty.call(to, 'node')
+    const hasPage = Object.prototype.hasOwnProperty.call(to, 'page')
+    if (hasNode === hasPage) {
+      throw new Error(
+        `组合接线 ${label} 的 to 必须且只能是 { node, channel } 或 { page: 'emit', event } 之一（不能同时给 node 与 page，也不能两者都不给）。`,
+      )
+    }
+    if (hasPage) {
+      if (to.page !== 'emit') {
+        throw new Error(`组合接线的 to.page 必须是字面量 'emit'（实际 ${JSON.stringify(to.page)}）。`)
       }
-    } else {
-      const event = (wire.to as { event?: unknown }).event
+      for (const k of Object.keys(to)) {
+        if (k !== 'page' && k !== 'event') {
+          throw new Error(`组合接线 ${label} 的 to 含未知键 "${k}" —— 页面目标只接受 page / event。`)
+        }
+      }
+      const event = to.event
       if (typeof event !== 'string' || !event) {
         throw new Error('组合接线的 to.page.event 必须是非空字符串。')
+      }
+    } else {
+      for (const k of Object.keys(to)) {
+        if (k !== 'node' && k !== 'channel') {
+          throw new Error(`组合接线 ${label} 的 to 含未知键 "${k}" —— 节点目标只接受 node / channel。`)
+        }
+      }
+      const target = infoById.get(String(to.node))
+      if (!target) throw new Error(`组合接线引用未知节点 "${String(to.node)}"。`)
+      const toRuntime = ARTIFACT_RUNTIME[target.artifact]
+      if (!toRuntime.expose.includes(String(to.channel))) {
+        throw new Error(
+          `组合接线引用了不存在的暴露面 ${target.artifact}.${String(to.channel)}（契约声明：${toRuntime.expose.join('/') || '(空)'}）。`,
+        )
+      }
+      // expose 里不全是方法（form.model 是数据）：只允许接线调用 invokable 子集。
+      if (!toRuntime.invokable.includes(String(to.channel))) {
+        throw new Error(
+          `组合接线 ${label} 的目标 ${target.artifact}.${String(to.channel)} 不是可调用通道 —— ` +
+            `${target.artifact} 暴露的 ${toRuntime.expose.join('/')} 里只有 [${toRuntime.invokable.join('/') || '(无)'}] 是方法，其余是数据。`,
+        )
+      }
+      // composable 弹窗没有模板 ref：页面只有「行按钮分派」这一条路径能调用它的 open()。
+      if (target.artifact === 'dialog-composable' && !(wire.from.channel === 'row-action' && to.channel === 'open')) {
+        throw new Error(
+          `组合接线 ${label} 指向 composable 弹窗 —— 它没有模板 ref，只有 row-action 分派能调用 open()；` +
+            `请把弹窗改成 mode: 'component'，或升级为页面事件由宿主处理。`,
+        )
+      }
+      // open 需要标题与行数据：只有 row-action 源携带行（页面自身另有 open(id, options)）。
+      if (to.channel === 'open' && wire.from.channel !== 'row-action') {
+        throw new Error(
+          `组合接线 ${label} 指向 open，但 open 需要标题与行数据 —— 只有 row-action 源携带行；` +
+            `请升级为页面事件，由宿主调用页面暴露的 open(id, options)。`,
+        )
       }
     }
     const key = wireKey(wire)
@@ -393,6 +493,15 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
       throw new Error(`组合接线 ${key} 重复声明 —— 同一触达点只能有一条显式接线。`)
     }
     explicitKeys.add(key)
+    // 行按钮分支必须真的有触发源：否则生成一个永远不触发的 if（死分支）。
+    if (wire.from.channel === 'row-action') {
+      const declared = rowActionsOf(wire.from.node)
+      if (!declared.includes(wire.when!.rowAction!)) {
+        throw new Error(
+          `组合接线 ${key} 指向该表未声明的行按钮 key —— ${wire.from.node} 的 rowButtons 只有 [${declared.join('/') || '(空)'}]，分支永远不会触发。`,
+        )
+      }
+    }
   }
 
   // 派生接线：同一 from（含 when.rowAction）上显式接线优先，不被重复派生。
@@ -422,7 +531,6 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
           to: { page: 'emit', event: 'row-action' },
           when: { rowAction: key },
         })
-        pushEmit('row-action')
       }
     }
   }
@@ -435,17 +543,14 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
       addDerived({ from: { node: form.id, channel: 'query' }, to: { node: defaultTable!.id, channel: 'reload' } })
     } else {
       addDerived({ from: { node: form.id, channel: 'query' }, to: { page: 'emit', event: 'query' } })
-      pushEmit('query')
     }
     addDerived({ from: { node: form.id, channel: 'submit' }, to: { page: 'emit', event: 'save' } })
-    pushEmit('save')
     // 片段点「重置」时先 `formRef.resetFields()`（es-form 的 'rest' 分支）再发
     // `reset`；组合页接上它，表格才会用清空后的条件重新取数。
     if (dataWiring) {
       addDerived({ from: { node: form.id, channel: 'reset' }, to: { node: defaultTable!.id, channel: 'reload' } })
     } else {
       addDerived({ from: { node: form.id, channel: 'reset' }, to: { page: 'emit', event: 'reset' } })
-      pushEmit('reset')
     }
   }
 
@@ -455,15 +560,16 @@ export function planComposition(plan: CompositionPlan): CompositionAnalysis {
       addDerived({ from: { node: dialog.id, channel: 'onSuccess' }, to: { node: defaultTable!.id, channel: 'refresh' } })
     } else {
       addDerived({ from: { node: dialog.id, channel: 'onSuccess' }, to: { page: 'emit', event: 'success' } })
-      pushEmit('success')
     }
   }
 
-  // 显式接线里的页面事件也要进 faces.emit（声明了就必须能派发）。
-  for (const wire of explicit) {
-    if ('page' in wire.to) pushEmit(wire.to.event)
-  }
+  // 显式接线先落地，再由最终 wires 投影 faces.emit（见文件头 P11 复核第 1 条：
+  // 覆盖派生的显式接线不能让被覆盖的事件留在声明里）。
   wires.unshift(...explicit)
+  const pageEmits: string[] = []
+  for (const wire of wires) {
+    if ('page' in wire.to && !pageEmits.includes(wire.to.event)) pageEmits.push(wire.to.event)
+  }
 
   const expose: string[] = []
   if (tables.length === 1) {
@@ -681,7 +787,6 @@ function pageCode(
 
   /** 行按钮处理器名字：单表沿用 `onRowAction`，多表按节点派生避免串台。 */
   const rowHandler = (table: EmittedNode): string => (multiTable ? `onRowAction${table.componentName}` : 'onRowAction')
-  const hasRowAction = tables.some((t) => rowsOf(t.id).length > 0)
 
   /** 页面事件调用表达式（vue2 / vue3 两套语法）。 */
   const emitExpr = (event: string, arg?: string): string =>
@@ -707,9 +812,19 @@ function pageCode(
       } else {
         const target = nodeById.get(wire.to.node)!
         if (target.scene === 'dialog') {
-          out.push(
-            `${indent}  ${openCall(target, { vue2, rowExpr: 'payload.row', success: successOf(target.id) })}`,
-          )
+          // 目标通道不同，产物也不同：`open` 走标题/行/成功回调的完整调用；`close`
+          // 只需无参调用（旧实现无条件生成 open(...)，把 close 静默改写成了开窗）。
+          if (wire.to.channel === 'open') {
+            out.push(
+              `${indent}  ${openCall(target, { vue2, rowExpr: 'payload.row', success: successOf(target.id) })}`,
+            )
+          } else {
+            out.push(
+              vue2
+                ? `${indent}  this.$refs.${refVar(target)}.${wire.to.channel}()`
+                : `${indent}  ${refVar(target)}.value?.${wire.to.channel}?.()`,
+            )
+          }
         } else {
           out.push(
             vue2
@@ -746,7 +861,7 @@ function pageCode(
         n.scene === 'table'
           ? ` ref="${refVar(n)}" @row-action="${rowHandler(n)}"`
           : n.scene === 'form'
-            ? ' @query="onQuery" @submit="onSubmit" @reset="onReset"'
+            ? ` ref="${refVar(n)}" @query="onQuery" @submit="onSubmit" @reset="onReset"`
             : ` ref="${refVar(n)}"`
       lines.push(`    <${kebabOf(n.componentName)}${attrs} />`)
     }
@@ -829,7 +944,7 @@ function pageCode(
 
   const lines: string[] = []
   lines.push(ts ? '<script setup lang="ts">' : '<script setup>')
-  const needRef = tables.length > 0 || componentNodes.some((n) => n.scene === 'dialog')
+  const needRef = componentNodes.length > 0
   if (needRef) lines.push("import { ref } from 'vue'")
   for (const n of nodes) {
     if (n.composableName) lines.push(`import { ${n.composableName} } from './${n.renamed.path}'`)
@@ -841,6 +956,9 @@ function pageCode(
     lines.push('')
   }
   for (const table of tables) lines.push(`const ${refVar(table)} = ref(null)`)
+  // 表单也要模板 ref：显式接线可以指向 validate / resetFields（P11 复核）。此前只有
+  // 表格/弹窗有 ref，`form.validate` 虽然写进契约却没有调用路径。
+  if (form) lines.push(`const ${refVar(form)} = ref(null)`)
   for (const dialog of dialogs) {
     if (dialog.composableName) lines.push(`const { open: ${composableOpenVar(dialog)} } = ${dialog.composableName}()`)
     else lines.push(`const ${refVar(dialog)} = ref(null)`)
@@ -939,7 +1057,8 @@ function pageCode(
   lines.push('  <div class="es-composed-page">')
   for (const n of componentNodes) {
     if (n.scene === 'table') lines.push(`    <${n.componentName} ref="${refVar(n)}" @row-action="${rowHandler(n)}" />`)
-    else if (n.scene === 'form') lines.push(`    <${n.componentName} @query="onQuery" @submit="onSubmit" @reset="onReset" />`)
+    else if (n.scene === 'form')
+      lines.push(`    <${n.componentName} ref="${refVar(n)}" @query="onQuery" @submit="onSubmit" @reset="onReset" />`)
     else lines.push(`    <${n.componentName} ref="${refVar(n)}" />`)
   }
   lines.push('  </div>')
