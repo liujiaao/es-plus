@@ -6,7 +6,7 @@ import {
   formatUnknownKey,
   type CompositionPlan,
 } from "@es-plus/shared";
-import { withEnvelope } from "./_artifact-content.js";
+import { registerArtifactTool, withEnvelope } from "./_artifact-content.js";
 import { SCENE_INTENT_SCHEMAS } from "./generate-scene.js";
 
 /**
@@ -136,7 +136,8 @@ function nodeError(id: string, lines: string[]): string {
 }
 
 export function registerGenerateComposition(server: McpServer) {
-  server.tool(
+  registerArtifactTool(
+    server,
     "generate_composition",
     "PAGE COMPOSER — assemble several standalone fragments into ONE working page (Page.vue + one file per node). Give it 1+ nodes, each `{ id, role?, scene, intent }` where scene is 'table' / 'form' / 'dialog' (at most one form; tables and dialogs may repeat) and intent is exactly that scene's standalone tool argument. The wiring is derived deterministically from the artifact runtime contract: a row button whose key equals a dialog node id opens that dialog (title from the dialog intent's defaultTitle); the query form reloads the default table from page 1; reset reloads it with cleared filters; submit becomes a page event 'save'; a successful dialog submit refreshes the default table. The default table is the node with role 'master', else the only table; in a multi-table page with neither, data channels become page events instead of guessing. Pass `wires` to declare master-detail style links yourself (e.g. master row-action key 'view' → detail table reload, where the row is passed as the model); an explicit wire overrides the derived one for the same source. Wire targets must be callable by the generated page: table refresh/reload, form validate/resetFields, component-dialog open/close; `open` is only reachable from a row-action (it carries the row), and a row-action key must match a declared rowButtons key. `behavior: 'ui-only'` wires only the UI (row button → dialog open) and turns query/reset/success into page events so the host performs its own requests. Use this when the user wants these pieces TOGETHER in one page but the request is not a CRUD page (use generate_scene/generate_crud for 'crud'). The page exposes refresh/reload/open and emits row-action/save (+ query/reset/success when there is no default table or behavior is ui-only). When the client supports MCP structured output, the composition envelope (nodes/wires/faces/page/fingerprint) is also returned as `structuredContent`; the text content is unchanged.",
     compositionShape,

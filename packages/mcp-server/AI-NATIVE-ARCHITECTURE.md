@@ -73,10 +73,11 @@ MCP server **不调用模型、不写文件、不持有会话**。所有“理�
                                 │ MCP (stdio)
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │ packages/mcp-server（无状态、无模型、纯函数）                         │
-│  · tools    14 个（生成 / 校验 / 精修 / 摄取 / 参考 / 脚手架）         │
-│  · resources 7 族（conventions / types / examples / nl-to-config /   │
-│              surfaces / crud-page-schema / schemas）                 │
-│  · prompts   2 个（crud-page / form-config）                         │
+│  · tools    19 个（full）/ 16 个（front-door）                       │
+│  · resources 9 族（conventions / types / examples / nl-to-config /   │
+│              surfaces / crud-page-schema / schemas /                │
+│              design-extraction / capabilities）                     │
+│  · prompts   3 个（crud-page / form-config / spec-to-surfaces）      │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ import
 ┌───────────────────────────────▼─────────────────────────────────────┐
@@ -154,7 +155,7 @@ surfaces
 | 旧 NL | `generate_crud_page` / `generate_crud_schema` → `crud-engine` regex → 生成 | **legacy fallback** |
 | 精修 | `refine_config(previous, revised)` → 校验 + `diffConfig` | 确定性，无模型 |
 | 摄取 | `ingest_schema(text, kind)` → `ingestSchema` → `composeCrudConfig` 草稿 | 只做类型→formtype |
-| 单组件 | `generate_form` / `generate_table` / `generate_dialog` → `fragment-generator` | 显式单组件请求 |
+| 单组件 | `generate_table` / `generate_dialog` → `fragment-generator` | 显式单组件请求 |
 
 ### 3.4 输入类型与真实边界
 
@@ -214,10 +215,16 @@ surfaces
 | 18 | `validate_intent` | 抽取校验 | ✅ | 能力报告 + 逐字段 issue | 否 | 稳定（P13） |
 | 19 | `coverage_report` | 覆盖率分级 | ✅ | 逐页 L1/L2/L3 | 否 | 稳定（P13） |
 
-> 生成类工具（2–10）在客户端支持 MCP 结构化输出时，会把产物信封挂到
+> 只有**带场景产物的三个工具** —— `generate_scene`、`generate_crud`（compat adapter）、
+> `generate_composition` —— 在客户端支持 MCP 结构化输出时，会把产物信封挂到
 > `structuredContent`：`contract` / `scene` / `artifact` / `target` / `mode` /
 > `files[]` / `config` / `warnings[]` / `fingerprint`；组合页另有 `nodes[]` /
 > `wires[]` / `faces` / `page` / `behavior` / `roles`。`content.text` 仍是逐字节不变的旧文本。
+> 这三个工具的 `tools/list` 条目同时声明 `outputSchema`（必填 `contract` + `fingerprint`，
+> 其余字段放行），宿主不必先调一次就能预知信封形状。
+> 其余生成入口（`generate_form` / `generate_table` / `generate_dialog` /
+> `generate_crud_from_config` / 两个 legacy 工具）**不挂信封**——它们返回片段或旧文本，
+> 调用方不要按 `structuredContent` 是否存在做分支。
 > 每个节点信封还带 `capability`（`es-plus.capabilities@1`）：意图逐键判定
 > `accepted` / `degraded` / `unsupported` + `missing`（见 §4.1c）。
 
@@ -671,12 +678,12 @@ __tests__/golden/cases/
 | 路径 | 职责 |
 |---|---|
 | `src/index.ts` | server 创建、instructions |
-| `src/tools/index.ts` | 14 工具注册 |
+| `src/tools/index.ts` | 19 工具注册（full；front-door 16） |
 | `src/tools/generate-crud.ts` | 前门 + surfaces 形状 |
 | `src/tools/generate-from-config.ts` | 配置直通 + 语义告警 |
 | `src/tools/_fragment-shapes.ts` | 片段/前门字段形状 |
-| `src/resources/*` | 7 族资源 |
-| `src/prompts/*` | 2 个 prompt |
+| `src/resources/*` | 9 族资源 |
+| `src/prompts/*` | 3 个 prompt |
 | `../shared/src/compose-crud-config.ts` | 三面归并 |
 | `../shared/src/structured-config.schema.ts` | 权威 Zod |
 | `../shared/src/validate-and-repair.ts` | 前门校验 |

@@ -41,6 +41,9 @@ export function withArgGuard(server: McpServer): McpServer {
     description: string,
     shape: Record<string, z.ZodTypeAny>,
     handler: (args: any, extra?: any) => unknown,
+    // P8 复核：产物信封的 `outputSchema` 从第 5 个参数透传（见 `_artifact-content.ts`
+    // 的 `registerArtifactTool`）。其余工具不传，行为与之前完全一致。
+    options?: { outputSchema?: z.ZodTypeAny },
   ) {
     const schema = z.object(shape);
     const wrapped = async (args: any, extra?: any) => {
@@ -84,7 +87,12 @@ export function withArgGuard(server: McpServer): McpServer {
       return (modern as Function).call(
         server,
         name,
-        { description, inputSchema: schema.passthrough() },
+        {
+          description,
+          inputSchema: schema.passthrough(),
+          ...(options?.outputSchema ? { outputSchema: options.outputSchema } : {}),
+          
+        },
         wrapped,
       );
     }

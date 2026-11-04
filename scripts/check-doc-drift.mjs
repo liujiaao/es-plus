@@ -20,7 +20,7 @@
  *
  * 退出码：0 = 文档与源码一致；1 = 有漂移。
  */
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
@@ -105,15 +105,73 @@ try {
     '**没有**顶层 `columns`',
     '未知键被静默剥离',
     '字段级 `render`/`formatter` 在片段表单中被静默丢弃',
+    // P8 复核：ASCII 图 / 文件地图 / 信封适用范围曾与源码相反（14 工具、7 族资源、
+    // 「生成类工具 2–10 全挂信封」）。这四处当时守卫只查 §4 标题与 profile 表，抓不到。
+    '`tools    14 个`',
+    '14 工具注册',
+    'resources 7 族',
+    '7 族资源',
+    'prompts   2 个',
+    '生成类工具（2–10）',
   ]
   for (const s of STALE) if (doc.includes(s)) fail(`文档仍含过时表述：「${s}」`)
 
-  // ── 4. 已落地的事实必须留在文档里 ─────────────────────────────────────
+  // ── 3b. 资源族 / prompt / ASCII 图 / 文件地图的计数从源码数出来 ──────────
+  // 这些数字以前只活在图上，没有任何门禁；P8 复核时三处全错却全绿。
+  const resourcesIdx = readFileSync(join(ROOT, 'packages', 'mcp-server', 'src', 'resources', 'index.ts'), 'utf8')
+  const promptsIdx = readFileSync(join(ROOT, 'packages', 'mcp-server', 'src', 'prompts', 'index.ts'), 'utf8')
+  const countCalls = (source, re) => (source.match(re) ?? []).length
+  const resourceFamilies = countCalls(resourcesIdx, /^\s*register\w+Resources?\(server[,)]/gm)
+  const promptCount = countCalls(promptsIdx, /^\s*register\w+Prompt\(server[,)]/gm)
+  const asciiTools = doc.match(/· tools\s+(\d+) 个（full）/)?.[1]
+  if (asciiTools !== String(full.length)) {
+    fail(`ASCII 图的工具数写的是 ${asciiTools ?? '(缺失)'}，源码注册 ${full.length}（full profile）`)
+  }
+  if (!doc.includes(`resources ${resourceFamilies} 族`)) {
+    fail(`文档没有写 resources ${resourceFamilies} 族（源码 registerResources 调用了 ${resourceFamilies} 个家族）`)
+  }
+  if (!doc.includes(`| \`src/resources/*\` | ${resourceFamilies} 族资源 |`)) {
+    fail(`文件地图里 src/resources/* 的资源族数不是 ${resourceFamilies}`)
+  }
+  const asciiPrompts = doc.match(/· prompts\s+(\d+) 个/)?.[1]
+  if (asciiPrompts !== String(promptCount)) {
+    fail(`ASCII 图的 prompt 数写的是 ${asciiPrompts ?? '(缺失)'}，源码注册 ${promptCount} 个`)
+  }
+  if (!doc.includes(`| \`src/prompts/*\` | ${promptCount} 个 prompt |`)) {
+    fail(`文件地图里 src/prompts/* 的 prompt 数不是 ${promptCount}`)
+  }
+  if (!doc.includes(`| \`src/tools/index.ts\` | ${full.length} 工具注册`)) {
+    fail(`文件地图里 src/tools/index.ts 的工具数不是 ${full.length}（full profile）`)
+  }
+
+  // ── 3c. 信封适用范围：以源码里真正调用 withEnvelope 的工具为准 ─────────
+  const toolsDir = join(ROOT, 'packages', 'mcp-server', 'src', 'tools')
+  const envelopeTools = readdirSync(toolsDir)
+    .filter((f) => f.endsWith('.ts') && !f.startsWith('_'))
+    .filter((f) => readFileSync(join(toolsDir, f), 'utf8').includes('withEnvelope('))
+    .map((f) => f.replace(/^generate-/, 'generate_').replace(/\.ts$/, '').replace(/-/g, '_'))
+    .filter((n) => names.includes(n))
+    .sort()
+  const envelopeNote = doc.split(/\n\n+/).find((p) => p.includes('structuredContent') && p.includes('只有**带场景产物'))
+  if (!envelopeNote) {
+    fail('文档缺少「信封只挂在哪些工具上」的适用范围说明')
+  } else {
+    for (const name of envelopeTools) {
+      if (!envelopeNote.includes(`\`${name}\``)) fail(`信封范围说明漏了实际调用 withEnvelope 的工具 ${name}`)
+    }
+    for (const name of ['generate_form', 'generate_table', 'generate_dialog', 'generate_crud_from_config']) {
+      if (!envelopeNote.includes(`\`${name}\``)) {
+        fail(`信封范围说明没有点名不挂信封的生成入口 ${name}`)
+      }
+    }
+  }
+
   const REQUIRED = [
     ['PRD 语料规模', '22 例'],
     ['ingest 的 TS 输入', 'TypeScript interface'],
     ['ingest 的 SQL 输入', 'SQL DDL'],
     ['信封透出', 'structuredContent'],
+    ['信封形状声明（P8 复核）', 'outputSchema'],
     ['唯一前门', 'generate_scene'],
     ['组合页', 'generate_composition'],
     ['兼容入口标签', 'COMPAT ENTRY'],

@@ -10,7 +10,7 @@ import {
   type SceneId,
   type ScenePlan,
 } from "@es-plus/shared";
-import { withEnvelope } from "./_artifact-content.js";
+import { registerArtifactTool, withEnvelope } from "./_artifact-content.js";
 import { crudShape } from "./generate-crud.js";
 import { tableShape } from "./generate-table.js";
 import { formShape } from "./generate-form.js";
@@ -83,7 +83,8 @@ function invalidIntentError(scene: SceneId, issues: z.ZodIssue[]): string {
 }
 
 export function registerGenerateScene(server: McpServer) {
-  server.tool(
+  registerArtifactTool(
+    server,
     "generate_scene",
     "FRONT DOOR — SCENE ROUTER: the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is exactly the generate_crud argument object (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for the fragment scenes it is exactly the generate_table / generate_form / generate_dialog argument object. Routing and emission are deterministic, and the output is byte-identical to the corresponding legacy tool. When the client supports MCP structured output, the artifact envelope (`contract` / `files` / `config` / `warnings` / `fingerprint`) is also returned as `structuredContent`; the text content is unchanged. Use generate_composition when several of these pieces must live TOGETHER in one page; `generate_crud` remains available as the compatibility entry for a plain list/table page and produces the same bytes as scene='crud'.",
     sceneShape,
