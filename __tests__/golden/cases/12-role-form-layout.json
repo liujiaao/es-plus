@@ -62,13 +62,37 @@
     "dialogs": {
       "add": {
         "title": "新增角色",
-        "width": 720
+        "width": 720,
+        "formItems": [
+          { "prop": "roleName", "label": "角色名", "formtype": "Input", "formSpan": 12 },
+          { "prop": "roleCode", "label": "角色编码", "formtype": "Input", "formSpan": 12 },
+          { "prop": "dataScope", "label": "数据权限范围", "formtype": "Select", "formSpan": 12,
+            "dataOptions": [
+              { "label": "全部", "value": "all" },
+              { "label": "本部门", "value": "dept" },
+              { "label": "本部门及以下", "value": "dept_and_child" },
+              { "label": "仅本人", "value": "self" }
+            ]
+          }
+        ]
       },
       "edit": {
         "title": "编辑角色",
-        "width": 720
+        "width": 720,
+        "formItems": [
+          { "prop": "roleName", "label": "角色名", "formtype": "Input", "formSpan": 12 },
+          { "prop": "roleCode", "label": "角色编码", "formtype": "Input", "formSpan": 12 },
+          { "prop": "dataScope", "label": "数据权限范围", "formtype": "Select", "formSpan": 12,
+            "dataOptions": [
+              { "label": "全部", "value": "all" },
+              { "label": "本部门", "value": "dept" },
+              { "label": "本部门及以下", "value": "dept_and_child" },
+              { "label": "仅本人", "value": "self" }
+            ]
+          }
+        ]
       }
     }
   },
-  "notes": "dialog width + 2-column add/edit form（列宽由字段级 formSpan 决定）。2026-10-29 把「查询表单分 2 列」写进 NL：gold 的三个可查询字段同时带 querySpan:12 与 formSpan:12，可原文只说「表单分 2 列」—— 模型只给 formSpan 是照 NL 的正确读法，却被 querySpan 判负。补 NL 而不是删 gold，是为了保住 querySpan 这条测量"
+  "notes": "dialog width + 2-column add/edit form（列宽由字段级 formSpan 决定）。2026-10-29 把「查询表单分 2 列」写进 NL：gold 的三个可查询字段同时带 querySpan:12 与 formSpan:12，可原文只说「表单分 2 列」—— 模型只给 formSpan 是照 NL 的正确读法，却被 querySpan 判负。补 NL 而不是删 gold，是为了保住 querySpan 这条测量。2026-11-04 补上 dialogs.add/edit 的 formItems：声明 dialogs 即进入显式模式，三端 normalizedDialogs 原样返回、生成器也只拷贝真声明的 formItems —— 原文只有 title/width 的条目在运行时是空弹窗，与本例 NL「弹窗里的表单也分 2 列」自相矛盾；formSpan:12 同样必须落在弹窗条目上（显式模式的 span 来自条目自己，不再从顶层字段派生）。"
 }

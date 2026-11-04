@@ -546,7 +546,7 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 
 3. **多表无 master 的静默升级 → 显式告警**：派生数据接线在没有唯一默认表时升级为页面
    事件，产出面只字不提。宿主会以为 `data-wiring` 仍在接表。现在在产物正文与信封
-   `warnings` 里点名，并给出两条出路（`<id>Refresh` / `<id>Reload`，或声明
+   `warnings` 里点名，并给出两条出路（每个节点的 `<节点camel>Refresh` / `<节点camel>Reload`，或声明
    `role: 'master'`）。`ui-only` 本就把数据通道全部交给宿主，不重复告警。
 4. **悬空 `@row-action` 监听**：模板对每张表都绑定 `@row-action`，但处理器只为「有行按钮
    接线」的表发射。明细表（无 `rowButtons`）因此得到一个指向未定义方法的监听 —— vue3
@@ -579,26 +579,39 @@ P11 把组合页从「一个表 / 一个弹窗 / 接线不可改」扩到多表�
 ### P12 复核 · gold 自评分（尺子的自证）
 
 计划第 1 条的「CRUD 腿」此前缺位：PRD 腿已逐例自评，CRUD 216 例与片段 69 例
-只有合成样例单测。补上守卫后**当场抓到一条真实尺子缺陷**：
+只有合成样例单测。补上守卫后**当场抓到两条 gold 用例自评判负**（`12-role-form-layout` /
+`18-notice-custom-dialog`）。当时的归因与修法**被 2026-11-04 复审推翻**，据实更正如下：
 
-- **`dialogs` 的 `formItems` 派生只回填 pred 侧**：gold 写
-  `dialogs.add: { showClose, appendTo, configBtn }` 而省略 `formItems`（渲染期由
-  `inForm !== false` 字段回填）时，gold 侧仍按空集比 ⟹ **gold-vs-gold 判负**。
-  受害用例：`12-role-form-layout` / `18-notice-custom-dialog`。同构于
-  `operationColumn`「省略即派生、尺子当空集」的建模缺陷：一个把派生结果**显式写全**的
-  正确模型也会被误罚。修法：抽出 `effectiveDialogEntry`，gold 与 pred 用**同一套**
-  回填规则（显式 `[]` 仍不派生）；`dialogsView` 同步改为两侧有效视图，保持
-  「want === got ⟺ pass」不变量。
+- **首版归因（错误，已回退）**：认为「`dialogs.add` 省略 `formItems` ⟹ 渲染期按
+  `inForm !== false` 字段回填」，于是把 gold 与 pred 都套上 `effectiveDialogEntry`
+  回填。回源码核对：三端 `normalizedDialogs` 都是
+  `if (props.schema.dialogs) return props.schema.dialogs`（**原样**），生成器也只在
+  `dlg.formItems` 真声明时才拷贝 —— 运行时**从不**回填。这个「对称」修复的真实效果是
+  给「声明了弹窗却漏写表单」的白卷判对（运行时是点开没有任何字段的空弹窗），并把
+  gold 语料自身的同类错误合法化。
+- **真实缺陷一分为二**：`dialogs` 的 `formItems` 只由 **legacy 模式**派生（`schema.dialogs`
+  缺席时由 `dialogFormItems` + `actions` 合成 add/edit/view）。尺子现在的模型是
+  `effectiveDialogs(cfg)`：显式模式（`dialogs` 非空 record，或声明了
+  `toolbarBtns`/`tableBtns`/`operationColumn`）条目**原样**；legacy 模式才按
+  `inForm !== false` + `actions` 派生（与 `render-plan` 的 `anyRenders` 逐字对齐，
+  空 record 等同省略）。gold 侧不再有任何回填。
+- **`12-role-form-layout` 是语料错误，不是尺子错误**：它声明 `dialogs.add/edit`
+  只为写 `width: 720`（AI 契约里弹窗宽度的唯一出口就是 `dialogs[k].width`），却没写
+  `formItems` —— 与本例 NL「弹窗里的表单也分 2 列」自相矛盾。补上三个字段的
+  `formItems`（含 `formSpan: 12`，显式模式的 span 来自条目自己，不再从顶层字段派生）。
+  `18-notice-custom-dialog` 的 `edit` 带 `hasCustomRender: true`（弹窗体由宿主 render
+  提供），省略 formItems 本就合法，无需改。
 - 新增 `scripts/check-gold-self-score.mjs`（`check:gold-self`，进 `scoring-eval` 组与
   旧链）：CRUD 用 `scoreAll(gold, gold, mask)`，片段用 `scoreFragment(scene, gold, gold, mask)`，
   要求 `core / full / scoped / stated` 全真且每个 applicable 维度 pass。纯离线、不调模型、
   不读写 accuracy 产物。
-- `scorers.test.mjs` 补两条对称性断言（gold 省略 formItems 时自评必正、pred 显式写出
-  派生结果也必正），把修复钉在尺子旁边。
+- `scorers.test.mjs` 的断言换成钉运行时事实的四条：gold/pred 任一侧在显式模式下省略
+  `formItems` 都判负；整键省略走 legacy 派生且与显式写全渲染等价；声明按钮面后不再
+  退回 legacy；legacy 派生按 `inForm !== false` 过滤。变异（把显式模式的条目重新
+  按字段回填）→ 两条断言红，恢复后绿。
 
 **验证**：`check:gold-self` → CRUD 216 + 片段 69 全绿；`check:scorers` /
-`check:rescore` / `check:ratchet` 绿；变异（把 `dialogsEqual` 的 gold 侧换回裸
-`gold.dialogs`）→ 守卫点名两条用例、`exactIntentFull` 红，恢复后绿。
+`check:rescore` / `check:ratchet` / `check:unknown-keys` 绿。
 
 **仍未完成（运营项，代码侧已就绪）**：计划第 6 条「重跑一次完整评测」受中继与额度
 约束，当前分支产物仍是 `measurement: failed`（407 行未测到），因此**不得引用任何
