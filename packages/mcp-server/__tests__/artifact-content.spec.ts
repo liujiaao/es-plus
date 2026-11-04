@@ -127,7 +127,7 @@ describe("structuredContent — 产物信封", () => {
     });
     expect(res.isError, res.content[0].text).toBeFalsy();
     const env = res.structuredContent;
-    expect(env.contract).toBe("es-plus.composition@2");
+    expect(env.contract).toBe("es-plus.composition@3");
     expect(env.page.path).toBe("Page.vue");
     expect(env.nodes).toHaveLength(2);
     expect(env.wires.length).toBeGreaterThan(0);

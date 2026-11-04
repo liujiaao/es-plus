@@ -12,8 +12,10 @@ import { SCENE_INTENT_SCHEMAS } from "../src/tools/generate-scene.js";
  *      不会产出半成品页面）；
  *   ② 节点成功时文本与直接调 `emitComposition` 完全一致（工具层不二次加工产物，
  *      也不另写一份意图解析）；
- *   ③ `planComposition` 的结构化拒绝原样透出（同场景两个节点）；
- *   ④ 入口形状本身拒绝空节点与 `crud` 节点（后者在 handler 里还有一层防御文案）。
+ *   ③ `planComposition` 的结构化拒绝原样透出（两个 form 节点 / 非法接线）；
+ *   ④ 入口形状本身拒绝空节点与 `crud` 节点（后者在 handler 里还有一层防御文案）；
+ *   ⑤ `@3` 的三个新旋钮（role / behavior / wires）只是**透传**，语义与校验全在
+ *      `planComposition` 一处实现 —— 工具层不复制第二份规则。
  */
 
 type Captured = { shape: any; handler: (args: any) => any };
@@ -104,7 +106,7 @@ describe("generate_composition — 组合页入口", () => {
     expect(result.content[0].text).toContain("crud");
   });
 
-  it("同场景两个节点由 planComposition 拒绝，错误原样透出", async () => {
+  it("两个 form 节点由 planComposition 拒绝，错误原样透出", async () => {
     const result = await call(tool, {
       nodes: [
         { id: "a", scene: "form", intent: formIntent },
@@ -112,7 +114,52 @@ describe("generate_composition — 组合页入口", () => {
       ],
     });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/不止一个节点/);
+    expect(result.content[0].text).toMatch(/form 场景出现了 2 个节点/);
+  });
+
+  it("@3：role / behavior / wires 原样透传给 planComposition", async () => {
+    const result = await call(tool, {
+      nodes: [
+        { id: "users", role: "master", scene: "table", intent: tableIntent },
+        { id: "items", scene: "table", intent: { ...tableIntent, rowButtons: [] } },
+        { id: "filter", scene: "form", intent: formIntent },
+      ],
+      wires: [
+        {
+          from: { node: "users", channel: "row-action" },
+          to: { node: "items", channel: "reload" },
+          when: { rowAction: "view" },
+        },
+      ],
+    });
+    expect(result.isError, result.content[0].text).toBeFalsy();
+    const text = result.content[0].text;
+    expect(text).toContain('[role=master]');
+    expect(text).toContain("Behavior: crud-requests");
+    expect(text).toContain('users.row-action (key=view) → items.reload');
+    // 多表暴露面按节点派生，master 另有一对缺省别名。
+    expect(text).toContain("exposes refresh/reload/usersRefresh/usersReload/itemsRefresh/itemsReload");
+  });
+
+  it("@3：behavior=ui-only 关闭派生数据接线", async () => {
+    const result = await call(tool, {
+      behavior: "ui-only",
+      nodes: [
+        { id: "users", scene: "table", intent: tableIntent },
+        { id: "filter", scene: "form", intent: formIntent },
+      ],
+    });
+    expect(result.isError, result.content[0].text).toBeFalsy();
+    expect(result.content[0].text).toContain("Behavior: ui-only（数据通道升级为页面事件）");
+  });
+
+  it("@3：非法接线由 planComposition 结构化拒绝（工具层不重复规则）", async () => {
+    const result = await call(tool, {
+      nodes: [{ id: "users", scene: "table", intent: tableIntent }],
+      wires: [{ from: { node: "users", channel: "row-action" }, to: { page: "emit", event: "x" } }],
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/必须声明 when\.rowAction/);
   });
 
   it("空节点在入口形状就拒绝，handler 另有一层兜底", async () => {

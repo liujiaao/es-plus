@@ -271,7 +271,7 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 MCP Server 默认（`full` profile）暴露 **17 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把 1–3 个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
 > 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 14 个）。
 
@@ -281,7 +281,7 @@ MCP Server 默认（`full` profile）暴露 **17 个工具**，AI 编码工具�
 
 ### generate_composition（组合页 / PAGE COMPOSER）
 
-把 1–3 个独立片段装配成一张页面：`{ name?, target?, nodes: [{ id, scene, intent }] }` → `Page.vue` + 每个节点一个文件。接线由 `ARTIFACT_RUNTIME` 派生：行按钮 key 命中弹窗节点 id 就开窗（标题取弹窗 `intent.defaultTitle`），否则升级为页面事件 `row-action`；查询/重置 → 表格 `reload`（新搜索回第 1 页）；提交 → 页面事件 `save`；弹窗成功 → 表格 `refresh`。页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`（未命中返回 `false`）。每个场景最多一个节点；vue2 弹窗只能是 `mode:'component'`。
+把独立片段装配成一张页面：`{ name?, target?, behavior?, nodes: [{ id, role?, scene, intent }], wires? }` → `Page.vue` + 每个节点一个文件。`form` 至多一个，`table` / `dialog` 可以多个（master-detail / 多弹窗）。接线由 `ARTIFACT_RUNTIME` 派生：行按钮 key 命中弹窗节点 id 就开窗（标题取弹窗 `intent.defaultTitle`），否则升级为页面事件 `row-action`；查询/重置 → **默认表** `reload`（新搜索回第 1 页；默认表 = `role: 'master'`，否则唯一的表）；提交 → 页面事件 `save`；弹窗成功 → 默认表 `refresh`（内联回调，多表也分得清）。多表且无 master 时数据通道不猜，升级为页面事件。`wires` 可显式声明接线（如主表 `row-action` key=view → 明细表 `reload(row)`），同一 `from` 上覆盖派生；`behavior: 'ui-only'` 只装配 UI 接线，查询/重置/成功全部交给宿主。页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`（未命中返回 `false`），多表另给每个节点一对 `<id>Refresh` / `<id>Reload`。vue2 弹窗只能是 `mode:'component'`。
 
 ### generate_crud（兼容入口 / COMPAT adapter）
 

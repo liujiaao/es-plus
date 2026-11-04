@@ -1,26 +1,30 @@
 #!/usr/bin/env node
 /**
- * 组合契约门禁 —— `es-plus.composition@2`（P6b 落地，P7 升版）。
+ * 组合契约门禁 —— `es-plus.composition@3`（P6b 落地，P7 @2，P11 @3）。
  *
  * ## 判据
  *
- * 对 golden 片段语料（table / form / dialog，三端）组装出四类组合，逐组断言：
+ * 对 golden 片段语料（table / form / dialog，三端）组装出多类组合，逐组断言：
  *
  *   ① **接线只来自契约**：每条 wire 的 from 通道 ∈ `ARTIFACT_RUNTIME[artifact].emits`
  *      或 `success.name`；to 节点的通道 ∈ 该 artifact 的 `expose`；
  *   ② **没有静默丢弃**：每个在场 artifact 的每个可触发通道（form submit/query/reset、
  *      dialog success、带行按钮的 table row-action）都出现在某条 wire 的 from；
- *      每条 `to.page` 的 event 都在 `faces.emit` 里，反之亦然；
+ *      每条 `to.page` 的 event 都在 `faces.emit` 里，反之亦然（`ui-only` 档位下数据通道
+ *      全部是页面事件，这条同时证明「降档不等于丢通道」）；
  *   ③ **页面与会话自洽**：`Page.vue` 的 `defineEmits` / `defineExpose` 与 `faces`
  *      完全一致；每个节点文件都以相对导入出现；每个 dialog 节点的标题字面量等于
- *      `intent.defaultTitle ?? dialogTitleFor(id)`（与单独发射同源）；有成功接线时
- *      页面必须有 `onTableSuccess`；
+ *      `intent.defaultTitle ?? dialogTitleFor(id)`（与单独发射同源）；每条成功接线都
+ *      真的落到页面代码里 —— invoke 形态是目标表 ref 的 `refresh()`/`reload()` 内联
+ *      回调（@3 取代 @2 的 `onTableSuccess`，多表页面因此能分清刷哪张），页面事件
+ *      形态是 `emit('<event>', { id, data })`；
  *   ④ **片段字节不变**：节点文件代码与单独 `emitSceneArtifact` 逐字节相等；
  *      `files` 路径唯一、每份 `code` 都在返回文本里；
- *   ⑤ **信封**：contract/target/wires/faces/nodes 自洽，指纹 16 位、两次相同、
- *      改一个字段（label）必变；
- *   ⑥ **结构化拒绝**：crud 节点、同场景两个节点、混装 target、vue2 + composable、
- *      空节点 —— 都必须是 `isError` 且没有文件 / 信封；
+ *   ⑤ **信封**：contract/target/behavior/roles/wires/faces/nodes 自洽，指纹 16 位、
+ *      两次相同、改一个字段（label）必变；
+ *   ⑥ **结构化拒绝**：crud 节点、两个 form 节点、混装 target、vue2 + composable、
+ *      空节点、非法 behavior、重复 role、未知通道、行动作接线缺 when、未知目标节点、
+ *      重复显式接线 —— 都必须是 `isError` 且没有文件 / 信封；
  *   ⑦ **页面真的能编译**：每个组合的 `Page.vue` 都过对应框架的 SFC 编译器
  *      （vue3/antdv：`@vue/compiler-sfc` 的 parse + compileScript + compileTemplate；
  *      vue2：`vue@2.7/compiler-sfc` 的 parse + compileTemplate）。只跑生成器不编译
@@ -165,6 +169,21 @@ function quotedList(code, head) {
   return [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1])
 }
 
+/**
+ * 节点 id → 页面里模板 ref 的变量名。
+ *
+ * 与 `composition.ts` 的 `pascalOf` + `refVar` 同一套规则。守卫**必须**自己算一遍而
+ * 不是去读产物里的 `const xxxRef` —— 读产物等于用被检对象定义期望值。
+ */
+function refOf(id) {
+  const pascal = id
+    .split('-')
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join('')
+  return `${pascal.charAt(0).toLowerCase()}${pascal.slice(1)}Ref`
+}
+
 async function checkPlan(file, plan, mod, expectArtifacts) {
   const { emitComposition, emitSceneArtifact, ARTIFACT_RUNTIME, COMPOSITION_CONTRACT_VERSION } = mod
   const result = emitComposition(plan)
@@ -212,6 +231,29 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
       }
     } else if (!faces.emit.includes(wire.to.event)) {
       fail(`${file}: 接线目标是页面事件 "${wire.to.event}"，但 faces.emit 里没有它`)
+    }
+  }
+
+  // ①b 显式接线必须原样落地，且同一触达点不允许同时存在派生接线（覆盖而不是叠加）。
+  const wireKeyOf = (w) =>
+    `${w.from.node}.${w.from.channel}${w.when?.rowAction ? `#${w.when.rowAction}` : ''}`
+  for (const wire of plan.wires ?? []) {
+    const key = wireKeyOf(wire)
+    const matches = wires.filter((w) => wireKeyOf(w) === key)
+    if (matches.length !== 1) {
+      fail(`${file}: 显式接线 ${key} 应恰好落地 1 条，实际 ${matches.length} 条`)
+    } else if (JSON.stringify(matches[0]) !== JSON.stringify(wire)) {
+      fail(`${file}: 显式接线 ${key} 被改写成 ${JSON.stringify(matches[0])}`)
+    }
+  }
+
+  // ①c role=master 是数据接线的默认目标（不是「第一个表」）。
+  const masterNode = plan.nodes.find((n) => n.role === 'master' && n.plan.scene === 'table')
+  const formNode = plan.nodes.find((n) => n.plan.scene === 'form')
+  if (masterNode && formNode && (plan.behavior ?? 'crud-requests') === 'crud-requests') {
+    const query = wires.find((w) => w.from.node === formNode.id && w.from.channel === 'query')
+    if (!query || !('node' in query.to) || query.to.node !== masterNode.id) {
+      fail(`${file}: role=master 的 ${masterNode.id} 没有成为查询默认目标（实际 ${JSON.stringify(query)}）`)
     }
   }
 
@@ -277,12 +319,25 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
       fail(`${file}: Page.vue 缺少弹窗标题字面量 '${title}'（应与 intent.defaultTitle / DIALOG_TITLES 同源）`)
     }
   }
-  const hasSuccessWire = wires.some((w) => w.from.channel === 'onSuccess' && 'node' in w.to && w.to.channel === 'refresh')
-  if (hasSuccessWire && !page.code.includes('onTableSuccess')) {
-    fail(`${file}: 有 dialog→table.refresh 接线，但页面没有 onTableSuccess 回调`)
-  }
-  if (!hasSuccessWire && page.code.includes('onTableSuccess')) {
-    fail(`${file}: 没有成功接线，页面却生成了 onTableSuccess`)
+  // 成功接线必须真的落在页面代码里：@3 不再有 onTableSuccess 中枢，成功回调是
+  // 内联在 open(...) 的第三个参数（多表才能分清刷哪张）；升级为页面事件时则必须
+  // 真的派发声明过的 event 名。
+  for (const wire of wires.filter((w) => w.from.channel === 'onSuccess')) {
+    if ('node' in wire.to) {
+      const call = isVue2
+        ? `this.$refs.${refOf(wire.to.node)}.${wire.to.channel}()`
+        : `${refOf(wire.to.node)}.value?.${wire.to.channel}?.()`
+      if (!page.code.includes(call)) {
+        fail(`${file}: 有成功接线 ${wire.from.node} → ${wire.to.node}.${wire.to.channel}，但页面没有内联调用 ${call}`)
+      }
+    } else {
+      const emitCall = isVue2
+        ? `this.$emit('${wire.to.event}', { id: '${wire.from.node}', data })`
+        : `emit('${wire.to.event}', { id: '${wire.from.node}', data })`
+      if (!page.code.includes(emitCall)) {
+        fail(`${file}: 成功接线升级为页面事件 "${wire.to.event}"，但页面没有派发「${emitCall}」`)
+      }
+    }
   }
   // ⑦ 编译见证
   await compilePage(envelope.target, page.code, file)
@@ -294,6 +349,16 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
   if (JSON.stringify(envelope.wires) !== JSON.stringify(wires)) fail(`${file}: 信封 wires 与结果不一致`)
   if (JSON.stringify(envelope.faces) !== JSON.stringify(faces)) fail(`${file}: 信封 faces 与结果不一致`)
   if (envelope.nodes.length !== plan.nodes.length) fail(`${file}: 信封节点数不符`)
+  const expectedBehavior = plan.behavior ?? 'crud-requests'
+  if (envelope.behavior !== expectedBehavior) {
+    fail(`${file}: 信封 behavior=${envelope.behavior}，期望 ${expectedBehavior}`)
+  }
+  const declaredRoles = {}
+  for (const n of plan.nodes) if (n.role !== undefined) declaredRoles[n.id] = n.role
+  const sortKeys = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]))
+  if (JSON.stringify(sortKeys(envelope.roles)) !== JSON.stringify(sortKeys(declaredRoles))) {
+    fail(`${file}: 信封 roles=${JSON.stringify(envelope.roles)}，期望 ${JSON.stringify(declaredRoles)}`)
+  }
   expectArtifacts.forEach((artifact, i) => {
     if (envelope.nodes[i].artifact !== artifact) {
       fail(`${file}: 节点 ${i} artifact=${envelope.nodes[i].artifact}，期望 ${artifact}`)
@@ -318,18 +383,19 @@ async function checkPlan(file, plan, mod, expectArtifacts) {
 function checkStructuralRejects(mod) {
   const { emitComposition } = mod
   const field = { fields: [{ prop: 'name', label: '姓名' }] }
+  const tableNode = (id, extra = {}) => ({ id, plan: { scene: 'table', intent: { ...field, ...extra } } })
   const cases = [
     ['空节点', { nodes: [] }, /至少需要一个节点/],
     ['crud 节点', { nodes: [{ id: 'root', plan: { scene: 'crud', intent: { name: 'x', apiUrl: '/x', surfaces: {} } } }] }, /crud 节点不能参与组合/],
     [
-      '同场景两个节点',
+      '两个 form 节点',
       {
         nodes: [
           { id: 'a', plan: { scene: 'form', intent: field } },
           { id: 'b', plan: { scene: 'form', intent: field } },
         ],
       },
-      /form 场景出现了不止一个节点/,
+      /form 场景出现了 2 个节点/,
     ],
     [
       '混装 target',
@@ -349,6 +415,58 @@ function checkStructuralRejects(mod) {
       },
       /vue2 页面只支持 mode: 'component'/,
     ],
+    ['非法 behavior', { behavior: 'auto', nodes: [tableNode('a')] }, /behavior="auto" 非法/],
+    [
+      '同场景重复角色',
+      {
+        nodes: [
+          { ...tableNode('a'), role: 'master' },
+          { ...tableNode('b'), role: 'master' },
+        ],
+      },
+      /都声明了 role="master"/,
+    ],
+    [
+      '未知通道',
+      {
+        nodes: [tableNode('a')],
+        wires: [{ from: { node: 'a', channel: 'nope' }, to: { page: 'emit', event: 'x' } }],
+      },
+      /不存在的通道/,
+    ],
+    [
+      '行动作接线缺 when',
+      {
+        nodes: [tableNode('a')],
+        wires: [{ from: { node: 'a', channel: 'row-action' }, to: { page: 'emit', event: 'x' } }],
+      },
+      /必须声明 when\.rowAction/,
+    ],
+    [
+      '未知目标节点',
+      {
+        nodes: [tableNode('a')],
+        wires: [
+          {
+            from: { node: 'a', channel: 'row-action' },
+            to: { node: 'ghost', channel: 'refresh' },
+            when: { rowAction: 'view' },
+          },
+        ],
+      },
+      /未知节点 "ghost"/,
+    ],
+    [
+      '重复的显式接线',
+      {
+        nodes: [tableNode('a')],
+        wires: [
+          { from: { node: 'a', channel: 'row-action' }, to: { page: 'emit', event: 'a' }, when: { rowAction: 'view' } },
+          { from: { node: 'a', channel: 'row-action' }, to: { page: 'emit', event: 'b' }, when: { rowAction: 'view' } },
+        ],
+      },
+      /重复声明/,
+    ],
   ]
   for (const [name, plan, re] of cases) {
     const result = emitComposition(plan)
@@ -359,6 +477,7 @@ function checkStructuralRejects(mod) {
     if (!re.test(result.text)) fail(`结构化拒绝「${name}」：错误文案不含 ${re}\n      实际：${result.text}`)
     if (result.files || result.envelope) fail(`结构化拒绝「${name}」：失败分支不应有文件 / 信封`)
   }
+  return cases.length
 }
 
 async function main() {
@@ -371,29 +490,67 @@ async function main() {
     let plans = 0
     for (const target of TARGETS) {
       const table = () => fragmentNode('users-table', 'table', `frag-table-01-${target}.json`)
+      const secondTable = () => fragmentNode('items', 'table', `frag-table-01-${target}.json`)
       const form = () => fragmentNode('query-form', 'form', `frag-form-01-${target}.json`)
-      const dialog = () =>
-        fragmentNode('edit', 'dialog', `frag-dialog-02-component-${target}.json`)
+      const dialog = () => fragmentNode('edit', 'dialog', `frag-dialog-02-component-${target}.json`)
+      // 第二个弹窗换一个标题，标题分派才不是「两条相同的字面量」。
+      const viewDialog = () => {
+        const node = fragmentNode('view', 'dialog', `frag-dialog-02-component-${target}.json`)
+        return { ...node, plan: { ...node.plan, intent: { ...node.plan.intent, defaultTitle: '查看用户' } } }
+      }
 
       const combos = [
         // 单节点：组合页也必须是一张能编译的页面（ref 名、faces 都按同一套规则）。
-        ['table', [table()], ['table']],
-        ['form', [form()], ['form']],
-        ['dialog', [dialog()], ['dialog-component']],
-        ['table+form', [table(), form()], ['table', 'form']],
-        ['form+dialog', [form(), dialog()], ['form', 'dialog-component']],
-        ['table+dialog', [table(), dialog()], ['table', 'dialog-component']],
+        ['table', { nodes: [table()] }, ['table']],
+        ['form', { nodes: [form()] }, ['form']],
+        ['dialog', { nodes: [dialog()] }, ['dialog-component']],
+        ['table+form', { nodes: [table(), form()] }, ['table', 'form']],
+        ['form+dialog', { nodes: [form(), dialog()] }, ['form', 'dialog-component']],
+        ['table+dialog', { nodes: [table(), dialog()] }, ['table', 'dialog-component']],
         // 弹窗节点 id 与表格的旧写死 ref 名撞车（@1 会生成两条 `const tableRef`）。
         // 这条用例存在的唯一目的就是让派生 ref 名的回归在编译腿里变红。
         [
           'table+dialog(id=table)',
-          [table(), fragmentNode('table', 'dialog', `frag-dialog-02-component-${target}.json`)],
+          { nodes: [table(), fragmentNode('table', 'dialog', `frag-dialog-02-component-${target}.json`)] },
           ['table', 'dialog-component'],
         ],
-        ['table+form+dialog', [table(), form(), dialog()], ['table', 'form', 'dialog-component']],
+        ['table+form+dialog', { nodes: [table(), form(), dialog()] }, ['table', 'form', 'dialog-component']],
+        // @3 多弹窗：三个行按钮里 view / edit 各开各的窗，delete 升级为页面事件。
+        [
+          'table+2 dialogs',
+          { nodes: [table(), dialog(), viewDialog()] },
+          ['table', 'dialog-component', 'dialog-component'],
+        ],
+        // @3 master-detail：主表行按钮 → 明细表 reload(row)，角色同时决定数据默认目标。
+        [
+          'table+table(master-detail wire)',
+          {
+            nodes: [{ ...table(), role: 'master' }, secondTable(), form()],
+            wires: [
+              {
+                from: { node: 'users-table', channel: 'row-action' },
+                to: { node: 'items', channel: 'reload' },
+                when: { rowAction: 'view' },
+              },
+            ],
+          },
+          ['table', 'table', 'form'],
+        ],
+        // @3 role 决定默认表：master 不是第一个节点时查询/成功也落到它。
+        [
+          'table+table(role=master)',
+          { nodes: [secondTable(), { ...table(), role: 'master' }, dialog()] },
+          ['table', 'table', 'dialog-component'],
+        ],
+        // @3 ui-only：数据通道全部升级为页面事件，UI 接线（行按钮 → 弹窗）保留。
+        [
+          'table+form+dialog(ui-only)',
+          { nodes: [table(), form(), dialog()], behavior: 'ui-only' },
+          ['table', 'form', 'dialog-component'],
+        ],
       ]
-      for (const [label, nodes, artifacts] of combos) {
-        await checkPlan(`${target} / ${label}`, { target, nodes }, mod, artifacts)
+      for (const [label, planExtra, artifacts] of combos) {
+        await checkPlan(`${target} / ${label}`, { target, ...planExtra }, mod, artifacts)
         plans++
       }
     }
@@ -408,14 +565,14 @@ async function main() {
       plans++
     }
 
-    checkStructuralRejects(mod)
+    const rejectCount = checkStructuralRejects(mod)
 
     if (failures > 0) {
       console.error(`\n✖ 组合契约有 ${failures} 处漂移`)
       process.exitCode = 1
     } else {
       console.log(
-        `\n✓ 组合契约一致：${plans} 组组合 / 接线通道全部来自 ARTIFACT_RUNTIME / 结构化拒绝 ${5} 例` +
+        `\n✓ 组合契约一致：${plans} 组组合 / 接线通道全部来自 ARTIFACT_RUNTIME / 结构化拒绝 ${rejectCount} 例` +
           `（标题 ${Object.values(DIALOG_TITLES).join('/')}）`,
       )
     }

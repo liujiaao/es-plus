@@ -196,7 +196,7 @@ surfaces
 |---|---|---|---|---|---|---|
 | 1 | `detect_project_target` | 环境 | ✅ | `{ target }` | 否 | 稳定 |
 | 2 | `generate_scene` | **前门（FRONT DOOR）** | ✅ | 代码 + warnings + 信封 | 否 | **推荐入口**（四场景路由） |
-| 3 | `generate_composition` | 组合 | ✅ | `Page.vue` + 逐节点片段 + 信封 | 否 | 稳定（1–3 个片段） |
+| 3 | `generate_composition` | 组合 | ✅ | `Page.vue` + 逐节点片段 + 信封 | 否 | 稳定（table/dialog 可多、form 至多一个；`@3`） |
 | 4 | `generate_crud` | 兼容前门（COMPAT ENTRY） | ✅ | 同 `scene='crud'`，字节一致 | 否 | 兼容入口 |
 | 5 | `generate_form` | 片段 | ✅ | `<es-form>` SFC | 否 | 稳定 |
 | 6 | `generate_table` | 片段 | ✅ | `<es-table>` SFC | 否 | 稳定 |
@@ -215,7 +215,7 @@ surfaces
 > 生成类工具（2–10）在客户端支持 MCP 结构化输出时，会把产物信封挂到
 > `structuredContent`：`contract` / `scene` / `artifact` / `target` / `mode` /
 > `files[]` / `config` / `warnings[]` / `fingerprint`；组合页另有 `nodes[]` /
-> `wires[]` / `faces` / `page`。`content.text` 仍是逐字节不变的旧文本。
+> `wires[]` / `faces` / `page` / `behavior` / `roles`。`content.text` 仍是逐字节不变的旧文本。
 > 每个节点信封还带 `capability`（`es-plus.capabilities@1`）：意图逐键判定
 > `accepted` / `degraded` / `unsupported` + `missing`（见 §4.1c）。
 
@@ -229,12 +229,12 @@ surfaces
 - **表格词汇**：`scene='table'` 的意图表就是 `generate_table` 的形状，P10 起与 `scene='crud'` 的表词汇对齐 —— `columns` / 顶层 `treeConfig` / 顶层 `expandConfig` / `mergeConfig` / `rowkey` 都收，且走**同一套发射器**（`sanitizeExplicitColumns` / `resolveTreeOptions` / `pushSfcColumn`），不是片段侧的第二份实现。
 - **边界**：只剩 `tableBtns` 需要 `scene='crud'`（工具栏按钮只存在于 CRUD 页 schema 的按钮面，片段没有对应渲染通道）。这条不对称由 `es-plus.capabilities@1` 台账逐键显式报出，不靠文档口径。
 
-#### `generate_composition`（组合页）
+#### `generate_composition`（组合页，`es-plus.composition@3`）
 
-- **定位**：把 1–3 份独立片段装成一张 `Page.vue`；节点只能是 `table` / `form` / `dialog`，每场景至多一个，`crud` 节点被拒绝（它已是整页）。
-- **接线**：由 `ARTIFACT_RUNTIME` 推导（行按钮 key 命中弹窗 id → `open`；查询 → 表格 `reload`；重置 → `reload`；提交 → 页面事件 `save`；弹窗成功 → 表格 `refresh`），不接受模型手写 wiring。
-- **输出**：文本 + `structuredContent`（组合信封：`nodes` / `wires` / `faces` / `page`）。
-- **边界**：组合页只装配 **UI 行为**，不内建 add/edit/delete 请求；`save` / 未命中的 `row-action` 上抛给宿主。需要内建请求语义时用 `scene='crud'`。
+- **定位**：把独立片段装成一张 `Page.vue`；节点只能是 `table` / `form` / `dialog`。`form` 至多一个（多表单的 `submit` 语义无法确定性区分），`table` / `dialog` 可以多个（master-detail、多弹窗）；`crud` 节点被拒绝（它已是整页）。
+- **接线**：派生部分由 `ARTIFACT_RUNTIME` 推导（行按钮 key 命中弹窗 id → `open`；查询 → 默认表 `reload(model)`；重置 → `reload()`；提交 → 页面事件 `save`；弹窗成功 → 默认表 `refresh`）。**默认表** = `role: 'master'` 的 table，否则页面里唯一的 table；多表且两者都没有时不猜，数据通道升级为页面事件。`@3` 起宿主可声明 `wires` 显式接线（master-detail：主表 `row-action` → 明细表 `reload(row)`），显式与派生同源校验，同一 `from` 上显式**覆盖**派生；`behavior: 'ui-only'` 只装配 UI 接线，数据通道全部升级为页面事件，由宿主自己发请求。
+- **输出**：文本 + `structuredContent`（组合信封：`nodes` / `wires` / `faces` / `page` / `behavior` / `roles`）。
+- **边界**：组合页只装配 **UI 行为**（含 `crud-requests` 档位下的表格取数/刷新），不内建 add/edit/delete 请求；`save` / 未命中的 `row-action` / 升级为事件的通道上抛给宿主。需要内建请求语义时用 `scene='crud'`。
 
 ### 4.1c 能力台账（P9，`es-plus.capabilities@1`）
 

@@ -98,7 +98,7 @@ describe('composition — 结构化拒绝', () => {
     ],
     ['重复 id', () => planComposition(plan([table('x'), dialog('x')])), /id "x" 重复/],
     ['非法 id', () => planComposition(plan([table('Users')])), /只允许 kebab-case/],
-    ['同一场景两个节点', () => planComposition(plan([form('a'), form('b')])), /form 场景出现了不止一个节点/],
+    ['同一场景两个节点', () => planComposition(plan([form('a'), form('b')])), /form 场景出现了 2 个节点/],
     [
       '混装 target',
       () => planComposition(plan([table('users', { target: 'vue3' }), form('f', { target: 'antdv' })])),
@@ -137,9 +137,11 @@ describe('composition — 产物', () => {
     expect(page.code).toContain("import Users from './users.vue'")
     expect(page.code).toContain("import Filter from './filter.vue'")
     expect(page.code).toContain("import Edit from './edit.vue'")
-    // 行动作 → 用注册表标题开窗，并带成功回调
+    // 行动作 → 用注册表标题开窗，并带成功回调（@3：成功回调内联到目标表，多表也分得清）
     expect(page.code).toContain("if (payload.key === 'edit') {")
-    expect(page.code).toContain("editRef.value?.open('编辑', payload.row, onTableSuccess)")
+    expect(page.code).toContain(
+      "editRef.value?.open('编辑', payload.row, (data) => { usersRef.value?.refresh?.() })",
+    )
     // 未匹配的行动作升级为页面事件
     expect(page.code).toContain("emit('row-action', payload)")
     // 查询 → 表格重载（新搜索回第 1 页）；提交 → 页面 save；重置 → 表格重载
@@ -149,7 +151,6 @@ describe('composition — 产物', () => {
     expect(page.code).toContain('usersRef.value?.reload?.()')
     expect(page.code).toContain('@reset="onReset"')
     expect(page.code).toContain('defineExpose({ refresh, reload, open })')
-    expect(page.code).toContain('onTableSuccess')
   })
 
   it('弹窗节点 id 与表格撞名时不会产生重复声明（id=table 回归）', () => {
@@ -196,7 +197,6 @@ describe('composition — 产物', () => {
     )
     expect(page.code).toContain("defineEmits(['success'])")
     expect(page.code).toContain('defineExpose({ open })')
-    expect(page.code).not.toContain('onTableSuccess')
   })
 
   it('vue2：Options API 页面与 $refs 调用，不生成 script setup', () => {
@@ -207,8 +207,7 @@ describe('composition — 产物', () => {
     expect(page.code).toContain('<script lang="ts">')
     expect(page.code).not.toContain('script setup')
     expect(page.code).toContain('export default {')
-    expect(page.code).toContain("this.$refs.editRef.open('编辑', payload.row, this.onTableSuccess)")
-    expect(page.code).toContain('onTableSuccess() { return this.$refs.usersRef.refresh() }')
+    expect(page.code).toContain("this.$refs.editRef.open('编辑', payload.row, (data) => { this.$refs.usersRef.refresh() })")
     expect(page.code).toContain('<users ref="usersRef" @row-action="onRowAction" />')
     expect(page.code).toContain('open(id, options = {}) {')
     expect(page.code).toContain('return false')
@@ -253,4 +252,209 @@ describe('composition — 产物', () => {
     const solo = emitComposition(plan([table()]))
     expect(tableFile.code).toBe(solo.files!.find((f) => f.path === 'users.vue')!.code)
   })
+})
+
+describe('composition@3 — 多弹窗 / 多表 / 显式接线 / behavior', () => {
+  function plainTable(id: string, extra: Record<string, unknown> = {}, rowButtons: any[] = []) {
+    return { id, plan: { scene: 'table' as const, intent: { fields: FIELDS, rowButtons, ...extra } } }
+  }
+
+  it('多弹窗：每个 dialog 一个 open 分派，行按钮各接各的', () => {
+    const a = planComposition(
+      plan([
+        table('users', { rowButtons: [{ key: 'edit', name: '编辑' }, { key: 'view', name: '查看' }] }),
+        dialog('edit'),
+        dialog('view', { defaultTitle: '查看用户' }),
+      ]),
+    )
+    expect(a.wires.filter((w) => w.from.channel === 'row-action')).toEqual([
+      { from: { node: 'users', channel: 'row-action' }, to: { node: 'edit', channel: 'open' }, when: { rowAction: 'edit' } },
+      { from: { node: 'users', channel: 'row-action' }, to: { node: 'view', channel: 'open' }, when: { rowAction: 'view' } },
+    ])
+    const page = emitComposition(
+      plan([
+        table('users', { rowButtons: [{ key: 'edit', name: '编辑' }, { key: 'view', name: '查看' }] }),
+        dialog('edit'),
+        dialog('view', { defaultTitle: '查看用户' }),
+      ]),
+    ).page!
+    expect(page.code).toContain("if (id === 'edit') {")
+    expect(page.code).toContain("if (id === 'view') {")
+    expect(page.code).toContain("'查看用户'")
+  })
+
+  it('master-detail：显式接线把主表行数据传给明细表 reload(row)', () => {
+    const master = { ...table('orders', { rowButtons: [{ key: 'view', name: '查看' }] }), role: 'master' }
+    const detail = { ...plainTable('items'), role: 'detail' }
+    const p = plan([master, detail], {
+      wires: [
+        {
+          from: { node: 'orders', channel: 'row-action' },
+          to: { node: 'items', channel: 'reload' },
+          when: { rowAction: 'view' },
+        },
+      ],
+    })
+    const a = planComposition(p)
+    expect(a.wires).toEqual([
+      {
+        from: { node: 'orders', channel: 'row-action' },
+        to: { node: 'items', channel: 'reload' },
+        when: { rowAction: 'view' },
+      },
+    ])
+    expect(a.faces.expose).toEqual([
+      'refresh',
+      'reload',
+      'ordersRefresh',
+      'ordersReload',
+      'itemsRefresh',
+      'itemsReload',
+    ])
+    const page = emitComposition(p).page!
+    // 多表：行按钮处理器按表派生，模板不再共用 onRowAction
+    expect(page.code).toContain('function onRowActionOrders(payload: { key: string; row: any }) {')
+    expect(page.code).toContain('itemsRef.value?.reload?.(payload.row)')
+    expect(page.code).toContain('@row-action="onRowActionOrders"')
+    // master 别名 refresh/reload 指向 master 表
+    expect(page.code).toContain('return ordersRef.value?.refresh?.(model)')
+    expect(page.code).toContain('function itemsReload(model?: Record<string, unknown>) {')
+  })
+
+  it('角色：多表页面里 form 查询/重置默认落到 role=master 的表', () => {
+    const master = { ...table('orders', { rowButtons: [] }), role: 'master' }
+    const detail = { ...plainTable('items'), role: 'detail' }
+    const a = planComposition(plan([master, detail, form()]))
+    expect(a.wires).toEqual([
+      { from: { node: 'filter', channel: 'query' }, to: { node: 'orders', channel: 'reload' } },
+      { from: { node: 'filter', channel: 'submit' }, to: { page: 'emit', event: 'save' } },
+      { from: { node: 'filter', channel: 'reset' }, to: { node: 'orders', channel: 'reload' } },
+    ])
+  })
+
+  it('多表且没有 master：不猜目标，查询/重置升级为页面事件', () => {
+    const a = planComposition(plan([plainTable('orders'), plainTable('items'), form()]))
+    expect(a.wires).toContainEqual({ from: { node: 'filter', channel: 'query' }, to: { page: 'emit', event: 'query' } })
+    expect(a.wires).toContainEqual({ from: { node: 'filter', channel: 'reset' }, to: { page: 'emit', event: 'reset' } })
+    expect(a.faces.expose).toEqual([
+      'ordersRefresh',
+      'ordersReload',
+      'itemsRefresh',
+      'itemsReload',
+    ])
+  })
+
+  it('显式接线覆盖同 from 的派生接线（不重复、不静默）', () => {
+    const a = planComposition(
+      plan([table('users', { rowButtons: [] }), form(), plainTable('archive')], {
+        wires: [{ from: { node: 'filter', channel: 'query' }, to: { node: 'archive', channel: 'reload' } }],
+      }),
+    )
+    const queries = a.wires.filter((w) => w.from.channel === 'query')
+    expect(queries).toEqual([{ from: { node: 'filter', channel: 'query' }, to: { node: 'archive', channel: 'reload' } }])
+    const page = emitComposition(
+      plan([table('users', { rowButtons: [] }), form(), plainTable('archive')], {
+        wires: [{ from: { node: 'filter', channel: 'query' }, to: { node: 'archive', channel: 'reload' } }],
+      }),
+    ).page!
+    expect(page.code).toContain('archiveRef.value?.reload?.(model)')
+  })
+
+  it('behavior=ui-only：只装配 UI 接线，数据通道全部升级为页面事件', () => {
+    const p = plan([table(), form(), dialog()], { behavior: 'ui-only' })
+    const a = planComposition(p)
+    expect(a.behavior).toBe('ui-only')
+    expect(a.wires).toEqual([
+      { from: { node: 'users', channel: 'row-action' }, to: { node: 'edit', channel: 'open' }, when: { rowAction: 'edit' } },
+      { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'row-action' }, when: { rowAction: 'remove' } },
+      { from: { node: 'filter', channel: 'query' }, to: { page: 'emit', event: 'query' } },
+      { from: { node: 'filter', channel: 'submit' }, to: { page: 'emit', event: 'save' } },
+      { from: { node: 'filter', channel: 'reset' }, to: { page: 'emit', event: 'reset' } },
+      { from: { node: 'edit', channel: 'onSuccess' }, to: { page: 'emit', event: 'success' } },
+    ])
+    expect(a.faces.emit).toEqual(['row-action', 'query', 'save', 'reset', 'success'])
+    const page = emitComposition(p).page!
+    // 行按钮 → 弹窗仍是 UI 接线
+    expect(page.code).toContain("editRef.value?.open('编辑', payload.row")
+    // 数据通道不再调用表格（页面暴露的 refresh/reload 仍在，但事件处理器不派生数据接线）
+    expect(page.code).toContain(
+      "function onQuery(model: Record<string, unknown>) {\n  emit('query', model)",
+    )
+    expect(page.code).toContain("function onReset() {\n  emit('reset')")
+  })
+
+  it('信封带 behavior / roles，且指纹对它们敏感', () => {
+    const p = plan([{ ...table(), role: 'master' }, form()], { behavior: 'crud-requests' })
+    const env = emitComposition(p).envelope!
+    expect(env.contract).toBe('es-plus.composition@3')
+    expect(env.behavior).toBe('crud-requests')
+    expect(env.roles).toEqual({ users: 'master' })
+    const changed = emitComposition(plan([{ ...table(), role: 'master' }, form()], { behavior: 'ui-only' })).envelope!
+    expect(changed.fingerprint).not.toBe(env.fingerprint)
+  })
+})
+
+describe('composition@3 — 显式接线与角色校验', () => {
+  const cases: Array<[string, () => unknown, RegExp]> = [
+    [
+      '未知通道',
+      () =>
+        planComposition(
+          plan([table('users', { rowButtons: [] })], {
+            wires: [{ from: { node: 'users', channel: 'nope' }, to: { page: 'emit', event: 'x' } }],
+          }),
+        ),
+      /不存在的通道/,
+    ],
+    [
+      '行动作接线缺 when',
+      () =>
+        planComposition(
+          plan([table('users'), dialog('edit')], {
+            wires: [{ from: { node: 'users', channel: 'row-action' }, to: { node: 'edit', channel: 'open' } }],
+          }),
+        ),
+      /必须声明 when\.rowAction/,
+    ],
+    [
+      '未知目标节点',
+      () =>
+        planComposition(
+          plan([table('users', { rowButtons: [] })], {
+            wires: [{ from: { node: 'users', channel: 'row-action' }, to: { node: 'ghost', channel: 'refresh' }, when: { rowAction: 'x' } }],
+          }),
+        ),
+      /未知节点 "ghost"/,
+    ],
+    [
+      '重复显式接线',
+      () =>
+        planComposition(
+          plan([table('users', { rowButtons: [] })], {
+            wires: [
+              { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'a' }, when: { rowAction: 'x' } },
+              { from: { node: 'users', channel: 'row-action' }, to: { page: 'emit', event: 'b' }, when: { rowAction: 'x' } },
+            ],
+          }),
+        ),
+      /重复声明/,
+    ],
+    [
+      '同场景重复角色',
+      () =>
+        planComposition(
+          plan([
+            { ...table('a', { rowButtons: [] }), role: 'master' },
+            { ...table('b', { rowButtons: [] }), role: 'master' },
+          ]),
+        ),
+      /都声明了 role="master"/,
+    ],
+    ['非法 behavior', () => planComposition(plan([table()], { behavior: 'auto' as any })), /behavior="auto" 非法/],
+  ]
+  for (const [name, run, re] of cases) {
+    it(name, () => {
+      expect(run).toThrow(re)
+    })
+  }
 })

@@ -621,7 +621,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 |------|------|----------|
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
 | `generate_scene` | **前门 / 场景路由器**：`scene` + 场景意图表 → 与旧工具逐字节相同的产物 | 按「要建什么」而不是「记得哪个工具」选入口；路由仍由确定性代码完成 |
-| `generate_composition` | **组合页**：1–3 个独立片段（table / form / dialog）→ 一张接好线的 `Page.vue` | 不再让宿主手写胶水；接线从运行时契约派生，漏接即失败 |
+| `generate_composition` | **组合页**：多个独立片段（table / form / dialog）→ 一张接好线的 `Page.vue`（多表 master-detail、多弹窗、显式 `wires`） | 不再让宿主手写胶水；接线从运行时契约派生，漏接即失败 |
 | `generate_crud` | **兼容入口**：填 `surfaces` 意图表（query / table / form / dialog 的任意子集）→ 组合并编译，与 `scene:'crud'` 逐字节相同 | 主路径的稳定别名；语义映射由**宿主 LLM** 完成，路由与编译由确定性代码完成 |
 | `generate_form` / `generate_table` / `generate_dialog` | 单组件片段：独立 es-form / es-table / useDialog | 明确只要一个组件，或要嵌在非 es-plus 组件旁边 |
 | `generate_crud_from_config` | **ADVANCED**：完整 `StructuredCrudConfig` → 可运行代码（已持有类型化配置时用） | Schema-first 流程的确定性 codegen 步骤；自然语言请求走前门 |

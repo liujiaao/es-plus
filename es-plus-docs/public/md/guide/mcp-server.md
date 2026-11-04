@@ -262,7 +262,7 @@ mcp-server-es-plus --help        # 用法说明
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
 | `generate_scene` | **前门 / 场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
-| `generate_composition` | **组合页**：把 1–3 个独立片段（table / form / dialog）装成一张能跑的 `Page.vue`，接线由运行时契约确定 | ✅ |
+| `generate_composition` | **组合页**：把多个独立片段（table / form / dialog）装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires` | ✅ |
 | `generate_crud` | **兼容入口（adapter）**：与 `generate_scene` 的 `scene='crud'` 逐字节相同，保留旧工具名 | ✅ |
 | `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
 | `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
@@ -289,13 +289,15 @@ mcp-server-es-plus --help        # 用法说明
 
 ### generate_composition（组合页 / PAGE COMPOSER）
 
-**功能**：把 1–3 个独立片段装配成一张页面 —— 产物是一份 `Page.vue` 加每个节点一个文件。入参 `{ name?, target?, nodes: [{ id, scene, intent }] }`，每个节点只放该场景的独立工具入参。接线由 `ARTIFACT_RUNTIME` 确定性派生：
+**功能**：把独立片段装配成一张页面 —— 产物是一份 `Page.vue` 加每个节点一个文件。入参 `{ name?, target?, behavior?, nodes: [{ id, role?, scene, intent }], wires? }`，每个节点只放该场景的独立工具入参。`form` 至多一个（多表单的 `submit` 语义无法确定性区分），`table` / `dialog` 可以多个（master-detail、多弹窗）。接线由 `ARTIFACT_RUNTIME` 确定性派生：
 
 - 行按钮 key 与某个弹窗节点 id 相同 → 打开该弹窗（标题取弹窗 `intent.defaultTitle`，缺省用注册表标题），否则升级为页面事件 `row-action`；
-- 查询 → 表格 `reload(model)`（新搜索回第 1 页）；重置 → `reload()`（片段先清空字段）；
-- 表单提交 → 页面事件 `save`；弹窗提交成功 → 表格 `refresh()`（停留在当前页）。
+- 查询 → **默认表** `reload(model)`（新搜索回第 1 页）；重置 → `reload()`（片段先清空字段）。默认表 = `role: 'master'` 的 table，否则页面里唯一的 table；多表且两者都没有时不猜，升级为页面事件 `query` / `reset`；
+- 表单提交 → 页面事件 `save`；弹窗提交成功 → 默认表 `refresh()`（停留在当前页；无默认表时升级为 `success` 事件）。
 
-页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`，未命中 id 返回 `false`。每个场景最多一个节点（多弹窗请用 `scene: 'crud'` 的 `surfaces.dialog`）；vue2 页面的弹窗只能是 `mode: 'component'`。
+`wires` 可**显式声明**接线（如 master-detail：主表 `row-action` key=view → 明细表 `reload(row)`，整行数据作为参数传入），与派生接线同源校验；同一 `from` 上显式覆盖派生。`behavior: 'ui-only'` 只装配 UI 接线（行按钮 → 弹窗），查询/重置/成功全部升级为页面事件，由宿主自己发请求。
+
+页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`，未命中 id 返回 `false`；多表页面另给每个节点一对 `<id>Refresh` / `<id>Reload`。vue2 页面的弹窗只能是 `mode: 'component'`。
 
 ### generate_crud（兼容入口 / COMPAT adapter）
 

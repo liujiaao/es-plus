@@ -631,7 +631,7 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 |------|------|----------|
 | `detect_project_target` | Reads package.json, infers vue2/vue3 | AI no longer guesses which Vue version you're on |
 | `generate_scene` | **Front door / scene router**: `scene` + that scene's intent table → byte-identical output to the legacy tool | Pick by *what is being built* instead of remembering a tool name; routing is still deterministic code |
-| `generate_composition` | **Page composer**: 1–3 standalone fragments (table / form / dialog) → one wired `Page.vue` | Hosts no longer hand-write the glue; wiring is derived from the runtime contract, and a dropped channel fails the build |
+| `generate_composition` | **Page composer**: multiple standalone fragments (table / form / dialog) → one wired `Page.vue` (multi-table master-detail, multi-dialog, explicit `wires`) | Hosts no longer hand-write the glue; wiring is derived from the runtime contract, and a dropped channel fails the build |
 | `generate_crud` | **Compat entry**: fill the `surfaces` intent table (any subset of query / table / form / dialog) → composed and compiled; byte-identical to `scene: 'crud'` | Stable alias for the main path; semantic mapping is done by the **host LLM**, routing and compilation by deterministic code |
 | `generate_form` / `generate_table` / `generate_dialog` | Single-surface fragments: standalone es-form / es-table / useDialog | When you want exactly one component, or a fragment beside non-es-plus components |
 | `generate_crud_from_config` | **ADVANCED**: full `StructuredCrudConfig` → runnable code (use when you already hold a typed config) | The codegen step in a Schema-first flow; natural-language requests go through the front door |
