@@ -4,6 +4,7 @@
 // 的 Global-Config / httpRequest 段都写明了装配前提，防止缺口回退。
 
 import { describe, it, expect } from "vitest";
+import { capabilityOf } from "@es-plus/shared";
 import { registerConventionsResource } from "../src/resources/conventions.js";
 
 type Captured = { handler: (uri: URL) => any };
@@ -58,4 +59,35 @@ describe("conventions — 全局装配前提", () => {
       expect(block).toContain("t:");
     });
   }
+});
+
+// Vue 2 虚拟滚动的说法一度是四处硬编码的英文散文（addendum / Virtual Scrolling 段 /
+// TableOptions 类型注释 / FAQ）。运行时语义或台账一改，说明书就会静默分叉。
+// 这里用台账现值反推文档必须包含的措辞 —— 有人改回硬编码、或台账变了文档没跟，都会红。
+describe("conventions — Vue 2 虚拟滚动说法派生自能力台账", () => {
+  it("vue2 资源的四处说法与 tableOptions.virtual 台账一致", async () => {
+    const text = await conventionsText("esplus://conventions/vue2");
+    const cell = capabilityOf("tableOptions.virtual", "vue2");
+    expect(cell, "CAPABILITIES 里必须有 tableOptions.virtual 的 vue2 单元格").toBeDefined();
+    const supported = cell!.level === "full" || cell!.level === "partial";
+    const warns = /告警|warn/i.test(cell!.note);
+
+    // 派生自 level：Virtual Scrolling 段两种分支都会写出来
+    expect(text).toContain(`capability level: ${cell!.level}`);
+
+    if (supported) {
+      expect(text).not.toContain("has no virtual scrolling");
+    } else {
+      expect(text).toContain("has no virtual scrolling");
+      if (warns) {
+        // 类型注释里的一句 + FAQ 的「NOT silent」+ 降级告警
+        expect(text).toContain("ignored (warns)");
+        expect(text).toContain("NOT silent");
+        expect(text).toContain("logs a warning");
+      } else {
+        expect(text).toContain("ignored silently");
+        expect(text).not.toContain("logs a warning");
+      }
+    }
+  });
 });

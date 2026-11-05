@@ -8,6 +8,7 @@ import {
   VALID_CRUD_ACTIONS,
   DEFAULT_CONFIG_TABLE_OUT,
   CRUD_PAGE_BTN_CLICK_KEYS,
+  capabilityOf,
 } from "@es-plus/shared";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
@@ -41,10 +42,46 @@ const TARGETS: Record<Target, TargetVars> = {
   },
 };
 
+/**
+ * Vue 2 虚拟滚动的**实际**能力 —— 单一真源是 shared 的 CAPABILITIES 台账
+ * （`tableOptions.virtual` 的 vue2 单元格）。
+ *
+ * 此前说明书把「被忽略 + 控制台告警」当作硬编码事实写了三遍（vue2 addendum /
+ * Virtual Scrolling 段 / FAQ）。运行时语义与台账若改动（哪怕以后 vue2 真接上
+ * 虚拟滚动，或降级不再告警），这三处就会变成对模型的错误指令 —— 而没有任何
+ * 守卫会发现「实现改了、说明书没改」。这里只派生可判定的两个事实：
+ * 支不支持（level）、降级时告不告警（note 里有没有「告警」）。
+ */
+function vue2VirtualFacts(): { supported: boolean; warns: boolean; level: string } {
+  const cell = capabilityOf("tableOptions.virtual", "vue2");
+  const level = cell?.level ?? "none";
+  return {
+    level,
+    supported: level === "full" || level === "partial",
+    warns: /告警|warn/i.test(cell?.note ?? ""),
+  };
+}
+
 function buildVue2Addendum(): string {
   // Concise vue2-specific differences appended at the end so the AI sees them
   // when it asks for vue2 conventions. We don't duplicate every rule — only
   // call out the syntactic deltas the rest of the doc otherwise glosses over.
+  const v2Virtual = vue2VirtualFacts();
+  const virtualGap = v2Virtual.supported
+    ? `- \`el-table-v2\` does NOT exist in Element UI, but this target implements virtual
+  scrolling at capability level ${v2Virtual.level} (\`engine: 'vxe'\` is the
+  supported large-data path here)`
+    : `- \`el-table-v2\` does NOT exist in Element UI — virtual scrolling is Vue 2's one
+  real gap; for Vue 2 large datasets, use server-side pagination or the vxe-table
+  engine (\`engine: 'vxe'\`), which is fully supported here`;
+  const virtualLimit = v2Virtual.supported
+    ? `- \`virtual: true\` / \`engine: 'virtual'\` takes effect on this target
+  (capability level: ${v2Virtual.level})`
+    : `- \`virtual: true\` / \`engine: 'virtual'\` in TableOptions is ignored${
+        v2Virtual.warns
+          ? " — the component logs a warning and renders a standard el-table (it does not fail)"
+          : " silently (the component logs nothing)"
+      }`;
   return `
 ---
 
@@ -97,13 +134,10 @@ export default defineComponent({
   not the \`@element-plus/icons-vue\` component package
 - \`el-pagination\` layout strings are the same
 - \`el-table\` API matches except for v-slot syntax
-- \`el-table-v2\` does NOT exist in Element UI — virtual scrolling is Vue 2's one
-  real gap; for Vue 2 large datasets, use server-side pagination or the vxe-table
-  engine (\`engine: 'vxe'\`), which is fully supported here
+${virtualGap}
 
 ## Limitations on Vue 2
-- \`virtual: true\` / \`engine: 'virtual'\` in TableOptions is ignored — the component
-  logs a warning and renders a standard el-table (it does not fail)
+${virtualLimit}
 - \`engine: 'vxe'\` IS supported: @es-plus/vue2 ships its own vxe engine
   (\`engines/vxe-engine.vue\`), so \`engine: 'vxe'\` switches to vxe-table — which
   itself supports Vue 2 — and is this target's recommended large-data path
@@ -205,6 +239,31 @@ function buildConventionsContent(target: Target, profile: ToolProfile = "full"):
   const v = TARGETS[target];
   const isVue2 = target === "vue2";
   const isAntdv = target === "antdv";
+  // 虚拟滚动相关说法全部从 CAPABILITIES 台账派生（见 vue2VirtualFacts）。
+  const v2Virtual = vue2VirtualFacts();
+  const v2VirtualSection = v2Virtual.supported
+    ? `Vue 2 + Element UI exposes virtual scrolling at capability level ${v2Virtual.level}.
+\`virtual: true\` / \`engine: 'virtual'\` is honoured on this target; \`engine: 'vxe'\`
+is still the recommended large-data path (vxe-table supports Vue 2).
+For large datasets, prefer server-side pagination with \`apiParams\` +
+\`configTableOut\` unless the user explicitly asks for virtual scrolling.`
+    : `Vue 2 + Element UI has no virtual scrolling at the component layer (there
+is no \`el-table-v2\`; capability level: ${v2Virtual.level}). \`virtual: true\` and
+\`engine: 'virtual'\` are ${
+        v2Virtual.warns
+          ? "NOT silently swallowed — the component logs a warning and degrades to a standard `el-table`"
+          : "ignored silently"
+      }; \`engine: 'vxe'\` IS available on this target too (vxe-table supports
+Vue 2) and is the recommended large-data path here.
+For large datasets, use server-side pagination with \`apiParams\` +
+\`configTableOut\`.`;
+  const v2Faq14 = v2Virtual.supported
+    ? `14. Vue 2: \`virtual: true\` / \`engine: 'virtual'\` works on this target (capability level: ${v2Virtual.level})`
+    : `14. Vue 2: \`virtual: true\` / \`engine: 'virtual'\` is ${
+        v2Virtual.warns
+          ? "NOT silent — the component logs a warning and degrades to a standard el-table"
+          : "ignored silently"
+      }; use server-side pagination or \`engine: 'vxe'\` for large datasets`;
   // AN-26：profile=front-door 时 `generate_crud_from_config` 不注册。下文这一节大部分
   // 讲的是**配置形状本身**（它仍是生成器的输入模型，也是 `validate_config` /
   // `refine_config` 的判据），保留；但标题与「该去调哪个工具」的两行必须换成实际
@@ -292,13 +351,7 @@ tableOptions: {
   own virtual scroll and inline editing
 - For 10k+ rows prefer server-side pagination via \`apiParams\` + \`configTableOut\`
   unless the user explicitly asks for virtual scrolling`
-    : `Vue 2 + Element UI has no virtual scrolling at the component layer (there
-is no \`el-table-v2\`). \`virtual: true\` and \`engine: 'virtual'\` are NOT silently
-swallowed — the component logs a warning and degrades to a standard
-\`el-table\`; \`engine: 'vxe'\` IS available on this target too (vxe-table supports
-Vue 2) and is the recommended large-data path here.
-For large datasets, use server-side pagination with \`apiParams\` +
-\`configTableOut\`.`}
+    : v2VirtualSection}
 
 ## Global Config Pattern
 ${!isVue2
@@ -554,7 +607,7 @@ interface StructuredCrudConfig {
     multiSelect?: boolean
     highlightCurrentRow?: boolean
     headerCellStyle?: Record<string, string>
-    virtual?: boolean           // vue3 → el-table-v2; antdv → <a-table virtual>; vue2 → ignored (warns)
+    virtual?: boolean           // vue3 → el-table-v2; antdv → <a-table virtual>; vue2 → ${v2Virtual.supported ? "supported (capability level: " + v2Virtual.level + ")" : v2Virtual.warns ? "ignored (warns)" : "ignored silently"}
     engine?: 'default' | 'virtual' | 'vxe'  // 'vxe' works on all three targets
     rowHeight?: number
     estimatedRowHeight?: number
@@ -739,7 +792,7 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` / `engine: 'virtual'` is NOT silent — the component logs a warning and degrades to a standard el-table; use server-side pagination or `engine: 'vxe'` for large datasets" : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
+${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n" + v2Faq14 : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
 ${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
