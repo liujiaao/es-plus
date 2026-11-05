@@ -1647,7 +1647,7 @@ export default defineComponent({
       { name: '查询', type: 'primary', key: 'query', triggerEvent: true },
       { name: '重置', key: 'rest', triggerEvent: true },
       { name: '新增', type: 'primary', key: 'add', icon: 'Plus', click: () => openForm('新增') },
-      { name: '导出', key: 'export', icon: 'Download', click: () => { /* TODO: 调用导出接口 */ } },
+      { name: '导出', key: 'export', icon: 'Download', click: () => Message.warning('导出尚未实现：请在 queryBtns 的 click 中接入导出接口') },
     ]
 
     const columns = [

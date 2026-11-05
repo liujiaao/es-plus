@@ -607,6 +607,8 @@ export function generateCode(config: GeneratedConfig): string {
   const lines: string[] = []
   const hasDialog = config.actions.includes('add') || config.actions.includes('edit') || config.actions.includes('view')
   const hasDelete = config.actions.includes('delete')
+  const hasExport = config.actions.includes('export')
+  const hasImport = config.actions.includes('import')
 
   lines.push(`<template>`)
   lines.push(`  <es-table`)
@@ -641,6 +643,9 @@ export function generateCode(config: GeneratedConfig): string {
   const epImports: string[] = []
   if (config.hasStatusRender) epImports.push('ElTag')
   if (hasDelete) epImports.push('ElMessageBox', 'ElMessage')
+  // 导出/导入的按钮此前只有一条 `/* TODO */` 注释：按钮渲染得出来、点下去零反馈，
+  // 静态看又像「已经有代码」。它们同样需要 ElMessage 来把「尚未实现」显示到界面上。
+  else if (hasExport || hasImport) epImports.push('ElMessage')
   if (epImports.length > 0) {
     lines.push(`import { ${epImports.join(', ')} } from 'element-plus'`)
   }
@@ -676,9 +681,12 @@ export function generateCode(config: GeneratedConfig): string {
     if (btn.key === 'add') {
       lines.push(`  { name: ${q(btn.name)}, type: ${q(btn.type)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => openForm('新增') },`)
     } else if (btn.key === 'export') {
-      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => { /* TODO: 调用导出接口 */ } },`)
+      // 规则引擎不知道后端地址（`GeneratedConfig` 里没有 apiUrl），替宿主发请求只会
+      // 猜错；但「点了没反应」是另一回事 —— 与 SFC / legacy wrapper 两条路径同一纪律：
+      // 至少让「尚未实现」在界面上可见。
+      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => ElMessage.warning('导出尚未实现：请在 queryBtns 的 click 中接入导出接口') },`)
     } else if (btn.key === 'import') {
-      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => { /* TODO: 调用导入接口 */ } },`)
+      lines.push(`  { name: ${q(btn.name)}, key: ${q(btn.key)}, icon: ${q(btn.icon)}, click: () => ElMessage.warning('导入尚未实现：请在 queryBtns 的 click 中接入导入接口') },`)
     } else {
       const parts = [`name: ${q(btn.name)}`]
       if (btn.type) parts.push(`type: ${q(btn.type)}`)

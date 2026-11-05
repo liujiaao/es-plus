@@ -149,6 +149,11 @@ function buildCrudPageSchema(config: GeneratedConfig): {
  */
 function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): string {
   const hasDelete = config.actions.includes('delete')
+  // 导出/导入按钮的**真实来源**是 queryBtns（下面 toolbarBtns 由它派生）：actions 里有、
+  // 但按钮没生成时不需要处理函数；反之自定义按钮也必须接住。此前 handleBtnClick 只认
+  // add/edit 两个确认键，export/import 点下去只 emit 一个没人分支的事件 —— 能点、零反馈。
+  const hasExport = (config.queryBtns ?? []).some((b: { key?: string }) => b.key === 'export')
+  const hasImport = (config.queryBtns ?? []).some((b: { key?: string }) => b.key === 'import')
   const hasStatusRender = config.hasStatusRender
   const isVue2 = target === 'vue2'
   const esPlusPkg = getEsPlusPackageName(target)
@@ -172,6 +177,8 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
 
     const epImports: string[] = []
     if (hasDelete) epImports.push('ElMessageBox', 'ElMessage')
+    // 导出/导入的「尚未实现」提示同样要 ElMessage（target 映射由 buildElementImport 负责）。
+    else if (hasExport || hasImport) epImports.push('ElMessage')
     if (hasStatusRender) epImports.push('ElTag')
     if (epImports.length > 0) {
       lines.push(buildElementImport(epImports, target))
@@ -217,6 +224,18 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
     lines.push(`        // TODO: 调用编辑接口`)
     lines.push(`        crudRef.value && crudRef.value.refresh && crudRef.value.refresh()`)
     lines.push(`      }`)
+    // 规则引擎不知道导出/导入接口（GeneratedConfig 里没有 apiUrl）；替宿主发请求只会猜错，
+    // 但「点了没反应」是另一回事 —— 至少让「尚未实现」可见、可定位（与 SFC 引擎同一纪律）。
+    if (hasExport) {
+      lines.push(`      if (key === 'export') {`)
+      lines.push(`        ElMessage.warning('导出尚未实现：请在 handleBtnClick 中接入导出接口')`)
+      lines.push(`      }`)
+    }
+    if (hasImport) {
+      lines.push(`      if (key === 'import') {`)
+      lines.push(`        ElMessage.warning('导入尚未实现：请在 handleBtnClick 中接入导入接口')`)
+      lines.push(`      }`)
+    }
     lines.push(`    }`)
 
     lines.push(``)
@@ -234,6 +253,7 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
 
   const epImports: string[] = []
   if (hasDelete) epImports.push('ElMessageBox', 'ElMessage')
+  else if (hasExport || hasImport) epImports.push('ElMessage')
   if (hasStatusRender) epImports.push('ElTag')
   if (epImports.length > 0) {
     lines.push(buildElementImport(epImports, target))
@@ -273,6 +293,16 @@ function buildWrapperSFC(config: GeneratedConfig, target: TargetFramework): stri
   lines.push(`    // TODO: 调用编辑接口`)
   lines.push(`    crudRef.value?.refresh()`)
   lines.push(`  }`)
+  if (hasExport) {
+    lines.push(`  if (key === 'export') {`)
+    lines.push(`    ElMessage.warning('导出尚未实现：请在 handleBtnClick 中接入导出接口')`)
+    lines.push(`  }`)
+  }
+  if (hasImport) {
+    lines.push(`  if (key === 'import') {`)
+    lines.push(`    ElMessage.warning('导入尚未实现：请在 handleBtnClick 中接入导入接口')`)
+    lines.push(`  }`)
+  }
   lines.push(`}`)
   lines.push(`</script>`)
 

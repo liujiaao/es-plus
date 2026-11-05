@@ -60,7 +60,7 @@ function subsetMismatch(actual, expected) {
   return misses
 }
 
-const { generateCrudSchema } = await import(
+const { generateCrudSchema, generateCrudPage, generateCrudConfig } = await import(
   new URL('../packages/shared/build/index.js', import.meta.url).href
 )
 
@@ -146,6 +146,82 @@ for (const preset of presets) {
 
   // 行内按钮：view/edit/delete 由 es-crud-page 从 actions 派生（core
   // resolveCrudActions），这里只保证 actions 本身透出了（上一段已断言）。
+}
+
+// ─── 合成输入：导出/导入按钮不得是「死按钮」（两条 legacy 路径） ──────────────
+//
+// 站点预设只覆盖「模型走信封协议」那条新路径；规则引擎的两条 legacy 出口
+// （`generateCode` 整页代码 / `generateCrudSchema` 的包装 SFC）此前对导出/导入
+// 只发一个 `/* TODO: 调用导出接口 */` 注释：按钮渲染得出来、点下去零反馈，而静态
+// 看又像「已经有代码」。这里用**必然识别出 export/import** 的合成提示词，对三条
+// 目标逐条断言产物里既有按钮、也有可见的处理分支。
+//
+// 先用 actions/toolbarBtns 证明前提成立 —— 否则「产物里没有 TODO」可能只是因为
+// 提示词根本没识别出这两个动作（恒真守卫）。
+const DEAD_BUTTON_PROMPTS = [
+  // 无 delete：专门打 `else if (hasExport || hasImport) epImports.push('ElMessage')`
+  // 这一支（有 delete 时 ElMessage 由删除分支带入，漏导入的 bug 会被掩盖）。
+  { label: 'export/import（不含 delete）', text: '系统配置管理，支持新增、导出、导入' },
+  // 含 delete：走通用路径，顺带确认没有把删除的 ElMessage 误删。
+  { label: 'export/import（含 delete）', text: '系统配置管理，支持新增、编辑、删除、导出、导入' },
+]
+
+const MSG_SYMBOL = { vue3: 'ElMessage', vue2: 'Message', antdv: 'message' }
+const MSG_PACKAGE = { vue3: 'element-plus', vue2: 'element-ui', antdv: 'ant-design-vue' }
+
+for (const { label, text } of DEAD_BUTTON_PROMPTS) {
+  const config = generateCrudConfig(text)
+  const actions = config.actions ?? []
+  for (const action of ['export', 'import']) {
+    if (!actions.includes(action)) {
+      failures.push(`合成提示词[${label}]：规则引擎没有识别出 "${action}" —— 下方死按钮断言会恒真`)
+    }
+  }
+  const btnKeys = new Set((config.queryBtns ?? []).map((b) => b.key))
+  for (const key of ['export', 'import']) {
+    if (!btnKeys.has(key)) {
+      failures.push(`合成提示词[${label}]：queryBtns 里没有 "${key}" —— 产物不可能有对应入口`)
+    }
+  }
+
+  for (const target of ['vue3', 'vue2', 'antdv']) {
+    const sym = MSG_SYMBOL[target]
+
+    // 路径 A：整页代码（generateCrudPage → crud-engine.generateCode 的 queryBtns click）
+    // 用上线函数而不是裸 `generateCode`：目标库改名（ElMessage→Message/message）只发生在这层。
+    const pageCode = generateCrudPage(text, target).code
+    for (const action of ['导出', '导入']) {
+      if (pageCode.includes(`TODO: 调用${action}接口`)) {
+        failures.push(`合成提示词[${label}]/${target}：generateCrudPage 仍产出死按钮「TODO: 调用${action}接口」`)
+      }
+    }
+    if (!pageCode.includes(`${sym}.warning(`)) {
+      failures.push(`合成提示词[${label}]/${target}：generateCrudPage 里没有可见的「尚未实现」提示（期望 ${sym}.warning）`)
+    }
+    if (!pageCode.includes(`from '${MSG_PACKAGE[target]}'`) || !pageCode.includes(sym)) {
+      failures.push(`合成提示词[${label}]/${target}：queryBtns 的提示引用了 ${sym}，但产物没从 ${MSG_PACKAGE[target]} 导入它`)
+    }
+
+    // 路径 B：包装 SFC（generateCrudSchema，handleBtnClick）
+    const sfc = generateCrudSchema(text, target).wrapperCode
+    for (const action of ['导出', '导入']) {
+      if (sfc.includes(`TODO: 调用${action}接口`)) {
+        failures.push(`合成提示词[${label}]/${target}：包装 SFC 仍产出死按钮「TODO: 调用${action}接口」`)
+      }
+    }
+    if (!/if \(key === 'export'\)/.test(sfc)) {
+      failures.push(`合成提示词[${label}]/${target}：包装 SFC 的 handleBtnClick 没有 "export" 分支`)
+    }
+    if (!/if \(key === 'import'\)/.test(sfc)) {
+      failures.push(`合成提示词[${label}]/${target}：包装 SFC 的 handleBtnClick 没有 "import" 分支`)
+    }
+    if (!sfc.includes(`${sym}.warning(`)) {
+      failures.push(`合成提示词[${label}]/${target}：包装 SFC 里没有可见的「尚未实现」提示（期望 ${sym}.warning）`)
+    }
+    if (!sfc.includes(`from '${MSG_PACKAGE[target]}'`) || !sfc.includes(sym)) {
+      failures.push(`合成提示词[${label}]/${target}：包装 SFC 引用 ${sym} 却没有从 ${MSG_PACKAGE[target]} 导入`)
+    }
+  }
 }
 
 if (failures.length) {
