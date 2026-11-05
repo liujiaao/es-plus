@@ -5,7 +5,7 @@
   - 弹窗 render 接收 inst 参数，用 inst.registerRef 注册表单到 dialog refs 存储
   - validateAndConfirm 用 dialog 的 getRefs('dialogForm') 取表单 + 透传原生 validate Promise
   - emits 对齐 vue3（无 page-change/sort-change/add-confirm/edit-confirm）
-  - formLayoutProps 对齐 vue3（labelBtnWidth 键 + 始终 gutter:16）；onOpen 时序对齐
+  - formLayoutProps 对齐 vue3（labelWidth 键落到查询字段 + 始终 gutter:16）；onOpen 时序对齐
   - 操作列行按钮不透传 icon/hidden（对齐 vue3）
 -->
 <template>
