@@ -48,7 +48,7 @@ export async function captureFrontDoor() {
       [
         "import { registerGenerateCrud } from '../../packages/mcp-server/src/tools/generate-crud.ts'",
         "import { registerGenerateScene } from '../../packages/mcp-server/src/tools/generate-scene.ts'",
-        "import { surfaceFieldSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
+        "import { surfaceFieldSchema, tableBlockOptionsSchema, tableFieldSchema, tablePaginationSchema, formLayoutSchema, dialogOptionsSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
         "import { z } from 'zod'",
         // AN-19: bundle the published extraction resource so the paid PRD leg uses
         // the SAME text a client reads (no second hand-written contract).
@@ -65,6 +65,10 @@ export async function captureFrontDoor() {
         "export { validateAndRepair } from '@es-plus/shared'",
         "export { z } from 'zod'",
         'export { buildDesignExtractionContent }',
+        // AN-21 续：片段形状也要能自查「有没有注入默认值」——它们被原样转发给
+        // generateTableBlock / generateFormBlock / generateDialogBlock，默认值一旦
+        // 由 SDK 在 handler 之前填进来，生成器就无法区分「显式给的」与「没给」。
+        'export { surfaceFieldSchema, tableBlockOptionsSchema, tableFieldSchema, tablePaginationSchema, formLayoutSchema, dialogOptionsSchema }',
         'export function capture() {',
         '  let cap = null',
         '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',

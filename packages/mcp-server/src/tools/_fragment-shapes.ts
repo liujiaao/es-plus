@@ -254,8 +254,12 @@ export function renderFragmentOutput(
 // 文案逐条镜像自 shared 权威 `StructuredCrudConfigSchema.tableOptions`：片段 prompt
 // 只自省 `.describe()`，少一条文案 = 宿主 LLM 少一条教学（键在、语义不在）。
 export const tableBlockOptionsSchema = z.object({
-  border: z.boolean().default(true),
-  stripe: z.boolean().default(true),
+  // 这三个键**不能写 `.default()`**（与上面 rowkey 同一条纪律）：SDK 会在进 handler 前
+  // 把默认值填进来，生成器就无法区分「调用方显式给了 true」与「没给」——冲突/告警类
+  // 判据全部失真。缺省由生成器统一补（`t.border !== false` 等），产物不变。
+  // `scripts/check-tool-shapes.mjs` 会遍历本对象，发现任何 ZodDefault 即红。
+  border: z.boolean().optional(),
+  stripe: z.boolean().optional(),
 // 不能给 `.default("id")`：前门拿默认值填出来的 `rowkey` 会被当作「调用方显式给了
 // rowkey」，与 intent 顶层的 rowkey 撞成假的 rowkey-conflict；缺省由生成器
 // （`input.rowkey ?? t.rowkey ?? 'id'`）在真正发射时补齐。
@@ -279,7 +283,7 @@ export const tableBlockOptionsSchema = z.object({
       "Container height used ONLY when heightType is 'height' (ignored for 'auto' / 'maxHeight' — use tabHeight there). Takes precedence over nothing: an explicit tabHeight always wins."
     ),
   multiSelect: z.boolean().optional(),
-  highlightCurrentRow: z.boolean().default(true),
+  highlightCurrentRow: z.boolean().optional(),
   headerCellStyle: z.record(z.string()).optional(),
   virtual: z
     .boolean()
