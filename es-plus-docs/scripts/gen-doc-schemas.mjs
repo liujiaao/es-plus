@@ -6,7 +6,7 @@
  * 产物（src 与 public 两处保持一致）：
  *   - es-form.schema.json          : form-item 数组包装（formItemList prop）
  *   - es-table-columns.schema.json : table-column 数组包装（columns prop）
- *   - es-table-data.schema.json    : 非派生文件，保持仓库内现状（数组 of object）
+ *   - es-table-data.schema.json    : 非派生文件（自由形态行数组），但同样由本脚本发射并纳入 `--check`
  *
  * 背景：文档站 Playground 把 src/schemas 喂给 monaco 做 JSON 校验，
  * 手写副本长期缺字段（props/required/rules/render/httpRequest/width/isInitRun…），
@@ -14,10 +14,19 @@
  *
  * 若单源目录缺失（如仅部署文档站的受限环境），打印警告并退出 0，
  * 保留仓库里已提交的产物，不让构建失败。
+ *
+ * ## `--check`（进 `check:consistency`）
+ *
+ * 产物只在 `prebuild` 时重算 —— 改了单源（或换了生成逻辑）却没人构建文档站时，
+ * 仓库里的副本会静默过期，而 Playground 正是拿它做校验：合法配置被标红、新字段
+ * 没有补全，构建与测试全绿。`--check` 重算一遍**但不写盘**，逐字节比对 src 与
+ * public 两处副本（行尾归一化，避免 autocrlf 造成的纯 CRLF churn），过期即红。
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const CHECK = process.argv.includes('--check')
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..') // es-plus-docs/
@@ -111,13 +120,54 @@ const outputs = [
         'Schema for the columns prop passed to <es-table />. GENERATED from packages/shared/schemas/table-column.schema.json by scripts/gen-doc-schemas.mjs — do not hand-edit.',
     }),
   },
+  {
+    name: 'es-table-data.schema.json',
+    // 非派生文件：dataSource 是自由形态的行数组，单源里没有对应 schema。
+    // 仍由本脚本发射，与另两份一起纳入 `--check` —— 否则它会成为唯一一份
+    // 「谁都能手改、没有任何守卫」的产物，和 Playground 的校验口径悄悄分叉。
+    schema: {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      $id: 'https://liujiaao.github.io/es-plus/schemas/es-table-data.schema.json',
+      title: 'ES-Plus EsTable dataSource',
+      description:
+        'Schema for the dataSource array — table rows, freeform but should be an array of plain objects',
+      type: 'array',
+      items: { type: 'object', additionalProperties: true },
+    },
+  },
 ]
 
 const json = (obj) => JSON.stringify(obj, null, 2) + '\n'
+const stale = []
 for (const { name, schema } of outputs) {
   const text = json(schema)
   for (const dir of [SRC_DIR, PUBLIC_DIR]) {
-    writeFileSync(resolve(dir, name), text)
+    const target = resolve(dir, name)
+    if (CHECK) {
+      // 行尾归一化后再比：工作区因 core.autocrlf 检出为 CRLF，生成物是 LF。
+      let current = null
+      try {
+        current = readFileSync(target, 'utf8').replace(/\r\n/g, '\n')
+      } catch {
+        current = null
+      }
+      if (current !== text) stale.push(target)
+      continue
+    }
+    writeFileSync(target, text)
   }
-  console.log(`[gen-doc-schemas] wrote ${name} (src + public)`)
+  if (!CHECK) console.log(`[gen-doc-schemas] wrote ${name} (src + public)`)
+}
+
+if (CHECK) {
+  if (stale.length) {
+    console.error(
+      `\n✗ 文档站 JSON Schema 副本与单源不一致（${stale.length} 处）：\n` +
+        stale.map((p) => `  - ${p}`).join('\n') +
+        '\n\n修法：运行 `node es-plus-docs/scripts/gen-doc-schemas.mjs` 重新生成并提交；' +
+        '不要手改这些文件（Playground 用它们做校验）。'
+    )
+    process.exit(1)
+  }
+  console.log(`✅ ${outputs.length} 份文档站 Schema 与单源逐字节一致（src + public）`)
 }
