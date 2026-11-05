@@ -4,6 +4,7 @@ import {
   COVERAGE_LEVEL_MEANING,
   SCENE_IDS,
   classifyCoverage,
+  collectUnknownKeys,
   type CoverageReport,
   type SceneId,
 } from "@es-plus/shared";
@@ -74,12 +75,29 @@ const pageShape = z
   .describe("One page of the structured inventory.");
 
 function shapeProblems(scene: SceneId, intent: unknown): readonly string[] {
-  const parsed = SCENE_INTENT_SCHEMAS[scene].safeParse(intent ?? {});
-  if (parsed.success) return [];
-  return parsed.error.issues.map((item) => {
+  const schema = SCENE_INTENT_SCHEMAS[scene];
+  const problems: string[] = [];
+  // 未知键必须与 generate_scene / validate_intent 同口径：`surfaces` 及其字段形状是
+  // `.passthrough()`（否则拼错的面键在到达闸门前就被剥掉），`safeParse` 因此对
+  // `surfaces.formFeilds` 这类错误**永远成功**。只跑 safeParse 会让覆盖报告把
+  // 「生成入口会拒绝、且该面会丢失」的意图判成 L1 可直发。这里复用同一个
+  // `collectUnknownKeys`（含嵌套层与近似键建议）。
+  for (const finding of collectUnknownKeys(schema, intent ?? {})) {
+    const path = `/${[...finding.path.map(String), finding.key].join("/")}`;
+    problems.push(
+      finding.suggestion
+        ? `${path}: unknown key "${finding.key}" — did you mean "${finding.suggestion}"?`
+        : `${path}: unknown key "${finding.key}" — check the spelling or the nesting level.`,
+    );
+  }
+  const parsed = schema.safeParse(intent ?? {});
+  if (parsed.success) return problems;
+  for (const item of parsed.error.issues) {
     const path = item.path.length ? `/${item.path.map(String).join("/")}` : "(root)";
-    return `${path}: ${item.message}`;
-  });
+    const message = `${path}: ${item.message}`;
+    if (!problems.includes(message)) problems.push(message);
+  }
+  return problems;
 }
 
 function renderCoverage(report: CoverageReport): string {  const { pages, summary, inventoryErrors } = report;

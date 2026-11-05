@@ -256,7 +256,10 @@ export function renderFragmentOutput(
 export const tableBlockOptionsSchema = z.object({
   border: z.boolean().default(true),
   stripe: z.boolean().default(true),
-  rowkey: z.string().default("id"),
+// 不能给 `.default("id")`：前门拿默认值填出来的 `rowkey` 会被当作「调用方显式给了
+// rowkey」，与 intent 顶层的 rowkey 撞成假的 rowkey-conflict；缺省由生成器
+// （`input.rowkey ?? t.rowkey ?? 'id'`）在真正发射时补齐。
+  rowkey: z.string().optional(),
   heightType: z
     .enum(["height", "auto", "maxHeight"])
     .optional()

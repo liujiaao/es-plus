@@ -179,7 +179,11 @@ export function registerDetectProjectTarget(server: McpServer, profile: ToolProf
   const generators =
     profile === "front-door"
       ? "generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog / get_component_api"
-      : "generate_crud_page / generate_crud_schema / get_component_api";
+      // full 档同时注册前门与 legacy。这里必须把**首选入口**放前面：只点名
+      // generate_crud_page / generate_crud_schema 会把宿主引向两个自述「LEGACY
+      // FALLBACK…use generate_crud instead」的解析器，而首选链路（generate_scene /
+      // generate_crud）恰恰没被提到。
+      : "generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog (or the legacy generate_crud_page / generate_crud_schema) / get_component_api";
   server.tool(
     "detect_project_target",
     `Detect which es-plus target (vue3 / vue2 / antdv) matches the user's project, given the project's package.json content. The MCP client (e.g. Claude Code) reads the file from the workspace and passes it here. Use this BEFORE calling ${generators} so you pick the right target instead of defaulting to vue3.`,

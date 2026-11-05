@@ -51,7 +51,10 @@ describe("coverage_report — 工具层", () => {
     expect(text).toContain("[L1] Users");
     expect(text).toContain("[L2] Orders");
     expect(text).toContain("[L3] Audit");
-    expect(text).toContain("unsupported key");
+    // `workflow` 既不在台账里、也不在前门形状里：形状闸门先命中，报的是精确的
+    // unknown key（含拼写建议），并注明 generate_scene 会拒绝 —— 比台账的
+    // "unsupported key(s)" 更可执行。台账路径由 shared 的 scene-coverage.spec 覆盖。
+    expect(text).toContain('unknown key "workflow"');
   });
 
   it("多部分页面 → L2，并提示 generate_composition", async () => {

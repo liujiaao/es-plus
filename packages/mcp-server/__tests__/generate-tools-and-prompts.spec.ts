@@ -560,6 +560,27 @@ describe("standalone fragment tools", () => {
     expect(res.content[0].text).toContain("```vue");
   });
 
+  it("generate_table：只给顶层 rowkey 时不被注入默认 tableOptions.rowkey（假冲突）", async () => {
+    const { server, tools } = makeMockServer();
+    registerGenerateTable(server);
+    // 走 SDK 的真实路径：先用注册形状解析 —— 默认值（.default()）在这一步注入，
+    // 直接调 handler 是看不见的。`tableOptions.rowkey` 若写 `.default('id')`，
+    // 调用方只给顶层 rowkey='orderNo' 也会被判成 tableOptions 显式给了 'id'。
+    const parsed = z.object(tools.generate_table.shape).parse({
+      fields: [field("name", "名称")],
+      apiUrl: "/api/users",
+      target: "vue3",
+      typescript: true,
+      i18n: false,
+      rowkey: "orderNo",
+    });
+    const res = await tools.generate_table.handler(parsed);
+    const text = res.content[0].text as string;
+    expect(res.isError).toBeFalsy();
+    expect(text).not.toContain("rowkey 冲突");
+    expect(text).toContain("rowkey: 'orderNo'");
+  });
+
   it("generate_dialog emits a .tsx composable", async () => {
     const { server, tools } = makeMockServer();
     registerGenerateDialog(server);
