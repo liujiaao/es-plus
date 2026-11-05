@@ -81,13 +81,19 @@ export const RENDER_PLAN_CONTRACT = {
   tableOptions: {
     schema: 'emit',
     sfc: 'emit',
-    evidence: { schema: 'border', sfc: 'border' },
+    // 证据必须来自**探针注入的值**，不能是无条件出现的键名：两模式都恒定发射
+    // `border`/`stripe: <?>`，写 'border' 时即使把 `tOpts.stripe` 的读取整段删掉，
+    // 守卫仍然全绿（「接受入参却永不注入」在这两个键上无人守望）。探针传
+    // `stripe:false`，证据钉住这个**非默认值**。
+    evidence: { schema: '"stripe": false', sfc: 'stripe: false' },
     always: true,
   },
   pagination: {
     schema: 'emit',
     sfc: 'emit',
-    evidence: { schema: 'pagination', sfc: 'pagination' },
+    // 同上：'pagination' 是两模式恒定出现的变量/键名。探针传 pageSize:20（默认 10），
+    // 证据钉住这个具体值。
+    evidence: { schema: '"pageSize": 20', sfc: 'pageSize: 20' },
     always: true,
   },
   mode: { schema: 'meta', sfc: 'meta', evidence: { schema: null, sfc: null }, always: true },

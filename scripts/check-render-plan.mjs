@@ -44,7 +44,7 @@ const KEY_PROBES = {
   apiUrl: {},
   fields: {},
   actions: {},
-  tableOptions: { tableOptions: { stripe: true } },
+  tableOptions: { tableOptions: { stripe: false } },
   pagination: { pagination: { pageSize: 20 } },
   mode: {},
   target: {},

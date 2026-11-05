@@ -101,8 +101,8 @@
     "schema": "emit",
     "sfc": "emit",
     "evidence": {
-      "schema": "pagination",
-      "sfc": "pagination"
+      "schema": "\"pageSize\": 20",
+      "sfc": "pageSize: 20"
     }
   },
   "permissions": {
@@ -127,8 +127,8 @@
     "schema": "emit",
     "sfc": "emit",
     "evidence": {
-      "schema": "border",
-      "sfc": "border"
+      "schema": "\"stripe\": false",
+      "sfc": "stripe: false"
     }
   },
   "target": {
