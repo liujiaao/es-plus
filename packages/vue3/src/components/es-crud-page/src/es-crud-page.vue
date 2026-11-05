@@ -259,7 +259,9 @@ const mergedColumns = computed<TableColumn[]>(() => {
     prop: 'operate',
     label: opCol.label || '操作',
     width: opCol.width || actionBtns.length * 80 + 20,
-    fixed: opCol.fixed || 'right',
+    // `??` 而不是 `||`：契约允许 `fixed: false`（= 不固定）。用 `||` 会把显式的
+    // false 当成缺省值改回 'right'，「不固定」这个请求静默失效且无告警。
+    fixed: opCol.fixed ?? 'right',
     btns: actionBtns
   })
 
@@ -312,7 +314,11 @@ const formLayoutProps = computed(() => {
   return {
     rowLayProps: { gutter: 16 },
     formLayProps: {
-      labelBtnWidth: layout.labelWidth,
+      // 顶层 `formLayout.labelWidth` 是**查询表单**的 label 宽度（AI prompt 的槽位
+      // 约定）。es-form 用 formLayProps.labelWidth 渲染字段 label，按钮行则回落到它
+      // （labelBtnWidth || labelWidth）—— 此前这里映射成 labelBtnWidth，等于把
+      // 「查询字段标签宽度」只加在空按钮行上，字段本身没变宽。
+      labelWidth: layout.labelWidth,
       ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {})
     }
   } as any

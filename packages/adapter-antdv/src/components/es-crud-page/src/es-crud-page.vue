@@ -303,7 +303,8 @@ const mergedColumns = computed<TableColumn[]>(() => {
     prop: 'operate',
     label: opCol.label || '操作',
     width: opCol.width || actionBtns.length * 80 + 20,
-    fixed: opCol.fixed || 'right',
+    // `??` 而不是 `||`：契约允许 `fixed: false`（= 不固定）；`||` 会把它静默改成 'right'。
+    fixed: opCol.fixed ?? 'right',
     btns: actionBtns,
   })
 
@@ -347,7 +348,7 @@ const mergedOptions = computed(() => {
   return base
 })
 
-// ─── 表单布局（对齐 vue3：labelBtnWidth 键 + 始终 gutter:16）──
+// ─── 表单布局（对齐 vue3：labelWidth 是查询表单字段的宽度，始终 gutter:16）──
 
 const formLayoutProps = computed(() => {
   const layout = props.schema.formLayout
@@ -355,7 +356,9 @@ const formLayoutProps = computed(() => {
   return {
     rowLayProps: { gutter: 16 },
     formLayProps: {
-      labelBtnWidth: layout.labelWidth,
+      // 与 vue3/vue2 同口径：顶层 labelWidth 落到**查询表单**（formLayProps.labelWidth），
+      // 不是按钮行的 labelBtnWidth。
+      labelWidth: layout.labelWidth,
       ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {}),
     },
   } as any

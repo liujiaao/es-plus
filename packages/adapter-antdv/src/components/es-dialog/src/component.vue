@@ -92,7 +92,7 @@
         <a-space v-else-if="footerBtns.length">
           <a-button
             v-for="(item, idx) in footerBtns"
-            v-show="checkPermission(item.permissionValue)"
+            v-if="checkPermission(item.permissionValue)"
             :key="item.key || idx"
             :type="mapBtnType(item.type)"
             :danger="mapBtnDanger(item.type)"

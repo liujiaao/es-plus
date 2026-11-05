@@ -53,7 +53,7 @@
                 <a-space :size="8" wrap>
                   <a-button
                     v-for="(it, inx) in colRightLeftList.colLeftBtn"
-                    v-show="checkPermission(it.permissionValue)"
+                    v-if="checkPermission(it.permissionValue)"
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
@@ -76,7 +76,7 @@
                 <a-space :size="8" wrap>
                   <a-button
                     v-for="(it, inx) in colRightLeftList.colRightBtn"
-                    v-show="checkPermission(it.permissionValue)"
+                    v-if="checkPermission(it.permissionValue)"
                     :key="it.key || inx"
                     v-bind="filterOptions(it)"
                     :type="mapBtnType(it.type)"
@@ -130,7 +130,7 @@
               <a-space :size="8" wrap>
                 <a-button
                   v-for="(it, inx) in configBtn"
-                  v-show="checkPermission(it.permissionValue)"
+                  v-if="checkPermission(it.permissionValue)"
                   :key="it.key || inx"
                   v-bind="filterOptions(it)"
                   :type="mapBtnType(it.type)"

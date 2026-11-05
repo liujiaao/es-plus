@@ -152,8 +152,8 @@
             v-model:current="paginationConfig.current"
             v-model:pageSize="paginationConfig.pageSize"
             :total="paginationConfig.total"
-            :showSizeChanger="true"
-            :showQuickJumper="true"
+            :showSizeChanger="paginationShowSizeChanger"
+            :showQuickJumper="paginationShowQuickJumper"
             :pageSizeOptions="paginationPageSizes.map(String)"
             :size="paginationIsSmall ? 'small' : 'default'"
             :showTotal="(total: number) => `共 ${total} 条`"
@@ -542,6 +542,19 @@ const paginationPageSizes = computed(() =>
   paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes || [10, 20, 50, 100]
 )
 const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
+// 分页布局（Element 语法）：a-pagination **没有** `layout` prop，无法定制排布；
+// 但 `sizes` / `jumper` 两个 token 有等价开关，必须兑现 —— 否则
+// `:pagination="{ layout: 'total, prev, pager, next' }"` 在 vue3/vue2 隐藏了
+// 每页条数选择器与跳页框，在 antdv 却原样显示，同一份契约三端三种样子。
+const paginationLayout = computed<string | undefined>(
+  () => paginationLayoutConfig.value?.layout || paginationConfig.value.layout || undefined
+)
+const paginationShowSizeChanger = computed(() =>
+  paginationLayout.value ? paginationLayout.value.includes('sizes') : true,
+)
+const paginationShowQuickJumper = computed(() =>
+  paginationLayout.value ? paginationLayout.value.includes('jumper') : true,
+)
 
 // ─── 表格选择 ───────────────────────────────────────
 const {
