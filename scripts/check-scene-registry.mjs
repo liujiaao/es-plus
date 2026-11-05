@@ -219,8 +219,10 @@ for (const scene of fragmentScenes) {
 
 // ── (e) 罐头弹窗标题单一真源 ────────────────────────────
 // 标题既是文案，又是提交方法 / 只读语义的判据（'新增'→POST、'查看'→只读）。
-// 注册表是唯一真源；emit 层与评测组合打分器必须 import 它，生成器模板里的字面量
-// 无法 import（会改变产物字节），因此由守卫**反向比对**常量与模板。
+// 注册表是唯一真源；emit 层、生成器模板与评测组合打分器都必须 import 它。
+// 两种合法写法，守卫分别断言：
+//   ① import 常量并在模板里插值 —— 漂移在结构上不可能，断言 import 与两处用法都在；
+//   ② 运行时直接写字面量（crud-engine 不经模板）—— 只能反向比对常量取值。
 const readSrc = (relPath) => readFileSync(join(ROOT, relPath), 'utf8')
 
 const emitSrc = readSrc('packages/shared/src/scene/emit.ts')
@@ -239,18 +241,32 @@ if (!/import\s*\{[^}]*dialogTitleFor[^}]*\}\s*from\s*'\.\/scenes\.mjs'/.test(sco
   fail('composition-scorers.mjs 没有从 scenes.mjs 导入 dialogTitleFor')
 }
 
+const registryImport = /import\s*\{[^}]*DIALOG_TITLES[^}]*\}\s*from\s*'\.\/scene\/registry\.js'/
 const titleHeuristics = [
-  ['packages/shared/src/structured-generator.ts', `=== '${DIALOG_TITLES.add}'`, `=== '${DIALOG_TITLES.view}'`],
-  ['packages/shared/src/fragment-generator.ts', `=== '${DIALOG_TITLES.add}'`, `=== '${DIALOG_TITLES.view}'`],
-  ['packages/shared/src/crud-engine.ts', `openForm('${DIALOG_TITLES.add}')`, `=== '${DIALOG_TITLES.view}'`],
+  { file: 'packages/shared/src/structured-generator.ts', mode: 'import' },
+  { file: 'packages/shared/src/fragment-generator.ts', mode: 'import' },
+  { file: 'packages/shared/src/crud-engine.ts', mode: 'literal' },
 ]
-for (const [file, addLiteral, viewLiteral] of titleHeuristics) {
+for (const { file, mode } of titleHeuristics) {
   const src = readSrc(file)
-  if (!src.includes(addLiteral)) {
-    fail(`${file}: 缺少标题启发式 ${addLiteral}（DIALOG_TITLES.add 改了但生成器模板没跟）`)
+  if (mode === 'import') {
+    if (!registryImport.test(src)) {
+      fail(`${file}: 没有从 ./scene/registry.js 导入 DIALOG_TITLES —— 标题启发式必须有单一真源`)
+    }
+    for (const [key, label] of [
+      ['add', '新增'],
+      ['view', '查看'],
+    ]) {
+      if (!src.includes(`DIALOG_TITLES.${key}`)) {
+        fail(`${file}: 缺少标题启发式 DIALOG_TITLES.${key}（'${label}'）—— 模板没跟上注册表常量`)
+      }
+    }
+    continue
   }
-  if (!src.includes(viewLiteral)) {
-    fail(`${file}: 缺少标题启发式 ${viewLiteral}（DIALOG_TITLES.view 改了但生成器模板没跟）`)
+  for (const literal of [`openForm('${DIALOG_TITLES.add}')`, `=== '${DIALOG_TITLES.view}'`]) {
+    if (!src.includes(literal)) {
+      fail(`${file}: 缺少标题启发式 ${literal}（DIALOG_TITLES 改了但源码没跟）`)
+    }
   }
 }
 

@@ -18,7 +18,9 @@
  *   5) **等价写法判等**：width 数字/px、rowkey 省略/id、`modal:false` vs
  *      `closeOnClickModal:false` —— 运行时已核实的等价落地不得判错。
  *   6) **派生规则与生成器源码一致**：`READ_ONLY_TITLE` / `NEW_TITLE` / 选项键全集
- *      必须仍出现在 `fragment-generator.ts` 里。改了源码忘了改这里 → 红。
+ *      必须仍出现在 `fragment-generator.ts` 里。生成器已改为 import `DIALOG_TITLES`
+ *      并在模板里插值（单一真源），故这里比对的是 `DIALOG_TITLES.view/add` 的用法；
+ *      改了源码忘了改这里 → 红。
  *   7) **三端语料同源**：同一编号的三端用例除 `target` 外逐字节相同（否则端间差异
  *      会被误当成模型能力差异）。
  */
@@ -38,7 +40,7 @@ import {
   isValidDialogDim,
   scoreDialog,
 } from './dialog-scorers.mjs'
-import { sceneOf } from './scenes.mjs'
+import { sceneOf, DIALOG_TITLES } from './scenes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..', '..')
@@ -240,17 +242,24 @@ if (untriggered.length) {
 // ── 6) 派生规则与生成器源码一致 ──────────────────────────────────────────────
 {
   const src = readFileSync(join(ROOT, 'packages', 'shared', 'src', 'fragment-generator.ts'), 'utf8')
-  const readOnly = src.match(/title(?:\.value)? === '查看'/g) ?? []
-  const newTitle = src.match(/title(?:\.value)? === '新增'/g) ?? []
+  // 标题字面量已收敛到 `DIALOG_TITLES`（registry 单一真源），模板里是插值而不是
+  // `'查看'`。计数照旧按「两支各一处」断言：常量改名后模板若少了一处，这里同样会红。
+  const readOnly = src.match(/title(?:\.value)? === \$\{q\(DIALOG_TITLES\.view\)\}/g) ?? []
+  const newTitle = src.match(/title(?:\.value)? === \$\{q\(DIALOG_TITLES\.add\)\}/g) ?? []
   check(
     readOnly.length >= 2,
-    `生成器应有两支（composable / component）的 title === '查看' 判断，实得 ${readOnly.length} 处 —— READ_ONLY_TITLE 已漂移`
+    `生成器应有两支（composable / component）的 DIALOG_TITLES.view 判断，实得 ${readOnly.length} 处 —— READ_ONLY_TITLE 已漂移`
   )
   check(
     newTitle.length >= 2,
-    `生成器应有两支的 title === '新增' 判断，实得 ${newTitle.length} 处 —— NEW_TITLE 已漂移`
+    `生成器应有两支的 DIALOG_TITLES.add 判断，实得 ${newTitle.length} 处 —— NEW_TITLE 已漂移`
   )
-  // 无 apiUrl 时不得出现「先发请求再判 view」的旁路：两支的提交分支都必须以 apiUrl 为闸门。
+  // 单一真源不能只是「都用了常量」：常量本身必须仍等于记分卡认的标题。
+  check(
+    READ_ONLY_TITLE === DIALOG_TITLES.view && NEW_TITLE === DIALOG_TITLES.add,
+    `记分卡标题与 DIALOG_TITLES 漂移：view=${READ_ONLY_TITLE}/${DIALOG_TITLES.view}，add=${NEW_TITLE}/${DIALOG_TITLES.add}`
+  )
+
   for (const [name, re] of [
     ['composable', /if \(input\.apiUrl\) \{[\s\S]*?httpRequest\(\{ url, method, data: formData \}\)/],
     ['component', /if \(apiUrl\) \{[\s\S]*?httpRequest\(\{ url, method, data: formData \}\)/],

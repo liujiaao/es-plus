@@ -30,9 +30,10 @@
  *
  * ## 与运行时见证的边界
  *
- * `READ_ONLY_TITLE` / `NEW_TITLE` 是**生成器源码里的字面量**（composable 与 component
- * 两支逐字一致）。改那两个字面量必须同时改这里 —— `dialog-scorers.test.mjs` 会读
- * `fragment-generator.ts` 的源码断言两者一致，否则「只读」会在运行时悄悄退化为可编辑。
+ * `READ_ONLY_TITLE` / `NEW_TITLE` 与生成器模板里的标题字面量同源：生成器 import
+ * `DIALOG_TITLES`（registry）并在模板里插值。改标题必须同时改这里 ——
+ * `dialog-scorers.test.mjs` 同时断言「生成器仍引用 DIALOG_TITLES.view/add」与
+ * 「这两个常量等于 READ_ONLY_TITLE / NEW_TITLE」，否则「只读」会在运行时悄悄退化为可编辑。
  */
 
 import {
