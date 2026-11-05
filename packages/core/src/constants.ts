@@ -8,16 +8,18 @@
  * 这两个重依赖拖进所有用户的应用包。真正的单一真源需要一个独立的、无依赖的契约包
  * （如 `@es-plus/contract`），属结构性改造，尚未进行。
  *
- * 因此当前用**门禁**代替 import：`scripts/check-schema-contract.mjs` 会断言本文件的
- * VALID_FORM_TYPES 与 shared/contract.ts 的逐项相等，两处漂移会让 CI 变红。
+ * 因此当前用**门禁**代替 import：`scripts/check-schema-contract.mjs` 会把本文件与
+ * shared/contract.ts 的**全部同名契约常量**（12 个常量 + 同名函数 normalizeFormType）
+ * 逐个深比较，两处漂移会让 CI 变红。判据是从两边的运行时导出推导的，不靠逐名手写断言 ——
+ * 新增同名常量若不登记，门禁同样会红。
  * （此前两者之间没有任何检查——schema 门禁锚定本文件，renderer-parity 锚定 shared，
  * 只改一处再同步 schema/类型即可保持全绿。）
  *
  * 维护规则：
  * 1. 这里只能存放"无副作用、无 Vue/Element 依赖"的纯常量
  * 2. 修改前需同步检查 mcp-server / cli 是否依赖
- * 3. 改 VALID_FORM_TYPES / FORM_TYPE_ALIASES 等契约常量时，必须同步
- *    packages/shared/src/contract.ts，否则 check:schema 会失败
+ * 3. 改任何契约常量（VALID_FORM_TYPES、SPECIAL_BTN_KEYS、DEFAULT_* 等 12 个）时，
+ *    必须同步 packages/shared/src/contract.ts，否则 check:schema 会失败
  */
 
 /**
