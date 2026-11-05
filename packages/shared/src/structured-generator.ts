@@ -29,6 +29,7 @@ import {
 import { capabilityWarnings } from './capability.js'
 import { buildPreflight, type PreflightInput, type PreflightReport } from './preflight.js'
 import { buildRenderPlan, type RenderPlan } from './render-plan.js'
+import { DIALOG_TITLES } from './scene/registry.js'
 
 export type { StructuredCrudConfig }
 
@@ -504,8 +505,13 @@ export function findDialogButtonsWithoutDialog(config: StructuredCrudConfig): st
   const hasDialogAction = actions.some((a) => a === 'add' || a === 'edit' || a === 'view')
 
   // ① 运行时会有哪些弹窗（镜像 generateSchema 的 useNewDialogMode / legacy 分支）
+  //
+  // `dialogs: {}` 必须按**缺席**算：`buildRenderPlan` 明确规定空 record 什么都不表达
+  // （否则 legacy 的 dialogFormItems 被跳过、按钮却仍由 actions 派生 = 点不开的死按钮）。
+  // 这里此前用 `config.dialogs !== undefined`，于是 `{}` 被当成新模式 —— 同一份配置
+  // 页面实际走 legacy、可用，这条检查却报「以下按钮点了不会有任何反应」。
   const newMode =
-    config.dialogs !== undefined ||
+    (config.dialogs !== undefined && Object.keys(config.dialogs).length > 0) ||
     config.toolbarBtns !== undefined ||
     config.tableBtns !== undefined ||
     config.operationColumn !== undefined
@@ -978,6 +984,14 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   const hasRender = tableFields.some(f => f.render)
   const ts = config.typescript
 
+  // 导入是唯一「按钮存在但生成器无法替宿主实现」的动作：handleImport 只发提示。
+  // 生成期必须点名，否则宿主会把空占位当成已接好的上传。
+  if (config.actions.includes('import')) {
+    warnings.push(
+      'actions 含 "import"：SFC 产物里的 handleImport 只是占位提示（不含上传实现）——请在 handleImport 中接入上传/IPC 逻辑。'
+    )
+  }
+
   // Vue 2 SFC 模式提醒：JSX render 需 babel-preset-jsx-vue2（target 级能力差异见下方矩阵）
   if (isVue2) {
     if (hasDialog) {
@@ -1038,14 +1052,17 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
 
   // F3（W2.4）：顶层 formLayout 此前只有 schema 模式消费（EsCrudPage 的 formLayoutProps），
   // SFC 模式从不读 —— 同一份 config 换 mode 布局就静默丢失。这里按 EsCrudPage 的映射
-  // （labelWidth → labelBtnWidth、minFoldRows 直传、rowLayProps.gutter=16）把等价的
+  // （labelWidth 直传、minFoldRows 直传、rowLayProps.gutter=16）把等价的
   // layoutFormProps 绑到查询 es-form。`span` 已于 AI-31③ 从契约删除（layout 级无消费者，
   // 列数是逐字段的 querySpan/formSpan）。
   const sfcFormLayout = plan.emits('formLayout')
     ? ((config.formLayout || {}) as { labelWidth?: string | number; minFoldRows?: number })
     : {}
   const sfcFormLayProps: Record<string, unknown> = {}
-  if (sfcFormLayout.labelWidth !== undefined) sfcFormLayProps.labelBtnWidth = sfcFormLayout.labelWidth
+  // 键名必须是 labelWidth（与 schema 模式同一语义：查询字段的 label 宽度）。
+  // 曾映射成 labelBtnWidth —— es-form 只用它渲染按钮行，于是「查询表单标签宽 100px」
+  // 在两种模式下都只改变了空按钮行，字段本身没变。
+  if (sfcFormLayout.labelWidth !== undefined) sfcFormLayProps.labelWidth = sfcFormLayout.labelWidth
   if (sfcFormLayout.minFoldRows) sfcFormLayProps.minFoldRows = sfcFormLayout.minFoldRows
   const hasSfcFormLayout = Object.keys(sfcFormLayProps).length > 0
 
@@ -1106,8 +1123,9 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   // 弹窗提交路径（openForm 的确定按钮）无条件调用 ElMessage.success/error ——
   // 此前只在 hasDelete 时导入，于是「没有删除动作但有弹窗」的产物在 vue-tsc 里
   // 报 `Cannot find name 'ElMessage'`（antdv 端是 `message`）：语法能过、类型不过。
+  // import 动作的 handleImport 占位也发 ElMessage.warning，同样要导入。
   if (hasDelete) epImports.push('ElMessageBox', 'ElMessage')
-  else if (hasDialog) epImports.push('ElMessage')
+  else if (hasDialog || config.actions.includes('import')) epImports.push('ElMessage')
   if (epImports.length > 0) {
     lines.push(buildElementImport(epImports, target))
   }
@@ -1178,7 +1196,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
   if (config.actions.includes('add')) {
     const perm = config.permissions?.add ? `, permissionValue: ${q(config.permissions.add)}` : ''
-    lines.push(`  { name: '新增', type: 'primary', key: 'add', icon: 'Plus', click: () => openForm('新增')${perm} },`)
+    lines.push(`  { name: '新增', type: 'primary', key: 'add', icon: 'Plus', click: () => openForm(${q(DIALOG_TITLES.add)})${perm} },`)
   }
   if (config.actions.includes('export')) {
     const perm = config.permissions?.export ? `, permissionValue: ${q(config.permissions.export)}` : ''
@@ -1361,7 +1379,10 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (config.actions.includes('import')) {
     lines.push(``)
     lines.push(`function handleImport() {`)
-    lines.push(`  // Implement import dialog/upload logic`)
+    // 不能留空实现：按钮在、点击零反馈、告警也空 = 静默死按钮（与 AN-06② 的
+    // wrapper 分支同一条纪律）。脚手架替宿主决定不了上传方式，但至少让「尚未实现」
+    // 在界面上可见。
+    lines.push(`  ElMessage.warning('导入尚未实现：请在 handleImport 中接入上传逻辑')`)
     lines.push(`}`)
   }
 
@@ -1375,7 +1396,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
     // filter(Boolean) 剔除空段，保证 `reactive({ ...row })` 恒合法。
     const formInit = [dialogModelInit, '...row'].filter(Boolean).join(', ')
     lines.push(`  const formData = reactive({ ${formInit} })`)
-    lines.push(`  const isView = title === '查看'`)
+    lines.push(`  const isView = title === ${q(DIALOG_TITLES.view)}`)
     lines.push(``)
 
     const dialogFormItemsJson = inlineJson(formFields.map(f => buildFormItem(f, 'form', config.i18n)), 4)
@@ -1404,8 +1425,8 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
     lines.push(`          return // 表单校验未通过：用户需修正，静默中止`)
     lines.push(`        }`)
     lines.push(`        try {`)
-    lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`          const url = title === '新增' ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData${qMember(tOpts.rowkey || 'id')}}\``)
+    lines.push(`          const method = title === ${q(DIALOG_TITLES.add)} ? 'POST' : 'PUT'`)
+    lines.push(`          const url = title === ${q(DIALOG_TITLES.add)} ? ${q(config.apiUrl)} : \`${qBt(config.apiUrl)}/\${formData${qMember(tOpts.rowkey || 'id')}}\``)
     lines.push(`          await httpRequest({ url, method, data: formData })`)
     lines.push(`          ElMessage.success(\`\${title}成功\`)`)
     lines.push(`          close()`)
@@ -1562,6 +1583,23 @@ function buildSchemaWrapper(config: StructuredCrudConfig, hasDelete: boolean, _h
     body.push(`${indent}    }).catch(() => {`)
     body.push(`${indent}      ElMessage.error('编辑失败')`)
     body.push(`${indent}    })`)
+    body.push(`${indent}  }`)
+  }
+  // 非弹窗动作：legacy 模式下 EsCrudPage 仍按 `actions` 派生「导出/导入」按钮并
+  // emit `btn-click`（vue3 es-crud-page.vue handleToolbarBtnClick 同时 emit('export')
+  // 与 emit('btn-click','export')），但本 wrapper 此前只处理两个 confirm 键 ——
+  // 两个按钮都渲染得出来、点下去零反应、且没有任何告警。与 buildSchemaWrapperNew
+  // 的同一段对齐：导出真的发请求，导入给出显式未实现提示。
+  if (config.actions.includes('export')) {
+    body.push(`${indent}  if (key === 'export') {`)
+    body.push(
+      `${indent}    window.open(\`${qBt(config.apiUrl)}/export?\${new URLSearchParams(data || {}).toString()}\`)`,
+    )
+    body.push(`${indent}  }`)
+  }
+  if (config.actions.includes('import')) {
+    body.push(`${indent}  if (key === 'import') {`)
+    body.push(`${indent}    ElMessage.warning('导入尚未实现：请在 handleBtnClick 中接入上传逻辑')`)
     body.push(`${indent}  }`)
   }
   body.push(`${indent}}`)
@@ -1994,8 +2032,14 @@ function applyExpandConfig(
 export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSorted = false): Record<string, unknown> {
   const col: Record<string, unknown> = {
     prop: field.prop,
-    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>` → label。
-    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : { label: field.label }),
+    // labelKey 优先序（AI-22）：字段级显式 labelKey → i18n 派生的 `field.<prop>`。
+    // `label` **始终保留**（与 buildFormItem 同一条纪律）：labelKey 只是优先显示的
+    // 翻译键，宿主未装配 `t` 时列组件必须回落到 label。此前 i18n 模式下只发 labelKey，
+    // 而 vue3/vue2 的 column-item 只在 `cols.labelKey && typeof esPlus.t === 'function'`
+    // 时才产出 label —— 没装配 t 的宿主得到**整列表头空白**，与 prompt 里「否则回落
+    // label」的承诺相反（antdv 同理：fallback 的 col.label 根本不存在）。
+    ...(field.labelKey ? { labelKey: field.labelKey } : i18n ? { labelKey: `field.${field.prop}` } : {}),
+    label: field.label,
   }
   if (field.width) col.width = field.width
   if (field.minWidth) col.minWidth = field.minWidth
@@ -2147,10 +2191,13 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // es-table 内部按 labelKey 解析 i18n 文案。绝不能内联 `label: '${t('...')}'` ——
   // 内层单引号会截断外层字符串（编译失败），且 SFC 从不 import/定义 t。
   if (field.labelKey) {
-    // 字段级显式 labelKey 优先（AI-22）。
+    // 字段级显式 labelKey 优先（AI-22）。label 一并发射：翻译键失效（宿主未装配 t）
+    // 时列组件回落到它 —— 与 schema 模式 buildTableColumn 同一口径。
     parts.push(`labelKey: ${q(field.labelKey)}`)
+    parts.push(`label: ${q(field.label)}`)
   } else if (config.i18n) {
     parts.push(`labelKey: ${q(`field.${field.prop}`)}`)
+    parts.push(`label: ${q(field.label)}`)
   } else {
     parts.push(`label: ${q(field.label)}`)
   }
@@ -2213,11 +2260,11 @@ export function buildActionBtns(config: StructuredCrudConfig): string[] {
   const btns: string[] = []
   if (config.actions.includes('view')) {
     const perm = config.permissions?.view ? `, permissionValue: ${q(config.permissions.view)}` : ''
-    btns.push(`{ name: '查看', type: 'primary', clickEvent: (row) => openForm('查看', row)${perm} }`)
+    btns.push(`{ name: '查看', type: 'primary', clickEvent: (row) => openForm(${q(DIALOG_TITLES.view)}, row)${perm} }`)
   }
   if (config.actions.includes('edit')) {
     const perm = config.permissions?.edit ? `, permissionValue: ${q(config.permissions.edit)}` : ''
-    btns.push(`{ name: '编辑', type: 'primary', clickEvent: (row) => openForm('编辑', row)${perm} }`)
+    btns.push(`{ name: '编辑', type: 'primary', clickEvent: (row) => openForm(${q(DIALOG_TITLES.edit)}, row)${perm} }`)
   }
   if (config.actions.includes('delete')) {
     const perm = config.permissions?.delete ? `, permissionValue: ${q(config.permissions.delete)}` : ''

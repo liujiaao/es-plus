@@ -19,6 +19,7 @@ import type { SurfaceField } from './compose-crud-config.js'
 import { getEsPlusPackageName, type TargetFramework, DEFAULT_TARGET } from './target.js'
 import { q, qBt, qKey, qMember, inlineJson, qAttr } from './codegen-escape.js'
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC } from './contract.js'
+import { DIALOG_TITLES } from './scene/registry.js'
 
 /**
  * 片段发射层(独立组件)——产出**自包含、可独立编译、可嵌入任意宿主**的单组件 SFC。
@@ -873,7 +874,7 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
   const formInit = [defaults, '...row'].filter(Boolean).join(', ')
   lines.push(`    const formData = reactive({ ${formInit} })`)
-  lines.push(`    const isView = title === '查看'`)
+  lines.push(`    const isView = title === ${q(DIALOG_TITLES.view)}`)
   lines.push('')
 
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, 'form', i18n)), 4)
@@ -907,8 +908,8 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   lines.push(`            return // 校验未通过:静默中止,等用户修正`)
   lines.push(`          }`)
   if (input.apiUrl) {
-    lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`          const url = title === '新增' ? ${q(input.apiUrl)} : \`${qBt(input.apiUrl)}/\${formData${qMember(rowkey)}}\``)
+    lines.push(`          const method = title === ${q(DIALOG_TITLES.add)} ? 'POST' : 'PUT'`)
+    lines.push(`          const url = title === ${q(DIALOG_TITLES.add)} ? ${q(input.apiUrl)} : \`${qBt(input.apiUrl)}/\${formData${qMember(rowkey)}}\``)
     lines.push(`          await httpRequest({ url, method, data: formData })`)
   }
   lines.push(`          close()`)
@@ -1093,15 +1094,15 @@ function generateDialogComponent(p: {
   lines.push('  }')
   lines.push('  // TODO(es-plus): 宿主编排槽 —— 提交前后的额外业务逻辑写在这里')
   if (apiUrl) {
-    lines.push(`  const method = title.value === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`  const url = title.value === '新增' ? ${q(apiUrl)} : \`${qBt(apiUrl)}/\${formData${qMember(rowkey)}}\``)
+    lines.push(`  const method = title.value === ${q(DIALOG_TITLES.add)} ? 'POST' : 'PUT'`)
+    lines.push(`  const url = title.value === ${q(DIALOG_TITLES.add)} ? ${q(apiUrl)} : \`${qBt(apiUrl)}/\${formData${qMember(rowkey)}}\``)
     lines.push(`  await httpRequest({ url, method, data: formData })`)
   }
   lines.push('  close()')
   lines.push('  successHandler?.(formData)')
   lines.push('}')
   lines.push('')
-  lines.push(`const isView = computed(() => title.value === '查看')`)
+  lines.push(`const isView = computed(() => title.value === ${q(DIALOG_TITLES.view)})`)
   lines.push('const configBtn = computed(() => isView.value')
   lines.push('  ? [')
   lines.push(`    { name: '关闭', click: () => close() }`)
