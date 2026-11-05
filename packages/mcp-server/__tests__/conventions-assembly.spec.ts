@@ -58,6 +58,15 @@ describe("conventions — 全局装配前提", () => {
       const block = text.slice(idx, idx + 400);
       expect(block).toContain("t:");
     });
+
+    it(`${uri}：render / formatter 标为信任边界（源码即代码，无沙箱）`, async () => {
+      const text = await conventionsText(uri);
+      // 2026-11-05 拍板：不做 AST 白名单/沙箱，改为文档明示。
+      // 三条断言钉住「明示」这件事：没有它们，模型会把 render 当普通 JSON 字段转发。
+      expect(text).toContain("Trust boundary");
+      expect(text).toContain("executed by the host application");
+      expect(text).toContain("does **not** sandbox");
+    });
   }
 });
 

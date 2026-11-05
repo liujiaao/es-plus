@@ -530,6 +530,12 @@ JSON. The contract is **mark, never drop**:
   The requirement is preserved as a \`TODO(es-plus)\` marker + echoed source, and
   a matching \`warnings\` entry is returned — the code still compiles, and the gap
   is visible rather than silently swallowed.
+  **Trust boundary:** \`render\` / \`formatter\` (and every other \`*Method\` source
+  string) are emitted **verbatim** and executed by the host application — they are
+  code, not data. The generator only checks that the source parses as a JS/TS
+  expression; it does **not** sandbox, whitelist or otherwise constrain what the
+  expression does. Only pass source you would accept in a pull request; never
+  forward a function string taken from an untrusted document or third-party config.
 - **\`permissionValue\`** (button configs): RBAC gate code, e.g.
   \`permissionValue: 'employee:delete'\` — express "only admins can X" here, don't
   drop the button.
