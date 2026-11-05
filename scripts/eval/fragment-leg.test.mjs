@@ -16,7 +16,11 @@
  *   6) cases=0 / measured=0 ⟹ 红（零分母不是全对）；
  *   7) 基线缺 fragmentScopedMin ⟹ 红（fail closed，不静默放行）；
  *   8) scoped 低于地板 ⟹ 红；
- *   9) 全部行没有产物（全 model-failure）⟹ 红（编译门无分母）。
+ *   9) 全部行没有产物（全 model-failure）⟹ 红（编译门无分母）；
+ *  10) 路由器拒绝**模型入参**（produced=false ∧ model-guard）⟹ 不计编译分母、不红
+ *      （它已按 0 分进 scoped；记成编译失败会让门禁在准确性目标下恒红）；
+ *  11) 路由器以**非模型侧**原因拒绝（threw / tool-error / intent-schema）⟹ 红
+ *      （那是我们自己的缺陷，不能被「模型答错」的口子放行）。
  */
 import { summarizeFragmentLeg, fragmentScopedFloor, FRAGMENT_COMPILE_FLOOR } from './fragment-leg.mjs'
 
@@ -54,6 +58,17 @@ const compileBadRow = (file = 'frag-dialog-01-vue3.json', scene = 'dialog') => (
   errorKind: null,
   compiles: false,
   compileError: { message: 'Unexpected token', file: 'dialog-fragment.tsx', line: 2, column: 5 },
+})
+/** 路由器拒绝了这份入参：没有任何产物（`produced: false`）。 */
+const rejectedRow = (rejectedKind, file = 'frag-table-06-vue3.json') => ({
+  file,
+  scene: 'table',
+  error: null,
+  errorKind: null,
+  compiles: false,
+  produced: false,
+  rejectedKind,
+  compileError: { message: '✗ Unknown argument(s) for generate_scene — nothing was generated.', file: null, line: null, column: null },
 })
 
 function summary({ rows, scoped, cases = rows.length, measured = rows.length, notMeasured = 0 }) {
@@ -133,6 +148,25 @@ const BASE = { fragmentScopedMin: 0.7778 }
   const rows = [modelFailRow(), modelFailRow('frag-form-02-vue3.json')]
   const r = summarizeFragmentLeg(rows, summary({ rows, scoped: 0 }), BASE)
   check(r.ok === false && has(r, /没有任何可编译产物/), '⑨ 所有行都没有产物时编译门必须红（零分母不是全对）')
+}
+
+// ⑩ 路由器拒绝模型入参：无产物，不进编译分母，也不单独红
+{
+  const rows = Array.from({ length: 9 }, (_, i) => okRow(`frag-${i}.json`)).concat([rejectedRow('model-guard')])
+  const r = summarizeFragmentLeg(rows, summary({ rows, scoped: 0.9 }), BASE)
+  check(r.ok === true, `⑩ 模型入参被路由器拒绝只应是「答错」而非门禁红（failures: ${r.failures.join(' | ')}）`)
+  check(r.compileMeasured === 9, `⑩ 编译分母必须排除无产物行（实得 ${r.compileMeasured}）`)
+  check(!has(r, /原因不在模型入参/), '⑩ 模型侧拒绝不应触发「路由器缺陷」判据')
+}
+
+// ⑪ 非模型侧拒绝（路由器/发射器自己的问题）必须红
+{
+  for (const kind of ['threw', 'tool-error', 'intent-schema']) {
+    const rows = Array.from({ length: 9 }, (_, i) => okRow(`frag-${i}.json`)).concat([rejectedRow(kind)])
+    const r = summarizeFragmentLeg(rows, summary({ rows, scoped: 0.9 }), BASE)
+    check(r.ok === false && has(r, /原因不在模型入参/), `⑪ rejectedKind=${kind} 必须红（不能计入模型答错）`)
+    check(r.compileMeasured === 9, `⑪ rejectedKind=${kind} 仍不进编译分母（无产物）`)
+  }
 }
 
 if (failures) {

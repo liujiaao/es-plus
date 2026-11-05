@@ -130,17 +130,52 @@ export async function driveFrontDoor(fd, pred) {
 }
 
 /**
+ * `generate_scene` 的**模型侧**拒绝文案锚点。
+ *
+ * 路由器拒绝有两种完全不同的含义，混在一起会把「模型答错」记成「发射器缺陷」：
+ *   · **model-guard**：未知键 / intent 过不了形状 —— 模型给了这份工具不接受的入参，
+ *     没有产物是**应得**的结果，准确率已按 0 分计入；
+ *   · 其他（`threw:` / 生成期报错 / sceneShape 解析失败）—— 我们自己的缺陷，必须红。
+ *
+ * 锚点取自 `packages/mcp-server/src/tools/generate-scene.ts` 的两处错误构造。
+ * `front-door-leg.test.mjs` 读那份源码断言两段文案仍存在：改文案而不同步这里会红，
+ * 不会静默把「我们的缺陷」当成「模型答错」放行。
+ */
+const MODEL_SIDE_REJECTIONS = [
+  /✗ Unknown argument\(s\) for generate_scene\b/,
+  /✗ intent failed schema validation for scene\b/,
+]
+
+/** 这条工具错误是不是「模型入参不被接受」（而不是路由器/发射器自己出错）。 */
+export function isModelSideSceneRejection(text) {
+  return MODEL_SIDE_REJECTIONS.some((re) => re.test(String(text ?? '')))
+}
+
+/**
  * 片段场景：把模型产出的 intent 喂进**同一个** `generate_scene`，返回落地与编译见证。
  * 这是片段腿的 gated witness —— 直接调 `FRAGMENT_GENERATORS[scene]` 只能证明生成器，
  * 证明不了「宿主实际调用的入口」能把这份 intent 落地。
+ *
+ * `rejectedKind` 区分「谁拒绝了」：`model-guard`（模型入参）/ `intent-schema`（语料→
+ * shape，确定性代码）/ `tool-error`（生成期 isError）/ `threw`（handler 抛错）。
+ * 编译门只拿 `landing === 'fragment'` 的行当分母（有产物才算发射），其余三种要红。
  */
 export async function driveSceneFragment(fd, scene, intent) {
-  const out = { route: scene, intent: null, landing: null, witness: [], rejected: null, compileFailures: [] }
+  const out = {
+    route: scene,
+    intent: null,
+    landing: null,
+    witness: [],
+    rejected: null,
+    rejectedKind: null,
+    compileFailures: [],
+  }
   try {
     const parsed = fd.sceneShape.safeParse({ scene, intent })
     if (!parsed.success) {
       out.intent = 'rejected'
       out.landing = 'rejected'
+      out.rejectedKind = 'intent-schema'
       out.rejected = `intent: ${parsed.error.issues
         .slice(0, 2)
         .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
@@ -152,6 +187,7 @@ export async function driveSceneFragment(fd, scene, intent) {
     const text = r.content?.[0]?.text ?? ''
     if (r.isError) {
       out.landing = 'rejected'
+      out.rejectedKind = isModelSideSceneRejection(text) ? 'model-guard' : 'tool-error'
       out.rejected = text.split('\n')[0]
       return out
     }
@@ -160,6 +196,7 @@ export async function driveSceneFragment(fd, scene, intent) {
     out.compileFailures.push(...out.witness)
   } catch (err) {
     out.landing = 'rejected'
+    out.rejectedKind = 'threw'
     out.rejected = `threw: ${String(err?.message ?? err).split('\n')[0]}`
   }
   return out

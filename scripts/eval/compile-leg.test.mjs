@@ -173,6 +173,9 @@ const compileRows = [
   { file: 'c.json', lang: 'zh', compiles: false, error: 'model failed', errorKind: 'model-failure' }, // 模型答错：无产物
   { file: 'd.json', lang: 'zh', compiles: false, error: 'truncated', errorKind: 'truncated' }, // 未测到：无产物
   { file: 'e.json', lang: 'zh', compiles: true, error: null, wrong: true }, // 能编译但语义 miss
+  // 片段腿：路由器拒绝了模型入参 ⟹ 没有任何产物（`produced: false`），与上面两种
+  // 无产物行同一处理。不排除会让「模型偶发传未知键」把编译门判成发射器缺陷。
+  { file: 'f.json', scene: 'table', compiles: false, produced: false, rejectedKind: 'model-guard', error: null },
 ]
 const compileSummary = summarizeCompile(compileRows, (r) => !r.wrong)
 check(compileSummary.measured === 3, `编译分母应只数有产物的行（期望 3，实得 ${compileSummary.measured}）`)
@@ -191,6 +194,14 @@ check(
   `编译失败样本必须带 file:line:col（实得 ${JSON.stringify(compileSummary.failureSamples)}）`
 )
 check(summarizeCompile([]).rate === null, '空行集：rate 必须是 null（不能是 0 或 1）')
+check(
+  summarizeCompile([{ compiles: false, produced: true, error: null }]).failure === 1,
+  'produced: true 的编译失败必须计入分母（排除的是「没有产物」，不是「产物坏了」）'
+)
+check(
+  summarizeCompile([{ compiles: false, produced: false, error: null }]).measured === 0,
+  'produced: false 的行没有产物，不得进编译分母'
+)
 check(
   summarizeCompile([{ compiles: true, error: null }]).modelFailureCompile === 0,
   '默认 passes95 全 true：不制造「模型答错」告警'

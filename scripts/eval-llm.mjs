@@ -845,6 +845,10 @@ async function main() {
       const sceneObs = await driveSceneFragment(frontDoor, scene, pred)
       const witnessOk = sceneObs.landing === 'fragment' && sceneObs.witness.length === 0
       const compiles = witnessOk
+      // 「有没有产物」与「产物能不能编译」是两件事：路由器拒绝（模型入参不被接受）
+      // 没有产物，记进编译分母就会把模型答错伪装成发射器缺陷（compile-leg.mjs 的
+      // 分母口径：只数真有产物的行）。它仍按 0 分计入准确率 —— 成绩里这件事不会消失。
+      const produced = sceneObs.landing === 'fragment'
       const compileError = witnessOk
         ? null
         : {
@@ -864,6 +868,8 @@ async function main() {
         file,
         scene,
         compiles,
+        produced,
+        rejectedKind: sceneObs.rejectedKind,
         noThrow,
         compileError,
         error: null,
@@ -888,6 +894,7 @@ async function main() {
         mask,
         pred,
         compiles,
+        produced,
         noThrow,
         compileError,
         error: null,
@@ -1709,6 +1716,12 @@ async function main() {
         ` · ${fragmentStats.measured}/${fragmentStats.cases} measured`
     )
     for (const f of fragmentStats.failures) console.error(`      ✗ ${f}`)
+    if (fragmentSummary.sceneLeg?.rejectedModelSide) {
+      console.log(
+        `    rejected (model-side args): ${fragmentSummary.sceneLeg.rejectedModelSide} 行` +
+          ` —— 路由器没产出任何东西，不进编译分母；它们已按 0 分计入 scoped/core`
+      )
+    }
     console.log(`  by fragment dimension (measured rows; n/a = no case exercises it)`)
     console.log('  ------------------------------------------')
     for (const dim of Object.keys(fragmentSummary.byDim).sort()) {

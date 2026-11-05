@@ -210,6 +210,9 @@ export function computeFragmentMetrics(fragmentRows, isNotMeasured) {
     attempted: sceneLegRows.length,
     landed: sceneLegRows.filter((r) => r.sceneLeg.landing === 'fragment').length,
     rejected: sceneLegRows.filter((r) => r.sceneLeg.landing === 'rejected').length,
+    // 其中「模型入参不被接受」的行：它们没有产物（不进编译分母），但按 0 分计入准确率。
+    // 非模型侧拒绝由 `fragment-leg.mjs` 单独判红。
+    rejectedModelSide: sceneLegRows.filter((r) => r.sceneLeg.rejectedKind === 'model-guard').length,
     intentRejected: sceneLegRows.filter((r) => r.sceneLeg.intent === 'rejected').length,
     witnessFailures: sceneLegRows.reduce((n, r) => n + (r.sceneLeg.witness?.length ?? 0), 0),
     byScene: {},

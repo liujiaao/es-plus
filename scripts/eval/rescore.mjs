@@ -195,6 +195,10 @@ for (const e of entries) {
     file: e.file,
     scene: e.scene,
     compiles: !!e.compiles,
+    // 逐行产物标记必须一起复原，否则复算的编译分母与跑批分叉（parity 守卫会红）。
+    // 旧 dump 没有 `produced` 时按 sceneLeg 反推；两者都没有才是 `undefined`（= 有产物）。
+    produced: e.produced ?? (e.sceneLeg ? e.sceneLeg.landing === 'fragment' : undefined),
+    rejectedKind: e.rejectedKind ?? e.sceneLeg?.rejectedKind ?? null,
     noThrow: e.noThrow !== false,
     compileError: e.compileError ?? null,
     error: null,

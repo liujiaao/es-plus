@@ -235,6 +235,12 @@ export function compileFences(text, label = 'fences') {
  * 未测到（`no-answer` / `truncated`）同理没有产物；它们仍由健康门对**门禁腿**零容忍判红
  * （`eval/ratchet.mjs` 的 `evaluateHealth`），不靠这里兜底。
  *
+ * 第三类「没有产物」是片段腿的路由器拒绝（`produced === false`，见 `front-door-leg.mjs`
+ * 的 `rejectedKind`）：模型给了这份工具不接受的入参，`generate_scene` 什么都没生成。
+ * 与上面同理，它不是「产物编译失败」—— 记进分母会让编译门在准确性目标下恒红，且把
+ * 归因指错方向。调用方用 `produced: false` 显式标记；缺省（CRUD 行）一律视为有产物。
+ * 拒绝本身是否合法由 `fragment-leg.mjs` 单独判（只有模型侧拒绝才允许不计产物）。
+ *
  * ## 分母为什么**含 en 腿**（A5）
  *
  * 编译门问的是「发射器能不能把合法配置变成能编译的产物」，与模型答得对不对、与观测腿
@@ -249,12 +255,14 @@ export function compileFences(text, label = 'fences') {
  *   - `modelFailureCompile` = 产物编译通过、但该行**不满足 95% 定义** ⟹ 模型语义 miss。
  *     它属于准确率门禁，不该让编译门变红；分开计数是为了让读者一眼分清两类 0。
  *
- * @param {Array<{error?:string|null, compiles?:boolean, file?:string, lang?:string, compileError?:object|null}>} rows
+ * @param {Array<{error?:string|null, compiles?:boolean, produced?:boolean, file?:string, lang?:string, compileError?:object|null}>} rows
+ *        逐行观测。`produced: false` = 确定没有任何产物（如路由器拒绝了模型入参），
+ *        与 `error` 同一处理，不进分母。
  * @param {(row:object)=>boolean} [passes95] 该行是否满足 95% 定义；默认全 true（= 不制造告警）。
  */
 export function summarizeCompile(rows, passes95 = () => true) {
   const all = Array.isArray(rows) ? rows : []
-  const measuredRows = all.filter((r) => !r.error)
+  const measuredRows = all.filter((r) => !r.error && r.produced !== false)
   const compiledRows = measuredRows.filter((r) => r.compiles)
   const failureRows = measuredRows.filter((r) => !r.compiles)
   // 按语言拆开（只对带 `lang` 的行；片段腿的行没有 lang，byLang 为空对象）。

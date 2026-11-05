@@ -21,8 +21,12 @@
  *   6) 产物语法错误 ⟹ witness/compileFailures 非空（门禁读它）；
  *   7) summarizeFrontDoor：编译失败 / 从未覆盖 no-table / 零路由 三者任一 ⟹ ok=false。
  *   8) 片段场景的 intent 喂进同一个路由器 → landing='fragment' + witness 为空。
+ *   9) `rejectedKind` 归因：模型侧（未知键 / intent 校验）vs 我们自己的（形状拒绝 /
+ *      handler 抛错 / 生成期报错）—— 前者不计编译分母，后者必须红。
+ *  10) 文案锚点：`generate-scene.ts` 里那两条拒绝文案仍在（改了文案不同步分类会红）。
  */
-import { driveFrontDoor, driveSceneFragment, summarizeFrontDoor } from './front-door-leg.mjs'
+import { readFileSync } from 'node:fs'
+import { driveFrontDoor, driveSceneFragment, isModelSideSceneRejection, summarizeFrontDoor } from './front-door-leg.mjs'
 
 let failures = 0
 function check(cond, msg) {
@@ -175,6 +179,46 @@ async function main() {
     const r = await driveSceneFragment(fd, 'form', { fields: [] })
     check(r.landing === 'rejected', `⑧ 路由器拒绝应记 landing='rejected'（实得 ${r.landing}）`)
     check(typeof r.rejected === 'string' && r.rejected.includes('scene "form"'), '⑧ 拒绝原因应原样带出')
+  }
+
+  // 9) 拒绝归因：模型侧 vs 我们自己
+  {
+    for (const text of [
+      '✗ Unknown argument(s) for generate_scene — nothing was generated.',
+      '✗ intent failed schema validation for scene "form" — nothing was generated:',
+    ]) {
+      const fd = fakeFd(() => err(text))
+      const r = await driveSceneFragment(fd, 'table', {})
+      check(r.rejectedKind === 'model-guard', `⑨ 模型侧拒绝应记 model-guard（实得 ${r.rejectedKind}）`)
+      check(isModelSideSceneRejection(text) === true, `⑨ isModelSideSceneRejection 应认 @ 模型侧文案`)
+    }
+    for (const text of ['✗ scene "crud" is not supported', '✗ generator threw: boom']) {
+      const fd = fakeFd(() => err(text))
+      const r = await driveSceneFragment(fd, 'table', {})
+      check(r.rejectedKind === 'tool-error', `⑨ 非模型侧 isError 应记 tool-error（实得 ${r.rejectedKind}）`)
+    }
+    {
+      const fd = fakeFd(() => {
+        throw new Error('boom')
+      })
+      const r = await driveSceneFragment(fd, 'table', {})
+      check(r.rejectedKind === 'threw', `⑨ handler 抛错应记 threw（实得 ${r.rejectedKind}）`)
+    }
+    {
+      const fd = fakeFd(() => ok(FRAG_OUT), { rejectShape: true })
+      const r = await driveSceneFragment(fd, 'table', {})
+      check(r.rejectedKind === 'intent-schema', `⑨ 形状拒绝应记 intent-schema（实得 ${r.rejectedKind}）`)
+    }
+  }
+
+  // 10) 文案锚点：分类依赖 generate-scene.ts 的两处文案，改文案必须同步
+  {
+    const src = readFileSync(
+      new URL('../../packages/mcp-server/src/tools/generate-scene.ts', import.meta.url),
+      'utf8'
+    )
+    check(src.includes('✗ Unknown argument(s) for generate_scene'), '⑩ 源码必须仍含「未知入参」拒绝文案')
+    check(src.includes('✗ intent failed schema validation for scene'), '⑩ 源码必须仍含「intent 校验」拒绝文案')
   }
 
   if (failures) {
