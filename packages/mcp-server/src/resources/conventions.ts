@@ -496,9 +496,10 @@ JSON. The contract is **mark, never drop**:
 
 **Not in the schema — do not emit.** The keys below exist at RUNTIME (they are
 declared on \`FormItemOption\` / \`TableOptions\` and really are consumed there), but
-they are **absent from the AI config schemas**, and those schemas are CLOSED: an
-unknown key is stripped with no error and no warning, so emitting one **silently
-loses the requirement**. Say it declaratively instead, or leave it to the host:
+they are **absent from the AI config schemas**. The front door rejects unknown keys
+**before generation** with a structured \`unknown key\` error (did-you-mean + "nothing
+was generated"), so emitting one fails the call loudly rather than being silently
+dropped. Say it declaratively instead, or leave it to the host:
 
 - **\`on\`** (form item): the control's event bag (\`{ change: fn, input: fn }\`),
   forwarded as \`onChange\`/\`onInput\` to the underlying control. Function values, so
@@ -738,7 +739,7 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` in TableOptions is silently ignored — use server-side pagination for large datasets" : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
+${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n14. Vue 2: `virtual: true` / `engine: 'virtual'` is NOT silent — the component logs a warning and degrades to a standard el-table; use server-side pagination or `engine: 'vxe'` for large datasets" : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
 ${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
