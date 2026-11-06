@@ -1,5 +1,77 @@
 # @es-plus/vue3
 
+## 1.8.0
+
+### Minor Changes
+
+- 3b30d00: 三端渲染与列合成收口（AI 原生化 AN-06…AN-11）
+
+  - **前导列合成单一真源**：选择列 / 序号列 / 展开列改由 core 的
+    `synthesizeLeadingColumns` + `buildLeadingColumns` 生成，顺序统一为
+    `selection → index → expand`。此前 8 条列产出路径（三端各自的默认 / 虚拟 / vxe 引擎，
+    外加 antdv 的 `adaptColumns`）里，三份 vxe 适配器各写一份 if，两处默认引擎则完全没有
+    —— 同一配置切换引擎就少一列，现在收敛到一处。
+  - **幂等且不覆盖显式列**：已显式声明同类型列（含 `hidCol`）时不再注入；合成列不参与
+    formatter 注入与 `width → minWidth` 转换。
+  - **`ellipsis` / `defaultSort` 生效**：`ellipsis` 发射为 `column.showOverflowTooltip`
+    （含 vxe 适配），`defaultSort` 三端映射。
+  - **`multiSelect` / `snIndex` 运行时接线**：生成配置即可用，不再是「生成器懂、运行时不懂」。
+  - **无静默丢弃**：字段/列级 `permissions`、`editConfig` 等此前被吞掉的配置现在要么生效、
+    要么显式告警。
+  - **antdv 的差异是消费者差异**：选择列由 `rowSelection`、展开列由 `expandedRowRender`
+    渲染，二者都不进 `adaptedColumns`；只有序号列是真实列，其默认值改取 core 的
+    `LEADING_COLUMN_DEFAULTS.index`，不再各写一份字面量。
+  - 回归：三端 mount 测试与 vxe 引擎测试补齐（含「显式 index 不重复」「与选择列共存仍在
+    首位」「antdv 序号列取 core 默认」），`check:capability-parity` 对账矩阵 ↔ schema ↔
+    运行时消费点。
+
+- b71d8c5: 扁平配置键、默认值层与 fail-closed 权限门（P5 / P5b / P6）
+
+  这一批在 `ai-native-runtime` 之后落地，此前没有任何 changeset 覆盖 —— 本轮补记。
+
+  > **行为变更（需要留意）**：`permission` 门由 fail-open 改为 **fail-closed**。
+  > 只有「声明了 `permissionValue` 但宿主没配 `permission()`」这一种错配会从**放行**变成
+  > **拒绝并告警**；既没声明门、或门与判定函数都配齐的项目行为不变。见下方 core 段落。
+
+  **`@es-plus/core`**
+
+  - 新增 `checkPermissionValue`：无 `permissionValue` 放行；声明了门且配了 `permission()`
+    以函数结果为准；声明了门但宿主漏配判定函数 → **拒绝**，并按权限码告警一次
+    （去重）。`filterButtonsByPermission` / `normalizeButtonsHideState` 改为委托它，
+    此前"没配就放行"的回退已删除。
+  - 新增 `normalizeSectionConfig`（写入时归一）：展平 `EsTable` / `EsForm` / `EsDialog`
+    下的 `methods` 嵌套（同名键以 `methods` 内为准）、剥掉 `$httpRequest` 的 `$` 前缀但
+    保留原名、把 `configQueryfieldOutput` 改名为 `configQueryFieldOutput`。
+  - 新增 `resolveComponentConfig`：两条安装路径（`app.use(EsPlus, { EsTable: {...} })` 与
+    `configureEsPlus`）写进「组件能读到的那份配置」的形状原本不同，现在统一为读时视图 ——
+    安装之后再调 `configureEsPlus` 才真的能改到组件。
+  - `TableOptions` 补上 `mergeConfig: { rowsBy: [...] }`（声明式合并单元格）：它早就被
+    antdv 渲染器、schema 与 MCP 提示词消费，却从未在任何一份契约里声明过，用户照着写会撞
+    TS2353。
+  - `core` ↔ `shared` 同名契约常量加全等守卫，两边不再可能各自漂移。
+
+  **三端渲染器（`@es-plus/vue3` / `@es-plus/vue2` / `@es-plus/adapter-antdv`）**
+
+  - 接入扁平配置键与 **defaults 层**：`options` prop 默认值改为 `{}`，内置默认值移进
+    `tableOptions` computed（`{ ...内置默认, ...全局 defaults, ...props.options }`）。
+    此前每个键都算「显式传入」，**全局默认值永远赢不了内置值**；现在实例 > 全局 > 内置。
+    模板与脚本统一读 `tableOptions`（vue3 约 40 处）。
+  - `provide` 从安装时的快照改为读时视图（`createGlobalConfigView` /
+    `createComponentConfigView`），`install` 之后调 `configureEsPlus` 才生效。
+  - 三端 12 处本地 `checkPermission` / `hasPermission` 实现全部替换为 core 的单一真源。
+  - `dataOptions` 形状三端统一：放行 `children` / `tagType`，前门校验通过的配置不再被
+    本库自己的类型判红；新增逐键对账守卫。
+  - `es-crud-page` 的 `formLayout.labelWidth` 落到**字段**（此前误取
+    `layout.labelBtnWidth`，只改了空按钮行，查询字段标签宽度不变）；按钮行专用键保持独立。
+  - `operationColumn.fixed` 不再用 `|| 'right'` 把显式 `fixed: false` 顶成右固定。
+  - antdv 权限位与分页 `layout` 与 vue3 对齐。
+
+### Patch Changes
+
+- Updated dependencies [3b30d00]
+- Updated dependencies [b71d8c5]
+  - @es-plus/core@1.4.0
+
 ## 1.7.0
 
 ### Minor Changes
