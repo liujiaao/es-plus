@@ -98,6 +98,10 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          # 访问站点的 webServer 在 es-plus-docs 里跑 vite，它有自己的 lock
+          cache-dependency-path: |
+            package-lock.json
+            es-plus-docs/package-lock.json
       - run: npm ci --legacy-peer-deps
       # vue2 dist 由 pretest:e2e:runtime 钩子构建，但其构建依赖 core/shared dist，
       # 故先把依赖链显式建好，与 unit-tests job 一致。
@@ -105,6 +109,13 @@ jobs:
         run: npm run build --workspace @es-plus/core
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
+      # playwright.config.ts 的第二个 webServer 在 `es-plus-docs` 里起 vite（AI 案例画廊 /
+      # AI CRUD 工作台要在真站点里跑）。站点**不在**根 workspaces（`packages/*`）里，
+      # 根 `npm ci` 不装它的依赖 ⟹ vite 启动时满屏 `Failed to resolve import "vue" /
+      # "pinia" / "element-plus"`，整个 runtime e2e 因为「站点没起来」而红。
+      # 2026-10-27 起一直如此；本地因为装了站点依赖才看不到。
+      - name: Install docs site deps (runtime webServer runs vite there)
+        run: cd es-plus-docs && npm ci --legacy-peer-deps
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Run runtime e2e (vue2)
