@@ -51,46 +51,46 @@
             <div class="btn-left">
               <a-form-item :labelCol="{ style: { width: '0px' } }" class="btn-formItem">
                 <a-space :size="8" wrap>
-                  <a-button
-                    v-for="(it, inx) in colRightLeftList.colLeftBtn"
-                    v-if="checkPermission(it.permissionValue)"
-                    :key="it.key || inx"
-                    v-bind="filterOptions(it)"
-                    :type="mapBtnType(it.type)"
-                    :danger="mapBtnDanger(it.type)"
-                    :size="mapBtnSize(it.size)"
-                    :disabled="resolveBtnDisabled(it)"
-                    :loading="it.loading"
-                    @click="() => clickBtn(it)"
-                  >
-                    <template #icon v-if="it.icon">
-                      <component :is="getAdvIconComponent(it.icon)" />
-                    </template>
-                    {{ it.name }}
-                  </a-button>
+                  <template v-for="(it, inx) in colRightLeftList.colLeftBtn" :key="it.key || inx">
+                    <a-button
+                      v-if="checkPermission(it.permissionValue)"
+                      v-bind="filterOptions(it)"
+                      :type="mapBtnType(it.type)"
+                      :danger="mapBtnDanger(it.type)"
+                      :size="mapBtnSize(it.size)"
+                      :disabled="resolveBtnDisabled(it)"
+                      :loading="it.loading"
+                      @click="() => clickBtn(it)"
+                    >
+                      <template #icon v-if="it.icon">
+                        <component :is="getAdvIconComponent(it.icon)" />
+                      </template>
+                      {{ it.name }}
+                    </a-button>
+                  </template>
                 </a-space>
               </a-form-item>
             </div>
             <div class="btn-right">
               <a-form-item :labelCol="{ style: { width: '0px' } }" class="btn-formItem">
                 <a-space :size="8" wrap>
-                  <a-button
-                    v-for="(it, inx) in colRightLeftList.colRightBtn"
-                    v-if="checkPermission(it.permissionValue)"
-                    :key="it.key || inx"
-                    v-bind="filterOptions(it)"
-                    :type="mapBtnType(it.type)"
-                    :danger="mapBtnDanger(it.type)"
-                    :size="mapBtnSize(it.size)"
-                    :disabled="resolveBtnDisabled(it)"
-                    :loading="it.loading"
-                    @click="() => clickBtn(it)"
-                  >
-                    <template #icon v-if="it.icon">
-                      <component :is="getAdvIconComponent(it.icon)" />
-                    </template>
-                    {{ it.name }}
-                  </a-button>
+                  <template v-for="(it, inx) in colRightLeftList.colRightBtn" :key="it.key || inx">
+                    <a-button
+                      v-if="checkPermission(it.permissionValue)"
+                      v-bind="filterOptions(it)"
+                      :type="mapBtnType(it.type)"
+                      :danger="mapBtnDanger(it.type)"
+                      :size="mapBtnSize(it.size)"
+                      :disabled="resolveBtnDisabled(it)"
+                      :loading="it.loading"
+                      @click="() => clickBtn(it)"
+                    >
+                      <template #icon v-if="it.icon">
+                        <component :is="getAdvIconComponent(it.icon)" />
+                      </template>
+                      {{ it.name }}
+                    </a-button>
+                  </template>
                   <!-- 折叠按钮 -->
                   <a-button
                     v-if="isFold"
@@ -128,23 +128,23 @@
           >
             <div class="buttonOperate" :style="{ textAlign: getBtnColSpan === 24 ? 'right' : 'left' }">
               <a-space :size="8" wrap>
-                <a-button
-                  v-for="(it, inx) in configBtn"
-                  v-if="checkPermission(it.permissionValue)"
-                  :key="it.key || inx"
-                  v-bind="filterOptions(it)"
-                  :type="mapBtnType(it.type)"
-                  :danger="mapBtnDanger(it.type)"
-                  :size="mapBtnSize(it.size)"
-                  :disabled="resolveBtnDisabled(it)"
-                  :loading="it.loading"
-                  @click="() => clickBtn(it)"
-                >
-                  <template #icon v-if="it.icon">
-                    <component :is="getAdvIconComponent(it.icon)" />
-                  </template>
-                  {{ it.name }}
-                </a-button>
+                <template v-for="(it, inx) in configBtn" :key="it.key || inx">
+                  <a-button
+                    v-if="checkPermission(it.permissionValue)"
+                    v-bind="filterOptions(it)"
+                    :type="mapBtnType(it.type)"
+                    :danger="mapBtnDanger(it.type)"
+                    :size="mapBtnSize(it.size)"
+                    :disabled="resolveBtnDisabled(it)"
+                    :loading="it.loading"
+                    @click="() => clickBtn(it)"
+                  >
+                    <template #icon v-if="it.icon">
+                      <component :is="getAdvIconComponent(it.icon)" />
+                    </template>
+                    {{ it.name }}
+                  </a-button>
+                </template>
                 <a-button
                   v-if="isFold"
                   type="link"

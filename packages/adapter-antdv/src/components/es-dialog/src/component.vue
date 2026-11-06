@@ -90,23 +90,23 @@
           :track-ref="false"
         />
         <a-space v-else-if="footerBtns.length">
-          <a-button
-            v-for="(item, idx) in footerBtns"
-            v-if="checkPermission(item.permissionValue)"
-            :key="item.key || idx"
-            :type="mapBtnType(item.type)"
-            :danger="mapBtnDanger(item.type)"
-            :size="mapBtnSize(item.size)"
-            :loading="item.loading"
-            :disabled="isDisabled(item)"
-            v-bind="filterOptions(item)"
-            @click="handleFooterBtnClick(item)"
-          >
-            <template #icon v-if="item.icon">
-              <component :is="getAdvIconComponent(item.icon)" />
-            </template>
-            {{ item.name }}
-          </a-button>
+          <template v-for="(item, idx) in footerBtns" :key="item.key || idx">
+            <a-button
+              v-if="checkPermission(item.permissionValue)"
+              :type="mapBtnType(item.type)"
+              :danger="mapBtnDanger(item.type)"
+              :size="mapBtnSize(item.size)"
+              :loading="item.loading"
+              :disabled="isDisabled(item)"
+              v-bind="filterOptions(item)"
+              @click="handleFooterBtnClick(item)"
+            >
+              <template #icon v-if="item.icon">
+                <component :is="getAdvIconComponent(item.icon)" />
+              </template>
+              {{ item.name }}
+            </a-button>
+          </template>
         </a-space>
         <slot v-else name="footer" />
       </div>

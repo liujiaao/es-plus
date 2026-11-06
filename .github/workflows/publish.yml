@@ -106,6 +106,21 @@ jobs:
       - name: Build packages
         run: npm run build:packages
 
+      # 前置守卫：类型错误必须在**发任何包之前**暴露。
+      #
+      # 三个渲染器（vue3 / vue2 / adapter-antdv）的 prepublishOnly 是
+      # `typecheck && build`，而 `changeset publish` 是按拓扑逐个 npm publish：
+      # 一旦某个渲染器在**中途**失败，排在它前面的 core / shared 已经发出去了 ——
+      # 要么补发新版本号，要么 npm unpublish，两种都很难看。
+      # 把整链先跑一遍，让失败发生在「一个包都还没发」的时刻。
+      #
+      # 这不是假想：2026-11-06 的发版前置审查里，adapter-antdv 的
+      # `v-for` + `v-if` 同标签（Vue 3 里 v-if 优先，循环变量在条件里不可见）让
+      # vue-tsc 报 4 条 TS2339 —— 而它的 vitest 全绿。没有这一步，adapter-antdv
+      # 会在 core / shared 已经发布之后才失败。
+      - name: Typecheck all workspaces
+        run: npm run typecheck --workspaces --if-present
+
       # changeset publish 会为每个新版本本地打 git tag，需要 git 身份
       - name: Configure git identity
         run: |
