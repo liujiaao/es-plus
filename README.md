@@ -556,7 +556,7 @@ npm run check:consistency
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+欢迎提交 Issue 和 Pull Request！用法提问、集成讨论和功能设想请走 [GitHub Discussions](https://github.com/liujiaao/es-plus/discussions)；能复现的缺陷与明确的功能请求请开 [Issue](https://github.com/liujiaao/es-plus/issues/new)。
 
 1. Fork 本仓库
 2. 创建功能分支：`git checkout -b feature/your-feature`

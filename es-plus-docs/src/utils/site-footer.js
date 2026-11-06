@@ -17,6 +17,7 @@
 
 /** 品牌与仓库常量（与 doc-chrome.js 的 REPO_URL/REPO_BRANCH 同一份事实，引用不复制） */
 export const FOOTER_REPO = 'https://github.com/liujiaao/es-plus'
+export const FOOTER_DISCUSSIONS = `${FOOTER_REPO}/discussions`
 export const FOOTER_ISSUES = `${FOOTER_REPO}/issues/new`
 export const FOOTER_LICENSE = `${FOOTER_REPO}/blob/master/LICENSE`
 export const FOOTER_NPM = 'https://www.npmjs.com/package/@es-plus/vue3'
@@ -98,6 +99,7 @@ export function buildFooterColumns({ siteKey, locale = 'zh', rendererZh = '', re
       title: en ? 'Resources' : '资源',
       links: [
         item('GitHub 仓库', 'GitHub', FOOTER_REPO, { external: true }),
+        item('讨论区', 'Discussions', FOOTER_DISCUSSIONS, { external: true }),
         item('npm 包', 'npm package', FOOTER_NPM, { external: true }),
         item('AI 工具链', 'AI toolchain', route('ai')),
         item('报告问题', 'Report an issue', FOOTER_ISSUES, { external: true }),

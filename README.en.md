@@ -550,7 +550,7 @@ npm run check:consistency
 
 ## Contributing
 
-Contributions welcome!
+Contributions welcome! For usage questions, integration discussion and feature ideas, use [GitHub Discussions](https://github.com/liujiaao/es-plus/discussions); for reproducible bugs and concrete feature requests, open an [issue](https://github.com/liujiaao/es-plus/issues/new).
 
 1. Fork the repository
 2. Create your branch: `git checkout -b feature/your-feature`
