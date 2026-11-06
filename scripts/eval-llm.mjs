@@ -2065,11 +2065,19 @@ async function main() {
   // Shields endpoint payload. The badge label changed in the SAME commit that moved
   // the gate (AI-33②), so the badge can never diverge from what the gate enforces:
   // both now read `gateRate` = the 95%-definition ∨, not the four-dim core.
+  //
+  // label 里带模型（2026-11-06）：这个读数是「模型 × 我们的口径」的联合属性，换模型
+  // 之后数字不可横向比较。此前 label 是固定串，于是换中继模型时公开面**看不出来**换了
+  // —— 读者会把 88.1%（opus）与 30%（任何更弱的模型）当成同一条曲线的两个点。
+  const shortModel = (id) => String(id).split('/').pop()
+  const servedIds = [...SERVED_MODELS]
+  const modelTag = servedIds.length ? servedIds.map(shortModel).join('+') : shortModel(MODEL)
+  const badgeLabel = `heldout 95%-definition · ${modelTag}`
   const pct = gateRate * 100
   const color = pct >= 95 ? 'brightgreen' : pct >= 90 ? 'green' : pct >= 80 ? 'yellow' : 'red'
   const badge = {
     schemaVersion: 1,
-    label: 'heldout 95%-definition',
+    label: badgeLabel,
     message: `${pct.toFixed(1)}%`,
     color,
   }
@@ -2088,7 +2096,7 @@ async function main() {
   const spct = scopedGate * 100
   const scopedBadge = {
     schemaVersion: 1,
-    label: 'scoped accuracy',
+    label: `scoped accuracy · ${modelTag}`,
     message: `${spct.toFixed(1)}%`,
     color: spct >= 95 ? 'brightgreen' : spct >= 90 ? 'green' : spct >= 80 ? 'yellow' : 'red',
   }

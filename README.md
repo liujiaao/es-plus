@@ -13,7 +13,7 @@
 [![heldout accuracy](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge.json)](./docs/internal/wave-2-production-trust-design.md)
 [![heldout zero-edit](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fliujiaao%2Fes-plus%2Fmaster%2F__tests__%2Fgolden%2Flast-accuracy-badge-scoped.json)](./docs/internal/wave-2-production-trust-design.md)
 
-<sub>两个徽章都来自夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）的实测，**不是营销数字**。<br>
+<sub>两个徽章都来自夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）的实测，**不是营销数字**。徽章 label 里标着测量所用的模型：读数随模型变化，**不同模型之间不可横向比较**，也不与历史读数拼成一条曲线。<br>
 第一个是**门禁口径**：in-schema intent 命中率 = 「零编辑 **∨** 3 轮内收敛」—— 模型首轮就给出可零改合并的配置，**或**在至多 3 轮自然语言修正内收敛到同一份配置，都算命中（[定义](docs/internal/wave-2-production-trust-design.md)）。<br>
 第二个是其中更严的一半：**只算首轮零编辑**，不给收敛机会，用来分辨「一次就对」和「改几轮才对」。<br>
 语料目前 216 例（留出 194 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
