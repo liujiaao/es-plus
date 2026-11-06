@@ -1,14 +1,14 @@
 {
-  "commit": "b1c4cf5a6e3cf19a120604d4bb265a86420e46cf",
-  "runId": "42014050393",
+  "commit": "eef44e5f14fd330c56eb1b8b4cfdb1e9f7e69f24",
+  "runId": "42239673277",
   "artifactSource": "ci",
-  "corpusHash": "f5d7525fbe9bb8af",
-  "corpusFiles": 279,
+  "corpusHash": "a6e2dfbab594a094",
+  "corpusFiles": 285,
   "fixedFieldsUsed": false,
   "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1",
-  "measuredAt": "2026-11-05T11:16:37.929Z",
-  "model": "pa/claude-opus-4-6",
-  "servedModel": "pa/claude-opus-4-6",
+  "measuredAt": "2026-11-06T15:38:40.461Z",
+  "model": "deepseek-flash",
+  "servedModel": "deepseek-flash",
   "maxTokens": 8000,
   "measurement": "failed",
   "reason": "measurement did not happen (or only partially happened) — NOT a low score. 407 row(s) unmeasured (no text block / truncated) and 0 row(s) where the model genuinely failed (those ARE scored, as 0). Unmeasured rows count as 0 in every denominator, so the surviving subset is selection-biased. See failures[] for the exact criteria that rejected it.",
@@ -38,9 +38,9 @@
     "401 failed to authenticate API key"
   ],
   "fragments": {
-    "cases": 63,
+    "cases": 69,
     "measured": 0,
-    "notMeasured": 63,
+    "notMeasured": 69,
     "core": null,
     "full": null,
     "scoped": null,
@@ -50,6 +50,19 @@
     "compileMeasured": 0,
     "compileCompiled": 0,
     "compileFailure": 0,
+    "sceneLeg": {
+      "attempted": 0,
+      "landed": 0,
+      "rejected": 0,
+      "rejectedModelSide": 0,
+      "intentRejected": 0,
+      "witnessFailures": 0,
+      "byScene": {
+        "table": null,
+        "form": null,
+        "dialog": null
+      }
+    },
     "byScene": {
       "table": null,
       "form": null,
@@ -59,8 +72,8 @@
     "scopedMin": 0.7778,
     "gateOk": false,
     "gateFailures": [
-      "片段腿 63 条全部未测到（measured=0）—— 这不是 0 分，是没测",
-      "片段腿 63/63 行**未测到**（无 text 块 / 截断）—— 未测到的行以 0 计入分母且活下来的子集可能选择偏置，本腿不构成一次完整测量",
+      "片段腿 69 条全部未测到（measured=0）—— 这不是 0 分，是没测",
+      "片段腿 69/69 行**未测到**（无 text 块 / 截断）—— 未测到的行以 0 计入分母且活下来的子集可能选择偏置，本腿不构成一次完整测量",
       "片段腿没有任何可编译产物（所有行都未产出结果）—— 编译门没有分母",
       "片段 scoped 没有数字（基线地板 77.8%）—— 测量缺失或该口径被移除"
     ]
@@ -78,7 +91,13 @@
     "compileRate": null,
     "compileMeasured": 0,
     "compileCompiled": 0,
-    "compileFailure": 0
+    "compileFailure": 0,
+    "membershipFloor": 0.9,
+    "gateOk": false,
+    "gateFailures": [
+      "22 条未测到（no-answer / truncated）",
+      "membership 没有可测决策（分母为 0）"
+    ]
   },
   "target": 0.95,
   "passed": false
