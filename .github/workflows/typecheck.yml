@@ -103,7 +103,27 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          # 站点三个包各有自己的 lock（它们不是根 workspace），不列进来就缓存不到
+          cache-dependency-path: |
+            package-lock.json
+            es-plus-docs/package-lock.json
+            es-pc/package-lock.json
+            es-eui/package-lock.json
       - run: npm ci --legacy-peer-deps
+      # 站点包不在根 workspaces（`packages/*`）里，根 `npm ci` 不装它们的依赖 ——
+      # 但 check:consistency 里有三个守卫会真的 import 站点工具链：
+      #   check:bundle-sources   → highlight.js（es-plus-docs）
+      #   check:code-fence       → markdown-it（es-plus-docs）
+      #   check:vue2-template    → @vue/component-compiler-utils（es-eui 的 vue-loader 15 传递依赖）
+      # 不装就一律 `Cannot find module`，于是整个 consistency job 红 ⟹ Deploy Docs 被跳过。
+      # 2026-10-27 起一直如此；本地因为装了站点依赖才看不到。
+      - name: Install site deps (consistency guards import site tooling)
+        run: |
+          for d in es-plus-docs es-pc es-eui; do
+            echo "::group::npm ci $d"
+            (cd "$d" && npm ci --legacy-peer-deps)
+            echo "::endgroup::"
+          done
       # check:scorers 跑 scripts/eval/scorers.test.mjs，它 import
       # StructuredCrudConfigSchema from '@es-plus/shared'（解析到 build/index.js），
       # 故必须先 tsc 出 shared build/（与 golden job 同理）。
