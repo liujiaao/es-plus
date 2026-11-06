@@ -31,6 +31,29 @@ cd es-eui
 npm run serve        # 默认 http://localhost:8080
 ```
 
+## EdgeOne Makers（项目 `es-plus-vue2`）
+
+项目根目录指向**本目录**（`es-eui`）。本站的 `prebuild` 会通过
+`npm --prefix .. run build --workspace @es-plus/core` 重建 monorepo 库，因此
+**必须同时安装仓库根的 devDependencies**（`tsc`、`vite` 都在那里）。只装本目录依赖会报：
+
+```
+sh: line 1: tsc: command not found
+npm error code 127
+```
+
+| 配置项 | 值 |
+| --- | --- |
+| 安装命令 | `npm ci --include=dev && npm --prefix .. ci --include=dev` |
+| 构建命令 | `npm run build` |
+| 输出目录 | `dist` |
+
+若控制台只能改构建命令，把根安装拼在最前面：
+`npm --prefix .. ci --include=dev && npm run build`。
+
+`--include=dev` 是必需的：构建环境若设了 `NODE_ENV=production`，`npm ci` 会默认省略
+devDependencies。改完配置后必须重新部署。
+
 ## 旧文档（已废弃）
 
 本目录曾以独立仓库 `es-eui` 发布到 `liujiaao.github.io/es-eui/`，该地址已下线。
