@@ -10,6 +10,8 @@ import { registerTools, resolveToolProfile, type ToolProfile } from "../src/tool
 
 const FULL_TOOLS = [
   "detect_project_target",
+  "generate_scene",
+  "generate_composition",
   "generate_crud",
   "generate_form",
   "generate_table",
@@ -21,6 +23,8 @@ const FULL_TOOLS = [
   "list_form_types",
   "ingest_schema",
   "refine_config",
+  "validate_intent",
+  "coverage_report",
   "get_component_api",
   "scaffold_page",
   "doctor_page",
@@ -41,14 +45,14 @@ describe("registerTools — full profile", () => {
   const tools = capture("full");
   const names = tools.map((t) => t.name);
 
-  it("注册全部 15 个工具且无重复", () => {
+  it("注册全部 19 个工具且无重复", () => {
     expect(names).toEqual(FULL_TOOLS);
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it("只有 generate_crud 带 FRONT DOOR 标签", () => {
+  it("只有 generate_scene 带 FRONT DOOR 标签（generate_crud 是兼容 adapter）", () => {
     const labelled = tools.filter((t) => /FRONT DOOR/.test(t.description));
-    expect(labelled.map((t) => t.name)).toEqual(["generate_crud"]);
+    expect(labelled.map((t) => t.name)).toEqual(["generate_scene"]);
   });
 
   it("高级/legacy 工具的描述带层级标签", () => {

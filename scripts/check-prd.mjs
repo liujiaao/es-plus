@@ -50,6 +50,13 @@ async function main() {
       fail(`没有捕获到 generate_crud 的注册（拿到 ${cap ? cap.name : 'null'}）`)
       return
     }
+    // P7：语料必须过**生产主入口**（场景路由器 scene='crud'）。只测 adapter 会让
+    // 「宣称主路径」与「被测路径」再次分叉（同 check:scene-eval 的判据）。
+    const sceneCap = mod.captureScene()
+    if (!sceneCap || sceneCap.name !== 'generate_scene') {
+      fail(`没有捕获到 generate_scene 的注册（拿到 ${sceneCap ? sceneCap.name : 'null'}）`)
+      return
+    }
     const { z } = await import('zod')
     const shape = z.object(cap.shape)
     const project = fieldProjector(new Set(Object.keys(surfaceFieldSchema.shape)))
@@ -87,8 +94,8 @@ async function main() {
       }
       expressible++
 
-      // ② 端到端 + 路由
-      const r = await cap.handler(parsed.data)
+      // ② 端到端 + 路由（走场景路由器，不直连 adapter）
+      const r = await sceneCap.handler({ scene: 'crud', intent: parsed.data })
       const text = r.content?.[0]?.text ?? ''
       if (r.isError) {
         fail(`${c.id}: 前门返回 isError — ${text.split('\n')[0]}`)

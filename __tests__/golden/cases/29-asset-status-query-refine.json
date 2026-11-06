@@ -3,6 +3,7 @@
   "nlEn": "Fixed-asset ledger: the first draft only needs to be searchable by asset name; the table shows asset name, asset number, usage status (in-use/idle/scrapped), and purchase date; supports add, edit, and delete.",
   "fixedFields": ["assetName", "assetNo", "status", "purchaseDate"],
   "pinnedDims": ["propSet", "actions", "inQuery:status"],
+  "nlStatedDims": ["propSet", "actions", "inQuery:status", "dataOptions:status", "formtype:status", "inTable:assetName", "inTable:assetNo", "inTable:purchaseDate", "inTable:status"],
   "refinements": [
     { "turn": 1, "correction": "使用状态也要能在查询条件里按选项筛选，不只是在表格里展示。" }
   ],

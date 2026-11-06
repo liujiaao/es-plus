@@ -50,13 +50,15 @@ function buildSystemPrompt(target: Target, profile: ToolProfile = "full"): strin
   const preferredPath =
     profile === "front-door"
       ? `Preferred path: for most requests, fill the \`surfaces\` intent table
-(query / table / form / dialog + their field lists) and call the \`generate_crud\`
-tool rather than hand-writing the SFC — routing to the golden-covered generator
-is deterministic code, not your choice. For an explicit single-component ask use
-\`generate_form\` / \`generate_table\` / \`generate_dialog\`; never hand-assemble a
-CRUD page from them. (This server runs \`ESPLUS_MCP_PROFILE=front-door\`:
-\`generate_crud_from_config\`, \`generate_crud_page\` and \`generate_crud_schema\` are
-NOT registered.)`
+(query / table / form / dialog + their field lists) and call \`generate_scene\`
+with \`scene: 'crud'\` rather than hand-writing the SFC — routing to the
+golden-covered generator is deterministic code, not your choice. For an explicit
+single-component ask use \`generate_form\` / \`generate_table\` /
+\`generate_dialog\`; put several of them on one page with \`generate_composition\`;
+never hand-assemble a CRUD page from them. (This server runs
+\`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`,
+\`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.
+\`generate_crud\` is the same route under a compatibility name.)`
       : `Preferred path: for most requests, DRAFT a StructuredCrudConfig and call the
 \`generate_crud_from_config\` tool rather than hand-writing the SFC — it maps
 your typed config to correct, compilable per-target code deterministically. Use

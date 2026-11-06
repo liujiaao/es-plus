@@ -291,6 +291,43 @@ export function splitToolbarButtonsByCode(buttons: BtnConfig[]): {
   }
 }
 
+/** 已告警过的权限码（按码去重：一次漏配会在每行按钮上重复出现，逐次告警会刷屏）。 */
+const warnedPermissionCodes = new Set<string>()
+
+/**
+ * 权限门（P5）—— 三端所有 `permissionValue` 判定的**单一真源**。
+ *
+ * 语义（fail-closed）：
+ *   - 没有 `permissionValue` → 放行（默认语义不变，也不影响任何没声明门的产物）；
+ *   - 有 `permissionValue` 且宿主配置了 `permission()` → 以函数结果为准；
+ *   - 有 `permissionValue` 但宿主**没配** `permission()` → **拒绝**（`false`）。
+ *
+ * 为什么不是放行：`permissionValue` 是产物里的声明式门。宿主漏配判定函数时放行，等于
+ * 把「配了门」变成「谁都能看见」—— 门看起来存在、实际失效（与 F5a 删掉的 confirm/reset
+ * 同一类幻影能力）。本函数只翻转「声明了门」的元素，**不**全局改变默认值。
+ *
+ * 漏配时按权限码告警一次：静默拒绝会让使用者难以定位，逐次告警又会淹没控制台。
+ *
+ * @param value      产物里声明的权限码（空 = 无门）
+ * @param permission 宿主入口配置的全局判定函数
+ */
+export function checkPermissionValue(
+  value: string | undefined | null,
+  permission?: (value: string) => boolean
+): boolean {
+  if (!value) return true
+  if (typeof permission === 'function') return permission(value)
+  if (!warnedPermissionCodes.has(value)) {
+    warnedPermissionCodes.add(value)
+    console.warn(
+      `[es-plus] permissionValue "${value}" 已声明，但宿主没有配置全局 permission() —— ` +
+        '按 fail-closed 拒绝该元素。请在 app.use(ESPlus, { permission: (code) => … })' +
+        '（vue2: Vue.use）里提供判定函数。'
+    )
+  }
+  return false
+}
+
 /**
  * 按权限校验函数过滤按钮
  *
@@ -301,11 +338,7 @@ export function filterButtonsByPermission(
   buttons: BtnConfig[],
   permission?: (value: string) => boolean
 ): BtnConfig[] {
-  if (typeof permission !== 'function') return buttons
-  return buttons.filter((it) => {
-    if (!it.permissionValue) return true
-    return permission(it.permissionValue)
-  })
+  return buttons.filter((it) => checkPermissionValue(it.permissionValue, permission))
 }
 
 /**
@@ -324,9 +357,7 @@ export function normalizeButtonsHideState(
 ): Array<BtnConfig & { isHide: boolean }> {
   return buttons.map((item) => {
     const processed: BtnConfig & { isHide: boolean } = { ...item, isHide: false }
-    const hasPerm =
-      !item.permissionValue ||
-      (typeof permission === 'function' ? permission(item.permissionValue) : true)
+    const hasPerm = checkPermissionValue(item.permissionValue, permission)
 
     if (!hasPerm) {
       processed.isHide = true

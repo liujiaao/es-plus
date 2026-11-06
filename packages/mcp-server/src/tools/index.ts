@@ -9,11 +9,15 @@ import { registerDoctorPage } from "./doctor-page.js";
 import { registerGenerateFromConfig } from "./generate-from-config.js";
 import { registerDetectProjectTarget } from "./detect-project-target.js";
 import { registerGenerateCrud } from "./generate-crud.js";
+import { registerGenerateScene } from "./generate-scene.js";
+import { registerGenerateComposition } from "./generate-composition.js";
 import { registerGenerateForm } from "./generate-form.js";
 import { registerGenerateTable } from "./generate-table.js";
 import { registerGenerateDialog } from "./generate-dialog.js";
 import { registerIngestSchema } from "./ingest-schema.js";
 import { registerRefineConfig } from "./refine-config.js";
+import { registerValidateIntent } from "./validate-intent.js";
+import { registerCoverageReport } from "./coverage-report.js";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 import { withArgGuard } from "./_arg-guard.js";
 
@@ -21,11 +25,12 @@ import { withArgGuard } from "./_arg-guard.js";
  * AN-26 —— 工具面 profile。
  *
  * 定义与解析已下沉到 `src/profile.ts`（见那里的说明）：提示词/资源也要按**同一份**
- * profile 适配，故不能让它们反向依赖这 15 个工具的注册模块。这里 re-export，
+ * profile 适配，故不能让它们反向依赖这一层的工具注册模块。这里 re-export，
  * 既有 `import { resolveToolProfile } from "./tools/index.js"` 不受影响。
  *
- * `front-door`：只留「前门 + 确定性支撑 + 单面片段」。
- *   · 保留 `generate_crud`（唯一前门）、`generate_form/table/dialog`（单组件显式诉求，
+ * `front-door`：只留「场景路由器 + 组合页 + 前门 + 确定性支撑 + 单面片段」。
+ *   · 保留 `generate_scene`（场景第一入口）、`generate_composition`（片段装页）、
+ *     `generate_crud`（兼容前门）、`generate_form/table/dialog`（单组件显式诉求，
  *     前门描述里明确让宿主在这种场景改用它们）、`validate_config`、`ingest_schema`、
  *     `refine_config`、`list_form_types`、`get_component_api`、`scaffold_page`、
  *     `doctor_page`、`detect_project_target`；
@@ -37,10 +42,14 @@ export { resolveToolProfile, type ToolProfile };
 export function registerTools(server: McpServer, profile: ToolProfile = resolveToolProfile()) {
   const frontDoorOnly = profile === "front-door";
   // 入参未知键闸门（见 `_arg-guard.ts`）：SDK 默认 strip，拼错的参数会静默消失。
-  // 只在**注册入口**套一次 —— 15 个工具文件保持原样，新增工具自动继承。
+  // 只在**注册入口**套一次 —— 各工具文件保持原样，新增工具自动继承。
   server = withArgGuard(server);
 
   registerDetectProjectTarget(server, profile);
+  // Scene router — the scene-first entry (P2). Same emitters as the tools below.
+  registerGenerateScene(server);
+  // Page composer — assembles standalone fragments into one page (P6b).
+  registerGenerateComposition(server);
   // Front door — the preferred entry for any composite / CRUD request.
   registerGenerateCrud(server);
   // Standalone single-surface tools (explicit single-component asks, or embedding
@@ -63,6 +72,9 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
   registerIngestSchema(server, profile);
   // 精修层:对已 pin 的配置做一轮 NL 纠正后,确定性校验新配置并回显本轮 diff。
   registerRefineConfig(server, profile);
+  // 宿主抽取契约（P13）：意图生成前校验 + 逐页覆盖分级。都只判不改、不生成代码。
+  registerValidateIntent(server);
+  registerCoverageReport(server);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
   registerDoctorPage(server);

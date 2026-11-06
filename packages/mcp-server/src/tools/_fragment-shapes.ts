@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { VALID_FORM_TYPES, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { VALID_FORM_TYPES, FORM_TYPE_ALIASES, formatFragmentText } from "@es-plus/shared";
 
 /**
  * zod3 shapes shared by the fragment tools (generate_form / generate_table /
- * generate_dialog) and the front door (generate_crud).
+ * generate_dialog) and the front door (generate_scene, scene='crud' — the
+ * `generate_crud` adapter reuses the same shapes).
  *
  * This is a hand-maintained zod3 mirror of the shared (zod4) authoritative
  * vocabulary (FieldConfig minus the inQuery/inTable/inForm membership flags —
@@ -164,6 +165,9 @@ export const surfaceFieldSchema = z.object({
       labelField: z.string().optional(),
       valueField: z.string().optional(),
     })
+    // 见文件头：嵌套形状也必须 passthrough，否则 `labelFeild` 这类拼写错误在 SDK
+    // 解析阶段就被剥掉，闸门的 did-you-mean 永远看不到它。
+    .passthrough()
     .optional()
     .describe("Remote options source for Select/Cascader — use instead of dataOptions when options come from an API."),
   width: z.union([z.number(), z.string()]).optional(),
@@ -226,23 +230,16 @@ export const tableFieldSchema = surfaceFieldSchema.extend({
   formtype: surfaceFieldSchema.shape.formtype.optional(),
 });
 
-/** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。 */
+/** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。
+ *
+ * 文本格式本身在 shared `formatFragmentText`（P2）：`generate_scene` 也走同一个
+ * 格式化器，字节等价才不依赖两份手写模板。这里只做 MCP `content` 适配。
+ */
 export function renderFragmentOutput(
   result: { code: string; summary: string; warnings: string[]; fence?: "vue" | "tsx" },
   fence: "vue" | "tsx",
 ): { content: Array<{ type: "text"; text: string }> } {
-  const effective = result.fence ?? fence;
-  const out: string[] = [result.summary];
-  if (result.warnings.length > 0) {
-    out.push("");
-    out.push("⚠️ Warnings (non-blocking — review and re-generate if any indicate a mapping mistake):");
-    for (const w of result.warnings) out.push(`  - ${w}`);
-  }
-  out.push("", "---", "");
-  out.push("```" + effective);
-  out.push(result.code);
-  out.push("```");
-  return { content: [{ type: "text", text: out.join("\n") }] };
+  return { content: [{ type: "text", text: formatFragmentText(result, fence) }] };
 }
 
 /**
@@ -257,9 +254,16 @@ export function renderFragmentOutput(
 // 文案逐条镜像自 shared 权威 `StructuredCrudConfigSchema.tableOptions`：片段 prompt
 // 只自省 `.describe()`，少一条文案 = 宿主 LLM 少一条教学（键在、语义不在）。
 export const tableBlockOptionsSchema = z.object({
-  border: z.boolean().default(true),
-  stripe: z.boolean().default(true),
-  rowkey: z.string().default("id"),
+  // 这三个键**不能写 `.default()`**（与上面 rowkey 同一条纪律）：SDK 会在进 handler 前
+  // 把默认值填进来，生成器就无法区分「调用方显式给了 true」与「没给」——冲突/告警类
+  // 判据全部失真。缺省由生成器统一补（`t.border !== false` 等），产物不变。
+  // `scripts/check-tool-shapes.mjs` 会遍历本对象，发现任何 ZodDefault 即红。
+  border: z.boolean().optional(),
+  stripe: z.boolean().optional(),
+// 不能给 `.default("id")`：前门拿默认值填出来的 `rowkey` 会被当作「调用方显式给了
+// rowkey」，与 intent 顶层的 rowkey 撞成假的 rowkey-conflict；缺省由生成器
+// （`input.rowkey ?? t.rowkey ?? 'id'`）在真正发射时补齐。
+  rowkey: z.string().optional(),
   heightType: z
     .enum(["height", "auto", "maxHeight"])
     .optional()
@@ -279,7 +283,7 @@ export const tableBlockOptionsSchema = z.object({
       "Container height used ONLY when heightType is 'height' (ignored for 'auto' / 'maxHeight' — use tabHeight there). Takes precedence over nothing: an explicit tabHeight always wins."
     ),
   multiSelect: z.boolean().optional(),
-  highlightCurrentRow: z.boolean().default(true),
+  highlightCurrentRow: z.boolean().optional(),
   headerCellStyle: z.record(z.string()).optional(),
   virtual: z
     .boolean()

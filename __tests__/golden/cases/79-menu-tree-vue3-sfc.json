@@ -3,6 +3,7 @@
   "nlEn": "Menu management: query by menu name; the table shows menu name and route path; menus are hierarchical and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["menuName", "path"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "treeConfig", "inTable:menuName", "inTable:path"],
   "config": {
     "name": "MenuTreeManage",
     "apiUrl": "/api/menus",

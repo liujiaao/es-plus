@@ -92,7 +92,7 @@
         <a-space v-else-if="footerBtns.length">
           <a-button
             v-for="(item, idx) in footerBtns"
-            v-show="checkPermission(item.permissionValue)"
+            v-if="checkPermission(item.permissionValue)"
             :key="item.key || idx"
             :type="mapBtnType(item.type)"
             :danger="mapBtnDanger(item.type)"
@@ -122,6 +122,7 @@ export default { name: 'EsDialog' }
 import { ref, reactive, computed, inject, watch, onMounted, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
+import { checkPermissionValue } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'
@@ -197,11 +198,8 @@ const injectedLocale = inject('antLocale', null) || inject('elLocale', null)
 if (injectedLocale) antLocale.value = injectedLocale as any
 
 // ─── 权限 ───────────────────────────────────────────
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 // ─── body 内 EsForm 实例 + refs 存储（对齐 vue3）──────
 const lyFormInstance = ref<unknown>(null)

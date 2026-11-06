@@ -3,6 +3,7 @@
   "nlEn": "Equipment repair management: query by device name and fault type (hardware / software / network); the table shows device name, fault type, reporter, urgency, and on-site address; supports add, edit, and delete. In the form, \"on-site address\" is hidden when the fault type is \"software\" or \"network\" (both are handled by remote support).",
   "fixedFields": ["deviceName", "faultType", "reporter", "urgency", "onsiteAddress"],
   "pinnedDims": ["propSet", "actions", "target", "isHidden:onsiteAddress"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:onsiteAddress", "dataOptions:faultType", "formtype:faultType", "inQuery:deviceName", "inQuery:faultType", "inTable:deviceName", "inTable:faultType", "inTable:onsiteAddress", "inTable:reporter", "inTable:urgency"],
   "config": {
     "name": "EquipmentRepairManage",
     "apiUrl": "/api/equipment-repairs",

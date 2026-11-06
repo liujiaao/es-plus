@@ -11,6 +11,7 @@
     "actions",
     "formtype:score"
   ],
+  "nlStatedDims": ["propSet", "actions", "formtype:score", "dataOptions:status", "formtype:status", "inTable:date", "inTable:name", "inTable:score", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

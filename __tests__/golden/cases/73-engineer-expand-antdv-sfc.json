@@ -3,6 +3,7 @@
   "nlEn": "Generate the engineer management page as an Ant Design SFC: query by engineer name and skill; the table shows name, skill and level; each row can expand to reveal the email and join date; supports add, edit and delete.",
   "fixedFields": ["name", "skill", "level", "email", "joinDate"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "expandConfig", "inTable:level", "inTable:name", "inTable:skill"],
   "config": {
     "name": "EngineerManage",
     "apiUrl": "/api/engineers",

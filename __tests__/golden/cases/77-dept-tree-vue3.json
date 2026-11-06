@@ -3,6 +3,7 @@
   "nlEn": "Department management: query by department name; the table shows department name and leader; departments are hierarchical (sub-departments nested under their parents) and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["deptName", "leader"],
   "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "nlStatedDims": ["propSet", "actions", "treeConfig", "inTable:deptName", "inTable:leader"],
   "config": {
     "name": "DeptTreeManage",
     "apiUrl": "/api/departments",

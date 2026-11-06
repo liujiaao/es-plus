@@ -3,6 +3,7 @@
   "nlEn": "Internationalized dictionary management page (SFC mode, i18n enabled): query by dict code and dict name; the table shows dict code, dict name, and status; supports add and edit. Field labels use i18n.",
   "fixedFields": ["dictCode", "dictName", "status"],
   "pinnedDims": ["propSet", "actions", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "i18n", "inQuery:dictCode", "inQuery:dictName", "inTable:dictCode", "inTable:dictName", "inTable:status"],
   "config": {
     "name": "DictI18nManage",
     "apiUrl": "/api/dicts",

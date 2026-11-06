@@ -3,6 +3,7 @@
   "nlEn": "Ticket management with an Ant Design look: query by title; the table shows title, priority, assignee and escalation reason; supports add, edit and delete. In the form, the \"escalation reason\" is hidden when the priority is \"low\", or no assignee has been filled in yet.",
   "fixedFields": ["title", "priority", "assignee", "escalateReason"],
   "pinnedDims": ["propSet", "actions", "isHidden:escalateReason", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:escalateReason", "inQuery:title", "inTable:assignee", "inTable:escalateReason", "inTable:priority", "inTable:title"],
   "config": {
     "name": "TicketManage",
     "apiUrl": "/api/tickets",

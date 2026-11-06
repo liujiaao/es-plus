@@ -1751,9 +1751,9 @@ describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按�
 // AI-35 的对偶：AI-35 管「弹窗没人能打开」，这里管「按钮指向的弹窗不存在」。
 // 三端 `openDialog(key)` 在 `normalizedDialogs[key]` 缺席时**直接 return** —— 不报错、
 // 不 emit `dialog-open`（行内按钮连 edit/view/btn-click 也不会 emit），于是按钮成了
-// 死按钮。触发面有两类：显式 `dialogs` 只覆盖了部分动作（含 `dialogs.add: null`
-// 被 repairConfig 删除后的形状），以及声明了按钮面但不声明 `dialogs`（此时生成器
-// 走新模式、不再发射 legacy `dialogFormItems`，运行时一张弹窗都没有）。
+// 死按钮。触发面有两类：显式 `dialogs` 只覆盖了部分动作，以及声明了按钮面但不声明
+// `dialogs`（此时生成器走新模式、不再发射 legacy `dialogFormItems`，运行时一张弹窗都没有）。
+// 注意 `dialogs: {}` **不**属于第二类：它按缺席处理（见 render-plan.ts / 下方用例）。
 describe('AI-35 对偶 — 按钮指向的弹窗不存在（openDialog 直接返回）', () => {
   const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
   const flat = (extra: Record<string, unknown>) => ({ name: 'T', apiUrl: '/x', fields: F, ...extra })
@@ -1774,15 +1774,18 @@ describe('AI-35 对偶 — 按钮指向的弹窗不存在（openDialog 直接返
     ).toEqual(['row "编辑" (dialogKey: "edit")'])
   })
 
-  it('dialogs.add: null 经修复删除后只剩空 dialogs ⇒ 「新增」仍是死按钮', () => {
-    // 这正是审计里点名的形状：null 被当作「未声明」删掉，但 actions 仍派生按钮。
-    const { warnings } = generateFromConfig(
+  it('空 dialogs record 按缺席处理（legacy 弹窗照常派生）⇒ 不是死按钮', () => {
+    // 审计 B7 的定案：`dialogs: {}` 什么都不表达，必须与「没写 dialogs」同义。
+    // 若当成新模式，legacy 的 dialogFormItems 被整段跳过、按钮仍由 actions 派生 ——
+    // 那才会造出点不开的死按钮。这里钉住修复后的语义：走 legacy，弹窗体真的发射。
+    const { warnings, code } = generateFromConfig(
       StructuredCrudConfigSchema.parse(
         flat({ actions: ['add'], dialogs: {} })
       ) as any
     )
-    expect(warnings.some((w) => w.includes('点了不会有任何反应'))).toBe(true)
-    expect(warnings.some((w) => w.includes('dialogKey: "add"'))).toBe(true)
+    expect(warnings.some((w) => w.includes('点了不会有任何反应'))).toBe(false)
+    expect(warnings.some((w) => w.includes('dialogKey: "add"'))).toBe(false)
+    expect(code).toContain('dialogFormItems')
   })
 
   it('既无 dialogs 又无表单字段（全 inForm:false）⇒ legacy 弹窗为空 ⇒ 死按钮', () => {

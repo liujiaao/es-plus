@@ -2,6 +2,7 @@ import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  FormDataOption,
   TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
@@ -21,6 +22,7 @@ import type {
 } from '@es-plus/core'
 
 export type {
+  FormDataOption,
   TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
@@ -90,7 +92,7 @@ export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
  * `required` / `disabled` / `value` 是表达式节点（`value` 存在时 `dependencies` 必填）。
  */
 export interface FieldReactionFulfill {
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   required?: FieldHiddenExprNode
   disabled?: FieldHiddenExprNode
   value?: FieldHiddenExprNode
@@ -129,7 +131,7 @@ export interface FormItemOption {
    * `h()` 需要的 `onXxx` 形式；已写成 `onXxx` 的键名原样透传。
    */
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
+  dataOptions?: FormDataOption[]
   /**
    * 动态显隐判断：返回 true 表示**隐藏**该字段。
    *

@@ -3,6 +3,7 @@
   "nlEn": "Administrative area management with an Ant Design look: query by area name; the table shows area name and population; sub-areas are nested under the subAreas field; supports add, edit and delete.",
   "fixedFields": ["areaName", "population"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:areaName", "inTable:population"],
   "config": {
     "name": "AreaTreeManage",
     "apiUrl": "/api/areas",

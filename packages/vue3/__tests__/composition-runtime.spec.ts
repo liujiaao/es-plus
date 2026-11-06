@@ -32,6 +32,8 @@ import EsTable from '../src/components/es-table/src/component.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
 import type { StructuredCrudConfig } from '../../shared/src/structured-generator'
 import { composeCrudConfig } from '../../shared/src/compose-crud-config'
+// 标题表的唯一真源在 shared 注册表（P5d）：测试里手抄一份，常量改名时会静默错位。
+import { DIALOG_TITLES } from '../../shared/src/scene/registry'
 import {
   createInMemoryBackend,
   findButtonByText,
@@ -52,8 +54,6 @@ interface CompositionCase {
   apiUrl: string
   surfaces: { query?: any[]; table?: any[]; form?: any[]; dialog?: string[] }
 }
-
-const DIALOG_TITLES: Record<string, string> = { add: '新增', edit: '编辑', view: '查看' }
 
 /**
  * 与 `generate-crud.ts` 有表支完全同构的组合：

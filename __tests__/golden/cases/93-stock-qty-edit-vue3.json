@@ -3,6 +3,7 @@
   "nlEn": "Stock quantity maintenance: double-click a row to edit the whole row inline, with an edit-status badge shown. Shows product name and stock count. Supports edit.",
   "fixedFields": ["goodsName", "qty"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "nlStatedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "StockQtyEditManage",
     "apiUrl": "/api/stock-qty",

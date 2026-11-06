@@ -3,6 +3,7 @@
   "nlEn": "(Using antd) Article management: query by title, category, and publish status (draft/published); the table shows title, category, publish status, and publish time; supports create, read, update, and delete.",
   "fixedFields": ["title", "category", "status", "publishedAt"],
   "pinnedDims": ["propSet", "actions", "formtype:status", "dataOptions:status", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "formtype:status", "dataOptions:status", "inQuery:category", "inQuery:status", "inQuery:title", "inTable:category", "inTable:publishedAt", "inTable:status", "inTable:title"],
   "config": {
     "name": "ArticleManage",
     "apiUrl": "/api/articles",

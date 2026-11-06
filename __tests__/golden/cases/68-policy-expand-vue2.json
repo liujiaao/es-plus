@@ -3,6 +3,7 @@
   "nlEn": "Policy management: query by policy name; the table shows policy name and effective date; each row can expand to reveal the issuing department, applicable scope and summary; supports add, edit and delete.",
   "fixedFields": ["policyName", "effectDate", "dept", "scope", "summary"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "expandConfig", "inTable:effectDate", "inTable:policyName"],
   "config": {
     "name": "PolicyManage",
     "apiUrl": "/api/policies",

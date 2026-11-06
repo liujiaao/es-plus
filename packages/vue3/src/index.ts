@@ -78,6 +78,7 @@ export type {
 // 配置类类型在 vue3 做 Element Plus 特化，从本地 ./types 导出（形状兼容 core）
 export type {
   FormItemOption,
+  FormDataOption,
   ApiParams,
   BtnConfig,
   LayoutFormProps,

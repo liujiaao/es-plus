@@ -3,6 +3,7 @@
   "nlEn": "Contract management: query by contract no. and party; the table shows contract no., party, and an amount column that is visible only with permission; supports add, edit, and delete.",
   "fixedFields": ["contractNo", "party", "amount"],
   "pinnedDims": ["propSet", "actions", "columns"],
+  "nlStatedDims": ["propSet", "actions", "columns", "extPoints:amount", "inQuery:contractNo", "inQuery:party", "inTable:amount", "inTable:contractNo", "inTable:party"],
   "config": {
     "name": "ContractManage",
     "apiUrl": "/api/contracts",

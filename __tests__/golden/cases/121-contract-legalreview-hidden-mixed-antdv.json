@@ -3,6 +3,7 @@
   "nlEn": "Contract-approval management with an Ant Design look: query by contract name; the table shows contract name, contract type, amount, auto-renew flag and legal review; supports add, edit and delete. In the form, the \"legal review\" is hidden when the contract type is fixed-term AND either the amount is greater than 100000 or auto-renew is checked.",
   "fixedFields": ["contractName", "contractType", "amount", "autoRenew", "legalReview"],
   "pinnedDims": ["propSet", "actions", "isHidden:legalReview", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:legalReview", "inQuery:contractName", "inTable:amount", "inTable:autoRenew", "inTable:contractName", "inTable:contractType", "inTable:legalReview"],
   "config": {
     "name": "ContractApprovalManage",
     "apiUrl": "/api/contract-approvals",

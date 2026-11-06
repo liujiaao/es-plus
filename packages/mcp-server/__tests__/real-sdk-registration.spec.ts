@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { emitSceneArtifact } from "@es-plus/shared";
 import { registerTools } from "../src/tools/index.js";
 import { registerResources } from "../src/resources/index.js";
 import { registerPrompts } from "../src/prompts/index.js";
@@ -48,5 +49,30 @@ describe("真实 McpServer 注册（SDK 版本兼容）", () => {
     // passthrough 的判据：带一个 schema 里没有的键仍然 parse 成功。
     // 若这里失败，说明闸门看到的 args 已被 zod 剥过键，`collectUnknownKeys` 恒空。
     expect(detect!.inputSchema!.safeParse({ packageJson: "{}", bogusKey: 1 }).success).toBe(true);
+  });
+
+  it("产物信封工具在 tools/list 里声明 outputSchema，且真实信封能通过（P8 复核）", () => {
+    const server = registerAll("full") as unknown as {
+      _registeredTools: Record<
+        string,
+        { outputSchema?: { safeParse?: (v: unknown) => { success: boolean } } }
+      >;
+    };
+    for (const name of ["generate_scene", "generate_crud", "generate_composition"]) {
+      expect(server._registeredTools[name]?.outputSchema, `${name} 缺少 outputSchema`).toBeTruthy();
+    }
+    // 不挂信封的生成入口不得声明 —— 否则 SDK 在成功分支没有 structuredContent 时会抛
+    // InvalidParams（工具从「返回文本」变成「协议错误」）。
+    for (const name of ["generate_form", "generate_table", "generate_dialog", "generate_crud_from_config"]) {
+      expect(server._registeredTools[name]?.outputSchema, `${name} 不应声明 outputSchema`).toBeFalsy();
+    }
+
+    const { envelope } = emitSceneArtifact({
+      scene: "table",
+      intent: { fields: [{ prop: "name", label: "姓名", formtype: "Input" }] },
+    } as any);
+    expect(envelope).toBeTruthy();
+    const schema = server._registeredTools["generate_scene"]!.outputSchema!;
+    expect(schema.safeParse!(envelope).success).toBe(true);
   });
 });

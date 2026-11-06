@@ -171,6 +171,7 @@ import {
   toTableSortState,
   sameSortState,
   buildSortParams,
+  checkPermissionValue,
 } from '@es-plus/core'
 import type { TableSortState, FieldOutputProvider } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
@@ -245,11 +246,8 @@ function getVxeGridInstance() {
   return (vxeEngineRef.value as any)?.vxeInstance?.()
 }
 
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 // 虚拟滚动引擎切换
 const isVirtual = computed(() =>
@@ -515,7 +513,7 @@ const withDataOptions = (col: TableColumn): TableColumn => {
 
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
-  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
   const list = columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
     .map((item) => withDataOptions({ ...item }))

@@ -3,6 +3,7 @@
   "nlEn": "Material cost maintenance: click the cost cell to edit inline. Shows material name and cost, where cost is a number input with two decimal places. Supports add, edit and delete.",
   "fixedFields": ["itemName", "cost"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "editConfig", "columns", "virtualScroll", "formtype:cost"],
   "config": {
     "name": "ItemCostEditManage",
     "apiUrl": "/api/item-cost",

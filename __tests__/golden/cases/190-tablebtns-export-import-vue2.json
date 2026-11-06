@@ -3,6 +3,7 @@
   "nlEn": "Order management (vue2 project): above the table there are two buttons on the left, \"Export Orders\" and \"Import Orders\"; the table shows order number, order amount, and status.",
   "fixedFields": ["orderNo", "amount", "status"],
   "pinnedDims": ["propSet", "actions", "tableBtns"],
+  "nlStatedDims": ["propSet", "target", "actions", "tableBtns", "inTable:amount", "inTable:orderNo", "inTable:status"],
   "config": {
     "name": "OrderManage",
     "apiUrl": "/api/orders",

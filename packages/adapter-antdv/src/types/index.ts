@@ -9,6 +9,7 @@
 import type { VNode, RenderFunction } from 'vue'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  FormDataOption,
   TableColumnDataOption,
   VxeEditRender,
   VxeTreeConfig,
@@ -76,7 +77,7 @@ export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
  * `required` / `disabled` / `value` 是表达式节点（`value` 存在时 `dependencies` 必填）。
  */
 export interface FieldReactionFulfill {
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   required?: FieldHiddenExprNode
   disabled?: FieldHiddenExprNode
   value?: FieldHiddenExprNode
@@ -112,7 +113,7 @@ export interface FormItemOption {
    * `h()` 需要的 `onXxx` 形式；已写成 `onXxx` 的键名原样透传。
    */
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
+  dataOptions?: FormDataOption[]
   /**
    * 动态显隐判断：返回 true 表示**隐藏**该字段。
    *
@@ -384,6 +385,16 @@ export interface PaginationConfig {
   pageSizes?: number[]
   size?: 'large' | 'middle' | 'small' | string
   isSmall?: boolean
+  /**
+   * 分页布局（Element 语法，如 'total, sizes, prev, pager, next, jumper'）。
+   *
+   * a-pagination 没有 `layout` prop（4.x 的 props 里不存在），因此这里只能**部分**
+   * 兑现：`sizes` / `jumper` 两个 token 决定是否显示每页条数选择器与跳页框
+   * （见 component.vue 的 paginationShowSizeChanger / paginationShowQuickJumper）。
+   * 其余 token（顺序、`->`、`slot`）在 antdv 没有对应能力 —— 声明它们不会报错，
+   * 但也不会改变分页器的排布。三端同一份契约，能兑现的部分必须兑现。
+   */
+  layout?: string
 }
 
 // ============================================================================
@@ -477,6 +488,7 @@ export interface EsPlusOptions {
 // Re-export core types for convenience
 export type {
   ListenToCallBack,
+  FormDataOption,
   TableColumnDataOption,
   TableEngineExposed,
   VxeTreeConfig,

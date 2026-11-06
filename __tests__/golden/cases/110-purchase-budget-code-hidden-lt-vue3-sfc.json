@@ -3,6 +3,7 @@
   "nlEn": "Purchase-request management: query by item name; the table shows item name, category, amount and budget account code; supports add, edit and delete. In the form, the \"budget account code\" is hidden when the amount is below 5000 (small purchases do not need one).",
   "fixedFields": ["itemName", "category", "amount", "budgetCode"],
   "pinnedDims": ["propSet", "actions", "isHidden:budgetCode", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "isHidden:budgetCode", "inQuery:itemName", "inTable:amount", "inTable:budgetCode", "inTable:category", "inTable:itemName"],
   "config": {
     "name": "PurchaseRequestManage",
     "apiUrl": "/api/purchase-requests",

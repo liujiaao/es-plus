@@ -85,6 +85,16 @@ describe("esplus://design-extraction", () => {
     // that is easiest to "helpfully" complete with an invented table.
     expect(text).toContain("no table, search form only");
   });
+
+  it("documents the multi-page coverage inventory and the L1/L2/L3 triggers (P13)", async () => {
+    const text = await readResource(DESIGN_EXTRACTION_URI);
+    expect(text).toContain("coverage_report");
+    expect(text).toContain("validate_intent");
+    for (const level of ["L1", "L2", "L3"]) expect(text).toContain(`**${level}**`);
+    expect(text).toContain("host code required");
+    expect(text).toContain("extensionPoints");
+    expect(text).toContain("hostCode");
+  });
 });
 
 describe("spec-to-surfaces prompt", () => {

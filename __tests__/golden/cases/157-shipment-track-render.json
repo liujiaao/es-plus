@@ -3,6 +3,7 @@
   "nlEn": "Shipment tracking: query by tracking no. and carrier; the table shows tracking no., carrier, tracking status, and update time, where the \"tracking status\" column needs custom rendering (colored tags per status); supports add and delete.",
   "fixedFields": ["trackingNo", "carrier", "trackStatus", "updatedAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:trackStatus", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:trackStatus", "inQuery:carrier", "inQuery:trackingNo", "inTable:carrier", "inTable:trackStatus", "inTable:trackingNo", "inTable:updatedAt"],
   "config": {
     "name": "ShipmentTrack",
     "apiUrl": "/api/shipments",

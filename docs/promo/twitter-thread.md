@@ -88,7 +88,7 @@ AI 写组件库的标准翻车：
 ES-Plus（@es-plus/vue3 + @es-plus/vue2）：
 
 ✅ 一份 JSON Schema 同时驱动 Vue 3 + Vue 2 渲染器
-✅ MCP server 暴露 15 个 tools，Claude/Cursor 一行接入
+✅ MCP server 暴露 16 个 tools（含场景路由器 generate_scene），Claude/Cursor 一行接入
 ✅ zod 校验所有 AI 生成的配置，错了立即重试
 ✅ CI 矩阵跑 6 个组合（3 个渲染端 × 2 种模式）的 vite build，证明"AI 生成的代码能编"
 
@@ -241,7 +241,7 @@ That's what MCP (Model Context Protocol) is for.
 ES-Plus (@es-plus/vue3 + @es-plus/vue2):
 
 ✅ One JSON schema, two renderers (Vue 3 + Element Plus, Vue 2 + Element UI)
-✅ Official MCP server exposes 15 tools — one-line Claude/Cursor integration
+✅ Official MCP server exposes 16 tools (including the `generate_scene` router) — one-line Claude/Cursor integration
 ✅ Every AI-generated config zod-validated; auto-retry on failure
 ✅ CI matrix runs `vite build` on AI-generated code across 6 combos per push
 

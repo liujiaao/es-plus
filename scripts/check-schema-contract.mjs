@@ -24,6 +24,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
+import { transformSync } from 'esbuild'
 import {
   readDialogContract,
   readDialogPassthrough,
@@ -192,6 +194,128 @@ function checkFormTypeEnum() {
         `✅ core/constants.ts 与 shared/contract.ts 的别名表一致（${coreKeys.length} 项，且均指向规范写法）`
       )
     }
+  }
+  return ok
+}
+
+// ── 1d. 全部同名契约常量（core/constants.ts ↔ shared/contract.ts）──
+// 1b/1c 只守住了 VALID_FORM_TYPES / FORM_TYPE_ALIASES。core 文件头却写着「会断言
+// 本文件…… 逐项相等」，维护规则也说「改 VALID_FORM_TYPES / FORM_TYPE_ALIASES **等**
+// 契约常量时必须同步」—— 而 SPECIAL_BTN_KEYS / OPERATION_COLUMN_PROP_* /
+// CRUD_PAGE_BTN_CLICK_KEYS / VALID_CRUD_ACTIONS / DEFAULT_* 这 10 个常量两处各写一份，
+// 没有任何检查。它们不是死副本：shared 那份被片段/整页生成器与 MCP conventions 消费
+// （宿主 LLM 看到的 'rest'、'operate'、默认按钮文案都从这里来），core 那份被三个渲染
+// 器包 re-export；只改一处，生成物与运行时就会对不上，而所有门禁全绿。
+//
+// 判据刻意**从运行时导出推导**而不是逐名正则：新增一个同名常量时它自动进入比较面，
+// 未登记就判红（否则「守卫没覆盖」这件事只能靠人记得）。已登记的名单同时兜住反向：
+// 某一边删掉常量（比较面缩小）时立刻红，不会因为「交集变少」而静默变绿。
+const DUPLICATED_CONTRACT_CONSTANTS = [
+  'VALID_FORM_TYPES',
+  'FORM_TYPE_ALIASES',
+  'SPECIAL_BTN_KEYS',
+  'BUILT_IN_BTN_KEYS',
+  'OPERATION_COLUMN_PROP_SFC',
+  'OPERATION_COLUMN_PROP_CRUD_PAGE',
+  'VALID_CRUD_ACTIONS',
+  'DEFAULT_CONFIG_TABLE_OUT',
+  'CRUD_PAGE_BTN_CLICK_KEYS',
+  'CRUD_PAGE_DIALOG_KEYS',
+  'DEFAULT_TOOLBAR_BTNS',
+  'DEFAULT_ROW_BTNS',
+]
+
+/**
+ * 用 esbuild 把 TS 源码转成 CJS 后**在门禁进程里求值**，拿到真实导出。
+ *
+ * 不跑 tsc、不 import 构建产物（`shared/build` 可能是旧的），也不手写正则解析对象
+ * 字面量 —— 三个渲染器包正是靠「手写副本 + 正则门禁」漂移的。
+ */
+function loadContractExports(file, label) {
+  try {
+    const js = transformSync(read(file), { loader: 'ts', format: 'cjs' }).code
+    const module = { exports: {} }
+    new Function('module', 'exports', 'require', js)(module, module.exports, () => {
+      throw new Error('契约常量文件不得有运行时 import（core 必须零依赖）')
+    })
+    return module.exports
+  } catch (err) {
+    fail(`未能加载 ${label} 的运行时导出：${err.message}`)
+    return null
+  }
+}
+
+const describeValue = (v) => {
+  const json = JSON.stringify(v)
+  return json.length > 160 ? `${json.slice(0, 157)}…` : json
+}
+
+function checkContractConstantParity() {
+  let ok = true
+  const core = loadContractExports('packages/core/src/constants.ts', 'core/constants.ts')
+  const shared = loadContractExports('packages/shared/src/contract.ts', 'shared/contract.ts')
+  if (!core || !shared) return false
+
+  // 类型只在编译期存在（`FormType` / `CrudAction`），运行时导出里只有值与函数。
+  const valueNames = (mod) => Object.keys(mod).filter((k) => typeof mod[k] !== 'function')
+  const coreValues = valueNames(core)
+  const sharedValues = valueNames(shared)
+  const duplicated = coreValues.filter((k) => sharedValues.includes(k))
+
+  // ① 登记的常量必须在两边都存在（防「这次只改了一边、把另一边删了」）。
+  for (const name of DUPLICATED_CONTRACT_CONSTANTS) {
+    const inCore = coreValues.includes(name)
+    const inShared = sharedValues.includes(name)
+    if (!inCore || !inShared) {
+      ok = fail(
+        `契约常量 ${name} 只存在于 ${inCore ? 'core/constants.ts' : 'shared/contract.ts'} 一侧 —— ` +
+          '两处是同一契约的手写副本，删除也必须两边同时删'
+      )
+    }
+  }
+
+  // ② 新增的同名常量必须登记（否则「比较面」扩大了，读者却不知道）。
+  const unregistered = duplicated.filter((k) => !DUPLICATED_CONTRACT_CONSTANTS.includes(k))
+  if (unregistered.length) {
+    ok = fail(
+      `core/constants.ts 与 shared/contract.ts 新增了同名常量但未登记：${unregistered.join(', ')} —— ` +
+        '登记进 DUPLICATED_CONTRACT_CONSTANTS，让它们进入逐值比较'
+    )
+  }
+
+  // ③ 登记项逐值深比较。漂移的表现不是「门禁红」，而是生成物里的 key/文案与运行时
+  //    不一致：例如 shared 的 RESET 写成 'reset' 后生成的按钮在 es-form 里永不触发重置。
+  let compared = 0
+  for (const name of DUPLICATED_CONTRACT_CONSTANTS) {
+    if (!duplicated.includes(name)) continue
+    compared++
+    if (!isDeepStrictEqual(core[name], shared[name])) {
+      ok = fail(
+        `契约常量 ${name} 在 core/constants.ts 与 shared/contract.ts 已分叉：\n` +
+          `    core  : ${describeValue(core[name])}\n` +
+          `    shared: ${describeValue(shared[name])}\n` +
+          '    两处是同一契约的手写副本（core 零依赖，不能 import shared），必须同步修改'
+      )
+    }
+  }
+
+  // ④ 同名函数（当前只有 normalizeFormType）也必须同形：常量一致但归一化逻辑各写一套，
+  //    别名在一条路径生效、另一条不生效。esbuild 已把两处输出规范化，故可直接比文本。
+  const functions = Object.keys(core).filter((k) => typeof core[k] === 'function' && k in shared)
+  for (const name of functions) {
+    const a = core[name].toString().replace(/\s+/g, ' ')
+    const b = shared[name].toString().replace(/\s+/g, ' ')
+    if (a !== b) {
+      ok = fail(
+        `契约函数 ${name} 在两处实现已分叉：\n    core  : ${a}\n    shared: ${b}`
+      )
+    }
+  }
+
+  if (ok) {
+    console.log(
+      `✅ core/constants.ts 与 shared/contract.ts 的全部同名契约常量一致（${compared} 个常量 + ${functions.length} 个函数）`
+    )
   }
   return ok
 }
@@ -942,6 +1066,7 @@ function topLevelKeysOf(block) {
 // 原先只打印一行总错误，读者得自己回滚屏幕找是哪条边的 ❌。
 const checks = [
   ['formtype 枚举同步', checkFormTypeEnum()],
+  ['契约常量双份全等（core ↔ shared）', checkContractConstantParity()],
   ['关键契约字段存在性', checkRequiredFields()],
   ['有意宽松的 schema 未被收紧', checkPermissiveSchemas()],
   ['结构化配置 Zod ↔ JSON 单源', checkStructuredConfigZod()],

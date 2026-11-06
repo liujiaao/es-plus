@@ -25,7 +25,7 @@ export function registerIngestSchema(server: McpServer, profile: ToolProfile = r
   // 继续教宿主「交给 generate_crud_from_config」只会换来 tool not found —— 按档位换指代。
   const nextStep =
     profile === "front-door"
-      ? "use the draft as the reference when filling `generate_crud`'s `surfaces` (map each field into query / table / form), and pass it to `validate_config` with type 'structured-crud-config' to check your edits"
+      ? "use the draft as the reference when filling `generate_scene`'s (scene='crud') `surfaces` (map each field into query / table / form), and pass it to `validate_config` with type 'structured-crud-config' to check your edits"
       : "pass it to generate_crud_from_config";
   server.tool(
     "ingest_schema",

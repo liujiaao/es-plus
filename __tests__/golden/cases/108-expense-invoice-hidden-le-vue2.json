@@ -3,6 +3,7 @@
   "nlEn": "Expense-claim management: query by applicant; the table shows applicant, expense type, amount and invoice number; supports add, edit and delete. In the form, the \"invoice number\" is hidden when the amount does not exceed 100 (small claims need no invoice).",
   "fixedFields": ["applicant", "expenseType", "amount", "invoiceNo"],
   "pinnedDims": ["propSet", "actions", "isHidden:invoiceNo", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:invoiceNo", "inQuery:applicant", "inTable:amount", "inTable:applicant", "inTable:expenseType", "inTable:invoiceNo"],
   "config": {
     "name": "ExpenseClaimManage",
     "apiUrl": "/api/expense-claims",

@@ -260,7 +260,7 @@ export const docsData: Record<string, any> = {
         { name: 'groups', type: 'TableColumn[]', default: '-', desc: '多级表头子列（虚拟模式扁平化渲染）' },
         { name: 'expandConfig', type: 'Object', default: '-', desc: '展开行内容 { title?, fields }，仅 type: "expand" 列消费' },
         { name: 'hidCol', type: 'boolean', default: '-', desc: '是否隐藏该列' },
-        { name: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
+        { name: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（声明了门但宿主没配全局 permission 时按 fail-closed 拒绝）' },
         { name: 'btns', type: 'Array', default: '-', desc: '行操作按钮 [{ name, type?, clickEvent? }]' },
         { name: 'type', type: 'string', default: '-', desc: '特殊列类型：selection（复选框多选，组件不提供单选列）/expand/index' },
         { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' },

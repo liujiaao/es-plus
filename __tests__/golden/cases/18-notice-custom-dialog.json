@@ -3,6 +3,7 @@
   "nlEn": "Notice announcements: query by announcement title, publish status, and publish time range; the table shows title, publish status, publish time, and publisher; supports add, edit, delete, and view; the announcement content is shown as a rich-text summary via a custom render in the edit dialog.",
   "fixedFields": ["title", "published", "publishTime", "publisher", "content"],
   "pinnedDims": ["propSet", "actions"],
+  "nlStatedDims": ["propSet", "actions", "dialogs", "inQuery:publishTime", "inQuery:published", "inQuery:title", "inTable:publishTime", "inTable:published", "inTable:publisher", "inTable:title"],
   "config": {
     "name": "NoticeManage",
     "apiUrl": "/api/notices",

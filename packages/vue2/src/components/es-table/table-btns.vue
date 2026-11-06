@@ -75,7 +75,7 @@
  */
 
 import { defineComponent, computed, inject, h } from '../../vue-compat'
-import { getGlobalConfig, getButtonPosition, type BtnConfig } from '@es-plus/core'
+import { getGlobalConfig, getButtonPosition, checkPermissionValue, type BtnConfig } from '@es-plus/core'
 import { getCompIcon } from '../../utils/icon'
 import { mapSize } from '../../utils/size'
 
@@ -139,12 +139,8 @@ export default defineComponent({
       (getGlobalConfig() as Record<string, unknown>) ??
       {}
 
-    const hasPermission = (_btnList: unknown[], pvalue?: string) => {
-      if (!pvalue) return true
-      const permFn = esPlus.permission
-      if (typeof permFn === 'function') return (permFn as (v: string) => boolean)(pvalue)
-      return true
-    }
+    const hasPermission = (_btnList: unknown[], pvalue?: string) =>
+      checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
     const processButtonConfig = (config: Array<Record<string, unknown>>) => {
       return config.map((item) => {

@@ -5,10 +5,12 @@
  *
  * The host in production sees `tools/list` (name + description + inputSchema)
  * and may fetch `esplus://design-extraction`. This module builds exactly that:
- * the captured `generate_crud` description/shape plus the resource's own text
- * (`buildDesignExtractionContent`, injected by the caller from the bundled
- * resource module). There is no second hand-written contract here, so a change
- * to the published resource automatically changes what the eval measures.
+ * the captured front door (`generate_scene`) name/description, the **intent**
+ * schema for `scene:'crud'` (the model's answer is that object; the host wraps
+ * it), plus the resource's own text (`buildDesignExtractionContent`, injected
+ * by the caller from the bundled resource module). There is no second
+ * hand-written contract here, so a change to the published resource
+ * automatically changes what the eval measures.
  *
  * ## Host-given fields
  *
@@ -28,13 +30,14 @@ import { renderShape } from './fragment-prompt.mjs'
 export function buildPrdSystemPrompt(tool, contract) {
   return [
     'You are the host LLM for the es-plus MCP server, working on the FIRST MILE:',
-    'turning a specification into the `generate_crud` intent table (`surfaces`).',
+    "turning a specification into the `generate_scene` intent table for `scene: 'crud'` (`intent.surfaces`).",
     'Do not write Vue code — the server routes and emits deterministically.',
     '',
     `Tool: ${tool.name}`,
     tool.description,
     '',
-    'Input schema (a single JSON object; "optional" keys may be omitted):',
+    'The host wraps your object as `{"scene": "crud", "intent": <your object>}` before calling the tool.',
+    'Input schema of `intent` (a single JSON object; "optional" keys may be omitted):',
     ...renderShape(tool.shape, { depth: 3 }),
     '',
     'Published extraction contract (resource esplus://design-extraction):',

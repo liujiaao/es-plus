@@ -3,6 +3,7 @@
   "nlEn": "Product listing control: the table supports inline editing — click a cell to change status. Shows product name and status, where status is a dropdown (enabled/disabled). Supports add and edit.",
   "fixedFields": ["productName", "status"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "editConfig", "columns", "formtype:status", "virtualScroll"],
   "config": {
     "name": "ProductStatusEditManage",
     "apiUrl": "/api/product-status",

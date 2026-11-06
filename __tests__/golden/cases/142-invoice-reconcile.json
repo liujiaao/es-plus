@@ -3,6 +3,7 @@
   "nlEn": "Invoice reconciliation: query by invoice no. and issuer; the table shows invoice no., issuer, amount, status, and issue date; supports add, edit, and delete; the amount keeps two decimal places; the add, edit, and delete buttons require permission codes invoice:add, invoice:edit, invoice:remove; the UI requires i18n; the query form is 2 columns.",
   "fixedFields": ["invoiceNo", "issuer", "amount", "status", "issuedAt"],
   "pinnedDims": ["propSet", "actions", "i18n", "fieldSpan", "permissions", "extPoints:amount", "formtype:amount"],
+  "nlStatedDims": ["propSet", "actions", "i18n", "fieldSpan", "permissions", "extPoints:amount", "formtype:amount", "inQuery:invoiceNo", "inQuery:issuer", "inTable:amount", "inTable:invoiceNo", "inTable:issuedAt", "inTable:issuer", "inTable:status"],
   "config": {
     "name": "InvoiceReconcile",
     "apiUrl": "/api/invoice-reconcile",

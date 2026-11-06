@@ -3,6 +3,7 @@
   "nlEn": "Leave-request management: query by employee name; the table shows employee name, leave type, start date, day count and sick-leave certificate; supports add, edit and delete. In the form, the \"sick-leave certificate\" is hidden when the leave type is not sick leave, or the day count is fewer than 3.",
   "fixedFields": ["employeeName", "leaveType", "startDate", "days", "sickProof"],
   "pinnedDims": ["propSet", "actions", "isHidden:sickProof"],
+  "nlStatedDims": ["propSet", "actions", "isHidden:sickProof", "inQuery:employeeName", "inTable:days", "inTable:employeeName", "inTable:leaveType", "inTable:sickProof", "inTable:startDate"],
   "config": {
     "name": "LeaveRequestManage",
     "apiUrl": "/api/leave-requests",

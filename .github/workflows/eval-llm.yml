@@ -85,17 +85,21 @@ jobs:
       # Commit the refreshed accuracy record + shields badge so the README badge
       # tracks reality — even on a RED run (always()), so a regression turns the
       # badge yellow/red instead of silently freezing on an old green number.
+      # P12: a run whose *measurement* failed does not touch the record/badges —
+      # it writes `last-accuracy.failed.json` alongside them, so an outage can
+      # never erase the last complete published measurement. `-A` also stages the
+      # sidecar's deletion on a later successful night.
       # Change-detected (no empty commits) and [skip ci] (no CI feedback loop).
       # Guarded to this repo so forks never attempt a push they can't make.
       - name: Commit accuracy badge + record
         if: always() && github.repository_owner == 'liujiaao' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          FILES="__tests__/golden/last-accuracy.json __tests__/golden/last-accuracy-badge.json __tests__/golden/last-accuracy-badge-scoped.json"
+          FILES="__tests__/golden/last-accuracy.json __tests__/golden/last-accuracy.failed.json __tests__/golden/last-accuracy-badge.json __tests__/golden/last-accuracy-badge-scoped.json"
           if git status --porcelain -- $FILES | grep -q .; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add $FILES
+            git add -A -- $FILES
             git commit -m "chore(eval): refresh nightly accuracy badge [skip ci]"
             git push
           else

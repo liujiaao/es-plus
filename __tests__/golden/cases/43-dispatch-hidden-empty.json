@@ -3,6 +3,7 @@
   "nlEn": "Vehicle dispatch management: query by plate number and driver; the table shows plate number, driver, destination, fuel-card number, and fuel-card note; supports add, edit, and delete. In the form, \"fuel-card note\" is hidden while the \"fuel-card number\" is empty.",
   "fixedFields": ["plateNo", "driver", "destination", "fuelCard", "fuelNote"],
   "pinnedDims": ["propSet", "actions", "target", "isHidden:fuelNote"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:fuelNote", "inQuery:driver", "inQuery:plateNo", "inTable:destination", "inTable:driver", "inTable:fuelCard", "inTable:fuelNote", "inTable:plateNo"],
   "config": {
     "name": "VehicleDispatchManage",
     "apiUrl": "/api/vehicle-dispatches",

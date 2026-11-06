@@ -3,6 +3,7 @@
   "nlEn": "Course enrollment management: query by student name and course name; the table shows student name, course name, phone, and backup email; supports add, edit, and delete. In the form, \"backup email\" is hidden once the \"phone\" is filled in (no need for an email if a phone is already on file).",
   "fixedFields": ["studentName", "courseName", "phone", "email"],
   "pinnedDims": ["propSet", "actions", "mode", "target", "isHidden:email"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "isHidden:email", "inQuery:courseName", "inQuery:studentName", "inTable:courseName", "inTable:email", "inTable:phone", "inTable:studentName"],
   "config": {
     "name": "CourseEnrollManage",
     "apiUrl": "/api/course-enrollments",

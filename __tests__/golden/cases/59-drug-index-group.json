@@ -3,6 +3,7 @@
   "nlEn": "Drug management: query by drug name and spec; the table's first column is a row number, then a \"Basic info\" group header covering drug name and spec, and a \"Inventory\" group header covering stock qty and unit; supports add, edit, and delete.",
   "fixedFields": ["drugName", "spec", "stockQty", "unit"],
   "pinnedDims": ["propSet", "actions", "columns"],
+  "nlStatedDims": ["propSet", "actions", "columns", "inQuery:drugName", "inQuery:spec"],
   "config": {
     "name": "DrugManage",
     "apiUrl": "/api/drugs",

@@ -69,7 +69,7 @@ import { computed, h, inject, defineComponent } from 'vue'
 // 本地导入 AButton↔<a-button>，对齐 es-table/component.vue 的别名策略，
 // 使命令式弹窗内（appContext 为 null）表格操作列按钮仍能解析。
 import { Button as AButton } from 'ant-design-vue'
-import { getButtonPosition } from '@es-plus/core'
+import { getButtonPosition, checkPermissionValue } from '@es-plus/core'
 import { getAdvIconComponent } from '../../../utils/icon'
 import { getGlobalConfig } from '../../../config'
 import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
@@ -84,12 +84,8 @@ const props = defineProps<{
 
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) ?? getGlobalConfig() ?? {}
 
-const hasPermission = (pvalue?: string) => {
-  if (!pvalue) return true
-  const permFn = esPlus.permission
-  if (typeof permFn === 'function') return (permFn as (v: string) => boolean)(pvalue)
-  return true
-}
+const hasPermission = (pvalue?: string) =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 const processButtonConfig = (config: Array<Record<string, unknown>>) => {
   return config.map((item) => {

@@ -152,8 +152,8 @@
             v-model:current="paginationConfig.current"
             v-model:pageSize="paginationConfig.pageSize"
             :total="paginationConfig.total"
-            :showSizeChanger="true"
-            :showQuickJumper="true"
+            :showSizeChanger="paginationShowSizeChanger"
+            :showQuickJumper="paginationShowQuickJumper"
             :pageSizeOptions="paginationPageSizes.map(String)"
             :size="paginationIsSmall ? 'small' : 'default'"
             :showTotal="(total: number) => `共 ${total} 条`"
@@ -214,6 +214,7 @@ import {
   buildSortParams,
   toCssSize,
   synthesizeLeadingColumns,
+  checkPermissionValue,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -290,11 +291,8 @@ function getVxeGridInstance() {
   return (vxeEngineRef.value as any)?.vxeInstance?.()
 }
 
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 // ─── Refs ───────────────────────────────────────────
 const tableRef = ref<any>(null)
@@ -544,6 +542,19 @@ const paginationPageSizes = computed(() =>
   paginationLayoutConfig.value?.pageSizes || paginationConfig.value.pageSizes || [10, 20, 50, 100]
 )
 const paginationIsSmall = computed(() => paginationLayoutConfig.value?.isSmall ?? paginationConfig.value.isSmall)
+// 分页布局（Element 语法）：a-pagination **没有** `layout` prop，无法定制排布；
+// 但 `sizes` / `jumper` 两个 token 有等价开关，必须兑现 —— 否则
+// `:pagination="{ layout: 'total, prev, pager, next' }"` 在 vue3/vue2 隐藏了
+// 每页条数选择器与跳页框，在 antdv 却原样显示，同一份契约三端三种样子。
+const paginationLayout = computed<string | undefined>(
+  () => paginationLayoutConfig.value?.layout || paginationConfig.value.layout || undefined
+)
+const paginationShowSizeChanger = computed(() =>
+  paginationLayout.value ? paginationLayout.value.includes('sizes') : true,
+)
+const paginationShowQuickJumper = computed(() =>
+  paginationLayout.value ? paginationLayout.value.includes('jumper') : true,
+)
 
 // ─── 表格选择 ───────────────────────────────────────
 const {
@@ -599,7 +610,7 @@ const withDataOptions = (col: TableColumn): TableColumn => {
 }
 
 const filteredColumns = computed(() => {
-  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（未配全局 permission 时放行）。
+  // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
   // 拷贝一层：`withDataOptions` 会写 render，绝不能落到父组件传入的列对象上。
   return columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))

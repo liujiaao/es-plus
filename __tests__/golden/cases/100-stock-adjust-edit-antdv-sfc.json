@@ -3,6 +3,7 @@
   "nlEn": "Stock adjustment: double-click a row to edit inline. Shows goods name and adjustment quantity. Supports edit.",
   "fixedFields": ["goodsName", "adjustQty"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode", "target"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "StockAdjustEditManage",
     "apiUrl": "/api/stock-adjust",

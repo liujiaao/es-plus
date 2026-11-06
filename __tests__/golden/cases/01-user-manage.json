@@ -3,6 +3,7 @@
   "nlEn": "User management page: query by username, phone, and status (enabled/disabled); the table shows username, phone, avatar, registration time, and status; supports add, edit, and delete.",
   "fixedFields": ["username", "phone", "status", "avatar", "createdAt"],
   "pinnedDims": ["propSet", "actions", "formtype:status", "dataOptions:status"],
+  "nlStatedDims": ["propSet", "actions", "formtype:status", "dataOptions:status", "inQuery:phone", "inQuery:status", "inQuery:username", "inTable:avatar", "inTable:createdAt", "inTable:phone", "inTable:status", "inTable:username"],
   "config": {
     "name": "UserManage",
     "apiUrl": "/api/users",

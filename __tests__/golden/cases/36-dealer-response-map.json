@@ -3,6 +3,7 @@
   "nlEn": "Vue2 dealer maintenance in single-file-component mode: the table shows dealer name, contact, phone, and cooperation status (active/stopped); supports add, edit, and delete, with no query fields. The backend returns { data: [...], total: N }.",
   "fixedFields": ["dealerName", "contact", "phone", "coopStatus"],
   "pinnedDims": ["propSet", "actions", "target", "mode", "configTableOut"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "configTableOut", "dataOptions:coopStatus", "formtype:coopStatus", "inTable:contact", "inTable:coopStatus", "inTable:dealerName", "inTable:phone"],
   "config": {
     "name": "DealerManage",
     "apiUrl": "/api/dealers",

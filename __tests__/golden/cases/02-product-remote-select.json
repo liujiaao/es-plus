@@ -3,6 +3,7 @@
   "nlEn": "Product list: query by product name and category (the category dropdown data comes from the /api/categories endpoint); the table shows product name, category, price, and on-sale status; supports add, edit, delete, and export.",
   "fixedFields": ["name", "categoryId", "price", "onSale"],
   "pinnedDims": ["propSet", "actions", "formtype:categoryId", "apiParams:categoryId"],
+  "nlStatedDims": ["propSet", "actions", "formtype:categoryId", "apiParams:categoryId", "inQuery:categoryId", "inQuery:name", "inTable:categoryId", "inTable:name", "inTable:onSale", "inTable:price"],
   "config": {
     "name": "ProductManage",
     "apiUrl": "/api/products",

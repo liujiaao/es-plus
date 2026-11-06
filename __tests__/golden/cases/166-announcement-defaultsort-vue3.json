@@ -3,6 +3,7 @@
   "nlEn": "Announcement list: the query bar has title; sorted by publish time descending by default; shows title and publish time. Supports add and edit.",
   "fixedFields": ["title", "publishTime"],
   "pinnedDims": ["propSet", "membership", "actions"],
+  "nlStatedDims": ["propSet", "membership", "actions", "defaultSort", "inQuery:title"],
   "config": {
     "name": "AnnouncementManage",
     "apiUrl": "/api/announcements",

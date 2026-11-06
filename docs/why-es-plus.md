@@ -356,7 +356,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 > **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
 
-1. **MCP server** 暴露 15 个 tools、8 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 3 个 legacy/高级工具），AI 通过协议读取
+1. **MCP server** 暴露 19 个 tools、9 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 3 个 legacy/高级工具），AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
 
@@ -613,14 +613,16 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 
 这一节是 ES-Plus 区别于其他**所有**中后台组件库的关键。
 
-### 7.1 MCP Server 暴露的 15 个 Tools
+### 7.1 MCP Server 暴露的 19 个 Tools
 
 参见 [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts)：
 
 | Tool | 作用 | 解决的痛点 |
 |------|------|----------|
 | `detect_project_target` | 读 package.json 推断 vue2/vue3 | AI 不再猜你用哪个 Vue 版本 |
-| `generate_crud` | **前门**：填 `surfaces` 意图表（query / table / form / dialog 的任意子集）→ 组合并编译 | **主路径**：语义映射由**宿主 LLM** 完成，路由与编译由确定性代码完成 |
+| `generate_scene` | **前门 / 场景路由器**：`scene` + 场景意图表 → 与旧工具逐字节相同的产物 | 按「要建什么」而不是「记得哪个工具」选入口；路由仍由确定性代码完成 |
+| `generate_composition` | **组合页**：多个独立片段（table / form / dialog）→ 一张接好线的 `Page.vue`（多表 master-detail、多弹窗、显式 `wires`） | 不再让宿主手写胶水；接线从运行时契约派生，漏接即失败 |
+| `generate_crud` | **兼容入口**：填 `surfaces` 意图表（query / table / form / dialog 的任意子集）→ 组合并编译，与 `scene:'crud'` 逐字节相同 | 主路径的稳定别名；语义映射由**宿主 LLM** 完成，路由与编译由确定性代码完成 |
 | `generate_form` / `generate_table` / `generate_dialog` | 单组件片段：独立 es-form / es-table / useDialog | 明确只要一个组件，或要嵌在非 es-plus 组件旁边 |
 | `generate_crud_from_config` | **ADVANCED**：完整 `StructuredCrudConfig` → 可运行代码（已持有类型化配置时用） | Schema-first 流程的确定性 codegen 步骤；自然语言请求走前门 |
 | `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**：自然语言 → 完整 .vue / CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`crud-engine.ts`），覆盖有限，仅适合不能推理的宿主 |

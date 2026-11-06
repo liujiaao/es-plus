@@ -95,7 +95,7 @@ export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } fro
 // ── 跨渲染器契约（须与 core/public-types PUBLIC_CONTRACT_TYPES 一致）──
 // 配置类类型在 antdv 做 Ant Design Vue 特化，从本地 ./types 导出（形状兼容 core）
 export type {
-  FormItemOption, ApiParams, BtnConfig, LayoutFormProps,
+  FormItemOption, FormDataOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableColumnDataOption, TableOptions, PaginationConfig, DialogOptions,
   EsFormInstance, EsTableInstance, EsPlusOptions,
 } from './types'

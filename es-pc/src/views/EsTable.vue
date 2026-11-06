@@ -381,7 +381,7 @@ const tableColumns = [
   { key: '17', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '空值占位文本（null / undefined / 空串时显示）' },
   { key: '18', prop: 'dataOptions', type: 'TableColumnDataOption[]', default: '-', desc: '码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 a-tag 状态色；未命中原值。render / formatter 优先' },
   { key: '19', prop: 'hidCol', type: 'boolean', default: '-', desc: '隐藏该列（保留配置不渲染）' },
-  { key: '20', prop: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（未配置全局 permission 时放行）' },
+  { key: '20', prop: 'permissionValue', type: 'string', default: '-', desc: '列级权限编码：无权限时该列不渲染（声明了门但宿主没配全局 permission 时按 fail-closed 拒绝）' },
   { key: '21', prop: 'btns', type: 'Array', default: '-', desc: '操作列按钮 [{ name, type?, icon?, permissionValue?, hidden?, clickEvent? }]' },
   { key: '22', prop: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
   { key: '23', prop: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' },

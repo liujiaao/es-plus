@@ -1,35 +1,45 @@
 /**
- * eval 的「前门腿」（W1.3）—— 「被测路径 = 宣称主路径」。
+ * eval 的「场景腿」（P3）—— 「被测路径 = 宣称主路径」。
  *
- * 此前 `scripts/eval-llm.mjs` 的编译校验只调后端 `generateFromConfig`，而 `generate_crud`
- * 自称 FRONT DOOR（生产里宿主 LLM 的直接入口）。`scripts/check-front-door.mjs` 已把**语料**
- * 确定性喂过前门；本模块补的是它无法回答的那一半：**模型产出**能不能经前门落地。
+ * P2 起生产前门是 `generate_scene`（scene='crud'），旧 `generate_crud` 只是 adapter。
+ * 因此本腿驱动的必须是**场景路由器**；继续驱动旧工具会让门禁守着一个用户不会调用的
+ * 入口。`driveFrontDoor` 保留旧名字只为减少调用点改动，内部已改为：
  *
- * 不额外花模型调用：前门只吃已经拿到的 `pred`（模型产出），路由与生成全是确定性代码。
- * 判红的两条是「回退即缺陷」而非「模型答错」：
- *   · 前门产物**编译失败**（含 no-table 片段）—— 与 compileRate 同一把尺子；
+ *     route(scene='crud') → intent(由 pred 投影) → landing(generate_scene) → witness(编译)
+ *
+ * `deriveSurfaces` 在这里**只**用于把模型产出的完整 config 投影成路由器的 intent；
+ * 它不参与打分，也不再是「前门」本身。
+ *
+ * 不额外花模型调用：路由与生成全是确定性代码。判红的两条是「回退即缺陷」而非「模型答错」：
+ *   · 场景路由器产物**编译失败**（含 no-table 片段）—— 与 compileRate 同一把尺子；
  *   · **no-table 分支一次都没被走到** —— 那是语料天然到不了的分支（见 check-front-door 头注），
  *     在 eval 里靠「人为清空 table 面」强制覆盖，消失即意味着该分支又被改坏了/删掉了。
- * 前门对模型产出的**拒绝**（isError / 过不了 crudShape）只记录、不判红：那是模型侧的问题，
- * 已由分数反映；把它当门禁会让「模型答错」伪装成「前门回归」。
+ * 路由器对模型产出的**拒绝**（isError / 过不了 intent）只记录、不判红：那是模型侧的问题，
+ * 已由分数反映；把它当门禁会让「模型答错」伪装成「路由器回归」。
  *
- * `driveFrontDoor` 是脚本化可测的（`front-door-leg.test.mjs`）：它接收 `{ shape, cap, project }`
- * 这样的最小接口，测试用假 handler 就能把每种分类钉死，不必打包真 handler。
+ * `driveFrontDoor` 是脚本化可测的（`front-door-leg.test.mjs`）：它接收
+ * `{ sceneShape, sceneCap, project }` 这样的最小接口，测试用假 handler 就能把每种分类钉死，
+ * 不必打包真 handler。
  */
 import { captureFrontDoor, fieldProjector, deriveSurfaces, frontDoorArgs, fencedBlocks, compileBlocks } from '../lib/front-door.mjs'
 
-/** 打包并捕获真前门；打包输入必须来自 `shared/src`（陈旧 build 会让这条腿失明）。 */
+/** 打包并捕获真场景路由器；打包输入必须来自 `shared/src`（陈旧 build 会让这条腿失明）。 */
 export async function setupFrontDoor() {
   const captured = await captureFrontDoor()
   const { cap, surfaceFieldSchema } = captured.mod.capture()
+  const sceneCap = captured.mod.captureScene()
   if (!cap || cap.name !== 'generate_crud') {
     captured.cleanup()
-    throw new Error(`前门腿：没有捕获到 generate_crud 的注册（拿到 ${cap ? cap.name : 'null'}）`)
+    throw new Error(`场景腿：没有捕获到 generate_crud（adapter）的注册（拿到 ${cap ? cap.name : 'null'}）`)
+  }
+  if (!sceneCap || sceneCap.name !== 'generate_scene') {
+    captured.cleanup()
+    throw new Error(`场景腿：没有捕获到 generate_scene 的注册（拿到 ${sceneCap ? sceneCap.name : 'null'}）`)
   }
   if (captured.fromBuild.length > 0 || captured.fromSrc.length === 0) {
     captured.cleanup()
     throw new Error(
-      `前门腿：打包输入不纯（shared/src ${captured.fromSrc.length} / shared/build ${captured.fromBuild.length}）—— ` +
+      `场景腿：打包输入不纯（shared/src ${captured.fromSrc.length} / shared/build ${captured.fromBuild.length}）—— ` +
         `陈旧构建会让本腿测旧代码`
     )
   }
@@ -38,7 +48,9 @@ export async function setupFrontDoor() {
   const { z } = await import('zod')
   return {
     cap,
+    sceneCap,
     shape: z.object(cap.shape),
+    sceneShape: z.object(sceneCap.shape),
     project: fieldProjector(new Set(Object.keys(surfaceFieldSchema.shape))),
     // AN-19: the published first-mile contract, bundled from the SAME resource
     // module the MCP server registers. Consumers must fail loudly if it is absent
@@ -50,42 +62,141 @@ export async function setupFrontDoor() {
   }
 }
 
-/** 把一条模型产出喂进真前门；返回可聚合的观测（不抛 —— 单行异常只记在该行）。 */
+/** 把一条模型产出喂进真场景路由器；返回可聚合的观测（不抛 —— 单行异常只记在该行）。 */
 export async function driveFrontDoor(fd, pred) {
-  const out = { branch: null, rejected: null, compileFailures: [], noTable: null }
+  const out = {
+    route: 'crud',
+    intent: null,
+    landing: null,
+    witness: [],
+    branch: null,
+    rejected: null,
+    compileFailures: [],
+    noTable: null,
+  }
   try {
+    // 诊断投影：模型产出的是完整 config，场景路由器的 intent 需要 surfaces。
+    // 这里只用它构造入参，不参与任何分数。
     const surfaces = deriveSurfaces(pred, fd.project)
-    const parsed = fd.shape.safeParse(frontDoorArgs(pred, surfaces))
+    const parsed = fd.sceneShape.safeParse({ scene: 'crud', intent: frontDoorArgs(pred, surfaces) })
     if (!parsed.success) {
-      out.rejected = `crudShape: ${parsed.error.issues
+      out.intent = 'rejected'
+      out.landing = 'rejected'
+      out.rejected = `intent: ${parsed.error.issues
         .slice(0, 2)
         .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
         .join('; ')}`
       return out
     }
-    const r = await fd.cap.handler(parsed.data)
+    out.intent = 'ok'
+    const r = await fd.sceneCap.handler(parsed.data)
     const text = r.content?.[0]?.text ?? ''
     if (r.isError) {
-      // 空 surfaces 是前门的**正确**拒绝（模型把各面与弹窗都清空），与「路由失败」分开记。
+      // 空 surfaces 是路由器的**正确**拒绝（模型把各面与弹窗都清空），与「路由失败」分开记。
       out.branch = /surfaces` is empty/.test(text) ? 'empty' : null
+      out.landing = out.branch ?? 'rejected'
       out.rejected = text.split('\n')[0]
     } else {
       out.branch = surfaces.table.length > 0 ? 'table' : 'fragment'
+      out.landing = out.branch
       if (fencedBlocks(text).length === 0) out.rejected = '产物里没有任何围栏代码块'
-      out.compileFailures.push(...compileBlocks(text, 'front-door'))
+      out.witness = compileBlocks(text, 'scene:crud')
+      out.compileFailures.push(...out.witness)
     }
 
     // no-table 分支：语料天然走不到，这里强制清空 table 面覆盖它（每次一行，成本是纯代码）。
-    const nt = await fd.cap.handler(fd.shape.parse(frontDoorArgs(pred, { ...surfaces, table: [] })))
-    const ntText = nt.content?.[0]?.text ?? ''
-    if (/surfaces` is empty/.test(ntText)) out.noTable = 'empty'
-    else if (nt.isError) out.noTable = 'error'
-    else if (!/no table surface/.test(ntText)) out.noTable = 'unrouted'
-    else {
-      out.noTable = 'ok'
-      out.compileFailures.push(...compileBlocks(ntText, 'front-door no-table'))
+    const ntParsed = fd.sceneShape.safeParse({
+      scene: 'crud',
+      intent: frontDoorArgs(pred, { ...surfaces, table: [] }),
+    })
+    if (!ntParsed.success) {
+      out.noTable = 'rejected'
+    } else {
+      const nt = await fd.sceneCap.handler(ntParsed.data)
+      const ntText = nt.content?.[0]?.text ?? ''
+      if (/surfaces` is empty/.test(ntText)) out.noTable = 'empty'
+      else if (nt.isError) out.noTable = 'error'
+      else if (!/no table surface/.test(ntText)) out.noTable = 'unrouted'
+      else {
+        out.noTable = 'ok'
+        out.compileFailures.push(...compileBlocks(ntText, 'scene:crud no-table'))
+      }
     }
   } catch (err) {
+    out.rejected = `threw: ${String(err?.message ?? err).split('\n')[0]}`
+    out.landing = 'rejected'
+  }
+  return out
+}
+
+/**
+ * `generate_scene` 的**模型侧**拒绝文案锚点。
+ *
+ * 路由器拒绝有两种完全不同的含义，混在一起会把「模型答错」记成「发射器缺陷」：
+ *   · **model-guard**：未知键 / intent 过不了形状 —— 模型给了这份工具不接受的入参，
+ *     没有产物是**应得**的结果，准确率已按 0 分计入；
+ *   · 其他（`threw:` / 生成期报错 / sceneShape 解析失败）—— 我们自己的缺陷，必须红。
+ *
+ * 锚点取自 `packages/mcp-server/src/tools/generate-scene.ts` 的两处错误构造。
+ * `front-door-leg.test.mjs` 读那份源码断言两段文案仍存在：改文案而不同步这里会红，
+ * 不会静默把「我们的缺陷」当成「模型答错」放行。
+ */
+const MODEL_SIDE_REJECTIONS = [
+  /✗ Unknown argument\(s\) for generate_scene\b/,
+  /✗ intent failed schema validation for scene\b/,
+]
+
+/** 这条工具错误是不是「模型入参不被接受」（而不是路由器/发射器自己出错）。 */
+export function isModelSideSceneRejection(text) {
+  return MODEL_SIDE_REJECTIONS.some((re) => re.test(String(text ?? '')))
+}
+
+/**
+ * 片段场景：把模型产出的 intent 喂进**同一个** `generate_scene`，返回落地与编译见证。
+ * 这是片段腿的 gated witness —— 直接调 `FRAGMENT_GENERATORS[scene]` 只能证明生成器，
+ * 证明不了「宿主实际调用的入口」能把这份 intent 落地。
+ *
+ * `rejectedKind` 区分「谁拒绝了」：`model-guard`（模型入参）/ `intent-schema`（语料→
+ * shape，确定性代码）/ `tool-error`（生成期 isError）/ `threw`（handler 抛错）。
+ * 编译门只拿 `landing === 'fragment'` 的行当分母（有产物才算发射），其余三种要红。
+ */
+export async function driveSceneFragment(fd, scene, intent) {
+  const out = {
+    route: scene,
+    intent: null,
+    landing: null,
+    witness: [],
+    rejected: null,
+    rejectedKind: null,
+    compileFailures: [],
+  }
+  try {
+    const parsed = fd.sceneShape.safeParse({ scene, intent })
+    if (!parsed.success) {
+      out.intent = 'rejected'
+      out.landing = 'rejected'
+      out.rejectedKind = 'intent-schema'
+      out.rejected = `intent: ${parsed.error.issues
+        .slice(0, 2)
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; ')}`
+      return out
+    }
+    out.intent = 'ok'
+    const r = await fd.sceneCap.handler(parsed.data)
+    const text = r.content?.[0]?.text ?? ''
+    if (r.isError) {
+      out.landing = 'rejected'
+      out.rejectedKind = isModelSideSceneRejection(text) ? 'model-guard' : 'tool-error'
+      out.rejected = text.split('\n')[0]
+      return out
+    }
+    out.landing = 'fragment'
+    out.witness = compileBlocks(text, `scene:${scene}`)
+    out.compileFailures.push(...out.witness)
+  } catch (err) {
+    out.landing = 'rejected'
+    out.rejectedKind = 'threw'
     out.rejected = `threw: ${String(err?.message ?? err).split('\n')[0]}`
   }
   return out
@@ -99,11 +210,22 @@ export function summarizeFrontDoor(rows) {
   )
   const routed = fdRows.filter((r) => r.frontDoor.branch === 'table' || r.frontDoor.branch === 'fragment')
   const noTableOk = fdRows.filter((r) => r.frontDoor.noTable === 'ok')
+  // P3 四段的可观测计数：route（请求的场景）→ intent（投影是否过路由器形状）→
+  // landing（路由器接受了哪条分支）→ witness（产物编译失败数，见 compileFailures）。
+  const landing = { table: 0, fragment: 0, empty: 0, rejected: 0, none: 0 }
+  for (const r of fdRows) {
+    const key = r.frontDoor.landing
+    if (key in landing) landing[key]++
+    else landing.none++
+  }
   return {
     rows: fdRows.length,
     routed: routed.length,
     rejected: fdRows.filter((r) => r.frontDoor.rejected).length,
+    intentRejected: fdRows.filter((r) => r.frontDoor.intent === 'rejected').length,
+    landing,
     compileFailures,
+    witnessFailures: compileFailures.length,
     noTableExercised: noTableOk.length,
     ok: compileFailures.length === 0 && noTableOk.length > 0 && routed.length > 0,
   }

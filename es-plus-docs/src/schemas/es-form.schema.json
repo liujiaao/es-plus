@@ -108,6 +108,17 @@
               "items": {
                 "$ref": "#/items/properties/dataOptions/items"
               }
+            },
+            "tagType": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "success",
+                "warning",
+                "danger",
+                "info"
+              ],
+              "description": "Tag color for the cell when the generator copies these field options onto a derived table column (form controls ignore it)"
             }
           }
         }

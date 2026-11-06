@@ -90,8 +90,10 @@ const CORE_CONTRACTS = [
  * 为什么单独列：`formLayout` 的形状住在三端 `CrudPageSchema` 的**匿名内联对象类型**里
  * （`formLayout?: { labelWidth?: string | number; minFoldRows?: number }`），core 只有
  * 另一套嵌套写法 `LayoutFormProps.formLayProps`，两者都不是具名 interface，`interfaceBody`
- * 切不到。运行时真读它：vue3 `es-crud-page.vue:274-284` 把 `formLayout.labelWidth` 映到
- * `formLayProps.labelBtnWidth`、`minFoldRows` 原样下传 —— 结论是「有消费通道」，不是幽灵键。
+ * 切不到。运行时真读它：三端 `es-crud-page.vue` 把 `formLayout.labelWidth` 原样映射到
+ * `formLayProps.labelWidth`（查询字段的 label 宽度）、`minFoldRows` 原样下传 ——
+ * 结论是「有消费通道」，不是幽灵键。`formLayProps.labelBtnWidth` 是**按钮行**专用键，
+ * 不是这个配置的落点。
  * 用 `files` 列出三端（任一端缺失即报错，防止某端单方面删掉该类型而无人知晓）。
  */
 const CORE_INLINE_CONTRACTS = [
@@ -823,16 +825,17 @@ async function main() {
     }
     const formLayoutPropsBody = constBlock(sfcRes.code, 'formLayoutProps').body || ''
     if (
-      !formLayoutPropsBody.includes('labelBtnWidth') ||
+      !formLayoutPropsBody.includes('labelWidth') ||
+      formLayoutPropsBody.includes('labelBtnWidth') ||
       !formLayoutPropsBody.includes('100px') ||
       !formLayoutPropsBody.includes('minFoldRows')
     ) {
       fail(
         `SFC 的 formLayoutProps 未携带配置的 labelWidth/minFoldRows：${formLayoutPropsBody || '(未找到)'}\n` +
-          '   schema 模式的 formLayout.labelWidth 对应 SFC 的 formLayProps.labelBtnWidth（es-form 的按钮区 label 宽度）。'
+          '   两种模式的 formLayout.labelWidth 都是「查询字段的 label 宽度」；映射成 labelBtnWidth 只改变按钮行，字段本身没变。'
       )
     } else {
-      ok('轴①d 顶层 formLayout 值级等价：schema 保留原键、SFC 映射为 labelBtnWidth/minFoldRows 并绑定')
+      ok('轴①d 顶层 formLayout 值级等价：schema / SFC 使用同一 labelWidth 键并绑定')
     }
 
     // ── 轴②：发射未消费 ───────────────────────────────────────────

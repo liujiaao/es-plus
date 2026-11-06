@@ -3,6 +3,7 @@
   "nlEn": "Customer management: query by customer name; the table shows customer name, customer type, company size and tax number; supports add, edit and delete. In the form, the \"tax number\" is hidden when the customer type is individual, or the company size is fewer than 50 people.",
   "fixedFields": ["customerName", "customerType", "companySize", "taxNo"],
   "pinnedDims": ["propSet", "actions", "isHidden:taxNo", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "isHidden:taxNo", "inQuery:customerName", "inTable:companySize", "inTable:customerName", "inTable:customerType", "inTable:taxNo"],
   "config": {
     "name": "CustomerManage",
     "apiUrl": "/api/customers",

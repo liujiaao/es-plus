@@ -3,6 +3,7 @@
   "nlEn": "Todo tasks: the query bar has task name; when there is no data show the text 「暂无待办，休息一下」; lists task name, owner and due time. Supports add.",
   "fixedFields": ["taskName", "owner", "dueTime"],
   "pinnedDims": ["propSet", "membership", "actions"],
+  "nlStatedDims": ["propSet", "membership", "actions", "inQuery:taskName"],
   "config": {
     "name": "TodoTaskManage",
     "apiUrl": "/api/todos",

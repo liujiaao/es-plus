@@ -3,6 +3,7 @@
   "nlEn": "Schedule planning: the table supports inline editing — click a cell to change it. Shows task name and due date, where the date uses a date picker. Supports add and edit.",
   "fixedFields": ["taskName", "dueDate"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "nlStatedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "formtype:dueDate"],
   "config": {
     "name": "ScheduleEditManage",
     "apiUrl": "/api/schedule",

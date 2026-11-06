@@ -13,6 +13,7 @@
     "reactions:subCategory",
     "mode"
   ],
+  "nlStatedDims": ["propSet", "mode", "actions", "reactions:subCategory", "dataOptions:category", "inQuery:title", "inTable:category", "inTable:subCategory", "inTable:submitter", "inTable:title"],
   "config": {
     "name": "TicketManage",
     "apiUrl": "/api/tickets",

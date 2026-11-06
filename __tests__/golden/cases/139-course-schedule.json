@@ -3,6 +3,7 @@
   "nlEn": "Course scheduling (vue2 / Element UI): query by course name and teacher (the teacher dropdown data comes from the /api/teachers endpoint); the table shows course name, teacher, classroom, signup count, and status; add and edit use different dialogs — on add fill in course name, teacher, and classroom, and on edit you can additionally change the status; supports add, edit, and delete; the \"signup count\" column is visible only with permission, code course:signup:view; the UI requires i18n.",
   "fixedFields": ["courseName", "teacherId", "room", "signupCount", "status"],
   "pinnedDims": ["propSet", "actions", "target", "i18n", "apiParams:teacherId", "dialogs", "extPoints:signupCount"],
+  "nlStatedDims": ["propSet", "target", "actions", "i18n", "apiParams:teacherId", "dialogs", "extPoints:signupCount", "formtype:teacherId", "inQuery:courseName", "inQuery:teacherId", "inTable:courseName", "inTable:room", "inTable:signupCount", "inTable:status", "inTable:teacherId"],
   "config": {
     "name": "CourseSchedule",
     "apiUrl": "/api/courses",

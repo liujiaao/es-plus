@@ -49,9 +49,27 @@ export interface FieldHiddenExprNode {
 
 export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
 
+/**
+ * One static option for dataOptions (Select / Radio / Checkbox / Cascader).
+ * MUST stay key-aligned with core's FormDataOption / the front-door
+ * DataOptionSchema — guard: scripts/check-option-shape.mjs.
+ *
+ * tagType is a TABLE-cell decoration, but the generator copies a field's
+ * dataOptions verbatim onto derived columns, so it is legal (and meaningful)
+ * on a field; form controls ignore it.
+ */
+export interface FormDataOption {
+  label: string
+  value: unknown
+  disabled?: boolean
+  /** Cascader child options (recursive). */
+  children?: FormDataOption[]
+  tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+}
+
 export interface FieldReactionFulfill {
   /** Literal option array for this field when the rule is active. NOT an expression. */
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   /** Expression node evaluating to a boolean: make this field required. */
   required?: FieldHiddenExprNode
   /** Expression node evaluating to a boolean: disable this field. */
@@ -79,7 +97,7 @@ export interface FormItemOption {
   span?: number
   attrs?: Record<string, unknown>
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown }>
+  dataOptions?: FormDataOption[]
   apiParams?: ApiParams
   isInitRun?: boolean
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>

@@ -5,7 +5,7 @@
  * （`ESPLUS_MCP_PROFILE=front-door` 下 `generate_crud_from_config` /
  * `generate_crud_page` / `generate_crud_schema` 根本不注册，任何「去调它」的引导
  * 都会让宿主拿到 tool not found）。若 prompts/resources 从 `tools/index.ts` 引，
- * 就会为了一个字符串常量把 15 个工具的注册模块连同其依赖全部拉进资源层；独立成
+ * 就会为了一个字符串常量把全部工具的注册模块连同其依赖全部拉进资源层；独立成
  * 模块后两边只共享一个纯函数，依赖方向也保持单向。
  *
  * `tools/index.ts` 继续 re-export 这两个符号，既有 import 路径不变。

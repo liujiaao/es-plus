@@ -387,6 +387,11 @@ for t in "${TAGS[@]}"; do git push origin --delete "$t"; done
 
 ### 尚未处理（需决策 / 超出本轮范围）
 
+> **2026-11-05 已拍板**：契约单一真源、`render`/`formatter` 注入面、tri-render 证据、
+> A4 verify-compile、antdv ColorPicker 五项均已定案，见
+> [structural-debt-decisions-2026-11-05.md](./structural-debt-decisions-2026-11-05.md)。
+> 以下原文保留为历史记录。
+
 - **真正的单一真源**：`core/constants.ts` ↔ `shared/contract.ts` 仍是手写双份 + 门禁。彻底解决需要一个独立的无依赖契约包（如 `@es-plus/contract`），属结构性改造。
 - **发布链路已打通并完成一次真实发版**（见下「实跑记录」）：Trusted Publishing 配置完成，7 个包已带 provenance 发布，release tag 已推送。
 - **coverage 无阈值门禁**：脚本已可用，但"覆盖率不得低于 X%"是策略决定，未擅自设阈值。

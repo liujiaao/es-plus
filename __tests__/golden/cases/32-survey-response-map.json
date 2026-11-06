@@ -3,6 +3,7 @@
   "nlEn": "Survey management: query by survey title and status (draft/published/archived); the table shows survey title, status, response count, and created time; supports add, edit, and delete. The backend paged endpoint returns { items, total, size, page }.",
   "fixedFields": ["title", "status", "responses", "createdAt"],
   "pinnedDims": ["propSet", "actions", "configTableOut"],
+  "nlStatedDims": ["propSet", "actions", "configTableOut", "dataOptions:status", "formtype:status", "inQuery:status", "inQuery:title", "inTable:createdAt", "inTable:responses", "inTable:status", "inTable:title"],
   "config": {
     "name": "SurveyManage",
     "apiUrl": "/api/surveys",

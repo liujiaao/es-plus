@@ -3,6 +3,7 @@
   "nlEn": "Payroll management: query by employee name and payroll month; the table shows employee name, payroll month, gross total, and net total; supports add and edit; only users with permission code payroll:netpay:view can view the \"Net Total\" column.",
   "fixedFields": ["netPay"],
   "pinnedDims": ["extPoints:netPay"],
+  "nlStatedDims": ["propSet", "extPoints:netPay", "inQuery:employeeName", "inQuery:payrollMonth", "inTable:employeeName", "inTable:grossPay", "inTable:netPay", "inTable:payrollMonth"],
   "config": {
     "name": "PayrollManage",
     "apiUrl": "/api/payrolls",

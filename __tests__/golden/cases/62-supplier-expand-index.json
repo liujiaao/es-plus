@@ -3,6 +3,7 @@
   "nlEn": "Supplier management: query by supplier name; the table shows supplier name and grade (A/B/C); each row can expand to reveal the contact and address; supports add, edit, and delete.",
   "fixedFields": ["name", "level", "contact", "address"],
   "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "expandConfig", "dataOptions:level", "formtype:level", "inTable:level", "inTable:name"],
   "config": {
     "name": "SupplierManage",
     "apiUrl": "/api/suppliers",

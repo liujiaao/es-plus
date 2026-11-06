@@ -3,6 +3,7 @@
   "nlEn": "Insurance claim management: query by policy number and claim type (auto / medical / property); the table shows policy number, claim type, incident date, and loss assessor; supports add, edit, and delete. In the form, \"loss assessor\" only needs to be assigned when the claim type is \"auto\"; it is hidden for the other types.",
   "fixedFields": ["policyNo", "claimType", "incidentDate", "assessor"],
   "pinnedDims": ["propSet", "actions", "mode", "isHidden:assessor"],
+  "nlStatedDims": ["propSet", "mode", "actions", "isHidden:assessor", "dataOptions:claimType", "formtype:claimType", "inQuery:claimType", "inQuery:policyNo", "inTable:assessor", "inTable:claimType", "inTable:incidentDate", "inTable:policyNo"],
   "config": {
     "name": "InsuranceClaimManage",
     "apiUrl": "/api/insurance-claims",

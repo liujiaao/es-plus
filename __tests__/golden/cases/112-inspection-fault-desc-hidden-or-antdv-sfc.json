@@ -3,6 +3,7 @@
   "nlEn": "Device-inspection management with an Ant Design look: query by device name; the table shows device name, device code, inspection result, site photo and fault description; supports add, edit and delete. In the form, the \"fault description\" is hidden when the inspection result is normal, or a site photo has already been uploaded.",
   "fixedFields": ["deviceName", "deviceCode", "checkResult", "photoUrl", "faultDesc"],
   "pinnedDims": ["propSet", "actions", "isHidden:faultDesc", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "isHidden:faultDesc", "formtype:photoUrl", "inQuery:deviceName", "inTable:checkResult", "inTable:deviceCode", "inTable:deviceName", "inTable:faultDesc", "inTable:photoUrl"],
   "config": {
     "name": "DeviceInspectionManage",
     "apiUrl": "/api/device-inspections",

@@ -14,6 +14,7 @@
     "isHidden:plateNo",
     "target"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "reactions:plateNo", "isHidden:plateNo", "inQuery:policyholder", "inTable:coverage", "inTable:insuranceType", "inTable:plateNo", "inTable:policyholder"],
   "config": {
     "name": "AutoInsuranceManage",
     "apiUrl": "/api/auto-insurances",

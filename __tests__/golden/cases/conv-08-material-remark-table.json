@@ -10,6 +10,7 @@
     "actions",
     "inTable:remark"
   ],
+  "nlStatedDims": ["propSet", "actions", "inTable:remark", "dataOptions:status", "formtype:status", "inTable:name", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateFromConfig, formatPreflight, validateAndRepair, normalizeTableBtn, repairConfig, type ValidationResult, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+import { generateFromConfig, formatPreflight, validateAndRepair, normalizeTableBtn, repairConfig, buildSemanticWarnings, formatValidationError, VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from "@es-plus/shared";
+
+// 这两个纯反馈函数已下沉到 shared（`config-feedback.ts`）：场景路由器
+// `generate_scene` 与 `generate_crud` 必须对同一份 config 输出逐字节相同的文案。
+// 这里 re-export 保持既有导入路径（测试/`generate-crud.ts`）不变。
+export { buildSemanticWarnings, formatValidationError };
 
 const FieldRuleSchema = z.object({
   required: z.boolean().optional(),
@@ -241,6 +246,9 @@ const FieldConfigSchema = z.object({
       labelField: z.string().optional(),
       valueField: z.string().optional(),
     })
+    // 嵌套对象必须 passthrough（`_arg-guard.ts` 的前提）：否则 `labelFeild` 在 SDK
+    // 解析阶段就被剥掉，handler 与闸门都看不到这个拼写错误。
+    .passthrough()
     .optional()
     .describe("Remote options source for Select/Cascader — use instead of dataOptions when options come from an API."),
   width: z.union([z.number(), z.string()]).optional(),
@@ -286,7 +294,7 @@ const FieldConfigSchema = z.object({
  * Deliberately does NOT accept `render`/`formatter` source strings: those are
  * field-level extension points; this is the structured column path.
  */
-const ColumnSchema: z.ZodType<any> = z.lazy(() =>
+export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
   z.object({
     prop: z
       .string()
@@ -357,6 +365,11 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
         "Row-expand content declared ON the `type:'expand'` column (AI-09 子项②). Same shape/semantics as the top-level `expandConfig`; use it when the expander is not the leading column or when `columns` is the source of truth. If BOTH are set, the top-level one wins on the expand column. Distinct from `tableOptions.expandConfig` (the vxe `{accordion}` switch)."
       ),
   })
+    // 列契约的两条描述（`x-*` 保留、未知名丢弃并告警）只有在键能活到生成器时才成立：
+    // 裸 `z.object` 会在 SDK 解析阶段把 `x-note` 和拼错的 `widht` 一起剥掉，
+    // 生成器的 `strippedColumnKeys` 扫描永远看不到它们。passthrough 后由
+    // `_arg-guard` 对非 `x-` 键给 did-you-mean，`x-*` 原样进入产物。
+    .passthrough()
 );
 
 /**
@@ -745,89 +758,10 @@ const configShape = {
     ),
 } as const;
 
-/**
- * Cheap post-parse semantic invariants. These never block generation (the
- * config is already schema-valid); they surface as non-blocking warnings so
- * the host LLM can self-correct on the next turn if the mapping looks off.
- */
-export function buildSemanticWarnings(config: any): string[] {
-  const warnings: string[] = [];
-  const fields: any[] = Array.isArray(config.fields) ? config.fields : [];
-  const topProps = new Set(fields.map((f) => f.prop));
-
-  // Add/edit requested but no field is form-visible → the form would be empty.
-  const mutating = (config.actions ?? []).some((a: string) => a === "add" || a === "edit");
-  if (mutating && fields.length > 0 && fields.every((f) => f.inForm === false)) {
-    warnings.push(
-      "actions include add/edit but every field has inForm:false — the add/edit form will be empty. Set inForm:true on the fields users should fill."
-    );
-  }
-
-  // dialogs.formItems referencing props absent from the top-level field set.
-  const dialogs = config.dialogs ?? {};
-  for (const [dialogId, dlg] of Object.entries<any>(dialogs)) {
-    // An add/edit dialog with no form items renders an empty modal body — the
-    // generator silently emits a dialog with nothing to fill (see the
-    // `if (dlg.formItems)` guard in structured-generator). Surface it so the
-    // host LLM either supplies formItems or drops the dialog. Skip when
-    // hasCustomRender:true — the modal body is a bespoke render, not an empty
-    // form, so "no formItems" is expected and the warning would be noise.
-    const isMutatingDialog = dialogId === "add" || dialogId === "edit";
-    const formItems = Array.isArray(dlg?.formItems) ? dlg.formItems : [];
-    if (isMutatingDialog && formItems.length === 0 && !dlg?.hasCustomRender) {
-      warnings.push(
-        `dialog "${dialogId}" is an add/edit dialog but has no formItems — the modal body will be empty. Add formItems (usually the mutable subset of fields) so users have inputs to fill.`
-      );
-    }
-    for (const fi of formItems) {
-      if (fi?.prop && !topProps.has(fi.prop)) {
-        warnings.push(
-          `dialog "${dialogId}" form item "${fi.prop}" is not in the top-level fields — confirm this is intentional (it won't map to a table column).`
-        );
-      }
-    }
-  }
-
-  // Select/Cascader with neither static nor remote options.
-  for (const f of fields) {
-    const needsOptions = f.formtype === "Select" || f.formtype === "Cascader";
-    const hasOptions =
-      (Array.isArray(f.dataOptions) && f.dataOptions.length > 0) || !!f.apiParams;
-    if (needsOptions && !hasOptions) {
-      warnings.push(
-        `field "${f.prop}" is a ${f.formtype} but has no dataOptions or apiParams — it will render an empty dropdown. Provide dataOptions (fixed enum) or apiParams (remote source).`
-      );
-    }
-  }
-
-  return warnings;
-}
-
-/**
- * 把一次校验失败渲染成前门的结构化错误正文（C2·A3）。
- *
- * 与 `validate_config` 工具的错误块同形（`  - {error}` + `Suggestions:` + `  → {s}`），
- * 让宿主 LLM 两条路径看到的失败格式一致。关键点：**什么都没生成** —— 非法 config 到不了
- * 用户面前，而不是像过去那样被 `assertValidConfig` 抛成一句泛化 `Error generating code: …`。
- */
-export function formatValidationError(result: ValidationResult): string {
-  return [
-    "✗ Config failed structured-config validation — nothing was generated:\n",
-    ...result.errors.map((e) => `  - ${e}`),
-    "",
-    result.suggestions.length > 0 ? "Suggestions:" : "",
-    ...result.suggestions.map((s) => `  → ${s}`),
-    "",
-    "Fix these and call again.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
 export function registerGenerateFromConfig(server: McpServer) {
   server.tool(
     "generate_crud_from_config",
-    "ADVANCED path — hand-authored StructuredCrudConfig (typed fields, not a JSON blob). For a natural-language request, use generate_crud (the front door) instead: it asks you for `surfaces` and routes deterministically, so you do not have to fill the whole config. Use this tool when you ALREADY hold a typed config (e.g. one you persist, diff, or edited via refine_config) or need direct access to config keys the front door does not expose. It runs the same deterministic generator and schema gate as the front door, and it REPAIRS before judging: key aliases, relocated/nested keys, null placeholders, 'false'-style string booleans and dialog shorthands (dialogs:[\"add\"]) are normalized first and each repair is reported as a warning (validate_config does NOT repair — it is the read-only diagnostic). You (the AI client) do the reasoning — read the natural-language request, then FILL these typed fields directly: name (PascalCase), apiUrl (real endpoint), fields[] (prop/label/formtype + inQuery/inTable/inForm), actions[]. The field descriptions tell you how to map meaning → formtype. For requirements the schema can't express, emit a marked extension point (formatter/render string) rather than dropping them. Supports target:'vue3'|'vue2'|'antdv' (default vue3). Read esplus://conventions, esplus://examples/nl-to-config and esplus://types first; after drafting, self-review against the original request before calling.",
+    "ADVANCED path — hand-authored StructuredCrudConfig (typed fields, not a JSON blob). For a natural-language request, use generate_scene (scene='crud', the front door) instead: it asks you for `surfaces` and routes deterministically, so you do not have to fill the whole config. Use this tool when you ALREADY hold a typed config (e.g. one you persist, diff, or edited via refine_config) or need direct access to config keys the front door does not expose. It runs the same deterministic generator and schema gate as the front door, and it REPAIRS before judging: key aliases, relocated/nested keys, null placeholders, 'false'-style string booleans and dialog shorthands (dialogs:[\"add\"]) are normalized first and each repair is reported as a warning (validate_config does NOT repair — it is the read-only diagnostic). You (the AI client) do the reasoning — read the natural-language request, then FILL these typed fields directly: name (PascalCase), apiUrl (real endpoint), fields[] (prop/label/formtype + inQuery/inTable/inForm), actions[]. The field descriptions tell you how to map meaning → formtype. For requirements the schema can't express, emit a marked extension point (formatter/render string) rather than dropping them. Supports target:'vue3'|'vue2'|'antdv' (default vue3). Read esplus://conventions, esplus://examples/nl-to-config and esplus://types first; after drafting, self-review against the original request before calling.",
     configShape,
     async (config: any) => {
       try {

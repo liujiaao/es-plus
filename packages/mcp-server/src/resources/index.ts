@@ -7,6 +7,7 @@ import { registerSurfacesExamplesResource } from "./surfaces-examples.js";
 import { registerConventionsResource } from "./conventions.js";
 import { registerCrudPageSchemaResource } from "./crud-page-schema.js";
 import { registerDesignExtractionResource } from "./design-extraction.js";
+import { registerCapabilitiesResource } from "./capabilities.js";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 
 /**
@@ -29,4 +30,6 @@ export function registerResources(server: McpServer, profile: ToolProfile = reso
   registerConventionsResource(server, profile);
   registerCrudPageSchemaResource(server);
   registerDesignExtractionResource(server);
+  // P9：场景能力台账（四场景词汇 / CRUD 降级表 / target 矩阵）。
+  registerCapabilitiesResource(server);
 }

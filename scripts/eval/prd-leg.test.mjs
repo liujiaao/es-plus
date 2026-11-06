@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path'
 import {
   SURFACE_KEYS,
   PRD_MIN_CASES,
+  PRD_MEMBERSHIP_FLOOR,
   normalizeLabel,
   labelOf,
   surfaceSets,
@@ -149,6 +150,42 @@ const f = (label, prop = label) => ({ prop, label, formtype: 'Input' });
   eq(noProducts.compileRate, null, '零分母时 compileRate 为 null，不是 1（否则红盲）')
 }
 
+// ─── P12 gate：完整 ∧ 编译零失败 ∧ membership ≥ 地板 ────────────────────────
+{
+  const perfect = scorePrdSurfaces(surf([f('a')], [f('a')]), surf([f('a')], [f('a')]))
+  const wrong = scorePrdSurfaces({}, surf([f('a'), f('b')]))
+  const okRow = (i) => ({ file: `ok-${i}`, error: null, compiles: true, score: perfect })
+  const corpus = Array.from({ length: PRD_MIN_CASES }, (_, i) => okRow(i))
+
+  const pass = summarizePrd(corpus)
+  eq(pass.cases, PRD_MIN_CASES, 'gate 分母 = 语料条数')
+  eq(pass.membershipFloor, PRD_MEMBERSHIP_FLOOR, '地板原样暴露（判定真源只在 prd-leg）')
+  check(pass.gateOk, '完整 + 编译全过 + membership 1.0 必须过闸')
+  eq(pass.gateFailures, [], '过闸时不得有失败原因')
+
+  const incomplete = summarizePrd([
+    ...corpus.slice(0, PRD_MIN_CASES - 1),
+    { file: 'na', error: 'empty turn', errorKind: 'no-answer', compiles: false, score: null },
+  ])
+  check(!incomplete.gateOk && incomplete.gateFailures.some((x) => x.includes('未测到')), '有未测到的行 ⟹ 不完整，不得过闸')
+
+  // 3 条答错 × 每行 2 个决策 = 34/40 = 0.85 < 0.9 地板。
+  const belowFloor = summarizePrd([
+    ...corpus.slice(3),
+    ...Array.from({ length: 3 }, (_, i) => ({ file: `bad-${i}`, error: null, compiles: true, score: wrong })),
+  ])
+  eq(belowFloor.membershipRate, 0.85, 'membership 微平均 34/40')
+  check(!belowFloor.gateOk && belowFloor.gateFailures.some((x) => x.includes('地板')), '低于地板必须红，且原因点名地板')
+
+  // 编译失败同样红（分母 = 有产物的行）。membership 仍满分，证明是编译判据在起作用。
+  const badCompile = summarizePrd([...corpus.slice(1), { file: 'nc', error: null, compiles: false, score: perfect }])
+  check(!badCompile.gateOk && badCompile.gateFailures.some((x) => x.includes('编译失败')), '编译失败必须红')
+
+  const empty = summarizePrd([])
+  check(!empty.gateOk && empty.gateFailures.some((x) => x.includes('没有任何行')), '空语料不得真空过闸')
+  eq(empty.membershipRate, null, '空语料 membershipRate 为 null，不是 1')
+}
+
 // ─── real corpus fairness ───────────────────────────────────────────────────
 {
   const { cases, errors } = loadPrdCases(PRD_DIR)
@@ -228,14 +265,18 @@ const f = (label, prop = label) => ({ prop, label, formtype: 'Input' });
   const queryArr = { _def: { typeName: 'ZodArray', type: fieldObj } }
   const surfacesObj = { _def: { typeName: 'ZodObject', shape: { query: queryArr } } }
   const tool = {
-    name: 'generate_crud',
-    description: 'FRONT DOOR — fill surfaces.',
+    name: 'generate_scene',
+    description: 'FRONT DOOR — fill the crud intent.',
     shape: { name: zodString, surfaces: surfacesObj },
   }
   const prompt = buildPrdSystemPrompt(tool, 'CONTRACT-MARKER: read esplus://design-extraction')
   check(prompt.includes('CONTRACT-MARKER'), 'system prompt 必须注入资源正文（与发布契约同源）')
-  check(prompt.includes('Tool: generate_crud'), 'system prompt 必须包含真实工具名')
+  check(prompt.includes('Tool: generate_scene'), 'system prompt 必须包含真实工具名（前门）')
   check(prompt.includes('FRONT DOOR'), 'system prompt 必须包含真实工具描述')
+  check(
+    prompt.includes('`{"scene": "crud", "intent": <your object>}`'),
+    'system prompt 必须写明模型产出会被宿主包成 scene/intent（与落地的场景路由器一致）'
+  )
   check(prompt.includes('surfaces.query'), 'shape 自省必须展开 surfaces 键')
   check(prompt.includes('NEVER emit `inQuery`'), 'system prompt 必须重申禁止 membership 旗标')
   const messages = buildPrdInitialMessages('用户管理 PRD', {

@@ -3,6 +3,7 @@
   "nlEn": "Hotel management: query by hotel name and city; the table shows hotel name, city and star rating; each row can expand to reveal the contact phone and full address; supports add, edit and delete.",
   "fixedFields": ["hotelName", "city", "star", "phone", "address"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "expandConfig", "inTable:city", "inTable:hotelName", "inTable:star"],
   "config": {
     "name": "HotelManage",
     "apiUrl": "/api/hotels",

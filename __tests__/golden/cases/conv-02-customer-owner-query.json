@@ -11,6 +11,7 @@
     "actions",
     "inQuery:owner"
   ],
+  "nlStatedDims": ["propSet", "actions", "inQuery:owner", "dataOptions:status", "formtype:status", "inTable:date", "inTable:name", "inTable:owner", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

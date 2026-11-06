@@ -3,6 +3,7 @@
   "nlEn": "Material management: above the table, the \"Batch Export\" button is on the left and the \"Add Material\" button is on the right; the table shows material code, material name, and stock quantity; each row has edit and delete; the add and edit dialogs contain material code, material name, and stock quantity.",
   "fixedFields": ["materialCode", "materialName", "stock"],
   "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn", "dialogs"],
+  "nlStatedDims": ["propSet", "actions", "tableBtns", "operationColumn", "dialogs", "inTable:materialCode", "inTable:materialName", "inTable:stock"],
   "config": {
     "name": "MaterialManage",
     "apiUrl": "/api/materials",

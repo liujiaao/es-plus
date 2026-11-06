@@ -3,6 +3,7 @@
   "nlEn": "Invoice management: query by invoice number; the table shows invoice number, amount and issue date; each row can expand to reveal the title and tax number; supports add, edit and delete.",
   "fixedFields": ["invoiceNo", "amount", "issueDate", "title", "taxNo"],
   "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "expandConfig", "inTable:amount", "inTable:invoiceNo", "inTable:issueDate"],
   "config": {
     "name": "InvoiceManage",
     "apiUrl": "/api/invoices",

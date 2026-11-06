@@ -36,7 +36,7 @@
 import { computed, h, inject } from 'vue'
 import { ElButton } from 'element-plus'
 import { getGlobalConfig } from '../../../config'
-import { getButtonPosition, filterBtnProps } from '@es-plus/core'
+import { getButtonPosition, filterBtnProps, checkPermissionValue } from '@es-plus/core'
 import type { BtnConfig } from '../../../types'
 
 const props = defineProps<{
@@ -60,12 +60,8 @@ RenderDom.props = {
 
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
-const hasPermission = (_btnList: unknown[], pvalue?: string) => {
-  if (!pvalue) return true
-  const permFn = esPlus.permission
-  if (typeof permFn === 'function') return (permFn as (v: string) => boolean)(pvalue)
-  return true
-}
+const hasPermission = (_btnList: unknown[], pvalue?: string) =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 const processButtonConfig = (config: Array<Record<string, unknown>>) => {
   return config.map((item) => {

@@ -5,7 +5,7 @@
 **三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 > **维护基线（先读这两份）**
-> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、15 个工具的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
+> - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、工具面的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**
 > - [AI-NATIVE-REMEDIATION-PLAN.md](./AI-NATIVE-REMEDIATION-PLAN.md) —— 面向「真实编译 100% + 准确率 95%」的 `AN-01..AN-29` 可执行计划、阶段门禁与验收口径。
 
 ## 客户端兼容矩阵
@@ -269,15 +269,23 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **15 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_crud` 是**唯一前门**（自然语言请求走它 —— 你把需求填成 `surfaces`，路由由确定性代码完成）。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留前门、单面片段与确定性支撑工具（共 12 个）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 16 个）。
 
-### generate_crud（唯一前门 / FRONT DOOR）
+### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
-自然语言请求的统一入口。入参是 `surfaces` 意图表：query / table / form / dialog 各放哪些字段、要哪些弹窗。**有表格**的请求走 golden 覆盖的单一生成器（一次成码）；**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+按「用户要建什么」而不是「记得哪个工具名」来生成：`{ scene, intent }`，`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表（crud 与 `generate_crud` 同形，片段与对应单面工具同形）。路由与发射是确定性代码，产物与旧工具逐字节相同 —— 两个入口可无感切换。
+
+### generate_composition（组合页 / PAGE COMPOSER）
+
+把独立片段装配成一张页面：`{ name?, target?, behavior?, nodes: [{ id, role?, scene, intent }], wires? }` → `Page.vue` + 每个节点一个文件。`form` 至多一个，`table` / `dialog` 可以多个（master-detail / 多弹窗）。接线由 `ARTIFACT_RUNTIME` 派生：行按钮 key 命中弹窗节点 id 就开窗（标题取弹窗 `intent.defaultTitle`），否则升级为页面事件 `row-action`；查询/重置 → **默认表** `reload`（新搜索回第 1 页；默认表 = `role: 'master'`，否则唯一的表）；提交 → 页面事件 `save`；弹窗成功 → 默认表 `refresh`（内联回调，多表也分得清）。多表且无 master 时数据通道不猜，升级为页面事件，并在产物与信封 `warnings` 里点名（给出每个节点的 `<节点camel>Refresh` / `<节点camel>Reload`（如 `order-list` → `orderListRefresh`）与声明 `role:'master'` 两条出路）。`wires` 可显式声明接线（如主表 `row-action` key=view → 明细表 `reload(row)`），同一 `from` 上覆盖派生；默认整行透传，明细接口只要外键时用 `to.model` 只映射声明的行字段（`{ departmentId: '$row.departmentId' }` → `reload({ departmentId: row.departmentId })`）；目标必须是页面真的能调用的通道（`ARTIFACT_RUNTIME.invokable`：表格 `refresh`/`reload`、表单 `validate`/`resetFields`、component 弹窗 `open`/`close`；`form.model` 是数据不是方法），`open` 只接受 `row-action` 源（需要行数据），composable 弹窗没有模板 ref、只能由行按钮分派打开，`when.rowAction` 必须是该表 `rowButtons` 里声明过的 key；`behavior: 'ui-only'` 只装配 UI 接线，查询/重置/成功全部交给宿主；缺省档是 `data-wiring`（只派生表格取数/刷新，**不生成** POST/PUT/DELETE/GET —— 内建请求语义请用 `scene='crud'`）。页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`（未命中返回 `false`），多表另给每个节点一对 `<节点camel>Refresh` / `<节点camel>Reload`（节点 id 的 camelCase，如 `order-list` → `orderListRefresh` / `orderListReload`）。vue2 弹窗只能是 `mode:'component'`。
+
+### generate_crud（兼容入口 / COMPAT adapter）
+
+与 `generate_scene` 的 `scene='crud'` 调用同一条 `emitScene` 路径（产物逐字节相同），保留旧工具名。入参是 `surfaces` 意图表：query / table / form / dialog 各放哪些字段、要哪些弹窗。**有表格**的请求走 golden 覆盖的单一生成器（一次成码）；**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，原样转交合成器。
 
 ### generate_form / generate_table / generate_dialog（单面片段）
 
@@ -389,6 +397,24 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 | `previous` | string? | 上一版已 pin 配置的 JSON（首轮省略） |
 | `revised` | string | 本轮修订后的配置 JSON |
 
+### validate_intent
+
+从 PRD / 原型抽出的意图表在**生成之前**先过一遍（P13）：返回 P9 能力报告（`es-plus.capabilities@1` 的 accepted / degraded / unsupported / missing 逐键判定）以及确定性逐字段问题 —— 未知面名、同一面内重复 `prop`、`query`/`form` 缺 `formtype`、把 `inQuery`/`inTable`/`inForm` 抄进意图、自定义弹窗用字符串 key、`label` 不在提供的规格原文里、系统生成字段进了可编辑表单。结构级判据复用 `generate_scene` 的同一份 Zod 形状。**只判不改、不生成代码**：宿主按 issue 修完再调生成工具。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `scene` | enum | `crud`（默认）/ `table` / `form` / `dialog` |
+| `intent` | object | 该场景的意图表（与 `generate_scene` 的 `intent` 同形） |
+| `spec` | string? | 规格原文；提供时每个字段 `label` 必须能在其中逐字找到 |
+
+### coverage_report
+
+把一份**结构化页面清单**（每页给出 `scene` + `intent`，或多部分页面的 `parts[]`）逐页分级：**L1** 直出（所有键 accepted，零编辑）；**L2** 直出 + 扩展点（有降级键 / 一页多个片段需 `generate_composition` 接线 / 宿主声明扩展点）；**L3** 需宿主代码（unsupported 键、缺必填键、宿主声明自有代码）。判据直接来自 P9 能力台账，同一份清单重跑必得同一结果；L3 是合法结论，不设工具错误。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `pages` | array | 页面清单；每页 `{ name?, scene, intent }` 或 `{ name?, parts: [{ scene, intent }], extensionPoints?, hostCode? }` |
+
 ### list_form_types
 
 列出 es-plus 支持的全部 14 种表单控件类型及用法示例。无需参数。
@@ -458,6 +484,7 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 | `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot |
 | `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot |
 | `esplus://design-extraction` | PRD / 线框 → surfaces 的提取契约（检查清单、正反例；图片由宿主视觉转写，server 不接收图片） |
+| `esplus://capabilities` | 场景能力台账 `es-plus.capabilities@1`：四场景词汇（accepted / required）、CRUD 逐键降级表（schema/sfc）、无表分支与片段边界 |
 
 ---
 

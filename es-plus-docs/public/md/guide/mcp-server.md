@@ -257,11 +257,13 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **15 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、组合页、前门、单面片段与支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
-| `generate_crud` | **唯一前门**：自然语言 → 三端可编译的 CRUD 页面 | ✅ |
+| `generate_scene` | **前门 / 场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
+| `generate_composition` | **组合页**：把多个独立片段（table / form / dialog）装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires` | ✅ |
+| `generate_crud` | **兼容入口（adapter）**：与 `generate_scene` 的 `scene='crud'` 逐字节相同，保留旧工具名 | ✅ |
 | `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
 | `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
 | `generate_dialog` | 单面片段：独立 `useXxxDialog()` composable 或 `<es-dialog>` SFC | ✅ |
@@ -269,6 +271,8 @@ mcp-server-es-plus --help        # 用法说明
 | `validate_config` | 确定性校验配置（只判不改） | ✅ |
 | `ingest_schema` | OpenAPI / JSON Schema / 示例 JSON / TS 接口 / SQL DDL → 草拟配置 | ✅ |
 | `refine_config` | 对已 pin 的配置做一轮精修：校验 + 结构化 diff | ✅ |
+| `validate_intent` | **生成前校验**：能力报告（accepted/degraded/unsupported/missing）+ 逐字段问题（面归属、重复 prop、缺 formtype、label 不在规格里） | ✅ |
+| `coverage_report` | **覆盖分级**：按 P9 能力台账给规格清单逐页判定 L1 直出 / L2 直出+扩展点 / L3 需宿主代码 | ✅ |
 | `list_form_types` | 列出全部 `formtype` 及其渲染器 | ✅ |
 | `get_component_api` | 组件 API / 类型文档 | ✅ |
 | `scaffold_page` | 最小页面脚手架 | ✅ |
@@ -279,9 +283,29 @@ mcp-server-es-plus --help        # 用法说明
 
 > profile 是**工具面**的开关，不是能力差异：被隐藏的三个工具与 `generate_crud` 共用同一套确定性生成器，隐藏它们只是为了让宿主在前门与 legacy 路径之间没有选择歧义。提示词、resources 与工具描述会按同一份 profile 同步调整。
 
-### generate_crud（唯一前门 / FRONT DOOR）
+### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
-**功能**：自然语言请求的统一入口。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，前门原样转交合成器。
+**功能**：按「用户要建什么」而不是「记得哪个工具名」来生成。入参是 `{ scene, intent }`：`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表 —— `scene: 'crud'` 时与 `generate_crud` 的入参完全相同（`name` / `apiUrl` / `surfaces` / 可选旋钮），片段场景则与 `generate_table` / `generate_form` / `generate_dialog` 的入参相同。路由与发射由确定性代码完成，产物与对应旧工具**逐字节相同**，因此可以在两者之间无感切换。
+
+**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时。多个片段要装进**同一张页面**时用 `generate_composition`；普通列表/表格页面用 `scene: 'crud'`（`generate_crud` 是同一条路径的兼容别名）。
+
+### generate_composition（组合页 / PAGE COMPOSER）
+
+**功能**：把独立片段装配成一张页面 —— 产物是一份 `Page.vue` 加每个节点一个文件。入参 `{ name?, target?, behavior?, nodes: [{ id, role?, scene, intent }], wires? }`，每个节点只放该场景的独立工具入参。`form` 至多一个（多表单的 `submit` 语义无法确定性区分），`table` / `dialog` 可以多个（master-detail、多弹窗）。接线由 `ARTIFACT_RUNTIME` 确定性派生：
+
+- 行按钮 key 与某个弹窗节点 id 相同 → 打开该弹窗（标题取弹窗 `intent.defaultTitle`，缺省用注册表标题），否则升级为页面事件 `row-action`；
+- 查询 → **默认表** `reload(model)`（新搜索回第 1 页）；重置 → `reload()`（片段先清空字段）。默认表 = `role: 'master'` 的 table，否则页面里唯一的 table；多表且两者都没有时不猜，升级为页面事件 `query` / `reset`，并在产物与信封 `warnings` 里点名（给出每个节点的 `<节点camel>Refresh` / `<节点camel>Reload`，如 `order-list` → `orderListRefresh`，与声明 `role:'master'` 两条出路）；
+- 表单提交 → 页面事件 `save`；弹窗提交成功 → 默认表 `refresh()`（停留在当前页；无默认表时升级为 `success` 事件）。
+
+片段表单**只发它 `buttons` 渲染出的按钮能发的事件**：缺省 `buttons:'none'` 时按钮区整块隐藏（`query` / `submit` / `reset` 都不会发生），`'query'` 发 `query` + `reset`，`'submit'` 发 `submit` + `reset`。组合**不代改**节点意图（否则节点产物就与单独 `generate_form` 不一致），因此接不上这些事件的接线会在 `warnings` 里点名并给出改法 —— 否则就是「页面声明了 `save`，界面上却没有保存按钮」的死分支。
+
+`wires` 可**显式声明**接线（如 master-detail：主表 `row-action` key=view → 明细表 `reload(row)`，整行数据作为参数传入），与派生接线同源校验；同一 `from` 上显式覆盖派生。默认整行透传；明细接口只接受外键时用 `to.model` 只映射声明的行字段（`{ departmentId: '$row.departmentId' }` → `reload({ departmentId: row.departmentId })`）。接线目标必须是页面**真的调得动**的通道（`ARTIFACT_RUNTIME.invokable`：表格 `refresh` / `reload`、表单 `validate` / `resetFields`、component 弹窗 `open` / `close`；`form.model` 是响应式数据，不是方法）；`open` 需要行数据，只接受 `row-action` 源；composable 弹窗没有模板 ref，只能由行按钮分派打开；`when.rowAction` 必须是该表 `rowButtons` 里声明过的 key，否则生成的分支永远不会触发。这些在计划阶段就结构化拒绝，错误正文带节点名。页面的 `emit` 面由**最终接线**投影 —— 被显式接线接管的事件不会出现在 `emits` 里。缺省档 `data-wiring` 只派生表格取数/刷新，**不生成** POST/PUT/DELETE/GET（内建请求语义请用 `scene: 'crud'`）；`behavior: 'ui-only'` 只装配 UI 接线（行按钮 → 弹窗），查询/重置/成功全部升级为页面事件，由宿主自己发请求。
+
+页面暴露 `refresh` / `reload` / `open(id, { title?, row?, onSuccess? })`，未命中 id 返回 `false`；多表页面另给每个节点一对 `<节点camel>Refresh` / `<节点camel>Reload`（节点 id 的 camelCase，如 `order-list` → `orderListRefresh`）。vue2 页面的弹窗只能是 `mode: 'component'`。
+
+### generate_crud（兼容入口 / COMPAT adapter）
+
+**功能**：自然语言请求的兼容入口，与 `generate_scene` 的 `scene='crud'` 调用**同一条** `emitScene` 路径，产物逐字节相同，保留旧工具名以免破坏既有宿主。你只需填 `surfaces` 意图表 —— query / table / form / dialog 各放哪些字段、要哪些弹窗；之后的路由与三端编译由确定性代码完成：**有表格**的请求走 golden 覆盖的单一生成器（一次成码），**无表格**的子集（如单独查询表单、单独弹窗）产出自包含片段。显式旋钮（`tableOptions` / `formLayout` / `operationColumn` / `tableBtns` / `toolbarBtns` / `expandConfig` / `treeConfig` / `mergeConfig`）可一并传入，原样转交合成器。
 
 ### generate_form / generate_table / generate_dialog（单面片段）
 
@@ -650,7 +674,7 @@ AI：[调用 scaffold_page { name: "order-list", features: ["query", "table", "d
 
 ## MCP Resources（可读取资源）
 
-AI 工具可以主动读取以下资源来获取上下文信息（共 **8 类**）：
+AI 工具可以主动读取以下资源来获取上下文信息（共 **9 类**）：
 
 | URI | 内容说明 |
 |-----|----------|
@@ -667,6 +691,7 @@ AI 工具可以主动读取以下资源来获取上下文信息（共 **8 类**�
 | `esplus://examples/nl-to-config` | 自然语言 → `StructuredCrudConfig` 的 few-shot 对（前门入参的写法参照） |
 | `esplus://examples/surfaces` | `surfaces` 意图表的 few-shot（query/table/form/dialog 各面怎么写） |
 | `esplus://design-extraction` | 设计稿/截图转写规范（图片须由宿主先转成文字，服务端不收图） |
+| `esplus://capabilities` | 场景能力台账 `es-plus.capabilities@1`：四场景的意图词汇（accepted / required）、CRUD 的逐键降级表（schema/sfc）、无表分支与片段边界。生成**之前**判断某个意图键会不会落地 |
 
 **作用**：当 AI 工具需要精确了解某个配置项的类型定义时，会自动读取对应的 Schema 资源，确保生成的代码类型正确。
 
@@ -758,7 +783,7 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 │              @es-plus/mcp-server                    │
 │                                                    │
 │  ┌─────────────────┐  ┌──────────────┐  ┌──────────┐  │
-│  │  Tools (15)     │  │Resources (8 类)│  │Prompts(3)│  │
+│  │  Tools (17)     │  │Resources (9 类)│  │Prompts(3)│  │
 │  │ 前门 + 单面片段  │  │ JSON Schema  │  │ 系统提示 │  │
 │  │ + 确定性支撑     │  │ TS 类型定义  │  │ 最佳实践 │  │
 │  │                 │  │ 预设示例     │  │          │  │
@@ -859,4 +884,4 @@ MCP Server 生成的是标准 @es-plus/vue3 配置代码。如果需要调整风
 | 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |
 
-> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 15 / `front-door` 12）。
+> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 19 / `front-door` 16）。

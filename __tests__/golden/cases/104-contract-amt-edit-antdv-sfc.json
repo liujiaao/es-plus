@@ -3,6 +3,7 @@
   "nlEn": "Contract amount maintenance: double-click a cell to edit inline. Shows contract number and amount, where the amount input carries a required placeholder. Supports edit.",
   "fixedFields": ["contractNo", "amount"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "ContractAmtEditManage",
     "apiUrl": "/api/contract",

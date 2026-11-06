@@ -3,6 +3,7 @@
   "nlEn": "Medical record management: query by patient name; the table shows patient name, age and department; each row can expand to reveal the diagnosis, attending doctor and admission date; supports add, edit and delete.",
   "fixedFields": ["patientName", "age", "dept", "diagnosis", "doctor", "admitDate"],
   "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "expandConfig", "inTable:age", "inTable:dept", "inTable:patientName"],
   "config": {
     "name": "MedicalRecordManage",
     "apiUrl": "/api/medical-records",

@@ -3,6 +3,7 @@
   "nlEn": "Insurance policy management: query by policy no. and policyholder; the table starts with a checkbox column, then shows policy no., policyholder, premium, and effective date; supports add, edit, and delete.",
   "fixedFields": ["policyNo", "holder", "premium", "effectDate"],
   "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "columns", "inQuery:holder", "inQuery:policyNo"],
   "config": {
     "name": "PolicyManage",
     "apiUrl": "/api/policies",

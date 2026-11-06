@@ -171,19 +171,50 @@ console.log('meta-eval: dialogs 底座数据键 + configBtn (AI-27)')
   const dialogsPass = (pred) => scoreAll(dlgGold, pred).byCapability.dialogs.pass
   check(dialogsPass(clone(dlgGold)) === true, 'dialogs(AI-27): gold-vs-gold 应判正')
 
-  // 派生型弹窗（add/edit/view）**声明底座键但省略 formItems** ⟹ formItems 按 `inForm !== false`
-  // 字段派生，与整键省略同义（渲染期 es-plus 的回填规则）。此前尺子只在整键省略时派生，
-  // 于是「为设 showClose/configBtn 而声明 dialogs.add、把表单项留给派生」被当成空集 formItems
-  // 误罚（operationColumn「省略即派生、尺子当空集」同构缺陷，dialog-formitems-derive-v1）。
-  const deriveOmitFormItems = clone(dlgGold)
-  delete deriveOmitFormItems.dialogs.add.formItems // 保留 showClose/appendTo/configBtn，只省 formItems
-  check(dialogsPass(deriveOmitFormItems) === true,
-    'dialogs: 声明底座键但省略 formItems 应按 inForm 字段派生（与整键省略同义）')
-  // 显式空数组是「刻意空表单」，不派生 —— gold 有一个 inForm 字段，空表单必然 ≠ 派生出的一项。
+  // 显式模式下条目**原样**：三端 `normalizedDialogs` 都是
+  // `if (props.schema.dialogs) return props.schema.dialogs`，生成器也只在 `dlg.formItems`
+  // 真声明时拷贝 —— 「声明了 `dialogs.add` 却没写 formItems」渲染出的是**空弹窗**。
+  // 所以 gold 省略 formItems 时 gold-vs-gold 仍判正（两侧都空），但 pred 省略**不再免费通过**。
+  const goldOmitsFormItems = clone(dlgGold)
+  delete goldOmitsFormItems.dialogs.add.formItems
+  check(scoreAll(goldOmitsFormItems, clone(goldOmitsFormItems)).byCapability.dialogs.pass === true,
+    'dialogs: gold 省略 formItems 时 gold-vs-gold 应判正（两侧同为原样空表单）')
+  check(scoreAll(goldOmitsFormItems, clone(dlgGold)).byCapability.dialogs.pass === false,
+    'dialogs: gold 省略、pred 显式写全 formItems 应判负（条目原样比较，不回填）')
+  const predOmitsFormItems = clone(dlgGold)
+  delete predOmitsFormItems.dialogs.add.formItems
+  check(dialogsPass(predOmitsFormItems) === false,
+    'dialogs: pred 声明了弹窗却漏写 formItems 应判负（运行时是空弹窗）')
+
+  // **legacy 模式**（整键省略、也没有按钮面）才是真正的派生：表单项由 `inForm !== false`
+  // 字段 + `actions` 补出，与显式写全**渲染等价**，必须判正 —— 这是库默认，不是 overfit。
+  const legacyGold = {
+    fields: [
+      { prop: 'a', label: 'A', formtype: 'Input' },
+      { prop: 'b', label: 'B', formtype: 'Input', inForm: false },
+    ],
+    actions: ['add'],
+    dialogs: { add: { title: '新增', formItems: [{ prop: 'a', label: 'A', formtype: 'Input' }] } },
+  }
+  const legacyPred = clone(legacyGold)
+  delete legacyPred.dialogs
+  check(scoreAll(legacyGold, legacyPred).byCapability.dialogs.pass === true,
+    'dialogs: 整键省略走 legacy 派生（inForm 过滤 + actions），与显式 formItems 渲染等价')
+  const legacyWithHidden = clone(legacyPred)
+  legacyWithHidden.fields[1].inForm = true // 派生出两个表单项 ⟹ 与 gold 的一项不等
+  check(scoreAll(legacyGold, legacyWithHidden).byCapability.dialogs.pass === false,
+    'dialogs: legacy 派生按 inForm !== false 过滤，多带一个字段应判负')
+  // 显式模式一旦出现按钮面，就不再退回 legacy 派生：pred 只声明 operationColumn 时
+  // schema.dialogs 与 dialogFormItems 都不会发出，`add` 弹窗不存在。
+  const buttonSurfaceNoDialogs = clone(legacyPred)
+  buttonSurfaceNoDialogs.operationColumn = { btns: [{ name: '查看' }] }
+  check(scoreAll(legacyGold, buttonSurfaceNoDialogs).byCapability.dialogs.pass === false,
+    'dialogs: 声明按钮面后不再 legacy 派生，缺 dialogs.add 应判负')
+  // 显式空数组是「刻意空表单」：与 gold 的一项不等，判负。
   const explicitEmpty = clone(dlgGold)
   explicitEmpty.dialogs.add.formItems = []
   check(dialogsPass(explicitEmpty) === false,
-    'dialogs: 显式 formItems:[] 是刻意空表单，不派生（与省略区分）')
+    'dialogs: 显式 formItems:[] 是刻意空表单，与 gold 的一项不等')
 
   // 底座键：漏写 / 写反 / 值不同 都算未命中（gold 锁了就必须一模一样）
   const dropShowClose = clone(dlgGold)

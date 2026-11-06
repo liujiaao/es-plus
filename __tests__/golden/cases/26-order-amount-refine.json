@@ -3,6 +3,7 @@
   "nlEn": "Order management: the table shows order number, customer name, order amount, order date, and order status (unpaid/paid/cancelled); query by customer name and order status; supports add, edit, and delete.",
   "fixedFields": ["orderNo", "customerName", "amount", "orderDate", "status"],
   "pinnedDims": ["propSet", "formtype:amount", "actions"],
+  "nlStatedDims": ["propSet", "formtype:amount", "actions", "dataOptions:status", "formtype:status", "inQuery:customerName", "inQuery:status", "inTable:amount", "inTable:customerName", "inTable:orderDate", "inTable:orderNo", "inTable:status"],
   "refinements": [
     { "turn": 1, "correction": "订单金额要按数值输入、金额列右对齐显示。" }
   ],

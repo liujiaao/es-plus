@@ -691,19 +691,73 @@ function dialogKeyByButtonName(config) {
   return m
 }
 
-const DERIVED_DIALOG_KEYS = new Set(['add', 'edit', 'view'])
+/**
+ * 页面是否走 **legacy 弹窗派生** —— 逐字镜像 `render-plan` 的 `anyRenders`：
+ * `dialogs` 只有**非空 record** 才算声明（`dialogs: {}` 等同省略），而
+ * `toolbarBtns` / `tableBtns` / `operationColumn` 只看是否出现（`[]` / `false`
+ * 也算显式交出按钮面，此时即使没写 `dialogs` 也不会退回 legacy）。
+ */
+function usesLegacyDialogMode(cfg) {
+  const d = cfg?.dialogs
+  const hasDialogs = !!d && typeof d === 'object' && !Array.isArray(d) && Object.keys(d).length > 0
+  const hasButtonSurface =
+    cfg?.toolbarBtns !== undefined || cfg?.tableBtns !== undefined || cfg?.operationColumn !== undefined
+  return !hasDialogs && !hasButtonSurface
+}
+
+/**
+ * legacy 派生弹窗 —— 镜像三端 `normalizedDialogs`：`schema.dialogFormItems`
+ * （= `inForm !== false` 字段）+ `actions`（默认 `['add','edit','delete']`）派生
+ * add/edit/view。生成器在 legacy 模式下同样只在这两个条件同时成立时才发弹窗。
+ */
+function legacyDerivedDialogs(cfg) {
+  const formFields = (cfg?.fields ?? []).filter((f) => f && f.inForm !== false)
+  const actions = cfg?.actions?.length ? cfg.actions : ['add', 'edit', 'delete']
+  const hasDialogAction = actions.some((a) => a === 'add' || a === 'edit' || a === 'view')
+  if (!formFields.length || !hasDialogAction) return {}
+  const formItems = formFields.map((f) => ({ prop: f.prop }))
+  const out = {}
+  if (actions.includes('add')) out.add = { title: '新增', formItems }
+  if (actions.includes('edit')) out.edit = { title: '编辑', formItems }
+  if (actions.includes('view')) out.view = { title: '查看', isHiddenFooter: true, formItems }
+  return out
+}
+
+/**
+ * 配置的**有效弹窗视图** —— 忠实镜像三端 `normalizedDialogs` 与 `structured-generator`：
+ *
+ * - **显式模式**（`dialogs` 非空，或声明了按钮面）：条目**原样**。生成器只在
+ *   `dlg.formItems` 真声明时才拷贝，运行时也只把这些条目交给弹窗 ——
+ *   「声明了 `dialogs.add` 却没写 `formItems`」渲染出的是一个**空弹窗**；
+ *   `hasCustomRender` 是唯一例外（弹窗体由宿主 render 提供）。
+ * - **legacy 模式**：由 `inForm !== false` 字段 + `actions` 派生 add/edit/view。
+ *
+ * 尺子此前把「省略 formItems ⟹ 按字段派生」当成两侧同规的渲染期事实（P12 复核），
+ * 那是错的：三端 `normalizedDialogs` 都是 `if (props.schema.dialogs) return props.schema.dialogs`
+ * 原样返回，生成器也从不回填。那个建模给「声明了弹窗但没写表单」的白卷判对，并把
+ * gold 语料自身的同类错误（`12-role-form-layout`）合法化。派生只发生在 legacy 模式。
+ */
+function effectiveDialogs(cfg) {
+  if (usesLegacyDialogMode(cfg)) return legacyDerivedDialogs(cfg)
+  return cfg?.dialogs ?? {}
+}
+
+/** gold 自己的有效视图（gold 声明了 dialogs ⟹ 恒为显式模式，即原样）。 */
+function goldDialogsView(gold) {
+  return effectiveDialogs(gold)
+}
 
 /**
  * pred 的 dialogs 在 gold 命名空间下的**有效视图**：
- *   1. 按按钮名重映射 pred 自选的 dialog key（见上）；
- *   2. gold 声明了 add/edit/view 而 pred 没声明 ⟹ 视为**派生弹窗**（省略即默认值：
- *      `dialogs` 只提供「这个弹窗自己的底座/表单项」，不声明就等于用派生出来的那份）。
- *      派生弹窗的表单项 = pred 的 `inForm !== false` 字段，无底座键、无声明式底栏。
+ *   1. 按按钮名重映射 pred 自选的 dialog key（见上；legacy 模式的键本就固定为 add/edit/view）；
+ *   2. legacy 模式下 pred 的派生弹窗按同一套键名参与比较。
+ * 显式模式下**不做任何回填**：pred 没声明 `dialogs[k]` 就是没有这个弹窗
+ * （入口按钮点了打不开），不能靠字段表替它补出表单项。
  */
 function predDialogsView(gold, pred) {
   const gd = gold.dialogs ?? {}
   const gKeys = new Set(Object.keys(gd))
-  const pRaw = pred.dialogs ?? {}
+  const pRaw = effectiveDialogs(pred)
   const pKeys = new Set(Object.keys(pRaw))
   const remap = new Map()
   const gNames = dialogKeyByButtonName(gold)
@@ -715,28 +769,7 @@ function predDialogsView(gold, pred) {
     remap.set(pKey, gKey)
   }
   const out = {}
-  // 声明了弹窗但省略 formItems ⟹ 与**整键省略**同义：formItems 按 `inForm !== false` 字段派生。
-  // 渲染期 es-plus 对 add/edit/view 弹窗正是这样回填的——宿主只为设底座键（showClose /
-  // appendTo / configBtn 等）而声明 `dialogs.add`、把表单项留给派生，是合法且常见的写法。
-  // 此前尺子只在整键省略时派生，于是「声明底座 + 省略 formItems」被当成空集 formItems 误罚
-  // （与 operationColumn「省略即派生、尺子当空集」同构的建模缺陷）。只对派生型键回填，
-  // 且仅当 formItems 真的未声明（`undefined`）——显式 `formItems: []` 是「刻意空表单」，不改。
-  for (const [k, v] of Object.entries(pRaw)) {
-    const key = remap.get(k) ?? k
-    if (DERIVED_DIALOG_KEYS.has(key) && v && typeof v === 'object' && v.formItems === undefined) {
-      out[key] = {
-        ...v,
-        formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })),
-      }
-    } else {
-      out[key] = v
-    }
-  }
-  for (const k of gKeys) {
-    if (out[k] !== undefined) continue
-    if (!DERIVED_DIALOG_KEYS.has(k)) continue
-    out[k] = { formItems: (pred.fields ?? []).filter((f) => f.inForm !== false).map((f) => ({ prop: f.prop })) }
-  }
+  for (const [k, v] of Object.entries(pRaw)) out[remap.get(k) ?? k] = v
   return out
 }
 
@@ -757,7 +790,7 @@ function predDialogsView(gold, pred) {
  * 把两件事混成一件。这条边界是**故意的**，不是遗漏。
  */
 function dialogsEqual(gold, pred) {
-  const gd = gold.dialogs ?? {}
+  const gd = goldDialogsView(gold)
   const pd = predDialogsView(gold, pred)
   for (const k of Object.keys(gd)) {
     const g = gd[k] ?? {}
@@ -830,8 +863,8 @@ const canonicalView = (v) => (v === undefined || v === null ? '（未配置）' 
  * confirm 写成 cancel」这类真实 miss 从「一行无声的维度名」变成可读证据。
  */
 function dialogsView(gold, cfg) {
-  const gd = gold.dialogs ?? {}
-  // 与 dialogsEqual 同源：key 对齐 + 派生弹窗回填后的视图才是判定依据。
+  const gd = goldDialogsView(gold)
+  // 与 dialogsEqual 同源：key 对齐 + 有效弹窗视图（legacy 派生 / 显式原样）才是判定依据。
   const cd = predDialogsView(gold, cfg)
   const keys = [...new Set([...Object.keys(gd), ...Object.keys(cd)])].sort()
   if (!keys.length) return '（未配置）'

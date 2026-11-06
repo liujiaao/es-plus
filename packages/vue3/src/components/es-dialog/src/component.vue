@@ -105,6 +105,7 @@ import EsForm from '../../es-form'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { getGlobalConfig } from '../../../config'
+import { checkPermissionValue } from '@es-plus/core'
 import type { BtnConfig } from '../../../types'
 
 const props = withDefaults(
@@ -180,11 +181,8 @@ const locale = ref(zhCn)
 
 const esPlus = inject<Record<string, unknown> | null>('$EsPlus', null) as Record<string, unknown> ?? getGlobalConfig() ?? {}
 
-const checkPermission = (pvalue?: string): boolean => {
-  if (!pvalue) return true
-  const fn = esPlus.permission
-  return typeof fn === 'function' ? (fn as (v: string) => boolean)(pvalue) : true
-}
+const checkPermission = (pvalue?: string): boolean =>
+  checkPermissionValue(pvalue, esPlus.permission as ((v: string) => boolean) | undefined)
 
 const injectedLocale = inject('elLocale', null)
 if (injectedLocale) {

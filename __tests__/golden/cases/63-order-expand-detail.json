@@ -3,6 +3,7 @@
   "nlEn": "Order management: query by order number; the table shows order number, amount and order time; each row can expand to reveal the receiver, phone and shipping address; supports add and delete.",
   "fixedFields": ["orderNo", "amount", "createdAt", "receiver", "phone", "address"],
   "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "expandConfig", "inTable:amount", "inTable:createdAt", "inTable:orderNo"],
   "config": {
     "name": "OrderManage",
     "apiUrl": "/api/orders",

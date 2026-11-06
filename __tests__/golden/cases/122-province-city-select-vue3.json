@@ -11,6 +11,7 @@
     "actions",
     "reactions:city"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:city", "dataOptions:province", "formtype:city", "formtype:province", "inQuery:province", "inTable:address", "inTable:city", "inTable:province"],
   "config": {
     "name": "ProvinceCityManage",
     "apiUrl": "/api/regions",

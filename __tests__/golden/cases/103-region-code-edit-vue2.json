@@ -3,6 +3,7 @@
   "nlEn": "Region code entry: click a cell to edit inline. Shows region name and code, where code defaults to CN. Supports add and edit.",
   "fixedFields": ["regionName", "code"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "nlStatedDims": ["propSet", "target", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "RegionCodeEditManage",
     "apiUrl": "/api/region-code",

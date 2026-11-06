@@ -1,0 +1,102 @@
+{
+  "scene": "table",
+  "target": "vue2",
+  "pinnedDims": [
+    "propSet",
+    "apiUrl",
+    "columns",
+    "expandConfig",
+    "mergeConfig",
+    "rowkey"
+  ],
+  "config": {
+    "fields": [
+      {
+        "prop": "dept",
+        "label": "部门",
+        "formtype": "Input"
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "phone",
+        "label": "电话",
+        "formtype": "Input"
+      },
+      {
+        "prop": "email",
+        "label": "邮箱",
+        "formtype": "Input"
+      }
+    ],
+    "apiUrl": "/api/staff",
+    "columns": [
+      {
+        "type": "index",
+        "label": "序号",
+        "width": 60
+      },
+      {
+        "label": "部门信息",
+        "groups": [
+          {
+            "prop": "dept",
+            "label": "部门"
+          },
+          {
+            "prop": "owner",
+            "label": "负责人"
+          }
+        ]
+      },
+      {
+        "label": "联系方式",
+        "groups": [
+          {
+            "prop": "phone",
+            "label": "电话"
+          },
+          {
+            "prop": "email",
+            "label": "邮箱"
+          }
+        ]
+      }
+    ],
+    "expandConfig": {
+      "title": "人员详情",
+      "fields": [
+        {
+          "prop": "email",
+          "label": "邮箱"
+        }
+      ]
+    },
+    "mergeConfig": {
+      "rowsBy": [
+        "dept"
+      ]
+    },
+    "rowkey": "code",
+    "typescript": true
+  },
+  "nl": "做一个部门人员独立表格：接口 /api/staff，行主键用 code。表头分两级：「部门信息」下面放部门、负责人，「联系方式」下面放电话、邮箱；最前面加一列序号（宽 60）。每行可以展开查看邮箱详情；相邻同部门的行合并成一个单元格。",
+  "notes": "P10：片段表格的顶层词汇组合（显式 columns 多级表头 + index 列 + 顶层 expandConfig + mergeConfig + 顶层 rowkey）。本用例证明片段入口与 CRUD 页收同一套表格词汇、且判定视图同源（columns 省略即派生、展开列位置不测量）。 target=vue2（同场景三条用例 config 逐字节相同，只差 target）。",
+  "fixedFields": [
+    "dept",
+    "owner",
+    "phone",
+    "email"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "apiUrl",
+    "columns",
+    "expandConfig",
+    "mergeConfig",
+    "rowkey"
+  ]
+}

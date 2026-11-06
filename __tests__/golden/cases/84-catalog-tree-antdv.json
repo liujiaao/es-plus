@@ -3,6 +3,7 @@
   "nlEn": "Catalog management with an Ant Design look: query by catalog name; the table shows catalog name and sort order; catalogs are hierarchical and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["catalogName", "sort"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:catalogName", "inTable:sort"],
   "config": {
     "name": "CatalogTreeManage",
     "apiUrl": "/api/catalogs",

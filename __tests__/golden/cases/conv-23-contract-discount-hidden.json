@@ -11,6 +11,7 @@
     "actions",
     "isHidden:discount"
   ],
+  "nlStatedDims": ["propSet", "actions", "isHidden:discount", "dataOptions:contractType", "formtype:contractType", "inTable:amount", "inTable:contractType", "inTable:discount", "inTable:title"],
   "refinements": [
     {
       "turn": 1,

@@ -3,6 +3,7 @@
   "nlEn": "Article category management: categories form a tree structure and support selecting a parent category (cascader, data from /api/categories/tree); the table shows category name, level, sort order, and creation time; supports add, edit, and delete.",
   "fixedFields": ["name", "level", "sortOrder", "parentId", "createdAt"],
   "pinnedDims": ["propSet", "actions", "formtype:parentId", "apiParams:parentId"],
+  "nlStatedDims": ["propSet", "actions", "formtype:parentId", "apiParams:parentId", "inTable:createdAt", "inTable:level", "inTable:name", "inTable:sortOrder"],
   "config": {
     "name": "CategoryManage",
     "apiUrl": "/api/categories",

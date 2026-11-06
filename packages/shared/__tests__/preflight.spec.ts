@@ -1,9 +1,9 @@
 // AN-15:前置清单与宿主入口 doctor。
 //
 // 这里钉的是「按配置推导 required」而非文案：permission 只有真的声明了门才 required
-// （否则运行时默认放行正是想要的语义）、i18n 只认 labelKey、JSX 只认 sfc+dialog。
-// doctor 侧则钉住**失败方向**：注释里的字样不能算配置（入口样板注释就写着
-// permission / t / httpRequest，不剥注释会假绿），标识符参数只能 unverified。
+// （没声明门就没有门可拒）、i18n 只认 labelKey、JSX 只认 sfc+dialog。doctor 侧则钉住
+// **失败方向**：注释里的字样不能算配置（入口样板注释就写着 permission / t / httpRequest，
+// 不剥注释会假绿），标识符参数只能 unverified。
 import { describe, it, expect } from 'vitest'
 import {
   buildPreflight,
@@ -49,11 +49,11 @@ describe('buildPreflight — required 由本配置推导', () => {
     expect(byId(r, 'jsx').required).toBe(false)
   })
 
-  it('permission becomes required for a field permissionValue — and says the runtime fails OPEN', () => {
+  it('permission becomes required for a field permissionValue — and says the runtime fails CLOSED', () => {
     const r = buildPreflight({ ...base, fields: [{ prop: 'x', permissionValue: 'user:add' }] })
     const p = byId(r, 'permission')
     expect(p.required).toBe(true)
-    expect(p.reason).toContain('FAILS OPEN')
+    expect(p.reason).toContain('FAILS CLOSED')
     expect(p.reason).toContain('1 permission gate')
   })
 
@@ -64,7 +64,7 @@ describe('buildPreflight — required 由本配置推导', () => {
 
   // 回归：权限码不只挂在字段/工具栏按钮上。列内按钮、分组子列、弹窗底部按钮都是载体，
   // 漏收 ⇒ preflight 宣称「本配置没有权限门」，而产物里明明有 permissionValue
-  // （缺 permission() 时失败方向是**放行**）。
+  // （缺 permission() 时失败方向是**拒绝**）。
   it('permission counts columns[].btns / nested groups / dialogs[k].configBtn', () => {
     expect(
       byId(
@@ -318,7 +318,8 @@ describe('doctorPage — 静态扫描的诚实边界', () => {
 
 describe('checkPreflightShape — 形状不可读时不得给出「全 ok」', () => {
   // 失败方向：形状错的载体被 `carriersOf` 静默跳过 ⟹ preflight 说「不需要 permission」，
-  // 而 permission 缺失时运行时是**放行**。所以这些形状必须被点名，而不是被忽略。
+  // 而 permission 缺失时运行时对已声明的门是**拒绝**（fail-closed）。所以这些形状必须被
+  // 点名，而不是被忽略。
   it('合法输入（完整配置 / 部分配置 / dialogs.add=null）→ 无 issue', () => {
     expect(
       checkPreflightShape({

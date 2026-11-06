@@ -357,7 +357,8 @@ export default defineComponent({
         label: (opCol as OperationColumnConfig).label || '操作',
         width:
           (opCol as OperationColumnConfig).width || actionBtns.length * 80 + 20,
-        fixed: ((opCol as OperationColumnConfig).fixed as string) || 'right',
+        // `??` 而不是 `||`：`fixed:false` 是合法的「不固定」，用 `||` 会被改回 'right'。
+        fixed: (opCol as OperationColumnConfig).fixed ?? 'right',
         btns: actionBtns,
       } as unknown as TableColumn)
 
@@ -407,7 +408,8 @@ export default defineComponent({
       return {
         rowLayProps: { gutter: 16 },
         formLayProps: {
-          labelBtnWidth: layout.labelWidth,
+          // 与 vue3 同口径：顶层 labelWidth 是查询表单的 label 宽度，不是按钮行宽度。
+          labelWidth: layout.labelWidth,
           ...(layout.minFoldRows ? { minFoldRows: layout.minFoldRows } : {}),
         },
       } as Record<string, unknown>

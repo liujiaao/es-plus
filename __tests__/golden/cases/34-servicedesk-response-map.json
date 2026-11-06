@@ -3,6 +3,7 @@
   "nlEn": "Ant Design Vue service-desk tickets: query by ticket no and status (pending/in-progress/done); the table shows ticket no, title, status, and created time; supports add, edit, and delete. The backend returns { result: [...], count: N }.",
   "fixedFields": ["ticketNo", "title", "status", "createdAt"],
   "pinnedDims": ["propSet", "actions", "target", "configTableOut"],
+  "nlStatedDims": ["propSet", "target", "actions", "configTableOut", "dataOptions:status", "formtype:status", "inQuery:status", "inQuery:ticketNo", "inTable:createdAt", "inTable:status", "inTable:ticketNo", "inTable:title"],
   "config": {
     "name": "ServiceDesk",
     "apiUrl": "/api/service-tickets",

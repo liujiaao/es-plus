@@ -14,6 +14,7 @@
     "target",
     "mode"
   ],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "reactions:shipAddress", "inQuery:orderNo", "inTable:contact", "inTable:deliveryMode", "inTable:orderNo", "inTable:shipAddress"],
   "config": {
     "name": "OrderDeliveryManage",
     "apiUrl": "/api/order-deliveries",

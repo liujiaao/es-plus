@@ -152,6 +152,24 @@ PR 标题用 commit message 同样的格式。模板会自动填充——按里�
 - 包体积（vue2/vue3/adapter-antdv dist 增长 > 10% 需要解释）
 - 跨包依赖一致性（peer dep 范围、版本范围）
 
+## 新增守卫（`scripts/check-*.mjs`）的验收清单
+
+守卫的价值全在「会红」；恒真的守卫比没有守卫更糟。提交新守卫前逐条过：
+
+1. **证据必须来自非默认值。** 以键名、默认文案、注释当证据几乎必然恒真（`render-plan` 曾用
+   键名 token，改成取值后才真正抓到差异）。用探针注入一个非默认值，确认守卫会红。
+2. **必须真跑一次变异验证。** 用 `cp` 备份后改坏目标 → 守卫红 → 改回 → 守卫绿，两步结果都贴进
+   PR 描述。（别用 `git checkout --`，会冲掉工作区里未提交的改动。）
+3. **红的时候先判「判据过期」还是「实现回归」。** 守卫常用源码文本作锚点：改变量名、把字面量
+   收敛成单一真源、运行时语义调整，都会让判据过期（`check-scene-registry` / `check-dialog-scorers`
+   / `check-threeway` 都发生过）。判据过期就改判据并注释旧口径，不要为了让守卫变绿把实现改回去。
+4. **登记两处。** 新守卫必须同时进 `package.json` 的 `check:consistency:legacy` 链与
+   `scripts/lib/guard-groups.mjs` 的分组；`scripts/check-consistency.mjs` 会校验两边的集合与顺序一致。
+5. **名单型断言要 import 运行器的 loader。** 语料/用例增长不触发红，说明执行器根本没跑它——
+   重扫目录证明不了执行器会跑。
+6. **读的是 `packages/shared/build`。** 改 `shared/src` 后先 `npm run build:libs`，否则守的是旧构建；
+   管道后面接 `| tail` 会吞掉退出码，用 `${PIPESTATUS[0]}` 取真实结果。
+
 ## 版本管理
 
 ES-Plus 用 **changesets** 管理版本与发布，单一真源见 [RELEASE.md](./RELEASE.md)。要点：

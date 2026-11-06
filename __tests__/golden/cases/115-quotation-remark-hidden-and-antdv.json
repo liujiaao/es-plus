@@ -3,6 +3,7 @@
   "nlEn": "Quotation management with an Ant Design look: query by product name; the table shows product name, category, quantity and remark; supports add, edit and delete. In the form, the \"remark\" is hidden when the category is neither \"other\" nor \"custom\" AND the quantity is greater than 0 (standard products follow a fixed spec and need no remark).",
   "fixedFields": ["productName", "category", "qty", "remark"],
   "pinnedDims": ["propSet", "actions", "isHidden:remark", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:remark", "inQuery:productName", "inTable:category", "inTable:productName", "inTable:qty", "inTable:remark"],
   "config": {
     "name": "QuotationManage",
     "apiUrl": "/api/quotations",

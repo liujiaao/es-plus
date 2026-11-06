@@ -3,6 +3,7 @@
   "nlEn": "Vendor management: query by vendor name and contact; the table starts with a checkbox column and a row-number column, then shows vendor name, contact, and status; supports add, edit, and delete.",
   "fixedFields": ["name", "contact", "status"],
   "pinnedDims": ["propSet", "actions", "columns"],
+  "nlStatedDims": ["propSet", "actions", "columns", "inQuery:contact", "inQuery:name"],
   "config": {
     "name": "VendorManage",
     "apiUrl": "/api/vendors",

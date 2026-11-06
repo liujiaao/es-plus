@@ -3,6 +3,7 @@
   "nlEn": "Inventory count entry: click a cell to edit inline. Shows item name and counted quantity. Supports add and edit.",
   "fixedFields": ["itemName", "count"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "InventoryCountEditManage",
     "apiUrl": "/api/inventory-count",

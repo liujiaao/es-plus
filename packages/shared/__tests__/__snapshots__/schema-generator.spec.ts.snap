@@ -2115,6 +2115,9 @@ function handleBtnClick(key, data) {
     // TODO: 调用编辑接口
     crudRef.value?.refresh()
   }
+  if (key === 'export') {
+    ElMessage.warning('导出尚未实现：请在 handleBtnClick 中接入导出接口')
+  }
 }
 </script>"
 `;

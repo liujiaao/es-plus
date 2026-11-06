@@ -3,6 +3,7 @@
   "nlEn": "Industry management: query by industry name; the table shows industry name and level; industries are hierarchical with children under the nodes field; supports add, edit and delete.",
   "fixedFields": ["industryName", "level"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:industryName", "inTable:level"],
   "config": {
     "name": "IndustryTreeManage",
     "apiUrl": "/api/industries",

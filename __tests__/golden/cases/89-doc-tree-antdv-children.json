@@ -3,6 +3,7 @@
   "nlEn": "Document management with an Ant Design look: query by document title; the table shows document title and update time; documents are hierarchical with children under the default children field; supports add, edit and delete.",
   "fixedFields": ["docTitle", "updatedAt"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:docTitle", "inTable:updatedAt"],
   "config": {
     "name": "DocTreeManage",
     "apiUrl": "/api/docs",

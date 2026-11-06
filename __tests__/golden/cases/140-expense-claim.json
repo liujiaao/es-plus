@@ -3,6 +3,7 @@
   "nlEn": "Expense claims: query by claim no. and applicant; the table shows claim no., applicant, amount, status, and submit time; add and edit use different dialogs — on add fill in applicant and amount, and on edit you can additionally change the status; supports add, edit, and delete; the \"amount\" column is visible only with permission, code expense:amount:view; the add, edit, and delete buttons require permission codes expense:add, expense:edit, expense:remove; the query form is 2 columns.",
   "fixedFields": ["claimNo", "applicant", "amount", "status", "submitAt"],
   "pinnedDims": ["propSet", "actions", "fieldSpan", "dialogs", "permissions", "extPoints:amount"],
+  "nlStatedDims": ["propSet", "actions", "fieldSpan", "dialogs", "permissions", "extPoints:amount", "inQuery:applicant", "inQuery:claimNo", "inTable:amount", "inTable:applicant", "inTable:claimNo", "inTable:status", "inTable:submitAt"],
   "config": {
     "name": "ExpenseClaim",
     "apiUrl": "/api/expenses",

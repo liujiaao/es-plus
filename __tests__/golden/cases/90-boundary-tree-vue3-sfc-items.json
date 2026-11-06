@@ -3,6 +3,7 @@
   "nlEn": "Boundary management: query by boundary name; the table shows boundary name and type; boundaries are hierarchical with children under the items field and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["boundaryName", "type"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "treeConfig", "inTable:boundaryName", "inTable:type"],
   "config": {
     "name": "BoundaryTreeManage",
     "apiUrl": "/api/boundaries",

@@ -14,6 +14,7 @@
     "target",
     "mode"
   ],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "reactions:conclusion", "inQuery:caseNo", "inTable:caseNo", "inTable:conclusion", "inTable:handler", "inTable:status"],
   "config": {
     "name": "CaseDispositionManage",
     "apiUrl": "/api/cases",

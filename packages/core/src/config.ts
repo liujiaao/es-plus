@@ -37,7 +37,13 @@ export interface EsPlusGlobalConfig {
    * 三端 install 的 options 形状一致，以及给后续「弹窗默认值」留位置。
    */
   EsDialog?: Record<string, unknown>
-  /** 权限校验函数（按钮 permissionValue → boolean），不配置则视为全部放行 */
+  /**
+   * 权限校验函数（按钮/字段/列 permissionValue → boolean）。
+   *
+   * 未配置时的语义是 **fail-closed**（P5）：声明了 `permissionValue` 的元素被拒绝
+   * （按钮隐藏 / 字段与列不渲染），没有声明的元素不受影响。不再视为全部放行 ——
+   * 漏配不该把「配了门」变成「谁都能看见」。三端统一走 `checkPermissionValue`。
+   */
   permission?: (value: string) => boolean
   /** i18n 翻译函数（labelKey → text），不配置则降级使用 label */
   t?: (key: string) => string

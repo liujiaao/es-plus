@@ -3,6 +3,7 @@
   "nlEn": "SKU management: above the table a batch-import button on the left and a batch-export button on the right; the table shows SKU code, SKU name, spec, selling price, stock, and status; each row can be edited and deleted; the table enables virtual scrolling.",
   "fixedFields": ["skuCode", "skuName", "spec", "price", "stock", "status"],
   "pinnedDims": ["propSet", "tableBtns", "operationColumn", "virtualScroll"],
+  "nlStatedDims": ["propSet", "tableBtns", "operationColumn", "virtualScroll", "inTable:price", "inTable:skuCode", "inTable:skuName", "inTable:spec", "inTable:status", "inTable:stock"],
   "config": {
     "name": "SkuManage",
     "apiUrl": "/api/skus",

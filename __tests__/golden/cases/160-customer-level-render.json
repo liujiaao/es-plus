@@ -3,6 +3,7 @@
   "nlEn": "Customer accounts: query by account name and owner; the table shows account name, customer level, and owner, where the \"customer level\" column needs custom rendering (colored tags per level); supports add and edit.",
   "fixedFields": ["account", "level", "owner"],
   "pinnedDims": ["propSet", "actions", "extPoints:level", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:level", "inQuery:account", "inQuery:owner", "inTable:account", "inTable:level", "inTable:owner"],
   "config": {
     "name": "CrmAccounts",
     "apiUrl": "/api/accounts",

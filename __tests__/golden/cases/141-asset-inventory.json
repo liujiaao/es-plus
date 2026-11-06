@@ -3,6 +3,7 @@
   "nlEn": "Asset inventory (Ant Design Vue): query by asset name and category (the category dropdown data comes from the /api/asset-categories endpoint); the table shows asset name, category, quantity, status, and check date; above the table \"New Check\" is on the left and \"Export\" on the right; supports add and delete; the add and delete buttons require permission codes asset:add, asset:remove; the UI requires i18n; the query form label width is 100px.",
   "fixedFields": ["assetName", "categoryId", "qty", "status", "checkAt"],
   "pinnedDims": ["propSet", "actions", "target", "i18n", "apiParams:categoryId", "formLayout", "tableBtns", "permissions"],
+  "nlStatedDims": ["propSet", "target", "actions", "i18n", "apiParams:categoryId", "formLayout", "tableBtns", "permissions", "formtype:categoryId", "inQuery:assetName", "inQuery:categoryId", "inTable:assetName", "inTable:categoryId", "inTable:checkAt", "inTable:qty", "inTable:status"],
   "config": {
     "name": "AssetInventory",
     "apiUrl": "/api/assets",

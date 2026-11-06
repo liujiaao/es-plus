@@ -2,7 +2,12 @@
   <div class="fragments-app">
     <section data-test="frag-table-01">
       <h3>独立表格（frag-table-01：行操作按钮）</h3>
-      <table-01 />
+      <!-- P4：行按钮 clickEvent → 片段 emit('row-action')；宿主在这里接住。 -->
+      <table-01 ref="table01" @row-action="onRowAction" />
+      <p data-test="row-action-count">{{ rowActions.length }}</p>
+      <p data-test="row-action-last">{{ rowActionLast }}</p>
+      <!-- P4：表格产物 expose 的命令式刷新面。 -->
+      <button data-test="refresh-table-01" @click="refreshTable01">refresh()</button>
     </section>
 
     <section data-test="frag-table-02">
@@ -12,12 +17,22 @@
 
     <section data-test="frag-form-01">
       <h3>独立表单（frag-form-01：submit 分支）</h3>
-      <form-01 />
+      <!-- P4：保存 → 片段内部 validate 通过后 emit('submit', snapshot)；重置 → emit('reset')。 -->
+      <form-01 ref="form01" @submit="onFormSubmit" @reset="onFormReset" />
+      <p data-test="form-submit-count">{{ formSubmits.length }}</p>
+      <p data-test="form-submit-last">{{ lastSubmitName }}</p>
+      <!-- P4：表单产物 expose 的 validate/resetFields。 -->
+      <button data-test="validate-form-01" @click="validateForm01">validate()</button>
+      <p data-test="form-validate-state">{{ validateState }}</p>
+      <button data-test="reset-form-01" @click="resetForm01">resetFields()</button>
     </section>
 
     <section data-test="frag-form-02">
       <h3>独立表单（frag-form-02：query + formLayout）</h3>
-      <form-02 />
+      <!-- P4：查询 → emit('query', snapshot)，宿主据此刷新自己的表格。 -->
+      <form-02 ref="form02" @query="onFormQuery" />
+      <p data-test="form-query-count">{{ formQueries.length }}</p>
+      <p data-test="form-query-last">{{ lastQueryKeyword }}</p>
     </section>
 
     <section data-test="frag-dialogs">
@@ -28,6 +43,8 @@
       <button data-test="open-composable-dialog" @click="openComposableDialog">打开 Composable 弹窗</button>
       <!-- component 形态的 <es-dialog> SFC：open() 由 setup 返回暴露 -->
       <dialog-component ref="componentDialog" />
+      <!-- P4：open(title, row, onSuccess) 的第三参回调。 -->
+      <p data-test="dialog-success-count">{{ dialogSuccesses }}</p>
     </section>
 
     <section data-test="frag-composition-dialogs">
@@ -60,10 +77,64 @@ export default {
     Form02,
     DialogComponent,
   },
+  data() {
+    return {
+      rowActions: [],
+      formSubmits: [],
+      formQueries: [],
+      formResets: 0,
+      validateState: 'idle',
+      dialogSuccesses: 0,
+    }
+  },
+  computed: {
+    rowActionLast() {
+      const last = this.rowActions[this.rowActions.length - 1]
+      return last ? `${last.key}:${last.name}` : ''
+    },
+    lastSubmitName() {
+      const last = this.formSubmits[this.formSubmits.length - 1]
+      return last ? String(last.name) : ''
+    },
+    lastQueryKeyword() {
+      const last = this.formQueries[this.formQueries.length - 1]
+      return last ? String(last.keyword) : ''
+    },
+  },
   methods: {
+    // P4：四个组合接线的「宿主侧」都写在这里，产物只负责派发 / 暴露。
+    onRowAction({ key, row }) {
+      this.rowActions.push({ key, name: row && row.name })
+    },
+    refreshTable01() {
+      this.$refs.table01.refresh()
+    },
+    onFormSubmit(model) {
+      this.formSubmits.push({ ...model })
+    },
+    onFormReset() {
+      this.formResets++
+    },
+    onFormQuery(model) {
+      this.formQueries.push({ ...model })
+    },
+    async validateForm01() {
+      try {
+        await this.$refs.form01.validate()
+        this.validateState = 'ok'
+      } catch {
+        this.validateState = 'invalid'
+      }
+    },
+    resetForm01() {
+      this.$refs.form01.resetFields()
+    },
     openComponentDialog() {
       // 预填一行：证明 open(title, row) 真的写进 reactive model。
-      this.$refs.componentDialog.open('编辑', { id: 1, name: '张三', status: 1 })
+      // P4：第三参 onSuccess 在提交成功（PUT 之后）触发。
+      this.$refs.componentDialog.open('编辑', { id: 1, name: '张三', status: 1 }, () => {
+        this.dialogSuccesses++
+      })
     },
     openComponentNewDialog() {
       // AN-16：「新增」走 POST（方法由运行时 title 派生，不是配置字段）。

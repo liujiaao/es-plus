@@ -3,6 +3,7 @@
   "nlEn": "Ticket management: query by ticket title; the table's first column is an index, then ticket title and priority; each row can expand to reveal the handler and handling remark; supports add, edit and delete.",
   "fixedFields": ["title", "priority", "handler", "remark"],
   "pinnedDims": ["propSet", "actions", "columns", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "columns", "expandConfig"],
   "config": {
     "name": "TicketManage",
     "apiUrl": "/api/tickets",

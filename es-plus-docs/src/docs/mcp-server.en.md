@@ -256,15 +256,17 @@ Once configured, ask the AI things like:
 - *"Add a status filter (enum: active/archived) to the search form."*
 - *"Make the price column right-aligned and format as currency."*
 
-The AI calls the MCP server's `generate_crud` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
+The AI calls the MCP server's `generate_scene` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes **15 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the front door, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the page composer, the front door, the single-surface fragments, and the deterministic support tools remain.
 
 | Tool | Purpose | front-door |
 |------|---------|:----------:|
-| `generate_crud` | **FRONT DOOR** — fill the `surfaces` intent table (query/table/form/dialog); routing and compilation are deterministic. Use this for natural-language requests. | ✅ |
+| `generate_scene` | **FRONT DOOR / SCENE ROUTER** — pick what is being built (`crud` / `table` / `form` / `dialog`) and pass that scene's intent table; output is byte-identical to the matching legacy tool. | ✅ |
+| `generate_composition` | **PAGE COMPOSER** — assemble multiple standalone fragments (`table` / `form` / `dialog`) into one working `Page.vue`; wiring is derived from the artifact runtime contract and explicit `wires` are accepted (multi-table master-detail, multi-dialog). A wire target must be a channel the page can actually call (`ARTIFACT_RUNTIME.invokable`: table `refresh`/`reload`, form `validate`/`resetFields`, component dialog `open`/`close`; `form.model` is data, not a method); `open` is only reachable from a `row-action` (it carries the row); a composable dialog has no template ref and can only be opened by row-button dispatch; `when.rowAction` must be a declared `rowButtons` key, otherwise the generated branch never fires. Row-action wires pass the whole row by default — use `to.model` (`{ departmentId: '$row.departmentId' }`) to pass only chosen fields. The default `behavior` is `data-wiring`, which only derives table reload/refresh (no POST/PUT/DELETE/GET — use scene 'crud' for built-in requests); `ui-only` turns query/reset/success into page events. A form fragment only emits what its `buttons` render — `none` (the default) renders no buttons at all, `query` emits query+reset, `submit` emits submit+reset — so wires from a channel the form cannot emit are named in `warnings` (composition never rewrites a node's intent, and a page that declares `save` with no save button is a dead branch). With more than one table and no `role: 'master'` there is no single default table, so data wiring is upgraded to page events and named in the artifact/envelope `warnings` (the page's per-node `<nodeCamel>Refresh` / `<nodeCamel>Reload` methods — node `order-list` exposes `orderListRefresh`/`orderListReload` — or declare `role: 'master'`). Invalid wiring is rejected at plan time with the node named in the error, and the page's `emits` face is projected from the final wires. | ✅ |
+| `generate_crud` | **COMPAT ENTRY (adapter)** — same bytes as `generate_scene` with `scene: 'crud'`; fill the `surfaces` intent table. Kept for hosts that already call this name. | ✅ |
 | `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`) | ✅ |
 | `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination) | ✅ |
 | `generate_dialog` | **Fragment** — a reusable `useXxxDialog()` composable (default) or a self-contained `<es-dialog>` SFC | ✅ |
@@ -272,6 +274,8 @@ The default `full` profile exposes **15 tools**. With `ESPLUS_MCP_PROFILE=front-
 | `validate_config` | Validate a config against the live schema (judge-only; it does not rewrite) | ✅ |
 | `ingest_schema` | Draft a config from OpenAPI / JSON Schema / sample JSON / TS interface / SQL DDL (deterministic, a head start you then edit) | ✅ |
 | `refine_config` | One round of refinement on a pinned config: validate `revised` + return a structured diff | ✅ |
+| `validate_intent` | **Pre-flight judge** — capability report (accepted / degraded / unsupported / missing) plus per-field issues (surface membership, duplicate props, missing formtype, labels absent from the spec) | ✅ |
+| `coverage_report` | **Coverage classification** — per page of a structured inventory: L1 direct emit / L2 direct emit + extension points / L3 host code, derived from the P9 capability ledger | ✅ |
 | `list_form_types` | List the 14 shared `formtype` values and their renderers | ✅ |
 | `get_component_api` | Component API and type docs | ✅ |
 | `scaffold_page` | Minimal page scaffold | ✅ |
@@ -284,7 +288,7 @@ The profile only changes which tools are *listed* — the hidden three share the
 
 ## Resources Exposed by the Server
 
-Eight resource families (target-specific variants for `vue3` / `vue2` / `antdv` where noted):
+**9** resource families (target-specific variants for `vue3` / `vue2` / `antdv` where noted):
 
 - `esplus://conventions` — generation rules (formtype, button keys, multi-dialog mode, `configureEsPlus`); `/vue3`, `/vue2`, `/antdv`
 - `esplus://crud-page-schema` — `EsCrudPage` schema and usage examples; `/vue3`, `/vue2`, `/antdv`
@@ -294,6 +298,7 @@ Eight resource families (target-specific variants for `vue3` / `vue2` / `antdv` 
 - `esplus://examples/nl-to-config` — few-shot pairs for natural language → `StructuredCrudConfig`
 - `esplus://examples/surfaces` — few-shot for the `surfaces` intent table
 - `esplus://design-extraction` — how to transcribe a mockup (images must be transcribed by the host first)
+- `esplus://capabilities` — scene capability ledger (`es-plus.capabilities@1`): intent vocabulary per scene (accepted / required), the CRUD per-key downgrade table (schema/sfc), the no-table branch and the fragment boundary — read it *before* generating to know which intent keys will actually land
 
 ## Prompts Exposed by the Server
 

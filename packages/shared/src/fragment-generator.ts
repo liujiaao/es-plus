@@ -1,9 +1,25 @@
-import { buildFormItem, buildTableColumnSFC, getDefaultValue, inferTsType } from './structured-generator.js'
-import type { FieldConfig, StructuredCrudConfig } from './structured-config.schema.js'
+import {
+  buildFormItem,
+  buildTableColumnSFC,
+  expandConfigEngineWarning,
+  getDefaultValue,
+  inferTsType,
+  inlineEditWarnings,
+  pushSfcColumn,
+  resolveTreeOptions,
+  sanitizeExplicitColumns,
+  strippedColumnKeys,
+} from './structured-generator.js'
+import type {
+  FieldConfig,
+  StructuredCrudConfig,
+  StructuredCrudConfigInput,
+} from './structured-config.schema.js'
 import type { SurfaceField } from './compose-crud-config.js'
 import { getEsPlusPackageName, type TargetFramework, DEFAULT_TARGET } from './target.js'
 import { q, qBt, qKey, qMember, inlineJson, qAttr } from './codegen-escape.js'
 import { SPECIAL_BTN_KEYS, OPERATION_COLUMN_PROP_SFC } from './contract.js'
+import { DIALOG_TITLES } from './scene/registry.js'
 
 /**
  * 片段发射层(独立组件)——产出**自包含、可独立编译、可嵌入任意宿主**的单组件 SFC。
@@ -126,7 +142,8 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     : buttons === 'none'
       ? ' :layout-form-props="{ formLayProps: { isBtnHidden: true } }"'
       : ''
-  lines.push(`  <es-form :model="model" :form-item-list="formItems"${btnAttr}${hideBtn} />`)
+  // `ref` 是运行时契约的一部分：宿主经片段 ref 调用 validate/resetFields（P4）。
+  lines.push(`  <es-form ref="formRef" :model="model" :form-item-list="formItems"${btnAttr}${hideBtn} />`)
   lines.push('</template>')
   lines.push('')
 
@@ -138,13 +155,19 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : '<script setup>')
   }
 
-  const vueImports = isVue2 ? ['defineComponent', 'reactive'] : ['reactive']
+  const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref']
   lines.push(`import { ${vueImports.join(', ')} } from 'vue'`)
   lines.push('')
 
   if (isVue2) {
     lines.push('export default defineComponent({')
-    lines.push('  setup() {')
+    // 片段自派发的三个语义事件。底层 es-form 不会替我们发 —— 查询/重置的
+    // `triggerEvent` 只在表单嵌在 es-table 内时联动表格；独立残片由包装层负责。
+    lines.push("  emits: ['submit', 'query', 'reset'],")
+    lines.push('  setup(props, ctx) {')
+    lines.push('    const emit = ctx.emit')
+  } else {
+    lines.push("const emit = defineEmits(['submit', 'query', 'reset'])")
   }
 
   // TS 接口(复用 inferTsType,与完整页一致)
@@ -160,6 +183,13 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   // 响应式 model(复用 getDefaultValue)
   const modelInit = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
   lines.push(ts ? `const model = reactive<FormModel>({ ${modelInit} })` : `const model = reactive({ ${modelInit} })`)
+
+  // 内部 es-form 的模板 ref —— validate / resetFields 的委托对象（P4）。
+  lines.push(
+    ts
+      ? 'const formRef = ref<{ validate: () => Promise<unknown>; resetFields: () => void } | null>(null)'
+      : 'const formRef = ref(null)',
+  )
 
   // formItems(复用 buildFormItem，内联 JSON)
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, context, i18n)), 2)
@@ -177,28 +207,42 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   }
 
   // 可选按钮
+  //
+  // P4 之前这里发的是 `triggerEvent: true`：只有表单**嵌在 es-table 里**时才有消费者
+  // （内部 queryTableRequest 联动父表格）。独立片段没有父表格 ⟹ 保存/查询/重置全是死按钮。
+  // 现在改成显式 click 闭包：保存先 validate、通过后才派发 submit；查询/重置派发同名事件。
   if (buttons !== 'none') {
     lines.push('')
     lines.push('const configBtn = [')
     if (buttons === 'query') {
-      lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', triggerEvent: true },`)
-      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
+      lines.push(`  { name: '查询', type: 'primary', key: '${SPECIAL_BTN_KEYS.QUERY}', click: (model) => emit('query', { ...model }) },`)
+      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', click: () => emit('reset') },`)
     } else {
-      lines.push(`  { name: '保存', type: 'primary', key: 'save', triggerEvent: true },`)
-      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', triggerEvent: true },`)
+      lines.push(
+        `  { name: '保存', type: 'primary', key: 'save', click: async (model) => { try { await formRef.value?.validate() } catch { return } emit('submit', { ...model }) } },`,
+      )
+      lines.push(`  { name: '重置', key: '${SPECIAL_BTN_KEYS.RESET}', click: () => emit('reset') },`)
     }
     lines.push(']')
   }
 
+  // 运行时契约：宿主经片段 ref 调用 validate / resetFields（P4）。三端同名。
+  lines.push('')
+  lines.push('const validate = () => formRef.value?.validate()')
+  lines.push('const resetFields = () => formRef.value?.resetFields()')
+
   // vue2:闭合 setup() 并 return
   if (isVue2) {
-    const exposed = ['model', 'formItems']
+    const exposed = ['model', 'formItems', 'formRef', 'validate', 'resetFields']
     if (buttons !== 'none') exposed.push('configBtn')
     if (hasLayout) exposed.push('layoutFormProps')
     lines.push('')
     lines.push(`    return { ${exposed.join(', ')} }`)
     lines.push('  }')
     lines.push('})')
+  } else {
+    lines.push('')
+    lines.push('defineExpose({ model, validate, resetFields })')
   }
 
   lines.push('</script>')
@@ -211,6 +255,7 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
       ? `- Form layout: ${FORM_LAYOUT_KEYS.filter((k) => layout[k] !== undefined).map((k) => `${k}=${String(layout[k])}`).join(', ') || '(isBtnHidden only)'}`
       : '',
     ts ? '- TypeScript enabled' : '',
+    '- Runtime: emits submit/query/reset; exposes validate/resetFields/model.',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
       : target === 'antdv'
@@ -377,6 +422,22 @@ export interface TableBlockInput {
    * 宿主监听 es-table 的事件自行处理。
    */
   rowButtons?: TableRowButton[]
+  /**
+   * P10 —— 与 CRUD 同一套表格词汇（此前这些键只存在于 `generate_scene(scene='crud')`，
+   * 宿主为了多级表头/树表/展开/合并必须整套换入口）。
+   *
+   * - `columns`：显式列（override 非 merge，`groups` 多级表头自指）；风险键经
+   *   `sanitizeExplicitColumns` 剥除，与整页 schema 路径同一实现。
+   * - `treeConfig` / `expandConfig`：**顶层窄子集**（跨端），与 `tableOptions.*`
+   *   的 vxe 富子集是不同层；树表按 `resolveTreeOptions` 合并（顶层覆盖）。
+   * - `mergeConfig`：相邻行合并（`rowsBy`）。
+   * - `rowkey`：顶层主键（与 `tableOptions.rowkey` 冲突时取顶层并告警，同 CRUD）。
+   */
+  columns?: StructuredCrudConfigInput['columns']
+  treeConfig?: StructuredCrudConfigInput['treeConfig']
+  expandConfig?: StructuredCrudConfigInput['expandConfig']
+  mergeConfig?: StructuredCrudConfigInput['mergeConfig']
+  rowkey?: string
 }
 
 /**
@@ -410,16 +471,45 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   const t: TableBlockOptions = input.tableOptions ?? {}
   const warnings: string[] = []
 
+  // P10：与 CRUD 同一套显式列 / 树表 / 展开 / 合并词汇。
+  const explicitColumns = Array.isArray(input.columns)
+    ? sanitizeExplicitColumns(input.columns as Array<Record<string, unknown>>)
+    : []
+  // 片段入口没有 `generateFromConfig` 那份 `collectUnknownKeys`（Zod 形状在 mcp 包），
+  // 但列契约来自 shared 的同一份 schema —— 拼错的列键必须同样可见，不能静默剥掉。
+  const stripped = Array.isArray(input.columns)
+    ? strippedColumnKeys(input.columns as Array<Record<string, unknown>>)
+    : []
+  if (stripped.length) {
+    warnings.push(
+      `以下显式列键不在列契约里，生成时会被忽略（产物中不存在这些键）：${stripped.join('、')}。拼写错误请改正；确属自定义元数据请使用 \`x-\` 前缀。`,
+    )
+  }
+  const hasExplicitExpandColumn = explicitColumns.some((c) => c.type === 'expand')
+  if (input.rowkey !== undefined && t.rowkey !== undefined && input.rowkey !== t.rowkey) {
+    warnings.push(
+      `rowkey 冲突：tableOptions.rowkey="${t.rowkey}" vs 顶层 rowkey="${input.rowkey}" —— 取顶层（与 CRUD 页同一口径）。`,
+    )
+  }
+  const rowkey = input.rowkey ?? t.rowkey ?? 'id'
+
   if (!input.apiUrl) {
     warnings.push('未提供 apiUrl —— 生成的表格不会自动取数,请为 tableData 手动接入数据源(或改用 compose/CRUD 页)。')
   }
 
-  // 与 schema 模式同一条核对（AI-09 子项④）：editConfig 只在 vxe 引擎下生效。
-  // 片段路径此前连这个键都收不到，自然不会告警；现在收得进就必须同样非静默。
-  if (t.editConfig && t.engine !== 'vxe') {
-    warnings.push(
-      `tableOptions.editConfig requires engine: 'vxe' — the current engine is '${t.engine ?? 'default'}', so inline editing will be silently ignored at runtime.`,
-    )
+  // 与 schema / SFC 两条整页路径同一条核对（AI-09 子项④ / AN-11④）：editConfig 只在
+  // vxe 引擎生效，且 vxe 只让带 `editRender` 的列可编辑。片段路径此前只复制了前半句，
+  // 「vxe 引擎 + 没有 editRender 列」在片段里仍是静默死路。文案由单源 helper 提供。
+  warnings.push(
+    ...inlineEditWarnings({
+      tableOptions: t,
+      columns: input.columns,
+    } as unknown as StructuredCrudConfig),
+  )
+  // 声明式展开内容在 vxe / 虚拟引擎上不会渲染（与整页 `applyExpandConfig` 同一判据）。
+  if (input.expandConfig) {
+    const expandWarning = expandConfigEngineWarning(t.engine, t.virtual, target)
+    if (expandWarning) warnings.push(expandWarning)
   }
 
   const lines: string[] = []
@@ -452,9 +542,20 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(`import { ${isVue2 ? 'defineComponent, ref' : 'ref'} } from 'vue'`)
   lines.push('')
 
+  const hasRowButtons = !!(input.rowButtons && input.rowButtons.length)
+
   if (isVue2) {
     lines.push('export default defineComponent({')
-    lines.push('  setup() {')
+    if (hasRowButtons) {
+      // 行操作按钮的语义事件由包装层派发（底层 es-table 只认 clickEvent(row)）。
+      lines.push("  emits: ['row-action'],")
+      lines.push('  setup(props, ctx) {')
+      lines.push('    const emit = ctx.emit')
+    } else {
+      lines.push('  setup() {')
+    }
+  } else if (hasRowButtons) {
+    lines.push("const emit = defineEmits(['row-action'])")
   }
 
   // columns —— 复用 buildTableColumnSFC（只读 config.i18n 与 tableOptions.defaultSort）
@@ -465,8 +566,21 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     tableOptions: { defaultSort: t.defaultSort },
   } as unknown as StructuredCrudConfig
   lines.push('const columns = [')
-  for (const f of fields) {
-    lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
+  // AI-09 子项②（P10 对齐）：顶层 `expandConfig` 落到展开列。显式列里已有
+  // `type:'expand'` 时不重复前置（与整页 SFC 路径同一判据）。
+  if (input.expandConfig && !hasExplicitExpandColumn) {
+    pushSfcColumn({ type: 'expand', expandConfig: input.expandConfig }, lines, '  ', warnings)
+  }
+  if (explicitColumns.length > 0) {
+    // 显式列 override 非 merge：数据列的顺序/构成完全由 columns 决定（与 schema 路径一致）。
+    for (const c of explicitColumns) {
+      const col = input.expandConfig && c.type === 'expand' ? { ...c, expandConfig: input.expandConfig } : c
+      pushSfcColumn(col, lines, '  ', warnings)
+    }
+  } else {
+    for (const f of fields) {
+      lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
+    }
   }
   if (input.rowButtons && input.rowButtons.length) {
     const w = input.rowButtons.length * 80 + 20
@@ -480,7 +594,10 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
       const parts = [`name: ${q(b.name)}`]
       if (b.type) parts.push(`type: ${q(b.type)}`)
       if (b.key) parts.push(`key: ${q(b.key)}`)
-      parts.push('triggerEvent: true')
+      // P4：`triggerEvent` 在 es-table 里没有任何消费者（行按钮走 `clickEvent(row)`），
+      // 旧产物因此是死按钮。这里直接内联 clickEvent，把动作翻译成语义事件。
+      const actionKey = b.key ?? b.name
+      parts.push(`clickEvent: (row) => emit('row-action', { key: ${q(actionKey)}, row })`)
       lines.push(`      { ${parts.join(', ')} },`)
     }
     lines.push('    ]')
@@ -500,19 +617,27 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   // 现在尊重 `tableOptions.headerCellStyle`，缺省仍回落到原来的默认背景。
   lines.push(`  headerCellStyle: ${inlineJson(t.headerCellStyle || { background: '#f5f7fa' })},`)
   if (input.apiUrl) lines.push(`  apiParams: { url: ${q(input.apiUrl)} },`)
-  lines.push(`  rowkey: ${q(t.rowkey || 'id')},`)
+  lines.push(`  rowkey: ${q(rowkey)},`)
+  // P10：顶层 treeConfig（跨端窄子集）与 tableOptions.treeConfig（vxe 富子集）
+  // 合并到同一个家 —— 直接复用整页的 `resolveTreeOptions`，顶层覆盖同名字键。
+  const treeOptions = input.treeConfig ? resolveTreeOptions(t, { treeConfig: input.treeConfig }) : t.treeConfig
   for (const k of TABLE_BLOCK_OPTION_ORDER) {
-    const v = t[k]
+    const v = k === 'treeConfig' ? treeOptions : t[k]
     // `false` 是这些键的有效取值（showHeader:false / cachePageSelection:false …），
     // 故判据是 `!== undefined` 而不是真值 —— 与 schema 模式的 AI-22 注释同口径。
     if (v === undefined) continue
     lines.push(`  ${k}: ${optionLiteral(v)},`)
   }
+  // 顶层 mergeConfig（AI-23）→ 运行时唯一家 options.mergeConfig（与整页 schema 路径同形）。
+  if (input.mergeConfig && Array.isArray(input.mergeConfig.rowsBy) && input.mergeConfig.rowsBy.length > 0) {
+    lines.push(`  mergeConfig: ${inlineJson({ rowsBy: [...input.mergeConfig.rowsBy] })},`)
+  }
   lines.push('}')
   lines.push('')
 
   lines.push('const tableData = ref([])')
-  lines.push('const tableRef = ref(null)')
+  // 包装层把 es-table 的命令式刷新面透出（P4 运行时契约：expose refresh/reload）。
+  lines.push(`const tableRef = ref${ts ? '<any>' : ''}(null)`)
   const pag = input.pagination ?? {}
   const pagParts: string[] = ['current: 1']
   // 权威 schema 的 `pagination.pageSize` 缺省 10 —— 片段此前把 `pageSize: 10` 写死，
@@ -525,11 +650,18 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   pagParts.push('total: 0')
   lines.push(`const pagination = ref({ ${pagParts.join(', ')} })`)
 
+  lines.push('')
+  lines.push('const refresh = (model) => tableRef.value?.refresh?.(model)')
+  lines.push('const reload = (model) => tableRef.value?.reload?.(model)')
+
   if (isVue2) {
     lines.push('')
-    lines.push('    return { columns, options, tableData, tableRef, pagination }')
+    lines.push('    return { columns, options, tableData, tableRef, pagination, refresh, reload }')
     lines.push('  }')
     lines.push('})')
+  } else {
+    lines.push('')
+    lines.push('defineExpose({ refresh, reload })')
   }
 
   lines.push('</script>')
@@ -540,6 +672,7 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
     `- ${fields.length} column(s)${input.rowButtons?.length ? `, ${input.rowButtons.length} row button(s)` : ''}`,
     input.apiUrl ? `- Auto-fetch via apiParams: ${input.apiUrl}` : '- No apiUrl — wire tableData manually',
     ts ? '- TypeScript enabled' : '',
+    '- Runtime: exposes refresh/reload; row buttons emit row-action.',
     isVue2
       ? '- Target: Vue 2 + Element UI (@es-plus/vue2)'
       : target === 'antdv'
@@ -741,7 +874,7 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
   const formInit = [defaults, '...row'].filter(Boolean).join(', ')
   lines.push(`    const formData = reactive({ ${formInit} })`)
-  lines.push(`    const isView = title === '查看'`)
+  lines.push(`    const isView = title === ${q(DIALOG_TITLES.view)}`)
   lines.push('')
 
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, 'form', i18n)), 4)
@@ -775,8 +908,8 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
   lines.push(`            return // 校验未通过:静默中止,等用户修正`)
   lines.push(`          }`)
   if (input.apiUrl) {
-    lines.push(`          const method = title === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`          const url = title === '新增' ? ${q(input.apiUrl)} : \`${qBt(input.apiUrl)}/\${formData${qMember(rowkey)}}\``)
+    lines.push(`          const method = title === ${q(DIALOG_TITLES.add)} ? 'POST' : 'PUT'`)
+    lines.push(`          const url = title === ${q(DIALOG_TITLES.add)} ? ${q(input.apiUrl)} : \`${qBt(input.apiUrl)}/\${formData${qMember(rowkey)}}\``)
     lines.push(`          await httpRequest({ url, method, data: formData })`)
   }
   lines.push(`          close()`)
@@ -930,7 +1063,7 @@ function generateDialogComponent(p: {
   lines.push('const visible = ref(false)')
   lines.push(`const title = ref('')`)
   lines.push(`const formRef = ref${ts ? '<{ validate: () => Promise<unknown> } | null>' : ''}(null)`)
-  lines.push(ts ? `let onSuccess: ((data: DialogModel) => void) | undefined` : 'let onSuccess')
+  lines.push(ts ? `let successHandler: ((data: DialogModel) => void) | undefined` : 'let successHandler')
   lines.push('')
 
   const formItemsJson = inlineJson(fields.map((f) => buildFormItem(f as unknown as FieldConfig, 'form', i18n)), 2)
@@ -940,12 +1073,12 @@ function generateDialogComponent(p: {
   // 集成契约 —— 与 composable 支同形（含「每次 open 重置为默认值再叠 row」）
   const titleDefault = defaultTitle !== undefined ? ` = ${q(defaultTitle)}` : ''
   const openSig = ts
-    ? `function open(t: string${titleDefault}, row: Partial<DialogModel> = {}, success?: (data: DialogModel) => void) {`
-    : `function open(t${titleDefault}, row = {}, success) {`
+    ? `function open(t: string${titleDefault}, row: Partial<DialogModel> = {}, onSuccess?: (data: DialogModel) => void) {`
+    : `function open(t${titleDefault}, row = {}, onSuccess) {`
   lines.push(openSig)
   lines.push('  title.value = t')
   lines.push('  Object.assign(formData, DEFAULTS, row)')
-  lines.push('  onSuccess = success')
+  lines.push('  successHandler = onSuccess')
   lines.push('  visible.value = true')
   lines.push('}')
   lines.push('')
@@ -961,15 +1094,15 @@ function generateDialogComponent(p: {
   lines.push('  }')
   lines.push('  // TODO(es-plus): 宿主编排槽 —— 提交前后的额外业务逻辑写在这里')
   if (apiUrl) {
-    lines.push(`  const method = title.value === '新增' ? 'POST' : 'PUT'`)
-    lines.push(`  const url = title.value === '新增' ? ${q(apiUrl)} : \`${qBt(apiUrl)}/\${formData${qMember(rowkey)}}\``)
+    lines.push(`  const method = title.value === ${q(DIALOG_TITLES.add)} ? 'POST' : 'PUT'`)
+    lines.push(`  const url = title.value === ${q(DIALOG_TITLES.add)} ? ${q(apiUrl)} : \`${qBt(apiUrl)}/\${formData${qMember(rowkey)}}\``)
     lines.push(`  await httpRequest({ url, method, data: formData })`)
   }
   lines.push('  close()')
-  lines.push('  onSuccess?.(formData)')
+  lines.push('  successHandler?.(formData)')
   lines.push('}')
   lines.push('')
-  lines.push(`const isView = computed(() => title.value === '查看')`)
+  lines.push(`const isView = computed(() => title.value === ${q(DIALOG_TITLES.view)})`)
   lines.push('const configBtn = computed(() => isView.value')
   lines.push('  ? [')
   lines.push(`    { name: '关闭', click: () => close() }`)
@@ -986,7 +1119,7 @@ function generateDialogComponent(p: {
     lines.push('})')
   } else {
     lines.push('')
-    lines.push('defineExpose({ open })')
+    lines.push('defineExpose({ open, close })')
   }
 
   lines.push('</script>')

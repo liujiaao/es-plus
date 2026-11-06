@@ -1,10 +1,14 @@
 {
-  "note": "由 scripts/gen-ai-capability-matrix.mjs 从源码现场生成，禁止手改。reach 表示「前门一步可达」还是「需 generate_crud_from_config」；capabilities 是 AN-09 的三端支持表（claim 边界）。",
+  "note": "由 scripts/gen-ai-capability-matrix.mjs 从源码现场生成，禁止手改。reach 表示「前门一步可达」还是「需 generate_crud_from_config」；capabilities 是 AN-09 的三端支持表（claim 边界）；sceneCapability 是 P5 的场景×能力矩阵（scenes 人工声明，reachable/surfaces 源码切出）。",
   "generatedBy": "scripts/gen-ai-capability-matrix.mjs",
   "sources": [
     "packages/shared/src/structured-config.schema.ts",
     "packages/shared/src/capability.ts",
-    "packages/mcp-server/src/tools/generate-crud.ts"
+    "packages/mcp-server/src/tools/generate-crud.ts",
+    "packages/mcp-server/src/tools/generate-{table,form,dialog}.ts",
+    "packages/shared/src/compose-crud-config.ts",
+    "packages/shared/src/scene/registry.ts",
+    "scripts/feature-coverage.data.mjs"
   ],
   "frontDoor": {
     "topLevelKeys": [
@@ -57,7 +61,8 @@
     "tokens": 41,
     "declarative": 24,
     "frontDoorReachable": 22,
-    "configOnly": 2
+    "configOnly": 2,
+    "scenes": 4
   },
   "capabilities": {
     "tableOptions.multiSelect": {
@@ -307,6 +312,940 @@
       }
     }
   },
+  "sceneCapability": {
+    "note": "scenes = 人工语义声明；reachable = 该令牌的键在场景入参表面里实际命中（源码切出）；surfaces = 场景能接收的裸键集（容器键即代表其嵌套块可用）。声明了某场景却一个键都不命中 → 生成器红。",
+    "scenes": [
+      "crud",
+      "table",
+      "form",
+      "dialog"
+    ],
+    "surfaces": {
+      "crud": [
+        "actions",
+        "align",
+        "apiParams",
+        "apiUrl",
+        "attrs",
+        "columns",
+        "dataOptions",
+        "dialogs",
+        "ellipsis",
+        "expandConfig",
+        "fields",
+        "fixed",
+        "formLayout",
+        "formSpan",
+        "formatter",
+        "formtype",
+        "i18n",
+        "inForm",
+        "inQuery",
+        "inTable",
+        "isHidden",
+        "label",
+        "labelKey",
+        "mergeConfig",
+        "minWidth",
+        "mode",
+        "name",
+        "operationColumn",
+        "pagination",
+        "permissionValue",
+        "permissions",
+        "prop",
+        "querySpan",
+        "reactions",
+        "render",
+        "required",
+        "rowkey",
+        "rules",
+        "surfaces",
+        "tableBtns",
+        "tableOptions",
+        "target",
+        "toolbarBtns",
+        "treeConfig",
+        "typescript",
+        "width"
+      ],
+      "table": [
+        "align",
+        "apiParams",
+        "apiUrl",
+        "attrs",
+        "columns",
+        "dataOptions",
+        "ellipsis",
+        "expandConfig",
+        "fields",
+        "fixed",
+        "formSpan",
+        "formatter",
+        "formtype",
+        "i18n",
+        "isHidden",
+        "label",
+        "labelKey",
+        "mergeConfig",
+        "minWidth",
+        "pagination",
+        "permissionValue",
+        "prop",
+        "querySpan",
+        "reactions",
+        "render",
+        "required",
+        "rowButtons",
+        "rowkey",
+        "rules",
+        "tableOptions",
+        "target",
+        "treeConfig",
+        "typescript",
+        "width"
+      ],
+      "form": [
+        "align",
+        "apiParams",
+        "attrs",
+        "buttons",
+        "context",
+        "dataOptions",
+        "ellipsis",
+        "fields",
+        "fixed",
+        "formLayout",
+        "formSpan",
+        "formatter",
+        "formtype",
+        "i18n",
+        "isHidden",
+        "label",
+        "labelKey",
+        "minWidth",
+        "permissionValue",
+        "prop",
+        "querySpan",
+        "reactions",
+        "render",
+        "required",
+        "rules",
+        "target",
+        "typescript",
+        "width"
+      ],
+      "dialog": [
+        "align",
+        "apiParams",
+        "apiUrl",
+        "attrs",
+        "composableName",
+        "dataOptions",
+        "defaultTitle",
+        "ellipsis",
+        "fields",
+        "fixed",
+        "formSpan",
+        "formatter",
+        "formtype",
+        "i18n",
+        "isHidden",
+        "label",
+        "labelKey",
+        "minWidth",
+        "mode",
+        "options",
+        "permissionValue",
+        "prop",
+        "querySpan",
+        "reactions",
+        "render",
+        "required",
+        "rowkey",
+        "rules",
+        "target",
+        "typescript",
+        "width"
+      ]
+    },
+    "tokens": {
+      "apiParams": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "apiParams"
+        ],
+        "reachable": {
+          "crud": [
+            "apiParams"
+          ],
+          "table": [
+            "apiParams"
+          ],
+          "form": [
+            "apiParams"
+          ],
+          "dialog": [
+            "apiParams"
+          ]
+        }
+      },
+      "cellDataOptions": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "dataOptions"
+        ],
+        "reachable": {
+          "crud": [
+            "dataOptions"
+          ],
+          "table": [
+            "dataOptions"
+          ],
+          "form": [
+            "dataOptions"
+          ],
+          "dialog": [
+            "dataOptions"
+          ]
+        }
+      },
+      "columnGroups": {
+        "tier": "B",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "columns"
+        ],
+        "reachable": {
+          "crud": [
+            "columns"
+          ],
+          "table": [
+            "columns"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "columnsDecl": {
+        "tier": "B",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "columns"
+        ],
+        "reachable": {
+          "crud": [
+            "columns"
+          ],
+          "table": [
+            "columns"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "columnSortable": {
+        "tier": "B",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "columns"
+        ],
+        "reachable": {
+          "crud": [
+            "columns"
+          ],
+          "table": [
+            "columns"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "columnStyle": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "fixed",
+          "width",
+          "minWidth",
+          "align",
+          "ellipsis"
+        ],
+        "reachable": {
+          "crud": [
+            "fixed",
+            "width",
+            "minWidth",
+            "align",
+            "ellipsis"
+          ],
+          "table": [
+            "fixed",
+            "width",
+            "minWidth",
+            "align",
+            "ellipsis"
+          ],
+          "form": [
+            "fixed",
+            "width",
+            "minWidth",
+            "align",
+            "ellipsis"
+          ],
+          "dialog": [
+            "fixed",
+            "width",
+            "minWidth",
+            "align",
+            "ellipsis"
+          ]
+        }
+      },
+      "configTableOut": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "tableOptions",
+          "configTableOut"
+        ],
+        "reachable": {
+          "crud": [
+            "tableOptions"
+          ],
+          "table": [
+            "tableOptions"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "crudPage": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "surfaces"
+        ],
+        "reachable": {
+          "crud": [
+            "surfaces"
+          ],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "defaultSort": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "tableOptions",
+          "defaultSort"
+        ],
+        "reachable": {
+          "crud": [
+            "tableOptions"
+          ],
+          "table": [
+            "tableOptions"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "dialogs": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "dialogs"
+        ],
+        "reachable": {
+          "crud": [
+            "dialogs"
+          ],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "errorBoundary": {
+        "tier": "D",
+        "scenes": [],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "expandConfig": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "expandConfig"
+        ],
+        "reachable": {
+          "crud": [
+            "expandConfig"
+          ],
+          "table": [
+            "expandConfig"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "fieldEventFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "form",
+          "dialog"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "fieldVisibility": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "isHidden"
+        ],
+        "reachable": {
+          "crud": [
+            "isHidden"
+          ],
+          "table": [
+            "isHidden"
+          ],
+          "form": [
+            "isHidden"
+          ],
+          "dialog": [
+            "isHidden"
+          ]
+        }
+      },
+      "formatterFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "formLayout": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "form"
+        ],
+        "keys": [
+          "formLayout"
+        ],
+        "reachable": {
+          "crud": [
+            "formLayout"
+          ],
+          "table": [],
+          "form": [
+            "formLayout"
+          ],
+          "dialog": []
+        }
+      },
+      "formtype": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "formtype",
+          "dataOptions",
+          "attrs"
+        ],
+        "reachable": {
+          "crud": [
+            "formtype",
+            "dataOptions",
+            "attrs"
+          ],
+          "table": [
+            "formtype",
+            "dataOptions",
+            "attrs"
+          ],
+          "form": [
+            "formtype",
+            "dataOptions",
+            "attrs"
+          ],
+          "dialog": [
+            "formtype",
+            "dataOptions",
+            "attrs"
+          ]
+        }
+      },
+      "hostOrchestration": {
+        "tier": "D",
+        "scenes": [],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "hostSkeleton": {
+        "tier": "D",
+        "scenes": [],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "httpRequestFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "inlineEdit": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "tableOptions",
+          "editConfig"
+        ],
+        "reachable": {
+          "crud": [
+            "tableOptions"
+          ],
+          "table": [
+            "tableOptions"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "mergeConfig": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "mergeConfig"
+        ],
+        "reachable": {
+          "crud": [
+            "mergeConfig"
+          ],
+          "table": [
+            "mergeConfig"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "operationColumn": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "operationColumn",
+          "actions"
+        ],
+        "reachable": {
+          "crud": [
+            "operationColumn",
+            "actions"
+          ],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "pagination": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "pagination"
+        ],
+        "reachable": {
+          "crud": [
+            "pagination"
+          ],
+          "table": [
+            "pagination"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "permissions": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "permissionValue",
+          "permissions"
+        ],
+        "reachable": {
+          "crud": [
+            "permissionValue",
+            "permissions"
+          ],
+          "table": [
+            "permissionValue"
+          ],
+          "form": [
+            "permissionValue"
+          ],
+          "dialog": [
+            "permissionValue"
+          ]
+        }
+      },
+      "reactions": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "reactions"
+        ],
+        "reachable": {
+          "crud": [
+            "reactions"
+          ],
+          "table": [
+            "reactions"
+          ],
+          "form": [
+            "reactions"
+          ],
+          "dialog": [
+            "reactions"
+          ]
+        }
+      },
+      "renderBtnFn": {
+        "tier": "C",
+        "scenes": [
+          "crud"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "renderFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "table",
+          "form",
+          "dialog"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "sfcSlot": {
+        "tier": "C",
+        "scenes": [
+          "crud"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "siteUncovered": {
+        "tier": "D",
+        "scenes": [],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "spanMethodFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "svgIcon": {
+        "tier": "D",
+        "scenes": [],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "tableBase": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "tableOptions"
+        ],
+        "reachable": {
+          "crud": [
+            "tableOptions"
+          ],
+          "table": [
+            "tableOptions"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "tableBtns": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "tableBtns"
+        ],
+        "reachable": {
+          "crud": [
+            "tableBtns"
+          ],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "toolbarBtns": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "toolbarBtns"
+        ],
+        "reachable": {
+          "crud": [
+            "toolbarBtns"
+          ],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "treeConfig": {
+        "tier": "A",
+        "scenes": [
+          "crud"
+        ],
+        "keys": [
+          "treeConfig"
+        ],
+        "reachable": {
+          "crud": [
+            "treeConfig"
+          ],
+          "table": [
+            "treeConfig"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "useDialogApi": {
+        "tier": "D",
+        "scenes": [
+          "crud",
+          "dialog"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "validation": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "form",
+          "dialog"
+        ],
+        "keys": [
+          "rules",
+          "required"
+        ],
+        "reachable": {
+          "crud": [
+            "rules",
+            "required"
+          ],
+          "table": [
+            "rules",
+            "required"
+          ],
+          "form": [
+            "rules",
+            "required"
+          ],
+          "dialog": [
+            "rules",
+            "required"
+          ]
+        }
+      },
+      "validatorFn": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "form",
+          "dialog"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "virtualScroll": {
+        "tier": "A",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "keys": [
+          "tableOptions",
+          "virtual",
+          "engine",
+          "rowHeight",
+          "estimatedRowHeight",
+          "overscanCount"
+        ],
+        "reachable": {
+          "crud": [
+            "tableOptions"
+          ],
+          "table": [
+            "tableOptions"
+          ],
+          "form": [],
+          "dialog": []
+        }
+      },
+      "vxeFirstClass": {
+        "tier": "C",
+        "scenes": [
+          "crud",
+          "table"
+        ],
+        "reachable": {
+          "crud": [],
+          "table": [],
+          "form": [],
+          "dialog": []
+        }
+      }
+    }
+  },
   "tokens": {
     "apiParams": {
       "kind": "declarative",
@@ -333,7 +1272,7 @@
         "columns[].children"
       ],
       "reach": "config-only",
-      "note": "多级表头（B 级：前门不收 columns，需 from_config）"
+      "note": "多级表头（CRUD 前门不收 columns，需 from_config；片段 generate_table 自 P10 起直收）"
     },
     "columnsDecl": {
       "kind": "auto",
@@ -351,7 +1290,7 @@
         "columns[].sortable"
       ],
       "reach": "config-only",
-      "note": "显式列的排序开关（B 级：同上）"
+      "note": "显式列的排序开关（CRUD 前门同上；片段 generate_table 自 P10 起直收 columns.sortable）"
     },
     "columnStyle": {
       "kind": "declarative",

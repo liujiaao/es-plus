@@ -3,6 +3,7 @@
   "nlEn": "Supplier settlement: query by supplier (the supplier dropdown data comes from the /api/suppliers endpoint) and settlement cycle; the table shows supplier, settlement cycle, payable amount, and status; above the table \"New Settlement\" is on the left and \"Batch Export\" on the right; supports add, edit, and delete; the payable amount keeps two decimal places; the add, edit, and delete buttons require permission codes settle:add, settle:edit, settle:remove; the query form label width is 90px.",
   "fixedFields": ["supplierId", "cycle", "amount", "status"],
   "pinnedDims": ["propSet", "actions", "apiParams:supplierId", "formLayout", "tableBtns", "permissions", "extPoints:amount", "formtype:amount"],
+  "nlStatedDims": ["propSet", "actions", "apiParams:supplierId", "formLayout", "tableBtns", "permissions", "extPoints:amount", "formtype:amount", "dataOptions:cycle", "formtype:cycle", "formtype:supplierId", "inQuery:cycle", "inQuery:supplierId", "inTable:amount", "inTable:cycle", "inTable:status", "inTable:supplierId"],
   "config": {
     "name": "SettleManage",
     "apiUrl": "/api/settlements",

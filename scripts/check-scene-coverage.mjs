@@ -41,9 +41,10 @@
  *
  * ## 明确不做
  *
- * 不评片段准确率（无 scorer，硬造会产出恒真伪信号）。片段本轮的口径是**覆盖 + 语法
- * 编译 + 真 vite build**（后者由 golden:e2e 执行，本条只保证「它没被跳过」）；
- * 准确率要等片段 scorer 落地后再进 `definition95` 分母。
+ * 本条不评片段准确率：准确率由**片段打分腿**（`scripts/eval/fragment-scorers.mjs`
+ * + `check:fragment-leg`）在模型跑批时度量，本守卫只负责「覆盖 + 语法编译 + 真 vite
+ * build」—— 后者由 golden:e2e 执行，本条只保证「它没被跳过」。硬在静态守卫里造一个
+ * 准确率会得到恒真伪信号。
  *
  * 用法：node scripts/check-scene-coverage.mjs
  * 退出码：0 = 覆盖无空格且片段语料全部可解析；1 = 有空缺格或产物解析失败。
@@ -52,7 +53,9 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SCENES, SCENE_TOOL, modesOf, cellOf, cellName, sceneOf } from './eval/scenes.mjs'
+import { SCENE_REGISTRY } from '@es-plus/shared/scene'
 import { FRAGMENT_GENERATORS, generateFragment, fragmentSandboxFiles } from './lib/fragment-cases.mjs'
+import { toolFileFor } from './lib/tool-files.mjs'
 import { parseSfc, parseComposable } from './lib/compile-check.mjs'
 // 运行器自己的用例加载器 —— 见 (c) 段：片段有没有被 `.filter(isCrudCase)` 静默跳过，
 // 必须问**它**（而不是我们再扫一遍目录，那只会证明「文件在磁盘上」）。
@@ -110,24 +113,36 @@ for (const scene of SCENES) {
   for (const m of missing) fail(`缺格：${cellName(m)} 无用例`)
 }
 
-// 工具注册表：静态断言四个场景工具仍然存在（纯文本正则，沿用 check-fragment-contract.mjs 的手法）。
+// 工具注册表：静态断言每个场景的 canonical 入口 + 兼容入口仍存在（纯文本正则，
+// 沿用 check-fragment-contract.mjs 的手法）。canonical 是 `generate_scene`（P2），
+// adapters 是仍然承载该场景语料的旧工具 —— 两边都要真注册，否则「场景能生成」
+// 只是注册表里的自述。
 const indexSrc = readFileSync(join(TOOLS_DIR, 'index.ts'), 'utf8')
-for (const [scene, tool] of Object.entries(SCENE_TOOL)) {
-  const toolFile = `${tool.replace(/^generate_/, 'generate-').replace(/_/g, '-')}.ts`
-  let src
-  try {
-    src = readFileSync(join(TOOLS_DIR, toolFile), 'utf8')
-  } catch {
-    fail(`场景 ${scene} 的工具文件 ${toolFile} 不存在（SCENE_TOOL 指向了已被删除/改名的工具）`)
-    continue
+const checkedTools = new Set()
+for (const scene of SCENES) {
+  const contract = SCENE_REGISTRY.find((s) => s.id === scene)
+  if (SCENE_TOOL[scene] !== contract.entry.tool) {
+    fail(`场景 ${scene}: SCENE_TOOL=${SCENE_TOOL[scene]} 与注册表 entry.tool=${contract.entry.tool} 不一致`)
   }
-  // 工具名必须真的在该文件里被注册，且该文件必须在 index.ts 里被 register 调用。
-  if (!new RegExp(`["'\`]${tool}["'\`]`).test(src)) {
-    fail(`场景 ${scene}：${toolFile} 里没有注册工具名 "${tool}"（改名即红，防止门禁守着一个不存在的场景）`)
-  }
-  const registrar = toolFile.replace(/\.ts$/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-  if (!indexSrc.includes(`register${registrar[0].toUpperCase()}${registrar.slice(1)}`)) {
-    fail(`场景 ${scene}：index.ts 未注册 ${toolFile}（工具存在但没挂上）`)
+  for (const tool of [contract.entry.tool, ...contract.entry.adapters]) {
+    if (checkedTools.has(tool)) continue
+    checkedTools.add(tool)
+    const toolFile = toolFileFor(tool)
+    let src
+    try {
+      src = readFileSync(join(TOOLS_DIR, toolFile), 'utf8')
+    } catch {
+      fail(`场景 ${scene} 的入口工具 ${tool}: 文件 ${toolFile} 不存在`)
+      continue
+    }
+    // 工具名必须真的在该文件里被注册，且该文件必须在 index.ts 里被 register 调用。
+    if (!new RegExp(`["'\`]${tool}["'\`]`).test(src)) {
+      fail(`场景 ${scene}：${toolFile} 里没有注册工具名 "${tool}"（改名即红，防止门禁守着一个不存在的场景）`)
+    }
+    const registrar = toolFile.replace(/\.ts$/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+    if (!indexSrc.includes(`register${registrar[0].toUpperCase()}${registrar.slice(1)}`)) {
+      fail(`场景 ${scene}：index.ts 未注册 ${toolFile}（工具存在但没挂上）`)
+    }
   }
 }
 

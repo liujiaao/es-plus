@@ -3,6 +3,7 @@
   "nlEn": "Product management: query by product name and status; the table shows product name, status, selling price, and stock; the table enables virtual scrolling with the container height given as the CSS value 100vh; supports add, edit, and delete.",
   "fixedFields": ["productName", "status", "price", "stock"],
   "pinnedDims": ["propSet", "actions", "virtualScroll"],
+  "nlStatedDims": ["propSet", "mode", "actions", "virtualScroll", "inQuery:productName", "inQuery:status", "inTable:price", "inTable:productName", "inTable:status", "inTable:stock"],
   "config": {
     "name": "ProductVirtualViewport",
     "apiUrl": "/api/products",

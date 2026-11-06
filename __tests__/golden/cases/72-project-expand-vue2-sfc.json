@@ -3,6 +3,7 @@
   "nlEn": "Generate the project management page as a vue2 SFC: query by project name; the table shows project name, owner and status; each row can expand to reveal the description and start date; supports add, edit and delete.",
   "fixedFields": ["projectName", "owner", "status", "description", "startDate"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "expandConfig", "inTable:owner", "inTable:projectName", "inTable:status"],
   "config": {
     "name": "ProjectManage",
     "apiUrl": "/api/projects",

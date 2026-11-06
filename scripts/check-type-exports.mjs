@@ -94,12 +94,6 @@ const RENDERER_SPECIFIC = new Map([
  */
 const MEMBER_DEVIATIONS = new Map([
   [
-    'PaginationConfig.@es-plus/adapter-antdv.layout',
-    'a-pagination 没有 layout 字符串 prop —— 对应能力由 showTotal / showSizeChanger / showQuickJumper 三个布尔表达，本端无对应物。' +
-      '（vue3 / vue2 的 el-pagination 有 layout，且已让 `:pagination="{ layout }"` 经 computed 回落生效；antdv 若照抄声明就是撒谎。）' +
-      '与「virtual 在 vue2 忽略（antdv 4 原样透传给 a-table）」「分页 size 在本端只认 small」同属一个取舍：不是漏实现，是底层组件无此概念。',
-  ],
-  [
     'DialogOptions.@es-plus/adapter-antdv.loading',
     'antdv 弹窗没有主体 loading 遮罩（只有底部按钮的 :loading）。vue3 的弹窗组件声明了 loading prop 并绑 v-loading，故 vue3 声明此成员。',
   ],

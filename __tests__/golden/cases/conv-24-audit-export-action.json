@@ -9,6 +9,7 @@
     "propSet",
     "actions"
   ],
+  "nlStatedDims": ["propSet", "actions", "dataOptions:status", "formtype:status", "inTable:date", "inTable:name", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

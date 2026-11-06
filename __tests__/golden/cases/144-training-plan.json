@@ -3,6 +3,7 @@
   "nlEn": "Training plans: query by plan name and lecturer (the lecturer dropdown data comes from the /api/lecturers endpoint); the table shows plan name, lecturer, attendee count, start date, and status; add and edit use different dialogs — on add fill in plan name, lecturer, and start date, and on edit you can additionally change the status; supports add, edit, and delete; the UI requires i18n; the query form is 2 columns.",
   "fixedFields": ["planName", "lecturerId", "attendeeCount", "startAt", "status"],
   "pinnedDims": ["propSet", "actions", "i18n", "apiParams:lecturerId", "fieldSpan", "dialogs"],
+  "nlStatedDims": ["propSet", "actions", "i18n", "apiParams:lecturerId", "fieldSpan", "dialogs", "formtype:lecturerId", "inQuery:lecturerId", "inQuery:planName", "inTable:attendeeCount", "inTable:lecturerId", "inTable:planName", "inTable:startAt", "inTable:status"],
   "config": {
     "name": "TrainingPlan",
     "apiUrl": "/api/trainings",

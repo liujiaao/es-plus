@@ -3,6 +3,7 @@
   "nlEn": "Vehicle management with an Ant Design look: query by plate number; the table shows plate number, brand and mileage; each row can expand to reveal the owner name, owner phone and insurance expiry; supports add, edit and delete.",
   "fixedFields": ["plateNo", "brand", "mileage", "owner", "ownerPhone", "insuranceExpiry"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "expandConfig", "inTable:brand", "inTable:mileage", "inTable:plateNo"],
   "config": {
     "name": "VehicleManage",
     "apiUrl": "/api/vehicles",

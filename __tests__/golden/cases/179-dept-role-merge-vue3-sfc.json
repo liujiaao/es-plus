@@ -12,6 +12,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "mode", "actions", "mergeConfig"],
   "config": {
     "name": "DeptRoleSfc",
     "apiUrl": "/api/staff",

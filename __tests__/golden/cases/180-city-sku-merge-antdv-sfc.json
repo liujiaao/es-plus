@@ -12,6 +12,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "mergeConfig"],
   "config": {
     "name": "CitySkuSfc",
     "apiUrl": "/api/stock",

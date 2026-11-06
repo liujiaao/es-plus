@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SurfaceField } from "@es-plus/shared";
 
 /**
- * Curated few-shot NL → `generate_crud` surfaces pairs.
+ * Curated few-shot NL → `generate_scene` (scene='crud') surfaces pairs.
  *
  * The front door's ONLY LLM decision is filling `surfaces` — which of
  * query / table / form / dialog a request implies, and the fields in each.
@@ -329,9 +329,9 @@ export const SURFACES_EXAMPLES: SurfacesExample[] = [
 
 function buildContent(): string {
   const intro = [
-    "# Natural-language → `generate_crud` surfaces — few-shot examples",
+    "# Natural-language → `generate_scene` (scene='crud') surfaces — few-shot examples",
     "",
-    "`generate_crud` is the FRONT DOOR. Your only real decision is filling `surfaces`:",
+    "`generate_scene` (scene='crud') is the FRONT DOOR; `generate_crud` is the same route under a compatibility name and produces identical bytes. Your only real decision is filling `surfaces`:",
     "which of **query / table / form / dialog** the request implies, and the fields in each.",
     "Routing is then deterministic — you never pick a tool or orchestrate several:",
     "",
@@ -364,7 +364,7 @@ function buildContent(): string {
       "",
       `**Route:** \`${ex.route}\``,
       "",
-      "**`generate_crud` input:**",
+      "**`intent` input (generate_scene, scene='crud'):**",
       "",
       "```json",
       JSON.stringify(ex.input, null, 2),
@@ -383,7 +383,7 @@ export function registerSurfacesExamplesResource(server: McpServer) {
     uri,
     {
       description:
-        "Few-shot natural-language → generate_crud `surfaces` examples with routing reasoning, across the full subset space (standalone form/table/dialog, query+table, table+dialog, full CRUD, vue2/antdv). Read this before calling generate_crud — it teaches the one decision the front door asks of you: which surfaces a request implies and which list each field belongs in.",
+        "Few-shot natural-language → generate_scene (scene='crud') `surfaces` examples with routing reasoning, across the full subset space (standalone form/table/dialog, query+table, table+dialog, full CRUD, vue2/antdv). Read this before calling generate_scene — it teaches the one decision the front door asks of you: which surfaces a request implies and which list each field belongs in.",
       mimeType: "text/markdown",
     },
     async () => ({

@@ -3,6 +3,7 @@
   "nlEn": "Coupon management: query by coupon name; the table shows coupon name, face value, validity period, and status (valid/expired); supports add, edit, and delete. The backend list endpoint returns only an array field list with no total field, so the frontend pages locally.",
   "fixedFields": ["name", "faceValue", "validUntil", "status"],
   "pinnedDims": ["propSet", "actions", "configTableOut"],
+  "nlStatedDims": ["propSet", "actions", "configTableOut", "dataOptions:status", "formtype:status", "inQuery:name", "inTable:faceValue", "inTable:name", "inTable:status", "inTable:validUntil"],
   "config": {
     "name": "CouponManage",
     "apiUrl": "/api/coupons",

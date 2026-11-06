@@ -147,46 +147,46 @@
       "tool": "generate_form",
       "label": "筛选表单",
       "file": "FilterBar.vue",
-      "lines": 56,
-      "bytes": 1076
+      "lines": 63,
+      "bytes": 1434
     },
     "table": {
       "tool": "generate_table",
       "label": "结果表格",
       "file": "ResultTable.vue",
-      "lines": 41,
-      "bytes": 1045
+      "lines": 47,
+      "bytes": 1290
     },
     "dialog": {
       "tool": "generate_dialog",
       "label": "详情弹窗",
       "file": "OrderDialog.vue",
       "lines": 126,
-      "bytes": 2869
+      "bytes": 2895
     }
   },
   "targets": {
     "vue3": {
       "bytes": {
-        "filter": 1076,
-        "table": 1045,
-        "dialog": 2869
+        "filter": 1434,
+        "table": 1290,
+        "dialog": 2895
       },
       "note": "Vue 3 + Element Plus（@es-plus/vue3）—— 主文档站真跑"
     },
     "vue2": {
       "bytes": {
-        "filter": 1183,
-        "table": 1165,
-        "dialog": 2991
+        "filter": 1545,
+        "table": 1412,
+        "dialog": 3010
       },
       "note": "Vue 2 + Element UI（@es-plus/vue2）—— 只做语法编译验证（见 knownGaps）"
     },
     "antdv": {
       "bytes": {
-        "filter": 1076,
-        "table": 1045,
-        "dialog": 2878
+        "filter": 1434,
+        "table": 1290,
+        "dialog": 2904
       },
       "note": "Vue 3 + Ant Design Vue（@es-plus/adapter-antdv）—— es-pc 真跑"
     }

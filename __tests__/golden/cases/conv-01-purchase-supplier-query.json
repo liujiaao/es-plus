@@ -12,6 +12,7 @@
     "actions",
     "inQuery:supplier"
   ],
+  "nlStatedDims": ["propSet", "actions", "inQuery:supplier", "dataOptions:status", "formtype:status", "inTable:amount", "inTable:date", "inTable:name", "inTable:status", "inTable:supplier"],
   "refinements": [
     {
       "turn": 1,

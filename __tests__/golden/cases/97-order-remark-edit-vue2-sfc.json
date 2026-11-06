@@ -3,6 +3,7 @@
   "nlEn": "Order remark editing: double-click a row to edit inline, and clicking elsewhere auto-closes the editor. Shows order number and remark, where remark is a multi-line textarea. Supports edit.",
   "fixedFields": ["orderNo", "remark"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode", "target"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "editConfig", "columns", "formtype:orderNo", "formtype:remark", "virtualScroll"],
   "config": {
     "name": "OrderRemarkEditManage",
     "apiUrl": "/api/order-remark",

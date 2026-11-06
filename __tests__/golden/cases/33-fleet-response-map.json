@@ -3,6 +3,7 @@
   "nlEn": "Vue2 fleet management: query by plate number and vehicle type (truck/bus/special); the table shows plate number, vehicle type, mileage, and inspection due date; supports add, edit, and delete. The backend endpoint returns { data: [...], total: N }.",
   "fixedFields": ["plateNo", "vehicleType", "mileage", "inspectDue"],
   "pinnedDims": ["propSet", "actions", "target", "configTableOut"],
+  "nlStatedDims": ["propSet", "target", "actions", "configTableOut", "dataOptions:vehicleType", "formtype:vehicleType", "inQuery:plateNo", "inQuery:vehicleType", "inTable:inspectDue", "inTable:mileage", "inTable:plateNo", "inTable:vehicleType"],
   "config": {
     "name": "FleetManage",
     "apiUrl": "/api/fleets",

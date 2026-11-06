@@ -3,6 +3,7 @@
   "nlEn": "Shift-swap request management: query by employee name and swap date; the table shows employee name, swap date, request type (duty-swap / rotation-swap), and swap reason; supports add, edit, and delete. In the form, \"swap reason\" is hidden when the request type is \"rotation-swap\" (the counterparty fills in the reason).",
   "fixedFields": ["employeeName", "swapDate", "swapType", "swapReason"],
   "pinnedDims": ["propSet", "actions", "isHidden:swapReason"],
+  "nlStatedDims": ["propSet", "actions", "isHidden:swapReason", "dataOptions:swapType", "formtype:swapType", "inQuery:employeeName", "inQuery:swapDate", "inTable:employeeName", "inTable:swapDate", "inTable:swapReason", "inTable:swapType"],
   "config": {
     "name": "ShiftSwapManage",
     "apiUrl": "/api/shift-swaps",

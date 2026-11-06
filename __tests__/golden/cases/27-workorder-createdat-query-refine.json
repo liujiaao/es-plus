@@ -3,6 +3,7 @@
   "nlEn": "Repair work-order management: the first draft only needs to be searchable by work-order title; the table shows work-order title, reporter, status (pending/in-progress/done), and created time; supports add, edit, and delete.",
   "fixedFields": ["title", "reporter", "status", "createdAt"],
   "pinnedDims": ["propSet", "actions", "inQuery:createdAt"],
+  "nlStatedDims": ["propSet", "actions", "inQuery:createdAt", "dataOptions:status", "formtype:status", "inTable:createdAt", "inTable:reporter", "inTable:status", "inTable:title"],
   "refinements": [
     { "turn": 1, "correction": "创建时间也要能当查询条件，按时间区间筛选，不只是在表格里看。" }
   ],

@@ -3,6 +3,7 @@
   "nlEn": "Store audit (Ant Design Vue): query by store name and region; the table shows store name, region, audit score, status, and audit date; above the table \"New Check\" is on the left and \"Export\" on the right; add and edit use different dialogs — on add fill in store name, region, and audit score, and on edit you can additionally change the status; supports add, edit, and delete; the add, edit, and delete buttons require permission codes audit:add, audit:edit, audit:remove; the UI requires i18n; the query form is 2 columns.",
   "fixedFields": ["storeName", "region", "score", "status", "auditAt"],
   "pinnedDims": ["propSet", "actions", "target", "i18n", "fieldSpan", "tableBtns", "dialogs", "permissions"],
+  "nlStatedDims": ["propSet", "target", "actions", "i18n", "fieldSpan", "tableBtns", "dialogs", "permissions", "inQuery:region", "inQuery:storeName", "inTable:auditAt", "inTable:region", "inTable:score", "inTable:status", "inTable:storeName"],
   "config": {
     "name": "StoreAudit",
     "apiUrl": "/api/store-audits",

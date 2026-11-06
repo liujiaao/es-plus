@@ -19,13 +19,26 @@
  * and a field placed in the wrong surface is wrong in both surfaces it touches.
  * That makes "put everything everywhere" score no better than omitting it.
  *
- * ## Why it is not a gate
+ * ## Why it is a gate (P12)
  *
- * The user-ratified 95% definition is CRUD `scoped ∨ convergence`. This corpus
- * measures a different input shape (spec text, not a request) and a different
- * output (surfaces, not a config). It is reported and recorded, never folded
- * into the gate — the same separation as the fragment leg, but without a floor
- * until a real full run establishes one.
+ * The user-ratified 95% definition is CRUD `scoped ∨ convergence`; the PRD corpus
+ * measures a different input (spec text) and output (surfaces), so its number never
+ * folds into that gate. It has its **own** gate, on its own denominator:
+ *
+ *   complete (every case answered) ∧ no product fails to compile ∧
+ *   `membershipRate ≥ PRD_MEMBERSHIP_FLOOR`
+ *
+ * The floor is set from a real full run, not from aspiration: 2026-11-02 measured
+ * 181/190 = 95.26% on 22/22 cases with 0 compile failures. A 0.90 floor leaves
+ * ~5.3pp of headroom — enough for night-to-night model noise, far too little to hide
+ * a structural regression (dropping `form` membership alone costs ≫ 5pp). Without a
+ * floor the leg could regress to 50% and every gate would stay green while the
+ * published "first mile" claim quietly became false.
+ *
+ * Still **not** part of the CRUD badge or the 95% definition: the CRUD gate keeps
+ * its meaning. Its own gate enters `passed` / exit code, and failures are reported
+ * as `prd.gateFailures` so a red run names which criterion fired instead of only
+ * showing a number.
  *
  * ## Integrity
  *
@@ -40,6 +53,13 @@ import { summarizeCompile } from './compile-leg.mjs'
 
 export const SURFACE_KEYS = Object.freeze(['query', 'table', 'form', 'dialog'])
 export const PRD_MIN_CASES = 20
+/**
+ * Membership floor for the PRD leg's own gate. Origin: 2026-11-02 full run,
+ * 181/190 = 0.9526 on a complete 22-case, 0-compile-failure measurement.
+ * Never lower it to make a red night green — lower it only by a ratified decision
+ * that also rewrites the published claim.
+ */
+export const PRD_MEMBERSHIP_FLOOR = 0.9
 
 /** Labels are compared after whitespace removal + ASCII case folding. */
 export function normalizeLabel(v) {
@@ -202,12 +222,24 @@ export function summarizePrd(rows) {
   const compile = summarizeCompile(
     rows.map((r) => (r.error || r.produced !== false ? r : { ...r, error: r.compileError?.message ?? '没有产物' }))
   )
+  const membershipRate = total ? Number((correct / total).toFixed(4)) : null
+  // P12 gate. Keep every criterion visible in `gateFailures`: a red run must name
+  // which one fired, otherwise the number alone reads like model drift.
+  const gateFailures = []
+  if (rows.length === 0) gateFailures.push('PRD 腿没有任何行（没有可测语料）')
+  else if (rows.length < PRD_MIN_CASES) gateFailures.push(`语料 ${rows.length} 条 < 地板 ${PRD_MIN_CASES}`)
+  if (notMeasuredRows.length) gateFailures.push(`${notMeasuredRows.length} 条未测到（no-answer / truncated）`)
+  if (compile.failure > 0) gateFailures.push(`产物编译失败 ${compile.failure} 条`)
+  if (membershipRate === null) gateFailures.push('membership 没有可测决策（分母为 0）')
+  else if (membershipRate < PRD_MEMBERSHIP_FLOOR) {
+    gateFailures.push(`membership ${membershipRate} < 地板 ${PRD_MEMBERSHIP_FLOOR}`)
+  }
   return {
     cases: rows.length,
     measured: measured.length,
     notMeasured: notMeasuredRows.length,
     presenceRate: mean((s) => s.presence.ok),
-    membershipRate: total ? Number((correct / total).toFixed(4)) : null,
+    membershipRate,
     membershipCorrect: correct,
     membershipTotal: total,
     dialogRate: mean((s) => s.dialogs.ok),
@@ -216,17 +248,26 @@ export function summarizePrd(rows) {
     compileMeasured: compile.measured,
     compileCompiled: compile.compiled,
     compileFailure: compile.failure,
+    membershipFloor: PRD_MEMBERSHIP_FLOOR,
+    gateOk: gateFailures.length === 0,
+    gateFailures,
   }
 }
 
 /**
- * Feed a model-produced `generate_crud` argument object through the REAL front
- * door handler and compile every fenced block. Host-given fields (`name`,
- * `apiUrl`, `target`, `mode`) are injected from the case when absent — they are
- * not part of what this leg measures.
+ * Feed a model-produced intent object through the REAL **scene router**
+ * (`generate_scene`, scene='crud') and compile every fenced block. Host-given
+ * fields (`name`, `apiUrl`, `target`, `mode`) are injected from the case when
+ * absent — they are not part of what this leg measures.
  *
- * `fd` is the object returned by `setupFrontDoor()` (shape + cap.handler). The
- * function never throws: a bad row is recorded, not allowed to abort the run.
+ * The model's answer is the *intent table*; P7 routes it the way the published
+ * front door does (`{ scene: 'crud', intent }`). Driving the old adapter here
+ * would measure an entry point users are no longer told to call, i.e. the very
+ * split this leg exists to prevent (see `check:scene-eval`).
+ *
+ * `fd` is the object returned by `setupFrontDoor()` (`shape` for early
+ * rejection + `sceneCap.handler`). The function never throws: a bad row is
+ * recorded, not allowed to abort the run.
  */
 export async function drivePrdSurfaces(fd, pred, goldConfig, compileBlocks, fencedBlocks) {
   const out = { branch: null, rejected: null, compileFailures: [], produced: false }
@@ -248,7 +289,7 @@ export async function drivePrdSurfaces(fd, pred, goldConfig, compileBlocks, fenc
         .join('; ')}`
       return out
     }
-    const r = await fd.cap.handler(parsed.data)
+    const r = await fd.sceneCap.handler({ scene: 'crud', intent: parsed.data })
     const text = r.content?.[0]?.text ?? ''
     if (r.isError) {
       out.rejected = text.split('\n')[0]

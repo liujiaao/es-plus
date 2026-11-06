@@ -400,7 +400,7 @@ export const COLUMN_CONTRACT = {
   // —— 列级权限（permissionValue / hidCol）——
   'permissionValue:column': {
     why:
-      '列级权限：三端都在列列表上按 hidCol + permissionValue 过滤（无权限的列不渲染；未配全局 permission 时放行）',
+      '列级权限：三端都在列列表上按 hidCol + permissionValue 过滤（无权限的列不渲染；声明了 permissionValue 但宿主没配 permission() 时按 fail-closed 拒绝）',
     sources: {
       vue3: ['packages/vue3/src/components/es-table/src/component.vue'],
       vue2: ['packages/vue2/src/components/es-table/component.vue'],

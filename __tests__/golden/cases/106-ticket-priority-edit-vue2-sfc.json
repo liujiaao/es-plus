@@ -3,6 +3,7 @@
   "nlEn": "Ticket priority maintenance: the table edits inline — click a cell to change it. Shows ticket title and priority, where priority is a dropdown (high/medium/low) defaulting to medium. Supports edit.",
   "fixedFields": ["title", "priority"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "editConfig", "columns", "formtype:priority", "virtualScroll"],
   "config": {
     "name": "TicketPriorityEditManage",
     "apiUrl": "/api/ticket",

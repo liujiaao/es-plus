@@ -3,6 +3,7 @@
   "nlEn": "Loan application management: query by customer name and loan type; the table uses two-level group headers — \"Customer\" grouping customer name and phone, and \"Loan\" grouping loan type and amount; supports add, edit, and delete.",
   "fixedFields": ["customerName", "phone", "loanType", "amount"],
   "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "columns", "inQuery:customerName", "inQuery:loanType"],
   "config": {
     "name": "LoanApplyManage",
     "apiUrl": "/api/loan-applications",

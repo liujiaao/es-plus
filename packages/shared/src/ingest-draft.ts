@@ -23,6 +23,19 @@ export const INGEST_KINDS = [
   'sql-ddl',
 ] as const satisfies readonly SchemaKind[]
 
+/**
+ * 编译期**反向**穷尽性断言。
+ *
+ * `satisfies readonly SchemaKind[]` 只保证「数组里的每个值都是 SchemaKind」，**不保证
+ * SchemaKind 的每个值都在数组里**。而 CLI 帮助、MCP 的 `z.enum`、文档守卫都以
+ * `INGEST_KINDS` 为唯一真源 —— `SchemaKind` 新增一种输入而此表漏写时，新 kind 会在
+ * 两个宿主和文档里同时静默消失，没有任何门禁会红。下面这行把「覆盖不全」变成编译错误；
+ * 与 `schema-ingest.ts` 里 `const _exhaustive: never = kind` 同一范式。
+ */
+type MissingIngestKind = Exclude<SchemaKind, (typeof INGEST_KINDS)[number]>
+const _missingIngestKinds: [MissingIngestKind] extends [never] ? readonly SchemaKind[] : never = INGEST_KINDS
+void _missingIngestKinds
+
 export interface BuildIngestDraftInput {
   text: string
   kind: SchemaKind

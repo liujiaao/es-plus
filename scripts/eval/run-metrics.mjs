@@ -202,6 +202,33 @@ export function computeFragmentMetrics(fragmentRows, isNotMeasured) {
   const fragHit = (r, sel) => (r.score ? (sel(r.score) ? 1 : 0) : 0)
   const fragMean = (rs, sel) => (rs.length ? rs.reduce((a, r) => a + fragHit(r, sel), 0) / rs.length : null)
 
+  // P3：片段腿的 gated witness 已切到 `generate_scene`。这里把四段摊开，避免
+  // 「compiles=true」掩盖 route/intent/landing 的回退（例如路由器把场景分派错，
+  // 但产物恰好也能编译）。只观测，不新增门禁判据。
+  const sceneLegRows = fragmentRows.filter((r) => r.sceneLeg)
+  const sceneLeg = {
+    attempted: sceneLegRows.length,
+    landed: sceneLegRows.filter((r) => r.sceneLeg.landing === 'fragment').length,
+    rejected: sceneLegRows.filter((r) => r.sceneLeg.landing === 'rejected').length,
+    // 其中「模型入参不被接受」的行：它们没有产物（不进编译分母），但按 0 分计入准确率。
+    // 非模型侧拒绝由 `fragment-leg.mjs` 单独判红。
+    rejectedModelSide: sceneLegRows.filter((r) => r.sceneLeg.rejectedKind === 'model-guard').length,
+    intentRejected: sceneLegRows.filter((r) => r.sceneLeg.intent === 'rejected').length,
+    witnessFailures: sceneLegRows.reduce((n, r) => n + (r.sceneLeg.witness?.length ?? 0), 0),
+    byScene: {},
+  }
+  for (const scene of ['table', 'form', 'dialog']) {
+    const rs = sceneLegRows.filter((r) => r.sceneLeg.route === scene)
+    sceneLeg.byScene[scene] = rs.length
+      ? {
+          attempted: rs.length,
+          landed: rs.filter((r) => r.sceneLeg.landing === 'fragment').length,
+          rejected: rs.filter((r) => r.sceneLeg.landing === 'rejected').length,
+          witnessFailures: rs.reduce((n, r) => n + (r.sceneLeg.witness?.length ?? 0), 0),
+        }
+      : null
+  }
+
   const summary = {
     cases: fragmentRows.length,
     measured: fragMeasured.length,
@@ -219,6 +246,7 @@ export function computeFragmentMetrics(fragmentRows, isNotMeasured) {
     compileMeasured: fragCompile.measured,
     compileCompiled: fragCompile.compiled,
     compileFailure: fragCompile.failure,
+    sceneLeg,
     byScene: {},
     byDim: {},
   }

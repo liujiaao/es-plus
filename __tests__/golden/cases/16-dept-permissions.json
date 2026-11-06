@@ -3,6 +3,7 @@
   "nlEn": "Department management: query by department name and department head; the table shows department name, head, contact phone, status, and creation time; supports add, edit, and delete; the add and edit buttons require permission code dept:write.",
   "fixedFields": ["deptName", "leader", "phone", "status", "createdAt"],
   "pinnedDims": ["propSet", "actions", "permissions"],
+  "nlStatedDims": ["propSet", "actions", "permissions", "inQuery:deptName", "inQuery:leader", "inTable:createdAt", "inTable:deptName", "inTable:leader", "inTable:phone", "inTable:status"],
   "config": {
     "name": "DeptManage",
     "apiUrl": "/api/departments",

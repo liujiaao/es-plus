@@ -1,16 +1,19 @@
 /**
- * 前门（`generate_crud`）驱动原语 —— 共享单源。
+ * 场景路由器（`generate_scene`）与旧前门（`generate_crud`）驱动原语 —— 共享单源。
  *
  * 两个消费者，各写一份必然漂移：
  *   1. `scripts/check-front-door.mjs` —— **确定性**冒烟：把**语料**喂进真 handler，断言可表达 /
  *      路由 / 编译 / 成员关系 round-trip；
- *   2. `scripts/eval-llm.mjs` —— 付费 eval 的「前门腿」：把**模型产出**喂进**同一个** handler，
- *      断言它是可路由且可编译的（W1.3「前门进 eval」的落点）。
+ *   2. `scripts/eval-llm.mjs` —— 付费 eval 的「场景腿」（P3）：把**模型产出**喂进**同一个**
+ *      `generate_scene` handler，断言它是可路由且可编译的。
+ *
+ * 另外捕获旧 `generate_crud`（adapter）供 `check-front-door` 与 PRD 观测腿使用；
+ * eval 的门禁路径不再驱动它。
  *
  * ## 为什么必须 esbuild 打包，而不是直接 import
  *
- * `generate_crud` 的注册写在 TS 源码里（`packages/mcp-server/src/tools/generate-crud.ts`），
- * 而两个消费者都是 `.mjs`，Node 不能直接 import TS。两条路：
+ * `generate_scene` / `generate_crud` 的注册写在 TS 源码里，而消费者都是 `.mjs`，
+ * Node 不能直接 import TS。两条路：
  *   · 读 `packages/mcp-server/build/` —— 陈旧构建会让守卫/eval **静默失明**（测的是旧代码）；
  *   · esbuild 现打包源码 —— 本次实现，`metafile` 自证输入来自 `shared/src`、`shared/build` 零命中。
  *
@@ -44,7 +47,8 @@ export async function captureFrontDoor() {
       entry,
       [
         "import { registerGenerateCrud } from '../../packages/mcp-server/src/tools/generate-crud.ts'",
-        "import { surfaceFieldSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
+        "import { registerGenerateScene } from '../../packages/mcp-server/src/tools/generate-scene.ts'",
+        "import { surfaceFieldSchema, tableBlockOptionsSchema, tableFieldSchema, tablePaginationSchema, formLayoutSchema, dialogOptionsSchema } from '../../packages/mcp-server/src/tools/_fragment-shapes.ts'",
         "import { z } from 'zod'",
         // AN-19: bundle the published extraction resource so the paid PRD leg uses
         // the SAME text a client reads (no second hand-written contract).
@@ -61,6 +65,10 @@ export async function captureFrontDoor() {
         "export { validateAndRepair } from '@es-plus/shared'",
         "export { z } from 'zod'",
         'export { buildDesignExtractionContent }',
+        // AN-21 续：片段形状也要能自查「有没有注入默认值」——它们被原样转发给
+        // generateTableBlock / generateFormBlock / generateDialogBlock，默认值一旦
+        // 由 SDK 在 handler 之前填进来，生成器就无法区分「显式给的」与「没给」。
+        'export { surfaceFieldSchema, tableBlockOptionsSchema, tableFieldSchema, tablePaginationSchema, formLayoutSchema, dialogOptionsSchema }',
         'export function capture() {',
         '  let cap = null',
         '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
@@ -76,6 +84,23 @@ export async function captureFrontDoor() {
         '  let cap = null',
         '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
         '  registerGenerateCrud(fake)',
+        '  return cap.handler(z.object(cap.shape).parse(args))',
+        '}',
+        '/**',
+        ' * P3：捕获**场景路由器**（`generate_scene`）的真 handler。',
+        ' * eval 的门禁腿必须驱动它，而不是驱动旧 `generate_crud` —— 否则「宣称主路径」',
+        ' * 与「被测路径」仍是两条。`check-scene-eval` 会静态断言这里被真正使用。',
+        ' */',
+        'export function captureScene() {',
+        '  let cap = null',
+        '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
+        '  registerGenerateScene(fake)',
+        '  return cap',
+        '}',
+        'export async function callScene(args) {',
+        '  let cap = null',
+        '  const fake = { tool: (name, desc, shape, handler) => { cap = { name, desc, shape, handler } } }',
+        '  registerGenerateScene(fake)',
         '  return cap.handler(z.object(cap.shape).parse(args))',
         '}',
       ].join('\n'),

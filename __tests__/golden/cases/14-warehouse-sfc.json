@@ -3,6 +3,7 @@
   "nlEn": "Simple SFC mode: warehouse management, query by warehouse code, warehouse name, and enabled status; the table shows warehouse code, warehouse name, enabled status, and creation time; supports add, edit, and delete.",
   "fixedFields": ["warehouseCode", "warehouseName", "enabled", "createdAt"],
   "pinnedDims": ["propSet", "actions", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "inQuery:enabled", "inQuery:warehouseCode", "inQuery:warehouseName", "inTable:createdAt", "inTable:enabled", "inTable:warehouseCode", "inTable:warehouseName"],
   "config": {
     "name": "WarehouseManage",
     "apiUrl": "/api/warehouses",

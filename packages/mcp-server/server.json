@@ -19,7 +19,7 @@
       "environmentVariables": [
         {
           "name": "ESPLUS_MCP_PROFILE",
-          "description": "Tool surface to expose: `full` (default, all tools) or `front-door` (only generate_crud plus single-surface fragments; the advanced and legacy tools are not registered).",
+          "description": "Tool surface to expose: `full` (default, all tools) or `front-door` (the preferred entries — generate_scene / generate_composition / generate_crud plus single-surface fragments, validate/refine/ingest/coverage helpers, and the host-contract tools; the legacy generate_crud_page / generate_crud_schema and the advanced generate_crud_from_config are not registered).",
           "format": "string",
           "isRequired": false,
           "default": "full",

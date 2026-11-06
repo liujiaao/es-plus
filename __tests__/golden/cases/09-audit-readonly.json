@@ -3,6 +3,7 @@
   "nlEn": "Log audit: the table shows operator, operation type (login/logout/create/edit/delete), operation target, operation time, and IP address; query by operator, operation type, and operation time range; read-only, with no operation column.",
   "fixedFields": ["operator", "actionType", "target", "actionTime", "ip"],
   "pinnedDims": ["propSet", "actions", "formtype:actionType", "dataOptions:actionType", "operationColumn"],
+  "nlStatedDims": ["propSet", "actions", "formtype:actionType", "dataOptions:actionType", "operationColumn", "inQuery:actionTime", "inQuery:actionType", "inQuery:operator", "inTable:actionTime", "inTable:actionType", "inTable:ip", "inTable:operator", "inTable:target"],
   "config": {
     "name": "AuditLog",
     "apiUrl": "/api/audit-logs",

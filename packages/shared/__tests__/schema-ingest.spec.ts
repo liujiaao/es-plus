@@ -297,6 +297,29 @@ interface Ignored { x: string }
     expect(r.warnings.join('\n')).toContain('多个 interface/type 声明')
   })
 
+  it('单行逗号分隔成员同样逐条摄取（成员分隔符可以是逗号）', () => {
+    const r = ingestSchema(
+      `interface Compact { id: number, /** 名称 */ name: string, roles: Array<'admin' | 'member'> }`,
+      'ts-interface',
+    )
+    // 成员一个都不能丢：此前整行被当成一个成员，`name` 与 `roles` 静默消失。
+    expect(r.fields.map((f) => f.prop)).toEqual(['id', 'name', 'roles'])
+    expect(r.fields[0]).toMatchObject({ formtype: 'InputNumber', required: true })
+    expect(r.fields[1]).toMatchObject({ label: '名称', formtype: 'Input', required: true })
+    expect(r.fields[2]).toMatchObject({ formtype: 'Checkbox', required: true })
+    expect(r.warnings.join('\n')).not.toContain('未能识别')
+  })
+
+  it('泛型参数里的逗号不是成员分隔符（不切出幻影字段）', () => {
+    const r = ingestSchema(
+      'interface Meta { mapping: Record<string, number>; pair: Map<string, number> }',
+      'ts-interface',
+    )
+    expect(r.fields.map((f) => f.prop)).toEqual(['mapping', 'pair'])
+    expect(r.fields[0]).toMatchObject({ formtype: 'Input' })
+    expect(r.warnings.join('\n')).toContain('嵌套对象')
+  })
+
   it('无法识别 / 非 prop:type 成员 → 告警兜底,不抛', () => {
     const r = ingestSchema(
       `

@@ -1,11 +1,11 @@
 /**
- * 片段腿门禁（AN-18）—— 把 63 条片段语料从「只观测」抬成**门禁腿**。
+ * 片段腿门禁（AN-18）—— 把片段语料（独立 table / form / dialog）从「只观测」抬成**门禁腿**。
  *
  * ## 为什么单独成腿，而不是塞进 CRUD 的 definition95
  *
  * 片段的 95% 定义与 CRUD 的 95% 定义回答的是两个问题：CRUD 问「组合页零编辑率」，
  * 片段问「独立 table/form/dialog 片段的契约命中率」。把两者混进一个分母，任何一侧的
- * 回归都会被另一侧的规模稀释（片段 63 条对 CRUD 188 条时，片段整体崩掉也只动 ~25%）。
+ * 回归都会被另一侧的规模稀释（片段语料量级远小于 CRUD 组合页时，片段整体崩掉也只动一小截）。
  * 所以门禁读**两个独立的数**：CRUD 仍走 `definition95`，片段走本文件的 `scoped`。
  *
  * ## 门禁判据（计划原文：`compileRate === 1 && scoped ≥ 阈值`）
@@ -13,6 +13,9 @@
  *   1. **产物编译必须 100%**。分母是「真有产物的行」而不是 `measured` —— 与 AN-13 的
  *      `summarizeCompile` 同一把尺子。模型答错（`model-failure`）没有产物，把它算成
  *      编译失败会让门禁在「总允许有答错行」的准确率目标下恒红（永久红 = 红盲）。
+ *      路由器拒绝模型入参（`produced === false` ∧ `rejectedKind === 'model-guard'`）
+ *      同理没有产物；但**非模型侧**的拒绝（`threw` / `tool-error` / `intent-schema`）
+ *      是我们自己的缺陷，单独判红（见 ③b）。
  *   2. **scoped ≥ 基线阈值**。阈值只从 `accuracy-baseline.json` 的 `fragmentScopedMin`
  *      读（该文件只由人工 PR 修改）—— 回归防线必须「只能经评审放宽」，否则夜间自动回写
  *      会把一次真实退步记成新基线，棘轮退化成装饰。
@@ -99,6 +102,21 @@ export function summarizeFragmentLeg(rows, summary, baseline) {
       `片段产物编译失败 ${compile.failure}/${compile.measured}（compileRate ${pct(compile.rate)}）` +
         `—— 能产出但编译不过的是**发射器缺陷**，不是模型准确率` +
         (compile.failureSamples.length ? `：${compile.failureSamples.join('；')}` : '')
+    )
+  }
+
+  // ③b 拒绝归因：没有产物的行里，只有「模型入参不被接受」（`model-guard`）允许不计编译
+  //     分母。路由器抛错 / 生成期 isError / intent 形状解析失败都是**我们**的缺陷 ——
+  //     必须红，否则「模型答错」这个口子会把真实的路由器回归一起放行。
+  const nonModelRejections = all.filter(
+    (r) => r.produced === false && r.rejectedKind && r.rejectedKind !== 'model-guard'
+  )
+  if (nonModelRejections.length) {
+    failures.push(
+      `片段腿 ${nonModelRejections.length}/${cases} 行被路由器拒绝且原因不在模型入参` +
+        `（${[...new Set(nonModelRejections.map((r) => r.rejectedKind))].join(' / ')}）` +
+        `—— 这是路由器/发射器缺陷，不是模型答错：` +
+        `${nonModelRejections.slice(0, 5).map((r) => r.file ?? '(row)').join('；')}`
     )
   }
 

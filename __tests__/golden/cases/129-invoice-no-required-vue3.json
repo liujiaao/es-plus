@@ -12,6 +12,7 @@
     "actions",
     "reactions:invoiceNo"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:invoiceNo", "inQuery:claimant", "inTable:amount", "inTable:city", "inTable:claimant", "inTable:invoiceNo"],
   "config": {
     "name": "ReimbursementManage",
     "apiUrl": "/api/reimbursements",

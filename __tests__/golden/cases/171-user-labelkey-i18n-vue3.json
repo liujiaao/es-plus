@@ -3,6 +3,7 @@
   "nlEn": "Internationalized user list: the query bar has name; field labels use labelKey (user.name.label, user.age.label); shows name and age. Supports add and edit.",
   "fixedFields": ["name", "age"],
   "pinnedDims": ["propSet", "membership", "actions", "i18n"],
+  "nlStatedDims": ["propSet", "membership", "actions", "i18n", "inQuery:name"],
   "config": {
     "name": "UserI18nManage",
     "apiUrl": "/api/users",

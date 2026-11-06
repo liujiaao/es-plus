@@ -3,6 +3,7 @@
   "nlEn": "Goods purchase-price management: double-click a row to edit inline. Shows goods name and purchase price. Supports edit.",
   "fixedFields": ["goodsName", "costPrice"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "GoodsCostEditManage",
     "apiUrl": "/api/goods-cost",

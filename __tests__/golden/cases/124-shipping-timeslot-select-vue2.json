@@ -13,6 +13,7 @@
     "reactions:timeSlot",
     "target"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "reactions:timeSlot", "dataOptions:deliveryType", "inQuery:receiver", "inTable:deliveryType", "inTable:receiver", "inTable:remark", "inTable:timeSlot"],
   "config": {
     "name": "DeliveryManage",
     "apiUrl": "/api/deliveries",

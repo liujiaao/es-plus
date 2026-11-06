@@ -3,6 +3,7 @@
   "nlEn": "Price tier maintenance: click a cell to change the discount. Shows tier name and discount, where discount is a dropdown (10% off / 20% off). Supports edit.",
   "fixedFields": ["tierName", "discount"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "editConfig", "columns", "virtualScroll", "formtype:discount"],
   "config": {
     "name": "PriceTierEditManage",
     "apiUrl": "/api/price-tiers",

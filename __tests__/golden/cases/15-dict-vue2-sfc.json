@@ -3,6 +3,7 @@
   "nlEn": "A vue2 project in SFC mode: dictionary management, query by dict type and dict code; the table shows dict type, dict code, dict value, sort order, and status; supports add, edit, and delete.",
   "fixedFields": ["dictType", "dictCode", "dictValue", "sortOrder", "status"],
   "pinnedDims": ["propSet", "actions", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "inQuery:dictCode", "inQuery:dictType", "inTable:dictCode", "inTable:dictType", "inTable:dictValue", "inTable:sortOrder", "inTable:status"],
   "config": {
     "name": "DictManage",
     "apiUrl": "/api/dicts",

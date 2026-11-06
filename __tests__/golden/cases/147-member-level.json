@@ -3,6 +3,7 @@
   "nlEn": "Member level management (SFC mode): query by level name and upgrade condition (the condition dropdown data comes from the /api/conditions endpoint); the table shows level name, upgrade condition, required points, and status; supports add and edit; the \"required points\" column is visible only with permission, code member:points:view; field labels use i18n; the UI requires i18n.",
   "fixedFields": ["levelName", "conditionId", "points", "status"],
   "pinnedDims": ["propSet", "actions", "mode", "i18n", "apiParams:conditionId", "extPoints:points"],
+  "nlStatedDims": ["propSet", "mode", "actions", "i18n", "apiParams:conditionId", "extPoints:points", "formtype:conditionId", "inQuery:conditionId", "inQuery:levelName", "inTable:conditionId", "inTable:levelName", "inTable:points", "inTable:status"],
   "config": {
     "name": "MemberLevel",
     "apiUrl": "/api/member-levels",

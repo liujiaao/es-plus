@@ -3,6 +3,7 @@
   "nlEn": "Movie management: query by movie name; the table shows movie name, duration and release date; each row can expand to reveal the synopsis; supports add, edit and delete.",
   "fixedFields": ["movieName", "duration", "releaseDate", "synopsis"],
   "pinnedDims": ["propSet", "actions", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "expandConfig", "inTable:duration", "inTable:movieName", "inTable:releaseDate"],
   "config": {
     "name": "MovieManage",
     "apiUrl": "/api/movies",

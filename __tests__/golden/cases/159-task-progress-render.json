@@ -3,6 +3,7 @@
   "nlEn": "Sprint tasks: query by task name and assignee; the table shows task name, assignee, and progress, where the \"progress\" column needs custom rendering (a progress bar showing the completion percentage); supports add, edit, and delete.",
   "fixedFields": ["task", "assignee", "progress"],
   "pinnedDims": ["propSet", "actions", "extPoints:progress", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:progress", "inQuery:assignee", "inQuery:task", "inTable:assignee", "inTable:progress", "inTable:task"],
   "config": {
     "name": "SprintBoard",
     "apiUrl": "/api/sprints",

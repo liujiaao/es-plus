@@ -214,6 +214,32 @@ export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
 export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[] | FieldHiddenExpr
 
 /**
+ * 表单静态选项：`FormItemOption.dataOptions` / 联动 `fulfill.dataOptions` 的元素。
+ *
+ * 这是**唯一权威形状**。此前四处各写一份内联字面量，漂移出了真实缺陷：AI 前门的
+ * `DataOptionSchema` 放行 `children` / `tagType`，而 vue3 / antdv 的 `FormItemOption`
+ * 没有 ⟹ 前门校验通过的配置被自己的类型判红（typecheck 腿把它们记成模型错）。
+ * 故：三端类型、JSON Schema、MCP 文档都必须与它逐键对齐
+ * （守卫：`scripts/check-option-shape.mjs`，红=某处又分叉了）。
+ *
+ * 关于 `tagType`：它是**表格面**的展示修饰，但生成器会把字段级 `dataOptions`
+ * **整份**复制到派生列（`structured-generator.ts` 的列继承），所以在字段上声明
+ * `tagType` 是合法且有意义的；表单控件渲染时忽略它。
+ */
+export interface FormDataOption {
+  /** 展示文本 */
+  label: string
+  /** 选项值（AI 契约限定 string | number | boolean；手写代码可用任意值） */
+  value: unknown
+  /** 该选项是否禁用 */
+  disabled?: boolean
+  /** Cascader 子选项（递归） */
+  children?: FormDataOption[]
+  /** 被复制到派生列时以「标签」渲染的语义色；表单控件忽略 */
+  tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+}
+
+/**
  * 字段联动（AI-07）的一条规则里，`fulfill` 的取值：
  *
  * - `dataOptions`：**字面量选项数组**（JSON 数据，非表达式）—— AI-16 DSL 刻意排除对象
@@ -228,7 +254,7 @@ export type FieldHidden = FieldHiddenCondition | FieldHiddenCondition[] | FieldH
  */
 export interface FieldReactionFulfill {
   /** 字面量选项数组。非数组则该键被丢弃、保留静态 dataOptions */
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   /** 是否必填（表达式节点）。求值结果非布尔则该键被丢弃 */
   required?: unknown
   /** 是否禁用（表达式节点）。求值结果非布尔则该键被丢弃 */
@@ -287,7 +313,7 @@ export interface FormItemOption {
   /** 透传给输入控件的事件监听器 */
   on?: Record<string, unknown>
   /** 静态选项（Select/Radio/Checkbox/Cascader 用） */
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   /**
    * 动态显隐判断：返回 true 表示**隐藏**该字段。
    *
@@ -357,7 +383,8 @@ export interface FormItemOption {
    *
    * 与按钮级 `permissionValue` 同一机制、不同粒度：无权限时**整个表单项不渲染**
    * （在 `formItemListFilter` 里与 `isHidden` 同层过滤）。与 `isHidden` 的区别是
-   * 前者按权限编码、后者按数据动态判定。未配置全局 `permission` 时一律放行。
+   * 前者按权限编码、后者按数据动态判定。未配置全局 `permission` 时按 fail-closed
+   * **拒绝**（P5）：声明了权限码就必须有判定函数，否则不渲染；没有权限码的元素不受影响。
    */
   permissionValue?: string
   /** 允许任意扩展键 */
@@ -548,7 +575,7 @@ export interface TableColumn {
    *
    * 与 `hidCol` 的区别：`hidCol` 是**静态**隐藏，本字段是**按权限**隐藏
    * （在 `filteredColumns` 里与 `hidCol` 同层过滤）。与操作列 `btns[].permissionValue`
-   * 同一机制、不同粒度。未配置全局 `permission` 时一律放行。
+   * 同一机制、不同粒度。未配置全局 `permission` 时按 fail-closed **拒绝**（P5）。
    */
   permissionValue?: string
   /** 操作按钮列 */
@@ -585,7 +612,8 @@ export interface TableColumn {
 /**
  * 表格列的声明式码值选项：单元格值命中 `value` 时展示 `label`。
  *
- * 与表单 `FormItemOption.dataOptions` 同形（label/value），只多一个 `tagType`：
+ * 与表单 `FormItemOption.dataOptions`（`FormDataOption`）同形（label/value），
+ * 少一个 `children`（表格单元格不做级联），只多一个 `tagType`：
  * 它是**表格专属**的展示修饰 —— 表单的下拉选项不需要颜色，而状态列需要。
  */
 export interface TableColumnDataOption {

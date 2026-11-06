@@ -13,6 +13,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "mergeConfig"],
   "config": {
     "name": "RegionCityProjectV2",
     "apiUrl": "/api/plan",

@@ -3,6 +3,7 @@
   "nlEn": "System log: the query bar has time; the table uses the compact (small) size and shows time, level and message columns. Read-only list.",
   "fixedFields": ["time", "level", "message"],
   "pinnedDims": ["propSet", "membership", "target"],
+  "nlStatedDims": ["propSet", "target", "membership", "inQuery:time"],
   "config": {
     "name": "SystemLogView",
     "apiUrl": "/api/logs",

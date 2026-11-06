@@ -3,6 +3,7 @@
   "nlEn": "Material ledger: the query bar has material code and material name; the table shows a leading row-index (serial number) column and lists material code, material name and stock quantity. Supports add, edit and delete.",
   "fixedFields": ["materialCode", "materialName", "stockQty"],
   "pinnedDims": ["propSet", "membership", "actions"],
+  "nlStatedDims": ["propSet", "membership", "actions", "inQuery:materialCode", "inQuery:materialName"],
   "config": {
     "name": "MaterialLedgerManage",
     "apiUrl": "/api/materials",

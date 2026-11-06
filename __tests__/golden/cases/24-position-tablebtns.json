@@ -3,6 +3,7 @@
   "nlEn": "Contract management: above the table, the \"Add Contract\" button is on the right and \"Batch Export\" is on the left; the table shows contract number, amount, and signing date; supports add, delete, and view; the amount keeps two decimal places.",
   "fixedFields": ["contractNo", "amount", "signedAt"],
   "pinnedDims": ["propSet", "actions", "tableBtns", "formtype:amount", "extPoints:amount"],
+  "nlStatedDims": ["propSet", "actions", "tableBtns", "formtype:amount", "extPoints:amount", "inTable:amount", "inTable:contractNo", "inTable:signedAt"],
   "config": {
     "name": "ContractManage",
     "apiUrl": "/api/contracts",

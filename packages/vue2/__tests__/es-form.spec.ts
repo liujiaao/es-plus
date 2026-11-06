@@ -397,10 +397,13 @@ describe('EsForm(vue2) - 字段级 permissionValue 门控', () => {
     }
   })
 
-  it('未配置全局 permission 时一律放行', async () => {
+  it('未配置全局 permission 时声明了 permissionValue 的字段被拒绝（fail-closed）', async () => {
+    const { resetGlobalConfig } = await import('@es-plus/core')
+    resetGlobalConfig()
     const vm = mountForm({ model: { name: '', salary: '' }, formItemList: gateItems() })
     await vm.$nextTick()
-    expect(findAllByName(vm, 'ElFormItem')).toHaveLength(2)
+    const labels = findAllByName(vm, 'ElFormItem').map((it) => it.$props.label)
+    expect(labels).toEqual(['姓名'])
   })
 })
 

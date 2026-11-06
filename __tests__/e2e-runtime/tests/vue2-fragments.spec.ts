@@ -276,3 +276,88 @@ test('组合 form+dialog：一份表单面派生 add/edit 两个 composable（AN
   await expect(edit).toBeHidden()
   expect(await unhandled(page)).toHaveLength(0)
 })
+
+/**
+ * P4 · 产物运行时契约（vue2，真实浏览器）
+ * ────────────────────────────────────────────────────────────────────────
+ * Tier-1 里 vue3 的 validate 失败态被 happy-dom 吞掉（只见证委托契约），ADV 可以真跑；
+ * **这里是最有分量的一腿**：真实 Element UI + 真实浏览器，「空必填不提交」端到端成立。
+ *
+ * 四条通道（refresh / validate / row-action / onSuccess）都不是配置字段 ——
+ * 记分卡结构上覆盖不到，只有挂载后真跑一次才算见证。
+ */
+test('P4 table：refresh() 真重新取数；行按钮派发 row-action（不再是死按钮）', async ({ page }) => {
+  const table = section(page, 'frag-table-01')
+  const before = (await calls(page)).usersList
+
+  await page.locator('[data-test="refresh-table-01"]').click()
+  await expect.poll(async () => (await calls(page)).usersList).toBeGreaterThan(before)
+
+  // 旧产物的行按钮只带 `triggerEvent`，而表格组件只消费 `clickEvent` —— 真浏览器的
+  // 判据是「点下去宿主的 @row-action 计数 +1」，而不是按钮存在。
+  await expect(section(page, 'row-action-count')).toHaveText('0')
+  await table.getByRole('button', { name: '编辑' }).first().click()
+  await expect(section(page, 'row-action-count')).toHaveText('1')
+  await expect(section(page, 'row-action-last')).toHaveText('edit:张三')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('P4 form：validate() 真实校验（空必填 invalid → 填好 ok）；resetFields 复位输入', async ({ page }) => {
+  const form = section(page, 'frag-form-01')
+  const nameInput = form.locator('.el-form-item', { hasText: '姓名' }).locator('input').first()
+
+  await page.locator('[data-test="validate-form-01"]').click()
+  await expect(section(page, 'form-validate-state')).toHaveText('invalid')
+  await expect(form.locator('.el-form-item__error').first()).toBeVisible()
+
+  await nameInput.fill('王五')
+  await page.locator('[data-test="validate-form-01"]').click()
+  await expect(section(page, 'form-validate-state')).toHaveText('ok')
+
+  // expose 的 resetFields 真的把 model 与输入框复位（不是空函数）。
+  await page.locator('[data-test="reset-form-01"]').click()
+  await expect(nameInput).toHaveValue('')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('P4 form：@submit 门禁 —— 空必填点保存不派发；填好后派发模型快照', async ({ page }) => {
+  const form = section(page, 'frag-form-01')
+  const nameInput = form.locator('.el-form-item', { hasText: '姓名' }).locator('input').first()
+
+  // 空必填：片段内部 validate reject → 宿主一次 submit 都收不到。
+  await form.getByRole('button', { name: '保存' }).click()
+  await expect(form.locator('.el-form-item__error').first()).toBeVisible()
+  await expect(section(page, 'form-submit-count')).toHaveText('0')
+
+  await nameInput.fill('王五')
+  await form.getByRole('button', { name: '保存' }).click()
+  await expect(section(page, 'form-submit-count')).toHaveText('1')
+  await expect(section(page, 'form-submit-last')).toHaveText('王五')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('P4 form：@query 派发查询模型（宿主据此刷新自己的表格）', async ({ page }) => {
+  const form = section(page, 'frag-form-02')
+  const keyword = form.locator('.el-form-item', { hasText: '关键字' }).locator('input').first()
+
+  await keyword.fill('abc')
+  await form.getByRole('button', { name: '查询' }).click()
+
+  await expect(section(page, 'form-query-count')).toHaveText('1')
+  await expect(section(page, 'form-query-last')).toHaveText('abc')
+  expect(await unhandled(page)).toHaveLength(0)
+})
+
+test('P4 dialog：open(title, row, onSuccess) 提交成功后回调真的触发', async ({ page }) => {
+  await page.locator('[data-test="open-component-dialog"]').click()
+  const dialog = page.locator('.el-dialog')
+  await expect(dialog).toBeVisible()
+  await expect(section(page, 'dialog-success-count')).toHaveText('0')
+
+  // 预填的姓名有效 → 提交成功 → onSuccess 触发一次（PUT 之后）。
+  await dialog.getByRole('button', { name: '确定' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(section(page, 'dialog-success-count')).toHaveText('1')
+  expect((await calls(page)).submits).toBe(1)
+  expect(await unhandled(page)).toHaveLength(0)
+})

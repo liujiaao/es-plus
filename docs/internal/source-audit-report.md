@@ -387,6 +387,13 @@ const wrapperFile = resolve(outputDir, `${pascalName}.vue`)
 
 ### 仍待决策
 
+> **2026-11-05 已拍板**：antdv ColorPicker 降级维持现状，连同契约双份、
+> `render`/`formatter` 注入面、tri-render 证据、A4 verify-compile 一并定案，见
+> [structural-debt-decisions-2026-11-05.md](./structural-debt-decisions-2026-11-05.md)。
+> **publish job 不在该备忘内**：它后续已由 Trusted Publishing 实跑解决（见
+> [deep-analysis-report.md](./deep-analysis-report.md) 的「实跑记录」），本节的
+> 「未解决」判断已过时。以下原文保留为历史记录。
+
 - **是否加 publish job**：当前 npm 账号写操作全 403（会话记录第六节）且未解决；
   在恢复写权限前加发布流水线只会引入一个注定失败的 job。**建议**：先解决 npm 写权限再谈。
 - **三端仍未消除的差异**：仅剩 antdv `ColorPicker` 的原生 `<input type="color">` 降级

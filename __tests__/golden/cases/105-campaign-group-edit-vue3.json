@@ -2,7 +2,8 @@
   "nl": "活动分组管理：表格行内编辑，单击单元格修改；展示活动名称、渠道、投放量，其中渠道与投放量归入投放信息分组；支持编辑。",
   "nlEn": "Campaign grouping: the table edits inline — click a cell to change it. Shows campaign name, channel, and reach, where channel and reach are grouped under placement info. Supports edit.",
   "fixedFields": ["campaignName", "channel", "reach"],
-  "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "pinnedDims": ["propSet", "actions", "editConfig", "columns"],
+  "nlStatedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
   "config": {
     "name": "CampaignGroupEditManage",
     "apiUrl": "/api/campaign",
@@ -25,5 +26,5 @@
     ],
     "actions": ["edit"]
   },
-  "notes": "AI-09 子项④: vxe 行内编辑 + 列分组共存（列组子列带 editRender，vue3/schema）；分组键用运行时契约 groups（TableColumn.groups），AN-08 前误写成 children —— 那是树表子节点的键，不是表头分组。2026-10-29 给「活动名称」补上 editRender：NL 说「单击单元格修改」，而 vxe 的契约是**每列都要 editRender 才可编辑**（prompt 原文 on EVERY editable column）⟹ 原文 gold 自己漏了一列，反倒把给全三列的模型判负"
+  "notes": "AI-09 子项④: vxe 行内编辑 + 列分组共存（列组子列带 editRender，vue3/schema）；分组键用运行时契约 groups（TableColumn.groups），AN-08 前误写成 children —— 那是树表子节点的键，不是表头分组。2026-10-29 给「活动名称」补上 editRender：NL 说「单击单元格修改」，而 vxe 的契约是**每列都要 editRender 才可编辑**（prompt 原文 on EVERY editable column）⟹ 原文 gold 自己漏了一列，反倒把给全三列的模型判负。2026-11-06 摘掉 `mode` pin：本用例是 schema 模式（`mode` 缺省），该维度 applicable=false，且 NL 从未提「单文件组件」——留着它等于把一个模型无法从 NL 得知、gold 也未声明的维度算进 scoped。"
 }

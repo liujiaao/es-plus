@@ -3,6 +3,7 @@
   "nlEn": "Appointment management: query by customer name and service; the table uses a \"Customer\" group header covering customer name and phone, and an \"Appointment\" group header covering service and appointment time; supports add, edit, and delete.",
   "fixedFields": ["customerName", "phone", "service", "apptTime"],
   "pinnedDims": ["propSet", "actions", "columns", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "columns", "inQuery:customerName", "inQuery:service"],
   "config": {
     "name": "AppointmentManage",
     "apiUrl": "/api/appointments",

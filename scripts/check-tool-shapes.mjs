@@ -131,6 +131,47 @@ function optionsOf(schema) {
 }
 
 /**
+ * 递归收集 ZodDefault（zod 3 的 `ZodDefault` / zod 4 的 `default`）。
+ *
+ * 看的是**运行时形状**而不是源码文本：注释里写一句 `.default("id")` 不会误判，
+ * 真挂上默认值也躲不过去。`default` 包装层本身要继续下钻（内层对象可能还有默认值）。
+ */
+function collectDefaults(schema, path = '', seen = new Set(), out = []) {
+  if (!schema || typeof schema !== 'object' || seen.has(schema)) return out
+  seen.add(schema)
+  const d = schema._def ?? {}
+  const kind = (d.typeName ?? d.type ?? '').replace(/^Zod/, '').toLowerCase()
+  if (kind === 'default' || kind === 'prefault') {
+    out.push(path || '(root)')
+    const inner = d.innerType ?? d.type
+    if (inner) collectDefaults(inner, path, seen, out)
+    return out
+  }
+  if (kind === 'object' || kind === 'strictobject' || kind === 'looseobject') {
+    for (const [k, child] of Object.entries(shapeOf(schema) ?? {})) {
+      collectDefaults(child, path ? `${path}.${k}` : k, seen, out)
+    }
+    return out
+  }
+  if (kind === 'array') return collectDefaults(elementOf(schema), path, seen, out)
+  if (kind === 'record') {
+    return collectDefaults(d.valueType ?? d.valueSchema ?? d.type, path, seen, out)
+  }
+  if (kind === 'union') {
+    for (const opt of optionsOf(schema) ?? []) collectDefaults(opt, path, seen, out)
+    return out
+  }
+  if (kind === 'tuple') {
+    for (const item of d.items ?? []) collectDefaults(item, path, seen, out)
+    return out
+  }
+  // optional / nullable / effects / pipe / readonly / catch：往里看一层
+  const inner = d.innerType ?? d.schema ?? d.in
+  if (inner) collectDefaults(inner, path, seen, out)
+  return out
+}
+
+/**
  * 键树：object → `{ key: 子树 }`；array → 元素键树；union → 各分支合并；
  * 标量 / record（无固定键）→ `null`。
  */
@@ -257,6 +298,34 @@ try {
     }
   }
 
+  // 6) 转发形状不得注入默认值（AN-21 续）
+  // 前门把旋钮 / 片段选项**原样**交给 shared 生成器；`.default()` 会在工具层就把缺省
+  // 变成显式值，生成器再也分不出「调用方说的」与「schema 补的」：
+  //   · `tableOptions.rowkey='id'` 与顶层 `rowkey='orderNo'` 撞成假冲突（实测）；
+  //   · 任何「显式才告警 / 显式才生效」的键都会复现同一类假象。
+  // 缺省一律由 shared 在真正发射时补 —— 它才是产物形状的真源。
+  const forwardTargets = [
+    ...KNOBS.map((k) => [`crudShape.${k}`, frontShape[k]]),
+    ['tableBlockOptionsSchema', mod.tableBlockOptionsSchema],
+    ['tableFieldSchema', mod.tableFieldSchema],
+    ['surfaceFieldSchema', mod.surfaceFieldSchema],
+    ['tablePaginationSchema', mod.tablePaginationSchema],
+    ['formLayoutSchema', mod.formLayoutSchema],
+    ['dialogOptionsSchema', mod.dialogOptionsSchema],
+  ]
+  for (const [label, schema] of forwardTargets) {
+    if (!schema) {
+      fail(`转发形状 ${label} 不存在 —— capture 导出漏了它，本项会静默失明`)
+      continue
+    }
+    for (const p of collectDefaults(schema)) {
+      fail(
+        `转发形状 ${label} 在 ${p} 注入了默认值 —— 缺省必须由 shared 生成器在发射时补，` +
+          `否则「显式给的」与「没给」在生成器里不可分（假冲突 / 假告警的来源）`
+      )
+    }
+  }
+
   if (failures.length > 0) {
     console.error(`\n工具旋钮形状检查失败：${failures.length} 处`)
     process.exitCode = 1
@@ -264,6 +333,7 @@ try {
     console.log(`✅ 前门 ${KNOBS.length} 颗旋钮与 shared 权威 Zod 逐键一致（含嵌套键）`)
     console.log(`✅ 未知旋钮/子键在工具层报错（${UNKNOWN_KEY_PROBES.length} 条探针）`)
     console.log(`✅ 无 z.any() / 裸 z.record() 回退；tableBtns 别名归一化生效`)
+    console.log(`✅ ${forwardTargets.length} 个转发形状零默认值注入（显式/缺省在生成器里可分）`)
   }
 } finally {
   cleanup()

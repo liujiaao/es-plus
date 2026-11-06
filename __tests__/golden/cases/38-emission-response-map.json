@@ -3,6 +3,7 @@
   "nlEn": "Ant Design Vue emission monitoring: query by monitoring point and pollutant type (waste-gas/waste-water); the table shows monitoring point, pollutant type, concentration, and monitored time; supports add, edit, and delete. The backend returns { data: [...], perPage: N }.",
   "fixedFields": ["site", "pollutant", "concentration", "monitoredAt"],
   "pinnedDims": ["propSet", "actions", "target", "configTableOut"],
+  "nlStatedDims": ["propSet", "target", "actions", "configTableOut", "dataOptions:pollutant", "formtype:pollutant", "inQuery:pollutant", "inQuery:site", "inTable:concentration", "inTable:monitoredAt", "inTable:pollutant", "inTable:site"],
   "config": {
     "name": "EmissionManage",
     "apiUrl": "/api/emissions",

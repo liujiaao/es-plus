@@ -11,6 +11,7 @@
     "actions",
     "reactions:region"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:region", "inQuery:entityName", "inTable:entityName", "inTable:province", "inTable:region"],
   "config": {
     "name": "RegionSyncManage",
     "apiUrl": "/api/region-syncs",
