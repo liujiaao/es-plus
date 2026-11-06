@@ -30,8 +30,16 @@ import { dirname, join, relative } from 'node:path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
-/** 表情符号范围：emoji 主体 + dingbats + 杂项符号 + 变体选择符 */
-const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u
+/**
+ * 表情符号范围：emoji 主体 + dingbats + 杂项符号 + 变体选择符。
+ *
+ * 变体选择符 U+FE0F 单独成一条正则：它会跟前一个码点拼成一个字形，放进同一个
+ * 字符类会被 no-misleading-character-class 判成「误导性字符类」。这里只是想问
+ * 「这段文本里有没有 emoji 的那类码点」，不做字形匹配，所以拆开等价表达。
+ */
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u
+const VARIATION_SELECTOR = /\uFE0F/u
+const hasEmoji = (text) => EMOJI.test(text) || VARIATION_SELECTOR.test(text)
 
 const SITES = [
   { dir: 'es-plus-docs/src', minFiles: 60 },
@@ -88,7 +96,7 @@ for (const site of SITES) {
       let m
       while ((m = re.exec(raw))) {
         const text = m[1].replace(/\s+/g, ' ').trim()
-        if (EMOJI.test(text)) {
+        if (hasEmoji(text)) {
           const line = raw.slice(0, m.index).split('\n').length
           fail(`${rel}:${line}：标题含 emoji ——「${text.slice(0, 40)}」（路线图 2.7：无 emoji 标题）`)
         }
@@ -99,10 +107,10 @@ for (const site of SITES) {
     // B/C. markdown：先屏蔽代码围栏，再看 # 标题与 frontmatter
     const lines = stripFences(raw)
     lines.forEach((line, i) => {
-      if (/^\s{0,3}#{1,6}\s/.test(line) && EMOJI.test(line)) {
+      if (/^\s{0,3}#{1,6}\s/.test(line) && hasEmoji(line)) {
         fail(`${rel}:${i + 1}：markdown 标题含 emoji ——「${line.trim().slice(0, 40)}」`)
       }
-      if (/^\s*(title|sidebarTitle|description)\s*:/.test(line) && EMOJI.test(line)) {
+      if (/^\s*(title|sidebarTitle|description)\s*:/.test(line) && hasEmoji(line)) {
         fail(`${rel}:${i + 1}：frontmatter 含 emoji ——「${line.trim().slice(0, 40)}」`)
       }
     })
@@ -128,7 +136,7 @@ for (const dir of ['docs', ...SITES.map((s) => `${s.dir}/locales`).filter((d) =>
       .split('\n')
       .forEach((line, i) => {
         const m = /"(title|badge|heading)"\s*:\s*"([^"]*)"/i.exec(line)
-        if (m && EMOJI.test(m[2])) {
+        if (m && hasEmoji(m[2])) {
           fail(`${rel}:${i + 1}：数据里的标题含 emoji ——「${m[1]}: ${m[2].slice(0, 40)}」`)
         }
       })

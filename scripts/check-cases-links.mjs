@@ -186,7 +186,7 @@ function docPageKeys(relPath) {
   let keys = null
   for (const line of src.split('\n')) {
     if (slug === null) {
-      const open = /^  '([^']+)':\s*\{/.exec(line)
+      const open = /^ {2}'([^']+)':\s*\{/.exec(line)
       if (open) {
         slug = open[1]
         keys = new Set()

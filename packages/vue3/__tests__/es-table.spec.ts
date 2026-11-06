@@ -929,7 +929,14 @@ describe('EsTable — 内建分页（localPagination）的跨页勾选回显', (
     const select = async (row: Record<string, unknown>) => {
       // 走 el-table 的命令式 API：内部 selection 与 selection-change 都按真实路径更新
       const inst = table.vm as any
-      ;(inst.toggleRowSelection || inst.$?.exposed?.toggleRowSelection).call(inst, row, true)
+      // 两个入口取到哪个都必须真的可调用：用 `||` 直接 `.call` 时，若两者都是
+      // undefined，报错会落在 `undefined.call` 上，看不出是「表格没暴露这个 API」。
+      const toggleRowSelection =
+        inst.toggleRowSelection ?? inst.$?.exposed?.toggleRowSelection
+      if (typeof toggleRowSelection !== 'function') {
+        throw new Error('el-table 未暴露 toggleRowSelection（命令式选区入口缺失）')
+      }
+      toggleRowSelection.call(inst, row, true)
       await settle()
     }
 

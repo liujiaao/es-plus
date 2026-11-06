@@ -18,7 +18,10 @@ export function slugifyHeading(text) {
   return String(text || '')
     .trim()
     .toLowerCase()
-    .replace(/[\s　]+/g, '-')
+    // U+3000（全角空格）在 CJK 排版里当分隔符用，slug 里同样要折成 -。
+    // 这里写成 \u3000 转义而不是字符本身：ESLint 的 no-irregular-whitespace
+    // 会把源码里裸露的 U+3000 判成「不规整空白」，连注释里也照报。
+    .replace(/[\s\u3000]+/g, '-')
     .replace(/[^\w一-龥-]+/g, '')
     .replace(/-{2,}/g, '-')
     .replace(/^-+|-+$/g, '')
