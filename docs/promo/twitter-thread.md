@@ -10,13 +10,13 @@
 ### 1/11 · 钩子
 
 ```
-我刚让 Claude Code 写了 100 个 CRUD 页面。
+我刚把 216 个 CRUD 配置交给 Claude 写。
 
-95% 第一次就跑通了。
+编译通过率 100%（407/407）。
 
-剩下 5% 还能编译，只是产品要改字段名。
+但只有 51% 第一次就写对，三轮内收敛 88% —— 剩下 12% 我不打算假装不存在。
 
-下面这串 thread，讲我们是怎么做到的——以及为什么大多数"AI 友好"组件库都在裸奔 👇
+下面这串 thread，讲我们是怎么做到的，以及为什么"AI 生成代码"这件事真正该被保证的是能编译，而不是一次写对 👇
 ```
 
 ### 2/11 · 痛点 1
@@ -88,7 +88,7 @@ AI 写组件库的标准翻车：
 ES-Plus（@es-plus/vue3 + @es-plus/vue2）：
 
 ✅ 一份 JSON Schema 同时驱动 Vue 3 + Vue 2 渲染器
-✅ MCP server 暴露 16 个 tools（含场景路由器 generate_scene），Claude/Cursor 一行接入
+✅ MCP server 暴露 19 个 tools（含场景路由器 generate_scene），Claude/Cursor 一行接入
 ✅ zod 校验所有 AI 生成的配置，错了立即重试
 ✅ CI 矩阵跑 6 个组合（3 个渲染端 × 2 种模式）的 vite build，证明"AI 生成的代码能编"
 
@@ -145,7 +145,7 @@ schema 不变，换一行 import，渐进迁移。
 ### 11/11 · CTA
 
 ```
-🌐 文档：https://liujiaao.github.io/es-plus/
+🌐 文档：https://main.esplus-ai.com/
 🤖 浏览器内 MCP 演示：/#/ai-crud
 🎮 StackBlitz Playground：/#/playground
 📦 npm: @es-plus/vue3 / @es-plus/vue2 / @es-plus/mcp-server / @es-plus/cli
@@ -163,13 +163,13 @@ Star、Try、骂街都欢迎。
 ### 1/11 · Hook
 
 ```
-I just had Claude Code write 100 CRUD pages.
+I had Claude write 216 CRUD configs.
 
-95% compiled on the first try.
+100% of the generated output compiles (407/407).
 
-The other 5% compiled fine — they just used field names the PM hadn't decided on yet.
+Only 51% was right on the first try — 88% converged within three rounds of plain-language fixes. I'm not going to pretend the other 12% doesn't exist.
 
-Thread on how, and why most "AI-friendly" component libraries are bluffing 👇
+Thread on how we built it, and why the real guarantee for AI codegen is "it compiles", not "it's right the first time" 👇
 ```
 
 ### 2/11 · Pain 1
@@ -296,7 +296,7 @@ keep the schema, swap one import line, migrate page-by-page.
 ### 11/11 · CTA
 
 ```
-🌐 Docs: https://liujiaao.github.io/es-plus/
+🌐 Docs: https://main.esplus-ai.com/
 🤖 Live MCP demo in browser: /#/ai-crud
 🎮 StackBlitz playground: /#/playground
 📦 npm: @es-plus/vue3 · @es-plus/vue2 · @es-plus/mcp-server · @es-plus/cli
@@ -351,7 +351,7 @@ Star, try, roast — all welcome.
 
 如果首条没爆，准备替换：
 
-- A "我让 Claude Code 写了 100 个 CRUD 页面，95% 第一次跑通" ✅（首选）
+- A "我把 216 个 CRUD 配置交给 AI 写：编译通过率 100%，88% 三轮内收敛" ✅（首选）
 - B "用 AI 写中后台为什么总翻车，以及一种工程化的解法"
 - C "原生 Element Plus 写 30 个 CRUD 页面要 7500 行代码。我们把它压到 900 行"
 - D "Vue 2 项目接 AI Coding，比 Vue 3 还快——这是怎么做到的"

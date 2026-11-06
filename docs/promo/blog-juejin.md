@@ -1,4 +1,4 @@
-# 我让 Claude Code 写了 100 个 CRUD 页面，95% 第一次就跑通——这是怎么做到的
+# 我把 216 个 CRUD 配置交给 AI 写：编译通过率 100%，88% 三轮内收敛
 
 > **标签**：前端 · Vue · 中后台 · AI 编程 · Claude · MCP · Element Plus  
 > **首发平台建议**：掘金（流量首选）/ SegmentFault（深度受众）/ 思否（备份）/ 知乎（看话题热度）  
@@ -16,11 +16,11 @@
 效果：
 
 - 一个 8 字段查询 + 6 列表格 + 编辑弹窗的页面，**从 250 行降到 30 行**
-- AI 生成的代码**编译通过率 ~95%**（社区方案普遍 ~40%）
+- AI 生成的配置 **100% 编译通过**（夜间实测 407/407）；**首次零编辑 51%**，**≤3 轮收敛 88%**（留出集 194 例，门禁目标 95%，尚未达到）
 - CI 矩阵每次 push 都跑 6 个组合（3 个渲染端 × 2 种模式）的 `vite build`，**契约级保证 AI 写出来的代码能跑**
 
 GitHub：<https://github.com/liujiaao/es-plus>  
-在线演示：<https://liujiaao.github.io/es-plus/>
+在线演示：<https://main.esplus-ai.com/>
 
 下面是完整故事。
 
@@ -285,7 +285,7 @@ app.use(ESPlus, { permission: (v) => userPermissions.includes(v) })
 
 这一节是 ES-Plus 区别于所有其他中后台组件库的关键。
 
-### 5.1 MCP Server 暴露 16 个 tools（含场景路由器）
+### 5.1 MCP Server 暴露 19 个 tools（含场景路由器）
 
 ```bash
 # 一行接入 Claude Code
@@ -339,11 +339,11 @@ matrix:
 
 **第一次跑这个 CI 直接挂了一个 vue2 sfc bug** —— 暴露了一个 import 提取问题。修完后到今天保持全绿。
 
-这个矩阵的意义：**任何 ES-Plus 发出的代码都能编译**。社区方案达不到这个水准。
+这个矩阵的意义：**任何 ES-Plus 发出的代码都能编译**（实测 407/407）。多数代码生成方案把「能不能编译」交给用户去发现，我们没有做过横向基准，所以这里只给自家数字。
 
 ### 5.4 浏览器里的 MCP 协议可视化
 
-打开 <https://liujiaao.github.io/es-plus/#/ai-crud>，你能看到：
+打开 <https://main.esplus-ai.com/#/ai-crud>，你能看到：
 
 - 左侧：6 个 preset（用户管理 / 订单弹窗 / 虚拟滚动 / 多步表单 / 跨页审核 / 级联筛选）
 - 右侧 **Trace 时间轴**：把每一次 MCP tool 调用、AI 请求、zod 校验、代码生成**全部可视化**
@@ -392,12 +392,13 @@ matrix:
 | 5 次横向需求改动 | 75 小时 | 2.5 小时 | **72 小时** |
 | **合计直接节省** | | | **~358 小时（≈ 9 工作周）** |
 
-加上 AI 协作收益：
+加上 AI 协作收益（除末行外均为夜间实测；「不接 MCP」一列没有对照实验，标的是作者经验值）：
 
-| 项 | 不接 MCP | 接 MCP |
+| 项 | 不接 MCP（经验值） | 接 MCP（实测） |
 |---|---------|--------|
-| AI 写的代码可用率 | ~40% | ~95% |
-| AI 生成单页时长（含人工修正） | 30 分钟 | 8 分钟 |
+| AI 生成产物编译通过率 | 未实测 | **100%**（407/407） |
+| AI 生成配置首次零编辑率 | — | **51%**（三门禁口径下 ≤3 轮收敛 88%） |
+| AI 生成单页时长（含人工修正） | 30 分钟 | 8 分钟（估算） |
 
 **15 个 AI 生成页面节省 5.5 小时**——绝对值不大，但代码一致性、可读性大幅提升，**长期维护成本下降难以量化**。
 
@@ -534,12 +535,12 @@ ES-Plus 是第一个把这三件事都做齐的中后台组件库。
 
 ## 相关链接
 
-- **🌐 在线文档**：<https://liujiaao.github.io/es-plus/>
-- **🎮 Playground**：<https://liujiaao.github.io/es-plus/#/playground>
-- **🤖 AI CRUD 生成器（活的 MCP 演示）**：<https://liujiaao.github.io/es-plus/#/ai-crud>
+- **🌐 在线文档**：<https://main.esplus-ai.com/>
+- **🎮 Playground**：<https://main.esplus-ai.com/#/playground>
+- **🤖 AI CRUD 生成器（活的 MCP 演示）**：<https://main.esplus-ai.com/#/ai-crud>
 - **💻 GitHub**（求 Star）：<https://github.com/liujiaao/es-plus>
 - **📦 npm**：[@es-plus/vue3](https://www.npmjs.com/package/@es-plus/vue3) · [@es-plus/vue2](https://www.npmjs.com/package/@es-plus/vue2) · [@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server) · [@es-plus/cli](https://www.npmjs.com/package/@es-plus/cli)
-- **📚 完整深度文档**：[Why ES-Plus](https://liujiaao.github.io/es-plus/#/guide/why-es-plus)
+- **📚 完整深度文档**：[Why ES-Plus](https://main.esplus-ai.com/#/guide/why-es-plus)
 
 如果你在写中后台 + 用 AI 编程工具，这是 2026 年值得认真试一次的轮子。
 

@@ -23,9 +23,20 @@
  */
 import { watchEffect } from 'vue'
 import { SITES, SITE_KEY, siteOf } from './sites'
+import { FOOTER_NPM, FOOTER_REPO } from './site-footer.js'
 
 /** 本站基准地址（含结尾斜杠）—— 与 site-seo.js 同一份来源 */
 const BASE = (siteOf(SITE_KEY) || SITES[0]).url
+
+/**
+ * 同一实体的其他权威主页（发布渠道）。
+ *
+ * schema.org 里 `sameAs` 表达的是**身份等价** ——「这还是同一个东西」，不是「相关链接」。
+ * 所以这里只放发布渠道：GitHub 仓库与 npm 包页。不放文章/教程（那是内容不是身份），
+ * 也不放 MCP registry —— 它当前没有 per-server 页面（`/servers/<name>` 返回 404），
+ * 写进去等于给抓取器一个死链。两个地址直接取页脚单源，不在这里另抄一份。
+ */
+const SAME_AS = [FOOTER_REPO, FOOTER_NPM]
 
 /** schema.org 的通用外壳；具体字段由各 builder 补 */
 export interface JsonLd {
@@ -131,6 +142,7 @@ export function softwareApplication(input: { title: string; description: string;
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Web',
     inLanguage: 'zh-CN',
+    sameAs: SAME_AS,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
   }
 }

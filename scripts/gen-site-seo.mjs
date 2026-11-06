@@ -322,6 +322,16 @@ async function checkJsonLd(mainSiteUrl) {
     if (!data.offers || data.offers['@type'] !== 'Offer' || data.offers.price !== '0') {
       runtimeFail('首页 JSON-LD 的 offers 不完整（SoftwareApplication 缺 offers 会被判为不完整）')
     }
+    // sameAs 只允许放「同一实体的权威主页」：必须是非空数组、绝对 https，且包含仓库。
+    // 判据刻意不写死全集 —— 加发布渠道（比如某天的 PyPI 镜像）不该让守卫变红，
+    // 但写成相对地址、塞文章链接、或整段删掉必须红。
+    if (!Array.isArray(data.sameAs) || data.sameAs.length === 0) {
+      runtimeFail('首页 JSON-LD 缺 sameAs（发布渠道身份合并）')
+    } else if (!data.sameAs.every((u) => typeof u === 'string' && /^https:\/\/[^/]+\/.+/.test(u))) {
+      runtimeFail(`首页 JSON-LD 的 sameAs 含非绝对 https 地址：${JSON.stringify(data.sameAs)}`)
+    } else if (!data.sameAs.some((u) => u.includes('github.com/'))) {
+      runtimeFail('首页 JSON-LD 的 sameAs 里没有仓库地址')
+    }
   }
 
   // ④ 传 null 要移除（离开文章页时不该留着上一页的类型）
