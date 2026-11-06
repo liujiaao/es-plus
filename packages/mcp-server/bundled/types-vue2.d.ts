@@ -18,6 +18,7 @@ export type {
   ApiParams,
   FormType,
   FormItemOption,
+  FormDataOption,
   BtnConfig,
   LayoutFormProps,
   TableColumn,

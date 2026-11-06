@@ -5,6 +5,7 @@ import type { VNode, RenderFunction } from 'vue'
 import type { FormItemProps, FormProps, ButtonProps } from 'element-plus'
 import type {
   ListenToCallBack as CoreListenToCallBack,
+  FormDataOption,
   TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
@@ -19,9 +20,12 @@ import type {
   VxeProxyConfig,
   VxeExpandConfig,
   VxeSeqConfig,
+  EsTableGlobalConfig,
+  EsFormGlobalConfig,
 } from '@es-plus/core'
 
 export type {
+  FormDataOption,
   TableColumnDataOption,
   VxeEditRender,
   VxeEditConfig,
@@ -91,7 +95,7 @@ export type FieldHiddenExpr = FieldHiddenExprNode | FieldHiddenExprNode[]
  * `required` / `disabled` / `value` 是表达式节点（`value` 存在时 `dependencies` 必填）。
  */
 export interface FieldReactionFulfill {
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[] }>
+  dataOptions?: FormDataOption[]
   required?: FieldHiddenExprNode
   disabled?: FieldHiddenExprNode
   value?: FieldHiddenExprNode
@@ -130,7 +134,7 @@ export interface FormItemOption {
    * `h()` 需要的 `onXxx` 形式；已写成 `onXxx` 的键名原样透传。
    */
   on?: Record<string, unknown>
-  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean }>
+  dataOptions?: FormDataOption[]
   /**
    * 动态显隐判断：返回 true 表示**隐藏**该字段。
    *
@@ -380,6 +384,8 @@ export interface TableOptions {
   sortParam?: boolean | { field?: string; order?: string }
   /** Span method for merging cells */
   spanMethod?: (data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => [number, number]
+  /** 声明式合并单元格（跨端窄子集）：`{ rowsBy: ['列 prop', ...] }`，按「相邻行该列取值相等」合并 */
+  mergeConfig?: { rowsBy: string[] }
   /** Cell class name */
   cellClassName?: string | ((data: { row: Record<string, unknown>; column: unknown; rowIndex: number; columnIndex: number }) => string)
   /** Cell style */
@@ -529,8 +535,8 @@ export interface EsPlusOptions {
    */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   /** 各组件级默认配置：install 时按组件名下发（index.ts 的 `options[component.name]`） */
-  EsTable?: Record<string, unknown>
-  EsForm?: Record<string, unknown>
+  EsTable?: EsTableGlobalConfig
+  EsForm?: EsFormGlobalConfig
   EsDialog?: Record<string, unknown>
   [key: string]: unknown
 }

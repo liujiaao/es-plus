@@ -89,6 +89,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:generator-escaping',
       'check:generator-fuzz',
       'check:schema-validator',
+      'check:option-shape',
       'check:unknown-keys',
     ],
   },

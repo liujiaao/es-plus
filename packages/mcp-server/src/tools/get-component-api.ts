@@ -80,7 +80,11 @@ interface FormItemOption {
   formtype?: FormType       // Input/Select/DatePicker/TimePicker/Switch/Rate/Upload/...${v.esPlusPkg === '@es-plus/adapter-antdv' ? '\n                            // antdv: ColorPicker degrades to a native <input type="color"> — no alpha/preset/history, and it does NOT trigger a-form-item validation' : ''}
   span?: number             // Grid span (1-24, default 6)
   attrs?: Record<string, unknown>  // Pass-through to ${v.elementPkg} component
-  dataOptions?: Array<{ label: string; value: unknown }>  // Options for Select/Radio/Checkbox
+  dataOptions?: Array<{ label: string; value: unknown; disabled?: boolean; children?: unknown[]; tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info' }>
+                            // Options for Select/Radio/Checkbox/Cascader.
+                            // children = Cascader sub-options (recursive).
+                            // tagType colors the cell when the generator copies
+                            // these options onto a derived table column.
   isHidden?: ((model, item, formProps) => boolean)
     | { field: string; op?: 'eq'|'ne'|'in'|'nIn'|'empty'|'notEmpty'|'truthy'|'falsy'; value?: unknown }
     | Array<{ field: string; op?: 'eq'|'ne'|'in'|'nIn'|'empty'|'notEmpty'|'truthy'|'falsy'; value?: unknown }>
