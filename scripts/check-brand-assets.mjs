@@ -20,8 +20,8 @@
  *      （SVG 读不到 CSS 变量，只能写字面量，所以必须靠门禁防漂移）；
  *   B. og-image 未过期（输入哈希对得上）+ 已发布到主站 public/；
  *   C. 三站 index.html 均有 favicon 链接、description、og:title/description/image、canonical，
- *      且 canonical 与 og:url 的域名 == es-plus-docs/vite.config.ts 的 SITE_HOSTNAME
- *      （与 check-site-nav 同一套规范域名来源）；
+ *      且 canonical 与 og:url 指向**该站自己的规范域名**（SITES 单源，三站各一个域名根），
+ *      og:image 共用主站域名下的一张卡片图；
  *   D. 三站标题都带「ES-Plus」（不再出现旧产品名 ES-EUI 或命名不一致）；
  *   E. es-pc 顶栏不再用第三方库图标当 logo。
  *   F. 分享卡片是**合法 PNG** 且发布的副本与单源逐字节一致：
@@ -33,6 +33,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { readSites, siteByKey } from './lib/sites.mjs'
 import { dirname, join } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -160,23 +161,31 @@ function checkOgImage() {
 
 // ── C/D/E. 三站 index.html 与顶栏标记 ───────────────────
 const SITE_HTML = [
-  { key: 'es-plus-docs', html: 'es-plus-docs/index.html', canon: '/', logoFile: 'es-plus-docs/src/components/layout/AppHeader.vue' },
-  { key: 'es-pc', html: 'es-pc/index.html', canon: '/es-pc/', logoFile: 'es-pc/src/layouts/DocLayout.vue' },
-  { key: 'es-eui', html: 'es-eui/public/index.html', canon: '/es-eui/', logoFile: 'es-eui/src/App.vue' },
+  { key: 'vue3', html: 'es-plus-docs/index.html', logoFile: 'es-plus-docs/src/components/layout/AppHeader.vue' },
+  { key: 'antdv', html: 'es-pc/index.html', logoFile: 'es-pc/src/layouts/DocLayout.vue' },
+  { key: 'vue2', html: 'es-eui/public/index.html', logoFile: 'es-eui/src/App.vue' },
 ]
 
-function siteOrigin() {
-  const vite = read('es-plus-docs/vite.config.ts')
-  const host = vite?.match(/SITE_HOSTNAME\s*=\s*'([^']+)'/)?.[1]
-  return host ? host.replace(/\/$/, '') : null
-}
-
 function checkSiteMeta() {
-  const origin = siteOrigin()
-  if (!origin) return
+  let sites
+  try {
+    sites = readSites()
+  } catch (error) {
+    fail(error.message)
+    return
+  }
+  // 三站共用主站域名下的一张卡片图（同一产品的三个渲染端）
+  const mainOrigin = new URL(siteByKey(sites, 'vue3').url).origin
   for (const site of SITE_HTML) {
     const html = read(site.html)
     if (!html) continue
+    let siteUrl
+    try {
+      siteUrl = siteByKey(sites, site.key).url
+    } catch (error) {
+      fail(error.message)
+      continue
+    }
 
     // 注意不能用 [^>]* 跨过 href：es-eui 用的是 webpack 模板语法
     // `<%= BASE_URL %>favicon.svg`，里面的 `%>` 含 `>`，会把匹配截断
@@ -195,7 +204,7 @@ function checkSiteMeta() {
       fail(`${site.html} 缺少 twitter:card`)
     }
 
-    const expectedUrl = `${origin}${site.canon}`
+    const expectedUrl = siteUrl
     const canon = html.match(/rel="canonical"\s+href="([^"]+)"/)?.[1]
     if (canon !== expectedUrl) {
       fail(`${site.html} 的 canonical 是 ${canon || '(缺失)'}，应为 ${expectedUrl}`)
@@ -205,9 +214,9 @@ function checkSiteMeta() {
       fail(`${site.html} 的 og:url 是 ${ogUrl || '(缺失)'}，应为 ${expectedUrl}`)
     }
     const ogImg = html.match(/property="og:image"\s+content="([^"]+)"/)?.[1]
-    if (ogImg !== `${origin}/og-image.png`) {
+    if (ogImg !== `${mainOrigin}/og-image.png`) {
       fail(
-        `${site.html} 的 og:image 是 ${ogImg || '(缺失)'}，应为 ${origin}/og-image.png` +
+        `${site.html} 的 og:image 是 ${ogImg || '(缺失)'}，应为 ${mainOrigin}/og-image.png` +
           '（三站是同一产品的三个渲染端，共用主站的卡片图）',
       )
     }
@@ -232,7 +241,10 @@ function checkSiteMeta() {
     }
   }
 
-  if (!failed) console.log(`✅ 三站 meta / canonical / og / 顶栏标记齐备且指向规范域名（${origin}）`)
+  if (!failed) {
+    const origins = sites.map((site) => new URL(site.url).origin).join(' / ')
+    console.log(`✅ 三站 meta / canonical / og / 顶栏标记齐备且指向各自的规范域名（${origins}）`)
+  }
 }
 
 checkFavicon()

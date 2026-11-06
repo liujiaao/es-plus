@@ -1,7 +1,7 @@
 ---
 title: '与其它方案对比'
 route: '/guide/comparison'
-canonical: 'https://liujiaao.github.io/es-plus/guide/comparison/'
+canonical: 'https://main.esplus-ai.com/guide/comparison/'
 source: 'es-plus-docs/src/docs/comparison.md'
 type: 'guide'
 ---

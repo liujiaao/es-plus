@@ -1,7 +1,7 @@
 ---
 title: 'Vue 2 支持周期'
 route: '/guide/vue2-eol'
-canonical: 'https://liujiaao.github.io/es-plus/guide/vue2-eol/'
+canonical: 'https://main.esplus-ai.com/guide/vue2-eol/'
 source: 'es-plus-docs/src/docs/vue2-eol.md'
 type: 'guide'
 ---

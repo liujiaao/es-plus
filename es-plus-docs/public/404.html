@@ -84,37 +84,41 @@
 
     <script>
       /*
-       * 深链兜底：本站是 hash 路由（`/#/guide/installation`），但旧 sitemap、外部文章与
-       * 聊天工具里的链接往往写成路径式（`/es-plus/guide/installation`）。这类地址在
-       * GitHub Pages 上没有对应文件，会落到这个页面 —— 此处把路径改写成 hash 再跳一次，
-       * 让「看起来指对了」的链接真的落到内容上，而不是停在 404。
+       * 深链兜底：三站都是 hash 路由（`/#/guide/installation`），但旧 sitemap、外部文章与
+       * 聊天工具里的链接往往写成路径式。这个页面把路径改写成 hash 再跳一次，让「看起来
+       * 指对了」的链接真的落到内容上，而不是停在 404。
        *
-       * 这张 404 页是**整个 Pages 站点共用的**（GitHub Pages 只认发布根的那一份），
-       * 所以 `/es-plus/es-pc/…`、`/es-plus/es-eui/…` 的深链也会落到这里。子站必须跳回
-       * 子站自己的 hash —— 此前一律按主站改写，`/es-plus/es-pc/guide/x` 会被送去
-       * `/es-plus/#/es-pc/guide/x`（主站的一条不存在的路由），等于把用户送错站点。
+       * 同一份文件会出现在两个宿主上，基准不同：
+       *   · EdgeOne（main.esplus-ai.com 等自有域名）：站点在域名根，BASE = '/'，没有子站；
+       *   · GitHub Pages 镜像：主站在 /es-plus/，es-pc / es-eui 在它的子路径下。
+       * 所以按 hostname 选基准 —— 把一个宿主的常量写死，另一边的深链就会被改写到错误地址。
        *
-       * BASE 与 SITES 必须与 vite.config.ts 的 SITE_HOSTNAME、src/utils/sites.ts 的
-       * 三站清单一致：scripts/check-sitemap.mjs 会校验，并**用假 location 真跑一遍**
-       * 这里的改写逻辑（这个文件只在线上 404 时才执行，本地开发永远看不见）。
+       * BASE 与 vite.config.ts 的 SITE_HOSTNAME 同口径；PAGES_BASE / PAGES_SITES 与
+       * deploy-docs.yml 的发布路径同口径。scripts/check-sitemap.mjs 会校验，并**用假
+       * location 真跑一遍**这里的改写逻辑（这个文件只在线上 404 时才执行）。
        */
-      var BASE = '/es-plus/'
-      // 子站前缀：从 sites.ts 的三站清单抄来（json 之外的唯一副本），按长度降序即天然正确
-      var SITES = ['/es-plus/es-pc/', '/es-plus/es-eui/']
+      var BASE = '/'
+      var PAGES_HOST = 'liujiaao.github.io'
+      var PAGES_BASE = '/es-plus/'
+      // 子站前缀：与 deploy-docs.yml 的 `cp -r <dir>/dist/. _site/<sub>/` 一致
+      var PAGES_SITES = ['/es-plus/es-pc/', '/es-plus/es-eui/']
+      var isPages = location.hostname === PAGES_HOST
+      var base = isPages ? PAGES_BASE : BASE
+      var sites = isPages ? PAGES_SITES : []
       var path = location.pathname || '/'
       var target = null
 
-      for (var i = 0; i < SITES.length; i++) {
-        var sub = SITES[i]
+      for (var i = 0; i < sites.length; i++) {
+        var sub = sites[i]
         if (path.indexOf(sub) === 0) {
           var subRest = path.slice(sub.length - 1) // 保留前导 /
           target = sub.slice(0, -1) + '/#' + subRest + location.search + location.hash
           break
         }
       }
-      if (!target && path.indexOf(BASE) === 0 && path.length > BASE.length) {
-        var rest = path.slice(BASE.length - 1) // 保留前导 /
-        target = BASE.slice(0, -1) + '/#' + rest + location.search + location.hash
+      if (!target && path.indexOf(base) === 0 && path.length > base.length) {
+        var rest = path.slice(base.length - 1) // 保留前导 /
+        target = base.slice(0, -1) + '/#' + rest + location.search + location.hash
       }
 
       var requested = document.getElementById('requested')

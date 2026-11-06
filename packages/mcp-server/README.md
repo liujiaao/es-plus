@@ -2,7 +2,7 @@
 
 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3) / [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 官方 MCP Server —— 让 AI 编码工具自动生成 CRUD 页面。同一 Schema 可生成 Vue 3 或 Vue 2 版本代码。
 
-**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
+**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://main.esplus-ai.com/) · [Vue 3 + Ant Design Vue](https://antdv.esplus-ai.com/) · [Vue 2 + Element UI](https://esui.esplus-ai.com/) —— [在线文档](https://main.esplus-ai.com/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 > **维护基线（先读这两份）**
 > - [AI-NATIVE-ARCHITECTURE.md](./AI-NATIVE-ARCHITECTURE.md) —— 主链路执行步骤、工具面的能力与边界（含 `ESPLUS_MCP_PROFILE` 两档工具面）、IR / 三端运行时契约、质量体系。**改动任何工具/schema/生成器前必读。**

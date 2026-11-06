@@ -27,10 +27,9 @@
  *      子站的重复页），逐字核对 canonical 与 robots。直接测 `applyPageSeo` 本身是
  *      不够的：测得到函数，测不到「有没有人调它」。
  *
- * 关于 robots.txt 的诚实说明：两站部署在 `https://liujiaao.github.io/` 的**子路径**下，
- * 而爬虫只读域名根部的 `/robots.txt`。所以这份文件对抓取指令实际不起作用，它的用途是
- * 把「本站 sitemap 在哪」写成机器可读的声明，并在换到自有域名 / history 路由后直接生效。
- * 产物里也写着同一句话 —— 不要在这里悄悄把它描述成「能控制抓取」。
+ * 关于 robots.txt：三站的规范地址是各自域名根（EdgeOne Makers），robots.txt 就位于
+ * 根路径，这份文件是**真的生效**的。GitHub Pages 镜像把主站放在 `/es-plus/`、子站放在
+ * 它的子路径下，那份镜像副本不在域名根，对抓取指令不起作用 —— 它只是旧链接的兜底。
  *
  * 用法：
  *   node scripts/gen-site-seo.mjs           # 生成两个子站的 sitemap.xml / robots.txt
@@ -164,8 +163,8 @@ function renderSitemap(paths, siteUrl) {
 function renderRobots(siteUrl) {
   return [
     '# 由 scripts/gen-site-seo.mjs 生成，请勿手改。',
-    '# 本站部署在站点域名的子路径下，爬虫只读域名根部的 /robots.txt —— 这份文件对',
-    '# 抓取指令实际不起作用；它声明的是本站 sitemap 的位置（换到自有域名后即生效）。',
+    '# 本站规范地址在域名根，robots.txt 位于根路径，这份声明对抓取生效。',
+    '# GitHub Pages 镜像里的副本在子路径下，不在域名根，那份副本不影响抓取。',
     'User-agent: *',
     'Allow: /',
     '',

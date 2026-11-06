@@ -2,7 +2,7 @@
 
 一行命令生成一个**装上就能跑**的 [ES-Plus](https://github.com/liujiaao/es-plus) CRUD 项目：选渲染器、可选接入 AI（MCP）工具链，产出的示例页「一份配置，三端一致」。
 
-**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— [在线文档](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
+**三端线上演示**（同一份配置，换的只有渲染器）：[Vue 3 + Element Plus](https://main.esplus-ai.com/) · [Vue 3 + Ant Design Vue](https://antdv.esplus-ai.com/) · [Vue 2 + Element UI](https://esui.esplus-ai.com/) —— [在线文档](https://main.esplus-ai.com/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 ```bash
 npm create es-plus@latest
@@ -64,7 +64,7 @@ npm create es-plus@latest my-app -- -t vue3 --no-mcp -y
 
 ## 文档
 
-- 在线文档 & Playground：https://liujiaao.github.io/es-plus/
+- 在线文档 & Playground：https://main.esplus-ai.com/
 - 源码：https://github.com/liujiaao/es-plus
 
 ## License

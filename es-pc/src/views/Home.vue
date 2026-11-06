@@ -206,7 +206,7 @@ import oneConfig from '@/brand/one-config-diff.json'
 import TriRenderTabs from '@/components/TriRenderTabs.vue'
 
 const openAiCrud = () => {
-  window.open('https://liujiaao.github.io/es-plus/#/ai-crud', '_blank')
+  window.open('https://main.esplus-ai.com/#/ai-crud', '_blank')
 }
 
 const features = [

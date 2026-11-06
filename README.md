@@ -18,9 +18,9 @@
 第二个是其中更严的一半：**只算首轮零编辑**，不给收敛机会，用来分辨「一次就对」和「改几轮才对」。<br>
 语料目前 216 例（留出 194 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
 
-**[在线文档](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
+**[在线文档](https://main.esplus-ai.com/)** · **[Playground](https://main.esplus-ai.com/#/playground)** · **[AI CRUD 生成器](https://main.esplus-ai.com/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 
-**同一份配置的三个渲染端，各自一个线上站**：[Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) —— 三个站都跑在线上，示例由各自站点的构建与守卫覆盖。
+**同一份配置的三个渲染端，各自一个线上站**：[Vue 3 + Element Plus](https://main.esplus-ai.com/) · [Vue 3 + Ant Design Vue](https://antdv.esplus-ai.com/) · [Vue 2 + Element UI](https://esui.esplus-ai.com/) —— 三个站都跑在线上，示例由各自站点的构建与守卫覆盖。
 
 > **v1.4.0 起重命名**：`es-plus-ui` 已重命名为 [`@es-plus/vue3`](https://www.npmjs.com/package/@es-plus/vue3)，同时新增 Vue 2 渲染器 [`@es-plus/vue2`](https://www.npmjs.com/package/@es-plus/vue2) 与框架无关的 [`@es-plus/core`](https://www.npmjs.com/package/@es-plus/core)。原 `es-plus-ui` 包继续作为 stub 包工作，详见 [迁移指南](./docs/migrate-v1.4.md)。
 
@@ -552,7 +552,7 @@ npm run check:consistency
 | `@es-plus/mcp-server` | AI 编码工具集成 | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
 | `@es-plus/cli` | 命令行工具 | [npm](https://www.npmjs.com/package/@es-plus/cli) |
 | `es-plus-ui` (deprecated) | 已迁移至 `@es-plus/vue3` | [迁移指南](./docs/migrate-v1.4.md) |
-| 在线文档 | 完整 API 与示例 | [文档](https://liujiaao.github.io/es-plus/) |
+| 在线文档 | 完整 API 与示例 | [文档](https://main.esplus-ai.com/) |
 
 ## 贡献
 

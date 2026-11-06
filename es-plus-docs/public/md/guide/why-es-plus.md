@@ -1,7 +1,7 @@
 ---
 title: '为什么是 ES-Plus'
 route: '/guide/why-es-plus'
-canonical: 'https://liujiaao.github.io/es-plus/guide/why-es-plus/'
+canonical: 'https://main.esplus-ai.com/guide/why-es-plus/'
 source: 'es-plus-docs/src/docs/why-es-plus.md'
 type: 'guide'
 ---
@@ -642,7 +642,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | `doctor_page` | 静态检查宿主入口的 preflight 清单（UI 库 / 插件注册 / `httpRequest` / `permission` / `t` / JSX） | 「代码生成对了但跑不起来」的最后一公里 |
 
 **所有 tool 的实现都在 `@es-plus/shared`** —— 这意味着：
-- 浏览器里的 [AI CRUD 演示页](https://liujiaao.github.io/es-plus/#/ai-crud)直接调同一份代码（无需后端）
+- 浏览器里的 [AI CRUD 演示页](https://main.esplus-ai.com/#/ai-crud)直接调同一份代码（无需后端）
 - 测试覆盖一次就同时保障 MCP server / CLI / 浏览器 demo
 - 三个调用方零行为差异
 
@@ -707,7 +707,7 @@ matrix:
 
 ### 7.5 浏览器里的 AI CRUD 演示页
 
-打开 [https://liujiaao.github.io/es-plus/#/ai-crud](https://liujiaao.github.io/es-plus/#/ai-crud)，你能看到：
+打开 [https://main.esplus-ai.com/#/ai-crud](https://main.esplus-ai.com/#/ai-crud)，你能看到：
 
 - 左侧：6 个 preset（用户管理 / 订单弹窗 / 虚拟滚动 / 多步表单 / 跨页审核 / 级联筛选）
 - 右侧 Trace 时间轴：把每一次 MCP tool 调用、AI 请求、zod 校验、代码生成**全部可视化**
@@ -894,9 +894,9 @@ AI 通过 MCP 协议拿到 ES-Plus 的 Schema，生成代码，写入文件，�
 
 ## 资源链接
 
-- **🌐 在线文档**：<https://liujiaao.github.io/es-plus/>
-- **🎮 Playground（StackBlitz 沙箱）**：<https://liujiaao.github.io/es-plus/#/playground>
-- **🤖 AI CRUD 生成器（活的 MCP 协议演示）**：<https://liujiaao.github.io/es-plus/#/ai-crud>
+- **🌐 在线文档**：<https://main.esplus-ai.com/>
+- **🎮 Playground（StackBlitz 沙箱）**：<https://main.esplus-ai.com/#/playground>
+- **🤖 AI CRUD 生成器（活的 MCP 协议演示）**：<https://main.esplus-ai.com/#/ai-crud>
 - **📦 npm 包**：
   - [@es-plus/vue3](https://www.npmjs.com/package/@es-plus/vue3)
   - [@es-plus/vue2](https://www.npmjs.com/package/@es-plus/vue2)

@@ -1,7 +1,7 @@
 ---
 title: '常见问题'
 route: '/guide/faq'
-canonical: 'https://liujiaao.github.io/es-plus/guide/faq/'
+canonical: 'https://main.esplus-ai.com/guide/faq/'
 source: 'es-plus-docs/src/docs/faq.md'
 type: 'guide'
 ---

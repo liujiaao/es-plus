@@ -7,7 +7,7 @@ import { docMeta } from '../scripts/doc-meta.mjs'
 
 // 站点规范域名：三站切换器（scripts/check-site-nav.mjs）与 sitemap 生成
 // （scripts/gen-sitemap.mjs）都以它为「本站地址」的单一来源 —— 换域名只改这一处。
-const SITE_HOSTNAME = 'https://liujiaao.github.io/es-plus'
+const SITE_HOSTNAME = 'https://main.esplus-ai.com'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())

@@ -2,8 +2,9 @@
  * 三端站点清单 —— 站点切换器与案例卡跨端互链共用的一份数据。
  *
  * `SITES` 是三站共同维护的列表，内容必须逐字一致，由 scripts/check-site-nav.mjs 校验。
- * 该门禁同时断言：每项只有一个 `url`（即 CI 实际部署到的地址）、url 的路径 ==
- * 部署工作流把该站拷贝到的子路径、地址基准 == 文档站 vite.config.ts 的 SITE_HOSTNAME。
+ * 该门禁同时断言：每项只有一个 `url`（即站点对外的规范地址）、三个地址是各自域名的
+ * 根（EdgeOne Makers 的生产域名）、主站地址与文档站 vite.config.ts 的 SITE_HOSTNAME
+ * 同源。GitHub Pages 上那份 `/es-plus/` 部署是旧链接的镜像，不再出现在切换器里。
  *
  * 为什么从布局组件里抽出来：**案例卡也要用它拼跨端链接**。留在布局组件里的话，
  * 案例页就得再抄一份地址表 —— 那会成为第 4 份副本，而门禁只覆盖布局里那一份
@@ -19,19 +20,19 @@ export const SITES = [
     key: 'vue3',
     label: 'Vue 3 · Element Plus',
     short: 'Vue 3 · EP',
-    url: 'https://liujiaao.github.io/es-plus/',
+    url: 'https://main.esplus-ai.com/',
   },
   {
     key: 'antdv',
     label: 'Vue 3 · Ant Design Vue',
     short: 'Vue 3 · AntDV',
-    url: 'https://liujiaao.github.io/es-plus/es-pc/',
+    url: 'https://antdv.esplus-ai.com/',
   },
   {
     key: 'vue2',
     label: 'Vue 2 · Element UI',
     short: 'Vue 2 · EUI',
-    url: 'https://liujiaao.github.io/es-plus/es-eui/',
+    url: 'https://esui.esplus-ai.com/',
   },
 ]
 
@@ -49,8 +50,8 @@ export const siteOf = (key) => SITES.find((s) => s.key === key)
  * 跨端链接：把某站在**它自己站内**的路由路径拼成该站的绝对地址。
  *
  * 三站都是 hash 路由（createWebHashHistory / VueRouter mode:'hash'），
- * 所以形如 `https://…/es-pc/#/es-form`；cases.json 里的 links 存的是站内路径
- * （`/es-form`），这里补上站点前缀与 `#`。
+ * 所以形如 `https://antdv.esplus-ai.com/#/es-form`；cases.json 里的 links 存的是
+ * 站内路径（`/es-form`），这里补上站点域名与 `#`。
  */
 export function crossSiteUrl(key, path) {
   const site = siteOf(key)

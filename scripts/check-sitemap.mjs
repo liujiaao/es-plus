@@ -14,10 +14,11 @@
  *   1. public/sitemap.xml 与 gen-sitemap.mjs 的产出逐字一致（等价于 --check）；
  *   2. 每条 <loc> 都在站点基准之下，且只有两种合法形式：文章页的路径式地址
  *      （`guide/…` 等有预渲染 HTML 的前缀，必须以 / 结尾），其余页面的 `#/…`；
- *   3. 404.html 存在、BASE 与 SITE_HOSTNAME 的路径一致、子站前缀与 sites.ts 一致、
- *      且**用假 location 真跑一遍改写逻辑**：主站深链回到主站 hash，子站深链回到
- *      子站自己的 hash（这张 404 页是整个 Pages 站点共用的，此前一律按主站改写，
- *      把 `/es-plus/es-pc/guide/x` 送进了主站的一条不存在的路由）。
+ *   3. 404.html 存在、BASE 与 SITE_HOSTNAME 的路径一致、GitHub Pages 镜像的子站前缀与
+ *      deploy-docs.yml 一致，且**用假 location 在两个宿主上各真跑一遍改写逻辑**：规范
+ *      域名（EdgeOne，站点在根）的深链回到自己的 hash；Pages 镜像里 `/es-plus/es-pc/…`、
+ *       `/es-plus/es-eui/…` 回到子站自己的 hash（此前一律按主站改写，把用户送进主站的
+ *      一条不存在的路由）。
  *
  * 用法：node scripts/check-sitemap.mjs
  * 退出码：0 = 一致；1 = 漂移。
@@ -25,7 +26,8 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { readText, sameText } from './lib/text-sync.mjs'
+import { sameText } from './lib/text-sync.mjs'
+import { PAGES_ORIGIN, PAGES_BASE, mirrorSubSites } from './lib/pages-mirror.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -33,7 +35,6 @@ const SITE = 'es-plus-docs'
 const SITEMAP = join(SITE, 'public', 'sitemap.xml')
 const NOT_FOUND = join(SITE, 'public', '404.html')
 const VITE_CONFIG = join(SITE, 'vite.config.ts')
-const SITES_MODULE = join(SITE, 'src', 'utils', 'sites.ts')
 
 /**
  * 有预渲染产物的内容页前缀（`<dist>/<prefix>/<slug>/index.html`）。
@@ -100,7 +101,7 @@ if (!hostMatch) {
     if (locs.length && !failed) console.log(`   sitemap: ${locs.length} 条（文章页路径式 + 其余 hash 式），全部为可打开地址`)
   }
 
-  // 3. 404 兜底：BASE 一致 + 子站前缀一致 + 改写逻辑真跑一遍
+  // 3. 404 兜底：规范域名（根）+ Pages 镜像（子路径）两套基准都真跑一遍
   const notFound = read(NOT_FOUND)
   if (notFound) {
     const m = notFound.match(/var BASE = '([^']+)'/)
@@ -109,32 +110,34 @@ if (!hostMatch) {
     } else {
       const expectedBase = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
       if (m[1] !== expectedBase) {
-        fail(`404.html 的 BASE 是 ${m[1]}，而站点规范路径是 ${expectedBase} —— 换部署路径时漏改一处`)
+        fail(`404.html 的 BASE 是 ${m[1]}，而站点规范路径是 ${expectedBase} —— 换域名时漏改一处`)
       }
       if (!/location\.replace\(/.test(notFound)) {
         fail('404.html 里没有 location.replace —— 路径式深链不会被改写成 hash 路由')
       }
 
-      // 3a. 子站前缀必须与 sites.ts 一致：三站清单里除主站外的每一项
-      const sitesSrc = read(SITES_MODULE)
-      const subSites = [...sitesSrc.matchAll(/url:\s*'([^']+)'/g)]
-        .map((match) => {
-          const pathname = new URL(match[1]).pathname
-          return pathname.endsWith('/') ? pathname : `${pathname}/`
-        })
-        .filter((pathname) => pathname !== expectedBase && pathname.startsWith(expectedBase))
-      if (!subSites.length) fail(`没能从 ${SITES_MODULE} 里解析出任何子站地址（解析规则可能已失效）`)
-      const declared = [...notFound.matchAll(/'(\/[^']*\/)'/g)]
+      // 3a. Pages 镜像：宿主与基准必须与部署工作流一致
+      const pagesHost = new URL(PAGES_ORIGIN).hostname
+      const declaredHost = notFound.match(/var PAGES_HOST = '([^']+)'/)?.[1]
+      if (declaredHost !== pagesHost) {
+        fail(`404.html 的 PAGES_HOST 是 ${declaredHost ?? '(缺失)'}，应为 ${pagesHost}（GitHub Pages 镜像宿主）`)
+      }
+      const declaredPagesBase = notFound.match(/var PAGES_BASE = '([^']+)'/)?.[1]
+      if (declaredPagesBase !== PAGES_BASE) {
+        fail(`404.html 的 PAGES_BASE 是 ${declaredPagesBase ?? '(缺失)'}，应为 ${PAGES_BASE}`)
+      }
+      // 子站前缀必须与 deploy-docs.yml 的「目录 → 子路径」映射一致
+      const expectedSubSites = mirrorSubSites()
+      const declaredSubSites = [...(notFound.match(/var PAGES_SITES = \[([^\]]*)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g)]
         .map((match) => match[1])
-        .filter((pathname) => pathname !== expectedBase && pathname.startsWith(expectedBase))
-      for (const pathname of subSites) {
-        if (!declared.includes(pathname)) {
-          fail(`404.html 的 SITES 里没有子站前缀 ${pathname} —— 该站的路径式深链会被改写进主站`)
+      for (const pathname of expectedSubSites) {
+        if (!declaredSubSites.includes(pathname)) {
+          fail(`404.html 的 PAGES_SITES 里没有子站前缀 ${pathname} —— 该站的 Pages 镜像深链会被改写进主站`)
         }
       }
-      for (const pathname of declared) {
-        if (!subSites.includes(pathname)) {
-          fail(`404.html 的 SITES 里有 ${pathname}，但 ${SITES_MODULE} 里没有这个子站 —— 两边已漂移`)
+      for (const pathname of declaredSubSites) {
+        if (!expectedSubSites.includes(pathname)) {
+          fail(`404.html 的 PAGES_SITES 里有 ${pathname}，但 deploy-docs.yml 没有发布这个子站 —— 两边已漂移`)
         }
       }
 
@@ -143,32 +146,43 @@ if (!hostMatch) {
       if (!scriptBody) {
         fail('404.html 里没有可执行的内联脚本')
       } else {
-        const runRewrite = (pathname, search = '', hash = '') => {
+        const runRewrite = (hostname, pathname, search = '', hash = '') => {
           let target = null
-          const fakeLocation = { pathname, search, hash, replace: (value) => { target = value } }
+          const fakeLocation = { hostname, pathname, search, hash, replace: (value) => { target = value } }
           const fakeDocument = { getElementById: () => ({ textContent: '' }) }
           // eslint-disable-next-line no-new-func
           new Function('location', 'document', scriptBody)(fakeLocation, fakeDocument)
           return target
         }
+        const MAIN_HOST = new URL(hostMatch[1]).hostname
         const cases = [
-          ['/es-plus/guide/installation', '', '', '/es-plus/#/guide/installation'],
-          ['/es-plus/es-pc/quickstart', '', '', '/es-plus/es-pc/#/quickstart'],
-          ['/es-plus/es-eui/component/esform', '', '', '/es-plus/es-eui/#/component/esform'],
-          ['/es-plus/es-pc/quickstart', '?from=mail', '#top', '/es-plus/es-pc/#/quickstart?from=mail#top'],
-          ['/es-plus/', '', '', null],
-          ['/outside/page', '', '', null],
+          // 规范域名：站点在根，任何路径都改写成该站的 hash
+          [MAIN_HOST, '/guide/installation', '', '', '/#/guide/installation'],
+          [MAIN_HOST, '/no-such-page', '?from=mail', '#top', '/#/no-such-page?from=mail#top'],
+          // 首页与站点根不跳（否则会自己打自己）
+          [MAIN_HOST, '/', '', '', null],
+          // Pages 镜像：主站与两个子站各回自己的 hash
+          [pagesHost, '/es-plus/guide/installation', '', '', '/es-plus/#/guide/installation'],
+          [pagesHost, '/es-plus/es-pc/quickstart', '', '', '/es-plus/es-pc/#/quickstart'],
+          [pagesHost, '/es-plus/es-eui/component/esform', '', '', '/es-plus/es-eui/#/component/esform'],
+          [pagesHost, '/es-plus/es-pc/quickstart', '?from=mail', '#top', '/es-plus/es-pc/#/quickstart?from=mail#top'],
+          [pagesHost, '/es-plus/', '', '', null],
+          // 镜像之外的路径不动：它不属于这个仓库的站点
+          [pagesHost, '/outside/page', '', '', null],
         ]
-        for (const [pathname, search, hash, expected] of cases) {
-          const actual = runRewrite(pathname, search, hash)
+        for (const [hostname, pathname, search, hash, expected] of cases) {
+          const actual = runRewrite(hostname, pathname, search, hash)
           if (actual !== expected) {
-            fail(`404.html 改写 ${pathname}${search}${hash} 得到 ${actual ?? '（不跳转）'}，应为 ${expected ?? '（不跳转）'}`)
+            fail(`404.html 在 ${hostname} 改写 ${pathname}${search}${hash} 得到 ${actual ?? '（不跳转）'}，应为 ${expected ?? '（不跳转）'}`)
           }
         }
       }
 
       if (!failed) {
-        console.log(`   404.html: BASE ${m[1]} 与规范域名一致；子站深链回到子站（${subSites.join(' / ')}）；改写逻辑已实跑`)
+        console.log(
+          `   404.html: 规范域名 BASE ${m[1]}；Pages 镜像 ${PAGES_BASE}（子站 ${expectedSubSites.join(' / ')}）；` +
+            '两套宿主上的改写逻辑已实跑',
+        )
       }
     }
   }

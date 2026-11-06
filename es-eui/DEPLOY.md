@@ -1,16 +1,21 @@
 # es-eui（Vue 2 文档站）部署说明
 
 本目录是 **es-plus 三个文档站之一**，展示 es-plus 在 **Vue 2 + Element UI** 上的渲染结果。
-它不单独发布：三个站点由 `.github/workflows/deploy-docs.yml` 一次构建、合并进同一个
-GitHub Pages 站点。
+它有两个发布目标：**腾讯云 EdgeOne Makers（规范地址）** 与 GitHub Pages 上的镜像。
 
 ## 线上地址
 
-- 主站（Vue 3 + Element Plus）：https://liujiaao.github.io/es-plus/
-- Ant Design Vue 站：https://liujiaao.github.io/es-plus/es-pc/
-- 本站（Vue 2 + Element UI）：https://liujiaao.github.io/es-plus/es-eui/
+- 主站（Vue 3 + Element Plus）：https://main.esplus-ai.com/
+- Ant Design Vue 站：https://antdv.esplus-ai.com/
+- 本站（Vue 2 + Element UI）：https://esui.esplus-ai.com/
 
-## 如何部署
+GitHub Pages 镜像（旧链接仍可用，不再是切换器与 canonical 公布的地址）：
+
+- 主站：https://liujiaao.github.io/es-plus/
+- Ant Design Vue 站：https://liujiaao.github.io/es-plus/es-pc/
+- 本站：https://liujiaao.github.io/es-plus/es-eui/
+
+## 如何部署（GitHub Pages 镜像）
 
 推送到 `master` 即可。流程：
 

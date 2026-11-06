@@ -174,7 +174,7 @@ function socialHtml({ brand, accent }) {
   <div class="wrap">
     <div class="brand">
       <div class="mark">ES</div><div class="name">${esc(s.name)}</div>
-      <span class="url">liujiaao.github.io/es-plus</span>
+      <span class="url">main.esplus-ai.com</span>
     </div>
     <h1>${esc(s.positioning)}</h1>
     <div class="sub">${esc(s.slogan.subtitle)}</div>

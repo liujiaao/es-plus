@@ -1,7 +1,7 @@
 ---
 title: '路线图与版本策略'
 route: '/guide/roadmap'
-canonical: 'https://liujiaao.github.io/es-plus/guide/roadmap/'
+canonical: 'https://main.esplus-ai.com/guide/roadmap/'
 source: 'es-plus-docs/src/docs/roadmap.md'
 type: 'guide'
 ---

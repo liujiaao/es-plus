@@ -21,7 +21,7 @@
         {{ copy.home }}
       </router-link>
       <a
-        href="https://liujiaao.github.io/es-plus/"
+        href="https://main.esplus-ai.com/"
         target="_blank"
         rel="noopener"
         class="es-nf-btn es-nf-btn--ghost"

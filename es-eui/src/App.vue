@@ -115,7 +115,7 @@
           本页为 ES-Plus 的 <strong>Vue 2 + Element UI</strong> 渲染器文档。完整文档（含 <strong>三端通用对比</strong> 与 <strong>AI 工具链</strong>）见主文档站
         </span>
         <a
-          href="https://liujiaao.github.io/es-plus/"
+          href="https://main.esplus-ai.com/"
           target="_blank"
           rel="noopener"
           class="banner-link"

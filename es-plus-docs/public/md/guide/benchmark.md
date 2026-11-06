@@ -1,7 +1,7 @@
 ---
 title: '性能与准确率基准'
 route: '/guide/benchmark'
-canonical: 'https://liujiaao.github.io/es-plus/guide/benchmark/'
+canonical: 'https://main.esplus-ai.com/guide/benchmark/'
 source: 'es-plus-docs/src/docs/benchmark.md'
 type: 'guide'
 ---

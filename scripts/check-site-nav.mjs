@@ -5,10 +5,11 @@
  * 背景：三站顶栏的跨站切换器各有一份手写的 `const SITES = [...]`，内容必须一致。
  * 最初的检查只做了「三处数组字面量逐字符相同」—— 这是个**不够**的门禁：三处一起写错
  * 依然是绿的。实际发生过两件事，它都没拦住：
- *   1. 三站共同声明了一套腾讯云 EdgeOne 地址，实测 401 / 不解析，而 CI 只部署
- *      GitHub Pages → UI 上挂着死链；
+ *   1. 三站共同声明了一套腾讯云 EdgeOne 地址，但当时没有对应的部署与验证，
+ *      实测 401 / 不解析 → UI 上挂着死链。现在 EdgeOne 是规范地址，判据也换成了
+ *      「地址是各站域名根 + 主站与 SITE_HOSTNAME 同源」；
  *   2. `detectCurrentSite()` 按 hostname 反推当前站，凡不是 github.io 的环境
- *      （localhost、将来的自有域名）都会猜错 → 顶栏显示错误的当前站
+ *      （localhost、自有域名）都会猜错 → 顶栏显示错误的当前站
  *      （在 es-eui 上显示「Vue 3 · Element Plus」），并把用户送去死链。
  *
  * 因此本脚本在校验「一致」之外，还校验「正确」——把 UI 里公布的地址与
@@ -17,11 +18,11 @@
  *   2. 每个站点显式声明 SITE_KEY，且与 SITES 中的 key 对得上
  *      （当前站不再靠 hostname 反推）；
  *   3. 不存在第二套「备用部署」字段（tencent / edgeone …）与按 hostname 选地址的
- *      分支 —— 未被 CI 维护的部署不应出现在 UI 上；
- *   4. SITES 里每个 url 的路径 == deploy-docs.yml 合成 Pages 产物时该站被拷贝到的
- *      子路径（站点目录 → 子路径的映射以工作流为唯一真源）；
- *   5. SITES 的地址基准 == es-plus-docs/vite.config.ts 里的 SITE_HOSTNAME
- *      （站点自报的规范域名），避免换域名时只改一处。
+ *      分支 —— 每个站只公布一条规范地址，避免 UI 上出现两个入口；
+ *   4. SITES 里每个 url 都是该站自己的域名根（EdgeOne Makers 生产域名），三个 origin
+ *      互不相同；主站地址与 es-plus-docs/vite.config.ts 的 SITE_HOSTNAME 同源。
+ *      GitHub Pages 上的 `/es-plus/` 部署是旧链接的**镜像**，不再出现在切换器里，
+ *      但 deploy-docs.yml 仍必须覆盖三个站点目录（否则镜像会静默断掉）。
  *
  * 用法：node scripts/check-site-nav.mjs
  * 退出码：0 = 全部通过；1 = 漂移或接线错误。
@@ -177,52 +178,63 @@ function main() {
     if (!failed) console.log(`✅ 三站 SITES 数组逐字一致（${parsed.length} 处）`)
   }
 
-  // ── 4. UI 公布的地址 == CI 实际部署的子路径 ──
+  // ── 4. 规范地址：各站域名根，三个 origin 互不相同 ──
+  const entries = parsed[0]?.entries ?? []
+  const entryByKey = new Map(entries.map((e) => [e.key, e]))
+  const origins = new Map()
+  for (const t of SITE_TARGETS) {
+    const entry = entryByKey.get(t.key)
+    if (!entry) {
+      fail(`SITES 里没有 key='${t.key}' 的站点，无法核对 ${t.dir} 的规范地址`)
+      continue
+    }
+    let url
+    try {
+      url = new URL(entry.url)
+    } catch {
+      fail(`SITES 里 ${t.key} 的 url 不是合法地址：${entry.url}`)
+      continue
+    }
+    if (url.protocol !== 'https:') fail(`${t.key} 的规范地址必须是 https：${entry.url}`)
+    if (url.pathname !== '/') {
+      fail(
+        `${t.key} 的规范地址是 ${entry.url}，但该站部署在自己的域名根 —— ` +
+          '规范地址应为 https://<domain>/（Pages 镜像的子路径不进 SITES）',
+      )
+    }
+    if (origins.has(url.origin)) {
+      fail(`${t.key} 与 ${origins.get(url.origin)} 共用了 origin ${url.origin} —— 三个站必须是三个独立域名`)
+    } else {
+      origins.set(url.origin, t.key)
+    }
+  }
+
+  // ── 5. 主站地址 == 站点自报的规范域名（SITE_HOSTNAME）──
+  const mainEntry = entryByKey.get('vue3')
+  const vite = read(VITE_CONFIG)
+  if (vite && mainEntry) {
+    const host = vite.match(/SITE_HOSTNAME\s*=\s*'([^']+)'/)
+    if (!host) {
+      fail(`未能在 ${VITE_CONFIG} 定位 SITE_HOSTNAME`)
+    } else if (new URL(host[1]).origin !== new URL(mainEntry.url).origin) {
+      fail(
+        `SITES 里主站（vue3）的地址是 ${mainEntry.url}，而 ${VITE_CONFIG} 的 SITE_HOSTNAME ` +
+          `推出 ${new URL(host[1]).origin} —— 两处都在声明「主站的规范地址」，换域名时必须同步`,
+      )
+    } else if (!failed) {
+      console.log(`✅ 三站规范地址为独立域名根；主站与 SITE_HOSTNAME 同源（${new URL(mainEntry.url).origin}）`)
+    }
+  }
+
+  // ── 6. GitHub Pages 镜像仍覆盖三个站点（虽不公布，删掉就会让旧链接变死链）──
   const deployPaths = parseDeployPaths()
   if (deployPaths) {
-    const perSite = new Map(parsed.map((p) => [p.key, p]))
-    const base = perSite.get('vue3')?.entries.find((e) => e.key === 'vue3')?.url
-    if (!base) {
-      fail('未能确定 SITES 中 vue3（根站点）的 url，无法推导地址基准')
-    } else {
-      for (const t of SITE_TARGETS) {
-        const sub = deployPaths.get(t.dir)
-        if (sub === undefined) {
-          fail(`${DEPLOY_WORKFLOW} 未把 ${t.dir} 拷进 Pages 产物（应有一行 cp -r ${t.dir}/dist/. _site/…）`)
-          continue
-        }
-        const site = perSite.get(t.key)
-        const url = site?.entries.find((e) => e.key === t.key)?.url
-        if (!url) continue
-        const expected = sub ? `${base}${sub}/` : base
-        if (url !== expected) {
-          fail(
-            `切换器里 ${t.key} 的 url 是 ${url}，但按 ${DEPLOY_WORKFLOW}，${t.dir} 被部署到 ` +
-              `${expected}（子路径 "${sub}"）—— UI 上公布的地址与 CI 实际部署不一致`,
-          )
-        }
-      }
-      if (!failed) console.log('✅ 切换器地址与部署工作流的子路径一致（3 站）')
-
-      // ── 5. 地址基准 == 站点自报的规范域名 ──
-      const vite = read(VITE_CONFIG)
-      if (vite) {
-        const host = vite.match(/SITE_HOSTNAME\s*=\s*'([^']+)'/)
-        if (!host) {
-          fail(`未能在 ${VITE_CONFIG} 定位 SITE_HOSTNAME`)
-        } else {
-          const expectedBase = `${host[1].replace(/\/$/, '')}/`
-          if (base !== expectedBase) {
-            fail(
-              `切换器的地址基准是 ${base}，而 ${VITE_CONFIG} 的 SITE_HOSTNAME 推出应为 ` +
-                `${expectedBase} —— 两处都在声明「本站的规范地址」，换域名时必须同步`,
-            )
-          } else {
-            console.log(`✅ 切换器地址基准与站点规范域名一致（${base}）`)
-          }
-        }
+    for (const t of SITE_TARGETS) {
+      if (!deployPaths.has(t.dir)) {
+        fail(`${DEPLOY_WORKFLOW} 未把 ${t.dir} 拷进 Pages 产物（应有一行 cp -r ${t.dir}/dist/. _site/…）`)
       }
     }
+    if (!failed) console.log(`✅ Pages 镜像仍发布三站（${[...deployPaths.keys()].join(' / ')}）`)
   }
 
   if (failed) {

@@ -47,5 +47,5 @@ Environment:
 Clients configure this binary as a stdio command, e.g.
   { "mcpServers": { "es-plus": { "command": "mcp-server-es-plus", "args": [] } } }
 
-Docs: https://liujiaao.github.io/es-plus/#/guide/mcp-server
+Docs: https://main.esplus-ai.com/#/guide/mcp-server
 `;

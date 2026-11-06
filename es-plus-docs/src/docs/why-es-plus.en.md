@@ -638,7 +638,7 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | `doctor_page` | Static-checks the host entry against the preflight checklist (UI library / plugin registration / `httpRequest` / `permission` / `t` / JSX) | The last mile of "the generated code is right but the app won't run" |
 
 **All tools are implemented in `@es-plus/shared`**, which means:
-- The [AI CRUD demo page](https://liujiaao.github.io/es-plus/#/ai-crud) in your browser calls the same code (no backend required)
+- The [AI CRUD demo page](https://main.esplus-ai.com/#/ai-crud) in your browser calls the same code (no backend required)
 - One test pass simultaneously covers the MCP server, the CLI, and the browser demo
 - Zero behavioral drift between the three callers
 
@@ -703,7 +703,7 @@ The point of this matrix is a **contract-level guarantee**: **within the e2e mat
 
 ### 7.5 The AI CRUD Demo in the Browser
 
-Open [https://liujiaao.github.io/es-plus/#/ai-crud](https://liujiaao.github.io/es-plus/#/ai-crud) and you'll see:
+Open [https://main.esplus-ai.com/#/ai-crud](https://main.esplus-ai.com/#/ai-crud) and you'll see:
 
 - Left: 6 presets (user management / order dialog / virtual scrolling / multi-step form / cross-page approval / cascading filters)
 - Right: a Trace timeline that visualizes every MCP tool call, AI request, zod validation, and codegen step
@@ -890,9 +890,9 @@ AI pulls the ES-Plus Schema through the MCP protocol, generates the code, writes
 
 ## Resources
 
-- **Docs**: <https://liujiaao.github.io/es-plus/>
-- **Playground (StackBlitz sandbox)**: <https://liujiaao.github.io/es-plus/#/playground>
-- **AI CRUD generator (live MCP demo)**: <https://liujiaao.github.io/es-plus/#/ai-crud>
+- **Docs**: <https://main.esplus-ai.com/>
+- **Playground (StackBlitz sandbox)**: <https://main.esplus-ai.com/#/playground>
+- **AI CRUD generator (live MCP demo)**: <https://main.esplus-ai.com/#/ai-crud>
 - **npm packages**:
   - [@es-plus/vue3](https://www.npmjs.com/package/@es-plus/vue3)
   - [@es-plus/vue2](https://www.npmjs.com/package/@es-plus/vue2)

@@ -51,9 +51,9 @@ export const SITE_ROUTES = {
 
 /** 三站身份（与 utils/sites 的 SITES 一一对应；这里只放页脚需要的三样） */
 export const FOOTER_SITES = [
-  { key: 'es-plus-docs', zh: 'Vue 3 · Element Plus', en: 'Vue 3 · Element Plus', href: 'https://liujiaao.github.io/es-plus/' },
-  { key: 'es-pc', zh: 'Vue 3 · Ant Design Vue', en: 'Vue 3 · Ant Design Vue', href: 'https://liujiaao.github.io/es-plus/es-pc/' },
-  { key: 'es-eui', zh: 'Vue 2 · Element UI', en: 'Vue 2 · Element UI', href: 'https://liujiaao.github.io/es-plus/es-eui/' },
+  { key: 'es-plus-docs', zh: 'Vue 3 · Element Plus', en: 'Vue 3 · Element Plus', href: 'https://main.esplus-ai.com/' },
+  { key: 'es-pc', zh: 'Vue 3 · Ant Design Vue', en: 'Vue 3 · Ant Design Vue', href: 'https://antdv.esplus-ai.com/' },
+  { key: 'es-eui', zh: 'Vue 2 · Element UI', en: 'Vue 2 · Element UI', href: 'https://esui.esplus-ai.com/' },
 ]
 
 /**
@@ -85,7 +85,7 @@ export function buildFooterColumns({ siteKey, locale = 'zh', rendererZh = '', re
         item('快速开始', 'Quick start', route('quickstart')),
         item('组件 API', 'Components', route('components')),
         item('核心案例', 'Core cases', route('cases')),
-        item('更新日志', 'Changelog', 'https://liujiaao.github.io/es-plus/#/guide/changelog', { external: true }),
+        item('更新日志', 'Changelog', 'https://main.esplus-ai.com/#/guide/changelog', { external: true }),
       ],
     },
     {

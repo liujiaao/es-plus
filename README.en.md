@@ -17,9 +17,9 @@ The first is the **gate definition**: the in-schema-intent hit rate is "zero-edi
 The second is the stricter half: **zero-edit on turn 0 only**, with no correction budget, so you can tell "right first time" apart from "right after a few rounds".<br>
 The corpus is 216 cases today (194 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
 
-**[Documentation](https://liujiaao.github.io/es-plus/)** · **[Playground](https://liujiaao.github.io/es-plus/#/playground)** · **[AI CRUD Generator](https://liujiaao.github.io/es-plus/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
+**[Documentation](https://main.esplus-ai.com/)** · **[Playground](https://main.esplus-ai.com/#/playground)** · **[AI CRUD Generator](https://main.esplus-ai.com/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
 
-**One config, three renderers — each with its own live site**: [Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) — all three are deployed, and each site's examples are covered by its own build and guards.
+**One config, three renderers — each with its own live site**: [Vue 3 + Element Plus](https://main.esplus-ai.com/) · [Vue 3 + Ant Design Vue](https://antdv.esplus-ai.com/) · [Vue 2 + Element UI](https://esui.esplus-ai.com/) — all three are deployed, and each site's examples are covered by its own build and guards.
 
 ---
 
@@ -546,7 +546,7 @@ npm run check:consistency
 | @es-plus/core | Framework-agnostic core | [npm](https://www.npmjs.com/package/@es-plus/core) |
 | @es-plus/mcp-server | AI coding tool integration | [npm](https://www.npmjs.com/package/@es-plus/mcp-server) |
 | @es-plus/cli | Command line tool | [npm](https://www.npmjs.com/package/@es-plus/cli) |
-| Documentation | Full API & examples | [Docs](https://liujiaao.github.io/es-plus/) |
+| Documentation | Full API & examples | [Docs](https://main.esplus-ai.com/) |
 
 ## Contributing
 

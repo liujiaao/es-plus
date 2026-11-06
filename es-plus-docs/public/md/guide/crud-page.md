@@ -1,7 +1,7 @@
 ---
 title: '整页 CRUD（EsCrudPage）'
 route: '/guide/crud-page'
-canonical: 'https://liujiaao.github.io/es-plus/guide/crud-page/'
+canonical: 'https://main.esplus-ai.com/guide/crud-page/'
 source: 'es-plus-docs/src/docs/crud-page.md'
 type: 'guide'
 ---

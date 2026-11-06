@@ -38,4 +38,4 @@ npx @es-plus/cli validate ./config.json --schema form-item
 
 ## 在线体验
 
-主文档站提供了 [AI CRUD 生成器](https://liujiaao.github.io/es-plus/#/ai-crud)，可视化 MCP 协议的完整调用流。完整的 AI 工具链文档见[主文档站](https://liujiaao.github.io/es-plus/)。
+主文档站提供了 [AI CRUD 生成器](https://main.esplus-ai.com/#/ai-crud)，可视化 MCP 协议的完整调用流。完整的 AI 工具链文档见[主文档站](https://main.esplus-ai.com/)。

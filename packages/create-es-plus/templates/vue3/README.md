@@ -32,5 +32,5 @@ AI 会产出一份配置，由 ES-Plus 校验并确定性编译成页面。
 
 ## 文档
 
-- 文档 & Playground：https://liujiaao.github.io/es-plus/
+- 文档 & Playground：https://main.esplus-ai.com/
 - 源码：https://github.com/liujiaao/es-plus

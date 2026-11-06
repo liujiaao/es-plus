@@ -4,7 +4,7 @@
 
 This package is now a thin re-export of `@es-plus/vue3`, kept on npm so existing installs continue to work. **All future development happens on `@es-plus/vue3`** — please migrate.
 
-**Live demos, one config, three renderers**: [Vue 3 + Element Plus](https://liujiaao.github.io/es-plus/) · [Vue 3 + Ant Design Vue](https://liujiaao.github.io/es-plus/es-pc/) · [Vue 2 + Element UI](https://liujiaao.github.io/es-plus/es-eui/) — [Docs](https://liujiaao.github.io/es-plus/) · [GitHub](https://github.com/liujiaao/es-plus)
+**Live demos, one config, three renderers**: [Vue 3 + Element Plus](https://main.esplus-ai.com/) · [Vue 3 + Ant Design Vue](https://antdv.esplus-ai.com/) · [Vue 2 + Element UI](https://esui.esplus-ai.com/) — [Docs](https://main.esplus-ai.com/) · [GitHub](https://github.com/liujiaao/es-plus)
 
 ## Why the rename?
 

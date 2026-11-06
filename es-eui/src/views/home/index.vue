@@ -171,7 +171,7 @@
     <div class="ai-entry">
       <div class="container">
         <a
-          href="https://liujiaao.github.io/es-plus/#/ai-crud"
+          href="https://main.esplus-ai.com/#/ai-crud"
           target="_blank"
           rel="noopener"
           class="ai-entry-card"

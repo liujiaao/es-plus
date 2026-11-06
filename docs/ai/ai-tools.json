@@ -26,8 +26,8 @@
       "title": "在线体验",
       "intro": "主文档站提供了 AI CRUD 生成器，可视化 MCP 协议的完整调用流。完整的 AI 工具链文档见主文档站。",
       "links": [
-        { "label": "AI CRUD 生成器", "href": "https://liujiaao.github.io/es-plus/#/ai-crud" },
-        { "label": "主文档站", "href": "https://liujiaao.github.io/es-plus/" }
+        { "label": "AI CRUD 生成器", "href": "https://main.esplus-ai.com/#/ai-crud" },
+        { "label": "主文档站", "href": "https://main.esplus-ai.com/" }
       ]
     }
   ]

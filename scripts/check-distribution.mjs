@@ -10,8 +10,8 @@
  *      它极容易漂：新增一个包、复制一份 README 当模板、或者某次改写把链接行删掉，
  *      都不会有任何报错 —— 只是那个包页从此变成孤岛。这里逐文件断言：仓库 README
  *      与**每个已发布包的 README** 都要有 ①在线文档 ②Ant Design Vue 站 ③Vue 2 站
- *      ④仓库地址。三个站的域名**从 `es-plus-docs/vite.config.ts` 的 SITE_HOSTNAME
- *      推出来**，不在这里另写一遍（换域名时只改一处）。
+ *      ④仓库地址。三个站的域名**从 `es-plus-docs/src/utils/sites.ts` 的 SITES 推出**
+ *      （三站是三个独立域名根），不在这里另写一遍（换域名时只改一处）。
  *
  *   2. **MCP 注册表条目**（`packages/mcp-server/server.json`）。官方 registry 的
  *      发布靠 `mcp-publisher` 读这个文件，而它的 `version` 与 `identifier` 是**手抄
@@ -28,6 +28,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readSites, siteByKey } from './lib/sites.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -42,15 +43,19 @@ const read = (p) => {
   return existsSync(abs) ? readFileSync(abs, 'utf-8') : null
 }
 
-/** 规范域名：与 check-brand-assets / check-site-seo 同源（es-plus-docs/vite.config.ts） */
-function siteOrigin() {
-  const vite = read('es-plus-docs/vite.config.ts')
-  const host = vite?.match(/SITE_HOSTNAME\s*=\s*'([^']+)'/)?.[1]
-  if (!host) {
-    fail('未能从 es-plus-docs/vite.config.ts 取到 SITE_HOSTNAME')
+/** 三站规范地址（单源：es-plus-docs/src/utils/sites.ts） */
+function siteOrigins() {
+  try {
+    const sites = readSites()
+    return {
+      main: siteByKey(sites, 'vue3').url,
+      antdv: siteByKey(sites, 'antdv').url,
+      vue2: siteByKey(sites, 'vue2').url,
+    }
+  } catch (error) {
+    fail(error.message)
     return null
   }
-  return host.replace(/\/$/, '')
 }
 
 const REPO_URL = 'https://github.com/liujiaao/es-plus'
@@ -71,12 +76,12 @@ function publishedPackages() {
 
 // ── 1. README 互链（仓库 README ×2 + 每个已发布包的 README）────────────
 function checkReadmeLinks() {
-  const origin = siteOrigin()
-  if (!origin) return
+  const origins = siteOrigins()
+  if (!origins) return
   const required = [
-    { url: `${origin}/`, what: '在线文档（Vue 3 + Element Plus 站）' },
-    { url: `${origin}/es-pc/`, what: 'Vue 3 + Ant Design Vue 站' },
-    { url: `${origin}/es-eui/`, what: 'Vue 2 + Element UI 站' },
+    { url: origins.main, what: '在线文档（Vue 3 + Element Plus 站）' },
+    { url: origins.antdv, what: 'Vue 3 + Ant Design Vue 站' },
+    { url: origins.vue2, what: 'Vue 2 + Element UI 站' },
     { url: REPO_URL, what: 'GitHub 仓库' },
   ]
   const targets = ['README.md', 'README.en.md', ...publishedPackages().map((p) => p.readme)]
@@ -99,7 +104,10 @@ function checkReadmeLinks() {
     }
   }
   if (ok === targets.length) {
-    console.log(`✅ 外部分发互链齐备：${ok} 份 README 都指向三站与仓库（${origin}）`)
+    console.log(
+      `✅ 外部分发互链齐备：${ok} 份 README 都指向三站与仓库` +
+        `（${origins.main} / ${origins.antdv} / ${origins.vue2}）`,
+    )
   }
 }
 

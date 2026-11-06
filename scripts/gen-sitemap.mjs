@@ -3,15 +3,15 @@
  * 主站 sitemap 生成。
  *
  * 背景：此前由 vite-plugin-sitemap 按手写的 19 条路径列表产出，而站点是 **hash 路由** ——
- * `https://…/es-plus/guide/getting-started` 在 GitHub Pages 上根本没有对应文件，抽三条
- * 去请求全是 404（其余同构，也一样）。一份「多数条目打不开」的 sitemap 比没有更糟：
- * 搜索引擎会先拿到 404，再降低整个站的抓取配额。
+ * `https://…/guide/getting-started` 在纯静态托管上根本没有对应文件，抽三条去请求全是
+ * 404（其余同构，也一样）。一份「多数条目打不开」的 sitemap 比没有更糟：搜索引擎会先
+ * 拿到 404，再降低整个站的抓取配额。
  *
  * 现在的口径：
- *   1. **文章类页面输出路径式地址**（`…/es-plus/guide/x/`）：构建期给每篇生成了
+ *   1. **文章类页面输出路径式地址**（`…/guide/x/`）：构建期给每篇生成了
  *      静态 HTML（scripts/gen-prerender.mjs），那份 HTML 就是这一页的规范地址，
  *      与 canonical / JSON-LD 同口径；
- *   2. 其余页面（营销页、工具页、案例详情）仍输出 hash 形式（`…/es-plus/#/quickstart`），
+ *   2. 其余页面（营销页、工具页、案例详情）仍输出 hash 形式（`https://main.esplus-ai.com/#/quickstart`），
  *      因为它们只有前端渲染这一种打开方式；
  *   3. 条目从**真实注册表**推导，不再手抄：路由表给出静态页，doc-registry /
  *      component-doc / advanced-doc / AI 案例 registry 给出参数页的每个 slug；

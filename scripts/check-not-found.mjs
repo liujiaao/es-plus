@@ -19,9 +19,14 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { readSites, siteByKey } from './lib/sites.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
+
+/** 另两站的「搜索文档」是去主站的真实外链；地址取 SITES 单源，不在这里再写死一遍 */
+const MAIN_SITE_URL = siteByKey(readSites(), 'vue3').url
+const EXTERNAL_DOCS_LINK = new RegExp(`href="${MAIN_SITE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`)
 
 const SITES = [
   {
@@ -43,7 +48,7 @@ const SITES = [
     entry: 'es-pc/src/main.js',
     cssImport: "import './styles/docs-notfound.css'",
     catchAll: "path: ':pathMatch(.*)*'",
-    search: /href="https:\/\/liujiaao\.github\.io\/es-plus\/"/,
+    search: EXTERNAL_DOCS_LINK,
   },
   {
     key: 'es-eui',
@@ -53,7 +58,7 @@ const SITES = [
     entry: 'es-eui/src/main.js',
     cssImport: "import './assets/docs-notfound.css'",
     catchAll: "path: '*'",
-    search: /href="https:\/\/liujiaao\.github\.io\/es-plus\/"/,
+    search: EXTERNAL_DOCS_LINK,
   },
 ]
 

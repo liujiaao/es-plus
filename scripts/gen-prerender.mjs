@@ -15,7 +15,7 @@
  * 会渲染成首页，等于把静态正文当场覆盖掉。想用交互版（示例、搜索、目录高亮）就点
  * 页面顶部的「在应用中打开」，去 `/#/guide/x`。
  *
- * 与 canonical 的关系：这些页是内容页的**规范地址**（`…/es-plus/guide/x/`），
+ * 与 canonical 的关系：这些页是内容页的**规范地址**（`…/guide/x/`），
  * 所以 `utils/site-seo.js` 与 `utils/json-ld.ts` 对文章类路径也改用路径式地址。
  * 三处必须同口径：sitemap 列它、页面上 canonical 指它、结构化数据的 url 也是它。
  *

@@ -1,7 +1,7 @@
 ---
 title: '贡献指南'
 route: '/guide/contributing'
-canonical: 'https://liujiaao.github.io/es-plus/guide/contributing/'
+canonical: 'https://main.esplus-ai.com/guide/contributing/'
 source: 'es-plus-docs/src/docs/contributing.md'
 type: 'guide'
 ---
