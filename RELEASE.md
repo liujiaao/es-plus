@@ -103,6 +103,16 @@ mcp-publisher validate packages/mcp-server/server.json   # 离线校验，不联
 mcp-publisher publish  packages/mcp-server/server.json   # 位置参数是 server.json 路径
 ```
 
+两点实操提醒（都是 2026-11-06 那次登记里踩到的）：
+
+- **`login` 之后要立刻 `publish`。** 拿到的是有效期很短的 Registry JWT，实测中间插了
+  几分钟别的活再发布就会失败：`401 … token is expired`。过期重新 `login` 即可，但
+  login → publish 连着做最省事。
+- **`server.json` 的 `$schema` 要跟 registry 当前的 schema 版本**（今为
+  `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`）。
+  用旧版仍能发布成功，但 `validate` 会打 `⚠️ Deprecated schema detected`；跨版本差异
+  是纯增量的，改 URL 即可，字段不用动。
+
 还有三项**只能人做**、代码管不了：
 
 - **GitHub Social preview**：仓库 Settings → Social preview 上传 `docs/brand/social-preview.png`
