@@ -12,6 +12,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "mergeConfig"],
   "config": {
     "name": "DeptTeamV2",
     "apiUrl": "/api/staff",

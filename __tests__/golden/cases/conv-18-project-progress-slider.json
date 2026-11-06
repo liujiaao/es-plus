@@ -11,6 +11,7 @@
     "actions",
     "formtype:progress"
   ],
+  "nlStatedDims": ["propSet", "actions", "formtype:progress", "dataOptions:status", "formtype:status", "inTable:name", "inTable:owner", "inTable:progress", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

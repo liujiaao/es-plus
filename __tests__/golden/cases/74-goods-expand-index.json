@@ -3,6 +3,7 @@
   "nlEn": "Goods management: query by goods name; the table's first column is an index, then goods name and price; each row can expand to reveal the spec and origin; supports add, edit and delete.",
   "fixedFields": ["goodsName", "price", "spec", "origin"],
   "pinnedDims": ["propSet", "actions", "columns", "expandConfig"],
+  "nlStatedDims": ["propSet", "actions", "columns", "expandConfig"],
   "config": {
     "name": "GoodsManage",
     "apiUrl": "/api/goods",

@@ -3,6 +3,7 @@
   "nlEn": "Book management: query by title and author; the table shows title, author and stock; each row can expand to reveal the publisher and ISBN; supports add, edit and delete.",
   "fixedFields": ["bookName", "author", "stock", "publisher", "isbn"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "expandConfig", "inTable:author", "inTable:bookName", "inTable:stock"],
   "config": {
     "name": "BookManage",
     "apiUrl": "/api/books",

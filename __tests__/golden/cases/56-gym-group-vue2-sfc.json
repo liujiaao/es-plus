@@ -3,6 +3,7 @@
   "nlEn": "Gym membership management: query by member name and card type; the table uses a \"Member\" group header covering member name and phone, and a \"Membership\" group header covering card type and expiry date; supports add, edit, and delete.",
   "fixedFields": ["memberName", "phone", "cardType", "expireDate"],
   "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "columns", "inQuery:cardType", "inQuery:memberName"],
   "config": {
     "name": "GymMemberManage",
     "apiUrl": "/api/gym-members",

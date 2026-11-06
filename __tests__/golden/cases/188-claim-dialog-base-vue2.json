@@ -3,6 +3,7 @@
   "nlEn": "Expense claims: query conditions are claim number and status (pending / approved / rejected); the table shows claim number, applicant, amount, and status; above the table there is an \"Add Claim\" button and each row has edit and delete. The add and edit dialogs must reset to an empty form on every open, must mount under #app-dialogs, and must not have the fullscreen button.",
   "fixedFields": ["claimNo", "applicant", "amount", "status"],
   "pinnedDims": ["propSet", "actions", "dialogs", "formtype:status", "dataOptions:status"],
+  "nlStatedDims": ["propSet", "target", "actions", "dialogs", "formtype:status", "dataOptions:status", "inQuery:claimNo", "inQuery:status", "inTable:amount", "inTable:applicant", "inTable:claimNo", "inTable:status", "operationColumn"],
   "config": {
     "name": "ExpenseClaim",
     "apiUrl": "/api/claims",

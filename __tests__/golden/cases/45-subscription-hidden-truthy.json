@@ -3,6 +3,7 @@
   "nlEn": "Subscription plan management: query by plan name and price; the table shows plan name, price, auto-renew, renewal discount, and expiry notice; supports add, edit, and delete. In the form, \"renewal discount\" is only shown when auto-renew is on, while \"expiry notice\" is hidden when auto-renew is on.",
   "fixedFields": ["planName", "price", "autoRenew", "renewDiscount", "expireNotice"],
   "pinnedDims": ["propSet", "actions", "isHidden:renewDiscount", "isHidden:expireNotice"],
+  "nlStatedDims": ["propSet", "actions", "isHidden:renewDiscount", "isHidden:expireNotice", "inQuery:planName", "inQuery:price", "inTable:autoRenew", "inTable:expireNotice", "inTable:planName", "inTable:price", "inTable:renewDiscount"],
   "config": {
     "name": "SubscriptionPlanManage",
     "apiUrl": "/api/subscription-plans",

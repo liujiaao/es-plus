@@ -3,6 +3,7 @@
   "nlEn": "Ticket board: query by ticket no. and title; the table shows ticket no., title, priority, status, and creation time, where the \"status\" column needs custom rendering (colored tags per status); supports add, edit, and delete.",
   "fixedFields": ["ticketNo", "title", "priority", "status", "createdAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:status"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:status", "inQuery:ticketNo", "inQuery:title", "inTable:createdAt", "inTable:priority", "inTable:status", "inTable:ticketNo", "inTable:title"],
   "config": {
     "name": "TicketBoard",
     "apiUrl": "/api/tickets",

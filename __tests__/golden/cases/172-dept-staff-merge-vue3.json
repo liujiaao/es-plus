@@ -12,6 +12,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "actions", "mergeConfig", "inTable:dept", "inTable:name", "inTable:role", "inTable:team"],
   "config": {
     "name": "DeptStaffManage",
     "apiUrl": "/api/staff",

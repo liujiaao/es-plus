@@ -12,6 +12,7 @@
     "actions",
     "reactions:currency"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:currency", "inQuery:docNo", "inTable:amount", "inTable:currency", "inTable:docNo", "inTable:settleType"],
   "config": {
     "name": "SettlementManage",
     "apiUrl": "/api/settlements",

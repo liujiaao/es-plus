@@ -3,6 +3,7 @@
   "nlEn": "Property rental management: query by listing name; the table shows listing name, monthly rent, furnished flag and agency-fee note; supports add, edit and delete. In the form, the \"agency-fee note\" is hidden when the listing is furnished, or the monthly rent is above 8000.",
   "fixedFields": ["houseName", "rent", "furnished", "agentFeeNote"],
   "pinnedDims": ["propSet", "actions", "isHidden:agentFeeNote", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "isHidden:agentFeeNote", "inQuery:houseName", "inTable:agentFeeNote", "inTable:furnished", "inTable:houseName", "inTable:rent"],
   "config": {
     "name": "PropertyRentalManage",
     "apiUrl": "/api/property-rentals",

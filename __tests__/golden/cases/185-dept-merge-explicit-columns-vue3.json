@@ -12,6 +12,7 @@
     "actions",
     "mergeConfig"
   ],
+  "nlStatedDims": ["propSet", "actions", "mergeConfig", "columns"],
   "config": {
     "name": "DeptExplicitCols",
     "apiUrl": "/api/staff",

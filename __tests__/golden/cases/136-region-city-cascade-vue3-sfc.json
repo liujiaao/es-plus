@@ -14,6 +14,7 @@
     "reactions:city",
     "mode"
   ],
+  "nlStatedDims": ["propSet", "mode", "actions", "reactions:region", "reactions:city", "dataOptions:province", "formtype:city", "formtype:province", "inQuery:entityName", "inTable:city", "inTable:entityName", "inTable:province", "inTable:region"],
   "config": {
     "name": "CascadeAddressManage",
     "apiUrl": "/api/cascade-addresses",

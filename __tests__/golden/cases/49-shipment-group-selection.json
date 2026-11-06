@@ -3,6 +3,7 @@
   "nlEn": "Shipment management: query by shipment no. and consignee; the table column order is a leading checkbox column, then shipment no., then a \"Logistics\" group header covering carrier and tracking no., and finally consignee; supports add, edit, and delete.",
   "fixedFields": ["shipmentNo", "carrier", "trackingNo", "consignee"],
   "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "columns", "inQuery:consignee", "inQuery:shipmentNo", "inTable:carrier", "inTable:consignee", "inTable:shipmentNo", "inTable:trackingNo"],
   "config": {
     "name": "ShipmentManage",
     "apiUrl": "/api/shipments",

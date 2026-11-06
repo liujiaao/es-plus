@@ -3,6 +3,7 @@
   "nlEn": "Campaign management in SFC mode: query by campaign name and status; the table shows campaign name, status, and start time; the toolbar has an import button on the left and an export button on the right; the operation column is 180 wide; the add/edit dialogs each customize their title and form items; supports add, edit, and delete.",
   "fixedFields": ["campaignName", "status", "startTime"],
   "pinnedDims": ["propSet", "actions", "mode", "tableBtns"],
+  "nlStatedDims": ["propSet", "mode", "actions", "tableBtns", "dialogs", "inQuery:campaignName", "inQuery:status", "inTable:campaignName", "inTable:startTime", "inTable:status", "operationColumn"],
   "config": {
     "name": "CampaignManage",
     "apiUrl": "/api/campaigns",

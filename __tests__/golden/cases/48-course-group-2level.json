@@ -3,6 +3,7 @@
   "nlEn": "Course management: query by course name and lecturer; the table has two-level group headers — \"Course info\" grouping \"Course name\" and \"Hours\", and \"Teacher info\" grouping \"Lecturer\" and \"Title\"; supports add, edit, and delete.",
   "fixedFields": ["courseName", "hours", "teacher", "title"],
   "pinnedDims": ["propSet", "actions", "columns"],
+  "nlStatedDims": ["propSet", "actions", "columns", "inQuery:courseName", "inQuery:teacher"],
   "config": {
     "name": "CourseManage",
     "apiUrl": "/api/courses",

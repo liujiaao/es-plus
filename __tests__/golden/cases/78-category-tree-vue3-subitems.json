@@ -3,6 +3,7 @@
   "nlEn": "Product category management: query by category name; the table shows category name and sort order; categories are hierarchical with children under the subItems field (not the default children); supports add, edit and delete.",
   "fixedFields": ["categoryName", "sortNo"],
   "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "nlStatedDims": ["propSet", "actions", "treeConfig", "inTable:categoryName", "inTable:sortNo"],
   "config": {
     "name": "CategoryTreeManage",
     "apiUrl": "/api/categories",

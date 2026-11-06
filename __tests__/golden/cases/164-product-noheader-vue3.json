@@ -3,6 +3,7 @@
   "nlEn": "Card-style product list: no query bar; hide the table header and just lay out product name and price. Read-only.",
   "fixedFields": ["productName", "price"],
   "pinnedDims": ["propSet", "membership"],
+  "nlStatedDims": ["propSet", "membership"],
   "config": {
     "name": "ProductCardView",
     "apiUrl": "/api/products",

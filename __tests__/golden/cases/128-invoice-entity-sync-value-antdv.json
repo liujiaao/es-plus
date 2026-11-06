@@ -13,6 +13,7 @@
     "reactions:invoiceEntity",
     "target"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "reactions:invoiceEntity", "inQuery:docNo", "inTable:amount", "inTable:docNo", "inTable:invoiceEntity", "inTable:storeName"],
   "config": {
     "name": "InvoiceManage",
     "apiUrl": "/api/invoices",

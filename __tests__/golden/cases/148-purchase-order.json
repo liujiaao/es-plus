@@ -3,6 +3,7 @@
   "nlEn": "Purchase orders (vue2 / Element UI, SFC mode): query by order no. and supplier (the supplier dropdown data comes from the /api/suppliers endpoint); the table shows order no., supplier, order amount, order date, and status; supports add and edit; the order amount keeps two decimal places; the UI requires i18n.",
   "fixedFields": ["orderNo", "supplierId", "amount", "orderedAt", "status"],
   "pinnedDims": ["propSet", "actions", "mode", "target", "i18n", "apiParams:supplierId", "extPoints:amount", "formtype:amount"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "i18n", "apiParams:supplierId", "extPoints:amount", "formtype:amount", "formtype:supplierId", "inQuery:orderNo", "inQuery:supplierId", "inTable:amount", "inTable:orderNo", "inTable:orderedAt", "inTable:status", "inTable:supplierId"],
   "config": {
     "name": "PurchaseOrder",
     "apiUrl": "/api/purchase-orders",

@@ -3,6 +3,7 @@
   "nlEn": "Supplier management: above the table, the \"Add Supplier\" button is on the right; the table shows supplier name, contact person, and phone number; each row has a \"Details\" button and a delete button; clicking Details opens a read-only supplier detail dialog with only a close button.",
   "fixedFields": ["supplierName", "contact", "phone"],
   "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn", "dialogs"],
+  "nlStatedDims": ["propSet", "target", "actions", "tableBtns", "operationColumn", "dialogs", "inTable:contact", "inTable:phone", "inTable:supplierName"],
   "config": {
     "name": "SupplierManage",
     "apiUrl": "/api/suppliers",

@@ -3,6 +3,7 @@
   "nlEn": "Meeting-room booking management: query by room name and booking date; the table shows room name, booking date, booking type (regular / ad-hoc), attendee count, external guest, and guest list; supports add, edit, and delete. In the form, \"guest list\" is hidden when the \"booking type\" is regular AND \"external guest\" is not checked.",
   "fixedFields": ["roomName", "bookDate", "bookType", "attendeeCount", "externalGuest", "guestList"],
   "pinnedDims": ["propSet", "actions", "target", "isHidden:guestList"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:guestList", "dataOptions:bookType", "formtype:bookType", "inQuery:bookDate", "inQuery:roomName", "inTable:attendeeCount", "inTable:bookDate", "inTable:bookType", "inTable:externalGuest", "inTable:guestList", "inTable:roomName"],
   "config": {
     "name": "MeetingRoomBookManage",
     "apiUrl": "/api/meeting-room-bookings",

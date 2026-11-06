@@ -3,6 +3,7 @@
   "nlEn": "Leave request management: query by employee name and leave type (annual / sick / personal); the table shows employee name, leave type, start date, end date, and sick-leave certificate; supports add, edit, and delete. In the form, \"sick-leave certificate\" is only needed when the leave type is \"sick\"; it is hidden for the other types.",
   "fixedFields": ["employeeName", "leaveType", "startDate", "endDate", "sickNote"],
   "pinnedDims": ["propSet", "actions", "target", "isHidden:sickNote"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:sickNote", "dataOptions:leaveType", "formtype:leaveType", "inQuery:employeeName", "inQuery:leaveType", "inTable:employeeName", "inTable:endDate", "inTable:leaveType", "inTable:sickNote", "inTable:startDate"],
   "config": {
     "name": "LeaveRequestManage",
     "apiUrl": "/api/leave-requests",

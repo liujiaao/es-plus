@@ -3,6 +3,7 @@
   "nlEn": "Contract review: above the table \"New Contract\" is on the left and \"Batch Export\" on the right; the table shows contract no., review result, reviewer, and review time; the \"review result\" column needs custom rendering (colored tags for passed/rejected); supports add, delete, and export; the add and delete buttons require permission codes review:add, review:remove.",
   "fixedFields": ["contractNo", "reviewResult", "reviewer", "reviewedAt"],
   "pinnedDims": ["propSet", "actions", "tableBtns", "permissions", "extPoints:reviewResult"],
+  "nlStatedDims": ["propSet", "actions", "tableBtns", "permissions", "extPoints:reviewResult", "inTable:contractNo", "inTable:reviewResult", "inTable:reviewedAt", "inTable:reviewer"],
   "config": {
     "name": "ContractReview",
     "apiUrl": "/api/contract-reviews",

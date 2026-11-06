@@ -3,6 +3,7 @@
   "nlEn": "Resource management: above the table, add on the left and export on the right; the table shows resource name, resource type (menu/button/api), identifier code, and status; each row can be edited and deleted; i18n display is required.",
   "fixedFields": ["name", "type", "code", "status"],
   "pinnedDims": ["propSet", "tableBtns", "operationColumn", "formtype:type", "dataOptions:type"],
+  "nlStatedDims": ["propSet", "tableBtns", "operationColumn", "formtype:type", "dataOptions:type", "i18n", "inTable:code", "inTable:name", "inTable:status", "inTable:type"],
   "config": {
     "name": "ResourceManage",
     "apiUrl": "/api/resources",

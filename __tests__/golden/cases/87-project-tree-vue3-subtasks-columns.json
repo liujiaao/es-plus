@@ -3,6 +3,7 @@
   "nlEn": "Project management: query by project name; the table has two-level group headers — \"Project\" grouping \"Project name\" and \"Owner\", plus a \"Progress\" column; projects are hierarchical with sub-tasks under the subTasks field and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["projectName", "owner", "progress"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "columns"],
+  "nlStatedDims": ["propSet", "actions", "treeConfig", "columns"],
   "config": {
     "name": "ProjectTreeManage",
     "apiUrl": "/api/projects",

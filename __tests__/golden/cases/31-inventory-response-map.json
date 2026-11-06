@@ -3,6 +3,7 @@
   "nlEn": "Inventory count management: query by product name and warehouse; the table shows product name, warehouse, system quantity, actual quantity, and count status (not-counted/counted/discrepancy); supports add, edit, and delete. The backend list endpoint returns { list: [...], totalCount: N }, so map the response fields accordingly.",
   "fixedFields": ["productName", "warehouse", "systemQty", "actualQty", "countStatus"],
   "pinnedDims": ["propSet", "actions", "configTableOut"],
+  "nlStatedDims": ["propSet", "actions", "configTableOut", "dataOptions:countStatus", "formtype:countStatus", "inQuery:productName", "inQuery:warehouse", "inTable:actualQty", "inTable:countStatus", "inTable:productName", "inTable:systemQty", "inTable:warehouse"],
   "config": {
     "name": "InventoryCount",
     "apiUrl": "/api/inventory-counts",

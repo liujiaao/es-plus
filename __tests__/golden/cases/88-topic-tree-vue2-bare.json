@@ -3,6 +3,7 @@
   "nlEn": "Topic management: query by topic title; the table shows topic title and reply count; topics are hierarchical (sub-topics nested under their parents); supports add and delete.",
   "fixedFields": ["title", "replyCount"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:replyCount", "inTable:title"],
   "config": {
     "name": "TopicTreeManage",
     "apiUrl": "/api/topics",

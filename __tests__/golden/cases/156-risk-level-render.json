@@ -3,6 +3,7 @@
   "nlEn": "Risk register: query by risk no. and owner; the table shows risk no., risk level, and owner, where the \"risk level\" column needs custom rendering (colored tags per level); supports add, edit, and delete.",
   "fixedFields": ["riskNo", "riskLevel", "owner"],
   "pinnedDims": ["propSet", "actions", "extPoints:riskLevel", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:riskLevel", "inQuery:owner", "inQuery:riskNo", "inTable:owner", "inTable:riskLevel", "inTable:riskNo"],
   "config": {
     "name": "RiskRegister",
     "apiUrl": "/api/risks",

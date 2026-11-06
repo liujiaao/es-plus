@@ -3,6 +3,7 @@
   "nlEn": "Vessel management: query by vessel name and port of registry; the table's first column is a row number, then shows vessel name, captain, and port of registry; supports add, edit, and delete.",
   "fixedFields": ["vesselName", "captain", "port"],
   "pinnedDims": ["propSet", "actions", "columns", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "columns", "inQuery:port", "inQuery:vesselName"],
   "config": {
     "name": "VesselManage",
     "apiUrl": "/api/vessels",

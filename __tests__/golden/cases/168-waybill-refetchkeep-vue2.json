@@ -3,6 +3,7 @@
   "nlEn": "Waybill list: the query bar has waybill number; keep the current page when refreshing (do not jump back to page 1); shows waybill number and status. Supports edit.",
   "fixedFields": ["waybillNo", "status"],
   "pinnedDims": ["propSet", "membership", "target", "actions"],
+  "nlStatedDims": ["propSet", "target", "membership", "actions", "inQuery:waybillNo"],
   "config": {
     "name": "WaybillManage",
     "apiUrl": "/api/waybills",

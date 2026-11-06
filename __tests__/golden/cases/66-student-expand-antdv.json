@@ -3,6 +3,7 @@
   "nlEn": "Student management with an Ant Design look: query by name and class; the table shows name, class and total score; each row can expand to reveal the parent name and parent phone; supports add, edit and delete.",
   "fixedFields": ["studentName", "className", "totalScore", "parentName", "parentPhone"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "expandConfig", "inTable:className", "inTable:parentName", "inTable:studentName", "inTable:totalScore"],
   "config": {
     "name": "StudentManage",
     "apiUrl": "/api/students",

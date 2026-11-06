@@ -3,6 +3,7 @@
   "nlEn": "Prescription management: query by patient name and drug name; the table's first column is a row-number column, then a \"Patient\" group header covering patient name and age, and a \"Drug\" group header covering drug name and dosage; supports add, edit, and delete.",
   "fixedFields": ["patientName", "age", "drugName", "dosage"],
   "pinnedDims": ["propSet", "actions", "columns"],
+  "nlStatedDims": ["propSet", "actions", "columns", "inQuery:drugName", "inQuery:patientName"],
   "config": {
     "name": "PrescriptionManage",
     "apiUrl": "/api/prescriptions",

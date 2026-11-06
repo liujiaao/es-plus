@@ -13,6 +13,7 @@
     "reactions:branch",
     "target"
   ],
+  "nlStatedDims": ["propSet", "target", "actions", "reactions:branch", "dataOptions:bankType", "inQuery:accountName", "inTable:accountName", "inTable:accountNo", "inTable:bankType", "inTable:branch"],
   "config": {
     "name": "CorporateAccountManage",
     "apiUrl": "/api/corporate-accounts",

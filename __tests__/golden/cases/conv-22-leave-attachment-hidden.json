@@ -11,6 +11,7 @@
     "actions",
     "isHidden:attachment"
   ],
+  "nlStatedDims": ["propSet", "actions", "isHidden:attachment", "dataOptions:leaveType", "formtype:leaveType", "inTable:attachment", "inTable:date", "inTable:leaveType", "inTable:name"],
   "refinements": [
     {
       "turn": 1,

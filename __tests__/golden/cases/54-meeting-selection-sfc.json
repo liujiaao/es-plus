@@ -3,6 +3,7 @@
   "nlEn": "Meeting management: query by meeting subject and room; the table starts with a checkbox column, then shows subject, host, and start time; supports add, edit, and delete.",
   "fixedFields": ["subject", "host", "startTime"],
   "pinnedDims": ["propSet", "actions", "columns", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "columns", "inQuery:room", "inQuery:subject"],
   "config": {
     "name": "MeetingManage",
     "apiUrl": "/api/meetings",

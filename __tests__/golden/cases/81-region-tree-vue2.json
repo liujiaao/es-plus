@@ -3,6 +3,7 @@
   "nlEn": "Region management: query by region name; the table shows region name and region code; regions are hierarchical and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["regionName", "regionCode"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "treeConfig", "inTable:regionCode", "inTable:regionName"],
   "config": {
     "name": "RegionTreeManage",
     "apiUrl": "/api/regions",

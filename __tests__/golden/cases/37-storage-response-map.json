@@ -3,6 +3,7 @@
   "nlEn": "Storage bin management in single-file-component mode: query by bin code; the table shows bin code, zone, capacity, and usage rate; supports add, edit, and delete. The backend paging page-number field is named pageIndex (not the default pageNo).",
   "fixedFields": ["binCode", "zone", "capacity", "usageRate"],
   "pinnedDims": ["propSet", "actions", "mode", "configTableOut"],
+  "nlStatedDims": ["propSet", "mode", "actions", "configTableOut", "inQuery:binCode", "inTable:binCode", "inTable:capacity", "inTable:usageRate", "inTable:zone"],
   "config": {
     "name": "StorageManage",
     "apiUrl": "/api/storage-bins",

@@ -3,6 +3,7 @@
   "nlEn": "Contract register: query by contract no. and party; the table shows contract no., party, contract status, and signing date, where the \"contract status\" column needs custom rendering (colored tags per status); supports add, edit, and delete.",
   "fixedFields": ["contractNo", "party", "status", "signedAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:status", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:status", "inQuery:contractNo", "inQuery:party", "inTable:contractNo", "inTable:party", "inTable:signedAt", "inTable:status"],
   "config": {
     "name": "ContractRegister",
     "apiUrl": "/api/contracts-register",

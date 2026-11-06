@@ -3,6 +3,7 @@
   "nlEn": "Customer visit follow-up (vue2 / Element UI): query by customer name and follower (the follower dropdown data comes from the /api/staff endpoint); the table shows customer name, follower, visit method, next visit time, and status; above the table \"New Follow-up\" is on the left and \"Batch Export\" on the right; supports add, edit, and delete; the add, edit, and delete buttons require permission codes visit:add, visit:edit, visit:remove; the query form label width is 90px.",
   "fixedFields": ["customerName", "staffId", "method", "nextVisitAt", "status"],
   "pinnedDims": ["propSet", "actions", "target", "apiParams:staffId", "formLayout", "tableBtns", "permissions"],
+  "nlStatedDims": ["propSet", "target", "actions", "apiParams:staffId", "formLayout", "tableBtns", "permissions", "formtype:staffId", "inQuery:customerName", "inQuery:staffId", "inTable:customerName", "inTable:method", "inTable:nextVisitAt", "inTable:staffId", "inTable:status"],
   "config": {
     "name": "VisitFollow",
     "apiUrl": "/api/visits",

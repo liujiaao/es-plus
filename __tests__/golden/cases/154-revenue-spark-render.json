@@ -3,6 +3,7 @@
   "nlEn": "Revenue board: query by month and channel; the table shows month, channel, and revenue, where the \"revenue\" column needs custom rendering (embedding a third-party mini trend-chart component for the recent trend); supports add.",
   "fixedFields": ["month", "channel", "revenue"],
   "pinnedDims": ["propSet", "actions", "extPoints:revenue"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:revenue", "inQuery:channel", "inQuery:month", "inTable:channel", "inTable:month", "inTable:revenue"],
   "config": {
     "name": "RevenueBoard",
     "apiUrl": "/api/revenue",

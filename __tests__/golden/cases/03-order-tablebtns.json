@@ -3,6 +3,7 @@
   "nlEn": "Order management: above the table there is an \"Add Order\" button on the left and a \"Batch Export\" button on the right; table columns are order number, amount, and order time; each row has view and delete actions.",
   "fixedFields": ["orderNo", "amount", "createdAt"],
   "pinnedDims": ["propSet", "actions", "tableBtns", "operationColumn"],
+  "nlStatedDims": ["propSet", "actions", "tableBtns", "operationColumn", "inTable:amount", "inTable:createdAt", "inTable:orderNo"],
   "config": {
     "name": "OrderManage",
     "apiUrl": "/api/orders",

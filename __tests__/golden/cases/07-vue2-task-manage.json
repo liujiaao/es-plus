@@ -3,6 +3,7 @@
   "nlEn": "Vue2 task management: query by task name, priority (high/medium/low), and due time; the table shows task name, priority, status (todo/in-progress/done), and due time; supports add, edit, delete, and export.",
   "fixedFields": ["taskName", "priority", "status", "dueDate"],
   "pinnedDims": ["propSet", "actions", "formtype:priority", "dataOptions:priority", "formtype:status", "dataOptions:status", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "formtype:priority", "dataOptions:priority", "formtype:status", "dataOptions:status", "inQuery:dueDate", "inQuery:priority", "inQuery:taskName", "inTable:dueDate", "inTable:priority", "inTable:status", "inTable:taskName"],
   "config": {
     "name": "TaskManage",
     "apiUrl": "/api/tasks",

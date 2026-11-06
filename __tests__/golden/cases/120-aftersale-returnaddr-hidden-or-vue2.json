@@ -3,6 +3,7 @@
   "nlEn": "After-sales repair management: query by order number; the table shows order number, service type, insured flag and return address; supports add, edit and delete. In the form, the \"return address\" is hidden when the service type is on-site, or the item is insured (on-site needs no return, insured items use a dedicated pickup line).",
   "fixedFields": ["orderNo", "serviceType", "insured", "returnAddress"],
   "pinnedDims": ["propSet", "actions", "isHidden:returnAddress", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:returnAddress", "inQuery:orderNo", "inTable:insured", "inTable:orderNo", "inTable:returnAddress", "inTable:serviceType"],
   "config": {
     "name": "AfterSaleRepairManage",
     "apiUrl": "/api/after-sale-repairs",

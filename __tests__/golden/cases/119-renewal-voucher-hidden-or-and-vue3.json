@@ -3,6 +3,7 @@
   "nlEn": "Renewal-reminder management: query by account name; the table shows account name, plan, seats, coupon code and renewal voucher; supports add, edit and delete. In the form, the \"renewal voucher\" is hidden when the plan is trial, or the seats are at most 5 and no coupon code has been entered.",
   "fixedFields": ["accountName", "plan", "seats", "couponCode", "renewalVoucher"],
   "pinnedDims": ["propSet", "actions", "isHidden:renewalVoucher"],
+  "nlStatedDims": ["propSet", "actions", "isHidden:renewalVoucher", "inQuery:accountName", "inTable:accountName", "inTable:couponCode", "inTable:plan", "inTable:renewalVoucher", "inTable:seats"],
   "config": {
     "name": "RenewalReminderManage",
     "apiUrl": "/api/renewal-reminders",

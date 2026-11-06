@@ -3,6 +3,7 @@
   "nlEn": "Team members: query by name and department; the table shows name, avatar, department, and role, where the \"avatar\" column needs custom rendering (shown as a round avatar); supports add, edit, and delete.",
   "fixedFields": ["userName", "avatarUrl", "dept", "role"],
   "pinnedDims": ["propSet", "actions", "extPoints:avatarUrl"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:avatarUrl", "inQuery:dept", "inQuery:userName", "inTable:avatarUrl", "inTable:dept", "inTable:role", "inTable:userName"],
   "config": {
     "name": "TeamRoster",
     "apiUrl": "/api/roster",

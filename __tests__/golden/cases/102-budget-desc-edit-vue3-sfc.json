@@ -3,6 +3,7 @@
   "nlEn": "Budget description maintenance: the table edits inline — click a cell to change it. Shows account name and budget description, where the description is multi-line text. Supports edit.",
   "fixedFields": ["accountName", "desc"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "editConfig", "columns", "formtype:accountName", "formtype:desc", "virtualScroll"],
   "config": {
     "name": "BudgetDescEditManage",
     "apiUrl": "/api/budget-desc",

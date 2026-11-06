@@ -3,6 +3,7 @@
   "nlEn": "Membership-card management: query by card number; the table shows card number, card type, balance, expired flag and gift note; supports add, edit and delete. In the form, the \"gift note\" is hidden when the card type is \"gift card\", or the balance is greater than 500 and the card has not expired.",
   "fixedFields": ["cardNo", "cardType", "balance", "expired", "giftNote"],
   "pinnedDims": ["propSet", "actions", "isHidden:giftNote", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "isHidden:giftNote", "inQuery:cardNo", "inTable:balance", "inTable:cardNo", "inTable:cardType", "inTable:expired", "inTable:giftNote"],
   "config": {
     "name": "MemberCardManage",
     "apiUrl": "/api/member-cards",

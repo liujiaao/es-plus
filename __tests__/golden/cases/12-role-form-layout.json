@@ -3,6 +3,7 @@
   "nlEn": "Role management: the query form is 2 columns; the add/edit dialog is 720px wide and its form is also 2 columns; the table shows role name, role code, data permission scope, and creation time; supports add, edit, delete, and view.",
   "fixedFields": ["roleName", "roleCode", "dataScope", "createdAt"],
   "pinnedDims": ["propSet", "actions", "fieldSpan"],
+  "nlStatedDims": ["propSet", "actions", "fieldSpan", "dialogs", "inTable:createdAt", "inTable:dataScope", "inTable:roleCode", "inTable:roleName"],
   "config": {
     "name": "RoleManage",
     "apiUrl": "/api/roles",

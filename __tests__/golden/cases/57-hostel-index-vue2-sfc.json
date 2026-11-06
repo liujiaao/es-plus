@@ -3,6 +3,7 @@
   "nlEn": "Hostel management: query by hostel name and city; the table's first column is a row number, then shows hostel name, city, and bed count; supports add, edit, and delete.",
   "fixedFields": ["hostelName", "city", "bedCount"],
   "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "columns", "inQuery:city", "inQuery:hostelName"],
   "config": {
     "name": "HostelManage",
     "apiUrl": "/api/hostels",

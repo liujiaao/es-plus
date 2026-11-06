@@ -11,6 +11,7 @@
     "actions",
     "isHidden:taxNo"
   ],
+  "nlStatedDims": ["propSet", "actions", "isHidden:taxNo", "dataOptions:invoiceType", "formtype:invoiceType", "inTable:amount", "inTable:invoiceType", "inTable:taxNo", "inTable:title"],
   "refinements": [
     {
       "turn": 1,

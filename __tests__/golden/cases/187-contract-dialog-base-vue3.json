@@ -3,6 +3,7 @@
   "nlEn": "Contract management: query conditions are contract number and signing party; the table shows contract number, signing party, contract amount, and signing date; above the table there is an \"Add Contract\" button and each row has edit and delete. The add-contract dialog must not have the close (X) entry in the top-right corner, and clicking the mask or pressing ESC must not close it; the dialog footer keeps only \"Submit for approval\" and \"Cancel\".",
   "fixedFields": ["contractNo", "party", "amount", "signDate"],
   "pinnedDims": ["propSet", "actions", "dialogs"],
+  "nlStatedDims": ["propSet", "actions", "dialogs", "inQuery:contractNo", "inQuery:party", "inTable:amount", "inTable:contractNo", "inTable:party", "inTable:signDate", "operationColumn"],
   "config": {
     "name": "ContractManage",
     "apiUrl": "/api/contracts",

@@ -3,6 +3,7 @@
   "nlEn": "Logistics waybill management: query by waybill no. and destination; the table's first column is a row number, then shows waybill no., destination, weight, and status; supports add, edit, and delete.",
   "fixedFields": ["waybillNo", "destination", "weight", "status"],
   "pinnedDims": ["propSet", "actions", "columns", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "columns", "inQuery:destination", "inQuery:waybillNo"],
   "config": {
     "name": "WaybillManage",
     "apiUrl": "/api/waybills",

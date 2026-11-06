@@ -3,6 +3,7 @@
   "nlEn": "Generate the flight management page as an SFC: query by flight number; the table shows flight number, departure time and arrival time; each row can expand to reveal the aircraft type and seat count; supports add, edit and delete.",
   "fixedFields": ["flightNo", "departTime", "arriveTime", "aircraft", "seats"],
   "pinnedDims": ["propSet", "actions", "expandConfig", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "expandConfig", "inTable:arriveTime", "inTable:departTime", "inTable:flightNo"],
   "config": {
     "name": "FlightManage",
     "apiUrl": "/api/flights",

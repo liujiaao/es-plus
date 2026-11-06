@@ -3,6 +3,7 @@
   "nlEn": "Invoice book: query by issuer and amount; the table shows invoice no., issuer, amount, and issue date, where the \"invoice no.\" column needs custom rendering (rendered as a clickable link); supports add, edit, and delete.",
   "fixedFields": ["invoiceNo", "party", "amount", "issuedAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:invoiceNo"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:invoiceNo", "inQuery:amount", "inQuery:party", "inTable:amount", "inTable:invoiceNo", "inTable:issuedAt", "inTable:party"],
   "config": {
     "name": "InvoiceBook",
     "apiUrl": "/api/invoices",

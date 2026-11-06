@@ -3,6 +3,7 @@
   "nlEn": "City atlas: the query bar has city name; fetch all data at once and paginate on the client; shows city name, province and population. Read-only.",
   "fixedFields": ["cityName", "province", "population"],
   "pinnedDims": ["propSet", "membership", "target"],
+  "nlStatedDims": ["propSet", "target", "membership", "inQuery:cityName"],
   "config": {
     "name": "CityAtlasView",
     "apiUrl": "/api/cities",

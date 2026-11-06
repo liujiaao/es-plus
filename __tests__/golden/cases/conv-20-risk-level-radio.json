@@ -11,6 +11,7 @@
     "actions",
     "formtype:level"
   ],
+  "nlStatedDims": ["propSet", "actions", "formtype:level", "dataOptions:level", "dataOptions:status", "formtype:status", "inTable:level", "inTable:name", "inTable:owner", "inTable:status"],
   "refinements": [
     {
       "turn": 1,

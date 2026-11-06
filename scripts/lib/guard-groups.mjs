@@ -59,6 +59,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:repair-loop',
       'check:fewshot-registration',
       'check:membership-trap',
+      'check:crud-fairness',
     ],
   },
   {

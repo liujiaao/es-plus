@@ -3,6 +3,7 @@
   "nlEn": "antdv promotion campaign management: above the table there is a \"New Campaign\" button on the left and a \"Batch Export\" button on the right; query by campaign name and status (draft/ongoing/ended); table columns are campaign name, status, start time, and end time; each row has edit, view, and delete actions; both the add and edit dialogs fill in campaign name, start time, and end time.",
   "fixedFields": ["title", "status", "startAt", "endAt"],
   "pinnedDims": ["propSet", "tableBtns", "operationColumn", "dialogs", "formtype:status", "dataOptions:status", "target"],
+  "nlStatedDims": ["propSet", "target", "tableBtns", "operationColumn", "dialogs", "formtype:status", "dataOptions:status", "inQuery:status", "inQuery:title", "inTable:endAt", "inTable:startAt", "inTable:status", "inTable:title"],
   "config": {
     "name": "PromotionManage",
     "apiUrl": "/api/promotions",

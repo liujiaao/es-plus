@@ -3,6 +3,7 @@
   "nlEn": "Customer management: the first draft only needs to be searchable by customer name; the table shows customer name, industry, owner, and created time; supports add, edit, and delete.",
   "fixedFields": ["customerName", "industry", "owner", "createdAt"],
   "pinnedDims": ["propSet", "actions", "inQuery:owner"],
+  "nlStatedDims": ["propSet", "actions", "inQuery:owner", "inTable:createdAt", "inTable:customerName", "inTable:industry", "inTable:owner"],
   "refinements": [
     { "turn": 1, "correction": "负责人也要能在查询条件里按名字搜，不只是在表格里展示。" }
   ],

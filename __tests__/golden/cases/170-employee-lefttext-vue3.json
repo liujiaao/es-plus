@@ -3,6 +3,7 @@
   "nlEn": "Employee roster: the query bar has name; show the text 「按部门分组统计」 on the left of the table toolbar; lists name, department and position. Supports add and edit.",
   "fixedFields": ["name", "department", "position"],
   "pinnedDims": ["propSet", "membership", "actions"],
+  "nlStatedDims": ["propSet", "membership", "actions", "inQuery:name"],
   "config": {
     "name": "EmployeeRosterManage",
     "apiUrl": "/api/employees",

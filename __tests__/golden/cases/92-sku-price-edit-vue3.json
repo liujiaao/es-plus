@@ -3,6 +3,7 @@
   "nlEn": "SKU pricing management: the table supports inline editing — click the unit-price cell to edit it. Shows SKU name and unit price; unit price uses a number input. Supports add and edit.",
   "fixedFields": ["skuName", "price"],
   "pinnedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll"],
+  "nlStatedDims": ["propSet", "actions", "editConfig", "columns", "virtualScroll", "formtype:price", "formtype:skuName"],
   "config": {
     "name": "SkuPriceEditManage",
     "apiUrl": "/api/sku-prices",

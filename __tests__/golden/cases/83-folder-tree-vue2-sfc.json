@@ -3,6 +3,7 @@
   "nlEn": "Folder management: query by folder name; the table shows folder name and size; folders are hierarchical and all nodes start expanded; supports add and delete.",
   "fixedFields": ["folderName", "size"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "treeConfig", "inTable:folderName", "inTable:size"],
   "config": {
     "name": "FolderTreeManage",
     "apiUrl": "/api/folders",

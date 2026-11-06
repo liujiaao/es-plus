@@ -3,6 +3,7 @@
   "nlEn": "Stock usage: query by SKU and item name; the table shows SKU, item name, usage rate, and warehouse, where the \"usage rate\" column needs custom rendering (shown as a progress bar); supports add and edit.",
   "fixedFields": ["sku", "name", "usage", "warehouse"],
   "pinnedDims": ["propSet", "actions", "extPoints:usage"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:usage", "inQuery:name", "inQuery:sku", "inTable:name", "inTable:sku", "inTable:usage", "inTable:warehouse"],
   "config": {
     "name": "StockUsage",
     "apiUrl": "/api/stock-usage",

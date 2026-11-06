@@ -3,6 +3,7 @@
   "nlEn": "Online-store order management: query by order number; the table shows order number, order amount, member level and free-shipping note; supports add, edit and delete. In the form, the \"free-shipping note\" is hidden when the order amount is at least 99, or the member level is VIP.",
   "fixedFields": ["orderNo", "amount", "memberLevel", "freeShipNote"],
   "pinnedDims": ["propSet", "actions", "isHidden:freeShipNote", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "isHidden:freeShipNote", "inQuery:orderNo", "inTable:amount", "inTable:freeShipNote", "inTable:memberLevel", "inTable:orderNo"],
   "config": {
     "name": "StoreOrderManage",
     "apiUrl": "/api/store-orders",

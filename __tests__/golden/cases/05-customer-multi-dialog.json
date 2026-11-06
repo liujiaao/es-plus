@@ -3,6 +3,7 @@
   "nlEn": "Customer management: add and edit use different dialog forms — on add, fill in company name, contact, and phone; on edit, besides those you can also change the credit limit.",
   "fixedFields": ["company", "contact", "phone"],
   "pinnedDims": ["dialogs"],
+  "nlStatedDims": ["propSet", "dialogs"],
   "config": {
     "name": "CustomerManage",
     "apiUrl": "/api/customers",

@@ -3,6 +3,7 @@
   "nlEn": "Resource management with an Ant Design look: query by resource name; the table shows resource name and resource type; resources are hierarchical and all nodes start expanded; supports add, edit and delete.",
   "fixedFields": ["resourceName", "resourceType"],
   "pinnedDims": ["propSet", "actions", "treeConfig", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "treeConfig", "inTable:resourceName", "inTable:resourceType"],
   "config": {
     "name": "ResourceTreeManage",
     "apiUrl": "/api/resources",

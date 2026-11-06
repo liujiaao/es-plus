@@ -3,6 +3,7 @@
   "nlEn": "Vue2 supplier management: the table shows supplier name, contact, phone, and status (enabled/disabled); add and edit use different dialogs — add fills in name, contact, and phone, while edit can also change the settlement cycle; supports add, edit, and delete.",
   "fixedFields": ["name", "contact", "phone", "status"],
   "pinnedDims": ["actions", "target", "dialogs", "formtype:status", "dataOptions:status"],
+  "nlStatedDims": ["propSet", "target", "actions", "dialogs", "formtype:status", "dataOptions:status", "inTable:contact", "inTable:name", "inTable:phone", "inTable:status"],
   "config": {
     "name": "SupplierManage",
     "apiUrl": "/api/suppliers",

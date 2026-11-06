@@ -3,6 +3,7 @@
   "nlEn": "Employee-profile management with an Ant Design look: query by employee name; the table shows employee name, department, years of service and onboarding task; supports add, edit and delete. In the form, the \"onboarding task\" is hidden when the years of service reach 5 (veterans need no onboarding).",
   "fixedFields": ["employeeName", "dept", "years", "onboardingTask"],
   "pinnedDims": ["propSet", "actions", "isHidden:onboardingTask", "target", "mode"],
+  "nlStatedDims": ["propSet", "target", "mode", "actions", "isHidden:onboardingTask", "inQuery:employeeName", "inTable:dept", "inTable:employeeName", "inTable:onboardingTask", "inTable:years"],
   "config": {
     "name": "EmployeeProfileManage",
     "apiUrl": "/api/employee-profiles",

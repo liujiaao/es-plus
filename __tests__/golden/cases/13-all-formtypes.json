@@ -3,6 +3,7 @@
   "nlEn": "Full field-type coverage: input (remark is multiline), select, date, time, slider, color picker, transfer, cascader, radio, checkbox, switch, rate, and upload, plus a complex status column with a custom render.",
   "fixedFields": ["remark", "complexStatus"],
   "pinnedDims": ["formtype:remark", "extPoints:complexStatus"],
+  "nlStatedDims": ["propSet", "formtype:remark", "extPoints:complexStatus", "dataOptions:complexStatus", "dataOptions:status", "formtype:complexStatus", "formtype:score", "formtype:status"],
   "config": {
     "name": "AllTypes",
     "apiUrl": "/api/all-types",

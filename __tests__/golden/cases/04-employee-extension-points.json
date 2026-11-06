@@ -3,6 +3,7 @@
   "nlEn": "Employee management: only administrators (permission code employee:delete) can see the \"Delete\" button; the \"Resignation Date\" column shows \"Active\" when empty, otherwise shows the date.",
   "fixedFields": ["leaveDate"],
   "pinnedDims": ["extPoints:leaveDate"],
+  "nlStatedDims": ["propSet", "extPoints:leaveDate"],
   "config": {
     "name": "EmployeeManage",
     "apiUrl": "/api/employees",

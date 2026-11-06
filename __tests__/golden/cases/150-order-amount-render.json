@@ -3,6 +3,7 @@
   "nlEn": "Order ledger: query by order no. and customer; the table shows order no., customer, order amount, and status, where the \"order amount\" column needs custom rendering (shown in red when over ten thousand); supports add, edit, and delete.",
   "fixedFields": ["orderNo", "customer", "amount", "status"],
   "pinnedDims": ["propSet", "actions", "extPoints:amount"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:amount", "inQuery:customer", "inQuery:orderNo", "inTable:amount", "inTable:customer", "inTable:orderNo", "inTable:status"],
   "config": {
     "name": "OrderLedger",
     "apiUrl": "/api/orders",

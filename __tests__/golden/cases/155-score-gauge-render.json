@@ -3,6 +3,7 @@
   "nlEn": "Health score: query by subject name and level; the table shows subject name, level, and health score, where the \"health score\" column needs custom rendering (embedding a third-party gauge component for the score); supports add and edit.",
   "fixedFields": ["name", "level", "score"],
   "pinnedDims": ["propSet", "actions", "extPoints:score"],
+  "nlStatedDims": ["propSet", "actions", "extPoints:score", "inQuery:level", "inQuery:name", "inTable:level", "inTable:name", "inTable:score"],
   "config": {
     "name": "HealthScore",
     "apiUrl": "/api/health-scores",

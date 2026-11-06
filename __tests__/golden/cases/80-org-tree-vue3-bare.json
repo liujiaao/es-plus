@@ -3,6 +3,7 @@
   "nlEn": "Organization management: query by organization name; the table shows organization name and headcount; organizations are hierarchical; supports add, edit and delete.",
   "fixedFields": ["orgName", "headcount"],
   "pinnedDims": ["propSet", "actions", "treeConfig"],
+  "nlStatedDims": ["propSet", "actions", "treeConfig", "inTable:headcount", "inTable:orgName"],
   "config": {
     "name": "OrgTreeManage",
     "apiUrl": "/api/orgs",

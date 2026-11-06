@@ -12,6 +12,7 @@
     "actions",
     "reactions:username"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:username", "inQuery:username", "inTable:accountType", "inTable:displayName", "inTable:remark", "inTable:username"],
   "config": {
     "name": "SystemAccountManage",
     "apiUrl": "/api/system-accounts",

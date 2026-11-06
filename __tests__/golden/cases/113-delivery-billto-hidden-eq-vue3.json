@@ -3,6 +3,7 @@
   "nlEn": "Delivery-note management: query by order number; the table shows order number, shipping address and billing address; supports add, edit and delete. In the form, the \"billing address\" is hidden when it is the same as the shipping address (same by default).",
   "fixedFields": ["orderNo", "shipTo", "billTo"],
   "pinnedDims": ["propSet", "actions", "isHidden:billTo"],
+  "nlStatedDims": ["propSet", "actions", "isHidden:billTo", "inQuery:orderNo", "inTable:billTo", "inTable:orderNo", "inTable:shipTo"],
   "config": {
     "name": "DeliveryNoteManage",
     "apiUrl": "/api/delivery-notes",

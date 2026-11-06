@@ -3,6 +3,7 @@
   "nlEn": "Compliance audit: query by audit no. and subject; the table shows audit no., subject, audit result, and audit time, where the \"audit result\" column needs custom rendering (shown as a badge with a status dot); supports add and edit.",
   "fixedFields": ["auditNo", "subject", "result", "auditedAt"],
   "pinnedDims": ["propSet", "actions", "extPoints:result", "target"],
+  "nlStatedDims": ["propSet", "target", "actions", "extPoints:result", "inQuery:auditNo", "inQuery:subject", "inTable:auditNo", "inTable:auditedAt", "inTable:result", "inTable:subject"],
   "config": {
     "name": "ComplianceAudit",
     "apiUrl": "/api/compliance-audits",

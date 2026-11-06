@@ -3,6 +3,7 @@
   "nlEn": "Recruitment management: query by job title and department; the table shows job title, department, headcount, status, and publish date; above the table \"New Job\" is on the left and \"Export\" on the right; add and edit use different dialogs — on add fill in job title, department, and headcount, and on edit you can additionally change the status; supports add, edit, and delete; the add, edit, and delete buttons require permission codes recruit:add, recruit:edit, recruit:remove respectively; the UI requires i18n; the query form is 2 columns.",
   "fixedFields": ["title", "dept", "headcount", "status", "publishAt"],
   "pinnedDims": ["propSet", "actions", "i18n", "fieldSpan", "tableBtns", "dialogs", "permissions"],
+  "nlStatedDims": ["propSet", "actions", "i18n", "fieldSpan", "tableBtns", "dialogs", "permissions", "inQuery:dept", "inQuery:title", "inTable:dept", "inTable:headcount", "inTable:publishAt", "inTable:status", "inTable:title"],
   "config": {
     "name": "RecruitManage",
     "apiUrl": "/api/recruits",

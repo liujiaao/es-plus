@@ -12,6 +12,7 @@
     "actions",
     "reactions:city"
   ],
+  "nlStatedDims": ["propSet", "actions", "reactions:city", "dataOptions:province", "formtype:city", "formtype:province", "inQuery:customerName", "inTable:address", "inTable:city", "inTable:customerName", "inTable:province"],
   "config": {
     "name": "CustomerAddressManage",
     "apiUrl": "/api/customer-addresses",

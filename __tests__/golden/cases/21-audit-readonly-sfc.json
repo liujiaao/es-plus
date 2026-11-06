@@ -3,6 +3,7 @@
   "nlEn": "Operation audit log in SFC mode: query by operator and operation type; the table shows operator, operation type, IP, and operation time, all as read-only display (no editable fields at all); supports a view-detail dialog.",
   "fixedFields": ["operator", "action", "ip", "createdAt"],
   "pinnedDims": ["propSet", "actions", "mode"],
+  "nlStatedDims": ["propSet", "mode", "actions", "inQuery:action", "inQuery:operator", "inTable:action", "inTable:createdAt", "inTable:ip", "inTable:operator"],
   "config": {
     "name": "AuditLogView",
     "apiUrl": "/api/audit-logs",

@@ -11,6 +11,7 @@
     "actions",
     "inForm:code"
   ],
+  "nlStatedDims": ["propSet", "actions", "inForm:code", "dataOptions:status", "formtype:status", "inTable:amount", "inTable:code", "inTable:name", "inTable:status"],
   "refinements": [
     {
       "turn": 1,
