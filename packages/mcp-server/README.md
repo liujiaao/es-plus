@@ -449,7 +449,8 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 `config`），按三态报告每一项：
 
 - `ok` —— 找到了证据；
-- `missing` —— 确定缺失（对应能力会静默失效，权限项甚至是**失败即放行**）；
+- `missing` —— 确定缺失（对应能力会静默失效；权限项更是 **fail-closed**：声明了
+  `permissionValue` 却没配 `permission()` 时，这些按钮会被**拒绝渲染**，而不是放行）；
 - `unverified` —— 字面量扫描看不到（`app.use(ESPlus, options)`、`...spread`、未提供 `viteConfig`），
   **不是通过**，报告会明确写出需人工确认。
 
