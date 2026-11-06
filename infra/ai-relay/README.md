@@ -52,14 +52,22 @@ npx wrangler deploy
 
 ## 部署（腾讯云 EdgeOne Makers，同源）
 
-仓库里的 `es-plus-docs` 已经由 EdgeOne Makers 部署（项目名见控制台，如 `es-plus-vue3`）。
-中继可以直接挂进**同一个项目**，于是站点与中继同源：
+仓库里的 `es-plus-docs` 已经由 EdgeOne Makers 部署（项目名 `es-plus-vue3`，生产域名
+`https://main.esplus-ai.com`）。中继直接挂进**同一个项目**，于是站点与中继同源：
 
 ```
-https://<项目域名>/v1/chat/completions   ← 浏览器同源请求，不必配 CORS
+https://main.esplus-ai.com/v1/chat/completions   ← 浏览器同源请求，不必配 CORS
         └─ es-plus-docs/cloud-functions/v1/chat/completions.js
              └─ createRelay(context.request, context.env, { clientIp: context.clientIp })
 ```
+
+三个站点的线上地址（只有主站承载 AI 工作台，另外两站不需要函数）：
+
+| 站点 | EdgeOne 项目 | 生产域名 |
+| --- | --- | --- |
+| `es-plus-docs`（Vue 3，含 `/ai-crud`） | `es-plus-vue3` | `https://main.esplus-ai.com` |
+| `es-eui`（Vue 2） | `es-plus-vue2` | `https://esui.esplus-ai.com` |
+| `es-pc`（Ant Design Vue） | `es-plus-antdv` | `https://antdv.esplus-ai.com` |
 
 仓库里已经放好入口，**不需要新建项目**：
 
@@ -91,15 +99,20 @@ EdgeOne Makers 控制台 → 项目 → **项目设置 → 构建部署配置 �
 | `RATE_LIMIT` / `RATE_WINDOW_SEC` | `20` / `60` | 每 IP 每窗口次数 |
 | `DISABLED` | `false` | 出事时改 `true` 一键熔断 |
 
-同源部署**不需要** `ALLOWED_ORIGINS`：中继会认出 `origin === 自身域名` 并放行。
-如果同一个中继还要服务 GitHub Pages（跨源），再加 `ALLOWED_ORIGINS=https://liujiaao.github.io`。
+同源部署**不需要** `ALLOWED_ORIGINS`：中继会认出 `origin === 自身域名` 并放行，
+所以 `https://main.esplus-ai.com` 不必写进去。只有「跨站调用」才需要名单 —— 例如
+GitHub Pages 版本也走这个中继，或将来 `esui` / `antdv` 也要调主站中继时：
+
+```bash
+ALLOWED_ORIGINS=https://liujiaao.github.io,https://esui.esplus-ai.com,https://antdv.esplus-ai.com
+```
 
 ### 2. 部署并验证
 
 推送/重新部署后（`cloud-functions/` 会被自动识别，目录即路由）：
 
 ```bash
-BASE=https://<项目域名>          # 控制台里的生产域名或自定义域名
+BASE=https://main.esplus-ai.com
 curl -s $BASE/healthz            # {"ok":true,"disabled":false}
 curl -s -X POST $BASE/v1/chat/completions \
   -H 'origin: '$BASE -H 'content-type: application/json' \
