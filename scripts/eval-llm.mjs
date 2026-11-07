@@ -487,6 +487,9 @@ async function main() {
       kind: 'meta',
       schemaVersion: 1,
       rulerVersion: RULER_VERSION,
+      // 与产物同一份模型输入指纹：预测落盘也要能自证「这批复现属于哪版 system prompt」，
+      // 否则隔周重放一份旧 dump 时，无法判断当时的教法是否已变。
+      promptFingerprint,
       commit: identity.commit ?? null,
       corpusHash: identity.corpusHash ?? null,
       corpusFiles: allFiles.length,
