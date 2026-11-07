@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "scoped accuracy",
-  "message": "82.5%",
+  "label": "scoped accuracy · deepseek-flash",
+  "message": "83.5%",
   "color": "yellow"
 }
