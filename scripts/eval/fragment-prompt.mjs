@@ -193,6 +193,13 @@ export function renderShape(shape, { indent = '', depth = 1 } = {}) {
   return lines
 }
 
+/** 场景 ↔ 真实工具名。eval 与 prompt 指纹守卫共用这一份，避免两处各写一遍。 */
+export const FRAGMENT_SCENE_TOOLS = Object.freeze({
+  table: 'generate_table',
+  form: 'generate_form',
+  dialog: 'generate_dialog',
+})
+
 /** 场景专属提示：只补**工具描述里没有明说**的通用契约，不另写 NL→键映射表。 */
 const SCENE_RULES = {
   table: [

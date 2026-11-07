@@ -498,7 +498,10 @@ node -e "…"   # 输出：propF1=1 → 81 行/47 pass；propF1<1 → 129 行/0 
 2. **分支语义**（`scripts/check-eval-freshness.mjs`）：master 上必须是**完整**测量、
    `corpusHash` 与当前语料一致、`measuredAt` 不超过 7 天；其它分支同一判据只警告
    （本地/PR 的旧快照是常态，判红会让守卫变成噪声）。`commit` 漂移**永远**只警告 ——
-   nightly 先测量后提交，master 上产物的 commit 天然是父提交。
+   nightly 先测量后提交，master 上产物的 commit 天然是父提交。产物自 2026-11-07 起还带
+   `promptFingerprint`（CRUD / PRD / 三个片段 system prompt 的 sha256 截断）：语料没变
+   但 prompt 改了，旧数字同样不属于当前源码，处理方式与 `corpusHash` 不符一致
+   （master 判红、其它分支警告；旧产物缺键只警告，等下一次全量跑批补齐）。
 3. **PRD 腿自有门禁**（`eval/prd-leg.mjs`）：完整测量 ∧ 编译零失败 ∧
    `membershipRate ≥ 0.90`（地板来自 2026-11-02 实测 181/190 = 95.26%，约 5.3pp 余量）。
    进入 `passed` / exit code，但**不**混进 CRUD 的 95% 定义与徽章 —— 两种输入、两套分母。

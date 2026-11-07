@@ -28,6 +28,7 @@
  * 停更数周。两种环境的正确答案不同，判据就必须知道自己在哪种环境里。
  */
 import { execSync } from 'node:child_process'
+import { diffPromptFingerprint, isPromptFingerprint } from './prompt-fingerprint.mjs'
 
 export const PUBLISHED_BRANCH = 'master'
 export const MAX_STALE_DAYS = 7
@@ -59,6 +60,8 @@ export const isCompleteMeasurement = (m) => m === 'complete' || m === 'complete-
  * @param {string|null} ctx.branch     当前分支（`detectBranch`）
  * @param {string|null} [ctx.headCommit]
  * @param {string|null} [ctx.corpusHash] 当前语料指纹
+ * @param {object|null} [ctx.promptFingerprint] 当前源码渲染出的模型输入指纹
+ *        （由 `prompt-sources.mjs` 采集；不传则跳过这一条判据）
  * @param {number} [ctx.now]           ms（默认 Date.now()，测试可注入）
  * @param {number} [ctx.maxDays]       新鲜度上限
  * @param {string} [ctx.publishedBranch]
@@ -69,6 +72,7 @@ export function evaluateFreshness({
   branch,
   headCommit = null,
   corpusHash = null,
+  promptFingerprint = null,
   now = Date.now(),
   maxDays = MAX_STALE_DAYS,
   publishedBranch = PUBLISHED_BRANCH,
@@ -119,6 +123,28 @@ export function evaluateFreshness({
           ` —— 已发布的数字描述的是旧语料，需要一次新的完整测量`
       )
     }
+  }
+
+  // prompt 指纹与语料指纹同一条纪律：数字必须能被证明「是用当前这份 system prompt 测的」。
+  // 旧产物没有这个键 → 只警告（不能让它红到下一次全量跑批为止，恒红 = 红盲）；
+  // 有键但不一致 → 与 corpusHash 不符同样处理（master 上红、其它分支警告）：
+  // prompt 改了而没重测，徽章上的数字就属于另一版教法，读者却会当成当前成绩。
+  if (promptFingerprint) {
+    if (artifact.promptFingerprint == null) {
+      warnings.push(
+        '产物无 `promptFingerprint`（模型输入指纹）—— 下一次全量跑批会补齐；' +
+          '在补齐前，无法证明这份数字对应的 system prompt 仍是当前源码'
+      )
+    } else if (isPromptFingerprint(artifact.promptFingerprint)) {
+      const diffs = diffPromptFingerprint(artifact.promptFingerprint, promptFingerprint)
+      if (diffs.length) {
+        publish(
+          `产物 promptFingerprint 与当前源码不一致（${diffs.join('；')}）—— ` +
+            `已发布的数字是用另一版 system prompt 测出来的，需要一次新的完整测量`
+        )
+      }
+    }
+    // 结构非法的情形由 `verifyArtifact` 判红（与分支无关），此处不重复报。
   }
 
   // 只警告：nightly 先测量、后提交产物（见文件头）。

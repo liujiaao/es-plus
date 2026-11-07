@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 // 收敛腿样本地板：与 eval 的守卫共用同一个常量（写死第二份必然漂移）。
 import { CONVERGE_SAMPLE_FLOOR } from './ratchet.mjs'
 import { RULER_VERSION } from './dump.mjs'
+import { isPromptFingerprint } from './prompt-fingerprint.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
@@ -122,7 +123,13 @@ export function currentCommit() {
  * 产物身份块。挂在**成功与失败**两种记录上 —— 失败记录同样需要能被定位
  * （否则只能从 Actions 日志反推它属于哪次提交、哪份语料）。
  */
-export function artifactIdentity({ corpusHash, corpusFiles, fixedFieldsUsed, rulerVersion = RULER_VERSION }) {
+export function artifactIdentity({
+  corpusHash,
+  corpusFiles,
+  fixedFieldsUsed,
+  rulerVersion = RULER_VERSION,
+  promptFingerprint = null,
+}) {
   return {
     commit: process.env.GITHUB_SHA || currentCommit(),
     runId: process.env.GITHUB_RUN_ID || null,
@@ -133,6 +140,11 @@ export function artifactIdentity({ corpusHash, corpusFiles, fixedFieldsUsed, rul
     // 尺子版本（Ruler v3 起）：把「两个百分比是不是同一把尺子量出来的」写成产物里的事实。
     // 与 dump 的 meta 同源同串 —— 复算、棘轮、产物三方比对的都是这一个值。
     rulerVersion,
+    // 模型输入指纹（prompt 版本）：把「这份数字是哪一版 system prompt 测出来的」写成事实。
+    // 语料变更有 corpusHash，prompt 变更此前没有任何痕迹 —— 改一句教法，旧分数仍挂在徽章上。
+    // 传 null 时不写键（老调用方/测试不受影响）；写出后由 verifyArtifact 校验结构、
+    // 由 check:eval-freshness 与当前源码比对（见 prompt-fingerprint.mjs）。
+    ...(promptFingerprint == null ? {} : { promptFingerprint }),
   }
 }
 
@@ -189,6 +201,19 @@ export function verifyArtifact(artifact, ctx = {}) {
     // 把它判红会让守卫一直红到下一次夜间全量跑批为止（恒红 = 红盲）。缺了只提示。
     if (typeof artifact.rulerVersion !== 'string') {
       warnings.push('产物无 `rulerVersion`（Ruler v3 之前写的）—— 下一次全量跑批会补齐；期间的百分比不可与新版横向比较')
+    }
+    // `promptFingerprint` 同理：已提交的产物是旧写入方写的。缺了只提示，等下一次全量跑批
+    // 自然补齐；写出来但结构坏了则是写入方缺陷（与「缺字段」不是一回事），判红。
+    if (artifact.promptFingerprint === undefined) {
+      warnings.push(
+        '产物无 `promptFingerprint`（模型输入指纹）—— 下一次全量跑批会补齐；' +
+          '在补齐前，无法证明这份数字对应的 system prompt 仍是当前源码'
+      )
+    } else if (!isPromptFingerprint(artifact.promptFingerprint)) {
+      failures.push(
+        `产物 promptFingerprint 结构非法：${JSON.stringify(artifact.promptFingerprint)} ` +
+          '—— 必须是 { version, crud, prd, fragments:{table,form,dialog} } 的 16 位十六进制指纹'
+      )
     }
   }
   // 诊断口径绝不允许被发布：喂了 fixedFields 的数字不是生产口径。

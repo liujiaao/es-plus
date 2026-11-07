@@ -8,6 +8,10 @@
  *   3. 失败旁路文件（`last-accuracy.failed.json`）存在时，它必须确实是失败记录，
  *      且不得发布准确率数字 —— 一次失败的跑批只允许留下诊断，不允许撤回已发布的测量。
  *
+ * 第 2 条从 2026-11-07 起还包含**模型输入指纹**（`promptFingerprint`）：语料没变但
+ * system prompt 改了，徽章上的数字同样不属于当前源码。旧产物没有这个键时只警告
+ * （下一次全量跑批补齐），有不一致则与 corpusHash 不符同等处理。
+ *
  * 分支语义见 `scripts/eval/freshness.mjs` 头注：同一条判据在 master 上是红、
  * 在 PR/本地是警告（旧快照天然落后）。这里只负责读文件、选分支、打印。
  *
@@ -71,11 +75,25 @@ try {
   process.exit(1)
 }
 
+// 当前源码渲染出的模型输入指纹。采集侧（prompt-sources）会现打包片段/前门工具，
+// 与 eval 同源；CRUD 一项读 `@es-plus/shared` 构建产物 —— 故必须先 `npm run build:libs`
+// （CI 的 consistency job 已在 check:consistency 之前 build shared）。
+let promptFingerprint = null
+try {
+  const { currentPromptFingerprint } = await import('./eval/prompt-sources.mjs')
+  promptFingerprint = await currentPromptFingerprint()
+} catch (err) {
+  console.error(`❌ 算不出模型输入指纹（promptFingerprint）：${err.message}`)
+  console.error('   先 `npm run build:libs`（CRUD prompt 读 @es-plus/shared 构建产物；片段/前门现打包源码）。')
+  process.exit(1)
+}
+
 const { failures, warnings } = evaluateFreshness({
   artifact,
   branch,
   headCommit,
   corpusHash,
+  promptFingerprint,
   maxDays,
 })
 

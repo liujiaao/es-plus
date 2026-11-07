@@ -48,6 +48,7 @@ import { scoreOptsForLang } from './eval/align.mjs'
 import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './eval/run-metrics.mjs'
 import { createDumpWriter, goldHashOf, RULER_VERSION } from './eval/dump.mjs'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
+import { fingerprintPrompts } from './eval/prompt-fingerprint.mjs'
 import {
   driveToValidConfig as driveToValidConfigPure,
   isNotMeasured,
@@ -58,7 +59,7 @@ import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
 import { planReplay, shouldAbortReplay, summarizeReplay, REPLAY_ABORT_AFTER } from './eval/replay.mjs'
 import { setupFrontDoor, driveFrontDoor, driveSceneFragment, summarizeFrontDoor } from './eval/front-door-leg.mjs'
-import { buildFragmentSystemPrompt, buildFragmentInitialMessages } from './eval/fragment-prompt.mjs'
+import { buildFragmentSystemPrompt, buildFragmentInitialMessages, FRAGMENT_SCENE_TOOLS } from './eval/fragment-prompt.mjs'
 import { scoreFragment, describeFragmentDimMiss } from './eval/fragment-scorers.mjs'
 import { compileProduct, compileFragment, fmtError } from './eval/compile-leg.mjs'
 import { summarizeFragmentLeg } from './eval/fragment-leg.mjs'
@@ -392,10 +393,9 @@ async function main() {
   // prompt 由捕获结果自省生成（不手写第二份键清单），校验器即宿主 `tools/call` 用的同一形状。
   // 与 frontDoor 同理，失败要立即红 —— 「形状都没捕获到」意味着片段这一列的测量根本不成立。
   const fragmentTools = await setupFragmentTools()
-  const FRAGMENT_TOOL_NAMES = { table: 'generate_table', form: 'generate_form', dialog: 'generate_dialog' }
   const fragmentSchemas = {}
   const fragmentSystems = {}
-  for (const [scene, toolName] of Object.entries(FRAGMENT_TOOL_NAMES)) {
+  for (const [scene, toolName] of Object.entries(FRAGMENT_SCENE_TOOLS)) {
     fragmentSchemas[scene] = z.object(fragmentTools[toolName].shape)
     fragmentSystems[scene] = buildFragmentSystemPrompt(scene, fragmentTools[toolName])
   }
@@ -442,9 +442,29 @@ async function main() {
   const files = LIMIT !== null ? scopedFiles.slice(0, LIMIT) : scopedFiles
   // AN-03：语料指纹取**全量**语料（`allFiles`），不是本次切片 —— 产物标识的是「这份数字
   // 属于哪一版语料」，`--fragments` 只在片段上跑也不该改变这一判断。
+  // 模型输入指纹（prompt 版本，见 eval/prompt-fingerprint.mjs）：把「这份数字是哪一版
+  // system prompt 测出来的」写进产物。语料变更有 corpusHash，prompt 变更此前毫无痕迹。
+  // 采集的就是下面各腿**实际喂给模型**的那几段文本 —— 不重新渲染一份，否则守卫校验的
+  // 就不是产物实际写下的东西。
+  // PRD 一项在 `--fragments` 探针里也照样采集：指纹描述「这份源码的 prompt」，不是
+  // 「本次跑了哪几条腿」；探针不写产物，但它落盘的 dump 仍应携带同一份指纹。
+  const prdSystemForFingerprint =
+    typeof frontDoor.extractionContract === 'string' && frontDoor.extractionContract.trim()
+      ? buildPrdSystemPrompt(
+          { name: frontDoor.sceneCap.name, description: frontDoor.sceneCap.desc, shape: frontDoor.cap.shape },
+          frontDoor.extractionContract
+        )
+      : '(no extraction contract — probe mode)'
+  const promptFingerprint = fingerprintPrompts({
+    crud: system,
+    prd: prdSystemForFingerprint,
+    fragments: fragmentSystems,
+  })
+
   const identity = artifactIdentity({
     corpusHash: corpusFingerprint(allFiles, CASES_DIR),
     corpusFiles: allFiles.length,
+    promptFingerprint,
   })
   const startedAt = Date.now()
   if (!files.length && !PRD_ONLY) {
@@ -1024,10 +1044,8 @@ async function main() {
   // 全量跑时跟着跑（22 条，成本可忽略），`--prd` 探针时单独跑；其余探针不跑。
   const prdRows = []
   if (RUN_PRD) {
-    const prdSystem = buildPrdSystemPrompt(
-      { name: frontDoor.sceneCap.name, description: frontDoor.sceneCap.desc, shape: frontDoor.cap.shape },
-      frontDoor.extractionContract
-    )
+    // 与产物里的 `promptFingerprint.prd` 是**同一个字符串**（上面已按同一契约构建）。
+    const prdSystem = prdSystemForFingerprint
     // `--limit` 同时约束 PRD（`--prd --limit N` 是「先用 N 条探中继/契约」的用法）。
     const plannedPrd = LIMIT !== null ? prdCases.slice(0, LIMIT) : prdCases
     for (const c of plannedPrd) {

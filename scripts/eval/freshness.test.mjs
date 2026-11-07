@@ -75,6 +75,84 @@ const failed = (over = {}) => ({
   check(has(rCommit.warnings, 'commit'), 'commit 漂移必须可见地提示')
 }
 
+// ─── 模型输入指纹：与语料指纹同一条纪律 ────────────────────────────────────
+{
+  const fp = (over = {}) => ({
+    version: 1,
+    crud: 'a'.repeat(16),
+    prd: 'b'.repeat(16),
+    fragments: { table: 'c'.repeat(16), form: 'd'.repeat(16), dialog: 'e'.repeat(16) },
+    ...over,
+  })
+  const same = evaluateFreshness({
+    artifact: complete({ promptFingerprint: fp() }),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp(),
+    now: NOW,
+  })
+  check(clean(same) && !has(same.warnings, 'promptFingerprint'), '指纹一致时必须通过且不提示')
+
+  // 旧产物：只警告，不能红到下一次全量跑批为止（恒红 = 红盲）。
+  const legacy = evaluateFreshness({
+    artifact: complete(),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp(),
+    now: NOW,
+  })
+  check(clean(legacy) && has(legacy.warnings, 'promptFingerprint'), '产物无 promptFingerprint 时只警告')
+
+  // prompt 改了而没重测：master 判红，消息必须点名是哪一项变了。
+  const rCrud = evaluateFreshness({
+    artifact: complete({ promptFingerprint: fp() }),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp({ crud: 'f'.repeat(16) }),
+    now: NOW,
+  })
+  check(!clean(rCrud) && has(rCrud.failures, 'promptFingerprint') && has(rCrud.failures, 'crud'),
+    'master 上 CRUD prompt 指纹不一致必须判红，并点名 crud')
+
+  const rFrag = evaluateFreshness({
+    artifact: complete({ promptFingerprint: fp() }),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp({ fragments: { ...fp().fragments, dialog: '0'.repeat(16) } }),
+    now: NOW,
+  })
+  check(!clean(rFrag) && has(rFrag.failures, 'dialog'), 'master 上片段 prompt 指纹不一致必须判红，并点名场景')
+
+  const rOther = evaluateFreshness({
+    artifact: complete({ promptFingerprint: fp() }),
+    branch: 'feat/x',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp({ prd: 'f'.repeat(16) }),
+    now: NOW,
+  })
+  check(clean(rOther) && has(rOther.warnings, 'promptFingerprint') && has(rOther.warnings, 'master 上判红'),
+    '非发布分支上的 prompt 漂移只警告，且说明 master 上会判红')
+
+  // 不传当前指纹（未采集）时不得凭空报警 —— 这条判据是可选注入。
+  const noCurrent = evaluateFreshness({
+    artifact: complete({ promptFingerprint: fp() }),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    now: NOW,
+  })
+  check(clean(noCurrent) && !has(noCurrent.warnings, 'promptFingerprint'), '未提供当前指纹时跳过该判据')
+
+  // 结构非法由 verifyArtifact 判红（任何分支）；freshness 不重复报。
+  const broken = evaluateFreshness({
+    artifact: complete({ promptFingerprint: { version: 1 } }),
+    branch: 'master',
+    corpusHash: 'hash-current',
+    promptFingerprint: fp(),
+    now: NOW,
+  })
+  check(clean(broken), '结构非法的指纹不在 freshness 里二次判红（由 verifyArtifact 负责）')
+}
+
 // ─── 其它分支：同一条判据只警告 ─────────────────────────────────────────────
 {
   const r = evaluateFreshness({ artifact: failed(), branch: 'feat/x', corpusHash: 'hash-current', now: NOW })

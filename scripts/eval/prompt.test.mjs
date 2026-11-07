@@ -134,8 +134,50 @@ check(msgs.length === 1 && msgs[0].role === 'user', '恒返回单条 user 消息
   )
 }
 
+// ── 9) 模型输入指纹：同输入必同、变一个字节必不同（否则守卫是空转）──
+{
+  const { fingerprintPrompts, isPromptFingerprint, diffPromptFingerprint } = await import(
+    './prompt-fingerprint.mjs'
+  )
+  const base = {
+    crud: 'CRUD system prompt\nrule A',
+    prd: 'PRD system prompt',
+    fragments: { table: 'T', form: 'F', dialog: 'D' },
+  }
+  const fp = fingerprintPrompts(base)
+  check(isPromptFingerprint(fp), '合法指纹必须通过结构校验')
+  check(fingerprintPrompts({ ...base }).crud === fp.crud, '同输入两次指纹必须相同')
+
+  // 每一项必须**独立**参与哈希：改一项只能动那一项，否则守卫无法点名是哪里变了。
+  const crudChanged = fingerprintPrompts({ ...base, crud: base.crud + ' ' })
+  check(crudChanged.crud !== fp.crud, 'crud 改一个字符必须改变 crud 指纹')
+  check(crudChanged.prd === fp.prd && crudChanged.fragments.table === fp.fragments.table,
+    'crud 变化不得污染其它项')
+
+  const fragChanged = fingerprintPrompts({
+    ...base,
+    fragments: { ...base.fragments, dialog: base.fragments.dialog + 'x' },
+  })
+  check(fragChanged.fragments.dialog !== fp.fragments.dialog, '片段 prompt 改一个字符必须改变该项指纹')
+  check(fragChanged.crud === fp.crud && fragChanged.prd === fp.prd, '片段变化不得污染其它项')
+
+  const diffs = diffPromptFingerprint(fp, fragChanged)
+  check(diffs.length === 1 && diffs[0].startsWith('dialog '), '差异必须点名变化的场景（诊断消息靠它）')
+  check(diffPromptFingerprint(fp, fingerprintPrompts(base)).length === 0, '同一份指纹差集为空')
+
+  // 缺场景/空文本必须响亮失败，不能算出一个「看起来正常」的指纹。
+  let threw = false
+  try {
+    fingerprintPrompts({ ...base, fragments: { table: 'T', form: 'F' } })
+  } catch {
+    threw = true
+  }
+  check(threw, '缺片段场景必须抛错（不得静默产生不完整指纹）')
+  check(!isPromptFingerprint({ version: 1, crud: 'x', prd: 'y', fragments: {} }), '短哈希/缺场景不得通过结构校验')
+}
+
 if (failures) {
   console.error(`\nmeta-eval FAILED: ${failures} 处断言未过`)
   process.exit(1)
 }
-console.log('\nmeta-eval OK — prompt 给定输入明示、旧路径逐字节不变、target/mode 维度未放水、回灌轮永不留空 text block。✔')
+console.log('\nmeta-eval OK — prompt 给定输入明示、旧路径逐字节不变、target/mode 维度未放水、回灌轮永不留空 text block、模型输入指纹非空转。✔')

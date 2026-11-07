@@ -82,6 +82,32 @@ const complete = (over = {}) => ({
     '带 rulerVersion 时不得再提示'
   )
 
+  // 模型输入指纹：与 rulerVersion 同一处置 —— 旧产物缺键只提示；**写出来但结构坏了**
+  // 是写入方缺陷（不是版本差），任何分支都判红。
+  const fingerprint = {
+    version: 1,
+    crud: 'a'.repeat(16),
+    prd: 'b'.repeat(16),
+    fragments: { table: 'c'.repeat(16), form: 'd'.repeat(16), dialog: 'e'.repeat(16) },
+  }
+  const noFp = verifyArtifact(complete(), { badgeFiles: [] })
+  check(clean(noFp), '无 promptFingerprint 不得判红（旧产物合法）')
+  check(noFp.warnings.some((w) => w.includes('promptFingerprint')), '无 promptFingerprint 必须给出提示')
+  const withFp = verifyArtifact(complete({ promptFingerprint: fingerprint }), { badgeFiles: [] })
+  check(clean(withFp) && !withFp.warnings.some((w) => w.includes('promptFingerprint')), '合法 promptFingerprint 不得提示或判红')
+  for (const [label, bad] of [
+    ['缺 fragments', { ...fingerprint, fragments: undefined }],
+    ['短哈希', { ...fingerprint, crud: 'abc' }],
+    ['版本不对', { ...fingerprint, version: 2 }],
+    ['非对象', 'deadbeef'],
+  ]) {
+    checkFails(
+      verifyArtifact(complete({ promptFingerprint: bad }), { badgeFiles: [] }),
+      'promptFingerprint',
+      `promptFingerprint ${label}`
+    )
+  }
+
   const noD95 = complete()
   delete noD95.definition95
   // A5：编译分母含 en 腿，产物带一份按语言的诊断拆分。
