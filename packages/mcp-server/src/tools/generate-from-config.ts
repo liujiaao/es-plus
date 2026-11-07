@@ -234,7 +234,7 @@ const FieldConfigSchema = z.object({
   formSpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
-  attrs: z.record(z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
+  attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
   dataOptions: z
     .array(DataOptionSchema)
     .optional()
@@ -327,7 +327,7 @@ export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
       .describe(
         'Nested child columns for a GROUP HEADER (multi-level). Recursive. Cross-renderer safe up to 2 levels (antdv supports N; vue3/vue2 default tables flatten beyond 1).'
       ),
-    btns: z.array(z.record(z.unknown())).optional().describe('In-cell action buttons (operation column)'),
+    btns: z.array(z.record(z.string(), z.unknown())).optional().describe('In-cell action buttons (operation column)'),
     editRender: z
       .object({
         name: z.string().optional().describe("Inline-edit renderer name, e.g. '$input' | '$select' | '$textarea' | '$date' (vxe engine only)."),
@@ -336,7 +336,7 @@ export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
           .array(z.object({ label: z.string(), value: z.union([z.string(), z.number(), z.boolean()]) }))
           .optional()
           .describe("Option list for a '$select' editor (label/value pairs)."),
-        props: z.record(z.unknown()).optional().describe("Props forwarded to the editor component."),
+        props: z.record(z.string(), z.unknown()).optional().describe("Props forwarded to the editor component."),
         autofocus: z.union([z.string(), z.boolean()]).optional(),
         defaultValue: z.unknown().optional(),
       })
@@ -482,8 +482,14 @@ const DialogBtnSchema = z.object({
 // and enum value lists baked into the JSON schema) instead of free-forming a
 // JSON blob. This is the single biggest lever on one-shot accuracy.
 //
-// NOTE: this is a hand-maintained zod3 copy of the shared (zod4) authoritative
-// StructuredCrudConfigSchema — the two zod versions can't share objects safely.
+// NOTE: this is a hand-maintained copy of the shared authoritative
+// StructuredCrudConfigSchema. It used to exist because the two packages were
+// pinned to different zod majors (v3 here, v4 in shared) and objects from two
+// zod instances can't be mixed. Both now resolve to a single zod 4 install
+// (scripts/check-deps.mjs enforces one major), so the copy could be replaced
+// by the shared schema's `.shape` — it stays as a deliberate, separately
+// worded tool schema until that refactor is measured against the eval corpus
+// (tool descriptions feed the model's JSON schema and one-shot accuracy).
 // scripts/check-schema-contract.mjs guards the two copies against drift
 // (target enum must cover vue3/vue2/antdv; tableOptions must carry the height/
 // virtual contract fields; tableBtns AND toolbarBtns must accept `position` and
@@ -525,7 +531,7 @@ const configShape = {
         ),
       multiSelect: z.boolean().optional(),
       highlightCurrentRow: z.boolean().default(true),
-      headerCellStyle: z.record(z.string()).optional(),
+      headerCellStyle: z.record(z.string(), z.string()).optional(),
       virtual: z.boolean().optional(),
       // 与 structured-config.schema.ts 的同名字段保持一致 —— 两边都是 z.object
       // （没有 passthrough），少一个键就等于把该配置静默剥掉。
@@ -615,7 +621,7 @@ const configShape = {
   mode: z.enum(["schema", "sfc"]).default("schema").describe("Output mode: 'schema' (schema.ts + wrapper SFC) or 'sfc' (single self-contained SFC)"),
   target: z.enum(["vue3", "vue2", "antdv"]).default("vue3").describe("Target renderer: vue3 (Element Plus), vue2 (Element UI), antdv (Ant Design Vue)"),
   typescript: z.boolean().default(true),
-  permissions: z.record(z.string()).optional(),
+  permissions: z.record(z.string(), z.string()).optional(),
   i18n: z.boolean().default(false),
   formLayout: z
     .object({

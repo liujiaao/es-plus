@@ -49,12 +49,11 @@ const FRAGMENT_CONFIG_TYPES = [ES_TABLE_TYPE, ES_FORM_TYPE, ES_DIALOG_TYPE] as c
 type FragmentConfigType = (typeof FRAGMENT_CONFIG_TYPES)[number];
 
 /**
- * 片段配置的 Zod 判据（zod3）。惰性构建，避免模块加载顺序带来的副作用。
+ * 片段配置的 Zod 判据。惰性构建，避免模块加载顺序带来的副作用。
  *
- * 注意 zod3 与 zod4 的 issue 词汇差异：zod3 的枚举错误码是 `invalid_enum_value`
- * 且合法值是 `options`，而 shared 的 `zodIssuesToResult` 按 zod4 的
- * `invalid_value`/`values` 渲染建议 —— 这里做一次归一化，保证两种分支给宿主的
- * 错误/建议串形态一致（Ajv 分支用 `/path: message`，这里也一样）。
+ * 整个 workspace 只有一份 zod（4.x，根 node_modules），片段形状与 shared 的
+ * 结构化 schema 由同一个 zod 实例构建 —— issue 词汇因此天然一致，无需再对
+ * `invalid_enum_value` / `options` 这类 zod3 说法做归一化。
  *
  * AN-08：片段入参**本就应当精确**（没有「宿主扩展键」的承诺），故 `.strict()`：
  * 未知键从「解析成功、键被静默剥掉」变成一条 issue。注意 MCP SDK 的 `server.tool()`
@@ -94,19 +93,19 @@ function validateFragmentConfig(config: unknown, type: FragmentConfigType): Vali
   const issues = result.error.issues.map((issue) => {
     const raw = issue as unknown as {
       code?: string;
-      options?: unknown[];
       values?: unknown[];
       expected?: string;
       minimum?: number;
       maximum?: number;
     };
     return {
-      path: issue.path,
+      // zod4 的 path 是 PropertyKey[]（含 symbol）；渲染用的 ZodIssueLike 只认
+      // string | number，按实际语义收窄（symbol 段不会出现在 JSON 配置上）。
+      path: issue.path.filter((k): k is string | number => typeof k !== "symbol"),
       message: issue.message,
-      // zod3 → zod4 词汇归一（见上方注释）
-      code: raw.code === "invalid_enum_value" ? "invalid_value" : raw.code,
+      code: raw.code,
       expected: raw.expected,
-      values: raw.values ?? raw.options,
+      values: raw.values,
       minimum: raw.minimum,
       maximum: raw.maximum,
     };

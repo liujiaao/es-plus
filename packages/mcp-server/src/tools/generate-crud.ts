@@ -98,7 +98,7 @@ export const crudShape = {
     .array(z.enum(["add", "edit", "delete", "view", "export", "import"]))
     .optional()
     .describe("Explicit CRUD actions. If omitted, derived from surfaces.dialog / form presence."),
-  permissions: z.record(z.string()).optional().describe("Permission codes keyed by action"),
+  permissions: z.record(z.string(), z.string()).optional().describe("Permission codes keyed by action"),
   pagination: z
     .object({ pageSize: z.number().int().default(10), pageSizes: z.array(z.number().int()).optional() })
     .optional(),

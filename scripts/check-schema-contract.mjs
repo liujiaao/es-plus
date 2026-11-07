@@ -412,7 +412,7 @@ function checkPermissiveSchemas() {
 //  - target 枚举漏加渲染目标 → 合法请求被 Zod 拒绝（曾漏 antdv）；
 //  - tableOptions 漏加契约字段 → 用户传入的字段被 Zod 静默 strip、无法传导到生成物
 //    （曾漏 tabHeight）。
-// mcp-server（zod3）在 generate-from-config.ts 里内联了一份 StructuredCrudConfig 的
+// mcp-server 在 generate-from-config.ts 里内联了一份 StructuredCrudConfig 的
 // zod 副本；它与 shared（zod4）的权威 schema 无法安全共享对象（版本不兼容），因此二者
 // 极易漂移（antdv 就曾只加到内联副本、漏掉权威 schema）。本守卫对“权威 schema”与
 // “mcp 内联副本”两处同时做单源文本巡检（与 checkFormTypeEnum 解析 core/constants.ts
@@ -853,7 +853,7 @@ function checkDialogContract() {
   if (sorted(d.sharedDialogKeys) !== sorted(d.mcpDialogKeys)) {
     ok = fail(
       `dialog 契约的两处 AI Zod 副本已分叉：\n    shared: [${d.sharedDialogKeys.join(', ')}]\n    mcp   : [${d.mcpDialogKeys.join(', ')}]\n` +
-        '    两份都是手工维护（zod4 / zod3 无法共享对象），必须同改'
+        '    两份都是手工维护的独立契约（各持一份，不共享对象），必须同改'
     )
   }
   // 三端 `CrudDialogConfig` 是同一契约的手写副本：任一端独有键即为漂移。
@@ -972,7 +972,7 @@ function checkDialogContract() {
 }
 
 // ── 3c. 契约双份全等 + MCP resource 第三份对齐（AI-32）──────
-// ① shared 权威 zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 内联 zod3
+// ① shared 权威 zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 内联副本
 //    `configShape`（20 键）此前只按**枚举清单逐项断** —— 往任一处加非清单键（或改
 //    `dialogs`/`operationColumn`/`pagination`/`formLayout` 形状）两守卫全绿而镜像已分叉，
 //    且 mcp 侧 `z.object` 无 passthrough → 静默 strip。

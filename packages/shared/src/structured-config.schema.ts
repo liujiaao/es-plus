@@ -3,7 +3,7 @@ import { VALID_FORM_TYPES, VALID_CRUD_ACTIONS, FORM_TYPE_ALIASES } from './contr
 import { isSafeProp } from './prop-safety.js'
 
 // 教学面：`.describe()` 是宿主 LLM 唯一能看到的语义（CRUD prompt / 片段 prompt 都从
-// 这里或它的 zod3 镜像自省）。规则子键此前裸奔，模型只能靠猜 pattern/trigger 的含义。
+// 这里或它在 mcp 侧的镜像自省）。规则子键此前裸奔，模型只能靠猜 pattern/trigger 的含义。
 const FieldRuleSchema = z.object({
   required: z
     .boolean()

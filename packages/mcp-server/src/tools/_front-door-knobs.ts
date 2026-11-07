@@ -3,8 +3,9 @@ import { z } from "zod";
 /**
  * 前门（`generate_scene` scene='crud'，兼容入口 `generate_crud`）的「旋钮」显式形状 —— AN-21。
  *
- * 为什么不能直接用 shared 的 Zod 对象：shared 是 zod 4，mcp-server 是 zod 3，
- * 两代 ZodObject 不能跨版本复用。这里是 shared 权威 schema 的 **zod 3 镜像**：
+ * 为什么仍不直接用 shared 的 Zod 对象：workspace 已统一到单份 zod 4（升级前这里是
+ * zod 3，两代 ZodObject 不能跨版本复用），但前门旋钮要与 `generate-from-config.ts`
+ * 的同名形状保持「不注入 `.default()`」的独立契约。这里是 shared 权威 schema 的镜像：
  * `scripts/check-tool-shapes.mjs` 会把每一颗旋钮的键树与 shared 运行时 schema 对账，
  * 少一个键 / 多一个键都会红。
  *
@@ -52,7 +53,7 @@ export const tableOptionsSchema = z
       .describe("Container height used ONLY when heightType is 'height' (ignored for 'auto'/'maxHeight' — use tabHeight there)."),
     multiSelect: z.boolean().optional(),
     highlightCurrentRow: z.boolean().optional(),
-    headerCellStyle: z.record(z.string()).optional(),
+    headerCellStyle: z.record(z.string(), z.string()).optional(),
     virtual: z
       .boolean()
       .optional()
@@ -70,7 +71,7 @@ export const tableOptionsSchema = z
     cachePageSelection: z.boolean().optional(),
     refetchKeepPage: z.boolean().optional(),
     localPagination: z.boolean().optional(),
-    // 与 shared 的 StructuredCrudConfigSchema 同形（zod3 vs zod4 不能共享对象）：
+    // 与 shared 的 StructuredCrudConfigSchema 同形（各持一份契约，不共享对象）：
     // union 而不是嵌套 .object()，两种形态都能过前门，不会把改键形态静默剥掉。
     sortParam: z
       .union([

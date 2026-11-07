@@ -18,18 +18,18 @@
  * `.strict()`：权威 schema 是共用的，把整棵树改成 strict 会让任何既有配置直接失败，
  * 且嵌套对象（`attrs` 之类）本来就该放开。
  *
- * ## zod 4 / zod 3 双版本适配
+ * ## zod 4 / zod 3 双词汇适配（历史约束，现仅为跨副本防御）
  *
- * 本仓**同时装着两个大版本**（不是笔误）：
- *  - `packages/shared` 自己的依赖是 **zod 4.4.3**（`structured-config.schema.ts` 就是它建的，
- *    与计划原文一致）；
- *  - 根目录 hoist 的是 **zod 3.25.76**，`mcp-server` / `core` / `cli` 解析到它 ——
- *    `validate_config` 的片段形状（`tableShape` 等）是 zod3 对象，会被传进本模块。
+ * 本仓曾经**同时装着两个大版本**：`packages/shared` 自己的依赖是 zod 4，而根目录
+ * hoist 的是 zod 3，`mcp-server` / `core` / `cli` 解析到它 —— `validate_config` 的
+ * 片段形状（`tableShape` 等）是 zod3 对象，会被传进本模块。
  *
- * 因此解包不能假设单一内部词汇。zod3 用 `_def.typeName`（`ZodOptional`…），zod4 用
- * `_def.type`（`optional`…）；这里统一成小写短名（`optional`/`object`/`pipe`…）再分派。
- * 判定一律基于 `_def` 字段而不是 `instanceof`：守卫用 esbuild 从源码打包时，跨副本的
- * `instanceof` 会静默失配（两个版本各有一份 class）。
+ * 2026-11-07 起 workspace 已统一到单份 zod 4（`scripts/check-deps.mjs` 断只有一个大版本），
+ * 片段形状与权威 schema 来自同一个实例。下面的双词汇解包**保留**，但理由是跨副本防御
+ * 而不是双版本共存：守卫用 esbuild 从源码打包、eval 会把形状交给另一个进程，任何一方
+ * 带来的 zod 对象都可能是另一份 class —— 故判定一律基于 `_def` 字段而不是 `instanceof`。
+ * zod3 用它自己的 `_def.typeName`（`ZodOptional`…），zod4 用 `_def.type`（`optional`…）；
+ * 这里统一成小写短名（`optional`/`object`/`pipe`…）再分派。
  *
  * 要解包的透明包装：
  * `optional/nullable/default/catch/readonly/prefault → innerType`、
@@ -276,12 +276,14 @@ function collect(
         | undefined
       if (!shape) return
       const known = Object.keys(shape)
-      // catchall（`.catchall(z.any())`）显式允许任意键；默认（zod3 的 ZodNever / zod4 无 catchall）不放行。
-      const catchall = def.catchall as AnyZod | undefined
-      const allowsUnknown = !!catchall && typeTag(unwrap(catchall)) !== 'never'
-
+      // **不要因为 catchall 就放行未知键。** zod4 把 `.passthrough()` / `.loose()` 编译成
+      // `catchall: z.unknown()`，与 `.catchall(z.any())` 在 `_def` 上完全同形，无法区分；
+      // 而本仓所有 `.passthrough()` 都是同一种用途 —— 让未知键**活过** `safeParse`
+      // （MCP SDK 的 `z.object()` 默认 strip），好由这里点名（AN-26 闸门）。把它当成
+      // 「所有键都已知」会让每一个闸门变成空操作：zod3 → zod4 迁移时正是这样让 20 条
+      // 未知键用例静默转绿的。真正键动态的对象要写成 `z.record(...)`（下面单独分支）。
       for (const key of Object.keys(value)) {
-        if (key in shape || isExtensionKey(key) || allowsUnknown) continue
+        if (key in shape || isExtensionKey(key)) continue
         out.push({
           path: [...path],
           key,

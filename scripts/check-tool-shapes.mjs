@@ -68,7 +68,7 @@ const VALID_PROBES = [
   ['mergeConfig', { rowsBy: ['dept'] }],
 ]
 
-/** zod3 / zod4 共用的包装层解包（只走公开/稳定的 `_def` 与 `.unwrap()`）。 */
+/** 包装层解包（只走公开/稳定的 `_def` 与 `.unwrap()`；同时认 zod3 与 zod4 两种内部词汇，防跨副本）。 */
 function unwrap(schema) {
   let t = schema
   for (let i = 0; i < 20 && t; i++) {
@@ -93,7 +93,7 @@ function unwrap(schema) {
         continue
       }
     }
-    // zod3 的 superRefine/transform → ZodEffects；zod4 的 transform → ZodPipe。
+    // zod3 的 superRefine/transform → ZodEffects；zod4 的 transform → ZodPipe（两种都解，防外来的 zod 对象）。
     if (kind === 'ZodEffects' || kind === 'effects') {
       if (d.schema) {
         t = d.schema

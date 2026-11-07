@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { registerTools } from "../src/tools/index.js";
 
 /**
@@ -46,8 +47,8 @@ describe("工具入参闸门 — 未知键不再静默消失", () => {
 
   it("交给 SDK 的是 passthrough 形状（未知键能活到 handler）", () => {
     const schema = tools.generate_crud.schema;
-    // zod3 对象：`_def.unknownKeys` 是 strip/strict/passthrough
-    expect(schema._def.unknownKeys).toBe("passthrough");
+    // 行为断言，不读 `_def`：zod3 用 `_def.unknownKeys === 'passthrough'`，zod4 把它
+    // 编译成 `catchall: z.unknown()`，两种内部词汇不同但「未知键活下来」是同一个契约。
     const parsed = schema.parse({ ...baseCrud, typoKey: 1 });
     expect(parsed.typoKey).toBe(1);
   });
@@ -115,8 +116,14 @@ describe("工具入参闸门 — 未知键不再静默消失", () => {
 
   it("闸门覆盖全部工具（19 个注册项全部走同一入口）", () => {
     expect(Object.keys(tools)).toHaveLength(19);
-    for (const [, tool] of Object.entries(tools)) {
-      expect(tool.schema._def.unknownKeys).toBe("passthrough");
+    for (const [name, tool] of Object.entries(tools)) {
+      // 用宿主真正看到的那份 JSON Schema 断言：loose 对象的 `additionalProperties`
+      // 是 `{}`（任意键放行），strip 对象根本没有该字段。这比读 `_def` 更接近契约，
+      // 且 zod3/zod4 都成立（zod4 的 `.passthrough()` 在 `_def` 上已与 catchall 同形）。
+      const json = z.toJSONSchema(tool.schema, { io: "input", unrepresentable: "any" }) as {
+        additionalProperties?: unknown;
+      };
+      expect(json.additionalProperties, `${name} 的工具形状会把未知键剥掉`).toEqual({});
     }
   });
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 捕获片段工具（`generate_table` / `generate_form` / `generate_dialog`）的**真实注册信息**：
- * 工具名、给宿主 LLM 看的 description、以及 zod3 入参形状。
+ * 工具名、给宿主 LLM 看的 description、以及工具入参形状。
  *
  * ## 为什么用 esbuild 现打包（与 `./front-door.mjs` 同因）
  *

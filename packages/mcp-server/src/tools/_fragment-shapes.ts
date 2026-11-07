@@ -2,15 +2,18 @@ import { z } from "zod";
 import { VALID_FORM_TYPES, FORM_TYPE_ALIASES, formatFragmentText } from "@es-plus/shared";
 
 /**
- * zod3 shapes shared by the fragment tools (generate_form / generate_table /
+ * Zod shapes shared by the fragment tools (generate_form / generate_table /
  * generate_dialog) and the front door (generate_scene, scene='crud' — the
  * `generate_crud` adapter reuses the same shapes).
  *
- * This is a hand-maintained zod3 mirror of the shared (zod4) authoritative
- * vocabulary (FieldConfig minus the inQuery/inTable/inForm membership flags —
- * those are derived by composeCrudConfig, not supplied per surface). The two
- * zod versions can't share objects safely; scripts/check-fragment-contract.mjs
- * guards this copy against drift from the shared SurfaceField contract.
+ * This is a hand-maintained mirror of the shared authoritative vocabulary
+ * (FieldConfig minus the inQuery/inTable/inForm membership flags — those are
+ * derived by composeCrudConfig, not supplied per surface). It used to be a
+ * zod-3-shaped copy because the two packages were on different zod majors;
+ * the workspace now resolves a single zod 4 (scripts/check-deps.mjs), so the
+ * copy survives only as a separately worded tool contract.
+ * scripts/check-fragment-contract.mjs guards it against drift from the shared
+ * SurfaceField contract.
  *
  * ## 为什么本文件每个对象形状都是 `.passthrough()`（AN-26 续）
  *
@@ -153,7 +156,7 @@ export const surfaceFieldSchema = z.object({
         "For a plain text length cap (e.g. '最多 20 字') prefer `attrs.maxlength`; a `min`/`max` rule validates values with a message but does not block typing. " +
         "Emit these rather than dropping a format/range requirement the user stated."
     ),
-  attrs: z.record(z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
+  attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
   dataOptions: z
     .array(DataOptionSchema)
     .optional()
@@ -184,7 +187,7 @@ export const surfaceFieldSchema = z.object({
     .optional()
     .describe("Extension point: a render-function source string for a fully custom cell/control."),
   // AI-21③：AI-06/07 的运行时底座（core normalizeFormItem 编译谓词）早已存在，
-  // 但入口词汇此前不含这两个键 —— 前门/片段一写就被 zod3 形状静默剥掉（「入口 vs schema」缺口）。
+  // 但入口词汇此前不含这两个键 —— 前门/片段一写就被工具形状静默剥掉（「入口 vs schema」缺口）。
   // isHidden 刻意用 `any`：真正的递归 DSL 校验由权威 shared Zod 在受校验路径上完成；
   // 在此逐字镜像那套递归/refine 会造出第三份**无守卫**副本（check-fragment-contract 只比顶层键集）。
   isHidden: z
@@ -243,11 +246,11 @@ export function renderFragmentOutput(
 }
 
 /**
- * `generate_table` 的容器级选项（Wave 4）—— shared `TableBlockOptions` 的 zod3 镜像，
+ * `generate_table` 的容器级选项（Wave 4）—— shared `TableBlockOptions` 的镜像，
  * 键集与权威 AI 侧 `StructuredCrudConfigSchema.tableOptions` **逐键相同**
  * （它本身已是 core `TableOptions` 里 JSON 可承载的声明式子集）。
  *
- * 手工双份同源（shared zod4 的 schema 不能跨包复用）：`scripts/check-fragment-contract.mjs`
+ * 手工双份同源（zod 已统一到 4.x，但工具契约文案刻意独立维护）：`scripts/check-fragment-contract.mjs`
  * 断本对象 ≡ shared `TableBlockOptions` ≡ 权威 `tableOptions` 键集，且每个键都在发射枚举里
  * —— `z.object` 无 passthrough，跑偏了就是静默 strip。
  */
@@ -284,7 +287,7 @@ export const tableBlockOptionsSchema = z.object({
     ),
   multiSelect: z.boolean().optional(),
   highlightCurrentRow: z.boolean().optional(),
-  headerCellStyle: z.record(z.string()).optional(),
+  headerCellStyle: z.record(z.string(), z.string()).optional(),
   virtual: z
     .boolean()
     .optional()
@@ -418,7 +421,7 @@ export const formLayoutSchema = z.object({
 /**
  * `generate_dialog` 的弹窗底座选项（AI-28）—— core `DialogOptions` 里**可声明式表达**
  * 的那一子集，与 shared `DialogBlockOptions`（`packages/shared/src/fragment-generator.ts`）
- * **手工双份同源**（zod4 ↔ zod3 不能共用对象）。
+ * **手工双份同源**（shared 与 mcp 各持一份工具契约，不跨包共享对象）。
  *
  * 刻意不收：`title`（`open(title, …)` 的入参，单一真源）、函数值键
  * （`render`/`renderHeader`/`renderFooter`/`configBtn`/`onClosed`/`beforeClose`）、

@@ -132,6 +132,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:site-seo',
       'check:bundle-sources',
       'check:distribution',
+      'check:deps',
       'check:analytics',
       'check:data-schemas',
       'check:doc-schemas',

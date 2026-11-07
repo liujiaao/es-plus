@@ -89,7 +89,10 @@ describe("validate_intent — 工具层", () => {
     );
     expect(atFormtype).toHaveLength(1);
     expect(atFormtype[0].message).toContain("(schema:");
-    expect(atFormtype[0].message.toLowerCase()).toContain("received number");
+    // 只钉「合法取值被附上」这条信息，不钉 zod 的措辞：v3 是
+    // "Invalid enum value. Expected 'Input' | …, received number"，v4 是
+    // "Invalid option: expected one of …"。措辞随依赖版本变，信息不该变。
+    expect(atFormtype[0].message).toContain("Input");
   });
 
   it("降级键的替代路径写进文本（来自台账，不是工具另写的建议）", async () => {

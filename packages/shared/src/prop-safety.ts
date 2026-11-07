@@ -18,7 +18,7 @@
  *
  * ## 为什么单独成文件
  *
- * 权威 Zod schema（`structured-config.schema.ts`，会拉进 zod4）与场景侧的
+ * 权威 Zod schema（`structured-config.schema.ts`，会拉进 zod 运行时）与场景侧的
  * 生成前校验（`scene/intent-validation.ts`）都要用同一条判据，而
  * `@es-plus/shared/scene` 子路径的纪律是**只放只读元数据 + 纯函数**、不得被迫加载
  * schema 运行时。把判据抽出来，两边各自 import 即可，既不重复也不互相拖累。

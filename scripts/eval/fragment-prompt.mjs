@@ -32,7 +32,17 @@
 
 import { buildGivenLine, buildFieldsLine } from './prompt.mjs'
 
-/** 把 zod3 的包装层剥掉，同时收集 optional / default / description。 */
+/**
+ * 形态标签：zod3 用 `_def.typeName`（`ZodString`…），zod4 用 `_def.type`（`string`…）。
+ * 自省一律先取标签再分派，**绝不**用 `instanceof` —— 脚本用 esbuild 从源码打包，
+ * 跨副本的 `instanceof` 会静默失配。
+ */
+const tagOf = (def) => def?.typeName ?? def?.type ?? ''
+
+/** zod4 把 `.describe()` 文本放进全局 registry，只经公开 getter 暴露；zod3 落在 `_def`。 */
+const descOf = (t) => t?.description ?? t?._def?.description
+
+/** 把包装层剥掉，同时收集 optional / default / description（zod3 / zod4 双词汇）。 */
 function unwrap(t) {
   let cur = t
   let optional = false
@@ -42,23 +52,29 @@ function unwrap(t) {
   while (cur && cur._def && !seen.has(cur)) {
     seen.add(cur)
     const d = cur._def
-    if (d.description && !description) description = d.description
-    if (d.typeName === 'ZodOptional') {
+    const desc = descOf(cur)
+    if (desc && !description) description = desc
+    const tag = tagOf(d)
+    if (tag === 'ZodOptional' || tag === 'optional') {
       optional = true
       cur = d.innerType
-    } else if (d.typeName === 'ZodNullable') {
+    } else if (tag === 'ZodNullable' || tag === 'nullable') {
       optional = true
       cur = d.innerType
-    } else if (d.typeName === 'ZodDefault') {
+    } else if (tag === 'ZodDefault' || tag === 'default' || tag === 'prefault') {
       optional = true
       try {
-        defaultValue = d.defaultValue()
+        // zod3 的 `defaultValue` 恒为函数；zod4 存的是值本身（`z.string().default(fn)` 才存函数）
+        defaultValue = typeof d.defaultValue === 'function' ? d.defaultValue() : d.defaultValue
       } catch {
         defaultValue = undefined
       }
       cur = d.innerType
-    } else if (d.typeName === 'ZodEffects') {
+    } else if (tag === 'ZodEffects' || tag === 'effects') {
       cur = d.schema
+    } else if (tag === 'pipe') {
+      // 展示取变换后的类型（zod4 `.transform()` 的 `out`）
+      cur = d.out ?? d.in
     } else {
       break
     }
@@ -66,9 +82,9 @@ function unwrap(t) {
   return { inner: cur, optional, defaultValue, description }
 }
 
-/** zod3 的 `ZodObject` shape 在不同版本可能是函数或对象。 */
+/** `ZodObject` 的 shape 在不同版本可能是函数、实例 getter 或 `_def` 上的对象。 */
 function objectShape(t) {
-  const s = t?._def?.shape
+  const s = t?.shape ?? t?._def?.shape
   const obj = typeof s === 'function' ? s() : s
   return obj && typeof obj === 'object' ? obj : null
 }
@@ -80,50 +96,70 @@ export function describeZodType(t, seen = new Set()) {
   seen.add(t)
   const { inner } = unwrap(t)
   const d = inner?._def ?? {}
-  switch (d.typeName) {
+  switch (tagOf(d)) {
     case 'ZodString':
+    case 'string':
       return 'string'
     case 'ZodNumber':
+    case 'number':
       return 'number'
     case 'ZodBoolean':
+    case 'boolean':
       return 'boolean'
     case 'ZodEnum':
-      return (d.values ?? []).map((v) => `'${v}'`).join(' | ')
+      return (d.values ?? d.options ?? []).map((v) => `'${v}'`).join(' | ')
+    case 'enum':
+      // zod4：`_def.entries` 是 { key: value } 对象
+      return Object.keys(d.entries ?? {}).map((v) => `'${v}'`).join(' | ')
     case 'ZodNativeEnum':
+    case 'nativeEnum':
       return Object.keys(d.values ?? {}).filter((k) => Number.isNaN(Number(k))).map((v) => `'${v}'`).join(' | ')
     case 'ZodLiteral':
-      return JSON.stringify(d.value)
+    case 'literal':
+      return JSON.stringify(Array.isArray(d.values) ? d.values[0] : d.value)
     case 'ZodArray':
-      return `${describeZodType(d.type, seen)}[]`
+    case 'array':
+      // zod3 `_def.type` / zod4 `_def.element`
+      return `${describeZodType(d.element ?? d.type, seen)}[]`
     case 'ZodRecord':
+    case 'record':
       return `Record<string, ${describeZodType(d.valueType, seen)}>`
     case 'ZodUnion':
+    case 'union':
       return (d.options ?? []).map((o) => describeZodType(o, new Set(seen))).join(' | ')
     case 'ZodObject':
+    case 'object':
       return 'object'
-    case 'ZodLazy': {
+    case 'ZodLazy':
+    case 'lazy': {
       const resolved = d.getter()
       return describeZodType(resolved, seen)
     }
     case 'ZodAny':
     case 'ZodUnknown':
+    case 'any':
+    case 'unknown':
       return 'any'
     case 'ZodEffects':
+    case 'effects':
       return describeZodType(d.schema, seen)
     default:
-      return String(d.typeName ?? 'unknown').replace(/^Zod/, '').toLowerCase()
+      return String(tagOf(d) ?? 'unknown').replace(/^Zod/, '').toLowerCase()
   }
 }
 
 /** 若是可下潜的对象（或对象数组），返回其键；否则 null。 */
 export function nestedShape(t) {
   const { inner } = unwrap(t)
-  if (!inner?._def) return null
-  if (inner._def.typeName === 'ZodObject') return objectShape(inner)
-  if (inner._def.typeName === 'ZodArray') {
-    let el = unwrap(inner._def.type).inner
-    if (el?._def?.typeName === 'ZodLazy') el = el._def.getter()
-    if (el?._def?.typeName === 'ZodObject') return objectShape(el)
+  const tag = tagOf(inner?._def)
+  if (!tag) return null
+  if (tag === 'ZodObject' || tag === 'object') return objectShape(inner)
+  if (tag === 'ZodArray' || tag === 'array') {
+    const el = unwrap(inner._def.element ?? inner._def.type).inner
+    const elTag = tagOf(el?._def)
+    const resolved = elTag === 'ZodLazy' || elTag === 'lazy' ? el._def.getter() : el
+    const resolvedTag = tagOf(resolved?._def)
+    if (resolvedTag === 'ZodObject' || resolvedTag === 'object') return objectShape(resolved)
   }
   return null
 }

@@ -74,8 +74,10 @@ function inspect(end, code, out = []) {
 // core 必须真的导出解析器（否则三端 import 会静默拿到 undefined？不会 —— 构建期就红；
 // 但 CI 的静态守卫先于构建，这里提前把「导出被删掉」变成可读的一条。）
 const coreIndex = readFileSync(join(ROOT, 'packages/core/src/index.ts'), 'utf8')
+// 说明符允许带 `.js`：ESM 产物要能被普通 Node 直接 import，源码因此统一写成
+// `from './crud-actions.js'`（tsc 从不重写说明符，nodenext 下漏写扩展名是编译错误）。
 check(
-  /export \{[^}]*resolveCrudActions[^}]*\} from '\.\/crud-actions'/.test(coreIndex),
+  /export \{[^}]*resolveCrudActions[^}]*\} from '\.\/crud-actions(\.js)?'/.test(coreIndex),
   'packages/core/src/index.ts 必须导出 resolveCrudActions（三端共用解析器）'
 )
 const coreSrc = readFileSync(join(ROOT, 'packages/core/src/crud-actions.ts'), 'utf8')

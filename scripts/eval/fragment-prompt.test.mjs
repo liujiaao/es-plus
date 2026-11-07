@@ -93,10 +93,16 @@ console.log('meta-eval: teaching surface (every non-obvious key carries .describ
     const seen = new Set()
     while (cur && cur._def && !seen.has(cur)) {
       seen.add(cur)
+      // zod4 把 `.describe()` 文本放进全局 registry，只经公开的 `description` getter
+      // 暴露；zod3 落在 `_def.description`。先读 getter、再兜底 `_def`，两代都对。
+      if (cur.description) return cur.description
       if (cur._def.description) return cur._def.description
       const d = cur._def
       if (d.typeName === 'ZodOptional' || d.typeName === 'ZodNullable' || d.typeName === 'ZodDefault') cur = d.innerType
       else if (d.typeName === 'ZodEffects') cur = d.schema
+      // zod4 的包装层用短名 + `innerType`（optional/nullable/default/prefault/readonly）
+      else if (['optional', 'nullable', 'default', 'prefault', 'readonly', 'nonoptional'].includes(d.type)) cur = d.innerType
+      else if (d.type === 'pipe' || d.type === 'transform') cur = d.in
       else break
     }
     return ''

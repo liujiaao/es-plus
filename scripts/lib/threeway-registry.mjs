@@ -5,7 +5,7 @@
  *
  * es-plus 的「AI 契约 → 生成器 → 三端运行时」是一条三段链，每一段的词汇**各自手写**：
  *
- *   ① AI 契约（两处手写 Zod 副本：shared zod4 权威 + mcp 内联 zod3）
+ *   ① AI 契约（两处手写 Zod 副本：shared 权威 + mcp 内联）
  *   ② 生成器发射面（`structured-generator.ts`，**两种模式两份产物**）
  *   ③ 三端运行时消费面（core 类型 + vue3/vue2/adapter-antdv 源码）
  *

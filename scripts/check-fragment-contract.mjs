@@ -1,23 +1,24 @@
 #!/usr/bin/env node
 /**
- * fragment 词汇 ↔ zod3 镜像 同步校验
+ * fragment 词汇 ↔ mcp 工具镜像 同步校验
  *
- * 背景:shared 用 zod4、mcp-server 用 zod3,两个大版本的 zod 对象不能跨包复用。
- * 于是片段工具(generate_form/table/dialog)与前门(generate_crud)在 mcp-server 侧
- * **手写**了一份 zod3 `surfaceFieldSchema`(packages/mcp-server/src/tools/_fragment-shapes.ts),
+ * 背景:片段工具(generate_form/table/dialog)与前门(generate_crud)在 mcp-server 侧
+ * **手写**了一份 `surfaceFieldSchema`(packages/mcp-server/src/tools/_fragment-shapes.ts),
  * 作为 shared 权威 `SurfaceField`(packages/shared/src/compose-crud-config.ts)的镜像。
+ * (这份副本最初是为了绕开「shared 用 zod4、mcp-server 用 zod3」的跨版本不可复用;
+ *  2026-11-07 起 workspace 已统一到单份 zod 4,副本保留为刻意独立维护的工具契约。)
  *
- * 手写副本就会漂移:给 SurfaceField 加了字段却忘了同步 zod3 镜像 → MCP 工具会**静默
+ * 手写副本就会漂移:给 SurfaceField 加了字段却忘了同步镜像 → MCP 工具会**静默
  * 丢弃**那个入参(zod 不认识的 key 被 strip),LLM 以为传了、生成器却没收到。本脚本在
  * PR 上就把这类漂移打红。
  *
  * 校验项:
- *  1. 键集一致:SurfaceField(接口)的属性集 === surfaceFieldSchema(zod3)的顶层键集。
+ *  1. 键集一致:SurfaceField(接口)的属性集 === surfaceFieldSchema(镜像)的顶层键集。
  *  2. 成员标志必须双双缺席:inQuery/inTable/inForm 由 composeCrudConfig 推导,
  *     不在任何「单面字段」里出现——两处都不许冒出来(冒出来说明有人把组合层的概念
  *     漏进了单面词汇)。
  *  3. dialog 底座选项(AI-28)三处一致:shared `DialogBlockOptions`(接口) ===
- *     zod3 `dialogOptionsSchema`(镜像),且**两者的键集都 ⊆ core `DialogOptions`
+ *     `dialogOptionsSchema`(镜像),且**两者的键集都 ⊆ core `DialogOptions`
  *     的具名键** —— 往任一侧加一个 core 不认的键都会红。
  *  4. 选项**发射顺序**全覆盖:上条的键集必须恰等于 `DIALOG_OPTION_ORDER ∪ {width}`。
  *     这是「输入形状承诺了、生成器却读不到」这一类静默丢弃的守卫 —— 接口里有一个
@@ -25,12 +26,12 @@
  *  5. 教学面不得教幻影键:`resources/types.ts` 的 `TYPES_FALLBACK_VUE3.DialogOptions`
  *     具名键 ⊆ core 的具名键,且**必须覆盖** `dialogOptionsSchema` 的全部键 ——
  *     `generate_dialog` 的 `options` 收的每个键,宿主要在类型资源里看得到。
- *  6. 片段 `tableOptions`(Wave 4):shared `TableBlockOptions` === zod3
+ *  6. 片段 `tableOptions`(Wave 4):shared `TableBlockOptions` === mcp 镜像
  *     `tableBlockOptionsSchema`,两者都 ⊆ core `TableOptions` 的具名键;且键集恰等于
  *     `TABLE_BLOCK_ALWAYS ∪ TABLE_BLOCK_OPTION_ORDER`(两者不重叠)—— 接口声明了却不在
  *     发射枚举里 = 接受入参却永不注入产物。
  *  7. 片段 `formLayout` / `pagination`(Wave 4):`EsFormLayout` / `EsTablePagination`
- *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ zod3 镜像(三处全等)。
+ *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ mcp 镜像(三处全等)。
  *     片段与**权威 schema** 同名嵌套块的等价性由 `check-entry-contract.mjs` 断言(6),
  *     两条守卫各守一侧:本脚本守手写副本漂移,那条守片段↔权威收窄。
  *
@@ -122,7 +123,7 @@ function main() {
 
   // ── 1. SurfaceField 接口键集 ──
   const sfBlock = sliceBlock(read(SURFACE_FIELD_SRC), 'export interface SurfaceField {', '}', 'SurfaceField')
-  // ── 2. surfaceFieldSchema(zod3)顶层键集 ──
+  // ── 2. surfaceFieldSchema(镜像)顶层键集 ──
   const zBlock = sliceBlock(read(FRAGMENT_SHAPES_SRC), 'export const surfaceFieldSchema = z.object({', '});', 'surfaceFieldSchema')
   if (sfBlock === null || zBlock === null) process.exit(1)
 
@@ -134,13 +135,13 @@ function main() {
 
   if (missingInZod.length) {
     ok = fail(
-      `zod3 surfaceFieldSchema 缺少 SurfaceField 的字段：${missingInZod.join(', ')}` +
+      `surfaceFieldSchema 镜像 缺少 SurfaceField 的字段：${missingInZod.join(', ')}` +
         '（给 SurfaceField 加了字段，但没同步 _fragment-shapes.ts —— MCP 工具会静默丢弃该入参）'
     )
   }
   if (extraInZod.length) {
     ok = fail(
-      `zod3 surfaceFieldSchema 多出 SurfaceField 没有的字段：${extraInZod.join(', ')}` +
+      `surfaceFieldSchema 镜像 多出 SurfaceField 没有的字段：${extraInZod.join(', ')}` +
         '（镜像里凭空多了 key —— 要么 SurfaceField 漏加，要么镜像拼错）'
     )
   }
@@ -148,7 +149,7 @@ function main() {
   // ── 3. 成员标志双双缺席 ──
   for (const flag of MEMBERSHIP_FLAGS) {
     if (sfKeys.has(flag)) ok = fail(`SurfaceField 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
-    if (zKeys.has(flag)) ok = fail(`zod3 surfaceFieldSchema 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
+    if (zKeys.has(flag)) ok = fail(`surfaceFieldSchema 镜像 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
   }
 
   // ── 4. dialog 底座选项(AI-28)：双份镜像 + 都 ⊆ core DialogOptions ──
@@ -170,10 +171,10 @@ function main() {
   const onlyShared = diff(dboKeys, dozKeys)
   const onlyZod = diff(dozKeys, dboKeys)
   if (onlyShared.length) {
-    ok = fail(`zod3 dialogOptionsSchema 缺少 DialogBlockOptions 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
+    ok = fail(`dialogOptionsSchema 镜像 缺少 DialogBlockOptions 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
   }
   if (onlyZod.length) {
-    ok = fail(`zod3 dialogOptionsSchema 多出 DialogBlockOptions 没有的键：${onlyZod.join(', ')}（镜像凭空多键 = core 侧描述落后）`)
+    ok = fail(`dialogOptionsSchema 镜像 多出 DialogBlockOptions 没有的键：${onlyZod.join(', ')}（镜像凭空多键 = core 侧描述落后）`)
   }
 
   // 4b. 两者都 ⊆ core DialogOptions 的具名键（不含 [key: string]: unknown 索引签名）。
@@ -211,7 +212,7 @@ function main() {
     )
   }
 
-  // ── 6. 片段 tableOptions(Wave 4)：shared 接口 ≡ zod3 镜像 ⊆ core TableOptions ──
+  // ── 6. 片段 tableOptions(Wave 4)：shared 接口 ≡ mcp 镜像 ⊆ core TableOptions ──
   const fgenSrc = read(FRAGMENT_GENERATOR_SRC)
   const fshapesSrc = read(FRAGMENT_SHAPES_SRC)
   const tboBlock = sliceBlock(fgenSrc, 'export interface TableBlockOptions {', '}', 'TableBlockOptions')
@@ -232,10 +233,10 @@ function main() {
   const tboOnlyShared = diff(tboKeys, tbozKeys)
   const tboOnlyZod = diff(tbozKeys, tboKeys)
   if (tboOnlyShared.length) {
-    ok = fail(`zod3 tableBlockOptionsSchema 缺少 TableBlockOptions 的键：${tboOnlyShared.join(', ')}（工具入参会静默 strip）`)
+    ok = fail(`tableBlockOptionsSchema 镜像 缺少 TableBlockOptions 的键：${tboOnlyShared.join(', ')}（工具入参会静默 strip）`)
   }
   if (tboOnlyZod.length) {
-    ok = fail(`zod3 tableBlockOptionsSchema 多出 TableBlockOptions 没有的键：${tboOnlyZod.join(', ')}（镜像凭空多键）`)
+    ok = fail(`tableBlockOptionsSchema 镜像 多出 TableBlockOptions 没有的键：${tboOnlyZod.join(', ')}（镜像凭空多键）`)
   }
 
   // 6b. ⊆ core TableOptions 的具名键（承诺的选项运行时必须读得懂）。
@@ -267,7 +268,7 @@ function main() {
     ok = fail(`TABLE_BLOCK_ALWAYS 与 TABLE_BLOCK_OPTION_ORDER 重复键：${tboDuplicated.join(', ')}（产物会重复发射同一选项）`)
   }
 
-  // ── 7. 片段 formLayout / pagination(Wave 4)：接口 ≡ 发射枚举 ≡ zod3 镜像 ──
+  // ── 7. 片段 formLayout / pagination(Wave 4)：接口 ≡ 发射枚举 ≡ mcp 镜像 ──
   const pairSpecs = [
     {
       label: 'formLayout',
@@ -301,10 +302,10 @@ function main() {
     const zodOnlyIface = diff(zodKeys, ifaceKeys)
     const ifaceOnlyZod = diff(ifaceKeys, zodKeys)
     if (zodOnlyIface.length) {
-      ok = fail(`zod3 ${spec.label} 镜像多出接口没有的键：${zodOnlyIface.join(', ')}`)
+      ok = fail(`${spec.label} 镜像多出接口没有的键：${zodOnlyIface.join(', ')}`)
     }
     if (ifaceOnlyZod.length) {
-      ok = fail(`zod3 ${spec.label} 镜像缺少接口的键：${ifaceOnlyZod.join(', ')}（工具入参会静默 strip）`)
+      ok = fail(`${spec.label} 镜像缺少接口的键：${ifaceOnlyZod.join(', ')}（工具入参会静默 strip）`)
     }
   }
 
@@ -362,10 +363,10 @@ function main() {
       const onlyShared = diff(a, b)
       const onlyFragment = diff(b, a)
       if (onlyShared.length) {
-        ok = fail(`片段 zod3 ${label} 缺少 shared 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
+        ok = fail(`片段 ${label} 缺少 shared 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
       }
       if (onlyFragment.length) {
-        ok = fail(`片段 zod3 ${label} 多出 shared 没有的键：${onlyFragment.join(', ')}（教出一个运行时读不懂的键）`)
+        ok = fail(`片段 ${label} 多出 shared 没有的键：${onlyFragment.join(', ')}（教出一个运行时读不懂的键）`)
       }
     }
     // 形状必须真的被字段引用（否则退回 `z.any()` 时上面的一致性检查仍在，却在教 `any[]`）。
@@ -377,10 +378,10 @@ function main() {
 
   if (ok) {
     console.log(
-      `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === zod3 surfaceFieldSchema ${zKeys.size} 键，成员标志均未泄漏；` +
+      `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === surfaceFieldSchema 镜像 ${zKeys.size} 键，成员标志均未泄漏；` +
         `dialog 选项 ${dboKeys.size} 键双份一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键；` +
         `tableOptions ${tboKeys.size} 键双份一致 ⊆ core TableOptions ${coreTblKeys.size} 键，发射枚举全覆盖；` +
-        `formLayout / pagination 接口 ≡ 发射枚举 ≡ zod3 镜像；reactions 结构 ≡ shared 权威）`
+        `formLayout / pagination 接口 ≡ 发射枚举 ≡ mcp 镜像；reactions 结构 ≡ shared 权威）`
     )
     process.exit(0)
   }

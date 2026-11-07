@@ -339,7 +339,7 @@ export const DIALOG_OPTIONS_JSON_ONLY = {
  *   - `formLayoutKeys` / `paginationKeys`：权威 schema 的同名嵌套块；
  *   - `fragmentShapes`：三个独立工具的顶层键（table/form/dialog，Wave 4 泛化）；
  *   - `fragmentTableOptionsKeys` / `fragmentFormLayoutKeys` / `fragmentPaginationKeys`：
- *     片段工具镜像的容器级键（zod3，`_fragment-shapes.ts`）。
+ *     片段工具镜像的容器级键（`_fragment-shapes.ts`）。
  *
  * 任一定位失败（选择器失效）→ 打印 ❌ 并返回 `null`，调用方须 `process.exit(1)` 拒绝静默放行。
  */
@@ -383,7 +383,7 @@ export function readReachability() {
     '  }).optional(),',
     'structured-config.schema.ts pagination'
   )
-  // AI-32①：mcp 内联副本的顶层键（`configShape`，直接作为 `server.tool` 的 zod3 raw shape）。
+  // AI-32①：mcp 内联副本的顶层键（`configShape`，直接作为 `server.tool` 的 raw shape）。
   const configShapeBlock = sliceBlock(
     fromCfgSrc,
     'const configShape = {',
@@ -398,7 +398,7 @@ export function readReachability() {
     'structured-config.schema.ts DialogConfigSchema'
   )
 
-  // Wave 4：三个独立工具的顶层形状（泛化 —— 不再只切 crudShape）+ 容器级 zod3 镜像。
+  // Wave 4：三个独立工具的顶层形状（泛化 —— 不再只切 crudShape）+ 容器级工具镜像。
   const fragmentShapes = {}
   for (const [name, def] of Object.entries(FRAGMENT_TOOL_SRC)) {
     const src = stripComments(read(def.file))

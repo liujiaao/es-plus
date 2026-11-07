@@ -8,7 +8,7 @@
  *   - fragments（generate_form/table/dialog）：精简 surfaceFieldSchema，SFC-only。
  *
  * 历史上「往 FieldConfig 加字段却不加进 SurfaceField」「schema 顶层新增键、前门没暴露」
- * 这两类缺口**不影响任何现有守卫**：check-fragment-contract 只对齐 SurfaceField↔zod3 镜像，
+ * 这两类缺口**不影响任何现有守卫**：check-fragment-contract 只对齐 SurfaceField↔mcp 镜像，
  * check-contract-consumption 只量渲染器对 core 契约的消费 —— **「入口 vs schema」这条轴
  * 结构上无守卫**。后果：新能力对前门**静默不可达**（LLM 以为能填、前门收不到、生成物里没有），
  * 与「mark, never drop」直接冲突。
@@ -47,7 +47,7 @@
  *   AI-23 已落地：顶层 `mergeConfig`（声明式合并单元格）**直接进前门**（crudShape + 转发），
  *   故从未出现在本表 —— 新增即已可达。）
  *
- * 与 check-fragment-contract.mjs 的分工：那条守卫管 `SurfaceField`↔zod3 镜像**双向相等**
+ * 与 check-fragment-contract.mjs 的分工：那条守卫管 `SurfaceField`↔镜像**双向相等**
  * （手写副本漂移）；本条管「入口词汇 ⊆ 权威词汇」「前门顶层键 vs schema 顶层键」的**可达性**。
  *
  * 用法：node scripts/check-entry-contract.mjs

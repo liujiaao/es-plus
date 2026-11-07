@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { emitSceneArtifact } from "@es-plus/shared";
 import { registerTools } from "../src/tools/index.js";
 import { registerResources } from "../src/resources/index.js";
@@ -74,5 +76,44 @@ describe("真实 McpServer 注册（SDK 版本兼容）", () => {
     expect(envelope).toBeTruthy();
     const schema = server._registeredTools["generate_scene"]!.outputSchema!;
     expect(schema.safeParse!(envelope).success).toBe(true);
+  });
+
+  /**
+   * zod 4 → JSON Schema 的真实转换只是一次往返才能证明的事：`registerTool` 里存的
+   * 是 ZodObject，`tools/list` 时才由 SDK 的 `zod-to-json-schema` 把它转成宿主看到的
+   * JSON Schema。上面那些断言都停在「注册没抛」，这一条真的发 `tools/list` 并读回
+   * `inputSchema` —— 换 zod 大版本时，转换器不认识的构造（refine / transform / lazy）
+   * 会在这里暴露，而不是等宿主拿到一个空 schema、模型照着空表填字段。
+   */
+  it("tools/list 往返：19 个工具的入参 JSON Schema 都带 properties（zod → JSON Schema 转换可用）", async () => {
+    const server = new McpServer({ name: "test", version: "0.0.0" });
+    registerTools(server, "full");
+    registerResources(server, "full");
+    registerPrompts(server, "full");
+
+    const [clientT, serverT] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverT);
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await client.connect(clientT);
+
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(19);
+    for (const tool of tools) {
+      expect(tool.inputSchema.type, `${tool.name} 的 inputSchema 不是 object`).toBe("object");
+    }
+    // 生成入口都带参数：属性表必须非空（`list_form_types` 是无参工具，0 个属性是正常的）。
+    for (const tool of tools.filter((t) => t.name.startsWith("generate_"))) {
+      const props = (tool.inputSchema as { properties?: Record<string, unknown> }).properties;
+      expect(props && Object.keys(props).length, `${tool.name} 的 inputSchema 没有 properties`).toBeGreaterThan(0);
+    }
+    // 前门工具是最大的那份形状：顶层键必须一个不少地出现在宿主可见的 schema 里。
+    const cfg = tools.find((t) => t.name === "generate_crud_from_config")!;
+    const keys = Object.keys((cfg.inputSchema as { properties?: Record<string, unknown> }).properties ?? {});
+    for (const key of ["name", "apiUrl", "fields", "tableOptions", "tableBtns"]) {
+      expect(keys, `generate_crud_from_config 的 inputSchema 缺 ${key}`).toContain(key);
+    }
+
+    await client.close();
+    await server.close();
   });
 });

@@ -164,7 +164,9 @@ function captureToolDescriptions(profile: "full" | "front-door"): Record<string,
 
 /** 某个入参的 `.describe()` 文本（`validate_config` 的指路写在这里，不在工具描述里）。 */
 function paramDesc(tool: { shape: any }, key: string): string {
-  return (tool.shape?.[key]?._def?.description as string) ?? "";
+  // 走公开的 `description` getter：zod3 把它落在 `_def`，zod4 放在全局 registry 里，
+  // 只有 getter 两边都认（读 `_def.description` 在 zod4 下恒为 undefined → '' 假绿）。
+  return (tool.shape?.[key]?.description as string) ?? "";
 }
 
 describe("server instructions", () => {

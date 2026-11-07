@@ -341,7 +341,7 @@ function driveToValidConfig(client, system, messages) {
 
 /**
  * 片段场景的自修复环：同一套「空轮重发 / 截断归因 / 降级」逻辑，只把校验器换成该工具
- * **真实注册**的 zod3 shape（`z.object(tool.shape)`，与宿主的 `tools/call` 同源）。
+ * **真实注册**的工具 shape（`z.object(tool.shape)`，与宿主的 `tools/call` 同源）。
  * 不能用 `StructuredCrudConfigSchema`：片段入参没有 query/table/actions 三面，
  * 拿 CRUD schema 校验只会把每一条都判红（正是 Wave 1.1「恒真伪信号」的镜像）。
  */
@@ -388,7 +388,7 @@ async function main() {
   // W1.3：前门腿的打包放在**任何模型调用之前** —— 它失败说明本脚本根本测不到宣称主路径，
   // 此时应当立即红，而不是先烧掉一次跑批再发现。
   const frontDoor = await setupFrontDoor()
-  // 片段场景（AI-SCENE-COVERAGE §1.2）：从**真实注册**里捕获工具名 / description / zod3 形状。
+  // 片段场景（AI-SCENE-COVERAGE §1.2）：从**真实注册**里捕获工具名 / description / 工具形状。
   // prompt 由捕获结果自省生成（不手写第二份键清单），校验器即宿主 `tools/call` 用的同一形状。
   // 与 frontDoor 同理，失败要立即红 —— 「形状都没捕获到」意味着片段这一列的测量根本不成立。
   const fragmentTools = await setupFragmentTools()
@@ -779,7 +779,7 @@ async function main() {
 
   // ── 片段场景（table / form / dialog）：**观测**准确率 ─────────────────────────
   // 每条用例一次「NL → 工具入参」：系统 prompt 按场景取捕获的真实工具描述，
-  // 校验器是宿主 `tools/call` 用的同一份 zod3 shape（含默认值填充），
+  // 校验器是宿主 `tools/call` 用的同一份工具 shape（含默认值填充），
   // 产物再喂真生成器做编译见证。分数只进 `fragments` 块，不参与 gate / 徽章。
   // 调试子集：`ESPLUS_FRAG_ONLY=frag-form-05-vue3,frag-table-03-vue3` 只跑指定用例。
   // 与 `--limit` 同理是**探针**（不写产物、不参与门禁 —— 已在入口处并入 PROBE），

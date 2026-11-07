@@ -33,6 +33,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
+import { z } from 'zod'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -225,6 +226,19 @@ function checkSuite(api) {
   if (levenshtein('nme', 'name') !== 1 || suggestKey('nm', ['name']) !== undefined) {
     problems.push('A10 短键阈值：nme→name（距离 1）应给建议，nm→name（距离 2）不该给')
   }
+  // A13：`.passthrough()` 形状上的未知键仍必须被点名。
+  // zod4 把 `.passthrough()` / `.loose()` 编译成 `catchall: z.unknown()`，与显式的
+  // `.catchall(z.any())` 在 `_def` 上完全同形。若收集器把「存在 catchall」理解为
+  // 「所有键都已知」，AN-26 的全部闸门（`_arg-guard` / `generate_scene` / 覆盖报告）
+  // 会在**不报任何错**的情况下变成空操作 —— zod3 → zod4 迁移时 20 条未知键用例正是
+  // 这样静默转绿的。这条判据把那种退化钉在这里。
+  {
+    const loose = z.object({ name: z.string() }).passthrough()
+    const got = collectUnknownKeys(loose, { name: 'x', workflow: 1 }).map(fingerprint).join(' | ')
+    if (got !== '/workflow=>(无建议)') {
+      problems.push(`A13 .passthrough() 形状上的未知键未被点名（实得：${got || '（空）'}）`)
+    }
+  }
 
   // ── B 前门：validate_config 必须判非法，并给出 did you mean ──
   const bad = validatePayload({ ...base(), tableOptions: { rowKey: 'id' } }, api.STRUCTURED_CRUD_TYPE)
@@ -336,7 +350,7 @@ async function main() {
       [UNKNOWN_KEYS_SRC]: (src) =>
         replaceAnchor(
           src,
-          '        if (key in shape || isExtensionKey(key) || allowsUnknown) continue',
+          '        if (key in shape || isExtensionKey(key)) continue',
           '        if (false && key in shape) continue',
           'P4',
         ),

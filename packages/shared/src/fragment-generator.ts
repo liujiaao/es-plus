@@ -284,7 +284,7 @@ export interface TableRowButton {
  *
  * 守卫（单一真源，勿另写清单）：
  *   - `scripts/check-entry-contract.mjs`：本接口键集 === 权威 `tableOptions` 键集；
- *   - `scripts/check-fragment-contract.mjs`：本接口 === zod3 镜像
+ *   - `scripts/check-fragment-contract.mjs`：本接口 === mcp 侧的镜像
  *     `tableBlockOptionsSchema`，且每个键都出现在发射枚举
  *     （{@link TABLE_BLOCK_ALWAYS} ∪ {@link TABLE_BLOCK_OPTION_ORDER}）里 ——
  *     「声明了、生成器却读不到」就是静默丢弃。
