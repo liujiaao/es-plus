@@ -22,9 +22,17 @@
  *   3. **tsc 产物在普通 Node 里能 import**。打包器会替我们补扩展名，Node 不会 ——
  *      `@es-plus/core` 1.3.0 / 1.4.0 的 `build/` 里 33 处 `from './shared'` 在三个
  *      站点里永远看不见（vite 解析得动），却让 `import '@es-plus/core'` 直接
- *      ERR_MODULE_NOT_FOUND。判据有两条，缺一不可：产物里没有无扩展名的**相对**
- *      说明符；无 bin 的库包真的被动态 import 一次（只有真加载才能证明用户那条
- *      import 会成功）。
+ *      ERR_MODULE_NOT_FOUND。判据有三条，缺一不可：产物里没有无扩展名的**相对**
+ *      说明符；无 bin 的库包真的被动态 import 一次；带 bin 的包真的被**当成命令行
+ *      程序启动**一次（`node <bin> --help`，退出码 0 且有输出）。
+ *
+ *      第三条是第 3 条判据的盲区补丁：bin 入口此前被**有意跳过**（import 它会执行
+ *      CLI / 起 stdio server），于是 `packages/cli`、`packages/create-es-plus`、
+ *      `packages/mcp-server` 的入口从未被任何守卫加载过 —— 扩展名缺陷在它们身上
+ *      只被静态扫描覆盖，模块顶层的运行时错误（找不到资源、坏依赖）没人发现。
+ *      `--help` 是三个包唯一共同的**无副作用**入口：commander 打印用法后退出，
+ *      不落盘、不连网、不阻塞 stdin；`--version` 只有 cli / mcp-server 支持
+ *      （create-es-plus 没有声明版本选项，实测 `--version` 退出码 1）。
  *
  * 不在第三条范围内的：`element-ui/lib/message-box` 这类**外部包**说明符 —— 那是
  * 打包器消费者的职责（vue2 的 dist 就是为 bundler 构建的），不是 Node ESM 的契约。
@@ -36,6 +44,7 @@
  * 退出码：0 = 一致；1 = 有漂移。
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readSites, siteByKey } from './lib/sites.mjs'
@@ -195,6 +204,7 @@ function walkJs(dir) {
 async function checkPlainNodeImportable() {
   const problems = []
   const runtimeTargets = []
+  const binTargets = []
 
   for (const dir of readdirSync(join(ROOT, 'packages'))) {
     const pkgPath = join(ROOT, 'packages', dir, 'package.json')
@@ -218,9 +228,22 @@ async function checkPlainNodeImportable() {
       }
     }
 
-    // ② 运行时：只对「无 bin、入口在 build/」的库包真加载一次。
-    //    带 bin 的包 import 会执行 CLI/启动 server，不能当冒烟用例。
-    if (pkg.private || pkg.bin) continue
+    // ② 运行时：库包真加载一次；带 bin 的包**不能** import（那会执行 CLI / 起 server），
+    //    改成当命令行程序启动一次（见下方 ③）。
+    if (pkg.private) continue
+    if (pkg.bin) {
+      const entries = typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin)
+      for (const raw of entries) {
+        if (typeof raw !== 'string') continue
+        const rel = raw.replace(/^\.\//, '')
+        if (!rel.startsWith('build/')) {
+          problems.push(`${pkg.name} 的 bin 入口 ${raw} 不在 build/ 下 —— 静态扩展名扫描覆盖不到它`)
+          continue
+        }
+        binTargets.push({ dir, name: pkg.name, entry: raw })
+      }
+      continue
+    }
     const entry = pkg.exports?.['.']?.import
     if (typeof entry === 'string' && entry.startsWith('./build/')) {
       runtimeTargets.push({ dir, name: pkg.name, entry })
@@ -236,12 +259,43 @@ async function checkPlainNodeImportable() {
     }
   }
 
+  // ③ 带 bin 的包：真的当命令行程序启动一次。
+  //    只做静态扫描是不够的 —— 它证明说明符带了扩展名，却不证明模块图能加载、
+  //    资源路径存在、依赖装齐。`--help` 是三个 bin 包唯一共同的**无副作用**入口
+  //    （commander 打印用法后退出：不落盘、不连网、不读 stdin）。
+  for (const { dir, name, entry } of binTargets) {
+    const abs = join(ROOT, 'packages', dir, entry)
+    if (!existsSync(abs)) {
+      problems.push(`${name} 的 bin 入口 ${entry} 不存在（package.json 指向了没构建/没打包的文件）`)
+      continue
+    }
+    const run = spawnSync(process.execPath, [abs, '--help'], {
+      encoding: 'utf8',
+      timeout: 20_000,
+      // stdin 关掉：服务型 bin（mcp-server）若误读 stdin，会立刻 EOF 而不是挂到超时。
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    if (run.error) {
+      problems.push(`${name} 的 bin 启动失败（${entry}）：${run.error.code || run.error.message}`)
+    } else if (run.status === null) {
+      problems.push(
+        `${name} 的 bin ${entry} 未在 20s 内退出（signal=${run.signal}）—— --help 必须无副作用地立即返回`,
+      )
+    } else if (run.status !== 0) {
+      const tail = (run.stderr || run.stdout || '').trim().split(/\r?\n/).slice(-3).join(' | ')
+      problems.push(`${name} 的 bin ${entry} --help 退出码 ${run.status}：${tail}`)
+    } else if (!(run.stdout || '').trim()) {
+      problems.push(`${name} 的 bin ${entry} --help 退出码 0 但没有输出 —— 无法证明入口真的加载成功`)
+    }
+  }
+
   if (problems.length) {
     for (const p of problems) fail(p)
     return
   }
   console.log(
-    `✅ tsc 产物可被普通 Node 直接 import（${runtimeTargets.length} 个库包入口；相对说明符均带扩展名）`,
+    `✅ tsc 产物可被普通 Node 直接使用（${runtimeTargets.length} 个库包入口可 import，` +
+      `${binTargets.length} 个 bin 入口可启动；相对说明符均带扩展名）`,
   )
 }
 
