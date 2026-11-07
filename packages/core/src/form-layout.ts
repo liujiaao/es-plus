@@ -16,7 +16,7 @@
  * Vue 2 / Vue 3 渲染层各自用 computed 包装该函数即可。
  */
 
-import type { FormItemOption } from './types'
+import type { FormItemOption } from './types.js'
 
 /**
  * 单行的元数据：包含项的全局索引列表

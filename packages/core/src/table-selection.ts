@@ -17,7 +17,7 @@
  * Vue 2 / Vue 3 渲染层各自创建 ref/reactive 包装这些状态。
  */
 
-import type { ModelData } from './types'
+import type { ModelData } from './types.js'
 
 /**
  * 跨页选择状态容器（框架无关）

@@ -13,9 +13,9 @@
  *   - toRaw / unref：core 接收的已经是普通对象，调用方在传入前自行 unwrap。
  */
 
-import { isObject, findValueByKey, wrapPromise } from './shared'
-import type { ApiParams, FormItemOption, ModelData, ListenToCallBack } from './types'
-import { getCallback } from './compat'
+import { isObject, findValueByKey, wrapPromise } from './shared.js'
+import type { ApiParams, FormItemOption, ModelData, ListenToCallBack } from './types.js'
+import { getCallback } from './compat.js'
 
 /**
  * 单次请求配置 —— 由调用方传入，描述本次请求要怎么发

@@ -32,8 +32,8 @@
  * `actions` 判据用 `Array.isArray` 而非真值：空数组是**显式的只读**，
  * 用 `||` 会把它换成默认的 add/edit/delete —— 正好是上面那类「多余的危险动作」。
  */
-import { CRUD_PAGE_DIALOG_KEYS } from './constants'
-import type { CrudActionLiteral } from './constants'
+import { CRUD_PAGE_DIALOG_KEYS } from './constants.js'
+import type { CrudActionLiteral } from './constants.js'
 
 /** 解析所需的最小 schema 结构（三端 `CrudPageSchema` 都满足）。 */
 export interface CrudActionsSource {

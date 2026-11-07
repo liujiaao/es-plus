@@ -12,11 +12,11 @@
  * 这些函数完全不依赖 Vue / Element，渲染层只需调用即可。
  */
 
-import type { BtnConfig, FieldHidden, FieldHiddenCondition, FieldHiddenExpr, FieldHiddenOp, FormItemOption, ModelData } from './types'
-import { getNestedValue } from './shared'
+import type { BtnConfig, FieldHidden, FieldHiddenCondition, FieldHiddenExpr, FieldHiddenOp, FormItemOption, ModelData } from './types.js'
+import { getNestedValue } from './shared.js'
 // looseEqual / isEmptyValue 的单一权威定义在 expr.ts（旧条件求值与新表达式求值共用）；
 // isExprNode / isHiddenExpr 供 compileHiddenCondition 分派表达式形态（AI-16）。
-import { isEmptyValue, isExprNode, isHiddenExpr, looseEqual } from './expr'
+import { isEmptyValue, isExprNode, isHiddenExpr, looseEqual } from './expr.js'
 
 /**
  * 位置解析所需的**最小**输入 —— 只含定位相关的三个字段。

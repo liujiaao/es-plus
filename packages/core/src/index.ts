@@ -25,14 +25,14 @@ export {
   getNestedValue,
   setNestedValue,
   parsePathSegments,
-} from './shared'
+} from './shared.js'
 
 // ─── 类型定义（跨渲染器契约 barrel，单一权威源）─────────────
 // 所有跨渲染器契约类型统一从 ./public-types 透传，三个渲染器 index.ts
 // 必须导出同名类型，由 scripts/check-type-exports.mjs 强制校验。
-export type * from './public-types'
-export { PUBLIC_CONTRACT_TYPES } from './public-types'
-export type { PublicContractTypeName } from './public-types'
+export type * from './public-types.js'
+export { PUBLIC_CONTRACT_TYPES } from './public-types.js'
+export type { PublicContractTypeName } from './public-types.js'
 
 // ─── 全局配置 ─────────────────────────────────────────────────
 export {
@@ -51,7 +51,7 @@ export {
   resolveFieldOutputProvider,
   normalizeSectionConfig,
   normalizeEsPlusOptions,
-} from './config'
+} from './config.js'
 export type {
   EsPlusGlobalConfig,
   HttpRequestFn,
@@ -61,7 +61,7 @@ export type {
   ConfigProvider,
   FieldOutputMap,
   FieldOutputProvider,
-} from './config'
+} from './config.js'
 
 // ─── 常量 ─────────────────────────────────────────────────────
 export {
@@ -78,8 +78,8 @@ export {
   CRUD_PAGE_DIALOG_KEYS,
   DEFAULT_TOOLBAR_BTNS,
   DEFAULT_ROW_BTNS,
-} from './constants'
-export type { FormTypeLiteral, CrudActionLiteral } from './constants'
+} from './constants.js'
+export type { FormTypeLiteral, CrudActionLiteral } from './constants.js'
 
 // ─── 表单布局算法 ─────────────────────────────────────────────
 export {
@@ -87,12 +87,12 @@ export {
   shouldShowFoldButton,
   getBtnColSpan,
   applyFoldFlags,
-} from './form-layout'
-export type { RowLayoutInfo, FormLayoutResult } from './form-layout'
+} from './form-layout.js'
+export type { RowLayoutInfo, FormLayoutResult } from './form-layout.js'
 
 // ─── EsCrudPage action 面解析（三端共用，AN-06）───────────────
-export { resolveCrudActions, LEGACY_CRUD_ACTIONS } from './crud-actions'
-export type { CrudActionsSource } from './crud-actions'
+export { resolveCrudActions, LEGACY_CRUD_ACTIONS } from './crud-actions.js'
+export type { CrudActionsSource } from './crud-actions.js'
 
 // ─── 跨页选择 ─────────────────────────────────────────────────
 export {
@@ -102,12 +102,12 @@ export {
   clearAllSelection,
   wantsCrossPageSelection,
   mergeSelectedRows,
-} from './table-selection'
-export type { SelectionState, TableRefLike } from './table-selection'
+} from './table-selection.js'
+export type { SelectionState, TableRefLike } from './table-selection.js'
 
 // ─── 分页请求判定 ─────────────────────────────────────────────
-export { resolveKeepPage, computeBoundaryRollback } from './pagination'
-export type { BoundaryRollbackInput, BoundaryRollbackResult } from './pagination'
+export { resolveKeepPage, computeBoundaryRollback } from './pagination.js'
+export type { BoundaryRollbackInput, BoundaryRollbackResult } from './pagination.js'
 
 // ─── 请求相关 ─────────────────────────────────────────────────
 export {
@@ -118,12 +118,12 @@ export {
   queryTableListMethod,
   httpRequestFormInstance,
   getEveryFormQueryField,
-} from './request'
+} from './request.js'
 export type {
   RequestConfig,
   ConfigFormFieldOut,
   FormFieldOptionResult,
-} from './request'
+} from './request.js'
 
 // ─── 字段/按钮解析 ────────────────────────────────────────────
 export {
@@ -143,7 +143,7 @@ export {
   resolveFormRules,
   matchHiddenCondition,
   compileHiddenCondition,
-} from './field-resolver'
+} from './field-resolver.js'
 
 // ─── 表达式求值器（AI-16 底座：JSON 表达式 DSL）───────────────
 // 零依赖、无 eval / new Function 的闭白名单求值器（JSONLogic 形态 / CEL 语义子集）。
@@ -151,8 +151,8 @@ export {
 // 供宿主在代码侧静态求值（AI-07 联动将由它承载）。
 // `looseEqual` 亦在此透出：AI-07 的「仅在变更时写回」判定（收敛终止的前提）
 // 由渲染层在调用点完成，需与求值器同源的相等语义（严格 + 仅放宽 number↔string）。
-export { evalExpr, isHiddenExpr, isExprNode, EXPR_OPS, looseEqual } from './expr'
-export type { FieldHiddenExpr, FieldHiddenExprNode, FieldHiddenExprOp } from './types'
+export { evalExpr, isHiddenExpr, isExprNode, EXPR_OPS, looseEqual } from './expr.js'
+export type { FieldHiddenExpr, FieldHiddenExprNode, FieldHiddenExprOp } from './types.js'
 
 // ─── 字段联动规划器（AI-07：声明式 reactions，纯 JSON、无回调）────────
 // 在 AI-16 求值器之上：显示派生（dataOptions/required/disabled）合入三端
@@ -164,18 +164,18 @@ export {
   buildReactionRequiredRule,
   resolveReactionValues,
   collectReactionDependencies,
-} from './reactions'
-export type { ReactionValue } from './reactions'
-export type { FieldReaction, FieldReactionFulfill } from './types'
+} from './reactions.js'
+export type { ReactionValue } from './reactions.js'
+export type { FieldReaction, FieldReactionFulfill } from './types.js'
 
 // ─── vxe 引擎纯函数（跨包共享）──────────────────────────────
-export { buildFirstClassGridOptions } from './vxe-engine'
+export { buildFirstClassGridOptions } from './vxe-engine/index.js'
 
 // ─── 声明式合并单元格（AI-23：跨端窄子集 mergeConfig.rowsBy）──
 // 求值全在本模块，三端只做「取值 → 调用 → 交给各自组件」（el-table spanMethod /
 // a-table customCell / vxe mergeMethod），故三端等价由构造保证。
-export { buildColumnSpans, buildRowSpanMethod, resolveMergeConfig } from './merge-span'
-export type { MergeConfig, MergeRow } from './merge-span'
+export { buildColumnSpans, buildRowSpanMethod, resolveMergeConfig } from './merge-span.js'
+export type { MergeConfig, MergeRow } from './merge-span.js'
 
 // ─── 前置非数据列合成（AN-09：选择 / 序号 / 展开，五个列产出路径共用一个判据）──
 export {
@@ -184,12 +184,12 @@ export {
   leadingColumnToTableColumn,
   LEADING_COLUMN_ORDER,
   LEADING_COLUMN_DEFAULTS,
-} from './table-columns'
-export type { LeadingColumnSpec, LeadingColumnType } from './table-columns'
+} from './table-columns.js'
+export type { LeadingColumnSpec, LeadingColumnType } from './table-columns.js'
 
 // ─── 表格单元格「码值 → 展示」解析（TableColumn.dataOptions，三端 × 各引擎同规）──
-export { findTableDataOption, resolveTableCellDisplay } from './table-cell'
-export type { TableCellDisplay } from './table-cell'
+export { findTableDataOption, resolveTableCellDisplay } from './table-cell.js'
+export type { TableCellDisplay } from './table-cell.js'
 
 // ─── 服务端排序契约（`tableOptions.sortParam`，三端窄子集）──────────────
 // 排序状态机与参数拼装全在本模块，三端只做「存状态 → 请求时调 buildSortParams →
@@ -202,15 +202,15 @@ export {
   sameSortState,
   seedSortState,
   buildSortParams,
-} from './table-sort'
-export type { SortParamNames, SortParamOption, TableSortOrder, TableSortState } from './table-sort'
+} from './table-sort.js'
+export type { SortParamNames, SortParamOption, TableSortOrder, TableSortState } from './table-sort.js'
 
 // ─── 行内编辑提交归一（`cell-edit` 载荷，三端同一求值点）───────────────
 // 三份 vxe 引擎只做「进会话拍快照 / 出会话比一遍」，判定全在 table-edit。
-export { resolveEditProp, snapshotEditRow, diffEditRow } from './table-edit'
+export { resolveEditProp, snapshotEditRow, diffEditRow } from './table-edit.js'
 
 // ─── vxe 打印辅助（纯 DOM 字符串变换，三端共享）───────────────
-export { patchHtmlRowSpans } from './vxe-print'
+export { patchHtmlRowSpans } from './vxe-print.js'
 
 // ─── 向后兼容适配层 ──────────────────────────────────────────
 export {
@@ -222,10 +222,10 @@ export {
   normalizeFormItemList,
   filterBtnProps,
   BTN_ORCHESTRATION_KEYS,
-} from './compat'
+} from './compat.js'
 // compat 中的 getButtonPosition/isButtonLeft/isButtonRight 也在 field-resolver 中导出
 export {
   getButtonPosition as resolveButtonPosition,
   isButtonLeft,
   isButtonRight,
-} from './compat'
+} from './compat.js'

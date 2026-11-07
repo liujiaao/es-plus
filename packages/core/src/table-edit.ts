@@ -25,7 +25,7 @@
  * 注意：vxe 的 `keepSource` 只是给 `revertData()` 留原始快照，**编辑改的就是你传进来的
  * 行对象本身**（同一引用）—— 这正是 `update:dataSource` 能收到改动的原因。
  */
-import type { CellEditPayload } from './types'
+import type { CellEditPayload } from './types.js'
 
 /** vxe 列对象（v4 `property` / v3 `field`）或 el-table 列（`prop`）→ 字段名。 */
 export function resolveEditProp(column: unknown): string | undefined {

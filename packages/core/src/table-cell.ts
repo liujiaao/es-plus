@@ -9,9 +9,9 @@
  * 渲染端只消费这里的结果：拿到 `tagType` 就用自家 Tag 组件包一层，否则直接输出文本。
  */
 
-import type { ModelData, TableColumn, TableColumnDataOption } from './types'
-import { getNestedValue } from './shared'
-import { looseEqual } from './expr'
+import type { ModelData, TableColumn, TableColumnDataOption } from './types.js'
+import { getNestedValue } from './shared.js'
+import { looseEqual } from './expr.js'
 
 /**
  * 在列的 `dataOptions` 里查找命中该值的选项。

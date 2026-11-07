@@ -1,4 +1,4 @@
-import type { TableColumn, TableOptions } from './types'
+import type { TableColumn, TableOptions } from './types.js'
 
 /**
  * AN-09 —— 前置非数据列（选择 / 序号 / 展开）的**合成单源**。

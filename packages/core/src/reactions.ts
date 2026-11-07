@@ -16,8 +16,8 @@
  * 绝不误禁控件、绝不写垃圾值）。同一个 fault 只告警一次。
  */
 
-import { evalExpr } from './expr'
-import type { FieldReaction, FormItemOption } from './types'
+import { evalExpr } from './expr.js'
+import type { FieldReaction, FormItemOption } from './types.js'
 
 /** model 的最小结构化形态（与 types.ts 的 ModelData 兼容；不 import 类型以保持轻量）。 */
 type ModelLike = Record<string, unknown>

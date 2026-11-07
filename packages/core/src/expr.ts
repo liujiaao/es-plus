@@ -19,7 +19,7 @@
  * 供旧条件求值（matchHiddenCondition）与新表达式求值共用，避免两份漂移。
  */
 
-import { getNestedValue } from './shared'
+import { getNestedValue } from './shared.js'
 
 /** model 的最小结构化形态（与 types.ts 的 ModelData 兼容；此处不 import 类型以保持模块轻量）。 */
 type ModelLike = Record<string, unknown>

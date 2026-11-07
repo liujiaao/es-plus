@@ -1,1 +1,1 @@
-export { buildFirstClassGridOptions } from './build-grid-config'
+export { buildFirstClassGridOptions } from './build-grid-config.js'

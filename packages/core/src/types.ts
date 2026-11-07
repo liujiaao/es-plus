@@ -18,7 +18,7 @@
 // ============================================================================
 
 // 组件档的配置形状由 config.ts 定义（归一化规则也在那边），这里只引用类型
-import type { EsTableGlobalConfig, EsFormGlobalConfig } from './config'
+import type { EsTableGlobalConfig, EsFormGlobalConfig } from './config.js'
 
 /**
  * 通用 model 数据形状（表单/表格行数据）

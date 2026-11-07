@@ -19,6 +19,16 @@
  *      任何构建会失败。这里把它钉回 package.json，并按官方 schema 的两条最易踩的
  *      约束（`description` ≤ 100 字符、name 是 `namespace/server` 反 DNS 形式）断言。
  *
+ *   3. **tsc 产物在普通 Node 里能 import**。打包器会替我们补扩展名，Node 不会 ——
+ *      `@es-plus/core` 1.3.0 / 1.4.0 的 `build/` 里 33 处 `from './shared'` 在三个
+ *      站点里永远看不见（vite 解析得动），却让 `import '@es-plus/core'` 直接
+ *      ERR_MODULE_NOT_FOUND。判据有两条，缺一不可：产物里没有无扩展名的**相对**
+ *      说明符；无 bin 的库包真的被动态 import 一次（只有真加载才能证明用户那条
+ *      import 会成功）。
+ *
+ * 不在第三条范围内的：`element-ui/lib/message-box` 这类**外部包**说明符 —— 那是
+ * 打包器消费者的职责（vue2 的 dist 就是为 bundler 构建的），不是 Node ESM 的契约。
+ *
  * 不在这里的三件事，因为都不是代码能保证的：GitHub Discussions 的分类、掘金/知乎
  * 文章的 URL、npm 包页本身要等下一次发布才会更新（拿到手的是仓库里的 README）。
  *
@@ -26,8 +36,8 @@
  * 退出码：0 = 一致；1 = 有漂移。
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { dirname, join, relative, sep } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readSites, siteByKey } from './lib/sites.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -168,8 +178,76 @@ function checkMcpRegistry() {
   }
 }
 
+/**
+ * 递归列出目录下的 .js 文件（`build/` 里没有软链，无需防环）。
+ */
+function walkJs(dir) {
+  const out = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...walkJs(abs))
+    else if (entry.name.endsWith('.js')) out.push(abs)
+  }
+  return out
+}
+
+// ── 3. tsc 产物在普通 Node 里能 import ────────────────────────────────
+async function checkPlainNodeImportable() {
+  const problems = []
+  const runtimeTargets = []
+
+  for (const dir of readdirSync(join(ROOT, 'packages'))) {
+    const pkgPath = join(ROOT, 'packages', dir, 'package.json')
+    const buildDir = join(ROOT, 'packages', dir, 'build')
+    if (!existsSync(pkgPath) || !existsSync(buildDir)) continue
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+
+    // ① 静态：ESM 产物里的相对说明符必须带扩展名。
+    //    逐行判 `import`/`export` 语句 —— tsc 每条语句独占一行，且这样不会把生成器
+    //    里 `./${n.renamed.path}` 这类**字符串字面量**误判成导入（也显式跳过 `${`）。
+    for (const file of walkJs(buildDir)) {
+      if (file.includes(`${sep}cjs${sep}`)) continue
+      for (const line of readFileSync(file, 'utf-8').split(/\r?\n/)) {
+        if (!/^\s*(?:import|export)\b/.test(line)) continue
+        const m = /from\s*['"](\.[^'"]*)['"]|\bimport\s*['"](\.[^'"]*)['"]/.exec(line)
+        const spec = m?.[1] ?? m?.[2]
+        if (!spec || spec.includes('${') || /\.[cm]?js$|\.json$/.test(spec)) continue
+        problems.push(
+          `${relative(ROOT, file)} → '${spec}'（Node ESM 不补扩展名，请写成 '${spec}.js'）`,
+        )
+      }
+    }
+
+    // ② 运行时：只对「无 bin、入口在 build/」的库包真加载一次。
+    //    带 bin 的包 import 会执行 CLI/启动 server，不能当冒烟用例。
+    if (pkg.private || pkg.bin) continue
+    const entry = pkg.exports?.['.']?.import
+    if (typeof entry === 'string' && entry.startsWith('./build/')) {
+      runtimeTargets.push({ dir, name: pkg.name, entry })
+    }
+  }
+
+  for (const { dir, name, entry } of runtimeTargets) {
+    const abs = join(ROOT, 'packages', dir, entry)
+    try {
+      await import(pathToFileURL(abs).href)
+    } catch (error) {
+      problems.push(`${name} 的 ESM 入口 ${entry} 加载失败：${error.code || error.message}`)
+    }
+  }
+
+  if (problems.length) {
+    for (const p of problems) fail(p)
+    return
+  }
+  console.log(
+    `✅ tsc 产物可被普通 Node 直接 import（${runtimeTargets.length} 个库包入口；相对说明符均带扩展名）`,
+  )
+}
+
 checkReadmeLinks()
 checkMcpRegistry()
+await checkPlainNodeImportable()
 if (failed) {
   console.error('\n外部分发入口存在漂移。')
   process.exit(1)

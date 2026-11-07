@@ -2,7 +2,15 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./build",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // ESM 产物要能被**普通 Node** 直接 import：Node 不补扩展名，而 tsc 从不重写说明符。
+    // 此前 `moduleResolution: "bundler"` 允许写 `from './shared'`，产物里就原样是
+    // `./shared` —— 打包器能解析，`node -e "import('@es-plus/core')"` 报
+    // ERR_MODULE_NOT_FOUND。nodenext 把「漏写扩展名」变成编译错误，这类缺陷不会再回来。
+    // CJS 那趟（tsconfig.cjs.json）保持 `module: CommonJS` + `node` 解析：那套规则下
+    // 扩展名可有可无，且源码里已写全，两趟产物都能解析。
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build", "__tests__", "**/*.spec.ts", "**/*.test.ts"]

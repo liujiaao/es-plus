@@ -60,7 +60,7 @@ export type {
   TableEngineExposed,
   // ── 行内编辑提交（`cell-edit` 载荷） ────────────
   CellEditPayload,
-} from './types'
+} from './types.js'
 
 /**
  * 跨渲染器必须一致导出的契约类型名清单（运行时常量，供 CI 断言使用）。

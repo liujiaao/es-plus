@@ -5,9 +5,9 @@
  * 确保旧写法在新版本中仍然可用。
  */
 
-import type { BtnConfig, FieldHidden, FormItemOption, ListenToCallBack, ModelData } from './types'
-import { FORM_TYPE_ALIASES } from './constants'
-import { compileHiddenCondition, resolveButtonSide } from './field-resolver'
+import type { BtnConfig, FieldHidden, FormItemOption, ListenToCallBack, ModelData } from './types.js'
+import { FORM_TYPE_ALIASES } from './constants.js'
+import { compileHiddenCondition, resolveButtonSide } from './field-resolver.js'
 
 // ============================================================================
 // FormType 归一化
