@@ -129,6 +129,15 @@ jobs:
       # 故必须先 tsc 出 shared build/（与 golden job 同理）。
       - name: Build @es-plus/shared
         run: npm run build --workspace @es-plus/shared
+      # check:distribution 的**运行时**判据只验证磁盘上已有的 build（产物不入库）：
+      #   无 bin 的库包真 import 一次；带 bin 的包真以 `node <entry> --help` 启动一次。
+      # 不先构建这三个带 bin 的包，这两条判据在 CI 里会静默跳过 —— 本地因为 build/
+      # 早已存在，看不到这个差异（2026-11-07 补 bin 冒烟时发现）。
+      - name: Build packages with entrypoints (distribution smoke)
+        run: |
+          npm run build --workspace @es-plus/cli
+          npm run build --workspace @es-plus/mcp-server
+          npm run build --workspace create-es-plus
       # 三包契约类型导出一致 + schema↔类型同步 + schemas 单源无漂移
       # + 生成物转义（反向探针）+ 校验器 schema 文件集契约 + 遗留桩转发契约
       - name: Check cross-renderer consistency
