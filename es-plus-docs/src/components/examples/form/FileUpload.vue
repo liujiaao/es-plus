@@ -164,8 +164,8 @@ const formItems = [
         { class: 'upload-trigger-area' },
         [
           h(UploadFilled, { style: { width: '40px', height: '40px', color: '#409eff', marginBottom: '8px' } }),
-          h('span', { style: { fontSize: '14px', color: '#606266' } }, '点击上传文件'),
-          h('span', { style: { fontSize: '12px', color: '#909399', marginTop: '4px' } }, '支持图片、PDF、TXT、Word、Excel、PPT、ZIP 等格式')
+          h('span', { style: { fontSize: '14px', color: 'var(--es-text-regular)' } }, '点击上传文件'),
+          h('span', { style: { fontSize: '12px', color: 'var(--es-text-tertiary)', marginTop: '4px' } }, '支持图片、PDF、TXT、Word、Excel、PPT、ZIP 等格式')
         ]
       )
     },

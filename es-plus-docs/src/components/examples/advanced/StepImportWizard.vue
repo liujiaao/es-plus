@@ -495,7 +495,7 @@ const openWizard = () => {
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
   font-size: 12px;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 
 .el-dialog .csv-tip {

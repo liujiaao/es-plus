@@ -10,8 +10,8 @@
       "pkg": "@es-plus/adapter-antdv",
       "pairs": 70,
       "medianDelta": 17,
-      "le10": 19,
-      "le20": 43,
+      "le10": 20,
+      "le20": 44,
       "ge100": 2,
       "best": "table/Basic.vue"
     },

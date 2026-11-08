@@ -23,6 +23,9 @@
   /* 代码块跟随主题：亮色 GitHub 风格；暗色见 .dark 覆盖（与全局 hljs 主题一致） */
   --es-doc-code-block-bg: #f6f8fa;
   --es-doc-code-block-text: #24292e;
+  /* 行内代码（`code` 药丸）文字色。示例与正文里大量直接写死的粉在同一底色上
+     亮色够用、深色只有 3.03:1；收敛成 token，深色单独提亮。 */
+  --es-doc-inline-code-text: #d63384;
   /* 提示框标题文字：比状态色（--es-success/warning/danger）深一档。
      状态色做边框、圆点是够的（非文本 UI 门槛 3:1），但同一块颜色当 13.5px 粗体
      标题压在各自的浅底上只有 3.05 / 2.97 / 4.35，达不到正文 AA 的 4.5（路线图 1.7）。 */
@@ -41,6 +44,7 @@
   --es-doc-code-tint: rgba(96, 165, 250, 0.14);
   --es-doc-code-block-bg: #1e1e1e;
   --es-doc-code-block-text: #abb2bf;
+  --es-doc-inline-code-text: #e879a9;
   /* 深色下状态色本身已经是浅色（#34d399 / #fbbf24 / #f87171），压在 12% 的同色
      暗底上都在 6:1 以上，不需要再加深那一档。 */
   --es-doc-tip-text: var(--es-success);
@@ -717,6 +721,36 @@
 
 .dark .ant-table-tbody > tr.ant-table-row-highlighted {
   background: rgba(59, 130, 246, 0.18) !important;
+}
+
+/* es-table 单元格里的 el-tag —— 库侧 `.tableContainer .el-tag` 把底色写死成亮灰，
+   并把类型色直接当文字色：亮色下 warning / success 只有 2.1–2.2:1，暗色下是
+   「亮药丸 + 亮色字」（实测 217 处）。同样是编译进库的字面量，用 !important 压回
+   状态 token —— 一套规则同时管两套主题，因为 --es-doc-*-text 本身随主题翻转。 */
+.table_component .el-tag {
+  background: var(--es-fill-light) !important;
+}
+
+.table_component .el-tag--primary {
+  color: var(--es-link);
+}
+
+.table_component .el-tag--info {
+  color: var(--es-text-regular);
+}
+
+.table_component .el-tag--warning {
+  color: var(--es-doc-warning-text);
+}
+
+.table_component .el-tag--success {
+  color: var(--es-doc-tip-text);
+  background: var(--es-success-tint) !important;
+}
+
+.table_component .el-tag--danger {
+  color: var(--es-doc-danger-text);
+  background: var(--es-danger-tint) !important;
 }
 
 /* 窄屏：正文表格的表头/单元格有 min-content 宽度，390px 下会撑出页面横向滚动条

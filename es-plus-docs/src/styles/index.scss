@@ -59,8 +59,10 @@ pre {
 .hljs-variable, .hljs-template-variable { color: #e36209; }
 
 // hljs dark mode tokens (One Dark-ish)
+// 注：注释色沿用 One Dark 原值时在代码块底色上只有 4.44:1（正文不足 4.5），
+// 提亮一档后 5.20:1，观感仍是弱化的注释。其余 token 5.2–8.3:1。
 .dark {
-  .hljs-comment, .hljs-quote { color: #7f848e; }
+  .hljs-comment, .hljs-quote { color: #8b9099; }
   .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #c678dd; }
   .hljs-string, .hljs-attr { color: #98c379; }
   .hljs-number, .hljs-literal { color: #d19a66; }

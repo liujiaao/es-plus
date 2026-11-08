@@ -62,7 +62,7 @@ const columns = [
     align: 'right' as const,
     render: (_h: any, { value, row }: any) => {
       const isHigh = value > 15000
-      return h('span', { style: `color:${isHigh ? '#67c23a' : '#606266'};font-weight:${isHigh ? 600 : 400}` },
+      return h('span', { style: `color:${isHigh ? '#67c23a' : 'var(--es-text-regular)'};font-weight:${isHigh ? 600 : 400}` },
         `¥${Number(value).toLocaleString()}`)
     },
   },

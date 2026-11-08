@@ -94,7 +94,7 @@ const confirmBeforeClose = () => {
       }
     },
     render: () => h('div', { style: 'padding: 20px' }, [
-      h('p', { style: 'margin-bottom: 10px; color: #606266' }, '在上面的输入框里写点东西，再点右上角 X 试试。'),
+      h('p', { style: 'margin-bottom: 10px; color: var(--es-text-regular)' }, '在上面的输入框里写点东西，再点右上角 X 试试。'),
       h('textarea', {
         rows: 4,
         placeholder: '随便写点什么…',
