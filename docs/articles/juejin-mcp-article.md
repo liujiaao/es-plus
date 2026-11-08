@@ -523,7 +523,7 @@ npx @es-plus/mcp-server
 
 - **npm**: `npm install es-plus-ui` / `npx @es-plus/mcp-server`
 - **GitHub**: [github.com/liujiaao/es-plus](https://github.com/liujiaao/es-plus)
-- **在线文档**: [liujiaao.github.io/es-plus](https://liujiaao.github.io/es-plus/)
+- **在线文档**: [main.esplus-ai.com](https://main.esplus-ai.com/)
 - **MCP Server**: [@es-plus/mcp-server](https://www.npmjs.com/package/@es-plus/mcp-server)
 - **CLI 工具**: `npx @es-plus/cli create my-page`
 

@@ -362,7 +362,7 @@ app.use(EsPlus)
 ```
 
 - GitHub: [github.com/liujiaao/es-plus](https://github.com/liujiaao/es-plus)
-- 在线文档: [liujiaao.github.io/es-plus](https://liujiaao.github.io/es-plus/)
+- 在线文档: [main.esplus-ai.com](https://main.esplus-ai.com/)
 - npm: [npmjs.com/package/es-plus-ui](https://www.npmjs.com/package/es-plus-ui)
 
 如果这篇文章对你有帮助，欢迎 Star 支持！

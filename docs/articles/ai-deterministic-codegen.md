@@ -97,8 +97,8 @@ npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 # 3. 对着 AI 说："用 es-plus 做一个订单管理 CRUD 页"
 ```
 
-- 文档 & Playground：https://liujiaao.github.io/es-plus/
-- AI CRUD 生成器（在线试）：https://liujiaao.github.io/es-plus/#/ai-crud
+- 文档 & Playground：https://main.esplus-ai.com/
+- AI CRUD 生成器（在线试）：https://main.esplus-ai.com/#/ai-crud
 - 源码：https://github.com/liujiaao/es-plus
 
 如果你也被"AI 生成的前端不敢直接合"坑过，欢迎去仓库拍一颗 star，或者开个 issue 聊聊你的场景。

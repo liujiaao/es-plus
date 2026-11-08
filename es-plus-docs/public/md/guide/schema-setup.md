@@ -17,11 +17,11 @@ ES-Plus 公开了 `formItemList` 与 `columns` 的 JSON Schema，配置到 IDE �
 
 | 用途 | URL |
 | --- | --- |
-| EsForm `formItemList` | `https://liujiaao.github.io/es-plus/schemas/es-form.schema.json` |
-| EsTable `columns` | `https://liujiaao.github.io/es-plus/schemas/es-table-columns.schema.json` |
-| EsTable `dataSource` | `https://liujiaao.github.io/es-plus/schemas/es-table-data.schema.json` |
+| EsForm `formItemList` | `https://main.esplus-ai.com/schemas/es-form.schema.json` |
+| EsTable `columns` | `https://main.esplus-ai.com/schemas/es-table-columns.schema.json` |
+| EsTable `dataSource` | `https://main.esplus-ai.com/schemas/es-table-data.schema.json` |
 
-> 自托管文档时把 `https://liujiaao.github.io/es-plus` 替换为实际部署域名即可。
+> 自托管文档时把 `https://main.esplus-ai.com` 替换为实际部署域名即可。
 
 ---
 
@@ -34,11 +34,11 @@ ES-Plus 公开了 `formItemList` 与 `columns` 的 JSON Schema，配置到 IDE �
   "json.schemas": [
     {
       "fileMatch": ["**/*.es-form.json", "**/form-config.json"],
-      "url": "https://liujiaao.github.io/es-plus/schemas/es-form.schema.json"
+      "url": "https://main.esplus-ai.com/schemas/es-form.schema.json"
     },
     {
       "fileMatch": ["**/*.es-table.json", "**/columns.config.json"],
-      "url": "https://liujiaao.github.io/es-plus/schemas/es-table-columns.schema.json"
+      "url": "https://main.esplus-ai.com/schemas/es-table-columns.schema.json"
     }
   ]
 }
@@ -68,7 +68,7 @@ ES-Plus 公开了 `formItemList` 与 `columns` 的 JSON Schema，配置到 IDE �
 1. **Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings**
 2. 点击 `+` 添加：
    - **Name**: `es-form`
-   - **Schema URL**: `https://liujiaao.github.io/es-plus/schemas/es-form.schema.json`
+   - **Schema URL**: `https://main.esplus-ai.com/schemas/es-form.schema.json`
    - **Schema version**: `JSON Schema Version 7`
    - **File path pattern**: `*.es-form.json`
 3. 重复一遍配置 `es-table-columns`。
@@ -87,7 +87,7 @@ ES-Plus 公开了 `formItemList` 与 `columns` 的 JSON Schema，配置到 IDE �
           <value>
             <SchemaInfo>
               <option name="name" value="es-form" />
-              <option name="relativePathToSchema" value="https://liujiaao.github.io/es-plus/schemas/es-form.schema.json" />
+              <option name="relativePathToSchema" value="https://main.esplus-ai.com/schemas/es-form.schema.json" />
               <option name="schemaVersion" value="JSON_SCHEMA_VERSION_7" />
               <option name="patterns">
                 <list>
@@ -137,7 +137,7 @@ TypeScript 自带补全 + 校验，比 JSON Schema 更精确。**JSON Schema 适
 
 ```json
 {
-  "$schema": "https://liujiaao.github.io/es-plus/schemas/es-form.schema.json",
+  "$schema": "https://main.esplus-ai.com/schemas/es-form.schema.json",
   "items": [
     { "prop": "name", "label": "姓名", "formtype": "Input" }
   ]
@@ -150,4 +150,4 @@ TypeScript 自带补全 + 校验，比 JSON Schema 更精确。**JSON Schema 适
 
 ## 反馈
 
-若发现某个属性没有补全或类型描述不准确，请到 [ES-Plus GitHub Issues](https://github.com/jiaaowuhan/es-plus/issues) 反馈。Schema 维护在 [`packages/vue3/src/types/index.ts`](https://github.com/jiaaowuhan/es-plus/blob/master/packages/vue3/src/types/index.ts) 与 docs 站 [`src/schemas/`](https://github.com/jiaaowuhan/es-plus/tree/master/es-plus-docs/src/schemas) 同步。
+若发现某个属性没有补全或类型描述不准确，请到 [ES-Plus GitHub Issues](https://github.com/liujiaao/es-plus/issues) 反馈。Schema 维护在 [`packages/vue3/src/types/index.ts`](https://github.com/liujiaao/es-plus/blob/master/packages/vue3/src/types/index.ts) 与 docs 站 [`src/schemas/`](https://github.com/liujiaao/es-plus/tree/master/es-plus-docs/src/schemas) 同步。

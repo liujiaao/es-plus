@@ -97,8 +97,8 @@ npm install @es-plus/vue3 element-plus @element-plus/icons-vue
 # 3. Tell the AI: "build an order-management CRUD page with es-plus"
 ```
 
-- Docs & Playground: https://liujiaao.github.io/es-plus/
-- AI CRUD generator (try online): https://liujiaao.github.io/es-plus/#/ai-crud
+- Docs & Playground: https://main.esplus-ai.com/
+- AI CRUD generator (try online): https://main.esplus-ai.com/#/ai-crud
 - Source: https://github.com/liujiaao/es-plus
 
 If you've been burned by "AI-generated frontend you can't merge," drop a star on the repo or open an issue to talk through your use case.
