@@ -10,7 +10,7 @@
   - 查询/重置由 EsForm 内部 triggerEvent 联动表格（单次请求），不 emit confirm/reset
 -->
 <template>
-  <a-form :ref="setFormRef" v-bind="formProps" class="es-form">
+  <a-form :ref="setFormRef" v-bind="formProps" :class="['es-form', { 'es-form--detail': isDetail }]">
     <a-row v-bind="rowLayout">
       <template v-for="(item, index) in formItem" :key="item.prop || index">
         <a-col
@@ -25,7 +25,10 @@
             v-bind="initFormItemOptions(item)"
             @click.stop="() => {}"
           >
-            <template v-if="item.formtype">
+            <template v-if="isDetail && item.formtype">
+              <span class="es-form-detail__text">{{ detailText(item) }}</span>
+            </template>
+            <template v-else-if="item.formtype">
               <RenderDomForm :row="item" :render="formInputRenderer(item)" :index="index" :model="model" />
             </template>
             <template v-else>
@@ -47,7 +50,7 @@
         </template>
         <a-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
           <!-- btnColSpanRow：左右分栏布局 -->
-          <div v-if="btnColSpanRow && configBtn.length" class="buttonOperate leftRightBtn">
+          <div v-if="btnColSpanRow && effectiveConfigBtn.length" class="buttonOperate leftRightBtn">
             <div class="btn-left">
               <a-form-item :labelCol="{ style: { width: '0px' } }" class="btn-formItem">
                 <a-space :size="8" wrap>
@@ -120,7 +123,7 @@
           </div>
           <!-- 非 btnColSpanRow：单行按钮布局 -->
           <a-form-item
-            v-else-if="configBtn.length"
+            v-else-if="effectiveConfigBtn.length"
             :label="' '"
             :labelCol="{ style: { width: labelBtnWidth || 'auto' } }"
             :class="{ formItemCols: getBtnColSpan === 24 }"
@@ -128,7 +131,7 @@
           >
             <div class="buttonOperate" :style="{ textAlign: getBtnColSpan === 24 ? 'right' : 'left' }">
               <a-space :size="8" wrap>
-                <template v-for="(it, inx) in configBtn" :key="it.key || inx">
+                <template v-for="(it, inx) in effectiveConfigBtn" :key="it.key || inx">
                   <a-button
                     v-if="checkPermission(it.permissionValue)"
                     v-bind="filterOptions(it)"
@@ -223,6 +226,7 @@ import {
   looseEqual,
   checkPermissionValue,
   resolveBuiltinText,
+  resolveFormDetailText,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -244,6 +248,13 @@ const props = withDefaults(
     btnColSpanRow?: boolean
     rules?: Record<string, unknown>
     fieldFieldOutput?: FieldOutputProvider
+    /**
+     * 表单模式：`edit`（默认）渲染输入控件；`detail` 渲染只读文本。
+     *
+     * detail 下控件换成文本（`dataOptions` 翻译、日期格式化、空值占位），label 布局不变；
+     * `render` 字段仍走自定义函数；`triggerEvent` 按钮（查询/重置等取数动作）默认不渲染。
+     */
+    mode?: 'edit' | 'detail'
   }>(),
   {
     model: () => ({}),
@@ -253,6 +264,7 @@ const props = withDefaults(
     renderBtn: false,
     btnColSpanRow: true,
     rules: () => ({}),
+    mode: 'edit',
   },
 )
 
@@ -610,10 +622,21 @@ const labelBtnWidth = computed(() => (formLayout.value.labelBtnWidth as string) 
 // ─── 按钮分流（委托 core 的唯一实现，三端一致）────────────
 // 此前三端各自内联 `direction === 'right' || !direction`，只认 direction ——
 // 配置里声明的 position/code 被静默丢弃，表单工具栏按钮永远渲到右侧。
+/**
+ * 详情模式下的生效按钮：`triggerEvent` 按钮（查询/重置等取数动作）在只读表单里没有意义，
+ * 默认不渲染；其余显式按钮（关闭/返回/打印…）照常。编辑模式原样返回。
+ */
+const effectiveConfigBtn = computed(() =>
+  props.mode === 'detail' ? (props.configBtn || []).filter((it) => !it.triggerEvent) : props.configBtn || [],
+)
+
 const colRightLeftList = computed(() => ({
-  colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
-  colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
+  colRightBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+  colLeftBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'left'),
 }))
+
+const isDetail = computed(() => props.mode === 'detail')
+const detailText = (item: FormItemOption): string => resolveFormDetailText(item, props.model)
 
 const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
@@ -890,6 +913,20 @@ defineExpose({
 <style lang="scss" scoped>
 .es-form {
   width: 100%;
+  // 详情模式：值以文本呈现，行高与输入控件对齐，长文本换行而不撑破栅格
+  &--detail {
+    :deep(.ant-form-item) {
+      margin-bottom: 8px;
+    }
+  }
+  .es-form-detail__text {
+    display: inline-block;
+    width: 100%;
+    min-height: 32px;
+    line-height: 32px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
   :deep(.ant-form-item) {
     margin-bottom: 10px
   }

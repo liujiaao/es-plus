@@ -1,5 +1,5 @@
 <template>
-  <el-form ref="formRef" v-bind="formProps" class="es-form">
+  <el-form ref="formRef" v-bind="formProps" :class="['es-form', { 'es-form--detail': isDetail }]">
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem">
@@ -14,7 +14,10 @@
               :prop="item.prop"
               @click.native.stop="noop"
             >
-              <template v-if="item.formtype">
+              <template v-if="isDetail && item.formtype">
+                <span class="es-form-detail__text">{{ detailText(item) }}</span>
+              </template>
+              <template v-else-if="item.formtype">
                 <render-dom-form
                   :row="item"
                   :render="formInputComponents(item)"
@@ -45,7 +48,7 @@
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
             <!-- btnColSpanRow=true 时左右分布 -->
             <div
-              v-if="btnColSpanRow && configBtn.length"
+              v-if="btnColSpanRow && effectiveConfigBtn.length"
               class="buttonOperate leftRightBtn"
             >
               <div class="btn-left">
@@ -92,7 +95,7 @@
             </div>
             <!-- btnColSpanRow=false 时单行布局 -->
             <el-form-item
-              v-if="!btnColSpanRow && configBtn.length"
+              v-if="!btnColSpanRow && effectiveConfigBtn.length"
               :label="' '"
               :label-width="formProps.labelBtnWidth ? formProps.labelBtnWidth : formProps.labelWidth"
               :class="{ formItemCols: btnColSpanRow ? true : getBtnColSpan === 24 }"
@@ -102,7 +105,7 @@
                 class="buttonOperate"
                 :style="{ 'text-align': getBtnColSpan === 24 ? 'right' : 'left' }"
               >
-                <template v-for="(it, inx) in configBtn">
+                <template v-for="(it, inx) in effectiveConfigBtn">
                   <el-button
                     v-if="checkPermission(it.permissionValue)"
                     :key="it.key || inx"
@@ -176,6 +179,7 @@ import {
   resolveReactionValues,
   collectReactionDependencies,
   checkPermissionValue,
+  resolveFormDetailText,
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
 
@@ -245,6 +249,11 @@ export default defineComponent({
     btnColSpanRow: { type: Boolean, default: true },
     /** 校验规则 */
     rules: { type: Object as PropType<Record<string, unknown>>, default: () => ({}) },
+    /**
+     * 表单模式：`edit`（默认）渲染输入控件；`detail` 渲染只读文本。
+     * detail 下 label 布局不变，`render` 字段仍走自定义函数，`triggerEvent` 按钮默认不渲染。
+     */
+    mode: { type: String as PropType<'edit' | 'detail'>, default: 'edit' },
     /** 字段映射注入函数 */
     fieldFieldOutput: { type: [Function, Object] as PropType<FieldOutputProvider>, default: undefined },
   },
@@ -647,9 +656,21 @@ export default defineComponent({
     )
 
     // ─── 按钮分组（左右） ──
+    /**
+     * 详情模式下的生效按钮：`triggerEvent` 按钮（查询/重置等取数动作）在只读表单里没有意义，
+     * 默认不渲染；其余显式按钮（关闭/返回/打印…）照常。编辑模式原样返回。
+     */
+    const effectiveConfigBtn = computed(() =>
+      props.mode === 'detail'
+        ? (props.configBtn || []).filter((it) => !it.triggerEvent)
+        : props.configBtn || []
+    )
+    const isDetail = computed(() => props.mode === 'detail')
+    const detailText = (item: FormItemOption): string => resolveFormDetailText(item, resolvedModel.value)
+
     const colRightLeftList = computed(() => ({
-      colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
-      colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
+      colRightBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+      colLeftBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'left'),
     }))
 
     const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
@@ -875,6 +896,9 @@ export default defineComponent({
       getBtnColSpan,
       isRenderBtn,
       renderBtnFn,
+      effectiveConfigBtn,
+      isDetail,
+      detailText,
       colRightLeftList,
       formInputComponents,
       formInstance,
@@ -910,6 +934,22 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .es-form {
+  // 详情模式：值以文本呈现，行高与输入控件对齐，长文本换行而不撑破栅格
+  &--detail {
+    ::v-deep(.el-form-item) {
+      margin-bottom: 12px;
+    }
+  }
+
+  .es-form-detail__text {
+    display: inline-block;
+    width: 100%;
+    min-height: 32px;
+    line-height: 32px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /**
    * 修复 Element UI v2 的栅格布局错乱问题。
    *

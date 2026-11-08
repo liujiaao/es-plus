@@ -122,6 +122,8 @@ export interface FormItemOption {
   span?: number
   /** Shortcut: auto-injected into attrs.placeholder */
   placeholder?: string
+  /** 详情模式（EsForm mode="detail"）下空值的展示文本，默认 '-' */
+  emptyPlaceholder?: string
   /** Shortcut: auto-injected into attrs.clearable */
   clearable?: boolean
   /** Shortcut: auto-injected into attrs.disabled */

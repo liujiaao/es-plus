@@ -101,6 +101,8 @@ export interface FormItemOption {
   formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
   placeholder?: string
+  /** 详情模式（EsForm mode="detail"）下空值的展示文本，默认 '-' */
+  emptyPlaceholder?: string
   clearable?: boolean
   disabled?: boolean
   attrs?: Record<string, unknown>

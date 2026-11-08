@@ -1,5 +1,5 @@
 <template>
-  <el-form :ref="setFormRef" v-bind="(formProps as any)" class="es-form">
+  <el-form :ref="setFormRef" v-bind="(formProps as any)" :class="['es-form', { 'es-form--detail': isDetail }]">
     <div class="flex-center">
       <el-row v-bind="rowLayout">
         <template v-for="(item, index) in formItem" :key="item.prop">
@@ -13,7 +13,10 @@
               :prop="item.prop"
               @click.stop="() => {}"
             >
-              <template v-if="item.formtype">
+              <template v-if="isDetail && item.formtype">
+                <span class="es-form-detail__text">{{ detailText(item) }}</span>
+              </template>
+              <template v-else-if="item.formtype">
                 <RenderDomForm :row="item" :render="formInputComponents(item)" :index="index" :model="model" />
               </template>
               <template v-else>
@@ -33,7 +36,7 @@
             />
           </template>
           <el-col v-else :span="btnColSpanRow ? 24 : getBtnColSpan">
-            <div v-if="btnColSpanRow && configBtn.length" class="buttonOperate leftRightBtn">
+            <div v-if="btnColSpanRow && effectiveConfigBtn.length" class="buttonOperate leftRightBtn">
               <div class="btn-left">
                 <el-form-item label-width="0px" class="btn-formItem">
                   <template v-for="(it, inx) in colRightLeftList.colLeftBtn" :key="it.key || inx">
@@ -91,15 +94,15 @@
               </div>
             </div>
             <el-form-item
-              v-if="!btnColSpanRow && configBtn.length"
+              v-if="!btnColSpanRow && effectiveConfigBtn.length"
               :label="' '"
               :label-width="(formProps as any).labelBtnWidth ? (formProps as any).labelBtnWidth : (formProps as any).labelWidth"
               :class="{ formItemCols: btnColSpanRow ? true : getBtnColSpan === 24 }"
               class="btn-formItem"
             >
               <div class="buttonOperate" :style="{ 'text-align': getBtnColSpan === 24 ? 'right' : 'left' }">
-                <template v-if="configBtn.length">
-                  <template v-for="(it, inx) in configBtn" :key="it.key || inx">
+                <template v-if="effectiveConfigBtn.length">
+                  <template v-for="(it, inx) in effectiveConfigBtn" :key="it.key || inx">
                     <el-button
                       v-if="checkPermission(it.permissionValue)"
                       v-bind="filterOptions(it)"
@@ -197,6 +200,7 @@ import {
   looseEqual,
   checkPermissionValue,
   resolveBuiltinText,
+  resolveFormDetailText,
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -209,6 +213,13 @@ const props = withDefaults(
     btnColSpanRow?: boolean
     rules?: Record<string, unknown>
     fieldFieldOutput?: FieldOutputProvider
+    /**
+     * 表单模式：`edit`（默认）渲染输入控件；`detail` 渲染只读文本。
+     *
+     * detail 下控件换成文本（`dataOptions` 翻译、日期格式化、空值占位），label 布局不变；
+     * `render` 字段仍走自定义函数；`triggerEvent` 按钮（查询/重置等取数动作）默认不渲染。
+     */
+    mode?: 'edit' | 'detail'
   }>(),
   {
     model: () => ({}),
@@ -217,7 +228,8 @@ const props = withDefaults(
     configBtn: () => [],
     renderBtn: false,
     btnColSpanRow: true,
-    rules: () => ({})
+    rules: () => ({}),
+    mode: 'edit'
   }
 )
 
@@ -468,10 +480,24 @@ watch(
   { immediate: true }
 )
 
+/**
+ * 详情模式下的生效按钮：`triggerEvent` 按钮（查询/重置等取数动作）在只读表单里没有意义，
+ * 默认不渲染；其余显式按钮（关闭/返回/打印…）照常。编辑模式原样返回。
+ *
+ * 「默认只保留关闭/返回」不在这里硬编码按钮名：宿主给什么 action 就渲染什么，
+ * 名字不是契约，行为（是否触发取数）才是。
+ */
+const effectiveConfigBtn = computed(() =>
+  props.mode === 'detail' ? (props.configBtn || []).filter((it) => !it.triggerEvent) : props.configBtn || []
+)
+
 const colRightLeftList = computed(() => ({
-  colRightBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'right'),
-  colLeftBtn: props.configBtn.filter((it) => resolveButtonSide(it, 'form') === 'left'),
+  colRightBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'right'),
+  colLeftBtn: effectiveConfigBtn.value.filter((it) => resolveButtonSide(it, 'form') === 'left'),
 }))
+
+const isDetail = computed(() => props.mode === 'detail')
+const detailText = (item: FormItemOption): string => resolveFormDetailText(item, props.model)
 
 const isRenderBtn = computed(() => typeof props.renderBtn === 'function')
 
@@ -731,6 +757,22 @@ defineExpose({
 
 <style lang="scss" scoped>
 .es-form {
+  // 详情模式：值以文本呈现，行高与输入控件对齐，长文本换行而不撑破栅格
+  &--detail {
+    :deep(.el-form-item) {
+      margin-bottom: 12px;
+    }
+  }
+
+  .es-form-detail__text {
+    display: inline-block;
+    width: 100%;
+    min-height: 32px;
+    line-height: 32px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   :deep(.el-form-item) {
     margin-bottom: 18px;
   }
