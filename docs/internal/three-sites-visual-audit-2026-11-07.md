@@ -323,10 +323,11 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
 - [x] 三站所有页面出现同一组数字（来自 `slogan.json`），grep 不到第二套口径
       —— 三站均 76.5%；`grep -r "77%"` 为空；数字由构建脚本从源码实测
 - [x] API 表描述列 ≥ 320px —— es-form 实测 **330px**（基线 104px）
-- [x] 主站 API 页高度 ≤ 10,000px —— es-form **5,972px**（基线 18,095px，−67%）。
-      做法是示例分组（IA 拆分）：20 个实时演示按「基础 / 联动与数据 / 控件扩展 / 上传与按钮 /
-      模式与组合」五组折叠成一组一屏，深链 `#demo-<key>` 会自动切到所在分组（锚点、
-      搜索索引、`cases.json` 全部不变）。`layout.spec.ts` 第 4 条守 ≤10,000px 与深链切换
+- [x] 主站 API 页高度 ≤ 10,000px —— es-form **6,737px**（基线 18,095px，−63%）。
+      做法是示例分组（IA 拆分）：示例较多的六页（es-form / es-table / es-crud-page /
+      use-dialog / linkage / vxe-table）按主题折叠成 3–5 组，一次只挂载一组；
+      深链 `#demo-<key>` 会自动切到所在分组（锚点、搜索索引、`cases.json` 全部不变）。
+      `layout.spec.ts` 第 4–6 条守 ≤10,000px、每页有分组、深链切组
 - [x] 三站 390×844 无横向溢出，表格可横向滚动 —— 三站溢出均为 0；
       演示表 `min-width:560px` + 容器 `overflow-x:auto`（runtime-e2e `layout.spec.ts` 守）
 - [x] 所有承载文字的色组合 ≥ 4.5:1（大字 ≥ 3:1）—— `check:a11y` 全绿（含令牌反算）
@@ -366,7 +367,7 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
 | P1-8 | ✅ | 新建 `check:design-tokens` 回归基线（221 文件 / 4,057 处存量）；新代码不允许新增字面量 |
 | P1-9 | ✅ | Monaco / vxe 都是独立 chunk、按路由加载；主站首屏 452.6 KB gz 里不含 Monaco（`check:bundle-budget` 可见） |
 | P1-10 | ✅ | `AiLiveDemo` 填真实订单数据，CTA 回到品牌蓝（`type="primary"`） |
-| P1-11 | ✅ | es-eui 表格页 20,492px → 12,610px，并拆出 3 个子页（5,189 / 4,539 / 5,209px）；主站 es-form 13,954 → **5,972px**（示例分组，见 §9.8） |
+| P1-11 | ✅ | es-eui 表格页 20,492px → 12,610px，并拆出 3 个子页（5,189 / 4,539 / 5,209px）；主站示例分组后 es-form 13,954 → **6,737px**，es-table / es-crud-page / use-dialog / linkage / vxe-table 同步分组（§9.8） |
 
 ### 9.3 方案 §6.4 的治理项（防回潮）
 
@@ -391,7 +392,7 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
      成本远超其余两站之和，收益是第三个站的深色。结论：保持 light-only，由 `check:dark-mode` 显式断言。
    - **i18n ❌（不做）**：两站文案全在 `.vue` 模板里，没有 locale 文件、没有翻译语料；
      加一个只能切到空白的语言开关，比没有更差（审计原话）。真要做需要先抽文案层，属独立批次。
-2. ~~**主站单页长度**（验收 4 的差口）。~~ ✅ 示例分组已把 es-form 压到 5,972px，见 §9.8。
+2. ~~**主站单页长度**（验收 4 的差口）。~~ ✅ 示例分组已把 es-form 压到 6,737px，见 §9.8。
 
 ### 9.5 验证记录
 
@@ -452,11 +453,24 @@ npm run theme:sync && theme:check # 11 份主题资源三站逐字节一致
 | P2-4 | ✅ | 澄清**两种容器、不是两套栅格**：`--es-layout-max: 1440px` 是文档壳上限（侧栏 + 正文 + 右栏 TOC），营销页用 `--es-landing-max: 1200`。tokens 注释与站点用法对齐，不再读成「两套 max-width 打架」 |
 | P2-1 / P2-2 / P2-5 / P2-6 | — | 本轮未涉及（前两个由 §9.6 的首页迭代与案例页图廊一并处理，P2-5 / P2-6 仍待复核） |
 
-#### es-form 示例分组（验收 4）
+#### 示例分组（验收 4）
 
-20 个实时演示不再一条长列表，而是五个分组标签：基础(3) / 联动与数据(6) / 控件扩展(4) / 上传与按钮(3) / 模式与组合(4)，一次只挂一组（默认 3–6 个 playground）。页面 13,954 → **5,972px**。
+示例较多的六页按主题分组，一次只挂载一组；标签条只在两个以上分组时渲染，单示例组件（svg-icon / error-boundary）行为不变。
 
-三个不能动的约束：① 每个示例的 `id="demo-<key>"` 与锚点不变（搜索索引、`cases.json`、站内外链全靠它）；② 深链进入时先根据 hash 选中所在分组，再 `nextTick` 之后才跑 `realignToHash`，否则目标元素还没挂载、滚动落空；③ 其余组件（`group` 字段都没有）仍走原样全量渲染，分组条只在组数 > 1 时出现。
+| 页面 | 分组 | 高度 |
+|---|---|---|
+| `/components/es-form` | 基础 3 / 联动与数据 6 / 控件扩展 4 / 上传与按钮 4 / 模式与组合 3 | 13,954 → **6,737px** |
+| `/components/es-table` | 基础与列 4 / 交互与数据 7 / 结构与展示 5 / 查询与行操作 3 | **10,092px**（略高于 10k，长表演示页，不在验收线上） |
+| `/components/es-crud-page` | 基础 3 / 弹窗 5 / 权限与操作列 2 | **8,346px** |
+| `/advanced/use-dialog` | 基础 3 / 表单与表格 2 / 实例与定制 3 / 业务场景 4 | **4,095px** |
+| `/advanced/linkage` | 查询与联动 5 / 表格与集成 7 / 表单流程 4 / 弹窗与流程 3 / 虚拟滚动 6 | **4,629px** |
+| `/advanced/vxe-table` | 引擎与渲染 5 / 选择与工具 5 / 编辑与数据 5 | **8,920px** |
+
+**为什么是数据字段而不是页面筛选**：`group` 写在 `component-doc.data.ts` / `advanced-doc.data.ts` 的 `examples[]` 上，与 `key` 同一份定义 —— 案例卡、搜索索引、锚点都从这份数据派生，分组只改变「同时渲染哪些」，不产生第二套 key。逻辑抽到 `composables/useExampleGroups.ts`，标签条抽到 `components/doc/ExampleGroupTabs.vue`，组件页与高级指南共用。
+
+**第一版只做了组件页**，六个页面里只有一个会分组 —— 这是本轮修掉的真实回归：`layout.spec.ts` 现在把「哪些页必须分组」写成清单（第 5 条），新增长页时补一行，而不是靠人记得。
+
+三个不能动的约束：① 每个示例的 `id="demo-<key>"` 与锚点不变（搜索索引、`cases.json`、站内外链全靠它）；② 深链进入时先根据 hash 选中所在分组，`nextTick` 之后才跑 `realignToHash`，否则目标元素还没挂载、滚动落空（组件页与高级指南各自实现，顺序一致）；③ 分组不产生新路由，hash 变化只切组 + 重定位。
 
 #### es-pc 暗色
 
@@ -476,7 +490,7 @@ npm run theme:sync && theme:check # 11 份主题资源三站逐字节一致
 ```
 node scripts/check-dark-mode.mjs     # es-plus-docs / es-pc 暗色口径一致，es-eui light-only
 npm run check:consistency            # 137/137 全绿（110.0s）
-npx playwright test tests/layout.spec.ts   # 4/4（新增第 4 条：es-form ≤10,000px + 深链切组）
+npx playwright test tests/layout.spec.ts   # 6/6（新增第 4–6 条：es-form ≤10,000px + 深链切组、六页分组清单、高级指南深链）
 npm run check:design-tokens -- --update    # 基线 4,057 → 3,917 处（221 文件）
 es-plus-docs / es-pc / es-eui 三站构建  # 全绿（es-eui 用 --dest dist-verify，验完删除）
 ```
