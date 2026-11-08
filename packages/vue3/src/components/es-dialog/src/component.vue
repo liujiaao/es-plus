@@ -30,11 +30,31 @@
             <span class="dialog-title">{{ props.title }}</span>
           </div>
           <div class="btns">
-            <el-icon @click="handleFullscreen" v-show="!props.hiddenFullBtn">
+            <!-- 图标按钮：可见内容只有一个图标，读屏拿不到名字；补 role/aria-label 与
+                 Enter / Space 键盘操作（el-icon 渲染成 <i>，原生不进 Tab 序列）。 -->
+            <el-icon
+              role="button"
+              tabindex="0"
+              :aria-label="isFullscreen ? builtinExitFullscreen : builtinFullscreen"
+              @click="handleFullscreen"
+              @keydown.enter.prevent="handleFullscreen"
+              @keydown.space.prevent="handleFullscreen"
+              v-show="!props.hiddenFullBtn"
+            >
               <FullScreen v-if="!isFullscreen" />
               <CopyDocument v-else />
             </el-icon>
-            <el-icon @click="handleClose" v-show="props.showClose"><Close /></el-icon>
+            <el-icon
+              role="button"
+              tabindex="0"
+              :aria-label="builtinClose"
+              @click="handleClose"
+              @keydown.enter.prevent="handleClose"
+              @keydown.space.prevent="handleClose"
+              v-show="props.showClose"
+            >
+              <Close />
+            </el-icon>
           </div>
         </template>
       </template>
@@ -105,8 +125,15 @@ import EsForm from '../../es-form'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { getGlobalConfig } from '../../../config'
-import { checkPermissionValue } from '@es-plus/core'
+import { checkPermissionValue, resolveBuiltinText } from '@es-plus/core'
 import type { BtnConfig } from '../../../types'
+
+// 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）。
+// computed：宿主在 app.use 时才配置 locale，模块级常量会冻在 import 时的缺省中文。
+const builtinFullscreen = computed(() => resolveBuiltinText('fullscreen'))
+const builtinExitFullscreen = computed(() => resolveBuiltinText('exitFullscreen'))
+const builtinClose = computed(() => resolveBuiltinText('close'))
+
 
 const props = withDefaults(
   defineProps<{

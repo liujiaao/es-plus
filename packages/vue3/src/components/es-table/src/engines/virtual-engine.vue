@@ -25,7 +25,7 @@
     </el-auto-resizer>
     <div v-if="!flatDataSource || flatDataSource.length === 0" class="es-virtual-table__empty">
       <slot name="empty">
-        <div class="es-empty es-empty-normal">
+        <div class="es-empty es-empty-normal" role="status">
           <div class="es-empty-image">
             <svg class="es-empty-img-simple" width="64" height="41" viewBox="0 0 64 41" xmlns="http://www.w3.org/2000/svg">
               <g transform="translate(0 1)" fill="none" fill-rule="evenodd">
@@ -63,7 +63,8 @@ const props = defineProps<{
 }>()
 
 // W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
-const builtinEmptyText = resolveBuiltinText('emptyText')
+// computed：宿主在 app.use 时才配置 locale，模块级常量会冻在 import 时的缺省中文
+const builtinEmptyText = computed(() => resolveBuiltinText('emptyText'))
 
 // W3-2：虚拟引擎（el-table-v2）没有列筛选 UI。列上声明了 filters 时不静默丢弃 ——
 // DEV 下点名这些列，提示改用默认引擎 / vxe（`filter-change` 事件也不会从本引擎发出）。

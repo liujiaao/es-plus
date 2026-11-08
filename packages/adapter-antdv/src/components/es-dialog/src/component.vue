@@ -48,16 +48,24 @@
           <slot name="title">{{ dialogTitle }}</slot>
         </span>
         <span class="es-dialog-header-actions">
+          <!-- 图标按钮：a-button 本身键盘可达，但可见内容只有图标，读屏拿不到名字 -->
           <a-button
             v-if="!props.hiddenFullBtn"
             type="text"
             size="small"
+            :aria-label="isFullscreen ? builtinExitFullscreen : builtinFullscreen"
             @click="toggleFullscreen"
           >
             <FullscreenExitOutlined v-if="isFullscreen" />
             <FullscreenOutlined v-else />
           </a-button>
-          <a-button v-if="props.showClose" type="text" size="small" @click="handleClose">
+          <a-button
+            v-if="props.showClose"
+            type="text"
+            size="small"
+            :aria-label="builtinClose"
+            @click="handleClose"
+          >
             <CloseOutlined />
           </a-button>
         </span>
@@ -122,7 +130,7 @@ export default { name: 'EsDialog' }
 import { ref, reactive, computed, inject, watch, onMounted, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
-import { checkPermissionValue } from '@es-plus/core'
+import { checkPermissionValue, resolveBuiltinText } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'
@@ -136,6 +144,13 @@ import RenderJsx from './render-jsx.vue'
 // 渲染的脱离子树（appContext 为 null，全局注册不可见）中仍能解析弹窗骨架组件。
 import { Modal as AModal, Button as AButton, Space as ASpace, Spin as ASpin } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
+
+// 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）。
+// computed：宿主在 app.use 时才配置 locale，模块级常量会冻在 import 时的缺省中文；
+// 三端共用同一批键，宿主用 messages 覆盖一次即三端一致。
+const builtinFullscreen = computed(() => resolveBuiltinText('fullscreen'))
+const builtinExitFullscreen = computed(() => resolveBuiltinText('exitFullscreen'))
+const builtinClose = computed(() => resolveBuiltinText('close'))
 
 // ─── Props（onClosed 不声明为 prop，让其作为事件监听器流入）──
 const props = withDefaults(

@@ -13,7 +13,8 @@
             <slot />
           </div>
         </div>
-        <div v-loading="loadStatus" element-loading-background="rgba(0, 0, 0, 0.03)" :element-loading-text="builtinLoadingText" class="page-loading-con tableContainer">
+        <!-- aria-busy：读屏用户靠它知道「拿的是旧数据、正在刷新」；v-loading 只是视觉遮罩 -->
+        <div v-loading="loadStatus" element-loading-background="rgba(0, 0, 0, 0.03)" :element-loading-text="builtinLoadingText" :aria-busy="loadStatus" class="page-loading-con tableContainer">
           <div class="table_inner_containers">
             <table-btns
               ref="tbBtnRef"
@@ -65,7 +66,9 @@
               @filter-change="handleColumnFilterChange"
             >
               <template #empty>
-                <div class="es-empty es-empty-normal">
+                <!-- role="status"：请求回来但没数据是一次状态变化，读屏要播报；
+                     装饰 SVG 已无 title，读屏只读 description 一行 -->
+                <div class="es-empty es-empty-normal" role="status">
                   <div class="es-empty-image">
                     <svg class="es-empty-img-simple" width="64" height="41" viewBox="0 0 64 41" xmlns="http://www.w3.org/2000/svg">
                       <g transform="translate(0 1)" fill="none" fill-rule="evenodd">
@@ -256,8 +259,11 @@ const tableOptions = computed<TableOptions>(() => ({
 
 // W3-1：内置文案走 locale 单源（安装时静态）。`tableOptions.emptyText` 仍是最高优先级的
 // 逐表覆盖，内置字典只是「没配时」的兜底 —— 默认 zh 下与历史字面量逐字节相同。
-const builtinEmptyText = resolveBuiltinText('emptyText')
-const builtinLoadingText = resolveBuiltinText('loading')
+// W3-1 内置文案。**必须是 computed**：模块级常量在 import 时求值，而宿主是在
+// `app.use(EsPlus, { locale })` 里配置语言的（import 之后），写成常量会让英文宿主
+// 永远拿到中文空态/加载文案（vue2 侧在 setup 里求值，一直是正确的）。
+const builtinEmptyText = computed(() => resolveBuiltinText('emptyText'))
+const builtinLoadingText = computed(() => resolveBuiltinText('loading'))
 
 // configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）
 function getVxeGridInstance() {

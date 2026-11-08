@@ -35,12 +35,28 @@
           <div class="dialog-header">
             <span class="dialog-title">{{ title }}</span>
             <div class="btns">
+              <!-- 图标按钮：可见内容只有一个 <i>，读屏拿不到名字；补 role/aria-label 与
+                   Enter / Space 键盘操作（原生 <i> 不进 Tab 序列，键盘用户此前无法全屏/关闭）。 -->
               <i
                 v-show="!hiddenFullBtn"
+                role="button"
+                tabindex="0"
+                :aria-label="isFullscreen ? builtinExitFullscreen : builtinFullscreen"
                 :class="isFullscreen ? 'el-icon-copy-document' : 'el-icon-full-screen'"
                 @click="handleFullscreen"
+                @keydown.enter.prevent="handleFullscreen"
+                @keydown.space.prevent="handleFullscreen"
               />
-              <i class="el-icon-close" v-show="showClose" @click="handleClose" />
+              <i
+                class="el-icon-close"
+                role="button"
+                tabindex="0"
+                :aria-label="builtinClose"
+                v-show="showClose"
+                @click="handleClose"
+                @keydown.enter.prevent="handleClose"
+                @keydown.space.prevent="handleClose"
+              />
             </div>
           </div>
         </template>
@@ -117,7 +133,7 @@ import {
   onMounted,
 } from '../../vue-compat'
 import type { PropType } from '../../vue-compat'
-import { getGlobalConfig, checkPermissionValue, type BtnConfig } from '@es-plus/core'
+import { getGlobalConfig, checkPermissionValue, resolveBuiltinText, type BtnConfig } from '@es-plus/core'
 import RenderJsx from './render-jsx.vue'
 import { getCompIcon } from '../../utils/icon'
 
@@ -517,6 +533,10 @@ export default defineComponent({
       isFullscreen,
       lyFormInstance,
       renderBodyRefsObject,
+      // 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）
+      builtinFullscreen: resolveBuiltinText('fullscreen'),
+      builtinExitFullscreen: resolveBuiltinText('exitFullscreen'),
+      builtinClose: resolveBuiltinText('close'),
       // computeds
       filteredAttrs,
       resolvedAppendToBody,

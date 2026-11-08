@@ -15,7 +15,8 @@
   <a-config-provider :locale="antLocale">
     <div :ref="setTableContainer" class="table_component" :class="{ 'table-striped': tableOptions.stripe }" :style="{ [heightType]: tabHeight }">
       <a-spin :spinning="loadStatus" :tip="builtinLoadingText">
-        <div class="table_containers">
+        <!-- aria-busy：读屏用户靠它知道「拿的是旧数据、正在刷新」；a-spin 只是视觉遮罩 -->
+        <div class="table_containers" :aria-busy="loadStatus">
           <!-- 插槽区域 -->
           <div
             v-if="showHeaderBar"
@@ -80,6 +81,14 @@
             @change="handleAdvTableChange"
             v-bind="tableBindAttrs"
           >
+            <!-- 空态：a-table 的默认空态是 .ant-table-placeholder 里的一段纯文本，
+                 没有语义角色；用 emptyText 插槽原样输出同一段文案，外挂 role="status"，
+                 读屏在「请求回来但没数据」时才会播报（视觉逐像素不变） -->
+            <template #emptyText>
+              <div class="es-table__empty" role="status">
+                {{ tableOptions.emptyText || builtinEmptyText }}
+              </div>
+            </template>
             <!-- 展开行 -->
             <template v-if="expandEnabled" #expandedRowRender="{ record }">
               <slot v-if="hasExpandSlot" name="expand" :row="record" />
@@ -297,8 +306,11 @@ const tableOptions = computed(
 )
 
 // W3-1：内置文案走 locale 单源（安装时静态）。`tableOptions.emptyText` 仍是逐表覆盖。
-const builtinEmptyText = resolveBuiltinText('emptyText')
-const builtinLoadingText = resolveBuiltinText('loading')
+// W3-1 内置文案。**必须是 computed**：模块级常量在 import 时求值，而宿主是在
+// `app.use(EsPlus, { locale })` 里配置语言的（import 之后），写成常量会让英文宿主
+// 永远拿到中文空态/加载文案（vue2 侧在 setup 里求值，一直是正确的）。
+const builtinEmptyText = computed(() => resolveBuiltinText('emptyText'))
+const builtinLoadingText = computed(() => resolveBuiltinText('loading'))
 
 function getVxeGridInstance() {
   if (!isVxeEngine.value) return null

@@ -21,6 +21,7 @@
         v-loading="loadStatus"
         element-loading-background="rgba(0, 0, 0, 0.03)"
         :element-loading-text="builtinLoadingText"
+        :aria-busy="loadStatus"
         class="page-loading-con tableContainer"
       >
         <div class="table_inner_containers">
@@ -72,7 +73,7 @@
             @selection-change="handleTableSelectionChange"
           >
             <template #empty>
-              <div class="es-empty es-empty-normal">
+              <div class="es-empty es-empty-normal" role="status">
                 <div class="es-empty-image">
                   <svg
                     class="es-empty-img-simple"

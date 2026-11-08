@@ -85,7 +85,8 @@ const props = defineProps<{
 }>()
 
 // W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
-const builtinEmptyText = resolveBuiltinText('emptyText')
+// computed：宿主在 app.use 时才配置 locale，模块级常量会冻在 import 时的缺省中文。
+const builtinEmptyText = computed(() => resolveBuiltinText('emptyText'))
 
 const emit = defineEmits<{
   'sort-change': [payload: { column: any; prop: string; order: string | null }]
