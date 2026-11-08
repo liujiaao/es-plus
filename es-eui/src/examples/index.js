@@ -59,6 +59,7 @@ import DialogStepDialog from './dialog/StepDialog.vue'
 import DialogMultiInstance from './dialog/MultiInstance.vue'
 import DialogAsyncContent from './dialog/AsyncContent.vue'
 import DialogDynamicBtn from './dialog/DynamicBtn.vue'
+import DialogDrawer from './dialog/Drawer.vue'
 
 import CombinationQueryFormLinkage from './combination/QueryFormLinkage.vue'
 import CombinationFormWithTable from './combination/FormWithTable.vue'
@@ -160,6 +161,7 @@ const componentMap = {
   './dialog/MultiInstance.vue': DialogMultiInstance,
   './dialog/AsyncContent.vue': DialogAsyncContent,
   './dialog/DynamicBtn.vue': DialogDynamicBtn,
+  './dialog/Drawer.vue': DialogDrawer,
   './combination/QueryFormLinkage.vue': CombinationQueryFormLinkage,
   './combination/FormWithTable.vue': CombinationFormWithTable,
   './combination/DialogNativeForm.vue': CombinationDialogNativeForm,
@@ -283,6 +285,7 @@ export const dialogExamples = [
   { key: 'AsyncContent', title: '异步内容弹窗', description: '打开后加载远程数据，instance.loading 控制遮罩，数据到达自动重渲染。' },
   { key: 'DynamicBtn', title: '动态按钮弹窗', description: 'configBtn 的 disabled 支持函数形式，随内容实时启停（审批场景）。' },
   { key: 'CachedInstance', title: '实例缓存：关闭不等于销毁', description: 'cacheKey 让弹窗关闭后保留实例（10 分钟未再打开才回收），重新打开时表单草稿、tab 选中原样还在。' },
+  { key: 'Drawer', title: '抽屉底座：列表 → 详情 / 编辑', description: "type: 'drawer' 把底座换成 el-drawer：render、configBtn、beforeClose 全部复用；Element UI 的抽屉没有 footer 槽，组件把按钮钉在正文底部。direction 决定从哪条边滑出（rtl/ltr 吃宽度，ttb/btt 吃高度）。" },
 ]
 
 export const crudExamples = [

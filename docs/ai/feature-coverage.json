@@ -599,6 +599,14 @@
       ]
     },
     {
+      "id": "dialog/13-drawer",
+      "group": "use-dialog",
+      "title": "抽屉底座：列表 → 详情 / 编辑",
+      "tokens": [
+        "useDialogApi"
+      ]
+    },
+    {
       "id": "advanced/01-form-table",
       "group": "linkage",
       "title": "查询表格完整版",
@@ -999,7 +1007,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 39,
+      "refs": 40,
       "uncovered": 58,
       "cases": [
         {
@@ -1235,6 +1243,14 @@
           ],
           "tier": "D",
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "dialog/Drawer",
+          "demo": "dialog/13-drawer",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
         },
         {
           "id": "dialog/DynamicBtn",
@@ -1870,7 +1886,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 97,
+      "refs": 98,
       "uncovered": 28,
       "cases": [
         {
@@ -2413,6 +2429,14 @@
         {
           "id": "es-dialog/DetailPreview",
           "demo": "dialog/07-detail-preview",
+          "tokens": [
+            "useDialogApi"
+          ],
+          "tier": "D"
+        },
+        {
+          "id": "es-dialog/Drawer",
+          "demo": "dialog/13-drawer",
           "tokens": [
             "useDialogApi"
           ],

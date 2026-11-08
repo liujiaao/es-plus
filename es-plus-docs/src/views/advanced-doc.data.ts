@@ -74,12 +74,14 @@ export const docsData: Record<string, any> = {
       { group: '业务场景', key: 'step-dialog', title: '分步向导弹窗', description: 'ElSteps + 多步骤 EsForm 切换，每步独立校验；renderFooter 按当前步骤动态渲染上一步/下一步/提交。', component: getComponent('dialog/09-step-dialog'), code: code('dialog/09-step-dialog') },
       { group: '业务场景', key: 'dynamic-btn', title: '动态按钮状态弹窗', description: '审批场景：Radio 切换操作类型，按钮 disabled 函数式动态禁用，条件校验。', component: getComponent('dialog/10-dynamic-btn'), code: code('dialog/10-dynamic-btn') },
       { group: '实例与定制', key: 'multi-instance', title: '多实例独立弹窗', description: 'onlyInstance: true 模式：每次调用创建独立容器，可同时打开多个弹窗，各自拖拽互不影响。', component: getComponent('dialog/11-multi-instance'), code: code('dialog/11-multi-instance') },
-      { group: '业务场景', key: 'form-table-dialog', title: '表单+表格+弹窗闭环', description: '弹窗内 EsTable 展示数据 + 操作列 btns 触发编辑弹窗 + configBtn 新增弹窗，两级弹窗嵌套 CRUD。', component: getComponent('dialog/12-form-table-dialog'), code: code('dialog/12-form-table-dialog') }
+      { group: '业务场景', key: 'form-table-dialog', title: '表单+表格+弹窗闭环', description: '弹窗内 EsTable 展示数据 + 操作列 btns 触发编辑弹窗 + configBtn 新增弹窗，两级弹窗嵌套 CRUD。', component: getComponent('dialog/12-form-table-dialog'), code: code('dialog/12-form-table-dialog') },
+      { group: '业务场景', key: 'drawer', title: '抽屉底座：列表 → 详情 / 编辑', description: "type: 'drawer' 把底座换成 el-drawer：render、configBtn、beforeClose、cacheKey 全部复用；direction 决定从哪条边滑出（rtl/ltr 吃宽度，ttb/btt 吃高度）。", component: getComponent('dialog/13-drawer'), code: code('dialog/13-drawer') }
     ],
     api: {
       'DialogOptions': [
         { name: 'type', type: "'dialog' | 'drawer'", desc: "底座形态，默认 'dialog'；传 'drawer' 换成侧边抽屉（el-drawer），render / configBtn / beforeClose / cacheKey 等能力全部复用" },
-        { name: 'direction', type: "'rtl' | 'ltr' | 'ttb' | 'btt'", desc: "抽屉弹出方向，默认 'rtl'（右侧），仅 type 为 'drawer' 时生效；横向时 width 是宽度，纵向时是高度" },        { name: 'title', type: 'string', desc: '弹窗标题' },
+        { name: 'direction', type: "'rtl' | 'ltr' | 'ttb' | 'btt'", desc: "抽屉弹出方向，默认 'rtl'（右侧），仅 type 为 'drawer' 时生效；横向时 width 是宽度，纵向时是高度" },
+        { name: 'title', type: 'string', desc: '弹窗标题' },
         { name: 'width', type: 'string | number', desc: '弹窗宽度，默认 "50%"' },
         { name: 'visible', type: 'boolean', desc: '显示状态。useDialog 未显式传入时补 true；缓存实例的开关也靠翻转它' },
         { name: 'loading', type: 'boolean', desc: '内容加载态：true 时在弹窗主体显示 loading 遮罩，默认 false' },

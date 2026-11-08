@@ -63,6 +63,17 @@
 
     <a-divider />
 
+    <!-- 抽屉底座 -->
+    <section id="drawer">
+      <h2>抽屉底座：列表 → 详情 / 编辑</h2>
+      <p><code>type: 'drawer'</code> 把底座换成 <code>a-drawer</code>：render、configBtn、beforeClose、cacheKey 全部复用；<code>direction</code> 映射成 placement，纵向时 <code>width</code> 就是高度。</p>
+            <CodeDemo :source="rawSFCs['./es-dialog/Drawer.vue']">
+        <EsDialogDrawer />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
     <!-- 嵌套弹窗 -->
     <section id="nested">
       <h2>嵌套弹窗</h2>
@@ -197,6 +208,7 @@ import EsDialogForm from './es-dialog/Form.vue'
 import EsDialogTable from './es-dialog/TableDialog.vue'
 import EsDialogConfirm from './es-dialog/Confirm.vue'
 import EsDialogAdvanced from './es-dialog/Advanced.vue'
+import EsDialogDrawer from './es-dialog/Drawer.vue'
 import EsDialogNestedModal from './es-dialog/NestedModal.vue'
 import EsDialogStepDialog from './es-dialog/StepDialog.vue'
 import EsDialogFormTableDialog from './es-dialog/FormTableDialog.vue'

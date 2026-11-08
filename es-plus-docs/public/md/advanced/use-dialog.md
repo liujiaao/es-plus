@@ -31,6 +31,7 @@ type: 'advanced'
 - 动态按钮状态弹窗 —— 审批场景：Radio 切换操作类型，按钮 disabled 函数式动态禁用，条件校验。
 - 多实例独立弹窗 —— onlyInstance: true 模式：每次调用创建独立容器，可同时打开多个弹窗，各自拖拽互不影响。
 - 表单+表格+弹窗闭环 —— 弹窗内 EsTable 展示数据 + 操作列 btns 触发编辑弹窗 + configBtn 新增弹窗，两级弹窗嵌套 CRUD。
+- 抽屉底座：列表 → 详情 / 编辑 —— type: 'drawer' 把底座换成 el-drawer：render、configBtn、beforeClose、cacheKey 全部复用；direction 决定从哪条边滑出（rtl/ltr 吃宽度，ttb/btt 吃高度）。
 
 ## API
 
