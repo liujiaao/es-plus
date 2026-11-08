@@ -12,6 +12,8 @@
  * 提取自 packages/vue3/src/config.ts (1.3.5)，行为完全一致。
  */
 
+import type { BuiltinMessages, LocaleOption } from './locale.js'
+
 /** 全局 HTTP 请求函数签名（AI 生成代码与用户配置共同遵守的调用契约） */
 export type HttpRequestFn = (params: Record<string, unknown>) => Promise<unknown>
 
@@ -47,6 +49,18 @@ export interface EsPlusGlobalConfig {
   permission?: (value: string) => boolean
   /** i18n 翻译函数（labelKey → text），不配置则降级使用 label */
   t?: (key: string) => string
+  /**
+   * 库内置文案的语言（W3-1）。
+   *
+   * 只管**框架自己产生**的文案（空态、加载中、CRUD 自动按钮、操作列标题、删除确认、
+   * 取消/确定…），与业务字段的 `labelKey` / `t` 是两个命名空间，刻意不复用。
+   *
+   * - `'zh-CN'`（缺省）/ `'en-US'`：内置字典；
+   * - `{ name, messages }`：自定义语言，`name` 以 `en` 开头时以英文为底。
+   */
+  locale?: LocaleOption
+  /** 内置文案的单键覆盖（优先级高于 `locale` 字典），例如 `{ operation: 'Actions' }` */
+  messages?: BuiltinMessages
   /** 全局 HTTP 请求函数（组件级 httpRequest 优先于此） */
   httpRequest?: (params: Record<string, unknown>) => Promise<unknown>
   /** 允许任意扩展键（业务方可通过这里塞入主题色、企业元信息等） */

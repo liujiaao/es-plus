@@ -22,6 +22,8 @@ import type {
   VxeSeqConfig,
   EsTableGlobalConfig,
   EsFormGlobalConfig,
+  LocaleOption,
+  BuiltinMessages,
 } from '@es-plus/core'
 
 export type {
@@ -526,6 +528,10 @@ export interface EsTableInstance {
 export interface EsPlusOptions {
   permission?: (value: string) => boolean
   t?: (key: string) => string
+  /** 库内置文案语言（W3-1；与 `t` / `labelKey` 是两个命名空间） */
+  locale?: LocaleOption
+  /** 内置文案单键覆盖（优先级高于 `locale` 字典） */
+  messages?: BuiltinMessages
   globalProperties?: boolean
   /** 跳过组件全局注册（自动导入模式下设为 true，见 index.ts 的 install） */
   skipComponentRegistration?: boolean

@@ -52,6 +52,16 @@ export {
   normalizeSectionConfig,
   normalizeEsPlusOptions,
 } from './config.js'
+// ─── 内置文案 / locale（W3-1）─────────────────────────────────
+export {
+  resolveBuiltinText,
+  resolveLocaleName,
+  getDefaultToolbarBtns,
+  getDefaultRowBtns,
+  ZH_CN_MESSAGES,
+  EN_US_MESSAGES,
+} from './locale.js'
+export type { BuiltinTextKey, BuiltinMessages, LocaleOption } from './locale.js'
 export type {
   EsPlusGlobalConfig,
   HttpRequestFn,

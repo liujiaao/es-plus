@@ -19,6 +19,7 @@
 
 // 组件档的配置形状由 config.ts 定义（归一化规则也在那边），这里只引用类型
 import type { EsTableGlobalConfig, EsFormGlobalConfig } from './config.js'
+import type { BuiltinMessages, LocaleOption } from './locale.js'
 
 /**
  * 通用 model 数据形状（表单/表格行数据）
@@ -1269,6 +1270,10 @@ export interface EsPlusOptions {
   permission?: (value: string) => boolean
   /** i18n 翻译函数 */
   t?: (key: string) => string
+  /** 库内置文案语言（W3-1；只管框架文案，与 `t` / `labelKey` 是两个命名空间） */
+  locale?: LocaleOption
+  /** 内置文案单键覆盖（优先级高于 `locale` 字典） */
+  messages?: BuiltinMessages
   /** 是否注册全局属性（$useDialog 等） */
   globalProperties?: boolean
   /** 跳过组件全局注册（自动导入模式下设为 true） */
