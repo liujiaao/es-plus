@@ -603,12 +603,16 @@ test('A8 片段拼装：三个生成片段拼进非 CRUD 分析页，筛选/图�
   const dlg = dialog(page)
   await expect(dlg).toBeVisible()
   await expect(dlg.locator('.el-dialog__header')).toContainText('查看')
-  await expect(dlg.getByRole('button', { name: '关闭' })).toHaveCount(1)
+  // 作用域必须是 footer：W4 给弹窗头部的图标按钮补了 aria-label="关闭"，不限定就会
+  // 同时命中头部的 X（`getByRole` 的 name 默认是子串匹配）—— 本断言判的是**底部动作区**
+  // 「只读模式没有『确定』、只剩『关闭』」，不是「整窗只有一个名字含关闭的按钮」。
+  const footer = dlg.locator('.el-dialog__footer')
+  await expect(footer.getByRole('button', { name: '关闭' })).toHaveCount(1)
   await expect(dlg.getByRole('button', { name: '确定' })).toHaveCount(0)
   const items = dlg.locator('.el-form-item')
   await expect(items.filter({ hasText: '客户' }).locator('input')).toHaveValue('深圳恒佳电子')
   await expect(items.filter({ hasText: '金额' }).locator('input')).toHaveValue('2514')
-  await dlg.getByRole('button', { name: '关闭' }).click()
+  await footer.getByRole('button', { name: '关闭' }).click()
   await expect(dlg).toBeHidden()
 
   // 产物未经手改：三片段 × 三个目标页签都来自产物，源码区逐块非空
