@@ -323,14 +323,16 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
 - [x] 三站所有页面出现同一组数字（来自 `slogan.json`），grep 不到第二套口径
       —— 三站均 76.5%；`grep -r "77%"` 为空；数字由构建脚本从源码实测
 - [x] API 表描述列 ≥ 320px —— es-form 实测 **330px**（基线 104px）
-- [ ] 主站 API 页高度 ≤ 10,000px —— **13,954px**（基线 18,095px，−23%）。
-      差口不在 API 表（3,109px），而在「使用案例」的 20 个实时演示（8,810px）；
-      再往下走是 IA 拆分（同 es-eui 表格页的做法），单列后续批次，见 §9
+- [x] 主站 API 页高度 ≤ 10,000px —— es-form **5,972px**（基线 18,095px，−67%）。
+      做法是示例分组（IA 拆分）：20 个实时演示按「基础 / 联动与数据 / 控件扩展 / 上传与按钮 /
+      模式与组合」五组折叠成一组一屏，深链 `#demo-<key>` 会自动切到所在分组（锚点、
+      搜索索引、`cases.json` 全部不变）。`layout.spec.ts` 第 4 条守 ≤10,000px 与深链切换
 - [x] 三站 390×844 无横向溢出，表格可横向滚动 —— 三站溢出均为 0；
       演示表 `min-width:560px` + 容器 `overflow-x:auto`（runtime-e2e `layout.spec.ts` 守）
 - [x] 所有承载文字的色组合 ≥ 4.5:1（大字 ≥ 3:1）—— `check:a11y` 全绿（含令牌反算）
 - [x] 三站 header 具备搜索 —— 主站全量索引；es-pc / es-eui 为**路由词表**站内检索
-      （⌘K / ↑↓ / Enter / Esc，面板外观只在共享主题一份）。暗色与语言切换仍未做，见 §9
+      （⌘K / ↑↓ / Enter / Esc，面板外观只在共享主题一份）。暗色：主站 + es-pc 已具备
+      （`check:dark-mode` 守），es-eui 仍 light-only；语言切换三站均未做，见 §9.8
 - [x] `check:design-tokens` 与视觉回归进入 CI
       —— 两者都进了分组 runner（14 组 / 137 步）；版式回归用不变量断言，不是像素 diff
 
@@ -357,14 +359,14 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
 | P1-1 | ✅ | 首页 11 屏 / 8,935px → **5 屏 / 4,632px** |
 | P1-2 | ✅ | 三站首页 section 统一走 `--es-landing-max`（1200）单列网格；820 / 680 只保留作正文行宽，不再是第二套栅格 |
 | P1-3 | ✅ | 组件卡固定 4 列（平板 2×2），无孤儿行 |
-| P1-4 | ◐ | **搜索已具备**：主站全量索引；es-pc / es-eui 新增路由词表站内检索（⌘K / ↑↓ / Enter / Esc，面板外观只在共享主题一份）。**暗色与语言切换仍未做** —— 见 9.4 |
+| P1-4 | ◐ | **搜索已具备**：主站全量索引；es-pc / es-eui 新增路由词表站内检索（⌘K / ↑↓ / Enter / Esc，面板外观只在共享主题一份）。**暗色**：主站 ✅、es-pc ✅（§9.8）、es-eui 明确 light-only（Element UI 2 主题在 SCSS 编译期）。**语言切换**三站均未做 —— 见 9.8 |
 | P1-5 | ✅ | 散文页右栏 TOC：主站、es-pc、es-eui 三站齐备（`<1280px` 收起） |
 | P1-6 | ✅ | es-eui 公告条回到文档流、可关闭，不再吸顶 |
 | P1-7 | ✅ | es-pc 版本号改中性胶囊 + 等宽数字，不再与主 CTA 抢层级 |
 | P1-8 | ✅ | 新建 `check:design-tokens` 回归基线（221 文件 / 4,057 处存量）；新代码不允许新增字面量 |
 | P1-9 | ✅ | Monaco / vxe 都是独立 chunk、按路由加载；主站首屏 452.6 KB gz 里不含 Monaco（`check:bundle-budget` 可见） |
 | P1-10 | ✅ | `AiLiveDemo` 填真实订单数据，CTA 回到品牌蓝（`type="primary"`） |
-| P1-11 | ◐ | es-eui 表格页 20,492px → 12,610px，并拆出 3 个子页（5,189 / 4,539 / 5,209px）；主站 es-form 仍 13,954px，见 9.4 |
+| P1-11 | ✅ | es-eui 表格页 20,492px → 12,610px，并拆出 3 个子页（5,189 / 4,539 / 5,209px）；主站 es-form 13,954 → **5,972px**（示例分组，见 §9.8） |
 
 ### 9.3 方案 §6.4 的治理项（防回潮）
 
@@ -379,10 +381,17 @@ P2-1 案例缩略图不可辨；P2-2 三段灰字 18/20/22 无节奏；P2-3 字�
 
 ### 9.4 未完成项（附原因与后续批次）
 
-1. **es-pc / es-eui 的暗色与语言切换**（P1-4 剩余两腿）。
-   暗色的真实成本不在开关，而在**字面色债**：两站样式里分别有 1,083 / 1,981 处 hex/px 字面量，直接加 `.dark` 会得到「白底深字 + 局部深底」的半成品。语言切换同理 —— 两站目前只有中文文案，加一个切不动的开关比没有更差。
-   建议按审计 §7 的 S4 单独立项：先做字面色 → 令牌的收敛（`check:design-tokens` 基线已就绪，可按文件递减），再上主题与 i18n。
-2. **主站单页长度**（验收 4 的差口）。es-form 13,954px，其中「使用案例」8,810px（20 个实时演示）。继续压缩只能走 IA 拆分（同 es-eui 表格页四页化的做法），需要连带改锚点、侧栏、搜索索引与 `cases.json`，属于独立批次。
+> 2026-11-08 更新：条目 1 的**暗色腿**已在 es-pc 落地、条目 2 已完成，明细见 §9.8；
+> i18n 与 es-eui 暗色仍按本文原因保持未做。
+
+1. ~~**es-pc / es-eui 的暗色与语言切换**（P1-4 剩余两腿）。~~ 拆开后：
+   - **es-pc 暗色 ✅**（§9.8）：字面色债先按令牌收敛，再接 `darkAlgorithm`。
+   - **es-eui 暗色 ❌（不做）**：Element UI 2 的主题是编译期 SCSS（`theme-chalk` 变量 → 打包成独立 CSS），
+     没有运行时暗色。要做只能整站编译两套产物 + 运行时换 `<link>`，与「同一份构建」的站点约定冲突；
+     成本远超其余两站之和，收益是第三个站的深色。结论：保持 light-only，由 `check:dark-mode` 显式断言。
+   - **i18n ❌（不做）**：两站文案全在 `.vue` 模板里，没有 locale 文件、没有翻译语料；
+     加一个只能切到空白的语言开关，比没有更差（审计原话）。真要做需要先抽文案层，属独立批次。
+2. ~~**主站单页长度**（验收 4 的差口）。~~ ✅ 示例分组已把 es-form 压到 5,972px，见 §9.8。
 
 ### 9.5 验证记录
 
@@ -432,6 +441,47 @@ npm run theme:sync && theme:check # 11 份主题资源三站逐字节一致
 **副题的孤字**：副题 20px、中文整句实测 730px，`max-width` 从 640 提到 780（留 50px 余量）后桌面保持一行；窄到手机宽度时自然折成两行，末行仍有 80% 以上填充，不会只剩「管。」两个字。
 
 **度量**：首页总高 4,764 → **4,868px**（仍 <5,000）；1440 / 1280 / 1100 / 768 / 390 与 en、暗色逐屏复核；`check:consistency` 137/137（两轮均绿，121.9s / 115.6s）、`layout.spec.ts` 3/3、`check:design-tokens`（4045 处）与 `check:landing` / `check:site-claims` / `check:a11y` / `check:motion` / `check:mobile` / `check:page-meta` 全绿；`npm run build` 通过。截图：`audit/hero-before.png`（改前）、`hero-after-f.png`（1440，含逗号版）、`hero-dengxian-1440.png`（最终：等线 + 去逗号）、`hero-en-dengxian.png`、`hero-390-final.png`、`font-probe-40.png`（雅黑/等线/Noto 三体对照）。
+
+### 9.8 第四轮：P2 打磨 + es-form 分组 + es-pc 暗色（2026-11-08）
+
+#### P2 状态
+
+| # | 状态 | 落地内容 |
+|---|---|---|
+| P2-3 | ✅ | 字号阶梯补 26 / 28 / 32 三档（`--es-text-26/28/32`）。此前页面标题只能在 24 与 30 之间写 `font-size: 26px` 这类字面量，三站逐页漂移；现已按令牌替换 30 个文件。档位注释写明只给「页面级标题 / 强调数字」用 |
+| P2-4 | ✅ | 澄清**两种容器、不是两套栅格**：`--es-layout-max: 1440px` 是文档壳上限（侧栏 + 正文 + 右栏 TOC），营销页用 `--es-landing-max: 1200`。tokens 注释与站点用法对齐，不再读成「两套 max-width 打架」 |
+| P2-1 / P2-2 / P2-5 / P2-6 | — | 本轮未涉及（前两个由 §9.6 的首页迭代与案例页图廊一并处理，P2-5 / P2-6 仍待复核） |
+
+#### es-form 示例分组（验收 4）
+
+20 个实时演示不再一条长列表，而是五个分组标签：基础(3) / 联动与数据(6) / 控件扩展(4) / 上传与按钮(3) / 模式与组合(4)，一次只挂一组（默认 3–6 个 playground）。页面 13,954 → **5,972px**。
+
+三个不能动的约束：① 每个示例的 `id="demo-<key>"` 与锚点不变（搜索索引、`cases.json`、站内外链全靠它）；② 深链进入时先根据 hash 选中所在分组，再 `nextTick` 之后才跑 `realignToHash`，否则目标元素还没挂载、滚动落空；③ 其余组件（`group` 字段都没有）仍走原样全量渲染，分组条只在组数 > 1 时出现。
+
+#### es-pc 暗色
+
+- 口径与主站逐字一致：首屏内联脚本（`localStorage 'theme'` 优先 → 跟随系统）+ `stores/theme.js` 同步 `classList` / `colorScheme` / `data-vxe-ui-theme`。
+- Ant Design Vue 4 的暗色**不是 CSS 类**：`App.vue` 的 `ConfigProvider` 按 `isDark` 在 `darkAlgorithm` / `defaultAlgorithm` 之间切换，否则就是「外壳黑、a-* 全亮」。
+- 换肤不是开关问题，是**字面色债**：先按令牌收敛 21 个文件的 `#fff / #fafafa / #f5f5f5 / #f6f8fa / #f5f7fa`，再补三处结构性漏点：
+  1. **标题色**：22 处 `color: #1a1a2e` 写死在视图 scoped 样式里，深色下标题与背景同为近黑（`h1[data-v-*]` 特异性等于 `.es-doc-content h1`，后加载就赢）→ 全部换 `var(--es-doc-heading)`；
+  2. **表头行**：`adapter-antdv` 把 `headerCellStyle` 交给 a-table 的 `customHeaderRow`，内联样式落在 **`<tr>`** 而不是 `<th>` —— 只压 `th` 的话，表头仍有一整条 `rgb(245,247,250)`。共享主题里补 `.dark .ant-table-thead > tr` 与 `th` 各一条（`!important` 是压内联的唯一手段），并给 th 补 `color` 令牌；
+  3. **演示行底色**：`CellMerge` 的 `#f0f9eb / #fdf6ec` 改为状态色低透明度（同一个 rgba 在白底是浅绿、在深底是暗绿），另把 `ExpandRow` 的内联 `#f5f7fa / #909399 / #303133` 换令牌。
+- 守卫：`check:dark-mode` 从「一个暗色站 + 两个 light-only 站」改成**站清单**，断言 es-pc 的首屏脚本 / store 规则 / `darkAlgorithm` / `initTheme()` 调用，以及「src 下至少有一个 `.vue` 真的调用 `toggleTheme`」（有深色规则没人能切 = 死配置，正是审计对旧版的判词）。es-eui 继续 light-only，理由见 §9.4。
+- 复核：1440 下 `/ /cases /es-form /es-table /flagship-approval /ai-generated /guide /es-dialog /es-crud-page` 九个页面在暗色里**没有面积 >30k px² 的亮色块**；390×844 无横向溢出且同样无亮块；亮色回归（`theme=light`）body 仍是 `rgb(247,248,250)` / 深色文字。
+
+**未做（明确不做的两件）**：es-eui 暗色、三站 i18n。原因见 §9.4，不做「半成品」是审计自己的结论。
+
+#### 验证
+
+```
+node scripts/check-dark-mode.mjs     # es-plus-docs / es-pc 暗色口径一致，es-eui light-only
+npm run check:consistency            # 137/137 全绿（110.0s）
+npx playwright test tests/layout.spec.ts   # 4/4（新增第 4 条：es-form ≤10,000px + 深链切组）
+npm run check:design-tokens -- --update    # 基线 4,057 → 3,917 处（221 文件）
+es-plus-docs / es-pc / es-eui 三站构建  # 全绿（es-eui 用 --dest dist-verify，验完删除）
+```
+
+> 数字账：令牌基线从 4,057 降到 3,917（60 个文件减少、无文件增加）。`theme:sync` 之后 `check:raw-sources` 曾红一次 —— 是上一轮 es-eui 源码的 `font-size` 改动没有重新生成 raw sources（97 个文件），跑生成器即恢复；这是生成物按设计的行为，不是守卫误报。
 
 ---
 
