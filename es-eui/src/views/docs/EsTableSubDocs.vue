@@ -41,13 +41,12 @@
         </router-link>
       </div>
       <CodePlayground
-        v-for="(ex, i) in examples"
+        v-for="ex in examples"
         :key="ex.key"
         :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('table', ex.key)"
-        :default-expanded="i < 2"
       >
         <template #preview>
           <component :is="getComponent('table', ex.key)" />
