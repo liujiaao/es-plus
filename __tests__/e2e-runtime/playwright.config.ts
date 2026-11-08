@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Tier 2 运行时 E2E（Playwright）——三个真实浏览器 project：
+// Tier 2 运行时 E2E（Playwright）——真实浏览器 project：
 //
 //   1. `vue2`  —— vue2 的片段/CRUD（真实 Element UI + 真实 @es-plus/vue2 dist）。
 //      vue3/antdv 的同类断言已由 Tier 1 vitest 覆盖，这里只补 vue2 不可行的部分。
@@ -16,8 +16,15 @@ import { defineConfig, devices } from '@playwright/test'
 //      390 下无横向溢出、演示表格可横滑。也跑在 `es-plus-docs` 那条 webServer 上；
 //      它自己 setViewportSize，所以只挂了一个 project，不随 `mobile-docs` 再跑一遍。
 //      为什么不挂 `vue2`：那个 fixture 只服务片段/CRUD，没有文档站。
+//   5. `vue3-table` / `antdv-table`（W4）—— 表格交互：排序 / 选择 / 分页 / 导出 /
+//      行内编辑各一条，用真实 Element Plus / Ant Design Vue 渲染两个包的 dist 产物。
+//      这两条腿补的是「Tier 1 vitest+happy-dom 覆盖不到」的浏览器行为：表头点击后
+//      真的重排、真实下载事件、vxe 行内编辑真的进编辑器。共用一台 dev server
+//      （`e2e-runtime/table`，`?lib=vue3|antdv`），不增加启动成本。
 const PORT = 51730
 const DOCS_PORT = 51731
+// 表格 fixture（vue3 / antdv 共用）：`?lib=` 选库，见 table/src/main.ts。
+const TABLE_PORT = 51740
 
 export default defineConfig({
   testDir: './tests',
@@ -34,7 +41,7 @@ export default defineConfig({
       name: 'vue2',
       // 窄屏腿（mobile.spec.ts）打的是主站，不属于 vue2 fixture —— 两个都要排除，
       // 否则 vue2 那条 dev server 会去跑一个它根本不服务的站点。
-      testIgnore: /(ai-gallery|ai-crud|mobile|layout|contrast)\.spec\.ts/,
+      testIgnore: /(ai-gallery|ai-crud|mobile|layout|contrast|table-vue3|table-antdv)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT}` },
     },
     {
@@ -49,6 +56,21 @@ export default defineConfig({
       name: 'mobile-docs',
       testMatch: /mobile\.spec\.ts/,
       use: { ...devices['Pixel 5'], baseURL: `http://localhost:${DOCS_PORT}` },
+    },
+    {
+      // vue3 表格交互腿（W4）：排序 / 选择 / 分页 / 导出 / 行内编辑各一条。
+      // 用真实 Element Plus 渲染 `@es-plus/vue3` 的 dist 产物 —— Tier 1 的
+      // vitest+happy-dom 覆盖不到「点击表头后浏览器里真的重排」这类行为。
+      name: 'vue3-table',
+      testMatch: /table-vue3\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${TABLE_PORT}` },
+    },
+    {
+      // antdv 表格交互腿（W4）：同一套五条交互，换成 Ant Design Vue 的适配器。
+      // 与 vue3-table 共用同一台 dev server（`?lib=antdv`），不增加启动成本。
+      name: 'antdv-table',
+      testMatch: /table-antdv\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${TABLE_PORT}` },
     },
   ],
   webServer: [
@@ -71,6 +93,16 @@ export default defineConfig({
       url: `http://localhost:${DOCS_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
+    },
+    {
+      // 表格 fixture：一台 dev server 同时服务 vue3-table / antdv-table 两条腿。
+      // 它消费 `@es-plus/{vue3,adapter-antdv}` 的 dist（workspace 软链），
+      // 由 `pretest:e2e:runtime` 负责先构建。
+      command: 'npx --no-install vite --port 51740 --strictPort',
+      cwd: './table',
+      url: `http://localhost:${TABLE_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
     },
   ],
 })

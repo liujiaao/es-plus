@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>es-plus table — Tier 2 runtime E2E / bench fixture</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      .fixture {
+        padding: 12px;
+      }
+      .fixture__bar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .fixture__btn {
+        padding: 4px 12px;
+        cursor: pointer;
+      }
+      .fixture__result {
+        font-size: 12px;
+        color: #666;
+      }
+      .fixture__table {
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

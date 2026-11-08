@@ -93,6 +93,7 @@
   },
   "devDependencies": {
     "vxe-table": "^4.6.0",
+    "vxe-pc-ui": "^4.16.23",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitejs/plugin-vue-jsx": "^4.0.0",
     "@vue/test-utils": "^2.4.0",

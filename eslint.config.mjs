@@ -103,6 +103,9 @@ export default [
 
   // ─── 4. Vue 3 SFC ────────────────────────────────────────────────
   ...vuePresetFor('packages/vue3/**/*.vue', 'flat/recommended'),
+  // 表格交互 fixture（__tests__/e2e-runtime/table）同样是 Vue 3 SFC，且没有自己的
+  // package.json；不显式路由就会落到基础段的 TS 解析器上 → 模板语法直接解析报错。
+  ...vuePresetFor('__tests__/e2e-runtime/table/**/*.vue', 'flat/recommended'),
 
   // ─── 5. node-script files ────────────────────────────────────────
   {

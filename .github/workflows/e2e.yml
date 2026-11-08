@@ -88,8 +88,11 @@ jobs:
         timeout-minutes: 5
 
   runtime-e2e:
-    # Tier 2 运行时 E2E：真实 Chromium 渲染真实 Element UI + 真实 @es-plus/vue2 dist，
-    # 覆盖 vitest（Tier 1）无法验证的浏览器级 CRUD 交互（弹窗、表单提交、列表刷新）。
+    # Tier 2 运行时 E2E：真实 Chromium 渲染真实组件库 + 真实 dist 产物，覆盖 vitest
+    # （Tier 1）无法验证的浏览器级行为 —— vue2 的 CRUD/片段，以及 vue3/antdv 的表格
+    # 五条交互（排序 / 选择 / 分页 / 导出 / vxe 行内编辑，W4 新增）。
+    # 注意：job 名保持原样 —— 分支保护/必需状态检查按 job 名匹配，改名会让 PR 等一个
+    # 永远不会出现的检查。
     name: Runtime e2e (vue2 / playwright)
     runs-on: ubuntu-latest
     steps:
@@ -103,8 +106,8 @@ jobs:
             package-lock.json
             es-plus-docs/package-lock.json
       - run: npm ci --legacy-peer-deps
-      # vue2 dist 由 pretest:e2e:runtime 钩子构建，但其构建依赖 core/shared dist，
-      # 故先把依赖链显式建好，与 unit-tests job 一致。
+      # 三个 fixture 消费的 dist（vue2 / vue3 / adapter-antdv）由 pretest:e2e:runtime
+      # 钩子构建，但其构建依赖 core/shared dist，故先把依赖链显式建好，与 unit-tests job 一致。
       - name: Build @es-plus/core
         run: npm run build --workspace @es-plus/core
       - name: Build @es-plus/shared
@@ -118,13 +121,13 @@ jobs:
         run: cd es-plus-docs && npm ci --legacy-peer-deps
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Run runtime e2e (vue2)
+      - name: Run runtime e2e (vue2 + vue3-table + antdv-table + docs)
         run: npm run test:e2e:runtime
-        timeout-minutes: 10
+        timeout-minutes: 15
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-vue2
+          name: playwright-report-runtime
           path: __tests__/e2e-runtime/playwright-report
           retention-days: 7
