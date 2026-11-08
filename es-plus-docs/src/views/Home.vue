@@ -1312,7 +1312,7 @@ $font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', '
 
 @media (max-width: 480px) {
   .hero-title {
-    font-size: 32px;
+    font-size: var(--es-text-32);
   }
 
   .hero-actions .el-button {

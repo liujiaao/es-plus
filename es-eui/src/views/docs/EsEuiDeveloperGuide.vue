@@ -1574,7 +1574,7 @@ $bg-light: #f7fafc;
 // Responsive
 @media (max-width: 768px) {
   .dev-guide-page { padding: 20px 16px; }
-  .hero-section { padding: 40px 20px; .hero-title { font-size: 28px; } }
+  .hero-section { padding: 40px 20px; .hero-title { font-size: var(--es-text-28); } }
   .content-card { padding: 20px; }
   .pipe-diagram { flex-direction: column; .pipe-step::after { display: none; } }
   .info-grid { grid-template-columns: 1fr; }

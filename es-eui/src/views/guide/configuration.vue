@@ -1175,7 +1175,7 @@ $bg-light: #f7fafc;
     padding: 40px 20px;
 
     .hero-title {
-      font-size: 32px;
+      font-size: var(--es-text-32);
     }
   }
 

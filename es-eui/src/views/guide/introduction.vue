@@ -617,7 +617,7 @@ $gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-br
       text-align: center;
 
       .stat-num {
-        font-size: 32px;
+        font-size: var(--es-text-32);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         color: var(--es-text-primary);
@@ -817,7 +817,7 @@ $gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-br
         box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 
         .goal-num {
-          font-size: 32px;
+          font-size: var(--es-text-32);
           font-weight: 700;
           color: $primary-color;
           opacity: 0.3;
@@ -1249,7 +1249,7 @@ $gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-br
     z-index: 1;
 
     h2 {
-      font-size: 32px;
+      font-size: var(--es-text-32);
       font-weight: 700;
       margin: 0 0 12px;
     }

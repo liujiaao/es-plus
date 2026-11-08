@@ -231,7 +231,7 @@ usePageMeta('ai-generated')
   margin-bottom: 16px;
 
   h1 {
-    font-size: 26px;
+    font-size: var(--es-text-26);
     margin: 8px 0 10px;
     color: var(--text-color-primary);
   }

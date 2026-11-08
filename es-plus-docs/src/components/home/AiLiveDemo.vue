@@ -259,7 +259,7 @@ generate()
 }
 
 .ai-live-title {
-  font-size: 28px;
+  font-size: var(--es-text-28);
   font-weight: 600;
   margin: 0 0 12px;
   color: var(--text-color-primary);

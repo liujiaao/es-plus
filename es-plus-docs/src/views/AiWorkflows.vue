@@ -94,7 +94,7 @@ usePageMeta('ai-gallery-workflows')
 }
 .wf-hero h1 {
   margin: 12px 0 8px;
-  font-size: 26px;
+  font-size: var(--es-text-26);
 }
 .wf-hero p {
   color: var(--es-text-regular);

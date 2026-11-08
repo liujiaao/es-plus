@@ -282,7 +282,7 @@ usePageMeta('cases')
   border-bottom: 1px solid var(--border-color-lighter);
 
   h1 {
-    font-size: 32px;
+    font-size: var(--es-text-32);
     font-weight: 700;
     color: var(--text-color-primary);
     margin-bottom: 12px;

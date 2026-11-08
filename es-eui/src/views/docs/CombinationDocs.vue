@@ -233,7 +233,7 @@ export default {
   }
 
   h1 {
-    font-size: 32px;
+    font-size: var(--es-text-32);
     margin-bottom: 10px;
     color: #303133;
   }
