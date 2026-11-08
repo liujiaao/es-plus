@@ -1,5 +1,5 @@
 import { computed, unref, type Ref } from 'vue'
-import { synthesizeLeadingColumns } from '@es-plus/core'
+import { synthesizeLeadingColumns, buildColumnFilterMethod, hasColumnFilters } from '@es-plus/core'
 import type { TableColumn, TableOptions } from '../../../../types'
 
 export interface VxeColumnOption {
@@ -169,6 +169,23 @@ function adaptSingleCol(
 
   if ((col as any).editRender) {
     base.editRender = (col as any).editRender
+  }
+
+  // W3-2 列筛选（与 vue3 / vue2 适配器同一口径）：vxe 的选项键是 `label`，
+  // 比较语义由 core 合成；自定义 filterMethod 原样透传。
+  if (hasColumnFilters(col)) {
+    base.filters = ((col.filters || []) as Array<{ text: string; value: unknown }>).map((f) => ({
+      label: f.text,
+      value: f.value,
+    }))
+    base.filterMultiple = col.filterMultiple !== false
+    if (typeof col.filterMethod === 'function') {
+      const custom = col.filterMethod
+      base.filterMethod = ({ value, row }: any) => custom(value, row)
+    } else {
+      const local = buildColumnFilterMethod(col)
+      if (local) base.filterMethod = ({ value, row }: any) => local(value, row)
+    }
   }
 
   if ((col as any).footerFormatter) {

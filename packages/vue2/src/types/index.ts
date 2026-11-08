@@ -20,6 +20,8 @@ export type {
   LayoutFormProps,
   TableColumn,
   TableColumnDataOption,
+  ColumnFilterMode,
+  TableColumnFilterOption,
   ConfigTableOut,
   TableOptions,
   PaginationConfig,

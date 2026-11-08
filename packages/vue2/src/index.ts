@@ -203,6 +203,8 @@ export type {
   VxeProxyConfig,
   VxeExpandConfig,
   VxeSeqConfig,
+  ColumnFilterMode,
+  TableColumnFilterOption,
 } from '@es-plus/core'
 
 // ─── 默认导出（带 install 的对象，可直接 Vue.use()） ───

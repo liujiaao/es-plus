@@ -76,7 +76,7 @@ export default defineComponent({
       default: () => ({}),
     },
   },
-  emits: ['sort-change', 'selection-change', 'row-click', 'row-dblclick', 'row-contextmenu', 'cell-edit'],
+  emits: ['sort-change', 'filter-change', 'selection-change', 'row-click', 'row-dblclick', 'row-contextmenu', 'cell-edit'],
   setup(props, { emit, expose }) {
     const gridRef = ref(null)
 
@@ -187,6 +187,10 @@ export default defineComponent({
         ...vxeOn,
         'edit-actived': chain(handleEditActived, vxeOn['edit-actived']),
         'edit-closed': chain(handleEditClosed, vxeOn['edit-closed']),
+        // W3-2：filter-change 也走这条链 —— 用户在 options.vxeOn 里注册的同名回调
+        // 先拿到 vxe 原始载荷，随后我们 emit 归一后的 `{ prop, values }`
+        // （与 vue3 / antdv 同形；本地过滤已由列上的 filterMethod 完成）。
+        'filter-change': chain(handleFilterChange, vxeOn['filter-change']),
       }
     })
 
@@ -383,6 +387,16 @@ export default defineComponent({
       emit('sort-change', { column: { prop: field }, prop: field, order: esOrder })
     }
 
+    // W3-2：vxe 的 filter-change 载荷是 `{ column, field, property, values, ... }`，
+    // 归一成三端同形的 `{ prop, values }`（本地过滤已由列上的 filterMethod 完成）。
+    function handleFilterChange(params: any) {
+      if (!params) return
+      emit('filter-change', {
+        prop: params.property || params.field || '',
+        values: Array.isArray(params.values) ? params.values : [],
+      })
+    }
+
     function handleCellClick({ row, $event }: any) {
       emit('row-click', row, $event)
     }
@@ -464,6 +478,7 @@ export default defineComponent({
       handleCheckboxChange,
       handleCheckboxAll,
       handleSortChange,
+      handleFilterChange,
       handleCellClick,
       handleCellDblclick,
       handleRowContextmenu,

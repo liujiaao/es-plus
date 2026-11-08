@@ -116,7 +116,9 @@ export type {
   VxeExpandConfig,
   VxeSeqConfig,
   TableEngineExposed,
-  CellEditPayload
+  CellEditPayload,
+  ColumnFilterMode,
+  TableColumnFilterOption
 } from '@es-plus/core'
 
 // vxe-table 打印辅助（spanMethod + 动态合并场景）

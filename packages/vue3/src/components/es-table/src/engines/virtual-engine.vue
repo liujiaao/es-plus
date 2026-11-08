@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef, inject } from 'vue'
+import { computed, ref, toRef, inject, watch } from 'vue'
 import { ElAutoResizer, ElTableV2 } from 'element-plus'
 import type { TableColumn, TableOptions } from '../../../../types'
 import { useColumnAdapter } from './use-column-adapter'
@@ -64,6 +64,23 @@ const props = defineProps<{
 
 // W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
 const builtinEmptyText = resolveBuiltinText('emptyText')
+
+// W3-2：虚拟引擎（el-table-v2）没有列筛选 UI。列上声明了 filters 时不静默丢弃 ——
+// DEV 下点名这些列，提示改用默认引擎 / vxe（`filter-change` 事件也不会从本引擎发出）。
+if (import.meta.env.DEV) {
+  watch(
+    () => props.columns.filter((c) => Array.isArray((c as any).filters) && (c as any).filters.length > 0),
+    (cols) => {
+      if (!cols.length) return
+      console.warn(
+        `[es-plus] 虚拟引擎不支持列筛选，以下列的 filters 不会渲染：${cols
+          .map((c) => c.prop || c.key || '(unnamed)')
+          .join(', ')}。请改用默认引擎或 engine:'vxe'（vxe 需 vxe-table）。`,
+      )
+    },
+    { immediate: true },
+  )
+}
 
 const emit = defineEmits<{
   'sort-change': [payload: { column: any; prop: string; order: string | null }]

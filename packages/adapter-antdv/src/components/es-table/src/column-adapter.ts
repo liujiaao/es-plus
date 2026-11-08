@@ -4,7 +4,7 @@
  * 将 ES-Plus TableColumn 转换为 Ant Design Vue 的 columns 配置。
  * 对齐 @es-plus/vue3 use-column-adapter 的列处理（labelKey/sortable/groups/emptyPlaceholder）。
  */
-import { LEADING_COLUMN_DEFAULTS, synthesizeLeadingColumns } from '@es-plus/core'
+import { LEADING_COLUMN_DEFAULTS, synthesizeLeadingColumns, buildColumnFilterMethod } from '@es-plus/core'
 import type { TableColumn } from '../../../types'
 
 /**
@@ -67,6 +67,19 @@ export function adaptColumn(
   // 不再用 compare:()=>0 的本地 no-op 排序。
   if (col.sortable) {
     advCol.sorter = true
+  }
+
+  // W3-2 列筛选：契约键与 el-table / vxe 端同名同形（filters / filterMultiple / filterMode），
+  // 适配到 a-table 的是 `filters` + `filterMultiple` + `onFilter`。比较语义由 core 单源合成，
+  // 三端默认都是 equals；自定义 filterMethod 直接当 onFilter 用（签名恰好一致）。
+  // 注意 a-table 的列 key 已在上方定成 `col.key || col.prop || fallbackKey`，
+  // change 事件里的 `filters` 就以它为键 —— 组件层再映射回 prop。
+  if (Array.isArray(col.filters) && col.filters.length > 0) {
+    advCol.filters = col.filters.map((f) => ({ text: f.text, value: f.value }))
+    advCol.filterMultiple = col.filterMultiple !== false
+    const local =
+      typeof col.filterMethod === 'function' ? col.filterMethod : buildColumnFilterMethod(col)
+    if (local) advCol.onFilter = (value: unknown, record: Record<string, unknown>) => local(value, record)
   }
 
   // 单元格/表头类名

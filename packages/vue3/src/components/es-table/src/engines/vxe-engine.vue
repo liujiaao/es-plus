@@ -18,6 +18,7 @@
     @checkbox-change="handleCheckboxChange"
     @checkbox-all="handleCheckboxAll"
     @sort-change="handleSortChange"
+    @filter-change="handleFilterChange"
     @cell-click="handleCellClick"
     @cell-dblclick="handleCellDblclick"
     @row-contextmenu="handleRowContextmenu"
@@ -88,6 +89,7 @@ const builtinEmptyText = resolveBuiltinText('emptyText')
 
 const emit = defineEmits<{
   'sort-change': [payload: { column: any; prop: string; order: string | null }]
+  'filter-change': [payload: { prop: string; values: unknown[] }]
   'selection-change': [rows: Record<string, unknown>[]]
   'row-click': [row: Record<string, unknown>, event: Event]
   'row-dblclick': [row: Record<string, unknown>, event: Event]
@@ -331,6 +333,16 @@ function handleCheckboxAll({ records }: any) {
 
 function handleSortChange({ field, order }: any) {
   emit('sort-change', { column: { prop: field }, prop: field, order: normalizeVxeOrder(order) })
+}
+
+// W3-2：vxe 的 filter-change 载荷是 `{ column, field, property, values, ... }`，
+// 归一成三端同形的 `{ prop, values }`（本地过滤已由列上的 filterMethod 完成）。
+function handleFilterChange(params: any) {
+  if (!params) return
+  emit('filter-change', {
+    prop: params.property || params.field || '',
+    values: Array.isArray(params.values) ? params.values : [],
+  })
 }
 
 function handleCellClick({ row, $event }: any) {

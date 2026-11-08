@@ -65,9 +65,10 @@
             ref="tableRef"
             style="width: 100%"
             v-bind="tableBindAttrs"
-            v-on="$listeners"
+            v-on="elTableListeners()"
             :data="effectiveDataSource"
             @sort-change="changeTableSort"
+            @filter-change="handleColumnFilterChange"
             @selection-change="handleTableSelectionChange"
           >
             <template #empty>
@@ -227,6 +228,9 @@ import {
   checkPermissionValue,
   exportTableCsv,
   resolveBuiltinText,
+  buildColumnFilterMethod,
+  hasColumnFilters,
+  columnFilterKey,
   type TableColumn,
   type TableSortState,
   type PaginationConfig,
@@ -405,6 +409,9 @@ export default defineComponent({
     'pagination-current-change',
     'size-change',
     'change-table-sort',
+    // 列筛选变化（W3-2）：`{ prop, values }`，三端同形。el-table 的原始 filter-change
+    // 由 handleColumnFilterChange 归一后派发；vxe 分支由引擎直接派发（经 $listeners 透传）。
+    'filter-change',
     // 自动加载（onMounted / visibleShow）失败时吞掉 rejection 并向外暴露错误（对齐 vue3）
     'request-error',
   ],
@@ -816,11 +823,30 @@ export default defineComponent({
       }
     }
 
+    /**
+     * W3-2：列筛选 → 本地筛选谓词（三端同规，比较语义在 core `table-filter.ts`）。
+     *
+     * Element UI 的 `filter-method(value, row, column)` 与 vue3 同形，这里只做签名适配；
+     * 分组列递归（筛选按钮挂在子列上）。自定义 `filterMethod` 原样透传。
+     */
+    const withColumnFilters = (col: TableColumn): TableColumn => {
+      if (Array.isArray(col.groups) && col.groups.length) {
+        return { ...col, groups: col.groups.map(withColumnFilters) }
+      }
+      if (typeof col.filterMethod === 'function' || !hasColumnFilters(col)) return col
+      const local = buildColumnFilterMethod(col)
+      if (!local) return col
+      return {
+        ...col,
+        filterMethod: (value: unknown, row: Record<string, unknown>) => local(value, row),
+      }
+    }
+
     const filteredColumns = computed(() => {
       // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
       const originals = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
       const list = originals.map((el) => {
-        const col = withDataOptions({ ...el } as TableColumn)
+        const col = withColumnFilters(withDataOptions({ ...el } as TableColumn))
         // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
         // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。
         if (
@@ -1493,6 +1519,45 @@ export default defineComponent({
       changeTableSort(sortInfo as unknown as Record<string, unknown>)
     }
 
+    /**
+     * W3-2：列筛选变化归一成 `{ prop, values }`（三端同形）。
+     *
+     * Element UI 的原始载荷键是 `columnKey || 内部列 id`（未设 columnKey 时是数字），
+     * 宿主无法映射回字段；`column-item` 已把 columnKey 固定为 `prop || key`。
+     * 模板上 `v-on="elTableListeners()"` 已剔除 `$listeners` 里的同名监听，
+     * 保证宿主只收到归一形态一次。
+     */
+    const handleColumnFilterChange = (raw: Record<string, unknown>) => {
+      if (!raw || typeof raw !== 'object') return
+      for (const [key, value] of Object.entries(raw)) {
+        const col = columnRowList.value.find(
+          (c) => (c.prop || c.key) === key || c.key === key
+        )
+        emit('filter-change', {
+          prop: columnFilterKey(col ?? ({} as TableColumn)) || key,
+          values: Array.isArray(value) ? value : [],
+        })
+      }
+    }
+
+    /**
+     * el-table 的宿主监听器透传表：去掉原生的 `filter-change`（载荷键是内部列 id），
+     * 由上面的归一处理器 + 显式 `@filter-change` 重新派发。其余事件原样透传。
+     *
+     * 用**函数**而非 computed：Vue 2 的 `$listeners` 不是响应式字段，父组件换监听器时
+     * computed 不会重算，函数在每次渲染求值才能始终拿到当前监听器。
+     *
+     * 模板里必须写成 `v-on="elTableListeners()"`（带括号）：Vue 2 的 `v-on` 无参数形态
+     * 走 `bindObjectListeners`，收到函数会告警「expects an Object value」并把**整份监听器
+     * 丢弃**（生产环境无告警）。
+     */
+    const elTableListeners = () => {
+      const all = ((instance.proxy as any)?.$listeners || {}) as Record<string, unknown>
+      const rest: Record<string, unknown> = { ...all }
+      delete rest['filter-change']
+      return rest
+    }
+
     // ─── 提供给子组件的实例 ────────────────────
     // P5: vxe 引擎下 tableRef 为 null，需委托给 vxeEngineRef
     provide(TABLE_CONTEXT_INJECT_KEY, () => ({
@@ -1680,6 +1745,8 @@ export default defineComponent({
       handleTableSelectionChange,
       handleVxeSortChange,
       changeTableSort,
+      handleColumnFilterChange,
+      elTableListeners,
       handleSizeChange,
       handleIndexChange,
       // exposed methods (also accessible via $refs.tableRef.xxx in Vue 2)

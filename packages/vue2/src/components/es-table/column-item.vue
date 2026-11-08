@@ -172,6 +172,9 @@ export default defineComponent({
         // dataOptions 是**数据**（单元格码值映射），已被 filteredColumns 落成 render；
         // 透传给 el-table-column 只会变成 `<td data-options="[object Object]">` 这类无意义 DOM 属性。
         if (t === 'groups' || t === 'scopedSlots' || t === 'render' || t === 'expandConfig' || t === 'dataOptions') continue
+        // W3-2：`filterMode` 是 core 的筛选语义键（已被合成进 filterMethod），
+        // el-table-column 没有这个 prop —— 透传只会变成无意义 DOM 属性。
+        if (t === 'filterMode') continue
 
         if (t.includes('-')) {
           const parts = t.split('-')
@@ -199,6 +202,12 @@ export default defineComponent({
       // 各自直接 v-bind 这里的结果，只有这一处能覆盖所有渲染分支。
       if (cols.ellipsis === true && !options.showOverflowTooltip) {
         options.showOverflowTooltip = true
+      }
+
+      // W3-2：filter-change 的载荷键取 `columnKey`，未设置时是 Element UI 的内部数字列 id。
+      // 声明筛选的列固定 columnKey = prop||key，与 a-table 的列 key / vxe 的 field 对齐。
+      if (Array.isArray(cols.filters) && cols.filters.length > 0 && !options.columnKey) {
+        options.columnKey = cols.prop || cols.key
       }
 
       return options

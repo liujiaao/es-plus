@@ -1,5 +1,5 @@
 import { computed, unref, type Ref } from 'vue'
-import { synthesizeLeadingColumns } from '@es-plus/core'
+import { synthesizeLeadingColumns, buildColumnFilterMethod, hasColumnFilters } from '@es-plus/core'
 import type { TableColumn, TableOptions } from '../../../../types'
 
 export interface VxeColumnOption {
@@ -178,6 +178,25 @@ function adaptSingleCol(
   // editRender → vxe 行内编辑渲染器（一等公民字段）
   if (col.editRender) {
     base.editRender = col.editRender
+  }
+
+  // W3-2 列筛选：vxe 的选项键是 `label`（契约里是展示用的 `text`），值仍按存储值比较。
+  // 显式给 filterMultiple，不依赖各引擎默认值（三端要一致）；本地谓词由 core 合成，
+  // 自定义 filterMethod（Tier C）原样透传。
+  if (hasColumnFilters(col)) {
+    base.filters = (col.filters as Array<{ text: string; value: unknown }>).map((f) => ({
+      label: f.text,
+      value: f.value,
+    }))
+    base.filterMultiple = col.filterMultiple !== false
+    if (typeof col.filterMethod === 'function') {
+      const custom = col.filterMethod
+      base.filterMethod = ({ value, row }: any) => custom(value, row)
+    } else {
+      const local = buildColumnFilterMethod(col)
+      if (local) base.filterMethod = ({ value, row }: any) => local(value, row)
+    }
+    // 自绘筛选面板/远程筛选等富配置仍走列级逃生舱（vxeColumn 深合并，后写覆盖）
   }
 
   // footerFormatter → vxe 表尾单元格格式化（一等公民字段）

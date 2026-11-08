@@ -49,6 +49,7 @@
               @sort-change="changeTableSort"
               @selection-change="handleVirtualSelectionChange"
               @cell-edit="(payload) => emit('cell-edit', payload)"
+              @filter-change="(payload) => emit('filter-change', payload)"
             />
             <el-table
               v-else
@@ -61,6 +62,7 @@
               :data="displayDataSource"
               @sort-change="changeTableSort"
               @selection-change="handleTableSelectionChange"
+              @filter-change="handleColumnFilterChange"
             >
               <template #empty>
                 <div class="es-empty es-empty-normal">
@@ -177,6 +179,9 @@ import {
   checkPermissionValue,
   exportTableCsv,
   resolveBuiltinText,
+  buildColumnFilterMethod,
+  columnFilterKey,
+  hasColumnFilters,
 } from '@es-plus/core'
 import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
@@ -212,6 +217,10 @@ const emit = defineEmits<{
   'request-error': [error: unknown]
   // 行内编辑提交（仅 vxe 引擎）：未改值不发。三端同形，见 core 的 CellEditPayload。
   'cell-edit': [payload: CellEditPayload]
+  // 列筛选变化（W3-2）：`{ prop, values }`，values 为该列当前选中的存储值数组。
+  // 本地过滤由各引擎按 core `table-filter` 的语义执行；此事件供服务端筛选使用，
+  // 三端同形（el-table 的原始 filter-change 已在这里归一，不会重复派发）。
+  'filter-change': [payload: { prop: string; values: unknown[] }]
 }>()
 
 const slots = defineSlots<{
@@ -521,12 +530,35 @@ const withDataOptions = (col: TableColumn): TableColumn => {
   }
 }
 
+/**
+ * W3-2：列筛选 → 本地筛选谓词（三端同规）。
+ *
+ * 只有「声明了 filters、有可绑定字段、且没给自定义 filterMethod」的列才注入；
+ * 注入的谓词只是 core `buildColumnFilterMethod` 的签名适配（el-table 的
+ * `filter-method(value, row, column)`），比较语义（equals/includes、宽松相等）
+ * 全部在 core —— 三端不会各写一份。
+ *
+ * 分组列递归：表头筛选按钮挂在各自子列上，父列只是分组标题。
+ */
+const withColumnFilters = (col: TableColumn): TableColumn => {
+  if (Array.isArray(col.groups) && col.groups.length) {
+    return { ...col, groups: col.groups.map(withColumnFilters) }
+  }
+  if (typeof col.filterMethod === 'function' || !hasColumnFilters(col)) return col
+  const local = buildColumnFilterMethod(col)
+  if (!local) return col
+  return {
+    ...col,
+    filterMethod: (value: unknown, row: Record<string, unknown>) => local(value, row),
+  }
+}
+
 const filteredColumns = computed(() => {
   // 浅拷贝：避免 computed 副作用（设置 formatter/render）污染原始列对象，防止跨引擎串扰
   // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
   const list = columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
-    .map((item) => withDataOptions({ ...item }))
+    .map((item) => withColumnFilters(withDataOptions({ ...item })))
   list.forEach((el) => {
     // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
     // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。
@@ -1196,6 +1228,29 @@ const changeTableSort = (payload: Record<string, unknown>) => {
     }
   }
   emit('change-table-sort', payload)
+}
+
+/**
+ * 列筛选变化（W3-2）。
+ *
+ * el-table 的原始载荷是 `{ [columnKey || 内部列 id]: values }` —— 没有 `columnKey` 时
+ * 键是内部数字 id，宿主无法识别。这里归一成 `{ prop, values }`（一次变化可能涉及多列，
+ * 逐项派发）。`column-item` 已把 `columnKey` 固定为 `prop || key`，所以查表同时按两者匹配。
+ *
+ * 本地过滤由 el-table 自己按注入的 filterMethod 完成；本事件只服务**服务端筛选**
+ * （监听后自行带筛选条件重取数据）。虚拟引擎不支持列筛选，见 virtual-engine 的告警。
+ */
+const handleColumnFilterChange = (raw: Record<string, unknown>) => {
+  if (!raw || typeof raw !== 'object') return
+  for (const [key, value] of Object.entries(raw)) {
+    const col = columnRowList.value.find(
+      (c) => (c.prop || c.key) === key || c.key === key,
+    )
+    emit('filter-change', {
+      prop: columnFilterKey(col ?? {}) || key,
+      values: Array.isArray(value) ? value : [],
+    })
+  }
 }
 
 const firstWordUpperCase = (str: string): string => {

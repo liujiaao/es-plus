@@ -120,6 +120,9 @@ const columnBindAttr = (cols: TableColumn) => {
     // dataOptions 是**数据**（单元格码值映射），已被 filteredColumns 落成 render；
     // 透传给 el-table-column 只会变成 `<td data-options="[object Object]">` 这类无意义 DOM 属性。
     if (t === 'groups' || t === 'scopedSlots' || t === 'render' || t === 'expandConfig' || t === 'dataOptions') continue
+    // W3-2：`filterMode` 是本库的筛选语义键（core 用来合成 filterMethod），
+    // el-table-column 没有这个 prop —— 透传只会变成无意义的 DOM 属性。
+    if (t === 'filterMode') continue
 
     if (t.includes('-')) {
       const parts = t.split('-')
@@ -148,6 +151,13 @@ const columnBindAttr = (cols: TableColumn) => {
   // 同时保留 `showOverflowTooltip` 原样透传（存量配置/显式列仍可能写它）。
   if (cols.ellipsis === true && !options.showOverflowTooltip) {
     options.showOverflowTooltip = true
+  }
+
+  // W3-2：el-table 的 filter-change 载荷键取 `columnKey`，**没有时用内部数字列 id** ——
+  // 宿主拿到的 `{ 7: [...] }` 无法映射回字段。声明筛选的列固定 columnKey = prop||key，
+  // 与 a-table 的列 key、vxe 的 field 对齐（三端同一个标识符）。
+  if (Array.isArray(cols.filters) && cols.filters.length > 0 && !options.columnKey) {
+    options.columnKey = (cols.prop || cols.key) as string
   }
 
   return options

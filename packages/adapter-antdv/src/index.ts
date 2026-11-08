@@ -106,6 +106,7 @@ export type {
   VxeEditRender, VxeEditConfig, VxeExportConfig, VxeToolbarConfig, VxeColumnConfig,
   VxeKeyboardConfig, VxeMouseConfig, VxeValidConfig, VxeFooterMethod,
   VxeTreeConfig, VxeProxyConfig, VxeExpandConfig, VxeSeqConfig,
+  ColumnFilterMode, TableColumnFilterOption,
 } from '@es-plus/core'
 // 对齐 vue3：导出 CRUD 高级类型
 export type {

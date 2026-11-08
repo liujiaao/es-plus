@@ -51,6 +51,7 @@
             :parent-slots="($slots as any)"
             @selection-change="handleVxeSelectionChange"
             @sort-change="handleVxeSortChange"
+            @filter-change="(payload) => emit('filter-change', payload)"
             @cell-edit="(payload) => emit('cell-edit', payload)"
           />
 
@@ -268,6 +269,10 @@ const emit = defineEmits<{
   'request-error': [error: unknown]
   // 行内编辑提交（仅 vxe 引擎）：未改值不发。三端同形，见 core 的 CellEditPayload。
   'cell-edit': [payload: CellEditPayload]
+  // 列筛选变化（W3-2）：载荷三端同形 `{ prop, values }`。
+  // el-table/vxe 是逐列事件，a-table 的 change 一次性给出全部筛选列的当前状态，
+  // 因此这里按列逐个转出（值清空时 values 为 []，与 el-table 的「取消勾选」等价）。
+  'filter-change': [payload: { prop: string; values: unknown[] }]
 }>()
 
 const slots = useSlots() as any
@@ -983,11 +988,48 @@ function handleVxeSelectionChange(rows: Record<string, unknown>[]) {
 }
 
 // ─── ADV Table 统一 change 事件 ─────────────────────
+/**
+ * a-table 的 `filters` 载荷以**列 key** 为键（本包在 adaptColumn 里定成
+ * `col.key || col.prop || 位置兜底`），值是选中项 value 的数组；取消全部勾选时
+ * 该键仍在，值为 null/undefined。这里把 key 映射回 prop 后逐列转出，与 el-table /
+ * vxe 的 `{ prop, values }` 同形（values 统一成数组，空即「无筛选」）。
+ */
+function emitColumnFilterChange(filters: Record<string, unknown> | undefined | null) {
+  if (!filters || typeof filters !== 'object') return
+  const findByKey = (
+    cols: Record<string, unknown>[],
+    key: string,
+  ): Record<string, unknown> | undefined => {
+    for (const c of cols) {
+      if (c.key === key) return c
+      const children = c.children as Record<string, unknown>[] | undefined
+      if (Array.isArray(children)) {
+        const hit = findByKey(children, key)
+        if (hit) return hit
+      }
+    }
+    return undefined
+  }
+  for (const [advKey, rawValues] of Object.entries(filters)) {
+    const advCol = findByKey(adaptedColumns.value, advKey)
+    // 筛不到列时无法还原契约字段名，宁可不发也不发空 prop
+    if (!advCol) continue
+    const esCol = advCol._esCol as TableColumn | undefined
+    const prop = esCol?.prop || esCol?.key || advKey
+    emit('filter-change', {
+      prop: String(prop),
+      values: Array.isArray(rawValues) ? rawValues : [],
+    })
+  }
+}
+
 function handleAdvTableChange(
   _pag: any,
-  _filters: any,
+  filters: any,
   sorter: any
 ) {
+  // W3-2：列筛选事件（渲染/本地过滤由列上的 filters + onFilter 完成，这里只做转出）
+  emitColumnFilterChange(filters)
   // 对齐 vue3 changeTableSort：emit { column, prop, order }，含排序清除（order: null）。
   // 清除时 a-table 的 sorter 走「legacy」形态：column 变成 undefined、只留 field，
   // 所以判据用 field，而不是 column —— 否则第三击清除永远不发事件，外部数据停留在旧排序。
