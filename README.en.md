@@ -15,7 +15,7 @@ Make AI-generated CRUD pages **safe to merge**: the LLM writes a single JSON con
 <sub>Both badges come from the nightly Layer-2 eval's measurement on the **heldout** slice of the golden corpus (fresh domains the few-shots never saw, near-variants excluded) — **not marketing figures**. The badge label names the model that produced the reading: the number is model-dependent, so **readings from different models are not comparable**, and must not be chained into a single trend line.<br>
 The first is the **gate definition**: the in-schema-intent hit rate is "zero-edit **OR** converged within 3 turns" — a config that can be merged as-is on turn 0, **or** that reaches the same config within at most 3 natural-language corrections, both count ([definition](./docs/internal/wave-2-production-trust-design.md)).<br>
 The second is the stricter half: **zero-edit on turn 0 only**, with no correction budget, so you can tell "right first time" apart from "right after a few rounds".<br>
-The corpus is 221 cases today (197 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
+The corpus is 223 cases today (199 heldout): a regression sentinel, not a statistically significant benchmark; it improves by adding cases, not by moving goalposts. The gate target is ≥95%; the current measured value is the badge above (produced by the nightly eval from `__tests__/golden/last-accuracy.json`).</sub>
 
 **[Documentation](https://main.esplus-ai.com/)** · **[Playground](https://main.esplus-ai.com/#/playground)** · **[AI CRUD Generator](https://main.esplus-ai.com/#/ai-crud)** · **[Changelog](https://github.com/liujiaao/es-plus/releases)**
 
@@ -62,7 +62,7 @@ And it's a solid CRUD library first: enterprise back-office apps are 80% CRUD �
 - **Backend-agnostic** — `configTableOut` maps any API response structure
 - **Permission control** — `permissionValue` on buttons, no `v-if` needed
 - **i18n** — `labelKey` + custom translate function, works with any i18n library
-- **TypeScript** — Full type definitions + 37 cross-renderer contract types (CI-enforced parity across all three renderers, count verified by `check:readme`)
+- **TypeScript** — Full type definitions + 39 cross-renderer contract types (CI-enforced parity across all three renderers, count verified by `check:readme`)
 - **AI-native** — Official MCP Server and CLI for natural-language page generation
 
 ---

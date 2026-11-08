@@ -265,7 +265,9 @@ export function conditionView(node, ctx, shared = new Set()) {
 //
 // 分类判据：**只影响布局呈现、NL 极少陈述**的键算装饰。`permissionValue`（无权限不出列）、
 // `dataOptions`（码值→文案映射）、`btns`（行内按钮）、`editRender.name/type/options/props/
-// defaultValue`（编辑器语义）都是行为契约，**不投影**。
+// defaultValue`（编辑器语义）都是行为契约，**不投影**。列筛选三键同理：`filters`（筛选选项
+// 是列行为契约）、`filterMultiple` / `filterMode`（单选 vs 多选、等值 vs 包含都被 NL 陈述）
+// 2026-11-08 随 W3-2 登记为结构键。
 // `ellipsis` / `showOverflowTooltip` 今天在语料里 0 处，暂列结构键（保守：宁可暂严，不可误绿），
 // 将来若出现「超出省略」类语料再议；`scorers.test.mjs` 的列键白名单会强制为新键做分类。
 //
@@ -290,6 +292,9 @@ export const COLUMN_KEY_CLASS = Object.freeze({
   expandConfig: 'structural',
   ellipsis: 'structural',
   showOverflowTooltip: 'structural',
+  filters: 'structural',
+  filterMultiple: 'structural',
+  filterMode: 'structural',
   width: 'decoration',
   minWidth: 'decoration',
   align: 'decoration',

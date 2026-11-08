@@ -1,0 +1,80 @@
+{
+  "nl": "航班列表：表格按航班号、航司、登机口、起飞时间四列展示，顺序照此。航司列可以按航司下拉筛选（单选），登机口列可以按关键字做文本包含筛选。支持新增、编辑。",
+  "nlEn": "Flight list: the table shows flight number, airline, gate and departure time in that order. The airline column can be filtered by an airline dropdown (single select); the gate column supports text-contains filtering. Supports add and edit.",
+  "fixedFields": [
+    "flightNo",
+    "airline",
+    "gate",
+    "departAt"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "columns"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "actions",
+    "columns"
+  ],
+  "config": {
+    "name": "FlightManage",
+    "apiUrl": "/api/flights",
+    "target": "vue3",
+    "mode": "schema",
+    "fields": [
+      {
+        "prop": "flightNo",
+        "label": "航班号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "airline",
+        "label": "航司",
+        "formtype": "Input"
+      },
+      {
+        "prop": "gate",
+        "label": "登机口",
+        "formtype": "Input"
+      },
+      {
+        "prop": "departAt",
+        "label": "起飞时间",
+        "formtype": "DatePicker"
+      }
+    ],
+    "columns": [
+      {
+        "prop": "flightNo",
+        "label": "航班号"
+      },
+      {
+        "prop": "airline",
+        "label": "航司",
+        "filters": [
+          { "text": "国航", "value": "CA" },
+          { "text": "东航", "value": "MU" }
+        ],
+        "filterMultiple": false
+      },
+      {
+        "prop": "gate",
+        "label": "登机口",
+        "filters": [
+          { "text": "A 区", "value": "A" }
+        ],
+        "filterMode": "includes"
+      },
+      {
+        "prop": "departAt",
+        "label": "起飞时间"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit"
+    ]
+  },
+  "notes": "W3-2 列筛选：显式 columns 上的 filters / filterMultiple / filterMode 经 AI Zod 存活并进入 schema 模式产物（生成器的列白名单由 ColumnSchema 推导，漏声明会被 sanitizeExplicitColumns 静默剥掉）。filterMode:'includes' 与默认 equals 两条语义各占一列；本地过滤由 core 的 table-filter.ts 单源求值，三端一致。"
+}

@@ -1,0 +1,76 @@
+{
+  "nl": "会员卡列表：按卡号、等级、余额三列展示，顺序照此。等级列可以按等级多选筛选（普通/黄金/白金），卡号列可以按关键字做文本包含筛选。支持新增、编辑、删除。",
+  "nlEn": "Membership card list: the table shows card number, level and balance in that order. The level column can be filtered by multiple levels (regular/gold/platinum); the card-number column supports text-contains filtering. Supports add, edit and delete.",
+  "fixedFields": [
+    "cardNo",
+    "level",
+    "balance"
+  ],
+  "pinnedDims": [
+    "propSet",
+    "actions",
+    "columns"
+  ],
+  "nlStatedDims": [
+    "propSet",
+    "actions",
+    "columns"
+  ],
+  "config": {
+    "name": "MemberCardManage",
+    "apiUrl": "/api/member-cards",
+    "target": "antdv",
+    "mode": "sfc",
+    "fields": [
+      {
+        "prop": "cardNo",
+        "label": "卡号",
+        "formtype": "Input"
+      },
+      {
+        "prop": "level",
+        "label": "等级",
+        "formtype": "Select",
+        "dataOptions": [
+          { "label": "普通", "value": 1 },
+          { "label": "黄金", "value": 2 },
+          { "label": "白金", "value": 3 }
+        ]
+      },
+      {
+        "prop": "balance",
+        "label": "余额",
+        "formtype": "InputNumber"
+      }
+    ],
+    "columns": [
+      {
+        "prop": "cardNo",
+        "label": "卡号",
+        "filters": [
+          { "text": "62 开头", "value": "62" }
+        ],
+        "filterMode": "includes"
+      },
+      {
+        "prop": "level",
+        "label": "等级",
+        "filters": [
+          { "text": "普通", "value": 1 },
+          { "text": "黄金", "value": 2 },
+          { "text": "白金", "value": 3 }
+        ]
+      },
+      {
+        "prop": "balance",
+        "label": "余额"
+      }
+    ],
+    "actions": [
+      "add",
+      "edit",
+      "delete"
+    ]
+  },
+  "notes": "W3-2 列筛选（SFC 模式 + antdv）：pushSfcColumn 把 filters 作为纯 JSON 列字面量发射、filterMultiple / filterMode 作为标量发射；a-table 适配器再映射成 filters + filterMultiple + onFilter。与 197 成对，覆盖 generator 的两种模式。"
+}
