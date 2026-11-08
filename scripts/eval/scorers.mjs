@@ -591,8 +591,54 @@ export function projectEditConfig(gold, pred) {
   return { gold: g, pred: p }
 }
 
-export function f1(goldSet, predSet) {
-  const tp = [...goldSet].filter((x) => predSet.has(x)).length
+// ── vxe 一等公民（AI-31）：`tableOptions` 的 11 个 JSON 键 ────────────────────
+// 修前这批键在 AI 契约里根本不存在（经 AI 入口被静默 strip），故没有任何维度；
+// 接入后必须能度量「NL 点名了某个 vxe 能力，模型是否真的declared 了它」。
+export const VXE_JSON_KEYS = Object.freeze([
+  'showFooter',
+  'footerData',
+  'exportConfig',
+  'toolbarConfig',
+  'columnConfig',
+  'keepSource',
+  'keyboardConfig',
+  'mouseConfig',
+  'validConfig',
+  'seqConfig',
+  'printConfig',
+])
+
+/**
+ * `true` 与运行时的展开形态等价 —— 单一事实源是 core
+ * `vxe-engine/build-grid-config.ts`：toolbarConfig:true → {export,refresh,custom}；
+ * exportConfig / printConfig:true → {}。不投影会把两种合法写法判成理解失败。
+ */
+const VXE_TRUE_EXPANSION = Object.freeze({
+  toolbarConfig: Object.freeze({ export: true, refresh: true, custom: true }),
+  exportConfig: Object.freeze({}),
+  printConfig: Object.freeze({}),
+})
+
+function projectVxeOption(key, value) {
+  if (value === true && Object.prototype.hasOwnProperty.call(VXE_TRUE_EXPANSION, key)) {
+    return VXE_TRUE_EXPANSION[key]
+  }
+  return value ?? null
+}
+
+/**
+ * vxe 配置键的等值判定：**只比 gold 声明了的键**（NL 没点名的不惩罚，
+ * 与 reactions / isHidden / mergeConfig 同规）。逐键投影后深比较。
+ */
+export function vxeConfigEqual(gold, pred) {
+  const g = gold.tableOptions ?? {}
+  const p = pred.tableOptions ?? {}
+  return VXE_JSON_KEYS.every(
+    (k) => g[k] === undefined || eq(projectVxeOption(k, g[k]), projectVxeOption(k, p[k]))
+  )
+}
+
+export function f1(goldSet, predSet) {  const tp = [...goldSet].filter((x) => predSet.has(x)).length
   const fp = predSet.size - tp
   const fn = goldSet.size - tp
   const precision = tp + fp === 0 ? 1 : tp / (tp + fp)
@@ -1276,6 +1322,15 @@ export const CAPABILITY_SCORERS = [
     key: 'mergeConfig',
     applicable: (g) => !!g.mergeConfig,
     pass: (g, p) => eq(g.mergeConfig ?? null, p.mergeConfig ?? null),
+  },
+  {
+    // vxe 一等公民的 JSON 子集（AI-31）：gold 点名了哪些键，pred 就该同键同值。
+    // 只比 gold 声明过的键（NL 没要求的不惩罚）；`true` 先投影成运行时展开形态，
+    // 避免「true vs {export,refresh,custom}」这种同义写法被判负。
+    // 仅当 gold 在 tableOptions 里写了这 11 键之一时才 applicable。
+    key: 'vxeConfig',
+    applicable: (g) => VXE_JSON_KEYS.some((k) => g.tableOptions?.[k] !== undefined),
+    pass: vxeConfigEqual,
   },
   {
     // 首屏默认排序（AI-10/AN-10）：`tableOptions.defaultSort` 整体深等值。

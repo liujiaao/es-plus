@@ -1,0 +1,23 @@
+{
+  "nl": "用户列表：查询条件有用户名；展示用户名、邮箱；表格引擎用 vxe；表格上方使用 vxe 工具栏，带导出、刷新和自定义列按钮；列宽可以拖拽调整。支持新增、编辑。",
+  "nlEn": "User list: the query bar has username; shows username and email; the table uses the vxe engine; the table has a vxe toolbar with export, refresh and custom-column buttons; column widths are draggable. Supports add and edit.",
+  "fixedFields": ["username", "email"],
+  "pinnedDims": ["propSet", "actions", "vxeConfig", "virtualScroll"],
+  "nlStatedDims": ["propSet", "actions", "vxeConfig", "virtualScroll"],
+  "config": {
+    "name": "UserToolbarManage",
+    "apiUrl": "/api/users",
+    "target": "vue3",
+    "fields": [
+      { "prop": "username", "label": "用户名", "formtype": "Input" },
+      { "prop": "email", "label": "邮箱", "formtype": "Input", "inQuery": false }
+    ],
+    "tableOptions": {
+      "engine": "vxe",
+      "toolbarConfig": { "export": true, "refresh": true, "custom": true },
+      "columnConfig": { "resizable": true }
+    },
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-31 Batch 2A: toolbarConfig + columnConfig（NL 点名导出/刷新/自定义列、列宽拖拽）经 AI Zod 存活并发射。toolbarConfig 取显式对象；`true` 与 {export,refresh,custom} 在尺子里等价（运行时展开见 core build-grid-config）。"
+}

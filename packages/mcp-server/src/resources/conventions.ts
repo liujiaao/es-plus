@@ -503,6 +503,24 @@ JSON. The contract is **mark, never drop**:
   cell. Function-valued
   \`editRender.events\` and custom-registered renderers are OUT OF SCOPE. Use this for
   "表格行内编辑 / 双击单元格改数量 / 点单元格直接改".
+- **vxe first-class config — \`tableOptions.engine: 'vxe'\` only**: these are PLAIN JSON
+  and forwarded verbatim to \`vxe-grid\`, so declare them instead of dropping the request
+  (on the default / virtual engines they are ignored — the generator warns only for the
+  target-level gaps, not for engine-level ones):
+  \`showFooter\` (bool) + \`footerData\` (2-D array \`[row][column]\`) for 合计行;
+  \`exportConfig\` (\`true\` or \`{ filename, type: 'csv'|'xlsx'|'html'|'xml'|'txt', useStyle }\`)
+  for 导出; \`toolbarConfig\` for the built-in vxe toolbar; \`columnConfig\`
+  (\`{ resizable: true, drag: true, showOverflow: 'tooltip' }\`) for 列宽拖拽;
+  \`keyboardConfig\` (\`{ isArrow, isTab, isEnter, isEdit, isDel, enterToTab }\`) +
+  \`mouseConfig\` (\`{ selected: true }\`) + \`validConfig\` (\`{ autoPos, message, msgMode }\`)
+  for 键盘导航 / 单元格选中 / 校验反馈 (pair them with \`editConfig\`);
+  \`seqConfig\` (\`{ startIndex }\`) for the serial column; \`printConfig\`
+  (\`true\` or \`{ columns: [...] }\`) for 打印; \`keepSource\` to keep edit snapshots.
+  FUNCTION forms stay out of JSON (Tier-3 runtime escape hatch): \`footerMethod\`,
+  \`proxyConfig.ajax\`, \`exportConfig.download\`, \`seqConfig.seqMethod\`, \`vxeConfig\`, \`vxeOn\`.
+  On a NON-vxe engine \`exportData()\` still works: the component falls back to a core CSV
+  builder for \`type: 'csv'\` and throws for other formats — so "导出 CSV" can be answered
+  even without the vxe engine.
 - **\`mergeConfig\`** (top-level — **not** an extension point: PLAIN JSON DATA): the
   declarative **row merge** — \`{ rowsBy: ['dept', 'team'] }\` (non-empty). Each named
   column is grouped by **adjacent-equal** values: the first row of a run keeps the cell

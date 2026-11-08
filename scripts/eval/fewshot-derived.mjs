@@ -78,4 +78,11 @@ export const FEWSHOT_DERIVED = new Set([
   '179-dept-role-merge-vue3-sfc.json',
   // #22 商品价格行内编辑：92 = 同域（SKU 单价）改写，复用 skuName/price 名与 vxe editConfig 教学点（人工裁定）
   '92-sku-price-edit-vue3.json',
+  // #27 vxe 表尾合计（footer + export/print）：192 = 换域 + 去掉导出/打印两键的改写
+  //     （prop 1.00 / NL 0.49，机检下界命中）；同批 193/194/196 各自保留不同的 vxe 键
+  //     （export / toolbar+column / print）→ 独立特性覆盖，不登记。
+  '192-order-footer-vue3.json',
+  // #28 vxe 键盘导航 + 单元格选中 + 校验气泡：195 = 换域改写（prop 1.00 / NL 0.79，
+  //     三个教学键 keyboardConfig/mouseConfig/validConfig 逐字同形）。
+  '195-stock-keyboard-valid-antdv.json',
 ])

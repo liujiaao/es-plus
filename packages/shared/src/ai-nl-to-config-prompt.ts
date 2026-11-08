@@ -815,6 +815,47 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
       actions: ['add', 'edit', 'delete'],
     },
   },
+  {
+    nl: '订单列表：查询条件有订单号；表格展示订单号、金额；用 vxe 引擎；表尾显示合计行，数据是「合计」加总金额；工具栏带导出和刷新按钮；还要能打印表格；支持新增、删除。',
+    reasoning:
+      '"表尾合计 / 工具栏 / 打印" 全是 vxe 一等公民的 **纯 JSON** 配置，必须声明出来而不是丢掉：表尾 `showFooter: true` + `footerData`（二维数组 `[行][列]`；函数版 `footerMethod` 进不了 JSON）；`toolbarConfig` 给对象（`true` 也合法，运行时会展开成 {export,refresh,custom}）；`printConfig: true` 用默认打印配置。这些键**只在 `tableOptions.engine: "vxe"` 下被消费**，所以 engine 必须一起给；换成默认/虚拟引擎时它们会静默不生效。不要把 `exportConfig.download` / `seqConfig.seqMethod` 这类函数写进 JSON —— 那是宿主侧的运行时逃生舱。',
+    config: {
+      name: 'OrderOpsManage',
+      apiUrl: '/api/orders',
+      fields: [
+        { prop: 'orderNo', label: '订单号', formtype: 'Input' },
+        { prop: 'amount', label: '金额', formtype: 'InputNumber', inQuery: false },
+      ],
+      tableOptions: {
+        engine: 'vxe',
+        showFooter: true,
+        footerData: [['合计', 1000]],
+        toolbarConfig: { export: true, refresh: true },
+        printConfig: true,
+      },
+      actions: ['add', 'delete'],
+    },
+  },
+  {
+    nl: '库存盘点：查询条件有物料号；表格展示物料号、数量；用 vxe 引擎；方向键在单元格之间移动，点击单元格高亮选中；校验不通过时自动定位到出错单元格，并用悬浮气泡提示；支持编辑。',
+    reasoning:
+      '"方向键移动 / 点击单元格高亮 / 校验气泡" 是 vxe 的键盘、鼠标与校验配置，都是 JSON：`keyboardConfig: { isArrow: true }`、`mouseConfig: { selected: true }`、`validConfig: { autoPos: true, message: "tooltip" }`。它们同样只在 `tableOptions.engine: "vxe"` 下生效，engine 必须一起给。校验规则本身写在**列**上（`columns[].rules`，配合 editRender），不属于 tableOptions；这里 NL 只要求「提示方式」，所以只声明 `validConfig`，不要为此虚构列或规则。',
+    config: {
+      name: 'StockCheckManage',
+      apiUrl: '/api/stock-checks',
+      fields: [
+        { prop: 'materialNo', label: '物料号', formtype: 'Input' },
+        { prop: 'qty', label: '数量', formtype: 'InputNumber', inQuery: false },
+      ],
+      tableOptions: {
+        engine: 'vxe',
+        keyboardConfig: { isArrow: true },
+        mouseConfig: { selected: true },
+        validConfig: { autoPos: true, message: 'tooltip' },
+      },
+      actions: ['edit'],
+    },
+  },
 ]
 
 /**

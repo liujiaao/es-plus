@@ -1,0 +1,24 @@
+{
+  "nl": "库存盘点：查询条件有物料号；展示物料号、数量；表格引擎用 vxe；方向键在单元格之间移动，点击单元格选中高亮；校验不通过时自动定位到出错单元格，并用悬浮气泡提示。支持编辑。",
+  "nlEn": "Stock check: the query bar has material number; shows material number and quantity; the table uses the vxe engine; arrow keys move between cells and clicking a cell selects and highlights it; when validation fails the table scrolls to the offending cell and shows a tooltip. Supports edit.",
+  "fixedFields": ["materialNo", "qty"],
+  "pinnedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "target"],
+  "config": {
+    "name": "StockCheckManage",
+    "apiUrl": "/api/stock-checks",
+    "target": "antdv",
+    "fields": [
+      { "prop": "materialNo", "label": "物料号", "formtype": "Input" },
+      { "prop": "qty", "label": "数量", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": {
+      "engine": "vxe",
+      "keyboardConfig": { "isArrow": true },
+      "mouseConfig": { "selected": true },
+      "validConfig": { "autoPos": true, "message": "tooltip" }
+    },
+    "actions": ["edit"]
+  },
+  "notes": "AI-31 Batch 2B: keyboardConfig / mouseConfig / validConfig 经 AI Zod 存活并发射（antdv 也走自己的 vxe 适配器）。三个子键都是 NL 明说的行为（方向键 / 点选高亮 / 自动定位 + 气泡）。"
+}

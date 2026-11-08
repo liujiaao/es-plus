@@ -41,7 +41,12 @@ export const CONTAINER_EVIDENCE = {
   editConfig: /行内编辑|单元格(?:修改|编辑)|双击整行|单击[^。；]*?单元格/,
   // 「行内编辑」在本库里只有 vxe 引擎能实现 ⟹ NL 提出编辑要求就等于指定了该引擎
   // （`virtualScroll` 维度的 applicable 正是 `engine ∈ {virtual, vxe}`）。
-  virtualScroll: /虚拟滚动|行内编辑|单元格(?:修改|编辑)|双击整行/,
+  // 明确说「用 vxe 引擎」同样是引擎依据（AI-31 的表尾/导出/打印用例即此写法）。
+  virtualScroll: /虚拟滚动|行内编辑|单元格(?:修改|编辑)|双击整行|vxe/i,
+  // vxe 一等公民的 JSON 子集（AI-31）：表尾合计 / 导出 / 工具栏 / 列宽拖拽 /
+  // 键盘导航 / 单元格选中 / 校验提示 / 打印。刻意只收「这些能力在 NL 里被点名」的措辞。
+  vxeConfig:
+    /合计行|表尾合计|导出[^。；]{0,12}?(?:CSV|Excel|xlsx|csv)|工具栏|列宽拖拽|列宽可(?:以)?拖|键盘导航|方向键|单元格高亮|点击单元格选中|校验提示|打印表格/,
   i18n: /i18n|国际化|labelKey/i,
   permissions: /权限码|按权限可见|有权限时可见|只有拥有权限码|需要权限/,
   formLayout: /标签宽度/,

@@ -1,0 +1,19 @@
+{
+  "nl": "订单列表：查询条件有订单号；表格展示订单号、金额；表格引擎用 vxe；表尾显示合计行。支持新增、删除。",
+  "nlEn": "Order list: the query bar has order number; the table shows order number and amount; the table uses the vxe engine; a footer summary row is displayed. Supports add and delete.",
+  "fixedFields": ["orderNo", "amount"],
+  "pinnedDims": ["propSet", "actions", "vxeConfig", "virtualScroll"],
+  "nlStatedDims": ["propSet", "actions", "vxeConfig", "virtualScroll"],
+  "config": {
+    "name": "OrderFooterManage",
+    "apiUrl": "/api/orders",
+    "target": "vue3",
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "showFooter": true },
+    "actions": ["add", "delete"]
+  },
+  "notes": "AI-31 Batch 2A: tableOptions.showFooter 经 AI Zod 存活并发射（vxe 引擎的 JSON 子集）。NL 明说「表格引擎用 vxe」⟹ virtualScroll 维度（engine 匹配）可钉。"
+}

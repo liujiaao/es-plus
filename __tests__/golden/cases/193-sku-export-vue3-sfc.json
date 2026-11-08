@@ -1,0 +1,23 @@
+{
+  "nl": "商品列表：查询条件有商品名称；展示商品名称、价格；表格引擎用 vxe；支持把表格导出成 CSV 文件，文件名 sku-report。支持新增、编辑。",
+  "nlEn": "Product list: the query bar has product name; shows product name and price; the table uses the vxe engine; the table can be exported as a CSV file named sku-report. Supports add and edit.",
+  "fixedFields": ["skuName", "price"],
+  "pinnedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "mode"],
+  "nlStatedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "mode"],
+  "config": {
+    "name": "SkuExportManage",
+    "apiUrl": "/api/skus",
+    "target": "vue3",
+    "mode": "sfc",
+    "fields": [
+      { "prop": "skuName", "label": "商品名称", "formtype": "Input" },
+      { "prop": "price", "label": "价格", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": {
+      "engine": "vxe",
+      "exportConfig": { "type": "csv", "filename": "sku-report" }
+    },
+    "actions": ["add", "edit"]
+  },
+  "notes": "AI-31 Batch 2A: tableOptions.exportConfig（type/filename 均为 NL 明说）经 AI Zod 存活并发射；vxe 引擎原生导出，`download` 回调属函数、不进 JSON。"
+}

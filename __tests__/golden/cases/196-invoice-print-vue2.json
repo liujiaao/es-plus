@@ -1,0 +1,19 @@
+{
+  "nl": "发票列表：查询条件有发票号；展示发票号、金额；表格引擎用 vxe；支持打印表格。支持新增、删除。",
+  "nlEn": "Invoice list: the query bar has invoice number; shows invoice number and amount; the table uses the vxe engine; the table can be printed. Supports add and delete.",
+  "fixedFields": ["invoiceNo", "amount"],
+  "pinnedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "target"],
+  "nlStatedDims": ["propSet", "actions", "vxeConfig", "virtualScroll", "target"],
+  "config": {
+    "name": "InvoicePrintManage",
+    "apiUrl": "/api/invoices",
+    "target": "vue2",
+    "fields": [
+      { "prop": "invoiceNo", "label": "发票号", "formtype": "Input" },
+      { "prop": "amount", "label": "金额", "formtype": "InputNumber", "inQuery": false }
+    ],
+    "tableOptions": { "engine": "vxe", "printConfig": true },
+    "actions": ["add", "delete"]
+  },
+  "notes": "AI-31 Batch 2B: tableOptions.printConfig（true = 默认打印配置）经 AI Zod 存活并发射；vue2 的 vxe 适配器同样消费。"
+}
