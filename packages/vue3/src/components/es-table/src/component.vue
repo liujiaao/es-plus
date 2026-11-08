@@ -13,7 +13,7 @@
             <slot />
           </div>
         </div>
-        <div v-loading="loadStatus" element-loading-background="rgba(0, 0, 0, 0.03)" element-loading-text="努力加载中..." class="page-loading-con tableContainer">
+        <div v-loading="loadStatus" element-loading-background="rgba(0, 0, 0, 0.03)" :element-loading-text="builtinLoadingText" class="page-loading-con tableContainer">
           <div class="table_inner_containers">
             <table-btns
               ref="tbBtnRef"
@@ -75,7 +75,7 @@
                       </g>
                     </svg>
                   </div>
-                  <div class="es-empty-description">{{ tableOptions.emptyText || '暂无数据' }}</div>
+                  <div class="es-empty-description">{{ tableOptions.emptyText || builtinEmptyText }}</div>
                 </div>
               </template>
               <column-item v-for="(cols, index) in elTableColumns" :key="cols.prop || cols.key || cols.type || index" :cols="{ ...cols, columnIndex: index }">
@@ -176,6 +176,7 @@ import {
   buildSortParams,
   checkPermissionValue,
   exportTableCsv,
+  resolveBuiltinText,
 } from '@es-plus/core'
 import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
@@ -243,6 +244,11 @@ const tableOptions = computed<TableOptions>(() => ({
   ...(($esPlusTable?.defaults as Record<string, unknown> | undefined) || {}),
   ...props.options
 }) as TableOptions)
+
+// W3-1：内置文案走 locale 单源（安装时静态）。`tableOptions.emptyText` 仍是最高优先级的
+// 逐表覆盖，内置字典只是「没配时」的兜底 —— 默认 zh 下与历史字面量逐字节相同。
+const builtinEmptyText = resolveBuiltinText('emptyText')
+const builtinLoadingText = resolveBuiltinText('loading')
 
 // configBtn 工具栏按钮通过此函数访问 vxe-grid 原生实例（惰性求值，避免在首次渲染时 template ref 为 null）
 function getVxeGridInstance() {

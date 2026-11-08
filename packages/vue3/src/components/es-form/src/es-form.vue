@@ -196,6 +196,7 @@ import {
   setNestedValue,
   looseEqual,
   checkPermissionValue,
+  resolveBuiltinText,
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -626,12 +627,12 @@ const handleCustomerForm = () => {
       }),
     configBtn: [
       {
-        name: '取消',
+        name: resolveBuiltinText('cancel'),
         icon: 'Close',
         click: (_instance: unknown, { close }: { close: () => void }) => close()
       },
       {
-        name: '确认',
+        name: resolveBuiltinText('confirm'),
         type: 'primary',
         icon: 'Check',
         click: (_instance: unknown, { close }: { close: () => void }) => close()

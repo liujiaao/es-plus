@@ -20,7 +20,7 @@
       <div
         v-loading="loadStatus"
         element-loading-background="rgba(0, 0, 0, 0.03)"
-        element-loading-text="努力加载中..."
+        :element-loading-text="builtinLoadingText"
         class="page-loading-con tableContainer"
       >
         <div class="table_inner_containers">
@@ -100,7 +100,7 @@
                     </g>
                   </svg>
                 </div>
-                <div class="es-empty-description">{{ tableOptions.emptyText || '暂无数据' }}</div>
+                <div class="es-empty-description">{{ tableOptions.emptyText || builtinEmptyText }}</div>
               </div>
             </template>
 
@@ -226,6 +226,7 @@ import {
   buildSortParams,
   checkPermissionValue,
   exportTableCsv,
+  resolveBuiltinText,
   type TableColumn,
   type TableSortState,
   type PaginationConfig,
@@ -1641,6 +1642,9 @@ export default defineComponent({
       tableId,
       tableData,
       effectiveDataSource,
+      // W3-1：内置空态/加载文案（locale 单源；tableOptions.emptyText 仍是逐表覆盖）
+      builtinEmptyText: resolveBuiltinText('emptyText'),
+      builtinLoadingText: resolveBuiltinText('loading'),
       // state
       loadStatus,
       paginationConfig,

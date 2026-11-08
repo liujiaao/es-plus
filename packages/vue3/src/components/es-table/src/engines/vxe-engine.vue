@@ -41,7 +41,7 @@
     <!-- 默认空数据 UI（用户未提供 #empty 时生效，样式与 el-table 保持一致） -->
     <template v-if="!namedParentSlots['empty']" #empty>
       <div style="display:flex;justify-content:center;align-items:center;min-height:60px;color:var(--el-text-color-secondary,#909399);font-size:14px">
-        {{ props.options.emptyText || '暂无数据' }}
+        {{ props.options.emptyText || builtinEmptyText }}
       </div>
     </template>
   </vxe-grid>
@@ -65,6 +65,7 @@ import {
   resolveEditProp,
   snapshotEditRow,
   diffEditRow,
+  resolveBuiltinText,
 } from '@es-plus/core'
 import {
   normalizeVxeOrder,
@@ -81,6 +82,9 @@ const props = defineProps<{
   options: TableOptions
   parentSlots?: Record<string, (...args: any[]) => any>
 }>()
+
+// W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
+const builtinEmptyText = resolveBuiltinText('emptyText')
 
 const emit = defineEmits<{
   'sort-change': [payload: { column: any; prop: string; order: string | null }]

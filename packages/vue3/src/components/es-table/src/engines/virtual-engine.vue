@@ -37,7 +37,7 @@
               </g>
             </svg>
           </div>
-          <div class="es-empty-description">{{ props.options.emptyText || '暂无数据' }}</div>
+          <div class="es-empty-description">{{ props.options.emptyText || builtinEmptyText }}</div>
         </div>
       </slot>
     </div>
@@ -52,7 +52,7 @@ import { useColumnAdapter } from './use-column-adapter'
 import { useVirtualSelection } from './use-virtual-selection'
 import { useVirtualSort } from './use-virtual-sort'
 import type { TableEngineExposed } from './types'
-import { getGlobalConfig } from '../../../../config'
+import { getGlobalConfig, resolveBuiltinText } from '@es-plus/core'
 
 const props = defineProps<{
   columns: TableColumn[]
@@ -61,6 +61,9 @@ const props = defineProps<{
   options: TableOptions
   parentSlots?: Record<string, (...args: any[]) => any>
 }>()
+
+// W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
+const builtinEmptyText = resolveBuiltinText('emptyText')
 
 const emit = defineEmits<{
   'sort-change': [payload: { column: any; prop: string; order: string | null }]

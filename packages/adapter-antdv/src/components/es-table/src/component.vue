@@ -14,7 +14,7 @@
 <template>
   <a-config-provider :locale="antLocale">
     <div :ref="setTableContainer" class="table_component" :class="{ 'table-striped': tableOptions.stripe }" :style="{ [heightType]: tabHeight }">
-      <a-spin :spinning="loadStatus" tip="努力加载中...">
+      <a-spin :spinning="loadStatus" :tip="builtinLoadingText">
         <div class="table_containers">
           <!-- 插槽区域 -->
           <div
@@ -73,7 +73,7 @@
             :customRow="resolvedCustomRow"
             :customHeaderRow="resolvedCustomHeaderRow"
             :scroll="tableScroll"
-            :locale="{ emptyText: tableOptions.emptyText || '暂无数据' }"
+            :locale="{ emptyText: tableOptions.emptyText || builtinEmptyText }"
             :defaultExpandAllRows="tableOptions.treeConfig?.expandAll === true"
             :childrenColumnName="tableOptions.treeConfig?.childrenField || 'children'"
             @change="handleAdvTableChange"
@@ -184,7 +184,8 @@ const defaultOptions: TableOptions = {
   highlightCurrentRow: true,
   cachePageSelection: true,
   showHeader: true,
-  emptyText: '暂无数据',
+  // W3-1：空态文案不再写进默认值 —— 这个对象在模块加载时求值，早于 install 的 locale。
+  // 空态由模板的 `tableOptions.emptyText || builtinEmptyText` 兜底（locale 单源）。
 }
 </script>
 
@@ -218,6 +219,7 @@ import {
   synthesizeLeadingColumns,
   checkPermissionValue,
   exportTableCsv,
+  resolveBuiltinText,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -288,6 +290,10 @@ const tableOptions = computed(
       ...props.options,
     }) as TableOptions
 )
+
+// W3-1：内置文案走 locale 单源（安装时静态）。`tableOptions.emptyText` 仍是逐表覆盖。
+const builtinEmptyText = resolveBuiltinText('emptyText')
+const builtinLoadingText = resolveBuiltinText('loading')
 
 function getVxeGridInstance() {
   if (!isVxeEngine.value) return null
@@ -724,7 +730,7 @@ const adaptedColumns = computed(() => {
     // 操作列：添加 buttons
     if ((col.prop === 'operate' || col.key === 'operate') && col.btns) {
       const filteredBtns = col.btns.filter((btn) => checkPermission(btn.permissionValue))
-      const operateTitle = (col.labelKey && t ? t(col.labelKey) : undefined) || col.label || '操作'
+      const operateTitle = (col.labelKey && t ? t(col.labelKey) : undefined) || col.label || resolveBuiltinText('operation')
       cols.push({
         dataIndex: 'operate',
         key: 'operate',

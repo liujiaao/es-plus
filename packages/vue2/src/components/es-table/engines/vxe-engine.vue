@@ -35,7 +35,7 @@
     <!-- 默认空数据 UI -->
     <template v-if="!namedParentSlots['empty']" v-slot:empty>
       <div style="display:flex;justify-content:center;align-items:center;min-height:60px;color:#909399;font-size:14px">
-        {{ options.emptyText || '暂无数据' }}
+        {{ options.emptyText || builtinEmptyText }}
       </div>
     </template>
   </vxe-grid>
@@ -45,7 +45,7 @@
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { CellEditPayload, TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow, resolveBuiltinText } from '@es-plus/core'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -459,6 +459,8 @@ export default defineComponent({
       renderSlotEntries,
       namedParentSlots,
       normalizeSlotProps,
+      // W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
+      builtinEmptyText: resolveBuiltinText('emptyText'),
       handleCheckboxChange,
       handleCheckboxAll,
       handleSortChange,

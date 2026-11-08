@@ -50,7 +50,7 @@ import EsTable from '../../es-table/src/component.vue'
 import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import { useDialog } from '../../es-dialog/src/use-dialog'
 import { getNestedValue, setNestedValue } from '../../../utils/shared'
-import { resolveCrudActions } from '@es-plus/core'
+import { resolveCrudActions, resolveBuiltinText } from '@es-plus/core'
 import type { CellEditPayload } from '@es-plus/core'
 import type {
   CrudPageSchema,
@@ -185,13 +185,13 @@ const normalizedDialogs = computed<Record<string, CrudDialogConfig>>(() => {
   const actions = resolvedActions.value
 
   if (actions.includes('add')) {
-    result.add = { ...dialogBase, title: '新增' }
+    result.add = { ...dialogBase, title: resolveBuiltinText('add') }
   }
   if (actions.includes('edit')) {
-    result.edit = { ...dialogBase, title: '编辑' }
+    result.edit = { ...dialogBase, title: resolveBuiltinText('edit') }
   }
   if (actions.includes('view')) {
-    result.view = { ...dialogBase, title: '查看', isHiddenFooter: true }
+    result.view = { ...dialogBase, title: resolveBuiltinText('view'), isHiddenFooter: true }
   }
 
   return result
@@ -208,13 +208,13 @@ const normalizedToolbarBtns = computed<CrudBtnConfig[]>(() => {
   const btns: CrudBtnConfig[] = []
 
   if (actions.includes('add')) {
-    btns.push({ name: '新增', type: 'primary', key: 'add', icon: 'Plus', dialogKey: 'add' })
+    btns.push({ name: resolveBuiltinText('add'), type: 'primary', key: 'add', icon: 'Plus', dialogKey: 'add' })
   }
   if (actions.includes('export')) {
-    btns.push({ name: '导出', key: 'export', icon: 'Download', actionType: 'export' })
+    btns.push({ name: resolveBuiltinText('export'), key: 'export', icon: 'Download', actionType: 'export' })
   }
   if (actions.includes('import')) {
-    btns.push({ name: '导入', key: 'import', icon: 'Upload', actionType: 'import' })
+    btns.push({ name: resolveBuiltinText('import'), key: 'import', icon: 'Upload', actionType: 'import' })
   }
 
   return btns
@@ -232,17 +232,17 @@ const normalizedOperationColumn = computed<OperationColumnConfig | false | undef
 
   const btns: RowBtnConfig[] = []
   if (actions.includes('view')) {
-    btns.push({ name: '查看', type: 'primary', key: 'view', dialogKey: 'view' })
+    btns.push({ name: resolveBuiltinText('view'), type: 'primary', key: 'view', dialogKey: 'view' })
   }
   if (actions.includes('edit')) {
-    btns.push({ name: '编辑', type: 'primary', key: 'edit', dialogKey: 'edit' })
+    btns.push({ name: resolveBuiltinText('edit'), type: 'primary', key: 'edit', dialogKey: 'edit' })
   }
   if (actions.includes('delete')) {
-    btns.push({ name: '删除', type: 'danger', key: 'delete', confirm: '确定删除该条数据吗？' })
+    btns.push({ name: resolveBuiltinText('delete'), type: 'danger', key: 'delete', confirm: resolveBuiltinText('deleteConfirm') })
   }
 
   return {
-    label: '操作',
+    label: resolveBuiltinText('operation'),
     width: btns.length * 80 + 20,
     fixed: 'right',
     btns,
@@ -260,13 +260,13 @@ const mergedFormBtns = computed<BtnConfig[]>(() => {
     // 故查询键自己发起一次「新搜索」（回到第 1 页，与 EsForm 的 queryTableRequest 同口径），
     // 再带着当前查询模型派发事件；重置键仍交给 EsForm 的 triggerEvent（重置表单 + 刷新）。
     {
-      name: '查询', type: 'primary', key: 'query',
+      name: resolveBuiltinText('query'), type: 'primary', key: 'query',
       click: () => {
         ;(tableRef.value as any)?.httpRequestInstance?.(queryModel, { keepPage: false })?.catch?.(() => {})
         emit('query', { ...queryModel })
       },
     },
-    { name: '重置', key: 'rest', triggerEvent: true },
+    { name: resolveBuiltinText('reset'), key: 'rest', triggerEvent: true },
   ]
 
   const toolbarBtns = normalizedToolbarBtns.value.map((btn) => {
@@ -301,7 +301,7 @@ const mergedColumns = computed<TableColumn[]>(() => {
 
   cols.push({
     prop: 'operate',
-    label: opCol.label || '操作',
+    label: opCol.label || resolveBuiltinText('operation'),
     width: opCol.width || actionBtns.length * 80 + 20,
     // `??` 而不是 `||`：契约允许 `fixed: false`（= 不固定）；`||` 会把它静默改成 'right'。
     fixed: opCol.fixed ?? 'right',
@@ -385,15 +385,15 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
 
   // 确认逻辑（对齐 vue3 ElMessageBox.confirm，ADV 用 Modal.confirm 近似 warning）
   if (btn.confirm) {
-    const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
+    const msg = typeof btn.confirm === 'string' ? btn.confirm : resolveBuiltinText('confirmAction')
     try {
       await new Promise((resolve, reject) => {
         Modal.confirm({
-          title: '提示',
+          title: resolveBuiltinText('tip'),
           icon: h(ExclamationCircleOutlined),
           content: msg,
-          okText: '确定',
-          cancelText: '取消',
+          okText: resolveBuiltinText('ok'),
+          cancelText: resolveBuiltinText('cancel'),
           okType: btn.type === 'danger' ? 'danger' : 'primary',
           onOk: () => resolve(true),
           onCancel: () => reject(new Error('cancel')),
@@ -430,15 +430,15 @@ async function handleRowBtnClick(btn: RowBtnConfig, row: Record<string, unknown>
 
   // 确认逻辑
   if (btn.confirm) {
-    const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
+    const msg = typeof btn.confirm === 'string' ? btn.confirm : resolveBuiltinText('confirmAction')
     try {
       await new Promise((resolve, reject) => {
         Modal.confirm({
-          title: '提示',
+          title: resolveBuiltinText('tip'),
           icon: h(ExclamationCircleOutlined),
           content: msg,
-          okText: '确定',
-          cancelText: '取消',
+          okText: resolveBuiltinText('ok'),
+          cancelText: resolveBuiltinText('cancel'),
           okType: btn.type === 'danger' ? 'danger' : 'primary',
           onOk: () => resolve(true),
           onCancel: () => reject(new Error('cancel')),
@@ -620,14 +620,14 @@ function resolveDialogBtns(
 
   return [
     {
-      name: '取消',
+      name: resolveBuiltinText('cancel'),
       click: (_: any, { close }: any) => {
         emit('dialog-cancel', key)
         close()
       },
     },
     {
-      name: '确定',
+      name: resolveBuiltinText('ok'),
       type: 'primary',
       click: async (_: any, { close, getRefs }: any) => {
         // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；

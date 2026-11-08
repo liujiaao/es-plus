@@ -32,7 +32,7 @@
     </template>
     <template v-if="!namedParentSlots['empty']" #empty>
       <div style="display:flex;justify-content:center;align-items:center;min-height:60px;color:#8c8c8c;font-size:14px">
-        {{ props.options.emptyText || '暂无数据' }}
+        {{ props.options.emptyText || builtinEmptyText }}
       </div>
     </template>
   </vxe-grid>
@@ -45,7 +45,7 @@ import type { CellEditPayload, TableEngineExposed } from '@es-plus/core'
 import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
-import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
+import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow, resolveBuiltinText } from '@es-plus/core'
 
 defineOptions({ inheritAttrs: false })
 
@@ -123,6 +123,9 @@ function normalizeSlotProps(slotProps: any) {
     value: prop && row ? row[prop] : undefined,
   }
 }
+
+// W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
+const builtinEmptyText = resolveBuiltinText('emptyText')
 
 const gridConfig = computed(() => {
   const opts = props.options as any

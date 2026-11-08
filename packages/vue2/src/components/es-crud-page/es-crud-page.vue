@@ -70,7 +70,7 @@ import type {
   DialogActionContext,
 } from './types'
 import type { BtnConfig, CellEditPayload, TableColumn } from '@es-plus/core'
-import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions } from '@es-plus/core'
+import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions, resolveBuiltinText } from '@es-plus/core'
 
 /**
  * AI-27：弹窗底座键的**显式白名单**（逐键转发给 `dialog()`）。
@@ -223,10 +223,10 @@ export default defineComponent({
       const result: Record<string, CrudDialogConfig> = {}
       const actions = resolvedActions.value
 
-      if (actions.includes('add')) result.add = { ...dialogBase, title: '新增' }
-      if (actions.includes('edit')) result.edit = { ...dialogBase, title: '编辑' }
+      if (actions.includes('add')) result.add = { ...dialogBase, title: resolveBuiltinText('add') }
+      if (actions.includes('edit')) result.edit = { ...dialogBase, title: resolveBuiltinText('edit') }
       if (actions.includes('view'))
-        result.view = { ...dialogBase, title: '查看', isHiddenFooter: true }
+        result.view = { ...dialogBase, title: resolveBuiltinText('view'), isHiddenFooter: true }
 
       return result
     })
@@ -242,7 +242,7 @@ export default defineComponent({
 
       if (actions.includes('add')) {
         btns.push({
-          name: '新增',
+          name: resolveBuiltinText('add'),
           type: 'primary',
           key: 'add',
           icon: 'Plus',
@@ -251,7 +251,7 @@ export default defineComponent({
       }
       if (actions.includes('export')) {
         btns.push({
-          name: '导出',
+          name: resolveBuiltinText('export'),
           key: 'export',
           icon: 'Download',
           actionType: 'export',
@@ -259,7 +259,7 @@ export default defineComponent({
       }
       if (actions.includes('import')) {
         btns.push({
-          name: '导入',
+          name: resolveBuiltinText('import'),
           key: 'import',
           icon: 'Upload',
           actionType: 'import',
@@ -284,19 +284,19 @@ export default defineComponent({
 
         const btns: RowBtnConfig[] = []
         if (actions.includes('view'))
-          btns.push({ name: '查看', type: 'primary', key: 'view', dialogKey: 'view' })
+          btns.push({ name: resolveBuiltinText('view'), type: 'primary', key: 'view', dialogKey: 'view' })
         if (actions.includes('edit'))
-          btns.push({ name: '编辑', type: 'primary', key: 'edit', dialogKey: 'edit' })
+          btns.push({ name: resolveBuiltinText('edit'), type: 'primary', key: 'edit', dialogKey: 'edit' })
         if (actions.includes('delete'))
           btns.push({
-            name: '删除',
+            name: resolveBuiltinText('delete'),
             type: 'danger',
             key: 'delete',
-            confirm: '确定删除该条数据吗？',
+            confirm: resolveBuiltinText('deleteConfirm'),
           })
 
         return {
-          label: '操作',
+          label: resolveBuiltinText('operation'),
           width: btns.length * 80 + 20,
           fixed: 'right',
           btns,
@@ -314,13 +314,13 @@ export default defineComponent({
         // 故查询键自己发起一次「新搜索」（回到第 1 页，与 EsForm 的 queryTableRequest 同口径），
         // 再带着当前查询模型派发事件；重置键仍交给 EsForm 的 triggerEvent（重置表单 + 刷新）。
         {
-          name: '查询', type: 'primary', key: 'query',
+          name: resolveBuiltinText('query'), type: 'primary', key: 'query',
           click: () => {
             ;(tableRef.value as any)?.httpRequestInstance?.(queryModel, { keepPage: false })?.catch?.(() => {})
             emit('query', { ...queryModel })
           },
         } as BtnConfig,
-        { name: '重置', key: 'rest', triggerEvent: true } as BtnConfig,
+        { name: resolveBuiltinText('reset'), key: 'rest', triggerEvent: true } as BtnConfig,
       ]
 
       const toolbarBtns = normalizedToolbarBtns.value.map((btn) => {
@@ -354,7 +354,7 @@ export default defineComponent({
 
       cols.push({
         prop: 'operate',
-        label: (opCol as OperationColumnConfig).label || '操作',
+        label: (opCol as OperationColumnConfig).label || resolveBuiltinText('operation'),
         width:
           (opCol as OperationColumnConfig).width || actionBtns.length * 80 + 20,
         // `??` 而不是 `||`：`fixed:false` 是合法的「不固定」，用 `||` 会被改回 'right'。
@@ -439,9 +439,9 @@ export default defineComponent({
       const key = btn.key || btn.actionType || btn.name || ''
 
       if (btn.confirm) {
-        const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
+        const msg = typeof btn.confirm === 'string' ? btn.confirm : resolveBuiltinText('confirmAction')
         try {
-          await MessageBox.confirm(msg, '提示', { type: 'warning' })
+          await MessageBox.confirm(msg, resolveBuiltinText('tip'), { type: 'warning' })
         } catch {
           return
         }
@@ -469,9 +469,9 @@ export default defineComponent({
       const key = btn.key || btn.name || ''
 
       if (btn.confirm) {
-        const msg = typeof btn.confirm === 'string' ? btn.confirm : '确定执行此操作吗？'
+        const msg = typeof btn.confirm === 'string' ? btn.confirm : resolveBuiltinText('confirmAction')
         try {
-          await MessageBox.confirm(msg, '提示', { type: 'warning' })
+          await MessageBox.confirm(msg, resolveBuiltinText('tip'), { type: 'warning' })
         } catch {
           return
         }
@@ -664,14 +664,14 @@ export default defineComponent({
 
       return [
         {
-          name: '取消',
+          name: resolveBuiltinText('cancel'),
           click: (_: unknown, { close }: any) => {
             emit('dialog-cancel', key)
             close()
           },
         },
         {
-          name: '确定',
+          name: resolveBuiltinText('ok'),
           type: 'primary',
           click: async (_: unknown, { close, getRefs }: any) => {
             // 校验失败会 reject（表单已高亮错误）、onConfirm 抛错各自路径已处理；
