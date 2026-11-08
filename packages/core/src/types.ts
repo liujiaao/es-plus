@@ -298,6 +298,11 @@ export interface FormItemOption {
   span?: number
   /** 占位文本快捷方式（自动注入到 attrs.placeholder，attrs 中的同名属性优先） */
   placeholder?: string
+  /**
+   * 详情模式（`EsForm mode="detail"`）下空值的展示文本，默认 `'-'`。
+   * 编辑模式不消费此字段（输入控件用 `placeholder`）。
+   */
+  emptyPlaceholder?: string
   /** 是否可清除快捷方式（自动注入到 attrs.clearable，attrs 中的同名属性优先） */
   clearable?: boolean
   /** 是否禁用快捷方式（自动注入到 attrs.disabled / props.disabled，attrs 中的同名属性优先） */
