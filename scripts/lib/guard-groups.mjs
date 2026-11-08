@@ -111,6 +111,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:threeway',
       'check:crud-actions',
       'check:button-surface',
+      'check:i18n-literals',
     ],
   },
   {
