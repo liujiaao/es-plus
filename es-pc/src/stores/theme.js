@@ -19,12 +19,30 @@ import { ref, watch } from 'vue'
 // 抽成常量后这条锚点会静默失效（守卫变绿，但两处规则其实可以漂移）。
 export const isDark = ref(false)
 
+/**
+ * 「主题已应用」的登记处 —— 给**惰性加载**的第三方主题用。
+ *
+ * vxe-table / vxe-pc-ui 在模块求值时就无条件 `setTheme('light')`
+ * （vxe-pc-ui/packages/components.ts 底部），把首屏脚本与 initTheme 挂好的
+ * data-vxe-ui-theme 覆盖回亮色。本站 vxe 是懒加载的，覆盖发生在主题落定之后，
+ * 结果就是 /es-vxe-table 永远整块白。vxe-install 加载完在这里登记一次，
+ * 之后每次切换主题都会重设它 —— 但 theme.js 不能反过来静态引 vxe（会把它拉回首屏）。
+ */
+const appliedListeners = new Set()
+
+/** 登记回调并立刻用当前主题调一次 */
+export const onThemeApplied = (fn) => {
+  appliedListeners.add(fn)
+  fn(isDark.value)
+}
+
 export const applyTheme = () => {
   const root = document.documentElement
   root.classList.toggle('dark', isDark.value)
   root.style.colorScheme = isDark.value ? 'dark' : 'light'
   // vxe-table 4.x 不认 `dark` 类：暗色变量整块挂在 [data-vxe-ui-theme="dark"] 上
   root.setAttribute('data-vxe-ui-theme', isDark.value ? 'dark' : 'light')
+  appliedListeners.forEach((fn) => fn(isDark.value))
 }
 
 export const initTheme = () => {

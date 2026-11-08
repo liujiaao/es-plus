@@ -169,6 +169,33 @@ for (const site of DARK_SITES) {
   }
 }
 
+/* ── A2. 惰性加载的 vxe 必须重设主题 ─────────────────────────────
+ * vxe-pc-ui 在**模块求值**时无条件 setTheme('light')（packages/components.ts 底部），
+ * 把首屏脚本挂好的 data-vxe-ui-theme 覆盖掉。两站都把 vxe 挪进了懒加载块，于是覆盖
+ * 发生在 initTheme 之后 —— 实测 /advanced/vxe-table 与 /es-vxe-table 在深色下整块白
+ * （html 有 dark 类、color-scheme=dark，表格背景 rgb(255,255,255)）。
+ * 修法是在安装模块里登记主题回调；这里断言这条接线还在，且 store 真的会通知回调。
+ */
+const VXE_THEME_WIRING = [
+  { installer: 'es-plus-docs/src/utils/vxe-install.ts', store: 'es-plus-docs/src/stores/theme.ts' },
+  { installer: 'es-pc/src/utils/vxe-install.js', store: 'es-pc/src/stores/theme.js' },
+]
+for (const wiring of VXE_THEME_WIRING) {
+  const installer = read(wiring.installer)
+  if (installer) {
+    if (!installer.includes('onThemeApplied(') || !installer.includes('VxeUI.setTheme(')) {
+      fail(
+        `${wiring.installer} 没有在加载后重设 vxe 主题 —— vxe 求值时会 setTheme('light')，` +
+          '深色页面里的 vxe 表格会整块白',
+      )
+    }
+  }
+  const store = read(wiring.store)
+  if (store && !store.includes('appliedListeners.forEach')) {
+    fail(`${wiring.store} 没有通知 onThemeApplied 登记的回调 —— 登记的 vxe 重设永远不会被调用`)
+  }
+}
+
 /* ── B. 明确 light-only 的站 ───────────────────────────────────── */
 for (const site of LIGHT_SITES) {
   const html = read(site.html)

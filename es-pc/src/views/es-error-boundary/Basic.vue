@@ -129,7 +129,7 @@ const logError = (err, info) => {
 /* 案例内类名统一 eb- 前缀，避免污染全局；不用 scoped —— 故障组件的根节点由子组件渲染，
    scoped 属性不会落到它渲染出的元素上 */
 .eb-workbench {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 8px;
   padding: 12px;
 }
@@ -143,18 +143,18 @@ const logError = (err, info) => {
 .eb-isolation {
   margin-left: auto;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--es-text-secondary);
 }
 .eb-widget {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--es-border-lighter);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 10px;
-  background: #fafcff;
+  background: var(--es-fill-light);
 }
 .eb-widget__title {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--es-text-secondary);
   margin-bottom: 8px;
 }
 .eb-kpi {
@@ -183,8 +183,8 @@ const logError = (err, info) => {
   background: linear-gradient(180deg, #69b1ff 0%, #1677ff 100%);
 }
 .eb-fallback {
-  border: 1px solid #ffccc7;
-  background: #fff2f0;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.12);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 10px;
@@ -193,37 +193,37 @@ const logError = (err, info) => {
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 600;
-  color: #cf1322;
+  color: var(--es-danger);
 }
 .eb-fallback__msg {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #a8071a;
+  color: var(--es-danger);
   font-family: 'Fira Code', monospace;
 }
 .eb-log {
   margin-top: 10px;
-  border-top: 1px dashed #f0f0f0;
+  border-top: 1px dashed var(--es-border-lighter);
   padding-top: 8px;
   font-size: 12px;
 }
 .eb-log__head {
-  color: #8c8c8c;
+  color: var(--es-text-secondary);
   margin-bottom: 4px;
 }
 .eb-log__empty {
   margin: 0;
-  color: #bfbfbf;
+  color: var(--es-text-secondary);
 }
 .eb-log__row {
   margin: 2px 0;
-  color: #595959;
+  color: var(--es-text-regular);
   display: flex;
   gap: 8px;
 }
 .eb-log__row code {
   color: #1677ff;
-  background: #e6f4ff;
+  background: rgba(22, 119, 255, 0.12);
   border-radius: 3px;
   padding: 0 5px;
   font-family: 'Fira Code', monospace;
@@ -232,7 +232,7 @@ const logError = (err, info) => {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.8;
-  color: #8c8c8c;
+  color: var(--es-text-secondary);
 }
 .eb-note code {
   background: var(--es-fill);

@@ -11,6 +11,17 @@
  */
 import VxeUI from 'vxe-pc-ui'
 import VxeTable from 'vxe-table'
+import { onThemeApplied } from '@/stores/theme'
+
+/**
+ * vxe 的两个包在**模块求值**时都会 `setTheme('light')`（vxe-pc-ui/packages/components.ts
+ * 底部），把 <html> 上已挂好的 data-vxe-ui-theme 覆盖回 light。本站 vxe 走懒加载，
+ * 覆盖发生在 initTheme 之后 —— 不重设的话 /es-vxe-table 永远是整块白，即使 html 上
+ * 有 `dark` 类、color-scheme 也是 dark。
+ *
+ * 登记在 onThemeApplied：模块加载完立刻设一次，之后每次切换主题再设一次。
+ */
+onThemeApplied((dark) => VxeUI.setTheme(dark ? 'dark' : 'light'))
 
 /** 把 vxe 的两个插件注册到 app（本站只有一个 Vue 3 应用实例） */
 export function installVxe(app) {

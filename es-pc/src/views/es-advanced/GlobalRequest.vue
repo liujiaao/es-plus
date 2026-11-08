@@ -95,11 +95,12 @@ const pageSchema = {
   gap: 8px;
   margin-top: 12px;
   padding: 10px 12px;
-  border: 1px dashed #b7eb8f;
+  /* 成功提示条：用半透明状态色而不是浅色实底，暗色下才不会留一块浅绿 */
+  border: 1px dashed rgba(82, 196, 26, 0.45);
   border-radius: 8px;
-  background: #f6ffed;
+  background: rgba(82, 196, 26, 0.12);
   font-size: 13px;
-  color: #595959;
+  color: var(--es-text-regular);
 }
 .log-label {
   font-weight: 600;
@@ -109,7 +110,7 @@ const pageSchema = {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 12px;
-  color: #595959;
+  color: var(--es-text-regular);
 }
 .log-detail code {
   font-family: 'Fira Code', monospace;

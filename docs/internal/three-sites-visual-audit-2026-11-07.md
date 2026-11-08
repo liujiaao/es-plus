@@ -497,6 +497,27 @@ es-plus-docs / es-pc / es-eui 三站构建  # 全绿（es-eui 用 --dest dist-ve
 
 > 数字账：令牌基线从 4,057 降到 3,917（60 个文件减少、无文件增加）。`theme:sync` 之后 `check:raw-sources` 曾红一次 —— 是上一轮 es-eui 源码的 `font-size` 改动没有重新生成 raw sources（97 个文件），跑生成器即恢复；这是生成物按设计的行为，不是守卫误报。
 
+### 9.9 第五轮：暗色全路由复核（2026-11-08）
+
+§9.8 的暗色验收只覆盖了 es-pc 的 9 个路由、主站 0 个新路由，属于**抽样**。这轮把两站**全部**路由在 1440 / 390 两个宽度逐页扫了一遍（判据不变：可见、背景亮度 > 0.75、不透明、面积 >30k px²），发现三类漏点：
+
+| 站 | 路由 | 症状 | 根因 | 修法 |
+|---|---|---|---|---|
+| es-plus-docs | `/advanced/vxe-table` | 4 张 vxe 表整块白（58 个亮块） | **vxe 在模块求值时无条件 `setTheme('light')`**（`vxe-pc-ui/packages/components.ts` 底部），把 `<html data-vxe-ui-theme>` 覆盖回 light。vxe 走懒加载，覆盖发生在 `initTheme` 之后 | `stores/theme.ts` 加 `onThemeApplied` 登记处，`utils/vxe-install.ts` 加载完登记 `VxeUI.setTheme()` 并立刻纠正一次 |
+| es-pc | `/es-vxe-table`、`/ai-gallery/engine-lab` | 同上（16 张表） | 同上（两站同构的懒加载器，同病） | 同上 |
+| es-pc | `/es-error-boundary`、`/advanced` | 2 + 1 个浅色卡片 | 视图里写死 `#fafcff / #f6ffed / #fff2f0` | 换 `--es-fill-light` / 状态色低透明度 rgba，文字换令牌 |
+
+**为什么上一轮没抓到**：探针是抽样跑的几个页面，而 vxe 的覆盖只在「懒加载块求值之后」发生 —— 首页、表单页这些不加载 vxe 的页面完全正常，坏的是恰好用到 vxe 的长尾页面。这也解释了为什么 §9.8 里 es-pc 的 `/es-vxe-table` 没进抽样名单。
+
+**修后复核**（探针留在 `audit/dark-probe-docs.mjs`、`audit/dark-probe-espc.mjs`，未跟踪）：
+
+```
+主站 30 条路由 × 1440 / 390    亮块 0 / 0
+es-pc 22 条路由 × 1440 / 390   亮块 0 / 0
+```
+
+守卫补了一节 A2：两站的 `vxe-install` 必须同时出现 `onThemeApplied(` 与 `VxeUI.setTheme(`，store 必须真的 `appliedListeners.forEach` 通知回调 —— 做了变异测试（把 `VxeUI.setTheme(` 改成下标写法，守卫按预期变红）。
+
 ---
 
 ## 附录 A：量化证据表
