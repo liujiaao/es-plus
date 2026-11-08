@@ -220,8 +220,41 @@ try {
   rmSync(tmp, { recursive: true, force: true })
 }
 
+// ── 6. 站点文档的过时措辞（W1-2）────────────────────────────────────────
+//
+// 此前的黑名单只扫 mcp-server 的架构手册，而 W1-2 那两处与源码相反的表述活在
+// **站点文档**里（permission-i18n.md / faq.md 写「未传 permission 时所有按钮默认
+// 显示、permissionValue 被忽略」，实际 field-resolver 是 fail-closed）。Guard 的
+// 覆盖面比它的名字窄，等于没有守卫 —— 这里把站点文档源纳入同一张黑名单。
+//
+// 只扫 `es-plus-docs/src/docs/*.md`（源），不扫 `public/md`（由 llms:gen 生成的
+// 镜像，同一句会被报两次）。
+const SITE_DOC_DIR = join(ROOT, 'es-plus-docs', 'src', 'docs')
+const SITE_STALE = [
+  '所有按钮默认显示',
+  '`permissionValue` 被忽略',
+  '`permissionValue` 字段会被忽略',
+]
+const siteDocs = readdirSync(SITE_DOC_DIR).filter((n) => n.endsWith('.md'))
+if (!siteDocs.length) fail(`站点文档目录为空或路径变了：${SITE_DOC_DIR}`)
+for (const name of siteDocs) {
+  const text = readFileSync(join(SITE_DOC_DIR, name), 'utf8')
+  for (const stale of SITE_STALE) {
+    if (text.includes(stale)) {
+      fail(`站点文档 ${name} 仍含过时表述：「${stale}」（未配置 permission 时是 fail-closed，见 W1-2）`)
+    }
+  }
+}
+// 正向断言：更正后的语义必须留在文档里，否则「删掉旧句」也能让黑名单变绿。
+for (const name of ['permission-i18n.md', 'faq.md']) {
+  const text = readFileSync(join(SITE_DOC_DIR, name), 'utf8')
+  if (!text.includes('fail-closed')) {
+    fail(`站点文档 ${name} 缺少 fail-closed 语义说明（W1-2 的正确表述不能只靠删旧句）`)
+  }
+}
+
 if (failures.length) {
   console.error(`\n✗ check:doc-drift —— ${failures.length} 处文档与源码不一致`)
   process.exit(1)
 }
-console.log('✅ check:doc-drift：工具计数/名单/边界/描述与源码一致。')
+console.log('✅ check:doc-drift：工具计数/名单/边界/描述与源码一致；站点文档无已回流的过时措辞。')
