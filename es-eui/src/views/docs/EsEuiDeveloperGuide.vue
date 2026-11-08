@@ -760,7 +760,7 @@ export default {
               <tr><td><code>border</code></td><td>Boolean</td><td>false</td><td>是否显示边框</td></tr>
               <tr><td><code>size</code></td><td>String</td><td>'small'</td><td>表格尺寸：mini / small / medium</td></tr>
               <tr><td><code>loading</code></td><td>Boolean</td><td>false</td><td>表格加载动画</td></tr>
-              <tr><td><code>headerCellStyle</code></td><td>Object</td><td>{ background: '#f5f7fa' }</td><td>表头单元格样式</td></tr>
+              <tr><td><code>headerCellStyle</code></td><td>Object</td><td>-</td><td>表头单元格样式（默认不注入内联样式，底色由主题 / 组件库决定）</td></tr>
               <tr><td><code>highlightCurrentRow</code></td><td>Boolean</td><td>true</td><td>高亮当前行</td></tr>
               <tr><td><code>rowkey</code></td><td>String</td><td>—</td><td>行唯一键值（全小写；多选缓存和树形结构必备）。组件内部再转成 el-table 的 <code>row-key</code></td></tr>
 

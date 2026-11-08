@@ -577,8 +577,17 @@ Ant Design Vue 自身暗色调色板（`#1668dc` 链接、白字压 `#dc4446`）
 4,124 / 3,488 / 4,141px。
 
 **仍未处理（下一批）**：`/components/es-table` 10,092px（验收线 10,000，差 92px）；
-es-pc `/es-form` 12,961px、`/es-table` 17,910px 仍是手写 section + 锚点、没有分组；
-`headerCellStyle` 默认值仍以行内样式注入（暗色靠 CSS 压住）。
+es-pc `/es-form` 12,961px、`/es-table` 17,910px 仍是手写 section + 锚点、没有分组。
+
+**`headerCellStyle` 债务已根治（同日，选 A：不再注入缺省内联值）**：
+三端 `es-table` 的 `defaultOptions`（含两个 vxe 引擎）不再下发
+`{ background: '#f5f7fa' }`，生成器（schema / crud / structured / fragment / code）
+同口径改为「用户给了才发」。底色改由主题提供 —— 新增
+`--es-table-header-bg`（亮 `#f5f7fa` / 暗 `#2c2e31`），一条
+`.table_component` 作用域规则覆盖 el-table / vxe / a-table。亮色观感与改前一致；
+暗色不再需要为「内联 #f5f7fa」写 `!important` 抢救（只剩用户**显式**传值那一例，
+需要压回 ADV 渲染在 `<tr>` 上的内联 background）。宿主可见的 schema 形状不变
+（键仍可选），宿主不定义 token 时表头就是组件库自己的颜色。
 
 ---
 

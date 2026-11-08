@@ -393,7 +393,7 @@ const tableOptions = [
   { key: '1', prop: 'border', type: 'boolean', default: 'false', desc: '是否显示边框' },
   { key: '2', prop: 'stripe', type: 'boolean', default: 'false', desc: '斑马纹（Ant Design Vue 无原生 stripe，按行样式实现）' },
   { key: '3', prop: 'size', type: 'string', default: 'small', desc: '表格尺寸：large / middle / small' },
-  { key: '4', prop: 'headerCellStyle', type: 'object', default: "{ background: '#f5f7fa' }", desc: '表头单元格样式' },
+  { key: '4', prop: 'headerCellStyle', type: 'object', default: '-', desc: '表头单元格样式（默认不注入内联样式，底色由主题 / 组件库决定）' },
   { key: '5', prop: 'headerCellClassName', type: 'string | Function', default: '-', desc: '表头单元格类名' },
   { key: '6', prop: 'highlightCurrentRow', type: 'boolean', default: 'true', desc: '高亮当前行（单选即用它 + 行事件）' },
   { key: '7', prop: 'showHeader', type: 'boolean', default: 'true', desc: '是否显示表头' },

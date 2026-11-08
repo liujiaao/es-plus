@@ -259,7 +259,7 @@ EsTable: {
 ```typescript
 configureEsPlus({
   EsTable: {
-    defaults: { size: 'small', border: true, headerCellStyle: { background: '#f5f7fa' } }
+    defaults: { size: 'small', border: true, showHeader: true }
   },
   EsForm: {
     defaults: { formLayProps: { labelWidth: '96px', minFoldRows: 2 } }

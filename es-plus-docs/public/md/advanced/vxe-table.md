@@ -70,7 +70,7 @@ type: 'advanced'
 | rowkey | string | 【vxe 引擎必须设置】默认映射为 "id"；缺少 rowkey 时跨页多选（reserve）无法保留选中行，会收到控制台警告 |
 | multiSelect | boolean | vxe 引擎映射为 checkboxConfig.reserve:true，自动支持跨页保留选中；须配合 rowkey 使用 |
 | snIndex | boolean | vxe 引擎映射为 type:seq 列；起始序号可通过 seqConfig.startIndex 调整 |
-| headerCellStyle | object \| Function \| false | vxe 引擎映射为 headerCellConfig.style，默认为 { background:"#f5f7fa" }（与 el-table 保持一致）；显式设置 false 可关闭默认背景 |
+| headerCellStyle | object \| Function \| false | vxe 引擎映射为 headerCellConfig.style；默认不注入内联样式（表头底色由主题 / 组件库决定），只有显式传入才生效，设置 false 可关闭背景 |
 | cellStyle / cellClassName | object \| string \| Function | vxe 引擎映射为 cellConfig.style / cellConfig.className，函数参数为 { row, rowIndex, column, columnIndex } |
 | rowClassName / rowStyle | string \| Function | vxe 引擎映射为 rowConfig.className / rowConfig.style，函数参数为 { row, rowIndex } |
 | defaultSort | { prop, order } | vxe 引擎将 order 映射：ascending→asc，descending→desc，注入 sortConfig.defaultSort |

@@ -207,7 +207,7 @@ export const docsData: Record<string, any> = {
         { name: 'rowkey', type: 'string', desc: '【vxe 引擎必须设置】默认映射为 "id"；缺少 rowkey 时跨页多选（reserve）无法保留选中行，会收到控制台警告' },
         { name: 'multiSelect', type: 'boolean', desc: 'vxe 引擎映射为 checkboxConfig.reserve:true，自动支持跨页保留选中；须配合 rowkey 使用' },
         { name: 'snIndex', type: 'boolean', desc: 'vxe 引擎映射为 type:seq 列；起始序号可通过 seqConfig.startIndex 调整' },
-        { name: 'headerCellStyle', type: 'object | Function | false', desc: 'vxe 引擎映射为 headerCellConfig.style，默认为 { background:"#f5f7fa" }（与 el-table 保持一致）；显式设置 false 可关闭默认背景' },
+        { name: 'headerCellStyle', type: 'object | Function | false', desc: 'vxe 引擎映射为 headerCellConfig.style；默认不注入内联样式（表头底色由主题 / 组件库决定），只有显式传入才生效，设置 false 可关闭背景' },
         { name: 'cellStyle / cellClassName', type: 'object | string | Function', desc: 'vxe 引擎映射为 cellConfig.style / cellConfig.className，函数参数为 { row, rowIndex, column, columnIndex }' },
         { name: 'rowClassName / rowStyle', type: 'string | Function', desc: 'vxe 引擎映射为 rowConfig.className / rowConfig.style，函数参数为 { row, rowIndex }' },
         { name: 'defaultSort', type: '{ prop, order }', desc: 'vxe 引擎将 order 映射：ascending→asc，descending→desc，注入 sortConfig.defaultSort' },
