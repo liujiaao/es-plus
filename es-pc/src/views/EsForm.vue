@@ -379,6 +379,7 @@ const formProps = [
   { key: '6', prop: 'renderBtn', type: 'Function | boolean', default: 'false', desc: '自定义按钮区渲染函数 (row, model, formItemList, h) => VNode' },
   { key: '7', prop: 'btnColSpanRow', type: 'boolean', default: 'true', desc: 'true = 按钮独占一行；false = 接在最后一个字段后' },
   { key: '8', prop: 'fieldFieldOutput', type: 'Function', default: '-', desc: '字段级 apiParams 的请求字段映射钩子 (defaults) => defaults' },
+  { key: '9', prop: 'mode', type: "'edit' | 'detail'", default: "'edit'", desc: 'detail 把控件换成只读文本（dataOptions 翻译、日期格式化、空值占位），label 布局不变；render 字段仍走自定义函数，triggerEvent 按钮默认不渲染' },
 ]
 
 const formMethods = [
@@ -398,6 +399,7 @@ const formItemOptions = [
   { key: '4', prop: 'formtype', type: 'string', default: '-', desc: '控件类型：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload' },
   { key: '5', prop: 'span', type: 'number', default: '6', desc: '栅格占位（1-24）' },
   { key: '6', prop: 'placeholder', type: 'string', default: '-', desc: '占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）' },
+  { key: '6.1', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
   { key: '7', prop: 'clearable', type: 'boolean', default: '-', desc: '可清除快捷方式，自动注入 attrs.clearable（attrs 同名优先）' },
   { key: '8', prop: 'disabled', type: 'boolean', default: '-', desc: '禁用快捷方式，自动注入 attrs.disabled / props.disabled（attrs 同名优先）' },
   { key: '9', prop: 'attrs', type: 'object', default: '-', desc: '透传给控件的属性袋；与 props 合并后交给底层组件' },

@@ -114,6 +114,7 @@ export const docsData: Record<string, any> = {
         { name: 'renderBtn', type: 'Function | boolean', default: 'false', desc: '自定义按钮渲染函数，返回 VNode' },
         { name: 'btnColSpanRow', type: 'boolean', default: 'true', desc: '按钮区域是否独占一行（左右分栏布局）' },
         { name: 'rules', type: 'Object', default: '{}', desc: '验证规则（Element Plus 格式）' },
+        { name: 'mode', type: "'edit' | 'detail'", default: "'edit'", desc: '表单模式：detail 把控件换成只读文本（dataOptions 翻译、日期格式化、空值占位），label 布局不变；render 字段仍走自定义函数，triggerEvent 按钮（查询/重置等取数动作）默认不渲染' },
         { name: 'fieldFieldOutput', type: 'FieldMap | Function', default: '-', desc: 'API 响应字段映射：字面量对象（叠加在内置默认映射上）或 (defaults) => FieldMap；全局 EsForm.fieldFieldOutput 可作兜底' }
       ],
       'FormItemOption': [
@@ -121,6 +122,7 @@ export const docsData: Record<string, any> = {
         { name: 'label', type: 'string', default: '-', desc: '标签文本（必填）' },
         { name: 'formtype', type: 'string', default: '-', desc: '控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容' },
         { name: 'span', type: 'number', default: '6', desc: '栅格占位（24 列布局）' },
+        { name: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
         { name: 'attrs', type: 'Object', default: '-', desc: '透传给 Element Plus 组件的属性（placeholder、clearable 等）' },
         { name: 'on', type: 'Object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
         { name: 'dataOptions', type: 'Array<{label, value}>', default: '-', desc: '选项数据（Select/Radio/Checkbox/Cascader）' },

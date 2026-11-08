@@ -70,6 +70,9 @@ const ALLOWLIST = new Map([
   ['FormItemOption.clearable', '由 core 的 normalizeFormItem 注入 attrs 后由控件消费（渲染器无需直接读）'],
   ['FormItemOption.required', '由 core 的 resolveItemValidateProps 消费（渲染器只需展开其返回值）'],
   ['BtnConfig.direction', '由 core 的 resolveButtonSide / splitButtonsByDirection 消费；三端内联的 direction 过滤已删除，改调 core'],
+  // 详情模式的展示解析在 core 单源：三端只把 item + model 交给 resolveFormDetailText，
+  // 不各自读 emptyPlaceholder（各写一份会先漂移空值兜底，与 table-cell 同因）。
+  ['FormItemOption.emptyPlaceholder', '由 core 的 form-detail.ts（resolveFormDetailText）统一消费；三端只渲染返回的文本'],
   // 列筛选谓词是**跨引擎单源**：三端只把列配置交给 core 的 buildColumnFilterMethod(col)，
   // 由它读取 filterMode 并生成 (value, row) => boolean。渲染器直接读 filterMode 反而是漂移源。
   ['TableColumn.filterMode', '由 core 的 table-filter.ts（buildColumnFilterMethod）统一消费；三端共享同一谓词，渲染器只传列配置'],

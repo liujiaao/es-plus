@@ -111,6 +111,16 @@
             <td>Function</td>
             <td>undefined</td>
           </tr>
+          <tr>
+            <td>mode</td>
+            <td>
+              表单模式：<code>'edit'</code>（默认）渲染输入控件；<code>'detail'</code> 把控件换成只读文本
+              （dataOptions 翻译、日期格式化、空值占位），label 布局不变；render 字段仍走自定义函数；
+              triggerEvent 按钮（查询/重置等取数动作）默认不渲染
+            </td>
+            <td>'edit' | 'detail'</td>
+            <td>'edit'</td>
+          </tr>
         </tbody>
       </table>
 
@@ -155,6 +165,11 @@
           <tr>
             <td>placeholder</td>
             <td>占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）</td>
+            <td>String</td>
+          </tr>
+          <tr>
+            <td>emptyPlaceholder</td>
+            <td>详情模式（<code>mode="detail"</code>）下空值的展示文本，默认 <code>'-'</code>；编辑模式不消费</td>
             <td>String</td>
           </tr>
           <tr>
