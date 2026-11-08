@@ -45,6 +45,9 @@ export type BuiltinTextKey =
   | 'tip'
   | 'deleteConfirm'
   | 'confirmAction'
+  | 'fullscreen'
+  | 'exitFullscreen'
+  | 'close'
 
 /** 简体中文（缺省）。**值即 v1.5 三个渲染器里原有的字面量**，默认行为逐字节不变。 */
 export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
@@ -65,6 +68,10 @@ export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
   tip: '提示',
   deleteConfirm: '确定删除该条数据吗？',
   confirmAction: '确定执行此操作吗？',
+  // 弹窗头部的图标按钮没有可见文字，这三个键只作为 `aria-label` 供读屏使用
+  fullscreen: '全屏',
+  exitFullscreen: '退出全屏',
+  close: '关闭',
 }
 
 /** English. */
@@ -86,6 +93,9 @@ export const EN_US_MESSAGES: Record<BuiltinTextKey, string> = {
   tip: 'Notice',
   deleteConfirm: 'Delete this record?',
   confirmAction: 'Proceed with this action?',
+  fullscreen: 'Fullscreen',
+  exitFullscreen: 'Exit fullscreen',
+  close: 'Close',
 }
 
 /**

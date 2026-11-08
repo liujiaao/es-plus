@@ -34,6 +34,16 @@ describe('内置文案字典', () => {
     expect(resolveBuiltinText('operation')).toBe('Actions')
   })
 
+  it('图标按钮的可访问名（aria-label）也有字典键，不再硬编码中文', () => {
+    expect(resolveBuiltinText('fullscreen')).toBe('全屏')
+    expect(resolveBuiltinText('exitFullscreen')).toBe('退出全屏')
+    expect(resolveBuiltinText('close')).toBe('关闭')
+    configureEsPlus({ locale: 'en-US' })
+    expect(resolveBuiltinText('fullscreen')).toBe('Fullscreen')
+    expect(resolveBuiltinText('exitFullscreen')).toBe('Exit fullscreen')
+    expect(resolveBuiltinText('close')).toBe('Close')
+  })
+
   it('messages 覆盖单键，且优先于 locale 字典', () => {
     configureEsPlus({ locale: 'en-US', messages: { operation: '操作列' } })
     expect(resolveBuiltinText('operation')).toBe('操作列')
