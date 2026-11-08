@@ -46,7 +46,7 @@
 
 ### 没传 `permission` 会怎样？
 
-所有按钮默认显示，`permissionValue` 被忽略 —— 这是刻意的向后兼容行为，不是漏判。所以「配了权限却全都可见」的第一件事是确认 `app.use(ESPlus, { permission })` 真的传进去了。
+**声明了 `permissionValue` 的按钮/字段/列会被拒绝**（fail-closed），并按权限码打印一次开发期告警。没有 `permissionValue` 的元素不受影响。所以「配了权限却看不到按钮」的第一件事是确认 `app.use(ESPlus, { permission })` 真的传进去了；确实要临时全部放行，请显式传 `permission: () => true`。
 
 ### 权限改了要刷新页面吗？
 
