@@ -47,9 +47,19 @@ const rows = (page: Page) => page.locator('.el-table__body-wrapper').first().loc
 const dialog = (page: Page) => page.locator('.el-dialog').filter({ has: page.locator('.el-form') })
 const total = (page: Page) => page.locator('.el-pagination__total')
 
+// 与 ai-crud.spec.ts 同一套等待策略，原因也一样，只是这里还多一层：
+//   1. 站点是源码模式的 vite dev，首屏要现编译 element-plus / vxe，实测单条 21–27s，
+//      离 Playwright 默认的 30s 只差几秒 —— 慢一点就把「编译慢」报成「页面挂了」；
+//   2. `index.html` 里挂着 `//gc.zgo.at/count.js`（GoatCounter，async），默认的
+//      `waitUntil: 'load'` 会等这个第三方脚本。外网抖一下就是整条 goto 超时
+//      （2026-11-08 满量跑批实录：goto 卡满 30s，重跑同一台机器就过）。
+//      load 事件不是这些用例的断言对象，等待交给后续 locator 的重试。
+test.setTimeout(120_000)
+const gotoApp = (page: Page, hash: string) => page.goto(hash, { waitUntil: 'domcontentloaded' })
+
 /** 画廊列表页：按 manifest 生成的清单渲染卡片。 */
 test('画廊列出 manifest 里的全部案例，并按能力簇分组', async ({ page }) => {
-  await page.goto('/#/ai-gallery')
+  await gotoApp(page, '/#/ai-gallery')
 
   // 卡片数 == manifest 条目数（2026-10 起是 9 条：2 个专属页 + 7 个通用宿主）
   await expect(page.locator(CARD)).toHaveCount(manifest.cases.length)
@@ -71,7 +81,7 @@ test('画廊列出 manifest 里的全部案例，并按能力簇分组', async (
 })
 
 test('详情页由产物驱动：第一页 10 行、状态列是彩色标签', async ({ page }) => {
-  await page.goto('/#/ai-gallery/employee-roster')
+  await gotoApp(page, '/#/ai-gallery/employee-roster')
 
   // pageSize=10 来自产物（pagination.pageSize），不是测试常量
   await expect(rows(page)).toHaveCount(10)
@@ -85,7 +95,7 @@ test('详情页由产物驱动：第一页 10 行、状态列是彩色标签', a
 })
 
 test('新增弹窗：空表单被必填校验拦住，填完真的落库并刷新', async ({ page }) => {
-  await page.goto('/#/ai-gallery/employee-roster')
+  await gotoApp(page, '/#/ai-gallery/employee-roster')
   await expect(rows(page)).toHaveCount(10)
 
   await page.getByRole('button', { name: '新增', exact: true }).click()
@@ -112,7 +122,7 @@ test('新增弹窗：空表单被必填校验拦住，填完真的落库并刷�
 })
 
 test('查看弹窗按产物的 fullscreen 全屏打开', async ({ page }) => {
-  await page.goto('/#/ai-gallery/employee-roster')
+  await gotoApp(page, '/#/ai-gallery/employee-roster')
   await expect(rows(page)).toHaveCount(10)
 
   await page
@@ -130,7 +140,7 @@ test('查看弹窗按产物的 fullscreen 全屏打开', async ({ page }) => {
 })
 
 test('产物可下载：「下载 schema」拿到的是本站加载的纯 JSON', async ({ page }) => {
-  await page.goto('/#/ai-gallery')
+  await gotoApp(page, '/#/ai-gallery')
   const card = page.locator(CARD).filter({ hasText: '员工花名册' })
 
   const [download] = await Promise.all([
@@ -148,7 +158,7 @@ test('产物可下载：「下载 schema」拿到的是本站加载的纯 JSON',
  * `{rows,records}`），总条数能显示成 26 就是 `configTableOut` 真的生效了。
  */
 test('订单批量：跨页勾选后批量动作作用在全部选中行上', async ({ page }) => {
-  await page.goto('/#/ai-gallery/order-batch')
+  await gotoApp(page, '/#/ai-gallery/order-batch')
 
   await expect(rows(page)).toHaveCount(8) // pagination.pageSize
   await expect(total(page)).toContainText('26') // configTableOut: count → 总条数
@@ -185,7 +195,7 @@ test('订单批量：跨页勾选后批量动作作用在全部选中行上', as
  * 所以金额是第 5 个 `td`。断言只比大小关系（升序 / 降序），不写死具体数字。
  */
 test('订单批量：点金额表头按服务端排序重取，且保留当前页', async ({ page }) => {
-  await page.goto('/#/ai-gallery/order-batch')
+  await gotoApp(page, '/#/ai-gallery/order-batch')
   await expect(rows(page)).toHaveCount(8)
 
   const amounts = async () =>
@@ -249,7 +259,7 @@ test('订单批量：点金额表头按服务端排序重取，且保留当前�
  * 折叠态只渲染根节点，点箭头展开第一棵子树。
  */
 test('组织架构树表：嵌套 rows 直接成层级，箭头展开子部门', async ({ page }) => {
-  await page.goto('/#/ai-gallery/org-tree-table')
+  await gotoApp(page, '/#/ai-gallery/org-tree-table')
 
   // Element Plus 把折叠的子树留在 DOM 里（display:none），所以按「可见 + 层级类」断言；
   // 不能用 hasText 找子部门 —— 备注列里就写着「下设平台组、前端组、测试组」。
@@ -276,7 +286,7 @@ test('组织架构树表：嵌套 rows 直接成层级，箭头展开子部门',
  * 行数不变（展开内容不是数据行），断言落在展开出来的文案上。
  */
 test('展开行：expandConfig 的字段表在行下方展开', async ({ page }) => {
-  await page.goto('/#/ai-gallery/expand-row')
+  await gotoApp(page, '/#/ai-gallery/expand-row')
 
   await expect(rows(page)).toHaveCount(8) // pagination.pageSize
   const body = page.locator('.el-table__body-wrapper').first()
@@ -298,7 +308,7 @@ test('展开行：expandConfig 的字段表在行下方展开', async ({ page })
  * 于是部门列应有 2 个 rowspan=4，小组列应有 4 个 rowspan=2。
  */
 test('分组报表：mergeConfig 生成跨行合并的单元格', async ({ page }) => {
-  await page.goto('/#/ai-gallery/grouped-report')
+  await gotoApp(page, '/#/ai-gallery/grouped-report')
 
   await expect(rows(page)).toHaveCount(8)
   await expect(total(page)).toContainText('10')
@@ -320,7 +330,7 @@ test('分组报表：mergeConfig 生成跨行合并的单元格', async ({ page 
  * 后者是这条用例真正防的回归：宿主没接管全局请求时，下拉会静默拿到无关数据。
  */
 test('异构后端：信封映射出总条数，远端下拉拿到宿主 mock 的供应商', async ({ page }) => {
-  await page.goto('/#/ai-gallery/legacy-erp-api')
+  await gotoApp(page, '/#/ai-gallery/legacy-erp-api')
 
   await expect(rows(page)).toHaveCount(10) // pagination.pageSize
   await expect(total(page)).toContainText('23') // configTableOut: totalCount → 总条数
@@ -355,7 +365,7 @@ test('异构后端：信封映射出总条数，远端下拉拿到宿主 mock �
  * partial（只有部分引擎 / 子键生效），按 §6 B2 该案例三端都停在 compile。
  */
 test('引擎实验室：一个枚举换 vxe，双击原地编辑并把改动回传宿主', async ({ page }) => {
-  await page.goto('/#/ai-gallery/engine-lab')
+  await gotoApp(page, '/#/ai-gallery/engine-lab')
 
   await expect(page.locator('.vxe-table')).toBeVisible()
   await expect(total(page)).toContainText('5000')
@@ -398,7 +408,7 @@ test('引擎实验室：一个枚举换 vxe，双击原地编辑并把改动回�
  */
 test('S2 组合画廊：对照全绿、成员关系可读，切渲染端只差包名', async ({ page }) => {
   // 入口：画廊列表 → 组合画廊。路由加上了但没人链 = 隐形页面，所以从点击开始。
-  await page.goto('/#/ai-gallery')
+  await gotoApp(page, '/#/ai-gallery')
   // `.ai-gallery-comp` 现在有两个（S2 组合画廊 / S3 工具工作流），按标题选中本卡片。
   await page.locator('a.ai-gallery-comp').filter({ hasText: '组合画廊' }).click()
   await expect(page).toHaveURL(/\/ai-gallery\/composition$/)
@@ -476,7 +486,7 @@ const AI_WORKFLOWS = JSON.parse(workflowsText.slice(workflowsText.indexOf('= {')
 
 test('S3 工具工作流：12 次真调用与记录逐项一致，预期失败的那一步真的失败', async ({ page }) => {
   // 入口：画廊列表 → 工具工作流（S3 卡片）。
-  await page.goto('/#/ai-gallery')
+  await gotoApp(page, '/#/ai-gallery')
   await page.locator('a.ai-gallery-comp').filter({ hasText: '工具工作流' }).click()
   await expect(page).toHaveURL(/\/ai-gallery\/workflows$/)
   await expect(page.locator('[data-testid="workflows-page"]')).toBeVisible()
@@ -560,7 +570,7 @@ const fdArtifact = JSON.parse(
 
 test('A8 片段拼装：三个生成片段拼进非 CRUD 分析页，筛选/图表/弹窗都靠宿主接线', async ({ page }) => {
   // 入口：Cases 页 → 片段拼装 CTA（路由加了没人链 = 隐形页面，所以从点击开始）
-  await page.goto('/#/cases')
+  await gotoApp(page, '/#/cases')
   await page.locator('a.fragment-cta').click()
   await expect(page).toHaveURL(/\/fragment-dashboard$/)
   await expect(page.locator('[data-testid="fragment-dashboard"]')).toBeVisible()
@@ -658,7 +668,7 @@ test('A9 三栏对照：12 个数字与三份源码全部来自度量单源，�
   expect(scenario).toBeTruthy()
 
   // 入口：Cases 页 → 三栏对照 CTA（路由加了没人链 = 隐形页面）
-  await page.goto('/#/cases')
+  await gotoApp(page, '/#/cases')
   await page.locator('a.nva-cta').click()
   await expect(page).toHaveURL(/\/native-vs-ai$/)
   await expect(page.locator('[data-testid="native-vs-ai"]')).toBeVisible()
